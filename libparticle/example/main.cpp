@@ -6,6 +6,8 @@
 #include "StringEx.h" // _s functions
 #include "ui.h"
 
+#include <algorithm>
+
 using namespace tinyxml2;
 
 #define DO_PARTICLELIB_TEST 0
@@ -209,7 +211,7 @@ static void testParticleLib()
 	}
 #endif
 
-	if (framework.init(0, nullptr, 1400, 900))
+	if (framework.init(1400, 900))
 	{
 		while (!framework.quitRequested)
 		{
@@ -262,7 +264,7 @@ static void testParticleLib()
 			#endif
 
 			#if 1
-				gxBegin(GL_QUADS);
+				gxBegin(GX_QUADS);
 				{
 					const int sx = 5;
 					const int sy = 100;
@@ -281,7 +283,7 @@ static void testParticleLib()
 				gxEnd();
 
 			#if 0 // work around for weird (driver?) issue where next draw call retains the color of the previous one
-				gxBegin(GL_TRIANGLES);
+				gxBegin(GX_TRIANGLES);
 				gxColor4f(0.f, 0.f, 0.f, 0.f);
 				gxEnd();
 			#endif
@@ -298,6 +300,12 @@ static void testParticleLib()
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
 #ifdef WIN32
 	_CrtSetDebugFillThreshold(0);
 #endif
@@ -313,7 +321,7 @@ int main(int argc, char * argv[])
 	const int windowSx = 1400;
 	const int windowSy = 900;
 
-	if (framework.init(argc, (const char**)argv, windowSx, windowSy))
+	if (framework.init(windowSx, windowSy))
 	{
 		initUi();
 		pushFontMode(FONT_SDF);

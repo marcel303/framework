@@ -30,6 +30,7 @@
 #include "AudioOutput_PortAudio.h"
 #include "framework.h"
 #include <algorithm>
+#include <string.h>
 
 #if LINUX
 	#include <portaudio.h>
@@ -64,6 +65,8 @@ static int portaudioCallback(
 
 bool AudioOutput_PortAudio::initPortAudio(const int numChannels, const int sampleRate, const int bufferSize)
 {
+	Assert(m_paInitialized == false);
+	
 	PaError err;
 
 	if ((err = Pa_Initialize()) != paNoError)
@@ -73,6 +76,8 @@ bool AudioOutput_PortAudio::initPortAudio(const int numChannels, const int sampl
 	}
 
 	logDebug("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
+	
+	m_paInitialized = true;
 	
 	PaStreamParameters outputParameters;
 	memset(&outputParameters, 0, sizeof(outputParameters));
@@ -99,6 +104,8 @@ bool AudioOutput_PortAudio::initPortAudio(const int numChannels, const int sampl
 		logError("portaudio: failed to start stream: %s", Pa_GetErrorText(err));
 		return false;
 	}
+	
+	m_numChannels = numChannels;
 
 	return true;
 }
@@ -127,10 +134,15 @@ bool AudioOutput_PortAudio::shutPortAudio()
 		m_paStream = nullptr;
 	}
 	
-	if ((err = Pa_Terminate()) != paNoError)
+	if (m_paInitialized)
 	{
-		logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
-		return false;
+		m_paInitialized = false;
+		
+		if ((err = Pa_Terminate()) != paNoError)
+		{
+			logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+			return false;
+		}
 	}
 	
 	return true;
@@ -153,7 +165,7 @@ void AudioOutput_PortAudio::portAudioCallback(
 			
 			const int numSamplesRead = m_stream->Provide(numSamples, samples);
 			
-			memset(samples + numSamplesRead, 0, (numSamples - numSamplesRead) * sizeof(AudioSample));
+			memset(samples + numSamplesRead, 0, (numSamples - numSamplesRead) * sizeof(int16_t) * m_numChannels);
 			
 			m_position += numSamplesRead;
 			m_isDone = numSamplesRead == 0;
@@ -181,9 +193,11 @@ void AudioOutput_PortAudio::portAudioCallback(
 }
 
 AudioOutput_PortAudio::AudioOutput_PortAudio()
-	: m_paStream(nullptr)
+	: m_paInitialized(false)
+	, m_paStream(nullptr)
 	, m_mutex(nullptr)
 	, m_stream(nullptr)
+	, m_numChannels(0)
 	, m_isPlaying(false)
 	, m_volume(1024)
 	, m_position(0)
@@ -209,6 +223,8 @@ bool AudioOutput_PortAudio::Initialize(const int numChannels, const int sampleRa
 
 bool AudioOutput_PortAudio::Shutdown()
 {
+	Stop();
+	
 	return shutPortAudio();
 }
 

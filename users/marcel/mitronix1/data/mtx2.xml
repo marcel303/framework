@@ -1,29 +1,35 @@
-<graph nextNodeId="8" nextLinkId="8" nextZKey="25">
-    <node id="1" typeName="voice" editorX="48" editorY="-32"/>
-    <node id="3" typeName="audio.in" editorX="-336" editorY="-32"/>
-    <node id="4" typeName="filter.comb" editorX="-208" editorY="-32">
+<graph nextNodeId="8" nextLinkId="8">
+    <node id="1" typeName="voice"/>
+    <node id="3" typeName="audio.in"/>
+    <node id="4" typeName="filter.comb">
         <input socket="delay" value="3.300000"/>
         <input socket="feedback" value="0.850000"/>
         <input socket="feedforward" value="1.000000"/>
         <input socket="maxDelay" value="3.300000"/>
     </node>
-    <node id="6" nodeType="1" typeName="" editorX="158" editorY="-23">
-        <visualizer nodeId="1" srcSocketName="audio" sx="181" sy="115"/>
-    </node>
-    <node id="7" typeName="sample.delay" editorX="-80" editorY="-32">
+    <node id="7" typeName="sample.delay">
         <input socket="delay2" value="0.060000"/>
         <input socket="delay3" value="0.120000"/>
         <input socket="delay4" value="0.360000"/>
         <input socket="maxDelay" value="1.000000"/>
     </node>
-    <link id="2" enabled="1" srcNodeId="4" srcNodeSocketName="value" dstNodeId="3" dstNodeSocketName="audio"/>
-    <link id="3" enabled="1" srcNodeId="7" srcNodeSocketName="value" dstNodeId="4" dstNodeSocketName="value"/>
-    <link id="4" enabled="1" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="7" dstNodeSocketName="value1"/>
-    <link id="5" enabled="1" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="7" dstNodeSocketName="value2"/>
-    <link id="6" enabled="1" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="7" dstNodeSocketName="value3"/>
-    <link id="7" enabled="1" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="7" dstNodeSocketName="value4"/>
-    <editor>
+    <link id="2" srcNodeId="4" srcNodeSocketName="value" dstNodeId="3" dstNodeSocketName="audio"/>
+    <link id="3" srcNodeId="7" srcNodeSocketName="value" dstNodeId="4" dstNodeSocketName="value"/>
+    <link id="4" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="7" dstNodeSocketName="value1"/>
+    <link id="5" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="7" dstNodeSocketName="value2"/>
+    <link id="6" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="7" dstNodeSocketName="value3"/>
+    <link id="7" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="7" dstNodeSocketName="value4"/>
+    <editor nextZKey="25">
         <dragAndZoom x="1.8556187152862549" y="55.832771301269531" zoom="1.1107962131500244"/>
-        <editorOptions menuIsVisible="1" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="8d22c297" gridColor="a09d7427"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="48" y="-32" zKey="0"/>
+            <nodeData nodeId="3" x="-336" y="-32" zKey="0"/>
+            <nodeData nodeId="4" x="-208" y="-32" zKey="0"/>
+            <nodeData nodeId="7" x="-80" y="-32" zKey="0"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="6" x="158" y="-23" zKey="-1" nodeId="1" srcSocketName="audio" sx="181" sy="115"/>
+        </visualizers>
+        <editorOptions comment="" menuIsVisible="1" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="8d22c297" gridColor="a09d7427"/>
     </editor>
 </graph>

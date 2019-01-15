@@ -26,10 +26,11 @@
 */
 
 #include "MPDebug.h"
+#include <SDL2/SDL.h>
 #include <stdarg.h>
 #include <stdio.h>
 
-#if defined(SYSTEM_WINDOWS)
+#if defined(WINDOWS)
 	#include <windows.h>
 #endif
 
@@ -39,7 +40,7 @@ namespace MP
 	{
 		void Print(const char * format, ...)
 		{
-		#if DEBUG_MEDIAPLAYER
+		#if DEBUG_MEDIAPLAYER_LOGGING
 			static char string[4096];
 
 			va_list list;
@@ -48,11 +49,17 @@ namespace MP
 
 			fprintf(stderr, "%s\n", string);
 
-		#if defined(SYSTEM_WINDOWS)
+		#if defined(WINDOWS)
 			strcat(string, "\n");
 			OutputDebugString(string);
 		#endif
 		#endif
+		}
+		
+		void SimulateHickup()
+		{
+			if ((rand() % 20) == 0)
+				SDL_Delay(10);
 		}
 	};
 };

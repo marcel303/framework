@@ -12,7 +12,7 @@
 #include "vfxNodes/vfxNodeDisplay.h"
 #include "vfxNodes/oscEndpointMgr.h"
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 #define ENABLE_AUDIO 1
 #define DO_AUDIODEVICE_SELECT (ENABLE_AUDIO && 1)
@@ -85,7 +85,7 @@ struct AudioNodeRandom : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(random, AudioNodeRandom)
+AUDIO_NODE_TYPE(AudioNodeRandom)
 {
 	typeName = "random";
 	
@@ -99,7 +99,7 @@ AUDIO_NODE_TYPE(random, AudioNodeRandom)
 
 #if DO_AUDIODEVICE_SELECT
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 #if LINUX
 	#include <portaudio.h>
@@ -318,20 +318,22 @@ struct SatellitesApp
 
 int main(int argc, char * argv[])
 {
-#if 1
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#elif 1
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
 #endif
 
 	framework.windowX = 10 + 140 + 10;
 	
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	initUi();
 	
 #if ENABLE_AUDIO
-	fillPcmDataCache("sats", false, false);
+	fillPcmDataCache("sats", false, false, true);
 #endif
 
 	SatellitesApp app;
@@ -396,7 +398,7 @@ int main(int argc, char * argv[])
 		}
 		else
 		{
-			inputIsCaptured |= app.audioGraphMgr->tickEditor(dt, inputIsCaptured);
+			inputIsCaptured |= app.audioGraphMgr->tickEditor(GFX_SX, GFX_SY, dt, inputIsCaptured);
 			
 			bool isEditing = false;
 			
@@ -442,7 +444,7 @@ int main(int argc, char * argv[])
 			{
 				if (!app.audioGraphMgr->files.empty() && app.audioGraphMgr->selectedFile == nullptr)
 					app.audioGraphMgr->selectFile(app.audioGraphMgr->files.begin()->first.c_str());
-				app.audioGraphMgr->drawEditor();
+				app.audioGraphMgr->drawEditor(GFX_SX, GFX_SY);
 			}
 		#endif
 			

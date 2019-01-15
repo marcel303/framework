@@ -1,4 +1,5 @@
 #include "audiostream/AudioOutput.h"
+#include "audiostream/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
 #include "FileStream.h"
@@ -12,16 +13,12 @@
 #include "tinyxml2.h"
 #include "xml.h"
 #include <algorithm>
+#include <cmath>
 #include <list>
 
 #if defined(WIN32) && !defined(DEBUG)
 	#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
 #endif
-
-// todo : + send OSC messages
-// todo : # load confirmation
-// todo : + combined PCM and sequence data load
-// todo : + playback pause/resume
 
 using namespace tinyxml2;
 
@@ -138,14 +135,15 @@ struct AudioFile : public AudioStream
 			{
 				m_filename = filename;
 				m_pcmData = pcmData;
-				m_sampleRate = audioStream.mSampleRate;
-				m_duration = pcmData.size() / double(audioStream.mSampleRate);
+				m_sampleRate = audioStream.SampleRate_get();
+				m_duration = pcmData.size() / double(audioStream.SampleRate_get());
 			}
 			SDL_UnlockMutex(m_mutex);
 		}
 		catch (std::exception & e)
 		{
 			logError("error: %s", e.what());
+			(void)e;
 
 			reset();
 		}
@@ -204,7 +202,7 @@ static float g_audioVolume = 1.f;
 
 static SDL_Thread * g_audioThread = nullptr;
 static volatile bool g_stopAudioThread = false;
-static AudioOutput_OpenAL * g_audioOutput = nullptr;
+static AudioOutput_PortAudio * g_audioOutput = nullptr;
 static bool g_wantsAudioPlayback = false;
 static uint32_t g_audioUpdateEvent = -1;
 
@@ -213,11 +211,11 @@ static int SDLCALL ExecuteAudioThread(void * arg)
 	while (!g_stopAudioThread)
 	{
 		if (g_wantsAudioPlayback && !g_audioOutput->IsPlaying_get())
-			g_audioOutput->Play();
+			g_audioOutput->Play(g_audioFile);
 		if (!g_wantsAudioPlayback && g_audioOutput->IsPlaying_get())
 			g_audioOutput->Stop();
 
-		g_audioOutput->Update(g_audioFile);
+		g_audioOutput->Update();
 		//SDL_Delay(10);
 		SDL_Delay(5);
 
@@ -582,8 +580,8 @@ void loadAudio(const char * filename)
 
 	Assert(g_audioOutput == nullptr);
 	Assert(g_lastAudioTime == 0.0);
-	g_audioOutput = new AudioOutput_OpenAL();
-	g_audioOutput->Initialize(2, g_audioFile->m_sampleRate, 1 << 12); // todo : sample rate;
+	g_audioOutput = new AudioOutput_PortAudio();
+	g_audioOutput->Initialize(2, g_audioFile->m_sampleRate, 1 << 8);
 
 	Assert(g_audioThread == nullptr);
 	Assert(!g_stopAudioThread);
@@ -812,6 +810,10 @@ static bool doTextDialog(std::string & text)
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	transmitSocket = new UdpTransmitSocket(IpEndpointName(OSC_DEST_ADDRESS, OSC_DEST_PORT));
 
 	framework.waitForEvents = true;
@@ -819,7 +821,7 @@ int main(int argc, char * argv[])
 	framework.windowTitle = "vfx.edit";
 	framework.windowY = 100;
 
-	if (framework.init(0, nullptr, GFX_SX * SCALE, GFX_SY * SCALE))
+	if (framework.init(GFX_SX * SCALE, GFX_SY * SCALE))
 	{
 		g_audioUpdateEvent = SDL_RegisterEvents(1);
 
@@ -1325,7 +1327,7 @@ int main(int argc, char * argv[])
 
 				if (g_sequence.bpm > 0.0)
 				{
-					gxBegin(GL_LINES);
+					gxBegin(GX_LINES);
 					{
 						for (int i = 0; true; ++i)
 						{
@@ -1356,12 +1358,11 @@ int main(int argc, char * argv[])
 
 					pushSurface(g_audioFileSurface);
 					{
-						glClearColor(0.f, 0.f, 0.f, 0.f);
-						glClear(GL_COLOR_BUFFER_BIT);
+						g_audioFileSurface->clear();
 
 						setColor(colorWhite);
 
-						gxBegin(GL_LINES);
+						gxBegin(GX_LINES);
 						{
 							for (int x = 0; x < sx; ++x)
 							{

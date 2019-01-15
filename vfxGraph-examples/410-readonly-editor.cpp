@@ -27,8 +27,8 @@
 
 #include "framework.h"
 #include "graph.h"
+#include "ui.h"
 #include "vfxGraph.h"
-#include "../libparticle/ui.h"
 #include <algorithm>
 
 #define FILENAME "testRibbon2.xml"
@@ -43,9 +43,15 @@ const int GFX_SY = 768;
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
 	framework.enableRealTimeEditing = true;
 	
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		initUi();
 		

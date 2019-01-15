@@ -10,12 +10,21 @@ public:
 	StringBuilder()
 	{
 		mLength = 0;
+		mIsValid = true;
+	}
+	
+	bool IsValid() const
+	{
+		return mIsValid;
 	}
 
 	void Append(char c)
 	{
 		if (mLength + 1 >= SIZE)
+		{
+			mIsValid = false;
 			return;
+		}
 
 		mBuffer[mLength] = c;
 		mLength++;
@@ -60,7 +69,10 @@ public:
 				temp[length++] = '-';
 			
 			if (mLength + length >= SIZE)
+			{
+				mIsValid = false;
 				return;
+			}
 			
 			while (length > 0)
 			{
@@ -98,4 +110,5 @@ private:
 
 	char mBuffer[SIZE];
 	int mLength;
+	bool mIsValid;
 };

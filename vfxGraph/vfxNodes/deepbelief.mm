@@ -104,7 +104,7 @@ void Deepbelief::shut()
 	state = nullptr;
 }
 
-void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, const int numChannels, const int pitch, const float certaintyTreshold)
+void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, const int numChannels, const int pitch, const float certaintyThreshold)
 {
 	if (state == nullptr)
 		return;
@@ -122,7 +122,7 @@ void Deepbelief::process(const uint8_t * bytes, const int sx, const int sy, cons
 	newWork->sy = sy;
 	newWork->numChannels = numChannels;
 	newWork->pitch = pitch;
-	newWork->certaintyTreshold = certaintyTreshold;
+	newWork->certaintyThreshold = certaintyThreshold;
 	
 	SDL_LockMutex(state->mutex);
 	{
@@ -191,11 +191,10 @@ int Deepbelief::threadMainProc(void * arg)
 {
 	State * state = (State*)arg;
 	
-	if (threadInit(state))
+	threadInit(state);
 	{
 		threadMain(state);
 	}
-	
 	threadShut(state);
 
 	delete state;
@@ -208,6 +207,9 @@ bool Deepbelief::threadInit(State * state)
 {
 	LOG_DBG("creating deepbelief network", 0);
 	
+	Assert(state->isInitialized == false);
+	Assert(state->network == nullptr);
+	
 	if (state->networkFilename.empty())
 	{
 		return false;
@@ -215,10 +217,12 @@ bool Deepbelief::threadInit(State * state)
 	else
 	{
 		state->network = jpcnn_create_network(state->networkFilename.c_str());
-		Assert(state->network);
 		
 		if (state->network == nullptr)
+		{
+			LOG_ERR("failed to load deepbelief network. filename=%s", state->networkFilename.c_str());
 			return false;
+		}
 		
 		state->isInitialized = true;
 		
@@ -314,15 +318,18 @@ void Deepbelief::threadMain(State * state)
 				char ** predictionsLabels = nullptr;
 				int predictionsLabelsLength = 0;
 				
-				jpcnn_classify_image(
-					state->network, buffer, JPCNN_RANDOM_SAMPLE, 0,
-					&predictionValues, &predictionValuesLength, &predictionsLabels, &predictionsLabelsLength);
+				if (state->network != nullptr)
+				{
+					jpcnn_classify_image(
+						state->network, buffer, JPCNN_RANDOM_SAMPLE, 0,
+						&predictionValues, &predictionValuesLength, &predictionsLabels, &predictionsLabelsLength);
+				}
 				
 				for (int i = 0; i < predictionValuesLength; ++i)
 				{
 					const float predictionValue = predictionValues[i];
 
-					if (predictionValue >= work->certaintyTreshold)
+					if (predictionValue >= work->certaintyThreshold)
 					{
 						DeepbeliefPrediction p;
 						p.certainty = predictionValue;
@@ -341,7 +348,11 @@ void Deepbelief::threadMain(State * state)
 			auto ts1 = g_TimerRT.TimeUS_get();
 		#endif
 			
-			std::sort(predictions.begin(), predictions.end(), [](auto & p1, auto & p2) { return p1.certainty > p2.certainty; });
+			std::sort(predictions.begin(), predictions.end(),
+				[](const DeepbeliefPrediction & p1, const DeepbeliefPrediction & p2)
+				{
+					return p1.certainty > p2.certainty;
+				});
 			
 		#if DO_TIMING
 			auto ts2 = g_TimerRT.TimeUS_get();

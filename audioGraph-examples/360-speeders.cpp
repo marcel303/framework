@@ -1,16 +1,14 @@
+#include "audioTypes.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"
 #include "objects/binauralizer.h"
 #include "objects/binaural_cipic.h"
 #include "objects/paobject.h"
-#include "soundmix.h"
 #include <algorithm>
 #include <cmath>
 
 #define MAX_SOUNDVOLUMES 100
-//#define NUM_SPEEDERS 16
-//#define NUM_SPEEDERS 90
-#define NUM_SPEEDERS 0
+#define NUM_SPEEDERS 90
 
 #define DO_RECORDING 1
 //#define NUM_BUFFERS_PER_RECORDING (4 * 44100 / AUDIO_UPDATE_SIZE)
@@ -194,9 +192,9 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			const Vec3 position_view = s_worldToViewTransform.Mul4(position_world);
 			
 			const float distanceToHead = position_view.CalcSize();
-			const float kDistanceToHeadTreshold = .1f; // 10cm. related to head size, but exact size is subjective
+			const float kDistanceToHeadThreshold = .1f; // 10cm. related to head size, but exact size is subjective
 			
-			const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadTreshold);
+			const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadThreshold);
 			
 			float elevation;
 			float azimuth;
@@ -222,16 +220,17 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			const binaural::HRIRSampleData * samples[3];
 			float sampleWeights[3];
 
-			s_sampleSet->lookup_3(
+			if (s_sampleSet->lookup_3(
 				elevation,
 				azimuth,
 				samples,
-				sampleWeights);
-
-			for (int j = 0; j < 3; ++j)
+				sampleWeights))
 			{
-				audioBufferAdd(combinedHrir.lSamples, samples[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
-				audioBufferAdd(combinedHrir.rSamples, samples[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
+				for (int j = 0; j < 3; ++j)
+				{
+					audioBufferAdd(combinedHrir.lSamples, samples[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
+					audioBufferAdd(combinedHrir.rSamples, samples[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
+				}
 			}
 		}
 
@@ -299,7 +298,7 @@ struct MyPortAudioHandler : PortAudioHandler
 		, audioSources()
 		, monoSource()
 	{
-		monoSource.open("wobbly.ogg", true);
+		monoSource.open("thegrooop/wobbly.ogg", true);
 	}
 
 	void addAudioSource(MultiChannelAudioSource_SoundVolume * audioSource)
@@ -646,16 +645,13 @@ struct RecordedFragment : AudioSource
 		}
 	#endif
 	}
+
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 struct World
 {
-#ifdef WIN32
-	// fixme : work around for "struct 'World' has an illegal zero-sized array" error when compiling with MSVC
-	Speeder speeders[NUM_SPEEDERS + 1];
-#else
-	Speeder speeders[NUM_SPEEDERS];
-#endif
+	Speeder speeders[NUM_SPEEDERS + 1]; // note : the "+1" is a work around for "struct 'World' has an illegal zero-sized array" error when compiling with MSVC
 	
 	std::vector<RecordedFragment*> recordedFragments;
 	
@@ -701,6 +697,8 @@ struct World
 			speeder.tick(dt);
 		}
 	}
+
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 static World * s_world = nullptr;
@@ -740,7 +738,7 @@ static void drawSoundVolume(const SoundVolume & volume)
 		gxPushMatrix(); { gxTranslatef(0, 0, +1); drawGrid3dLine(res, res, 0, 1); } gxPopMatrix();
 	#endif
 	
-		gxSetTexture(getTexture("thegrooop-white.png"));
+		gxSetTexture(getTexture("thegrooop/logo-white.png"));
 		{
 			drawRect(-1, -1, +1, +1);
 		}
@@ -767,7 +765,13 @@ static void drawSoundVolume_Translucent(const SoundVolume & volume)
 
 int main(int argc, char * argv[])
 {
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	Camera3d camera;
@@ -788,19 +792,21 @@ int main(int argc, char * argv[])
 	s_binauralMutex = &binauralMutex;
 	
 	binaural::HRIRSampleSet sampleSet;
-	binaural::loadHRIRSampleSet_Cipic("hrtf/CIPIC/subject147", sampleSet);
+	binaural::loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
 	sampleSet.finalize();
 	s_sampleSet = &sampleSet;
 	
 	MyPortAudioHandler * paHandler = new MyPortAudioHandler();
 	s_paHandler = paHandler;
 	
-	World world;
-	world.init();
-	s_world = &world;
+	World * world = new World();
+	world->init();
+	s_world = world;
 	
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, paHandler);
+	
+	int nextSpeederIndex = 0;
 	
 	do
 	{
@@ -812,9 +818,31 @@ int main(int argc, char * argv[])
 		
 		camera.tick(dt, true);
 		
+		if (camera.position[1] < .3f)
+			camera.position[1] = .3f;
+		
+	#if NUM_SPEEDERS >= 1
+		//if (mouse.wentDown(BUTTON_LEFT))
+		if (mouse.isDown(BUTTON_LEFT))
+		{
+			const Mat4x4 cameraTransform = camera.getWorldMatrix();
+			
+			SDL_LockMutex(audioMutex);
+			{
+				auto & speeder = world->speeders[nextSpeederIndex];
+				
+				speeder.p = cameraTransform.GetTranslation() + cameraTransform.GetAxis(2) * .4f;
+				speeder.v = cameraTransform.GetAxis(2) * 10.f;
+			}
+			SDL_UnlockMutex(audioMutex);
+			
+			nextSpeederIndex = (nextSpeederIndex + 1) % NUM_SPEEDERS;
+		}
+	#endif
+
 		// update the world
 		
-		world.tick(dt);
+		world->tick(dt);
 		
 		// update information to/from audio thread
 		
@@ -838,11 +866,9 @@ int main(int argc, char * argv[])
 			
 			camera.pushViewMatrix();
 			{
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-				glEnable(GL_LINE_SMOOTH);
+				pushLineSmooth(true);
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
+				pushDepthTest(true, DEPTH_LESS);
 				{
 					for (int i = 0; i < numSoundVolumes; ++i)
 					{
@@ -850,13 +876,11 @@ int main(int argc, char * argv[])
 						drawSoundVolume(soundVolumes[i]);
 					}
 				}
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
 				
 				//
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
-				glDepthMask(GL_FALSE);
+				pushDepthTest(true, DEPTH_LESS, false);
 				pushBlend(BLEND_ADD);
 				{
 					gxPushMatrix();
@@ -877,8 +901,9 @@ int main(int argc, char * argv[])
 					}
 				}
 				popBlend();
-				glDepthMask(GL_TRUE);
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
+				
+				popLineSmooth();
 			}
 			camera.popViewMatrix();
 		}
@@ -887,7 +912,9 @@ int main(int argc, char * argv[])
 	
 	pa.shut();
 	
-	world.shut();
+	world->shut();
+	delete world;
+	world = nullptr;
 	s_world = nullptr;
 	
 	s_paHandler = nullptr;

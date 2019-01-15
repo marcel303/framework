@@ -28,7 +28,7 @@
 #include "audioGraph.h" // getHrirSampleSet
 #include "audioNodeBinauralizer.h"
 
-AUDIO_NODE_TYPE(binauralizer, AudioNodeBinauralizer)
+AUDIO_NODE_TYPE(AudioNodeBinauralizer)
 {
 	typeName = "binauralizer";
 	

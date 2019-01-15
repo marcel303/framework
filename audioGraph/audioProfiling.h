@@ -27,7 +27,13 @@
 
 #pragma once
 
-#define ENABLE_AUDIOGRAPH_CPU_TIMING 1
+#ifndef ENABLE_AUDIOGRAPH_CPU_TIMING
+	#ifndef CHIBI_BUILD_DISTRIBUTION
+		#define ENABLE_AUDIOGRAPH_CPU_TIMING 1
+	#else
+		#define ENABLE_AUDIOGRAPH_CPU_TIMING 0 // do not alter
+	#endif
+#endif
 
 #if 0 // set to 1 to enable profiling
 

@@ -32,7 +32,13 @@
 
 int main(int argc, char * argv[])
 {
-	if (!framework.init(argc, (const char**)argv, VIEW_SX, VIEW_SY))
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
 	const char * sounds[3] = { "button1.ogg", "button2.ogg", "button3.ogg" };
@@ -41,11 +47,14 @@ int main(int argc, char * argv[])
 	Music music("bgm.ogg");
 	bool playMusic = true;
 	
-	while (!keyboard.isDown(SDLK_ESCAPE))
+	while (!framework.quitRequested)
 	{
 		// process
 		
 		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
 		
 		int index = -1;
 		

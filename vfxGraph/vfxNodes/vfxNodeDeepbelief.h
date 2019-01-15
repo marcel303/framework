@@ -38,7 +38,7 @@ struct VfxNodeDeepbelief : VfxNodeBase
 	{
 		kInput_Network,
 		kInput_Image,
-		kInput_Treshold,
+		kInput_Threshold,
 		kInput_UpdateInterval,
 		kInput_COUNT
 	};

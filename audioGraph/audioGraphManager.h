@@ -30,6 +30,7 @@
 #include "audioTypes.h"
 #include <list>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -38,6 +39,7 @@ struct AudioGraphFileRTC;
 struct AudioGraphGlobals;
 struct AudioRealTimeConnection;
 struct AudioValueHistorySet;
+struct AudioVoiceManager;
 struct Graph;
 struct GraphEdit;
 struct GraphEdit_TypeDefinitionLibrary;
@@ -76,6 +78,10 @@ struct AudioGraphManager
 	virtual ~AudioGraphManager() { }
 	
 	// called from the app thread
+	virtual AudioGraphGlobals * createGlobals(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) = 0;
+	virtual void freeGlobals(AudioGraphGlobals *& globals) = 0;
+	
+	// called from the app thread
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) = 0;
 	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) = 0;
 	virtual void tickMain() = 0;
@@ -85,12 +91,23 @@ struct AudioGraphManager
 	virtual void tickVisualizers() = 0;
 };
 
+/*
+Basic audio graph manager, with optional support for caching graphs on load. This graph
+manager has less overhead than the real-time editing (RTE) and MultiRTE implementations,
+as it doesn't support real-time editing and doesn't create editors for loaded graphs.
+*/
 struct AudioGraphManager_Basic : AudioGraphManager
 {
 	struct GraphCacheElem
 	{
 		bool isValid;
-		Graph graph;
+		Graph * graph;
+		
+		GraphCacheElem()
+			: isValid(false)
+			, graph(nullptr)
+		{
+		}
 	};
 	
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
@@ -102,6 +119,7 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	
 	AudioMutex_Shared audioMutex;
 	
+	std::set<AudioGraphGlobals*> allocatedGlobals;
 	AudioGraphGlobals * globals;
 	
 	AudioGraphManager_Basic(const bool cacheOnCreate);
@@ -113,6 +131,10 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	void addGraphToCache(const char * filename);
 	
 	// called from the app thread
+	virtual AudioGraphGlobals * createGlobals(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual void freeGlobals(AudioGraphGlobals *& globals) override;
+	
+	// called from the app thread
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) override;
 	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) override;
 	virtual void tickMain() override;
@@ -122,6 +144,13 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	virtual void tickVisualizers() override;
 };
 
+/*
+Audio graph manager with real-time editing (RTE) support. RTE support means the audio
+graph manager implements tickEditor and drawEditor, which allows it to present a graphical
+user interface for editing audio graphs in real-time. The active graph being edited is
+selected using selectFile or selectInstance. selectInstance also allows one to specify
+the instance for which to show real-time information such as visualizers and timing data.
+*/
 struct AudioGraphManager_RTE : AudioGraphManager
 {
 	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
@@ -132,6 +161,7 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	
 	SDL_mutex * audioMutex;
 	
+	std::set<AudioGraphGlobals*> allocatedGlobals;
 	AudioGraphGlobals * globals;
 	
 	int displaySx;
@@ -149,6 +179,10 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
+	virtual AudioGraphGlobals * createGlobals(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual void freeGlobals(AudioGraphGlobals *& globals) override;
+	
+	// called from the app thread
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) override;
 	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) override;
 	virtual void tickMain() override;
@@ -158,8 +192,8 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	virtual void tickVisualizers() override;
 	
 	// called from the app thread
-	bool tickEditor(const float dt, const bool isInputCaptured);
-	void drawEditor();
+	bool tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured);
+	void drawEditor(const int sx, const int sy);
 };
 
 //
@@ -174,6 +208,7 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	
 	SDL_mutex * audioMutex;
 	
+	std::set<AudioGraphGlobals*> allocatedGlobals;
 	AudioGraphGlobals * globals;
 	
 	int displaySx;
@@ -191,6 +226,10 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
+	virtual AudioGraphGlobals * createGlobals(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual void freeGlobals(AudioGraphGlobals *& globals) override;
+	
+	// called from the app thread
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphGlobals * globals = nullptr, const bool createdPaused = false) override;
 	virtual void free(AudioGraphInstance *& instance, const bool doRampDown) override;
 	virtual void tickMain() override;
@@ -200,6 +239,6 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	virtual void tickVisualizers() override;
 	
 	// called from the app thread
-	bool tickEditor(const float dt, const bool isInputCaptured);
-	void drawEditor();
+	bool tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured);
+	void drawEditor(const int sx, const int sy);
 };

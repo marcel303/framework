@@ -1,0 +1,5 @@
+app marcel-planetvis2
+
+	depend_library framework
+	
+	add_files main.cpp paging.cpp paging.h

@@ -120,6 +120,11 @@ void AgendaEffect::apply(bool success, int playerId, int * targets, int numTarge
 
 				switch (m_specialEffect)
 				{
+				case SpecialEffect_None:
+					break;
+				case SpecialEffect_IncomeModifier:
+					break;
+					
 				case SpecialEffect_Kill:
 					logDebug("agenda: player %d gets killed!", i);
 					player.m_shouldBeKilled = true;
@@ -137,6 +142,9 @@ void AgendaEffect::apply(bool success, int playerId, int * targets, int numTarge
 
 		switch (m_specialEffect)
 		{
+		case SpecialEffect_None:
+			break;
+			
 		case SpecialEffect_IncomeModifier:
 			g_gameState->m_perRoundIncome.food += m_specialEffectParam[0];
 			g_gameState->m_perRoundIncome.wealth += m_specialEffectParam[1];
@@ -145,10 +153,16 @@ void AgendaEffect::apply(bool success, int playerId, int * targets, int numTarge
 			m_specialEffectParam[1] = 0;
 			m_specialEffectParam[2] = 0;
 			break;
+			
+		case SpecialEffect_Kill:
+			break;
 		}
 
 		switch (m_specialEffect2)
 		{
+		case SpecialEffect_None:
+			break;
+			
 		case SpecialEffect_IncomeModifier:
 			g_gameState->m_perRoundIncome.food += m_specialEffectParam[0];
 			g_gameState->m_perRoundIncome.wealth += m_specialEffectParam[1];
@@ -156,6 +170,9 @@ void AgendaEffect::apply(bool success, int playerId, int * targets, int numTarge
 			m_specialEffectParam[0] = 0;
 			m_specialEffectParam[1] = 0;
 			m_specialEffectParam[2] = 0;
+			break;
+			
+		case SpecialEffect_Kill:
 			break;
 		}
 	}

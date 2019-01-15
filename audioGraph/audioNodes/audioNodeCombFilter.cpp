@@ -26,10 +26,10 @@
 */
 
 #include "audioNodeCombFilter.h"
-#include "vfxNodes/delayLine.h"
+#include "delayLine.h"
 #include <algorithm>
 
-AUDIO_NODE_TYPE(filter_comb, AudioNodeCombFilter)
+AUDIO_NODE_TYPE(AudioNodeCombFilter)
 {
 	typeName = "filter.comb";
 	

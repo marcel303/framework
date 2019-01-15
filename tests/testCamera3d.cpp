@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "testBase.h"
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -96,8 +96,7 @@ void testCamera3d()
 			
 			camera.pushViewMatrix();
 			{
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
+				pushDepthTest(true, DEPTH_LESS);
 				
 				gxPushMatrix();
 				{
@@ -125,7 +124,7 @@ void testCamera3d()
 					drawGrid3d(10, 10, 0, 2);
 				gxSetTexture(0);
 				
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
 			}
 			camera.popViewMatrix();
 			

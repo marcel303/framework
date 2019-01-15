@@ -1,83 +1,104 @@
-<graph nextNodeId="51" nextLinkId="83" nextZKey="409">
-    <node id="23" typeName="pcm.fromFile" editorX="-120" editorY="45">
+<graph nextNodeId="51" nextLinkId="83">
+    <node id="23" typeName="pcm.fromFile">
         <input socket="filename" value="music2.ogg"/>
     </node>
-    <node id="24" typeName="audio.pcm" editorX="40" editorY="38">
+    <node id="24" typeName="audio.pcm">
         <input socket="rangeBegin" value="10.000000"/>
         <input socket="rangeLength" value="0.020000"/>
     </node>
-    <node id="25" typeName="sample.delay" editorX="-85" editorY="179">
+    <node id="25" typeName="sample.delay">
         <input socket="delay1" value="0.200000"/>
         <input socket="maxDelay" value="10.000000"/>
         <input socket="value" value="1.000000"/>
     </node>
-    <node id="26" typeName="mix" editorX="312" editorY="-5"/>
-    <node id="27" typeName="math.sine" editorX="-249" editorY="174"/>
-    <node id="28" typeName="phase" editorX="-386.0006103515625" editorY="183">
+    <node id="26" typeName="mix"/>
+    <node id="27" typeName="math.sine"/>
+    <node id="28" typeName="phase">
         <input socket="frequency" value="20.000000"/>
     </node>
-    <node id="35" typeName="audio.sine" editorX="-382" editorY="295">
+    <node id="35" typeName="audio.sine">
         <input socket="frequency" value="1.000000"/>
         <input socket="mode" value="1"/>
         <input socket="skew" value="0.100000"/>
     </node>
-    <node id="36" typeName="math" editorX="-240" editorY="336"/>
-    <node id="37" typeName="audio.sine" editorX="-426" editorY="-93.725860595703125">
+    <node id="36" typeName="math"/>
+    <node id="37" typeName="audio.sine">
         <input socket="frequency" value="0.040000"/>
         <input socket="mode" value="1"/>
     </node>
-    <node id="38" typeName="map.range" editorX="-270" editorY="-57.003814697265625">
+    <node id="38" typeName="map.range">
         <input socket="outMax" value="43.000000"/>
         <input socket="outMin" value="41.000000"/>
     </node>
-    <node id="39" typeName="audio.sine" editorX="-596.9183349609375" editorY="39.529998779296875">
+    <node id="39" typeName="audio.sine">
         <input socket="frequency" value="0.050000"/>
         <input socket="mode" value="1"/>
     </node>
-    <node id="40" typeName="map.range" editorX="-454" editorY="39.996063232421875">
+    <node id="40" typeName="map.range">
         <input socket="outMax" value="0.002000"/>
         <input socket="outMin" value="0.100000"/>
     </node>
-    <node id="41" typeName="math" editorX="-240" editorY="432">
+    <node id="41" typeName="math">
         <input socket="b" value="0.400000"/>
         <input socket="type" value="14"/>
     </node>
-    <node id="42" typeName="math" editorX="-240" editorY="528">
+    <node id="42" typeName="math">
         <input socket="b" value="0.500000"/>
         <input socket="type" value="7"/>
     </node>
-    <node id="47" typeName="envelope" editorX="181.5576171875" editorY="103.61360168457031">
+    <node id="47" typeName="envelope">
         <input socket="attack" value="0.400000"/>
         <input socket="decay" value="0.300000"/>
         <input socket="release" value="3.000000"/>
         <input socket="sustain" value="0.800000"/>
     </node>
-    <node id="48" typeName="voice" editorX="474" editorY="-27"/>
-    <node id="49" typeName="display" editorX="463.00003051757812" editorY="-128.7476806640625"/>
-    <node id="50" typeName="voice.4d" editorX="643.9998779296875" editorY="17.000045776367188"/>
-    <link id="39" enabled="1" srcNodeId="24" srcNodeSocketName="pcm" dstNodeId="23" dstNodeSocketName="pcm"/>
-    <link id="42" enabled="1" srcNodeId="26" srcNodeSocketName="sourceA" dstNodeId="24" dstNodeSocketName="audio"/>
-    <link id="51" enabled="1" srcNodeId="25" srcNodeSocketName="delay1" dstNodeId="35" dstNodeSocketName="audio"/>
-    <link id="52" enabled="1" srcNodeId="36" srcNodeSocketName="a" dstNodeId="35" dstNodeSocketName="audio"/>
-    <link id="53" enabled="1" srcNodeId="25" srcNodeSocketName="delay2" dstNodeId="36" dstNodeSocketName="result"/>
-    <link id="56" enabled="1" srcNodeId="25" srcNodeSocketName="value" dstNodeId="27" dstNodeSocketName="result"/>
-    <link id="57" enabled="1" srcNodeId="27" srcNodeSocketName="value" dstNodeId="28" dstNodeSocketName="phase"/>
-    <link id="61" enabled="1" srcNodeId="38" srcNodeSocketName="value" dstNodeId="37" dstNodeSocketName="audio"/>
-    <link id="62" enabled="1" srcNodeId="24" srcNodeSocketName="rangeBegin" dstNodeId="38" dstNodeSocketName="result"/>
-    <link id="63" enabled="1" srcNodeId="40" srcNodeSocketName="value" dstNodeId="39" dstNodeSocketName="audio"/>
-    <link id="64" enabled="1" srcNodeId="24" srcNodeSocketName="rangeLength" dstNodeId="40" dstNodeSocketName="result"/>
-    <link id="66" enabled="1" srcNodeId="41" srcNodeSocketName="a" dstNodeId="35" dstNodeSocketName="audio"/>
-    <link id="67" enabled="1" srcNodeId="42" srcNodeSocketName="a" dstNodeId="35" dstNodeSocketName="audio"/>
-    <link id="68" enabled="1" srcNodeId="25" srcNodeSocketName="delay3" dstNodeId="41" dstNodeSocketName="result"/>
-    <link id="69" enabled="1" srcNodeId="25" srcNodeSocketName="delay4" dstNodeId="42" dstNodeSocketName="result"/>
-    <link id="76" enabled="1" srcNodeId="26" srcNodeSocketName="gainA" dstNodeId="25" dstNodeSocketName="value2"/>
-    <link id="77" enabled="1" srcNodeId="48" srcNodeSocketName="audio" dstNodeId="26" dstNodeSocketName="audio"/>
-    <link id="80" enabled="1" srcNodeId="50" srcNodeSocketName="audio" dstNodeId="26" dstNodeSocketName="audio"/>
-    <link id="81" enabled="1" srcNodeId="49" srcNodeSocketName="audioL" dstNodeId="26" dstNodeSocketName="audio"/>
-    <link id="82" enabled="1" srcNodeId="49" srcNodeSocketName="audioR" dstNodeId="26" dstNodeSocketName="audio"/>
-    <editor>
+    <node id="48" typeName="voice"/>
+    <node id="49" typeName="display"/>
+    <node id="50" typeName="voice.4d"/>
+    <link id="39" srcNodeId="24" srcNodeSocketName="pcm" dstNodeId="23" dstNodeSocketName="pcm"/>
+    <link id="42" srcNodeId="26" srcNodeSocketName="sourceA" dstNodeId="24" dstNodeSocketName="audio"/>
+    <link id="51" srcNodeId="25" srcNodeSocketName="delay1" dstNodeId="35" dstNodeSocketName="audio"/>
+    <link id="52" srcNodeId="36" srcNodeSocketName="a" dstNodeId="35" dstNodeSocketName="audio"/>
+    <link id="53" srcNodeId="25" srcNodeSocketName="delay2" dstNodeId="36" dstNodeSocketName="result"/>
+    <link id="56" srcNodeId="25" srcNodeSocketName="value" dstNodeId="27" dstNodeSocketName="result"/>
+    <link id="57" srcNodeId="27" srcNodeSocketName="value" dstNodeId="28" dstNodeSocketName="phase"/>
+    <link id="61" srcNodeId="38" srcNodeSocketName="value" dstNodeId="37" dstNodeSocketName="audio"/>
+    <link id="62" srcNodeId="24" srcNodeSocketName="rangeBegin" dstNodeId="38" dstNodeSocketName="result"/>
+    <link id="63" srcNodeId="40" srcNodeSocketName="value" dstNodeId="39" dstNodeSocketName="audio"/>
+    <link id="64" srcNodeId="24" srcNodeSocketName="rangeLength" dstNodeId="40" dstNodeSocketName="result"/>
+    <link id="66" srcNodeId="41" srcNodeSocketName="a" dstNodeId="35" dstNodeSocketName="audio"/>
+    <link id="67" srcNodeId="42" srcNodeSocketName="a" dstNodeId="35" dstNodeSocketName="audio"/>
+    <link id="68" srcNodeId="25" srcNodeSocketName="delay3" dstNodeId="41" dstNodeSocketName="result"/>
+    <link id="69" srcNodeId="25" srcNodeSocketName="delay4" dstNodeId="42" dstNodeSocketName="result"/>
+    <link id="76" srcNodeId="26" srcNodeSocketName="gainA" dstNodeId="25" dstNodeSocketName="value2"/>
+    <link id="77" srcNodeId="48" srcNodeSocketName="audio" dstNodeId="26" dstNodeSocketName="audio"/>
+    <link id="80" srcNodeId="50" srcNodeSocketName="audio" dstNodeId="26" dstNodeSocketName="audio"/>
+    <link id="81" srcNodeId="49" srcNodeSocketName="audioL" dstNodeId="26" dstNodeSocketName="audio"/>
+    <link id="82" srcNodeId="49" srcNodeSocketName="audioR" dstNodeId="26" dstNodeSocketName="audio"/>
+    <editor nextZKey="1">
         <dragAndZoom x="269.64895629882812" y="121.09842681884766" zoom="1"/>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="1" backgroundColor="000000cc" gridColor="ffffff4c">
+        <nodeDatas>
+            <nodeData nodeId="23" x="-120" y="45" zKey="0"/>
+            <nodeData nodeId="24" x="40" y="38" zKey="0"/>
+            <nodeData nodeId="25" x="-85" y="179" zKey="0"/>
+            <nodeData nodeId="26" x="312" y="-5" zKey="0"/>
+            <nodeData nodeId="27" x="-249" y="174" zKey="0"/>
+            <nodeData nodeId="28" x="-386.0006103515625" y="183" zKey="0"/>
+            <nodeData nodeId="35" x="-382" y="295" zKey="0"/>
+            <nodeData nodeId="36" x="-240" y="336" zKey="0"/>
+            <nodeData nodeId="37" x="-426" y="-93.725860595703125" zKey="0"/>
+            <nodeData nodeId="38" x="-270" y="-57.003814697265625" zKey="0"/>
+            <nodeData nodeId="39" x="-596.9183349609375" y="39.529998779296875" zKey="0"/>
+            <nodeData nodeId="40" x="-454" y="39.996063232421875" zKey="0"/>
+            <nodeData nodeId="41" x="-240" y="432" zKey="0"/>
+            <nodeData nodeId="42" x="-240" y="528" zKey="0"/>
+            <nodeData nodeId="47" x="181.5576171875" y="103.61360168457031" zKey="0"/>
+            <nodeData nodeId="48" x="474" y="-27" zKey="0"/>
+            <nodeData nodeId="49" x="463.00003051757812" y="-128.7476806640625" zKey="0"/>
+            <nodeData nodeId="50" x="643.9998779296875" y="17.000045776367188" zKey="0"/>
+        </nodeDatas>
+        <visualizers/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="1" backgroundColor="000000cc" gridColor="ffffff4c">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
                 <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>

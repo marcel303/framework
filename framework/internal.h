@@ -29,6 +29,7 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include <GL/glew.h>
 #include <map>
 #include <SDL2/SDL.h>
 #include <string>
@@ -82,14 +83,6 @@ static int fopen_s(FILE ** file, const char * filename, const char * mode)
 void splitString(const std::string & str, std::vector<std::string> & result);
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
-#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
-#if defined(WIN32)
-	void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
-#else
-	void debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
-#endif
-#endif
-
 //
 
 struct BoxAtlasElem;
@@ -108,13 +101,158 @@ struct TextureAtlas;
 
 //
 
-class WindowData
+/*
+MouseData contains the mouse data for a Window (obviously). but less obvious is the way in which mouse events are processed. mouse events are processed over
+multiple frames if we have to. due to the way the mouse API works (mouse.wentDown, mouse.wentUp) we need to process cases where both the mouse down and mouse up
+event arrive during a framework.process call. this may happen for instance when using a touch pad which simulates mouse events during 'soft touches' (touches
+where not physically pressing down a button or a surface). since there is no physical action, and the mouse events are simulated when the finger is released,
+without moving, from the touch pad, there is no delay between the mouse down and mouse up events. in these cases, we may wish to process both events separately,
+as otherwise the behavior of mouse.wentDown and mouse.wentUp doesn't yield the expected behavior
+
+consider the following sequence of events:
+
+	framework.process()
+		(event) MouseDown -> true
+		(event) MouseDown -> false
+ 
+	if (mouse.wentDown(..))
+	{
+		// code doesn't get here
+	}
+
+wentDown returns false here, as isDown is already set to false. so we 'missed' the event
+
+now consider the case where we spead event processing over multiple framework.process calls:
+
+	framework.process()
+		(event) MouseDown -> true
+ 
+	if (mouse.wentDown(..))
+	{
+		// do something useful here
+	}
+ 
+ 	framework.process()
+		(event) MouseDown -> false
+
+it will detect the mouse down event, and during the next process, mouse.wentUp will be true
+*/
+
+class MouseData
 {
 public:
+	bool mouseDown[BUTTON_MAX];
+	bool mouseChange[BUTTON_MAX];
+	bool hasOldMousePosition;
+	
+	int mouseX;
+	int mouseY;
+	int mouseDx;
+	int mouseDy;
+	int mouseScrollY;
+	int oldMouseX;
+	int oldMouseY;
+	
+	std::vector<SDL_Event> events;
+	
+	MouseData()
+	{
+		memset(mouseDown, 0, sizeof(mouseDown));
+		memset(mouseChange, 0, sizeof(mouseChange));
+		hasOldMousePosition = false;
+		
+		mouseX = 0;
+		mouseY = 0;
+		mouseDx = 0;
+		mouseDy = 0;
+		mouseScrollY = 0;
+		oldMouseX = 0;
+		oldMouseY = 0;
+	}
+	
+	void addEvent(const SDL_Event & e)
+	{
+		events.push_back(e);
+	}
+	
+	void processEvents()
+	{
+		if (events.empty())
+			return;
+		
+		const size_t numEvents = events.size();
+		
+		size_t eventIndex = 0;
+		
+		bool stop = false;
+		
+		while (stop == false)
+		{
+			const SDL_Event & e = events[eventIndex];
+			
+			if (e.type == SDL_MOUSEBUTTONDOWN)
+			{
+				const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
+				
+				if (index >= 0)
+				{
+					mouseDown[index] = true;
+					mouseChange[index] = true;
+					stop = true;
+				}
+			}
+			else if (e.type == SDL_MOUSEBUTTONUP)
+			{
+				const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
+				
+				if (index >= 0)
+				{
+					mouseDown[index] = false;
+					mouseChange[index] = true;
+					stop = true;
+				}
+			}
+			else if (e.type == SDL_MOUSEMOTION)
+			{
+				mouseX = e.motion.x;
+				mouseY = e.motion.y;
+			}
+			else
+			{
+				Assert(false);
+			}
+			
+			eventIndex++;
+			
+			if (eventIndex == numEvents)
+				stop = true;
+		}
+		
+		if (eventIndex == numEvents)
+			events.clear();
+		else
+		{
+		#ifdef WIN32
+			std::reverse(events.begin(), events.end());
+			for (int i = 0; i < eventIndex; ++i)
+				events.pop_back();
+			std::reverse(events.begin(), events.end());
+#if 0
+			printf("size: %d\n", (int)events.size());
+			for (int i = 0; i < eventIndex; ++i)
+			{
+				auto itr = events.begin();
+				events.erase(itr);
+			}
+#endif
+		#else
+			events.erase(events.begin(), events.begin() + eventIndex);
+		#endif
+		}
+	}
+	
 	void beginProcess()
 	{
-		keyChangeCount = 0;
-		keyRepeatCount = 0;
 		memset(mouseChange, 0, sizeof(mouseChange));
 		
 		mouseDx = 0;
@@ -127,6 +265,10 @@ public:
 	
 	void endProcess()
 	{
+		processEvents();
+		
+		//
+		
 		if (hasOldMousePosition)
 		{
 			mouseDx = mouseX - oldMouseX;
@@ -143,36 +285,56 @@ public:
 			mouseDy = 0;
 		}
 	}
+};
+
+class WindowData
+{
+public:
+	void beginProcess()
+	{
+		quitRequested = false;
+		
+		keyChangeCount = 0;
+		keyRepeatCount = 0;
+		
+		mouseData.beginProcess();
+	}
+	
+	void endProcess()
+	{
+		mouseData.endProcess();
+	}
 	
 	void makeActive() const
 	{
 		framework.windowIsActive = isActive;
 		
-		mouse.x = mouseX;
-		mouse.y = mouseY;
-		mouse.dx = mouseDx;
-		mouse.dy = mouseDy;
-		mouse.scrollY = mouseScrollY;
+		mouse.x = mouseData.mouseX;
+		mouse.y = mouseData.mouseY;
+		mouse.dx = mouseData.mouseDx;
+		mouse.dy = mouseData.mouseDy;
+		mouse.scrollY = mouseData.mouseScrollY;
 	}
 	
 	bool isActive;
 	bool quitRequested;
-	bool mouseDown[BUTTON_MAX];
-	bool mouseChange[BUTTON_MAX];
-	bool hasOldMousePosition;
 	int keyDown[256];
 	int keyDownCount;
 	int keyChange[256];
 	int keyChangeCount;
 	int keyRepeat[256];
 	int keyRepeatCount;
-	int mouseX;
-	int mouseY;
-	int mouseDx;
-	int mouseDy;
-	int mouseScrollY;
-	int oldMouseX;
-	int oldMouseY;
+	
+	MouseData mouseData;
+};
+
+//
+
+struct DepthTestInfo
+{
+	bool testEnabled;
+	DEPTH_TEST test;
+	bool writeEnabled;
 };
 
 //
@@ -195,8 +357,7 @@ public:
 		gxShaderIsDirty = true;
 	}
 	
-	SDL_Window * mainWindow;
-	WindowData mainWindowData;
+	Window * mainWindow;
 	SDL_Window * currentWindow;
 	WindowData * currentWindowData;
 	SDL_GLContext glContext;
@@ -209,9 +370,14 @@ public:
 	BLEND_MODE blendMode;
 	COLOR_MODE colorMode;
 	COLOR_POST colorPost;
+	bool lineSmoothEnabled;
+	bool wireframeEnabled;
 	FONT_MODE fontMode;
 	Color color;
 	bool colorClamp;
+	bool depthTestEnabled;
+	DEPTH_TEST depthTest;
+	bool depthTestWriteEnabled;
 	GRADIENT_TYPE hqGradientType;
 	Mat4x4 hqGradientMatrix;
 	Color hqGradientColor1;
@@ -351,6 +517,7 @@ public:
 		kSp_ModelViewMatrix,
 		kSp_ModelViewProjectionMatrix,
 		kSp_ProjectionMatrix,
+		kSp_SkinningMatrices,
 		kSp_Texture,
 		kSp_Params,
 		kSp_ShadingParams,
@@ -881,8 +1048,8 @@ public:
 	BuiltinShader colorMultiply;
 	BuiltinShader colorTemperature;
 	
-	BuiltinShader treshold;
-	BuiltinShader tresholdValue;
+	BuiltinShader threshold;
+	BuiltinShader thresholdValue;
 	
 	BuiltinShader hqLine;
 	BuiltinShader hqFilledTriangle;

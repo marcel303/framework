@@ -244,6 +244,9 @@ public:
 				m_testMatrix.translate(dx, dy, dz);
 			}
 			break;
+			
+		case kTransformMode_COUNT:
+			break;
 		}
 
 		//
@@ -425,6 +428,9 @@ public:
 
 		case kTest_Torus88:
 			d = computeTorus88(testCoord, 1.f, .25f);
+			break;
+			
+		case kTest_COUNT:
 			break;
 		}
 

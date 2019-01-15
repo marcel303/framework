@@ -27,7 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioNodeTriggerDenom.h"
 
-AUDIO_NODE_TYPE(trigger_denom, AudioNodeTriggerDenom)
+AUDIO_NODE_TYPE(AudioNodeTriggerDenom)
 {
 	typeName = "trigger.denom";
 	

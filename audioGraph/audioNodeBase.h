@@ -476,15 +476,12 @@ struct AudioNodeBase
 	
 	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }
+	virtual void shut() { }
 	virtual void tick(const float dt) { }
 	virtual void handleTrigger(const int inputSocketIndex) { }
 	
 	virtual void getDescription(AudioNodeDescription & d) { }
 	virtual bool getFilterResponse(float * magnitude, const int numSteps) const { return false; }
-	
-// todo : perhaps the tick/draw should be handled through the real-time editing interface? we can do locking over there
-	virtual bool tickEditor(const int x, const int y, int & sx, int & sy, bool & inputIsCaptured) { return false; }
-	virtual void drawEditor(Surface * surface, const int x, const int y, const int sx, const int sy) { }
 };
 
 //
@@ -557,7 +554,7 @@ struct AudioNodeTypeRegistration
 	AudioNodeBase* (*create)(void * data);
 	void * createData;
 	
-	GraphEdit_ResourceEditorBase * (*createResourceEditor)();
+	GraphEdit_ResourceEditorBase * (*createResourceEditor)(void * data);
 	
 	std::string typeName;
 	std::string displayName;
@@ -575,19 +572,19 @@ struct AudioNodeTypeRegistration
 	void outEditable(const char * name);
 };
 
-#define AUDIO_NODE_TYPE(name, type) \
-	struct name ## __audio_registration : AudioNodeTypeRegistration \
+#define AUDIO_NODE_TYPE(type) \
+	struct type ## __registration : AudioNodeTypeRegistration \
 	{ \
-		name ## __audio_registration() \
+		type ## __registration() \
 		{ \
 			create = [](void * data) -> AudioNodeBase* { return new type(); }; \
 			init(); \
 		} \
 		void init(); \
 	}; \
-	extern name ## __audio_registration name ## __audio_registrationInstance; \
-	name ## __audio_registration name ## __audio_registrationInstance; \
-	void name ## __audio_registration :: init()
+	extern type ## __registration type ## __registrationInstance; \
+	type ## __registration type ## __registrationInstance; \
+	void type ## __registration :: init()
 
 extern AudioEnumTypeRegistration * g_audioEnumTypeRegistrationList;
 extern AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList;

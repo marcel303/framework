@@ -38,9 +38,11 @@ struct SDL_mutex;
 
 class AudioOutput_PortAudio : AudioOutput
 {
+	bool m_paInitialized;
 	PaStream * m_paStream;
 	SDL_mutex * m_mutex;
 	AudioStream * m_stream;
+	int m_numChannels;
 	std::atomic<bool> m_isPlaying;
 	std::atomic<int> m_volume;
 	std::atomic<int64_t> m_position;

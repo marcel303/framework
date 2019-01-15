@@ -1,0 +1,17 @@
+library libosc
+
+	scan_files cpp path osc group osc
+	scan_files h   path osc group osc
+	scan_files cpp path ip  group ip
+	scan_files h   path ip  group ip
+
+	with_platform macos   scan_files cpp path ip/posix group ip/posix
+	with_platform macos   scan_files h   path ip/posix group ip/posix
+	with_platform windows scan_files cpp path ip/win32 group ip/win32
+	with_platform windows scan_files h   path ip/win32 group ip/win32
+	
+	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
+
+	header_path . expose
+	
+	with_platform windows depend_library WSock32.lib global

@@ -363,6 +363,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 			catch (std::exception & e)
 			{
 				logError("failed to read cache data: %s", e.what());
+				(void)e;
 
 				delete imageData;
 				imageData = 0;
@@ -394,6 +395,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 			catch (std::exception & e)
 			{
 				logError("failed to write cache data: %s", e.what());
+				(void)e;
 			}
 		}
 	#endif
@@ -716,16 +718,28 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 	return result;
 }
 
-static bool preprocessShader(const std::string & source, std::string & destination, std::vector<std::string> & errorMessages)
+static void addLineAndFileMarker(std::string & destination, const int lineNumber, const int fileId)
+{
+	char lineText[128];
+	sprintf_s(lineText, sizeof(lineText), "#line %d %d\n", int(lineNumber), fileId);
+	destination.append(lineText);
+}
+
+static bool preprocessShader(const std::string & source, std::string & destination, std::vector<std::string> & errorMessages, int & fileId)
 {
 	bool result = true;
 
 	std::vector<std::string> lines;
 
 	splitString(source, lines, '\n');
-
+	
 	for (size_t i = 0; i < lines.size(); ++i)
 	{
+		if (i == 0)
+		{
+			addLineAndFileMarker(destination, i, fileId);
+		}
+		
 		const std::string & line = lines[i];
 		const std::string trimmedLine = String::TrimLeft(lines[i]);
 
@@ -749,8 +763,10 @@ static bool preprocessShader(const std::string & source, std::string & destinati
 			else
 			{
 				std::string temp(bytes, numBytes);
+				
+				int nextFileId = fileId + 1;
 
-				if (!preprocessShader(temp, destination, errorMessages))
+				if (!preprocessShader(temp, destination, errorMessages, nextFileId))
 				{
 					result = false;
 				}
@@ -758,6 +774,8 @@ static bool preprocessShader(const std::string & source, std::string & destinati
 				delete [] bytes;
 				bytes = 0;
 				numBytes = 0;
+				
+				addLineAndFileMarker(destination, i + 1, fileId);
 			}
 		}
 		else
@@ -787,14 +805,16 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 	{
 		std::string source;
 		std::string temp(bytes, numBytes);
+		
+		int fileId = 0;
 
-		if (!preprocessShader(temp, source, errorMessages))
+		if (!preprocessShader(temp, source, errorMessages, fileId))
 		{
 			result = false;
 		}
 		else
 		{
-			//logDebug("shader source: %s", source.c_str());
+			//printf("shader source:\n%s", source.c_str());
 
 			shader = glCreateShader(type);
 
@@ -971,6 +991,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 			params[kSp_ModelViewMatrix].set(glGetUniformLocation(program, "ModelViewMatrix"));
 			params[kSp_ModelViewProjectionMatrix].set(glGetUniformLocation(program, "ModelViewProjectionMatrix"));
 			params[kSp_ProjectionMatrix].set(glGetUniformLocation(program, "ProjectionMatrix"));
+			params[kSp_SkinningMatrices].set(glGetUniformLocation(program, "skinningMatrices"));
 			params[kSp_Texture].set(glGetUniformLocation(program, "texture0"));
 			params[kSp_Params].set(glGetUniformLocation(program, "params"));
 			params[kSp_ShadingParams].set(glGetUniformLocation(program, "shadingParams"));
@@ -1211,7 +1232,7 @@ void AnimCacheElem::free()
 }
 
 template <typename Policy>
-void splitString(const std::string & str, std::vector<std::string> & result, Policy policy)
+void splitString(const std::string & str, std::vector<std::string> & result, Policy policy, const bool keepEmptyElements)
 {
 	int start = -1;
 	
@@ -1224,6 +1245,8 @@ void splitString(const std::string & str, std::vector<std::string> & result, Pol
 			// found start
 			if (!policy.isBreak(c))
 				start = i;
+			else if (keepEmptyElements)
+				result.push_back(std::string());
 		}
 		else if (policy.isBreak(c))
 		{
@@ -1247,11 +1270,18 @@ public:
 	}
 };
 
+void splitString(const std::string & str, std::vector<std::string> & result, bool keepEmptyElements)
+{
+	WhiteSpacePolicy policy;
+	
+	splitString<WhiteSpacePolicy>(str, result, policy, keepEmptyElements);
+}
+
 void splitString(const std::string & str, std::vector<std::string> & result)
 {
 	WhiteSpacePolicy policy;
 	
-	splitString<WhiteSpacePolicy>(str, result, policy);
+	splitString<WhiteSpacePolicy>(str, result, policy, false);
 }
 
 class CharPolicy
@@ -1276,7 +1306,7 @@ void splitString(const std::string & str, std::vector<std::string> & result, cha
 {
 	CharPolicy policy(c);
 	
-	splitString<CharPolicy>(str, result, policy);
+	splitString<CharPolicy>(str, result, policy, true);
 }
 
 void AnimCacheElem::load(const char * filename)
@@ -1672,7 +1702,7 @@ void SoundCacheElem::load(const char * filename)
 				soundData->channelSize);
 		}
 	#else
-		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->channelSize, soundData->channelCount);
+		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->sampleRate, soundData->channelSize, soundData->channelCount);
 
 		if (buffer != nullptr)
 		{
@@ -1804,9 +1834,11 @@ void FontCacheElem::load(const char * filename)
 	else
 	{
 		logInfo("loaded %s", filename);
-
-		// fixme : this is a work around for FreeType returning monochrome data in FT_Load_Char, instead of the 8 bit gray scale data it should be returning, when it finds a stored glyph bitmap in the font itself. since we cannot directly upload bit packed font data to OpenGL, we 'force' FreeType to always render the outline version instead, by setting num_fixed_sizes to zero here
-		//face->num_fixed_sizes = 0;
+		
+		const FT_Error err = FT_Select_Charmap(face, FT_ENCODING_UNICODE);
+		Assert(err == 0);
+		if (err != 0)
+			logWarning("failed to select FreeType unicode character map");
 		
 		loaded = true;
 	}
@@ -1815,10 +1847,10 @@ void FontCacheElem::load(const char * filename)
 #if USE_GLYPH_ATLAS
 	if (loaded)
 	{
-		const GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
+		const int swizzleMask[4] = { GX_SWIZZLE_ONE, GX_SWIZZLE_ONE, GX_SWIZZLE_ONE, 0 };
 		
 		textureAtlas = new TextureAtlas();
-		textureAtlas->init(256, 16, GL_R8, false, false, swizzleMask);
+		textureAtlas->init(256, 16, GX_R8_UNORM, false, false, swizzleMask);
 	}
 #endif
 }
@@ -1939,7 +1971,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(const StbFont * font, int size, int c)
 		
 		for (;;)
 		{
-			elem.textureAtlasElem = globals.font->textureAtlas->tryAlloc(values, sx, sy, GL_RED, GL_UNSIGNED_BYTE, GLYPH_ATLAS_BORDER);
+			elem.textureAtlasElem = globals.font->textureAtlas->tryAlloc(values, sx, sy, GLYPH_ATLAS_BORDER);
 			
 			if (elem.textureAtlasElem != nullptr)
 				break;
@@ -1991,7 +2023,8 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		
 		GlyphCacheElem elem;
 		
-		FT_Set_Pixel_Sizes(face, 0, size);
+		const FT_Error err = FT_Set_Pixel_Sizes(face, 0, size);
+		(void)err; Assert(err == FT_Err_Ok);
 
 		// note : we use FT_LOAD_NO_BITMAP to avoid getting embedded glyph data. this embedded data uses 1 bpp monochrome pre-rendered versions of the glyphs. we currently do not support unpacking this data, although it may be beneficial (readability-wise) to do so
 		// note : we use FT_LOAD_FORCE_AUTOHINT to improve readability for some fonts at small sizes. perhaps this flag can be removed when FT_LOAD_NO_BITMAP is removed
@@ -2005,7 +2038,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 			
 			for (;;)
 			{
-				e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, GLYPH_ATLAS_BORDER);
+				e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows, GLYPH_ATLAS_BORDER);
 				
 				if (e != nullptr)
 					break;
@@ -2164,7 +2197,7 @@ void MsdfGlyphCache::allocTextureAtlas()
 	m_textureAtlas = nullptr;
 	
 	m_textureAtlas = new TextureAtlas();
-	m_textureAtlas->init(kAtlasSx, kAtlasSy, GL_RGB32F, true, true, nullptr);
+	m_textureAtlas->init(kAtlasSx, kAtlasSy, GX_RGB32_FLOAT, true, true, nullptr);
 	
 	m_map.clear();
 }
@@ -2326,7 +2359,7 @@ void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
 		
 		for (;;)
 		{
-			glyph.textureAtlasElem = m_textureAtlas->tryAlloc((uint8_t*)&msdf(0, 0), bitmapSx, bitmapSy, GL_RGB, GL_FLOAT);
+			glyph.textureAtlasElem = m_textureAtlas->tryAlloc((uint8_t*)&msdf(0, 0), bitmapSx, bitmapSy);
 			
 			if (glyph.textureAtlasElem != nullptr)
 				break;
@@ -2444,7 +2477,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 				
 				if (result)
 				{
-					ae = m_textureAtlas->tryAlloc(bytes, atlasElemSx, atlasElemSy, GL_RGB, GL_FLOAT);
+					ae = m_textureAtlas->tryAlloc(bytes, atlasElemSx, atlasElemSy);
 					
 					result &= ae != nullptr;
 				}
@@ -2492,7 +2525,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 {
 	bool result = true;
 	
-	if (globals.fontMSDF->m_glyphCache->m_isLoaded == false)
+	if (m_isLoaded == false)
 	{
 		return false;
 	}
@@ -2542,7 +2575,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 		result &= frameBuffer != 0;
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureAtlas->texture, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureAtlas->texture->id, 0);
 		checkErrorGL();
 		
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -2718,8 +2751,8 @@ BuiltinShaders::BuiltinShaders()
 	, gaussianKernelBuffer()
 	, colorMultiply("engine/builtin-colormultiply")
 	, colorTemperature("engine/builtin-colortemperature")
-	, treshold("engine/builtin-treshold")
-	, tresholdValue("engine/builtin-treshold-componentwise")
+	, threshold("engine/builtin-threshold")
+	, thresholdValue("engine/builtin-threshold-componentwise")
 	, hqLine("engine/builtin-hq-line")
 	, hqFilledTriangle("engine/builtin-hq-filled-triangle")
 	, hqFilledCircle("engine/builtin-hq-filled-circle")

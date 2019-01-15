@@ -7,6 +7,8 @@
 extern "C" {
 #endif
 
+#define EXPOSE_ALLEGRO_C_API 0
+
 typedef struct SAMPLE
 {
 	int freq;
@@ -24,6 +26,9 @@ typedef struct PACKFILE
 	int x;
 } PACKFILE;
 
+#if EXPOSE_ALLEGRO_C_API
+
+int install_timer();
 int install_sound(int digi, int midi, const char * cfg_path);
 
 void allegro_message(const char * format, ...);
@@ -33,7 +38,9 @@ long file_size(const char * filename);
 char * get_extension(const char * filename);
 
 void install_int_ex(void (*proc)(), int speed);
+void install_int_ex2(void (*proc)(void * data), int speed, void * data);
 void remove_int(void (*proc)());
+void remove_int2(void (*proc)(void * data), void * data);
 
 void set_volume(int, int);
 
@@ -51,6 +58,8 @@ void voice_set_frequency(int voice, int freq);
 void voice_set_pan(int voice, int pan);
 
 void lock_sample(SAMPLE * sample);
+
+#endif
 
 static inline int ABS(int x) { return x < 0 ? -x : +x; }
 
@@ -76,7 +85,41 @@ static inline int ABS(int x) { return x < 0 ? -x : +x; }
 
 #ifdef __cplusplus
 
-struct AllegroVoiceAPI
+struct SDL_mutex;
+
+struct AllegroTimerReg;
+
+struct AllegroTimerApi
+{
+	enum Mode
+	{
+		kMode_Threaded,
+		kMode_Manual
+	};
+	
+	AllegroTimerReg * timerRegs = nullptr;
+	
+	SDL_mutex * mutex = nullptr;
+	
+	Mode mode;
+	
+	AllegroTimerApi(const Mode in_mode);
+	~AllegroTimerApi();
+	
+	static void handle_int(void * data);
+	
+	void install_int_ex(void (*proc)(), int speed);
+	void install_int_ex2(void (*proc)(void * data), int speed, void * data);
+	void remove_int(void (*proc)());
+	void remove_int2(void (*proc)(void * data), void * data);
+	
+	void lock();
+	void unlock();
+	
+	void processInterrupts(const int numMicroseconds);
+};
+
+struct AllegroVoiceApi
 {
 	static const int MAX_VOICES = 128;
 
@@ -102,10 +145,11 @@ struct AllegroVoiceAPI
 	
 	int sampleRate;
 	
-	AllegroVoiceAPI(const int _sampleRate)
-		: sampleRate(_sampleRate)
-	{
-	}
+	SDL_mutex * mutex;
+	bool useMutex;
+	
+	AllegroVoiceApi(const int sampleRate, const bool useMutex);
+	~AllegroVoiceApi();
 	
 	int allocate_voice(SAMPLE * sample);
 	void reallocate_voice(int voice, SAMPLE * sample);
@@ -120,25 +164,20 @@ struct AllegroVoiceAPI
 	void voice_set_frequency(int voice, int freq);
 	void voice_set_pan(int voice, int pan);
 	
-	virtual void lock() { }
-	virtual void unlock() { }
+	void lock();
+	void unlock();
 	
-	void generateSamplesForVoice(const int voiceIndex, float * __restrict samples, const int numSamples, float & stereoPanning);
+	bool generateSamplesForVoice(const int voiceIndex, float * __restrict samples, const int numSamples, float & stereoPanning);
 };
 
 #include "audiostream/AudioStream.h"
 
 struct AudioStream_AllegroVoiceMixer : AudioStream
 {
-	SDL_mutex * mutex;
+	AllegroVoiceApi * voiceApi;
+	AllegroTimerApi * timerApi;
 	
-	AllegroVoiceAPI * voiceAPI;
-	
-	AudioStream_AllegroVoiceMixer(AllegroVoiceAPI * voiceAPI);
-	virtual ~AudioStream_AllegroVoiceMixer() override;
-	
-	void lock();
-	void unlock();
+	AudioStream_AllegroVoiceMixer(AllegroVoiceApi * voiceApi, AllegroTimerApi * timerApi);
 	
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override;
 };

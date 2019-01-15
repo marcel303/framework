@@ -32,8 +32,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "Mat4x4.h"
 #include "StringBuilder.h"
 
-#define voiceMgr g_currentAudioGraph->globals->voiceMgr
-
 static const int kReturnBase = 41;
 static const int kMaxReturns = 4;
 
@@ -55,7 +53,7 @@ AUDIO_ENUM_TYPE(subboost)
 	elem("3");
 }
 
-AUDIO_NODE_TYPE(voice_4d, AudioNodeVoice4D)
+AUDIO_NODE_TYPE(AudioNodeVoice4D)
 {
 	typeName = "voice.4d";
 	
@@ -155,13 +153,13 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addInput(kInput_DopplerScale, kAudioPlugType_FloatVec);
 	addInput(kInput_DopplerSmooth, kAudioPlugType_FloatVec);
 	addInput(kInput_DistanceIntensity, kAudioPlugType_Bool);
-	addInput(kInput_DistanceIntensityTreshold, kAudioPlugType_FloatVec);
+	addInput(kInput_DistanceIntensityThreshold, kAudioPlugType_FloatVec);
 	addInput(kInput_DistanceIntensityCurve, kAudioPlugType_FloatVec);
 	addInput(kInput_DistanceDampening, kAudioPlugType_Bool);
-	addInput(kInput_DistanceDampeningTreshold, kAudioPlugType_FloatVec);
+	addInput(kInput_DistanceDampeningThreshold, kAudioPlugType_FloatVec);
 	addInput(kInput_DistanceDampeningCurve, kAudioPlugType_FloatVec);
 	addInput(kInput_DistanceDiffusion, kAudioPlugType_Bool);
-	addInput(kInput_DistanceDiffusionTreshold, kAudioPlugType_FloatVec);
+	addInput(kInput_DistanceDiffusionThreshold, kAudioPlugType_FloatVec);
 	addInput(kInput_DistanceDiffusionCurve, kAudioPlugType_FloatVec);
 	addInput(kInput_SpatialDelay, kAudioPlugType_Bool);
 	addInput(kInput_SpatialDelayMode, kAudioPlugType_Int);
@@ -183,11 +181,11 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	audioGraph = g_currentAudioGraph;
 }
 
-AudioNodeVoice4D::~AudioNodeVoice4D()
+void AudioNodeVoice4D::shut()
 {
 	if (voice != nullptr)
 	{
-		voiceMgr->freeVoice(voice);
+		g_currentAudioGraph->freeVoice(voice);
 	}
 }
 
@@ -199,7 +197,7 @@ void AudioNodeVoice4D::tick(const float dt)
 	{
 		if (voice != nullptr)
 		{
-			voiceMgr->freeVoice(voice);
+			g_currentAudioGraph->freeVoice(voice);
 		}
 		
 		return;
@@ -208,7 +206,7 @@ void AudioNodeVoice4D::tick(const float dt)
 	{
 		const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
 		
-		voiceMgr->allocVoice(voice, &source, "voice.4d", true, .3f, rampTime, -1);
+		g_currentAudioGraph->allocVoice(voice, &source, "voice.4d", true, .3f, rampTime, -1);
 		
 		if (voice->type == AudioVoice::kType_4DSOUND)
 		{
@@ -275,31 +273,31 @@ void AudioNodeVoice4D::tick(const float dt)
 		
 		// distance intensity
 		{
-			const AudioFloat treshold(100.f);
+			const AudioFloat threshold(100.f);
 			const AudioFloat curve(-.4f);
 			
 			voice4D->spat.distanceIntensity.enable = getInputBool(kInput_DistanceIntensity, true);
-			voice4D->spat.distanceIntensity.threshold = getInputAudioFloat(kInput_DistanceIntensityTreshold, &treshold)->getMean();
+			voice4D->spat.distanceIntensity.threshold = getInputAudioFloat(kInput_DistanceIntensityThreshold, &threshold)->getMean();
 			voice4D->spat.distanceIntensity.curve = getInputAudioFloat(kInput_DistanceIntensityCurve, &curve)->getMean();
 		}
 		
 		// distance dampening
 		{
-			const AudioFloat treshold(100.f);
+			const AudioFloat threshold(100.f);
 			const AudioFloat curve(-.4f);
 			
 			voice4D->spat.distanceDampening.enable = getInputBool(kInput_DistanceDampening, true);
-			voice4D->spat.distanceDampening.threshold = getInputAudioFloat(kInput_DistanceDampeningTreshold, &treshold)->getMean();
+			voice4D->spat.distanceDampening.threshold = getInputAudioFloat(kInput_DistanceDampeningThreshold, &threshold)->getMean();
 			voice4D->spat.distanceDampening.curve = getInputAudioFloat(kInput_DistanceDampeningCurve, &curve)->getMean();
 		}
 		
 		// distance diffusion
 		{
-			const AudioFloat treshold(50.f);
+			const AudioFloat threshold(50.f);
 			const AudioFloat curve(.2f);
 			
 			voice4D->spat.distanceDiffusion.enable = getInputBool(kInput_DistanceDiffusion, false);
-			voice4D->spat.distanceDiffusion.threshold = getInputAudioFloat(kInput_DistanceDiffusionTreshold, &treshold)->getMean();
+			voice4D->spat.distanceDiffusion.threshold = getInputAudioFloat(kInput_DistanceDiffusionThreshold, &threshold)->getMean();
 			voice4D->spat.distanceDiffusion.curve = getInputAudioFloat(kInput_DistanceDiffusionCurve, &curve)->getMean();
 		}
 		
@@ -380,7 +378,7 @@ void AudioNodeVoice4D::getDescription(AudioNodeDescription & d)
 
 //
 
-AUDIO_NODE_TYPE(return_4d, AudioNodeVoice4DReturn)
+AUDIO_NODE_TYPE(AudioNodeVoice4DReturn)
 {
 	typeName = "return.4d";
 	
@@ -481,7 +479,15 @@ AudioNodeVoice4DReturn::~AudioNodeVoice4DReturn()
 {
 	if (voice != nullptr)
 	{
-		voiceMgr->freeVoice(voice);
+		g_currentAudioGraph->freeVoice(voice);
+	}
+}
+
+void AudioNodeVoice4DReturn::shut()
+{
+	if (voice != nullptr)
+	{
+		g_currentAudioGraph->freeVoice(voice);
 	}
 }
 
@@ -497,7 +503,7 @@ void AudioNodeVoice4DReturn::tick(const float dt)
 		{
 			if (voice != nullptr)
 			{
-				voiceMgr->freeVoice(voice);
+				g_currentAudioGraph->freeVoice(voice);
 			}
 			
 			//
@@ -505,7 +511,7 @@ void AudioNodeVoice4DReturn::tick(const float dt)
 			const float rampTime = getInputAudioFloat(kInput_RampTime, &AudioFloat::One)->getMean();
 			
 			source.returnNode = this;
-			if (voiceMgr->allocVoice(voice, &source, "return.4d", true, .2f, rampTime, absoluteIndex))
+			if (g_currentAudioGraph->allocVoice(voice, &source, "return.4d", true, .2f, rampTime, absoluteIndex))
 			{
 				voice->speaker = AudioVoice::kSpeaker_LeftAndRight;
 				
@@ -552,7 +558,7 @@ void AudioNodeVoice4DReturn::tick(const float dt)
 
 #include "osc4d.h"
 
-AUDIO_NODE_TYPE(globals_4d, AudioNodeVoice4DGlobals)
+AUDIO_NODE_TYPE(AudioNodeVoice4DGlobals)
 {
 	typeName = "globals.4d";
 	
@@ -582,6 +588,8 @@ void AudioNodeVoice4DGlobals::tick(const float dt)
 	{
 		return;
 	}
+	
+	AudioVoiceManager * voiceMgr = g_currentAudioGraph->globals->voiceMgr;
 	
 	if (voiceMgr->type != AudioVoiceManager::kType_4DSOUND)
 	{

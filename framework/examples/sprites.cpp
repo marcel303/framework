@@ -33,14 +33,23 @@
 
 int main(int argc, char * argv[])
 {
-	if (!framework.init(argc, (const char**)argv, VIEW_SX, VIEW_SY))
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
 	float angle = 0.f;
 	
-	while (!keyboard.isDown(SDLK_ESCAPE))
+	while (!framework.quitRequested)
 	{
 		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
 		
 		angle += framework.timeStep * 10.f;
 		
@@ -52,14 +61,14 @@ int main(int argc, char * argv[])
 				{
 					const float px = VIEW_SX / 8 * (x + .5f);
 					const float py = VIEW_SY / 8 * (y + .5f);
-					const float scale = 2.f;
+					const float scale = 1.5f;
 					const float angleSpeed = (x * 8 + y - 31.5f);
 					
 					Sprite sprite("sprite.png");
 					sprite.x = px;
 					sprite.y = py;
 					sprite.angle = angle * angleSpeed;
-					sprite.scale = 1.5f;
+					sprite.scale = scale;
 					sprite.pivotX = sprite.getWidth() / 2.f;
 					sprite.pivotY = sprite.getHeight() / 2.f;
 					

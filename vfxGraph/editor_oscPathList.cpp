@@ -29,11 +29,11 @@
 #include "editor_oscPathList.h"
 #include "StringEx.h" // sprintf_s
 #include "tinyxml2.h"
+#include "ui.h"
 #include "vfxNodes/oscEndpointMgr.h"
 #include "vfxNodes/oscReceiver.h"
 #include "vfxResource.h"
 #include "vfxTypes.h"
-#include "../libparticle/ui.h" // todo : remove
 
 //
 
@@ -61,19 +61,14 @@ ResourceEditor_OscPathList::~ResourceEditor_OscPathList()
 	uiState = nullptr;
 }
 
-void ResourceEditor_OscPathList::afterSizeChanged()
+void ResourceEditor_OscPathList::doMenu(const bool doTick, const bool doDraw, const float dt)
 {
 	uiState->sx = sx;
-}
-
-void ResourceEditor_OscPathList::afterPositionChanged()
-{
+	
 	uiState->x = x;
 	uiState->y = y;
-}
-
-void ResourceEditor_OscPathList::doMenu(const float dt)
-{
+	
+	makeActive(uiState, doTick, doDraw);
 	pushMenu("osc.pathList");
 	
 	if (g_doActions && learningIndex != -1)
@@ -147,16 +142,14 @@ void ResourceEditor_OscPathList::doMenu(const float dt)
 
 bool ResourceEditor_OscPathList::tick(const float dt, const bool inputIsCaptured)
 {
-	makeActive(uiState, true, false);
-	doMenu(dt);
+	doMenu(true, false, dt);
 	
 	return uiState->activeElem != nullptr;
 }
 
 void ResourceEditor_OscPathList::draw() const
 {
-	makeActive(uiState, false, true);
-	const_cast<ResourceEditor_OscPathList*>(this)->doMenu(0.f);
+	const_cast<ResourceEditor_OscPathList*>(this)->doMenu(false, true, 0.f);
 }
 
 void ResourceEditor_OscPathList::setResource(const GraphNode & node, const char * type, const char * name)

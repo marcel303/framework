@@ -1,0 +1,14 @@
+include engine/ShaderPS.txt
+
+shader_in float radians;
+
+void main()
+{
+	float value = sin(radians);
+
+	vec4 color = vec4(vec3(value), 1.0);
+	
+	//color.r = phase;
+
+	shader_fragColor = color;
+}

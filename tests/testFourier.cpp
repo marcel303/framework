@@ -30,6 +30,7 @@
 #include "image.h"
 #include "testBase.h"
 #include "Timer.h"
+#include <algorithm>
 #include <cmath>
 
 extern const int GFX_SX;
@@ -368,7 +369,7 @@ static void fft2D_draw(const real * __restrict dreal, const real * __restrict di
 		const real scaleX =  10.0 * mouse.x / real(GFX_SX);
 		const real scaleY = 100.0 * mouse.y / real(GFX_SX);
 		
-		gxBegin(GL_POINTS);
+		gxBegin(GX_POINTS);
 		{
 			for (int y = 0; y < transformSy; ++y)
 			{
@@ -405,13 +406,8 @@ static void fft2D_draw(const real * __restrict dreal, const real * __restrict di
 template <typename real>
 void testFourier2dImpl()
 {
-	//ImageData * image = loadImage("rainbow-pow2.png");
-	//ImageData * image = loadImage("rainbow-small.png");
-	//ImageData * image = loadImage("rainbow.png");
-	//ImageData * image = loadImage("rainbow.jpg");
-	//ImageData * image = loadImage("picture.jpg");
-	//const char * filename = "happysun.jpg";
 	const char * filename = "happysun2.png";
+	
 	ImageData * image = loadImage(filename);
 	
 	if (image == nullptr)

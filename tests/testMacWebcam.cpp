@@ -2,7 +2,6 @@
 
 #include "framework.h"
 #include "vfxNodes/macWebcam.h"
-#include "vfxNodes/openglTexture.h"
 #include <cmath>
 
 extern const int GFX_SX;
@@ -22,7 +21,7 @@ void testMacWebcam()
 		return;
 	}
 
-	OpenglTexture texture;
+	GxTexture texture;
 	
 	int lastImageIndex = -1;
 	
@@ -36,12 +35,12 @@ void testMacWebcam()
 		
 		if (webcam->image && webcam->image->index != lastImageIndex)
 		{
-			if (texture.isChanged(webcam->image->sx, webcam->image->sy, GL_RGBA8))
+			if (texture.isChanged(webcam->image->sx, webcam->image->sy, GX_RGBA8_UNORM))
 			{
-				texture.allocate(webcam->image->sx, webcam->image->sy, GL_RGBA8, false, true);
+				texture.allocate(webcam->image->sx, webcam->image->sy, GX_RGBA8_UNORM, false, true);
 			}
 			
-			texture.upload(webcam->image->data, 4, webcam->image->pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
+			texture.upload(webcam->image->data, 4, webcam->image->pitch / 4);
 		}
 		
 		//

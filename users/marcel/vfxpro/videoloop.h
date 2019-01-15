@@ -20,5 +20,5 @@ struct VideoLoop
 	
 	uint32_t getTexture() const;
 	uint32_t getFirstFrameTexture() const;
-	bool getVideoProperties(int & sx, int & sy, double & duration) const;
+	bool getVideoProperties(int & sx, int & sy, double & duration, double & sampleAspectRatio) const;
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <GL/glew.h> // texture arrays
 #include "BezierPath.h"
 #include "Calc.h"
 #include "config.h"
@@ -11,8 +12,6 @@
 #include "video.h"
 #include <map>
 #include <vector>
-
-#include "StringEx.h" // todo : to cpp
 
 //
 
@@ -30,9 +29,9 @@ extern int GFX_SY;
 extern Config config;
 
 extern float g_pcmVolume;
-extern GLuint g_pcmTexture;
-extern GLuint g_fftTexture;
-extern GLuint g_fftTextureWithFade;
+extern GxTexture g_pcmTexture;
+extern GxTexture g_fftTexture;
+extern GxTexture g_fftTextureWithFade;
 
 extern bool g_isReplay;
 
@@ -903,7 +902,7 @@ struct Effect_Wobbly : Effect
 		
 		void tick(const double dt)
 		{
-			const double f = std::pow(1.0 - falloffD, dt);
+			const double f = pow(1.0 - falloffD, dt);
 			
 			falloff *= f;
 		}

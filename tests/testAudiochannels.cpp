@@ -183,6 +183,7 @@ static bool initAudioOutput()
 		catch (std::exception & e)
 		{
 			logDebug("failed to load %s: %s", filename, e.what());
+			(void)e;
 		}
 	}
 	

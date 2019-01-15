@@ -27,9 +27,9 @@
 
 #include "framework.h"
 #include "graph.h"
+#include "ui.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
-#include "../libparticle/ui.h"
 #include <algorithm>
 
 #define FILENAME "testRibbon2.xml"
@@ -47,9 +47,15 @@ const int VISUALS_SY = 1080/2;
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
 	framework.enableRealTimeEditing = true;
 	
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		initUi();
 		
@@ -81,7 +87,7 @@ int main(int argc, char * argv[])
 			
 			vfxGraph->tick(VISUALS_SX, VISUALS_SY, timeStep);
 			
-			const GLuint texture = vfxGraph->traverseDraw(VISUALS_SX, VISUALS_SY);
+			const GxTextureId texture = vfxGraph->traverseDraw(VISUALS_SX, VISUALS_SY);
 			
 			pushWindow(visualsWindow);
 			{

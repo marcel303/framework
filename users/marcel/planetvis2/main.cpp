@@ -1,3 +1,4 @@
+#include <GL/glew.h> // virtual textures
 #include "Calc.h"
 #include "CubeSides.txt"
 #include "framework.h"
@@ -6,6 +7,9 @@
 
 #include "FileStream.h"
 #include "Noise.h"
+
+#include <algorithm>
+#include <cmath>
 
 #define GFX_SX 1024
 #define GFX_SY 1024
@@ -370,7 +374,7 @@ struct Cube
 
 					const float cubeSizeRcp = 1.f / size;
 
-					gxBegin(GL_QUADS);
+					gxBegin(GX_QUADS);
 					{
 						const int x1 = x;
 						const int y1 = y;
@@ -495,7 +499,7 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 #endif
 	}
 
-	auto t1 = SDL_GetTicks();
+	//auto t1 = SDL_GetTicks();
 
 	glTexPageCommitmentARB(
 		GL_TEXTURE_2D_ARRAY,
@@ -505,7 +509,7 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 		isResident);
 	checkErrorGL();
 
-	auto t2 = SDL_GetTicks();
+	//auto t2 = SDL_GetTicks();
 
 	//printf("glTexPageCommitmentARB took %dms\n", int(t2 - t1));
 
@@ -659,7 +663,7 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 	checkErrorGL();
 
 #if DO_ALEX_BATHOLOMEUS
-	// todo : what's the fastest way to stream pages once we want to do it async?
+	// todo-planetvis : what's the fastest way to stream pages once we want to do it async?
 	if (levelSize == params.cube->m_initSize)
 	{
 		Surface s(128, 128, false);
@@ -691,7 +695,7 @@ void QuadNode::traverse(const int level, const int x, const int y, const int siz
 {
 	const bool doTraverse = traverseImpl(level, x, y, size, params) || (level == 0);
 
-	// todo : remove children check ?
+	// todo-planetvis : remove children check ?
 
 	if (doTraverse)
 	{
@@ -744,7 +748,7 @@ void QuadNode::traverse(const int level, const int x, const int y, const int siz
 			const int sphereDistance = calculateSphereDistance(level, x, y, size, params);
 			const float cubeSizeRcp = 1.f / params.tree->m_initSize;
 
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 			{
 				const int x1 = x;
 				const int y1 = y;
@@ -786,7 +790,7 @@ void QuadNode::traverse(const int level, const int x, const int y, const int siz
 
 #if DO_CUBE_QUADS_INFOS
 		setColorf(1.f, 1.f, 1.f, 1.f / (d / 200.f + 1.f));
-		gxBegin(GL_LINE_LOOP);
+		gxBegin(GX_LINE_LOOP);
 		{
 			const int x1 = x;
 			const int y1 = y;
@@ -901,7 +905,7 @@ void CubeSide::eval(const QuadParams & params)
 		gxTranslatef(-cubeSize/2, -cubeSize/2, -cubeSize/2);
 
 		setColor(colorWhite);
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			const int cubeSize = m_quadTree.m_initSize;
 			int v1[3];
@@ -932,7 +936,7 @@ void CubeSide::eval(const QuadParams & params)
 		drawRectLine(0, 0, m_quadTree.m_initSize, m_quadTree.m_initSize);
 
 	#if 1
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			setColor(255, 255, 0);
 			gxVertex3f(localParams.viewX, localParams.viewY, localParams.viewZ * .9f);
@@ -1110,7 +1114,7 @@ static void drawPointGrid(const int x, const int y, const int size, const int st
 	const int cubeRadius = cubeSize / 2;
 
 	glPointSize(2);
-	gxBegin(GL_POINTS);
+	gxBegin(GX_POINTS);
 	{
 		for (int ox = 0; ox < size; ox += step)
 		{
@@ -1286,7 +1290,7 @@ static void drawFractalSpherePart(const Vertex & v1, const Vertex & v2, const Ve
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	gxBegin(GL_TRIANGLES);
+	gxBegin(GX_TRIANGLES);
 	{
 		//for (int i = numTrianglesUsed * 3; i != 0; --i, ++start)
 		for (int i = numTrianglesUsed; i != 0; --i)
@@ -1748,7 +1752,7 @@ static void generateTextureArray(const char * name, const int baseSize, const in
 	}
 	else
 	{
-		GLuint texture = createTextureFromRGBA8(image->imageData, image->sx, image->sy, true, false);
+		GxTextureId texture = createTextureFromRGBA8(image->imageData, image->sx, image->sy, true, false);
 
 		delete image;
 		image = nullptr;
@@ -1832,8 +1836,7 @@ static void generateTextureArray(const char * name, const int baseSize, const in
 				Assert(values == nullptr);
 			}
 
-			glDeleteTextures(1, &texture);
-			texture = 0;
+			freeTexture(texture);
 		}
 	}
 }
@@ -1895,7 +1898,7 @@ int main(int argc, char * argv[])
 	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;
 
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		framework.fillCachesWithPath(".", true);
 		
@@ -2048,10 +2051,10 @@ int main(int argc, char * argv[])
 
 				matP = matP * matV;
 
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPushMatrix();
 				gxLoadMatrixf(matP.m_v);
-				gxMatrixMode(GL_MODELVIEW);
+				gxMatrixMode(GX_MODELVIEW);
 				gxPushMatrix();
 				gxLoadIdentity();
 				{
@@ -2099,7 +2102,7 @@ int main(int argc, char * argv[])
 							gxTranslatef(-cubeSize/2, -cubeSize/2, -cubeSize/2);
 
 							glPointSize(10.f);
-							gxBegin(GL_POINTS);
+							gxBegin(GX_POINTS);
 							{
 								gxColor4f(1.f, 1.f, .5f, 1.f);
 								gxVertex3f(params.viewX, params.viewY, params.viewZ);
@@ -2116,9 +2119,9 @@ int main(int argc, char * argv[])
 
 					setBlend(BLEND_ALPHA);
 				}
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPopMatrix();
-				gxMatrixMode(GL_MODELVIEW);
+				gxMatrixMode(GX_MODELVIEW);
 				gxPopMatrix();
 
 			#if 0
@@ -2219,7 +2222,7 @@ int main(int argc, char * argv[])
 					PageData pageData;
 					if (pageLoad(CUBE_PAGE_NAME, baseSize, pageSize, cubeSide, levelSize, pageX, pageY, pageData))
 					{
-						GLuint texture = createTextureFromRGBA8(pageData.bytes, pageSize, pageSize, false, true);
+						GxTextureId texture = createTextureFromRGBA8(pageData.bytes, pageSize, pageSize, false, true);
 						gxSetTexture(texture);
 						{
 							setColor(colorWhite);
@@ -2228,7 +2231,7 @@ int main(int argc, char * argv[])
 							setBlend(BLEND_ALPHA);
 						}
 						gxSetTexture(0);
-						glDeleteTextures(1, &texture);
+						freeTexture(texture);
 					}
 
 					pageX++;

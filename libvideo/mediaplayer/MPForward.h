@@ -50,4 +50,11 @@ namespace MP
 		kOutputMode_RGBA,
 		kOutputMode_PlanarYUV
 	};
+	
+	enum AudioOutputMode
+	{
+		kAudioOutputMode_Mono,
+		kAudioOutputMode_Stereo,
+		kAudioOutputMode_MultiChannel,
+	};
 }

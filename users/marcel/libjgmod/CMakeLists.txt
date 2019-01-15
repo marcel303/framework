@@ -2,9 +2,6 @@ cmake_minimum_required(VERSION 2.6)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(HAS_LIBGG 0)
-set(HAS_FRAMEWORK 0)
-
 set(HAS_LIBJGMOD 1 PARENT_SCOPE)
 message("setting HAS_LIBJGMOD")
 
@@ -25,8 +22,8 @@ project(libjgmod)
 
 # --- libjgmod ---
 
-file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.c" "*.cpp" "*.h")
-list(REMOVE_ITEM source jgm.c jgmod.c)
+file(GLOB source RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "*.cpp" "*.h")
+list(REMOVE_ITEM source jgm.cpp main.cpp)
 
 source_group("sources" FILES ${source})
 
@@ -41,7 +38,7 @@ target_link_libraries(libjgmod PUBLIC libgg)
 #
 #
 
-add_executable(jgm jgm.c)
+add_executable(jgm jgm.cpp)
 
 target_link_libraries(jgm PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(jgm PRIVATE libjgmod)
@@ -51,7 +48,7 @@ target_link_libraries(jgm PRIVATE framework)
 #
 #
 
-add_executable(jgmod jgmod.cpp)
+add_executable(jgmod main.cpp)
 
 target_link_libraries(jgmod PRIVATE ${FRAMEWORK_LIBRARIES})
 target_link_libraries(jgmod PRIVATE libjgmod)

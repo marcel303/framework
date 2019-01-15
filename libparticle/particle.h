@@ -1,8 +1,5 @@
 #pragma once
 
-#pragma pack(push)
-#pragma pack(1)
-
 namespace tinyxml2
 {
 	class XMLElement;
@@ -387,5 +384,3 @@ float computeParticleSize(const ParticleEmitterInfo & pei, const ParticleInfo & 
 float computeParticleRotation(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float particleLife, const float particleSpeed, const float particleRotation);
 
 bool tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeStep, const float gravityX, const float gravityY, ParticleEmitter & pe);
-
-#pragma pack(pop)

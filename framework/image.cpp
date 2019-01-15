@@ -32,6 +32,7 @@
 	#include <Windows.h>
 #endif
 #include <FreeImage.h>
+#include <string.h>
 
 //
 

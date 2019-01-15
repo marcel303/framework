@@ -1,12 +1,12 @@
-<graph nextNodeId="109" nextLinkId="127" nextZKey="1091">
-    <node id="86" typeName="audio.in" passthrough="1" editorX="336" editorY="112"/>
-    <node id="87" typeName="filter.comb" passthrough="1" editorX="464" editorY="112">
+<graph nextNodeId="109" nextLinkId="127">
+    <node id="86" typeName="audio.in" passthrough="1"/>
+    <node id="87" typeName="filter.comb" passthrough="1">
         <input socket="delay" value="4.000000"/>
         <input socket="feedback" value="0.950000"/>
         <input socket="maxDelay" value="10.000000"/>
     </node>
-    <node id="88" typeName="voice" passthrough="1" editorX="592" editorY="112"/>
-    <node id="91" typeName="return.4d" editorX="464" editorY="272">
+    <node id="88" typeName="voice" passthrough="1"/>
+    <node id="91" typeName="return.4d">
         <input socket="back" value="1"/>
         <input socket="back.distance" value="50.000000"/>
         <input socket="back.scatter" value="0.100000"/>
@@ -27,81 +27,99 @@
         <input socket="top.distance" value="50.000000"/>
         <input socket="top.scatter" value="0.100000"/>
     </node>
-    <node id="92" typeName="audio.in" editorX="31.912109375" editorY="256" folded="1">
+    <node id="92" typeName="audio.in">
         <input socket="channel" value="58"/>
     </node>
-    <node id="96" typeName="audio.sine" editorX="192" editorY="496" folded="1">
+    <node id="96" typeName="audio.sine">
         <input socket="a" value="6.000000"/>
         <input socket="b" value="30.000000"/>
         <input socket="frequency" value="0.005430"/>
     </node>
-    <node id="97" typeName="audio.sine" editorX="192" editorY="624" folded="1">
+    <node id="97" typeName="audio.sine">
         <input socket="a" value="200.000000"/>
         <input socket="b" value="1000.000000"/>
         <input socket="frequency" value="0.010000"/>
     </node>
-    <node id="98" typeName="in.value" editorName="return.gain" editorX="-97.22802734375" editorY="256" folded="1">
+    <node id="98" typeName="in.value">
         <input socket="name" value="return.gain"/>
         <input socket="smoothness" value="0.700000"/>
     </node>
-    <node id="99" typeName="audio.sine" editorX="192" editorY="400" folded="1">
+    <node id="99" typeName="audio.sine">
         <input socket="a" value="3.000000"/>
         <input socket="b" value="20.000000"/>
         <input socket="frequency" value="0.034000"/>
     </node>
-    <node id="100" typeName="audio.sine" editorX="192" editorY="448" folded="1">
+    <node id="100" typeName="audio.sine">
         <input socket="a" value="3.000000"/>
         <input socket="b" value="20.000000"/>
         <input socket="frequency" value="0.043000"/>
     </node>
-    <node id="101" typeName="filter.comb" editorX="312.58392333984375" editorY="274.73251342773438" folded="1">
+    <node id="101" typeName="filter.comb">
         <input socket="delay" value="0.020000"/>
         <input socket="feedback" value="0.800000"/>
         <input socket="feedforward" value="0.600000"/>
         <input socket="maxDelay" value="4.000000"/>
     </node>
-    <node id="103" typeName="binauralizer" passthrough="1" editorX="160" editorY="240">
+    <node id="103" typeName="binauralizer" passthrough="1">
         <input socket="sampleSet" value="cipic.12"/>
     </node>
-    <node id="104" typeName="audio.sine" editorX="32" editorY="320" folded="1">
+    <node id="104" typeName="audio.sine">
         <input socket="a" value="-45.000000"/>
         <input socket="b" value="45.000000"/>
         <input socket="frequency" value="0.043200"/>
     </node>
-    <node id="105" typeName="audio.sine" editorX="160" editorY="176" folded="1">
+    <node id="105" typeName="audio.sine">
         <input socket="a" value="0.030000"/>
         <input socket="b" value="0.060000"/>
         <input socket="frequency" value="0.013200"/>
     </node>
-    <node id="108" typeName="audio.sine" editorX="190" editorY="585" folded="1">
+    <node id="108" typeName="audio.sine">
         <input socket="a" value="200.000000"/>
         <input socket="b" value="1000.000000"/>
         <input socket="frequency" value="0.023400"/>
     </node>
-    <link id="96" enabled="1" srcNodeId="87" srcNodeSocketName="value" dstNodeId="86" dstNodeSocketName="audio"/>
-    <link id="97" enabled="1" srcNodeId="88" srcNodeSocketName="audio" dstNodeId="87" dstNodeSocketName="value"/>
-    <link id="98" enabled="1" srcNodeId="91" srcNodeSocketName="audio" dstNodeId="86" dstNodeSocketName="audio"/>
-    <link id="100" enabled="1" srcNodeId="91" srcNodeSocketName="back.distance" dstNodeId="96" dstNodeSocketName="audio"/>
-    <link id="101" enabled="1" srcNodeId="91" srcNodeSocketName="bottom.distance" dstNodeId="96" dstNodeSocketName="audio"/>
-    <link id="102" enabled="1" srcNodeId="91" srcNodeSocketName="top.distance" dstNodeId="96" dstNodeSocketName="audio"/>
-    <link id="105" enabled="1" srcNodeId="91" srcNodeSocketName="front.distance" dstNodeId="96" dstNodeSocketName="audio"/>
-    <link id="106" enabled="1" srcNodeId="91" srcNodeSocketName="back.scatter" dstNodeId="97" dstNodeSocketName="audio"/>
-    <link id="108" enabled="1" srcNodeId="91" srcNodeSocketName="bottom.scatter" dstNodeId="97" dstNodeSocketName="audio"/>
-    <link id="110" enabled="1" srcNodeId="91" srcNodeSocketName="right.scatter" dstNodeId="97" dstNodeSocketName="audio"/>
-    <link id="112" enabled="1" srcNodeId="92" srcNodeSocketName="gain" dstNodeId="98" dstNodeSocketName="valueX"/>
-    <link id="113" enabled="1" srcNodeId="91" srcNodeSocketName="left.distance" dstNodeId="99" dstNodeSocketName="audio"/>
-    <link id="114" enabled="1" srcNodeId="91" srcNodeSocketName="right.distance" dstNodeId="100" dstNodeSocketName="audio"/>
-    <link id="116" enabled="1" srcNodeId="91" srcNodeSocketName="audio" dstNodeId="101" dstNodeSocketName="value"/>
-    <link id="117" enabled="1" srcNodeId="103" srcNodeSocketName="audio" dstNodeId="92" dstNodeSocketName="audio"/>
-    <link id="118" enabled="1" srcNodeId="101" srcNodeSocketName="value" dstNodeId="103" dstNodeSocketName="leftEar"/>
-    <link id="119" enabled="1" srcNodeId="103" srcNodeSocketName="azimuth" dstNodeId="104" dstNodeSocketName="audio"/>
-    <link id="121" enabled="1" srcNodeId="101" srcNodeSocketName="delay" dstNodeId="105" dstNodeSocketName="audio"/>
-    <link id="124" enabled="1" srcNodeId="91" srcNodeSocketName="left.scatter" dstNodeId="108" dstNodeSocketName="audio"/>
-    <link id="125" enabled="1" srcNodeId="91" srcNodeSocketName="top.scatter" dstNodeId="108" dstNodeSocketName="audio"/>
-    <link id="126" enabled="1" srcNodeId="91" srcNodeSocketName="front.scatter" dstNodeId="108" dstNodeSocketName="audio"/>
-    <editor>
+    <link id="96" srcNodeId="87" srcNodeSocketName="value" dstNodeId="86" dstNodeSocketName="audio"/>
+    <link id="97" srcNodeId="88" srcNodeSocketName="audio" dstNodeId="87" dstNodeSocketName="value"/>
+    <link id="98" srcNodeId="91" srcNodeSocketName="audio" dstNodeId="86" dstNodeSocketName="audio"/>
+    <link id="100" srcNodeId="91" srcNodeSocketName="back.distance" dstNodeId="96" dstNodeSocketName="audio"/>
+    <link id="101" srcNodeId="91" srcNodeSocketName="bottom.distance" dstNodeId="96" dstNodeSocketName="audio"/>
+    <link id="102" srcNodeId="91" srcNodeSocketName="top.distance" dstNodeId="96" dstNodeSocketName="audio"/>
+    <link id="105" srcNodeId="91" srcNodeSocketName="front.distance" dstNodeId="96" dstNodeSocketName="audio"/>
+    <link id="106" srcNodeId="91" srcNodeSocketName="back.scatter" dstNodeId="97" dstNodeSocketName="audio"/>
+    <link id="108" srcNodeId="91" srcNodeSocketName="bottom.scatter" dstNodeId="97" dstNodeSocketName="audio"/>
+    <link id="110" srcNodeId="91" srcNodeSocketName="right.scatter" dstNodeId="97" dstNodeSocketName="audio"/>
+    <link id="112" srcNodeId="92" srcNodeSocketName="gain" dstNodeId="98" dstNodeSocketName="valueX"/>
+    <link id="113" srcNodeId="91" srcNodeSocketName="left.distance" dstNodeId="99" dstNodeSocketName="audio"/>
+    <link id="114" srcNodeId="91" srcNodeSocketName="right.distance" dstNodeId="100" dstNodeSocketName="audio"/>
+    <link id="116" srcNodeId="91" srcNodeSocketName="audio" dstNodeId="101" dstNodeSocketName="value"/>
+    <link id="117" srcNodeId="103" srcNodeSocketName="audio" dstNodeId="92" dstNodeSocketName="audio"/>
+    <link id="118" srcNodeId="101" srcNodeSocketName="value" dstNodeId="103" dstNodeSocketName="leftEar"/>
+    <link id="119" srcNodeId="103" srcNodeSocketName="azimuth" dstNodeId="104" dstNodeSocketName="audio"/>
+    <link id="121" srcNodeId="101" srcNodeSocketName="delay" dstNodeId="105" dstNodeSocketName="audio"/>
+    <link id="124" srcNodeId="91" srcNodeSocketName="left.scatter" dstNodeId="108" dstNodeSocketName="audio"/>
+    <link id="125" srcNodeId="91" srcNodeSocketName="top.scatter" dstNodeId="108" dstNodeSocketName="audio"/>
+    <link id="126" srcNodeId="91" srcNodeSocketName="front.scatter" dstNodeId="108" dstNodeSocketName="audio"/>
+    <editor nextZKey="1">
         <dragAndZoom x="554.07763671875" y="455.18121337890625" zoom="1"/>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="0467ca5f" gridColor="b600ff96">
+        <nodeDatas>
+            <nodeData nodeId="86" x="336" y="112" zKey="0"/>
+            <nodeData nodeId="87" x="464" y="112" zKey="0"/>
+            <nodeData nodeId="88" x="592" y="112" zKey="0"/>
+            <nodeData nodeId="91" x="464" y="272" zKey="0"/>
+            <nodeData nodeId="92" x="31.912109375" y="256" zKey="0" folded="1"/>
+            <nodeData nodeId="96" x="192" y="496" zKey="0" folded="1"/>
+            <nodeData nodeId="97" x="192" y="624" zKey="0" folded="1"/>
+            <nodeData nodeId="98" x="-97.22802734375" y="256" zKey="0" folded="1"/>
+            <nodeData nodeId="99" x="192" y="400" zKey="0" folded="1"/>
+            <nodeData nodeId="100" x="192" y="448" zKey="0" folded="1"/>
+            <nodeData nodeId="101" x="312.58392333984375" y="274.73251342773438" zKey="0" folded="1"/>
+            <nodeData nodeId="103" x="160" y="240" zKey="0"/>
+            <nodeData nodeId="104" x="32" y="320" zKey="0" folded="1"/>
+            <nodeData nodeId="105" x="160" y="176" zKey="0" folded="1"/>
+            <nodeData nodeId="108" x="190" y="585" zKey="0" folded="1"/>
+        </nodeDatas>
+        <visualizers/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="0467ca5f" gridColor="b600ff96">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
                 <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>

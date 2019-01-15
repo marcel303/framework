@@ -1,6 +1,8 @@
 #pragma once
 
-#define GG_ENABLE_TIMERS 1
+#if !defined(GG_ENABLE_TIMERS)
+	#define GG_ENABLE_TIMERS 1
+#endif
 
 #if GG_ENABLE_TIMERS
 
@@ -161,8 +163,7 @@ private:
 
 		Item * m_next;
 	};
-
-	const char * m_path;
+	
 	StatTimerView * m_next;
 
 	Item * m_itemHead;
@@ -195,6 +196,7 @@ public:
 #define TIMER_START(name) name.Start()
 #define TIMER_STOP(name) name.Stop()
 #define TIMER_ADD_MICROSECONDS(name, count) name.AddTimeUS(count)
+#define TIMER_ADD_SECONDS(name, count) name.AddTimeUS(count * 1000000)
 #define TIMER_SCOPE(name) StatTimerScope name ## _scope(&name)
 
 // timer views

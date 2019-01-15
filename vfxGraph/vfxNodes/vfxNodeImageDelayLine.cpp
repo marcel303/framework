@@ -82,7 +82,7 @@ static GLuint allocateTexture(const int sx, const int sy, GLenum internalFormat,
 	return newTexture;
 }
 
-static GLuint copyTexture(const GLuint texture)
+static GxTextureId copyTexture(const GxTextureId texture)
 {
 	// update texture
 	
@@ -160,7 +160,7 @@ static GLuint copyTexture(const GLuint texture)
 
 struct ImageDelayLine
 {
-	std::deque<GLuint> history;
+	std::deque<GxTextureId> history;
 	int historySize;
 	int maxHistorySize;
 
@@ -201,10 +201,9 @@ struct ImageDelayLine
 
 		while (historySize > maxHistorySize)
 		{
-			GLuint texture = history.back();
+			GxTextureId texture = history.back();
 			
-			glDeleteTextures(1, &texture);
-			texture = 0;
+			freeTexture(texture);
 
 			history.pop_back();
 			historySize--;
@@ -215,10 +214,9 @@ struct ImageDelayLine
 	{
 		if (historySize == maxHistorySize)
 		{
-			GLuint texture = history.back();
+			GxTextureId texture = history.back();
 			
-			glDeleteTextures(1, &texture);
-			texture = 0;
+			freeTexture(texture);
 			checkErrorGL();
 
 			history.pop_back();
@@ -228,7 +226,7 @@ struct ImageDelayLine
 			historySize++;
 		}
 		
-		const GLuint copy = copyTexture(texture);
+		const GxTextureId copy = copyTexture(texture);
 		
 		history.push_front(copy);
 	}

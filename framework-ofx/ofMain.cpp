@@ -25,8 +25,9 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "framework.h"
 #include "ofMain.h"
+
+#include "framework.h"
 #include "Parse.h"
 #include "StringEx.h"
 #include <algorithm>
@@ -141,8 +142,36 @@ void ofVbo::setVertexData(const ofVec2f * _vertices, const int numVertices, cons
 		vertices[i] = _vertices[i];
 }
 
-void ofVbo::draw(const int primitiveType, const int vertexOffset, const int numVertices)
+static GX_PRIMITIVE_TYPE toGxPrimitiveType(const GLenum primitiveType)
 {
+	switch (primitiveType)
+	{
+	case GL_POINTS:
+		return GX_POINTS;
+	case GL_LINES:
+		return GX_LINES;
+	case GL_LINE_LOOP:
+		return GX_LINE_LOOP;
+	case GL_LINE_STRIP:
+		return GX_LINE_STRIP;
+	case GL_TRIANGLES:
+		return GX_TRIANGLES;
+	case GL_TRIANGLE_FAN:
+		return GX_TRIANGLE_FAN;
+	case GL_TRIANGLE_STRIP:
+		return GX_TRIANGLE_STRIP;
+	case GL_QUADS:
+		return GX_QUADS;
+	default:
+		Assert(false);
+		return GX_INVALID_PRIM;
+	}
+}
+
+void ofVbo::draw(const int _primitiveType, const int vertexOffset, const int numVertices)
+{
+	const GX_PRIMITIVE_TYPE primitiveType = toGxPrimitiveType(_primitiveType);
+	
 	gxBegin(primitiveType);
 	{
 		const int numVerticesToDraw = std::min(int(vertices.size()) - vertexOffset, numVertices);

@@ -37,7 +37,7 @@ AUDIO_ENUM_TYPE(pcmSelectMode)
 	elem("random");
 }
 
-AUDIO_NODE_TYPE(audioSourcePcmSelect, AudioNodeSourcePcmSelect)
+AUDIO_NODE_TYPE(AudioNodeSourcePcmSelect)
 {
 	typeName = "audio.pcmSelect";
 	
@@ -154,47 +154,52 @@ void AudioNodeSourcePcmSelect::tick(const float dt)
 	{
 		audioOutput.setScalar(0.f);
 	}
-	else if (fileIndex == -1)
+	else if (fileIndex == -1 || files[fileIndex]->numSamples == 0)
 	{
 		audioOutput.setScalar(0.f);
 	}
 	else
 	{
 		const PcmData * pcmData = files[fileIndex];
-
+		
 		audioOutput.setVector();
-
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+		
+		int left = AUDIO_UPDATE_SIZE;
+		int done = 0;
+		
+		while (left != 0)
 		{
-			if (samplePosition >= 0 && samplePosition < pcmData->numSamples)
+			const int todo = std::min(left, pcmData->numSamples - samplePosition);
+		
+			memcpy(audioOutput.samples + done, pcmData->samples + samplePosition, todo * sizeof(float));
+			
+			samplePosition += todo;
+			
+			if (samplePosition == pcmData->numSamples)
 			{
-				audioOutput.samples[i] = pcmData->samples[samplePosition];
-			}
-			else
-			{
-				audioOutput.samples[i] = 0.f;
-			}
-
-			if (samplePosition < pcmData->numSamples)
-			{
-				samplePosition++;
-
-				if (samplePosition == pcmData->numSamples)
+				if (maxLoopCount < 0 || loopCount < maxLoopCount)
 				{
-					if (maxLoopCount < 0 || loopCount < maxLoopCount)
-					{
-						loopCount++;
-						
-						nextFile(mode);
-						
-						trigger(kOutput_Loop);
-					}
-					else
-					{
-						trigger(kOutput_Done);
-					}
+					loopCount++;
+					
+					nextFile(mode);
+					
+					trigger(kOutput_Loop);
+				}
+				else
+				{
+					trigger(kOutput_Done);
+					
+					break;
 				}
 			}
+			
+			left -= todo;
+			done += todo;
+		}
+		
+		if (left != 0)
+		{
+			memset(audioOutput.samples + done, 0, left * sizeof(float));
 		}
 		
 		audioOutput.mul(*gain);

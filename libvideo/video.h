@@ -41,6 +41,8 @@ struct MediaPlayer : public AudioStream
 			, outputMode(MP::kOutputMode_RGBA)
 			, enableAudioStream(true)
 			, enableVideoStream(true)
+			, desiredAudioStreamIndex(-1)
+			, audioOutputMode(MP::kAudioOutputMode_Stereo)
 		{
 		}
 		
@@ -48,6 +50,8 @@ struct MediaPlayer : public AudioStream
 		MP::OutputMode outputMode;
 		bool enableAudioStream;
 		bool enableVideoStream;
+		int desiredAudioStreamIndex;
+		MP::AudioOutputMode audioOutputMode;
 	};
 	
 	struct Context
@@ -55,7 +59,7 @@ struct MediaPlayer : public AudioStream
 		Context()
 			: mpTickEvent(nullptr)
 			, mpTickMutex(nullptr)
-			, mpThreadId(-1)
+			, mpSeekMutex(nullptr)
 		#ifndef __WIN32__ // todo : do it like this on Win32 too
 			, hasBegun(false)
 			, stopMpThread(false)
@@ -82,6 +86,12 @@ struct MediaPlayer : public AudioStream
 				SDL_DestroyMutex(mpTickMutex);
 				mpTickMutex = nullptr;
 			}
+			
+			if (mpSeekMutex)
+			{
+				SDL_DestroyMutex(mpSeekMutex);
+				mpSeekMutex = nullptr;
+			}
 		}
 
 		void tick();
@@ -93,7 +103,7 @@ struct MediaPlayer : public AudioStream
 		MP::Context mpContext;
 		SDL_cond * mpTickEvent;
 		SDL_mutex * mpTickMutex;
-		SDL_threadID mpThreadId;
+		SDL_mutex * mpSeekMutex;
 
 		// hacky messaging between threads
 		std::atomic_bool hasBegun;
@@ -104,15 +114,14 @@ struct MediaPlayer : public AudioStream
 	Context * context;
 	
 	MP::VideoFrame * videoFrame;
-	uint32_t texture;
-	int textureSx;
-	int textureSy;
-	int textureFormat;
+	GxTexture * texture;
 	
 	double presentTime;
 
 	int audioChannelCount;
 	int audioSampleRate;
+	
+	std::atomic<double> audioTime;
 
 	// threading related
 	SDL_Thread * mpThread;
@@ -120,15 +129,13 @@ struct MediaPlayer : public AudioStream
 	MediaPlayer()
 		: context(nullptr)
 		, videoFrame(nullptr)
-		, texture(0)
-		, textureSx(0)
-		, textureSy(0)
-		, textureFormat(-1)
+		, texture(nullptr)
 		, presentTime(-0.0001)
 		, audioChannelCount(-1)
 		, audioSampleRate(-1)
+		, audioTime(0.0)
 		// threading related
-		, mpThread(0)
+		, mpThread(nullptr)
 	{
 	}
 
@@ -144,13 +151,14 @@ struct MediaPlayer : public AudioStream
 
 	bool isActive(Context * context) const;
 	bool presentedLastFrame(Context * context) const;
-	void seek(const double time);
+	void seekToStart();
+	void seek(const double time, const bool nearest);
 	
 	bool updateVideoFrame();
 	void updateTexture();
 	void freeTexture();
 	uint32_t getTexture() const;
-	bool getVideoProperties(int & sx, int & sy, double & duration) const;
+	bool getVideoProperties(int & sx, int & sy, double & duration, double & sampleAspectRatio) const;
 
 	void updateAudio();
 	bool getAudioProperties(int & channelCount, int & sampleRate) const;

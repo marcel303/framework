@@ -1,0 +1,78 @@
+include fsfx/common.inc
+
+#if 0
+uniform float param2;
+vec2 displace(vec2 coord)
+{
+	float d = length(coord);
+	float a = atan(coord.y, coord.x);
+
+#if 1
+	//a += sin(d * 10.0 * param2);
+	a += sin(a * param2) * 0.5;
+	//a *= param2;
+	//d += (sin(a * 2.0) + 1.0) / 2.0;
+	//d *= (3.0 + cos(a * 4.0)) / 4.0;
+	
+	float u = cos(a) * d;
+	float v = sin(a) * d;
+#else
+	float u = cos(a) / d;
+	float v = sin(a) / d;
+#endif
+
+	return vec2(u, v);
+}
+
+void main()
+{
+	vec2 colormapSize = textureSize(colormap, 0);
+	vec2 colormapSizeRcp = 1.f / colormapSize;
+	
+	vec2 sampleCoord = texcoord;
+	
+	vec2 coord = texcoord;
+	coord *= colormapSize;
+	coord -= colormapSize / 2.0;
+	coord /= colormapSize.y;
+	coord *= 2.0;
+	
+	coord = displace(coord);
+	
+	coord /= 2.0;
+	coord *= colormapSize.y;
+	coord += colormapSize / 2.0;
+	coord /= colormapSize;
+	
+	vec4 color = texture(colormap, coord);
+	
+	color = mix(texture(colormap, texcoord), color, opacity);
+	shader_fragColor = color;
+}
+#else
+vec4 fsfx()
+{
+	vec2 colormapSize = textureSize(colormap, 0);
+	vec2 colormapSizeRcp = 1.f / colormapSize;
+	
+	vec2 sampleCoord = texcoord;
+	
+	vec2 coord = texcoord * colormapSize;
+	float mid = colormapSize.x * 0.5;
+	float delta = coord.x - mid;
+	float distance = abs(delta);
+	
+	float maxDistance = max(0.0, param1);
+	
+	if (distance >= maxDistance)
+	{
+		vec2 pos = vec2(mid + sign(delta) * maxDistance, coord.y);
+		
+		sampleCoord = pos * colormapSizeRcp;
+	}
+	
+	vec4 color = texture(colormap, sampleCoord);
+	
+	return color;
+}
+#endif

@@ -28,6 +28,7 @@
 #pragma once
 
 #include "Mat4x4.h"
+#include <functional>
 #include <list>
 #include <map>
 #include <set>
@@ -44,6 +45,8 @@ namespace tinyxml2
 	class XMLPrinter;
 }
 
+class Window;
+
 struct UiState;
 struct ParticleColor;
 
@@ -57,6 +60,7 @@ namespace GraphUi
 
 //
 
+struct GraphEdit_NodeResourceEditorWindow;
 struct GraphEdit_NodeTypeSelect;
 struct GraphEdit_ResourceEditorBase;
 struct GraphEdit_TypeDefinitionLibrary;
@@ -308,10 +312,12 @@ struct GraphEdit_TypeDefinition
 	
 	struct ResourceEditor
 	{
-		GraphEdit_ResourceEditorBase * (*create)();
+		GraphEdit_ResourceEditorBase * (*create)(void * data);
+		void * createData;
 		
 		ResourceEditor()
 			: create(nullptr)
+			, createData(nullptr)
 		{
 		}
 	};
@@ -679,8 +685,8 @@ struct GraphEdit_ResourceEditorBase
 		afterPositionChanged();
 	}
 	
-	virtual void afterSizeChanged() = 0;
-	virtual void afterPositionChanged() = 0;
+	virtual void afterSizeChanged() { }
+	virtual void afterPositionChanged() { }
 	
 	virtual bool tick(const float dt, const bool inputIsCaptured) = 0;
 	virtual void draw() const = 0;
@@ -705,6 +711,9 @@ struct GraphEdit_RealTimeConnection
 	{
 		std::string name;
 		std::string typeName;
+		std::string defaultValue;
+		
+		std::vector<GraphEdit_EnumDefinition::Elem> enumElems;
 	};
 	
 	struct DynamicOutput
@@ -845,7 +854,7 @@ struct GraphEdit_RealTimeConnection
 
 //
 
-#include "../libparticle/particle.h" // todo : remove ParticleColor dependency
+#include "particle.h" // todo : remove ParticleColor dependency
 
 struct SDL_Cursor;
 
@@ -877,15 +886,17 @@ struct GraphEdit : GraphEditConnection
 		kFlag_NodeAdd = 1 << 2,
 		kFlag_NodeRemove = 1 << 3,
 		kFlag_NodeProperties = 1 << 4,
-		kFlag_NodeDrag = 1 << 5,
-		kFlag_LinkAdd = 1 << 6,
-		kFlag_LinkRemove = 1 << 7,
-		kFlag_Drag = 1 << 8,
-		kFlag_Zoom = 1 << 9,
-		kFlag_ToggleIsPassthrough = 1 << 10,
-		kFlag_ToggleIsFolded = 1 << 11,
-		kFlag_SetCursor = 1 << 12,
-		kFlag_Select = 1 << 13,
+		kFlag_NodeResourceEdit = 1 << 5,
+		kFlag_NodeDrag = 1 << 6,
+		kFlag_LinkAdd = 1 << 7,
+		kFlag_LinkRemove = 1 << 8,
+		kFlag_LinkEdit = 1 << 9,
+		kFlag_Drag = 1 << 10,
+		kFlag_Zoom = 1 << 11,
+		kFlag_ToggleIsPassthrough = 1 << 12,
+		kFlag_ToggleIsFolded = 1 << 13,
+		kFlag_SetCursor = 1 << 14,
+		kFlag_Select = 1 << 15,
 		kFlag_All = ~0
 	};
 	
@@ -897,6 +908,8 @@ struct GraphEdit : GraphEditConnection
 			
 			std::vector<GraphEdit_TypeDefinition::InputSocket> inputSockets;
 			std::vector<GraphEdit_TypeDefinition::OutputSocket> outputSockets;
+			
+			std::vector<GraphEdit_EnumDefinition> enumDefinitions;
 			
 			DynamicSockets()
 				: hasDynamicSockets(false)
@@ -913,64 +926,15 @@ struct GraphEdit : GraphEditConnection
 					
 					inputSockets.clear();
 					outputSockets.clear();
+					
+					enumDefinitions.clear();
 				}
 			}
 			
 			void update(
 				const GraphEdit_TypeDefinition & typeDefinition,
 				const std::vector<GraphEdit_RealTimeConnection::DynamicInput> & newInputs,
-				const std::vector<GraphEdit_RealTimeConnection::DynamicOutput> & newOutputs)
-			{
-				hasDynamicSockets = true;
-				
-				inputSockets.resize(typeDefinition.inputSockets.size() + newInputs.size());
-				
-				int inputSocketIndex = 0;
-				
-				for (auto & inputSocket : typeDefinition.inputSockets)
-				{
-					inputSockets[inputSocketIndex] = inputSocket;
-					
-					inputSocketIndex++;
-				}
-				
-				for (auto & newInput : newInputs)
-				{
-					auto & input = inputSockets[inputSocketIndex];
-					
-					input.name = newInput.name;
-					input.typeName = newInput.typeName;
-					input.isDynamic = true;
-					input.index = inputSocketIndex;
-					
-					inputSocketIndex++;
-				}
-				
-				//
-				
-				outputSockets.resize(typeDefinition.outputSockets.size() + newOutputs.size());
-				
-				int outputSocketIndex = 0;
-				
-				for (auto & outputSocket : typeDefinition.outputSockets)
-				{
-					outputSockets[outputSocketIndex] = outputSocket;
-					
-					outputSocketIndex++;
-				}
-				
-				for (auto & newOutput : newOutputs)
-				{
-					auto & output = outputSockets[outputSocketIndex];
-					
-					output.name = newOutput.name;
-					output.typeName = newOutput.typeName;
-					output.isDynamic = true;
-					output.index = outputSocketIndex;
-					
-					outputSocketIndex++;
-				}
-			}
+				const std::vector<GraphEdit_RealTimeConnection::DynamicOutput> & newOutputs);
 		};
 	
 		float x;
@@ -1007,8 +971,6 @@ struct GraphEdit : GraphEditConnection
 		}
 		
 		void setIsFolded(const bool isFolded);
-		
-		void setVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex);
 	};
 	
 	struct EditorVisualizer : GraphEdit_Visualizer
@@ -1428,6 +1390,8 @@ struct GraphEdit : GraphEditConnection
 	
 	float nodeDoubleClickTime;
 	
+	std::function<void(const GraphNodeId)> handleNodeDoubleClicked;
+	
 	Touches touches;
 	
 	GraphEditMouse mousePosition;
@@ -1449,6 +1413,8 @@ struct GraphEdit : GraphEditConnection
 	GraphEdit_NodeTypeSelect * nodeInsertMenu;
 	
 	NodeResourceEditor nodeResourceEditor;
+	
+	std::list<GraphEdit_NodeResourceEditorWindow*> nodeResourceEditorWindows;
 	
 	std::list<Notification> notifications;
 	
@@ -1490,6 +1456,7 @@ struct GraphEdit : GraphEditConnection
 	bool tickTouches();
 	void tickMouseScroll(const float dt);
 	void tickKeyboardScroll();
+	void tickNodeResourceEditorWindows();
 	
 	void nodeSelectEnd();
 	void nodeDragEnd();
@@ -1508,6 +1475,7 @@ struct GraphEdit : GraphEditConnection
 	bool tryAddNode(const std::string & typeName, const float x, const float y, const bool select, GraphNodeId * nodeId);
 	bool tryAddVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex, const float x, const float y, const bool select, EditorVisualizer ** visualizer);
 	
+	void updateDynamicSockets();
 	void resolveSocketIndices(
 		const GraphNodeId srcNodeId, const std::string & srcNodeSocketName, int & srcNodeSocketIndex,
 		const GraphNodeId dstNodeId, const std::string & dstNodeSocketName, int & dstNodeSocketIndex);

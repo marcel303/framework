@@ -28,8 +28,8 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "framework.h"
-#include "soundmix.h"
 #include <cmath>
 
 const int GFX_SX = 1024;
@@ -39,7 +39,13 @@ const int GFX_SY = 768;
 
 int main(int argc, char * argv[])
 {
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		// initialize audio related systems
 		
@@ -80,14 +86,14 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
-			audioGraphMgr.tickEditor(framework.timeStep, false);
+			audioGraphMgr.tickEditor(GFX_SX, GFX_SY, framework.timeStep, false);
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				setFont("calibri.ttf");
 				pushFontMode(FONT_SDF);
 				{
-					audioGraphMgr.drawEditor();
+					audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 					
 					// show CPU usage of the audio thread
 					

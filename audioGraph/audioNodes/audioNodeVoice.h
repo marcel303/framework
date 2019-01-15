@@ -31,6 +31,7 @@
 #include "soundmix.h" // AudioSource
 
 struct AudioGraph;
+struct AudioVoice;
 
 struct AudioNodeVoice : AudioNodeBase
 {
@@ -54,6 +55,8 @@ struct AudioNodeVoice : AudioNodeBase
 		kInput_Audio,
 		kInput_Gain,
 		kInput_Speaker,
+		kInput_RampTime,
+		kInput_FadeTime,
 		kInput_ChannelIndex,
 		kInput_COUNT
 	};
@@ -69,7 +72,8 @@ struct AudioNodeVoice : AudioNodeBase
 	AudioGraph * audioGraph;
 	
 	AudioNodeVoice();
-	virtual ~AudioNodeVoice() override;
+	
+	virtual void shut() override;
 	
 	virtual void tick(const float dt) override;
 };

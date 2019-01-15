@@ -1,3 +1,18 @@
 [submodule "libjsusfx"]
 	path = libjsusfx
 	url = https://github.com/marcel303/jsusfx
+[submodule "3rdparty/PS3EYEDriver"]
+	path = 3rdparty/PS3EYEDriver
+	url = https://github.com/marcel303/PS3EYEDriver.git
+[submodule "chibi"]
+	path = chibi
+	url = https://github.com/marcel303/chibi.git
+[submodule "3rdparty/libsdl2"]
+	path = 3rdparty/libsdl2
+	url = https://github.com/spurious/SDL-mirror.git
+[submodule "3rdparty/imgui"]
+	path = 3rdparty/imgui
+	url = https://github.com/marcel303/imgui
+[submodule "3rdparty/ImGuiColorTextEdit"]
+	path = 3rdparty/ImGuiColorTextEdit
+	url = https://github.com/marcel303/ImGuiColorTextEdit

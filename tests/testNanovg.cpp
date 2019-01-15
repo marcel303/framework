@@ -27,8 +27,10 @@
 
 #include "framework.h"
 #include "testBase.h"
+#include <algorithm>
 
 #define NANOVG_GL3_IMPLEMENTATION
+#include <GL/glew.h> // NanoVG
 #include "nanovg/nanovg.h"
 #include "nanovg/nanovg_gl.h"
 

@@ -1,9 +1,9 @@
+#include "audioTypes.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"
 #include "objects/binauralizer.h"
 #include "objects/binaural_cipic.h"
 #include "objects/paobject.h"
-#include "soundmix.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -121,6 +121,7 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		const binaural::HRIRSampleData * samples[3 * MAX_BINAURALIZERS_PER_VOLUME];
 		float sampleWeights[3 * MAX_BINAURALIZERS_PER_VOLUME];
+		bool lookupResults[MAX_BINAURALIZERS_PER_VOLUME];
 		float gainCopy[MAX_BINAURALIZERS_PER_VOLUME];
 		
 		mutex->lock();
@@ -129,7 +130,7 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			
 			for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
 			{
-				binauralizer[i].sampleSet->lookup_3(
+				lookupResults[i] = binauralizer[i].sampleSet->lookup_3(
 					binauralizer[i].sampleLocation.elevation,
 					binauralizer[i].sampleLocation.azimuth,
 					samples + i * 3,
@@ -148,12 +149,15 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
 		{
-			const float gain = gainCopy[i];
-			
-			for (int j = 0; j < 3; ++j)
+			if (lookupResults[i])
 			{
-				audioBufferAdd(combinedHrir.lSamples, samplesPtr[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
-				audioBufferAdd(combinedHrir.rSamples, samplesPtr[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
+				const float gain = gainCopy[i];
+				
+				for (int j = 0; j < 3; ++j)
+				{
+					audioBufferAdd(combinedHrir.lSamples, samplesPtr[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
+					audioBufferAdd(combinedHrir.rSamples, samplesPtr[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
+				}
 			}
 			
 			samplesPtr += 3;
@@ -271,6 +275,8 @@ struct MyPortAudioHandler : PortAudioHandler
 			destinationBuffer[i * 2 + 1] = channelR[i];
 		}
 	}
+
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 static void drawSoundVolume(const SoundVolume & volume)
@@ -307,7 +313,7 @@ static void drawSoundVolume_Translucent(const SoundVolume & volume)
 
 static void drawPoint(Vec3Arg p, const Color & c1, const Color & c2, const Color & c3, const float size)
 {
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		setColor(c1);
 		gxVertex3f(p[0]-size, p[1], p[2]);
@@ -338,7 +344,13 @@ static const Vec3 s_cubeVertices[8] =
 
 int main(int argc, char * argv[])
 {
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	const int kFontSize = 16;
@@ -370,9 +382,16 @@ int main(int argc, char * argv[])
 	
 	const char * filenames[] =
 	{
-		"wobbly.ogg",
-		"hrtf/music2.ogg",
-		"hrtf/music.ogg"
+		"thegrooop/welcome/01 Welcome Intro alleeeen zang.ogg",
+		"thegrooop/welcome/02 Welcome Intro zonder zang.ogg",
+		"thegrooop/welcome/03 Welcome couplet 1 alleeen zang.ogg",
+		"thegrooop/welcome/04 Welcome couplet 1 zonder zang.ogg",
+		"thegrooop/welcome/05 Welcome couplet 2 alleen zang.ogg",
+		"thegrooop/welcome/06 Welcome couplet 2 zonder zang.ogg",
+		"thegrooop/welcome/07 Welcome refrein 1 alleen zang.ogg",
+		"thegrooop/welcome/08 Welcome refrein 1 zonder zang.ogg",
+		"thegrooop/welcome/09 Welcome brug alleeeen zang.ogg",
+		"thegrooop/welcome/10 Welcome brug zonder zang.ogg"
 	};
 	const int numFilenames = sizeof(filenames) / sizeof(filenames[0]);
 	
@@ -388,7 +407,7 @@ int main(int argc, char * argv[])
 	MyMutex binauralMutex(audioMutex);
 	
 	binaural::HRIRSampleSet sampleSet;
-	binaural::loadHRIRSampleSet_Cipic("hrtf/CIPIC/subject147", sampleSet);
+	binaural::loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
 	sampleSet.finalize();
 	
 	MyPortAudioHandler * paHandler = new MyPortAudioHandler();
@@ -523,9 +542,9 @@ int main(int argc, char * argv[])
 					const Vec3 pView = camera.getViewMatrix().Mul4(pWorld);
 					
 					const float distanceToHead = pView.CalcSize();
-					const float kDistanceToHeadTreshold = .1f; // 10cm. related to head size, but exact size is subjective
+					const float kDistanceToHeadThreshold = .1f; // 10cm. related to head size, but exact size is subjective
 					
-					const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadTreshold);
+					const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadThreshold);
 					
 					float elevation;
 					float azimuth;
@@ -573,11 +592,9 @@ int main(int argc, char * argv[])
 			
 			camera.pushViewMatrix();
 			{
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-				glEnable(GL_LINE_SMOOTH);
+				pushLineSmooth(true);
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
+				pushDepthTest(true, DEPTH_LESS);
 				{
 					gxPushMatrix();
 					{
@@ -598,13 +615,11 @@ int main(int argc, char * argv[])
 						drawPoint(samplePoints[i], colorRed, colorGreen, colorBlue, .1f);
 					}
 				}
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
 				
 				//
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
-				glDepthMask(GL_FALSE);
+				pushDepthTest(true, DEPTH_LESS, false);
 				pushBlend(BLEND_ADD);
 				{
 					for (int i = 0; i < MAX_VOLUMES; ++i)
@@ -615,8 +630,9 @@ int main(int argc, char * argv[])
 					}
 				}
 				popBlend();
-				glDepthMask(GL_TRUE);
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
+				
+				popLineSmooth();
 			}
 			camera.popViewMatrix();
 			

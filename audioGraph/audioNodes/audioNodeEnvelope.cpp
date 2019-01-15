@@ -27,7 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioNodeEnvelope.h"
 
-AUDIO_NODE_TYPE(envelope, AudioNodeEnvelope)
+AUDIO_NODE_TYPE(AudioNodeEnvelope)
 {
 	typeName = "envelope";
 	

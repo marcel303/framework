@@ -28,9 +28,21 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "Debugging.h"
-#include "soundmix.h"
 #include <SDL2/SDL.h>
+
+#if defined(MACOS) || defined(LINUX)
+	#include <unistd.h>
+#endif
+
+#if defined(WINDOWS)
+	#include <direct.h>
+#endif
+
+#ifdef WIN32
+	#define chdir _chdir
+#endif
 
 #define CHANNEL_COUNT 64
 
@@ -80,6 +92,10 @@ static void doEvent(AudioGraph * audioGraph, const std::string & event, const in
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	chdir(CHIBI_RESOURCE_PATH);
+#endif
+
 	const char * filename = nullptr;
 
 	if (argc < 2)
@@ -145,8 +161,8 @@ int main(int argc, char * argv[])
 					{
 						const int count =
 							audioGraphMgr.globals->controlValues.size() +
-							instance->audioGraph->controlValues.size() +
-							instance->audioGraph->events.size();
+							instance->audioGraph->stateDescriptor.controlValues.size() +
+							instance->audioGraph->stateDescriptor.events.size();
 						
 						if (count == 0)
 							selectedIndex = 0;
@@ -167,14 +183,14 @@ int main(int argc, char * argv[])
 							index++;
 						}
 						
-						for (auto & controlValue : instance->audioGraph->controlValues)
+						for (auto & controlValue : instance->audioGraph->stateDescriptor.controlValues)
 						{
 							doControlValue(controlValue, index, selectedIndex, 'L', c);
 							
 							index++;
 						}
 						
-						for (auto & event : instance->audioGraph->events)
+						for (auto & event : instance->audioGraph->stateDescriptor.events)
 						{
 							doEvent(instance->audioGraph, event.name, index, selectedIndex, c);
 							

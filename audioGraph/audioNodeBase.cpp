@@ -396,33 +396,56 @@ void AudioFloatArray::update()
 	}
 	
 	bool allScalar = true;
+	bool anyScalar = false;
+	
+	float scalarSum = 0.f;
 	
 	for (auto & elem : elems)
-		allScalar &= elem.audioFloat->isScalar;
-	
+	{
+		if (elem.audioFloat->isScalar)
+		{
+			scalarSum += elem.audioFloat->getScalar();
+			anyScalar = true;
+		}
+		else
+		{
+			allScalar = false;
+		}
+	}
 	
 	if (allScalar)
 	{
-		float s = 0.f;
-		
-		for (auto & elem : elems)
-		{
-			s += elem.audioFloat->getScalar();
-		}
-		
-		sum->setScalar(s);
+		sum->setScalar(scalarSum);
 	}
 	else
 	{
-		sum->setVector();
-		
-		sum->set(*elems[0].audioFloat);
-		
-		for (int i = 1; i < numElems; ++i)
+		if (anyScalar)
 		{
-			auto * a = elems[i].audioFloat;
+			sum->setScalar(scalarSum);
+			sum->expand();
+			sum->setVector();
 			
-			sum->add(*a);
+			for (int i = 0; i < numElems; ++i)
+			{
+				auto * a = elems[i].audioFloat;
+				
+				if (a->isScalar == false)
+				{
+					audioBufferAdd(sum->samples, a->samples, AUDIO_UPDATE_SIZE);
+				}
+			}
+		}
+		else
+		{
+			sum->setVector();
+			sum->set(*elems[0].audioFloat);
+		
+			for (int i = 1; i < numElems; ++i)
+			{
+				auto * a = elems[i].audioFloat;
+				
+				sum->add(*a);
+			}
 		}
 	}
 }
@@ -830,6 +853,7 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 			inputSocket.index = i;
 			inputSocket.enumName = src.enumName;
 			inputSocket.defaultValue = src.defaultValue;
+			inputSocket.hasDefaultValue = true;
 			inputSocket.displayName = src.displayName;
 			
 			typeDefinition.inputSockets.push_back(inputSocket);
@@ -850,6 +874,7 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 		}
 		
 		typeDefinition.resourceEditor.create = registration->createResourceEditor;
+		typeDefinition.resourceEditor.createData = registration->createData;
 		
 		typeDefinition.createUi();
 		

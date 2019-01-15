@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "objects/paobject.h"
 #include "video.h"
+#include <algorithm>
 
 #include "AmbisonicDecoder.h"
 
@@ -27,7 +28,7 @@ struct MyAudioHandler : PortAudioHandler
 	
 	void init(const char * filename)
 	{
-		soundData = loadSound("sound.wav");
+		soundData = loadSound(filename);
 		
 		decoder.Configure(1, true, kAmblib_CustomSpeakerSetUp, 2);
 		
@@ -127,16 +128,20 @@ struct MyAudioHandler : PortAudioHandler
 
 int main(int argc, char * argv[])
 {
-#ifdef DEBUG
-	framework.enableRealTimeEditing = true;
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
 #else
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
-	
+#endif
+
+#ifdef DEBUG
+	framework.enableRealTimeEditing = true;
+#else
 	framework.fullscreen = true;
 #endif
 	
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	pushFontMode(FONT_SDF);
 	
@@ -271,7 +276,7 @@ int main(int argc, char * argv[])
 			setColor(colorWhite);
 			gxSetTexture(mp->getTexture());
 			glPointSize(10.f);
-			gxBegin(GL_POINTS);
+			gxBegin(GX_POINTS);
 			for (float u = -1.f; u <= +1.f; u += 1.f / 200.f)
 			{
 				for (float v = -1.f; v <= +1.f; v += 1.f / 200.f)

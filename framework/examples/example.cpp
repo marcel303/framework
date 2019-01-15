@@ -71,6 +71,12 @@ static void sortSprites(Sprite ** sprites, int numSprites)
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
 #if FULLSCREEN
 	framework.fullscreen = true;
 #else
@@ -86,7 +92,7 @@ int main(int argc, char * argv[])
 		}
 	}
 
-	if (!framework.init(argc, (const char **)argv, sx, sy))
+	if (!framework.init(sx, sy))
 		return -1;
 	framework.fillCachesWithPath(".", true);
 	
@@ -99,7 +105,7 @@ int main(int argc, char * argv[])
 	float y = sy/4.f;
 	
 	Music bgm("bgm.ogg");
-	//bgm.play();
+	bgm.play();
 
 	Shader shader("shader1");
 	Shader postprocess("shader2");
@@ -113,9 +119,12 @@ int main(int argc, char * argv[])
 	for (int i = 0; i < numSprites; ++i)
 		sprites[i] = createRandomSprite();
 	
-	while (!keyboard.isDown(SDLK_ESCAPE))
+	while (!framework.quitRequested)
 	{
 		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
 		
 		if (keyboard.isDown(SDLK_a))
 		{

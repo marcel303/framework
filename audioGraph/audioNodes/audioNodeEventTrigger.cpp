@@ -28,7 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraph.h"
 #include "audioNodeEventTrigger.h"
 
-AUDIO_NODE_TYPE(trigger_event, AudioNodeEventTrigger)
+AUDIO_NODE_TYPE(AudioNodeEventTrigger)
 {
 	typeName = "trigger.event";
 	
@@ -112,12 +112,9 @@ void AudioNodeEventTrigger::tick(const float dt)
 
 	if (name != nullptr)
 	{
-		for (auto & event : g_currentAudioGraph->activeEvents)
+		if (g_currentAudioGraph->stateDescriptor.activeEvents.count(name) != 0)
 		{
-			if (event == name)
-			{
-				trigger(kOutput_Trigger);
-			}
+			trigger(kOutput_Trigger);
 		}
 	}
 }

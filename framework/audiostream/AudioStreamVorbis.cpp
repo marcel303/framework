@@ -33,10 +33,11 @@
 static void DuplicateInPlace(short * buffer, int numSamples);
 
 AudioStream_Vorbis::AudioStream_Vorbis()
-	: mSampleRate(0)
-	, mFile(0)
+	: mFile(0)
 	, mVorbisFile(0)
-	, mNumChannels(0)	
+	, mNumChannels(0)
+	, mSampleRate(0)
+	, mDuration(0)
 	, mPosition(0)
 	, mLoop(false)
 	, mHasLooped(false)
@@ -54,8 +55,6 @@ AudioStream_Vorbis::~AudioStream_Vorbis()
 
 int AudioStream_Vorbis::Provide(int numSamples, AudioSample* __restrict buffer)
 {
-	fassert(mFile != 0);
-	
 	if (mFile == 0)
 		return 0;
 	
@@ -164,8 +163,9 @@ void AudioStream_Vorbis::Open(const char* fileName, bool loop)
 	
 	vorbis_info* info = ov_info(mVorbisFile, -1);
 	
-	mSampleRate = static_cast<int>(info->rate);
 	mNumChannels = info->channels;
+	mSampleRate = static_cast<int>(info->rate);
+	mDuration = ov_pcm_total(mVorbisFile, -1);
 	
 	logDebug("Vorbis Audio Stream: channelCount=%d, sampleRate=%d", mNumChannels, mSampleRate);
 }
@@ -185,12 +185,12 @@ void AudioStream_Vorbis::Close()
 	}
 }
 
-int AudioStream_Vorbis::Position_get()
+int AudioStream_Vorbis::Position_get() const
 {
 	return mPosition;
 }
 
-bool AudioStream_Vorbis::HasLooped_get()
+bool AudioStream_Vorbis::HasLooped_get() const
 {
 	return mHasLooped;
 }

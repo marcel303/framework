@@ -144,7 +144,7 @@ void VfxNodeImageDownsample::tick(const float dt)
 					const float u2 = (sx * pixelSize + .5f) / float(image->getSx());
 					const float v2 = (sy * pixelSize + .5f) / float(image->getSy());
 					
-					gxBegin(GL_QUADS);
+					gxBegin(GX_QUADS);
 					{
 						gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
 						gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);

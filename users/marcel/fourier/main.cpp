@@ -683,7 +683,7 @@ int main(int argc, char * argv[])
 	framework.fullscreen = false;
 	framework.useClosestDisplayMode = true;
 
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		//ImageData * image = loadImage("image.png");
 

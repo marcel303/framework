@@ -40,6 +40,8 @@ OpenFrameworks -> framework interop classes
 #include <stdint.h>
 #include <string>
 #include <vector>
+
+#include <GL/glew.h> // OpenFrameworks exposes OpenGL
 #include "framework.h"
 
 using namespace std;

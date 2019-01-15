@@ -70,12 +70,6 @@ TIMER_DEFINE(g_appDrawTime, PerFrame, "App/Draw");
 
 //
 
-#ifndef WIN32
-	#define sprintf_s(s, ss, f, ...) sprintf(s, f, __VA_ARGS__)
-#endif
-
-//
-
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 std::string getRaceName(int r);
 
@@ -131,7 +125,7 @@ static void drawWinnerScreen()
 		setFont("electro.ttf");
 		setColor(Color::fromHex("d3f7ff"));
 		drawText(GFX_SX/2, GFX_SY*2/3, 40, 0.f, +1.f,
-		g_gameState->m_players[playerIdx].m_goal.m_description.c_str());
+		player.m_goal.m_description.c_str());
 	}
 }
 
@@ -450,8 +444,6 @@ public:
 			{
 				for (int i = 0; i < g_gameState->m_numPlayers; ++i)
 				{
-					Player & player = g_gameState->m_players[i];
-
 					if (canSelectCharacter(i) && mouse.wentDown(BUTTON_LEFT))
 					{
 						if (mouse.x >= m_characterIcons[i].x1 &&
@@ -582,7 +574,7 @@ public:
 
 	void draw()
 	{
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 
 		if (g_flipScreen)
@@ -621,8 +613,6 @@ public:
 
 			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
-				Player & player = g_gameState->m_players[i];
-
 				const CharacterIcon & icon = m_characterIcons[i];
 
 				if (canSelectCharacter(i))
@@ -926,7 +916,7 @@ public:
 
 	void draw()
 	{
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 
 		if (!g_flipScreen)
@@ -1261,9 +1251,7 @@ public:
 			for (int i = 0; i < NUM_VOTING_BUTTONS;++i)
 			{
 				AgendaOption & option = agenda.m_options[i];
-
-				VotingScreen::VotingButton & button = g_votingScreen->m_votingButtons[i];
-
+				
 				setFont("orbi.ttf");
 				if (g_votingScreen->m_state != VotingScreen::State_ShowResults || m_resultsAnim.state <= ResultsAnim::State_ShowVotingResults)
 				{
@@ -1407,7 +1395,7 @@ bool App::init()
 	framework.windowTitle = "S.P.A.C.E.";
 	framework.actionHandler = HandleAction;
 
-	if (framework.init(0, 0, GFX_SX * 2, GFX_SY))
+	if (framework.init(GFX_SX * 2, GFX_SY))
 	{
 		if (!g_devMode)
 		{
@@ -1439,6 +1427,7 @@ bool App::init()
 		catch (std::exception & e)
 		{
 			logError(e.what());
+			(void)e;
 		}
 
 		return true;
@@ -1590,7 +1579,11 @@ void App::draw()
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
 	changeDirectory("data");
+#endif
 
 	g_optionManager.LoadFromCommandLine(argc, argv);
 

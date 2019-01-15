@@ -29,7 +29,6 @@
 
 #include "macWebcam.h"
 #include "vfxNodeWebcam.h"
-#include <GL/glew.h>
 
 VFX_NODE_TYPE(VfxNodeWebcam)
 {
@@ -128,12 +127,12 @@ void VfxNodeWebcam::tick(const float dt)
 			{
 				vfxGpuTimingBlock(VfxNodeWebcam);
 				
-				if (texture.isChanged(webcam->image->sx, webcam->image->sy, GL_RGBA8))
+				if (texture.isChanged(webcam->image->sx, webcam->image->sy, GX_RGBA8_UNORM))
 				{
 					allocateImage(webcam->image->sx, webcam->image->sy);
 				}
 				
-				texture.upload(webcam->image->data, 4, webcam->image->pitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
+				texture.upload(webcam->image->data, 4, webcam->image->pitch / 4);
 			}
 			
 			imageCpuOutput.allocOnSizeChange(webcam->image->sx, webcam->image->sy, 4);
@@ -177,7 +176,7 @@ void VfxNodeWebcam::allocateImage(const int sx, const int sy)
 {
 	freeImage();
 
-	texture.allocate(sx, sy, GL_RGBA8, true, true);
+	texture.allocate(sx, sy, GX_RGBA8_UNORM, true, true);
 	
 	imageOutput.texture = texture.id;
 }

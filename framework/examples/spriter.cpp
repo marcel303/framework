@@ -33,7 +33,13 @@
 
 int main(int argc, char * argv[])
 {
-	if (!framework.init(argc, (const char**)argv, VIEW_SX, VIEW_SY))
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
 	Spriter spriter("character/Sprite.scml");
@@ -51,9 +57,12 @@ int main(int argc, char * argv[])
 	
 	bool isGrounded = true;
 	
-	while (!keyboard.isDown(SDLK_ESCAPE))
+	while (!framework.quitRequested)
 	{
 		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
 		
 		if (isGrounded && ((rand() % 100) == 0 || keyboard.wentDown(SDLK_SPACE)))
 		{
@@ -110,17 +119,21 @@ int main(int argc, char * argv[])
 			setColor(colorWhite);
 			spriter.draw(spriterState);
 			
-			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.1f, 1.f, 1.f).RotateZ(+M_PI_2).Translate(-VIEW_SX/2, -10, 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
+			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.1f, 1.f, 1.f).RotateZ(+float(M_PI_2)).Translate(-VIEW_SX/2, -10, 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			hqFillRoundedRect(10, 10, VIEW_SX - 10, 100, 10.f);
 			hqEnd();
 			hqClearGradient();
 			
-			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.1f, 1.f, 1.f).RotateZ(-M_PI_2).Translate(-VIEW_SX/2, -(VIEW_SY-10), 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
+			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.1f, 1.f, 1.f).RotateZ(-float(M_PI_2)).Translate(-VIEW_SX/2, -(VIEW_SY-10), 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			hqFillRoundedRect(10, VIEW_SY - 10, VIEW_SX - 10, VIEW_SY - 100, 10.f);
 			hqEnd();
 			hqClearGradient();
+			
+			setFont("calibri.ttf");
+			setColor(80, 80, 80);
+			drawText(VIEW_SX/2, 30, 16, 0, +1, "This example demonstrates loading, animating and drawing a character created using 2d skeletal animation software Spriter.");
 		}
 		framework.endDraw();
 	}

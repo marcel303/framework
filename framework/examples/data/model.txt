@@ -1,7 +1,7 @@
 # resources
 
 boneset file:model01.fbx
-meshset file:model01.fbx
+meshset file:model01.fbx show:BlackKnight_Mesh
 animset file:model01.fbx name:anim01
 animset file:model02.fbx name:anim02
 animset file:model03.fbx name:anim03

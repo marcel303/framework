@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "openglTexture.h"
+#include "gx_texture.h"
 #include "vfxNodeBase.h"
 
 struct VfxNodeSpectrum2D : VfxNodeBase
@@ -68,8 +68,8 @@ struct VfxNodeSpectrum2D : VfxNodeBase
 		kOutput_COUNT
 	};
 	
-	OpenglTexture texture1;
-	OpenglTexture texture2;
+	GxTexture texture1;
+	GxTexture texture2;
 	float * dreal;
 	float * dimag;
 	

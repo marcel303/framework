@@ -6,7 +6,7 @@ void drawThickCircle(const float radius1, const float radius2, const int numSegm
 {
 	const float angleStep = 2.f * M_PI / numSegments;
 	
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int i = 0; i < numSegments; ++i)
 		{
@@ -41,7 +41,7 @@ static void drawTubeCircle_failed1(const float radius1, const float radius2, con
 	const float angleStep1 = 2.f * M_PI / numSegments1;
 	const float angleStep2 = 2.f * M_PI / numSegments2;
 	
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int i = 0; i < numSegments1; ++i)
 		{
@@ -95,7 +95,7 @@ void drawTubeCircle(const double radius1, const double radius2, const int numSeg
 	const double angleStep1 = 2.0 * M_PI / numSegments1;
 	const double angleStep2 = 2.0 * M_PI / numSegments2;
 	
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int i = 0; i < numSegments1; ++i)
 		{

@@ -33,11 +33,14 @@
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
+#include "audioUi.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "vfxNodes/oscEndpointMgr.h"
-#include "soundmix.h"
 #include <algorithm>
 #include <cmath>
+
+#include "ui.h"
 
 #define ENABLE_AUDIO_RTE 1
 
@@ -310,10 +313,10 @@ struct FileWindow
 		, scrollY(0.f)
 		, desiredScrollY(0.f)
 	{
-		window.setPosition(5, 100);
+		window.setPosition(10, 100);
 		
 		std::vector<std::string> paths;
-		paths = listFiles(".", false);
+		paths = listFiles("vfxgraphs", false);
 		std::sort(paths.begin(), paths.end());
 		
 		for (auto & path : paths)
@@ -466,7 +469,7 @@ struct FileWindow
 							setLumi(255);
 						else
 							setLumi(200);
-						drawText(x, y, 14, 0, 0, "%s", filename.c_str());
+						drawText(x, y, 14, 0, 0, "%s", Path::GetFileName(filename).c_str());
 						
 						y += item_sy + item_spacing;
 						
@@ -486,7 +489,7 @@ void testVfxGraph()
 	setAbout("This example shows Vfx Graph in action!");
 	
 	// fixme !
-	fillPcmDataCache("../4dworld/testsounds", true, true);
+	fillPcmDataCache("../4dworld/testsounds", true, true, true);
 	
 	initAudioGraph();
 	
@@ -499,9 +502,9 @@ void testVfxGraph()
 	
 	GraphEdit graphEdit(GFX_SX, GFX_SY, &tdl, &rtc);
 	
-	//graphEdit.load("testRibbon4.xml");
-	//graphEdit.load("mlworkshopVc.xml");
-	graphEdit.load("polyphonic.xml");
+	//graphEdit.load("vfxgraphs/mlworkshopVc.xml");
+	graphEdit.load("vfxgraphs/mlworkshopVd.xml");
+	//graphEdit.load("vfxgraphs/polyphonic.xml");
 	
 	FileWindow fileWindow(&graphEdit);
 	
@@ -524,7 +527,7 @@ void testVfxGraph()
 		s_audioGraphMgr->tickMain();
 		
 	#if ENABLE_AUDIO_RTE
-		s_audioGraphMgr->tickEditor(framework.timeStep, editor != 1);
+		s_audioGraphMgr->tickEditor(GFX_SX, GFX_SY, framework.timeStep, editor != 1);
 	#endif
 		
 		// update the vfx graph!
@@ -541,11 +544,30 @@ void testVfxGraph()
 			graphEdit.tickVisualizers(framework.timeStep);
 			
 			// draw the editor!
+		
+		#if ENABLE_AUDIO_RTE
+			// draw the editor!
 			if (editor == 0)
 				graphEdit.draw();
-		#if ENABLE_AUDIO_RTE
 			else
-				s_audioGraphMgr->drawEditor();
+				s_audioGraphMgr->drawEditor(GFX_SX, GFX_SY);
+		#else
+			graphEdit.draw();
+		#endif
+			
+		#if ENABLE_AUDIO_RTE
+			makeActive(graphEdit.uiState, true, true);
+			g_drawX = 10;
+			g_drawY = GFX_SY - 160;
+			pushMenu("graph-select");
+			if (doAudioGraphSelect(*s_audioGraphMgr))
+				editor = 1;
+			popMenu();
+			pushMenu("editor-type");
+			g_drawY = GFX_SY - 110;
+			if (doButton("Switch editor type"))
+				editor = 1 - editor;
+			popMenu();
 		#endif
 			
 			drawTestUi();
@@ -630,112 +652,4 @@ static void shutAudioGraph()
 		SDL_DestroyMutex(s_audioMutex);
 		s_audioMutex = nullptr;
 	}
-}
-
-//
-
-// todo : create a separate JsusFx test
-
-#include "audioNodeBase.h"
-
-static AudioNodeBase * tryGetSelectedAudioNode(AudioGraphManager_RTE * audioGraphMgr)
-{
-	if (audioGraphMgr->selectedFile == nullptr)
-		return nullptr;
-	if (audioGraphMgr->selectedFile->activeInstance == nullptr)
-		return nullptr;
-	
-	GraphEdit * graphEdit = audioGraphMgr->selectedFile->graphEdit;
-	
-	if (graphEdit->selectedNodes.size() != 1)
-		return nullptr;
-	
-	const AudioGraphInstance * activeInstance = audioGraphMgr->selectedFile->activeInstance;
-	
-	const GraphNodeId nodeId = *graphEdit->selectedNodes.begin();
-	
-	auto audioNodeItr = activeInstance->audioGraph->nodes.find(nodeId);
-	
-	if (audioNodeItr == activeInstance->audioGraph->nodes.end())
-		return nullptr;
-	
-	AudioNodeBase * audioNode = audioNodeItr->second;
-	
-	return audioNode;
-}
-
-void testVfxGraph_JsusFx()
-{
-	setAbout("This example shows Vfx Graph in action!");
-
-	fillPcmDataCache("../4dworld/testsounds", true, true);
-	
-	initAudioGraph();
-	
-	AudioGraphInstance * instance = s_audioGraphMgr->createInstance("ag-test.xml");
-	s_audioGraphMgr->selectInstance(instance);
-	
-	do
-	{
-		framework.process();
-		
-		const float dt = framework.timeStep;
-		
-		AudioNodeBase * selectedAudioNode = tryGetSelectedAudioNode(s_audioGraphMgr);
-		
-		bool inputIsCaptured = false;
-		
-		int sx;
-		int sy;
-		
-		bool drawEditor = false;
-		
-		if (selectedAudioNode != nullptr)
-		{
-			g_currentAudioGraph = s_audioGraphMgr->selectedFile->activeInstance->audioGraph;
-			{
-				drawEditor = selectedAudioNode->tickEditor(0, 0, sx, sy, inputIsCaptured) && (sx > 0 && sy > 0);
-			}
-			g_currentAudioGraph = nullptr;
-		}
-		
-		inputIsCaptured |= s_audioGraphMgr->tickEditor(dt, inputIsCaptured);
-		
-		framework.beginDraw(0, 0, 0, 0);
-		{
-			s_audioGraphMgr->drawEditor();
-			
-			if (drawEditor)
-			{
-				Surface surface(sx, sy, false);
-				
-				pushSurface(&surface);
-				{
-					surface.clear();
-					
-					g_currentAudioGraph = s_audioGraphMgr->selectedFile->activeInstance->audioGraph;
-					{
-						selectedAudioNode->drawEditor(&surface, 0, 0, sx, sy);
-					}
-					g_currentAudioGraph = nullptr;
-				}
-				popSurface();
-				
-				pushBlend(BLEND_OPAQUE);
-				pushColorMode(COLOR_IGNORE);
-				gxSetTexture(surface.getTexture());
-				drawRect(0, 0, sx, sy);
-				gxSetTexture(0);
-				popColorMode();
-				popBlend();
-			}
-			
-			drawTestUi();
-		}
-		framework.endDraw();
-	} while (!keyboard.wentDown(SDLK_ESCAPE));
-	
-	s_audioGraphMgr->free(instance, false);
-	
-	shutAudioGraph();
 }

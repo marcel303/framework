@@ -40,11 +40,14 @@ struct VfxNodeSound;
 struct VfxNodeSound_AudioStream : AudioStream
 {
 	VfxNodeSound * soundNode;
+	
 	std::atomic<uint64_t> timeInSamples;
+	std::atomic<bool> hasLooped;
 	
 	VfxNodeSound_AudioStream()
 		: soundNode(nullptr)
 		, timeInSamples(0)
+		, hasLooped(false)
 	{
 	}
 	
@@ -73,6 +76,7 @@ struct VfxNodeSound : VfxNodeBase
 		kOutput_Time,
 		kOutput_Play,
 		kOutput_Pause,
+		kOutput_Loop,
 		kOutput_Beat,
 		kOutput_BeatCount,
 		kOutput_COUNT

@@ -1,0 +1,10 @@
+app marcel-vfxpro
+
+	depend_library framework
+	depend_library libosc
+	depend_library libvideo
+	
+	scan_files *.cpp
+	scan_files *.h
+
+	resource_path "/Users/thecat/Google Drive/ACASHA/vfx"

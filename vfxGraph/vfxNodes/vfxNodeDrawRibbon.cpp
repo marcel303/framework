@@ -93,7 +93,7 @@ void VfxNodeDrawRibbon::draw() const
 	
 	setColor(colorWhite);
 	
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int i = 0; i < ribbon.length - 1; ++i)
 		{

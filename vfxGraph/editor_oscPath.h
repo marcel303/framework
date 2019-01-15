@@ -41,10 +41,7 @@ struct ResourceEditor_OscPath : GraphEdit_ResourceEditorBase
 	ResourceEditor_OscPath();
 	virtual ~ResourceEditor_OscPath() override;
 	
-	void afterSizeChanged() override;
-	void afterPositionChanged() override;
-	
-	void doMenu(const float dt);
+	void doMenu(const bool doTick, const bool doDraw, const float dt);
 	
 	bool tick(const float dt, const bool inputIsCaptured) override;
 	void draw() const override;

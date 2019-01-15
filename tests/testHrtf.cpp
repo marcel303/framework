@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // glPointSize
 #include "audio.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
@@ -36,7 +37,11 @@
 #include "StringEx.h"
 #include "testBase.h"
 #include "Timer.h"
+#include <atomic>
 #include <complex>
+
+// todo : use a longer test sound
+// todo : make 3D view optional
 
 #define HRTF_BUFFER_SIZE 512
 #define AUDIO_BUFFER_SIZE 512
@@ -747,7 +752,7 @@ struct AudioSource_Binaural : AudioSource
 	
 	HRTF hrtf;
 	
-	uint64_t processTimeAvg;
+	std::atomic<uint64_t> processTimeAvg;
 	
 	SDL_mutex * mutex;
 	
@@ -926,10 +931,10 @@ void testHrtf()
 	// load impulse-response audio files
 	
 	HRIRSet hrirSet;
-	hrirSet.loadMitDatabase("hrtf/MIT-HRTF-DIFFUSE");
+	hrirSet.loadMitDatabase("binaural/MIT-HRTF-DIFFUSE");
 	
 	AudioSource_StreamOgg sound;
-	sound.load("hrtf/music2.ogg");
+	sound.load("menuselect.ogg");
 	
 	AudioSource_Binaural binaural;
 	binaural.source = &sound;
@@ -1061,20 +1066,18 @@ void testHrtf()
 		{
 			Mat4x4 projectionMatrix;
 			projectionMatrix.MakePerspectiveLH(Calc::DegToRad(90.f), GFX_SY / float(GFX_SX), .01f, 1000.f);
-			gxMatrixMode(GL_PROJECTION);
+			gxMatrixMode(GX_PROJECTION);
 			gxPushMatrix();
 			gxLoadMatrixf(projectionMatrix.m_v);
-			gxMatrixMode(GL_MODELVIEW);
+			gxMatrixMode(GX_MODELVIEW);
 			gxPushMatrix();
 			gxLoadIdentity();
-			
-			// todo : show source and head position
 			
 			gxPushMatrix();
 			{
 				gxMultMatrixf(objectToView.m_v);
 				
-				gxBegin(GL_LINES);
+				gxBegin(GX_LINES);
 				{
 					setColor(colorRed);
 					gxVertex3f(-1.f, 0.f, 0.f);
@@ -1091,7 +1094,7 @@ void testHrtf()
 				gxEnd();
 				
 				glPointSize(5.f);
-				gxBegin(GL_POINTS);
+				gxBegin(GX_POINTS);
 				{
 					for (auto & s : hrirSet.sampleLocations)
 					{
@@ -1114,15 +1117,14 @@ void testHrtf()
 			}
 			gxPopMatrix();
 			
-			gxMatrixMode(GL_PROJECTION);
+			gxMatrixMode(GX_PROJECTION);
 			gxPopMatrix();
-			gxMatrixMode(GL_MODELVIEW);
+			gxMatrixMode(GX_MODELVIEW);
 			gxPopMatrix();
 			
 			setFont("calibri.ttf");
-			setColor(colorWhite);
-			
-			drawText(10, 10, 24, 1, 1, "time: %.4fms", binaural.processTimeAvg / 1000.0);
+			setColor(200, 200, 200);
+			drawText(10, 10, 14, 1, 1, "time: %.4fms", binaural.processTimeAvg / 1000.0);
 			
 			drawTestUi();
 		}

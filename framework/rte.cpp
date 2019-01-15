@@ -84,6 +84,8 @@ static void handleFileChange(const std::string & filename)
 	{
 		framework.realTimeEditCallback(filename);
 	}
+	
+	framework.changedFiles.push_back(filename);
 }
 
 #if 1
@@ -114,7 +116,8 @@ static void fillFileInfos()
 				fi.filename = file;
 				fi.time = s.st_mtime;
 
-				if (String::EndsWith(file, ".vs") || String::EndsWith(file, ".ps") || String::EndsWith(file, ".cs") || String::EndsWith(file, ".xml") || String::EndsWith(file, ".png") || String::EndsWith(file, ".jpg"))
+				if (String::EndsWith(file, ".vs") || String::EndsWith(file, ".ps") || String::EndsWith(file, ".cs") || String::EndsWith(file, ".xml") || String::EndsWith(file, ".txt") ||
+					String::EndsWith(file, ".png") || String::EndsWith(file, ".jpg"))
 					s_fileInfos.push_back(fi);
 			}
 

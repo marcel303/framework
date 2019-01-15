@@ -49,9 +49,9 @@ namespace MP
 		, m_codecContext(nullptr)
 		, m_codec(nullptr)
 		, m_swrContext(nullptr)
+		, m_outputChannelCount(0)
+		, m_timeBase(0.0)
 		, m_streamIndex(-1)
-		, m_time(0.0)
-		, m_frameTime(0)
 		, m_initialized(false)
 	{
 	}
@@ -65,17 +65,16 @@ namespace MP
 		Assert(m_codecContext == nullptr);
 		Assert(m_codec == nullptr);
 		Assert(m_swrContext == nullptr);
+		Assert(m_outputChannelCount == 0);
 	}
 
-	bool AudioContext::Initialize(Context * context, const size_t streamIndex)
+	bool AudioContext::Initialize(Context * context, const size_t streamIndex, const AudioOutputMode outputMode)
 	{
 		Assert(m_initialized == false);
 
 		m_initialized = true;
 
 		m_streamIndex = streamIndex;
-		m_time = 0.0;
-		m_frameTime = 0;
 		
 		Assert(m_packetQueue == nullptr);
 		m_packetQueue = new PacketQueue();
@@ -83,7 +82,7 @@ namespace MP
 		Assert(m_audioBuffer == nullptr);
 		m_audioBuffer = new AudioBuffer();
 		
-		AVCodecParameters * audioParams = context->GetFormatContext()->streams[m_streamIndex]->codecpar;\
+		AVCodecParameters * audioParams = context->GetFormatContext()->streams[m_streamIndex]->codecpar;
 		if (!audioParams)
 		{
 			Debug::Print("Audio: failed to find audio params.");
@@ -126,17 +125,44 @@ namespace MP
 		Debug::Print("Audio: channels: %d.", m_codecContext->channels);
 		Debug::Print("Audio: framesize: %d.", m_codecContext->frame_size); // Number of samples/packet.
 		
+		const int64_t outputSampleFormat =
+			outputMode == kAudioOutputMode_Mono ? AV_CH_LAYOUT_MONO :
+			outputMode == kAudioOutputMode_Stereo ? AV_CH_LAYOUT_STEREO :
+			audioParams->format;
+		
 		Assert(m_swrContext == nullptr);
 		m_swrContext = swr_alloc_set_opts(nullptr,
-			AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_S16, m_codecContext->sample_rate,
-			audioParams->channel_layout, (AVSampleFormat)audioParams->format, audioParams->sample_rate,
-		0, nullptr);
+			// output
+			outputSampleFormat,
+			AV_SAMPLE_FMT_S16,
+			// input
+			m_codecContext->sample_rate,
+			audioParams->channel_layout,
+			(AVSampleFormat)audioParams->format,
+			audioParams->sample_rate,
+			// log
+			0, nullptr);
 		
 		if (!m_swrContext)
 		{
 			Debug::Print("Audio: failed to alloc/init swr context.");
 			return false;
 		}
+		
+		if (swr_init(m_swrContext) < 0)
+		{
+			Debug::Print("Audio: failed to init swr context.");
+			return false;
+		}
+		
+		m_outputChannelCount =
+			outputSampleFormat == AV_CH_LAYOUT_MONO ? 1 :
+			outputSampleFormat == AV_CH_LAYOUT_STEREO ? 2 :
+			m_codecContext->channels;
+		
+		Debug::Print("Audio: output channels: %d.", m_outputChannelCount);
+		
+		m_timeBase = av_q2d(context->GetFormatContext()->streams[streamIndex]->time_base);
 		
 		return true;
 	}
@@ -149,6 +175,8 @@ namespace MP
 
 		m_initialized = false;
 
+		m_outputChannelCount = 0;
+		
 		if (m_swrContext)
 		{
 			swr_free(&m_swrContext);
@@ -187,11 +215,6 @@ namespace MP
 		return m_streamIndex;
 	}
 
-	double AudioContext::GetTime() const
-	{
-		return m_time;
-	}
-
 	bool AudioContext::FillAudioBuffer()
 	{
 		bool result = true;
@@ -212,9 +235,9 @@ namespace MP
 		return result;
 	}
 
-	bool AudioContext::RequestAudio(int16_t * out_samples, const size_t _frameCount, bool & out_gotAudio)
+	bool AudioContext::RequestAudio(int16_t * out_samples, const size_t frameCount, bool & out_gotAudio, double & out_audioTime)
 	{
-		size_t frameCount = _frameCount;
+		size_t numFramesLeft = frameCount;
 		
 		Assert(out_samples);
 
@@ -226,30 +249,54 @@ namespace MP
 
 		Debug::Print("Audio: begin request.");
 
-		while (frameCount > 0 && stop == false)
+		while (stop == false)
 		{
-			size_t numSamples = frameCount * m_codecContext->channels;
+			const size_t numSamplesToRead = numFramesLeft * m_outputChannelCount;
+			
+			// read samples from the audio buffer
+			
+			size_t numSamplesRead;
+			const bool hasMore = m_audioBuffer->ReadSamples(out_samples, numSamplesToRead, numSamplesRead, out_audioTime);
+			
+			// update the output buffer pointer and the number of frames left
+			
+			const size_t numFramesRead = numSamplesRead / m_outputChannelCount;
+			Assert((numSamplesRead % m_outputChannelCount) == 0);
+			Assert(numFramesRead * m_outputChannelCount == numSamplesRead);
 
-			if (!m_audioBuffer->ReadSamples(out_samples, numSamples))
+			if (numFramesRead > 0)
 			{
-				stop = true;
+				Debug::Print("\tAudio: read from buffer. time: %03.3f", out_audioTime);
+				
+				out_samples += numFramesRead * m_outputChannelCount;
+				
+				numFramesLeft -= numFramesRead;
+			}
+			
+			if (hasMore)
+			{
+				// there's more audio data left inside the audio buffer. loop until done
+				
+				if (numFramesLeft == 0)
+				{
+					Debug::Print("\tAudio: read done.");
+					
+					stop = true;
+				}
 			}
 			else
 			{
-				const size_t numFrames = numSamples / m_codecContext->channels;
-
-				out_samples += numFrames * m_codecContext->channels;
-
-				frameCount -= numFrames;
-				m_frameTime += numFrames;
-				m_time = m_frameTime / (double)m_codecContext->sample_rate;
-
-				Debug::Print("\tAudio: read from buffer. time: %03.3f", m_time);
-
-				if (frameCount == 0)
+				// the audio buffer is empty. calculate the number of remaining samples, set the remaining
+				// samples to zero, and end the loop
+				
+				const size_t numSamplesRemaining = numFramesLeft * m_outputChannelCount;
+				
+				if (numSamplesRemaining > 0)
 				{
-					Debug::Print("\tAudio: read done.");
+					memset(out_samples, 0, numSamplesRemaining * sizeof(int16_t));
 				}
+				
+				stop = true;
 			}
 		}
 
@@ -313,10 +360,26 @@ namespace MP
 				Assert(bytesDecoded >= 0);
 				Assert(bytesRemaining >= 0);
 				
-				//swr_convert(m_swrContext, out, out_count, in, in_count);
-				
-				if (frame->nb_samples > 0)
+				if (gotFrame && frame->nb_samples > 0)
 				{
+				#if 1
+					if (m_outputChannelCount != 0)
+					{
+						AudioBufferSegment segment;
+						
+						int16_t * __restrict dst = segment.m_samples;
+						
+						swr_convert(m_swrContext, (uint8_t**)&dst, frame->nb_samples, (const uint8_t**)frame->extended_data, frame->nb_samples);
+						
+						segment.m_numSamples = frame->nb_samples * m_outputChannelCount;
+						
+						segment.m_time = av_frame_get_best_effort_timestamp(frame) * m_timeBase;
+
+						m_audioBuffer->AddSegment(segment);
+
+						Debug::Print("\t\tAudio: decoded frame. got %d frames.", int(frame->nb_samples));
+					}
+				#else
 					if (m_codecContext->channels != 0)
 					{
 						AudioBufferSegment segment;
@@ -327,22 +390,48 @@ namespace MP
 						{
 							for (int c = 0; c < m_codecContext->channels; ++c)
 							{
-								const int16_t * __restrict src = (int16_t*)frame->data[c];
-								
-								*dst++ = src[i];
+								if (frame->format == AV_SAMPLE_FMT_S16P)
+								{
+									const int16_t * __restrict src = (int16_t*)frame->data[c];
+									
+									*dst++ = src[i];
+								}
+								else if (frame->format == AV_SAMPLE_FMT_S32P)
+								{
+									const int32_t * __restrict src = (int32_t*)frame->data[c];
+									
+									*dst++ = src[i] >> 16;
+								}
+								else if (frame->format == AV_SAMPLE_FMT_FLTP)
+								{
+									const float * __restrict src = (float*)frame->data[c];
+									
+									//Assert(src[i] >= -1.f && src[i] <= +1.f);
+									
+									*dst++ = src[i] * ((1 << 15) - 1);
+								}
+								else
+								{
+									Assert(false);
+									
+									*dst++ = 0;
+								}
 							}
 						}
 						
 						segment.m_numSamples = frame->nb_samples * m_codecContext->channels;
+						
+						segment.m_time = av_frame_get_best_effort_timestamp(frame) * m_timeBase;
 
 						m_audioBuffer->AddSegment(segment);
 
 						Debug::Print("\t\tAudio: decoded frame. got %d frames.", int(frame->nb_samples));
 					}
+				#endif
 				}
 				else
 				{
-					Assert(0);
+					Assert(gotFrame == false);
 				}
 			}
 		}

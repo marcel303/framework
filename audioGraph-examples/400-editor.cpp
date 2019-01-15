@@ -29,14 +29,19 @@
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
 #include "framework.h"
-#include "soundmix.h"
 
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
 
 int main(int argc, char * argv[])
 {
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
 		createAudioTypeDefinitionLibrary(typeDefinitionLibrary);

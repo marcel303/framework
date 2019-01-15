@@ -2,7 +2,12 @@
 
 #include "Vec2.h"
 #include "Vec3.h"
-#include <math.h>
+
+#if defined(__clang__)
+	// use builtin for sqrtf
+#else
+	#include <math.h>
+#endif
 
 class Vec4
 {
@@ -27,6 +32,11 @@ public:
 		m_v[2] = xyz[2];
 		m_v[3] = w;
 	}
+	
+	inline void SetZero()
+	{
+		m_v[0] = m_v[1] = m_v[2] = m_v[3] = 0.0f;
+	}
 
 	inline float CalcSize() const
 	{
@@ -36,7 +46,11 @@ public:
 			m_v[2] * m_v[2] +
 			m_v[3] * m_v[3];
 		
+	#if defined(__clang__)
+		return __builtin_sqrtf(sq);
+	#else
 		return sqrtf(sq);
+	#endif
 	}
 
 	inline float CalcSizeSq() const

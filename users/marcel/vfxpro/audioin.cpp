@@ -26,7 +26,8 @@ int portaudioCallback(
 }
 
 AudioIn::AudioIn()
-	: m_stream(nullptr)
+	: m_paInitialized(false)
+	, m_stream(nullptr)
 	, m_sampleBuffer(nullptr)
 	, m_sampleBufferSize(0)
 	, m_hasData(false)
@@ -56,6 +57,8 @@ bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int buffer
 	}
 	
 	LOG_DBG("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
+	
+	m_paInitialized = true;
 	
 	PaStreamParameters parameters;
 	memset(&parameters, 0, sizeof(parameters));
@@ -123,11 +126,16 @@ void AudioIn::shutdown()
 		m_stream = nullptr;
 	}
 	
-	err = Pa_Terminate();
-	
-	if (err != paNoError)
+	if (m_paInitialized)
 	{
-		LOG_ERR("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+		m_paInitialized = false;
+		
+		err = Pa_Terminate();
+		
+		if (err != paNoError)
+		{
+			LOG_ERR("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+		}
 	}
 	
 	delete [] m_sampleBuffer;
@@ -174,61 +182,78 @@ void AudioIn::handleAudioData(const short * __restrict buffer)
 
 #else
 
+#include <Windows.h>
+
+struct AudioInWave
+{
+	HWAVEIN m_waveIn;
+	WAVEFORMATEX m_waveFormat;
+	WAVEHDR m_waveHeader;
+
+	AudioInWave()
+	{
+		memset(&m_waveFormat, 0, sizeof(m_waveFormat));
+		memset(&m_waveHeader, 0, sizeof(m_waveHeader));
+	}
+};
+
 AudioIn::AudioIn()
-	: m_waveIn(nullptr)
+	: m_wave(nullptr)
 	, m_buffer(nullptr)
 {
-	memset(&m_waveFormat, 0, sizeof(m_waveFormat));
-	memset(&m_waveHeader, 0, sizeof(m_waveHeader));
+	m_wave = new AudioInWave();
 }
 
 AudioIn::~AudioIn()
 {
 	shutdown();
+
+	delete m_wave;
+	m_wave = nullptr;
 }
 
 bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int bufferSampleCount)
 {
-	// todo : let the user select a device
+	// todo-vfxpro : let the user select a device
 
 	//const int numDevices = waveInGetNumDevs();
 
 	MMRESULT mmResult = MMSYSERR_NOERROR;
 
-	memset(&m_waveFormat, 0, sizeof(m_waveFormat));
-	m_waveFormat.wFormatTag = WAVE_FORMAT_PCM;
-	m_waveFormat.nSamplesPerSec = sampleRate;
-	m_waveFormat.nChannels = channelCount;
-	m_waveFormat.wBitsPerSample = 16;
-	m_waveFormat.nBlockAlign = m_waveFormat.nChannels * m_waveFormat.wBitsPerSample / 8;
-	m_waveFormat.nAvgBytesPerSec = m_waveFormat.nSamplesPerSec * m_waveFormat.nBlockAlign;
-	m_waveFormat.cbSize = 0;
+	memset(&m_wave->m_waveFormat, 0, sizeof(m_wave->m_waveFormat));
+	m_wave->m_waveFormat.wFormatTag = WAVE_FORMAT_PCM;
+	m_wave->m_waveFormat.nSamplesPerSec = sampleRate;
+	m_wave->m_waveFormat.nChannels = channelCount;
+	m_wave->m_waveFormat.wBitsPerSample = 16;
+	m_wave->m_waveFormat.nBlockAlign = m_wave->m_waveFormat.nChannels * m_wave->m_waveFormat.wBitsPerSample / 8;
+	m_wave->m_waveFormat.nAvgBytesPerSec = m_wave->m_waveFormat.nSamplesPerSec * m_wave->m_waveFormat.nBlockAlign;
+	m_wave->m_waveFormat.cbSize = 0;
 
-	mmResult = waveInOpen(&m_waveIn, deviceIndex < 0 ? WAVE_MAPPER : deviceIndex, &m_waveFormat, 0, 0, CALLBACK_NULL);
+	mmResult = waveInOpen(&m_wave->m_waveIn, deviceIndex < 0 ? WAVE_MAPPER : deviceIndex, &m_wave->m_waveFormat, 0, 0, CALLBACK_NULL);
 	Assert(mmResult == MMSYSERR_NOERROR);
 
 	if (mmResult == MMSYSERR_NOERROR)
 	{
 		m_buffer = new short[bufferSampleCount * channelCount];
 
-		memset(&m_waveHeader, 0, sizeof(m_waveHeader));
-		m_waveHeader.lpData = (LPSTR)m_buffer;
-		m_waveHeader.dwBufferLength = m_waveFormat.nBlockAlign * bufferSampleCount;
-		m_waveHeader.dwBytesRecorded = 0;
-		m_waveHeader.dwUser = 0;
-		m_waveHeader.dwFlags = 0;
-		m_waveHeader.dwLoops = 0;
-		mmResult = waveInPrepareHeader(m_waveIn, &m_waveHeader, sizeof(m_waveHeader));
+		memset(&m_wave->m_waveHeader, 0, sizeof(m_wave->m_waveHeader));
+		m_wave->m_waveHeader.lpData = (LPSTR)m_buffer;
+		m_wave->m_waveHeader.dwBufferLength = m_wave->m_waveFormat.nBlockAlign * bufferSampleCount;
+		m_wave->m_waveHeader.dwBytesRecorded = 0;
+		m_wave->m_waveHeader.dwUser = 0;
+		m_wave->m_waveHeader.dwFlags = 0;
+		m_wave->m_waveHeader.dwLoops = 0;
+		mmResult = waveInPrepareHeader(m_wave->m_waveIn, &m_wave->m_waveHeader, sizeof(m_wave->m_waveHeader));
 		Assert(mmResult == MMSYSERR_NOERROR);
 
 		if (mmResult == MMSYSERR_NOERROR)
 		{
-			mmResult = waveInAddBuffer(m_waveIn, &m_waveHeader, sizeof(m_waveHeader));
+			mmResult = waveInAddBuffer(m_wave->m_waveIn, &m_wave->m_waveHeader, sizeof(m_wave->m_waveHeader));
 			Assert(mmResult == MMSYSERR_NOERROR);
 
 			if (mmResult == MMSYSERR_NOERROR)
 			{
-				mmResult = waveInStart(m_waveIn);
+				mmResult = waveInStart(m_wave->m_waveIn);
 				Assert(mmResult == MMSYSERR_NOERROR);
 
 				if (mmResult == MMSYSERR_NOERROR)
@@ -246,25 +271,25 @@ bool AudioIn::init(int deviceIndex, int channelCount, int sampleRate, int buffer
 
 void AudioIn::shutdown()
 {
-	if (m_waveIn != nullptr)
+	if (m_wave->m_waveIn != nullptr)
 	{
 		MMRESULT mmResult = MMSYSERR_NOERROR;
 
-		if (m_waveHeader.dwFlags & WHDR_PREPARED)
+		if (m_wave->m_waveHeader.dwFlags & WHDR_PREPARED)
 		{
-			mmResult = waveInReset(m_waveIn);
+			mmResult = waveInReset(m_wave->m_waveIn);
 			Assert(mmResult == MMSYSERR_NOERROR);
 
-			mmResult = waveInUnprepareHeader(m_waveIn, &m_waveHeader, sizeof(m_waveHeader));
+			mmResult = waveInUnprepareHeader(m_wave->m_waveIn, &m_wave->m_waveHeader, sizeof(m_wave->m_waveHeader));
 			Assert(mmResult == MMSYSERR_NOERROR);
 		}
 
-		if (m_waveIn)
+		if (m_wave->m_waveIn)
 		{
-			mmResult = waveInClose(m_waveIn);
+			mmResult = waveInClose(m_wave->m_waveIn);
 			Assert(mmResult == MMSYSERR_NOERROR);
 
-			m_waveIn = nullptr;
+			m_wave->m_waveIn = nullptr;
 		}
 
 		delete [] m_buffer;
@@ -274,7 +299,7 @@ void AudioIn::shutdown()
 
 bool AudioIn::provide(AudioSample * __restrict buffer, int & sampleCount)
 {
-	if (m_waveIn == nullptr)
+	if (m_wave->m_waveIn == nullptr)
 	{
 		sampleCount = 0;
 
@@ -286,19 +311,19 @@ bool AudioIn::provide(AudioSample * __restrict buffer, int & sampleCount)
 
 	#if 0
 		printf("wave header flags: %08x (prepared:%d, inqueue:%d, done:%d)\n",
-			m_waveHeader.dwFlags,
-			(m_waveHeader.dwFlags & WHDR_PREPARED) ? 1 : 0,
-			(m_waveHeader.dwFlags & WHDR_INQUEUE) ? 1 : 0,
-			(m_waveHeader.dwFlags & WHDR_DONE) ? 1 : 0);
+			m_wave->m_waveHeader.dwFlags,
+			(m_wave->m_waveHeader.dwFlags & WHDR_PREPARED) ? 1 : 0,
+			(m_wave->m_waveHeader.dwFlags & WHDR_INQUEUE) ? 1 : 0,
+			(m_wave->m_waveHeader.dwFlags & WHDR_DONE) ? 1 : 0);
 	#endif
 
-		if (m_waveHeader.dwFlags & WHDR_DONE)
+		if (m_wave->m_waveHeader.dwFlags & WHDR_DONE)
 		{
-			Assert(sampleCount == m_waveHeader.dwBytesRecorded / sizeof(short) / m_waveFormat.nChannels);
+			Assert(sampleCount == m_wave->m_waveHeader.dwBytesRecorded / sizeof(short) / m_wave->m_waveFormat.nChannels);
 
-			if (m_waveFormat.nChannels == 1)
+			if (m_wave->m_waveFormat.nChannels == 1)
 			{
-				sampleCount = m_waveHeader.dwBytesRecorded / sizeof(short);
+				sampleCount = m_wave->m_waveHeader.dwBytesRecorded / sizeof(short);
 
 				for (int i = 0; i < sampleCount; ++i)
 				{
@@ -306,9 +331,9 @@ bool AudioIn::provide(AudioSample * __restrict buffer, int & sampleCount)
 					buffer[i].channel[1] = m_buffer[i * 1 + 0];
 				}
 			}
-			else if (m_waveFormat.nChannels == 2)
+			else if (m_wave->m_waveFormat.nChannels == 2)
 			{
-				sampleCount = m_waveHeader.dwBytesRecorded / sizeof(short) / 2;
+				sampleCount = m_wave->m_waveHeader.dwBytesRecorded / sizeof(short) / 2;
 
 				for (int i = 0; i < sampleCount; ++i)
 				{
@@ -318,10 +343,10 @@ bool AudioIn::provide(AudioSample * __restrict buffer, int & sampleCount)
 			}
 			else
 			{
-				Assert(m_waveFormat.nChannels == 1 || m_waveFormat.nChannels == 2);
+				Assert(m_wave->m_waveFormat.nChannels == 1 || m_wave->m_waveFormat.nChannels == 2);
 			}
 
-			mmResult = waveInAddBuffer(m_waveIn, &m_waveHeader, sizeof(m_waveHeader));
+			mmResult = waveInAddBuffer(m_wave->m_waveIn, &m_wave->m_waveHeader, sizeof(m_wave->m_waveHeader));
 			Assert(mmResult == MMSYSERR_NOERROR);
 
 			if (mmResult != MMSYSERR_NOERROR)

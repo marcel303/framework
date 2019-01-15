@@ -1,55 +1,69 @@
-<graph nextNodeId="85" nextLinkId="97" nextZKey="777">
-    <node id="51" typeName="globals.4d" editorX="555" editorY="-67.168487548828125">
+<graph nextNodeId="85" nextLinkId="97">
+    <node id="51" typeName="globals.4d">
         <input socket="rot.y" value="85.000000"/>
     </node>
-    <node id="73" typeName="audio.sine" editorX="272" editorY="128" folded="1">
+    <node id="73" typeName="audio.sine">
         <input socket="a" value="-180.000000"/>
         <input socket="b" value="180.000000"/>
         <input socket="fine" value="0"/>
         <input socket="frequency" value="0.123000"/>
     </node>
-    <node id="74" typeName="audio.sine" editorX="272" editorY="-16" folded="1">
+    <node id="74" typeName="audio.sine">
         <input socket="a" value="-5.000000"/>
         <input socket="b" value="0.000000"/>
         <input socket="fine" value="0"/>
         <input socket="frequency" value="0.145000"/>
     </node>
-    <node id="75" typeName="audio.sine" editorX="288" editorY="272" folded="1">
+    <node id="75" typeName="audio.sine">
         <input socket="a" value="0.500000"/>
         <input socket="b" value="2.000000"/>
         <input socket="fine" value="0"/>
         <input socket="frequency" value="13.000000"/>
     </node>
-    <node id="76" typeName="math.mul" editorX="400" editorY="-16" folded="1"/>
-    <node id="77" typeName="memf" editorName="crazy" editorX="400" editorY="16" folded="1">
+    <node id="76" typeName="math.mul"/>
+    <node id="77" typeName="memf">
         <input socket="name" value="crazy"/>
     </node>
-    <node id="78" typeName="math.mul" editorX="400" editorY="128" folded="1"/>
-    <node id="79" typeName="memf" editorName="crazy" editorX="400" editorY="160" folded="1">
+    <node id="78" typeName="math.mul"/>
+    <node id="79" typeName="memf">
         <input socket="name" value="crazy"/>
     </node>
-    <node id="81" typeName="memf" editorName="crazy" editorX="400" editorY="240" folded="1">
+    <node id="81" typeName="memf">
         <input socket="name" value="crazy"/>
     </node>
-    <node id="83" typeName="audio.drywet" editorX="400" editorY="272" folded="1">
+    <node id="83" typeName="audio.drywet">
         <input socket="dry" value="1.000000"/>
     </node>
-    <node id="84" typeName="math" editorName="offset" editorX="400" editorY="-64" folded="1">
+    <node id="84" typeName="math">
         <input socket="a" value="-0.800000"/>
     </node>
-    <link id="80" enabled="1" srcNodeId="76" srcNodeSocketName="a" dstNodeId="74" dstNodeSocketName="audio"/>
-    <link id="81" enabled="1" srcNodeId="76" srcNodeSocketName="b" dstNodeId="77" dstNodeSocketName="value1"/>
-    <link id="82" enabled="1" srcNodeId="51" srcNodeSocketName="pos.y" dstNodeId="76" dstNodeSocketName="result"/>
-    <link id="83" enabled="1" srcNodeId="78" srcNodeSocketName="a" dstNodeId="73" dstNodeSocketName="audio"/>
-    <link id="84" enabled="1" srcNodeId="51" srcNodeSocketName="rot.y" dstNodeId="78" dstNodeSocketName="result"/>
-    <link id="85" enabled="1" srcNodeId="78" srcNodeSocketName="b" dstNodeId="79" dstNodeSocketName="value1"/>
-    <link id="92" enabled="1" srcNodeId="83" srcNodeSocketName="wet" dstNodeId="75" dstNodeSocketName="audio"/>
-    <link id="94" enabled="1" srcNodeId="83" srcNodeSocketName="wetness" dstNodeId="81" dstNodeSocketName="value1"/>
-    <link id="95" enabled="1" srcNodeId="51" srcNodeSocketName="plode" dstNodeId="83" dstNodeSocketName="audio"/>
-    <link id="96" enabled="1" srcNodeId="51" srcNodeSocketName="pos.y" dstNodeId="84" dstNodeSocketName="result"/>
-    <editor>
+    <link id="80" srcNodeId="76" srcNodeSocketName="a" dstNodeId="74" dstNodeSocketName="audio"/>
+    <link id="81" srcNodeId="76" srcNodeSocketName="b" dstNodeId="77" dstNodeSocketName="value1"/>
+    <link id="82" srcNodeId="51" srcNodeSocketName="pos.y" dstNodeId="76" dstNodeSocketName="result"/>
+    <link id="83" srcNodeId="78" srcNodeSocketName="a" dstNodeId="73" dstNodeSocketName="audio"/>
+    <link id="84" srcNodeId="51" srcNodeSocketName="rot.y" dstNodeId="78" dstNodeSocketName="result"/>
+    <link id="85" srcNodeId="78" srcNodeSocketName="b" dstNodeId="79" dstNodeSocketName="value1"/>
+    <link id="92" srcNodeId="83" srcNodeSocketName="wet" dstNodeId="75" dstNodeSocketName="audio"/>
+    <link id="94" srcNodeId="83" srcNodeSocketName="wetness" dstNodeId="81" dstNodeSocketName="value1"/>
+    <link id="95" srcNodeId="51" srcNodeSocketName="plode" dstNodeId="83" dstNodeSocketName="audio"/>
+    <link id="96" srcNodeId="51" srcNodeSocketName="pos.y" dstNodeId="84" dstNodeSocketName="result"/>
+    <editor nextZKey="1">
         <dragAndZoom x="588.52423095703125" y="125.35511016845703" zoom="1.3131787776947021"/>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="8079608c" gridColor="a3cbe71e">
+        <nodeDatas>
+            <nodeData nodeId="51" x="555" y="-67.168487548828125" zKey="0"/>
+            <nodeData nodeId="73" x="272" y="128" zKey="0" folded="1"/>
+            <nodeData nodeId="74" x="272" y="-16" zKey="0" folded="1"/>
+            <nodeData nodeId="75" x="288" y="272" zKey="0" folded="1"/>
+            <nodeData nodeId="76" x="400" y="-16" zKey="0" folded="1"/>
+            <nodeData nodeId="77" x="400" y="16" zKey="0" folded="1"/>
+            <nodeData nodeId="78" x="400" y="128" zKey="0" folded="1"/>
+            <nodeData nodeId="79" x="400" y="160" zKey="0" folded="1"/>
+            <nodeData nodeId="81" x="400" y="240" zKey="0" folded="1"/>
+            <nodeData nodeId="83" x="400" y="272" zKey="0" folded="1"/>
+            <nodeData nodeId="84" x="400" y="-64" zKey="0" folded="1"/>
+        </nodeDatas>
+        <visualizers/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="8079608c" gridColor="a3cbe71e">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
                 <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>

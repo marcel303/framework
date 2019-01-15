@@ -32,7 +32,6 @@
 #include "kinect2FrameListener.h"
 
 #include <libfreenect2/libfreenect2.hpp>
-#include <libfreenect2/registration.h>
 #include <libfreenect2/packet_pipeline.h>
 #include <libfreenect2/logger.h>
 
@@ -42,7 +41,6 @@ Kinect2::Kinect2()
 	: freenect2(nullptr)
 	, device(nullptr)
 	, pipeline(nullptr)
-	, registration(nullptr)
 	, listener(nullptr)
 	, mutex(nullptr)
 	, thread(nullptr)
@@ -209,11 +207,6 @@ bool Kinect2::threadInitImpl()
 	logDebug("device serial: %s", device->getSerialNumber().c_str());
 	logDebug("device firmware: %s", device->getFirmwareVersion().c_str());
 	
-	Assert(registration == nullptr);
-	registration = new libfreenect2::Registration(
-		device->getIrCameraParams(),
-		device->getColorCameraParams());
-	
 	return true;
 }
 
@@ -228,9 +221,6 @@ void Kinect2::threadShut()
 
 bool Kinect2::threadProcess()
 {
-	//libfreenect2::Frame undistorted(512, 424, 4);
-	//libfreenect2::Frame registered(512, 424, 4);
-	
 	SDL_Delay(50);
 	
 	return true;

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Quat.h"
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Vec4.h"
@@ -24,6 +23,8 @@
 #define m13 m_v[INDEX(1, 3)]
 #define m23 m_v[INDEX(2, 3)]
 #define m33 m_v[INDEX(3, 3)]
+
+class Quat;
 
 class Mat4x4
 {
@@ -515,11 +516,7 @@ public:
 		return (*this) * t;
 	}
 	
-	inline Mat4x4 Rotate(const Quat & q) const
-	{
-		Mat4x4 t = q.toMatrix();
-		return (*this) * t;
-	}
+	Mat4x4 Rotate(const Quat & q) const;
 
 	inline Mat4x4 Invert() const
 	{

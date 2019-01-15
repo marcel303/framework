@@ -35,6 +35,8 @@
 #include "model.h"
 #include "model_fbx.h"
 #include "model_ogre.h"
+#include "Path.h"
+#include "StringEx.h"
 
 #define DEBUG_TRS 0
 
@@ -65,6 +67,8 @@ namespace AnimModel
 	
 	Mesh::Mesh()
 	{
+		m_isVisible = true;
+		
 		m_vertices = 0;
 		m_numVertices = 0;
 		
@@ -683,7 +687,7 @@ namespace AnimModel
 		
 		for (std::map<std::string, Anim*>::iterator i = m_animations.begin(); i != m_animations.end(); ++i)
 		{
-			const std::string newName = name;
+			const std::string & newName = name;
 			
 			Anim * anim = i->second;
 			
@@ -731,6 +735,9 @@ Model::Model(const char * filename, const bool autoUpdate)
 	ctor();
 	
 	m_model = &g_modelCache.findOrCreate(filename);
+	
+	ctorEnd();
+	
 }
 
 Model::Model(ModelCacheElem & cacheElem, const bool autoUpdate)
@@ -739,6 +746,8 @@ Model::Model(ModelCacheElem & cacheElem, const bool autoUpdate)
 	ctor();
 	
 	m_model = &cacheElem;
+	
+	ctorEnd();
 }
 
 void Model::ctor()
@@ -764,13 +773,27 @@ void Model::ctor()
 	animLoopCount = 0;
 	animSpeed = 1.f;
 	animRootMotionEnabled = true;
+	m_boneTransforms = nullptr;
 	
 	if (m_autoUpdate)
 		framework.registerModel(this);
 }
 
+void Model::ctorEnd()
+{
+	const int numBones = m_model->boneSet->m_numBones;
+	
+	m_boneTransforms = new BoneTransform[numBones];
+	
+	for (int i = 0; i < numBones; ++i)
+		m_boneTransforms[i] = m_model->boneSet->m_bones[i].transform;
+}
+
 Model::~Model()
 {
+	delete [] m_boneTransforms;
+	m_boneTransforms = nullptr;
+	
 	if (m_autoUpdate)
 		framework.unregisterModel(this);
 }
@@ -843,50 +866,81 @@ void Model::drawEx(Vec3Arg position, Vec3Arg axis, const float angle, const floa
 
 void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 {
-	Mat4x4 * localMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
-	Mat4x4 * worldMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
-	Mat4x4 * globalMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * m_model->boneSet->m_numBones, 16);
+	const int numBones = calculateBoneMatrices(matrix, nullptr, nullptr, nullptr, 0);
 	
-	calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, m_model->boneSet->m_numBones);
+	Mat4x4 * localMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numBones, 16);
+	Mat4x4 * worldMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numBones, 16);
+	Mat4x4 * globalMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numBones, 16);
+	
+	calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, numBones);
+	
+	if (drawFlags & DrawUnSkinned)
+	{
+		gxPushMatrix();
+		gxMultMatrixf(matrix.m_v);
+	}
 	
 	// draw
 	
 	if (drawFlags & DrawMesh)
 	{
+		const Shader * previousShader = nullptr;
+		
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 		{
-			// todo: hide meshes that shouldn't render
-			if (i != 0)
+			Mesh * mesh = m_model->meshSet->m_meshes[i];
+			
+			if (mesh->m_isVisible == false)
 				continue;
 			
-			Mesh * mesh = m_model->meshSet->m_meshes[i];
+			if (mesh->m_numIndices == 0)
+				continue;
+			
 			Shader & shader = (overrideShader != nullptr) ? *overrideShader : mesh->m_material.shader;
 			
 			setShader(shader);
 			
 			gxValidateMatrices();
 			
-			// todo: use constant locations for skinningMatrices and drawColor, and move this setting to outside of the loop
-			// set uniform constants for skinning matrices
-			
-			const GLint boneMatrices = shader.getImmediate("skinningMatrices");
-			
-			if (boneMatrices != -1)
+			if (&shader != previousShader)
 			{
-				glUniformMatrix4fv(boneMatrices, m_model->boneSet->m_numBones, GL_FALSE, (GLfloat*)globalMatrices);
-				checkErrorGL();
-			}
+				previousShader = &shader;
+				
+				// set uniform constants for skinning matrices
+				
+				const ShaderCacheElem & shaderElem = shader.getCacheElem();
+				
+				if (shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index >= 0)
+				{
+					glUniformMatrix4fv(shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index, numBones, GL_FALSE, (GLfloat*)globalMatrices);
+					checkErrorGL();
+				}
+				
+			// todo : use constant locations for drawColor and drawSkin
 			
-			const GLint drawColor = shader.getImmediate("drawColor");
-			
-			if (drawColor != -1)
-			{
-				glUniform4f(drawColor,
-					(drawFlags & DrawColorTexCoords)    ? 1.f : 0.f,
-					(drawFlags & DrawColorNormals)      ? 1.f : 0.f,
-					(drawFlags & DrawColorBlendIndices) ? 1.f : 0.f,
-					(drawFlags & DrawColorBlendWeights) ? 1.f : 0.f);
-				checkErrorGL();
+				const GLint drawColor = shader.getImmediate("drawColor");
+				
+				if (drawColor != -1)
+				{
+					glUniform4f(drawColor,
+						(drawFlags & DrawColorTexCoords)    ? 1.f : 0.f,
+						(drawFlags & DrawColorNormals)      ? 1.f : 0.f,
+						(drawFlags & DrawColorBlendIndices) ? 1.f : 0.f,
+						(drawFlags & DrawColorBlendWeights) ? 1.f : 0.f);
+					checkErrorGL();
+				}
+				
+				const GLint drawSkin = shader.getImmediate("drawSkin");
+				
+				if (drawSkin != -1)
+				{
+					glUniform4f(drawSkin,
+						(drawFlags & DrawUnSkinned)   ? 1.f : 0.f,
+						(drawFlags & DrawHardSkinned) ? 1.f : 0.f,
+						0.f,
+						0.f);
+					checkErrorGL();
+				}
 			}
 			
 			// bind vertex arrays
@@ -907,37 +961,61 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		clearShader();
 	}
 	
+	if (drawFlags & DrawUnSkinned)
+	{
+		gxPopMatrix();
+	}
+	
 	if (drawFlags & DrawNormals)
 	{
-		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
+		gxBegin(GX_LINES);
 		{
-			const Mesh * mesh = m_model->meshSet->m_meshes[i];
-			
-			gxBegin(GL_LINES);
+			for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 			{
+				const Mesh * mesh = m_model->meshSet->m_meshes[i];
+			
 				for (int j = 0; j < mesh->m_numVertices; ++j)
 				{
 					const Vertex & vertex = mesh->m_vertices[j];
 					
-					// -- software vertex blend (soft skinned) --
 					Vec3 p(0.f, 0.f, 0.f);
 					Vec3 n(0.f, 0.f, 0.f);
-					for (int b = 0; b < 4; ++b)
-					{
-						if (vertex.boneWeights[b] == 0)
-							continue;
-						const int boneIndex = vertex.boneIndices[b];
-						const float boneWeight = vertex.boneWeights[b] / 255.f;						
-						const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
-						p += globalMatrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz)) * boneWeight;
-						n += globalMatrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz)) * boneWeight;
-					}
-					// -- software vertex blend (soft skinned) --
 					
-					const float scale = 3.f;
+					if (drawFlags & DrawUnSkinned)
+					{
+						// -- software vertex blend (unskinned) --
+						p = matrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz));
+						n = matrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz));
+						// -- software vertex blend (unskinned) --
+					}
+					else if (drawFlags & DrawHardSkinned)
+					{
+						// -- software vertex blend (hard skinned) --
+						const int boneIndex = vertex.boneIndices[0];
+						const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
+						p = globalMatrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz));
+						n = globalMatrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz));
+						// -- software vertex blend (hard skinned) --
+					}
+					else
+					{
+						// -- software vertex blend (soft skinned) --
+						
+						for (int b = 0; b < 4; ++b)
+						{
+							if (vertex.boneWeights[b] == 0)
+								continue;
+							const int boneIndex = vertex.boneIndices[b];
+							const float boneWeight = vertex.boneWeights[b] / 255.f;
+							const Mat4x4 & globalMatrix = globalMatrices[boneIndex];
+							p += globalMatrix.Mul4(Vec3(vertex.px, vertex.py, vertex.pz)) * boneWeight;
+							n += globalMatrix.Mul3(Vec3(vertex.nx, vertex.ny, vertex.nz)) * boneWeight;
+						}
+						// -- software vertex blend (soft skinned) --
+					}
 					
 					const Vec3 & p1 = p;
-					const Vec3   p2 = p + n * scale;
+					const Vec3   p2 = p + n * drawNormalsScale;
 					
 					gxColor3ub(127, 127, 127);
 					gxNormal3f(n[0], n[1], n[2]);
@@ -945,8 +1023,42 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 					gxVertex3f(p2[0], p2[1], p2[2]);
 				}
 			}
+		}
+		gxEnd();
+	}
+	
+	if (drawFlags & DrawBoundingBox)
+	{
+		Vec3 min;
+		Vec3 max;
+		
+		calculateAABB(min, max, false);
+		
+		gxPushMatrix();
+		gxMultMatrixf(matrix.m_v);
+		{
+			gxBegin(GX_LINES);
+			{
+				const float x[2] = { min[0], max[0] };
+				const float y[2] = { min[1], max[1] };
+				const float z[2] = { min[2], max[2] };
+				
+				gxColor3ub(127, 127, 127);
+				for (int x1 = 0; x1 <= 1; ++x1)
+					for (int y1 = 0; y1 <= 1; ++y1)
+						for (int z1 = 0; z1 <= 1; ++z1)
+							for (int x2 = 0; x2 <= 1; ++x2)
+								for (int y2 = 0; y2 <= 1; ++y2)
+									for (int z2 = 0; z2 <= 1; ++z2)
+										if (std::abs(x1-x2) + std::abs(y1-y2) + std::abs(z2-z1) == 1)
+										{
+											gxVertex3f(x[x1], y[y1], z[z1]);
+											gxVertex3f(x[x2], y[y2], z[z2]);
+										}
+			}
 			gxEnd();
 		}
+		gxPopMatrix();
 	}
 	
 	if (drawFlags & DrawBones)
@@ -959,7 +1071,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 
 		// bone to object matrix translation
 		gxColor3ub(127, 127, 127);
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
@@ -976,7 +1088,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		gxEnd();
 		gxColor3ub(0, 255, 0);
 		glPointSize(5.f);
-		gxBegin(GL_POINTS);
+		gxBegin(GX_POINTS);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
@@ -1003,7 +1115,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 
 		// object to bone matrix translation
 		gxColor3ub(127, 127, 127);
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
@@ -1021,7 +1133,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		gxColor3ub(255, 0, 0);
 		glPointSize(7.f);
 		checkErrorGL();
-		gxBegin(GL_POINTS);
+		gxBegin(GX_POINTS);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
@@ -1078,62 +1190,34 @@ int Model::calculateBoneMatrices(
 {
 	if (numMatrices == 0)
 	{
-		return m_model->boneSet->m_numBones;
+		// todo : add flag if static mesh or not ?
+		
+		if (m_model->boneSet->m_numBones == 0)
+			return 1;
+		else
+			return m_model->boneSet->m_numBones;
+	}
+	
+	if (m_model->boneSet->m_numBones == 0)
+	{
+		Assert(numMatrices == 1);
+		
+		localMatrices[0].MakeIdentity();
+		worldMatrices[0] = matrix;
+		globalMatrices[0] = worldMatrices[0];
+		
+		return 1;
 	}
 	
 	Assert(numMatrices == m_model->boneSet->m_numBones);
-	
-	// calculate transforms in local bone space
-	
-	BoneTransform * transforms = (BoneTransform*)ALIGNED_ALLOCA(sizeof(BoneTransform) * m_model->boneSet->m_numBones, 16);
-	
-	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
-	{
-		transforms[i] = m_model->boneSet->m_bones[i].transform;
-	}
-	
-	// apply animations
-	
-	// todo: move to updateAnimation
-	if (m_isAnimStarted && m_animSegment && !animIsPaused)
-	{
-		Anim * anim = reinterpret_cast<Anim*>(m_animSegment);
-		
-		const bool isDone = anim->evaluate(animTime, transforms);
-		
-		if (anim->m_rootMotion)
-		{
-			int boneIndex = m_model->boneSet->findBone(m_model->rootNode);
-			
-			if (boneIndex != -1)
-			{
-				transforms[boneIndex].translation = m_model->boneSet->m_bones[boneIndex].transform.translation;
-			}
-		}
-		
-		if (isDone)
-		{
-			if (animLoop > 0 || animLoop < 0)
-			{
-				animTime = 0.f;
-				animLoopCount++;
-				if (animLoop > 0)
-					animLoop--;
-			}
-			else
-			{
-				animIsActive = false;
-			}
-		}
-	}
 	
 	// convert translation / rotation pairs into matrices
 	
 	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 	{
-		// todo: scale?
+		// todo : scale?
 		
-		const BoneTransform & transform = transforms[i];
+		const BoneTransform & transform = m_boneTransforms[i];
 		
 		Mat4x4 & boneMatrix = localMatrices[i];
 		
@@ -1285,6 +1369,80 @@ int Model::softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * wor
 	return 0;
 }
 
+void Model::calculateAABB(Vec3 & min, Vec3 & max, const bool applyAnimation) const
+{
+	const float minFloat = -std::numeric_limits<float>::max();
+	const float maxFloat = +std::numeric_limits<float>::max();
+
+	min = Vec3(maxFloat, maxFloat, maxFloat);
+	max = Vec3(minFloat, minFloat, minFloat);
+	
+	//
+	
+	if (applyAnimation)
+	{
+		Mat4x4 matrix;
+		matrix.MakeScaling(scale, scale, scale);
+		
+		const int numMatrices = calculateBoneMatrices(matrix, nullptr, nullptr, nullptr, 0);
+		
+		Mat4x4 * localMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numMatrices, 16);
+		Mat4x4 * worldMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numMatrices, 16);
+		Mat4x4 * globalMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numMatrices, 16);
+		
+		calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, numMatrices);
+		
+		const int numVertices = softBlend(
+			matrix, nullptr, nullptr,  nullptr, numMatrices,
+			false, nullptr, nullptr, nullptr,
+			false, nullptr, nullptr, nullptr, 0);
+		
+		float * __restrict positionX = new float[numVertices];
+		float * __restrict positionY = new float[numVertices];
+		float * __restrict positionZ = new float[numVertices];
+		
+		softBlend(
+			matrix, localMatrices, worldMatrices, globalMatrices, numMatrices,
+			true, positionX, positionY, positionZ,
+			false, nullptr, nullptr, nullptr, numVertices);
+		
+		for (int i = 0; i < numVertices; ++i)
+		{
+			min[0] = fminf(min[0], positionX[i]);
+			min[1] = fminf(min[1], positionY[i]);
+			min[2] = fminf(min[2], positionZ[i]);
+			
+			max[0] = fmaxf(max[0], positionX[i]);
+			max[1] = fmaxf(max[1], positionY[i]);
+			max[2] = fmaxf(max[2], positionZ[i]);
+		}
+		
+		delete [] positionX;
+		delete [] positionY;
+		delete [] positionZ;
+	}
+	else
+	{
+		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
+		{
+			const Mesh * mesh = m_model->meshSet->m_meshes[i];
+			
+			for (int j = 0; j < mesh->m_numVertices; ++j)
+			{
+				const Vertex & vertex = mesh->m_vertices[j];
+				
+				min[0] = fminf(min[0], vertex.px);
+				min[1] = fminf(min[1], vertex.py);
+				min[2] = fminf(min[2], vertex.pz);
+				
+				max[0] = fmaxf(max[0], vertex.px);
+				max[1] = fmaxf(max[1], vertex.py);
+				max[2] = fmaxf(max[2], vertex.pz);
+			}
+		}
+	}
+}
+
 void Model::updateAnimationSegment()
 {
 	if (m_isAnimStarted && !m_animSegmentName.empty())
@@ -1311,13 +1469,55 @@ void Model::updateAnimationSegment()
 
 void Model::updateAnimation(float timeStep)
 {
-	// todo: evaluate bone transforms, and update root motion
-	
 	animRootMotion.SetZero();
 	
 	const float oldTime = animTime;
-	animTime += animSpeed * timeStep;
+	if (!animIsPaused)
+		animTime += animSpeed * timeStep;
 	const float newTime = animTime;
+	
+	// calculate transforms in local bone space
+	
+	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
+	{
+		m_boneTransforms[i] = m_model->boneSet->m_bones[i].transform;
+	}
+	
+	// apply animations
+	
+	if (m_isAnimStarted && m_animSegment)
+	{
+		Anim * anim = reinterpret_cast<Anim*>(m_animSegment);
+		
+		const bool isDone = anim->evaluate(animTime, m_boneTransforms);
+		
+		if (anim->m_rootMotion)
+		{
+			int boneIndex = m_model->boneSet->findBone(m_model->rootNode);
+			
+			if (boneIndex != -1)
+			{
+				m_boneTransforms[boneIndex].translation = m_model->boneSet->m_bones[boneIndex].transform.translation;
+			}
+		}
+		
+		if (isDone)
+		{
+			if (animLoop > 0 || animLoop < 0)
+			{
+				animTime = 0.f;
+				animLoopCount++;
+				if (animLoop > 0)
+					animLoop--;
+			}
+			else
+			{
+				animIsActive = false;
+			}
+		}
+	}
+	
+	// update root motion
 	
 	Anim * anim = static_cast<Anim*>(m_animSegment);
 	
@@ -1467,6 +1667,7 @@ void ModelCacheElem::load(const char * filename)
 	// 1) read file contents
 	std::vector<SectionRecord> records;
 	
+	if (Path::GetExtension(filename, true) == "txt")
 	{
 		FileReader r;
 		
@@ -1481,6 +1682,24 @@ void ModelCacheElem::load(const char * filename)
 				if (parseSectionRecord(filename, line, record))
 					records.push_back(record);
 			}
+		}
+		else
+		{
+			logError("failed to open %s", filename);
+		}
+	}
+	else
+	{
+		std::vector<std::string> lines;
+		lines.push_back(std::string("boneset file:") + filename);
+		lines.push_back(std::string("meshset file:") + filename);
+		
+		for (const std::string & line : lines)
+		{
+			SectionRecord record;
+		
+			if (parseSectionRecord(filename, line, record))
+				records.push_back(record);
 		}
 	}
 	
@@ -1521,6 +1740,13 @@ void ModelCacheElem::load(const char * filename)
 	if (boneSet == 0)
 	{
 		boneSet = new BoneSet();
+		boneSet->allocate(1);
+		
+		Bone & bone = boneSet->m_bones[0];
+		bone.name = "root";
+		bone.poseMatrix.MakeIdentity();
+		bone.parent = -1;
+		bone.originalIndex = 0;
 	}
 	
 	// 3) load mesh set and anim sets
@@ -1551,6 +1777,59 @@ void ModelCacheElem::load(const char * filename)
 					{
 						meshSet = loader->loadMeshSet(file.c_str(), boneSet);
 						delete loader;
+						
+						if (meshSet)
+						{
+							const std::string show = record.args.getString("show", "");
+							const std::string hide = record.args.getString("hide", "");
+							
+							if (!show.empty())
+							{
+								// first mark everything invisible
+								
+								for (int i = 0; i < meshSet->m_numMeshes; ++i)
+									meshSet->m_meshes[i]->m_isVisible = false;
+								
+								// mark selected meshes visible
+								
+								std::vector<std::string> wildcards;
+								splitString(show, wildcards, ',');
+								
+								for (int i = 0; i < meshSet->m_numMeshes; ++i)
+								{
+									Mesh * mesh = meshSet->m_meshes[i];
+									
+									for (auto & wildcard : wildcards)
+									{
+										if (String::MatchesWildcard(mesh->m_name.c_str(), wildcard.c_str()))
+										{
+											mesh->m_isVisible = true;
+										}
+									}
+								}
+							}
+							
+							if (!hide.empty())
+							{
+								// mark selected meshes invisible
+								
+								std::vector<std::string> wildcards;
+								splitString(hide, wildcards, ',');
+								
+								for (int i = 0; i < meshSet->m_numMeshes; ++i)
+								{
+									Mesh * mesh = meshSet->m_meshes[i];
+									
+									for (auto & wildcard : wildcards)
+									{
+										if (String::MatchesWildcard(mesh->m_name.c_str(), wildcard.c_str()))
+										{
+											mesh->m_isVisible = false;
+										}
+									}
+								}
+							}
+						}
 					}
 				}
 			}

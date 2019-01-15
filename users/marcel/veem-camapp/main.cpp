@@ -19,7 +19,7 @@
 #if defined(LINUX)
 	#define DO_CONTROLLER 0
 #else
-	#define DO_CONTROLLER 0
+	#define DO_CONTROLLER 1
 #endif
 
 #if DO_CONTROLLER
@@ -287,7 +287,8 @@ struct Recorder
 			
 			//LOG_DBG("got frame data!", 0);
 			
-			// todo : make thread safe
+			// note : we copy the OSC address prefix to ensure it's thread safe to use later
+			//        it may change and become invalid due to ui interactions otherwise
 			
 			std::string oscAddressPrefix;
 			
@@ -318,7 +319,7 @@ struct Controller
 	
 	void init(Recorder * _recorder1, Recorder * _recorder2)
 	{
-		framework.init(0, nullptr, GFX_SX, GFX_SY);
+		framework.init(GFX_SX, GFX_SY);
 		
 		recorder1 = _recorder1;
 		recorder2 = _recorder2;
@@ -389,25 +390,19 @@ struct Controller
 		
 		if (recorder != nullptr && recorder->frameData != nullptr)
 		{
-			GLuint texture = createTextureFromR8(recorder->frameData, 320, 240, false, true);
+			GxTexture texture;
 			
-			if (texture != 0)
+			texture.allocate(320, 240, GX_R8_UNORM, false, true);
+			
+			if (texture.isValid())
 			{
-				glBindTexture(GL_TEXTURE_2D, texture);
-				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-				checkErrorGL();
-				glBindTexture(GL_TEXTURE_2D, 0);
-				checkErrorGL();
+				texture.upload(recorder->frameData, 1, 0);
+				texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 
-				gxSetTexture(texture);
+				gxSetTexture(texture.id);
 				setColor(colorWhite);
 				drawRect(0, 0, CAMVIEW_SX, CAMVIEW_SY);
 				gxSetTexture(0);
-				
-				glDeleteTextures(1, &texture);
-				texture = 0;
-				checkErrorGL();
 			}
 		}
 		
@@ -425,20 +420,15 @@ struct Controller
 	{
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			setFont("calibri.ttf");
-			pushFontMode(FONT_SDF);
+			gxPushMatrix();
 			{
-				gxPushMatrix();
-				{
-					drawCameraUi(0);
-					gxTranslatef(CAMVIEW_SX, 0, 0);
-					
-					drawCameraUi(1);
-					gxTranslatef(CAMVIEW_SX, 0, 0);
-				}
-				gxPopMatrix();
+				drawCameraUi(0);
+				gxTranslatef(CAMVIEW_SX, 0, 0);
+				
+				drawCameraUi(1);
+				gxTranslatef(CAMVIEW_SX, 0, 0);
 			}
-			popFontMode();
+			gxPopMatrix();
 		}
 		framework.endDraw();
 	}
@@ -556,9 +546,13 @@ void changeDirectory(const char * path);
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
-	
+#endif
+
 #if 1
 	// show connected devices
 	

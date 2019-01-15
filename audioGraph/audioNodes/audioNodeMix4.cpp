@@ -168,7 +168,7 @@ struct AudioNodeSourceMix : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(audioSourceMix, AudioNodeSourceMix)
+AUDIO_NODE_TYPE(AudioNodeSourceMix)
 {
 	typeName = "audio.mix";
 	

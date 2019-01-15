@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "testBase.h"
+#include <algorithm>
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -199,7 +200,7 @@ void testReactionDiffusion()
 		{
 			const Grid & grid = rd->grid[rd->curGridIndex];
 
-			gxBegin(GL_POINTS);
+			gxBegin(GX_POINTS);
 			{
 				for (int x = 0; x < Grid::kGridSx; ++x)
 				{

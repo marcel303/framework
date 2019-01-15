@@ -61,7 +61,7 @@ std::vector<std::string> StreamReader::ReadAllLines()
 	{
 		std::string line = ReadLine();
 
-		result.push_back(line);
+		result.emplace_back(std::move(line));
 	}
 	
 	return result;
@@ -174,7 +174,9 @@ void StreamReader::ReadText_Binary(char* out_String, size_t maxLength)
 std::string StreamReader::ReadLine()
 {
 	std::string result;
-
+	
+	result.reserve(8);
+	
 	bool first = true;
 	bool stop = false;
 

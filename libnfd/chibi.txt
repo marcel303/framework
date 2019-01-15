@@ -1,0 +1,14 @@
+library libnfd
+
+	add_files nfd_common.c nfd_common.h nfd.h
+
+	with_platform macos add_files nfd_cocoa.m
+	with_platform linux add_files nfd_gtk.c
+	with_platform windows add_files nfd_win.cpp
+
+	with_platform macos depend_library AppKit find
+	with_platform linux depend_package GTK2
+	
+	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
+
+	header_path . expose

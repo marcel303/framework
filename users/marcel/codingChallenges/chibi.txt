@@ -1,0 +1,22 @@
+app codingChallenges-086-cubeWave
+	depend_library framework
+	depend_library imgui-framework
+	add_files 086-cubeWave.cpp
+	resource_path data
+
+app codingChallenges-116-lissajousCurveTable
+	depend_library framework
+	add_files 116-lissajousCurveTable.cpp
+
+app codingChallenges-127-flockingSimulation
+	depend_library framework
+	depend_library imgui-framework
+	add_files 127-flockingSimulation.cpp
+
+app codingChallenges-129-kochFractalSnowflake
+	depend_library framework
+	add_files 129-kochFractalSnowflake.cpp
+
+app codingChallenges-u01-extrusion
+	depend_library framework
+	add_files u01-extrusion.cpp

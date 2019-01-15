@@ -27,7 +27,6 @@
 
 #include "MemAlloc.h"
 #include "vfxNodeImageCpuToGpu.h"
-#include <GL/glew.h> // GL_RED
 
 VFX_ENUM_TYPE(imageCpuToGpuChannel)
 {
@@ -96,20 +95,20 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 	{
 		// always upload single channel data using the fast path
 		
-		if (texture.isChanged(image->sx, image->sy, GL_R8))
+		if (texture.isChanged(image->sx, image->sy, GX_R8_UNORM))
 		{
-			texture.allocate(image->sx, image->sy, GL_R8, filter, clamp);
-			texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+			texture.allocate(image->sx, image->sy, GX_R8_UNORM, filter, clamp);
+			texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		}
 		
-		texture.upload(image->channel[0].data, image->alignment, image->channel[0].pitch, GL_RED, GL_UNSIGNED_BYTE);
+		texture.upload(image->channel[0].data, image->alignment, image->channel[0].pitch);
 	}
 	else if (channel == kChannel_RGB || channel == kChannel_RGBA)
 	{
-		if (texture.isChanged(image->sx, image->sy, GL_RGBA8))
+		if (texture.isChanged(image->sx, image->sy, GX_RGBA8_UNORM))
 		{
-			texture.allocate(image->sx, image->sy, GL_RGBA8, filter, clamp);
-			texture.setSwizzle(GL_RED, GL_GREEN, GL_BLUE, GL_ALPHA);
+			texture.allocate(image->sx, image->sy, GX_RGBA8_UNORM, filter, clamp);
+			texture.setSwizzle(0, 1, 2, 3);
 		}
 		
 		// todo : should we keep this temp buffer allocated ?
@@ -145,17 +144,17 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 				temp, tempPitch, image->sx, image->sy);
 		}
 		
-		texture.upload(temp, 4, tempPitch / 4, GL_RGBA, GL_UNSIGNED_BYTE);
+		texture.upload(temp, 4, tempPitch / 4);
 		
 		MemFree(temp);
 		temp = nullptr;
 	}
 	else if (channel == kChannel_R || channel == kChannel_G || channel == kChannel_B || channel == kChannel_A)
 	{
-		if (texture.isChanged(image->sx, image->sy, GL_R8))
+		if (texture.isChanged(image->sx, image->sy, GX_R8_UNORM))
 		{
-			texture.allocate(image->sx, image->sy, GL_R8, filter, clamp);
-			texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+			texture.allocate(image->sx, image->sy, GX_R8_UNORM, filter, clamp);
+			texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		}
 		
 		const VfxImageCpu::Channel * source = nullptr;
@@ -169,7 +168,7 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 		else
 			source = &image->channel[3];
 		
-		texture.upload(source->data, image->alignment, source->pitch, GL_RED, GL_UNSIGNED_BYTE);
+		texture.upload(source->data, image->alignment, source->pitch);
 	}
 	else
 	{
@@ -186,5 +185,5 @@ void VfxNodeImageCpuToGpu::tick(const float dt)
 
 void VfxNodeImageCpuToGpu::getDescription(VfxNodeDescription & d)
 {
-	d.addOpenglTexture("output image", imageOutput.texture);
+	d.addGxTexture("output image", texture);
 }

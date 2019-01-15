@@ -34,11 +34,11 @@
 #include "StringEx.h"
 
 #include <SDL2/SDL.h>
+#include <string.h>
 
 //
 
 #include "audioNodeBase.h"
-#include "soundmix.h"
 #include "Timer.h"
 
 AudioValueHistory::AudioValueHistory()
@@ -301,6 +301,8 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	auto oldAudioGraph = g_currentAudioGraph;
 	g_currentAudioGraph = audioGraph;
 	{
+		node->shut();
+		
 		delete node;
 		node = nullptr;
 	}
@@ -414,6 +416,7 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 	
 	AUDIO_SCOPE;
 	
+	// fixme : output mem is nullptr for trigger types. change to this ptr ?
 	Assert(input->isConnected());
 	
 	if (input->type == kAudioPlugType_FloatVec)

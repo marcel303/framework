@@ -1,0 +1,113 @@
+library framework
+	
+	depend_library libgg
+	depend_library libfbx
+
+	depend_library libsdl2
+
+	scan_files cpp
+	scan_files c   path audiostream          group audiostream
+	scan_files cpp path audiostream          group audiostream
+	scan_files cpp path msdfgen     traverse group msdfgen conglomerate msdfgen_all.cpp
+
+	scan_files h
+	scan_files h path audiostream                    group audiostream
+	scan_files h path audiostream/oggvorbis traverse group audiostream/oggvorbis
+	scan_files h path msdfgen               traverse group msdfgen
+
+	header_path . expose
+	header_path audiostream/oggvorbis expose
+	
+	compile_definition NO_SDL_GLEXT            * expose
+	compile_definition FRAMEWORK_USE_OPENAL    0 expose
+	compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+
+	compile_definition HAVE_M_PI               * expose toolchain msvc
+	compile_definition _USE_MATH_DEFINES       * expose toolchain msvc
+	compile_definition _CRT_SECURE_NO_WARNINGS * expose toolchain msvc
+
+# Not every feature works on Raspberry Pi or is just to slow, so we tweak some settings here
+	with_platform linux.raspberry-pi compile_definition USE_LEGACY_OPENGL    1 expose
+	with_platform linux.raspberry-pi compile_definition ENABLE_HQ_PRIMITIVES 0 expose
+	with_platform linux.raspberry-pi compile_definition ENABLE_MSDF_FONTS    0 expose
+
+# Macos header file includes and libraries
+# note : freetype was configured using : ./configure --disable-static --without-zlib --without-png --without-bzip2
+# note : freetype dylib was updated using : install_name_tool -id "@rpath/libfreetype.6.dylib" libfreetype.6.dylib
+	with_platform macos header_path macos/include          expose
+	with_platform macos header_path macos/include/freetype
+	with_platform macos depend_library macos/glew/lib/libGLEW.a local
+	with_platform macos depend_library macos/lib/libfreeimage.a local
+	with_platform macos depend_library macos/lib/libfreetype.6.dylib local embed_framework
+	with_platform macos depend_library macos/lib/libportaudio.a local
+
+# Windows header file includes and libraries
+	with_platform windows header_path win32/include          expose
+	with_platform windows header_path win32/include/freetype
+	with_platform windows depend_library win32/lib/FreeImage.lib local
+	with_platform windows depend_library win32/lib/freetype.lib local
+	with_platform windows depend_library win32/lib/glew32.lib local
+	with_platform windows depend_library win32/lib/OpenAL32.lib local
+	with_platform windows depend_library win32/lib/XInput9_1_0.lib local
+	with_platform windows depend_library win32/lib/portaudio_x86.lib local
+	with_platform windows depend_library Winmm.lib global
+	with_platform windows depend_library OpenGL32.lib global
+	with_platform windows add_dist_files win32/dll/FreeImage.dll
+	with_platform windows add_dist_files win32/dll/freetype.dll
+	with_platform windows add_dist_files win32/dll/glew32.dll
+	with_platform windows add_dist_files win32/dll/OpenAL32.dll
+	with_platform windows add_dist_files win32/dll/XInput9_1_0.dll
+	with_platform windows add_dist_files win32/dll/portaudio_x86.dll
+
+# Linux header file includes and libraries
+
+	# fixme : need a fix for the freetype2 include path
+	with_platform linux header_path /usr/include/freetype2
+	with_platform linux depend_library pthread find
+	with_platform linux depend_library portaudio find
+	with_platform linux depend_library freeimage find
+	with_platform linux depend_package OpenGL
+	with_platform linux depend_package GLEW
+	with_platform linux depend_package Freetype
+
+app framework-example-aniplay
+	add_files examples/aniplay.cpp
+	resource_path examples/data
+	depend_library framework
+	group framework-examples
+
+app framework-example-basic
+	add_files examples/example.cpp
+	resource_path examples/data
+	depend_library framework
+	group framework-examples
+
+app framework-example-model-basic
+	add_files examples/model-basic.cpp
+	resource_path examples/data
+	depend_library framework
+	group framework-examples
+
+app framework-example-model-advanced
+	add_files examples/model.cpp
+	resource_path examples/data
+	depend_library framework
+	group framework-examples
+
+app framework-example-sounds
+	add_files examples/sounds.cpp
+	resource_path examples/data
+	depend_library framework
+	group framework-examples
+
+app framework-example-spriter
+	add_files examples/spriter.cpp
+	resource_path examples/data
+	depend_library framework
+	group framework-examples
+
+app framework-example-sprites
+	add_files examples/sprites.cpp
+	resource_path examples/data
+	depend_library framework
+	group framework-examples

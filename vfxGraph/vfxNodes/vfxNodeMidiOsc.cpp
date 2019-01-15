@@ -36,7 +36,7 @@ VFX_NODE_TYPE(VfxNodeMidiOsc)
 	in("endpoint", "string");
 	out("key", "float");
 	out("value", "float");
-	out("trigger", "trigger");
+	out("trigger!", "trigger");
 }
 
 VfxNodeMidiOsc::VfxNodeMidiOsc()

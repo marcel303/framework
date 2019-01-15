@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // glPointSize
 #include "audio.h"
 #include "audioTypes.h"
 #include "binaural.h"
@@ -34,13 +35,17 @@
 #include "binauralizer.h"
 #include "framework.h"
 #include "paobject.h"
-#include "soundmix.h"
+#include "soundmix.h" // PcmData, audio buffer routines
 #include "Timer.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
 
-#include "../libparticle/ui.h"
+#include "ui.h"
+
+#if ENABLE_WDL_FFT
+	#include "WDL/fft.h"
+#endif
 
 using namespace binaural;
 
@@ -155,6 +160,8 @@ namespace BinauralTestNamespace
 			
 			binauralizer.generateInterleaved(samples, AUDIO_UPDATE_SIZE);
 		}
+
+		ALIGNED_AUDIO_NEW_AND_DELETE();
 	};
 
 	struct MyPortAudioHandler : PortAudioHandler
@@ -214,7 +221,7 @@ namespace BinauralTestNamespace
 			
 			for (auto & sound : sounds)
 			{
-				float soundSamples[AUDIO_UPDATE_SIZE * 2];
+				ALIGN16 float soundSamples[AUDIO_UPDATE_SIZE * 2];
 				
 				sound->generate(soundSamples);
 				
@@ -244,18 +251,17 @@ using namespace BinauralTestNamespace;
 
 int main(int argc, char * argv[])
 {
-#if 0
-	char * basePath = SDL_GetBasePath();
-	changeDirectory(basePath);
-	changeDirectory("data");
-	SDL_free(basePath);
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
 #endif
 
 #if FULLSCREEN
 	framework.fullscreen = true;
 #endif
 	
-	if (!framework.init(0, 0, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	initUi();
@@ -291,8 +297,9 @@ int main(int argc, char * argv[])
 		Surface view3D(200, 200, false);
 	#endif
 		
+	// todo : rename testsounds/music2.ogg -> thegrooop/talkative.ogg
 		PcmData pcmData;
-		pcmData.load("testsounds/birdTest.ogg", 0, false);
+		pcmData.load("testsounds/music2.ogg", 0, false);
 		
 		MyPortAudioHandler audioHandler;
 		int numSources = 0;
@@ -378,7 +385,7 @@ int main(int argc, char * argv[])
 			float * __restrict samples = overlapBuffer + AUDIO_BUFFER_SIZE - AUDIO_UPDATE_SIZE;
 			
 			float oscillatorPhaseStep = 1.f / 50.f;
-			const float twoPi = M_PI * 2.f;
+			const float twoPi = float(M_PI) * 2.f;
 			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
@@ -544,7 +551,7 @@ int main(int argc, char * argv[])
 					gxRotatef(framework.time * .1f, 0, 1, 0);
 					
 					glPointSize(2.f);
-					gxBegin(GL_POINTS);
+					gxBegin(GX_POINTS);
 					{
 						for (auto & sample : sampleSet.samples)
 						{
@@ -561,7 +568,7 @@ int main(int argc, char * argv[])
 					gxEnd();
 					glPointSize(1.f);
 					
-					gxBegin(GL_LINES);
+					gxBegin(GX_LINES);
 					{
 						gxColor4f(1, 0, 0, 1); gxVertex3f(0, 0, 0); gxVertex3f(1, 0, 0);
 						gxColor4f(0, 1, 0, 1); gxVertex3f(0, 0, 0); gxVertex3f(0, 1, 0);
@@ -688,6 +695,10 @@ int main(int argc, char * argv[])
 				
 				//
 				
+			#if ENABLE_WDL_FFT
+				const int * fftPermuteTable = WDL_fft_permute_tab(HRTF_BUFFER_SIZE);
+			#endif
+			
 				gxPushMatrix();
 				{
 					gxTranslatef(0, GFX_SY - 50, 0);
@@ -700,7 +711,11 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_ADD);
 					for (int i = 0; i < sx; ++i)
 					{
+					#if ENABLE_WDL_FFT
+						const int j = fftPermuteTable[(i + sx/2) % sx];
+					#else
 						const int j = (i + sx/2) % sx;
+					#endif
 						const float power = std::hypotf(hrtf.lFilter.real[j], hrtf.lFilter.imag[j]);
 						setColorf(1.f, 0.f, 0.f, power);
 						drawLine(i, 0, i, sy);
@@ -724,7 +739,11 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_ADD);
 					for (int i = 0; i < sx; ++i)
 					{
+					#if ENABLE_WDL_FFT
+						const int j = fftPermuteTable[(i + sx/2) % sx];
+					#else
 						const int j = (i + sx/2) % sx;
+					#endif
 						const float power = std::hypotf(hrtf.rFilter.real[j], hrtf.rFilter.imag[j]);
 						setColorf(0.f, 1.f, 0.f, power);
 						drawLine(i, 0, i, sy);
@@ -875,7 +894,7 @@ static void drawHrirSampleGrid(const HRIRSampleSet & sampleSet, const Vec2 & hov
 	}
 	hqEnd();
 	
-	gxBegin(GL_POINTS);
+	gxBegin(GX_POINTS);
 	{
 		for (auto & sample : sampleSet.samples)
 		{

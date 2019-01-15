@@ -38,7 +38,7 @@ void testTextureAtlas()
 	{
 		TextureAtlas ta;
 		
-		ta.init(128, 128, GL_R8, false, false, nullptr);
+		ta.init(128, 128, GX_R8_UNORM, false, false, nullptr);
 		
 		bool success = true;
 		
@@ -47,19 +47,19 @@ void testTextureAtlas()
 		
 		const uint64_t tr1 = g_TimerRT.TimeUS_get();
 		
-		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
 		
 		success &= false != ta.makeBigger(256, 256);
 		
-		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
-		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
-		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
 		
 		success &= false != ta.makeBigger(512, 256);
 		
 		for (int i = 0; i < 500; ++i)
 		{
-			success &= nullptr != ta.tryAlloc(values, random(4, 12), random(4, 12), GL_RED, GL_UNSIGNED_BYTE);
+			success &= nullptr != ta.tryAlloc(values, random(4, 12), random(4, 12));
 		}
 		
 		const uint64_t tr2 = g_TimerRT.TimeUS_get();
@@ -87,7 +87,7 @@ void testTextureAtlas()
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(ta.texture);
+				gxSetTexture(ta.texture->id);
 				{
 					setColor(colorWhite);
 					drawRect(0, 0, ta.a.sx, ta.a.sy);
@@ -222,7 +222,7 @@ void testDynamicTextureAtlas()
 	
 	TextureAtlas ta;
 	
-	ta.init(GFX_SX/2, GFX_SY/2, GL_R8, false, false, nullptr);
+	ta.init(GFX_SX/2, GFX_SY/2, GX_R8_UNORM, false, false, nullptr);
 	
 	const uint64_t tt1 = g_TimerRT.TimeUS_get();
 
@@ -236,7 +236,7 @@ void testDynamicTextureAtlas()
 		for (int i = 0; i < sx * sy; ++i)
 			values[i] = i;
 		
-		BoxAtlasElem * e = ta.tryAlloc(values, sx, sy, GL_RED, GL_UNSIGNED_BYTE);
+		BoxAtlasElem * e = ta.tryAlloc(values, sx, sy);
 		
 		if (e != nullptr)
 		{
@@ -304,7 +304,7 @@ void testDynamicTextureAtlas()
 			for (int i = 0; i < sx * sy; ++i)
 				values[i] = i;
 			
-			BoxAtlasElem * e = ta.tryAlloc(values, sx, sy, GL_RED, GL_UNSIGNED_BYTE);
+			BoxAtlasElem * e = ta.tryAlloc(values, sx, sy);
 			
 			if (e != nullptr)
 			{
@@ -348,7 +348,7 @@ void testDynamicTextureAtlas()
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			pushBlend(BLEND_OPAQUE);
-			gxSetTexture(ta.texture);
+			gxSetTexture(ta.texture->id);
 			{
 				setColor(colorWhite);
 				drawRect(0, 0, ta.a.sx, ta.a.sy);

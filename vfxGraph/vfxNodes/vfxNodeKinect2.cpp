@@ -29,10 +29,9 @@
 
 #if ENABLE_KINECT2
 
+#include "gx_texture.h"
 #include "kinect2FrameListener.h"
-#include "openglTexture.h"
 #include "vfxNodeKinect2.h"
-#include <GL/glew.h> // GL_RED
 #include <libfreenect2/libfreenect2.hpp>
 
 // kinect device and video frames/textures. note that these are all shared between kinect2 nodes, as
@@ -44,8 +43,8 @@ static int initCount = 0;
 static Kinect2 * kinect = nullptr;
 static libfreenect2::Frame * videoFrame = nullptr;
 static libfreenect2::Frame * depthFrame = nullptr;
-static OpenglTexture videoTexture;
-static OpenglTexture depthTexture;
+static GxTexture videoTexture;
+static GxTexture depthTexture;
 static int tickId = 0;
 static int videoFrameTickId = 0;
 static int depthFrameTickId = 0;
@@ -194,13 +193,13 @@ void VfxNodeKinect2::tick(const float dt)
 		
 		// create texture from video data
 		
-		if (videoTexture.isChanged(videoFrame->width, videoFrame->height, GL_RGBA8))
+		if (videoTexture.isChanged(videoFrame->width, videoFrame->height, GX_RGBA8_UNORM))
 		{
-			videoTexture.allocate(videoFrame->width, videoFrame->height, GL_RGBA8, true, true);
-			videoTexture.setSwizzle(GL_BLUE, GL_GREEN, GL_RED, GL_ONE);
+			videoTexture.allocate(videoFrame->width, videoFrame->height, GX_RGBA8_UNORM, true, true);
+			videoTexture.setSwizzle(2, 1, 0, GX_SWIZZLE_ONE);
 		}
 		
-		videoTexture.upload(videoFrame->data, 16, videoFrame->width, GL_RGBA, GL_UNSIGNED_BYTE);
+		videoTexture.upload(videoFrame->data, 16, videoFrame->width);
 		
 		videoTextureTickId = videoFrameTickId;
 	}
@@ -211,13 +210,13 @@ void VfxNodeKinect2::tick(const float dt)
 		
 		// create texture from depth data
 		
-		if (depthTexture.isChanged(depthFrame->width, depthFrame->height, GL_R32F))
+		if (depthTexture.isChanged(depthFrame->width, depthFrame->height, GX_R32_FLOAT))
 		{
-			depthTexture.allocate(depthFrame->width, depthFrame->height, GL_R32F, true, true);
-			depthTexture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+			depthTexture.allocate(depthFrame->width, depthFrame->height, GX_R32_FLOAT, true, true);
+			depthTexture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		}
 		
-		depthTexture.upload(depthFrame->data, 16, depthFrame->width, GL_RED, GL_FLOAT);
+		depthTexture.upload(depthFrame->data, 16, depthFrame->width);
 		
 		depthTextureTickId = depthFrameTickId;
 	}
@@ -234,9 +233,12 @@ void VfxNodeKinect2::tick(const float dt)
 	else
 		depthImage.texture = 0;
 	
+	/*
 	if (videoFrame != nullptr)
 		videoImageCpu.setDataRGBA8(videoFrame->data, videoFrame->width, videoFrame->height, 16, videoFrame->width * 4);
 	else
+	// todo
+	*/
 		videoImageCpu.reset();
 	
 	if (depthFrame != nullptr)
@@ -257,10 +259,10 @@ void VfxNodeKinect2::getDescription(VfxNodeDescription & d)
 		d.newline();
 	}
 	
-	d.addOpenglTexture("video texture", videoTexture.id);
+	d.addGxTexture("video texture", videoTexture);
 	d.newline();
 	
-	d.addOpenglTexture("depth texture", depthTexture.id);
+	d.addGxTexture("depth texture", depthTexture);
 	d.newline();
 	
 	d.add("video image", videoImageCpu);

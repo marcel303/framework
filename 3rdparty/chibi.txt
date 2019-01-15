@@ -1,0 +1,45 @@
+with_platform macos add libsdl2-support
+with_platform linux add libsdl2-support
+with_platform windows add libsdl2-win32
+
+with_platform macos add libetherdream
+
+library imgui
+	header_path imgui expose
+	add_files imgui/imgui.cpp imgui/imgui.h imgui/imgui_demo.cpp imgui/imgui_draw.cpp imgui/imgui_internal.h imgui/imgui_widgets.cpp
+
+library ImGuiColorTextEdit
+	depend_library imgui
+	header_path ImGuiColorTextEdit alias_through_copy imgui expose
+	add_files ImGuiColorTextEdit/TextEditor.cpp ImGuiColorTextEdit/TextEditor.h
+
+app ImGuiColorTextEdit-000-test
+	resource_path .
+	depend_library imgui-framework
+	depend_library ImGuiColorTextEdit
+	add_files ImGuiColorTextEdit-support/test.cpp
+
+app ImGuiColorTextEdit-100-read-write
+	resource_path ImGuiColorTextEdit-support/data
+	depend_library imgui-framework
+	depend_library ImGuiColorTextEdit
+	depend_library libnfd
+	add_files ImGuiColorTextEdit-support/read-write.cpp
+
+app ImGuiColorTextEdit-200-realtime-shader-editing
+	resource_path ImGuiColorTextEdit-support/data
+	depend_library imgui-framework
+	depend_library ImGuiColorTextEdit
+	depend_library libnfd
+	add_files ImGuiColorTextEdit-support/realtime-shader-editing.cpp
+
+library rtmidi
+	add_files rtmidi/RtMidi.cpp rtmidi/RtMidi.h
+	header_path rtmidi alias_through_copy rtmidi expose
+	
+	with_platform macos compile_definition __MACOSX_CORE__ *
+	with_platform linux compile_definition __LINUX_ALSA__ *
+	with_platform windows compile_definition __WINDOWS_MM__ *
+	
+	with_platform macos depend_library CoreMIDI find
+	with_platform linux depend_library asound find

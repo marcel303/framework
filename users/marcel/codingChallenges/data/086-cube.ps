@@ -1,0 +1,20 @@
+include engine/ShaderPS.txt
+
+shader_in vec4 v_color;
+shader_in vec3 v_normal;
+
+uniform vec4 color1;
+uniform vec4 color2;
+uniform vec4 color3;
+
+void main()
+{
+	vec4 color =
+		color1 * abs(v_normal.x) +
+		color2 * abs(v_normal.y) +
+		color3 * abs(v_normal.z);
+
+	color = color * v_color;
+	
+    shader_fragColor = color;
+}

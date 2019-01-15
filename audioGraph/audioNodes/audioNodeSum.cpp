@@ -27,7 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioNodeSum.h"
 
-AUDIO_NODE_TYPE(sum, AudioNodeSum)
+AUDIO_NODE_TYPE(AudioNodeSum)
 {
 	typeName = "sum";
 	

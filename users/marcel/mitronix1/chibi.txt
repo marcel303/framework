@@ -1,0 +1,10 @@
+app marcel-mitronix
+
+	depend_library audiograph
+	depend_library framework
+	depend_library libosc
+	depend_library vfxgraph
+	
+	add_files main.cpp slideshow.cpp slideshow.h
+
+	resource_path "data"

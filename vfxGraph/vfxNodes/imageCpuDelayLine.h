@@ -69,6 +69,7 @@ struct ImageCpuDelayLine
 	struct WorkItem
 	{
 		VfxImageCpuData * imageData;
+		bool imageDataIsConsumed;
 		int jpegQualityLevel;
 		double timestamp;
 		

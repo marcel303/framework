@@ -3,13 +3,22 @@
 #include "jsusfx.h"
 #include "jsusfx_file.h"
 #include "jsusfx_gfx.h"
+#include "jsusfx_serialize.h"
 
 #include "gfx-framework.h"
 #include "jsusfx-framework.h"
 
+#include "audioIO.h"
+
+#include "BoxAtlas.h"
 #include "Path.h"
 #include "StringEx.h"
+#include "Timer.h"
 
+#include "tinyxml2.h"
+#include "tinyxml2_helpers.h"
+
+#include <algorithm>
 #include <map>
 #include <vector>
 
@@ -20,25 +29,36 @@ GFX status:
 - JSFX-Kawa (https://github.com/kawaCat/JSFX-kawa) works.
 - ATK for Reaper works.
 
-todo :
+*/
 
-mouse_cap
+/*
 
-mouse_cap is a bitfield of mouse and keyboard modifier state.
-	1: left mouse button
-	2: right mouse button
-	4: Control key (Windows), Command key (OSX)
-	8: Shift key
-	16: Alt key (Windows), Option key (OSX)
-	32: Windows key (Windows), Control key (OSX) -- REAPER 4.60+
-	64: middle mouse button -- REAPER 4.60+
+test todo :
 
-mouse_wheel
+- add button to connect/disconnect midi
+- add ability to load/save effect chains
+	+ add load/save to xml
+	- add UI to select/load saved effect chains
+- add an option to set effect window size to 50%, 75%, 100% of the initial (preferred) size
 
-gfx_mode
-	0x1 = additive
-	0x2 = disable source alpha for gfx_blit (make it opaque)
-	0x4 = disable filtering for gfx_blit (point sampling)
+test done :
+
++ add octave select to on-screen MIDI keyboard
++ bring JSFX window to top when selecting it in the effect chain window
++ draw a cross when an effect is active in the effect chain list
++ show CPU-usage per effect (perhaps in the effect chain list?)
++ show effect stats when hovering over an effect in the effect chain list like:
+	+ number of I/O pins,
+	+ description,
+	# sliders
++ don't draw JSFX UI when a window is minimized
++ add an option to hide to JSFX UI from the effect chain list
++ perhaps hide should be the default behavior of the close button, instead of closing and removing it from the effect chain?
++ add an effect search filter box
+# add option to organize windows (using box atlas?)
++ make octave buttons round
++ add option to enable live audio input
++ fix issue with some effect options not being saved (Hammer and String, resonance feedback type for instance)
 
 */
 
@@ -48,12 +68,24 @@ gfx_mode
 #define DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/"
 
 #define SEARCH_PATH_reaper "/Users/thecat/Library/Application Support/REAPER/Effects/"
-#define SEARCH_PATH_geraintluff "/Users/thecat/geraintluff -jsfx/"
+#define SEARCH_PATH_geraintluff "/Users/thecat/repos/geraintluff -jsfx/"
 #define SEARCH_PATH_ATK "/Users/thecat/atk-reaper/plugins/"
-#define SEARCH_PATH_kawa "/Users/thecat/Downloads/JSFX-kawa-master/"
+#define SEARCH_PATH_kawa "/Users/thecat/Downloads/JsusFx - Kawa/"
 
 #define RENDER_TO_SURFACE 0
 #define ENABLE_SCREENSHOT_API 0
+
+#define ENABLE_AUDIOIO 1 // todo : make this the default and remove the option
+#define ENABLE_MIDI 1
+
+#define SHOW_SLIDERS_IN_EFFECT_CHAIN_WINDOW 0
+
+#if ENABLE_MIDI
+	#include "rtmidi/RtMidi.h"
+#endif
+
+#undef min
+#undef max
 
 const int GFX_SX = 1000;
 const int GFX_SY = 720;
@@ -115,11 +147,12 @@ struct MidiKeyboard
 	
 	struct Key
 	{
-		int note;
 		bool isDown;
 	};
 	
 	Key keys[kNumKeys];
+	
+	int octave = 4;
 	
 	MidiKeyboard()
 	{
@@ -127,7 +160,23 @@ struct MidiKeyboard
 		{
 			auto & key = keys[i];
 			
-			key.note = 32 + i;
+			key.isDown = false;
+		}
+	}
+	
+	int getNote(const int keyIndex) const
+	{
+		return octave * 8 + keyIndex;
+	}
+	
+	void changeOctave(const int direction)
+	{
+		octave = clamp(octave + direction, 0, 10);
+		
+		for (int i = 0; i < kNumKeys; ++i)
+		{
+			auto & key = keys[i];
+			
 			key.isDown = false;
 		}
 	}
@@ -142,16 +191,25 @@ static void writeMidi(uint8_t *& midi, int & midiSize, const int message, const 
 	midiSize += 3;
 }
 
-void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8_t * midi, int * midiSize, const bool doTick, const bool doDraw)
+void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8_t * midi, int * midiSize, const bool doTick, const bool doDraw, int & out_sx, int & out_sy)
 {
 	const int keySx = 16;
 	const int keySy = 64;
-
-	const int sx = keySx * MidiKeyboard::kNumKeys;
-	const int sy = keySy;
+	const int octaveSx = 24;
+	const int octaveSy = 24;
 
 	const int hoverIndex = mouseY >= 0 && mouseY <= keySy ? mouseX / keySx : -1;
 	const float velocity = clamp(mouseY / float(keySy), 0.f, 1.f);
+	
+	const int octaveX = keySx * MidiKeyboard::kNumKeys + 4;
+	const int octaveY = 4;
+	const int octaveHoverIndex = mouseX >= octaveX && mouseX <= octaveX + octaveSx ? (mouseY - octaveY) / octaveSy : -1;
+	
+	const int sx = std::max(keySx * MidiKeyboard::kNumKeys, octaveX + octaveSx);
+	const int sy = std::max(keySy, octaveSy * 2);
+	
+	out_sx = sx;
+	out_sy = sy;
 	
 	if (doTick)
 	{
@@ -171,15 +229,23 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 				{
 					key.isDown = true;
 					
-					writeMidi(midi, *midiSize, MIDI_ON, key.note, velocity * 127);
+					writeMidi(midi, *midiSize, MIDI_ON, kb.getNote(i), velocity * 127);
 				}
 				else
 				{
-					writeMidi(midi, *midiSize, MIDI_OFF, key.note, velocity * 127);
+					writeMidi(midi, *midiSize, MIDI_OFF, kb.getNote(i), velocity * 127);
 					
 					key.isDown = false;
 				}
 			}
+		}
+		
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			if (octaveHoverIndex == 0)
+				kb.changeOctave(+1);
+			if (octaveHoverIndex == 1)
+				kb.changeOctave(-1);
 		}
 	}
 	
@@ -192,7 +258,7 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 		const Color colorkeyHover(255, 255, 255);
 		const Color colorKeyDown(100, 100, 100);
 		
-		hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(M_PI/2.f).Scale(1.f, 1.f / keySy, 1.f), Color(140, 180, 220), colorWhite, COLOR_MUL);
+		hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(float(M_PI)/2.f).Scale(1.f, 1.f / keySy, 1.f), Color(140, 180, 220), colorWhite, COLOR_MUL);
 		
 		for (int i = 0; i < MidiKeyboard::kNumKeys; ++i)
 		{
@@ -212,6 +278,44 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 		}
 		
 		hqClearGradient();
+		
+		{
+			gxPushMatrix();
+			{
+				gxTranslatef(octaveX, octaveY, 0);
+				
+				//setLumi(200);
+				//drawText(octaveSx + 4, 4, 12, +1, +1, "octave: %d", kb.octave);
+				
+				setColor(0 == octaveHoverIndex ? colorkeyHover : colorKey);
+				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(float(M_PI)/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				hqFillRoundedRect(0, 0, octaveSx, octaveSy, 2.f);
+				hqEnd();
+				hqClearGradient();
+				
+				setLumi(40);
+				hqBegin(HQ_FILLED_TRIANGLES);
+				hqFillTriangle(octaveSx/2, 6, octaveSx - 6, octaveSy - 6, 6, octaveSy - 6);
+				hqEnd();
+				
+				gxTranslatef(0, octaveSy, 0);
+				
+				setColor(1 == octaveHoverIndex ? colorkeyHover : colorKey);
+				hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).RotateZ(float(M_PI)/2.f).Scale(1.f, 1.f / (octaveSy * 2), 1.f).Translate(-octaveX, -octaveY, 0), Color(140, 180, 220), colorWhite, COLOR_MUL);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				hqFillRoundedRect(0, 0, octaveSx, octaveSy, 2.f);
+				hqEnd();
+				hqClearGradient();
+				
+				setLumi(40);
+				hqBegin(HQ_FILLED_TRIANGLES);
+				hqFillTriangle(octaveSx/2, octaveSy - 6, octaveSx - 6, 6, 6, 6);
+				hqEnd();
+			}
+			gxPopMatrix();
+		}
+		hqClearGradient();
 	}
 }
 
@@ -227,6 +331,17 @@ struct MidiBuffer
 	
 	uint8_t bytes[kMaxBytes];
 	int numBytes = 0;
+	
+	bool append(const uint8_t * in_bytes, const int in_numBytes)
+	{
+		if (numBytes + in_numBytes > MidiBuffer::kMaxBytes)
+			return false;
+		
+		for (int i = 0; i < in_numBytes; ++i)
+			bytes[numBytes++] = in_bytes[i];
+		
+		return true;
+	}
 };
 
 static MidiBuffer s_midiBuffer;
@@ -266,6 +381,10 @@ struct AudioStream_JsusFx : AudioStream
 	SDL_mutex * mutex = nullptr;
 	
 	Limiter limiter;
+	
+	double playbackTime = 0.0;
+	
+	uint64_t cpuTime = 0;
 	
 	virtual ~AudioStream_JsusFx() override
 	{
@@ -330,11 +449,25 @@ struct AudioStream_JsusFx : AudioStream
 		
 		lock();
 		{
+			uint64_t time1 = g_TimerRT.TimeUS_get();
+			
+			const double beatPosition = 0.0;
+			const int tsNum = 0;
+			const int tsDenom = 4;
+			
+			fx->setTransportValues(120, JsusFx::kPlaybackState_Playing, playbackTime, beatPosition, tsNum, tsDenom);
+			
 			fx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
 			
 			fx->process(input, output, numSamples, 2, 2);
 			
+			playbackTime += numSamples / float(SAMPLE_RATE);
+			
 			s_midiBuffer.numBytes = 0;
+			
+			uint64_t time2 = g_TimerRT.TimeUS_get();
+			
+			cpuTime = time2 - time1;
 		}
 		unlock();
 		
@@ -366,7 +499,9 @@ static void handleAction(const std::string & action, const Dictionary & d)
 			auto filename = d.getString("file", "");
 			
 			JsusFxPathLibrary_Basic pathLibrary(DATA_ROOT);
-			s_fx->compile(pathLibrary, filename);
+			s_fx->compile(pathLibrary, filename,
+				JsusFx::kCompileFlag_CompileGraphicsSection |
+				JsusFx::kCompileFlag_CompileSerializeSection);
 			
 			s_fx->prepare(SAMPLE_RATE, BUFFER_SIZE);
 		}
@@ -376,36 +511,186 @@ static void handleAction(const std::string & action, const Dictionary & d)
 
 //
 
-struct AudioStream_JsusFxChain : AudioStream
+struct JsusFxElem
 {
-	struct EffectElem
-	{
-		bool isPassthrough = false;
-		JsusFx * jsusFx = nullptr;
-	};
+	int id = 0;
+	bool isPassthrough = false;
+	std::string filename;
+
+	JsusFx_Framework jsusFx;
+	JsusFxFileAPI_Basic fileAPI;
+	JsusFxGfx_Framework gfxAPI;
 	
+	bool isValid = false;
+	
+	uint64_t cpuTime = 0;
+	
+	JsusFxElem(JsusFxPathLibrary & pathLibrary)
+		: jsusFx(pathLibrary)
+		, fileAPI()
+		, gfxAPI(jsusFx)
+	{
+	}
+	
+	void init()
+	{
+		fileAPI.init(jsusFx.m_vm);
+		jsusFx.fileAPI = &fileAPI;
+		
+		gfxAPI.init(jsusFx.m_vm);
+		jsusFx.gfx = &gfxAPI;
+		
+		if (jsusFx.compile(jsusFx.pathLibrary, filename,
+			JsusFx::kCompileFlag_CompileGraphicsSection |
+			JsusFx::kCompileFlag_CompileSerializeSection))
+		{
+			jsusFx.prepare(SAMPLE_RATE, BUFFER_SIZE);
+			
+			isValid = true;
+		}
+	}
+};
+
+struct JsusFxChain
+{
+	JsusFxPathLibrary_Basic pathLibrary;
+	
+	std::vector<JsusFxElem*> effects;
+	
+	int nextEffectId = 1;
+	
+	JsusFxChain(const char * dataRoot)
+		: pathLibrary(dataRoot)
+	{
+		pathLibrary.addSearchPath("lib");
+	}
+	
+	void add(JsusFxElem * elem)
+	{
+		elem->id = nextEffectId++;
+		
+		effects.push_back(elem);
+	}
+	
+	void remove(JsusFxElem * elem)
+	{
+		auto i = std::find(effects.begin(), effects.end(), elem);
+		
+		Assert(i != effects.end());
+		if (i != effects.end())
+		{
+			effects.erase(i);
+		}
+	}
+	
+	void clear()
+	{
+		while (effects.empty() == false)
+		{
+			remove(effects.front());
+		}
+	}
+	
+	void loadXml(tinyxml2::XMLElement * xml_effectChain)
+	{
+		Assert(effects.empty());
+		Assert(nextEffectId == 1);
+		
+		for (auto xml_effect = xml_effectChain->FirstChildElement("effect"); xml_effect != nullptr; xml_effect = xml_effect->NextSiblingElement("effect"))
+		{
+			JsusFxElem * elem = new JsusFxElem(pathLibrary);
+			
+			elem->id = intAttrib(xml_effect, "id", nextEffectId);
+			
+			elem->isPassthrough = boolAttrib(xml_effect, "passthrough", false);
+			elem->filename = stringAttrib(xml_effect, "filename", "");
+			
+			elem->init();
+			
+			//
+			
+			JsusFxSerializationData serializationData;
+			
+			if (!loadJsusFxSerializationDataFromXml(xml_effect, serializationData))
+			{
+				logError("failed to load jsfx serialization data from xml");
+			}
+			else
+			{
+				JsusFxSerializer_Basic serializer(serializationData);
+				
+				elem->jsusFx.serialize(serializer, false);
+			}
+			
+			//
+			
+			effects.push_back(elem);
+			
+			nextEffectId = std::max(nextEffectId, elem->id) + 1;
+		}
+	}
+
+	void saveXml(tinyxml2::XMLPrinter & p)
+	{
+		for (auto & effect : effects)
+		{
+			p.OpenElement("effect");
+			{
+				p.PushAttribute("id", effect->id);
+				p.PushAttribute("passthrough", effect->isPassthrough);
+				p.PushAttribute("filename", effect->filename.c_str());
+				
+				// serialize jsfx data
+				
+				JsusFxSerializationData serializationData;
+				
+				JsusFxSerializer_Basic serializer(serializationData);
+				
+				if (effect->jsusFx.serialize(serializer, true))
+				{
+					saveJsusFxSerializationDataToXml(serializationData, p);
+				}
+			}
+			p.CloseElement();
+		}
+	}
+};
+
+struct AudioStream_JsusFxChain : AudioStream, AudioIOCallback
+{
 	AudioStream * source = nullptr;
 	
-	std::vector<EffectElem> effects;
+	JsusFxChain & effectChain;
 	
 	SDL_mutex * mutex = nullptr;
 	
 	Limiter limiter;
 	
+	std::atomic<bool> enableInput;
+	
+	AudioStream_JsusFxChain(JsusFxChain & _effectChain)
+		: effectChain(_effectChain)
+	{
+		enableInput = false;
+	}
+	
 	virtual ~AudioStream_JsusFxChain() override
+	{
+		shut();
+	}
+	
+	void init()
+	{
+		mutex = SDL_CreateMutex();
+	}
+	
+	void shut()
 	{
 		if (mutex != nullptr)
 		{
 			SDL_DestroyMutex(mutex);
 			mutex = nullptr;
 		}
-	}
-	
-	void init(AudioStream * _source)
-	{
-		source = _source;
-		
-		mutex = SDL_CreateMutex();
 	}
 	
 	void lock()
@@ -422,36 +707,59 @@ struct AudioStream_JsusFxChain : AudioStream
 		(void)r;
 	}
 	
-	void add(JsusFx * jsusFx)
-	{
-		lock();
-		{
-			EffectElem elem;
-			elem.jsusFx = jsusFx;
-			
-			effects.push_back(elem);
-		}
-		unlock();
-	}
-	
-	void remove(JsusFx * jsusFx)
-	{
-		lock();
-		{
-			auto i = std::find_if(effects.begin(), effects.end(), [=](const EffectElem & e) -> bool { return e.jsusFx == jsusFx; });
-			
-			Assert(i != effects.end());
-			if (i != effects.end())
-				effects.erase(i);
-		}
-		unlock();
-	}
-	
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
 	{
-		Assert(numSamples == BUFFER_SIZE);
+		float * samples = (float*)alloca(numSamples * 2 * sizeof(float));
 		
-		source->Provide(numSamples, buffer);
+		const int numSourceSamples = source->Provide(numSamples, buffer);
+		
+		for (int i = 0; i < numSourceSamples; ++i)
+		{
+			samples[i * 2 + 0] = buffer[i].channel[0] / float(1 << 15);
+			samples[i * 2 + 1] = buffer[i].channel[1] / float(1 << 15);
+		}
+		
+		for (int i = numSourceSamples; i < numSamples; ++i)
+		{
+			samples[i * 2 + 0] = 0.f;
+			samples[i * 2 + 1] = 0.f;
+		}
+		
+		process(samples, numSamples);
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			const float valueL = samples[i * 2 + 0];
+			const float valueR = samples[i * 2 + 1];
+			
+			buffer[i].channel[0] = valueL * float((1 << 15) - 2);
+			buffer[i].channel[1] = valueR * float((1 << 15) - 2);
+		}
+		
+		return numSamples;
+	}
+	
+	virtual void audioCallback(const float * input, float * output, const int numSamples) override
+	{
+		if (enableInput)
+		{
+			for (int i = 0; i < numSamples; ++i)
+			{
+				output[i * 2 + 0] = input[i];
+				output[i * 2 + 1] = input[i];
+			}
+		}
+		else
+		{
+			memset(output, 0, numSamples * 2 * sizeof(float));
+		}
+		
+		process(output, numSamples);
+	}
+	
+	void process(float * __restrict samples, const int numSamples)
+	{
+		Assert(numSamples == BUFFER_SIZE);
 		
 		const int kNumBuffers = 4;
 		float bufferData[2][kNumBuffers][BUFFER_SIZE];
@@ -461,20 +769,33 @@ struct AudioStream_JsusFxChain : AudioStream
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			bufferData[inputIndex][0][i] = buffer[i].channel[0] / float(1 << 15);
-			bufferData[inputIndex][1][i] = buffer[i].channel[1] / float(1 << 15);
+			bufferData[inputIndex][0][i] = samples[i * 2 + 0];
+			bufferData[inputIndex][1][i] = samples[i * 2 + 1];
 		}
 		
 		lock();
 		{
-			for (auto & effect : effects)
+			MidiBuffer midiRecvBuffer;
+			MidiBuffer midiSendBuffer;
+			
+			// consume received midi data
+			midiRecvBuffer = s_midiBuffer;
+			s_midiBuffer.numBytes = 0;
+			
+			for (auto & effect : effectChain.effects)
 			{
-				if (effect.isPassthrough)
+				if (effect->isPassthrough)
+				{
+					effect->cpuTime = 0;
 					continue;
+				}
 				
-				auto & jsusFx = effect.jsusFx;
+				auto & jsusFx = effect->jsusFx;
 				
-				jsusFx->setMidi(s_midiBuffer.bytes, s_midiBuffer.numBytes);
+				const uint64_t time1 = g_TimerRT.TimeUS_get();
+	
+				jsusFx.setMidi(midiRecvBuffer.bytes, midiRecvBuffer.numBytes);
+				jsusFx.setMidiSendBuffer(midiSendBuffer.bytes, MidiBuffer::kMaxBytes);
 				
 				const float * input[kNumBuffers];
 				float * output[kNumBuffers];
@@ -485,13 +806,23 @@ struct AudioStream_JsusFxChain : AudioStream
 					output[i] = bufferData[1 - inputIndex][i];
 				}
 				
-				if (jsusFx->process(input, output, numSamples, kNumBuffers, kNumBuffers))
+				if (jsusFx.process(input, output, numSamples, kNumBuffers, kNumBuffers))
 				{
 					inputIndex = 1 - inputIndex;
 				}
+				
+				// fill in the midi receive buffer for the next effect
+				
+				if (midiRecvBuffer.append(jsusFx.midi, jsusFx.midiSize) == false ||
+					midiRecvBuffer.append(jsusFx.midiSendBuffer, jsusFx.midiSendBufferSize) == false)
+				{
+					logWarning("midi receive buffer overflow during effect chain processing");
+				}
+				
+				const uint64_t time2 = g_TimerRT.TimeUS_get();
+				
+				effect->cpuTime = time2 - time1;
 			}
-			
-			s_midiBuffer.numBytes = 0;
 		}
 		unlock();
 		
@@ -502,11 +833,9 @@ struct AudioStream_JsusFxChain : AudioStream
 			const float valueL = limiter.next(bufferData[1 - inputIndex][0][i]);
 			const float valueR = limiter.next(bufferData[1 - inputIndex][1][i]);
 			
-			buffer[i].channel[0] = valueL * float((1 << 15) - 2);
-			buffer[i].channel[1] = valueR * float((1 << 15) - 2);
+			samples[i * 2 + 0] = valueL;
+			samples[i * 2 + 1] = valueR;
 		}
-		
-		return numSamples;
 	}
 };
 
@@ -517,49 +846,28 @@ struct JsusFxWindow
 	Surface * surface;
 #endif
 	
-	JsusFxPathLibrary_Basic pathLibrary;
+	JsusFxElem * effectElem;
 	
-	JsusFx_Framework jsusFx;
-	JsusFxFileAPI_Basic fileAPI;
-	JsusFxGfx_Framework gfxAPI;
+	bool cleanup;
 	
-	std::string filename;
-	
-	bool isValid;
 	bool sliderIsActive[JsusFx::kMaxSliders];
 	
-	JsusFxWindow(const char * _filename)
+	JsusFxWindow(JsusFxElem * _effectElem)
 		: window(nullptr)
 	#if RENDER_TO_SURFACE
 		, surface(nullptr)
 	#endif
-		, pathLibrary(DATA_ROOT)
-		, jsusFx(pathLibrary)
-		, fileAPI()
-		, gfxAPI(jsusFx)
-		, filename(_filename)
-		, isValid(false)
+		, effectElem(_effectElem)
+		, cleanup(false)
 	{
 		memset(sliderIsActive, 0, sizeof(sliderIsActive));
 		
-		fileAPI.init(jsusFx.m_vm);
-		jsusFx.fileAPI = &fileAPI;
+		const std::string caption = String::FormatC("%s (%d ins, %d outs)",
+			Path::GetFileName(effectElem->filename).c_str(),
+			effectElem->jsusFx.numInputs,
+			effectElem->jsusFx.numOutputs);
 		
-		gfxAPI.init(jsusFx.m_vm);
-		jsusFx.gfx = &gfxAPI;
-		
-		pathLibrary.addSearchPath("lib");
-		
-		if (jsusFx.compile(pathLibrary, filename))
-		{
-			jsusFx.prepare(SAMPLE_RATE, BUFFER_SIZE);
-			
-			const std::string caption = String::FormatC("%s (%d ins, %d outs)", Path::GetFileName(filename).c_str(), jsusFx.numInputs, jsusFx.numOutputs);
-			
-			window = new Window(caption.c_str(), jsusFx.gfx_w, jsusFx.gfx_h, true);
-			
-			isValid = true;
-		}
+		window = new Window(caption.c_str(), effectElem->jsusFx.gfx_w, effectElem->jsusFx.gfx_h, true);
 	}
 	
 	~JsusFxWindow()
@@ -575,21 +883,21 @@ struct JsusFxWindow
 	
 	void tick(const float dt)
 	{
-		if (!isValid)
+		if (!effectElem->isValid)
 			return;
 		
 		if (window->getQuitRequested())
 		{
-			delete window;
-			window = nullptr;
-			
-			isValid = false;
+			window->hide();
 		}
 	}
 	
 	void draw()
 	{
-		if (!isValid)
+		if (!effectElem->isValid)
+			return;
+		
+		if (window->isHidden())
 			return;
 		
 		pushWindow(*window);
@@ -609,6 +917,8 @@ struct JsusFxWindow
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
+				setFont("calibri.ttf");
+				
 			#if ENABLE_SCREENSHOT_API
 				const bool doScreenshot = keyboard.wentDown(SDLK_s);
 				
@@ -620,12 +930,12 @@ struct JsusFxWindow
 				Surface * surface = nullptr;
 			#endif
 
-				gfxAPI.setup(surface, window->getWidth(), window->getHeight(), mouse.x, mouse.y, true);
+				effectElem->gfxAPI.setup(surface, window->getWidth(), window->getHeight(), mouse.x, mouse.y, true);
 				
 				pushFontMode(FONT_SDF);
 				setColorClamp(true);
 				{
-					jsusFx.draw();
+					effectElem->jsusFx.draw();
 				}
 				setColorClamp(false);
 				popFontMode();
@@ -639,13 +949,13 @@ struct JsusFxWindow
 				
 				int sliderIndex = 0;
 				
-				for (auto & slider : jsusFx.sliders)
+				for (auto & slider : effectElem->jsusFx.sliders)
 				{
 					if (slider.exists && slider.desc[0] != '-')
 					{
 						gxPushMatrix();
 						gxTranslatef(x, y, 0);
-						doSlider(jsusFx, slider, mouse.x - x, mouse.y - y, sliderIsActive[sliderIndex]);
+						doSlider(effectElem->jsusFx, slider, mouse.x - x, mouse.y - y, sliderIsActive[sliderIndex]);
 						gxPopMatrix();
 						
 						y += 16;
@@ -679,23 +989,58 @@ struct JsusFxChainWindow
 {
 	Window window;
 	
-	AudioStream_JsusFxChain & effectChain;
+	Surface * surface;
+	
+	JsusFxChain & effectChain;
+	
+	AudioStream_JsusFxChain & effectChainAudioStream;
+	
+	std::vector<JsusFxWindow*> & windows;
 	
 	int selectedEffectIndex;
 	
-	JsusFxChainWindow(AudioStream_JsusFxChain & _effectChain)
+	bool sliderIsActive[JsusFx::kMaxSliders];
+	
+	JsusFxChainWindow(JsusFxChain & _effectChain, AudioStream_JsusFxChain & _effectChainAudioStream, std::vector<JsusFxWindow*> & _windows)
 		: window("Effect Chain", 300, 300, true)
+		, surface(nullptr)
 		, effectChain(_effectChain)
+		, effectChainAudioStream(_effectChainAudioStream)
+		, windows(_windows)
 		, selectedEffectIndex(0)
 	{
+		memset(sliderIsActive, 0, sizeof(sliderIsActive));
+	}
+	
+	~JsusFxChainWindow()
+	{
+		delete surface;
+		surface = nullptr;
+	}
+	
+	void cancelSliderEditing()
+	{
+		memset(sliderIsActive, 0, sizeof(sliderIsActive));
 	}
 	
 	void tick(const float dt)
 	{
 		pushWindow(window);
 		{
-			framework.beginDraw(50, 50, 50, 0);
+			if (surface == nullptr || surface->getWidth() != window.getWidth() || surface->getHeight() != window.getHeight())
 			{
+				delete surface;
+				surface = nullptr;
+				
+				surface = new Surface(window.getWidth(), window.getHeight(), false);
+			}
+			
+			if (!framework.events.empty())
+			{
+				pushSurface(surface);
+				surface->clear(50, 50, 50, 0);
+				pushBlend(BLEND_ALPHA);
+				
 				setFont("calibri.ttf");
 				setColor(colorWhite);
 				
@@ -706,10 +1051,35 @@ struct JsusFxChainWindow
 				
 				for (auto & effect : effectChain.effects)
 				{
+					JsusFxWindow * effectWindow = nullptr;
+					
+					for (JsusFxWindow * window : windows)
+					{
+						if (window->effectElem == effect)
+							effectWindow = window;
+					}
+					
+					Assert(effectWindow != nullptr);
+					
+					if (keyboard.wentDown(SDLK_SPACE))
+						if (effectIndex == selectedEffectIndex)
+							effect->isPassthrough = !effect->isPassthrough;
+					
+					if (keyboard.wentDown(SDLK_DELETE) || keyboard.wentDown(SDLK_BACKSPACE))
+					{
+						if (effectIndex == selectedEffectIndex)
+						{
+							if (effectWindow != nullptr)
+								effectWindow->cleanup = true;
+							cancelSliderEditing();
+						}
+					}
+				
+					if (effectWindow != nullptr)
 					{
 						const int x1 = x;
 						const int y1 = y;
-						const int x2 = x + 16;
+						const int x2 = x + 36;
 						const int y2 = y + 16;
 						
 						const bool isInside =
@@ -718,17 +1088,60 @@ struct JsusFxChainWindow
 							mouse.x <= x2 &&
 							mouse.y <= y2;
 						
-						if (isInside && mouse.wentDown(BUTTON_LEFT))
-							effect.isPassthrough = !effect.isPassthrough;
+						hqBegin(HQ_FILLED_ROUNDED_RECTS);
+						setLumi(isInside ? 100 : 40);
+						hqFillRoundedRect(x1, y1, x2, y2, 4.f);
+						hqEnd();
 						
-						setLumi(effect.isPassthrough ? 0 : 200);
+						setLumi(200);
+						if (effectWindow->window->isHidden())
+							drawText((x1 + x2)/2, (y1 + y2)/2, 12, 0.f, 0.f, "Show");
+						else
+							drawText((x1 + x2)/2, (y1 + y2)/2, 12, 0.f, 0.f, "Hide");
+						
+						if (isInside && mouse.wentDown(BUTTON_LEFT))
+						{
+							if (effectWindow->window->isHidden())
+							{
+								effectWindow->window->show();
+								window.raise();
+							}
+							else
+								effectWindow->window->hide();
+						}
+					}
+					
+					{
+						const int x1 = x + 40;
+						const int y1 = y;
+						const int x2 = x1 + 16;
+						const int y2 = y1 + 16;
+						
+						const bool isInside =
+							mouse.x >= x1 &&
+							mouse.y >= y1 &&
+							mouse.x <= x2 &&
+							mouse.y <= y2;
+						
+						if (isInside && mouse.wentDown(BUTTON_LEFT))
+							effect->isPassthrough = !effect->isPassthrough;
+						
+						setLumi(effect->isPassthrough ? 0 : 200);
 						drawRect(x1, y1, x2, y2);
 						setLumi(100);
+						if (!effect->isPassthrough)
+						{
+							// draw a cross when checked
+							hqBegin(HQ_LINES);
+							hqLine(x1 + 3, y1 + 3, 1.1f, x2 - 3, y2 - 3, 1.1f);
+							hqLine(x1 + 3, y2 - 3, 1.1f, x2 - 3, y1 + 3, 1.1f);
+							hqEnd();
+						}
 						drawRectLine(x1, y1, x2, y2);
 					}
 					
 					{
-						const int x1 = x + 20;
+						const int x1 = x + 60;
 						const int y1 = y;
 						const int x2 = window.getWidth();
 						const int y2 = y + 16;
@@ -740,7 +1153,17 @@ struct JsusFxChainWindow
 							mouse.y <= y2;
 						
 						if (isInside && mouse.wentDown(BUTTON_LEFT))
+						{
 							selectedEffectIndex = effectIndex;
+							cancelSliderEditing();
+							
+							if (effectWindow != nullptr)
+							{
+								effectWindow->window->raise();
+							
+								window.raise();
+							}
+						}
 						
 						if (effectIndex == selectedEffectIndex)
 						{
@@ -749,28 +1172,108 @@ struct JsusFxChainWindow
 						}
 						
 						setLumi(200);
-						drawText(x1, (y1 + y2)/2, 14, +1, 0, "%s", effect.jsusFx->desc);
+						drawText(x1, (y1 + y2)/2, 14, +1, 0, "%s", effect->jsusFx.desc);
 						y += 20;
 					}
 					
 					effectIndex++;
 				}
 				
-				effectChain.lock();
+				effectChainAudioStream.lock();
 				{
 					if (keyboard.wentDown(SDLK_UP) && selectedEffectIndex - 1 >= 0)
 					{
 						std::swap(effectChain.effects[selectedEffectIndex], effectChain.effects[selectedEffectIndex - 1]);
 						selectedEffectIndex--;
+						cancelSliderEditing();
 					}
 					
 					if (keyboard.wentDown(SDLK_DOWN) && selectedEffectIndex + 1 < effectChain.effects.size())
 					{
 						std::swap(effectChain.effects[selectedEffectIndex], effectChain.effects[selectedEffectIndex + 1]);
 						selectedEffectIndex++;
+						cancelSliderEditing();
 					}
 				}
-				effectChain.unlock();
+				effectChainAudioStream.unlock();
+				
+				gxPushMatrix();
+				{
+					JsusFxElem * effect = nullptr;
+					
+					if (selectedEffectIndex >= 0 && selectedEffectIndex < effectChain.effects.size())
+						effect = effectChain.effects[selectedEffectIndex];
+					
+					int numSliders = 0;
+					
+				#if SHOW_SLIDERS_IN_EFFECT_CHAIN_WINDOW
+					if (effect != nullptr)
+					{
+						JsusFx & fx = effect->jsusFx;
+					
+						for (int i = 0; i < JsusFx::kMaxSliders; ++i)
+							if (fx.sliders[i].exists && fx.sliders[i].desc[0] != '-')
+								numSliders++;
+					}
+				#endif
+					
+					const int sy = 70 + numSliders * 16;
+					
+					gxTranslatef(0, window.getHeight() - sy, 0);
+					
+					hqBegin(HQ_FILLED_ROUNDED_RECTS);
+					{
+						setLumi(200);
+						hqFillRoundedRect(0, 0, window.getWidth(), sy, 4.f);
+					}
+					hqEnd();
+					
+					if (effect != nullptr)
+					{
+						setLumi(40);
+						
+						int x = 7;
+						int y = 7;
+						
+						drawText(x, y, 12, +1, +1, "file: %s", Path::GetFileName(effect->filename).c_str());
+						y += 16;
+						
+						drawText(x, y, 12, +1, +1, "desc: %s", effect->jsusFx.desc);
+						y += 16;
+						
+						drawText(x, y, 12, +1, +1, "pins: %d in, %d out", effect->jsusFx.numInputs, effect->jsusFx.numOutputs);
+						y += 14;
+						
+						drawText(x, y, 12, +1, +1, "CPU time: %.2f%%", effect->cpuTime * 100 * 44100 / BUFFER_SIZE / 1000000.f);
+						y += 14;
+						
+					#if SHOW_SLIDERS_IN_EFFECT_CHAIN_WINDOW
+						JsusFx & fx = effect->jsusFx;
+						
+						for (int i = 0; i < JsusFx::kMaxSliders; ++i)
+						{
+							if (fx.sliders[i].exists && fx.sliders[i].desc[0] != '-')
+							{
+								gxPushMatrix();
+								gxTranslatef(x, y, 0);
+								doSlider(fx, fx.sliders[i], mouse.x - x, mouse.y - y, sliderIsActive[i]);
+								gxPopMatrix();
+								
+								y += 16;
+							}
+						}
+					#endif
+					}
+				}
+				gxPopMatrix();
+				
+				popBlend();
+				popSurface();
+			}
+			
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				surface->blit(BLEND_OPAQUE);
 			}
 			framework.endDraw();
 		}
@@ -794,6 +1297,8 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 	{
 		if (String::EndsWith(filename, "-example"))
 			continue;
+		if (String::EndsWith(filename, "-inc"))
+			continue;
 		if (String::EndsWith(filename, "-template"))
 			continue;
 			
@@ -803,12 +1308,6 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 			continue;
 		
 		JsusFx_Framework jsusFx(pathLibrary);
-		
-		fileAPI.init(jsusFx.m_vm);
-		jsusFx.fileAPI = &fileAPI;
-		
-		gfxAPI.init(jsusFx.m_vm);
-		jsusFx.gfx = &gfxAPI;
 		
 		if (!jsusFx.readHeader(pathLibrary, filename))
 			continue;
@@ -826,7 +1325,7 @@ std::vector<std::string> scanJsusFxScripts(const char * searchPath, const bool r
 
 static void testJsusFxList()
 {
-	if (!framework.init(0, nullptr, 420, 720))
+	if (!framework.init(420, 720))
 		return;
 	
 	JsusFx::init();
@@ -840,24 +1339,132 @@ static void testJsusFxList()
 	
 	std::string activeLocation = "GeraintLuff";
 	
+	JsusFxChain effectChain(DATA_ROOT);
+	
 	std::vector<JsusFxWindow*> windows;
 	
-	AudioStream_Vorbis vorbis;
-	vorbis.Open("movers.ogg", true);
+	//AudioStream_Vorbis vorbis;
+	//vorbis.Open("movers.ogg", true);
 	
-	AudioStream_JsusFxChain audioStream;
-	audioStream.init(&vorbis);
-	
-	AudioOutput_PortAudio audioOutput;
-	audioOutput.Initialize(2, SAMPLE_RATE, BUFFER_SIZE);
-	audioOutput.Play(&audioStream);
+	AudioStream_JsusFxChain audioStream(effectChain);
+	audioStream.init();
 	
 	MidiKeyboard midiKeyboard;
 	
-	JsusFxChainWindow effectChainWindow(audioStream);
+	{
+		const char * filename = "effectChain.xml";
+		
+		tinyxml2::XMLDocument d;
+
+		if (d.LoadFile(filename) == tinyxml2::XML_SUCCESS)
+		{
+			auto xml_effectChain = d.FirstChildElement("effectChain");
+			
+			if (xml_effectChain != nullptr)
+			{
+				effectChain.loadXml(xml_effectChain);
+			}
+			
+			//
+			
+			for (auto & effect : effectChain.effects)
+			{
+				JsusFxWindow * window = new JsusFxWindow(effect);
+				
+				windows.push_back(window);
+			}
+			
+			//
+			
+			auto xml_editor = d.FirstChildElement("editor");
+			
+			if (xml_editor != nullptr)
+			{
+				auto xml_midiKeyboard = xml_editor->FirstChildElement("midiKeyboard");
+				
+				if (xml_midiKeyboard != nullptr)
+				{
+					midiKeyboard.octave = intAttrib(xml_midiKeyboard, "octave", midiKeyboard.octave);
+				}
+				
+				auto xml_audioInput = xml_editor->FirstChildElement("audioInput");
+				
+				if (xml_audioInput != nullptr)
+				{
+					audioStream.enableInput = boolAttrib(xml_audioInput, "enabled", audioStream.enableInput);
+				}
+				
+				auto xml_effectChain = xml_editor->FirstChildElement("effectChain");
+				
+				if (xml_effectChain != nullptr)
+				{
+					for (auto xml_effect = xml_effectChain->FirstChildElement("effect"); xml_effect != nullptr; xml_effect = xml_effect->NextSiblingElement("effect"))
+					{
+						const int id = intAttrib(xml_effect, "id", 0);
+						
+						if (id != 0)
+						{
+							auto windowItr = std::find_if(windows.begin(), windows.end(), [&](JsusFxWindow * w) -> bool { return w->effectElem->id == id; });
+							
+							if (windowItr != windows.end())
+							{
+								JsusFxWindow * window = *windowItr;
+								
+								const int windowX = intAttrib(xml_effect, "window_x", 0);
+								const int windowY = intAttrib(xml_effect, "window_y", 0);
+								const int windowSx = intAttrib(xml_effect, "window_sx", window->window->getWidth());
+								const int windowSy = intAttrib(xml_effect, "window_sy", window->window->getHeight());
+								const bool windowIsVisible = boolAttrib(xml_effect, "window_visible", true);
+								
+								if (!windowIsVisible)
+									window->window->hide();
+								
+								window->window->setPosition(windowX, windowY);
+								window->window->setSize(windowSx, windowSy);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	
+#if ENABLE_AUDIOIO
+	AudioIO audioIO;
+	audioIO.Initialize(2, 1, SAMPLE_RATE, BUFFER_SIZE);
+	audioIO.Play(&audioStream);
+#else
+	AudioOutput_PortAudio audioOutput;
+	audioOutput.Initialize(2, SAMPLE_RATE, BUFFER_SIZE);
+	audioOutput.Play(&audioStream);
+#endif
+
+#if ENABLE_MIDI
+	RtMidiIn * midiIn = new RtMidiIn(RtMidi::UNSPECIFIED, "Midi Controller", 1024);
+	
+	for (int i = 0; i < midiIn->getPortCount(); ++i)
+	{
+		auto name = midiIn->getPortName();
+		
+		logDebug("available MIDI port: %d: %s", i, name.c_str());
+	}
+
+	const int port = 0;
+	
+	if (port < midiIn->getPortCount())
+	{
+		midiIn->openPort(port);
+	}
+#endif
+	
+	JsusFxChainWindow effectChainWindow(effectChain, audioStream, windows);
 	
 	bool scrollerIsActive = false;
 	float scrollerPosition = 0.f;
+	
+	std::string filenameFilter;
+	
+	bool redraw = true;
 	
 	for (;;)
 	{
@@ -877,9 +1484,16 @@ static void testJsusFxList()
 			
 			window->tick(dt);
 			
-			if (window->isValid == false)
+			if (window->cleanup)
 			{
-				audioStream.remove(&window->jsusFx);
+				audioStream.lock();
+				{
+					effectChain.remove(window->effectElem);
+				}
+				audioStream.unlock();
+				
+				delete window->effectElem;
+				window->effectElem = nullptr;
 				
 				delete window;
 				window = nullptr;
@@ -894,158 +1508,421 @@ static void testJsusFxList()
 		
 		effectChainWindow.tick(dt);
 		
-		framework.beginDraw(0, 0, 0, 0);
+	#if ENABLE_MIDI
+		audioStream.lock();
 		{
-			setFont("calibri.ttf");
-			
-			int x = 0;
-			int y = 0;
-			
-			x += 10;
-			y += 10;
-			
-			gxPushMatrix();
+			std::vector<uint8_t> messageBytes;
+
+			for (;;)
 			{
-				gxTranslatef(x, y, 0);
+				midiIn->getMessage(&messageBytes);
 				
-				audioStream.lock();
-				{
-					doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y - y, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false);
-				}
-				audioStream.unlock();
+				if (messageBytes.empty())
+					break;
 				
-				doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y, nullptr, nullptr, false, true);
-			}
-			gxPopMatrix();
-			
-			y += 74;
-			
-			int locationX = 0;
-			
-			for (auto & locationItr : filenamesByLocation)
-			{
-				const std::string & location = locationItr.first;
-				
-				const int x1 = x + locationX;
-				const int y1 = y;
-				const int x2 = x1 + 80;
-				const int y2 = y1 + 20;
-				
-				const bool isInside = mouse.x >= x1 && mouse.y >= y1 && mouse.x < x2 && mouse.y < y2;
-				
-				if (isInside && mouse.wentDown(BUTTON_LEFT))
-				{
-					activeLocation = location;
-				}
-				
-				setColor(colorWhite);
-				
-				setLumi(isInside ? 200 : 100);
-				drawRect(x1, y1, x2, y2);
-				setLumi(isInside ? 100 : 200);
-				drawText((x1 + x2)/2, (y1 + y2)/2, 16, 0, 0, "%s", location.c_str());
-				
-				locationX += 90;
-			}
-			
-			y += 24;
-			
-			auto & filenames = filenamesByLocation[activeLocation];
-			
-			const int kMaxVisible = 30;
-			
-			if (filenames.size() > kMaxVisible)
-			{
-				const float x1 = x;
-				const float y1 = y;
-				const float x2 = x1 + 400;
-				const float y2 = y1 + 16;
-				
-				const float size = (x2 - x1) - 2*2;
-				const float barSize = size * kMaxVisible / float(filenames.size());
-				const float scrollPixels = (size - barSize) * scrollerPosition;
-				
-				const float barX1 = x1 + 2 + scrollPixels;
-				const float barY1 = y1 + 2;
-				const float barX2 = barX1 + barSize;
-				const float barY2 = y2 - 2;
-				
-				const bool isInside = mouse.x >= x1 && mouse.y >= y1 && mouse.x < x2 && mouse.y < y2;
-				
-				if (isInside && mouse.wentDown(BUTTON_LEFT))
-					scrollerIsActive = true;
-				
-				if (mouse.wentUp(BUTTON_LEFT))
-					scrollerIsActive = false;
-				
-				if (scrollerIsActive)
-				{
-					scrollerPosition = clamp((mouse.x - x1) / float(x2 - x1), 0.f, 1.f);
-					drawText(0, 0, 20, +1, +1, "SCROLL: %g", scrollerPosition);
-				}
-				
-				hqBegin(HQ_FILLED_ROUNDED_RECTS);
-				setLumi(100);
-				hqFillRoundedRect(x1, y1, x2, y2, 4);
-				setLumi(isInside ? 200 : 160);
-				hqFillRoundedRect(barX1, barY1, barX2, barY2, 3);
-				hqEnd();
-			}
-			else
-			{
-				scrollerPosition = 0.f;
-				scrollerIsActive = false;
-			}
-			
-			y += 20;
-			
-			const int numVisible = filenames.size() < kMaxVisible ? filenames.size() : kMaxVisible;
-			
-			int index = (filenames.size() - numVisible) * scrollerPosition;
-			
-			for (int i = 0; i < numVisible; ++i, ++index)
-			{
-				auto & filename = filenames[index];
-				
-				setColor(colorWhite);
-				
-				const bool isInside = mouse.x >= x && mouse.y >= y && mouse.x < x + 400 && mouse.y < y + 14;
-				
-				if (isInside && mouse.wentDown(BUTTON_LEFT))
-				{
-					JsusFxWindow * window = new JsusFxWindow(filename.c_str());
-					
-					if (window->isValid)
-					{
-						audioStream.add(&window->jsusFx);
-					}
-					
-					windows.push_back(window);
-				}
-				
-				setLumi(isInside ? 200 : 100);
-				drawRect(x, y, x + 400, y + 14);
-				setLumi(isInside ? 100 : 200);
-				drawText(x + 2, y + 14/2, 10, +1, 0, "%s", filename.c_str());
-				
-				y += 16;
+				if (s_midiBuffer.append(&messageBytes[0], messageBytes.size()) == false)
+					break;
 			}
 		}
-		framework.endDraw();
+		audioStream.unlock();
+	#endif
+		
+		if (framework.events.empty() == false)
+			redraw = true;
+		
+		if (redraw)
+		{
+			redraw = false;
+			
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				setFont("calibri.ttf");
+				
+				int x = 0;
+				int y = 0;
+				
+				x += 10;
+				y += 10;
+				
+				int midiSx;
+				int midiSy;
+				
+				gxPushMatrix();
+				{
+					gxTranslatef(x, y, 0);
+					
+					audioStream.lock();
+					{
+						doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y - y, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false, midiSx, midiSy);
+					}
+					audioStream.unlock();
+					
+					doMidiKeyboard(midiKeyboard, mouse.x - x, mouse.y - y, nullptr, nullptr, false, true, midiSx, midiSy);
+				}
+				gxPopMatrix();
+				
+				gxPushMatrix();
+				{
+					const int old_x = x;
+					
+					x += midiSx;
+					x += 10;
+					
+					gxTranslatef(x, y, 0);
+					
+					const int x1 = 0;
+					const int y1 = 0;
+					const int x2 = 20;
+					const int y2 = 20;
+					
+					const int mx = mouse.x - x;
+					const int my = mouse.y - y;
+					
+					if (mouse.wentDown(BUTTON_LEFT) &&
+						mx >= x1 &&
+						my >= y1 &&
+						mx <= x2 &&
+						my <= y2)
+					{
+						audioStream.enableInput = !audioStream.enableInput;
+					}
+					
+					setLumi(audioStream.enableInput ? 200 : 0);
+					drawRect(x1, y1, x2, y2);
+					setLumi(100);
+					if (audioStream.enableInput)
+					{
+						// draw a cross when checked
+						hqBegin(HQ_LINES);
+						hqLine(x1 + 3, y1 + 3, 1.1f, x2 - 3, y2 - 3, 1.1f);
+						hqLine(x1 + 3, y2 - 3, 1.1f, x2 - 3, y1 + 3, 1.1f);
+						hqEnd();
+					}
+					drawRectLine(x1, y1, x2, y2);
+					
+					x = old_x;
+				}
+				gxPopMatrix();
+				
+				y += midiSy;
+				y += 10;
+				
+				int locationX = 0;
+				
+				for (auto & locationItr : filenamesByLocation)
+				{
+					const std::string & location = locationItr.first;
+					
+					const int x1 = x + locationX;
+					const int y1 = y;
+					const int x2 = x1 + 80;
+					const int y2 = y1 + 20;
+					
+					const bool isInside = mouse.x >= x1 && mouse.y >= y1 && mouse.x < x2 && mouse.y < y2;
+					
+					if (isInside && mouse.wentDown(BUTTON_LEFT))
+					{
+						activeLocation = location;
+					}
+					
+					setColor(colorWhite);
+					
+					setLumi(isInside ? 200 : 100);
+					drawRect(x1, y1, x2, y2);
+					setLumi(isInside ? 100 : 200);
+					drawText((x1 + x2)/2, (y1 + y2)/2, 16, 0, 0, "%s", location.c_str());
+					
+					locationX += 90;
+				}
+				
+				y += 24;
+				
+				// search filter box
+				
+				{
+					setLumi(filenameFilter.empty() ? 40 : 60);
+					hqBegin(HQ_FILLED_ROUNDED_RECTS);
+					hqFillRoundedRect(10, y, 10 + 400, y + 20, 4.f);
+					hqEnd();
+					setLumi(200);
+					drawText(10 + 4, y + 10, 12, +1, 0, "%s", filenameFilter.c_str());
+					for (auto & e : framework.events)
+					{
+						if (e.type == SDL_KEYDOWN)
+						{
+							if (e.key.keysym.sym >= SDLK_a && e.key.keysym.sym <= SDLK_z)
+								filenameFilter.push_back(e.key.keysym.sym - SDLK_a + 'a');
+						}
+					}
+					
+					y += 20;
+				}
+				
+				if (keyboard.wentDown(SDLK_BACKSPACE))
+					filenameFilter.clear();
+				
+				// apply search filter
+				
+				auto & allFilenames = filenamesByLocation[activeLocation];
+				
+				std::vector<std::string> filenames;
+				
+				if (filenameFilter.empty())
+					filenames = allFilenames;
+				else
+				{
+					for (auto & filename : allFilenames)
+						if (strcasestr(filename.c_str(), filenameFilter.c_str()) != nullptr)
+							filenames.push_back(filename);
+				}
+				
+				if (keyboard.wentDown(SDLK_RETURN) && filenames.size() == 1)
+				{
+					auto & filename = filenames[0];
+					
+					JsusFxElem * elem = new JsusFxElem(effectChain.pathLibrary);
+			
+					elem->filename = filename;
+					
+					elem->init();
+				
+					if (elem->isValid)
+					{
+						audioStream.lock();
+						{
+							effectChain.add(elem);
+						}
+						audioStream.unlock();
+						
+						JsusFxWindow * window = new JsusFxWindow(elem);
+						
+						windows.push_back(window);
+					}
+					else
+					{
+						delete elem;
+						elem = nullptr;
+					}
+				}
+				
+				// filtered effect list
+				
+				const int kMaxVisible = 30;
+				
+				if (filenames.size() > kMaxVisible)
+				{
+					const float x1 = x;
+					const float y1 = y;
+					const float x2 = x1 + 400;
+					const float y2 = y1 + 16;
+					
+					const float size = (x2 - x1) - 2*2;
+					const float barSize = size * kMaxVisible / float(filenames.size());
+					const float scrollPixels = (size - barSize) * scrollerPosition;
+					
+					const float barX1 = x1 + 2 + scrollPixels;
+					const float barY1 = y1 + 2;
+					const float barX2 = barX1 + barSize;
+					const float barY2 = y2 - 2;
+					
+					const bool isInside = mouse.x >= x1 && mouse.y >= y1 && mouse.x < x2 && mouse.y < y2;
+					
+					if (isInside && mouse.wentDown(BUTTON_LEFT))
+						scrollerIsActive = true;
+					
+					if (mouse.wentUp(BUTTON_LEFT))
+						scrollerIsActive = false;
+					
+					if (scrollerIsActive)
+					{
+						scrollerPosition = clamp((mouse.x - x1) / float(x2 - x1), 0.f, 1.f);
+						drawText(0, 0, 20, +1, +1, "SCROLL: %g", scrollerPosition);
+					}
+					
+					hqBegin(HQ_FILLED_ROUNDED_RECTS);
+					setLumi(100);
+					hqFillRoundedRect(x1, y1, x2, y2, 4);
+					setLumi(isInside ? 200 : 160);
+					hqFillRoundedRect(barX1, barY1, barX2, barY2, 3);
+					hqEnd();
+				}
+				else
+				{
+					scrollerPosition = 0.f;
+					scrollerIsActive = false;
+				}
+				
+				y += 20;
+				
+				const int numVisible = filenames.size() < kMaxVisible ? filenames.size() : kMaxVisible;
+				
+				int index = (filenames.size() - numVisible) * scrollerPosition;
+				
+				for (int i = 0; i < numVisible; ++i, ++index)
+				{
+					auto & filename = filenames[index];
+					
+					setColor(colorWhite);
+					
+					const bool isInside = mouse.x >= x && mouse.y >= y && mouse.x < x + 400 && mouse.y < y + 14;
+					
+					if (isInside && mouse.wentDown(BUTTON_LEFT))
+					{
+						JsusFxElem * elem = new JsusFxElem(effectChain.pathLibrary);
+						
+						elem->filename = filename;
+						
+						elem->init();
+						
+						if (elem->isValid)
+						{
+							audioStream.lock();
+							{
+								effectChain.add(elem);
+							}
+							audioStream.unlock();
+							
+							JsusFxWindow * window = new JsusFxWindow(elem);
+							
+							windows.push_back(window);
+						}
+						else
+						{
+							delete elem;
+							elem = nullptr;
+						}
+					}
+					
+					setLumi(isInside ? 200 : 100);
+					drawRect(x, y, x + 400, y + 14);
+					setLumi(isInside ? 100 : 200);
+					drawText(x + 2, y + 14/2, 10, +1, 0, "%s", filename.c_str());
+					
+					y += 16;
+				}
+			}
+			framework.endDraw();
+		}
 		
 		for (auto & window : windows)
 			window->draw();
 	}
 	
-	audioOutput.Stop();
+#if ENABLE_MIDI
+	midiIn->closePort();
 	
-	// todo : free effects, windows etc
+	delete midiIn;
+	midiIn = nullptr;
+#endif
+
+#if ENABLE_AUDIOIO
+	audioIO.Stop();
+	audioIO.Shutdown();
+#else
+	audioOutput.Stop();
+	audioOutput.Shutdown();
+#endif
+
+	tinyxml2::XMLPrinter p;
+	
+	p.OpenElement("effectChain");
+	{
+		effectChain.saveXml(p);
+	}
+	p.CloseElement();
+	
+	p.OpenElement("editor");
+	{
+		p.OpenElement("midiKeyboard");
+		{
+			p.PushAttribute("octave", midiKeyboard.octave);
+		}
+		p.CloseElement();
+		
+		p.OpenElement("audioInput");
+		{
+			p.PushAttribute("enabled", audioStream.enableInput);
+		}
+		p.CloseElement();
+		
+		p.OpenElement("effectChain");
+		{
+			for (JsusFxWindow * window : windows)
+			{
+				p.OpenElement("effect");
+				{
+					int windowX;
+					int windowY;
+					
+					window->window->getPosition(windowX, windowY);
+					
+					p.PushAttribute("id", window->effectElem->id);
+					p.PushAttribute("window_visible", !window->window->isHidden());
+					p.PushAttribute("window_x", windowX);
+					p.PushAttribute("window_y", windowY);
+					p.PushAttribute("window_sx", window->window->getWidth());
+					p.PushAttribute("window_sy", window->window->getHeight());
+				}
+				p.CloseElement();
+			}
+		}
+		p.CloseElement();
+	}
+	p.CloseElement();
+	
+	tinyxml2::XMLDocument d;
+	
+	if (d.Parse(p.CStr()) != tinyxml2::XML_SUCCESS)
+	{
+		logError("failed to parse emitted XML");
+		Assert(false);
+	}
+	else
+	{
+		const char * filename = "effectChain.xml";
+		
+		FILE * f = fopen(filename, "wt");
+		
+		if (f == nullptr)
+		{
+			logError("failed to open file for writing");
+		}
+		else
+		{
+			fprintf(f, "%s", p.CStr());
+			
+			fclose(f);
+			f = nullptr;
+		}
+	}
+	
+	// free effects, windows etc
+
+	audioStream.shut();
+
+	for (auto & window : windows)
+	{
+		delete window;
+		window = nullptr;
+	}
+
+	windows.clear();
+
+	effectChain.clear();
+
+	filenamesByLocation.clear();
 	
 	framework.shutdown();
 }
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
 #if 1
 	testJsusFxList();
 	exit(0);
@@ -1054,7 +1931,7 @@ int main(int argc, char * argv[])
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
 	
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	JsusFx::init();
@@ -1073,42 +1950,16 @@ int main(int argc, char * argv[])
 	fx.fileAPI = &fileAPI;
 	fileAPI.init(fx.m_vm);
 	
-	//const char * filename = "3bandpeakfilter";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/FocusPressPushZoom";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/Direct";
-	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/vumetergfx";
-	//const char * filename = "/Users/thecat/jsusfx/scripts/liteon/statevariable";
-	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Delay.jsfx";
-	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Chorus.jsfx";
-	//const char * filename = "/Users/thecat/Downloads/JSFX-kawa-master/kawa_XY_Flanger.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spring-Box.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Stereo Alignment Delay.jsfx";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Transform/RotateTiltTumble";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Bad Connection.jsfx";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Quad";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/AmbiXToB";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/Binaural";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Encode/Periphonic3D";
-	//const char * filename = "/Users/thecat/atk-reaper/plugins/FOA/Decode/UHJ";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Warble.jsfx"; // fixme
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Spectrum Matcher.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Smooth Limiter.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Sandwich Amp.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Pulsar.jsfx"; // todo
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Panalysis.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/pad-synth.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/MIDI Harmony.jsfx"; // todo
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Level Meter.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Learning Sampler.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Humonica.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And String.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Hammer And Chord.jsfx";
-	//const char * filename = "/Users/thecat/geraintluff -jsfx/Echo-Cycles.jsfx";
-	//const char * filename = "/Users/thecat/Downloads/Transpire/Transpire";
-	const char * filename = "/Users/thecat/Downloads/Surround_Pan_2-JSFX/Surround Pan 2/Surround Pan 2";
-	//const char * filename = "/Users/thecat/Downloads/QuadraCom-JSFX/QuadraCom/QuadraCom";
+	//const char * filename = "/Users/thecat/Downloads/JsusFx - Leet Delay 2/Leet Delay 2";
+	//const char * filename = "/Users/thecat/Downloads/JsusFx - QuadraCom/QuadraCom/QuadraCom";
+	//const char * filename = "/Users/thecat/Downloads/JsusFx - SEGX2/SEGX2 Gate";
+	const char * filename = "/Users/thecat/Downloads/JsusFx - Surround Pan 2/Surround Pan 2/Surround Pan 2";
+	//const char * filename = "/Users/thecat/Downloads/JsusFx - Transpire/Transpire";
+	//const char * filename = "/Users/thecat/Downloads/JsusFx - TriLeveler2/TriLeveler2/TriLeveler2";
 	
-	if (!fx.compile(pathLibrary, filename))
+	if (!fx.compile(pathLibrary, filename,
+		JsusFx::kCompileFlag_CompileGraphicsSection |
+		JsusFx::kCompileFlag_CompileSerializeSection))
 	{
 		logError("failed to load file: %s", filename);
 		return -1;
@@ -1143,7 +1994,9 @@ int main(int argc, char * argv[])
 
 		audioStream.lock();
 		{
-			doMidiKeyboard(midiKeyboard, mouse.x - 10 - fx.gfx_w, mouse.y - 10, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false);
+			int sx;
+			int sy;
+			doMidiKeyboard(midiKeyboard, mouse.x - 10 - fx.gfx_w, mouse.y - 10, s_midiBuffer.bytes + s_midiBuffer.numBytes, &s_midiBuffer.numBytes, true, false, sx, sy);
 		}
 		audioStream.unlock();
 		
@@ -1216,7 +2069,9 @@ int main(int argc, char * argv[])
 			{
 				gxTranslatef(10 + fx.gfx_w, 10, 0);
 				
-				doMidiKeyboard(midiKeyboard, mouse.x - 10 - fx.gfx_w, mouse.y - 10, nullptr, nullptr, false, true);
+				int sx;
+				int sy;
+				doMidiKeyboard(midiKeyboard, mouse.x - 10 - fx.gfx_w, mouse.y - 10, nullptr, nullptr, false, true, sx, sy);
 			}
 			gxPopMatrix();
 		}

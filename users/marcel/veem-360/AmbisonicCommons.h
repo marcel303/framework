@@ -16,7 +16,9 @@
 #ifndef _AMBISONICCOMMONS_H
 #define    _AMBISONICCOMMONS_H
 
+#ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
+#endif
 #include <math.h>
 #include <memory.h>
 

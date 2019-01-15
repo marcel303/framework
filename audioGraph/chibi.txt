@@ -1,0 +1,23 @@
+library libdelaunay
+
+	add_files delaunay/delaunay.cpp delaunay/delaunay.h delaunay/edge.h delaunay/triangle.h delaunay/vector2.h
+
+	header_path . expose
+
+library audiograph
+
+	depend_library framework
+	depend_library libavgraph
+	depend_library libdelaunay
+	depend_library libosc
+	depend_library libparticle-ui
+
+	header_path .       expose
+	header_path objects expose
+
+	scan_files cpp
+	scan_files h
+	scan_files cpp path objects    group objects
+	scan_files h   path objects    group objects
+	scan_files cpp path audioNodes group audioNodes conglomerate audioNodes_all.h
+	scan_files h   path audioNodes group audioNodes

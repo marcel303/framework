@@ -1,0 +1,29 @@
+add audioGraph
+add audioGraph-examples
+add avGraph
+add framework
+add framework-ofx
+add tests
+add vfxGraph
+add vfxGraph-examples
+
+global_group libraries
+
+	with_platform macos add 3rdparty/PS3EYEDriver/framework
+	add 3rdparty
+	add 3rdparty/imgui-framework
+	add 3rdparty/libwebrequest
+	with_platform macos add 3rdparty/xmm-support
+	add libfbx
+	add libgg
+	add libjsusfx-framework
+	add libnfd
+	add libosc
+	add libparticle
+	add libvideo
+	add users/marcel/libjgmod
+	add users/marcel/optionmenu
+
+global_group users/marcel
+
+	add users/marcel/geopart1

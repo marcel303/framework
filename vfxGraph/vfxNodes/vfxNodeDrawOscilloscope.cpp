@@ -170,7 +170,7 @@ void VfxNodeDrawOscilloscope::draw() const
 						
 						if (!values.empty())
 						{
-							gxBegin(GL_QUADS);
+							gxBegin(GX_QUADS);
 							{
 								for (size_t i = 0; i < values.size() - 1; ++i)
 								{

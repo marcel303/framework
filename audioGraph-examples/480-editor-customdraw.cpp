@@ -30,8 +30,8 @@
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "framework.h"
-#include "soundmix.h"
 #include <cmath>
 
 const int GFX_SX = 1024;
@@ -46,7 +46,7 @@ static void drawChannels(const GraphEdit_ChannelData & channelData, const float 
 		if (channel.numValues < 2)
 			continue;
 		
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			const float xScale = sx / (channel.numValues - 1);
 			const float xOffset = -sx/2.f;
@@ -91,9 +91,8 @@ static void drawEditor(const GraphEdit & graphEdit, AudioRealTimeConnection * rt
 	const float scale = .01f;
 	const float kRadius = 40.f;
 	
-	// todo : would be nice to have an axis swizzle function
-	gxScalef(scale, scale, scale);
-	gxRotatef(180, 1, 0, 0);
+	// note : negate the y-axis to make sure text renders up-right
+	gxScalef(scale, -scale, scale);
 	
 	// draw links
 	
@@ -145,7 +144,7 @@ static void drawEditor(const GraphEdit & graphEdit, AudioRealTimeConnection * rt
 			setColor(20, 20, 20);
 			fillCircle(0, 0, kRadius, 100);
 			
-			gxTranslatef(0, 0, 1.f);
+			gxTranslatef(0, 0, -1.f);
 			
 			auto typeDefinition = graphEdit.typeDefinitionLibrary->tryGetTypeDefinition(node->typeName.c_str());
 			
@@ -199,7 +198,7 @@ static void drawEditor(const GraphEdit & graphEdit, AudioRealTimeConnection * rt
 					
 					if (audioNode->getFilterResponse(magnitude, numSteps))
 					{
-						gxBegin(GL_LINES);
+						gxBegin(GX_LINES);
 						{
 							const float sx = 30.f;
 							const float sy = 30.f;
@@ -260,10 +259,13 @@ static void drawEditor(const GraphEdit & graphEdit, AudioRealTimeConnection * rt
 
 int main(int argc, char * argv[])
 {
-	//framework.fullscreen = true;
-	framework.enableDepthBuffer = true;
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
 
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		// initialize audio related systems
 		
@@ -297,6 +299,10 @@ int main(int argc, char * argv[])
 		camera.position = Vec3(0.f, 1.5f, -4.f);
 		camera.pitch = -15.f;
 		
+		Surface surface(GFX_SX, GFX_SY, true, true, SURFACE_RGBA8);
+		
+		bool showDefaultEditor = false;
+		
 		while (!framework.quitRequested)
 		{
 			framework.process();
@@ -306,15 +312,22 @@ int main(int argc, char * argv[])
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
 			
+			if (keyboard.wentDown(SDLK_TAB))
+				showDefaultEditor = !showDefaultEditor;
+			
 			camera.tick(dt, true);
 
-			audioGraphMgr.tickEditor(dt, false);
+			audioGraphMgr.tickEditor(GFX_SX, GFX_SY, dt, showDefaultEditor == false);
 			
 			framework.beginDraw(220, 220, 220, 0);
 			{
 				setFont("calibri.ttf");
 				pushFontMode(FONT_SDF);
 				{
+					pushSurface(&surface);
+					surface.clear();
+					surface.clearDepth(1.f);
+					
 					const float fov = 60.f;
 					const float near = .01f;
 					const float far = 100.f;
@@ -322,8 +335,7 @@ int main(int argc, char * argv[])
 
 					camera.pushViewMatrix();
 					{
-						glEnable(GL_DEPTH_TEST);
-						glDepthFunc(GL_LEQUAL);
+						pushDepthTest(true, DEPTH_LEQUAL);
 						
 						setColor(100, 100, 100);
 						drawGrid3dLine(10, 10, 0, 2, true);
@@ -333,11 +345,30 @@ int main(int argc, char * argv[])
 							drawEditor(*audioGraphMgr.selectedFile->graphEdit, instance->realTimeConnection, instance->audioGraph);
 						}
 						
-						glDisable(GL_DEPTH_TEST);
+						popDepthTest();
 					}
 					camera.popViewMatrix();
 
+					popSurface();
+					
 					projectScreen2d();
+					
+					float samples[AUDIO_UPDATE_SIZE * 2];
+					voiceMgr.generateAudio(samples, AUDIO_UPDATE_SIZE);
+					float magnitudeSq = 0.f;
+					for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+						magnitudeSq += samples[i] * samples[i];
+					magnitudeSq /= AUDIO_UPDATE_SIZE;
+					const float blurStrength = magnitudeSq * 2000.f;
+					setShader_GaussianBlurV(surface.getTexture(), 30, blurStrength);
+					surface.postprocess();
+					pushBlend(BLEND_OPAQUE);
+					drawRect(0, GFX_SY, GFX_SX, 0);
+					popBlend();
+					clearShader();
+					
+					if (showDefaultEditor)
+						audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 					
 					// show CPU usage of the audio thread
 					

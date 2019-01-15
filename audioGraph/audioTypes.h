@@ -36,7 +36,7 @@
 #define SAMPLE_RATE 44100
 
 #ifndef AUDIO_USE_SSE
-	#if __SSE2__
+	#ifdef __SSE2__
 		#define AUDIO_USE_SSE 1
 	#else
 		#define AUDIO_USE_SSE 0 // do not alter
@@ -195,6 +195,34 @@ struct AudioControlValue
 	float desiredY;
 	float currentX;
 	float currentY;
+	
+	void finalize()
+	{
+		pushed_desiredX = desiredX;
+		pushed_desiredY = desiredY;
+		
+		active_desiredX = desiredX;
+		active_desiredY = desiredY;
+		active_currentX = currentX;
+		active_currentY = currentY;
+		
+		stored_currentX = currentX;
+		stored_currentY = currentY;
+	}
+	
+	// note : these 'pushed' values are updated on the main thread, when pushing control values to the audio thread. they just contain the updated desiredX, desiredY
+	float pushed_desiredX;
+	float pushed_desiredY;
+	
+	// note : these 'active' values are updated and used on the audio thread and are unsafe to use from any other thread. please don't touch them unless you know what you're doing!
+	float active_desiredX;
+	float active_desiredY;
+	float active_currentX;
+	float active_currentY;
+	
+	// note : these 'stored' values are updated on the audio thread, when updating control values on the audio thread. they just contain the updated currentX, currentY
+	float stored_currentX;
+	float stored_currentY;
 };
 
 struct AudioEvent
@@ -232,6 +260,17 @@ struct AudioMutex
 	void debugCheckIsLocked();
 };
 
+struct AudioThreadId
+{
+	int64_t id;
+	
+	AudioThreadId();
+	
+	void initThreadId();
+	
+	bool checkThreadId() const;
+};
+
 struct AudioRNG
 {
 	AudioRNG();
@@ -239,3 +278,29 @@ struct AudioRNG
 	float nextf(const float min, const float max);
 	double nextd(const double min, const double max);
 };
+
+#if AUDIO_USE_SSE
+	#define ALIGNED_AUDIO_NEW_AND_DELETE() \
+		void * operator new(size_t size) \
+		{ \
+			return _mm_malloc(size, 32); \
+		} \
+		void operator delete(void * mem) \
+		{ \
+			_mm_free(mem); \
+		}
+#elif AUDIO_USE_GCC_VECTOR
+	#define ALIGNED_AUDIO_NEW_AND_DELETE() \
+		void * operator new(size_t size) { \
+			void * result = nullptr; \
+			posix_memalign(&result, 32, size); \
+			return result; \
+		} \
+		void operator delete(void * mem) \
+		{ \
+			_mm_free(mem); \
+		}
+#else
+	#define ALIGNED_AUDIO_NEW_AND_DELETE()
+#endif
+

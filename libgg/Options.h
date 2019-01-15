@@ -1,6 +1,8 @@
 #pragma once
 
-#define GG_ENABLE_OPTIONS 1
+#if !defined(GG_ENABLE_OPTIONS)
+	#define GG_ENABLE_OPTIONS 1
+#endif
 
 #if GG_ENABLE_OPTIONS
 

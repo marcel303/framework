@@ -52,7 +52,7 @@ if (NOT HAS_AUDIOGRAPH)
 endif (NOT HAS_AUDIOGRAPH)
 
 #todo : remove ugly sub-framework folder dependency jsusfx library
-add_subdirectory(../users/marcel/jsusfx-framework jsusfx-framework)
+add_subdirectory(../libjsusfx-framework jsusfx-framework)
 
 #
 

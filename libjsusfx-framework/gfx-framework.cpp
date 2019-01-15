@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_TEXTURE_WIDTH, GL_TEXTURE_HEIGHT
 #include "framework.h"
 #include "gfx-framework.h"
 #include "jsusfx.h"
@@ -32,8 +33,11 @@
 
 #include "WDL/wdlstring.h"
 
-#define STUB logDebug("function %s not implemented", __FUNCTION__)
-//#define STUB do { } while (false)
+#include "data/lice-gradient.ps"
+#include "data/lice-gradient.vs"
+
+//#define STUB logDebug("function %s not implemented", __FUNCTION__)
+#define STUB do { } while (false)
 
 //
 
@@ -135,7 +139,10 @@ JsusFxGfx_Framework::JsusFxGfx_Framework(JsusFx & _jsusFx)
 	: JsusFxGfx()
 	, jsusFx(_jsusFx)
 	, surface(nullptr)
+	, drawTransform(true)
 {
+	shaderSource("lice-gradient.ps", s_liceGradientPs);
+	shaderSource("lice-gradient.vs", s_liceGradientVs);
 }
 
 void JsusFxGfx_Framework::setup(
@@ -157,10 +164,6 @@ void JsusFxGfx_Framework::setup(
 void JsusFxGfx_Framework::setup(const int w, const int h)
 {
 	// update gfx state
-	
-	// todo : correct sx/sy ?
-	//*m_gfx_w = w ? w : GFX_SX;
-	//*m_gfx_h = h ? h : GFX_SY/4;
 	
 	*m_gfx_w = w;
 	*m_gfx_h = h;
@@ -194,6 +197,17 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 	
 	*m_mouse_x = mouseX;
 	*m_mouse_y = mouseY;
+	
+	/*
+	mouse_cap is a bitfield of mouse and keyboard modifier state.
+		1: left mouse button
+		2: right mouse button
+		4: Control key (Windows), Command key (OSX)
+		8: Shift key
+		16: Alt key (Windows), Option key (OSX)
+		32: Windows key (Windows), Control key (OSX) -- REAPER 4.60+
+		64: middle mouse button -- REAPER 4.60+
+	*/
 	
 	int vflags = 0;
 	
@@ -241,9 +255,13 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 		if (keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI))
 			vflags |= 0x20;
 	#endif
+	
+		// note : 0x40 would be middle mouse button
 	}
 	
 	*m_mouse_cap = vflags;
+	
+	*m_mouse_wheel = mouse.scrollY;
 	
 	lastKey = 0;
 	
@@ -261,8 +279,9 @@ void JsusFxGfx_Framework::beginDraw()
 	Assert(primType == kPrimType_Other);
 	
 	pushSurface(surface);
+	gxLoadMatrixf(drawTransform.m_v);
 	currentImageIndex = -1;
-	
+
 	pushBlend(BLEND_OPAQUE);
 	currentBlendMode = -1;
 	updateBlendMode();
@@ -280,13 +299,6 @@ void JsusFxGfx_Framework::endDraw()
 	
 // todo : reset surface or not ?
 	//surface = nullptr;
-}
-
-void JsusFxGfx_Framework::handleReset()
-{
-	m_fontSize = 12.f;
-	
-	imageCache.free();
 }
 
 void JsusFxGfx_Framework::updatePrimType(PrimType _primType)
@@ -307,9 +319,9 @@ void JsusFxGfx_Framework::updatePrimType(PrimType _primType)
 		primType = _primType;
 		
 		if (primType == kPrimType_Rect)
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 		else if (primType == kPrimType_RectLine)
-			gxBegin(GL_LINES);
+			gxBegin(GX_LINES);
 		else if (primType == kPrimType_HqLine)
 			hqBegin(HQ_LINES);
 		else if (primType == kPrimType_HqFillCircle)
@@ -353,7 +365,10 @@ void JsusFxGfx_Framework::updateSurface()
 		popSurface();
 		
 		if (index == -1)
+		{
 			pushSurface(surface);
+			gxLoadMatrixf(drawTransform.m_v);
+		}
 		else
 		{
 			auto image = &imageCache.get(index);
@@ -829,7 +844,7 @@ EEL_F JsusFxGfx_Framework::gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFro
 		
 		const char * filename = jsusFx.fileInfos[fileIndex].filename.c_str();
 		
-		const GLuint texture = getTexture(filename);
+		const GxTextureId texture = getTexture(filename);
 		
 		if (texture == 0)
 		{
@@ -926,7 +941,7 @@ EEL_F JsusFxGfx_Framework::gfx_setimgdim(int img, EEL_F * w, EEL_F * h)
 		if (use_h > 2048)
 			use_h = 2048;
 		
-		logDebug("resizing image %d to (%d, %d)", img, use_w, use_h);
+		//logDebug("resizing image %d to (%d, %d)", img, use_w, use_h);
 		
 		image.resize(use_w, use_h);
 	}
@@ -1128,6 +1143,7 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 	coords[7] = np > 8 ? parms[8][0] : coords[3] * scale;
 
 	const bool isFromFB = bmIndex == -1; // todo : allow blit from image index -1 ?
+	(void)isFromFB;
 
 	const bool isOverlapping = bmIndex == destIndex;
 	
@@ -1229,7 +1245,7 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 					int(*m_gfx_dest), dx, dy, dsx, dsy);
 			#endif
 			
-				gxBegin(GL_QUADS);
+				gxBegin(GX_QUADS);
 				{
 					gxTexCoord2f(u1, v1); gxVertex2f(x1, y1);
 					gxTexCoord2f(u2, v1); gxVertex2f(x2, y1);

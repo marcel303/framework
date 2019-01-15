@@ -28,10 +28,34 @@
 #ifndef __MPDEBUG_H__
 #define __MPDEBUG_H__
 
-#if defined(DEBUG)
-	#define DEBUG_MEDIAPLAYER 0 // fixme : make config option
+#if !defined(DEBUG_MEDIAPLAYER)
+	#if defined(DEBUG)
+		#define DEBUG_MEDIAPLAYER 0
+	#else
+		#define DEBUG_MEDIAPLAYER 0 // do not alter
+	#endif
+#endif
+
+#if DEBUG_MEDIAPLAYER
+	#if !defined(DEBUG_MEDIAPLAYER_LOGGING)
+		#define DEBUG_MEDIAPLAYER_LOGGING 0
+	#endif
+	#if !defined(DEBUG_MEDIAPLAYER_VIDEO_ALLOCS)
+		#define DEBUG_MEDIAPLAYER_VIDEO_ALLOCS 1
+	#endif
+	#if !defined(DEBUG_MEDIAPLAYER_SIMULATE_HICKUPS)
+		#define DEBUG_MEDIAPLAYER_SIMULATE_HICKUPS 1
+	#endif
 #else
-	#define DEBUG_MEDIAPLAYER 0 // do not alter
+	#if !defined(DEBUG_MEDIAPLAYER_LOGGING)
+		#define DEBUG_MEDIAPLAYER_LOGGING 0 // do not alter
+	#endif
+	#if !defined(DEBUG_MEDIAPLAYER_VIDEO_ALLOCS)
+		#define DEBUG_MEDIAPLAYER_VIDEO_ALLOCS 0 // do not alter
+	#endif
+	#if !defined(DEBUG_MEDIAPLAYER_SIMULATE_HICKUPS)
+		#define DEBUG_MEDIAPLAYER_SIMULATE_HICKUPS 0 // do not alter
+	#endif
 #endif
 
 namespace MP
@@ -39,6 +63,8 @@ namespace MP
 	namespace Debug
 	{
         void Print(const char * format, ...);
+		
+        void SimulateHickup();
 	};
 };
 

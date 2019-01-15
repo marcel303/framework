@@ -30,7 +30,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 // todo : make it possible to have multiple delayed triggers pile up
 
-AUDIO_NODE_TYPE(trigger_time, AudioNodeTimeTrigger)
+AUDIO_NODE_TYPE(AudioNodeTimeTrigger)
 {
 	typeName = "trigger.time";
 	

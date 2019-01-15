@@ -28,11 +28,10 @@
 #include <algorithm>
 #include <list>
 #include <time.h>
+#include "fbx.h"
 #include "framework.h"
 #include "internal.h"
 #include "model_fbx.h"
-
-#include "../libfbx/fbx.h" // todo: move to framework
 
 /*
 
@@ -67,6 +66,7 @@ static Mat4x4 matrixTranslation(const Vec3 & v);
 static Mat4x4 matrixRotation(const Vec3 & v, RotationType rotationType);
 static Mat4x4 matrixScaling(const Vec3 & v);
 
+static FbxObject * readFbxGeometry(int & logIndent, const FbxRecord & model, const std::string & objectType, const std::string & objectName);
 static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const std::string & objectType, const std::string & objectName);
 static FbxPose * readFbxPose(int & logIndent, const FbxRecord & pose, const std::string & objectType, const std::string & objectName);
 static FbxObject * readFbxDeformer(int & logIndent, const FbxRecord & deformer, const std::string & objectType, const std::string & objectName);
@@ -155,6 +155,22 @@ static Mat4x4 matrixScaling(const Vec3 & v)
 
 // FBX types
 
+// todo : according to the FBX documentation, FbxMesh should derive from FbxGeometry. this explains why there's so much duplicate code between the two. todo : remove redundant code in FbxMesh and make FbxMesh derive from FbxGeometry
+
+enum MappingType
+{
+	kMappingType_ByPolygonVertex,
+	kMappingType_ByVertex
+};
+
+static MappingType toMappingType(const std::string & name)
+{
+	return
+		name == "ByVertice" || name == "ByVertex"
+		? MappingType::kMappingType_ByVertex
+		: MappingType::kMappingType_ByPolygonVertex;
+}
+
 class FbxObject
 {
 public:
@@ -177,6 +193,29 @@ public:
 	std::string name;
 	bool persistent;
 	FbxObject * parent;
+};
+
+class FbxGeometry : public FbxObject
+{
+public:
+	std::vector<float> vertices;
+	std::vector<int> vertexIndices;
+	std::vector<float> normals;
+	std::vector<int> normalIndices;
+	std::vector<float> uvs;
+	std::vector<int> uvIndices;
+	std::vector<float> colors;
+	std::vector<int> colorIndices;
+	
+	MappingType normalMappingType;
+	MappingType uvMappingType;
+	
+	FbxGeometry(const std::string & name)
+		: FbxObject("Geometry", name)
+		, normalMappingType(kMappingType_ByPolygonVertex)
+		, uvMappingType(kMappingType_ByPolygonVertex)
+	{
+	}
 };
 
 class FbxMesh : public FbxObject
@@ -239,14 +278,20 @@ public:
 	std::vector<float> vertices;
 	std::vector<int> vertexIndices;
 	std::vector<float> normals;
+	std::vector<int> normalIndices;
 	std::vector<float> uvs;
 	std::vector<int> uvIndices;
 	std::vector<float> colors;
 	std::vector<int> colorIndices;
 	std::vector<Deformer> deformers;
 	
-	FbxMesh(const std::string & type, const std::string & name)
-		: FbxObject("Mesh", name)
+	MappingType normalMappingType;
+	MappingType uvMappingType;
+	
+	FbxMesh(const std::string & name)
+		: FbxObject("Mesh", name, true)
+		, normalMappingType(kMappingType_ByPolygonVertex)
+		, uvMappingType(kMappingType_ByPolygonVertex)
 	{
 	}
 };
@@ -343,7 +388,7 @@ public:
 					key.captureProperties<FbxValue>(values);
 					const int stride = int(values.size()) / keyCount;
 					
-					//fbxLog(logIndent, "keyCount=%d\n", keyCount);
+					//fbxLog(logIndent, "keyCount=%d", keyCount);
 					
 					for (size_t i = 0; i + stride <= values.size(); i += stride)
 					{
@@ -368,7 +413,7 @@ public:
 							key.value = value;
 							keys.push_back(key);
 							
-							//fbxLog(logIndent, "%014lld -> %f\n", temp.time, temp.value);
+							//fbxLog(logIndent, "%014lld -> %f", temp.time, temp.value);
 						}
 						
 						if (time > endTime)
@@ -377,7 +422,7 @@ public:
 						}
 					}
 					
-					//fbxLog(logIndent, "got %d unique keys\n", keys.size());
+					//fbxLog(logIndent, "got %d unique keys", keys.size());
 				}
 				else
 				{
@@ -404,7 +449,7 @@ public:
 			{
 				const std::string name = channel.captureProperty<std::string>(0);
 				
-				//fbxLog(logIndent, "stream: name=%s\n", name.c_str());
+				//fbxLog(logIndent, "stream: name=%s", name.c_str());
 				
 				logIndent++;
 				{
@@ -556,6 +601,51 @@ public:
 	std::map<std::string, FbxAnimTransform> transforms;
 };
 
+static FbxObject * readFbxGeometry(int & logIndent, const FbxRecord & model, const std::string & objectType, const std::string & objectName)
+{
+	FbxObject * result = 0;
+	
+	FbxGeometry * geometry = new FbxGeometry(objectName);
+	result = geometry;
+	
+	const FbxRecord vertices = model.firstChild("Vertices");
+	const FbxRecord vertexIndices = model.firstChild("PolygonVertexIndex");
+	
+	const FbxRecord normalsLayer = model.firstChild("LayerElementNormal");
+	const FbxRecord normals = normalsLayer.firstChild("Normals");
+	const FbxRecord normalIndices = normalsLayer.firstChild("NormalsIndex");
+	const std::string normalMappingType = normalsLayer.firstChild("MappingInformationType").captureProperty<std::string>(0);
+	geometry->normalMappingType = toMappingType(normalMappingType);
+	
+	const FbxRecord uvsLayer = model.firstChild("LayerElementUV");
+	const FbxRecord uvs = uvsLayer.firstChild("UV");
+	const FbxRecord uvIndices = uvsLayer.firstChild("UVIndex");
+	const std::string uvMappingType = uvsLayer.firstChild("MappingInformationType").captureProperty<std::string>(0);
+	geometry->uvMappingType = toMappingType(uvMappingType);
+	
+	const FbxRecord colorsLayer = model.firstChild("LayerElementColor");
+	const FbxRecord colors = colorsLayer.firstChild("Colors");
+	const FbxRecord colorIndices = colorsLayer.firstChild("ColorIndex");
+	
+	vertices.capturePropertyArray(0, geometry->vertices);
+	vertexIndices.capturePropertyArray(0, geometry->vertexIndices);
+	normals.capturePropertyArray(0, geometry->normals);
+	normalIndices.capturePropertyArray(0, geometry->normalIndices);
+	uvs.capturePropertyArray(0, geometry->uvs);
+	uvIndices.capturePropertyArray(0, geometry->uvIndices);
+	colors.capturePropertyArray(0, geometry->colors);
+	colorIndices.capturePropertyArray(0, geometry->colorIndices);
+	
+	fbxLog(logIndent, "found a geometry! name: %s, hasVertices: %d (%d), hasNormals: %d, hasUVs: %d",
+		objectName.c_str(),
+		vertices.isValid(),
+		int(geometry->vertices.size()),
+		normals.isValid(),
+		uvs.isValid());
+	
+	return result;
+}
+
 static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const std::string & objectType, const std::string & objectName)
 {
 	// todo: allocate generic node object for non mesh
@@ -564,7 +654,7 @@ static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const 
 	
 	//if (treatAsMesh(objectType))
 	{
-		FbxMesh * mesh = new FbxMesh("Mesh", objectName);
+		FbxMesh * mesh = new FbxMesh(objectName);
 		result = mesh;
 		
 		FbxRecord properties = model.firstChild("Properties60");
@@ -671,10 +761,15 @@ static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const 
 		
 		const FbxRecord normalsLayer = model.firstChild("LayerElementNormal");
 		const FbxRecord normals = normalsLayer.firstChild("Normals");
+		const FbxRecord normalIndices = normalsLayer.firstChild("NormalsIndex");
+		const std::string normalMappingType = normalsLayer.firstChild("MappingInformationType").captureProperty<std::string>(0);
+		mesh->normalMappingType = toMappingType(normalMappingType);
 		
 		const FbxRecord uvsLayer = model.firstChild("LayerElementUV");
 		const FbxRecord uvs = uvsLayer.firstChild("UV");
 		const FbxRecord uvIndices = uvsLayer.firstChild("UVIndex");
+		const std::string uvMappingType = uvsLayer.firstChild("MappingInformationType").captureProperty<std::string>(0);
+		mesh->uvMappingType = toMappingType(uvMappingType);
 		
 		const FbxRecord colorsLayer = model.firstChild("LayerElementColor");
 		const FbxRecord colors = colorsLayer.firstChild("Colors");
@@ -683,6 +778,7 @@ static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const 
 		vertices.capturePropertiesAsFloat(mesh->vertices);
 		vertexIndices.capturePropertiesAsInt(mesh->vertexIndices);
 		normals.capturePropertiesAsFloat(mesh->normals);
+		normalIndices.capturePropertiesAsInt(mesh->normalIndices);
 		uvs.capturePropertiesAsFloat(mesh->uvs);
 		uvIndices.capturePropertiesAsInt(mesh->uvIndices);
 		colors.capturePropertiesAsFloat(mesh->colors);
@@ -735,7 +831,7 @@ static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const 
 			matrixScaling(scalingLocal) *
 			matrixTranslation(-scalingPivot);
 		
-		fbxLog(logIndent, "found a mesh! name: %s, hasVertices: %d (%d), hasNormals: %d, hasUVs: %d\n",
+		fbxLog(logIndent, "found a mesh! name: %s, hasVertices: %d (%d), hasNormals: %d, hasUVs: %d",
 			objectName.c_str(),
 			vertices.isValid(),
 			int(mesh->vertices.size()),
@@ -744,10 +840,10 @@ static FbxObject * readFbxModel(int & logIndent, const FbxRecord & model, const 
 		
 		logIndent++;
 		{
-			fbxLog(logIndent+1, "transform:\n");
+			fbxLog(logIndent+1, "transform:");
 			for (int i = 0; i < 4; ++i)
 			{
-				fbxLog(logIndent + 2, "%8.2f %8.2f %8.2f %8.2f\n",
+				fbxLog(logIndent + 2, "%8.2f %8.2f %8.2f %8.2f",
 					mesh->transform(i, 0),
 					mesh->transform(i, 1),
 					mesh->transform(i, 2),
@@ -780,7 +876,7 @@ static FbxPose * readFbxPose(int & logIndent, const FbxRecord & pose, const std:
 	
 	// type = BindPose
 	
-	fbxLog(logIndent, "pose! name=%s, type=%s\n", poseName.c_str(), poseType.c_str());
+	fbxLog(logIndent, "pose! name=%s, type=%s", poseName.c_str(), poseType.c_str());
 	
 	for (FbxRecord poseNode = pose.firstChild("PoseNode"); poseNode.isValid(); poseNode = poseNode.nextSibling("PoseNode"))
 	{
@@ -801,10 +897,10 @@ static FbxPose * readFbxPose(int & logIndent, const FbxRecord & pose, const std:
 		}
 		else
 		{
-			fbxLog(logIndent, "warning: pose matrix doesn't contain 16 elements\n");
+			fbxLog(logIndent, "warning: pose matrix doesn't contain 16 elements");
 		}
 		
-		//fbxLog(logIndent, "pose node! matrixSize=%d, node=%s\n", int(matrix.size()), nodeName.c_str());
+		//fbxLog(logIndent, "pose node! matrixSize=%d, node=%s", int(matrix.size()), nodeName.c_str());
 	}
 	
 	return fbxPose;
@@ -857,7 +953,7 @@ static FbxObject * readFbxDeformer(int & logIndent, const FbxRecord & deformer, 
 	else
 		fbxDeformer->transformLink.MakeIdentity();
 	
-	//fbxLog(logIndent, "deformer! name=%s, type=%s, numIndices=%d, numWeights=%d\n", name.c_str(), type.c_str(), int(fbxDeformer->indices.size()), int(fbxDeformer->weights.size()));
+	//fbxLog(logIndent, "deformer! name=%s, type=%s, numIndices=%d, numWeights=%d", name.c_str(), type.c_str(), int(fbxDeformer->indices.size()), int(fbxDeformer->weights.size()));
 	
 	return fbxDeformer;
 }
@@ -1049,20 +1145,24 @@ public:
 		const std::vector<float> & vertices,
 		const std::vector<int> & vertexIndices,
 		const std::vector<float> & normals,
+		const std::vector<int> & normalIndices,
+		const MappingType normalMappingType,
 		const std::vector<float> & uvs,
 		const std::vector<int> & uvIndices,
+		const MappingType uvMappingType,
 		const std::vector<float> & colors,
 		const std::vector<int> & colorIndices,
 		const std::vector<FbxMesh::Deformer> & deformers)
 	{
-		fbxLog(logIndent, "-- running da welding machine! --\n");
+		fbxLog(logIndent, "-- running da welding machine! --");
 		
 		logIndent++;
 		
-		fbxLog(logIndent, "input: %d vertices, %d indices, %d normals, %d UVs (%d indices), %d colors (%d indices)\n",
+		fbxLog(logIndent, "input: %d vertices, %d indices, %d normals (%d indices), %d UVs (%d indices), %d colors (%d indices)",
 			(int)vertices.size()/3,
 			(int)vertexIndices.size(),
 			(int)normals.size()/3,
+			(int)normalIndices.size(),
 			(int)uvs.size()/2,
 			(int)uvIndices.size(),
 			(int)colors.size()/3,
@@ -1070,10 +1170,15 @@ public:
 		
 		const int time1 = getTimeMS();
 		
-		m_vertices.reserve(vertices.size());
+		const size_t numVertices = vertices.size() / 3;
+		const size_t numNormals = normals.size() / 3;
+		const size_t numUVs = uvs.size() / 3;
+		const size_t numColors = colors.size() / 4;
+		
+		m_vertices.reserve(numVertices);
 		m_indices.reserve(vertexIndices.size());
 		
-		typedef HashMap<Vertex, int, 1000> WeldVertices;
+		typedef HashMap<Vertex, int, 1024> WeldVertices;
 		WeldVertices weldVertices(vertexIndices.size() / 3);
 		
 		for (size_t i = 0; i < vertexIndices.size(); ++i)
@@ -1087,7 +1192,7 @@ public:
 			
 			// position
 			
-			if (vertexIndex < vertices.size() / 3)
+			if (vertexIndex < numVertices)
 			{
 				vertex.px = vertices[vertexIndex * 3 + 0];
 				vertex.py = vertices[vertexIndex * 3 + 1];
@@ -1100,41 +1205,102 @@ public:
 			
 			// normal
 			
-			if (i < normals.size() / 3)
+			if (!normalIndices.empty())
 			{
-				vertex.nx = normals[i * 3 + 0];
-				vertex.ny = normals[i * 3 + 1];
-				vertex.nz = normals[i * 3 + 2];
+				const int lookupIndex =
+					normalMappingType == kMappingType_ByVertex
+						? vertexIndex
+						: i;
+				
+				if (lookupIndex < normalIndices.size())
+				{
+					// indexed normal
+					
+					const size_t normalIndex = normalIndices[lookupIndex];
+					
+					if (normalIndex < numNormals)
+					{
+						vertex.nx = normals[normalIndex * 3 + 0];
+						vertex.ny = normals[normalIndex * 3 + 1];
+						vertex.nz = normals[normalIndex * 3 + 2];
+					}
+					else
+					{
+						vertex.nx = vertex.ny = vertex.nz = 0.f;
+					}
+				}
+				else
+				{
+					vertex.nx = vertex.ny = vertex.nz = 0.f;
+				}
 			}
 			else
 			{
-				vertex.nx = vertex.ny = vertex.nz = 0.f;
+				const int normalIndex =
+					normalMappingType == kMappingType_ByVertex
+						? vertexIndex
+						: i;
+				
+				if (normalIndex < numNormals)
+				{
+					// non-indexed normal
+					
+					vertex.nx = normals[normalIndex * 3 + 0];
+					vertex.ny = normals[normalIndex * 3 + 1];
+					vertex.nz = normals[normalIndex * 3 + 2];
+				}
+				else
+				{
+					vertex.nx = vertex.ny = vertex.nz = 0.f;
+				}
 			}
 			
 			// uv
 			
-			if (uvIndices.size() >= vertexIndices.size())
+			// todo : should look at ReferenceInformationType in the FBX file for LayerElementNormal, LayerElementUV. it can be Direct or IndexToDirect. in the IndexToDirect case, indices are used. otherwise elements are mapped directly. see https://banexdevblog.wordpress.com/2014/06/23/a-quick-tutorial-about-the-fbx-ascii-format/ for more information
+			
+			if (!uvIndices.empty())
 			{
-				// indexed UV
+				const int lookupIndex =
+					uvMappingType == kMappingType_ByVertex
+						? vertexIndex
+						: i;
 				
-				const size_t uvIndex = uvIndices[i];
-				
-				if (uvIndex * 2 < uvs.size())
+				if (lookupIndex < uvIndices.size())
 				{
-					vertex.tx = uvs[uvIndex * 2 + 0];
-					vertex.ty = uvs[uvIndex * 2 + 1];
+					// indexed UV
+					
+					const size_t uvIndex = uvIndices[lookupIndex];
+					
+					if (uvIndex < numUVs)
+					{
+						vertex.tx = uvs[uvIndex * 2 + 0];
+						vertex.ty = uvs[uvIndex * 2 + 1];
+					}
 				}
-			}
-			else if (uvIndices.size() == 0 && i < uvs.size() / 2)
-			{
-				// non-indexed UV
-				
-				vertex.tx = uvs[i * 2 + 0];
-				vertex.ty = uvs[i * 2 + 1];
+				else
+				{
+					vertex.tx = vertex.ty = 0.f;
+				}
 			}
 			else
 			{
-				vertex.tx = vertex.ty = 0.f;
+				const int uvIndex =
+					uvMappingType == kMappingType_ByVertex
+						? vertexIndex
+						: i;
+				
+				if (uvIndex < numUVs)
+				{
+					// non-indexed UV
+					
+					vertex.tx = uvs[uvIndex * 2 + 0];
+					vertex.ty = uvs[uvIndex * 2 + 1];
+				}
+				else
+				{
+					vertex.tx = vertex.ty = 0.f;
+				}
 			}
 			
 			// color
@@ -1145,7 +1311,7 @@ public:
 				
 				const size_t colorIndex = colorIndices[i];
 				
-				if (colorIndex < colors.size() / 4)
+				if (colorIndex < numColors)
 				{
 					vertex.cx = colors[colorIndex * 4 + 0];
 					vertex.cy = colors[colorIndex * 4 + 1];
@@ -1153,7 +1319,7 @@ public:
 					vertex.cw = colors[colorIndex * 4 + 3];
 				}
 			}
-			else if (colorIndices.size() == 0 && i < colors.size() / 4)
+			else if (colorIndices.size() == 0 && i < numColors)
 			{
 				// non-indexed color
 				
@@ -1174,9 +1340,9 @@ public:
 			for (int d = 0; d < numDeformers; ++d)
 			{
 				vertex.boneIndices[d] = deformers[vertexIndex].entries[d].index;
-				vertex.boneWeights[d] = int8_t(deformers[vertexIndex].entries[d].weight * 255.f);
+				vertex.boneWeights[d] = uint8_t(deformers[vertexIndex].entries[d].weight * 255.f);
 				
-				//fbxLog(logIndent, "added %d, %d\n", vertex.blendIndices[d], vertex.boneWeights[d]);
+				//fbxLog(logIndent, "added %d, %d", vertex.blendIndices[d], vertex.boneWeights[d]);
 			}
 			for (int d = numDeformers; d < 4; ++d)
 			{
@@ -1258,15 +1424,15 @@ public:
 				}
 			}
 			
-			fbxLog(logIndent, "triangulation result: %d -> %d indices\n", int(m_indices.size()), int(temp.size()));
+			fbxLog(logIndent, "triangulation result: %d -> %d indices", int(m_indices.size()), int(temp.size()));
 			
-			m_indices = temp;
+			std::swap(m_indices, temp);
 		}
 		
 		const int time2 = getTimeMS();
-		fbxLog(logIndent, "time: %d ms\n", time2 - time1);
+		fbxLog(logIndent, "time: %d ms", time2 - time1);
 		
-		fbxLog(logIndent, "output: %d vertices, %d indices\n",
+		fbxLog(logIndent, "output: %d vertices, %d indices",
 			(int)m_vertices.size(),
 			(int)m_indices.size());
 		
@@ -1327,7 +1493,7 @@ namespace AnimModel
 		
 		if (!readFile(filename, bytes))
 		{
-			fbxLog(logIndent, "failed to open %s\n", filename);
+			fbxLog(logIndent, "failed to open %s", filename);
 			return 0;
 		}
 		
@@ -1335,7 +1501,16 @@ namespace AnimModel
 		
 		FbxReader reader;
 		
-		reader.openFromMemory(&bytes[0], bytes.size());
+		try
+		{
+			reader.openFromMemory(&bytes[0], bytes.size());
+		}
+		catch (std::exception & e)
+		{
+			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			(void)e;
+			return 0;
+		}
 		
 		// gather a list of all objects
 		
@@ -1353,11 +1528,33 @@ namespace AnimModel
 			{
 				FbxObject * fbxObject = 0;
 				
-				std::vector<std::string> objectProps = object.captureProperties<std::string>();
-				const std::string objectName = objectProps.size() >= 1 ? objectProps[0] : "";
-				const std::string objectType = objectProps.size() >= 2 ? objectProps[1] : "";
+				std::string objectName;
+				std::string objectType;
 				
-				if (object.name == "Model")
+				if (reader.getVersion() >= 7000)
+				{
+					const int64_t id = object.captureProperty<int64_t>(0);
+					std::vector<std::string> objectProps = object.captureProperties<std::string>();
+					
+					char name[64];
+					sprintf_s(name, sizeof(name), "%lld", id);
+					
+					objectName = name;
+					objectType = objectProps.size() >= 3 ? objectProps[objectProps.size() - 1] : "";
+				}
+				else
+				{
+					std::vector<std::string> objectProps = object.captureProperties<std::string>();
+					
+					objectName = objectProps.size() >= 1 ? objectProps[0] : "";
+					objectType = objectProps.size() >= 2 ? objectProps[1] : "";
+				}
+				
+				if (object.name == "Geometry")
+				{
+					fbxObject = readFbxGeometry(logIndent, object, objectType, objectName);
+				}
+				else if (object.name == "Model")
 				{
 					fbxObject = readFbxModel(logIndent, object, objectType, objectName);
 				}
@@ -1386,13 +1583,13 @@ namespace AnimModel
 					}
 					else
 					{
-						fbxLog(logIndent, "duplicate object name !!!\n");
+						fbxLog(logIndent, "duplicate object name !!!");
 						delete fbxObject;
 					}
 				}
 				else
 				{
-					fbxLog(logIndent, "unknown object type: %s (name=%s)\n", objectType.c_str(), objectName.c_str());
+					fbxLog(logIndent, "unknown object type: %s (name=%s)", objectType.c_str(), objectName.c_str());
 				}
 			}
 		}
@@ -1418,13 +1615,13 @@ namespace AnimModel
 				}
 				else
 				{
-					fbxLog(logIndent, "duplicate object name !!!\n");
+					fbxLog(logIndent, "duplicate object name !!!");
 					delete fbxObject;
 				}
 			}
 			else
 			{
-				fbxLog(logIndent, "unknown object type: %s (name=%s)\n", objectType.c_str(), objectName.c_str());
+				fbxLog(logIndent, "unknown object type: %s (name=%s)", objectType.c_str(), objectName.c_str());
 			}
 		}
 		
@@ -1436,14 +1633,18 @@ namespace AnimModel
 		{
 			std::vector<std::string> properties = connection.captureProperties<std::string>();
 			
-			if (properties.size() >= 3)
+			if (properties.size() < 3)
+			{
+				fbxLog(logIndent, "warning: connection doesn't specify from-to");
+			}
+			else
 			{
 				const std::string & fromName = properties[1];
 				const std::string & toName = properties[2];
 				
 				if (fromName == toName)
 				{
-					fbxLog(logIndent, "warning: connect to self? %s\n", fromName.c_str());
+					fbxLog(logIndent, "warning: connect to self? %s", fromName.c_str());
 				}
 				else
 				{
@@ -1452,7 +1653,7 @@ namespace AnimModel
 					
 					if (from != objectsByName.end() && to != objectsByName.end())
 					{
-						//fbxLog(logIndent, "connect %s -> %s\n", fromName.c_str(), toName.c_str());
+						//fbxLog(logIndent, "connect %s -> %s", fromName.c_str(), toName.c_str());
 						
 						FbxObject * fromObject = from->second;
 						FbxObject * toObject = to->second;
@@ -1478,7 +1679,88 @@ namespace AnimModel
 					}
 					else
 					{
-						fbxLog(logIndent, "error: unable to connect %s -> %s\n", fromName.c_str(), toName.c_str());
+						fbxLog(logIndent, "error: unable to connect %s -> %s", fromName.c_str(), toName.c_str());
+					}
+				}
+			}
+		}
+		
+		// FBX >= 7000 (?)
+		
+		for (FbxRecord connection = connections.firstChild("C"); connection.isValid(); connection = connection.nextSibling("C"))
+		{
+			std::vector<int64_t> properties = connection.captureProperties<int64_t>();
+			
+			if (properties.size() < 3)
+			{
+				fbxLog(logIndent, "warning: connection doesn't specify from-to");
+			}
+			else
+			{
+				char fromNameBuffer[64];
+				char toNameBuffer[64];
+				
+				sprintf_s(fromNameBuffer, sizeof(fromNameBuffer), "%lld", properties[1]);
+				sprintf_s(toNameBuffer, sizeof(toNameBuffer), "%lld", properties[2]);
+				
+				const std::string fromName = fromNameBuffer;
+				const std::string toName = toNameBuffer;
+				
+				if (fromName == toName)
+				{
+					fbxLog(logIndent, "warning: connect to self? %s", fromName.c_str());
+				}
+				else
+				{
+					ObjectsByName::iterator from = objectsByName.find(fromName);
+					ObjectsByName::iterator to = objectsByName.find(toName);
+					
+					if (from != objectsByName.end() && to != objectsByName.end())
+					{
+						//fbxLog(logIndent, "connect %s -> %s", fromName.c_str(), toName.c_str());
+						
+						FbxObject * fromObject = from->second;
+						FbxObject * toObject = to->second;
+						
+						// todo: figure out a better way to deal with object to object connections
+						//       the current implementation breaks if another type of node object
+						//       is present in the scene
+						if (fromObject->type == "Mesh" && toObject->type == "Deformer")
+						{
+							FbxMesh * mesh = static_cast<FbxMesh*>(fromObject);
+							FbxDeformer * deformer = static_cast<FbxDeformer*>(toObject);
+							
+							deformer->mesh = mesh;
+						}
+						else if (fromObject->type == "Geometry" && toObject->type == "Mesh")
+						{
+							FbxGeometry * geometry = static_cast<FbxGeometry*>(fromObject);
+							FbxMesh * mesh = static_cast<FbxMesh*>(toObject);
+							
+							// todo : would be nice to refactor this and avoid the copying here
+							mesh->vertices = geometry->vertices;
+							mesh->vertexIndices = geometry->vertexIndices;
+							mesh->normals = geometry->normals;
+							mesh->normalIndices = geometry->normalIndices;
+							mesh->normalMappingType = geometry->normalMappingType;
+							mesh->uvs = geometry->uvs;
+							mesh->uvIndices = geometry->uvIndices;
+							mesh->uvMappingType = geometry->uvMappingType;
+							mesh->colors = geometry->colors;
+							mesh->colorIndices = geometry->colorIndices;
+						}
+						else if (fromObject->type == "Mesh" && toObject->type == "Mesh")
+						{
+							fromObject->parent = toObject;
+						}
+						else
+						{
+							fromObject->parent = toObject;
+						}
+					}
+					else
+					{
+						fbxLog(logIndent, "error: unable to connect %s -> %s", fromName.c_str(), toName.c_str());
 					}
 				}
 			}
@@ -1503,7 +1785,7 @@ namespace AnimModel
 			
 			if (isDead)
 			{
-				fbxLog(logIndent, "garbage collecting object! %s\n", object->name.c_str());
+				fbxLog(logIndent, "garbage collecting object! name=%s, type=%s", object->name.c_str(), object->type.c_str());
 				
 				garbage.push_back(object);
 			}
@@ -1564,7 +1846,7 @@ namespace AnimModel
 				
 				if (mesh != 0 && boneMesh != 0)
 				{
-					//fbxLog(logIndent, "found mesh for deformer! %s\n", mesh->name.c_str());
+					//fbxLog(logIndent, "found mesh for deformer! %s", mesh->name.c_str());
 					
 					const std::string & boneName = boneMesh->name;
 					fassert(boneNameToBoneIndex.count(boneName) != 0);
@@ -1587,13 +1869,13 @@ namespace AnimModel
 						}
 						else
 						{
-							fbxLog(logIndent, "error: deformer index %d is out of range [max=%d]\n", vertexIndex, int(mesh->deformers.size()));
+							fbxLog(logIndent, "error: deformer index %d is out of range [max=%d]", vertexIndex, int(mesh->deformers.size()));
 						}
 					}
 				}
 				else
 				{
-					fbxLog(logIndent, "error: deformer %s: mesh=%p, boneMesh=%p\n", deformer->name.c_str(), mesh, boneMesh);
+					fbxLog(logIndent, "error: deformer %s: mesh=%p, boneMesh=%p", deformer->name.c_str(), mesh, boneMesh);
 				}
 			}
 		}
@@ -1612,7 +1894,7 @@ namespace AnimModel
 				{
 					FbxMesh * mesh = static_cast<FbxMesh*>(object);
 					
-					fbxLog(logIndent, "transforming vertices for %s into global object space\n", mesh->name.c_str());
+					fbxLog(logIndent, "transforming vertices for %s into global object space", mesh->name.c_str());
 					
 					// todo: include geometric transform as well
 					
@@ -1635,7 +1917,8 @@ namespace AnimModel
 		
 		// finalize meshes by invoking the powers of the awesome vertex welding machine
 		
-		std::list<MeshBuilder> meshes; // todo: deprecate and use framework classes
+		std::list<MeshBuilder> meshes;
+		std::list<std::string> meshNames;
 		
 		for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
 		{
@@ -1660,17 +1943,22 @@ namespace AnimModel
 				}
 				
 				meshes.push_back(MeshBuilder());
+				meshNames.push_back(fbxMesh->name);
+				
 				MeshBuilder & meshBuilder = meshes.back();
 				
-				// todo: triangulate mesh
+				// weld vertices and triangulate mesh
 				
 				meshBuilder.construct(
 					logIndent,
 					fbxMesh->vertices,
 					fbxMesh->vertexIndices,
 					fbxMesh->normals,
+					fbxMesh->normalIndices,
+					fbxMesh->normalMappingType,
 					fbxMesh->uvs,
 					fbxMesh->uvIndices,
+					fbxMesh->uvMappingType,
 					fbxMesh->colors,
 					fbxMesh->colorIndices,
 					fbxMesh->deformers);
@@ -1679,21 +1967,30 @@ namespace AnimModel
 		
 		const int time2 = getTimeMS();
 		
-		fbxLog(logIndent, "time: %d ms\n", time2-time1);
+		fbxLog(logIndent, "time: %d ms", time2-time1);
 		
 		// create meshes
 		
 		std::vector<Mesh*> meshes2;
 		
-		for (std::list<MeshBuilder>::iterator i = meshes.begin(); i != meshes.end(); ++i)
+		auto mesh_itr = meshes.begin();
+		auto meshName_itr = meshNames.begin();
+		
+		for (; mesh_itr != meshes.end(); ++mesh_itr, ++meshName_itr)
 		{
-			const MeshBuilder & meshBuilder = *i;
+			const MeshBuilder & meshBuilder = *mesh_itr;
+			const std::string & meshName = *meshName_itr;
 			
 			Mesh * mesh = new Mesh();
 			
+			mesh->m_name = meshName;
+			
 			mesh->allocateVB(meshBuilder.m_vertices.size());
 			
-			memcpy(mesh->m_vertices, &meshBuilder.m_vertices[0], sizeof(mesh->m_vertices[0]) * mesh->m_numVertices);
+			if (!meshBuilder.m_vertices.empty())
+			{
+				memcpy(mesh->m_vertices, &meshBuilder.m_vertices[0], sizeof(mesh->m_vertices[0]) * mesh->m_numVertices);
+			}
 			
 			mesh->allocateIB(meshBuilder.m_indices.size());
 			
@@ -1734,7 +2031,7 @@ namespace AnimModel
 		
 		if (!readFile(filename, bytes))
 		{
-			fbxLog(logIndent, "failed to open %s\n", filename);
+			fbxLog(logIndent, "failed to open %s", filename);
 			return 0;
 		}
 		
@@ -1742,7 +2039,16 @@ namespace AnimModel
 		
 		FbxReader reader;
 		
-		reader.openFromMemory(&bytes[0], bytes.size());
+		try
+		{
+			reader.openFromMemory(&bytes[0], bytes.size());
+		}
+		catch (std::exception & e)
+		{
+			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			(void)e;
+			return 0;
+		}
 		
 		// gather a list of all meshes
 		
@@ -1758,13 +2064,35 @@ namespace AnimModel
 				{
 					if (object.name == "Model")
 					{
-						std::vector<std::string> objectProps = object.captureProperties<std::string>();
-						const std::string objectName = objectProps.size() >= 1 ? objectProps[0] : "";
-						const std::string objectType = objectProps.size() >= 2 ? objectProps[1] : "";
+						std::string objectName;
+						std::string objectType;
+						
+						if (reader.getVersion() >= 7000)
+						{
+							const int64_t id = object.captureProperty<int64_t>(0);
+							std::vector<std::string> objectProps = object.captureProperties<std::string>();
+							
+							char name[64];
+							sprintf_s(name, sizeof(name), "%lld", id);
+							
+							objectName = name;
+							objectType = objectProps.size() >= 3 ? objectProps[objectProps.size() - 1] : "";
+						}
+						else
+						{
+							std::vector<std::string> objectProps = object.captureProperties<std::string>();
+							
+							objectName = objectProps.size() >= 1 ? objectProps[0] : "";
+							objectType = objectProps.size() >= 2 ? objectProps[1] : "";
+						}
+						
+						// pretend null nodes or mesh so they will be added to the hierarchy
+						if (objectType == "Null")
+							objectType = "Mesh";
 						
 						if (objectType == "Mesh" && !objectName.empty())
 						{
-							//fbxLog(logIndent, "found mesh! %s\n", objectName.c_str());
+							//fbxLog(logIndent, "found mesh! %s", objectName.c_str());
 							
 							objectsByName[objectName] = FbxObject(objectType, objectName);
 						}
@@ -1783,7 +2111,7 @@ namespace AnimModel
 				
 				if (!objectName.empty())
 				{
-					//fbxLog(logIndent, "found mesh! %s\n", objectName.c_str());
+					//fbxLog(logIndent, "found mesh! %s", objectName.c_str());
 					
 					objectsByName[objectName] = FbxObject("Mesh", objectName);
 				}
@@ -1805,7 +2133,7 @@ namespace AnimModel
 				
 				if (fromName == toName)
 				{
-					fbxLog(logIndent, "warning: connect to self? %s\n", fromName.c_str());
+					fbxLog(logIndent, "warning: connect to self? %s", fromName.c_str());
 				}
 				else
 				{
@@ -1814,7 +2142,53 @@ namespace AnimModel
 					
 					if (from != objectsByName.end() && to != objectsByName.end())
 					{
-						//fbxLog(logIndent, "connect %s -> %s\n", fromName.c_str(), toName.c_str());
+						//fbxLog(logIndent, "connect %s -> %s", fromName.c_str(), toName.c_str());
+						
+						FbxObject & fromObject = from->second;
+						FbxObject & toObject = to->second;
+						
+						if (toObject.type == "Mesh" && fromObject.type == "Mesh")
+						{
+							fromObject.parent = &toObject;
+						}
+					}
+				}
+			}
+		}
+		
+		// FBX >= 7000 ?
+		
+		for (FbxRecord connection = connections.firstChild("C"); connection.isValid(); connection = connection.nextSibling("C"))
+		{
+			std::vector<int64_t> properties = connection.captureProperties<int64_t>();
+			
+			if (properties.size() < 3)
+			{
+				fbxLog(logIndent, "warning: connection doesn't specify from-to");
+			}
+			else
+			{
+				char fromNameBuffer[64];
+				char toNameBuffer[64];
+				
+				sprintf_s(fromNameBuffer, sizeof(fromNameBuffer), "%lld", properties[1]);
+				sprintf_s(toNameBuffer, sizeof(toNameBuffer), "%lld", properties[2]);
+				
+				const std::string fromName = fromNameBuffer;
+				const std::string toName = toNameBuffer;
+				
+				if (fromName == toName)
+				{
+					fbxLog(logIndent, "warning: connect to self? %s", fromName.c_str());
+				}
+				else
+				{
+					ObjectsByName::iterator from = objectsByName.find(fromName);
+					ObjectsByName::iterator to = objectsByName.find(toName);
+					
+					if (from != objectsByName.end() && to != objectsByName.end())
+					{
+						//fbxLog(logIndent, "connect %s -> %s", fromName.c_str(), toName.c_str());
 						
 						FbxObject & fromObject = from->second;
 						FbxObject & toObject = to->second;
@@ -1833,7 +2207,7 @@ namespace AnimModel
 		typedef std::map<std::string, int> ModelNameToBoneIndex;
 		ModelNameToBoneIndex modelNameToBoneIndex;
 		
-		//fbxLog(logIndent, "generating %d bone indices\n", int(objectsByName.size()));
+		//fbxLog(logIndent, "generating %d bone indices", int(objectsByName.size()));
 		
 		for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
 		{
@@ -1846,22 +2220,22 @@ namespace AnimModel
 					const int index = int(modelNameToBoneIndex.size());
 					modelNameToBoneIndex[object.name] = index;
 					
-					//fbxLog(logIndent, "bone %s = index %d\n", object.name.c_str(), index);
+					//fbxLog(logIndent, "bone %s = index %d", object.name.c_str(), index);
 				}
 				else
 				{
-					fbxLog(logIndent, "warning: duplicate object name: %s\n", object.name.c_str());
+					fbxLog(logIndent, "warning: duplicate object name: %s", object.name.c_str());
 				}
 			}
 		}
 		
-		// look for bine pose
+		// look for pose
 		
 		FbxPose * pose = readFbxPose(logIndent, reader);
 		
 		// allocate bone matrix for each mesh
 		
-		//fbxLog(logIndent, "allocating %d bones\n", int(modelNameToBoneIndex.size()));
+		//fbxLog(logIndent, "allocating %d bones", int(modelNameToBoneIndex.size()));
 		
 		std::vector<Mat4x4> objectToBoneMatrices;
 		std::vector<Mat4x4> boneToObjectMatrices;
@@ -1961,7 +2335,7 @@ namespace AnimModel
 		
 		if (!readFile(filename, bytes))
 		{
-			fbxLog(logIndent, "failed to open %s\n", filename);
+			fbxLog(logIndent, "failed to open %s", filename);
 			return 0;
 		}
 		
@@ -1969,7 +2343,16 @@ namespace AnimModel
 		
 		FbxReader reader;
 		
-		reader.openFromMemory(&bytes[0], bytes.size());
+		try
+		{
+			reader.openFromMemory(&bytes[0], bytes.size());
+		}
+		catch (std::exception & e)
+		{
+			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			(void)e;
+			return 0;
+		}
 		
 		// read take data
 		
@@ -1984,7 +2367,7 @@ namespace AnimModel
 		{
 			const std::string name = take.captureProperty<std::string>(0);
 			
-			fbxLog(logIndent, "take: %s\n", name.c_str());
+			fbxLog(logIndent, "take: %s", name.c_str());
 			
 			anims.push_back(FbxAnim());
 			FbxAnim & anim = anims.back();
@@ -2001,7 +2384,7 @@ namespace AnimModel
 			{
 				std::string modelName = model.captureProperty<std::string>(0);
 				
-				fbxLog(logIndent, "model: %s\n", modelName.c_str());
+				fbxLog(logIndent, "model: %s", modelName.c_str());
 				
 				logIndent++;
 				
@@ -2009,7 +2392,7 @@ namespace AnimModel
 				{
 					std::string channelName = channel.captureProperty<std::string>(0);
 					
-					//fbxLog(logIndent, "channel: %s\n", channelName.c_str());
+					//fbxLog(logIndent, "channel: %s", channelName.c_str());
 					
 					if (channelName == "Transform")
 					{
@@ -2084,7 +2467,7 @@ namespace AnimModel
 				}
 			}
 			
-			fbxLog(logIndent, "added animation: %s\n", anim.name.c_str());
+			fbxLog(logIndent, "added animation: %s", anim.name.c_str());
 			
 			animations[anim.name] = animation;
 		}

@@ -68,7 +68,7 @@ within the triangle.
 #endif
 
 #if !defined(BINAURAL_USE_SSE)
-	#if __SSE2__
+	#ifdef __SSE2__
 		#define BINAURAL_USE_SSE 1
 	#else
 		#define BINAURAL_USE_SSE 0 // do not alter
@@ -98,7 +98,8 @@ within the triangle.
 #endif
 
 #define ENABLE_DEBUGGING 0
-#define ENABLE_FOURIER4 (BINAURAL_USE_SIMD && 1)
+#define ENABLE_FOURIER4 (BINAURAL_USE_SIMD && 0)
+#define ENABLE_WDL_FFT (BINAURAL_USE_SIMD && 1)
 
 #if BINAURAL_USE_SSE
 	#include <xmmintrin.h>
@@ -149,7 +150,7 @@ namespace binaural
 			const HRTFData & filter,
 			float * __restrict outputReal,
 			float * __restrict outputImag) const;
-	#if ENABLE_FOURIER4
+	#if ENABLE_FOURIER4 || ENABLE_WDL_FFT
 		void convolveAndReverseIndices_4(
 			const float4 * __restrict filterReal,
 			const float4 * __restrict filterImag,
@@ -400,7 +401,7 @@ namespace binaural
 		const float * __restrict array3,
 		const float * __restrict array4,
 		float4 * __restrict result);
-
+	
 	void deinterleaveAudioBuffers_4(
 		const float4 * __restrict interleaved,
 		float * __restrict array1,

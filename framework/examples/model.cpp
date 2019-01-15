@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include <map>
 
 #include <time.h>
 static int getTimeUS() { return clock() * 1000000 / CLOCKS_PER_SEC; }
@@ -72,9 +73,15 @@ public:
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
 	framework.enableDepthBuffer = true;
 	
-	if (!framework.init(argc, (const char **)argv, VIEW_SX, VIEW_SY))
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
 	pushFontMode(FONT_SDF);
@@ -114,9 +121,12 @@ int main(int argc, char * argv[])
 	
 	float angle = 0.f;
 	
-	while (!keyboard.isDown(SDLK_ESCAPE))
+	while (!framework.quitRequested)
 	{
 		framework.process();
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
 		
 		bool startRandomAnim = false;
 		
@@ -130,6 +140,10 @@ int main(int argc, char * argv[])
 			drawFlags = drawFlags ^ DrawPoseMatrices;
 		if (keyboard.wentDown(SDLK_n))
 			drawFlags = drawFlags ^ DrawNormals;
+		if (keyboard.wentDown(SDLK_h))
+			drawFlags ^= DrawHardSkinned;
+		if (keyboard.wentDown(SDLK_u))
+			drawFlags ^= DrawUnSkinned;
 		if (keyboard.wentDown(SDLK_1))
 			drawFlags ^= DrawColorBlendWeights;
 		if (keyboard.wentDown(SDLK_2))
@@ -176,6 +190,11 @@ int main(int argc, char * argv[])
 						model->startAnim(name.c_str(), loop ? -1 : 1);
 						model->animSpeed = animSpeed;
 					}
+					
+					if (keyboard.wentDown(SDLK_o))
+						model->pauseAnim();
+					if (keyboard.wentDown(SDLK_i))
+						model->resumeAnim();
 				}
 			}
 		}
@@ -187,28 +206,22 @@ int main(int argc, char * argv[])
 		
 		// set 3D transform
 		
-		const float fov = 90.f * M_PI / 180.f;
+		const float fov = 90.f * float(M_PI) / 180.f;
 		const float aspect = VIEW_SY / float(VIEW_SX);
 		
 		Mat4x4 transform3d;
 		transform3d.MakePerspectiveGL(fov, aspect, .1f, +2000.f);
 		setTransform3d(transform3d);
 		
-		framework.beginDraw(31, 31, 31, 0);
+		framework.beginDraw(31, 31, 31, 0, 1.f);
 		{
-			glClearDepth(1.f);
-			glClear(GL_DEPTH_BUFFER_BIT);
-			
 			// switch to 3D drawing mode
 			
 			setTransform(TRANSFORM_3D);
 			
-			glDepthFunc(GL_LESS);
-			glEnable(GL_DEPTH_TEST);
-			checkErrorGL();
+			pushDepthTest(true, DEPTH_LESS);
 			
-			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
-			checkErrorGL();
+			pushWireframe(wireframe);
 			
 			gxPushMatrix();
 			{
@@ -250,11 +263,9 @@ int main(int argc, char * argv[])
 			}
 			gxPopMatrix();
 			
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			checkErrorGL();
+			popWireframe();
 			
-			glDisable(GL_DEPTH_TEST);
-			checkErrorGL();
+			popDepthTest();
 			
 			// show instructions
 			
@@ -264,7 +275,7 @@ int main(int argc, char * argv[])
 			
 			setColor(0, 0, 0, 180);
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
-			hqFillRoundedRect(0, 0, 270, 276, 14);
+			hqFillRoundedRect(0, 0, 270, 340, 14);
 			hqEnd();
 			
 			setFont("calibri.ttf");
@@ -275,12 +286,15 @@ int main(int argc, char * argv[])
 			int x = 17;
 			int y = 17;
 			
+			beginTextBatch();
 			y -= incrementY;
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "S: stress test [%s]", stressTest ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "W: wireframe [%s]", wireframe ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "B: draw bones [%s]", (drawFlags & DrawBones) ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "M: draw pose matrices [%s]", (drawFlags & DrawPoseMatrices) ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "N: draw normals [%s]", (drawFlags & DrawNormals) ? "on" : "off");
+			y += incrementY; drawText(x, y, fontSize, +1, +1, "H: hard skinned [%s]", (drawFlags & DrawHardSkinned) ? "on" : "off");
+			y += incrementY; drawText(x, y, fontSize, +1, +1, "U: unskinned [%s]", (drawFlags & DrawUnSkinned) ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "1: color blend weights [%s]", (drawFlags & DrawColorBlendWeights) ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "2: color blend indices [%s]", (drawFlags & DrawColorBlendIndices) ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "3: color texture coordinates [%s]", (drawFlags & DrawColorTexCoords) ? "on" : "off");
@@ -289,13 +303,25 @@ int main(int argc, char * argv[])
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "A: rotate view [%s]", rotate ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "L: loop animations [%s]", loop ? "on" : "off");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "P: auto play animations [%s]", autoPlay ? "on" : "off");
+			y += incrementY; drawText(x, y, fontSize, +1, +1, "O: pause animations");
+			y += incrementY; drawText(x, y, fontSize, +1, +1, "I: resume animations");
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "UP: increase animation speed [%.2f]", animSpeed);
 			y += incrementY; drawText(x, y, fontSize, +1, +1, "DOWN: decrease animation speed [%.2f]", animSpeed);
+			endTextBatch();
 		}
 		framework.endDraw();
 	}
 	
 	popFontMode();
+	
+	for (auto & modelItr : models)
+	{
+		auto & model = modelItr.second;
+		
+		delete model;
+		model = nullptr;
+	}
+	
 	framework.shutdown();
 	
 	return 0;

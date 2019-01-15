@@ -126,9 +126,9 @@ struct Osc4D
 	void sourceSpatialCompressor(const bool enable, const float attack, const float release, const float minimum, const float maximum, const float curve, const bool invert);
 	void sourceDoppler(const bool enable, const float scale, const float smooth);
 
-	void sourceDistanceIntensity(const bool enable, const float treshold, const float curve);
-	void sourceDistanceDamping(const bool enable, const float treshold, const float curve);
-	void sourceDistanceDiffusion(const bool enable, const float treshold, const float curve);
+	void sourceDistanceIntensity(const bool enable, const float threshold, const float curve);
+	void sourceDistanceDamping(const bool enable, const float threshold, const float curve);
+	void sourceDistanceDiffusion(const bool enable, const float threshold, const float curve);
 
 	void sourceSpatialDelay(const bool enable, const SpatialDelayMode mode, const int times, const float feedback, const float drywet, const float smooth, const float scale, const float noiseDepth, const float noiseFrequency);
 	
@@ -137,8 +137,8 @@ struct Osc4D
 	void sourceSubBoost(const SubBoost boost);
 	
 	void setReturn(const int index, const char * side);
-	void returnDistanceIntensity(const int index, const bool enable, const float treshold, const float curve);
-	void returnDistanceDamping(const int index, const bool enable, const float treshold, const float curve);
+	void returnDistanceIntensity(const int index, const bool enable, const float threshold, const float curve);
+	void returnDistanceDamping(const int index, const bool enable, const float threshold, const float curve);
 	void returnSide(const int index, const ReturnSide side, const bool enable, const float distance, const float scatter);
 
 	void globalPosition(const float x, const float y, const float z);

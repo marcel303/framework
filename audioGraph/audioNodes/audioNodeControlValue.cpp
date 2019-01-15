@@ -43,7 +43,7 @@ AUDIO_ENUM_TYPE(controlValueScope)
 	elem("perInstance");
 }
 
-AUDIO_NODE_TYPE(controlValue, AudioNodeControlValue)
+AUDIO_NODE_TYPE(AudioNodeControlValue)
 {
 	typeName = "in.value";
 	

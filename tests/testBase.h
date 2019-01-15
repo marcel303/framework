@@ -36,3 +36,5 @@ bool tickTestUi();
 
 void setInstructions(const char * instructions);
 void setAbout(const char * about);
+
+bool downloadTestFiles(const char * urls_and_filenames[], const int numFiles);

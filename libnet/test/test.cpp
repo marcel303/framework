@@ -1458,7 +1458,7 @@ int main(int argc, char * argv[])
 		if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 			throw std::exception();//"failed to initialize SDL");
 		
-		framework.init(0, 0, displaySx, displaySy);
+		framework.init(displaySx, displaySy);
 		
 		ImageMem image(displaySx, displaySy);
 

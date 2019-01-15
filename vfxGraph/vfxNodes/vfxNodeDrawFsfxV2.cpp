@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_ACTIVE_UNIFORMS. todo : remove with Framework-provided shader inspection funcitonality
 #include "framework.h"
 #include "Path.h"
 #include "StringEx.h"
@@ -49,6 +50,7 @@ void getFsfxShaderList(std::vector<std::string> & shaderList)
 	{
 		shaderListIsInitialized = true;
 		auto files = listFiles("fsfx", true);
+		std::sort(files.begin(), files.end());
 		
 		for (auto & file : files)
 		{

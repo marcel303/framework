@@ -1,0 +1,9 @@
+library optionmenu
+	depend_library framework
+	add_files OptionMenu.cpp OptionMenu.h StatTimerMenu.cpp StatTimerMenu.h
+	header_path . expose
+
+app optionmenu-example
+	depend_library optionmenu
+	add_files example.cpp
+	resource_path data

@@ -1,0 +1,41 @@
+include fsfx/common.inc
+
+uniform float gaussianKernelSize;
+
+layout (std140) uniform gaussianKernel
+{
+	vec4 gaussianKernelWeights[16];
+};
+
+// todo : optimize getWeight function
+
+float getWeight(int i)
+{
+	vec4 v = gaussianKernelWeights[i / 4];
+
+	i = i & 3;
+
+	if (i == 0)
+		return v.x;
+	else if (i == 1)
+		return v.y;
+	else if (i == 2)
+		return v.z;
+	else
+		return v.w;
+}
+
+vec4 fsfx()
+{
+    float texScale = param1 / textureSize(colormap, 0).y / (gaussianKernelSize - 1.0);
+	
+	vec4 result = texture(colormap, texcoord) * getWeight(0);
+	
+	for (int i = 1; i < gaussianKernelSize; ++i)
+	{
+		result += texture(colormap, texcoord + vec2(0.0, texScale * i)) * getWeight(i);
+		result += texture(colormap, texcoord - vec2(0.0, texScale * i)) * getWeight(i);
+	}
+	
+    return result;
+}

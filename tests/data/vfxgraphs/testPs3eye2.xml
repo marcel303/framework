@@ -1,0 +1,64 @@
+<graph nextNodeId="74" nextLinkId="110">
+    <node id="63" typeName="ps3eye">
+        <input socket="autoColors" value="0"/>
+        <input socket="exposure" value="1.000000"/>
+        <input socket="gain" value="0.900000"/>
+        <input socket="resolution" value="0"/>
+    </node>
+    <node id="64" typeName="image_cpu.blobs">
+        <input socket="channel" value="2"/>
+        <input socket="maxBlobs" value="64"/>
+        <input socket="tresholdTest" value="0"/>
+    </node>
+    <node id="65" typeName="image_cpu.toGpu">
+        <input socket="channel" value="0"/>
+    </node>
+    <node id="68" typeName="audioGraph.poly">
+        <input socket="file" value="audioKey.xml"/>
+    </node>
+    <node id="69" typeName="channel.math">
+        <input socket="type" value="3"/>
+    </node>
+    <node id="70" typeName="channel.literal">
+        <input socket="text" value="0.001"/>
+    </node>
+    <node id="71" typeName="channel.curve">
+        <input socket="max" value="400.000000"/>
+        <input socket="min" value="100.000000"/>
+        <input socket="size" value="20.000000"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="72" typeName="channel.math">
+        <input socket="type" value="3"/>
+    </node>
+    <node id="73" typeName="channel.literal">
+        <input socket="text" value="10"/>
+    </node>
+    <link id="101" srcNodeId="64" srcNodeSocketName="image" dstNodeId="63" dstNodeSocketName="image_mem"/>
+    <link id="102" srcNodeId="65" srcNodeSocketName="image" dstNodeId="64" dstNodeSocketName="mask"/>
+    <link id="103" srcNodeId="69" srcNodeSocketName="a" dstNodeId="64" dstNodeSocketName="x"/>
+    <link id="104" srcNodeId="69" srcNodeSocketName="b" dstNodeId="70" dstNodeSocketName="channel"/>
+    <link id="105" srcNodeId="68" srcNodeSocketName="volume" dstNodeId="69" dstNodeSocketName="result"/>
+    <link id="107" srcNodeId="72" srcNodeSocketName="a" dstNodeId="64" dstNodeSocketName="y"/>
+    <link id="108" srcNodeId="72" srcNodeSocketName="b" dstNodeId="73" dstNodeSocketName="channel"/>
+    <link id="109" srcNodeId="68" srcNodeSocketName="frequency" dstNodeId="72" dstNodeSocketName="result" dynamic="1"/>
+    <editor nextZKey="480">
+        <dragAndZoom x="-24.19744873046875" y="-140.14920043945312" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="63" x="-384" y="-192" zKey="457"/>
+            <nodeData nodeId="64" x="-128" y="-304" zKey="479"/>
+            <nodeData nodeId="65" x="0" y="-352" zKey="453"/>
+            <nodeData nodeId="68" x="304" y="-96" zKey="470"/>
+            <nodeData nodeId="69" x="96" y="-160" zKey="471"/>
+            <nodeData nodeId="70" x="-80" y="-112" zKey="474"/>
+            <nodeData nodeId="71" x="128" y="112" zKey="473"/>
+            <nodeData nodeId="72" x="96" y="-16" zKey="477"/>
+            <nodeData nodeId="73" x="-96" y="16" zKey="478"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="66" x="160" y="-448" zKey="458" nodeId="65" dstSocketName="image" sx="216" sy="198"/>
+            <visualizer id="67" x="-192" y="-416" zKey="456" nodeId="64" dstSocketName="numBlobs" sx="136" sy="98"/>
+        </visualizers>
+        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+    </editor>
+</graph>

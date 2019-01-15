@@ -59,6 +59,8 @@ void VfxNodeTriggerTimer::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeTriggerTimer);
 	
+	const int kMaxFrequency = 10000;
+	
 	const bool startAuto = getInputBool(kInput_Auto, true);
 	const float interval = getInputFloat(kInput_Interval, 0.f);
 	
@@ -68,15 +70,19 @@ void VfxNodeTriggerTimer::tick(const float dt)
 		timer = 0.f;
 	}
 	
-	if (isPassthrough || interval == 0.f || isStarted == false)
+	if (isPassthrough || interval <= 0.f || isStarted == false)
 	{
 		timer = 0.f;
 	}
-	else if (timer < interval)
+	else
 	{
 		timer += dt;
 		
-		if (timer >= interval)
+		// clamp interval to minimum value (= maximum frequency) to avoid getting stuck in the while loop below
+		
+		const float clampedInterval = fmaxf(interval, 1.f / kMaxFrequency);
+		
+		while (timer >= clampedInterval)
 		{
 			triggerCount++;
 			triggerCountOutput = triggerCount;
@@ -84,9 +90,14 @@ void VfxNodeTriggerTimer::tick(const float dt)
 			trigger(kOutput_Trigger);
 			
 			if (startAuto)
-				timer = 0.f;
+			{
+				timer -= clampedInterval;
+			}
 			else
+			{
 				isStarted = false;
+				break;
+			}
 		}
 	}
 }
@@ -120,9 +131,21 @@ void VfxNodeTriggerTimer::getDescription(VfxNodeDescription & d)
 	{
 		const float interval = getInputFloat(kInput_Interval, 0.f);
 		
-		const float remaining = std::max(0.f, interval - timer);
-		
-		d.add("time remaining: %.2fs", remaining);
+		if (interval <= 0.f)
+		{
+			d.add("time remaining: infinity (interval <= 0)");
+		}
+		else
+		{
+			const float clampedInterval = fmaxf(interval, 1.f / kMaxFrequency);
+			
+			if (clampedInterval != interval)
+				d.add("warning: frequency for interval exceeds maximum value of %dHz", kMaxFrequency);
+			
+			const float remaining = std::max(0.f, interval - timer);
+			
+			d.add("time remaining: %.2fs", remaining);
+		}
 	}
 	else
 	{
