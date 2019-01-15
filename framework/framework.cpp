@@ -5884,7 +5884,6 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	{
 		glEnable(GL_DEPTH_TEST);
 		glDepthFunc(toOpenGLDepthFunc(test));
-		glDepthMask(writeEnabled ? GL_TRUE : GL_FALSE);
 		checkErrorGL();
 	}
 	else
@@ -5892,6 +5891,9 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 		glDisable(GL_DEPTH_TEST);
 		checkErrorGL();
 	}
+	
+	glDepthMask(writeEnabled ? GL_TRUE : GL_FALSE);
+	checkErrorGL();
 }
 
 void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
