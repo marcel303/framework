@@ -2600,8 +2600,7 @@ void Effect_Bezier::draw()
 			BezierPath path;
 			path.ConstructFromNodes(&nodes.front(), nodes.size());
 
-			glEnable(GL_LINE_SMOOTH);
-			glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+			pushLineSmooth(true);
 
 			gxBegin(GX_LINE_STRIP);
 			{
@@ -2620,7 +2619,7 @@ void Effect_Bezier::draw()
 			}
 			gxEnd();
 
-			glDisable(GL_LINE_SMOOTH);
+			popLineSmooth();
 		}
 	}
 }
@@ -3305,8 +3304,7 @@ void Effect_Fireworks::draw(DrawableList & list)
 
 void Effect_Fireworks::draw()
 {
-	glEnable(GL_LINE_SMOOTH);
-	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+	pushLineSmooth(true);
 
 	gxBegin(GX_LINES);
 	{
@@ -3328,7 +3326,7 @@ void Effect_Fireworks::draw()
 	}
 	gxEnd();
 
-	glDisable(GL_LINE_SMOOTH);
+	popLineSmooth();
 }
 
 //

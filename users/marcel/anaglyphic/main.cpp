@@ -1,4 +1,4 @@
-#include <GL/glew.h> // GL_PROGRAM_POINT_SIZE, GL_LINE_SMOOTH, glPolygonMode. todo : remove ?
+#include <GL/glew.h> // GL_PROGRAM_POINT_SIZE, glPolygonMode. todo : remove ?
 #include "Calc.h"
 #include "framework.h"
 #include "Timer.h"
@@ -177,8 +177,7 @@ struct VectorMemory
 
 	void draw() const
 	{
-		glEnable(GL_LINE_SMOOTH);
-		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+		pushLineSmooth(true);
 		
 		gxBegin(GX_LINES);
 		{
@@ -199,7 +198,7 @@ struct VectorMemory
 		}
 		gxEnd();
 		
-		glDisable(GL_LINE_SMOOTH);
+		popLineSmooth();
 	}
 };
 

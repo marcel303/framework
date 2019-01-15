@@ -1,4 +1,3 @@
-#include <GL/glew.h> // GL_LINE_SMOOTH
 #include "framework.h"
 #include "lattice.h"
 #include <algorithm>
@@ -159,7 +158,7 @@ static void testRaster()
 			{
 				const float step = mouse.x / 256.f * 2.f * M_PI * 2.f;
 
-				glHint(GL_LINE_SMOOTH_HINT, GL_FASTEST);
+				pushLineSmooth(true);
 				
 				gxBegin(GX_LINES);
 				{
@@ -226,6 +225,8 @@ static void testRaster()
 					}
 				}
 				gxEnd();
+				
+				popLineSmooth();
 			}
 			clearShader();
 			

@@ -1,4 +1,3 @@
-#include <GL/glew.h> // GL_LINE_SMOOTH
 #include "calibration.h"
 #include "edreamUtils.h"
 #include "etherdream.h"
@@ -419,9 +418,7 @@ struct CalibrationUi
 		
 		setColor(255, 255, 255, 127);
 		gxBegin(GX_LINE_STRIP);
-		glEnable(GL_LINE_SMOOTH); // todo : remove, replace with hq lines
-		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-		checkErrorGL();
+		pushLineSmooth(true); // todo : remove, replace with hq lines
 		for (int i = 0; i < 1000; ++i)
 		{
 			const float angle = i / 1000.f * 2.f * float(M_PI);
@@ -435,7 +432,7 @@ struct CalibrationUi
 			gxVertex2f(p[0], p[1]);
 		}
 		gxEnd();
-		glDisable(GL_LINE_SMOOTH);
+		popLineSmooth();
 		
 		gxPopMatrix();
 	}

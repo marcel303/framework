@@ -1,4 +1,3 @@
-#include <GL/glew.h> // GL_LINE_SMOOTH
 #include "framework.h"
 #include "Mat4x4.h"
 #include <vector>
@@ -235,9 +234,7 @@ int main(int argc, char * argv[])
 			
 			setColor(255, 255, 255, 127);
 			gxBegin(GX_LINE_STRIP);
-			glEnable(GL_LINE_SMOOTH);
-			glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-			checkErrorGL();
+			pushLineSmooth(true);
 			for (int i = 0; i < 1000; ++i)
 			{
 				const float angle = i / 1000.f * 2.f * float(M_PI);
@@ -251,6 +248,7 @@ int main(int argc, char * argv[])
 				gxVertex2f(p[0], p[1]);
 			}
 			gxEnd();
+			popLineSmooth();
 			
 			h.drawEditor();
 		}

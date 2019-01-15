@@ -1,4 +1,3 @@
-#include <GL/glew.h> // GL_LINE_SMOOTH
 #include "audioTypes.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"
@@ -593,8 +592,7 @@ int main(int argc, char * argv[])
 			
 			camera.pushViewMatrix();
 			{
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-				glEnable(GL_LINE_SMOOTH);
+				pushLineSmooth(true);
 				
 				pushDepthTest(true, DEPTH_LESS);
 				{
@@ -633,6 +631,8 @@ int main(int argc, char * argv[])
 				}
 				popBlend();
 				popDepthTest();
+				
+				popLineSmooth();
 			}
 			camera.popViewMatrix();
 			

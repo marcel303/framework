@@ -976,8 +976,7 @@ static void showTestImage()
 
 			gxPushMatrix();
 			{
-				glEnable(GL_LINE_SMOOTH);
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+				pushLineSmooth(true);
 
 				Sprite sprite("testimage.jpg");
 
@@ -1011,7 +1010,7 @@ static void showTestImage()
 					gxPopMatrix();
 				}
 
-				glDisable(GL_LINE_SMOOTH);
+				popLineSmooth();
 			}
 			gxPopMatrix();
 
