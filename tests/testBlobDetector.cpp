@@ -25,10 +25,10 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // glReadPixels
 #include "framework.h"
 #include "objects/blobDetector.h"
 #include "Timer.h"
-#include "vfxNodes/openglTexture.h"
 #include <cmath>
 
 extern const int GFX_SX;
@@ -104,9 +104,9 @@ void testBlobDetection()
 	
 	//exit(0);
 	
-	OpenglTexture texture;
-	texture.allocate(SURFACE_SX, SURFACE_SY, GL_RGBA8, false, true);
-	texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+	GxTexture texture;
+	texture.allocate(SURFACE_SX, SURFACE_SY, GX_R8_UNORM, false, true);
+	texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
 	float time = 0.f;
 	
@@ -153,7 +153,7 @@ void testBlobDetection()
 		
 		uint8_t values[SURFACE_SX * SURFACE_SY];
 		BlobDetector::computeValuesFromRGBA(rgba, SURFACE_SX, SURFACE_SY, threshold, values);
-		texture.upload(values, 1, SURFACE_SX, GL_RED, GL_UNSIGNED_BYTE);
+		texture.upload(values, 1, SURFACE_SX);
 		
 		const int numBlobs = BlobDetector::detectBlobs(values, SURFACE_SX, SURFACE_SY, blobs, kMaxBlobs);
 		
