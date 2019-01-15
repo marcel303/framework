@@ -290,6 +290,40 @@ typedef int32_t GxImmediateIndex;
 typedef uint32_t GxShaderId;
 typedef uint32_t GxShaderBufferId;
 
+#if USE_LEGACY_OPENGL || true // todo : remove legacy OpenGL constraint
+
+// these must match the OpenGL definition for things to work
+
+enum GX_PRIMITIVE_TYPE
+{
+	GX_INVALID_PRIM = -1,
+	GX_POINTS = GL_POINTS,
+	GX_LINES = GL_LINES,
+	GX_LINE_LOOP = GL_LINE_LOOP,
+	GX_LINE_STRIP = GL_LINE_STRIP,
+	GX_TRIANGLES = GL_TRIANGLES,
+	GX_TRIANGLE_FAN = GL_TRIANGLE_FAN,
+	GX_TRIANGLE_STRIP = GL_TRIANGLE_STRIP,
+	GX_QUADS = GL_QUADS
+};
+
+#else
+
+enum GX_PRIMITIVE_TYPE
+{
+	GX_INVALID_PRIM = -1,
+	GX_POINTS,
+	GX_LINES,
+	GX_LINE_LOOP,
+	GX_LINE_STRIP,
+	GX_TRIANGLES,
+	GX_TRIANGLE_FAN,
+	GX_TRIANGLE_STRIP,
+	GX_QUADS
+};
+
+#endif
+
 //
 
 class Framework
@@ -1347,7 +1381,7 @@ static inline void gxValidateMatrices() { }
 
 static inline void gxInitialize() { }
 static inline void gxShutdown() { }
-static inline void gxBegin(int primitiveType) { }
+static inline void gxBegin(int /*GX_PRIMITIVE_TYPE*/ primitiveType) { }
 static inline void gxEnd() { }
 static inline void gxColor4f(float r, float g, float b, float a) { }
 static inline void gxColor4fv(const float * rgba) { }
@@ -1378,7 +1412,7 @@ void gxValidateMatrices();
 
 void gxInitialize();
 void gxShutdown();
-void gxBegin(int primitiveType);
+void gxBegin(int /*GX_PRIMITIVE_TYPE*/ primitiveType);
 void gxEnd();
 void gxEmitVertices(int primitiveType, int numVertices);
 void gxColor4f(float r, float g, float b, float a);

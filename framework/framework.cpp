@@ -3937,7 +3937,7 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 			const float rsx = float(m_texture->sx / m_anim->m_gridSize[0]);
 			const float rsy = float(m_texture->sy / m_anim->m_gridSize[1]);
 			
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 			{
 				gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f, 0.f);
 				gxTexCoord2f(1.f, 0.f); gxVertex2f(rsx, 0.f);
@@ -5945,7 +5945,7 @@ void shaderSource(const char * filename, const char * text)
 
 void drawPoint(float x, float y)
 {
-	gxBegin(GL_POINTS);
+	gxBegin(GX_POINTS);
 	{
 		gxVertex2f(x, y);
 	}
@@ -5954,7 +5954,7 @@ void drawPoint(float x, float y)
 
 void drawLine(float x1, float y1, float x2, float y2)
 {
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		gxVertex2f(x1, y1);
 		gxVertex2f(x2, y2);
@@ -5964,7 +5964,7 @@ void drawLine(float x1, float y1, float x2, float y2)
 
 void drawRect(float x1, float y1, float x2, float y2)
 {
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
@@ -5976,7 +5976,7 @@ void drawRect(float x1, float y1, float x2, float y2)
 
 void drawRectLine(float x1, float y1, float x2, float y2)
 {
-	gxBegin(GL_LINE_LOOP);
+	gxBegin(GX_LINE_LOOP);
 	{
 		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
@@ -5988,7 +5988,7 @@ void drawRectLine(float x1, float y1, float x2, float y2)
 
 void drawCircle(float x, float y, float radius, int numSegments)
 {
-	gxBegin(GL_LINE_LOOP);
+	gxBegin(GX_LINE_LOOP);
 	{
 		for (int i = 0; i < numSegments; ++i)
 		{
@@ -6004,7 +6004,7 @@ void drawCircle(float x, float y, float radius, int numSegments)
 
 void fillCircle(float x, float y, float radius, int numSegments)
 {
-	gxBegin(GL_TRIANGLES);
+	gxBegin(GX_TRIANGLES);
 	{
 		for (int i = 0; i < numSegments; ++i)
 		{
@@ -6157,7 +6157,7 @@ static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem 
 	{
 		gxSetTexture(globals.font->textureAtlas->texture);
 		
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 	}
 	
 	const float scale = stbtt_ScaleForPixelHeight(&font->fontInfo, size);
@@ -6230,7 +6230,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 	{
 		gxSetTexture(globals.font->textureAtlas->texture->id);
 		
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 	}
 	
 	for (size_t i = 0; i < numGlyphs; ++i)
@@ -6284,7 +6284,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 		{
 			gxSetTexture(elem.texture);
 			
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 			{
 				const float bsx = float(elem.g.bitmap.width);
 				const float bsy = float(elem.g.bitmap.rows);
@@ -6394,7 +6394,7 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		
 		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id);
 		
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 	}
 	
 	const float scale = stbtt_ScaleForPixelHeight(&glyphCache.m_font.fontInfo, size);
@@ -6550,7 +6550,7 @@ void beginTextBatch(Shader * overrideShader)
 		globals.isInTextBatch = true;
 		
 		gxSetTexture(globals.font->textureAtlas->texture->id);
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 	#endif
 	}
 #if ENABLE_MSDF_FONTS
@@ -6569,7 +6569,7 @@ void beginTextBatch(Shader * overrideShader)
 		setShader(shader);
 		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture->id);
 		
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 	}
 #endif
 }
@@ -6835,7 +6835,7 @@ void drawPath(const Path2d & path)
 	int numPoints = 0;
 	path.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
 
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		for (int i = 0; i < numPoints - 1; ++i)
 		{
@@ -6854,7 +6854,7 @@ void drawPath(const Path2d & path)
 
 	glLineWidth(1.f);
 
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		for (int i = 0; i < numPoints; ++i)
 		{
@@ -6878,7 +6878,7 @@ void drawPath(const Path2d & path)
 	glPointSize(5.f);
 	setColor(255, 255, 255, 31);
 
-	gxBegin(GL_POINTS);
+	gxBegin(GX_POINTS);
 	{
 		for (int i = 0; i < numPoints; ++i)
 		{
@@ -6895,7 +6895,7 @@ void drawPath(const Path2d & path)
 
 void drawLine3d(int axis)
 {
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		gxTexCoord2f(0, 0); gxVertex3f(axis == 0 ? -1 : 0, axis == 1 ? -1 : 0, axis == 2 ? -1 : 0);
 		gxTexCoord2f(1, 1); gxVertex3f(axis == 0 ? +1 : 0, axis == 1 ? +1 : 0, axis == 2 ? +1 : 0);
@@ -6907,7 +6907,7 @@ void drawRect3d(int axis1, int axis2)
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		float xyz[3];
 		
@@ -6932,7 +6932,7 @@ void drawGrid3d(int resolution1, int resolution2, int axis1, int axis2)
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int i = 0; i < resolution1; ++i)
 		{
@@ -6974,7 +6974,7 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 	
 	if (optimized)
 	{
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (int i = 0; i <= resolution1; ++i)
 			{
@@ -7010,7 +7010,7 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 	}
 	else
 	{
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (int i = 0; i < resolution1; ++i)
 			{
@@ -7410,7 +7410,7 @@ static GLuint s_gxVertexBufferObject[GX_VAO_COUNT] = { };
 static GLuint s_gxIndexBufferObject[GX_VAO_COUNT] = { };
 static GxVertex s_gxVertexBuffer[1024*16];
 
-static int s_gxPrimitiveType = -1;
+static int /*GX_PRIMITIVE_TYPE*/ s_gxPrimitiveType = GX_INVALID_PRIM;
 static GxVertex * s_gxVertices = 0;
 static int s_gxVertexCount = 0;
 static int s_gxMaxVertexCount = 0;
@@ -7418,7 +7418,7 @@ static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 static bool s_gxTextureEnabled = false;
 
-static int s_gxLastPrimitiveType = -1;
+static int /*GX_PRIMITIVE_TYPE*/ s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
 
 static const VsInput vsInputs[] =
@@ -7502,7 +7502,7 @@ void gxShutdown()
 		memset(s_gxIndexBufferObject, 0, sizeof(s_gxIndexBufferObject));
 	}
 	
-	s_gxPrimitiveType = -1;
+	s_gxPrimitiveType = GX_INVALID_PRIM;
 	s_gxVertices = nullptr;
 	s_gxVertexCount = 0;
 	s_gxMaxVertexCount = 0;
@@ -7510,8 +7510,32 @@ void gxShutdown()
 	s_gxVertex = GxVertex();
 	s_gxTextureEnabled = false;
 	
-	s_gxLastPrimitiveType = -1;
+	s_gxLastPrimitiveType = GX_INVALID_PRIM;
 	s_gxLastVertexCount = -1;
+}
+
+static GLenum toOpenGLPrimitiveType(const int /*GX_PRIMITIVE_TYPE*/ primitiveType)
+{
+	switch (primitiveType)
+	{
+	case GX_LINES:
+		return GL_LINES;
+	case GX_LINE_LOOP:
+		return GL_LINE_LOOP;
+	case GX_LINE_STRIP:
+		return GL_LINE_STRIP;
+	case GX_TRIANGLES:
+		return GL_TRIANGLES;
+	case GX_TRIANGLE_FAN:
+		return GL_TRIANGLE_FAN;
+	case GX_TRIANGLE_STRIP:
+		return GL_TRIANGLE_STRIP;
+	case GX_QUADS:
+		return GL_QUADS;
+	default:
+		Assert(false);
+		return GL_INVALID_ENUM;
+	}
 }
 
 static void gxFlush(bool endOfBatch)
@@ -7520,7 +7544,7 @@ static void gxFlush(bool endOfBatch)
 
 	if (s_gxVertexCount)
 	{
-		const int primitiveType = s_gxPrimitiveType;
+		const int /*GX_PRIMITIVE_TYPE*/ primitiveType = s_gxPrimitiveType;
 
 		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
 
@@ -7562,7 +7586,7 @@ static void gxFlush(bool endOfBatch)
 	
 		// convert quads to triangles
 		
-		if (s_gxPrimitiveType == GL_QUADS)
+		if (s_gxPrimitiveType == GX_QUADS)
 		{
 			fassert(s_gxVertexCount < 65536);
 			
@@ -7601,7 +7625,7 @@ static void gxFlush(bool endOfBatch)
 			#endif
 			}
 			
-			s_gxPrimitiveType = GL_TRIANGLES;
+			s_gxPrimitiveType = GX_TRIANGLES;
 			numElements = numIndices;
 			
 			indexed = true;
@@ -7627,18 +7651,20 @@ static void gxFlush(bool endOfBatch)
 		
 		if (shader.isValid())
 		{
+			const GLenum glPrimitiveType = toOpenGLPrimitiveType(s_gxPrimitiveType);
+
 			if (indexed)
 			{
 				#if GX_USE_ELEMENT_ARRAY_BUFFER
-				glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, 0);
+				glDrawElements(glPrimitiveType, numElements, INDEX_TYPE, 0);
 				#else
-				glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, indices);
+				glDrawElements(glPrimitiveType, numElements, INDEX_TYPE, indices);
 				#endif
 				checkErrorGL();
 			}
 			else
 			{
-				glDrawArrays(s_gxPrimitiveType, 0, numElements);
+				glDrawArrays(glPrimitiveType, 0, numElements);
 				checkErrorGL();
 			}
 		}
@@ -7655,20 +7681,20 @@ static void gxFlush(bool endOfBatch)
 		{
 			switch (s_gxPrimitiveType)
 			{
-				case GL_LINE_LOOP:
+				case GX_LINE_LOOP:
 					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
 					s_gxVertexCount = 1;
 					break;
-				case GL_LINE_STRIP:
+				case GX_LINE_STRIP:
 					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
 					s_gxVertexCount = 1;
 					break;
-				case GL_TRIANGLE_FAN:
+				case GX_TRIANGLE_FAN:
 					s_gxVertices[0] = s_gxVertices[0];
 					s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
 					s_gxVertexCount = 2;
 					break;
-				case GL_TRIANGLE_STRIP:
+				case GX_TRIANGLE_STRIP:
 					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
 					s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
 					s_gxVertexCount = 2;
@@ -7687,7 +7713,7 @@ static void gxFlush(bool endOfBatch)
 		s_gxVertices = 0;
 }
 
-void gxBegin(int primitiveType)
+void gxBegin(int /*GX_PRIMITIVE_TYPE*/ primitiveType)
 {
 	s_gxPrimitiveType = primitiveType;
 	s_gxVertices = s_gxVertexBuffer;
@@ -8343,27 +8369,27 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	{
 	case HQ_LINES:
 		setShader_HqLines();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_FILLED_TRIANGLES:
 		setShader_HqFilledTriangles();
-		gxBegin(GL_TRIANGLES);
+		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_FILLED_CIRCLES:
 		setShader_HqFilledCircles();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_FILLED_RECTS:
 		setShader_HqFilledRects();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 	
 	case HQ_FILLED_ROUNDED_RECTS:
 		setShader_HqFilledRoundedRects();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_TRIANGLES:
@@ -8373,17 +8399,17 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 
 	case HQ_STROKED_CIRCLES:
 		setShader_HqStrokedCircles();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_RECTS:
 		setShader_HqStrokedRects();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 	
 	case HQ_STROKED_ROUNDED_RECTS:
 		setShader_HqStrokedRoundedRects();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	default:
@@ -8403,39 +8429,39 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 	switch (type)
 	{
 	case HQ_LINES:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_FILLED_TRIANGLES:
-		gxBegin(GL_TRIANGLES);
+		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_FILLED_CIRCLES:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_FILLED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 	
 	case HQ_FILLED_ROUNDED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_TRIANGLES:
-		gxBegin(GL_TRIANGLES);
+		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_STROKED_CIRCLES:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 		
 	case HQ_STROKED_ROUNDED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	default:
@@ -8484,37 +8510,37 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	switch (type)
 	{
 	case HQ_LINES:
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		break;
 
 	case HQ_FILLED_TRIANGLES:
-		gxBegin(GL_TRIANGLES);
+		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_FILLED_CIRCLES:
 		break;
 
 	case HQ_FILLED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 	
 	case HQ_FILLED_ROUNDED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_TRIANGLES:
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		break;
 
 	case HQ_STROKED_CIRCLES:
 		break;
 
 	case HQ_STROKED_RECTS:
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		break;
 	
 	case HQ_STROKED_ROUNDED_RECTS:
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		break;
 
 	default:
