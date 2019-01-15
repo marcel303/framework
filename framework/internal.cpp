@@ -1971,7 +1971,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(const StbFont * font, int size, int c)
 		
 		for (;;)
 		{
-			elem.textureAtlasElem = globals.font->textureAtlas->tryAlloc(values, sx, sy, GL_RED, GL_UNSIGNED_BYTE, GLYPH_ATLAS_BORDER);
+			elem.textureAtlasElem = globals.font->textureAtlas->tryAlloc(values, sx, sy, GLYPH_ATLAS_BORDER);
 			
 			if (elem.textureAtlasElem != nullptr)
 				break;
@@ -2038,7 +2038,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 			
 			for (;;)
 			{
-				e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, GLYPH_ATLAS_BORDER);
+				e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows, GLYPH_ATLAS_BORDER);
 				
 				if (e != nullptr)
 					break;
@@ -2359,7 +2359,7 @@ void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
 		
 		for (;;)
 		{
-			glyph.textureAtlasElem = m_textureAtlas->tryAlloc((uint8_t*)&msdf(0, 0), bitmapSx, bitmapSy, GL_RGB, GL_FLOAT);
+			glyph.textureAtlasElem = m_textureAtlas->tryAlloc((uint8_t*)&msdf(0, 0), bitmapSx, bitmapSy);
 			
 			if (glyph.textureAtlasElem != nullptr)
 				break;
@@ -2477,7 +2477,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 				
 				if (result)
 				{
-					ae = m_textureAtlas->tryAlloc(bytes, atlasElemSx, atlasElemSy, GL_RGB, GL_FLOAT);
+					ae = m_textureAtlas->tryAlloc(bytes, atlasElemSx, atlasElemSy);
 					
 					result &= ae != nullptr;
 				}

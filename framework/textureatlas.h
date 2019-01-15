@@ -49,7 +49,7 @@ struct TextureAtlas
 	void init(const int sx, const int sy, const GX_TEXTURE_FORMAT format, const bool filter, const bool clamp, const int * swizzleMask);
 	void shut();
 	
-	BoxAtlasElem * tryAlloc(const uint8_t * values, const int sx, const int sy, const GLenum uploadFormat, const GLenum uploadType, const int border = 0);
+	BoxAtlasElem * tryAlloc(const uint8_t * values, const int sx, const int sy, const int border = 0);
 	void free(BoxAtlasElem *& e);
 	
 	GxTexture * allocateTexture(const int sx, const int sy);

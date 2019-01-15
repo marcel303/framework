@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_R8. todo : remove with Framework-provided texture object
 #include "framework.h"
 #include "testBase.h"
 #include "textureatlas.h"
@@ -48,19 +47,19 @@ void testTextureAtlas()
 		
 		const uint64_t tr1 = g_TimerRT.TimeUS_get();
 		
-		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
 		
 		success &= false != ta.makeBigger(256, 256);
 		
-		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
-		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
-		success &= nullptr != ta.tryAlloc(values, 128, 128, GL_RED, GL_UNSIGNED_BYTE);
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
+		success &= nullptr != ta.tryAlloc(values, 128, 128);
 		
 		success &= false != ta.makeBigger(512, 256);
 		
 		for (int i = 0; i < 500; ++i)
 		{
-			success &= nullptr != ta.tryAlloc(values, random(4, 12), random(4, 12), GL_RED, GL_UNSIGNED_BYTE);
+			success &= nullptr != ta.tryAlloc(values, random(4, 12), random(4, 12));
 		}
 		
 		const uint64_t tr2 = g_TimerRT.TimeUS_get();
@@ -237,7 +236,7 @@ void testDynamicTextureAtlas()
 		for (int i = 0; i < sx * sy; ++i)
 			values[i] = i;
 		
-		BoxAtlasElem * e = ta.tryAlloc(values, sx, sy, GL_RED, GL_UNSIGNED_BYTE);
+		BoxAtlasElem * e = ta.tryAlloc(values, sx, sy);
 		
 		if (e != nullptr)
 		{
@@ -305,7 +304,7 @@ void testDynamicTextureAtlas()
 			for (int i = 0; i < sx * sy; ++i)
 				values[i] = i;
 			
-			BoxAtlasElem * e = ta.tryAlloc(values, sx, sy, GL_RED, GL_UNSIGNED_BYTE);
+			BoxAtlasElem * e = ta.tryAlloc(values, sx, sy);
 			
 			if (e != nullptr)
 			{

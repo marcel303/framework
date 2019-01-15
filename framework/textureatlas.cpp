@@ -80,7 +80,7 @@ void TextureAtlas::shut()
 	init(0, 0, GX_R32_FLOAT, false, false, nullptr);
 }
 
-BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, const int sy, const GLenum uploadFormat, const GLenum uploadType, const int border)
+BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, const int sy, const int border)
 {
 	auto e = a.tryAlloc(sx + border * 2, sy + border * 2);
 	
