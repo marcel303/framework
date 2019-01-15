@@ -1,5 +1,6 @@
 #pragma once
 
+#include <GL/glew.h> // GL_PROGRAM_POINT_SIZE
 #include "Calc.h"
 #include "framework.h"
 #include <cmath>
@@ -79,7 +80,7 @@ struct VectorParticleSystem
 		glEnable(GL_PROGRAM_POINT_SIZE);
 		checkErrorGL();
 		
-		gxBegin(GL_POINTS);
+		gxBegin(GX_POINTS);
 		{
 			for (int i = 0; i < kMaxParticles; ++i)
 			{
@@ -155,7 +156,7 @@ struct VectorMemory
 
 	void draw(const float opacity) const
 	{
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (int i = 0; i < kMaxLines; ++i)
 			{

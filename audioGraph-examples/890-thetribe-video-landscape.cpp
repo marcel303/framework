@@ -3,6 +3,7 @@
 #include "Noise.h"
 #include "objects/audioSourceVorbis.h"
 #include "Path.h"
+#include "Quat.h"
 #include "soundVolume.h"
 #include "textScroller.h"
 #include "vectorLines.h"
@@ -1618,7 +1619,7 @@ struct World
 		camera.pushViewMatrix();
 		
 		Mat4x4 worldToViewMatrix;
-		gxGetMatrixf(GL_MODELVIEW, worldToViewMatrix.m_v);
+		gxGetMatrixf(GX_MODELVIEW, worldToViewMatrix.m_v);
 		
 		const Vec3 cameraPosition_world = worldToViewMatrix.CalcInv().GetTranslation();
 		

@@ -7,8 +7,6 @@
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 
-#define APPMODE 1
-
 #if !defined(DEBUG)
 	#define FINMODE 1
 #endif
@@ -208,13 +206,7 @@ VFX_NODE_TYPE(VfxNodeTriggerFilter)
 #include "Path.h"
 #include "video.h"
 
-#if APPMODE
-	#warning this shouldn't be enabled except for deployment of the app
-
-	#define MEDIA_PATH "/Users/thecat/Sexyshow/media/"
-#else
-	#define MEDIA_PATH "/Users/thecat/Sexyshow/media/"
-#endif
+#define MEDIA_PATH "/Users/thecat/thegrooop/Sexyshow/media/"
 
 //
 
@@ -225,7 +217,7 @@ struct MediaElem
 	
 	MediaPlayer mp;
 	
-	GLuint texture = 0;
+	GxTextureId texture = 0;
 };
 
 static std::vector<std::string> doMediaPicker()
@@ -315,7 +307,7 @@ static std::vector<std::string> doMediaPicker()
 					}
 				}
 				
-				const GLuint texture = e->texture ? e->texture : e->mp.getTexture();
+				const GxTextureId texture = e->texture ? e->texture : e->mp.getTexture();
 				
 				setColor(colorWhite);
 				setLumi(hover ? 255 : 200);
@@ -369,7 +361,9 @@ static std::vector<std::string> doMediaPicker()
 
 int main(int argc, char * argv[])
 {
-#if APPMODE
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
 	char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
 	SDL_free(basePath);
@@ -384,7 +378,7 @@ int main(int argc, char * argv[])
 	framework.fullscreen = true;
 #endif
 
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	bool inputIsWorking = false;

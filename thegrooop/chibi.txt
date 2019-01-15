@@ -3,3 +3,24 @@ app thegrooop-880-talkawave
 	add_files ../audioGraph-examples/880-talkawave.cpp
 	resource_path ../audioGraph-examples/data
 	group thegrooop
+
+app thegrooop-890-performance
+	depend_library audiograph
+	depend_library vfxgraph
+	add_files ../audioGraph-examples/890-performance.cpp
+	add_files ../audioGraph-examples/890-performance.h
+	add_files ../audioGraph-examples/890-thetribe-video-landscape.cpp
+	add_files ../audioGraph-examples/audioMixer.cpp
+	add_files ../audioGraph-examples/audioMixer.h
+	add_files ../audioGraph-examples/textScroller.cpp
+	add_files ../audioGraph-examples/textScroller.h
+	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	group thegrooop
+
+app thegrooop-892-landart
+	depend_library audiograph
+	depend_library vfxgraph
+	add_files ../audioGraph-examples/892-landart.cpp
+	add_files ../audioGraph-examples/892-landart.h
+	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	group thegrooop

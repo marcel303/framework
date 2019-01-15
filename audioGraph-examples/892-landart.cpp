@@ -4,7 +4,7 @@
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 
-#if !defined(DEBUG) || 1
+#if !defined(DEBUG)
 	#define FINMODE 1
 #endif
 
@@ -344,7 +344,9 @@ VFX_NODE_TYPE(VfxNodeLandscape)
 
 int main(int argc, char * argv[])
 {
-#if FINMODE
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
 	char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
 	SDL_free(basePath);
@@ -357,7 +359,7 @@ int main(int argc, char * argv[])
 	framework.fullscreen = true;
 #endif
 
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 
 	VfxGraphMgr * vfxGraphMgr = new VfxGraphMgr();
