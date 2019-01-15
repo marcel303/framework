@@ -88,27 +88,7 @@ BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, cons
 	{
 		if (values != nullptr)
 		{
-		// todo : add uploadArea(..) method to GxTexture
-		
-			GLuint restoreTexture;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, texture->id);
-			checkErrorGL();
-			
-			GLint restoreUnpack;
-			glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
-			checkErrorGL();
-			
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, e->x + border, e->y + border, sx, sy, uploadFormat, uploadType, values);
-			checkErrorGL();
-			
-			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
-			checkErrorGL();
-			glBindTexture(GL_TEXTURE_2D, restoreTexture);
-			checkErrorGL();
+			texture->uploadArea(values, 1, 0, sx, sy, e->x + border, e->y + border);
 		}
 		
 		return e;
