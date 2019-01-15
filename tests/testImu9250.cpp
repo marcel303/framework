@@ -27,8 +27,6 @@
 
 #ifndef WIN32
 
-#include <GL/glew.h> // GL_DEPTH_TEST
-
 #include "framework.h"
 #include "Log.h"
 #include "Timer.h"
@@ -532,8 +530,7 @@ void testImu9250()
 				gxTranslatef(0, 0, 2);
 				gxRotatef(+90, 0, 0, 1);
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
+				pushDepthTest(true, DEPTH_LESS);
 		
 				gxPushMatrix();
 				{
@@ -596,7 +593,7 @@ void testImu9250()
 				}
 				gxPopMatrix();
 				
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
 			}
 			camera.popViewMatrix();
 			

@@ -1,4 +1,4 @@
-#include <GL/glew.h> // GL_DEPTH_TEST
+#include <GL/glew.h> // glPolygonMode
 #include "Calc.h"
 #include "framework.h"
 #include "image.h"
@@ -382,9 +382,8 @@ int main(int argc, char * argv[])
 
 				pushSurface(&surface);
 				{
-					glEnable(GL_DEPTH_TEST);
-					glDepthFunc(GL_LESS);
-
+					pushDepthTest(true, DEPTH_LESS);
+					
 					setBlend(BLEND_OPAQUE);
 
 					projectPerspective3d(60.f, 1.f, 10000.f);
@@ -605,7 +604,7 @@ int main(int argc, char * argv[])
 					
 					projectScreen2d();
 
-					glDisable(GL_DEPTH_TEST);
+					popDepthTest();
 
 					//
 

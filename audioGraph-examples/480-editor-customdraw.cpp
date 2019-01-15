@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_DEPTH_TEST
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioGraphRealTimeConnection.h"
@@ -336,8 +335,7 @@ int main(int argc, char * argv[])
 
 					camera.pushViewMatrix();
 					{
-						glEnable(GL_DEPTH_TEST);
-						glDepthFunc(GL_LEQUAL);
+						pushDepthTest(true, DEPTH_LEQUAL);
 						
 						setColor(100, 100, 100);
 						drawGrid3dLine(10, 10, 0, 2, true);
@@ -347,7 +345,7 @@ int main(int argc, char * argv[])
 							drawEditor(*audioGraphMgr.selectedFile->graphEdit, instance->realTimeConnection, instance->audioGraph);
 						}
 						
-						glDisable(GL_DEPTH_TEST);
+						popDepthTest();
 					}
 					camera.popViewMatrix();
 

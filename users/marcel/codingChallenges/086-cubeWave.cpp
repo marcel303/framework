@@ -1,4 +1,3 @@
-#include <GL/glew.h> // GL_DEPTH_TEST
 #include "framework.h"
 #include "imgui-framework.h"
 
@@ -83,8 +82,7 @@ int main(int argc, char * argv[])
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			projectPerspective3d(90.f, .01f, 100.f);
-			glEnable(GL_DEPTH_TEST);
-			glDepthFunc(GL_LESS);
+			pushDepthTest(true, DEPTH_LESS);
 			pushBlend(BLEND_OPAQUE);
 			
 			gxPushMatrix();
@@ -115,9 +113,8 @@ int main(int argc, char * argv[])
 			}
 			gxPopMatrix();
 			
-			glDisable(GL_DEPTH_TEST);
 			popBlend();
-			
+			popDepthTest();
 			projectScreen2d();
 			
 			guiCtx.draw();

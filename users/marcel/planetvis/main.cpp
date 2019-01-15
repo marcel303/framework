@@ -1514,8 +1514,7 @@ int main(int argc, char * argv[])
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
+				pushDepthTest(true, DEPTH_LESS);
 
 				setBlend(BLEND_OPAQUE);
 
@@ -1719,7 +1718,7 @@ int main(int argc, char * argv[])
 
 					//
 
-					glDisable(GL_DEPTH_TEST);
+					popDepthTest();
 					setBlend(BLEND_OPAQUE);
 
 					gxPushMatrix();
@@ -1814,7 +1813,7 @@ int main(int argc, char * argv[])
 					//
 					
 					setBlend(BLEND_OPAQUE);
-					glEnable(GL_DEPTH_TEST);
+					pushDepthTest(true, DEPTH_LESS);
 				}
 			#endif
 
@@ -1823,7 +1822,7 @@ int main(int argc, char * argv[])
 				{
 					const float scale = quadTree.initSize / float(GFX_SX);
 
-					glDisable(GL_DEPTH_TEST);
+					popDepthTest();
 					setBlend(BLEND_ALPHA);
 
 					gxPushMatrix();
@@ -1870,7 +1869,7 @@ int main(int argc, char * argv[])
 					quadTree.root.traverse(0, 0, 0, quadTree.initSize, params);
 
 					setBlend(BLEND_OPAQUE);
-					glEnable(GL_DEPTH_TEST);
+					pushDepthTest(true, DEPTH_LESS);
 				}
 				gxPopMatrix();
 			#endif

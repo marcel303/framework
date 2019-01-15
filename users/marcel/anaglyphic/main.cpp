@@ -1,4 +1,4 @@
-#include <GL/glew.h> // GL_PROGRAM_POINT_SIZE. todo : remove ?
+#include <GL/glew.h> // GL_PROGRAM_POINT_SIZE, GL_LINE_SMOOTH, glPolygonMode. todo : remove ?
 #include "Calc.h"
 #include "framework.h"
 #include "Timer.h"
@@ -229,7 +229,7 @@ static void drawGrid(const int numQuadsX, const int numQuadsY)
 	gxEnd();
 }
 
-static void drawExtrusion(const int numX, const int numY, const GLuint texture)
+static void drawExtrusion(const int numX, const int numY, const GxTextureId texture)
 {
 	const float stepX = 1.f / (numX + 1);
 	const float stepY = 1.f / (numY + 1);
@@ -550,8 +550,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 		surface->clear(0, 0, 0, 0);
 		surface->clearDepth(1.f);
 
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
+		pushDepthTest(true, DEPTH_LESS);
 
 		Mat4x4 matP;
 		matP.MakePerspectiveLH(Calc::DegToRad(60.f), surface->getHeight() / float(surface->getWidth()), .1f, 10000.f);
@@ -687,7 +686,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 					//
 
 					{
-						glDepthMask(false);
+						pushDepthWrite(false);
 						
 						setColor(127, 127, 127);
 						Shader shader("particles");
@@ -700,20 +699,20 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 						}
 						clearShader();
 
-						glDepthMask(true);
+						popDepthWrite();
 					}
 
 					//
 
 					{
-						glDepthMask(false);
+						pushDepthWrite(false);
 
 						pushBlend(BLEND_ADD);
 						setColor(127, 127, 127);
 						vm.draw();
 						popBlend();
 
-						glDepthMask(true);
+						popDepthWrite();
 					}
 				}
 			}
@@ -723,7 +722,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 		gxMatrixMode(GL_PROJECTION);
 		gxPopMatrix();
 
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
 	}
 	popSurface();
 

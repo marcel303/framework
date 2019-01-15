@@ -31,7 +31,7 @@ Acknowledgement for the use of the Stanford Lucy model:
 	http://graphics.stanford.edu/data/3Dscanrep/
 */
 
-#include <GL/glew.h> // GL_DEPTH_TEST
+#include <GL/glew.h> // glPolygonMode
 #include "framework.h"
 
 #define VIEW_SX 1200
@@ -94,9 +94,7 @@ int main(int argc, char * argv[])
 			
 			camera.pushViewMatrix();
 			
-			glDepthFunc(GL_LESS);
-			glEnable(GL_DEPTH_TEST);
-			checkErrorGL();
+			pushDepthTest(true, DEPTH_LESS);
 			
 			pushBlend(BLEND_OPAQUE);
 			setColor(255, 255, 255);
@@ -127,17 +125,16 @@ int main(int argc, char * argv[])
 			
 			popBlend();
 			
-			glDepthMask(GL_FALSE);
+			pushDepthWrite(false);
 			gxPushMatrix();
 			gxTranslatef(0, -800, 0);
 			gxScalef(1000, 1000, 1000);
 			setAlpha(10);
 			drawGrid3dLine(100, 100, 0, 2);
 			gxPopMatrix();
-			glDepthMask(GL_TRUE);
+			popDepthWrite();
 			
-			glDisable(GL_DEPTH_TEST);
-			checkErrorGL();
+			popDepthTest();
 			
 			camera.popViewMatrix();
 			

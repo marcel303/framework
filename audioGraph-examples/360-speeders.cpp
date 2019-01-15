@@ -1,4 +1,4 @@
-#include <GL/glew.h> // GL_DEPTH_TEST
+#include <GL/glew.h> // GL_LINE_SMOOTH
 #include "audioTypes.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"
@@ -870,8 +870,7 @@ int main(int argc, char * argv[])
 				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 				glEnable(GL_LINE_SMOOTH);
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
+				pushDepthTest(true, DEPTH_LESS);
 				{
 					for (int i = 0; i < numSoundVolumes; ++i)
 					{
@@ -879,13 +878,11 @@ int main(int argc, char * argv[])
 						drawSoundVolume(soundVolumes[i]);
 					}
 				}
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
 				
 				//
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
-				glDepthMask(GL_FALSE);
+				pushDepthTest(true, DEPTH_LESS, false);
 				pushBlend(BLEND_ADD);
 				{
 					gxPushMatrix();
@@ -906,8 +903,7 @@ int main(int argc, char * argv[])
 					}
 				}
 				popBlend();
-				glDepthMask(GL_TRUE);
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
 			}
 			camera.popViewMatrix();
 		}

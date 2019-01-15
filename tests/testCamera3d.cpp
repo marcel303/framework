@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_DEPTH_TEST
 #include "framework.h"
 #include "testBase.h"
 
@@ -97,8 +96,7 @@ void testCamera3d()
 			
 			camera.pushViewMatrix();
 			{
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
+				pushDepthTest(true, DEPTH_LESS);
 				
 				gxPushMatrix();
 				{
@@ -126,7 +124,7 @@ void testCamera3d()
 					drawGrid3d(10, 10, 0, 2);
 				gxSetTexture(0);
 				
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
 			}
 			camera.popViewMatrix();
 			

@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_DEPTH_TEST
+#include <GL/glew.h> // glPolygonMode
 #include "framework.h"
 #include <map>
 
@@ -214,18 +214,13 @@ int main(int argc, char * argv[])
 		transform3d.MakePerspectiveGL(fov, aspect, .1f, +2000.f);
 		setTransform3d(transform3d);
 		
-		framework.beginDraw(31, 31, 31, 0);
+		framework.beginDraw(31, 31, 31, 0, 1.f);
 		{
-			glClearDepth(1.f);
-			glClear(GL_DEPTH_BUFFER_BIT);
-			
 			// switch to 3D drawing mode
 			
 			setTransform(TRANSFORM_3D);
 			
-			glDepthFunc(GL_LESS);
-			glEnable(GL_DEPTH_TEST);
-			checkErrorGL();
+			pushDepthTest(true, DEPTH_LESS);
 			
 			glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
 			checkErrorGL();
@@ -273,8 +268,7 @@ int main(int argc, char * argv[])
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			checkErrorGL();
 			
-			glDisable(GL_DEPTH_TEST);
-			checkErrorGL();
+			popDepthTest();
 			
 			// show instructions
 			
