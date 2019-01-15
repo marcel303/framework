@@ -5823,6 +5823,10 @@ static GLenum toOpenGLDepthFunc(DEPTH_TEST test)
 
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 {
+	globals.depthTestEnabled = enabled;
+	globals.depthTest = test;
+	globals.depthTestWriteEnabled = writeEnabled;
+	
 	if (enabled)
 	{
 		glEnable(GL_DEPTH_TEST);
