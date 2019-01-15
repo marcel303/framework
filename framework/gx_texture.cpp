@@ -251,6 +251,66 @@ void GxTexture::clearf(const float r, const float g, const float b, const float 
 	checkErrorGL();
 }
 
+void GxTexture::clearAreaToZero(const int x, const int y, const int sx, const int sy)
+{
+	GLenum uploadFormat;
+	GLenum uploadElementType;
+	toOpenGLUploadType(format, uploadFormat, uploadElementType);
+	
+	const int maxElementCount =
+		uploadFormat == GL_RED ? 1 :
+		uploadFormat == GL_RG ? 2 :
+		uploadFormat == GL_RGB ? 3 :
+		uploadFormat == GL_RGBA ? 4 :
+		4;
+	
+	const int maxPixelSize =
+		uploadElementType == GL_UNSIGNED_BYTE ? maxElementCount :
+		uploadElementType == GL_FLOAT ? maxElementCount * 4 :
+		maxElementCount * 4;
+	
+	const int maxMemorySize =
+		maxPixelSize * sx * sy;
+	
+	const bool allocateFromStack = (maxMemorySize < 16 * 1024);
+	
+	uint8_t * zeroes =
+		allocateFromStack ? (uint8_t*)alloca(maxMemorySize) :
+		(uint8_t*)malloc(maxMemorySize);
+	
+	memset(zeroes, 0, maxMemorySize);
+	
+	// capture current OpenGL states before we change them
+
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	GLint restoreUnpack;
+	glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
+	GLint restorePitch;
+	glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restorePitch);
+	checkErrorGL();
+	
+	//
+	
+	glBindTexture(GL_TEXTURE_2D, id);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+	checkErrorGL();
+	
+	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, sx ,sy, uploadFormat, uploadElementType, zeroes);
+	checkErrorGL();
+
+	// restore previous OpenGL states
+
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, restorePitch);
+	checkErrorGL();
+	
+	if (!allocateFromStack)
+		::free(zeroes);
+}
+
 void GxTexture::upload(const void * src, const int _srcAlignment, const int _srcPitch)
 {
 	Assert(id != 0);

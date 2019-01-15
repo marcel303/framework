@@ -85,6 +85,8 @@ struct GxTexture
 	void setSampling(const bool filter, const bool clamp);
 
 	void clearf(const float r, const float g, const float b, const float a);
+	void clearAreaToZero(const int x, const int y, const int sx, const int sy);
+	
 	void upload(const void * src, const int srcAlignment, const int srcPitch);
 	void uploadArea(const void * src, const int srcAlignment, const int srcPitch, const int srcSx, const int srcSy, const int dstX, const int dstY);
 };
