@@ -5326,6 +5326,7 @@ static int surfaceStackSize = 0;
 static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
 static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
 static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
+static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
 
 static void getViewportSize(float & sx, float & sy)
 {
@@ -5798,6 +5799,63 @@ void popColorPost()
 	const COLOR_POST value = colorPostStack.popValue();
 	
 	setColorPost(value);
+}
+
+static GLenum toOpenGLDepthFunc(DEPTH_TEST test)
+{
+	switch (test)
+	{
+	case DEPTH_EQUAL:
+		return GL_EQUAL;
+	case DEPTH_LESS:
+		return GL_LESS;
+	case DEPTH_LEQUAL:
+		return GL_LEQUAL;
+	case DEPTH_GREATER:
+		return GL_GREATER;
+	case DEPTH_GEQUAL:
+		return GL_GEQUAL;
+	default:
+		Assert(false);
+		return GL_LESS;
+	}
+}
+
+void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
+{
+	if (enabled)
+	{
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(toOpenGLDepthFunc(test));
+		glDepthMask(writeEnabled ? GL_TRUE : GL_FALSE);
+		checkErrorGL();
+	}
+	else
+	{
+		glDisable(GL_DEPTH_TEST);
+		checkErrorGL();
+	}
+}
+
+void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
+{
+	const DepthTestInfo info =
+	{
+		globals.depthTestEnabled,
+		globals.depthTest,
+		globals.depthTestWriteEnabled
+	};
+	
+	depthTestStack.push(info);
+	
+	setDepthTest(enabled, test, writeEnabled);
+}
+
+void popDepthTest()
+{
+	const DepthTestInfo depthTestInfo = depthTestStack.popValue();
+	
+	setDepthTest(depthTestInfo.testEnabled, depthTestInfo.test, depthTestInfo.writeEnabled);
 }
 
 void setColor(const Color & color)

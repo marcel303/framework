@@ -330,6 +330,15 @@ public:
 
 //
 
+struct DepthTestInfo
+{
+	bool testEnabled;
+	DEPTH_TEST test;
+	bool writeEnabled;
+};
+
+//
+
 class Globals
 {
 public:
@@ -364,6 +373,9 @@ public:
 	FONT_MODE fontMode;
 	Color color;
 	bool colorClamp;
+	bool depthTestEnabled;
+	DEPTH_TEST depthTest;
+	bool depthTestWriteEnabled;
 	GRADIENT_TYPE hqGradientType;
 	Mat4x4 hqGradientMatrix;
 	Color hqGradientColor1;

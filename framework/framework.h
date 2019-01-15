@@ -144,6 +144,15 @@ enum COLOR_POST
 	POST_RGB_TO_LUMI
 };
 
+enum DEPTH_TEST
+{
+	DEPTH_EQUAL,
+	DEPTH_LESS,
+	DEPTH_LEQUAL,
+	DEPTH_GREATER,
+	DEPTH_GEQUAL
+};
+
 enum FONT_MODE // setFontMode
 {
 	FONT_BITMAP,
@@ -1304,6 +1313,10 @@ void popColorMode();
 void setColorPost(COLOR_POST colorPost);
 void pushColorPost(COLOR_POST colorPost);
 void popColorPost();
+
+void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
+void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
+void popDepthTest();
 
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
