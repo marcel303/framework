@@ -105,25 +105,8 @@ void TextureAtlas::free(BoxAtlasElem *& e)
 	{
 		Assert(e->isAllocated);
 		
-		uint8_t * zeroes = (uint8_t*)alloca(e->sx * e->sy);
-		memset(zeroes, 0, e->sx * e->sy);
-		
-	// todo : add clearAreaf method to GxTexture(..)
+		texture->clearAreaToZero(e->x, e->y, e->sx, e->sy);
 	
-		glBindTexture(GL_TEXTURE_2D, texture->id);
-		checkErrorGL();
-		
-		GLint restoreUnpack;
-		glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
-		checkErrorGL();
-		
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, e->x, e->y, e->sx, e->sy, GL_RED, GL_UNSIGNED_BYTE, zeroes);
-		checkErrorGL();
-		
-		glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
-		checkErrorGL();
-		
 		a.free(e);
 	}
 }
