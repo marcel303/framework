@@ -371,6 +371,7 @@ public:
 	COLOR_MODE colorMode;
 	COLOR_POST colorPost;
 	bool lineSmoothEnabled;
+	bool wireframeEnabled;
 	FONT_MODE fontMode;
 	Color color;
 	bool colorClamp;

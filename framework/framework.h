@@ -1328,6 +1328,9 @@ void popColorPost();
 void pushLineSmooth(bool enabled);
 void popLineSmooth();
 
+void pushWireframe(bool enabled);
+void popWireframe();
+
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void popDepthTest();
