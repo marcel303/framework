@@ -193,7 +193,7 @@ void TextureAtlas::clearTexture(GLuint texture, float r, float g, float b, float
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
 		checkErrorGL();
 		{
-			glClearColor(0, 0, 0, 0);
+			glClearColor(r, g, b, a);
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
 		glDeleteFramebuffers(1, &frameBuffer);
