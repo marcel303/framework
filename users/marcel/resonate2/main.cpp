@@ -1,4 +1,3 @@
-#include <GL/glew.h> // GL_TEXTURE_CUBE_MAP_SEAMLESS. todo : remove and replace with functionality in Framework-provided cube map object
 #include "Benchmark.h"
 #include "computeEditor.h"
 #include "constants.h"
@@ -1358,7 +1357,6 @@ int main(int argc, char * argv[])
 				{
 					for (int i = 0; i < 6; ++i)
 					{
-						glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 						Shader shader("cube");
 						setShader(shader);
 						shader.setTextureCube("cubemap", 0, cubemapTexture);
@@ -1370,7 +1368,6 @@ int main(int argc, char * argv[])
 							gxPopMatrix();
 						}
 						clearShader();
-						glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 					}
 				}
 				
