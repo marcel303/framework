@@ -1,0 +1,5 @@
+app thegrooop-880-talkawave
+	depend_library audiograph
+	add_files ../audioGraph-examples/880-talkawave.cpp
+	resource_path ../audioGraph-examples/data
+	group thegrooop

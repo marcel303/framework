@@ -223,16 +223,17 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			const binaural::HRIRSampleData * samples[3];
 			float sampleWeights[3];
 
-			s_sampleSet->lookup_3(
+			if (s_sampleSet->lookup_3(
 				elevation,
 				azimuth,
 				samples,
-				sampleWeights);
-
-			for (int j = 0; j < 3; ++j)
+				sampleWeights))
 			{
-				audioBufferAdd(combinedHrir.lSamples, samples[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
-				audioBufferAdd(combinedHrir.rSamples, samples[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
+				for (int j = 0; j < 3; ++j)
+				{
+					audioBufferAdd(combinedHrir.lSamples, samples[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
+					audioBufferAdd(combinedHrir.rSamples, samples[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
+				}
 			}
 		}
 
@@ -936,7 +937,7 @@ static void drawSoundVolume(const SoundVolume & volume)
 		gxPushMatrix(); { gxTranslatef(0, 0, +1); drawGrid3dLine(res, res, 0, 1); } gxPopMatrix();
 	#endif
 	
-		gxSetTexture(getTexture("thegrooop-white.png"));
+		gxSetTexture(getTexture("thegrooop/logo-white.png"));
 		{
 			drawRect(-1, -1, +1, +1);
 		}
@@ -970,7 +971,7 @@ static void drawWaves_solid(const Waves & waves)
 		gxMultMatrixf(waves.transform.m_v);
 		
 		setColor(100, 100, 100);
-		gxBegin(GL_TRIANGLES);
+		gxBegin(GX_TRIANGLES);
 		{
 			for (int x = 0; x < waves.kSize - 1; ++x)
 			{
@@ -1006,10 +1007,14 @@ static void drawWaves_solid(const Waves & waves)
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	framework.enableDepthBuffer = true;
 	//framework.fullscreen = true;
 	
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	Camera3d camera;
@@ -1030,7 +1035,7 @@ int main(int argc, char * argv[])
 	s_binauralMutex = &binauralMutex;
 	
 	binaural::HRIRSampleSet sampleSet;
-	binaural::loadHRIRSampleSet_Cipic("hrtf/CIPIC/subject147", sampleSet);
+	binaural::loadHRIRSampleSet_Cipic("binaural/CIPIC/subject147", sampleSet);
 	sampleSet.finalize();
 	s_sampleSet = &sampleSet;
 	
@@ -1102,7 +1107,7 @@ int main(int argc, char * argv[])
 		}
 		s_binauralMutex->unlock();
 		
-		framework.beginDraw(0, 0, 0, 0);
+		framework.beginDraw(0, 0, 0, 0, 1.f);
 		{
 			pushFontMode(FONT_SDF);
 			setFont("calibri.ttf");
@@ -1111,11 +1116,9 @@ int main(int argc, char * argv[])
 			
 			camera.pushViewMatrix();
 			{
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-				glEnable(GL_LINE_SMOOTH);
+				pushLineSmooth(true);
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
+				pushDepthTest(true, DEPTH_LESS);
 				{
 				#if DO_WATER
 					drawWaves_solid(waves);
@@ -1127,13 +1130,11 @@ int main(int argc, char * argv[])
 						drawSoundVolume(soundVolumes[i]);
 					}
 				}
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
 				
 				//
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
-				glDepthMask(GL_FALSE);
+				pushDepthTest(true, DEPTH_LESS, false);
 				pushBlend(BLEND_ADD);
 				{
 					gxPushMatrix();
@@ -1154,8 +1155,9 @@ int main(int argc, char * argv[])
 					}
 				}
 				popBlend();
-				glDepthMask(GL_TRUE);
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
+				
+				popLineSmooth();
 			}
 			camera.popViewMatrix();
 			
