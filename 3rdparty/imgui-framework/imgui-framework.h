@@ -38,7 +38,7 @@ struct FrameworkImGuiContext
 	
 	char * clipboard_text = nullptr;
 	
-	GLuint font_texture_id = 0;
+	GxTexture font_texture;
 	
 	ImGuiContext * previous_context = nullptr;
 	

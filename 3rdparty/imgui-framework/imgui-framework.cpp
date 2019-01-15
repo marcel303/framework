@@ -31,7 +31,7 @@
 
 FrameworkImGuiContext::~FrameworkImGuiContext()
 {
-	fassert(font_texture_id == 0);
+	fassert(font_texture.id == 0);
 }
 
 void FrameworkImGuiContext::init(const bool enableIniFiles)
@@ -100,10 +100,9 @@ void FrameworkImGuiContext::init(const bool enableIniFiles)
 
 void FrameworkImGuiContext::shut()
 {
-	if (font_texture_id != 0)
+	if (font_texture.id != 0)
 	{
-		glDeleteTextures(1, &font_texture_id);
-		font_texture_id = 0;
+		font_texture.free();
 	}
 	
 	for (int i = 0; i < ImGuiMouseCursor_COUNT; ++i)
@@ -164,9 +163,16 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 	#if DO_KINETIC_SCROLL
 	#if DO_TOUCH_SCROLL
 		Vec2 new_kinetic_scroll;
+		const bool hasWindowFocus = framework.getCurrentWindow().hasFocus();
 		for (auto & e : framework.events)
 		{
-			if (e.type == SDL_FINGERDOWN)
+			if (hasWindowFocus == false)
+			{
+				kinetic_scroll.SetZero();
+				
+				num_touches = 0;
+			}
+			else if (e.type == SDL_FINGERDOWN)
 			{
 				kinetic_scroll.SetZero();
 				kinetic_scroll_smoothed[0] = 0.0;
@@ -194,13 +200,13 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 					kinetic_scroll_smoothed[1] = 0.0;
 				}
 			}
-			else if (e.type == SDL_FINGERMOTION && num_touches == 2 && dt > 0.f)
+			else if (e.type == SDL_FINGERMOTION && num_touches == 2 && dt > 0.f/* && e.tfinger.firstMove == false*/)
 			{
 				new_kinetic_scroll += Vec2(e.tfinger.dx * 100.f, e.tfinger.dy * 10.f) / dt;
 			}
 		}
 		
-		const double retain = pow(.001, dt);
+		const double retain = pow(0.6, dt * 100.0);
 		const double attain = 1.0 - retain;
 		kinetic_scroll_smoothed[0] = kinetic_scroll_smoothed[0] * retain + new_kinetic_scroll[0] * attain;
 		kinetic_scroll_smoothed[1] = kinetic_scroll_smoothed[1] * retain + new_kinetic_scroll[1] * attain;
@@ -312,10 +318,9 @@ void FrameworkImGuiContext::updateFontTexture()
 	
 	auto & io = ImGui::GetIO();
 	
-	if (font_texture_id != 0)
+	if (font_texture.id != 0)
 	{
-		glDeleteTextures(1, &font_texture_id);
-		font_texture_id = 0;
+		font_texture.free();
 	}
 	
 	// create font texture
@@ -324,8 +329,9 @@ void FrameworkImGuiContext::updateFontTexture()
 	uint8_t * pixels = nullptr;
 	io.Fonts->GetTexDataAsRGBA32(&pixels, &sx, &sy);
 	
-	font_texture_id = createTextureFromRGBA8(pixels, sx, sy, false, true);
-	io.Fonts->TexID = (void*)(uintptr_t)font_texture_id;
+	font_texture.allocate(sx, sy, GX_RGBA8_UNORM, false, true);
+	font_texture.upload(pixels, 1, 0);
+	io.Fonts->TexID = (void*)(uintptr_t)font_texture.id;
 	
 	popImGuiContext();
 }
@@ -400,11 +406,11 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 					(int)(clip_rect.z - clip_rect.x),
 					(int)(clip_rect.w - clip_rect.y));
 				
-				const GLuint textureId = (GLuint)(uintptr_t)cmd->TextureId;
+				const GxTextureId textureId = (GxTextureId)(uintptr_t)cmd->TextureId;
 				
 				gxSetTexture(textureId);
 				{
-					gxBegin(GL_TRIANGLES);
+					gxBegin(GX_TRIANGLES);
 					{
 						for (int e = 0; e < cmd->ElemCount; ++e)
 						{
