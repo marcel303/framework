@@ -28,31 +28,31 @@
 #pragma once
 
 #include "BoxAtlas.h"
+#include "gx_texture.h"
 #include <SDL2/SDL_opengl.h>
 
 struct TextureAtlas
 {
 	BoxAtlas a;
 	
-	GLuint texture;
-	GLenum internalFormat;
+	GxTexture * texture;
+	GX_TEXTURE_FORMAT format;
 	
 	bool filter;
 	bool clamp;
 	
-	GLint swizzleMask[4];
+	int swizzleMask[4];
 	
 	TextureAtlas();
 	~TextureAtlas();
 	
-	void init(const int sx, const int sy, const GLenum internalFormat, const bool filter, const bool clamp, const GLint * swizzleMask);
+	void init(const int sx, const int sy, const GX_TEXTURE_FORMAT format, const bool filter, const bool clamp, const int * swizzleMask);
 	void shut();
 	
 	BoxAtlasElem * tryAlloc(const uint8_t * values, const int sx, const int sy, const GLenum uploadFormat, const GLenum uploadType, const int border = 0);
 	void free(BoxAtlasElem *& e);
 	
-	GLuint allocateTexture(const int sx, const int sy);
-	void clearTexture(GLuint texture, float r, float g, float b, float a);
+	GxTexture * allocateTexture(const int sx, const int sy);
 	
 	bool makeBigger(const int sx, const int sy);
 	bool optimize();

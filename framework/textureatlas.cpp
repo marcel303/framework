@@ -25,15 +25,15 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_R32F. todo : remove in favor of a Framework-provided texture object
+#include <GL/glew.h> // GL_FRAMEBUFFER. todo : remove in favor of a Framework-provided texture object
 #include "framework.h"
 #include "textureatlas.h"
 #include <string.h>
 
 TextureAtlas::TextureAtlas()
 	: a()
-	, texture(0)
-	, internalFormat(GL_R32F)
+	, texture(nullptr)
+	, format(GX_UNKNOWN_FORMAT)
 	, filter(false)
 	, clamp(false)
 	, swizzleMask()
@@ -45,11 +45,11 @@ TextureAtlas::~TextureAtlas()
 	shut();
 }
 
-void TextureAtlas::init(const int sx, const int sy, const GLenum _internalFormat, const bool _filter, const bool _clamp, const GLint * _swizzleMask)
+void TextureAtlas::init(const int sx, const int sy, const GX_TEXTURE_FORMAT _format, const bool _filter, const bool _clamp, const GLint * _swizzleMask)
 {
 	a.init(sx, sy);
 	
-	internalFormat = _internalFormat;
+	format = _format;
 	
 	filter = _filter;
 	clamp = _clamp;
@@ -60,17 +60,16 @@ void TextureAtlas::init(const int sx, const int sy, const GLenum _internalFormat
 	}
 	else
 	{
-		swizzleMask[0] = GL_RED;
-		swizzleMask[1] = GL_GREEN;
-		swizzleMask[2] = GL_BLUE;
-		swizzleMask[3] = GL_ALPHA;
+		swizzleMask[0] = 0;
+		swizzleMask[1] = 1;
+		swizzleMask[2] = 2;
+		swizzleMask[3] = 3;
 	}
 	
-	if (texture != 0)
+	if (texture != nullptr)
 	{
-		glDeleteTextures(1, &texture);
-		texture = 0;
-		checkErrorGL();
+		delete texture;
+		texture = nullptr;
 	}
 	
 	texture = allocateTexture(sx, sy);
@@ -78,7 +77,7 @@ void TextureAtlas::init(const int sx, const int sy, const GLenum _internalFormat
 
 void TextureAtlas::shut()
 {
-	init(0, 0, GL_R32F, false, false, nullptr);
+	init(0, 0, GX_R32_FLOAT, false, false, nullptr);
 }
 
 BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, const int sy, const GLenum uploadFormat, const GLenum uploadType, const int border)
@@ -89,11 +88,13 @@ BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, cons
 	{
 		if (values != nullptr)
 		{
+		// todo : add uploadArea(..) method to GxTexture
+		
 			GLuint restoreTexture;
 			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
 			checkErrorGL();
 			
-			glBindTexture(GL_TEXTURE_2D, texture);
+			glBindTexture(GL_TEXTURE_2D, texture->id);
 			checkErrorGL();
 			
 			GLint restoreUnpack;
@@ -127,7 +128,9 @@ void TextureAtlas::free(BoxAtlasElem *& e)
 		uint8_t * zeroes = (uint8_t*)alloca(e->sx * e->sy);
 		memset(zeroes, 0, e->sx * e->sy);
 		
-		glBindTexture(GL_TEXTURE_2D, texture);
+	// todo : add clearAreaf method to GxTexture(..)
+	
+		glBindTexture(GL_TEXTURE_2D, texture->id);
 		checkErrorGL();
 		
 		GLint restoreUnpack;
@@ -145,63 +148,18 @@ void TextureAtlas::free(BoxAtlasElem *& e)
 	}
 }
 
-GLuint TextureAtlas::allocateTexture(const int sx, const int sy)
+GxTexture * TextureAtlas::allocateTexture(const int sx, const int sy)
 {
-	GLuint newTexture = 0;
+	GxTexture * newTexture = nullptr;
 	
 	if (sx > 0 || sy > 0)
 	{
-		GLuint restoreTexture;
-		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-		checkErrorGL();
-		
-		glGenTextures(1, &newTexture);
-		glBindTexture(GL_TEXTURE_2D, newTexture);
-		glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, sx, sy);
-		checkErrorGL();
-		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-		checkErrorGL();
-		
-		glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-		checkErrorGL();
-	
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-		
-		glBindTexture(GL_TEXTURE_2D, restoreTexture);
-		checkErrorGL();
+		newTexture = new GxTexture();
+		newTexture->allocate(sx, sy, format, filter, clamp);
+		newTexture->setSwizzle(swizzleMask[0], swizzleMask[1], swizzleMask[2], swizzleMask[3]);
 	}
 	
 	return newTexture;
-}
-
-void TextureAtlas::clearTexture(GLuint texture, float r, float g, float b, float a)
-{
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
-	{
-		GLuint frameBuffer = 0;
-		
-		glGenFramebuffers(1, &frameBuffer);
-		checkErrorGL();
-		
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-		checkErrorGL();
-		{
-			glClearColor(r, g, b, a);
-			glClear(GL_COLOR_BUFFER_BIT);
-		}
-		glDeleteFramebuffers(1, &frameBuffer);
-		frameBuffer = 0;
-		checkErrorGL();
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-	checkErrorGL();
 }
 
 bool TextureAtlas::makeBigger(const int sx, const int sy)
@@ -221,12 +179,14 @@ bool TextureAtlas::makeBigger(const int sx, const int sy)
 
 	//
 	
-	GLuint newTexture = allocateTexture(sx, sy);
+	GxTexture * newTexture = allocateTexture(sx, sy);
 	
-	glBindTexture(GL_TEXTURE_2D, newTexture);
+	newTexture->clearf(0, 0, 0, 0);
+	
+// todo : add method to copy an area from one GxTexture to another
+
+	glBindTexture(GL_TEXTURE_2D, newTexture->id);
 	checkErrorGL();
-	
-	clearTexture(newTexture, 0, 0, 0, 0);
 	
 	GLuint frameBuffer = 0;
 	
@@ -234,7 +194,7 @@ bool TextureAtlas::makeBigger(const int sx, const int sy)
 	checkErrorGL();
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture->id, 0);
 	checkErrorGL();
 	
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -254,9 +214,8 @@ bool TextureAtlas::makeBigger(const int sx, const int sy)
 	glDeleteFramebuffers(1, &frameBuffer);
 	frameBuffer = 0;
 	
-	glDeleteTextures(1, &texture);
-	texture = 0;
-	checkErrorGL();
+	delete texture;
+	texture = nullptr;
 	
 	//
 	
@@ -289,12 +248,14 @@ bool TextureAtlas::optimize()
 
 	//
 	
-	GLuint newTexture = allocateTexture(a.sx, a.sy);
+	GxTexture * newTexture = allocateTexture(a.sx, a.sy);
 	
-	glBindTexture(GL_TEXTURE_2D, newTexture);
+	newTexture->clearf(0, 0, 0, 0);
+	
+// todo : add method to copy a list of areas from one GxTexture to another
+
+	glBindTexture(GL_TEXTURE_2D, newTexture->id);
 	checkErrorGL();
-	
-	clearTexture(newTexture, 0, 0, 0, 0);
 	
 	GLuint frameBuffer = 0;
 	
@@ -302,7 +263,7 @@ bool TextureAtlas::optimize()
 	checkErrorGL();
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture->id, 0);
 	checkErrorGL();
 	
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -336,9 +297,8 @@ bool TextureAtlas::optimize()
 	frameBuffer = 0;
 	checkErrorGL();
 	
-	glDeleteTextures(1, &texture);
-	texture = 0;
-	checkErrorGL();
+	delete texture;
+	texture = nullptr;
 	
 	//
 	
@@ -374,12 +334,12 @@ bool TextureAtlas::makeBiggerAndOptimize(const int sx, const int sy)
 	
 	//
 	
-	GLuint newTexture = allocateTexture(sx, sy);
+	GxTexture * newTexture = allocateTexture(sx, sy);
 	
-	glBindTexture(GL_TEXTURE_2D, newTexture);
+	newTexture->clearf(0, 0, 0, 0);
+	
+	glBindTexture(GL_TEXTURE_2D, newTexture->id);
 	checkErrorGL();
-	
-	clearTexture(newTexture, 0, 0, 0, 0);
 	
 	GLuint frameBuffer = 0;
 	
@@ -387,7 +347,7 @@ bool TextureAtlas::makeBiggerAndOptimize(const int sx, const int sy)
 	checkErrorGL();
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture->id, 0);
 	checkErrorGL();
 	
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -421,9 +381,8 @@ bool TextureAtlas::makeBiggerAndOptimize(const int sx, const int sy)
 	frameBuffer = 0;
 	checkErrorGL();
 	
-	glDeleteTextures(1, &texture);
-	texture = 0;
-	checkErrorGL();
+	delete texture;
+	texture = nullptr;
 	
 	//
 	
