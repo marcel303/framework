@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_FRAMEBUFFER. todo : remove in favor of a Framework-provided texture object
 #include "framework.h"
 #include "textureatlas.h"
 #include <string.h>
@@ -45,7 +44,7 @@ TextureAtlas::~TextureAtlas()
 	shut();
 }
 
-void TextureAtlas::init(const int sx, const int sy, const GX_TEXTURE_FORMAT _format, const bool _filter, const bool _clamp, const GLint * _swizzleMask)
+void TextureAtlas::init(const int sx, const int sy, const GX_TEXTURE_FORMAT _format, const bool _filter, const bool _clamp, const int * _swizzleMask)
 {
 	a.init(sx, sy);
 	
@@ -56,6 +55,12 @@ void TextureAtlas::init(const int sx, const int sy, const GX_TEXTURE_FORMAT _for
 	
 	if (_swizzleMask != nullptr)
 	{
+		Assert(
+			_swizzleMask[0] <= 3 &&
+			_swizzleMask[1] <= 3 &&
+			_swizzleMask[2] <= 3 &&
+			_swizzleMask[3] <= 3);
+		
 		memcpy(swizzleMask, _swizzleMask, sizeof(swizzleMask));
 	}
 	else
@@ -132,50 +137,21 @@ bool TextureAtlas::makeBigger(const int sx, const int sy)
 	
 	// update texture
 	
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
-	checkErrorGL();
-	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-
-	//
-	
 	GxTexture * newTexture = allocateTexture(sx, sy);
 	
 	newTexture->clearf(0, 0, 0, 0);
-	
-// todo : add method to copy an area from one GxTexture to another
 
-	glBindTexture(GL_TEXTURE_2D, newTexture->id);
-	checkErrorGL();
+	GxTexture::CopyRegion region;
+	region.srcX = 0;
+	region.srcY = 0;
+	region.dstX = 0;
+	region.dstY = 0;
+	region.sx = a.sx;
+	region.sy = a.sy;
 	
-	GLuint frameBuffer = 0;
-	
-	glGenFramebuffers(1, &frameBuffer);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture->id, 0);
-	checkErrorGL();
-	
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, a.sx, a.sy);
-	checkErrorGL();
+	newTexture->copyRegionsFromTexture(*texture, &region, 1);
 	
 	//
-	
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-	checkErrorGL();
-	
-	//
-	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
 	
 	delete texture;
 	texture = nullptr;
@@ -201,36 +177,12 @@ bool TextureAtlas::optimize()
 	
 	// update texture
 	
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
-	checkErrorGL();
-	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-
-	//
-	
 	GxTexture * newTexture = allocateTexture(a.sx, a.sy);
 	
 	newTexture->clearf(0, 0, 0, 0);
 	
-// todo : add method to copy a list of areas from one GxTexture to another
-
-	glBindTexture(GL_TEXTURE_2D, newTexture->id);
-	checkErrorGL();
-	
-	GLuint frameBuffer = 0;
-	
-	glGenFramebuffers(1, &frameBuffer);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture->id, 0);
-	checkErrorGL();
-	
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	checkErrorGL();
+	GxTexture::CopyRegion regions[a.kMaxElems];
+	int numRegions = 0;
 	
 	for (int i = 0; i < a.kMaxElems; ++i)
 	{
@@ -241,24 +193,20 @@ bool TextureAtlas::optimize()
 		
 		if (eSrc.isAllocated)
 		{
-			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, eDst.x, eDst.y, eSrc.x, eSrc.y, eSrc.sx, eSrc.sy);
-			checkErrorGL();
+			auto & region = regions[numRegions++];
+			
+			region.srcX = eSrc.x;
+			region.srcY = eSrc.y;
+			region.dstX = eDst.x;
+			region.dstY = eDst.y;
+			region.sx = eSrc.sx;
+			region.sy = eSrc.sy;
 		}
 	}
 	
-	//
-	
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-	checkErrorGL();
+	newTexture->copyRegionsFromTexture(*texture, regions, numRegions);
 	
 	//
-	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
-	checkErrorGL();
 	
 	delete texture;
 	texture = nullptr;
@@ -287,34 +235,12 @@ bool TextureAtlas::makeBiggerAndOptimize(const int sx, const int sy)
 	
 	// update texture
 	
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
-	checkErrorGL();
-	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-	
-	//
-	
 	GxTexture * newTexture = allocateTexture(sx, sy);
 	
 	newTexture->clearf(0, 0, 0, 0);
 	
-	glBindTexture(GL_TEXTURE_2D, newTexture->id);
-	checkErrorGL();
-	
-	GLuint frameBuffer = 0;
-	
-	glGenFramebuffers(1, &frameBuffer);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture->id, 0);
-	checkErrorGL();
-	
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	checkErrorGL();
+	GxTexture::CopyRegion regions[a.kMaxElems];
+	int numRegions = 0;
 	
 	for (int i = 0; i < a.kMaxElems; ++i)
 	{
@@ -325,24 +251,20 @@ bool TextureAtlas::makeBiggerAndOptimize(const int sx, const int sy)
 		
 		if (eSrc.isAllocated)
 		{
-			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, eDst.x, eDst.y, eSrc.x, eSrc.y, eSrc.sx, eSrc.sy);
-			checkErrorGL();
+			auto & region = regions[numRegions++];
+			
+			region.srcX = eSrc.x;
+			region.srcY = eSrc.y;
+			region.dstX = eDst.x;
+			region.dstY = eDst.y;
+			region.sx = eSrc.sx;
+			region.sy = eSrc.sy;
 		}
 	}
 	
-	//
-	
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-	checkErrorGL();
+	newTexture->copyRegionsFromTexture(*texture, regions, numRegions);
 	
 	//
-	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
-	checkErrorGL();
 	
 	delete texture;
 	texture = nullptr;
