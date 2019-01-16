@@ -2335,6 +2335,57 @@ bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, 
 	return result;
 }
 
+// todo : perhaps use GxTextures internally
+
+static GLint toOpenGLTextureSwizzle(const int value)
+{
+	if (value == GX_SWIZZLE_ZERO)
+		return GL_ZERO;
+	else if (value == GX_SWIZZLE_ONE)
+		return GL_ONE;
+	else if (value == 0)
+		return GL_RED;
+	else if (value == 1)
+		return GL_GREEN;
+	else if (value == 2)
+		return GL_BLUE;
+	else if (value == 3)
+		return GL_ALPHA;
+	else
+		return GL_INVALID_ENUM;
+}
+
+void Surface::setSwizzle(int r, int g, int b, int a)
+{
+	// capture previous OpenGL state
+	
+	GLuint oldTexture = 0;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, (GLint*)&oldTexture);
+	checkErrorGL();
+	
+	// set swizzle on both targets
+
+	GLint swizzleMask[4] =
+	{
+		toOpenGLTextureSwizzle(r),
+		toOpenGLTextureSwizzle(g),
+		toOpenGLTextureSwizzle(b),
+		toOpenGLTextureSwizzle(a)
+	};
+
+	for (int i = 0; i < 2; ++i)
+	{
+		glBindTexture(GL_TEXTURE_2D, m_texture[i]);
+		glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+		checkErrorGL();
+	}
+	
+	// restore the previous OpenGL state
+	
+	glBindTexture(GL_TEXTURE_2D, oldTexture);
+	checkErrorGL();
+}
+
 uint32_t Surface::getFramebuffer() const
 {
 	return m_buffer[m_bufferId];

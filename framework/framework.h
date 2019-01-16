@@ -514,6 +514,8 @@ public:
 	void swapBuffers();
 
 	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
+	void setSwizzle(int r, int g, int b, int a);
+	
 	uint32_t getFramebuffer() const; // todo : make internally accessible only
 	GxTextureId getTexture() const;
 	bool hasDepthTexture() const;
