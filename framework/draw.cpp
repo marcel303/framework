@@ -27,6 +27,8 @@
 
 #include "framework.h"
 
+static bool s_isInCubeBatch = false;
+
 void fillCube(Vec3Arg position, Vec3Arg size)
 {
 	const float vertices[8][3] =
@@ -61,17 +63,19 @@ void fillCube(Vec3Arg position, Vec3Arg size)
 		{  0, +1,  0 }
 	};
 	
-	gxBegin(GX_QUADS);
+	if (s_isInCubeBatch == false)
+		gxBegin(GX_QUADS);
+	
 	{
 		for (int face_idx = 0; face_idx < 6; ++face_idx)
 		{
-			const float * normal = normals[face_idx];
+			const float * __restrict normal = normals[face_idx];
 			
 			gxNormal3fv(normal);
 			
 			for (int vertex_idx = 0; vertex_idx < 4; ++vertex_idx)
 			{
-				const float * vertex = vertices[faces[face_idx][vertex_idx]];
+				const float * __restrict vertex = vertices[faces[face_idx][vertex_idx]];
 				
 				gxVertex3f(
 					position[0] + size[0] * vertex[0],
@@ -80,5 +84,23 @@ void fillCube(Vec3Arg position, Vec3Arg size)
 			}
 		}
 	}
+	
+	if (s_isInCubeBatch == false)
+		gxEnd();
+}
+
+void beginCubeBatch()
+{
+	Assert(s_isInCubeBatch == false);
+	
+	gxBegin(GX_QUADS);
+	s_isInCubeBatch = true;
+}
+
+void endCubeBatch()
+{
+	Assert(s_isInCubeBatch == true);
+	
 	gxEnd();
+	s_isInCubeBatch = false;
 }
