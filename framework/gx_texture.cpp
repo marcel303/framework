@@ -399,3 +399,53 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, restorePitch);
 	checkErrorGL();
 }
+
+void GxTexture::copyRegionsFromTexture(const GxTexture & src, const CopyRegion * regions, const int numRegions)
+{
+	// capture current OpenGL states before we change them
+	
+	GLuint restoreBuffer = 0;
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&restoreBuffer);
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	checkErrorGL();
+	
+	//
+	
+	glBindTexture(GL_TEXTURE_2D, id);
+	checkErrorGL();
+	
+	GLuint frameBuffer = 0;
+	
+	glGenFramebuffers(1, &frameBuffer);
+	checkErrorGL();
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, src.id, 0);
+	checkErrorGL();
+	
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	checkErrorGL();
+	
+	for (int i = 0; i < numRegions; ++i)
+	{
+		auto & region = regions[i];
+		
+		glCopyTexSubImage2D(
+			GL_TEXTURE_2D, 0,
+			region.dstX, region.dstY,
+			region.srcX, region.srcY,
+			region.sx, region.sy);
+		checkErrorGL();
+	}
+	
+	glDeleteFramebuffers(1, &frameBuffer);
+	frameBuffer = 0;
+	checkErrorGL();
+	
+	// restore previous OpenGL states
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, restoreBuffer);
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	checkErrorGL();
+}

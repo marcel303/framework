@@ -62,6 +62,16 @@ typedef uint32_t GxTextureId;
 
 struct GxTexture
 {
+	struct CopyRegion
+	{
+		int srcX;
+		int srcY;
+		int dstX;
+		int dstY;
+		int sx;
+		int sy;
+	};
+	
 	GxTextureId id;
 	bool owned;
 	
@@ -91,4 +101,6 @@ struct GxTexture
 	
 	void upload(const void * src, const int srcAlignment, const int srcPitch);
 	void uploadArea(const void * src, const int srcAlignment, const int srcPitch, const int srcSx, const int srcSy, const int dstX, const int dstY);
+	
+	void copyRegionsFromTexture(const GxTexture & src, const CopyRegion * regions, const int numRegions);
 };
