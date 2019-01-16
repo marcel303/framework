@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_TEXTURE_SWIZZLE_RGBA. todo : remove with Framework-provided texture object
+#include <GL/glew.h> // glReadPixels
 #include "framework.h"
 #include "image.h"
 #include "testBase.h"
@@ -49,10 +49,7 @@ void testDotDetector()
 	Surface surface(sx, sy, false, false, SURFACE_R8);
 	
 	// make sure the surface turns up black and white instead of shades of red when we draw it, by applying a swizzle mask
-	glBindTexture(GL_TEXTURE_2D, surface.getTexture());
-	GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-	checkErrorGL();
+	surface.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
 	uint8_t * surfaceData = new uint8_t[sx * sy];
 	memset(surfaceData, 0xff, sizeof(uint8_t) * sx * sy);
