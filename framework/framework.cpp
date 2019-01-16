@@ -3334,6 +3334,9 @@ Color::Color(float r, float g, float b, float a)
 
 Color Color::fromHex(const char * str)
 {
+	if (str[0] == '#')
+		str++;
+	
 	const size_t len = strlen(str);
 	
 	if (len == 0)
