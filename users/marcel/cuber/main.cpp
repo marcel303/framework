@@ -1,4 +1,3 @@
-#include <GL/glew.h> // glPointSize
 #include "AudioFFT.h"
 #include "Calc.h"
 #include "config.h"
@@ -341,14 +340,15 @@ static void drawCube(const Cube & cube)
 		gxEnd();
 	#endif
 
-	#if VIDEO_RECORDING_MODE
-		glPointSize(2.f);
-	#endif
-		glPointSize(2.f);
 		setBlend(BLEND_ADD);
-
-		gxBegin(GX_POINTS);
+		beginCubeBatch();
 		{
+		#if VIDEO_RECORDING_MODE
+			const Vec3 cubeSize(.04f, .04f, .04f);
+		#else
+			const Vec3 cubeSize(.02f, .02f, .02f);
+		#endif
+			
 			for (int x = 0; x < SX; ++x)
 			{
 				for (int y = 0; y < SY; ++y)
@@ -366,12 +366,12 @@ static void drawCube(const Cube & cube)
 							value * cube.m_color[x][y][z][2], 1.f);
 					#endif
 					
-						gxVertex3f(x, y, z);
+						fillCube(Vec3(x, y, z), cubeSize);
 					}
 				}
 			}
 		}
-		gxEnd();
+		endCubeBatch();
 
 		setBlend(BLEND_ALPHA);
 	}

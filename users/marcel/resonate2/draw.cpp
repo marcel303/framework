@@ -1,4 +1,3 @@
-#include <GL/glew.h> // glPointSize
 #include "constants.h"
 #include "draw.h"
 #include "framework.h"
@@ -155,24 +154,22 @@ void drawLatticeFaces(const Lattice & lattice, const int faceIndex)
 
 void drawImpulseResponseProbes(const ImpulseResponseProbe * probes, const int numProbes, const Lattice & lattice)
 {
-	glPointSize(10.f);
-	gxBegin(GX_POINTS);
-	for (int i = 0; i < numProbes; ++i)
+	beginCubeBatch();
 	{
-		const auto & probe = probes[i];
+		const Vec3 cubeSize(.01f, .01f, .01f);
 		
-		const auto & vertex_p = lattice.vertices_p[probe.vertexIndex];
-		const auto & vertex_n = lattice.vertices_n[probe.vertexIndex];
-		
-		const float offset = -.01f;
-		
-		gxVertex3f(
-			vertex_p.x + vertex_n.x * offset,
-			vertex_p.y + vertex_n.y * offset,
-			vertex_p.z + vertex_n.z * offset);
+		for (int i = 0; i < numProbes; ++i)
+		{
+			const auto & probe = probes[i];
+			
+			const auto & vertex_p = lattice.vertices_p[probe.vertexIndex];
+			
+			const Vec3 position(vertex_p.x, vertex_p.y, vertex_p.z);
+			
+			fillCube(position, cubeSize);
+		}
 	}
-	gxEnd();
-	glPointSize(1.f);
+	endCubeBatch();
 }
 
 void drawImpulseResponseGraph(const ImpulseResponseState & state, const float responses[kNumProbeFrequencies], const bool drawFrequencyTable, const float in_maxResponse, const float saturation)
