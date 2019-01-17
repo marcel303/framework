@@ -389,6 +389,7 @@ public:
 	bool enableDepthBuffer;
 	bool enableDrawTiming;
 	bool enableProfiling;
+	bool allowHighDpi;
 	int minification;
 	bool enableMidi;
 	int midiDeviceIndex;
@@ -495,6 +496,8 @@ enum SURFACE_FORMAT
 class Surface
 {
 	int m_size[2];
+	int m_backingScale; // backing scale puts a multiplier on the physical size (in pixels) of the surface. it's like MSAA, but fully super-sampled. it's used t orender to retina screens, where the 'resolve' operation just copies pixels 1:1, where a resolve onto a non-retina screen would downsample the surface instead
+	
 	int m_bufferId;
 	SURFACE_FORMAT m_format;
 	bool m_doubleBuffered;
@@ -522,6 +525,7 @@ public:
 	GxTextureId getDepthTexture() const;
 	int getWidth() const;
 	int getHeight() const;
+	int getBackingScale() const;
 	SURFACE_FORMAT getFormat() const;
 	
 	void clear(int r = 0, int g = 0, int b = 0, int a = 0);
@@ -1298,7 +1302,7 @@ void clearCaches(int caches);
 void setTransform(TRANSFORM transform);
 TRANSFORM getTransform();
 void applyTransform();
-void applyTransformWithViewportSize(const float sx, const float sy);
+void applyTransformWithViewportSize(const int sx, const int sy);
 void setTransform2d(const Mat4x4 & transform);
 void setTransform3d(const Mat4x4 & transform);
 void pushTransform();
