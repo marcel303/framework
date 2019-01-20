@@ -40,6 +40,8 @@ VFX_NODE_TYPE(VfxNodeOscSheet)
 	in("oscPrefix", "string");
 	in("groupPrefix", "bool", "1");
 	in("oscSheet", "string");
+	in("synOnInit", "bool");
+	in("sync", "trigger");
 }
 
 VfxNodeOscSheet::VfxNodeOscSheet()
@@ -47,12 +49,15 @@ VfxNodeOscSheet::VfxNodeOscSheet()
 	, currentOscPrefix()
 	, currentOscSheet()
 	, currentGroupPrefix(false)
+	, sync(false)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_OscEndpoint, kVfxPlugType_String);
 	addInput(kInput_OscPrefix, kVfxPlugType_String);
 	addInput(kInput_GroupPrefix, kVfxPlugType_Bool);
 	addInput(kInput_OscSheet, kVfxPlugType_String);
+	addInput(kInput_SyncOnInit, kVfxPlugType_Bool);
+	addInput(kInput_Sync, kVfxPlugType_Trigger);
 }
 
 void VfxNodeOscSheet::updateOscSheet()
@@ -98,7 +103,7 @@ void VfxNodeOscSheet::updateOscSheet()
 		{
 			const int oscAddress_index = csvDocument.getColumnIndex("OSC Address");
 			const int type_index = csvDocument.getColumnIndex("Type");
-			const int defaultValue_index = csvDocument.getColumnIndex("Default value");
+			const int defaultValue_index = csvDocument.getColumnIndex("Default Value");
 			const int enumValues_index = csvDocument.getColumnIndex("Enumeration Values");
 			
 			const size_t currentOscPrefixSize = currentOscPrefix.size();
@@ -135,6 +140,7 @@ void VfxNodeOscSheet::updateOscSheet()
 						InputInfo inputInfo;
 						inputInfo.oscAddress = oscAddress;
 						inputInfo.defaultFloat = Parse::Float(defaultValue);
+						inputInfo.lastFloat = inputInfo.defaultFloat;
 						inputInfos.push_back(inputInfo);
 					}
 					else if (strcmp(type, "f f") == 0) // todo : not yet supported
@@ -153,6 +159,7 @@ void VfxNodeOscSheet::updateOscSheet()
 							inputInfo.oscAddress = oscAddress;
 							inputInfo.isVec2f = true;
 							inputInfo.defaultFloat = Parse::Float(defaultValue);
+							inputInfo.lastFloat = inputInfo.defaultFloat;
 							inputInfos.push_back(inputInfo);
 						}
 					}
@@ -172,6 +179,7 @@ void VfxNodeOscSheet::updateOscSheet()
 							inputInfo.oscAddress = oscAddress;
 							inputInfo.isVec3f = true;
 							inputInfo.defaultFloat = Parse::Float(defaultValue);
+							inputInfo.lastFloat = inputInfo.defaultFloat;
 							inputInfos.push_back(inputInfo);
 						}
 					}
@@ -186,6 +194,7 @@ void VfxNodeOscSheet::updateOscSheet()
 						InputInfo inputInfo;
 						inputInfo.oscAddress = oscAddress;
 						inputInfo.defaultInt = Parse::Int32(defaultValue);
+						inputInfo.lastInt = inputInfo.defaultInt;
 						inputInfos.push_back(inputInfo);
 					}
 					else if (strstr(type, "boolean") != nullptr)
@@ -199,6 +208,7 @@ void VfxNodeOscSheet::updateOscSheet()
 						InputInfo inputInfo;
 						inputInfo.oscAddress = oscAddress;
 						inputInfo.defaultBool = Parse::Bool(defaultValue);
+						inputInfo.lastBool = inputInfo.defaultBool;
 						inputInfos.push_back(inputInfo);
 					}
 					else if (strstr(type, "enum") != nullptr)
@@ -206,7 +216,7 @@ void VfxNodeOscSheet::updateOscSheet()
 						VfxNodeBase::DynamicInput input;
 						input.type = kVfxPlugType_Int;
 						input.name = name;
-						input.defaultValue = strcmp(defaultValue, "true") == 0 ? "1" : "0";
+						input.defaultValue = defaultValue; // todo : look up default enum value from OSC sheet
 						
 						if (enumValues_index >= 0)
 						{
@@ -226,7 +236,7 @@ void VfxNodeOscSheet::updateOscSheet()
 					 
 						InputInfo inputInfo;
 						inputInfo.oscAddress = oscAddress;
-						inputInfo.defaultBool = Parse::Bool(defaultValue);
+						inputInfo.defaultInt = Parse::Int32(defaultValue); // todo : check default enum value from sheet
 						inputInfos.push_back(inputInfo);
 					}
 					else
@@ -265,6 +275,8 @@ void VfxNodeOscSheet::tick(const float dt)
 		char buffer[1 << 12];
 		osc::OutboundPacketStream stream(buffer, sizeof(buffer));
 		
+		stream << osc::BeginBundleImmediate;
+		
 		bool isEmpty = true;
 		
 		for (size_t i = 0; i < dynamicInputs.size(); )
@@ -273,47 +285,124 @@ void VfxNodeOscSheet::tick(const float dt)
 			
 			auto & inputInfo = inputInfos[i];
 			
-			if (isEmpty)
-				stream << osc::BeginBundleImmediate;
-			
-			stream << osc::BeginMessage(inputInfos[i].oscAddress.c_str());
+			if (inputInfo.isVec2f)
 			{
-				if (inputInfo.isVec2f)
+				const float value1 = getInputFloat(kInput_COUNT + i + 0, inputInfo.defaultFloat);
+				const float value2 = getInputFloat(kInput_COUNT + i + 1, inputInfo.defaultFloat);
+				
+				const bool isChanged =
+					value1 != inputInfos[i + 0].lastFloat ||
+					value2 != inputInfos[i + 1].lastFloat;
+				
+				if (isChanged || sync)
 				{
-					stream
-						<< getInputFloat(kInput_COUNT + i + 0, inputInfo.defaultFloat)
-						<< getInputFloat(kInput_COUNT + i + 1, inputInfo.defaultFloat);
+					isEmpty = false;
 					
-					i += 2;
+					stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
+					{
+						stream
+							<< value1
+							<< value2;
+					}
+					stream << osc::EndMessage;
+					
+					inputInfos[i + 0].lastFloat = value1;
+					inputInfos[i + 1].lastFloat = value2;
 				}
-				else if (inputInfo.isVec3f)
+				
+				i += 2;
+			}
+			else if (inputInfo.isVec3f)
+			{
+				const float value1 = getInputFloat(kInput_COUNT + i + 0, inputInfo.defaultFloat);
+				const float value2 = getInputFloat(kInput_COUNT + i + 1, inputInfo.defaultFloat);
+				const float value3 = getInputFloat(kInput_COUNT + i + 2, inputInfo.defaultFloat);
+				
+				const bool isChanged =
+					value1 != inputInfos[i + 0].lastFloat ||
+					value2 != inputInfos[i + 1].lastFloat ||
+					value3 != inputInfos[i + 2].lastFloat;
+				
+				if (isChanged || sync)
 				{
-					stream
-						<< getInputFloat(kInput_COUNT + i + 0, inputInfo.defaultFloat)
-						<< getInputFloat(kInput_COUNT + i + 1, inputInfo.defaultFloat)
-						<< getInputFloat(kInput_COUNT + i + 2, inputInfo.defaultFloat);
+					isEmpty = false;
 					
-					i += 3;
+					stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
+					{
+						stream
+							<< value1
+							<< value2
+							<< value3;
+					}
+					stream << osc::EndMessage;
+					
+					inputInfos[i + 0].lastFloat = value1;
+					inputInfos[i + 1].lastFloat = value2;
+					inputInfos[i + 2].lastFloat = value3;
+				}
+				
+				i += 3;
+			}
+			else
+			{
+				if (input.type == kVfxPlugType_Float)
+				{
+					const float value = getInputFloat(kInput_COUNT + i, inputInfo.defaultFloat);
+					
+					if (value != inputInfo.lastFloat || sync)
+					{
+						isEmpty = false;
+						
+						stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
+						{
+							stream << value;
+						}
+						stream << osc::EndMessage;
+						
+						inputInfo.lastFloat = value;
+					}
+				}
+				else if (input.type == kVfxPlugType_Int)
+				{
+					const int value = getInputInt(kInput_COUNT + i, inputInfo.defaultInt);
+					
+					if (value != inputInfo.lastInt || sync)
+					{
+						isEmpty = false;
+						
+						stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
+						{
+							stream << value;
+						}
+						stream << osc::EndMessage;
+						
+						inputInfo.lastInt = value;
+					}
+				}
+				else if (input.type == kVfxPlugType_Bool)
+				{
+					const bool value = getInputBool(kInput_COUNT + i, inputInfo.defaultBool);
+					
+					if (value != inputInfo.lastBool || sync)
+					{
+						isEmpty = false;
+						
+						stream << osc::BeginMessage(inputInfo.oscAddress.c_str());
+						{
+							stream << value;
+						}
+						stream << osc::EndMessage;
+						
+						inputInfo.lastBool = value;
+					}
 				}
 				else
 				{
-					if (input.type == kVfxPlugType_Float)
-						stream << getInputFloat(kInput_COUNT + i, inputInfo.defaultFloat);
-					else if (input.type == kVfxPlugType_Int)
-						stream << getInputInt(kInput_COUNT + i, inputInfo.defaultInt);
-					else if (input.type == kVfxPlugType_Bool)
-						stream << getInputBool(kInput_COUNT + i, inputInfo.defaultBool);
-					else
-					{
-						Assert(false);
-					}
-					
-					i += 1;
+					Assert(false);
 				}
+				
+				i += 1;
 			}
-			stream << osc::EndMessage;
-			
-			isEmpty = false;
 			
 			// flush if the buffer is getting full
 			
@@ -324,6 +413,9 @@ void VfxNodeOscSheet::tick(const float dt)
 				endpoint->send(stream.Data(), stream.Size());
 				
 				stream = osc::OutboundPacketStream(buffer, sizeof(buffer));
+				
+				stream << osc::BeginBundleImmediate;
+				
 				isEmpty = true;
 			}
 		}
@@ -337,9 +429,19 @@ void VfxNodeOscSheet::tick(const float dt)
 			endpoint->send(stream.Data(), stream.Size());
 		}
 	}
+	
+	sync = false;
 }
 
 void VfxNodeOscSheet::init(const GraphNode & node)
 {
 	updateOscSheet();
+	
+	sync = getInputBool(kInput_SyncOnInit, false);
+}
+
+void VfxNodeOscSheet::handleTrigger(const int socketIndex)
+{
+	if (socketIndex == kInput_Sync)
+		sync = true;
 }

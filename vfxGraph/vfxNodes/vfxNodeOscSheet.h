@@ -37,6 +37,8 @@ struct VfxNodeOscSheet : VfxNodeBase
 		kInput_OscPrefix,
 		kInput_GroupPrefix,
 		kInput_OscSheet,
+		kInput_SyncOnInit,
+		kInput_Sync,
 		kInput_COUNT
 	};
 
@@ -55,6 +57,13 @@ struct VfxNodeOscSheet : VfxNodeBase
 		float defaultFloat = 0.f;
 		int defaultInt = 0;
 		bool defaultBool = false;
+		
+		union
+		{
+			float lastFloat;
+			int lastInt;
+			bool lastBool;
+		};
 	};
 	
 	std::string currentOscPrefix;
@@ -63,10 +72,14 @@ struct VfxNodeOscSheet : VfxNodeBase
 	
 	std::vector<InputInfo> inputInfos;
 	
+	bool sync;
+	
 	VfxNodeOscSheet();
 	
 	void updateOscSheet();
 	
 	virtual void tick(const float dt) override;
 	virtual void init(const GraphNode & node) override;
+	
+	virtual void handleTrigger(const int socketIndex) override;
 };
