@@ -1,4 +1,4 @@
-OSC Address	Type	Default value	Has Range	Range Minimum	Range Maximum	Enumeration Values
+OSC Address	Type	Default Value	Has Range	Range Minimum	Range Maximum	Enumeration Values
 /global1/dimensions	f f f	1	n	-	-	-
 /global1/origin	f f f	0	n	-	-	-
 /global1/plode	f f f	1	n	-	-	-
