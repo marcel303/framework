@@ -32,6 +32,13 @@
 
 extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
+VFX_ENUM_TYPE(oscSheetSendMode)
+{
+	elem("onTick");
+	elem("onChange");
+	elem("onSync");
+}
+
 VFX_NODE_TYPE(VfxNodeOscSheet)
 {
 	typeName = "osc.sheet";
@@ -41,7 +48,8 @@ VFX_NODE_TYPE(VfxNodeOscSheet)
 	in("groupPrefix", "bool", "1");
 	in("oscSheet", "string");
 	in("synOnInit", "bool");
-	in("sync", "trigger");
+	inEnum("sendMode", "oscSheetSendMode", "1");
+	in("sync!", "trigger");
 }
 
 VfxNodeOscSheet::VfxNodeOscSheet()
@@ -57,6 +65,7 @@ VfxNodeOscSheet::VfxNodeOscSheet()
 	addInput(kInput_GroupPrefix, kVfxPlugType_Bool);
 	addInput(kInput_OscSheet, kVfxPlugType_String);
 	addInput(kInput_SyncOnInit, kVfxPlugType_Bool);
+	addInput(kInput_SendMode, kVfxPlugType_Int);
 	addInput(kInput_Sync, kVfxPlugType_Trigger);
 }
 
@@ -270,6 +279,10 @@ void VfxNodeOscSheet::tick(const float dt)
 	
 	auto endpoint = g_oscEndpointMgr.findSender(endpointName);
 	
+	const SendMode sendMode = (SendMode)getInputInt(kInput_SendMode, kSend_OnChange);
+	
+#define shouldSend(in_isChanged) ((sendMode == kSend_OnChange && (in_isChanged)) || (sendMode == kSend_OnTick) || sync)
+
 	if (endpoint != nullptr)
 	{
 		char buffer[1 << 12];
@@ -294,7 +307,7 @@ void VfxNodeOscSheet::tick(const float dt)
 					value1 != inputInfos[i + 0].lastFloat ||
 					value2 != inputInfos[i + 1].lastFloat;
 				
-				if (isChanged || sync)
+				if (shouldSend(isChanged))
 				{
 					isEmpty = false;
 					
@@ -323,7 +336,7 @@ void VfxNodeOscSheet::tick(const float dt)
 					value2 != inputInfos[i + 1].lastFloat ||
 					value3 != inputInfos[i + 2].lastFloat;
 				
-				if (isChanged || sync)
+				if (shouldSend(isChanged))
 				{
 					isEmpty = false;
 					
@@ -349,7 +362,7 @@ void VfxNodeOscSheet::tick(const float dt)
 				{
 					const float value = getInputFloat(kInput_COUNT + i, inputInfo.defaultFloat);
 					
-					if (value != inputInfo.lastFloat || sync)
+					if (shouldSend(value != inputInfo.lastFloat))
 					{
 						isEmpty = false;
 						
@@ -366,7 +379,7 @@ void VfxNodeOscSheet::tick(const float dt)
 				{
 					const int value = getInputInt(kInput_COUNT + i, inputInfo.defaultInt);
 					
-					if (value != inputInfo.lastInt || sync)
+					if (shouldSend(value != inputInfo.lastInt))
 					{
 						isEmpty = false;
 						
@@ -383,7 +396,7 @@ void VfxNodeOscSheet::tick(const float dt)
 				{
 					const bool value = getInputBool(kInput_COUNT + i, inputInfo.defaultBool);
 					
-					if (value != inputInfo.lastBool || sync)
+					if (shouldSend(value != inputInfo.lastBool))
 					{
 						isEmpty = false;
 						
@@ -429,6 +442,8 @@ void VfxNodeOscSheet::tick(const float dt)
 			endpoint->send(stream.Data(), stream.Size());
 		}
 	}
+	
+#undef shouldSend
 	
 	sync = false;
 }

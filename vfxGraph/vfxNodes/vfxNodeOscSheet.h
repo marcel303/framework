@@ -38,6 +38,7 @@ struct VfxNodeOscSheet : VfxNodeBase
 		kInput_GroupPrefix,
 		kInput_OscSheet,
 		kInput_SyncOnInit,
+		kInput_SendMode,
 		kInput_Sync,
 		kInput_COUNT
 	};
@@ -45,6 +46,13 @@ struct VfxNodeOscSheet : VfxNodeBase
 	enum Output
 	{
 		kOutput_COUNT
+	};
+	
+	enum SendMode
+	{
+		kSend_OnTick,
+		kSend_OnChange,
+		kSend_OnSync
 	};
 	
 	struct InputInfo
