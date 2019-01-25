@@ -23,12 +23,35 @@ mkdir "chibi-build\cmake-files"
 cd %~dp0 || exit /b
 
 rem generate Visual Studio project file
-mkdir "chibi-build\vs2015"
-cd chibi-build/vs2015 && cmake -G "Visual Studio 14 2015" ../cmake-files
-cd %~dp0 || exit /b
 
-mkdir "chibi-build\vs2017"
-cd chibi-build/vs2017 && cmake -G "Visual Studio 15 2017" ../cmake-files
-cd %~dp0 || exit /b
+set success="false"
 
-%SystemRoot%\explorer.exe /select,.\chibi-build\vs2017\Project.sln
+IF %success% == "false" (
+	mkdir "chibi-build\vs2017"
+	cd chibi-build/vs2017 && cmake -G "Visual Studio 15 2017" ../cmake-files
+	IF ERRORLEVEL 1 (
+		echo Failed to generate Visual Studio 2017 solution.
+	) ELSE (
+		set success="true"
+	)
+	cd %~dp0 || exit /b
+
+	IF %success% == "false" (
+		%SystemRoot%\explorer.exe /select,.\chibi-build\vs2017\Project.sln
+	)
+)
+
+IF %success% == "false" (
+	mkdir "chibi-build\vs2015"
+	cd chibi-build/vs2015 && cmake -G "Visual Studio 14 2015" ../cmake-files
+	IF ERRORLEVEL 1 (
+		echo Failed to generate Visual Studio 2015 solution.
+	) ELSE (
+		set success="true"
+	)
+	cd %~dp0 || exit /b
+
+	IF %success% == "false" (
+		%SystemRoot%\explorer.exe /select,.\chibi-build\vs2015\Project.sln
+	)
+)
