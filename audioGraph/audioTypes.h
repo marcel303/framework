@@ -79,6 +79,7 @@
 
 #if AUDIO_USE_SSE
 	#include <xmmintrin.h>
+	#include <emmintrin.h>
 
 	struct ScopedFlushDenormalsObject
 	{
