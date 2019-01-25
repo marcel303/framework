@@ -1,5 +1,12 @@
 @echo off
 
+where /q cmake
+IF ERRORLEVEL 1 (
+	echo CMake not found. Please install CMake and make sure to add its location to the system path.
+	pause
+	exit /b
+)
+
 rem todo : verify all submodules are synced somehow
 rem git submodule update --init --recursive
 
