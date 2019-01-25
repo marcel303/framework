@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // glPointSize
 #include "audio.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
@@ -1093,13 +1092,16 @@ void testHrtf()
 				}
 				gxEnd();
 				
-				glPointSize(5.f);
-				gxBegin(GX_POINTS);
+				//
+				
+				beginCubeBatch();
 				{
+					const Vec3 cubeSize(.01f, .01f, .01f);
+					
 					for (auto & s : hrirSet.sampleLocations)
 					{
 						setColor(100, 100, 100);
-						gxVertex3f(s.x, s.y, s.z);
+						fillCube(Vec3(s.x, s.y, s.z), cubeSize);
 					}
 					
 					for (int i = 0; i < numSampleLocations; ++i)
@@ -1107,13 +1109,13 @@ void testHrtf()
 						auto s = sampleLocations[i].sampleLocation;
 						
 						setColor(colorGreen);
-						gxVertex3f(s->x, s->y, s->z);
+						fillCube(Vec3(s->x, s->y, s->z), cubeSize);
 					}
 					
 					setColor(colorGreen);
-					gxVertex3f(mousePosition[0], mousePosition[1], mousePosition[2]);
+					fillCube(mousePosition, cubeSize * 1.4f);
 				}
-				gxEnd();
+				endCubeBatch();
 			}
 			gxPopMatrix();
 			

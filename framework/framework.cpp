@@ -83,8 +83,6 @@
 
 #define MAX_TEXT_LENGTH 2048
 
-#define HIGHDPI_HACK 0 // todo : remove or make it into an init option (allowUpscaling or something) and make it nicer
-
 #if defined(_MSC_VER) && _MSC_VER >= 1900
 	#pragma comment(lib, "legacy_stdio_definitions.lib")
 #endif
@@ -120,7 +118,8 @@ static float scale255(const float v)
 	return v * m;
 }
 
-static void getViewportSize(float & sx, float & sy);
+static void getCurrentBackingSize(int & sx, int & sy);
+static void getCurrentSurfaceSize(int & sx, int & sy);
 
 // -----
 
@@ -145,6 +144,8 @@ Midi midi;
 
 static std::map<std::string, std::string> s_shaderSources;
 
+static int s_backingScale = 1.f; // global backing scale multiplier. a bit of a hack as it assumed the scale never changes, but works well for most apps in most situations for now..
+
 Framework::Framework()
 {
 	waitForEvents = false;
@@ -155,6 +156,7 @@ Framework::Framework()
 	enableDepthBuffer = false;
 	enableDrawTiming = true;
 	enableProfiling = false;
+	allowHighDpi = true;
 	minification = 1;
 	enableMidi = false;
 	midiDeviceIndex = 0;
@@ -352,12 +354,8 @@ bool Framework::init(int sx, int sy)
 	if (!windowBorder)
 		flags |= SDL_WINDOW_BORDERLESS;
 	
-#if HIGHDPI_HACK
-	flags |= SDL_WINDOW_ALLOW_HIGHDPI;
-	
-	actualSx /= 2;
-	actualSy /= 2;
-#endif
+	if (allowHighDpi)
+		flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
 	fassert(globals.mainWindow == nullptr);
 	SDL_Window * mainWindow = SDL_CreateWindow(
@@ -385,6 +383,13 @@ bool Framework::init(int sx, int sy)
 	
 	windowSx = sx;
 	windowSy = sy;
+	
+	int drawableSx;
+	int drawableSy;
+	SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
+	s_backingScale = (int)roundf(fmaxf(drawableSx / float(actualSx), drawableSy / float(actualSy)));
+	if (s_backingScale < 1)
+		s_backingScale = 1;
 	
 #if ENABLE_OPENGL
 	fassert(globals.glContext == nullptr);
@@ -637,6 +642,7 @@ bool Framework::shutdown()
 	enableDepthBuffer = false;
 	enableDrawTiming = true;
 	enableProfiling = false;
+	allowHighDpi = true;
 	minification = 1;
 	enableMidi = false;
 	midiDeviceIndex = 0;
@@ -1513,8 +1519,8 @@ static void updateViewport(Surface * surface, SDL_Window * window)
 		glViewport(
 			0,
 			0,
-			surface->getWidth() / framework.minification,
-			surface->getHeight() / framework.minification);
+			surface->getWidth() / framework.minification * surface->getBackingScale(),
+			surface->getHeight() / framework.minification * surface->getBackingScale());
 	}
 	else
 	{
@@ -1603,9 +1609,9 @@ void Framework::beginScreenshot(int r, int g, int b, int a, int scale)
 {
 	Assert(scale >= 1);
 	
-	float sx;
-	float sy;
-	getViewportSize(sx, sy);
+	int sx;
+	int sy;
+	getCurrentSurfaceSize(sx, sy);
 	
 	sx *= scale;
 	sy *= scale;
@@ -1638,9 +1644,9 @@ void Framework::endScreenshot(const char * name, const int index, const bool omi
 
 	// draw the captured image to the current surface, as if the temporary surface never happened
 	
-	float sx;
-	float sy;
-	getViewportSize(sx, sy);
+	int sx;
+	int sy;
+	getCurrentSurfaceSize(sx, sy);
 	
 	pushBlend(BLEND_OPAQUE);
 	gxSetTexture(surface->getTexture());
@@ -1656,14 +1662,11 @@ void Framework::endScreenshot(const char * name, const int index, const bool omi
 
 void Framework::screenshot(const char * name, int index, bool omitAlpha)
 {
-	float _sx;
-	float _sy;
-	getViewportSize(_sx, _sy);
+	int sx;
+	int sy;
+	getCurrentBackingSize(sx, sy);
 
 	// fetch the pixel data
-	
-	const int sx = int(_sx);
-	const int sy = int(_sy);
 	
 	uint8_t * bytes = new uint8_t[sx * sy * 4];
 	
@@ -2075,6 +2078,7 @@ void Surface::construct()
 {
 	m_size[0] = 0;
 	m_size[1] = 0;
+	m_backingScale = 1;
 	
 	m_bufferId = 0;
 	
@@ -2156,12 +2160,12 @@ void Surface::swapBuffers()
 	m_bufferId = (m_bufferId + 1) % 2;
 }
 
-bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
+bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
 {
 	fassert(m_buffer[0] == 0);
 	
-	sx /= framework.minification;
-	sy /= framework.minification;
+	const int sx = in_sx / framework.minification;
+	const int sy = in_sy / framework.minification;
 	
 	GLuint oldBuffer = 0;
 	GLuint oldTexture = 0;
@@ -2174,13 +2178,17 @@ bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, 
 	
 	bool result = true;
 	
-	m_size[0] = sx * framework.minification;
-	m_size[1] = sy * framework.minification;
+	m_size[0] = in_sx;
+	m_size[1] = in_sy;
+	m_backingScale = s_backingScale;
 	
 	m_format = format;
 	
 	m_doubleBuffered = doubleBuffered;
 
+	const int backingSx = sx * m_backingScale;
+	const int backingSy = sy * m_backingScale;
+	
 	if (result && withDepthBuffer)
 	{
 		fassert(m_depthTexture == 0);
@@ -2197,7 +2205,7 @@ bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, 
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 			checkErrorGL();
 
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, sx, sy, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, backingSx, backingSy, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
 			checkErrorGL();
 
 			// set filtering
@@ -2266,10 +2274,10 @@ bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, 
 			uploadType = GL_FLOAT;
 		}
 		
-		glTexImage2D(GL_TEXTURE_2D, 0, glFormat, sx, sy, 0, uploadFormat, uploadType, nullptr);
+		glTexImage2D(GL_TEXTURE_2D, 0, glFormat, backingSx, backingSy, 0, uploadFormat, uploadType, nullptr);
 		checkErrorGL();
 	#else
-		glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, sx, sy);
+		glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, backingSx, backingSy);
 		checkErrorGL();
 	#endif
 
@@ -2414,6 +2422,11 @@ int Surface::getWidth() const
 int Surface::getHeight() const
 {
 	return m_size[1];
+}
+
+int Surface::getBackingScale() const
+{
+	return m_backingScale;
 }
 
 SURFACE_FORMAT Surface::getFormat() const
@@ -3334,6 +3347,9 @@ Color::Color(float r, float g, float b, float a)
 
 Color Color::fromHex(const char * str)
 {
+	if (str[0] == '#')
+		str++;
+	
 	const size_t len = strlen(str);
 	
 	if (len == 0)
@@ -5381,7 +5397,31 @@ static Stack<bool, 32> lineSmoothStack(false);
 static Stack<bool, 32> wireframeStack(false);
 static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
 
-static void getViewportSize(float & sx, float & sy)
+static void getCurrentBackingSize(int & sx, int & sy)
+{
+	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	
+	if (surface != nullptr)
+	{
+		// surfaces may explicitly set a backing scale > 1, in which case the backing size will be larger than the reported size of the surface
+		
+		sx = surface->getWidth() / framework.minification * surface->getBackingScale();
+		sy = surface->getHeight() / framework.minification * surface->getBackingScale();
+	}
+	else
+	{
+		// the windowing system may apply a backing scale, in which case the backing size will be larger than the reported size of the window
+		
+		int drawableSx;
+		int drawableSy;
+		SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
+		
+		sx = drawableSx;
+		sy = drawableSy;
+	}
+}
+
+static void getCurrentSurfaceSize(int & sx, int & sy)
 {
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
 	
@@ -5392,20 +5432,17 @@ static void getViewportSize(float & sx, float & sy)
 	}
 	else
 	{
-		if (globals.currentWindow == globals.mainWindow->getWindow())
-		{
-			sx = globals.displaySize[0];
-			sy = globals.displaySize[1];
-		}
-		else
-		{
-			int drawableSx;
-			int drawableSy;
-			SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
-			
-			sx = drawableSx;
-			sy = drawableSy;
-		}
+		// todo : fix for case with fullscreen desktop mode
+		//if (globals.currentWindow == globals.mainWindow->getWindow() && false)
+		//	sx = globals.displaySize[0];
+		//	sy = globals.displaySize[1];
+		
+		int windowSx;
+		int windowSy;
+		SDL_GetWindowSize(globals.currentWindow, &windowSx, &windowSy);
+
+		sx = windowSx * framework.minification;
+		sy = windowSy * framework.minification;
 	}
 }
 
@@ -5423,14 +5460,14 @@ TRANSFORM getTransform()
 
 void applyTransform()
 {
-	float sx;
-	float sy;
-	getViewportSize(sx, sy);
+	int sx;
+	int sy;
+	getCurrentSurfaceSize(sx, sy);
 	
 	applyTransformWithViewportSize(sx, sy);
 }
 
-void applyTransformWithViewportSize(const float sx, const float sy)
+void applyTransformWithViewportSize(const int sx, const int sy)
 {
 	// calculate screen matrix (we need it to transform vertices to screen space)
 	{
@@ -5544,11 +5581,11 @@ void projectPerspective3d(const float fov, const float nearZ, const float farZ)
 {
 	Mat4x4 transform;
 	
-	float sx;
-	float sy;
-	getViewportSize(sx, sy);
+	int sx;
+	int sy;
+	getCurrentSurfaceSize(sx, sy);
 	
-	transform.MakePerspectiveLH(fov / 180.f * M_PI, sy / sx, nearZ, farZ);
+	transform.MakePerspectiveLH(fov / 180.f * M_PI, sy / float(sx), nearZ, farZ);
 	
 	globals.transform3d = transform;
 	
@@ -5665,14 +5702,25 @@ void popSurface()
 
 void setDrawRect(int x, int y, int sx, int sy)
 {
+	int surfaceSx;
+	int surfaceSy;
+	getCurrentSurfaceSize(surfaceSx, surfaceSy);
+	
+	int backingSx;
+	int backingSy;
+	getCurrentBackingSize(backingSx, backingSy);
+	
+#define ScaleX(x) x = ((x) * backingSx / (surfaceSx / framework.minification))
+#define ScaleY(y) y = ((y) * backingSy / (surfaceSy / framework.minification))
+	
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
 
 	if (surface != nullptr)
 	{
-		x /= framework.minification;
-		y /= framework.minification;
-		sx /= framework.minification;
-		sy /= framework.minification;
+		ScaleX(x);
+		ScaleY(y);
+		ScaleX(sx);
+		ScaleY(sy);
 
 		glScissor(x, y, sx, sy);
 		checkErrorGL();
@@ -5684,10 +5732,10 @@ void setDrawRect(int x, int y, int sx, int sy)
 	{
 		y = globals.displaySize[1] - y - sy;
 
-		x /= framework.minification;
-		y /= framework.minification;
-		sx /= framework.minification;
-		sy /= framework.minification;
+		ScaleX(x);
+		ScaleY(y);
+		ScaleX(sx);
+		ScaleY(sy);
 
 		glScissor(x, y, sx, sy);
 		checkErrorGL();

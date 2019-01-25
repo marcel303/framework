@@ -6,9 +6,9 @@ Coding Challenge #86: Cube Wave by Bees and Bombs
 https://www.youtube.com/watch?v=H81Tdrmz2LA
 */
 
-static Color color1(1.f, 0.f, 0.f);
-static Color color2(0.f, 1.f, 0.f);
-static Color color3(0.f, 0.f, 1.f);
+static Color color1 = Color::fromHex("0A0514");
+static Color color2 = Color::fromHex("3E4511");
+static Color color3 = Color::fromHex("1A1AC7");
 
 Vec3 computeSize(const float x, const float y, const float time)
 {
@@ -93,13 +93,13 @@ int main(int argc, char * argv[])
 				{
 					for (int zi = -halfSize; zi <= +halfSize; ++zi)
 					{
-						const float x = xi / float(halfSize);
-						const float z = zi / float(halfSize);
+						const float x = xi / float(halfSize + 1);
+						const float z = zi / float(halfSize + 1);
 						
 						Vec3 size = computeSize(x, z, animTime);
 						
-						size[0] /= halfSize * 2.f;
-						size[2] /= halfSize * 2.f;
+						size[0] /= float(halfSize + 1);
+						size[2] /= float(halfSize + 1);
 						
 						Shader shader("086-cube");
 						shader.setImmediate("color1", color1.r, color1.g, color1.b, color1.a);

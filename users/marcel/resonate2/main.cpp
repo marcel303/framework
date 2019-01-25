@@ -1503,16 +1503,10 @@ int main(int argc, char * argv[])
 					
 					const Vec3 p = rayOrigin + rayDirection * t;
 					
-					const float pointSize = clamp<float>(4.f / t, .01f, 80.f);
-					
-					// show a yellow rectangle at the point of intersection
+					// show a yellow cube at the point of intersection
 					
 					setColor(colorYellow);
-					glPointSize(pointSize);
-					gxBegin(GX_POINTS);
-					gxVertex3f(p[0], p[1], p[2]);
-					gxEnd();
-					glPointSize(1);
+					fillCube(p, Vec3(.014f, .014f, .014f));
 					
 					// show the location in cube face space
 					

@@ -38,13 +38,6 @@ enum GX_TEXTURE_FORMAT
 	GX_RG8_UNORM,
 	GX_RGB8_UNORM,
 	GX_RGBA8_UNORM,
-	//GX_R16_UNORM,
-	//GX_RG16_UNORM,
-	
-	// float signed normalized
-	//GX_R16F_SNORM,
-	//GX_R32F_SNORM,
-	//GX_RG16F_SNORM
 	
 	// floating point
 	GX_R16_FLOAT,

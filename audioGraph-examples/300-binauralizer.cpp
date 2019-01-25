@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // glPointSize
 #include "audio.h"
 #include "audioTypes.h"
 #include "binaural.h"
@@ -550,9 +549,10 @@ int main(int argc, char * argv[])
 					
 					gxRotatef(framework.time * .1f, 0, 1, 0);
 					
-					glPointSize(2.f);
-					gxBegin(GX_POINTS);
+					beginCubeBatch();
 					{
+						const Vec3 cubeSize(.01f, .01f, .01f);
+						
 						for (auto & sample : sampleSet.samples)
 						{
 							const float elevation = sample->elevation;
@@ -562,11 +562,10 @@ int main(int argc, char * argv[])
 							elevationAndAzimuthToCartesian(elevation, azimuth, x, y, z);
 							
 							setColor(150, 150, 150);
-							gxVertex3f(x, y, z);
+							fillCube(Vec3(x, y, z), cubeSize);
 						}
 					}
-					gxEnd();
-					glPointSize(1.f);
+					endCubeBatch();
 					
 					gxBegin(GX_LINES);
 					{
