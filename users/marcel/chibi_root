@@ -2,13 +2,13 @@ add 4d-imu9250
 add 4dsound2-osc
 add ambisonics1
 add anaglyphic
-add artnet1
 add avpaint
 add biquad-simd
 add codingChallenges
 add colorpart
 add cuber
 with_platform macos add etherdream1
+add geopart1
 add homography
 add jsusfx1
 add libjgmod-audiograph
