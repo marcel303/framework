@@ -1384,6 +1384,8 @@ void drawRect3d(int axis1 = 0, int axis2 = 1);
 void drawGrid3d(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1);
 void drawGrid3dLine(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1, bool optimized = false);
 void fillCube(Vec3Arg position, Vec3Arg size);
+void fillCylinder(Vec3Arg position, const float radius, const float height, const int resolution, const float angleOffset = 0.f);
+void fillHexagon(Vec3Arg position, const float radius, const float height, const float angleOffset = 0.f);
 void beginCubeBatch();
 void endCubeBatch();
 
