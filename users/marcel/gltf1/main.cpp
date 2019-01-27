@@ -1,19 +1,246 @@
+#include <GL/glew.h> // GL_CULL_FACE. todo : add functions to control culling mode to Framework
 #include "framework.h"
 #include "json.hpp"
 #include "Path.h"
 #include "TextIO.h"
 
-#include <SDL2/SDL_opengl.h> // GL_CULL_FACE. todo : add functions to control culling mode to Framework
+#include "data/engine/ShaderCommon.txt"
+
+#include <SDL2/SDL_opengl.h>
+
+class GxVertexBuffer
+{
+	friend class GxMesh;
+	
+	GLuint m_vertexArray;
+	
+public:
+	GxVertexBuffer()
+		: m_vertexArray(0)
+	{
+		// create buffer
+		glGenBuffers(1, &m_vertexArray);
+		checkErrorGL();
+	}
+	
+	~GxVertexBuffer()
+	{
+		// free buffer
+		glDeleteBuffers(1, &m_vertexArray);
+		m_vertexArray = 0;
+		checkErrorGL();
+	}
+	
+	void setData(const void * bytes, const int numBytes)
+	{
+		// fill the buffer with data
+		glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
+		glBufferData(GL_ARRAY_BUFFER, numBytes, bytes, GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		checkErrorGL();
+	}
+};
+
+enum GxIndexFormat
+{
+	kGxIndexFormat_U16,
+	kGxIndexFormat_U32
+};
+
+class GxIndexBuffer
+{
+	friend class GxMesh;
+	
+	GLuint m_indexArray;
+	int m_numIndices;
+	GxIndexFormat m_format;
+	
+public:
+	GxIndexBuffer()
+		: m_indexArray(0)
+		, m_numIndices(0)
+		, m_format(kGxIndexFormat_U16)
+	{
+		// create buffer
+		glGenBuffers(1, &m_indexArray);
+		checkErrorGL();
+	}
+	
+	~GxIndexBuffer()
+	{
+		// free buffer
+		glDeleteBuffers(1, &m_indexArray);
+		m_indexArray = 0;
+		checkErrorGL();
+	}
+	
+	void setData(const void * bytes, const int numIndices, const GxIndexFormat format)
+	{
+		// fill the buffer with data
+		
+		const int numBytes =
+			format == kGxIndexFormat_U16
+			? numIndices * 2
+			: numIndices * 4;
+		
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexArray);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, numBytes, bytes, GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		checkErrorGL();
+		
+		m_numIndices = numIndices;
+		m_format = format;
+	}
+	
+	int getNumIndices() const
+	{
+		return m_numIndices;
+	}
+	
+	GxIndexFormat getFormat() const
+	{
+		return m_format;
+	}
+};
+
+struct GxVertexInput
+{
+	int id;
+	int components;
+	int type;
+	bool normalize;
+	int offset;
+	int stride;
+};
+
+class GxMesh
+{
+	GLuint m_vertexArrayObject;
+	
+	GxVertexBuffer * m_vertexBuffer;
+	GxIndexBuffer * m_indexBuffer;
+	
+	void bindVsInputs(const GxVertexInput * vsInputs, int numVsInputs);
+	
+public:
+	GxMesh()
+		: m_vertexArrayObject(0)
+		, m_vertexBuffer(nullptr)
+		, m_indexBuffer(nullptr)
+	{
+		// create vertex array object
+		glGenVertexArrays(1, &m_vertexArrayObject);
+		checkErrorGL();
+	}
+	
+	~GxMesh()
+	{
+		// free vertex array object
+		glDeleteVertexArrays(1, &m_vertexArrayObject);
+		m_vertexArrayObject = 0;
+		checkErrorGL();
+	}
+	
+	void setVB(GxVertexBuffer * buffer, GxVertexInput * vertexInputs, int numVertexInputs);
+	void setIB(GxIndexBuffer * buffer);
+	
+	void draw() const;
+};
+
+void GxMesh::bindVsInputs(const GxVertexInput * vsInputs, int numVsInputs)
+{
+	checkErrorGL();
+
+	for (int i = 0; i < numVsInputs; ++i)
+	{
+		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
+		
+		glEnableVertexAttribArray(vsInputs[i].id);
+		checkErrorGL();
+		
+		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, vsInputs[i].stride, (void*)(intptr_t)vsInputs[i].offset);
+		checkErrorGL();
+	}
+}
+
+void GxMesh::setVB(GxVertexBuffer * buffer, GxVertexInput * vertexInputs, int numVertexInputs)
+{
+	m_vertexBuffer = buffer;
+	
+	Assert(m_vertexArrayObject != 0);
+	glBindVertexArray(m_vertexArrayObject);
+	checkErrorGL();
+	{
+		Assert(m_vertexBuffer->m_vertexArray != 0);
+		glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer->m_vertexArray);
+		checkErrorGL();
+		
+		bindVsInputs(vertexInputs, numVertexInputs);
+	}
+	glBindVertexArray(0);
+	checkErrorGL();
+}
+
+void GxMesh::setIB(GxIndexBuffer * buffer)
+{
+	m_indexBuffer = buffer;
+	
+	Assert(m_vertexArrayObject != 0);
+	glBindVertexArray(m_vertexArrayObject);
+	checkErrorGL();
+	{
+		Assert(m_indexBuffer->m_indexArray != 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer->m_indexArray);
+		checkErrorGL();
+	}
+	glBindVertexArray(0);
+	checkErrorGL();
+}
+
+void GxMesh::draw() const
+{
+	gxValidateMatrices();
+	
+	const int numIndices = m_indexBuffer->getNumIndices();
+	
+	// bind vertex arrays
+
+	fassert(m_vertexBuffer && m_vertexBuffer->m_vertexArray);
+	fassert(m_indexBuffer && m_indexBuffer->m_indexArray);
+	glBindVertexArray(m_vertexArrayObject);
+	checkErrorGL();
+
+	GLenum indexType =
+		m_indexBuffer->getFormat() == kGxIndexFormat_U16
+		? GL_UNSIGNED_SHORT
+		: GL_UNSIGNED_INT;
+	
+	glDrawElements(GL_TRIANGLES, numIndices, indexType, 0);
+	checkErrorGL();
+
+	glBindVertexArray(0);
+	checkErrorGL();
+}
 
 using json = nlohmann::json;
 
 namespace gltf
 {
+	const int kMode_Triangles = 0x0004;
+	const int kElementType_U32 = 0x1405;
+	
 	struct Buffer
 	{
 		std::string uri;
 		int byteLength = -1;
-		uint8_t * data = nullptr;
+		std::vector<uint8_t> data;
+		
+		bool isValid() const
+		{
+			return
+				!uri.empty() &&
+				byteLength >= 0;
+		}
 	};
 	
 	struct BufferView
@@ -23,6 +250,15 @@ namespace gltf
 		int byteOffset = -1;
 		std::string name;
 		int target = -1;
+		
+		bool isValid() const
+		{
+			return
+				buffer >= 0 &&
+				byteLength >= 0 &&
+				byteOffset >= 0 &&
+				target >= 0;
+		}
 	};
 	
 	struct Accessor
@@ -34,6 +270,16 @@ namespace gltf
 		std::vector<float> min;
 		std::vector<float> max;
 		std::string type;
+		
+		bool isValid() const
+		{
+			return
+				bufferView >= 0 &&
+				byteOffset >= 0 &&
+				componentType >= 0 &&
+				count >= 0 &&
+				!type.empty();
+		}
 	};
 	
 	struct Image
@@ -41,12 +287,25 @@ namespace gltf
 		std::string uri;
 		
 		std::string path;
+		
+		bool isValid() const
+		{
+			return
+				!uri.empty();
+		}
 	};
 	
 	struct Texture
 	{
 		int sampler = -1;
 		int source = -1;
+		
+		bool isValid() const
+		{
+			return
+				sampler >= 0 &&
+				source >= 0;
+		}
 	};
 	
 	struct Material
@@ -55,10 +314,18 @@ namespace gltf
 		{
 			int index = -1;
 			int texCoord = -1;
+			
+			bool isValid() const
+			{
+				return
+					index >= 0 &&
+					texCoord >= 0;
+			}
 		};
 		
 		struct PbrMetallicRoughness
 		{
+			Color baseColorFactor;
 			TextureReference baseColorTexture;
 		};
 		
@@ -68,6 +335,12 @@ namespace gltf
 		PbrMetallicRoughness pbrMetallicRoughness;
 		
 		TextureReference emissiveTexture;
+		
+		bool isValid() const
+		{
+			return
+				(alphaMode == "OPAQUE" || alphaMode == "MASK" || alphaMode == "BLEND");
+		}
 	};
 	
 	struct MeshPrimitive
@@ -86,11 +359,28 @@ namespace gltf
 		int indices = -1;
 		int material = -1;
 		int mode = -1;
+		
+		bool isValid() const
+		{
+			return
+				indices >= 0 &&
+				material >= 0 &&
+				mode >= 0;
+		}
 	};
 	
 	struct Mesh
 	{
 		std::vector<MeshPrimitive> primitives;
+		
+		bool isValid() const
+		{
+			for (auto & primitive : primitives)
+				if (!primitive.isValid())
+					return false;
+			
+			return true;
+		}
 	};
 	
 	struct Scene
@@ -110,6 +400,22 @@ void from_json(const json & j, Vec3 & v)
 	v[0] = j.at(0).get<float>();
 	v[1] = j.at(1).get<float>();
 	v[2] = j.at(2).get<float>();
+}
+
+void from_json(const json & j, Vec4 & v)
+{
+	v[0] = j.at(0).get<float>();
+	v[1] = j.at(1).get<float>();
+	v[2] = j.at(2).get<float>();
+	v[3] = j.at(3).get<float>();
+}
+
+void from_json(const json & j, Color & c)
+{
+	c.r = j.at(0).get<float>();
+	c.g = j.at(1).get<float>();
+	c.b = j.at(2).get<float>();
+	c.a = j.at(3).get<float>();
 }
 
 static bool loadGltf(const char * path, gltf::Scene & scene)
@@ -155,6 +461,9 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				accessor.min = json_accessor.value("min", std::vector<float>());
 				accessor.max = json_accessor.value("max", std::vector<float>());
 				accessor.type = json_accessor.value("type", "");
+				
+				if (!accessor.isValid())
+					return false;
 		
 				scene.accessors.push_back(accessor);
 			}
@@ -170,6 +479,9 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				buffer.byteLength = buffer_json.value("byteLength", 0);
 				buffer.uri = buffer_json.value("uri", "");
 				
+				if (!buffer.isValid())
+					return false;
+				
 				auto path = dir + "/" + buffer.uri;
 				
 				FILE * file = fopen(path.c_str(), "rb");
@@ -177,15 +489,15 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				if (file == nullptr)
 					return false;
 				
-				buffer.data = (uint8_t*)malloc(buffer.byteLength);
+				buffer.data.resize(buffer.byteLength);
 				
-				fread(buffer.data, buffer.byteLength, 1, file);
+				if (buffer.byteLength > 0)
+				{
+					fread(&buffer.data.front(), buffer.byteLength, 1, file);
+				}
 				
 				fclose(file);
 				file = nullptr;
-				
-				//logDebug("buffer.byteLength: %d", buffer.byteLength);
-				//logDebug("buffer.uri: %s", buffer.uri.c_str());
 				
 				scene.buffers.push_back(buffer);
 			}
@@ -203,6 +515,9 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				bufferView.byteOffset = json_bufferView.value("byteOffset", -1);
 				bufferView.name = json_bufferView.value("name", "");
 				bufferView.target = json_bufferView.value("target", -1);
+				
+				if (!bufferView.isValid())
+					return false;
 				
 				scene.bufferViews.push_back(bufferView);
 			}
@@ -236,9 +551,15 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 									auto & attributes_json = primitive_member_itr.value();
 									
 									primitive.attributes["POSITION"] = attributes_json.value("POSITION", -1);
-									primitive.attributes["TEXCOORD_0"] = attributes_json.value("TEXCOORD_0", -1);
+									
+									const int texcoord_0 = attributes_json.value("TEXCOORD_0", -1);
+									if (texcoord_0 != -1)
+										primitive.attributes["TEXCOORD_0"] = texcoord_0;
 								}
 							}
+							
+							if (!primitive.isValid())
+								return false;
 							
 							mesh.primitives.push_back(primitive);
 						}
@@ -260,6 +581,9 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				
 				image.path = dir + "/" + image.uri;
 				
+				if (!image.isValid())
+					return false;
+				
 				scene.images.push_back(image);
 			}
 		}
@@ -273,6 +597,9 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				
 				texture.sampler = texture_json.value("sampler", -1);
 				texture.source = texture_json.value("source", -1);
+				
+				if (!texture.isValid())
+					return false;
 				
 				scene.textures.push_back(texture);
 			}
@@ -294,6 +621,8 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				{
 					auto & pbrMetallicRoughness = pbrMetallicRoughness_itr.value();
 					
+					material.pbrMetallicRoughness.baseColorFactor = pbrMetallicRoughness.value("baseColorFactor", colorWhite);
+					
 					auto baseColorTexture_itr = pbrMetallicRoughness.find("baseColorTexture");
 				
 					if (baseColorTexture_itr != pbrMetallicRoughness.end())
@@ -311,6 +640,9 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 					material.emissiveTexture.index = emissiveTexture.value().value("index", -1);
 				}
 				
+				if (!material.isValid())
+					return false;
+				
 				scene.materials.push_back(material);
 			}
 		}
@@ -320,8 +652,7 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 		}
 	}
 	
-	
-	return false;
+	return true;
 }
 
 int main(int argc, char * argv[])
@@ -342,6 +673,151 @@ int main(int argc, char * argv[])
 	if (!loadGltf(path, scene))
 	{
 		logError("failed to load GLTF file");
+	}
+	
+	auto resolveBufferView = [&](const int index, gltf::Accessor *& accessor, gltf::BufferView *& bufferView, gltf::Buffer *& buffer) -> bool
+	{
+		if (index < 0 || index >= scene.accessors.size())
+			return false;
+	
+		accessor = &scene.accessors[index];
+	
+		if (accessor->bufferView < 0 || accessor->bufferView >= scene.bufferViews.size())
+			return false;
+	
+		bufferView = &scene.bufferViews[accessor->bufferView];
+	
+		if (bufferView->buffer < 0 || bufferView->buffer >= scene.buffers.size())
+			return false;
+	
+		buffer = &scene.buffers[bufferView->buffer];
+		
+		return true;
+	};
+
+	std::map<int, GxVertexBuffer*> vertexBuffers;
+	std::map<int, GxIndexBuffer*> indexBuffers;
+	std::map<gltf::Mesh*, GxMesh*> meshes;
+	
+	int bufferIndex = 0;
+	
+	for (auto & buffer : scene.buffers)
+	{
+		GxVertexBuffer * vertexBuffer = new GxVertexBuffer();
+		
+		vertexBuffer->setData(&buffer.data.front(), buffer.byteLength);
+		
+		Assert(vertexBuffers[bufferIndex] == nullptr);
+		vertexBuffers[bufferIndex++] = vertexBuffer;
+	}
+	
+	for (auto & mesh : scene.meshes)
+	{
+		for (auto & primitive : mesh.primitives)
+		{
+			GxIndexBuffer * indexBuffer = nullptr;
+			
+			//
+			
+			auto indexBuffer_itr = indexBuffers.find(primitive.indices);
+			
+			if (indexBuffer_itr != indexBuffers.end())
+			{
+				indexBuffer = indexBuffer_itr->second;
+			}
+			else
+			{
+				gltf::Accessor * accessor;
+				gltf::BufferView * bufferView;
+				gltf::Buffer * buffer;
+				
+				if (resolveBufferView(primitive.indices, accessor, bufferView, buffer))
+				{
+					if (accessor->componentType != gltf::kElementType_U32)
+						continue;
+					
+					indexBuffer = new GxIndexBuffer();
+					const uint8_t * index_mem = &buffer->data.front() + bufferView->byteOffset + accessor->byteOffset;
+					
+					indexBuffer->setData(index_mem, accessor->count, kGxIndexFormat_U32);
+					
+					Assert(indexBuffers[primitive.indices] == nullptr);
+					indexBuffers[primitive.indices] = indexBuffer;
+				}
+			}
+			
+			//
+			
+			std::vector<GxVertexInput> vertexInputs;
+			
+			int vertexBufferIndex = -1;
+			
+			for (auto & attribute : primitive.attributes)
+			{
+				gltf::Accessor * accessor;
+				gltf::BufferView * bufferView;
+				gltf::Buffer * buffer;
+	
+				const std::string & attributeName = attribute.first;
+				const int accessorIndex = attribute.second;
+	
+				if (!resolveBufferView(accessorIndex, accessor, bufferView, buffer))
+					continue;
+				
+				if (vertexBufferIndex == -1)
+					vertexBufferIndex = bufferView->buffer;
+				else if (bufferView->buffer != vertexBufferIndex)
+					vertexBufferIndex = -2;
+	
+				const int id =
+					attributeName == "POSITION" ? VS_POSITION :
+					attributeName == "TEXCOORD_0" ? VS_TEXCOORD :
+					-1;
+				
+				if (id == -1)
+					continue;
+				
+				const int components =
+					accessor->type == "VEC2" ? 2 :
+					accessor->type == "VEC3" ? 3 :
+					-1;
+				
+				if (components == -1)
+					continue;
+				
+				const int type =
+					accessor->type == "VEC2" ? GL_FLOAT :
+					accessor->type == "VEC3" ? GL_FLOAT :
+					-1;
+				
+				if (type == -1)
+					continue;
+				
+				GxVertexInput v;
+				v.id = id;
+				v.components = components;
+				v.type = type;
+				v.normalize = false;
+				v.offset = bufferView->byteOffset + accessor->byteOffset;
+				v.stride = 0;
+				
+				vertexInputs.push_back(v);
+			}
+			
+			if (vertexBufferIndex < 0)
+				continue;
+			
+			Assert(vertexBuffers[vertexBufferIndex] != nullptr);
+			
+			GxVertexBuffer * vertexBuffer = vertexBuffers[vertexBufferIndex];
+			
+			GxMesh * gxMesh = new GxMesh();
+			gxMesh->setVB(vertexBuffer, &vertexInputs.front(), vertexInputs.size());
+			gxMesh->setIB(indexBuffer);
+			
+			Assert(meshes[&mesh] == nullptr);
+			meshes[&mesh] = gxMesh;
+		}
 	}
 	
 	Camera3d camera;
@@ -365,29 +841,7 @@ int main(int argc, char * argv[])
 			
 			gxRotatef(-90, 1, 0, 0);
 			
-			auto resolveBufferView = [&](const int index, gltf::Accessor *& accessor, gltf::BufferView *& bufferView, gltf::Buffer *& buffer) -> bool
-			{
-				if (index < 0 || index >= scene.accessors.size())
-					return false;
-			
-				accessor = &scene.accessors[index];
-			
-				if (accessor->bufferView < 0 || accessor->bufferView >= scene.bufferViews.size())
-					return false;
-			
-				bufferView = &scene.bufferViews[accessor->bufferView];
-			
-				if (bufferView->buffer < 0 || bufferView->buffer >= scene.buffers.size())
-					return false;
-			
-				buffer = &scene.buffers[bufferView->buffer];
-				
-				return true;
-			};
-			
-			setColor(colorWhite);
-			
-			//gxScalef(.01f, .01f, .01f);
+			//gxScalef(-.01f, .01f, .01f);
 			
 			for (int i = 0; i < 2; ++i)
 			{
@@ -397,19 +851,20 @@ int main(int argc, char * argv[])
 				{
 					for (auto & primitive : mesh.primitives)
 					{
-						const int kMode_Triangles = 0x0004;
-						const int kElementType_U32 = 0x1405;
-						
-						if (primitive.mode != kMode_Triangles)
+						if (primitive.mode != gltf::kMode_Triangles)
 							continue;
 						
 						BLEND_MODE blendMode;
 						
+						GxTextureId textureId = 0;
+						
 						if (primitive.material < 0 || primitive.material >= scene.materials.size())
 						{
+							blendMode = BLEND_OPAQUE;
+							
 							gxSetTexture(0);
 							
-							blendMode = BLEND_OPAQUE;
+							setColor(colorWhite);
 						}
 						else
 						{
@@ -432,21 +887,22 @@ int main(int argc, char * argv[])
 							
 							const int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
 							
-							if (textureIndex < 0 || textureIndex >= scene.textures.size())
-								gxSetTexture(0);
-							else
+							if (textureIndex >= 0 && textureIndex < scene.textures.size())
 							{
 								auto & texture = scene.textures[textureIndex];
 								
-								if (texture.source < 0 || texture.source >= scene.images.size())
-									gxSetTexture(0);
-								else
+								if (texture.source >= 0 || texture.source < scene.images.size())
 								{
 									auto & image = scene.images[texture.source];
 									
-									gxSetTexture(getTexture(image.path.c_str()));
+									textureId = getTexture(image.path.c_str());
 								}
 							}
+							
+							if (keyboard.isDown(SDLK_u))
+								setColor(colorWhite);
+							else
+								setColor(material.pbrMetallicRoughness.baseColorFactor);
 						}
 						
 						const bool isOpaqueMaterial = (blendMode == BLEND_OPAQUE);
@@ -456,6 +912,31 @@ int main(int argc, char * argv[])
 						
 						setBlend(blendMode);
 						
+						gxSetTexture(textureId);
+						
+					#if 1
+						if (keyboard.isDown(SDLK_m))
+						{
+							auto gxMesh_itr = meshes.find(&mesh);
+							
+							if (gxMesh_itr != meshes.end())
+							{
+								GxMesh * gxMesh = gxMesh_itr->second;
+								
+								Shader shader("shader");
+								shader.setTexture("source", 0, textureId);
+								
+								setShader(shader);
+								{
+									gxMesh->draw();
+								}
+								clearShader();
+								
+								continue;
+							}
+						}
+					#endif
+						
 						gltf::Accessor * indexAccessor;
 						gltf::BufferView * indexBufferView;
 						gltf::Buffer * indexBuffer;
@@ -463,7 +944,7 @@ int main(int argc, char * argv[])
 						if (!resolveBufferView(primitive.indices, indexAccessor, indexBufferView, indexBuffer))
 							continue;
 						
-						if (indexAccessor->componentType != kElementType_U32)
+						if (indexAccessor->componentType != gltf::kElementType_U32)
 							continue;
 						
 						//
@@ -482,33 +963,38 @@ int main(int argc, char * argv[])
 						
 						//
 						
-						gltf::Accessor * texcoord0Accessor;
+						gltf::Accessor * texcoord0Accessor = nullptr;
 						gltf::BufferView * texcoord0BufferView;
 						gltf::Buffer * texcoord0Buffer;
 						
-						const int texcoord0AccessorIndex = primitive.attributes["TEXCOORD_0"];
+						auto texcoord0_itr = primitive.attributes.find("TEXCOORD_0");
 						
-						if (!resolveBufferView(texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
-							continue;
+						if (texcoord0_itr != primitive.attributes.end())
+						{
+							const int texcoord0AccessorIndex = primitive.attributes["TEXCOORD_0"];
+							
+							if (!resolveBufferView(texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
+								continue;
+							
+							if (texcoord0Accessor->type != "VEC2")
+								continue;
+						}
 						
-						if (texcoord0Accessor->type != "VEC2")
-							continue;
-						
-						pushWireframe(false);
+						pushWireframe(keyboard.isDown(SDLK_w));
 						gxBegin(GX_TRIANGLES);
 						{
 							for (int i = 0; i < indexAccessor->count; ++i)
 							{
-								const uint8_t * index_mem = indexBuffer->data + indexBufferView->byteOffset + indexAccessor->byteOffset;
-								Assert(index_mem < indexBuffer->data + indexBuffer->byteLength);
+								const uint8_t * index_mem = &indexBuffer->data.front() + indexBufferView->byteOffset + indexAccessor->byteOffset;
+								Assert(index_mem < &indexBuffer->data.front() + indexBuffer->byteLength);
 								const uint32_t * index_ptr = (uint32_t*)index_mem;
 								const uint32_t index = index_ptr[i];
 								
 								//
 								
-								const uint8_t * position_mem = positionBuffer->data + positionBufferView->byteOffset + positionAccessor->byteOffset;
+								const uint8_t * position_mem = &positionBuffer->data.front() + positionBufferView->byteOffset + positionAccessor->byteOffset;
 								position_mem += index * 3 * sizeof(float);
-								Assert(position_mem < positionBuffer->data + positionBuffer->byteLength);
+								Assert(position_mem < &positionBuffer->data.front() + positionBuffer->byteLength);
 								const float * position_ptr = (float*)position_mem;
 								
 								const float position_x = position_ptr[0];
@@ -517,17 +1003,21 @@ int main(int argc, char * argv[])
 								
 								//
 								
-								const uint8_t * texcoord0_mem = texcoord0Buffer->data + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
-								texcoord0_mem += index * 2 * sizeof(float);
-								Assert(texcoord0_mem < texcoord0Buffer->data + texcoord0Buffer->byteLength);
-								const float * texcoord0_ptr = (float*)texcoord0_mem;
-								
-								const float texcoord0_x = texcoord0_ptr[0];
-								const float texcoord0_y = texcoord0_ptr[1];
+								if (texcoord0Accessor != nullptr)
+								{
+									const uint8_t * texcoord0_mem = &texcoord0Buffer->data.front() + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
+									texcoord0_mem += index * 2 * sizeof(float);
+									Assert(texcoord0_mem < &texcoord0Buffer->data.front() + texcoord0Buffer->byteLength);
+									const float * texcoord0_ptr = (float*)texcoord0_mem;
+									
+									const float texcoord0_x = texcoord0_ptr[0];
+									const float texcoord0_y = texcoord0_ptr[1];
+									
+									gxTexCoord2f(texcoord0_x, texcoord0_y);
+								}
 								
 								//
 								
-								gxTexCoord2f(texcoord0_x, texcoord0_y);
 								gxVertex3f(position_x, position_y, position_z);
 							}
 						}
