@@ -12,7 +12,7 @@ class GxVertexBuffer
 {
 	friend class GxMesh;
 	
-	GLuint m_vertexArray;
+	GxShaderBufferId m_vertexArray;
 	
 public:
 	GxVertexBuffer()
@@ -41,25 +41,25 @@ public:
 	}
 };
 
-enum GxIndexFormat
+enum GX_INDEX_FORMAT
 {
-	kGxIndexFormat_U16,
-	kGxIndexFormat_U32
+	GX_INDEX_16, // indices are 16-bits (uint16_t)
+	GX_INDEX_32  // indices are 32-bits (uint32_t)
 };
 
 class GxIndexBuffer
 {
 	friend class GxMesh;
 	
-	GLuint m_indexArray;
+	GxShaderBufferId m_indexArray;
 	int m_numIndices;
-	GxIndexFormat m_format;
+	GX_INDEX_FORMAT m_format;
 	
 public:
 	GxIndexBuffer()
 		: m_indexArray(0)
 		, m_numIndices(0)
-		, m_format(kGxIndexFormat_U16)
+		, m_format(GX_INDEX_16)
 	{
 		// create buffer
 		glGenBuffers(1, &m_indexArray);
@@ -74,12 +74,12 @@ public:
 		checkErrorGL();
 	}
 	
-	void setData(const void * bytes, const int numIndices, const GxIndexFormat format)
+	void setData(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
 	{
 		// fill the buffer with data
 		
 		const int numBytes =
-			format == kGxIndexFormat_U16
+			format == GX_INDEX_16
 			? numIndices * 2
 			: numIndices * 4;
 		
@@ -97,7 +97,7 @@ public:
 		return m_numIndices;
 	}
 	
-	GxIndexFormat getFormat() const
+	GX_INDEX_FORMAT getFormat() const
 	{
 		return m_format;
 	}
@@ -115,12 +115,12 @@ struct GxVertexInput
 
 class GxMesh
 {
-	GLuint m_vertexArrayObject;
+	uint32_t m_vertexArrayObject;
 	
-	GxVertexBuffer * m_vertexBuffer;
-	GxIndexBuffer * m_indexBuffer;
+	const GxVertexBuffer * m_vertexBuffer;
+	const GxIndexBuffer * m_indexBuffer;
 	
-	void bindVsInputs(const GxVertexInput * vsInputs, int numVsInputs);
+	void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs);
 	
 public:
 	GxMesh()
@@ -141,13 +141,13 @@ public:
 		checkErrorGL();
 	}
 	
-	void setVB(GxVertexBuffer * buffer, GxVertexInput * vertexInputs, int numVertexInputs);
-	void setIB(GxIndexBuffer * buffer);
+	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs);
+	void setIndexBuffer(const GxIndexBuffer * buffer);
 	
 	void draw() const;
 };
 
-void GxMesh::bindVsInputs(const GxVertexInput * vsInputs, int numVsInputs)
+void GxMesh::bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs)
 {
 	checkErrorGL();
 
@@ -163,7 +163,7 @@ void GxMesh::bindVsInputs(const GxVertexInput * vsInputs, int numVsInputs)
 	}
 }
 
-void GxMesh::setVB(GxVertexBuffer * buffer, GxVertexInput * vertexInputs, int numVertexInputs)
+void GxMesh::setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs)
 {
 	m_vertexBuffer = buffer;
 	
@@ -181,7 +181,7 @@ void GxMesh::setVB(GxVertexBuffer * buffer, GxVertexInput * vertexInputs, int nu
 	checkErrorGL();
 }
 
-void GxMesh::setIB(GxIndexBuffer * buffer)
+void GxMesh::setIndexBuffer(const GxIndexBuffer * buffer)
 {
 	m_indexBuffer = buffer;
 	
@@ -211,7 +211,7 @@ void GxMesh::draw() const
 	checkErrorGL();
 
 	GLenum indexType =
-		m_indexBuffer->getFormat() == kGxIndexFormat_U16
+		m_indexBuffer->getFormat() == GX_INDEX_16
 		? GL_UNSIGNED_SHORT
 		: GL_UNSIGNED_INT;
 	
@@ -345,15 +345,6 @@ namespace gltf
 	
 	struct MeshPrimitive
 	{
-		/*
-          "attributes": {
-            "NORMAL": 1,
-            "POSITION": 0,
-            "TANGENT": 2,
-            "TEXCOORD_0": 3
-          },
-		*/
-		
 		std::map<std::string, int> attributes;
 		
 		int indices = -1;
@@ -550,11 +541,10 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 								{
 									auto & attributes_json = primitive_member_itr.value();
 									
-									primitive.attributes["POSITION"] = attributes_json.value("POSITION", -1);
-									
-									const int texcoord_0 = attributes_json.value("TEXCOORD_0", -1);
-									if (texcoord_0 != -1)
-										primitive.attributes["TEXCOORD_0"] = texcoord_0;
+									for (auto attribute_json_itr = attributes_json.begin(); attribute_json_itr != attributes_json.end(); ++attribute_json_itr)
+									{
+										primitive.attributes[attribute_json_itr.key()] = attribute_json_itr.value();
+									}
 								}
 							}
 							
@@ -660,13 +650,16 @@ int main(int argc, char * argv[])
 	changeDirectory(CHIBI_RESOURCE_PATH);
 	
 	framework.enableDepthBuffer = true;
+	framework.enableRealTimeEditing = true;
 	
 	if (!framework.init(800, 600))
 		return -1;
 
 	//const char * path = "van_gogh_room/scene.gltf";
 	//const char * path = "littlest_tokyo/scene.gltf";
-	const char * path = "ftm/scene.gltf";
+	//const char * path = "ftm/scene.gltf";
+	//const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
+	const char * path = "halloween_little_witch/scene.gltf";
 
 	gltf::Scene scene;
 	
@@ -739,7 +732,7 @@ int main(int argc, char * argv[])
 					indexBuffer = new GxIndexBuffer();
 					const uint8_t * index_mem = &buffer->data.front() + bufferView->byteOffset + accessor->byteOffset;
 					
-					indexBuffer->setData(index_mem, accessor->count, kGxIndexFormat_U32);
+					indexBuffer->setData(index_mem, accessor->count, GX_INDEX_32);
 					
 					Assert(indexBuffers[primitive.indices] == nullptr);
 					indexBuffers[primitive.indices] = indexBuffer;
@@ -771,6 +764,7 @@ int main(int argc, char * argv[])
 	
 				const int id =
 					attributeName == "POSITION" ? VS_POSITION :
+					attributeName == "NORMAL" ? VS_NORMAL :
 					attributeName == "TEXCOORD_0" ? VS_TEXCOORD :
 					-1;
 				
@@ -812,8 +806,8 @@ int main(int argc, char * argv[])
 			GxVertexBuffer * vertexBuffer = vertexBuffers[vertexBufferIndex];
 			
 			GxMesh * gxMesh = new GxMesh();
-			gxMesh->setVB(vertexBuffer, &vertexInputs.front(), vertexInputs.size());
-			gxMesh->setIB(indexBuffer);
+			gxMesh->setVertexBuffer(vertexBuffer, &vertexInputs.front(), vertexInputs.size());
+			gxMesh->setIndexBuffer(indexBuffer);
 			
 			Assert(meshes[&mesh] == nullptr);
 			meshes[&mesh] = gxMesh;
@@ -841,7 +835,8 @@ int main(int argc, char * argv[])
 			
 			gxRotatef(-90, 1, 0, 0);
 			
-			//gxScalef(-.01f, .01f, .01f);
+			gxScalef(-.01f, .01f, .01f);
+			//gxScalef(100.f, 100.f, 100.f);
 			
 			for (int i = 0; i < 2; ++i)
 			{
@@ -915,7 +910,7 @@ int main(int argc, char * argv[])
 						gxSetTexture(textureId);
 						
 					#if 1
-						if (keyboard.isDown(SDLK_m))
+						if (!keyboard.isDown(SDLK_m))
 						{
 							auto gxMesh_itr = meshes.find(&mesh);
 							
