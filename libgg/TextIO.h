@@ -40,6 +40,10 @@ namespace TextIO
 	
 	typedef void (*LineCallback)(void * userData, const char * begin, const char * end);
 	
+	bool loadFileContents(const char * filename,
+		char *& text,
+		size_t & size);
+	
 	bool loadText(const char * text, std::vector<std::string> & lines, LineEndings & lineEndings);
 	bool loadTextWithCallback(const char * text, LineEndings & lineEndings, LineCallback lineCallback, void * userData);
 	
