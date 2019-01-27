@@ -9,6 +9,7 @@ add codingChallenges
 add colorpart
 add cuber
 with_platform macos add etherdream1
+add gltf1
 add homography
 add jsusfx1
 add libjgmod-audiograph
@@ -23,6 +24,7 @@ add rawaudio1
 add refine
 add resonate1
 add resonate2
+add sceneedit1
 add speakwithus
 add sRGB
 add twinkle
