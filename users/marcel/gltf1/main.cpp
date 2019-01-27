@@ -3,6 +3,8 @@
 #include "Path.h"
 #include "TextIO.h"
 
+#include <SDL2/SDL_opengl.h> // GL_CULL_FACE. todo : add functions to control culling mode to Framework
+
 using json = nlohmann::json;
 
 namespace gltf
@@ -49,13 +51,23 @@ namespace gltf
 	
 	struct Material
 	{
-		struct EmissiveTexture
+		struct TextureReference
 		{
 			int index = -1;
 			int texCoord = -1;
 		};
 		
-		EmissiveTexture emissiveTexture;
+		struct PbrMetallicRoughness
+		{
+			TextureReference baseColorTexture;
+		};
+		
+		std::string alphaMode; // OPAQUE, MASK (alpha test) or BLEND
+		bool doubleSided = true;
+		
+		PbrMetallicRoughness pbrMetallicRoughness;
+		
+		TextureReference emissiveTexture;
 	};
 	
 	struct MeshPrimitive
@@ -273,6 +285,25 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 			{
 				gltf::Material material;
 				
+				material.alphaMode = material_json.value("alphaMode", "OPAQUE");
+				material.doubleSided = material_json.value("doubleSided", true);
+				
+				auto pbrMetallicRoughness_itr = material_json.find("pbrMetallicRoughness");
+				
+				if (pbrMetallicRoughness_itr != material_json.end())
+				{
+					auto & pbrMetallicRoughness = pbrMetallicRoughness_itr.value();
+					
+					auto baseColorTexture_itr = pbrMetallicRoughness.find("baseColorTexture");
+				
+					if (baseColorTexture_itr != pbrMetallicRoughness.end())
+					{
+						auto & baseColorTexture = baseColorTexture_itr.value();
+						
+						material.pbrMetallicRoughness.baseColorTexture.index = baseColorTexture.value("index", -1);
+					}
+				}
+				
 				auto emissiveTexture = material_json.find("emissiveTexture");
 				
 				if (emissiveTexture != material_json.end())
@@ -302,7 +333,9 @@ int main(int argc, char * argv[])
 	if (!framework.init(800, 600))
 		return -1;
 
-	const char * path = "van_gogh_room/scene.gltf";
+	//const char * path = "van_gogh_room/scene.gltf";
+	//const char * path = "littlest_tokyo/scene.gltf";
+	const char * path = "ftm/scene.gltf";
 
 	gltf::Scene scene;
 	
@@ -354,116 +387,153 @@ int main(int argc, char * argv[])
 			
 			setColor(colorWhite);
 			
-			for (auto & mesh : scene.meshes)
+			//gxScalef(.01f, .01f, .01f);
+			
+			for (int i = 0; i < 2; ++i)
 			{
-				for (auto & primitive : mesh.primitives)
+				const bool isOpaquePass = (i == 0);
+				
+				for (auto & mesh : scene.meshes)
 				{
-					const int kMode_Triangles = 0x0004;
-					const int kElementType_U32 = 0x1405;
-					
-					if (primitive.mode != kMode_Triangles)
-						continue;
-					
-					if (primitive.material < 0 || primitive.material >= scene.materials.size())
-						gxSetTexture(0);
-					else
+					for (auto & primitive : mesh.primitives)
 					{
-						auto & material = scene.materials[primitive.material];
+						const int kMode_Triangles = 0x0004;
+						const int kElementType_U32 = 0x1405;
 						
-						if (material.emissiveTexture.index < 0 || material.emissiveTexture.index >= scene.textures.size())
+						if (primitive.mode != kMode_Triangles)
+							continue;
+						
+						BLEND_MODE blendMode;
+						
+						if (primitive.material < 0 || primitive.material >= scene.materials.size())
+						{
 							gxSetTexture(0);
+							
+							blendMode = BLEND_OPAQUE;
+						}
 						else
 						{
-							auto & texture = scene.textures[material.emissiveTexture.index];
+							auto & material = scene.materials[primitive.material];
 							
-							if (texture.source < 0 || texture.source >= scene.images.size())
+							blendMode = material.alphaMode == "OPAQUE" ? BLEND_OPAQUE : BLEND_ALPHA;
+							
+							if (material.doubleSided)
+							{
+								glDisable(GL_CULL_FACE);
+								checkErrorGL();
+							}
+							else
+							{
+								glFrontFace(GL_CCW);
+								glCullFace(GL_FRONT); // weird
+								glEnable(GL_CULL_FACE);
+								checkErrorGL();
+							}
+							
+							const int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
+							
+							if (textureIndex < 0 || textureIndex >= scene.textures.size())
 								gxSetTexture(0);
 							else
 							{
-								auto & image = scene.images[texture.source];
+								auto & texture = scene.textures[textureIndex];
 								
-								gxSetTexture(getTexture(image.path.c_str()));
+								if (texture.source < 0 || texture.source >= scene.images.size())
+									gxSetTexture(0);
+								else
+								{
+									auto & image = scene.images[texture.source];
+									
+									gxSetTexture(getTexture(image.path.c_str()));
+								}
 							}
 						}
-					}
-					
-					gltf::Accessor * indexAccessor;
-					gltf::BufferView * indexBufferView;
-					gltf::Buffer * indexBuffer;
-					
-					if (!resolveBufferView(primitive.indices, indexAccessor, indexBufferView, indexBuffer))
-						continue;
-					
-					if (indexAccessor->componentType != kElementType_U32)
-						continue;
-					
-					//
-					
-					gltf::Accessor * positionAccessor;
-					gltf::BufferView * positionBufferView;
-					gltf::Buffer * positionBuffer;
-					
-					const int positionAccessorIndex = primitive.attributes["POSITION"];
-					
-					if (!resolveBufferView(positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
-						continue;
-					
-					if (positionAccessor->type != "VEC3")
-						continue;
-					
-					//
-					
-					gltf::Accessor * texcoord0Accessor;
-					gltf::BufferView * texcoord0BufferView;
-					gltf::Buffer * texcoord0Buffer;
-					
-					const int texcoord0AccessorIndex = primitive.attributes["TEXCOORD_0"];
-					
-					if (!resolveBufferView(texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
-						continue;
-					
-					if (texcoord0Accessor->type != "VEC2")
-						continue;
-					
-					pushWireframe(false);
-					gxBegin(GX_TRIANGLES);
-					{
-						for (int i = 0; i < indexAccessor->count; ++i)
+						
+						const bool isOpaqueMaterial = (blendMode == BLEND_OPAQUE);
+						
+						if (isOpaquePass != isOpaqueMaterial)
+							continue;
+						
+						setBlend(blendMode);
+						
+						gltf::Accessor * indexAccessor;
+						gltf::BufferView * indexBufferView;
+						gltf::Buffer * indexBuffer;
+						
+						if (!resolveBufferView(primitive.indices, indexAccessor, indexBufferView, indexBuffer))
+							continue;
+						
+						if (indexAccessor->componentType != kElementType_U32)
+							continue;
+						
+						//
+						
+						gltf::Accessor * positionAccessor;
+						gltf::BufferView * positionBufferView;
+						gltf::Buffer * positionBuffer;
+						
+						const int positionAccessorIndex = primitive.attributes["POSITION"];
+						
+						if (!resolveBufferView(positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
+							continue;
+						
+						if (positionAccessor->type != "VEC3")
+							continue;
+						
+						//
+						
+						gltf::Accessor * texcoord0Accessor;
+						gltf::BufferView * texcoord0BufferView;
+						gltf::Buffer * texcoord0Buffer;
+						
+						const int texcoord0AccessorIndex = primitive.attributes["TEXCOORD_0"];
+						
+						if (!resolveBufferView(texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
+							continue;
+						
+						if (texcoord0Accessor->type != "VEC2")
+							continue;
+						
+						pushWireframe(false);
+						gxBegin(GX_TRIANGLES);
 						{
-							const uint8_t * index_mem = indexBuffer->data + indexBufferView->byteOffset + indexAccessor->byteOffset;
-							Assert(index_mem < indexBuffer->data + indexBuffer->byteLength);
-							const uint32_t * index_ptr = (uint32_t*)index_mem;
-							const uint32_t index = index_ptr[i];
-							
-							//
-							
-							const uint8_t * position_mem = positionBuffer->data + positionBufferView->byteOffset + positionAccessor->byteOffset;
-							position_mem += index * 3 * sizeof(float);
-							Assert(position_mem < positionBuffer->data + positionBuffer->byteLength);
-							const float * position_ptr = (float*)position_mem;
-							
-							const float position_x = position_ptr[0];
-							const float position_y = position_ptr[1];
-							const float position_z = position_ptr[2];
-							
-							//
-							
-							const uint8_t * texcoord0_mem = texcoord0Buffer->data + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
-							texcoord0_mem += index * 2 * sizeof(float);
-							Assert(texcoord0_mem < texcoord0Buffer->data + texcoord0Buffer->byteLength);
-							const float * texcoord0_ptr = (float*)texcoord0_mem;
-							
-							const float texcoord0_x = texcoord0_ptr[0];
-							const float texcoord0_y = texcoord0_ptr[1];
-							
-							//
-							
-							gxTexCoord2f(texcoord0_x, texcoord0_y);
-							gxVertex3f(position_x, position_y, position_z);
+							for (int i = 0; i < indexAccessor->count; ++i)
+							{
+								const uint8_t * index_mem = indexBuffer->data + indexBufferView->byteOffset + indexAccessor->byteOffset;
+								Assert(index_mem < indexBuffer->data + indexBuffer->byteLength);
+								const uint32_t * index_ptr = (uint32_t*)index_mem;
+								const uint32_t index = index_ptr[i];
+								
+								//
+								
+								const uint8_t * position_mem = positionBuffer->data + positionBufferView->byteOffset + positionAccessor->byteOffset;
+								position_mem += index * 3 * sizeof(float);
+								Assert(position_mem < positionBuffer->data + positionBuffer->byteLength);
+								const float * position_ptr = (float*)position_mem;
+								
+								const float position_x = position_ptr[0];
+								const float position_y = position_ptr[1];
+								const float position_z = position_ptr[2];
+								
+								//
+								
+								const uint8_t * texcoord0_mem = texcoord0Buffer->data + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
+								texcoord0_mem += index * 2 * sizeof(float);
+								Assert(texcoord0_mem < texcoord0Buffer->data + texcoord0Buffer->byteLength);
+								const float * texcoord0_ptr = (float*)texcoord0_mem;
+								
+								const float texcoord0_x = texcoord0_ptr[0];
+								const float texcoord0_y = texcoord0_ptr[1];
+								
+								//
+								
+								gxTexCoord2f(texcoord0_x, texcoord0_y);
+								gxVertex3f(position_x, position_y, position_z);
+							}
 						}
+						gxEnd();
+						popWireframe();
 					}
-					gxEnd();
-					popWireframe();
 				}
 			}
 			
