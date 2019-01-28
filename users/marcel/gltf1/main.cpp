@@ -1,13 +1,13 @@
-#include <GL/glew.h> // GL_CULL_FACE. todo : add functions to control culling mode to Framework
 #include "framework.h"
 #include "gx_mesh.h"
 #include "json.hpp"
 #include "Path.h"
 #include "TextIO.h"
+#include "Quat.h"
 
 #include "data/engine/ShaderCommon.txt"
 
-#include <SDL2/SDL_opengl.h>
+#include <SDL2/SDL_opengl.h> // GL_CULL_FACE. todo : add functions to control culling mode to Framework
 
 using json = nlohmann::json;
 
@@ -43,8 +43,8 @@ namespace gltf
 			return
 				buffer >= 0 &&
 				byteLength >= 0 &&
-				byteOffset >= 0 &&
-				target >= 0;
+				byteOffset >= 0/* &&
+				target >= 0*/;
 		}
 	};
 	
@@ -164,10 +164,12 @@ namespace gltf
 	struct Node
 	{
 		std::string name;
+		int mesh = -1;
 		std::vector<int> children;
 		Vec3 translation;
+		Quat rotation;
 		Vec3 scale;
-		Vec4 rotation; // angleAxis
+		Mat4x4 matrix = Mat4x4(true);
 	};
 	
 	struct SceneRoot
@@ -213,6 +215,20 @@ void from_json(const json & j, Color & c)
 	c.g = j.at(1).get<float>();
 	c.b = j.at(2).get<float>();
 	c.a = j.at(3).get<float>();
+}
+
+void from_json(const json & j, Quat & q)
+{
+	q[0] = j.at(0).get<float>();
+	q[1] = j.at(1).get<float>();
+	q[2] = j.at(2).get<float>();
+	q[3] = j.at(3).get<float>();
+}
+
+void from_json(const json & j, Mat4x4 & m)
+{
+	for (int i = 0; i < 16; ++i)
+		m.m_v[i] = j.at(i).get<float>();
 }
 
 static bool loadGltf(const char * path, gltf::Scene & scene)
@@ -450,9 +466,12 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 			{
 				gltf::Node node;
 				node.name = node_json.value("name", "");
+				node.mesh = node_json.value("mesh", -1);
 				node.children = node_json.value("children", std::vector<int>());
 				node.translation = node_json.value("translation", Vec3(0, 0, 0));
-				node.rotation = node_json.value("rotation", Vec4(0, 1, 0, 0));
+				node.rotation = node_json.value("rotation", Quat(0, 0, 0, 1));
+				node.scale = node_json.value("scale", Vec3(1, 1, 1));
+				node.matrix = node_json.value("matrix", Mat4x4(true));
 				
 				// todo : matrix
 				
@@ -495,8 +514,8 @@ int main(int argc, char * argv[])
 	if (!framework.init(800, 600))
 		return -1;
 
-	const char * path = "van_gogh_room/scene.gltf";
-	//const char * path = "littlest_tokyo/scene.gltf";
+	//const char * path = "van_gogh_room/scene.gltf";
+	const char * path = "littlest_tokyo/scene.gltf";
 	//const char * path = "ftm/scene.gltf";
 	//const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
 	//const char * path = "halloween_little_witch/scene.gltf";
@@ -679,9 +698,7 @@ int main(int argc, char * argv[])
 			pushDepthTest(true, DEPTH_LESS);
 			camera.pushViewMatrix();
 			
-			gxRotatef(-90, 1, 0, 0);
-			
-			//gxScalef(-.01f, .01f, .01f);
+			gxScalef(-.01f, .01f, .01f);
 			//gxScalef(100.f, 100.f, 100.f);
 			
 			auto drawMesh = [&](const gltf::Mesh & mesh, const bool isOpaquePass)
@@ -699,8 +716,6 @@ int main(int argc, char * argv[])
 					{
 						blendMode = BLEND_OPAQUE;
 						
-						gxSetTexture(0);
-						
 						setColor(colorWhite);
 					}
 					else
@@ -717,7 +732,7 @@ int main(int argc, char * argv[])
 						else
 						{
 							glFrontFace(GL_CCW);
-							glCullFace(GL_FRONT); // weird
+							glCullFace(GL_BACK);
 							glEnable(GL_CULL_FACE);
 							checkErrorGL();
 						}
@@ -728,7 +743,7 @@ int main(int argc, char * argv[])
 						{
 							auto & texture = scene.textures[textureIndex];
 							
-							if (texture.source >= 0 || texture.source < scene.images.size())
+							if (texture.source >= 0 && texture.source < scene.images.size())
 							{
 								auto & image = scene.images[texture.source];
 								
@@ -777,7 +792,8 @@ int main(int argc, char * argv[])
 					}
 				#endif
 					
-				#if 0
+					// draw mesh, without the use of vertex and index buffers
+					
 					gltf::Accessor * indexAccessor;
 					gltf::BufferView * indexBufferView;
 					gltf::Buffer * indexBuffer;
@@ -794,7 +810,12 @@ int main(int argc, char * argv[])
 					gltf::BufferView * positionBufferView;
 					gltf::Buffer * positionBuffer;
 					
-					const int positionAccessorIndex = primitive.attributes["POSITION"];
+					auto position_itr = primitive.attributes.find("POSITION");
+					
+					if (position_itr == primitive.attributes.end())
+						continue;
+					
+					const int positionAccessorIndex = position_itr->second;
 					
 					if (!resolveBufferView(positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
 						continue;
@@ -812,7 +833,7 @@ int main(int argc, char * argv[])
 					
 					if (texcoord0_itr != primitive.attributes.end())
 					{
-						const int texcoord0AccessorIndex = primitive.attributes["TEXCOORD_0"];
+						const int texcoord0AccessorIndex = texcoord0_itr->second;
 						
 						if (!resolveBufferView(texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
 							continue;
@@ -864,18 +885,63 @@ int main(int argc, char * argv[])
 					}
 					gxEnd();
 					popWireframe();
-				#endif
 				}
+			};
+			
+			std::function<void(const gltf::Node & node, const bool isOpaquePass)> drawNodeTraverse = [&](const gltf::Node & node, const bool isOpaquePass)
+			{
+				gxPushMatrix();
+				gxTranslatef(node.translation[0], node.translation[1], node.translation[2]);
+				Mat4x4 rotationMatrix = node.rotation.toMatrix();
+				gxMultMatrixf(rotationMatrix.m_v);
+				gxScalef(node.scale[0], node.scale[1], node.scale[2]);
+				gxMultMatrixf(node.matrix.m_v);
+				
+				for (auto child_index : node.children)
+				{
+					if (child_index < 0 || child_index >= scene.nodes.size())
+						continue;
+					
+					auto & child = scene.nodes[child_index];
+					
+					drawNodeTraverse(child, isOpaquePass);
+				}
+				
+				if (node.mesh >= 0 && node.mesh < scene.meshes.size())
+				{
+					auto & mesh = scene.meshes[node.mesh];
+					
+					drawMesh(mesh, isOpaquePass);
+				}
+				
+				gxPopMatrix();
 			};
 			
 			for (int i = 0; i < 2; ++i)
 			{
 				const bool isOpaquePass = (i == 0);
 				
+			#if 1
+				if (scene.activeScene < 0 || scene.activeScene >= scene.sceneRoots.size())
+					continue;
+				
+				auto & sceneRoot = scene.sceneRoots[scene.activeScene];
+				
+				for (auto & node_index : sceneRoot.nodes)
+				{
+					if (node_index >= 0 && node_index < scene.nodes.size())
+					{
+						auto & node = scene.nodes[node_index];
+						
+						drawNodeTraverse(node, isOpaquePass);
+					}
+				}
+			#else
 				for (auto & mesh : scene.meshes)
 				{
 					drawMesh(mesh, isOpaquePass);
 				}
+			#endif
 			}
 			
 			camera.popViewMatrix();
