@@ -12,22 +12,40 @@ static const int VIEW_SY = 600;
 
 struct ComponentBase;
 
-struct ComponentType
+enum ComponentPropertyType
+{
+	kComponentPropertyType_Int32,
+	kComponentPropertyType_Float,
+	kComponentPropertyType_Vec2,
+	kComponentPropertyType_Vec3,
+	kComponentPropertyType_Vec4,
+	kComponentPropertyType_String
+};
+
+struct ComponentPropertyBase
+{
+	std::string name;
+	ComponentPropertyType type;
+};
+
+template <typename T> struct ComponentProperty : ComponentPropertyBase
+{
+	typedef std::function<void(ComponentBase * component, const T&)> Setter;
+	typedef std::function<T&(ComponentBase * component)> Getter;
+	
+	Getter getter;
+	Setter setter;
+};
+
+struct ComponentTypeBase
 {
 	typedef std::function<void(ComponentBase * component, const std::string&)> SetString;
 	typedef std::function<std::string(ComponentBase * component)> GetString;
 	
-	enum PropertyType
-	{
-		Float,
-		Int32,
-		String
-	};
-	
 	struct Property
 	{
 		std::string name;
-		PropertyType type;
+		ComponentPropertyType type;
 		GetString getString;
 		SetString setString;
 	};
@@ -35,7 +53,7 @@ struct ComponentType
 	std::string typeName;
 	std::vector<Property> properties;
 	
-	void in(const char * name, const PropertyType type, const GetString & getString, const SetString & setString)
+	void genericIn(const char * name, const ComponentPropertyType type, const GetString & getString, const SetString & setString)
 	{
 		Property property;
 		property.name = name;
@@ -44,6 +62,24 @@ struct ComponentType
 		property.setString = setString;
 		
 		properties.push_back(property);
+	}
+};
+
+template <typename T>
+struct ComponentType : ComponentTypeBase
+{
+	void in(const char * name, std::string T::* member)
+	{
+		genericIn(name, kComponentPropertyType_String,
+			[=](ComponentBase * comp) -> std::string { return static_cast<T*>(comp)->*member; },
+			[=](ComponentBase * comp, const std::string & s) { static_cast<T*>(comp)->*member = s; });
+	}
+	
+	void in(const char * name, float T::* member)
+	{
+		genericIn(name, kComponentPropertyType_Float,
+			[=](ComponentBase * comp) -> std::string { return String::FormatC("%f", static_cast<T*>(comp)->*member); },
+			[=](ComponentBase * comp, const std::string & s) { static_cast<T*>(comp)->*member = Parse::Float(s); });
 	}
 };
 
@@ -200,20 +236,14 @@ struct ModelComponent : Component<ModelComponent>
 	}
 };
 
-template <typename T, typename U>
-constexpr int func(T const& t, U T::* a) {
-     return (char const*)&t - (char const*)&(t.*a);
-}
-
-struct ModelComponentType : ComponentType
+struct ModelComponentType : ComponentType<ModelComponent>
 {
 	ModelComponentType()
 	{
 		typeName = "ModelComponent";
 		
-		in("filename", String,
-			[](ComponentBase * comp) -> std::string { return static_cast<ModelComponent*>(comp)->filename; },
-			[](ComponentBase * comp, const std::string & s) { static_cast<ModelComponent*>(comp)->filename = s; });
+		in("filename", &ModelComponent::filename);
+		in("scale", &ModelComponent::scale);
 	}
 };
 struct ModelComponentMgr : ComponentMgr<ModelComponent>
@@ -230,12 +260,12 @@ struct ModelComponentMgr : ComponentMgr<ModelComponent>
 struct ComponentTypeRegistration
 {
 	ComponentMgrBase * componentMgr = nullptr;
-	ComponentType * componentType = nullptr;
+	ComponentTypeBase * componentType = nullptr;
 };
 
 std::vector<ComponentTypeRegistration> s_componentTypeRegistrations;
 
-void registerComponentType(ComponentType * componentType, ComponentMgrBase * componentMgr)
+void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase * componentMgr)
 {
 	ComponentTypeRegistration registration;
 	registration.componentMgr = componentMgr;
@@ -339,6 +369,8 @@ struct SceneEditor
 	FrameworkImGuiContext guiContext;
 	
 	std::set<int> nodesToRemove;
+	
+	bool cameraIsActive = false;
 	
 	SceneEditor()
 	{
@@ -482,19 +514,22 @@ struct SceneEditor
 	
 	void tickEditor(const float dt, bool & inputIsCaptured)
 	{
-		guiContext.processBegin(dt, 800, 600, inputIsCaptured);
+		if (cameraIsActive == false)
 		{
-			if (ImGui::Begin("Editor"))
+			guiContext.processBegin(dt, 800, 600, inputIsCaptured);
 			{
-				ImGui::Checkbox("Draw ground plane", &drawGroundPlane);
-				ImGui::Checkbox("Draw nodes", &drawNodes);
-				ImGui::Checkbox("Draw node bounding boxes", &drawNodeBoundingBoxes);
-				
-				editNodeListTraverse(scene.rootNodeId);
+				if (ImGui::Begin("Editor"))
+				{
+					ImGui::Checkbox("Draw ground plane", &drawGroundPlane);
+					ImGui::Checkbox("Draw nodes", &drawNodes);
+					ImGui::Checkbox("Draw node bounding boxes", &drawNodeBoundingBoxes);
+					
+					editNodeListTraverse(scene.rootNodeId);
+				}
+				ImGui::End();
 			}
-			ImGui::End();
+			guiContext.processEnd();
 		}
-		guiContext.processEnd();
 		
 		//if (inputIsCaptured == false)
 		//if (keyboard.wentDown(SDLK_s))
@@ -515,6 +550,9 @@ struct SceneEditor
 			
 			for (auto nodeId : selectedNodes)
 			{
+				if (nodeId == scene.rootNodeId)
+					continue;
+				
 				auto nodeItr = scene.nodes.find(nodeId);
 				
 				auto & node = nodeItr->second;
@@ -529,8 +567,17 @@ struct SceneEditor
 		
 		if (inputIsCaptured == false)
 		{
-			camera.tick(dt, inputIsCaptured == false);
+			if (mouse.wentDown(BUTTON_LEFT))
+				cameraIsActive = true;
 		}
+		
+		if (cameraIsActive)
+		{
+			if (inputIsCaptured || mouse.wentUp(BUTTON_LEFT))
+				cameraIsActive = false;
+		}
+		
+		camera.tick(dt, cameraIsActive);
 	}
 	
 	void drawNode(const SceneNode & node) const
