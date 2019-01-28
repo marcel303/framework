@@ -9,11 +9,23 @@
 
 #include <SDL2/SDL_opengl.h> // GL_CULL_FACE. todo : add functions to control culling mode to Framework
 
+#define VIEW_SX 1000
+#define VIEW_SY 600
+
 using json = nlohmann::json;
 
 namespace gltf
 {
-	const int kMode_Triangles = 0x0004;
+	enum PrimitiveType
+	{
+		kPrimitiveType_Points = 0,
+		kPrimitiveType_Lines = 1,
+		kPrimitiveType_LineStrip = 2,
+		kPrimitiveType_Triangles = 4,
+		kPrimitiveType_TriangleStrip = 5,
+		kPrimitiveType_TriangleFan = 6
+	};
+
 	const int kElementType_U32 = 0x1405;
 	
 	struct Buffer
@@ -94,6 +106,8 @@ namespace gltf
 				source >= 0;
 		}
 	};
+	
+	// todo : samplers
 	
 	struct Material
 	{
@@ -511,7 +525,7 @@ int main(int argc, char * argv[])
 	framework.enableDepthBuffer = true;
 	framework.enableRealTimeEditing = true;
 	
-	if (!framework.init(800, 600))
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
 	//const char * path = "van_gogh_room/scene.gltf";
@@ -696,29 +710,27 @@ int main(int argc, char * argv[])
 		{
 			projectPerspective3d(60.f, .1f, 100.f);
 			pushDepthTest(true, DEPTH_LESS);
+			pushBlend(BLEND_OPAQUE);
 			camera.pushViewMatrix();
 			
 			gxScalef(-.01f, .01f, .01f);
+			//gxScalef(-1, 1, 1);
 			//gxScalef(100.f, 100.f, 100.f);
 			
 			auto drawMesh = [&](const gltf::Mesh & mesh, const bool isOpaquePass)
 			{
 				for (auto & primitive : mesh.primitives)
 				{
-					if (primitive.mode != gltf::kMode_Triangles)
+					if (primitive.mode != gltf::kPrimitiveType_Triangles)
 						continue;
 					
-					BLEND_MODE blendMode;
+					BLEND_MODE blendMode = BLEND_OPAQUE;
 					
 					GxTextureId textureId = 0;
 					
-					if (primitive.material < 0 || primitive.material >= scene.materials.size())
-					{
-						blendMode = BLEND_OPAQUE;
-						
-						setColor(colorWhite);
-					}
-					else
+					Color color = colorWhite;
+					
+					if (primitive.material >= 0 && primitive.material < scene.materials.size())
 					{
 						auto & material = scene.materials[primitive.material];
 						
@@ -751,10 +763,8 @@ int main(int argc, char * argv[])
 							}
 						}
 						
-						if (keyboard.isDown(SDLK_u))
-							setColor(colorWhite);
-						else
-							setColor(material.pbrMetallicRoughness.baseColorFactor);
+						if (!keyboard.isDown(SDLK_u))
+							color = material.pbrMetallicRoughness.baseColorFactor;
 					}
 					
 					const bool isOpaqueMaterial = (blendMode == BLEND_OPAQUE);
@@ -763,8 +773,6 @@ int main(int argc, char * argv[])
 						continue;
 					
 					setBlend(blendMode);
-					
-					gxSetTexture(textureId);
 					
 				#if 1
 					if (!keyboard.isDown(SDLK_m))
@@ -777,8 +785,10 @@ int main(int argc, char * argv[])
 							
 							Shader shader("shader");
 							shader.setTexture("source", 0, textureId);
+							shader.setImmediate("color", color.r, color.g, color.b, color.a);
+							shader.setImmediate("params", textureId != 0, 0.f, 0.f, 0.f);
 							shader.setImmediate("time", framework.time);
-							
+					
 							setShader(shader);
 							{
 								pushWireframe(keyboard.isDown(SDLK_w));
@@ -786,11 +796,15 @@ int main(int argc, char * argv[])
 								popWireframe();
 							}
 							clearShader();
-							
-							continue;
 						}
+						
+						continue;
 					}
 				#endif
+				
+					gxSetTexture(textureId);
+					
+					setColor(color);
 					
 					// draw mesh, without the use of vertex and index buffers
 					
@@ -885,6 +899,8 @@ int main(int argc, char * argv[])
 					}
 					gxEnd();
 					popWireframe();
+					
+					gxSetTexture(0);
 				}
 			};
 			
@@ -945,6 +961,7 @@ int main(int argc, char * argv[])
 			}
 			
 			camera.popViewMatrix();
+			popBlend();
 			popDepthTest();
 		}
 		framework.endDraw();
