@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "imgui-framework.h"
 #include "Parse.h"
+#include "Quat.h"
 #include "StringEx.h"
 #include <algorithm>
 #include <map>
@@ -135,6 +136,12 @@ typedef ComponentProperty<Vec4> ComponentPropertyVec4;
 typedef ComponentProperty<std::string> ComponentPropertyString;
 typedef ComponentProperty<AngleAxis> ComponentPropertyAngleAxis;
 
+enum ComponentPriority
+{
+	kComponentPriority_Transform = 10,
+	kComponentPriority_Default = 100
+};
+
 struct ComponentTypeBase
 {
 	typedef std::function<void(ComponentBase * component, const std::string&)> SetString;
@@ -142,7 +149,7 @@ struct ComponentTypeBase
 	
 	std::string typeName;
 	std::vector<ComponentPropertyBase*> properties;
-	int tickPriority = 100;
+	int tickPriority = kComponentPriority_Default;
 };
 
 template <typename T>
@@ -318,24 +325,21 @@ struct ComponentMgr : ComponentMgrBase
 	}
 };
 
-struct ModelComponent : Component<ModelComponent>
+//
+
+struct TransformComponent : Component<TransformComponent>
 {
-	std::string filename;
-	
-	Vec3 aabbMin;
-	Vec3 aabbMax;
-	
-	Vec3 position; // todo : remove. is a member of transform component
+	Vec3 position;
 	AngleAxis angleAxis;
 	float scale = 1.f;
+	
+	Mat4x4 globalTransform = Mat4x4(true);
 	
 	virtual bool init(const std::vector<KeyValuePair> & params) override
 	{
 		for (auto & param : params)
 		{
-			if (strcmp(param.key, "filename") == 0)
-				filename = param.value;
-			else if (strcmp(param.key, "scale") == 0)
+			if (strcmp(param.key, "scale") == 0)
 				scale = Parse::Float(param.value);
 			else if (strcmp(param.key, "x") == 0)
 				position[0] = Parse::Float(param.value);
@@ -343,6 +347,52 @@ struct ModelComponent : Component<ModelComponent>
 				position[1] = Parse::Float(param.value);
 			else if (strcmp(param.key, "z") == 0)
 				position[2] = Parse::Float(param.value);
+		}
+		
+		return true;
+	}
+};
+
+struct TransformComponentType : ComponentType<TransformComponent>
+{
+	TransformComponentType()
+	{
+		typeName = "TransformComponent";
+		
+		in("position", &TransformComponent::position);
+		in("angleAxis", &TransformComponent::angleAxis);
+		in("scale", &TransformComponent::scale)
+			.setLimits(0.f, 10.f)
+			.setEditingCurveExponential(2.f);
+	}
+};
+
+struct Scene;
+struct SceneNode;
+
+struct TransformComponentMgr : ComponentMgr<TransformComponent>
+{
+	void calculateTransformsTraverse(Scene & scene, SceneNode & node) const;
+	void calculateTransforms(Scene & scene) const;
+};
+
+//
+
+struct ModelComponent : Component<ModelComponent>
+{
+	std::string filename;
+	
+	Vec3 aabbMin;
+	Vec3 aabbMax;
+	
+	Mat4x4 objectToWorld = Mat4x4(true);
+	
+	virtual bool init(const std::vector<KeyValuePair> & params) override
+	{
+		for (auto & param : params)
+		{
+			if (strcmp(param.key, "filename") == 0)
+				filename = param.value;
 		}
 		
 		Model(filename.c_str()).calculateAABB(aabbMin, aabbMax, true);
@@ -355,8 +405,14 @@ struct ModelComponent : Component<ModelComponent>
 		if (filename.empty())
 			return;
 		
-		setColor(colorWhite);
-		Model(filename.c_str()).drawEx(position, Vec3(0, 1, 0), 0.f, scale);
+		gxPushMatrix();
+		{
+			gxMultMatrixf(objectToWorld.m_v);
+			
+			setColor(colorWhite);
+			Model(filename.c_str()).draw();
+		}
+		gxPopMatrix();
 	}
 };
 
@@ -367,11 +423,6 @@ struct ModelComponentType : ComponentType<ModelComponent>
 		typeName = "ModelComponent";
 		
 		in("filename", &ModelComponent::filename);
-		in("position", &ModelComponent::position);
-		in("angleAxis", &ModelComponent::angleAxis);
-		in("scale", &ModelComponent::scale)
-			.setLimits(0.f, 10.f)
-			.setEditingCurveExponential(2.f);
 	}
 };
 
@@ -385,6 +436,8 @@ struct ModelComponentMgr : ComponentMgr<ModelComponent>
 		}
 	}
 };
+
+//
 
 struct ComponentTypeRegistration
 {
@@ -405,6 +458,7 @@ void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase *
 	std::sort(s_componentTypeRegistrations.begin(), s_componentTypeRegistrations.end(), [](const ComponentTypeRegistration & r1, const ComponentTypeRegistration & r2) { return r1.componentType->tickPriority < r2.componentType->tickPriority; });
 }
 
+static TransformComponentMgr s_transformComponentMgr;
 static ModelComponentMgr s_modelComponentMgr;
 
 struct SceneNode
@@ -414,6 +468,18 @@ struct SceneNode
 	std::vector<int> childNodeIds;
 	
 	std::vector<ComponentBase*> components;
+	
+	template <typename T>
+	T * findComponent()
+	{
+		for (auto * component : components)
+		{
+			if (component->typeIndex() == std::type_index(typeid(T)))
+				return static_cast<T*>(component);
+		}
+		
+		return nullptr;
+	}
 	
 	template <typename T>
 	const T * findComponent() const
@@ -431,6 +497,7 @@ struct SceneNode
 	{
 		for (auto * component : components)
 		{
+		// todo : find the appropriate component mgr from registration list
 			if (component->typeIndex() == s_modelComponentMgr.typeIndex())
 				s_modelComponentMgr.removeComponentForNode(id, s_modelComponentMgr.castToComponentType(component));
 		}
@@ -475,6 +542,65 @@ struct Scene
 		return i->second;
 	}
 };
+
+// todo : move to transform component source file
+
+void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode & node) const
+{
+	gxPushMatrix();
+	{
+		auto transformComp = node.findComponent<TransformComponent>();
+		
+		if (transformComp != nullptr)
+		{
+			gxTranslatef(
+				transformComp->position[0],
+				transformComp->position[1],
+				transformComp->position[2]);
+			
+			gxRotatef(
+				transformComp->angleAxis.angle * 180.f / float(M_PI),
+				transformComp->angleAxis.axis[0],
+				transformComp->angleAxis.axis[1],
+				transformComp->angleAxis.axis[2]);
+			
+			gxScalef(
+				transformComp->scale,
+				transformComp->scale,
+				transformComp->scale);
+			
+			gxGetMatrixf(GX_MODELVIEW, transformComp->globalTransform.m_v);
+		}
+		
+		auto modelComp = node.findComponent<ModelComponent>();
+		
+		if (modelComp != nullptr)
+		{
+			gxGetMatrixf(GX_MODELVIEW, modelComp->objectToWorld.m_v);
+		}
+		
+		for (auto & childNodeId : node.childNodeIds)
+		{
+			auto childNodeItr = scene.nodes.find(childNodeId);
+			
+			//Assert(childNodeItr != scene.nodes.end());
+			if (childNodeItr != scene.nodes.end())
+			{
+				SceneNode & childNode = childNodeItr->second;
+				
+				calculateTransformsTraverse(scene, childNode);
+			}
+		}
+	}
+	gxPopMatrix();
+}
+
+void TransformComponentMgr::calculateTransforms(Scene & scene) const
+{
+	calculateTransformsTraverse(scene, scene.getRootNode());
+}
+
+//
 
 struct SceneEditor
 {
@@ -589,92 +715,96 @@ struct SceneEditor
 			
 			for (auto * component : node.components)
 			{
-				ComponentTypeRegistration * r = nullptr;
-				
-				for (auto & registration : s_componentTypeRegistrations)
-					if (registration.componentMgr->typeIndex() == component->typeIndex())
-						r = &registration;
-				
-				Assert(r != nullptr);
-				if (r != nullptr)
+				ImGui::PushID(component);
 				{
-					auto & type = r->componentType;
+					ComponentTypeRegistration * r = nullptr;
 					
-					ImGui::LabelText("Component", "%s", type->typeName.c_str());
+					for (auto & registration : s_componentTypeRegistrations)
+						if (registration.componentMgr->typeIndex() == component->typeIndex())
+							r = &registration;
 					
-					for (auto & propertyBase : type->properties)
+					Assert(r != nullptr);
+					if (r != nullptr)
 					{
-						switch (propertyBase->type)
+						auto & type = r->componentType;
+						
+						ImGui::LabelText("Component", "%s", type->typeName.c_str());
+						
+						for (auto & propertyBase : type->properties)
 						{
-						case kComponentPropertyType_Int32:
+							switch (propertyBase->type)
 							{
+							case kComponentPropertyType_Int32:
+								{
+								}
+								break;
+							case kComponentPropertyType_Float:
+								{
+									auto property = static_cast<ComponentPropertyFloat*>(propertyBase);
+									
+									auto & value = property->getter(component);
+									
+									if (property->hasLimits)
+										ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential);
+									else
+										ImGui::InputFloat(property->name.c_str(), &value);
+								}
+								break;
+							case kComponentPropertyType_Vec2:
+								{
+									auto property = static_cast<ComponentPropertyVec2*>(propertyBase);
+									
+									auto & value = property->getter(component);
+						
+									ImGui::InputFloat2(property->name.c_str(), &value[0]);
+								}
+								break;
+							case kComponentPropertyType_Vec3:
+								{
+									auto property = static_cast<ComponentPropertyVec3*>(propertyBase);
+									
+									auto & value = property->getter(component);
+						
+									ImGui::InputFloat3(property->name.c_str(), &value[0]);
+								}
+								break;
+							case kComponentPropertyType_Vec4:
+								{
+									auto property = static_cast<ComponentPropertyVec4*>(propertyBase);
+									
+									auto & value = property->getter(component);
+						
+									ImGui::InputFloat4(property->name.c_str(), &value[0]);
+								}
+								break;
+							case kComponentPropertyType_String:
+								{
+									auto property = static_cast<ComponentPropertyString*>(propertyBase);
+									
+									auto value = property->getter(component);
+						
+									char buffer[1024];
+									strcpy_s(buffer, sizeof(buffer), value.c_str());
+									
+									if (ImGui::InputText(property->name.c_str(), buffer, sizeof(buffer)))
+										property->setter(component, buffer);
+								}
+								break;
+							case kComponentPropertyType_AngleAxis:
+								{
+									auto property = static_cast<ComponentPropertyAngleAxis*>(propertyBase);
+									
+									auto value = property->getter(component);
+									
+									// todo : also edit axis
+									ImGui::SliderAngle(property->name.c_str(), &value.angle);
+								}
+								break;
 							}
-							break;
-						case kComponentPropertyType_Float:
-							{
-								auto property = static_cast<ComponentPropertyFloat*>(propertyBase);
-								
-								auto & value = property->getter(component);
-								
-								if (property->hasLimits)
-									ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential);
-								else
-									ImGui::InputFloat(property->name.c_str(), &value);
-							}
-							break;
-						case kComponentPropertyType_Vec2:
-							{
-								auto property = static_cast<ComponentPropertyVec2*>(propertyBase);
-								
-								auto & value = property->getter(component);
-					
-								ImGui::InputFloat2(property->name.c_str(), &value[0]);
-							}
-							break;
-						case kComponentPropertyType_Vec3:
-							{
-								auto property = static_cast<ComponentPropertyVec3*>(propertyBase);
-								
-								auto & value = property->getter(component);
-					
-								ImGui::InputFloat3(property->name.c_str(), &value[0]);
-							}
-							break;
-						case kComponentPropertyType_Vec4:
-							{
-								auto property = static_cast<ComponentPropertyVec4*>(propertyBase);
-								
-								auto & value = property->getter(component);
-					
-								ImGui::InputFloat4(property->name.c_str(), &value[0]);
-							}
-							break;
-						case kComponentPropertyType_String:
-							{
-								auto property = static_cast<ComponentPropertyString*>(propertyBase);
-								
-								auto value = property->getter(component);
-					
-								char buffer[1024];
-								strcpy_s(buffer, sizeof(buffer), value.c_str());
-								
-								if (ImGui::InputText(property->name.c_str(), buffer, sizeof(buffer)))
-									property->setter(component, buffer);
-							}
-							break;
-						case kComponentPropertyType_AngleAxis:
-							{
-								auto property = static_cast<ComponentPropertyAngleAxis*>(propertyBase);
-								
-								auto value = property->getter(component);
-								
-								// todo : also edit axis
-								ImGui::SliderAngle(property->name.c_str(), &value.angle);
-							}
-							break;
 						}
 					}
 				}
+				ImGui::PopID();
 			}
 			
 			ImGui::Indent();
@@ -782,8 +912,8 @@ struct SceneEditor
 		
 		if (modelComp != nullptr)
 		{
-			const Vec3 min = modelComp->aabbMin * modelComp->scale;
-			const Vec3 max = modelComp->aabbMax * modelComp->scale;
+			const Vec3 & min = modelComp->aabbMin;
+			const Vec3 & max = modelComp->aabbMax;
 			
 			const Vec3 position = (min + max) / 2.f;
 			const Vec3 size = (max - min) / 2.f;
@@ -797,20 +927,25 @@ struct SceneEditor
 	{
 		gxPushMatrix();
 		{
-			auto modelComp = node.findComponent<ModelComponent>();
+			auto transformComp = node.findComponent<TransformComponent>();
 			
-			if (modelComp != nullptr)
+			if (transformComp != nullptr)
 			{
 				gxTranslatef(
-					modelComp->position[0],
-					modelComp->position[1],
-					modelComp->position[2]);
+					transformComp->position[0],
+					transformComp->position[1],
+					transformComp->position[2]);
 				
 				gxRotatef(
-					modelComp->angleAxis.angle * 180.f / float(M_PI),
-					modelComp->angleAxis.axis[0],
-					modelComp->angleAxis.axis[1],
-					modelComp->angleAxis.axis[2]);
+					transformComp->angleAxis.angle * 180.f / float(M_PI),
+					transformComp->angleAxis.axis[0],
+					transformComp->angleAxis.axis[1],
+					transformComp->angleAxis.axis[2]);
+				
+				gxScalef(
+					transformComp->scale,
+					transformComp->scale,
+					transformComp->scale);
 			}
 			
 			for (auto & childNodeId : node.childNodeIds)
@@ -883,16 +1018,23 @@ static void createRandomScene(Scene & scene)
 		
 		node.id = scene.allocNodeId();
 		
-		auto component = s_modelComponentMgr.createComponentForNode(node.id);
+		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
 		
-		if (component->init({{ "filename", "model.txt" } }))
+		if (modelComp->init({{ "filename", "model.txt" } }))
 		{
-			node.components.push_back(component);
+			node.components.push_back(modelComp);
+		}
+		
+		auto transformComp = s_transformComponentMgr.createComponentForNode(node.id);
+		
+		if (transformComp->init({ }))
+		{
+			transformComp->position[0] = random(-4.f, +4.f);
+			transformComp->position[1] = random(-4.f, +4.f);
+			transformComp->position[2] = random(-4.f, +4.f);
+			transformComp->scale = .01f;
 			
-			component->position[0] = random(-4.f, +4.f);
-			component->position[1] = random(-4.f, +4.f);
-			component->position[2] = random(-4.f, +4.f);
-			component->scale = .01f;
+			node.components.push_back(transformComp);
 		}
 		
 		scene.nodes[node.id] = node;
@@ -912,6 +1054,7 @@ int main(int argc, char * argv[])
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
+	registerComponentType(new TransformComponentType(), &s_transformComponentMgr);
 	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);
 	
 	SceneEditor editor;
@@ -931,6 +1074,8 @@ int main(int argc, char * argv[])
 		bool inputIsCaptured = false;
 		
 		editor.tickEditor(dt, inputIsCaptured);
+		
+		s_transformComponentMgr.calculateTransforms(editor.scene);
 		
 		for (auto & r : s_componentTypeRegistrations)
 		{
