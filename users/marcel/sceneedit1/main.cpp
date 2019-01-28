@@ -2,6 +2,7 @@
 #include "imgui-framework.h"
 #include "Parse.h"
 #include "StringEx.h"
+#include <algorithm>
 #include <map>
 #include <set>
 
@@ -94,6 +95,7 @@ struct ComponentTypeBase
 	
 	std::string typeName;
 	std::vector<ComponentPropertyBase*> properties;
+	int tickPriority = 100;
 };
 
 template <typename T>
@@ -170,6 +172,8 @@ struct ComponentMgrBase
 	virtual void addComponentForNode(const int nodeId, ComponentBase * component) = 0;
 	virtual void removeComponentForNode(const int nodeId, ComponentBase * component) = 0;
 	
+	virtual void tick(const float dt) = 0;
+	
 	virtual std::type_index typeIndex() = 0;
 };
 
@@ -229,7 +233,7 @@ struct ComponentMgr : ComponentMgrBase
 		component->next = nullptr;
 	}
 	
-	void tick(const float dt)
+	virtual void tick(const float dt) override
 	{
 		for (T * i = head; i != nullptr; i = i->next)
 		{
@@ -300,6 +304,7 @@ struct ModelComponentType : ComponentType<ModelComponent>
 		in("scale", &ModelComponent::scale);
 	}
 };
+
 struct ModelComponentMgr : ComponentMgr<ModelComponent>
 {
 	void draw() const
@@ -326,6 +331,8 @@ void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase *
 	registration.componentType = componentType;
 
 	s_componentTypeRegistrations.push_back(registration);
+	
+	std::sort(s_componentTypeRegistrations.begin(), s_componentTypeRegistrations.end(), [](const ComponentTypeRegistration & r1, const ComponentTypeRegistration & r2) { return r1.componentType->tickPriority < r2.componentType->tickPriority; });
 }
 
 static ModelComponentMgr s_modelComponentMgr;
@@ -826,7 +833,10 @@ int main(int argc, char * argv[])
 		
 		editor.tickEditor(dt, inputIsCaptured);
 		
-		s_modelComponentMgr.tick(dt);
+		for (auto & r : s_componentTypeRegistrations)
+		{
+			r.componentMgr->tick(dt);
+		}
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
