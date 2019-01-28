@@ -1,0 +1,44 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+uniform sampler2D source;
+uniform float time;
+
+shader_in vec2 v_texcoord0;
+shader_in vec3 v_normal;
+shader_in vec3 v_normalV;
+
+void main()
+{
+	vec4 result = texture(source, v_texcoord0);
+
+#if 0
+	result.rgb = srgbToLinear(result.rgb);
+
+	vec3 totalLightColor = vec3(0.0);
+
+	{
+		vec3 lightColor = vec3(1.0, 1.0, 1.0);
+		float lightIntensity = 0.004;
+
+		totalLightColor += lightColor * lightIntensity;
+	}
+
+	{
+		vec3 lightDirection = normalize(vec3(cos(time), -4.0, sin(time)));
+		vec3 lightColor = vec3(1.0, 0.8, 0.6) * 0.1;
+		float lightIntensity = max(0.0, dot(normalize(v_normal), lightDirection) * 1.0);
+
+		totalLightColor += lightColor * lightIntensity;
+	}
+
+	result.rgb *= totalLightColor;
+
+	//float facing = max(0.0, dot(normalize(v_normalV), vec3(0.0, 0.0, -1.0)));
+	//result.rgb += vec3(0.7, 0.7, 0.25) * (pow(1.0 - facing * 0.3, 32.0)) * 0.1 * 2.8;
+
+	result.rgb = linearToSrgb(result.rgb);
+#endif
+	
+	shader_fragColor = result;
+}
