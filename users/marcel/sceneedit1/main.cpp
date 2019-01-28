@@ -26,7 +26,30 @@ struct ComponentPropertyBase
 {
 	std::string name;
 	ComponentPropertyType type;
+	
+	ComponentPropertyBase(const char * in_name, const ComponentPropertyType in_type)
+		: name(in_name)
+		, type(in_type)
+	{
+	}
 };
+
+template <typename T> ComponentPropertyType getComponentPropertyType();
+
+template <> ComponentPropertyType getComponentPropertyType<int>()
+{
+	return kComponentPropertyType_Int32;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<float>()
+{
+	return kComponentPropertyType_Float;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<std::string>()
+{
+	return kComponentPropertyType_String;
+}
 
 template <typename T> struct ComponentProperty : ComponentPropertyBase
 {
@@ -35,13 +58,23 @@ template <typename T> struct ComponentProperty : ComponentPropertyBase
 	
 	Getter getter;
 	Setter setter;
+	
+	ComponentProperty(const char * name)
+		: ComponentPropertyBase(name, getComponentPropertyType<T>())
+	{
+	}
 };
+
+typedef ComponentProperty<int> ComponentPropertyInt;
+typedef ComponentProperty<float> ComponentPropertyFloat;
+typedef ComponentProperty<std::string> ComponentPropertyString;
 
 struct ComponentTypeBase
 {
 	typedef std::function<void(ComponentBase * component, const std::string&)> SetString;
 	typedef std::function<std::string(ComponentBase * component)> GetString;
 	
+	/*
 	struct Property
 	{
 		std::string name;
@@ -49,10 +82,12 @@ struct ComponentTypeBase
 		GetString getString;
 		SetString setString;
 	};
+	*/
 	
 	std::string typeName;
-	std::vector<Property> properties;
+	std::vector<ComponentPropertyBase*> properties;
 	
+	/*
 	void genericIn(const char * name, const ComponentPropertyType type, const GetString & getString, const SetString & setString)
 	{
 		Property property;
@@ -63,6 +98,7 @@ struct ComponentTypeBase
 		
 		properties.push_back(property);
 	}
+	*/
 };
 
 template <typename T>
@@ -70,16 +106,26 @@ struct ComponentType : ComponentTypeBase
 {
 	void in(const char * name, std::string T::* member)
 	{
-		genericIn(name, kComponentPropertyType_String,
-			[=](ComponentBase * comp) -> std::string { return static_cast<T*>(comp)->*member; },
-			[=](ComponentBase * comp, const std::string & s) { static_cast<T*>(comp)->*member = s; });
+		auto p = new ComponentPropertyString(name);
+		p->getter = [=](ComponentBase * comp) -> std::string & { return static_cast<T*>(comp)->*member; };
+		p->setter = [=](ComponentBase * comp, const std::string & s) { static_cast<T*>(comp)->*member = s; };
+		
+		properties.push_back(p);
 	}
 	
 	void in(const char * name, float T::* member)
 	{
+		auto p = new ComponentPropertyFloat(name);
+		p->getter = [=](ComponentBase * comp) -> float & { return static_cast<T*>(comp)->*member; };
+		p->setter = [=](ComponentBase * comp, const float & s) { static_cast<T*>(comp)->*member = s; };
+		
+		properties.push_back(p);
+		
+	/*
 		genericIn(name, kComponentPropertyType_Float,
 			[=](ComponentBase * comp) -> std::string { return String::FormatC("%f", static_cast<T*>(comp)->*member); },
 			[=](ComponentBase * comp, const std::string & s) { static_cast<T*>(comp)->*member = Parse::Float(s); });
+	*/
 	}
 };
 
@@ -473,15 +519,37 @@ struct SceneEditor
 					
 					ImGui::LabelText("Component", "%s", type->typeName.c_str());
 					
-					for (auto & property : type->properties)
+					for (auto & propertyBase : type->properties)
 					{
-						auto value = property.getString(component);
+						switch (propertyBase->type)
+						{
+						case kComponentPropertyType_Int32:
+							{
+							}
+							break;
+						case kComponentPropertyType_Float:
+							{
+								auto property = static_cast<ComponentPropertyFloat*>(propertyBase);
+								
+								auto & value = property->getter(component);
 					
-						char buffer[1024];
-						strcpy_s(buffer, sizeof(buffer), value.c_str());
-						
-						if (ImGui::InputText(property.name.c_str(), buffer, sizeof(buffer)))
-							property.setString(component, buffer);
+								ImGui::InputFloat(property->name.c_str(), &value);
+							}
+							break;
+						case kComponentPropertyType_String:
+							{
+								auto property = static_cast<ComponentPropertyString*>(propertyBase);
+								
+								auto value = property->getter(component);
+					
+								char buffer[1024];
+								strcpy_s(buffer, sizeof(buffer), value.c_str());
+								
+								if (ImGui::InputText(property->name.c_str(), buffer, sizeof(buffer)))
+									property->setter(component, buffer);
+							}
+							break;
+						}
 					}
 				}
 			}
