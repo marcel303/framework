@@ -18,12 +18,14 @@ void main()
 	if (params.x != 0.0)
 	{
 		vec4 sourceColor = texture(source, v_texcoord0);
-		
+
 		result.rgb = result.rgb * sourceColor.rgb;
 		result.a   = result.a   * sourceColor.a;
 	}
 
 #if 0
+	vec4 dryColor = result;
+
 	result.rgb = srgbToLinear(result.rgb);
 
 	vec3 totalLightColor = vec3(0.0);
@@ -52,7 +54,7 @@ void main()
 
 	float drywet = (sin(time / 4.56) + 1.0) / 2.0;
 
-	result = mix(source_color, result, drywet);
+	result = mix(dryColor, result, drywet);
 #endif
 	
 	shader_fragColor = result;
