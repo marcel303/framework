@@ -9,6 +9,7 @@ add codingChallenges
 add colorpart
 add cuber
 with_platform macos add etherdream1
+add geopart1
 add gltf1
 add homography
 add jsusfx1

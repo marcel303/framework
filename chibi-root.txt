@@ -22,9 +22,6 @@ global_group libraries
 	add libosc
 	add libparticle
 	add libvideo
+	add users/marcel/artnet1
 	add users/marcel/libjgmod
 	add users/marcel/optionmenu
-
-global_group users/marcel
-
-	add users/marcel/geopart1
