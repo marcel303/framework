@@ -1,5 +1,6 @@
 #include <GL/glew.h> // GL_CULL_FACE. todo : add functions to control culling mode to Framework
 #include "framework.h"
+#include "gx_mesh.h"
 #include "json.hpp"
 #include "Path.h"
 #include "TextIO.h"
@@ -7,220 +8,6 @@
 #include "data/engine/ShaderCommon.txt"
 
 #include <SDL2/SDL_opengl.h>
-
-class GxVertexBuffer
-{
-	friend class GxMesh;
-	
-	GxShaderBufferId m_vertexArray;
-	
-public:
-	GxVertexBuffer()
-		: m_vertexArray(0)
-	{
-		// create buffer
-		glGenBuffers(1, &m_vertexArray);
-		checkErrorGL();
-	}
-	
-	~GxVertexBuffer()
-	{
-		// free buffer
-		glDeleteBuffers(1, &m_vertexArray);
-		m_vertexArray = 0;
-		checkErrorGL();
-	}
-	
-	void setData(const void * bytes, const int numBytes)
-	{
-		// fill the buffer with data
-		glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
-		glBufferData(GL_ARRAY_BUFFER, numBytes, bytes, GL_STATIC_DRAW);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		checkErrorGL();
-	}
-};
-
-enum GX_INDEX_FORMAT
-{
-	GX_INDEX_16, // indices are 16-bits (uint16_t)
-	GX_INDEX_32  // indices are 32-bits (uint32_t)
-};
-
-class GxIndexBuffer
-{
-	friend class GxMesh;
-	
-	GxShaderBufferId m_indexArray;
-	int m_numIndices;
-	GX_INDEX_FORMAT m_format;
-	
-public:
-	GxIndexBuffer()
-		: m_indexArray(0)
-		, m_numIndices(0)
-		, m_format(GX_INDEX_16)
-	{
-		// create buffer
-		glGenBuffers(1, &m_indexArray);
-		checkErrorGL();
-	}
-	
-	~GxIndexBuffer()
-	{
-		// free buffer
-		glDeleteBuffers(1, &m_indexArray);
-		m_indexArray = 0;
-		checkErrorGL();
-	}
-	
-	void setData(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
-	{
-		// fill the buffer with data
-		
-		const int numBytes =
-			format == GX_INDEX_16
-			? numIndices * 2
-			: numIndices * 4;
-		
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexArray);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, numBytes, bytes, GL_STATIC_DRAW);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		checkErrorGL();
-		
-		m_numIndices = numIndices;
-		m_format = format;
-	}
-	
-	int getNumIndices() const
-	{
-		return m_numIndices;
-	}
-	
-	GX_INDEX_FORMAT getFormat() const
-	{
-		return m_format;
-	}
-};
-
-struct GxVertexInput
-{
-	int id;
-	int components;
-	int type;
-	bool normalize;
-	int offset;
-	int stride;
-};
-
-class GxMesh
-{
-	uint32_t m_vertexArrayObject;
-	
-	const GxVertexBuffer * m_vertexBuffer;
-	const GxIndexBuffer * m_indexBuffer;
-	
-	void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs);
-	
-public:
-	GxMesh()
-		: m_vertexArrayObject(0)
-		, m_vertexBuffer(nullptr)
-		, m_indexBuffer(nullptr)
-	{
-		// create vertex array object
-		glGenVertexArrays(1, &m_vertexArrayObject);
-		checkErrorGL();
-	}
-	
-	~GxMesh()
-	{
-		// free vertex array object
-		glDeleteVertexArrays(1, &m_vertexArrayObject);
-		m_vertexArrayObject = 0;
-		checkErrorGL();
-	}
-	
-	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs);
-	void setIndexBuffer(const GxIndexBuffer * buffer);
-	
-	void draw() const;
-};
-
-void GxMesh::bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs)
-{
-	checkErrorGL();
-
-	for (int i = 0; i < numVsInputs; ++i)
-	{
-		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
-		
-		glEnableVertexAttribArray(vsInputs[i].id);
-		checkErrorGL();
-		
-		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, vsInputs[i].stride, (void*)(intptr_t)vsInputs[i].offset);
-		checkErrorGL();
-	}
-}
-
-void GxMesh::setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs)
-{
-	m_vertexBuffer = buffer;
-	
-	Assert(m_vertexArrayObject != 0);
-	glBindVertexArray(m_vertexArrayObject);
-	checkErrorGL();
-	{
-		Assert(m_vertexBuffer->m_vertexArray != 0);
-		glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer->m_vertexArray);
-		checkErrorGL();
-		
-		bindVsInputs(vertexInputs, numVertexInputs);
-	}
-	glBindVertexArray(0);
-	checkErrorGL();
-}
-
-void GxMesh::setIndexBuffer(const GxIndexBuffer * buffer)
-{
-	m_indexBuffer = buffer;
-	
-	Assert(m_vertexArrayObject != 0);
-	glBindVertexArray(m_vertexArrayObject);
-	checkErrorGL();
-	{
-		Assert(m_indexBuffer->m_indexArray != 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer->m_indexArray);
-		checkErrorGL();
-	}
-	glBindVertexArray(0);
-	checkErrorGL();
-}
-
-void GxMesh::draw() const
-{
-	gxValidateMatrices();
-	
-	const int numIndices = m_indexBuffer->getNumIndices();
-	
-	// bind vertex arrays
-
-	fassert(m_vertexBuffer && m_vertexBuffer->m_vertexArray);
-	fassert(m_indexBuffer && m_indexBuffer->m_indexArray);
-	glBindVertexArray(m_vertexArrayObject);
-	checkErrorGL();
-
-	GLenum indexType =
-		m_indexBuffer->getFormat() == GX_INDEX_16
-		? GL_UNSIGNED_SHORT
-		: GL_UNSIGNED_INT;
-	
-	glDrawElements(GL_TRIANGLES, numIndices, indexType, 0);
-	checkErrorGL();
-
-	glBindVertexArray(0);
-	checkErrorGL();
-}
 
 using json = nlohmann::json;
 
@@ -374,6 +161,21 @@ namespace gltf
 		}
 	};
 	
+	struct Node
+	{
+		std::string name;
+		std::vector<int> children;
+		Vec3 translation;
+		Vec3 scale;
+		Vec4 rotation; // angleAxis
+	};
+	
+	struct SceneRoot
+	{
+		std::string name;
+		std::vector<int> nodes;
+	};
+	
 	struct Scene
 	{
 		std::vector<Buffer> buffers;
@@ -383,6 +185,10 @@ namespace gltf
 		std::vector<Texture> textures;
 		std::vector<Material> materials;
 		std::vector<Mesh> meshes;
+		std::vector<Node> nodes;
+		std::vector<SceneRoot> sceneRoots;
+		
+		int activeScene = -1;
 	};
 }
 
@@ -636,6 +442,40 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				scene.materials.push_back(material);
 			}
 		}
+		else if (member_name == "nodes")
+		{
+			auto & nodes_json = member;
+			
+			for (auto & node_json : nodes_json)
+			{
+				gltf::Node node;
+				node.name = node_json.value("name", "");
+				node.children = node_json.value("children", std::vector<int>());
+				node.translation = node_json.value("translation", Vec3(0, 0, 0));
+				node.rotation = node_json.value("rotation", Vec4(0, 1, 0, 0));
+				
+				// todo : matrix
+				
+				scene.nodes.push_back(node);
+			}
+		}
+		else if (member_name == "scene")
+		{
+			scene.activeScene = member_itr.value();
+		}
+		else if (member_name == "scenes")
+		{
+			auto & scenes_json = member;
+			
+			for (auto & scene_json : scenes_json)
+			{
+				gltf::SceneRoot sceneRoot;
+				sceneRoot.name = scene_json.value("name", "");
+				sceneRoot.nodes = scene_json.value("nodes", std::vector<int>());
+				
+				scene.sceneRoots.push_back(sceneRoot);
+			}
+		}
 		else
 		{
 			logDebug("unknown key: %s", member_name.c_str());
@@ -655,11 +495,11 @@ int main(int argc, char * argv[])
 	if (!framework.init(800, 600))
 		return -1;
 
-	//const char * path = "van_gogh_room/scene.gltf";
+	const char * path = "van_gogh_room/scene.gltf";
 	//const char * path = "littlest_tokyo/scene.gltf";
 	//const char * path = "ftm/scene.gltf";
 	//const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
-	const char * path = "halloween_little_witch/scene.gltf";
+	//const char * path = "halloween_little_witch/scene.gltf";
 
 	gltf::Scene scene;
 	
@@ -690,7 +530,9 @@ int main(int argc, char * argv[])
 
 	std::map<int, GxVertexBuffer*> vertexBuffers;
 	std::map<int, GxIndexBuffer*> indexBuffers;
-	std::map<gltf::Mesh*, GxMesh*> meshes;
+	std::map<const gltf::Mesh*, GxMesh*> meshes;
+	
+	// create vertex buffers from buffer objects
 	
 	int bufferIndex = 0;
 	
@@ -703,6 +545,8 @@ int main(int argc, char * argv[])
 		Assert(vertexBuffers[bufferIndex] == nullptr);
 		vertexBuffers[bufferIndex++] = vertexBuffer;
 	}
+	
+	// create index buffers and meshes for mesh primitives
 	
 	for (auto & mesh : scene.meshes)
 	{
@@ -739,7 +583,7 @@ int main(int argc, char * argv[])
 				}
 			}
 			
-			//
+			// create mapping between vertex buffer and vertex shader
 			
 			std::vector<GxVertexInput> vertexInputs;
 			
@@ -771,25 +615,25 @@ int main(int argc, char * argv[])
 				if (id == -1)
 					continue;
 				
-				const int components =
+				const int numComponents =
 					accessor->type == "VEC2" ? 2 :
 					accessor->type == "VEC3" ? 3 :
 					-1;
 				
-				if (components == -1)
+				if (numComponents == -1)
 					continue;
 				
-				const int type =
-					accessor->type == "VEC2" ? GL_FLOAT :
-					accessor->type == "VEC3" ? GL_FLOAT :
-					-1;
+				const GX_ELEMENT_TYPE type =
+					accessor->type == "VEC2" ? GX_ELEMENT_FLOAT32 :
+					accessor->type == "VEC3" ? GX_ELEMENT_FLOAT32 :
+					(GX_ELEMENT_TYPE)-1;
 				
-				if (type == -1)
+				if (type == (GX_ELEMENT_TYPE)-1)
 					continue;
 				
 				GxVertexInput v;
 				v.id = id;
-				v.components = components;
+				v.numComponents = numComponents;
 				v.type = type;
 				v.normalize = false;
 				v.offset = bufferView->byteOffset + accessor->byteOffset;
@@ -800,6 +644,8 @@ int main(int argc, char * argv[])
 			
 			if (vertexBufferIndex < 0)
 				continue;
+			
+			// create mesh
 			
 			Assert(vertexBuffers[vertexBufferIndex] != nullptr);
 			
@@ -835,8 +681,192 @@ int main(int argc, char * argv[])
 			
 			gxRotatef(-90, 1, 0, 0);
 			
-			gxScalef(-.01f, .01f, .01f);
+			//gxScalef(-.01f, .01f, .01f);
 			//gxScalef(100.f, 100.f, 100.f);
+			
+			auto drawMesh = [&](const gltf::Mesh & mesh, const bool isOpaquePass)
+			{
+				for (auto & primitive : mesh.primitives)
+				{
+					if (primitive.mode != gltf::kMode_Triangles)
+						continue;
+					
+					BLEND_MODE blendMode;
+					
+					GxTextureId textureId = 0;
+					
+					if (primitive.material < 0 || primitive.material >= scene.materials.size())
+					{
+						blendMode = BLEND_OPAQUE;
+						
+						gxSetTexture(0);
+						
+						setColor(colorWhite);
+					}
+					else
+					{
+						auto & material = scene.materials[primitive.material];
+						
+						blendMode = material.alphaMode == "OPAQUE" ? BLEND_OPAQUE : BLEND_ALPHA;
+						
+						if (material.doubleSided)
+						{
+							glDisable(GL_CULL_FACE);
+							checkErrorGL();
+						}
+						else
+						{
+							glFrontFace(GL_CCW);
+							glCullFace(GL_FRONT); // weird
+							glEnable(GL_CULL_FACE);
+							checkErrorGL();
+						}
+						
+						const int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
+						
+						if (textureIndex >= 0 && textureIndex < scene.textures.size())
+						{
+							auto & texture = scene.textures[textureIndex];
+							
+							if (texture.source >= 0 || texture.source < scene.images.size())
+							{
+								auto & image = scene.images[texture.source];
+								
+								textureId = getTexture(image.path.c_str());
+							}
+						}
+						
+						if (keyboard.isDown(SDLK_u))
+							setColor(colorWhite);
+						else
+							setColor(material.pbrMetallicRoughness.baseColorFactor);
+					}
+					
+					const bool isOpaqueMaterial = (blendMode == BLEND_OPAQUE);
+					
+					if (isOpaquePass != isOpaqueMaterial)
+						continue;
+					
+					setBlend(blendMode);
+					
+					gxSetTexture(textureId);
+					
+				#if 1
+					if (!keyboard.isDown(SDLK_m))
+					{
+						auto gxMesh_itr = meshes.find(&mesh);
+						
+						if (gxMesh_itr != meshes.end())
+						{
+							GxMesh * gxMesh = gxMesh_itr->second;
+							
+							Shader shader("shader");
+							shader.setTexture("source", 0, textureId);
+							shader.setImmediate("time", framework.time);
+							
+							setShader(shader);
+							{
+								pushWireframe(keyboard.isDown(SDLK_w));
+								gxMesh->draw();
+								popWireframe();
+							}
+							clearShader();
+							
+							continue;
+						}
+					}
+				#endif
+					
+				#if 0
+					gltf::Accessor * indexAccessor;
+					gltf::BufferView * indexBufferView;
+					gltf::Buffer * indexBuffer;
+					
+					if (!resolveBufferView(primitive.indices, indexAccessor, indexBufferView, indexBuffer))
+						continue;
+					
+					if (indexAccessor->componentType != gltf::kElementType_U32)
+						continue;
+					
+					//
+					
+					gltf::Accessor * positionAccessor;
+					gltf::BufferView * positionBufferView;
+					gltf::Buffer * positionBuffer;
+					
+					const int positionAccessorIndex = primitive.attributes["POSITION"];
+					
+					if (!resolveBufferView(positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
+						continue;
+					
+					if (positionAccessor->type != "VEC3")
+						continue;
+					
+					//
+					
+					gltf::Accessor * texcoord0Accessor = nullptr;
+					gltf::BufferView * texcoord0BufferView;
+					gltf::Buffer * texcoord0Buffer;
+					
+					auto texcoord0_itr = primitive.attributes.find("TEXCOORD_0");
+					
+					if (texcoord0_itr != primitive.attributes.end())
+					{
+						const int texcoord0AccessorIndex = primitive.attributes["TEXCOORD_0"];
+						
+						if (!resolveBufferView(texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
+							continue;
+						
+						if (texcoord0Accessor->type != "VEC2")
+							continue;
+					}
+					
+					pushWireframe(keyboard.isDown(SDLK_w));
+					gxBegin(GX_TRIANGLES);
+					{
+						for (int i = 0; i < indexAccessor->count; ++i)
+						{
+							const uint8_t * index_mem = &indexBuffer->data.front() + indexBufferView->byteOffset + indexAccessor->byteOffset;
+							Assert(index_mem < &indexBuffer->data.front() + indexBuffer->byteLength);
+							const uint32_t * index_ptr = (uint32_t*)index_mem;
+							const uint32_t index = index_ptr[i];
+							
+							//
+							
+							const uint8_t * position_mem = &positionBuffer->data.front() + positionBufferView->byteOffset + positionAccessor->byteOffset;
+							position_mem += index * 3 * sizeof(float);
+							Assert(position_mem < &positionBuffer->data.front() + positionBuffer->byteLength);
+							const float * position_ptr = (float*)position_mem;
+							
+							const float position_x = position_ptr[0];
+							const float position_y = position_ptr[1];
+							const float position_z = position_ptr[2];
+							
+							//
+							
+							if (texcoord0Accessor != nullptr)
+							{
+								const uint8_t * texcoord0_mem = &texcoord0Buffer->data.front() + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
+								texcoord0_mem += index * 2 * sizeof(float);
+								Assert(texcoord0_mem < &texcoord0Buffer->data.front() + texcoord0Buffer->byteLength);
+								const float * texcoord0_ptr = (float*)texcoord0_mem;
+								
+								const float texcoord0_x = texcoord0_ptr[0];
+								const float texcoord0_y = texcoord0_ptr[1];
+								
+								gxTexCoord2f(texcoord0_x, texcoord0_y);
+							}
+							
+							//
+							
+							gxVertex3f(position_x, position_y, position_z);
+						}
+					}
+					gxEnd();
+					popWireframe();
+				#endif
+				}
+			};
 			
 			for (int i = 0; i < 2; ++i)
 			{
@@ -844,181 +874,7 @@ int main(int argc, char * argv[])
 				
 				for (auto & mesh : scene.meshes)
 				{
-					for (auto & primitive : mesh.primitives)
-					{
-						if (primitive.mode != gltf::kMode_Triangles)
-							continue;
-						
-						BLEND_MODE blendMode;
-						
-						GxTextureId textureId = 0;
-						
-						if (primitive.material < 0 || primitive.material >= scene.materials.size())
-						{
-							blendMode = BLEND_OPAQUE;
-							
-							gxSetTexture(0);
-							
-							setColor(colorWhite);
-						}
-						else
-						{
-							auto & material = scene.materials[primitive.material];
-							
-							blendMode = material.alphaMode == "OPAQUE" ? BLEND_OPAQUE : BLEND_ALPHA;
-							
-							if (material.doubleSided)
-							{
-								glDisable(GL_CULL_FACE);
-								checkErrorGL();
-							}
-							else
-							{
-								glFrontFace(GL_CCW);
-								glCullFace(GL_FRONT); // weird
-								glEnable(GL_CULL_FACE);
-								checkErrorGL();
-							}
-							
-							const int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
-							
-							if (textureIndex >= 0 && textureIndex < scene.textures.size())
-							{
-								auto & texture = scene.textures[textureIndex];
-								
-								if (texture.source >= 0 || texture.source < scene.images.size())
-								{
-									auto & image = scene.images[texture.source];
-									
-									textureId = getTexture(image.path.c_str());
-								}
-							}
-							
-							if (keyboard.isDown(SDLK_u))
-								setColor(colorWhite);
-							else
-								setColor(material.pbrMetallicRoughness.baseColorFactor);
-						}
-						
-						const bool isOpaqueMaterial = (blendMode == BLEND_OPAQUE);
-						
-						if (isOpaquePass != isOpaqueMaterial)
-							continue;
-						
-						setBlend(blendMode);
-						
-						gxSetTexture(textureId);
-						
-					#if 1
-						if (!keyboard.isDown(SDLK_m))
-						{
-							auto gxMesh_itr = meshes.find(&mesh);
-							
-							if (gxMesh_itr != meshes.end())
-							{
-								GxMesh * gxMesh = gxMesh_itr->second;
-								
-								Shader shader("shader");
-								shader.setTexture("source", 0, textureId);
-								
-								setShader(shader);
-								{
-									gxMesh->draw();
-								}
-								clearShader();
-								
-								continue;
-							}
-						}
-					#endif
-						
-						gltf::Accessor * indexAccessor;
-						gltf::BufferView * indexBufferView;
-						gltf::Buffer * indexBuffer;
-						
-						if (!resolveBufferView(primitive.indices, indexAccessor, indexBufferView, indexBuffer))
-							continue;
-						
-						if (indexAccessor->componentType != gltf::kElementType_U32)
-							continue;
-						
-						//
-						
-						gltf::Accessor * positionAccessor;
-						gltf::BufferView * positionBufferView;
-						gltf::Buffer * positionBuffer;
-						
-						const int positionAccessorIndex = primitive.attributes["POSITION"];
-						
-						if (!resolveBufferView(positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
-							continue;
-						
-						if (positionAccessor->type != "VEC3")
-							continue;
-						
-						//
-						
-						gltf::Accessor * texcoord0Accessor = nullptr;
-						gltf::BufferView * texcoord0BufferView;
-						gltf::Buffer * texcoord0Buffer;
-						
-						auto texcoord0_itr = primitive.attributes.find("TEXCOORD_0");
-						
-						if (texcoord0_itr != primitive.attributes.end())
-						{
-							const int texcoord0AccessorIndex = primitive.attributes["TEXCOORD_0"];
-							
-							if (!resolveBufferView(texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
-								continue;
-							
-							if (texcoord0Accessor->type != "VEC2")
-								continue;
-						}
-						
-						pushWireframe(keyboard.isDown(SDLK_w));
-						gxBegin(GX_TRIANGLES);
-						{
-							for (int i = 0; i < indexAccessor->count; ++i)
-							{
-								const uint8_t * index_mem = &indexBuffer->data.front() + indexBufferView->byteOffset + indexAccessor->byteOffset;
-								Assert(index_mem < &indexBuffer->data.front() + indexBuffer->byteLength);
-								const uint32_t * index_ptr = (uint32_t*)index_mem;
-								const uint32_t index = index_ptr[i];
-								
-								//
-								
-								const uint8_t * position_mem = &positionBuffer->data.front() + positionBufferView->byteOffset + positionAccessor->byteOffset;
-								position_mem += index * 3 * sizeof(float);
-								Assert(position_mem < &positionBuffer->data.front() + positionBuffer->byteLength);
-								const float * position_ptr = (float*)position_mem;
-								
-								const float position_x = position_ptr[0];
-								const float position_y = position_ptr[1];
-								const float position_z = position_ptr[2];
-								
-								//
-								
-								if (texcoord0Accessor != nullptr)
-								{
-									const uint8_t * texcoord0_mem = &texcoord0Buffer->data.front() + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
-									texcoord0_mem += index * 2 * sizeof(float);
-									Assert(texcoord0_mem < &texcoord0Buffer->data.front() + texcoord0Buffer->byteLength);
-									const float * texcoord0_ptr = (float*)texcoord0_mem;
-									
-									const float texcoord0_x = texcoord0_ptr[0];
-									const float texcoord0_y = texcoord0_ptr[1];
-									
-									gxTexCoord2f(texcoord0_x, texcoord0_y);
-								}
-								
-								//
-								
-								gxVertex3f(position_x, position_y, position_z);
-							}
-						}
-						gxEnd();
-						popWireframe();
-					}
+					drawMesh(mesh, isOpaquePass);
 				}
 			}
 			

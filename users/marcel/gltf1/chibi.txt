@@ -2,4 +2,5 @@ app gltf1
 	depend_library framework
 	depend_library jsoncpp
 	add_files main.cpp
+	add_files gx_mesh.cpp gx_mesh.h
 	resource_path .
