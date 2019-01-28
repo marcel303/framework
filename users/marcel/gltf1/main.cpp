@@ -7,8 +7,6 @@
 
 #include "data/engine/ShaderCommon.txt"
 
-#include <SDL2/SDL_opengl.h> // GL_CULL_FACE. todo : add functions to control culling mode to Framework
-
 #define VIEW_SX 1000
 #define VIEW_SY 600
 
@@ -795,44 +793,31 @@ int main(int argc, char * argv[])
 					
 					Color color = colorWhite;
 					
-					if (primitive.material >= 0 && primitive.material < scene.materials.size())
+					if (primitive.material < 0 || primitive.material >= scene.materials.size())
+						continue;
+					
+					auto & material = scene.materials[primitive.material];
+					
+					Assert(material.alphaMode != "MASK"); // todo : implement !
+					
+					blendMode = material.alphaMode == "OPAQUE" ? BLEND_OPAQUE : BLEND_ALPHA;
+					
+					const int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
+					
+					if (textureIndex >= 0 && textureIndex < scene.textures.size())
 					{
-						auto & material = scene.materials[primitive.material];
+						auto & texture = scene.textures[textureIndex];
 						
-						Assert(material.alphaMode != "MASK"); // todo : implement !
-						
-						blendMode = material.alphaMode == "OPAQUE" ? BLEND_OPAQUE : BLEND_ALPHA;
-						
-						if (material.doubleSided)
+						if (texture.source >= 0 && texture.source < scene.images.size())
 						{
-							glDisable(GL_CULL_FACE);
-							checkErrorGL();
-						}
-						else
-						{
-							glFrontFace(GL_CCW);
-							glCullFace(GL_BACK);
-							glEnable(GL_CULL_FACE);
-							checkErrorGL();
-						}
-						
-						const int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
-						
-						if (textureIndex >= 0 && textureIndex < scene.textures.size())
-						{
-							auto & texture = scene.textures[textureIndex];
+							auto & image = scene.images[texture.source];
 							
-							if (texture.source >= 0 && texture.source < scene.images.size())
-							{
-								auto & image = scene.images[texture.source];
-								
-								textureId = getTexture(image.path.c_str());
-							}
+							textureId = getTexture(image.path.c_str());
 						}
-						
-						if (!keyboard.isDown(SDLK_u))
-							color = material.pbrMetallicRoughness.baseColorFactor;
 					}
+					
+					if (!keyboard.isDown(SDLK_u))
+						color = material.pbrMetallicRoughness.baseColorFactor;
 					
 					const bool isOpaqueMaterial = (blendMode == BLEND_OPAQUE);
 					
@@ -859,7 +844,9 @@ int main(int argc, char * argv[])
 							setShader(shader);
 							{
 								pushWireframe(keyboard.isDown(SDLK_w));
+								pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
 								gxMesh->draw();
+								popCullMode();
 								popWireframe();
 							}
 							clearShader();
@@ -924,6 +911,7 @@ int main(int argc, char * argv[])
 					}
 					
 					pushWireframe(keyboard.isDown(SDLK_w));
+					pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
 					gxBegin(GX_TRIANGLES);
 					{
 						for (int i = 0; i < indexAccessor->count; ++i)
@@ -965,6 +953,7 @@ int main(int argc, char * argv[])
 						}
 					}
 					gxEnd();
+					popCullMode();
 					popWireframe();
 					
 					gxSetTexture(0);
