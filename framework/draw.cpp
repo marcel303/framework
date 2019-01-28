@@ -29,6 +29,59 @@
 
 static bool s_isInCubeBatch = false;
 
+void lineCube(Vec3Arg position, Vec3Arg size)
+{
+	const float vertices[8][3] =
+	{
+		{ -1, -1, -1 }, // 0
+		{ +1, -1, -1 }, // 1
+		{ +1, +1, -1 }, // 2
+		{ -1, +1, -1 }, // 3
+		{ -1, -1, +1 }, // 4
+		{ +1, -1, +1 }, // 5
+		{ +1, +1, +1 }, // 6
+		{ -1, +1, +1 }  // 7
+	};
+
+	const int edges[12][2] =
+	{
+		// neg x -> pos x
+		{ 0, 1 },
+		{ 3, 2 },
+		{ 4, 5 },
+		{ 7, 6 },
+		
+		// neg y -> pos y
+		{ 0, 3 },
+		{ 1, 2 },
+		{ 4, 7 },
+		{ 5, 6 },
+		
+		// neg z -> pos z
+		{ 0, 4 },
+		{ 1, 5 },
+		{ 2, 6 },
+		{ 3, 7 },
+	};
+	
+	gxBegin(GX_LINES);
+	{
+		for (int edge_idx = 0; edge_idx < 12; ++edge_idx)
+		{
+			for (int vertex_idx = 0; vertex_idx < 2; ++vertex_idx)
+			{
+				const float * __restrict vertex = vertices[edges[edge_idx][vertex_idx]];
+				
+				gxVertex3f(
+					position[0] + size[0] * vertex[0],
+					position[1] + size[1] * vertex[1],
+					position[2] + size[2] * vertex[2]);
+			}
+		}
+	}
+	gxEnd();
+}
+
 void fillCube(Vec3Arg position, Vec3Arg size)
 {
 	const float vertices[8][3] =
