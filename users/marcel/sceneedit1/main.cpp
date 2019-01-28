@@ -11,6 +11,16 @@
 static const int VIEW_SX = 800;
 static const int VIEW_SY = 600;
 
+//
+
+struct AngleAxis
+{
+	float angle = 0.f;
+	Vec3 axis = Vec3(0.f, 1.f, 0.f);
+};
+
+//
+
 struct ComponentBase;
 
 enum ComponentPropertyType
@@ -20,7 +30,8 @@ enum ComponentPropertyType
 	kComponentPropertyType_Vec2,
 	kComponentPropertyType_Vec3,
 	kComponentPropertyType_Vec4,
-	kComponentPropertyType_String
+	kComponentPropertyType_String,
+	kComponentPropertyType_AngleAxis
 };
 
 struct ComponentPropertyBase
@@ -67,6 +78,11 @@ template <> ComponentPropertyType getComponentPropertyType<std::string>()
 	return kComponentPropertyType_String;
 }
 
+template <> ComponentPropertyType getComponentPropertyType<AngleAxis>()
+{
+	return kComponentPropertyType_AngleAxis;
+}
+
 template <typename T> struct ComponentProperty : ComponentPropertyBase
 {
 	typedef std::function<void(ComponentBase * component, const T&)> Setter;
@@ -82,11 +98,42 @@ template <typename T> struct ComponentProperty : ComponentPropertyBase
 };
 
 typedef ComponentProperty<int> ComponentPropertyInt;
-typedef ComponentProperty<float> ComponentPropertyFloat;
+
+struct ComponentPropertyFloat : ComponentProperty<float>
+{
+	bool hasLimits = false;
+	float min;
+	float max;
+	
+	float editingCurveExponential = 1.f;
+	
+	ComponentPropertyFloat(const char * name)
+		: ComponentProperty<float>(name)
+	{
+	}
+	
+	ComponentPropertyFloat & setLimits(const float in_min, const float in_max)
+	{
+		hasLimits = true;
+		min = in_min;
+		max = in_max;
+		
+		return *this;
+	}
+	
+	ComponentPropertyFloat & setEditingCurveExponential(const float in_exponential)
+	{
+		editingCurveExponential = in_exponential;
+		
+		return *this;
+	}
+};
+
 typedef ComponentProperty<Vec2> ComponentPropertyVec2;
 typedef ComponentProperty<Vec3> ComponentPropertyVec3;
 typedef ComponentProperty<Vec4> ComponentPropertyVec4;
 typedef ComponentProperty<std::string> ComponentPropertyString;
+typedef ComponentProperty<AngleAxis> ComponentPropertyAngleAxis;
 
 struct ComponentTypeBase
 {
@@ -101,40 +148,59 @@ struct ComponentTypeBase
 template <typename T>
 struct ComponentType : ComponentTypeBase
 {
-	void in(const char * name, int T::* member)
+	ComponentPropertyInt & in(const char * name, int T::* member)
 	{
 		auto p = new ComponentPropertyInt(name);
 		p->getter = [=](ComponentBase * comp) -> int & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const int & s) { static_cast<T*>(comp)->*member = s; };
 		
 		properties.push_back(p);
+		
+		return *p;
 	}
 	
-	void in(const char * name, float T::* member)
+	ComponentPropertyFloat & in(const char * name, float T::* member)
 	{
 		auto p = new ComponentPropertyFloat(name);
 		p->getter = [=](ComponentBase * comp) -> float & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const float & s) { static_cast<T*>(comp)->*member = s; };
 		
 		properties.push_back(p);
+		
+		return *p;
 	}
 	
-	void in(const char * name, Vec3 T::* member)
+	ComponentPropertyVec3 & in(const char * name, Vec3 T::* member)
 	{
 		auto p = new ComponentPropertyVec3(name);
 		p->getter = [=](ComponentBase * comp) -> Vec3 & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const Vec3 & s) { static_cast<T*>(comp)->*member = s; };
 		
 		properties.push_back(p);
+		
+		return *p;
 	}
 	
-	void in(const char * name, std::string T::* member)
+	ComponentPropertyString & in(const char * name, std::string T::* member)
 	{
 		auto p = new ComponentPropertyString(name);
 		p->getter = [=](ComponentBase * comp) -> std::string & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const std::string & s) { static_cast<T*>(comp)->*member = s; };
 		
 		properties.push_back(p);
+		
+		return *p;
+	}
+	
+	ComponentPropertyAngleAxis & in(const char * name, AngleAxis T::* member)
+	{
+		auto p = new ComponentPropertyAngleAxis(name);
+		p->getter = [=](ComponentBase * comp) -> AngleAxis & { return static_cast<T*>(comp)->*member; };
+		p->setter = [=](ComponentBase * comp, const AngleAxis & s) { static_cast<T*>(comp)->*member = s; };
+		
+		properties.push_back(p);
+		
+		return *p;
 	}
 };
 
@@ -260,6 +326,7 @@ struct ModelComponent : Component<ModelComponent>
 	Vec3 aabbMax;
 	
 	Vec3 position; // todo : remove. is a member of transform component
+	AngleAxis angleAxis;
 	float scale = 1.f;
 	
 	virtual bool init(const std::vector<KeyValuePair> & params) override
@@ -301,7 +368,10 @@ struct ModelComponentType : ComponentType<ModelComponent>
 		
 		in("filename", &ModelComponent::filename);
 		in("position", &ModelComponent::position);
-		in("scale", &ModelComponent::scale);
+		in("angleAxis", &ModelComponent::angleAxis);
+		in("scale", &ModelComponent::scale)
+			.setLimits(0.f, 10.f)
+			.setEditingCurveExponential(2.f);
 	}
 };
 
@@ -340,9 +410,6 @@ static ModelComponentMgr s_modelComponentMgr;
 struct SceneNode
 {
 	int id = -1;
-	
-	Vec3 position;
-	Vec3 rotation;
 	
 	std::vector<int> childNodeIds;
 	
@@ -450,7 +517,8 @@ struct SceneEditor
 	
 	SceneNode * raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection)
 	{
-	#if 1
+	#if 0
+	// todo : traverse node hierarchy and apply transforms
 		SceneNode * result = nullptr;
 		float bestDistance = 0.f;
 		
@@ -547,8 +615,11 @@ struct SceneEditor
 								auto property = static_cast<ComponentPropertyFloat*>(propertyBase);
 								
 								auto & value = property->getter(component);
-					
-								ImGui::InputFloat(property->name.c_str(), &value);
+								
+								if (property->hasLimits)
+									ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential);
+								else
+									ImGui::InputFloat(property->name.c_str(), &value);
 							}
 							break;
 						case kComponentPropertyType_Vec2:
@@ -589,6 +660,16 @@ struct SceneEditor
 								
 								if (ImGui::InputText(property->name.c_str(), buffer, sizeof(buffer)))
 									property->setter(component, buffer);
+							}
+							break;
+						case kComponentPropertyType_AngleAxis:
+							{
+								auto property = static_cast<ComponentPropertyAngleAxis*>(propertyBase);
+								
+								auto value = property->getter(component);
+								
+								// todo : also edit axis
+								ImGui::SliderAngle(property->name.c_str(), &value.angle);
 							}
 							break;
 						}
@@ -695,7 +776,7 @@ struct SceneEditor
 		const bool isSelected = selectedNodes.count(node.id) != 0;
 		
 		setColor(isSelected ? colorYellow : colorWhite);
-		fillCube(node.position, Vec3(.1f, .1f, .1f));
+		fillCube(Vec3(), Vec3(.1f, .1f, .1f));
 		
 		const ModelComponent * modelComp = node.findComponent<ModelComponent>();
 		
@@ -704,7 +785,7 @@ struct SceneEditor
 			const Vec3 min = modelComp->aabbMin * modelComp->scale;
 			const Vec3 max = modelComp->aabbMax * modelComp->scale;
 			
-			const Vec3 position = node.position + (min + max) / 2.f;
+			const Vec3 position = (min + max) / 2.f;
 			const Vec3 size = (max - min) / 2.f;
 			
 			setColor(255, 0, 0, 80);
@@ -714,20 +795,40 @@ struct SceneEditor
 	
 	void drawNodesTraverse(const SceneNode & node) const
 	{
-		for (auto & childNodeId : node.childNodeIds)
+		gxPushMatrix();
 		{
-			auto childNodeItr = scene.nodes.find(childNodeId);
+			auto modelComp = node.findComponent<ModelComponent>();
 			
-			//Assert(childNodeItr != scene.nodes.end());
-			if (childNodeItr != scene.nodes.end())
+			if (modelComp != nullptr)
 			{
-				const SceneNode & childNode = childNodeItr->second;
+				gxTranslatef(
+					modelComp->position[0],
+					modelComp->position[1],
+					modelComp->position[2]);
 				
-				drawNodesTraverse(childNode);
+				gxRotatef(
+					modelComp->angleAxis.angle * 180.f / float(M_PI),
+					modelComp->angleAxis.axis[0],
+					modelComp->angleAxis.axis[1],
+					modelComp->angleAxis.axis[2]);
 			}
+			
+			for (auto & childNodeId : node.childNodeIds)
+			{
+				auto childNodeItr = scene.nodes.find(childNodeId);
+				
+				//Assert(childNodeItr != scene.nodes.end());
+				if (childNodeItr != scene.nodes.end())
+				{
+					const SceneNode & childNode = childNodeItr->second;
+					
+					drawNodesTraverse(childNode);
+				}
+			}
+			
+			drawNode(node);
 		}
-		
-		drawNode(node);
+		gxPopMatrix();
 	}
 	
 	void drawEditor() const
@@ -782,17 +883,15 @@ static void createRandomScene(Scene & scene)
 		
 		node.id = scene.allocNodeId();
 		
-		node.position[0] = random(-4.f, +4.f);
-		node.position[1] = random(-4.f, +4.f);
-		node.position[2] = random(-4.f, +4.f);
-		
 		auto component = s_modelComponentMgr.createComponentForNode(node.id);
 		
 		if (component->init({{ "filename", "model.txt" } }))
 		{
 			node.components.push_back(component);
 			
-			component->position = node.position;
+			component->position[0] = random(-4.f, +4.f);
+			component->position[1] = random(-4.f, +4.f);
+			component->position[2] = random(-4.f, +4.f);
 			component->scale = .01f;
 		}
 		
