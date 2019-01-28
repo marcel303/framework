@@ -46,6 +46,21 @@ template <> ComponentPropertyType getComponentPropertyType<float>()
 	return kComponentPropertyType_Float;
 }
 
+template <> ComponentPropertyType getComponentPropertyType<Vec2>()
+{
+	return kComponentPropertyType_Vec2;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<Vec3>()
+{
+	return kComponentPropertyType_Vec3;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<Vec4>()
+{
+	return kComponentPropertyType_Vec4;
+}
+
 template <> ComponentPropertyType getComponentPropertyType<std::string>()
 {
 	return kComponentPropertyType_String;
@@ -67,6 +82,9 @@ template <typename T> struct ComponentProperty : ComponentPropertyBase
 
 typedef ComponentProperty<int> ComponentPropertyInt;
 typedef ComponentProperty<float> ComponentPropertyFloat;
+typedef ComponentProperty<Vec2> ComponentPropertyVec2;
+typedef ComponentProperty<Vec3> ComponentPropertyVec3;
+typedef ComponentProperty<Vec4> ComponentPropertyVec4;
 typedef ComponentProperty<std::string> ComponentPropertyString;
 
 struct ComponentTypeBase
@@ -74,41 +92,18 @@ struct ComponentTypeBase
 	typedef std::function<void(ComponentBase * component, const std::string&)> SetString;
 	typedef std::function<std::string(ComponentBase * component)> GetString;
 	
-	/*
-	struct Property
-	{
-		std::string name;
-		ComponentPropertyType type;
-		GetString getString;
-		SetString setString;
-	};
-	*/
-	
 	std::string typeName;
 	std::vector<ComponentPropertyBase*> properties;
-	
-	/*
-	void genericIn(const char * name, const ComponentPropertyType type, const GetString & getString, const SetString & setString)
-	{
-		Property property;
-		property.name = name;
-		property.type = type;
-		property.getString = getString;
-		property.setString = setString;
-		
-		properties.push_back(property);
-	}
-	*/
 };
 
 template <typename T>
 struct ComponentType : ComponentTypeBase
 {
-	void in(const char * name, std::string T::* member)
+	void in(const char * name, int T::* member)
 	{
-		auto p = new ComponentPropertyString(name);
-		p->getter = [=](ComponentBase * comp) -> std::string & { return static_cast<T*>(comp)->*member; };
-		p->setter = [=](ComponentBase * comp, const std::string & s) { static_cast<T*>(comp)->*member = s; };
+		auto p = new ComponentPropertyInt(name);
+		p->getter = [=](ComponentBase * comp) -> int & { return static_cast<T*>(comp)->*member; };
+		p->setter = [=](ComponentBase * comp, const int & s) { static_cast<T*>(comp)->*member = s; };
 		
 		properties.push_back(p);
 	}
@@ -120,12 +115,24 @@ struct ComponentType : ComponentTypeBase
 		p->setter = [=](ComponentBase * comp, const float & s) { static_cast<T*>(comp)->*member = s; };
 		
 		properties.push_back(p);
+	}
+	
+	void in(const char * name, Vec3 T::* member)
+	{
+		auto p = new ComponentPropertyVec3(name);
+		p->getter = [=](ComponentBase * comp) -> Vec3 & { return static_cast<T*>(comp)->*member; };
+		p->setter = [=](ComponentBase * comp, const Vec3 & s) { static_cast<T*>(comp)->*member = s; };
 		
-	/*
-		genericIn(name, kComponentPropertyType_Float,
-			[=](ComponentBase * comp) -> std::string { return String::FormatC("%f", static_cast<T*>(comp)->*member); },
-			[=](ComponentBase * comp, const std::string & s) { static_cast<T*>(comp)->*member = Parse::Float(s); });
-	*/
+		properties.push_back(p);
+	}
+	
+	void in(const char * name, std::string T::* member)
+	{
+		auto p = new ComponentPropertyString(name);
+		p->getter = [=](ComponentBase * comp) -> std::string & { return static_cast<T*>(comp)->*member; };
+		p->setter = [=](ComponentBase * comp, const std::string & s) { static_cast<T*>(comp)->*member = s; };
+		
+		properties.push_back(p);
 	}
 };
 
@@ -289,6 +296,7 @@ struct ModelComponentType : ComponentType<ModelComponent>
 		typeName = "ModelComponent";
 		
 		in("filename", &ModelComponent::filename);
+		in("position", &ModelComponent::position);
 		in("scale", &ModelComponent::scale);
 	}
 };
@@ -534,6 +542,33 @@ struct SceneEditor
 								auto & value = property->getter(component);
 					
 								ImGui::InputFloat(property->name.c_str(), &value);
+							}
+							break;
+						case kComponentPropertyType_Vec2:
+							{
+								auto property = static_cast<ComponentPropertyVec2*>(propertyBase);
+								
+								auto & value = property->getter(component);
+					
+								ImGui::InputFloat2(property->name.c_str(), &value[0]);
+							}
+							break;
+						case kComponentPropertyType_Vec3:
+							{
+								auto property = static_cast<ComponentPropertyVec3*>(propertyBase);
+								
+								auto & value = property->getter(component);
+					
+								ImGui::InputFloat3(property->name.c_str(), &value[0]);
+							}
+							break;
+						case kComponentPropertyType_Vec4:
+							{
+								auto property = static_cast<ComponentPropertyVec4*>(propertyBase);
+								
+								auto & value = property->getter(component);
+					
+								ImGui::InputFloat4(property->name.c_str(), &value[0]);
 							}
 							break;
 						case kComponentPropertyType_String:
