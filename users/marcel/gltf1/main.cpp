@@ -518,6 +518,70 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 	return true;
 }
 
+struct AnimatedCamera3d
+{
+	Vec3 position;
+	Quat orientation;
+	
+	Vec3 desiredPosition;
+	Quat desiredOrientation;
+	bool animate = false;
+	float animationSpeed = .5f;
+	
+	void tick(const float dt, const bool inputIsCaptured)
+	{
+		if (inputIsCaptured == false)
+		{
+		
+		}
+		
+		if (animate)
+		{
+			const float retain = powf(1.f - animationSpeed, dt);
+			const float attain = 1.f - retain;
+			
+			position = lerp(position, desiredPosition, attain);
+			orientation = orientation.slerp(desiredOrientation, attain);
+			
+			//position = desiredPosition;
+			//orientation = desiredOrientation;
+		}
+	}
+	
+	Mat4x4 getWorldMatrix() const
+	{
+		return Mat4x4(true).Translate(position).Rotate(orientation);
+	}
+
+	Mat4x4 getViewMatrix() const
+	{
+		return getWorldMatrix().CalcInv();
+	}
+
+	void pushViewMatrix() const
+	{
+		const Mat4x4 matrix = getViewMatrix();
+		
+		const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+		{
+			gxMatrixMode(GX_PROJECTION);
+			gxPushMatrix();
+			gxMultMatrixf(matrix.m_v);
+		}
+		gxMatrixMode(restoreMatrixMode);
+	}
+
+	void popViewMatrix() const
+	{
+		const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+		{
+			gxMatrixMode(GX_PROJECTION);
+			gxPopMatrix();
+		}
+		gxMatrixMode(restoreMatrixMode);
+	}
+};
+
 int main(int argc, char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
@@ -529,8 +593,8 @@ int main(int argc, char * argv[])
 		return -1;
 
 	//const char * path = "van_gogh_room/scene.gltf";
-	const char * path = "littlest_tokyo/scene.gltf";
-	//const char * path = "ftm/scene.gltf";
+	//const char * path = "littlest_tokyo/scene.gltf";
+	const char * path = "ftm/scene.gltf";
 	//const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
 	//const char * path = "halloween_little_witch/scene.gltf";
 
@@ -694,6 +758,7 @@ int main(int argc, char * argv[])
 	}
 	
 	Camera3d camera;
+	//AnimatedCamera3d camera;
 	
 	camera.position = Vec3(0, 0, -2);
 	
@@ -713,8 +778,8 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			camera.pushViewMatrix();
 			
-			gxScalef(-.01f, .01f, .01f);
-			//gxScalef(-1, 1, 1);
+			//gxScalef(-.01f, .01f, .01f);
+			gxScalef(-1, 1, 1);
 			//gxScalef(100.f, 100.f, 100.f);
 			
 			auto drawMesh = [&](const gltf::Mesh & mesh, const bool isOpaquePass)
@@ -733,6 +798,8 @@ int main(int argc, char * argv[])
 					if (primitive.material >= 0 && primitive.material < scene.materials.size())
 					{
 						auto & material = scene.materials[primitive.material];
+						
+						Assert(material.alphaMode != "MASK"); // todo : implement !
 						
 						blendMode = material.alphaMode == "OPAQUE" ? BLEND_OPAQUE : BLEND_ALPHA;
 						
@@ -995,31 +1062,168 @@ int main(int argc, char * argv[])
 				gxPopMatrix();
 			};
 			
-			for (int i = 0; i < 2; ++i)
+			struct BoundingBox
 			{
-				const bool isOpaquePass = (i == 0);
+				Vec3 min;
+				Vec3 max;
+				bool hasMinMax = false;
+			};
+			
+			std::function<void(const gltf::Node & node, BoundingBox & boundingBox)> calculateNodeMinMaxTraverse = [&](const gltf::Node & node, BoundingBox & boundingBox)
+			{
+				gxPushMatrix();
+				gxTranslatef(node.translation[0], node.translation[1], node.translation[2]);
+				Mat4x4 rotationMatrix = node.rotation.toMatrix();
+				gxMultMatrixf(rotationMatrix.m_v);
+				gxScalef(node.scale[0], node.scale[1], node.scale[2]);
+				gxMultMatrixf(node.matrix.m_v);
 				
-			#if 1
-				if (scene.activeScene < 0 || scene.activeScene >= scene.sceneRoots.size())
-					continue;
+				for (auto child_index : node.children)
+				{
+					if (child_index < 0 || child_index >= scene.nodes.size())
+						continue;
+					
+					auto & child = scene.nodes[child_index];
+					
+					calculateNodeMinMaxTraverse(child, boundingBox);
+				}
 				
+				if (node.mesh >= 0 && node.mesh < scene.meshes.size())
+				{
+					auto & mesh = scene.meshes[node.mesh];
+					
+					for (auto & primitive : mesh.primitives)
+					{
+						gltf::Accessor * positionAccessor;
+						gltf::BufferView * positionBufferView;
+						gltf::Buffer * positionBuffer;
+						
+						auto position_itr = primitive.attributes.find("POSITION");
+						
+						if (position_itr == primitive.attributes.end())
+							continue;
+						
+						const int positionAccessorIndex = position_itr->second;
+						
+						if (!resolveBufferView(positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
+							continue;
+						
+						if (positionAccessor->type != "VEC3")
+							continue;
+						
+						const Vec3 min(
+							positionAccessor->min[0],
+							positionAccessor->min[1],
+							positionAccessor->min[2]);
+						const Vec3 max(
+							positionAccessor->max[0],
+							positionAccessor->max[1],
+							positionAccessor->max[2]);
+						
+						const Vec3 minMax[2] = { min, max };
+						
+						Mat4x4 nodeToWorld;
+						
+						gxGetMatrixf(GX_MODELVIEW, nodeToWorld.m_v);
+						
+						// 1) construct all eight vertices of the bounding box giving by min, max
+						// 2) transform the min, max from node space into world-space
+						// 3) compare with bounding box min, max and expand bounding box
+						
+						for (int x = 0; x < 2; ++x)
+						{
+							for (int y = 0; y < 2; ++y)
+							{
+								for (int z = 0; z < 2; ++z)
+								{
+									const Vec3 point_node(
+										minMax[x][0],
+										minMax[y][1],
+										minMax[z][2]);
+									
+									const Vec3 point_world = nodeToWorld.Mul4(point_node);
+									
+									if (boundingBox.hasMinMax)
+									{
+										for (int i = 0; i < 3; ++i)
+										{
+											boundingBox.min[i] = fminf(boundingBox.min[i], point_world[i]);
+											boundingBox.max[i] = fmaxf(boundingBox.max[i], point_world[i]);
+										}
+									}
+									else
+									{
+										boundingBox.hasMinMax = true;
+										boundingBox.min = point_world;
+										boundingBox.max = point_world;
+									}
+								}
+							}
+						}
+					}
+				}
+				
+				gxPopMatrix();
+			};
+			
+			BoundingBox boundingBox;
+			
+			if (scene.activeScene >= 0 && scene.activeScene < scene.sceneRoots.size())
+			{
 				auto & sceneRoot = scene.sceneRoots[scene.activeScene];
-				
+			
 				for (auto & node_index : sceneRoot.nodes)
 				{
 					if (node_index >= 0 && node_index < scene.nodes.size())
 					{
 						auto & node = scene.nodes[node_index];
 						
-						drawNodeTraverse(node, isOpaquePass);
+						calculateNodeMinMaxTraverse(node, boundingBox);
 					}
 				}
+			}
+			
+			if (keyboard.wentDown(SDLK_p))
+			{
+				const float distance = (boundingBox.max - boundingBox.min).CalcSize() / 2.f * .9f;
+				const Vec3 target = (boundingBox.min + boundingBox.max) / 2.f;
+				
+			#if 0
+				Mat4x4 rotationMatrix;
+				rotationMatrix.MakeRotationY(random(0.f, float(M_PI) * 2.f));
+				camera.desiredOrientation.fromMatrix(rotationMatrix);
+				camera.desiredPosition = target - rotationMatrix.GetAxis(2) * distance;
+				camera.animate = true;
 			#else
-				for (auto & mesh : scene.meshes)
-				{
-					drawMesh(mesh, isOpaquePass);
-				}
+				camera.pitch = 8.f;
+				camera.yaw = random(0.f, 360.f);
+				
+				camera.position = target - camera.getWorldMatrix().GetAxis(2) * distance;
 			#endif
+			}
+			
+			for (int i = 0; i < 2; ++i)
+			{
+				const bool isOpaquePass = (i == 0);
+				
+				pushDepthWrite(isOpaquePass ? true : false);
+				{
+					if (scene.activeScene < 0 || scene.activeScene >= scene.sceneRoots.size())
+						continue;
+					
+					auto & sceneRoot = scene.sceneRoots[scene.activeScene];
+					
+					for (auto & node_index : sceneRoot.nodes)
+					{
+						if (node_index >= 0 && node_index < scene.nodes.size())
+						{
+							auto & node = scene.nodes[node_index];
+							
+							drawNodeTraverse(node, isOpaquePass);
+						}
+					}
+				}
+				popDepthWrite();
 			}
 			
 			if (keyboard.isDown(SDLK_b))
