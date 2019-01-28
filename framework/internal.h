@@ -339,6 +339,14 @@ struct DepthTestInfo
 
 //
 
+struct CullModeInfo
+{
+	CULL_MODE mode;
+	CULL_WINDING winding;
+};
+
+//
+
 class Globals
 {
 public:
@@ -380,6 +388,8 @@ public:
 	bool depthTestEnabled;
 	DEPTH_TEST depthTest;
 	bool depthTestWriteEnabled;
+	CULL_MODE cullMode;
+	CULL_WINDING cullWinding;
 	GRADIENT_TYPE hqGradientType;
 	Mat4x4 hqGradientMatrix;
 	Color hqGradientColor1;

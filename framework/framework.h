@@ -154,6 +154,19 @@ enum DEPTH_TEST
 	DEPTH_ALWAYS
 };
 
+enum CULL_MODE
+{
+	CULL_NONE,
+	CULL_FRONT,
+	CULL_BACK
+};
+
+enum CULL_WINDING
+{
+	CULL_CCW,
+	CULL_CW
+};
+
 enum FONT_MODE // setFontMode
 {
 	FONT_BITMAP,
@@ -1343,6 +1356,9 @@ void popDepthTest();
 
 void pushDepthWrite(bool enabled);
 void popDepthWrite();
+
+void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
+void popCullMode();
 
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
