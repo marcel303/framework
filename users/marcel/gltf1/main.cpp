@@ -933,6 +933,68 @@ int main(int argc, char * argv[])
 				gxPopMatrix();
 			};
 			
+			std::function<void(const gltf::Node & node)> drawNodeMinMaxTraverse = [&](const gltf::Node & node)
+			{
+				gxPushMatrix();
+				gxTranslatef(node.translation[0], node.translation[1], node.translation[2]);
+				Mat4x4 rotationMatrix = node.rotation.toMatrix();
+				gxMultMatrixf(rotationMatrix.m_v);
+				gxScalef(node.scale[0], node.scale[1], node.scale[2]);
+				gxMultMatrixf(node.matrix.m_v);
+				
+				for (auto child_index : node.children)
+				{
+					if (child_index < 0 || child_index >= scene.nodes.size())
+						continue;
+					
+					auto & child = scene.nodes[child_index];
+					
+					drawNodeMinMaxTraverse(child);
+				}
+				
+				if (node.mesh >= 0 && node.mesh < scene.meshes.size())
+				{
+					auto & mesh = scene.meshes[node.mesh];
+					
+					for (auto & primitive : mesh.primitives)
+					{
+						gltf::Accessor * positionAccessor;
+						gltf::BufferView * positionBufferView;
+						gltf::Buffer * positionBuffer;
+						
+						auto position_itr = primitive.attributes.find("POSITION");
+						
+						if (position_itr == primitive.attributes.end())
+							continue;
+						
+						const int positionAccessorIndex = position_itr->second;
+						
+						if (!resolveBufferView(positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
+							continue;
+						
+						if (positionAccessor->type != "VEC3")
+							continue;
+						
+						const Vec3 min(
+							positionAccessor->min[0],
+							positionAccessor->min[1],
+							positionAccessor->min[2]);
+						const Vec3 max(
+							positionAccessor->max[0],
+							positionAccessor->max[1],
+							positionAccessor->max[2]);
+						
+						const Vec3 mid = (min + max) / 2.f;
+						const Vec3 size = (max - min) / 2.f;
+						
+						setColor(127, 63, 255);
+						lineCube(mid, size);
+					}
+				}
+				
+				gxPopMatrix();
+			};
+			
 			for (int i = 0; i < 2; ++i)
 			{
 				const bool isOpaquePass = (i == 0);
@@ -958,6 +1020,30 @@ int main(int argc, char * argv[])
 					drawMesh(mesh, isOpaquePass);
 				}
 			#endif
+			}
+			
+			if (keyboard.isDown(SDLK_b))
+			{
+				pushBlend(BLEND_ADD);
+				pushDepthWrite(false);
+				{
+					if (scene.activeScene >= 0 && scene.activeScene < scene.sceneRoots.size())
+					{
+						auto & sceneRoot = scene.sceneRoots[scene.activeScene];
+						
+						for (auto & node_index : sceneRoot.nodes)
+						{
+							if (node_index >= 0 && node_index < scene.nodes.size())
+							{
+								auto & node = scene.nodes[node_index];
+								
+								drawNodeMinMaxTraverse(node);
+							}
+						}
+					}
+				}
+				popDepthWrite();
+				popBlend();
 			}
 			
 			camera.popViewMatrix();
