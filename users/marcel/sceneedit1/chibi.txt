@@ -2,5 +2,6 @@ app marcel-sceneedit1
 	depend_library framework
 	depend_library imgui-framework
 	depend_library jsoncpp
-	add_files main.cpp
+	scan_files *.cpp
+	scan_files *.h
 	resource_path data

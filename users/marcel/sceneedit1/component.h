@@ -1,8 +1,18 @@
 #pragma once
 
 #include "Debugging.h"
-#include <typeindex>
-#include <vector>
+#include <typeindex> // todo : remove and replace with opaque type wrapping type index or type hash
+#include <vector> // todo : use initializer list for key-value pairs
+
+// todo : movement AngleAxis object elsewhere
+
+#include "Vec3.h"
+
+struct AngleAxis
+{
+	float angle = 0.f;
+	Vec3 axis = Vec3(0.f, 1.f, 0.f);
+};
 
 //
 

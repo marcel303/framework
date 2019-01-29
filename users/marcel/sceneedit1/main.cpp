@@ -1,3 +1,7 @@
+#define DEFINE_COMPONENT_TYPES
+#include "modelComponent.h"
+#include "transformComponent.h"
+
 #include "component.h"
 #include "componentType.h"
 #include "framework.h"
@@ -5,6 +9,7 @@
 #include "Parse.h"
 #include "Quat.h"
 #include "StringEx.h"
+
 #include <algorithm>
 #include <map>
 #include <set>
@@ -12,118 +17,6 @@
 
 static const int VIEW_SX = 800;
 static const int VIEW_SY = 600;
-
-//
-
-struct TransformComponent : Component<TransformComponent>
-{
-	Vec3 position;
-	AngleAxis angleAxis;
-	float scale = 1.f;
-	
-	Mat4x4 globalTransform = Mat4x4(true);
-	
-	virtual bool init(const std::vector<KeyValuePair> & params) override
-	{
-		for (auto & param : params)
-		{
-			if (strcmp(param.key, "scale") == 0)
-				scale = Parse::Float(param.value);
-			else if (strcmp(param.key, "x") == 0)
-				position[0] = Parse::Float(param.value);
-			else if (strcmp(param.key, "y") == 0)
-				position[1] = Parse::Float(param.value);
-			else if (strcmp(param.key, "z") == 0)
-				position[2] = Parse::Float(param.value);
-		}
-		
-		return true;
-	}
-};
-
-struct TransformComponentType : ComponentType<TransformComponent>
-{
-	TransformComponentType()
-	{
-		typeName = "TransformComponent";
-		
-		in("position", &TransformComponent::position);
-		in("angleAxis", &TransformComponent::angleAxis);
-		in("scale", &TransformComponent::scale)
-			.setLimits(0.f, 10.f)
-			.setEditingCurveExponential(2.f);
-	}
-};
-
-struct Scene;
-struct SceneNode;
-
-struct TransformComponentMgr : ComponentMgr<TransformComponent>
-{
-	void calculateTransformsTraverse(Scene & scene, SceneNode & node) const;
-	void calculateTransforms(Scene & scene) const;
-};
-
-//
-
-struct ModelComponent : Component<ModelComponent>
-{
-	std::string filename;
-	
-	Vec3 aabbMin;
-	Vec3 aabbMax;
-	
-	Mat4x4 objectToWorld = Mat4x4(true);
-	
-	virtual bool init(const std::vector<KeyValuePair> & params) override
-	{
-		for (auto & param : params)
-		{
-			if (strcmp(param.key, "filename") == 0)
-				filename = param.value;
-		}
-		
-		Model(filename.c_str()).calculateAABB(aabbMin, aabbMax, true);
-		
-		return true;
-	}
-	
-	void draw() const
-	{
-		if (filename.empty())
-			return;
-		
-		gxPushMatrix();
-		{
-			gxMultMatrixf(objectToWorld.m_v);
-			
-			setColor(colorWhite);
-			Model(filename.c_str()).draw();
-		}
-		gxPopMatrix();
-	}
-};
-
-struct ModelComponentType : ComponentType<ModelComponent>
-{
-	ModelComponentType()
-	{
-		typeName = "ModelComponent";
-		
-		in("filename", &ModelComponent::filename);
-	}
-};
-
-struct ModelComponentMgr : ComponentMgr<ModelComponent>
-{
-	void draw() const
-	{
-		for (auto i = head; i != nullptr; i = i->next)
-		{
-			i->draw();
-		}
-	}
-};
 
 //
 
