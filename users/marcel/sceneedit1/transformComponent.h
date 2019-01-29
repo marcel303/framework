@@ -6,8 +6,6 @@
 struct Scene;
 struct SceneNode;
 
-#include "Parse.h"
-
 struct TransformComponent : Component<TransformComponent>
 {
 	Vec3 position;

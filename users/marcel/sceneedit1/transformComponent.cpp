@@ -1,3 +1,4 @@
+#include "Parse.h"
 #include "transformComponent.h"
 
 bool TransformComponent::init(const std::vector<KeyValuePair> & params)
