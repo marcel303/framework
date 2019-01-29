@@ -45,6 +45,8 @@ static ModelComponentMgr s_modelComponentMgr;
 struct SceneNode
 {
 	int id = -1;
+	int parentId = -1;
+	std::string displayName;
 	
 	std::vector<int> childNodeIds;
 	
@@ -99,6 +101,8 @@ struct Scene
 	{
 		SceneNode rootNode;
 		rootNode.id = allocNodeId();
+		rootNode.displayName = "root";
+		
 		nodes[rootNode.id] = rootNode;
 		
 		rootNodeId = rootNode.id;
@@ -164,7 +168,7 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 		{
 			auto childNodeItr = scene.nodes.find(childNodeId);
 			
-			//Assert(childNodeItr != scene.nodes.end());
+			Assert(childNodeItr != scene.nodes.end());
 			if (childNodeItr != scene.nodes.end())
 			{
 				SceneNode & childNode = childNodeItr->second;
@@ -247,7 +251,81 @@ struct SceneEditor
 		if (scene.nodes.empty())
 			return nullptr;
 		else
-			return &scene.nodes[rand() % scene.nodes.size()];
+		{
+			int index = rand() % scene.nodes.size();
+			auto i = scene.nodes.begin();
+			while (index-- > 0)
+				i++;
+			return &i->second;
+		}
+	#endif
+	}
+	
+	void removeNodeTraverse(const int nodeId)
+	{
+		auto nodeItr = scene.nodes.find(nodeId);
+		
+		Assert(nodeItr != scene.nodes.end());
+		if (nodeItr != scene.nodes.end())
+		{
+			auto & node = nodeItr->second;
+			
+			if (node.parentId != -1)
+			{
+				auto parentNodeItr = scene.nodes.find(node.parentId);
+				Assert(parentNodeItr != scene.nodes.end());
+				if (parentNodeItr != scene.nodes.end())
+				{
+					auto & parentNode = parentNodeItr->second;
+					auto childNodeItr = std::find(parentNode.childNodeIds.begin(), parentNode.childNodeIds.end(), node.id);
+					Assert(childNodeItr != parentNode.childNodeIds.end());
+					if (childNodeItr != parentNode.childNodeIds.end())
+						parentNode.childNodeIds.erase(childNodeItr);
+				}
+			}
+			
+			/*
+			// optimize : set parent id to -1 to avoid the child from removing itself from the parent's child list. since we are removing the parent itself here the child doesn't need to do this itself
+			// todo : pass a boolean to the child instructing it to remove itself or not ?
+			for (auto childNodeId : node.childNodeIds)
+			{
+				auto childNodeItr = scene.nodes.find(childNodeId);
+		
+				Assert(childNodeItr != scene.nodes.end());
+				if (childNodeItr != scene.nodes.end())
+				{
+					auto & childNode = childNodeItr->second;
+					childNode.parentId = -1;
+				}
+				
+				removeNodeTraverse(childNodeId);
+			}
+			*/
+			
+			scene.nodes.erase(nodeItr);
+			
+			selectedNodes.erase(nodeId);
+			
+			nodesToRemove.erase(nodeId);
+		}
+	}
+	
+	void removeNodesToRemove()
+	{
+		// todo : remove nodesToRemove and directly call removeNodeTraverse ?
+		
+		while (!nodesToRemove.empty())
+		{
+			auto nodeToRemoveItr = nodesToRemove.begin();
+			auto nodeId = *nodeToRemoveItr;
+			
+			removeNodeTraverse(nodeId);
+		}
+
+		Assert(nodesToRemove.empty());
+	#if defined(DEBUG)
+		for (auto & selectedNodeId : selectedNodes)
+			Assert(scene.nodes.find(selectedNodeId) != scene.nodes.end());
 	#endif
 	}
 	
@@ -255,25 +333,24 @@ struct SceneEditor
 	{
 		ImGui::PushID(nodeId);
 		{
-			ImGui::LabelText("Id", "%d", nodeId);
-			
-			//if (ImGui::BeginPopupContextWindow("NodeMenu"))
 			if (ImGui::BeginPopupContextItem("NodeMenu"))
 			{
-				logDebug("context window for %d", nodeId);
+				//logDebug("context window for %d", nodeId);
 				
 				if (ImGui::MenuItem("Remove"))
 				{
 					nodesToRemove.insert(nodeId);
 				}
 				
-				if (ImGui::MenuItem("Insert child node"))
+				if (ImGui::MenuItem("Insert node"))
 				{
-					SceneNode node;
-					node.id = scene.allocNodeId();
-					scene.nodes[node.id] = node;
+					SceneNode childNode;
+					childNode.id = scene.allocNodeId();
+					childNode.parentId = nodeId;
+					childNode.displayName = String::FormatC("Node %d", childNode.id);
+					scene.nodes[childNode.id] = childNode;
 					
-					scene.nodes[nodeId].childNodeIds.push_back(node.id);
+					scene.nodes[nodeId].childNodeIds.push_back(childNode.id);
 				}
 				
 				for (auto & r : s_componentTypeRegistrations)
@@ -292,120 +369,121 @@ struct SceneEditor
 				ImGui::EndPopup();
 			}
 			
-			SceneNode & node = scene.nodes[nodeId];
-			
-			for (auto * component : node.components)
+			ImGui::Indent();
 			{
-				ImGui::PushID(component);
+				SceneNode & node = scene.nodes[nodeId];
+				
+				for (auto * component : node.components)
 				{
-					ComponentTypeRegistration * r = nullptr;
-					
-					for (auto & registration : s_componentTypeRegistrations)
-						if (registration.componentMgr->typeIndex() == component->typeIndex())
-							r = &registration;
-					
-					Assert(r != nullptr);
-					if (r != nullptr)
+					ImGui::PushID(component);
 					{
-						auto & type = r->componentType;
+						ComponentTypeRegistration * r = nullptr;
 						
-						ImGui::LabelText("Component", "%s", type->typeName.c_str());
+						for (auto & registration : s_componentTypeRegistrations)
+							if (registration.componentMgr->typeIndex() == component->typeIndex())
+								r = &registration;
 						
-						for (auto & propertyBase : type->properties)
+						Assert(r != nullptr);
+						if (r != nullptr)
 						{
-							switch (propertyBase->type)
+							auto & type = r->componentType;
+							
+							ImGui::LabelText("Component", "%s", type->typeName.c_str());
+							
+							for (auto & propertyBase : type->properties)
 							{
-							case kComponentPropertyType_Int32:
+								switch (propertyBase->type)
 								{
+								case kComponentPropertyType_Int32:
+									{
+									}
+									break;
+								case kComponentPropertyType_Float:
+									{
+										auto property = static_cast<ComponentPropertyFloat*>(propertyBase);
+										
+										auto & value = property->getter(component);
+										
+										if (property->hasLimits)
+											ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential);
+										else
+											ImGui::InputFloat(property->name.c_str(), &value);
+									}
+									break;
+								case kComponentPropertyType_Vec2:
+									{
+										auto property = static_cast<ComponentPropertyVec2*>(propertyBase);
+										
+										auto & value = property->getter(component);
+							
+										ImGui::InputFloat2(property->name.c_str(), &value[0]);
+									}
+									break;
+								case kComponentPropertyType_Vec3:
+									{
+										auto property = static_cast<ComponentPropertyVec3*>(propertyBase);
+										
+										auto & value = property->getter(component);
+							
+										ImGui::InputFloat3(property->name.c_str(), &value[0]);
+									}
+									break;
+								case kComponentPropertyType_Vec4:
+									{
+										auto property = static_cast<ComponentPropertyVec4*>(propertyBase);
+										
+										auto & value = property->getter(component);
+							
+										ImGui::InputFloat4(property->name.c_str(), &value[0]);
+									}
+									break;
+								case kComponentPropertyType_String:
+									{
+										auto property = static_cast<ComponentPropertyString*>(propertyBase);
+										
+										auto & value = property->getter(component);
+							
+										char buffer[1024];
+										strcpy_s(buffer, sizeof(buffer), value.c_str());
+										
+										if (ImGui::InputText(property->name.c_str(), buffer, sizeof(buffer)))
+											property->setter(component, buffer);
+									}
+									break;
+								case kComponentPropertyType_AngleAxis:
+									{
+										auto property = static_cast<ComponentPropertyAngleAxis*>(propertyBase);
+										
+										auto & value = property->getter(component);
+										
+										// todo : also edit axis
+										ImGui::SliderAngle(property->name.c_str(), &value.angle);
+									}
+									break;
 								}
-								break;
-							case kComponentPropertyType_Float:
-								{
-									auto property = static_cast<ComponentPropertyFloat*>(propertyBase);
-									
-									auto & value = property->getter(component);
-									
-									if (property->hasLimits)
-										ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential);
-									else
-										ImGui::InputFloat(property->name.c_str(), &value);
-								}
-								break;
-							case kComponentPropertyType_Vec2:
-								{
-									auto property = static_cast<ComponentPropertyVec2*>(propertyBase);
-									
-									auto & value = property->getter(component);
-						
-									ImGui::InputFloat2(property->name.c_str(), &value[0]);
-								}
-								break;
-							case kComponentPropertyType_Vec3:
-								{
-									auto property = static_cast<ComponentPropertyVec3*>(propertyBase);
-									
-									auto & value = property->getter(component);
-						
-									ImGui::InputFloat3(property->name.c_str(), &value[0]);
-								}
-								break;
-							case kComponentPropertyType_Vec4:
-								{
-									auto property = static_cast<ComponentPropertyVec4*>(propertyBase);
-									
-									auto & value = property->getter(component);
-						
-									ImGui::InputFloat4(property->name.c_str(), &value[0]);
-								}
-								break;
-							case kComponentPropertyType_String:
-								{
-									auto property = static_cast<ComponentPropertyString*>(propertyBase);
-									
-									auto & value = property->getter(component);
-						
-									char buffer[1024];
-									strcpy_s(buffer, sizeof(buffer), value.c_str());
-									
-									if (ImGui::InputText(property->name.c_str(), buffer, sizeof(buffer)))
-										property->setter(component, buffer);
-								}
-								break;
-							case kComponentPropertyType_AngleAxis:
-								{
-									auto property = static_cast<ComponentPropertyAngleAxis*>(propertyBase);
-									
-									auto & value = property->getter(component);
-									
-									// todo : also edit axis
-									ImGui::SliderAngle(property->name.c_str(), &value.angle);
-								}
-								break;
 							}
 						}
 					}
+					ImGui::PopID();
 				}
-				ImGui::PopID();
-			}
 			
-			ImGui::Indent();
-			{
-				if (node.childNodeIds.empty() == false)
+				for (auto & childNodeId : node.childNodeIds)
 				{
-					if (ImGui::CollapsingHeader("Children"))
+					auto childNodeItr = scene.nodes.find(childNodeId);
+					
+					Assert(childNodeItr != scene.nodes.end());
+					if (childNodeItr != scene.nodes.end())
 					{
-						for (auto & childNodeId : node.childNodeIds)
+						ImGui::PushID(childNodeId);
+						
+						auto & childNode = childNodeItr->second;
+						
+						if (ImGui::CollapsingHeader(childNode.displayName.c_str()))
 						{
-							auto childNodeItr = scene.nodes.find(childNodeId);
-							
-							//Assert(childNodeItr != scene.nodes.end());
-							if (childNodeItr != scene.nodes.end())
-							{
-								auto childNodeId = childNodeItr->first;
-								
-								editNodeListTraverse(childNodeId);
-							}
+							editNodeListTraverse(childNodeId);
 						}
+				
+						ImGui::PopID();
 					}
 				}
 			}
@@ -420,13 +498,16 @@ struct SceneEditor
 		{
 			guiContext.processBegin(dt, 800, 600, inputIsCaptured);
 			{
-				if (ImGui::Begin("Editor"))
+				if (ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 				{
 					ImGui::Checkbox("Draw ground plane", &drawGroundPlane);
 					ImGui::Checkbox("Draw nodes", &drawNodes);
 					ImGui::Checkbox("Draw node bounding boxes", &drawNodeBoundingBoxes);
 					
+					ImGui::Text("Root node");
 					editNodeListTraverse(scene.rootNodeId);
+					
+					removeNodesToRemove();
 				}
 				ImGui::End();
 			}
@@ -455,16 +536,10 @@ struct SceneEditor
 				if (nodeId == scene.rootNodeId)
 					continue;
 				
-				auto nodeItr = scene.nodes.find(nodeId);
-				
-				auto & node = nodeItr->second;
-				
-				node.freeComponents();
-				
-				scene.nodes.erase(nodeItr);
+				nodesToRemove.insert(nodeId);
 			}
 			
-			selectedNodes.clear();
+			removeNodesToRemove();
 		}
 		
 		if (inputIsCaptured == false)
@@ -499,7 +574,7 @@ struct SceneEditor
 			const Vec3 position = (min + max) / 2.f;
 			const Vec3 size = (max - min) / 2.f;
 			
-			setColor(255, 0, 0, 80);
+			setColor(255, 0, 0, 40);
 			fillCube(position, size);
 		}
 	}
@@ -533,7 +608,7 @@ struct SceneEditor
 			{
 				auto childNodeItr = scene.nodes.find(childNodeId);
 				
-				//Assert(childNodeItr != scene.nodes.end());
+				Assert(childNodeItr != scene.nodes.end());
 				if (childNodeItr != scene.nodes.end())
 				{
 					const SceneNode & childNode = childNodeItr->second;
@@ -550,12 +625,13 @@ struct SceneEditor
 	void drawEditor() const
 	{
 		projectPerspective3d(60.f, .1f, 100.f);
-		pushDepthTest(true, DEPTH_LESS);
 		camera.pushViewMatrix();
 		{
 			if (drawGroundPlane)
 			{
 				pushLineSmooth(true);
+				pushDepthTest(true, DEPTH_LESS);
+				pushBlend(BLEND_ALPHA);
 				gxPushMatrix();
 				{
 					gxScalef(100, 1, 100);
@@ -567,22 +643,31 @@ struct SceneEditor
 					drawGrid3dLine(500, 500, 0, 2, true);
 				}
 				gxPopMatrix();
+				popBlend();
+				popDepthTest();
 				popLineSmooth();
 			}
 			
 			if (true)
 			{
+				pushDepthTest(true, DEPTH_LESS);
+				pushBlend(BLEND_OPAQUE);
 				s_modelComponentMgr.draw();
+				popBlend();
+				popDepthTest();
 			}
 			
 			if (drawNodes)
 			{
+				pushDepthWrite(false);
+				pushBlend(BLEND_ADD);
 				drawNodesTraverse(scene.getRootNode());
+				popBlend();
+				popDepthWrite();
 			}
 		}
 		camera.popViewMatrix();
 		
-		popDepthTest();
 		projectScreen2d();
 		
 		const_cast<SceneEditor*>(this)->guiContext.draw();
@@ -598,6 +683,8 @@ static void createRandomScene(Scene & scene)
 		SceneNode node;
 		
 		node.id = scene.allocNodeId();
+		node.parentId = scene.rootNodeId;
+		node.displayName = String::FormatC("Node %d", node.id);
 		
 		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
 		
