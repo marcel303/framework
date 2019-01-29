@@ -331,6 +331,13 @@ struct SceneEditor
 	
 	void editNodeListTraverse(const int nodeId)
 	{
+		auto nodeItr = scene.nodes.find(nodeId);
+		Assert(nodeItr != scene.nodes.end());
+		if (nodeItr == scene.nodes.end())
+			return;
+		
+		SceneNode & node = nodeItr->second;
+		
 		ImGui::PushID(nodeId);
 		{
 			if (ImGui::BeginPopupContextItem("NodeMenu"))
@@ -355,14 +362,22 @@ struct SceneEditor
 				
 				for (auto & r : s_componentTypeRegistrations)
 				{
-					char text[256];
-					sprintf_s(text, sizeof(text), "Add %s", r.componentType->typeName.c_str());
+					bool isAdded = false;
 					
-					if (ImGui::MenuItem(text))
+					for (auto * component : node.components)
+						if (component->typeIndex() == r.componentMgr->typeIndex())
+							isAdded = true;
+					
+					if (isAdded == false)
 					{
-						auto & node = scene.nodes[nodeId];
-						auto component = r.componentMgr->createComponentForNode(node.id);
-						node.components.push_back(component);
+						char text[256];
+						sprintf_s(text, sizeof(text), "Add %s", r.componentType->typeName.c_str());
+						
+						if (ImGui::MenuItem(text))
+						{
+							auto component = r.componentMgr->createComponentForNode(node.id);
+							node.components.push_back(component);
+						}
 					}
 				}
 
@@ -371,8 +386,6 @@ struct SceneEditor
 			
 			ImGui::Indent();
 			{
-				SceneNode & node = scene.nodes[nodeId];
-				
 				for (auto * component : node.components)
 				{
 					ImGui::PushID(component);
