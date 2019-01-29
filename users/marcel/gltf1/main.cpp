@@ -10,6 +10,8 @@
 #define VIEW_SX 1000
 #define VIEW_SY 600
 
+#define ANIMATED_CAMERA 1 // todo : remove option and use hybrid
+
 using json = nlohmann::json;
 
 namespace gltf
@@ -516,6 +518,8 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 	return true;
 }
 
+#if ANIMATED_CAMERA
+
 struct AnimatedCamera3d
 {
 	Vec3 position;
@@ -524,7 +528,7 @@ struct AnimatedCamera3d
 	Vec3 desiredPosition;
 	Quat desiredOrientation;
 	bool animate = false;
-	float animationSpeed = .5f;
+	float animationSpeed = 1.f;
 	
 	void tick(const float dt, const bool inputIsCaptured)
 	{
@@ -580,6 +584,8 @@ struct AnimatedCamera3d
 	}
 };
 
+#endif
+
 int main(int argc, char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
@@ -591,8 +597,8 @@ int main(int argc, char * argv[])
 		return -1;
 
 	//const char * path = "van_gogh_room/scene.gltf";
-	//const char * path = "littlest_tokyo/scene.gltf";
-	const char * path = "ftm/scene.gltf";
+	const char * path = "littlest_tokyo/scene.gltf";
+	//const char * path = "ftm/scene.gltf";
 	//const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
 	//const char * path = "halloween_little_witch/scene.gltf";
 
@@ -755,8 +761,11 @@ int main(int argc, char * argv[])
 		}
 	}
 	
+#if ANIMATED_CAMERA
+	AnimatedCamera3d camera;
+#else
 	Camera3d camera;
-	//AnimatedCamera3d camera;
+#endif
 	
 	camera.position = Vec3(0, 0, -2);
 	
@@ -776,8 +785,8 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			camera.pushViewMatrix();
 			
-			//gxScalef(-.01f, .01f, .01f);
-			gxScalef(-1, 1, 1);
+			gxScalef(-.01f, .01f, .01f);
+			//gxScalef(-1, 1, 1);
 			//gxScalef(100.f, 100.f, 100.f);
 			
 			auto drawMesh = [&](const gltf::Mesh & mesh, const bool isOpaquePass)
@@ -798,7 +807,7 @@ int main(int argc, char * argv[])
 					
 					auto & material = scene.materials[primitive.material];
 					
-					Assert(material.alphaMode != "MASK"); // todo : implement !
+					//Assert(material.alphaMode != "MASK"); // todo : implement !
 					
 					blendMode = material.alphaMode == "OPAQUE" ? BLEND_OPAQUE : BLEND_ALPHA;
 					
@@ -1177,12 +1186,13 @@ int main(int argc, char * argv[])
 				const float distance = (boundingBox.max - boundingBox.min).CalcSize() / 2.f * .9f;
 				const Vec3 target = (boundingBox.min + boundingBox.max) / 2.f;
 				
-			#if 0
-				Mat4x4 rotationMatrix;
-				rotationMatrix.MakeRotationY(random(0.f, float(M_PI) * 2.f));
-				camera.desiredOrientation.fromMatrix(rotationMatrix);
-				camera.desiredPosition = target - rotationMatrix.GetAxis(2) * distance;
+			#if ANIMATED_CAMERA
+				camera.desiredOrientation.fromAxisAngle(Vec3(0, 1, 0), random(0.f, float(M_PI) * 2.f));
+				const Mat4x4 orientationMatrix = camera.desiredOrientation.toMatrix();
+				const Vec3 orientationVector = orientationMatrix.GetAxis(2);
+				camera.desiredPosition = target - orientationVector * distance;
 				camera.animate = true;
+				camera.animationSpeed = .9f;
 			#else
 				camera.pitch = 8.f;
 				camera.yaw = random(0.f, 360.f);
