@@ -11,11 +11,11 @@ struct ModelComponent : Component<ModelComponent>
 	Vec3 aabbMin;
 	Vec3 aabbMax;
 	
-	Mat4x4 objectToWorld = Mat4x4(true);
+	Mat4x4 _objectToWorld = Mat4x4(true); // todo : remove. use transform stored in SceneNode
 	
 	virtual bool init(const std::vector<KeyValuePair> & params) override;
 	
-	void draw() const;
+	void draw(const Mat4x4 & objectToWorld) const;
 };
 
 struct ModelComponentMgr : ComponentMgr<ModelComponent>

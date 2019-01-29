@@ -12,8 +12,6 @@ struct TransformComponent : Component<TransformComponent>
 	AngleAxis angleAxis;
 	float scale = 1.f;
 	
-	Mat4x4 globalTransform = Mat4x4(true);
-	
 	virtual bool init(const std::vector<KeyValuePair> & params) override;
 };
 

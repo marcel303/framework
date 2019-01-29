@@ -14,7 +14,7 @@ bool ModelComponent::init(const std::vector<KeyValuePair> & params)
 	return true;
 }
 
-void ModelComponent::draw() const
+void ModelComponent::draw(const Mat4x4 & objectToWorld) const
 {
 	if (filename.empty())
 		return;
@@ -35,6 +35,6 @@ void ModelComponentMgr::draw() const
 {
 	for (auto i = head; i != nullptr; i = i->next)
 	{
-		i->draw();
+		i->draw(i->_objectToWorld);
 	}
 }

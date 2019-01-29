@@ -15,8 +15,8 @@
 #include <set>
 #include <typeindex>
 
-static const int VIEW_SX = 800;
-static const int VIEW_SY = 600;
+static const int VIEW_SX = 1200;
+static const int VIEW_SY = 800;
 
 //
 
@@ -51,6 +51,8 @@ struct SceneNode
 	std::vector<int> childNodeIds;
 	
 	std::vector<ComponentBase*> components;
+	
+	Mat4x4 objectToWorld = Mat4x4(true);
 	
 	template <typename T>
 	T * findComponent()
@@ -153,15 +155,15 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 				transformComp->scale,
 				transformComp->scale,
 				transformComp->scale);
-			
-			gxGetMatrixf(GX_MODELVIEW, transformComp->globalTransform.m_v);
 		}
+		
+		gxGetMatrixf(GX_MODELVIEW, node.objectToWorld.m_v);
 		
 		auto modelComp = node.findComponent<ModelComponent>();
 		
 		if (modelComp != nullptr)
 		{
-			gxGetMatrixf(GX_MODELVIEW, modelComp->objectToWorld.m_v);
+			modelComp->_objectToWorld = node.objectToWorld;
 		}
 		
 		for (auto & childNodeId : node.childNodeIds)
@@ -183,6 +185,77 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 void TransformComponentMgr::calculateTransforms(Scene & scene) const
 {
 	calculateTransformsTraverse(scene, scene.getRootNode());
+}
+
+//
+
+/**
+ * Intersects a bounding box given by (min, max) with a ray specified by its origin and direction. If there is an intersection, the function returns true, and stores the distance of the point of intersection in 't'. If there is no intersection, the function returns false and leaves 't' unmodified. Note that the ray direction is expected to be the inverse of the actual ray direction, for efficiency reasons.
+ * @min: Minimum of bounding box extents.
+ * @max: Maximum of bounding box extents.
+ * @px: Origin X of ray.
+ * @py: Origin Y of ray.
+ * @pz: Origin Z of ray.
+ * @dxInv: Inverse of direction X of ray.
+ * @dyInv: Inverse of direction Y of ray.
+ * @dzInv: Inverse of direction Z of ray.
+ * @t: Stores the distance to the intersection point if there is an intersection.
+ * @return: True if there is an intersection. False otherwise.
+ */
+static bool intersectBoundingBox3d(const float * min, const float * max, const float px, const float py, const float pz, const float dxInv, const float dyInv, const float dzInv, float & t)
+{
+	float tmin = std::numeric_limits<float>().min();
+	float tmax = std::numeric_limits<float>().max();
+
+	const float p[3] = { px, py, pz };
+	const float rd[3] = { dxInv, dyInv, dzInv };
+
+	for (int i = 0; i < 3; ++i)
+	{
+		const float t1 = (min[i] - p[i]) * rd[i];
+		const float t2 = (max[i] - p[i]) * rd[i];
+
+		tmin = std::max(tmin, std::min(t1, t2));
+		tmax = std::min(tmax, std::max(t1, t2));
+	}
+
+	if (tmax >= tmin)
+	{
+		t = tmin;
+
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+#include "SIMD.h" // todo : create SimdVec.h, add SimdBoundingBox.h
+
+static bool intersectBoundingBox3d_simd(SimdVecArg rayOrigin, SimdVecArg rayDirectionInv, SimdVecArg boxMin, SimdVecArg boxMax, /*SimdVec & ioDistance*/float & ioDistance)
+{
+	const static SimdVec infNeg(-std::numeric_limits<float>::infinity());
+	const static SimdVec infPos(+std::numeric_limits<float>::infinity());
+
+	// distances
+	SimdVec minVecTemp = boxMin.Sub(rayOrigin).Mul(rayDirectionInv);
+	SimdVec maxVecTemp = boxMax.Sub(rayOrigin).Mul(rayDirectionInv);
+
+	SimdVec minVec = minVecTemp.Min(maxVecTemp);
+	SimdVec maxVec = minVecTemp.Max(maxVecTemp);
+
+	// calculcate distance
+	const SimdVec max =                    maxVec.ReplicateX().Min(maxVec.ReplicateY().Min(maxVec.ReplicateZ()));
+	const SimdVec min = SimdVec(VZERO).Max(minVec.ReplicateX().Max(minVec.ReplicateY().Max(minVec.ReplicateZ())));
+
+	// no intersection or greater distance?
+	if (min.ANY_GE3(max))
+		return false;
+
+	ioDistance = min.X();
+
+	return true;
 }
 
 //
@@ -211,6 +284,8 @@ struct SceneEditor
 	
 	bool cameraIsActive = false;
 	
+	Mat4x4 projectionMatrix;
+	
 	SceneEditor()
 	{
 		camera.position = Vec3(0, 1, -2);
@@ -228,37 +303,47 @@ struct SceneEditor
 	
 	SceneNode * raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection)
 	{
-	#if 0
-	// todo : traverse node hierarchy and apply transforms
 		SceneNode * result = nullptr;
-		float bestDistance = 0.f;
+		float bestDistance = std::numeric_limits<float>::max();
 		
 		for (auto & nodeItr : scene.nodes)
 		{
 			auto & node = nodeItr.second;
 			
-			const float distance = (node.position - rayOrigin).CalcSize();
+			auto modelComponent = node.findComponent<ModelComponent>();
 			
-			if (distance < bestDistance || result == nullptr)
+			if (modelComponent != nullptr)
 			{
-				result = &node;
-				bestDistance = distance;
+				auto & objectToWorld = node.objectToWorld;
+				auto worldToObject = objectToWorld.CalcInv();
+				
+				const Vec3 rayOrigin_object = worldToObject.Mul4(rayOrigin);
+				const Vec3 rayDirection_object = worldToObject.Mul3(rayDirection);
+				
+				float distance;
+				
+				if (intersectBoundingBox3d(
+					&modelComponent->aabbMin[0],
+					&modelComponent->aabbMax[0],
+					rayOrigin_object[0],
+					rayOrigin_object[1],
+					rayOrigin_object[2],
+					1.f / rayDirection_object[0],
+					1.f / rayDirection_object[1],
+					1.f / rayDirection_object[2],
+					distance))
+				{
+					if (distance < bestDistance)
+					{
+						bestDistance = distance;
+						
+						result = &node;
+					}
+				}
 			}
 		}
 		
 		return result;
-	#else
-		if (scene.nodes.empty())
-			return nullptr;
-		else
-		{
-			int index = rand() % scene.nodes.size();
-			auto i = scene.nodes.begin();
-			while (index-- > 0)
-				i++;
-			return &i->second;
-		}
-	#endif
 	}
 	
 	void removeNodeTraverse(const int nodeId)
@@ -469,8 +554,10 @@ struct SceneEditor
 										
 										auto & value = property->getter(component);
 										
-										// todo : also edit axis
 										ImGui::SliderAngle(property->name.c_str(), &value.angle);
+										ImGui::PushID(&value.axis);
+										ImGui::SliderFloat3(property->name.c_str(), &value.axis[0], -1.f, +1.f);
+										ImGui::PopID();
 									}
 									break;
 								}
@@ -507,6 +594,11 @@ struct SceneEditor
 	
 	void tickEditor(const float dt, bool & inputIsCaptured)
 	{
+	// todo : this is a bit of a hack. avoid projectPerspective3d altogether ?
+		projectPerspective3d(60.f, .1f, 100.f);
+		gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+		projectScreen2d();
+		
 		if (cameraIsActive == false)
 		{
 			guiContext.processBegin(dt, 800, 600, inputIsCaptured);
@@ -527,12 +619,26 @@ struct SceneEditor
 			guiContext.processEnd();
 		}
 		
-		//if (inputIsCaptured == false)
-		//if (keyboard.wentDown(SDLK_s))
+		if (inputIsCaptured == false && mouse.wentDown(BUTTON_LEFT))
 		{
 			//inputIsCaptured = true;
 			
-			const SceneNode * node = raycast(camera.position, camera.getWorldMatrix().GetAxis(2));
+			// transform mouse coordinates into a world space direction vector
+			
+			const Vec2 mousePosition_screen(
+				mouse.x,
+				mouse.y);
+			const Vec2 mousePosition_clip(
+				mousePosition_screen[0] / float(VIEW_SX) * 2.f - 1.f,
+				mousePosition_screen[1] / float(VIEW_SY) * 2.f - 1.f);
+			const Vec2 mousePosition_view = projectionMatrix.CalcInv().Mul(mousePosition_clip);
+			const Vec3 mouseDirection_world = camera.getWorldMatrix().Mul3(
+				Vec3(
+					+mousePosition_view[0],
+					-mousePosition_view[1],
+					1.f));
+			
+			const SceneNode * node = raycast(camera.position, mouseDirection_world);
 			
 			selectedNodes.clear();
 			
@@ -587,7 +693,7 @@ struct SceneEditor
 			const Vec3 position = (min + max) / 2.f;
 			const Vec3 size = (max - min) / 2.f;
 			
-			setColor(255, 0, 0, 40);
+			setColor(isSelected ? 255 : 60, 0, 0, 40);
 			fillCube(position, size);
 		}
 	}
@@ -731,6 +837,7 @@ int main(int argc, char * argv[])
 #endif
 
 	framework.enableDepthBuffer = true;
+	framework.allowHighDpi = false;
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
