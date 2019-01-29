@@ -414,7 +414,133 @@ struct SceneEditor
 	#endif
 	}
 	
-	void editNodeListTraverse(const int nodeId)
+	void editNode(SceneNode & node, const bool editChildren)
+	{
+		for (auto * component : node.components)
+		{
+			ImGui::PushID(component);
+			{
+				ComponentTypeRegistration * r = nullptr;
+				
+				for (auto & registration : s_componentTypeRegistrations)
+					if (registration.componentMgr->typeIndex() == component->typeIndex())
+						r = &registration;
+				
+				Assert(r != nullptr);
+				if (r != nullptr)
+				{
+					auto & type = r->componentType;
+					
+					ImGui::LabelText("Component", "%s", type->typeName.c_str());
+					
+					for (auto & propertyBase : type->properties)
+					{
+						switch (propertyBase->type)
+						{
+						case kComponentPropertyType_Int32:
+							{
+							}
+							break;
+						case kComponentPropertyType_Float:
+							{
+								auto property = static_cast<ComponentPropertyFloat*>(propertyBase);
+								
+								auto & value = property->getter(component);
+								
+								if (property->hasLimits)
+									ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential);
+								else
+									ImGui::InputFloat(property->name.c_str(), &value);
+							}
+							break;
+						case kComponentPropertyType_Vec2:
+							{
+								auto property = static_cast<ComponentPropertyVec2*>(propertyBase);
+								
+								auto & value = property->getter(component);
+					
+								ImGui::InputFloat2(property->name.c_str(), &value[0]);
+							}
+							break;
+						case kComponentPropertyType_Vec3:
+							{
+								auto property = static_cast<ComponentPropertyVec3*>(propertyBase);
+								
+								auto & value = property->getter(component);
+					
+								ImGui::InputFloat3(property->name.c_str(), &value[0]);
+							}
+							break;
+						case kComponentPropertyType_Vec4:
+							{
+								auto property = static_cast<ComponentPropertyVec4*>(propertyBase);
+								
+								auto & value = property->getter(component);
+					
+								ImGui::InputFloat4(property->name.c_str(), &value[0]);
+							}
+							break;
+						case kComponentPropertyType_String:
+							{
+								auto property = static_cast<ComponentPropertyString*>(propertyBase);
+								
+								auto & value = property->getter(component);
+					
+								char buffer[1024];
+								strcpy_s(buffer, sizeof(buffer), value.c_str());
+								
+								if (ImGui::InputText(property->name.c_str(), buffer, sizeof(buffer)))
+									property->setter(component, buffer);
+							}
+							break;
+						case kComponentPropertyType_AngleAxis:
+							{
+								auto property = static_cast<ComponentPropertyAngleAxis*>(propertyBase);
+								
+								auto & value = property->getter(component);
+								
+								ImGui::SliderAngle(property->name.c_str(), &value.angle);
+								ImGui::PushID(&value.axis);
+								ImGui::SliderFloat3(property->name.c_str(), &value.axis[0], -1.f, +1.f);
+								ImGui::PopID();
+							}
+							break;
+						}
+					}
+				}
+			}
+			ImGui::PopID();
+		}
+	
+		if (editChildren)
+		{
+			ImGui::Indent();
+			{
+				for (auto & childNodeId : node.childNodeIds)
+				{
+					auto childNodeItr = scene.nodes.find(childNodeId);
+					
+					Assert(childNodeItr != scene.nodes.end());
+					if (childNodeItr != scene.nodes.end())
+					{
+						ImGui::PushID(childNodeId);
+						
+						auto & childNode = childNodeItr->second;
+						
+						if (ImGui::CollapsingHeader(childNode.displayName.c_str()))
+						{
+							editNodeListTraverse(childNodeId, editChildren);
+						}
+				
+						ImGui::PopID();
+					}
+				}
+			}
+			ImGui::Unindent();
+		}
+	}
+	
+	void editNodeListTraverse(const int nodeId, const bool editChildren)
 	{
 		auto nodeItr = scene.nodes.find(nodeId);
 		Assert(nodeItr != scene.nodes.end());
@@ -469,125 +595,7 @@ struct SceneEditor
 				ImGui::EndPopup();
 			}
 			
-			ImGui::Indent();
-			{
-				for (auto * component : node.components)
-				{
-					ImGui::PushID(component);
-					{
-						ComponentTypeRegistration * r = nullptr;
-						
-						for (auto & registration : s_componentTypeRegistrations)
-							if (registration.componentMgr->typeIndex() == component->typeIndex())
-								r = &registration;
-						
-						Assert(r != nullptr);
-						if (r != nullptr)
-						{
-							auto & type = r->componentType;
-							
-							ImGui::LabelText("Component", "%s", type->typeName.c_str());
-							
-							for (auto & propertyBase : type->properties)
-							{
-								switch (propertyBase->type)
-								{
-								case kComponentPropertyType_Int32:
-									{
-									}
-									break;
-								case kComponentPropertyType_Float:
-									{
-										auto property = static_cast<ComponentPropertyFloat*>(propertyBase);
-										
-										auto & value = property->getter(component);
-										
-										if (property->hasLimits)
-											ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential);
-										else
-											ImGui::InputFloat(property->name.c_str(), &value);
-									}
-									break;
-								case kComponentPropertyType_Vec2:
-									{
-										auto property = static_cast<ComponentPropertyVec2*>(propertyBase);
-										
-										auto & value = property->getter(component);
-							
-										ImGui::InputFloat2(property->name.c_str(), &value[0]);
-									}
-									break;
-								case kComponentPropertyType_Vec3:
-									{
-										auto property = static_cast<ComponentPropertyVec3*>(propertyBase);
-										
-										auto & value = property->getter(component);
-							
-										ImGui::InputFloat3(property->name.c_str(), &value[0]);
-									}
-									break;
-								case kComponentPropertyType_Vec4:
-									{
-										auto property = static_cast<ComponentPropertyVec4*>(propertyBase);
-										
-										auto & value = property->getter(component);
-							
-										ImGui::InputFloat4(property->name.c_str(), &value[0]);
-									}
-									break;
-								case kComponentPropertyType_String:
-									{
-										auto property = static_cast<ComponentPropertyString*>(propertyBase);
-										
-										auto & value = property->getter(component);
-							
-										char buffer[1024];
-										strcpy_s(buffer, sizeof(buffer), value.c_str());
-										
-										if (ImGui::InputText(property->name.c_str(), buffer, sizeof(buffer)))
-											property->setter(component, buffer);
-									}
-									break;
-								case kComponentPropertyType_AngleAxis:
-									{
-										auto property = static_cast<ComponentPropertyAngleAxis*>(propertyBase);
-										
-										auto & value = property->getter(component);
-										
-										ImGui::SliderAngle(property->name.c_str(), &value.angle);
-										ImGui::PushID(&value.axis);
-										ImGui::SliderFloat3(property->name.c_str(), &value.axis[0], -1.f, +1.f);
-										ImGui::PopID();
-									}
-									break;
-								}
-							}
-						}
-					}
-					ImGui::PopID();
-				}
-			
-				for (auto & childNodeId : node.childNodeIds)
-				{
-					auto childNodeItr = scene.nodes.find(childNodeId);
-					
-					Assert(childNodeItr != scene.nodes.end());
-					if (childNodeItr != scene.nodes.end())
-					{
-						ImGui::PushID(childNodeId);
-						
-						auto & childNode = childNodeItr->second;
-						
-						if (ImGui::CollapsingHeader(childNode.displayName.c_str()))
-						{
-							editNodeListTraverse(childNodeId);
-						}
-				
-						ImGui::PopID();
-					}
-				}
-			}
-			ImGui::Unindent();
+			editNode(node, editChildren);
 		}
 		ImGui::PopID();
 	}
@@ -609,8 +617,18 @@ struct SceneEditor
 					ImGui::Checkbox("Draw nodes", &drawNodes);
 					ImGui::Checkbox("Draw node bounding boxes", &drawNodeBoundingBoxes);
 					
-					ImGui::Text("Root node");
-					editNodeListTraverse(scene.rootNodeId);
+					if (selectedNodes.empty())
+					{
+						ImGui::Text("Root node");
+						editNodeListTraverse(scene.rootNodeId, true);
+					}
+					else
+					{
+						for (auto & selectedNodeId : selectedNodes)
+						{
+							editNodeListTraverse(selectedNodeId, false);
+						}
+					}
 					
 					removeNodesToRemove();
 				}
