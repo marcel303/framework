@@ -185,20 +185,18 @@ void Universe::Step() {
   }
 }
 
-void Universe::Draw(sf::RenderWindow& window, float opacity) const {
-  sf::CircleShape circle;
-  circle.setRadius(RADIUS * m_zoom);
-  circle.setOrigin(circle.getRadius(), circle.getRadius());
+void Universe::Draw(float opacity) const {
+  hqBegin(HQ_FILLED_CIRCLES);
   for (size_t i = 0; i < m_particles.size(); ++i) {
     const Particle& p = m_particles[i];
     const float x = (p.x - m_center_x)*m_zoom + float(m_width/2);
     const float y = (p.y - m_center_y)*m_zoom + float(m_height/2);
-    circle.setPosition(x, y);
-    sf::Color col = m_types.Color(p.type);
+    Color col = m_types.Color(p.type);
     col.a = uint8_t(opacity * 255);
-    circle.setFillColor(col);
-    window.draw(circle);
+    setColor(col);
+    hqFillCircle(x, y, RADIUS * m_zoom);
   }
+  hqEnd();
 }
 
 

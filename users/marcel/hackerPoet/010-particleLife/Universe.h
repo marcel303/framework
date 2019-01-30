@@ -1,4 +1,5 @@
 #pragma once
+
 #include "Particles.h"
 #include <random>
 
@@ -16,7 +17,7 @@ public:
   void ToggleWrap() { m_wrap = !m_wrap; }
 
   void Step();
-  void Draw(sf::RenderWindow& window, float opacity) const;
+  void Draw(float opacity) const;
   void Zoom(float cx, float cy, float zoom);
 
   int GetIndex(int x, int y) const;

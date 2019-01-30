@@ -1,5 +1,6 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+
+#include "framework.h"
 #include <cstdint>
 #include <vector>
 
@@ -19,8 +20,8 @@ public:
   }
 
   size_t Size() const { return m_col.size(); }
-  const sf::Color& Color(size_t i) const { return m_col[i]; }
-  sf::Color& Color(size_t i) { return m_col[i]; }
+  const ::Color& Color(size_t i) const { return m_col[i]; }
+  ::Color& Color(size_t i) { return m_col[i]; }
   float Attaract(size_t i, size_t j) const { return m_attract[i*m_col.size() + j]; }
   float& Attaract(size_t i, size_t j) { return m_attract[i*m_col.size() + j]; }
   float MinR(size_t i, size_t j) const { return m_minR[i*m_col.size() + j]; }
@@ -29,7 +30,7 @@ public:
   float& MaxR(size_t i, size_t j) { return m_maxR[i*m_col.size() + j]; }
 
 private:
-  std::vector<sf::Color> m_col;
+  std::vector<::Color> m_col;
   std::vector<float> m_attract;
   std::vector<float> m_minR;
   std::vector<float> m_maxR;

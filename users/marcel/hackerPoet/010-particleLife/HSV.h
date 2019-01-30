@@ -1,7 +1,8 @@
 #pragma once
-#include <SFML/Graphics.hpp>
 
-inline sf::Color FromHSV(float h, float s, float v) {
+#include "framework.h"
+
+inline Color FromHSV(float h, float s, float v) {
   //All input ranges expected to be 0-1
   const int i = int(h * 6);
   const float f = h * 6 - i;
@@ -21,5 +22,5 @@ inline sf::Color FromHSV(float h, float s, float v) {
   }
 
   //Convert color range from 0-1 to 0-255
-  return sf::Color(uint8_t(r * 255), uint8_t(g * 255), uint8_t(b * 255));
+  return Color(uint8_t(r * 255), uint8_t(g * 255), uint8_t(b * 255));
 }
