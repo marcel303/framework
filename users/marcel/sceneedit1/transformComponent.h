@@ -40,3 +40,35 @@ struct TransformComponentType : ComponentType<TransformComponent>
 };
 
 #endif
+
+// todo : move to its own source file
+
+#if defined(DEFINE_COMPONENT_TYPES)
+
+#include "componentType.h"
+
+struct RotateTransformComponent : Component<RotateTransformComponent>
+{
+	float speed = 0.f;
+	
+	virtual void tick(const float dt)
+	{
+		// todo : fetch transform component and update its rotation
+	}
+};
+
+struct RotateTransformComponentMgr : ComponentMgr<RotateTransformComponent>
+{
+};
+
+struct RotateTransformComponentType : ComponentType<RotateTransformComponent>
+{
+	RotateTransformComponentType()
+	{
+		typeName = "RotateTransformComponent";
+		
+		in("speed", &RotateTransformComponent::speed);
+	}
+};
+
+#endif

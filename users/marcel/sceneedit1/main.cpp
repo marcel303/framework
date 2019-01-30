@@ -49,9 +49,12 @@ ComponentTypeBase * findComponentType(const std::vector<ComponentTypeRegistratio
 	for (auto & r : componentTypeRegistrations)
 		if (r.componentType->typeName == typeName)
 			return r.componentType;
+	
+	return nullptr;
 }
 
 static TransformComponentMgr s_transformComponentMgr;
+static RotateTransformComponentMgr s_rotateTransformComponentMgr;
 static ModelComponentMgr s_modelComponentMgr;
 
 struct SceneNode
@@ -169,7 +172,8 @@ void from_json(const json & j, SceneNode & node)
 					
 					for (auto & property : r.componentType->properties)
 					{
-						property->from_json(component, component_json);
+						if (component_json.count(property->name) != 0)
+							property->from_json(component, component_json);
 					}
 					
 					if (component->init())
@@ -375,6 +379,8 @@ static bool intersectBoundingBox3d(const float * min, const float * max, const f
 	}
 }
 
+#if 0
+
 #include "SIMD.h" // todo : create SimdVec.h, add SimdBoundingBox.h
 
 static bool intersectBoundingBox3d_simd(SimdVecArg rayOrigin, SimdVecArg rayDirectionInv, SimdVecArg boxMin, SimdVecArg boxMax, /*SimdVec & ioDistance*/float & ioDistance)
@@ -401,6 +407,8 @@ static bool intersectBoundingBox3d_simd(SimdVecArg rayOrigin, SimdVecArg rayDire
 
 	return true;
 }
+
+#endif
 
 //
 
@@ -786,7 +794,7 @@ struct SceneEditor
 		
 		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
 		
-		if (modelComponentType->initComponent(modelComp, { { "filename", "model.txt" } }) &&
+		if (modelComponentType->initComponent(modelComp, { { "filename", "model.txt" }, { "scale", "0.01" } }) &&
 			modelComp->init())
 			node.components.push_back(modelComp);
 		else
@@ -797,7 +805,6 @@ struct SceneEditor
 		if (transformComp->init())
 		{
 			transformComp->position = position;
-			transformComp->scale = .01f;
 			
 			node.components.push_back(transformComp);
 		}
@@ -806,9 +813,16 @@ struct SceneEditor
 		
 		scene.nodes[node.id] = node;
 		
-		auto & rootNode = scene.getRootNode();
+		//
 		
-		rootNode.childNodeIds.push_back(node.id);
+		auto parentNode_itr = scene.nodes.find(parentId);
+		Assert(parentNode_itr != scene.nodes.end());
+		if (parentNode_itr != scene.nodes.end())
+		{
+			auto & parentNode = parentNode_itr->second;
+			
+			parentNode.childNodeIds.push_back(node.id);
+		}
 	}
 	
 	void tickEditor(const float dt, bool & inputIsCaptured)
@@ -1078,7 +1092,7 @@ static void createRandomScene(Scene & scene)
 		
 		auto modelComponentType = findComponentType(s_componentTypeRegistrations, "ModelComponent");
 		
-		if (modelComponentType->initComponent(modelComp, { { "filename", "model.txt" } }) &&
+		if (modelComponentType->initComponent(modelComp, { { "filename", "model.txt" }, { "scale", "0.01" } }) &&
 			modelComp->init())
 			node.components.push_back(modelComp);
 		else
@@ -1091,7 +1105,6 @@ static void createRandomScene(Scene & scene)
 			transformComp->position[0] = random(-4.f, +4.f);
 			transformComp->position[1] = random(-4.f, +4.f);
 			transformComp->position[2] = random(-4.f, +4.f);
-			transformComp->scale = .01f;
 			
 			node.components.push_back(transformComp);
 		}
@@ -1117,6 +1130,7 @@ int main(int argc, char * argv[])
 		return -1;
 
 	registerComponentType(new TransformComponentType(), &s_transformComponentMgr);
+	registerComponentType(new RotateTransformComponentType(), &s_rotateTransformComponentMgr);
 	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);
 	
 	SceneEditor editor;
