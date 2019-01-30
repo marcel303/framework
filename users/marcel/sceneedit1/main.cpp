@@ -80,8 +80,10 @@ struct SceneNode : ComponentSet
 	}
 };
 
-void to_json(json & j, const SceneNode & node)
+void to_json(json & j, const SceneNode * node_ptr)
 {
+	auto & node = *node_ptr;
+	
 	j = json
 	{
 		{ "id", node.id },
@@ -116,8 +118,18 @@ void to_json(json & j, const SceneNode & node)
 	}
 }
 
-void from_json(const json & j, SceneNode & node)
+struct SceneNodeFromJson
 {
+	// this struct is just a silly little trick to make deserialization from json work. apparently from_json with target type 'SceneNode *&' is not allowed, so we cannot allocate objects and assign the pointer to the result. we use a struct with inside a pointer and later move the resultant objects into a vector again ..
+	
+	SceneNode * node = nullptr;
+};
+
+void from_json(const json & j, SceneNodeFromJson & node_from_json)
+{
+	node_from_json.node = new SceneNode();
+	
+	auto & node = *node_from_json.node;
 	node.id = j.value("id", -1);
 	node.displayName = j.value("displayName", "");
 	node.childNodeIds = j.value("children", std::vector<int>());
@@ -162,7 +174,7 @@ void from_json(const json & j, SceneNode & node)
 
 struct Scene
 {
-	std::map<int, SceneNode> nodes;
+	std::map<int, SceneNode*> nodes;
 	
 	int nextNodeId = 0;
 	
@@ -170,11 +182,11 @@ struct Scene
 	
 	Scene()
 	{
-		SceneNode rootNode;
+		SceneNode & rootNode = *new SceneNode();
 		rootNode.id = allocNodeId();
 		rootNode.displayName = "root";
 		
-		nodes[rootNode.id] = rootNode;
+		nodes[rootNode.id] = &rootNode;
 		
 		rootNodeId = rootNode.id;
 	}
@@ -187,15 +199,17 @@ struct Scene
 	SceneNode & getRootNode()
 	{
 		auto i = nodes.find(rootNodeId);
+		Assert(i != nodes.end());
 		
-		return i->second;
+		return *i->second;
 	}
 	
 	const SceneNode & getRootNode() const
 	{
 		auto i = nodes.find(rootNodeId);
+		Assert(i != nodes.end());
 		
-		return i->second;
+		return *i->second;
 	}
 	
 	bool save(json & j)
@@ -223,16 +237,18 @@ struct Scene
 		nextNodeId = j.value("nextNodeId", -1);
 		rootNodeId = j.value("rootNodeId", -1);
 		
-		auto nodes_vector = j.value("nodes", std::vector<SceneNode>());
+		auto nodes_from_json = j.value("nodes", std::vector<SceneNodeFromJson>());
 		
-		for (auto & node : nodes_vector)
+		for (auto & node_from_json : nodes_from_json)
 		{
-			nodes[node.id] = node;
+			auto * node = node_from_json.node;
+			
+			nodes[node->id] = node;
 		}
 		
 		for (auto & node_itr : nodes)
 		{
-			auto & node = node_itr.second;
+			auto & node = *node_itr.second;
 			
 			for (auto & childNodeId : node.childNodeIds)
 			{
@@ -241,7 +257,7 @@ struct Scene
 				Assert(childNode_itr != nodes.end());
 				if (childNode_itr != nodes.end())
 				{
-					auto & childNode = childNode_itr->second;
+					auto & childNode = *childNode_itr->second;
 					
 					childNode.parentId = node.id;
 				}
@@ -295,7 +311,7 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 			Assert(childNodeItr != scene.nodes.end());
 			if (childNodeItr != scene.nodes.end())
 			{
-				SceneNode & childNode = childNodeItr->second;
+				SceneNode & childNode = *childNodeItr->second;
 				
 				calculateTransformsTraverse(scene, childNode);
 			}
@@ -434,7 +450,7 @@ struct SceneEditor
 		
 		for (auto & nodeItr : scene.nodes)
 		{
-			auto & node = nodeItr.second;
+			auto & node = *nodeItr.second;
 			
 			auto modelComponent = node.findComponent<ModelComponent>();
 			
@@ -479,7 +495,7 @@ struct SceneEditor
 		Assert(nodeItr != scene.nodes.end());
 		if (nodeItr != scene.nodes.end())
 		{
-			auto & node = nodeItr->second;
+			auto & node = *nodeItr->second;
 			
 			if (removeFromParent == false)
 			{
@@ -506,7 +522,7 @@ struct SceneEditor
 				Assert(parentNodeItr != scene.nodes.end());
 				if (parentNodeItr != scene.nodes.end())
 				{
-					auto & parentNode = parentNodeItr->second;
+					auto & parentNode = *parentNodeItr->second;
 					auto childNodeItr = std::find(parentNode.childNodeIds.begin(), parentNode.childNodeIds.end(), node.id);
 					Assert(childNodeItr != parentNode.childNodeIds.end());
 					if (childNodeItr != parentNode.childNodeIds.end())
@@ -533,6 +549,8 @@ struct SceneEditor
 			*/
 			
 			node.freeComponents();
+			
+			delete &node;
 			
 			scene.nodes.erase(nodeItr);
 			
@@ -677,7 +695,7 @@ struct SceneEditor
 					{
 						ImGui::PushID(childNodeId);
 						
-						auto & childNode = childNodeItr->second;
+						auto & childNode = *childNodeItr->second;
 						
 						if (ImGui::CollapsingHeader(childNode.displayName.c_str()))
 						{
@@ -699,7 +717,7 @@ struct SceneEditor
 		if (nodeItr == scene.nodes.end())
 			return;
 		
-		SceneNode & node = nodeItr->second;
+		SceneNode & node = *nodeItr->second;
 		
 		ImGui::PushID(nodeId);
 		{
@@ -714,13 +732,13 @@ struct SceneEditor
 				
 				if (ImGui::MenuItem("Insert node"))
 				{
-					SceneNode childNode;
+					SceneNode & childNode = *new SceneNode();
 					childNode.id = scene.allocNodeId();
 					childNode.parentId = nodeId;
 					childNode.displayName = String::FormatC("Node %d", childNode.id);
-					scene.nodes[childNode.id] = childNode;
+					scene.nodes[childNode.id] = &childNode;
 					
-					scene.nodes[nodeId].childNodeIds.push_back(childNode.id);
+					scene.nodes[nodeId]->childNodeIds.push_back(childNode.id);
 				}
 				
 				for (auto & r : s_componentTypeRegistrations)
@@ -757,7 +775,7 @@ struct SceneEditor
 	
 	void addNodeFromTemplate(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
 	{
-		SceneNode node;
+		SceneNode & node = *new SceneNode();
 		
 		node.id = scene.allocNodeId();
 		node.parentId = parentId;
@@ -785,7 +803,7 @@ struct SceneEditor
 		else
 			s_transformComponentMgr.removeComponentForNode(node.id, transformComp);
 		
-		scene.nodes[node.id] = node;
+		scene.nodes[node.id] = &node;
 		
 		//
 		
@@ -793,7 +811,7 @@ struct SceneEditor
 		Assert(parentNode_itr != scene.nodes.end());
 		if (parentNode_itr != scene.nodes.end())
 		{
-			auto & parentNode = parentNode_itr->second;
+			auto & parentNode = *parentNode_itr->second;
 			
 			parentNode.childNodeIds.push_back(node.id);
 		}
@@ -877,7 +895,7 @@ struct SceneEditor
 								Assert(parentNode_itr != scene.nodes.end());
 								if (parentNode_itr != scene.nodes.end())
 								{
-									auto & parentNode = parentNode_itr->second;
+									auto & parentNode = *parentNode_itr->second;
 									
 									const Vec3 groundPosition_parent = parentNode.objectToWorld.CalcInv().Mul4(groundPosition);
 									
@@ -987,7 +1005,7 @@ struct SceneEditor
 				Assert(childNodeItr != scene.nodes.end());
 				if (childNodeItr != scene.nodes.end())
 				{
-					const SceneNode & childNode = childNodeItr->second;
+					const SceneNode & childNode = *childNodeItr->second;
 					
 					drawNodesTraverse(childNode);
 				}
@@ -1056,7 +1074,7 @@ static void createRandomScene(Scene & scene)
 	
 	for (int i = 0; i < 8; ++i)
 	{
-		SceneNode node;
+		SceneNode & node = *new SceneNode();
 		
 		node.id = scene.allocNodeId();
 		node.parentId = scene.rootNodeId;
@@ -1085,7 +1103,7 @@ static void createRandomScene(Scene & scene)
 		else
 			s_transformComponentMgr.removeComponentForNode(node.id, transformComp);
 		
-		scene.nodes[node.id] = node;
+		scene.nodes[node.id] = &node;
 		
 		rootNode.childNodeIds.push_back(node.id);
 	}
@@ -1151,7 +1169,7 @@ int main(int argc, char * argv[])
 				if (tempScene.load(j))
 				{
 					for (auto & node_itr : editor.scene.nodes)
-						editor.nodesToRemove.insert(node_itr.second.id);
+						editor.nodesToRemove.insert(node_itr.second->id);
 					editor.removeNodesToRemove();
 					
 					editor.scene = tempScene;
@@ -1199,7 +1217,7 @@ int main(int argc, char * argv[])
 			if (result == true)
 			{
 				for (auto & node_itr : editor.scene.nodes)
-					editor.nodesToRemove.insert(node_itr.second.id);
+					editor.nodesToRemove.insert(node_itr.second->id);
 				editor.removeNodesToRemove();
 				
 				editor.scene = tempScene;
