@@ -57,7 +57,7 @@ static TransformComponentMgr s_transformComponentMgr;
 static RotateTransformComponentMgr s_rotateTransformComponentMgr;
 static ModelComponentMgr s_modelComponentMgr;
 
-struct SceneNode
+struct SceneNode : ComponentSet
 {
 	int id = -1;
 	int parentId = -1;
@@ -65,33 +65,7 @@ struct SceneNode
 	
 	std::vector<int> childNodeIds;
 	
-	std::vector<ComponentBase*> components;
-	
 	Mat4x4 objectToWorld = Mat4x4(true);
-	
-	template <typename T>
-	T * findComponent()
-	{
-		for (auto * component : components)
-		{
-			if (component->typeIndex() == std::type_index(typeid(T)))
-				return static_cast<T*>(component);
-		}
-		
-		return nullptr;
-	}
-	
-	template <typename T>
-	const T * findComponent() const
-	{
-		for (auto * component : components)
-		{
-			if (component->typeIndex() == std::type_index(typeid(T)))
-				return static_cast<T*>(component);
-		}
-		
-		return nullptr;
-	}
 	
 	void freeComponents()
 	{

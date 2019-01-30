@@ -18,12 +18,15 @@ struct AngleAxis
 
 struct ComponentBase;
 struct ComponentMgrBase;
+struct ComponentSet;
 
 //
 
 struct ComponentBase
 {
-	int nodeId = -1;
+	int nodeId = -1; // todo : remove ?
+	
+	ComponentSet * componentSet = nullptr;
 	
 	virtual void tick(const float dt) { }
 	virtual bool init() { return true; }
@@ -127,4 +130,34 @@ struct ComponentMgr : ComponentMgrBase
 	{
 		return std::type_index(typeid(T));
 	}
+};
+
+struct ComponentSet
+{
+	std::vector<ComponentBase*> components;
+	
+	template <typename T>
+	T * findComponent()
+	{
+		for (auto * component : components)
+		{
+			if (component->typeIndex() == std::type_index(typeid(T)))
+				return static_cast<T*>(component);
+		}
+		
+		return nullptr;
+	}
+	
+	template <typename T>
+	const T * findComponent() const
+	{
+		for (auto * component : components)
+		{
+			if (component->typeIndex() == std::type_index(typeid(T)))
+				return static_cast<T*>(component);
+		}
+		
+		return nullptr;
+	}
+	
 };
