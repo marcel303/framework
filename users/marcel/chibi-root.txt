@@ -10,6 +10,7 @@ add cuber
 with_platform macos add etherdream1
 add geopart1
 add gltf1
+add hackerPoet/010-particleLife
 add homography
 add jsusfx1
 add libjgmod-audiograph

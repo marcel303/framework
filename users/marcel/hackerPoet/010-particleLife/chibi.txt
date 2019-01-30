@@ -1,0 +1,4 @@
+app hackerPoet-010-particleLife
+	depend_library framework
+	scan_files *.cpp
+	scan_files *.h
