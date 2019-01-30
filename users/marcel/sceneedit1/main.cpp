@@ -10,10 +10,15 @@
 #include "Quat.h"
 #include "StringEx.h"
 
+#include "json.hpp"
+#include "TextIO.h"
+
 #include <algorithm>
 #include <map>
 #include <set>
 #include <typeindex>
+
+using namespace nlohmann;
 
 static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
@@ -91,6 +96,85 @@ struct SceneNode
 	}
 };
 
+void to_json(json & j, const SceneNode & node)
+{
+	j = json
+	{
+		{ "id", node.id },
+		{ "displayName", node.displayName },
+		{ "children", node.childNodeIds }
+	};
+	
+	int component_index = 0;
+	
+	for (auto * component : node.components)
+	{
+		// todo : save components
+		
+		for (auto & r : s_componentTypeRegistrations)
+		{
+			if (r.componentMgr->typeIndex() == component->typeIndex())
+			{
+				auto & components_json = j["components"];
+				
+				auto & component_json = components_json[component_index++];
+				
+				component_json["typeName"] = r.componentType->typeName;
+				
+				for (auto & property : r.componentType->properties)
+				{
+					property->to_json(component, component_json[property->name]);
+				}
+				
+				break;
+			}
+		}
+	}
+}
+
+void from_json(const json & j, SceneNode & node)
+{
+	node.id = j.value("id", -1);
+	node.displayName = j.value("displayName", "");
+	node.childNodeIds = j.value("children", std::vector<int>());
+	
+	auto components_json_itr = j.find("components");
+	
+	if (components_json_itr != j.end())
+	{
+		auto & components_json = *components_json_itr;
+		
+		for (auto & component_json : components_json)
+		{
+			const std::string typeName = component_json.value("typeName", "");
+			
+			if (typeName.empty())
+			{
+				logWarning("empty type name");
+				continue;
+			}
+			
+			for (auto & r : s_componentTypeRegistrations)
+			{
+				if (r.componentType->typeName == typeName)
+				{
+					auto component = r.componentMgr->createComponentForNode(node.id);
+					
+					for (auto & property : r.componentType->properties)
+					{
+						property->from_json(component, component_json);
+					}
+					
+					if (component->init({ }))
+						node.components.push_back(component);
+					else
+						r.componentMgr->removeComponentForNode(node.id, component);
+				}
+			}
+		}
+	}
+}
+
 struct Scene
 {
 	std::map<int, SceneNode> nodes;
@@ -127,6 +211,59 @@ struct Scene
 		auto i = nodes.find(rootNodeId);
 		
 		return i->second;
+	}
+	
+	bool save(json & j)
+	{
+		j["nextNodeId"] = nextNodeId;
+		j["rootNodeId"] = rootNodeId;
+		
+		auto & nodes_json = j["nodes"];
+		
+		int node_index = 0;
+		
+		for (auto & node_itr : nodes)
+		{
+			auto & node = node_itr.second;
+			auto & node_json = nodes_json[node_index++];
+			
+			node_json = node;
+		}
+		
+		return true;
+	}
+	
+	bool load(const json & j)
+	{
+		nextNodeId = j.value("nextNodeId", -1);
+		rootNodeId = j.value("rootNodeId", -1);
+		
+		auto nodes_vector = j.value("nodes", std::vector<SceneNode>());
+		
+		for (auto & node : nodes_vector)
+		{
+			nodes[node.id] = node;
+		}
+		
+		for (auto & node_itr : nodes)
+		{
+			auto & node = node_itr.second;
+			
+			for (auto & childNodeId : node.childNodeIds)
+			{
+				auto childNode_itr = nodes.find(childNodeId);
+				
+				Assert(childNode_itr != nodes.end());
+				if (childNode_itr != nodes.end())
+				{
+					auto & childNode = childNode_itr->second;
+					
+					childNode.parentId = node.id;
+				}
+			}
+		}
+		
+		return true;
 	}
 };
 
@@ -346,7 +483,7 @@ struct SceneEditor
 		return result;
 	}
 	
-	void removeNodeTraverse(const int nodeId)
+	void removeNodeTraverse(const int nodeId, const bool removeFromParent)
 	{
 		auto nodeItr = scene.nodes.find(nodeId);
 		
@@ -355,7 +492,26 @@ struct SceneEditor
 		{
 			auto & node = nodeItr->second;
 			
-			if (node.parentId != -1)
+			if (removeFromParent == false)
+			{
+				for (auto childNodeId : node.childNodeIds)
+				{
+					removeNodeTraverse(childNodeId, removeFromParent);
+				}
+				
+				node.childNodeIds.clear();
+			}
+			else
+			{
+				while (!node.childNodeIds.empty())
+				{
+					removeNodeTraverse(node.childNodeIds.front(), removeFromParent);
+				}
+				
+				Assert(node.childNodeIds.empty());
+			}
+			
+			if (removeFromParent && node.parentId != -1)
 			{
 				auto parentNodeItr = scene.nodes.find(node.parentId);
 				Assert(parentNodeItr != scene.nodes.end());
@@ -387,6 +543,8 @@ struct SceneEditor
 			}
 			*/
 			
+			node.freeComponents();
+			
 			scene.nodes.erase(nodeItr);
 			
 			selectedNodes.erase(nodeId);
@@ -404,7 +562,7 @@ struct SceneEditor
 			auto nodeToRemoveItr = nodesToRemove.begin();
 			auto nodeId = *nodeToRemoveItr;
 			
-			removeNodeTraverse(nodeId);
+			removeNodeTraverse(nodeId, false);
 		}
 
 		Assert(nodesToRemove.empty());
@@ -416,6 +574,11 @@ struct SceneEditor
 	
 	void editNode(SceneNode & node, const bool editChildren)
 	{
+		char name[256];
+		sprintf_s(name, sizeof(name), "%s", node.displayName.c_str());
+		if (ImGui::InputText("Name", name, sizeof(name)))
+			node.displayName = name;
+		
 		for (auto * component : node.components)
 		{
 			ImGui::PushID(component);
@@ -587,7 +750,10 @@ struct SceneEditor
 						if (ImGui::MenuItem(text))
 						{
 							auto component = r.componentMgr->createComponentForNode(node.id);
-							node.components.push_back(component);
+							if (component->init({ }))
+								node.components.push_back(component);
+							else
+								r.componentMgr->removeComponentForNode(node.id, component);
 						}
 					}
 				}
@@ -598,6 +764,42 @@ struct SceneEditor
 			editNode(node, editChildren);
 		}
 		ImGui::PopID();
+	}
+	
+	void addNodeFromTemplate(Vec3Arg position, const AngleAxis & angleAxis)
+	{
+		SceneNode node;
+		
+		node.id = scene.allocNodeId();
+		node.parentId = scene.rootNodeId;
+		node.displayName = String::FormatC("Node %d", node.id);
+		
+	// todo : create the node from an actual template
+	
+		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
+		
+		if (modelComp->init({{ "filename", "model.txt" } }))
+			node.components.push_back(modelComp);
+		else
+			s_modelComponentMgr.removeComponentForNode(node.id, modelComp);
+		
+		auto transformComp = s_transformComponentMgr.createComponentForNode(node.id);
+		
+		if (transformComp->init({ }))
+		{
+			transformComp->position = position;
+			transformComp->scale = .01f;
+			
+			node.components.push_back(transformComp);
+		}
+		else
+			s_transformComponentMgr.removeComponentForNode(node.id, transformComp);
+		
+		scene.nodes[node.id] = node;
+		
+		auto & rootNode = scene.getRootNode();
+		
+		rootNode.childNodeIds.push_back(node.id);
 	}
 	
 	void tickEditor(const float dt, bool & inputIsCaptured)
@@ -662,6 +864,24 @@ struct SceneEditor
 			
 			if (node != nullptr)
 				selectedNodes.insert(node->id);
+			else
+			{
+				// todo : make action dependent on editing state. in this case, node placement
+				
+				// find intersection point with the ground plane
+				
+				if (mouseDirection_world[1] != 0.f)
+				{
+					const float t = -camera.position[1] / mouseDirection_world[1];
+					
+					if (t >= 0.f)
+					{
+						const Vec3 groundPosition = camera.position + mouseDirection_world * t;
+						
+						addNodeFromTemplate(groundPosition, AngleAxis());
+					}
+				}
+			}
 		}
 		
 		if (inputIsCaptured == false && (keyboard.wentDown(SDLK_BACKSPACE) || keyboard.wentDown(SDLK_DELETE)))
@@ -826,9 +1046,9 @@ static void createRandomScene(Scene & scene)
 		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
 		
 		if (modelComp->init({{ "filename", "model.txt" } }))
-		{
 			node.components.push_back(modelComp);
-		}
+		else
+			s_modelComponentMgr.removeComponentForNode(node.id, modelComp);
 		
 		auto transformComp = s_transformComponentMgr.createComponentForNode(node.id);
 		
@@ -841,6 +1061,8 @@ static void createRandomScene(Scene & scene)
 			
 			node.components.push_back(transformComp);
 		}
+		else
+			s_transformComponentMgr.removeComponentForNode(node.id, transformComp);
 		
 		scene.nodes[node.id] = node;
 		
@@ -866,7 +1088,7 @@ int main(int argc, char * argv[])
 	SceneEditor editor;
 	editor.init();
 	
-	createRandomScene(editor.scene);
+	//createRandomScene(editor.scene);
 	
 	for (;;)
 	{
@@ -880,6 +1102,89 @@ int main(int argc, char * argv[])
 		bool inputIsCaptured = false;
 		
 		editor.tickEditor(dt, inputIsCaptured);
+		
+		// save load test. todo : remove test code
+		
+		if (keyboard.wentDown(SDLK_s))
+		{
+			json j;
+			
+			if (editor.scene.save(j))
+			{
+				auto text = j.dump(4);
+				
+				printf("%s", text.c_str());
+				
+				std::vector<std::string> lines;
+				TextIO::LineEndings lineEndings;
+				if (TextIO::loadText(text.c_str(), lines, lineEndings))
+				{
+					TextIO::save("testScene.json", lines, TextIO::kLineEndings_Unix);
+				}
+				
+				//
+				
+				Scene tempScene;
+				
+				if (tempScene.load(j))
+				{
+					for (auto & node_itr : editor.scene.nodes)
+						editor.nodesToRemove.insert(node_itr.second.id);
+					editor.removeNodesToRemove();
+					
+					editor.scene = tempScene;
+				}
+			}
+		}
+		
+		if (keyboard.wentDown(SDLK_l))
+		{
+			bool result = true;
+			
+			char * text;
+			size_t textSize;
+			
+			if (result == true)
+			{
+				result &= TextIO::loadFileContents("testScene.json", text, textSize);
+			}
+			
+			json j;
+			
+			if (result == true)
+			{
+				try
+				{
+					j = json::parse(text);
+				}
+				catch (std::exception & e)
+				{
+					logError("failed to parse JSON: %s", e.what());
+					result &= false;
+				}
+				
+				delete [] text;
+				text = nullptr;
+			}
+			
+			Scene tempScene;
+			
+			if (result == true)
+			{
+				result &= tempScene.load(j);
+			}
+			
+			if (result == true)
+			{
+				for (auto & node_itr : editor.scene.nodes)
+					editor.nodesToRemove.insert(node_itr.second.id);
+				editor.removeNodesToRemove();
+				
+				editor.scene = tempScene;
+			}
+		}
+		
+		//
 		
 		s_transformComponentMgr.calculateTransforms(editor.scene);
 		

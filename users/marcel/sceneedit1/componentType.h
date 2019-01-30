@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "json.hpp" // for assigment from templated class ..
+
 struct ComponentPropertyBase;
 struct ComponentTypeBase;
 
@@ -34,44 +36,57 @@ struct ComponentPropertyBase
 		, type(in_type)
 	{
 	}
+	
+	virtual void to_json(ComponentBase * component, nlohmann::json & j) = 0;
+	virtual void from_json(ComponentBase * component, const nlohmann::json & j) = 0;
 };
 
 template <typename T> ComponentPropertyType getComponentPropertyType();
 
-template <> ComponentPropertyType getComponentPropertyType<int>()
+template <> inline ComponentPropertyType getComponentPropertyType<int>()
 {
 	return kComponentPropertyType_Int32;
 }
 
-template <> ComponentPropertyType getComponentPropertyType<float>()
+template <> inline ComponentPropertyType getComponentPropertyType<float>()
 {
 	return kComponentPropertyType_Float;
 }
 
-template <> ComponentPropertyType getComponentPropertyType<Vec2>()
+template <> inline ComponentPropertyType getComponentPropertyType<Vec2>()
 {
 	return kComponentPropertyType_Vec2;
 }
 
-template <> ComponentPropertyType getComponentPropertyType<Vec3>()
+template <> inline ComponentPropertyType getComponentPropertyType<Vec3>()
 {
 	return kComponentPropertyType_Vec3;
 }
 
-template <> ComponentPropertyType getComponentPropertyType<Vec4>()
+template <> inline ComponentPropertyType getComponentPropertyType<Vec4>()
 {
 	return kComponentPropertyType_Vec4;
 }
 
-template <> ComponentPropertyType getComponentPropertyType<std::string>()
+template <> inline ComponentPropertyType getComponentPropertyType<std::string>()
 {
 	return kComponentPropertyType_String;
 }
 
-template <> ComponentPropertyType getComponentPropertyType<AngleAxis>()
+template <> inline ComponentPropertyType getComponentPropertyType<AngleAxis>()
 {
 	return kComponentPropertyType_AngleAxis;
 }
+
+void to_json(nlohmann::json & j, const Vec2 & v);
+void to_json(nlohmann::json & j, const Vec3 & v);
+void to_json(nlohmann::json & j, const Vec4 & v);
+void to_json(nlohmann::json & j, const AngleAxis & v);
+
+void from_json(const nlohmann::json & j, Vec2 & v);
+void from_json(const nlohmann::json & j, Vec3 & v);
+void from_json(const nlohmann::json & j, Vec4 & v);
+void from_json(const nlohmann::json & j, AngleAxis & v);
 
 template <typename T> struct ComponentProperty : ComponentPropertyBase
 {
@@ -84,6 +99,16 @@ template <typename T> struct ComponentProperty : ComponentPropertyBase
 	ComponentProperty(const char * name)
 		: ComponentPropertyBase(name, getComponentPropertyType<T>())
 	{
+	}
+	
+	virtual void to_json(ComponentBase * component, nlohmann::json & j) override
+	{
+		j = getter(component);
+	}
+	
+	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override
+	{
+		setter(component, j.value(name, T()));
 	}
 };
 
