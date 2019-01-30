@@ -1,14 +1,8 @@
 #include "framework.h"
 #include "modelComponent.h"
 
-bool ModelComponent::init(const std::vector<KeyValuePair> & params)
+bool ModelComponent::init()
 {
-	for (auto & param : params)
-	{
-		if (strcmp(param.key, "filename") == 0)
-			filename = param.value;
-	}
-	
 	Model(filename.c_str()).calculateAABB(aabbMin, aabbMax, true);
 	
 	return true;

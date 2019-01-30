@@ -44,6 +44,13 @@ void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase *
 	std::sort(s_componentTypeRegistrations.begin(), s_componentTypeRegistrations.end(), [](const ComponentTypeRegistration & r1, const ComponentTypeRegistration & r2) { return r1.componentType->tickPriority < r2.componentType->tickPriority; });
 }
 
+ComponentTypeBase * findComponentType(const std::vector<ComponentTypeRegistration> & componentTypeRegistrations, const char * typeName)
+{
+	for (auto & r : componentTypeRegistrations)
+		if (r.componentType->typeName == typeName)
+			return r.componentType;
+}
+
 static TransformComponentMgr s_transformComponentMgr;
 static ModelComponentMgr s_modelComponentMgr;
 
@@ -165,7 +172,7 @@ void from_json(const json & j, SceneNode & node)
 						property->from_json(component, component_json);
 					}
 					
-					if (component->init({ }))
+					if (component->init())
 						node.components.push_back(component);
 					else
 						r.componentMgr->removeComponentForNode(node.id, component);
@@ -750,7 +757,7 @@ struct SceneEditor
 						if (ImGui::MenuItem(text))
 						{
 							auto component = r.componentMgr->createComponentForNode(node.id);
-							if (component->init({ }))
+							if (component->init())
 								node.components.push_back(component);
 							else
 								r.componentMgr->removeComponentForNode(node.id, component);
@@ -766,26 +773,28 @@ struct SceneEditor
 		ImGui::PopID();
 	}
 	
-	void addNodeFromTemplate(Vec3Arg position, const AngleAxis & angleAxis)
+	void addNodeFromTemplate(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
 	{
 		SceneNode node;
 		
 		node.id = scene.allocNodeId();
-		node.parentId = scene.rootNodeId;
+		node.parentId = parentId;
 		node.displayName = String::FormatC("Node %d", node.id);
 		
 	// todo : create the node from an actual template
-	
+		auto modelComponentType = findComponentType(s_componentTypeRegistrations, "ModelComponent");
+		
 		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
 		
-		if (modelComp->init({{ "filename", "model.txt" } }))
+		if (modelComponentType->initComponent(modelComp, { { "filename", "model.txt" } }) &&
+			modelComp->init())
 			node.components.push_back(modelComp);
 		else
 			s_modelComponentMgr.removeComponentForNode(node.id, modelComp);
 		
 		auto transformComp = s_transformComponentMgr.createComponentForNode(node.id);
 		
-		if (transformComp->init({ }))
+		if (transformComp->init())
 		{
 			transformComp->position = position;
 			transformComp->scale = .01f;
@@ -858,18 +867,12 @@ struct SceneEditor
 					-mousePosition_view[1],
 					1.f));
 			
-			const SceneNode * node = raycast(camera.position, mouseDirection_world);
-			
-			selectedNodes.clear();
-			
-			if (node != nullptr)
-				selectedNodes.insert(node->id);
-			else
+			if (keyboard.isDown(SDLK_LSHIFT))
 			{
 				// todo : make action dependent on editing state. in this case, node placement
-				
+			
 				// find intersection point with the ground plane
-				
+			
 				if (mouseDirection_world[1] != 0.f)
 				{
 					const float t = -camera.position[1] / mouseDirection_world[1];
@@ -878,9 +881,37 @@ struct SceneEditor
 					{
 						const Vec3 groundPosition = camera.position + mouseDirection_world * t;
 						
-						addNodeFromTemplate(groundPosition, AngleAxis());
+						if (keyboard.isDown(SDLK_c))
+						{
+							for (auto & parentNodeId : selectedNodes)
+							{
+								auto parentNode_itr = scene.nodes.find(parentNodeId);
+								Assert(parentNode_itr != scene.nodes.end());
+								if (parentNode_itr != scene.nodes.end())
+								{
+									auto & parentNode = parentNode_itr->second;
+									
+									const Vec3 groundPosition_parent = parentNode.objectToWorld.CalcInv().Mul4(groundPosition);
+									
+									addNodeFromTemplate(groundPosition_parent, AngleAxis(), parentNodeId);
+								}
+							}
+						}
+						else
+						{
+							addNodeFromTemplate(groundPosition, AngleAxis(), scene.rootNodeId);
+						}
 					}
 				}
+			}
+			else
+			{
+				const SceneNode * node = raycast(camera.position, mouseDirection_world);
+				
+				selectedNodes.clear();
+				
+				if (node != nullptr)
+					selectedNodes.insert(node->id);
 			}
 		}
 		
@@ -1045,14 +1076,17 @@ static void createRandomScene(Scene & scene)
 		
 		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
 		
-		if (modelComp->init({{ "filename", "model.txt" } }))
+		auto modelComponentType = findComponentType(s_componentTypeRegistrations, "ModelComponent");
+		
+		if (modelComponentType->initComponent(modelComp, { { "filename", "model.txt" } }) &&
+			modelComp->init())
 			node.components.push_back(modelComp);
 		else
 			s_modelComponentMgr.removeComponentForNode(node.id, modelComp);
 		
 		auto transformComp = s_transformComponentMgr.createComponentForNode(node.id);
 		
-		if (transformComp->init({ }))
+		if (transformComp->init())
 		{
 			transformComp->position[0] = random(-4.f, +4.f);
 			transformComp->position[1] = random(-4.f, +4.f);

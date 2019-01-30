@@ -13,7 +13,7 @@ struct ModelComponent : Component<ModelComponent>
 	
 	Mat4x4 _objectToWorld = Mat4x4(true); // todo : remove. use transform stored in SceneNode
 	
-	virtual bool init(const std::vector<KeyValuePair> & params) override;
+	virtual bool init() override;
 	
 	void draw(const Mat4x4 & objectToWorld) const;
 };

@@ -23,16 +23,10 @@ struct ComponentMgrBase;
 
 struct ComponentBase
 {
-	struct KeyValuePair
-	{
-		const char * key;
-		const char * value;
-	};
-	
 	int nodeId = -1;
 	
 	virtual void tick(const float dt) { }
-	virtual bool init(const std::vector<KeyValuePair> & params) { return true; }
+	virtual bool init() { return true; }
 	
 	virtual std::type_index typeIndex() = 0;
 };

@@ -1,5 +1,6 @@
 #include "componentType.h"
 #include "json.hpp"
+#include "Parse.h"
 
 void to_json(nlohmann::json & j, const Vec2 & v)
 {
@@ -49,4 +50,41 @@ void from_json(const nlohmann::json & j, AngleAxis & v)
 	
 	v.angle = j.value("angle", defaultValue.angle);
 	v.axis = j.value("axis", defaultValue.axis);
+}
+
+//
+
+bool ComponentTypeBase::initComponent(ComponentBase * component, const std::vector<KeyValuePair> & params) const
+{
+	bool result = true;
+	
+	for (auto & param : params)
+	{
+		for (auto * property : properties)
+		{
+			if (property->name == param.key)
+			{
+				if (property->type == kComponentPropertyType_Int32)
+				{
+					const int value = Parse::Int32(param.value);
+					
+					static_cast<ComponentPropertyInt*>(property)->setter(component, value);
+				}
+				else if (property->type == kComponentPropertyType_Float)
+				{
+					const float value = Parse::Float(param.value);
+					
+					static_cast<ComponentPropertyFloat*>(property)->setter(component, value);
+				}
+				else if (property->type == kComponentPropertyType_String)
+				{
+					const std::string & value = param.value;
+					
+					static_cast<ComponentPropertyString*>(property)->setter(component, value);
+				}
+			}
+		}
+	}
+	
+	return result;
 }
