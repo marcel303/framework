@@ -22,63 +22,6 @@ TransformComponentMgr s_transformComponentMgr;
 RotateTransformComponentMgr s_rotateTransformComponentMgr;
 ModelComponentMgr s_modelComponentMgr;
 
-// todo : move to transform component source file
-
-void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode & node) const
-{
-	gxPushMatrix();
-	{
-		auto transformComp = node.components.find<TransformComponent>();
-		
-		if (transformComp != nullptr)
-		{
-			gxTranslatef(
-				transformComp->position[0],
-				transformComp->position[1],
-				transformComp->position[2]);
-			
-			gxRotatef(
-				transformComp->angleAxis.angle * 180.f / float(M_PI),
-				transformComp->angleAxis.axis[0],
-				transformComp->angleAxis.axis[1],
-				transformComp->angleAxis.axis[2]);
-			
-			gxScalef(
-				transformComp->scale,
-				transformComp->scale,
-				transformComp->scale);
-		}
-		
-		gxGetMatrixf(GX_MODELVIEW, node.objectToWorld.m_v);
-		
-		auto modelComp = node.components.find<ModelComponent>();
-		
-		if (modelComp != nullptr)
-		{
-			modelComp->_objectToWorld = node.objectToWorld;
-		}
-		
-		for (auto & childNodeId : node.childNodeIds)
-		{
-			auto childNodeItr = scene.nodes.find(childNodeId);
-			
-			Assert(childNodeItr != scene.nodes.end());
-			if (childNodeItr != scene.nodes.end())
-			{
-				SceneNode & childNode = *childNodeItr->second;
-				
-				calculateTransformsTraverse(scene, childNode);
-			}
-		}
-	}
-	gxPopMatrix();
-}
-
-void TransformComponentMgr::calculateTransforms(Scene & scene) const
-{
-	calculateTransformsTraverse(scene, scene.getRootNode());
-}
-
 //
 
 /**
@@ -796,10 +739,19 @@ struct SceneEditor
 		projectPerspective3d(60.f, .1f, 100.f);
 		camera.pushViewMatrix();
 		{
+			if (true)
+			{
+				pushDepthTest(true, DEPTH_LESS);
+				pushBlend(BLEND_OPAQUE);
+				s_modelComponentMgr.draw();
+				popBlend();
+				popDepthTest();
+			}
+			
 			if (drawGroundPlane)
 			{
 				pushLineSmooth(true);
-				pushDepthTest(true, DEPTH_LESS);
+				pushDepthTest(true, DEPTH_LESS, false);
 				pushBlend(BLEND_ALPHA);
 				gxPushMatrix();
 				{
@@ -815,15 +767,6 @@ struct SceneEditor
 				popBlend();
 				popDepthTest();
 				popLineSmooth();
-			}
-			
-			if (true)
-			{
-				pushDepthTest(true, DEPTH_LESS);
-				pushBlend(BLEND_OPAQUE);
-				s_modelComponentMgr.draw();
-				popBlend();
-				popDepthTest();
 			}
 			
 			if (drawNodes)
@@ -843,47 +786,6 @@ struct SceneEditor
 	}
 };
 
-static void createRandomScene(Scene & scene)
-{
-	auto & rootNode = scene.getRootNode();
-	
-	for (int i = 0; i < 8; ++i)
-	{
-		SceneNode & node = *new SceneNode();
-		
-		node.id = scene.allocNodeId();
-		node.parentId = scene.rootNodeId;
-		node.displayName = String::FormatC("Node %d", node.id);
-		
-		auto modelComp = s_modelComponentMgr.createComponent();
-		
-		modelComp->filename = "model.txt";
-		modelComp->scale = .01f;
-		
-		if (modelComp->init())
-			node.components.add(modelComp);
-		else
-			s_modelComponentMgr.removeComponent(modelComp);
-		
-		auto transformComp = s_transformComponentMgr.createComponent();
-		
-		if (transformComp->init())
-		{
-			transformComp->position[0] = random(-4.f, +4.f);
-			transformComp->position[1] = random(-4.f, +4.f);
-			transformComp->position[2] = random(-4.f, +4.f);
-			
-			node.components.add(transformComp);
-		}
-		else
-			s_transformComponentMgr.removeComponent(transformComp);
-		
-		scene.nodes[node.id] = &node;
-		
-		rootNode.childNodeIds.push_back(node.id);
-	}
-}
-
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -900,8 +802,6 @@ int main(int argc, char * argv[])
 	
 	SceneEditor editor;
 	editor.init();
-	
-	//createRandomScene(editor.scene);
 	
 	for (;;)
 	{
@@ -957,6 +857,10 @@ int main(int argc, char * argv[])
 		{
 			type->componentMgr->tick(dt);
 		}
+		
+		s_transformComponentMgr.calculateTransforms(editor.scene);
+		
+		//
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
