@@ -5,6 +5,8 @@
 #include "modelComponent.h"
 #include "transformComponent.h"
 
+#include <algorithm>
+
 // todo : remove component mgr globals
 extern TransformComponentMgr s_transformComponentMgr;
 extern RotateTransformComponentMgr s_rotateTransformComponentMgr;

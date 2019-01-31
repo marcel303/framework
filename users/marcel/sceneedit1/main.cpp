@@ -5,8 +5,6 @@
 #include "componentType.h"
 #include "framework.h"
 #include "imgui-framework.h"
-#include "Parse.h"
-#include "Quat.h"
 #include "StringEx.h"
 
 #include "helpers.h"
@@ -14,7 +12,6 @@
 #include "json.hpp"
 #include "TextIO.h"
 
-#include <algorithm>
 #include <map>
 #include <set>
 #include <typeindex>
