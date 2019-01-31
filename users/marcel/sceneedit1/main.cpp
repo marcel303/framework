@@ -2,6 +2,7 @@
 #include "transformComponent.h"
 
 #include "component.h"
+#include "componentJson.h"
 #include "componentType.h"
 #include "framework.h"
 #include "imgui-framework.h"
@@ -9,7 +10,6 @@
 
 #include "helpers.h"
 
-#include "json.hpp"
 #include "TextIO.h"
 
 #include <map>
@@ -86,7 +86,9 @@ void to_json(json & j, const SceneNode * node_ptr)
 			
 			for (auto & property : componentType->properties)
 			{
-				property->to_json(component, component_json[property->name]);
+				ComponentJson property_json(component_json[property->name]);
+				
+				property->to_json(component, property_json);
 			}
 		}
 	}

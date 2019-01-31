@@ -8,8 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "json.hpp" // sadly cannot forward declare json class ..
-
+struct ComponentJson;
 struct ComponentPropertyBase;
 struct ComponentTypeBase;
 
@@ -38,8 +37,8 @@ struct ComponentPropertyBase
 	{
 	}
 	
-	virtual void to_json(ComponentBase * component, nlohmann::json & j) = 0;
-	virtual void from_json(ComponentBase * component, const nlohmann::json & j) = 0;
+	virtual void to_json(ComponentBase * component, ComponentJson & j) = 0;
+	virtual void from_json(ComponentBase * component, const ComponentJson & j) = 0;
 };
 
 template <typename T> ComponentPropertyType getComponentPropertyType();
@@ -65,8 +64,8 @@ struct ComponentPropertyBool : ComponentProperty<bool>
 	{
 	}
 	
-	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
-	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
+	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 };
 
 struct ComponentPropertyInt : ComponentProperty<int>
@@ -89,8 +88,8 @@ struct ComponentPropertyInt : ComponentProperty<int>
 		return *this;
 	}
 	
-	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
-	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
+	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 };
 
 struct ComponentPropertyFloat : ComponentProperty<float>
@@ -122,8 +121,8 @@ struct ComponentPropertyFloat : ComponentProperty<float>
 		return *this;
 	}
 	
-	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
-	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
+	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 };
 
 struct ComponentPropertyVec2 : ComponentProperty<Vec2>
@@ -133,8 +132,8 @@ struct ComponentPropertyVec2 : ComponentProperty<Vec2>
 	{
 	}
 	
-	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
-	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
+	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 };
 
 struct ComponentPropertyVec3 : ComponentProperty<Vec3>
@@ -144,8 +143,8 @@ struct ComponentPropertyVec3 : ComponentProperty<Vec3>
 	{
 	}
 	
-	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
-	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
+	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 };
 
 struct ComponentPropertyVec4 : ComponentProperty<Vec4>
@@ -155,8 +154,8 @@ struct ComponentPropertyVec4 : ComponentProperty<Vec4>
 	{
 	}
 	
-	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
-	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
+	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 };
 
 struct ComponentPropertyString : ComponentProperty<std::string>
@@ -166,8 +165,8 @@ struct ComponentPropertyString : ComponentProperty<std::string>
 	{
 	}
 	
-	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
-	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
+	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 };
 
 struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
@@ -177,8 +176,8 @@ struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
 	{
 	}
 	
-	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
-	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
+	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 };
 
 // component types

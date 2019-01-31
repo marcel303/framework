@@ -1,5 +1,5 @@
+#include "componentJson.h"
 #include "componentType.h"
-#include "json.hpp"
 #include "Parse.h"
 
 template <> ComponentPropertyType getComponentPropertyType<bool>()
@@ -96,96 +96,96 @@ static void from_json(const nlohmann::json & j, AngleAxis & v)
 
 //
 
-void ComponentPropertyBool::to_json(ComponentBase * component, nlohmann::json & j)
+void ComponentPropertyBool::to_json(ComponentBase * component, ComponentJson & j)
 {
-	j = getter(component);
+	j.j = getter(component);
 }
 
-void ComponentPropertyBool::from_json(ComponentBase * component, const nlohmann::json & j)
+void ComponentPropertyBool::from_json(ComponentBase * component, const ComponentJson & j)
 {
-	setter(component, j.value(name, false));
-}
-
-//
-
-void ComponentPropertyInt::to_json(ComponentBase * component, nlohmann::json & j)
-{
-	j = getter(component);
-}
-
-void ComponentPropertyInt::from_json(ComponentBase * component, const nlohmann::json & j)
-{
-	setter(component, j.value(name, 0));
+	setter(component, j.j.value(name, false));
 }
 
 //
 
-void ComponentPropertyFloat::to_json(ComponentBase * component, nlohmann::json & j)
+void ComponentPropertyInt::to_json(ComponentBase * component, ComponentJson & j)
 {
-	j = getter(component);
+	j.j = getter(component);
 }
 
-void ComponentPropertyFloat::from_json(ComponentBase * component, const nlohmann::json & j)
+void ComponentPropertyInt::from_json(ComponentBase * component, const ComponentJson & j)
 {
-	setter(component, j.value(name, 0.f));
-}
-
-//
-
-void ComponentPropertyVec2::to_json(ComponentBase * component, nlohmann::json & j)
-{
-	j = getter(component);
-}
-
-void ComponentPropertyVec2::from_json(ComponentBase * component, const nlohmann::json & j)
-{
-	setter(component, j.value(name, Vec2()));
+	setter(component, j.j.value(name, 0));
 }
 
 //
 
-void ComponentPropertyVec3::to_json(ComponentBase * component, nlohmann::json & j)
+void ComponentPropertyFloat::to_json(ComponentBase * component, ComponentJson & j)
 {
-	j = getter(component);
+	j.j = getter(component);
 }
 
-void ComponentPropertyVec3::from_json(ComponentBase * component, const nlohmann::json & j)
+void ComponentPropertyFloat::from_json(ComponentBase * component, const ComponentJson & j)
 {
-	setter(component, j.value(name, Vec3()));
-}
-
-//
-
-void ComponentPropertyVec4::to_json(ComponentBase * component, nlohmann::json & j)
-{
-	j = getter(component);
-}
-
-void ComponentPropertyVec4::from_json(ComponentBase * component, const nlohmann::json & j)
-{
-	setter(component, j.value(name, Vec4()));
+	setter(component, j.j.value(name, 0.f));
 }
 
 //
 
-void ComponentPropertyString::to_json(ComponentBase * component, nlohmann::json & j)
+void ComponentPropertyVec2::to_json(ComponentBase * component, ComponentJson & j)
 {
-	j = getter(component);
+	j.j = getter(component);
 }
 
-void ComponentPropertyString::from_json(ComponentBase * component, const nlohmann::json & j)
+void ComponentPropertyVec2::from_json(ComponentBase * component, const ComponentJson & j)
 {
-	setter(component, j.value(name, std::string()));
+	setter(component, j.j.value(name, Vec2()));
 }
 
 //
 
-void ComponentPropertyAngleAxis::to_json(ComponentBase * component, nlohmann::json & j)
+void ComponentPropertyVec3::to_json(ComponentBase * component, ComponentJson & j)
 {
-	j = getter(component);
+	j.j = getter(component);
 }
 
-void ComponentPropertyAngleAxis::from_json(ComponentBase * component, const nlohmann::json & j)
+void ComponentPropertyVec3::from_json(ComponentBase * component, const ComponentJson & j)
 {
-	setter(component, j.value(name, AngleAxis()));
+	setter(component, j.j.value(name, Vec3()));
+}
+
+//
+
+void ComponentPropertyVec4::to_json(ComponentBase * component, ComponentJson & j)
+{
+	j.j = getter(component);
+}
+
+void ComponentPropertyVec4::from_json(ComponentBase * component, const ComponentJson & j)
+{
+	setter(component, j.j.value(name, Vec4()));
+}
+
+//
+
+void ComponentPropertyString::to_json(ComponentBase * component, ComponentJson & j)
+{
+	j.j = getter(component);
+}
+
+void ComponentPropertyString::from_json(ComponentBase * component, const ComponentJson & j)
+{
+	setter(component, j.j.value(name, std::string()));
+}
+
+//
+
+void ComponentPropertyAngleAxis::to_json(ComponentBase * component, ComponentJson & j)
+{
+	j.j = getter(component);
+}
+
+void ComponentPropertyAngleAxis::from_json(ComponentBase * component, const ComponentJson & j)
+{
+	setter(component, j.j.value(name, AngleAxis()));
 }
