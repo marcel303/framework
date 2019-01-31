@@ -41,13 +41,15 @@ struct SceneNode : ComponentSet
 	{
 		for (auto * component : components)
 		{
-		// todo : find the appropriate component mgr from registration list
-			if (component->typeIndex() == s_modelComponentMgr.typeIndex())
-				s_modelComponentMgr.removeComponentForNode(id, s_modelComponentMgr.castToComponentType(component));
-			if (component->typeIndex() == s_transformComponentMgr.typeIndex())
-				s_transformComponentMgr.removeComponentForNode(id, s_transformComponentMgr.castToComponentType(component));
-			if (component->typeIndex() == s_rotateTransformComponentMgr.typeIndex())
-				s_rotateTransformComponentMgr.removeComponentForNode(id, s_rotateTransformComponentMgr.castToComponentType(component));
+			for (auto * componentType : g_componentTypes)
+			{
+				auto * componentMgr = componentType->componentMgr;
+				
+				if (component->typeIndex() != componentMgr->typeIndex())
+					continue;
+			
+				componentMgr->removeComponentForNode(id, component);
+			}
 		}
 		
 		components.clear();
