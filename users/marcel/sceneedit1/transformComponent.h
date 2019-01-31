@@ -53,7 +53,12 @@ struct RotateTransformComponent : Component<RotateTransformComponent>
 	
 	virtual void tick(const float dt)
 	{
-		// todo : fetch transform component and update its rotation
+		// fetch transform component and update its rotation
+		
+		auto transformComponent = componentSet->findComponent<TransformComponent>();
+		
+		if (transformComponent != nullptr)
+			transformComponent->angleAxis.angle += speed * dt;
 	}
 };
 

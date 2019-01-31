@@ -74,6 +74,10 @@ struct SceneNode : ComponentSet
 		// todo : find the appropriate component mgr from registration list
 			if (component->typeIndex() == s_modelComponentMgr.typeIndex())
 				s_modelComponentMgr.removeComponentForNode(id, s_modelComponentMgr.castToComponentType(component));
+			if (component->typeIndex() == s_transformComponentMgr.typeIndex())
+				s_transformComponentMgr.removeComponentForNode(id, s_transformComponentMgr.castToComponentType(component));
+			if (component->typeIndex() == s_rotateTransformComponentMgr.typeIndex())
+				s_rotateTransformComponentMgr.removeComponentForNode(id, s_rotateTransformComponentMgr.castToComponentType(component));
 		}
 		
 		components.clear();
@@ -155,6 +159,7 @@ void from_json(const json & j, SceneNodeFromJson & node_from_json)
 				if (r.componentType->typeName == typeName)
 				{
 					auto component = r.componentMgr->createComponentForNode(node.id);
+					component->componentSet = &node;
 					
 					for (auto & property : r.componentType->properties)
 					{
@@ -569,7 +574,7 @@ struct SceneEditor
 			auto nodeToRemoveItr = nodesToRemove.begin();
 			auto nodeId = *nodeToRemoveItr;
 			
-			removeNodeTraverse(nodeId, false);
+			removeNodeTraverse(nodeId, true);
 		}
 
 		Assert(nodesToRemove.empty());
@@ -581,11 +586,6 @@ struct SceneEditor
 	
 	void editNode(SceneNode & node, const bool editChildren)
 	{
-		char name[256];
-		sprintf_s(name, sizeof(name), "%s", node.displayName.c_str());
-		if (ImGui::InputText("Name", name, sizeof(name)))
-			node.displayName = name;
-		
 		for (auto * component : node.components)
 		{
 			ImGui::PushID(component);
@@ -721,6 +721,11 @@ struct SceneEditor
 		
 		ImGui::PushID(nodeId);
 		{
+			char name[256];
+			sprintf_s(name, sizeof(name), "%s", node.displayName.c_str());
+			if (ImGui::InputText("Name", name, sizeof(name)))
+				node.displayName = name;
+			
 			if (ImGui::BeginPopupContextItem("NodeMenu"))
 			{
 				//logDebug("context window for %d", nodeId);
@@ -757,6 +762,8 @@ struct SceneEditor
 						if (ImGui::MenuItem(text))
 						{
 							auto component = r.componentMgr->createComponentForNode(node.id);
+							component->componentSet = &node;
+							
 							if (component->init())
 								node.components.push_back(component);
 							else
@@ -785,6 +792,7 @@ struct SceneEditor
 		auto modelComponentType = findComponentType(s_componentTypeRegistrations, "ModelComponent");
 		
 		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
+		modelComp->componentSet = &node;
 		
 		if (modelComponentType->initComponent(modelComp, { { "filename", "model.txt" }, { "scale", "0.01" } }) &&
 			modelComp->init())
@@ -793,6 +801,7 @@ struct SceneEditor
 			s_modelComponentMgr.removeComponentForNode(node.id, modelComp);
 		
 		auto transformComp = s_transformComponentMgr.createComponentForNode(node.id);
+		transformComp->componentSet = &node;
 		
 		if (transformComp->init())
 		{
@@ -1081,6 +1090,7 @@ static void createRandomScene(Scene & scene)
 		node.displayName = String::FormatC("Node %d", node.id);
 		
 		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
+		modelComp->componentSet = &node;
 		
 		auto modelComponentType = findComponentType(s_componentTypeRegistrations, "ModelComponent");
 		
@@ -1091,6 +1101,7 @@ static void createRandomScene(Scene & scene)
 			s_modelComponentMgr.removeComponentForNode(node.id, modelComp);
 		
 		auto transformComp = s_transformComponentMgr.createComponentForNode(node.id);
+		transformComp->componentSet = &node;
 		
 		if (transformComp->init())
 		{
