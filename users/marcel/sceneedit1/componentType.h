@@ -17,6 +17,7 @@ struct ComponentTypeBase;
 
 enum ComponentPropertyType
 {
+	kComponentPropertyType_Bool,
 	kComponentPropertyType_Int32,
 	kComponentPropertyType_Float,
 	kComponentPropertyType_Vec2,
@@ -43,41 +44,6 @@ struct ComponentPropertyBase
 
 template <typename T> ComponentPropertyType getComponentPropertyType();
 
-template <> inline ComponentPropertyType getComponentPropertyType<int>()
-{
-	return kComponentPropertyType_Int32;
-}
-
-template <> inline ComponentPropertyType getComponentPropertyType<float>()
-{
-	return kComponentPropertyType_Float;
-}
-
-template <> inline ComponentPropertyType getComponentPropertyType<Vec2>()
-{
-	return kComponentPropertyType_Vec2;
-}
-
-template <> inline ComponentPropertyType getComponentPropertyType<Vec3>()
-{
-	return kComponentPropertyType_Vec3;
-}
-
-template <> inline ComponentPropertyType getComponentPropertyType<Vec4>()
-{
-	return kComponentPropertyType_Vec4;
-}
-
-template <> inline ComponentPropertyType getComponentPropertyType<std::string>()
-{
-	return kComponentPropertyType_String;
-}
-
-template <> inline ComponentPropertyType getComponentPropertyType<AngleAxis>()
-{
-	return kComponentPropertyType_AngleAxis;
-}
-
 template <typename T> struct ComponentProperty : ComponentPropertyBase
 {
 	typedef std::function<void(ComponentBase * component, const T&)> Setter;
@@ -92,11 +58,35 @@ template <typename T> struct ComponentProperty : ComponentPropertyBase
 	}
 };
 
+struct ComponentPropertyBool : ComponentProperty<bool>
+{
+	ComponentPropertyBool(const char * name)
+		: ComponentProperty<bool>(name)
+	{
+	}
+	
+	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
+	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+};
+
 struct ComponentPropertyInt : ComponentProperty<int>
 {
+	bool hasLimits = false;
+	int min;
+	int max;
+	
 	ComponentPropertyInt(const char * name)
 		: ComponentProperty<int>(name)
 	{
+	}
+	
+	ComponentPropertyInt & setLimits(const int in_min, const int in_max)
+	{
+		hasLimits = true;
+		min = in_min;
+		max = in_max;
+		
+		return *this;
 	}
 	
 	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
@@ -220,6 +210,17 @@ struct ComponentTypeBase
 template <typename T>
 struct ComponentType : ComponentTypeBase
 {
+	ComponentPropertyBool & in(const char * name, bool T::* member)
+	{
+		auto p = new ComponentPropertyBool(name);
+		p->getter = [=](ComponentBase * comp) -> bool & { return static_cast<T*>(comp)->*member; };
+		p->setter = [=](ComponentBase * comp, const bool & s) { static_cast<T*>(comp)->*member = s; };
+		
+		properties.push_back(p);
+		
+		return *p;
+	}
+	
 	ComponentPropertyInt & in(const char * name, int T::* member)
 	{
 		auto p = new ComponentPropertyInt(name);

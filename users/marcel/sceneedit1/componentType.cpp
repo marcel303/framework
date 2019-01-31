@@ -2,6 +2,48 @@
 #include "json.hpp"
 #include "Parse.h"
 
+template <> ComponentPropertyType getComponentPropertyType<bool>()
+{
+	return kComponentPropertyType_Bool;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<int>()
+{
+	return kComponentPropertyType_Int32;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<float>()
+{
+	return kComponentPropertyType_Float;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<Vec2>()
+{
+	return kComponentPropertyType_Vec2;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<Vec3>()
+{
+	return kComponentPropertyType_Vec3;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<Vec4>()
+{
+	return kComponentPropertyType_Vec4;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<std::string>()
+{
+	return kComponentPropertyType_String;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<AngleAxis>()
+{
+	return kComponentPropertyType_AngleAxis;
+}
+
+//
+
 static void to_json(nlohmann::json & j, const Vec2 & v)
 {
 	j = { v[0], v[1] };
@@ -50,6 +92,18 @@ static void from_json(const nlohmann::json & j, AngleAxis & v)
 	
 	v.angle = j.value("angle", defaultValue.angle);
 	v.axis = j.value("axis", defaultValue.axis);
+}
+
+//
+
+void ComponentPropertyBool::to_json(ComponentBase * component, nlohmann::json & j)
+{
+	j = getter(component);
+}
+
+void ComponentPropertyBool::from_json(ComponentBase * component, const nlohmann::json & j)
+{
+	setter(component, j.value(name, false));
 }
 
 //
