@@ -2,7 +2,6 @@
 
 #include "Debugging.h"
 #include <typeindex> // todo : remove and replace with opaque type wrapping type index or type hash
-#include <vector> // todo : use initializer list for key-value pairs
 
 // todo : movement AngleAxis object elsewhere
 
@@ -25,6 +24,7 @@ struct ComponentSet;
 struct ComponentBase
 {
 	ComponentSet * componentSet = nullptr;
+	ComponentBase * next_in_set = nullptr; // next component in the component set
 	
 	virtual void tick(const float dt) { }
 	virtual bool init() { return true; }
@@ -130,12 +130,18 @@ struct ComponentMgr : ComponentMgrBase
 
 struct ComponentSet
 {
-	std::vector<ComponentBase*> components;
+	ComponentBase * head = nullptr;
+	
+	void add(ComponentBase * component)
+	{
+		component->next_in_set = head;
+		head = component;
+	}
 	
 	template <typename T>
 	T * findComponent()
 	{
-		for (auto * component : components)
+		for (auto * component = head; component != nullptr; component = component->next_in_set)
 		{
 			if (component->typeIndex() == std::type_index(typeid(T)))
 				return static_cast<T*>(component);
@@ -147,7 +153,7 @@ struct ComponentSet
 	template <typename T>
 	const T * findComponent() const
 	{
-		for (auto * component : components)
+		for (auto * component = head; component != nullptr; component = component->next_in_set)
 		{
 			if (component->typeIndex() == std::type_index(typeid(T)))
 				return static_cast<T*>(component);

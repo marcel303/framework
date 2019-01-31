@@ -39,8 +39,15 @@ struct SceneNode : ComponentSet
 	
 	void freeComponents()
 	{
-		for (auto * component : components)
+		ComponentBase * next;
+		
+		for (auto * component = head; component != nullptr; component = next)
 		{
+			// the component will be removed and next_in_set will become invalid, so we need to fetch it now
+			
+			next = component->next_in_set;
+			
+		// todo : give error when failure to find component manager. this would imply a memory leak
 			for (auto * componentType : g_componentTypes)
 			{
 				auto * componentMgr = componentType->componentMgr;
@@ -52,7 +59,7 @@ struct SceneNode : ComponentSet
 			}
 		}
 		
-		components.clear();
+		head = nullptr;
 	}
 };
 
@@ -69,7 +76,7 @@ void to_json(json & j, const SceneNode * node_ptr)
 	
 	int component_index = 0;
 	
-	for (auto * component : node.components)
+	for (auto * component = node.head; component != nullptr; component = component->next_in_set)
 	{
 		// todo : save components
 		
@@ -141,7 +148,7 @@ void from_json(const json & j, SceneNodeFromJson & node_from_json)
 				}
 				
 				if (component->init())
-					node.components.push_back(component);
+					node.add(component);
 				else
 					componentType->componentMgr->removeComponent(component);
 			}
@@ -559,7 +566,7 @@ struct SceneEditor
 	void editNode(SceneNode & node, const bool editChildren)
 	{
 	#if 1
-		for (auto * component : node.components)
+		for (auto * component = node.head; component != nullptr; component = component->next_in_set)
 		{
 			ImGui::PushID(component);
 			{
@@ -735,7 +742,7 @@ struct SceneEditor
 				{
 					bool isAdded = false;
 					
-					for (auto * component : node.components)
+					for (auto * component = node.head; component != nullptr; component = component->next_in_set)
 						if (component->typeIndex() == componentType->componentMgr->typeIndex())
 							isAdded = true;
 					
@@ -750,7 +757,7 @@ struct SceneEditor
 							component->componentSet = &node;
 							
 							if (component->init())
-								node.components.push_back(component);
+								node.add(component);
 							else
 								componentType->componentMgr->removeComponent(component);
 						}
@@ -781,7 +788,7 @@ struct SceneEditor
 		modelComp->scale = .01f;
 		
 		if (modelComp->init())
-			node.components.push_back(modelComp);
+			node.add(modelComp);
 		else
 			s_modelComponentMgr.removeComponent(modelComp);
 		
@@ -792,7 +799,7 @@ struct SceneEditor
 		{
 			transformComp->position = position;
 			
-			node.components.push_back(transformComp);
+			node.add(transformComp);
 		}
 		else
 			s_transformComponentMgr.removeComponent(transformComp);
@@ -1081,7 +1088,7 @@ static void createRandomScene(Scene & scene)
 		modelComp->scale = .01f;
 		
 		if (modelComp->init())
-			node.components.push_back(modelComp);
+			node.add(modelComp);
 		else
 			s_modelComponentMgr.removeComponent(modelComp);
 		
@@ -1094,7 +1101,7 @@ static void createRandomScene(Scene & scene)
 			transformComp->position[1] = random(-4.f, +4.f);
 			transformComp->position[2] = random(-4.f, +4.f);
 			
-			node.components.push_back(transformComp);
+			node.add(transformComp);
 		}
 		else
 			s_transformComponentMgr.removeComponent(transformComp);
