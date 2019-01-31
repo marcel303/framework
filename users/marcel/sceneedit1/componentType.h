@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "json.hpp" // for assigment from templated class ..
+#include "json.hpp" // sadly cannot forward declare json class ..
 
 struct ComponentPropertyBase;
 struct ComponentTypeBase;
@@ -77,16 +77,6 @@ template <> inline ComponentPropertyType getComponentPropertyType<AngleAxis>()
 {
 	return kComponentPropertyType_AngleAxis;
 }
-
-void to_json(nlohmann::json & j, const Vec2 & v);
-void to_json(nlohmann::json & j, const Vec3 & v);
-void to_json(nlohmann::json & j, const Vec4 & v);
-void to_json(nlohmann::json & j, const AngleAxis & v);
-
-void from_json(const nlohmann::json & j, Vec2 & v);
-void from_json(const nlohmann::json & j, Vec3 & v);
-void from_json(const nlohmann::json & j, Vec4 & v);
-void from_json(const nlohmann::json & j, AngleAxis & v);
 
 template <typename T> struct ComponentProperty : ComponentPropertyBase
 {
