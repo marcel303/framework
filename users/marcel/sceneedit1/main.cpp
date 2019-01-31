@@ -16,7 +16,7 @@
 #include <set>
 #include <typeindex>
 
-using namespace nlohmann;
+using json = nlohmann::json;
 
 static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
@@ -556,6 +556,7 @@ struct SceneEditor
 	
 	void editNode(SceneNode & node, const bool editChildren)
 	{
+	#if 1
 		for (auto * component : node.components)
 		{
 			ImGui::PushID(component);
@@ -571,8 +572,25 @@ struct SceneEditor
 					{
 						switch (propertyBase->type)
 						{
+						case kComponentPropertyType_Bool:
+							{
+								auto property = static_cast<ComponentPropertyBool*>(propertyBase);
+								
+								auto & value = property->getter(component);
+								
+								ImGui::Checkbox(property->name.c_str(), &value);
+							}
+							break;
 						case kComponentPropertyType_Int32:
 							{
+								auto property = static_cast<ComponentPropertyInt*>(propertyBase);
+								
+								auto & value = property->getter(component);
+								
+								if (property->hasLimits)
+									ImGui::SliderInt(property->name.c_str(), &value, property->min, property->max);
+								else
+									ImGui::InputInt(property->name.c_str(), &value);
 							}
 							break;
 						case kComponentPropertyType_Float:
@@ -645,6 +663,7 @@ struct SceneEditor
 			}
 			ImGui::PopID();
 		}
+	#endif
 	
 		if (editChildren)
 		{
