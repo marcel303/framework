@@ -173,7 +173,7 @@ struct ComponentTypeBase
 	std::vector<ComponentPropertyBase*> properties;
 	int tickPriority = kComponentPriority_Default;
 	
-	bool initComponent(ComponentBase * component, const std::vector<KeyValuePair> & params) const;
+	ComponentMgrBase * componentMgr = nullptr;
 };
 
 template <typename T>

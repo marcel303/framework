@@ -43,10 +43,6 @@ struct TransformComponentType : ComponentType<TransformComponent>
 
 // todo : move to its own source file
 
-#if defined(DEFINE_COMPONENT_TYPES)
-
-#include "componentType.h"
-
 struct RotateTransformComponent : Component<RotateTransformComponent>
 {
 	float speed = 0.f;
@@ -65,6 +61,10 @@ struct RotateTransformComponent : Component<RotateTransformComponent>
 struct RotateTransformComponentMgr : ComponentMgr<RotateTransformComponent>
 {
 };
+
+#if defined(DEFINE_COMPONENT_TYPES)
+
+#include "componentType.h"
 
 struct RotateTransformComponentType : ComponentType<RotateTransformComponent>
 {

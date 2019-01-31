@@ -1,4 +1,3 @@
-#define DEFINE_COMPONENT_TYPES
 #include "modelComponent.h"
 #include "transformComponent.h"
 
@@ -9,6 +8,8 @@
 #include "Parse.h"
 #include "Quat.h"
 #include "StringEx.h"
+
+#include "helpers.h"
 
 #include "json.hpp"
 #include "TextIO.h"
@@ -25,37 +26,9 @@ static const int VIEW_SY = 800;
 
 //
 
-struct ComponentTypeRegistration
-{
-	ComponentMgrBase * componentMgr = nullptr;
-	ComponentTypeBase * componentType = nullptr;
-};
-
-std::vector<ComponentTypeRegistration> s_componentTypeRegistrations;
-
-void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase * componentMgr)
-{
-	ComponentTypeRegistration registration;
-	registration.componentMgr = componentMgr;
-	registration.componentType = componentType;
-
-	s_componentTypeRegistrations.push_back(registration);
-	
-	std::sort(s_componentTypeRegistrations.begin(), s_componentTypeRegistrations.end(), [](const ComponentTypeRegistration & r1, const ComponentTypeRegistration & r2) { return r1.componentType->tickPriority < r2.componentType->tickPriority; });
-}
-
-ComponentTypeBase * findComponentType(const std::vector<ComponentTypeRegistration> & componentTypeRegistrations, const char * typeName)
-{
-	for (auto & r : componentTypeRegistrations)
-		if (r.componentType->typeName == typeName)
-			return r.componentType;
-	
-	return nullptr;
-}
-
-static TransformComponentMgr s_transformComponentMgr;
-static RotateTransformComponentMgr s_rotateTransformComponentMgr;
-static ModelComponentMgr s_modelComponentMgr;
+TransformComponentMgr s_transformComponentMgr;
+RotateTransformComponentMgr s_rotateTransformComponentMgr;
+ModelComponentMgr s_modelComponentMgr;
 
 struct SceneNode : ComponentSet
 {
@@ -101,22 +74,20 @@ void to_json(json & j, const SceneNode * node_ptr)
 	{
 		// todo : save components
 		
-		for (auto & r : s_componentTypeRegistrations)
+		auto * componentType = findComponentType(component->typeIndex());
+		
+		Assert(componentType != nullptr);
+		if (componentType != nullptr)
 		{
-			if (r.componentMgr->typeIndex() == component->typeIndex())
+			auto & components_json = j["components"];
+			
+			auto & component_json = components_json[component_index++];
+			
+			component_json["typeName"] = componentType->typeName;
+			
+			for (auto & property : componentType->properties)
 			{
-				auto & components_json = j["components"];
-				
-				auto & component_json = components_json[component_index++];
-				
-				component_json["typeName"] = r.componentType->typeName;
-				
-				for (auto & property : r.componentType->properties)
-				{
-					property->to_json(component, component_json[property->name]);
-				}
-				
-				break;
+				property->to_json(component, component_json[property->name]);
 			}
 		}
 	}
@@ -154,24 +125,24 @@ void from_json(const json & j, SceneNodeFromJson & node_from_json)
 				continue;
 			}
 			
-			for (auto & r : s_componentTypeRegistrations)
+			auto * componentType = findComponentType(typeName.c_str());
+			
+			Assert(componentType != nullptr);
+			if (componentType != nullptr)
 			{
-				if (r.componentType->typeName == typeName)
+				auto * component = componentType->componentMgr->createComponentForNode(node.id);
+				component->componentSet = &node;
+				
+				for (auto & property : componentType->properties)
 				{
-					auto component = r.componentMgr->createComponentForNode(node.id);
-					component->componentSet = &node;
-					
-					for (auto & property : r.componentType->properties)
-					{
-						if (component_json.count(property->name) != 0)
-							property->from_json(component, component_json);
-					}
-					
-					if (component->init())
-						node.components.push_back(component);
-					else
-						r.componentMgr->removeComponentForNode(node.id, component);
+					if (component_json.count(property->name) != 0)
+						property->from_json(component, component_json);
 				}
+				
+				if (component->init())
+					node.components.push_back(component);
+				else
+					componentType->componentMgr->removeComponentForNode(node.id, component);
 			}
 		}
 	}
@@ -590,20 +561,14 @@ struct SceneEditor
 		{
 			ImGui::PushID(component);
 			{
-				ComponentTypeRegistration * r = nullptr;
+				auto * componentType = findComponentType(component->typeIndex());
 				
-				for (auto & registration : s_componentTypeRegistrations)
-					if (registration.componentMgr->typeIndex() == component->typeIndex())
-						r = &registration;
-				
-				Assert(r != nullptr);
-				if (r != nullptr)
+				Assert(componentType != nullptr);
+				if (componentType != nullptr)
 				{
-					auto & type = r->componentType;
+					ImGui::LabelText("Component", "%s", componentType->typeName.c_str());
 					
-					ImGui::LabelText("Component", "%s", type->typeName.c_str());
-					
-					for (auto & propertyBase : type->properties)
+					for (auto & propertyBase : componentType->properties)
 					{
 						switch (propertyBase->type)
 						{
@@ -746,28 +711,28 @@ struct SceneEditor
 					scene.nodes[nodeId]->childNodeIds.push_back(childNode.id);
 				}
 				
-				for (auto & r : s_componentTypeRegistrations)
+				for (auto * componentType : g_componentTypes)
 				{
 					bool isAdded = false;
 					
 					for (auto * component : node.components)
-						if (component->typeIndex() == r.componentMgr->typeIndex())
+						if (component->typeIndex() == componentType->componentMgr->typeIndex())
 							isAdded = true;
 					
 					if (isAdded == false)
 					{
 						char text[256];
-						sprintf_s(text, sizeof(text), "Add %s", r.componentType->typeName.c_str());
+						sprintf_s(text, sizeof(text), "Add %s", componentType->typeName.c_str());
 						
 						if (ImGui::MenuItem(text))
 						{
-							auto component = r.componentMgr->createComponentForNode(node.id);
+							auto * component = componentType->componentMgr->createComponentForNode(node.id);
 							component->componentSet = &node;
 							
 							if (component->init())
 								node.components.push_back(component);
 							else
-								r.componentMgr->removeComponentForNode(node.id, component);
+								componentType->componentMgr->removeComponentForNode(node.id, component);
 						}
 					}
 				}
@@ -789,13 +754,13 @@ struct SceneEditor
 		node.displayName = String::FormatC("Node %d", node.id);
 		
 	// todo : create the node from an actual template
-		auto modelComponentType = findComponentType(s_componentTypeRegistrations, "ModelComponent");
-		
 		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
 		modelComp->componentSet = &node;
 		
-		if (modelComponentType->initComponent(modelComp, { { "filename", "model.txt" }, { "scale", "0.01" } }) &&
-			modelComp->init())
+		modelComp->filename = "model.txt";
+		modelComp->scale = .01f;
+		
+		if (modelComp->init())
 			node.components.push_back(modelComp);
 		else
 			s_modelComponentMgr.removeComponentForNode(node.id, modelComp);
@@ -1092,10 +1057,10 @@ static void createRandomScene(Scene & scene)
 		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
 		modelComp->componentSet = &node;
 		
-		auto modelComponentType = findComponentType(s_componentTypeRegistrations, "ModelComponent");
+		modelComp->filename = "model.txt";
+		modelComp->scale = .01f;
 		
-		if (modelComponentType->initComponent(modelComp, { { "filename", "model.txt" }, { "scale", "0.01" } }) &&
-			modelComp->init())
+		if (modelComp->init())
 			node.components.push_back(modelComp);
 		else
 			s_modelComponentMgr.removeComponentForNode(node.id, modelComp);
@@ -1131,10 +1096,8 @@ int main(int argc, char * argv[])
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
-
-	registerComponentType(new TransformComponentType(), &s_transformComponentMgr);
-	registerComponentType(new RotateTransformComponentType(), &s_rotateTransformComponentMgr);
-	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);
+	
+	registerComponentTypes();
 	
 	SceneEditor editor;
 	editor.init();
@@ -1239,9 +1202,9 @@ int main(int argc, char * argv[])
 		
 		s_transformComponentMgr.calculateTransforms(editor.scene);
 		
-		for (auto & r : s_componentTypeRegistrations)
+		for (auto * type : g_componentTypes)
 		{
-			r.componentMgr->tick(dt);
+			type->componentMgr->tick(dt);
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);
