@@ -26,6 +26,8 @@ enum ComponentPropertyType
 	kComponentPropertyType_AngleAxis
 };
 
+template <typename T> ComponentPropertyType getComponentPropertyType();
+
 struct ComponentPropertyBase
 {
 	std::string name;
@@ -41,9 +43,8 @@ struct ComponentPropertyBase
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) = 0;
 };
 
-template <typename T> ComponentPropertyType getComponentPropertyType();
-
-template <typename T> struct ComponentProperty : ComponentPropertyBase
+template <typename T>
+struct ComponentProperty : ComponentPropertyBase
 {
 	typedef std::function<void(ComponentBase * component, const T&)> Setter;
 	typedef std::function<T&(ComponentBase * component)> Getter;

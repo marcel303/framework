@@ -3,6 +3,7 @@
 #include "Debugging.h"
 #include "Log.h"
 #include "scene.h"
+#include "TextIO.h"
 
 #include "helpers.h" // g_componentTypes
 
@@ -177,6 +178,24 @@ bool Scene::save(ComponentJson & jj)
 	return true;
 }
 
+bool Scene::saveToFile(const char * filename)
+{
+	nlohmann::json j;
+	ComponentJson jj(j);
+	
+	if (!save(jj))
+		return false;
+	
+	auto text = j.dump(4);
+
+	std::vector<std::string> lines;
+	TextIO::LineEndings lineEndings;
+	if (!TextIO::loadText(text.c_str(), lines, lineEndings))
+		return false;
+	
+	return TextIO::save(filename, lines, TextIO::kLineEndings_Unix);
+}
+
 bool Scene::load(const ComponentJson & jj)
 {
 	auto & j = jj.j;
@@ -212,4 +231,44 @@ bool Scene::load(const ComponentJson & jj)
 	}
 	
 	return true;
+}
+
+bool Scene::loadFromFile(const char * filename)
+{
+	bool result = true;
+
+	char * text;
+	size_t textSize;
+
+	if (result == true)
+	{
+		result &= TextIO::loadFileContents(filename, text, textSize);
+	}
+
+	nlohmann::json j;
+
+	if (result == true)
+	{
+		try
+		{
+			j = nlohmann::json::parse(text);
+		}
+		catch (std::exception & e)
+		{
+			LOG_ERR("failed to parse JSON: %s", e.what());
+			result &= false;
+		}
+		
+		delete [] text;
+		text = nullptr;
+	}
+	
+	if (result == true)
+	{
+		ComponentJson jj(j);
+		
+		result &= load(jj);
+	}
+	
+	return result;
 }

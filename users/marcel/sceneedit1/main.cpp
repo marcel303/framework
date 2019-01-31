@@ -2,13 +2,11 @@
 #include "transformComponent.h"
 
 #include "component.h"
-#include "componentJson.h"
 #include "componentType.h"
 #include "framework.h"
 #include "imgui-framework.h"
 #include "scene.h"
 #include "StringEx.h"
-#include "TextIO.h"
 
 #include "helpers.h"
 
@@ -922,27 +920,11 @@ int main(int argc, char * argv[])
 		
 		if (keyboard.wentDown(SDLK_s))
 		{
-			nlohmann::json j;
-			ComponentJson jj(j);
-			
-			if (editor.scene.save(jj))
+			if (editor.scene.saveToFile("testScene.json"))
 			{
-				auto text = j.dump(4);
-				
-				printf("%s", text.c_str());
-				
-				std::vector<std::string> lines;
-				TextIO::LineEndings lineEndings;
-				if (TextIO::loadText(text.c_str(), lines, lineEndings))
-				{
-					TextIO::save("testScene.json", lines, TextIO::kLineEndings_Unix);
-				}
-				
-				//
-				
 				Scene tempScene;
 				
-				if (tempScene.load(jj))
+				if (tempScene.loadFromFile("testScene.json"))
 				{
 					for (auto & node_itr : editor.scene.nodes)
 						editor.nodesToRemove.insert(node_itr.second->id);
@@ -955,42 +937,9 @@ int main(int argc, char * argv[])
 		
 		if (keyboard.wentDown(SDLK_l))
 		{
-			bool result = true;
-			
-			char * text;
-			size_t textSize;
-			
-			if (result == true)
-			{
-				result &= TextIO::loadFileContents("testScene.json", text, textSize);
-			}
-			
-			nlohmann::json j;
-			
-			if (result == true)
-			{
-				try
-				{
-					j = nlohmann::json::parse(text);
-				}
-				catch (std::exception & e)
-				{
-					logError("failed to parse JSON: %s", e.what());
-					result &= false;
-				}
-				
-				delete [] text;
-				text = nullptr;
-			}
-			
 			Scene tempScene;
 			
-			if (result == true)
-			{
-				result &= tempScene.load(j);
-			}
-			
-			if (result == true)
+			if (tempScene.loadFromFile("testScene.json"))
 			{
 				for (auto & node_itr : editor.scene.nodes)
 					editor.nodesToRemove.insert(node_itr.second->id);
