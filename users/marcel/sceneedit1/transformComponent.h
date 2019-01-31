@@ -47,15 +47,7 @@ struct RotateTransformComponent : Component<RotateTransformComponent>
 {
 	float speed = 0.f;
 	
-	virtual void tick(const float dt)
-	{
-		// fetch transform component and update its rotation
-		
-		auto transformComponent = componentSet->findComponent<TransformComponent>();
-		
-		if (transformComponent != nullptr)
-			transformComponent->angleAxis.angle += speed * dt;
-	}
+	virtual void tick(const float dt);
 };
 
 struct RotateTransformComponentMgr : ComponentMgr<RotateTransformComponent>
