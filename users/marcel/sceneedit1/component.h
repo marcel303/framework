@@ -134,6 +134,9 @@ struct ComponentSet
 	
 	void add(ComponentBase * component)
 	{
+		Assert(component->componentSet == nullptr);
+		component->componentSet = this;
+		
 		component->next_in_set = head;
 		head = component;
 	}

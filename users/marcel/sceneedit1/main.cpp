@@ -141,7 +141,6 @@ void from_json(const json & j, SceneNodeFromJson & node_from_json)
 			if (componentType != nullptr)
 			{
 				auto * component = componentType->componentMgr->createComponent();
-				component->componentSet = &node.components;
 				
 				for (auto & property : componentType->properties)
 				{
@@ -756,7 +755,6 @@ struct SceneEditor
 						if (ImGui::MenuItem(text))
 						{
 							auto * component = componentType->componentMgr->createComponent();
-							component->componentSet = &node.components;
 							
 							if (component->init())
 								node.components.add(component);
@@ -784,7 +782,6 @@ struct SceneEditor
 		
 	// todo : create the node from an actual template
 		auto modelComp = s_modelComponentMgr.createComponent();
-		modelComp->componentSet = &node.components;
 		
 		modelComp->filename = "model.txt";
 		modelComp->scale = .01f;
@@ -795,7 +792,6 @@ struct SceneEditor
 			s_modelComponentMgr.removeComponent(modelComp);
 		
 		auto transformComp = s_transformComponentMgr.createComponent();
-		transformComp->componentSet = &node.components;
 		
 		if (transformComp->init())
 		{
@@ -1084,7 +1080,6 @@ static void createRandomScene(Scene & scene)
 		node.displayName = String::FormatC("Node %d", node.id);
 		
 		auto modelComp = s_modelComponentMgr.createComponent();
-		modelComp->componentSet = &node.components;
 		
 		modelComp->filename = "model.txt";
 		modelComp->scale = .01f;
@@ -1095,7 +1090,6 @@ static void createRandomScene(Scene & scene)
 			s_modelComponentMgr.removeComponent(modelComp);
 		
 		auto transformComp = s_transformComponentMgr.createComponent();
-		transformComp->componentSet = &node.components;
 		
 		if (transformComp->init())
 		{
