@@ -24,8 +24,6 @@ struct ComponentSet;
 
 struct ComponentBase
 {
-	int nodeId = -1; // todo : remove ?
-	
 	ComponentSet * componentSet = nullptr;
 	
 	virtual void tick(const float dt) { }
@@ -48,9 +46,9 @@ struct Component : ComponentBase
 
 struct ComponentMgrBase
 {
-	virtual ComponentBase * createComponentForNode(const int nodeId) = 0;
-	virtual void addComponentForNode(const int nodeId, ComponentBase * component) = 0;
-	virtual void removeComponentForNode(const int nodeId, ComponentBase * component) = 0;
+	virtual ComponentBase * createComponent() = 0;
+	virtual void addComponent(ComponentBase * component) = 0;
+	virtual void removeComponent(ComponentBase * component) = 0;
 	
 	virtual void tick(const float dt) = 0;
 	
@@ -63,18 +61,16 @@ struct ComponentMgr : ComponentMgrBase
 	T * head = nullptr;
 	T * tail = nullptr;
 	
-	virtual T * createComponentForNode(const int nodeId) override
+	virtual T * createComponent() override
 	{
 		T * component = new T();
 		
-		component->nodeId = nodeId;
-		
-		addComponentForNode(nodeId, component);
+		addComponent(component);
 		
 		return component;
 	}
 	
-	virtual void addComponentForNode(const int nodeId, ComponentBase * in_component) override
+	virtual void addComponent(ComponentBase * in_component) override
 	{
 		T * component = castToComponentType(in_component);
 		
@@ -95,7 +91,7 @@ struct ComponentMgr : ComponentMgrBase
 		}
 	}
 	
-	virtual void removeComponentForNode(const int nodeId, ComponentBase * in_component) override
+	virtual void removeComponent(ComponentBase * in_component) override
 	{
 		T * component = castToComponentType(in_component);
 		
@@ -121,7 +117,7 @@ struct ComponentMgr : ComponentMgrBase
 		}
 	}
 	
-	T * castToComponentType(ComponentBase * component)
+	inline T * castToComponentType(ComponentBase * component)
 	{
 		return static_cast<T*>(component);
 	}

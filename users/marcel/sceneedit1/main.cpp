@@ -48,7 +48,7 @@ struct SceneNode : ComponentSet
 				if (component->typeIndex() != componentMgr->typeIndex())
 					continue;
 			
-				componentMgr->removeComponentForNode(id, component);
+				componentMgr->removeComponent(component);
 			}
 		}
 		
@@ -129,7 +129,7 @@ void from_json(const json & j, SceneNodeFromJson & node_from_json)
 			Assert(componentType != nullptr);
 			if (componentType != nullptr)
 			{
-				auto * component = componentType->componentMgr->createComponentForNode(node.id);
+				auto * component = componentType->componentMgr->createComponent();
 				component->componentSet = &node;
 				
 				for (auto & property : componentType->properties)
@@ -141,7 +141,7 @@ void from_json(const json & j, SceneNodeFromJson & node_from_json)
 				if (component->init())
 					node.components.push_back(component);
 				else
-					componentType->componentMgr->removeComponentForNode(node.id, component);
+					componentType->componentMgr->removeComponent(component);
 			}
 		}
 	}
@@ -725,13 +725,13 @@ struct SceneEditor
 						
 						if (ImGui::MenuItem(text))
 						{
-							auto * component = componentType->componentMgr->createComponentForNode(node.id);
+							auto * component = componentType->componentMgr->createComponent();
 							component->componentSet = &node;
 							
 							if (component->init())
 								node.components.push_back(component);
 							else
-								componentType->componentMgr->removeComponentForNode(node.id, component);
+								componentType->componentMgr->removeComponent(component);
 						}
 					}
 				}
@@ -753,7 +753,7 @@ struct SceneEditor
 		node.displayName = String::FormatC("Node %d", node.id);
 		
 	// todo : create the node from an actual template
-		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
+		auto modelComp = s_modelComponentMgr.createComponent();
 		modelComp->componentSet = &node;
 		
 		modelComp->filename = "model.txt";
@@ -762,9 +762,9 @@ struct SceneEditor
 		if (modelComp->init())
 			node.components.push_back(modelComp);
 		else
-			s_modelComponentMgr.removeComponentForNode(node.id, modelComp);
+			s_modelComponentMgr.removeComponent(modelComp);
 		
-		auto transformComp = s_transformComponentMgr.createComponentForNode(node.id);
+		auto transformComp = s_transformComponentMgr.createComponent();
 		transformComp->componentSet = &node;
 		
 		if (transformComp->init())
@@ -774,7 +774,7 @@ struct SceneEditor
 			node.components.push_back(transformComp);
 		}
 		else
-			s_transformComponentMgr.removeComponentForNode(node.id, transformComp);
+			s_transformComponentMgr.removeComponent(transformComp);
 		
 		scene.nodes[node.id] = &node;
 		
@@ -1053,7 +1053,7 @@ static void createRandomScene(Scene & scene)
 		node.parentId = scene.rootNodeId;
 		node.displayName = String::FormatC("Node %d", node.id);
 		
-		auto modelComp = s_modelComponentMgr.createComponentForNode(node.id);
+		auto modelComp = s_modelComponentMgr.createComponent();
 		modelComp->componentSet = &node;
 		
 		modelComp->filename = "model.txt";
@@ -1062,9 +1062,9 @@ static void createRandomScene(Scene & scene)
 		if (modelComp->init())
 			node.components.push_back(modelComp);
 		else
-			s_modelComponentMgr.removeComponentForNode(node.id, modelComp);
+			s_modelComponentMgr.removeComponent(modelComp);
 		
-		auto transformComp = s_transformComponentMgr.createComponentForNode(node.id);
+		auto transformComp = s_transformComponentMgr.createComponent();
 		transformComp->componentSet = &node;
 		
 		if (transformComp->init())
@@ -1076,7 +1076,7 @@ static void createRandomScene(Scene & scene)
 			node.components.push_back(transformComp);
 		}
 		else
-			s_transformComponentMgr.removeComponentForNode(node.id, transformComp);
+			s_transformComponentMgr.removeComponent(transformComp);
 		
 		scene.nodes[node.id] = &node;
 		
