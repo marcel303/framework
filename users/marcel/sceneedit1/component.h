@@ -142,7 +142,7 @@ struct ComponentSet
 	}
 	
 	template <typename T>
-	T * findComponent()
+	T * find()
 	{
 		for (auto * component = head; component != nullptr; component = component->next_in_set)
 		{
@@ -154,7 +154,7 @@ struct ComponentSet
 	}
 	
 	template <typename T>
-	const T * findComponent() const
+	const T * find() const
 	{
 		for (auto * component = head; component != nullptr; component = component->next_in_set)
 		{
@@ -164,5 +164,4 @@ struct ComponentSet
 		
 		return nullptr;
 	}
-	
 };

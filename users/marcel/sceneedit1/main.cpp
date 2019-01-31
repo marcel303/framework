@@ -259,7 +259,7 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 {
 	gxPushMatrix();
 	{
-		auto transformComp = node.components.findComponent<TransformComponent>();
+		auto transformComp = node.components.find<TransformComponent>();
 		
 		if (transformComp != nullptr)
 		{
@@ -282,7 +282,7 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 		
 		gxGetMatrixf(GX_MODELVIEW, node.objectToWorld.m_v);
 		
-		auto modelComp = node.components.findComponent<ModelComponent>();
+		auto modelComp = node.components.find<ModelComponent>();
 		
 		if (modelComp != nullptr)
 		{
@@ -437,7 +437,7 @@ struct SceneEditor
 		{
 			auto & node = *nodeItr.second;
 			
-			auto modelComponent = node.components.findComponent<ModelComponent>();
+			auto modelComponent = node.components.find<ModelComponent>();
 			
 			if (modelComponent != nullptr)
 			{
@@ -957,7 +957,7 @@ struct SceneEditor
 		setColor(isSelected ? colorYellow : colorWhite);
 		fillCube(Vec3(), Vec3(.1f, .1f, .1f));
 		
-		const ModelComponent * modelComp = node.components.findComponent<ModelComponent>();
+		const ModelComponent * modelComp = node.components.find<ModelComponent>();
 		
 		if (modelComp != nullptr)
 		{
@@ -976,7 +976,7 @@ struct SceneEditor
 	{
 		gxPushMatrix();
 		{
-			auto transformComp = node.components.findComponent<TransformComponent>();
+			auto transformComp = node.components.find<TransformComponent>();
 			
 			if (transformComp != nullptr)
 			{
