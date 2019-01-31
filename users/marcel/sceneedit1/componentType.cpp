@@ -51,3 +51,87 @@ void from_json(const nlohmann::json & j, AngleAxis & v)
 	v.angle = j.value("angle", defaultValue.angle);
 	v.axis = j.value("axis", defaultValue.axis);
 }
+
+//
+
+void ComponentPropertyInt::to_json(ComponentBase * component, nlohmann::json & j)
+{
+	j = getter(component);
+}
+
+void ComponentPropertyInt::from_json(ComponentBase * component, const nlohmann::json & j)
+{
+	setter(component, j.value(name, 0));
+}
+
+//
+
+void ComponentPropertyFloat::to_json(ComponentBase * component, nlohmann::json & j)
+{
+	j = getter(component);
+}
+
+void ComponentPropertyFloat::from_json(ComponentBase * component, const nlohmann::json & j)
+{
+	setter(component, j.value(name, 0.f));
+}
+
+//
+
+void ComponentPropertyVec2::to_json(ComponentBase * component, nlohmann::json & j)
+{
+	j = getter(component);
+}
+
+void ComponentPropertyVec2::from_json(ComponentBase * component, const nlohmann::json & j)
+{
+	setter(component, j.value(name, Vec2()));
+}
+
+//
+
+void ComponentPropertyVec3::to_json(ComponentBase * component, nlohmann::json & j)
+{
+	j = getter(component);
+}
+
+void ComponentPropertyVec3::from_json(ComponentBase * component, const nlohmann::json & j)
+{
+	setter(component, j.value(name, Vec3()));
+}
+
+//
+
+void ComponentPropertyVec4::to_json(ComponentBase * component, nlohmann::json & j)
+{
+	j = getter(component);
+}
+
+void ComponentPropertyVec4::from_json(ComponentBase * component, const nlohmann::json & j)
+{
+	setter(component, j.value(name, Vec4()));
+}
+
+//
+
+void ComponentPropertyString::to_json(ComponentBase * component, nlohmann::json & j)
+{
+	j = getter(component);
+}
+
+void ComponentPropertyString::from_json(ComponentBase * component, const nlohmann::json & j)
+{
+	setter(component, j.value(name, std::string()));
+}
+
+//
+
+void ComponentPropertyAngleAxis::to_json(ComponentBase * component, nlohmann::json & j)
+{
+	j = getter(component);
+}
+
+void ComponentPropertyAngleAxis::from_json(ComponentBase * component, const nlohmann::json & j)
+{
+	setter(component, j.value(name, AngleAxis()));
+}

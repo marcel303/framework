@@ -100,19 +100,18 @@ template <typename T> struct ComponentProperty : ComponentPropertyBase
 		: ComponentPropertyBase(name, getComponentPropertyType<T>())
 	{
 	}
-	
-	virtual void to_json(ComponentBase * component, nlohmann::json & j) override
-	{
-		j = getter(component);
-	}
-	
-	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override
-	{
-		setter(component, j.value(name, T()));
-	}
 };
 
-typedef ComponentProperty<int> ComponentPropertyInt;
+struct ComponentPropertyInt : ComponentProperty<int>
+{
+	ComponentPropertyInt(const char * name)
+		: ComponentProperty<int>(name)
+	{
+	}
+	
+	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
+	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+};
 
 struct ComponentPropertyFloat : ComponentProperty<float>
 {
@@ -142,13 +141,65 @@ struct ComponentPropertyFloat : ComponentProperty<float>
 		
 		return *this;
 	}
+	
+	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
+	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
 };
 
-typedef ComponentProperty<Vec2> ComponentPropertyVec2;
-typedef ComponentProperty<Vec3> ComponentPropertyVec3;
-typedef ComponentProperty<Vec4> ComponentPropertyVec4;
-typedef ComponentProperty<std::string> ComponentPropertyString;
-typedef ComponentProperty<AngleAxis> ComponentPropertyAngleAxis;
+struct ComponentPropertyVec2 : ComponentProperty<Vec2>
+{
+	ComponentPropertyVec2(const char * name)
+		: ComponentProperty<Vec2>(name)
+	{
+	}
+	
+	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
+	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+};
+
+struct ComponentPropertyVec3 : ComponentProperty<Vec3>
+{
+	ComponentPropertyVec3(const char * name)
+		: ComponentProperty<Vec3>(name)
+	{
+	}
+	
+	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
+	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+};
+
+struct ComponentPropertyVec4 : ComponentProperty<Vec4>
+{
+	ComponentPropertyVec4(const char * name)
+		: ComponentProperty<Vec4>(name)
+	{
+	}
+	
+	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
+	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+};
+
+struct ComponentPropertyString : ComponentProperty<std::string>
+{
+	ComponentPropertyString(const char * name)
+		: ComponentProperty<std::string>(name)
+	{
+	}
+	
+	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
+	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+};
+
+struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
+{
+	ComponentPropertyAngleAxis(const char * name)
+		: ComponentProperty<AngleAxis>(name)
+	{
+	}
+	
+	virtual void to_json(ComponentBase * component, nlohmann::json & j) override final;
+	virtual void from_json(ComponentBase * component, const nlohmann::json & j) override final;
+};
 
 // component types
 
