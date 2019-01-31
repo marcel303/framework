@@ -27,7 +27,7 @@ TransformComponentMgr s_transformComponentMgr;
 RotateTransformComponentMgr s_rotateTransformComponentMgr;
 ModelComponentMgr s_modelComponentMgr;
 
-struct SceneNode : ComponentSet
+struct SceneNode
 {
 	int id = -1;
 	int parentId = -1;
@@ -37,11 +37,13 @@ struct SceneNode : ComponentSet
 	
 	Mat4x4 objectToWorld = Mat4x4(true);
 	
+	ComponentSet components;
+	
 	void freeComponents()
 	{
 		ComponentBase * next;
 		
-		for (auto * component = head; component != nullptr; component = next)
+		for (auto * component = components.head; component != nullptr; component = next)
 		{
 			// the component will be removed and next_in_set will become invalid, so we need to fetch it now
 			
@@ -59,7 +61,7 @@ struct SceneNode : ComponentSet
 			}
 		}
 		
-		head = nullptr;
+		components.head = nullptr;
 	}
 };
 
@@ -76,7 +78,7 @@ void to_json(json & j, const SceneNode * node_ptr)
 	
 	int component_index = 0;
 	
-	for (auto * component = node.head; component != nullptr; component = component->next_in_set)
+	for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 	{
 		// todo : save components
 		
@@ -139,7 +141,7 @@ void from_json(const json & j, SceneNodeFromJson & node_from_json)
 			if (componentType != nullptr)
 			{
 				auto * component = componentType->componentMgr->createComponent();
-				component->componentSet = &node;
+				component->componentSet = &node.components;
 				
 				for (auto & property : componentType->properties)
 				{
@@ -148,7 +150,7 @@ void from_json(const json & j, SceneNodeFromJson & node_from_json)
 				}
 				
 				if (component->init())
-					node.add(component);
+					node.components.add(component);
 				else
 					componentType->componentMgr->removeComponent(component);
 			}
@@ -258,7 +260,7 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 {
 	gxPushMatrix();
 	{
-		auto transformComp = node.findComponent<TransformComponent>();
+		auto transformComp = node.components.findComponent<TransformComponent>();
 		
 		if (transformComp != nullptr)
 		{
@@ -281,7 +283,7 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 		
 		gxGetMatrixf(GX_MODELVIEW, node.objectToWorld.m_v);
 		
-		auto modelComp = node.findComponent<ModelComponent>();
+		auto modelComp = node.components.findComponent<ModelComponent>();
 		
 		if (modelComp != nullptr)
 		{
@@ -436,7 +438,7 @@ struct SceneEditor
 		{
 			auto & node = *nodeItr.second;
 			
-			auto modelComponent = node.findComponent<ModelComponent>();
+			auto modelComponent = node.components.findComponent<ModelComponent>();
 			
 			if (modelComponent != nullptr)
 			{
@@ -566,7 +568,7 @@ struct SceneEditor
 	void editNode(SceneNode & node, const bool editChildren)
 	{
 	#if 1
-		for (auto * component = node.head; component != nullptr; component = component->next_in_set)
+		for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 		{
 			ImGui::PushID(component);
 			{
@@ -742,7 +744,7 @@ struct SceneEditor
 				{
 					bool isAdded = false;
 					
-					for (auto * component = node.head; component != nullptr; component = component->next_in_set)
+					for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 						if (component->typeIndex() == componentType->componentMgr->typeIndex())
 							isAdded = true;
 					
@@ -754,10 +756,10 @@ struct SceneEditor
 						if (ImGui::MenuItem(text))
 						{
 							auto * component = componentType->componentMgr->createComponent();
-							component->componentSet = &node;
+							component->componentSet = &node.components;
 							
 							if (component->init())
-								node.add(component);
+								node.components.add(component);
 							else
 								componentType->componentMgr->removeComponent(component);
 						}
@@ -782,24 +784,24 @@ struct SceneEditor
 		
 	// todo : create the node from an actual template
 		auto modelComp = s_modelComponentMgr.createComponent();
-		modelComp->componentSet = &node;
+		modelComp->componentSet = &node.components;
 		
 		modelComp->filename = "model.txt";
 		modelComp->scale = .01f;
 		
 		if (modelComp->init())
-			node.add(modelComp);
+			node.components.add(modelComp);
 		else
 			s_modelComponentMgr.removeComponent(modelComp);
 		
 		auto transformComp = s_transformComponentMgr.createComponent();
-		transformComp->componentSet = &node;
+		transformComp->componentSet = &node.components;
 		
 		if (transformComp->init())
 		{
 			transformComp->position = position;
 			
-			node.add(transformComp);
+			node.components.add(transformComp);
 		}
 		else
 			s_transformComponentMgr.removeComponent(transformComp);
@@ -959,7 +961,7 @@ struct SceneEditor
 		setColor(isSelected ? colorYellow : colorWhite);
 		fillCube(Vec3(), Vec3(.1f, .1f, .1f));
 		
-		const ModelComponent * modelComp = node.findComponent<ModelComponent>();
+		const ModelComponent * modelComp = node.components.findComponent<ModelComponent>();
 		
 		if (modelComp != nullptr)
 		{
@@ -978,7 +980,7 @@ struct SceneEditor
 	{
 		gxPushMatrix();
 		{
-			auto transformComp = node.findComponent<TransformComponent>();
+			auto transformComp = node.components.findComponent<TransformComponent>();
 			
 			if (transformComp != nullptr)
 			{
@@ -1082,18 +1084,18 @@ static void createRandomScene(Scene & scene)
 		node.displayName = String::FormatC("Node %d", node.id);
 		
 		auto modelComp = s_modelComponentMgr.createComponent();
-		modelComp->componentSet = &node;
+		modelComp->componentSet = &node.components;
 		
 		modelComp->filename = "model.txt";
 		modelComp->scale = .01f;
 		
 		if (modelComp->init())
-			node.add(modelComp);
+			node.components.add(modelComp);
 		else
 			s_modelComponentMgr.removeComponent(modelComp);
 		
 		auto transformComp = s_transformComponentMgr.createComponent();
-		transformComp->componentSet = &node;
+		transformComp->componentSet = &node.components;
 		
 		if (transformComp->init())
 		{
@@ -1101,7 +1103,7 @@ static void createRandomScene(Scene & scene)
 			transformComp->position[1] = random(-4.f, +4.f);
 			transformComp->position[2] = random(-4.f, +4.f);
 			
-			node.add(transformComp);
+			node.components.add(transformComp);
 		}
 		else
 			s_transformComponentMgr.removeComponent(transformComp);
