@@ -9,6 +9,8 @@ struct ModelComponent : Component<ModelComponent>
 	std::string filename;
 	float scale = 1.f;
 	AngleAxis rotation;
+	bool colorTexcoords = false;
+	bool colorNormals = false;
 	
 	Vec3 modelAabbMin;
 	Vec3 modelAabbMax;
@@ -44,6 +46,8 @@ struct ModelComponentType : ComponentType<ModelComponent>
 		in("scale", &ModelComponent::scale)
 			.setLimits(0.f, 100.f)
 			.setEditingCurveExponential(2.f);
+		in("colorTexcoords", &ModelComponent::colorTexcoords);
+		in("colorNormals", &ModelComponent::colorNormals);
 	}
 };
 

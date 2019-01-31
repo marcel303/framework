@@ -26,8 +26,13 @@ void ModelComponent::draw(const Mat4x4 & objectToWorld) const
 	{
 		gxMultMatrixf(objectToWorld.m_v);
 		
+		const int drawFlags =
+			DrawMesh |
+			(DrawColorTexCoords * colorTexcoords) |
+			(DrawColorNormals * colorNormals);
+			
 		setColor(colorWhite);
-		Model(filename.c_str()).drawEx(Vec3(), rotation.axis, rotation.angle, scale);
+		Model(filename.c_str()).drawEx(Vec3(), rotation.axis, rotation.angle, scale, drawFlags);
 	}
 	gxPopMatrix();
 }
