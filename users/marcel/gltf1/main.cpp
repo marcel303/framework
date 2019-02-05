@@ -528,16 +528,25 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				
 				/*
 				minFilter:
-				NEAREST_MIPMAP_NEAREST,
-				NEAREST_MIPMAP_LINEAR,
-				LINEAR_MIPMAP_NEAREST,
-				LINEAR_MIPMAP_LINEAR
+				9728 = NEAREST,
+				9729 = LINEAR,
+				9984 = NEAREST_MIPMAP_NEAREST,
+				9985 = LINEAR_MIPMAP_NEAREST,
+				9986 = NEAREST_MIPMAP_LINEAR,
+				9987 = LINEAR_MIPMAP_LINEAR
+				*/
+				
+				/*
+				magFilter:
+				9728 = NEAREST,
+				9729 = LINEAR
 				*/
 				
 				/*
 				wrap:
-				REPEAT,
-				MIRRORED_REPEAT,
+				10497 = REPEAT,
+				33071 = CLAMP_TO_EDGE,
+				33648 = MIRRORED_REPEAT
 				
 				*/
 				//if (!sampler.isValid())
@@ -904,7 +913,8 @@ int main(int argc, char * argv[])
 					attributeName == "POSITION" ? VS_POSITION :
 					attributeName == "NORMAL" ? VS_NORMAL :
 					attributeName == "COLOR_0" ? VS_COLOR :
-					attributeName == "TEXCOORD_0" ? VS_TEXCOORD :
+					attributeName == "TEXCOORD_0" ? VS_TEXCOORD0 :
+					attributeName == "TEXCOORD_1" ? VS_TEXCOORD1 :
 					attributeName == "JOINTS_0" ? VS_BLEND_INDICES :
 					attributeName == "WEIGHTS_0" ? VS_BLEND_WEIGHTS :
 					-1;
@@ -1001,6 +1011,25 @@ int main(int argc, char * argv[])
 			//gxScalef(-1, 1, 1);
 			//gxScalef(100.f, 100.f, 100.f);
 			
+			auto tryGetTextureId = [&](const int textureIndex) -> GxTextureId
+			{
+				GxTextureId result = 0;
+				
+				if (textureIndex >= 0 && textureIndex < scene.textures.size())
+				{
+					auto & texture = scene.textures[textureIndex];
+					
+					if (texture.source >= 0 && texture.source < scene.images.size())
+					{
+						auto & image = scene.images[texture.source];
+						
+						result = getTexture(image.path.c_str());
+					}
+				}
+				
+				return result;
+			};
+			
 			auto drawMesh = [&](const gltf::Mesh & mesh, const bool isOpaquePass)
 			{
 				for (auto & primitive : mesh.primitives)
@@ -1010,12 +1039,6 @@ int main(int argc, char * argv[])
 						logWarning("primitive type not supported");
 						continue;
 					}
-					
-					BLEND_MODE blendMode = BLEND_OPAQUE;
-					
-					GxTextureId textureId = 0;
-					
-					Color color = colorWhite;
 					
 					if (primitive.material < 0 || primitive.material >= scene.materials.size())
 					{
@@ -1027,21 +1050,14 @@ int main(int argc, char * argv[])
 					
 					//Assert(material.alphaMode != "MASK"); // todo : implement !
 					
-					blendMode = material.alphaMode == "OPAQUE" ? BLEND_OPAQUE : BLEND_ALPHA;
+					const BLEND_MODE blendMode = material.alphaMode == "OPAQUE" ? BLEND_OPAQUE : BLEND_ALPHA;
 					
-					const int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
+					const GxTextureId textureId = keyboard.isDown(SDLK_1) ? 0 : tryGetTextureId(material.pbrMetallicRoughness.baseColorTexture.index);
+					const GxTextureId metallicRoughnessTextureId = keyboard.isDown(SDLK_2) ? 0 : tryGetTextureId(material.pbrMetallicRoughness.metallicRoughnessTexture.index);
+					const GxTextureId normalTextureId = keyboard.isDown(SDLK_3) ? 0 : tryGetTextureId(material.normalTexture.index);
+					const GxTextureId occlusionTextureId = keyboard.isDown(SDLK_4) ? 0 : tryGetTextureId(material.occlusionTexture.index);
 					
-					if (textureIndex >= 0 && textureIndex < scene.textures.size())
-					{
-						auto & texture = scene.textures[textureIndex];
-						
-						if (texture.source >= 0 && texture.source < scene.images.size())
-						{
-							auto & image = scene.images[texture.source];
-							
-							textureId = getTexture(image.path.c_str());
-						}
-					}
+					Color color = colorWhite;
 					
 					if (!keyboard.isDown(SDLK_u))
 						color = material.pbrMetallicRoughness.baseColorFactor;
@@ -1062,11 +1078,42 @@ int main(int argc, char * argv[])
 						{
 							GxMesh * gxMesh = gxMesh_itr->second;
 							
+						#if 0
 							Shader shader("shader");
+							
 							shader.setTexture("source", 0, textureId);
 							shader.setImmediate("color", color.r, color.g, color.b, color.a);
 							shader.setImmediate("params", textureId != 0, 0.f, 0.f, 0.f);
 							shader.setImmediate("time", framework.time);
+						#else
+							Shader shader("shader-pbr");
+							
+							shader.setImmediate("scene_camPos",
+								camera.position[0],
+								camera.position[1],
+								camera.position[2]);
+							
+							shader.setTexture("baseColorTexture", 0, textureId);
+							shader.setTexture("normalTexture", 1, normalTextureId);
+							shader.setTexture("occlusionTexture", 2, occlusionTextureId);
+							shader.setTexture("metallicTexture", 3, metallicRoughnessTextureId);
+							//shader.setTexture("emissiveTexture;
+
+							shader.setImmediate("material_baseColorFactor",
+								material.pbrMetallicRoughness.baseColorFactor.r,
+								material.pbrMetallicRoughness.baseColorFactor.g,
+								material.pbrMetallicRoughness.baseColorFactor.b,
+								material.pbrMetallicRoughness.baseColorFactor.a);
+							shader.setImmediate("material_hasBaseColorTexture", textureId != 0);
+							shader.setImmediate("material_hasMetallicRoughnessTexture", metallicRoughnessTextureId != 0);
+							shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
+							shader.setImmediate("material_hasOcclusionTexture", occlusionTextureId != 0);
+							shader.setImmediate("material_hasEmissiveTexture", 0);
+							shader.setImmediate("material_metallicFactor", material.pbrMetallicRoughness.metallicFactor);
+							shader.setImmediate("material_roughnessFactor", material.pbrMetallicRoughness.roughnessFactor);
+							shader.setImmediate("material_alphaMask", 0);
+							shader.setImmediate("material_alphaMaskCutoff", 0.f);
+						#endif
 					
 							setShader(shader);
 							{
