@@ -33,6 +33,14 @@ public:
 		m_v[3] = w;
 	}
 	
+	inline void Set(float x, float y, float z, float w)
+	{
+		m_v[0] = x;
+		m_v[1] = y;
+		m_v[2] = z;
+		m_v[3] = w;
+	}
+	
 	inline void SetZero()
 	{
 		m_v[0] = m_v[1] = m_v[2] = m_v[3] = 0.0f;

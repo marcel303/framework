@@ -21,6 +21,13 @@ public:
 		m_v[2] = v3;
 	}
 	
+	inline void Set(float x, float y, float z)
+	{
+		m_v[0] = x;
+		m_v[1] = y;
+		m_v[2] = z;
+	}
+	
 	inline void SetZero()
 	{
 		m_v[0] = m_v[1] = m_v[2] = 0.0f;
