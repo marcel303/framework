@@ -42,7 +42,6 @@ int main(int argc, char *argv[]) {
 	std::cout << " Right Click - Click anywhere to unfollow particle" << std::endl;
 	std::cout << "Scroll Wheel - Zoom in/out" << std::endl;
 	std::cout << std::endl;
-	system("pause");
 
 	//Create the universe of particles
 	Universe universe(9, 400, window_w, window_h);
