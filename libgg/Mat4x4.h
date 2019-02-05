@@ -483,6 +483,13 @@ public:
 		return Translate(vec[0], vec[1], vec[2]);
 	}
 
+	inline Mat4x4 Scale(const float scale) const
+	{
+		Mat4x4 t;
+		t.MakeScaling(scale, scale, scale);
+		return (*this) * t;
+	}
+	
 	inline Mat4x4 Scale(const float x, const float y, const float z) const
 	{
 		Mat4x4 t;
