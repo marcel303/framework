@@ -123,7 +123,35 @@ namespace gltf
 	
 	struct Material
 	{
-		struct TextureReference
+		struct NormalTexture
+		{
+			int index = -1;
+			int texCoord = 0;
+			float scale = 1.f; // multiplier for the normal fetched from the texture
+			
+			bool isValid() const
+			{
+				return
+					index >= 0 &&
+					texCoord >= 0;
+			}
+		};
+		
+		struct OcclusionTexture
+		{
+			int index = -1;
+			int texCoord = 0;
+			float strength = 1.f;
+			
+			bool isValid() const
+			{
+				return
+					index >= 0 &&
+					texCoord >= 0;
+			}
+		};
+		
+		struct EmissiveTexture
 		{
 			int index = -1;
 			int texCoord = -1;
@@ -138,8 +166,23 @@ namespace gltf
 		
 		struct PbrMetallicRoughness
 		{
+			struct BaseColorTexture
+			{
+				int index = -1;
+				int texCoord = 0;
+			};
+			
+			struct MetallicRoughnessTexture
+			{
+				int index = -1;
+				int texCoord = 0;
+			};
+			
 			Color baseColorFactor;
-			TextureReference baseColorTexture;
+			BaseColorTexture baseColorTexture;
+			float metallicFactor = 1.f;
+			float roughnessFactor = 1.f;
+			MetallicRoughnessTexture metallicRoughnessTexture;
 		};
 		
 		std::string alphaMode; // OPAQUE, MASK (alpha test) or BLEND
@@ -147,7 +190,10 @@ namespace gltf
 		
 		PbrMetallicRoughness pbrMetallicRoughness;
 		
-		TextureReference emissiveTexture;
+		NormalTexture normalTexture;
+		OcclusionTexture occlusionTexture;
+		EmissiveTexture emissiveTexture;
+		Vec3 emissiveFactor;
 		
 		bool isValid() const
 		{
@@ -266,7 +312,10 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 	size_t size = 0;
 	
 	if (!TextIO::loadFileContents(path, text, size))
+	{
+		logDebug("failed to load GLTF file contents");
 		return false;
+	}
 	
 	json j;
 	
@@ -303,7 +352,10 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				accessor.type = json_accessor.value("type", "");
 				
 				if (!accessor.isValid())
+				{
+					logDebug("accessor is invalid");
 					return false;
+				}
 		
 				scene.accessors.push_back(accessor);
 			}
@@ -320,14 +372,20 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				buffer.uri = buffer_json.value("uri", "");
 				
 				if (!buffer.isValid())
+				{
+					logDebug("buffer is invalid");
 					return false;
+				}
 				
 				auto path = dir + "/" + buffer.uri;
 				
 				FILE * file = fopen(path.c_str(), "rb");
 				
 				if (file == nullptr)
+				{
+					logDebug("failed to open buffer file");
 					return false;
+				}
 				
 				buffer.data.resize(buffer.byteLength);
 				
@@ -357,7 +415,10 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				bufferView.target = json_bufferView.value("target", -1);
 				
 				if (!bufferView.isValid())
+				{
+					logDebug("bufferView is invalid");
 					return false;
+				}
 				
 				scene.bufferViews.push_back(bufferView);
 			}
@@ -398,7 +459,10 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 							}
 							
 							if (!primitive.isValid())
+							{
+								logDebug("primitive is invalid");
 								return false;
+							}
 							
 							mesh.primitives.push_back(primitive);
 						}
@@ -423,7 +487,10 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				// todo : add support for bufferView property ?
 				
 				if (!image.isValid())
+				{
+					logDebug("image is invalid");
 					return false;
+				}
 				
 				scene.images.push_back(image);
 			}
@@ -440,7 +507,10 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				texture.source = texture_json.value("source", -1);
 				
 				if (!texture.isValid())
+				{
+					logDebug("texture is invalid");
 					return false;
+				}
 				
 				scene.textures.push_back(texture);
 			}
@@ -503,33 +573,48 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 						auto & baseColorTexture = baseColorTexture_itr.value();
 						
 						material.pbrMetallicRoughness.baseColorTexture.index = baseColorTexture.value("index", -1);
+						material.pbrMetallicRoughness.baseColorTexture.texCoord = baseColorTexture.value("texCoord", 0);
 					}
 					
-					// todo : metallicFactor
+					material.pbrMetallicRoughness.metallicFactor = pbrMetallicRoughness.value("metallicFactor", 1.f);
+					material.pbrMetallicRoughness.roughnessFactor = pbrMetallicRoughness.value("roughnessFactor", 1.f);
 					
-					// todo : roughnessFactor
+					// metallicRoughnessTexture
 					
-					// todo : metallicRoughnessTexture
+					auto metallicRoughnessTexture_itr = pbrMetallicRoughness.find("metallicRoughnessTexture");
+				
+					if (metallicRoughnessTexture_itr != pbrMetallicRoughness.end())
+					{
+						auto & metallicRoughnessTexture = metallicRoughnessTexture_itr.value();
+						
+						material.pbrMetallicRoughness.metallicRoughnessTexture.index = metallicRoughnessTexture.value("index", -1);
+						material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord = metallicRoughnessTexture.value("texCoord", 0);
+					}
 				}
 				
-				// todo : normalTexture
+				// normalTexture
 				
-				auto normalTexture = material_json.find("normalTexture");
+				auto normalTexture_itr = material_json.find("normalTexture");
 				
-				if (normalTexture != material_json.end())
+				if (normalTexture_itr != material_json.end())
 				{
-					logDebug("found normalTexture: %d. todo : implement in material", normalTexture.value().value("index", -1));
-					// todo : .texcoord
+					auto & normalTexture = *normalTexture_itr;
+					
+					material.normalTexture.index = normalTexture.value("index", -1);
+					material.normalTexture.texCoord = normalTexture.value("texCoord", 0);
 				}
 				
-				// todo : occlusionTexture
+				// occlusionTexture
 				
-				auto occlusionTexture = material_json.find("occlusionTexture");
+				auto occlusionTexture_itr = material_json.find("occlusionTexture");
 				
-				if (occlusionTexture != material_json.end())
+				if (occlusionTexture_itr != material_json.end())
 				{
-					logDebug("found occlusionTexture: %d. todo : implement in material", occlusionTexture.value().value("index", -1));
-					// todo : .texcoord
+					auto & occlusionTexture = *occlusionTexture_itr;
+					
+					material.occlusionTexture.index = occlusionTexture.value("index", -1);
+					material.occlusionTexture.texCoord = occlusionTexture.value("texCoord", 0);
+					material.occlusionTexture.strength = occlusionTexture.value("strength", 1.f);
 				}
 				
 				auto emissiveTexture = material_json.find("emissiveTexture");
@@ -537,13 +622,16 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				if (emissiveTexture != material_json.end())
 				{
 					material.emissiveTexture.index = emissiveTexture.value().value("index", -1);
-					// todo : .texcoord
+					material.emissiveTexture.texCoord = emissiveTexture.value().value("texCoord", 0);
 				}
 				
-				// todo : emissiveFactor
+				material.emissiveFactor = material_json.value("emissiveFactor", Vec3());
 				
 				if (!material.isValid())
+				{
+					logDebug("material is invalid");
 					return false;
+				}
 				
 				scene.materials.push_back(material);
 			}
@@ -745,11 +833,18 @@ int main(int argc, char * argv[])
 				gltf::BufferView * bufferView;
 				gltf::Buffer * buffer;
 				
-				if (resolveBufferView(primitive.indices, accessor, bufferView, buffer))
+				if (!resolveBufferView(primitive.indices, accessor, bufferView, buffer))
+				{
+					logWarning("failed to resolve buffer view");
+				}
+				else
 				{
 					if (accessor->componentType != gltf::kElementType_U16 &&
 						accessor->componentType != gltf::kElementType_U32)
+					{
+						logWarning("index element type not supported");
 						continue;
+					}
 					
 					indexBuffer = new GxIndexBuffer();
 					const uint8_t * index_mem = &buffer->data.front() + bufferView->byteOffset + accessor->byteOffset;
@@ -782,7 +877,10 @@ int main(int argc, char * argv[])
 				const int accessorIndex = attribute.second;
 	
 				if (!resolveBufferView(accessorIndex, accessor, bufferView, buffer))
+				{
+					logWarning("failed to resolve buffer view");
 					continue;
+				}
 				
 				if (vertexBufferIndex == -1)
 					vertexBufferIndex = bufferView->buffer;
@@ -812,7 +910,10 @@ int main(int argc, char * argv[])
 					-1;
 				
 				if (id == -1)
+				{
+					//logDebug("unknown attribute: %s", attributeName.c_str());
 					continue;
+				}
 				
 				const int numComponents =
 					accessor->type == "SCALAR" ? 1 :
@@ -822,7 +923,10 @@ int main(int argc, char * argv[])
 					-1;
 				
 				if (numComponents == -1)
+				{
+					logWarning("number of components not supported");
 					continue;
+				}
 				
 				const GX_ELEMENT_TYPE type =
 					accessor->type == "SCALAR" ? GX_ELEMENT_FLOAT32 :
@@ -832,7 +936,10 @@ int main(int argc, char * argv[])
 					(GX_ELEMENT_TYPE)-1;
 				
 				if (type == (GX_ELEMENT_TYPE)-1)
+				{
+					logWarning("element type not supported");
 					continue;
+				}
 				
 				GxVertexInput v;
 				v.id = id;
@@ -846,7 +953,10 @@ int main(int argc, char * argv[])
 			}
 			
 			if (vertexBufferIndex < 0)
+			{
+				logWarning("invalid vertex buffer index");
 				continue;
+			}
 			
 			// create mesh
 			
@@ -896,7 +1006,10 @@ int main(int argc, char * argv[])
 				for (auto & primitive : mesh.primitives)
 				{
 					if (primitive.mode != gltf::kPrimitiveType_Triangles)
+					{
+						logWarning("primitive type not supported");
 						continue;
+					}
 					
 					BLEND_MODE blendMode = BLEND_OPAQUE;
 					
@@ -905,7 +1018,10 @@ int main(int argc, char * argv[])
 					Color color = colorWhite;
 					
 					if (primitive.material < 0 || primitive.material >= scene.materials.size())
+					{
+						logWarning("invalid material index");
 						continue;
+					}
 					
 					auto & material = scene.materials[primitive.material];
 					
@@ -978,10 +1094,16 @@ int main(int argc, char * argv[])
 					gltf::Buffer * indexBuffer;
 					
 					if (!resolveBufferView(primitive.indices, indexAccessor, indexBufferView, indexBuffer))
+					{
+						logWarning("failed to resolve buffer view");
 						continue;
+					}
 					
 					if (indexAccessor->componentType != gltf::kElementType_U32)
+					{
+						logWarning("component type not supported");
 						continue;
+					}
 					
 					//
 					
@@ -992,15 +1114,24 @@ int main(int argc, char * argv[])
 					auto position_itr = primitive.attributes.find("POSITION");
 					
 					if (position_itr == primitive.attributes.end())
+					{
+						logWarning("position attribute not found");
 						continue;
+					}
 					
 					const int positionAccessorIndex = position_itr->second;
 					
 					if (!resolveBufferView(positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
+					{
+						logWarning("failed to resolve buffer view");
 						continue;
+					}
 					
 					if (positionAccessor->type != "VEC3")
+					{
+						logWarning("position element type not supported");
 						continue;
+					}
 					
 					//
 					
@@ -1015,10 +1146,16 @@ int main(int argc, char * argv[])
 						const int texcoord0AccessorIndex = texcoord0_itr->second;
 						
 						if (!resolveBufferView(texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
+						{
+							logWarning("failed to resolve buffer view");
 							continue;
+						}
 						
 						if (texcoord0Accessor->type != "VEC2")
+						{
+							logWarning("texcoord element type not supported");
 							continue;
+						}
 					}
 					
 					pushWireframe(keyboard.isDown(SDLK_w));
@@ -1083,7 +1220,10 @@ int main(int argc, char * argv[])
 				for (auto child_index : node.children)
 				{
 					if (child_index < 0 || child_index >= scene.nodes.size())
+					{
+						logWarning("invalid child index");
 						continue;
+					}
 					
 					auto & child = scene.nodes[child_index];
 					
@@ -1112,7 +1252,10 @@ int main(int argc, char * argv[])
 				for (auto child_index : node.children)
 				{
 					if (child_index < 0 || child_index >= scene.nodes.size())
+					{
+						logWarning("invalid child index");
 						continue;
+					}
 					
 					auto & child = scene.nodes[child_index];
 					
@@ -1132,15 +1275,24 @@ int main(int argc, char * argv[])
 						auto position_itr = primitive.attributes.find("POSITION");
 						
 						if (position_itr == primitive.attributes.end())
+						{
+							logWarning("position attribute not found");
 							continue;
+						}
 						
 						const int positionAccessorIndex = position_itr->second;
 						
 						if (!resolveBufferView(positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
+						{
+							logWarning("failed to resolve buffer view");
 							continue;
+						}
 						
 						if (positionAccessor->type != "VEC3")
+						{
+							logWarning("position element type not supported");
 							continue;
+						}
 						
 						const Vec3 min(
 							positionAccessor->min[0],
@@ -1181,7 +1333,10 @@ int main(int argc, char * argv[])
 				for (auto child_index : node.children)
 				{
 					if (child_index < 0 || child_index >= scene.nodes.size())
+					{
+						logWarning("invalid child index");
 						continue;
+					}
 					
 					auto & child = scene.nodes[child_index];
 					
@@ -1201,15 +1356,24 @@ int main(int argc, char * argv[])
 						auto position_itr = primitive.attributes.find("POSITION");
 						
 						if (position_itr == primitive.attributes.end())
+						{
+							logWarning("position attribute not found");
 							continue;
+						}
 						
 						const int positionAccessorIndex = position_itr->second;
 						
 						if (!resolveBufferView(positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
+						{
+							logWarning("failed to resolve buffer view");
 							continue;
+						}
 						
 						if (positionAccessor->type != "VEC3")
+						{
+							logWarning("position element type not supported");
 							continue;
+						}
 						
 						const Vec3 min(
 							positionAccessor->min[0],
@@ -1310,7 +1474,10 @@ int main(int argc, char * argv[])
 				pushDepthWrite(isOpaquePass ? true : false);
 				{
 					if (scene.activeScene < 0 || scene.activeScene >= scene.sceneRoots.size())
+					{
+						logWarning("invalid scene index");
 						continue;
+					}
 					
 					auto & sceneRoot = scene.sceneRoots[scene.activeScene];
 					
