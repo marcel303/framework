@@ -1,6 +1,7 @@
 GL_EXT_secondary_color
 http://oss.sgi.com/projects/ogl-sample/registry/EXT/secondary_color.txt
 GL_EXT_secondary_color
+
 	GL_COLOR_SUM_EXT 0x8458
 	GL_CURRENT_SECONDARY_COLOR_EXT 0x8459
 	GL_SECONDARY_COLOR_ARRAY_SIZE_EXT 0x845A
@@ -24,4 +25,4 @@ GL_EXT_secondary_color
 	void glSecondaryColor3uivEXT (const GLuint *v)
 	void glSecondaryColor3usEXT (GLushort red, GLushort green, GLushort blue)
 	void glSecondaryColor3usvEXT (const GLushort *v)
-	void glSecondaryColorPointerEXT (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer)
+	void glSecondaryColorPointerEXT (GLint size, GLenum type, GLsizei stride, const void *pointer)

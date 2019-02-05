@@ -1,6 +1,7 @@
 GL_ARB_vertex_blend
 http://oss.sgi.com/projects/ogl-sample/registry/ARB/vertex_blend.txt
 GL_ARB_vertex_blend
+
 	GL_MAX_VERTEX_UNITS_ARB 0x86A4
 	GL_ACTIVE_VERTEX_UNITS_ARB 0x86A5
 	GL_WEIGHT_SUM_UNITY_ARB 0x86A6
@@ -51,5 +52,5 @@ GL_ARB_vertex_blend
 	void glWeightubvARB (GLint size, GLubyte *weights)
 	void glWeightusvARB (GLint size, GLushort *weights)
 	void glWeightuivARB (GLint size, GLuint *weights)
-	void glWeightPointerARB (GLint size, GLenum type, GLsizei stride, GLvoid *pointer)
+	void glWeightPointerARB (GLint size, GLenum type, GLsizei stride, void *pointer)
 	void glVertexBlendARB (GLint count)

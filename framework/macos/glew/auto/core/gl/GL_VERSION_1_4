@@ -1,6 +1,7 @@
 GL_VERSION_1_4
 http://www.opengl.org/documentation/specs/version1.4/glspec14.pdf
 
+
 	GL_GENERATE_MIPMAP 0x8191
 	GL_GENERATE_MIPMAP_HINT 0x8192
 	GL_DEPTH_COMPONENT16 0x81A5
@@ -46,9 +47,9 @@ http://www.opengl.org/documentation/specs/version1.4/glspec14.pdf
 	void glFogCoordfv (const GLfloat *coord)
 	void glFogCoordd (GLdouble coord)
 	void glFogCoorddv (const GLdouble *coord)
-	void glFogCoordPointer (GLenum type, GLsizei stride, const GLvoid *pointer)
+	void glFogCoordPointer (GLenum type, GLsizei stride, const void *pointer)
 	void glMultiDrawArrays (GLenum mode, const GLint *first, const GLsizei *count, GLsizei drawcount)
-	void glMultiDrawElements (GLenum mode, const GLsizei *count, GLenum type, const GLvoid **indices, GLsizei drawcount)
+	void glMultiDrawElements (GLenum mode, const GLsizei *count, GLenum type, const void *const* indices, GLsizei drawcount)
 	void glPointParameteri (GLenum pname, GLint param)
 	void glPointParameteriv (GLenum pname, const GLint *params)
 	void glPointParameterf (GLenum pname, GLfloat param)
@@ -69,7 +70,7 @@ http://www.opengl.org/documentation/specs/version1.4/glspec14.pdf
 	void glSecondaryColor3uiv (const GLuint *v)
 	void glSecondaryColor3us (GLushort red, GLushort green, GLushort blue)
 	void glSecondaryColor3usv (const GLushort *v)
-	void glSecondaryColorPointer (GLint size, GLenum type, GLsizei stride, const GLvoid *pointer)
+	void glSecondaryColorPointer (GLint size, GLenum type, GLsizei stride, const void *pointer)
 	void glBlendFuncSeparate (GLenum sfactorRGB, GLenum dfactorRGB, GLenum sfactorAlpha, GLenum dfactorAlpha)
 	void glWindowPos2d (GLdouble x, GLdouble y)
 	void glWindowPos2f (GLfloat x, GLfloat y)
