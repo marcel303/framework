@@ -406,14 +406,7 @@ bool Framework::init(int sx, int sy)
 	
 	if (!basicOpenGL)
 	{
-	#ifndef MACOS
-		glewExperimental = GL_TRUE; // force GLEW to resolve all supported extension methods
-	#endif
-	
 		const int glewStatus = glewInit();
-	#ifndef MACOS
-		glGetError(); // note : GLEW generates an error code and we're not interested in trapping it..
-	#endif
 		checkErrorGL();
 
 		if (glewStatus != GLEW_OK)
