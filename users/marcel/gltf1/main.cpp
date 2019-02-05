@@ -10,7 +10,13 @@
 #define VIEW_SX 1000
 #define VIEW_SY 600
 
-#define ANIMATED_CAMERA 1 // todo : remove option and use hybrid
+#define ANIMATED_CAMERA 0 // todo : remove option and use hybrid
+
+#define LOW_LATENCY_HACK_TEST 0 // todo : remove
+
+#if LOW_LATENCY_HACK_TEST
+	#include <unistd.h>
+#endif
 
 using json = nlohmann::json;
 
@@ -26,7 +32,12 @@ namespace gltf
 		kPrimitiveType_TriangleFan = 6
 	};
 
+	const int kElementType_S8 = 5120;
+	const int kElementType_U8 = 5121;
+	const int kElementType_S16 = 5122;
+	const int kElementType_U16 = 5123;
 	const int kElementType_U32 = 0x1405;
+	const int kElementType_Float32 = 5126;
 	
 	struct Buffer
 	{
@@ -65,6 +76,7 @@ namespace gltf
 		int bufferView = -1;
 		int byteOffset = -1;
 		int componentType = -1;
+		bool normalized = false;
 		int count = -1;
 		std::vector<float> min;
 		std::vector<float> max;
@@ -283,7 +295,8 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				
 				accessor.bufferView = json_accessor.value("bufferView", -1);
 				accessor.byteOffset = json_accessor.value("byteOffset", 0);
-				accessor.componentType = json_accessor.value("componentType", -1);;
+				accessor.componentType = json_accessor.value("componentType", -1);
+				accessor.normalized = json_accessor.value("normalized", false);
 				accessor.count = json_accessor.value("count", -1);
 				accessor.min = json_accessor.value("min", std::vector<float>());
 				accessor.max = json_accessor.value("max", std::vector<float>());
@@ -407,6 +420,8 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				
 				image.path = dir + "/" + image.uri;
 				
+				// todo : add support for bufferView property ?
+				
 				if (!image.isValid())
 					return false;
 				
@@ -430,6 +445,37 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				scene.textures.push_back(texture);
 			}
 		}
+		else if (member_name == "samplers")
+		{
+			auto & samplers = member;
+			
+			for (auto & sampler_json : samplers)
+			{
+				const int minFilter = sampler_json.value("minFilter", -1);
+				const int magFilter = sampler_json.value("magFilter", -1);
+				const int wrapS = sampler_json.value("wrapS", -1);
+				const int wrapT = sampler_json.value("wrapT", -1);
+				
+				/*
+				minFilter:
+				NEAREST_MIPMAP_NEAREST,
+				NEAREST_MIPMAP_LINEAR,
+				LINEAR_MIPMAP_NEAREST,
+				LINEAR_MIPMAP_LINEAR
+				*/
+				
+				/*
+				wrap:
+				REPEAT,
+				MIRRORED_REPEAT,
+				
+				*/
+				//if (!sampler.isValid())
+				//	return false;
+				
+				//scene.samplers.push_back(sampler);
+			}
+		}
 		else if (member_name == "materials")
 		{
 			auto & materials = member;
@@ -439,6 +485,7 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				gltf::Material material;
 				
 				material.alphaMode = material_json.value("alphaMode", "OPAQUE");
+				// todo : alphaCutoff
 				material.doubleSided = material_json.value("doubleSided", true);
 				
 				auto pbrMetallicRoughness_itr = material_json.find("pbrMetallicRoughness");
@@ -457,6 +504,32 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 						
 						material.pbrMetallicRoughness.baseColorTexture.index = baseColorTexture.value("index", -1);
 					}
+					
+					// todo : metallicFactor
+					
+					// todo : roughnessFactor
+					
+					// todo : metallicRoughnessTexture
+				}
+				
+				// todo : normalTexture
+				
+				auto normalTexture = material_json.find("normalTexture");
+				
+				if (normalTexture != material_json.end())
+				{
+					logDebug("found normalTexture: %d. todo : implement in material", normalTexture.value().value("index", -1));
+					// todo : .texcoord
+				}
+				
+				// todo : occlusionTexture
+				
+				auto occlusionTexture = material_json.find("occlusionTexture");
+				
+				if (occlusionTexture != material_json.end())
+				{
+					logDebug("found occlusionTexture: %d. todo : implement in material", occlusionTexture.value().value("index", -1));
+					// todo : .texcoord
 				}
 				
 				auto emissiveTexture = material_json.find("emissiveTexture");
@@ -464,7 +537,10 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				if (emissiveTexture != material_json.end())
 				{
 					material.emissiveTexture.index = emissiveTexture.value().value("index", -1);
+					// todo : .texcoord
 				}
+				
+				// todo : emissiveFactor
 				
 				if (!material.isValid())
 					return false;
@@ -671,13 +747,19 @@ int main(int argc, char * argv[])
 				
 				if (resolveBufferView(primitive.indices, accessor, bufferView, buffer))
 				{
-					if (accessor->componentType != gltf::kElementType_U32)
+					if (accessor->componentType != gltf::kElementType_U16 &&
+						accessor->componentType != gltf::kElementType_U32)
 						continue;
 					
 					indexBuffer = new GxIndexBuffer();
 					const uint8_t * index_mem = &buffer->data.front() + bufferView->byteOffset + accessor->byteOffset;
 					
-					indexBuffer->setData(index_mem, accessor->count, GX_INDEX_32);
+					const GX_INDEX_FORMAT format =
+						accessor->componentType == gltf::kElementType_U16
+						? GX_INDEX_16
+						: GX_INDEX_32;
+					
+					indexBuffer->setData(index_mem, accessor->count, format);
 					
 					Assert(indexBuffers[primitive.indices] == nullptr);
 					indexBuffers[primitive.indices] = indexBuffer;
@@ -707,26 +789,46 @@ int main(int argc, char * argv[])
 				else if (bufferView->buffer != vertexBufferIndex)
 					vertexBufferIndex = -2;
 	
+				/*
+				POSITION,
+				NORMAL,
+				TANGENT,
+				TEXCOORD_0,
+				TEXCOORD_1,
+				COLOR_0,
+				JOINS_0, (bone indices)
+				WEIGHTS_0
+				
+				note : bitangent = cross(normal, tangent.xyz) * tangent.w
+				*/
+				
 				const int id =
 					attributeName == "POSITION" ? VS_POSITION :
 					attributeName == "NORMAL" ? VS_NORMAL :
+					attributeName == "COLOR_0" ? VS_COLOR :
 					attributeName == "TEXCOORD_0" ? VS_TEXCOORD :
+					attributeName == "JOINTS_0" ? VS_BLEND_INDICES :
+					attributeName == "WEIGHTS_0" ? VS_BLEND_WEIGHTS :
 					-1;
 				
 				if (id == -1)
 					continue;
 				
 				const int numComponents =
+					accessor->type == "SCALAR" ? 1 :
 					accessor->type == "VEC2" ? 2 :
 					accessor->type == "VEC3" ? 3 :
+					accessor->type == "VEC4" ? 4 :
 					-1;
 				
 				if (numComponents == -1)
 					continue;
 				
 				const GX_ELEMENT_TYPE type =
+					accessor->type == "SCALAR" ? GX_ELEMENT_FLOAT32 :
 					accessor->type == "VEC2" ? GX_ELEMENT_FLOAT32 :
 					accessor->type == "VEC3" ? GX_ELEMENT_FLOAT32 :
+					accessor->type == "VEC4" ? GX_ELEMENT_FLOAT32 :
 					(GX_ELEMENT_TYPE)-1;
 				
 				if (type == (GX_ELEMENT_TYPE)-1)
@@ -736,7 +838,7 @@ int main(int argc, char * argv[])
 				v.id = id;
 				v.numComponents = numComponents;
 				v.type = type;
-				v.normalize = false;
+				v.normalize = accessor->normalized;
 				v.offset = bufferView->byteOffset + accessor->byteOffset;
 				v.stride = 0;
 				
@@ -1254,6 +1356,28 @@ int main(int argc, char * argv[])
 			popDepthTest();
 		}
 		framework.endDraw();
+		
+	#if LOW_LATENCY_HACK_TEST
+		static uint64_t t1 = 0;
+		static uint64_t t2 = 0;
+		
+		static int x = 0;
+		x++;
+		printf("frame: %d\n", x);
+		
+		t2 = SDL_GetTicks();
+		
+		const uint64_t time_ms = t2 - t1 + 1;
+		
+		if (time_ms < 16 && !keyboard.isDown(SDLK_RSHIFT))
+		{
+			const uint64_t delay_ms = 16 - time_ms;
+			
+			usleep(delay_ms * 1000);
+		}
+		
+		t1 = SDL_GetTicks();
+	#endif
 	}
 	
 	framework.shutdown();
