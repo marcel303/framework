@@ -406,10 +406,14 @@ bool Framework::init(int sx, int sy)
 	
 	if (!basicOpenGL)
 	{
+	#ifndef MACOS
 		glewExperimental = GL_TRUE; // force GLEW to resolve all supported extension methods
+	#endif
 	
 		const int glewStatus = glewInit();
+	#ifndef MACOS
 		glGetError(); // note : GLEW generates an error code and we're not interested in trapping it..
+	#endif
 		checkErrorGL();
 
 		if (glewStatus != GLEW_OK)
@@ -5303,6 +5307,11 @@ void Camera3d::tick(float dt, bool enableInput)
 		
 		yaw -= thisDx * mouseRotationSpeed;
 		pitch -= thisDy * mouseRotationSpeed;
+	}
+	else
+	{
+		mouseDx = 0.f;
+		mouseDy = 0.f;
 	}
 	
 	// go from normalized input values to values directly used to add to position
