@@ -160,11 +160,11 @@ void endCubeBatch()
 
 void fillCylinder(Vec3Arg position, const float radius, const float height, const int resolution, const float angleOffset)
 {
-	float dx[resolution];
-	float dz[resolution];
+	float * dx = (float*)alloca(resolution * sizeof(float));
+	float * dz = (float*)alloca(resolution * sizeof(float));
 	
-	float x[resolution];
-	float z[resolution];
+	float * x = (float*)alloca(resolution * sizeof(float));
+	float * z = (float*)alloca(resolution * sizeof(float));
 	
 	for (int i = 0; i < resolution; ++i)
 	{
