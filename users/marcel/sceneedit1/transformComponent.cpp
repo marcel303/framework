@@ -1,71 +1,57 @@
-#include "framework.h"
+#include "Mat4x4.h"
+#include "Quat.h"
 #include "scene.h"
 #include "transformComponent.h"
-#include <math.h>
 
 #include "modelComponent.h" // fixme : hack to set global transform on model component
 
-bool TransformComponent::init()
+void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode & node, const Mat4x4 & globalTransform) const
 {
-	return true;
-}
-
-void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode & node) const
-{
-	gxPushMatrix();
+	auto transformComp = node.components.find<TransformComponent>();
+	
+	if (transformComp != nullptr)
 	{
-		auto transformComp = node.components.find<TransformComponent>();
+		Quat q;
+		q.fromAxisAngle(transformComp->angleAxis.axis, transformComp->angleAxis.angle);
+
+		const Mat4x4 localTransform = Mat4x4(true).Translate(transformComp->position).Rotate(q).Scale(transformComp->scale);
 		
-		if (transformComp != nullptr)
+		node.objectToWorld = globalTransform * localTransform;
+	}
+	else
+	{
+		node.objectToWorld = globalTransform;
+	}
+	
+	auto modelComp = node.components.find<ModelComponent>();
+	
+	if (modelComp != nullptr)
+	{
+		modelComp->_objectToWorld = node.objectToWorld;
+	}
+	
+	for (auto & childNodeId : node.childNodeIds)
+	{
+		auto childNodeItr = scene.nodes.find(childNodeId);
+		
+		Assert(childNodeItr != scene.nodes.end());
+		if (childNodeItr != scene.nodes.end())
 		{
-			gxTranslatef(
-				transformComp->position[0],
-				transformComp->position[1],
-				transformComp->position[2]);
+			SceneNode & childNode = *childNodeItr->second;
 			
-			gxRotatef(
-				transformComp->angleAxis.angle * 180.f / float(M_PI),
-				transformComp->angleAxis.axis[0],
-				transformComp->angleAxis.axis[1],
-				transformComp->angleAxis.axis[2]);
-			
-			gxScalef(
-				transformComp->scale,
-				transformComp->scale,
-				transformComp->scale);
-		}
-		
-		gxGetMatrixf(GX_MODELVIEW, node.objectToWorld.m_v);
-		
-		auto modelComp = node.components.find<ModelComponent>();
-		
-		if (modelComp != nullptr)
-		{
-			modelComp->_objectToWorld = node.objectToWorld;
-		}
-		
-		for (auto & childNodeId : node.childNodeIds)
-		{
-			auto childNodeItr = scene.nodes.find(childNodeId);
-			
-			Assert(childNodeItr != scene.nodes.end());
-			if (childNodeItr != scene.nodes.end())
-			{
-				SceneNode & childNode = *childNodeItr->second;
-				
-				calculateTransformsTraverse(scene, childNode);
-			}
+			calculateTransformsTraverse(scene, childNode, node.objectToWorld);
 		}
 	}
-	gxPopMatrix();
 }
 
 void TransformComponentMgr::calculateTransforms(Scene & scene) const
 {
-	calculateTransformsTraverse(scene, scene.getRootNode());
+	calculateTransformsTraverse(scene, scene.getRootNode(), Mat4x4(true));
 }
 
 //
+
+#include <math.h>
 
 void RotateTransformComponent::tick(const float dt)
 {

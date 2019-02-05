@@ -4,7 +4,7 @@
 #include "Vec2.h" // todo : remove ?
 #include "Vec3.h" // todo : remove ?
 #include "Vec4.h" // todo : remove ?
-#include <functional>
+#include <functional> // todo : use a more simple way to add a getter/setter and remove this dependency
 #include <string>
 #include <vector>
 
@@ -186,6 +186,7 @@ struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
 enum ComponentPriority
 {
 	kComponentPriority_Transform = 10,
+	kComponentPriority_Camera = 20,
 	kComponentPriority_Default = 100
 };
 
@@ -243,11 +244,33 @@ struct ComponentType : ComponentTypeBase
 		return *p;
 	}
 	
+	ComponentPropertyVec2 & in(const char * name, Vec2 T::* member)
+	{
+		auto p = new ComponentPropertyVec2(name);
+		p->getter = [=](ComponentBase * comp) -> Vec2 & { return static_cast<T*>(comp)->*member; };
+		p->setter = [=](ComponentBase * comp, const Vec2 & s) { static_cast<T*>(comp)->*member = s; };
+		
+		properties.push_back(p);
+		
+		return *p;
+	}
+	
 	ComponentPropertyVec3 & in(const char * name, Vec3 T::* member)
 	{
 		auto p = new ComponentPropertyVec3(name);
 		p->getter = [=](ComponentBase * comp) -> Vec3 & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const Vec3 & s) { static_cast<T*>(comp)->*member = s; };
+		
+		properties.push_back(p);
+		
+		return *p;
+	}
+	
+	ComponentPropertyVec4 & in(const char * name, Vec4 T::* member)
+	{
+		auto p = new ComponentPropertyVec4(name);
+		p->getter = [=](ComponentBase * comp) -> Vec4 & { return static_cast<T*>(comp)->*member; };
+		p->setter = [=](ComponentBase * comp, const Vec4 & s) { static_cast<T*>(comp)->*member = s; };
 		
 		properties.push_back(p);
 		

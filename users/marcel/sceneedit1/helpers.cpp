@@ -2,12 +2,14 @@
 #include "helpers.h"
 
 #define DEFINE_COMPONENT_TYPES
+#include "cameraComponent.h"
 #include "modelComponent.h"
 #include "transformComponent.h"
 
 #include <algorithm>
 
 // todo : remove component mgr globals
+CameraComponentMgr s_cameraComponentMgr;
 extern TransformComponentMgr s_transformComponentMgr;
 extern RotateTransformComponentMgr s_rotateTransformComponentMgr;
 extern ModelComponentMgr s_modelComponentMgr;
@@ -33,6 +35,7 @@ void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase *
 
 void registerComponentTypes()
 {
+	registerComponentType(new CameraComponentType(), &s_cameraComponentMgr);
 	registerComponentType(new TransformComponentType(), &s_transformComponentMgr);
 	registerComponentType(new RotateTransformComponentType(), &s_rotateTransformComponentMgr);
 	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);

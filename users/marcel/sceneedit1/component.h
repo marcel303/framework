@@ -38,7 +38,7 @@ struct Component : ComponentBase
 	T * next = nullptr;
 	T * prev = nullptr;
 	
-	virtual std::type_index typeIndex() override
+	virtual std::type_index typeIndex() override final
 	{
 		return std::type_index(typeid(T));
 	}
@@ -61,7 +61,7 @@ struct ComponentMgr : ComponentMgrBase
 	T * head = nullptr;
 	T * tail = nullptr;
 	
-	virtual T * createComponent() override
+	virtual T * createComponent() override final
 	{
 		T * component = new T();
 		
@@ -70,7 +70,7 @@ struct ComponentMgr : ComponentMgrBase
 		return component;
 	}
 	
-	virtual void addComponent(ComponentBase * in_component) override
+	virtual void addComponent(ComponentBase * in_component) override final
 	{
 		T * component = castToComponentType(in_component);
 		
@@ -91,7 +91,7 @@ struct ComponentMgr : ComponentMgrBase
 		}
 	}
 	
-	virtual void removeComponent(ComponentBase * in_component) override
+	virtual void removeComponent(ComponentBase * in_component) override final
 	{
 		T * component = castToComponentType(in_component);
 		
@@ -122,7 +122,7 @@ struct ComponentMgr : ComponentMgrBase
 		return static_cast<T*>(component);
 	}
 	
-	virtual std::type_index typeIndex() override
+	virtual std::type_index typeIndex() override final
 	{
 		return std::type_index(typeid(T));
 	}

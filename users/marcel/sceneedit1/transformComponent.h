@@ -1,7 +1,6 @@
 #pragma once
 
 #include "component.h"
-#include "Mat4x4.h"
 
 struct Scene;
 struct SceneNode;
@@ -11,13 +10,11 @@ struct TransformComponent : Component<TransformComponent>
 	Vec3 position;
 	AngleAxis angleAxis;
 	float scale = 1.f;
-	
-	virtual bool init() override;
 };
 
 struct TransformComponentMgr : ComponentMgr<TransformComponent>
 {
-	void calculateTransformsTraverse(Scene & scene, SceneNode & node) const;
+	void calculateTransformsTraverse(Scene & scene, SceneNode & node, const Mat4x4 & globalTransform) const;
 	void calculateTransforms(Scene & scene) const;
 };
 
@@ -47,7 +44,7 @@ struct RotateTransformComponent : Component<RotateTransformComponent>
 {
 	float speed = 0.f;
 	
-	virtual void tick(const float dt);
+	virtual void tick(const float dt) override final;
 };
 
 struct RotateTransformComponentMgr : ComponentMgr<RotateTransformComponent>

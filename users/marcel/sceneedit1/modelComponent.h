@@ -20,8 +20,8 @@ struct ModelComponent : Component<ModelComponent>
 	
 	Mat4x4 _objectToWorld = Mat4x4(true); // todo : remove. use transform stored in SceneNode
 	
-	virtual bool init() override;
-	virtual void tick(const float dt) override;
+	virtual bool init() override final;
+	virtual void tick(const float dt) override final;
 	
 	void draw(const Mat4x4 & objectToWorld) const;
 };
