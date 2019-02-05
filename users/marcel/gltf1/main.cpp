@@ -1093,11 +1093,16 @@ int main(int argc, char * argv[])
 								camera.position[1],
 								camera.position[2]);
 							
+							shader.setImmediate("scene_lightDir",
+								.5f,
+								1.f,
+								.5f);
+							
 							shader.setTexture("baseColorTexture", 0, textureId);
 							shader.setTexture("normalTexture", 1, normalTextureId);
 							shader.setTexture("occlusionTexture", 2, occlusionTextureId);
 							shader.setTexture("metallicTexture", 3, metallicRoughnessTextureId);
-							//shader.setTexture("emissiveTexture;
+							//shader.setTexture("emissiveTexture");
 
 							shader.setImmediate("material_baseColorFactor",
 								material.pbrMetallicRoughness.baseColorFactor.r,
@@ -1108,10 +1113,12 @@ int main(int argc, char * argv[])
 							shader.setImmediate("material_hasMetallicRoughnessTexture", metallicRoughnessTextureId != 0);
 							shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
 							shader.setImmediate("material_hasOcclusionTexture", occlusionTextureId != 0);
-							shader.setImmediate("material_hasEmissiveTexture", 0);
-							shader.setImmediate("material_metallicFactor", material.pbrMetallicRoughness.metallicFactor);
-							shader.setImmediate("material_roughnessFactor", material.pbrMetallicRoughness.roughnessFactor);
-							shader.setImmediate("material_alphaMask", 0);
+							shader.setImmediate("material_hasEmissiveTexture", false);
+							shader.setImmediate("material_metallicFactor",
+								material.pbrMetallicRoughness.metallicFactor);
+							shader.setImmediate("material_roughnessFactor",
+								material.pbrMetallicRoughness.roughnessFactor);
+							shader.setImmediate("material_alphaMask", false);
 							shader.setImmediate("material_alphaMaskCutoff", 0.f);
 						#endif
 					
