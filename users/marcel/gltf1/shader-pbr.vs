@@ -11,17 +11,12 @@ void main()
 {
   vec4 position = unpackPosition();
 
+  gl_Position = objectToProjection(position);
+  
   v_position_world = objectToWorld(position).xyz;
-
-  position = objectToProjection(position);
   
-  vec2 texcoord0 = unpackTexcoord(0);
-  vec2 texcoord1 = unpackTexcoord(1);
-  
-  gl_Position = position;
-  
-  v_texcoord0 = texcoord0;
-  v_texcoord1 = texcoord1;
+  v_texcoord0 = unpackTexcoord(0);
+  v_texcoord1 = unpackTexcoord(1);
 
   v_normal = objectToWorld(unpackNormal()).xyz;
 }

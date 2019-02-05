@@ -10,6 +10,7 @@ uniform sampler2D metallicTexture;
 uniform sampler2D emissiveTexture;
 
 uniform vec3 scene_camPos;
+uniform vec3 scene_lightDir;
 
 uniform vec4 material_baseColorFactor;
 uniform float material_hasBaseColorTexture;
@@ -30,7 +31,6 @@ shader_in vec3 v_normal;
 #define PI 3.1415926535897932384626433832795
 #define kMinRoughness 0.04
 
-vec3 scene_lightDir = normalize(vec3(-1.0, 1.0, -1.0));
 float scene_gamma = 2.2;
 
 vec3 ALBEDO;
@@ -167,34 +167,48 @@ void main()
 
     vec3 diffuse = ALBEDO;
 
-    // -- specular reflectance
-
     vec3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
-
-    vec3 reflection = vec3(0.5);
-
-    vec3 specular = reflection * F;
-
-    // -- ambient
 
     vec3 kD = 1.0 - F;
     kD *= 1.0 - metallic;
+    
+    vec3 ambient = kD * diffuse;
+
+    // -- specular reflectance
+
+    vec3 reflection = vec3(0.2);
+
+    vec3 specular = reflection * F;
+
+    ambient += specular;
+
+    // -- ambient occlusion
+
     float ao = (material_hasOcclusionTexture != 0.0) ? texture(occlusionTexture, v_texcoord1).r : 1.0;
-    vec3 ambient = (kD * diffuse + specular) * ao;
+
+    ambient *= ao;
+
+    // -- add all terms
 
     vec3 color = ambient + Lo;
 
-    // -- linear to gamma space
+    // -- convert linear to gamma space
 
     color = pow(color, vec3(1.0 / scene_gamma));
 
-    // -- emissive
+    // -- add emissive
 
     if (material_hasEmissiveTexture != 0.0)
     {
         vec3 emissive = texture(emissiveTexture, v_texcoord0).rgb;
         color += emissive;
     }
+
+    // -- store
+
+//    color.rgb = R;
+//    color.r = metallic;
+//    color.r = roughness;
 
     shader_fragColor = vec4(color, baseColor.a);
 }
