@@ -1,0 +1,3 @@
+library jsoncpp
+	add_files dummy.cpp
+	header_path . expose

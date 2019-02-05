@@ -181,11 +181,7 @@ namespace TextIO
 	
 	bool loadFileContents(const char * filename,
 		char *& text,
-	#if WINDOWS
-		long & size)
-	#else
-		ssize_t & size)
-	#endif
+		size_t & size)
 	{
 		bool result = false;
 		
@@ -203,16 +199,18 @@ namespace TextIO
 		if (fstat(fileno(file), &buffer) != 0)
 			goto cleanup;
 		
-		size = buffer.st_size;
+		size = (size_t)buffer.st_size;
 	#else
 		if (fseek(file, 0, SEEK_END) != 0)
 			goto cleanup;
 
-		size = ftell(file);
+		ssize_t ssize = ftell(file);
 		
-		if (size < 0)
+		if (ssize < 0)
 			goto cleanup;
 
+		size = (size_t)ssize;
+		
 		if (fseek(file, 0, SEEK_SET) != 0)
 			goto cleanup;
 	#endif
@@ -246,11 +244,7 @@ namespace TextIO
 	{
 		bool result = false;
 		
-	#if WINDOWS
-		long size = 0;
-	#else
-		ssize_t size = 0;
-	#endif
+		size_t size = 0;
 		char * text = nullptr;
 
 		std::string line;
@@ -276,11 +270,7 @@ namespace TextIO
 	{
 		bool result = false;
 		
-	#if WINDOWS
-		long size = 0;
-	#else
-		ssize_t size = 0;
-	#endif
+		size_t size = 0;
 	
 		if (loadFileContents(filename, text, size) == false)
 			goto cleanup;

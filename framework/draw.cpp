@@ -29,6 +29,59 @@
 
 static bool s_isInCubeBatch = false;
 
+void lineCube(Vec3Arg position, Vec3Arg size)
+{
+	const float vertices[8][3] =
+	{
+		{ -1, -1, -1 }, // 0
+		{ +1, -1, -1 }, // 1
+		{ +1, +1, -1 }, // 2
+		{ -1, +1, -1 }, // 3
+		{ -1, -1, +1 }, // 4
+		{ +1, -1, +1 }, // 5
+		{ +1, +1, +1 }, // 6
+		{ -1, +1, +1 }  // 7
+	};
+
+	const int edges[12][2] =
+	{
+		// neg x -> pos x
+		{ 0, 1 },
+		{ 3, 2 },
+		{ 4, 5 },
+		{ 7, 6 },
+		
+		// neg y -> pos y
+		{ 0, 3 },
+		{ 1, 2 },
+		{ 4, 7 },
+		{ 5, 6 },
+		
+		// neg z -> pos z
+		{ 0, 4 },
+		{ 1, 5 },
+		{ 2, 6 },
+		{ 3, 7 },
+	};
+	
+	gxBegin(GX_LINES);
+	{
+		for (int edge_idx = 0; edge_idx < 12; ++edge_idx)
+		{
+			for (int vertex_idx = 0; vertex_idx < 2; ++vertex_idx)
+			{
+				const float * __restrict vertex = vertices[edges[edge_idx][vertex_idx]];
+				
+				gxVertex3f(
+					position[0] + size[0] * vertex[0],
+					position[1] + size[1] * vertex[1],
+					position[2] + size[2] * vertex[2]);
+			}
+		}
+	}
+	gxEnd();
+}
+
 void fillCube(Vec3Arg position, Vec3Arg size)
 {
 	const float vertices[8][3] =
@@ -103,4 +156,88 @@ void endCubeBatch()
 	
 	gxEnd();
 	s_isInCubeBatch = false;
+}
+
+void fillCylinder(Vec3Arg position, const float radius, const float height, const int resolution, const float angleOffset)
+{
+	float dx[resolution];
+	float dz[resolution];
+	
+	float x[resolution];
+	float z[resolution];
+	
+	for (int i = 0; i < resolution; ++i)
+	{
+		const float angle = angleOffset + (i + .5f) / float(resolution) * 2.f * float(M_PI);
+		
+		dx[i] = cosf(angle);
+		dz[i] = sinf(angle);
+		
+		x[i] = position[0] + dx[i] * radius;
+		z[i] = position[2] + dz[i] * radius;
+	}
+	
+	const float y1 = position[1] - height;
+	const float y2 = position[1] + height;
+	
+	gxBegin(GX_QUADS);
+	{
+		for (int i = 0; i < resolution; ++i)
+		{
+			const int vertex1 = i;
+			const int vertex2 = i + 1 < resolution ? i + 1 : 0;
+			
+			// emit quad
+			
+			const float dxMid = dx[vertex1] + dx[vertex2];
+			const float dzMid = dz[vertex1] + dz[vertex2];
+			const float dLength = hypotf(dxMid, dzMid);
+			
+			const float nx = dxMid / dLength;
+			const float nz = dzMid / dLength;
+			
+			gxNormal3f(nx, 0.f, nz);
+			
+			gxVertex3f(x[vertex1], y1, z[vertex1]);
+			gxVertex3f(x[vertex2], y1, z[vertex2]);
+			gxVertex3f(x[vertex2], y2, z[vertex2]);
+			gxVertex3f(x[vertex1], y2, z[vertex1]);
+		}
+	}
+	gxEnd();
+	
+	gxBegin(GX_TRIANGLES);
+	{
+		gxNormal3f(0, -1, 0);
+		
+		for (int i = 0; i < resolution; ++i)
+		{
+			const int vertex1 = 0;
+			const int vertex2 = (i + 0) % resolution;
+			const int vertex3 = (i + 1) % resolution;
+			
+			gxVertex3f(x[vertex1], y1, z[vertex1]);
+			gxVertex3f(x[vertex2], y1, z[vertex2]);
+			gxVertex3f(x[vertex3], y1, z[vertex3]);
+		}
+		
+		gxNormal3f(0, +1, 0);
+		
+		for (int i = 0; i < resolution; ++i)
+		{
+			const int vertex1 = 0;
+			const int vertex2 = (i + 0) % resolution;
+			const int vertex3 = (i + 1) % resolution;
+			
+			gxVertex3f(x[vertex1], y2, z[vertex1]);
+			gxVertex3f(x[vertex2], y2, z[vertex2]);
+			gxVertex3f(x[vertex3], y2, z[vertex3]);
+		}
+	}
+	gxEnd();
+}
+
+void fillHexagon(Vec3Arg position, const float radius, const float height, const float angleOffset)
+{
+	fillCylinder(position, radius, height, 5, angleOffset);
 }

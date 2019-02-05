@@ -234,7 +234,7 @@ int main(int argc, char * argv[])
 				}
 			}
 			
-			// when using ramping when freeing instances, instances are actually still processed after being 'freed'. to ensure they're really freed once ramping is done, tickMain needs to be called regularly. we avoid freeing audio graphs on the audio thread, as the operation could be quite heavy and we don't want our audio to hitch
+			// when using ramping when freeing instances, instances are actually still being processed after being 'freed'. to ensure they're really freed once ramping is done, tickMain needs to be called regularly. we avoid freeing audio graphs on the audio thread, as the operation could be quite heavy and we don't want our audio to hitch
 			audioGraphMgr.tickMain();
 			
 			// draw

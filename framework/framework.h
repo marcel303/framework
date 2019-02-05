@@ -154,6 +154,19 @@ enum DEPTH_TEST
 	DEPTH_ALWAYS
 };
 
+enum CULL_MODE
+{
+	CULL_NONE,
+	CULL_FRONT,
+	CULL_BACK
+};
+
+enum CULL_WINDING
+{
+	CULL_CCW,
+	CULL_CW
+};
+
 enum FONT_MODE // setFontMode
 {
 	FONT_BITMAP,
@@ -1344,6 +1357,9 @@ void popDepthTest();
 void pushDepthWrite(bool enabled);
 void popDepthWrite();
 
+void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
+void popCullMode();
+
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
 void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);
@@ -1383,7 +1399,10 @@ void drawLine3d(int axis = 0);
 void drawRect3d(int axis1 = 0, int axis2 = 1);
 void drawGrid3d(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1);
 void drawGrid3dLine(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1, bool optimized = false);
+void lineCube(Vec3Arg position, Vec3Arg size);
 void fillCube(Vec3Arg position, Vec3Arg size);
+void fillCylinder(Vec3Arg position, const float radius, const float height, const int resolution, const float angleOffset = 0.f);
+void fillHexagon(Vec3Arg position, const float radius, const float height, const float angleOffset = 0.f);
 void beginCubeBatch();
 void endCubeBatch();
 

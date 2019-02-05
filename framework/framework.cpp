@@ -5396,6 +5396,7 @@ static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
 static Stack<bool, 32> lineSmoothStack(false);
 static Stack<bool, 32> wireframeStack(false);
 static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
+static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
 
 static void getCurrentBackingSize(int & sx, int & sy)
 {
@@ -6024,6 +6025,57 @@ void pushDepthWrite(bool enabled)
 void popDepthWrite()
 {
 	popDepthTest();
+}
+
+static void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
+{
+	globals.cullMode = mode;
+	globals.cullWinding = frontFaceWinding;
+	
+	if (mode == CULL_NONE)
+	{
+		glDisable(GL_CULL_FACE);
+		checkErrorGL();
+	}
+	else
+	{
+		const GLenum face =
+			mode == CULL_FRONT
+			? GL_FRONT
+			: GL_BACK;
+		
+		glEnable(GL_CULL_FACE);
+		glCullFace(face);
+		checkErrorGL();
+		
+		const GLenum winding =
+			frontFaceWinding == CULL_CCW
+			? GL_CCW
+			: GL_CW;
+		
+		glFrontFace(winding);
+		checkErrorGL();
+	}
+}
+
+void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
+{
+	const CullModeInfo info =
+	{
+		globals.cullMode,
+		globals.cullWinding
+	};
+	
+	cullModeStack.push(info);
+	
+	setCullMode(mode, frontFaceWinding);
+}
+
+void popCullMode()
+{
+	const CullModeInfo cullMode = cullModeStack.popValue();
+	
+	setCullMode(cullMode.mode, cullMode.winding);
 }
 
 void setColor(const Color & color)
