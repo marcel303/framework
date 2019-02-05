@@ -30,8 +30,6 @@ shader_in vec3 v_normal;
 vec3 ALBEDO;
 
 #define PI 3.1415926535897932384626433832795
-//#define ALBEDO pow(texture(baseColorTexture, v_texcoord0).rgb, vec3(2.2))
-
 
 // Normal Distribution function --------------------------------------
 float D_GGX(float dotNH, float roughness)
@@ -110,7 +108,12 @@ vec3 perturbNormal()
 
 void main()
 {
-    vec4 baseColor = texture(baseColorTexture, v_texcoord0) * material_baseColorFactor;
+    vec4 baseColor = material_baseColorFactor;
+
+    if (material_hasBaseColorTexture != 0.0)
+    {
+        baseColor *= texture(baseColorTexture, v_texcoord0);
+    }
 
     if (material_alphaMask != 0.0)
     {
@@ -120,18 +123,22 @@ void main()
 
     ALBEDO = pow(baseColor.rgb, vec3(2.2));
 
-    vec3 scene_lightDir = normalize(vec3(1.0, 1.0, 1.0));
+    vec3 scene_lightDir = normalize(vec3(-1.0, 1.0, -1.0));
     float scene_gamma = 2.2;
 
-    vec3 N = (material_hasNormalTexture == 1.0f) ? perturbNormal() : normalize(v_normal);
+    vec3 N = (material_hasNormalTexture != 0.0) ? perturbNormal() : normalize(v_normal);
     vec3 V = normalize(scene_camPos - v_position_world);
     vec3 R = -normalize(reflect(V, N));
 
     float metallic = material_metallicFactor;
     float roughness = material_roughnessFactor;
-    if (material_hasMetallicRoughnessTexture == 1.0f) {
-        metallic *= texture(metallicTexture, v_texcoord0).b;
-        roughness *= clamp(texture(metallicTexture, v_texcoord0).g, 0.04, 1.0);
+    
+    if (material_hasMetallicRoughnessTexture != 0.0)
+    {
+        vec4 metallicRoughness = texture(metallicTexture, v_texcoord0);
+
+        metallic *= metallicRoughness.b;
+        roughness *= clamp(metallicRoughness.g, 0.04, 1.0);
     }
 
     vec3 F0 = vec3(0.04); 
@@ -140,24 +147,24 @@ void main()
     vec3 L = normalize(scene_lightDir.xyz);
     vec3 Lo = specularContribution(L, V, N, F0, metallic, roughness);
 
-    vec2 brdf = vec2(0.0);
-    vec3 reflection = vec3(0.5);//prefilteredReflection(R, roughness).rgb;
-    vec3 irradiance = vec3(0.5);
+    vec3 reflection = vec3(0.5);
 
-    // Diffuse based on irradiance
-    vec3 diffuse = irradiance * ALBEDO;
+    // Diffuse
+    vec3 diffuse = ALBEDO;
 
     vec3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
 
     // Specular reflectance
-    vec3 specular = reflection * (F * brdf.x + brdf.y);
+    vec3 specular = reflection * F;
 
     // Ambient part
     vec3 kD = 1.0 - F;
-    kD *= 1.0 - metallic; // fixme
-    float ao = (material_hasOcclusionTexture == 1.0f) ? texture(occlusionTexture, v_texcoord1).r : 1.0f;
+    kD *= 1.0 - metallic;
+    float ao = (material_hasOcclusionTexture != 0.0) ? texture(occlusionTexture, v_texcoord1).r : 1.0;
     vec3 ambient = (kD * diffuse + specular) * ao;
-    vec3 color = ambient + Lo * 10.0; // fixme : don't x10
+
+    // Sum
+    vec3 color = ambient + Lo;
 
     // Gamma correction
     color = pow(color, vec3(1.0f / scene_gamma));
@@ -166,8 +173,6 @@ void main()
         vec3 emissive = texture(emissiveTexture, v_texcoord0).rgb;// * u_EmissiveFactor;
         color += emissive;
     }
-
-    //color.rgb = R.rgb;
 
     shader_fragColor = vec4(color, baseColor.a);
 }
