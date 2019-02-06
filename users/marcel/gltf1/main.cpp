@@ -18,6 +18,10 @@
 	#include <unistd.h>
 #endif
 
+
+#define SHADER_METALLIC_ROUGHNESS 0
+#define SHADER_SPECULAR_GLOSSINESS 1
+
 using json = nlohmann::json;
 
 namespace gltf
@@ -185,10 +189,36 @@ namespace gltf
 			MetallicRoughnessTexture metallicRoughnessTexture;
 		};
 		
+		struct PbrSpecularGlossiness
+		{
+			struct DiffuseTexture
+			{
+				int index = -1;
+				int texCoord = 0;
+			};
+			
+			struct SpecularGlossinessTexture
+			{
+				int index = -1;
+				int texCoord = 0;
+			};
+			
+			Color diffuseFactor = colorWhite;
+			DiffuseTexture diffuseTexture;
+			Vec3 specularFactor = Vec3(1, 1, 1);
+			float glossinessFactor = 1.f;
+			SpecularGlossinessTexture specularGlossinessTexture;
+		};
+		
 		std::string alphaMode = "OPAQUE"; // OPAQUE, MASK (alpha test) or BLEND
 		bool doubleSided = false;
 		
+		// material types
+		
 		PbrMetallicRoughness pbrMetallicRoughness;
+		PbrSpecularGlossiness pbrSpecularGlossiness;
+		
+		// additional maps
 		
 		NormalTexture normalTexture;
 		OcclusionTexture occlusionTexture;
@@ -598,6 +628,45 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 						
 						material.pbrMetallicRoughness.metallicRoughnessTexture.index = metallicRoughnessTexture.value("index", -1);
 						material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord = metallicRoughnessTexture.value("texCoord", 0);
+					}
+				}
+				
+				auto extensions_itr = material_json.find("extensions");
+				
+				if (extensions_itr != material_json.end())
+				{
+					auto & extensions = extensions_itr.value();
+					
+					auto pbrSpecularGlossiness_itr = extensions.find("KHR_materials_pbrSpecularGlossiness");
+					
+					if (pbrSpecularGlossiness_itr != extensions.end())
+					{
+						auto & pbrSpecularGlossiness = pbrSpecularGlossiness_itr.value();
+						
+						material.pbrSpecularGlossiness.diffuseFactor = pbrSpecularGlossiness.value("diffuseFactor", colorWhite);
+						
+						auto diffuseTexture_itr = pbrSpecularGlossiness.find("diffuseTexture");
+					
+						if (diffuseTexture_itr != pbrSpecularGlossiness.end())
+						{
+							auto & diffuseTexture = diffuseTexture_itr.value();
+							
+							material.pbrSpecularGlossiness.diffuseTexture.index = diffuseTexture.value("index", -1);
+							material.pbrSpecularGlossiness.diffuseTexture.texCoord = diffuseTexture.value("texCoord", 0);
+						}
+						
+						material.pbrSpecularGlossiness.specularFactor = pbrSpecularGlossiness.value("specularFactor", Vec3(1, 1, 1));
+						material.pbrSpecularGlossiness.glossinessFactor = pbrSpecularGlossiness.value("glossinessFactor", 1.f);
+						
+						auto specularGlossinessTexture_itr = pbrSpecularGlossiness.find("specularGlossinessTexture");
+					
+						if (specularGlossinessTexture_itr != pbrSpecularGlossiness.end())
+						{
+							auto & specularGlossinessTexture = specularGlossinessTexture_itr.value();
+							
+							material.pbrSpecularGlossiness.specularGlossinessTexture.index = specularGlossinessTexture.value("index", -1);
+							material.pbrSpecularGlossiness.specularGlossinessTexture.texCoord = specularGlossinessTexture.value("texCoord", 0);
+						}
 					}
 				}
 				
@@ -1055,11 +1124,24 @@ int main(int argc, char * argv[])
 						? BLEND_OPAQUE
 						: BLEND_ALPHA;
 					
+				#if SHADER_METALLIC_ROUGHNESS
+					// PBR metallic roughness material
 					const GxTextureId textureId = keyboard.isDown(SDLK_1) ? 0 : tryGetTextureId(material.pbrMetallicRoughness.baseColorTexture.index);
 					const GxTextureId metallicRoughnessTextureId = keyboard.isDown(SDLK_2) ? 0 : tryGetTextureId(material.pbrMetallicRoughness.metallicRoughnessTexture.index);
 					const GxTextureId normalTextureId = keyboard.isDown(SDLK_3) ? 0 : tryGetTextureId(material.normalTexture.index);
 					const GxTextureId occlusionTextureId = keyboard.isDown(SDLK_4) ? 0 : tryGetTextureId(material.occlusionTexture.index);
-					
+					const GxTextureId emissiveTextureId = keyboard.isDown(SDLK_5) ? 0 : tryGetTextureId(material.emissiveTexture.index);
+				#endif
+				
+				#if SHADER_SPECULAR_GLOSSINESS
+					// PBR specular glossiness material
+					const GxTextureId diffuseTextureId = keyboard.isDown(SDLK_1) ? 0 : tryGetTextureId(material.pbrSpecularGlossiness.diffuseTexture.index);
+					const GxTextureId specularGlossinessTextureId = keyboard.isDown(SDLK_2) ? 0 : tryGetTextureId(material.pbrSpecularGlossiness.specularGlossinessTexture.index);
+					const GxTextureId normalTextureId = keyboard.isDown(SDLK_3) ? 0 : tryGetTextureId(material.normalTexture.index);
+					const GxTextureId occlusionTextureId = keyboard.isDown(SDLK_4) ? 0 : tryGetTextureId(material.occlusionTexture.index);
+					const GxTextureId emissiveTextureId = keyboard.isDown(SDLK_5) ? 0 : tryGetTextureId(material.emissiveTexture.index);
+				#endif
+				
 					Color color = colorWhite;
 					
 					if (!keyboard.isDown(SDLK_u))
@@ -1088,7 +1170,53 @@ int main(int argc, char * argv[])
 							shader.setImmediate("color", color.r, color.g, color.b, color.a);
 							shader.setImmediate("params", textureId != 0, 0.f, 0.f, 0.f);
 							shader.setImmediate("time", framework.time);
-						#else
+						#endif
+						
+						#if SHADER_SPECULAR_GLOSSINESS
+							Shader shader("shader-pbr-specularGlossiness");
+							
+							shader.setImmediate("scene_camPos",
+								camera.position[0],
+								camera.position[1],
+								camera.position[2]);
+							
+							shader.setImmediate("scene_lightDir",
+								.5f,
+								1.f,
+								.5f);
+							
+							shader.setTexture("diffuseTexture", 0, diffuseTextureId);
+							shader.setTexture("normalTexture", 1, normalTextureId);
+							shader.setTexture("occlusionTexture", 2, occlusionTextureId);
+							shader.setTexture("specularGlossinessTexture", 3, specularGlossinessTextureId);
+							//shader.setTexture("emissiveTexture");
+
+							shader.setImmediate("material_diffuseFactor",
+								material.pbrSpecularGlossiness.diffuseFactor.r,
+								material.pbrSpecularGlossiness.diffuseFactor.g,
+								material.pbrSpecularGlossiness.diffuseFactor.b,
+								material.pbrSpecularGlossiness.diffuseFactor.a);
+							shader.setImmediate("material_hasDiffuseTexture", diffuseTextureId != 0);
+							shader.setImmediate("material_hasSpecularGlossinessTexture", specularGlossinessTextureId != 0);
+							shader.setImmediate("material_glossinessFactor",
+								material.pbrSpecularGlossiness.glossinessFactor);
+							shader.setImmediate("material_specularFactor",
+								material.pbrSpecularGlossiness.specularFactor[0],
+								material.pbrSpecularGlossiness.specularFactor[1],
+								material.pbrSpecularGlossiness.specularFactor[2]);
+							
+							shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
+							shader.setImmediate("material_hasOcclusionTexture", occlusionTextureId != 0);
+							shader.setImmediate("material_hasEmissiveTexture", false);
+							shader.setImmediate("material_emissiveFactor",
+								material.emissiveFactor[0],
+								material.emissiveFactor[1],
+								material.emissiveFactor[2]);
+							shader.setImmediate("material_alphaMask", false);
+							shader.setImmediate("material_alphaMaskCutoff", 0.f);
+						#endif
+						
+						#if SHADER_METALLIC_ROUGHNESS
 							Shader shader("shader-pbr");
 							
 							shader.setImmediate("scene_camPos",
@@ -1104,7 +1232,7 @@ int main(int argc, char * argv[])
 							shader.setTexture("baseColorTexture", 0, textureId);
 							shader.setTexture("normalTexture", 1, normalTextureId);
 							shader.setTexture("occlusionTexture", 2, occlusionTextureId);
-							shader.setTexture("metallicTexture", 3, metallicRoughnessTextureId);
+							shader.setTexture("metallicRoughnessTexture", 3, metallicRoughnessTextureId);
 							//shader.setTexture("emissiveTexture");
 
 							shader.setImmediate("material_baseColorFactor",
@@ -1121,6 +1249,10 @@ int main(int argc, char * argv[])
 								material.pbrMetallicRoughness.metallicFactor);
 							shader.setImmediate("material_roughnessFactor",
 								material.pbrMetallicRoughness.roughnessFactor);
+							shader.setImmediate("material_emissiveFactor",
+								material.emissiveFactor[0],
+								material.emissiveFactor[1],
+								material.emissiveFactor[2]);
 							shader.setImmediate("material_alphaMask", false);
 							shader.setImmediate("material_alphaMaskCutoff", 0.f);
 						#endif
@@ -1140,7 +1272,7 @@ int main(int argc, char * argv[])
 					}
 				#endif
 				
-					gxSetTexture(textureId);
+					gxSetTexture(diffuseTextureId);
 					
 					setColor(color);
 					
