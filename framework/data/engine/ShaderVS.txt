@@ -7,7 +7,8 @@ include engine/ShaderCommon.txt
 shader_attrib vec4 in_position4;
 shader_attrib vec3 in_normal;
 shader_attrib vec4 in_color;
-shader_attrib vec2 in_texcoord;
+shader_attrib vec2 in_texcoord0;
+shader_attrib vec2 in_texcoord1;
 shader_attrib vec4 in_skinningBlendIndices;
 shader_attrib vec4 in_skinningBlendWeights;
 
@@ -90,7 +91,8 @@ vec4 unpackColor()
 
 vec2 unpackTexcoord(int index)
 {
-	if (index == 0) return in_texcoord;
+	if (index == 0) return in_texcoord0;
+	if (index == 1) return in_texcoord1;
 	return vec2(0.0, 0.0);
 }
 

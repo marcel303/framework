@@ -55,6 +55,8 @@ public:
 #define VS_POSITION      0
 #define VS_NORMAL        1
 #define VS_COLOR         2
-#define VS_TEXCOORD      3
-#define VS_BLEND_INDICES 4
-#define VS_BLEND_WEIGHTS 5
+#define VS_TEXCOORD0     3
+#define VS_TEXCOORD      VS_TEXCOORD0
+#define VS_TEXCOORD1     4
+#define VS_BLEND_INDICES 5
+#define VS_BLEND_WEIGHTS 6

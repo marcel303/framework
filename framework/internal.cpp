@@ -952,7 +952,8 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 		glBindAttribLocation(program, VS_POSITION,      "in_position4");
 		glBindAttribLocation(program, VS_NORMAL,        "in_normal");
 		glBindAttribLocation(program, VS_COLOR,         "in_color");
-		glBindAttribLocation(program, VS_TEXCOORD,      "in_texcoord");
+		glBindAttribLocation(program, VS_TEXCOORD0,     "in_texcoord0");
+		glBindAttribLocation(program, VS_TEXCOORD1,     "in_texcoord1");
 		glBindAttribLocation(program, VS_BLEND_INDICES, "in_skinningBlendIndices");
 		glBindAttribLocation(program, VS_BLEND_WEIGHTS, "in_skinningBlendWeights");
 		checkErrorGL();
