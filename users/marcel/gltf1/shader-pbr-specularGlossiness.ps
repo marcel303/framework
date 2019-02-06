@@ -5,17 +5,17 @@ include engine/ShaderUtil.txt
 
 // material maps
 
-uniform vec4 material_baseColorFactor;
-uniform sampler2D baseColorTexture;
+uniform vec4 material_diffuseFactor;
+uniform sampler2D diffuseTexture;
 
-uniform float material_metallicFactor;
-uniform float material_roughnessFactor;
-uniform sampler2D metallicRoughnessTexture;
+uniform vec3 material_specularFactor;
+uniform float material_glossinessFactor;
+uniform sampler2D specularGlossinessTexture;
 
-uniform float material_hasBaseColorTexture;
-uniform float material_hasMetallicRoughnessTexture;
+uniform float material_hasDiffuseTexture;
+uniform float material_hasSpecularGlossinessTexture;
 
-// additional maps
+// extra maps
 
 uniform sampler2D normalTexture;
 
@@ -78,16 +78,13 @@ vec3 F_SchlickR(float cosTheta, vec3 F0, float roughness)
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
-vec3 specularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float roughness)
+vec3 specularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, vec3 metallic, float roughness)
 {
     // Precalculate vectors and dot products    
     vec3 H = normalize (V + L);
     float NdotH = clamp(dot(N, H), 0.0, 1.0);
     float NdotV = clamp(dot(N, V), 0.0, 1.0);
     float NdotL = clamp(dot(N, L), 0.0, 1.0);
-
-    // Light color fixed
-    vec3 lightColor = vec3(1.0);
 
     vec3 color = vec3(0.0);
 
@@ -99,7 +96,7 @@ vec3 specularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float
         // F = Fresnel factor (Reflectance depending on angle of incidence)
         vec3 F = F_Schlick(NdotV, F0);      
         vec3 spec = D * F * G / (4.0 * NdotL * NdotV + 0.001);      
-        vec3 kD = (vec3(1.0) - F) * (1.0 - metallic);           
+        vec3 kD = (vec3(1.0) - F) * (vec3(1.0) - metallic);           
         color += (kD * ALBEDO / PI + spec) * NdotL;
     }
 
@@ -126,13 +123,13 @@ vec3 perturbNormal()
 
 void main()
 {
-    // -- unpack base color and alpha
+    // -- unpack diffuse color and alpha
 
-    vec4 baseColor = material_baseColorFactor;
+    vec4 baseColor = material_diffuseFactor;
 
-    if (material_hasBaseColorTexture != 0.0)
+    if (material_hasDiffuseTexture != 0.0)
     {
-        vec4 colorAndAlpha = texture(baseColorTexture, v_texcoord0);
+        vec4 colorAndAlpha = texture(diffuseTexture, v_texcoord0);
 
         colorAndAlpha.rgb = pow(colorAndAlpha.rgb, vec3(2.2));
 
@@ -157,18 +154,19 @@ void main()
 
     // -- unpack metallic and roughness
 
-    float metallic = material_metallicFactor;
-    float roughness = material_roughnessFactor;
+    vec3 reflection = material_specularFactor;
+    float glossiness = material_glossinessFactor;
     
-    if (material_hasMetallicRoughnessTexture != 0.0)
+    if (material_hasSpecularGlossinessTexture != 0.0)
     {
-        vec4 metallicRoughness = texture(metallicRoughnessTexture, v_texcoord0);
+        vec4 specularGlossiness = texture(specularGlossinessTexture, v_texcoord0);
 
-        metallic *= metallicRoughness.b;
-        roughness *= metallicRoughness.g;
+        reflection *= specularGlossiness.rgb;
+        glossiness *= specularGlossiness.a;
     }
 
-    roughness = clamp(roughness, kMinRoughness, 1.0);
+    vec3 metallic = reflection;
+    float roughness = clamp(1.0 - glossiness, kMinRoughness, 1.0);
 
     // -- specular
 
@@ -183,16 +181,14 @@ void main()
 
     vec3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
 
-    vec3 kD = 1.0 - F;
-    kD *= 1.0 - metallic;
+    vec3 kD = vec3(1.0) - F;
+    kD *= vec3(1.0) - metallic;
     
     vec3 ambient = kD * diffuse;
 
     // -- specular reflectance
 
-    vec3 reflection = vec3(0.2);
-
-    vec3 specular = reflection * F;
+    vec3 specular = metallic * F;
 
     ambient += specular;
 
@@ -221,6 +217,9 @@ void main()
     color += material_emissiveFactor;
 
     // -- store
+
+    //color.rgb = baseColor.rgb;
+//    color.rgb = vec3(0.0);
 
 //    color.rgb = R;
 //    color.r = metallic;
