@@ -45,6 +45,8 @@ if [ "$os" == "mac" ]; then
 	mkdir -p chibi-build/xcode
 	cd chibi-build/xcode && cmake -G "Xcode" ../cmake-files
 	cd "$root"
+
+	open -a Finder chibi-build/xcode
 fi
 
 if [ "$os" == "linux" ]; then
