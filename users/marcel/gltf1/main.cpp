@@ -19,8 +19,8 @@
 #endif
 
 
-#define SHADER_METALLIC_ROUGHNESS 0
-#define SHADER_SPECULAR_GLOSSINESS 1
+#define SHADER_METALLIC_ROUGHNESS 1
+#define SHADER_SPECULAR_GLOSSINESS 0
 
 using json = nlohmann::json;
 
@@ -841,8 +841,8 @@ int main(int argc, char * argv[])
 	//const char * path = "van_gogh_room/scene.gltf";
 	//const char * path = "littlest_tokyo/scene.gltf";
 	//const char * path = "ftm/scene.gltf";
-	const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
-	//const char * path = "halloween_little_witch/scene.gltf";
+	//const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
+	const char * path = "halloween_little_witch/scene.gltf";
 
 	gltf::Scene scene;
 	
@@ -1076,8 +1076,8 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			camera.pushViewMatrix();
 			
-			//gxScalef(-.01f, .01f, .01f);
-			gxScalef(-1, 1, 1);
+			gxScalef(-.01f, .01f, .01f);
+			//gxScalef(-1, 1, 1);
 			//gxScalef(-100.f, 100.f, 100.f);
 			
 			auto tryGetTextureId = [&](const int textureIndex) -> GxTextureId
@@ -1206,6 +1206,7 @@ int main(int argc, char * argv[])
 								material.pbrSpecularGlossiness.specularFactor[2]);
 							
 							shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
+							shader.setImmediate("material_occlusionStrength", material.occlusionTexture.strength);
 							shader.setImmediate("material_hasOcclusionTexture", occlusionTextureId != 0);
 							shader.setImmediate("material_hasEmissiveTexture", false);
 							shader.setImmediate("material_emissiveFactor",
@@ -1243,6 +1244,7 @@ int main(int argc, char * argv[])
 							shader.setImmediate("material_hasBaseColorTexture", textureId != 0);
 							shader.setImmediate("material_hasMetallicRoughnessTexture", metallicRoughnessTextureId != 0);
 							shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
+							shader.setImmediate("material_occlusionStrength", material.occlusionTexture.strength);
 							shader.setImmediate("material_hasOcclusionTexture", occlusionTextureId != 0);
 							shader.setImmediate("material_hasEmissiveTexture", false);
 							shader.setImmediate("material_metallicFactor",
@@ -1272,7 +1274,12 @@ int main(int argc, char * argv[])
 					}
 				#endif
 				
+				#if SHADER_METALLIC_ROUGHNESS
+					gxSetTexture(textureId);
+				#endif
+				#if SHADER_SPECULAR_GLOSSINESS
 					gxSetTexture(diffuseTextureId);
+				#endif
 					
 					setColor(color);
 					

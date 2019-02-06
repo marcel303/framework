@@ -25,6 +25,7 @@ uniform vec3 material_emissiveFactor;
 uniform sampler2D emissiveTexture;
 
 uniform float material_hasNormalTexture;
+uniform float material_occlusionStrength;
 uniform float material_hasOcclusionTexture;
 uniform float material_hasEmissiveTexture;
 
@@ -186,17 +187,28 @@ void main()
     
     vec3 ambient = kD * diffuse;
 
+    // -- ambient occlusion
+
+    float ao;
+
+    if (material_hasOcclusionTexture != 0.0)
+    {
+        float value = texture(occlusionTexture, v_texcoord1).r;
+
+        ao = mix(1.0, value, material_occlusionStrength);
+    }
+    else
+    {
+        ao = 1.0;
+    }
+
+    ambient *= ao;
+
     // -- specular reflectance
 
     vec3 specular = metallic * F;
 
     ambient += specular;
-
-    // -- ambient occlusion
-
-    float ao = (material_hasOcclusionTexture != 0.0) ? texture(occlusionTexture, v_texcoord1).r : 1.0;
-
-    ambient *= ao;
 
     // -- add all terms
 
