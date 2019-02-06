@@ -211,6 +211,7 @@ namespace gltf
 		};
 		
 		std::string alphaMode = "OPAQUE"; // OPAQUE, MASK (alpha test) or BLEND
+		float alphaCutoff = .5f;
 		bool doubleSided = false;
 		
 		// material types
@@ -594,7 +595,7 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				gltf::Material material;
 				
 				material.alphaMode = material_json.value("alphaMode", "OPAQUE");
-				// todo : alphaCutoff
+				material.alphaCutoff = material_json.value("alphaCutoff", .5f);
 				material.doubleSided = material_json.value("doubleSided", false);
 				
 				auto pbrMetallicRoughness_itr = material_json.find("pbrMetallicRoughness");
@@ -1255,8 +1256,8 @@ int main(int argc, char * argv[])
 								material.emissiveFactor[0],
 								material.emissiveFactor[1],
 								material.emissiveFactor[2]);
-							shader.setImmediate("material_alphaMask", false);
-							shader.setImmediate("material_alphaMaskCutoff", 0.f);
+							shader.setImmediate("material_alphaMask", material.alphaMode == "MASK");
+							shader.setImmediate("material_alphaMaskCutoff", material.alphaCutoff);
 						#endif
 					
 							setShader(shader);
