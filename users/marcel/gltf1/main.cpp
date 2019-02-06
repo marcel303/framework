@@ -154,7 +154,7 @@ namespace gltf
 		struct EmissiveTexture
 		{
 			int index = -1;
-			int texCoord = -1;
+			int texCoord = 0;
 			
 			bool isValid() const
 			{
@@ -178,15 +178,15 @@ namespace gltf
 				int texCoord = 0;
 			};
 			
-			Color baseColorFactor;
+			Color baseColorFactor = colorWhite;
 			BaseColorTexture baseColorTexture;
 			float metallicFactor = 1.f;
 			float roughnessFactor = 1.f;
 			MetallicRoughnessTexture metallicRoughnessTexture;
 		};
 		
-		std::string alphaMode; // OPAQUE, MASK (alpha test) or BLEND
-		bool doubleSided = true;
+		std::string alphaMode = "OPAQUE"; // OPAQUE, MASK (alpha test) or BLEND
+		bool doubleSided = false;
 		
 		PbrMetallicRoughness pbrMetallicRoughness;
 		
@@ -565,7 +565,7 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				
 				material.alphaMode = material_json.value("alphaMode", "OPAQUE");
 				// todo : alphaCutoff
-				material.doubleSided = material_json.value("doubleSided", true);
+				material.doubleSided = material_json.value("doubleSided", false);
 				
 				auto pbrMetallicRoughness_itr = material_json.find("pbrMetallicRoughness");
 				
@@ -770,9 +770,9 @@ int main(int argc, char * argv[])
 		return -1;
 
 	//const char * path = "van_gogh_room/scene.gltf";
-	const char * path = "littlest_tokyo/scene.gltf";
+	//const char * path = "littlest_tokyo/scene.gltf";
 	//const char * path = "ftm/scene.gltf";
-	//const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
+	const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
 	//const char * path = "halloween_little_witch/scene.gltf";
 
 	gltf::Scene scene;
@@ -1007,9 +1007,9 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			camera.pushViewMatrix();
 			
-			gxScalef(-.01f, .01f, .01f);
-			//gxScalef(-1, 1, 1);
-			//gxScalef(100.f, 100.f, 100.f);
+			//gxScalef(-.01f, .01f, .01f);
+			gxScalef(-1, 1, 1);
+			//gxScalef(-100.f, 100.f, 100.f);
 			
 			auto tryGetTextureId = [&](const int textureIndex) -> GxTextureId
 			{
@@ -1050,7 +1050,10 @@ int main(int argc, char * argv[])
 					
 					//Assert(material.alphaMode != "MASK"); // todo : implement !
 					
-					const BLEND_MODE blendMode = material.alphaMode == "OPAQUE" ? BLEND_OPAQUE : BLEND_ALPHA;
+					const BLEND_MODE blendMode =
+						material.alphaMode == "OPAQUE" || material.alphaMode == "MASK"
+						? BLEND_OPAQUE
+						: BLEND_ALPHA;
 					
 					const GxTextureId textureId = keyboard.isDown(SDLK_1) ? 0 : tryGetTextureId(material.pbrMetallicRoughness.baseColorTexture.index);
 					const GxTextureId metallicRoughnessTextureId = keyboard.isDown(SDLK_2) ? 0 : tryGetTextureId(material.pbrMetallicRoughness.metallicRoughnessTexture.index);
@@ -1525,7 +1528,7 @@ int main(int argc, char * argv[])
 			{
 				const bool isOpaquePass = (i == 0);
 				
-				pushDepthWrite(isOpaquePass ? true : false);
+				pushDepthWrite(keyboard.isDown(SDLK_z) ? true : isOpaquePass ? true : false);
 				{
 					if (scene.activeScene < 0 || scene.activeScene >= scene.sceneRoots.size())
 					{
