@@ -43,10 +43,29 @@ namespace gltf
 	const int kElementType_U32 = 0x1405;
 	const int kElementType_Float32 = 5126;
 	
+	struct Asset
+	{
+		struct Extras
+		{
+			std::string author;
+			std::string license;
+			std::string source;
+			std::string title;
+		};
+		
+		std::string copyright;
+		std::string generator;
+		std::string version;
+		std::string minVersion;
+		
+		Extras extras;
+	};
+	
 	struct Buffer
 	{
 		std::string uri;
 		int byteLength = -1;
+		std::string name;
 		std::vector<uint8_t> data;
 		
 		bool isValid() const
@@ -60,17 +79,19 @@ namespace gltf
 	struct BufferView
 	{
 		int buffer = -1;
-		int byteLength = -1;
 		int byteOffset = -1;
+		int byteLength = -1;
+		int byteStride = 0;
+		int target = -1; // 34962 = ARRAY_BUFFER, 34963 = ELEMENT_ARRAY_BUFFER
 		std::string name;
-		int target = -1;
 		
 		bool isValid() const
 		{
 			return
 				buffer >= 0 &&
+				byteOffset >= 0 &&
 				byteLength >= 0 &&
-				byteOffset >= 0/* &&
+				byteStride >= 0/* &&
 				target >= 0*/;
 		}
 	};
@@ -100,6 +121,7 @@ namespace gltf
 	struct Image
 	{
 		std::string uri;
+		std::string name;
 		
 		std::string path;
 		
@@ -210,6 +232,7 @@ namespace gltf
 			SpecularGlossinessTexture specularGlossinessTexture;
 		};
 		
+		std::string name;
 		std::string alphaMode = "OPAQUE"; // OPAQUE, MASK (alpha test) or BLEND
 		float alphaCutoff = .5f;
 		bool doubleSided = false;
@@ -283,6 +306,8 @@ namespace gltf
 	
 	struct Scene
 	{
+		Asset asset;
+		
 		std::vector<Buffer> buffers;
 		std::vector<BufferView> bufferViews;
 		std::vector<Accessor> accessors;
@@ -391,6 +416,29 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				scene.accessors.push_back(accessor);
 			}
 		}
+		else if (member_name == "asset")
+		{
+			auto & asset_json = member;
+			
+			auto & asset = scene.asset;
+			
+			asset.copyright = asset_json.value("copyright", "");
+			asset.generator = asset_json.value("generator", "");
+			asset.version = asset_json.value("version", "");
+			asset.minVersion = asset_json.value("minVersion", "");
+			
+			auto extras_json_itr = asset_json.find("extras");
+			
+			if (extras_json_itr != asset_json.end())
+			{
+				auto & extras_json = extras_json_itr.value();
+				
+				asset.extras.author = extras_json.value("author", "");
+				asset.extras.license = extras_json.value("license", "");
+				asset.extras.source = extras_json.value("source", "");
+				asset.extras.title = extras_json.value("title", "");
+			}
+		}
 		else if (member_name == "buffers")
 		{
 			auto & buffers = member;
@@ -399,8 +447,9 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 			{
 				gltf::Buffer buffer;
 				
-				buffer.byteLength = buffer_json.value("byteLength", 0);
 				buffer.uri = buffer_json.value("uri", "");
+				buffer.byteLength = buffer_json.value("byteLength", 0);
+				buffer.name = buffer_json.value("name", "");
 				
 				if (!buffer.isValid())
 				{
@@ -440,10 +489,11 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				gltf::BufferView bufferView;
 				
 				bufferView.buffer = json_bufferView.value("buffer", -1);
-				bufferView.byteLength = json_bufferView.value("byteLength", -1);
 				bufferView.byteOffset = json_bufferView.value("byteOffset", -1);
-				bufferView.name = json_bufferView.value("name", "");
+				bufferView.byteLength = json_bufferView.value("byteLength", -1);
+				bufferView.byteStride = json_bufferView.value("byteStride", 0);
 				bufferView.target = json_bufferView.value("target", -1);
+				bufferView.name = json_bufferView.value("name", "");
 				
 				if (!bufferView.isValid())
 				{
@@ -512,6 +562,7 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				gltf::Image image;
 				
 				image.uri = image_json.value("uri", "");
+				image.name = image_json.value("name", "");
 				
 				image.path = dir + "/" + image.uri;
 				
@@ -594,6 +645,7 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 			{
 				gltf::Material material;
 				
+				material.name = material_json.value("name", "");
 				material.alphaMode = material_json.value("alphaMode", "OPAQUE");
 				material.alphaCutoff = material_json.value("alphaCutoff", .5f);
 				material.doubleSided = material_json.value("doubleSided", false);
@@ -681,6 +733,10 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 					
 					material.normalTexture.index = normalTexture.value("index", -1);
 					material.normalTexture.texCoord = normalTexture.value("texCoord", 0);
+					material.normalTexture.scale = normalTexture.value("scale", 1.f);
+					
+					if (material.normalTexture.scale != 1.f)
+						logWarning("normalTexture.scale isn't 1.0. rendering won't be as expected");
 				}
 				
 				// occlusionTexture
@@ -841,9 +897,9 @@ int main(int argc, char * argv[])
 
 	//const char * path = "van_gogh_room/scene.gltf";
 	//const char * path = "littlest_tokyo/scene.gltf";
-	//const char * path = "ftm/scene.gltf";
+	const char * path = "ftm/scene.gltf";
 	//const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
-	const char * path = "halloween_little_witch/scene.gltf";
+	//const char * path = "halloween_little_witch/scene.gltf";
 
 	gltf::Scene scene;
 	
@@ -1027,7 +1083,7 @@ int main(int argc, char * argv[])
 				v.type = type;
 				v.normalize = accessor->normalized;
 				v.offset = bufferView->byteOffset + accessor->byteOffset;
-				v.stride = 0;
+				v.stride = bufferView->byteStride;
 				
 				vertexInputs.push_back(v);
 			}
