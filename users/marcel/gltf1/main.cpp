@@ -1117,13 +1117,18 @@ int main(int argc, char * argv[])
 	
 	camera.position = Vec3(0, 0, -2);
 	
+	bool centimeters = true;
+	
 	for (;;)
 	{
 		framework.process();
 
 		if (framework.quitRequested)
 			break;
-
+		
+		if (keyboard.wentDown(SDLK_t))
+			centimeters = !centimeters;
+		
 		camera.tick(framework.timeStep, true);
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -1133,9 +1138,10 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			camera.pushViewMatrix();
 			
-			gxScalef(-.01f, .01f, .01f);
-			//gxScalef(-1, 1, 1);
-			//gxScalef(-100.f, 100.f, 100.f);
+			if (centimeters)
+				gxScalef(-.01f, .01f, .01f);
+			else
+				gxScalef(-1, 1, 1);
 			
 			auto tryGetTextureId = [&](const int textureIndex) -> GxTextureId
 			{
