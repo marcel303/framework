@@ -1774,6 +1774,21 @@ int main(int argc, char * argv[])
 			camera.popViewMatrix();
 			popBlend();
 			popDepthTest();
+			
+			projectScreen2d();
+			
+			setColor(0, 0, 0, 127);
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			hqFillRoundedRect(4, 4, VIEW_SX - 4, 90, 10.f);
+			hqEnd();
+			
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			setLumi(170);
+			
+			drawText(10, 30, 16, +1, -1, "(Extra) Author: %s", scene.asset.extras.author.c_str());
+			drawText(10, 50, 16, +1, -1, "(Extra) License: %s", scene.asset.extras.license.c_str());
+			drawText(10, 70, 16, +1, -1, "(Extra) Title: %s", scene.asset.extras.title.c_str());
 		}
 		framework.endDraw();
 		
@@ -1799,6 +1814,8 @@ int main(int argc, char * argv[])
 		t1 = SDL_GetTicks();
 	#endif
 	}
+	
+	Font("calibri.ttf").saveCache();
 	
 	framework.shutdown();
 
