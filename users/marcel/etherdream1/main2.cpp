@@ -294,6 +294,75 @@ struct GraviticSource
 	}
 };
 
+struct NoiseSweepModifier
+{
+	bool isActive = false;
+	float time = 0.f;
+	
+	float x1 = 0.f;
+	float x2 = 0.f;
+	
+	float strength = 1.f;
+	float duration = 1.f;
+	
+	float previousTime = 0.f;
+	
+	void begin(const float in_x1, const float in_x2)
+	{
+		isActive = true;
+		time = 0.f;
+		previousTime = 0.f;
+		
+		x1 = in_x1;
+		x2 = in_x2;
+	}
+	
+	void tick(const float dt)
+	{
+		if (time >= duration)
+			isActive = false;
+		
+		previousTime = time;
+		
+		time += dt;
+	}
+	
+	static float isInside(const float x, const float in_x1, const float in_x2)
+	{
+		const float x1 = fminf(in_x1, in_x2);
+		const float x2 = fmaxf(in_x1, in_x2);
+		
+		return x >= x1 && x <= x2;
+	}
+	
+	static float distanceBetween(const float x1, const float x2)
+	{
+		return fabsf(x2 - x1);
+	}
+	
+	float calculateForce(const float in_x) const
+	{
+		if (isActive == false)
+			return 0.f;
+		else
+		{
+			const float tPrev = saturate(previousTime / duration);
+			const float tCurr = saturate(time / duration);
+			
+			const float xPrev = x1 * (1.f - tPrev) + x2 * tPrev;
+			const float xCurr = x1 * (1.f - tCurr) + x2 * tCurr;
+			
+			const float dx = isInside(in_x, xPrev, xCurr)
+				? 0.f
+				: fminf(distanceBetween(in_x, xPrev), distanceBetween(in_x, xCurr));
+			
+			const float falloff = 1.f / fmaxf(dx * dx, .01f);
+			
+			return random<float>(-1.f, +1.f) * falloff * strength / sqrtf(duration);
+		}
+	}
+};
+
 struct LaserFrame
 {
 	LaserPoint points[kFrameSize];
@@ -657,6 +726,8 @@ int main(int argc, char * argv[])
 	gravitic.force = 1.f;
 	gravitic.minimumDistance = .04f;
 	
+	NoiseSweepModifier noiseSweep;
+	
 	PurpleRain rain;
 	
 	bool pauseSimulation = false;
@@ -685,17 +756,17 @@ int main(int argc, char * argv[])
 	float scaleFactor = .8f;
 	float rotationAngle = 0.f;
 	
-	enum CalibrationImage
+	enum CalibrationPattern
 	{
-		kCalibrationImage_None,
-		kCalibrationImage_Rectangle,
-		kCalibrationImage_RectanglePoints,
-		kCalibrationImage_VScroll,
-		kCalibrationImage_HScroll,
-		kCalibrationImage_COUNT
+		kCalibrationPattern_None,
+		kCalibrationPattern_Rectangle,
+		kCalibrationPattern_RectanglePoints,
+		kCalibrationPattern_VScroll,
+		kCalibrationPattern_HScroll,
+		kCalibrationPattern_COUNT
 	};
 	
-	CalibrationImage calibrationImage = kCalibrationImage_None;
+	CalibrationPattern calibrationPattern = kCalibrationPattern_None;
 	
 	enum Tab
 	{
@@ -809,6 +880,11 @@ int main(int argc, char * argv[])
 					ImGui::SliderFloat("Gravitic force", &gravitic.force, 0.f, 10.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Gravitic minimum distance", &gravitic.minimumDistance, 0.f, 1.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Gravitic z position", &gravitic.z, -1.f, +1.f, "%.4f", 2.f);
+					
+					if (ImGui::Button("Start noise sweep"))
+						noiseSweep.begin(-1.f, +5.f);
+					ImGui::SliderFloat("Noise sweep strength", &noiseSweep.strength, 0.f, 100.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Noise sweep duration", &noiseSweep.duration, 0.f, 100.f, "%.4f", 2.f);
 				}
 				else if (tab == kTab_Calibration)
 				{
@@ -829,8 +905,8 @@ int main(int argc, char * argv[])
 					if (selectedLaserInstanceIndex != -1)
 					{
 						{
-							int itemIndex = calibrationImage;
-							const char * items[kCalibrationImage_COUNT] =
+							int itemIndex = calibrationPattern;
+							const char * items[kCalibrationPattern_COUNT] =
 							{
 								"None",
 								"Rectangle",
@@ -838,8 +914,8 @@ int main(int argc, char * argv[])
 								"V-Scroll",
 								"H-Scroll"
 							};
-							ImGui::Combo("Calibration image", &itemIndex, items, kCalibrationImage_COUNT);
-							calibrationImage = (CalibrationImage)itemIndex;
+							ImGui::Combo("Calibration pattern", &itemIndex, items, kCalibrationPattern_COUNT);
+							calibrationPattern = (CalibrationPattern)itemIndex;
 						}
 					
 						auto & laserInstance = laserInstances[selectedLaserInstanceIndex];
@@ -890,7 +966,7 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		const float dt = pauseSimulation ? 0.f : keyboard.isDown(SDLK_SPACE) ? 0.f : framework.timeStep;
+		const float dt = pauseSimulation ? 0.f : keyboard.isDown(SDLK_SPACE) ? 0.f : fminf(1.f / 30.f, framework.timeStep);
 		
 		dropTimer += dt;
 		
@@ -947,6 +1023,8 @@ int main(int argc, char * argv[])
 		gravitic.x = mouse.x / 200.f;
 		gravitic.y = (mouse.y - 200.f) / 200.f;
 		
+		logDebug("gravitic location: %.2f, %.2f", gravitic.x, gravitic.y);
+		
 		// apply gravitic source
 		
 		for (auto & string : strings)
@@ -962,6 +1040,29 @@ int main(int argc, char * argv[])
 				string.forces[i] += force[1];
 			}
 		}
+		
+		// apply noise sweep
+		
+		const int numSteps = 1;
+		
+		for (int i = 0; i < numSteps; ++i)
+		{
+			noiseSweep.tick(dt / numSteps);
+			
+			for (auto & string : strings)
+			{
+				for (int i = 0; i < string.getNumPoints(); ++i)
+				{
+					const float x = string.getXForPointIndex(i);
+				
+					const float force = noiseSweep.calculateForce(x);
+					
+					string.forces[i] += force / numSteps;
+				}
+			}
+		}
+		
+		// simulate
 		
 		for (auto & string : strings)
 		{
@@ -1184,16 +1285,16 @@ int main(int argc, char * argv[])
 	
 			//
 			
-			if (calibrationImage == kCalibrationImage_Rectangle)
-				drawCalibrationImage_rectangle(frame.points, kFrameSize);
-			else if (calibrationImage == kCalibrationImage_RectanglePoints)
-				drawCalibrationImage_rectanglePoints(frame.points, kFrameSize);
-			else if (calibrationImage == kCalibrationImage_VScroll)
-				drawCalibrationImage_line_vscroll(frame.points, kFrameSize, framework.time * .3f);
-			else if (calibrationImage == kCalibrationImage_HScroll)
-				drawCalibrationImage_line_hscroll(frame.points, kFrameSize, framework.time * .4f);
+			if (calibrationPattern == kCalibrationPattern_Rectangle)
+				drawCalibrationPattern_rectangle(frame.points, kFrameSize);
+			else if (calibrationPattern == kCalibrationPattern_RectanglePoints)
+				drawCalibrationPattern_rectanglePoints(frame.points, kFrameSize);
+			else if (calibrationPattern == kCalibrationPattern_VScroll)
+				drawCalibrationPattern_line_vscroll(frame.points, kFrameSize, framework.time * .3f);
+			else if (calibrationPattern == kCalibrationPattern_HScroll)
+				drawCalibrationPattern_line_hscroll(frame.points, kFrameSize, framework.time * .4f);
 			else
-				Assert(calibrationImage == kCalibrationImage_None);
+				Assert(calibrationPattern == kCalibrationPattern_None);
 			
 			if (rotationAngle != 0.f)
 			{

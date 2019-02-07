@@ -1,7 +1,7 @@
 #include "calibration.h"
 #include <math.h>
 
-void drawCalibrationImage_rectangle(LaserPoint * points, const int numPoints)
+void drawCalibrationPattern_rectangle(LaserPoint * points, const int numPoints)
 {
 	const LaserPoint corners[4] =
 	{
@@ -24,7 +24,7 @@ void drawCalibrationImage_rectangle(LaserPoint * points, const int numPoints)
 	}
 }
 
-void drawCalibrationImage_rectanglePoints(LaserPoint * points, const int numPoints)
+void drawCalibrationPattern_rectanglePoints(LaserPoint * points, const int numPoints)
 {
 	const LaserPoint corners[4] =
 	{
@@ -58,7 +58,7 @@ void drawCalibrationImage_rectanglePoints(LaserPoint * points, const int numPoin
 	}
 }
 
-void drawCalibrationImage_line_vscroll(LaserPoint * points, const int numPoints, const float phase)
+void drawCalibrationPattern_line_vscroll(LaserPoint * points, const int numPoints, const float phase)
 {
 	for (int i = 0; i < numPoints; ++i)
 	{
@@ -68,7 +68,7 @@ void drawCalibrationImage_line_vscroll(LaserPoint * points, const int numPoints,
 	}
 }
 
-void drawCalibrationImage_line_hscroll(LaserPoint * points, const int numPoints, const float phase)
+void drawCalibrationPattern_line_hscroll(LaserPoint * points, const int numPoints, const float phase)
 {
 	for (int i = 0; i < numPoints; ++i)
 	{
