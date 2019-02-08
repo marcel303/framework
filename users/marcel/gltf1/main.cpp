@@ -1243,10 +1243,13 @@ int main(int argc, char * argv[])
 								camera.position[1],
 								camera.position[2]);
 							
+							const float dx = cosf(framework.time);
+							const float dz = sinf(framework.time);
+							
 							shader.setImmediate("scene_lightDir",
-								.5f,
-								1.f,
-								.5f);
+								dx,
+								-1.f,
+								dz);
 							
 							shader.setTexture("diffuseTexture", 0, diffuseTextureId);
 							shader.setTexture("normalTexture", 1, normalTextureId);
