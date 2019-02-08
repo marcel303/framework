@@ -185,21 +185,15 @@ void main()
     vec3 ambient = kD * diffuse;
 
     // -- ambient occlusion
-
-    float ao;
-
+    
     if (material_hasOcclusionTexture != 0.0)
     {
-        float value = texture(occlusionTexture, v_texcoord1).r;
+        float ao = texture(occlusionTexture, v_texcoord1).r;
 
-        ao = mix(1.0, value, material_occlusionStrength);
-    }
-    else
-    {
-        ao = 1.0;
-    }
+        ao = mix(1.0, ao, material_occlusionStrength);
 
-    ambient *= ao;
+        ambient *= ao;
+    }
 
     // -- specular reflectance
 
