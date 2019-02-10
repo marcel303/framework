@@ -7,7 +7,7 @@ add tests
 add vfxGraph
 add vfxGraph-examples
 
-global_group libraries
+push_group libraries
 
 	with_platform macos add 3rdparty/PS3EYEDriver/framework
 	add 3rdparty
@@ -25,3 +25,5 @@ global_group libraries
 	add users/marcel/artnet1
 	add users/marcel/libjgmod
 	add users/marcel/optionmenu
+
+pop_group
