@@ -36,12 +36,15 @@ namespace gltf
 		kPrimitiveType_TriangleFan = 6
 	};
 
-	const int kElementType_S8 = 5120;
-	const int kElementType_U8 = 5121;
-	const int kElementType_S16 = 5122;
-	const int kElementType_U16 = 5123;
-	const int kElementType_U32 = 0x1405;
-	const int kElementType_Float32 = 5126;
+	enum ElementType
+	{
+		kElementType_S8 = 5120,
+		kElementType_U8 = 5121,
+		kElementType_S16 = 5122,
+		kElementType_U16 = 5123,
+		kElementType_U32 = 0x1405,
+		kElementType_Float32 = 5126
+	};
 	
 	struct Asset
 	{
@@ -129,6 +132,20 @@ namespace gltf
 		{
 			return
 				!uri.empty();
+		}
+	};
+	
+	struct Sampler
+	{
+		int minFilter = -1; // todo : add enums
+		int magFilter = -1;
+		int wrapS = -1;
+		int wrapT = -1;
+		
+		bool isValid() const
+		{
+			// todo
+			return true;
 		}
 	};
 	
@@ -312,6 +329,7 @@ namespace gltf
 		std::vector<BufferView> bufferViews;
 		std::vector<Accessor> accessors;
 		std::vector<Image> images;
+		std::vector<Sampler> samplers;
 		std::vector<Texture> textures;
 		std::vector<Material> materials;
 		std::vector<Mesh> meshes;
@@ -603,10 +621,12 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 			
 			for (auto & sampler_json : samplers)
 			{
-				const int minFilter = sampler_json.value("minFilter", -1);
-				const int magFilter = sampler_json.value("magFilter", -1);
-				const int wrapS = sampler_json.value("wrapS", -1);
-				const int wrapT = sampler_json.value("wrapT", -1);
+				gltf::Sampler sampler;
+				
+				sampler.minFilter = sampler_json.value("minFilter", -1);
+				sampler.magFilter = sampler_json.value("magFilter", -1);
+				sampler.wrapS = sampler_json.value("wrapS", -1);
+				sampler.wrapT = sampler_json.value("wrapT", -1);
 				
 				/*
 				minFilter:
@@ -631,10 +651,11 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				33648 = MIRRORED_REPEAT
 				
 				*/
-				//if (!sampler.isValid())
-				//	return false;
 				
-				//scene.samplers.push_back(sampler);
+				if (!sampler.isValid())
+					return false;
+				
+				scene.samplers.push_back(sampler);
 			}
 		}
 		else if (member_name == "materials")
@@ -1255,7 +1276,7 @@ int main(int argc, char * argv[])
 							shader.setTexture("normalTexture", 1, normalTextureId);
 							shader.setTexture("occlusionTexture", 2, occlusionTextureId);
 							shader.setTexture("specularGlossinessTexture", 3, specularGlossinessTextureId);
-							//shader.setTexture("emissiveTexture");
+							shader.setTexture("emissiveTexture", 4, emissiveTextureId);
 
 							shader.setImmediate("material_diffuseFactor",
 								material.pbrSpecularGlossiness.diffuseFactor.r,
@@ -1274,7 +1295,7 @@ int main(int argc, char * argv[])
 							shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
 							shader.setImmediate("material_occlusionStrength", material.occlusionTexture.strength);
 							shader.setImmediate("material_hasOcclusionTexture", occlusionTextureId != 0);
-							shader.setImmediate("material_hasEmissiveTexture", false);
+							shader.setImmediate("material_hasEmissiveTexture", emissiveTextureId != 0);
 							shader.setImmediate("material_emissiveFactor",
 								material.emissiveFactor[0],
 								material.emissiveFactor[1],
@@ -1300,7 +1321,7 @@ int main(int argc, char * argv[])
 							shader.setTexture("normalTexture", 1, normalTextureId);
 							shader.setTexture("occlusionTexture", 2, occlusionTextureId);
 							shader.setTexture("metallicRoughnessTexture", 3, metallicRoughnessTextureId);
-							//shader.setTexture("emissiveTexture");
+							shader.setTexture("emissiveTexture", 4, emissiveTextureId);
 
 							shader.setImmediate("material_baseColorFactor",
 								material.pbrMetallicRoughness.baseColorFactor.r,
@@ -1312,7 +1333,7 @@ int main(int argc, char * argv[])
 							shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
 							shader.setImmediate("material_occlusionStrength", material.occlusionTexture.strength);
 							shader.setImmediate("material_hasOcclusionTexture", occlusionTextureId != 0);
-							shader.setImmediate("material_hasEmissiveTexture", false);
+							shader.setImmediate("material_hasEmissiveTexture", emissiveTextureId != 0);
 							shader.setImmediate("material_metallicFactor",
 								material.pbrMetallicRoughness.metallicFactor);
 							shader.setImmediate("material_roughnessFactor",
