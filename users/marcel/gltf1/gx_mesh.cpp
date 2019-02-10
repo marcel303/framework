@@ -53,9 +53,9 @@ void GxVertexBuffer::setData(const void * bytes, const int numBytes)
 }
 
 GxIndexBuffer::GxIndexBuffer()
-	: m_indexArray(0)
-	, m_numIndices(0)
+	: m_numIndices(0)
 	, m_format(GX_INDEX_16)
+	, m_indexArray(0)
 {
 	glGenBuffers(1, &m_indexArray);
 	checkErrorGL();
@@ -97,9 +97,9 @@ GX_INDEX_FORMAT GxIndexBuffer::getFormat() const
 }
 
 GxMesh::GxMesh()
-	: m_vertexArrayObject(0)
-	, m_vertexBuffer(nullptr)
+	: m_vertexBuffer(nullptr)
 	, m_indexBuffer(nullptr)
+	, m_vertexArrayObject(0)
 {
 	glGenVertexArrays(1, &m_vertexArrayObject);
 	checkErrorGL();

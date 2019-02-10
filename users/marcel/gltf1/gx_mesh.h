@@ -57,9 +57,10 @@ class GxIndexBuffer
 {
 	friend class GxMesh;
 	
-	uint32_t m_indexArray;
 	int m_numIndices;
 	GX_INDEX_FORMAT m_format;
+	
+	uint32_t m_indexArray;
 	
 public:
 	GxIndexBuffer();
@@ -83,10 +84,10 @@ struct GxVertexInput
 
 class GxMesh
 {
-	uint32_t m_vertexArrayObject;
-	
 	const GxVertexBuffer * m_vertexBuffer;
 	const GxIndexBuffer * m_indexBuffer;
+	
+	uint32_t m_vertexArrayObject;
 	
 	void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs);
 	
