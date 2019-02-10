@@ -510,7 +510,7 @@ static bool doMenus(const bool tick, const bool draw, const float dt)
 	doButton("TT", "STB TrueType", testStbTruetype);
 	doButton("TAtl", "Texture Atlas", testTextureAtlas);
 	doButton("Thr", "Threading", testThreading);
-	doButton("Aud", "Audio Graph", testAudioGraph);
+	//doButton("Aud", "Audio Graph", testAudioGraph);
 #ifndef WIN32
 	doButton("PS3", "PS3 Eye Camera", testPs3eye);
 #endif
