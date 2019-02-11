@@ -1,0 +1,3 @@
+library miniz
+	add_files miniz.cpp miniz.h
+	header_path . expose
