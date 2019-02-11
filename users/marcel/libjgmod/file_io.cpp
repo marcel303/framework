@@ -20,63 +20,37 @@
 
 JGMOD_FILE *jgmod_fopen (const char *filename, const char *mode)
 {
-#ifdef JGMOD_PACKFILE
-    return pack_fopen (filename, mode);
-#else
     return fopen(filename, mode);
-#endif
 }
 
 
 int jgmod_fclose (JGMOD_FILE *f)
 {
-#ifdef JGMOD_PACKFILE
-    return pack_fclose (f);
-#else
     return fclose (f);
-#endif
 }
 
 
 void jgmod_fseek (JGMOD_FILE **f, const char *filename, int offset)
 {
-#ifdef JGMOD_PACKFILE
-    pack_fclose (*f);
-    *f = pack_fopen (filename, "r");
-    pack_fseek (*f, offset);
-#else
     fseek (*f, offset, SEEK_SET);
-#endif
 }
 
 
 void jgmod_skip (JGMOD_FILE *f, int skip)
 {
-#ifdef JGMOD_PACKFILE
-    pack_fseek (f, skip);
-#else
     fseek (f, skip, SEEK_CUR);
-#endif
 }
 
 
 int jgmod_fread (void *buf, int size, JGMOD_FILE *f)
 {
-#ifdef JGMOD_PACKFILE
-    return pack_fread (buf, size, f);
-#else
     return fread (buf, 1, size, f);
-#endif
 }
 
 
 int jgmod_getc (JGMOD_FILE *f)
 {
-#ifdef JGMOD_PACKFILE
-    return pack_getc (f);
-#else
     return getc (f);
-#endif
 }
 
 
@@ -148,11 +122,7 @@ long jgmod_igetl (JGMOD_FILE *f)
 
 int jgmod_putc (int c, JGMOD_FILE *f)
 {
-#ifdef JGMOD_PACKFILE
-    return pack_putc (c, f);
-#else
     return putc (c, f);
-#endif
 }
 
 
@@ -192,9 +162,5 @@ long jgmod_iputl (long l, JGMOD_FILE *f)
 
 int jgmod_fwrite (const void *buf, int size, JGMOD_FILE *f)
 {
-#ifdef JGMOD_PACKFILE
-    return pack_fwrite (buf, size, f);
-#else
     return fwrite (buf, sizeof(char), size, f);
-#endif
 }

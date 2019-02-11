@@ -11,11 +11,7 @@
 #define JGMOD_STDFILE
 
 
-#ifdef JGMOD_PACKFILE
-    #define JGMOD_FILE PACKFILE
-#else
-	#include <stdio.h>
-    #define JGMOD_FILE FILE
-#endif
+#include <stdio.h>
+#define JGMOD_FILE FILE
 
 #endif
