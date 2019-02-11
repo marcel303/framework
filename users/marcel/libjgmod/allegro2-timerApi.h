@@ -4,13 +4,6 @@
 
 //
 
-#define END_OF_FUNCTION(x)
-#define LOCK_FUNCTION(x)
-#define LOCK_VARIABLE(x)
-#define END_OF_MAIN()
-
-//
-
 struct SDL_mutex;
 
 struct AllegroTimerReg;

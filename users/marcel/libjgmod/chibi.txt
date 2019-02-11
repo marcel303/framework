@@ -1,35 +1,38 @@
 library allegro2-timerApi shared
 	depend_library libsdl2
 	add_files allegro2-timerApi.cpp allegro2-timerApi.h
+	header_path . expose
 
 library allegro2-voiceApi shared
 	depend_library libsdl2
 	add_files allegro2-voiceApi.cpp allegro2-voiceApi.h
+	header_path . expose
 
-library libjgmod
+library libjgmod shared
 
+	depend_library allegro2-timerApi
 	depend_library allegro2-voiceApi
 	
-	add_files file_io.cpp file_io.h jgmod.h jshare.h load_it.cpp load_mod.cpp load_s3m.cpp load_xm.cpp mod.cpp player.cpp player2.cpp player3.cpp player4.cpp player5.cpp
+	add_files file_io.cpp file_io.h jgmod.h jshare.h
+	add_files load_it.cpp load_mod.cpp load_s3m.cpp load_xm.cpp
+	add_files mod.cpp
+	add_files player.cpp player2.cpp player3.cpp player4.cpp player5.cpp
 	add_files it_compression.cpp it_compression.h
 
 	header_path . expose
 
-library libjgmod-framework
+library framework-allegro2
 
 	depend_library allegro2-timerApi
 	depend_library allegro2-voiceApi
-	depend_library libjgmod
 	depend_library framework
-
-# todo : add framework files here. let libjgmod expose a mixer interface
 
 	add_files framework-allegro2.cpp framework-allegro2.h
 
 	header_path . expose
 
 library libjgmod-vis
-	
+
 	depend_library libjgmod
 	depend_library framework
 
@@ -39,7 +42,8 @@ library libjgmod-vis
 
 app libjgmod-example
 
-	depend_library libjgmod-framework
+	depend_library framework-allegro2
+	depend_library libjgmod
 
 	add_files main.cpp
 
