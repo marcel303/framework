@@ -1,7 +1,8 @@
 #include "audioNodeJgmod.h"
 #include "jgmod.h"
 
-#include "framework-allegro2.h"
+#include "allegro2-timerApi.h"
+#include "allegro2-voiceApi.h"
 
 #include "soundmix.h"
 

@@ -1,13 +1,3 @@
-library allegro2-timerApi shared
-	depend_library libsdl2
-	add_files allegro2-timerApi.cpp allegro2-timerApi.h
-	header_path . expose
-
-library allegro2-voiceApi shared
-	depend_library libsdl2
-	add_files allegro2-voiceApi.cpp allegro2-voiceApi.h
-	header_path . expose
-
 library libjgmod shared
 
 	depend_library allegro2-timerApi
@@ -18,16 +8,6 @@ library libjgmod shared
 	add_files mod.cpp
 	add_files player.cpp player2.cpp player3.cpp player4.cpp player5.cpp
 	add_files it_compression.cpp it_compression.h
-
-	header_path . expose
-
-library framework-allegro2
-
-	depend_library allegro2-timerApi
-	depend_library allegro2-voiceApi
-	depend_library framework
-
-	add_files framework-allegro2.cpp framework-allegro2.h
 
 	header_path . expose
 

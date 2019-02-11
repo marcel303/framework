@@ -1,5 +1,6 @@
 add 4d-imu9250
 add 4dsound2-osc
+add allegro2-support
 add ambisonics1
 add anaglyphic
 add avpaint
