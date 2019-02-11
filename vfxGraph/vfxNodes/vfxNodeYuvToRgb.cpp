@@ -59,7 +59,7 @@ static const char * s_yuvToRgbVs = R"SHADER(
 	{
 		gl_Position = ModelViewProjectionMatrix * in_position4;
 		
-		texcoord = vec2(in_texcoord);
+		texcoord = unpackTexcoord(0);
 	}
 )SHADER";
 

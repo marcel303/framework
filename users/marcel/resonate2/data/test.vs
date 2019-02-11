@@ -6,5 +6,5 @@ void main()
 {
 	gl_Position = ModelViewProjectionMatrix * in_position4;
 	
-	radians = in_texcoord.x;
+	radians = unpackTexcoord(0).x;
 }
