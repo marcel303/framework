@@ -11,9 +11,9 @@ AUDIO_NODE_TYPE(AudioNodeJgmod)
 	typeName = "jgmod";
 	
 	in("filename", "string");
-	in("speed", "float", "1");
-	in("pitch", "float", "1");
-	in("gain", "float", "1");
+	in("speed", "audioValue", "1");
+	in("pitch", "audioValue", "1");
+	in("gain", "audioValue", "1");
 	
 	for (int i = 0; i < AudioNodeJgmod::kNumChannels; ++i)
 	{
@@ -34,9 +34,9 @@ AudioNodeJgmod::AudioNodeJgmod()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Filename, kAudioPlugType_String);
-	addInput(kInput_Speed, kAudioPlugType_Float);
-	addInput(kInput_Pitch, kAudioPlugType_Float);
-	addInput(kInput_Gain, kAudioPlugType_Float);
+	addInput(kInput_Speed, kAudioPlugType_FloatVec);
+	addInput(kInput_Pitch, kAudioPlugType_FloatVec);
+	addInput(kInput_Gain, kAudioPlugType_FloatVec);
 	
 	for (int i = 0; i < kNumChannels; ++i)
 		addOutput(kOutput_Channel1 + i, kAudioPlugType_FloatVec, &output[i]);
@@ -120,9 +120,9 @@ void AudioNodeJgmod::tick(const float dt)
 		return;
 	}
 	
-	const float speed = getInputFloat(kInput_Speed, 1.f);
-	const float pitch = getInputFloat(kInput_Pitch, 1.f);
-	const float gain = getInputFloat(kInput_Gain, 1.f);
+	const float speed = getInputAudioFloat(kInput_Speed, &AudioFloat::One)->getMean();
+	const float pitch = getInputAudioFloat(kInput_Pitch, &AudioFloat::One)->getMean();
+	const float gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One)->getMean();
 	
 	jgmodPlayer->set_speed(speed * 100.f);
 	jgmodPlayer->set_pitch(pitch * 100.f);
