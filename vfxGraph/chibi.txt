@@ -3,10 +3,10 @@ library vfxgraph
 	depend_library artnet
 	depend_library audiograph
 	depend_library framework
+	depend_library framework-allegro2
 	depend_library framework-ofx
 	depend_library libavgraph
 	depend_library libjgmod
-	depend_library libjgmod-framework
 	depend_library libosc
 	depend_library libvideo
 	depend_library rtmidi

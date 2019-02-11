@@ -1149,6 +1149,9 @@ struct FileEditor_Video : FileEditor
 	}
 };
 
+#include "allegro2-timerApi.h"
+#include "allegro2-voiceApi.h"
+
 struct FileEditor_Jgmod : FileEditor
 {
 	AllegroTimerApi timerApi;

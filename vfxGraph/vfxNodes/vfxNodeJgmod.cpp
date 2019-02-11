@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "allegro2-timerApi.h"
+#include "allegro2-voiceApi.h"
 #include "audiostream/AudioOutput_PortAudio.h"
 #include "framework.h"
 #include "framework-allegro2.h"

@@ -1,3 +1,4 @@
+#include "allegro2-voiceApi.h"
 #include "framework.h"
 #include "framework-allegro2.h"
 #include "jgmod.h"
