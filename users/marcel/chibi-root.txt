@@ -14,6 +14,7 @@ add gltf1
 add hackerPoet/010-particleLife
 add homography
 add jsusfx1
+add libgg-psd
 add libjgmod-audiograph
 add magiclines
 add mitronix1
