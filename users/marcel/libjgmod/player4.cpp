@@ -13,8 +13,6 @@
 #include "jgmod.h"
 #include "jshare.h"
 
-#include "framework-allegro2.h"
-
 void JGMOD_PLAYER::parse_new_note (int chn, int note, int sample_no)
 {
     SAMPLE_INFO *si;
@@ -291,7 +289,7 @@ void JGMOD_PLAYER::process_envelope (volatile ENVELOPE_INFO *t, int v, bool keyo
             b++;
 
             if ( (t->flg & JGMOD_ENV_SUS) && (keyon == false) && (b > t->susend) )
-                	{
+					{
 					a = t->susbeg;
 					p = t->pos[a];
 					if (t->susbeg == t->susend)
@@ -300,19 +298,19 @@ void JGMOD_PLAYER::process_envelope (volatile ENVELOPE_INFO *t, int v, bool keyo
 						b = a + 1;
 					}
             else if ( (t->flg & JGMOD_ENV_LOOP) && (b > t->loopend) )
-                {
-                a = t->loopbeg;
-                p = t->pos[a];
-                if (t->loopbeg == t->loopend)
-                    b = a;
-                else
-                    b = a + 1;
-                }
+                	{
+					a = t->loopbeg;
+					p = t->pos[a];
+					if (t->loopbeg == t->loopend)
+						b = a;
+					else
+						b = a + 1;
+					}
             else if (b >= t->pts)
-                {
-                b--;
-                p--;
-                }
+			{
+			b--;
+			p--;
+			}
             }
 
         t->p = p;
