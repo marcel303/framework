@@ -1941,7 +1941,7 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 	, m_window(nullptr)
 	, m_windowData(nullptr)
 {
-	const int flags = SDL_WINDOW_OPENGL | (SDL_WINDOW_RESIZABLE * resizable);
+	const int flags = SDL_WINDOW_OPENGL | (SDL_WINDOW_ALLOW_HIGHDPI * framework.allowHighDpi) | (SDL_WINDOW_RESIZABLE * resizable);
 	
 	m_window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sx, sy, flags);
 	
