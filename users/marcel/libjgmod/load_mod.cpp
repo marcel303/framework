@@ -15,9 +15,10 @@
 #include "jshare.h"
 #include "file_io.h"
 
-#include "framework-allegro2.h"
+#include "allegro2-voiceApi.h"
 
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 typedef struct MODTYPE{    /* struct to identify type of module */

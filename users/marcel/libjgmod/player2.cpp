@@ -14,8 +14,9 @@
 #include "jgmod.h"
 #include "jshare.h"
 
-#include "framework-allegro2.h"
+#include "allegro2-timerApi.h"
 
+#include <algorithm>
 #include <math.h>
 #include <stdint.h>
 
@@ -237,7 +238,7 @@ int JGMOD_PLAYER::calc_pan (int chn) const
 {
     int temp;
 
-    temp = ci[chn].temp_pan + ((ci[chn].panenv.v - 32) * (128 - ABS(ci[chn].temp_pan - 128)) / 32);
+    temp = ci[chn].temp_pan + ((ci[chn].panenv.v - 32) * (128 - std::abs(ci[chn].temp_pan - 128)) / 32);
     if (temp > 255)
         temp = 255;
     else if (temp < 0)
@@ -431,7 +432,7 @@ void JGMOD_PLAYER::parse_pro_pitch_slide_up (int chn, int extcommand)
     if (extcommand) 
         ci[chn].pro_pitch_slide = (extcommand << 2);
 
-    ci[chn].pro_pitch_slide = -ABS(ci[chn].pro_pitch_slide);
+    ci[chn].pro_pitch_slide = -std::abs(ci[chn].pro_pitch_slide);
 }
 
 void JGMOD_PLAYER::parse_pro_pitch_slide_down (int chn, int extcommand)
@@ -441,7 +442,7 @@ void JGMOD_PLAYER::parse_pro_pitch_slide_down (int chn, int extcommand)
     if (extcommand) 
         ci[chn].pro_pitch_slide = (extcommand << 2);
 
-    ci[chn].pro_pitch_slide = ABS(ci[chn].pro_pitch_slide);
+    ci[chn].pro_pitch_slide = std::abs(ci[chn].pro_pitch_slide);
 }
 
 void JGMOD_PLAYER::parse_pro_volume_slide (int chn, int extcommand)
@@ -569,9 +570,9 @@ void JGMOD_PLAYER::parse_slide2period (int chn, int extcommand, int note)
     if (note > 0)
         ci[chn].slide2period = note2period (note-1, ci[chn].c2spd);
 
-    ci[chn].slide2period_spd = ABS (ci[chn].slide2period_spd);
+    ci[chn].slide2period_spd = std::abs (ci[chn].slide2period_spd);
     if (ci[chn].slide2period > ci[chn].period)
-        ci[chn].slide2period_spd = -ABS (ci[chn].slide2period_spd);
+        ci[chn].slide2period_spd = -std::abs (ci[chn].slide2period_spd);
 
     if (!ci[chn].slide2period)
         return;
@@ -681,7 +682,7 @@ void JGMOD_PLAYER::parse_extended_command (int chn, int extcommand)
             else if ( ((extcommand & 0xF) == 0) && (ci[chn].pro_fine_pitch_slide > 0))
                 break;
 
-            ci[chn].pro_fine_pitch_slide = -ABS(ci[chn].pro_fine_pitch_slide);
+            ci[chn].pro_fine_pitch_slide = -std::abs(ci[chn].pro_fine_pitch_slide);
             ci[chn].period += ci[chn].pro_fine_pitch_slide;
             break;
             }
@@ -695,7 +696,7 @@ void JGMOD_PLAYER::parse_extended_command (int chn, int extcommand)
             else if ( ((extcommand & 0xF) == 0) && (ci[chn].pro_fine_pitch_slide < 0))
                 break;
 
-            ci[chn].pro_fine_pitch_slide = ABS(ci[chn].pro_fine_pitch_slide);
+            ci[chn].pro_fine_pitch_slide = std::abs(ci[chn].pro_fine_pitch_slide);
             ci[chn].period += ci[chn].pro_fine_pitch_slide;
             break;
             }

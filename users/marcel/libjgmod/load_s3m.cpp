@@ -15,9 +15,10 @@
 #include "jshare.h"
 #include "file_io.h"
 
-#include "framework-allegro2.h"
+#include "allegro2-voiceApi.h"
 
 #include <string.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 

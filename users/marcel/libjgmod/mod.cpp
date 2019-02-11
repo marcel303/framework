@@ -15,7 +15,8 @@
 #include "jshare.h"
 #include "file_io.h"
 
-#include "framework-allegro2.h"
+#include "allegro2-timerApi.h"
+#include "allegro2-voiceApi.h"
 #include "StringEx.h"
 
 #include <stdarg.h>

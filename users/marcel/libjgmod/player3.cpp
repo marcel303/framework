@@ -13,7 +13,10 @@
 #include "jgmod.h"
 #include "jshare.h"
 
-#include "framework-allegro2.h"
+#include "allegro2-timerApi.h"
+#include "allegro2-voiceApi.h"
+
+#include <algorithm>
 
 #define speed_ratio     mi.speed_ratio / 100
 #define pitch_ratio     mi.pitch_ratio / 100
@@ -116,8 +119,8 @@ void JGMOD_PLAYER::parse_s3m_portamento_up (int chn, int extcommand)
         }
     else if (extcommand == 0)
         {
-        ci[chn].s3m_pitch_slide = -ABS(ci[chn].s3m_pitch_slide);
-        ci[chn].s3m_fine_pitch_slide = -ABS(ci[chn].s3m_fine_pitch_slide);
+        ci[chn].s3m_pitch_slide = -std::abs(ci[chn].s3m_pitch_slide);
+        ci[chn].s3m_fine_pitch_slide = -std::abs(ci[chn].s3m_fine_pitch_slide);
         }
 
     ci[chn].s3m_pitch_slide_on = true;
@@ -149,8 +152,8 @@ void JGMOD_PLAYER::parse_s3m_portamento_down (int chn, int extcommand)
         }
      else if (extcommand == 0)
         {
-        ci[chn].s3m_pitch_slide = ABS(ci[chn].s3m_pitch_slide);
-        ci[chn].s3m_fine_pitch_slide = ABS(ci[chn].s3m_fine_pitch_slide);
+        ci[chn].s3m_pitch_slide = std::abs(ci[chn].s3m_pitch_slide);
+        ci[chn].s3m_fine_pitch_slide = std::abs(ci[chn].s3m_fine_pitch_slide);
      }
 
      ci[chn].s3m_pitch_slide_on = true;

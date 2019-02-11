@@ -16,7 +16,7 @@
 
 #include "it_compression.h"
 
-#include "framework-allegro2.h"
+#include "allegro2-voiceApi.h"
 
 #include <assert.h>
 #include <stdio.h>

@@ -15,10 +15,11 @@
 #include "jshare.h"
 #include "file_io.h"
 
-#include "framework-allegro2.h"
+#include "allegro2-voiceApi.h"
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 //#define JG_debug

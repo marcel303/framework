@@ -14,7 +14,7 @@
 #include "jgmod.h"
 #include "jshare.h"
 
-#include "framework-allegro2.h"
+#include "allegro2-voiceApi.h"
 
 #include <stdio.h>
 

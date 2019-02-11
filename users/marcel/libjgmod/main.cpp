@@ -15,6 +15,8 @@
 // todo : load sample and instrument names
 // todo : check mod, xm, s3m loaders for file seeks that skip bytes and reference vs file formats. perhaps something interesthing is skipped?
 
+#include "allegro2-timerApi.h"
+#include "allegro2-voiceApi.h"
 #include "audiostream/AudioOutput_PortAudio.h"
 #include "framework.h"
 #include "framework-allegro2.h"
