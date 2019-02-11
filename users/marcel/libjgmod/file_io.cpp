@@ -16,45 +16,43 @@
 
 #include "framework-allegro2.h"
 
-#include <stdio.h>
-
-JGMOD_FILE *jgmod_fopen (const char *filename, const char *mode)
+FILE *jgmod_fopen (const char *filename, const char *mode)
 {
     return fopen(filename, mode);
 }
 
 
-int jgmod_fclose (JGMOD_FILE *f)
+int jgmod_fclose (FILE *f)
 {
     return fclose (f);
 }
 
 
-void jgmod_fseek (JGMOD_FILE **f, const char *filename, int offset)
+void jgmod_fseek (FILE **f, const char *filename, int offset)
 {
     fseek (*f, offset, SEEK_SET);
 }
 
 
-void jgmod_skip (JGMOD_FILE *f, int skip)
+void jgmod_skip (FILE *f, int skip)
 {
     fseek (f, skip, SEEK_CUR);
 }
 
 
-int jgmod_fread (void *buf, int size, JGMOD_FILE *f)
+int jgmod_fread (void *buf, int size, FILE *f)
 {
     return fread (buf, 1, size, f);
 }
 
 
-int jgmod_getc (JGMOD_FILE *f)
+int jgmod_getc (FILE *f)
 {
     return getc (f);
 }
 
 
-int jgmod_mgetw (JGMOD_FILE *f)
+int jgmod_mgetw (FILE *f)
 {
     int b1, b2;
 
@@ -66,7 +64,7 @@ int jgmod_mgetw (JGMOD_FILE *f)
 }
 
 
-long jgmod_mgetl (JGMOD_FILE *f)
+long jgmod_mgetl (FILE *f)
 {
 #if 1
 	uint8_t b[4];
@@ -87,7 +85,7 @@ long jgmod_mgetl (JGMOD_FILE *f)
 }
 
 
-int jgmod_igetw (JGMOD_FILE *f)
+int jgmod_igetw (FILE *f)
 {
     int b1, b2;
 
@@ -99,7 +97,7 @@ int jgmod_igetw (JGMOD_FILE *f)
 }
 
 
-long jgmod_igetl (JGMOD_FILE *f)
+long jgmod_igetl (FILE *f)
 {
 #if 1
 	uint8_t b[4];
@@ -120,13 +118,13 @@ long jgmod_igetl (JGMOD_FILE *f)
 }
 
 
-int jgmod_putc (int c, JGMOD_FILE *f)
+int jgmod_putc (int c, FILE *f)
 {
     return putc (c, f);
 }
 
 
-int jgmod_iputw (int w, JGMOD_FILE *f)
+int jgmod_iputw (int w, FILE *f)
 {
     int b1, b2;
 
@@ -141,7 +139,7 @@ int jgmod_iputw (int w, JGMOD_FILE *f)
 }
 
 
-long jgmod_iputl (long l, JGMOD_FILE *f)
+long jgmod_iputl (long l, FILE *f)
 {
     int b1, b2, b3, b4;
 
@@ -160,7 +158,7 @@ long jgmod_iputl (long l, JGMOD_FILE *f)
 }
 
 
-int jgmod_fwrite (const void *buf, int size, JGMOD_FILE *f)
+int jgmod_fwrite (const void *buf, int size, FILE *f)
 {
     return fwrite (buf, sizeof(char), size, f);
 }

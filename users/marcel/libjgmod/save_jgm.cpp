@@ -21,20 +21,20 @@
 #define JGM_SIG      "JGMOD 01 module : "
 
 
-void save_jgm (JGMOD_FILE *file, JGMOD *j);
-void save_note (int no_field, PATTERN_INFO *pi, JGMOD_FILE *file, JGMOD *j);
+void save_jgm (FILE *file, JGMOD *j);
+void save_note (int no_field, PATTERN_INFO *pi, FILE *file, JGMOD *j);
 int repeat_note (int curr_field, int no_field, PATTERN_INFO *pi);
-void save_jgsample (int no_field, PATTERN_INFO *pi, JGMOD_FILE *file);
+void save_jgsample (int no_field, PATTERN_INFO *pi, FILE *file);
 int repeat_jgsample (int curr_field, int no_field, PATTERN_INFO *pi);
-void save_volume (int no_field, PATTERN_INFO *pi, JGMOD_FILE *file);
+void save_volume (int no_field, PATTERN_INFO *pi, FILE *file);
 int repeat_volume (int curr_field, int no_field, PATTERN_INFO *pi);
-void save_command (int no_field, PATTERN_INFO *pi, JGMOD_FILE *file);
+void save_command (int no_field, PATTERN_INFO *pi, FILE *file);
 int repeat_command (int curr_field, int no_field, PATTERN_INFO *pi);
-void save_extcommand (int no_field, PATTERN_INFO *pi, JGMOD_FILE *file);
+void save_extcommand (int no_field, PATTERN_INFO *pi, FILE *file);
 int repeat_extcommand (int curr_field, int no_field, PATTERN_INFO *pi);
 
 
-void save_jgm (JGMOD_FILE *file, JGMOD *j)
+void save_jgm (FILE *file, JGMOD *j)
 {
     int index;
     int head_no;
@@ -155,7 +155,7 @@ void save_jgm (JGMOD_FILE *file, JGMOD *j)
         }
 }
 
-void save_note (int no_field, PATTERN_INFO *pi, JGMOD_FILE *file, JGMOD *j)
+void save_note (int no_field, PATTERN_INFO *pi, FILE *file, JGMOD *j)
 {
     int curr_field = 0;
     int repeat;
@@ -218,7 +218,7 @@ int repeat_note (int curr_field, int no_field, PATTERN_INFO *pi)
 }
 
 
-void save_jgsample (int no_field, PATTERN_INFO *pi, JGMOD_FILE *file)
+void save_jgsample (int no_field, PATTERN_INFO *pi, FILE *file)
 {
     int curr_field=0;
     int repeat;
@@ -270,7 +270,7 @@ int repeat_jgsample (int curr_field, int no_field, PATTERN_INFO *pi)
         return dx;
 }
 
-void save_volume (int no_field, PATTERN_INFO *pi, JGMOD_FILE *file)
+void save_volume (int no_field, PATTERN_INFO *pi, FILE *file)
 {
 
     int curr_field=0;
@@ -323,7 +323,7 @@ int repeat_volume (int curr_field, int no_field, PATTERN_INFO *pi)
         return dx;
 }
 
-void save_command (int no_field, PATTERN_INFO *pi, JGMOD_FILE *file)
+void save_command (int no_field, PATTERN_INFO *pi, FILE *file)
 {
     int curr_field=0;
     int repeat;
@@ -376,7 +376,7 @@ int repeat_command (int curr_field, int no_field, PATTERN_INFO *pi)
 }
 
 
-void save_extcommand (int no_field, PATTERN_INFO *pi, JGMOD_FILE *file)
+void save_extcommand (int no_field, PATTERN_INFO *pi, FILE *file)
 {
     int curr_field=0;
     int repeat;

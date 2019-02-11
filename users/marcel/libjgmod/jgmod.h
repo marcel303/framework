@@ -1,8 +1,6 @@
 #ifndef JGMOD_H
 #define JGMOD_H
 
-#include "port.h"
-
 #ifndef JGM_ID
     #define JGM_ID  DAT_ID('J','G','M',' ')
 #endif

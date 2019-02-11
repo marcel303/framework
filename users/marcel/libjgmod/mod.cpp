@@ -53,7 +53,7 @@ JGMOD *jgmod_load (const char *filename, bool fast_loading, bool enable_m15)
 
     if (jgmod::detect_jgm (filename) == 1)
         {
-        JGMOD_FILE *f;
+        FILE *f;
         JGMOD *j;
 
         f = jgmod_fopen (filename, "rb");
@@ -163,7 +163,7 @@ int jgmod_get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15)
 	
     if (jgmod::detect_jgm (filename) == 1)
         {
-        JGMOD_FILE *f;
+        FILE *f;
 
         f = jgmod_fopen (filename, "rb");
         if (f != nullptr)

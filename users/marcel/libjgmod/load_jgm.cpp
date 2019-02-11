@@ -30,7 +30,7 @@ namespace jgmod
 int detect_jgm (const char *filename)
 {
     char id[18];
-    JGMOD_FILE *file;
+    FILE *file;
 
     file = jgmod_fopen (filename, "rb");
     if (file == nullptr)
@@ -46,7 +46,7 @@ int detect_jgm (const char *filename)
 }
 
 
-int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji)
+int get_jgm_info(FILE *f, JGMOD_INFO *ji)
 {
     ji->type = JGMOD_TYPE_JGM;
     sprintf (ji->type_name, "JGM");
@@ -57,7 +57,7 @@ int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji)
 }
 
 
-JGMOD *load_jgm (JGMOD_FILE *f)
+JGMOD *load_jgm (FILE *f)
 {
     INSTRUMENT_INFO *ii;
     PATTERN_INFO *pi;

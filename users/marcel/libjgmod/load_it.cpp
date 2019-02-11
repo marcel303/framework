@@ -64,7 +64,7 @@ int get_mod_no_pat (int *table, int max_trk);
 // to detect unreal IT files
 int detect_unreal_it (const char *filename)
 {
-    JGMOD_FILE *f;
+    FILE *f;
     char id[4];
     int index;
     int start_offset = 0;
@@ -153,7 +153,7 @@ void convert_it_pitch (int *pitch)
 
 int detect_it(const char *filename)
 {
-    JGMOD_FILE *f;
+    FILE *f;
     char id[4];
 
     f =  jgmod_fopen (filename, "rb");
@@ -171,7 +171,7 @@ int detect_it(const char *filename)
 
 int get_it_info(const char *filename, int start_offset, JGMOD_INFO *ji)
 {
-    JGMOD_FILE *f;
+    FILE *f;
 
     f = jgmod_fopen (filename, "rb");
     if (f == nullptr)
@@ -368,7 +368,7 @@ static void convert_it_command (int *command, int *extcommand, int & last_specia
 
 JGMOD *load_it (const char *filename, int start_offset)
 {
-    JGMOD_FILE *f;
+    FILE *f;
     JGMOD *j;
 
     f =  jgmod_fopen (filename, "rb");

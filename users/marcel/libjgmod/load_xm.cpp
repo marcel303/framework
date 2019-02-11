@@ -27,7 +27,7 @@
 namespace jgmod
 {
 
-void load_note (JGMOD *j, JGMOD_FILE *f, NOTE_INFO *ni);
+void load_note (JGMOD *j, FILE *f, NOTE_INFO *ni);
 NOTE_INFO *get_note (JGMOD *j, int pat, int pos, int chn);
 void convert_xm_command (int *command, int *extcommand);
 
@@ -56,7 +56,7 @@ typedef struct XMWAV
     int vibrato_rate;
 }XMWAV;
 
-void load_note (JGMOD *j, JGMOD_FILE *f, NOTE_INFO *ni)
+void load_note (JGMOD *j, FILE *f, NOTE_INFO *ni)
 {
     int cmp;
 
@@ -107,7 +107,7 @@ void load_note (JGMOD *j, JGMOD_FILE *f, NOTE_INFO *ni)
 
 int get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 {
-    JGMOD_FILE *f;
+    FILE *f;
 
     f = jgmod_fopen (filename,"rb");
     if (f == nullptr)
@@ -137,7 +137,7 @@ int get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 // to detect unreal XM files
 int detect_unreal_xm (const char *filename)
 {
-    JGMOD_FILE *f;
+    FILE *f;
     char id[18];
     int index;
     int start_offset = 0;
@@ -191,7 +191,7 @@ int detect_unreal_xm (const char *filename)
 // to detect xm files.
 int detect_xm (const char *filename)
 {
-    JGMOD_FILE *f;
+    FILE *f;
     char id[17];
 
     f =  jgmod_fopen (filename, "rb");
@@ -216,7 +216,7 @@ JGMOD *load_xm (const char *filename, int start_offset)
     SAMPLE *s;
     NOTE_INFO *ni;
     JGMOD *j;
-    JGMOD_FILE *f;
+    FILE *f;
     XMWAV *wv;
     XMWAV *tempwv;
     VIB_INFO vi;

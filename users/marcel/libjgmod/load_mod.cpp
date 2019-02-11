@@ -117,7 +117,7 @@ int get_mod_no_pat (int *table, int max_trk);
 
 int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
 {
-    JGMOD_FILE *f;
+    FILE *f;
 
 
     if (no_inst == 15)
@@ -152,7 +152,7 @@ int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
 //To detect protracker with 31 instruments
 int detect_m31 (const char *filename)
 {
-    JGMOD_FILE *f;
+    FILE *f;
     char id[4];
     int index;
     
@@ -175,7 +175,7 @@ int detect_m31 (const char *filename)
 // determining no of instruments.
 JGMOD *load_m (const char *filename, int no_inst)
 {
-    JGMOD_FILE *f;
+    FILE *f;
     JGMOD *j;
     PATTERN_INFO *pi;
     SAMPLE_INFO *si;
@@ -402,7 +402,7 @@ JGMOD *load_m (const char *filename, int no_inst)
 // not very reliable
 int detect_m15 (const char *filename)
 {
-    JGMOD_FILE *f;
+    FILE *f;
     int index;
     int temp;
 

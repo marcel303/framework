@@ -29,8 +29,8 @@ extern const int noteperiod[];
 namespace jgmod
 {
 
-void S3M_get_num_chn(JGMOD_FILE *f, uint8_t chn_set[32], char remap[32]);
-void S3M_load_pat(JGMOD_FILE *f, JGMOD *j, NOTE_INFO *n, int no_chn, char remap[32]);
+void S3M_get_num_chn(FILE *f, uint8_t chn_set[32], char remap[32]);
+void S3M_load_pat(FILE *f, JGMOD *j, NOTE_INFO *n, int no_chn, char remap[32]);
 void convert_s3m_command (int *command, int *extcommand);
 void convert_s3m_pitch (int *pitch);
 int get_mod_no_pat (int *table, int max_trk);
@@ -38,7 +38,7 @@ int get_mod_no_pat (int *table, int max_trk);
 
 int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 {
-    JGMOD_FILE *f;
+    FILE *f;
 
     f = jgmod_fopen (filename, "rb");
     if (f == nullptr)
@@ -67,7 +67,7 @@ int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji)
 // to detect unreal s3m files
 int detect_unreal_s3m (const char *filename)
 {
-    JGMOD_FILE *f;
+    FILE *f;
     char id[4];
     int index;
     int start_offset = 0;
@@ -109,7 +109,7 @@ int detect_unreal_s3m (const char *filename)
 // to detect s3m files
 int detect_s3m (const char *filename)
 {
-    JGMOD_FILE *f;
+    FILE *f;
     char id[4];
 
     f = jgmod_fopen (filename, "rb");
@@ -129,7 +129,7 @@ int detect_s3m (const char *filename)
 
 // to get the number of channels actually used.
 // must seek to the pattern first
-void S3M_get_num_chn(JGMOD_FILE *f, uint8_t chn_set[32], char remap[32])
+void S3M_get_num_chn(FILE *f, uint8_t chn_set[32], char remap[32])
 {
     int row=0, flag, ch;
 
@@ -159,7 +159,7 @@ void S3M_get_num_chn(JGMOD_FILE *f, uint8_t chn_set[32], char remap[32])
 
 
 // similar to s3m_get_num_chn but load the notes into the jgmod structure
-void S3M_load_pat(JGMOD_FILE *f, JGMOD *j, NOTE_INFO *n, int no_chn, char remap[32])
+void S3M_load_pat(FILE *f, JGMOD *j, NOTE_INFO *n, int no_chn, char remap[32])
 {
     NOTE_INFO dummy;
     NOTE_INFO *ni;
@@ -237,7 +237,7 @@ void convert_s3m_pitch (int *pitch)
 // load a s3m file
 JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading)
 {
-    JGMOD_FILE *f;
+    FILE *f;
     JGMOD *j;
     int sf;                 //sample format (signed or unsigned)
     int dp;                 //default pan positons

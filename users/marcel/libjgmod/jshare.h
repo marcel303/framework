@@ -1,6 +1,8 @@
 #ifndef JSHARE_H
 #define JSHARE_H
 
+#include <stdio.h>
+
 struct JGMOD;
 struct JGMOD_INFO;
 
@@ -22,8 +24,8 @@ JGMOD *load_m (const char *filename, int no_inst);
 JGMOD *load_s3m (const char *filename, int start_offset, bool fast_loading);
 JGMOD *load_it (const char *filename, int start_offset);
 JGMOD *load_xm (const char *filename, int start_offset);
-JGMOD *load_jgm (JGMOD_FILE *f);
-int get_jgm_info(JGMOD_FILE *f, JGMOD_INFO *ji);
+JGMOD *load_jgm (FILE *f);
+int get_jgm_info(FILE *f, JGMOD_INFO *ji);
 int get_it_info(const char *filename, int start_offset, JGMOD_INFO *ji);
 int get_s3m_info (const char *filename, int start_offset, JGMOD_INFO *ji);
 int get_xm_info (const char *filename, int start_offset, JGMOD_INFO *ji);
