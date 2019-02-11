@@ -3,11 +3,9 @@
 #include <SDL2/SDL.h>
 
 #define FIXBITS AllegroVoiceApi::FIXBITS
-
 #define INTERP_LINEAR 1
 
 #define Assert assert
-
 #define Verify(x) do { const bool y = x; Assert(y); } while (false)
 
 AllegroVoiceApi::AllegroVoiceApi(const int in_sampleRate, const bool in_useMutex)
@@ -295,11 +293,24 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 		
 		if (sampleIndex >= 0 && sampleIndex < voice.sample->len)
 		{
+		#if INTERP_LINEAR
+			const int sampleIndex2 = sampleIndex + 1 < voice.sample->len ? sampleIndex + 1 : sampleIndex;
+
+			const int t = (voice.position >> (FIXBITS - 16)) & 0xffff;
+		#endif
+		
 			if (voice.sample->bits == 8)
 			{
 				const unsigned char * __restrict values = (unsigned char*)voice.sample->data;
 				
+			#if INTERP_LINEAR
+				const int value1 = int8_t(values[sampleIndex ] ^ 0x80);
+				const int value2 = int8_t(values[sampleIndex2] ^ 0x80);
+	
+				const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+			#else
 				const int value = int8_t(values[sampleIndex] ^ 0x80) * voice.volume;
+			#endif
 				
 				samples[i] = value * scale16;
 			}
@@ -307,7 +318,14 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 			{
 				const unsigned short * __restrict values = (unsigned short*)voice.sample->data;
 				
+			#if INTERP_LINEAR
+				const int value1 = int16_t(values[sampleIndex ] ^ 0x8000);
+				const int value2 = int16_t(values[sampleIndex2] ^ 0x8000);
+	
+				const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+			#else
 				const int value = int16_t(values[sampleIndex] ^ 0x8000) * voice.volume;
+			#endif
 				
 				samples[i] = value * scale24;
 			}

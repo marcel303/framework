@@ -9,10 +9,10 @@
 #include <stdio.h>
 #include <string.h>
 
-//#define DIGI_SAMPLERATE 44100
-#define DIGI_SAMPLERATE 192000
+#define DIGI_SAMPLERATE 44100
 
 #define FIXBITS AllegroVoiceApi::FIXBITS
+#define INTERP_LINEAR 0
 
 //
 
