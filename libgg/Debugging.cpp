@@ -1,17 +1,19 @@
 #include <assert.h>
 #include <exception>
 #include <string.h>
+
 #if defined(DEBUG) && defined(WIN32) && 0
-#include <vld.h>
+	#include <vld.h>
 #endif
+
 #include "Debugging.h"
 #include "Heap.h"
 #include "Log.h"
 #include "MemOps.h"
 
 #ifdef DEBUG
-#include <stdlib.h>
-#include <new>
+	#include <stdlib.h>
+	#include <new>
 #endif
 
 #ifdef DEBUG
@@ -64,6 +66,8 @@ AllocState::AllocState()
 	maxAllocationSize = 0;
 }
 
+#if DEBUG_MEM
+
 #include <new>
 
 class MemoryException : public std::bad_alloc
@@ -79,16 +83,14 @@ public:
 	}
 };
 
-#if DEBUG_MEM
-
 typedef struct AllocInfo
 {
 	size_t size;
 } AllocInfo;
 
 static inline uintptr_t PadAddr(uintptr_t addr, uintptr_t align) { return (addr + align - 1) & ~(align - 1); }
-static const int kAllocFront = PadAddr(sizeof(AllocInfo) + 4, 16);
-static const int kAllocBack = 4;
+#define kAllocFront PadAddr(sizeof(AllocInfo) + 4, 16)
+#define kAllocBack 4
 
 #endif
 
