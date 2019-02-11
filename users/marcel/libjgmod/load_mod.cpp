@@ -108,350 +108,348 @@ const int mod_finetune[]=
 
 namespace jgmod
 {
+	// -- Prototypes -------------------------------------------------------------
+	int get_mod_no_pat (int *table, int max_trk);
 
-// -- Prototypes -------------------------------------------------------------
-int get_mod_no_pat (int *table, int max_trk);
-
-//-- Codes -------------------------------------------------------------------
-
-
-int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
-{
-    FILE *f;
+	//-- Codes -------------------------------------------------------------------
 
 
-    if (no_inst == 15)
-        {
-        sprintf (ji->type_name, "MOD (15 Samples)");
-        ji->type = JGMOD_TYPE_MOD15;
-        }
-    else if (no_inst == 31)
-        {
-        sprintf (ji->type_name, "MOD (31 Samples)");
-        ji->type = JGMOD_TYPE_MOD31;
-        }
-    else
-        {
-        jgmod_seterror ("MOD must have 15 or 31 samples");
-        return -1;
-        }
+	int get_m_info(const char *filename, int no_inst, JGMOD_INFO *ji)
+	{
+		FILE *f;
 
 
-    f = jgmod_fopen (filename, "rb");
-    if (f == nullptr)
-        {
-        jgmod_seterror ("Unable to open %s", filename);
-        return -1;
-        }
-
-    jgmod_fread (ji->name, 20, f);
-    jgmod_fclose(f);
-    return 1;
-}
-
-//To detect protracker with 31 instruments
-int detect_m31 (const char *filename)
-{
-    FILE *f;
-    char id[4];
-    int index;
-    
-    f = jgmod_fopen (filename, "rb");
-    if (f == nullptr)
-        return -1;
-
-    jgmod_skip (f, 1080);
-    jgmod_fread (id, 4, f);
-    jgmod_fclose (f);
-
-    for (index=0; memcmp("32FW", modtypes[index].id, 4); index++)
-        if (memcmp (id, modtypes[index].id, 4) == 0)
-            return 1;
-
-    return -1;
-}
-
-// Load protracker 15 or 31 instruments. no_inst is used for
-// determining no of instruments.
-JGMOD *load_m (const char *filename, int no_inst)
-{
-    FILE *f;
-    JGMOD *j;
-    PATTERN_INFO *pi;
-    SAMPLE_INFO *si;
-    NOTE_INFO *ni;
-    SAMPLE *s;
-    char *data;
-    int index;
-    int counter;
-    int temp;
-    char id[4];
-
-    if (no_inst != 15 && no_inst != 31)
-        {
-        jgmod_seterror ("MOD must be 15 or 31 instruments");
-        return nullptr;
-        }
-
-    j = (JGMOD*)jgmod_calloc (sizeof (JGMOD ));
-    if (j == nullptr)
-        {
-        jgmod_seterror ("Unable to allocate enough memory for JGMOD structure");
-        return nullptr;
-        }
-
-    j->si = (SAMPLE_INFO*)jgmod_calloc (sizeof (SAMPLE_INFO) * no_inst);
-    if (j->si == nullptr)
-        {
-        jgmod_seterror ("Unable to allocate enough memory for SAMPLE_INFO structure");
-        jgmod_destroy (j);
-        return nullptr;
-        }
-
-    j->s = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * no_inst);
-    if (j->s == nullptr)
-        {
-        jgmod_seterror ("Unable to allocate enough memory for SAMPLE structure");
-        jgmod_destroy (j);
-        return nullptr;
-        }
-
-    j->no_sample = no_inst;
-    j->global_volume = 64;
-    j->mixing_volume = 64;
-    j->tempo = 6;
-    j->bpm = 125;
-    for (index=0; index<JGMOD_MAX_VOICES; index++)            //set the panning position
-        {
-        if ( (index%4) == 0 || (index%4) == 3)
-            j->panning[index] = 0;
-        else
-            j->panning[index] = 255;
-        }
+		if (no_inst == 15)
+			{
+			sprintf (ji->type_name, "MOD (15 Samples)");
+			ji->type = JGMOD_TYPE_MOD15;
+			}
+		else if (no_inst == 31)
+			{
+			sprintf (ji->type_name, "MOD (31 Samples)");
+			ji->type = JGMOD_TYPE_MOD31;
+			}
+		else
+			{
+			jgmod_seterror ("MOD must have 15 or 31 samples");
+			return -1;
+			}
 
 
-    f = jgmod_fopen (filename, "rb");
-    if (f == nullptr)
-        {
-        jgmod_seterror ("Unable to open %s", filename);
-        jgmod_destroy (j);
-        return nullptr;
-        }
+		f = jgmod_fopen (filename, "rb");
+		if (f == nullptr)
+			{
+			jgmod_seterror ("Unable to open %s", filename);
+			return -1;
+			}
 
-    jgmod_fread (j->name, 20, f);        //get the song name
-    for (index=0; index<no_inst; index++)    //get the sample info
-        {
-        si = j->si + index;
+		jgmod_fread (ji->name, 20, f);
+		jgmod_fclose(f);
+		return 1;
+	}
 
-        jgmod_skip (f, 22);
-        si->lenght = jgmod_mgetw (f);
-        si->c2spd = jgmod_getc(f);   //get finetune and change to c2spd
-        si->volume = jgmod_getc(f);
-        si->global_volume = 64;
-        si->repoff = jgmod_mgetw (f) * 2;
-        si->replen = jgmod_mgetw (f);
-        si->transpose = 0;
-
-        si->c2spd = mod_finetune[si->c2spd];
-
-        if (si->lenght == 1)
-            si->lenght = 0;
-        else
-            si->lenght *= 2;
-
-        if (si->replen == 1)
-            si->replen = 0;
-        else
-            si->replen *= 2;
-        }
-
-    j->no_trk = jgmod_getc(f);       // get no of track
-    j->restart_pos = jgmod_getc(f);  // restart position
-
-	for (index=0; index<64; index++)
-		j->channel_volume[index] = 64;
+	//To detect protracker with 31 instruments
+	int detect_m31 (const char *filename)
+	{
+		FILE *f;
+		char id[4];
+		int index;
 		
-    for (index=0; index < 128; index++)
-        *(j->pat_table + index) = jgmod_getc(f);
-    
-    j->no_pat = get_mod_no_pat (j->pat_table, 128);
+		f = jgmod_fopen (filename, "rb");
+		if (f == nullptr)
+			return -1;
 
-    if (no_inst == 31)
-        {
-        jgmod_fread (id, 4, f);              // get the id
-        for (index=0; memcmp("32FW", modtypes[index].id, 4); index++) // get no of channels
-            {
-            if (memcmp (id, modtypes[index].id, 4) == 0)
-                break;
-            }
-        j->no_chn = modtypes[index].no_channel;
-        }
-    else
-        j->no_chn = 4;
+		jgmod_skip (f, 1080);
+		jgmod_fread (id, 4, f);
+		jgmod_fclose (f);
 
-    j->pi = (PATTERN_INFO*)jgmod_calloc (j->no_pat * sizeof(PATTERN_INFO));
-    if (j->pi == nullptr)
-        {
-        jgmod_seterror ("Unable to allocate enough memory for PATTERN_INFO");
-        jgmod_fclose (f);
-        jgmod_destroy(j);
-        return nullptr;
-        }
+		for (index=0; memcmp("32FW", modtypes[index].id, 4); index++)
+			if (memcmp (id, modtypes[index].id, 4) == 0)
+				return 1;
 
-    // allocate patterns;
-    for (index=0; index<j->no_pat; index++)
-        {
-        pi = j->pi+index;
-        pi->ni = (NOTE_INFO*)jgmod_calloc (sizeof(NOTE_INFO) * 64 * j->no_chn);
-        if (pi->ni == nullptr)
-            {
-            jgmod_seterror ("Unable to allocate enough memory for NOTE_INFO");
-            jgmod_fclose (f);
-            jgmod_destroy (j);
-            return nullptr;
-            }
-        }
+		return -1;
+	}
 
+	// Load protracker 15 or 31 instruments. no_inst is used for
+	// determining no of instruments.
+	JGMOD *load_m (const char *filename, int no_inst)
+	{
+		FILE *f;
+		JGMOD *j;
+		PATTERN_INFO *pi;
+		SAMPLE_INFO *si;
+		NOTE_INFO *ni;
+		SAMPLE *s;
+		char *data;
+		int index;
+		int counter;
+		int temp;
+		char id[4];
 
-    for (index=0; index<j->no_pat; index++)
-        {
-        pi = j->pi + index;
-        pi->no_pos = 64;
-        }
+		if (no_inst != 15 && no_inst != 31)
+			{
+			jgmod_seterror ("MOD must be 15 or 31 instruments");
+			return nullptr;
+			}
 
-    // load notes
-    for (counter=0; counter<j->no_pat; counter++)
-        {
-        pi = j->pi+counter;
-        ni = pi->ni;
-        
-        for (index=0; index<(64 * j->no_chn); index++)
-            {
-            temp = jgmod_mgetl (f);
-            ni->sample = ((temp >> 24) & 0xF0) + ((temp >> 12) & 0xF);
-            ni->note = (temp >> 16) & 0xFFF;
-            ni->command = (temp >> 8) & 0xF;
-            ni->extcommand = temp & 0xFF;
-            ni->volume = 0;
+		j = (JGMOD*)jgmod_calloc (sizeof (JGMOD ));
+		if (j == nullptr)
+			{
+			jgmod_seterror ("Unable to allocate enough memory for JGMOD structure");
+			return nullptr;
+			}
 
-            if (ni->note)
-                ni->note = JGMOD_NTSC / ni->note;   //change to hz
+		j->si = (SAMPLE_INFO*)jgmod_calloc (sizeof (SAMPLE_INFO) * no_inst);
+		if (j->si == nullptr)
+			{
+			jgmod_seterror ("Unable to allocate enough memory for SAMPLE_INFO structure");
+			jgmod_destroy (j);
+			return nullptr;
+			}
 
-            ni++;
-            }
-        }
+		j->s = (SAMPLE*)jgmod_calloc (sizeof (SAMPLE) * no_inst);
+		if (j->s == nullptr)
+			{
+			jgmod_seterror ("Unable to allocate enough memory for SAMPLE structure");
+			jgmod_destroy (j);
+			return nullptr;
+			}
 
-    // load the instrument 
-    for (index=0; index<no_inst; index++)
-        {
-        s  = j->s + index;
-        si = j->si +index;
-
-        s->bits         = 8;
-
-        #ifdef ALLEGRO_DATE
-        s->stereo       = FALSE;
-        #endif
-
-        s->freq         = 1000;
-        s->priority     = JGMOD_PRIORITY;
-        s->len          = si->lenght;
-        s->param        = -1;
-        s->data         = jgmod_calloc (s->len);
-
-        if (s->len)
-            if (s->data == nullptr)
-                {
-                jgmod_seterror ("Unable to allocate enough memory for SAMPLE DATA");
-                jgmod_fclose (f);
-                jgmod_destroy (j);
-                return nullptr;
-                }
-
-        if (si->replen > 0)         //sample does loop
-            {
-            si->loop = JGMOD_LOOP_ON;
-            s->loop_start   = si->repoff;
-            s->loop_end     = si->repoff + si->replen;
-            }
-        else
-            {
-            si->loop = JGMOD_LOOP_OFF;
-            s->loop_start   = 0;
-            s->loop_end     = si->lenght;
-            }
-
-        jgmod_fread (s->data, s->len, f);
-        for (temp=0; temp< (signed)(s->len); temp++)
-            {
-            data = (char *)s->data;
-            data[temp] = data[temp] ^ 0x80;
-            }
-        }
+		j->no_sample = no_inst;
+		j->global_volume = 64;
+		j->mixing_volume = 64;
+		j->tempo = 6;
+		j->bpm = 125;
+		for (index=0; index<JGMOD_MAX_VOICES; index++)            //set the panning position
+			{
+			if ( (index%4) == 0 || (index%4) == 3)
+				j->panning[index] = 0;
+			else
+				j->panning[index] = 255;
+			}
 
 
-    // process the restart position stuff
-    if (j->restart_pos > j->no_trk)
-        j->restart_pos = 0;
+		f = jgmod_fopen (filename, "rb");
+		if (f == nullptr)
+			{
+			jgmod_seterror ("Unable to open %s", filename);
+			jgmod_destroy (j);
+			return nullptr;
+			}
 
-    jgmod_fclose (f);
-    return j;
-}
+		jgmod_fread (j->name, 20, f);        //get the song name
+		for (index=0; index<no_inst; index++)    //get the sample info
+			{
+			si = j->si + index;
 
-// to detect protracker with 15 instruments.
-// not very reliable
-int detect_m15 (const char *filename)
-{
-    FILE *f;
-    int index;
-    int temp;
+			jgmod_skip (f, 22);
+			si->lenght = jgmod_mgetw (f);
+			si->c2spd = jgmod_getc(f);   //get finetune and change to c2spd
+			si->volume = jgmod_getc(f);
+			si->global_volume = 64;
+			si->repoff = jgmod_mgetw (f) * 2;
+			si->replen = jgmod_mgetw (f);
+			si->transpose = 0;
 
-    f = jgmod_fopen (filename, "rb");
-    if (f == nullptr)
-        return 0;
+			si->c2spd = mod_finetune[si->c2spd];
 
-    jgmod_skip (f, 20);  //skip the name of the music;
+			if (si->lenght == 1)
+				si->lenght = 0;
+			else
+				si->lenght *= 2;
 
-    for (index=0; index<15; index++)
-        {
-        jgmod_skip (f, 24);      //skip sample name and sample length
-        temp = jgmod_getc (f);   //get sample finetune
-        if (temp != 0)          //finetune should be 0
-            {
-            jgmod_fclose (f);
-            return 0;
-            }
+			if (si->replen == 1)
+				si->replen = 0;
+			else
+				si->replen *= 2;
+			}
 
-        temp = jgmod_getc(f);    //get sample volume
-        if (temp > 64)          //should be <= 64
-            {
-            jgmod_fclose (f);
-            return 0;
-            }
+		j->no_trk = jgmod_getc(f);       // get no of track
+		j->restart_pos = jgmod_getc(f);  // restart position
 
-        jgmod_skip (f, 4);       //skip sample repeat offset and length
-        }
+		for (index=0; index<64; index++)
+			j->channel_volume[index] = 64;
+		
+		for (index=0; index < 128; index++)
+			*(j->pat_table + index) = jgmod_getc(f);
+		
+		j->no_pat = get_mod_no_pat (j->pat_table, 128);
 
-    jgmod_fclose (f);
-    return 1;
-}
+		if (no_inst == 31)
+			{
+			jgmod_fread (id, 4, f);              // get the id
+			for (index=0; memcmp("32FW", modtypes[index].id, 4); index++) // get no of channels
+				{
+				if (memcmp (id, modtypes[index].id, 4) == 0)
+					break;
+				}
+			j->no_chn = modtypes[index].no_channel;
+			}
+		else
+			j->no_chn = 4;
+
+		j->pi = (PATTERN_INFO*)jgmod_calloc (j->no_pat * sizeof(PATTERN_INFO));
+		if (j->pi == nullptr)
+			{
+			jgmod_seterror ("Unable to allocate enough memory for PATTERN_INFO");
+			jgmod_fclose (f);
+			jgmod_destroy(j);
+			return nullptr;
+			}
+
+		// allocate patterns;
+		for (index=0; index<j->no_pat; index++)
+			{
+			pi = j->pi+index;
+			pi->ni = (NOTE_INFO*)jgmod_calloc (sizeof(NOTE_INFO) * 64 * j->no_chn);
+			if (pi->ni == nullptr)
+				{
+				jgmod_seterror ("Unable to allocate enough memory for NOTE_INFO");
+				jgmod_fclose (f);
+				jgmod_destroy (j);
+				return nullptr;
+				}
+			}
+
+
+		for (index=0; index<j->no_pat; index++)
+			{
+			pi = j->pi + index;
+			pi->no_pos = 64;
+			}
+
+		// load notes
+		for (counter=0; counter<j->no_pat; counter++)
+			{
+			pi = j->pi+counter;
+			ni = pi->ni;
+			
+			for (index=0; index<(64 * j->no_chn); index++)
+				{
+				temp = jgmod_mgetl (f);
+				ni->sample = ((temp >> 24) & 0xF0) + ((temp >> 12) & 0xF);
+				ni->note = (temp >> 16) & 0xFFF;
+				ni->command = (temp >> 8) & 0xF;
+				ni->extcommand = temp & 0xFF;
+				ni->volume = 0;
+
+				if (ni->note)
+					ni->note = JGMOD_NTSC / ni->note;   //change to hz
+
+				ni++;
+				}
+			}
+
+		// load the instrument
+		for (index=0; index<no_inst; index++)
+			{
+			s  = j->s + index;
+			si = j->si +index;
+
+			s->bits         = 8;
+
+			#ifdef ALLEGRO_DATE
+			s->stereo       = FALSE;
+			#endif
+
+			s->freq         = 1000;
+			s->priority     = JGMOD_PRIORITY;
+			s->len          = si->lenght;
+			s->param        = -1;
+			s->data         = jgmod_calloc (s->len);
+
+			if (s->len)
+				if (s->data == nullptr)
+					{
+					jgmod_seterror ("Unable to allocate enough memory for SAMPLE DATA");
+					jgmod_fclose (f);
+					jgmod_destroy (j);
+					return nullptr;
+					}
+
+			if (si->replen > 0)         //sample does loop
+				{
+				si->loop = JGMOD_LOOP_ON;
+				s->loop_start   = si->repoff;
+				s->loop_end     = si->repoff + si->replen;
+				}
+			else
+				{
+				si->loop = JGMOD_LOOP_OFF;
+				s->loop_start   = 0;
+				s->loop_end     = si->lenght;
+				}
+
+			jgmod_fread (s->data, s->len, f);
+			for (temp=0; temp< (signed)(s->len); temp++)
+				{
+				data = (char *)s->data;
+				data[temp] = data[temp] ^ 0x80;
+				}
+			}
+
+
+		// process the restart position stuff
+		if (j->restart_pos > j->no_trk)
+			j->restart_pos = 0;
+
+		jgmod_fclose (f);
+		return j;
+	}
+
+	// to detect protracker with 15 instruments.
+	// not very reliable
+	int detect_m15 (const char *filename)
+	{
+		FILE *f;
+		int index;
+		int temp;
+
+		f = jgmod_fopen (filename, "rb");
+		if (f == nullptr)
+			return 0;
+
+		jgmod_skip (f, 20);  //skip the name of the music;
+
+		for (index=0; index<15; index++)
+			{
+			jgmod_skip (f, 24);      //skip sample name and sample length
+			temp = jgmod_getc (f);   //get sample finetune
+			if (temp != 0)          //finetune should be 0
+				{
+				jgmod_fclose (f);
+				return 0;
+				}
+
+			temp = jgmod_getc(f);    //get sample volume
+			if (temp > 64)          //should be <= 64
+				{
+				jgmod_fclose (f);
+				return 0;
+				}
+
+			jgmod_skip (f, 4);       //skip sample repeat offset and length
+			}
+
+		jgmod_fclose (f);
+		return 1;
+	}
 
 
 
-// to detect the no of patterns in protracker files.
-int get_mod_no_pat (int *table, int max_trk)
-{
-    int index;
-    int max=0;
+	// to detect the no of patterns in protracker files.
+	int get_mod_no_pat (int *table, int max_trk)
+	{
+		int index;
+		int max=0;
 
-    for (index=0; index<max_trk; index++)
-        if (table[index] > max)
-            max = table[index];
+		for (index=0; index<max_trk; index++)
+			if (table[index] > max)
+				max = table[index];
 
-    max++;
-    return max;
-}
-
+		max++;
+		return max;
+	}
 }
 
 void *jgmod_calloc (int size)
