@@ -14,6 +14,7 @@ push_group libraries
 	add 3rdparty/imgui-framework
 	add 3rdparty/jsoncpp
 	add 3rdparty/libwebrequest
+	add 3rdparty/miniz
 	with_platform macos add 3rdparty/xmm-support
 	add libfbx
 	add libgg

@@ -1,5 +1,6 @@
 library libfbx
-	add_files fbx.cpp fbx.h miniz.cpp miniz.h
+	depend_library miniz
+	add_files fbx.cpp fbx.h
 	header_path . expose
 
 app libfbx-test
