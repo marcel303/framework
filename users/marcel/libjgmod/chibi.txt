@@ -1,6 +1,6 @@
 library libjgmod
 
-	add_files file_io.cpp file_io.h jgmod.h jshare.h load_it.cpp load_jgm.cpp load_mod.cpp load_s3m.cpp load_xm.cpp mod.cpp player.cpp player2.cpp player3.cpp player4.cpp player5.cpp port.h save_jgm.cpp
+	add_files file_io.cpp file_io.h jgmod.h jshare.h load_it.cpp load_mod.cpp load_s3m.cpp load_xm.cpp mod.cpp player.cpp player2.cpp player3.cpp player4.cpp player5.cpp
 	add_files it_compression.cpp it_compression.h
 
 # todo : remove framework files and library here. let libjgmod expose a mixer interface

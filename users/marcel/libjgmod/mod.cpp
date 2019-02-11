@@ -51,25 +51,6 @@ JGMOD *jgmod_load (const char *filename, bool fast_loading, bool enable_m15)
 {
     int temp;
 
-    if (jgmod::detect_jgm (filename) == 1)
-        {
-        FILE *f;
-        JGMOD *j;
-
-        f = jgmod_fopen (filename, "rb");
-        if (f != nullptr)
-            {
-            j = jgmod::load_jgm (f);
-            jgmod_fclose (f);
-            return j;
-            }
-        else
-            {
-            jgmod_seterror ("Unable to open %s", filename);
-            return nullptr;
-            }
-        }
-
     if (jgmod::detect_it (filename) == 1)
         return jgmod::load_it (filename, 0);
 
@@ -161,19 +142,6 @@ int jgmod_get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15)
 	
 	memset(ji, 0, sizeof(*ji));
 	
-    if (jgmod::detect_jgm (filename) == 1)
-        {
-        FILE *f;
-
-        f = jgmod_fopen (filename, "rb");
-        if (f != nullptr)
-            {
-            temp = jgmod::get_jgm_info(f, ji);
-            jgmod_fclose (f);
-            return temp;
-            }
-        }
-
     if (jgmod::detect_it (filename) == 1)
         return jgmod::get_it_info (filename, 0, ji);
 
