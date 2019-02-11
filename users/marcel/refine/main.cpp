@@ -96,9 +96,9 @@ struct FileBrowser
 		// list files
 
 		//const char * rootFolder = "/Users/thecat/framework/vfxGraph-examples/data";
-		//const char * rootFolder = "/Users/thecat/framework/";
+		const char * rootFolder = "/Users/thecat/framework/";
 		//const char * rootFolder = "/Users/thecat/";
-		const char * rootFolder = "d:/repos";
+		//const char * rootFolder = "d:/repos";
 		
 		auto files = listFiles(rootFolder, true);
 		
@@ -645,6 +645,8 @@ struct FileEditor_Text : FileEditor
 
 struct FileEditor_Sprite : FileEditor
 {
+	float desiredScale = 1.f;
+	
 	Sprite sprite;
 	std::string path;
 	char sheetFilename[64];
@@ -672,6 +674,15 @@ struct FileEditor_Sprite : FileEditor
 		if (hasFocus == false)
 			return;
 		
+		// update smoothed changes
+		
+		const float retainAnimTick = .8f;
+		const float retainThisTick = powf(retainAnimTick, dt * 100.f);
+		
+		sprite.scale = lerp<float>(sprite.scale, desiredScale, 1.f - retainThisTick);
+		
+		// update sprite
+		
 		sprite.update(dt);
 		
 		// draw
@@ -692,6 +703,7 @@ struct FileEditor_Sprite : FileEditor
 		}
 		
 		setColor(colorWhite);
+		sprite.pixelpos = false;
 		sprite.x = (sx - sprite.getWidth() * sprite.scale) / 2;
 		sprite.y = (sy - sprite.getHeight() * sprite.scale) / 2;
 		sprite.draw();
@@ -713,7 +725,7 @@ struct FileEditor_Sprite : FileEditor
 				}
 				
 				ImGui::SliderFloat("angle", &sprite.angle, -360.f, +360.f);
-				ImGui::SliderFloat("scale", &sprite.scale, 0.f, 100.f, "%.2f", 2);
+				ImGui::SliderFloat("scale", &desiredScale, 0.f, 100.f, "%.2f", 2);
 				ImGui::Checkbox("flip X", &sprite.flipX);
 				ImGui::Checkbox("flip Y", &sprite.flipY);
 				ImGui::InputFloat("pivot X", &sprite.pivotX);
@@ -1910,6 +1922,7 @@ int main(int argc, char * argv[])
 			extension == "vs" || // Vertex shader
 			extension == "frag" || // Fragment shader
 			extension == "txt" ||
+			extension == "plist" || // OSX property list
 			extension == "ini" ||
 			extension == "c" || // c
 			extension == "cpp" || // c++
@@ -1921,6 +1934,7 @@ int main(int argc, char * argv[])
 			extension == "bat" || // Batch file
 			extension == "sh" || // Shell script
 			extension == "java" ||
+			extension == "js" || // Javascript
 			extension == "pde" || // Processing sketch
 			extension == "ino") // Arduino sketch)
 		{
