@@ -1,0 +1,4 @@
+library msdfgen
+	scan_files cpp traverse conglomerate msdfgen_all.cpp
+	scan_files h   traverse
+	header_path . expose

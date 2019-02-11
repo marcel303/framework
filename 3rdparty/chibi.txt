@@ -4,6 +4,10 @@ with_platform windows add libsdl2-win32
 
 with_platform macos add libetherdream
 
+add utf8rewind
+add tinyxml2
+add msdfgen
+
 library imgui
 	header_path imgui expose
 	add_files imgui/imgui.cpp imgui/imgui.h imgui/imgui_demo.cpp imgui/imgui_draw.cpp imgui/imgui_internal.h imgui/imgui_widgets.cpp

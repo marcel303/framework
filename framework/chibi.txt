@@ -5,15 +5,17 @@ library framework
 
 	depend_library libsdl2
 
+	depend_library msdfgen
+	depend_library tinyxml2
+	depend_library utf8rewind
+
 	scan_files cpp
 	scan_files c   path audiostream          group audiostream
 	scan_files cpp path audiostream          group audiostream
-	scan_files cpp path msdfgen     traverse group msdfgen conglomerate msdfgen_all.cpp
 
 	scan_files h
 	scan_files h path audiostream                    group audiostream
 	scan_files h path audiostream/oggvorbis traverse group audiostream/oggvorbis
-	scan_files h path msdfgen               traverse group msdfgen
 
 	header_path . expose
 	header_path audiostream/oggvorbis expose

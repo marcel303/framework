@@ -38,7 +38,7 @@
 #endif
 
 #if ENABLE_MSDF_FONTS
-	#include "msdfgen/msdfgen.h"
+	#include "msdfgen.h"
 #endif
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
