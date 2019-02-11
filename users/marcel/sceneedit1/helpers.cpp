@@ -68,3 +68,10 @@ ComponentTypeBase * findComponentType(const std::type_index & typeIndex)
 {
 	return findComponentType(g_componentTypes, typeIndex);
 }
+
+//
+
+#include "helpers.h"
+#include "resource.h"
+
+ResourceDatabase g_resourceDatabase;

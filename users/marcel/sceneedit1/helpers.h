@@ -13,3 +13,15 @@ ComponentTypeBase * findComponentType(const char * typeName);
 ComponentTypeBase * findComponentType(const std::type_index & typeIndex);
 
 extern std::vector<ComponentTypeBase*> g_componentTypes;
+
+//
+
+#include "resource.h" // fixme
+
+extern ResourceDatabase g_resourceDatabase;
+
+template <typename T>
+T * findResource(const char * name)
+{
+	return g_resourceDatabase.find<T>(name);
+}
