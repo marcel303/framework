@@ -1,0 +1,7 @@
+library libgg-psd
+	
+	depend_library libgg
+	
+	scan_files cpp traverse conglomerate libgg-psd-all.cxx
+
+	header_path . expose
