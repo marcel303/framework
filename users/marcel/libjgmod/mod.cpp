@@ -17,10 +17,10 @@
 
 #include "allegro2-timerApi.h"
 #include "allegro2-voiceApi.h"
-#include "StringEx.h"
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifdef WIN32
@@ -33,10 +33,16 @@ void jgmod_seterror(const char * format, ...)
 {
 	va_list args;
 	va_start(args, format);
+#ifdef WIN32
 	vsprintf_s(
 		jgmod_error,
 		sizeof(jgmod_error),
 		format, args);
+#else
+	vsprintf(
+		jgmod_error,
+		format, args);
+#endif
 	va_end(args);
 }
 

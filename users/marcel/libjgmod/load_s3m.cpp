@@ -18,9 +18,9 @@
 #include "allegro2-voiceApi.h"
 
 #include <string.h>
-#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 //#define JG_debug
 //#define force_8_bit

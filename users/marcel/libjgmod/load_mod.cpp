@@ -18,8 +18,8 @@
 #include "allegro2-voiceApi.h"
 
 #include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 typedef struct MODTYPE{    /* struct to identify type of module */
         char    id[5];

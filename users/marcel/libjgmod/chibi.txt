@@ -1,8 +1,8 @@
-library allegro2-timerApi
+library allegro2-timerApi shared
 	depend_library libsdl2
 	add_files allegro2-timerApi.cpp allegro2-timerApi.h
 
-library allegro2-voiceApi
+library allegro2-voiceApi shared
 	depend_library libsdl2
 	add_files allegro2-voiceApi.cpp allegro2-voiceApi.h
 
@@ -12,9 +12,6 @@ library libjgmod
 	
 	add_files file_io.cpp file_io.h jgmod.h jshare.h load_it.cpp load_mod.cpp load_s3m.cpp load_xm.cpp mod.cpp player.cpp player2.cpp player3.cpp player4.cpp player5.cpp
 	add_files it_compression.cpp it_compression.h
-
-# todo : remove framework files and library here. let libjgmod expose a mixer interface
-	depend_library framework
 
 	header_path . expose
 
