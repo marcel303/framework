@@ -1,0 +1,12 @@
+language: cpp
+
+os:
+  - linux
+  - osx
+
+compiler:
+  - gcc
+  - clang
+
+script: 
+  - ./build.sh
