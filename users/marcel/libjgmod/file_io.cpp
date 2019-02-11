@@ -13,8 +13,7 @@
 
 #include "file_io.h"
 #include "jgmod.h"
-
-#include "framework-allegro2.h"
+#include <stdint.h>
 
 FILE *jgmod_fopen (const char *filename, const char *mode)
 {

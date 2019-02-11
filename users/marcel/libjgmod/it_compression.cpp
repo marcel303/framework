@@ -21,12 +21,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define NEED_BYTESWAP
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #include "it_compression.h"
-//#include "headers.h"
-//#include "fmt.h"
 #include <stdio.h>
+
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 // ------------------------------------------------------------------------------------------------------------
 // IT decompression code from itsex.c (Cubic Player) and load_it.cpp (Modplug)
