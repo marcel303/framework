@@ -1,5 +1,4 @@
-#ifndef JGMOD_H
-#define JGMOD_H
+#pragma once
 
 #ifndef JGM_ID
     #define JGM_ID  DAT_ID('J','G','M',' ')
@@ -482,5 +481,3 @@ JGMOD *jgmod_load (const char * filename, bool fast_loading = true, bool enable_
 void jgmod_destroy (JGMOD * j);
 
 int jgmod_get_info (const char *filename, JGMOD_INFO * ji, bool enable_m15 = false);
-
-#endif  // for JGMOD_H

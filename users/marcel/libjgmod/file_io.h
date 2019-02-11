@@ -1,5 +1,4 @@
-#ifndef FILE_IO_H
-#define FILE_IO_H
+#pragma once
 
 #include <stdio.h>
 
@@ -18,5 +17,3 @@ int jgmod_putc (int c, FILE *f);
 int jgmod_iputw (int w, FILE *f);
 long jgmod_iputl (long w, FILE *f);
 int jgmod_fwrite (const void *buf, int size, FILE *f);
-
-#endif
