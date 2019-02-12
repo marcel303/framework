@@ -73,7 +73,7 @@ library framework
 	with_platform linux depend_library pthread find
 	with_platform linux depend_library portaudio find
 	with_platform linux depend_library freeimage find
-	with_platform linux depend_package OpenGL
+	with_platform linux depend_package OPENGL
 	with_platform linux depend_package GLEW
 	with_platform linux depend_package Freetype
 
