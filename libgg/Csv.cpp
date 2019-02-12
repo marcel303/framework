@@ -4,6 +4,7 @@
 #include "Parse.h"
 #include "StreamReader.h"
 #include "StringEx.h"
+#include <string.h>
 
 bool CsvRow::parse(const std::string & line, const char separator, const std::vector<std::string> & header)
 {
