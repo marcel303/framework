@@ -419,6 +419,7 @@ bool Framework::init(int sx, int sy)
 
 		logInfo("using OpenGL %s, %s, GLEW %s", glGetString(GL_VERSION), glGetString(GL_VENDOR), glewGetString(GLEW_VERSION));
 	
+	#if !USE_LEGACY_OPENGL
 		if (!GLEW_VERSION_3_2)
 		{
 			logWarning("OpenGL 3.2 not supported");
@@ -426,6 +427,15 @@ bool Framework::init(int sx, int sy)
 				initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
 			return false;
 		}
+	#else
+		if (!GLEW_VERSION_2_1)
+		{
+			logWarning("OpenGL 2.1 not supported");
+			if (initErrorHandler)
+				initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
+			return false;
+		}
+	#endif
 	}
 
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT

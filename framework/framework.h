@@ -31,6 +31,11 @@
 //        which should hopefully rarely be needed
 // for now we seem to depend mostly on: SDL_event, SDL_mutex, SDL_thread and SDL_timer
 
+#if USE_LEGACY_OPENGL
+	#include <GL/glew.h>
+	#include <SDL2/SDL_opengl.h>
+#endif
+
 #include "Debugging.h"
 #include "gx_texture.h"
 #include "Mat4x4.h"
@@ -1446,6 +1451,7 @@ static inline void gxColor3ub(int r, int g, int b) { }
 static inline void gxColor4ub(int r, int g, int b, int a) { }
 static inline void gxTexCoord2f(float u, float v) { }
 static inline void gxNormal3f(float x, float y, float z) { }
+static inline void gxNormal3fv(const float  * v) { }
 static inline void gxVertex2f(float x, float y) { }
 static inline void gxVertex3f(float x, float y, float z) { }
 static inline void gxVertex4f(float x, float y, float z, float w) { }
@@ -1511,6 +1517,7 @@ void gxEnd();
 #define gxColor4ub glColor4ub
 #define gxTexCoord2f glTexCoord2f
 #define gxNormal3f glNormal3f
+#define gxNormal3fv glNormal3fv
 #define gxVertex2f glVertex2f
 #define gxVertex2fv glVertex2fv
 #define gxVertex3f glVertex3f
