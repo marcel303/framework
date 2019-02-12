@@ -70,7 +70,7 @@ library framework
 	with_platform linux depend_library freeimage find
 	with_platform linux depend_package OpenGL
 	with_platform linux depend_package GLEW
-	with_platform linux depend_package FREETYPE
+	with_platform linux depend_package Freetype
 
 app framework-example-aniplay
 	add_files examples/aniplay.cpp
