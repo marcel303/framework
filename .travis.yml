@@ -11,13 +11,13 @@ compiler:
   - clang
 
 script: 
+  # the version of portaudio that's included with Debian is outdated.
+  # portaudio needs to be built from sources on Linux.
   - if [ $TRAVIS_OS_NAME == linux ]; then
       sudo apt-get update -qq;
       sudo apt-get install -y --no-install-recommends libglew-dev;
       sudo apt-get install -y --no-install-recommends libfreeimage-dev;
       sudo apt-get install -y --no-install-recommends libsdl2-dev;
-      # the version of portaudio that's included with Debian is outdated.
-      # portaudio needs to be built from sources on Linux.
       wget http://www.portaudio.com/archives/pa_stable_v190600_20161030.tgz;
       tar -xf pa_stable_v190600_20161030.tgz;
       cd portaudio;
