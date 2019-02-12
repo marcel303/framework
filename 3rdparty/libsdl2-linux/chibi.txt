@@ -1,5 +1,5 @@
 cmake_module_path cmake_modules
 
-library libsdl2
+library libsdl2 shared
 	depend_package SDL2
 	add_files dummy.cpp
