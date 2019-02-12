@@ -255,8 +255,8 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 			{
 				const int pan = voice.pan;
 				
-				const int pan1 = (0xff - pan) * voice.volume;
-				const int pan2 = (       pan) * voice.volume;
+				const int pan1 = ((1 << 8) - pan) * voice.volume;
+				const int pan2 = (           pan) * voice.volume;
 				
 				int sampleIndex = voice.position >> FIXBITS;
 				

@@ -235,7 +235,7 @@ void AllegroVoiceApi::voice_set_frequency(int voice, int freq)
 
 void AllegroVoiceApi::voice_set_pan(int voice, int pan)
 {
-	Assert(pan >= 0 && pan <= 255);
+	Assert(pan >= 0 && pan <= 256);
 	
 	if (voice == -1)
 		return;
@@ -278,7 +278,7 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 		return false;
 	}
 	
-	stereoPanning = voice.pan / 255.f;
+	stereoPanning = voice.pan / 256.f;
 	
 	int64_t voice_position = voice.position;
 	

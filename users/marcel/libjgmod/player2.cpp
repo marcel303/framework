@@ -239,8 +239,8 @@ int JGMOD_PLAYER::calc_pan (int chn) const
     int temp;
 
     temp = ci[chn].temp_pan + ((ci[chn].panenv.v - 32) * (128 - std::abs(ci[chn].temp_pan - 128)) / 32);
-    if (temp > 255)
-        temp = 255;
+    if (temp > 256)
+        temp = 256;
     else if (temp < 0)
         temp = 0;
 
