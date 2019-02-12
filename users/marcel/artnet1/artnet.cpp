@@ -40,12 +40,12 @@ enum ArtnetVersion
 	kArtnetVersion_14 = 14
 };
 
-static inline void writeByte(uint8_t *& __restrict dst, const uint8_t byte)
+static inline void writeByte(uint8_t * __restrict & dst, const uint8_t byte)
 {
 	*dst++ = byte;
 }
 
-static inline void writeBytes(uint8_t *& __restrict dst, const void * src, const int srcSize)
+static inline void writeBytes(uint8_t * __restrict & dst, const void * src, const int srcSize)
 {
 	memcpy(dst, src, srcSize);
 	dst += srcSize;
