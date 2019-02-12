@@ -3,7 +3,7 @@
 #include <SDL2/SDL.h>
 
 #define FIXBITS AllegroVoiceApi::FIXBITS
-#define INTERP_LINEAR 0
+#define INTERP_LINEAR 1
 
 #define Assert assert
 #define Verify(x) do { const bool y = x; Assert(y); } while (false)
@@ -307,7 +307,7 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 				const int value1 = int8_t(values[sampleIndex ] ^ 0x80);
 				const int value2 = int8_t(values[sampleIndex2] ^ 0x80);
 	
-				const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+				const int value = (value1 * ((1 << 16) - t) + value2 * t) >> 16;
 			#else
 				const int value = int8_t(values[sampleIndex] ^ 0x80);
 			#endif
@@ -322,7 +322,7 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 				const int value1 = int16_t(values[sampleIndex ] ^ 0x8000);
 				const int value2 = int16_t(values[sampleIndex2] ^ 0x8000);
 	
-				const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+				const int value = (value1 * ((1 << 16) - t) + value2 * t) >> 16;
 			#else
 				const int value = int16_t(values[sampleIndex] ^ 0x8000);
 			#endif

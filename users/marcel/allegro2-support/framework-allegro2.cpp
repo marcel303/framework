@@ -12,7 +12,7 @@
 #define DIGI_SAMPLERATE 44100
 
 #define FIXBITS AllegroVoiceApi::FIXBITS
-#define INTERP_LINEAR 0
+#define INTERP_LINEAR 1
 
 //
 
@@ -280,7 +280,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 							const int value1 = int8_t(values[sampleIndex ] ^ 0x80);
 							const int value2 = int8_t(values[sampleIndex2] ^ 0x80);
 							
-							const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+							const int value = (value1 * ((1 << 16) - t) + value2 * t) >> 16;
 						#else
 							const int value = int8_t(values[sampleIndex] ^ 0x80);
 						#endif
@@ -296,7 +296,7 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 							const int value1 = int16_t(values[sampleIndex ] ^ 0x8000);
 							const int value2 = int16_t(values[sampleIndex2] ^ 0x8000);
 							
-							const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+							const int value = (value1 * ((1 << 16) - t) + value2 * t) >> 16;
 						#else
 							const int value = int16_t(values[sampleIndex] ^ 0x8000);
 						#endif
