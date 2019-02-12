@@ -10,14 +10,16 @@ compiler:
   - gcc
   - clang
 
-script: 
+addons:
+  apt:
+    update: true
+    
+before_install:
   # the version of portaudio that's included with Debian is outdated.
   # portaudio needs to be built from sources on Linux.
   - if [ $TRAVIS_OS_NAME == linux ]; then
-      sudo apt-get update -qq;
       cmake --version;
-      sudo apt-get install -y --no-install-recommends cmake;
-      cmake --version;
+      sudo apt-get install -y --no-install-recommends libgtk2.0-dev;
       sudo apt-get install -y --no-install-recommends libglew-dev;
       sudo apt-get install -y --no-install-recommends libfreeimage-dev;
       sudo apt-get install -y --no-install-recommends libsdl2-dev;
@@ -28,5 +30,7 @@ script:
       sudo make install;
       cd ..;
     fi
+
+script: 
   - git submodule update --init --recursive
   - ./build.sh
