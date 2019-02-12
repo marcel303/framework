@@ -22,11 +22,16 @@ before_install:
       sudo apt-get install -y --no-install-recommends libgtk2.0-dev;
       sudo apt-get install -y --no-install-recommends libglew-dev;
       sudo apt-get install -y --no-install-recommends libfreeimage-dev;
-      sudo apt-get install -y --no-install-recommends libsdl2-dev;
       wget http://www.portaudio.com/archives/pa_stable_v190600_20161030.tgz;
       tar -xf pa_stable_v190600_20161030.tgz;
       cd portaudio;
       cmake -DCMAKE_BUILD_TYPE=Release .;
+      sudo make install;
+      cd ..;
+      wget https://www.libsdl.org/release/SDL2-2.0.9.tar.gz;
+      tar -xf SDL2-2.0.9.tar.gz;
+      cd SDL2-2.0.9;
+      ./configure;
       sudo make install;
       cd ..;
       sudo apt-get install libavcodec-dev;
