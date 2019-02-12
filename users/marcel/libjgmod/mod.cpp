@@ -622,8 +622,8 @@ void JGMOD_PLAYER::set_speed (int speed)
 {
     if (speed <= 0)
         speed = 1;
-    else if (speed > 400)
-        speed = 400;
+    else if (speed > 1000)
+        speed = 1000;
 	
 	if (speed == mi.speed_ratio)
 		return;
@@ -642,8 +642,8 @@ void JGMOD_PLAYER::set_pitch (int pitch)
     if (pitch <= 0)
         pitch = 1;
 
-    if (pitch > 400)
-        pitch = 400;
+    if (pitch > 1000)
+        pitch = 1000;
 
     mi.pitch_ratio = pitch;
 }
