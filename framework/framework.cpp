@@ -9215,7 +9215,9 @@ std::string getDirectory()
 #if WINDOWS
 	_getcwd(temp, sizeof(temp));
 #else
-	getcwd(temp, sizeof(temp));
+	const char * r;
+	r = getcwd(temp, sizeof(temp));
+	(void)r; // mute gcc warning about unused return value
 #endif
 
 	return temp;
