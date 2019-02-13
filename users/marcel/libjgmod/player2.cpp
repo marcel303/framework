@@ -25,6 +25,8 @@
 
 #define LOGFAC 32
 
+#define USE_IT_VIB_TABLE 0
+
 extern const int mod_finetune[];
 
 // for converting linear period to frequency
@@ -152,6 +154,7 @@ extern const int noteperiod[];
 
 const int noteperiod[] =
 {
+	// confirmed to be correct
     6848, 6464, 6096, 5760, 5424, 5120, 4832, 4560, 4304, 4064, 3840, 3628
 };
 
@@ -163,6 +166,30 @@ static const int vib_table[] =
     255, 253, 250, 244, 235, 224, 212, 197,
     180, 161, 141, 120, 97,  74,  49,  24
 };
+
+#if USE_IT_VIB_TABLE
+
+const int8_t vib_table_it[256] =
+{
+	  0,  2,  3,  5,  6,  8,  9, 11, 12, 14, 16, 17, 19, 20, 22, 23,
+	 24, 26, 27, 29, 30, 32, 33, 34, 36, 37, 38, 39, 41, 42, 43, 44,
+	 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 56, 57, 58, 59,
+	 59, 60, 60, 61, 61, 62, 62, 62, 63, 63, 63, 64, 64, 64, 64, 64,
+	 64, 64, 64, 64, 64, 64, 63, 63, 63, 62, 62, 62, 61, 61, 60, 60,
+	 59, 59, 58, 57, 56, 56, 55, 54, 53, 52, 51, 50, 49, 48, 47, 46,
+	 45, 44, 43, 42, 41, 39, 38, 37, 36, 34, 33, 32, 30, 29, 27, 26,
+	 24, 23, 22, 20, 19, 17, 16, 14, 12, 11,  9,  8,  6,  5,  3,  2,
+	  0, -2, -3, -5, -6, -8, -9,-11,-12,-14,-16,-17,-19,-20,-22,-23,
+	-24,-26,-27,-29,-30,-32,-33,-34,-36,-37,-38,-39,-41,-42,-43,-44,
+	-45,-46,-47,-48,-49,-50,-51,-52,-53,-54,-55,-56,-56,-57,-58,-59,
+	-59,-60,-60,-61,-61,-62,-62,-62,-63,-63,-63,-64,-64,-64,-64,-64,
+	-64,-64,-64,-64,-64,-64,-63,-63,-63,-62,-62,-62,-61,-61,-60,-60,
+	-59,-59,-58,-57,-56,-56,-55,-54,-53,-52,-51,-50,-49,-48,-47,-46,
+	-45,-44,-43,-42,-41,-39,-38,-37,-36,-34,-33,-32,-30,-29,-27,-26,
+	-24,-23,-22,-20,-19,-17,-16,-14,-12,-11, -9, -8, -6, -5, -3, -2,
+};
+
+#endif
 
 int JGMOD_PLAYER::interpolate(const int p, const int p1, const int p2, const int v1, const int v2)
 {
@@ -339,9 +366,9 @@ int JGMOD_PLAYER::period2pitch(const int period) const
 {
     if ((of->flag & JGMOD_MODE_XM) && (of->flag & JGMOD_MODE_LINEAR))
 	{
-        const int temp = (int)floor(8363.0 * pow(2.0, (4608.0 - period) / 768.0 ));
+        //const int temp = (int)floor(8363.0 * pow(2.0, (4608.0 - period) / 768.0 ));
 
-        //temp = lintab[period % 768] >> (period / 768);
+        const int temp = lintab[period % 768] >> (period / 768);
 						  
         return temp;
 	}
@@ -490,16 +517,38 @@ void JGMOD_PLAYER::do_vibrato(const int chn)
 {
     int temp = 0;
 
+	/*
+	note : depending on the sign / phase of the vibrato pointer (an 8 bit signed integer),
+	the value computed above gets added or subtracted from the period
+	*/
+	
+#if USE_IT_VIB_TABLE
+	int q = (ci[chn].vibrato_pointer >> 0) & 0x7F;
+#else
     int q = (ci[chn].vibrato_pointer >> 2) & 0x1F;
+#endif
 
     if ((ci[chn].vibrato_waveform & 3) == 0)
     {
-        temp = vib_table[q];
+    	// sine wave
+		
+	#if USE_IT_VIB_TABLE
+		temp = vib_table_it[q] * 4;
+        assert(temp >= 0);
+	#else
+		temp = vib_table[q];
+	#endif
 	}
     else if ((ci[chn].vibrato_waveform & 3) == 1)
 	{
-        q <<= 3;
+		// ramp down
 		
+	#if USE_IT_VIB_TABLE
+		q <<= 1;
+	#else
+        q <<= 3;
+	#endif
+	
         if (ci[chn].vibrato_pointer < 0)
             q = 255 - q;
 
@@ -507,18 +556,24 @@ void JGMOD_PLAYER::do_vibrato(const int chn)
 	}
     else if ((ci[chn].vibrato_waveform & 3) == 2)
     {
-        temp = 255;
+    	// square wave
+		
+		temp = 255;
 	}
     else
     {
+    	// random
+		
         temp = rand() % 256;
 	}
 
     temp *= ci[chn].vibrato_depth;
     temp >>= ci[chn].vibrato_shift;
-
+	
+	// add or subtract the wave form from the period, depending on the phase of the vibrato effect
+	
     if (ci[chn].vibrato_pointer >= 0)
-        temp += ci[chn].period;
+        temp = ci[chn].period + temp;
     else
         temp = ci[chn].period - temp;
 
