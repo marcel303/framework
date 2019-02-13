@@ -429,24 +429,24 @@ protected:
 	void do_delay_sample (const int chn);
 
 	// -- located in player3.c ---------------------------------------------------
-	void parse_volume_command (int chn, int volume, int note);
-	void parse_note_command (int chn, int note);
+	void parse_volume_command (const int chn, const int volume, const int note);
+	void parse_note_command (const int chn, const int note);
 
-	void parse_s3m_volume_slide (int chn, int extcommand);
-	void parse_s3m_portamento_down (int chn, int extcommand);
-	void parse_s3m_portamento_up (int chn, int extcommand);
-	void parse_s3m_arpeggio (int chn, int extcommand);
-	void parse_s3m_panning (int chn, int extcommand);
-	void parse_tremor (int chn, int extcommand);
-	void parse_s3m_retrig (int chn, int extcommand);
+	void parse_s3m_volume_slide (const int chn, const int extcommand);
+	void parse_s3m_portamento_down (const int chn, const int extcommand);
+	void parse_s3m_portamento_up (const int chn, const int extcommand);
+	void parse_s3m_arpeggio (const int chn, const int extcommand);
+	void parse_s3m_panning (const int chn, const int extcommand);
+	void parse_tremor (const int chn, const int extcommand);
+	void parse_s3m_retrig (const int chn, const int extcommand);
 
-	void do_global_volume (int extcommand);
-	void do_s3m_set_tempo (int extcommand);
-	void do_s3m_set_bpm (int extcommand);
-	void do_s3m_volume_slide (int chn);
-	void do_s3m_portamento (int chn);
-	void do_tremor (int chn);
-	void do_s3m_retrig (int chn);
+	void do_global_volume (const int extcommand);
+	void do_s3m_set_tempo (const int extcommand);
+	void do_s3m_set_bpm (const int extcommand);
+	void do_s3m_volume_slide (const int chn);
+	void do_s3m_portamento (const int chn);
+	void do_tremor (const int chn);
+	void do_s3m_retrig (const int chn);
 
 	// -- located in player4.c ---------------------------------------------------
 	void parse_new_note (int chn, int note, int sample_no);
