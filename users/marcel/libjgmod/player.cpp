@@ -124,7 +124,7 @@ void JGMOD_PLAYER::mod_interrupt()
             mi.pos++;
 
             const PATTERN_INFO & pi = of->pi[mi.pat];
-            
+			
             if (mi.pos >= pi.no_pos)
 			{
                 mi.pos = 0;
@@ -543,11 +543,10 @@ void JGMOD_PLAYER::mod_interrupt()
 
             voiceApi->reallocate_voice(voice_table[chn], &s);
 
-            if (si.loop & JGMOD_LOOP_ON)
+			if (si.loop & JGMOD_LOOP_BIDI)
+                voiceApi->voice_set_playmode(voice_table[chn], PLAYMODE_LOOP | PLAYMODE_BIDIR);
+            else if (si.loop & JGMOD_LOOP_ON)
                 voiceApi->voice_set_playmode(voice_table[chn], PLAYMODE_LOOP);
-
-            if (si.loop & JGMOD_LOOP_BIDI)
-                voiceApi->voice_set_playmode(voice_table[chn], PLAYMODE_BIDIR|PLAYMODE_LOOP);
 
             //voice_start(voice_table[chn]);
             //ci[chn].kick = false;
