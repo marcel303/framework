@@ -348,11 +348,6 @@ namespace jgmod
 			si = j->si +index;
 
 			s->bits         = 8;
-
-			#ifdef ALLEGRO_DATE
-			s->stereo       = FALSE;
-			#endif
-
 			s->freq         = 1000;
 			s->priority     = JGMOD_PRIORITY;
 			s->len          = si->lenght;

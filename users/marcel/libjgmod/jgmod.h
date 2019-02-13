@@ -372,26 +372,26 @@ struct JGMOD_PLAYER
 	
 	JGMOD_PLAYER();
 	
-	int init(int no_voices, AllegroTimerApi * timerApi, AllegroVoiceApi * voiceApi);
-	void shut ();
+	int init(const int no_voices, AllegroTimerApi * timerApi, AllegroVoiceApi * voiceApi);
+	void shut();
 	
-	void play (JGMOD *j, bool loop, int speed = 100, int pitch = 100);
-	void next_track ();
-	void prev_track ();
-	void goto_track (int new_track);
-	void stop ();
-	bool is_playing () const;
-	void pause ();
-	void resume ();
-	bool is_paused () const;
+	void play(JGMOD * j, const bool loop, const int speed = 100, const int pitch = 100);
+	void next_track();
+	void prev_track();
+	void goto_track(const int new_track);
+	void stop();
+	bool is_playing() const;
+	void pause();
+	void resume();
+	bool is_paused() const;
 	void destroy_mod();
-	void set_volume (int volume);
-	int get_volume () const;
-	SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no);
-	void set_loop (bool loop);
-	void set_speed (int speed);
-	void set_pitch (int pitch);
-	void toggle_pause_mode ();
+	void set_volume(const int volume);
+	int get_volume() const;
+	SAMPLE * get_jgmod_sample(JGMOD * j, const int sample_no);
+	void set_loop(const bool loop);
+	void set_speed(const int speed);
+	void set_pitch(const int pitch);
+	void toggle_pause_mode();
 	
 protected:
 	static void mod_interrupt_proc (void * data);
@@ -477,7 +477,7 @@ protected:
 void jgmod_seterror(const char * format, ...);
 const char * jgmod_geterror();
 
-JGMOD *jgmod_load (const char * filename, bool fast_loading = true, bool enable_m15 = false);
-void jgmod_destroy (JGMOD * j);
+JGMOD * jgmod_load(const char * filename, const bool fast_loading = true, const bool enable_m15 = false);
+void jgmod_destroy(JGMOD * j);
 
-int jgmod_get_info (const char *filename, JGMOD_INFO * ji, bool enable_m15 = false);
+int jgmod_get_info(const char * filename, JGMOD_INFO * ji, const bool enable_m15 = false);

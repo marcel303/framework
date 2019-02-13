@@ -948,11 +948,6 @@ namespace jgmod
 		#endif
 			
 			s->freq = si->c2spd;
-			
-			#ifdef ALLEGRO_DATE
-			s->stereo = FALSE;
-			#endif
-			
 			s->len = si->lenght;
 			s->priority = JGMOD_PRIORITY;
 			s->loop_start = si->repoff;
