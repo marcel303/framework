@@ -2,6 +2,9 @@
 
 #include "component.h"
 #include "Mat4x4.h"
+#include <string>
+
+//
 
 struct CameraComponent : Component<CameraComponent>
 {
@@ -9,8 +12,7 @@ struct CameraComponent : Component<CameraComponent>
 	float nearDistance = .01f;
 	float farDistance = 100.f;
 
-	Mat4x4 projectionMatrix;
-	Mat4x4 viewMatrix;
+	std::string controller;
 
 	virtual void tick(const float dt) override final;
 };
@@ -30,6 +32,7 @@ struct CameraComponentType : ComponentType<CameraComponent>
 		typeName = "CameraComponent";
 		tickPriority = kComponentPriority_Camera;
 
+		in("controller", &CameraComponent::controller);
 		in("fov", &CameraComponent::fov);
 		in("nearDistance", &CameraComponent::nearDistance);
 		in("farDistance", &CameraComponent::farDistance);
