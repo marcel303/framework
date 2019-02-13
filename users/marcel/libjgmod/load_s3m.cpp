@@ -203,7 +203,7 @@ namespace jgmod
 				{
 					ni->command = jgmod_getc(f);
 					ni->extcommand = jgmod_getc(f);
-					convert_s3m_command (&ni->command, &ni->extcommand);
+					convert_s3m_command(&ni->command, &ni->extcommand);
 				}
 			}
 			else
@@ -366,7 +366,7 @@ namespace jgmod
 			jgmod_getc(f);
 			jgmod_getc(f); // skip packing type
 			type = jgmod_getc(f);
-			si->c2spd = jgmod_igetl (f) & 0xFFFF;
+			si->c2spd = jgmod_igetl(f) & 0xFFFF;
 			jgmod_skip(f, 12);
 		// todo : store the sample name
 			jgmod_skip(f, 28); // skip sample name
@@ -384,7 +384,7 @@ namespace jgmod
 			s->param = -1;
 
 			// don't load the samples
-			if (memcmp (id, "SCRS", 4) != 0)
+			if (memcmp(id, "SCRS", 4) != 0)
 			{
 				s->data = jgmod_calloc(0);
 				continue;
@@ -402,7 +402,7 @@ namespace jgmod
 				s->bits = 16;
 
 				for (int counter = 0; counter < s->len; ++counter)
-					data[counter] = jgmod_igetw (f);
+					data[counter] = jgmod_igetw(f);
 
 				if (sf == 1)
 				{
@@ -524,7 +524,7 @@ namespace jgmod
 	#ifdef JG_debug
 		for (int index = 0; index < j->no_sample; ++index)
 		{
-			printf ("instrument %2d = %d bit\n", index, j->s[index].bits);
+			printf("instrument %2d = %d bit\n", index, j->s[index].bits);
 		}
 
 		printf("\n\nActual pattern : %d", actual_pat);
@@ -536,14 +536,14 @@ namespace jgmod
 			pi = j->pi + index;
 			ni = pi->ni;
 			
-			printf ("\n\nPattern %d\n", index);
+			printf("\n\nPattern %d\n", index);
 			
 			for (int temp = 0; temp < 64 * j->no_chn; ++temp)
 			{
 				if ((temp % j->no_chn) == 0)
-					printf ("\n");
+					printf("\n");
 					
-				printf ("%02d %03d    ", ni->command, ni->extcommand);
+				printf("%02d %03d    ", ni->command, ni->extcommand);
 				
 				ni++;
 			}
@@ -559,7 +559,7 @@ namespace jgmod
 	//convert s3m commands to protracker like commands
 	void convert_s3m_command(int * command, int * extcommand)
 	{
-		const int no = (*extcommand & 0xF0 ) >> 4;
+		const int no = (*extcommand & 0xF0) >> 4;
 
 		if (*command == 1)                      // s3m set tempo
 			*command = S3EFFECT_A;
