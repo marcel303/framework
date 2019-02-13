@@ -245,8 +245,8 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			buffer[i].channel[0] = samplesL[i] * (1 << (15 - 2));
-			buffer[i].channel[1] = samplesR[i] * (1 << (15 - 2));
+			mixingBuffer[i * 2 + 0] = samplesL[i] * (1 << (15 - 2));
+			mixingBuffer[i * 2 + 1] = samplesR[i] * (1 << (15 - 2));
 		}
 	#else
 		for (auto & __restrict voice : voiceApi->voices)
