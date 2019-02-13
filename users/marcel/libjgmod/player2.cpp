@@ -453,7 +453,7 @@ void JGMOD_PLAYER::parse_pro_pitch_slide_down(const int chn, const int extcomman
     ci[chn].pro_pitch_slide = std::abs(ci[chn].pro_pitch_slide);
 }
 
-void JGMOD_PLAYER::parse_pro_volume_slide (int chn, int extcommand)
+void JGMOD_PLAYER::parse_pro_volume_slide(const int chn, const int extcommand)
 {
     if (extcommand & 0xF0)
         ci[chn].pro_volume_slide = ((extcommand & 0xF0) >> 4);
@@ -461,7 +461,7 @@ void JGMOD_PLAYER::parse_pro_volume_slide (int chn, int extcommand)
         ci[chn].pro_volume_slide = -(extcommand & 0xF);
 }
 
-void JGMOD_PLAYER::parse_vibrato (int chn, int extcommand, int shift)
+void JGMOD_PLAYER::parse_vibrato(const int chn, const int extcommand, const int shift)
 {
     if (!ci[chn].period)
         return;
@@ -474,30 +474,35 @@ void JGMOD_PLAYER::parse_vibrato (int chn, int extcommand, int shift)
                     
     if (extcommand & 0xF)
         ci[chn].vibrato_depth = (extcommand & 0xF);
-
 }
 
-void JGMOD_PLAYER::do_vibrato (int chn)
+void JGMOD_PLAYER::do_vibrato(const int chn)
 {
-    int temp=0;
-    int q;
+    int temp = 0;
 
-    q = (ci[chn].vibrato_pointer >> 2) & 0x1F;
+    int q = (ci[chn].vibrato_pointer >> 2) & 0x1F;
 
-    if ( (ci[chn].vibrato_waveform & 3) == 0 )
+    if ((ci[chn].vibrato_waveform & 3) == 0)
+    {
         temp = vib_table[q];
-    else if ( (ci[chn].vibrato_waveform & 3) == 1)
-        {
+	}
+    else if ((ci[chn].vibrato_waveform & 3) == 1)
+	{
         q <<= 3;
+		
         if (ci[chn].vibrato_pointer < 0)
             q = 255 - q;
 
         temp = q;
-        }
-    else if ( (ci[chn].vibrato_waveform & 3) == 2)
+	}
+    else if ((ci[chn].vibrato_waveform & 3) == 2)
+    {
         temp = 255;
+	}
     else
-        temp = rand() % 255;
+    {
+        temp = rand() % 256;
+	}
 
     temp *= ci[chn].vibrato_depth;
     temp >>= ci[chn].vibrato_shift;
@@ -510,11 +515,12 @@ void JGMOD_PLAYER::do_vibrato (int chn)
     ci[chn].temp_period = temp;
 
     if (mi.tick)
+    {
         ci[chn].vibrato_pointer += ci[chn].vibrato_speed;
-
+	}
 }
 
-void JGMOD_PLAYER::parse_tremolo (int chn, int extcommand, int shift)
+void JGMOD_PLAYER::parse_tremolo(const int chn, const int extcommand, const int shift)
 {
     ci[chn].tremolo_on = true;
     ci[chn].tremolo_shift = shift;
@@ -524,30 +530,35 @@ void JGMOD_PLAYER::parse_tremolo (int chn, int extcommand, int shift)
 
     if (extcommand & 0xF)
         ci[chn].tremolo_depth = (extcommand & 0xF);
-
 }
 
-void JGMOD_PLAYER::do_tremolo (int chn)
+void JGMOD_PLAYER::do_tremolo(const int chn)
 {
-    int q;
-    int temp;
+    int temp = 0;
 
-    q = (ci[chn].tremolo_pointer >> 2) & 0x1F;
+    int q = (ci[chn].tremolo_pointer >> 2) & 0x1F;
 
-    if ( (ci[chn].tremolo_waveform & 3) == 0)
+    if ((ci[chn].tremolo_waveform & 3) == 0)
+    {
         temp = vib_table[q];
-    else if ( (ci[chn].tremolo_waveform & 3) == 1)
-        {
+	}
+    else if ((ci[chn].tremolo_waveform & 3) == 1)
+	{
         q <<= 3;
+		
         if (ci[chn].tremolo_pointer < 0)
             q = 255 -q;
         
         temp = q;
-        }
-    else if ( (ci[chn].tremolo_waveform & 3) == 2)
+	}
+    else if ((ci[chn].tremolo_waveform & 3) == 2)
+    {
         temp = 255;
+	}
     else
-        temp = rand() % 255;
+    {
+        temp = rand() % 256;
+	}
         
     temp *= ci[chn].tremolo_depth;
     temp >>= ci[chn].tremolo_shift;
@@ -558,263 +569,270 @@ void JGMOD_PLAYER::do_tremolo (int chn)
         ci[chn].temp_volume = ci[chn].volume - temp;
 
     if (mi.tick)
+    {
         ci[chn].tremolo_pointer += ci[chn].tremolo_speed;
-
+	}
 }
 
-void JGMOD_PLAYER::parse_slide2period (int chn, int extcommand, int note)
+void JGMOD_PLAYER::parse_slide2period(const int chn, const int extcommand, const int note)
 {
     if (!ci[chn].period)
         return;
 
     if (extcommand > 0)
-    	{
+	{
 		if (of->flag & JGMOD_MODE_IT)
 			ci[chn].slide2period_spd = (extcommand << 1);
 		else
 			ci[chn].slide2period_spd = (extcommand << 2);
-		}
+	}
 
     if (note > 0)
+    {
         ci[chn].slide2period = note2period (note-1, ci[chn].c2spd);
+	}
 
     ci[chn].slide2period_spd = std::abs (ci[chn].slide2period_spd);
+	
     if (ci[chn].slide2period > ci[chn].period)
-        ci[chn].slide2period_spd = -std::abs (ci[chn].slide2period_spd);
+        ci[chn].slide2period_spd = -std::abs(ci[chn].slide2period_spd);
 
-    if (!ci[chn].slide2period)
+    if (ci[chn].slide2period == 0)
         return;
 
     ci[chn].slide2period_on = true;
 }
 
-void JGMOD_PLAYER::do_slide2period (int chn)
+void JGMOD_PLAYER::do_slide2period(const int chn)
 {
     ci[chn].period -= ci[chn].slide2period_spd;
 
     if (ci[chn].slide2period_spd > 0)       // sliding down
-        {
+	{
         if (ci[chn].period < ci[chn].slide2period)
             ci[chn].period = ci[chn].slide2period;
-        }
+	}
     else
-        {
+	{
         if (ci[chn].period > ci[chn].slide2period)
             ci[chn].period = ci[chn].slide2period;
-        }
-
+	}
 
     ci[chn].temp_period = ci[chn].period;
-
 }
 
-void JGMOD_PLAYER::parse_pro_arpeggio (int chn, int extcommand)
+void JGMOD_PLAYER::parse_pro_arpeggio(const int chn, const int extcommand)
 {
     if (!ci[chn].period)
         return;
 
     if (extcommand)
-        {
+	{
         ci[chn].arpeggio = extcommand;
         ci[chn].arpeggio_on = true;
-        }
-
+	}
 }
 
-void JGMOD_PLAYER::do_arpeggio (int chn)
+void JGMOD_PLAYER::do_arpeggio(const int chn)
 {
-    if ( (mi.tick % 3) == 0)
+	const int phase = mi.tick % 3;
+	
+    if (phase == 0)
+    {
         ci[chn].temp_period = ci[chn].period;
-    else if ( (mi.tick % 3) == 1)
-        ci[chn].temp_period = find_lower_period (ci[chn].period, (ci[chn].arpeggio & 0xF0) >> 4);
-    else if ( (mi.tick % 3) == 2)
-        ci[chn].temp_period = find_lower_period (ci[chn].period, ci[chn].arpeggio & 0xF);
-
+	}
+    else if (phase == 1)
+    {
+        ci[chn].temp_period = find_lower_period(ci[chn].period, (ci[chn].arpeggio & 0xF0) >> 4);
+	}
+    else if (phase == 2)
+    {
+        ci[chn].temp_period = find_lower_period(ci[chn].period, ci[chn].arpeggio & 0xF);
+	}
 }
 
-void JGMOD_PLAYER::do_delay_sample (int chn)
+void JGMOD_PLAYER::do_delay_sample(const int chn)
 {
     if (mi.tick == ci[chn].delay_sample)
-        {
+	{
         ci[chn].kick = true;
         ci[chn].delay_sample = 0;
-        }
+	}
     else
+    {
         ci[chn].kick = false;
-
+	}
 }
 
-void JGMOD_PLAYER::parse_old_note (int chn, int note, int sample_no)
+void JGMOD_PLAYER::parse_old_note(const int chn, const int note, const int sample_no)
 {
-    SAMPLE_INFO *si;
-
     if (note > 0 && sample_no >= 0)
-        {
-        si = of->si+sample_no;
+	{
+        const SAMPLE_INFO & si = of->si[sample_no];
+		
         ci[chn].sample = sample_no;
-        ci[chn].volume = si->volume;
-        ci[chn].c2spd = si->c2spd;
-        ci[chn].period = note2period (note, ci[chn].c2spd);
+        ci[chn].volume = si.volume;
+        ci[chn].c2spd = si.c2spd;
+        ci[chn].period = note2period(note, ci[chn].c2spd);
         ci[chn].kick = true;
-        }
-    else if ( (note > 0) && (sample_no < 0) )  // only pitch specified
-        {
-        si = of->si + ci[chn].sample;
-        ci[chn].period = note2period (note, ci[chn].c2spd);
+	}
+    else if (note > 0 && sample_no < 0)  // only pitch specified
+	{
+        ci[chn].period = note2period(note, ci[chn].c2spd);
         ci[chn].kick = true;
-        }
-    else if ( (note <= 0) && (sample_no >= 0) ) // only sample_spedified
+	}
+    else if (note <= 0 && sample_no >= 0) // only sample_spedified
+	{
+        if (ci[chn].sample != sample_no && ci[chn].period > 0)
         {
-        if ( (ci[chn].sample != sample_no) && (ci[chn].period > 0))
             ci[chn].kick = true;
+		}
 
-        si = of->si + sample_no;
+        const SAMPLE_INFO & si = of->si[sample_no];
         ci[chn].sample = sample_no;
-        ci[chn].volume = si->volume;
-        ci[chn].c2spd = si->c2spd;
-        }
-
+        ci[chn].volume = si.volume;
+        ci[chn].c2spd = si.c2spd;
+	}
 }
 
-void JGMOD_PLAYER::parse_extended_command (int chn, int extcommand)
+void JGMOD_PLAYER::parse_extended_command(const int chn, const int extcommand)
 {
     switch (extcommand >> 4)
-        {
-        case 1 :    // fine pitch slide up
-            {
-            if (!ci[chn].period)
-                break;
+	{
+	case 1: // fine pitch slide up
+		{
+			if (!ci[chn].period)
+				break;
 
-            if (extcommand & 0xF)
-                ci[chn].pro_fine_pitch_slide = ((extcommand & 0xF) << 2);
-            else if ( ((extcommand & 0xF) == 0) && (ci[chn].pro_fine_pitch_slide > 0))
-                break;
+			if (extcommand & 0xF)
+				ci[chn].pro_fine_pitch_slide = ((extcommand & 0xF) << 2);
+			else if ((extcommand & 0xF) == 0 && ci[chn].pro_fine_pitch_slide > 0)
+				break;
 
-            ci[chn].pro_fine_pitch_slide = -std::abs(ci[chn].pro_fine_pitch_slide);
-            ci[chn].period += ci[chn].pro_fine_pitch_slide;
-            break;
-            }
-        case 2 :    // fine pitch slide down
-            {
-            if (!ci[chn].period)
-                break;
+			ci[chn].pro_fine_pitch_slide = -std::abs(ci[chn].pro_fine_pitch_slide);
+			ci[chn].period += ci[chn].pro_fine_pitch_slide;
+			break;
+		}
+	case 2: // fine pitch slide down
+		{
+			if (!ci[chn].period)
+				break;
 
-            if (extcommand & 0xF)
-                ci[chn].pro_fine_pitch_slide = ((extcommand & 0xF) << 2);
-            else if ( ((extcommand & 0xF) == 0) && (ci[chn].pro_fine_pitch_slide < 0))
-                break;
+			if (extcommand & 0xF)
+				ci[chn].pro_fine_pitch_slide = ((extcommand & 0xF) << 2);
+			else if ((extcommand & 0xF) == 0 && ci[chn].pro_fine_pitch_slide < 0)
+				break;
 
-            ci[chn].pro_fine_pitch_slide = std::abs(ci[chn].pro_fine_pitch_slide);
-            ci[chn].period += ci[chn].pro_fine_pitch_slide;
-            break;
-            }
-        case 3:     // glissando
-            {
-            if (extcommand & 0xF)
-                ci[chn].glissando = true;
-            else
-                ci[chn].glissando = false;
+			ci[chn].pro_fine_pitch_slide = std::abs(ci[chn].pro_fine_pitch_slide);
+			ci[chn].period += ci[chn].pro_fine_pitch_slide;
+			break;
+		}
+	case 3: // glissando
+		{
+			if (extcommand & 0xF)
+				ci[chn].glissando = true;
+			else
+				ci[chn].glissando = false;
 
-            break;
-            }
-        case 4 :    // set vibrato waveform
-            {
-            ci[chn].vibrato_waveform = (extcommand & 0xF);
-            break;
-            }
-        case 7 :    // set tremolo waveform
-            {
-            ci[chn].tremolo_waveform = (extcommand & 0xF);
-            break;
-            }
-        case 8 :    // set 16 position panning
-            {
-            ci[chn].pan = (extcommand & 0xF) * 17;
-            break;
-            }
-        case 9 :    // retrigger sample
-            {
-            ci[chn].retrig = (extcommand & 0xF);
-            break;
-            }
-        case 10 :   // fine volume slide up
-            {
-            ci[chn].volume += (extcommand & 0xF);
-            break;
-            }
-        case 11 :   // fine volume slide down
-            {
-            ci[chn].volume -= (extcommand & 0xF);
-            break;
-            }
-        case 12 :   // cut sample
-            {
-            ci[chn].cut_sample = (extcommand & 0xF);
-            if (ci[chn].cut_sample == 0)
-                ci[chn].volume = 0;
-            break;
-            }
-        case 13 :   // delay sample
-            {
-            ci[chn].delay_sample = (extcommand & 0xF);
-            break;
-            }
-        case 16 :   // stereo control
-            {
-            ci[chn].pan = (extcommand & 0xF);
+			break;
+		}
+	case 4: // set vibrato waveform
+		{
+			ci[chn].vibrato_waveform = (extcommand & 0xF);
+			break;
+		}
+	case 7: // set tremolo waveform
+		{
+			ci[chn].tremolo_waveform = (extcommand & 0xF);
+			break;
+		}
+	case 8: // set 16 position panning
+		{
+			ci[chn].pan = (extcommand & 0xF) * 17;
+			break;
+		}
+	case 9: // retrigger sample
+		{
+			ci[chn].retrig = (extcommand & 0xF);
+			break;
+		}
+	case 10: // fine volume slide up
+		{
+			ci[chn].volume += (extcommand & 0xF);
+			break;
+		}
+	case 11: // fine volume slide down
+		{
+			ci[chn].volume -= (extcommand & 0xF);
+			break;
+		}
+	case 12: // cut sample
+		{
+			ci[chn].cut_sample = (extcommand & 0xF);
+			if (ci[chn].cut_sample == 0)
+				ci[chn].volume = 0;
+			break;
+		}
+	case 13: // delay sample
+		{
+			ci[chn].delay_sample = (extcommand & 0xF);
+			break;
+		}
+	case 16: // stereo control
+		{
+			ci[chn].pan = (extcommand & 0xF);
 
-            if (ci[chn].pan < 8)
-                ci[chn].pan += 8;
-            else
-                ci[chn].pan -= 8;
+			if (ci[chn].pan < 8)
+				ci[chn].pan += 8;
+			else
+				ci[chn].pan -= 8;
 
-            ci[chn].pan *= 17;
-            break;
-            }
-        case 17 :   // xm fine porta down
-            {
-            if (!ci[chn].period)
-                break;
+			ci[chn].pan *= 17;
+			break;
+		}
+	case 17: // xm fine porta down
+		{
+			if (!ci[chn].period)
+				break;
 
-            if (extcommand & 0xF)
-                ci[chn].xm_fine_pitch_slide_down = -((extcommand & 0xF) << 2);
+			if (extcommand & 0xF)
+				ci[chn].xm_fine_pitch_slide_down = -((extcommand & 0xF) << 2);
 
-            ci[chn].period += ci[chn].xm_fine_pitch_slide_down;
+			ci[chn].period += ci[chn].xm_fine_pitch_slide_down;
 
-            break;
-            }
-        case 18 :   // xm fine porta up
-            {
-            if (!ci[chn].period)
-                break;
+			break;
+		}
+	case 18: // xm fine porta up
+		{
+			if (!ci[chn].period)
+				break;
 
-            if (extcommand & 0xF)
-                ci[chn].xm_fine_pitch_slide_up = ((extcommand & 0xF) << 2);
+			if (extcommand & 0xF)
+				ci[chn].xm_fine_pitch_slide_up = ((extcommand & 0xF) << 2);
 
-            ci[chn].period += ci[chn].xm_fine_pitch_slide_up;
+			ci[chn].period += ci[chn].xm_fine_pitch_slide_up;
 
-            break;
-            }
+			break;
+		}
+	case 19: // xm fine volume slide up
+		{
+			if (extcommand & 0xF)
+				ci[chn].xm_fine_volume_slide_up = (extcommand & 0xF);
 
-        case 19 :   // xm fine volume slide up
-            {
-            if (extcommand & 0xF)
-                ci[chn].xm_fine_volume_slide_up = (extcommand & 0xF);
+			ci[chn].temp_volume += ci[chn].xm_fine_volume_slide_up;
+			ci[chn].volume += ci[chn].xm_fine_volume_slide_up;
 
-            ci[chn].temp_volume += ci[chn].xm_fine_volume_slide_up;
-            ci[chn].volume += ci[chn].xm_fine_volume_slide_up;
+			break;
+		}
+	case 20: // xm fine volume slide down
+		{
+			if (extcommand & 0xF)
+				ci[chn].xm_fine_volume_slide_down = -(extcommand & 0xF);
 
-            break;
-            }
-        case 20 :   // xm fine volume slide down
-            {
-            if (extcommand & 0xF)
-                ci[chn].xm_fine_volume_slide_down = -(extcommand & 0xF);
+			ci[chn].temp_volume += ci[chn].xm_fine_volume_slide_down;
+			ci[chn].volume += ci[chn].xm_fine_volume_slide_down;
 
-            ci[chn].temp_volume += ci[chn].xm_fine_volume_slide_down;
-            ci[chn].volume += ci[chn].xm_fine_volume_slide_down;
-
-            break;
-            }
-        }
+			break;
+		}
+	}
 }

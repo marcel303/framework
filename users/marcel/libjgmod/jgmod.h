@@ -407,26 +407,26 @@ protected:
 	int period2pitch (const int period) const;
 	static int interpolate(int p, int p1, int p2, int v1, int v2);
 
-	void parse_extended_command (int chn, int extcommand);
-	void parse_old_note (int chn, int note, int sample_no);
+	void parse_extended_command (const int chn, const int extcommand);
+	void parse_old_note (const int chn, const int note, const int sample_no);
 
 	void parse_pro_pitch_slide_up (const int chn, const int extcommand);
 	void parse_pro_pitch_slide_down (const int chn, const int extcommand);
-	void parse_pro_volume_slide (int chn, int extcommand);
-	void parse_vibrato (int chn, int extcommand, int shift);
-	void parse_tremolo (int chn, int extcommand, int shift);
-	void parse_slide2period (int chn, int extcommand, int note);
-	void parse_pro_arpeggio (int chn, int extcommand);
+	void parse_pro_volume_slide (const int chn, const int extcommand);
+	void parse_vibrato (const int chn, const int extcommand, const int shift);
+	void parse_tremolo (const int chn, const int extcommand, const int shift);
+	void parse_slide2period (const int chn, const int extcommand, const int note);
+	void parse_pro_arpeggio (const int chn, const int extcommand);
 
 	void do_position_jump (const int extcommand);
 	void do_pattern_break (const int extcommand);
 	void do_pro_tempo_bpm (const int extcommand);
 	void do_pattern_loop (const int chn, const int extcommand);
-	void do_vibrato (int chn);
-	void do_tremolo (int chn);
-	void do_slide2period (int chn);
-	void do_arpeggio (int chn);
-	void do_delay_sample (int chn);
+	void do_vibrato (const int chn);
+	void do_tremolo (const int chn);
+	void do_slide2period (const int chn);
+	void do_arpeggio (const int chn);
+	void do_delay_sample (const int chn);
 
 	// -- located in player3.c ---------------------------------------------------
 	void parse_volume_command (int chn, int volume, int note);
