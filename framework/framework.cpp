@@ -835,6 +835,8 @@ static const XMap * getXMap(const char * deviceName)
 
 void Framework::process()
 {
+	SDL_Delay(20);
+	
 	cpuTimingBlock(frameworkProcess);
 	
 	g_soundPlayer.process();

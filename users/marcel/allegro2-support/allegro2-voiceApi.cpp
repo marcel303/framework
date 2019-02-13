@@ -294,7 +294,10 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 		if (sampleIndex >= 0 && sampleIndex < voice.sample->len)
 		{
 		#if INTERP_LINEAR
-			const int sampleIndex2 = sampleIndex + 1 < voice.sample->len ? sampleIndex + 1 : sampleIndex;
+			const int sampleIndex2 =
+				(voice.playmode & PLAYMODE_LOOP) != 0
+				? (sampleIndex + 1 < voice.sample->loop_end ? sampleIndex + 1 : sampleIndex)
+				: (sampleIndex + 1 < voice.sample->len      ? sampleIndex + 1 : sampleIndex);
 
 			const int t = (voice.position >> (FIXBITS - 16)) & 0xffff;
 		#endif
