@@ -124,7 +124,7 @@ struct ENVELOPE_INFO
     int a;
     int b;
     int p;
-    int v;
+    int v; // 0..64 (6 bits)
 };
 
 struct CHANNEL_INFO
@@ -132,7 +132,7 @@ struct CHANNEL_INFO
     ENVELOPE_INFO volenv;
     ENVELOPE_INFO panenv;
 
-	int  channel_volume;
+	int  channel_volume; // 0..64 (6 bits)
     int  instrument;
     int  sample;
     int  volume;
@@ -143,10 +143,10 @@ struct CHANNEL_INFO
     int  pan;
     bool kick;      // TRUE if sample needs to be restarted
     bool keyon;     // FALSE if the key is pressed (sustain). fixme : this seems opposite of what the name intuitively would suggest..
-    int  volfade;    // volume fadeout
+    int  volfade;    // volume fadeout. 0..32768 (15 bits)
     int  instfade;   // how much volume to subtract from volfade
 
-    int  temp_volume;
+    int  temp_volume; // 0..64 (6 bits)
     int  temp_period;
     int  temp_pan;
 
@@ -239,7 +239,7 @@ struct MUSIC_INFO
     int tempo;
     int speed_ratio;
     int pitch_ratio;
-    int global_volume;
+    int global_volume;  // 0..64 (6 bits)
     
     int new_pos;        // for pattern break
     int new_trk;        // or position jump
@@ -272,7 +272,7 @@ struct SAMPLE_INFO
     int c2spd;
     int transpose;
     int volume;        // default volume for this sample when triggered by note
-    int global_volume; // volume used during mixing for every instance of this sample
+    int global_volume; // volume used during mixing for every instance of this sample. 0..64 (6 bits)
     int pan;
     int repoff;
     int replen;
@@ -343,7 +343,7 @@ struct JGMOD
     int no_instrument;
     int no_sample;
     int global_volume;
-    int mixing_volume;
+    int mixing_volume; // 0..256 (usually 64 to create headroom) (8 bits)
 };
 
 struct JGMOD_INFO
@@ -366,7 +366,7 @@ struct JGMOD_PLAYER
 	volatile MUSIC_INFO mi;
 	volatile int voice_table[JGMOD_MAX_VOICES];
 	volatile CHANNEL_INFO ci[JGMOD_MAX_VOICES];
-	volatile int mod_volume;
+	volatile int mod_volume; // 0..256 (8 bits)
 	
 	volatile bool enable_lasttrk_loop;
 	
@@ -405,7 +405,7 @@ protected:
 	int note2period (const int note, const int c2spd) const;
 	int get_jgmod_sample_no (const int instrument_no, const int note_no) const;
 	int period2pitch (const int period) const;
-	static int interpolate(int p, int p1, int p2, int v1, int v2);
+	static int interpolate(const int p, const int p1, const int p2, const int v1, const int v2);
 
 	void parse_extended_command (const int chn, const int extcommand);
 	void parse_old_note (const int chn, const int note, const int sample_no);

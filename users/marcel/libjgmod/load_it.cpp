@@ -531,7 +531,7 @@ namespace jgmod
 			kSpecial_SongMessageAttached = 1 << 0
 		};
 		
-		// note : JGMOD assumed global_volume 0->64
+		// note : JGMOD assumes global_volume 0->64
 		j->global_volume = jgmod_getc(f) / 2; // Global volume. (0->128) All volumes are adjusted by this.
 		const uint8_t mixing_volume = jgmod_getc(f); // Mix volume (0->128) During mixing, this value controls the magnitude of the wave being mixed.
 		j->mixing_volume = mixing_volume;

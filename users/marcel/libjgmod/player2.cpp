@@ -25,14 +25,12 @@
 
 #define LOGFAC 32
 
-
 extern const int mod_finetune[];
-
-int find_lower_period(int period, int times);
 
 // for converting linear period to frequency
 static const unsigned long lintab[768] =
-{   535232,534749,534266,533784,533303,532822,532341,531861,
+{
+   	535232,534749,534266,533784,533303,532822,532341,531861,
     531381,530902,530423,529944,529466,528988,528511,528034,
     527558,527082,526607,526131,525657,525183,524709,524236,
     523763,523290,522818,522346,521875,521404,520934,520464,
@@ -133,7 +131,8 @@ static const unsigned long lintab[768] =
 
 
 // for converting note to amiga period
-static const uint16_t logtab[]={
+static const uint16_t logtab[]=
+{
 	LOGFAC*907,LOGFAC*900,LOGFAC*894,LOGFAC*887,LOGFAC*881,LOGFAC*875,LOGFAC*868,LOGFAC*862,
 	LOGFAC*856,LOGFAC*850,LOGFAC*844,LOGFAC*838,LOGFAC*832,LOGFAC*826,LOGFAC*820,LOGFAC*814,
 	LOGFAC*808,LOGFAC*802,LOGFAC*796,LOGFAC*791,LOGFAC*785,LOGFAC*779,LOGFAC*774,LOGFAC*768,
@@ -150,27 +149,35 @@ static const uint16_t logtab[]={
 };
 
 extern const int noteperiod[];
-const int noteperiod[] = {
+
+const int noteperiod[] =
+{
     6848, 6464, 6096, 5760, 5424, 5120, 4832, 4560, 4304, 4064, 3840, 3628
-    };
+};
 
 // for vibrato and tremolo
-static const int vib_table[] = {
+static const int vib_table[] =
+{
     0,   24,  49,  74,  97,  120, 141, 161,
     180, 197, 212, 224, 235, 244, 250, 253,
     255, 253, 250, 244, 235, 224, 212, 197,
-    180, 161, 141, 120, 97,  74,  49,  24};
+    180, 161, 141, 120, 97,  74,  49,  24
+};
 
-int JGMOD_PLAYER::interpolate(int p, int p1, int p2, int v1, int v2)
+int JGMOD_PLAYER::interpolate(const int p, const int p1, const int p2, const int v1, const int v2)
 {
     if (p1 == p2)
+    {
         return v1;
+	}
+	else
+	{
+		const int dv = v2 - v1;
+		const int dp = p2 - p1;
+		const int di = p  - p1;
 
-    const int dv = v2 - v1;
-    const int dp = p2 - p1;
-    const int di = p  - p1;
-
-    return v1 + (di * dv / dp);
+		return v1 + (di * dv / dp);
+	}
 }
 
 int JGMOD_PLAYER::find_lower_period(const int period, const int times) const
@@ -212,22 +219,25 @@ int JGMOD_PLAYER::find_lower_period(const int period, const int times) const
 // change the volume from scale of 64 to 255
 int JGMOD_PLAYER::calc_volume(const int chn) const
 {
-    int temp;
+    int64_t temp;
+	
+    const volatile CHANNEL_INFO & ci_chn = ci[chn];
 
-    temp = ci[chn].temp_volume * mi.global_volume * ci[chn].volfade; // 0...2^27
-    temp >>= 19;                                    // 0...256
+    temp = ci_chn.temp_volume; // 6 bits
+    temp *= mi.global_volume; // 6 + 6 = 12 bits
+    temp *= ci_chn.volfade; // 12 + 15 = 27 bits
 	
-    temp *= ci[chn].channel_volume;
-    temp >>= 6;
+    temp *= ci_chn.channel_volume; // 27 + 6 = 33 bits
 	
-    temp *= of->si[ci[chn].sample].global_volume;
-    temp >>= 6;
+	const SAMPLE_INFO & si = of->si[ci_chn.sample];
+    temp *= si.global_volume; // 33 + 6 = 39 bits
 	
-    temp *= of->mixing_volume; // todo : makes more sense to apply during mixing I guess. same for global volume
-    temp >>= 8;
+	// todo : makes more sense to apply during mixing I guess. same for global volume
+    temp *= of->mixing_volume; // 39 + 8 = 47 bits
 	
-    temp *= mod_volume * ci[chn].volenv.v;          // 0...4177920
-    temp >>= 14;                                    // 0...255
+    temp *= mod_volume; // 47 + 8 = 55 bits
+    temp *= ci_chn.volenv.v; // 55 + 6 = 61 bits
+    temp >>= 53L; // 61 - 53 = 8 bits
 
     return temp;
 }
