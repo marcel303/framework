@@ -163,56 +163,54 @@ static const int vib_table[] = {
 
 int JGMOD_PLAYER::interpolate(int p, int p1, int p2, int v1, int v2)
 {
-    int dp, dv, di;
-
-    if(p1 == p2)
+    if (p1 == p2)
         return v1;
 
-    dv = v2 - v1;
-    dp = p2 - p1;
-    di = p  - p1;
+    const int dv = v2 - v1;
+    const int dp = p2 - p1;
+    const int di = p  - p1;
 
-    return v1 + ((di*dv) / dp);
+    return v1 + (di * dv / dp);
 }
 
-int JGMOD_PLAYER::find_lower_period(int period, int times) const
+int JGMOD_PLAYER::find_lower_period(const int period, const int times) const
 {
     int result = period;
     int index = 0;
 
     if (mi.flag & JGMOD_MODE_XM)
-        {
+	{
         while (result >= period)
-            {
+		{
             index++;
-            if ( note2period (index, 0) <= period )
-                {
+			
+            if (note2period(index, 0) <= period)
+			{
                 index += times;
-                result = note2period (index, 0);
-                }
-            }
-        }
+                result = note2period(index, 0);
+			}
+		}
+	}
     else
-        {
+	{
         while (result >= period)
-            {
-            if ( (noteperiod[index%12] >> (index/12)) <= period)
-                {
+		{
+            if ((noteperiod[index % 12] >> (index / 12)) <= period)
+			{
                 index += times;
-                result = noteperiod[index%12] >> (index/12);
-                }
+                result = noteperiod[index % 12] >> (index / 12);
+			}
 
             index++;
-            }
-        }
-
+		}
+	}
 
     return result;
 
 }
 
 // change the volume from scale of 64 to 255
-int JGMOD_PLAYER::calc_volume (int chn) const
+int JGMOD_PLAYER::calc_volume(const int chn) const
 {
     int temp;
 
@@ -234,11 +232,12 @@ int JGMOD_PLAYER::calc_volume (int chn) const
     return temp;
 }
 
-int JGMOD_PLAYER::calc_pan (int chn) const
+int JGMOD_PLAYER::calc_pan(const int chn) const
 {
-    int temp;
-
-    temp = ci[chn].temp_pan + ((ci[chn].panenv.v - 32) * (128 - std::abs(ci[chn].temp_pan - 128)) / 32);
+    int temp =
+    	ci[chn].temp_pan +
+    	((ci[chn].panenv.v - 32) * (128 - std::abs(ci[chn].temp_pan - 128)) / 32);
+	
     if (temp > 256)
         temp = 256;
     else if (temp < 0)
@@ -248,171 +247,176 @@ int JGMOD_PLAYER::calc_pan (int chn) const
 }
 
 // return the position of the note
-NOTE_INFO *JGMOD_PLAYER::get_note (JGMOD *j, int pat, int pos, int chn)
+NOTE_INFO *JGMOD_PLAYER::get_note(JGMOD *j, const int pat, const int pos, const int chn)
 {
-    PATTERN_INFO *pi;
-    NOTE_INFO *ni;
+    PATTERN_INFO & pi = j->pi[pat];
+    NOTE_INFO    & ni = pi.ni[pos * j->no_chn + chn];
 
-    pi = j->pi + pat;
-    ni = pi->ni + (pos*j->no_chn + chn);
-
-    return ni;
+    return &ni;
 }
 
-int JGMOD_PLAYER::note2period (int note, int c2spd) const
+int JGMOD_PLAYER::note2period(const int in_note, const int in_c2spd) const
 {
     if (mi.flag & JGMOD_MODE_LINEAR)
-        {
-        if (note < 0)
-            note = 0;
-        else if (note > 118)
-            note = 118;
+	{
+		const int c2spd = in_c2spd;
+		
+		assert(in_note >= 0);
+		const int note = in_note < 0 ? 0 : in_note > 118 ? 118 : in_note;
 
-        return (7680 - (note*64) - (c2spd/2) + 64);
-        }
+        return (7680 - (note * 64) - (c2spd / 2) + 64);
+	}
     else if (mi.flag & JGMOD_MODE_PERIOD)
-        {
-        uint8_t n, o;
-        uint16_t p1, p2, i;
+	{
+		const int c2spd = in_c2spd;
+		
+		assert(in_note >= 0);
+		const int note = in_note < 0 ? 0 : in_note > 118 ? 118 : in_note;
 
-        if (note < 0)
-            note = 0;
-        else if (note>118)
-            note = 118;
+        const uint8_t n = note % 12;
+        const uint8_t o = note / 12;
+        const uint16_t i = (n << 3) + (c2spd >> 4);
 
-        n = note % 12;
-        o = note / 12;
-        i = (n<<3) + (c2spd>> 4);
+        const uint16_t p1 = logtab[i];
+        const uint16_t p2 = logtab[i+1];
 
-        p1 = logtab[i];
-        p2 = logtab[i+1];
-
-        return (interpolate (c2spd/16, 0, 15, p1, p2) >> o);
-        }
+        return (interpolate(c2spd / 16, 0, 15, p1, p2) >> o);
+	}
     else
-        {
+	{
         int temp;
 
-        if (c2spd == 0)
-            c2spd = 4242;
+		const int c2spd =
+			in_c2spd == 0
+			? 4242
+			: in_c2spd;
+		
+		assert(in_note >= 0);
+		const int note = in_note;
 
         temp =  int64_t(note) * c2spd / 8363;
         return (JGMOD_NTSC << 2) / temp;
-        }
-
+	}
 }
 
-int JGMOD_PLAYER::get_jgmod_sample_no (int instrument_no, int note_no) const
+int JGMOD_PLAYER::get_jgmod_sample_no(const int instrument_no, const int note_no) const
 {
+	assert(of->no_sample >= 1); // we may return -1 in this case, which isn't handled at the call sites
+	
     if (mi.flag & (JGMOD_MODE_XM | JGMOD_MODE_IT))
 	{
         if (note_no < 0 || note_no >= JGMOD_MAX_INSTKEYS)
-            return (of->no_sample - 1);
+            return of->no_sample - 1;
         else if (instrument_no < 0 || instrument_no >= of->no_instrument)
-            return (of->no_sample - 1);
+            return of->no_sample - 1;
             
 		const int sample_no = of->ii[instrument_no].sample_number[note_no];
 		
         if (sample_no < 0 || sample_no >= of->no_sample)
-            return (of->no_sample - 1);
+            return of->no_sample - 1;
 		
 		return sample_no;
 	}
     else
     {
+    	assert(false); // ???
         return instrument_no;
 	}
 
 }
 
-int JGMOD_PLAYER::period2pitch (int period) const
+int JGMOD_PLAYER::period2pitch(const int period) const
 {
-    if ( (of->flag & JGMOD_MODE_XM) && (of->flag & JGMOD_MODE_LINEAR) )
-        {
-        int temp;
-        //char buf[108];
+    if ((of->flag & JGMOD_MODE_XM) && (of->flag & JGMOD_MODE_LINEAR))
+	{
+        const int temp = (int)floor(8363.0 * pow(2.0, (4608.0 - period) / 768.0 ));
 
-        //asm ("fnsave %0" : "=m" (buf) : );   // save fpu registers
-        //temp = floor(8363.0 * pow ( 2, (4608 - period) / 768.0 ));
-        //asm ("frstor %0" : : "m" (buf));    // restore fpu registers    
-
-        temp = lintab[period % 768] >> (period / 768);
-        //temp >>= 2;
+        //temp = lintab[period % 768] >> (period / 768);
+						  
         return temp;
-        }
-    else if ( (of->flag & JGMOD_MODE_XM) && (of->flag & JGMOD_MODE_PERIOD) )
+	}
+    else if ((of->flag & JGMOD_MODE_XM) && (of->flag & JGMOD_MODE_PERIOD))
         return 14317456L / period;
     else
-        return ((JGMOD_NTSC << 2) / period);
+        return (JGMOD_NTSC << 2) / period;
 }
 
-void JGMOD_PLAYER::do_position_jump (int extcommand)
+void JGMOD_PLAYER::do_position_jump(const int extcommand)
 {
     if (enable_lasttrk_loop == true)
-        {
+	{
         mi.new_trk = extcommand + 1;
 
         if (mi.loop == true)
+        {
             if (mi.new_trk > of->no_trk)
                 mi.new_trk = 1;
-
+		}
+		
         if (!mi.new_pos)
             mi.new_pos = 1;
-        }
+	}
     else
-        {
-        if (mi.trk < (of->no_trk-1))
-            {
+	{
+        if (mi.trk < of->no_trk - 1)
+		{
             mi.new_trk = extcommand + 1;
 
             if (!mi.new_pos)
                 mi.new_pos = 1;
-            }
-        }
-
-
+		}
+	}
 }
 
-void JGMOD_PLAYER::do_pattern_break (int extcommand)
+void JGMOD_PLAYER::do_pattern_break(const int extcommand)
 {
     PATTERN_INFO *pi;
 
-    if (!mi.new_trk)
-        mi.new_trk = mi.trk+2;
+    if (mi.new_trk == 0)
+        mi.new_trk = mi.trk + 2;
 
     mi.new_pos = (extcommand >> 4) * 10 + (extcommand & 0xF) + 1;
 
     if (mi.loop == true)
+    {
         if (mi.new_trk > of->no_trk)
             mi.new_trk = 1;
+	}
+	
+    pi = of->pi + of->pat_table[mi.new_trk - 1];
 
-    pi = of->pi + *(of->pat_table + mi.new_trk-1);
-
-    if ( (mi.new_pos-1) >= pi->no_pos)
+    if (mi.new_pos - 1 >= pi->no_pos)
          mi.new_pos -= 1;
 }
 
-void JGMOD_PLAYER::do_pro_tempo_bpm (int extcommand)
+void JGMOD_PLAYER::do_pro_tempo_bpm(const int extcommand)
 {
     if (extcommand == 0)
-        {}
+	{
+	}
     else if (extcommand <= 32)
+    {
         mi.tempo = extcommand;
+	}
     else
-        {
+	{
         mi.bpm = extcommand;
-        //timerApi->remove_int2 (mod_interrupt_proc, this);
-        timerApi->install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (mi.bpm * 24 * speed_ratio), this);
-        }
-
+		
+        timerApi->install_int_ex2(
+        	mod_interrupt_proc,
+        	BPM_TO_TIMER(mi.bpm * 24 * speed_ratio),
+        	this);
+	}
 }
 
-void JGMOD_PLAYER::do_pattern_loop (int chn, int extcommand)
+void JGMOD_PLAYER::do_pattern_loop(const int chn, const int extcommand)
 {
-    if ( (extcommand & 0xF) == 0)
+    if ((extcommand & 0xF) == 0)
+    {
         ci[chn].loop_start = mi.pos;
+	}
     else
-        {
+	{
         if (ci[chn].loop_times > 0)
             ci[chn].loop_times--;
         else
@@ -422,25 +426,29 @@ void JGMOD_PLAYER::do_pattern_loop (int chn, int extcommand)
             ci[chn].loop_on = true;
         else
             ci[chn].loop_start = mi.pos+1;
-        }
+	}
 }
 
-void JGMOD_PLAYER::parse_pro_pitch_slide_up (int chn, int extcommand)
+void JGMOD_PLAYER::parse_pro_pitch_slide_up(const int chn, const int extcommand)
 {
     ci[chn].pro_pitch_slide_on = true;
 
-    if (extcommand) 
+    if (extcommand != 0)
+    {
         ci[chn].pro_pitch_slide = (extcommand << 2);
+	}
 
     ci[chn].pro_pitch_slide = -std::abs(ci[chn].pro_pitch_slide);
 }
 
-void JGMOD_PLAYER::parse_pro_pitch_slide_down (int chn, int extcommand)
+void JGMOD_PLAYER::parse_pro_pitch_slide_down(const int chn, const int extcommand)
 {
     ci[chn].pro_pitch_slide_on = true;
 
-    if (extcommand) 
+    if (extcommand != 0)
+    {
         ci[chn].pro_pitch_slide = (extcommand << 2);
+	}
 
     ci[chn].pro_pitch_slide = std::abs(ci[chn].pro_pitch_slide);
 }

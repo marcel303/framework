@@ -398,30 +398,30 @@ protected:
 	void mod_interrupt ();
 	
 	// -- located in player2.c ---------------------------------------------------
-	int find_lower_period(int period, int times) const;
-	static NOTE_INFO * get_note (JGMOD * j, int pat, int pos, int chn);
-	int calc_pan (int chn) const;
-	int calc_volume (int volume) const;
-	int note2period (int note, int c2spd) const;
-	int get_jgmod_sample_no (int instrument_no, int note_no) const;
-	int period2pitch (int period) const;
+	int find_lower_period(const int period, const int times) const;
+	static NOTE_INFO * get_note (JGMOD * j, const int pat, const int pos, const int chn);
+	int calc_pan (const int chn) const;
+	int calc_volume (const int chn) const;
+	int note2period (const int note, const int c2spd) const;
+	int get_jgmod_sample_no (const int instrument_no, const int note_no) const;
+	int period2pitch (const int period) const;
 	static int interpolate(int p, int p1, int p2, int v1, int v2);
 
 	void parse_extended_command (int chn, int extcommand);
 	void parse_old_note (int chn, int note, int sample_no);
 
-	void parse_pro_pitch_slide_down (int chn, int extcommand);
-	void parse_pro_pitch_slide_up (int chn, int extcommand);
+	void parse_pro_pitch_slide_up (const int chn, const int extcommand);
+	void parse_pro_pitch_slide_down (const int chn, const int extcommand);
 	void parse_pro_volume_slide (int chn, int extcommand);
 	void parse_vibrato (int chn, int extcommand, int shift);
 	void parse_tremolo (int chn, int extcommand, int shift);
 	void parse_slide2period (int chn, int extcommand, int note);
 	void parse_pro_arpeggio (int chn, int extcommand);
 
-	void do_position_jump (int extcommand);
-	void do_pattern_break (int extcommand);
-	void do_pro_tempo_bpm (int extcommand);
-	void do_pattern_loop (int chn, int extcommand);
+	void do_position_jump (const int extcommand);
+	void do_pattern_break (const int extcommand);
+	void do_pro_tempo_bpm (const int extcommand);
+	void do_pattern_loop (const int chn, const int extcommand);
 	void do_vibrato (int chn);
 	void do_tremolo (int chn);
 	void do_slide2period (int chn);
