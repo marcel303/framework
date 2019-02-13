@@ -394,8 +394,8 @@ struct JGMOD_PLAYER
 	void toggle_pause_mode();
 	
 protected:
-	static void mod_interrupt_proc (void * data);
-	void mod_interrupt ();
+	static void mod_interrupt_proc(void * data);
+	void mod_interrupt();
 	
 	// -- located in player2.c ---------------------------------------------------
 	int find_lower_period(const int period, const int times) const;
