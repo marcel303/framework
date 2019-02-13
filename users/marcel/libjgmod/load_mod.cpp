@@ -110,7 +110,7 @@ const int mod_finetune[]=
 namespace jgmod
 {
 	// -- Prototypes -------------------------------------------------------------
-	int get_mod_no_pat (int *table, int max_trk);
+	int get_mod_no_pat(const int * table, const int max_trk);
 
 	//-- Codes -------------------------------------------------------------------
 
@@ -434,7 +434,7 @@ namespace jgmod
 
 
 	// to detect the no of patterns in protracker files.
-	int get_mod_no_pat (int *table, int max_trk)
+	int get_mod_no_pat(const int * table, const int max_trk)
 	{
 		int index;
 		int max=0;

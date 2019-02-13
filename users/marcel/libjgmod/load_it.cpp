@@ -58,7 +58,7 @@ extern const int noteperiod[];
 
 namespace jgmod
 {
-	int get_mod_no_pat (int *table, int max_trk);
+	int get_mod_no_pat(const int * table, const int max_trk);
 
 	// to detect unreal IT files
 	int detect_unreal_it (const char *filename)
