@@ -165,7 +165,7 @@ int AllegroVoiceApi::voice_get_frequency(int voice)
 
 void AllegroVoiceApi::voice_set_volume(int voice, int volume)
 {
-	Assert(volume >= 0 && volume <= 255);
+	Assert(volume >= 0 && volume <= 256);
 	
 	if (voice == -1)
 		return;
