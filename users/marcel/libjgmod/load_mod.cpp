@@ -110,7 +110,7 @@ const int mod_finetune[]=
 namespace jgmod
 {
 	// -- Prototypes -------------------------------------------------------------
-	int get_mod_no_pat (int *table, int max_trk);
+	int get_mod_no_pat(const int * table, const int max_trk);
 
 	//-- Codes -------------------------------------------------------------------
 
@@ -224,9 +224,9 @@ namespace jgmod
 		for (index=0; index<JGMOD_MAX_VOICES; index++)            //set the panning position
 			{
 			if ( (index%4) == 0 || (index%4) == 3)
-				j->panning[index] = 0;
+				j->panning[index] = 64;
 			else
-				j->panning[index] = 255;
+				j->panning[index] = 192;
 			}
 
 
@@ -348,11 +348,6 @@ namespace jgmod
 			si = j->si +index;
 
 			s->bits         = 8;
-
-			#ifdef ALLEGRO_DATE
-			s->stereo       = FALSE;
-			#endif
-
 			s->freq         = 1000;
 			s->priority     = JGMOD_PRIORITY;
 			s->len          = si->lenght;
@@ -439,7 +434,7 @@ namespace jgmod
 
 
 	// to detect the no of patterns in protracker files.
-	int get_mod_no_pat (int *table, int max_trk)
+	int get_mod_no_pat(const int * table, const int max_trk)
 	{
 		int index;
 		int max=0;

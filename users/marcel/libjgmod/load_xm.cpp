@@ -540,10 +540,6 @@ namespace jgmod
 			s->loop_start = tempwv->loop_start;
 			s->loop_end = tempwv->loop_start + tempwv->loop_lenght;
 			s->param = -1;
-			#ifdef ALLEGRO_DATE
-			s->stereo = FALSE;
-			#endif
-
 
 	#ifdef force_8_bit
 			if (s->bits == 8)
@@ -655,9 +651,6 @@ namespace jgmod
 		s->loop_start = 0;
 		s->loop_end = 0;
 		s->param = -1;
-		#ifdef ALLEGRO_DATE
-		s->stereo = FALSE;
-		#endif
 
 		s->data = jgmod_calloc (1);
 		if (s->data == nullptr)

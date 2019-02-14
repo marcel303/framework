@@ -294,6 +294,8 @@ struct GraviticSource
 	}
 };
 
+#include "Noise.h"
+
 struct NoiseSweepModifier
 {
 	bool isActive = false;
@@ -301,6 +303,7 @@ struct NoiseSweepModifier
 	
 	float x1 = 0.f;
 	float x2 = 0.f;
+	float noiseFrequency = 1.f;
 	
 	float strength = 1.f;
 	float duration = 1.f;
@@ -321,7 +324,6 @@ struct NoiseSweepModifier
 	{
 		if (time >= duration)
 			isActive = false;
-		
 		previousTime = time;
 		
 		time += dt;
@@ -358,7 +360,11 @@ struct NoiseSweepModifier
 			
 			const float falloff = 1.f / fmaxf(dx * dx, .01f);
 			
-			return random<float>(-1.f, +1.f) * falloff * strength / sqrtf(duration);
+			//const float valueAtX = random<float>(-1.f, +1.f);
+			//const float valueAtX = sinf(in_x * 2.f * float(M_PI) * 10.f);
+			const float valueAtX = octave_noise_2d(4, .5f, 1.f, in_x * noiseFrequency, framework.time);
+			
+			return valueAtX * falloff * strength / sqrtf(duration);
 		}
 	}
 };
@@ -684,10 +690,110 @@ static void addPaddingForLaserFrame(LaserFrame & frame)
 #endif
 }
 
+static void testDistanceBasedSampling()
+{
+	while (!framework.quitRequested)
+	{
+		framework.process();
+		
+		Vec2 points[10];
+		
+		for (int i = 0; i < 10; ++i)
+		{
+			points[i][0] = (i - 5) * 20;
+			points[i][1] = sinf(framework.time + i / 2.f) * 80.f;
+		}
+		
+		float totalDistances[10];
+		
+		float totalDistance = 0.f;
+		
+		totalDistances[0] = 0.f;
+		
+		for (int i = 1; i < 10; ++i)
+		{
+			const Vec2 & p1 = points[i - 1];
+			const Vec2 & p2 = points[i - 0];
+			
+			totalDistance += (p2 - p1).CalcSize();
+			
+			totalDistances[i] = totalDistance;
+		}
+		
+		//printf("total distance: %.2f\n", totalDistance);
+		
+		const int numResampledPoints = 50;
+		
+		Vec2 resampledPoints[100];
+		
+		for (int i = 0; i < numResampledPoints; ++i)
+		{
+			const float distance = i / float(numResampledPoints - 1) * totalDistance;
+			
+			float * itr = std::upper_bound(totalDistances, totalDistances + 10, distance);
+			
+			const int index = itr - totalDistances;
+			
+			if (index == 0)
+			{
+				resampledPoints[i] = points[0];
+			}
+			else if (index == 10)
+			{
+				resampledPoints[i] = points[10 - 1];
+			}
+			else
+			{
+				const Vec2 & p1 = points[index - 1];
+				const Vec2 & p2 = points[index - 0];
+				
+				const float distance1 = totalDistances[index - 1];
+				const float distance2 = totalDistances[index - 0];
+				
+				const float t = (distance - distance1) / (distance2 - distance1);
+				
+				Assert(t >= 0.f && t <= 1.f);
+				
+				const Vec2 p = p1 * (1.f - t) + p2 * t;
+				
+				//printf("point: %.2f, %.2f\n", p[0], p[1]);
+				
+				resampledPoints[i] = p;
+			}
+		}
+		
+		//printf("done\n");
+		
+		framework.beginDraw(0, 0, 0, 0);
+		gxTranslatef(VIEW_SX/2, VIEW_SY/2, 0);
+		gxScalef(3, 3, 1);
+		
+		setColor(colorRed);
+		hqBegin(HQ_FILLED_CIRCLES);
+		for (int i = 0; i < 10; ++i)
+		{
+			hqFillCircle(points[i][0], points[i][1], 3.f);
+		}
+		hqEnd();
+		
+		setColor(colorWhite);
+		hqBegin(HQ_FILLED_CIRCLES);
+		for (int i = 0; i < numResampledPoints; ++i)
+		{
+			hqFillCircle(resampledPoints[i][0], resampledPoints[i][1], 1.f);
+		}
+		hqEnd();
+		
+		framework.endDraw();
+	}
+}
+
 int main(int argc, char * argv[])
 {
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
+	
+	//testDistanceBasedSampling();
 	
 	FrameworkImGuiContext guiCtx;
 	guiCtx.init();
@@ -885,6 +991,7 @@ int main(int argc, char * argv[])
 						noiseSweep.begin(-1.f, +5.f);
 					ImGui::SliderFloat("Noise sweep strength", &noiseSweep.strength, 0.f, 100.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Noise sweep duration", &noiseSweep.duration, 0.f, 100.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Noise sweep noise frequency", &noiseSweep.noiseFrequency, 0.f, 100.f, "%.4f", 2.f);
 				}
 				else if (tab == kTab_Calibration)
 				{

@@ -18,6 +18,7 @@
 #include "allegro2-timerApi.h"
 #include "allegro2-voiceApi.h"
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,134 +52,139 @@ const char * jgmod_geterror()
 	return jgmod_error;
 }
 
-// load supported types of mod files.
-// Detect the type first.
-// Then call for the appropriate loader.
-JGMOD *jgmod_load (const char *filename, bool fast_loading, bool enable_m15)
+JGMOD * jgmod_load(const char * filename, const bool fast_loading, const bool enable_m15)
 {
+	// load supported types of mod files.
+	// Detect the type first.
+	// Then call for the appropriate loader.
+
     int temp;
 
-    if (jgmod::detect_it (filename) == 1)
-        return jgmod::load_it (filename, 0);
+    if (jgmod::detect_it(filename) == 1)
+        return jgmod::load_it(filename, 0);
+	
+    if (jgmod::detect_xm(filename) == 1)
+        return jgmod::load_xm(filename, 0);
 
-    if (jgmod::detect_xm (filename) == 1)
-        return jgmod::load_xm (filename, 0);
+    if (jgmod::detect_s3m(filename) == 1)
+        return jgmod::load_s3m(filename, 0, fast_loading);
 
-    if (jgmod::detect_s3m (filename) == 1)
-        return jgmod::load_s3m (filename, 0, fast_loading);
+    if (jgmod::detect_m31(filename) == 1)
+        return jgmod::load_m(filename, 31);
 
-    if (jgmod::detect_m31 (filename) == 1)
-        return jgmod::load_m (filename, 31);
-
-    temp = jgmod::detect_unreal_it (filename);
+    temp = jgmod::detect_unreal_it(filename);
     if (temp > 0)
         return jgmod::load_it (filename, temp);
 
-    temp = jgmod::detect_unreal_xm (filename);
+    temp = jgmod::detect_unreal_xm(filename);
     if (temp > 0)
-        return jgmod::load_xm (filename, temp);
+        return jgmod::load_xm(filename, temp);
 
-    temp = jgmod::detect_unreal_s3m (filename);
+    temp = jgmod::detect_unreal_s3m(filename);
     if (temp > 0)
-        return jgmod::load_s3m (filename, temp, fast_loading);
+        return jgmod::load_s3m(filename, temp, fast_loading);
 
-    if (enable_m15 == true)            //detect this last
-        {
-        if (jgmod::detect_m15 (filename) == 1)
-            return jgmod::load_m (filename, 15);
-        }
+    if (enable_m15 == true) // detect this last
+	{
+        if (jgmod::detect_m15(filename) == 1)
+            return jgmod::load_m(filename, 15);
+	}
 
-    jgmod_seterror ("Unsupported MOD type or unable to open file");
+    jgmod_seterror("Unsupported MOD type or unable to open file");
     return nullptr;
 }
 
-void jgmod_destroy (JGMOD *j)
+void jgmod_destroy(JGMOD * j)
 {
-    int index;
-    PATTERN_INFO *pi;
-
     if (j == nullptr)
         return;
 
     if (j->si != nullptr)
-        {
-        free (j->si);
-        }
+	{
+        free(j->si);
+        j->si = nullptr;
+	}
 
     if (j->ii != nullptr)
-        {
-        free (j->ii);
-        }
+	{
+        free(j->ii);
+        j->ii = nullptr;
+	}
 
     if (j->pi != nullptr)
-        {
-        for (index=0; index<j->no_pat; index++)
-            {
-            pi = j->pi+index;
-            if (pi->ni != nullptr)
-                {
-                free (pi->ni);
-                }
-            }
-        free (j->pi);
-        }
+	{
+        for (int index = 0; index < j->no_pat; ++index)
+		{
+            PATTERN_INFO & pi = j->pi[index];
+			
+            if (pi.ni != nullptr)
+			{
+                free(pi.ni);
+                pi.ni = nullptr;
+			}
+		}
+		
+        free(j->pi);
+        j->pi = nullptr;
+	}
 
-    for (index=0; index < j->no_sample; index++)
-        {
-        if (j->s + index)
-            {
-            if (j->s[index].data)
-                {
-                free (j->s[index].data);
-                }
-            }
-        }
+    for (int index = 0; index < j->no_sample; ++index)
+	{
+		SAMPLE & s = j->s[index];
+		
+		if (s.data != nullptr)
+		{
+			free(s.data);
+			s.data = nullptr;
+		}
+	}
 
-    free (j->s);
+    free(j->s);
+    j->s = nullptr;
 
-    free (j);
+    free(j);
     j = nullptr;
 }
 
-int jgmod_get_info (const char *filename, JGMOD_INFO *ji, bool enable_m15)
+int jgmod_get_info(const char * filename, JGMOD_INFO * ji, const bool enable_m15)
 {
     int temp;
 
+	assert(ji != nullptr);
     if (ji == nullptr)
         return -1;
 	
 	memset(ji, 0, sizeof(*ji));
 	
-    if (jgmod::detect_it (filename) == 1)
-        return jgmod::get_it_info (filename, 0, ji);
+    if (jgmod::detect_it(filename) == 1)
+        return jgmod::get_it_info(filename, 0, ji);
 
-    if (jgmod::detect_xm (filename) == 1)
-        return jgmod::get_xm_info (filename, 0, ji);
+    if (jgmod::detect_xm(filename) == 1)
+        return jgmod::get_xm_info(filename, 0, ji);
 
-    if (jgmod::detect_s3m (filename) == 1)
-        return jgmod::get_s3m_info (filename, 0, ji);
+    if (jgmod::detect_s3m(filename) == 1)
+        return jgmod::get_s3m_info(filename, 0, ji);
 
-    if (jgmod::detect_m31 (filename) == 1)
-        return jgmod::get_m_info (filename, 31, ji);
+    if (jgmod::detect_m31(filename) == 1)
+        return jgmod::get_m_info(filename, 31, ji);
 
-    temp = jgmod::detect_unreal_it (filename);
+    temp = jgmod::detect_unreal_it(filename);
     if (temp > 0)
-        return jgmod::get_it_info (filename, temp, ji);
+        return jgmod::get_it_info(filename, temp, ji);
 
-    temp = jgmod::detect_unreal_xm (filename);
+    temp = jgmod::detect_unreal_xm(filename);
     if (temp > 0)
-        return jgmod::get_xm_info (filename, temp, ji);
+        return jgmod::get_xm_info(filename, temp, ji);
 
-    temp = jgmod::detect_unreal_s3m (filename);
+    temp = jgmod::detect_unreal_s3m(filename);
     if (temp > 0)
-        return jgmod::get_s3m_info (filename, temp, ji);
+        return jgmod::get_s3m_info(filename, temp, ji);
 
-    if (enable_m15 == true)            //detect this last
-        {
-        if (jgmod::detect_m15 (filename) == 1)
-            return jgmod::get_m_info (filename, 15, ji);
-        }
-
+    if (enable_m15 == true) // detect this last
+	{
+        if (jgmod::detect_m15(filename) == 1)
+            return jgmod::get_m_info(filename, 15, ji);
+	}
 
     jgmod_seterror ("Unsupported MOD type or unable to open file");
     return -1;
@@ -193,80 +199,73 @@ JGMOD_PLAYER::JGMOD_PLAYER()
 	for (int i = 0; i < JGMOD_MAX_VOICES; ++i)
 		voice_table[i] = -1;
 
-	mod_volume = 255;
+	mod_volume = 256;
 	
 	enable_lasttrk_loop = true;
 }
 
-int JGMOD_PLAYER::init(int max_chn, AllegroTimerApi * in_timerApi, AllegroVoiceApi * in_voiceApi)
+int JGMOD_PLAYER::init(const int max_chn, AllegroTimerApi * in_timerApi, AllegroVoiceApi * in_voiceApi)
 {
-    int index;
-    int temp=0;
-
-    if (is_init == true)      // don't need to initialize many times
+	// don't need to initialize many times
+	assert(is_init == false);
+    if (is_init == true)
         return 1;
 
-    if ( (max_chn > JGMOD_MAX_VOICES) || (max_chn <= 0) )
+	assert(max_chn > 0 && max_chn <= JGMOD_MAX_VOICES);
+    if (max_chn <= 0 || max_chn > JGMOD_MAX_VOICES)
         return -1;
 
+	assert(timerApi == nullptr && voiceApi == nullptr);
 	timerApi = in_timerApi;
 	voiceApi = in_voiceApi;
 	
+	assert(fake_sample == nullptr);
     if (fake_sample == nullptr)
-        fake_sample = (SAMPLE *)jgmod_calloc (sizeof (SAMPLE));     // use to trick allegro
-                                                    // into giving me voice
-    if (fake_sample == nullptr)                        // channels
-        {
-        jgmod_seterror ("Unable to setup initialization sample");
-        return -1;
-        }
-
+    {
+    	// use to trick allegro into giving me voice channels
+        fake_sample = (SAMPLE*)jgmod_calloc(sizeof(SAMPLE));
+	}
+	
     fake_sample->freq = 1000;
     fake_sample->loop_start = 0;
     fake_sample->loop_end = 0;
     fake_sample->priority = JGMOD_PRIORITY;
-
-    #ifdef ALLEGRO_DATE         // for compatibility with Allegro 3.0
-    fake_sample->stereo = FALSE;
-    #endif
-
     fake_sample->bits = 8;
     fake_sample->len  = 0;
     fake_sample->param = -1;
-    fake_sample->data = jgmod_calloc (0);
+    fake_sample->data = jgmod_calloc(0);
 
-    if (fake_sample->data == nullptr)
-        {
-        jgmod_seterror ("JGMOD : Not enough memory to setup initialization sample");
-        free (fake_sample);
-        return -1;
-        }
-
-    for (index=0; index<max_chn; index++)    //allocate all the voices
-        {
-        voice_table[index] = voiceApi->allocate_voice (fake_sample);
+	// allocate all the voices
+	bool result = true;
+    for (int index = 0; index < max_chn; ++index)
+	{
+        voice_table[index] = voiceApi->allocate_voice(fake_sample);
+		
         if (voice_table[index] == -1)
-            temp = -1;
+            result = false;
         else
-            {
+		{
             ci[index].volume = 0;
-            voiceApi->voice_set_volume (voice_table[index], 0);
-            voiceApi->voice_start (voice_table[index]);
-            }
-        }
+			
+            voiceApi->voice_set_volume(voice_table[index], 0);
+            voiceApi->voice_start(voice_table[index]);
+		}
+	}
 	
-    if (temp == -1)
+    if (result == false)
+	{
+        for (int index = 0; index < max_chn; ++index)
         {
-        for (index=0; index<max_chn; index++)
             if (voice_table[index] != -1)
-                {
-                voiceApi->deallocate_voice (voice_table[index]);
+			{
+                voiceApi->deallocate_voice(voice_table[index]);
                 voice_table[index] = -1;
-                }
+			}
+		}
 
-        jgmod_seterror ("JGMOD : Unable to allocate enough voices");
-        return -1;
-        }
+		jgmod_seterror ("JGMOD : Unable to allocate enough voices");
+		return -1;
+	}
 	
     mi.max_chn = max_chn;
     mi.is_playing = false;
@@ -278,41 +277,43 @@ int JGMOD_PLAYER::init(int max_chn, AllegroTimerApi * in_timerApi, AllegroVoiceA
     return 1;
 }
 
-void JGMOD_PLAYER::shut ()
+void JGMOD_PLAYER::shut()
 {
-    int index;
-
     stop();
-    timerApi->remove_int2 (mod_interrupt_proc, this);
+	
+    timerApi->remove_int2(mod_interrupt_proc, this);
 
-    for (index=0; index<JGMOD_MAX_VOICES; index++)
-        {
+    for (int index = 0; index < JGMOD_MAX_VOICES; ++index)
+	{
         if (voice_table[index] >= 0)
-            voiceApi->deallocate_voice (voice_table[index]);
+        {
+            voiceApi->deallocate_voice(voice_table[index]);
 
-        voice_table[index] = -1;
+        	voice_table[index] = -1;
         }
-
+	}
+	
     is_init = false;
 }
 
-void JGMOD_PLAYER::play (JGMOD *j, bool loop, int speed, int pitch)
+void JGMOD_PLAYER::play(JGMOD * j, const bool loop, const int speed, const int pitch)
 {
-    int index;
-    int temp;
-
     if (j == nullptr)
-        {
+	{
         jgmod_seterror ("Can't play a JGMOD pointer with null value");
         return;
-        }
+	}
 
-    if (of != nullptr)     // make sure only one mod being played.
+	// make sure only one mod being played.
+    if (of != nullptr)
+    {
         stop();
+	}
 
     mi.flag = j->flag;
-    for (index=0 ;index<JGMOD_MAX_VOICES; index++)
-        {
+	
+    for (int index = 0; index < JGMOD_MAX_VOICES; ++index)
+	{
         ci[index].keyon = false;
         ci[index].kick = false;
         ci[index].channel_volume = j->channel_volume[index];
@@ -419,14 +420,14 @@ void JGMOD_PLAYER::play (JGMOD *j, bool loop, int speed, int pitch)
         ci[index].panenv.p = 0;
         ci[index].panenv.v = 32;
 
-        for (temp=0; temp < JGMOD_MAX_ENVPTS; temp++)
-            {
+        for (int temp = 0; temp < JGMOD_MAX_ENVPTS; ++temp)
+		{
             ci[index].volenv.env[temp] = 0;
             ci[index].volenv.pos[temp] = 0;
 
             ci[index].panenv.env[temp] = 0;
             ci[index].panenv.pos[temp] = 0;
-            }
+		}
 
         if (j->flag & JGMOD_MODE_XM)
             ci[index].c2spd = 0;
@@ -435,7 +436,7 @@ void JGMOD_PLAYER::play (JGMOD *j, bool loop, int speed, int pitch)
 
         if (index < mi.max_chn)
             ci[index].pan = j->panning[index];
-        }
+	}
 
     mi.no_chn = j->no_chn;
     mi.tick = -1;
@@ -464,31 +465,32 @@ void JGMOD_PLAYER::play (JGMOD *j, bool loop, int speed, int pitch)
     set_speed(speed);
     set_pitch(pitch);
 
-    //timerApi->remove_int2 (mod_interrupt_proc, this);
-    timerApi->install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * j->bpm * mi.speed_ratio / 100), this);
+    timerApi->install_int_ex2(
+    	mod_interrupt_proc,
+    	BPM_TO_TIMER(24 * j->bpm * mi.speed_ratio / 100),
+    	this);
 }
 
-void JGMOD_PLAYER::stop ()
+void JGMOD_PLAYER::stop()
 {
-    int index;
-
     if (of == nullptr)
         return;
 
     mi.forbid = true;
     mi.is_playing = false;
     mi.trk = 0;
-    for (index=0; index<(mi.max_chn); index++)
-        {
-        voiceApi->voice_stop (voice_table[index]);
-        voiceApi->voice_set_volume (voice_table[index], 0);
-        }
+	
+    for (int index = 0; index < mi.max_chn; ++index)
+	{
+        voiceApi->voice_stop(voice_table[index]);
+        voiceApi->voice_set_volume(voice_table[index], 0);
+	}
         
     of = nullptr;
     mi.forbid = false;
 }
 
-void JGMOD_PLAYER::next_track ()
+void JGMOD_PLAYER::next_track()
 {
     mi.forbid = true;
 
@@ -498,7 +500,7 @@ void JGMOD_PLAYER::next_track ()
     mi.forbid = false;
 }
 
-void JGMOD_PLAYER::prev_track ()
+void JGMOD_PLAYER::prev_track()
 {
     mi.forbid = true;
 
@@ -511,58 +513,57 @@ void JGMOD_PLAYER::prev_track ()
     mi.forbid = false;
 }
 
-void JGMOD_PLAYER::goto_track (int new_track)
+void JGMOD_PLAYER::goto_track(const int new_track)
 {
     mi.forbid = true;
 
     mi.skip_pos = 1;
-    mi.skip_trk = new_track+1;
+    mi.skip_trk = new_track + 1;
     if (mi.skip_trk < 1)
         mi.skip_trk = 1;
 
     mi.forbid = false;
 }
 
-bool JGMOD_PLAYER::is_playing () const
+bool JGMOD_PLAYER::is_playing() const
 {
-    return (mi.is_playing);
+    return mi.is_playing;
 }
 
-void JGMOD_PLAYER::pause ()
+void JGMOD_PLAYER::pause()
 {
-    int index;
-
     mi.forbid = true;
     mi.pause = true;
-    for (index=0; index<(mi.max_chn); index++)
-        voiceApi->voice_stop (voice_table[index]);
+	
+    for (int index = 0; index < mi.max_chn; ++index)
+    {
+        voiceApi->voice_stop(voice_table[index]);
+	}
 
     mi.forbid = false;
 }
 
-void JGMOD_PLAYER::resume ()
+void JGMOD_PLAYER::resume()
 {
-    int index;
-
     mi.forbid = true;
     mi.pause = false;
-    for (index=0; index<(mi.max_chn); index++)
-        {
-        if (voiceApi->voice_get_position (voice_table[index]) >=0)
-            voiceApi->voice_start (voice_table[index]);
-        }
+
+    for (int index = 0; index < mi.max_chn; ++index)
+	{
+        if (voiceApi->voice_get_position(voice_table[index]) >= 0)
+            voiceApi->voice_start(voice_table[index]);
+	}
 
     mi.forbid = false;
 }
 
-bool JGMOD_PLAYER::is_paused () const
+bool JGMOD_PLAYER::is_paused() const
 {
     if (is_playing() == false)
         return false;
 
-    return (mi.pause);
+    return mi.pause;
 }
-
 
 void JGMOD_PLAYER::destroy_mod()
 {
@@ -571,59 +572,52 @@ void JGMOD_PLAYER::destroy_mod()
 	jgmod_destroy(of);
 }
 
-
-void JGMOD_PLAYER::set_volume (int volume)
+void JGMOD_PLAYER::set_volume(const int in_volume)
 {
-    int chn;
-
-    if (volume < 0)
-        volume = 0;
-    else if (volume > 255)
-        volume = 255;
+	const int volume = in_volume < 0 ? 0 : in_volume > 256 ? 256 : in_volume;
 	
 	if (volume == mod_volume)
 		return;
 	
     mod_volume = volume;
 
-    for (chn=0; chn<mi.max_chn ; chn++)
-        voiceApi->voice_set_volume (voice_table[chn], calc_volume(chn));
+    for (int chn = 0; chn < mi.max_chn; ++chn)
+    {
+        voiceApi->voice_set_volume(voice_table[chn], calc_volume(chn));
+	}
 }
 
-int JGMOD_PLAYER::get_volume () const
+int JGMOD_PLAYER::get_volume() const
 {
     return mod_volume;
 }
 
 // get a instrument from JGMOD structure
-SAMPLE *JGMOD_PLAYER::get_jgmod_sample (JGMOD *j, int sample_no)
+SAMPLE * JGMOD_PLAYER::get_jgmod_sample(JGMOD * j, const int sample_no)
 {
     if (j == nullptr)
-        {
+	{
         jgmod_seterror ("JGMOD pointer passed in is a NULL value");
         return nullptr;
-        }
+	}
 
-    if ( (sample_no < 0) || (sample_no >= j->no_sample) )
-        {
+    if (sample_no < 0 || sample_no >= j->no_sample)
+	{
         jgmod_seterror ("Incorrect value of no sample found");
         return nullptr;
-        }
+	}
     
-    return &(j->s[sample_no]);
+    return &j->s[sample_no];
 }
 
-void JGMOD_PLAYER::set_loop (bool loop)
+void JGMOD_PLAYER::set_loop(const bool loop)
 {
     mi.loop = loop;
 }
 
-void JGMOD_PLAYER::set_speed (int speed)
+void JGMOD_PLAYER::set_speed(const int in_speed)
 {
-    if (speed <= 0)
-        speed = 1;
-    else if (speed > 400)
-        speed = 400;
+	const int speed = in_speed < 0 ? 0 : in_speed > 1000 ? 1000 : in_speed;
 	
 	if (speed == mi.speed_ratio)
 		return;
@@ -631,24 +625,22 @@ void JGMOD_PLAYER::set_speed (int speed)
     mi.speed_ratio = speed;
 
     if (is_playing() == true)
-        {
-        //timerApi->remove_int2 (mod_interrupt_proc, this);
-        timerApi->install_int_ex2 (mod_interrupt_proc, BPM_TO_TIMER (24 * mi.bpm * mi.speed_ratio / 100), this);
-        }
+	{
+        timerApi->install_int_ex2(
+        	mod_interrupt_proc,
+        	BPM_TO_TIMER(24 * mi.bpm * mi.speed_ratio / 100),
+        	this);
+	}
 }
 
-void JGMOD_PLAYER::set_pitch (int pitch)
+void JGMOD_PLAYER::set_pitch(const int in_pitch)
 {
-    if (pitch <= 0)
-        pitch = 1;
-
-    if (pitch > 400)
-        pitch = 400;
-
+	const int pitch = in_pitch < 0 ? 0 : in_pitch > 1000 ? 1000 : in_pitch;
+	
     mi.pitch_ratio = pitch;
 }
 
-void JGMOD_PLAYER::toggle_pause_mode ()
+void JGMOD_PLAYER::toggle_pause_mode()
 {
     if (is_paused() == true)
         resume();

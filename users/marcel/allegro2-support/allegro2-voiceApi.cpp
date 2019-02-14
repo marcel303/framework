@@ -3,7 +3,7 @@
 #include <SDL2/SDL.h>
 
 #define FIXBITS AllegroVoiceApi::FIXBITS
-#define INTERP_LINEAR 0
+#define INTERP_LINEAR 1
 
 #define Assert assert
 #define Verify(x) do { const bool y = x; Assert(y); } while (false)
@@ -165,7 +165,7 @@ int AllegroVoiceApi::voice_get_frequency(int voice)
 
 void AllegroVoiceApi::voice_set_volume(int voice, int volume)
 {
-	Assert(volume >= 0 && volume <= 255);
+	Assert(volume >= 0 && volume <= 256);
 	
 	if (voice == -1)
 		return;
@@ -235,7 +235,7 @@ void AllegroVoiceApi::voice_set_frequency(int voice, int freq)
 
 void AllegroVoiceApi::voice_set_pan(int voice, int pan)
 {
-	Assert(pan >= 0 && pan <= 255);
+	Assert(pan >= 0 && pan <= 256);
 	
 	if (voice == -1)
 		return;
@@ -278,7 +278,7 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 		return false;
 	}
 	
-	stereoPanning = voice.pan / 255.f;
+	stereoPanning = voice.pan / 256.f;
 	
 	int64_t voice_position = voice.position;
 	
@@ -294,7 +294,10 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 		if (sampleIndex >= 0 && sampleIndex < voice.sample->len)
 		{
 		#if INTERP_LINEAR
-			const int sampleIndex2 = sampleIndex + 1 < voice.sample->len ? sampleIndex + 1 : sampleIndex;
+			const int sampleIndex2 =
+				(voice.playmode & PLAYMODE_LOOP) != 0
+				? (sampleIndex + 1 < voice.sample->loop_end ? sampleIndex + 1 : sampleIndex)
+				: (sampleIndex + 1 < voice.sample->len      ? sampleIndex + 1 : sampleIndex);
 
 			const int t = (voice.position >> (FIXBITS - 16)) & 0xffff;
 		#endif
@@ -307,7 +310,7 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 				const int value1 = int8_t(values[sampleIndex ] ^ 0x80);
 				const int value2 = int8_t(values[sampleIndex2] ^ 0x80);
 	
-				const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+				const int value = (value1 * ((1 << 16) - t) + value2 * t) >> 16;
 			#else
 				const int value = int8_t(values[sampleIndex] ^ 0x80);
 			#endif
@@ -322,7 +325,7 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 				const int value1 = int16_t(values[sampleIndex ] ^ 0x8000);
 				const int value2 = int16_t(values[sampleIndex2] ^ 0x8000);
 	
-				const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+				const int value = (value1 * ((1 << 16) - t) + value2 * t) >> 16;
 			#else
 				const int value = int16_t(values[sampleIndex] ^ 0x8000);
 			#endif

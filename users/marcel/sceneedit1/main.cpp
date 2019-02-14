@@ -1,3 +1,4 @@
+#include "cameraComponent.h"
 #include "modelComponent.h"
 #include "transformComponent.h"
 
@@ -689,6 +690,35 @@ struct SceneEditor
 			setColor(isSelected ? 255 : 60, 0, 0, 40);
 			fillCube(position, size);
 		}
+		
+	#if 0 // todo : remove ?
+		const CameraComponent * cameraComp = node.components.find<CameraComponent>();
+		
+		if (cameraComp != nullptr)
+		{
+		// todo : draw camera frustum
+		
+			const Vec3 origin = cameraComp->viewMatrix.Mul4(Vec3(0, 0, 0));
+			
+			gxBegin(GX_LINES);
+			{
+				for (int dx = -1; dx <= +1; dx += 2)
+				{
+					for (int dy = -1; dy <= +1; dy += 2)
+					{
+						const int dz = 1;
+						
+						const Vec3 vertex(dx, dy, dz);
+						
+						setColor(colorWhite);
+						gxVertex3f(origin[0], origin[1], origin[2]);
+						gxVertex3f(vertex[0], vertex[1], vertex[2]);
+					}
+				}
+			}
+			gxEnd();
+		}
+	#endif
 	}
 	
 	void drawNodesTraverse(const SceneNode & node) const
@@ -786,6 +816,14 @@ struct SceneEditor
 	}
 };
 
+#include "cameraResource.h"
+
+static void testResources()
+{
+	g_resourceDatabase.add("controller 1", new CameraControllerTest());
+	g_resourceDatabase.add("controller 2", new CameraControllerTest());
+}
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -799,6 +837,8 @@ int main(int argc, char * argv[])
 		return -1;
 	
 	registerComponentTypes();
+
+	testResources(); // todo : remove
 	
 	SceneEditor editor;
 	editor.init();
@@ -818,8 +858,10 @@ int main(int argc, char * argv[])
 		
 		// save load test. todo : remove test code
 		
-		if (keyboard.wentDown(SDLK_s))
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_s))
 		{
+			inputIsCaptured = true;
+			
 			if (editor.scene.saveToFile("testScene.json"))
 			{
 				Scene tempScene;
@@ -835,8 +877,10 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		if (keyboard.wentDown(SDLK_l))
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_l))
 		{
+			inputIsCaptured = true;
+			
 			Scene tempScene;
 			
 			if (tempScene.loadFromFile("testScene.json"))

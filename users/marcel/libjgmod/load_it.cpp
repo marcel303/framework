@@ -58,7 +58,7 @@ extern const int noteperiod[];
 
 namespace jgmod
 {
-	int get_mod_no_pat (int *table, int max_trk);
+	int get_mod_no_pat(const int * table, const int max_trk);
 
 	// to detect unreal IT files
 	int detect_unreal_it (const char *filename)
@@ -531,7 +531,7 @@ namespace jgmod
 			kSpecial_SongMessageAttached = 1 << 0
 		};
 		
-		// note : JGMOD assumed global_volume 0->64
+		// note : JGMOD assumes global_volume 0->64
 		j->global_volume = jgmod_getc(f) / 2; // Global volume. (0->128) All volumes are adjusted by this.
 		const uint8_t mixing_volume = jgmod_getc(f); // Mix volume (0->128) During mixing, this value controls the magnitude of the wave being mixed.
 		j->mixing_volume = mixing_volume;
@@ -948,11 +948,6 @@ namespace jgmod
 		#endif
 			
 			s->freq = si->c2spd;
-			
-			#ifdef ALLEGRO_DATE
-			s->stereo = FALSE;
-			#endif
-			
 			s->len = si->lenght;
 			s->priority = JGMOD_PRIORITY;
 			s->loop_start = si->repoff;

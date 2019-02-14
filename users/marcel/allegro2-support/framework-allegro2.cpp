@@ -12,7 +12,13 @@
 #define DIGI_SAMPLERATE 44100
 
 #define FIXBITS AllegroVoiceApi::FIXBITS
-#define INTERP_LINEAR 0
+#define INTERP_LINEAR 1
+
+#if defined(DEBUG)
+	#define ENABLE_VALIDATION 0
+#else
+	#define ENABLE_VALIDATION 0
+#endif
 
 //
 
@@ -245,8 +251,8 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			buffer[i].channel[0] = samplesL[i] * (1 << (15 - 2));
-			buffer[i].channel[1] = samplesR[i] * (1 << (15 - 2));
+			mixingBuffer[i * 2 + 0] = samplesL[i] * (1 << (15 - 2));
+			mixingBuffer[i * 2 + 1] = samplesR[i] * (1 << (15 - 2));
 		}
 	#else
 		for (auto & __restrict voice : voiceApi->voices)
@@ -255,19 +261,27 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 			{
 				const int pan = voice.pan;
 				
-				const int pan1 = (0xff - pan) * voice.volume;
-				const int pan2 = (       pan) * voice.volume;
+				const int pan1 = ((1 << 8) - pan) * voice.volume;
+				const int pan2 = (           pan) * voice.volume;
 				
 				int sampleIndex = voice.position >> FIXBITS;
 				
 				for (int i = 0; i < numSamples; ++i)
 				{
-					Assert(sampleIndex >= 0 && sampleIndex < voice.sample->len);
-					
+				#if ENABLE_VALIDATION
+					if (voice.playmode & PLAYMODE_LOOP)
+						Assert(sampleIndex >= 0 && sampleIndex < voice.sample->loop_end);
+					else
+						Assert(sampleIndex >= 0 && sampleIndex < voice.sample->len);
+				#endif
+				
 					if (sampleIndex >= 0 && sampleIndex < voice.sample->len)
 					{
 					#if INTERP_LINEAR
-						const int sampleIndex2 = sampleIndex + 1 < voice.sample->len ? sampleIndex + 1 : sampleIndex;
+						const int sampleIndex2 =
+							(voice.playmode & PLAYMODE_LOOP) != 0
+							? (sampleIndex + 1 < voice.sample->loop_end ? sampleIndex + 1 : sampleIndex)
+							: (sampleIndex + 1 < voice.sample->len      ? sampleIndex + 1 : sampleIndex);
 						
 						const int t = (voice.position >> (FIXBITS - 16)) & 0xffff;
 					#endif
@@ -280,7 +294,16 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 							const int value1 = int8_t(values[sampleIndex ] ^ 0x80);
 							const int value2 = int8_t(values[sampleIndex2] ^ 0x80);
 							
-							const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+							const int value = (value1 * ((1 << 16) - t) + value2 * t) >> 16;
+							
+						#if ENABLE_VALIDATION
+							if (value1 < value2)
+								Assert(value >= value1 && value <= value2);
+							else if (value1 > value2)
+								Assert(value <= value1 && value >= value2);
+							else
+								Assert(value == value1 && value == value2);
+						#endif
 						#else
 							const int value = int8_t(values[sampleIndex] ^ 0x80);
 						#endif
@@ -296,7 +319,16 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 							const int value1 = int16_t(values[sampleIndex ] ^ 0x8000);
 							const int value2 = int16_t(values[sampleIndex2] ^ 0x8000);
 							
-							const int value = (value1 * (0xffff - t) + value2 * t) >> 16;
+							const int value = (value1 * ((1 << 16) - t) + value2 * t) >> 16;
+							
+						#if ENABLE_VALIDATION
+							if (value1 < value2)
+								Assert(value >= value1 && value < value2);
+							else if (value2 < value1)
+								Assert(value <= value1 && value >= value2);
+							else
+								Assert(value == value1 && value == value2);
+						#endif
 						#else
 							const int value = int16_t(values[sampleIndex] ^ 0x8000);
 						#endif
@@ -340,6 +372,14 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 								#endif
 								
 									voice.sampleIncrement = -voice.sampleIncrement;
+									
+								#if ENABLE_VALIDATION
+									const int64_t min = int64_t(voice.sample->loop_start) << FIXBITS;
+									const int64_t max = int64_t(voice.sample->loop_end) << FIXBITS;
+									Assert(voice.position >= min && voice.position < max);
+									Assert(sampleIndex >= voice.sample->loop_start);
+									Assert(sampleIndex < voice.sample->loop_end);
+								#endif
 								}
 							}
 							else
@@ -364,6 +404,14 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 								#endif
 								
 									voice.sampleIncrement = -voice.sampleIncrement;
+									
+								#if ENABLE_VALIDATION
+									const int64_t min = int64_t(voice.sample->loop_start) << FIXBITS;
+									const int64_t max = int64_t(voice.sample->loop_end) << FIXBITS;
+									Assert(voice.position >= min && voice.position < max);
+									Assert(sampleIndex >= voice.sample->loop_start);
+									Assert(sampleIndex < voice.sample->loop_end);
+								#endif
 								}
 							}
 						}
@@ -385,6 +433,14 @@ int AudioStream_AllegroVoiceMixer::Provide(int numSamples, AudioSample* __restri
 								sampleIndex = voice.sample->loop_start;
 								
 								voice.position = int64_t(voice.sample->loop_start) << FIXBITS;
+							#endif
+							
+							#if ENABLE_VALIDATION
+								const int64_t min = int64_t(voice.sample->loop_start) << FIXBITS;
+								const int64_t max = int64_t(voice.sample->loop_end) << FIXBITS;
+								Assert(voice.position >= min && voice.position < max);
+								Assert(sampleIndex >= voice.sample->loop_start);
+								Assert(sampleIndex < voice.sample->loop_end);
 							#endif
 							}
 						}

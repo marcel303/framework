@@ -30,7 +30,7 @@ struct AllegroVoiceApi
 		int started = 0;
 		int64_t position = 0;
 		int frequency = 0;
-		int pan = 127;
+		int pan = 128;
 		int volume = 255;
 		int playmode = 0;
 		SAMPLE * sample = nullptr;

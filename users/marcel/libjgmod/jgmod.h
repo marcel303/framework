@@ -124,7 +124,7 @@ struct ENVELOPE_INFO
     int a;
     int b;
     int p;
-    int v;
+    int v; // 0..64 (6 bits)
 };
 
 struct CHANNEL_INFO
@@ -132,7 +132,7 @@ struct CHANNEL_INFO
     ENVELOPE_INFO volenv;
     ENVELOPE_INFO panenv;
 
-	int  channel_volume;
+	int  channel_volume; // 0..64 (6 bits)
     int  instrument;
     int  sample;
     int  volume;
@@ -143,10 +143,10 @@ struct CHANNEL_INFO
     int  pan;
     bool kick;      // TRUE if sample needs to be restarted
     bool keyon;     // FALSE if the key is pressed (sustain). fixme : this seems opposite of what the name intuitively would suggest..
-    int  volfade;    // volume fadeout
+    int  volfade;    // volume fadeout. 0..32768 (15 bits)
     int  instfade;   // how much volume to subtract from volfade
 
-    int  temp_volume;
+    int  temp_volume; // 0..64 (6 bits)
     int  temp_period;
     int  temp_pan;
 
@@ -239,7 +239,7 @@ struct MUSIC_INFO
     int tempo;
     int speed_ratio;
     int pitch_ratio;
-    int global_volume;
+    int global_volume;  // 0..64 (6 bits)
     
     int new_pos;        // for pattern break
     int new_trk;        // or position jump
@@ -272,7 +272,7 @@ struct SAMPLE_INFO
     int c2spd;
     int transpose;
     int volume;        // default volume for this sample when triggered by note
-    int global_volume; // volume used during mixing for every instance of this sample
+    int global_volume; // volume used during mixing for every instance of this sample. 0..64 (6 bits)
     int pan;
     int repoff;
     int replen;
@@ -343,7 +343,7 @@ struct JGMOD
     int no_instrument;
     int no_sample;
     int global_volume;
-    int mixing_volume;
+    int mixing_volume; // 0..256 (usually 64 to create headroom) (8 bits)
 };
 
 struct JGMOD_INFO
@@ -366,87 +366,87 @@ struct JGMOD_PLAYER
 	volatile MUSIC_INFO mi;
 	volatile int voice_table[JGMOD_MAX_VOICES];
 	volatile CHANNEL_INFO ci[JGMOD_MAX_VOICES];
-	volatile int mod_volume;
+	volatile int mod_volume; // 0..256 (8 bits)
 	
 	volatile bool enable_lasttrk_loop;
 	
 	JGMOD_PLAYER();
 	
-	int init(int no_voices, AllegroTimerApi * timerApi, AllegroVoiceApi * voiceApi);
-	void shut ();
+	int init(const int no_voices, AllegroTimerApi * timerApi, AllegroVoiceApi * voiceApi);
+	void shut();
 	
-	void play (JGMOD *j, bool loop, int speed = 100, int pitch = 100);
-	void next_track ();
-	void prev_track ();
-	void goto_track (int new_track);
-	void stop ();
-	bool is_playing () const;
-	void pause ();
-	void resume ();
-	bool is_paused () const;
+	void play(JGMOD * j, const bool loop, const int speed = 100, const int pitch = 100);
+	void next_track();
+	void prev_track();
+	void goto_track(const int new_track);
+	void stop();
+	bool is_playing() const;
+	void pause();
+	void resume();
+	bool is_paused() const;
 	void destroy_mod();
-	void set_volume (int volume);
-	int get_volume () const;
-	SAMPLE *get_jgmod_sample (JGMOD *j, int sample_no);
-	void set_loop (bool loop);
-	void set_speed (int speed);
-	void set_pitch (int pitch);
-	void toggle_pause_mode ();
+	void set_volume(const int volume);
+	int get_volume() const;
+	SAMPLE * get_jgmod_sample(JGMOD * j, const int sample_no);
+	void set_loop(const bool loop);
+	void set_speed(const int speed);
+	void set_pitch(const int pitch);
+	void toggle_pause_mode();
 	
 protected:
-	static void mod_interrupt_proc (void * data);
-	void mod_interrupt ();
+	static void mod_interrupt_proc(void * data);
+	void mod_interrupt();
 	
 	// -- located in player2.c ---------------------------------------------------
-	int find_lower_period(int period, int times) const;
-	static NOTE_INFO * get_note (JGMOD * j, int pat, int pos, int chn);
-	int calc_pan (int chn) const;
-	int calc_volume (int volume) const;
-	int note2period (int note, int c2spd) const;
-	int get_jgmod_sample_no (int instrument_no, int note_no) const;
-	int period2pitch (int period) const;
-	static int interpolate(int p, int p1, int p2, int v1, int v2);
+	int find_lower_period(const int period, const int times) const;
+	static NOTE_INFO * get_note (JGMOD * j, const int pat, const int pos, const int chn);
+	int calc_pan (const int chn) const;
+	int calc_volume (const int chn) const;
+	int note2period (const int note, const int c2spd) const;
+	int get_jgmod_sample_no (const int instrument_no, const int note_no) const;
+	int period2pitch (const int period) const;
+	static int interpolate(const int p, const int p1, const int p2, const int v1, const int v2);
 
-	void parse_extended_command (int chn, int extcommand);
-	void parse_old_note (int chn, int note, int sample_no);
+	void parse_extended_command (const int chn, const int extcommand);
+	void parse_old_note (const int chn, const int note, const int sample_no);
 
-	void parse_pro_pitch_slide_down (int chn, int extcommand);
-	void parse_pro_pitch_slide_up (int chn, int extcommand);
-	void parse_pro_volume_slide (int chn, int extcommand);
-	void parse_vibrato (int chn, int extcommand, int shift);
-	void parse_tremolo (int chn, int extcommand, int shift);
-	void parse_slide2period (int chn, int extcommand, int note);
-	void parse_pro_arpeggio (int chn, int extcommand);
+	void parse_pro_pitch_slide_up (const int chn, const int extcommand);
+	void parse_pro_pitch_slide_down (const int chn, const int extcommand);
+	void parse_pro_volume_slide (const int chn, const int extcommand);
+	void parse_vibrato (const int chn, const int extcommand, const int shift);
+	void parse_tremolo (const int chn, const int extcommand, const int shift);
+	void parse_slide2period (const int chn, const int extcommand, const int note);
+	void parse_pro_arpeggio (const int chn, const int extcommand);
 
-	void do_position_jump (int extcommand);
-	void do_pattern_break (int extcommand);
-	void do_pro_tempo_bpm (int extcommand);
-	void do_pattern_loop (int chn, int extcommand);
-	void do_vibrato (int chn);
-	void do_tremolo (int chn);
-	void do_slide2period (int chn);
-	void do_arpeggio (int chn);
-	void do_delay_sample (int chn);
+	void do_position_jump (const int extcommand);
+	void do_pattern_break (const int extcommand);
+	void do_pro_tempo_bpm (const int extcommand);
+	void do_pattern_loop (const int chn, const int extcommand);
+	void do_vibrato (const int chn);
+	void do_tremolo (const int chn);
+	void do_slide2period (const int chn);
+	void do_arpeggio (const int chn);
+	void do_delay_sample (const int chn);
 
 	// -- located in player3.c ---------------------------------------------------
-	void parse_volume_command (int chn, int volume, int note);
-	void parse_note_command (int chn, int note);
+	void parse_volume_command (const int chn, const int volume, const int note);
+	void parse_note_command (const int chn, const int note);
 
-	void parse_s3m_volume_slide (int chn, int extcommand);
-	void parse_s3m_portamento_down (int chn, int extcommand);
-	void parse_s3m_portamento_up (int chn, int extcommand);
-	void parse_s3m_arpeggio (int chn, int extcommand);
-	void parse_s3m_panning (int chn, int extcommand);
-	void parse_tremor (int chn, int extcommand);
-	void parse_s3m_retrig (int chn, int extcommand);
+	void parse_s3m_volume_slide (const int chn, const int extcommand);
+	void parse_s3m_portamento_down (const int chn, const int extcommand);
+	void parse_s3m_portamento_up (const int chn, const int extcommand);
+	void parse_s3m_arpeggio (const int chn, const int extcommand);
+	void parse_s3m_panning (const int chn, const int extcommand);
+	void parse_tremor (const int chn, const int extcommand);
+	void parse_s3m_retrig (const int chn, const int extcommand);
 
-	void do_global_volume (int extcommand);
-	void do_s3m_set_tempo (int extcommand);
-	void do_s3m_set_bpm (int extcommand);
-	void do_s3m_volume_slide (int chn);
-	void do_s3m_portamento (int chn);
-	void do_tremor (int chn);
-	void do_s3m_retrig (int chn);
+	void do_global_volume (const int extcommand);
+	void do_s3m_set_tempo (const int extcommand);
+	void do_s3m_set_bpm (const int extcommand);
+	void do_s3m_volume_slide (const int chn);
+	void do_s3m_portamento (const int chn);
+	void do_tremor (const int chn);
+	void do_s3m_retrig (const int chn);
 
 	// -- located in player4.c ---------------------------------------------------
 	void parse_new_note (int chn, int note, int sample_no);
@@ -477,7 +477,7 @@ protected:
 void jgmod_seterror(const char * format, ...);
 const char * jgmod_geterror();
 
-JGMOD *jgmod_load (const char * filename, bool fast_loading = true, bool enable_m15 = false);
-void jgmod_destroy (JGMOD * j);
+JGMOD * jgmod_load(const char * filename, const bool fast_loading = true, const bool enable_m15 = false);
+void jgmod_destroy(JGMOD * j);
 
-int jgmod_get_info (const char *filename, JGMOD_INFO * ji, bool enable_m15 = false);
+int jgmod_get_info(const char * filename, JGMOD_INFO * ji, const bool enable_m15 = false);
