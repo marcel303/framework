@@ -14,12 +14,12 @@ set chibi_bin="chibi-build/chibi/Debug/chibi.exe"
 
 rem build chibi binary
 mkdir "chibi-build\chibi"
-cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --build . || exit /b
+cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --build . || cd %~dp0 && exit /b
 cd %~dp0 || exit /b
 
 rem generate cmake files using chibi
 mkdir "chibi-build\cmake-files"
-%chibi_bin% . chibi-build/cmake-files || exit /b
+%chibi_bin% . chibi-build/cmake-files || cd %~dp0 && exit /b
 cd %~dp0 || exit /b
 
 rem generate Visual Studio project file
