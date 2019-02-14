@@ -27,7 +27,7 @@
 
 #include "audioGraph.h"
 #include "audioNodeBase.h"
-#include "graphEdit.h" // todo : move type definition library elsewhere, since it needs to be made shared, contrary to the graph editor itself
+#include "graph_typeDefinitionLibrary.h"
 #include "Log.h"
 #include "soundmix.h"
 #include "StringEx.h"
