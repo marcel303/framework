@@ -77,7 +77,7 @@ static const std::string & getDisplayName(const GraphNode & node, const GraphEdi
 	return !nodeData.displayName.empty() ? nodeData.displayName : node.typeName;
 }
 
-const std::vector<GraphEdit_TypeDefinition::InputSocket> & getInputSockets(const GraphEdit_TypeDefinition & typeDefinition, const GraphEdit::NodeData & nodeData)
+const std::vector<Graph_TypeDefinition::InputSocket> & getInputSockets(const Graph_TypeDefinition & typeDefinition, const GraphEdit::NodeData & nodeData)
 {
 	return
 		nodeData.dynamicSockets.hasDynamicSockets
@@ -85,7 +85,7 @@ const std::vector<GraphEdit_TypeDefinition::InputSocket> & getInputSockets(const
 		: typeDefinition.inputSockets;
 }
 
-const std::vector<GraphEdit_TypeDefinition::OutputSocket> & getOutputSockets(const GraphEdit_TypeDefinition & typeDefinition, const GraphEdit::NodeData & nodeData)
+const std::vector<Graph_TypeDefinition::OutputSocket> & getOutputSockets(const Graph_TypeDefinition & typeDefinition, const GraphEdit::NodeData & nodeData)
 {
 	return
 		nodeData.dynamicSockets.hasDynamicSockets
@@ -249,7 +249,7 @@ static Color toColor(const ParticleColor & particleColor)
 	return color;
 }
 
-bool GraphEdit_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
+bool Graph_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
 {
 	bool result = true;
 	
@@ -266,13 +266,13 @@ bool GraphEdit_ValueTypeDefinition::loadXml(const XMLElement * xmlType)
 	
 	if (result == false)
 	{
-		*this = GraphEdit_ValueTypeDefinition();
+		*this = Graph_ValueTypeDefinition();
 	}
 	
 	return result;
 }
 
-bool GraphEdit_EnumDefinition::loadXml(const XMLElement * xmlEnum)
+bool Graph_EnumDefinition::loadXml(const XMLElement * xmlEnum)
 {
 	bool result = true;
 	
@@ -298,13 +298,13 @@ bool GraphEdit_EnumDefinition::loadXml(const XMLElement * xmlEnum)
 	
 	if (result == false)
 	{
-		*this = GraphEdit_EnumDefinition();
+		*this = Graph_EnumDefinition();
 	}
 	
 	return result;
 }
 
-bool GraphEdit_TypeDefinition::InputSocket::canConnectTo(const GraphEdit_TypeDefinitionLibrary * typeDefintionLibrary, const GraphEdit_TypeDefinition::OutputSocket & socket) const
+bool Graph_TypeDefinition::InputSocket::canConnectTo(const Graph_TypeDefinitionLibrary * typeDefintionLibrary, const Graph_TypeDefinition::OutputSocket & socket) const
 {
 	auto valueTypeDefinition = typeDefintionLibrary->tryGetValueTypeDefinition(typeName);
 	
@@ -314,7 +314,7 @@ bool GraphEdit_TypeDefinition::InputSocket::canConnectTo(const GraphEdit_TypeDef
 	return true;
 }
 
-bool GraphEdit_TypeDefinition::OutputSocket::canConnectTo(const GraphEdit_TypeDefinitionLibrary * typeDefintionLibrary, const GraphEdit_TypeDefinition::InputSocket & socket) const
+bool Graph_TypeDefinition::OutputSocket::canConnectTo(const Graph_TypeDefinitionLibrary * typeDefintionLibrary, const Graph_TypeDefinition::InputSocket & socket) const
 {
 	auto valueTypeDefinition = typeDefintionLibrary->tryGetValueTypeDefinition(socket.typeName);
 	
@@ -324,7 +324,7 @@ bool GraphEdit_TypeDefinition::OutputSocket::canConnectTo(const GraphEdit_TypeDe
 	return true;
 }
 
-void GraphEdit_TypeDefinition::createUi()
+void Graph_TypeDefinition::createUi()
 {
 	// setup input sockets
 	
@@ -349,7 +349,7 @@ void GraphEdit_TypeDefinition::createUi()
 	}
 }
 
-bool GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
+bool Graph_TypeDefinition::loadXml(const XMLElement * xmlType)
 {
 	bool result = true;
 	
@@ -395,7 +395,7 @@ bool GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 	
 	if (result == false)
 	{
-		*this = GraphEdit_TypeDefinition();
+		*this = Graph_TypeDefinition();
 	}
 	
 	return result;
@@ -403,7 +403,7 @@ bool GraphEdit_TypeDefinition::loadXml(const XMLElement * xmlType)
 
 //
 
-const GraphEdit_ValueTypeDefinition * GraphEdit_TypeDefinitionLibrary::tryGetValueTypeDefinition(const std::string & typeName) const
+const Graph_ValueTypeDefinition * Graph_TypeDefinitionLibrary::tryGetValueTypeDefinition(const std::string & typeName) const
 {
 	auto i = valueTypeDefinitions.find(typeName);
 	
@@ -413,7 +413,7 @@ const GraphEdit_ValueTypeDefinition * GraphEdit_TypeDefinitionLibrary::tryGetVal
 		return nullptr;
 }
 
-const GraphEdit_EnumDefinition * GraphEdit_TypeDefinitionLibrary::tryGetEnumDefinition(const std::string & typeName) const
+const Graph_EnumDefinition * Graph_TypeDefinitionLibrary::tryGetEnumDefinition(const std::string & typeName) const
 {
 	auto i = enumDefinitions.find(typeName);
 	
@@ -423,7 +423,7 @@ const GraphEdit_EnumDefinition * GraphEdit_TypeDefinitionLibrary::tryGetEnumDefi
 		return nullptr;
 }
 
-const GraphEdit_TypeDefinition * GraphEdit_TypeDefinitionLibrary::tryGetTypeDefinition(const std::string & typeName) const
+const Graph_TypeDefinition * Graph_TypeDefinitionLibrary::tryGetTypeDefinition(const std::string & typeName) const
 {
 	auto i = typeDefinitions.find(typeName);
 	
@@ -433,7 +433,7 @@ const GraphEdit_TypeDefinition * GraphEdit_TypeDefinitionLibrary::tryGetTypeDefi
 		return nullptr;
 }
 
-const GraphEdit_LinkTypeDefinition * GraphEdit_TypeDefinitionLibrary::tryGetLinkTypeDefinition(const std::string & srcTypeName, const std::string & dstTypeName) const
+const Graph_LinkTypeDefinition * Graph_TypeDefinitionLibrary::tryGetLinkTypeDefinition(const std::string & srcTypeName, const std::string & dstTypeName) const
 {
 	auto key = std::make_pair(srcTypeName, dstTypeName);
 	
@@ -445,13 +445,13 @@ const GraphEdit_LinkTypeDefinition * GraphEdit_TypeDefinitionLibrary::tryGetLink
 		return nullptr;
 }
 
-bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
+bool Graph_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 {
 	bool result = true;
 	
 	for (auto xmlType = xmlLibrary->FirstChildElement("valueType"); xmlType != nullptr; xmlType = xmlType->NextSiblingElement("valueType"))
 	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
+		Graph_ValueTypeDefinition typeDefinition;
 		
 		result &= typeDefinition.loadXml(xmlType);
 		
@@ -466,7 +466,7 @@ bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 	
 	for (auto xmlEnum = xmlLibrary->FirstChildElement("enum"); xmlEnum != nullptr; xmlEnum = xmlEnum->NextSiblingElement("enum"))
 	{
-		GraphEdit_EnumDefinition enumDefinition;
+		Graph_EnumDefinition enumDefinition;
 		
 		result &= enumDefinition.loadXml(xmlEnum);
 		
@@ -481,7 +481,7 @@ bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 	
 	for (auto xmlType = xmlLibrary->FirstChildElement("linkType"); xmlType != nullptr; xmlType = xmlType->NextSiblingElement("linkType"))
 	{
-		GraphEdit_LinkTypeDefinition typeDefinition;
+		Graph_LinkTypeDefinition typeDefinition;
 		
 		typeDefinition.srcTypeName = stringAttrib(xmlType, "srcTypeName", "");
 		typeDefinition.dstTypeName = stringAttrib(xmlType, "dstTypeName", "");
@@ -491,7 +491,7 @@ bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 		
 		for (auto xmlParam = xmlType->FirstChildElement("param"); xmlParam != nullptr; xmlParam = xmlParam->NextSiblingElement("param"))
 		{
-			GraphEdit_LinkTypeDefinition::Param param;
+			Graph_LinkTypeDefinition::Param param;
 			
 			param.typeName = stringAttrib(xmlParam, "typeName", "");
 			param.name = stringAttrib(xmlParam, "name", "");
@@ -510,7 +510,7 @@ bool GraphEdit_TypeDefinitionLibrary::loadXml(const XMLElement * xmlLibrary)
 	
 	for (auto xmlType = xmlLibrary->FirstChildElement("type"); xmlType != nullptr; xmlType = xmlType->NextSiblingElement("type"))
 	{
-		GraphEdit_TypeDefinition typeDefinition;
+		Graph_TypeDefinition typeDefinition;
 		
 		result &= typeDefinition.loadXml(xmlType);
 		typeDefinition.createUi();
@@ -1351,7 +1351,7 @@ void GraphEdit::EditorVisualizer::updateSize(const GraphEdit & graphEdit)
 //
 
 void GraphEdit::NodeData::DynamicSockets::update(
-	const GraphEdit_TypeDefinition & typeDefinition,
+	const Graph_TypeDefinition & typeDefinition,
 	const std::vector<GraphEdit_RealTimeConnection::DynamicInput> & newInputs,
 	const std::vector<GraphEdit_RealTimeConnection::DynamicOutput> & newOutputs)
 {
@@ -1384,7 +1384,7 @@ void GraphEdit::NodeData::DynamicSockets::update(
 		{
 			input.enumName = newInput.name + "_dynInputEnum";
 			
-			GraphEdit_EnumDefinition enumDefinition;
+			Graph_EnumDefinition enumDefinition;
 			enumDefinition.enumName = input.enumName;
 			enumDefinition.enumElems = newInput.enumElems;
 			enumDefinitions.push_back(enumDefinition);
@@ -1433,7 +1433,7 @@ void GraphEdit::NodeData::setIsFolded(const bool _isFolded)
 GraphEdit::GraphEdit(
 	const int _displaySx,
 	const int _displaySy,
-	GraphEdit_TypeDefinitionLibrary * _typeDefinitionLibrary,
+	Graph_TypeDefinitionLibrary * _typeDefinitionLibrary,
 	GraphEdit_RealTimeConnection * _realTimeConnection)
 	: graph(nullptr)
 	, nextZKey(1)
@@ -1561,7 +1561,7 @@ GraphLink * GraphEdit::tryGetLink(const GraphLinkId id) const
 		return nullptr;
 }
 
-const GraphEdit_TypeDefinition::InputSocket * GraphEdit::tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const
+const Graph_TypeDefinition::InputSocket * GraphEdit::tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const
 {
 	auto node = tryGetNode(nodeId);
 	
@@ -1569,7 +1569,7 @@ const GraphEdit_TypeDefinition::InputSocket * GraphEdit::tryGetInputSocket(const
 	if (node == nullptr)
 		return nullptr;
 	
-	const GraphEdit_TypeDefinition * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
+	const Graph_TypeDefinition * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
 	
 	if (typeDefinition == nullptr)
 		return nullptr;
@@ -1587,7 +1587,7 @@ const GraphEdit_TypeDefinition::InputSocket * GraphEdit::tryGetInputSocket(const
 	return &inputSockets[socketIndex];
 }
 
-const GraphEdit_TypeDefinition::OutputSocket * GraphEdit::tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const
+const Graph_TypeDefinition::OutputSocket * GraphEdit::tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const
 {
 	auto node = tryGetNode(nodeId);
 	
@@ -1713,9 +1713,9 @@ bool GraphEdit::getLinkPath(const GraphLinkId linkId, LinkPath & path) const
 	}
 }
 
-const GraphEdit_LinkTypeDefinition * GraphEdit::tryGetLinkTypeDefinition(const GraphLinkId linkId) const
+const Graph_LinkTypeDefinition * GraphEdit::tryGetLinkTypeDefinition(const GraphLinkId linkId) const
 {
-	const GraphEdit_LinkTypeDefinition * result = nullptr;
+	const Graph_LinkTypeDefinition * result = nullptr;
 	
 	auto link = tryGetLink(linkId);
 	Assert(link != nullptr);
@@ -1959,7 +1959,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 	return false;
 }
 
-bool GraphEdit::hitTestNode(const NodeData & nodeData, const GraphEdit_TypeDefinition & typeDefinition, const float x, const float y, const bool socketsAreVisible, NodeHitTestResult & result) const
+bool GraphEdit::hitTestNode(const NodeData & nodeData, const Graph_TypeDefinition & typeDefinition, const float x, const float y, const bool socketsAreVisible, NodeHitTestResult & result) const
 {
 	result = NodeHitTestResult();
 	
@@ -4002,7 +4002,7 @@ void GraphEdit::socketConnectEnd()
 	{
 		bool clearInputDuplicates = true;
 		
-		const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeDefinitionLibrary->tryGetValueTypeDefinition(socketConnect.srcNodeSocket->typeName);
+		const Graph_ValueTypeDefinition * valueTypeDefinition = typeDefinitionLibrary->tryGetValueTypeDefinition(socketConnect.srcNodeSocket->typeName);
 		
 		if (valueTypeDefinition != nullptr && valueTypeDefinition->multipleInputs)
 		{
@@ -4155,7 +4155,7 @@ void GraphEdit::doEditorOptions(const float dt)
 		uiState->activeColor = nullptr;
 }
 
-static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors, const GraphEdit_EnumDefinition * enumDefinition, bool & pressed);
+static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors, const Graph_EnumDefinition * enumDefinition, bool & pressed);
 
 void GraphEdit::doLinkParams(const float dt)
 {
@@ -4206,10 +4206,10 @@ void GraphEdit::doLinkParams(const float dt)
 					
 					std::string newValueText = oldValueText;
 					
-					const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeDefinitionLibrary->tryGetValueTypeDefinition(param.typeName);
+					const Graph_ValueTypeDefinition * valueTypeDefinition = typeDefinitionLibrary->tryGetValueTypeDefinition(param.typeName);
 					
 					//const GraphEdit_EnumDefinition * enumDefinition = typeLibrary->tryGetEnumDefinition(param.enumName);
-					const GraphEdit_EnumDefinition * enumDefinition = nullptr;
+					const Graph_EnumDefinition * enumDefinition = nullptr;
 					
 					bool pressed = false;
 					
@@ -5341,7 +5341,7 @@ void GraphEdit::draw() const
 	popFontMode();
 }
 
-void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, const GraphEdit_TypeDefinition & definition, const char * displayName) const
+void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, const Graph_TypeDefinition & definition, const char * displayName) const
 {
 	cpuTimingBlock(drawNode);
 	
@@ -6118,7 +6118,7 @@ void GraphEdit::linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId
 
 //
 
-GraphUi::PropEdit::PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary, GraphEdit * _graphEdit)
+GraphUi::PropEdit::PropEdit(Graph_TypeDefinitionLibrary * _typeLibrary, GraphEdit * _graphEdit)
 	: typeLibrary(nullptr)
 	, graphEdit(_graphEdit)
 	, graph(nullptr)
@@ -6152,7 +6152,7 @@ void GraphUi::PropEdit::setNode(const GraphNodeId _nodeId)
 	}
 }
 
-static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors, const GraphEdit_EnumDefinition * enumDefinition, bool & pressed)
+static bool doMenuItem(const GraphEdit & graphEdit, std::string & valueText, const std::string & name, const std::string & defaultValue, const std::string & editor, const float dt, const int index, ParticleColor * uiColors, const int maxUiColors, const Graph_EnumDefinition * enumDefinition, bool & pressed)
 {
 	pressed = false;
 	
@@ -6296,7 +6296,7 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 	
 	if (node != nullptr && nodeData != nullptr)
 	{
-		const GraphEdit_TypeDefinition * typeDefinition = typeLibrary->tryGetTypeDefinition(node->typeName);
+		const Graph_TypeDefinition * typeDefinition = typeLibrary->tryGetTypeDefinition(node->typeName);
 		
 		if (typeDefinition != nullptr)
 		{
@@ -6328,9 +6328,9 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 				
 				std::string newValueText = oldValueText;
 				
-				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(inputSocket.typeName);
+				const Graph_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(inputSocket.typeName);
 				
-				const GraphEdit_EnumDefinition * enumDefinition = nullptr;
+				const Graph_EnumDefinition * enumDefinition = nullptr;
 				
 				for (auto & e : nodeData->dynamicSockets.enumDefinitions)
 					if (e.enumName == inputSocket.enumName)
@@ -6398,7 +6398,7 @@ void GraphUi::PropEdit::doMenus(UiState * uiState, const float dt)
 				
 				const std::string oldValueText = newValueText;
 				
-				const GraphEdit_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(outputSocket.typeName);
+				const Graph_ValueTypeDefinition * valueTypeDefinition = typeLibrary->tryGetValueTypeDefinition(outputSocket.typeName);
 				
 				bool pressed = false;
 				
@@ -6525,7 +6525,7 @@ struct TypeNameAndScore
 	}
 };
 
-void calculateTypeNamesAndScores(const std::string & typeName, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, std::vector<TypeNameAndScore> & typeNamesAndScores)
+void calculateTypeNamesAndScores(const std::string & typeName, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, std::vector<TypeNameAndScore> & typeNamesAndScores)
 {
 	int index = 0;
 	

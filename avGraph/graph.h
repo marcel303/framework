@@ -43,7 +43,7 @@ namespace tinyxml2
 
 //
 
-struct GraphEdit_TypeDefinitionLibrary;
+struct Graph_TypeDefinitionLibrary;
 
 //
 
@@ -173,8 +173,8 @@ struct Graph
 	GraphNode * tryGetNode(const GraphNodeId nodeId);
 	GraphLink * tryGetLink(const GraphLinkId linkId);
 	
-	bool loadXml(const tinyxml2::XMLElement * xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
-	bool saveXml(tinyxml2::XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary) const;
+	bool loadXml(const tinyxml2::XMLElement * xmlGraph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary);
+	bool saveXml(tinyxml2::XMLPrinter & xmlGraph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary) const;
 	
-	bool load(const char * filename, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
+	bool load(const char * filename, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary);
 };

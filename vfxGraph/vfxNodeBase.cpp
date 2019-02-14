@@ -1439,9 +1439,9 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 #include "graph.h"
 #include "tinyxml2.h"
 
-void createVfxValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+void createVfxValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
-	auto addSimple = [&](const char * typeName, const char * editor, const char * visualizer = nullptr) -> GraphEdit_ValueTypeDefinition &
+	auto addSimple = [&](const char * typeName, const char * editor, const char * visualizer = nullptr) -> Graph_ValueTypeDefinition &
 	{
 		auto & td = typeDefinitionLibrary.valueTypeDefinitions[typeName];
 		
@@ -1467,7 +1467,7 @@ void createVfxValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinit
 	{
 		std::pair<std::string, std::string> key("float", "float");
 		
-		GraphEdit_LinkTypeDefinition & floatLink = typeDefinitionLibrary.linkTypeDefinitions[key];
+		Graph_LinkTypeDefinition & floatLink = typeDefinitionLibrary.linkTypeDefinitions[key];
 		
 		floatLink.srcTypeName = "float";
 		floatLink.dstTypeName = "float";
@@ -1533,7 +1533,7 @@ void VfxEnumTypeRegistration::elem(const char * name, const char * valueText)
 
 extern void getFsfxShaderList(std::vector<std::string> & shaderList);
 
-void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList)
+void createVfxEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList)
 {
 	for (const VfxEnumTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
 	{
@@ -1543,7 +1543,7 @@ void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 		
 		for (auto & src : registration->elems)
 		{
-			GraphEdit_EnumDefinition::Elem dst;
+			Graph_EnumDefinition::Elem dst;
 			
 			dst.name = src.name;
 			dst.valueText = src.valueText;
@@ -1560,7 +1560,7 @@ void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 		
 		for (auto & shader : shaderList)
 		{
-			GraphEdit_EnumDefinition::Elem elem;
+			Graph_EnumDefinition::Elem elem;
 			elem.name = shader;
 			elem.valueText = shader;
 			
@@ -1633,11 +1633,11 @@ void VfxNodeTypeRegistration::outEditable(const char * name)
 
 #include "graph.h"
 
-void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxNodeTypeRegistration * registrationList)
+void createVfxNodeTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxNodeTypeRegistration * registrationList)
 {
 	for (const VfxNodeTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
 	{
-		GraphEdit_TypeDefinition typeDefinition;
+		Graph_TypeDefinition typeDefinition;
 		
 		typeDefinition.typeName = registration->typeName;
 		
@@ -1661,7 +1661,7 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 		{
 			auto & src = registration->inputs[i];
 			
-			GraphEdit_TypeDefinition::InputSocket inputSocket;
+			Graph_TypeDefinition::InputSocket inputSocket;
 			inputSocket.typeName = src.typeName;
 			inputSocket.name = src.name;
 			inputSocket.index = i;
@@ -1677,7 +1677,7 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 		{
 			auto & src = registration->outputs[i];
 			
-			GraphEdit_TypeDefinition::OutputSocket outputSocket;
+			Graph_TypeDefinition::OutputSocket outputSocket;
 			outputSocket.typeName = src.typeName;
 			outputSocket.name = src.name;
 			outputSocket.isEditable = src.isEditable;
@@ -1697,7 +1697,7 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 
 //
 
-void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * enumRegistrationList, const VfxNodeTypeRegistration * nodeRegistrationList)
+void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * enumRegistrationList, const VfxNodeTypeRegistration * nodeRegistrationList)
 {
 	createVfxValueTypeDefinitions(typeDefinitionLibrary);
 	createVfxEnumTypeDefinitions(typeDefinitionLibrary, enumRegistrationList);

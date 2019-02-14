@@ -39,16 +39,19 @@ namespace tinyxml2
 	class XMLPrinter;
 }
 
-struct GraphEdit_EnumDefinition;
-struct GraphEdit_LinkTypeDefinition;
-struct GraphEdit_ResourceEditorBase;
-struct GraphEdit_TypeDefinition;
-struct GraphEdit_TypeDefinitionLibrary;
-struct GraphEdit_ValueTypeDefinition;
+struct Graph_EnumDefinition;
+struct Graph_LinkTypeDefinition;
+struct Graph_TypeDefinition;
+struct Graph_TypeDefinitionLibrary;
+struct Graph_ValueTypeDefinition;
 
 //
 
-struct GraphEdit_ValueTypeDefinition
+struct GraphEdit_ResourceEditorBase;
+
+//
+
+struct Graph_ValueTypeDefinition
 {
 	std::string typeName;
 	bool multipleInputs;
@@ -61,7 +64,7 @@ struct GraphEdit_ValueTypeDefinition
 	std::string visualizer;
 	bool typeValidation;
 	
-	GraphEdit_ValueTypeDefinition()
+	Graph_ValueTypeDefinition()
 		: typeName()
 		, multipleInputs(false)
 		, editor()
@@ -75,7 +78,7 @@ struct GraphEdit_ValueTypeDefinition
 	bool loadXml(const tinyxml2::XMLElement * xmlType);
 };
 
-struct GraphEdit_EnumDefinition
+struct Graph_EnumDefinition
 {
 	struct Elem
 	{
@@ -86,7 +89,7 @@ struct GraphEdit_EnumDefinition
 	std::string enumName;
 	std::vector<Elem> enumElems;
 	
-	GraphEdit_EnumDefinition()
+	Graph_EnumDefinition()
 		: enumName()
 		, enumElems()
 	{
@@ -95,7 +98,7 @@ struct GraphEdit_EnumDefinition
 	bool loadXml(const tinyxml2::XMLElement * xmlType);
 };
 
-struct GraphEdit_TypeDefinition
+struct Graph_TypeDefinition
 {
 	struct InputSocket;
 	struct OutputSocket;
@@ -127,7 +130,7 @@ struct GraphEdit_TypeDefinition
 		{
 		}
 		
-		bool canConnectTo(const GraphEdit_TypeDefinitionLibrary * typeDefintionLibrary, const OutputSocket & socket) const;
+		bool canConnectTo(const Graph_TypeDefinitionLibrary * typeDefintionLibrary, const OutputSocket & socket) const;
 	};
 	
 	struct OutputSocket
@@ -153,7 +156,7 @@ struct GraphEdit_TypeDefinition
 		{
 		}
 		
-		bool canConnectTo(const GraphEdit_TypeDefinitionLibrary * typeDefintionLibrary, const InputSocket & socket) const;
+		bool canConnectTo(const Graph_TypeDefinitionLibrary * typeDefintionLibrary, const InputSocket & socket) const;
 	};
 	
 	struct ResourceEditor
@@ -181,7 +184,7 @@ struct GraphEdit_TypeDefinition
 	
 	std::string resourceTypeName;
 	
-	GraphEdit_TypeDefinition()
+	Graph_TypeDefinition()
 		: typeName()
 		, inputSockets()
 		, outputSockets()
@@ -196,7 +199,7 @@ struct GraphEdit_TypeDefinition
 	bool loadXml(const tinyxml2::XMLElement * xmlNode);
 };
 
-struct GraphEdit_LinkTypeDefinition
+struct Graph_LinkTypeDefinition
 {
 	struct Param
 	{
@@ -217,14 +220,14 @@ struct GraphEdit_LinkTypeDefinition
 	std::vector<Param> params;
 };
 
-struct GraphEdit_TypeDefinitionLibrary
+struct Graph_TypeDefinitionLibrary
 {
-	std::map<std::string, GraphEdit_ValueTypeDefinition> valueTypeDefinitions;
-	std::map<std::string, GraphEdit_EnumDefinition> enumDefinitions;
-	std::map<std::string, GraphEdit_TypeDefinition> typeDefinitions;
-	std::map<std::pair<std::string, std::string>, GraphEdit_LinkTypeDefinition> linkTypeDefinitions;
+	std::map<std::string, Graph_ValueTypeDefinition> valueTypeDefinitions;
+	std::map<std::string, Graph_EnumDefinition> enumDefinitions;
+	std::map<std::string, Graph_TypeDefinition> typeDefinitions;
+	std::map<std::pair<std::string, std::string>, Graph_LinkTypeDefinition> linkTypeDefinitions;
 	
-	GraphEdit_TypeDefinitionLibrary()
+	Graph_TypeDefinitionLibrary()
 		: valueTypeDefinitions()
 		, enumDefinitions()
 		, typeDefinitions()
@@ -232,10 +235,10 @@ struct GraphEdit_TypeDefinitionLibrary
 	{
 	}
 	
-	const GraphEdit_ValueTypeDefinition * tryGetValueTypeDefinition(const std::string & typeName) const;
-	const GraphEdit_EnumDefinition * tryGetEnumDefinition(const std::string & typeName) const;
-	const GraphEdit_TypeDefinition * tryGetTypeDefinition(const std::string & typeName) const;
-	const GraphEdit_LinkTypeDefinition * tryGetLinkTypeDefinition(const std::string & srcTypeName, const std::string & dstTypeName) const;
+	const Graph_ValueTypeDefinition * tryGetValueTypeDefinition(const std::string & typeName) const;
+	const Graph_EnumDefinition * tryGetEnumDefinition(const std::string & typeName) const;
+	const Graph_TypeDefinition * tryGetTypeDefinition(const std::string & typeName) const;
+	const Graph_LinkTypeDefinition * tryGetLinkTypeDefinition(const std::string & srcTypeName, const std::string & dstTypeName) const;
 	
 	bool loadXml(const tinyxml2::XMLElement * xmlLibrary);
 };

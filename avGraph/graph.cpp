@@ -27,7 +27,7 @@
 
 #include "Debugging.h"
 #include "graph.h"
-#include "graphEdit.h"
+#include "graphEdit.h" // todo : remove
 #include "Parse.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
@@ -283,7 +283,7 @@ GraphLink * Graph::tryGetLink(const GraphLinkId linkId)
 		return &linkItr->second;
 }
 
-bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary)
+bool Graph::loadXml(const XMLElement * xmlGraph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary)
 {
 	nextNodeId = intAttrib(xmlGraph, "nextNodeId", nextNodeId);
 	nextLinkId = intAttrib(xmlGraph, "nextLinkId", nextLinkId);
@@ -430,7 +430,7 @@ bool Graph::loadXml(const XMLElement * xmlGraph, const GraphEdit_TypeDefinitionL
 	return true;
 }
 
-bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary) const
+bool Graph::saveXml(XMLPrinter & xmlGraph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary) const
 {
 	bool result = true;
 	
@@ -535,7 +535,7 @@ bool Graph::saveXml(XMLPrinter & xmlGraph, const GraphEdit_TypeDefinitionLibrary
 	return result;
 }
 
-bool Graph::load(const char * filename, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary)
+bool Graph::load(const char * filename, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary)
 {
 	XMLDocument document;
 	

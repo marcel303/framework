@@ -87,7 +87,7 @@ void VfxNodeVfxGraph::open(const char * filename)
 	{
 		graph = new Graph();
 		
-		typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+		typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 		
 		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 		

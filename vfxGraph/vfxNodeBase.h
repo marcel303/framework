@@ -40,8 +40,8 @@
 
 #define EXTENDED_INPUTS 1
 
+struct Graph_TypeDefinitionLibrary;
 struct GraphEdit_ResourceEditorBase;
-struct GraphEdit_TypeDefinitionLibrary;
 struct GraphNode;
 struct GxTexture;
 class Surface;
@@ -936,8 +936,8 @@ struct VfxNodeTypeRegistration
 extern VfxEnumTypeRegistration * g_vfxEnumTypeRegistrationList;
 extern VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList;
 
-void createVfxValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
-void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList);
-void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxNodeTypeRegistration * registrationList);
+void createVfxValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
+void createVfxEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList);
+void createVfxNodeTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxNodeTypeRegistration * registrationList);
 
-void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * enumRegistrationList, const VfxNodeTypeRegistration * nodeRegistrationList);
+void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * enumRegistrationList, const VfxNodeTypeRegistration * nodeRegistrationList);

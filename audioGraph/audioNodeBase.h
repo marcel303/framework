@@ -35,8 +35,8 @@
 
 #define MULTIPLE_AUDIO_INPUT 1
 
+struct Graph_TypeDefinitionLibrary;
 struct GraphEdit_ResourceEditorBase;
-struct GraphEdit_TypeDefinitionLibrary;
 struct GraphNode;
 
 struct AudioFloat;
@@ -589,8 +589,8 @@ struct AudioNodeTypeRegistration
 extern AudioEnumTypeRegistration * g_audioEnumTypeRegistrationList;
 extern AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList;
 
-void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
-void createAudioEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * registrationList);
-void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioNodeTypeRegistration * registrationList);
+void createAudioValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
+void createAudioEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * registrationList);
+void createAudioNodeTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioNodeTypeRegistration * registrationList);
 
-void createAudioTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * enumRegistrationList, const AudioNodeTypeRegistration * nodeRegistrationList);
+void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * enumRegistrationList, const AudioNodeTypeRegistration * nodeRegistrationList);

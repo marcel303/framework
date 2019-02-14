@@ -507,7 +507,7 @@ extern void linkVfxNodes();
 extern void linkVfxNodes_Mac();
 #endif
 
-void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
 	linkVfxNodes();
 #if MACOS
@@ -547,7 +547,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 
 //
 
-VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary)
+VfxGraph * constructVfxGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary)
 {
 	VfxGraph * vfxGraph = new VfxGraph();
 	

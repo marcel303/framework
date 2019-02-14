@@ -66,7 +66,7 @@ void VfxGraphManager_Basic::init()
 	
 	//
 	
-	typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+	typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 	
 	createVfxTypeDefinitionLibrary(*typeDefinitionLibrary);
 }
@@ -425,7 +425,7 @@ void VfxGraphManager_RTE::init()
 	
 	//
 	
-	typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+	typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 	
 	createVfxTypeDefinitionLibrary(*typeDefinitionLibrary);
 }

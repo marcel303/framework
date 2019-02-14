@@ -685,17 +685,17 @@ void AudioEnumTypeRegistration::elem(const char * name, const int value)
 
 #include "graph.h"
 
-void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+void createAudioValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
 	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
+		Graph_ValueTypeDefinition typeDefinition;
 		typeDefinition.typeName = "bool";
 		typeDefinition.editor = "checkbox";
 		typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
 	
 	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
+		Graph_ValueTypeDefinition typeDefinition;
 		typeDefinition.typeName = "int";
 		typeDefinition.editor = "textbox_int";
 		typeDefinition.visualizer = "valueplotter";
@@ -703,7 +703,7 @@ void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefin
 	}
 	
 	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
+		Graph_ValueTypeDefinition typeDefinition;
 		typeDefinition.typeName = "float";
 		typeDefinition.editor = "textbox_float";
 		typeDefinition.visualizer = "valueplotter";
@@ -711,14 +711,14 @@ void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefin
 	}
 	
 	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
+		Graph_ValueTypeDefinition typeDefinition;
 		typeDefinition.typeName = "string";
 		typeDefinition.editor = "textbox";
 		typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
 	
 	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
+		Graph_ValueTypeDefinition typeDefinition;
 		typeDefinition.typeName = "audioValue";
 		typeDefinition.editor = "textbox_float";
 		typeDefinition.visualizer = "channels";
@@ -729,7 +729,7 @@ void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefin
 	}
 	
 	{
-		GraphEdit_ValueTypeDefinition typeDefinition;
+		Graph_ValueTypeDefinition typeDefinition;
 		typeDefinition.typeName = "trigger";
 		typeDefinition.editor = "button";
 		typeDefinition.multipleInputs = true;
@@ -737,7 +737,7 @@ void createAudioValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefin
 	}
 }
 
-void createAudioEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * registrationList)
+void createAudioEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * registrationList)
 {
 	for (const AudioEnumTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
 	{
@@ -747,7 +747,7 @@ void createAudioEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 		
 		for (auto & src : registration->elems)
 		{
-			GraphEdit_EnumDefinition::Elem dst;
+			Graph_EnumDefinition::Elem dst;
 			
 			dst.name = src.name;
 			dst.valueText = String::FormatC("%d", src.value);
@@ -819,11 +819,11 @@ void AudioNodeTypeRegistration::outEditable(const char * name)
 
 #include "graph.h"
 
-void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioNodeTypeRegistration * registrationList)
+void createAudioNodeTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioNodeTypeRegistration * registrationList)
 {
 	for (const AudioNodeTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
 	{
-		GraphEdit_TypeDefinition typeDefinition;
+		Graph_TypeDefinition typeDefinition;
 		
 		typeDefinition.typeName = registration->typeName;
 		
@@ -847,7 +847,7 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 		{
 			auto & src = registration->inputs[i];
 			
-			GraphEdit_TypeDefinition::InputSocket inputSocket;
+			Graph_TypeDefinition::InputSocket inputSocket;
 			inputSocket.typeName = src.typeName;
 			inputSocket.name = src.name;
 			inputSocket.index = i;
@@ -863,7 +863,7 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 		{
 			auto & src = registration->outputs[i];
 			
-			GraphEdit_TypeDefinition::OutputSocket outputSocket;
+			Graph_TypeDefinition::OutputSocket outputSocket;
 			outputSocket.typeName = src.typeName;
 			outputSocket.name = src.name;
 			outputSocket.isEditable = src.isEditable;
@@ -884,7 +884,7 @@ void createAudioNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefini
 
 //
 
-void createAudioTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * enumRegistrationList, const AudioNodeTypeRegistration * nodeRegistrationList)
+void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * enumRegistrationList, const AudioNodeTypeRegistration * nodeRegistrationList)
 {
 	createAudioValueTypeDefinitions(typeDefinitionLibrary);
 	createAudioEnumTypeDefinitions(typeDefinitionLibrary, enumRegistrationList);

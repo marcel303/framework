@@ -29,9 +29,9 @@
 
 #include <string>
 
+struct Graph_TypeDefinition;
+struct Graph_TypeDefinitionLibrary;
 struct GraphEdit;
-struct GraphEdit_TypeDefinition;
-struct GraphEdit_TypeDefinitionLibrary;
 struct UiState;
 
 struct GraphEdit_NodeTypeSelect
@@ -56,7 +56,7 @@ struct GraphEdit_NodeTypeSelect
 		{
 		}
 		
-		bool isMatch(const GraphEdit_TypeDefinition & typeDefinition) const;
+		bool isMatch(const Graph_TypeDefinition & typeDefinition) const;
 	};
 	
 	int x;
@@ -75,17 +75,17 @@ struct GraphEdit_NodeTypeSelect
 
 	bool tick(
 		GraphEdit & graphEdit,
-		const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary,
+		const Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
 		const float dt,
 		std::string & selectedNodeType);
 	void draw(
 		const GraphEdit & graphEdit,
-		const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
+		const Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
 	
 	void cancel();
 
 	bool doMenus(
 		GraphEdit & graphEdit,
-		const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary,
+		const Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
 		std::string & selectedNodeTypeName);
 };

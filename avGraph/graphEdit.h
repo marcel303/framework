@@ -59,11 +59,14 @@ namespace GraphUi
 
 //
 
+struct Graph_TypeDefinitionLibrary;
+
+//
+
 struct GraphEdit;
 struct GraphEdit_NodeResourceEditorWindow;
 struct GraphEdit_NodeTypeSelect;
 struct GraphEdit_ResourceEditorBase;
-struct GraphEdit_TypeDefinitionLibrary;
 struct GraphEdit_Visualizer;
 
 //
@@ -390,7 +393,7 @@ struct GraphEdit_RealTimeConnection
 		std::string typeName;
 		std::string defaultValue;
 		
-		std::vector<GraphEdit_EnumDefinition::Elem> enumElems;
+		std::vector<Graph_EnumDefinition::Elem> enumElems;
 	};
 	
 	struct DynamicOutput
@@ -583,10 +586,10 @@ struct GraphEdit : GraphEditConnection
 		{
 			bool hasDynamicSockets;
 			
-			std::vector<GraphEdit_TypeDefinition::InputSocket> inputSockets;
-			std::vector<GraphEdit_TypeDefinition::OutputSocket> outputSockets;
+			std::vector<Graph_TypeDefinition::InputSocket> inputSockets;
+			std::vector<Graph_TypeDefinition::OutputSocket> outputSockets;
 			
-			std::vector<GraphEdit_EnumDefinition> enumDefinitions;
+			std::vector<Graph_EnumDefinition> enumDefinitions;
 			
 			DynamicSockets()
 				: hasDynamicSockets(false)
@@ -609,7 +612,7 @@ struct GraphEdit : GraphEditConnection
 			}
 			
 			void update(
-				const GraphEdit_TypeDefinition & typeDefinition,
+				const Graph_TypeDefinition & typeDefinition,
 				const std::vector<GraphEdit_RealTimeConnection::DynamicInput> & newInputs,
 				const std::vector<GraphEdit_RealTimeConnection::DynamicOutput> & newOutputs);
 		};
@@ -670,8 +673,8 @@ struct GraphEdit : GraphEditConnection
 	
 	struct NodeHitTestResult
 	{
-		const GraphEdit_TypeDefinition::InputSocket * inputSocket;
-		const GraphEdit_TypeDefinition::OutputSocket * outputSocket;
+		const Graph_TypeDefinition::InputSocket * inputSocket;
+		const Graph_TypeDefinition::OutputSocket * outputSocket;
 		bool background;
 		
 		NodeHitTestResult()
@@ -736,9 +739,9 @@ struct GraphEdit : GraphEditConnection
 	struct SocketSelection
 	{
 		GraphNodeId srcNodeId;
-		const GraphEdit_TypeDefinition::InputSocket * srcNodeSocket;
+		const Graph_TypeDefinition::InputSocket * srcNodeSocket;
 		GraphNodeId dstNodeId;
-		const GraphEdit_TypeDefinition::OutputSocket * dstNodeSocket;
+		const Graph_TypeDefinition::OutputSocket * dstNodeSocket;
 		
 		SocketSelection()
 			: srcNodeId(kGraphNodeIdInvalid)
@@ -940,9 +943,9 @@ struct GraphEdit : GraphEditConnection
 	struct SocketConnect
 	{
 		GraphNodeId srcNodeId;
-		const GraphEdit_TypeDefinition::InputSocket * srcNodeSocket;
+		const Graph_TypeDefinition::InputSocket * srcNodeSocket;
 		GraphNodeId dstNodeId;
-		const GraphEdit_TypeDefinition::OutputSocket * dstNodeSocket;
+		const Graph_TypeDefinition::OutputSocket * dstNodeSocket;
 		
 		SocketConnect()
 			: srcNodeId(kGraphNodeIdInvalid)
@@ -1040,9 +1043,9 @@ struct GraphEdit : GraphEditConnection
 	
 	std::map<GraphNodeId, EditorVisualizer> visualizers;
 	
-	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
+	Graph_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
-	GraphEdit_TypeDefinition emptyTypeDefinition;
+	Graph_TypeDefinition emptyTypeDefinition;
 	
 	GraphEdit_RealTimeConnection * realTimeConnection;
 	
@@ -1110,22 +1113,22 @@ struct GraphEdit : GraphEditConnection
 	GraphEdit(
 		const int _displaySx,
 		const int _displaySy,
-		GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary,
+		Graph_TypeDefinitionLibrary * typeDefinitionLibrary,
 		GraphEdit_RealTimeConnection * realTimeConnection = nullptr);
 	~GraphEdit();
 	
 	GraphNode * tryGetNode(const GraphNodeId id) const;
 	NodeData * tryGetNodeData(const GraphNodeId id) const;
 	GraphLink * tryGetLink(const GraphLinkId id) const;
-	const GraphEdit_TypeDefinition::InputSocket * tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const;
-	const GraphEdit_TypeDefinition::OutputSocket * tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const;
+	const Graph_TypeDefinition::InputSocket * tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const;
+	const Graph_TypeDefinition::OutputSocket * tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const;
 	bool getLinkPath(const GraphLinkId linkId, LinkPath & path) const;
-	const GraphEdit_LinkTypeDefinition * tryGetLinkTypeDefinition(const GraphLinkId linkId) const;
+	const Graph_LinkTypeDefinition * tryGetLinkTypeDefinition(const GraphLinkId linkId) const;
 	EditorVisualizer * tryGetVisualizer(const GraphNodeId id) const;
 	
 	bool enabled(const int flag) const;
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
-	bool hitTestNode(const NodeData & nodeData, const GraphEdit_TypeDefinition & typeDefinition, const float x, const float y, const bool socketsAreVisible, NodeHitTestResult & result) const;
+	bool hitTestNode(const NodeData & nodeData, const Graph_TypeDefinition & typeDefinition, const float x, const float y, const bool socketsAreVisible, NodeHitTestResult & result) const;
 	
 	bool tick(const float dt, const bool inputIsCaptured);
 	void tickVisualizers(const float dt);
@@ -1178,7 +1181,7 @@ struct GraphEdit : GraphEditConnection
 	void showNotification(const char * format, ...);
 	
 	void draw() const;
-	void drawNode(const GraphNode & node, const NodeData & nodeData, const GraphEdit_TypeDefinition & typeDefinition, const char * displayName) const;
+	void drawNode(const GraphNode & node, const NodeData & nodeData, const Graph_TypeDefinition & typeDefinition, const char * displayName) const;
 	void drawVisualizer(const EditorVisualizer & visualizer) const;
 	
 	bool load(const char * filename);
@@ -1201,7 +1204,7 @@ namespace GraphUi
 {
 	struct PropEdit
 	{
-		GraphEdit_TypeDefinitionLibrary * typeLibrary;
+		Graph_TypeDefinitionLibrary * typeLibrary;
 		GraphEdit * graphEdit;
 		Graph * graph;
 		GraphNodeId nodeId;
@@ -1210,7 +1213,7 @@ namespace GraphUi
 		static const int kMaxUiColors = 32;
 		ParticleColor * uiColors;
 		
-		PropEdit(GraphEdit_TypeDefinitionLibrary * _typeLibrary, GraphEdit * graphEdit);
+		PropEdit(Graph_TypeDefinitionLibrary * _typeLibrary, GraphEdit * graphEdit);
 		~PropEdit();
 		
 		void setGraph(Graph * graph);

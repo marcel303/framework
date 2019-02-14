@@ -452,7 +452,7 @@ void AudioGraphManager_Basic::init(SDL_mutex * mutex, AudioVoiceManager * voiceM
 	
 	//
 	
-	typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+	typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 	
 	createAudioValueTypeDefinitions(*typeDefinitionLibrary);
 	createAudioEnumTypeDefinitions(*typeDefinitionLibrary, g_audioEnumTypeRegistrationList);
@@ -733,7 +733,7 @@ void AudioGraphManager_RTE::init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr
 	
 	//
 	
-	typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+	typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 	
 	createAudioValueTypeDefinitions(*typeDefinitionLibrary);
 	createAudioEnumTypeDefinitions(*typeDefinitionLibrary, g_audioEnumTypeRegistrationList);
@@ -1175,7 +1175,7 @@ void AudioGraphManager_MultiRTE::init(SDL_mutex * mutex, AudioVoiceManager * voi
 	
 	//
 	
-	typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+	typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 	
 	createAudioValueTypeDefinitions(*typeDefinitionLibrary);
 	createAudioEnumTypeDefinitions(*typeDefinitionLibrary, g_audioEnumTypeRegistrationList);

@@ -297,11 +297,11 @@ struct AudioGraphGlobals
 
 //
 
-void createAudioTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
+void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
 
 AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & typeName, AudioGraph * audioGraph);
 
-AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals, const bool createdPaused);
+AudioGraph * constructAudioGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals, const bool createdPaused);
 
 //
 

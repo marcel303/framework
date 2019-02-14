@@ -82,7 +82,7 @@ struct VfxGraphManager_Basic : VfxGraphManager
 		}
 	};
 	
-	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
+	Graph_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
 	
 	std::map<std::string, GraphCacheElem> graphCache;
 	bool cacheOnCreate;
@@ -134,7 +134,7 @@ struct VfxGraphManager_RTE : VfxGraphManager
 	int displaySx = 0;
 	int displaySy = 0;
 	
-	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
+	Graph_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
 	
 	std::map<std::string, VfxGraphFile*> files;
 	

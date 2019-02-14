@@ -41,8 +41,8 @@ struct AudioRealTimeConnection;
 struct AudioValueHistorySet;
 struct AudioVoiceManager;
 struct Graph;
+struct Graph_TypeDefinitionLibrary;
 struct GraphEdit;
-struct GraphEdit_TypeDefinitionLibrary;
 
 struct SDL_mutex;
 
@@ -110,7 +110,7 @@ struct AudioGraphManager_Basic : AudioGraphManager
 		}
 	};
 	
-	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
+	Graph_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
 	std::map<std::string, GraphCacheElem> graphCache;
 	bool cacheOnCreate;
@@ -153,7 +153,7 @@ the instance for which to show real-time information such as visualizers and tim
 */
 struct AudioGraphManager_RTE : AudioGraphManager
 {
-	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
+	Graph_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
 	std::map<std::string, AudioGraphFile*> files;
 	
@@ -200,7 +200,7 @@ struct AudioGraphManager_RTE : AudioGraphManager
 
 struct AudioGraphManager_MultiRTE : AudioGraphManager
 {
-	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary;
+	Graph_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
 	std::map<std::string, AudioGraphFile*> files;
 	

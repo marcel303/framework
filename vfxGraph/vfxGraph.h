@@ -203,10 +203,12 @@ struct VfxDynamicData
 
 //
 
-void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
+struct Graph_TypeDefinitionLibrary;
+
+void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
 
 VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName);
 
-VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
+VfxGraph * constructVfxGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary);
 
 void connectVfxSockets(VfxNodeBase * srcNode, const int srcNodeSocketIndex, VfxPlug * srcSocket, VfxNodeBase * dstNode, const int dstNodeSocketIndex, VfxPlug * dstSocket, const std::map<std::string, std::string> & linkParams, const bool addPredep);

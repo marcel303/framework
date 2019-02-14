@@ -801,7 +801,7 @@ void AudioGraph::triggerEvent(const char * event)
 
 //
 
-void createAudioTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
 	createAudioTypeDefinitionLibrary(typeDefinitionLibrary, g_audioEnumTypeRegistrationList, g_audioNodeTypeRegistrationList);
 }
@@ -838,7 +838,7 @@ AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & ty
 
 extern void linkAudioNodes();
 
-AudioGraph * constructAudioGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals, const bool createdPaused)
+AudioGraph * constructAudioGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals, const bool createdPaused)
 {
 	linkAudioNodes();
 	
