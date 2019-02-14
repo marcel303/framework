@@ -6,6 +6,8 @@ library libavgraph-core
 
 	add_files graph.cpp graph.h graph_typeDefinitionLibrary.cpp graph_typeDefinitionLibrary.h
 
+	header_path . expose
+
 library libavgraph
 
 	depend_library libavgraph-core
