@@ -1,6 +1,7 @@
 #include "allegro2-voiceApi.h"
 #include <assert.h>
 #include <SDL2/SDL.h>
+#include <string.h>
 
 #define FIXBITS AllegroVoiceApi::FIXBITS
 #define INTERP_LINEAR 1
