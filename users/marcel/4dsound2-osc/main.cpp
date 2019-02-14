@@ -147,7 +147,7 @@ int main(int argc, char * argv[])
 	
 	// create vfx type definition library
 	
-	GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
+	Graph_TypeDefinitionLibrary typeDefinitionLibrary;
 	createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 	
 	// create vfx graph manager

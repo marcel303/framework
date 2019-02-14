@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "graph.h"
+#include "graphEdit.h"
 #include "ui.h"
 #include "vfxGraph.h"
 #include <algorithm>
@@ -55,7 +56,7 @@ int main(int argc, char * argv[])
 	{
 		initUi();
 		
-		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
+		Graph_TypeDefinitionLibrary typeDefinitionLibrary;
 		createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 		
 		GraphEdit graphEdit(GFX_SX, GFX_SY, &typeDefinitionLibrary);

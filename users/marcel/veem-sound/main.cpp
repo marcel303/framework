@@ -766,7 +766,7 @@ int main(int argc, char * argv[])
 	VfxGraph * vfxGraph = new VfxGraph();
 	RealTimeConnection realTimeConnection(vfxGraph);
 	
-	GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
+	Graph_TypeDefinitionLibrary typeDefinitionLibrary;
 	createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 	GraphEdit graphEdit(GFX_SX, GFX_SY, &typeDefinitionLibrary, &realTimeConnection);
 #if DEPLOYMENT_BUILD && 0

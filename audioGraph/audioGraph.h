@@ -29,6 +29,7 @@
 
 #include "audioTypes.h"
 #include "graph.h"
+#include "graph_typeDefinitionLibrary.h" // todo : remove
 #include <atomic>
 #include <map>
 #include <set>

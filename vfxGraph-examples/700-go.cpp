@@ -176,7 +176,7 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+	Graph_TypeDefinitionLibrary * typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 	
 	createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 	

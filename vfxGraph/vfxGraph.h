@@ -28,6 +28,7 @@
 #pragma once
 
 #include "graph.h"
+#include "graph_typeDefinitionLibrary.h" // todo : remove
 #include <map>
 #include <set>
 #include <string>

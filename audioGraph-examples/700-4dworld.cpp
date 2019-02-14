@@ -34,6 +34,7 @@
 #include "audioVoiceManager4D.h"
 #include "Calc.h"
 #include "framework.h"
+#include "graphEdit.h"
 #include "MemAlloc.h"
 #include "Path.h"
 #include "StringEx.h"

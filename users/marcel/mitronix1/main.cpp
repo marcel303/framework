@@ -5,6 +5,7 @@
 #include "audioNodeBase.h"
 #include "framework.h"
 #include "graph.h"
+#include "graphEdit.h"
 #include "Noise.h"
 #include "slideshow.h"
 #include "wavefield.h"

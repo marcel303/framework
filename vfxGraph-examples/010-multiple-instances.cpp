@@ -64,7 +64,7 @@ struct Grid
 {
 	GridElem elem[GRID_SX][GRID_SY];
 	
-	void load(const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+	void load(const Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
 	{
 		const char * filenames[] =
 		{
@@ -107,7 +107,7 @@ int main(int argc, char * argv[])
 	
 	if (framework.init(GFX_SX, GFX_SY))
 	{
-		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
+		Graph_TypeDefinitionLibrary typeDefinitionLibrary;
 		createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 		
 		Grid * grid = new Grid();

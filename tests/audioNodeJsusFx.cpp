@@ -28,6 +28,7 @@
 #include "audioGraph.h"
 #include "audioNodeJsusFx.h"
 #include "audioResource.h"
+#include "graphEdit.h"
 #include "Log.h"
 
 #include "jsusfx.h"

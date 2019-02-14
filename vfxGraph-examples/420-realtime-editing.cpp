@@ -56,7 +56,7 @@ int main(int argc, char * argv[])
 	{
 		initUi();
 		
-		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
+		Graph_TypeDefinitionLibrary typeDefinitionLibrary;
 		createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 		
 		VfxGraph * vfxGraph = nullptr;

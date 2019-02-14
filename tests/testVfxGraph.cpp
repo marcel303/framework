@@ -497,7 +497,7 @@ void testVfxGraph()
 	
 	RealTimeConnection rtc(vfxGraph);
 	
-	GraphEdit_TypeDefinitionLibrary tdl;
+	Graph_TypeDefinitionLibrary tdl;
 	createVfxTypeDefinitionLibrary(tdl, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 	
 	GraphEdit graphEdit(GFX_SX, GFX_SY, &tdl, &rtc);

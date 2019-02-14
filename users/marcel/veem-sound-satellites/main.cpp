@@ -194,7 +194,7 @@ struct SatellitesApp
 	VfxGraph * vfxGraph = nullptr;
 	RealTimeConnection * realTimeConnection = nullptr;
 	
-	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
+	Graph_TypeDefinitionLibrary * typeDefinitionLibrary = nullptr;
 	GraphEdit * graphEdit = nullptr;
 	
 	bool doSetupScreen()
@@ -271,7 +271,7 @@ struct SatellitesApp
 		vfxGraph = new VfxGraph();
 		realTimeConnection = new RealTimeConnection((vfxGraph));
 		
-		typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+		typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary);
 		graphEdit = new GraphEdit(GFX_SX, GFX_SY, typeDefinitionLibrary, realTimeConnection);
 		graphEdit->load("satellites.xml");

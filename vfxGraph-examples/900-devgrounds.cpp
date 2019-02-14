@@ -326,7 +326,7 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+		Graph_TypeDefinitionLibrary * typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 		
 		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 		
@@ -401,7 +401,7 @@ int main(int argc, char * argv[])
 			
 			GraphEdit * graphEdit = nullptr;
 			
-			GraphEditWindow(GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary, const char * filename)
+			GraphEditWindow(Graph_TypeDefinitionLibrary * typeDefinitionLibrary, const char * filename)
 			{
 				window = new Window(filename, 640, 480, true);
 				
