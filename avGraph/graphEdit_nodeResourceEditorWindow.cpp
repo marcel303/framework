@@ -26,7 +26,7 @@
 */
 
 #include "framework.h"
-#include "graph.h"
+#include "graphEdit.h"
 #include "graphEdit_nodeResourceEditorWindow.h"
 #include "ui.h"
 

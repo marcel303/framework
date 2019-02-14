@@ -28,16 +28,12 @@
 #pragma once
 
 #include "Mat4x4.h"
-#include <functional>
-#include <list>
+#include <list> // todo : remove std::list dependency
 #include <map>
-#include <set>
 #include <stdint.h>
 #include <string>
-#include <vector>
 
-extern int GRAPHEDIT_SX;
-extern int GRAPHEDIT_SY;
+// forward declarations
 
 namespace tinyxml2
 {
@@ -45,26 +41,9 @@ namespace tinyxml2
 	class XMLPrinter;
 }
 
-class Window;
-
-struct UiState;
-struct ParticleColor;
-
-struct GraphEdit;
-
-namespace GraphUi
-{
-	struct PropEdit;
-	struct NodeTypeNameSelect;
-};
-
 //
 
-struct GraphEdit_NodeResourceEditorWindow;
-struct GraphEdit_NodeTypeSelect;
-struct GraphEdit_ResourceEditorBase;
 struct GraphEdit_TypeDefinitionLibrary;
-struct GraphEdit_Visualizer;
 
 //
 

@@ -1,9 +1,219 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+#include <GL/glew.h> // GL_TEXTURE_WIDTH, GL_TEXTURE_HEIGHT
+#include "Calc.h"
 #include "framework.h"
+#include "graphEdit.h"
+#include "graphEdit_nodeResourceEditorWindow.h"
+#include "graphEdit_nodeTypeSelect.h"
+#include "Parse.h"
 #include "particle.h"
+#include "StringEx.h"
+#include "tinyxml2.h"
+#include "tinyxml2_helpers.h"
 #include "ui.h"
+#include <algorithm>
+#include <cmath>
+
+//
+
+using namespace tinyxml2;
+
+#define ENABLE_FILE_FIXUPS 1
+
+//
 
 int GRAPHEDIT_SX = 0;
 int GRAPHEDIT_SY = 0;
+
+//
+
+static const int kGridSize = 16;
+
+//
+
+static bool areCompatibleSocketLinkTypeNames(const std::string & srcTypeName, const bool srcTypeValidation, const std::string & dstTypeName)
+{
+	if (srcTypeValidation == false)
+		return true;
+	if (srcTypeName == dstTypeName)
+		return true;
+	
+	return false;
+}
+
+static bool areNodeSocketsVisible(const GraphEdit::NodeData & nodeData)
+{
+	return nodeData.foldAnimProgress == 1.f;
+}
+
+static const std::string & getDisplayName(const GraphNode & node, const GraphEdit::NodeData & nodeData)
+{
+	return !nodeData.displayName.empty() ? nodeData.displayName : node.typeName;
+}
+
+const std::vector<GraphEdit_TypeDefinition::InputSocket> & getInputSockets(const GraphEdit_TypeDefinition & typeDefinition, const GraphEdit::NodeData & nodeData)
+{
+	return
+		nodeData.dynamicSockets.hasDynamicSockets
+		? nodeData.dynamicSockets.inputSockets
+		: typeDefinition.inputSockets;
+}
+
+const std::vector<GraphEdit_TypeDefinition::OutputSocket> & getOutputSockets(const GraphEdit_TypeDefinition & typeDefinition, const GraphEdit::NodeData & nodeData)
+{
+	return
+		nodeData.dynamicSockets.hasDynamicSockets
+		? nodeData.dynamicSockets.outputSockets
+		: typeDefinition.outputSockets;
+}
+
+//
+
+static const float kNodeSx = 100.f;
+static const float kNodePadding = 5.f;
+static const float kNodeLabelSy = 15.f;
+static const float kNodeSocketPaddingSy = 20.f;
+static const float kNodeSocketRadius = 6.f;
+
+static void getNodeRect(const int numInputs, const int numOutputs, const bool isFolded, float & sx, float & sy)
+{
+	if (isFolded)
+	{
+		sx = kNodeSx;
+		sy = kNodePadding + kNodeLabelSy + kNodePadding;
+	}
+	else
+	{
+		const int numSockets = std::max(numInputs, numOutputs);
+		
+		sx = kNodeSx;
+		sy = kNodePadding + kNodeLabelSy + kNodeSocketPaddingSy * numSockets + kNodePadding;
+	}
+}
+
+static void getNodeInputSocketCircle(const int index, float & x, float & y, float & radius)
+{
+	x = 0.f;
+	y = kNodePadding + kNodeLabelSy + kNodeSocketPaddingSy * (index + .5f);
+	
+	radius = kNodeSocketRadius;
+}
+
+static void getNodeOutputSocketCircle(const int index, float & x, float & y, float & radius)
+{
+	x = kNodeSx;
+	y = kNodePadding + kNodeLabelSy + kNodeSocketPaddingSy * (index + .5f);
+	
+	radius = kNodeSocketRadius;
+}
+
+static bool testRectOverlap(
+	const int _ax1, const int _ay1, const int _ax2, const int _ay2,
+	const int _bx1, const int _by1, const int _bx2, const int _by2)
+{
+	const int ax1 = std::min(_ax1, _ax2);
+	const int ay1 = std::min(_ay1, _ay2);
+	const int ax2 = std::max(_ax1, _ax2);
+	const int ay2 = std::max(_ay1, _ay2);
+	
+	const int bx1 = std::min(_bx1, _bx2);
+	const int by1 = std::min(_by1, _by2);
+	const int bx2 = std::max(_bx1, _bx2);
+	const int by2 = std::max(_by1, _by2);
+	
+	if (ax2 < bx1 || ay2 < by1 || ax1 > bx2 || ay1 > by2)
+		return false;
+	else
+		return true;
+}
+
+static bool testLineOverlap(
+	const int lx1, const int ly1,
+	const int lx2, const int ly2,
+	const int cx, const int cy, const int cr)
+{
+	{
+		const int dx = lx1 - cx;
+		const int dy = ly1 - cy;
+		const int dsSq = dx * dx + dy * dy;
+		if (dsSq <= cr * cr)
+			return true;
+	}
+	
+	{
+		const int dx = lx2 - cx;
+		const int dy = ly2 - cy;
+		const int dsSq = dx * dx + dy * dy;
+		if (dsSq <= cr * cr)
+			return true;
+	}
+	
+	{
+		const double ldx = lx2 - lx1;
+		const double ldy = ly2 - ly1;
+		const double lds = std::hypot(ldx, ldy);
+		const double nx = -ldy / lds;
+		const double ny = +ldx / lds;
+		const double nd = nx * lx1 + ny * ly1;
+		
+		const double dMin = ldx * lx1 + ldy * ly1;
+		const double dMax = ldx * lx2 + ldy * ly2;
+		Assert(dMin <= dMax);
+		
+		const double dd = ldx * cx + ldy * cy;
+		
+		if (dd < dMin || dd > dMax)
+			return false;
+		
+		const double dThreshold = cr;
+		const double d = std::abs(cx * nx + cy * ny - nd);
+		
+		//printf("d = %f / %f\n", float(d), float(dThreshold));
+		
+		if (d <= dThreshold)
+			return true;
+	}
+	
+	return false;
+}
+
+static bool testCircleOverlap(
+	const int x1, const int y1,
+	const int x2, const int y2,
+	const int r)
+{
+	const int dx = x2 - x1;
+	const int dy = y2 - y1;
+	const int dsSq = dx * dx + dy * dy;
+	
+	return dsSq <= r * r;
+}
 
 static bool selectionMod()
 {

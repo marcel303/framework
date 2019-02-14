@@ -27,6 +27,51 @@
 
 #pragma once
 
+#include "graph.h"
+#include <functional>
+#include <list>
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
+
+// forward declarations
+
+namespace tinyxml2
+{
+	class XMLElement;
+	class XMLPrinter;
+}
+
+//
+
+class Window;
+
+struct UiState;
+struct ParticleColor;
+
+namespace GraphUi
+{
+	struct PropEdit;
+	struct NodeTypeNameSelect;
+};
+
+//
+
+struct GraphEdit;
+struct GraphEdit_NodeResourceEditorWindow;
+struct GraphEdit_NodeTypeSelect;
+struct GraphEdit_ResourceEditorBase;
+struct GraphEdit_TypeDefinitionLibrary;
+struct GraphEdit_Visualizer;
+
+//
+
+extern int GRAPHEDIT_SX;
+extern int GRAPHEDIT_SY;
+
+//
+
 struct GraphEdit_ValueTypeDefinition
 {
 	std::string typeName;
