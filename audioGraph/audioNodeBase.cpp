@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audioGraph.h"
 #include "audioNodeBase.h"
 #include "graph_typeDefinitionLibrary.h"
 #include "Log.h"
@@ -41,6 +40,10 @@
 #if AUDIO_USE_GCC_VECTOR
 	typedef float vec4f __attribute__ ((vector_size(16)));
 #endif
+
+//
+
+AUDIO_THREAD_LOCAL int g_currentAudioGraphTraversalId = -1;
 
 //
 
@@ -452,10 +455,10 @@ void AudioFloatArray::update()
 
 AudioFloat * AudioFloatArray::get()
 {
-	Assert(g_currentAudioGraph != nullptr);
-	if (lastUpdateTick != g_currentAudioGraph->currentTickTraversalId)
+	Assert(g_currentAudioGraphTraversalId != -1);
+	if (lastUpdateTick != g_currentAudioGraphTraversalId)
 	{
-		lastUpdateTick = g_currentAudioGraph->currentTickTraversalId;
+		lastUpdateTick = g_currentAudioGraphTraversalId;
 		
 		update();
 	}

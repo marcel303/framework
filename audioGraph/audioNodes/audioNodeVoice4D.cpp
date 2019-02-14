@@ -113,6 +113,7 @@ void AudioNodeVoice4D::AudioSourceVoiceNode::generate(SAMPLE_ALIGN16 float * __r
 	{
 		Assert(g_currentAudioGraph == nullptr);
 		g_currentAudioGraph = voiceNode->audioGraph;
+		g_currentAudioGraphTraversalId = g_currentAudioGraph->currentTickTraversalId;
 		{
 			const AudioFloat * audio = voiceNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
 			
@@ -120,6 +121,7 @@ void AudioNodeVoice4D::AudioSourceVoiceNode::generate(SAMPLE_ALIGN16 float * __r
 			
 			memcpy(samples, audio->samples, numSamples * sizeof(float));
 		}
+		g_currentAudioGraphTraversalId = -1;
 		g_currentAudioGraph = nullptr;
 	}
 }
@@ -423,6 +425,7 @@ void AudioNodeVoice4DReturn::AudioSourceReturnNode::generate(SAMPLE_ALIGN16 floa
 	{
 		Assert(g_currentAudioGraph == nullptr);
 		g_currentAudioGraph = returnNode->audioGraph;
+		g_currentAudioGraphTraversalId = g_currentAudioGraph->currentTickTraversalId;
 		{
 			const AudioFloat * audio = returnNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
 			
@@ -430,6 +433,7 @@ void AudioNodeVoice4DReturn::AudioSourceReturnNode::generate(SAMPLE_ALIGN16 floa
 			
 			memcpy(samples, audio->samples, numSamples * sizeof(float));
 		}
+		g_currentAudioGraphTraversalId = -1;
 		g_currentAudioGraph = nullptr;
 	}
 }

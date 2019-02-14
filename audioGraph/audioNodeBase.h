@@ -42,7 +42,11 @@ struct GraphNode;
 struct AudioFloat;
 struct PcmData;
 
-class Surface;
+//
+
+extern AUDIO_THREAD_LOCAL int g_currentAudioGraphTraversalId;
+
+//
 
 struct AudioFloat
 {
