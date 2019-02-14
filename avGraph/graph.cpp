@@ -27,7 +27,7 @@
 
 #include "Debugging.h"
 #include "graph.h"
-#include "graphEdit.h" // todo : remove
+#include "graph_typeDefinitionLibrary.h"
 #include "Parse.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"

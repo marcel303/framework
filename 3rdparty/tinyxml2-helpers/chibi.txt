@@ -1,0 +1,7 @@
+library tinyxml2-helpers
+	
+	depend_library tinyxml2
+	
+	add_files tinyxml2_helpers.cpp tinyxml2_helpers.h
+	
+	header_path . expose

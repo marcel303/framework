@@ -7,6 +7,7 @@ library framework
 
 	depend_library msdfgen
 	depend_library tinyxml2
+	depend_library tinyxml2-helpers
 	depend_library utf8rewind
 
 	scan_files cpp

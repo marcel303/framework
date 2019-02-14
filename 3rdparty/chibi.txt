@@ -6,6 +6,7 @@ with_platform macos add libetherdream
 
 add utf8rewind
 add tinyxml2
+add tinyxml2-helpers
 add msdfgen
 
 library imgui
