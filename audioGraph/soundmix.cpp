@@ -28,7 +28,6 @@
 #include "audio.h"
 #include "Debugging.h"
 #include "Log.h"
-#include "osc4d.h"
 #include "Path.h"
 #include "soundmix.h"
 
