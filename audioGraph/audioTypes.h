@@ -232,46 +232,6 @@ struct AudioEvent
 	int refCount = 0;
 };
 
-struct SDL_mutex;
-
-struct AudioMutex_Shared
-{
-	SDL_mutex * mutex;
-	
-	AudioMutex_Shared();
-	AudioMutex_Shared(SDL_mutex * mutex);
-	
-	void lock() const;
-	void unlock() const;
-};
-
-struct AudioMutex
-{
-	SDL_mutex * mutex;
-	
-	AudioMutex();
-	~AudioMutex();
-	
-	void init();
-	void shut();
-	
-	void lock() const;
-	void unlock() const;
-
-	void debugCheckIsLocked();
-};
-
-struct AudioThreadId
-{
-	int64_t id;
-	
-	AudioThreadId();
-	
-	void initThreadId();
-	
-	bool checkThreadId() const;
-};
-
 struct AudioRNG
 {
 	AudioRNG();

@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "audioThreading.h"
 #include "audioTypes.h"
 #include <list>
 #include <map>

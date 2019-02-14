@@ -25,29 +25,46 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audioTypes.h"
-#include "Debugging.h"
+#pragma once
 
-#if !AUDIO_USE_SIMD
-	#warning "AUDIO_USE_SIMD is set to 0. is this intended?"
-#endif
+#include <stdint.h>
 
-//
+struct SDL_mutex;
 
-AudioRNG::AudioRNG()
+struct AudioMutex_Shared
 {
-}
-
-float AudioRNG::nextf(const float min, const float max)
-{
-	const float t = rand() / float(RAND_MAX);
+	SDL_mutex * mutex;
 	
-	return min * t + max * (1.f - t);
-}
-
-double AudioRNG::nextd(const double min, const double max)
-{
-	const double t = rand() / double(RAND_MAX);
+	AudioMutex_Shared();
+	AudioMutex_Shared(SDL_mutex * mutex);
 	
-	return min * t + max * (1.0 - t);
-}
+	void lock() const;
+	void unlock() const;
+};
+
+struct AudioMutex
+{
+	SDL_mutex * mutex;
+	
+	AudioMutex();
+	~AudioMutex();
+	
+	void init();
+	void shut();
+	
+	void lock() const;
+	void unlock() const;
+
+	void debugCheckIsLocked();
+};
+
+struct AudioThreadId
+{
+	int64_t id;
+	
+	AudioThreadId();
+	
+	void initThreadId();
+	
+	bool checkThreadId() const;
+};
