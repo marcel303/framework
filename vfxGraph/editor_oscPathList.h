@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "graph.h"
+#include "graphEdit.h" // todo : move resource interface elsewhere, since it needs to be made shared, contrary to the graph editor itself
 
 struct UiState;
 struct VfxOscPathList;

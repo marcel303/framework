@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "graphEdit.h"
 #include "StringEx.h"
 #include "ui.h"
 #include "vfxGraph.h"

@@ -26,6 +26,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "audioNodeWavefield1D.h"
+#include "graphEdit.h" // todo : move resource interface elsewhere, since it needs to be made shared, contrary to the graph editor itself
 #include "Noise.h"
 #include "wavefield.h"
 #include <cmath>

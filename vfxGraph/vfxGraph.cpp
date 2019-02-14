@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "graphEdit.h" // todo : move resource interface elsewhere, since it needs to be made shared, contrary to the graph editor itself
 #include "Parse.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"

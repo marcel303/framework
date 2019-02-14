@@ -27,10 +27,10 @@
 
 #pragma once
 
-#include "graph.h"
 #include <stdint.h>
 
 struct Graph;
+struct GraphEdit;
 struct RealTimeConnection;
 struct VfxGraph;
 
