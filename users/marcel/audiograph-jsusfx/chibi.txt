@@ -1,0 +1,9 @@
+library audiograph-jsusfx shared
+
+	depend_library audiograph
+	depend_library jsusfx-framework
+
+	add_files audioNodeJsusFx.cpp
+	add_files audioNodeJsusFx.h
+
+	header_path . expose
