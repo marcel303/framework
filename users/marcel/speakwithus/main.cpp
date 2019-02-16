@@ -1,5 +1,6 @@
 #include "audio.h"
 #include "audioTypes.h"
+#include "audioThreading.h"
 #include "framework.h"
 #include "objects/paobject.h"
 #include "Path.h"
