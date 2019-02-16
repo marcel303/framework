@@ -1,4 +1,4 @@
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "framework.h"
 
 #include "allegro2-timerApi.h"
