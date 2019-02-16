@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audio.h"
+#include "audiostream/AudioIO.h"
 #include "Debugging.h"
 #include "Log.h"
 #include "Path.h"

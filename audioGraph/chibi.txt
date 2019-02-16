@@ -6,9 +6,7 @@ library libdelaunay
 
 library audiograph-core
 
-	# todo : remove framework dependency
-	depend_library framework
-
+	depend_library framework-audiostream
 	depend_library libavgraph-core
 	depend_library libgg
 
@@ -24,16 +22,21 @@ library audiograph-nodes
 	# todo : remove framework dependency
 	depend_library framework
 
+	# todo : remove libavgraph dependency. depending on it here due to resource editors
+	depend_library libavgraph
+
+	depend_library audiograph-core
 	depend_library libavgraph-core
 	depend_library libdelaunay
 	depend_library libosc
 
-	header_path .       expose
+# fixme : conglomerate affects other libraries ?
+
 	header_path objects expose
 
 	add_files audioNodes_all.cpp audioNodes_all.h
 
-	scan_files cpp path objects    group objects conglomerate objects.h
+	scan_files cpp path objects    group objects
 	scan_files h   path objects    group objects
 	scan_files cpp path audioNodes conglomerate audioNodes_all.h
 	scan_files h   path audioNodes
