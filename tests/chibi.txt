@@ -1,9 +1,10 @@
 app tests
 
 	depend_library audiograph
+	depend_library audiograph-jsusfx
 	depend_library framework
 	depend_library framework-ofx
-	depend_library jsusfx-framework
+	depend_library jgmod-audiograph
 # todo : add with_library ?
 	with_platform macos depend_library libps3eye
 	depend_library libvideo
