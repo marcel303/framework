@@ -37,10 +37,10 @@ cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --
 cd "$root"
 
 # generate cmake files using chibi
-mkdir -p chibi-build/cmake-files
-"$chibi_bin" . chibi-build/cmake-files $target_arg
+mkdir -p chibi-build/cmake-files-for-build
+"$chibi_bin" . chibi-build/cmake-files-for-build $target_arg
 
 # build all of the libraries and example and test app binaries. this will take a while
 mkdir -p chibi-build/bin
-cd chibi-build/bin && cmake -DCMAKE_BUILD_TYPE=Release ../cmake-files && cmake --build .
+cd chibi-build/bin && cmake -DCMAKE_BUILD_TYPE=Release ../cmake-files-for-build && cmake --build .
 cd "$root"
