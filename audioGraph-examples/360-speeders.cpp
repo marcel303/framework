@@ -1,8 +1,8 @@
 #include "audioTypes.h"
+#include "binaural_cipic.h"
+#include "binauralizer.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"
-#include "objects/binauralizer.h"
-#include "objects/binaural_cipic.h"
 #include "objects/paobject.h"
 #include <algorithm>
 #include <cmath>
