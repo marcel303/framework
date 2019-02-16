@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "DownloadCache.h"
 #include "framework.h"
 #include "StringEx.h"

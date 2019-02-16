@@ -1,4 +1,4 @@
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "framework.h"
 
 #define GFX_SX 1024

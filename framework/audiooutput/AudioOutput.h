@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "AudioStream.h"
+#include "audiostream/AudioStream.h"
 
 class AudioOutput
 {

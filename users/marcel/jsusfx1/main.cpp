@@ -321,7 +321,7 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, uint8
 
 //
 
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStream.h"
 #include "audiostream/AudioStreamVorbis.h"
 

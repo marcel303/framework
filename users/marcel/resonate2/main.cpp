@@ -21,7 +21,7 @@
 	#include <alloca.h>
 #endif
 
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStream.h"
 
 /*

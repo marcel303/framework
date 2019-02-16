@@ -6,7 +6,7 @@
 #include "Path.h"
 #include "script.h"
 
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStreamVorbis.h"
 
 #if defined(WIN32)

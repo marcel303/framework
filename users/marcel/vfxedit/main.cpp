@@ -1,5 +1,5 @@
-#include "audiostream/AudioOutput.h"
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "Calc.h"
 #include "FileStream.h"

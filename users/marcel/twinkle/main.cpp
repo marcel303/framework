@@ -4,8 +4,8 @@
 #include "Options.h"
 
 #include "audio.h"
-#include "audiostream/AudioOutput.h"
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 
 #include <map>
 

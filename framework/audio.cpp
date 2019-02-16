@@ -26,9 +26,9 @@
 */
 
 #include "audio.h"
-#include "audiostream/AudioOutput.h"
-#include "audiostream/AudioOutput_OpenAL.h"
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput.h"
+#include "audiooutput/AudioOutput_OpenAL.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "framework.h"
 #include "internal.h"

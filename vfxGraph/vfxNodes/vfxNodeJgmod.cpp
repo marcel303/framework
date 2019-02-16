@@ -27,7 +27,7 @@
 
 #include "allegro2-timerApi.h"
 #include "allegro2-voiceApi.h"
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "framework.h"
 #include "framework-allegro2.h"
 #include "jgmod.h"
