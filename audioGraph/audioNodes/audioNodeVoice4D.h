@@ -31,6 +31,8 @@
 #include "audioVoiceManager.h"
 #include "soundmix.h" // AudioSource
 
+struct AudioGraph;
+
 struct AudioNodeVoice4D : AudioNodeBase
 {
 	struct AudioSourceVoiceNode : AudioSource
