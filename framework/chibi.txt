@@ -11,6 +11,8 @@ library framework
 	depend_library utf8rewind
 
 	scan_files cpp
+	scan_files c   path audiooutput          group audiooutput
+	scan_files cpp path audiooutput          group audiooutput
 	scan_files c   path audiostream          group audiostream
 	scan_files cpp path audiostream          group audiostream
 
