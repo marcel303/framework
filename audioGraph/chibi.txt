@@ -4,7 +4,7 @@ library libdelaunay
 
 	header_path . expose
 
-library audiograph-core
+library audiograph-core shared
 
 	depend_library framework-audiostream
 	depend_library libavgraph-core
