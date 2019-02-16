@@ -27,36 +27,7 @@
 
 #pragma once
 
-#include <SDL2/SDL.h>
-#include <stdlib.h>
-#include <string.h>
-
-class SoundData
-{
-public:
-	SoundData()
-	{
-		memset(this, 0, sizeof(SoundData));
-	}
-	
-	~SoundData()
-	{
-		if (sampleData != 0)
-		{
-			delete [] (char*)sampleData;
-			sampleData = 0;
-		}
-	}
-	
-	int channelSize;  // 1 or 2 bytes = int8 or int16, 4 bytes = float32
-	int channelCount; // 1 for mono, 2 for stereo
-	int sampleCount;
-	int sampleRate;
-	
-	void * sampleData;
-};
-
-SoundData * loadSound(const char * filename);
+#include "audiostream/AudioIO.h"
 
 #if FRAMEWORK_USE_OPENAL
 
@@ -115,6 +86,8 @@ public:
 //
 
 #if FRAMEWORK_USE_PORTAUDIO
+
+#include <SDL2/SDL.h>
 
 #if LINUX
 	#include <portaudio.h>

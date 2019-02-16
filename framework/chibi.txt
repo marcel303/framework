@@ -1,3 +1,17 @@
+library framework-audiostream
+
+	depend_library libgg
+
+	scan_files c   path audiostream          group audiostream
+	scan_files cpp path audiostream          group audiostream
+
+	scan_files h path audiostream                    group audiostream
+	scan_files h path audiostream/oggvorbis traverse group audiostream/oggvorbis
+
+	header_path . expose
+
+	header_path audiostream/oggvorbis expose
+
 library framework
 
 	depend_library libgg
@@ -10,18 +24,15 @@ library framework
 	depend_library tinyxml2-helpers
 	depend_library utf8rewind
 
+	depend_library framework-audiostream
+
 	scan_files cpp
 	scan_files c   path audiooutput          group audiooutput
 	scan_files cpp path audiooutput          group audiooutput
-	scan_files c   path audiostream          group audiostream
-	scan_files cpp path audiostream          group audiostream
 
 	scan_files h
-	scan_files h path audiostream                    group audiostream
-	scan_files h path audiostream/oggvorbis traverse group audiostream/oggvorbis
 
 	header_path . expose
-	header_path audiostream/oggvorbis expose
 	
 	compile_definition NO_SDL_GLEXT            * expose
 	compile_definition FRAMEWORK_USE_OPENAL    0 expose
