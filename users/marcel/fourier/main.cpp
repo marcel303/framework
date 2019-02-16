@@ -1,14 +1,17 @@
 #include "Calc.h"
 #include "framework.h"
-#include "image.h"
+#include <algorithm>
+#include <cmath>
 
-#define GFX_SX 1920
-#define GFX_SY 1080
+#define GFX_SX 1200
+#define GFX_SY 800
 
-#define TEST_BEZIER 0
-#define TEST_FLOWPARTICLES 0
-#define TEST_FIREWORKS 0
-#define TEST_TRACERS 1
+#if !defined(TEST_BEZIER) && !defined(TEST_FLOWPARTICLES) && !defined(TEST_FIREWORKS) && !defined(TEST_TRACERS)
+	#define TEST_BEZIER 0
+	#define TEST_FLOWPARTICLES 0
+	#define TEST_FIREWORKS 0
+	#define TEST_TRACERS 0
+#endif
 
 #if TEST_BEZIER
 
@@ -70,8 +73,8 @@ struct BezierTest
 			timeLeft = kInitialDuration;
 			duration = kInitialDuration;
 
-			//color = Color::fromHSL(random(0.f, 1.f), 1.f, .5f);
-			color = colorWhite;
+			color = Color::fromHSL(random(0.f, 1.f), 1.f, .5f);
+			//color = colorWhite;
 
 			Line baseLine;
 
@@ -134,28 +137,23 @@ struct BezierTest
 				}
 			}
 		}
-
-		//
-
-		const float a = 1.f - (timeLeft / duration);
-		const float t = duration - timeLeft;
-
+		
 		//
 
 		for (int i = 0; i < kNumLines; ++i)
 		{
 			for (int j = 0; j < kNumNodes; ++j)
 			{
-				//const float aa = .9f;
-				//const float bb = 1.f - std::powf(aa, dt);
+			#if 0
+				const float aa = .9f;
+				const float bb = 1.f - std::powf(aa, dt);
 
-				//lines[i].nodes[j].currentPosition[0] = Calc::Lerp(lines[i].nodes[j].currentPosition[0], lines[i].nodes[j].desiredPosition[0], bb);
-				//lines[i].nodes[j].currentPosition[1] = Calc::Lerp(lines[i].nodes[j].currentPosition[1], lines[i].nodes[j].desiredPosition[1], bb);
-
+				lines[i].nodes[j].currentPosition[0] = Calc::Lerp(lines[i].nodes[j].currentPosition[0], lines[i].nodes[j].desiredPosition[0], bb);
+				lines[i].nodes[j].currentPosition[1] = Calc::Lerp(lines[i].nodes[j].currentPosition[1], lines[i].nodes[j].desiredPosition[1], bb);
+			#else
 				lines[i].nodes[j].currentPosition = lines[i].nodes[j].desiredPosition;
-
-				//lines[i].nodes[j].currentPosition[1] += sin(j + t * 4.f) * .1f;
-				
+			#endif
+			
 				//
 
 				lines[i].nodes[j].posOffset += lines[i].nodes[j].posSpeed * dt;
@@ -190,8 +188,8 @@ struct BezierTest
 	{
 		const float t = 1.f - (timeLeft / duration);
 
-		//const float a = pow(sin(t * Calc::mPI), .5f) * alpha;
-		const float a = 1.f;
+		const float a = pow(sin(t * Calc::mPI), .5f) * alpha;
+		//const float a = 1.f;
 
 		gxPushMatrix();
 		{
@@ -235,10 +233,9 @@ struct BezierTest
 				BezierPath path;
 				path.ConstructFromNodes(nodes, kNumNodes);
 
-				glEnable(GL_LINE_SMOOTH);
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+				pushLineSmooth(true);
 
-				gxBegin(GL_LINE_STRIP);
+				gxBegin(GX_LINE_STRIP);
 				{
 					for (float i = 0.f; i <= kNumNodes; i += 0.01f)
 					{
@@ -249,7 +246,7 @@ struct BezierTest
 				}
 				gxEnd();
 
-				glDisable(GL_LINE_SMOOTH);
+				popLineSmooth();
 			}
 		}
 		gxPopMatrix();
@@ -305,19 +302,19 @@ struct M
 			const float dx = xf - xi;
 			const float dy = yf - yi;
 
-#if 0
+		#if 0
 			const float wx1 = 1.f;
 			const float wx2 = 0.f;
 			
 			const float wy1 = 1.f;
 			const float wy2 = 0.f;
-#else
+		#else
 			const float wx1 = 1.f - dx;
 			const float wx2 =       dx;
 
 			const float wy1 = 1.f - dy;
 			const float wy2 =       dy;
-#endif
+		#endif
 
 			float * out[2] = { &out_x, &out_y };
 
@@ -353,8 +350,8 @@ static void sampleWindmap(const float x, const float y, float & out_x, float & o
 {
 	//const float a = sin(x * 1.234f + framework.time/10.f) * 2.f + sin(y * 2.345f) * 1.6f;
 	const float a = x * 2.345f * sin((x - y) * .345f) + y * sin(x * .543f) * 1.234f;
-	const float v = (1.1f + sin(cos(x * 2.543) + sin(y * 1.432))) / 2.1f;
-	//const float v = 1.f;
+	const float vs = (1.1f + sin(cos(x * 2.543) + sin(y * 1.432))) / 2.1f;
+	const float v = lerp<float>(vs, 1.f, .2f);
 	out_x = std::cos(a) * v;
 	out_y = std::sin(a) * v;
 }
@@ -443,7 +440,7 @@ struct TraceGrid
 
 	void draw()
 	{
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			for (int x = 0; x < GSX; ++x)
 			{
@@ -484,7 +481,7 @@ struct TraceGrid
 
 			setColor(colorWhite);
 
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 			{
 				for (int x = x1; x < x2; ++x)
 				{
@@ -657,8 +654,7 @@ struct TraceEffect
 		grid.draw();
 
 		gxColor4f(1.f, 1.f, 1.f, 1.f);
-		glPointSize(4.f);
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (auto & t : tracers)
 			{
@@ -677,18 +673,19 @@ struct TraceEffect
 
 int main(int argc, char * argv[])
 {
-	changeDirectory("data");
-
 	framework.exclusiveFullscreen = false;
 	framework.fullscreen = false;
 	framework.useClosestDisplayMode = true;
 
 	if (framework.init(GFX_SX, GFX_SY))
 	{
-		//ImageData * image = loadImage("image.png");
-
+	#if TEST_FLOWPARTICLES
 		Surface surface(GFX_SX, GFX_SY, true);
 		surface.clear();
+	#else
+		Surface surface(GFX_SX, GFX_SY, false);
+		surface.clear();
+	#endif
 
 	#if TEST_FLOWPARTICLES
 		M map;
@@ -698,7 +695,7 @@ int main(int argc, char * argv[])
 		memset(ps, 0, sizeof(ps));
 
 		float spawnValue = 0.f;
-		float spawnValueTreshold = 1.f / 2000.f;
+		float spawnValueTreshold = 1.f / 3000.f;
 
 		int nextParticle = 0;
 	#endif
@@ -727,14 +724,14 @@ int main(int argc, char * argv[])
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
-		#if TEST_BEZIER
+			#if TEST_BEZIER
 				pushSurface(&surface);
 				{
-					if (false)
+					if (true)
 					{
 						// don't clear
 					}
-					else if (true)
+					else if (false)
 					{
 						surface.clear();
 					}
@@ -745,13 +742,14 @@ int main(int argc, char * argv[])
 						drawRect(0, 0, GFX_SX, GFX_SY);
 					}
 
-					setBlend(BLEND_ADD);
-					testBezier(1.f);
+					//setBlend(BLEND_ADD);
+					setBlend(BLEND_ALPHA);
+					testBezier(.01f);
 				}
 				popSurface();
-		#endif
+			#endif
 
-		#if TEST_FLOWPARTICLES
+			#if TEST_FLOWPARTICLES
 				const float dt = framework.timeStep;
 
 				moffset[0] += dt * .00234f;
@@ -764,17 +762,17 @@ int main(int argc, char * argv[])
 						const float xf = x / (MSX - 1.f) + moffset[0];
 						const float yf = y / (MSY - 1.f) + moffset[1];
 
-#if 0
+					#if 0
 						map.v[x][y][0] = xf;
 						map.v[x][y][1] = yf;
-#elif 0
+					#elif 0
 						const float e = .001f;
 						const float s = 5.f;
 						const float m = .08f;
 
 						map.v[x][y][0] = (samplePlasma(xf + e, yf, s) - samplePlasma(xf - e, yf, s)) / (e * 2.f) * m;
 						map.v[x][y][1] = (samplePlasma(xf, yf + e, s) - samplePlasma(xf, yf - e, s)) / (e * 2.f) * m;// + .5f;
-#else
+					#else
 						//const float s = 4.f + sin(framework.time/10.f) * 10.f;
 						const float s = 10.f;
 						const float m = .5f;
@@ -786,7 +784,7 @@ int main(int argc, char * argv[])
 
 						map.v[x][y][0] *= m;
 						map.v[x][y][1] *= m;
-#endif
+					#endif
 					}
 				}
 
@@ -810,7 +808,7 @@ int main(int argc, char * argv[])
 
 				const float speedMul = dt * 200.f;
 
-				const Color baseColor = Color::fromHSL(framework.time / 10.f, .1f, .5f);
+				const Color baseColor = Color::fromHSL(framework.time / 20.f, .2f, .8f);
 				//const Color baseColor(1.f, .5f, .25f);
 
 				for (int i = 0; i < PS; ++i)
@@ -843,19 +841,11 @@ int main(int argc, char * argv[])
 					setColorf(c, c, c, c);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 
-					setBlend(BLEND_ADD);
-					//setBlend(BLEND_ALPHA);
+					pushBlend(BLEND_MAX);
+					pushColorPost(POST_PREMULTIPLY_RGB_WITH_ALPHA);
 
-					glPointSize(2.f);
-					//glLineWidth(2.f);
-
-					glEnable(GL_LINE_SMOOTH);
-					glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-
-					gxBegin(GL_LINES);
-					//gxBegin(GL_POINTS);
+					hqBegin(HQ_LINES);
 					{
-	#if 1
 						for (int i = 0; i < PS; ++i)
 						{
 							const P & p = ps[i];
@@ -870,44 +860,48 @@ int main(int argc, char * argv[])
 									//const float s = .1f;
 
 									gxColor4f(baseColor.r * s, baseColor.g * s, baseColor.b * s, p.life * p.lifeRcp * 1.f);
-									gxVertex2f(p.oldX, p.oldY);
-									gxVertex2f(p.x, p.y);
+									hqLine(p.oldX, p.oldY, 1.4f * s, p.x, p.y, 1.4f * s);
 								}
 							}
 						}
-	#endif
+					}
+					hqEnd();
 
-	#if 0
-						for (int i = 0; i < 10000; ++i)
+					if (mouse.isDown(BUTTON_LEFT) && false)
+					{
+						hqBegin(HQ_FILLED_CIRCLES);
 						{
-							const float t = i / 10000.f;
-
-							const float x = GFX_SX/2 + std::cos(t * Calc::m2PI * 100) * t * 800;
-							const float y = GFX_SY/2 + std::sin(t * Calc::m2PI * 100) * t * 500;
-
-							float v[2];
-
-							if (map.sample(x, y, v[0], v[1]))
+							for (int i = 0; i < 10000; ++i)
 							{
-								gxColor4f((v[0] + 1.f) / 2.f, (v[1] + 1.f) / 2.f, 0.5f, 1.f);
-								gxVertex2f(x, y);
-							}
-							else
-							{
-								gxColor4f(1.f, 1.f, 1.f, 1.f);
-								gxVertex2f(x, y);
+								const float t = i / 10000.f;
+
+								const float x = mouse.x + std::cos(t * Calc::m2PI * 100) * t * 800;
+								const float y = mouse.y + std::sin(t * Calc::m2PI * 100) * t * 500;
+
+								float v[2];
+
+								if (map.sample(x, y, v[0], v[1]))
+								{
+									gxColor4f((v[0] + 1.f) / 2.f, (v[1] + 1.f) / 2.f, 0.5f, 1.f);
+									hqFillCircle(x, y, 2.f);
+								}
+								else
+								{
+									gxColor4f(1.f, 1.f, 1.f, 1.f);
+									hqFillCircle(x, y, 2.f);
+								}
 							}
 						}
-	#endif
-
-						glDisable(GL_LINE_SMOOTH);
+						hqEnd();
 					}
-					gxEnd();
+					
+					popColorPost();
+					popBlend();
 				}
 				popSurface();
 			#endif
 
-#if TEST_FIREWORKS
+			#if TEST_FIREWORKS
 				static int mode = 0;
 
 				if (keyboard.wentDown(SDLK_m))
@@ -1041,14 +1035,11 @@ int main(int argc, char * argv[])
 
 					//
 
-					glEnable(GL_LINE_SMOOTH);
-					glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+					pushLineSmooth(true);
 
 					setBlend(BLEND_ADD);
 
-					glPointSize(4.f);
-
-					gxBegin(GL_LINES);
+					gxBegin(GX_LINES);
 					{
 						for (int i = 0; i < PS; ++i)
 						{
@@ -1092,12 +1083,12 @@ int main(int argc, char * argv[])
 					}
 					gxEnd();
 
-					glDisable(GL_LINE_SMOOTH);
+					popLineSmooth();
 				}
 				popSurface();
-#endif
+			#endif
 
-#if TEST_TRACERS
+			#if TEST_TRACERS
 				const float dt = framework.timeStep;
 
 				effect.tick(dt);
@@ -1116,7 +1107,7 @@ int main(int argc, char * argv[])
 					effect.draw();
 				}
 				popSurface();
-#endif
+			#endif
 
 				setBlend(BLEND_OPAQUE);
 
