@@ -1,12 +1,13 @@
-library jgmod-audiograph
+library jgmod-audiograph shared
 
-	depend_library audiograph
+	depend_library audiograph-core
 	depend_library libjgmod
 
 	add_files audioNodeJgmod.cpp audioNodeJgmod.h
 
 app jgmod-audiograph-test
 
+	depend_library audiograph
 	depend_library jgmod-audiograph
 
 	add_files test.cpp
