@@ -34,10 +34,11 @@
 #define USE_FRAMEWORK 1
 
 #if USE_FRAMEWORK
-	#include "audio.h"
-	#include "framework.h"
+	#include "audiostream/AudioIO.h" // loadSound
 	#include "Parse.h"
+	#include "StringEx.h" // sprintf_s
 	#include "Timer.h"
+	#include <dirent.h>
 #endif
 
 #if BINAURAL_USE_SSE
@@ -885,7 +886,43 @@ namespace binaural
 	{
 		debugTimerBegin("list_files");
 		
-		result = ::listFiles(path, recurse);
+		std::vector<DIR*> dirs;
+		{
+			DIR * dir = opendir(path);
+			if (dir)
+				dirs.push_back(dir);
+		}
+		
+		while (!dirs.empty())
+		{
+			DIR * dir = dirs.back();
+			dirs.pop_back();
+			
+			dirent * ent;
+			
+			while ((ent = readdir(dir)) != 0)
+			{
+				char fullPath[PATH_MAX];
+				if (strcmp(path, "."))
+					sprintf_s(fullPath, sizeof(fullPath), "%s/%s", path, ent->d_name);
+				else
+					strcpy_s(fullPath, sizeof(fullPath), ent->d_name);
+				
+				if (ent->d_type == DT_DIR)
+				{
+					if (recurse && strcmp(ent->d_name, ".") && strcmp(ent->d_name, ".."))
+					{
+						listFiles(fullPath, recurse, result);
+					}
+				}
+				else
+				{
+					result.push_back(fullPath);
+				}
+			}
+			
+			closedir(dir);
+		}
 		
 		debugTimerEnd("list_files");
 	}
