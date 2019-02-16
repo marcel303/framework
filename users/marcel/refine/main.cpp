@@ -242,6 +242,11 @@ struct FileEditor
 		surface = nullptr;
 	}
 	
+	virtual bool wantsTick(const bool hasFocus, const bool inputIsCaptured)
+	{
+		return false;
+	}
+	
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) = 0;
 };
 
@@ -1205,11 +1210,16 @@ struct FileEditor_Jgmod : FileEditor
 		jgmod_destroy(jgmod);
 	}
 	
-	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
+	virtual bool wantsTick(const bool hasFocus, const bool inputIsCaptured) override
 	{
 		if (hasFocus == false)
-			return;
+			return false;
 		
+		return true;
+	}
+	
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
+	{
 		clearSurface(0, 0, 0, 0);
 		
 		setFont("unispace.ttf");
@@ -1837,6 +1847,11 @@ struct EditorWindow
 
 	void process(const float dt)
 	{
+		const bool hasFocus = window.hasFocus();
+		
+		if (editor->wantsTick(hasFocus, false) == false)
+			return;
+		
 		if (surface == nullptr || surface->getWidth() != window.getWidth() || surface->getHeight() != window.getHeight())
 		{
 			delete surface;
@@ -1857,7 +1872,7 @@ struct EditorWindow
 						surface->getWidth(),
 						surface->getHeight(),
 						dt,
-						window.hasFocus(),
+						hasFocus,
 						inputIsCaptured);
 				}
 				editor->tickEnd();
