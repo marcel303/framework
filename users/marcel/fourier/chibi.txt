@@ -1,14 +1,14 @@
-app fourier-bezier
+app marcel-fourier-bezier
 	depend_library framework
 	compile_definition TEST_BEZIER 1
 	add_files main.cpp
 
-app fourier-flowparticles
+app marcel-fourier-flowparticles
 	depend_library framework
 	compile_definition TEST_FLOWPARTICLES 1
 	add_files main.cpp
 
-app fourier-tracers
+app marcel-fourier-tracers
 	depend_library framework
 	compile_definition TEST_TRACERS 1
 	add_files main.cpp

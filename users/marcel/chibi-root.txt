@@ -27,6 +27,7 @@ add refine
 add resonate1
 add resonate2
 add sceneedit1
+add serial-to-osc
 add speakwithus
 add sRGB
 add twinkle
