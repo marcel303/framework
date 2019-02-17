@@ -5,6 +5,7 @@
 #include "allegro2-voiceApi.h"
 
 #include "soundmix.h"
+#include "StringEx.h"
 
 AUDIO_NODE_TYPE(AudioNodeJgmod)
 {
@@ -18,7 +19,7 @@ AUDIO_NODE_TYPE(AudioNodeJgmod)
 	for (int i = 0; i < AudioNodeJgmod::kNumChannels; ++i)
 	{
 		char name[16];
-		sprintf(name, "ch%d", i + 1);
+		sprintf_s(name, sizeof(name), "ch%d", i + 1);
 		
 		out(name, "audioValue");
 	}
