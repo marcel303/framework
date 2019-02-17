@@ -12,7 +12,7 @@ library libgg
 	compile_definition WDL_FFT_REALSIZE 8 expose
 	compile_definition EEL_F_SIZE 8 expose
 
-	compile_definition _USE_MATH_DEFINES       * toolchain msvc
+	compile_definition _USE_MATH_DEFINES       * toolchain msvc expose
 	compile_definition _CRT_SECURE_NO_WARNINGS * toolchain msvc
 
 	with_platform macos   compile_definition MACOS   * expose
