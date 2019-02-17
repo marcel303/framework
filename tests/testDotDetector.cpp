@@ -432,7 +432,7 @@ void testDotDetector()
 			y += spacing;
 			drawText(5, y, fontSize, +1, +1, "G = toggle grid. T = next threshold function. UP/DOWN = change threshold");
 			y += spacing;
-			drawText(5, y, fontSize, +1, +1, "SPACE = quit test. MOUSE_LBUTTON = enable speed/radius test");
+			drawText(5, y, fontSize, +1, +1, "MOUSE_LBUTTON = enable speed/radius test");
 			y += spacing;
 			y += spacing;
 			drawText(5, y, fontSize, +1, +1, "dotTracker enabled: %d. I = toggle dot tracking", useDotTracker);
