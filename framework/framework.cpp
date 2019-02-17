@@ -196,7 +196,19 @@ Framework::~Framework()
 bool Framework::init(int sx, int sy)
 {
 #ifdef WIN32
-	SetProcessDPIAware();
+	//SetProcessDPIAware();
+
+	/*
+	todo : high dpi support on Windows
+
+	Either support will need to be added to SDL, or, framework will need to implement it.
+	Idea:
+	1) Set process dpi awareness flag.
+	2) Detect DPI for default display.
+	3) Compare DPI with 'standard' dpi. If high (almost 2x more), assume a high dpi display.
+	4) If a high dpi display is detected, set backing scale to 2. This will ensure additional pixel density for surfaces.
+	5) Multiply window size times backing scale, divide mouse coordinates times backing scale. This will ensure additioal pixel density for the back buffers.
+	*/
 #endif
 
 	// initialize SDL
@@ -835,8 +847,6 @@ static const XMap * getXMap(const char * deviceName)
 
 void Framework::process()
 {
-	SDL_Delay(20);
-	
 	cpuTimingBlock(frameworkProcess);
 	
 	g_soundPlayer.process();
