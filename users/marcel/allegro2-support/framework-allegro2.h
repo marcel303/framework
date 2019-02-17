@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "allegro2-timerApi.h"
+#include "allegro2-voiceApi.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

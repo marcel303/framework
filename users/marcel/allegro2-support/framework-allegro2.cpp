@@ -1,8 +1,5 @@
 #include "audiooutput/AudioOutput_PortAudio.h"
 #include "framework.h"
-
-#include "allegro2-timerApi.h"
-#include "allegro2-voiceApi.h"
 #include "framework-allegro2.h"
 
 #include <atomic>
