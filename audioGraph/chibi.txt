@@ -21,6 +21,8 @@ library audiograph-core shared
 	depend_library libavgraph-core
 	depend_library libgg
 
+	compile_definition TARGET_IS_AUDIOGRAPH_CORE *
+
 	header_path core expose
 
 	add_files core/audioNodeBase.cpp core/audioNodeBase.h

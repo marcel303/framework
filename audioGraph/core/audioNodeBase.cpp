@@ -45,6 +45,23 @@
 
 AUDIO_THREAD_LOCAL int g_currentAudioGraphTraversalId = -1;
 
+int getCurrentAudioGraphTraversalId()
+{
+	return g_currentAudioGraphTraversalId;
+}
+
+void setCurrentAudioGraphTraversalId(int id)
+{
+	Assert(g_currentAudioGraphTraversalId == -1 || id == -1);
+	g_currentAudioGraphTraversalId = id;
+}
+
+void clearCurrentAudioGraphTraversalId()
+{
+	Assert(g_currentAudioGraphTraversalId != -1);
+	g_currentAudioGraphTraversalId = -1;
+}
+
 //
 
 AudioFloat AudioFloat::Zero(0.0);
