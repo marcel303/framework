@@ -35,6 +35,9 @@
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 
+#include "ObjectLinkage.h"
+EnsureLinkage(jgmod_audiograph);
+
 #define ENABLE_AUDIO_RTE 1
 
 // todo : ask a few plugin developers if it's ok to bundle their app on framework's repo as a test/demo of jsfx support

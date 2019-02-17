@@ -5,6 +5,9 @@
 #include "framework.h"
 #include "paobject.h"
 
+#include "ObjectLinkage.h"
+EnsureLinkage(jgmod_audiograph)
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)

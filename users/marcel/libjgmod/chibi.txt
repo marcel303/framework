@@ -1,4 +1,4 @@
-library libjgmod shared
+library libjgmod
 
 	depend_library allegro2-timerApi
 	depend_library allegro2-voiceApi

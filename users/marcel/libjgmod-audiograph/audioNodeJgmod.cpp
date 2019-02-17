@@ -6,6 +6,9 @@
 
 #include "soundmix.h"
 
+#include "ObjectLinkage.h"
+DefineLinkage(jgmod_audiograph);
+
 AUDIO_NODE_TYPE(AudioNodeJgmod)
 {
 	typeName = "jgmod";

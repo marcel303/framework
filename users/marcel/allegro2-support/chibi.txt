@@ -1,9 +1,9 @@
-library allegro2-timerApi shared
+library allegro2-timerApi
 	depend_library libsdl2
 	add_files allegro2-timerApi.cpp allegro2-timerApi.h
 	header_path . expose
 
-library allegro2-voiceApi shared
+library allegro2-voiceApi
 	depend_library libsdl2
 	add_files allegro2-voiceApi.cpp allegro2-voiceApi.h
 	header_path . expose
