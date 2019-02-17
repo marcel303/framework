@@ -212,7 +212,7 @@ void AllegroTimerApi::processInterrupts(const int numMicroseconds)
 			
 			r->sampleTime += numMicroseconds;
 			
-			if (r->sampleTime >= r->delayInMicroseconds)
+			while (r->sampleTime >= r->delayInMicroseconds)
 			{
 				r->sampleTime -= r->delayInMicroseconds;
 				
