@@ -19,6 +19,7 @@ push_group libraries
 	add libfbx
 	add libgg
 	add libjsusfx-framework
+	add libnet
 	add libnfd
 	add libosc
 	add libparticle

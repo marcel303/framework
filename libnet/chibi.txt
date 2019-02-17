@@ -1,0 +1,16 @@
+library libnet
+
+	depend_library libgg
+
+	scan_files cpp
+	scan_files h
+
+	header_path . expose
+
+app libnet-test
+
+	depend_library framework
+	depend_library libnet
+
+	add_files test/SDL_Bitmap.h
+	add_files test/test.cpp
