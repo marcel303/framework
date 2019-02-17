@@ -1,6 +1,6 @@
 #pragma once
 
-#define BPM_TO_TIMER(x) ((1000000 * 60) / (x))
+#define BPM_TO_TIMER(x) (x == 0 ? 0 : ((1000000 * 60) / (x)))
 
 //
 

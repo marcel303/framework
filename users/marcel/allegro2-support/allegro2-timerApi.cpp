@@ -207,6 +207,9 @@ void AllegroTimerApi::processInterrupts(const int numMicroseconds)
 	{
 		for (AllegroTimerReg * r = timerRegs; r != nullptr; r = r->next)
 		{
+			if (r->delayInMicroseconds == 0) // infinity
+				continue;
+			
 			r->sampleTime += numMicroseconds;
 			
 			if (r->sampleTime >= r->delayInMicroseconds)
