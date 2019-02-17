@@ -178,6 +178,8 @@ inline __m128d operator*(__m128d a, __m128d b)
 	#else
 		#define AUDIOGRAPH_EXPORTED __declspec(dllimport)
 	#endif
+#else
+	#define AUDIOGRAPH_EXPORTED
 #endif
 
 struct AudioControlValue
