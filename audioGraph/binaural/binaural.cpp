@@ -28,6 +28,7 @@
 #include "binaural.h"
 #include "delaunay/delaunay.h"
 #include "fourier.h"
+#include <algorithm>
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -38,7 +39,13 @@
 	#include "Parse.h"
 	#include "StringEx.h" // sprintf_s
 	#include "Timer.h"
+#ifdef WIN32
+	#include <Windows.h>
+	#undef min
+	#undef max
+#else
 	#include <dirent.h>
+#endif
 #endif
 
 #if BINAURAL_USE_SSE
@@ -886,6 +893,37 @@ namespace binaural
 	{
 		debugTimerBegin("list_files");
 		
+	#ifdef WIN32
+		WIN32_FIND_DATAA ffd;
+		char wildcard[MAX_PATH];
+		sprintf_s(wildcard, sizeof(wildcard), "%s\\*", path);
+		HANDLE find = FindFirstFileA(wildcard, &ffd);
+		if (find != INVALID_HANDLE_VALUE)
+		{
+			do
+			{
+				char fullPath[MAX_PATH];
+				if (strcmp(path, "."))
+					sprintf_s(fullPath, sizeof(fullPath), "%s/%s", path, ffd.cFileName);
+				else
+					strcpy_s(fullPath, sizeof(fullPath), ffd.cFileName);
+
+				if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+				{
+					if (recurse && strcmp(ffd.cFileName, ".") && strcmp(ffd.cFileName, ".."))
+					{
+						listFiles(fullPath, recurse, result);
+					}
+				}
+				else
+				{
+					result.push_back(fullPath);
+				}
+			} while (FindNextFileA(find, &ffd) != 0);
+
+			FindClose(find);
+		}
+	#else
 		std::vector<DIR*> dirs;
 		{
 			DIR * dir = opendir(path);
@@ -923,6 +961,7 @@ namespace binaural
 			
 			closedir(dir);
 		}
+	#endif
 		
 		debugTimerEnd("list_files");
 	}

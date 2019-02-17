@@ -198,8 +198,7 @@ void testImpulseResponseMeasurement()
 			drawText(GFX_SX/2, GFX_SY*3/4 + 60, 24, 0, 0, "sumS=%f, sumX=%f, sumY=%f", sumS, sumX, sumY);
 			
 			setColor(colorWhite);
-			drawText(GFX_SX/2, GFX_SY*3/4 + 90, 24, 1, 0, "MOUSE = change frequency");
-			drawText(GFX_SX/2, GFX_SY*3/4 + 120, 24, 1, 0, "SPACE = quit");
+			drawText(GFX_SX/2, GFX_SY*3/4 + 100, 24, 1, 0, "MOUSE X = reference frequency");
 			
 			drawTestUi();
 		}

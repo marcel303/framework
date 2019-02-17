@@ -18,11 +18,11 @@ cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --
 cd %~dp0 || exit /b
 
 rem generate cmake files using chibi
-mkdir "chibi-build\cmake-files"
-%chibi_bin% . chibi-build/cmake-files || cd %~dp0 && exit /b
+mkdir "chibi-build\cmake-files-for-build"
+%chibi_bin% . chibi-build/cmake-files-for-build || cd %~dp0 && exit /b
 cd %~dp0 || exit /b
 
 rem build all of the libraries and example and test app binaries. this will take a while
 mkdir "chibi-build\bin"
-cd chibi-build/bin && cmake -DCMAKE_BUILD_TYPE=Release ../cmake-files && cmake --build . || cd %~dp0 && exit /b
+cd chibi-build/bin && cmake -DCMAKE_BUILD_TYPE=Release ../cmake-files-for-build && cmake --build . || cd %~dp0 && exit /b
 cd %~dp0 || exit /b

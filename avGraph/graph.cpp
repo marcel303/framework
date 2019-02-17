@@ -31,6 +31,7 @@
 #include "Parse.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
+#include <algorithm>
 
 using namespace tinyxml2;
 

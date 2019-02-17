@@ -155,14 +155,13 @@ void AudioRealTimeConnection::updateAudioValues()
 				
 				if (input->isConnected() && input->type == kAudioPlugType_FloatVec)
 				{
-					Assert(g_currentAudioGraphTraversalId == -1);
-					g_currentAudioGraphTraversalId = audioGraph->currentTickTraversalId;
+					setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
 					{
 						const AudioFloat & value = input->getAudioFloat();
 						
 						audioValueHistory.provide(value);
 					}
-					g_currentAudioGraphTraversalId = -1;
+					clearCurrentAudioGraphTraversalId();
 				}
 			}
 			else if (socketRef.dstSocketIndex != -1)
@@ -186,14 +185,13 @@ void AudioRealTimeConnection::updateAudioValues()
 				
 				if (output->isConnected() && output->type == kAudioPlugType_FloatVec)
 				{
-					Assert(g_currentAudioGraphTraversalId == -1);
-					g_currentAudioGraphTraversalId = audioGraph->currentTickTraversalId;
+					setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
 					{
 						const AudioFloat & value = output->getAudioFloat();
 						
 						audioValueHistory.provide(value);
 					}
-					g_currentAudioGraphTraversalId = -1;
+					clearCurrentAudioGraphTraversalId();
 				}
 			}
 			
@@ -564,12 +562,11 @@ bool AudioRealTimeConnection::setPlugValue(AudioGraph * audioGraph, AudioPlug * 
 		
 	case kAudioPlugType_FloatVec:
 		{
-			Assert(g_currentAudioGraphTraversalId == -1);
-			g_currentAudioGraphTraversalId = audioGraph->currentTickTraversalId;
+			setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
 			{
 				plug->getRwAudioFloat().setScalar(Parse::Float(value));
 			}
-			g_currentAudioGraphTraversalId = -1;
+			clearCurrentAudioGraphTraversalId();
 			return true;
 		}
 
@@ -603,12 +600,11 @@ bool AudioRealTimeConnection::getPlugValue(AudioGraph * audioGraph, AudioPlug * 
 	case kAudioPlugType_PcmData:
 		return false;
 	case kAudioPlugType_FloatVec:
-		Assert(g_currentAudioGraphTraversalId == -1);
-		g_currentAudioGraphTraversalId = audioGraph->currentTickTraversalId;
+		setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
 		{
 			value = String::FormatC("%f", plug->getAudioFloat().getScalar());
 		}
-		g_currentAudioGraphTraversalId = -1;
+		clearCurrentAudioGraphTraversalId();
 		return true;
 	case kAudioPlugType_Trigger:
 		return false;

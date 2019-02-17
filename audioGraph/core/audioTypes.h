@@ -172,6 +172,14 @@ inline __m128d operator*(__m128d a, __m128d b)
 
 #endif
 
+#if defined(WIN32)
+	#if defined(TARGET_IS_AUDIOGRAPH_CORE)
+		#define AUDIOGRAPH_EXPORTED
+	#else
+		#define AUDIOGRAPH_EXPORTED __declspec(dllimport)
+	#endif
+#endif
+
 struct AudioControlValue
 {
 	enum Type

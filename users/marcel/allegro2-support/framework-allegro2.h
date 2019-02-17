@@ -45,15 +45,13 @@ void voice_set_pan(int voice, int pan);
 
 void lock_sample(SAMPLE * sample);
 
-#endif
-
 static inline int ABS(int x) { return x < 0 ? -x : +x; }
 
 #define GFX_AUTODETECT 0
 #define DIGI_AUTODETECT 0
 #define MIDI_NONE 0
 
-#define BPM_TO_TIMER(x) ((1000000 * 60) / (x))
+#endif
 
 //
 

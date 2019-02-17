@@ -369,8 +369,7 @@ void AudioGraph::tick(const float dt, const bool in_syncMainToAudio)
 	
 	++currentTickTraversalId;
 	
-	Assert(g_currentAudioGraphTraversalId == -1);
-	g_currentAudioGraphTraversalId = currentTickTraversalId;
+	setCurrentAudioGraphTraversalId(currentTickTraversalId);
 	
 	for (auto & i : nodes)
 	{
@@ -382,7 +381,7 @@ void AudioGraph::tick(const float dt, const bool in_syncMainToAudio)
 		}
 	}
 	
-	g_currentAudioGraphTraversalId = -1;
+	clearCurrentAudioGraphTraversalId();
 	
 	rteMutex_audio.unlock();
 	

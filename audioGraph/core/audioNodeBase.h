@@ -44,15 +44,17 @@ struct PcmData;
 
 //
 
-extern AUDIO_THREAD_LOCAL int g_currentAudioGraphTraversalId;
+int getCurrentAudioGraphTraversalId();
+void setCurrentAudioGraphTraversalId(int id);
+void clearCurrentAudioGraphTraversalId();
 
 //
 
 struct AudioFloat
 {
-	static AudioFloat Zero;
-	static AudioFloat One;
-	static AudioFloat Half;
+	static AUDIOGRAPH_EXPORTED AudioFloat Zero;
+	static AUDIOGRAPH_EXPORTED AudioFloat One;
+	static AUDIOGRAPH_EXPORTED AudioFloat Half;
 	
 	bool isScalar;
 	bool isExpanded;
@@ -590,8 +592,8 @@ struct AudioNodeTypeRegistration
 	type ## __registration type ## __registrationInstance; \
 	void type ## __registration :: init()
 
-extern AudioEnumTypeRegistration * g_audioEnumTypeRegistrationList;
-extern AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList;
+extern AUDIOGRAPH_EXPORTED AudioEnumTypeRegistration * g_audioEnumTypeRegistrationList;
+extern AUDIOGRAPH_EXPORTED AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList;
 
 void createAudioValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
 void createAudioEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * registrationList);

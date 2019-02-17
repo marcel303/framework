@@ -36,6 +36,7 @@
 #include "StringEx.h"
 #include "testBase.h"
 #include "Timer.h"
+#include <algorithm>
 #include <atomic>
 #include <complex>
 
