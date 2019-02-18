@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "testBase.h"
+#include <algorithm>
 #include <iostream>
 #include <limits>
 
