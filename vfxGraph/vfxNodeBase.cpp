@@ -40,9 +40,10 @@
 #ifdef __SSE2__
 	// for interleave and deinterleave methods of VfxImageCpu
 	#include <xmmintrin.h>
+#endif
 
+#ifdef __SSSE3__
 	// for _mm_shuffle_epi8 in deinterleave4
-	// todo : _mm_shuffle_epi8 requires SSSE3. check for it
 	#include <tmmintrin.h>
 #endif
 
@@ -400,7 +401,7 @@ void VfxImageCpu::deinterleave4(
 		
 		int begin = 0;
 		
-	#ifdef __SSE2__
+	#if defined(__SSSE3__) // SSSE3 due to _mm_shuffle_epi8
 		/*
 		without SSE:
 			[II] Benchmark: deinterleave4: 0.000278 sec
@@ -444,6 +445,8 @@ void VfxImageCpu::deinterleave4(
 		}
 		
 		begin = sx_8 * 8;
+	#elif defined(__SSE2__)
+		#warning "__SSE2__ defined but not __SSSE3__. deinterleave4 not optimized, but possibly could be?"
 	#endif
 	
 		for (int x = begin; x < sx; ++x)
