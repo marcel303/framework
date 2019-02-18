@@ -529,7 +529,7 @@ xmm::Ellipse xmm::GaussianDistribution::toEllipse(unsigned int dimension1,
     gaussian_ellipse.width = sqrt(5.991 * eigenVal1);
     gaussian_ellipse.height = sqrt(5.991 * eigenVal2);
     gaussian_ellipse.angle = atan(b / (eigenVal1 - c));
-    if (isnan(gaussian_ellipse.angle)) {
+    if (std::isnan(gaussian_ellipse.angle)) {
         gaussian_ellipse.angle = M_PI_2;
     }
 
@@ -691,7 +691,7 @@ xmm::Ellipse xmm::covariance2ellipse(double c_xx, double c_xy, double c_yy) {
     gaussian_ellipse.width = sqrt(5.991 * eigenVal1);
     gaussian_ellipse.height = sqrt(5.991 * eigenVal2);
     gaussian_ellipse.angle = atan(c_xy / (eigenVal1 - c_yy));
-    if (isnan(gaussian_ellipse.angle)) {
+    if (std::isnan(gaussian_ellipse.angle)) {
         gaussian_ellipse.angle = M_PI_2;
     }
 
