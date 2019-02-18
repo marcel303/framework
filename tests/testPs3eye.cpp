@@ -1,4 +1,4 @@
-#if defined(MACOS) || defined(LINUX) // todo : enable on Linux once issue with finding libusb is resolved
+#if defined(MACOS)// || defined(LINUX) // todo : enable on Linux once issue with finding libusb is resolved
 
 #include "Benchmark.h"
 #include "framework.h"
