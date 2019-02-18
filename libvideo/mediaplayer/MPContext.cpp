@@ -548,12 +548,11 @@ namespace MP
 		if (ReadPacket(packet))
 		{
 		#if LIBAVCODEC_VERSION_MAJOR >= 57
+			// todo : use the old version as default ? seems like a better implementation actually
 			AVPacket * packetCopy = av_packet_clone(&packet);
 			av_packet_unref(&packet);
 		#else
-			AVPacket * packetCopy = av_packet_alloc();
-			if (packetCopy != nullptr)
-				av_packet_ref(packetCopy, &packet);
+			AVPacket * packetCopy = &packet;
 		#endif
 			
 			if (!packetCopy)
@@ -565,7 +564,13 @@ namespace MP
 					result = false;
 				
 				av_packet_unref(packetCopy);
+				
+			#if LIBAVCODEC_VERSION_MAJOR >= 57
+				av_packet_free(&packetCopy);
 				packetCopy = nullptr;
+			#else
+				packetCopy = nullptr;
+			#endif
 			}
 		}
 		else
