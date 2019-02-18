@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Image.h"
 #include <xmmintrin.h>
 
 struct ImageMem

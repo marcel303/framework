@@ -2,6 +2,7 @@
 
 #include "NetDiag.h"
 #include "Packet.h"
+#include <string.h>
 
 inline Packet::Packet()
 	: m_rcvAddress()
