@@ -15,37 +15,24 @@ addons:
     update: true
     
 before_install:
-  # The version of portaudio that's included with Ubuntu is outdated.
-  # portaudio needs to be built from sources on Linux.
-  # The version of SDL2 that's included with Ubuntu is outdated (2.0.4 at the time of writing and five years old).
-  # SDL2 needs to be built from sources on Linux.
   - if [ $TRAVIS_OS_NAME == linux ]; then
       cmake --version;
-      sudo apt-get install -y --no-install-recommends libgtk2.0-dev;
+      sudo apt-get install -y --no-install-recommends libsdl2-dev;
       sudo apt-get install -y --no-install-recommends libglew-dev;
+      sudo apt-get install -y --no-install-recommends libgtk2.0-dev;
       sudo apt-get install -y --no-install-recommends libfreeimage-dev;
-      wget http://www.portaudio.com/archives/pa_stable_v190600_20161030.tgz;
-      tar -xf pa_stable_v190600_20161030.tgz;
-      cd portaudio;
-      cmake -DCMAKE_BUILD_TYPE=Release .;
-      sudo make install;
-      cd ..;
-      wget https://www.libsdl.org/release/SDL2-2.0.9.tar.gz;
-      tar -xf SDL2-2.0.9.tar.gz;
-      cd SDL2-2.0.9;
-      ./configure;
-      sudo make install;
-      cd ..;
-      sudo apt-get install libavcodec-dev;
-      sudo apt-get install libavdevice-dev;
-      sudo apt-get install libavfilter-dev;
-      sudo apt-get install libavformat-dev;
-      sudo apt-get install libavresample-dev;
-      sudo apt-get install libswscale-dev;
-      sudo apt-get install libturbojpeg0-dev;
-      sudo apt-get install gobjc++;
-      sudo apt-get install libusb-1.0-0-dev;
-      sudo apt-get install libasound2-dev;
+      sudo apt-get install -y --no-install-recommends libfreetype6-dev;
+      sudo apt-get install -y --no-install-recommends libavcodec-dev;
+      sudo apt-get install -y --no-install-recommends libavdevice-dev;
+      sudo apt-get install -y --no-install-recommends libavfilter-dev;
+      sudo apt-get install -y --no-install-recommends libavformat-dev;
+      sudo apt-get install -y --no-install-recommends libavresample-dev;
+      sudo apt-get install -y --no-install-recommends libswscale-dev;
+      sudo apt-get install -y --no-install-recommends libturbojpeg0-dev;
+      sudo apt-get install -y --no-install-recommends gobjc++;
+      sudo apt-get install -y --no-install-recommends libusb-1.0-0-dev;
+      sudo apt-get install -y --no-install-recommends libasound2-dev;
+      sudo apt-get install -y --no-install-recommends libportaudio19-dev;
     fi
 
 script: 
