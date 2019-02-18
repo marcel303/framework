@@ -547,8 +547,14 @@ namespace MP
 
 		if (ReadPacket(packet))
 		{
+		#if LIBAVCODEC_VERSION_MAJOR >= 57
 			AVPacket * packetCopy = av_packet_clone(&packet);
 			av_packet_unref(&packet);
+		#else
+			AVPacket * packetCopy = av_packet_alloc();
+			if (packetCopy != nullptr)
+				av_packet_ref(packetCopy, &packet);
+		#endif
 			
 			if (!packetCopy)
 				Debug::Print("av_packet_clone failed");
