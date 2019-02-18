@@ -29,6 +29,7 @@
 #include "vfxGraph.h"
 #include "vfxGraphManager.h"
 #include "vfxGraphRealTimeConnection.h"
+#include <algorithm>
 
 VfxGraphInstance::~VfxGraphInstance()
 {
