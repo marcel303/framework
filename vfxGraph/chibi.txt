@@ -65,6 +65,8 @@ library vfxgraph
 	with_platform linux compile_definition ENABLE_WIIMOTE    0 expose
 	with_platform linux compile_definition __LINUX_ALSA__    *
 
+	with_platform linux depend_library turbojpeg find
+
 	with_platform windows compile_definition ENABLE_SYPHON     0 expose
 	with_platform windows compile_definition ENABLE_LEAPMOTION 1 expose
 	with_platform windows compile_definition ENABLE_KINECT2    0 expose
