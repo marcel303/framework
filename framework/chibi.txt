@@ -40,6 +40,7 @@ library framework
 
 	depend_library libsdl2
 
+	depend_library audioio
 	depend_library audiostream
 	depend_library audiostream-vorbis
 	depend_library msdfgen
