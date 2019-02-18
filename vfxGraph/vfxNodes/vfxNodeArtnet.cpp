@@ -26,6 +26,7 @@
 */
 
 #include "artnet.h"
+#include "framework.h"
 #include "oscEndpointMgr.h"
 #include "vfxNodeArtnet.h"
 

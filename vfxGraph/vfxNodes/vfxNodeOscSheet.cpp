@@ -26,6 +26,9 @@
 */
 
 #include "Csv.h"
+#include "framework.h"
+#include "osc/OscOutboundPacketStream.h"
+#include "oscEndpointMgr.h"
 #include "Parse.h"
 #include "StringEx.h"
 #include "vfxNodeOscSheet.h"

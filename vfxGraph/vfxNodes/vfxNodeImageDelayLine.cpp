@@ -25,8 +25,11 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // glTexStorage2D
 //#include "imageDelayLine.h" // todo
 #include "vfxNodeImageDelayLine.h"
+#include <algorithm>
+#include <cmath>
 
 //
 

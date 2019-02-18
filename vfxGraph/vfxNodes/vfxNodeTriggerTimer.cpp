@@ -26,6 +26,7 @@
 */
 
 #include "vfxNodeTriggerTimer.h"
+#include <math.h>
 
 VFX_NODE_TYPE(VfxNodeTriggerTimer)
 {

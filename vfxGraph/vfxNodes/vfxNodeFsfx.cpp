@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h>
 #include "framework.h"
 #include "StringEx.h"
 #include "vfxGraph.h"

@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <SDL2/SDL_opengl.h>
 #include "framework.h"
 #include "jpegLoader.h"
 #include "MemAlloc.h"

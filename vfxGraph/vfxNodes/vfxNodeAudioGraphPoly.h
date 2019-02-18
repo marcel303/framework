@@ -33,6 +33,10 @@
 
 struct AudioGraphInstance;
 
+//
+
+#include "audioVoiceManager.h"
+
 struct VoiceMgr_VoiceGroup : AudioVoiceManager
 {
 	enum Mode

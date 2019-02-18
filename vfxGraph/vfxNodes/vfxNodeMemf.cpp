@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "vfxGraph.h"
 #include "vfxNodeMemf.h"
 
 VFX_NODE_TYPE(VfxNodeMemf)

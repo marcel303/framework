@@ -28,6 +28,7 @@
 #include "Log.h"
 #include "oscEndpointMgr.h"
 #include "osc/OscOutboundPacketStream.h"
+#include "vfxGraph.h"
 #include "vfxNodeOscSend.h"
 
 #define OSC_BUFFER_SIZE 1024

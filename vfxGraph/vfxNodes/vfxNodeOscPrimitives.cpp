@@ -125,7 +125,7 @@ void VfxNodeOscSine::tick(const float dt)
 		}
 	}
 	
-	outputValue = (1.f + std::sin(phaseHelper.phase * 2.f * float(M_PI))) * .5f;
+	outputValue = (1.f + sinf(phaseHelper.phase * 2.f * float(M_PI))) * .5f;
 }
 
 //
@@ -233,7 +233,7 @@ void VfxNodeOscTriangle::tick(const float dt)
 		}
 	}
 	
-	outputValue = 1.f - std::abs(phaseHelper.phase * 2.f - 1.f);
+	outputValue = 1.f - fabsf(phaseHelper.phase * 2.f - 1.f);
 }
 
 //
@@ -330,7 +330,7 @@ void VfxNodeOscRandom::tick(const float dt)
 	{
 		next();
 		
-		phase = std::fmod(phase, 1.f);
+		phase = fmodf(phase, 1.f);
 	}
 }
 
