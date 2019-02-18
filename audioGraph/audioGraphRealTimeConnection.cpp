@@ -155,7 +155,7 @@ void AudioRealTimeConnection::updateAudioValues()
 				
 				if (input->isConnected() && input->type == kAudioPlugType_FloatVec)
 				{
-					setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
+					setCurrentAudioGraphTraversalId(node->lastTickTraversalId);
 					{
 						const AudioFloat & value = input->getAudioFloat();
 						
@@ -185,7 +185,7 @@ void AudioRealTimeConnection::updateAudioValues()
 				
 				if (output->isConnected() && output->type == kAudioPlugType_FloatVec)
 				{
-					setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
+					setCurrentAudioGraphTraversalId(node->lastTickTraversalId);
 					{
 						const AudioFloat & value = output->getAudioFloat();
 						

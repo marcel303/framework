@@ -60,8 +60,7 @@ void AudioNodeVoice::AudioSourceVoiceNode::generate(SAMPLE_ALIGN16 float * __res
 	}
 	else
 	{
-		Assert(g_currentAudioGraph == nullptr);
-		setCurrentAudioGraphTraversalId(g_currentAudioGraph->currentTickTraversalId);
+		setCurrentAudioGraphTraversalId(voiceNode->lastTickTraversalId);
 		{
 			const AudioFloat * audio = voiceNode->getInputAudioFloat(kInput_Audio, &AudioFloat::Zero);
 			
@@ -70,7 +69,6 @@ void AudioNodeVoice::AudioSourceVoiceNode::generate(SAMPLE_ALIGN16 float * __res
 			memcpy(samples, audio->samples, numSamples * sizeof(float));
 		}
 		clearCurrentAudioGraphTraversalId();
-		g_currentAudioGraph = nullptr;
 	}
 }
 
