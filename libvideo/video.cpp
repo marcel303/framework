@@ -337,15 +337,11 @@ void MediaPlayer::updateTexture()
 		{
 			freeTexture();
 			
-		#if USE_LEGACY_OPENGL
-			#error todo : implement legacy code path again. it used GL_LUMINANCE8 before when format is planar
-		#else
 			texture = new GxTexture();
 			texture->allocate(sx, sy, format, true, true);
 			
 			if (format == GX_R8_UNORM)
 				texture->setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
-		#endif
 		}
 		
 		if (texture != nullptr)
