@@ -5,7 +5,7 @@
 
 #define Assert assert
 
-#define Verify(x) do { const bool y = x; Assert(y); } while (false)
+#define Verify(x) do { const bool y = x; (void)y; Assert(y); } while (false)
 
 typedef void (*TimerProc)();
 
