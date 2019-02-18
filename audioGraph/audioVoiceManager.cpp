@@ -28,6 +28,7 @@
 #include "audioVoiceManager.h"
 #include "Debugging.h"
 #include "soundmix.h" // audio buffer routines
+#include <string.h>
 
 void AudioVoice::applyRamping(RampInfo & rampInfo, float * __restrict samples, const int numSamples, const int durationInSamples)
 {
