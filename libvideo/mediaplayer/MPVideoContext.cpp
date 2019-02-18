@@ -146,10 +146,12 @@ namespace MP
 				return false;
 			}
 			
+		#if LIBAVCODEC_VERSION_MAJOR >= 57
 			if (avcodec_parameters_to_context(m_codecContext, codecParams) < 0)
 			{
 				Debug::Print("Video: failed to set codec params on codec context.");
 			}
+		#endif
 			
 			// Open codec.
 			if (avcodec_open2(m_codecContext, m_codec, nullptr) < 0)
