@@ -5,7 +5,7 @@
 #include "particle_framework.h"
 #include "tinyxml2.h"
 #include "ui.h"
-#include <cmath>
+#include <math.h>
 
 #include "StringEx.h" // _s functions
 
@@ -669,15 +669,15 @@ void draw(const bool menuActive, const float sx, const float sy)
 							 p; p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
 				{
 					const float particleLife = 1.f - p->life;
-					//const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+					//const float particleSpeed = sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
 					const float particleSpeed = p->speedScalar;
 
 					ParticleColor color(true);
 					computeParticleColor(g_peiList[i], g_piList[i], particleLife, particleSpeed, color);
 					const float size_div_2 = computeParticleSize(g_peiList[i], g_piList[i], particleLife, particleSpeed) / 2.f;
 
-					const float s = std::sinf(-p->rotation * float(M_PI) / 180.f);
-					const float c = std::cosf(-p->rotation * float(M_PI) / 180.f);
+					const float s = sinf(-p->rotation * float(M_PI) / 180.f);
+					const float c = cosf(-p->rotation * float(M_PI) / 180.f);
 
 					gxColor4fv(color.rgba);
 					gxTexCoord2f(0.f, 1.f); gxVertex2f(p->position[0] + (- c - s) * size_div_2, p->position[1] + (+ s - c) * size_div_2);
@@ -694,7 +694,7 @@ void draw(const bool menuActive, const float sx, const float sy)
 						 p; p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
 			{
 				const float particleLife = 1.f - p->life;
-				const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+				const float particleSpeed = sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
 
 				ParticleColor color;
 				computeParticleColor(g_peiList[i], g_piList[i], particleLife, particleSpeed, color);
