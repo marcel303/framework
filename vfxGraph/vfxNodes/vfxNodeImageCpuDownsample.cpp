@@ -488,7 +488,7 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				
 				int numPixelsProcessed = 0;
 				
-			#ifdef __SSE2__
+			#ifdef __SSSE3__
 				if (((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(srcItr3) | uintptr_t(srcItr4) | uintptr_t(dstItr)) & 0xf) == 0)
 				{
 					numPixelsProcessed = downsampleLine4x4_1channel_SSE(srcItr1, srcItr2, srcItr3, srcItr4, downsampledSx, dstItr);
