@@ -18,8 +18,8 @@
 
 #include <stdio.h>
 
-#define speed_ratio     mi.speed_ratio / 100
-#define pitch_ratio     mi.pitch_ratio / 100
+#define speed_ratio     int64_t(mi.speed_ratio) / 100
+#define pitch_ratio     int64_t(mi.pitch_ratio) / 100
 
 // the core of the mod player.
 void JGMOD_PLAYER::mod_interrupt_proc(void * data)
