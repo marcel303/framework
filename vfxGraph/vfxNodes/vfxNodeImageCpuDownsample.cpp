@@ -30,13 +30,20 @@
 #include <algorithm>
 
 #ifdef __SSE2__
-	#include <immintrin.h>
 	#include <xmmintrin.h>
 
 	#if !__AVX__
 		#ifndef WIN32
-			#warning AVX support disabled. wave field methods will use slower SSE code paths
+			#warning AVX support disabled. image cpu downsample methods will use slower SSE2 code paths
 		#endif
+	#else
+		#include <immintrin.h>
+	#endif
+
+	#ifndef __SSSE3__
+		#warning SSSE3 support disabled. image cpu downsample methods will use slower SSE2 code paths
+	#else
+		#include <tmmintrin.h>
 	#endif
 #endif
 
@@ -283,7 +290,7 @@ void VfxNodeImageCpuDownsample::freeImage()
 	imageOutput.reset();
 }
 
-#ifdef __SSE2__
+#ifdef __SSSE3__
 
 static int downsampleLine2x2_1channel_SSE(
 	const uint8_t * __restrict _srcLine1,
@@ -426,7 +433,7 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				
 				int numPixelsProcessed = 0;
 				
-			#ifdef __SSE2__
+			#ifdef __SSSE3__
 				if (((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(dstItr)) & 0xf) == 0)
 				{
 				#if __AVX__
