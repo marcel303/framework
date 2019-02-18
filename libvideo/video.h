@@ -32,6 +32,10 @@
 #include <atomic>
 #include <stdint.h>
 
+struct SDL_cond;
+struct SDL_Thread;
+struct SDL_mutex;
+
 struct MediaPlayer : public AudioStream
 {
 	struct OpenParams
@@ -73,26 +77,7 @@ struct MediaPlayer : public AudioStream
 		#endif
 		}
 
-		~Context()
-		{
-			if (mpTickEvent)
-			{
-				SDL_DestroyCond(mpTickEvent);
-				mpTickEvent = nullptr;
-			}
-
-			if (mpTickMutex)
-			{
-				SDL_DestroyMutex(mpTickMutex);
-				mpTickMutex = nullptr;
-			}
-			
-			if (mpSeekMutex)
-			{
-				SDL_DestroyMutex(mpSeekMutex);
-				mpSeekMutex = nullptr;
-			}
-		}
+		~Context();
 
 		void tick();
 

@@ -38,6 +38,31 @@ static const int kMaxVideoThreads = 64;
 
 static thread_local SDL_threadID s_mpThreadId = -1;
 
+//
+
+MediaPlayer::Context::~Context()
+{
+	if (mpTickEvent)
+	{
+		SDL_DestroyCond(mpTickEvent);
+		mpTickEvent = nullptr;
+	}
+
+	if (mpTickMutex)
+	{
+		SDL_DestroyMutex(mpTickMutex);
+		mpTickMutex = nullptr;
+	}
+	
+	if (mpSeekMutex)
+	{
+		SDL_DestroyMutex(mpSeekMutex);
+		mpSeekMutex = nullptr;
+	}
+}
+
+//
+
 static int ExecMediaPlayerThread(void * param)
 {
 	MediaPlayer::Context * context = (MediaPlayer::Context*)param;
