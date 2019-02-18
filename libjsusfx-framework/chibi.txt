@@ -4,6 +4,7 @@ library jsusfx-wdl
 
 	#../libjsusfx/src/WDL/fft.c
 
+	with_platform linux add_files ../libjsusfx/src/WDL/eel2/asm-nseel-x64.o
 	with_platform macos add_files ../libjsusfx/src/WDL/eel2/asm-nseel-x64-macho.o
 	
 	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
