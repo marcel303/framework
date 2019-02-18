@@ -48,6 +48,10 @@ extern "C"
 
 #define DO_DECODE_BUFFER_OPTIMIZE 0
 
+#if !defined(LIBAVCODEC_VERSION_MAJOR)
+	#error LIBAVCODEC_VERSION_MAJOR not defined
+#endif
+
 namespace MP
 {
 	VideoContext::VideoContext()
@@ -106,6 +110,9 @@ namespace MP
 		Assert(m_videoBuffer == nullptr);
 		m_videoBuffer = new VideoBuffer();
 
+		AVCodecID codec_id = AV_CODEC_ID_NONE;
+		
+	#if LIBAVCODEC_VERSION_MAJOR >= 57
 		AVCodecParameters * codecParams = context->GetFormatContext()->streams[m_streamIndex]->codecpar;
 		if (!codecParams)
 		{
@@ -113,9 +120,14 @@ namespace MP
 			return false;
 		}
 		
+		codec_id = codecParams->codec_id;
+	#else
+		codec_id = context->GetFormatContext()->streams[m_streamIndex]->codec->codec_id;
+	#endif
+		
 		// Get codec for video stream.
 		Assert(m_codec == nullptr);
-		m_codec = avcodec_find_decoder(codecParams->codec_id);
+		m_codec = avcodec_find_decoder(codec_id);
 		if (!m_codec)
 		{
 			Debug::Print("Video: failed to find decoder.");
