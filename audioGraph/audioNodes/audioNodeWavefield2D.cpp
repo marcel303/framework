@@ -80,7 +80,7 @@ AUDIO_RESOURCE_TYPE(AudioResource_Wavefield2D, "wavefield.2d");
 
 //
 
-#include "graph.h"
+#include "graphEdit.h"
 #include "Noise.h"
 #include "ui.h"
 

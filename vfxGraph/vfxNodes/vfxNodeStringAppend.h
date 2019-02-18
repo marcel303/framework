@@ -27,6 +27,9 @@
 
 #pragma once
 
+#include "vfxNodeBase.h"
+#include <string>
+
 struct VfxNodeStringAppend : VfxNodeBase
 {
 	enum Input

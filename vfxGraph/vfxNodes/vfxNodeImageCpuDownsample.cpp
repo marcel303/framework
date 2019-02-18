@@ -43,6 +43,7 @@
 	#ifndef __SSSE3__
 		#warning SSSE3 support disabled. image cpu downsample methods will use slower SSE2 code paths
 	#else
+		#include <immintrin.h> // fixme : _mm_extract_epi32 : argh! this is SSE 4.1 !
 		#include <tmmintrin.h>
 	#endif
 #endif
