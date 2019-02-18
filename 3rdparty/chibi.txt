@@ -4,10 +4,11 @@ with_platform windows add libsdl2-win32
 
 with_platform macos add libetherdream
 
+add midifile
+add msdfgen
 add utf8rewind
 add tinyxml2
 add tinyxml2-helpers
-add msdfgen
 
 library imgui
 	header_path imgui expose
