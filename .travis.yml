@@ -32,7 +32,7 @@ before_install:
       sudo apt-get install -y --no-install-recommends gobjc++;
       sudo apt-get install -y --no-install-recommends libusb-1.0-0-dev;
       sudo apt-get install -y --no-install-recommends libasound2-dev;
-      sudo apt-get install -y --no-install-recommends libportaudio19-dev;
+      sudo apt-get install -y --no-install-recommends portaudio19-dev;
     fi
 
 script: 
