@@ -41,6 +41,10 @@ extern "C"
 
 #define QUEUE_SIZE (4 * 3 * 10)
 
+#if !defined(LIBAVCODEC_VERSION_MAJOR)
+	#error LIBAVCODEC_VERSION_MAJOR not defined
+#endif
+
 namespace MP
 {
 	AudioContext::AudioContext()
@@ -82,6 +86,9 @@ namespace MP
 		Assert(m_audioBuffer == nullptr);
 		m_audioBuffer = new AudioBuffer();
 		
+		AVCodecID codec_id = AV_CODEC_ID_NONE;
+		
+	#if LIBAVCODEC_VERSION_MAJOR >= 57
 		AVCodecParameters * audioParams = context->GetFormatContext()->streams[m_streamIndex]->codecpar;
 		if (!audioParams)
 		{
@@ -89,8 +96,13 @@ namespace MP
 			return false;
 		}
 		
+		codec_id = audioParams->codec_id;
+	#else
+		codec_id = context->GetFormatContext()->streams[m_streamIndex]->codec->codec_id;
+	#endif
+	
 		// Get codec for audio stream.
-		m_codec = avcodec_find_decoder(audioParams->codec_id);
+		m_codec = avcodec_find_decoder(codec_id);
 		if (!m_codec)
 		{
 			Debug::Print("Audio: unable to find codec.");
@@ -107,11 +119,13 @@ namespace MP
 			return false;
 		}
 		
+	#if LIBAVCODEC_VERSION_MAJOR >= 57
 		if (avcodec_parameters_to_context(m_codecContext, audioParams) < 0)
 		{
 			Debug::Print("Audio: failed to set params on codec context.");
 			return false;
 		}
+	#endif
 
 		// Open codec.
 		if (avcodec_open2(m_codecContext, m_codec, nullptr) < 0)
@@ -125,15 +139,23 @@ namespace MP
 		Debug::Print("Audio: channels: %d.", m_codecContext->channels);
 		Debug::Print("Audio: framesize: %d.", m_codecContext->frame_size); // Number of samples/packet.
 		
+	#if LIBAVCODEC_VERSION_MAJOR >= 57
+		const int64_t outputChannelLayout =
+			outputMode == kAudioOutputMode_Mono ? AV_CH_LAYOUT_MONO :
+			outputMode == kAudioOutputMode_Stereo ? AV_CH_LAYOUT_STEREO :
+			audioParams->channel_layout;
+	#else
 		const int64_t outputSampleFormat =
 			outputMode == kAudioOutputMode_Mono ? AV_CH_LAYOUT_MONO :
 			outputMode == kAudioOutputMode_Stereo ? AV_CH_LAYOUT_STEREO :
-			audioParams->format;
-		
+			m_codecContext->channel_layout;
+	#endif
+
+	#if LIBAVCODEC_VERSION_MAJOR >= 57
 		Assert(m_swrContext == nullptr);
 		m_swrContext = swr_alloc_set_opts(nullptr,
 			// output
-			outputSampleFormat,
+			outputChannelLayout,
 			AV_SAMPLE_FMT_S16,
 			// input
 			m_codecContext->sample_rate,
@@ -142,6 +164,20 @@ namespace MP
 			audioParams->sample_rate,
 			// log
 			0, nullptr);
+	#else
+		Assert(m_swrContext == nullptr);
+		m_swrContext = swr_alloc_set_opts(nullptr,
+			// output
+			outputChannelLayout,
+			AV_SAMPLE_FMT_S16,
+			// input
+			m_codecContext->sample_rate,
+			m_codecContext->channel_layout,
+			m_codecContext->sample_fmt,
+			m_codecContext->sample_rate,
+			// log
+			0, nullptr);
+	#endif
 		
 		if (!m_swrContext)
 		{
@@ -156,8 +192,8 @@ namespace MP
 		}
 		
 		m_outputChannelCount =
-			outputSampleFormat == AV_CH_LAYOUT_MONO ? 1 :
-			outputSampleFormat == AV_CH_LAYOUT_STEREO ? 2 :
+			outputChannelLayout == AV_CH_LAYOUT_MONO ? 1 :
+			outputChannelLayout == AV_CH_LAYOUT_STEREO ? 2 :
 			m_codecContext->channels;
 		
 		Debug::Print("Audio: output channels: %d.", m_outputChannelCount);
