@@ -145,7 +145,7 @@ namespace MP
 			outputMode == kAudioOutputMode_Stereo ? AV_CH_LAYOUT_STEREO :
 			audioParams->channel_layout;
 	#else
-		const int64_t outputSampleFormat =
+		const int64_t outputChannelLayout =
 			outputMode == kAudioOutputMode_Mono ? AV_CH_LAYOUT_MONO :
 			outputMode == kAudioOutputMode_Stereo ? AV_CH_LAYOUT_STEREO :
 			m_codecContext->channel_layout;

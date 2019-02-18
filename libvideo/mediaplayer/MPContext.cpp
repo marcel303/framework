@@ -44,6 +44,10 @@ extern "C"
 
 #define STREAM_NOT_FOUND 0xFFFF
 
+#if !defined(LIBAVCODEC_VERSION_MAJOR)
+	#error LIBAVCODEC_VERSION_MAJOR not defined
+#endif
+
 namespace MP
 {
 	Context::Context()
@@ -496,6 +500,7 @@ namespace MP
 			// Show stream info.
 			av_dump_format(m_formatContext, i, m_filename.c_str(), false);
 			
+		#if LIBAVCODEC_VERSION_MAJOR >= 57
 			if (m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
 			{
 				if (out_audioStreamIndex == STREAM_NOT_FOUND || audioStreamIndex == desiredAudioStreamIndex)
@@ -503,10 +508,25 @@ namespace MP
 				
 				audioStreamIndex++;
 			}
+		#else
+			if (m_formatContext->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
+			{
+				if (out_audioStreamIndex == STREAM_NOT_FOUND || audioStreamIndex == desiredAudioStreamIndex)
+					out_audioStreamIndex = i;
+				
+				audioStreamIndex++;
+			}
+		#endif
 
+		#if LIBAVCODEC_VERSION_MAJOR >= 57
 			if (out_videoStreamIndex == STREAM_NOT_FOUND)
 				if (m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
 					out_videoStreamIndex = i;
+		#else
+			if (out_videoStreamIndex == STREAM_NOT_FOUND)
+				if (m_formatContext->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+					out_videoStreamIndex = i;
+		#endif
 		}
 
 		if (out_audioStreamIndex == STREAM_NOT_FOUND)
