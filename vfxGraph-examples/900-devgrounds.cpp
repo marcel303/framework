@@ -362,7 +362,7 @@ int main(int argc, char * argv[])
 						vfxGraph = nullptr;
 						
 						auto t2 = g_TimerRT.TimeUS_get();
-						printf("construct %003d + tick took %dus\n", i, int(t2 - t1));
+						printf("construct %03d + tick took %dus\n", i, int(t2 - t1));
 						
 						++i;
 					}
