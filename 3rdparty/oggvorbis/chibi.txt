@@ -1,0 +1,7 @@
+library oggvorbis
+
+	add_files oggvorbis.c oggvorbis.h
+
+	header_path . expose
+
+	header_path oggvorbis expose

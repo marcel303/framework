@@ -1,16 +1,37 @@
-library framework-audiostream
+library audiostream
 
 	depend_library libgg
 
-	scan_files c   path audiostream          group audiostream
-	scan_files cpp path audiostream          group audiostream
+	add_files audiostream/AudioMixer.cpp
+	add_files audiostream/AudioMixer.h
 
-	scan_files h path audiostream                    group audiostream
-	scan_files h path audiostream/oggvorbis traverse group audiostream/oggvorbis
+	add_files audiostream/AudioStream.h
 
 	header_path . expose
 
-	header_path audiostream/oggvorbis expose
+library audiostream-vorbis
+	
+	depend_library audiostream
+	depend_library oggvorbis
+
+	add_files audiostream/AudioStreamVorbis.cpp
+	add_files audiostream/AudioStreamVorbis.h
+
+	header_path . expose
+
+library audioio
+
+# todo : add WAVE audio stream library and depend on it here
+
+	depend_library audiostream
+	depend_library audiostream-vorbis
+
+# todo : move AudioIO file to its own directory
+
+	add_files audiostream/AudioIO.cpp
+	add_files audiostream/AudioIO.h
+
+	header_path . expose
 
 library framework
 
@@ -19,12 +40,12 @@ library framework
 
 	depend_library libsdl2
 
+	depend_library audiostream
+	depend_library audiostream-vorbis
 	depend_library msdfgen
 	depend_library tinyxml2
 	depend_library tinyxml2-helpers
 	depend_library utf8rewind
-
-	depend_library framework-audiostream
 
 	scan_files cpp
 	scan_files c   path audiooutput          group audiooutput

@@ -6,7 +6,7 @@ library libdelaunay
 
 library binaural
 
-	depend_library framework-audiostream
+	depend_library audioio
 	depend_library libdelaunay
 	depend_library libgg
 
@@ -17,10 +17,11 @@ library binaural
 
 library audiograph-core shared
 
-	depend_library framework-audiostream
+	depend_library audioio
 	depend_library libavgraph-core
 	depend_library libgg
 
+# todo : remove TARGET_IS_AUDIOGRAPH_CORE
 	compile_definition TARGET_IS_AUDIOGRAPH_CORE *
 
 	header_path core expose

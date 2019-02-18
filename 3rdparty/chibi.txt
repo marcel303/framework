@@ -6,6 +6,7 @@ with_platform macos add libetherdream
 
 add midifile
 add msdfgen
+add oggvorbis
 add utf8rewind
 add tinyxml2
 add tinyxml2-helpers
