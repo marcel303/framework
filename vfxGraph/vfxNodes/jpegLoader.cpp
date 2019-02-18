@@ -324,7 +324,7 @@ static bool saveImage_turbojpegInternal(const void * srcBuffer, const int srcBuf
 		
 		unsigned long dstBufferSize2 = dstBufferSize;
 		
-		if (tjCompress2(h, (const unsigned char *)srcBuffer, srcSx, xPitch, srcSy, pixelFormat, (unsigned char**)&dstBuffer, &dstBufferSize2, subsamp, quality, flags) < 0)
+		if (tjCompress2(h, (unsigned char *)srcBuffer, srcSx, xPitch, srcSy, pixelFormat, (unsigned char**)&dstBuffer, &dstBufferSize2, subsamp, quality, flags) < 0)
 		{
 			LOG_ERR("turbojpeg: %s", tjGetErrorStr());
 			
