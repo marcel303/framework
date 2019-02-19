@@ -498,21 +498,16 @@ void AudioPlug::connectTo(AudioPlug & dst)
 	{
 		LOG_ERR("node connection failed. type mismatch", 0);
 	}
+	else if (dst.type == kAudioPlugType_FloatVec)
+	{
+		AudioFloatArray::Elem elem;
+		elem.audioFloat = (AudioFloat*)dst.mem;
+		floatArray.elems.push_back(elem);
+		floatArray.lastUpdateTick = -1;
+	}
 	else
 	{
-	#if MULTIPLE_AUDIO_INPUT
-		if (dst.type == kAudioPlugType_FloatVec)
-		{
-			AudioFloatArray::Elem elem;
-			elem.audioFloat = (AudioFloat*)dst.mem;
-			floatArray.elems.push_back(elem);
-			floatArray.lastUpdateTick = -1;
-		}
-		else
-	#endif
-		{
-			mem = dst.mem;
-		}
+		mem = dst.mem;
 	}
 }
 
@@ -522,18 +517,13 @@ void AudioPlug::connectToImmediate(void * dstMem, const AudioPlugType dstType)
 	{
 		LOG_ERR("node connection failed. type mismatch", 0);
 	}
+	else if (dstType == kAudioPlugType_FloatVec)
+	{
+		floatArray.immediateValue = (AudioFloat*)dstMem;
+	}
 	else
 	{
-	#if MULTIPLE_AUDIO_INPUT
-		if (dstType == kAudioPlugType_FloatVec)
-		{
-			floatArray.immediateValue = (AudioFloat*)dstMem;
-		}
-		else
-	#endif
-		{
-			mem = dstMem;
-		}
+		mem = dstMem;
 	}
 }
 
@@ -742,9 +732,7 @@ void createAudioValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitio
 		typeDefinition.typeName = "audioValue";
 		typeDefinition.editor = "textbox_float";
 		typeDefinition.visualizer = "channels";
-	#if MULTIPLE_AUDIO_INPUT
 		typeDefinition.multipleInputs = true;
-	#endif
 		typeDefinitionLibrary.valueTypeDefinitions[typeDefinition.typeName] = typeDefinition;
 	}
 	

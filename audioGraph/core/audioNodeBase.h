@@ -33,8 +33,6 @@
 #include <string>
 #include <vector>
 
-#define MULTIPLE_AUDIO_INPUT 1
-
 struct Graph_TypeDefinitionLibrary;
 struct GraphEdit_ResourceEditorBase;
 struct GraphNode;
@@ -123,8 +121,6 @@ struct AudioFloat
 #endif
 };
 
-#if MULTIPLE_AUDIO_INPUT
-
 struct AudioFloatArray
 {
 	struct Elem
@@ -162,8 +158,6 @@ struct AudioFloatArray
 	AudioFloat * get();
 };
 
-#endif
-
 enum AudioPlugType
 {
 	kAudioPlugType_None,
@@ -182,17 +176,13 @@ struct AudioPlug
 	bool isTriggered;
 	void * mem;
 	
-#if MULTIPLE_AUDIO_INPUT
 	mutable AudioFloatArray floatArray;
-#endif
 
 	AudioPlug()
 		: type(kAudioPlugType_None)
 		, isTriggered(false)
 		, mem(nullptr)
-	#if MULTIPLE_AUDIO_INPUT
 		, floatArray()
-	#endif
 	{
 	}
 	
@@ -203,9 +193,7 @@ struct AudioPlug
 	{
 		mem = nullptr;
 		
-	#if MULTIPLE_AUDIO_INPUT
 		floatArray.immediateValue = nullptr;
-	#endif
 	}
 	
 	bool isConnected() const
@@ -213,12 +201,10 @@ struct AudioPlug
 		if (mem != nullptr)
 			return true;
 		
-	#if MULTIPLE_AUDIO_INPUT
 		if (floatArray.elems.empty() == false)
 			return true;
 		if (floatArray.immediateValue != nullptr)
 			return true;
-	#endif
 	
 		return false;
 	}
@@ -250,10 +236,10 @@ struct AudioPlug
 	const AudioFloat & getAudioFloat() const
 	{
 		Assert(type == kAudioPlugType_FloatVec);
-	#if MULTIPLE_AUDIO_INPUT
+	
 		if (mem == nullptr)
 			return *floatArray.get();
-	#endif
+	
 		return *((AudioFloat*)mem);
 	}
 	
@@ -292,10 +278,10 @@ struct AudioPlug
 	AudioFloat & getRwAudioFloat()
 	{
 		Assert(type == kAudioPlugType_FloatVec);
-	#if MULTIPLE_AUDIO_INPUT
+	
 		if (mem == nullptr)
 			return *floatArray.get();
-	#endif
+	
 		return *((AudioFloat*)mem);
 	}
 };
