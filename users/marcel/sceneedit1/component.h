@@ -30,6 +30,8 @@ struct ComponentBase
 	virtual bool init() { return true; }
 	
 	virtual std::type_index typeIndex() = 0;
+	
+	virtual void propertyChanged(void * address) { };
 };
 
 template <typename T>

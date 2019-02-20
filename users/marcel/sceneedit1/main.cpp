@@ -301,7 +301,8 @@ struct SceneEditor
 								
 								auto & value = property->getter(component);
 								
-								ImGui::Checkbox(property->name.c_str(), &value);
+								if (ImGui::Checkbox(property->name.c_str(), &value))
+									component->propertyChanged(&value);
 							}
 							break;
 						case kComponentPropertyType_Int32:
@@ -311,9 +312,15 @@ struct SceneEditor
 								auto & value = property->getter(component);
 								
 								if (property->hasLimits)
-									ImGui::SliderInt(property->name.c_str(), &value, property->min, property->max);
+								{
+									if (ImGui::SliderInt(property->name.c_str(), &value, property->min, property->max))
+										component->propertyChanged(&value);
+								}
 								else
-									ImGui::InputInt(property->name.c_str(), &value);
+								{
+									if (ImGui::InputInt(property->name.c_str(), &value))
+										component->propertyChanged(&value);
+								}
 							}
 							break;
 						case kComponentPropertyType_Float:
@@ -323,9 +330,15 @@ struct SceneEditor
 								auto & value = property->getter(component);
 								
 								if (property->hasLimits)
-									ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential);
+								{
+									if (ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential))
+										component->propertyChanged(&value);
+								}
 								else
-									ImGui::InputFloat(property->name.c_str(), &value);
+								{
+									if (ImGui::InputFloat(property->name.c_str(), &value))
+										component->propertyChanged(&value);
+								}
 							}
 							break;
 						case kComponentPropertyType_Vec2:
@@ -334,7 +347,8 @@ struct SceneEditor
 								
 								auto & value = property->getter(component);
 					
-								ImGui::InputFloat2(property->name.c_str(), &value[0]);
+								if (ImGui::InputFloat2(property->name.c_str(), &value[0]))
+									component->propertyChanged(&value);
 							}
 							break;
 						case kComponentPropertyType_Vec3:
@@ -343,7 +357,8 @@ struct SceneEditor
 								
 								auto & value = property->getter(component);
 					
-								ImGui::InputFloat3(property->name.c_str(), &value[0]);
+								if (ImGui::InputFloat3(property->name.c_str(), &value[0]))
+									component->propertyChanged(&value);
 							}
 							break;
 						case kComponentPropertyType_Vec4:
@@ -352,7 +367,8 @@ struct SceneEditor
 								
 								auto & value = property->getter(component);
 					
-								ImGui::InputFloat4(property->name.c_str(), &value[0]);
+								if (ImGui::InputFloat4(property->name.c_str(), &value[0]))
+									component->propertyChanged(&value);
 							}
 							break;
 						case kComponentPropertyType_String:
@@ -365,7 +381,11 @@ struct SceneEditor
 								strcpy_s(buffer, sizeof(buffer), value.c_str());
 								
 								if (ImGui::InputText(property->name.c_str(), buffer, sizeof(buffer)))
+								{
 									property->setter(component, buffer);
+									
+									component->propertyChanged(&value);
+								}
 							}
 							break;
 						case kComponentPropertyType_AngleAxis:
@@ -374,9 +394,11 @@ struct SceneEditor
 								
 								auto & value = property->getter(component);
 								
-								ImGui::SliderAngle(property->name.c_str(), &value.angle);
+								if (ImGui::SliderAngle(property->name.c_str(), &value.angle))
+									component->propertyChanged(&value);
 								ImGui::PushID(&value.axis);
-								ImGui::SliderFloat3(property->name.c_str(), &value.axis[0], -1.f, +1.f);
+								if (ImGui::SliderFloat3(property->name.c_str(), &value.axis[0], -1.f, +1.f))
+									component->propertyChanged(&value);
 								ImGui::PopID();
 							}
 							break;
