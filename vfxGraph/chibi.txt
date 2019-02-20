@@ -12,6 +12,7 @@ library vfxgraph
 	depend_library rtmidi
 	
 # todo : add with_library chibi directive ?
+	with_platform linux depend_library libps3eye
 	with_platform macos depend_library libps3eye
 
 	header_path .       expose
@@ -61,7 +62,7 @@ library vfxgraph
 	with_platform linux compile_definition ENABLE_LEAPMOTION 0 expose
 	with_platform linux compile_definition ENABLE_KINECT2    0 expose
 	with_platform linux compile_definition ENABLE_DEEPBELIEF 0 expose
-	with_platform linux compile_definition ENABLE_PS3EYE     0 expose
+	with_platform linux compile_definition ENABLE_PS3EYE     1 expose
 	with_platform linux compile_definition ENABLE_WIIMOTE    0 expose
 	with_platform linux compile_definition __LINUX_ALSA__    *
 
