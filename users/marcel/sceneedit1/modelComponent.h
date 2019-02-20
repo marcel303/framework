@@ -18,17 +18,19 @@ struct ModelComponent : Component<ModelComponent>
 	Vec3 aabbMin;
 	Vec3 aabbMax;
 	
-	Mat4x4 _objectToWorld = Mat4x4(true); // todo : remove. use transform stored in SceneNode
-	
 	virtual bool init() override final;
 	virtual void tick(const float dt) override final;
 	
 	void draw(const Mat4x4 & objectToWorld) const;
 };
 
+//
+
+struct Scene;
+
 struct ModelComponentMgr : ComponentMgr<ModelComponent>
 {
-	void draw() const;
+	void draw(const Scene & scene) const;
 };
 
 #if defined(DEFINE_COMPONENT_TYPES)

@@ -3,8 +3,6 @@
 #include "scene.h"
 #include "transformComponent.h"
 
-#include "modelComponent.h" // fixme : hack to set global transform on model component
-
 void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode & node, const Mat4x4 & globalTransform) const
 {
 	auto transformComp = node.components.find<TransformComponent>();
@@ -21,13 +19,6 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 	else
 	{
 		node.objectToWorld = globalTransform;
-	}
-	
-	auto modelComp = node.components.find<ModelComponent>();
-	
-	if (modelComp != nullptr)
-	{
-		modelComp->_objectToWorld = node.objectToWorld;
 	}
 	
 	for (auto & childNodeId : node.childNodeIds)

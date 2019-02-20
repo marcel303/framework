@@ -39,10 +39,25 @@ void ModelComponent::draw(const Mat4x4 & objectToWorld) const
 
 //
 
-void ModelComponentMgr::draw() const
+#include "scene.h"
+#include "transformComponent.h"
+
+void ModelComponentMgr::draw(const Scene & scene) const
 {
-	for (auto i = head; i != nullptr; i = i->next)
+#if 1
+	for (auto & node_itr : scene.nodes)
+	{
+		auto & node = node_itr.second;
+		
+		auto * modelComp = node->components.find<ModelComponent>();
+		
+		if (modelComp != nullptr)
+			modelComp->draw(node->objectToWorld);
+	}
+#else
+	for (auto * i = head; i != nullptr; i = i->next)
 	{
 		i->draw(i->_objectToWorld);
 	}
+#endif
 }

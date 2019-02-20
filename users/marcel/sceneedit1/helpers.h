@@ -16,7 +16,7 @@ extern std::vector<ComponentTypeBase*> g_componentTypes;
 
 //
 
-#include "resource.h" // fixme
+#include "resource.h" // fixme : move resource helpers somewhere else
 
 extern ResourceDatabase g_resourceDatabase;
 
