@@ -13,8 +13,22 @@ bool ModelComponent::init()
 
 void ModelComponent::tick(const float dt)
 {
-	aabbMin = modelAabbMin * scale;
-	aabbMax = modelAabbMax * scale;
+}
+
+void ModelComponent::propertyChanged(void * address)
+{
+	if (address == &filename)
+	{
+		Model(filename.c_str()).calculateAABB(modelAabbMin, modelAabbMax, true);
+		
+		aabbMin = modelAabbMin * scale;
+		aabbMax = modelAabbMax * scale;
+	}
+	else if (address == &scale)
+	{
+		aabbMin = modelAabbMin * scale;
+		aabbMax = modelAabbMax * scale;
+	}
 }
 
 void ModelComponent::draw(const Mat4x4 & objectToWorld) const

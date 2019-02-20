@@ -21,6 +21,8 @@ struct ModelComponent : Component<ModelComponent>
 	virtual bool init() override final;
 	virtual void tick(const float dt) override final;
 	
+	virtual void propertyChanged(void * address) override final;
+	
 	void draw(const Mat4x4 & objectToWorld) const;
 };
 
