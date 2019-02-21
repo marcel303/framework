@@ -10,9 +10,12 @@
 #include "StringEx.h"
 
 #include "helpers.h"
+#include "template.h"
 
 #include <set>
 #include <typeindex>
+
+extern void test_templates();
 
 static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
@@ -507,7 +510,7 @@ struct SceneEditor
 		ImGui::PopID();
 	}
 	
-	void addNodeFromTemplate(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
+	void addNodeFromTemplate_v1(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
 	{
 		SceneNode & node = *new SceneNode();
 		
@@ -548,6 +551,63 @@ struct SceneEditor
 			auto & parentNode = *parentNode_itr->second;
 			
 			parentNode.childNodeIds.push_back(node.id);
+		}
+	}
+	
+	void addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
+	{
+		Template t;
+		
+		if (!loadTemplateWithOverlaysFromFile("textfiles/base-entity-v2-overlay.txt", t, false))
+			return;
+		
+		//
+		
+		SceneNode * node = new SceneNode();
+		
+		node->id = scene.allocNodeId();
+		node->parentId = parentId;
+		node->displayName = String::FormatC("Node %d", node->id);
+		
+		instantiateComponentsFromTemplate(t, node->components);
+		
+		bool init_ok = true;
+		
+		for (auto * component = node->components.head; component != nullptr && init_ok; component = component->next_in_set)
+		{
+			init_ok &= component->init();
+		}
+		
+		if (init_ok == false)
+		{
+			logError("failed to initialize node components");
+			
+			node->freeComponents();
+			
+			delete node;
+			node = nullptr;
+			
+			return;
+		}
+		
+		{
+			auto transformComp = node->components.find<TransformComponent>();
+			
+			transformComp->position = position;
+			transformComp->angleAxis = angleAxis;
+		}
+		
+		scene.nodes[node->id] = node;
+		
+		//
+		
+		auto parentNode_itr = scene.nodes.find(parentId);
+		Assert(parentNode_itr != scene.nodes.end());
+		if (parentNode_itr != scene.nodes.end())
+		{
+			auto & parentNode = *parentNode_itr->second;
+			
+			parentNode.childNodeIds.push_back(node->id);
 		}
 	}
 	
@@ -642,13 +702,13 @@ struct SceneEditor
 									
 									const Vec3 groundPosition_parent = parentNode.objectToWorld.CalcInv().Mul4(groundPosition);
 									
-									addNodeFromTemplate(groundPosition_parent, AngleAxis(), parentNodeId);
+									addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
 								}
 							}
 						}
 						else
 						{
-							addNodeFromTemplate(groundPosition, AngleAxis(), scene.rootNodeId);
+							addNodeFromTemplate_v2(groundPosition, AngleAxis(), scene.rootNodeId);
 						}
 					}
 				}
@@ -854,6 +914,11 @@ int main(int argc, char * argv[])
 
 	framework.enableDepthBuffer = true;
 	framework.allowHighDpi = false;
+
+#if 0
+	test_templates();
+	return 0;
+#endif
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
