@@ -1,0 +1,9 @@
+transform
+	position
+		1 2 3
+
+rotate-transform
+	id
+		rotate-transform
+	speed
+		10

@@ -181,6 +181,56 @@ static bool parseTemplateFromLines(const std::vector<std::string> & lines, Templ
 	return true;
 }
 
+static void overlayTemplate(Template & target, const Template & overlay)
+{
+	for (auto & overlay_component : overlay.components)
+	{
+		TemplateComponent * target_component = nullptr;
+		
+		for (auto & target_component_itr : target.components)
+		{
+			if (target_component_itr.type_name == overlay_component.type_name &&
+				target_component_itr.id == overlay_component.id)
+				target_component = &target_component_itr;
+		}
+		
+		if (target_component == nullptr)
+		{
+			// component doesn't exist yet. add it
+			
+			target.components.push_back(overlay_component);
+		}
+		else
+		{
+			// component already exists. overlay properties
+			
+			for (auto & overlay_property : overlay_component.properties)
+			{
+				TemplateComponentProperty * target_property = nullptr;
+				
+				for (auto & target_property_itr : target_component->properties)
+				{
+					if (target_property_itr.name == overlay_property.name)
+						target_property = &target_property_itr;
+				}
+				
+				if (target_property == nullptr)
+				{
+					// propertoes doesn't exist yet. add it
+					
+					target_component->properties.push_back(overlay_property);
+				}
+				else
+				{
+					// property already exists. overlay value
+					
+					target_property->value = overlay_property.value;
+				}
+			}
+		}
+	}
+}
+
 static bool instantiateComponentsFromTemplate(const Template & t)
 {
 	for (auto & component_template : t.components)
@@ -224,6 +274,26 @@ static bool instantiateComponentsFromTemplate(const Template & t)
 	return true;
 }
 
+static bool loadTemplateFromFile(const char * filename, Template & t)
+{
+	std::vector<std::string> lines;
+	TextIO::LineEndings lineEndings;
+	
+	if (!TextIO::load(filename, lines, lineEndings))
+	{
+		logError("failed to load text file");
+		return false;
+	}
+	
+	if (!parseTemplateFromLines(lines, t))
+	{
+		logError("failed to parse template from lines");
+		return false;
+	}
+	
+	return true;
+}
+
 void test_templates()
 {
 	if (!framework.init(640, 480))
@@ -231,16 +301,17 @@ void test_templates()
 
 	registerComponentTypes();
 	
-	std::vector<std::string> lines;
-	TextIO::LineEndings lineEndings;
-	
-	if (!TextIO::load("textfiles/base-entity-v1.txt", lines, lineEndings))
-		logError("failed to load text file");
-	
 	Template t;
 	
-	if (!parseTemplateFromLines(lines, t))
-		logError("failed to parse template from lines");
+	if (!loadTemplateFromFile("textfiles/base-entity-v1.txt", t))
+		logError("failed to load template from file");
+	
+	Template overlay;
+	
+	if (!loadTemplateFromFile("textfiles/base-entity-v1-overlay.txt", overlay))
+		logError("failed to load template from file");
+	
+	overlayTemplate(t, overlay);
 	
 	if (!instantiateComponentsFromTemplate(t))
 		logError("failed to instantiate components from template");
