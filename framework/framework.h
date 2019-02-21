@@ -39,10 +39,11 @@
 #include "Debugging.h"
 #include "gx_texture.h"
 #include "Mat4x4.h"
+#include "Vec2.h"
 #include "Vec3.h"
 #include "Vec4.h"
 #include <float.h> // FLT_MAX (sprite draw)
-#include <SDL2/SDL.h>
+#include <SDL2/SDL.h> // SDL_Event
 #include <string>
 #include <vector>
 
