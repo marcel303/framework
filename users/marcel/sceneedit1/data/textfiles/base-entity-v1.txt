@@ -1,0 +1,11 @@
+transform
+
+rotate-transform
+	id
+		rotate-transform
+
+model
+	filename
+		model.txt
+	scale
+		0.01
