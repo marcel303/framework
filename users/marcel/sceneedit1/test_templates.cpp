@@ -181,7 +181,7 @@ static bool parseTemplateFromLines(const std::vector<std::string> & lines, Templ
 	return true;
 }
 
-static void overlayTemplate(Template & target, const Template & overlay)
+static bool overlayTemplate(Template & target, const Template & overlay, const bool allowAddingComponents, const bool allowAddingProperties)
 {
 	for (auto & overlay_component : overlay.components)
 	{
@@ -196,9 +196,19 @@ static void overlayTemplate(Template & target, const Template & overlay)
 		
 		if (target_component == nullptr)
 		{
-			// component doesn't exist yet. add it
-			
-			target.components.push_back(overlay_component);
+			if (allowAddingComponents == false)
+			{
+				logError("component doesn't exist: %s, id=%s",
+					overlay_component.type_name.c_str(),
+					overlay_component.id.c_str());
+				return false;
+			}
+			else
+			{
+				// component doesn't exist yet. add it
+				
+				target.components.push_back(overlay_component);
+			}
 		}
 		else
 		{
@@ -216,9 +226,20 @@ static void overlayTemplate(Template & target, const Template & overlay)
 				
 				if (target_property == nullptr)
 				{
-					// propertoes doesn't exist yet. add it
-					
-					target_component->properties.push_back(overlay_property);
+					if (allowAddingProperties == false)
+					{
+						logError("component property doesn't exist: component=%s, id=%s, property=%s",
+							overlay_component.type_name.c_str(),
+							overlay_component.id.c_str(),
+							overlay_property.name.c_str());
+						return false;
+					}
+					else
+					{
+						// property doesn't exist yet. add it
+						
+						target_component->properties.push_back(overlay_property);
+					}
 				}
 				else
 				{
@@ -229,6 +250,8 @@ static void overlayTemplate(Template & target, const Template & overlay)
 			}
 		}
 	}
+	
+	return true;
 }
 
 static bool instantiateComponentsFromTemplate(const Template & t)
@@ -311,7 +334,8 @@ void test_templates()
 	if (!loadTemplateFromFile("textfiles/base-entity-v1-overlay.txt", overlay))
 		logError("failed to load template from file");
 	
-	overlayTemplate(t, overlay);
+	if (!overlayTemplate(t, overlay, false, true))
+		logError("failed to overlay template");
 	
 	if (!instantiateComponentsFromTemplate(t))
 		logError("failed to instantiate components from template");
