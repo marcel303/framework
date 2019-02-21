@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+struct ComponentSet;
+
 struct TemplateComponentProperty
 {
 	std::string name;
@@ -27,4 +29,4 @@ bool loadTemplateFromFile(const char * filename, Template & t);
 
 bool overlayTemplate(Template & target, const Template & overlay, const bool allowAddingComponents, const bool allowAddingProperties);
 
-bool instantiateComponentsFromTemplate(const Template & t);
+bool instantiateComponentsFromTemplate(const Template & t, ComponentSet & componentSet);

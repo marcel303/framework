@@ -2,6 +2,8 @@
 #include "helpers.h"
 #include "template.h"
 
+#include "scene.h"
+
 void test_templates()
 {
 	if (!framework.init(640, 480))
@@ -22,7 +24,9 @@ void test_templates()
 	if (!overlayTemplate(t, overlay, false, true))
 		logError("failed to overlay template");
 	
-	if (!instantiateComponentsFromTemplate(t))
+	SceneNode node;
+	
+	if (!instantiateComponentsFromTemplate(t, node.components))
 		logError("failed to instantiate components from template");
 	
 	// show what we just parsed
@@ -38,6 +42,8 @@ void test_templates()
 				property.value.c_str());
 		}
 	}
+	
+	exit(0);
 	
 	for (;;)
 	{

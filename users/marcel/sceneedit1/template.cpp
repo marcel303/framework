@@ -258,7 +258,7 @@ bool overlayTemplate(Template & target, const Template & overlay, const bool all
 	return true;
 }
 
-bool instantiateComponentsFromTemplate(const Template & t)
+bool instantiateComponentsFromTemplate(const Template & t, ComponentSet & componentSet)
 {
 	for (auto & component_template : t.components)
 	{
@@ -289,7 +289,7 @@ bool instantiateComponentsFromTemplate(const Template & t)
 			property->from_text(component, property_template.value.c_str());
 		}
 		
-		componentType->componentMgr->removeComponent(component);
+		componentSet.add(component);
 	}
 	
 	return true;
