@@ -181,18 +181,47 @@ static bool parseTemplateFromLines(const std::vector<std::string> & lines, Templ
 	return true;
 }
 
-static void instantiate()
+static bool instantiateComponentsFromTemplate(const Template & t)
 {
-		/*
-			const ComponentTypeBase * componentType = findComponentType(full_name);
-		 
-			if (componentType == nullptr)
+	for (auto & component_template : t.components)
+	{
+		const ComponentTypeBase * componentType = findComponentType(component_template.type_name.c_str());
+		
+		if (componentType == nullptr)
+		{
+			logError("unknown component type: %s", component_template.type_name.c_str());
+			return false;
+		}
+		
+		ComponentBase * component = componentType->componentMgr->createComponent();
+		
+		for (auto & property_template : component_template.properties)
+		{
+		// note : id is merely used for merging templates for now
+		// todo : remove id properties ? make it just part of the component definition inside the template ?
+		
+			if (property_template.name == "id")
+				continue;
+			
+			ComponentPropertyBase * property = nullptr;
+			
+			for (auto & property_itr : componentType->properties)
+				if (property_itr->name == property_template.name)
+					property = property_itr;
+			
+			if (property == nullptr)
 			{
-				logError("unknown component type: %s (%s)", full_name, componentTypeName);
-				//return false;
-				continue; // fixme : this should be an error
+				logError("unknown property: %s", property_template.name.c_str());
+				return false; // fixme : leaks
 			}
-		*/
+		
+		// todo : add component property base virtual method to parse from string
+		}
+		
+		componentType->componentMgr->removeComponent(component);
+	}
+	
+	return true;
 }
 
 void test_templates()
@@ -212,6 +241,9 @@ void test_templates()
 	
 	if (!parseTemplateFromLines(lines, t))
 		logError("failed to parse template from lines");
+	
+	if (!instantiateComponentsFromTemplate(t))
+		logError("failed to instantiate components from template");
 	
 	// show what we just parsed
 	
