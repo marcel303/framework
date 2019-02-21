@@ -62,6 +62,29 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, Template & o
 		
 		if (current_level == 0)
 		{
+			if (memcmp(text, "base", 4) == 0)
+			{
+				// base specifier. find the base name at the end
+			
+				const char * base = text;
+				
+				while (base[0] != 0 && !isspace(base[0]))
+					base++;
+				
+				while (base[0] != 0 && isspace(base[0]))
+					base++;
+				
+				if (base[0] == 0)
+				{
+					LOG_ERR("missing base name", 0);
+					return false;
+				}
+				
+				out_template.base = base;
+				
+				continue;
+			}
+			
 			// type name
 			
 			Assert(current_component_element == nullptr);

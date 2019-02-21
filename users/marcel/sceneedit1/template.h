@@ -21,6 +21,8 @@ struct TemplateComponent
 
 struct Template
 {
+	std::string base;
+	
 	std::vector<TemplateComponent> components;
 };
 
