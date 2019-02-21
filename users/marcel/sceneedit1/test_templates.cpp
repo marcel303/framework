@@ -100,7 +100,7 @@ static bool parseTemplateFromLines(const std::vector<std::string> & lines, Templ
 			int length = 0;
 			bool capitalize = true;
 			
-			for (int i = 0; typeName[i] != 0 && length < 1024; ++i)
+			for (int i = 0; typeName[i] != 0 && !isspace(typeName[i]) && length < 1024; ++i)
 			{
 				if (typeName[i] == '-')
 					capitalize = true;
@@ -127,6 +127,16 @@ static bool parseTemplateFromLines(const std::vector<std::string> & lines, Templ
 				return false;
 			}
 			
+			// find the optional id at the end
+			
+			const char * id = typeName;
+			
+			while (id[0] != 0 && !isspace(id[0]))
+				id++;
+			
+			while (id[0] != 0 && isspace(id[0]))
+				id++;
+			
 			// begin a new element, and set its type name to the full type name we just constructed
 			
 			out_template.components.emplace_back(TemplateComponent());
@@ -134,6 +144,7 @@ static bool parseTemplateFromLines(const std::vector<std::string> & lines, Templ
 			current_component_element = &out_template.components.back();
 			
 			current_component_element->type_name = full_name;
+			current_component_element->id = id;
 		}
 		else if (current_level == 1)
 		{
@@ -170,11 +181,6 @@ static bool parseTemplateFromLines(const std::vector<std::string> & lines, Templ
 			const char * propertyValue = text;
 			
 			current_property_element->value = propertyValue;
-			
-			// is this the id for the component ?
-			
-			if (current_property_element->name == "id")
-				current_component_element->id = current_property_element->value;
 		}
 	}
 	
@@ -270,12 +276,6 @@ static bool instantiateComponentsFromTemplate(const Template & t)
 		
 		for (auto & property_template : component_template.properties)
 		{
-		// note : id is merely used for merging templates for now
-		// todo : remove id properties ? make it just part of the component definition inside the template ?
-		
-			if (property_template.name == "id")
-				continue;
-			
 			ComponentPropertyBase * property = nullptr;
 			
 			for (auto & property_itr : componentType->properties)

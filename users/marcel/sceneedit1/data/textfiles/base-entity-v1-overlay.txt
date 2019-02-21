@@ -2,8 +2,6 @@ transform
 	position
 		1 2 3
 
-rotate-transform
-	id
-		rotate-transform
+rotate-transform rotate-transform
 	speed
 		10

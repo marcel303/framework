@@ -1,8 +1,6 @@
 transform
 
-rotate-transform
-	id
-		rotate-transform
+rotate-transform rotate-transform
 
 model
 	filename
