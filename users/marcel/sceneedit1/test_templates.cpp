@@ -85,9 +85,7 @@ static bool parseTemplateFromLines(const std::vector<std::string> & lines, Templ
 			// type name
 			
 			Assert(current_component_element == nullptr);
-		
-		// todo : add support for a optional id directly after the type name
-		
+			
 			const char * typeName = text;
 			
 			// apply conversion to the type name:
@@ -287,8 +285,8 @@ static bool instantiateComponentsFromTemplate(const Template & t)
 				logError("unknown property: %s", property_template.name.c_str());
 				return false; // fixme : leaks
 			}
-		
-		// todo : add component property base virtual method to parse from string
+			
+			property->from_text(component, property_template.value.c_str());
 		}
 		
 		componentType->componentMgr->removeComponent(component);

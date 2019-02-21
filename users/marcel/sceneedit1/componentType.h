@@ -41,6 +41,8 @@ struct ComponentPropertyBase
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) = 0;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) = 0;
+	
+	virtual bool from_text(ComponentBase * component, const char * text) = 0;
 };
 
 template <typename T>
@@ -67,6 +69,8 @@ struct ComponentPropertyBool : ComponentProperty<bool>
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
+	
+	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
 
 struct ComponentPropertyInt : ComponentProperty<int>
@@ -91,6 +95,8 @@ struct ComponentPropertyInt : ComponentProperty<int>
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
+	
+	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
 
 struct ComponentPropertyFloat : ComponentProperty<float>
@@ -124,6 +130,8 @@ struct ComponentPropertyFloat : ComponentProperty<float>
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
+	
+	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
 
 struct ComponentPropertyVec2 : ComponentProperty<Vec2>
@@ -135,6 +143,8 @@ struct ComponentPropertyVec2 : ComponentProperty<Vec2>
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
+	
+	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
 
 struct ComponentPropertyVec3 : ComponentProperty<Vec3>
@@ -146,6 +156,8 @@ struct ComponentPropertyVec3 : ComponentProperty<Vec3>
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
+	
+	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
 
 struct ComponentPropertyVec4 : ComponentProperty<Vec4>
@@ -157,6 +169,8 @@ struct ComponentPropertyVec4 : ComponentProperty<Vec4>
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
+	
+	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
 
 struct ComponentPropertyString : ComponentProperty<std::string>
@@ -168,6 +182,8 @@ struct ComponentPropertyString : ComponentProperty<std::string>
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
+	
+	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
 
 struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
@@ -179,6 +195,8 @@ struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
+	
+	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
 
 // component types

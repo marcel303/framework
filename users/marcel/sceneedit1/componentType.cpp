@@ -2,6 +2,12 @@
 #include "componentType.h"
 #include "Parse.h"
 
+//
+
+void splitString(const std::string & str, std::vector<std::string> & result);
+
+//
+
 template <> ComponentPropertyType getComponentPropertyType<bool>()
 {
 	return kComponentPropertyType_Bool;
@@ -106,6 +112,13 @@ void ComponentPropertyBool::from_json(ComponentBase * component, const Component
 	setter(component, j.j.value(name, false));
 }
 
+bool ComponentPropertyBool::from_text(ComponentBase * component, const char * text)
+{
+	setter(component, Parse::Bool(text));
+	
+	return true;
+}
+
 //
 
 void ComponentPropertyInt::to_json(ComponentBase * component, ComponentJson & j)
@@ -116,6 +129,13 @@ void ComponentPropertyInt::to_json(ComponentBase * component, ComponentJson & j)
 void ComponentPropertyInt::from_json(ComponentBase * component, const ComponentJson & j)
 {
 	setter(component, j.j.value(name, 0));
+}
+
+bool ComponentPropertyInt::from_text(ComponentBase * component, const char * text)
+{
+	setter(component, Parse::Int32(text));
+	
+	return true;
 }
 
 //
@@ -130,6 +150,13 @@ void ComponentPropertyFloat::from_json(ComponentBase * component, const Componen
 	setter(component, j.j.value(name, 0.f));
 }
 
+bool ComponentPropertyFloat::from_text(ComponentBase * component, const char * text)
+{
+	setter(component, Parse::Float(text));
+	
+	return true;
+}
+
 //
 
 void ComponentPropertyVec2::to_json(ComponentBase * component, ComponentJson & j)
@@ -140,6 +167,23 @@ void ComponentPropertyVec2::to_json(ComponentBase * component, ComponentJson & j
 void ComponentPropertyVec2::from_json(ComponentBase * component, const ComponentJson & j)
 {
 	setter(component, j.j.value(name, Vec2()));
+}
+
+bool ComponentPropertyVec2::from_text(ComponentBase * component, const char * text)
+{
+	std::vector<std::string> parts;
+	splitString(text, parts);
+	
+	if (parts.size() != 2)
+		return false;
+	
+	const Vec2 value(
+		Parse::Float(parts[0]),
+		Parse::Float(parts[1]));
+	
+	setter(component, value);
+	
+	return true;
 }
 
 //
@@ -154,6 +198,24 @@ void ComponentPropertyVec3::from_json(ComponentBase * component, const Component
 	setter(component, j.j.value(name, Vec3()));
 }
 
+bool ComponentPropertyVec3::from_text(ComponentBase * component, const char * text)
+{
+	std::vector<std::string> parts;
+	splitString(text, parts);
+	
+	if (parts.size() != 3)
+		return false;
+	
+	const Vec3 value(
+		Parse::Float(parts[0]),
+		Parse::Float(parts[1]),
+		Parse::Float(parts[2]));
+	
+	setter(component, value);
+	
+	return true;
+}
+
 //
 
 void ComponentPropertyVec4::to_json(ComponentBase * component, ComponentJson & j)
@@ -164,6 +226,25 @@ void ComponentPropertyVec4::to_json(ComponentBase * component, ComponentJson & j
 void ComponentPropertyVec4::from_json(ComponentBase * component, const ComponentJson & j)
 {
 	setter(component, j.j.value(name, Vec4()));
+}
+
+bool ComponentPropertyVec4::from_text(ComponentBase * component, const char * text)
+{
+	std::vector<std::string> parts;
+	splitString(text, parts);
+	
+	if (parts.size() != 4)
+		return false;
+	
+	const Vec4 value(
+		Parse::Float(parts[0]),
+		Parse::Float(parts[1]),
+		Parse::Float(parts[2]),
+		Parse::Float(parts[3]));
+	
+	setter(component, value);
+	
+	return true;
 }
 
 //
@@ -178,6 +259,13 @@ void ComponentPropertyString::from_json(ComponentBase * component, const Compone
 	setter(component, j.j.value(name, std::string()));
 }
 
+bool ComponentPropertyString::from_text(ComponentBase * component, const char * text)
+{
+	setter(component, text);
+	
+	return true;
+}
+
 //
 
 void ComponentPropertyAngleAxis::to_json(ComponentBase * component, ComponentJson & j)
@@ -188,4 +276,25 @@ void ComponentPropertyAngleAxis::to_json(ComponentBase * component, ComponentJso
 void ComponentPropertyAngleAxis::from_json(ComponentBase * component, const ComponentJson & j)
 {
 	setter(component, j.j.value(name, AngleAxis()));
+}
+
+bool ComponentPropertyAngleAxis::from_text(ComponentBase * component, const char * text)
+{
+	std::vector<std::string> parts;
+	splitString(text, parts);
+	
+	if (parts.size() != 4)
+		return false;
+	
+	AngleAxis value;
+	
+	value.angle = Parse::Float(parts[0]);
+	value.axis.Set(
+		Parse::Float(parts[1]),
+		Parse::Float(parts[2]),
+		Parse::Float(parts[3]));
+	
+	setter(component, value);
+	
+	return true;
 }
