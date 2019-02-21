@@ -31,4 +31,6 @@ bool loadTemplateFromFile(const char * filename, Template & t);
 
 bool overlayTemplate(Template & target, const Template & overlay, const bool allowAddingComponents, const bool allowAddingProperties);
 
+bool loadTemplateWithOverlaysFromFile(const char * filename, Template & out_template, const bool allowAddingComponentsFromBase);
+
 bool instantiateComponentsFromTemplate(const Template & t, ComponentSet & componentSet);

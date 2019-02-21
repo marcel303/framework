@@ -48,66 +48,6 @@ static void test_templates_v1()
 	dump_template(t);
 }
 
-#include "Path.h"
-#include <set>
-
-static bool loadTemplateWithOverlaysFromFile(const char * filename, Template & out_template, const bool allowAddingComponentsFromBase)
-{
-	auto directory = Path::GetDirectory(filename);
-	
-	std::set<std::string> processed;
-	
-	std::vector<Template> templates;
-	
-	std::string current_filename = filename;
-	
-	for (;;)
-	{
-		Template t;
-		
-		if (!loadTemplateFromFile(current_filename.c_str(), t))
-			return false;
-		
-		processed.insert(current_filename);
-		
-		templates.emplace_back(std::move(t));
-		
-		auto & base = templates.back().base;
-		
-		if (base.empty())
-			break;
-		
-		auto new_filename = directory + "/" + base;
-		
-		if (processed.count(new_filename) != 0)
-		{
-			logError("cyclic dependency found. %s references %s which is already processed",
-				current_filename.c_str(),
-				new_filename.c_str());
-			return false;
-		}
-		
-		current_filename = new_filename;
-	}
-	
-	Assert(!templates.empty());
-	
-	for (auto template_itr = templates.rbegin(); template_itr != templates.rend(); ++template_itr)
-	{
-		if (template_itr == templates.rbegin())
-		{
-			out_template = *template_itr;
-		}
-		else
-		{
-			if (!overlayTemplate(out_template, *template_itr, allowAddingComponentsFromBase, true))
-				return false;
-		}
-	}
-	
-	return true;
-}
-
 void test_templates()
 {
 	if (!framework.init(640, 480))

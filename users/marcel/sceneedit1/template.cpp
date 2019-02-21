@@ -1,11 +1,14 @@
 #include "Debugging.h"
 #include "Log.h"
+#include "Path.h"
 #include "TextIO.h"
 
 #include "component.h"
 #include "componentType.h"
 #include "helpers.h"
 #include "template.h"
+
+#include <set>
 
 static bool isEmptyLine(const char * line)
 {
@@ -275,6 +278,63 @@ bool overlayTemplate(Template & target, const Template & overlay, const bool all
 					target_property->value = overlay_property.value;
 				}
 			}
+		}
+	}
+	
+	return true;
+}
+
+bool loadTemplateWithOverlaysFromFile(const char * filename, Template & out_template, const bool allowAddingComponentsFromBase)
+{
+	auto directory = Path::GetDirectory(filename);
+	
+	std::set<std::string> processed;
+	
+	std::vector<Template> templates;
+	
+	std::string current_filename = filename;
+	
+	for (;;)
+	{
+		Template t;
+		
+		if (!loadTemplateFromFile(current_filename.c_str(), t))
+			return false;
+		
+		processed.insert(current_filename);
+		
+		templates.emplace_back(std::move(t));
+		
+		auto & base = templates.back().base;
+		
+		if (base.empty())
+			break;
+		
+		auto new_filename = directory + "/" + base;
+		
+		if (processed.count(new_filename) != 0)
+		{
+			LOG_ERR("cyclic dependency found. %s references %s which is already processed",
+				current_filename.c_str(),
+				new_filename.c_str());
+			return false;
+		}
+		
+		current_filename = new_filename;
+	}
+	
+	Assert(!templates.empty());
+	
+	for (auto template_itr = templates.rbegin(); template_itr != templates.rend(); ++template_itr)
+	{
+		if (template_itr == templates.rbegin())
+		{
+			out_template = *template_itr;
+		}
+		else
+		{
+			if (!overlayTemplate(out_template, *template_itr, allowAddingComponentsFromBase, true))
+				return false;
 		}
 	}
 	
