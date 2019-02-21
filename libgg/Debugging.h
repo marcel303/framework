@@ -12,28 +12,3 @@ void HandleAssert(const char * func, int line, const char * expr, ...);
 #define Verify(x) do { const bool y = x; (void)y; } while (false)
 #define VerifyMsg(x, msg, ...) do { const bool y = x; (void)y; } while (false)
 #endif
-
-class AllocState
-{
-public:
-	typedef unsigned long long counter_t;
-	
-	AllocState();
-	
-	counter_t allocationCount;
-	counter_t allocationSize;
-	counter_t totalAllocationCount;
-	counter_t totalAllocationSize;
-	counter_t maxAllocationCount;
-	counter_t maxAllocationSize;
-};
-
-AllocState GetAllocState();
-void DBG_PrintAllocState();
-
-#ifdef MSVC
-
-#define  _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
-
-#endif
