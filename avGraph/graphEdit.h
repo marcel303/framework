@@ -32,6 +32,7 @@
 #include <functional>
 #include <list>
 #include <map>
+#include <math.h>
 #include <set>
 #include <string>
 #include <vector>
