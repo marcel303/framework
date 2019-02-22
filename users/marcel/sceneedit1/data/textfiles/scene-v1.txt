@@ -1,0 +1,73 @@
+
+# NOTE : parser encounters entity <name> and extracts all lines
+# until indent is zero again and passes it to parseTemplateFromLines
+# NOTE : we will need a parseTemplateFromLines which also applies
+# overlays recursively
+# NOTE : we will also need to unindent the extracted lines
+# TODO : let template-with-overlay function use a callback to load
+# base templates ? we could reference templates defined in the scene
+# file as a base, and we could resolve paths relative to the scene file
+
+template locally-defined-template
+
+	transform
+		scale
+			2
+
+entity t
+
+	base locally-defined-template
+
+	transform
+		position
+			4 0 4
+
+entity a
+
+	base base-entity-v2.txt
+
+	transform
+		position
+			0 0 0
+
+entity b
+
+	base base-entity-v2.txt
+
+	transform
+		position
+			0 0 0
+
+	vfx-graph
+		path
+			test1.xml
+
+	parameter-mapping
+		source
+			vfx-position
+		target
+			transform.position
+
+	parameter-mapping
+		source
+			vfx-rotation
+		target
+			transform.angle
+
+entity c
+
+	base base-entity-v2.txt
+
+	transform
+		position
+			0 0 0
+
+# NOTE : we should probably spawn all entities defined above by default
+# even if they're not in the list below
+# add per-entity option to avoid this behavior
+
+scene
+	entities
+		a
+		b
+			c

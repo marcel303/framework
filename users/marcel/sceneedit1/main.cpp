@@ -1,5 +1,6 @@
 #include "cameraComponent.h"
 #include "modelComponent.h"
+#include "parameterComponent.h"
 #include "transformComponent.h"
 
 #include "component.h"
@@ -16,6 +17,7 @@
 #include <typeindex>
 
 extern void test_templates();
+extern bool test_scenefiles();
 
 static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
@@ -25,6 +27,7 @@ static const int VIEW_SY = 800;
 TransformComponentMgr s_transformComponentMgr;
 RotateTransformComponentMgr s_rotateTransformComponentMgr;
 ModelComponentMgr s_modelComponentMgr;
+ParameterComponentMgr s_parameterComponentMgr;
 
 //
 
@@ -917,6 +920,11 @@ int main(int argc, char * argv[])
 
 #if 0
 	test_templates();
+	return 0;
+#endif
+
+#if 1
+	test_scenefiles();
 	return 0;
 #endif
 	
