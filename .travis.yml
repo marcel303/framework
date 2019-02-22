@@ -6,29 +6,30 @@ os:
   - linux
   - osx
 
-addons:
-  apt:
-    packages:
-      - libsdl2-dev
-      - libglew-dev
-      - libgtk2.0-dev
-      - libfreeimage-dev
-      - libfreetype6-dev
-      - libavcodec-dev
-      - libavdevice-dev
-      - libavfilter-dev
-      - libavformat-dev
-      - libavresample-dev
-      - libswscale-dev
-      - libturbojpeg0-dev
-      - gobjc++
-      - libusb-1.0-0-dev
-      - libasound2-dev
-      - portaudio19-dev
-
 compiler:
   - gcc
   - clang
+
+before_install:
+  - if [ $TRAVIS_OS_NAME == linux ]; then
+      cmake --version;
+      sudo apt-get install -y --no-install-recommends libsdl2-dev;
+      sudo apt-get install -y --no-install-recommends libglew-dev;
+      sudo apt-get install -y --no-install-recommends libgtk2.0-dev;
+      sudo apt-get install -y --no-install-recommends libfreeimage-dev;
+      sudo apt-get install -y --no-install-recommends libfreetype6-dev;
+      sudo apt-get install -y --no-install-recommends libavcodec-dev;
+      sudo apt-get install -y --no-install-recommends libavdevice-dev;
+      sudo apt-get install -y --no-install-recommends libavfilter-dev;
+      sudo apt-get install -y --no-install-recommends libavformat-dev;
+      sudo apt-get install -y --no-install-recommends libavresample-dev;
+      sudo apt-get install -y --no-install-recommends libswscale-dev;
+      sudo apt-get install -y --no-install-recommends libturbojpeg0-dev;
+      sudo apt-get install -y --no-install-recommends gobjc++;
+      sudo apt-get install -y --no-install-recommends libusb-1.0-0-dev;
+      sudo apt-get install -y --no-install-recommends libasound2-dev;
+      sudo apt-get install -y --no-install-recommends portaudio19-dev;
+    fi
 
 script: 
   - git submodule update --init --recursive
