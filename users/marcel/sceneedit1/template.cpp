@@ -10,11 +10,16 @@
 
 #include <set>
 
-static bool isEmptyLine(const char * line)
+static bool isEmptyLineOrComment(const char * line)
 {
 	for (int i = 0; line[i] != 0; ++i)
+	{
+		if (line[i] == '#')
+			return true;
+		
 		if (!isspace(line[i]))
 			return false;
+	}
 	
 	return true;
 }
@@ -38,7 +43,9 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, Template & o
 	
 	for (auto & line : lines)
 	{
-		if (isEmptyLine(line.c_str()))
+		// check for empty lines and skip them
+		
+		if (isEmptyLineOrComment(line.c_str()))
 			continue;
 		
 		const int new_level = calculateIndentationLevel(line.c_str());
@@ -190,6 +197,7 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, Template & o
 	
 	return true;
 }
+
 
 bool loadTemplateFromFile(const char * filename, Template & t)
 {
@@ -376,4 +384,23 @@ bool instantiateComponentsFromTemplate(const Template & t, ComponentSet & compon
 	}
 	
 	return true;
+}
+
+void dumpTemplateToLog(const Template & t)
+{
+	for (auto & component : t.components)
+	{
+		LOG_DBG("%30s : %20s *",
+			component.type_name.c_str(),
+			component.id.c_str());
+		
+		for (auto & property : component.properties)
+		{
+			LOG_DBG("%30s : %20s : %20s = %s",
+				component.type_name.c_str(),
+				component.id.c_str(),
+				property.name.c_str(),
+				property.value.c_str());
+		}
+	}
 }
