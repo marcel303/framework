@@ -203,9 +203,10 @@ struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
 
 enum ComponentPriority
 {
-	kComponentPriority_Transform = 10,
-	kComponentPriority_Camera = 20,
-	kComponentPriority_Default = 100
+	kComponentPriority_Parameter = 100,
+	kComponentPriority_Transform = 200,
+	kComponentPriority_Camera = 400,
+	kComponentPriority_Default = 1000
 };
 
 struct ComponentTypeBase

@@ -4,6 +4,7 @@
 #define DEFINE_COMPONENT_TYPES
 #include "cameraComponent.h"
 #include "modelComponent.h"
+#include "parameterComponent.h"
 #include "transformComponent.h"
 
 #include <algorithm>
@@ -13,6 +14,7 @@ CameraComponentMgr s_cameraComponentMgr;
 extern TransformComponentMgr s_transformComponentMgr;
 extern RotateTransformComponentMgr s_rotateTransformComponentMgr;
 extern ModelComponentMgr s_modelComponentMgr;
+extern ParameterComponentMgr s_parameterComponentMgr;
 
 std::vector<ComponentTypeBase*> g_componentTypes;
 
@@ -39,6 +41,7 @@ void registerComponentTypes()
 	registerComponentType(new TransformComponentType(), &s_transformComponentMgr);
 	registerComponentType(new RotateTransformComponentType(), &s_rotateTransformComponentMgr);
 	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);
+	registerComponentType(new ParameterComponentType(), &s_parameterComponentMgr);
 }
 
 static ComponentTypeBase * findComponentType(const std::vector<ComponentTypeBase*> & componentTypes, const char * typeName)
