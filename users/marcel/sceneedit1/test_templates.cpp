@@ -60,6 +60,11 @@ void test_templates()
 	if (!loadTemplateWithOverlaysFromFile("textfiles/base-entity-v2-overlay.txt", t, false))
 		logError("failed to load template with overlays from file");
 	
+	SceneNode node;
+	
+	if (!instantiateComponentsFromTemplate(t, node.components))
+		logError("failed to instantiate components from template");
+	
 	dump_template(t);
 	
 	exit(0);
