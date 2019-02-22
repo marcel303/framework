@@ -6,28 +6,25 @@ os:
   - linux
   - osx
 
-matrix:
-  include:
-    - os: linux
-      addons:
-        apt:
-          packages:
-            - libsdl2-dev
-            - libglew-dev
-            - libgtk2.0-dev
-            - libfreeimage-dev
-            - libfreetype6-dev
-            - libavcodec-dev
-            - libavdevice-dev
-            - libavfilter-dev
-            - libavformat-dev
-            - libavresample-dev
-            - libswscale-dev
-            - libturbojpeg0-dev
-            - gobjc++
-            - libusb-1.0-0-dev
-            - libasound2-dev
-            - portaudio19-dev
+addons:
+  apt:
+    packages:
+      - libsdl2-dev
+      - libglew-dev
+      - libgtk2.0-dev
+      - libfreeimage-dev
+      - libfreetype6-dev
+      - libavcodec-dev
+      - libavdevice-dev
+      - libavfilter-dev
+      - libavformat-dev
+      - libavresample-dev
+      - libswscale-dev
+      - libturbojpeg0-dev
+      - gobjc++
+      - libusb-1.0-0-dev
+      - libasound2-dev
+      - portaudio19-dev
 
 compiler:
   - gcc
