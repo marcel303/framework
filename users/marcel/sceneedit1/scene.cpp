@@ -14,6 +14,16 @@ struct SceneNodeFromJson
 	SceneNode * node = nullptr;
 };
 
+bool SceneNode::initComponents()
+{
+	bool result = true;
+	
+	for (auto * component = components.head; component != nullptr; component = component->next_in_set)
+		result &= component->init();
+	
+	return result;
+}
+
 void SceneNode::freeComponents()
 {
 	ComponentBase * next;

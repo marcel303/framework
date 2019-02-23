@@ -22,6 +22,7 @@ struct SceneNode
 	
 	ComponentSet components;
 	
+	bool initComponents();
 	void freeComponents();
 };
 

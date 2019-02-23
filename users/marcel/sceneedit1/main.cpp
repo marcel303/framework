@@ -8,7 +8,9 @@
 #include "framework.h"
 #include "imgui-framework.h"
 #include "scene.h"
+#include "scene_fromText.h"
 #include "StringEx.h"
+#include "TextIO.h"
 
 #include "helpers.h"
 #include "template.h"
@@ -986,6 +988,42 @@ int main(int argc, char * argv[])
 				
 				editor.scene = tempScene;
 			}
+		}
+		
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_t))
+		{
+			inputIsCaptured = true;
+			
+			// load scene description text file
+	
+			changeDirectory("textfiles"); // todo : use a nicer solution to handling relative paths
+
+			std::vector<std::string> lines;
+			TextIO::LineEndings lineEndings;
+			
+			if (!TextIO::load("scene-v1.txt", lines, lineEndings))
+			{
+				logError("failed to load text file");
+			}
+			else
+			{
+				Scene tempScene;
+
+				if (!parseSceneFromLines(lines, tempScene))
+				{
+					logError("failed to parse scene from lines");
+				}
+				else
+				{
+					for (auto & node_itr : editor.scene.nodes)
+						editor.nodesToRemove.insert(node_itr.second->id);
+					editor.removeNodesToRemove();
+					
+					editor.scene = tempScene;
+				}
+			}
+			
+			changeDirectory(".."); // fixme : remove
 		}
 		
 		//
