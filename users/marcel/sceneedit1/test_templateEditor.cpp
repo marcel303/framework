@@ -64,6 +64,36 @@ struct TemplateComponentInstance
 	}
 };
 
+struct TemplateInstance
+{
+	std::vector<TemplateComponentInstance> template_component_instances;
+	
+	void init(Template & t)
+	{
+		// create template component instances for each component in the template
+		
+		for (auto & template_component : t.components)
+		{
+			TemplateComponentInstance template_component_instance;
+			
+			ComponentTypeBase * component_type = findComponentType(template_component.type_name.c_str());
+			
+			if (component_type == nullptr)
+			{
+				LOG_ERR("failed to find component type: %s", template_component.type_name.c_str());
+			}
+			else if (!template_component_instance.init(component_type, template_component))
+			{
+				LOG_ERR("failed to initialize template component instance", 0);
+			}
+			else
+			{
+				template_component_instances.emplace_back(std::move(template_component_instance));
+			}
+		}
+	}
+};
+
 static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentBase * component, const bool signalChanges)
 {
 	switch (propertyBase->type)
@@ -195,29 +225,9 @@ void test_templateEditor()
 		return;
 	}
 	
-	// create template component instances for each component in the template
+	TemplateInstance template_instance;
 	
-	std::vector<TemplateComponentInstance> template_component_instances;
-	
-	for (auto & template_component : t.components)
-	{
-		TemplateComponentInstance template_component_instance;
-		
-		ComponentTypeBase * component_type = findComponentType(template_component.type_name.c_str());
-		
-		if (component_type == nullptr)
-		{
-			LOG_ERR("failed to find component type: %s", template_component.type_name.c_str());
-		}
-		else if (!template_component_instance.init(component_type, template_component))
-		{
-			LOG_ERR("failed to initialize template component instance", 0);
-		}
-		else
-		{
-			template_component_instances.emplace_back(std::move(template_component_instance));
-		}
-	}
+	template_instance.init(t);
 	
 	framework.init(640, 480);
 	
@@ -240,7 +250,7 @@ void test_templateEditor()
 			
 			if (ImGui::Begin("Components"))
 			{
-				for (auto & template_component_instance : template_component_instances)
+				for (auto & template_component_instance : template_instance.template_component_instances)
 				{
 					ImGui::PushID(&template_component_instance);
 					{
