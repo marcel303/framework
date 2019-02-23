@@ -38,21 +38,21 @@ entity b
 		position
 			0 0 0
 
-	vfx-graph
-		path
-			test1.xml
-
-	parameter-mapping
-		source
-			vfx-position
-		target
-			transform.position
-
-	parameter-mapping
-		source
-			vfx-rotation
-		target
-			transform.angle
+#	vfx-graph
+#		path
+#			test1.xml
+#
+#	parameter-mapping
+#		source
+#			vfx-position
+#		target
+#			transform.position
+#
+#	parameter-mapping
+#		source
+#			vfx-rotation
+#		target
+#			transform.angle
 
 entity c
 

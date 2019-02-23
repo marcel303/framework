@@ -117,7 +117,7 @@ static void extractLinesGivenIndentationLevel(const std::vector<std::string> & l
 static bool parseSceneObjectFromLines(std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates);
 static bool parseSceneObjectStructureFromLines(std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates);
 
-static bool parseSceneFromLines(std::vector<std::string> & lines)
+static bool parseSceneFromLines(std::vector<std::string> & lines, Scene & out_scene)
 {
 	int current_level = -1;
 	
@@ -208,7 +208,7 @@ static bool parseSceneFromLines(std::vector<std::string> & lines)
 				
 				++i;
 				
-				// todo : extract template lines and parse it
+				// extract template lines and parse it
 				
 				std::vector<std::string> entity_lines;
 				
@@ -227,7 +227,15 @@ static bool parseSceneFromLines(std::vector<std::string> & lines)
 				
 				dumpTemplateToLog(t);
 				
-				// todo : check if an entity with the same name exists already
+				// check if an entity with the same name exists already
+				
+				if (entities.count(name) != 0)
+				{
+					LOG_ERR("entity with name '%s' already exists", name);
+					return false;
+				}
+				
+				// add the entity to the map
 				
 				entities.insert({ name, t });
 			}
@@ -235,17 +243,13 @@ static bool parseSceneFromLines(std::vector<std::string> & lines)
 			{
 				++i;
 				
-				// todo : extract scene hieraerchy and parse it
+				// extract scene hierarchy and parse it
 				
 				std::vector<std::string> scene_lines;
 				
 				extractLinesGivenIndentationLevel(lines, i, current_level + 1, scene_lines, true);
 				
-				LOG_DBG("%d lines", (int)scene_lines.size());
-				
-				Scene scene;
-				
-				if (!parseSceneObjectFromLines(scene_lines, scene, entities))
+				if (!parseSceneObjectFromLines(scene_lines, out_scene, entities))
 					return false;
 			}
 			else
@@ -391,11 +395,11 @@ static bool parseSceneObjectStructureFromLines(std::vector<std::string> & lines,
 		
 		auto & t = template_itr->second;
 		
-	// todo : look up node by name. nodes should already be created when parsing entities
 	// todo : make sure nodes are added to the scene only once. raise an error otherwise
 		SceneNode * node = new SceneNode();
 		node->id = out_scene.allocNodeId();
 		node->parentId = node_stack.back()->id;
+		node->displayName = name; // fixme : name is used as a key here, not merely as a display name!
 		
 		if (!instantiateComponentsFromTemplate(t, node->components))
 		{
@@ -422,7 +426,7 @@ bool test_scenefiles()
 
 	registerComponentTypes();
 
-	// todo : load scene description text file
+	// load scene description text file
 
 	std::vector<std::string> lines;
 	TextIO::LineEndings lineEndings;
@@ -432,8 +436,10 @@ bool test_scenefiles()
 		LOG_ERR("failed to load text file", 0);
 		return false;
 	}
+	
+	Scene scene;
 
-	if (!parseSceneFromLines(lines))
+	if (!parseSceneFromLines(lines, scene))
 	{
 		LOG_ERR("failed to parse scene from lines", 0);
 		return false;
