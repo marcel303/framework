@@ -298,19 +298,18 @@ bool applyTemplateOverlaysWithCallback(const char * name, const Template & t, Te
 	std::vector<Template> templates;
 	
 	processed.insert(name);
+	templates.push_back(t);
 	
-	std::string current_name;
+	std::string current_name = name;
 	
 	for (;;)
 	{
-		// todo : let use inherit the path component of the previous name.. so we end up with the full relative path
+		// todo : let us inherit the path component of the previous name.. so we end up with the full relative path
 	
-		auto & base = templates.empty() ? t.base : templates.back().base;
+		auto & new_name = templates.empty() ? t.base : templates.back().base;
 		
-		if (base.empty())
+		if (new_name.empty())
 			break;
-		
-		auto & new_name = base;
 		
 		if (processed.count(new_name) != 0)
 		{
@@ -325,20 +324,29 @@ bool applyTemplateOverlaysWithCallback(const char * name, const Template & t, Te
 		Template t;
 		
 		if (!fetchTemplate(current_name.c_str(), user_data, t))
+		{
+			LOG_ERR("failed to fetch template. name=%s", current_name.c_str());
 			return false;
+		}
 		
 		processed.insert(current_name);
 		templates.emplace_back(std::move(t));
 	}
 	
-	// note : optimize to avoid copy to self
-	if (&t != &out_template)
-		out_template = t;
-	
 	for (auto template_itr = templates.rbegin(); template_itr != templates.rend(); ++template_itr)
 	{
-		if (!overlayTemplate(out_template, *template_itr, allowAddingComponentsFromBase, true))
-			return false;
+		if (template_itr == templates.rbegin())
+		{
+			out_template = *template_itr;
+		}
+		else
+		{
+			if (!overlayTemplate(out_template, *template_itr, allowAddingComponentsFromBase, true))
+			{
+				LOG_ERR("failed to overlay template", 0);
+				return false;
+			}
+		}
 	}
 	
 	return true;
@@ -369,7 +377,10 @@ bool loadTemplateWithOverlaysFromFile(const char * path, Template & out_template
 		std::string path = std::string(directory) + "/" + name;
 		
 		if (!loadTemplateFromFile(path.c_str(), out_template))
+		{
+			LOG_ERR("failed to load template from file. path=%s", path.c_str());
 			return false;
+		}
 		
 		return true;
 	};
@@ -402,7 +413,7 @@ bool instantiateComponentsFromTemplate(const Template & t, ComponentSet & compon
 			if (property == nullptr)
 			{
 				LOG_ERR("unknown property: %s", property_template.name.c_str());
-				return false; // fixme : leaks
+				return false;
 			}
 			
 			property->from_text(component, property_template.value.c_str());

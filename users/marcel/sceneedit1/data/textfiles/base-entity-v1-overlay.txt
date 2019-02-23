@@ -1,3 +1,5 @@
+base base-entity-v1.txt
+
 transform
 	position
 		1 2 3

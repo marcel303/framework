@@ -183,9 +183,41 @@ static bool parseSceneFromLines(std::vector<std::string> & lines, Scene & out_sc
 				
 				Template t;
 				
-			// todo : recursively parse using overlays
-			
 				if (!parseTemplateFromLines(template_lines, t))
+				{
+					LOG_ERR("failed to parse template", 0);
+					return false;
+				}
+				
+				// recursively apply overlays
+				
+				struct FetchContext
+				{
+					std::map<std::string, Template> * templates;
+				};
+				
+				auto fetchTemplate = [](const char * name, void * user_data, Template & out_template) -> bool
+				{
+					const FetchContext * context = (FetchContext*)user_data;
+					
+					auto template_itr = context->templates->find(name);
+					
+					if (template_itr != context->templates->end())
+					{
+						out_template = template_itr->second;
+						
+						return true;
+					}
+					else
+					{
+						return loadTemplateFromFile(name, out_template);
+					}
+				};
+				
+				FetchContext context;
+				context.templates = &templates;
+				
+				if (!applyTemplateOverlaysWithCallback(name, t, t, true, fetchTemplate, &context))
 				{
 					LOG_ERR("failed to parse template", 0);
 					return false;
@@ -294,6 +326,7 @@ static bool parseSceneFromLines(std::vector<std::string> & lines, Scene & out_sc
 		}
 		else
 		{
+			LOG_ERR("syntax error: %s", line.c_str());
 			return false;
 		}
 	}
@@ -437,6 +470,8 @@ static bool parseSceneObjectStructureFromLines(std::vector<std::string> & lines,
 		if (!instantiateComponentsFromTemplate(t, node->components))
 		{
 			LOG_ERR("failed to instantiate components from template", 0);
+			
+			node->freeComponents();
 			
 			delete node;
 			node = nullptr;

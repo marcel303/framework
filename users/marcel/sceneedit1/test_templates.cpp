@@ -41,7 +41,11 @@ static void test_templates_v1()
 	SceneNode node;
 	
 	if (!instantiateComponentsFromTemplate(t, node.components))
+	{
 		logError("failed to instantiate components from template");
+		
+		node.freeComponents();
+	}
 	
 	// show what we just parsed
 	
@@ -63,7 +67,11 @@ void test_templates()
 	SceneNode node;
 	
 	if (!instantiateComponentsFromTemplate(t, node.components))
+	{
 		logError("failed to instantiate components from template");
+		
+		node.freeComponents();
+	}
 	
 	dump_template(t);
 	

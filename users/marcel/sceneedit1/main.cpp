@@ -561,7 +561,7 @@ struct SceneEditor
 	{
 		Template t;
 		
-		if (!loadTemplateWithOverlaysFromFile("textfiles/base-entity-v2-overlay.txt", t, false))
+		if (!loadTemplateWithOverlaysFromFile("textfiles/base-entity-v1-overlay.txt", t, false))
 			return;
 		
 		//
@@ -572,9 +572,9 @@ struct SceneEditor
 		node->parentId = parentId;
 		node->displayName = String::FormatC("Node %d", node->id);
 		
-		instantiateComponentsFromTemplate(t, node->components);
-		
 		bool init_ok = true;
+		
+		init_ok &= instantiateComponentsFromTemplate(t, node->components);
 		
 		for (auto * component = node->components.head; component != nullptr && init_ok; component = component->next_in_set)
 		{
@@ -923,7 +923,7 @@ int main(int argc, char * argv[])
 	return 0;
 #endif
 
-#if 1
+#if 0
 	test_scenefiles();
 	return 0;
 #endif
