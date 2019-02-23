@@ -64,7 +64,7 @@ struct TemplateComponentInstance
 	}
 };
 
-static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentBase * component)
+static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentBase * component, const bool signalChanges)
 {
 	switch (propertyBase->type)
 	{
@@ -74,7 +74,7 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 			
 			auto & value = property->getter(component);
 			
-			if (ImGui::Checkbox(property->name.c_str(), &value))
+			if (ImGui::Checkbox(property->name.c_str(), &value) && signalChanges)
 				component->propertyChanged(&value);
 		}
 		break;
@@ -86,12 +86,12 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 			
 			if (property->hasLimits)
 			{
-				if (ImGui::SliderInt(property->name.c_str(), &value, property->min, property->max))
+				if (ImGui::SliderInt(property->name.c_str(), &value, property->min, property->max) && signalChanges)
 					component->propertyChanged(&value);
 			}
 			else
 			{
-				if (ImGui::InputInt(property->name.c_str(), &value))
+				if (ImGui::InputInt(property->name.c_str(), &value) && signalChanges)
 					component->propertyChanged(&value);
 			}
 		}
@@ -104,12 +104,12 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 			
 			if (property->hasLimits)
 			{
-				if (ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential))
+				if (ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential) && signalChanges)
 					component->propertyChanged(&value);
 			}
 			else
 			{
-				if (ImGui::InputFloat(property->name.c_str(), &value))
+				if (ImGui::InputFloat(property->name.c_str(), &value) && signalChanges)
 					component->propertyChanged(&value);
 			}
 		}
@@ -120,7 +120,7 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 			
 			auto & value = property->getter(component);
 
-			if (ImGui::InputFloat2(property->name.c_str(), &value[0]))
+			if (ImGui::InputFloat2(property->name.c_str(), &value[0]) && signalChanges)
 				component->propertyChanged(&value);
 		}
 		break;
@@ -130,7 +130,7 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 			
 			auto & value = property->getter(component);
 
-			if (ImGui::InputFloat3(property->name.c_str(), &value[0]))
+			if (ImGui::InputFloat3(property->name.c_str(), &value[0]) && signalChanges)
 				component->propertyChanged(&value);
 		}
 		break;
@@ -140,7 +140,7 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 			
 			auto & value = property->getter(component);
 
-			if (ImGui::InputFloat4(property->name.c_str(), &value[0]))
+			if (ImGui::InputFloat4(property->name.c_str(), &value[0]) && signalChanges)
 				component->propertyChanged(&value);
 		}
 		break;
@@ -157,7 +157,8 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 			{
 				property->setter(component, buffer);
 				
-				component->propertyChanged(&value);
+				if (signalChanges)
+					component->propertyChanged(&value);
 			}
 		}
 		break;
@@ -167,10 +168,10 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 			
 			auto & value = property->getter(component);
 			
-			if (ImGui::SliderAngle(property->name.c_str(), &value.angle))
+			if (ImGui::SliderAngle(property->name.c_str(), &value.angle) && signalChanges)
 				component->propertyChanged(&value);
 			ImGui::PushID(&value.axis);
-			if (ImGui::SliderFloat3(property->name.c_str(), &value.axis[0], -1.f, +1.f))
+			if (ImGui::SliderFloat3(property->name.c_str(), &value.axis[0], -1.f, +1.f) && signalChanges)
 				component->propertyChanged(&value);
 			ImGui::PopID();
 		}
@@ -234,6 +235,9 @@ void test_templateEditor()
 		
 		guiContext.processBegin(framework.timeStep, 640, 480, inputIsCaptured);
 		{
+			ImGui::SetNextWindowPos(ImVec2(10, 10));
+			ImGui::SetNextWindowSize(ImVec2(400, 400));
+			
 			if (ImGui::Begin("Components"))
 			{
 				for (auto & template_component_instance : template_component_instances)
@@ -247,7 +251,7 @@ void test_templateEditor()
 						// todo : show the default value when a property is set to default
 						// todo : use a different color when a property is set to default
 						
-							doComponentProperty(component_property, template_component_instance.component);
+							doComponentProperty(component_property, template_component_instance.component, false);
 							
 							if (ImGui::BeginPopupContextItem(component_property->name.c_str()))
 							{
