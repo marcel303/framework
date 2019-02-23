@@ -395,11 +395,10 @@ static bool parseSceneObjectStructureFromLines(std::vector<std::string> & lines,
 		
 		auto & t = template_itr->second;
 		
-	// todo : make sure nodes are added to the scene only once. raise an error otherwise
 		SceneNode * node = new SceneNode();
 		node->id = out_scene.allocNodeId();
 		node->parentId = node_stack.back()->id;
-		node->displayName = name; // fixme : name is used as a key here, not merely as a display name!
+		node->displayName = name;
 		
 		if (!instantiateComponentsFromTemplate(t, node->components))
 		{
