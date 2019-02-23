@@ -292,43 +292,43 @@ bool overlayTemplate(Template & target, const Template & overlay, const bool all
 	return true;
 }
 
-bool loadTemplateWithOverlaysFromFile(const char * filename, Template & out_template, const bool allowAddingComponentsFromBase)
+bool parseTemplateWithOverlaysWithCallback(const char * name, Template & out_template, const bool allowAddingComponentsFromBase, FetchTemplateCallback fetchTemplate, void * user_data)
 {
-	auto directory = Path::GetDirectory(filename);
-	
 	std::set<std::string> processed;
 	
 	std::vector<Template> templates;
 	
-	std::string current_filename = filename;
+	std::string current_name = name;
 	
 	for (;;)
 	{
 		Template t;
 		
-		if (!loadTemplateFromFile(current_filename.c_str(), t))
+		if (!fetchTemplate(current_name.c_str(), user_data, t))
 			return false;
 		
-		processed.insert(current_filename);
+		processed.insert(current_name);
 		
 		templates.emplace_back(std::move(t));
 		
+	// todo : let use inherit the path component of the previous name.. so we end up with the full relative path
+	
 		auto & base = templates.back().base;
 		
 		if (base.empty())
 			break;
 		
-		auto new_filename = directory + "/" + base;
+		auto new_name = base;
 		
-		if (processed.count(new_filename) != 0)
+		if (processed.count(new_name) != 0)
 		{
 			LOG_ERR("cyclic dependency found. %s references %s which is already processed",
-				current_filename.c_str(),
-				new_filename.c_str());
+				current_name.c_str(),
+				new_name.c_str());
 			return false;
 		}
 		
-		current_filename = new_filename;
+		current_name = new_name;
 	}
 	
 	Assert(!templates.empty());
@@ -347,6 +347,26 @@ bool loadTemplateWithOverlaysFromFile(const char * filename, Template & out_temp
 	}
 	
 	return true;
+}
+
+bool loadTemplateWithOverlaysFromFile(const char * path, Template & out_template, const bool allowAddingComponentsFromBase)
+{
+	auto directory = Path::GetDirectory(path);
+	auto filename = Path::GetFileName(path);
+	
+	auto fetchTemplate = [](const char * name, void * user_data, Template & out_template) -> bool
+	{
+		const char * directory = (const char*)user_data;
+		
+		std::string path = std::string(directory) + "/" + name;
+		
+		if (!loadTemplateFromFile(path.c_str(), out_template))
+			return false;
+		
+		return true;
+	};
+	
+	return parseTemplateWithOverlaysWithCallback(filename.c_str(), out_template, allowAddingComponentsFromBase, fetchTemplate, (void*)directory.c_str());
 }
 
 bool instantiateComponentsFromTemplate(const Template & t, ComponentSet & componentSet)

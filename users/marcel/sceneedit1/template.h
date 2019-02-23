@@ -26,11 +26,14 @@ struct Template
 	std::vector<TemplateComponent> components;
 };
 
+typedef bool (*FetchTemplateCallback)(const char * name, void * user_data, Template & out_template);
+
 bool parseTemplateFromLines(const std::vector<std::string> & lines, Template & out_template);
 bool loadTemplateFromFile(const char * filename, Template & t);
 
 bool overlayTemplate(Template & target, const Template & overlay, const bool allowAddingComponents, const bool allowAddingProperties);
 
+bool parseTemplateWithOverlaysWithCallback(const char * name, Template & out_template, const bool allowAddingComponentsFromBase, FetchTemplateCallback fetchTemplate, void * user_data);
 bool loadTemplateWithOverlaysFromFile(const char * filename, Template & out_template, const bool allowAddingComponentsFromBase);
 
 bool instantiateComponentsFromTemplate(const Template & t, ComponentSet & componentSet);
