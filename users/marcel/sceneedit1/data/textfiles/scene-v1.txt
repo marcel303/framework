@@ -28,7 +28,7 @@ entity a
 
 	transform
 		position
-			0 0 0
+			7 7 7
 
 entity b
 
@@ -36,7 +36,7 @@ entity b
 
 	transform
 		position
-			0 0 0
+			8 8 8
 
 #	vfx-graph
 #		path
@@ -60,7 +60,7 @@ entity c
 
 	transform
 		position
-			0 0 0
+			2 2 2
 
 # NOTE : we should probably spawn all entities defined above by default
 # even if they're not in the list below

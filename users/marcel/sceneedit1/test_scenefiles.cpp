@@ -184,6 +184,7 @@ static bool parseSceneFromLines(std::vector<std::string> & lines, Scene & out_sc
 				Template t;
 				
 			// todo : recursively parse using overlays
+			
 				if (!parseTemplateFromLines(template_lines, t))
 				{
 					LOG_ERR("failed to parse template", 0);
@@ -218,8 +219,41 @@ static bool parseSceneFromLines(std::vector<std::string> & lines, Scene & out_sc
 				
 				Template t;
 				
-			// todo : recursively parse using overlays
 				if (!parseTemplateFromLines(entity_lines, t))
+				{
+					LOG_ERR("failed to parse template (entity)", 0);
+					return false;
+				}
+				
+				// recursively apply overlays
+				
+				struct FetchContext
+				{
+					std::map<std::string, Template> * templates;
+				};
+				
+				auto fetchTemplate = [](const char * name, void * user_data, Template & out_template) -> bool
+				{
+					const FetchContext * context = (FetchContext*)user_data;
+					
+					auto template_itr = context->templates->find(name);
+					
+					if (template_itr != context->templates->end())
+					{
+						out_template = template_itr->second;
+						
+						return true;
+					}
+					else
+					{
+						return loadTemplateFromFile(name, out_template);
+					}
+				};
+				
+				FetchContext context;
+				context.templates = &templates;
+				
+				if (!applyTemplateOverlaysWithCallback(name, t, t, true, fetchTemplate, &context))
 				{
 					LOG_ERR("failed to parse template (entity)", 0);
 					return false;
@@ -426,11 +460,13 @@ bool test_scenefiles()
 	registerComponentTypes();
 
 	// load scene description text file
+	
+	changeDirectory("textfiles"); // todo : use a nicer solution to handling relative paths
 
 	std::vector<std::string> lines;
 	TextIO::LineEndings lineEndings;
 	
-	if (!TextIO::load("textfiles/scene-v1.txt", lines, lineEndings))
+	if (!TextIO::load("scene-v1.txt", lines, lineEndings))
 	{
 		LOG_ERR("failed to load text file", 0);
 		return false;
@@ -444,6 +480,8 @@ bool test_scenefiles()
 		return false;
 	}
 
+	LOG_DBG("success!", 0);
+	
 	exit(0);
 
 	return true;

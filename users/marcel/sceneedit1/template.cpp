@@ -292,33 +292,25 @@ bool overlayTemplate(Template & target, const Template & overlay, const bool all
 	return true;
 }
 
-bool parseTemplateWithOverlaysWithCallback(const char * name, Template & out_template, const bool allowAddingComponentsFromBase, FetchTemplateCallback fetchTemplate, void * user_data)
+bool applyTemplateOverlaysWithCallback(const char * name, const Template & t, Template & out_template, const bool allowAddingComponentsFromBase, FetchTemplateCallback fetchTemplate, void * user_data)
 {
 	std::set<std::string> processed;
-	
 	std::vector<Template> templates;
 	
-	std::string current_name = name;
+	processed.insert(name);
+	
+	std::string current_name;
 	
 	for (;;)
 	{
-		Template t;
-		
-		if (!fetchTemplate(current_name.c_str(), user_data, t))
-			return false;
-		
-		processed.insert(current_name);
-		
-		templates.emplace_back(std::move(t));
-		
-	// todo : let use inherit the path component of the previous name.. so we end up with the full relative path
+		// todo : let use inherit the path component of the previous name.. so we end up with the full relative path
 	
-		auto & base = templates.back().base;
+		auto & base = templates.empty() ? t.base : templates.back().base;
 		
 		if (base.empty())
 			break;
 		
-		auto new_name = base;
+		auto & new_name = base;
 		
 		if (processed.count(new_name) != 0)
 		{
@@ -329,24 +321,40 @@ bool parseTemplateWithOverlaysWithCallback(const char * name, Template & out_tem
 		}
 		
 		current_name = new_name;
+		
+		Template t;
+		
+		if (!fetchTemplate(current_name.c_str(), user_data, t))
+			return false;
+		
+		processed.insert(current_name);
+		templates.emplace_back(std::move(t));
 	}
 	
-	Assert(!templates.empty());
+	// note : optimize to avoid copy to self
+	if (&t != &out_template)
+		out_template = t;
 	
 	for (auto template_itr = templates.rbegin(); template_itr != templates.rend(); ++template_itr)
 	{
-		if (template_itr == templates.rbegin())
-		{
-			out_template = *template_itr;
-		}
-		else
-		{
-			if (!overlayTemplate(out_template, *template_itr, allowAddingComponentsFromBase, true))
-				return false;
-		}
+		if (!overlayTemplate(out_template, *template_itr, allowAddingComponentsFromBase, true))
+			return false;
 	}
 	
 	return true;
+}
+
+bool parseTemplateWithOverlaysWithCallback(const char * name, Template & out_template, const bool allowAddingComponentsFromBase, FetchTemplateCallback fetchTemplate, void * user_data)
+{
+	Template t;
+	
+	if (!fetchTemplate(name, user_data, t))
+	{
+		LOG_ERR("failed to fetch template. name=%s", name);
+		return false;
+	}
+	
+	return applyTemplateOverlaysWithCallback(name, t, out_template, allowAddingComponentsFromBase, fetchTemplate, user_data);
 }
 
 bool loadTemplateWithOverlaysFromFile(const char * path, Template & out_template, const bool allowAddingComponentsFromBase)
