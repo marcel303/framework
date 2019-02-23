@@ -39,6 +39,8 @@ struct ComponentPropertyBase
 	{
 	}
 	
+	virtual void setToDefault(ComponentBase * component) = 0;
+	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) = 0;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) = 0;
 	
@@ -67,6 +69,8 @@ struct ComponentPropertyBool : ComponentProperty<bool>
 	{
 	}
 	
+	virtual void setToDefault(ComponentBase * component) override final { setter(component, false); }
+	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 	
@@ -92,6 +96,8 @@ struct ComponentPropertyInt : ComponentProperty<int>
 		
 		return *this;
 	}
+	
+	virtual void setToDefault(ComponentBase * component) override final { setter(component, 0); }
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
@@ -128,6 +134,8 @@ struct ComponentPropertyFloat : ComponentProperty<float>
 		return *this;
 	}
 	
+	virtual void setToDefault(ComponentBase * component) override final { setter(component, 0.f); }
+	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 	
@@ -140,6 +148,8 @@ struct ComponentPropertyVec2 : ComponentProperty<Vec2>
 		: ComponentProperty<Vec2>(name)
 	{
 	}
+	
+	virtual void setToDefault(ComponentBase * component) override final { setter(component, Vec2()); }
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
@@ -154,6 +164,8 @@ struct ComponentPropertyVec3 : ComponentProperty<Vec3>
 	{
 	}
 	
+	virtual void setToDefault(ComponentBase * component) override final { setter(component, Vec3()); }
+	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 	
@@ -166,6 +178,8 @@ struct ComponentPropertyVec4 : ComponentProperty<Vec4>
 		: ComponentProperty<Vec4>(name)
 	{
 	}
+	
+	virtual void setToDefault(ComponentBase * component) override final { setter(component, Vec4()); }
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
@@ -180,6 +194,8 @@ struct ComponentPropertyString : ComponentProperty<std::string>
 	{
 	}
 	
+	virtual void setToDefault(ComponentBase * component) override final { setter(component, std::string()); }
+	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
 	
@@ -192,6 +208,8 @@ struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
 		: ComponentProperty<AngleAxis>(name)
 	{
 	}
+	
+	virtual void setToDefault(ComponentBase * component) override final { setter(component, AngleAxis()); }
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
