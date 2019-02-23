@@ -1,5 +1,7 @@
 #include "framework.h"
+#include "helpers.h"
 #include "Log.h"
+#include "scene.h"
 #include "template.h"
 #include "TextIO.h"
 #include <map>
@@ -112,11 +114,16 @@ static void extractLinesGivenIndentationLevel(const std::vector<std::string> & l
 	}
 }
 
+static bool parseSceneObjectFromLines(std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates);
+static bool parseSceneObjectStructureFromLines(std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates);
+
 static bool parseSceneFromLines(std::vector<std::string> & lines)
 {
 	int current_level = -1;
 	
 	std::map<std::string, Template> templates;
+	
+	std::map<std::string, Template> entities;
 	
 	for (size_t i = 0; i < lines.size(); )
 	{
@@ -219,6 +226,10 @@ static bool parseSceneFromLines(std::vector<std::string> & lines)
 				}
 				
 				dumpTemplateToLog(t);
+				
+				// todo : check if an entity with the same name exists already
+				
+				entities.insert({ name, t });
 			}
 			else if (match_text(word, "scene"))
 			{
@@ -232,34 +243,10 @@ static bool parseSceneFromLines(std::vector<std::string> & lines)
 				
 				LOG_DBG("%d lines", (int)scene_lines.size());
 				
-				for (size_t j = 0; j < scene_lines.size(); )
-				{
-					char * scene_line = (char*)scene_lines[j].c_str();
-					
-					if (isEmptyLineOrComment(scene_line))
-					{
-						++j;
-						continue;
-					}
-					
-					const char * word;
-					
-					if (!eat_word_v2(scene_line, word))
-					{
-						LOG_ERR("failed to eat word", 0);
-						return false;
-					}
-					
-					if (match_text(word, "entities"))
-					{
-						++j;
-					}
-					else
-					{
-						LOG_ERR("syntax error", 0);
-						return false;
-					}
-				}
+				Scene scene;
+				
+				if (!parseSceneObjectFromLines(scene_lines, scene, entities))
+					return false;
 			}
 			else
 			{
@@ -276,10 +263,164 @@ static bool parseSceneFromLines(std::vector<std::string> & lines)
 	return true;
 }
 
+static bool parseSceneObjectFromLines(std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates)
+{
+	int current_level = -1;
+	
+	for (size_t i = 0; i < lines.size(); )
+	{
+		char * line = (char*)lines[i].c_str();
+		
+		if (isEmptyLineOrComment(line))
+		{
+			++i;
+			continue;
+		}
+		
+		//
+		
+		const int new_level = calculateIndentationLevel(line);
+		
+		if (new_level > current_level + 1)
+		{
+			// only one level of identation may be added per line
+			
+			LOG_ERR("syntax error", 0);
+			return false;
+		}
+		
+		current_level = new_level;
+		
+		//
+		
+		if (current_level == 0)
+		{
+			const char * word;
+			
+			if (!eat_word_v2(line, word))
+			{
+				LOG_ERR("failed to eat word", 0);
+				return false;
+			}
+			
+			if (match_text(word, "nodes"))
+			{
+				++i;
+				
+				std::vector<std::string> nodes_lines;
+		
+				extractLinesGivenIndentationLevel(lines, i, current_level + 1, nodes_lines, true);
+				
+				if (!parseSceneObjectStructureFromLines(nodes_lines, out_scene, templates))
+					return false;
+			}
+			else
+			{
+				LOG_ERR("syntax error", 0);
+				return false;
+			}
+		}
+		else
+		{
+			LOG_ERR("syntax error", 0);
+			return false;
+		}
+	}
+	
+	return true;
+}
+
+static bool parseSceneObjectStructureFromLines(std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates)
+{
+	int current_level = -1;
+	
+	std::vector<SceneNode*> node_stack;
+	
+	node_stack.push_back(&out_scene.getRootNode());
+	
+	for (size_t i = 0; i < lines.size(); )
+	{
+		char * line = (char*)lines[i].c_str();
+		
+		if (isEmptyLineOrComment(line))
+		{
+			++i;
+			continue;
+		}
+		
+		//
+		
+		const int new_level = calculateIndentationLevel(line);
+		
+		if (new_level > current_level + 1)
+		{
+			// only one level of identation may be added per line
+			
+			LOG_ERR("syntax error", 0);
+			return false;
+		}
+		
+		while (current_level >= new_level)
+		{
+			node_stack.pop_back();
+			
+			--current_level;
+		}
+		
+		current_level = new_level;
+		
+		//
+		
+		const char * name;
+		
+		if (!eat_word_v2(line, name))
+		{
+			LOG_ERR("failed to eat word", 0);
+			return false;
+		}
+		
+		++i;
+		
+		auto template_itr = templates.find(name);
+		
+		if (template_itr == templates.end())
+		{
+			LOG_ERR("entity does not exist: %s", name);
+			return false;
+		}
+		
+		auto & t = template_itr->second;
+		
+	// todo : look up node by name. nodes should already be created when parsing entities
+	// todo : make sure nodes are added to the scene only once. raise an error otherwise
+		SceneNode * node = new SceneNode();
+		node->id = out_scene.allocNodeId();
+		node->parentId = node_stack.back()->id;
+		
+		if (!instantiateComponentsFromTemplate(t, node->components))
+		{
+			LOG_ERR("failed to instantiate components from template", 0);
+			
+			delete node;
+			node = nullptr;
+			
+			return false;
+		}
+		
+		out_scene.nodes.insert({ node->id, node });
+		
+		node_stack.push_back(node);
+	}
+	
+	return true;
+}
+
 bool test_scenefiles()
 {
 	if (!framework.init(640, 480))
 		return false;
+
+	registerComponentTypes();
 
 	// todo : load scene description text file
 

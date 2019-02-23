@@ -67,7 +67,7 @@ entity c
 # add per-entity option to avoid this behavior
 
 scene
-	entities
+	nodes
 		a
 		b
 			c
