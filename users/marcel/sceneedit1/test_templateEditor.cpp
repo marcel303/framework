@@ -4,8 +4,10 @@
 #include "imgui.h"
 #include "imgui-framework.h"
 #include "Log.h"
+#include "Path.h"
 #include "StringEx.h"
 #include "template.h"
+#include <set>
 
 // todo : create a template instance, similar to how we create component and component property instances, to facilitate editing ?
 // editing template would be very similar in fact to editing components. just that the properties live somewhere else
@@ -213,23 +215,57 @@ void test_templateEditor()
 {
 	registerComponentTypes();
 	
-	// load template from file
-	
-// todo : load all of the overlays
+	// load all of the template overlays from file
 
-	Template t;
+	std::set<std::string> processed;
+	std::vector<Template> templates;
 	
-	if (!loadTemplateFromFile("textfiles/base-entity-v1.txt", t))
+	std::string path = "textfiles/base-entity-v1-overlay.txt";
+	
+	std::string directory = Path::GetDirectory(path);
+	std::string filename = Path::GetFileName(path);
+	
+	std::string current_filename = directory + "/" + filename;
+	
+	for (;;)
 	{
-		LOG_ERR("failed to load template from file", 0);
-		return;
+		Template t;
+		
+		if (!loadTemplateFromFile(current_filename.c_str(), t))
+		{
+			LOG_ERR("failed to load template from file", 0);
+			break;
+		}
+		
+		processed.insert(current_filename);
+		templates.emplace_back(t);
+		
+		if (t.base.empty())
+			break;
+		
+		std::string new_filename = directory + "/" + t.base;
+		
+		if (processed.count(new_filename) != 0)
+		{
+			LOG_ERR("cyclic dependency detected", 0);
+			break;
+		}
+		
+		current_filename = new_filename;
 	}
 	
-	TemplateInstance template_instance;
+	std::vector<TemplateInstance> template_instances;
 	
-	template_instance.init(t);
+	for (auto & t : templates)
+	{
+		TemplateInstance template_instance;
+		template_instance.init(t);
+		
+		template_instances.emplace_back(std::move(template_instance));
+	}
 	
-	framework.init(640, 480);
+	if (!framework.init(640, 480))
+		return;
 	
 	FrameworkImGuiContext guiContext;
 	guiContext.init();
@@ -248,8 +284,10 @@ void test_templateEditor()
 			ImGui::SetNextWindowPos(ImVec2(10, 10));
 			ImGui::SetNextWindowSize(ImVec2(400, 400));
 			
-			if (ImGui::Begin("Components"))
+			if (!template_instances.empty() && ImGui::Begin("Components"))
 			{
+				auto & template_instance = template_instances.front();
+				
 				for (auto & template_component_instance : template_instance.template_component_instances)
 				{
 					ImGui::PushID(&template_component_instance);
