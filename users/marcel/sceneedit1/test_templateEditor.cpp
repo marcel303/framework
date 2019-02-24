@@ -8,11 +8,14 @@
 #include "StringEx.h"
 #include "template.h"
 #include <set>
+#include <sstream>
 
 // todo : create a template instance, similar to how we create component and component property instances, to facilitate editing ?
 // editing template would be very similar in fact to editing components. just that the properties live somewhere else
 // todo : when editing, apply the latest version to the component instance
 // todo : allow for live value viewing ?
+
+// todo : when saving we will want to distinguish between templates which define (new) components, and those that merely override component properties. perhaps have new component definitions have a plus sign (+transform) to signify it's a new definition ? or maybe just skip saving if a component with the same type name + id exists in a base template and the list of property override is empty ?
 
 // todo : avoid creating a component instance just to aid in editing templates
 
@@ -48,6 +51,11 @@ struct TemplateComponentInstance
 	ComponentTypeBase * componentType = nullptr;
 	
 	std::string id;
+	
+	~TemplateComponentInstance()
+	{
+		Assert(component == nullptr);
+	}
 	
 	bool init(ComponentTypeBase * in_componentType, const char * in_id, const TemplateComponent * templateComponent)
 	{
@@ -89,18 +97,23 @@ struct TemplateComponentInstance
 		
 		return result;
 	}
+	
+	void shut()
+	{
+		if (component != nullptr)
+		{
+			componentType->componentMgr->removeComponent(component);
+			component = nullptr;
+		}
+	}
 };
 
 struct TemplateInstance
 {
-	Template * t = nullptr;
-	
 	std::vector<TemplateComponentInstance> component_instances;
 	
-	bool init(Template & in_t, const std::set<ComponentTypeWithId> & componentTypesWithId)
+	bool init(Template & t, const std::set<ComponentTypeWithId> & componentTypesWithId)
 	{
-		t = &in_t;
-		
 		// create template component instances for each component
 		
 		for (auto & componentTypeWithId : componentTypesWithId)
@@ -109,7 +122,7 @@ struct TemplateInstance
 			
 			TemplateComponent * template_component = nullptr;
 			
-			for (auto & template_component_itr : t->components)
+			for (auto & template_component_itr : t.components)
 			{
 				if (template_component_itr.type_name == componentTypeWithId.type_name &&
 					template_component_itr.id == componentTypeWithId.id)
@@ -146,6 +159,12 @@ struct TemplateInstance
 		}
 		
 		return true;
+	}
+	
+	void shut()
+	{
+		for (auto & component : component_instances)
+			component.shut();
 	}
 };
 
@@ -619,6 +638,95 @@ bool test_templateEditor()
 		}
 		framework.endDraw();
 	}
+	
+	
+	//
+	
+	int out_index = 0;
+	
+	for (size_t instance_itr = 0; instance_itr < template_instances.size() - 1; ++instance_itr)
+	{
+		auto & instance = template_instances[instance_itr];
+		
+		char filename[64];
+		sprintf_s(filename, sizeof(filename), "out/%03d.txt", out_index);
+		out_index++;
+		
+		std::ostringstream out;
+		
+		for (size_t component_itr = 0; component_itr < instance.component_instances.size(); ++component_itr)
+		{
+			auto & component = instance.component_instances[component_itr];
+			
+			// check if
+			bool component_is_set_in_base = false;
+			
+			for (size_t instance_base_itr = instance_itr + 1; instance_base_itr < template_instances.size() - 1; ++instance_base_itr)
+			{
+				auto & base_component = template_instances[instance_base_itr].component_instances[component_itr];
+				
+				Assert(base_component.componentType->typeName == component.componentType->typeName);
+				Assert(base_component.id == component.id);
+				
+				component_is_set_in_base |= base_component.isSet;
+			}
+			
+			bool any_property_is_set = false;
+			
+			for (auto & property_info : component.property_infos)
+				any_property_is_set |= property_info.isSet;
+			
+			if (component.isSet || any_property_is_set)
+			{
+				if (component.isSet)
+					out << component.componentType->typeName << "\n";
+				else
+					out << "-" << component.componentType->typeName << "\n";
+				
+				for (size_t property_itr = 0; property_itr < component.property_infos.size(); ++property_itr)
+				{
+					if (component.property_infos[property_itr].isSet)
+					{
+						std::string value;
+						
+						auto & property = component.componentType->properties[property_itr];
+						
+						property->to_text(component.component, value);
+						
+						out << "\t" << property->name << "\n";
+						out << "\t\t" << value << "\n";
+					}
+				}
+			}
+		}
+		
+		std::string content = out.str();
+		
+		if (!content.empty())
+		{
+			FILE * file = fopen(filename, "wt");
+			
+			if (file == nullptr)
+			{
+				logError("failed to open output file. filename=%s", filename);
+				return false;
+			}
+			else
+			{
+				fprintf(file, "%s", content.c_str());
+				
+				fclose(file);
+				file = nullptr;
+			}
+		}
+	}
+	
+	for (auto & instance : template_instances)
+	{
+		instance.shut();
+	}
+	
+	template_instances.clear();
 	
 	guiContext.shut();
 	
