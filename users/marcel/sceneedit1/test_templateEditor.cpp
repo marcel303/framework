@@ -107,6 +107,20 @@ struct TemplateInstance
 {
 	std::vector<TemplateComponentInstance> components;
 	
+	TemplateComponentInstance * findComponentInstance(const char * typeName, const char * id)
+	{
+		for (auto & component : components)
+		{
+			if (component.componentType->typeName == typeName &&
+				component.id == id)
+			{
+				return &component;
+			}
+		}
+		
+		return nullptr;
+	}
+	
 	bool init(Template & t, const std::set<ComponentTypeWithId> & componentTypesWithId)
 	{
 		// create template component instances for each component
@@ -301,8 +315,10 @@ bool test_templateEditor()
 	
 	std::vector<TemplateInstance> template_instances;
 	
-	for (auto & t : templates)
+	for (size_t i = 0; i < templates.size(); ++i)
 	{
+		auto & t = templates[i];
+		
 		TemplateInstance template_instance;
 		
 		if (!template_instance.init(t, componentTypesWithId))
@@ -422,10 +438,8 @@ bool test_templateEditor()
 					
 					// iterate over all of its components
 					
-					for (size_t component_itr = 0; component_itr < template_instance.components.size(); ++component_itr)
+					for (auto & component_instance : template_instance.components)
 					{
-						auto & component_instance = template_instance.components[component_itr];
-						
 						ImGui::PushID(&component_instance);
 						{
 							ImGui::Text("%s", component_instance.componentType->typeName.c_str());
@@ -435,8 +449,12 @@ bool test_templateEditor()
 							if (ImGui::InputText("Id", id, sizeof(id)))
 							{
 								// patch id for all template instances
-								for (auto & template_instance : template_instances)
-									template_instance.components[component_itr].id = id;
+								for (auto & instance : template_instances)
+								{
+									auto * component = instance.findComponentInstance(component_instance.componentType->typeName.c_str(), component_instance.id.c_str());
+									
+									component->id = id;
+								}
 							}
 							
 							// iterate over all of the components' properties
@@ -450,10 +468,13 @@ bool test_templateEditor()
 								
 								for (size_t i = selectedTemplateIndex; i < template_instances.size(); ++i)
 								{
-									if (template_instances[i].components[component_itr].propertyIsSetArray[property_itr])
+									auto * base_component = template_instances[i].findComponentInstance(component_instance.componentType->typeName.c_str(), component_instance.id.c_str());
+									Assert(base_component != nullptr);
+									
+									if (base_component->propertyIsSetArray[property_itr])
 									{
-										component_with_value = template_instances[i].components[component_itr].component;
-										property_with_value = template_instances[i].components[component_itr].componentType->properties[property_itr];
+										component_with_value = base_component->component;
+										property_with_value = base_component->componentType->properties[property_itr];
 										break;
 									}
 								}
