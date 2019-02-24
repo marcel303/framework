@@ -1,6 +1,7 @@
 #include "componentJson.h"
 #include "componentType.h"
 #include "Parse.h"
+#include "StringEx.h"
 
 //
 
@@ -112,6 +113,11 @@ void ComponentPropertyBool::from_json(ComponentBase * component, const Component
 	setter(component, j.j.value(name, false));
 }
 
+void ComponentPropertyBool::to_text(ComponentBase * component, std::string & text)
+{
+	text = getter(component) ? "true" : "false";
+}
+
 bool ComponentPropertyBool::from_text(ComponentBase * component, const char * text)
 {
 	setter(component, Parse::Bool(text));
@@ -129,6 +135,11 @@ void ComponentPropertyInt::to_json(ComponentBase * component, ComponentJson & j)
 void ComponentPropertyInt::from_json(ComponentBase * component, const ComponentJson & j)
 {
 	setter(component, j.j.value(name, 0));
+}
+
+void ComponentPropertyInt::to_text(ComponentBase * component, std::string & text)
+{
+	text = String::FormatC("%d", getter(component));
 }
 
 bool ComponentPropertyInt::from_text(ComponentBase * component, const char * text)
@@ -150,6 +161,11 @@ void ComponentPropertyFloat::from_json(ComponentBase * component, const Componen
 	setter(component, j.j.value(name, 0.f));
 }
 
+void ComponentPropertyFloat::to_text(ComponentBase * component, std::string & text)
+{
+	text = String::FormatC("%f", getter(component));
+}
+
 bool ComponentPropertyFloat::from_text(ComponentBase * component, const char * text)
 {
 	setter(component, Parse::Float(text));
@@ -167,6 +183,13 @@ void ComponentPropertyVec2::to_json(ComponentBase * component, ComponentJson & j
 void ComponentPropertyVec2::from_json(ComponentBase * component, const ComponentJson & j)
 {
 	setter(component, j.j.value(name, Vec2()));
+}
+
+void ComponentPropertyVec2::to_text(ComponentBase * component, std::string & text)
+{
+	const auto & value = getter(component);
+	
+	text = String::FormatC("%f %f", value[0], value[1]);
 }
 
 bool ComponentPropertyVec2::from_text(ComponentBase * component, const char * text)
@@ -198,6 +221,13 @@ void ComponentPropertyVec3::from_json(ComponentBase * component, const Component
 	setter(component, j.j.value(name, Vec3()));
 }
 
+void ComponentPropertyVec3::to_text(ComponentBase * component, std::string & text)
+{
+	const auto & value = getter(component);
+	
+	text = String::FormatC("%f %f %f", value[0], value[1], value[2]);
+}
+
 bool ComponentPropertyVec3::from_text(ComponentBase * component, const char * text)
 {
 	std::vector<std::string> parts;
@@ -226,6 +256,13 @@ void ComponentPropertyVec4::to_json(ComponentBase * component, ComponentJson & j
 void ComponentPropertyVec4::from_json(ComponentBase * component, const ComponentJson & j)
 {
 	setter(component, j.j.value(name, Vec4()));
+}
+
+void ComponentPropertyVec4::to_text(ComponentBase * component, std::string & text)
+{
+	const auto & value = getter(component);
+	
+	text = String::FormatC("%f %f %f %f", value[0], value[1], value[2], value[3]);
 }
 
 bool ComponentPropertyVec4::from_text(ComponentBase * component, const char * text)
@@ -259,6 +296,11 @@ void ComponentPropertyString::from_json(ComponentBase * component, const Compone
 	setter(component, j.j.value(name, std::string()));
 }
 
+void ComponentPropertyString::to_text(ComponentBase * component, std::string & text)
+{
+	text = getter(component);
+}
+
 bool ComponentPropertyString::from_text(ComponentBase * component, const char * text)
 {
 	setter(component, text);
@@ -276,6 +318,13 @@ void ComponentPropertyAngleAxis::to_json(ComponentBase * component, ComponentJso
 void ComponentPropertyAngleAxis::from_json(ComponentBase * component, const ComponentJson & j)
 {
 	setter(component, j.j.value(name, AngleAxis()));
+}
+
+void ComponentPropertyAngleAxis::to_text(ComponentBase * component, std::string & text)
+{
+	const auto & value = getter(component);
+	
+	text = String::FormatC("%f %f %f %f", value.angle, value.axis[0], value.axis[1], value.axis[2]);
 }
 
 bool ComponentPropertyAngleAxis::from_text(ComponentBase * component, const char * text)
