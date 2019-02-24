@@ -244,7 +244,7 @@ bool test_templateEditor()
 	std::set<std::string> processed;
 	std::vector<Template> templates;
 	
-	std::string path = "textfiles/base-entity-v1-overlay.txt";
+	std::string path = "textfiles/base-entity-v3-d.txt";
 	
 	std::string directory = Path::GetDirectory(path);
 	std::string filename = Path::GetFileName(path);
