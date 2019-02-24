@@ -122,6 +122,15 @@ static void doComponentProperty(
 			
 			auto & value = property->getter(component);
 			
+			if (isSet == false)
+			{
+				if (defaultPropertyBase != nullptr)
+				{
+					auto defaultProperty = static_cast<ComponentPropertyBool*>(defaultPropertyBase);
+					value = defaultProperty->getter(defaultComponent);
+				}
+			}
+			
 			if (ImGui::Checkbox(property->name.c_str(), &value))
 			{
 				isSet = true;
@@ -137,10 +146,24 @@ static void doComponentProperty(
 			
 			auto & value = property->getter(component);
 			
+			if (isSet == false)
+			{
+				if (defaultPropertyBase != nullptr)
+				{
+					auto defaultProperty = static_cast<ComponentPropertyInt*>(defaultPropertyBase);
+					value = defaultProperty->getter(defaultComponent);
+				}
+			}
+			
 			if (property->hasLimits)
 			{
-				if (ImGui::SliderInt(property->name.c_str(), &value, property->min, property->max) && signalChanges)
-					component->propertyChanged(&value);
+				if (ImGui::SliderInt(property->name.c_str(), &value, property->min, property->max))
+				{
+					isSet = true;
+					
+					if (signalChanges)
+						component->propertyChanged(&value);
+				}
 			}
 			else
 			{
@@ -167,8 +190,6 @@ static void doComponentProperty(
 					auto defaultProperty = static_cast<ComponentPropertyFloat*>(defaultPropertyBase);
 					value = defaultProperty->getter(defaultComponent);
 				}
-				//else
-				//	property->setToDefault(component);
 			}
 			
 			if (property->hasLimits)
@@ -183,8 +204,13 @@ static void doComponentProperty(
 			}
 			else
 			{
-				if (ImGui::InputFloat(property->name.c_str(), &value) && signalChanges)
-					component->propertyChanged(&value);
+				if (ImGui::InputFloat(property->name.c_str(), &value))
+				{
+					isSet = true;
+					
+					if (signalChanges)
+						component->propertyChanged(&value);
+				}
 			}
 		}
 		break;
@@ -193,9 +219,23 @@ static void doComponentProperty(
 			auto property = static_cast<ComponentPropertyVec2*>(propertyBase);
 			
 			auto & value = property->getter(component);
-
-			if (ImGui::InputFloat2(property->name.c_str(), &value[0]) && signalChanges)
-				component->propertyChanged(&value);
+			
+			if (isSet == false)
+			{
+				if (defaultPropertyBase != nullptr)
+				{
+					auto defaultProperty = static_cast<ComponentPropertyVec2*>(defaultPropertyBase);
+					value = defaultProperty->getter(defaultComponent);
+				}
+			}
+			
+			if (ImGui::InputFloat2(property->name.c_str(), &value[0]))
+			{
+				isSet = true;
+				
+				if (signalChanges)
+					component->propertyChanged(&value);
+			}
 		}
 		break;
 	case kComponentPropertyType_Vec3:
@@ -203,9 +243,23 @@ static void doComponentProperty(
 			auto property = static_cast<ComponentPropertyVec3*>(propertyBase);
 			
 			auto & value = property->getter(component);
+			
+			if (isSet == false)
+			{
+				if (defaultPropertyBase != nullptr)
+				{
+					auto defaultProperty = static_cast<ComponentPropertyVec3*>(defaultPropertyBase);
+					value = defaultProperty->getter(defaultComponent);
+				}
+			}
 
-			if (ImGui::InputFloat3(property->name.c_str(), &value[0]) && signalChanges)
-				component->propertyChanged(&value);
+			if (ImGui::InputFloat3(property->name.c_str(), &value[0]))
+			{
+				isSet = true;
+				
+				if (signalChanges)
+					component->propertyChanged(&value);
+			}
 		}
 		break;
 	case kComponentPropertyType_Vec4:
@@ -214,8 +268,22 @@ static void doComponentProperty(
 			
 			auto & value = property->getter(component);
 
-			if (ImGui::InputFloat4(property->name.c_str(), &value[0]) && signalChanges)
-				component->propertyChanged(&value);
+			if (isSet == false)
+			{
+				if (defaultPropertyBase != nullptr)
+				{
+					auto defaultProperty = static_cast<ComponentPropertyVec4*>(defaultPropertyBase);
+					value = defaultProperty->getter(defaultComponent);
+				}
+			}
+			
+			if (ImGui::InputFloat4(property->name.c_str(), &value[0]))
+			{
+				isSet = true;
+				
+				if (signalChanges)
+					component->propertyChanged(&value);
+			}
 		}
 		break;
 	case kComponentPropertyType_String:
@@ -224,12 +292,23 @@ static void doComponentProperty(
 			
 			auto & value = property->getter(component);
 
+			if (isSet == false)
+			{
+				if (defaultPropertyBase != nullptr)
+				{
+					auto defaultProperty = static_cast<ComponentPropertyString*>(defaultPropertyBase);
+					value = defaultProperty->getter(defaultComponent);
+				}
+			}
+			
 			char buffer[1024];
 			strcpy_s(buffer, sizeof(buffer), value.c_str());
 			
 			if (ImGui::InputText(property->name.c_str(), buffer, sizeof(buffer)))
 			{
 				property->setter(component, buffer);
+				
+				isSet = true;
 				
 				if (signalChanges)
 					component->propertyChanged(&value);
@@ -242,11 +321,33 @@ static void doComponentProperty(
 			
 			auto & value = property->getter(component);
 			
-			if (ImGui::SliderAngle(property->name.c_str(), &value.angle) && signalChanges)
-				component->propertyChanged(&value);
+			if (isSet == false)
+			{
+				if (defaultPropertyBase != nullptr)
+				{
+					auto defaultProperty = static_cast<ComponentPropertyAngleAxis*>(defaultPropertyBase);
+					value = defaultProperty->getter(defaultComponent);
+				}
+			}
+			
+			if (ImGui::SliderAngle(property->name.c_str(), &value.angle))
+			{
+				isSet = true;
+				
+				if (signalChanges)
+					component->propertyChanged(&value);
+			}
+			
 			ImGui::PushID(&value.axis);
-			if (ImGui::SliderFloat3(property->name.c_str(), &value.axis[0], -1.f, +1.f) && signalChanges)
-				component->propertyChanged(&value);
+			{
+				if (ImGui::SliderFloat3(property->name.c_str(), &value.axis[0], -1.f, +1.f))
+				{
+					isSet = true;
+					
+					if (signalChanges)
+						component->propertyChanged(&value);
+				}
+			}
 			ImGui::PopID();
 		}
 		break;
