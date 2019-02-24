@@ -183,10 +183,8 @@ bool saveTemplateInstanceToString(const std::vector<TemplateInstance> & instance
 	
 	std::ostringstream out;
 	
-	for (size_t component_itr = 0; component_itr < instance.components.size(); ++component_itr)
+	for (auto & component : instance.components)
 	{
-		auto & component = instance.components[component_itr];
-		
 		bool anyPropertyIsSet = false;
 		
 		for (auto propertyIsSet : component.propertyIsSetArray)
@@ -311,25 +309,6 @@ bool test_templateEditor()
 		}
 	}
 	
-	// create template instances
-	
-	std::vector<TemplateInstance> template_instances;
-	
-	for (size_t i = 0; i < templates.size(); ++i)
-	{
-		auto & t = templates[i];
-		
-		TemplateInstance template_instance;
-		
-		if (!template_instance.init(t, componentTypesWithId))
-		{
-			LOG_ERR("failed to initialize template instance", 0);
-			return false;
-		}
-		
-		template_instances.emplace_back(std::move(template_instance));
-	}
-	
 	// create a fallback template instance, with default values for all component properties
 	// note : default values are determined by instantiating compontent types and inspecting their initial property values
 	
@@ -362,21 +341,24 @@ bool test_templateEditor()
 			fallback_template.components.emplace_back(std::move(template_component));
 		}
 		
+		templates.emplace_back(std::move(fallback_template));
+	}
+	
+	// create template instances
+	
+	std::vector<TemplateInstance> template_instances;
+	
+	for (auto template_itr = templates.begin(); template_itr != templates.end(); ++template_itr)
+	{
+		auto & t = *template_itr;
+		
 		TemplateInstance template_instance;
 		
-		if (!template_instance.init(fallback_template, componentTypesWithId))
+		if (!template_instance.init(t, componentTypesWithId))
 		{
-			LOG_ERR("failed to initialize (fallback) template instance", 0);
+			LOG_ERR("failed to initialize template instance", 0);
 			return false;
 		}
-		
-	#if defined(DEBUG)
-		for (auto & component : template_instance.components)
-		{
-			for (bool propertyIsSet : component.propertyIsSetArray)
-				Assert(propertyIsSet);
-		}
-	#endif
 		
 		template_instances.emplace_back(std::move(template_instance));
 	}
