@@ -695,6 +695,7 @@ bool test_templateEditor()
 								{
 									component_with_value = template_instances[i].component_instances[component_itr].component;
 									property_with_value = template_instances[i].component_instances[component_itr].componentType->properties[property_itr];
+									break;
 								}
 							}
 							
