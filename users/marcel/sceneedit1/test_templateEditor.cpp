@@ -659,67 +659,77 @@ bool test_templateEditor()
 			ImGui::SetNextWindowPos(ImVec2(10, 10));
 			ImGui::SetNextWindowSize(ImVec2(400, 400));
 			
-			if (selectedTemplateIndex < template_instances.size() && ImGui::Begin("Components"))
+			if (ImGui::Begin("Components"))
 			{
-				// determine and fetch the template we want to edit
+				ImGui::SliderInt("Template level", &selectedTemplateIndex, 0, (int)template_instances.size() - 2);
 				
-				size_t template_itr = selectedTemplateIndex;
-				
-				auto & template_instance = template_instances[template_itr];
-				
-				// iterate over all of its components
-				
-				for (size_t component_itr = 0; component_itr < template_instance.components.size(); ++component_itr)
+				if (selectedTemplateIndex >= 0 && selectedTemplateIndex < template_instances.size())
 				{
-					auto & component_instance = template_instance.components[component_itr];
+					const bool isFallbackTemplate = (selectedTemplateIndex == template_instances.size() - 1);
 					
-					ImGui::PushID(&component_instance);
+					// determine and fetch the template we want to edit
+					
+					size_t template_itr = selectedTemplateIndex;
+					
+					auto & template_instance = template_instances[template_itr];
+					
+					// iterate over all of its components
+					
+					for (size_t component_itr = 0; component_itr < template_instance.components.size(); ++component_itr)
 					{
-						ImGui::Text("%s", component_instance.componentType->typeName.c_str());
+						auto & component_instance = template_instance.components[component_itr];
 						
-						// iterate over all of the components' properties
-						
-						for (size_t property_itr = 0; property_itr < component_instance.componentType->properties.size(); ++property_itr)
+						ImGui::PushID(&component_instance);
 						{
-						// todo : show the default value when a property is set to default
-						// todo : use a different color when a property is set to default
-						
-							auto & property = component_instance.componentType->properties[property_itr];
+							ImGui::Text("%s", component_instance.componentType->typeName.c_str());
 							
-							ComponentBase * component_with_value = nullptr;
-							ComponentPropertyBase * property_with_value = nullptr;
+							// iterate over all of the components' properties
 							
-							for (size_t i = template_itr; i < template_instances.size(); ++i)
+							for (size_t property_itr = 0; property_itr < component_instance.componentType->properties.size(); ++property_itr)
 							{
-								if (template_instances[i].components[component_itr].propertyIsSetArray[property_itr])
+							// todo : show the default value when a property is set to default
+							// todo : use a different color when a property is set to default
+							
+								auto & property = component_instance.componentType->properties[property_itr];
+								
+								ComponentBase * component_with_value = nullptr;
+								ComponentPropertyBase * property_with_value = nullptr;
+								
+								for (size_t i = template_itr; i < template_instances.size(); ++i)
 								{
-									component_with_value = template_instances[i].components[component_itr].component;
-									property_with_value = template_instances[i].components[component_itr].componentType->properties[property_itr];
-									break;
-								}
-							}
-							
-							// there should always with a property with value, as we create a default template instance before
-							Assert(property_with_value != nullptr);
-							
-							bool propertyIsSet = component_instance.propertyIsSetArray[property_itr]; // argh frck c++ with its bit array..
-							
-							doComponentProperty(property, component_instance.component, false, propertyIsSet, property_with_value, component_with_value);
-							
-							if (ImGui::BeginPopupContextItem(property->name.c_str()))
-							{
-								if (ImGui::MenuItem("Set to default"))
-								{
-									propertyIsSet = false;
+									if (template_instances[i].components[component_itr].propertyIsSetArray[property_itr])
+									{
+										component_with_value = template_instances[i].components[component_itr].component;
+										property_with_value = template_instances[i].components[component_itr].componentType->properties[property_itr];
+										break;
+									}
 								}
 								
-								ImGui::EndPopup();
+								// there should always with a property with value, as we create a default template instance before
+								Assert(property_with_value != nullptr);
+								
+								bool propertyIsSet = component_instance.propertyIsSetArray[property_itr]; // argh frck c++ with its bit array..
+								
+								doComponentProperty(property, component_instance.component, false, propertyIsSet, property_with_value, component_with_value);
+								
+								if (ImGui::BeginPopupContextItem(property->name.c_str()))
+								{
+									if (isFallbackTemplate == false)
+									{
+										if (ImGui::MenuItem("Set to default"))
+										{
+											propertyIsSet = false;
+										}
+									}
+									
+									ImGui::EndPopup();
+								}
+								
+								component_instance.propertyIsSetArray[property_itr] = propertyIsSet;
 							}
-							
-							component_instance.propertyIsSetArray[property_itr] = propertyIsSet;
 						}
+						ImGui::PopID();
 					}
-					ImGui::PopID();
 				}
 			}
 			ImGui::End();
