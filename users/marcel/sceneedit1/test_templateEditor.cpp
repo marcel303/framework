@@ -345,10 +345,11 @@ bool test_templateEditor()
 	}
 	
 	// create template instances
+	// note : this operation will reverse the array. !! the fallback template will be at index zero !!
 	
 	std::vector<TemplateInstance> template_instances;
 	
-	for (auto template_itr = templates.begin(); template_itr != templates.end(); ++template_itr)
+	for (auto template_itr = templates.rbegin(); template_itr != templates.rend(); ++template_itr)
 	{
 		auto & t = *template_itr;
 		
@@ -390,7 +391,7 @@ bool test_templateEditor()
 	FrameworkImGuiContext guiContext;
 	guiContext.init();
 	
-	int selectedTemplateIndex = 0;
+	int selectedTemplateIndex = (int)template_instances.size() - 1;
 	
 	for (;;)
 	{
@@ -408,11 +409,11 @@ bool test_templateEditor()
 			
 			if (ImGui::Begin("Components"))
 			{
-				ImGui::SliderInt("Template level", &selectedTemplateIndex, 0, (int)template_instances.size() - 2);
+				ImGui::SliderInt("Template level", &selectedTemplateIndex, 1, (int)template_instances.size() - 1);
 				
 				if (selectedTemplateIndex >= 0 && selectedTemplateIndex < template_instances.size())
 				{
-					const bool isFallbackTemplate = (selectedTemplateIndex == template_instances.size() - 1);
+					const bool isFallbackTemplate = (selectedTemplateIndex == 0);
 					
 					// determine and fetch the template we want to edit
 					
@@ -448,7 +449,7 @@ bool test_templateEditor()
 								ComponentBase * component_with_value = nullptr;
 								ComponentPropertyBase * property_with_value = nullptr;
 								
-								for (size_t i = selectedTemplateIndex; i < template_instances.size(); ++i)
+								for (int i = selectedTemplateIndex; i >= 0; --i)
 								{
 									auto * base_component = template_instances[i].findComponentInstance(component_instance.componentType->typeName.c_str(), component_instance.id.c_str());
 									Assert(base_component != nullptr);
@@ -494,7 +495,7 @@ bool test_templateEditor()
 			ImGui::SetNextWindowSize(ImVec2(600, 400));
 			if (ImGui::Begin("Out"))
 			{
-				for (size_t instance_itr = 0; instance_itr < template_instances.size() - 1; ++instance_itr)
+				for (int instance_itr = (int)template_instances.size() - 1; instance_itr > 0; --instance_itr)
 				{
 					ImGui::PushID(instance_itr);
 					{
