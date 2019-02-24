@@ -114,41 +114,40 @@ struct TemplateInstance
 		
 		components.resize(componentTypesWithId.size());
 		
-		int component_index = 0;
+		int componentIndex = 0;
 		
 		for (auto & componentTypeWithId : componentTypesWithId)
 		{
 			// see if there's a template component for this component + id
 			
-			TemplateComponent * template_component = nullptr;
+			TemplateComponent * templateComponent = nullptr;
 			
-			for (auto & template_component_itr : t.components)
+			for (auto & templateComponent_itr : t.components)
 			{
-				if (template_component_itr.type_name == componentTypeWithId.typeName &&
-					template_component_itr.id == componentTypeWithId.id)
+				if (templateComponent_itr.type_name == componentTypeWithId.typeName &&
+					templateComponent_itr.id == componentTypeWithId.id)
 				{
-					template_component = &template_component_itr;
+					templateComponent = &templateComponent_itr;
 				}
 			}
 			
-			// create the instance
+			// initialize the component instance
 			
-			TemplateComponentInstance & component_instance = components[component_index];
-			component_index++;
+			TemplateComponentInstance & component = components[componentIndex++];
 			
-			if (template_component == nullptr)
+			if (templateComponent == nullptr)
 			{
-				component_instance.isOverride = true;
+				component.isOverride = true;
 			}
 			
-			ComponentTypeBase * component_type = findComponentType(componentTypeWithId.typeName.c_str());
+			ComponentTypeBase * componentType = findComponentType(componentTypeWithId.typeName.c_str());
 			
-			if (component_type == nullptr)
+			if (componentType == nullptr)
 			{
-				LOG_ERR("failed to find component type: %s", template_component->type_name.c_str());
+				LOG_ERR("failed to find component type: %s", templateComponent->type_name.c_str());
 				return false;
 			}
-			else if (!component_instance.init(component_type, componentTypeWithId.id.c_str(), template_component))
+			else if (!component.init(componentType, componentTypeWithId.id.c_str(), templateComponent))
 			{
 				LOG_ERR("failed to initialize template component instance", 0);
 				return false;
@@ -417,9 +416,9 @@ static void doComponentProperty(
 	ImGui::PopStyleColor();
 }
 
-bool saveTemplateInstanceToString(const std::vector<TemplateInstance> & instances, const size_t instance_index, std::string & text)
+bool saveTemplateInstanceToString(const std::vector<TemplateInstance> & instances, const size_t instanceIndex, std::string & out_text)
 {
-	auto & instance = instances[instance_index];
+	auto & instance = instances[instanceIndex];
 	
 	std::ostringstream out;
 	
@@ -456,16 +455,16 @@ bool saveTemplateInstanceToString(const std::vector<TemplateInstance> & instance
 		}
 	}
 	
-	text = out.str();
+	out_text = out.str();
 	
 	return true;
 }
 
-bool saveTemplateInstanceToFile(const std::vector<TemplateInstance> & instances, const size_t instance_index, const char * filename)
+bool saveTemplateInstanceToFile(const std::vector<TemplateInstance> & instances, const size_t instanceIndex, const char * filename)
 {
 	std::string content;
 	
-	if (!saveTemplateInstanceToString(instances, instance_index, content))
+	if (!saveTemplateInstanceToString(instances, instanceIndex, content))
 		return false;
 	
 	if (!content.empty())
@@ -607,9 +606,9 @@ bool test_templateEditor()
 		}
 		
 	#if defined(DEBUG)
-		for (auto & component_instance : template_instance.components)
+		for (auto & component : template_instance.components)
 		{
-			for (bool propertyIsSet : component_instance.propertyIsSetArray)
+			for (bool propertyIsSet : component.propertyIsSetArray)
 				Assert(propertyIsSet);
 		}
 	#endif
@@ -644,6 +643,8 @@ bool test_templateEditor()
 	FrameworkImGuiContext guiContext;
 	guiContext.init();
 	
+	int selectedTemplateIndex = 0;
+	
 	for (;;)
 	{
 		framework.process();
@@ -658,11 +659,11 @@ bool test_templateEditor()
 			ImGui::SetNextWindowPos(ImVec2(10, 10));
 			ImGui::SetNextWindowSize(ImVec2(400, 400));
 			
-			if (!template_instances.empty() && ImGui::Begin("Components"))
+			if (selectedTemplateIndex < template_instances.size() && ImGui::Begin("Components"))
 			{
 				// determine and fetch the template we want to edit
 				
-				size_t template_itr = 0;
+				size_t template_itr = selectedTemplateIndex;
 				
 				auto & template_instance = template_instances[template_itr];
 				
