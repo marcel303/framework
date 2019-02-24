@@ -23,11 +23,13 @@ struct TemplateComponentInstance
 		bool isSet = false;
 	};
 	
-	std::vector<PropertyInfo> propertyInfos;
+	std::vector<PropertyInfo> property_infos;
 	
 	ComponentBase * component = nullptr;
 	
-	ComponentTypeBase * componentType;
+	ComponentTypeBase * componentType = nullptr;
+	
+	std::string id;
 	
 	bool init(ComponentTypeBase * in_componentType, const TemplateComponent & templateComponent)
 	{
@@ -35,13 +37,15 @@ struct TemplateComponentInstance
 		
 		componentType = in_componentType;
 		
-		propertyInfos.resize(componentType->properties.size());
+		property_infos.resize(componentType->properties.size());
 		
 		component = componentType->componentMgr->createComponent();
 		
+		id = templateComponent.id;
+		
 		//
 		
-		auto propertyInfo_itr = propertyInfos.begin();
+		auto propertyInfo_itr = property_infos.begin();
 		
 		for (auto * componentProperty : componentType->properties)
 		{
@@ -68,15 +72,19 @@ struct TemplateComponentInstance
 
 struct TemplateInstance
 {
-	std::vector<TemplateComponentInstance> template_component_instances;
+	Template * t = nullptr;
 	
-	void init(Template & t)
+	std::vector<TemplateComponentInstance> component_instances;
+	
+	void init(Template & in_t)
 	{
+		t = &in_t;
+		
 		// create template component instances for each component in the template
 		
-		for (auto & template_component : t.components)
+		for (auto & template_component : t->components)
 		{
-			TemplateComponentInstance template_component_instance;
+			TemplateComponentInstance component_instance;
 			
 			ComponentTypeBase * component_type = findComponentType(template_component.type_name.c_str());
 			
@@ -84,20 +92,28 @@ struct TemplateInstance
 			{
 				LOG_ERR("failed to find component type: %s", template_component.type_name.c_str());
 			}
-			else if (!template_component_instance.init(component_type, template_component))
+			else if (!component_instance.init(component_type, template_component))
 			{
 				LOG_ERR("failed to initialize template component instance", 0);
 			}
 			else
 			{
-				template_component_instances.emplace_back(std::move(template_component_instance));
+				component_instances.emplace_back(std::move(component_instance));
 			}
 		}
 	}
 };
 
-static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentBase * component, const bool signalChanges)
+static void doComponentProperty(
+	ComponentPropertyBase * propertyBase,
+	ComponentBase * component,
+	const bool signalChanges,
+	bool & isSet,
+	ComponentPropertyBase * defaultPropertyBase,
+	ComponentBase * defaultComponent)
 {
+	ImGui::PushStyleColor(ImGuiCol_Text, isSet ? (ImU32)ImColor(255, 255, 255, 255) : (ImU32)ImColor(0, 255, 0, 255));
+	
 	switch (propertyBase->type)
 	{
 	case kComponentPropertyType_Bool:
@@ -106,8 +122,13 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 			
 			auto & value = property->getter(component);
 			
-			if (ImGui::Checkbox(property->name.c_str(), &value) && signalChanges)
-				component->propertyChanged(&value);
+			if (ImGui::Checkbox(property->name.c_str(), &value))
+			{
+				isSet = true;
+				
+				if (signalChanges)
+					component->propertyChanged(&value);
+			}
 		}
 		break;
 	case kComponentPropertyType_Int32:
@@ -123,8 +144,13 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 			}
 			else
 			{
-				if (ImGui::InputInt(property->name.c_str(), &value) && signalChanges)
-					component->propertyChanged(&value);
+				if (ImGui::InputInt(property->name.c_str(), &value))
+				{
+					isSet = true;
+					
+					if (signalChanges)
+						component->propertyChanged(&value);
+				}
 			}
 		}
 		break;
@@ -134,10 +160,26 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 			
 			auto & value = property->getter(component);
 			
+			if (isSet == false)
+			{
+				if (defaultPropertyBase != nullptr)
+				{
+					auto defaultProperty = static_cast<ComponentPropertyFloat*>(defaultPropertyBase);
+					value = defaultProperty->getter(defaultComponent);
+				}
+				//else
+				//	property->setToDefault(component);
+			}
+			
 			if (property->hasLimits)
 			{
-				if (ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential) && signalChanges)
-					component->propertyChanged(&value);
+				if (ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential))
+				{
+					isSet = true;
+					
+					if (signalChanges)
+						component->propertyChanged(&value);
+				}
 			}
 			else
 			{
@@ -209,6 +251,8 @@ static void doComponentProperty(ComponentPropertyBase * propertyBase, ComponentB
 		}
 		break;
 	}
+	
+	ImGui::PopStyleColor();
 }
 
 void test_templateEditor()
@@ -254,12 +298,59 @@ void test_templateEditor()
 		current_filename = new_filename;
 	}
 	
+// fixme : template instances should contain all component types
+
 	std::vector<TemplateInstance> template_instances;
 	
 	for (auto & t : templates)
 	{
 		TemplateInstance template_instance;
 		template_instance.init(t);
+		
+		template_instances.emplace_back(std::move(template_instance));
+	}
+	
+	// create a default template instance, with default values taken from components
+	
+	if (!template_instances.empty())
+	{
+		Template t;
+		
+		for (auto & component : template_instances.back().component_instances)
+		{
+			TemplateComponent template_component;
+			template_component.type_name = component.componentType->typeName;
+			template_component.id = component.id;
+			
+			auto * componentBase = component.componentType->componentMgr->createComponent();
+			
+			for (auto & property : component.componentType->properties)
+			{
+				TemplateComponentProperty template_property;
+				
+				template_property.name = property->name;
+				property->to_text(componentBase, template_property.value);
+				
+				template_component.properties.push_back(template_property);
+			}
+			
+			component.componentType->componentMgr->removeComponent(componentBase);
+			componentBase = nullptr;
+			
+			t.components.emplace_back(std::move(template_component));
+		}
+		
+		TemplateInstance template_instance;
+		
+		template_instance.init(t);
+		
+	#if defined(DEBUG)
+		for (auto & component_instance : template_instance.component_instances)
+		{
+			for (auto & property_info : component_instance.property_infos)
+				Assert(property_info.isSet);
+		}
+	#endif
 		
 		template_instances.emplace_back(std::move(template_instance));
 	}
@@ -286,26 +377,55 @@ void test_templateEditor()
 			
 			if (!template_instances.empty() && ImGui::Begin("Components"))
 			{
-				auto & template_instance = template_instances.front();
+				// determine and fetch the template we want to edit
 				
-				for (auto & template_component_instance : template_instance.template_component_instances)
+				size_t template_itr = 0;
+				
+				auto & template_instance = template_instances[template_itr];
+				
+				// iterate over all of its components
+				
+				for (size_t component_itr = 0; component_itr < template_instance.component_instances.size(); ++component_itr)
 				{
-					ImGui::PushID(&template_component_instance);
+					auto & component_instance = template_instance.component_instances[component_itr];
+					
+					ImGui::PushID(&component_instance);
 					{
-						ImGui::Text("%s", template_component_instance.componentType->typeName.c_str());
+						ImGui::Text("%s", component_instance.componentType->typeName.c_str());
 						
-						for (auto & component_property : template_component_instance.componentType->properties)
+						// iterate over all of the components' properties
+						
+						for (size_t property_itr = 0; property_itr < component_instance.componentType->properties.size(); ++property_itr)
 						{
 						// todo : show the default value when a property is set to default
 						// todo : use a different color when a property is set to default
 						
-							doComponentProperty(component_property, template_component_instance.component, false);
+							auto & property = component_instance.componentType->properties[property_itr];
 							
-							if (ImGui::BeginPopupContextItem(component_property->name.c_str()))
+							auto & property_info = component_instance.property_infos[property_itr];
+							
+							ComponentBase * component_with_value = nullptr;
+							ComponentPropertyBase * property_with_value = nullptr;
+							
+							for (size_t i = template_itr; i < template_instances.size(); ++i)
+							{
+								if (template_instances[i].component_instances[component_itr].property_infos[property_itr].isSet)
+								{
+									component_with_value = template_instances[i].component_instances[component_itr].component;
+									property_with_value = template_instances[i].component_instances[component_itr].componentType->properties[property_itr];
+								}
+							}
+							
+							// there should always with a property with value, as we create a default template instance before
+							Assert(property_with_value != nullptr);
+							
+							doComponentProperty(property, component_instance.component, false, property_info.isSet, property_with_value, component_with_value);
+							
+							if (ImGui::BeginPopupContextItem(property->name.c_str()))
 							{
 								if (ImGui::MenuItem("Set to default"))
 								{
-									component_property->setToDefault(template_component_instance.component);
+									property_info.isSet = false;
 								}
 								
 								ImGui::EndPopup();
