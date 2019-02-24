@@ -291,11 +291,11 @@ bool test_templateEditor()
 		
 		current_filename = new_filename;
 	}
-	
-	// generate a set of all referenced component types + their ids. this set will be used to populate template instances later on
-	
-	std::set<ComponentTypeWithId> componentTypesWithId;
-	
+
+	// generate a set of all referenced component types + their ids. this set will be used to populate the fallback template
+
+	std::set<ComponentTypeWithId> allComponentTypesWithId;
+
 	for (auto & t : templates)
 	{
 		for (auto & component : t.components)
@@ -304,18 +304,20 @@ bool test_templateEditor()
 			elem.typeName = component.type_name;
 			elem.id = component.id;
 			
-			if (componentTypesWithId.count(elem) == 0)
-				componentTypesWithId.insert(elem);
+			if (allComponentTypesWithId.count(elem) == 0)
+				allComponentTypesWithId.insert(elem);
 		}
 	}
 	
-	// create a fallback template instance, with default values for all component properties
+	// create a fallback template, with default values for all component properties
 	// note : default values are determined by instantiating compontent types and inspecting their initial property values
 	
 	{
+		// create the fallback template
+		
 		Template fallback_template;
 		
-		for (auto & componentTypeWithId : componentTypesWithId)
+		for (auto & componentTypeWithId : allComponentTypesWithId)
 		{
 			TemplateComponent template_component;
 			
@@ -349,41 +351,49 @@ bool test_templateEditor()
 	
 	std::vector<TemplateInstance> template_instances;
 	
+	std::set<ComponentTypeWithId> componentTypesWithId;
+	
 	for (auto template_itr = templates.rbegin(); template_itr != templates.rend(); ++template_itr)
 	{
 		auto & t = *template_itr;
 		
-		TemplateInstance template_instance;
+		const bool isFallbackTemplate = (template_itr == templates.rbegin());
 		
-		if (!template_instance.init(t, componentTypesWithId))
+		if (isFallbackTemplate)
 		{
-			LOG_ERR("failed to initialize template instance", 0);
-			return false;
+			TemplateInstance template_instance;
+			
+			if (!template_instance.init(t, allComponentTypesWithId))
+			{
+				LOG_ERR("failed to initialize (fallback) template instance", 0);
+				return false;
+			}
+			
+			template_instances.emplace_back(std::move(template_instance));
 		}
-		
-		template_instances.emplace_back(std::move(template_instance));
-	}
-	
-#if defined(DEBUG)
-	for (size_t i = 1; i < template_instances.size(); ++i)
-	{
-		auto & a = template_instances[0];
-		auto & b = template_instances[i];
-		
-		Assert(a.components.size() == b.components.size());
-		
-		for (size_t j = 0; j < a.components.size(); ++j)
+		else
 		{
-			auto & a_comp = a.components[j];
-			auto & b_comp = b.components[j];
+			for (auto & component : t.components)
+			{
+				ComponentTypeWithId elem;
+				elem.typeName = component.type_name;
+				elem.id = component.id;
+				
+				if (componentTypesWithId.count(elem) == 0)
+					componentTypesWithId.insert(elem);
+			}
 			
-			Assert(a_comp.componentType->typeName == b_comp.componentType->typeName);
-			Assert(a_comp.id == b_comp.id);
+			TemplateInstance template_instance;
 			
-			Assert(a_comp.propertyIsSetArray.size() == b_comp.propertyIsSetArray.size());
+			if (!template_instance.init(t, componentTypesWithId))
+			{
+				LOG_ERR("failed to initialize template instance", 0);
+				return false;
+			}
+			
+			template_instances.emplace_back(std::move(template_instance));
 		}
 	}
-#endif
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return false;
@@ -452,9 +462,8 @@ bool test_templateEditor()
 								for (int i = selectedTemplateIndex; i >= 0; --i)
 								{
 									auto * base_component = template_instances[i].findComponentInstance(component_instance.componentType->typeName.c_str(), component_instance.id.c_str());
-									Assert(base_component != nullptr);
 									
-									if (base_component->propertyIsSetArray[property_itr])
+									if (base_component != nullptr && base_component->propertyIsSetArray[property_itr])
 									{
 										component_with_value = base_component->component;
 										property_with_value = base_component->componentType->properties[property_itr];
