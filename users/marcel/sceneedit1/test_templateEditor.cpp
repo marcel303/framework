@@ -19,6 +19,9 @@
 
 // todo : avoid creating a component instance just to aid in editing templates
 
+#define VIEW_SX 1200
+#define VIEW_SY 480
+
 struct ComponentTypeWithId
 {
 	std::string type_name;
@@ -634,7 +637,7 @@ bool test_templateEditor()
 		template_instances.emplace_back(std::move(template_instance));
 	}
 	
-	if (!framework.init(640, 480))
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return false;
 	
 	FrameworkImGuiContext guiContext;
@@ -649,7 +652,7 @@ bool test_templateEditor()
 		
 		bool inputIsCaptured = false;
 		
-		guiContext.processBegin(framework.timeStep, 640, 480, inputIsCaptured);
+		guiContext.processBegin(framework.timeStep, VIEW_SX, VIEW_SY, inputIsCaptured);
 		{
 			ImGui::SetNextWindowPos(ImVec2(10, 10));
 			ImGui::SetNextWindowSize(ImVec2(400, 400));
@@ -710,6 +713,29 @@ bool test_templateEditor()
 								ImGui::EndPopup();
 							}
 						}
+					}
+					ImGui::PopID();
+				}
+			}
+			ImGui::End();
+			
+			ImGui::SetNextWindowPos(ImVec2(440, 10));
+			ImGui::SetNextWindowSize(ImVec2(600, 400));
+			if (ImGui::Begin("Out"))
+			{
+				for (size_t instance_itr = 0; instance_itr < template_instances.size() - 1; ++instance_itr)
+				{
+					ImGui::PushID(instance_itr);
+					{
+						std::string text;
+						
+						if (!saveTemplateInstanceToString(template_instances, instance_itr, text))
+						{
+							logError("failed to save template instance");
+							return false;
+						}
+						
+						ImGui::InputTextMultiline("Text", (char*)text.c_str(), text.size());
 					}
 					ImGui::PopID();
 				}
