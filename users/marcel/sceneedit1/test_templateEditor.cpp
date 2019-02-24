@@ -443,11 +443,17 @@ bool test_templateEditor()
 							if (ImGui::InputText("Id", id, sizeof(id)))
 							{
 								// patch id for all template instances
+								// note : make a copy of the id since it will possibly be modified in the loop below
+								auto old_id = component_instance.id;
+								
 								for (auto & instance : template_instances)
 								{
-									auto * component = instance.findComponentInstance(component_instance.componentType->typeName.c_str(), component_instance.id.c_str());
+									auto * component = instance.findComponentInstance(component_instance.componentType->typeName.c_str(), old_id.c_str());
 									
-									component->id = id;
+									if (component != nullptr)
+									{
+										component->id = id;
+									}
 								}
 							}
 							
@@ -472,7 +478,7 @@ bool test_templateEditor()
 									}
 								}
 								
-								// there should always with a property with value, as we create a default template instance before
+								// there should always be a property with a value, as we created a default template instance before
 								Assert(property_with_value != nullptr);
 								
 								bool propertyIsSet = component_instance.propertyIsSetArray[property_itr]; // argh frck c++ with its bit array..
