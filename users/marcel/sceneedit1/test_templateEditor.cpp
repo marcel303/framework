@@ -8,6 +8,7 @@
 #include "Path.h"
 #include "StringEx.h"
 #include "template.h"
+#include <list>
 #include <set>
 #include <sstream>
 
@@ -18,8 +19,57 @@
 
 // todo : avoid creating a component instance just to aid in editing templates
 
+// todo : add support for adding components
+// todo : add support for removing components
+
 #define VIEW_SX 1200
 #define VIEW_SY 480
+
+static bool doComponentTypeMenu(std::string & out_typeName)
+{
+	bool result = false;
+	
+	// sort the component types by name by putting them in a set
+	
+	std::set<std::string> componentTypeNames;
+	
+	for (auto * componentType : g_componentTypes)
+		componentTypeNames.insert(componentType->typeName);
+	
+	for (auto & typeName : componentTypeNames)
+	{
+		if (ImGui::MenuItem(typeName.c_str()))
+		{
+			result = true;
+			
+			out_typeName = typeName;
+		}
+	}
+	
+	return result;
+}
+
+static void createFallbackTemplateForComponent(const char * componentTypeName, const char * componentId, TemplateComponent & template_component)
+{
+	template_component.type_name = componentTypeName;
+	template_component.id = componentId;
+	
+	auto * componentType = findComponentType(componentTypeName);
+	auto * component = componentType->componentMgr->createComponent();
+	
+	for (auto & property : componentType->properties)
+	{
+		TemplateComponentProperty template_property;
+		
+		template_property.name = property->name;
+		property->to_text(component, template_property.value);
+		
+		template_component.properties.push_back(template_property);
+	}
+	
+	componentType->componentMgr->removeComponent(component);
+	component = nullptr;
+}
 
 struct ComponentTypeWithId
 {
@@ -105,7 +155,7 @@ struct TemplateComponentInstance
 
 struct TemplateInstance
 {
-	std::vector<TemplateComponentInstance> components;
+	std::list<TemplateComponentInstance> components;
 	
 	TemplateComponentInstance * findComponentInstance(const char * typeName, const char * id)
 	{
@@ -127,7 +177,7 @@ struct TemplateInstance
 		
 		components.resize(componentTypesWithId.size());
 		
-		int componentIndex = 0;
+		auto component_itr = components.begin();
 		
 		for (auto & componentTypeWithId : componentTypesWithId)
 		{
@@ -146,7 +196,7 @@ struct TemplateInstance
 			
 			// initialize the component instance
 			
-			TemplateComponentInstance & component = components[componentIndex++];
+			TemplateComponentInstance & component = *component_itr++;
 			
 			if (templateComponent == nullptr)
 			{
@@ -174,6 +224,43 @@ struct TemplateInstance
 	{
 		for (auto & component : components)
 			component.shut();
+	}
+	
+	bool addComponentByTypeName(const char * typeName, const bool isOverride, const bool isFallback)
+	{
+		// add component instance
+		
+		components.resize(components.size() + 1);
+		
+		// initialize the component instance
+		
+		TemplateComponentInstance & component = components.back();;
+	
+		component.isOverride = isOverride;
+	
+		ComponentTypeBase * componentType = findComponentType(typeName);
+	
+		TemplateComponent template_component;
+		
+		if (isFallback)
+		{
+			createFallbackTemplateForComponent(typeName, "", template_component);
+		}
+		
+		if (componentType == nullptr)
+		{
+			LOG_ERR("failed to find component type: %s", typeName);
+			components.pop_back();
+			return false;
+		}
+		else if (!component.init(componentType, "", &template_component))
+		{
+			LOG_ERR("failed to initialize template component instance", 0);
+			components.pop_back();
+			return false;
+		}
+		
+		return true;
 	}
 };
 
@@ -321,24 +408,7 @@ bool test_templateEditor()
 		{
 			TemplateComponent template_component;
 			
-			template_component.type_name = componentTypeWithId.typeName;
-			template_component.id = componentTypeWithId.id;
-			
-			auto * componentType = findComponentType(componentTypeWithId.typeName.c_str());
-			auto * component = componentType->componentMgr->createComponent();
-			
-			for (auto & property : componentType->properties)
-			{
-				TemplateComponentProperty template_property;
-				
-				template_property.name = property->name;
-				property->to_text(component, template_property.value);
-				
-				template_component.properties.push_back(template_property);
-			}
-			
-			componentType->componentMgr->removeComponent(component);
-			component = nullptr;
+			createFallbackTemplateForComponent(componentTypeWithId.typeName.c_str(), componentTypeWithId.id.c_str(), template_component);
 			
 			fallback_template.components.emplace_back(std::move(template_component));
 		}
@@ -437,6 +507,50 @@ bool test_templateEditor()
 						ImGui::PushID(&component_instance);
 						{
 							ImGui::Text("%s", component_instance.componentType->typeName.c_str());
+							
+							if (ImGui::BeginPopupContextItem("Component"))
+							{
+								if (ImGui::BeginMenu("Add component.."))
+								{
+									std::string typeName;
+									
+									if (doComponentTypeMenu(typeName))
+									{
+										// code below will break if selectedTemplateIndex is zero
+										Assert(selectedTemplateIndex != 0);
+										
+										for (int i = selectedTemplateIndex; i < template_instances.size(); ++i)
+										{
+											auto & template_instance = template_instances[i];
+											
+											if (!template_instance.addComponentByTypeName(typeName.c_str(), i != selectedTemplateIndex, false))
+											{
+												LOG_ERR("failed to add component to template instance", 0);
+											}
+										}
+										
+										// add fallback template instance
+										
+										auto & template_instance = template_instances[0];
+										
+										if (!template_instance.addComponentByTypeName(typeName.c_str(), true, true))
+										{
+											LOG_ERR("failed to add component to template instance", 0);
+										}
+									}
+									
+									ImGui::EndMenu();
+								}
+								
+								char text[64];
+								sprintf_s(text, sizeof(text), "Remove %s", component_instance.componentType->typeName.c_str());
+								if (ImGui::MenuItem(text))
+								{
+									// todo
+								}
+								
+								ImGui::EndPopup();
+							}
 							
 							char id[64];
 							strcpy_s(id, sizeof(id), component_instance.id.c_str());
