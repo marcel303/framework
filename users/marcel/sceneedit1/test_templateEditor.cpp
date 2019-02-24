@@ -181,9 +181,11 @@ bool saveTemplateInstanceToString(const std::vector<TemplateInstance> & instance
 		if (component.isOverride == false || anyPropertyIsSet)
 		{
 			if (component.isOverride)
-				out << "-" << component.componentType->typeName << "\n";
-			else
-				out << component.componentType->typeName << "\n";
+				out << "-";
+			out << component.componentType->typeName;
+			if (component.id.empty() == false)
+				out << " " << component.id;
+			out << "\n";
 			
 			for (size_t property_itr = 0; property_itr < component.propertyIsSetArray.size(); ++property_itr)
 			{
@@ -416,9 +418,7 @@ bool test_templateEditor()
 					
 					// determine and fetch the template we want to edit
 					
-					size_t template_itr = selectedTemplateIndex;
-					
-					auto & template_instance = template_instances[template_itr];
+					auto & template_instance = template_instances[selectedTemplateIndex];
 					
 					// iterate over all of its components
 					
@@ -430,6 +430,15 @@ bool test_templateEditor()
 						{
 							ImGui::Text("%s", component_instance.componentType->typeName.c_str());
 							
+							char id[64];
+							strcpy_s(id, sizeof(id), component_instance.id.c_str());
+							if (ImGui::InputText("Id", id, sizeof(id)))
+							{
+								// patch id for all template instances
+								for (auto & template_instance : template_instances)
+									template_instance.components[component_itr].id = id;
+							}
+							
 							// iterate over all of the components' properties
 							
 							for (size_t property_itr = 0; property_itr < component_instance.componentType->properties.size(); ++property_itr)
@@ -439,7 +448,7 @@ bool test_templateEditor()
 								ComponentBase * component_with_value = nullptr;
 								ComponentPropertyBase * property_with_value = nullptr;
 								
-								for (size_t i = template_itr; i < template_instances.size(); ++i)
+								for (size_t i = selectedTemplateIndex; i < template_instances.size(); ++i)
 								{
 									if (template_instances[i].components[component_itr].propertyIsSetArray[property_itr])
 									{
