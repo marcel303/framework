@@ -421,6 +421,91 @@ static void doComponentProperty(
 	ImGui::PopStyleColor();
 }
 
+bool saveTemplateInstanceToString(const std::vector<TemplateInstance> & instances, const size_t instance_index, std::string & text)
+{
+	auto & instance = instances[instance_index];
+	
+	std::ostringstream out;
+	
+	for (size_t component_itr = 0; component_itr < instance.component_instances.size(); ++component_itr)
+	{
+		auto & component = instance.component_instances[component_itr];
+		
+		// check if
+		bool component_is_set_in_base = false;
+		
+		for (size_t instance_base_itr = instance_index + 1; instance_base_itr < instances.size() - 1; ++instance_base_itr)
+		{
+			auto & base_component = instances[instance_base_itr].component_instances[component_itr];
+			
+			Assert(base_component.componentType->typeName == component.componentType->typeName);
+			Assert(base_component.id == component.id);
+			
+			component_is_set_in_base |= base_component.isSet;
+		}
+		
+		bool any_property_is_set = false;
+		
+		for (auto & property_info : component.property_infos)
+			any_property_is_set |= property_info.isSet;
+		
+		if (component.isSet || any_property_is_set)
+		{
+			if (component.isSet)
+				out << component.componentType->typeName << "\n";
+			else
+				out << "-" << component.componentType->typeName << "\n";
+			
+			for (size_t property_itr = 0; property_itr < component.property_infos.size(); ++property_itr)
+			{
+				if (component.property_infos[property_itr].isSet)
+				{
+					std::string value;
+					
+					auto & property = component.componentType->properties[property_itr];
+					
+					property->to_text(component.component, value);
+					
+					out << "\t" << property->name << "\n";
+					out << "\t\t" << value << "\n";
+				}
+			}
+		}
+	}
+	
+	text = out.str();
+	
+	return true;
+}
+
+bool saveTemplateInstanceToFile(const std::vector<TemplateInstance> & instances, const size_t instance_index, const char * filename)
+{
+	std::string content;
+	
+	if (!saveTemplateInstanceToString(instances, instance_index, content))
+		return false;
+	
+	if (!content.empty())
+	{
+		FILE * file = fopen(filename, "wt");
+		
+		if (file == nullptr)
+		{
+			logError("failed to open output file. filename=%s", filename);
+			return false;
+		}
+		else
+		{
+			fprintf(file, "%s", content.c_str());
+			
+			fclose(file);
+			file = nullptr;
+		}
+	}
+	
+	return true;
+}
+
 bool test_templateEditor()
 {
 	registerComponentTypes();
@@ -647,86 +732,11 @@ bool test_templateEditor()
 	
 	for (size_t instance_itr = 0; instance_itr < template_instances.size() - 1; ++instance_itr)
 	{
-		auto saveTemplateInstance = [](const std::vector<TemplateInstance> & instances, const size_t instance_index, const char * filename) -> bool
-		{
-			auto & instance = instances[instance_index];
-			
-			std::ostringstream out;
-			
-			for (size_t component_itr = 0; component_itr < instance.component_instances.size(); ++component_itr)
-			{
-				auto & component = instance.component_instances[component_itr];
-				
-				// check if
-				bool component_is_set_in_base = false;
-				
-				for (size_t instance_base_itr = instance_index + 1; instance_base_itr < instances.size() - 1; ++instance_base_itr)
-				{
-					auto & base_component = instances[instance_base_itr].component_instances[component_itr];
-					
-					Assert(base_component.componentType->typeName == component.componentType->typeName);
-					Assert(base_component.id == component.id);
-					
-					component_is_set_in_base |= base_component.isSet;
-				}
-				
-				bool any_property_is_set = false;
-				
-				for (auto & property_info : component.property_infos)
-					any_property_is_set |= property_info.isSet;
-				
-				if (component.isSet || any_property_is_set)
-				{
-					if (component.isSet)
-						out << component.componentType->typeName << "\n";
-					else
-						out << "-" << component.componentType->typeName << "\n";
-					
-					for (size_t property_itr = 0; property_itr < component.property_infos.size(); ++property_itr)
-					{
-						if (component.property_infos[property_itr].isSet)
-						{
-							std::string value;
-							
-							auto & property = component.componentType->properties[property_itr];
-							
-							property->to_text(component.component, value);
-							
-							out << "\t" << property->name << "\n";
-							out << "\t\t" << value << "\n";
-						}
-					}
-				}
-			}
-			
-			std::string content = out.str();
-			
-			if (!content.empty())
-			{
-				FILE * file = fopen(filename, "wt");
-				
-				if (file == nullptr)
-				{
-					logError("failed to open output file. filename=%s", filename);
-					return false;
-				}
-				else
-				{
-					fprintf(file, "%s", content.c_str());
-					
-					fclose(file);
-					file = nullptr;
-				}
-			}
-			
-			return true;
-		};
-		
 		char filename[64];
 		sprintf_s(filename, sizeof(filename), "out/%03d.txt", out_index);
 		out_index++;
 		
-		if (!saveTemplateInstance(template_instances, instance_itr, filename))
+		if (!saveTemplateInstanceToFile(template_instances, instance_itr, filename))
 		{
 			logError("failed to save template instance");
 			return false;
