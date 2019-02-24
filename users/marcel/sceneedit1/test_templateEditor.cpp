@@ -24,13 +24,13 @@
 
 struct ComponentTypeWithId
 {
-	std::string type_name;
+	std::string typeName;
 	std::string id;
 	
 	bool operator<(const ComponentTypeWithId & other) const
 	{
-		if (type_name != other.type_name)
-			return type_name < other.type_name;
+		if (typeName != other.typeName)
+			return typeName < other.typeName;
 		else if (id != other.id)
 			return id < other.id;
 		else
@@ -40,20 +40,13 @@ struct ComponentTypeWithId
 
 struct TemplateComponentInstance
 {
-	struct PropertyInfo
-	{
-		bool isSet = false;
-	};
-	
-	bool isSet = false;
-	
-	std::vector<PropertyInfo> property_infos;
-	
-	ComponentBase * component = nullptr;
+	bool isOverride = false;
 	
 	ComponentTypeBase * componentType = nullptr;
-	
+	ComponentBase * component = nullptr;
 	std::string id;
+	
+	std::vector<bool> propertyIsSetArray;
 	
 	~TemplateComponentInstance()
 	{
@@ -65,24 +58,22 @@ struct TemplateComponentInstance
 		bool result = true;
 		
 		componentType = in_componentType;
-		
-		property_infos.resize(componentType->properties.size());
-		
 		component = componentType->componentMgr->createComponent();
-		
 		id = in_id;
 		
 		// iterate over each property to see if it's set or not
 		
+		propertyIsSetArray.resize(componentType->properties.size());
+		
 		if (templateComponent != nullptr)
 		{
-			auto propertyInfo_itr = property_infos.begin();
+			auto propertyIsSet_itr = propertyIsSetArray.begin();
 			
 			for (auto * componentProperty : componentType->properties)
 			{
-				auto & propertyInfo = *propertyInfo_itr;
+				// see if a value is set for this property. if so, remember this fact so the editor knows to shows the right value
 				
-				// see if there's a value for this property
+				bool propertyIsSet = false;
 				
 				for (auto & templateProperty : templateComponent->properties)
 				{
@@ -90,11 +81,13 @@ struct TemplateComponentInstance
 					{
 						componentProperty->from_text(component, templateProperty.value.c_str());
 						
-						propertyInfo.isSet = true;
+						propertyIsSet = true;
+						
+						break;
 					}
 				}
 				
-				propertyInfo_itr++;
+				*propertyIsSet_itr++ = propertyIsSet;
 			}
 		}
 		
@@ -113,13 +106,13 @@ struct TemplateComponentInstance
 
 struct TemplateInstance
 {
-	std::vector<TemplateComponentInstance> component_instances;
+	std::vector<TemplateComponentInstance> components;
 	
 	bool init(Template & t, const std::set<ComponentTypeWithId> & componentTypesWithId)
 	{
 		// create template component instances for each component
 		
-		component_instances.resize(componentTypesWithId.size());
+		components.resize(componentTypesWithId.size());
 		
 		int component_index = 0;
 		
@@ -131,7 +124,7 @@ struct TemplateInstance
 			
 			for (auto & template_component_itr : t.components)
 			{
-				if (template_component_itr.type_name == componentTypeWithId.type_name &&
+				if (template_component_itr.type_name == componentTypeWithId.typeName &&
 					template_component_itr.id == componentTypeWithId.id)
 				{
 					template_component = &template_component_itr;
@@ -140,15 +133,15 @@ struct TemplateInstance
 			
 			// create the instance
 			
-			TemplateComponentInstance & component_instance = component_instances[component_index];
+			TemplateComponentInstance & component_instance = components[component_index];
 			component_index++;
 			
-			if (template_component != nullptr)
+			if (template_component == nullptr)
 			{
-				component_instance.isSet = true;
+				component_instance.isOverride = true;
 			}
 			
-			ComponentTypeBase * component_type = findComponentType(componentTypeWithId.type_name.c_str());
+			ComponentTypeBase * component_type = findComponentType(componentTypeWithId.typeName.c_str());
 			
 			if (component_type == nullptr)
 			{
@@ -167,7 +160,7 @@ struct TemplateInstance
 	
 	void shut()
 	{
-		for (auto & component : component_instances)
+		for (auto & component : components)
 			component.shut();
 	}
 };
@@ -430,38 +423,25 @@ bool saveTemplateInstanceToString(const std::vector<TemplateInstance> & instance
 	
 	std::ostringstream out;
 	
-	for (size_t component_itr = 0; component_itr < instance.component_instances.size(); ++component_itr)
+	for (size_t component_itr = 0; component_itr < instance.components.size(); ++component_itr)
 	{
-		auto & component = instance.component_instances[component_itr];
+		auto & component = instance.components[component_itr];
 		
-		// check if
-		bool component_is_set_in_base = false;
+		bool anyPropertyIsSet = false;
 		
-		for (size_t instance_base_itr = instance_index + 1; instance_base_itr < instances.size() - 1; ++instance_base_itr)
+		for (auto propertyIsSet : component.propertyIsSetArray)
+			anyPropertyIsSet |= propertyIsSet;
+		
+		if (component.isOverride == false || anyPropertyIsSet)
 		{
-			auto & base_component = instances[instance_base_itr].component_instances[component_itr];
-			
-			Assert(base_component.componentType->typeName == component.componentType->typeName);
-			Assert(base_component.id == component.id);
-			
-			component_is_set_in_base |= base_component.isSet;
-		}
-		
-		bool any_property_is_set = false;
-		
-		for (auto & property_info : component.property_infos)
-			any_property_is_set |= property_info.isSet;
-		
-		if (component.isSet || any_property_is_set)
-		{
-			if (component.isSet)
-				out << component.componentType->typeName << "\n";
-			else
+			if (component.isOverride)
 				out << "-" << component.componentType->typeName << "\n";
+			else
+				out << component.componentType->typeName << "\n";
 			
-			for (size_t property_itr = 0; property_itr < component.property_infos.size(); ++property_itr)
+			for (size_t property_itr = 0; property_itr < component.propertyIsSetArray.size(); ++property_itr)
 			{
-				if (component.property_infos[property_itr].isSet)
+				if (component.propertyIsSetArray[property_itr])
 				{
 					std::string value;
 					
@@ -561,7 +541,7 @@ bool test_templateEditor()
 		for (auto & component : t.components)
 		{
 			ComponentTypeWithId elem;
-			elem.type_name = component.type_name;
+			elem.typeName = component.type_name;
 			elem.id = component.id;
 			
 			if (componentTypesWithId.count(elem) == 0)
@@ -596,10 +576,10 @@ bool test_templateEditor()
 		{
 			TemplateComponent template_component;
 			
-			template_component.type_name = componentTypeWithId.type_name;
+			template_component.type_name = componentTypeWithId.typeName;
 			template_component.id = componentTypeWithId.id;
 			
-			auto * componentType = findComponentType(componentTypeWithId.type_name.c_str());
+			auto * componentType = findComponentType(componentTypeWithId.typeName.c_str());
 			auto * component = componentType->componentMgr->createComponent();
 			
 			for (auto & property : componentType->properties)
@@ -627,15 +607,36 @@ bool test_templateEditor()
 		}
 		
 	#if defined(DEBUG)
-		for (auto & component_instance : template_instance.component_instances)
+		for (auto & component_instance : template_instance.components)
 		{
-			for (auto & property_info : component_instance.property_infos)
-				Assert(property_info.isSet);
+			for (bool propertyIsSet : component_instance.propertyIsSetArray)
+				Assert(propertyIsSet);
 		}
 	#endif
 		
 		template_instances.emplace_back(std::move(template_instance));
 	}
+	
+#if defined(DEBUG)
+	for (size_t i = 1; i < template_instances.size(); ++i)
+	{
+		auto & a = template_instances[0];
+		auto & b = template_instances[i];
+		
+		Assert(a.components.size() == b.components.size());
+		
+		for (size_t j = 0; j < a.components.size(); ++j)
+		{
+			auto & a_comp = a.components[j];
+			auto & b_comp = b.components[j];
+			
+			Assert(a_comp.componentType->typeName == b_comp.componentType->typeName);
+			Assert(a_comp.id == b_comp.id);
+			
+			Assert(a_comp.propertyIsSetArray.size() == b_comp.propertyIsSetArray.size());
+		}
+	}
+#endif
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return false;
@@ -667,9 +668,9 @@ bool test_templateEditor()
 				
 				// iterate over all of its components
 				
-				for (size_t component_itr = 0; component_itr < template_instance.component_instances.size(); ++component_itr)
+				for (size_t component_itr = 0; component_itr < template_instance.components.size(); ++component_itr)
 				{
-					auto & component_instance = template_instance.component_instances[component_itr];
+					auto & component_instance = template_instance.components[component_itr];
 					
 					ImGui::PushID(&component_instance);
 					{
@@ -684,17 +685,15 @@ bool test_templateEditor()
 						
 							auto & property = component_instance.componentType->properties[property_itr];
 							
-							auto & property_info = component_instance.property_infos[property_itr];
-							
 							ComponentBase * component_with_value = nullptr;
 							ComponentPropertyBase * property_with_value = nullptr;
 							
 							for (size_t i = template_itr; i < template_instances.size(); ++i)
 							{
-								if (template_instances[i].component_instances[component_itr].property_infos[property_itr].isSet)
+								if (template_instances[i].components[component_itr].propertyIsSetArray[property_itr])
 								{
-									component_with_value = template_instances[i].component_instances[component_itr].component;
-									property_with_value = template_instances[i].component_instances[component_itr].componentType->properties[property_itr];
+									component_with_value = template_instances[i].components[component_itr].component;
+									property_with_value = template_instances[i].components[component_itr].componentType->properties[property_itr];
 									break;
 								}
 							}
@@ -702,17 +701,21 @@ bool test_templateEditor()
 							// there should always with a property with value, as we create a default template instance before
 							Assert(property_with_value != nullptr);
 							
-							doComponentProperty(property, component_instance.component, false, property_info.isSet, property_with_value, component_with_value);
+							bool propertyIsSet = component_instance.propertyIsSetArray[property_itr]; // argh frck c++ with its bit array..
+							
+							doComponentProperty(property, component_instance.component, false, propertyIsSet, property_with_value, component_with_value);
 							
 							if (ImGui::BeginPopupContextItem(property->name.c_str()))
 							{
 								if (ImGui::MenuItem("Set to default"))
 								{
-									property_info.isSet = false;
+									propertyIsSet = false;
 								}
 								
 								ImGui::EndPopup();
 							}
+							
+							component_instance.propertyIsSetArray[property_itr] = propertyIsSet;
 						}
 					}
 					ImGui::PopID();
