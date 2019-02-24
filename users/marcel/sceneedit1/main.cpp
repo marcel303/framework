@@ -20,7 +20,7 @@
 
 extern void test_templates();
 extern bool test_scenefiles();
-extern void test_templateEditor();
+extern bool test_templateEditor();
 
 static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
@@ -932,7 +932,8 @@ int main(int argc, char * argv[])
 #endif
 
 #if 1
-	test_templateEditor();
+	if (!test_templateEditor())
+		logError("failure!");
 	return 0;
 #endif
 	

@@ -16,12 +16,30 @@
 
 // todo : avoid creating a component instance just to aid in editing templates
 
+struct ComponentTypeWithId
+{
+	std::string type_name;
+	std::string id;
+	
+	bool operator<(const ComponentTypeWithId & other) const
+	{
+		if (type_name != other.type_name)
+			return type_name < other.type_name;
+		else if (id != other.id)
+			return id < other.id;
+		else
+			return false;
+	}
+};
+
 struct TemplateComponentInstance
 {
 	struct PropertyInfo
 	{
 		bool isSet = false;
 	};
+	
+	bool isSet = false;
 	
 	std::vector<PropertyInfo> property_infos;
 	
@@ -31,7 +49,7 @@ struct TemplateComponentInstance
 	
 	std::string id;
 	
-	bool init(ComponentTypeBase * in_componentType, const TemplateComponent & templateComponent)
+	bool init(ComponentTypeBase * in_componentType, const char * in_id, const TemplateComponent * templateComponent)
 	{
 		bool result = true;
 		
@@ -41,29 +59,32 @@ struct TemplateComponentInstance
 		
 		component = componentType->componentMgr->createComponent();
 		
-		id = templateComponent.id;
+		id = in_id;
 		
-		//
+		// iterate over each property to see if it's set or not
 		
-		auto propertyInfo_itr = property_infos.begin();
-		
-		for (auto * componentProperty : componentType->properties)
+		if (templateComponent != nullptr)
 		{
-			auto & propertyInfo = *propertyInfo_itr;
+			auto propertyInfo_itr = property_infos.begin();
 			
-			// see if there's a value for this property
-			
-			for (auto & templateProperty : templateComponent.properties)
+			for (auto * componentProperty : componentType->properties)
 			{
-				if (templateProperty.name == componentProperty->name)
+				auto & propertyInfo = *propertyInfo_itr;
+				
+				// see if there's a value for this property
+				
+				for (auto & templateProperty : templateComponent->properties)
 				{
-					componentProperty->from_text(component, templateProperty.value.c_str());
-					
-					propertyInfo.isSet = true;
+					if (templateProperty.name == componentProperty->name)
+					{
+						componentProperty->from_text(component, templateProperty.value.c_str());
+						
+						propertyInfo.isSet = true;
+					}
 				}
+				
+				propertyInfo_itr++;
 			}
-			
-			propertyInfo_itr++;
 		}
 		
 		return result;
@@ -76,31 +97,55 @@ struct TemplateInstance
 	
 	std::vector<TemplateComponentInstance> component_instances;
 	
-	void init(Template & in_t)
+	bool init(Template & in_t, const std::set<ComponentTypeWithId> & componentTypesWithId)
 	{
 		t = &in_t;
 		
-		// create template component instances for each component in the template
+		// create template component instances for each component
 		
-		for (auto & template_component : t->components)
+		for (auto & componentTypeWithId : componentTypesWithId)
 		{
+			// see if there's a template component for this component + id
+			
+			TemplateComponent * template_component = nullptr;
+			
+			for (auto & template_component_itr : t->components)
+			{
+				if (template_component_itr.type_name == componentTypeWithId.type_name &&
+					template_component_itr.id == componentTypeWithId.id)
+				{
+					template_component = &template_component_itr;
+				}
+			}
+			
+			// create the instance
+			
 			TemplateComponentInstance component_instance;
 			
-			ComponentTypeBase * component_type = findComponentType(template_component.type_name.c_str());
+			if (template_component != nullptr)
+			{
+				component_instance.isSet = true;
+			}
+			
+			ComponentTypeBase * component_type = findComponentType(componentTypeWithId.type_name.c_str());
 			
 			if (component_type == nullptr)
 			{
-				LOG_ERR("failed to find component type: %s", template_component.type_name.c_str());
+				LOG_ERR("failed to find component type: %s", template_component->type_name.c_str());
+				return false;
 			}
-			else if (!component_instance.init(component_type, template_component))
+			else if (!component_instance.init(component_type, componentTypeWithId.id.c_str(), template_component))
 			{
 				LOG_ERR("failed to initialize template component instance", 0);
+				return false;
 			}
 			else
 			{
 				component_instances.emplace_back(std::move(component_instance));
 			}
 		}
+		
+		return true;
 	}
 };
 
@@ -356,7 +401,7 @@ static void doComponentProperty(
 	ImGui::PopStyleColor();
 }
 
-void test_templateEditor()
+bool test_templateEditor()
 {
 	registerComponentTypes();
 	
@@ -379,7 +424,7 @@ void test_templateEditor()
 		if (!loadTemplateFromFile(current_filename.c_str(), t))
 		{
 			LOG_ERR("failed to load template from file", 0);
-			break;
+			return false;
 		}
 		
 		processed.insert(current_filename);
@@ -393,57 +438,85 @@ void test_templateEditor()
 		if (processed.count(new_filename) != 0)
 		{
 			LOG_ERR("cyclic dependency detected", 0);
-			break;
+			return false;
 		}
 		
 		current_filename = new_filename;
 	}
 	
-// fixme : template instances should contain all component types
-
+	// generate a set of all referenced component types + their ids. this set will be used to populate template instances later on
+	
+	std::set<ComponentTypeWithId> componentTypesWithId;
+	
+	for (auto & t : templates)
+	{
+		for (auto & component : t.components)
+		{
+			ComponentTypeWithId elem;
+			elem.type_name = component.type_name;
+			elem.id = component.id;
+			
+			if (componentTypesWithId.count(elem) == 0)
+				componentTypesWithId.insert(elem);
+		}
+	}
+	
+	// create template instances
+	
 	std::vector<TemplateInstance> template_instances;
 	
 	for (auto & t : templates)
 	{
 		TemplateInstance template_instance;
-		template_instance.init(t);
+		
+		if (!template_instance.init(t, componentTypesWithId))
+		{
+			LOG_ERR("failed to initialize template instance", 0);
+			return false;
+		}
 		
 		template_instances.emplace_back(std::move(template_instance));
 	}
 	
-	// create a default template instance, with default values taken from components
+	// create a fallback template instance, with default values for all component properties
+	// note : default values are determined by instantiating compontent types and inspecting their initial property values
 	
-	if (!template_instances.empty())
 	{
-		Template t;
+		Template fallback_template;
 		
-		for (auto & component : template_instances.back().component_instances)
+		for (auto & componentTypeWithId : componentTypesWithId)
 		{
 			TemplateComponent template_component;
-			template_component.type_name = component.componentType->typeName;
-			template_component.id = component.id;
 			
-			auto * componentBase = component.componentType->componentMgr->createComponent();
+			template_component.type_name = componentTypeWithId.type_name;
+			template_component.id = componentTypeWithId.id;
 			
-			for (auto & property : component.componentType->properties)
+			auto * componentType = findComponentType(componentTypeWithId.type_name.c_str());
+			auto * component = componentType->componentMgr->createComponent();
+			
+			for (auto & property : componentType->properties)
 			{
 				TemplateComponentProperty template_property;
 				
 				template_property.name = property->name;
-				property->to_text(componentBase, template_property.value);
+				property->to_text(component, template_property.value);
 				
 				template_component.properties.push_back(template_property);
 			}
 			
-			component.componentType->componentMgr->removeComponent(componentBase);
-			componentBase = nullptr;
+			componentType->componentMgr->removeComponent(component);
+			component = nullptr;
 			
-			t.components.emplace_back(std::move(template_component));
+			fallback_template.components.emplace_back(std::move(template_component));
 		}
 		
 		TemplateInstance template_instance;
 		
-		template_instance.init(t);
+		if (!template_instance.init(fallback_template, componentTypesWithId))
+		{
+			LOG_ERR("failed to initialize (fallback) template instance", 0);
+			return false;
+		}
 		
 	#if defined(DEBUG)
 		for (auto & component_instance : template_instance.component_instances)
@@ -457,7 +530,7 @@ void test_templateEditor()
 	}
 	
 	if (!framework.init(640, 480))
-		return;
+		return false;
 	
 	FrameworkImGuiContext guiContext;
 	guiContext.init();
@@ -550,4 +623,6 @@ void test_templateEditor()
 	guiContext.shut();
 	
 	framework.shutdown();
+	
+	return true;
 }
