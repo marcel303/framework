@@ -10,17 +10,42 @@
 
 template locally-defined-template
 
+	model m1
+		filename
+			model.txt
+		scale
+			0.01
+	model m2
+		filename
+			model.txt
+		scale
+			0.016
+
 	transform
 		scale
-			2
+			1.1
 
-entity t
+	rotate-transform
+		speed
+			-1
 
+entity t1
 	base locally-defined-template
-
 	transform
 		position
-			4 0 4
+			0 0 0
+
+entity t2
+	base locally-defined-template
+	transform
+		position
+			2 0 0
+
+entity t3
+	base locally-defined-template
+	transform
+		position
+			4 0 0
 
 entity a
 
@@ -71,3 +96,6 @@ scene
 		a
 		b
 			c
+		t1
+		t2
+		t3
