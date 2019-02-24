@@ -350,8 +350,11 @@ bool test_templateEditor()
 	// note : this operation will reverse the array. !! the fallback template will be at index zero !!
 	
 	std::vector<TemplateInstance> template_instances;
+	template_instances.resize(templates.size());
 	
 	std::set<ComponentTypeWithId> componentTypesWithId;
+	
+	auto template_instance_itr = template_instances.begin();
 	
 	for (auto template_itr = templates.rbegin(); template_itr != templates.rend(); ++template_itr)
 	{
@@ -361,18 +364,18 @@ bool test_templateEditor()
 		
 		if (isFallbackTemplate)
 		{
-			TemplateInstance template_instance;
+			auto & template_instance = *template_instance_itr++;
 			
 			if (!template_instance.init(t, allComponentTypesWithId))
 			{
 				LOG_ERR("failed to initialize (fallback) template instance", 0);
 				return false;
 			}
-			
-			template_instances.emplace_back(std::move(template_instance));
 		}
 		else
 		{
+			// add the components from this template to the set of all components encountered so far
+			
 			for (auto & component : t.components)
 			{
 				ComponentTypeWithId elem;
@@ -383,15 +386,13 @@ bool test_templateEditor()
 					componentTypesWithId.insert(elem);
 			}
 			
-			TemplateInstance template_instance;
+			auto & template_instance = *template_instance_itr++;
 			
 			if (!template_instance.init(t, componentTypesWithId))
 			{
 				LOG_ERR("failed to initialize template instance", 0);
 				return false;
 			}
-			
-			template_instances.emplace_back(std::move(template_instance));
 		}
 	}
 	
