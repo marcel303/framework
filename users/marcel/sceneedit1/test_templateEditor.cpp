@@ -155,6 +155,9 @@ struct TemplateComponentInstance
 
 struct TemplateInstance
 {
+	std::string name;
+	std::string base;
+	
 	std::list<TemplateComponentInstance> components;
 	
 	TemplateComponentInstance * findComponentInstance(const char * typeName, const char * id)
@@ -173,6 +176,9 @@ struct TemplateInstance
 	
 	bool init(Template & t, const std::set<ComponentTypeWithId> & componentTypesWithId)
 	{
+		name = t.name;
+		base = t.base;
+		
 		// create template component instances for each component
 		
 		components.resize(componentTypesWithId.size());
@@ -269,6 +275,11 @@ bool saveTemplateInstanceToString(const std::vector<TemplateInstance> & instance
 	auto & instance = instances[instanceIndex];
 	
 	std::ostringstream out;
+	
+	if (instance.base.empty() == false)
+	{
+		out << "base " << instance.base << "\n";
+	}
 	
 	for (auto & component : instance.components)
 	{
@@ -500,6 +511,11 @@ bool test_templateEditor()
 					
 					auto & template_instance = template_instances[selectedTemplateIndex];
 					
+					// show its name
+					
+					ImGui::Text("\t%s", template_instance.name.c_str());
+					ImGui::Separator();
+					
 					// iterate over all of its components
 					
 					for (auto & component_instance : template_instance.components)
@@ -510,6 +526,8 @@ bool test_templateEditor()
 							
 							if (ImGui::BeginPopupContextItem("Component"))
 							{
+								ImGui::Checkbox("Is override", &component_instance.isOverride);
+								
 								if (ImGui::BeginMenu("Add component.."))
 								{
 									std::string typeName;
@@ -558,10 +576,23 @@ bool test_templateEditor()
 							{
 								// patch id for all template instances
 								// note : make a copy of the id since it will possibly be modified in the loop below
+								
 								auto old_id = component_instance.id;
 								
-								for (auto & instance : template_instances)
+								component_instance.id = id;
+								
+								//for (size_t template_itr = selectedTemplateIndex + 1; template_itr < template_instances.size(); ++template_itr)
+								for (size_t template_itr = 0; template_itr < template_instances.size(); ++template_itr)
 								{
+									auto & instance = template_instances[template_itr];
+									
+									// make sure we skip ourselves. it may be possible we added a few components of
+									// type X, and now we start renaming them. in this case, we don't want to rename
+									// all of them at the same time; it would be impossible to give them unique names!
+									//Assert(&instance != &template_instance);
+									if (&instance == &template_instance)
+										continue;
+									
 									auto * component = instance.findComponentInstance(component_instance.componentType->typeName.c_str(), old_id.c_str());
 									
 									if (component != nullptr)
@@ -607,6 +638,18 @@ bool test_templateEditor()
 										{
 											propertyIsSet = false;
 										}
+										
+										if (ImGui::MenuItem("Set override"))
+										{
+											if (propertyIsSet == false)
+											{
+												propertyIsSet = true;
+												
+												std::string text;
+												property_with_value->to_text(component_instance.component, text);
+												property->from_text(component_instance.component, text.c_str());
+											}
+										}
 									}
 									
 									ImGui::EndPopup();
@@ -622,7 +665,7 @@ bool test_templateEditor()
 			ImGui::End();
 			
 			ImGui::SetNextWindowPos(ImVec2(440, 10));
-			ImGui::SetNextWindowSize(ImVec2(600, 400));
+			ImGui::SetNextWindowSize(ImVec2(700, 400));
 			if (ImGui::Begin("Out"))
 			{
 				for (int instance_itr = (int)template_instances.size() - 1; instance_itr > 0; --instance_itr)
@@ -637,7 +680,9 @@ bool test_templateEditor()
 							return false;
 						}
 						
-						ImGui::InputTextMultiline("Text", (char*)text.c_str(), text.size());
+						ImGui::InputTextMultiline(
+							template_instances[instance_itr].name.c_str(),
+							(char*)text.c_str(), text.size());
 					}
 					ImGui::PopID();
 				}
