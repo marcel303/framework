@@ -1,6 +1,7 @@
 #include "cameraComponent.h"
 #include "modelComponent.h"
 #include "parameterComponent.h"
+#include "parameterUi.h"
 #include "transformComponent.h"
 
 #include "component.h"
@@ -25,12 +26,10 @@ extern bool test_templateEditor();
 static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
 
-//
-
+// todo : move these instances to helpers.cpp
 TransformComponentMgr s_transformComponentMgr;
-RotateTransformComponentMgr s_rotateTransformComponentMgr;
 ModelComponentMgr s_modelComponentMgr;
-ParameterComponentMgr s_parameterComponentMgr;
+extern ParameterComponentMgr s_parameterComponentMgr;
 
 //
 
@@ -649,7 +648,18 @@ struct SceneEditor
 						}
 					}
 					
-					removeNodesToRemove();
+					rembalkoveNodesToRemove();
+				}
+				ImGui::End();
+				
+				if (ImGui::Begin("Parameter UI"))
+				{
+					for (auto * component = s_parameterComponentMgr.head; component != nullptr; component = component->next)
+					{
+						ImGui::Text("%s", component->prefix.c_str());
+						
+						doParameterUi(*component);
+					}
 				}
 				ImGui::End();
 			}
@@ -931,7 +941,7 @@ int main(int argc, char * argv[])
 	return 0;
 #endif
 
-#if 1
+#if 0
 	if (!test_templateEditor())
 		logError("failure!");
 	return 0;

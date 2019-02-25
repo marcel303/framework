@@ -6,15 +6,17 @@
 #include "modelComponent.h"
 #include "parameterComponent.h"
 #include "transformComponent.h"
+#include "vfxgraphComponent.h"
 
 #include <algorithm>
 
 // todo : remove component mgr globals
 CameraComponentMgr s_cameraComponentMgr;
 extern TransformComponentMgr s_transformComponentMgr;
-extern RotateTransformComponentMgr s_rotateTransformComponentMgr;
+RotateTransformComponentMgr s_rotateTransformComponentMgr;
 extern ModelComponentMgr s_modelComponentMgr;
-extern ParameterComponentMgr s_parameterComponentMgr;
+ParameterComponentMgr s_parameterComponentMgr;
+VfxgraphComponentMgr s_vfxgraphComponentMgr;
 
 std::vector<ComponentTypeBase*> g_componentTypes;
 
@@ -42,6 +44,7 @@ void registerComponentTypes()
 	registerComponentType(new RotateTransformComponentType(), &s_rotateTransformComponentMgr);
 	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);
 	registerComponentType(new ParameterComponentType(), &s_parameterComponentMgr);
+	registerComponentType(new VfxgraphComponentType(), &s_vfxgraphComponentMgr);
 }
 
 static ComponentTypeBase * findComponentType(const std::vector<ComponentTypeBase*> & componentTypes, const char * typeName)
