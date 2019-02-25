@@ -21,6 +21,7 @@ struct TemplateComponent
 
 struct Template
 {
+	std::string name;
 	std::string base;
 	
 	std::vector<TemplateComponent> components;
@@ -28,7 +29,7 @@ struct Template
 
 typedef bool (*FetchTemplateCallback)(const char * name, void * user_data, Template & out_template);
 
-bool parseTemplateFromLines(const std::vector<std::string> & lines, Template & out_template);
+bool parseTemplateFromLines(const std::vector<std::string> & lines, const char * name, Template & out_template);
 bool loadTemplateFromFile(const char * filename, Template & t);
 
 bool overlayTemplate(Template & target, const Template & overlay, const bool allowAddingComponents, const bool allowAddingProperties);

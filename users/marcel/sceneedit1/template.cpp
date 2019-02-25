@@ -34,10 +34,15 @@ static int calculateIndentationLevel(const char * line)
 	return result;
 }
 
-bool parseTemplateFromLines(const std::vector<std::string> & lines, Template & out_template)
+bool parseTemplateFromLines(const std::vector<std::string> & lines, const char * name, Template & out_template)
 {
 	TemplateComponent * current_component_element = nullptr;
 	TemplateComponentProperty * current_property_element = nullptr;
+	
+	if (name != nullptr)
+	{
+		out_template.name = name;
+	}
 	
 	int current_level = -1;
 	
@@ -210,7 +215,7 @@ bool loadTemplateFromFile(const char * filename, Template & t)
 		return false;
 	}
 	
-	if (!parseTemplateFromLines(lines, t))
+	if (!parseTemplateFromLines(lines, filename, t))
 	{
 		LOG_ERR("failed to parse template from lines", 0);
 		return false;

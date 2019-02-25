@@ -174,7 +174,7 @@ bool parseSceneFromLines(std::vector<std::string> & lines, Scene & out_scene)
 				
 				Template t;
 				
-				if (!parseTemplateFromLines(template_lines, t))
+				if (!parseTemplateFromLines(template_lines, name, t))
 				{
 					LOG_ERR("failed to parse template", 0);
 					return false;
@@ -242,7 +242,7 @@ bool parseSceneFromLines(std::vector<std::string> & lines, Scene & out_scene)
 				
 				Template t;
 				
-				if (!parseTemplateFromLines(entity_lines, t))
+				if (!parseTemplateFromLines(entity_lines, nullptr, t))
 				{
 					LOG_ERR("failed to parse template (entity)", 0);
 					return false;
