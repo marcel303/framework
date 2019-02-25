@@ -26,6 +26,8 @@ struct ComponentBase
 	ComponentSet * componentSet = nullptr;
 	ComponentBase * next_in_set = nullptr; // next component in the component set
 	
+	virtual ~ComponentBase() { }
+	
 	virtual void tick(const float dt) { }
 	virtual bool init() { return true; }
 	
@@ -48,6 +50,8 @@ struct Component : ComponentBase
 
 struct ComponentMgrBase
 {
+	virtual ~ComponentMgrBase() { }
+	
 	virtual ComponentBase * createComponent() = 0;
 	virtual void addComponent(ComponentBase * component) = 0;
 	virtual void removeComponent(ComponentBase * component) = 0;
