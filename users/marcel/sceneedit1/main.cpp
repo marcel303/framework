@@ -648,7 +648,7 @@ struct SceneEditor
 						}
 					}
 					
-					rembalkoveNodesToRemove();
+					removeNodesToRemove();
 				}
 				ImGui::End();
 				
