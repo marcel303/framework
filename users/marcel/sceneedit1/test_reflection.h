@@ -213,6 +213,15 @@ struct StructuredType : Type
 		
 		return *this;
 	}
+	
+	template <typename C, typename T>
+	StructuredType & add(const char * name, T C::* C_member)
+	{
+		C * x = nullptr;
+		const size_t offset = (size_t)(uintptr_t)&(x->*C_member);
+		
+		return add(std::type_index(typeid(T)), offset, name);
+	}
 };
 
 struct TypeDB

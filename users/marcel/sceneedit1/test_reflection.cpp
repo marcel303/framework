@@ -160,9 +160,9 @@ void test_reflection_1()
 	
 	{
 		typeDB.add(typeid(TestStruct_1), "TestStruct_1")
-			.add(typeid(TestStruct_1::b), offsetof(TestStruct_1, b), "b")
-			.add(typeid(TestStruct_1::x), offsetof(TestStruct_1, x), "x")
-			.add(typeid(TestStruct_1::f), offsetof(TestStruct_1, f), "f");
+			.add("b", &TestStruct_1::b)
+			.add("x", &TestStruct_1::x)
+			.add("f", &TestStruct_1::f);
 	}
 	
 	{
