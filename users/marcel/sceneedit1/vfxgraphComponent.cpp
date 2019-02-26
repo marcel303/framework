@@ -10,6 +10,8 @@ extern VfxgraphComponentMgr s_vfxgraphComponentMgr;
 VfxgraphComponent::~VfxgraphComponent()
 {
 	s_vfxgraphComponentMgr.vfxGraphMgr->free(instance);
+	
+	g_resourceDatabase.remove(&textureResource);
 }
 
 void VfxgraphComponent::tick(const float dt)

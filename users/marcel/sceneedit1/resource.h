@@ -63,6 +63,8 @@ struct ResourceDatabase
 	void add(const char * name, ResourceBase * resource);
 	void addComponentResource(const char * componentId, const char * resourceName, ResourceBase * resource);
 	
+	void remove(ResourceBase * resource);
+	
 	ResourceBase * find(const std::type_index & typeIndex, const char * name);
 	
 	template <typename T>

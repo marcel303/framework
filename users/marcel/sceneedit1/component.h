@@ -103,6 +103,9 @@ struct ComponentMgr : ComponentMgrBase
 		}
 	}
 	
+// todo : remove and destroy separate, or just settle on create/remove methods and hide or remove add/remove ones ?
+// todo : in_component '*&' to ensure nullptr gets set
+
 	virtual void removeComponent(ComponentBase * in_component) override final
 	{
 		T * component = castToComponentType(in_component);
@@ -119,6 +122,9 @@ struct ComponentMgr : ComponentMgrBase
 		
 		component->prev = nullptr;
 		component->next = nullptr;
+		
+		delete component;
+		component = nullptr;
 	}
 	
 	virtual void tick(const float dt) override

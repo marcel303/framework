@@ -1,3 +1,4 @@
+#include "Debugging.h"
 #include "resource.h"
 #include "StringEx.h"
 
@@ -48,6 +49,24 @@ void ResourceDatabase::addComponentResource(const char * componentId, const char
 	std::string fullName = std::string(componentId) + "." + resourceName;
 	
 	add(fullName.c_str(), resource);
+}
+
+void ResourceDatabase::remove(ResourceBase * resource)
+{
+	for (Elem ** e = &head; *e != nullptr; e = &(*e)->next)
+	{
+		if ((*e)->resource == resource)
+		{
+			Elem * next = (*e)->next;
+			
+			delete *e;
+			*e = next;
+			
+			return;
+		}
+	}
+	
+	AssertMsg(false, "failed to find resource to remove", 0);
 }
 
 ResourceBase * ResourceDatabase::find(const std::type_index & typeIndex, const char * name)
