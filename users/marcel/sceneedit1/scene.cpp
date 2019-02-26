@@ -26,29 +26,7 @@ bool SceneNode::initComponents()
 
 void SceneNode::freeComponents()
 {
-	ComponentBase * next;
-	
-	for (auto * component = components.head; component != nullptr; component = next)
-	{
-		// the component will be removed and next_in_set will become invalid, so we need to fetch it now
-		
-		next = component->next_in_set;
-		
-	// todo : give error when failure to find component manager. this would imply a memory leak
-		for (auto * componentType : g_componentTypes)
-		{
-			auto * componentMgr = componentType->componentMgr;
-			
-			if (component->typeIndex() != componentMgr->typeIndex())
-				continue;
-		
-			componentMgr->removeComponent(component);
-			
-			break;
-		}
-	}
-	
-	components.head = nullptr;
+	freeComponentsInComponentSet(components);
 }
 
 static void to_json(nlohmann::json & j, const SceneNode * node_ptr)
@@ -136,7 +114,7 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 				if (component->init())
 					node.components.add(component);
 				else
-					componentType->componentMgr->removeComponent(component);
+					componentType->componentMgr->destroyComponent(component);
 			}
 		}
 	}

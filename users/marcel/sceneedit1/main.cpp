@@ -502,7 +502,7 @@ struct SceneEditor
 							if (component->init())
 								node.components.add(component);
 							else
-								componentType->componentMgr->removeComponent(component);
+								componentType->componentMgr->destroyComponent(component);
 						}
 					}
 				}
@@ -531,7 +531,7 @@ struct SceneEditor
 		if (modelComp->init())
 			node.components.add(modelComp);
 		else
-			s_modelComponentMgr.removeComponent(modelComp);
+			s_modelComponentMgr.destroyComponent(modelComp);
 		
 		auto transformComp = s_transformComponentMgr.createComponent(nullptr);
 		
@@ -542,7 +542,7 @@ struct SceneEditor
 			node.components.add(transformComp);
 		}
 		else
-			s_transformComponentMgr.removeComponent(transformComp);
+			s_transformComponentMgr.destroyComponent(transformComp);
 		
 		scene.nodes[node.id] = &node;
 		
@@ -985,31 +985,7 @@ static bool testResourcePointers()
 			}
 		}
 		
-		// free components
-		// todo : make this a member of componentSet ?
-		
-		ComponentBase * next;
-	
-		for (auto * component = componentSet.head; component != nullptr; component = next)
-		{
-			// the component will be removed and next_in_set will become invalid, so we need to fetch it now
-			
-			next = component->next_in_set;
-			
-		// todo : give error when failure to find component manager. this would imply a memory leak
-			
-			auto * componentType = findComponentType(component->typeIndex());
-			
-			Assert(componentType != nullptr);
-			if (componentType != nullptr)
-			{
-				auto * componentMgr = componentType->componentMgr;
-
-				componentMgr->removeComponent(component);
-			}
-		}
-		
-		componentSet.head = nullptr;
+		freeComponentsInComponentSet(componentSet);
 	}
 	
 	Assert(g_resourceDatabase.head == nullptr);

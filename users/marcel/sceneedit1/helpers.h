@@ -4,6 +4,7 @@
 #include <vector>
 
 struct ComponentMgrBase;
+struct ComponentSet;
 struct ComponentTypeBase;
 
 void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase * componentMgr);
@@ -11,6 +12,8 @@ void registerComponentTypes();
 
 ComponentTypeBase * findComponentType(const char * typeName);
 ComponentTypeBase * findComponentType(const std::type_index & typeIndex);
+
+void freeComponentsInComponentSet(ComponentSet & componentSet);
 
 extern std::vector<ComponentTypeBase*> g_componentTypes;
 

@@ -58,7 +58,14 @@ struct ComponentMgrBase
 	
 	virtual ComponentBase * createComponent(const char * id) = 0;
 	virtual void addComponent(ComponentBase * component) = 0;
-	virtual void removeComponent(ComponentBase * component) = 0;
+	virtual void destroyComponentImpl(ComponentBase * component) = 0;
+	
+	template <typename T>
+	void destroyComponent(T *& component)
+	{
+		destroyComponentImpl(component);
+		component = nullptr;
+	}
 	
 	virtual void tick(const float dt) = 0;
 	
@@ -102,11 +109,8 @@ struct ComponentMgr : ComponentMgrBase
 			tail = component;
 		}
 	}
-	
-// todo : remove and destroy separate, or just settle on create/remove methods and hide or remove add/remove ones ?
-// todo : in_component '*&' to ensure nullptr gets set
 
-	virtual void removeComponent(ComponentBase * in_component) override final
+	virtual void destroyComponentImpl(ComponentBase * in_component) override final
 	{
 		T * component = castToComponentType(in_component);
 		
@@ -124,7 +128,6 @@ struct ComponentMgr : ComponentMgrBase
 		component->next = nullptr;
 		
 		delete component;
-		component = nullptr;
 	}
 	
 	virtual void tick(const float dt) override

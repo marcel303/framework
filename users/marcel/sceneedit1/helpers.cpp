@@ -76,6 +76,28 @@ ComponentTypeBase * findComponentType(const std::type_index & typeIndex)
 	return findComponentType(g_componentTypes, typeIndex);
 }
 
+void freeComponentsInComponentSet(ComponentSet & componentSet)
+{
+	ComponentBase * next;
+
+	for (auto * component = componentSet.head; component != nullptr; component = next)
+	{
+		// the component will be removed and next_in_set will become invalid, so we need to fetch it now
+		
+		next = component->next_in_set;
+		
+		auto * componentType = findComponentType(component->typeIndex());
+		Assert(componentType != nullptr);
+		
+		auto * componentMgr = componentType->componentMgr;
+
+		componentMgr->destroyComponent(component);
+		Assert(component == nullptr);
+	}
+
+	componentSet.head = nullptr;
+}
+
 //
 
 #include "helpers.h"

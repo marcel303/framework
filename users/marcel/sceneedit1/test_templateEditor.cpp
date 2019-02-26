@@ -67,8 +67,8 @@ static void createFallbackTemplateForComponent(const char * componentTypeName, c
 		template_component.properties.push_back(template_property);
 	}
 	
-	componentType->componentMgr->removeComponent(component);
-	component = nullptr;
+	componentType->componentMgr->destroyComponent(component);
+	Assert(component == nullptr);
 }
 
 struct ComponentTypeWithId
@@ -147,9 +147,15 @@ struct TemplateComponentInstance
 	{
 		if (component != nullptr)
 		{
-			componentType->componentMgr->removeComponent(component);
-			component = nullptr;
+			componentType->componentMgr->destroyComponent(component);
+			Assert(component == nullptr);
 		}
+		
+		componentType = nullptr;
+		
+		id.clear();
+		
+		propertyIsSetArray.clear();
 	}
 };
 
