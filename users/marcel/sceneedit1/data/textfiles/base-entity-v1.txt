@@ -7,3 +7,9 @@ model
 		model.txt
 	scale
 		0.01
+
+parameter
+
+vfxgraph
+	path
+		vfxgraphs/test.xml

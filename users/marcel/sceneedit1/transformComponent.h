@@ -27,6 +27,7 @@ struct TransformComponentType : ComponentType<TransformComponent>
 	TransformComponentType()
 	{
 		typeName = "TransformComponent";
+		tickPriority = kComponentPriority_Transform;
 		
 		in("position", &TransformComponent::position);
 		in("angleAxis", &TransformComponent::angleAxis);

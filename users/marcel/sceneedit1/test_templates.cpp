@@ -8,13 +8,13 @@ static void dump_template(const Template & t)
 {
 	for (auto & component : t.components)
 	{
-		logDebug("%30s : %20s *",
+		logInfo("%30s : %20s *",
 			component.type_name.c_str(),
 			component.id.c_str());
 		
 		for (auto & property : component.properties)
 		{
-			logDebug("%30s : %20s : %20s = %s",
+			logInfo("%30s : %20s : %20s = %s",
 				component.type_name.c_str(),
 				component.id.c_str(),
 				property.name.c_str(),
