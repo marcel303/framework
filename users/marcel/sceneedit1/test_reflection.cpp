@@ -1,12 +1,67 @@
 #include "test_reflection.h"
 
+//
+
+void StructuredType::add(const std::type_index & typeIndex, const size_t offset, const char * name)
+{
+	Member_Scalar * member = new Member_Scalar(name, typeIndex, offset);
+	
+	member->next = members_head;
+	members_head = member;
+}
+
+//
+
+#include <map>
+
+struct TypeDB_impl
+{
+	std::map<std::type_index, const Type*> types;
+
+	const Type * findType(const std::type_index & typeIndex) const
+	{
+		auto i = types.find(typeIndex);
+
+		if (i == types.end())
+			return nullptr;
+		else
+			return i->second;
+	}
+
+	void add(std::type_index typeIndex, const Type * type)
+	{
+		types[typeIndex] = type;
+	}
+};
+
+TypeDB::TypeDB()
+{
+	impl = new TypeDB_impl();
+}
+
+TypeDB::~TypeDB()
+{
+	delete impl;
+	impl = nullptr;
+}
+
+const Type * TypeDB::findType(const std::type_index & typeIndex) const
+{
+	return impl->findType(typeIndex);
+}
+
+void TypeDB::add(const std::type_index & typeIndex, const Type * type)
+{
+	impl->add(typeIndex, type);
+}
+
 static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type, void * object)
 {
 	if (type->isStructured)
 	{
 		auto * structured_type = static_cast<const StructuredType*>(type);
 		
-		for (auto * member : structured_type->members)
+		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
 		{
 			if (member->isVector)
 			{
@@ -24,10 +79,10 @@ static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type
 			}
 			else
 			{
-				auto * member_interface = static_cast<Member_ScalarInterface*>(member);
+				auto * member_scalar = static_cast<Member_Scalar*>(member);
 
-				auto * member_type = typeDB.findType(member_interface->scalar_type());
-				void * member_object = member_interface->scalar_access(object);
+				auto * member_type = typeDB.findType(member_scalar->typeIndex);
+				void * member_object = member_scalar->scalar_access(object);
 
 				dumpReflectionInfo_traverse(typeDB, member_type, member_object);
 			}
@@ -64,9 +119,9 @@ void test_reflection_1()
 {
 	TypeDB typeDB;
 
-	typeDB.addPlain<bool>(kDataType_Bool);
-	typeDB.addPlain<int>(kDataType_Int);
-	typeDB.addPlain<float>(kDataType_Float);
+	typeDB.addPlain<bool>("bool", kDataType_Bool);
+	typeDB.addPlain<int>("int", kDataType_Int);
+	typeDB.addPlain<float>("float", kDataType_Float);
 	
 	StructuredType * stype = new StructuredType("TestStruct_1");
 	stype->add(typeid(TestStruct_1::b), offsetof(TestStruct_1, b), "b");
@@ -78,7 +133,7 @@ void test_reflection_1()
 	int x = 3;
 	TestStruct_1 s;
 
-	auto * object = &x;
+	auto * object = &s;
 	auto * type = typeDB.findType(*object);
 
 	dumpReflectionInfo_traverse(typeDB, type, object);

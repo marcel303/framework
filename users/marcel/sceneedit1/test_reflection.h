@@ -37,38 +37,36 @@ StructuredType
 
 */
 
-#include <string>
 #include <typeindex>
-#include <vector>
 
 struct Member
 {
-	std::string name; // todo : make const char*
+	Member * next;
+
+	const char * name;
 	bool isVector;
+
+	Member(const char * in_name, const bool in_isVector)
+		: next(nullptr)
+		, name(in_name)
+		, isVector(in_isVector)
+	{
+	}
 };
 
-struct Member_ScalarInterface : Member
-{
-	virtual std::type_index scalar_type() = 0;
-	virtual void * scalar_access(void * object) = 0;
-};
-
-struct Member_Scalar : Member_ScalarInterface
+struct Member_Scalar : Member
 {
 	std::type_index typeIndex;
-	size_t offset = -1;
+	size_t offset;
 	
-	Member_Scalar(const std::type_index in_typeIndex)
-		: typeIndex(in_typeIndex)
+	Member_Scalar(const char * in_name, const std::type_index & in_typeIndex, const size_t in_offset)
+		: Member(in_name, false)
+		, typeIndex(in_typeIndex)
+		, offset(in_offset)
 	{
 		
 	}
-	virtual std::type_index scalar_type()
-	{
-		return typeIndex;
-	}
-	
-	virtual void * scalar_access(void * object)
+	void * scalar_access(void * object)
 	{
 		const uintptr_t address = (uintptr_t)object;
 		
@@ -86,7 +84,12 @@ struct Member_VectorInterface : Member
 
 struct Type
 {
-	bool isStructured = false;
+	bool isStructured;
+
+	Type(const bool in_isStructured)
+		: isStructured(in_isStructured)
+	{
+	}
 };
 
 enum DataType
@@ -102,8 +105,15 @@ enum DataType
 
 struct PlainType : Type
 {
-	std::string typeName;
+	const char * typeName;
 	DataType dataType;
+
+	PlainType(const char * in_typeName, const DataType in_dataType)
+		: Type(false)
+		, typeName(in_typeName)
+		, dataType(in_dataType)
+	{
+	}
 	
 	template <typename T>
 	T & access(void * object) const
@@ -116,43 +126,27 @@ struct PlainType : Type
 
 struct StructuredType : Type
 {
-	std::string typeName;
-	
-	// todo : use linked list ?
-	std::vector<Member*> members;
+	const char * typeName;
+	Member * members_head;
 	
 	StructuredType(const char * in_typeName)
+		: Type(true)
+		, typeName(in_typeName)
+		, members_head(nullptr)
 	{
-		isStructured = true;
-		typeName = in_typeName;
 	}
 	
-	void add(std::type_index typeIndex, const size_t offset, const char * name)
-	{
-		Member_Scalar * member = new Member_Scalar(typeIndex);
-		member->name = name;
-		member->isVector = false;
-		member->offset = offset;
-		
-		members.push_back(member);
-	}
+	void add(const std::type_index & typeIndex, const size_t offset, const char * name);
 };
-
-#include <map>
 
 struct TypeDB
 {
-	std::map<std::type_index, const Type*> types; // todo : use p-impl (ugh)
-	
-	const Type * findType(std::type_index typeIndex) const
-	{
-		auto i = types.find(typeIndex);
+	struct TypeDB_impl * impl;
 
-		if (i == types.end())
-			return nullptr;
-		else
-			return i->second;
-	}
+	TypeDB();
+	~TypeDB();
+	
+	const Type * findType(const std::type_index & typeIndex) const;
 
 	template <typename T>
 	const Type * findType() const
@@ -166,21 +160,14 @@ struct TypeDB
 		return findType(std::type_index(typeid(T)));
 	}
 
-	void add(std::type_index typeIndex, const Type * type)
-	{
-		types[typeIndex] = type;
-	}
+	void add(const std::type_index & typeIndex, const Type * type);
 
 	template <typename T>
-	Type * addPlain(const DataType dataType)
+	Type * addPlain(const char * typeName, const DataType dataType)
 	{
-		auto typeIndex = std::type_index(typeid(T));
+		PlainType * type = new PlainType(typeName, dataType);
 
-		PlainType * type = new PlainType();
-		type->isStructured = false;
-		type->dataType = dataType;
-
-		add(typeIndex, type);
+		add(std::type_index(typeid(T)), type);
 		
 		return type;
 	}
