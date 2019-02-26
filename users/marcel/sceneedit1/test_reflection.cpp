@@ -80,17 +80,25 @@ StructuredType & TypeDB::add(const std::type_index & typeIndex, const char * typ
 	return *type;
 }
 
-static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type, void * object)
+static void print_indent(const int indent)
+{
+	for (int i = 0; i < indent; ++i)
+		printf("\t");
+}
+
+static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type, void * object, const int indent)
 {
 	if (type->isStructured)
 	{
 		auto * structured_type = static_cast<const StructuredType*>(type);
 		
+		print_indent(indent); printf("structured type '%s'\n", structured_type->typeName);
+		
 		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
 		{
 			if (member->isVector)
 			{
-				printf("got vector\n");
+				print_indent(indent); printf("got vector\n");
 				
 				auto * member_interface = static_cast<Member_VectorInterface*>(member);
 
@@ -101,35 +109,39 @@ static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type
 				{
 					auto * vector_object = member_interface->vector_access(object, i);
 
-					dumpReflectionInfo_traverse(typeDB, vector_type, vector_object);
+					dumpReflectionInfo_traverse(typeDB, vector_type, vector_object, indent + 1);
 				}
 			}
 			else
 			{
+				print_indent(indent); printf("got scalar\n");
+				
 				auto * member_scalar = static_cast<Member_Scalar*>(member);
 
 				auto * member_type = typeDB.findType(member_scalar->typeIndex);
 				void * member_object = member_scalar->scalar_access(object);
 
-				dumpReflectionInfo_traverse(typeDB, member_type, member_object);
+				dumpReflectionInfo_traverse(typeDB, member_type, member_object, indent + 1);
 			}
 		}
 	}
 	else
 	{
-		auto * plainType = static_cast<const PlainType*>(type);
+		auto * plain_type = static_cast<const PlainType*>(type);
 
-		switch (plainType->dataType)
+		print_indent(indent); printf("%s ", plain_type->typeName);
+		
+		switch (plain_type->dataType)
 		{
 			// todo : show values
 		case kDataType_Bool:
-			printf("got bool %s\n", plainType->access<bool>(object) ? "true" : "false");
+			printf("(bool) %s\n", plain_type->access<bool>(object) ? "true" : "false");
 			break;
 		case kDataType_Int:
-			printf("got int %d\n", plainType->access<int>(object));
+			printf("(int) %d\n", plain_type->access<int>(object));
 			break;
 		case kDataType_Float:
-			printf("got float %f\n", plainType->access<float>(object));
+			printf("(float) %f\n", plain_type->access<float>(object));
 			break;
 		}
 	}
@@ -148,6 +160,8 @@ struct TestStruct_2
 	std::vector<int> x;
 	std::vector<float> f;
 	std::vector<TestStruct_1> s;
+	
+	float g = 10.f;
 };
 
 void test_reflection_1()
@@ -169,7 +183,8 @@ void test_reflection_1()
 		typeDB.add(typeid(TestStruct_2), "TestStruct_2")
 			.add("x", &TestStruct_2::x)
 			.add("f", &TestStruct_2::f)
-			.add("s", &TestStruct_2::s);
+			.add("s", &TestStruct_2::s)
+			.add("g", &TestStruct_2::g);
 	}
 	
 	int x = 3;
@@ -183,5 +198,5 @@ void test_reflection_1()
 	auto * object = &s2;
 	auto * type = typeDB.findType(*object);
 
-	dumpReflectionInfo_traverse(typeDB, type, object);
+	dumpReflectionInfo_traverse(typeDB, type, object, 0);
 }
