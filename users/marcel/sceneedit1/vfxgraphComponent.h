@@ -3,6 +3,17 @@
 #include "component.h"
 #include <string>
 
+//
+
+#include "resource.h"
+
+struct TextureResource : Resource<TextureResource> // todo : move elsewhere
+{
+	uint32_t texture;
+};
+
+//
+
 struct VfxGraphInstance;
 struct VfxGraphManager_Basic;
 
@@ -11,6 +22,8 @@ struct VfxgraphComponent : Component<VfxgraphComponent>
 	std::string path;
 	
 	VfxGraphInstance * instance = nullptr;
+	
+	TextureResource textureResource;
 	
 	virtual ~VfxgraphComponent() override final;
 	

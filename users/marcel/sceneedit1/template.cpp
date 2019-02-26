@@ -405,7 +405,7 @@ bool instantiateComponentsFromTemplate(const Template & t, ComponentSet & compon
 			return false;
 		}
 		
-		ComponentBase * component = componentType->componentMgr->createComponent();
+		ComponentBase * component = componentType->componentMgr->createComponent(component_template.id.c_str());
 		
 		for (auto & property_template : component_template.properties)
 		{

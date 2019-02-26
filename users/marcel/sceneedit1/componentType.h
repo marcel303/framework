@@ -1,16 +1,19 @@
 #pragma once
 
 #include "component.h"
-#include "Vec2.h" // todo : remove ?
-#include "Vec3.h" // todo : remove ?
-#include "Vec4.h" // todo : remove ?
 #include <functional> // todo : use a more simple way to add a getter/setter and remove this dependency
 #include <string>
 #include <vector>
 
+class Vec2;
+class Vec3;
+class Vec4;
+
 struct ComponentJson;
 struct ComponentPropertyBase;
 struct ComponentTypeBase;
+
+struct ResourcePtr;
 
 // component properties
 
@@ -23,7 +26,8 @@ enum ComponentPropertyType
 	kComponentPropertyType_Vec3,
 	kComponentPropertyType_Vec4,
 	kComponentPropertyType_String,
-	kComponentPropertyType_AngleAxis
+	kComponentPropertyType_AngleAxis,
+	kComponentPropertyType_ResourcePtr
 };
 
 template <typename T> ComponentPropertyType getComponentPropertyType();
@@ -70,7 +74,7 @@ struct ComponentPropertyBool : ComponentProperty<bool>
 	{
 	}
 	
-	virtual void setToDefault(ComponentBase * component) override final { setter(component, false); }
+	virtual void setToDefault(ComponentBase * component) override final;
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
@@ -99,7 +103,7 @@ struct ComponentPropertyInt : ComponentProperty<int>
 		return *this;
 	}
 	
-	virtual void setToDefault(ComponentBase * component) override final { setter(component, 0); }
+	virtual void setToDefault(ComponentBase * component) override final;
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
@@ -137,7 +141,7 @@ struct ComponentPropertyFloat : ComponentProperty<float>
 		return *this;
 	}
 	
-	virtual void setToDefault(ComponentBase * component) override final { setter(component, 0.f); }
+	virtual void setToDefault(ComponentBase * component) override final;
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
@@ -153,7 +157,7 @@ struct ComponentPropertyVec2 : ComponentProperty<Vec2>
 	{
 	}
 	
-	virtual void setToDefault(ComponentBase * component) override final { setter(component, Vec2()); }
+	virtual void setToDefault(ComponentBase * component) override final;
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
@@ -169,7 +173,7 @@ struct ComponentPropertyVec3 : ComponentProperty<Vec3>
 	{
 	}
 	
-	virtual void setToDefault(ComponentBase * component) override final { setter(component, Vec3()); }
+	virtual void setToDefault(ComponentBase * component) override final;
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
@@ -185,7 +189,7 @@ struct ComponentPropertyVec4 : ComponentProperty<Vec4>
 	{
 	}
 	
-	virtual void setToDefault(ComponentBase * component) override final { setter(component, Vec4()); }
+	virtual void setToDefault(ComponentBase * component) override final;
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
@@ -201,7 +205,7 @@ struct ComponentPropertyString : ComponentProperty<std::string>
 	{
 	}
 	
-	virtual void setToDefault(ComponentBase * component) override final { setter(component, std::string()); }
+	virtual void setToDefault(ComponentBase * component) override final;
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
@@ -217,7 +221,23 @@ struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
 	{
 	}
 	
-	virtual void setToDefault(ComponentBase * component) override final { setter(component, AngleAxis()); }
+	virtual void setToDefault(ComponentBase * component) override final;
+	
+	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
+	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
+	
+	virtual void to_text(ComponentBase * component, std::string & text) override final;
+	virtual bool from_text(ComponentBase * component, const char * text) override final;
+};
+
+struct ComponentPropertyResourcePtr : ComponentProperty<ResourcePtr>
+{
+	ComponentPropertyResourcePtr(const char * name)
+		: ComponentProperty<ResourcePtr>(name)
+	{
+	}
+	
+	virtual void setToDefault(ComponentBase * component) override final;
 	
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
@@ -339,6 +359,17 @@ struct ComponentType : ComponentTypeBase
 		auto p = new ComponentPropertyAngleAxis(name);
 		p->getter = [=](ComponentBase * comp) -> AngleAxis & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const AngleAxis & s) { static_cast<T*>(comp)->*member = s; };
+		
+		properties.push_back(p);
+		
+		return *p;
+	}
+	
+	ComponentPropertyResourcePtr & in(const char * name, ResourcePtr T::* member)
+	{
+		auto p = new ComponentPropertyResourcePtr(name);
+		p->getter = [=](ComponentBase * comp) -> ResourcePtr & { return static_cast<T*>(comp)->*member; };
+		p->setter = [=](ComponentBase * comp, const ResourcePtr & s) { static_cast<T*>(comp)->*member = s; };
 		
 		properties.push_back(p);
 		

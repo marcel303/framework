@@ -26,7 +26,11 @@ struct ComponentBase
 	ComponentSet * componentSet = nullptr;
 	ComponentBase * next_in_set = nullptr; // next component in the component set
 	
-	virtual ~ComponentBase() { }
+	const char * id = "";
+	
+	virtual ~ComponentBase();
+	
+	void setId(const char * id);
 	
 	virtual void tick(const float dt) { }
 	virtual bool init() { return true; }
@@ -52,7 +56,7 @@ struct ComponentMgrBase
 {
 	virtual ~ComponentMgrBase() { }
 	
-	virtual ComponentBase * createComponent() = 0;
+	virtual ComponentBase * createComponent(const char * id) = 0;
 	virtual void addComponent(ComponentBase * component) = 0;
 	virtual void removeComponent(ComponentBase * component) = 0;
 	
@@ -67,9 +71,11 @@ struct ComponentMgr : ComponentMgrBase
 	T * head = nullptr;
 	T * tail = nullptr;
 	
-	virtual T * createComponent() override final
+	virtual T * createComponent(const char * id) override final
 	{
 		T * component = new T();
+		
+		component->setId(id);
 		
 		addComponent(component);
 		
@@ -145,6 +151,17 @@ struct ComponentSet
 		
 		component->next_in_set = head;
 		head = component;
+	}
+	
+	ComponentBase * find(const char * id)
+	{
+		for (auto * component = head; component != nullptr; component = component->next_in_set)
+		{
+			if (component->id == id)
+				return component;
+		}
+		
+		return nullptr;
 	}
 	
 	template <typename T>

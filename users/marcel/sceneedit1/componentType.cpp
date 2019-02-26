@@ -1,7 +1,11 @@
 #include "componentJson.h"
 #include "componentType.h"
 #include "Parse.h"
+#include "resource.h"
 #include "StringEx.h"
+#include "Vec2.h"
+#include "Vec3.h"
+#include "Vec4.h"
 
 //
 
@@ -47,6 +51,11 @@ template <> ComponentPropertyType getComponentPropertyType<std::string>()
 template <> ComponentPropertyType getComponentPropertyType<AngleAxis>()
 {
 	return kComponentPropertyType_AngleAxis;
+}
+
+template <> ComponentPropertyType getComponentPropertyType<ResourcePtr>()
+{
+	return kComponentPropertyType_ResourcePtr;
 }
 
 //
@@ -103,6 +112,11 @@ static void from_json(const nlohmann::json & j, AngleAxis & v)
 
 //
 
+void ComponentPropertyBool::setToDefault(ComponentBase * component)
+{
+	setter(component, false);
+}
+
 void ComponentPropertyBool::to_json(ComponentBase * component, ComponentJson & j)
 {
 	j.j = getter(component);
@@ -126,6 +140,11 @@ bool ComponentPropertyBool::from_text(ComponentBase * component, const char * te
 }
 
 //
+
+void ComponentPropertyInt::setToDefault(ComponentBase * component)
+{
+	setter(component, 0);
+}
 
 void ComponentPropertyInt::to_json(ComponentBase * component, ComponentJson & j)
 {
@@ -151,6 +170,11 @@ bool ComponentPropertyInt::from_text(ComponentBase * component, const char * tex
 
 //
 
+void ComponentPropertyFloat::setToDefault(ComponentBase * component)
+{
+	setter(component, 0.f);
+}
+
 void ComponentPropertyFloat::to_json(ComponentBase * component, ComponentJson & j)
 {
 	j.j = getter(component);
@@ -174,6 +198,11 @@ bool ComponentPropertyFloat::from_text(ComponentBase * component, const char * t
 }
 
 //
+
+void ComponentPropertyVec2::setToDefault(ComponentBase * component)
+{
+	setter(component, Vec2());
+}
 
 void ComponentPropertyVec2::to_json(ComponentBase * component, ComponentJson & j)
 {
@@ -211,6 +240,11 @@ bool ComponentPropertyVec2::from_text(ComponentBase * component, const char * te
 
 //
 
+void ComponentPropertyVec3::setToDefault(ComponentBase * component)
+{
+	setter(component, Vec3());
+}
+
 void ComponentPropertyVec3::to_json(ComponentBase * component, ComponentJson & j)
 {
 	j.j = getter(component);
@@ -247,6 +281,11 @@ bool ComponentPropertyVec3::from_text(ComponentBase * component, const char * te
 }
 
 //
+
+void ComponentPropertyVec4::setToDefault(ComponentBase * component)
+{
+	setter(component, Vec4());
+}
 
 void ComponentPropertyVec4::to_json(ComponentBase * component, ComponentJson & j)
 {
@@ -286,6 +325,11 @@ bool ComponentPropertyVec4::from_text(ComponentBase * component, const char * te
 
 //
 
+void ComponentPropertyString::setToDefault(ComponentBase * component)
+{
+	setter(component, std::string());
+}
+
 void ComponentPropertyString::to_json(ComponentBase * component, ComponentJson & j)
 {
 	j.j = getter(component);
@@ -309,6 +353,11 @@ bool ComponentPropertyString::from_text(ComponentBase * component, const char * 
 }
 
 //
+
+void ComponentPropertyAngleAxis::setToDefault(ComponentBase * component)
+{
+	setter(component, AngleAxis());
+}
 
 void ComponentPropertyAngleAxis::to_json(ComponentBase * component, ComponentJson & j)
 {
@@ -342,6 +391,43 @@ bool ComponentPropertyAngleAxis::from_text(ComponentBase * component, const char
 		Parse::Float(parts[1]),
 		Parse::Float(parts[2]),
 		Parse::Float(parts[3]));
+	
+	setter(component, value);
+	
+	return true;
+}
+
+//
+
+void ComponentPropertyResourcePtr::setToDefault(ComponentBase * component)
+{
+	setter(component, ResourcePtr());
+}
+
+void ComponentPropertyResourcePtr::to_json(ComponentBase * component, ComponentJson & j)
+{
+	j.j = getter(component).path;
+}
+
+void ComponentPropertyResourcePtr::from_json(ComponentBase * component, const ComponentJson & j)
+{
+	ResourcePtr value;
+	
+	value.path = j.j.value(name, "");
+	
+	setter(component, value);
+}
+
+void ComponentPropertyResourcePtr::to_text(ComponentBase * component, std::string & text)
+{
+	text = getter(component).path;
+}
+
+bool ComponentPropertyResourcePtr::from_text(ComponentBase * component, const char * text)
+{
+	ResourcePtr value;
+	
+	value.path = text;
 	
 	setter(component, value);
 	

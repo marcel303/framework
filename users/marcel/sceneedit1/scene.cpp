@@ -77,6 +77,11 @@ static void to_json(nlohmann::json & j, const SceneNode * node_ptr)
 			
 			component_json["typeName"] = componentType->typeName;
 			
+			if (component->id[0] != 0)
+			{
+				component_json["id"] = component->id;
+			}
+			
 			for (auto & property : componentType->properties)
 			{
 				ComponentJson property_json(component_json[property->name]);
@@ -105,6 +110,7 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 		for (auto & component_json : components_json)
 		{
 			const std::string typeName = component_json.value("typeName", "");
+			const std::string id = component_json.value("id", "");
 			
 			if (typeName.empty())
 			{
@@ -117,7 +123,7 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 			Assert(componentType != nullptr);
 			if (componentType != nullptr)
 			{
-				auto * component = componentType->componentMgr->createComponent();
+				auto * component = componentType->componentMgr->createComponent(id.c_str());
 				
 				for (auto & property : componentType->properties)
 				{

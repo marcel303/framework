@@ -3,6 +3,8 @@
 #include "vfxGraphManager.h"
 #include "vfxgraphComponent.h"
 
+#include "helpers.h" // g_resourceDatabase
+
 extern VfxgraphComponentMgr s_vfxgraphComponentMgr;
 
 VfxgraphComponent::~VfxgraphComponent()
@@ -17,11 +19,15 @@ void VfxgraphComponent::tick(const float dt)
 		// todo : width and height. take inspiration from vfx graph's vfx graph node
 		
 		instance->vfxGraph->tick(640, 480, dt);
+		
+		textureResource.texture = instance->vfxGraph->traverseDraw(640, 480);
 	}
 }
 
 bool VfxgraphComponent::init()
 {
+	g_resourceDatabase.addComponentResource(id, "texture", &textureResource);
+	
 	if (path.empty())
 	{
 		// nothing to do

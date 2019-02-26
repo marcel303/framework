@@ -55,7 +55,7 @@ static void createFallbackTemplateForComponent(const char * componentTypeName, c
 	template_component.id = componentId;
 	
 	auto * componentType = findComponentType(componentTypeName);
-	auto * component = componentType->componentMgr->createComponent();
+	auto * component = componentType->componentMgr->createComponent(nullptr);
 	
 	for (auto & property : componentType->properties)
 	{
@@ -107,7 +107,7 @@ struct TemplateComponentInstance
 		bool result = true;
 		
 		componentType = in_componentType;
-		component = componentType->componentMgr->createComponent();
+		component = componentType->componentMgr->createComponent(nullptr);
 		id = in_id;
 		
 		// iterate over each property to see if it's set or not
@@ -526,7 +526,7 @@ bool test_templateEditor()
 							
 							if (ImGui::BeginPopupContextItem("Component"))
 							{
-								ImGui::Checkbox("Is override", &component_instance.isOverride);
+								ImGui::MenuItem("Is override", nullptr, &component_instance.isOverride);
 								
 								if (ImGui::BeginMenu("Add component.."))
 								{

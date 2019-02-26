@@ -22,6 +22,7 @@ std::vector<ComponentTypeBase*> g_componentTypes;
 
 void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase * componentMgr)
 {
+	Assert(componentType->typeName.empty() == false);
 	Assert(componentType->componentMgr == nullptr);
 	componentType->componentMgr = componentMgr;
 

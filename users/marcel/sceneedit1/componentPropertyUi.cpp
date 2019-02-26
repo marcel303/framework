@@ -1,6 +1,9 @@
 #include "componentType.h"
 #include "imgui.h"
 #include "StringEx.h"
+#include "Vec2.h"
+#include "Vec3.h"
+#include "Vec4.h"
 
 void doComponentProperty(
 	ComponentPropertyBase * propertyBase,

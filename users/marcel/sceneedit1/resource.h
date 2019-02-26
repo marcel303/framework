@@ -20,6 +20,25 @@ struct Resource : ResourceBase
 
 //
 
+#include <string>
+
+struct ResourcePtr
+{
+	std::string path;
+	
+	ResourceBase * getImpl(const std::type_index & typeIndex);
+	
+	template <typename T>
+	T * get()
+	{
+		ResourceBase * resource = getImpl(std::type_index(typeid(T)));
+		
+		return static_cast<T*>(resource);
+	}
+};
+
+//
+
 struct ResourceDatabase
 {
 	struct Elem
@@ -42,6 +61,7 @@ struct ResourceDatabase
 	~ResourceDatabase();
 	
 	void add(const char * name, ResourceBase * resource);
+	void addComponentResource(const char * componentId, const char * resourceName, ResourceBase * resource);
 	
 	ResourceBase * find(const std::type_index & typeIndex, const char * name);
 	

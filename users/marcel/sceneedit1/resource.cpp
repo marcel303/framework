@@ -1,6 +1,20 @@
 #include "resource.h"
 #include "StringEx.h"
 
+//
+
+#include "helpers.h"
+
+ResourceBase * ResourcePtr::getImpl(const std::type_index & typeIndex)
+{
+	if (path.empty())
+		return nullptr;
+	else
+		return g_resourceDatabase.find(typeIndex, path.c_str());
+}
+
+//
+
 ResourceDatabase::~ResourceDatabase()
 {
 	Elem * e = head;
@@ -27,6 +41,13 @@ void ResourceDatabase::add(const char * name, ResourceBase * resource)
 	e->next = head;
 	
 	head = e;
+}
+
+void ResourceDatabase::addComponentResource(const char * componentId, const char * resourceName, ResourceBase * resource)
+{
+	std::string fullName = std::string(componentId) + "." + resourceName;
+	
+	add(fullName.c_str(), resource);
 }
 
 ResourceBase * ResourceDatabase::find(const std::type_index & typeIndex, const char * name)

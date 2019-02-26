@@ -35,15 +35,15 @@ extern ParameterComponentMgr s_parameterComponentMgr;
 
 /**
  * Intersects a bounding box given by (min, max) with a ray specified by its origin and direction. If there is an intersection, the function returns true, and stores the distance of the point of intersection in 't'. If there is no intersection, the function returns false and leaves 't' unmodified. Note that the ray direction is expected to be the inverse of the actual ray direction, for efficiency reasons.
- * @min: Minimum of bounding box extents.
- * @max: Maximum of bounding box extents.
- * @px: Origin X of ray.
- * @py: Origin Y of ray.
- * @pz: Origin Z of ray.
- * @dxInv: Inverse of direction X of ray.
- * @dyInv: Inverse of direction Y of ray.
- * @dzInv: Inverse of direction Z of ray.
- * @t: Stores the distance to the intersection point if there is an intersection.
+ * @param min: Minimum of bounding box extents.
+ * @param max: Maximum of bounding box extents.
+ * @param px: Origin X of ray.
+ * @param py: Origin Y of ray.
+ * @param pz: Origin Z of ray.
+ * @param dxInv: Inverse of direction X of ray.
+ * @param dyInv: Inverse of direction Y of ray.
+ * @param dzInv: Inverse of direction Z of ray.
+ * @param t: Stores the distance to the intersection point if there is an intersection.
  * @return: True if there is an intersection. False otherwise.
  */
 static bool intersectBoundingBox3d(const float * min, const float * max, const float px, const float py, const float pz, const float dxInv, const float dyInv, const float dzInv, float & t)
@@ -497,7 +497,7 @@ struct SceneEditor
 						
 						if (ImGui::MenuItem(text))
 						{
-							auto * component = componentType->componentMgr->createComponent();
+							auto * component = componentType->componentMgr->createComponent(nullptr);
 							
 							if (component->init())
 								node.components.add(component);
@@ -523,8 +523,7 @@ struct SceneEditor
 		node.parentId = parentId;
 		node.displayName = String::FormatC("Node %d", node.id);
 		
-	// todo : create the node from an actual template
-		auto modelComp = s_modelComponentMgr.createComponent();
+		auto modelComp = s_modelComponentMgr.createComponent(nullptr);
 		
 		modelComp->filename = "model.txt";
 		modelComp->scale = .01f;
@@ -534,7 +533,7 @@ struct SceneEditor
 		else
 			s_modelComponentMgr.removeComponent(modelComp);
 		
-		auto transformComp = s_transformComponentMgr.createComponent();
+		auto transformComp = s_transformComponentMgr.createComponent(nullptr);
 		
 		if (transformComp->init())
 		{
@@ -651,6 +650,8 @@ struct SceneEditor
 					removeNodesToRemove();
 				}
 				ImGui::End();
+				
+				//
 				
 				if (ImGui::Begin("Parameter UI"))
 				{
@@ -918,8 +919,74 @@ struct SceneEditor
 
 static void testResources()
 {
-	g_resourceDatabase.add("controller 1", new CameraControllerTest());
-	g_resourceDatabase.add("controller 2", new CameraControllerTest());
+	g_resourceDatabase.add("controller 1", new Resource<CameraControllerTest>());
+	g_resourceDatabase.add("controller 2", new Resource<CameraControllerTest>());
+}
+
+//
+
+#include "vfxgraphComponent.h"
+
+struct ResourcePtrTestComponent : Component<ResourcePtrTestComponent>
+{
+	ResourcePtr resourcePtr;
+	
+	virtual void tick(const float dt) override final
+	{
+		auto * textureResource = resourcePtr.get<TextureResource>();
+		
+		if (textureResource != nullptr)
+			logDebug("texture: %d", textureResource->texture);
+	}
+};
+
+typedef ComponentMgr<ResourcePtrTestComponent> ResourcePtrTestComponentMgr;
+
+struct ResourcePtrTestComponentType : ComponentType<ResourcePtrTestComponent>
+{
+	ResourcePtrTestComponentType()
+	{
+		typeName = "ResourcePtrTestComponent";
+		
+		in("texture", &ResourcePtrTestComponent::resourcePtr);
+	}
+};
+
+static bool testResourcePointers()
+{
+	if (!framework.init(VIEW_SX, VIEW_SY))
+		return false;
+	
+	registerComponentTypes();
+	
+	ResourcePtrTestComponentMgr resourcePtrTestComponentMgr;
+	registerComponentType(new ResourcePtrTestComponentType(), &resourcePtrTestComponentMgr);
+	
+	Template t;
+	
+	if (!loadTemplateFromFile("textfiles/resource-pointer-v1.txt", t))
+		logError("failed to load resource pointer test file");
+	else
+	{
+		ComponentSet componentSet;
+		
+		instantiateComponentsFromTemplate(t, componentSet);
+		
+		for (auto * component = componentSet.head; component != nullptr; component = component->next_in_set)
+		{
+			component->init();
+		}
+		
+		for (int i = 0; i < 10; ++i)
+		{
+			for (auto * component = componentSet.head; component != nullptr; component = component->next_in_set)
+			{
+				component->tick(0.f);
+			}
+		}
+	}
+	
+	return true;
 }
 
 int main(int argc, char * argv[])
@@ -944,6 +1011,11 @@ int main(int argc, char * argv[])
 #if 0
 	if (!test_templateEditor())
 		logError("failure!");
+	return 0;
+#endif
+
+#if 0
+	testResourcePointers();
 	return 0;
 #endif
 	
@@ -1035,6 +1107,7 @@ int main(int argc, char * argv[])
 					for (auto & node_itr : editor.scene.nodes)
 						editor.nodesToRemove.insert(node_itr.second->id);
 					editor.removeNodesToRemove();
+					Assert(editor.scene.nodes.empty());
 					
 					editor.scene = tempScene;
 				}
