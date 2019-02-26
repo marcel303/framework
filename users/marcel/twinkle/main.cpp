@@ -7,6 +7,7 @@
 #include "audiooutput/AudioOutput.h"
 #include "audiooutput/AudioOutput_PortAudio.h"
 
+#include <limits.h> // INT_MAX
 #include <map>
 
 #ifdef WIN32
