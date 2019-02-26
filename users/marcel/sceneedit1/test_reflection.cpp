@@ -1,4 +1,8 @@
 #include "test_reflection.h"
+#include "Vec2.h"
+#include "Vec3.h"
+#include "Vec4.h"
+#include <string>
 
 //
 
@@ -143,6 +147,27 @@ static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type
 		case kDataType_Float:
 			printf("(float) %f\n", plain_type->access<float>(object));
 			break;
+		case kDataType_Vec2:
+			printf("(vec2) %f %f\n",
+				plain_type->access<Vec2>(object)[0],
+				plain_type->access<Vec2>(object)[1]);
+			break;
+		case kDataType_Vec3:
+			printf("(vec3) %f %f %f\n",
+				plain_type->access<Vec3>(object)[0],
+				plain_type->access<Vec3>(object)[1],
+				plain_type->access<Vec3>(object)[2]);
+			break;
+		case kDataType_Vec4:
+			printf("(vec4) %f %f %f %f\n",
+				plain_type->access<Vec4>(object)[0],
+				plain_type->access<Vec4>(object)[1],
+				plain_type->access<Vec4>(object)[2],
+				plain_type->access<Vec4>(object)[3]);
+			break;
+		case kDataType_String:
+			printf("(string) %s\n", plain_type->access<std::string>(object).c_str());
+			break;
 		}
 	}
 }
@@ -164,6 +189,14 @@ struct TestStruct_2
 	float g = 10.f;
 };
 
+struct TestStruct_3
+{
+	Vec2 v2 = Vec2(2.1f, 2.2f);
+	Vec3 v3 = Vec3(3.1f, 3.2f, 3.3f);
+	Vec4 v4 = Vec4(4.1f, 4.2f, 4.3f, 4.4f);
+	std::string s = "hey!";
+};
+
 void test_reflection_1()
 {
 	TypeDB typeDB;
@@ -171,6 +204,10 @@ void test_reflection_1()
 	typeDB.addPlain<bool>("bool", kDataType_Bool);
 	typeDB.addPlain<int>("int", kDataType_Int);
 	typeDB.addPlain<float>("float", kDataType_Float);
+	typeDB.addPlain<Vec2>("Vec2", kDataType_Vec2);
+	typeDB.addPlain<Vec3>("Vec3", kDataType_Vec3);
+	typeDB.addPlain<Vec4>("Vec4", kDataType_Vec4);
+	typeDB.addPlain<std::string>("std::string", kDataType_String);
 	
 	{
 		typeDB.add(typeid(TestStruct_1), "TestStruct_1")
@@ -187,15 +224,24 @@ void test_reflection_1()
 			.add("g", &TestStruct_2::g);
 	}
 	
+	{
+		typeDB.add(typeid(TestStruct_3), "TestStruct_3")
+			.add("v2", &TestStruct_3::v2)
+			.add("v3", &TestStruct_3::v3)
+			.add("v4", &TestStruct_3::v4)
+			.add("s", &TestStruct_3::s);
+	}
+	
 	int x = 3;
 	TestStruct_1 s1;
 	TestStruct_2 s2;
+	TestStruct_3 s3;
 	
 	s2.x.resize(4, 42);
 	s2.f.resize(4, 3.14f);
 	s2.s.resize(4);
 
-	auto * object = &s2;
+	auto * object = &s3;
 	auto * type = typeDB.findType(*object);
 
 	dumpReflectionInfo_traverse(typeDB, type, object, 0);
