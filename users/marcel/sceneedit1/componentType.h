@@ -30,8 +30,6 @@ enum ComponentPropertyType
 	kComponentPropertyType_ResourcePtr
 };
 
-template <typename T> ComponentPropertyType getComponentPropertyType();
-
 struct ComponentPropertyBase
 {
 	std::string name;
@@ -61,8 +59,8 @@ struct ComponentProperty : ComponentPropertyBase
 	Getter getter;
 	Setter setter;
 	
-	ComponentProperty(const char * name)
-		: ComponentPropertyBase(name, getComponentPropertyType<T>())
+	ComponentProperty(const char * name, const ComponentPropertyType type)
+		: ComponentPropertyBase(name, type)
 	{
 	}
 };
@@ -70,7 +68,7 @@ struct ComponentProperty : ComponentPropertyBase
 struct ComponentPropertyBool : ComponentProperty<bool>
 {
 	ComponentPropertyBool(const char * name)
-		: ComponentProperty<bool>(name)
+		: ComponentProperty<bool>(name, kComponentPropertyType_Bool)
 	{
 	}
 	
@@ -90,7 +88,7 @@ struct ComponentPropertyInt : ComponentProperty<int>
 	int max;
 	
 	ComponentPropertyInt(const char * name)
-		: ComponentProperty<int>(name)
+		: ComponentProperty<int>(name, kComponentPropertyType_Int32)
 	{
 	}
 	
@@ -121,7 +119,7 @@ struct ComponentPropertyFloat : ComponentProperty<float>
 	float editingCurveExponential = 1.f;
 	
 	ComponentPropertyFloat(const char * name)
-		: ComponentProperty<float>(name)
+		: ComponentProperty<float>(name, kComponentPropertyType_Float)
 	{
 	}
 	
@@ -153,7 +151,7 @@ struct ComponentPropertyFloat : ComponentProperty<float>
 struct ComponentPropertyVec2 : ComponentProperty<Vec2>
 {
 	ComponentPropertyVec2(const char * name)
-		: ComponentProperty<Vec2>(name)
+		: ComponentProperty<Vec2>(name, kComponentPropertyType_Vec2)
 	{
 	}
 	
@@ -169,7 +167,7 @@ struct ComponentPropertyVec2 : ComponentProperty<Vec2>
 struct ComponentPropertyVec3 : ComponentProperty<Vec3>
 {
 	ComponentPropertyVec3(const char * name)
-		: ComponentProperty<Vec3>(name)
+		: ComponentProperty<Vec3>(name, kComponentPropertyType_Vec3)
 	{
 	}
 	
@@ -185,7 +183,7 @@ struct ComponentPropertyVec3 : ComponentProperty<Vec3>
 struct ComponentPropertyVec4 : ComponentProperty<Vec4>
 {
 	ComponentPropertyVec4(const char * name)
-		: ComponentProperty<Vec4>(name)
+		: ComponentProperty<Vec4>(name, kComponentPropertyType_Vec4)
 	{
 	}
 	
@@ -201,7 +199,7 @@ struct ComponentPropertyVec4 : ComponentProperty<Vec4>
 struct ComponentPropertyString : ComponentProperty<std::string>
 {
 	ComponentPropertyString(const char * name)
-		: ComponentProperty<std::string>(name)
+		: ComponentProperty<std::string>(name, kComponentPropertyType_String)
 	{
 	}
 	
@@ -217,7 +215,7 @@ struct ComponentPropertyString : ComponentProperty<std::string>
 struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
 {
 	ComponentPropertyAngleAxis(const char * name)
-		: ComponentProperty<AngleAxis>(name)
+		: ComponentProperty<AngleAxis>(name, kComponentPropertyType_AngleAxis)
 	{
 	}
 	
@@ -233,7 +231,7 @@ struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
 struct ComponentPropertyResourcePtr : ComponentProperty<ResourcePtr>
 {
 	ComponentPropertyResourcePtr(const char * name)
-		: ComponentProperty<ResourcePtr>(name)
+		: ComponentProperty<ResourcePtr>(name, kComponentPropertyType_ResourcePtr)
 	{
 	}
 	

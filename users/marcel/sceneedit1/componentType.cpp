@@ -13,53 +13,6 @@ void splitString(const std::string & str, std::vector<std::string> & result);
 
 //
 
-template <> ComponentPropertyType getComponentPropertyType<bool>()
-{
-	return kComponentPropertyType_Bool;
-}
-
-template <> ComponentPropertyType getComponentPropertyType<int>()
-{
-	return kComponentPropertyType_Int32;
-}
-
-template <> ComponentPropertyType getComponentPropertyType<float>()
-{
-	return kComponentPropertyType_Float;
-}
-
-template <> ComponentPropertyType getComponentPropertyType<Vec2>()
-{
-	return kComponentPropertyType_Vec2;
-}
-
-template <> ComponentPropertyType getComponentPropertyType<Vec3>()
-{
-	return kComponentPropertyType_Vec3;
-}
-
-template <> ComponentPropertyType getComponentPropertyType<Vec4>()
-{
-	return kComponentPropertyType_Vec4;
-}
-
-template <> ComponentPropertyType getComponentPropertyType<std::string>()
-{
-	return kComponentPropertyType_String;
-}
-
-template <> ComponentPropertyType getComponentPropertyType<AngleAxis>()
-{
-	return kComponentPropertyType_AngleAxis;
-}
-
-template <> ComponentPropertyType getComponentPropertyType<ResourcePtr>()
-{
-	return kComponentPropertyType_ResourcePtr;
-}
-
-//
-
 static void to_json(nlohmann::json & j, const Vec2 & v)
 {
 	j = { v[0], v[1] };
