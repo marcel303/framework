@@ -2,12 +2,26 @@
 
 //
 
+void StructuredType::add(Member * member)
+{
+	if (members_head == nullptr)
+		members_head = member;
+	else
+	{
+		Member ** members_tail = &members_head;
+		
+		while ((*members_tail)->next != nullptr)
+			members_tail = &(*members_tail)->next;
+		
+		(*members_tail)->next = member;
+	}
+}
+
 void StructuredType::add(const std::type_index & typeIndex, const size_t offset, const char * name)
 {
 	Member_Scalar * member = new Member_Scalar(name, typeIndex, offset);
 	
-	member->next = members_head;
-	members_head = member;
+	add(member);
 }
 
 //
@@ -65,6 +79,8 @@ static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type
 		{
 			if (member->isVector)
 			{
+				printf("got vector\n");
+				
 				auto * member_interface = static_cast<Member_VectorInterface*>(member);
 
 				const auto vector_size = member_interface->vector_size(object);
@@ -115,6 +131,14 @@ struct TestStruct_1
 	float f = 1.f;
 };
 
+struct TestStruct_2
+{
+	//std::vector<bool> b; // boolean not supported due to STL using a bit vector in the background for this type
+	std::vector<int> x;
+	std::vector<float> f;
+	std::vector<TestStruct_1> s;
+};
+
 void test_reflection_1()
 {
 	TypeDB typeDB;
@@ -123,17 +147,31 @@ void test_reflection_1()
 	typeDB.addPlain<int>("int", kDataType_Int);
 	typeDB.addPlain<float>("float", kDataType_Float);
 	
-	StructuredType * stype = new StructuredType("TestStruct_1");
-	stype->add(typeid(TestStruct_1::b), offsetof(TestStruct_1, b), "b");
-	stype->add(typeid(TestStruct_1::x), offsetof(TestStruct_1, x), "x");
-	stype->add(typeid(TestStruct_1::f), offsetof(TestStruct_1, f), "f");
+	{
+		StructuredType * stype = new StructuredType("TestStruct_1");
+		stype->add(typeid(TestStruct_1::b), offsetof(TestStruct_1, b), "b");
+		stype->add(typeid(TestStruct_1::x), offsetof(TestStruct_1, x), "x");
+		stype->add(typeid(TestStruct_1::f), offsetof(TestStruct_1, f), "f");
+		typeDB.add(typeid(TestStruct_1), stype);
+	}
 	
-	typeDB.add(typeid(TestStruct_1), stype);
+	{
+		StructuredType * stype = new StructuredType("TestStruct_2");
+		stype->addVector("x", &TestStruct_2::x);
+		stype->addVector("f", &TestStruct_2::f);
+		stype->addVector("s", &TestStruct_2::s);
+		typeDB.add(typeid(TestStruct_2), stype);
+	}
 	
 	int x = 3;
-	TestStruct_1 s;
+	TestStruct_1 s1;
+	TestStruct_2 s2;
+	
+	s2.x.resize(4, 42);
+	s2.f.resize(4, 3.14f);
+	s2.s.resize(4);
 
-	auto * object = &s;
+	auto * object = &s2;
 	auto * type = typeDB.findType(*object);
 
 	dumpReflectionInfo_traverse(typeDB, type, object);
