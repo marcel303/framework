@@ -33,4 +33,5 @@ before_install:
 
 script: 
   - git submodule update --init --recursive
+  - echo add_root users/marcel >> chibi-root.txt 
   - ./build.sh
