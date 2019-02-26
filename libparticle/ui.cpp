@@ -465,6 +465,8 @@ void resetMenu()
 
 bool doButton(const char * name, const float xOffset, const float xScale, const bool lineBreak)
 {
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	UiElem & elem = g_menu->getElem(name);
 	
 	const int kPadding = 5;
@@ -682,6 +684,8 @@ static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float x
 {
 	UiTextboxResult result = kUiTextboxResult_NoEvent;
 	
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	UiElem & elem = g_menu->getElem(name);
 	
 	enum Vars
@@ -879,6 +883,8 @@ UiTextboxResult doTextBox(std::string & value, const char * name, const float dt
 
 bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 {
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	UiElem & elem = g_menu->getElem(name);
 	
 	const int kPadding = 5;
@@ -971,6 +977,8 @@ bool doCheckBox(bool & value, const char * name, const bool isCollapsable)
 
 bool doDrawer(bool & value, const char * name)
 {
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	UiElem & elem = g_menu->getElem(name);
 	
 	const int kPadding = 5;
@@ -1041,6 +1049,8 @@ bool doDrawer(bool & value, const char * name)
 
 void doLabel(const char * text, const float xAlign)
 {
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	const int x1 = g_drawX;
 	const int x2 = g_drawX + g_menu->sx;
 	const int y1 = g_drawY;
@@ -1069,6 +1079,8 @@ void doBreak()
 
 void doEnumImpl(int & value, const char * name, const std::vector<EnumValue> & enumValues)
 {
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	UiElem & elem = g_menu->getElem(name);
 	
 	const int kPadding = 5;
@@ -1131,6 +1143,8 @@ void doEnumImpl(int & value, const char * name, const std::vector<EnumValue> & e
 
 bool doDropdownDrawer(bool & value, const char * name, const char * valueName)
 {
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	UiElem & elem = g_menu->getElem(name);
 	
 	const int kPadding = 5;
@@ -1199,6 +1213,8 @@ bool doDropdownDrawer(bool & value, const char * name, const char * valueName)
 
 void doDropdownImpl(int & value, const char * name, const std::vector<EnumValue> & enumValues)
 {
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	UiElem & elem = g_menu->getElem(name);
 	
 	bool & isOpen = elem.getBool(0, false);
@@ -1257,6 +1273,8 @@ static ParticleCurve::Key * findNearestKey(ParticleCurve & curve, const float t,
 
 void doParticleCurve(ParticleCurve & curve, const char * name)
 {
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	UiElem & elem = g_menu->getElem(name);
 	
 	enum Vars
@@ -1464,6 +1482,8 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 
 void doParticleColor(ParticleColor & color, const char * name)
 {
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	UiElem & elem = g_menu->getElem(name);
 	
 	const int kPadding = 5;
@@ -1555,6 +1575,8 @@ static ParticleColorCurve::Key * findNearestKey(ParticleColorCurve & curve, cons
 
 void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 {
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	pushMenu(name);
 	
 	UiElem & elem = g_menu->getElem("curve");
@@ -1730,6 +1752,8 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 
 void doColorWheel(float & r, float & g, float & b, float & a, const char * name, const float dt)
 {
+	AssertMsg(g_menu != nullptr, "pushMenu must be called first!", 0);
+	
 	UiElem & elem = g_menu->getElem(name);
 	
 	const float wheelX = g_drawX + (g_menu->sx - g_uiState->colorWheel->getSx()) / 2;
