@@ -41,9 +41,11 @@ struct Scene
 	SceneNode & getRootNode();
 	const SceneNode & getRootNode() const;
 	
+#if ENABLE_COMPONENT_JSON
 	bool save(ComponentJson & j);
 	bool saveToFile(const char * filename);
 	
 	bool load(const ComponentJson & j);
 	bool loadFromFile(const char * filename);
+#endif
 };

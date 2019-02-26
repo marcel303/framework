@@ -9,7 +9,10 @@ class Vec2;
 class Vec3;
 class Vec4;
 
-struct ComponentJson;
+#if ENABLE_COMPONENT_JSON
+	struct ComponentJson;
+#endif
+
 struct ComponentPropertyBase;
 struct ComponentTypeBase;
 
@@ -43,9 +46,11 @@ struct ComponentPropertyBase
 	
 	virtual void setToDefault(ComponentBase * component) = 0;
 	
+#if ENABLE_COMPONENT_JSON
 	virtual void to_json(ComponentBase * component, ComponentJson & j) = 0;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) = 0;
-	
+#endif
+
 	virtual void to_text(ComponentBase * component, std::string & text) = 0;
 	virtual bool from_text(ComponentBase * component, const char * text) = 0;
 };
@@ -74,9 +79,11 @@ struct ComponentPropertyBool : ComponentProperty<bool>
 	
 	virtual void setToDefault(ComponentBase * component) override final;
 	
+#if ENABLE_COMPONENT_JSON
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
-	
+#endif
+
 	virtual void to_text(ComponentBase * component, std::string & text) override final;
 	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
@@ -103,9 +110,11 @@ struct ComponentPropertyInt : ComponentProperty<int>
 	
 	virtual void setToDefault(ComponentBase * component) override final;
 	
+#if ENABLE_COMPONENT_JSON
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
-	
+#endif
+
 	virtual void to_text(ComponentBase * component, std::string & text) override final;
 	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
@@ -141,9 +150,11 @@ struct ComponentPropertyFloat : ComponentProperty<float>
 	
 	virtual void setToDefault(ComponentBase * component) override final;
 	
+#if ENABLE_COMPONENT_JSON
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
-	
+#endif
+
 	virtual void to_text(ComponentBase * component, std::string & text) override final;
 	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
@@ -157,9 +168,11 @@ struct ComponentPropertyVec2 : ComponentProperty<Vec2>
 	
 	virtual void setToDefault(ComponentBase * component) override final;
 	
+#if ENABLE_COMPONENT_JSON
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
-	
+#endif
+
 	virtual void to_text(ComponentBase * component, std::string & text) override final;
 	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
@@ -173,9 +186,11 @@ struct ComponentPropertyVec3 : ComponentProperty<Vec3>
 	
 	virtual void setToDefault(ComponentBase * component) override final;
 	
+#if ENABLE_COMPONENT_JSON
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
-	
+#endif
+
 	virtual void to_text(ComponentBase * component, std::string & text) override final;
 	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
@@ -189,9 +204,11 @@ struct ComponentPropertyVec4 : ComponentProperty<Vec4>
 	
 	virtual void setToDefault(ComponentBase * component) override final;
 	
+#if ENABLE_COMPONENT_JSON
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
-	
+#endif
+
 	virtual void to_text(ComponentBase * component, std::string & text) override final;
 	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
@@ -205,9 +222,11 @@ struct ComponentPropertyString : ComponentProperty<std::string>
 	
 	virtual void setToDefault(ComponentBase * component) override final;
 	
+#if ENABLE_COMPONENT_JSON
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
-	
+#endif
+
 	virtual void to_text(ComponentBase * component, std::string & text) override final;
 	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
@@ -221,9 +240,11 @@ struct ComponentPropertyAngleAxis : ComponentProperty<AngleAxis>
 	
 	virtual void setToDefault(ComponentBase * component) override final;
 	
+#if ENABLE_COMPONENT_JSON
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
-	
+#endif
+
 	virtual void to_text(ComponentBase * component, std::string & text) override final;
 	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };
@@ -237,9 +258,11 @@ struct ComponentPropertyResourcePtr : ComponentProperty<ResourcePtr>
 	
 	virtual void setToDefault(ComponentBase * component) override final;
 	
+#if ENABLE_COMPONENT_JSON
 	virtual void to_json(ComponentBase * component, ComponentJson & j) override final;
 	virtual void from_json(ComponentBase * component, const ComponentJson & j) override final;
-	
+#endif
+
 	virtual void to_text(ComponentBase * component, std::string & text) override final;
 	virtual bool from_text(ComponentBase * component, const char * text) override final;
 };

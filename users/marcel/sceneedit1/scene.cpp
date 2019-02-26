@@ -1,4 +1,3 @@
-#include "componentJson.h"
 #include "componentType.h"
 #include "Debugging.h"
 #include "Log.h"
@@ -6,13 +5,6 @@
 #include "TextIO.h"
 
 #include "helpers.h" // g_componentTypes
-
-struct SceneNodeFromJson
-{
-	// this struct is just a silly little trick to make deserialization from json work. apparently from_json with target type 'SceneNode *&' is not allowed, so we cannot allocate objects and assign the pointer to the result. we use a struct with inside a pointer and later move the resultant objects into a vector again ..
-
-	SceneNode * node = nullptr;
-};
 
 bool SceneNode::initComponents()
 {
@@ -28,6 +20,17 @@ void SceneNode::freeComponents()
 {
 	freeComponentsInComponentSet(components);
 }
+
+#if ENABLE_COMPONENT_JSON
+
+#include "componentJson.h"
+
+struct SceneNodeFromJson
+{
+	// this struct is just a silly little trick to make deserialization from json work. apparently from_json with target type 'SceneNode *&' is not allowed, so we cannot allocate objects and assign the pointer to the result. we use a struct with inside a pointer and later move the resultant objects into a vector again ..
+
+	SceneNode * node = nullptr;
+};
 
 static void to_json(nlohmann::json & j, const SceneNode * node_ptr)
 {
@@ -111,14 +114,28 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 						property->from_json(component, component_json);
 				}
 				
-				if (component->init())
-					node.components.add(component);
-				else
-					componentType->componentMgr->destroyComponent(component);
+				node.components.add(component);
 			}
 		}
 	}
+	
+	// initialize components
+	
+	bool init_ok = true;
+	
+	for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
+	{
+		init_ok &= component->init();
+	}
+	
+	if (!init_ok)
+	{
+	// todo : let deserialization fail
+		LOG_ERR("failed to initialize one or more components in node component set", 0);
+	}
 }
+
+#endif
 
 Scene::Scene()
 {
@@ -151,6 +168,8 @@ const SceneNode & Scene::getRootNode() const
 	
 	return *i->second;
 }
+
+#if ENABLE_COMPONENT_JSON
 
 bool Scene::save(ComponentJson & jj)
 {
@@ -268,3 +287,5 @@ bool Scene::loadFromFile(const char * filename)
 	
 	return result;
 }
+
+#endif

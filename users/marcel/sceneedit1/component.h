@@ -3,6 +3,8 @@
 #include "Debugging.h"
 #include <typeindex> // todo : remove and replace with opaque type wrapping type index or type hash
 
+#define ENABLE_COMPONENT_JSON 1
+
 // todo : movement AngleAxis object elsewhere
 
 #include "Vec3.h"

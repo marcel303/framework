@@ -1046,6 +1046,7 @@ int main(int argc, char * argv[])
 		
 		editor.tickEditor(dt, inputIsCaptured);
 		
+	#if ENABLE_COMPONENT_JSON
 		// save load test. todo : remove test code
 		
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_s))
@@ -1082,7 +1083,8 @@ int main(int argc, char * argv[])
 				editor.scene = tempScene;
 			}
 		}
-		
+	#endif
+	
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_t))
 		{
 			inputIsCaptured = true;
