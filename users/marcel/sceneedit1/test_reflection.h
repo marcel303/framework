@@ -1,42 +1,5 @@
 #pragma once
 
-/*
-
-structured type info contains information about a structured type
-(yes, really!)
-
-structured types must support:
-	members: using plain old data types
-	arrays: using any plain old data type or array type
-
-design decision: we will want type-safety for arrays. so we will
-need to support templated array types
-
-we will need some way to fetch type information from c++
-
-we will need some way to fetch type information from text
-	WELL ACTUALLY
-		scratch this. we only need type names for things we instance explicitly by
-		type. which currently, is just the components
-	WHAT WE DO NEED
-		is the ability to reflect on a type, and have some way to iterate over its members
-		find out if it's an array or not, and to serialize and deserialize data
-		we will also need to known the names of types for editing, and for serialization
-
-inferring the type from c++ would only be needed for editing. we will need to get
-the std::type_index for this for relection info
-
-StructuredType
-	StructuredType (cyclic-constraint) [] members
-	type_index
-	name
-
-(cyclic-constraint) means it must be possible to have cyclic references between types
-	structure x with array of x should be possible
-	this implies we need to have pointers for StructuredType info
-
-*/
-
 #include <typeindex>
 
 struct Member
@@ -64,9 +27,9 @@ struct Member_Scalar : Member
 		, typeIndex(in_typeIndex)
 		, offset(in_offset)
 	{
-		
 	}
-	void * scalar_access(void * object)
+	
+	void * scalar_access(void * object) const
 	{
 		const uintptr_t address = (uintptr_t)object;
 		
@@ -99,7 +62,7 @@ struct Member_Vector : Member_VectorInterface
 	
 	Member_Vector(const char * in_name, const size_t in_offset)
 		: Member_VectorInterface(in_name, true)
-		, typeIndex(std::type_index(typeid(VectorType)))
+		, typeIndex(typeid(VectorType))
 		, offset(in_offset)
 	{
 	}

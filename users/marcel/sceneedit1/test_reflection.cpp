@@ -197,6 +197,9 @@ struct TestStruct_3
 	std::string s = "hey!";
 };
 
+#define TYPEDB_ADD_STRUCT(typeDB, type) \
+	typeDB.add(std::type_index(typeid(type)), #type)
+
 void test_reflection_1()
 {
 	TypeDB typeDB;
@@ -210,14 +213,14 @@ void test_reflection_1()
 	typeDB.addPlain<std::string>("std::string", kDataType_String);
 	
 	{
-		typeDB.add(typeid(TestStruct_1), "TestStruct_1")
+		TYPEDB_ADD_STRUCT(typeDB, TestStruct_1)
 			.add("b", &TestStruct_1::b)
 			.add("x", &TestStruct_1::x)
 			.add("f", &TestStruct_1::f);
 	}
 	
 	{
-		typeDB.add(typeid(TestStruct_2), "TestStruct_2")
+		TYPEDB_ADD_STRUCT(typeDB, TestStruct_2)
 			.add("x", &TestStruct_2::x)
 			.add("f", &TestStruct_2::f)
 			.add("s", &TestStruct_2::s)
@@ -225,7 +228,7 @@ void test_reflection_1()
 	}
 	
 	{
-		typeDB.add(typeid(TestStruct_3), "TestStruct_3")
+		TYPEDB_ADD_STRUCT(typeDB, TestStruct_3)
 			.add("v2", &TestStruct_3::v2)
 			.add("v3", &TestStruct_3::v3)
 			.add("v4", &TestStruct_3::v4)
