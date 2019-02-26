@@ -198,10 +198,11 @@ struct StructuredType : Type
 	}
 	
 	void add(Member * member);
-	void add(const std::type_index & typeIndex, const size_t offset, const char * name);
+	
+	StructuredType & add(const std::type_index & typeIndex, const size_t offset, const char * name);
 	
 	template <typename C, typename T>
-	void addVector(const char * name, std::vector<T> C::* C_member)
+	StructuredType & add(const char * name, std::vector<T> C::* C_member)
 	{
 		C * x = nullptr;
 		const size_t offset = (size_t)(uintptr_t)&(x->*C_member);
@@ -209,6 +210,8 @@ struct StructuredType : Type
 		Member * member = new Member_Vector<T>(name, offset);
 		
 		add(member);
+		
+		return *this;
 	}
 };
 
@@ -233,15 +236,16 @@ struct TypeDB
 		return findType(std::type_index(typeid(T)));
 	}
 
-	void add(const std::type_index & typeIndex, const Type * type);
-
+	void add(const std::type_index & typeIndex, Type * type);
+	StructuredType & add(const std::type_index & typeIndex, const char * typeName);
+	
 	template <typename T>
-	Type * addPlain(const char * typeName, const DataType dataType)
+	PlainType & addPlain(const char * typeName, const DataType dataType)
 	{
 		PlainType * type = new PlainType(typeName, dataType);
 
 		add(std::type_index(typeid(T)), type);
 		
-		return type;
+		return *type;
 	}
 };

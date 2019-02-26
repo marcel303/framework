@@ -17,11 +17,13 @@ void StructuredType::add(Member * member)
 	}
 }
 
-void StructuredType::add(const std::type_index & typeIndex, const size_t offset, const char * name)
+StructuredType & StructuredType::add(const std::type_index & typeIndex, const size_t offset, const char * name)
 {
 	Member_Scalar * member = new Member_Scalar(name, typeIndex, offset);
 	
 	add(member);
+	
+	return *this;
 }
 
 //
@@ -64,9 +66,18 @@ const Type * TypeDB::findType(const std::type_index & typeIndex) const
 	return impl->findType(typeIndex);
 }
 
-void TypeDB::add(const std::type_index & typeIndex, const Type * type)
+void TypeDB::add(const std::type_index & typeIndex, Type * type)
 {
 	impl->add(typeIndex, type);
+}
+
+StructuredType & TypeDB::add(const std::type_index & typeIndex, const char * typeName)
+{
+	StructuredType * type = new StructuredType(typeName);
+	
+	add(typeIndex, type);
+	
+	return *type;
 }
 
 static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type, void * object)
@@ -148,19 +159,17 @@ void test_reflection_1()
 	typeDB.addPlain<float>("float", kDataType_Float);
 	
 	{
-		StructuredType * stype = new StructuredType("TestStruct_1");
-		stype->add(typeid(TestStruct_1::b), offsetof(TestStruct_1, b), "b");
-		stype->add(typeid(TestStruct_1::x), offsetof(TestStruct_1, x), "x");
-		stype->add(typeid(TestStruct_1::f), offsetof(TestStruct_1, f), "f");
-		typeDB.add(typeid(TestStruct_1), stype);
+		typeDB.add(typeid(TestStruct_1), "TestStruct_1")
+			.add(typeid(TestStruct_1::b), offsetof(TestStruct_1, b), "b")
+			.add(typeid(TestStruct_1::x), offsetof(TestStruct_1, x), "x")
+			.add(typeid(TestStruct_1::f), offsetof(TestStruct_1, f), "f");
 	}
 	
 	{
-		StructuredType * stype = new StructuredType("TestStruct_2");
-		stype->addVector("x", &TestStruct_2::x);
-		stype->addVector("f", &TestStruct_2::f);
-		stype->addVector("s", &TestStruct_2::s);
-		typeDB.add(typeid(TestStruct_2), stype);
+		typeDB.add(typeid(TestStruct_2), "TestStruct_2")
+			.add("x", &TestStruct_2::x)
+			.add("f", &TestStruct_2::f)
+			.add("s", &TestStruct_2::s);
 	}
 	
 	int x = 3;
