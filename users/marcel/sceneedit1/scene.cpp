@@ -43,6 +43,8 @@ void SceneNode::freeComponents()
 				continue;
 		
 			componentMgr->removeComponent(component);
+			
+			break;
 		}
 	}
 	
