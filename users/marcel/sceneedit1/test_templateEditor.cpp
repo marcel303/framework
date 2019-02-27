@@ -659,9 +659,6 @@ bool test_templateEditor()
 											propertyIsSet = false;
 										}
 										
-										/*
-										// todo : restore functionality. we don't have to/fom text right now
-										
 										if (ImGui::MenuItem("Set override"))
 										{
 											if (propertyIsSet == false)
@@ -669,11 +666,10 @@ bool test_templateEditor()
 												propertyIsSet = true;
 												
 												std::string text;
-												property_with_value->to_text(component_instance.component, text);
-												property->from_text(component_instance.component, text.c_str());
+												member_totext(typeDB, member, component_with_value, text);
+												member_fromtext(typeDB, member, component_instance.component, text.c_str());
 											}
 										}
-										*/
 									}
 									
 									ImGui::EndPopup();
