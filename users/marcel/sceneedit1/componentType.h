@@ -279,15 +279,6 @@ enum ComponentPriority
 
 struct ComponentTypeBase
 {
-	struct KeyValuePair
-	{
-		const char * key;
-		const char * value;
-	};
-	
-	typedef std::function<void(ComponentBase * component, const std::string&)> SetString;
-	typedef std::function<std::string(ComponentBase * component)> GetString;
-	
 	std::string typeName;
 	std::vector<ComponentPropertyBase*> properties;
 	int tickPriority = kComponentPriority_Default;
