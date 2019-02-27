@@ -289,7 +289,7 @@ struct TemplateInstance
 	}
 };
 
-bool saveTemplateInstanceToString(const std::vector<TemplateInstance> & instances, const size_t instanceIndex, std::string & out_text)
+bool saveTemplateInstanceToString(const TypeDB & typeDB, const std::vector<TemplateInstance> & instances, const size_t instanceIndex, std::string & out_text)
 {
 	auto & instance = instances[instanceIndex];
 	
@@ -316,17 +316,17 @@ bool saveTemplateInstanceToString(const std::vector<TemplateInstance> & instance
 				out << " " << component.id;
 			out << "\n";
 			
-			for (size_t property_itr = 0; property_itr < component.propertyIsSetArray.size(); ++property_itr)
+			Member * member = component.componentType->members_head;
+			
+			for (size_t property_itr = 0; property_itr < component.propertyIsSetArray.size(); ++property_itr, member = member->next)
 			{
 				if (component.propertyIsSetArray[property_itr])
 				{
 					std::string value;
 					
-					auto & property = component.componentType->properties[property_itr];
+					member_totext(typeDB, member, component.component, value);
 					
-					property->to_text(component.component, value);
-					
-					out << "\t" << property->name << "\n";
+					out << "\t" << member->name << "\n";
 					out << "\t\t" << value << "\n";
 				}
 			}
@@ -338,11 +338,11 @@ bool saveTemplateInstanceToString(const std::vector<TemplateInstance> & instance
 	return true;
 }
 
-bool saveTemplateInstanceToFile(const std::vector<TemplateInstance> & instances, const size_t instanceIndex, const char * filename)
+bool saveTemplateInstanceToFile(const TypeDB & typeDB, const std::vector<TemplateInstance> & instances, const size_t instanceIndex, const char * filename)
 {
 	std::string content;
 	
-	if (!saveTemplateInstanceToString(instances, instanceIndex, content))
+	if (!saveTemplateInstanceToString(typeDB, instances, instanceIndex, content))
 		return false;
 	
 	if (!content.empty())
@@ -626,15 +626,10 @@ bool test_templateEditor()
 							
 							// iterate over all of the components' properties
 							
-							for (size_t property_itr = 0; property_itr < component_instance.componentType->properties.size(); ++property_itr)
+							size_t property_itr = 0;
+							
+							for (auto * member = component_instance.componentType->members_head; member != nullptr; member = member->next, ++property_itr)
 							{
-								auto & property = component_instance.componentType->properties[property_itr];
-								
-								Member * member = component_instance.componentType->members_head;
-								
-								for (int i = 0; i < property_itr; ++i)
-									member = member->next;
-								
 								ComponentBase * component_with_value = nullptr;
 								
 								for (int i = selectedTemplateIndex; i >= 0; --i)
@@ -655,7 +650,7 @@ bool test_templateEditor()
 								
 								doComponentProperty(member, component_instance.component, false, propertyIsSet, component_with_value);
 								
-								if (ImGui::BeginPopupContextItem(property->name.c_str()))
+								if (ImGui::BeginPopupContextItem(member->name))
 								{
 									if (isFallbackTemplate == false)
 									{
@@ -703,7 +698,7 @@ bool test_templateEditor()
 					{
 						std::string text;
 						
-						if (!saveTemplateInstanceToString(template_instances, instance_itr, text))
+						if (!saveTemplateInstanceToString(typeDB, template_instances, instance_itr, text))
 						{
 							logError("failed to save template instance");
 							return false;
@@ -738,7 +733,7 @@ bool test_templateEditor()
 		sprintf_s(filename, sizeof(filename), "out/%03d.txt", out_index);
 		out_index++;
 		
-		if (!saveTemplateInstanceToFile(template_instances, instance_itr, filename))
+		if (!saveTemplateInstanceToFile(typeDB, template_instances, instance_itr, filename))
 		{
 			logError("failed to save template instance");
 			return false;
