@@ -286,6 +286,18 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 						int new_size = vector_size;
 						bool do_resize = false;
 						
+						ImGui::Text("%s", member->name);
+						
+						if (ImGui::BeginPopupContextItem("Vector"))
+						{
+							if (ImGui::MenuItem("Add item"))
+							{
+								insert_index = vector_size;
+							}
+							
+							ImGui::EndPopup();
+						}
+						
 						for (size_t i = 0; i < vector_size; ++i)
 						{
 							ImGui::PushID(i);
@@ -306,12 +318,12 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 										member_interface->vector_swap(object, i, i + 1);
 									}
 										
-									if (vector_size > 0 && ImGui::MenuItem("Insert before"))
+									if (ImGui::MenuItem("Insert before"))
 									{
 										insert_index = i;
 									}
 									
-									if (ImGui::MenuItem(vector_size > 0 ? "Insert after" : "Insert"))
+									if (ImGui::MenuItem("Insert after"))
 									{
 										insert_index = i + 1;
 									}
