@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AngleAxis.h"
 #include "component.h"
 #include "Mat4x4.h"
 #include <string>
@@ -44,13 +45,13 @@ struct ModelComponentType : ComponentType<ModelComponent>
 	ModelComponentType()
 		: ComponentType("ModelComponent")
 	{
-		in("filename", &ModelComponent::filename);
-		in("rotation", &ModelComponent::rotation);
+		add("filename", &ModelComponent::filename);
+		add("rotation", &ModelComponent::rotation);
 		in("scale", &ModelComponent::scale)
 			.setLimits(0.f, 100.f)
 			.setEditingCurveExponential(2.f);
-		in("colorTexcoords", &ModelComponent::colorTexcoords);
-		in("colorNormals", &ModelComponent::colorNormals);
+		add("colorTexcoords", &ModelComponent::colorTexcoords);
+		add("colorNormals", &ModelComponent::colorNormals);
 	}
 };
 

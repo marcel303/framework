@@ -2,21 +2,11 @@
 
 #include "component.h"
 #include "reflection.h"
-#include <functional> // todo : use a more simple way to add a getter/setter and remove this dependency
-#include <string>
-#include <vector>
-
-class Vec2;
-class Vec3;
-class Vec4;
+#include <type_traits>
 
 #if ENABLE_COMPONENT_JSON
 	struct ComponentJson;
 #endif
-
-struct ComponentTypeBase;
-
-struct ResourcePtr;
 
 // component types
 
@@ -65,47 +55,53 @@ struct ComponentMemberFlag_EditorType_Axis : MemberFlag<ComponentMemberFlag_Edit
 {
 };
 
-template <typename T>
-struct ComponentMemberAdder
+struct ComponentMemberAdder_Int
 {
 	Member * member;
 	
-	ComponentMemberAdder(Member * in_member)
+	ComponentMemberAdder_Int(Member * in_member)
 		: member(in_member)
 	{
 	}
 	
-	ComponentMemberAdder & setLimits(const T min, const T max)
+	ComponentMemberAdder_Int & setLimits(const int min, const int max)
 	{
-		if (std::is_same<T, int>())
-		{
-			ComponentMemberFlag_IntLimits * limits = new ComponentMemberFlag_IntLimits();
-			limits->min = min;
-			limits->max = max;
+		ComponentMemberFlag_IntLimits * limits = new ComponentMemberFlag_IntLimits();
+		limits->min = min;
+		limits->max = max;
+	
+		member->addFlag(limits);
 		
-			member->addFlag(limits);
-		}
-		else if (std::is_same<T, float>())
-		{
-			ComponentMemberFlag_FloatLimits * limits = new ComponentMemberFlag_FloatLimits();
-			limits->min = min;
-			limits->max = max;
-		
-			member->addFlag(limits);
-		}
+		return *this;
+	}
+};
+
+struct ComponentMemberAdder_Float
+{
+	Member * member;
+	
+	ComponentMemberAdder_Float(Member * in_member)
+		: member(in_member)
+	{
+	}
+	
+	ComponentMemberAdder_Float & setLimits(const float min, const float max)
+	{
+		ComponentMemberFlag_FloatLimits * limits = new ComponentMemberFlag_FloatLimits();
+		limits->min = min;
+		limits->max = max;
+	
+		member->addFlag(limits);
 		
 		return *this;
 	}
 	
-	ComponentMemberAdder & setEditingCurveExponential(const T value)
+	ComponentMemberAdder_Float & setEditingCurveExponential(const float value)
 	{
-		if (std::is_same<T, float>())
-		{
-			ComponentMemberFlag_FloatEditorCurveExponential * curveExponential = new ComponentMemberFlag_FloatEditorCurveExponential();
-			curveExponential->exponential = value;
-		
-			member->addFlag(curveExponential);
-		}
+		ComponentMemberFlag_FloatEditorCurveExponential * curveExponential = new ComponentMemberFlag_FloatEditorCurveExponential();
+		curveExponential->exponential = value;
+	
+		member->addFlag(curveExponential);
 		
 		return *this;
 	}
@@ -119,54 +115,17 @@ struct ComponentType : ComponentTypeBase
 	{
 	}
 	
-	void in(const char * name, bool T::* member)
-	{
-		add(name, member);
-	}
-	
-	ComponentMemberAdder<int> in(const char * name, int T::* member)
+	ComponentMemberAdder_Int in(const char * name, int T::* member)
 	{
 		add(name, member);
 		
-		return ComponentMemberAdder<int>(members_tail);
+		return ComponentMemberAdder(members_tail);
 	}
 	
-	ComponentMemberAdder<float> in(const char * name, float T::* member)
+	ComponentMemberAdder_Float in(const char * name, float T::* member)
 	{
 		add(name, member);
 		
-		return ComponentMemberAdder<float>(members_tail);
-	}
-	
-	void in(const char * name, Vec2 T::* member)
-	{
-		add(name, member);
-	}
-	
-	void in(const char * name, Vec3 T::* member)
-	{
-		add(name, member);
-	}
-	
-	void in(const char * name, Vec4 T::* member)
-	{
-		add(name, member);
-	}
-	
-	void in(const char * name, std::string T::* member)
-	{
-		add(name, member);
-	}
-	
-	void in(const char * name, AngleAxis T::* member)
-	{
-		add(name, member);
-	}
-	
-	void in(const char * name, ResourcePtr T::* member)
-	{
-		// todo : add reflection type for ResourcePtr
-		
-		add(name, member);
+		return ComponentMemberAdder_Float(members_tail);
 	}
 };

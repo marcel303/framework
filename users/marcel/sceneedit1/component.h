@@ -1,19 +1,9 @@
 #pragma once
 
 #include "Debugging.h"
-#include <typeindex> // todo : remove and replace with opaque type wrapping type index or type hash
+#include <typeindex>
 
 #define ENABLE_COMPONENT_JSON 1
-
-// todo : movement AngleAxis object elsewhere
-
-#include "Vec3.h"
-
-struct AngleAxis
-{
-	float angle = 0.f;
-	Vec3 axis = Vec3(0.f, 1.f, 0.f);
-};
 
 //
 
@@ -132,7 +122,7 @@ struct ComponentMgr : ComponentMgrBase
 		delete component;
 	}
 	
-	virtual void tick(const float dt) override
+	virtual void tick(const float dt) override final
 	{
 		for (T * i = head; i != nullptr; i = i->next)
 		{
@@ -155,25 +145,9 @@ struct ComponentSet
 {
 	ComponentBase * head = nullptr;
 	
-	void add(ComponentBase * component)
-	{
-		Assert(component->componentSet == nullptr);
-		component->componentSet = this;
-		
-		component->next_in_set = head;
-		head = component;
-	}
+	void add(ComponentBase * component);
 	
-	ComponentBase * find(const char * id)
-	{
-		for (auto * component = head; component != nullptr; component = component->next_in_set)
-		{
-			if (component->id == id)
-				return component;
-		}
-		
-		return nullptr;
-	}
+	ComponentBase * find(const char * id);
 	
 	template <typename T>
 	T * find()

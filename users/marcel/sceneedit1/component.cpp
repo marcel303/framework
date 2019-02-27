@@ -32,3 +32,25 @@ void ComponentBase::setId(const char * in_id)
 		memcpy((char*)id, in_id, length + 1);
 	}
 }
+
+//
+
+void ComponentSet::add(ComponentBase * component)
+{
+	Assert(component->componentSet == nullptr);
+	component->componentSet = this;
+	
+	component->next_in_set = head;
+	head = component;
+}
+
+ComponentBase * ComponentSet::find(const char * id)
+{
+	for (auto * component = head; component != nullptr; component = component->next_in_set)
+	{
+		if (strcmp(component->id, id) == 0)
+			return component;
+	}
+	
+	return nullptr;
+}

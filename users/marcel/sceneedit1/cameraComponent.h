@@ -32,10 +32,10 @@ struct CameraComponentType : ComponentType<CameraComponent>
 	{
 		tickPriority = kComponentPriority_Camera;
 
-		in("controller", &CameraComponent::controller);
-		in("fov", &CameraComponent::fov);
-		in("nearDistance", &CameraComponent::nearDistance);
-		in("farDistance", &CameraComponent::farDistance);
+		add("controller", &CameraComponent::controller);
+		add("fov", &CameraComponent::fov);
+		add("nearDistance", &CameraComponent::nearDistance);
+		add("farDistance", &CameraComponent::farDistance);
 	}
 };
 

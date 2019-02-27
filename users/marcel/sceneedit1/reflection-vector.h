@@ -50,27 +50,27 @@ struct Member_Vector : Member_VectorInterface
 		return *(VectorType*)object;
 	}
 	
-	virtual std::type_index vector_type() const
+	virtual std::type_index vector_type() const override final
 	{
 		return std::type_index(typeid(T));
 	}
 	
-	virtual size_t vector_size(const void * object) const
+	virtual size_t vector_size(const void * object) const override final
 	{
 		return getVector(object).size();
 	}
 	
-	virtual void vector_resize(void * object, const size_t size) const
+	virtual void vector_resize(void * object, const size_t size) const override final
 	{
 		return getVector(object).resize(size);
 	}
 	
-	virtual void * vector_access(void * object, const size_t index) const
+	virtual void * vector_access(void * object, const size_t index) const override final
 	{
 		return &getVector(object).at(index);
 	}
 	
-	virtual void vector_swap(void * object, const size_t index1, const size_t index2) const
+	virtual void vector_swap(void * object, const size_t index1, const size_t index2) const override final
 	{
 		auto & vector = getVector(object);
 		

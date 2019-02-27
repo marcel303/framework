@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AngleAxis.h"
 #include "component.h"
 
 struct Scene;
@@ -29,8 +30,8 @@ struct TransformComponentType : ComponentType<TransformComponent>
 	{
 		tickPriority = kComponentPriority_Transform;
 		
-		in("position", &TransformComponent::position);
-		in("angleAxis", &TransformComponent::angleAxis);
+		add("position", &TransformComponent::position);
+		add("angleAxis", &TransformComponent::angleAxis);
 		in("scale", &TransformComponent::scale)
 			.setLimits(0.f, 10.f)
 			.setEditingCurveExponential(2.f);

@@ -124,7 +124,7 @@ struct ParameterComponent : Component<ParameterComponent>
 	
 	std::vector<ParameterBase*> parameters;
 	
-	virtual void tick(const float dt) override;
+	virtual void tick(const float dt) override final;
 	
 	void add(ParameterBase * parameter);
 	
@@ -150,7 +150,7 @@ struct ParameterComponentType : ComponentType<ParameterComponent>
 	{
 		tickPriority = kComponentPriority_Parameter;
 		
-		in("prefix", &ParameterComponent::prefix);
+		add("prefix", &ParameterComponent::prefix);
 	}
 };
 
