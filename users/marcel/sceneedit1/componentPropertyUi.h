@@ -7,6 +7,7 @@ struct StructuredType;
 struct TypeDB;
 
 bool doComponentProperty(
+	const TypeDB & typeDB,
 	const Member & member,
 	ComponentBase * component,
 	const bool signalChanges,

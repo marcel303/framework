@@ -305,7 +305,7 @@ struct SceneEditor
 					for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 					{
 						bool isSet = true;
-						doComponentProperty(*member, component, true, isSet, nullptr);
+						doComponentProperty(g_typeDB, *member, component, true, isSet, nullptr);
 					}
 				}
 			}
@@ -911,7 +911,7 @@ int main(int argc, char * argv[])
 	return 0;
 #endif
 
-#if 0
+#if 1
 	if (!test_templateEditor())
 		logError("failure!");
 	return 0;

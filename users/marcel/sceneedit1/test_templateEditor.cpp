@@ -646,32 +646,7 @@ bool test_templateEditor()
 								
 								bool propertyIsSet = component_instance.propertyIsSetArray[property_itr]; // argh frck c++ with its bit array..
 								
-								doComponentProperty(member, component_instance.component, false, propertyIsSet, component_with_value);
-								
-								if (ImGui::BeginPopupContextItem(member->name))
-								{
-									if (isFallbackTemplate == false)
-									{
-										if (ImGui::MenuItem("Set to default"))
-										{
-											propertyIsSet = false;
-										}
-										
-										if (ImGui::MenuItem("Set override"))
-										{
-											if (propertyIsSet == false)
-											{
-												propertyIsSet = true;
-												
-												std::string text;
-												member_totext(typeDB, member, component_with_value, text);
-												member_fromtext(typeDB, member, component_instance.component, text.c_str());
-											}
-										}
-									}
-									
-									ImGui::EndPopup();
-								}
+								doComponentProperty(typeDB, *member, component_instance.component, false, propertyIsSet, component_with_value);
 								
 								component_instance.propertyIsSetArray[property_itr] = propertyIsSet;
 							}

@@ -8,6 +8,7 @@
 #include "Vec4.h"
 
 bool doComponentProperty(
+	const TypeDB & typeDB,
 	const Member & member,
 	ComponentBase * component,
 	const bool signalChanges,
@@ -36,17 +37,39 @@ bool doComponentProperty(
 	
 	auto & plain_type = static_cast<const PlainType&>(*member_type);
 	
+	bool result = false;
+	
 	if (doReflection_PlainType(member, plain_type, member_object, isSet, default_member_object))
 	{
 		if (signalChanges)
 			component->propertyChanged(member_object);
 		
-		return true;
+		result = true;
 	}
-	else
+	
+	if (defaultComponent != nullptr && ImGui::BeginPopupContextItem(member.name))
 	{
-		return false;
+		if (ImGui::MenuItem("Set to default"))
+		{
+			isSet = false;
+		}
+		
+		if (ImGui::MenuItem("Set override"))
+		{
+			if (isSet == false)
+			{
+				isSet = true;
+				
+				std::string text;
+				member_totext(typeDB, &member, defaultComponent, text);
+				member_fromtext(typeDB, &member, component, text.c_str());
+			}
+		}
+		
+		ImGui::EndPopup();
 	}
+	
+	return result;
 }
 
 bool doReflection_PlainType(
