@@ -12,8 +12,9 @@ struct Member_VectorInterface : Member
 	
 	virtual std::type_index vector_type() const = 0;
 	virtual size_t vector_size(const void * object) const = 0;
-	virtual void vector_resize(void * object, const size_t size) = 0;
+	virtual void vector_resize(void * object, const size_t size) const = 0;
 	virtual void * vector_access(void * object, const size_t index) const = 0;
+	virtual void vector_swap(void * object, const size_t index1, const size_t index2) const = 0;
 };
 
 template <typename T>
@@ -59,7 +60,7 @@ struct Member_Vector : Member_VectorInterface
 		return getVector(object).size();
 	}
 	
-	virtual void vector_resize(void * object, const size_t size)
+	virtual void vector_resize(void * object, const size_t size) const
 	{
 		return getVector(object).resize(size);
 	}
@@ -67,5 +68,12 @@ struct Member_Vector : Member_VectorInterface
 	virtual void * vector_access(void * object, const size_t index) const
 	{
 		return &getVector(object).at(index);
+	}
+	
+	virtual void vector_swap(void * object, const size_t index1, const size_t index2) const
+	{
+		auto & vector = getVector(object);
+		
+		std::swap(vector[index1], vector[index2]);
 	}
 };
