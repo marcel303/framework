@@ -69,10 +69,11 @@ void doComponentProperty( // todo : restore support for limits
 				}
 			}
 			
-			/*
-			if (property->hasLimits)
+			auto * limits = member->findFlag<ComponentMemberFlag_IntLimits>();
+			
+			if (limits != nullptr)
 			{
-				if (ImGui::SliderInt(property->name.c_str(), &value, property->min, property->max))
+				if (ImGui::SliderInt(member->name, &value, limits->min, limits->max))
 				{
 					isSet = true;
 					
@@ -81,7 +82,6 @@ void doComponentProperty( // todo : restore support for limits
 				}
 			}
 			else
-			*/
 			{
 				if (ImGui::InputInt(member->name, &value))
 				{
@@ -107,10 +107,14 @@ void doComponentProperty( // todo : restore support for limits
 				}
 			}
 			
-			/*
-			if (property->hasLimits)
+			auto * limits = member->findFlag<ComponentMemberFlag_FloatLimits>();
+			
+			if (limits != nullptr)
 			{
-				if (ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential))
+				auto * curveExponential = member->findFlag<ComponentMemberFlag_FloatEditorCurveExponential>();
+				
+				if (ImGui::SliderFloat(member->name, &value, limits->min, limits->max, "%.3f",
+					curveExponential == nullptr ? 1.f : curveExponential->exponential))
 				{
 					isSet = true;
 					
@@ -119,7 +123,6 @@ void doComponentProperty( // todo : restore support for limits
 				}
 			}
 			else
-			*/
 			{
 				if (ImGui::InputFloat(member->name, &value))
 				{

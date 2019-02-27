@@ -328,15 +328,14 @@ struct SceneEditor
 									{
 										auto & value = plain_type->access<int>(member_object);
 										
-									// todo : restore limits support
-										/*
-										if (property->hasLimits)
+										auto * limits = member->findFlag<ComponentMemberFlag_IntLimits>();
+										
+										if (limits != nullptr)
 										{
-											if (ImGui::SliderInt(property->name.c_str(), &value, property->min, property->max))
+											if (ImGui::SliderInt(member->name, &value, limits->min, limits->max))
 												component->propertyChanged(&value);
 										}
 										else
-										*/
 										{
 											if (ImGui::InputInt(member->name, &value))
 												component->propertyChanged(&value);
@@ -347,14 +346,17 @@ struct SceneEditor
 									{
 										auto & value = plain_type->access<float>(member_object);
 										
-										/*
-										if (property->hasLimits)
+										auto * limits = member->findFlag<ComponentMemberFlag_FloatLimits>();
+			
+										if (limits != nullptr)
 										{
-											if (ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential))
+											auto * curveExponential = member->findFlag<ComponentMemberFlag_FloatEditorCurveExponential>();
+											
+											if (ImGui::SliderFloat(member->name, &value, limits->min, limits->max, "%.3f",
+												curveExponential == nullptr ? 1.f : curveExponential->exponential))
 												component->propertyChanged(&value);
 										}
 										else
-										*/
 										{
 											if (ImGui::InputFloat(member->name, &value))
 												component->propertyChanged(&value);
@@ -939,6 +941,8 @@ static void testResources()
 
 //
 
+#if 00
+
 #include "vfxgraphComponent.h"
 
 struct ResourcePtrTestComponent : Component<ResourcePtrTestComponent>
@@ -1007,6 +1011,8 @@ static bool testResourcePointers()
 	return true;
 }
 
+#endif
+
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
@@ -1021,12 +1027,12 @@ int main(int argc, char * argv[])
 	return 0;
 #endif
 
-#if 1
+#if 0
 	test_scenefiles();
 	return 0;
 #endif
 
-#if 1
+#if 0
 	if (!test_templateEditor())
 		logError("failure!");
 	return 0;
