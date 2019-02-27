@@ -1,6 +1,7 @@
 #include "component.h"
 #include "componentType.h"
 #include "helpers.h"
+#include "Log.h"
 
 #define DEFINE_COMPONENT_TYPES
 #include "cameraComponent.h"
@@ -160,6 +161,89 @@ static void from_json(const nlohmann::json & j, Vec4 & v)
 	v[3] = j[3].get<float>();
 }
 
+#endif
+
+#if ENABLE_COMPONENT_JSON
+bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * object, const ComponentJson & j, const Member * in_member)
+{
+	if (type->isStructured)
+	{
+		auto * structured_type = static_cast<const StructuredType*>(type);
+		
+		bool result = true;
+		
+		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
+		{
+			if (member->isVector)
+			{
+				//result &= false; // todo : support vector types
+				//Assert(false);
+				LOG_ERR("todo : support vector types in member_fromjson_recursive!", 0);
+			}
+			else
+			{
+				auto * member_scalar = static_cast<const Member_Scalar*>(member);
+				
+				auto * member_type = typeDB.findType(member_scalar->typeIndex);
+				auto * member_object = member_scalar->scalar_access(object);
+				
+				auto member_json_itr = j.j.find(member->name);
+				
+				if (member_json_itr != j.j.end())
+				{
+					auto & member_json = *member_json_itr;
+					
+					result &= member_fromjson_recursive(typeDB, member_type, member_object, member_json, member);
+				}
+			}
+		}
+		
+		return true;
+	}
+	else
+	{
+		Assert(in_member != nullptr);
+		
+		auto * plain_type = static_cast<const PlainType*>(type);
+		
+		switch (plain_type->dataType)
+		{
+		case kDataType_Bool:
+			plain_type->access<bool>(object) = j.j.get<bool>();
+			return true;
+			
+		case kDataType_Int:
+			plain_type->access<int>(object) = j.j.get<int>();
+			return true;
+			
+		case kDataType_Float:
+			plain_type->access<float>(object) = j.j.get<float>();
+			return true;
+			
+		case kDataType_Vec2:
+			plain_type->access<Vec2>(object) = j.j.get<Vec2>();
+			return true;
+			
+		case kDataType_Vec3:
+			plain_type->access<Vec3>(object) = j.j.get<Vec3>();
+			return true;
+			
+		case kDataType_Vec4:
+			plain_type->access<Vec4>(object) = j.j.get<Vec4>();
+			return true;
+			
+		case kDataType_String:
+			plain_type->access<std::string>(object) = j.j.get<std::string>();
+			return true;
+			
+		case kDataType_Other:
+			Assert(false);
+			break;
+		}
+	}
+	
+	return false;
+}
 #endif
 
 bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object, const ComponentJson & j)
