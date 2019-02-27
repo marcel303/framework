@@ -2,6 +2,34 @@
 
 #include <typeindex>
 
+struct MemberFlagBase
+{
+	MemberFlagBase * next;
+	
+	std::type_index typeIndex;
+	
+	template <typename T>
+	bool isType() const
+	{
+		return std::type_index(typeid(T)) == typeIndex;
+	}
+	
+	MemberFlagBase(const std::type_index & in_typeIndex)
+		: next(nullptr)
+		, typeIndex(in_typeIndex)
+	{
+	}
+};
+
+template <typename T>
+struct MemberFlag : MemberFlagBase
+{
+	MemberFlag()
+		: MemberFlagBase(std::type_index(typeid(T)))
+	{
+	}
+};
+
 struct Member
 {
 	Member * next;
@@ -9,11 +37,20 @@ struct Member
 	const char * name;
 	bool isVector;
 	
+	MemberFlagBase * flags;
+	
 	Member(const char * in_name, const bool in_isVector)
 		: next(nullptr)
 		, name(in_name)
 		, isVector(in_isVector)
+		, flags(nullptr)
 	{
+	}
+	
+	void addFlag(MemberFlagBase * flag)
+	{
+		flag->next = flags;
+		flags = flag;
 	}
 };
 
@@ -101,11 +138,13 @@ struct StructuredType : Type
 {
 	const char * typeName;
 	Member * members_head;
+	Member * members_tail;
 	
 	StructuredType(const char * in_typeName)
 		: Type(true)
 		, typeName(in_typeName)
 		, members_head(nullptr)
+		, members_tail(nullptr)
 	{
 	}
 	

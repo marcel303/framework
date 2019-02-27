@@ -5,15 +5,14 @@
 void StructuredType::add(Member * member)
 {
 	if (members_head == nullptr)
+	{
 		members_head = member;
+		members_tail = member;
+	}
 	else
 	{
-		Member ** members_tail = &members_head;
-		
-		while ((*members_tail)->next != nullptr)
-			members_tail = &(*members_tail)->next;
-		
-		(*members_tail)->next = member;
+		members_tail->next = member;
+		members_tail = member;
 	}
 }
 
