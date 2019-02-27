@@ -331,12 +331,14 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 				{
 					auto * member_scalar = static_cast<const Member_Scalar*>(member);
 					
-				// todo : check if member type is null
-				
 					auto * member_type = g_typeDB.findType(member_scalar->typeIndex);
 					auto * member_object = member_scalar->scalar_access(object);
 					
-					result |= doReflectionMember_traverse(typeDB, *member_type, member_object, member);
+					Assert(member_type != nullptr);
+					if (member_type != nullptr)
+					{
+						result |= doReflectionMember_traverse(typeDB, *member_type, member_object, member);
+					}
 				}
 			}
 			ImGui::PopID();
