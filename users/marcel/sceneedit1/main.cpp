@@ -305,7 +305,7 @@ struct SceneEditor
 					for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 					{
 						bool isSet = true;
-						doComponentProperty(member, component, true, isSet, nullptr);
+						doComponentProperty(*member, component, true, isSet, nullptr);
 					}
 				}
 			}

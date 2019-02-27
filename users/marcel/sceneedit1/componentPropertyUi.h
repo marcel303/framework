@@ -7,15 +7,15 @@ struct StructuredType;
 struct TypeDB;
 
 bool doComponentProperty(
-	const Member * member,
+	const Member & member,
 	ComponentBase * component,
 	const bool signalChanges,
 	bool & isSet,
 	ComponentBase * defaultComponent);
 
 bool doReflection_PlainType(
-	const Member * member,
-	const PlainType * plain_type,
+	const Member & member,
+	const PlainType & plain_type,
 	void * member_object,
 	bool & isSet,
 	void * default_member_object);
