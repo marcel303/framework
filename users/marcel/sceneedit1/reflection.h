@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stddef.h>
 #include <typeindex>
 
 struct MemberFlagBase
