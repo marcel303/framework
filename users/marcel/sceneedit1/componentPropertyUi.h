@@ -24,4 +24,5 @@ bool doReflection_PlainType(
 bool doReflection_StructuredType(
 	const TypeDB & typeDB,
 	const StructuredType & type,
-	void * object);
+	void * object,
+	bool & isSet);
