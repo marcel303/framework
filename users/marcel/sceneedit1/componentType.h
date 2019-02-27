@@ -57,6 +57,14 @@ struct ComponentMemberFlag_FloatEditorCurveExponential : MemberFlag<ComponentMem
 	float exponential;
 };
 
+struct ComponentMemberFlag_EditorType_Angle : MemberFlag<ComponentMemberFlag_EditorType_Angle>
+{
+};
+
+struct ComponentMemberFlag_EditorType_Axis : MemberFlag<ComponentMemberFlag_EditorType_Axis>
+{
+};
+
 template <typename T>
 struct ComponentMemberAdder
 {

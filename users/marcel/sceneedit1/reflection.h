@@ -187,6 +187,13 @@ struct StructuredType : Type
 		
 		return add(std::type_index(typeid(T)), offset, name);
 	}
+	
+	StructuredType & addFlag(MemberFlagBase * flag)
+	{
+		members_tail->addFlag(flag);
+		
+		return *this;
+	}
 };
 
 struct TypeDB
@@ -218,6 +225,16 @@ struct TypeDB
 	{
 		PlainType * type = new PlainType(typeName, dataType);
 
+		add(std::type_index(typeid(T)), type);
+		
+		return *type;
+	}
+	
+	template <typename T>
+	StructuredType & addStructured(const char * typeName)
+	{
+		StructuredType * type = new StructuredType(typeName);
+		
 		add(std::type_index(typeid(T)), type);
 		
 		return *type;

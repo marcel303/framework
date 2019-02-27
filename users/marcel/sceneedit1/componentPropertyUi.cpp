@@ -122,23 +122,36 @@ bool doReflection_PlainType(
 				}
 			}
 			
-			auto * limits = member.findFlag<ComponentMemberFlag_FloatLimits>();
+		// todo : add hasFlag method ?
+			const bool isAngle = member.findFlag<ComponentMemberFlag_EditorType_Angle>() != nullptr;
 			
-			if (limits != nullptr)
+			if (isAngle)
 			{
-				auto * curveExponential = member.findFlag<ComponentMemberFlag_FloatEditorCurveExponential>();
-				
-				if (ImGui::SliderFloat(member.name, &value, limits->min, limits->max, "%.3f",
-					curveExponential == nullptr ? 1.f : curveExponential->exponential))
+				if (ImGui::SliderAngle(member.name, &value))
 				{
 					result = true;
 				}
 			}
 			else
 			{
-				if (ImGui::InputFloat(member.name, &value))
+				auto * limits = member.findFlag<ComponentMemberFlag_FloatLimits>();
+				
+				if (limits != nullptr)
 				{
-					result = true;
+					auto * curveExponential = member.findFlag<ComponentMemberFlag_FloatEditorCurveExponential>();
+					
+					if (ImGui::SliderFloat(member.name, &value, limits->min, limits->max, "%.3f",
+						curveExponential == nullptr ? 1.f : curveExponential->exponential))
+					{
+						result = true;
+					}
+				}
+				else
+				{
+					if (ImGui::InputFloat(member.name, &value))
+					{
+						result = true;
+					}
 				}
 			}
 		}
@@ -172,10 +185,22 @@ bool doReflection_PlainType(
 					value = plain_type.access<Vec3>(default_member_object);
 				}
 			}
+			
+			const bool isAxis = member.findFlag<ComponentMemberFlag_EditorType_Axis>() != nullptr;
 
-			if (ImGui::InputFloat3(member.name, &value[0]))
+			if (isAxis)
 			{
-				result = true;
+				if (ImGui::SliderFloat3(member.name, &value[0], -1.f, +1.f))
+				{
+					result = true;
+				}
+			}
+			else
+			{
+				if (ImGui::InputFloat3(member.name, &value[0]))
+				{
+					result = true;
+				}
 			}
 		}
 		break;
@@ -221,32 +246,7 @@ bool doReflection_PlainType(
 		}
 		break;
 	case kDataType_Other:
-		if (strcmp(plain_type.typeName, "AngleAxis") == 0) // todo : replace AngleAxis with structured type
-		{
-			auto & value = plain_type.access<AngleAxis>(member_object);
-			
-			if (isSet == false)
-			{
-				if (default_member_object != nullptr)
-				{
-					value = plain_type.access<AngleAxis>(default_member_object);
-				}
-			}
-			
-			if (ImGui::SliderAngle(member.name, &value.angle))
-			{
-				result = true;
-			}
-			
-			ImGui::PushID(&value.axis);
-			{
-				if (ImGui::SliderFloat3(member.name, &value.axis[0], -1.f, +1.f))
-				{
-					result = true;
-				}
-			}
-			ImGui::PopID();
-		}
+		Assert(false);
 		break;
 	}
 	
@@ -283,6 +283,8 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 					if (vector_type != nullptr)
 					{
 						size_t insert_index = (size_t)-1;
+						int new_size = vector_size;
+						bool do_resize = false;
 						
 						for (size_t i = 0; i < vector_size; ++i)
 						{
@@ -314,6 +316,8 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 										insert_index = i + 1;
 									}
 									
+									do_resize = ImGui::InputInt("Resize", &new_size);
+									
 									ImGui::EndPopup();
 								}
 							}
@@ -324,6 +328,11 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 						{
 							member_interface->vector_resize(object, vector_size + 1);
 							member_interface->vector_swap(object, vector_size, insert_index);
+						}
+						
+						if (do_resize)
+						{
+							member_interface->vector_resize(object, new_size);
 						}
 					}
 				}

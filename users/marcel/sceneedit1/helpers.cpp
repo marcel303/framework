@@ -49,7 +49,11 @@ void registerBuiltinTypes()
 	g_typeDB.addPlain<Vec3>("vec3", kDataType_Vec3);
 	g_typeDB.addPlain<Vec4>("vec4", kDataType_Vec4);
 	g_typeDB.addPlain<std::string>("string", kDataType_String);
-	g_typeDB.addPlain<AngleAxis>("AngleAxis", kDataType_Other);
+	g_typeDB.addStructured<AngleAxis>("AngleAxis")
+		.add("angle", &AngleAxis::angle)
+			.addFlag(new ComponentMemberFlag_EditorType_Angle)
+		.add("axis", &AngleAxis::axis)
+			.addFlag(new ComponentMemberFlag_EditorType_Axis);
 }
 
 void registerComponentTypes()
@@ -218,11 +222,6 @@ bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object
 		
 	case kDataType_Other:
 		Assert(false);
-		if (strcmp(plain_type->typeName, "AngleAxis") == 0)
-		{
-			plain_type->access<AngleAxis>(member_object) = j.j.value(member->name, AngleAxis());
-			return true;
-		}
 		break;
 	}
 	
@@ -280,11 +279,6 @@ bool member_tojson(const TypeDB & typeDB, const Member * member, const void * ob
 		
 	case kDataType_Other:
 		Assert(false);
-		if (strcmp(plain_type->typeName, "AngleAxis") == 0)
-		{
-			j.j[member->name] = plain_type->access<AngleAxis>(member_object);
-			return true;
-		}
 		break;
 	}
 	
@@ -383,26 +377,6 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 		
 	case kDataType_Other:
 		Assert(false);
-		if (strcmp(plain_type->typeName, "AngleAxis") == 0)
-		{
-			// todo : need a better float to string conversion function
-		
-			std::vector<std::string> parts;
-			splitString(text, parts);
-			
-			if (parts.size() != 4)
-				return false;
-			
-			auto & value = plain_type->access<AngleAxis>(member_object);
-			
-			value.angle = Parse::Float(parts[0]);
-			value.axis.Set(
-				Parse::Float(parts[1]),
-				Parse::Float(parts[2]),
-				Parse::Float(parts[3]));
-			
-			return true;
-		}
 		break;
 	}
 	
@@ -484,20 +458,6 @@ bool member_totext(const TypeDB & typeDB, const Member * member, const void * ob
 		
 	case kDataType_Other:
 		Assert(false);
-		if (strcmp(plain_type->typeName, "AngleAxis") == 0)
-		{
-			// todo : need a better float to string conversion function
-		
-			auto & value = plain_type->access<AngleAxis>(member_object);
-			
-			out_text = String::FormatC("%f %f %f %f",
-				value.angle,
-				value.axis[0],
-				value.axis[1],
-				value.axis[2]);
-			
-			return true;
-		}
 		break;
 	}
 	
