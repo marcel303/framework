@@ -201,6 +201,26 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 		
 	case kDataType_Other:
 		Assert(false);
+		if (strcmp(plain_type->typeName, "AngleAxis") == 0)
+		{
+			// todo : need a better float to string conversion function
+		
+			std::vector<std::string> parts;
+			splitString(text, parts);
+			
+			if (parts.size() != 4)
+				return false;
+			
+			auto & value = plain_type->access<AngleAxis>(member_object);
+			
+			value.angle = Parse::Float(parts[0]);
+			value.axis.Set(
+				Parse::Float(parts[1]),
+				Parse::Float(parts[2]),
+				Parse::Float(parts[3]));
+			
+			return true;
+		}
 		break;
 	}
 	

@@ -108,7 +108,7 @@ struct TemplateComponentInstance
 		Assert(component == nullptr);
 	}
 	
-	bool init(ComponentTypeBase * in_componentType, const char * in_id, const TemplateComponent * templateComponent)
+	bool init(const TypeDB & typeDB, ComponentTypeBase * in_componentType, const char * in_id, const TemplateComponent * templateComponent)
 	{
 		bool result = true;
 		
@@ -131,7 +131,7 @@ struct TemplateComponentInstance
 		{
 			auto propertyIsSet_itr = propertyIsSetArray.begin();
 			
-			for (auto * componentProperty : componentType->properties)
+			for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 			{
 				// see if a value is set for this property. if so, remember this fact so the editor knows to shows the right value
 				
@@ -139,9 +139,9 @@ struct TemplateComponentInstance
 				
 				for (auto & templateProperty : templateComponent->properties)
 				{
-					if (templateProperty.name == componentProperty->name)
+					if (templateProperty.name == member->name)
 					{
-						componentProperty->from_text(component, templateProperty.value.c_str());
+						result &= member_fromtext(typeDB, member, component, templateProperty.value.c_str());
 						
 						propertyIsSet = true;
 						
@@ -193,7 +193,7 @@ struct TemplateInstance
 		return nullptr;
 	}
 	
-	bool init(Template & t, const std::set<ComponentTypeWithId> & componentTypesWithId)
+	bool init(const TypeDB & typeDB, Template & t, const std::set<ComponentTypeWithId> & componentTypesWithId)
 	{
 		name = t.name;
 		base = t.base;
@@ -235,7 +235,7 @@ struct TemplateInstance
 				LOG_ERR("failed to find component type: %s", templateComponent->type_name.c_str());
 				return false;
 			}
-			else if (!component.init(componentType, componentTypeWithId.id.c_str(), templateComponent))
+			else if (!component.init(typeDB, componentType, componentTypeWithId.id.c_str(), templateComponent))
 			{
 				LOG_ERR("failed to initialize template component instance", 0);
 				return false;
@@ -278,7 +278,7 @@ struct TemplateInstance
 			components.pop_back();
 			return false;
 		}
-		else if (!component.init(componentType, "", &template_component))
+		else if (!component.init(typeDB, componentType, "", &template_component))
 		{
 			LOG_ERR("failed to initialize template component instance", 0);
 			components.pop_back();
@@ -469,7 +469,7 @@ bool test_templateEditor()
 		{
 			auto & template_instance = *template_instance_itr++;
 			
-			if (!template_instance.init(t, allComponentTypesWithId))
+			if (!template_instance.init(typeDB, t, allComponentTypesWithId))
 			{
 				LOG_ERR("failed to initialize (fallback) template instance", 0);
 				return false;
@@ -491,7 +491,7 @@ bool test_templateEditor()
 			
 			auto & template_instance = *template_instance_itr++;
 			
-			if (!template_instance.init(t, componentTypesWithId))
+			if (!template_instance.init(typeDB, t, componentTypesWithId))
 			{
 				LOG_ERR("failed to initialize template instance", 0);
 				return false;
