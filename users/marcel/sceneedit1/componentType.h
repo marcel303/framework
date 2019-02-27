@@ -115,7 +115,7 @@ struct ComponentType : ComponentTypeBase
 	{
 		add(name, member);
 		
-		return ComponentMemberAdder(members_tail);
+		return ComponentMemberAdder_Int(members_tail);
 	}
 	
 	ComponentMemberAdder_Float in(const char * name, float T::* member)
