@@ -34,16 +34,28 @@ bool doComponentProperty(
 	
 	bool result = false;
 	
+	bool treeNodeIsOpen = false;
+	
 	if (member_type->isStructured)
 	{
 		auto * structured_type = static_cast<const StructuredType*>(member_type);
 		
-		if (doReflection_StructuredType(typeDB, *structured_type, member_object, isSet))
+		if (ImGui::TreeNodeEx(member.name, ImGuiTreeNodeFlags_DefaultOpen))
 		{
-			if (signalChanges)
-				component->propertyChanged(member_object);
+			treeNodeIsOpen = true;
 			
-			result = true;
+			// note : process these as a group, so the context menu below works when right-clicking on any item inside the structure
+			ImGui::BeginGroup();
+			{
+				if (doReflection_StructuredType(typeDB, *structured_type, member_object, isSet))
+				{
+					if (signalChanges)
+						component->propertyChanged(member_object);
+					
+					result = true;
+				}
+			}
+			ImGui::EndGroup();
 		}
 	}
 	else
@@ -59,19 +71,19 @@ bool doComponentProperty(
 		}
 	}
 	
-	if (defaultComponent != nullptr && ImGui::BeginPopupContextItem(member.name))
+	if (ImGui::BeginPopupContextItem(member.name))
 	{
-		if (ImGui::MenuItem("Set to default"))
+		if (ImGui::MenuItem("Set to default", nullptr, false, isSet == true))
 		{
 			isSet = false;
 		}
 		
-		if (ImGui::MenuItem("Set override"))
+		if (ImGui::MenuItem("Set override", nullptr, false, isSet == false))
 		{
-			if (isSet == false)
+			isSet = true;
+			
+			if (defaultComponent != nullptr)
 			{
-				isSet = true;
-				
 				std::string text;
 				member_totext(typeDB, &member, defaultComponent, text);
 				member_fromtext(typeDB, &member, component, text.c_str());
@@ -80,6 +92,9 @@ bool doComponentProperty(
 		
 		ImGui::EndPopup();
 	}
+	
+	if (treeNodeIsOpen)
+		ImGui::TreePop();
 	
 	return result;
 }
@@ -301,6 +316,8 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 	
 	if (type.isStructured)
 	{
+		const bool treeNodeIsOpen = in_member != nullptr && false && ImGui::TreeNodeEx(in_member->name, ImGuiTreeNodeFlags_DefaultOpen);
+		
 		auto & structured_type = static_cast<const StructuredType&>(type);
 		
 		for (auto * member = structured_type.members_head; member != nullptr; member = member->next)
@@ -321,54 +338,61 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 						int new_size = vector_size;
 						bool do_resize = false;
 						
-						ImGui::Text("%s", member->name);
+						const bool vector_traverse = ImGui::TreeNodeEx(member->name, ImGuiTreeNodeFlags_DefaultOpen);
 						
-						if (ImGui::BeginPopupContextItem("Vector"))
+						if (vector_traverse)
 						{
-							if (ImGui::MenuItem("Add item"))
+							//ImGui::Text("%s", member->name);
+							
+							if (ImGui::BeginPopupContextItem("Vector"))
 							{
-								insert_index = vector_size;
+								if (ImGui::MenuItem("Add item"))
+								{
+									insert_index = vector_size;
+								}
+								
+								ImGui::EndPopup();
 							}
 							
-							ImGui::EndPopup();
-						}
-						
-						for (size_t i = 0; i < vector_size; ++i)
-						{
-							ImGui::PushID(i);
+							for (size_t i = 0; i < vector_size; ++i)
 							{
-								auto * vector_object = member_interface->vector_access(object, i);
-								
-								result |= doReflectionMember_traverse(typeDB, *vector_type, vector_object, member, isSet);
-								
-								if (ImGui::BeginPopupContextItem("Vector"))
+								ImGui::PushID(i);
 								{
-									if (i > 0 && ImGui::MenuItem("Move up"))
-									{
-										member_interface->vector_swap(object, i, i - 1);
-									}
+									auto * vector_object = member_interface->vector_access(object, i);
 									
-									if (i + 1 < vector_size && ImGui::MenuItem("Move down"))
+									result |= doReflectionMember_traverse(typeDB, *vector_type, vector_object, member, isSet);
+									
+									if (ImGui::BeginPopupContextItem("Vector"))
 									{
-										member_interface->vector_swap(object, i, i + 1);
-									}
+										if (i > 0 && ImGui::MenuItem("Move up"))
+										{
+											member_interface->vector_swap(object, i, i - 1);
+										}
 										
-									if (ImGui::MenuItem("Insert before"))
-									{
-										insert_index = i;
+										if (i + 1 < vector_size && ImGui::MenuItem("Move down"))
+										{
+											member_interface->vector_swap(object, i, i + 1);
+										}
+										
+										if (ImGui::MenuItem("Insert before"))
+										{
+											insert_index = i;
+										}
+										
+										if (ImGui::MenuItem("Insert after"))
+										{
+											insert_index = i + 1;
+										}
+										
+										do_resize = ImGui::InputInt("Resize", &new_size);
+										
+										ImGui::EndPopup();
 									}
-									
-									if (ImGui::MenuItem("Insert after"))
-									{
-										insert_index = i + 1;
-									}
-									
-									do_resize = ImGui::InputInt("Resize", &new_size);
-									
-									ImGui::EndPopup();
 								}
+								ImGui::PopID();
 							}
-							ImGui::PopID();
+							
+							ImGui::TreePop();
 						}
 						
 						if (insert_index != (size_t)-1)
@@ -398,6 +422,11 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 				}
 			}
 			ImGui::PopID();
+		}
+		
+		if (treeNodeIsOpen)
+		{
+			ImGui::TreePop();
 		}
 	}
 	else
