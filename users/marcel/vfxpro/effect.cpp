@@ -2296,7 +2296,7 @@ void Effect_Bars::initializeBars()
 
 		while (x < GFX_SX)
 		{
-			const float t = std::powf(random(0.f, 1.f), m_sizePow);
+			const float t = powf(random(0.f, 1.f), m_sizePow);
 
 			Bar bar;
 
@@ -2311,7 +2311,7 @@ void Effect_Bars::initializeBars()
 			}
 			else
 			{
-				const float s = 1.f / std::powf(layer + 1.f, m_sizePow);
+				const float s = 1.f / powf(layer + 1.f, m_sizePow);
 
 				bar.skipSize = m_baseSize * s;
 				bar.drawSize = Calc::Lerp(m_minSize, m_maxSize, t) * s;
@@ -3315,7 +3315,7 @@ void Effect_Fireworks::draw()
 
 			if (p.life != 0.f)
 			{
-				gxColor4f(p.color.r, p.color.g, p.color.b, std::powf(p.life * p.lifeRcp, .25f));
+				gxColor4f(p.color.r, p.color.g, p.color.b, powf(p.life * p.lifeRcp, .25f));
 
 				gxVertex2f(+p.oldX, p.oldY);
 				gxVertex2f(+p.x,    p.y);
