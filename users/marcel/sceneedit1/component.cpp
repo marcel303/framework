@@ -18,7 +18,7 @@ void ComponentBase::setId(const char * in_id)
 
 	// if the new id is an empty string, avoid the new operation
 
-	if (in_id[0] == 0)
+	if (in_id == nullptr || in_id[0] == 0)
 	{
 		id = "";
 	}

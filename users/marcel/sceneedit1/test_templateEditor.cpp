@@ -615,6 +615,11 @@ bool test_templateEditor()
 							{
 								auto & property = component_instance.componentType->properties[property_itr];
 								
+								Member * member = component_instance.componentType->members_head;
+								
+								for (int i = 0; i < property_itr; ++i)
+									member = member->next;
+								
 								ComponentBase * component_with_value = nullptr;
 								ComponentPropertyBase * property_with_value = nullptr;
 								
@@ -635,7 +640,9 @@ bool test_templateEditor()
 								
 								bool propertyIsSet = component_instance.propertyIsSetArray[property_itr]; // argh frck c++ with its bit array..
 								
-								doComponentProperty(property, component_instance.component, false, propertyIsSet, property_with_value, component_with_value);
+								//doComponentProperty(property, component_instance.component, false, propertyIsSet, property_with_value, component_with_value);
+								
+								doComponentProperty_v2(member, component_instance.component, false, propertyIsSet, component_with_value);
 								
 								if (ImGui::BeginPopupContextItem(property->name.c_str()))
 								{
