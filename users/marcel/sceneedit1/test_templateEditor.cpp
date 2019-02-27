@@ -621,7 +621,6 @@ bool test_templateEditor()
 									member = member->next;
 								
 								ComponentBase * component_with_value = nullptr;
-								ComponentPropertyBase * property_with_value = nullptr;
 								
 								for (int i = selectedTemplateIndex; i >= 0; --i)
 								{
@@ -630,19 +629,16 @@ bool test_templateEditor()
 									if (base_component != nullptr && base_component->propertyIsSetArray[property_itr])
 									{
 										component_with_value = base_component->component;
-										property_with_value = base_component->componentType->properties[property_itr];
 										break;
 									}
 								}
 								
-								// there should always be a property with a value, as we created a default template instance before
-								Assert(property_with_value != nullptr);
+								// there should always be a component with a value, as we created a default template instance before
+								Assert(component_with_value != nullptr);
 								
 								bool propertyIsSet = component_instance.propertyIsSetArray[property_itr]; // argh frck c++ with its bit array..
 								
-								//doComponentProperty(property, component_instance.component, false, propertyIsSet, property_with_value, component_with_value);
-								
-								doComponentProperty_v2(member, component_instance.component, false, propertyIsSet, component_with_value);
+								doComponentProperty(member, component_instance.component, false, propertyIsSet, component_with_value);
 								
 								if (ImGui::BeginPopupContextItem(property->name.c_str()))
 								{
@@ -652,6 +648,9 @@ bool test_templateEditor()
 										{
 											propertyIsSet = false;
 										}
+										
+										/*
+										// todo : restore functionality. we don't have to/fom text right now
 										
 										if (ImGui::MenuItem("Set override"))
 										{
@@ -664,6 +663,7 @@ bool test_templateEditor()
 												property->from_text(component_instance.component, text.c_str());
 											}
 										}
+										*/
 									}
 									
 									ImGui::EndPopup();
