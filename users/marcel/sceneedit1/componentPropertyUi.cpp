@@ -270,33 +270,76 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 		
 		for (auto * member = structured_type.members_head; member != nullptr; member = member->next)
 		{
-			if (member->isVector)
+			ImGui::PushID(member->name);
 			{
-				auto * member_interface = static_cast<const Member_VectorInterface*>(member);
-				
-				const auto vector_size = member_interface->vector_size(object);
-				auto * vector_type = typeDB.findType(member_interface->vector_type());
-				
-				Assert(vector_type != nullptr);
-				if (vector_type != nullptr)
+				if (member->isVector)
 				{
-					for (size_t i = 0; i < vector_size; ++i)
+					auto * member_interface = static_cast<const Member_VectorInterface*>(member);
+					
+					const auto vector_size = member_interface->vector_size(object);
+					auto * vector_type = typeDB.findType(member_interface->vector_type());
+					
+					Assert(vector_type != nullptr);
+					if (vector_type != nullptr)
 					{
-						auto * vector_object = member_interface->vector_access(object, i);
+						size_t insert_index = (size_t)-1;
 						
-						result |= doReflectionMember_traverse(typeDB, vector_type, vector_object, member);
+						for (size_t i = 0; i < vector_size; ++i)
+						{
+							ImGui::PushID(i);
+							{
+								auto * vector_object = member_interface->vector_access(object, i);
+								
+								result |= doReflectionMember_traverse(typeDB, *vector_type, vector_object, member);
+								
+								if (ImGui::BeginPopupContextItem("Vector"))
+								{
+									if (i > 0 && ImGui::MenuItem("Move up"))
+									{
+										member_interface->vector_swap(object, i, i - 1);
+									}
+									
+									if (i + 1 < vector_size && ImGui::MenuItem("Move down"))
+									{
+										member_interface->vector_swap(object, i, i + 1);
+									}
+										
+									if (vector_size > 0 && ImGui::MenuItem("Insert before"))
+									{
+										insert_index = i;
+									}
+									
+									if (ImGui::MenuItem(vector_size > 0 ? "Insert after" : "Insert"))
+									{
+										insert_index = i + 1;
+									}
+									
+									ImGui::EndPopup();
+								}
+							}
+							ImGui::PopID();
+						}
+						
+						if (insert_index != (size_t)-1)
+						{
+							member_interface->vector_resize(object, vector_size + 1);
+							member_interface->vector_swap(object, vector_size, insert_index);
+						}
 					}
 				}
-			}
-			else
-			{
-				auto * member_scalar = static_cast<const Member_Scalar*>(member);
+				else
+				{
+					auto * member_scalar = static_cast<const Member_Scalar*>(member);
+					
+				// todo : check if member type is null
 				
-				auto * member_type = g_typeDB.findType(member_scalar->typeIndex);
-				auto * member_object = member_scalar->scalar_access(object);
-				
-				result |= doReflectionMember_traverse(typeDB, member_type, member_object, member);
+					auto * member_type = g_typeDB.findType(member_scalar->typeIndex);
+					auto * member_object = member_scalar->scalar_access(object);
+					
+					result |= doReflectionMember_traverse(typeDB, *member_type, member_object, member);
+				}
 			}
+			ImGui::PopID();
 		}
 	}
 	else
@@ -318,5 +361,5 @@ bool doReflection_StructuredType(
 	const StructuredType & type,
 	void * object)
 {
-	return doReflectionMember_traverse(typeDB, &type, object, nullptr);
+	return doReflectionMember_traverse(typeDB, type, object, nullptr);
 }
