@@ -1783,7 +1783,7 @@ int main(int argc, char * argv[])
 			g_fftTexture.upload(powerValues, 4, 0);
 			
 			static float powerValuesWithFade[kFFTComplexSize] = { };
-			const float fftFadeA = std::powf(g_scene->m_fftFade, dtReal);
+			const float fftFadeA = powf(g_scene->m_fftFade, dtReal);
 			for (int i = 0; i < kFFTComplexSize; ++i)
 				powerValuesWithFade[i] = std::max(powerValuesWithFade[i] * fftFadeA, powerValues[i]);
 			g_fftTextureWithFade.allocate(kFFTComplexSize, 1, GX_R32_FLOAT, true, true);
