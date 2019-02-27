@@ -19,7 +19,6 @@ bool doComponentProperty(
 	
 	auto & member_scalar = static_cast<const Member_Scalar&>(member);
 	
-// todo : check if member type is zero
 	auto * member_type = g_typeDB.findType(member_scalar.typeIndex);
 	auto * member_object = member_scalar.scalar_access(component);
 	
@@ -27,6 +26,10 @@ bool doComponentProperty(
 		defaultComponent == nullptr
 		? nullptr
 		: member_scalar.scalar_access(defaultComponent);
+	
+	Assert(member_type != nullptr);
+	if (member_type == nullptr)
+		return false;
 	
 	if (member_type->isStructured) // todo : add support for structured types
 		return false;
@@ -274,13 +277,15 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 				const auto vector_size = member_interface->vector_size(object);
 				auto * vector_type = typeDB.findType(member_interface->vector_type());
 				
-				// todo : check if vector_type exists
-				
-				for (size_t i = 0; i < vector_size; ++i)
+				Assert(vector_type != nullptr);
+				if (vector_type != nullptr)
 				{
-					auto * vector_object = member_interface->vector_access(object, i);
-					
-					result |= doReflectionMember_traverse(typeDB, vector_type, vector_object, member);
+					for (size_t i = 0; i < vector_size; ++i)
+					{
+						auto * vector_object = member_interface->vector_access(object, i);
+						
+						result |= doReflectionMember_traverse(typeDB, vector_type, vector_object, member);
+					}
 				}
 			}
 			else
