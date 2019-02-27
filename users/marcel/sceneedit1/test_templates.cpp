@@ -23,7 +23,7 @@ static void dump_template(const Template & t)
 	}
 }
 
-static void test_templates_v1()
+void test_templates_v1()
 {
 	Template t;
 	

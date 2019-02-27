@@ -523,10 +523,8 @@ bool test_templateEditor()
 			{
 				ImGui::SliderInt("Template level", &selectedTemplateIndex, 1, (int)template_instances.size() - 1);
 				
-				if (selectedTemplateIndex >= 0 && selectedTemplateIndex < template_instances.size())
+				if (selectedTemplateIndex >= 1 && selectedTemplateIndex < template_instances.size())
 				{
-					const bool isFallbackTemplate = (selectedTemplateIndex == 0);
-					
 					// determine and fetch the template we want to edit
 					
 					auto & template_instance = template_instances[selectedTemplateIndex];

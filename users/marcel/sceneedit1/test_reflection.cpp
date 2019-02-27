@@ -1,3 +1,4 @@
+#include "Debugging.h"
 #include "reflection.h"
 #include "Vec2.h"
 #include "Vec3.h"
@@ -87,6 +88,10 @@ static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type
 			break;
 		case kDataType_String:
 			printf("(string) %s\n", plain_type->access<std::string>(object).c_str());
+			break;
+			
+		case kDataType_Other:
+			Assert(false);
 			break;
 		}
 	}
