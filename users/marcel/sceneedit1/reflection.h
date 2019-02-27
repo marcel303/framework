@@ -52,6 +52,18 @@ struct Member
 		flag->next = flags;
 		flags = flag;
 	}
+	
+	template <typename T>
+	const T * findFlag() const
+	{
+		const std::type_index typeIndex(typeid(T));
+		
+		for (auto * flag = flags; flag != nullptr; flag = flag->next)
+			if (flag->typeIndex == typeIndex)
+				return static_cast<const T*>(flag);
+		
+		return nullptr;
+	}
 };
 
 struct Member_Scalar : Member
