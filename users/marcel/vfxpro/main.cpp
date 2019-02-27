@@ -961,7 +961,7 @@ static void showTestImage()
 
 				setColor(colorWhite);
 				setFont("calibri.ttf");
-				if (std::fmodf(framework.time, 1.f) < .5f)
+				if (fmodf(framework.time, 1.f) < .5f)
 					drawText(GFX_SX/2, GFX_SY/2-8 + 250, 32, 0.f, 0.f, "press any key to start visualizing");
 			}
 			gxPopMatrix();
