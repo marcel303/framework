@@ -17,6 +17,7 @@
 #include "helpers.h"
 #include "template.h"
 
+#include <algorithm>
 #include <limits>
 #include <set>
 #include <typeindex>
