@@ -34,10 +34,8 @@ bool doComponentProperty(
 	
 	if (doReflection_PlainType(member, plain_type, member_object, isSet, default_member_object))
 	{
-		void * address = plain_type->access<void*>(member_object);
-		
 		if (signalChanges)
-			component->propertyChanged(address);
+			component->propertyChanged(member_object);
 		
 		return true;
 	}
