@@ -4,10 +4,6 @@
 #include "reflection.h"
 #include <type_traits>
 
-#if ENABLE_COMPONENT_JSON
-	struct ComponentJson;
-#endif
-
 // component types
 
 enum ComponentPriority

@@ -104,20 +104,13 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 			
 			auto * componentType = findComponentType(typeName.c_str());
 			
-			Assert(componentType != nullptr);
+			AssertMsg(componentType != nullptr, "could not find component type for type name '%s'", typeName.c_str());
 			if (componentType != nullptr)
 			{
 				auto * component = componentType->componentMgr->createComponent(id.c_str());
 				
-				for (auto * member = componentType->members_head; member != nullptr; member = member->next)
-				{
-					if (component_json.count(member->name) != 0)
-					{
-					// fixme : referencing g_typeDB is not very nice
-						if (member_fromjson(g_typeDB, member, component, component_json) == false)
-							LOG_ERR("failed to read member from json", 0);
-					}
-				}
+				if (member_fromjson_recursive(g_typeDB, componentType, component, component_json, nullptr) == false)
+					LOG_ERR("failed to read member from json", 0);
 				
 				node.components.add(component);
 			}
