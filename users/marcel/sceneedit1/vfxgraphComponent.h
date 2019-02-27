@@ -1,3 +1,5 @@
+#if 0
+
 #pragma once
 
 #include "component.h"
@@ -25,6 +27,8 @@ struct VfxgraphComponent : Component<VfxgraphComponent>
 	
 	TextureResource textureResource;
 	
+	std::vector<int> array;
+	
 	virtual ~VfxgraphComponent() override final;
 	
 	virtual void tick(const float dt) override final;
@@ -48,11 +52,14 @@ struct VfxgraphComponentMgr : ComponentMgr<VfxgraphComponent>
 struct VfxgraphComponentType : ComponentType<VfxgraphComponent>
 {
 	VfxgraphComponentType()
+		: ComponentType("VfxgraphComponent")
 	{
-		typeName = "VfxgraphComponent";
-		
 		in("path", &VfxgraphComponent::path);
+		
+		//in("array", &VfxgraphComponent::array);
 	}
 };
+
+#endif
 
 #endif

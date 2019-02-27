@@ -16,7 +16,7 @@ extern TransformComponentMgr s_transformComponentMgr;
 RotateTransformComponentMgr s_rotateTransformComponentMgr;
 extern ModelComponentMgr s_modelComponentMgr;
 ParameterComponentMgr s_parameterComponentMgr;
-VfxgraphComponentMgr s_vfxgraphComponentMgr;
+//VfxgraphComponentMgr s_vfxgraphComponentMgr;
 
 TypeDB g_typeDB;
 
@@ -59,7 +59,7 @@ void registerComponentTypes()
 	registerComponentType(new RotateTransformComponentType(), &s_rotateTransformComponentMgr);
 	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);
 	registerComponentType(new ParameterComponentType(), &s_parameterComponentMgr);
-	registerComponentType(new VfxgraphComponentType(), &s_vfxgraphComponentMgr);
+	//registerComponentType(new VfxgraphComponentType(), &s_vfxgraphComponentMgr);
 }
 
 static ComponentTypeBase * findComponentType(const std::vector<ComponentTypeBase*> & componentTypes, const char * typeName)

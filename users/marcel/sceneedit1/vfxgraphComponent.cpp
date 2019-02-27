@@ -1,3 +1,5 @@
+#if 0
+
 #include "parameterComponent.h"
 #include "vfxGraph.h"
 #include "vfxGraphManager.h"
@@ -79,3 +81,5 @@ VfxgraphComponentMgr::~VfxgraphComponentMgr()
 	delete vfxGraphMgr;
 	vfxGraphMgr = nullptr;
 }
+
+#endif
