@@ -38,8 +38,6 @@ struct ParticleColor
 
 struct ParticleCurve
 {
-	static const int kMaxKeys = 8;
-
 	struct Key
 	{
 		float t;
@@ -50,12 +48,12 @@ struct ParticleCurve
 		bool operator<(const Key & other) const;
 	};
 	
-	Key keys[kMaxKeys];
+	Key * keys;
 	int numKeys;
 
 	ParticleCurve();
 
-	bool allocKey(Key *& key);
+	Key * allocKey();
 	void freeKey(Key *& key);
 	void clearKeys();
 	Key * sortKeys(Key * keyToReturn = 0);
@@ -69,8 +67,6 @@ struct ParticleCurve
 
 struct ParticleColorCurve
 {
-	static const int kMaxKeys = 10;
-
 	struct Key
 	{
 		float t;
@@ -79,21 +75,16 @@ struct ParticleColorCurve
 		Key();
 
 		bool operator<(const Key & other) const;
-		bool operator==(const Key & other) const;
-		bool operator!=(const Key & other) const;
 	};
 
-	Key keys[kMaxKeys];
+	Key * keys;
 	int numKeys;
 	
 	bool useLinearColorSpace;
 
 	ParticleColorCurve();
 
-	bool operator==(const ParticleColorCurve & other) const;
-	bool operator!=(const ParticleColorCurve & other) const;
-
-	bool allocKey(Key *& key);
+	Key * allocKey();
 	void freeKey(Key *& key);
 	void clearKeys();
 	Key * sortKeys(Key * keyToReturn = 0);

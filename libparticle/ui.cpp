@@ -1285,7 +1285,7 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 		kVar_DragOffsetY
 	};
 	
-	ParticleCurve::Key *& selectedKey = elem.getPointer<ParticleCurve::Key*>(kVar_SelectedKey, nullptr);
+	int & selectedKeyIndex = elem.getInt(kVar_SelectedKey, -1);
 	bool & isDragging = elem.getBool(kVar_IsDragging, false);
 	float & dragOffsetX = elem.getFloat(kVar_DragOffsetX, 0.f);
 	float & dragOffsetY = elem.getFloat(kVar_DragOffsetY, 0.f);
@@ -1306,7 +1306,7 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 		elem.tick(x1, y1, x2, y2);
 
 		if (!elem.isActive)
-			selectedKey = nullptr;
+			selectedKeyIndex = -1;
 		else if (elem.hasFocus)
 		{
 			if (mouse.wentDown(BUTTON_LEFT))
@@ -1326,33 +1326,29 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 				{
 					// insert a new key
 
-					//const float insertValue = curve.sample(t);
 					const float insertValue = value;
 
-					if (curve.allocKey(key))
-					{
-						key->t = t;
-						key->value = insertValue;
+					key = curve.allocKey();
+					key->t = t;
+					key->value = insertValue;
 
-						//key = curve.sortKeys(key);
-					}
+					key = curve.sortKeys(key);
 				}
 
-				selectedKey = key;
+				selectedKeyIndex = key - curve.keys;
 
-				if (selectedKey != nullptr)
-				{
-					isDragging = true;
-					dragOffsetX = key->t - t;
-					dragOffsetY = key->value - value;
-				}
+				//
+				
+				isDragging = true;
+				dragOffsetX = key->t - t;
+				dragOffsetY = key->value - value;
 			}
 			
 			if (!mouse.isDown(BUTTON_LEFT))
 			{
 				if (mouse.wentDown(BUTTON_RIGHT) || keyboard.wentDown(SDLK_DELETE) || keyboard.wentDown(SDLK_BACKSPACE))
 				{
-					selectedKey = nullptr;
+					selectedKeyIndex = -1;
 
 					// erase key
 
@@ -1369,16 +1365,20 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 
 		if (isDragging)
 		{
-			if (elem.isActive && selectedKey != nullptr && mouse.isDown(BUTTON_LEFT))
+			if (elem.isActive && selectedKeyIndex != -1 && mouse.isDown(BUTTON_LEFT))
 			{
 				// move selected key around
 
 				const float t = screenToCurve(x1, x2, mouse.x, dragOffsetX);
 				const float value = screenToCurve(y1, y2, mouse.y, dragOffsetY);
+				
+				ParticleCurve::Key * selectedKey = curve.keys + selectedKeyIndex;
 
 				selectedKey->t = t;
 				selectedKey->value = value;
+
 				selectedKey = curve.sortKeys(selectedKey);
+				selectedKeyIndex = selectedKey - curve.keys;
 
 				fassert(selectedKey->t == t);
 			}
@@ -1425,7 +1425,7 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 		setDrawRect(x1, y1, x2-x1, y2-y1);
 		{
 			const float t = screenToCurve(x1, x2, mouse.x, 0.f);
-			auto highlightedKey = isDragging ? selectedKey : findNearestKey(curve, t, kMaxSelectionDeviation);
+			auto highlightedKey = isDragging ? &curve.keys[selectedKeyIndex] : findNearestKey(curve, t, kMaxSelectionDeviation);
 			
 			hqBegin(HQ_LINES);
 			{
@@ -1434,7 +1434,7 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 					const float c =
 						  !elem.hasFocus ? .5f
 						: (highlightedKey == &curve.keys[i]) ? 1.f
-						: (selectedKey == &curve.keys[i]) ? .8f
+						: (selectedKeyIndex == i) ? .8f
 						: .5f;
 					
 					auto & key = curve.keys[i];
@@ -1452,7 +1452,7 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 				const float c =
 					  !elem.hasFocus ? .5f
 					: (highlightedKey == &curve.keys[i]) ? 1.f
-					: (selectedKey == &curve.keys[i]) ? .8f
+					: (selectedKeyIndex == i) ? .8f
 					: .5f;
 				const float x = curveToScreen(x1, x2, curve.keys[i].t);
 				const float y = curveToScreen(y1, y2, curve.keys[i].value);// (y1 + y2) / 2.f;
@@ -1588,7 +1588,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 		kVar_DragOffset
 	};
 	
-	ParticleColorCurve::Key *& selectedKey = elem.getPointer<ParticleColorCurve::Key*>(kVar_SelectedKey, nullptr);
+	int & selectedKeyIndex = elem.getInt(kVar_SelectedKey, -1);
 	bool & isDragging = elem.getBool(kVar_IsDragging, false);
 	float & dragOffset = elem.getFloat(kVar_DragOffset, 0.f);
 	
@@ -1611,7 +1611,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 		elem.tick(x1, y1, x2, y2);
 
 		if (!elem.isActive)
-			selectedKey = nullptr;
+			selectedKeyIndex = -1;
 		else if (elem.hasFocus)
 		{
 			if (mouse.wentDown(BUTTON_LEFT))
@@ -1636,35 +1636,30 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 					ParticleColor color;
 					curve.sample(t, curve.useLinearColorSpace, color);
 
-					if (curve.allocKey(key))
-					{
-						key->color = color;
-						key->t = t;
+					key = curve.allocKey();
+					key->color = color;
+					key->t = t;
 
-						g_uiState->colorWheel->fromColor(
-							key->color.rgba[0],
-							key->color.rgba[1],
-							key->color.rgba[2],
-							key->color.rgba[3]);
+					g_uiState->colorWheel->fromColor(
+						key->color.rgba[0],
+						key->color.rgba[1],
+						key->color.rgba[2],
+						key->color.rgba[3]);
 
-						key = curve.sortKeys(key);
-					}
+					key = curve.sortKeys(key);
 				}
 
-				selectedKey = key;
+				selectedKeyIndex = key - curve.keys;
 
-				if (selectedKey != nullptr)
-				{
-					isDragging = true;
-					dragOffset = key->t - t;
-				}
+				isDragging = true;
+				dragOffset = key->t - t;
 			}
 			
 			if (!mouse.isDown(BUTTON_LEFT))
 			{
 				if (mouse.wentDown(BUTTON_RIGHT) || keyboard.wentDown(SDLK_DELETE) || keyboard.wentDown(SDLK_BACKSPACE))
 				{
-					selectedKey = nullptr;
+					selectedKeyIndex = -1;
 
 					// erase key
 
@@ -1681,14 +1676,17 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 
 		if (isDragging)
 		{
-			if (elem.isActive && selectedKey != nullptr && mouse.isDown(BUTTON_LEFT))
+			if (elem.isActive && selectedKeyIndex != -1 && mouse.isDown(BUTTON_LEFT))
 			{
 				// move selected key around
 
 				const float t = screenToCurve(x1, x2, mouse.x, dragOffset);
 
+				ParticleColorCurve::Key * selectedKey = curve.keys + selectedKeyIndex;
 				selectedKey->t = t;
+				
 				selectedKey = curve.sortKeys(selectedKey);
+				selectedKeyIndex = selectedKey - curve.keys;
 
 				fassert(selectedKey->t == t);
 			}
@@ -1700,7 +1698,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 
 		if (elem.isActive)
 		{
-			g_uiState->activeColor = selectedKey != nullptr ? &selectedKey->color : 0;
+			g_uiState->activeColor = selectedKeyIndex != -1 ? &curve.keys[selectedKeyIndex].color : nullptr;
 		}
 	}
 
@@ -1733,7 +1731,7 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 				const float c =
 					  !elem.hasFocus ? .5f
 					: (key == &curve.keys[i]) ? 1.f
-					: (selectedKey == &curve.keys[i]) ? .8f
+					: (selectedKeyIndex == i) ? .8f
 					: .5f;
 				const float x = curveToScreen(x1, x2, curve.keys[i].t);
 				const float y = (y1 + y2) / 2.f;
