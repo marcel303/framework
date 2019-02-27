@@ -25,8 +25,8 @@ struct TransformComponentMgr : ComponentMgr<TransformComponent>
 struct TransformComponentType : ComponentType<TransformComponent>
 {
 	TransformComponentType()
+		: ComponentType("TransformComponent")
 	{
-		typeName = "TransformComponent";
 		tickPriority = kComponentPriority_Transform;
 		
 		in("position", &TransformComponent::position);
@@ -59,9 +59,8 @@ struct RotateTransformComponentMgr : ComponentMgr<RotateTransformComponent>
 struct RotateTransformComponentType : ComponentType<RotateTransformComponent>
 {
 	RotateTransformComponentType()
+		: ComponentType("RotateTransformComponent")
 	{
-		typeName = "RotateTransformComponent";
-		
 		in("speed", &RotateTransformComponent::speed);
 	}
 };

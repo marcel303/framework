@@ -355,6 +355,7 @@ bool saveTemplateInstanceToFile(const std::vector<TemplateInstance> & instances,
 
 bool test_templateEditor()
 {
+	registerBuiltinTypes();
 	registerComponentTypes();
 	
 	// load all of the template overlays from file
@@ -528,7 +529,7 @@ bool test_templateEditor()
 					{
 						ImGui::PushID(&component_instance);
 						{
-							ImGui::Text("%s", component_instance.componentType->typeName.c_str());
+							ImGui::Text("%s", component_instance.componentType->typeName);
 							
 							if (ImGui::BeginPopupContextItem("Component"))
 							{
@@ -567,7 +568,7 @@ bool test_templateEditor()
 								}
 								
 								char text[64];
-								sprintf_s(text, sizeof(text), "Remove %s", component_instance.componentType->typeName.c_str());
+								sprintf_s(text, sizeof(text), "Remove %s", component_instance.componentType->typeName);
 								if (ImGui::MenuItem(text))
 								{
 									// todo
@@ -599,7 +600,7 @@ bool test_templateEditor()
 									if (&instance == &template_instance)
 										continue;
 									
-									auto * component = instance.findComponentInstance(component_instance.componentType->typeName.c_str(), old_id.c_str());
+									auto * component = instance.findComponentInstance(component_instance.componentType->typeName, old_id.c_str());
 									
 									if (component != nullptr)
 									{
@@ -619,7 +620,7 @@ bool test_templateEditor()
 								
 								for (int i = selectedTemplateIndex; i >= 0; --i)
 								{
-									auto * base_component = template_instances[i].findComponentInstance(component_instance.componentType->typeName.c_str(), component_instance.id.c_str());
+									auto * base_component = template_instances[i].findComponentInstance(component_instance.componentType->typeName, component_instance.id.c_str());
 									
 									if (base_component != nullptr && base_component->propertyIsSetArray[property_itr])
 									{

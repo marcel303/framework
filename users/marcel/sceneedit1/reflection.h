@@ -49,8 +49,9 @@ struct Type
 	}
 };
 
-enum DataType
+enum DataType // just for convenience and efficiency reasons, this enum allows for fast identification of plain types. so instead of using string comparisons on the type name, this enum can be used to more quickly determine the type
 {
+	kDataType_Other,
 	kDataType_Bool,
 	kDataType_Int,
 	kDataType_Float,

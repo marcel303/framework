@@ -57,6 +57,7 @@ void test_templates()
 	if (!framework.init(640, 480))
 		return;
 
+	registerBuiltinTypes();
 	registerComponentTypes();
 	
 	Template t;

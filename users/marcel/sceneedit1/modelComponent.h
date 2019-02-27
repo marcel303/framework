@@ -42,9 +42,8 @@ struct ModelComponentMgr : ComponentMgr<ModelComponent>
 struct ModelComponentType : ComponentType<ModelComponent>
 {
 	ModelComponentType()
+		: ComponentType("ModelComponent")
 	{
-		typeName = "ModelComponent";
-		
 		in("filename", &ModelComponent::filename);
 		in("rotation", &ModelComponent::rotation);
 		in("scale", &ModelComponent::scale)

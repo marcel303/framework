@@ -18,11 +18,13 @@ extern ModelComponentMgr s_modelComponentMgr;
 ParameterComponentMgr s_parameterComponentMgr;
 VfxgraphComponentMgr s_vfxgraphComponentMgr;
 
+TypeDB g_typeDB;
+
 std::vector<ComponentTypeBase*> g_componentTypes;
 
 void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase * componentMgr)
 {
-	Assert(componentType->typeName.empty() == false);
+	Assert(componentType->typeName != nullptr);
 	Assert(componentType->componentMgr == nullptr);
 	componentType->componentMgr = componentMgr;
 
@@ -38,6 +40,18 @@ void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase *
 	);
 }
 
+void registerBuiltinTypes()
+{
+	g_typeDB.addPlain<bool>("bool", kDataType_Bool);
+	g_typeDB.addPlain<int>("int", kDataType_Int);
+	g_typeDB.addPlain<float>("float", kDataType_Float);
+	g_typeDB.addPlain<Vec2>("vec2", kDataType_Vec2);
+	g_typeDB.addPlain<Vec3>("vec3", kDataType_Vec3);
+	g_typeDB.addPlain<Vec4>("vec4", kDataType_Vec4);
+	g_typeDB.addPlain<std::string>("string", kDataType_String);
+	g_typeDB.addPlain<AngleAxis>("AngleAxis", kDataType_Other);
+}
+
 void registerComponentTypes()
 {
 	registerComponentType(new CameraComponentType(), &s_cameraComponentMgr);
@@ -51,7 +65,7 @@ void registerComponentTypes()
 static ComponentTypeBase * findComponentType(const std::vector<ComponentTypeBase*> & componentTypes, const char * typeName)
 {
 	for (auto * componentType : componentTypes)
-		if (componentType->typeName == typeName)
+		if (strcmp(componentType->typeName, typeName) == 0)
 			return componentType;
 	
 	return nullptr;

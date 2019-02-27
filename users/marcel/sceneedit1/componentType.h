@@ -1,6 +1,7 @@
 #pragma once
 
 #include "component.h"
+#include "reflection.h"
 #include <functional> // todo : use a more simple way to add a getter/setter and remove this dependency
 #include <string>
 #include <vector>
@@ -277,20 +278,34 @@ enum ComponentPriority
 	kComponentPriority_Default = 1000
 };
 
-struct ComponentTypeBase
+struct ComponentTypeBase : StructuredType
 {
-	std::string typeName;
+	// todo : remove properties array, and property types defined above. we should use the type system!
 	std::vector<ComponentPropertyBase*> properties;
 	int tickPriority = kComponentPriority_Default;
 	
 	ComponentMgrBase * componentMgr = nullptr;
+	
+	ComponentTypeBase(const char * in_typeName)
+		: StructuredType(in_typeName)
+	{
+	}
 };
 
 template <typename T>
 struct ComponentType : ComponentTypeBase
 {
+	ComponentType(const char * in_typeName)
+		: ComponentTypeBase(in_typeName)
+	{
+	}
+	
 	ComponentPropertyBool & in(const char * name, bool T::* member)
 	{
+		add(name, member);
+		
+		//
+		
 		auto p = new ComponentPropertyBool(name);
 		p->getter = [=](ComponentBase * comp) -> bool & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const bool & s) { static_cast<T*>(comp)->*member = s; };
@@ -302,6 +317,10 @@ struct ComponentType : ComponentTypeBase
 	
 	ComponentPropertyInt & in(const char * name, int T::* member)
 	{
+		add(name, member);
+		
+		//
+		
 		auto p = new ComponentPropertyInt(name);
 		p->getter = [=](ComponentBase * comp) -> int & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const int & s) { static_cast<T*>(comp)->*member = s; };
@@ -313,6 +332,10 @@ struct ComponentType : ComponentTypeBase
 	
 	ComponentPropertyFloat & in(const char * name, float T::* member)
 	{
+		add(name, member);
+		
+		//
+		
 		auto p = new ComponentPropertyFloat(name);
 		p->getter = [=](ComponentBase * comp) -> float & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const float & s) { static_cast<T*>(comp)->*member = s; };
@@ -324,6 +347,10 @@ struct ComponentType : ComponentTypeBase
 	
 	ComponentPropertyVec2 & in(const char * name, Vec2 T::* member)
 	{
+		add(name, member);
+		
+		//
+		
 		auto p = new ComponentPropertyVec2(name);
 		p->getter = [=](ComponentBase * comp) -> Vec2 & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const Vec2 & s) { static_cast<T*>(comp)->*member = s; };
@@ -335,6 +362,10 @@ struct ComponentType : ComponentTypeBase
 	
 	ComponentPropertyVec3 & in(const char * name, Vec3 T::* member)
 	{
+		add(name, member);
+		
+		//
+		
 		auto p = new ComponentPropertyVec3(name);
 		p->getter = [=](ComponentBase * comp) -> Vec3 & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const Vec3 & s) { static_cast<T*>(comp)->*member = s; };
@@ -346,6 +377,10 @@ struct ComponentType : ComponentTypeBase
 	
 	ComponentPropertyVec4 & in(const char * name, Vec4 T::* member)
 	{
+		add(name, member);
+		
+		//
+		
 		auto p = new ComponentPropertyVec4(name);
 		p->getter = [=](ComponentBase * comp) -> Vec4 & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const Vec4 & s) { static_cast<T*>(comp)->*member = s; };
@@ -357,6 +392,10 @@ struct ComponentType : ComponentTypeBase
 	
 	ComponentPropertyString & in(const char * name, std::string T::* member)
 	{
+		add(name, member);
+		
+		//
+		
 		auto p = new ComponentPropertyString(name);
 		p->getter = [=](ComponentBase * comp) -> std::string & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const std::string & s) { static_cast<T*>(comp)->*member = s; };
@@ -368,6 +407,10 @@ struct ComponentType : ComponentTypeBase
 	
 	ComponentPropertyAngleAxis & in(const char * name, AngleAxis T::* member)
 	{
+		add(name, member);
+		
+		//
+		
 		auto p = new ComponentPropertyAngleAxis(name);
 		p->getter = [=](ComponentBase * comp) -> AngleAxis & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const AngleAxis & s) { static_cast<T*>(comp)->*member = s; };
@@ -379,6 +422,8 @@ struct ComponentType : ComponentTypeBase
 	
 	ComponentPropertyResourcePtr & in(const char * name, ResourcePtr T::* member)
 	{
+		// todo : add reflection type for ResourcePtr
+		
 		auto p = new ComponentPropertyResourcePtr(name);
 		p->getter = [=](ComponentBase * comp) -> ResourcePtr & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const ResourcePtr & s) { static_cast<T*>(comp)->*member = s; };

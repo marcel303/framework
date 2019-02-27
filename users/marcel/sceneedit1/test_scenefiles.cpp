@@ -14,6 +14,7 @@ bool test_scenefiles()
 	if (!framework.init(640, 480))
 		return false;
 
+	registerBuiltinTypes();
 	registerComponentTypes();
 
 	// load scene description text file

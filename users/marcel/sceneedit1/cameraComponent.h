@@ -28,8 +28,8 @@ struct CameraComponentMgr : ComponentMgr<CameraComponent>
 struct CameraComponentType : ComponentType<CameraComponent>
 {
 	CameraComponentType()
+		: ComponentType("CameraComponent")
 	{
-		typeName = "CameraComponent";
 		tickPriority = kComponentPriority_Camera;
 
 		in("controller", &CameraComponent::controller);

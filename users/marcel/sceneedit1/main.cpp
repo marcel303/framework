@@ -288,6 +288,7 @@ struct SceneEditor
 	
 	void editNode(SceneNode & node, const bool editChildren)
 	{
+		// todo : make a separate function to edit a data structure (recursively)
 	#if 1
 		for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 		{
@@ -298,119 +299,130 @@ struct SceneEditor
 				Assert(componentType != nullptr);
 				if (componentType != nullptr)
 				{
-					ImGui::LabelText("Component", "%s", componentType->typeName.c_str());
+					ImGui::LabelText("Component", "%s", componentType->typeName);
 					
-					for (auto & propertyBase : componentType->properties)
+					for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 					{
-						switch (propertyBase->type)
+						if (member->isVector == false)
 						{
-						case kComponentPropertyType_Bool:
+							auto * member_scalar = static_cast<Member_Scalar*>(member);
+							
+							auto * member_type = g_typeDB.findType(member_scalar->typeIndex);
+							auto * member_object = member_scalar->scalar_access(component);
+							
+							if (member_type->isStructured == false)
 							{
-								auto property = static_cast<ComponentPropertyBool*>(propertyBase);
+								const PlainType * plain_type = static_cast<const PlainType*>(member_type);
 								
-								auto & value = property->getter(component);
-								
-								if (ImGui::Checkbox(property->name.c_str(), &value))
-									component->propertyChanged(&value);
-							}
-							break;
-						case kComponentPropertyType_Int32:
-							{
-								auto property = static_cast<ComponentPropertyInt*>(propertyBase);
-								
-								auto & value = property->getter(component);
-								
-								if (property->hasLimits)
+								switch (plain_type->dataType)
 								{
-									if (ImGui::SliderInt(property->name.c_str(), &value, property->min, property->max))
-										component->propertyChanged(&value);
+								case kDataType_Bool:
+									{
+										auto & value = plain_type->access<bool>(member_object);
+										
+										if (ImGui::Checkbox(member->name, &value))
+											component->propertyChanged(&value);
+									}
+									break;
+								case kDataType_Int:
+									{
+										auto & value = plain_type->access<int>(member_object);
+										
+										/*
+										if (property->hasLimits)
+										{
+											if (ImGui::SliderInt(property->name.c_str(), &value, property->min, property->max))
+												component->propertyChanged(&value);
+										}
+										else
+										*/
+										{
+											if (ImGui::InputInt(member->name, &value))
+												component->propertyChanged(&value);
+										}
+									}
+									break;
+								case kDataType_Float:
+									{
+										auto & value = plain_type->access<float>(member_object);
+										
+										/*
+										if (property->hasLimits)
+										{
+											if (ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential))
+												component->propertyChanged(&value);
+										}
+										else
+										*/
+										{
+											if (ImGui::InputFloat(member->name, &value))
+												component->propertyChanged(&value);
+										}
+									}
+									break;
+								case kDataType_Vec2:
+									{
+										auto & value = plain_type->access<Vec2>(member_object);
+							
+										if (ImGui::InputFloat2(member->name, &value[0]))
+											component->propertyChanged(&value);
+									}
+									break;
+								case kDataType_Vec3:
+									{
+										auto & value = plain_type->access<Vec3>(member_object);
+							
+										if (ImGui::InputFloat3(member->name, &value[0]))
+											component->propertyChanged(&value);
+									}
+									break;
+								case kDataType_Vec4:
+									{
+										auto & value = plain_type->access<Vec4>(member_object);
+							
+										if (ImGui::InputFloat4(member->name, &value[0]))
+											component->propertyChanged(&value);
+									}
+									break;
+								case kDataType_String:
+									{
+										auto & value = plain_type->access<std::string>(member_object);
+							
+										char buffer[1024];
+										strcpy_s(buffer, sizeof(buffer), value.c_str());
+										
+										if (ImGui::InputText(member->name, buffer, sizeof(buffer)))
+										{
+											value = buffer;
+											
+											component->propertyChanged(&value);
+										}
+									}
+									break;
+								default:
+									// todo : remove and replace with structured type
+									if (strcmp(plain_type->typeName, "AngleAxis") == 0)
+									{
+										auto & value = plain_type->access<AngleAxis>(member_object);
+										
+										if (ImGui::SliderAngle(member->name, &value.angle))
+											component->propertyChanged(&value);
+										ImGui::PushID(&value.axis);
+										if (ImGui::SliderFloat3(member->name, &value.axis[0], -1.f, +1.f))
+											component->propertyChanged(&value);
+										ImGui::PopID();
+									}
+									break;
 								}
-								else
-								{
-									if (ImGui::InputInt(property->name.c_str(), &value))
-										component->propertyChanged(&value);
-								}
 							}
-							break;
-						case kComponentPropertyType_Float:
+							else
 							{
-								auto property = static_cast<ComponentPropertyFloat*>(propertyBase);
-								
-								auto & value = property->getter(component);
-								
-								if (property->hasLimits)
-								{
-									if (ImGui::SliderFloat(property->name.c_str(), &value, property->min, property->max, "%.3f", property->editingCurveExponential))
-										component->propertyChanged(&value);
-								}
-								else
-								{
-									if (ImGui::InputFloat(property->name.c_str(), &value))
-										component->propertyChanged(&value);
-								}
+								// todo : allow editing of structured data
 							}
-							break;
-						case kComponentPropertyType_Vec2:
-							{
-								auto property = static_cast<ComponentPropertyVec2*>(propertyBase);
-								
-								auto & value = property->getter(component);
-					
-								if (ImGui::InputFloat2(property->name.c_str(), &value[0]))
-									component->propertyChanged(&value);
-							}
-							break;
-						case kComponentPropertyType_Vec3:
-							{
-								auto property = static_cast<ComponentPropertyVec3*>(propertyBase);
-								
-								auto & value = property->getter(component);
-					
-								if (ImGui::InputFloat3(property->name.c_str(), &value[0]))
-									component->propertyChanged(&value);
-							}
-							break;
-						case kComponentPropertyType_Vec4:
-							{
-								auto property = static_cast<ComponentPropertyVec4*>(propertyBase);
-								
-								auto & value = property->getter(component);
-					
-								if (ImGui::InputFloat4(property->name.c_str(), &value[0]))
-									component->propertyChanged(&value);
-							}
-							break;
-						case kComponentPropertyType_String:
-							{
-								auto property = static_cast<ComponentPropertyString*>(propertyBase);
-								
-								auto & value = property->getter(component);
-					
-								char buffer[1024];
-								strcpy_s(buffer, sizeof(buffer), value.c_str());
-								
-								if (ImGui::InputText(property->name.c_str(), buffer, sizeof(buffer)))
-								{
-									property->setter(component, buffer);
-									
-									component->propertyChanged(&value);
-								}
-							}
-							break;
-						case kComponentPropertyType_AngleAxis:
-							{
-								auto property = static_cast<ComponentPropertyAngleAxis*>(propertyBase);
-								
-								auto & value = property->getter(component);
-								
-								if (ImGui::SliderAngle(property->name.c_str(), &value.angle))
-									component->propertyChanged(&value);
-								ImGui::PushID(&value.axis);
-								if (ImGui::SliderFloat3(property->name.c_str(), &value.axis[0], -1.f, +1.f))
-									component->propertyChanged(&value);
-								ImGui::PopID();
-							}
-							break;
+						}
+						else
+						{
+							// todo : allow editing of arrays
 						}
 					}
 				}
@@ -494,7 +506,7 @@ struct SceneEditor
 					if (isAdded == false)
 					{
 						char text[256];
-						sprintf_s(text, sizeof(text), "Add %s", componentType->typeName.c_str());
+						sprintf_s(text, sizeof(text), "Add %s", componentType->typeName);
 						
 						if (ImGui::MenuItem(text))
 						{
@@ -946,9 +958,8 @@ typedef ComponentMgr<ResourcePtrTestComponent> ResourcePtrTestComponentMgr;
 struct ResourcePtrTestComponentType : ComponentType<ResourcePtrTestComponent>
 {
 	ResourcePtrTestComponentType()
+		: ComponentType("ResourcePtrTestComponent")
 	{
-		typeName = "ResourcePtrTestComponent";
-		
 		in("texture", &ResourcePtrTestComponent::resourcePtr);
 	}
 };
@@ -958,6 +969,7 @@ static bool testResourcePointers()
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return false;
 	
+	registerBuiltinTypes();
 	registerComponentTypes();
 	
 	ResourcePtrTestComponentMgr resourcePtrTestComponentMgr;
@@ -1024,7 +1036,7 @@ int main(int argc, char * argv[])
 	return 0;
 #endif
 
-#if 1
+#if 0
 	test_reflection_1();
 	return 0;
 #endif
@@ -1032,6 +1044,7 @@ int main(int argc, char * argv[])
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
+	registerBuiltinTypes();
 	registerComponentTypes();
 
 	testResources(); // todo : remove

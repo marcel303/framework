@@ -5,6 +5,7 @@
 #include "Vec3.h"
 #include "Vec4.h"
 
+// todo : replace property editor in main.cpp with this one. this one is more advanced ..
 void doComponentProperty(
 	ComponentPropertyBase * propertyBase,
 	ComponentBase * component,

@@ -146,8 +146,8 @@ struct ParameterComponentMgr : ComponentMgr<ParameterComponent>
 struct ParameterComponentType : ComponentType<ParameterComponent>
 {
 	ParameterComponentType()
+		: ComponentType("ParameterComponent")
 	{
-		typeName = "ParameterComponent";
 		tickPriority = kComponentPriority_Parameter;
 		
 		in("prefix", &ParameterComponent::prefix);
