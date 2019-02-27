@@ -49,7 +49,7 @@ static bool doComponentTypeMenu(std::string & out_typeName)
 	return result;
 }
 
-static void createFallbackTemplateForComponent(const char * componentTypeName, const char * componentId, TemplateComponent & template_component)
+static void createFallbackTemplateForComponent(const TypeDB & typeDB, const char * componentTypeName, const char * componentId, TemplateComponent & template_component)
 {
 	template_component.type_name = componentTypeName;
 	template_component.id = componentId;
@@ -57,12 +57,18 @@ static void createFallbackTemplateForComponent(const char * componentTypeName, c
 	auto * componentType = findComponentType(componentTypeName);
 	auto * component = componentType->componentMgr->createComponent(nullptr);
 	
-	for (auto & property : componentType->properties)
+	for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 	{
 		TemplateComponentProperty template_property;
 		
-		template_property.name = property->name;
-		property->to_text(component, template_property.value);
+		template_property.name = member->name;
+		
+		if (!member_totext(typeDB, member, component, template_property.value))
+		{
+		// fixme : this may trigger an error. let createFallbackTemplateForComponent return false in this case
+			LOG_ERR("failed to serialize component property to text", 0);
+			continue;
+		}
 		
 		template_component.properties.push_back(template_property);
 	}
@@ -112,7 +118,14 @@ struct TemplateComponentInstance
 		
 		// iterate over each property to see if it's set or not
 		
-		propertyIsSetArray.resize(componentType->properties.size());
+		int numProperties = 0;
+		
+		for (auto * member = componentType->members_head; member != nullptr; member = member->next)
+			numProperties++;
+		
+		Assert(componentType->properties.size() == numProperties);
+		
+		propertyIsSetArray.resize(numProperties);
 		
 		if (templateComponent != nullptr)
 		{
@@ -238,7 +251,7 @@ struct TemplateInstance
 			component.shut();
 	}
 	
-	bool addComponentByTypeName(const char * typeName, const bool isOverride, const bool isFallback)
+	bool addComponentByTypeName(const TypeDB & typeDB, const char * typeName, const bool isOverride, const bool isFallback)
 	{
 		// add component instance
 		
@@ -256,7 +269,7 @@ struct TemplateInstance
 		
 		if (isFallback)
 		{
-			createFallbackTemplateForComponent(typeName, "", template_component);
+			createFallbackTemplateForComponent(typeDB, typeName, "", template_component);
 		}
 		
 		if (componentType == nullptr)
@@ -355,6 +368,8 @@ bool saveTemplateInstanceToFile(const std::vector<TemplateInstance> & instances,
 
 bool test_templateEditor()
 {
+	auto & typeDB = g_typeDB;
+	
 	registerBuiltinTypes();
 	registerComponentTypes();
 	
@@ -426,7 +441,7 @@ bool test_templateEditor()
 		{
 			TemplateComponent template_component;
 			
-			createFallbackTemplateForComponent(componentTypeWithId.typeName.c_str(), componentTypeWithId.id.c_str(), template_component);
+			createFallbackTemplateForComponent(typeDB, componentTypeWithId.typeName.c_str(), componentTypeWithId.id.c_str(), template_component);
 			
 			fallback_template.components.emplace_back(std::move(template_component));
 		}
@@ -548,7 +563,7 @@ bool test_templateEditor()
 										{
 											auto & template_instance = template_instances[i];
 											
-											if (!template_instance.addComponentByTypeName(typeName.c_str(), i != selectedTemplateIndex, false))
+											if (!template_instance.addComponentByTypeName(typeDB, typeName.c_str(), i != selectedTemplateIndex, false))
 											{
 												LOG_ERR("failed to add component to template instance", 0);
 											}
@@ -558,7 +573,7 @@ bool test_templateEditor()
 										
 										auto & template_instance = template_instances[0];
 										
-										if (!template_instance.addComponentByTypeName(typeName.c_str(), true, true))
+										if (!template_instance.addComponentByTypeName(typeDB, typeName.c_str(), true, true))
 										{
 											LOG_ERR("failed to add component to template instance", 0);
 										}

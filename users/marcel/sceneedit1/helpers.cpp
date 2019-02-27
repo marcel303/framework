@@ -115,6 +115,7 @@ void freeComponentsInComponentSet(ComponentSet & componentSet)
 //
 
 #include "Parse.h"
+#include "StringEx.h"
 
 void splitString(const std::string & str, std::vector<std::string> & result);
 
@@ -139,15 +140,15 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 	{
 	case kDataType_Bool:
 		plain_type->access<bool>(member_object) = Parse::Bool(text);
-		break;
+		return true;
 		
 	case kDataType_Int:
 		plain_type->access<int>(member_object) = Parse::Int32(text);
-		break;
+		return true;
 		
 	case kDataType_Float:
 		plain_type->access<float>(member_object) = Parse::Float(text);
-		break;
+		return true;
 		
 	case kDataType_Vec2:
 		{
@@ -161,7 +162,7 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 				Parse::Float(parts[0]),
 				Parse::Float(parts[1]));
 		}
-		break;
+		return true;
 		
 	case kDataType_Vec3:
 		{
@@ -176,7 +177,7 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 				Parse::Float(parts[1]),
 				Parse::Float(parts[2]));
 		}
-		break;
+		return true;
 		
 	case kDataType_Vec4:
 		{
@@ -192,18 +193,113 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 				Parse::Float(parts[2]),
 				Parse::Float(parts[3]));
 		}
-		break;
+		return true;
 		
 	case kDataType_String:
 		plain_type->access<std::string>(member_object) = text;
-		break;
+		return true;
 		
 	case kDataType_Other:
 		Assert(false);
-		return false;
+		break;
 	}
 	
-	return true;
+	return false;
+}
+
+bool member_totext(const TypeDB & typeDB, const Member * member, void * object, std::string & out_text)
+{
+	if (member->isVector) // todo : add support for serialization of vectors
+		return false;
+	
+	auto * member_scalar = static_cast<const Member_Scalar*>(member);
+	
+	auto * member_type = typeDB.findType(member_scalar->typeIndex);
+	auto * member_object = member_scalar->scalar_access(object);
+	
+	if (member_type->isStructured) // todo : add support for serialization of structured types
+		return false;
+	
+	auto * plain_type = static_cast<const PlainType*>(member_type);
+
+	switch (plain_type->dataType)
+	{
+	case kDataType_Bool:
+		out_text = plain_type->access<bool>(member_object) ? "true" : "false";
+		return true;
+		
+	case kDataType_Int:
+		out_text = String::FormatC("%d", plain_type->access<int>(member_object));
+		return true;
+		
+	case kDataType_Float:
+		// todo : need a better float to string conversion function
+		out_text = String::FormatC("%f", plain_type->access<float>(member_object));
+		return true;
+		
+	case kDataType_Vec2:
+		{
+			// todo : need a better float to string conversion function
+		
+			auto & value = plain_type->access<Vec2>(member_object);
+			
+			out_text = String::FormatC("%f %f",
+				value[0],
+				value[1]);
+		}
+		return true;
+		
+	case kDataType_Vec3:
+		{
+			// todo : need a better float to string conversion function
+		
+			auto & value = plain_type->access<Vec3>(member_object);
+			
+			out_text = String::FormatC("%f %f %f",
+				value[0],
+				value[1],
+				value[2]);
+		}
+		return true;
+		
+	case kDataType_Vec4:
+		{
+			// todo : need a better float to string conversion function
+		
+			auto & value = plain_type->access<Vec4>(member_object);
+			
+			out_text = String::FormatC("%f %f %f %f",
+				value[0],
+				value[1],
+				value[2],
+				value[3]);
+		}
+		return true;
+		
+	case kDataType_String:
+		out_text = plain_type->access<std::string>(member_object);
+		return true;
+		
+	case kDataType_Other:
+		Assert(false);
+		if (strcmp(plain_type->typeName, "AngleAxis") == 0)
+		{
+			// todo : need a better float to string conversion function
+		
+			auto & value = plain_type->access<AngleAxis>(member_object);
+			
+			out_text = String::FormatC("%f %f %f %f",
+				value.angle,
+				value.axis[0],
+				value.axis[1],
+				value.axis[2]);
+			
+			return true;
+		}
+		break;
+	}
+	
+	return false;
 }
 
 //
