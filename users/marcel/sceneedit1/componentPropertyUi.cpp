@@ -7,8 +7,7 @@
 #include "Vec3.h"
 #include "Vec4.h"
 
-// todo : replace property editor in main.cpp with this one. this one is more advanced ..
-void doComponentProperty( // todo : restore support for limits
+bool doComponentProperty(
 	const Member * member,
 	ComponentBase * component,
 	const bool signalChanges,
@@ -16,17 +15,46 @@ void doComponentProperty( // todo : restore support for limits
 	ComponentBase * defaultComponent)
 {
 	if (member->isVector) // todo : add support for vector types
-		return;
+		return false;
 	
 	auto * member_scalar = static_cast<const Member_Scalar*>(member);
 	
 	auto * member_type = g_typeDB.findType(member_scalar->typeIndex);
 	auto * member_object = member_scalar->scalar_access(component);
 	
+	auto * default_member_object =
+		defaultComponent == nullptr
+		? nullptr
+		: member_scalar->scalar_access(defaultComponent);
+	
 	if (member_type->isStructured) // todo : add support for structured types
-		return;
+		return false;
 	
 	auto * plain_type = static_cast<const PlainType*>(member_type);
+	
+	if (doReflection_PlainType(member, plain_type, member_object, isSet, default_member_object))
+	{
+		void * address = plain_type->access<void*>(member_object);
+		
+		if (signalChanges)
+			component->propertyChanged(address);
+		
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
+
+bool doReflection_PlainType(
+	const Member * member,
+	const PlainType * plain_type,
+	void * member_object,
+	bool & isSet,
+	void * default_member_object)
+{
+	bool result = false;
 	
 	ImGui::PushStyleColor(ImGuiCol_Text, isSet ? (ImU32)ImColor(255, 255, 255, 255) : (ImU32)ImColor(0, 255, 0, 255));
 	
@@ -38,20 +66,15 @@ void doComponentProperty( // todo : restore support for limits
 			
 			if (isSet == false)
 			{
-				if (defaultComponent != nullptr)
+				if (default_member_object != nullptr)
 				{
-					auto * default_member_object = member_scalar->scalar_access(defaultComponent);
-					
 					value = plain_type->access<bool>(default_member_object);
 				}
 			}
 			
 			if (ImGui::Checkbox(member->name, &value))
 			{
-				isSet = true;
-				
-				if (signalChanges)
-					component->propertyChanged(&value);
+				result = true;
 			}
 		}
 		break;
@@ -61,10 +84,8 @@ void doComponentProperty( // todo : restore support for limits
 			
 			if (isSet == false)
 			{
-				if (defaultComponent != nullptr)
+				if (default_member_object != nullptr)
 				{
-					auto * default_member_object = member_scalar->scalar_access(defaultComponent);
-					
 					value = plain_type->access<int>(default_member_object);
 				}
 			}
@@ -75,20 +96,14 @@ void doComponentProperty( // todo : restore support for limits
 			{
 				if (ImGui::SliderInt(member->name, &value, limits->min, limits->max))
 				{
-					isSet = true;
-					
-					if (signalChanges)
-						component->propertyChanged(&value);
+					result = true;
 				}
 			}
 			else
 			{
 				if (ImGui::InputInt(member->name, &value))
 				{
-					isSet = true;
-					
-					if (signalChanges)
-						component->propertyChanged(&value);
+					result = true;
 				}
 			}
 		}
@@ -99,10 +114,8 @@ void doComponentProperty( // todo : restore support for limits
 			
 			if (isSet == false)
 			{
-				if (defaultComponent != nullptr)
+				if (default_member_object != nullptr)
 				{
-					auto * default_member_object = member_scalar->scalar_access(defaultComponent);
-					
 					value = plain_type->access<float>(default_member_object);
 				}
 			}
@@ -116,20 +129,14 @@ void doComponentProperty( // todo : restore support for limits
 				if (ImGui::SliderFloat(member->name, &value, limits->min, limits->max, "%.3f",
 					curveExponential == nullptr ? 1.f : curveExponential->exponential))
 				{
-					isSet = true;
-					
-					if (signalChanges)
-						component->propertyChanged(&value);
+					result = true;
 				}
 			}
 			else
 			{
 				if (ImGui::InputFloat(member->name, &value))
 				{
-					isSet = true;
-					
-					if (signalChanges)
-						component->propertyChanged(&value);
+					result = true;
 				}
 			}
 		}
@@ -140,20 +147,15 @@ void doComponentProperty( // todo : restore support for limits
 			
 			if (isSet == false)
 			{
-				if (defaultComponent != nullptr)
+				if (default_member_object != nullptr)
 				{
-					auto * default_member_object = member_scalar->scalar_access(defaultComponent);
-					
 					value = plain_type->access<Vec2>(default_member_object);
 				}
 			}
 			
 			if (ImGui::InputFloat2(member->name, &value[0]))
 			{
-				isSet = true;
-				
-				if (signalChanges)
-					component->propertyChanged(&value);
+				result = true;
 			}
 		}
 		break;
@@ -163,20 +165,15 @@ void doComponentProperty( // todo : restore support for limits
 			
 			if (isSet == false)
 			{
-				if (defaultComponent != nullptr)
+				if (default_member_object != nullptr)
 				{
-					auto * default_member_object = member_scalar->scalar_access(defaultComponent);
-					
 					value = plain_type->access<Vec3>(default_member_object);
 				}
 			}
 
 			if (ImGui::InputFloat3(member->name, &value[0]))
 			{
-				isSet = true;
-				
-				if (signalChanges)
-					component->propertyChanged(&value);
+				result = true;
 			}
 		}
 		break;
@@ -186,20 +183,15 @@ void doComponentProperty( // todo : restore support for limits
 
 			if (isSet == false)
 			{
-				if (defaultComponent != nullptr)
+				if (default_member_object != nullptr)
 				{
-					auto * default_member_object = member_scalar->scalar_access(defaultComponent);
-					
 					value = plain_type->access<Vec4>(default_member_object);
 				}
 			}
 			
 			if (ImGui::InputFloat4(member->name, &value[0]))
 			{
-				isSet = true;
-				
-				if (signalChanges)
-					component->propertyChanged(&value);
+				result = true;
 			}
 		}
 		break;
@@ -209,10 +201,8 @@ void doComponentProperty( // todo : restore support for limits
 
 			if (isSet == false)
 			{
-				if (defaultComponent != nullptr)
+				if (default_member_object != nullptr)
 				{
-					auto * default_member_object = member_scalar->scalar_access(defaultComponent);
-					
 					value = plain_type->access<std::string>(default_member_object);
 				}
 			}
@@ -224,10 +214,7 @@ void doComponentProperty( // todo : restore support for limits
 			{
 				value = buffer;
 				
-				isSet = true;
-				
-				if (signalChanges)
-					component->propertyChanged(&value);
+				result = true;
 			}
 		}
 		break;
@@ -238,30 +225,22 @@ void doComponentProperty( // todo : restore support for limits
 			
 			if (isSet == false)
 			{
-				if (defaultComponent != nullptr)
+				if (default_member_object != nullptr)
 				{
-					auto * default_member_object = member_scalar->scalar_access(defaultComponent);
-					
 					value = plain_type->access<AngleAxis>(default_member_object);
 				}
 			}
 			
 			if (ImGui::SliderAngle(member->name, &value.angle))
 			{
-				isSet = true;
-				
-				if (signalChanges)
-					component->propertyChanged(&value);
+				result = true;
 			}
 			
 			ImGui::PushID(&value.axis);
 			{
 				if (ImGui::SliderFloat3(member->name, &value.axis[0], -1.f, +1.f))
 				{
-					isSet = true;
-					
-					if (signalChanges)
-						component->propertyChanged(&value);
+					result = true;
 				}
 			}
 			ImGui::PopID();
@@ -270,4 +249,70 @@ void doComponentProperty( // todo : restore support for limits
 	}
 	
 	ImGui::PopStyleColor();
+	
+	if (result)
+	{
+		isSet = true;
+	}
+	
+	return result;
+}
+
+static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type * type, void * object, const Member * in_member)
+{
+	bool result = false;
+	
+	if (type->isStructured)
+	{
+		auto * structured_type = static_cast<const StructuredType*>(type);
+		
+		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
+		{
+			if (member->isVector)
+			{
+				auto * member_interface = static_cast<const Member_VectorInterface*>(member);
+				
+				const auto vector_size = member_interface->vector_size(object);
+				auto * vector_type = typeDB.findType(member_interface->vector_type());
+				
+				// todo : check if vector_type exists
+				
+				for (size_t i = 0; i < vector_size; ++i)
+				{
+					auto * vector_object = member_interface->vector_access(object, i);
+					
+					result |= doReflectionMember_traverse(typeDB, vector_type, vector_object, member);
+				}
+			}
+			else
+			{
+				auto * member_scalar = static_cast<const Member_Scalar*>(member);
+				
+				auto * member_type = g_typeDB.findType(member_scalar->typeIndex);
+				auto * member_object = member_scalar->scalar_access(object);
+				
+				result |= doReflectionMember_traverse(typeDB, member_type, member_object, member);
+			}
+		}
+	}
+	else
+	{
+		Assert(in_member);
+		
+		auto * plain_type = static_cast<const PlainType*>(type);
+		
+		bool isSet = true;
+		
+		result |= doReflection_PlainType(in_member, plain_type, object, isSet, nullptr);
+	}
+	
+	return result;
+}
+
+bool doReflection_StructuredType(
+	const TypeDB & typeDB,
+	const StructuredType & type,
+	void * object)
+{
+	return doReflectionMember_traverse(typeDB, &type, object, nullptr);
 }
