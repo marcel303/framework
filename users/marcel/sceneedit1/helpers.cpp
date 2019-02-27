@@ -114,6 +114,100 @@ void freeComponentsInComponentSet(ComponentSet & componentSet)
 
 //
 
+#include "Parse.h"
+
+void splitString(const std::string & str, std::vector<std::string> & result);
+
+bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object, const char * text)
+{
+	if (member->isVector) // todo : add support for deserialization of vectors
+		return false;
+	
+	auto * member_scalar = static_cast<const Member_Scalar*>(member);
+	
+	auto * member_type = typeDB.findType(member_scalar->typeIndex);
+	auto * member_object = member_scalar->scalar_access(object);
+	
+	if (member_type->isStructured) // todo : add support for deserialization of structured types
+		return false;
+	
+	auto * plain_type = static_cast<const PlainType*>(member_type);
+	
+// todo : I definitely need better parse function. ones which return a success code
+
+	switch (plain_type->dataType)
+	{
+	case kDataType_Bool:
+		plain_type->access<bool>(member_object) = Parse::Bool(text);
+		break;
+		
+	case kDataType_Int:
+		plain_type->access<int>(member_object) = Parse::Int32(text);
+		break;
+		
+	case kDataType_Float:
+		plain_type->access<float>(member_object) = Parse::Float(text);
+		break;
+		
+	case kDataType_Vec2:
+		{
+			std::vector<std::string> parts;
+			splitString(text, parts);
+			
+			if (parts.size() != 2)
+				return false;
+			
+			plain_type->access<Vec2>(member_object).Set(
+				Parse::Float(parts[0]),
+				Parse::Float(parts[1]));
+		}
+		break;
+		
+	case kDataType_Vec3:
+		{
+			std::vector<std::string> parts;
+			splitString(text, parts);
+			
+			if (parts.size() != 3)
+				return false;
+			
+			plain_type->access<Vec3>(member_object).Set(
+				Parse::Float(parts[0]),
+				Parse::Float(parts[1]),
+				Parse::Float(parts[2]));
+		}
+		break;
+		
+	case kDataType_Vec4:
+		{
+			std::vector<std::string> parts;
+			splitString(text, parts);
+			
+			if (parts.size() != 4)
+				return false;
+			
+			plain_type->access<Vec4>(member_object).Set(
+				Parse::Float(parts[0]),
+				Parse::Float(parts[1]),
+				Parse::Float(parts[2]),
+				Parse::Float(parts[3]));
+		}
+		break;
+		
+	case kDataType_String:
+		plain_type->access<std::string>(member_object) = text;
+		break;
+		
+	case kDataType_Other:
+		Assert(false);
+		return false;
+	}
+	
+	return true;
+}
+
+//
+
 #include "helpers.h"
 #include "resource.h"
 

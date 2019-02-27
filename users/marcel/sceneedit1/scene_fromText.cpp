@@ -108,7 +108,7 @@ static void extractLinesGivenIndentationLevel(const std::vector<std::string> & l
 	}
 }
 
-bool parseSceneFromLines(std::vector<std::string> & lines, Scene & out_scene)
+bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene)
 {
 	int current_level = -1;
 	
@@ -306,7 +306,7 @@ bool parseSceneFromLines(std::vector<std::string> & lines, Scene & out_scene)
 				
 				extractLinesGivenIndentationLevel(lines, i, current_level + 1, scene_lines, true);
 				
-				if (!parseSceneObjectFromLines(scene_lines, out_scene, entities))
+				if (!parseSceneObjectFromLines(typeDB, scene_lines, out_scene, entities))
 					return false;
 			}
 			else
@@ -325,7 +325,7 @@ bool parseSceneFromLines(std::vector<std::string> & lines, Scene & out_scene)
 	return true;
 }
 
-bool parseSceneObjectFromLines(std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates)
+bool parseSceneObjectFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates)
 {
 	int current_level = -1;
 	
@@ -373,7 +373,7 @@ bool parseSceneObjectFromLines(std::vector<std::string> & lines, Scene & out_sce
 		
 				extractLinesGivenIndentationLevel(lines, i, current_level + 1, nodes_lines, true);
 				
-				if (!parseSceneObjectStructureFromLines(nodes_lines, out_scene, templates))
+				if (!parseSceneObjectStructureFromLines(typeDB, nodes_lines, out_scene, templates))
 					return false;
 			}
 			else
@@ -392,7 +392,7 @@ bool parseSceneObjectFromLines(std::vector<std::string> & lines, Scene & out_sce
 	return true;
 }
 
-bool parseSceneObjectStructureFromLines(std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates)
+bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates)
 {
 	int current_level = -1;
 	
@@ -458,7 +458,7 @@ bool parseSceneObjectStructureFromLines(std::vector<std::string> & lines, Scene 
 		node->parentId = node_stack.back()->id;
 		node->displayName = name;
 		
-		if (!instantiateComponentsFromTemplate(t, node->components) || !node->initComponents())
+		if (!instantiateComponentsFromTemplate(typeDB, t, node->components) || !node->initComponents())
 		{
 			LOG_ERR("failed to instantiate components from template", 0);
 			

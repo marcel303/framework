@@ -18,6 +18,8 @@ ComponentTypeBase * findComponentType(const std::type_index & typeIndex);
 
 void freeComponentsInComponentSet(ComponentSet & componentSet);
 
+bool member_fromtext(const TypeDB & typeDB, const Member * member, void * member_object, const char * text);
+
 extern TypeDB g_typeDB;
 
 extern std::vector<ComponentTypeBase*> g_componentTypes;

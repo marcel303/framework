@@ -328,6 +328,7 @@ struct SceneEditor
 									{
 										auto & value = plain_type->access<int>(member_object);
 										
+									// todo : restore limits support
 										/*
 										if (property->hasLimits)
 										{
@@ -588,7 +589,7 @@ struct SceneEditor
 		
 		bool init_ok = true;
 		
-		init_ok &= instantiateComponentsFromTemplate(t, node->components);
+		init_ok &= instantiateComponentsFromTemplate(g_typeDB, t, node->components);
 		
 		for (auto * component = node->components.head; component != nullptr && init_ok; component = component->next_in_set)
 		{
@@ -983,7 +984,7 @@ static bool testResourcePointers()
 	{
 		ComponentSet componentSet;
 		
-		instantiateComponentsFromTemplate(t, componentSet);
+		instantiateComponentsFromTemplate(g_typeDB, t, componentSet);
 		
 		for (auto * component = componentSet.head; component != nullptr; component = component->next_in_set)
 		{
@@ -1020,12 +1021,12 @@ int main(int argc, char * argv[])
 	return 0;
 #endif
 
-#if 0
+#if 1
 	test_scenefiles();
 	return 0;
 #endif
 
-#if 0
+#if 1
 	if (!test_templateEditor())
 		logError("failure!");
 	return 0;
@@ -1123,7 +1124,7 @@ int main(int argc, char * argv[])
 			{
 				Scene tempScene;
 
-				if (!parseSceneFromLines(lines, tempScene))
+				if (!parseSceneFromLines(g_typeDB, lines, tempScene))
 				{
 					logError("failed to parse scene from lines");
 				}

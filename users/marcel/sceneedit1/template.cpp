@@ -393,7 +393,7 @@ bool loadTemplateWithOverlaysFromFile(const char * path, Template & out_template
 	return parseTemplateWithOverlaysWithCallback(filename.c_str(), out_template, allowAddingComponentsFromBase, fetchTemplate, (void*)directory.c_str());
 }
 
-bool instantiateComponentsFromTemplate(const Template & t, ComponentSet & componentSet)
+bool instantiateComponentsFromTemplate(const TypeDB & typeDB, const Template & t, ComponentSet & componentSet)
 {
 	for (auto & component_template : t.components)
 	{
@@ -409,19 +409,25 @@ bool instantiateComponentsFromTemplate(const Template & t, ComponentSet & compon
 		
 		for (auto & property_template : component_template.properties)
 		{
-			ComponentPropertyBase * property = nullptr;
+			Member * member = nullptr;
 			
-			for (auto & property_itr : componentType->properties)
-				if (property_itr->name == property_template.name)
-					property = property_itr;
+			for (auto * member_itr = componentType->members_head; member_itr != nullptr; member_itr = member_itr->next)
+				if (strcmp(member_itr->name, property_template.name.c_str()) == 0)
+					member = member_itr;
 			
-			if (property == nullptr)
+			if (member == nullptr)
 			{
 				LOG_ERR("unknown property: %s", property_template.name.c_str());
 				return false;
 			}
 			
-			property->from_text(component, property_template.value.c_str());
+			if (member_fromtext(g_typeDB, member, component, property_template.value.c_str()) == false)
+			{
+				LOG_ERR("failed to deserialize property from text: property=%s, text=%s",
+					property_template.name.c_str(),
+					property_template.value.c_str());
+				return false;
+			}
 		}
 		
 		componentSet.add(component);

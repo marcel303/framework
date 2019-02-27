@@ -7,7 +7,7 @@
 
 struct Scene;
 
-bool parseSceneFromLines(std::vector<std::string> & lines, Scene & out_scene);
+bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene);
 
-bool parseSceneObjectFromLines(std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates);
-bool parseSceneObjectStructureFromLines(std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates);
+bool parseSceneObjectFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates);
+bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates);

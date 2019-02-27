@@ -32,7 +32,7 @@ bool test_scenefiles()
 	
 	Scene scene;
 
-	if (!parseSceneFromLines(lines, scene))
+	if (!parseSceneFromLines(g_typeDB, lines, scene))
 	{
 		LOG_ERR("failed to parse scene from lines", 0);
 		return false;

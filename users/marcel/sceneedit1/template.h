@@ -4,6 +4,7 @@
 #include <vector>
 
 struct ComponentSet;
+struct TypeDB;
 
 struct TemplateComponentProperty
 {
@@ -38,6 +39,6 @@ bool applyTemplateOverlaysWithCallback(const char * name, const Template & t, Te
 bool parseTemplateWithOverlaysWithCallback(const char * name, Template & out_template, const bool allowAddingComponentsFromBase, FetchTemplateCallback fetchTemplate, void * user_data);
 bool loadTemplateWithOverlaysFromFile(const char * filename, Template & out_template, const bool allowAddingComponentsFromBase);
 
-bool instantiateComponentsFromTemplate(const Template & t, ComponentSet & componentSet);
+bool instantiateComponentsFromTemplate(const TypeDB & typeDB, const Template & t, ComponentSet & componentSet);
 
 void dumpTemplateToLog(const Template & t);

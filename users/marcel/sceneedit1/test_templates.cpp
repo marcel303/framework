@@ -40,7 +40,7 @@ static void test_templates_v1()
 	
 	SceneNode node;
 	
-	if (!instantiateComponentsFromTemplate(t, node.components))
+	if (!instantiateComponentsFromTemplate(g_typeDB, t, node.components))
 	{
 		logError("failed to instantiate components from template");
 		
@@ -67,7 +67,7 @@ void test_templates()
 	
 	SceneNode node;
 	
-	if (!instantiateComponentsFromTemplate(t, node.components))
+	if (!instantiateComponentsFromTemplate(g_typeDB, t, node.components))
 	{
 		logError("failed to instantiate components from template");
 		
