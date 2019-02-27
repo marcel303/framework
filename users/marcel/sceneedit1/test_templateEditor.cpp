@@ -123,8 +123,6 @@ struct TemplateComponentInstance
 		for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 			numProperties++;
 		
-		Assert(componentType->properties.size() == numProperties);
-		
 		propertyIsSetArray.resize(numProperties);
 		
 		if (templateComponent != nullptr)

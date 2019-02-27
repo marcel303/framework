@@ -281,7 +281,7 @@ enum ComponentPriority
 struct ComponentTypeBase : StructuredType
 {
 	// todo : remove properties array, and property types defined above. we should use the type system!
-	std::vector<ComponentPropertyBase*> properties;
+	std::vector<ComponentPropertyBase*> _properties;
 	int tickPriority = kComponentPriority_Default;
 	
 	ComponentMgrBase * componentMgr = nullptr;
@@ -310,7 +310,7 @@ struct ComponentType : ComponentTypeBase
 		p->getter = [=](ComponentBase * comp) -> bool & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const bool & s) { static_cast<T*>(comp)->*member = s; };
 		
-		properties.push_back(p);
+		_properties.push_back(p);
 		
 		return *p;
 	}
@@ -325,7 +325,7 @@ struct ComponentType : ComponentTypeBase
 		p->getter = [=](ComponentBase * comp) -> int & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const int & s) { static_cast<T*>(comp)->*member = s; };
 		
-		properties.push_back(p);
+		_properties.push_back(p);
 		
 		return *p;
 	}
@@ -340,7 +340,7 @@ struct ComponentType : ComponentTypeBase
 		p->getter = [=](ComponentBase * comp) -> float & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const float & s) { static_cast<T*>(comp)->*member = s; };
 		
-		properties.push_back(p);
+		_properties.push_back(p);
 		
 		return *p;
 	}
@@ -355,7 +355,7 @@ struct ComponentType : ComponentTypeBase
 		p->getter = [=](ComponentBase * comp) -> Vec2 & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const Vec2 & s) { static_cast<T*>(comp)->*member = s; };
 		
-		properties.push_back(p);
+		_properties.push_back(p);
 		
 		return *p;
 	}
@@ -370,7 +370,7 @@ struct ComponentType : ComponentTypeBase
 		p->getter = [=](ComponentBase * comp) -> Vec3 & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const Vec3 & s) { static_cast<T*>(comp)->*member = s; };
 		
-		properties.push_back(p);
+		_properties.push_back(p);
 		
 		return *p;
 	}
@@ -385,7 +385,7 @@ struct ComponentType : ComponentTypeBase
 		p->getter = [=](ComponentBase * comp) -> Vec4 & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const Vec4 & s) { static_cast<T*>(comp)->*member = s; };
 		
-		properties.push_back(p);
+		_properties.push_back(p);
 		
 		return *p;
 	}
@@ -400,7 +400,7 @@ struct ComponentType : ComponentTypeBase
 		p->getter = [=](ComponentBase * comp) -> std::string & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const std::string & s) { static_cast<T*>(comp)->*member = s; };
 		
-		properties.push_back(p);
+		_properties.push_back(p);
 		
 		return *p;
 	}
@@ -415,7 +415,7 @@ struct ComponentType : ComponentTypeBase
 		p->getter = [=](ComponentBase * comp) -> AngleAxis & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const AngleAxis & s) { static_cast<T*>(comp)->*member = s; };
 		
-		properties.push_back(p);
+		_properties.push_back(p);
 		
 		return *p;
 	}
@@ -424,11 +424,15 @@ struct ComponentType : ComponentTypeBase
 	{
 		// todo : add reflection type for ResourcePtr
 		
+		add(name, member);
+		
+		//
+		
 		auto p = new ComponentPropertyResourcePtr(name);
 		p->getter = [=](ComponentBase * comp) -> ResourcePtr & { return static_cast<T*>(comp)->*member; };
 		p->setter = [=](ComponentBase * comp, const ResourcePtr & s) { static_cast<T*>(comp)->*member = s; };
 		
-		properties.push_back(p);
+		_properties.push_back(p);
 		
 		return *p;
 	}

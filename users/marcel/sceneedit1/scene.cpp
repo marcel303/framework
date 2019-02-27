@@ -65,7 +65,7 @@ static void to_json(nlohmann::json & j, const SceneNode * node_ptr)
 				component_json["id"] = component->id;
 			}
 			
-			for (auto & property : componentType->properties)
+			for (auto & property : componentType->_properties)
 			{
 				ComponentJson property_json(component_json[property->name]);
 				
@@ -108,7 +108,7 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 			{
 				auto * component = componentType->componentMgr->createComponent(id.c_str());
 				
-				for (auto & property : componentType->properties)
+				for (auto & property : componentType->_properties)
 				{
 					if (component_json.count(property->name) != 0)
 						property->from_json(component, component_json);
