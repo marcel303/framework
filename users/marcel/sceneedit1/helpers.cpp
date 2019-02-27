@@ -112,7 +112,189 @@ void freeComponentsInComponentSet(ComponentSet & componentSet)
 	componentSet.head = nullptr;
 }
 
-//
+// member <-> json serialization
+
+#if ENABLE_COMPONENT_JSON
+
+#include "componentJson.h"
+
+static void to_json(nlohmann::json & j, const Vec2 & v)
+{
+	j = { v[0], v[1] };
+}
+
+static void to_json(nlohmann::json & j, const Vec3 & v)
+{
+	j = { v[0], v[1], v[2] };
+}
+
+static void to_json(nlohmann::json & j, const Vec4 & v)
+{
+	j = { v[0], v[1], v[2], v[3] };
+}
+
+static void to_json(nlohmann::json & j, const AngleAxis & v)
+{
+	j["angle"] = v.angle;
+	j["axis"] = { v.axis[0], v.axis[1], v.axis[2] };
+}
+
+static void from_json(const nlohmann::json & j, Vec2 & v)
+{
+	v[0] = j[0].get<float>();
+	v[1] = j[1].get<float>();
+}
+
+static void from_json(const nlohmann::json & j, Vec3 & v)
+{
+	v[0] = j[0].get<float>();
+	v[1] = j[1].get<float>();
+	v[2] = j[2].get<float>();
+}
+
+static void from_json(const nlohmann::json & j, Vec4 & v)
+{
+	v[0] = j[0].get<float>();
+	v[1] = j[1].get<float>();
+	v[2] = j[2].get<float>();
+	v[3] = j[3].get<float>();
+}
+
+static void from_json(const nlohmann::json & j, AngleAxis & v)
+{
+	AngleAxis defaultValue;
+	
+	v.angle = j.value("angle", defaultValue.angle);
+	v.axis = j.value("axis", defaultValue.axis);
+}
+
+#endif
+
+bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object, const ComponentJson & j)
+{
+#if ENABLE_COMPONENT_JSON
+	if (member->isVector) // todo : add support for deserialization of vectors
+		return false;
+	
+	auto * member_scalar = static_cast<const Member_Scalar*>(member);
+	
+	auto * member_type = typeDB.findType(member_scalar->typeIndex);
+	auto * member_object = member_scalar->scalar_access(object);
+	
+	if (member_type->isStructured) // todo : add support for deserialization of structured types
+		return false;
+	
+	auto * plain_type = static_cast<const PlainType*>(member_type);
+	
+	switch (plain_type->dataType)
+	{
+	case kDataType_Bool:
+		plain_type->access<bool>(member_object) = j.j.value(member->name, false);
+		return true;
+		
+	case kDataType_Int:
+		plain_type->access<int>(member_object) = j.j.value(member->name, 0);
+		return true;
+		
+	case kDataType_Float:
+		plain_type->access<float>(member_object) = j.j.value(member->name, 0.f);
+		return true;
+		
+	case kDataType_Vec2:
+		plain_type->access<Vec2>(member_object) = j.j.value(member->name, Vec2());
+		return true;
+		
+	case kDataType_Vec3:
+		plain_type->access<Vec3>(member_object) = j.j.value(member->name, Vec3());
+		return true;
+		
+	case kDataType_Vec4:
+		plain_type->access<Vec4>(member_object) = j.j.value(member->name, Vec4());
+		return true;
+		
+	case kDataType_String:
+		plain_type->access<std::string>(member_object) = j.j.value(member->name, std::string());
+		return true;
+		
+	case kDataType_Other:
+		Assert(false);
+		if (strcmp(plain_type->typeName, "AngleAxis") == 0)
+		{
+			plain_type->access<AngleAxis>(member_object) = j.j.value(member->name, AngleAxis());
+			return true;
+		}
+		break;
+	}
+	
+	return false;
+#else
+	return false;
+#endif
+}
+
+bool member_tojson(const TypeDB & typeDB, const Member * member, const void * object, ComponentJson & j)
+{
+#if ENABLE_COMPONENT_JSON
+	if (member->isVector) // todo : add support for serialization of vectors
+		return false;
+	
+	auto * member_scalar = static_cast<const Member_Scalar*>(member);
+	
+	auto * member_type = typeDB.findType(member_scalar->typeIndex);
+	auto * member_object = member_scalar->scalar_access(object);
+	
+	if (member_type->isStructured) // todo : add support for serialization of structured types
+		return false;
+	
+	auto * plain_type = static_cast<const PlainType*>(member_type);
+
+	switch (plain_type->dataType)
+	{
+	case kDataType_Bool:
+		j.j[member->name] = plain_type->access<bool>(member_object);
+		return true;
+		
+	case kDataType_Int:
+		j.j[member->name] = plain_type->access<int>(member_object);
+		return true;
+		
+	case kDataType_Float:
+		j.j[member->name] = plain_type->access<float>(member_object);
+		return true;
+		
+	case kDataType_Vec2:
+		j.j[member->name] = plain_type->access<Vec2>(member_object);
+		return true;
+		
+	case kDataType_Vec3:
+		j.j[member->name] = plain_type->access<Vec3>(member_object);
+		return true;
+		
+	case kDataType_Vec4:
+		j.j[member->name] = plain_type->access<Vec4>(member_object);
+		return true;
+		
+	case kDataType_String:
+		j.j[member->name] = plain_type->access<std::string>(member_object);
+		return true;
+		
+	case kDataType_Other:
+		Assert(false);
+		if (strcmp(plain_type->typeName, "AngleAxis") == 0)
+		{
+			j.j[member->name] = plain_type->access<AngleAxis>(member_object);
+			return true;
+		}
+		break;
+	}
+	
+	return false;
+#else
+	return false;
+#endif
+}
+
+// member <-> text serialization
 
 #include "Parse.h"
 #include "StringEx.h"
@@ -227,7 +409,7 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 	return false;
 }
 
-bool member_totext(const TypeDB & typeDB, const Member * member, void * object, std::string & out_text)
+bool member_totext(const TypeDB & typeDB, const Member * member, const void * object, std::string & out_text)
 {
 	if (member->isVector) // todo : add support for serialization of vectors
 		return false;

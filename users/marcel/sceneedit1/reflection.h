@@ -8,7 +8,7 @@ struct Member
 
 	const char * name;
 	bool isVector;
-
+	
 	Member(const char * in_name, const bool in_isVector)
 		: next(nullptr)
 		, name(in_name)
@@ -30,6 +30,13 @@ struct Member_Scalar : Member
 	}
 	
 	void * scalar_access(void * object) const
+	{
+		const uintptr_t address = (uintptr_t)object;
+		
+		return (void*)(address + offset);
+	}
+	
+	const void * scalar_access(const void * object) const
 	{
 		const uintptr_t address = (uintptr_t)object;
 		
@@ -75,6 +82,14 @@ struct PlainType : Type
 	
 	template <typename T>
 	T & access(void * object) const
+	{
+		// todo : perform data type validation ?
+		
+		return *(T*)object;
+	}
+	
+	template <typename T>
+	const T & access(const void * object) const
 	{
 		// todo : perform data type validation ?
 		

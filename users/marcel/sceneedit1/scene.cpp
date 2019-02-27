@@ -65,11 +65,12 @@ static void to_json(nlohmann::json & j, const SceneNode * node_ptr)
 				component_json["id"] = component->id;
 			}
 			
-			for (auto & property : componentType->_properties)
+			ComponentJson component_json_wrapped(component_json);
+			
+			for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 			{
-				ComponentJson property_json(component_json[property->name]);
-				
-				property->to_json(component, property_json);
+				if (member_tojson(g_typeDB, member, component, component_json_wrapped) == false)
+					LOG_ERR("failed to write member to json", 0);
 			}
 		}
 	}
@@ -108,10 +109,14 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 			{
 				auto * component = componentType->componentMgr->createComponent(id.c_str());
 				
-				for (auto & property : componentType->_properties)
+				for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 				{
-					if (component_json.count(property->name) != 0)
-						property->from_json(component, component_json);
+					if (component_json.count(member->name) != 0)
+					{
+					// fixme : referencing g_typeDB is not very nice
+						if (member_fromjson(g_typeDB, member, component, component_json) == false)
+							LOG_ERR("failed to read member from json", 0);
+					}
 				}
 				
 				node.components.add(component);
