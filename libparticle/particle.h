@@ -24,9 +24,6 @@ struct ParticleColor
 	ParticleColor(bool noinit) { }
 	ParticleColor(float r, float g, float b, float a);
 
-	bool operator==(const ParticleColor & other) const;
-	bool operator!=(const ParticleColor & other) const;
-
 	void set(float r, float g, float b, float a);
 	void modulateWith(const ParticleColor & other);
 	void interpolateBetween(const ParticleColor & v1, const ParticleColor & v2, const float t);
@@ -119,9 +116,6 @@ struct ParticleEmitterInfo
 	//
 
 	ParticleEmitterInfo();
-
-	bool operator==(const ParticleEmitterInfo & other) const;
-	bool operator!=(const ParticleEmitterInfo & other) const;
 
 	void save(tinyxml2::XMLPrinter * printer) const;
 	void load(const tinyxml2::XMLElement * elem);
@@ -280,9 +274,6 @@ struct ParticleInfo
 	//
 
 	ParticleInfo();
-
-	bool operator==(const ParticleInfo & other) const;
-	bool operator!=(const ParticleInfo & other) const;
 
 	bool allocBurst(Burst *& burst);
 	void clearBursts();

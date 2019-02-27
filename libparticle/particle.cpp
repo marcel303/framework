@@ -73,16 +73,6 @@ ParticleColor::ParticleColor(float r, float g, float b, float a)
 	rgba[3] = a;
 }
 
-bool ParticleColor::operator==(const ParticleColor & other) const
-{
-	return memcmp(this, &other, sizeof(ParticleColor)) == 0;
-}
-
-bool ParticleColor::operator!=(const ParticleColor & other) const
-{
-	return !(*this == other);
-}
-
 void ParticleColor::set(float r, float g, float b, float a)
 {
 	rgba[0] = r;
@@ -508,16 +498,6 @@ ParticleEmitterInfo::ParticleEmitterInfo()
 	memset(materialName, 0, sizeof(materialName));
 }
 
-bool ParticleEmitterInfo::operator==(const ParticleEmitterInfo & other) const
-{
-	return memcmp(this, &other, sizeof(ParticleEmitterInfo)) == 0;
-}
-
-bool ParticleEmitterInfo::operator!=(const ParticleEmitterInfo & other) const
-{
-	return !(*this == other);
-}
-
 void ParticleEmitterInfo::save(XMLPrinter * printer) const
 {
 	printer->PushAttribute("name", name);
@@ -632,16 +612,6 @@ ParticleInfo::ParticleInfo()
 	, sortMode(kSortMode_YoungestFirst)
 	, blendMode(kBlendMode_AlphaBlended)
 {
-}
-
-bool ParticleInfo::operator==(const ParticleInfo & other) const
-{
-	return memcmp(this, &other, sizeof(ParticleInfo)) == 0;
-}
-
-bool ParticleInfo::operator!=(const ParticleInfo & other) const
-{
-	return !(*this == other);
 }
 
 bool ParticleInfo::allocBurst(Burst *& burst)
