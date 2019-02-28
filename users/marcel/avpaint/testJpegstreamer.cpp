@@ -210,7 +210,7 @@ static bool saveImage_turbojpeg(const void * srcBuffer, const int srcBufferSize,
 		
 		unsigned long dstBufferSize2 = dstBufferSize;
 		
-		if (tjCompress2(h, (const unsigned char *)srcBuffer, srcSx, xPitch, srcSy, TJPF_RGBX, (unsigned char**)&dstBuffer, &dstBufferSize2, subsamp, quality, 0) < 0)
+		if (tjCompress2(h, (unsigned char *)srcBuffer, srcSx, xPitch, srcSy, TJPF_RGBX, (unsigned char**)&dstBuffer, &dstBufferSize2, subsamp, quality, 0) < 0)
 		{
 			logError("turbojpeg: %s", tjGetErrorStr());
 			
@@ -1005,7 +1005,7 @@ int main(int argc, char * argv[])
 			}
 			
 			const float speedInterp = (mouse.x / float(GFX_SX) - .5f) * 2.f;
-			const float speedFactor = Calc::Lerp(0.f, 1000.f, std::powf(std::abs(speedInterp), 2.5f)) * Calc::Sign(speedInterp);
+			const float speedFactor = Calc::Lerp(0.f, 1000.f, std::pow(std::abs(speedInterp), 2.5f)) * Calc::Sign(speedInterp);
 			
 			int streamIndex = 0;
 			
