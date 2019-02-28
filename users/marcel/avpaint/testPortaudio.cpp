@@ -12,8 +12,14 @@
 #include <cmath>
 #include <emmintrin.h>
 #include <immintrin.h>
-#include <portaudio/portaudio.h>
+#include <math.h>
 #include <set>
+
+#if LINUX
+	#include <portaudio.h>
+#else
+	#include <portaudio/portaudio.h>
+#endif
 
 #define SAMPLERATE (44100.0)
 
@@ -100,12 +106,12 @@ struct SineOsc : BaseOsc
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			samples[i] = std::sinf(phase);
+			samples[i] = sinf(phase);
 			
 			phase += phaseStep;
 		}
 		
-		phase = std::fmodf(phase, M_PI * 2.f);
+		phase = fmodf(phase, M_PI * 2.f);
 	}
 };
 
@@ -130,12 +136,12 @@ struct SawOsc : BaseOsc
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			samples[i] = std::fmodf(phase, 2.f) - 1.f;
+			samples[i] = fmodf(phase, 2.f) - 1.f;
 			
 			phase += phaseStep;
 		}
 		
-		phase = std::fmodf(phase, 2.f);
+		phase = fmodf(phase, 2.f);
 	}
 };
 
@@ -171,12 +177,12 @@ struct TriangleOsc : BaseOsc
 		{
 			phaseStep = phaseStep * retain1 + targetPhaseStep * retain2;
 			
-			samples[i] = (std::abs(std::fmodf(phase, 2.f) - 1.f) - .5f) * 2.f;
+			samples[i] = (std::abs(fmodf(phase, 2.f) - 1.f) - .5f) * 2.f;
 			
 			phase += phaseStep;
 		}
 		
-		phase = std::fmodf(phase, 2.f);
+		phase = fmodf(phase, 2.f);
 	}
 };
 
@@ -201,12 +207,12 @@ struct SquareOsc : BaseOsc
 
 		for (int i = 0; i < numSamples; ++i)
 		{
-			samples[i] = std::fmodf(phase, 2.f) < 1.f ? -1.f : +1.f;
+			samples[i] = fmodf(phase, 2.f) < 1.f ? -1.f : +1.f;
 			
 			phase += phaseStep;
 		}
 		
-		phase = std::fmodf(phase, 2.f);
+		phase = fmodf(phase, 2.f);
 	}
 };
 
@@ -235,8 +241,8 @@ struct SpringOsc1D : BaseOsc
 		
 		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 		{
-			const double vRetain = std::pow(vRetainPerSecond, dt);
-			const double pRetain = std::pow(pRetainPerSecond, dt);
+			const double vRetain = pow(vRetainPerSecond, dt);
+			const double pRetain = pow(pRetainPerSecond, dt);
 			
 			for (int i = 0; i < kNumElems; ++i)
 			{
@@ -358,7 +364,7 @@ struct SpringOsc1D : BaseOsc
 				for (int i = -r; i <= +r; ++i)
 				{
 					const int x = spot + i;
-					const double value = std::pow((1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0, 2.0);
+					const double value = pow((1.0 + cos(i / double(r) * Calc::mPI)) / 2.0, 2.0);
 					
 					if (x >= 0 && x < WaterSim::kNumElems)
 						m_waterSim.p[x] += value * s;
@@ -397,10 +403,10 @@ struct SpringOsc1D : BaseOsc
 				m_waterSim.f[x] = 1.0;
 				
 				m_waterSim.f[x] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
-				m_waterSim.f[x] *= Calc::Lerp(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
-				//m_waterSim.f[x] = 1.0 - std::pow(m_waterSim.f[x], 2.0);
+				m_waterSim.f[x] *= Calc::Lerp(1.0, (cos(x * xRatio) + 1.0) / 2.0, cosFactor);
+				//m_waterSim.f[x] = 1.0 - pow(m_waterSim.f[x], 2.0);
 				
-				//m_waterSim.f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+				//m_waterSim.f[x] = 1.0 - pow(random(0.f, 1.f), 2.0) * (cos(x / 4.32) + 1.0)/2.0 * (cos(y / 3.21) + 1.0)/2.0;
 				m_waterSim.f[x] *= Calc::Lerp(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
 			}
 		}
@@ -458,8 +464,8 @@ struct SpringOsc2D : BaseOsc
 		
 		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool _closedEnds)
 		{
-			const double vRetain = std::pow(vRetainPerSecond, dt);
-			const double pRetain = std::pow(pRetainPerSecond, dt);
+			const double vRetain = pow(vRetainPerSecond, dt);
+			const double pRetain = pow(pRetainPerSecond, dt);
 			
 			const bool closedEnds = _closedEnds && false;
 			
@@ -696,10 +702,10 @@ struct SpringOsc2D : BaseOsc
 					m_waterSim.f[x][y] = 1.0;
 					
 					m_waterSim.f[x][y] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
-					m_waterSim.f[x][y] *= Calc::Lerp(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
-					//m_waterSim.f[x][y] = 1.0 - std::pow(m_waterSim.f[x][y], 2.0);
+					m_waterSim.f[x][y] *= Calc::Lerp(1.0, (cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
+					//m_waterSim.f[x][y] = 1.0 - pow(m_waterSim.f[x][y], 2.0);
 					
-					//m_waterSim.f[x][y] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+					//m_waterSim.f[x][y] = 1.0 - pow(random(0.f, 1.f), 2.0) * (cos(x / 4.32) + 1.0)/2.0 * (cos(y / 3.21) + 1.0)/2.0;
 					m_waterSim.f[x][y] *= Calc::Lerp(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
 				}
 			}
@@ -753,10 +759,10 @@ struct SpringOsc2D : BaseOsc
 				const int y = spotY + j;
 				
 				double value = 1.0;
-				value *= (1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0;
-				value *= (1.0 + std::cos(j / double(r) * Calc::mPI)) / 2.0;
+				value *= (1.0 + cos(i / double(r) * Calc::mPI)) / 2.0;
+				value *= (1.0 + cos(j / double(r) * Calc::mPI)) / 2.0;
 				
-				//value = std::pow(value, 2.0);
+				//value = pow(value, 2.0);
 				
 				if (x >= 0 && x < WaterSim::kNumElems)
 				{
@@ -876,7 +882,7 @@ struct DelayLine
 	
 	float readInterp(const float offset) const
 	{
-		const float index = std::fmodf(samples.size() + nextWriteIndex + offset, samples.size());
+		const float index = fmodf(samples.size() + nextWriteIndex + offset, samples.size());
 		const int index1 = int(index);
 		const int index2 = (index1 + 1) % samples.size();
 		
@@ -930,7 +936,7 @@ struct AudioDspOsc : BaseOsc
 				float value = (pcmData[nextReadIndex].channel[0] + pcmData[nextReadIndex].channel[1]) / 65536.f / 3.f;
 				
 				//const float offset = delayLine.samples.size() * mouse.x / float(GFX_SX) / 10.f;
-				const float offset = delayLine.samples.size() * mouse.x / float(GFX_SX) / 10.f + (float)std::sin(t * 2.0 * M_PI * 5.0) * 100.0;
+				const float offset = delayLine.samples.size() * mouse.x / float(GFX_SX) / 10.f + (float)sin(t * 2.0 * M_PI * 5.0) * 100.0;
 				
 				t += tStep;
 				if (t >= 1.0)
