@@ -297,7 +297,7 @@ static void createVoxelSet(VoxelSet<sx, sy, sz> & voxelSet, DataSet<sx, sy, sz> 
 		{
 			for (int vz = 0; vz < sz; ++vz)
 			{
-				int minDistance = INT_MAX;
+				int minDistance = std::numeric_limits<int>::max();
 
 				for (int dsX = 0; dsX < sx; ++dsX)
 				{
