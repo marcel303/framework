@@ -734,7 +734,7 @@ struct SceneEditor
 					transformComp->position[2]);
 				
 				gxRotatef(
-					transformComp->angleAxis.angle * 180.f / float(M_PI),
+					transformComp->angleAxis.angle,
 					transformComp->angleAxis.axis[0],
 					transformComp->angleAxis.axis[1],
 					transformComp->angleAxis.axis[2]);
