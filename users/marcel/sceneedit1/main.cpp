@@ -304,10 +304,13 @@ struct SceneEditor
 				{
 					ImGui::LabelText("Component", "%s", componentType->typeName);
 					
-					for (auto * member = componentType->members_head; member != nullptr; member = member->next)
+					bool isSet = true;
+					void * changedMemberObject = nullptr;
+					
+					if (doReflection_StructuredType(g_typeDB, *componentType, component, isSet, &changedMemberObject))
 					{
-						bool isSet = true;
-						doComponentProperty(g_typeDB, *member, component, true, isSet, nullptr);
+						// signal component one of its properties has changed
+						component->propertyChanged(changedMemberObject);
 					}
 				}
 			}
@@ -913,7 +916,7 @@ int main(int argc, char * argv[])
 	return 0;
 #endif
 
-#if 1
+#if 0
 	if (!test_templateEditor())
 		logError("failure!");
 	return 0;
