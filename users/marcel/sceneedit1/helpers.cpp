@@ -57,6 +57,8 @@ void registerBuiltinTypes()
 			.addFlag(new ComponentMemberFlag_EditorType_Angle)
 		.add("axis", &AngleAxis::axis)
 			.addFlag(new ComponentMemberFlag_EditorType_Axis);
+	
+	g_typeDB.add(std::type_index(typeid(TransformComponent)), new TransformComponentType());
 }
 
 void registerComponentTypes()
@@ -164,6 +166,9 @@ static void from_json(const nlohmann::json & j, Vec4 & v)
 #endif
 
 #if ENABLE_COMPONENT_JSON
+
+// todo : clean up member_fromjson_recursive and member_tojson_recursive later
+
 bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * object, const ComponentJson & j, const Member * in_member)
 {
 	if (type->isStructured)
@@ -176,9 +181,48 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * 
 		{
 			if (member->isVector)
 			{
+			#if 0
 				//result &= false; // todo : support vector types
 				//Assert(false);
 				LOG_ERR("todo : support vector types in member_fromjson_recursive!", 0);
+			#else
+				auto * member_interface = static_cast<const Member_VectorInterface*>(member);
+				
+				auto * vector_type = typeDB.findType(member_interface->vector_type());
+				
+				Assert(vector_type != nullptr);
+				if (vector_type == nullptr)
+				{
+					result &= false;
+				}
+				else
+				{
+					auto member_json_itr = j.j.find(member->name);
+				
+					if (member_json_itr != j.j.end())
+					{
+						auto & member_json = *member_json_itr;
+						
+						if (member_json.is_array() == false)
+						{
+							LOG_WRN("json element is not of type array", 0);
+						}
+						else
+						{
+							const size_t vector_size = member_json.size();
+							
+							member_interface->vector_resize(object, vector_size);
+							
+							for (size_t i = 0; i < vector_size; ++i)
+							{
+								void * vector_object = member_interface->vector_access(object, i);
+								
+								result &= member_fromjson_recursive(typeDB, vector_type, vector_object, member_json.at(i), member);
+							}
+						}
+					}
+				}
+			#endif
 			}
 			else
 			{
@@ -295,6 +339,108 @@ bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object
 	case kDataType_Other:
 		Assert(false);
 		break;
+	}
+	
+	return false;
+#else
+	return false;
+#endif
+}
+
+bool member_tojson_recursive(const TypeDB & typeDB, const Type * type, const void * object, ComponentJson & j)
+{
+#if ENABLE_COMPONENT_JSON
+	if (type->isStructured)
+	{
+		auto * structured_type = static_cast<const StructuredType*>(type);
+		
+		bool result = true;
+		
+		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
+		{
+			if (member->isVector)
+			{
+				auto * member_interface = static_cast<const Member_VectorInterface*>(member);
+				
+				auto * vector_type = typeDB.findType(member_interface->vector_type());
+				
+				if (vector_type == nullptr)
+				{
+					LOG_ERR("failed to find type for type name %s", structured_type->typeName);
+					result &= false;
+				}
+				else
+				{
+					auto vector_size = member_interface->vector_size(object);
+					
+					for (auto i = 0; i < vector_size; ++i)
+					{
+						auto * vector_object = member_interface->vector_access((void*)object, i);
+						
+						nlohmann::json elem_json;
+						ComponentJson elem_json_wrapped(elem_json);
+						
+						member_tojson_recursive(typeDB, vector_type, vector_object, elem_json_wrapped);
+						
+						j.j[member->name].push_back(elem_json);
+					}
+				}
+			}
+			else
+			{
+				auto * member_scalar = static_cast<const Member_Scalar*>(member);
+				
+				auto * member_type = typeDB.findType(member_scalar->typeIndex);
+				auto * member_object = member_scalar->scalar_access(object);
+				
+				auto & member_json = j.j[member->name];
+				
+				ComponentJson member_json_wrapped(member_json);
+				
+				result &= member_tojson_recursive(typeDB, member_type, member_object, member_json_wrapped);
+			}
+		}
+		
+		return result;
+	}
+	else
+	{
+		auto * plain_type = static_cast<const PlainType*>(type);
+
+		switch (plain_type->dataType)
+		{
+		case kDataType_Bool:
+			j.j = plain_type->access<bool>(object);
+			return true;
+			
+		case kDataType_Int:
+			j.j = plain_type->access<int>(object);
+			return true;
+			
+		case kDataType_Float:
+			j.j = plain_type->access<float>(object);
+			return true;
+			
+		case kDataType_Vec2:
+			j.j = plain_type->access<Vec2>(object);
+			return true;
+			
+		case kDataType_Vec3:
+			j.j = plain_type->access<Vec3>(object);
+			return true;
+			
+		case kDataType_Vec4:
+			j.j = plain_type->access<Vec4>(object);
+			return true;
+			
+		case kDataType_String:
+			j.j = plain_type->access<std::string>(object);
+			return true;
+			
+		case kDataType_Other:
+			Assert(false);
+			break;
+		}
 	}
 	
 	return false;

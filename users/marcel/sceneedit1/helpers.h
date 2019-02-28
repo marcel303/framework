@@ -22,6 +22,7 @@ void freeComponentsInComponentSet(ComponentSet & componentSet);
 
 bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * object, const ComponentJson & j, const Member * in_member);
 bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object, const ComponentJson & j);
+bool member_tojson_recursive(const TypeDB & typeDB, const Type * type, const void * object, ComponentJson & j);
 bool member_tojson(const TypeDB & typeDB, const Member * member, const void * object, ComponentJson & j);
 
 bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object, const char * text);
