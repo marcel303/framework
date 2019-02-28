@@ -9,6 +9,7 @@
 #include "StringEx.h"
 #include "types.h"
 #include <limits>
+#include <math.h>
 #include <vector>
 
 #define DO_COCREATE 0
@@ -863,9 +864,9 @@ struct AudioCreation : Editable, public AudioStreamEx
 					setFont("calibri.ttf");
 					drawText(0, 0, 32, -1.f, -1.f, "%02d:%02d - %02d:%02d",
 						int(position/60.f),
-						int(std::fmodf(position, 60.f)),
+						int(fmodf(position, 60.f)),
 						int(duration/60.f),
-						int(std::fmodf(duration, 60.f)));
+						int(fmodf(duration, 60.f)));
 				};
 				gxPopMatrix();
 			}

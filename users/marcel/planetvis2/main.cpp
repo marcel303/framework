@@ -1193,7 +1193,7 @@ static void setPlanarTexShader(const Cube * cube, const int debugCubeSideIndex)
 			for (int y = 0; y < 3; ++y)
 				cubeSideInfo.transforms[s * 9 + y * 3 + x] = cube->m_sides[s].m_transform[x][y];
 	}
-	cubeSideInfo.testValue = std::fmodf(framework.time, .5f);
+	cubeSideInfo.testValue = std::fmod(framework.time, .5f);
 	static ShaderBufferRw buffer;
 	buffer.setDataRaw(&cubeSideInfo, sizeof(cubeSideInfo));
 
