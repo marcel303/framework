@@ -800,6 +800,7 @@ int main(int argc, char * argv[])
 			
 			glitchLoop->tick(dt);
 			
+		#if ENABLE_LEAPMOTION
 			{
 				static float speed = 1.f;
 				
@@ -837,6 +838,7 @@ int main(int argc, char * argv[])
 					}
 				}
 			}
+		#endif
 			
 			videoGame->tick(dt);
 			
