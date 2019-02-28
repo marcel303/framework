@@ -28,6 +28,7 @@ planes.
 
 */
 
+#include <stddef.h> // size_t on linux. somehow <vector> doesn't pull it in
 #include <stdint.h>
 #include <vector>
 
