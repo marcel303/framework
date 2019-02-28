@@ -8,7 +8,12 @@
 #include <cmath>
 #include <list>
 #include <string.h>
-#include <turbojpeg/turbojpeg.h>
+
+#if defined(LINUX)
+	#include <turbojpeg.h>
+#else
+	#include <turbojpeg/turbojpeg.h>
+#endif
 
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
