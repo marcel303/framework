@@ -47,7 +47,7 @@ bool doComponentProperty(
 			// note : process these as a group, so the context menu below works when right-clicking on any item inside the structure
 			ImGui::BeginGroup();
 			{
-				if (doReflection_StructuredType(typeDB, *structured_type, member_object, isSet))
+				if (doReflection_StructuredType(typeDB, *structured_type, member_object, isSet, nullptr))
 				{
 					if (signalChanges)
 						component->propertyChanged(member_object);
@@ -310,7 +310,7 @@ bool doReflection_PlainType(
 	return result;
 }
 
-static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type, void * object, const Member * in_member, bool & isSet)
+static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type, void * object, const Member * in_member, bool & isSet, void ** changedMemberObject)
 {
 	bool result = false;
 	
@@ -360,7 +360,7 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 								{
 									auto * vector_object = member_interface->vector_access(object, i);
 									
-									result |= doReflectionMember_traverse(typeDB, *vector_type, vector_object, member, isSet);
+									result |= doReflectionMember_traverse(typeDB, *vector_type, vector_object, member, isSet, changedMemberObject);
 									
 									if (ImGui::BeginPopupContextItem("Vector"))
 									{
@@ -420,7 +420,7 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 					Assert(member_type != nullptr);
 					if (member_type != nullptr)
 					{
-						result |= doReflectionMember_traverse(typeDB, *member_type, member_object, member, isSet);
+						result |= doReflectionMember_traverse(typeDB, *member_type, member_object, member, isSet, changedMemberObject);
 					}
 				}
 			}
@@ -438,7 +438,13 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 		
 		auto & plain_type = static_cast<const PlainType&>(type);
 		
-		result |= doReflection_PlainType(*in_member, plain_type, object, isSet, nullptr);
+		if (doReflection_PlainType(*in_member, plain_type, object, isSet, nullptr))
+		{
+			result = true;
+			
+			if (changedMemberObject != nullptr)
+				*changedMemberObject = object;
+		}
 	}
 	
 	return result;
@@ -448,7 +454,10 @@ bool doReflection_StructuredType(
 	const TypeDB & typeDB,
 	const StructuredType & type,
 	void * object,
-	bool & isSet)
+	bool & isSet,
+	void ** changedMemberObject)
 {
-	return doReflectionMember_traverse(typeDB, type, object, nullptr, isSet);
+	Assert(changedMemberObject == nullptr || *changedMemberObject == nullptr);
+	
+	return doReflectionMember_traverse(typeDB, type, object, nullptr, isSet, changedMemberObject);
 }
