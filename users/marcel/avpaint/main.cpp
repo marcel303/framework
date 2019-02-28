@@ -4,6 +4,7 @@
 #include "StringEx.h"
 #include "TweenFloat.h"
 #include "videoloop.h"
+#include <math.h>
 
 #if ENABLE_LEAPMOTION
 	#include "leap/Leap.h"
@@ -242,7 +243,7 @@ struct VideoEffect
 				Shader shader("video-fade");
 				setShader(shader);
 				{
-					//const float opacity = 1.f - std::powf(.1f, dt);
+					//const float opacity = 1.f - powf(.1f, dt);
 					const float opacity = 1.f;
 					shader.setImmediate("opacity", opacity);
 					shader.setTexture("source", 0, currVideoLoop->getTexture());
@@ -257,7 +258,7 @@ struct VideoEffect
 			#if 0
 				pushBlend(BLEND_OPAQUE);
 				applyFsfx(*surface, "fsfx/godrays.ps");
-				const float luminanceStrength = (-std::cosf(framework.time / 4.567f) + 1.f) / 2.f;
+				const float luminanceStrength = (-cosf(framework.time / 4.567f) + 1.f) / 2.f;
 				applyFsfx(*surface, "fsfx/luminance.ps", luminanceStrength);
 				popBlend();
 			#endif
@@ -811,7 +812,7 @@ int main(int argc, char * argv[])
 						desiredSpeed *= maxSpeed;
 						desiredSpeed = Calc::Mid(desiredSpeed, 0.f, maxSpeed);
 						
-						speed = Calc::Lerp(desiredSpeed, speed, std::powf(.05f, dt));
+						speed = Calc::Lerp(desiredSpeed, speed, powf(.05f, dt));
 					}
 				}
 			}
@@ -830,7 +831,7 @@ int main(int argc, char * argv[])
 						desiredSpeed *= maxSpeed;
 						desiredSpeed = Calc::Mid(desiredSpeed, 0.f, maxSpeed);
 						
-						speed = Calc::Lerp(desiredSpeed, speed, std::powf(.05f, dt));
+						speed = Calc::Lerp(desiredSpeed, speed, powf(.05f, dt));
 					}
 				}
 			}
@@ -921,7 +922,7 @@ int main(int argc, char * argv[])
 							else
 								opacity = 1.f;
 							
-							//const float opacity = std::sinf(uploadedImageFade * M_PI);
+							//const float opacity = sinf(uploadedImageFade * M_PI);
 							
 							gxSetTexture(texture);
 							{

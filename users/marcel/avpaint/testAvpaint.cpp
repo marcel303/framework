@@ -4,6 +4,7 @@
 #include "leapstate.h"
 #include "Traveller.h"
 #include "videoloop.h"
+#include <math.h>
 
 #if ENABLE_LEAPMOTION
 	#include "leap/Leap.h"
@@ -45,8 +46,8 @@ struct GrainsEffect
 		for (int i = 0; i < kMaxGrains; ++i)
 		{
 			grains[i].life -= dt;
-			grains[i].vx *= std::powf(1.f - grains[i].vfalloff, dt);
-			grains[i].vy *= std::powf(1.f - grains[i].vfalloff, dt);
+			grains[i].vx *= powf(1.f - grains[i].vfalloff, dt);
+			grains[i].vy *= powf(1.f - grains[i].vfalloff, dt);
 			grains[i].px += grains[i].vx * dt;
 			grains[i].py += grains[i].vy * dt;
 		}
@@ -235,7 +236,7 @@ int main(int argc, char * argv[])
 
 			const float dt = framework.timeStep;
 			
-			blurStrength = Calc::Lerp(desiredBlurStrength, blurStrength, std::powf(.5f, dt));
+			blurStrength = Calc::Lerp(desiredBlurStrength, blurStrength, powf(.5f, dt));
 			
 			grainsEffect.tick(dt);
 			
@@ -373,10 +374,10 @@ int main(int argc, char * argv[])
 							{
 								gxTranslatef(GFX_SX/2.f, GFX_SY/2.f, 0.f);
 								
-								const float scale = std::cos(framework.time * .1f) + 1.2f;
+								const float scale = cosf(framework.time * .1f) + 1.2f;
 								gxScalef(scale, scale, 1.f);
 								
-								const float angle = std::cos(framework.time * .1f) * 360.f;
+								const float angle = cosf(framework.time * .1f) * 360.f;
 								gxRotatef(angle, 0.f, 0.f, 1.f);
 								
 								hqBegin(HQ_STROKED_CIRCLES);
@@ -572,7 +573,7 @@ int main(int argc, char * argv[])
 						if (g_leapState.hands[0].active)
 						{
 							pushBlend(BLEND_OPAQUE);
-							setShader_GaussianBlurH(surface.getTexture(), 60, std::cosf(g_leapState.hands[0].fingers[2].position[1] / 255.f * 5.f) * 100.f);
+							setShader_GaussianBlurH(surface.getTexture(), 60, cosf(g_leapState.hands[0].fingers[2].position[1] / 255.f * 5.f) * 100.f);
 							surface.postprocess();
 							clearShader();
 							popBlend();
@@ -581,7 +582,7 @@ int main(int argc, char * argv[])
 						if (g_leapState.hands[0].active)
 						{
 							pushBlend(BLEND_OPAQUE);
-							setShader_GaussianBlurV(surface.getTexture(), 60, std::cosf(g_leapState.hands[0].fingers[1].position[1] / 255.f * 5.f) * 100.f);
+							setShader_GaussianBlurV(surface.getTexture(), 60, cosf(g_leapState.hands[0].fingers[1].position[1] / 255.f * 5.f) * 100.f);
 							surface.postprocess();
 							clearShader();
 							popBlend();
@@ -591,7 +592,7 @@ int main(int argc, char * argv[])
 					
 				#if 0
 					pushBlend(BLEND_OPAQUE);
-					setShader_GaussianBlurH(surface.getTexture(), 5, blurStrength * std::cos(framework.time / 2.345f) * 40.f);
+					setShader_GaussianBlurH(surface.getTexture(), 5, blurStrength * cosf(framework.time / 2.345f) * 40.f);
 					surface.postprocess();
 					clearShader();
 					popBlend();
@@ -608,8 +609,8 @@ int main(int argc, char * argv[])
 								const float t2 = (i + 1) / 20.f;
 								const float y1 = t1 * GFX_SY;
 								const float y2 = t2 * GFX_SY;
-								const float blurStrengthModifier = std::cos(i / 10.f + framework.time);
-								const float radius = blurStrength * blurStrengthModifier * std::cos(framework.time / 6.789f) * 200.f;
+								const float blurStrengthModifier = cosf(i / 10.f + framework.time);
+								const float radius = blurStrength * blurStrengthModifier * cosf(framework.time / 6.789f) * 200.f;
 								setShader_GaussianBlurH(texture, 63, radius);
 								gxBegin(GX_QUADS);
 								{
@@ -629,7 +630,7 @@ int main(int argc, char * argv[])
 					
 				#if 0
 					pushBlend(BLEND_OPAQUE);
-					setShader_GaussianBlurV(surface.getTexture(), 5, blurStrength * std::cos(framework.time / 1.123f) * 20.f);
+					setShader_GaussianBlurV(surface.getTexture(), 5, blurStrength * cosf(framework.time / 1.123f) * 20.f);
 					surface.postprocess();
 					clearShader();
 					popBlend();
@@ -645,8 +646,8 @@ int main(int argc, char * argv[])
 							const float t2 = (i + 1) / 30.f;
 							const float x1 = t1 * GFX_SX;
 							const float x2 = t2 * GFX_SX;
-							const float blurStrengthModifier = std::cos(i / 10.f + framework.time);
-							const float radius = blurStrength * blurStrengthModifier * std::cos(framework.time / 3.456f) * 100.f;
+							const float blurStrengthModifier = cosf(i / 10.f + framework.time);
+							const float radius = blurStrength * blurStrengthModifier * cosf(framework.time / 3.456f) * 100.f;
 							setShader_GaussianBlurV(texture, 63, radius);
 							gxBegin(GX_QUADS);
 							{
@@ -662,10 +663,10 @@ int main(int argc, char * argv[])
 					popSurface();
 					popBlend();
 				
-					applyFsfx(surface, "fsfx/invert.ps", (-std::cosf(invertValue.value * Calc::m2PI) + 1.f) / 2.f);
+					applyFsfx(surface, "fsfx/invert.ps", (-cosf(invertValue.value * Calc::m2PI) + 1.f) / 2.f);
 					
 					pushBlend(BLEND_OPAQUE);
-					setShader_ColorTemperature(surface.getTexture(), (std::cosf(framework.time / 2.f) + 1.f) / 2.f, 1.f);
+					setShader_ColorTemperature(surface.getTexture(), (cosf(framework.time / 2.f) + 1.f) / 2.f, 1.f);
 					surface.postprocess();
 					clearShader();
 					popBlend();

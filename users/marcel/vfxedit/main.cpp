@@ -650,7 +650,7 @@ static int getFloorBeat(double time)
 	}
 	else
 	{
-		return (int)std::floorf(time / 60.0 * g_sequence.bpm);
+		return (int)std::floor(time / 60.0 * g_sequence.bpm);
 	}
 }
 

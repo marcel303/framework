@@ -992,7 +992,7 @@ static void showTestImage()
 						gxTranslatef(i * 10, i * 10, i * 10);
 
 						const float rotOffset = i * 3;
-						const float rotSpeed = 2.f;// * std::sinf(framework.time);
+						const float rotSpeed = 2.f;// * std::sin(framework.time);
 						const float scale = 1.f - i / 100.f / 2.f;
 
 						gxRotatef(rotOffset + framework.time * rotSpeed * 1.234f, 1, 0, 0);

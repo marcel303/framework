@@ -5,6 +5,7 @@
 #include "video.h"
 #include <cmath>
 #include <list>
+#include <math.h>
 
 #include <array>
 
@@ -109,7 +110,7 @@ struct ParticleSystem
 				{
 					const float l = lt[i] * lr[i];
 
-					const float size = std::sin(l * Calc::mPI) * ((6.f - std::cos(l * Calc::mPI * 7.f)) / 5.f) * kMaxSize;
+					const float size = sinf(l * Calc::mPI) * ((6.f - cosf(l * Calc::mPI * 7.f)) / 5.f) * kMaxSize;
 
 					gxTexCoord2f(size, 0.f);
 					gxVertex3f(x[i], y[i], z[i]);
@@ -236,8 +237,8 @@ static void drawExtrusion(const int numX, const int numY, const GxTextureId text
 	const float sizeY = stepY * .45f;
 	
 	const float time = framework.time * .2f;
-	const Vec3 lightPosition = Vec3(std::sinf(time * 1.234f) * 200.f, 200.f + std::sinf(time * 2.345f) * 200.f, std::sinf(time * 3.456f) * 50.f - 250.f);
-	const Vec3 lightDirection = Vec3(std::sinf(framework.time), std::cosf(framework.time), -2.f).CalcNormalized();
+	const Vec3 lightPosition = Vec3(sinf(time * 1.234f) * 200.f, 200.f + sinf(time * 2.345f) * 200.f, sinf(time * 3.456f) * 50.f - 250.f);
+	const Vec3 lightDirection = Vec3(sinf(framework.time), cosf(framework.time), -2.f).CalcNormalized();
 
 	gxPushMatrix();
 	{
@@ -657,15 +658,15 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 							const float scaleZ = 50.f;
 							
 							gxTranslatef(0.f, 250.f, -400.f);
-							gxRotatef(std::sinf(framework.time * .123f) * 30.f, 0.f, 1.f, 0.f);
+							gxRotatef(sinf(framework.time * .123f) * 30.f, 0.f, 1.f, 0.f);
 							gxScalef(scaleX, scaleY, scaleZ);
 
 							const GxTextureId texture = mp->getTexture();
 
 							if (texture != 0)
 							{
-								const int numX = int(std::round(scaleX / 60.f));
-								const int numY = int(std::round(scaleY / 60.f));
+								const int numX = int(roundf(scaleX / 60.f));
+								const int numY = int(roundf(scaleY / 60.f));
 								
 								pushBlend(BLEND_OPAQUE);
 								drawExtrusion(numX, numY, texture);

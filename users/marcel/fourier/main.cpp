@@ -2,6 +2,7 @@
 #include "framework.h"
 #include <algorithm>
 #include <cmath>
+#include <math.h>
 
 #define GFX_SX 1200
 #define GFX_SY 800
@@ -95,8 +96,8 @@ struct BezierTest
 				{
 					const float a = i / float(kNumNodes - 1) * Calc::m2PI;
 					const float d = random(-.2f, 1.f);
-					baseLine.nodes[i].desiredPosition[0] = std::cos(a) * d;
-					baseLine.nodes[i].desiredPosition[1] = std::sin(a) * d;
+					baseLine.nodes[i].desiredPosition[0] = cosf(a) * d;
+					baseLine.nodes[i].desiredPosition[1] = sinf(a) * d;
 				}
 
 				baseLine.nodes[i].currentPosition = baseLine.nodes[i].desiredPosition;
@@ -146,7 +147,7 @@ struct BezierTest
 			{
 			#if 0
 				const float aa = .9f;
-				const float bb = 1.f - std::powf(aa, dt);
+				const float bb = 1.f - powf(aa, dt);
 
 				lines[i].nodes[j].currentPosition[0] = Calc::Lerp(lines[i].nodes[j].currentPosition[0], lines[i].nodes[j].desiredPosition[0], bb);
 				lines[i].nodes[j].currentPosition[1] = Calc::Lerp(lines[i].nodes[j].currentPosition[1], lines[i].nodes[j].desiredPosition[1], bb);
@@ -188,7 +189,7 @@ struct BezierTest
 	{
 		const float t = 1.f - (timeLeft / duration);
 
-		const float a = pow(sin(t * Calc::mPI), .5f) * alpha;
+		const float a = powf(sinf(t * Calc::mPI), .5f) * alpha;
 		//const float a = 1.f;
 
 		gxPushMatrix();
@@ -333,9 +334,9 @@ struct M
 
 static float samplePlasma(const float x, const float y)
 {
-	const float f1 = std::sin(std::hypot(x, y));
+	const float f1 = sinf(hypotf(x, y));
 
-	const float f2 = std::sin(x / (std::cos(y/1.2f) + 1.7f)) * std::cos(y / (sin(x/1.0f) + 1.9f));
+	const float f2 = sinf(x / (cosf(y/1.2f) + 1.7f)) * cosf(y / (sinf(x/1.0f) + 1.9f));
 
 	return (f1 + f2) / 2.f + .1f;
 	//return f2;
@@ -348,12 +349,12 @@ static float samplePlasma(const float x, const float y, const float s)
 
 static void sampleWindmap(const float x, const float y, float & out_x, float & out_y)
 {
-	//const float a = sin(x * 1.234f + framework.time/10.f) * 2.f + sin(y * 2.345f) * 1.6f;
-	const float a = x * 2.345f * sin((x - y) * .345f) + y * sin(x * .543f) * 1.234f;
-	const float vs = (1.1f + sin(cos(x * 2.543) + sin(y * 1.432))) / 2.1f;
+	//const float a = sinf(x * 1.234f + framework.time/10.f) * 2.f + sinf(y * 2.345f) * 1.6f;
+	const float a = x * 2.345f * sinf((x - y) * .345f) + y * sinf(x * .543f) * 1.234f;
+	const float vs = (1.1f + sinf(cosf(x * 2.543) + sinf(y * 1.432))) / 2.1f;
 	const float v = lerp<float>(vs, 1.f, .2f);
-	out_x = std::cos(a) * v;
-	out_y = std::sin(a) * v;
+	out_x = cosf(a) * v;
+	out_y = sinf(a) * v;
 }
 
 #endif
@@ -631,7 +632,7 @@ struct TraceEffect
 						//t1.direction = t.direction;
 						t1.direction = (t.direction + 1) % 4;
 						t1.depth = t.depth + 1;
-						t1.pixlife = std::powf(pixlife, kPixLifePow) * random(kPixLifeMul1, kPixLifeMul2);
+						t1.pixlife = powf(pixlife, kPixLifePow) * random(kPixLifeMul1, kPixLifeMul2);
 						t1.pixlifeRcp = 1.f / t1.pixlife;
 
 						t2.alive = 1;
@@ -641,7 +642,7 @@ struct TraceEffect
 						t2.oldY = t2.y;
 						t2.direction = ((t.direction / 2 + 1) * 2 + (rand() % 2)) % 4;
 						t2.depth = t.depth + 1;
-						t2.pixlife = std::powf(pixlife, kPixLifePow) * random(kPixLifeMul1, kPixLifeMul2);
+						t2.pixlife = powf(pixlife, kPixLifePow) * random(kPixLifeMul1, kPixLifeMul2);
 						t2.pixlifeRcp = 1.f / t2.pixlife;
 					}
 				}
@@ -773,7 +774,7 @@ int main(int argc, char * argv[])
 						map.v[x][y][0] = (samplePlasma(xf + e, yf, s) - samplePlasma(xf - e, yf, s)) / (e * 2.f) * m;
 						map.v[x][y][1] = (samplePlasma(xf, yf + e, s) - samplePlasma(xf, yf - e, s)) / (e * 2.f) * m;// + .5f;
 					#else
-						//const float s = 4.f + sin(framework.time/10.f) * 10.f;
+						//const float s = 4.f + sinf(framework.time/10.f) * 10.f;
 						const float s = 10.f;
 						const float m = .5f;
 
@@ -856,7 +857,7 @@ int main(int argc, char * argv[])
 
 								if (map.sample(p.x, p.y, v[0], v[1]))
 								{
-									const float s = (std::sqrt(v[0] * v[0] + v[1] * v[1]) + .3f) * 1.f;
+									const float s = (sqrtf(v[0] * v[0] + v[1] * v[1]) + .3f) * 1.f;
 									//const float s = .1f;
 
 									gxColor4f(baseColor.r * s, baseColor.g * s, baseColor.b * s, p.life * p.lifeRcp * 1.f);
@@ -875,8 +876,8 @@ int main(int argc, char * argv[])
 							{
 								const float t = i / 10000.f;
 
-								const float x = mouse.x + std::cos(t * Calc::m2PI * 100) * t * 800;
-								const float y = mouse.y + std::sin(t * Calc::m2PI * 100) * t * 500;
+								const float x = mouse.x + cosf(t * Calc::m2PI * 100) * t * 800;
+								const float y = mouse.y + sinf(t * Calc::m2PI * 100) * t * 500;
 
 								float v[2];
 
@@ -930,8 +931,8 @@ int main(int argc, char * argv[])
 					p.oldY = p.y;
 					p.life = 1.f;
 					p.lifeRcp = 1.f / p.life;
-					p.vx = std::cos(a) * v;
-					p.vy = std::sin(a) * v;
+					p.vx = cosf(a) * v;
+					p.vy = sinf(a) * v;
 					p.color = Color::fromHSL(.5f + random(0.f, .3f), .5f, .5f);
 				}
 
@@ -974,8 +975,8 @@ int main(int argc, char * argv[])
 									pc.oldY = pc.y;
 									pc.life = 2.f;
 									pc.lifeRcp = 1.f / pc.life;
-									pc.vx = std::cos(a) * v + p.vx * pv;
-									pc.vy = std::sin(a) * v + p.vy * pv;
+									pc.vx = cosf(a) * v + p.vx * pv;
+									pc.vy = sinf(a) * v + p.vy * pv;
 									pc.color = p.color;
 
 									P & pm = nextp();
@@ -1004,8 +1005,8 @@ int main(int argc, char * argv[])
 										pc.oldY = pc.y;
 										pc.life = 1.f;
 										pc.lifeRcp = 1.f / pc.life;
-										pc.vx = std::cos(a) * v;
-										pc.vy = std::sin(a) * v - 10.f;
+										pc.vx = cosf(a) * v;
+										pc.vy = sinf(a) * v - 10.f;
 										pc.color = p.color;
 
 										P & pm = nextp();

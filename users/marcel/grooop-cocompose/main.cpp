@@ -1232,10 +1232,10 @@ struct Picture : Editable
 					{
 						const float angle1 = angleStep * (i+0);
 						const float angle2 = angleStep * (i+1);
-						const float x1 = std::cosf(angle1);
-						const float y1 = std::sinf(angle1);
-						const float x2 = std::cosf(angle2);
-						const float y2 = std::sinf(angle2);
+						const float x1 = std::cos(angle1);
+						const float y1 = std::sin(angle1);
+						const float x2 = std::cos(angle2);
+						const float y2 = std::sin(angle2);
 
 						gxVertex2f(x1 * radius1, y1 * radius1);
 						gxVertex2f(x2 * radius1, y2 * radius1);
