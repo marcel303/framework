@@ -2,6 +2,7 @@
 
 #include "constants.h"
 #include <math.h>
+#include <stdint.h>
 #include <vector>
 
 static const int kNumVertices = 6 * kGridSize * kGridSize;
