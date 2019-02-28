@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cmath>
+#include <math.h>
 
 struct FollowValue
 {
@@ -17,7 +17,7 @@ struct FollowValue
 
 	void tick(const float dt)
 	{
-		const float a1 = std::powf(1.f - followPerSecond, dt);
+		const float a1 = powf(1.f - followPerSecond, dt);
 		const float a2 = 1.f - a1;
 
 		value = value * a1 + targetValue * a2;
