@@ -1,6 +1,7 @@
 #include "Log.h"
 #include "scene.h"
 #include "scene_fromText.h"
+#include <string.h>
 
 static bool isEmptyLineOrComment(const char * line)
 {

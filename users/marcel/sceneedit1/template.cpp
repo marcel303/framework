@@ -9,6 +9,7 @@
 #include "template.h"
 
 #include <set>
+#include <string.h>
 
 static bool isEmptyLineOrComment(const char * line)
 {
