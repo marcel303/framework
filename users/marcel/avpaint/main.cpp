@@ -4,6 +4,8 @@
 #include "StringEx.h"
 #include "TweenFloat.h"
 #include "videoloop.h"
+
+#include <cmath>
 #include <math.h>
 
 #if ENABLE_LEAPMOTION
