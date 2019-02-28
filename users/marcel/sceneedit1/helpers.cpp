@@ -167,36 +167,31 @@ static void from_json(const nlohmann::json & j, Vec4 & v)
 
 #if ENABLE_COMPONENT_JSON
 
-// todo : clean up member_fromjson_recursive and member_tojson_recursive later
-
-bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * object, const ComponentJson & j, const Member * in_member)
+bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * object, const ComponentJson & j)
 {
 	if (type->isStructured)
 	{
-		auto * structured_type = static_cast<const StructuredType*>(type);
-		
 		bool result = true;
+		
+		auto * structured_type = static_cast<const StructuredType*>(type);
 		
 		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
 		{
 			if (member->isVector)
 			{
-			#if 0
-				//result &= false; // todo : support vector types
-				//Assert(false);
-				LOG_ERR("todo : support vector types in member_fromjson_recursive!", 0);
-			#else
 				auto * member_interface = static_cast<const Member_VectorInterface*>(member);
 				
 				auto * vector_type = typeDB.findType(member_interface->vector_type());
 				
-				Assert(vector_type != nullptr);
 				if (vector_type == nullptr)
 				{
+					LOG_ERR("failed to find type for structured type with type name %s", structured_type->typeName);
 					result &= false;
 				}
 				else
 				{
+					// see if the json contains this member
+					
 					auto member_json_itr = j.j.find(member->name);
 				
 					if (member_json_itr != j.j.end())
@@ -209,20 +204,23 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * 
 						}
 						else
 						{
+							// resize the array
+							
 							const size_t vector_size = member_json.size();
 							
 							member_interface->vector_resize(object, vector_size);
+							
+							// deserialize each element individually
 							
 							for (size_t i = 0; i < vector_size; ++i)
 							{
 								void * vector_object = member_interface->vector_access(object, i);
 								
-								result &= member_fromjson_recursive(typeDB, vector_type, vector_object, member_json.at(i), member);
+								result &= member_fromjson_recursive(typeDB, vector_type, vector_object, member_json.at(i));
 							}
 						}
 					}
 				}
-			#endif
 			}
 			else
 			{
@@ -237,7 +235,7 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * 
 				{
 					auto & member_json = *member_json_itr;
 					
-					result &= member_fromjson_recursive(typeDB, member_type, member_object, member_json, member);
+					result &= member_fromjson_recursive(typeDB, member_type, member_object, member_json);
 				}
 			}
 		}
@@ -246,8 +244,6 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * 
 	}
 	else
 	{
-		Assert(in_member != nullptr);
-		
 		auto * plain_type = static_cast<const PlainType*>(type);
 		
 		switch (plain_type->dataType)
@@ -288,21 +284,31 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * 
 	
 	return false;
 }
-#endif
 
 bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object, const ComponentJson & j)
 {
-#if ENABLE_COMPONENT_JSON
 	if (member->isVector) // todo : add support for deserialization of vectors
+	{
+		LOG_WRN("vector types not supported yet", 0);
 		return false;
+	}
 	
 	auto * member_scalar = static_cast<const Member_Scalar*>(member);
 	
 	auto * member_type = typeDB.findType(member_scalar->typeIndex);
 	auto * member_object = member_scalar->scalar_access(object);
 	
-	if (member_type->isStructured) // todo : add support for deserialization of structured types
+	if (member_type == nullptr)
+	{
+		LOG_ERR("failed to find type", 0);
 		return false;
+	}
+	
+	if (member_type->isStructured)
+	{
+		LOG_ERR("member is a structured type. use member_fromjson_recursive instead", 0);
+		return false;
+	}
 	
 	auto * plain_type = static_cast<const PlainType*>(member_type);
 	
@@ -342,19 +348,15 @@ bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object
 	}
 	
 	return false;
-#else
-	return false;
-#endif
 }
 
 bool member_tojson_recursive(const TypeDB & typeDB, const Type * type, const void * object, ComponentJson & j)
 {
-#if ENABLE_COMPONENT_JSON
 	if (type->isStructured)
 	{
-		auto * structured_type = static_cast<const StructuredType*>(type);
-		
 		bool result = true;
+		
+		auto * structured_type = static_cast<const StructuredType*>(type);
 		
 		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
 		{
@@ -371,16 +373,16 @@ bool member_tojson_recursive(const TypeDB & typeDB, const Type * type, const voi
 				}
 				else
 				{
-					auto vector_size = member_interface->vector_size(object);
+					const size_t vector_size = member_interface->vector_size(object);
 					
-					for (auto i = 0; i < vector_size; ++i)
+					for (size_t i = 0; i < vector_size; ++i)
 					{
 						auto * vector_object = member_interface->vector_access((void*)object, i);
 						
 						nlohmann::json elem_json;
 						ComponentJson elem_json_wrapped(elem_json);
 						
-						member_tojson_recursive(typeDB, vector_type, vector_object, elem_json_wrapped);
+						result &= member_tojson_recursive(typeDB, vector_type, vector_object, elem_json_wrapped);
 						
 						j.j[member->name].push_back(elem_json);
 					}
@@ -444,24 +446,32 @@ bool member_tojson_recursive(const TypeDB & typeDB, const Type * type, const voi
 	}
 	
 	return false;
-#else
-	return false;
-#endif
 }
 
 bool member_tojson(const TypeDB & typeDB, const Member * member, const void * object, ComponentJson & j)
 {
-#if ENABLE_COMPONENT_JSON
 	if (member->isVector) // todo : add support for serialization of vectors
+	{
+		LOG_WRN("vector types not supported yet", 0);
 		return false;
+	}
 	
 	auto * member_scalar = static_cast<const Member_Scalar*>(member);
 	
 	auto * member_type = typeDB.findType(member_scalar->typeIndex);
 	auto * member_object = member_scalar->scalar_access(object);
 	
-	if (member_type->isStructured) // todo : add support for serialization of structured types
+	if (member_type == nullptr)
+	{
+		LOG_ERR("failed to find type", 0);
 		return false;
+	}
+	
+	if (member_type->isStructured)
+	{
+		LOG_ERR("member is a structured type. use member_tojson_recursive instead", 0);
+		return false;
+	}
 	
 	auto * plain_type = static_cast<const PlainType*>(member_type);
 
@@ -501,10 +511,31 @@ bool member_tojson(const TypeDB & typeDB, const Member * member, const void * ob
 	}
 	
 	return false;
-#else
-	return false;
-#endif
 }
+
+#else
+
+bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * object, const ComponentJson & j)
+{
+	return false;
+}
+
+bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object, const ComponentJson & j)
+{
+	return false;
+}
+
+bool member_tojson_recursive(const TypeDB & typeDB, const Type * type, const void * object, ComponentJson & j)
+{
+	return false;
+}
+
+bool member_tojson(const TypeDB & typeDB, const Member * member, const void * object, ComponentJson & j)
+{
+	return false;
+}
+
+#endif
 
 // member <-> text serialization
 
