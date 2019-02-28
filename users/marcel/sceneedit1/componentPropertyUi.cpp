@@ -398,7 +398,10 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 						if (insert_index != (size_t)-1)
 						{
 							member_interface->vector_resize(object, vector_size + 1);
-							member_interface->vector_swap(object, vector_size, insert_index);
+							for (size_t i = vector_size; i > insert_index; --i)
+							{
+								member_interface->vector_swap(object, i, i - 1);
+							}
 						}
 						
 						if (do_resize)
