@@ -1,7 +1,5 @@
 #pragma once
 
-#define ENABLE_LEAPMOTION 1
-
 #if ENABLE_LEAPMOTION
 
 #include "leap/Leap.h"

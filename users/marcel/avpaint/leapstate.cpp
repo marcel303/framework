@@ -1,7 +1,6 @@
-#include "leapstate.h"
-
 #if ENABLE_LEAPMOTION
 
+#include "leapstate.h"
 #include <SDL2/SDL.h>
 
 XLeapState g_leapState;
