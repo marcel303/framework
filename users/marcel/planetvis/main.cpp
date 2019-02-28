@@ -4,6 +4,7 @@
 #include "Timer.h"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 #define GFX_SX 1024
 #define GFX_SY 1024

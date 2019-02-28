@@ -8,6 +8,7 @@
 #include "StreamWriter.h"
 #include "StringEx.h"
 #include "types.h"
+#include <limits>
 #include <vector>
 
 #define DO_COCREATE 0
