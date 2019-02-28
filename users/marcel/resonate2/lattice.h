@@ -2,7 +2,8 @@
 
 #include "constants.h"
 #include <math.h>
-#include <stdint.h>
+#include <stddef.h> // linux: <vector> doesn't pull in size_t
+#include <stdint.h> // linux: <vector> doesn't pull in uint32_t
 #include <vector>
 
 static const int kNumVertices = 6 * kGridSize * kGridSize;
