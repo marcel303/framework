@@ -498,9 +498,9 @@ public:
 	virtual float fftBucketValue(int index) const = 0;
 	virtual int fftBucketCount() const = 0;
 
-	virtual bool keyIsDown(const SDLKey key) const = 0;
-	virtual bool keyWentDown(const SDLKey key) const = 0;
-	virtual bool keyWentUp(const SDLKey key) const = 0;
+	virtual bool keyIsDown(const int key) const = 0;
+	virtual bool keyWentDown(const int key) const = 0;
+	virtual bool keyWentUp(const int key) const = 0;
 
 	virtual int mouseX() const = 0;
 	virtual int mouseY() const = 0;
@@ -516,9 +516,9 @@ public:
 	virtual float fftBucketValue(int index) const;
 	virtual int fftBucketCount() const;
 
-	virtual bool keyIsDown(const SDLKey key) const;
-	virtual bool keyWentDown(const SDLKey key) const;
-	virtual bool keyWentUp(const SDLKey key) const;
+	virtual bool keyIsDown(const int key) const;
+	virtual bool keyWentDown(const int key) const;
+	virtual bool keyWentUp(const int key) const;
 
 	virtual int mouseX() const;
 	virtual int mouseY() const;

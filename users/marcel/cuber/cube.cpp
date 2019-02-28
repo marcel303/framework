@@ -2,19 +2,19 @@
 #include "framework.h"
 #include "StringEx.h"
 
-bool EffectCtxImpl::keyIsDown(const SDLKey key) const
+bool EffectCtxImpl::keyIsDown(const int key) const
 {
-	return keyboard.isDown(key);
+	return keyboard.isDown((SDLKey)key);
 }
 
-bool EffectCtxImpl::keyWentDown(const SDLKey key) const
+bool EffectCtxImpl::keyWentDown(const int key) const
 {
-	return keyboard.wentDown(key);
+	return keyboard.wentDown((SDLKey)key);
 }
 
-bool EffectCtxImpl::keyWentUp(const SDLKey key) const
+bool EffectCtxImpl::keyWentUp(const int key) const
 {
-	return keyboard.wentUp(key);
+	return keyboard.wentUp((SDLKey)key);
 }
 
 int EffectCtxImpl::mouseX() const
