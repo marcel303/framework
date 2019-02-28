@@ -67,10 +67,10 @@ static void to_json(nlohmann::json & j, const SceneNode * node_ptr)
 			
 			ComponentJson component_json_wrapped(component_json);
 			
-			for (auto * member = componentType->members_head; member != nullptr; member = member->next)
+			if (member_tojson_recursive(g_typeDB, componentType, component, component_json_wrapped) == false)
 			{
-				if (member_tojson(g_typeDB, member, component, component_json_wrapped) == false)
-					LOG_ERR("failed to write member to json", 0);
+				LOG_ERR("failed to write component to json", 0);
+				// todo : throw an exception ?
 			}
 		}
 	}
@@ -109,8 +109,11 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 			{
 				auto * component = componentType->componentMgr->createComponent(id.c_str());
 				
-				if (member_fromjson_recursive(g_typeDB, componentType, component, component_json, nullptr) == false)
+				if (member_fromjson_recursive(g_typeDB, componentType, component, component_json) == false)
+				{
 					LOG_ERR("failed to read member from json", 0);
+					// todo : throw an exception ?
+				}
 				
 				node.components.add(component);
 			}
