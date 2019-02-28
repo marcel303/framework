@@ -2,6 +2,7 @@
 #include "Quat.h"
 #include "scene.h"
 #include "transformComponent.h"
+#include <math.h>
 
 void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode & node, const Mat4x4 & globalTransform) const
 {
@@ -10,7 +11,7 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 	if (transformComp != nullptr)
 	{
 		Quat q;
-		q.fromAxisAngle(transformComp->angleAxis.axis, transformComp->angleAxis.angle);
+		q.fromAxisAngle(transformComp->angleAxis.axis, transformComp->angleAxis.angle * float(M_PI) / 180.f);
 
 		const Mat4x4 localTransform = Mat4x4(true).Translate(transformComp->position).Rotate(q).Scale(transformComp->scale);
 		
@@ -56,7 +57,7 @@ void RotateTransformComponent::tick(const float dt)
 		
 		angle += speed * dt;
 		
-		angle = fmodf(angle, float(M_PI * 2.0));
+		angle = fmodf(angle, 360.f);
 		
 		transformComponent->angleAxis.angle = angle;
 	}
