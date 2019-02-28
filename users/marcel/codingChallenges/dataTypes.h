@@ -1,6 +1,7 @@
 #pragma once
 
 #include <assert.h>
+#include <stdlib.h> // malloc
 
 template <typename T, int C>
 struct MemoryPool
