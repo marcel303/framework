@@ -1825,7 +1825,7 @@ static void generateTextureArray(const char * name, const int baseSize, const in
 				{
 					const int x = i % baseSize;
 					const int y = i / baseSize;
-					const float d = std::sqrtf(x * x + y * y);
+					const float d = std::sqrt(x * x + y * y);
 					//values[i] *= (std::sin((i / 1.234f + (i % baseSize) * 1.234f) * .2f) + 1.f) / 2.f;
 					//values[i] *= (std::sin(d * .2f) + 1.f) / 2.f;
 					//values[i] *= (std::sin((x / 1.234f + y * 1.234f) * .2f) + 1.f) / 2.f;

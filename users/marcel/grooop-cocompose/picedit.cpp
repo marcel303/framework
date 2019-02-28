@@ -63,7 +63,7 @@ void PicEdit::drawMove(const float x, const float y, const float moveX, const fl
 	static float v = 0.f;
 	const float dx = drawState.endX - x;
 	const float dy = drawState.endY - y;
-	const float ds = std::sqrtf(dx * dx + dy * dy);
+	const float ds = std::sqrt(dx * dx + dy * dy);
 	drawState.color = Color::fromHSL(v / 360.f, 1.f, .5f);
 	v += ds * .1f;
 

@@ -240,7 +240,7 @@ static void testParticleLib()
 				for (Particle * p = pp.head; p; p = p->next)
 				{
 					const float particleLife = 1.f - p->life;
-					const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+					const float particleSpeed = std::sqrt(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
 
 					ParticleColor color;
 					computeParticleColor(pei2, pi2, particleLife, particleSpeed, color);
