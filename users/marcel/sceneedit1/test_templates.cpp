@@ -6,6 +6,7 @@
 
 static void dump_template(const Template & t)
 {
+#if ENABLE_LOGGING
 	for (auto & component : t.components)
 	{
 		logInfo("%30s : %20s *",
@@ -23,10 +24,11 @@ static void dump_template(const Template & t)
 			if (property.value_lines.size() > 1)
 			{
 				for (auto & value_line : property.value_lines)
-					logDebug("\t%s", value_line.c_str());
+					logInfo("\t%s", value_line.c_str());
 			}
 		}
 	}
+#endif
 }
 
 void test_templates_v1()

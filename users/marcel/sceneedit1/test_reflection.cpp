@@ -164,6 +164,10 @@ void test_reflection_1()
 	TestStruct_1 s1;
 	TestStruct_2 s2;
 	TestStruct_3 s3;
+	(void)x;
+	(void)s1;
+	(void)s2;
+	(void)s3;
 	
 	s2.x.resize(4, 42);
 	s2.f.resize(4, 3.14f);

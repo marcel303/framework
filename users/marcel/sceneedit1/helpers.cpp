@@ -8,6 +8,7 @@
 #include "cameraComponent.h"
 #include "modelComponent.h"
 #include "parameterComponent.h"
+#include "rotateTransformComponent.h"
 #include "sceneNodeComponent.h"
 #include "transformComponent.h"
 #include "vfxgraphComponent.h"
@@ -67,11 +68,11 @@ void registerBuiltinTypes()
 void registerComponentTypes()
 {
 	registerComponentType(new CameraComponentType(), &s_cameraComponentMgr);
-	registerComponentType(new TransformComponentType(), &s_transformComponentMgr);
-	registerComponentType(new RotateTransformComponentType(), &s_rotateTransformComponentMgr);
 	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);
 	registerComponentType(new ParameterComponentType(), &s_parameterComponentMgr);
+	registerComponentType(new RotateTransformComponentType(), &s_rotateTransformComponentMgr);
 	registerComponentType(new SceneNodeComponentType(), &s_sceneNodeComponentMgr);
+	registerComponentType(new TransformComponentType(), &s_transformComponentMgr);
 	//registerComponentType(new VfxgraphComponentType(), &s_vfxgraphComponentMgr);
 }
 
@@ -817,20 +818,6 @@ bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * stru
 	return result;
 }
 
-static bool isEmptyLineOrComment(const char * line) // todo : add helper functions for dealing with lines
-{
-	for (int i = 0; line[i] != 0; ++i)
-	{
-		if (line[i] == '#')
-			return true;
-		
-		if (!isspace(line[i]))
-			return false;
-	}
-	
-	return true;
-}
-
 bool object_fromlines_recursive(
 	const TypeDB & typeDB, const Type * type, void * object,
 	LineReader & line_reader)
@@ -845,8 +832,6 @@ bool object_fromlines_recursive(
 		
 		while ((line = line_reader.get_next_line(true)) != nullptr)
 		{
-			Assert(!isEmptyLineOrComment(line));
-			
 			// determine the structured member name
 			
 			const char * name = line;

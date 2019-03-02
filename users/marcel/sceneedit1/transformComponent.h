@@ -3,6 +3,8 @@
 #include "AngleAxis.h"
 #include "component.h"
 
+class Mat4x4;
+
 struct Scene;
 struct SceneNode;
 
@@ -35,34 +37,6 @@ struct TransformComponentType : ComponentType<TransformComponent>
 		in("scale", &TransformComponent::scale)
 			.setLimits(0.f, 10.f)
 			.setEditingCurveExponential(2.f);
-	}
-};
-
-#endif
-
-// todo : move to its own source file
-
-struct RotateTransformComponent : Component<RotateTransformComponent>
-{
-	float speed = 0.f;
-	
-	virtual void tick(const float dt) override final;
-};
-
-struct RotateTransformComponentMgr : ComponentMgr<RotateTransformComponent>
-{
-};
-
-#if defined(DEFINE_COMPONENT_TYPES)
-
-#include "componentType.h"
-
-struct RotateTransformComponentType : ComponentType<RotateTransformComponent>
-{
-	RotateTransformComponentType()
-		: ComponentType("RotateTransformComponent")
-	{
-		in("speed", &RotateTransformComponent::speed);
 	}
 };
 

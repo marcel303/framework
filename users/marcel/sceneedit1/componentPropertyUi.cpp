@@ -99,6 +99,7 @@ bool doComponentProperty(
 					member_tojson_recursive(typeDB, member_type, member_object, json_wrapped) &&
 					member_fromjson_recursive(typeDB, member_type, member_object, json_wrapped);
 				Assert(result);
+				(void)result;
 			#endif
 			}
 		}
