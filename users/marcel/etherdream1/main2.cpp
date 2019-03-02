@@ -6,6 +6,7 @@
 #include "imgui-framework.h"
 #include "laserTypes.h"
 #include "masking.h"
+#include "noiseModulator.h"
 #include <algorithm>
 #include <map>
 #include <sstream>
@@ -834,6 +835,8 @@ int main(int argc, char * argv[])
 	
 	NoiseSweepModifier noiseSweep;
 	
+	NoiseModulator noiseModulator;
+	
 	PurpleRain rain;
 	
 	bool pauseSimulation = false;
@@ -992,6 +995,13 @@ int main(int argc, char * argv[])
 					ImGui::SliderFloat("Noise sweep strength", &noiseSweep.strength, 0.f, 100.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Noise sweep duration", &noiseSweep.duration, 0.f, 100.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Noise sweep noise frequency", &noiseSweep.noiseFrequency, 0.f, 100.f, "%.4f", 2.f);
+					
+					ImGui::Separator();
+					ImGui::SliderFloat("Noise modulator strength", &noiseModulator.strength, 0.f, 100.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Noise modulator follow factor", &noiseModulator.followFactor, 0.f, 1.f, "%.4f", 1.f);
+					ImGui::SliderFloat("Noise modulator falloff", &noiseModulator.falloff_strength, 0.f, 100.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Noise modulator spatial frequency", &noiseModulator.noiseFrequency_spat, 0.f, 100.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Noise modulator time frequency", &noiseModulator.noiseFrequency_time, 0.f, 100.f, "%.4f", 2.f);
 				}
 				else if (tab == kTab_Calibration)
 				{
@@ -1148,23 +1158,62 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		// apply noise sweep
-		
-		const int numSteps = 1;
-		
-		for (int i = 0; i < numSteps; ++i)
 		{
-			noiseSweep.tick(dt / numSteps);
+			// apply noise sweep
 			
-			for (auto & string : strings)
+			const int numSteps = 1;
+			
+			for (int i = 0; i < numSteps; ++i)
 			{
-				for (int i = 0; i < string.getNumPoints(); ++i)
-				{
-					const float x = string.getXForPointIndex(i);
+				noiseSweep.tick(dt / numSteps);
 				
-					const float force = noiseSweep.calculateForce(x);
+				for (auto & string : strings)
+				{
+					for (int i = 0; i < string.getNumPoints(); ++i)
+					{
+						const float x = string.getXForPointIndex(i);
 					
-					string.forces[i] += force / numSteps;
+						const float force = noiseSweep.calculateForce(x);
+						
+						string.forces[i] += force / numSteps;
+					}
+				}
+			}
+		}
+		
+		{
+			// apply noise modulator
+			
+			const int numSteps = 10;
+			
+			
+			for (int i = 0; i < numSteps; ++i)
+			{
+				noiseModulator.tick(gravitic.x, dt / numSteps);
+				
+				for (auto & string : strings)
+				{
+					for (int i = 0; i < string.getNumPoints(); ++i)
+					{
+						const float x = string.getXForPointIndex(i);
+						const float y = string.positions[i];
+					
+						const float force = noiseModulator.calculateForce(x, y);
+						
+						// distance falloff. todo : calculate these once for object
+						const float dx = x - gravitic.x;
+						const float dy = y - gravitic.y;
+						const float dz = 0.f - gravitic.z;
+						
+						float minimumDistance = 1e-3f;
+						const float minimumDistanceSq = minimumDistance * minimumDistance;
+						const float distanceSq = fmaxf(minimumDistanceSq, dx * dx + dy * dy + dz * dz);
+
+						// todo : add option to toggle between distance squared, distance
+						const float falloff = 1.f / distanceSq;
+						
+						string.forces[i] += force * falloff / numSteps;
+					}
 				}
 			}
 		}
