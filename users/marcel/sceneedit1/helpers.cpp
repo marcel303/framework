@@ -868,7 +868,7 @@ static void extractLinesGivenIndentationLevel(const std::vector<std::string> & l
 
 bool object_fromlines_recursive(
 	const TypeDB & typeDB, const Type * type, void * object,
-	const std::vector<std::string> & lines, size_t & line_index)
+	LineReader & line_reader)
 {
 	if (type->isStructured)
 	{
@@ -876,24 +876,18 @@ bool object_fromlines_recursive(
 		
 		auto * structured_type = static_cast<const StructuredType*>(type);
 		
-		while (line_index < lines.size())
+		const char * line;
+		
+		while ((line = line_reader.get_next_line()) != nullptr)
 		{
-			auto & line = lines[line_index];
-			line_index++;
-			
-			if (isEmptyLineOrComment(line.c_str()))
+			if (isEmptyLineOrComment(line))
 				continue;
 			
 			// determine the structured member name
 			
-			const char * name = line.c_str();
+			const char * name = line;
 			
 			Assert(name[0] != '\t');
-			
-			// extract the data for this member
-			
-			std::vector<std::string> member_lines;
-			extractLinesGivenIndentationLevel(lines, line_index, 1, member_lines, true);
 			
 			// find the member inside the structured type
 			
@@ -913,11 +907,13 @@ bool object_fromlines_recursive(
 			}
 			else
 			{
-				// deserialize the member using the data we extracted
+				// deserialize the member
 				
-				size_t member_line_index = 0;
-				
-				result &= member_fromlines_recursive(typeDB, member, object, member_lines, member_line_index);
+				line_reader.push_indent();
+				{
+					result &= member_fromlines_recursive(typeDB, member, object, line_reader);
+				}
+				line_reader.pop_indent();
 			}
 		}
 		
@@ -925,9 +921,11 @@ bool object_fromlines_recursive(
 	}
 	else
 	{
-		AssertMsg(lines.empty() == false, "got empty lines for plain type", 0);
+		const char * line = line_reader.get_next_line();
 		
-		if (lines.empty())
+		AssertMsg(line != nullptr, "got empty line for plain type", 0);
+		
+		if (line == nullptr)
 		{
 			return false;
 		}
@@ -935,10 +933,7 @@ bool object_fromlines_recursive(
 		{
 			auto * plain_type = static_cast<const PlainType*>(type);
 			
-			const char * text = lines[line_index].c_str();
-			line_index++;
-			
-			if (object_fromtext(typeDB, plain_type, object, text) == false)
+			if (object_fromtext(typeDB, plain_type, object, line) == false)
 			{
 				LOG_ERR("failed to deserialize plain type from text", 0);
 				
@@ -956,16 +951,11 @@ bool object_fromlines_recursive(
 
 bool member_fromlines_recursive(
 	const TypeDB & typeDB, const Member * member, void * object,
-	const std::vector<std::string> & lines, size_t & line_index)
+	LineReader & line_reader)
 {
 	bool result = true;
 	
-	if (lines.empty())
-	{
-		LOG_ERR("empty lines for member %s", member->name);
-		result &= false;
-	}
-	else if (member->isVector)
+	if (member->isVector)
 	{
 		LOG_ERR("vector types aren't supported yet", 0);
 		Assert(false);
@@ -985,7 +975,7 @@ bool member_fromlines_recursive(
 		}
 		else
 		{
-			result &= object_fromlines_recursive(typeDB, member_type, member_object, lines, line_index);
+			result &= object_fromlines_recursive(typeDB, member_type, member_object, line_reader);
 		}
 	}
 	
@@ -1063,6 +1053,31 @@ bool member_tolines_recursive(
 	}
 	
 	return result;
+}
+
+//
+
+const char * LineReader::get_next_line()
+{
+	// at end? return nullptr
+	
+	if (line_index == lines.size())
+		return nullptr;
+	
+	const char * line = lines[line_index].c_str();
+	
+	// calculate indentation level. less than ours? return nullptr
+	
+	const size_t next_level = calculateIndentationLevel(line);
+	
+	if (next_level < indentation_level)
+		return nullptr;
+	
+	// return line with appropriate offset to compensate for indentation
+	
+	line_index++;
+	
+	return line + indentation_level;
 }
 
 //

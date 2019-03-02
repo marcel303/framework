@@ -464,8 +464,9 @@ bool instantiateComponentsFromTemplate(const TypeDB & typeDB, const Template & t
 				return false;
 			}
 			
-			size_t line_index = 0;
-			if (member_fromlines_recursive(g_typeDB, member, component, property_template.value_lines, line_index) == false)
+			LineReader line_reader(property_template.value_lines, 0, 0);
+			
+			if (member_fromlines_recursive(g_typeDB, member, component, line_reader) == false)
 			{
 				LOG_ERR("failed to deserialize property from text: property=%s, lines=", property_template.name.c_str());
 				for (auto & line : property_template.value_lines)

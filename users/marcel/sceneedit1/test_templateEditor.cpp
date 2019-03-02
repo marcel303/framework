@@ -139,8 +139,9 @@ struct TemplateComponentInstance
 				{
 					if (templateProperty.name == member->name)
 					{
-						size_t line_index = 0;
-						result &= member_fromlines_recursive(typeDB, member, component, templateProperty.value_lines, line_index);
+						LineReader line_reader(templateProperty.value_lines, 0, 0);
+						
+						result &= member_fromlines_recursive(typeDB, member, component, line_reader);
 						
 						propertyIsSet = true;
 						
@@ -629,7 +630,7 @@ bool test_templateEditor()
 								bool isSet = true;
 								auto * base_component = template_instances[0].findComponentInstance(component_instance.componentType->typeName, component_instance.id.c_str());
 								
-								doReflection_StructuredType(typeDB, *component_instance.componentType, component_instance.component, isSet, nullptr, nullptr);
+								doReflection_StructuredType(typeDB, *component_instance.componentType, component_instance.component, isSet, base_component, nullptr);
 							}
 						#else
 							// iterate over all of the components' properties
@@ -707,7 +708,7 @@ bool test_templateEditor()
 	
 	int out_index = 0;
 	
-	for (size_t instance_itr = 0; instance_itr < template_instances.size() - 1; ++instance_itr)
+	for (size_t instance_itr = 1; instance_itr < template_instances.size(); ++instance_itr)
 	{
 		char filename[64];
 		sprintf_s(filename, sizeof(filename), "out/%03d.txt", out_index);
