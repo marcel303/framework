@@ -14,7 +14,7 @@ struct LineReader
 		const int in_line_index,
 		const int in_indentation_level);
 	
-	const char * get_next_line();
+	const char * get_next_line(const bool skipEmptyLines);
 	
 	void push_indent()
 	{

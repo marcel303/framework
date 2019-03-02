@@ -36,36 +36,7 @@ static int calculateIndentationLevel(const char * line)
 	return result;
 }
 
-static void extractLinesGivenIndentationLevel(const std::vector<std::string> & lines, size_t & index, const int level, std::vector<std::string> & out_lines, const bool subtract_indentation)
-{
-	for (;;)
-	{
-		if (index == lines.size())
-			break;
-		
-		const std::string & line = lines[index];
-		
-		if (isEmptyLineOrComment(line.c_str()))
-		{
-			++index;
-			continue;
-		}
-		
-		const int current_level = calculateIndentationLevel(line.c_str());
-		
-		if (current_level < level)
-			break;
-		
-		if (subtract_indentation)
-			out_lines.push_back(line.substr(level));
-		else
-			out_lines.push_back(line);
-		
-		++index;
-	}
-}
-
-bool parseTemplateFromLines(const std::vector<std::string> & lines, const char * name, Template & out_template)
+bool parseTemplateFromLines(LineReader & line_reader, const char * name, Template & out_template)
 {
 	TemplateComponent * current_component_element = nullptr;
 	TemplateComponentProperty * current_property_element = nullptr;
@@ -77,20 +48,15 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, const char *
 	
 	int current_level = -1;
 	
-	for (size_t line_index = 0; line_index < lines.size(); )
+	const char * line;
+	
+	while ((line = line_reader.get_next_line(true)))
 	{
-		auto & line = lines[line_index];
-		
 		// check for empty lines and skip them
 		
-		if (isEmptyLineOrComment(line.c_str()))
-		{
-			++line_index; // todo : increment directly after capturing line above
-			
-			continue;
-		}
+		Assert(!isEmptyLineOrComment(line));
 		
-		const int new_level = calculateIndentationLevel(line.c_str());
+		const int new_level = calculateIndentationLevel(line);
 		
 		if (new_level > current_level + 1)
 		{
@@ -110,15 +76,13 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, const char *
 		
 		current_level = new_level;
 		
-		const char * text = line.c_str() + current_level;
-		
 		if (current_level == 0)
 		{
-			if (memcmp(text, "base", 4) == 0)
+			if (memcmp(line, "base", 4) == 0)
 			{
 				// base specifier. find the base name at the end
 			
-				const char * base = text;
+				const char * base = line;
 				
 				while (base[0] != 0 && !isspace(base[0]))
 					base++;
@@ -134,8 +98,6 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, const char *
 				
 				out_template.base = base;
 				
-				++line_index;
-				
 				continue;
 			}
 			
@@ -143,7 +105,7 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, const char *
 			
 			Assert(current_component_element == nullptr);
 			
-			const char * typeName = text;
+			const char * typeName = line;
 			
 			// apply conversion to the type name:
 			// 'transform' becomes TransformComponent
@@ -200,8 +162,6 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, const char *
 			
 			current_component_element->type_name = full_name;
 			current_component_element->id = id;
-			
-			++line_index;
 		}
 		else if (current_level == 1)
 		{
@@ -222,22 +182,27 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, const char *
 			
 			current_property_element = &current_component_element->properties.back();
 			
-			const char * propertyName = text;
+			const char * propertyName = line;
 			
 		// todo : add support for adding a value directly after the property name
 		
 			current_property_element->name = propertyName;
 			
-			++line_index;
-		}
-		else if (current_level == 2)
-		{
-			// property value
+			// read property values
 			
 			Assert(current_component_element != nullptr);
 			Assert(current_property_element != nullptr);
 			
-			extractLinesGivenIndentationLevel(lines, line_index, 2, current_property_element->value_lines, true);
+			line_reader.push_indent();
+			line_reader.push_indent();
+			{
+				const char * value_line;
+				
+				while ((value_line = line_reader.get_next_line(false)))
+					current_property_element->value_lines.push_back(value_line);
+			}
+			line_reader.push_indent();
+			line_reader.push_indent();
 		}
 	}
 	
@@ -256,7 +221,9 @@ bool loadTemplateFromFile(const char * filename, Template & t)
 		return false;
 	}
 	
-	if (!parseTemplateFromLines(lines, filename, t))
+	LineReader line_reader(lines, 0, 0);
+	
+	if (!parseTemplateFromLines(line_reader, filename, t))
 	{
 		LOG_ERR("failed to parse template from lines", 0);
 		return false;

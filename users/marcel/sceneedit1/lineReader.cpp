@@ -1,4 +1,19 @@
 #include "lineReader.h"
+#include <string.h>
+
+static bool isEmptyLineOrComment(const char * line)
+{
+	for (int i = 0; line[i] != 0; ++i)
+	{
+		if (line[i] == '#')
+			return true;
+		
+		if (!isspace(line[i]))
+			return false;
+	}
+	
+	return true;
+}
 
 static int calculateIndentationLevel(const char * line) // todo : add helper functions for dealing with lines
 {
@@ -20,7 +35,7 @@ LineReader::LineReader(
 {
 }
 
-const char * LineReader::get_next_line()
+const char * LineReader::get_next_line(const bool skipEmptyLines)
 {
 	// at end? return nullptr
 	
@@ -40,5 +55,10 @@ const char * LineReader::get_next_line()
 	
 	line_index++;
 	
-	return line + indentation_level;
+	const char * result = line + indentation_level;
+	
+	if (skipEmptyLines && isEmptyLineOrComment(result))
+		return get_next_line(skipEmptyLines);
+	else
+		return result;
 }

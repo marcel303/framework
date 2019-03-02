@@ -1,3 +1,4 @@
+#include "lineReader.h"
 #include "Log.h"
 #include "scene.h"
 #include "scene_fromText.h"
@@ -175,7 +176,9 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 				
 				Template t;
 				
-				if (!parseTemplateFromLines(template_lines, name, t))
+				LineReader template_line_reader(template_lines, 0, 0); // todo : use parent line reader
+				
+				if (!parseTemplateFromLines(template_line_reader, name, t))
 				{
 					LOG_ERR("failed to parse template", 0);
 					return false;
@@ -243,7 +246,9 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 				
 				Template t;
 				
-				if (!parseTemplateFromLines(entity_lines, nullptr, t))
+				LineReader entity_line_reader(entity_lines, 0, 0); // todo : use parent line reader
+				
+				if (!parseTemplateFromLines(entity_line_reader, nullptr, t))
 				{
 					LOG_ERR("failed to parse template (entity)", 0);
 					return false;

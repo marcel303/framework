@@ -840,10 +840,9 @@ bool object_fromlines_recursive(
 		
 		const char * line;
 		
-		while ((line = line_reader.get_next_line()) != nullptr)
+		while ((line = line_reader.get_next_line(true)) != nullptr)
 		{
-			if (isEmptyLineOrComment(line))
-				continue;
+			Assert(!isEmptyLineOrComment(line));
 			
 			// determine the structured member name
 			
@@ -883,7 +882,7 @@ bool object_fromlines_recursive(
 	}
 	else
 	{
-		const char * line = line_reader.get_next_line();
+		const char * line = line_reader.get_next_line(false);
 		
 		AssertMsg(line != nullptr, "got empty line for plain type", 0);
 		
