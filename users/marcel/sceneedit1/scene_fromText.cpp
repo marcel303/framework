@@ -112,218 +112,185 @@ static void extractLinesGivenIndentationLevel(const std::vector<std::string> & l
 
 bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene)
 {
-	int current_level = -1;
-	
 	std::map<std::string, Template> templates;
 	
 	std::map<std::string, Template> entities;
 	
-	for (size_t i = 0; i < lines.size(); )
+	LineReader line_reader(lines, 0, 0);
+	
+	char * line; // fixme : make const char
+	
+	while ((line = (char*)line_reader.get_next_line(true)))
 	{
-		std::string & line = lines[i];
-		
-		// check for empty lines and skip them
-		
-		if (isEmptyLineOrComment(line.c_str()))
-		{
-			i++;
-			continue;
-		}
-		
-		const int new_level = calculateIndentationLevel(line.c_str());
-		
-		if (new_level > current_level + 1)
+		if (line[0] == '\t')
 		{
 			// only one level of identation may be added per line
 			
-			LOG_ERR("syntax error", 0);
+			LOG_ERR("more than one level of identation added one line %d", line_reader.line_index);
 			return false;
 		}
 		
-		current_level = new_level;
-		
-		char * text = (char*)line.c_str() + current_level;
-		
-		if (current_level == 0)
+		const char * word;
+
+		if (!eat_word_v2(line, word))
 		{
-			const char * word;
-	
-			if (!eat_word_v2(text, word))
+			LOG_ERR("failed to eat word", 0);
+			return false;
+		}
+		
+		if (match_text(word, "template"))
+		{
+			const char * name;
+			
+			if (!eat_word_v2(line, name))
 			{
-				LOG_ERR("failed to eat word", 0);
+				LOG_ERR("missing template name", 0);
 				return false;
 			}
 			
-			if (match_text(word, "template"))
+			// parse the template
+			
+			Template t;
+			
+			line_reader.push_indent();
 			{
-				const char * name;
-				
-				if (!eat_word_v2(text, name))
-				{
-					LOG_ERR("missing template name", 0);
-					return false;
-				}
-				
-				++i;
-				
-				// extract template lines, parse it, and store it (by name) in a map
-				
-				std::vector<std::string> template_lines;
-				
-				extractLinesGivenIndentationLevel(lines, i, current_level + 1, template_lines, true);
-				
-				// parse the template
-				
-				Template t;
-				
-				LineReader template_line_reader(template_lines, 0, 0); // todo : use parent line reader
-				
-				if (!parseTemplateFromLines(template_line_reader, name, t))
+				if (!parseTemplateFromLines(line_reader, name, t))
 				{
 					LOG_ERR("failed to parse template", 0);
+					line_reader.pop_indent();
 					return false;
 				}
-				
-				// recursively apply overlays
-				
-				struct FetchContext
-				{
-					std::map<std::string, Template> * templates;
-				};
-				
-				auto fetchTemplate = [](const char * name, void * user_data, Template & out_template) -> bool
-				{
-					const FetchContext * context = (FetchContext*)user_data;
-					
-					auto template_itr = context->templates->find(name);
-					
-					if (template_itr != context->templates->end())
-					{
-						out_template = template_itr->second;
-						
-						return true;
-					}
-					else
-					{
-						return loadTemplateFromFile(name, out_template);
-					}
-				};
-				
-				FetchContext context;
-				context.templates = &templates;
-				
-				if (!applyTemplateOverlaysWithCallback(name, t, t, true, fetchTemplate, &context))
-				{
-					LOG_ERR("failed to parse template", 0);
-					return false;
-				}
-				
-				dumpTemplateToLog(t);
-				
-				// store it (by name) in a map for future reference
-				
-				templates.insert({ name, t });
 			}
-			else if (match_text(word, "entity"))
+			line_reader.pop_indent();
+			
+			// recursively apply overlays
+			
+			struct FetchContext
 			{
-				const char * name;
+				std::map<std::string, Template> * templates;
+			};
+			
+			auto fetchTemplate = [](const char * name, void * user_data, Template & out_template) -> bool
+			{
+				const FetchContext * context = (FetchContext*)user_data;
 				
-				if (!eat_word_v2(text, name))
+				auto template_itr = context->templates->find(name);
+				
+				if (template_itr != context->templates->end())
 				{
-					LOG_ERR("missing entity name", 0);
-					return false;
-				}
-				
-				++i;
-				
-				// extract template lines and parse it
-				
-				std::vector<std::string> entity_lines;
-				
-				extractLinesGivenIndentationLevel(lines, i, current_level + 1, entity_lines, true);
-				
-				// parse the template
-				
-				Template t;
-				
-				LineReader entity_line_reader(entity_lines, 0, 0); // todo : use parent line reader
-				
-				if (!parseTemplateFromLines(entity_line_reader, nullptr, t))
-				{
-					LOG_ERR("failed to parse template (entity)", 0);
-					return false;
-				}
-				
-				// recursively apply overlays
-				
-				struct FetchContext
-				{
-					std::map<std::string, Template> * templates;
-				};
-				
-				auto fetchTemplate = [](const char * name, void * user_data, Template & out_template) -> bool
-				{
-					const FetchContext * context = (FetchContext*)user_data;
+					out_template = template_itr->second;
 					
-					auto template_itr = context->templates->find(name);
-					
-					if (template_itr != context->templates->end())
-					{
-						out_template = template_itr->second;
-						
-						return true;
-					}
-					else
-					{
-						return loadTemplateFromFile(name, out_template);
-					}
-				};
-				
-				FetchContext context;
-				context.templates = &templates;
-				
-				if (!applyTemplateOverlaysWithCallback(name, t, t, true, fetchTemplate, &context))
-				{
-					LOG_ERR("failed to parse template (entity)", 0);
-					return false;
+					return true;
 				}
-				
-				dumpTemplateToLog(t);
-				
-				// check if an entity with the same name exists already
-				
-				if (entities.count(name) != 0)
+				else
 				{
-					LOG_ERR("entity with name '%s' already exists", name);
-					return false;
+					return loadTemplateFromFile(name, out_template);
 				}
-				
-				// add the entity to the map
-				
-				entities.insert({ name, t });
-			}
-			else if (match_text(word, "scene"))
+			};
+			
+			FetchContext context;
+			context.templates = &templates;
+			
+			if (!applyTemplateOverlaysWithCallback(name, t, t, true, fetchTemplate, &context))
 			{
-				++i;
-				
-				// extract scene hierarchy and parse it
-				
-				std::vector<std::string> scene_lines;
-				
-				extractLinesGivenIndentationLevel(lines, i, current_level + 1, scene_lines, true);
-				
-				if (!parseSceneObjectFromLines(typeDB, scene_lines, out_scene, entities))
-					return false;
-			}
-			else
-			{
-				LOG_ERR("syntax error: %s", line.c_str());
+				LOG_ERR("failed to parse template", 0);
 				return false;
 			}
+			
+			dumpTemplateToLog(t);
+			
+			// store it (by name) in a map for future reference
+			
+			templates.insert({ name, t });
+		}
+		else if (match_text(word, "entity"))
+		{
+			const char * name;
+			
+			if (!eat_word_v2(line, name))
+			{
+				LOG_ERR("missing entity name", 0);
+				return false;
+			}
+			
+			// parse the template
+			
+			Template t;
+			
+			line_reader.push_indent();
+			{
+				if (!parseTemplateFromLines(line_reader, nullptr, t))
+				{
+					LOG_ERR("failed to parse template (entity)", 0);
+					line_reader.pop_indent();
+					return false;
+				}
+			}
+			line_reader.pop_indent();
+			
+			// recursively apply overlays
+			
+			struct FetchContext
+			{
+				std::map<std::string, Template> * templates;
+			};
+			
+			auto fetchTemplate = [](const char * name, void * user_data, Template & out_template) -> bool
+			{
+				const FetchContext * context = (FetchContext*)user_data;
+				
+				auto template_itr = context->templates->find(name);
+				
+				if (template_itr != context->templates->end())
+				{
+					out_template = template_itr->second;
+					
+					return true;
+				}
+				else
+				{
+					return loadTemplateFromFile(name, out_template);
+				}
+			};
+			
+			FetchContext context;
+			context.templates = &templates;
+			
+			if (!applyTemplateOverlaysWithCallback(name, t, t, true, fetchTemplate, &context))
+			{
+				LOG_ERR("failed to parse template (entity)", 0);
+				return false;
+			}
+			
+			dumpTemplateToLog(t);
+			
+			// check if an entity with the same name exists already
+			
+			if (entities.count(name) != 0)
+			{
+				LOG_ERR("entity with name '%s' already exists", name);
+				return false;
+			}
+			
+			// add the entity to the map
+			
+			entities.insert({ name, t });
+		}
+		else if (match_text(word, "scene"))
+		{
+			line_reader.push_indent();
+			{
+				if (!parseSceneObjectFromLines(typeDB, line_reader, out_scene, entities))
+				{
+					line_reader.pop_indent();
+					return false;
+				}
+			}
+			line_reader.pop_indent();
 		}
 		else
 		{
-			LOG_ERR("syntax error: %s", line.c_str());
+			LOG_ERR("syntax error: %s", line);
 			return false;
 		}
 	}
@@ -331,66 +298,44 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 	return true;
 }
 
-bool parseSceneObjectFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates)
+bool parseSceneObjectFromLines(const TypeDB & typeDB, LineReader & line_reader, Scene & out_scene, std::map<std::string, Template> & templates)
 {
-	int current_level = -1;
+	char * line; // fixme : use const char
 	
-	for (size_t i = 0; i < lines.size(); )
+	while ((line = (char*)line_reader.get_next_line(true)))
 	{
-		char * line = (char*)lines[i].c_str();
-		
-		if (isEmptyLineOrComment(line))
-		{
-			++i;
-			continue;
-		}
-		
-		//
-		
-		const int new_level = calculateIndentationLevel(line);
-		
-		if (new_level > current_level + 1)
+		if (line[0] == '\t')
 		{
 			// only one level of identation may be added per line
 			
-			LOG_ERR("syntax error", 0);
+			LOG_ERR("more than one level of identation added one line %d", line_reader.line_index);
 			return false;
 		}
 		
-		current_level = new_level;
-		
 		//
 		
-		if (current_level == 0)
-		{
-			const char * word;
-			
-			if (!eat_word_v2(line, word))
-			{
-				LOG_ERR("failed to eat word", 0);
-				return false;
-			}
-			
-			if (match_text(word, "nodes"))
-			{
-				++i;
-				
-				std::vector<std::string> nodes_lines;
+		const char * word;
 		
-				extractLinesGivenIndentationLevel(lines, i, current_level + 1, nodes_lines, true);
-				
-				if (!parseSceneObjectStructureFromLines(typeDB, nodes_lines, out_scene, templates))
+	// fixme : destructive operation!
+	
+		if (!eat_word_v2(line, word))
+		{
+			LOG_ERR("failed to eat word", 0);
+			return false;
+		}
+		
+		if (match_text(word, "nodes"))
+		{
+			line_reader.push_indent();
+			{
+				if (!parseSceneObjectStructureFromLines(typeDB, line_reader, out_scene, templates))
 					return false;
 			}
-			else
-			{
-				LOG_ERR("syntax error", 0);
-				return false;
-			}
+			line_reader.pop_indent();
 		}
 		else
 		{
-			LOG_ERR("syntax error", 0);
+			LOG_ERR("syntax error on line %d", line_reader.line_index);
 			return false;
 		}
 	}
@@ -398,35 +343,29 @@ bool parseSceneObjectFromLines(const TypeDB & typeDB, std::vector<std::string> &
 	return true;
 }
 
-bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene, std::map<std::string, Template> & templates)
+bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, LineReader & line_reader, Scene & out_scene, std::map<std::string, Template> & templates)
 {
-	int current_level = -1;
-	
 	std::vector<SceneNode*> node_stack;
 	
 	node_stack.push_back(&out_scene.getRootNode());
 	
-	for (size_t i = 0; i < lines.size(); )
+	char * line; // fixme : make const char
+	
+	int current_level = -1;
+	
+	while ((line = (char*)line_reader.get_next_line(true)))
 	{
-		char * line = (char*)lines[i].c_str();
-		
-		if (isEmptyLineOrComment(line))
-		{
-			++i;
-			continue;
-		}
-		
-		//
-		
 		const int new_level = calculateIndentationLevel(line);
 		
 		if (new_level > current_level + 1)
 		{
 			// only one level of identation may be added per line
 			
-			LOG_ERR("syntax error", 0);
+			LOG_ERR("more than one level of identation added one line %d", line_reader.line_index);
 			return false;
 		}
+		
+		//
 		
 		while (current_level >= new_level)
 		{
@@ -436,6 +375,7 @@ bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, std::vector<std::
 		}
 		
 		current_level = new_level;
+
 		
 		//
 		
@@ -446,8 +386,6 @@ bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, std::vector<std::
 			LOG_ERR("failed to eat word", 0);
 			return false;
 		}
-		
-		++i;
 		
 		auto template_itr = templates.find(name);
 		
