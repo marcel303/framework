@@ -28,7 +28,7 @@ struct NoiseModulator
 	float noiseFrequency_time = 20.f;
 	
 	float strength = 10.f;
-	float falloff_strength = 10.f;
+	float falloff_strength = 100.f;
 	
 	float time_phase = 0.f;
 	

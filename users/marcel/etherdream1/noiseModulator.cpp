@@ -55,7 +55,8 @@ float NoiseModulator::calculateForce(const float in_x, const float in_y) const
 	//else if (mode == kNoiseModulatorMode_Random)
 	//	valueAtX = nap::math::random<float>(-1.f, +1.f);
 	//else
-		valueAtX = sinf((in_x * noiseFrequency_spat + time_phase) * 2.f * float(M_PI));
+		valueAtX = sinf(in_x * noiseFrequency_spat * 2.f * float(M_PI));
+		valueAtX += sinf(time_phase * 2.f * float(M_PI));
 	
 	if (multiply_strength_with_velocity)
 		valueAtX *= velocity;

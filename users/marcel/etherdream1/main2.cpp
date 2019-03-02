@@ -980,7 +980,7 @@ int main(int argc, char * argv[])
 							float mass = strings[i].mass;
 							float tension = strings[i].tension;
 							ImGui::SliderFloat("String mass", &mass, 0.f, 10.f, "%.4f", 2.f);
-							ImGui::SliderFloat("String tension", &tension, 0.f, 1000.f, "%.4f", 2.f);
+							ImGui::SliderFloat("String tension", &tension, 0.f, 100000.f, "%.4f", 2.f);
 							strings[i].mass = mass;
 							strings[i].tension = tension;
 						}
