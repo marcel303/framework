@@ -35,6 +35,35 @@ static int calculateIndentationLevel(const char * line)
 	return result;
 }
 
+static void extractLinesGivenIndentationLevel(const std::vector<std::string> & lines, size_t & index, const int level, std::vector<std::string> & out_lines, const bool subtract_indentation)
+{
+	for (;;)
+	{
+		if (index == lines.size())
+			break;
+		
+		const std::string & line = lines[index];
+		
+		if (isEmptyLineOrComment(line.c_str()))
+		{
+			++index;
+			continue;
+		}
+		
+		const int current_level = calculateIndentationLevel(line.c_str());
+		
+		if (current_level < level)
+			break;
+		
+		if (subtract_indentation)
+			out_lines.push_back(line.substr(level));
+		else
+			out_lines.push_back(line);
+		
+		++index;
+	}
+}
+
 bool parseTemplateFromLines(const std::vector<std::string> & lines, const char * name, Template & out_template)
 {
 	TemplateComponent * current_component_element = nullptr;
@@ -47,12 +76,18 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, const char *
 	
 	int current_level = -1;
 	
-	for (auto & line : lines)
+	for (size_t line_index = 0; line_index < lines.size(); )
 	{
+		auto & line = lines[line_index];
+		
 		// check for empty lines and skip them
 		
 		if (isEmptyLineOrComment(line.c_str()))
+		{
+			++line_index; // todo : increment directly after capturing line above
+			
 			continue;
+		}
 		
 		const int new_level = calculateIndentationLevel(line.c_str());
 		
@@ -97,6 +132,8 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, const char *
 				}
 				
 				out_template.base = base;
+				
+				++line_index;
 				
 				continue;
 			}
@@ -162,6 +199,8 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, const char *
 			
 			current_component_element->type_name = full_name;
 			current_component_element->id = id;
+			
+			++line_index;
 		}
 		else if (current_level == 1)
 		{
@@ -187,6 +226,8 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, const char *
 		// todo : add support for adding a value directly after the property name
 		
 			current_property_element->name = propertyName;
+			
+			++line_index;
 		}
 		else if (current_level == 2)
 		{
@@ -195,9 +236,7 @@ bool parseTemplateFromLines(const std::vector<std::string> & lines, const char *
 			Assert(current_component_element != nullptr);
 			Assert(current_property_element != nullptr);
 			
-			const char * propertyValue = text;
-			
-			current_property_element->value = propertyValue;
+			extractLinesGivenIndentationLevel(lines, line_index, 2, current_property_element->value_lines, true);
 		}
 	}
 	
@@ -289,7 +328,10 @@ bool overlayTemplate(Template & target, const Template & overlay, const bool all
 				{
 					// property already exists. overlay value
 					
-					target_property->value = overlay_property.value;
+				// todo : add a more intelligent overlay, where individual structured members are overlaid
+				// note : this will be A LOT of effort to make work. also, vectors will complicate things a lot
+				//        we'll probably need to (temporarily) assign unique ids to each member
+					target_property->value_lines = overlay_property.value_lines;
 				}
 			}
 		}
@@ -422,11 +464,12 @@ bool instantiateComponentsFromTemplate(const TypeDB & typeDB, const Template & t
 				return false;
 			}
 			
-			if (member_fromtext(g_typeDB, member, component, property_template.value.c_str()) == false)
+			size_t line_index = 0;
+			if (member_fromlines_recursive(g_typeDB, member, component, property_template.value_lines, line_index) == false)
 			{
-				LOG_ERR("failed to deserialize property from text: property=%s, text=%s",
-					property_template.name.c_str(),
-					property_template.value.c_str());
+				LOG_ERR("failed to deserialize property from text: property=%s, lines=", property_template.name.c_str());
+				for (auto & line : property_template.value_lines)
+					LOG_ERR("%s", line.c_str());
 				return false;
 			}
 		}
@@ -447,11 +490,12 @@ void dumpTemplateToLog(const Template & t)
 		
 		for (auto & property : component.properties)
 		{
-			LOG_DBG("%30s : %20s : %20s = %s",
+			LOG_DBG("%30s : %20s : %20s",
 				component.type_name.c_str(),
 				component.id.c_str(),
-				property.name.c_str(),
-				property.value.c_str());
+				property.name.c_str());
+			for (auto & line : property.value_lines)
+				LOG_DBG("\t%s", line.c_str());
 		}
 	}
 }

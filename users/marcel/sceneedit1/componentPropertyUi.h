@@ -26,4 +26,5 @@ bool doReflection_StructuredType(
 	const StructuredType & type,
 	void * object,
 	bool & isSet,
+	void * defaultObject,
 	void ** changedMemberObject); // note : since we can store only one pointer, changedMemberObject is the address of the first member that changed

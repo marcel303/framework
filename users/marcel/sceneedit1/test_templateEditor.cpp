@@ -63,7 +63,7 @@ static void createFallbackTemplateForComponent(const TypeDB & typeDB, const char
 		
 		template_property.name = member->name;
 		
-		if (!member_totext(typeDB, member, component, template_property.value))
+		if (!member_tolines_recursive(typeDB, componentType, component, member, template_property.value_lines, 0))
 		{
 		// fixme : this may trigger an error. let createFallbackTemplateForComponent return false in this case
 			LOG_ERR("failed to serialize component property to text", 0);
@@ -139,7 +139,8 @@ struct TemplateComponentInstance
 				{
 					if (templateProperty.name == member->name)
 					{
-						result &= member_fromtext(typeDB, member, component, templateProperty.value.c_str());
+						size_t line_index = 0;
+						result &= member_fromlines_recursive(typeDB, member, component, templateProperty.value_lines, line_index);
 						
 						propertyIsSet = true;
 						
@@ -289,6 +290,8 @@ struct TemplateInstance
 
 bool saveTemplateInstanceToString(const TypeDB & typeDB, const std::vector<TemplateInstance> & instances, const size_t instanceIndex, std::string & out_text)
 {
+	bool result = true;
+	
 	auto & instance = instances[instanceIndex];
 	
 	std::ostringstream out;
@@ -320,12 +323,12 @@ bool saveTemplateInstanceToString(const TypeDB & typeDB, const std::vector<Templ
 			{
 				if (component.propertyIsSetArray[property_itr])
 				{
-					std::string value;
-					
-					member_totext(typeDB, member, component.component, value);
+					std::vector<std::string> lines;
+					result &= member_tolines_recursive(typeDB, member, component.component, lines, 0);
 					
 					out << "\t" << member->name << "\n";
-					out << "\t\t" << value << "\n";
+					for (auto & line : lines)
+						out << "\t\t" << line << "\n";
 				}
 			}
 		}
@@ -333,7 +336,7 @@ bool saveTemplateInstanceToString(const TypeDB & typeDB, const std::vector<Templ
 	
 	out_text = out.str();
 	
-	return true;
+	return result;
 }
 
 bool saveTemplateInstanceToFile(const TypeDB & typeDB, const std::vector<TemplateInstance> & instances, const size_t instanceIndex, const char * filename)
@@ -620,6 +623,15 @@ bool test_templateEditor()
 								}
 							}
 							
+						#if 0
+						// todo : remove doReflection_StructuredType test code
+							{
+								bool isSet = true;
+								auto * base_component = template_instances[0].findComponentInstance(component_instance.componentType->typeName, component_instance.id.c_str());
+								
+								doReflection_StructuredType(typeDB, *component_instance.componentType, component_instance.component, isSet, nullptr, nullptr);
+							}
+						#else
 							// iterate over all of the components' properties
 							
 							size_t property_itr = 0;
@@ -648,6 +660,7 @@ bool test_templateEditor()
 								
 								component_instance.propertyIsSetArray[property_itr] = propertyIsSet;
 							}
+						#endif
 						}
 						ImGui::PopID();
 					}

@@ -7,6 +7,9 @@
 #include "Vec3.h"
 #include "Vec4.h"
 
+#include "componentJson.h"
+#include "json.hpp" // todo : add a json replacement for structured data
+
 bool doComponentProperty(
 	const TypeDB & typeDB,
 	const Member & member,
@@ -47,7 +50,7 @@ bool doComponentProperty(
 			// note : process these as a group, so the context menu below works when right-clicking on any item inside the structure
 			ImGui::BeginGroup();
 			{
-				if (doReflection_StructuredType(typeDB, *structured_type, member_object, isSet, nullptr))
+				if (doReflection_StructuredType(typeDB, *structured_type, member_object, isSet, default_member_object, nullptr))
 				{
 					if (signalChanges)
 						component->propertyChanged(member_object);
@@ -84,9 +87,19 @@ bool doComponentProperty(
 			
 			if (defaultComponent != nullptr)
 			{
+			#if 0
 				std::string text;
 				member_totext(typeDB, &member, defaultComponent, text);
 				member_fromtext(typeDB, &member, component, text.c_str());
+			#else
+				// todo : replace with more efficient (de)serialization functions
+				nlohmann::json json;
+				ComponentJson json_wrapped(json);
+				const bool result =
+					member_tojson_recursive(typeDB, member_type, member_object, json_wrapped) &&
+					member_fromjson_recursive(typeDB, member_type, member_object, json_wrapped);
+				Assert(result);
+			#endif
 			}
 		}
 		
@@ -177,7 +190,7 @@ bool doReflection_PlainType(
 			
 			if (isAngle)
 			{
-				if (ImGui::SliderAngle(member.name, &value))
+				if (ImGui::SliderFloat(member.name, &value, -360.f, +360.f, "%.0f deg", 1.0f))
 				{
 					result = true;
 				}
@@ -310,7 +323,7 @@ bool doReflection_PlainType(
 	return result;
 }
 
-static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type, void * object, const Member * in_member, bool & isSet, void ** changedMemberObject)
+static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type, void * object, const Member * in_member, bool & isSet, void * default_object, void ** changedMemberObject)
 {
 	bool result = false;
 	
@@ -360,7 +373,7 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 								{
 									auto * vector_object = member_interface->vector_access(object, i);
 									
-									result |= doReflectionMember_traverse(typeDB, *vector_type, vector_object, member, isSet, changedMemberObject);
+									result |= doReflectionMember_traverse(typeDB, *vector_type, vector_object, member, isSet, nullptr, changedMemberObject);
 									
 									if (ImGui::BeginPopupContextItem("Vector"))
 									{
@@ -420,7 +433,12 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 					Assert(member_type != nullptr);
 					if (member_type != nullptr)
 					{
-						result |= doReflectionMember_traverse(typeDB, *member_type, member_object, member, isSet, changedMemberObject);
+						auto * default_member_object =
+							default_object == nullptr
+							? nullptr
+							: member_scalar->scalar_access(default_object);
+				
+						result |= doReflectionMember_traverse(typeDB, *member_type, member_object, member, isSet, default_member_object, changedMemberObject);
 					}
 				}
 			}
@@ -438,7 +456,7 @@ static bool doReflectionMember_traverse(const TypeDB & typeDB, const Type & type
 		
 		auto & plain_type = static_cast<const PlainType&>(type);
 		
-		if (doReflection_PlainType(*in_member, plain_type, object, isSet, nullptr))
+		if (doReflection_PlainType(*in_member, plain_type, object, isSet, default_object))
 		{
 			result = true;
 			
@@ -455,9 +473,10 @@ bool doReflection_StructuredType(
 	const StructuredType & type,
 	void * object,
 	bool & isSet,
+	void * defaultObject,
 	void ** changedMemberObject)
 {
 	Assert(changedMemberObject == nullptr || *changedMemberObject == nullptr);
 	
-	return doReflectionMember_traverse(typeDB, type, object, nullptr, isSet, changedMemberObject);
+	return doReflectionMember_traverse(typeDB, type, object, nullptr, isSet, defaultObject, changedMemberObject);
 }

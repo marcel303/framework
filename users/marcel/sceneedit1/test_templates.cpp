@@ -14,11 +14,12 @@ static void dump_template(const Template & t)
 		
 		for (auto & property : component.properties)
 		{
-			logInfo("%30s : %20s : %20s = %s",
+			logInfo("%30s : %20s : %20s =",
 				component.type_name.c_str(),
 				component.id.c_str(),
-				property.name.c_str(),
-				property.value.c_str());
+				property.name.c_str());
+			for (auto & value_line : property.value_lines)
+				logDebug("\t%s", value_line.c_str());
 		}
 	}
 }

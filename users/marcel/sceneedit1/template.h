@@ -9,7 +9,7 @@ struct TypeDB;
 struct TemplateComponentProperty
 {
 	std::string name;
-	std::string value; // todo : make this a list of values. with corrected indentation. leave it the the property type to deserialize itself
+	std::vector<std::string> value_lines;
 };
 
 struct TemplateComponent

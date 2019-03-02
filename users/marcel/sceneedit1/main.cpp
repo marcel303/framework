@@ -307,7 +307,7 @@ struct SceneEditor
 					bool isSet = true;
 					void * changedMemberObject = nullptr;
 					
-					if (doReflection_StructuredType(g_typeDB, *componentType, component, isSet, &changedMemberObject))
+					if (doReflection_StructuredType(g_typeDB, *componentType, component, isSet, nullptr, &changedMemberObject))
 					{
 						// signal component one of its properties has changed
 						component->propertyChanged(changedMemberObject);
@@ -916,7 +916,7 @@ int main(int argc, char * argv[])
 	return 0;
 #endif
 
-#if 0
+#if 1
 	if (!test_templateEditor())
 		logError("failure!");
 	return 0;
