@@ -51,21 +51,24 @@ const char * LineReader::get_next_line(const bool skipEmptyLines)
 	
 	const char * line = lines[line_index].c_str();
 	
-	// calculate indentation level. less than ours? return nullptr
-	
-	const size_t next_level = calculateIndentationLevel(line);
-	
-	if (next_level < indentation_level)
-		return nullptr;
-	
-	// return line with appropriate offset to compensate for indentation
-	
-	line_index++;
-	
-	const char * result = line + indentation_level;
-	
-	if (skipEmptyLines && isEmptyLineOrComment(result))
+	if (skipEmptyLines && isEmptyLineOrComment(line))
+	{
+		line_index++;
 		return get_next_line(skipEmptyLines);
+	}
 	else
-		return result;
+	{
+		// calculate indentation level. less than ours? return nullptr
+		
+		const size_t next_level = calculateIndentationLevel(line);
+		
+		if (next_level < indentation_level)
+			return nullptr;
+		
+		// return line with appropriate offset to compensate for indentation
+		
+		line_index++;
+		
+		return line + indentation_level;
+	}
 }
