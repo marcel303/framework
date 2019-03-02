@@ -13,6 +13,7 @@ struct LineReader
 		const std::vector<std::string> & in_lines,
 		const int in_line_index,
 		const int in_indentation_level);
+	~LineReader();
 	
 	const char * get_next_line(const bool skipEmptyLines);
 	

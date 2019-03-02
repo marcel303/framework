@@ -1,4 +1,5 @@
 #include "lineReader.h"
+#include "Log.h"
 #include <string.h>
 
 static bool isEmptyLineOrComment(const char * line)
@@ -33,6 +34,12 @@ LineReader::LineReader(
 	, line_index(in_line_index)
 	, indentation_level(in_indentation_level)
 {
+}
+
+LineReader::~LineReader()
+{
+// todo : add a better way to detect push/pop mismatches and assert 
+	LOG_DBG("indentation level when line reader disposed: %d", indentation_level);
 }
 
 const char * LineReader::get_next_line(const bool skipEmptyLines)
