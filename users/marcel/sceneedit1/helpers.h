@@ -10,35 +10,7 @@ struct ComponentMgrBase;
 struct ComponentSet;
 struct ComponentTypeBase;
 
-struct LineReader
-{
-	const std::vector<std::string> & lines;
-	size_t line_index;
-	size_t indentation_level;
-	
-	LineReader(
-		const std::vector<std::string> & in_lines,
-		const size_t in_line_index,
-		const size_t in_indentation_level)
-		: lines(in_lines)
-		, line_index(in_line_index)
-		, indentation_level(in_indentation_level)
-	{
-	
-	}
-	
-	const char * get_next_line();
-	
-	void push_indent()
-	{
-		indentation_level++;
-	}
-	
-	void pop_indent()
-	{
-		indentation_level--;
-	}
-};
+struct LineReader;
 
 void registerBuiltinTypes();
 

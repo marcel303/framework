@@ -6,6 +6,7 @@
 #include "component.h"
 #include "componentType.h"
 #include "helpers.h"
+#include "lineReader.h"
 #include "template.h"
 
 #include <set>

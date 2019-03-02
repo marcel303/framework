@@ -1,6 +1,7 @@
 #include "component.h"
 #include "componentType.h"
 #include "helpers.h"
+#include "lineReader.h"
 #include "Log.h"
 
 #define DEFINE_COMPONENT_TYPES
@@ -827,45 +828,6 @@ static bool isEmptyLineOrComment(const char * line) // todo : add helper functio
 	return true;
 }
 
-static int calculateIndentationLevel(const char * line) // todo : add helper functions for dealing with lines
-{
-	int result = 0;
-	
-	while (line[result] == '\t')
-		result++;
-	
-	return result;
-}
-
-static void extractLinesGivenIndentationLevel(const std::vector<std::string> & lines, size_t & index, const int level, std::vector<std::string> & out_lines, const bool subtract_indentation) // todo : add helper functions for dealing with lines
-{
-	for (;;)
-	{
-		if (index == lines.size())
-			break;
-		
-		const std::string & line = lines[index];
-		
-		if (isEmptyLineOrComment(line.c_str()))
-		{
-			++index;
-			continue;
-		}
-		
-		const int current_level = calculateIndentationLevel(line.c_str());
-		
-		if (current_level < level)
-			break;
-		
-		if (subtract_indentation)
-			out_lines.push_back(line.substr(level));
-		else
-			out_lines.push_back(line);
-		
-		++index;
-	}
-}
-
 bool object_fromlines_recursive(
 	const TypeDB & typeDB, const Type * type, void * object,
 	LineReader & line_reader)
@@ -1053,31 +1015,6 @@ bool member_tolines_recursive(
 	}
 	
 	return result;
-}
-
-//
-
-const char * LineReader::get_next_line()
-{
-	// at end? return nullptr
-	
-	if (line_index == lines.size())
-		return nullptr;
-	
-	const char * line = lines[line_index].c_str();
-	
-	// calculate indentation level. less than ours? return nullptr
-	
-	const size_t next_level = calculateIndentationLevel(line);
-	
-	if (next_level < indentation_level)
-		return nullptr;
-	
-	// return line with appropriate offset to compensate for indentation
-	
-	line_index++;
-	
-	return line + indentation_level;
 }
 
 //

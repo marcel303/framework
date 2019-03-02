@@ -4,6 +4,7 @@
 #include "helpers.h"
 #include "imgui.h"
 #include "imgui-framework.h"
+#include "lineReader.h"
 #include "Log.h"
 #include "Path.h"
 #include "StringEx.h"
