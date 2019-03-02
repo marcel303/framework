@@ -18,8 +18,6 @@ struct SceneNode
 	
 	std::vector<int> childNodeIds;
 	
-	Mat4x4 objectToWorld = Mat4x4(true);
-	
 	ComponentSet components;
 	
 	bool initComponents();

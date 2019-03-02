@@ -2,6 +2,7 @@
 #include "Debugging.h"
 #include "Log.h"
 #include "scene.h"
+#include "sceneNodeComponent.h"
 #include "TextIO.h"
 
 #include "helpers.h" // g_componentTypes
@@ -84,7 +85,8 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 	node.id = j.value("id", -1);
 	node.displayName = j.value("displayName", "");
 	node.childNodeIds = j.value("children", std::vector<int>());
-
+	node.components.add(new SceneNodeComponent());
+	
 	auto components_json_itr = j.find("components");
 
 	if (components_json_itr != j.end())
@@ -143,6 +145,7 @@ Scene::Scene()
 	SceneNode & rootNode = *new SceneNode();
 	rootNode.id = allocNodeId();
 	rootNode.displayName = "root";
+	rootNode.components.add(new SceneNodeComponent());
 	
 	nodes[rootNode.id] = &rootNode;
 	

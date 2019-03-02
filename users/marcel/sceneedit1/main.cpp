@@ -11,6 +11,7 @@
 #include "imgui-framework.h"
 #include "scene.h"
 #include "scene_fromText.h"
+#include "sceneNodeComponent.h"
 #include "StringEx.h"
 #include "TextIO.h"
 
@@ -162,11 +163,14 @@ struct SceneEditor
 		{
 			auto & node = *nodeItr.second;
 			
-			auto modelComponent = node.components.find<ModelComponent>();
+			auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
+			auto * modelComponent = node.components.find<ModelComponent>();
 			
-			if (modelComponent != nullptr)
+			Assert(sceneNodeComp != nullptr);
+			
+			if (sceneNodeComp != nullptr && modelComponent != nullptr)
 			{
-				auto & objectToWorld = node.objectToWorld;
+				auto & objectToWorld = sceneNodeComp->objectToWorld;
 				auto worldToObject = objectToWorld.CalcInv();
 				
 				const Vec3 rayOrigin_object = worldToObject.Mul4(rayOrigin);
@@ -377,6 +381,9 @@ struct SceneEditor
 					childNode.id = scene.allocNodeId();
 					childNode.parentId = nodeId;
 					childNode.displayName = String::FormatC("Node %d", childNode.id);
+					childNode.components.add(new SceneNodeComponent());
+					childNode.initComponents();
+					
 					scene.nodes[childNode.id] = &childNode;
 					
 					scene.nodes[nodeId]->childNodeIds.push_back(childNode.id);
@@ -422,6 +429,7 @@ struct SceneEditor
 		node.id = scene.allocNodeId();
 		node.parentId = parentId;
 		node.displayName = String::FormatC("Node %d", node.id);
+		node.components.add(new SceneNodeComponent());
 		
 		auto modelComp = s_modelComponentMgr.createComponent(nullptr);
 		
@@ -472,6 +480,7 @@ struct SceneEditor
 		node->id = scene.allocNodeId();
 		node->parentId = parentId;
 		node->displayName = String::FormatC("Node %d", node->id);
+		node->components.add(new SceneNodeComponent());
 		
 		bool init_ok = true;
 		
@@ -617,9 +626,15 @@ struct SceneEditor
 								{
 									auto & parentNode = *parentNode_itr->second;
 									
-									const Vec3 groundPosition_parent = parentNode.objectToWorld.CalcInv().Mul4(groundPosition);
+									auto * sceneNodeComp = parentNode.components.find<SceneNodeComponent>();
 									
-									addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
+									Assert(sceneNodeComp != nullptr);
+									if (sceneNodeComp != nullptr)
+									{
+										const Vec3 groundPosition_parent = sceneNodeComp->objectToWorld.CalcInv().Mul4(groundPosition);
+										
+										addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
+									}
 								}
 							}
 						}
@@ -916,7 +931,7 @@ int main(int argc, char * argv[])
 	return 0;
 #endif
 
-#if 1
+#if 0
 	if (!test_templateEditor())
 		logError("failure!");
 	return 0;
@@ -1002,7 +1017,7 @@ int main(int argc, char * argv[])
 			// load scene description text file
 	
 			changeDirectory("textfiles"); // todo : use a nicer solution to handling relative paths
-
+			
 			std::vector<std::string> lines;
 			TextIO::LineEndings lineEndings;
 			

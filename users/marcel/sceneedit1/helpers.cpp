@@ -8,6 +8,7 @@
 #include "cameraComponent.h"
 #include "modelComponent.h"
 #include "parameterComponent.h"
+#include "sceneNodeComponent.h"
 #include "transformComponent.h"
 #include "vfxgraphComponent.h"
 
@@ -20,6 +21,7 @@ extern TransformComponentMgr s_transformComponentMgr;
 RotateTransformComponentMgr s_rotateTransformComponentMgr;
 extern ModelComponentMgr s_modelComponentMgr;
 ParameterComponentMgr s_parameterComponentMgr;
+SceneNodeComponentMgr s_sceneNodeComponentMgr;
 //VfxgraphComponentMgr s_vfxgraphComponentMgr;
 
 TypeDB g_typeDB;
@@ -69,6 +71,7 @@ void registerComponentTypes()
 	registerComponentType(new RotateTransformComponentType(), &s_rotateTransformComponentMgr);
 	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);
 	registerComponentType(new ParameterComponentType(), &s_parameterComponentMgr);
+	registerComponentType(new SceneNodeComponentType(), &s_sceneNodeComponentMgr);
 	//registerComponentType(new VfxgraphComponentType(), &s_vfxgraphComponentMgr);
 }
 

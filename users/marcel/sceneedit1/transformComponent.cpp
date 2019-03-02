@@ -1,12 +1,16 @@
 #include "Mat4x4.h"
 #include "Quat.h"
 #include "scene.h"
+#include "sceneNodeComponent.h"
 #include "transformComponent.h"
 #include <math.h>
 
 void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode & node, const Mat4x4 & globalTransform) const
 {
-	auto transformComp = node.components.find<TransformComponent>();
+	auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
+	auto * transformComp = node.components.find<TransformComponent>();
+	
+	Mat4x4 newGlobalTransform;
 	
 	if (transformComp != nullptr)
 	{
@@ -15,11 +19,16 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 
 		const Mat4x4 localTransform = Mat4x4(true).Translate(transformComp->position).Rotate(q).Scale(transformComp->scale);
 		
-		node.objectToWorld = globalTransform * localTransform;
+		newGlobalTransform = globalTransform * localTransform;
 	}
 	else
 	{
-		node.objectToWorld = globalTransform;
+		newGlobalTransform = globalTransform;
+	}
+	
+	if (sceneNodeComp != nullptr)
+	{
+		sceneNodeComp->objectToWorld = newGlobalTransform;
 	}
 	
 	for (auto & childNodeId : node.childNodeIds)
@@ -31,7 +40,7 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 		{
 			SceneNode & childNode = *childNodeItr->second;
 			
-			calculateTransformsTraverse(scene, childNode, node.objectToWorld);
+			calculateTransformsTraverse(scene, childNode, newGlobalTransform);
 		}
 	}
 }

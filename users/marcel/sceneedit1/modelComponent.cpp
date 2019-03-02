@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "modelComponent.h"
+#include "sceneNodeComponent.h"
 
 bool ModelComponent::init()
 {
@@ -58,20 +59,12 @@ void ModelComponent::draw(const Mat4x4 & objectToWorld) const
 
 void ModelComponentMgr::draw(const Scene & scene) const
 {
-#if 1
-	for (auto & node_itr : scene.nodes)
-	{
-		auto & node = node_itr.second;
-		
-		auto * modelComp = node->components.find<ModelComponent>();
-		
-		if (modelComp != nullptr)
-			modelComp->draw(node->objectToWorld);
-	}
-#else
 	for (auto * i = head; i != nullptr; i = i->next)
 	{
-		i->draw(i->_objectToWorld);
+		auto * sceneNodeComp = i->componentSet->find<SceneNodeComponent>();
+		
+		Assert(sceneNodeComp != nullptr);
+		if (sceneNodeComp != nullptr)
+			i->draw(sceneNodeComp->objectToWorld);
 	}
-#endif
 }

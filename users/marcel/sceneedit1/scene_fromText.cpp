@@ -2,6 +2,7 @@
 #include "Log.h"
 #include "scene.h"
 #include "scene_fromText.h"
+#include "sceneNodeComponent.h"
 #include <string.h>
 
 static bool isEmptyLineOrComment(const char * line)
@@ -197,7 +198,7 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 				return false;
 			}
 			
-			dumpTemplateToLog(t);
+			//dumpTemplateToLog(t);
 			
 			// store it (by name) in a map for future reference
 			
@@ -262,7 +263,7 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 				return false;
 			}
 			
-			dumpTemplateToLog(t);
+			//dumpTemplateToLog(t);
 			
 			// check if an entity with the same name exists already
 			
@@ -401,6 +402,7 @@ bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, LineReader & line
 		node->id = out_scene.allocNodeId();
 		node->parentId = node_stack.back()->id;
 		node->displayName = name;
+		node->components.add(new SceneNodeComponent());
 		
 		if (!instantiateComponentsFromTemplate(typeDB, t, node->components) || !node->initComponents())
 		{
