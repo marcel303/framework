@@ -12,30 +12,6 @@
 #include <set>
 #include <string.h>
 
-static bool isEmptyLineOrComment(const char * line)
-{
-	for (int i = 0; line[i] != 0; ++i)
-	{
-		if (line[i] == '#')
-			return true;
-		
-		if (!isspace(line[i]))
-			return false;
-	}
-	
-	return true;
-}
-
-static int calculateIndentationLevel(const char * line)
-{
-	int result = 0;
-	
-	while (line[result] == '\t')
-		result++;
-	
-	return result;
-}
-
 bool parseTemplateFromLines(LineReader & line_reader, const char * name, Template & out_template)
 {
 	if (name != nullptr)

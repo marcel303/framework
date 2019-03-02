@@ -5,20 +5,6 @@
 #include "sceneNodeComponent.h"
 #include <string.h>
 
-static bool isEmptyLineOrComment(const char * line)
-{
-	for (int i = 0; line[i] != 0; ++i)
-	{
-		if (line[i] == '#')
-			return true;
-		
-		if (!isspace(line[i]))
-			return false;
-	}
-	
-	return true;
-}
-
 static int calculateIndentationLevel(const char * line)
 {
 	int result = 0;
@@ -80,35 +66,6 @@ static bool eat_word_v2(char *& line, const char *& word)
 static bool match_text(const char * text, const char * other)
 {
 	return strcmp(text, other) == 0;
-}
-
-static void extractLinesGivenIndentationLevel(const std::vector<std::string> & lines, size_t & index, const int level, std::vector<std::string> & out_lines, const bool subtract_indentation)
-{
-	for (;;)
-	{
-		if (index == lines.size())
-			break;
-		
-		const std::string & line = lines[index];
-		
-		if (isEmptyLineOrComment(line.c_str()))
-		{
-			++index;
-			continue;
-		}
-		
-		const int current_level = calculateIndentationLevel(line.c_str());
-		
-		if (current_level < level)
-			break;
-		
-		if (subtract_indentation)
-			out_lines.push_back(line.substr(level));
-		else
-			out_lines.push_back(line);
-		
-		++index;
-	}
 }
 
 bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene)
