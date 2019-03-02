@@ -306,7 +306,7 @@ struct SceneEditor
 				Assert(componentType != nullptr);
 				if (componentType != nullptr)
 				{
-					ImGui::LabelText("Component", "%s", componentType->typeName);
+					ImGui::LabelText("", "%s", componentType->typeName);
 					
 					bool isSet = true;
 					void * changedMemberObject = nullptr;
@@ -324,29 +324,25 @@ struct SceneEditor
 	
 		if (editChildren)
 		{
-			ImGui::Indent();
+			for (auto & childNodeId : node.childNodeIds)
 			{
-				for (auto & childNodeId : node.childNodeIds)
-				{
-					auto childNodeItr = scene.nodes.find(childNodeId);
-					
-					Assert(childNodeItr != scene.nodes.end());
-					if (childNodeItr != scene.nodes.end())
-					{
-						ImGui::PushID(childNodeId);
-						
-						auto & childNode = *childNodeItr->second;
-						
-						if (ImGui::CollapsingHeader(childNode.displayName.c_str()))
-						{
-							editNodeListTraverse(childNodeId, editChildren);
-						}
+				auto childNodeItr = scene.nodes.find(childNodeId);
 				
-						ImGui::PopID();
+				Assert(childNodeItr != scene.nodes.end());
+				if (childNodeItr != scene.nodes.end())
+				{
+					auto * childNode = childNodeItr->second;
+					
+					if (ImGui::TreeNodeEx(childNode, ImGuiTreeNodeFlags_CollapsingHeader, "%s", childNode->displayName.c_str()))
+					{
+						ImGui::Indent();
+						editNodeListTraverse(childNodeId, editChildren);
+						ImGui::Unindent();
+						
+						ImGui::TreePop();
 					}
 				}
 			}
-			ImGui::Unindent();
 		}
 	}
 	

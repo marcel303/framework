@@ -99,6 +99,9 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 			const std::string typeName = component_json.value("typeName", "");
 			const std::string id = component_json.value("id", "");
 			
+			if (typeName == "SceneNodeComponent")
+				continue;
+				
 			if (typeName.empty())
 			{
 				LOG_WRN("empty type name", 0);
