@@ -402,9 +402,11 @@ bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, LineReader & line
 		node->id = out_scene.allocNodeId();
 		node->parentId = node_stack.back()->id;
 		node->displayName = name;
+		
 		node->components.add(new SceneNodeComponent());
 		
-		if (!instantiateComponentsFromTemplate(typeDB, t, node->components) || !node->initComponents())
+		if (!instantiateComponentsFromTemplate(typeDB, t, node->components) ||
+			!node->initComponents())
 		{
 			LOG_ERR("failed to instantiate components from template", 0);
 			

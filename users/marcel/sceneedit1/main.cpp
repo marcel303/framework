@@ -377,16 +377,26 @@ struct SceneEditor
 				
 				if (ImGui::MenuItem("Insert node"))
 				{
-					SceneNode & childNode = *new SceneNode();
-					childNode.id = scene.allocNodeId();
-					childNode.parentId = nodeId;
-					childNode.displayName = String::FormatC("Node %d", childNode.id);
-					childNode.components.add(new SceneNodeComponent());
-					childNode.initComponents();
+					SceneNode * childNode = new SceneNode();
+					childNode->id = scene.allocNodeId();
+					childNode->parentId = nodeId;
+					childNode->displayName = String::FormatC("Node %d", childNode->id);
 					
-					scene.nodes[childNode.id] = &childNode;
+					childNode->components.add(new SceneNodeComponent());
 					
-					scene.nodes[nodeId]->childNodeIds.push_back(childNode.id);
+					if (childNode->initComponents() == false)
+					{
+						childNode->freeComponents();
+						
+						delete childNode;
+						childNode = nullptr;
+					}
+					else
+					{
+						scene.nodes[childNode->id] = childNode;
+						
+						scene.nodes[nodeId]->childNodeIds.push_back(childNode->id);
+					}
 				}
 				
 				for (auto * componentType : g_componentTypes)
@@ -424,45 +434,43 @@ struct SceneEditor
 	
 	void addNodeFromTemplate_v1(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
 	{
-		SceneNode & node = *new SceneNode();
+		SceneNode * node = new SceneNode();
+		node->id = scene.allocNodeId();
+		node->parentId = parentId;
+		node->displayName = String::FormatC("Node %d", node->id);
 		
-		node.id = scene.allocNodeId();
-		node.parentId = parentId;
-		node.displayName = String::FormatC("Node %d", node.id);
-		node.components.add(new SceneNodeComponent());
+		node->components.add(new SceneNodeComponent());
 		
-		auto modelComp = s_modelComponentMgr.createComponent(nullptr);
-		
+		auto * modelComp = s_modelComponentMgr.createComponent(nullptr);
 		modelComp->filename = "model.txt";
 		modelComp->scale = .01f;
+		node->components.add(modelComp);
 		
-		if (modelComp->init())
-			node.components.add(modelComp);
-		else
-			s_modelComponentMgr.destroyComponent(modelComp);
+		auto * transformComp = s_transformComponentMgr.createComponent(nullptr);
+		transformComp->position = position;
+		node->components.add(transformComp);
 		
-		auto transformComp = s_transformComponentMgr.createComponent(nullptr);
-		
-		if (transformComp->init())
+		if (node->initComponents() == false)
 		{
-			transformComp->position = position;
+			node->freeComponents();
 			
-			node.components.add(transformComp);
+			delete node;
+			node = nullptr;
 		}
 		else
-			s_transformComponentMgr.destroyComponent(transformComp);
-		
-		scene.nodes[node.id] = &node;
-		
-		//
-		
-		auto parentNode_itr = scene.nodes.find(parentId);
-		Assert(parentNode_itr != scene.nodes.end());
-		if (parentNode_itr != scene.nodes.end())
 		{
-			auto & parentNode = *parentNode_itr->second;
+			scene.nodes[node->id] = node;
 			
-			parentNode.childNodeIds.push_back(node.id);
+			//
+			
+			auto parentNode_itr = scene.nodes.find(parentId);
+			Assert(parentNode_itr != scene.nodes.end());
+			if (parentNode_itr != scene.nodes.end())
+			{
+				auto & parentNode = *parentNode_itr->second;
+				
+				parentNode.childNodeIds.push_back(node->id);
+			}
 		}
 	}
 	
@@ -476,20 +484,17 @@ struct SceneEditor
 		//
 		
 		SceneNode * node = new SceneNode();
-		
 		node->id = scene.allocNodeId();
 		node->parentId = parentId;
 		node->displayName = String::FormatC("Node %d", node->id);
+		
 		node->components.add(new SceneNodeComponent());
 		
 		bool init_ok = true;
 		
 		init_ok &= instantiateComponentsFromTemplate(g_typeDB, t, node->components);
 		
-		for (auto * component = node->components.head; component != nullptr && init_ok; component = component->next_in_set)
-		{
-			init_ok &= component->init();
-		}
+		init_ok &= node->initComponents();
 		
 		if (init_ok == false)
 		{
@@ -504,10 +509,13 @@ struct SceneEditor
 		}
 		
 		{
-			auto transformComp = node->components.find<TransformComponent>();
+			auto * transformComp = node->components.find<TransformComponent>();
 			
-			transformComp->position = position;
-			transformComp->angleAxis = angleAxis;
+			if (transformComp != nullptr)
+			{
+				transformComp->position = position;
+				transformComp->angleAxis = angleAxis;
+			}
 		}
 		
 		scene.nodes[node->id] = node;

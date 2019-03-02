@@ -79,13 +79,14 @@ static void to_json(nlohmann::json & j, const SceneNode * node_ptr)
 
 void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 {
-	node_from_json.node = new SceneNode();
-
-	auto & node = *node_from_json.node;
-	node.id = j.value("id", -1);
-	node.displayName = j.value("displayName", "");
-	node.childNodeIds = j.value("children", std::vector<int>());
-	node.components.add(new SceneNodeComponent());
+	auto * node = new SceneNode();
+	node->id = j.value("id", -1);
+	node->displayName = j.value("displayName", "");
+	node->childNodeIds = j.value("children", std::vector<int>());
+	
+	node->components.add(new SceneNodeComponent());
+	
+	node_from_json.node = node;
 	
 	auto components_json_itr = j.find("components");
 
@@ -117,24 +118,24 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 					// todo : throw an exception ?
 				}
 				
-				node.components.add(component);
+				node->components.add(component);
 			}
 		}
 	}
 	
 	// initialize components
 	
-	bool init_ok = true;
-	
-	for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
-	{
-		init_ok &= component->init();
-	}
-	
-	if (!init_ok)
+	if (node->initComponents() == false)
 	{
 	// todo : let deserialization fail
 		LOG_ERR("failed to initialize one or more components in node component set", 0);
+		
+		node->freeComponents();
+		
+		node_from_json.node = nullptr;
+		
+		delete node;
+		node = nullptr;
 	}
 }
 
@@ -142,14 +143,27 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 
 Scene::Scene()
 {
-	SceneNode & rootNode = *new SceneNode();
-	rootNode.id = allocNodeId();
-	rootNode.displayName = "root";
-	rootNode.components.add(new SceneNodeComponent());
+	Assert(rootNodeId == -1);
 	
-	nodes[rootNode.id] = &rootNode;
+	SceneNode * rootNode = new SceneNode();
+	rootNode->id = allocNodeId();
+	rootNode->displayName = "root";
 	
-	rootNodeId = rootNode.id;
+	rootNode->components.add(new SceneNodeComponent());
+	
+	if (rootNode->initComponents() == false)
+	{
+		rootNode->freeComponents();
+		
+		delete rootNode;
+		rootNode = nullptr;
+	}
+	else
+	{
+		nodes[rootNode->id] = rootNode;
+		
+		rootNodeId = rootNode->id;
+	}
 }
 
 int Scene::allocNodeId()
