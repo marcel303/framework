@@ -38,172 +38,145 @@ static int calculateIndentationLevel(const char * line)
 
 bool parseTemplateFromLines(LineReader & line_reader, const char * name, Template & out_template)
 {
-	TemplateComponent * current_component_element = nullptr;
-	TemplateComponentProperty * current_property_element = nullptr;
-	
 	if (name != nullptr)
 	{
 		out_template.name = name;
 	}
 	
-	int current_level = -1;
+	// read components
 	
 	const char * line;
 	
 	while ((line = line_reader.get_next_line(true)))
 	{
-		// check for empty lines and skip them
-		
-		Assert(!isEmptyLineOrComment(line));
-		
-		const int new_level = calculateIndentationLevel(line);
-		
-		if (new_level > current_level + 1)
+		if (line[0] == '\t')
 		{
 			// only one level of identation may be added per line
 			
-			LOG_ERR("syntax error", 0);
+			LOG_ERR("more than one level of identation added one line %d", line_reader.line_index);
 			return false;
 		}
 		
-		if (new_level < 2)
-			current_property_element = nullptr;
-		if (new_level < 1)
-			current_component_element = nullptr;
-		
-		if (current_component_element == nullptr)
-			Assert(current_property_element == nullptr);
-		
-		current_level = new_level;
-		
-		if (current_level == 0)
+		if (memcmp(line, "base", 4) == 0)
 		{
-			if (memcmp(line, "base", 4) == 0)
-			{
-				// base specifier. find the base name at the end
-			
-				const char * base = line;
-				
-				while (base[0] != 0 && !isspace(base[0]))
-					base++;
-				
-				while (base[0] != 0 && isspace(base[0]))
-					base++;
-				
-				if (base[0] == 0)
-				{
-					LOG_ERR("missing base name", 0);
-					return false;
-				}
-				
-				out_template.base = base;
-				
-				continue;
-			}
-			
-			// type name
-			
-			Assert(current_component_element == nullptr);
-			
-			const char * typeName = line;
-			
-			// apply conversion to the type name:
-			// 'transform' becomes TransformComponent
-			// 'rotate-transform' becomes RotateTransformComponent
-			
-		// todo : detect if the type name already has a 'Component' suffix
+			// special : base specifier. find the base name at the end
 		
-			char full_name[1024];
-			int length = 0;
-			bool capitalize = true;
+			const char * base = line;
 			
-			for (int i = 0; typeName[i] != 0 && !isspace(typeName[i]) && length < 1024; ++i)
+			while (base[0] != 0 && !isspace(base[0]))
+				base++;
+			
+			while (base[0] != 0 && isspace(base[0]))
+				base++;
+			
+			if (base[0] == 0)
 			{
-				if (typeName[i] == '-')
-					capitalize = true;
-				else if (capitalize)
-				{
-					capitalize = false;
-					full_name[length++] = toupper(typeName[i]);
-				}
-				else
-					full_name[length++] = typeName[i];
-			}
-			
-			const char * suffix = "Component";
-			
-			for (int i = 0; suffix[i] != 0 && length < 1024; ++i)
-				full_name[length++] = suffix[i];
-			
-			if (length < 1024)
-				full_name[length++] = 0;
-			
-			if (length == 1024)
-			{
-				LOG_ERR("type name is too long", 0);
+				LOG_ERR("missing base name", 0);
 				return false;
 			}
 			
-			// find the optional id at the end
+			out_template.base = base;
 			
-			const char * id = typeName;
-			
-			while (id[0] != 0 && !isspace(id[0]))
-				id++;
-			
-			while (id[0] != 0 && isspace(id[0]))
-				id++;
-			
-			// begin a new element, and set its type name to the full type name we just constructed
-			
-			out_template.components.emplace_back(TemplateComponent());
-			
-			current_component_element = &out_template.components.back();
-			
-			current_component_element->type_name = full_name;
-			current_component_element->id = id;
+			continue;
 		}
-		else if (current_level == 1)
-		{
-			// property name
-			
-			Assert(current_component_element != nullptr);
-			Assert(current_property_element == nullptr);
-			
-			if (current_component_element->type_name.empty())
-			{
-				LOG_ERR("found property outside the context of a component", 0);
-				return false;
-			}
-			
-			// begin a new property
-			
-			current_component_element->properties.emplace_back(TemplateComponentProperty());
-			
-			current_property_element = &current_component_element->properties.back();
-			
-			const char * propertyName = line;
-			
-		// todo : add support for adding a value directly after the property name
 		
-			current_property_element->name = propertyName;
-			
-			// read property values
-			
-			Assert(current_component_element != nullptr);
-			Assert(current_property_element != nullptr);
-			
-			line_reader.push_indent();
-			line_reader.push_indent();
+		// component type name
+		
+		const char * typeName = line;
+		
+		// apply conversion to the type name:
+		// 'transform' becomes TransformComponent
+		// 'rotate-transform' becomes RotateTransformComponent
+		
+	// todo : detect if the type name already has a 'Component' suffix
+	
+		char full_name[1024];
+		int length = 0;
+		bool capitalize = true;
+		
+		for (int i = 0; typeName[i] != 0 && !isspace(typeName[i]) && length < 1024; ++i)
+		{
+			if (typeName[i] == '-')
+				capitalize = true;
+			else if (capitalize)
 			{
-				const char * value_line;
-				
-				while ((value_line = line_reader.get_next_line(false)))
-					current_property_element->value_lines.push_back(value_line);
+				capitalize = false;
+				full_name[length++] = toupper(typeName[i]);
 			}
-			line_reader.push_indent();
-			line_reader.push_indent();
+			else
+				full_name[length++] = typeName[i];
 		}
+		
+		const char * suffix = "Component";
+		
+		for (int i = 0; suffix[i] != 0 && length < 1024; ++i)
+			full_name[length++] = suffix[i];
+		
+		if (length < 1024)
+			full_name[length++] = 0;
+		
+		if (length == 1024)
+		{
+			LOG_ERR("type name is too long", 0);
+			return false;
+		}
+		
+		// find the optional component id at the end
+		
+		const char * id = typeName;
+		
+		while (id[0] != 0 && !isspace(id[0]))
+			id++;
+		
+		while (id[0] != 0 && isspace(id[0]))
+			id++;
+		
+		// add a new component element, and set its type name to the full type name we just constructed
+		
+		out_template.components.emplace_back(TemplateComponent());
+		
+		auto & current_component_element = out_template.components.back();
+		
+		current_component_element.type_name = full_name;
+		current_component_element.id = id;
+		
+		if (current_component_element.type_name.empty())
+		{
+			LOG_ERR("found property outside the context of a component", 0);
+			return false;
+		}
+	
+		// read component properties
+		
+		line_reader.push_indent();
+		{
+			const char * propertyName;
+			
+			while ((propertyName = line_reader.get_next_line(true)))
+			{
+				// add a new property
+				
+				current_component_element.properties.emplace_back(TemplateComponentProperty());
+				
+				auto & current_property_element = current_component_element.properties.back();
+				
+			// todo : add support for adding a value directly after the property name
+			
+				current_property_element.name = propertyName;
+				
+				// read property value lines
+				
+				line_reader.push_indent();
+				{
+					const char * value_line;
+					
+					while ((value_line = line_reader.get_next_line(false)))
+						current_property_element.value_lines.push_back(value_line);
+				}
+				line_reader.pop_indent();
+			}
+		}
+		line_reader.pop_indent();
 	}
 	
 	return true;
