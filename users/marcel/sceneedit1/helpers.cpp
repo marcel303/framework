@@ -229,18 +229,26 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * 
 				auto * member_type = typeDB.findType(member_scalar->typeIndex);
 				auto * member_object = member_scalar->scalar_access(object);
 				
-				auto member_json_itr = j.j.find(member->name);
-				
-				if (member_json_itr != j.j.end())
+				if (member_type == nullptr)
 				{
-					auto & member_json = *member_json_itr;
+					LOG_ERR("failed to find type for member %s", member->name);
+					result &= false;
+				}
+				else
+				{
+					auto member_json_itr = j.j.find(member->name);
 					
-					result &= member_fromjson_recursive(typeDB, member_type, member_object, member_json);
+					if (member_json_itr != j.j.end())
+					{
+						auto & member_json = *member_json_itr;
+						
+						result &= member_fromjson_recursive(typeDB, member_type, member_object, member_json);
+					}
 				}
 			}
 		}
 		
-		return true;
+		return result;
 	}
 	else
 	{
@@ -300,7 +308,7 @@ bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object
 	
 	if (member_type == nullptr)
 	{
-		LOG_ERR("failed to find type", 0);
+		LOG_ERR("failed to find type for member %s", member->name);
 		return false;
 	}
 	
@@ -395,11 +403,19 @@ bool member_tojson_recursive(const TypeDB & typeDB, const Type * type, const voi
 				auto * member_type = typeDB.findType(member_scalar->typeIndex);
 				auto * member_object = member_scalar->scalar_access(object);
 				
-				auto & member_json = j.j[member->name];
-				
-				ComponentJson member_json_wrapped(member_json);
-				
-				result &= member_tojson_recursive(typeDB, member_type, member_object, member_json_wrapped);
+				if (member_type == nullptr)
+				{
+					LOG_ERR("failed to find type for member %s", member->name);
+					result &= false;
+				}
+				else
+				{
+					auto & member_json = j.j[member->name];
+					
+					ComponentJson member_json_wrapped(member_json);
+					
+					result &= member_tojson_recursive(typeDB, member_type, member_object, member_json_wrapped);
+				}
 			}
 		}
 		
@@ -463,13 +479,13 @@ bool member_tojson(const TypeDB & typeDB, const Member * member, const void * ob
 	
 	if (member_type == nullptr)
 	{
-		LOG_ERR("failed to find type", 0);
+		LOG_ERR("failed to find type for member %s", member->name);
 		return false;
 	}
 	
 	if (member_type->isStructured)
 	{
-		LOG_ERR("member is a structured type. use member_tojson_recursive instead", 0);
+		LOG_ERR("member '%s' is a structured type. use member_tojson_recursive instead", member->name);
 		return false;
 	}
 	
@@ -544,35 +560,22 @@ bool member_tojson(const TypeDB & typeDB, const Member * member, const void * ob
 
 void splitString(const std::string & str, std::vector<std::string> & result);
 
-bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object, const char * text)
+bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void * object, const char * text)
 {
-	if (member->isVector) // todo : add support for deserialization of vectors
-		return false;
-	
-	auto * member_scalar = static_cast<const Member_Scalar*>(member);
-	
-	auto * member_type = typeDB.findType(member_scalar->typeIndex);
-	auto * member_object = member_scalar->scalar_access(object);
-	
-	if (member_type->isStructured) // todo : add support for deserialization of structured types
-		return false;
-	
-	auto * plain_type = static_cast<const PlainType*>(member_type);
-	
 // todo : I definitely need better parse function. ones which return a success code
 
 	switch (plain_type->dataType)
 	{
 	case kDataType_Bool:
-		plain_type->access<bool>(member_object) = Parse::Bool(text);
+		plain_type->access<bool>(object) = Parse::Bool(text);
 		return true;
 		
 	case kDataType_Int:
-		plain_type->access<int>(member_object) = Parse::Int32(text);
+		plain_type->access<int>(object) = Parse::Int32(text);
 		return true;
 		
 	case kDataType_Float:
-		plain_type->access<float>(member_object) = Parse::Float(text);
+		plain_type->access<float>(object) = Parse::Float(text);
 		return true;
 		
 	case kDataType_Vec2:
@@ -583,7 +586,7 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 			if (parts.size() != 2)
 				return false;
 			
-			plain_type->access<Vec2>(member_object).Set(
+			plain_type->access<Vec2>(object).Set(
 				Parse::Float(parts[0]),
 				Parse::Float(parts[1]));
 		}
@@ -597,7 +600,7 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 			if (parts.size() != 3)
 				return false;
 			
-			plain_type->access<Vec3>(member_object).Set(
+			plain_type->access<Vec3>(object).Set(
 				Parse::Float(parts[0]),
 				Parse::Float(parts[1]),
 				Parse::Float(parts[2]));
@@ -612,7 +615,7 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 			if (parts.size() != 4)
 				return false;
 			
-			plain_type->access<Vec4>(member_object).Set(
+			plain_type->access<Vec4>(object).Set(
 				Parse::Float(parts[0]),
 				Parse::Float(parts[1]),
 				Parse::Float(parts[2]),
@@ -621,7 +624,99 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 		return true;
 		
 	case kDataType_String:
-		plain_type->access<std::string>(member_object) = text;
+		plain_type->access<std::string>(object) = text;
+		return true;
+		
+	case kDataType_Other:
+		Assert(false);
+		break;
+	}
+	
+	return false;
+}
+
+bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object, const char * text)
+{
+	if (member->isVector) // todo : add support for deserialization of vectors
+		return false;
+	
+	auto * member_scalar = static_cast<const Member_Scalar*>(member);
+	
+	auto * member_type = typeDB.findType(member_scalar->typeIndex);
+	auto * member_object = member_scalar->scalar_access(object);
+	
+	if (member_type == nullptr)
+	{
+		LOG_ERR("failed to find type for member %s", member->name);
+		return false;
+	}
+	
+	if (member_type->isStructured) // todo : add support for deserialization of structured types
+		return false;
+	
+	auto * plain_type = static_cast<const PlainType*>(member_type);
+	
+	return object_fromtext(typeDB, plain_type, member_object, text);
+}
+
+static bool plain_type_totext(const PlainType * plain_type, const void * object, std::string & out_text)
+{
+	switch (plain_type->dataType)
+	{
+	case kDataType_Bool:
+		out_text = plain_type->access<bool>(object) ? "true" : "false";
+		return true;
+		
+	case kDataType_Int:
+		out_text = String::FormatC("%d", plain_type->access<int>(object));
+		return true;
+		
+	case kDataType_Float:
+		// todo : need a better float to string conversion function
+		out_text = String::FormatC("%f", plain_type->access<float>(object));
+		return true;
+		
+	case kDataType_Vec2:
+		{
+			// todo : need a better float to string conversion function
+		
+			auto & value = plain_type->access<Vec2>(object);
+			
+			out_text = String::FormatC("%f %f",
+				value[0],
+				value[1]);
+		}
+		return true;
+		
+	case kDataType_Vec3:
+		{
+			// todo : need a better float to string conversion function
+		
+			auto & value = plain_type->access<Vec3>(object);
+			
+			out_text = String::FormatC("%f %f %f",
+				value[0],
+				value[1],
+				value[2]);
+		}
+		return true;
+		
+	case kDataType_Vec4:
+		{
+			// todo : need a better float to string conversion function
+		
+			auto & value = plain_type->access<Vec4>(object);
+			
+			out_text = String::FormatC("%f %f %f %f",
+				value[0],
+				value[1],
+				value[2],
+				value[3]);
+		}
+		return true;
+		
+	case kDataType_String:
+		out_text = plain_type->access<std::string>(object);
 		return true;
 		
 	case kDataType_Other:
@@ -642,75 +737,332 @@ bool member_totext(const TypeDB & typeDB, const Member * member, const void * ob
 	auto * member_type = typeDB.findType(member_scalar->typeIndex);
 	auto * member_object = member_scalar->scalar_access(object);
 	
+	if (member_type == nullptr)
+	{
+		LOG_ERR("failed to find type for member %s", member->name);
+		return false;
+	}
+	
 	if (member_type->isStructured) // todo : add support for serialization of structured types
 		return false;
 	
 	auto * plain_type = static_cast<const PlainType*>(member_type);
 
-	switch (plain_type->dataType)
+	return plain_type_totext(plain_type, member_object, out_text);
+}
+
+//
+
+static void addLine(std::vector<std::string> & lines, const int indent, const char * text)
+{
+	std::string line;
+	
+	for (int i = 0; i < indent; ++i)
+		line.push_back('\t');
+	
+	line.append(text);
+	
+	lines.push_back(line);
+}
+
+bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * structured_type, const void * object, const Member * member, std::vector<std::string> & out_lines, const int currentIndent)
+{
+	bool result = true;
+	
+	if (member->isVector)
 	{
-	case kDataType_Bool:
-		out_text = plain_type->access<bool>(member_object) ? "true" : "false";
-		return true;
+		auto * member_interface = static_cast<const Member_VectorInterface*>(member);
 		
-	case kDataType_Int:
-		out_text = String::FormatC("%d", plain_type->access<int>(member_object));
-		return true;
+		auto * vector_type = typeDB.findType(member_interface->vector_type());
 		
-	case kDataType_Float:
-		// todo : need a better float to string conversion function
-		out_text = String::FormatC("%f", plain_type->access<float>(member_object));
-		return true;
-		
-	case kDataType_Vec2:
+		if (vector_type == nullptr)
 		{
-			// todo : need a better float to string conversion function
-		
-			auto & value = plain_type->access<Vec2>(member_object);
-			
-			out_text = String::FormatC("%f %f",
-				value[0],
-				value[1]);
+			LOG_ERR("failed to find type for type name %s", structured_type->typeName);
+			result &= false;
 		}
-		return true;
-		
-	case kDataType_Vec3:
+		else
 		{
-			// todo : need a better float to string conversion function
-		
-			auto & value = plain_type->access<Vec3>(member_object);
+			const size_t vector_size = member_interface->vector_size(object);
 			
-			out_text = String::FormatC("%f %f %f",
-				value[0],
-				value[1],
-				value[2]);
+			for (size_t i = 0; i < vector_size; ++i)
+			{
+				auto * vector_object = member_interface->vector_access((void*)object, i);
+				
+				result &= object_tolines_recursive(typeDB, vector_type, vector_object, out_lines, currentIndent);
+			}
 		}
-		return true;
+	}
+	else
+	{
+		auto * member_scalar = static_cast<const Member_Scalar*>(member);
 		
-	case kDataType_Vec4:
+		auto * member_type = typeDB.findType(member_scalar->typeIndex);
+		auto * member_object = member_scalar->scalar_access(object);
+		
+		if (member_type == nullptr)
 		{
-			// todo : need a better float to string conversion function
-		
-			auto & value = plain_type->access<Vec4>(member_object);
-			
-			out_text = String::FormatC("%f %f %f %f",
-				value[0],
-				value[1],
-				value[2],
-				value[3]);
+			LOG_ERR("failed to find type for member %s", member->name);
+			result &= false;
 		}
-		return true;
+		else
+		{
+			result &= object_tolines_recursive(typeDB, member_type, member_object, out_lines, currentIndent);
+		}
+	}
+	
+	return result;
+}
+
+static bool isEmptyLineOrComment(const char * line) // todo : add helper functions for dealing with lines
+{
+	for (int i = 0; line[i] != 0; ++i)
+	{
+		if (line[i] == '#')
+			return true;
 		
-	case kDataType_String:
-		out_text = plain_type->access<std::string>(member_object);
-		return true;
+		if (!isspace(line[i]))
+			return false;
+	}
+	
+	return true;
+}
+
+static int calculateIndentationLevel(const char * line) // todo : add helper functions for dealing with lines
+{
+	int result = 0;
+	
+	while (line[result] == '\t')
+		result++;
+	
+	return result;
+}
+
+static void extractLinesGivenIndentationLevel(const std::vector<std::string> & lines, size_t & index, const int level, std::vector<std::string> & out_lines, const bool subtract_indentation) // todo : add helper functions for dealing with lines
+{
+	for (;;)
+	{
+		if (index == lines.size())
+			break;
 		
-	case kDataType_Other:
-		Assert(false);
-		break;
+		const std::string & line = lines[index];
+		
+		if (isEmptyLineOrComment(line.c_str()))
+		{
+			++index;
+			continue;
+		}
+		
+		const int current_level = calculateIndentationLevel(line.c_str());
+		
+		if (current_level < level)
+			break;
+		
+		if (subtract_indentation)
+			out_lines.push_back(line.substr(level));
+		else
+			out_lines.push_back(line);
+		
+		++index;
+	}
+}
+
+bool object_fromlines_recursive(
+	const TypeDB & typeDB, const Type * type, void * object,
+	const std::vector<std::string> & lines, size_t & line_index)
+{
+	if (type->isStructured)
+	{
+		bool result = true;
+		
+		auto * structured_type = static_cast<const StructuredType*>(type);
+		
+		while (line_index < lines.size())
+		{
+			auto & line = lines[line_index];
+			line_index++;
+			
+			if (isEmptyLineOrComment(line.c_str()))
+				continue;
+			
+			// determine the structured member name
+			
+			const char * name = line.c_str();
+			
+			Assert(name[0] != '\t');
+			
+			// extract the data for this member
+			
+			std::vector<std::string> member_lines;
+			extractLinesGivenIndentationLevel(lines, line_index, 1, member_lines, true);
+			
+			// find the member inside the structured type
+			
+			Member * member = nullptr;
+			
+			for (auto * member_itr = structured_type->members_head; member_itr != nullptr; member_itr = member_itr->next)
+			{
+				if (strcmp(member_itr->name, name) == 0)
+					member = member_itr;
+			}
+			
+			if (member == nullptr)
+			{
+				// the lines contain data for a member we don't know. skip it
+				
+				LOG_WRN("unknown member: %s", name);
+			}
+			else
+			{
+				// deserialize the member using the data we extracted
+				
+				size_t member_line_index = 0;
+				
+				result &= member_fromlines_recursive(typeDB, member, object, member_lines, member_line_index);
+			}
+		}
+		
+		return result;
+	}
+	else
+	{
+		AssertMsg(lines.empty() == false, "got empty lines for plain type", 0);
+		
+		if (lines.empty())
+		{
+			return false;
+		}
+		else
+		{
+			auto * plain_type = static_cast<const PlainType*>(type);
+			
+			const char * text = lines[line_index].c_str();
+			line_index++;
+			
+			if (object_fromtext(typeDB, plain_type, object, text) == false)
+			{
+				LOG_ERR("failed to deserialize plain type from text", 0);
+				
+				return false;
+			}
+			else
+			{
+				return true;
+			}
+		}
 	}
 	
 	return false;
+}
+
+bool member_fromlines_recursive(
+	const TypeDB & typeDB, const Member * member, void * object,
+	const std::vector<std::string> & lines, size_t & line_index)
+{
+	bool result = true;
+	
+	if (lines.empty())
+	{
+		LOG_ERR("empty lines for member %s", member->name);
+		result &= false;
+	}
+	else if (member->isVector)
+	{
+		LOG_ERR("vector types aren't supported yet", 0);
+		Assert(false);
+		//result &= false;
+	}
+	else
+	{
+		auto * member_scalar = static_cast<const Member_Scalar*>(member);
+
+		auto * member_type = typeDB.findType(member_scalar->typeIndex);
+		auto * member_object = member_scalar->scalar_access(object);
+		
+		if (member_type == nullptr)
+		{
+			LOG_ERR("failed to find type for member %s", member->name);
+			result &= false;
+		}
+		else
+		{
+			result &= object_fromlines_recursive(typeDB, member_type, member_object, lines, line_index);
+		}
+	}
+	
+	return result;
+}
+
+bool object_tolines_recursive(
+	const TypeDB & typeDB, const Type * type, const void * object,
+	std::vector<std::string> & out_lines, const int currentIndent)
+{
+	if (type->isStructured)
+	{
+		bool result = true;
+		
+		auto * structured_type = static_cast<const StructuredType*>(type);
+		
+		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
+		{
+			addLine(out_lines, currentIndent, member->name);
+			
+			result &= member_tolines_recursive(typeDB, structured_type, object, member, out_lines, currentIndent + 1);
+		}
+		
+		return result;
+	}
+	else
+	{
+		auto * plain_type = static_cast<const PlainType*>(type);
+		
+		std::string text;
+		
+		if (plain_type_totext(plain_type, object, text) == false)
+		{
+			LOG_ERR("failed to serialize plain type to text", 0);
+			return false;
+		}
+		else
+		{
+			addLine(out_lines, currentIndent, text.c_str());
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+bool member_tolines_recursive(
+	const TypeDB & typeDB, const Member * member, const void * object,
+	std::vector<std::string> & out_lines, const int currentIndent)
+{
+	bool result = true;
+	
+	if (member->isVector)
+	{
+		LOG_ERR("vector types aren't supported yet", 0);
+		Assert(false);
+		//result &= false;
+	}
+	else
+	{
+		auto * member_scalar = static_cast<const Member_Scalar*>(member);
+
+		auto * member_type = typeDB.findType(member_scalar->typeIndex);
+		auto * member_object = member_scalar->scalar_access(object);
+		
+		if (member_type == nullptr)
+		{
+			LOG_ERR("failed to find type for member %s", member->name);
+			result &= false;
+		}
+		else
+		{
+			result &= object_tolines_recursive(typeDB, member_type, member_object, out_lines, currentIndent);
+		}
+	}
+	
+	return result;
 }
 
 //

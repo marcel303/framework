@@ -25,8 +25,25 @@ bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object
 bool member_tojson_recursive(const TypeDB & typeDB, const Type * type, const void * object, ComponentJson & j);
 bool member_tojson(const TypeDB & typeDB, const Member * member, const void * object, ComponentJson & j);
 
+bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void * object, const char * text);
 bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object, const char * text);
 bool member_totext(const TypeDB & typeDB, const Member * member, const void * object, std::string & out_text);
+
+bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * structured_type, const void * object, const Member * member, std::vector<std::string> & out_lines, const int currentIndent);
+
+bool object_fromlines_recursive(
+	const TypeDB & typeDB, const Type * type, void * object,
+	const std::vector<std::string> & lines, size_t & line_index);
+bool member_fromlines_recursive(
+	const TypeDB & typeDB, const Member * member, void * object,
+	const std::vector<std::string> & lines, size_t & line_index);
+
+bool object_tolines_recursive(
+	const TypeDB & typeDB, const Type * type, const void * object,
+	std::vector<std::string> & out_lines, const int currentIndent);
+bool member_tolines_recursive(
+	const TypeDB & typeDB, const Member * member, const void * object,
+	std::vector<std::string> & out_lines, const int currentIndent);
 
 extern TypeDB g_typeDB;
 
