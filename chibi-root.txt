@@ -23,7 +23,6 @@ push_group libraries
 	add libjsusfx-framework
 	add libnet
 	add libnfd
-	add libosc
 	add libparticle
 	add libvideo
 	add users/marcel/allegro2-support
