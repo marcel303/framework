@@ -24,8 +24,8 @@ struct NoiseModulator
 
 	float followFactor = .2f;
 	
-	float noiseFrequency_spat = 20.f;
-	float noiseFrequency_time = 20.f;
+	float noiseFrequency_spat = 0.f;
+	float noiseFrequency_time = 1.f;
 	
 	float strength = 10.f;
 	float falloff_strength = 100.f;

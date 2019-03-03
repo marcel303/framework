@@ -999,7 +999,7 @@ int main(int argc, char * argv[])
 					ImGui::Separator();
 					ImGui::SliderFloat("Noise modulator strength", &noiseModulator.strength, 0.f, 100.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Noise modulator follow factor", &noiseModulator.followFactor, 0.f, 1.f, "%.4f", 1.f);
-					ImGui::SliderFloat("Noise modulator falloff", &noiseModulator.falloff_strength, 0.f, 100.f, "%.4f", 2.f);
+					ImGui::SliderFloat("Noise modulator falloff", &noiseModulator.falloff_strength, 0.f, 200.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Noise modulator spatial frequency", &noiseModulator.noiseFrequency_spat, 0.f, 100.f, "%.4f", 2.f);
 					ImGui::SliderFloat("Noise modulator time frequency", &noiseModulator.noiseFrequency_time, 0.f, 100.f, "%.4f", 2.f);
 				}
@@ -1184,8 +1184,7 @@ int main(int argc, char * argv[])
 		{
 			// apply noise modulator
 			
-			const int numSteps = 10;
-			
+			const int numSteps = 1;
 			
 			for (int i = 0; i < numSteps; ++i)
 			{
