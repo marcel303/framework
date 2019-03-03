@@ -12,7 +12,20 @@ bool SceneNode::initComponents()
 	bool result = true;
 	
 	for (auto * component = components.head; component != nullptr; component = component->next_in_set)
-		result &= component->init();
+	{
+		if (component->init() == false)
+		{
+			auto * componentType = findComponentType(component->typeIndex());
+			
+			LOG_ERR("failed to initialize component '%s' of type %s",
+				component->id,
+				componentType == nullptr
+					? "(unknown)"
+					: componentType->typeName);
+			
+			result = false;
+		}
+	}
 	
 	return result;
 }
@@ -101,7 +114,7 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 			
 			if (typeName == "SceneNodeComponent")
 				continue;
-				
+			
 			if (typeName.empty())
 			{
 				LOG_WRN("empty type name", 0);
@@ -124,21 +137,6 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 				node->components.add(component);
 			}
 		}
-	}
-	
-	// initialize components
-	
-	if (node->initComponents() == false)
-	{
-	// todo : let deserialization fail
-		LOG_ERR("failed to initialize one or more components in node component set", 0);
-		
-		node->freeComponents();
-		
-		node_from_json.node = nullptr;
-		
-		delete node;
-		node = nullptr;
 	}
 }
 
@@ -240,6 +238,38 @@ bool Scene::load(const ComponentJson & jj)
 	rootNodeId = j.value("rootNodeId", -1);
 	
 	auto nodes_from_json = j.value("nodes", std::vector<SceneNodeFromJson>());
+	
+	// initialize components
+	
+	bool init_ok = true;
+	
+	for (auto & node_from_json : nodes_from_json)
+	{
+		auto * node = node_from_json.node;
+		
+		if (node->initComponents() == false)
+		{
+			LOG_ERR("failed to initialize one or more components in node component set", 0);
+			init_ok &= false;
+		}
+	}
+	
+	// clean up if initialization failed
+	
+	if (init_ok == false)
+	{
+		for (auto & node_from_json : nodes_from_json)
+		{
+			auto * node = node_from_json.node;
+			
+			node->freeComponents();
+			
+			delete node;
+			node = nullptr;
+		}
+		
+		return false;
+	}
 	
 	for (auto & node_from_json : nodes_from_json)
 	{
