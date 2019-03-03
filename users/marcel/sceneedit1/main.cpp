@@ -570,7 +570,8 @@ struct SceneEditor
 				{
 					for (auto * component = s_parameterComponentMgr.head; component != nullptr; component = component->next)
 					{
-						ImGui::Text("%s", component->prefix.c_str());
+						if (component->parameters.empty())
+							continue;
 						
 						doParameterUi(*component);
 					}

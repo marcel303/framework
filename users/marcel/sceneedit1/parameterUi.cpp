@@ -1,6 +1,7 @@
 #include "imgui.h"
 #include "parameterComponent.h"
 #include "parameterUi.h"
+#include "StringEx.h"
 
 void doParameterUi(ParameterBase & parameterBase)
 {
@@ -45,28 +46,58 @@ void doParameterUi(ParameterBase & parameterBase)
 		{
 			auto & parameter = static_cast<ParameterVec2&>(parameterBase);
 			
-			ImGui::InputFloat2(parameter.name.c_str(), &parameter.value[0]);
+			if (parameter.hasLimits)
+			{
+				// fixme : no separate min/max for each dimension
+				ImGui::SliderFloat2(parameter.name.c_str(), &parameter.value[0], parameter.min[0], parameter.max[0]);
+			}
+			else
+			{
+				ImGui::InputFloat2(parameter.name.c_str(), &parameter.value[0]);
+			}
 		}
 		break;
 	case kParameterType_Vec3:
 		{
 			auto & parameter = static_cast<ParameterVec3&>(parameterBase);
 			
-			ImGui::InputFloat3(parameter.name.c_str(), &parameter.value[0]);
+			if (parameter.hasLimits)
+			{
+				// fixme : no separate min/max for each dimension
+				ImGui::SliderFloat3(parameter.name.c_str(), &parameter.value[0], parameter.min[0], parameter.max[0]);
+			}
+			else
+			{
+				ImGui::InputFloat3(parameter.name.c_str(), &parameter.value[0]);
+			}
 		}
 		break;
 	case kParameterType_Vec4:
 		{
 			auto & parameter = static_cast<ParameterVec4&>(parameterBase);
 			
-			ImGui::InputFloat4(parameter.name.c_str(), &parameter.value[0]);
+			if (parameter.hasLimits)
+			{
+				// fixme : no separate min/max for each dimension
+				ImGui::SliderFloat4(parameter.name.c_str(), &parameter.value[0], parameter.min[0], parameter.max[0]);
+			}
+			else
+			{
+				ImGui::InputFloat4(parameter.name.c_str(), &parameter.value[0]);
+			}
 		}
 		break;
 	case kParameterType_String:
 		{
 			auto & parameter = static_cast<ParameterString&>(parameterBase);
 			
-			Assert(false); // todo : implement kParameterType_String
+			char buffer[1024];
+			strcpy_s(buffer, sizeof(buffer), parameter.value.c_str());
+			
+			if (ImGui::InputText(parameter.name.c_str(), buffer, sizeof(buffer)))
+			{
+				parameter.value = buffer;
+			}
 		}
 		break;
 	}
@@ -74,13 +105,21 @@ void doParameterUi(ParameterBase & parameterBase)
 
 void doParameterUi(ParameterComponent & component)
 {
-	for (auto * parameter : component.parameters)
+	if (ImGui::TreeNodeEx(&component, ImGuiTreeNodeFlags_CollapsingHeader, "%s", component.prefix.c_str()))
 	{
-		doParameterUi(*parameter);
+		for (auto * parameter : component.parameters)
+		{
+			doParameterUi(*parameter);
+		}
 	}
 }
 
-void doParameterUi(ParameterComponent * components, const int numComponents)
+void doParameterUi(ParameterComponent ** components, const int numComponents)
 {
-
+	// todo : implement parameter UI, with optional search filter by component prefix
+	
+	for (int i = 0; i < numComponents; ++i)
+	{
+		doParameterUi(*components[i]);
+	}
 }

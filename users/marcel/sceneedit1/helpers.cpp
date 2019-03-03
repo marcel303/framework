@@ -63,6 +63,12 @@ void registerBuiltinTypes()
 			.addFlag(new ComponentMemberFlag_EditorType_Axis);
 	
 	g_typeDB.add(std::type_index(typeid(TransformComponent)), new TransformComponentType());
+	g_typeDB.addStructured<ParameterDefinition>("parameter")
+		.add("type", &ParameterDefinition::type)
+		.add("name", &ParameterDefinition::name)
+		.add("defaultValue", &ParameterDefinition::defaultValue)
+		.add("min", &ParameterDefinition::min)
+		.add("max", &ParameterDefinition::max);
 }
 
 void registerComponentTypes()

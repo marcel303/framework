@@ -111,12 +111,107 @@ struct ParameterFloat : Parameter<float, kParameterType_Float>
 	}
 };
 
-typedef Parameter<Vec2, kParameterType_Vec2> ParameterVec2;
-typedef Parameter<Vec3, kParameterType_Vec3> ParameterVec3;
-typedef Parameter<Vec4, kParameterType_Vec4> ParameterVec4;
+struct ParameterVec2 : Parameter<Vec2, kParameterType_Vec2>
+{
+	bool hasLimits = false;
+	Vec2 min;
+	Vec2 max;
+	
+	float editingCurveExponential = 1.f;
+	
+	ParameterVec2(const char * name, const Vec2 & defaultValue)
+		: Parameter(name, defaultValue)
+	{
+	}
+	
+	ParameterVec2 & setLimits(const Vec2 & in_min, const Vec2 & in_max)
+	{
+		hasLimits = true;
+		min = in_min;
+		max = in_max;
+		
+		return *this;
+	}
+	
+	ParameterVec2 & setEditingCurveExponential(const float in_exponential)
+	{
+		editingCurveExponential = in_exponential;
+		
+		return *this;
+	}
+};
+struct ParameterVec3 : Parameter<Vec3, kParameterType_Vec3>
+{
+	bool hasLimits = false;
+	Vec3 min;
+	Vec3 max;
+	
+	float editingCurveExponential = 1.f;
+	
+	ParameterVec3(const char * name, const Vec3 & defaultValue)
+		: Parameter(name, defaultValue)
+	{
+	}
+	
+	ParameterVec3 & setLimits(const Vec3 & in_min, const Vec3 & in_max)
+	{
+		hasLimits = true;
+		min = in_min;
+		max = in_max;
+		
+		return *this;
+	}
+	
+	ParameterVec3 & setEditingCurveExponential(const float in_exponential)
+	{
+		editingCurveExponential = in_exponential;
+		
+		return *this;
+	}
+};
+
+struct ParameterVec4 : Parameter<Vec4, kParameterType_Vec4>
+{
+	bool hasLimits = false;
+	Vec4 min;
+	Vec4 max;
+	
+	float editingCurveExponential = 1.f;
+	
+	ParameterVec4(const char * name, const Vec4 & defaultValue)
+		: Parameter(name, defaultValue)
+	{
+	}
+	
+	ParameterVec4 & setLimits(const Vec4 & in_min, const Vec4 & in_max)
+	{
+		hasLimits = true;
+		min = in_min;
+		max = in_max;
+		
+		return *this;
+	}
+	
+	ParameterVec4 & setEditingCurveExponential(const float in_exponential)
+	{
+		editingCurveExponential = in_exponential;
+		
+		return *this;
+	}
+};
+
 typedef Parameter<std::string, kParameterType_String> ParameterString;
 
 //
+
+struct ParameterDefinition
+{
+	std::string type;
+	std::string name;
+	std::string defaultValue;
+	std::string min;
+	std::string max;
+};
 
 struct ParameterComponent : Component<ParameterComponent>
 {
@@ -124,6 +219,9 @@ struct ParameterComponent : Component<ParameterComponent>
 	
 	std::vector<ParameterBase*> parameters;
 	
+	std::vector<ParameterDefinition> parameterDefinitions;
+	
+	virtual bool init() override final;
 	virtual void tick(const float dt) override final;
 	
 	void add(ParameterBase * parameter);
@@ -131,6 +229,10 @@ struct ParameterComponent : Component<ParameterComponent>
 	ParameterBool * addBool(const char * name, const bool defaultValue);
 	ParameterInt * addInt(const char * name, const int defaultValue);
 	ParameterFloat * addFloat(const char * name, const float defaultValue);
+	ParameterVec2 * addVec2(const char * name, const Vec2 & defaultValue);
+	ParameterVec3 * addVec3(const char * name, const Vec3 & defaultValue);
+	ParameterVec4 * addVec4(const char * name, const Vec4 & defaultValue);
+	ParameterString * addString(const char * name, const char * defaultValue);
 };
 
 //
@@ -151,6 +253,7 @@ struct ParameterComponentType : ComponentType<ParameterComponent>
 		tickPriority = kComponentPriority_Parameter;
 		
 		add("prefix", &ParameterComponent::prefix);
+		add("parameters", &ParameterComponent::parameterDefinitions);
 	}
 };
 
