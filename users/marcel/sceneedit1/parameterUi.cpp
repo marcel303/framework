@@ -133,8 +133,8 @@ void doParameterUi(ParameterComponent & component, const char * filter)
 	{
 		if (ImGui::TreeNodeEx(&component, ImGuiTreeNodeFlags_Framed, "%s", component.prefix.c_str()))
 		{
-			for (auto * parameter : component.parameters)
-				doParameterUi(*parameter);
+			for (int i = 0; i < numParameters; ++i)
+				doParameterUi(*parameters[i]);
 			
 			ImGui::TreePop();
 		}
