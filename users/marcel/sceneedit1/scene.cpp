@@ -144,6 +144,15 @@ void from_json(const nlohmann::json & j, SceneNodeFromJson & node_from_json)
 
 Scene::Scene()
 {
+}
+
+int Scene::allocNodeId()
+{
+	return nextNodeId++;
+}
+
+void Scene::createRootNode()
+{
 	Assert(rootNodeId == -1);
 	
 	SceneNode * rootNode = new SceneNode();
@@ -165,11 +174,6 @@ Scene::Scene()
 		
 		rootNodeId = rootNode->id;
 	}
-}
-
-int Scene::allocNodeId()
-{
-	return nextNodeId++;
 }
 
 SceneNode & Scene::getRootNode()
@@ -232,6 +236,8 @@ bool Scene::saveToFile(const char * filename)
 
 bool Scene::load(const ComponentJson & jj)
 {
+	bool result = true;
+	
 	auto & j = jj.j;
 	
 	nextNodeId = j.value("nextNodeId", -1);
@@ -239,25 +245,74 @@ bool Scene::load(const ComponentJson & jj)
 	
 	auto nodes_from_json = j.value("nodes", std::vector<SceneNodeFromJson>());
 	
-	// initialize components
-	
-	bool init_ok = true;
-	
-	for (auto & node_from_json : nodes_from_json)
+	if (result)
 	{
-		auto * node = node_from_json.node;
+		// initialize components
 		
-		if (node->initComponents() == false)
+		for (auto & node_from_json : nodes_from_json)
 		{
-			LOG_ERR("failed to initialize one or more components in node component set", 0);
-			init_ok &= false;
+			auto * node = node_from_json.node;
+			
+			if (node->initComponents() == false)
+			{
+				LOG_ERR("failed to initialize one or more components in node component set", 0);
+				result &= false;
+			}
 		}
 	}
 	
-	// clean up if initialization failed
-	
-	if (init_ok == false)
+	if (result)
 	{
+		// add nodes and check for duplicate ids
+		
+		for (auto & node_from_json : nodes_from_json)
+		{
+			auto * node = node_from_json.node;
+			
+			Assert(nodes.count(node->id) == 0);
+			if (nodes.count(node->id) == 0)
+			{
+				nodes[node->id] = node;
+			}
+			else
+			{
+				LOG_ERR("duplicate node id: %d", node->id);
+				result &= false;
+			}
+		}
+		
+		// set up scene node hierarchy
+		
+		for (auto & node_itr : nodes)
+		{
+			auto * node = node_itr.second;
+			
+			for (auto & childNodeId : node->childNodeIds)
+			{
+				auto childNode_itr = nodes.find(childNodeId);
+				
+				Assert(childNode_itr != nodes.end());
+				if (childNode_itr != nodes.end())
+				{
+					auto * childNode = childNode_itr->second;
+					
+					childNode->parentId = node->id;
+				}
+				else
+				{
+					LOG_ERR("invalid child node id in scene node hierarchy. node=%d, child_node=%d", node->id, childNodeId);
+					result &= false;
+				}
+			}
+		}
+	}
+	
+	// clean up if something failed
+	
+	if (result == false)
+	{
+		nodes.clear();
+		
 		for (auto & node_from_json : nodes_from_json)
 		{
 			auto * node = node_from_json.node;
@@ -267,36 +322,9 @@ bool Scene::load(const ComponentJson & jj)
 			delete node;
 			node = nullptr;
 		}
-		
-		return false;
 	}
 	
-	for (auto & node_from_json : nodes_from_json)
-	{
-		auto * node = node_from_json.node;
-		
-		nodes[node->id] = node;
-	}
-	
-	for (auto & node_itr : nodes)
-	{
-		auto & node = *node_itr.second;
-		
-		for (auto & childNodeId : node.childNodeIds)
-		{
-			auto childNode_itr = nodes.find(childNodeId);
-			
-			Assert(childNode_itr != nodes.end());
-			if (childNode_itr != nodes.end())
-			{
-				auto & childNode = *childNode_itr->second;
-				
-				childNode.parentId = node.id;
-			}
-		}
-	}
-	
-	return true;
+	return result;
 }
 
 bool Scene::loadFromFile(const char * filename)

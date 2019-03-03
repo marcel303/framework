@@ -36,6 +36,7 @@ struct Scene
 	
 	int allocNodeId();
 	
+	void createRootNode();
 	SceneNode & getRootNode();
 	const SceneNode & getRootNode() const;
 	

@@ -150,6 +150,8 @@ struct SceneEditor
 	void init()
 	{
 		guiContext.init();
+		
+		scene.createRootNode();
 	}
 	
 	void shut()
