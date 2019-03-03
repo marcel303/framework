@@ -27,10 +27,10 @@
 
 #include "Debugging.h"
 #include "editor_oscPath.h"
+#include "oscEndpointMgr.h"
+#include "oscReceiver.h"
 #include "tinyxml2.h"
 #include "ui.h"
-#include "vfxNodes/oscEndpointMgr.h"
-#include "vfxNodes/oscReceiver.h"
 #include "vfxResource.h"
 #include "vfxTypes.h"
 

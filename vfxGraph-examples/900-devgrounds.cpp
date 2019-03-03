@@ -34,13 +34,13 @@
 
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
-#include "vfxNodes/oscEndpointMgr.h"
 #include "vfxNodes/vfxNodeVfxGraph.h"
 #include "vfxTypes.h"
 
 #include "imgui-framework.h"
 #include "imgui/TextEditor.h"
 #include "mediaplayer/MPUtil.h"
+#include "oscEndpointMgr.h"
 #include "Timer.h"
 #include "tinyxml2.h"
 #include "ui.h"

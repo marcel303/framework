@@ -1,11 +1,11 @@
 #include "framework.h"
 #include "osc/OscOutboundPacketStream.h"
+#include "oscEndpointMgr.h"
 #include "StringEx.h"
 #include "ui.h"
 #include "vfxGraph.h"
 #include "vfxGraphManager.h"
 #include "vfxGraphRealTimeConnection.h"
-#include "vfxNodes/oscEndpointMgr.h"
 #include "vfxUi.h"
 
 // todo : let inputs set if visible in node editor or not

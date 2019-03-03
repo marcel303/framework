@@ -30,7 +30,8 @@
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
 #include <list>
-#include <SDL2/SDL.h>
+#include <mutex>
+#include <thread>
 
 #include "Debugging.h"
 #include "Log.h"
@@ -45,7 +46,7 @@ public:
 		IpEndpointName remoteEndpoint;
 	};
 	
-	SDL_mutex * receiveMutex;
+	std::mutex * receiveMutex;
 	OscReceiveHandler * receiveHandler;
 	
 	std::list<ReceivedMessage> receivedMessages;
@@ -56,7 +57,7 @@ public:
 		, receiveHandler(nullptr)
 		, receivedMessages()
 	{
-		receiveMutex = SDL_CreateMutex();
+		receiveMutex = new std::mutex();
 	}
 	
 	~OscPacketListener()
@@ -65,7 +66,7 @@ public:
 		swapMessages();
 		freeMessages();
 		
-		SDL_DestroyMutex(receiveMutex);
+		delete receiveMutex;
 		receiveMutex = nullptr;
 		
 		Assert(receiveHandler == nullptr);
@@ -74,12 +75,12 @@ public:
 	
 	void swapMessages()
 	{
-		SDL_LockMutex(receiveMutex);
+		receiveMutex->lock();
 		{
 			receivedMessagesCopy = receivedMessages;
 			receivedMessages.clear();
 		}
-		SDL_UnlockMutex(receiveMutex);
+		receiveMutex->unlock();
 	}
 	
 	void freeMessages()
@@ -127,11 +128,11 @@ protected:
 		message.remoteEndpoint = remoteEndpoint;
 		memcpy(message.data, data, size);
 		
-		SDL_LockMutex(receiveMutex);
+		receiveMutex->lock();
 		{
 			receivedMessages.push_back(message);
 		}
-		SDL_UnlockMutex(receiveMutex);
+		receiveMutex->unlock();
 	}
 	
 	virtual void ProcessBundle(const osc::ReceivedBundle & b, const IpEndpointName & remoteEndpoint) override
@@ -162,7 +163,7 @@ protected:
 OscReceiver::OscReceiver()
 	: packetListener(nullptr)
 	, receiveSocket(nullptr)
-	, messageThread(nullptr)
+	, messageThreadPtr(nullptr)
 	, ipAddress()
 	, udpPort(0)
 {
@@ -225,7 +226,7 @@ bool OscReceiver::doInit(const char * _ipAddress, const int _udpPort)
 			
 			LOG_DBG("creating OSC receive thread", 0);
 		
-			messageThread = SDL_CreateThread(executeOscThread, "OSC thread", this);
+			messageThreadPtr = new std::thread(executeOscThread, this);
 			
 			return true;
 		}
@@ -247,10 +248,15 @@ bool OscReceiver::shut()
 		receiveSocket->AsynchronousBreak();
 	}
 	
-	if (messageThread != nullptr)
+	if (messageThreadPtr != nullptr)
 	{
-		SDL_WaitThread(messageThread, nullptr);
+		std::thread * messageThread = (std::thread*)messageThreadPtr;
+		messageThread->join();
+		
+		delete messageThread;
 		messageThread = nullptr;
+		
+		messageThreadPtr = nullptr;
 	}
 	
 	LOG_DBG("terminating OSC receive thread [done]", 0);

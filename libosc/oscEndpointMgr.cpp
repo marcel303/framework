@@ -27,7 +27,7 @@
 
 #include "Log.h"
 #include "oscEndpointMgr.h"
-#include "vfxGraph.h"
+//#include "vfxGraph.h"
 
 OscEndpointMgr g_oscEndpointMgr;
 

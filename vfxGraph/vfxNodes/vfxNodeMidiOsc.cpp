@@ -26,7 +26,7 @@
 */
 
 #include "Log.h"
-#include "vfxNodes/oscEndpointMgr.h"
+#include "oscEndpointMgr.h"
 #include "vfxNodes/vfxNodeMidiOsc.h"
 
 VFX_NODE_TYPE(VfxNodeMidiOsc)

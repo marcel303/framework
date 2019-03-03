@@ -6,11 +6,11 @@
 #include "framework.h"
 #include "Noise.h"
 #include "objects/paobject.h"
+#include "oscEndpointMgr.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 #include "vfxNodeBase.h"
 #include "vfxNodes/vfxNodeDisplay.h"
-#include "vfxNodes/oscEndpointMgr.h"
 #include <algorithm>
 
 #include "mechanism.h"

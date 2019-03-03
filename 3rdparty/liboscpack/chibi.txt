@@ -1,4 +1,4 @@
-library libosc
+library liboscpack
 
 	scan_files cpp path osc group osc
 	scan_files h   path osc group osc

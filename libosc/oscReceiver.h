@@ -33,8 +33,6 @@
 class OscPacketListener;
 class UdpListeningReceiveSocket;
 
-struct SDL_Thread;
-
 struct OscReceiveHandler
 {
 	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) = 0;
@@ -45,7 +43,7 @@ struct OscReceiver
 	OscPacketListener * packetListener;
 	UdpListeningReceiveSocket * receiveSocket;
 	
-	SDL_Thread * messageThread;
+	void * messageThreadPtr; // std::thread
 	
 	std::string ipAddress;
 	int udpPort;

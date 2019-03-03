@@ -27,11 +27,11 @@
 
 #include "Debugging.h"
 #include "editor_oscPathList.h"
+#include "oscEndpointMgr.h"
+#include "oscReceiver.h"
 #include "StringEx.h" // sprintf_s
 #include "tinyxml2.h"
 #include "ui.h"
-#include "vfxNodes/oscEndpointMgr.h"
-#include "vfxNodes/oscReceiver.h"
 #include "vfxResource.h"
 #include "vfxTypes.h"
 

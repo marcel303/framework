@@ -36,7 +36,7 @@
 #include "audioUi.h"
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
-#include "vfxNodes/oscEndpointMgr.h"
+#include "oscEndpointMgr.h"
 #include <algorithm>
 #include <cmath>
 
