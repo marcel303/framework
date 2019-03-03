@@ -109,18 +109,39 @@ void doParameterUi(ParameterBase & parameterBase)
 	}
 }
 
-void doParameterUi(ParameterComponent & component)
+void doParameterUi(ParameterComponent & component, const char * filter)
 {
-	if (ImGui::TreeNodeEx(&component, ImGuiTreeNodeFlags_CollapsingHeader, "%s", component.prefix.c_str()))
+	const bool do_filter = filter != nullptr && filter[0] != 0;
+	
+	ParameterBase ** parameters = (ParameterBase**)alloca(component.parameters.size() * sizeof(ParameterBase*));
+	
+	int numParameters = 0;
+	
+	if (do_filter)
 	{
 		for (auto * parameter : component.parameters)
+			if (strcasestr(parameter->name.c_str(), filter))
+				parameters[numParameters++] = parameter;
+	}
+	else
+	{
+		for (auto * parameter : component.parameters)
+			parameters[numParameters++] = parameter;
+	}
+	
+	if (numParameters > 0)
+	{
+		if (ImGui::TreeNodeEx(&component, ImGuiTreeNodeFlags_Framed, "%s", component.prefix.c_str()))
 		{
-			doParameterUi(*parameter);
+			for (auto * parameter : component.parameters)
+				doParameterUi(*parameter);
+			
+			ImGui::TreePop();
 		}
 	}
 }
 
-void doParameterUi(ParameterComponentMgr & componentMgr)
+void doParameterUi(ParameterComponentMgr & componentMgr, const char * filter)
 {
 	// todo : implement parameter UI, with optional search filter by component prefix
 	
@@ -162,6 +183,6 @@ void doParameterUi(ParameterComponentMgr & componentMgr)
 	
 	for (int i = 0; i < numElems; ++i)
 	{
-		doParameterUi(*elems[i].comp);
+		doParameterUi(*elems[i].comp, filter);
 	}
 }

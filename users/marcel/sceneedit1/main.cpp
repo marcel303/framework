@@ -139,6 +139,9 @@ struct SceneEditor
 	
 	Mat4x4 projectionMatrix;
 	
+	static const int kMaxParameterFilter = 100;
+	char parameterFilter[kMaxParameterFilter] = { };
+	
 	SceneEditor()
 	{
 		camera.position = Vec3(0, 1, -2);
@@ -566,7 +569,9 @@ struct SceneEditor
 				
 				if (ImGui::Begin("Parameter UI"))
 				{
-					doParameterUi(s_parameterComponentMgr);
+					ImGui::InputText("Filter", parameterFilter, kMaxParameterFilter);
+					
+					doParameterUi(s_parameterComponentMgr, parameterFilter);
 				}
 				ImGui::End();
 			}

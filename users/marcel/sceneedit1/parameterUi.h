@@ -5,5 +5,5 @@ struct ParameterComponent;
 struct ParameterComponentMgr;
 
 void doParameterUi(ParameterBase & parameter);
-void doParameterUi(ParameterComponent & component);
-void doParameterUi(ParameterComponentMgr & componentMgr);
+void doParameterUi(ParameterComponent & component, const char * filter);
+void doParameterUi(ParameterComponentMgr & componentMgr, const char * filter);
