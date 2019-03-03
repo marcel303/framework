@@ -72,7 +72,7 @@
 #endif
 
 #ifndef WIN32
-static int fopen_s(FILE ** file, const char * filename, const char * mode)
+inline int fopen_s(FILE ** file, const char * filename, const char * mode)
 {
 	*file = fopen(filename, mode);
 	return *file ? 0 : EINVAL;
