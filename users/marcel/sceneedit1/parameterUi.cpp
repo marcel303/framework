@@ -2,6 +2,7 @@
 #include "parameterComponent.h"
 #include "parameterUi.h"
 #include "StringEx.h"
+#include <algorithm>
 
 #ifdef WIN32
 	#include <malloc.h>
