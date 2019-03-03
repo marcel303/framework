@@ -1754,14 +1754,14 @@ int main(int argc, char * argv[])
 			{
 				const bool isOpaquePass = (i == 0);
 				
+				if (scene.activeScene < 0 || scene.activeScene >= scene.sceneRoots.size())
+				{
+					logWarning("invalid scene index");
+					continue;
+				}
+				
 				pushDepthWrite(keyboard.isDown(SDLK_z) ? true : isOpaquePass ? true : false);
 				{
-					if (scene.activeScene < 0 || scene.activeScene >= scene.sceneRoots.size())
-					{
-						logWarning("invalid scene index");
-						continue;
-					}
-					
 					auto & sceneRoot = scene.sceneRoots[scene.activeScene];
 					
 					for (auto & node_index : sceneRoot.nodes)
