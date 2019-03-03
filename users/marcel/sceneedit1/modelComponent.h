@@ -12,6 +12,7 @@ struct ModelComponent : Component<ModelComponent>
 	AngleAxis rotation;
 	bool colorTexcoords = false;
 	bool colorNormals = false;
+	bool centimetersToMeters = false;
 	
 	Vec3 modelAabbMin;
 	Vec3 modelAabbMax;
@@ -52,6 +53,7 @@ struct ModelComponentType : ComponentType<ModelComponent>
 			.setEditingCurveExponential(2.f);
 		add("colorTexcoords", &ModelComponent::colorTexcoords);
 		add("colorNormals", &ModelComponent::colorNormals);
+		add("centimetersToMeters", &ModelComponent::centimetersToMeters);
 	}
 };
 
