@@ -16,6 +16,7 @@
 #include "TextIO.h"
 
 #include "helpers.h"
+#include "lineReader.h"
 #include "template.h"
 
 #include <algorithm>
@@ -1049,6 +1050,50 @@ int main(int argc, char * argv[])
 			}
 			
 			changeDirectory(".."); // fixme : remove
+		}
+		
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_p))
+		{
+			inputIsCaptured = true;
+			
+			auto & rootNode = editor.scene.getRootNode();
+			
+			if (!rootNode.childNodeIds.empty())
+			{
+				auto nodeId = rootNode.childNodeIds[0];
+				
+				auto node_itr = editor.scene.nodes.find(nodeId);
+				Assert(node_itr != editor.scene.nodes.end());
+				{
+					auto * node = node_itr->second;
+					
+					if (node->components.head != nullptr)
+					{
+						auto * component = node->components.head;
+						auto * componentType = findComponentType(component->typeIndex());
+						
+						Assert(componentType != nullptr);
+						if (componentType != nullptr)
+						{
+							std::vector<std::string> lines;
+							object_tolines_recursive(g_typeDB, componentType, component, lines, 0);
+							
+							for (auto & line : lines)
+								logInfo("%s", line.c_str());
+							
+							auto * component_copy = componentType->componentMgr->createComponent(nullptr);
+							
+							LineReader line_reader(lines, 0, 0);
+							if (object_fromlines_recursive(g_typeDB, componentType, component_copy, line_reader))
+							{
+								logDebug("success!");
+							}
+							
+							componentType->componentMgr->destroyComponent(component_copy);
+						}
+					}
+				}
+			}
 		}
 		
 		//

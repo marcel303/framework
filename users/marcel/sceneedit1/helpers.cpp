@@ -799,7 +799,9 @@ bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * stru
 			{
 				auto * vector_object = member_interface->vector_access((void*)object, i);
 				
-				result &= object_tolines_recursive(typeDB, vector_type, vector_object, out_lines, currentIndent);
+				addLine(out_lines, currentIndent, "-");
+				
+				result &= object_tolines_recursive(typeDB, vector_type, vector_object, out_lines, currentIndent + 1);
 			}
 		}
 	}
@@ -912,9 +914,33 @@ bool member_fromlines_recursive(
 	
 	if (member->isVector)
 	{
-		LOG_ERR("vector types aren't supported yet", 0);
-		Assert(false);
-		//result &= false;
+		auto * member_interface = static_cast<const Member_VectorInterface*>(member);
+		
+		auto * vector_type = typeDB.findType(member_interface->vector_type());
+
+		const char * element;
+		
+		while ((element = line_reader.get_next_line(true)))
+		{
+			Assert(element[0] == '-');
+			if (element[0] != '-')
+			{
+				LOG_ERR("syntax error. expected '-' for next array element", 0);
+				result &= false;
+			}
+			else
+			{
+				member_interface->vector_resize(object, member_interface->vector_size(object) + 1);
+				
+				auto * vector_object = member_interface->vector_access(object, member_interface->vector_size(object) - 1);
+				
+				line_reader.push_indent();
+				{
+					result &= object_fromlines_recursive(typeDB, vector_type, vector_object, line_reader);
+				}
+				line_reader.pop_indent();
+			}
+		}
 	}
 	else
 	{
