@@ -1,0 +1,6 @@
+library libosc
+	depend_library libgg
+	depend_library liboscpack
+	scan_files cpp
+	scan_files h
+	header_path . expose
