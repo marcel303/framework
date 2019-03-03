@@ -2,7 +2,8 @@
 
 struct ParameterBase;
 struct ParameterComponent;
+struct ParameterComponentMgr;
 
 void doParameterUi(ParameterBase & parameter);
 void doParameterUi(ParameterComponent & component);
-void doParameterUi(ParameterComponent ** components, const int numComponents);
+void doParameterUi(ParameterComponentMgr & componentMgr);

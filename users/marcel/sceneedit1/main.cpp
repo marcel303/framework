@@ -338,8 +338,6 @@ struct SceneEditor
 						ImGui::Indent();
 						editNodeListTraverse(childNodeId, editChildren);
 						ImGui::Unindent();
-						
-						ImGui::TreePop();
 					}
 				}
 			}
@@ -568,13 +566,7 @@ struct SceneEditor
 				
 				if (ImGui::Begin("Parameter UI"))
 				{
-					for (auto * component = s_parameterComponentMgr.head; component != nullptr; component = component->next)
-					{
-						if (component->parameters.empty())
-							continue;
-						
-						doParameterUi(*component);
-					}
+					doParameterUi(s_parameterComponentMgr);
 				}
 				ImGui::End();
 			}

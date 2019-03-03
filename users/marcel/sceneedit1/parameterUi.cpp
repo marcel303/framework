@@ -3,6 +3,12 @@
 #include "parameterUi.h"
 #include "StringEx.h"
 
+#ifdef WIN32
+	#include <malloc.h>
+#else
+	#include <alloca.h>
+#endif
+
 void doParameterUi(ParameterBase & parameterBase)
 {
 	switch (parameterBase.type)
@@ -114,12 +120,48 @@ void doParameterUi(ParameterComponent & component)
 	}
 }
 
-void doParameterUi(ParameterComponent ** components, const int numComponents)
+void doParameterUi(ParameterComponentMgr & componentMgr)
 {
 	// todo : implement parameter UI, with optional search filter by component prefix
 	
-	for (int i = 0; i < numComponents; ++i)
+	struct Elem
 	{
-		doParameterUi(*components[i]);
+		ParameterComponent * comp;
+		
+		bool operator<(const Elem & other) const
+		{
+			const int prefix_cmp = strcmp(comp->prefix.c_str(), other.comp->prefix.c_str());
+			if (prefix_cmp != 0)
+				return prefix_cmp < 0;
+			
+			const int id_cmp = strcmp(comp->id, other.comp->id);
+			if (id_cmp != 0)
+				return id_cmp < 0;
+			
+			return false;
+		}
+	};
+	
+	int numComponents = 0;
+	
+	for (auto * comp = componentMgr.head; comp != nullptr; comp = comp->next)
+	{
+		if (!comp->parameters.empty())
+			numComponents++;
+	}
+	
+	Elem * elems = (Elem*)alloca(numComponents * sizeof(Elem));
+	
+	int numElems = 0;
+	
+	for (auto * comp = componentMgr.head; comp != nullptr; comp = comp->next)
+		if (!comp->parameters.empty())
+			elems[numElems++].comp = comp;
+	
+	std::sort(elems, elems + numElems);
+	
+	for (int i = 0; i < numElems; ++i)
+	{
+		doParameterUi(*elems[i].comp);
 	}
 }
