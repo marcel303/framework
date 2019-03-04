@@ -772,7 +772,7 @@ static void addLine(std::vector<std::string> & lines, const int indent, const ch
 		line.push_back('\t');
 	
 	line.append(text);
-	
+
 	lines.push_back(line);
 }
 
@@ -799,9 +799,16 @@ bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * stru
 			{
 				auto * vector_object = member_interface->vector_access((void*)object, i);
 				
-				addLine(out_lines, currentIndent, "-");
-				
-				result &= object_tolines_recursive(typeDB, vector_type, vector_object, out_lines, currentIndent + 1);
+				if (vector_type->isStructured)
+				{
+					addLine(out_lines, currentIndent, "-");
+					
+					result &= object_tolines_recursive(typeDB, vector_type, vector_object, out_lines, currentIndent + 1);
+				}
+				else
+				{
+					result &= object_tolines_recursive(typeDB, vector_type, vector_object, out_lines, currentIndent);
+				}
 			}
 		}
 	}
@@ -918,27 +925,47 @@ bool member_fromlines_recursive(
 		
 		auto * vector_type = typeDB.findType(member_interface->vector_type());
 
-		const char * element;
-		
-		while ((element = line_reader.get_next_line(true)))
+		if (vector_type->isStructured)
 		{
-			Assert(element[0] == '-');
-			if (element[0] != '-')
+			const char * element;
+			
+			while ((element = line_reader.get_next_line(true)))
 			{
-				LOG_ERR("syntax error. expected '-' for next array element", 0);
-				result &= false;
+				Assert(element[0] == '-');
+				if (element[0] != '-')
+				{
+					LOG_ERR("syntax error. expected '-' for next array element", 0);
+					result &= false;
+				}
+				else
+				{
+					member_interface->vector_resize(object, member_interface->vector_size(object) + 1);
+					
+					auto * vector_object = member_interface->vector_access(object, member_interface->vector_size(object) - 1);
+					
+					line_reader.push_indent();
+					{
+						result &= object_fromlines_recursive(typeDB, vector_type, vector_object, line_reader);
+					}
+					line_reader.pop_indent();
+				}
 			}
-			else
+		}
+		else
+		{
+			// more condensed format for plain data
+			
+			const char * element;
+			
+			while ((element = line_reader.get_next_line(true)))
 			{
+				line_reader.line_index--;
+				
 				member_interface->vector_resize(object, member_interface->vector_size(object) + 1);
 				
 				auto * vector_object = member_interface->vector_access(object, member_interface->vector_size(object) - 1);
 				
-				line_reader.push_indent();
-				{
-					result &= object_fromlines_recursive(typeDB, vector_type, vector_object, line_reader);
-				}
-				line_reader.pop_indent();
+				result &= object_fromlines_recursive(typeDB, vector_type, vector_object, line_reader);
 			}
 		}
 	}
