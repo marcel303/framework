@@ -17,12 +17,16 @@
 
 #include "helpers.h"
 #include "lineReader.h"
+#include "lineWriter.h"
 #include "template.h"
 
 #include <algorithm>
 #include <limits>
 #include <set>
 #include <typeindex>
+
+#include "componentJson.h" // todo : remove
+#include <json.hpp> // todo : remove
 
 extern void test_templates();
 extern bool test_scenefiles();
@@ -1075,21 +1079,52 @@ int main(int argc, char * argv[])
 						Assert(componentType != nullptr);
 						if (componentType != nullptr)
 						{
-							std::vector<std::string> lines;
-							object_tolines_recursive(g_typeDB, componentType, component, lines, 0);
+							auto t1 = SDL_GetTicks();
+							for (int i = 0; i < 100000; ++i)
+							{
+						#if 1
+							LineWriter line_writer;
+							object_tolines_recursive(g_typeDB, componentType, component, line_writer, 0);
 							
-							for (auto & line : lines)
-								logInfo("%s", line.c_str());
+							std::vector<std::string> lines = line_writer.ToLines();
+							
+							//for (auto & line : lines)
+							//	logInfo("%s", line.c_str());
 							
 							auto * component_copy = componentType->componentMgr->createComponent(nullptr);
 							
 							LineReader line_reader(lines, 0, 0);
 							if (object_fromlines_recursive(g_typeDB, componentType, component_copy, line_reader))
 							{
-								logDebug("success!");
+								//logDebug("success!");
 							}
 							
 							componentType->componentMgr->destroyComponent(component_copy);
+						#else
+							nlohmann::json json;
+							ComponentJson j1(json);
+							
+							member_tojson_recursive(g_typeDB, componentType, component, j1);
+							
+							auto str = json.dump(4);
+							//printf("%s", str.c_str());
+							
+							json = json.parse(str);
+							ComponentJson j2(json);
+							
+							auto * component_copy = componentType->componentMgr->createComponent(nullptr);
+							
+							if (member_fromjson_recursive(g_typeDB, componentType, component_copy, j2))
+							{
+								//logDebug("success!");
+							}
+							
+							componentType->componentMgr->destroyComponent(component_copy);
+						#endif
+							}
+							auto t2 = SDL_GetTicks();
+							printf("time: %ums\n", (t2 - t1));
+							printf("(done)\n");
 						}
 					}
 				}
