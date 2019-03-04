@@ -2,6 +2,7 @@
 #include "componentType.h"
 #include "helpers.h"
 #include "lineReader.h"
+#include "lineWriter.h"
 #include "Log.h"
 
 #define DEFINE_COMPONENT_TYPES
@@ -764,19 +765,17 @@ bool member_totext(const TypeDB & typeDB, const Member * member, const void * ob
 
 //
 
-static void addLine(std::vector<std::string> & lines, const int indent, const char * text)
+static void addLine(LineWriter & line_writer, const int indent, const char * text)
 {
-	std::string line;
-	
 	for (int i = 0; i < indent; ++i)
-		line.push_back('\t');
+		line_writer.Append('\t');
 	
-	line.append(text);
-
-	lines.push_back(line);
+	line_writer.Append(text);
+	
+	line_writer.Append('\n');
 }
 
-bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * structured_type, const void * object, const Member * member, std::vector<std::string> & out_lines, const int currentIndent)
+bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * structured_type, const void * object, const Member * member, LineWriter & line_writer, const int currentIndent)
 {
 	bool result = true;
 	
@@ -801,13 +800,13 @@ bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * stru
 				
 				if (vector_type->isStructured)
 				{
-					addLine(out_lines, currentIndent, "-");
+					addLine(line_writer, currentIndent, "-");
 					
-					result &= object_tolines_recursive(typeDB, vector_type, vector_object, out_lines, currentIndent + 1);
+					result &= object_tolines_recursive(typeDB, vector_type, vector_object, line_writer, currentIndent + 1);
 				}
 				else
 				{
-					result &= object_tolines_recursive(typeDB, vector_type, vector_object, out_lines, currentIndent);
+					result &= object_tolines_recursive(typeDB, vector_type, vector_object, line_writer, currentIndent);
 				}
 			}
 		}
@@ -826,7 +825,7 @@ bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * stru
 		}
 		else
 		{
-			result &= object_tolines_recursive(typeDB, member_type, member_object, out_lines, currentIndent);
+			result &= object_tolines_recursive(typeDB, member_type, member_object, line_writer, currentIndent);
 		}
 	}
 	
@@ -992,7 +991,7 @@ bool member_fromlines_recursive(
 
 bool object_tolines_recursive(
 	const TypeDB & typeDB, const Type * type, const void * object,
-	std::vector<std::string> & out_lines, const int currentIndent)
+	LineWriter & line_writer, const int currentIndent)
 {
 	if (type->isStructured)
 	{
@@ -1002,9 +1001,9 @@ bool object_tolines_recursive(
 		
 		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
 		{
-			addLine(out_lines, currentIndent, member->name);
+			addLine(line_writer, currentIndent, member->name);
 			
-			result &= member_tolines_recursive(typeDB, structured_type, object, member, out_lines, currentIndent + 1);
+			result &= member_tolines_recursive(typeDB, structured_type, object, member, line_writer, currentIndent + 1);
 		}
 		
 		return result;
@@ -1022,7 +1021,7 @@ bool object_tolines_recursive(
 		}
 		else
 		{
-			addLine(out_lines, currentIndent, text.c_str());
+			addLine(line_writer, currentIndent, text.c_str());
 			return true;
 		}
 	}
@@ -1032,7 +1031,7 @@ bool object_tolines_recursive(
 
 bool member_tolines_recursive(
 	const TypeDB & typeDB, const Member * member, const void * object,
-	std::vector<std::string> & out_lines, const int currentIndent)
+	LineWriter & line_writer, const int currentIndent)
 {
 	bool result = true;
 	
@@ -1056,7 +1055,7 @@ bool member_tolines_recursive(
 		}
 		else
 		{
-			result &= object_tolines_recursive(typeDB, member_type, member_object, out_lines, currentIndent);
+			result &= object_tolines_recursive(typeDB, member_type, member_object, line_writer, currentIndent);
 		}
 	}
 	

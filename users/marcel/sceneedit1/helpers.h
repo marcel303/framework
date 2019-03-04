@@ -11,6 +11,7 @@ struct ComponentSet;
 struct ComponentTypeBase;
 
 struct LineReader;
+struct LineWriter;
 
 void registerBuiltinTypes();
 
@@ -31,7 +32,7 @@ bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void *
 bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object, const char * text);
 bool member_totext(const TypeDB & typeDB, const Member * member, const void * object, std::string & out_text);
 
-bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * structured_type, const void * object, const Member * member, std::vector<std::string> & out_lines, const int currentIndent);
+bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * structured_type, const void * object, const Member * member, LineWriter & line_writer, const int currentIndent);
 
 bool object_fromlines_recursive(
 	const TypeDB & typeDB, const Type * type, void * object,
@@ -42,10 +43,10 @@ bool member_fromlines_recursive(
 
 bool object_tolines_recursive(
 	const TypeDB & typeDB, const Type * type, const void * object,
-	std::vector<std::string> & out_lines, const int currentIndent);
+	LineWriter & line_Writer, const int currentIndent);
 bool member_tolines_recursive(
 	const TypeDB & typeDB, const Member * member, const void * object,
-	std::vector<std::string> & out_lines, const int currentIndent);
+	LineWriter & line_Writer, const int currentIndent);
 
 extern TypeDB g_typeDB;
 

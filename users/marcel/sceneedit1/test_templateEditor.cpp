@@ -5,6 +5,7 @@
 #include "imgui.h"
 #include "imgui-framework.h"
 #include "lineReader.h"
+#include "lineWriter.h"
 #include "Log.h"
 #include "Path.h"
 #include "StringEx.h"
@@ -64,12 +65,15 @@ static void createFallbackTemplateForComponent(const TypeDB & typeDB, const char
 		
 		template_property.name = member->name;
 		
-		if (!member_tolines_recursive(typeDB, componentType, component, member, template_property.value_lines, 0))
+		LineWriter line_writer;
+		if (!member_tolines_recursive(typeDB, componentType, component, member, line_writer, 0))
 		{
 		// fixme : this may trigger an error. let createFallbackTemplateForComponent return false in this case
 			LOG_ERR("failed to serialize component property to text", 0);
 			continue;
 		}
+		
+		template_property.value_lines = line_writer.ToLines(); // todo : optimize
 		
 		template_component.properties.push_back(template_property);
 	}
@@ -325,8 +329,9 @@ bool saveTemplateInstanceToString(const TypeDB & typeDB, const std::vector<Templ
 			{
 				if (component.propertyIsSetArray[property_itr])
 				{
+					LineWriter line_writer;
 					std::vector<std::string> lines;
-					result &= member_tolines_recursive(typeDB, member, component.component, lines, 0);
+					result &= member_tolines_recursive(typeDB, member, component.component, line_writer, 0);
 					
 					out << "\t" << member->name << "\n";
 					for (auto & line : lines)
