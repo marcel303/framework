@@ -568,13 +568,56 @@ bool member_tojson(const TypeDB & typeDB, const Member * member, const void * ob
 // member <-> text serialization
 
 #include "Parse.h"
-#include "StringEx.h"
+#include "StringEx.h" // strcpy_s
 
-void splitString(const std::string & str, std::vector<std::string> & result);
+inline bool is_whitespace(const char c)
+{
+	return isspace(c);
+}
+
+static bool extract_word(const char * __restrict & text, char * __restrict out_word, const int max_word_size)
+{
+	while (*text != 0 && is_whitespace(*text) == true)
+		text++;
+	
+	if (*text == 0)
+		return false;
+	
+	const char * word = text;
+	
+	while (*text != 0 && is_whitespace(*text) == false)
+		text++;
+	
+	if (text > word)
+	{
+		const size_t size = text - word;
+		
+		if (*text != 0)
+		{
+			text++;
+		}
+		
+		if (size + 1 > max_word_size)
+			return false;
+		else
+		{
+			for (size_t i = 0; i < size; ++i)
+				out_word[i] = word[i];
+			
+			out_word[size] = 0;
+			
+			return true;
+		}
+	}
+	else
+	{
+		return false;
+	}
+}
 
 bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void * object, const char * text)
 {
-// todo : I definitely need better parse function. ones which return a success code
+// todo : I definitely need better parse functions. ones which return a success code
 
 	switch (plain_type->dataType)
 	{
@@ -592,11 +635,15 @@ bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void *
 		
 	case kDataType_Vec2:
 		{
-			std::vector<std::string> parts;
-			splitString(text, parts);
+			char parts[2][64];
 			
-			if (parts.size() != 2)
+			const char * text_ptr = text;
+			
+			if (!extract_word(text_ptr, parts[0], sizeof(parts[0])) ||
+				!extract_word(text_ptr, parts[1], sizeof(parts[1])))
+			{
 				return false;
+			}
 			
 			plain_type->access<Vec2>(object).Set(
 				Parse::Float(parts[0]),
@@ -606,11 +653,16 @@ bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void *
 		
 	case kDataType_Vec3:
 		{
-			std::vector<std::string> parts;
-			splitString(text, parts);
+			char parts[3][64];
 			
-			if (parts.size() != 3)
+			const char * text_ptr = text;
+			
+			if (!extract_word(text_ptr, parts[0], sizeof(parts[0])) ||
+				!extract_word(text_ptr, parts[1], sizeof(parts[1])) ||
+				!extract_word(text_ptr, parts[2], sizeof(parts[2])))
+			{
 				return false;
+			}
 			
 			plain_type->access<Vec3>(object).Set(
 				Parse::Float(parts[0]),
@@ -621,11 +673,17 @@ bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void *
 		
 	case kDataType_Vec4:
 		{
-			std::vector<std::string> parts;
-			splitString(text, parts);
+			char parts[4][64];
 			
-			if (parts.size() != 4)
+			const char * text_ptr = text;
+			
+			if (!extract_word(text_ptr, parts[0], sizeof(parts[0])) ||
+				!extract_word(text_ptr, parts[1], sizeof(parts[1])) ||
+				!extract_word(text_ptr, parts[2], sizeof(parts[2])) ||
+				!extract_word(text_ptr, parts[3], sizeof(parts[3])))
+			{
 				return false;
+			}
 			
 			plain_type->access<Vec4>(object).Set(
 				Parse::Float(parts[0]),
