@@ -671,21 +671,21 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 	return object_fromtext(typeDB, plain_type, member_object, text);
 }
 
-static bool plain_type_totext(const PlainType * plain_type, const void * object, std::string & out_text)
+static bool plain_type_totext(const PlainType * plain_type, const void * object, char * out_text, const int out_text_size)
 {
 	switch (plain_type->dataType)
 	{
 	case kDataType_Bool:
-		out_text = plain_type->access<bool>(object) ? "true" : "false";
+		strcpy_s(out_text, out_text_size, plain_type->access<bool>(object) ? "true" : "false");
 		return true;
 		
 	case kDataType_Int:
-		out_text = String::FormatC("%d", plain_type->access<int>(object));
+		sprintf_s(out_text, out_text_size, "%d", plain_type->access<int>(object));
 		return true;
 		
 	case kDataType_Float:
 		// todo : need a better float to string conversion function
-		out_text = String::FormatC("%f", plain_type->access<float>(object));
+		sprintf_s(out_text, out_text_size, "%f", plain_type->access<float>(object));
 		return true;
 		
 	case kDataType_Vec2:
@@ -694,7 +694,7 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 		
 			auto & value = plain_type->access<Vec2>(object);
 			
-			out_text = String::FormatC("%f %f",
+			sprintf_s(out_text, out_text_size, "%f %f",
 				value[0],
 				value[1]);
 		}
@@ -706,7 +706,7 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 		
 			auto & value = plain_type->access<Vec3>(object);
 			
-			out_text = String::FormatC("%f %f %f",
+			sprintf_s(out_text, out_text_size, "%f %f %f",
 				value[0],
 				value[1],
 				value[2]);
@@ -719,7 +719,7 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 		
 			auto & value = plain_type->access<Vec4>(object);
 			
-			out_text = String::FormatC("%f %f %f %f",
+			sprintf_s(out_text, out_text_size, "%f %f %f %f",
 				value[0],
 				value[1],
 				value[2],
@@ -728,7 +728,7 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 		return true;
 		
 	case kDataType_String:
-		out_text = plain_type->access<std::string>(object);
+		strcpy_s(out_text, out_text_size, plain_type->access<std::string>(object).c_str());
 		return true;
 		
 	case kDataType_Other:
@@ -759,8 +759,16 @@ bool member_totext(const TypeDB & typeDB, const Member * member, const void * ob
 		return false;
 	
 	auto * plain_type = static_cast<const PlainType*>(member_type);
+	
+	const int text_size = 1024;
+	char text[text_size];
 
-	return plain_type_totext(plain_type, member_object, out_text);
+	if (plain_type_totext(plain_type, member_object, text, text_size) == false)
+		return false;
+	
+	out_text = text;
+	
+	return true;
 }
 
 //
@@ -1012,16 +1020,17 @@ bool object_tolines_recursive(
 	{
 		auto * plain_type = static_cast<const PlainType*>(type);
 		
-		std::string text;
+		const int text_size = 1024;
+		char text[text_size];
 		
-		if (plain_type_totext(plain_type, object, text) == false)
+		if (plain_type_totext(plain_type, object, text, text_size) == false)
 		{
 			LOG_ERR("failed to serialize plain type to text", 0);
 			return false;
 		}
 		else
 		{
-			addLine(line_writer, currentIndent, text.c_str());
+			addLine(line_writer, currentIndent, text);
 			return true;
 		}
 	}
