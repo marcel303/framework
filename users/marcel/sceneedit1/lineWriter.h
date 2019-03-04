@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 #include <string>
+#include <string.h>
 
 #include <vector> // todo : remove. use LineReader to read individual lines
 
