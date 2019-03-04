@@ -5,25 +5,157 @@
 
 #include <vector> // todo : remove. use LineReader to read individual lines
 
-struct LineWriter
+class LineWriter
 {
 	static const int kMaxFormattedTextSize = 1 << 12;
+	static const int kDefaultBlockSize = 1 << 16;
 	
-	std::string text;
-	
-	LineWriter()
+	struct Block
 	{
-		text.reserve(1 << 16);
+		Block * prev;
+		
+		char * text;
+		size_t size;
+		size_t capacity;
+	};
+	
+	void addBlock()
+	{
+		if (text_size == 0)
+			return;
+		
+		Block * block = new Block();
+		
+		block->prev = blocks_tail;
+		block->text = text;
+		block->size = text_size;
+		block->capacity = text_capacity;
+		
+		blocks_tail = block;
+		
+		text = nullptr;
+		text_size = 0;
+		text_capacity = 0;
+	}
+	
+	void newBlock(const size_t capacity)
+	{
+		text = new char[capacity];
+		text_size = 0;
+		text_capacity = capacity;
+	}
+	
+	Block * blocks_tail = nullptr;
+	
+	char * text = nullptr;
+	size_t text_size = 0;
+	size_t text_capacity = 0;
+	
+public:
+	~LineWriter()
+	{
+		Block * block = blocks_tail;
+		
+		while (block != nullptr)
+		{
+			Block * prev = block->prev;
+			
+			//
+			
+			delete [] block->text;
+			block->text = nullptr;
+			
+			delete block;
+			block = nullptr;
+			
+			//
+			
+			block = prev;
+		}
 	}
 	
 	void Append(const char c)
 	{
-		text.push_back(c);
+		if (text_size == text_capacity)
+		{
+			addBlock();
+			newBlock(kDefaultBlockSize);
+		}
+		
+		text[text_size] = c;
+		
+		text_size += 1;
 	}
 	
-	void Append(const char * text)
+	void Append(const char * __restrict in_text)
 	{
-		this->text.append(text);
+		size_t in_text_size = 0;
+		
+		while (in_text[in_text_size] != 0)
+			in_text_size++;
+		
+		const size_t size = in_text_size;
+		
+		if (text_size + size <= text_capacity)
+		{
+			// space is available
+		}
+		else
+		{
+			const size_t block_size = size > kDefaultBlockSize ? size : kDefaultBlockSize;
+			
+			addBlock();
+			newBlock(block_size);
+		}
+		
+		char * __restrict text_ptr = text + text_size;
+		
+		for (size_t i = 0; i < in_text_size; ++i)
+			text_ptr[i] = in_text[i];
+			
+		text_size += size;
+	}
+	
+	void AppendIndentedLine(const int indentation, const char * __restrict in_text)
+	{
+		// compute space requirement
+		
+		size_t in_text_size = 0;
+		
+		while (in_text[in_text_size] != 0)
+			in_text_size++;
+		
+		const size_t size = indentation + in_text_size + 1; // +1 for line break
+		
+		// ensure space is available
+		
+		if (text_size + size <= text_capacity)
+		{
+			// space is available
+		}
+		else
+		{
+			const size_t block_size = size > kDefaultBlockSize ? size : kDefaultBlockSize;
+			
+			addBlock();
+			newBlock(block_size);
+		}
+		
+		// copy data
+		
+		char * __restrict text_ptr = text + text_size;
+		
+		for (size_t i = 0; i < indentation; ++i)
+			text_ptr[i] = '\t';
+		
+		text_ptr += indentation;
+		
+		for (size_t i = 0; i < in_text_size; ++i)
+			text_ptr[i] = in_text[i];
+	
+		text_ptr[in_text_size] = '\n';
+	
+		text_size += size;
 	}
 	
 	void AppendFormat(const char * format, ...)
@@ -37,26 +169,99 @@ struct LineWriter
 		Append(text);
 	}
 	
-	std::vector<std::string> ToLines() const // todo : remove
+	std::vector<std::string> ToLines() // todo : remove
 	{
-		// todo : remove !
-		
 		std::vector<std::string> result;
+		
+		// commit current text
+		
+		if (text_size > 0)
+		{
+			addBlock();
+		}
+		
+		// early out when empty
+		
+		if (blocks_tail == nullptr)
+		{
+			return result;
+		}
+		
+		// compute concatenation of all text blocks, or use the text from the first block as a possible optimize
+		
+		char * total_text;
+		
+		const bool single_block_mode = (blocks_tail->prev == nullptr && blocks_tail->size < blocks_tail->capacity);
+		
+		if (single_block_mode)
+		{
+			// add null terminator
+			
+			blocks_tail->text[blocks_tail->size] = 0;
+			
+			total_text = blocks_tail->text;
+		}
+		else
+		{
+			// compute concatenation of all text blocks
+			
+			size_t total_size = 0;
+			
+			std::vector<Block*> blocks;
+			
+			for (Block * block = blocks_tail; block != nullptr; block = block->prev)
+			{
+				total_size += block->size;
+				
+				blocks.push_back(block);
+			}
+			
+			total_text = new char[total_size + 1];
+		
+			char * total_text_ptr = total_text;
+			
+			for (auto block_itr = blocks.rbegin(); block_itr != blocks.rend(); ++block_itr)
+			{
+				auto * block = *block_itr;
+				
+				memcpy(total_text_ptr, block->text, block->size);
+				
+				total_text_ptr += block->size;
+			}
+			
+			total_text_ptr[0] = 0;
+		}
+		
+		// todo : remove !
 		
 		size_t begin = 0;
 		size_t end = 0;
 		
-		const char * str = text.c_str();
+		const char * str = total_text;
+		
+		size_t num_lines = 0;
+		
+		for (size_t i = 0; str[i] != 0; ++i)
+			if (str[i] == '\n')
+				num_lines++;
+		
+		result.reserve(num_lines);
 		
 		while (str[begin] != 0)
 		{
 			while (str[end] != 0 && str[end] != '\n')
 				end++;
 			
-			result.emplace_back(text.substr(begin, end - begin));
+			result.emplace_back(std::string(str + begin, end - begin));
 			
 			begin = end + 1;
 			end = begin;
+		}
+		
+		if (single_block_mode == false)
+		{
+			delete [] total_text;
+			total_text = nullptr;
 		}
 		
 		return result;

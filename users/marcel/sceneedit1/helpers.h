@@ -11,7 +11,7 @@ struct ComponentSet;
 struct ComponentTypeBase;
 
 struct LineReader;
-struct LineWriter;
+class LineWriter;
 
 void registerBuiltinTypes();
 

@@ -683,11 +683,17 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 		return true;
 		
 	case kDataType_Int:
-		rapidjson::internal::i32toa(plain_type->access<int>(object), out_text);
+		{
+			char * text_ptr = rapidjson::internal::i32toa(plain_type->access<int>(object), out_text);
+			*text_ptr = 0;
+		}
 		return true;
 		
 	case kDataType_Float:
-		rapidjson::internal::dtoa(plain_type->access<float>(object), out_text);
+		{
+			char * text_ptr = rapidjson::internal::dtoa(plain_type->access<float>(object), out_text);
+			*text_ptr++ = 0;
+		}
 		return true;
 		
 	case kDataType_Vec2:
@@ -696,7 +702,7 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 			
 			char * text_ptr = out_text;
 			text_ptr = rapidjson::internal::dtoa(value[0], text_ptr); *text_ptr++ = ' ';
-			text_ptr = rapidjson::internal::dtoa(value[1], text_ptr);
+			text_ptr = rapidjson::internal::dtoa(value[1], text_ptr); *text_ptr++ = 0;
 		}
 		return true;
 		
@@ -707,7 +713,7 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 			char * text_ptr = out_text;
 			text_ptr = rapidjson::internal::dtoa(value[0], text_ptr); *text_ptr++ = ' ';
 			text_ptr = rapidjson::internal::dtoa(value[1], text_ptr); *text_ptr++ = ' ';
-			text_ptr = rapidjson::internal::dtoa(value[2], text_ptr);
+			text_ptr = rapidjson::internal::dtoa(value[2], text_ptr); *text_ptr++ = 0;
 		}
 		return true;
 		
@@ -719,7 +725,7 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 			text_ptr = rapidjson::internal::dtoa(value[0], text_ptr); *text_ptr++ = ' ';
 			text_ptr = rapidjson::internal::dtoa(value[1], text_ptr); *text_ptr++ = ' ';
 			text_ptr = rapidjson::internal::dtoa(value[2], text_ptr); *text_ptr++ = ' ';
-			text_ptr = rapidjson::internal::dtoa(value[3], text_ptr);
+			text_ptr = rapidjson::internal::dtoa(value[3], text_ptr); *text_ptr++ = 0;
 		}
 		return true;
 		
@@ -771,12 +777,7 @@ bool member_totext(const TypeDB & typeDB, const Member * member, const void * ob
 
 static void addLine(LineWriter & line_writer, const int indent, const char * text)
 {
-	for (int i = 0; i < indent; ++i)
-		line_writer.Append('\t');
-	
-	line_writer.Append(text);
-	
-	line_writer.Append('\n');
+	line_writer.AppendIndentedLine(indent, text);
 }
 
 bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * structured_type, const void * object, const Member * member, LineWriter & line_writer, const int currentIndent)
