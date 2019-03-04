@@ -1037,6 +1037,7 @@ int main(int argc, char * argv[])
 			else
 			{
 				Scene tempScene;
+				tempScene.createRootNode();
 
 				if (!parseSceneFromLines(g_typeDB, lines, tempScene))
 				{
