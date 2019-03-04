@@ -31,7 +31,8 @@ bool test_scenefiles()
 	}
 	
 	Scene scene;
-
+	scene.createRootNode();
+	
 	if (!parseSceneFromLines(g_typeDB, lines, scene))
 	{
 		LOG_ERR("failed to parse scene from lines", 0);
