@@ -671,6 +671,9 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 	return object_fromtext(typeDB, plain_type, member_object, text);
 }
 
+#include "rapidjson/internal/dtoa.h"
+#include "rapidjson/internal/itoa.h"
+
 static bool plain_type_totext(const PlainType * plain_type, const void * object, char * out_text, const int out_text_size)
 {
 	switch (plain_type->dataType)
@@ -680,50 +683,43 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 		return true;
 		
 	case kDataType_Int:
-		sprintf_s(out_text, out_text_size, "%d", plain_type->access<int>(object));
+		rapidjson::internal::i32toa(plain_type->access<int>(object), out_text);
 		return true;
 		
 	case kDataType_Float:
-		// todo : need a better float to string conversion function
-		sprintf_s(out_text, out_text_size, "%f", plain_type->access<float>(object));
+		rapidjson::internal::dtoa(plain_type->access<float>(object), out_text);
 		return true;
 		
 	case kDataType_Vec2:
 		{
-			// todo : need a better float to string conversion function
-		
 			auto & value = plain_type->access<Vec2>(object);
 			
-			sprintf_s(out_text, out_text_size, "%f %f",
-				value[0],
-				value[1]);
+			char * text_ptr = out_text;
+			text_ptr = rapidjson::internal::dtoa(value[0], text_ptr); *text_ptr++ = ' ';
+			text_ptr = rapidjson::internal::dtoa(value[1], text_ptr);
 		}
 		return true;
 		
 	case kDataType_Vec3:
 		{
-			// todo : need a better float to string conversion function
-		
 			auto & value = plain_type->access<Vec3>(object);
 			
-			sprintf_s(out_text, out_text_size, "%f %f %f",
-				value[0],
-				value[1],
-				value[2]);
+			char * text_ptr = out_text;
+			text_ptr = rapidjson::internal::dtoa(value[0], text_ptr); *text_ptr++ = ' ';
+			text_ptr = rapidjson::internal::dtoa(value[1], text_ptr); *text_ptr++ = ' ';
+			text_ptr = rapidjson::internal::dtoa(value[2], text_ptr);
 		}
 		return true;
 		
 	case kDataType_Vec4:
 		{
-			// todo : need a better float to string conversion function
-		
 			auto & value = plain_type->access<Vec4>(object);
 			
-			sprintf_s(out_text, out_text_size, "%f %f %f %f",
-				value[0],
-				value[1],
-				value[2],
-				value[3]);
+			char * text_ptr = out_text;
+			text_ptr = rapidjson::internal::dtoa(value[0], text_ptr); *text_ptr++ = ' ';
+			text_ptr = rapidjson::internal::dtoa(value[1], text_ptr); *text_ptr++ = ' ';
+			text_ptr = rapidjson::internal::dtoa(value[2], text_ptr); *text_ptr++ = ' ';
+			text_ptr = rapidjson::internal::dtoa(value[3], text_ptr);
 		}
 		return true;
 		
