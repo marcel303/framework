@@ -34,7 +34,7 @@ struct Scene;
 
 struct ModelComponentMgr : ComponentMgr<ModelComponent>
 {
-	void draw(const Scene & scene) const;
+	void draw() const;
 };
 
 #if defined(DEFINE_COMPONENT_TYPES)

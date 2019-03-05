@@ -58,10 +58,9 @@ void ModelComponent::draw(const Mat4x4 & objectToWorld) const
 
 //
 
-#include "scene.h"
 #include "transformComponent.h"
 
-void ModelComponentMgr::draw(const Scene & scene) const
+void ModelComponentMgr::draw() const
 {
 	for (auto * i = head; i != nullptr; i = i->next)
 	{

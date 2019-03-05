@@ -796,7 +796,7 @@ struct SceneEditor
 			{
 				pushDepthTest(true, DEPTH_LESS);
 				pushBlend(BLEND_OPAQUE);
-				s_modelComponentMgr.draw(scene);
+				s_modelComponentMgr.draw();
 				popBlend();
 				popDepthTest();
 			}
