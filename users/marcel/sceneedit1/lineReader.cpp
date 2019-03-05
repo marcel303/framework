@@ -9,7 +9,7 @@ static bool isEmptyLineOrComment(const char * line)
 		if (line[i] == '#')
 			return true;
 		
-		if (!isspace(line[i]))
+		if (line[i] != ' ' || line[i] != '\t')
 			return false;
 	}
 	
@@ -39,7 +39,7 @@ LineReader::LineReader(
 LineReader::~LineReader()
 {
 // todo : add a better way to detect push/pop mismatches and assert 
-	LOG_DBG("indentation level when line reader disposed: %d", indentation_level);
+	//LOG_DBG("indentation level when line reader disposed: %d", indentation_level);
 }
 
 const char * LineReader::get_next_line(const bool skipEmptyLines)
@@ -64,6 +64,8 @@ const char * LineReader::get_next_line(const bool skipEmptyLines)
 		
 		if (next_level < indentation_level)
 			return nullptr;
+		
+	// todo : check for indentation level increment greater than one in various place
 		
 		// return line with appropriate offset to compensate for indentation
 		

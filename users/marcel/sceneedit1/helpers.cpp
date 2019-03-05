@@ -572,11 +572,13 @@ bool member_tojson(const TypeDB & typeDB, const Member * member, const void * ob
 
 inline bool is_whitespace(const char c)
 {
-	return isspace(c);
+	return c == ' ' || c == '\t';
 }
 
-static bool extract_word(const char * __restrict & text, char * __restrict out_word, const int max_word_size)
+static bool extract_word(const char *& in_text, char * __restrict out_word, const int max_word_size)
 {
+	const char * __restrict text = in_text;
+	
 	while (*text != 0 && is_whitespace(*text) == true)
 		text++;
 	
@@ -605,6 +607,8 @@ static bool extract_word(const char * __restrict & text, char * __restrict out_w
 				out_word[i] = word[i];
 			
 			out_word[size] = 0;
+			
+			in_text = text;
 			
 			return true;
 		}
@@ -833,11 +837,6 @@ bool member_totext(const TypeDB & typeDB, const Member * member, const void * ob
 
 //
 
-static void addLine(LineWriter & line_writer, const int indent, const char * text)
-{
-	line_writer.AppendIndentedLine(indent, text);
-}
-
 bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * structured_type, const void * object, const Member * member, LineWriter & line_writer, const int currentIndent)
 {
 	bool result = true;
@@ -857,18 +856,23 @@ bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * stru
 		{
 			const size_t vector_size = member_interface->vector_size(object);
 			
-			for (size_t i = 0; i < vector_size; ++i)
+			if (vector_type->isStructured)
 			{
-				auto * vector_object = member_interface->vector_access((void*)object, i);
-				
-				if (vector_type->isStructured)
+				for (size_t i = 0; i < vector_size; ++i)
 				{
-					addLine(line_writer, currentIndent, "-");
+					auto * vector_object = member_interface->vector_access((void*)object, i);
+					
+					line_writer.AppendIndentedLine(currentIndent, "-");
 					
 					result &= object_tolines_recursive(typeDB, vector_type, vector_object, line_writer, currentIndent + 1);
 				}
-				else
+			}
+			else
+			{
+				for (size_t i = 0; i < vector_size; ++i)
 				{
+					auto * vector_object = member_interface->vector_access((void*)object, i);
+					
 					result &= object_tolines_recursive(typeDB, vector_type, vector_object, line_writer, currentIndent);
 				}
 			}
@@ -1017,17 +1021,17 @@ bool member_fromlines_recursive(
 		{
 			// more condensed format for plain data
 			
+			auto * plain_type = static_cast<const PlainType*>(vector_type);
+			
 			const char * element;
 			
 			while ((element = line_reader.get_next_line(true)))
 			{
-				line_reader.line_index--;
-				
 				member_interface->vector_resize(object, member_interface->vector_size(object) + 1);
 				
 				auto * vector_object = member_interface->vector_access(object, member_interface->vector_size(object) - 1);
-				
-				result &= object_fromlines_recursive(typeDB, vector_type, vector_object, line_reader);
+			
+				result &= object_fromtext(typeDB, plain_type, vector_object, element);
 			}
 		}
 	}
@@ -1064,7 +1068,7 @@ bool object_tolines_recursive(
 		
 		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
 		{
-			addLine(line_writer, currentIndent, member->name);
+			line_writer.AppendIndentedLine(currentIndent, member->name);
 			
 			result &= member_tolines_recursive(typeDB, structured_type, object, member, line_writer, currentIndent + 1);
 		}
@@ -1085,7 +1089,7 @@ bool object_tolines_recursive(
 		}
 		else
 		{
-			addLine(line_writer, currentIndent, text);
+			line_writer.AppendIndentedLine(currentIndent, text);
 			return true;
 		}
 	}
