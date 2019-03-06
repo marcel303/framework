@@ -330,8 +330,9 @@ bool saveTemplateInstanceToString(const TypeDB & typeDB, const std::vector<Templ
 				if (component.propertyIsSetArray[property_itr])
 				{
 					LineWriter line_writer;
-					std::vector<std::string> lines;
 					result &= member_tolines_recursive(typeDB, member, component.component, line_writer, 0);
+					
+					std::vector<std::string> lines = line_writer.ToLines();
 					
 					out << "\t" << member->name << "\n";
 					for (auto & line : lines)
