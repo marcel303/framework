@@ -5713,6 +5713,16 @@ void pushSurface(Surface * surface)
 
 void popSurface()
 {
+#if defined(MACOS)
+	// fix for driver issue where the results of drawing are possibly not yet flushed when accessing a surface texture,
+	// causing artefacts due to texel fetches returning inconsistent results
+	if (glTextureBarrierNV != nullptr)
+	{
+		glTextureBarrierNV();
+		checkErrorGL();
+	}
+#endif
+	
 	fassert(surfaceStackSize > 0);
 	surfaceStack[--surfaceStackSize] = 0;
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
