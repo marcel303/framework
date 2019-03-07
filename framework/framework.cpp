@@ -5129,7 +5129,7 @@ bool Mouse::isIdle() const
 
 // -----
 
-bool Keyboard::isDown(SDLKey key) const
+bool Keyboard::isDown(int key) const
 {
 	for (int i = 0; i < globals.currentWindowData->keyDownCount; ++i)
 		if (globals.currentWindowData->keyDown[i] == key)
@@ -5137,7 +5137,7 @@ bool Keyboard::isDown(SDLKey key) const
 	return false;
 }
 
-static bool keyChange(SDLKey key)
+static bool keyChange(int key)
 {
 	for (int i = 0; i < globals.currentWindowData->keyChangeCount; ++i)
 		if (globals.currentWindowData->keyChange[i] == key)
@@ -5145,17 +5145,17 @@ static bool keyChange(SDLKey key)
 	return false;
 }
 
-bool Keyboard::wentDown(SDLKey key, bool allowRepeat) const
+bool Keyboard::wentDown(int key, bool allowRepeat) const
 {
 	return (isDown(key) && keyChange(key)) || (allowRepeat && keyRepeat(key));
 }
 
-bool Keyboard::wentUp(SDLKey key) const
+bool Keyboard::wentUp(int key) const
 {
 	return !isDown(key) && keyChange(key);
 }
 
-bool Keyboard::keyRepeat(SDLKey key) const
+bool Keyboard::keyRepeat(int key) const
 {
 	for (int i = 0; i < globals.currentWindowData->keyRepeatCount; ++i)
 		if (globals.currentWindowData->keyRepeat[i] == key)

@@ -57,10 +57,6 @@
 	#define fassert(x) do { } while (false)
 #endif
 
-#if LINUX
-	typedef int SDLKey;
-#endif
-
 // configuration
 
 #if defined(DEBUG)
@@ -1233,10 +1229,10 @@ class Keyboard
 public:
 	std::vector<SDL_Event> events;
 	
-	bool isDown(SDLKey key) const;
-	bool wentDown(SDLKey key, bool allowRepeat = false) const;
-	bool wentUp(SDLKey key) const;
-	bool keyRepeat(SDLKey key) const;
+	bool isDown(int key) const;
+	bool wentDown(int key, bool allowRepeat = false) const;
+	bool wentUp(int key) const;
+	bool keyRepeat(int key) const;
 
 	bool isIdle() const; // return true when there are no buttons being pressed
 };
