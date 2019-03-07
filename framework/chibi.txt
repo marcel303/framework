@@ -49,10 +49,10 @@ library framework
 	depend_library utf8rewind
 
 	scan_files cpp
-	scan_files c   path audiooutput          group audiooutput
-	scan_files cpp path audiooutput          group audiooutput
-
 	scan_files h
+	
+	scan_files cpp path audiooutput          group audiooutput
+	scan_files h   path audiooutput          group audiooutput
 
 	header_path . expose
 	
