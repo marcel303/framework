@@ -30,6 +30,7 @@
 #include "Log.h"
 #include "Path.h"
 #include "soundmix.h"
+#include <string.h>
 
 #if AUDIO_USE_SSE
 	#include <xmmintrin.h>
