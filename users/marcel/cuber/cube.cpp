@@ -4,17 +4,17 @@
 
 bool EffectCtxImpl::keyIsDown(const int key) const
 {
-	return keyboard.isDown((SDLKey)key);
+	return keyboard.isDown(key);
 }
 
 bool EffectCtxImpl::keyWentDown(const int key) const
 {
-	return keyboard.wentDown((SDLKey)key);
+	return keyboard.wentDown(key);
 }
 
 bool EffectCtxImpl::keyWentUp(const int key) const
 {
-	return keyboard.wentUp((SDLKey)key);
+	return keyboard.wentUp(key);
 }
 
 int EffectCtxImpl::mouseX() const
