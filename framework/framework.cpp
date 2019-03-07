@@ -2400,7 +2400,7 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 		toOpenGLTextureSwizzle(a)
 	};
 
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < (m_doubleBuffered ? 2 : 1); ++i)
 	{
 		glBindTexture(GL_TEXTURE_2D, m_texture[i]);
 		glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
