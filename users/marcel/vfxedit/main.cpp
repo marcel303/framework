@@ -786,7 +786,7 @@ static bool doTextDialog(std::string & text)
 		}
 
 		for (int i = 0; i < 256; ++i)
-			if (keyboard.wentDown((SDLKey)i) && isChar((SDLKey)i))
+			if (keyboard.wentDown(i) && isChar(i))
 				text.push_back(i);
 
 		if (keyboard.wentDown(SDLK_RETURN))

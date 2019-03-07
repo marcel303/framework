@@ -127,7 +127,7 @@ int main(int argc, char * argv[])
 			
 			for (int i = 0; i < 6; ++i)
 			{
-				if (keyboard.wentDown((SDLKey)(SDLK_1 + i)))
+				if (keyboard.wentDown((SDLK_1 + i)))
 				{
 					offset = i;
 					reload = true;
