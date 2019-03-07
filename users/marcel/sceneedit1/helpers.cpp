@@ -4,6 +4,7 @@
 #include "lineReader.h"
 #include "lineWriter.h"
 #include "Log.h"
+#include "scene.h"
 
 #define DEFINE_COMPONENT_TYPES
 #include "cameraComponent.h"
@@ -62,6 +63,8 @@ void registerBuiltinTypes()
 			.addFlag(new ComponentMemberFlag_EditorType_Angle)
 		.add("axis", &AngleAxis::axis)
 			.addFlag(new ComponentMemberFlag_EditorType_Axis);
+			
+	//
 	
 	g_typeDB.add(std::type_index(typeid(TransformComponent)), new TransformComponentType());
 	g_typeDB.addStructured<ParameterDefinition>("parameter")
@@ -988,6 +991,8 @@ bool member_fromlines_recursive(
 	if (member->isVector)
 	{
 		auto * member_interface = static_cast<const Member_VectorInterface*>(member);
+		
+		member_interface->vector_resize(object, 0);
 		
 		auto * vector_type = typeDB.findType(member_interface->vector_type());
 
