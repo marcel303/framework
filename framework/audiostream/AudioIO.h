@@ -25,18 +25,11 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <string.h> // memset
-
 #pragma once
 
 class SoundData
 {
 public:
-	SoundData()
-	{
-		memset(this, 0, sizeof(SoundData));
-	}
-	
 	~SoundData()
 	{
 		if (sampleData != 0)
@@ -46,12 +39,12 @@ public:
 		}
 	}
 	
-	int channelSize;  // 1 or 2 bytes = int8 or int16, 4 bytes = float32
-	int channelCount; // 1 for mono, 2 for stereo
-	int sampleCount;
-	int sampleRate;
+	int channelSize = 0;  // 1 or 2 bytes = int8 or int16, 4 bytes = float32
+	int channelCount = 0; // 1 for mono, 2 for stereo
+	int sampleCount = 0;
+	int sampleRate = 0;
 	
-	void * sampleData;
+	void * sampleData = nullptr;
 };
 
 SoundData * loadSound(const char * filename);
