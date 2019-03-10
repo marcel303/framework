@@ -32,6 +32,7 @@ extern void test_templates();
 extern bool test_scenefiles();
 extern bool test_templateEditor();
 extern void test_reflection_1();
+extern void test_bindObjectToFile();
 
 static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
@@ -955,6 +956,11 @@ int main(int argc, char * argv[])
 	test_reflection_1();
 	return 0;
 #endif
+
+#if 0
+	test_bindObjectToFile();
+	return 0;
+#endif
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
@@ -970,7 +976,10 @@ int main(int argc, char * argv[])
 	for (;;)
 	{
 		framework.process();
-
+		
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
+		
 		if (framework.quitRequested)
 			break;
 
@@ -987,19 +996,49 @@ int main(int argc, char * argv[])
 		{
 			inputIsCaptured = true;
 			
-			if (editor.scene.saveToFile("testScene.json"))
+			auto t1 = SDL_GetTicks();
+			
+			if (!keyboard.isDown(SDLK_LSHIFT))
 			{
-				Scene tempScene;
-				
-				if (tempScene.loadFromFile("testScene.json"))
+				if (editor.scene.saveToFile("testScene.json") == false)
+					logError("failed to save scene to json");
+				else
 				{
-					for (auto & node_itr : editor.scene.nodes)
-						editor.nodesToRemove.insert(node_itr.second->id);
-					editor.removeNodesToRemove();
+				#if 1
+					Scene tempScene;
 					
-					editor.scene = tempScene;
+					if (tempScene.loadFromFile("testScene.json") == false)
+						logError("failed to load scene from json");
+					else
+					{
+						for (auto & node_itr : editor.scene.nodes)
+							editor.nodesToRemove.insert(node_itr.second->id);
+						editor.removeNodesToRemove();
+						
+						editor.scene = tempScene;
+					}
+				#endif
 				}
 			}
+			
+			LineWriter line_writer;
+			if (editor.scene.saveToLines(g_typeDB, line_writer) == false)
+				logError("failed to save scene to lines");
+			else
+			{
+				auto lines = line_writer.ToLines();
+		
+				if (TextIO::save("testScene.txt", lines, TextIO::kLineEndings_Unix) == false)
+					logError("failed to save lines to file");
+				else
+				{
+					// todo : load it
+				}
+			}
+			
+			auto t2 = SDL_GetTicks();
+			printf("time: %ums\n", (t2 - t1));
+			printf("(done)\n");
 		}
 		
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_l))

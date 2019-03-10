@@ -7,8 +7,10 @@
 #include <vector>
 
 struct ComponentJson;
+class LineWriter;
 struct Scene;
 struct SceneNode;
+struct TypeDB;
 
 struct SceneNode
 {
@@ -46,5 +48,7 @@ struct Scene
 	
 	bool load(const ComponentJson & j);
 	bool loadFromFile(const char * filename);
+	
+	bool saveToLines(const TypeDB & typeDB, LineWriter & line_writer);
 #endif
 };

@@ -1,5 +1,6 @@
 #include "componentType.h"
 #include "Debugging.h"
+#include "lineWriter.h"
 #include "Log.h"
 #include "scene.h"
 #include "sceneNodeComponent.h"
@@ -68,6 +69,9 @@ static void to_json(nlohmann::json & j, const SceneNode * node_ptr)
 		Assert(componentType != nullptr);
 		if (componentType != nullptr)
 		{
+			if (strcmp(componentType->typeName, "SceneNodeComponent") == 0)
+				continue;
+			
 			auto & components_json = j["components"];
 			
 			auto & component_json = components_json[component_index++];
@@ -368,3 +372,73 @@ bool Scene::loadFromFile(const char * filename)
 }
 
 #endif
+
+bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
+{
+	bool result = true;
+	
+	int indent = 0;
+	
+	for (auto & node_itr : nodes)
+	{
+		auto & node = node_itr.second;
+		
+		char node_definition[128];
+		sprintf(node_definition, "entity %d", node->id);
+		line_writer.AppendIndentedLine(indent, node_definition);
+		
+		indent++;
+		{
+			for (auto * component = node->components.head; component != nullptr; component = component->next_in_set)
+			{
+				auto * componentType = findComponentType(component->typeIndex());
+				
+				if (componentType == nullptr) // todo : error
+					continue;
+				
+				if (strcmp(componentType->typeName, "SceneNodeComponent") == 0)
+					continue;
+				
+				// todo : make short version of component type name
+				
+				if (component->id[0] != 0)
+				{
+					char component_definition[128];
+					sprintf(component_definition, "%s %s", componentType->typeName, component->id);
+					line_writer.AppendIndentedLine(indent, component_definition);
+				}
+				else
+				{
+					line_writer.AppendIndentedLine(indent, componentType->typeName);
+				}
+				
+				indent++;
+				{
+					result &= object_tolines_recursive(typeDB, componentType, component, line_writer, indent);
+				}
+				indent--;
+			}
+		}
+		indent--;
+	}
+	
+	//
+	
+	line_writer.AppendIndentedLine(indent, "scene");
+	
+	indent++;
+	{
+		line_writer.AppendIndentedLine(indent, "nodes");
+		
+		indent++;
+		{
+			// todo : write node hierarchy
+		}
+		indent--;
+	}
+	indent--;
+	
+	Assert(indent == 0);
+
+	return result;
+}
