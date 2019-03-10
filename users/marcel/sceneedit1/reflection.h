@@ -113,9 +113,9 @@ enum DataType // just for convenience and efficiency reasons, this enum allows f
 	kDataType_Bool,
 	kDataType_Int,
 	kDataType_Float,
-	kDataType_Vec2,
-	kDataType_Vec3,
-	kDataType_Vec4,
+	kDataType_Float2,
+	kDataType_Float3,
+	kDataType_Float4,
 	kDataType_String // std::string
 };
 

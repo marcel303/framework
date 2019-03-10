@@ -68,18 +68,18 @@ static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type
 		case kDataType_Float:
 			printf("(float) %f\n", plain_type->access<float>(object));
 			break;
-		case kDataType_Vec2:
+		case kDataType_Float2:
 			printf("(vec2) %f %f\n",
 				plain_type->access<Vec2>(object)[0],
 				plain_type->access<Vec2>(object)[1]);
 			break;
-		case kDataType_Vec3:
+		case kDataType_Float3:
 			printf("(vec3) %f %f %f\n",
 				plain_type->access<Vec3>(object)[0],
 				plain_type->access<Vec3>(object)[1],
 				plain_type->access<Vec3>(object)[2]);
 			break;
-		case kDataType_Vec4:
+		case kDataType_Float4:
 			printf("(vec4) %f %f %f %f\n",
 				plain_type->access<Vec4>(object)[0],
 				plain_type->access<Vec4>(object)[1],
@@ -132,9 +132,9 @@ void test_reflection_1()
 	typeDB.addPlain<bool>("bool", kDataType_Bool);
 	typeDB.addPlain<int>("int", kDataType_Int);
 	typeDB.addPlain<float>("float", kDataType_Float);
-	typeDB.addPlain<Vec2>("Vec2", kDataType_Vec2);
-	typeDB.addPlain<Vec3>("Vec3", kDataType_Vec3);
-	typeDB.addPlain<Vec4>("Vec4", kDataType_Vec4);
+	typeDB.addPlain<Vec2>("Vec2", kDataType_Float2);
+	typeDB.addPlain<Vec3>("Vec3", kDataType_Float3);
+	typeDB.addPlain<Vec4>("Vec4", kDataType_Float4);
 	typeDB.addPlain<std::string>("std::string", kDataType_String);
 	
 	{

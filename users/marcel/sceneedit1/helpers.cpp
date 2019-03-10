@@ -54,9 +54,9 @@ void registerBuiltinTypes()
 	g_typeDB.addPlain<bool>("bool", kDataType_Bool);
 	g_typeDB.addPlain<int>("int", kDataType_Int);
 	g_typeDB.addPlain<float>("float", kDataType_Float);
-	g_typeDB.addPlain<Vec2>("vec2", kDataType_Vec2);
-	g_typeDB.addPlain<Vec3>("vec3", kDataType_Vec3);
-	g_typeDB.addPlain<Vec4>("vec4", kDataType_Vec4);
+	g_typeDB.addPlain<Vec2>("vec2", kDataType_Float2);
+	g_typeDB.addPlain<Vec3>("vec3", kDataType_Float3);
+	g_typeDB.addPlain<Vec4>("vec4", kDataType_Float4);
 	g_typeDB.addPlain<std::string>("string", kDataType_String);
 	g_typeDB.addStructured<AngleAxis>("AngleAxis")
 		.add("angle", &AngleAxis::angle)
@@ -283,15 +283,15 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * 
 			plain_type->access<float>(object) = j.j.get<float>();
 			return true;
 			
-		case kDataType_Vec2:
+		case kDataType_Float2:
 			plain_type->access<Vec2>(object) = j.j.get<Vec2>();
 			return true;
 			
-		case kDataType_Vec3:
+		case kDataType_Float3:
 			plain_type->access<Vec3>(object) = j.j.get<Vec3>();
 			return true;
 			
-		case kDataType_Vec4:
+		case kDataType_Float4:
 			plain_type->access<Vec4>(object) = j.j.get<Vec4>();
 			return true;
 			
@@ -349,15 +349,15 @@ bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object
 		plain_type->access<float>(member_object) = j.j.value(member->name, 0.f);
 		return true;
 		
-	case kDataType_Vec2:
+	case kDataType_Float2:
 		plain_type->access<Vec2>(member_object) = j.j.value(member->name, Vec2());
 		return true;
 		
-	case kDataType_Vec3:
+	case kDataType_Float3:
 		plain_type->access<Vec3>(member_object) = j.j.value(member->name, Vec3());
 		return true;
 		
-	case kDataType_Vec4:
+	case kDataType_Float4:
 		plain_type->access<Vec4>(member_object) = j.j.value(member->name, Vec4());
 		return true;
 		
@@ -454,15 +454,15 @@ bool member_tojson_recursive(const TypeDB & typeDB, const Type * type, const voi
 			j.j = plain_type->access<float>(object);
 			return true;
 			
-		case kDataType_Vec2:
+		case kDataType_Float2:
 			j.j = plain_type->access<Vec2>(object);
 			return true;
 			
-		case kDataType_Vec3:
+		case kDataType_Float3:
 			j.j = plain_type->access<Vec3>(object);
 			return true;
 			
-		case kDataType_Vec4:
+		case kDataType_Float4:
 			j.j = plain_type->access<Vec4>(object);
 			return true;
 			
@@ -520,15 +520,15 @@ bool member_tojson(const TypeDB & typeDB, const Member * member, const void * ob
 		j.j[member->name] = plain_type->access<float>(member_object);
 		return true;
 		
-	case kDataType_Vec2:
+	case kDataType_Float2:
 		j.j[member->name] = plain_type->access<Vec2>(member_object);
 		return true;
 		
-	case kDataType_Vec3:
+	case kDataType_Float3:
 		j.j[member->name] = plain_type->access<Vec3>(member_object);
 		return true;
 		
-	case kDataType_Vec4:
+	case kDataType_Float4:
 		j.j[member->name] = plain_type->access<Vec4>(member_object);
 		return true;
 		
@@ -640,7 +640,7 @@ bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void *
 		plain_type->access<float>(object) = Parse::Float(text);
 		return true;
 		
-	case kDataType_Vec2:
+	case kDataType_Float2:
 		{
 			char parts[2][64];
 			
@@ -658,7 +658,7 @@ bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void *
 		}
 		return true;
 		
-	case kDataType_Vec3:
+	case kDataType_Float3:
 		{
 			char parts[3][64];
 			
@@ -678,7 +678,7 @@ bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void *
 		}
 		return true;
 		
-	case kDataType_Vec4:
+	case kDataType_Float4:
 		{
 			char parts[4][64];
 			
@@ -761,7 +761,7 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 		}
 		return true;
 		
-	case kDataType_Vec2:
+	case kDataType_Float2:
 		{
 			auto & value = plain_type->access<Vec2>(object);
 			
@@ -771,7 +771,7 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 		}
 		return true;
 		
-	case kDataType_Vec3:
+	case kDataType_Float3:
 		{
 			auto & value = plain_type->access<Vec3>(object);
 			
@@ -782,7 +782,7 @@ static bool plain_type_totext(const PlainType * plain_type, const void * object,
 		}
 		return true;
 		
-	case kDataType_Vec4:
+	case kDataType_Float4:
 		{
 			auto & value = plain_type->access<Vec4>(object);
 			
@@ -937,6 +937,15 @@ bool object_fromlines_recursive(
 				// the lines contain data for a member we don't know. skip it
 				
 				LOG_WRN("unknown member: %s", name);
+				
+				line_reader.push_indent();
+				{
+					while (line_reader.get_next_line(true))
+					{
+						// skip indented lines
+					}
+				}
+				line_reader.pop_indent();
 			}
 			else
 			{

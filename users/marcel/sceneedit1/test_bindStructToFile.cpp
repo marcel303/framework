@@ -109,8 +109,8 @@ void test_bindObjectToFile()
 {
 	TypeDB typeDB;
 	typeDB.addPlain<float>("float", kDataType_Float);
-	typeDB.addPlain<Vec2>("Vec2", kDataType_Vec2);
-	typeDB.addPlain<Vec3>("Vec3", kDataType_Vec3);
+	typeDB.addPlain<Vec2>("Vec2", kDataType_Float2);
+	typeDB.addPlain<Vec3>("Vec3", kDataType_Float3);
 
 	struct Polygon
 	{

@@ -220,7 +220,7 @@ bool doReflection_PlainType(
 			}
 		}
 		break;
-	case kDataType_Vec2:
+	case kDataType_Float2:
 		{
 			auto & value = plain_type.access<Vec2>(member_object);
 			
@@ -238,7 +238,7 @@ bool doReflection_PlainType(
 			}
 		}
 		break;
-	case kDataType_Vec3:
+	case kDataType_Float3:
 		{
 			auto & value = plain_type.access<Vec3>(member_object);
 			
@@ -268,7 +268,7 @@ bool doReflection_PlainType(
 			}
 		}
 		break;
-	case kDataType_Vec4:
+	case kDataType_Float4:
 		{
 			auto & value = plain_type.access<Vec4>(member_object);
 
