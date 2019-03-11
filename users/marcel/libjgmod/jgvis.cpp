@@ -6,25 +6,129 @@
 
 #define bitmap_height 12
 
-struct OLD_CHN_INFO
+static void drawCircle(const JGVIS & vis, const JGMOD_PLAYER & player, const int chn, const int start_chn, const int note_length, const int note_relative_pos);
+
+static int calculate_note_length(const JGMOD * mod, int note_length)
 {
-    int old_sample;
-    Color color;
-};
+	if (note_length == 0)
+	{
+		if (mod->flag & JGMOD_MODE_XM)
+			note_length = 180;
+		else
+			note_length = 140;
+	}
+	
+	return note_length;
+}
 
-static void drawCircle(const JGMOD_PLAYER & player, const int chn, const int start_chn, const int note_length);
+static int normalize_end_chn(JGMOD * mod, int end_chn)
+{
+	if (end_chn < 0)
+	{
+		end_chn = mod->no_chn;
+		
+		if (end_chn > 33)
+        	end_chn = 33;
+	}
+	
+	return end_chn;
+}
 
-// todo : remove this global state!
+void jgvis_tick(JGVIS & vis, JGMOD_PLAYER & player, bool & inputIsCaptured)
+{
+	if (inputIsCaptured)
+		return;
+	
+	inputIsCaptured = true;
+	
+	const JGMOD * mod = player.of;
+	
+	vis.note_length = calculate_note_length(player.of, vis.note_length);
+	vis.end_chn = normalize_end_chn(player.of, vis.end_chn);
+	
+	if (keyboard.wentDown(SDLK_LEFT, true))
+		player.prev_track();
+	if (keyboard.wentDown(SDLK_RIGHT, true))
+		player.next_track();
 
-static OLD_CHN_INFO old_chn_info[JGMOD_MAX_VOICES];
+	if (keyboard.wentDown(SDLK_PLUS, true))
+		player.set_volume(player.get_volume() + 5);
+	if (keyboard.wentDown(SDLK_MINUS, true))
+		player.set_volume(player.get_volume() - 5);
 
-void jgmod_draw(const JGMOD_PLAYER & player, const bool drawCircles)
+	if (keyboard.wentDown(SDLK_F1, true))
+		player.set_speed (player.mi.speed_ratio - 5);
+	if (keyboard.wentDown(SDLK_F2, true))
+		player.set_speed (player.mi.speed_ratio + 5);
+	if (keyboard.wentDown(SDLK_F3, true))
+		player.set_pitch (player.mi.pitch_ratio - 5);
+	if (keyboard.wentDown(SDLK_F4, true))
+		player.set_pitch (player.mi.pitch_ratio + 5);
+	if (keyboard.wentDown(SDLK_F5, true))
+		vis.note_length++;
+
+	if (keyboard.wentDown(SDLK_F6, true))
+	{
+		vis.note_length--;
+		if (vis.note_length <= 0)
+			vis.note_length = 1;
+	}
+	if (keyboard.wentDown(SDLK_F7, true))
+	{
+		vis.note_relative_pos -= 2;
+		if (vis.note_relative_pos < -300)
+			vis.note_relative_pos = -300;
+	}
+	if (keyboard.wentDown(SDLK_F8, true))
+	{
+		vis.note_relative_pos += 2;
+		if (vis.note_relative_pos > 300)
+			vis.note_relative_pos = 300;
+	}
+
+	if (keyboard.wentDown(SDLK_r, true))
+		player.play (player.of, true);
+	if (keyboard.wentDown(SDLK_p, true) || keyboard.wentDown(SDLK_SPACE, true))
+		player.toggle_pause_mode ();
+
+	if (keyboard.wentDown(SDLK_DOWN, true))
+	{
+		if (mod->no_chn > 33)
+		{
+			vis.end_chn = vis.start_chn + 33 + 1;
+			if (vis.end_chn > mod->no_chn)
+				vis.end_chn = mod->no_chn;
+
+			vis.start_chn = vis.end_chn - 33;
+		}
+	}
+	if (keyboard.wentDown(SDLK_UP, true))
+	{
+		if (mod->no_chn > 33)
+		{
+			vis.start_chn--;
+			if (vis.start_chn < 0)
+				vis.start_chn = 0;
+
+			vis.end_chn = vis.start_chn + 33;
+		}
+	}
+}
+
+void jgvis_draw(JGVIS & vis, const JGMOD_PLAYER & player, const bool drawCircles)
 {
 	setColor(colorWhite);
 	
 	AllegroVoiceApi * voiceApi = player.voiceApi;
 	
 	const JGMOD * mod = player.of;
+	
+	//
+	
+	vis.note_length = calculate_note_length(player.of, vis.note_length);
+	vis.end_chn = normalize_end_chn(player.of, vis.end_chn);
+	
+	//
 	
 	if (mod == nullptr)
 	{
@@ -34,19 +138,6 @@ void jgmod_draw(const JGMOD_PLAYER & player, const bool drawCircles)
 	}
 	else
 	{
-		int start_chn = 0;
-		int end_chn = mod->no_chn;
-		
-		if (end_chn > 33)
-			end_chn = 33;
-		
-		int note_length;
-		
-		if (mod->flag & JGMOD_MODE_XM)
-			note_length = 180;
-		else
-			note_length = 140;
-		
 		// draw header
 		
 		drawText(0,  0, 12, +1, +1, "Song name   : %s", mod->name);
@@ -62,17 +153,17 @@ void jgmod_draw(const JGMOD_PLAYER & player, const bool drawCircles)
 
 		for (int index = 0; index < mod->no_chn; ++index)
 		{
-			if (old_chn_info[index].old_sample != player.ci[index].sample)
-				old_chn_info[index].color = Color::fromHSL((rand() % 68 + 32) / 100.f, .5f, .5f);
+			if (vis.old_chn_info[index].old_sample != player.ci[index].sample)
+				vis.old_chn_info[index].color = Color::fromHSL((rand() % 68 + 32) / 100.f, .5f, .5f);
 
-			old_chn_info[index].old_sample = player.ci[index].sample;
+			vis.old_chn_info[index].old_sample = player.ci[index].sample;
 		}
 
-		for (int index = start_chn; index < end_chn; ++index)
+		for (int index = vis.start_chn; index < vis.end_chn; ++index)
 		{
 			if (drawCircles)
 			{
-				drawCircle(player, index, start_chn, note_length);
+				drawCircle(vis, player, index, vis.start_chn, vis.note_length, vis.note_relative_pos);
 			}
 
 			if (voiceApi->voice_get_position(player.voice_table[index]) >= 0 &&
@@ -81,18 +172,18 @@ void jgmod_draw(const JGMOD_PLAYER & player, const bool drawCircles)
 				voiceApi->voice_get_frequency(player.voice_table[index]) > 0 &&
 				player.mi.global_volume > 0)
 			{
-				drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d : %s", index+1, player.ci[index].sample+1, player.ci[index].volume,  voiceApi->voice_get_frequency(player.voice_table[index]), player.ci[index].pan,
+				drawText(0, 82+(index-vis.start_chn)*bitmap_height, 12, +1, +1, "%2d: %3d %2d %6dHz %3d : %s", index+1, player.ci[index].sample+1, player.ci[index].volume,  voiceApi->voice_get_frequency(player.voice_table[index]), player.ci[index].pan,
 					player.of->si[player.ci[index].sample].name);
 			}
 			else
 			{
-				drawText(0, 82+(index-start_chn)*bitmap_height, 12, +1, +1, "%2d: %3s %2s %6sHz %3s  ", index+1, " --", "--",  " -----", "---");
+				drawText(0, 82+(index-vis.start_chn)*bitmap_height, 12, +1, +1, "%2d: %3s %2s %6sHz %3s  ", index+1, " --", "--",  " -----", "---");
 			}
 		}
 	}
 }
 
-static void drawCircle(const JGMOD_PLAYER & player, const int chn, const int start_chn, const int note_length)
+static void drawCircle(const JGVIS & vis, const JGMOD_PLAYER & player, const int chn, const int start_chn, const int note_length, const int note_relative_pos)
 {
     if (player.voiceApi->voice_get_position(player.voice_table[chn]) >= 0 &&
     	player.ci[chn].volume >= 1 &&
@@ -116,7 +207,7 @@ static void drawCircle(const JGMOD_PLAYER & player, const int chn, const int sta
 				xpos = player.voiceApi->voice_get_frequency(player.voice_table[chn]) * 8363.f / player.ci[chn].c2spd;
 
 			xpos /= note_length;
-			//xpos += note_relative_pos;
+			xpos += note_relative_pos;
 
 			if (xpos > 439)
 				xpos = 439;
@@ -125,7 +216,7 @@ static void drawCircle(const JGMOD_PLAYER & player, const int chn, const int sta
 			
 			hqBegin(HQ_FILLED_CIRCLES);
 			{
-				setColor(old_chn_info[chn].color);
+				setColor(vis.old_chn_info[chn].color);
 				hqFillCircle(xpos, 5, radius);
 				setColor(colorWhite);
 			}

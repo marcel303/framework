@@ -24,6 +24,7 @@ app libjgmod-example
 
 	depend_library framework-allegro2
 	depend_library libjgmod
+	depend_library libjgmod-vis
 
 	add_files main.cpp
 
