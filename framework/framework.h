@@ -47,10 +47,6 @@
 #include <string>
 #include <vector>
 
-#if 0 // todo : required to build on Linux?
-	#include <float.h>
-#endif
-
 #if defined(DEBUG)
 	#define fassert(x) Assert(x)
 #else
