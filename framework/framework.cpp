@@ -282,18 +282,12 @@ bool Framework::init(int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 #endif
 	
-	// todo: ensure VSYNC is enabled
-	
 	flags |= SDL_WINDOW_OPENGL;
 #endif
 	
 	if (fullscreen && minification == 1)
 	{
 		flags |= SDL_WINDOW_FULLSCREEN;
-		
-	#if ENABLE_OPENGL
-		SDL_GL_SetSwapInterval(1);
-	#endif
 	}
 
 	int actualSx = sx / minification;
@@ -462,6 +456,8 @@ bool Framework::init(int sx, int sy)
 	
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
+	
+	SDL_GL_SetSwapInterval(1);
 
 	gxInitialize();
 	
