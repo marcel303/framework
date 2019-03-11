@@ -1186,6 +1186,8 @@ struct FileEditor_Jgmod : FileEditor
 	
 	JGMOD_PLAYER player;
 	
+	JGVIS vis;
+	
 	AudioOutput_PortAudio audioOutput;
 	AudioStream_AllegroVoiceMixer voiceMixer;
 	
@@ -1220,13 +1222,17 @@ struct FileEditor_Jgmod : FileEditor
 	
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
+		jgvis_tick(vis, player, inputIsCaptured);
+		
+		//
+		
 		clearSurface(0, 0, 0, 0);
 		
 		setFont("unispace.ttf");
 		pushFontMode(FONT_SDF);
 		{
 			gxTranslatef(12, 12, 0);
-			jgmod_draw(player, true);
+			jgvis_draw(vis, player, true);
 		}
 		popFontMode();
 	}
