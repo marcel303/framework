@@ -244,7 +244,7 @@ struct FileEditor
 	
 	virtual bool wantsTick(const bool hasFocus, const bool inputIsCaptured)
 	{
-		return false;
+		return hasFocus;
 	}
 	
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) = 0;
@@ -1853,12 +1853,19 @@ struct EditorWindow
 
 	void process(const float dt)
 	{
+		const bool isResize =
+			surface == nullptr ||
+			surface->getWidth() != window.getWidth() ||
+			surface->getHeight() != window.getHeight();
+		
 		const bool hasFocus = window.hasFocus();
 		
-		if (editor->wantsTick(hasFocus, false) == false)
+		const bool wantsTick = editor->wantsTick(hasFocus, false);
+		
+		if (wantsTick == false && isResize == false)
 			return;
 		
-		if (surface == nullptr || surface->getWidth() != window.getWidth() || surface->getHeight() != window.getHeight())
+		if (isResize)
 		{
 			delete surface;
 			surface = nullptr;
@@ -2063,19 +2070,7 @@ int main(int argc, char * argv[])
 		const float dt = framework.timeStep;
 		
 		// update editor windows
-
-		if (editor != nullptr)
-		{
-			if (keyboard.wentDown(SDLK_e) && keyboard.isDown(SDLK_LSHIFT))
-			{
-				EditorWindow * window = new EditorWindow(editor);
-
-				editorWindows.push_back(window);
-
-				editor = nullptr;
-			}
-		}
-
+		
 		for (auto i = editorWindows.begin(); i != editorWindows.end(); )
 		{
 			auto editorWindow = *i;
@@ -2167,12 +2162,22 @@ int main(int argc, char * argv[])
 							ImVec2(1.f, 1.f),
 							ImGui::GetColorU32(ImVec4(1.f, 1.f, 1.f, 1.f)));
 					}
+					
+					ImGui::SetCursorPos(ImVec2(0, 0));
+					if (ImGui::Button("Pop Out!"))
+					{
+						EditorWindow * window = new EditorWindow(editor);
+
+						editorWindows.push_back(window);
+
+						editor = nullptr;
+					}
 				}
 				ImGui::End();
 			}
 		}
 		guiContext.processEnd();
-
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			// draw ui
