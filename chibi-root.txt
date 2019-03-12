@@ -1,6 +1,7 @@
 add audioGraph
 add audioGraph-examples
 add avGraph
+add chibi
 add framework
 add framework-ofx
 add tests
