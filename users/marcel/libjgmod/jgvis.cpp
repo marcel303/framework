@@ -1,3 +1,16 @@
+/*
+ *
+ *                _______  _______  __________  _______  _____
+ *               /____  / / _____/ /         / / ___  / / ___ \
+ *               __  / / / / ____ / //   // / / /  / / / /  / /
+ *             /  /_/ / / /__/ / / / /_/ / / / /__/ / / /__/ /
+ *            /______/ /______/ /_/     /_/ /______/ /______/
+ *
+ *
+ *
+ *
+ *  Visualisation and player interaction. */
+
 #include "allegro2-voiceApi.h"
 #include "framework.h"
 #include "framework-allegro2.h"
