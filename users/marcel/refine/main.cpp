@@ -635,6 +635,13 @@ struct FileEditor_Text : FileEditor
 
 					ImGui::EndMenuBar();
 				}
+				else
+				{
+					// window focus is needed to make mouse/touchpad scrolling work for the editor
+					// however, we only give it focus when the menu bar isn't active. otherwise
+					// menu bar menus don't open..
+					ImGui::SetNextWindowFocus();
+				}
 				
 				auto cpos = textEditor.GetCursorPosition();
 				ImGui::Text("%6d/%-6d %6d lines  | %s | %s | %s | %s | %s", cpos.mLine + 1, cpos.mColumn + 1, textEditor.GetTotalLines(),
@@ -645,7 +652,6 @@ struct FileEditor_Text : FileEditor
 					textEditor.CanUndo() ? "*" : " ",
 					textEditor.GetLanguageDefinition().mName.c_str(), path.c_str());
 				
-				ImGui::SetNextWindowFocus();
 				textEditor.Render(filename.c_str(), ImVec2(sx - 20, sy - 70), false);
 			}
 			ImGui::End();
