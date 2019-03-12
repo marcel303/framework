@@ -247,6 +247,10 @@ struct FileEditor
 		return hasFocus;
 	}
 	
+	virtual void doButtonBar()
+	{
+	}
+	
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) = 0;
 };
 
@@ -1220,6 +1224,52 @@ struct FileEditor_Jgmod : FileEditor
 		return true;
 	}
 	
+	virtual void doButtonBar() override
+	{
+		if (ImGui::Button("Help"))
+		{
+			ImGui::OpenPopup("Help");
+		}
+		
+		if (ImGui::BeginPopupModal("Help"))
+		{
+			ImGui::Text("Controls:");
+			
+			ImGui::Indent();
+			ImGui::PushStyleColor(ImGuiCol_Text, (ImU32)ImColor(255, 255, 0));
+			
+			ImGui::Text("Left: Go to previous track");
+			ImGui::Text("Right: Go to next track");
+			
+			ImGui::Text("+: Increase volume");
+			ImGui::Text("-: Decrease volume");
+			
+			ImGui::Text("F1: Decrease playback speed");
+			ImGui::Text("F2: Increase playback speed");
+			ImGui::Text("F3: Decrease pitch");
+			ImGui::Text("F4: Increase pitch");
+			
+			ImGui::Text("F5: Increase visual note length");
+			ImGui::Text("F6: Decrease visual note length");
+			
+			ImGui::Text("F7: Decrease visual note offset");
+			ImGui::Text("F8: Increase visual note offset");
+			
+			ImGui::Text("R: Restart playback");
+			ImGui::Text("P or SPACE: Pause/resume playback");
+			
+			ImGui::Text("UP/DOWN: Scroll through the channel list");
+			
+			ImGui::Unindent();
+			ImGui::PopStyleColor();
+	
+			if (ImGui::Button("Close"))
+				ImGui::CloseCurrentPopup();
+			
+			ImGui::EndPopup();
+		}
+	}
+	
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
 		jgvis_tick(vis, player, inputIsCaptured);
@@ -1837,6 +1887,8 @@ struct EditorWindow
 	FileEditor * editor = nullptr;
 	
 	Surface * surface = nullptr;
+	
+	bool wantsToDock = false;
 
 	EditorWindow(FileEditor * in_editor)
 		: window("View", 800, 600, true)
@@ -2084,6 +2136,18 @@ int main(int argc, char * argv[])
 
 				i = editorWindows.erase(i);
 			}
+			else if (editorWindow->wantsToDock && editor == nullptr)
+			{
+				editor = editorWindow->editor;
+				editorWindow->editor = nullptr;
+				
+				//
+				
+				delete editorWindow;
+				editorWindow = nullptr;
+				
+				i = editorWindows.erase(i);
+			}
 			else
 				++i;
 		}
@@ -2163,13 +2227,29 @@ int main(int argc, char * argv[])
 							ImGui::GetColorU32(ImVec4(1.f, 1.f, 1.f, 1.f)));
 					}
 					
+					//
+					
 					ImGui::SetCursorPos(ImVec2(0, 0));
+					
+					if (editor != nullptr)
+					{
+						editor->doButtonBar();
+					}
+					
+					ImGui::SameLine();
 					if (ImGui::Button("Pop Out!"))
 					{
 						EditorWindow * window = new EditorWindow(editor);
 
 						editorWindows.push_back(window);
 
+						editor = nullptr;
+					}
+					
+					ImGui::SameLine();
+					if (ImGui::Button("Close"))
+					{
+						delete editor;
 						editor = nullptr;
 					}
 				}
