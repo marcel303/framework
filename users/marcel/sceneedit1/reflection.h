@@ -105,6 +105,10 @@ struct Type
 		: isStructured(in_isStructured)
 	{
 	}
+	
+	virtual ~Type()
+	{
+	}
 };
 
 enum DataType // just for convenience and efficiency reasons, this enum allows for fast identification of plain types. so instead of using string comparisons on the type name, this enum can be used to more quickly determine the type
@@ -161,6 +165,8 @@ struct StructuredType : Type
 		, members_tail(nullptr)
 	{
 	}
+	
+	virtual ~StructuredType() override;
 	
 	void add(Member * member);
 	

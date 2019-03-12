@@ -2,6 +2,27 @@
 
 //
 
+StructuredType::~StructuredType()
+{
+	for (auto * member = members_head; member != nullptr; )
+	{
+		auto * next = member->next;
+		
+		for (auto * flag = member->flags; flag != nullptr; )
+		{
+			auto * next_flag = flag->next;
+			
+			delete flag;
+			
+			flag = next_flag;
+		}
+		
+		delete member;
+		
+		member = next;
+	}
+}
+
 void StructuredType::add(Member * member)
 {
 	if (members_head == nullptr)
@@ -32,7 +53,13 @@ StructuredType & StructuredType::add(const std::type_index & typeIndex, const si
 struct TypeDB_impl
 {
 	std::map<std::type_index, const Type*> types;
-
+	
+	~TypeDB_impl()
+	{
+		for (auto & i : types)
+			delete i.second;
+	}
+	
 	const Type * findType(const std::type_index & typeIndex) const
 	{
 		auto i = types.find(typeIndex);
