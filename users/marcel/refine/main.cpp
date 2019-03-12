@@ -219,6 +219,8 @@ struct FileBrowser
 
 struct FileEditor
 {
+	std::string path;
+	
 	Surface * surface = nullptr;
 	
 	virtual ~FileEditor()
@@ -1988,7 +1990,7 @@ int main(int argc, char * argv[])
 	FileEditor * editor = nullptr;
 	Surface * editorSurface = new Surface(VIEW_SX - 300, VIEW_SY, false, true);
 	
-	fileBrowser.onFileSelected = [&](const std::string & path)
+	auto openEditor = [&](const std::string & path)
 	{
 		delete editor;
 		editor = nullptr;
@@ -2105,7 +2107,14 @@ int main(int argc, char * argv[])
 				editor = new FileEditor_VfxGraph(filename.c_str());
 			}
 		}
+		
+		if (editor != nullptr)
+		{
+			editor->path = path;
+		}
 	};
+	
+	fileBrowser.onFileSelected = openEditor;
 	
 	std::vector<EditorWindow*> editorWindows;
 
@@ -2231,12 +2240,11 @@ int main(int argc, char * argv[])
 					
 					ImGui::SetCursorPos(ImVec2(0, 0));
 					
-					if (editor != nullptr)
-					{
-						editor->doButtonBar();
-					}
+					editor->doButtonBar();
 					
-					ImGui::SameLine();
+					if (ImGui::GetCursorPos().y != 0)
+						ImGui::SameLine();
+					
 					if (ImGui::Button("Pop Out!"))
 					{
 						EditorWindow * window = new EditorWindow(editor);
@@ -2244,6 +2252,14 @@ int main(int argc, char * argv[])
 						editorWindows.push_back(window);
 
 						editor = nullptr;
+					}
+					
+					ImGui::SameLine();
+					if (ImGui::Button("Reopen"))
+					{
+						auto path_copy = editor->path;
+						
+						openEditor(path_copy);
 					}
 					
 					ImGui::SameLine();
