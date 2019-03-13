@@ -645,10 +645,19 @@ struct FileEditor_Text : FileEditor
 							
 							if (list_chibi_targets(build_root, libraries, apps))
 							{
+								static char filter[PATH_MAX] = { }; // fixme : make search filter a member
+								ImGui::InputText("Filter", filter, sizeof(filter));
+								
 								for (auto & app : apps)
-									ImGui::MenuItem(app.c_str());
+								{
+									if (filter[0] == 0 || strcasestr(app.c_str(), filter) != nullptr)
+										ImGui::MenuItem(app.c_str());
+								}
 								for (auto & library : libraries)
-									ImGui::MenuItem(library.c_str());
+								{
+									if (filter[0] == 0 || strcasestr(library.c_str(), filter) != nullptr)
+										ImGui::MenuItem(library.c_str());
+								}
 							}
 						}
 						
