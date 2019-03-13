@@ -479,6 +479,8 @@ static bool loadIntoTextEditor(const char * filename, TextIO::LineEndings & line
 	}
 }
 
+#include "chibi.h"
+
 struct FileEditor_Text : FileEditor
 {
 	std::string path;
@@ -629,6 +631,26 @@ struct FileEditor_Text : FileEditor
 							lineEndings = TextIO::kLineEndings_Unix;
 						if (ImGui::MenuItem("Windows", nullptr, lineEndings == TextIO::kLineEndings_Windows))
 							lineEndings = TextIO::kLineEndings_Windows;
+						
+						ImGui::EndMenu();
+					}
+					
+					if (ImGui::BeginMenu("Chibi"))
+					{
+						char build_root[PATH_MAX];
+						if (find_chibi_build_root(getDirectory().c_str(), build_root, sizeof(build_root)))
+						{
+							std::vector<std::string> libraries;
+							std::vector<std::string> apps;
+							
+							if (list_chibi_targets(build_root, libraries, apps))
+							{
+								for (auto & app : apps)
+									ImGui::MenuItem(app.c_str());
+								for (auto & library : libraries)
+									ImGui::MenuItem(library.c_str());
+							}
+						}
 						
 						ImGui::EndMenu();
 					}
