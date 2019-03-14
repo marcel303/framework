@@ -1602,6 +1602,9 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 
 			jsusFx.prepare(44100, 256);
 			
+			jsusFx.gfx_w = std::max(jsusFx.gfx_w, 440);
+			jsusFx.gfx_h = std::max(jsusFx.gfx_h, 240);
+			
 			paObject.init(44100, 2, 0, 256, this);
 		}
 	}
@@ -1785,16 +1788,25 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 				pushFontMode(FONT_SDF);
 				{
 					const int margin = 10;
-				
-					int x = margin;
-					int y = margin;
 
-					int sliderIndex = 0;
+					int numSliders = 0;
+				
+ 					for (auto & slider : jsusFx.sliders)
+						if (slider.exists && slider.desc[0] != '-')
+							numSliders++;
 				
 					const int sx = 200;
 					const int sy = 20;
 					const int advanceY = 22;
-				
+					
+					const int totalSx = sx + margin * 2;
+					const int totalSy = advanceY * numSliders + margin * 2;
+					
+					int x = (surface->getWidth() - totalSx) / 2;
+					int y = (surface->getWidth() - totalSy) / 2;
+					
+					int sliderIndex = 0;
+					
 					auto doSlider = [&](JsusFx & fx, JsusFx_Slider & slider, int x, int y, bool & isActive)
 						{
 							const bool isInside =
@@ -1838,20 +1850,14 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 							drawRectLine(0, 0, sx, sy);
 						};
 
-					int numSliders = 0;
-				
- 					for (auto & slider : jsusFx.sliders)
-						if (slider.exists && slider.desc[0] != '-')
-							numSliders++;
-				
 					if (numSliders > 0)
 					{
-						const int totalSx = sx + margin * 2;
-						const int totalSy = advanceY * numSliders + margin * 2;
-					
 						setColor(0, 0, 0, 127);
-						drawRect(0, 0, totalSx, totalSy);
+						drawRect(x, y, x + totalSx, y + totalSy);
 					
+						x += margin;
+						y += margin;
+						
 						for (auto & slider : jsusFx.sliders)
 						{
 							if (slider.exists && slider.desc[0] != '-')
