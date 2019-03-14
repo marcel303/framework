@@ -1580,6 +1580,9 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 
 	MidiBuffer midiBuffer;
 	MidiKeyboard midiKeyboard;
+	
+	bool showMidiKeyboard = true;
+	bool showControlSliders = false;
 
 	FileEditor_JsusFx(const char * path)
 		: jsusFx(pathLibary)
@@ -1673,6 +1676,14 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 			outputBufferf[i * 2 + 1] = outputSamples[1][i];
 		}
 	}
+	
+	virtual void doButtonBar() override
+	{
+		ImGui::Checkbox("Midi Keyboard", &showMidiKeyboard);
+		
+		ImGui::SameLine();
+		ImGui::Checkbox("Control sliders", &showControlSliders);
+	}
 
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
 	{
@@ -1694,8 +1705,11 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 			int midiSx;
 			int midiSy;
 
-			doMidiKeyboard(midiKeyboard, mouse.x, mouse.y, midiBuffer, true, false, midiSx, midiSy, inputIsCaptured);
-
+			if (showMidiKeyboard)
+			{
+				doMidiKeyboard(midiKeyboard, mouse.x, mouse.y, midiBuffer, true, false, midiSx, midiSy, inputIsCaptured);
+			}
+			
 			if (isValid == false)
 			{
 				setFont("calibri.ttf");
@@ -1704,180 +1718,195 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 				drawText(sx/2, sy/2, 16, 0, 0, "Failed to load jsfx file");
 				popFontMode();
 			}
-			else if (jsusFx.hasGraphicsSection())
+			else
 			{
-				setFont("calibri.ttf");
-				pushFontMode(FONT_SDF);
-				setColorClamp(true);
+				if (jsusFx.hasGraphicsSection())
 				{
-					const int gfxSx = jsusFx.gfx_w;
-					const int gfxSy = jsusFx.gfx_h;
-
-					if (firstFrame)
+					setFont("calibri.ttf");
+					pushFontMode(FONT_SDF);
+					setColorClamp(true);
 					{
-						firstFrame = false;
+						const int gfxSx = jsusFx.gfx_w;
+						const int gfxSy = jsusFx.gfx_h;
 
-						offsetX = (sx - gfxSx) / 2;
-						offsetY = (sy - gfxSy) / 2;
-					}
-
-					if (inputIsCaptured == false)
-					{
-						const bool isOutside =
-							mouse.x < offsetX || mouse.x > offsetX + jsusFx.gfx_w ||
-							mouse.y < offsetY || mouse.y > offsetY + jsusFx.gfx_h;
-
-						if (isOutside && mouse.wentDown(BUTTON_LEFT))
+						if (firstFrame)
 						{
-							isDragging = true;
+							firstFrame = false;
+
+							offsetX = (sx - gfxSx) / 2;
+							offsetY = (sy - gfxSy) / 2;
 						}
 
-						if (mouse.wentUp(BUTTON_LEFT))
+						if (inputIsCaptured == false)
+						{
+							const bool isOutside =
+								mouse.x < offsetX || mouse.x > offsetX + jsusFx.gfx_w ||
+								mouse.y < offsetY || mouse.y > offsetY + jsusFx.gfx_h;
+
+							if (isOutside && mouse.wentDown(BUTTON_LEFT))
+							{
+								isDragging = true;
+							}
+
+							if (mouse.wentUp(BUTTON_LEFT))
+							{
+								isDragging = false;
+							}
+						}
+						else
 						{
 							isDragging = false;
 						}
-					}
-					else
-					{
-						isDragging = false;
-					}
-				
-					if (isDragging)
-					{
-						inputIsCaptured = true;
-
-						offsetX = mouse.x - gfxSx/2;
-						offsetY = mouse.y;
-					}
-				
-					if (inputIsCaptured == false)
-					{
-						if (keyboard.wentDown(SDLK_f) && keyboard.isDown(SDLK_LSHIFT))
+					
+						if (isDragging)
 						{
 							inputIsCaptured = true;
-						
-							jsusFx.gfx_w = sx;
-							jsusFx.gfx_h = sy;
-						
-							offsetX = 0;
-							offsetY = 0;
+
+							offsetX = mouse.x - gfxSx/2;
+							offsetY = mouse.y;
 						}
-					}
-
-					mouse.x -= offsetX;
-					mouse.y -= offsetY;
-					{
-						setDrawRect(offsetX, offsetY, gfxSx, gfxSy);
-						gfx.drawTransform.MakeTranslation(offsetX, offsetY, 0.f);
-
-						gfx.setup(surface, gfxSx, gfxSy, mouse.x, mouse.y, inputIsCaptured == false);
-
-						jsusFx.draw();
-
-						clearDrawRect();
-					}
-					mouse.x += offsetX;
-					mouse.y += offsetY;
-				}
-				setColorClamp(false);
-				popFontMode();
-			}
-			else
-			{
-				setFont("calibri.ttf");
-				pushFontMode(FONT_SDF);
-				{
-					const int margin = 10;
-
-					int numSliders = 0;
-				
- 					for (auto & slider : jsusFx.sliders)
-						if (slider.exists && slider.desc[0] != '-')
-							numSliders++;
-				
-					const int sx = 200;
-					const int sy = 20;
-					const int advanceY = 22;
 					
-					const int totalSx = sx + margin * 2;
-					const int totalSy = advanceY * numSliders + margin * 2;
-					
-					int x = (surface->getWidth() - totalSx) / 2;
-					int y = (surface->getWidth() - totalSy) / 2;
-					
-					int sliderIndex = 0;
-					
-					auto doSlider = [&](JsusFx & fx, JsusFx_Slider & slider, int x, int y, bool & isActive)
+						if (inputIsCaptured == false)
 						{
-							const bool isInside =
-								x >= 0 && x <= sx &&
-								y >= 0 && y <= sy;
-						
-							if (isInside && mouse.wentDown(BUTTON_LEFT))
-								isActive = true;
-						
-							if (mouse.wentUp(BUTTON_LEFT))
-								isActive = false;
-						
-							if (isActive)
+							if (keyboard.wentDown(SDLK_f) && keyboard.isDown(SDLK_LSHIFT))
 							{
-								const float t = x / float(sx);
-								const float v = slider.min + (slider.max - slider.min) * t;
-								fx.moveSlider(&slider - fx.sliders, v);
-							}
-						
-							setColor(0, 0, 255, 127);
-							const float t = (slider.getValue() - slider.min) / (slider.max - slider.min);
-							drawRect(0, 0, sx * t, sy);
-						
-							if (slider.isEnum)
-							{
-								const int enumIndex = (int)slider.getValue();
+								inputIsCaptured = true;
 							
-								if (enumIndex >= 0 && enumIndex < slider.enumNames.size())
+								jsusFx.gfx_w = sx;
+								jsusFx.gfx_h = sy;
+							
+								offsetX = 0;
+								offsetY = 0;
+							}
+						}
+
+						mouse.x -= offsetX;
+						mouse.y -= offsetY;
+						{
+							setDrawRect(offsetX, offsetY, gfxSx, gfxSy);
+							gfx.drawTransform.MakeTranslation(offsetX, offsetY, 0.f);
+
+							gfx.setup(surface, gfxSx, gfxSy, mouse.x, mouse.y, inputIsCaptured == false);
+
+							jsusFx.draw();
+
+							clearDrawRect();
+						}
+						mouse.x += offsetX;
+						mouse.y += offsetY;
+					}
+					setColorClamp(false);
+					popFontMode();
+				}
+			
+				if (showControlSliders)
+				{
+					setFont("calibri.ttf");
+					pushFontMode(FONT_SDF);
+					{
+						const int margin = 10;
+
+						int numSliders = 0;
+					
+						for (auto & slider : jsusFx.sliders)
+							if (slider.exists && slider.desc[0] != '-')
+								numSliders++;
+					
+						const int sx = 200;
+						const int sy = 20;
+						const int advanceY = 22;
+						
+						const int totalSx = sx + margin * 2;
+						const int totalSy = advanceY * numSliders + margin * 2;
+						
+						if (firstFrame)
+						{
+							firstFrame = false;
+							
+							offsetX = (surface->getWidth() - totalSx) / 2;
+							offsetY = (surface->getWidth() - totalSy) / 2;
+						}
+						
+						int x = offsetX;
+						int y = offsetY;
+						
+						int sliderIndex = 0;
+						
+						auto doSlider = [&](JsusFx & fx, JsusFx_Slider & slider, int x, int y, bool & isActive)
+							{
+								const bool isInside =
+									x >= 0 && x <= sx &&
+									y >= 0 && y <= sy;
+							
+								if (isInside && mouse.wentDown(BUTTON_LEFT))
+									isActive = true;
+							
+								if (mouse.wentUp(BUTTON_LEFT))
+									isActive = false;
+							
+								if (isActive)
+								{
+									const float t = x / float(sx);
+									const float v = slider.min + (slider.max - slider.min) * t;
+									fx.moveSlider(&slider - fx.sliders, v);
+								}
+							
+								setColor(0, 0, 255, 127);
+								const float t = (slider.getValue() - slider.min) / (slider.max - slider.min);
+								drawRect(0, 0, sx * t, sy);
+							
+								if (slider.isEnum)
+								{
+									const int enumIndex = (int)slider.getValue();
+								
+									if (enumIndex >= 0 && enumIndex < slider.enumNames.size())
+									{
+										setColor(colorWhite);
+										drawText(sx/2.f, sy/2.f, 14.f, 0.f, 0.f, "%s", slider.enumNames[enumIndex].c_str());
+									}
+								}
+								else
 								{
 									setColor(colorWhite);
-									drawText(sx/2.f, sy/2.f, 14.f, 0.f, 0.f, "%s", slider.enumNames[enumIndex].c_str());
+									drawText(sx/2.f, sy/2.f, 14.f, 0.f, 0.f, "%s", slider.desc);
 								}
-							}
-							else
-							{
-								setColor(colorWhite);
-								drawText(sx/2.f, sy/2.f, 14.f, 0.f, 0.f, "%s", slider.desc);
-							}
-						
-							setColor(63, 31, 255, 127);
-							drawRectLine(0, 0, sx, sy);
-						};
+							
+								setColor(63, 31, 255, 127);
+								drawRectLine(0, 0, sx, sy);
+							};
 
-					if (numSliders > 0)
-					{
-						setColor(0, 0, 0, 127);
-						drawRect(x, y, x + totalSx, y + totalSy);
-					
-						x += margin;
-						y += margin;
-						
-						for (auto & slider : jsusFx.sliders)
+						if (numSliders > 0)
 						{
-							if (slider.exists && slider.desc[0] != '-')
+							setColor(0, 0, 0, 127);
+							drawRect(x, y, x + totalSx, y + totalSy);
+						
+							x += margin;
+							y += margin;
+							
+							for (auto & slider : jsusFx.sliders)
 							{
-								gxPushMatrix();
-								gxTranslatef(x, y, 0);
-								doSlider(jsusFx, slider, mouse.x - x, mouse.y - y, sliderIsActive[sliderIndex]);
-								gxPopMatrix();
+								if (slider.exists && slider.desc[0] != '-')
+								{
+									gxPushMatrix();
+									gxTranslatef(x, y, 0);
+									doSlider(jsusFx, slider, mouse.x - x, mouse.y - y, sliderIsActive[sliderIndex]);
+									gxPopMatrix();
 
-								y += advanceY;
+									y += advanceY;
+								}
+
+								sliderIndex++;
 							}
-
-							sliderIndex++;
 						}
 					}
+					popFontMode();
 				}
-				popFontMode();
 			}
 
-			doMidiKeyboard(midiKeyboard, mouse.x, mouse.y, midiBuffer, false, true, midiSx, midiSy, inputIsCaptured);
+			if (showMidiKeyboard)
+			{
+				doMidiKeyboard(midiKeyboard, mouse.x, mouse.y, midiBuffer, false, true, midiSx, midiSy, inputIsCaptured);
+			}
 		}
 		popSurface();
 
