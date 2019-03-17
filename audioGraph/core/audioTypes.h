@@ -170,6 +170,43 @@ inline __m128d operator*(__m128d a, __m128d b)
 	return _mm_mul_pd(a, b);
 }
 
+#if __AVX__
+
+#include <immintrin.h>
+
+inline __m256 operator+(__m256 a, __m256 b)
+{
+	return _mm256_add_ps(a, b);
+}
+
+inline __m256 operator-(__m256 a, __m256 b)
+{
+	return _mm256_sub_ps(a, b);
+}
+
+inline __m256 operator*(__m256 a, __m256 b)
+{
+	return _mm256_mul_ps(a, b);
+}
+
+inline __m256d operator+(__m256d a, __m256d b)
+{
+	return _mm256_add_pd(a, b);
+}
+
+inline __m256d operator-(__m256d a, __m256d b)
+{
+	return _mm256_sub_pd(a, b);
+}
+
+inline __m256d operator*(__m256d a, __m256d b)
+{
+	return _mm256_mul_pd(a, b);
+}
+
+#endif
+
+
 #endif
 
 #if defined(WIN32)
