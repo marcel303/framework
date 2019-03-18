@@ -65,7 +65,7 @@ public:
 
 			Action action;
 			action.type = ActionType_Clear;
-			action.size = m_data.capacity();
+			action.size = (uint16_t)m_data.capacity();
 			m_actions.push_back(action);
 			m_actionsSize += sizeof(action.type) + sizeof(action.size);
 
@@ -87,7 +87,7 @@ public:
 			{
 				Action action;
 				action.type = ActionType_Resize;
-				action.size = size;
+				action.size = (uint16_t)size;
 				m_actions.push_back(action);
 				m_actionsSize += sizeof(action.type) + sizeof(action.size);
 			}
@@ -116,7 +116,7 @@ public:
 			{
 				Action action;
 				action.type = ActionType_Reserve;
-				action.size = size;
+				action.size = (uint16_t)size;
 				m_actions.push_back(action);
 				m_actionsSize += sizeof(action.type) + sizeof(action.size);
 			}
@@ -160,7 +160,7 @@ public:
 			{
 				Action action;
 				action.type = ActionType_Erase;
-				action.index = index;
+				action.index = (uint16_t)index;
 				m_actions.push_back(action);
 				m_actionsSize += sizeof(action.type) + sizeof(action.index);
 			}
@@ -179,7 +179,7 @@ public:
 			{
 				Action action;
 				action.type = ActionType_SetElement;
-				action.index = index;
+				action.index = (uint16_t)index;
 				action.value = value;
 				m_actions.push_back(action);
 				m_actionsSize += sizeof(action.type) + sizeof(action.index) + sizeof(action.value);
@@ -236,8 +236,8 @@ public:
 					NetAssert(m_data.size() < (1 << 16));
 					NetAssert(m_data.capacity() < (1 << 16));
 
-					uint16_t size = m_data.size();
-					uint16_t capacity = m_data.capacity();
+					uint16_t size = (uint16_t)m_data.size();
+					uint16_t capacity = (uint16_t)m_data.capacity();
 
 					context.Serialize(size);
 					context.Serialize(capacity);
@@ -250,7 +250,7 @@ public:
 				else
 				{
 					NetAssert(m_actions.size() < (1 << 16));
-					uint16_t numActions = m_actions.size();
+					uint16_t numActions = (uint16_t)m_actions.size();
 					context.Serialize(numActions);
 
 					for (size_t i = 0; i < m_actions.size(); ++i)
