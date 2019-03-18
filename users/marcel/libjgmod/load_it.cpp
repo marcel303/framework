@@ -181,12 +181,12 @@ namespace jgmod
 
 		if (start_offset ==0)
 			{
-			sprintf_s (ji->type_name, sizeof(ji->type_name), "IT");
+			strcpy_s (ji->type_name, sizeof(ji->type_name), "IT");
 			ji->type = JGMOD_TYPE_IT;
 			}
 		else
 			{
-			sprintf_s (ji->type_name, sizeof(ji->type_name), "Unreal IT (UMX)");
+			strcpy_s(ji->type_name, sizeof(ji->type_name), "Unreal IT (UMX)");
 			ji->type = JGMOD_TYPE_UNREAL_IT;
 			}
 

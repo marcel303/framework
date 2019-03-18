@@ -122,12 +122,12 @@ namespace jgmod
 
 		if (no_inst == 15)
 			{
-			sprintf_s (ji->type_name, sizeof(ji->type_name), "MOD (15 Samples)");
+			strcpy_s(ji->type_name, sizeof(ji->type_name), "MOD (15 Samples)");
 			ji->type = JGMOD_TYPE_MOD15;
 			}
 		else if (no_inst == 31)
 			{
-			sprintf_s (ji->type_name, sizeof(ji->type_name), "MOD (31 Samples)");
+			strcpy_s(ji->type_name, sizeof(ji->type_name), "MOD (31 Samples)");
 			ji->type = JGMOD_TYPE_MOD31;
 			}
 		else
