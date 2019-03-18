@@ -47,12 +47,12 @@ namespace jgmod
 		if (start_offset == 0)
 		{
 			ji->type = JGMOD_TYPE_S3M;
-			sprintf(ji->type_name, "S3M");
+			sprintf_s(ji->type_name, sizeof(ji->type_name), "S3M");
 		}
 		else
 		{
 			ji->type = JGMOD_TYPE_UNREAL_S3M;
-			sprintf(ji->type_name, "Unreal S3M (UMX)");
+			sprintf_s(ji->type_name, sizeof(ji->type_name), "Unreal S3M (UMX)");
 			jgmod_skip(f, start_offset);
 		}
 

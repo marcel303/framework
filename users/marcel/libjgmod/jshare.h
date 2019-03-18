@@ -2,6 +2,13 @@
 
 #include <stdio.h>
 
+#if defined(__GNUC__)
+	#define sprintf_s(s, ss, f, ...) snprintf(s, ss, f, __VA_ARGS__)
+	#define vsprintf_s(s, ss, f, a) vsnprintf(s, ss, f, a)
+	#define strcpy_s(d, ds, s) strcpy(d, s)
+	#define sscanf_s sscanf
+#endif
+
 struct JGMOD;
 struct JGMOD_INFO;
 
