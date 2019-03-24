@@ -17,6 +17,7 @@ add jsusfx1
 add libgg-psd
 add magiclines
 add mitronix1
+add pincushion1
 add planetvis
 add planetvis2
 # todo : add with_library ?
