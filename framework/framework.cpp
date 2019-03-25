@@ -5454,16 +5454,21 @@ static void getCurrentSurfaceSize(int & sx, int & sy)
 	else
 	{
 		// todo : fix for case with fullscreen desktop mode
-		//if (globals.currentWindow == globals.mainWindow->getWindow() && false)
-		//	sx = globals.displaySize[0];
-		//	sy = globals.displaySize[1];
-		
-		int windowSx;
-		int windowSy;
-		SDL_GetWindowSize(globals.currentWindow, &windowSx, &windowSy);
+		// fixme : add specific code for setting screen matrix
+		if (globals.currentWindow == globals.mainWindow->getWindow() && false)
+		{
+			sx = globals.displaySize[0];
+			sy = globals.displaySize[1];
+		}
+		else
+		{
+			int windowSx;
+			int windowSy;
+			SDL_GetWindowSize(globals.currentWindow, &windowSx, &windowSy);
 
-		sx = windowSx * framework.minification;
-		sy = windowSy * framework.minification;
+			sx = windowSx * framework.minification;
+			sy = windowSy * framework.minification;
+		}
 	}
 }
 
@@ -8235,6 +8240,37 @@ void gxSetTexture(GxTextureId texture)
 	{
 		s_gxTextureEnabled = false;
 	}
+}
+
+static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter)
+{
+	if (filter == GX_SAMPLE_NEAREST)
+		return GL_NEAREST;
+	else if (filter == GX_SAMPLE_LINEAR)
+		return GL_LINEAR;
+	else
+	{
+		fassert(false);
+		return GL_NEAREST;
+	}
+}
+
+void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
+{
+	fassert(s_gxTextureEnabled);
+	
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+	
+	const GLenum openglFilter = toOpenGLSampleFilter(filter);
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglFilter);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, openglFilter);
+	checkErrorGL();
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	checkErrorGL();
 }
 
 #else

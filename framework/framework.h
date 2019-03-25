@@ -327,6 +327,12 @@ enum GX_MATRIX
 	GX_PROJECTION = GL_PROJECTION
 };
 
+enum GX_SAMPLE_FILTER
+{
+	GX_SAMPLE_NEAREST = GL_NEAREST,
+	GX_SAMPLE_LINEAR = GL_LINEAR
+};
+
 #else
 
 enum GX_PRIMITIVE_TYPE
@@ -346,6 +352,12 @@ enum GX_MATRIX
 {
 	GX_MODELVIEW,
 	GX_PROJECTION
+};
+
+enum GX_SAMPLE_FILTER
+{
+	GX_SAMPLE_NEAREST,
+	GX_SAMPLE_LINEAR
 };
 
 #endif
@@ -1484,6 +1496,7 @@ void gxVertex3fv(const float * v);
 void gxVertex4f(float x, float y, float z, float w);
 void gxVertex4fv(const float * v);
 void gxSetTexture(GxTextureId texture);
+void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
 #else
 

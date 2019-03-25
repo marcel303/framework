@@ -649,9 +649,7 @@ void draw(const bool menuActive, const float sx, const float sy)
 	for (int i = 0; i < kMaxParticleInfos; ++i)
 	{
 		gxSetTexture(Sprite(g_peiList[i].materialName).getTexture());
-	// todo : restore texture filtering for particle material textures
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
 
 		if (g_piList[i].blendMode == ParticleInfo::kBlendMode_AlphaBlended)
 			setBlend(BLEND_ALPHA);
