@@ -4,7 +4,7 @@
 static void drawBox2dPolygonShape(b2PolygonShape & shape, b2Body & body)
 {
 	const b2Vec2 position = body.GetPosition();
-	const float32 angle = body.GetAngle();
+	const float32 angle = body.GetAngle() * 180.f / M_PI;
 	
 	gxPushMatrix();
 	{
@@ -25,6 +25,7 @@ struct Box
 {
 	b2PolygonShape shape;
 	b2Body * body = nullptr;
+	Color color;
 	
 	void init(b2World & world, const float x, const float y, const float size)
 	{
@@ -45,15 +46,45 @@ struct Box
 		fixtureDef.density = 1.0f;
 
 		// Override the default friction.
-		fixtureDef.friction = 0.3f;
+		fixtureDef.friction = 0.8f;
+		
+		fixtureDef.restitution = .8f;
 
 		// Add the shape to the body.
 		body->CreateFixture(&fixtureDef);
 	}
 };
 
+struct ContactListener : b2ContactListener
+{
+	virtual void BeginContact(b2Contact * contact) override
+	{
+		auto * manifold = contact->GetManifold();
+		
+		for (int i = 0; i < manifold->pointCount; ++i)
+		{
+			// todo : come up with something better
+			
+			auto velA = contact->GetFixtureA()->GetBody()->GetLinearVelocity();
+			auto velB = contact->GetFixtureA()->GetBody()->GetLinearVelocity();
+			auto dot = b2Dot(velA, velB);
+			auto amount = sqrtf(fmaxf(dot, 0.f));
+			
+			const int volume = clamp<int>(amount * 10.f, 0, 255);
+			
+			Sound("menuselect.ogg").play(volume);
+		}
+	}
+
+	virtual void EndContact(b2Contact * contact) override
+	{
+	}
+};
+
 int main(int argc, char * argv[])
 {
+	changeDirectory(CHIBI_RESOURCE_PATH);
+	
 	if (!framework.init(800, 600))
 		return -1;
 	
@@ -62,7 +93,10 @@ int main(int argc, char * argv[])
 
 	// Construct a world object, which will hold and simulate the rigid bodies.
 	b2World world(gravity);
-
+	
+	ContactListener contactListener;
+	world.SetContactListener(&contactListener);
+	
 	// Define the ground body.
 	b2BodyDef groundBodyDef;
 	groundBodyDef.position.Set(0.0f, -10.0f);
@@ -76,24 +110,25 @@ int main(int argc, char * argv[])
 	b2PolygonShape groundBox;
 
 	// The extents are the half-widths of the box.
-	groundBox.SetAsBox(50.0f, 10.0f);
+	groundBox.SetAsBox(50.0f, 1.0f);
 
 	// Add the ground fixture to the ground body.
 	groundBody->CreateFixture(&groundBox, 0.0f);
 	
 	// Create a bunch of boxes.
 	std::vector<Box*> boxes;
-	for (int i = 0; i < 100; ++i)
+	for (int i = 0; i < 20; ++i)
 	{
 		Box * box = new Box();
-		box->init(world, random<float>(-2.f, +2.f), random<float>(2.f, 50.f), 1.f);
+		box->init(world, random<float>(-6.f, +6.f), random<float>(2.f, 50.f), 1.f);
+		box->color = Color::fromHSL(.5f + i / 20.f * .1f, .5f, .5f);
 		boxes.push_back(box);
 	}
 
 	// Prepare for simulation. Typically we use a time step of 1/60 of a
 	// second (60Hz) and 10 iterations. This provides a high quality simulation
 	// in most game scenarios.
-	float32 timeStep = 1.0f / 60.0f;
+	float32 maxTimeStep = 1.0f / 30.0f;
 	int32 velocityIterations = 6;
 	int32 positionIterations = 2;
 	
@@ -106,6 +141,8 @@ int main(int argc, char * argv[])
 		
 		if (framework.quitRequested)
 			break;
+		
+		const float timeStep = fminf(framework.timeStep, maxTimeStep);
 		
 		const Vec2 mousePos_world = (Vec2(mouse.x, -mouse.y) - Vec2(400, -300)) / viewScale;
 		
@@ -133,9 +170,11 @@ int main(int argc, char * argv[])
 			setColor(200, 200, 200);
 			drawBox2dPolygonShape(groundBox, *groundBody);
 			
-			setColor(colorWhite);
 			for (auto * box : boxes)
+			{
+				setColor(box->color);
 				drawBox2dPolygonShape(box->shape, *box->body);
+			}
 		}
 		framework.endDraw();
 	}

@@ -2,3 +2,4 @@ app marcel-box2d1
 	depend_library box2d
 	depend_library framework
 	add_files main.cpp
+	resource_path data
