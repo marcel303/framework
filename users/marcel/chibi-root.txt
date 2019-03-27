@@ -4,6 +4,7 @@ add ambisonics1
 add anaglyphic
 add avpaint
 add biquad-simd
+add box2d1
 add codingChallenges
 add colorpart
 add cuber
