@@ -16,3 +16,6 @@ url=https://github.com/marcel303/SDL-mirror.git
 [submodule "3rdparty/ImGuiColorTextEdit"]
 	path = 3rdparty/ImGuiColorTextEdit
 	url = https://github.com/marcel303/ImGuiColorTextEdit
+[submodule "3rdparty/box2d"]
+	path = 3rdparty/box2d
+	url = https://github.com/erincatto/Box2D

@@ -1,0 +1,4 @@
+library box2d
+	scan_files cpp path ../box2d/Box2D traverse
+	scan_files h   path ../box2d/Box2D traverse
+	header_path ../box2d expose
