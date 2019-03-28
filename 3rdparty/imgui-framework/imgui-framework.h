@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "framework.h"
 #include "imgui.h"
 
 #define DO_KINETIC_SCROLL 1
