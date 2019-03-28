@@ -21,6 +21,98 @@ static void drawBox2dPolygonShape(b2PolygonShape & shape, b2Body & body)
 	gxPopMatrix();
 }
 
+struct DebugDraw : public b2Draw
+{
+	b2Transform xform;
+	
+	void pushTransform()
+	{
+		gxPushMatrix();
+		gxTranslatef(xform.p.x, xform.p.y, 0);
+		gxRotatef(xform.q.GetAngle(), 0, 0, 1);
+	}
+	
+	void popTransform()
+	{
+		gxPopMatrix();
+	}
+	
+	virtual void DrawPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) override
+	{
+		pushTransform();
+		{
+			setColorf(color.r, color.g, color.b, color.a);
+			gxBegin(GX_LINE_LOOP);
+			{
+				for (int i = 0; i < vertexCount; ++i)
+					gxVertex2f(vertices[i].x, vertices[i].y);
+			}
+			gxEnd();
+		}
+		popTransform();
+	}
+
+	virtual void DrawSolidPolygon(const b2Vec2* vertices, int32 vertexCount, const b2Color& color) override
+	{
+		pushTransform();
+		{
+			setColorf(color.r, color.g, color.b, color.a);
+			gxBegin(GX_TRIANGLE_FAN);
+			{
+				for (int i = 0; i < vertexCount; ++i)
+					gxVertex2f(vertices[i].x, vertices[i].y);
+			}
+			gxEnd();
+		}
+		popTransform();
+	}
+
+	virtual void DrawCircle(const b2Vec2& center, float32 radius, const b2Color& color) override
+	{
+		pushTransform();
+		{
+			setColorf(color.r, color.g, color.b, color.a);
+			drawCircle(center.x, center.y, radius, 100);
+		}
+		popTransform();
+	}
+
+	virtual void DrawSolidCircle(const b2Vec2& center, float32 radius, const b2Vec2& axis, const b2Color& color) override
+	{
+		pushTransform();
+		{
+			setColorf(color.r, color.g, color.b, color.a);
+			fillCircle(center.x, center.y, radius, 100);
+		}
+		popTransform();
+	}
+
+	virtual void DrawSegment(const b2Vec2& p1, const b2Vec2& p2, const b2Color& color) override
+	{
+		pushTransform();
+		{
+			setColorf(color.r, color.g, color.b, color.a);
+			drawLine(p1.x, p1.y, p2.x, p2.y);
+		}
+		popTransform();
+	}
+
+	virtual void DrawTransform(const b2Transform& xf) override
+	{
+		xform = xf;
+	}
+
+	virtual void DrawPoint(const b2Vec2& p, float32 size, const b2Color& color) override
+	{
+		pushTransform();
+		{
+			setColorf(color.r, color.g, color.b, color.a);
+			fillCircle(p.x, p.y, size, 100);
+		}
+		popTransform();
+	}
+};
+
 struct Box
 {
 	b2PolygonShape shape;
@@ -134,6 +226,9 @@ int main(int argc, char * argv[])
 	
 	const float viewScale = 10.f;
 	
+	DebugDraw debugDraw;
+	world.SetDebugDraw(&debugDraw);
+	
 	// This is our little game loop.
 	for (;;)
 	{
@@ -167,6 +262,7 @@ int main(int argc, char * argv[])
 			gxScalef(1, -1, 0);
 			gxScalef(viewScale, viewScale, 1);
 			
+		#if 0
 			setColor(200, 200, 200);
 			drawBox2dPolygonShape(groundBox, *groundBody);
 			
@@ -175,6 +271,10 @@ int main(int argc, char * argv[])
 				setColor(box->color);
 				drawBox2dPolygonShape(box->shape, *box->body);
 			}
+		#else
+			debugDraw.SetFlags(0xffff);
+			world.DrawDebugData();
+		#endif
 		}
 		framework.endDraw();
 	}
