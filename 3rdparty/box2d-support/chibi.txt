@@ -2,3 +2,11 @@ library box2d
 	scan_files cpp path ../box2d/Box2D traverse
 	scan_files h   path ../box2d/Box2D traverse
 	header_path ../box2d expose
+
+app box2d-testbed-framework
+	depend_library box2d
+	depend_library framework
+	depend_library imgui-framework
+	scan_files cpp traverse
+	scan_files h   traverse
+	resource_path Testbed
