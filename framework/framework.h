@@ -284,7 +284,6 @@ namespace spriter
 // globals
 
 extern Framework framework;
-extern Dictionary settings;
 extern Mouse mouse;
 extern Keyboard keyboard;
 extern Gamepad gamepad[MAX_GAMEPAD];

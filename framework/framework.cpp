@@ -134,7 +134,6 @@ Color colorYellow(255, 255, 0, 255);
 //
 
 Framework framework;
-Dictionary settings;
 Mouse mouse;
 Keyboard keyboard;
 Gamepad gamepad[MAX_GAMEPAD];
@@ -526,10 +525,6 @@ bool Framework::init(int sx, int sy)
 	{
 		initRealTimeEditing();
 	}
-
-	// load settings
-
-	settings.load("settings.txt");
 
 	// set icon
 
@@ -1310,8 +1305,6 @@ void Framework::processActions(const std::string & actions, const Dictionary & a
 
 void Framework::reloadCaches()
 {
-	settings.load("settings.txt");
-
 	g_textureCache.reload();
 	g_shaderCache.reload();
 	g_animCache.reload();
