@@ -61,6 +61,9 @@ struct DebugCamera
 	
 	float m_width = 0.f;
 	float m_height = 0.f;
+	
+	void Apply() const;
+	b2Vec2 ConvertScreenToWorld(b2Vec2 v) const;
 };
 
 extern DebugCamera g_camera;

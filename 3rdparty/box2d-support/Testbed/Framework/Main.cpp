@@ -24,6 +24,32 @@ DebugDraw g_debugDraw;
 
 DebugCamera g_camera;
 
+void DebugCamera::Apply() const
+{
+	gxTranslatef(1024/2, 640/2, 0);
+	gxScalef(1, -1, 1);
+	gxScalef(640/50.f, 640/50.f, 1);
+	gxScalef(g_camera.m_zoom, g_camera.m_zoom, 1);
+	gxTranslatef(-g_camera.m_center.x, -g_camera.m_center.y, 0);
+}
+
+b2Vec2 DebugCamera::ConvertScreenToWorld(b2Vec2 v) const
+{
+	v -= b2Vec2(1024/2, 640/2);
+	
+	v.y = -v.y;
+	
+	v.x /= 640/50.f;
+	v.y /= 640/50.f;
+	
+	v.x /= g_camera.m_zoom;
+	v.y /= g_camera.m_zoom;
+	
+	v += g_camera.m_center;
+	
+	return v;
+}
+
 //
 struct UIState
 {
@@ -199,6 +225,7 @@ static void sTickKeyboard()
 		ui.showMenu = !ui.showMenu;
 	
 #if 0
+// todo : pass keyboard events to tests
 	if (test)
 	{
 		test->Keyboard(key);
@@ -216,7 +243,7 @@ static void sTickMouse()
 	b2Vec2 ps(mouse.x, mouse.y);
 
 	//ps.Set(0, 0);
-	b2Vec2 pw = ps; // todo : g_camera.ConvertScreenToWorld(ps);
+	b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
 	
 	// Use the mouse to move things around.
 	if (mouse.wentDown(BUTTON_LEFT))
@@ -238,7 +265,7 @@ static void sTickMouse()
 	
 	if (mouse.wentDown(BUTTON_RIGHT))
 	{
-		// todo : lastp = g_camera.ConvertScreenToWorld(ps);
+		lastp = g_camera.ConvertScreenToWorld(ps);
 		rightMouseDown = true;
 	}
 
@@ -251,9 +278,9 @@ static void sTickMouse()
 //
 static void sTickMouseMotion()
 {
-	b2Vec2 ps(mouse.dx, mouse.dy);
+	b2Vec2 ps(mouse.x, mouse.y);
 
-	b2Vec2 pw; // todo : = g_camera.ConvertScreenToWorld(ps);
+	b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
 	test->MouseMove(pw);
 	
 	if (rightMouseDown)
@@ -261,7 +288,7 @@ static void sTickMouseMotion()
 		b2Vec2 diff = pw - lastp;
 		g_camera.m_center.x -= diff.x;
 		g_camera.m_center.y -= diff.y;
-		// todo : lastp = g_camera.ConvertScreenToWorld(ps);
+		lastp = g_camera.ConvertScreenToWorld(ps);
 	}
 }
 
@@ -451,11 +478,7 @@ int main(int, char**)
 				ImGui::End();
 
 				gxPushMatrix();
-				gxTranslatef(1024/2, 640/2, 0);
-				gxScalef(1, -1, 1);
-				gxScalef(640/50.f, 640/50.f, 1);
-				gxScalef(g_camera.m_zoom, g_camera.m_zoom, 1);
-				gxTranslatef(-g_camera.m_center.x, -g_camera.m_center.y, 0);
+				g_camera.Apply();
 				
 				sSimulate();
 				sInterface();
