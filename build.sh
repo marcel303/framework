@@ -42,5 +42,5 @@ mkdir -p chibi-build/cmake-files-for-build
 
 # build all of the libraries and example and test app binaries. this will take a while
 mkdir -p chibi-build/bin
-cd chibi-build/bin && cmake -DCMAKE_BUILD_TYPE=Release ../cmake-files-for-build && cmake --build .
+cd chibi-build/bin && cmake -DCMAKE_BUILD_TYPE=Release ../cmake-files-for-build && cmake --build . -- -j6
 cd "$root"
