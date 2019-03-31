@@ -47,12 +47,7 @@ OscReceiver * OscEndpointMgr::allocReceiver(const char * name, const char * ipAd
 		}
 	}
 	
-	{
-		Receiver r;
-		
-		receivers.push_back(r);
-	}
-	
+	receivers.emplace_back();
 	auto & r = receivers.back();
 	
 	r.name = name;
@@ -121,12 +116,7 @@ OscSender * OscEndpointMgr::allocSender(const char * name, const char * ipAddres
 		}
 	}
 	
-	{
-		Sender s;
-		
-		senders.push_back(s);
-	}
-	
+	senders.emplace_back();
 	auto & s = senders.back();
 	
 	s.name = name;
