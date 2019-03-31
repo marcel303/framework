@@ -29,6 +29,8 @@
 #include "oscEndpointMgr.h"
 #include "vfxNodes/vfxNodeMidiOsc.h"
 
+extern OscEndpointMgr g_oscEndpointMgr;
+
 VFX_NODE_TYPE(VfxNodeMidiOsc)
 {
 	typeName = "midiosc";

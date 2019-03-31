@@ -36,6 +36,10 @@
 
 //
 
+extern OscEndpointMgr g_oscEndpointMgr;
+
+//
+
 VFX_NODE_TYPE(VfxNodeOscReceiveChannels)
 {
 	typeName = "osc.receiveChannels";

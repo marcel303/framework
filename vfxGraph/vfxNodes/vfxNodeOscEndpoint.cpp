@@ -28,6 +28,8 @@
 #include "oscEndpointMgr.h"
 #include "vfxNodeOscEndpoint.h"
 
+extern OscEndpointMgr g_oscEndpointMgr;
+
 VFX_NODE_TYPE(VfxNodeOscEndpoint)
 {
 	typeName = "osc.endpoint";

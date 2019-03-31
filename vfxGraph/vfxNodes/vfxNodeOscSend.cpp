@@ -33,6 +33,8 @@
 
 #define OSC_BUFFER_SIZE 1024
 
+extern OscEndpointMgr g_oscEndpointMgr;
+
 VFX_ENUM_TYPE(oscSendMode)
 {
 	elem("onTick");

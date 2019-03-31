@@ -33,7 +33,15 @@
 #include "StringEx.h"
 #include "vfxNodeOscSheet.h"
 
+//
+
 extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
+
+//
+
+extern OscEndpointMgr g_oscEndpointMgr;
+
+//
 
 VFX_ENUM_TYPE(oscSheetSendMode)
 {
