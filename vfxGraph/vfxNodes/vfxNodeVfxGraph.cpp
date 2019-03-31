@@ -231,6 +231,8 @@ void VfxNodeVfxGraph::init(const GraphNode & node)
 	
 	if (filename != nullptr)
 	{
+		currentFilename = filename;
+		
 		open(filename);
 	}
 }
