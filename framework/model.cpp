@@ -1658,6 +1658,8 @@ void ModelCacheElem::load(const char * filename)
 	// animation name:walk loop:<loopcount> rootmotion:<enabled>
 	//     trigger time:<second> loop:<loop> actions:<action,action,..> [params]
 	
+	const std::string path = Path::GetDirectory(filename);
+	
 	float scale = 1.f;
 	
 	int right   = +1;
@@ -1723,13 +1725,15 @@ void ModelCacheElem::load(const char * filename)
 					logError("%s: mandatory property 'file' not specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
 				else
 				{
-					logDebug("using bone set from %s", file.c_str());
+					const std::string file_path = path.empty() ? file : (path + "/" + file);
 					
-					Loader * loader = createLoader(file.c_str());
+					logDebug("using bone set from %s", file_path.c_str());
+					
+					Loader * loader = createLoader(file_path.c_str());
 					
 					if (loader)
 					{
-						boneSet = loader->loadBoneSet(file.c_str());
+						boneSet = loader->loadBoneSet(file_path.c_str());
 						delete loader;
 					}
 				}
@@ -1769,13 +1773,15 @@ void ModelCacheElem::load(const char * filename)
 					logError("%s: mandatory property 'file' not specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
 				else
 				{
-					logDebug("using mesh set from %s", file.c_str());
+					const std::string file_path = path.empty() ? file : (path + "/" + file);
 					
-					Loader * loader = createLoader(file.c_str());
+					logDebug("using mesh set from %s", file_path.c_str());
+					
+					Loader * loader = createLoader(file_path.c_str());
 					
 					if (loader)
 					{
-						meshSet = loader->loadMeshSet(file.c_str(), boneSet);
+						meshSet = loader->loadMeshSet(file_path.c_str(), boneSet);
 						delete loader;
 						
 						if (meshSet)
@@ -1845,25 +1851,34 @@ void ModelCacheElem::load(const char * filename)
 				logError("%s: mandatory property 'file' not specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
 			else
 			{
-				logDebug("using anim set from %s", file.c_str());
+				const std::string file_path = path.empty() ? file : (path + "/" + file);
 				
-				Loader * loader = createLoader(file.c_str());
+				logDebug("using anim set from %s", file_path.c_str());
+				
+				Loader * loader = createLoader(file_path.c_str());
 				
 				if (loader)
 				{
-					AnimSet * temp = loader->loadAnimSet(file.c_str(), boneSet);
+					AnimSet * temp = loader->loadAnimSet(file_path.c_str(), boneSet);
 					
-					// todo: apply name when not merging
-					
-					const std::string name = record.args.getString("name", "");
-					
-					if (!name.empty())
-						temp->rename(name);
-					
-					if (!animSet)
-						animSet = temp;
+					if (temp == nullptr)
+					{
+						logError("failed to load anim set from file %s", file_path.c_str());
+					}
 					else
-						animSet->mergeFromAndFree(temp);
+					{
+						// todo: apply name when not merging
+						
+						const std::string name = record.args.getString("name", "");
+						
+						if (!name.empty())
+							temp->rename(name);
+						
+						if (!animSet)
+							animSet = temp;
+						else
+							animSet->mergeFromAndFree(temp);
+					}
 						
 					delete loader;
 				}

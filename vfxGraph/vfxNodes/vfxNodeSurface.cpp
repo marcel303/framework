@@ -72,7 +72,6 @@ VfxNodeSurface::VfxNodeSurface()
 	: VfxNodeBase()
 	, surface(nullptr)
 	, oldSurface(nullptr)
-	, oldDepthTestEnabled(false)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Draw, kVfxPlugType_Draw);
@@ -182,8 +181,6 @@ void VfxNodeSurface::beforeDraw() const
 	oldSurface = g_currentVfxSurface;
 	g_currentVfxSurface = surface;
 	
-	glGetIntegerv(GL_DEPTH_TEST, &oldDepthTestEnabled);
-	
 	pushSurface(surface);
 	
 	if (clear)
@@ -224,17 +221,19 @@ void VfxNodeSurface::beforeDraw() const
 		
 		gxTranslatef(surface->getWidth()/2.f, surface->getHeight()/2.f, 0.f);
 		
-		glDisable(GL_DEPTH_TEST);
-		checkErrorGL();
+		pushDepthTest(false, DEPTH_LEQUAL);
 	}
-	
-	if (viewMode == kViewMode_Perspective)
+	else if (viewMode == kViewMode_Perspective)
 	{
 		projectPerspective3d(fov, zNear, zFar);
 		
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
-		checkErrorGL();
+		pushDepthTest(true, DEPTH_LEQUAL);
+	}
+	else
+	{
+		Assert(false);
+		
+		pushDepthTest(false, DEPTH_LEQUAL);
 	}
 	
 	pushBlend(BLEND_ALPHA);
@@ -247,16 +246,7 @@ void VfxNodeSurface::afterDraw() const
 	
 	popBlend();
 	
-	if (oldDepthTestEnabled)
-	{
-		glEnable(GL_DEPTH_TEST);
-		checkErrorGL();
-	}
-	else
-	{
-		glDisable(GL_DEPTH_TEST);
-		checkErrorGL();
-	}
+	popDepthTest();
 	
 	popTransform();
 	
