@@ -224,17 +224,43 @@ static void sTickKeyboard()
 	if (keyboard.wentDown(SDLK_TAB))
 		ui.showMenu = !ui.showMenu;
 	
-#if 0
-// todo : pass keyboard events to tests
-	if (test)
+	auto toGlfwKey = [](const int key) -> GLFW_KEY
 	{
-		test->Keyboard(key);
-	}
-	else if (action == GLFW_RELEASE)
+		if (key >= SDLK_a && key <= SDLK_z)
+			return GLFW_KEY(GLFW_KEY_A + (key - SDLK_a));
+		if (key >= SDLK_0 && key <= SDLK_9)
+			return GLFW_KEY(GLFW_KEY_0 + (key - SDLK_0));
+		
+		if (key == SDLK_LEFT)
+			return GLFW_KEY_LEFT;
+		if (key == SDLK_RIGHT)
+			return GLFW_KEY_RIGHT;
+		if (key == SDLK_ESCAPE)
+			return GLFW_KEY_ESCAPE;
+		if (key == SDLK_COMMA)
+			return GLFW_KEY_COMMA;
+		
+		return GLFW_KEY_UNKNOWN;
+	};
+	
+	for (auto & e : keyboard.events)
 	{
-		test->KeyboardUp(key);
+		const GLFW_KEY key = toGlfwKey(e.key.keysym.sym);
+		
+		if (key != GLFW_KEY_UNKNOWN)
+		{
+			if (e.type == SDL_KEYDOWN)
+			{
+				if (test)
+ 					test->Keyboard(key);
+			}
+			else if (e.type == SDL_KEYUP)
+			{
+				if (test)
+					test->KeyboardUp(key);
+			}
+		}
 	}
-#endif
 }
 
 //
