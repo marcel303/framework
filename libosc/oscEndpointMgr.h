@@ -81,5 +81,3 @@ struct OscEndpointMgr
 	
 	void tick();
 };
-
-extern OscEndpointMgr g_oscEndpointMgr;
