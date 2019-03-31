@@ -224,7 +224,7 @@ std::string Path::FlattenPathComponents(const std::vector<std::string>& componen
 	
 	for (size_t i = 0; i < components.size(); ++i)
 	{
-		if (i != 0)
+		if (result.empty() == false && result.back() != '/')
 			result += '/';
 		
 		result += components[i];
@@ -237,7 +237,25 @@ std::vector<std::string> Path::GetPathComponents(const std::string& _path)
 {
 	std::string path = NormalizeSlashes(_path);
 	
-	return String::Split(path, '/');
+	std::vector<std::string> result;
+	
+	if (path.empty() == false && path.front() == '/')
+	{
+		// absolute unix path. retain the first '/' to indicate it's an absolute path
+		
+		result.push_back("/");
+		
+		std::vector<std::string> elems = String::Split(path, '/');
+		
+		for (auto & elem : elems)
+			result.push_back(elem);
+	}
+	else
+	{
+		result = String::Split(path, '/');
+	}
+	
+	return result;
 }
 
 char Path::SafeRead(const std::string& a_String, int a_Position)
