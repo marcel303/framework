@@ -78,7 +78,7 @@ static void sCreateUI()
 
 	// Init UI
 	const char* fontPath = "Data/DroidSans.ttf";
-	ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath, 15.f);
+	ImGui::GetIO().FontDefault = ImGui::GetIO().Fonts->AddFontFromFileTTF(fontPath, 15.f);
 	
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.FrameRounding = style.GrabRounding = style.ScrollbarRounding = 2.0f;
@@ -459,14 +459,18 @@ int main(int, char**)
 		fprintf(stderr, "Failed to initialize GLFW\n");
 		return -1;
 	}
+	
+	setFont("Data/DroidSans.ttf");
 
 	char title[64];
 	sprintf(title, "Box2D Testbed Version %d.%d.%d", b2_version.major, b2_version.minor, b2_version.revision);
 	
 	FrameworkImGuiContext guiContext;
 	guiContext.init();
-
+	guiContext.pushImGuiContext();
 	sCreateUI();
+	guiContext.popImGuiContext();
+	guiContext.updateFontTexture();
 
 	testCount = 0;
 	while (g_testEntries[testCount].createFcn != NULL)

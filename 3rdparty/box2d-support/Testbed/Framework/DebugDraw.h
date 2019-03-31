@@ -2,6 +2,8 @@
 
 #include "Box2D/Box2D.h"
 #include "framework.h"
+#include "StringEx.h"
+#include <stdarg.h>
 
 struct DebugDraw : public b2Draw
 {
@@ -89,21 +91,46 @@ struct DebugDraw : public b2Draw
 		pushTransform();
 		{
 			setColorf(color.r, color.g, color.b, color.a);
-			fillCircle(p.x, p.y, size, 100);
+			fillCircle(p.x, p.y, size / 25.f, 20);
 		}
 		popTransform();
 	}
 
-	void DrawString(int x, int y, const char* string, ...)
+	void DrawString(int x, int y, const char* format, ...)
 	{
+		char text[1024];
+		va_list args;
+		va_start(args, format);
+		vsprintf_s(text, sizeof(text), format, args);
+		va_end(args);
+		
+		gxPushMatrix();
+		gxLoadIdentity();
+		setColor(140, 255, 200);
+		drawText(x, y, 12, +1, -1, "%s", text);
+		gxPopMatrix();
 	}
 
-	void DrawString(const b2Vec2& p, const char* string, ...)
+	void DrawString(const b2Vec2& p, const char* format, ...)
 	{
+		char text[1024];
+		va_list args;
+		va_start(args, format);
+		vsprintf_s(text, sizeof(text), format, args);
+		va_end(args);
+		
+		gxPushMatrix();
+		gxLoadIdentity();
+		drawText(p.x, p.y, 12, +1, -1, "%s", text);
+		gxPopMatrix();
 	}
 
 	void DrawAABB(b2AABB* aabb, const b2Color& color)
 	{
+		setColorf(color.r, color.g, color.b, color.a);
+		drawRect(
+			aabb->lowerBound.x, aabb->lowerBound.y,
+			aabb->upperBound.x, aabb->upperBound.y);
 	}
 
 	void Flush()
