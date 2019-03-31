@@ -376,7 +376,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 	{
 		imageData = loadImage(filename);
 
-	#ifdef WIN32
+	#ifdef WIN32 // todo : enable cacheResourceData on other platforms than windows too
 		if (framework.cacheResourceData && imageData)
 		{
 			std::string cacheFilename = getCacheFilename(filename, false);
