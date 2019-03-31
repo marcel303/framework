@@ -40,8 +40,13 @@
 	#define VFX_GRAPH_ENABLE_TIMING 0
 #endif
 
+// framework forward declarations
 class Surface;
 
+// libosc forward declarations
+struct OscEndpointMgr;
+
+// vfxgraph forward declarations
 struct VfxDynamicData;
 struct VfxDynamicInputSocketValue;
 struct VfxDynamicLink;
@@ -54,8 +59,12 @@ struct VfxResourceBase;
 struct VfxNodeDisplay;
 struct VfxNodeOutput;
 
+// vfxgraph traversal state
 extern VfxGraph * g_currentVfxGraph;
 extern Surface * g_currentVfxSurface;
+
+// vfxgraph globals
+extern OscEndpointMgr g_oscEndpointMgr;
 
 struct MemoryComponent
 {

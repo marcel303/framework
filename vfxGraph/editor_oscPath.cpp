@@ -34,8 +34,14 @@
 #include "vfxResource.h"
 #include "vfxTypes.h"
 
+//
+
 extern int GRAPHEDIT_SX;
 extern int GRAPHEDIT_SY;
+
+//
+
+extern OscEndpointMgr g_oscEndpointMgr;
 
 //
 

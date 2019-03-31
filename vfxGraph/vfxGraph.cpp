@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "graphEdit.h"
+#include "oscEndpointMgr.h" // g_oscEndpointMgr
 #include "Parse.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
@@ -40,7 +41,7 @@
 extern int VFXGRAPH_SX;
 extern int VFXGRAPH_SY;
 
-int VFXGRAPH_SX = 0;
+int VFXGRAPH_SX = 0; // todo : remove. make these members
 int VFXGRAPH_SY = 0;
 
 //
@@ -48,6 +49,12 @@ int VFXGRAPH_SY = 0;
 VfxGraph * g_currentVfxGraph = nullptr;
 
 Surface * g_currentVfxSurface = nullptr;
+
+//
+
+OscEndpointMgr g_oscEndpointMgr;
+
+//
 
 static Surface * s_dummySurface = nullptr; // todo : add explicit vfx graph init and shutdown ?
 

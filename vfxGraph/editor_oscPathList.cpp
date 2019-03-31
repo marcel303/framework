@@ -42,6 +42,10 @@ extern int GRAPHEDIT_SY;
 
 //
 
+extern OscEndpointMgr g_oscEndpointMgr;
+
+//
+
 ResourceEditor_OscPathList::ResourceEditor_OscPathList()
 	: GraphEdit_ResourceEditorBase(GRAPHEDIT_SX*2/3, 100)
 	, uiState(nullptr)

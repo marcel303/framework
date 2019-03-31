@@ -32,6 +32,8 @@
 
 // todo : add DMX setup resource
 
+extern OscEndpointMgr g_oscEndpointMgr;
+
 VFX_NODE_TYPE(VfxNodeArtnet)
 {
 	typeName = "artnet";
