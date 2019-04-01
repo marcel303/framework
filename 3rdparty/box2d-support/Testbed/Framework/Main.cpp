@@ -85,6 +85,8 @@ static void sCreateUI()
 	style.FramePadding = ImVec2(4, 2);
 	style.DisplayWindowPadding = ImVec2(0, 0);
 	style.DisplaySafeAreaPadding = ImVec2(0, 0);
+	
+	ImGui::StyleColorsClassic();
 }
 
 //
