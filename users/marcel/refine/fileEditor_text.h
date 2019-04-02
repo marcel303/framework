@@ -1,7 +1,9 @@
 #pragma once
 
 #include "fileEditor.h"
+#include "imgui/TextEditor.h"
 #include "nfd.h"
+#include "TextIO.h"
 
 static bool loadIntoTextEditor(const char * filename, TextIO::LineEndings & lineEndings, TextEditor & textEditor)
 {

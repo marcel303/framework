@@ -5,6 +5,7 @@
 #include "audioVoiceManager.h"
 #include "fileEditor.h"
 #include "graphEdit.h"
+#include "ui.h"
 #include "vfxGraphManager.h"
 #include "vfxUi.h"
 

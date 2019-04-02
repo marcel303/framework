@@ -1,6 +1,7 @@
 #pragma once
 
 #include "fileEditor.h"
+#include "ui.h" // drawUiRectCheckered
 
 struct FileEditor_Model : FileEditor
 {

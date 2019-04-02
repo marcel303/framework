@@ -10,5 +10,6 @@ app refine
 	depend_library libparticle
 	depend_library libvideo
 	depend_library vfxgraph
-	add_files main.cpp
+	scan_files cpp
+	scan_files h
 	resource_path data

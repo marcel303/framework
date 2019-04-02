@@ -1,19 +1,16 @@
 #include "framework.h"
 #include "imgui-framework.h"
-#include "imgui/TextEditor.h"
 #include "Path.h"
 #include "StringEx.h"
-#include "TextIO.h"
-#include "ui.h"
 #include <algorithm>
 #include <functional>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
-#include "paobject.h"
 
 #include "fileEditor.h"
 #include "fileEditor_audioGraph.h"
+#include "fileEditor_audioStream_vorbis.h"
 #include "fileEditor_font.h"
 #include "fileEditor_jgmod.h"
 #include "fileEditor_jsfx.h"
@@ -24,9 +21,6 @@
 #include "fileEditor_text.h"
 #include "fileEditor_vfxGraph.h"
 #include "fileEditor_video.h"
-
-#include "audiooutput/AudioOutput_PortAudio.h"
-#include "audiostream/AudioStreamVorbis.h"
 
 #undef min
 #undef max
@@ -212,57 +206,6 @@ struct FileBrowser
 };
 
 //
-
-struct FileEditor_AudioStream_Vorbis : FileEditor
-{
-	AudioOutput_PortAudio audioOutput;
-	AudioStream_Vorbis * audioStream = nullptr;
-	
-	FileEditor_AudioStream_Vorbis(const char * path)
-	{
-		audioStream = new AudioStream_Vorbis();
-		audioStream->Open(path, true);
-		
-		audioOutput.Initialize(2, audioStream->SampleRate_get(), 256);
-		audioOutput.Play(audioStream);
-	}
-	
-	virtual ~FileEditor_AudioStream_Vorbis()
-	{
-		audioOutput.Shutdown();
-		
-		delete audioStream;
-		audioStream = nullptr;
-	}
-	
-	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
-	{
-		audioOutput.Update();
-		
-		if (hasFocus == false)
-			return;
-		
-		clearSurface(0, 0, 0, 0);
-		
-		if (audioStream->Duration_get() > 0)
-		{
-			gxPushMatrix();
-			gxTranslatef(0, sy/2, 0);
-			
-			hqBegin(HQ_FILLED_ROUNDED_RECTS);
-			setColor(100, 100, 200);
-			hqFillRoundedRect(4, -10, int64_t(sx - 4) * audioStream->Position_get() / audioStream->Duration_get(), +10, 10);
-			hqEnd();
-			
-			hqBegin(HQ_STROKED_ROUNDED_RECTS);
-			setColor(140, 140, 200);
-			hqStrokeRoundedRect(4, -10, sx - 4, +10, 10, 2.f);
-			hqEnd();
-			
-			gxPopMatrix();
-		}
-	}
-};
 
 struct EditorWindow
 {

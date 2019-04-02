@@ -1,6 +1,7 @@
 #pragma once
 
 #include "fileEditor.h"
+#include "ui.h" // drawUiRectCheckered
 #include "video.h"
 
 struct FileEditor_Video : FileEditor
