@@ -32,6 +32,7 @@ push_group libraries
 	add users/marcel/audiograph-jsusfx
 	add users/marcel/libjgmod
 	add users/marcel/libjgmod-audiograph
+	add users/marcel/libreflection
 	add users/marcel/optionmenu
 
 pop_group

@@ -1,0 +1,3 @@
+library libreflection
+	add_files reflection.cpp reflection.h reflection-vector.h
+	header_path . expose
