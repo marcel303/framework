@@ -1,9 +1,9 @@
 #pragma once
 
-#include <stdint.h>
-#include <vector>
 #include "libnet_forward.h"
 #include "NetSerializable.h"
+#include <stdint.h>
+#include <vector>
 
 template <typename T>
 class NetArray

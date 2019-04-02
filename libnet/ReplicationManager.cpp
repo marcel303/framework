@@ -1,4 +1,3 @@
-#include <algorithm>
 #include "BitStream.h"
 #include "Channel.h"
 #include "Log.h"
@@ -7,6 +6,7 @@
 #include "PacketDispatcher.h"
 #include "ReplicationManager.h"
 #include "Types.h"
+#include <algorithm>
 
 ReplicationManager::ReplicationManager()
 {

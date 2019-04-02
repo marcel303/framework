@@ -1,10 +1,8 @@
-#ifndef REPLICATIONCLIENT_H
-#define REPLICATIONCLIENT_H
 #pragma once
 
+#include "ReplicationObject.h"
 #include <list>
 #include <map>
-#include "ReplicationObject.h"
 
 class ReplicationClient
 {
@@ -54,5 +52,3 @@ public:
 	typedef std::map<int, ReplicationObject*> ReplicationObjectColl;
 	ReplicationObjectColl m_clientObjects;
 };
-
-#endif

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stdint.h>
 #include "Debugging.h"
 #include "Log.h"
+#include <stdint.h>
 
 #if 1
 

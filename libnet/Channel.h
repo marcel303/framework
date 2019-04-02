@@ -1,12 +1,12 @@
 #pragma once
 
-#include <deque>
-#include <list>
 #include "ChannelTypes.h"
 #include "libnet_config.h"
 #include "NetSocket.h"
 #include "Packet.h"
 #include "PolledTimer.h"
+#include <deque>
+#include <list>
 
 class ChannelManager;
 

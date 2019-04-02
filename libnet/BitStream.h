@@ -1,10 +1,10 @@
 #pragma once
 
+#include "Debugging.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string>
 #include <string.h>
-#include "Debugging.h"
 
 namespace Net
 {

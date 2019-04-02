@@ -1,14 +1,12 @@
-#ifndef REPLICATIONMANAGER_H
-#define REPLICATIONMANAGER_H
 #pragma once
 
-#include <map>
 #include "NetHandlePool.h"
 #include "NetSerializable.h"
 #include "PacketListener.h"
 #include "ReplicationClient.h"
 #include "ReplicationHandler.h"
 #include "ReplicationObject.h"
+#include <map>
 
 class ReplicationManager : public PacketListener
 {
@@ -75,5 +73,3 @@ private:
 	int m_tick;
 	int m_serverObjectCreationId;
 };
-
-#endif

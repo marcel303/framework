@@ -1,5 +1,3 @@
-#ifndef REPLICATIONHANDLER_H
-#define REPLICATIONHANDLER_H
 #pragma once
 
 //#include "libnet_forward.h"
@@ -16,5 +14,3 @@ public:
 	virtual void OnReplicationObjectCreated(ReplicationClient * client, ReplicationObject * object) = 0;
 	virtual void OnReplicationObjectDestroyed(ReplicationClient * client, ReplicationObject * object) = 0;
 };
-
-#endif

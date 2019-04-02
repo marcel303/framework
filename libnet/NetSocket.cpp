@@ -1,11 +1,11 @@
+#include "Log.h"
+#include "NetSocket.h"
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #if !defined(WINDOWS)
 	#include <unistd.h>
 #endif
-#include "Log.h"
-#include "NetSocket.h"
 
 #if !defined(WINDOWS)
 	#define SOCKET_ERROR   (-1)

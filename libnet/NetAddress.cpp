@@ -1,5 +1,5 @@
-#include <string.h>
 #include "NetAddress.h"
+#include <string.h>
 
 static int GetOctet(int address, int i)
 {

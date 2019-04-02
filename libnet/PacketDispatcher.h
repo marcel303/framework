@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stdint.h>
 #include "libnet_config.h"
 #include "libnet_forward.h"
+#include <stdint.h>
 
 class PacketDispatcher
 {
