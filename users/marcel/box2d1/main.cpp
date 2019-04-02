@@ -151,25 +151,39 @@ struct ContactListener : b2ContactListener
 {
 	virtual void BeginContact(b2Contact * contact) override
 	{
-		auto * manifold = contact->GetManifold();
-		
-		for (int i = 0; i < manifold->pointCount; ++i)
-		{
-			// todo : come up with something better
-			
-			auto velA = contact->GetFixtureA()->GetBody()->GetLinearVelocity();
-			auto velB = contact->GetFixtureA()->GetBody()->GetLinearVelocity();
-			auto dot = b2Dot(velA, velB);
-			auto amount = sqrtf(fmaxf(dot, 0.f));
-			
-			const int volume = clamp<int>(amount * 10.f, 0, 255);
-			
-			Sound("menuselect.ogg").play(volume);
-		}
 	}
 
 	virtual void EndContact(b2Contact * contact) override
 	{
+	}
+	
+	virtual void PreSolve(b2Contact* contact, const b2Manifold* oldManifold) override
+	{
+		b2WorldManifold worldManifold;
+		contact->GetWorldManifold(&worldManifold);
+		
+		b2PointState state1[2];
+		b2PointState state2[2];
+		b2GetPointStates(state1, state2, oldManifold, contact->GetManifold());
+		
+		if (state2[0] == b2_addState)
+		{
+			const b2Body * bodyA = contact->GetFixtureA()->GetBody();
+			const b2Body * bodyB = contact->GetFixtureB()->GetBody();
+			
+			const b2Vec2 point = worldManifold.points[0];
+			const b2Vec2 vA = bodyA->GetLinearVelocityFromWorldPoint(point);
+			const b2Vec2 vB = bodyB->GetLinearVelocityFromWorldPoint(point);
+			
+			const float32 approachVelocity = - b2Dot(vB - vA, worldManifold.normal);
+			
+			if (approachVelocity > 0.f)
+			{
+				const int volume = clamp<int>(approachVelocity, 0, 255);
+			
+				Sound("menuselect.ogg").play(volume);
+			}
+		}
 	}
 };
 
@@ -272,7 +286,7 @@ int main(int argc, char * argv[])
 				drawBox2dPolygonShape(box->shape, *box->body);
 			}
 		#else
-			debugDraw.SetFlags(0xffff);
+			debugDraw.SetFlags(DebugDraw::e_shapeBit | DebugDraw::e_jointBit | DebugDraw::e_pairBit);
 			world.DrawDebugData();
 		#endif
 		}
