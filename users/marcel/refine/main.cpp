@@ -2,8 +2,6 @@
 #include "imgui-framework.h"
 #include "Path.h"
 #include "StringEx.h"
-#include <algorithm>
-#include <functional>
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
@@ -21,6 +19,9 @@
 #include "fileEditor_text.h"
 #include "fileEditor_vfxGraph.h"
 #include "fileEditor_video.h"
+
+#include <algorithm>
+#include <functional>
 
 #undef min
 #undef max
