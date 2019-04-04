@@ -26,6 +26,13 @@
 #undef min
 #undef max
 
+#define CHIBI_INTEGRATION 1
+
+#if CHIBI_INTEGRATION
+	#include "chibi.h"
+	#include "nfd.h"
+#endif
+
 static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
 
@@ -188,21 +195,11 @@ struct FileBrowser
 	
 	void tick()
 	{
-		ImGui::SetNextWindowPos(ImVec2(0, 0));
-		ImGui::SetNextWindowSize(ImVec2(300, 0));
-		if (ImGui::Begin("File Browser", nullptr,
-			ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_NoScrollbar*0 |
-			ImGuiWindowFlags_NoScrollWithMouse*0))
+		ImGui::PushID("root");
 		{
-			ImGui::PushID("root");
-			{
-				tickRecurse(rootElem);
-			}
-			ImGui::PopID();
+			tickRecurse(rootElem);
 		}
-		ImGui::End();
+		ImGui::PopID();
 	}
 };
 
@@ -316,6 +313,23 @@ int main(int argc, char * argv[])
 	FileEditor * editor = nullptr;
 	Surface * editorSurface = new Surface(VIEW_SX - 300, VIEW_SY, false, true);
 	
+#if CHIBI_INTEGRATION
+	struct Chibi
+	{
+		bool has_listed = false;
+		bool has_list = false;
+		
+		std::vector<std::string> libraries;
+		std::vector<std::string> apps;
+		
+		char filter[PATH_MAX] = { };
+		
+		std::set<std::string> selected_targets;
+	};
+	
+	Chibi chibi;
+#endif
+
 	bool mitigateHitch = false;
 	
 	auto openEditor = [&](const std::string & path)
@@ -357,6 +371,7 @@ int main(int argc, char * argv[])
 			extension == "ino") // Arduino sketch)
 		{
 		// todo : think of a nicer way to open files with ambiguous filename extensions
+		// todo : investigate possibility of removing ambiguous filename extensions
 			if (extension == "txt" && (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)))
 				editor = new FileEditor_Model(filename.c_str());
 			else
@@ -506,7 +521,112 @@ int main(int argc, char * argv[])
 
 		guiContext.processBegin(dt, VIEW_SX, VIEW_SY, inputIsCaptured);
 		{
-			fileBrowser.tick();
+			ImGui::SetNextWindowPos(ImVec2(0, 0));
+			ImGui::SetNextWindowSize(ImVec2(300, 0));
+			if (ImGui::Begin("File Browser", nullptr,
+				ImGuiWindowFlags_NoTitleBar |
+				ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_MenuBar |
+				ImGuiWindowFlags_NoScrollbar*0 |
+				ImGuiWindowFlags_NoScrollWithMouse*0))
+			{
+				ImGui::BeginMenuBar();
+				{
+					if (ImGui::BeginMenu("File"))
+					{
+						ImGui::MenuItem("Refresh");
+						
+						ImGui::EndMenu();
+					}
+					
+				#if CHIBI_INTEGRATION
+					if (ImGui::BeginMenu("Chibi"))
+					{
+						if (!chibi.has_listed)
+						{
+							chibi.has_listed = true;
+							
+							char build_root[PATH_MAX];
+							if (find_chibi_build_root(getDirectory().c_str(), build_root, sizeof(build_root)))
+							{
+								chibi.has_list = list_chibi_targets(build_root, chibi.libraries, chibi.apps);
+							}
+						}
+						
+						if (chibi.has_list)
+						{
+						// todo : add option to generate Xcode project (OSX) or Visual Studio 2015, 2017 solution file (Windows)
+						
+							if (ImGui::Button("Generate CMakeLists.txt"))
+							{
+								nfdchar_t * filename = nullptr;
+								
+								if (NFD_SaveDialog(nullptr, nullptr, &filename) == NFD_OKAY)
+								{
+									framework.process(); // hack fix for making the debugger response after the dialog
+									
+									std::string dst_path = Path::GetDirectory(filename);
+									
+									const int num_targets = chibi.selected_targets.size();
+									const char ** targets = (const char**)alloca(num_targets * sizeof(char*));
+									int index = 0;
+									for (auto & target : chibi.selected_targets)
+										targets[index++] = target.c_str();
+									
+									if (chibi_generate(nullptr, ".", dst_path.c_str(), targets, num_targets) == false)
+									{
+										showErrorMessage("Failed", "Failed to generate CMakeLists.txt");
+									}
+								}
+								
+								if (filename != nullptr)
+								{
+									free(filename);
+									filename = nullptr;
+								}
+							}
+							
+							ImGui::InputText("Filter", chibi.filter, sizeof(chibi.filter));
+							
+							for (auto & app : chibi.apps)
+							{
+								if (chibi.filter[0] == 0 || strcasestr(app.c_str(), chibi.filter) != nullptr)
+								{
+									bool selected = chibi.selected_targets.count(app) != 0;
+									if (ImGui::Selectable(app.c_str(), &selected, ImGuiSelectableFlags_DontClosePopups))
+									{
+										if (selected)
+											chibi.selected_targets.insert(app);
+										else
+											chibi.selected_targets.erase(app);
+									}
+								}
+							}
+							for (auto & library : chibi.libraries)
+							{
+								if (chibi.filter[0] == 0 || strcasestr(library.c_str(), chibi.filter) != nullptr)
+								{
+									bool selected = chibi.selected_targets.count(library) != 0;
+									if (ImGui::Selectable(library.c_str(), &selected, ImGuiSelectableFlags_DontClosePopups))
+									{
+										if (selected)
+											chibi.selected_targets.insert(library);
+										else
+											chibi.selected_targets.erase(library);
+									}
+								}
+							}
+						}
+						
+						ImGui::EndMenu();
+					}
+				#endif
+				}
+				ImGui::EndMenuBar();
+			
+				fileBrowser.tick();
+			}
+			ImGui::End();
 			
 			if (editor != nullptr)
 			{

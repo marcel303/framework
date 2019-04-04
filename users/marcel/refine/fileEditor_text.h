@@ -23,13 +23,6 @@ static bool loadIntoTextEditor(const char * filename, TextIO::LineEndings & line
 	}
 }
 
-#define CHIBI_INTEGRATION 1
-
-#if CHIBI_INTEGRATION
-	#include "chibi.h"
-	#include "nfd.h"
-#endif
-
 struct FileEditor_Text : FileEditor
 {
 	std::string path;
@@ -38,23 +31,6 @@ struct FileEditor_Text : FileEditor
 	bool isValid = false;
 	
 	FrameworkImGuiContext guiContext;
-	
-#if CHIBI_INTEGRATION
-	struct Chibi
-	{
-		bool has_listed = false;
-		bool has_list = false;
-		
-		std::vector<std::string> libraries;
-		std::vector<std::string> apps;
-		
-		char filter[PATH_MAX] = { };
-		
-		std::set<std::string> selected_targets;
-	};
-	
-	Chibi chibi;
-#endif
 	
 	FileEditor_Text(const char * in_path)
 	{
@@ -75,6 +51,7 @@ struct FileEditor_Text : FileEditor
 	#if 0
 		// set a custom font on the text editor
 		// todo : find a good mono spaced font for the editor
+		// todo : update to latest version of the text editor, and evaluate support for non mono spaces fonts
 		guiContext.pushImGuiContext();
 		ImGuiIO& io = ImGui::GetIO();
 		io.FontDefault = io.Fonts->AddFontFromFileTTF((s_dataFolder + "/SFMono-Medium.otf").c_str(), 16);
@@ -200,89 +177,6 @@ struct FileEditor_Text : FileEditor
 						
 						ImGui::EndMenu();
 					}
-					
-				#if CHIBI_INTEGRATION
-					if (ImGui::BeginMenu("Chibi"))
-					{
-						if (!chibi.has_listed)
-						{
-							chibi.has_listed = true;
-							
-							char build_root[PATH_MAX];
-							if (find_chibi_build_root(getDirectory().c_str(), build_root, sizeof(build_root)))
-							{
-								chibi.has_list = list_chibi_targets(build_root, chibi.libraries, chibi.apps);
-							}
-						}
-						
-						if (chibi.has_list)
-						{
-						// todo : add option to generate Xcode project (OSX) or Visual Studio 2015, 2017 solution file (Windows)
-						
-							if (ImGui::Button("Generate CMakeLists.txt"))
-							{
-								nfdchar_t * filename = nullptr;
-								
-								if (NFD_SaveDialog(nullptr, nullptr, &filename) == NFD_OKAY)
-								{
-									framework.process(); // hack fix for making the debugger response after the dialog
-									
-									std::string dst_path = Path::GetDirectory(filename);
-									
-									const int num_targets = chibi.selected_targets.size();
-									const char ** targets = (const char**)alloca(num_targets * sizeof(char*));
-									int index = 0;
-									for (auto & target : chibi.selected_targets)
-										targets[index++] = target.c_str();
-									
-									if (chibi_generate(nullptr, ".", dst_path.c_str(), targets, num_targets) == false)
-									{
-										showErrorMessage("Failed", "Failed to generate CMakeLists.txt");
-									}
-								}
-								
-								if (filename != nullptr)
-								{
-									free(filename);
-									filename = nullptr;
-								}
-							}
-							
-							ImGui::InputText("Filter", chibi.filter, sizeof(chibi.filter));
-							
-							for (auto & app : chibi.apps)
-							{
-								if (chibi.filter[0] == 0 || strcasestr(app.c_str(), chibi.filter) != nullptr)
-								{
-									bool selected = chibi.selected_targets.count(app) != 0;
-									if (ImGui::Selectable(app.c_str(), &selected, ImGuiSelectableFlags_DontClosePopups))
-									{
-										if (selected)
-											chibi.selected_targets.insert(app);
-										else
-											chibi.selected_targets.erase(app);
-									}
-								}
-							}
-							for (auto & library : chibi.libraries)
-							{
-								if (chibi.filter[0] == 0 || strcasestr(library.c_str(), chibi.filter) != nullptr)
-								{
-									bool selected = chibi.selected_targets.count(library) != 0;
-									if (ImGui::Selectable(library.c_str(), &selected, ImGuiSelectableFlags_DontClosePopups))
-									{
-										if (selected)
-											chibi.selected_targets.insert(library);
-										else
-											chibi.selected_targets.erase(library);
-									}
-								}
-							}
-						}
-						
-						ImGui::EndMenu();
-					}
-				#endif
 
 					ImGui::EndMenuBar();
 				}
