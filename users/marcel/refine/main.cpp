@@ -316,6 +316,8 @@ int main(int argc, char * argv[])
 	FileEditor * editor = nullptr;
 	Surface * editorSurface = new Surface(VIEW_SX - 300, VIEW_SY, false, true);
 	
+	bool mitigateHitch = false;
+	
 	auto openEditor = [&](const std::string & path)
 	{
 		delete editor;
@@ -438,6 +440,8 @@ int main(int argc, char * argv[])
 		{
 			editor->path = path;
 		}
+		
+		mitigateHitch = true;
 	};
 	
 	fileBrowser.onFileSelected = openEditor;
@@ -447,6 +451,15 @@ int main(int argc, char * argv[])
 	for (;;)
 	{
 		framework.process();
+		
+		if (mitigateHitch)
+		{
+			// some operations, like opening a new editor, may cause a hitch. to avoid huge time steps
+			// from causing jerky animation, we set the time step to zero here
+			
+			mitigateHitch = false;
+			framework.timeStep = 0.f;
+		}
 		
 		if (keyboard.wentDown(SDLK_ESCAPE))
 			framework.quitRequested = true;
