@@ -311,7 +311,7 @@ int main(int argc, char * argv[])
 
 	// file editor
 	FileEditor * editor = nullptr;
-	Surface * editorSurface = new Surface(VIEW_SX - 300, VIEW_SY, false, true);
+	Surface * editorSurface = new Surface(VIEW_SX - 300, VIEW_SY - 30, false, true);
 	
 #if CHIBI_INTEGRATION
 	struct Chibi
@@ -636,9 +636,12 @@ int main(int argc, char * argv[])
 				ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
 				ImGui::SetNextWindowSize(size, ImGuiCond_Always);
 				
-				if (ImGui::Begin("editor", nullptr,
+				pos += ImVec2(0, 30);
+				
+				if (ImGui::Begin("Editor", nullptr,
 					ImGuiWindowFlags_NoTitleBar |
 					ImGuiWindowFlags_NoMove |
+					ImGuiWindowFlags_MenuBar |
 					ImGuiWindowFlags_NoScrollbar |
 					ImGuiWindowFlags_NoScrollWithMouse))
 				{
@@ -699,33 +702,33 @@ int main(int argc, char * argv[])
 					
 					ImGui::SetCursorPos(ImVec2(0, 0));
 					
-					editor->doButtonBar();
-					
-					if (ImGui::GetCursorPos().y != 0)
-						ImGui::SameLine();
-					
-					if (ImGui::Button("Pop Out!"))
+					if (ImGui::BeginMenuBar())
 					{
-						EditorWindow * window = new EditorWindow(editor);
-
-						editorWindows.push_back(window);
-
-						editor = nullptr;
-					}
-					
-					ImGui::SameLine();
-					if (ImGui::Button("Reopen"))
-					{
-						auto path_copy = editor->path;
+						editor->doButtonBar();
 						
-						openEditor(path_copy);
-					}
-					
-					ImGui::SameLine();
-					if (ImGui::Button("Close"))
-					{
-						delete editor;
-						editor = nullptr;
+						if (ImGui::MenuItem("Pop Out!"))
+						{
+							EditorWindow * window = new EditorWindow(editor);
+
+							editorWindows.push_back(window);
+
+							editor = nullptr;
+						}
+						
+						if (ImGui::MenuItem("Reopen"))
+						{
+							auto path_copy = editor->path;
+							
+							openEditor(path_copy);
+						}
+						
+						if (ImGui::MenuItem("Close"))
+						{
+							delete editor;
+							editor = nullptr;
+						}
+						
+						ImGui::EndMenuBar();
 					}
 				}
 				ImGui::End();
