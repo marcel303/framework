@@ -1,7 +1,15 @@
 #include "reflection.h"
 #include <vector>
 
-struct ChromaticSomething // aka rainbow
+/*
+
+This example shows how to fill a type database,
+query a type from the database, and iterate the
+members of a structured type.
+
+*/
+
+struct ChromaticSomething // aka a rainbow
 {
 	bool chromatic = true;
 	std::vector<int> hues;
@@ -22,6 +30,7 @@ int main(int argc, char * argv[])
 		.add("density", &ChromaticSomething::density);
 
 	// we now have a type database. whoohoo!
+	// let's fetch a type and inspect it
 	
 	const Type * type = typeDB.findType<ChromaticSomething>();
 	
