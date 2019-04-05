@@ -1,3 +1,19 @@
 library libreflection
 	add_files reflection.cpp reflection.h reflection-vector.h
 	header_path . expose
+
+app libreflection-000-typedb
+	depend_library libreflection
+	add_files examples/000-typedb.cpp
+
+app libreflection-010-reflection
+	depend_library libreflection
+	add_files examples/010-reflection.cpp
+
+app libreflection-020-structured
+	depend_library libreflection
+	add_files examples/020-structured.cpp
+
+app libreflection-100-flags
+	depend_library libreflection
+	add_files examples/100-flags.cpp
