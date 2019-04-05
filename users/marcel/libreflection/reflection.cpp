@@ -67,7 +67,7 @@ void StructuredType::add(Member * member)
 StructuredType & StructuredType::add(const std::type_index & typeIndex, const size_t offset, const char * name)
 {
 	Member_Scalar * member = new Member_Scalar(name, typeIndex, offset);
-	
+
 	add(member);
 	
 	return *this;
@@ -99,6 +99,8 @@ struct TypeDB_impl
 
 	void add(std::type_index typeIndex, const Type * type)
 	{
+	// todo : assert type does not exist yet
+	
 		types[typeIndex] = type;
 	}
 };

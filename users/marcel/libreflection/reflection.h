@@ -76,6 +76,10 @@ struct Member
 	{
 	}
 	
+	virtual ~Member()
+	{
+	}
+	
 	void addFlag(MemberFlagBase * flag)
 	{
 		flag->next = flags;
