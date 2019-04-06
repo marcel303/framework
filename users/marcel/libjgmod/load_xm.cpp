@@ -119,12 +119,12 @@ namespace jgmod
 		if (start_offset == 0)
 			{
 			ji->type = JGMOD_TYPE_XM;
-			sprintf (ji->type_name, "XM");
+			strcpy_s(ji->type_name, sizeof(ji->type_name), "XM");
 			}
 		else
 			{
 			ji->type = JGMOD_TYPE_UNREAL_XM;
-			sprintf (ji->type_name, "Unreal XM (UMX)");
+			strcpy_s(ji->type_name, sizeof(ji->type_name), "Unreal XM (UMX)");
 			}
 		
 

@@ -181,12 +181,12 @@ namespace jgmod
 
 		if (start_offset ==0)
 			{
-			sprintf (ji->type_name, "IT");
+			strcpy_s (ji->type_name, sizeof(ji->type_name), "IT");
 			ji->type = JGMOD_TYPE_IT;
 			}
 		else
 			{
-			sprintf (ji->type_name, "Unreal IT (UMX)");
+			strcpy_s(ji->type_name, sizeof(ji->type_name), "Unreal IT (UMX)");
 			ji->type = JGMOD_TYPE_UNREAL_IT;
 			}
 
@@ -677,7 +677,7 @@ namespace jgmod
 		#ifdef JG_debug
 			printf("instrument name: %s\n", name);
 		#endif
-			strcpy(ii->name, name);
+			strcpy_s(ii->name, sizeof(ii->name), name);
 			
 			const uint8_t IFC = jgmod_getc(f); // IFC = Initial Filter cutoff
 			const uint8_t IFR = jgmod_getc(f); // IFR = Initial Filter resonance
@@ -829,7 +829,7 @@ namespace jgmod
 		#ifdef JG_debug
 			//printf("sample name: %s\n", sample_name);
 		#endif
-			strcpy(si->name, sample_name);
+			strcpy_s(si->name, sizeof(si->name), sample_name);
 			
 			/*
 			Conversion flags:
