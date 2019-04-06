@@ -8327,6 +8327,38 @@ void gxSetTexture(GxTextureId texture)
 	}
 }
 
+static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter)
+{
+	if (filter == GX_SAMPLE_NEAREST)
+		return GL_NEAREST;
+	else if (filter == GX_SAMPLE_LINEAR)
+		return GL_LINEAR;
+	else
+	{
+		fassert(false);
+		return GL_NEAREST;
+	}
+}
+
+void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
+{
+	if (s_gxTextureEnabled)
+	{
+		glActiveTexture(GL_TEXTURE0);
+		checkErrorGL();
+		
+		const GLenum openglFilter = toOpenGLSampleFilter(filter);
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglFilter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, openglFilter);
+		checkErrorGL();
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		checkErrorGL();
+	}
+}
+
 #endif
 
 // builtin shaders

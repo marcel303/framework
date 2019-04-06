@@ -1530,6 +1530,7 @@ void gxEnd();
 #define gxVertex4f glVertex4f
 #define gxVertex4fv glVertex4fv
 void gxSetTexture(GxTextureId texture);
+void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
 
 #endif
