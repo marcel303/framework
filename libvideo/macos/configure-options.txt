@@ -1,0 +1,16 @@
+shared libraries for ffmpeg were built using the following options passed to ffmpeg's configure script,
+
+	./configure --disable-outdevs --enable-shared --disable-static --enable-rpath --install-name-dir=@rpath --disable-sdl --disable-sdl2
+
+after configure and make are run, the dylibs are collected
+
+	mkdir lib-shared
+	cp libavcodec/libavcodec.57.dylib lib-shared
+	cp libavdevice/libavdevice.57.dylib lib-shared
+	cp libavfilter/libavfilter.6.dylib lib-shared
+	cp libavformat/libavformat.57.dylib lib-shared
+	cp libavutil/libavutil.55.dylib lib-shared
+	cp libswresample/libswresample.2.dylib lib-shared
+	cp libswscale/libswscale.4.dylib lib-shared
+
+and finally copied here
