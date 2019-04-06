@@ -8342,11 +8342,8 @@ static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter)
 
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 {
-	if (s_gxTextureEnabled)
+	if (glIsEnabled(GL_TEXTURE_2D))
 	{
-		glActiveTexture(GL_TEXTURE0);
-		checkErrorGL();
-		
 		const GLenum openglFilter = toOpenGLSampleFilter(filter);
 		
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglFilter);
