@@ -5,6 +5,8 @@
 #include "nfd.h"
 #include "TextIO.h"
 
+// todo : add option to select font
+
 static bool loadIntoTextEditor(const char * filename, TextIO::LineEndings & lineEndings, TextEditor & textEditor)
 {
 	std::vector<std::string> lines;
