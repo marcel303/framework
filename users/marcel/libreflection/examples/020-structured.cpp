@@ -34,8 +34,6 @@ static void printStructuredObject_recursively(const TypeDB & typeDB, const Type 
 		
 		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
 		{
-			indent(indentation_level); printf("member: %s\n", member->name);
-
 			if (member->isVector)
 			{
 				auto * member_vector = static_cast<const Member_VectorInterface*>(member);
@@ -46,7 +44,11 @@ static void printStructuredObject_recursively(const TypeDB & typeDB, const Type 
 				if (vector_type == nullptr) // this could happen if the type database is incomplete
 					continue;
 				
-				for (size_t i = 0; i < member_vector->vector_size(object); ++i)
+				const size_t vector_size = member_vector->vector_size(object);
+				
+				indent(indentation_level); printf("member: %s [%zu]\n", member->name, vector_size);
+				
+				for (size_t i = 0; i < vector_size; ++i)
 				{
 					auto * vector_object = member_vector->vector_access(object, i);
 					
@@ -56,6 +58,8 @@ static void printStructuredObject_recursively(const TypeDB & typeDB, const Type 
 			}
 			else
 			{
+				indent(indentation_level); printf("member: %s\n", member->name);
+				
 				auto * member_scalar = static_cast<const Member_Scalar*>(member);
 				auto * member_object = member_scalar->scalar_access(object);
 				
@@ -135,6 +139,7 @@ int main(int argc, char * argv[])
 	dataset.subsets[0].location.elevation = 12.f;
 	dataset.subsets[1].location.azimuth = 30.f;
 	dataset.subsets[1].location.elevation = 32.f;
+	dataset.subsets[1].subsets.resize(2);
 	dataset.location.azimuth = 40.f;
 	dataset.location.elevation = 42.f;
 	
