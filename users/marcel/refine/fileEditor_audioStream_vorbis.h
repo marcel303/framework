@@ -1,8 +1,9 @@
 #pragma once
 
 #include "audiooutput/AudioOutput_PortAudio.h"
-#include "audiostream/AudioStreamVorbis.h"
 #include "fileEditor.h"
+
+class AudioStream_Vorbis;
 
 struct FileEditor_AudioStream_Vorbis : FileEditor
 {

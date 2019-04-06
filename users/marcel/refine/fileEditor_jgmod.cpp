@@ -1,5 +1,3 @@
-#include "fileEditor_jgmod.h"
-
 #include "framework-allegro2.h"
 #include "jgmod.h"
 #include "jgvis.h"
@@ -9,6 +7,7 @@
 
 #include "audiooutput/AudioOutput_PortAudio.h"
 
+#include "fileEditor_jgmod.h"
 #include "imgui.h"
 
 FileEditor_Jgmod::FileEditor_Jgmod(const char * path)

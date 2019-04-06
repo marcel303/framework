@@ -2,7 +2,6 @@
 
 #include "fileEditor.h"
 #include "imgui-framework.h"
-#include "ui.h" // drawUiRectCheckered
 
 struct FileEditor_Model : FileEditor
 {

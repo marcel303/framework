@@ -1,13 +1,10 @@
 #pragma once
 
 #include "audioGraphManager.h"
-#include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #include "fileEditor.h"
-#include "graphEdit.h"
 #include "ui.h"
 #include "vfxGraphManager.h"
-#include "vfxUi.h"
 
 extern SDL_mutex * g_vfxAudioMutex;
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;

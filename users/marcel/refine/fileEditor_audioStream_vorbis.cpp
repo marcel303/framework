@@ -1,7 +1,6 @@
-#include "fileEditor_audioStream_vorbis.h"
-
 #include "audiooutput/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStreamVorbis.h"
+#include "fileEditor_audioStream_vorbis.h"
 
 FileEditor_AudioStream_Vorbis::FileEditor_AudioStream_Vorbis(const char * path)
 {

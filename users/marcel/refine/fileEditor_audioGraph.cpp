@@ -1,9 +1,7 @@
-#include "fileEditor_audioGraph.h"
-
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
-#include "fileEditor.h"
+#include "fileEditor_audioGraph.h"
 #include "graphEdit.h"
 
 FileEditor_AudioGraph::FileEditor_AudioGraph(const char * path)

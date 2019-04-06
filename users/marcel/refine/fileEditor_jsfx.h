@@ -5,7 +5,6 @@
 #include "jsusfx_file.h"
 #include "jsusfx-framework.h"
 #include "paobject.h"
-#include "ui.h" // drawUiRectCheckered
 
 #define MIDI_OFF 0x80
 #define MIDI_ON 0x90

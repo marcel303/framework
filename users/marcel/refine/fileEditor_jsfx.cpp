@@ -1,10 +1,9 @@
-#include "fileEditor_jsfx.h"
-
 #include "gfx-framework.h"
 #include "jsusfx_file.h"
 #include "jsusfx-framework.h"
 #include "ui.h" // drawUiRectCheckered
 
+#include "fileEditor_jsfx.h"
 #include "imgui.h"
 
 void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, MidiBuffer & midiBuffer, const bool doTick, const bool doDraw, int & out_sx, int & out_sy, bool & inputIsCaptured)

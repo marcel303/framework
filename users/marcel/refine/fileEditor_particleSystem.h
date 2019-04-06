@@ -2,7 +2,6 @@
 
 #include "fileEditor.h"
 #include "particle_editor.h"
-#include "ui.h"
 
 struct FileEditor_ParticleSystem : FileEditor
 {

@@ -1,5 +1,4 @@
 #include "fileEditor_model.h"
-
 #include "ui.h" // drawUiRectCheckered
 
 FileEditor_Model::FileEditor_Model(const char * path)

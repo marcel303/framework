@@ -1,5 +1,4 @@
 #include "fileEditor_video.h"
-
 #include "ui.h" // drawUiRectCheckered
 #include "video.h"
 

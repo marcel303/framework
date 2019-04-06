@@ -1,8 +1,7 @@
-#include "fileEditor_vfxGraph.h"
-
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
+#include "fileEditor_vfxGraph.h"
 #include "graphEdit.h"
 #include "ui.h"
 #include "vfxGraphManager.h"

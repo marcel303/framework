@@ -1,5 +1,4 @@
 #include "fileEditor_particleSystem.h"
-
 #include "particle_editor.h"
 #include "ui.h"
 
