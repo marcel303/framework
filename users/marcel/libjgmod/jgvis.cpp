@@ -167,7 +167,7 @@ void jgvis_draw(JGVIS & vis, const JGMOD_PLAYER & player, const bool drawCircles
 		for (int index = 0; index < mod->no_chn; ++index)
 		{
 			if (vis.old_chn_info[index].old_sample != player.ci[index].sample)
-				vis.old_chn_info[index].color = Color::fromHSL((rand() % 68 + 32) / 100.f, .5f, .5f);
+				vis.old_chn_info[index].hue = (rand() % 68 + 32) / 100.f;
 
 			vis.old_chn_info[index].old_sample = player.ci[index].sample;
 		}
@@ -229,7 +229,7 @@ static void drawCircle(const JGVIS & vis, const JGMOD_PLAYER & player, const int
 			
 			hqBegin(HQ_FILLED_CIRCLES);
 			{
-				setColor(vis.old_chn_info[chn].color);
+				setColor(Color::fromHSL(vis.old_chn_info[chn].hue, .5f, .5f));
 				hqFillCircle(xpos, 5, radius);
 				setColor(colorWhite);
 			}

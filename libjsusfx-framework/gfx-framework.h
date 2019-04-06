@@ -28,6 +28,7 @@
 #pragma once
 
 #include "jsusfx_gfx.h"
+#include "Mat4x4.h"
 
 //
 

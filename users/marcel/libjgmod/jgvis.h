@@ -13,6 +13,8 @@
 
 #pragma once
 
+#include <new>
+
 struct JGMOD_PLAYER;
 
 struct JGVIS
@@ -20,7 +22,7 @@ struct JGVIS
 	struct OLD_CHN_INFO
 	{
 		int old_sample = -1;
-		Color color = colorBlack;
+		float hue = 0.f;
 	};
 	
 	OLD_CHN_INFO old_chn_info[JGMOD_MAX_VOICES];
