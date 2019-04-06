@@ -15,6 +15,11 @@ struct Member_VectorInterface : Member
 	virtual void vector_resize(void * object, const size_t size) const = 0;
 	virtual void * vector_access(void * object, const size_t index) const = 0;
 	virtual void vector_swap(void * object, const size_t index1, const size_t index2) const = 0;
+	
+	const void * vector_access(const void * object, const size_t index) const
+	{
+		return vector_access((void*)object, index);
+	}
 };
 
 template <typename T>
