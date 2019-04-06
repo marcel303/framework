@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#pragma once
+
 #include "jsusfx_gfx.h"
 
 //
