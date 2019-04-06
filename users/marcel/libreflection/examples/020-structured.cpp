@@ -1,5 +1,6 @@
 #include "reflection.h"
 #include <assert.h>
+#include <stdio.h>
 #include <vector>
 
 /*

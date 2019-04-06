@@ -1,4 +1,5 @@
 #include "reflection.h"
+#include <stdio.h>
 
 struct ChromaticSomething // aka rainbow
 {
