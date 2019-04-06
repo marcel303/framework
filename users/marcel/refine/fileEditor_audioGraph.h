@@ -20,64 +20,8 @@ struct FileEditor_AudioGraph : FileEditor
 	
 	AudioGraphInstance * instance = nullptr;
 	
-	FileEditor_AudioGraph(const char * path)
-		: audioGraphMgr(defaultSx, defaultSy)
-	{
-		// init audio graph
-		audioMutex.init();
-		audioVoiceMgr.init(audioMutex.mutex, 64, 64);
-		audioVoiceMgr.outputStereo = true;
-		audioGraphMgr.init(audioMutex.mutex, &audioVoiceMgr);
-		
-		// init audio output
-		audioUpdateHandler.init(audioMutex.mutex, nullptr, 0);
-		audioUpdateHandler.voiceMgr = &audioVoiceMgr;
-		audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
-		
-		paObject.init(44100, 2, 0, 256, &audioUpdateHandler);
-		
-		// create instance
-		instance = audioGraphMgr.createInstance(path);
-		audioGraphMgr.selectInstance(instance);
-	}
+	FileEditor_AudioGraph(const char * path);
+	virtual ~FileEditor_AudioGraph() override;
 	
-	virtual ~FileEditor_AudioGraph() override
-	{
-		// free instance
-		audioGraphMgr.free(instance, false);
-		Assert(instance == nullptr);
-		
-		// shut audio output
-		paObject.shut();
-		audioUpdateHandler.shut();
-		
-		// shut audio graph
-		audioGraphMgr.shut();
-		audioVoiceMgr.shut();
-		audioMutex.shut();
-	}
-	
-	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
-	{
-		// update real-time editing
-		
-		inputIsCaptured |= audioGraphMgr.tickEditor(sx, sy, dt, inputIsCaptured);
-		
-		// tick audio graph
-		
-		audioGraphMgr.tickMain();
-		
-		// draw ?
-		
-		if (hasFocus == false && audioGraphMgr.selectedFile->graphEdit->animationIsDone)
-			return;
-		
-		// draw
-		
-		clearSurface(0, 0, 0, 0);
-		
-		// update visualizers and draw editor
-		
-		audioGraphMgr.drawEditor(sx, sy);
-	}
+	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override;
 };
