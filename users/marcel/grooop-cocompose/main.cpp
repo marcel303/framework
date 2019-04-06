@@ -12,12 +12,12 @@
 #include <math.h>
 #include <vector>
 
-#define DO_COCREATE 0
+#define DO_COCREATE 1
 #define DO_GAUSSIAN_BLUR 0
 #define DO_COMPUTE_PARTICLES 0
 #define DO_LIGHT_PROPAGATION 0
 #define DO_FLOCKING 0
-#define DO_PATH 1
+#define DO_PATH 0
 #define DO_BUILTIN_SHADER 0
 
 /*
@@ -485,7 +485,7 @@ struct AudioFile : public AudioStream
 
 				audioStream.Open(filename, false);
 
-				sampleRate = audioStream.mSampleRate;
+				sampleRate = audioStream.SampleRate_get();
 
 				const int sampleBufferSize = 1 << 16;
 				AudioSample sampleBuffer[sampleBufferSize];
@@ -606,10 +606,10 @@ struct AudioVoice : Editable
 
 	void drawPcmData(const int sx, const int sy)
 	{
-		const int64_t numLines = std::ceil(sx);
+		const int64_t numLines = ceilf(sx);
 		const int64_t numSamples = audioFile.m_pcmData.size();
 
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (int x = 0; x < sx; ++x)
 			{
@@ -647,8 +647,7 @@ struct AudioVoice : Editable
 
 		pushSurface(pcmDataSurface);
 		{
-			glClearColor(0.f, 0.f, 0.f, 0.f);
-			glClear(GL_COLOR_BUFFER_BIT);
+			pcmDataSurface->clear();
 
 			setColor(colorWhite);
 
@@ -804,7 +803,7 @@ struct AudioCreation : Editable, public AudioStreamEx
 					gxSetTexture(voice->pcmDataSurface->getTexture());
 					{
 						setColor(colorWhite);
-						gxBegin(GL_QUADS);
+						gxBegin(GX_QUADS);
 						{
 							gxTexCoord2f(0.f,    0.f); gxVertex2f(0.f,                       0.f  );
 							gxTexCoord2f(amount, 0.f); gxVertex2f(kAudioCreationSx * amount, 0.f  );
@@ -818,7 +817,7 @@ struct AudioCreation : Editable, public AudioStreamEx
 					gxSetTexture(voice->pcmDataSurface->getTexture());
 					{
 						setColor(255, 127, 63);
-						gxBegin(GL_QUADS);
+						gxBegin(GX_QUADS);
 						{
 							gxTexCoord2f(amount, 0.f); gxVertex2f(kAudioCreationSx * amount, 0.f  );
 							gxTexCoord2f(1.f,    0.f); gxVertex2f(kAudioCreationSx,          0.f  );
@@ -1223,7 +1222,7 @@ struct Picture : Editable
 				gxTranslatef(x, y, 0.f);
 				gxRotatef(angle, 0.f, 0.f, 1.f);
 
-				gxBegin(GL_TRIANGLES);
+				gxBegin(GX_TRIANGLES);
 				{
 					const int numSteps = 100;
 					const float angleStep = Calc::m2PI * 3/4 / numSteps;
@@ -1234,10 +1233,10 @@ struct Picture : Editable
 					{
 						const float angle1 = angleStep * (i+0);
 						const float angle2 = angleStep * (i+1);
-						const float x1 = std::cos(angle1);
-						const float y1 = std::sin(angle1);
-						const float x2 = std::cos(angle2);
-						const float y2 = std::sin(angle2);
+						const float x1 = cosf(angle1);
+						const float y1 = sinf(angle1);
+						const float x2 = cosf(angle2);
+						const float y2 = sinf(angle2);
 
 						gxVertex2f(x1 * radius1, y1 * radius1);
 						gxVertex2f(x2 * radius1, y2 * radius1);
@@ -1505,8 +1504,8 @@ struct Picture : Editable
 				beginVec -= originVec;
 				endVec -= originVec;
 
-				const float beginAngle = std::atan2f(beginVec[1], beginVec[0]);
-				const float endAngle = std::atan2f(endVec[1], endVec[0]);
+				const float beginAngle = atan2f(beginVec[1], beginVec[0]);
+				const float endAngle = atan2f(endVec[1], endVec[0]);
 
 				const float dot = beginVec * endVec;
 				const float angle = endAngle - beginAngle;
@@ -1930,18 +1929,18 @@ static void randomizeParticles(ShaderBufferRw & particleBuffer, const int partic
 			//const float angle = random(0.f, Calc::m2PI);
 			const float angle = baseRadius;
 
-			particleArray[i].px = std::cos(angle) * radius;
-			particleArray[i].py = std::sin(angle) * radius;
+			particleArray[i].px = cosf(angle) * radius;
+			particleArray[i].py = sinf(angle) * radius;
 			particleArray[i].pz = random(-1.f, +1.f);
 		}
 
 		{
-			const float speed = std::pow(random(0.f, 1.f), 4.f) * 1.f;
+			const float speed = powf(random(0.f, 1.f), 4.f) * 1.f;
 			//const float angle = random(0.f, Calc::m2PI);
 			const float angle = baseRadius + Calc::mPI2;
 
-			particleArray[i].vx = std::cos(angle) * speed;
-			particleArray[i].vy = std::sin(angle) * speed;
+			particleArray[i].vx = cosf(angle) * speed;
+			particleArray[i].vy = sinf(angle) * speed;
 			particleArray[i].vz = random(-1.f, +1.f);
 		}
 	}
@@ -2079,9 +2078,9 @@ static void subdivideLightMesh(const LightMesh & in, LightMesh & out, const floa
 
 		const float dx = v2.px - v1.px;
 		const float dy = v2.py - v1.py;
-		const float ds = std::hypot(dx, dy);
+		const float ds = hypotf(dx, dy);
 
-		const int numSteps = int(std::ceil(ds / maxDistance)) + 1;
+		const int numSteps = int(ceilf(ds / maxDistance)) + 1;
 
 		const float sx = dx / (numSteps - 1);
 		const float sy = dy / (numSteps - 1);
@@ -2229,12 +2228,12 @@ struct Flock
 		mx = GFX_SX/2;
 		my = GFX_SY/2;
 
-		mx += std::cos(framework.time * 2.f / 3.45f) * 200.f;
-		my += std::sin(framework.time * 2.f / 3.21f) * 200.f;
+		mx += cosf(framework.time * 2.f / 3.45f) * 200.f;
+		my += sinf(framework.time * 2.f / 3.21f) * 200.f;
 
 		//
 
-		const float falloff = std::pow(.2f, dt);
+		const float falloff = powf(.2f, dt);
 
 		for (FlockElem & e : elems)
 		{
@@ -2248,14 +2247,14 @@ struct Flock
 
 				const float dx = other.px - e.px;
 				const float dy = other.py - e.py;
-				const float ds = std::hypot(dx, dy);
+				const float ds = hypotf(dx, dy);
 
 				if (false)
 				{
 					if (ds > 0.f)
 					{
 						const float dc = ds - 50.f;
-						const float dcs = std::abs(dc);
+						const float dcs = fabsf(dc);
 
 						const float strength = 1.f / (dcs + .1f) * 4000.f;
 
@@ -2280,13 +2279,13 @@ struct Flock
 			{
 				const float dx = me->px - e.px;
 				const float dy = me->py - e.py;
-				const float ds = std::hypot(dx, dy);
+				const float ds = hypotf(dx, dy);
 				const float dc = ds - 50.f;
 
-				//const float strength = (std::abs(dc) < 100.f ? Calc::Sign(dc) : 0.f) * 100.f;
+				//const float strength = (fabsf(dc) < 100.f ? Calc::Sign(dc) : 0.f) * 100.f;
 
 				const float strength = Calc::Sign(dc) * 100.f;
-				//const float strength = Calc::Sign(dc) / (std::abs(dc) / 1000.f + .001f);
+				//const float strength = Calc::Sign(dc) / (fabsf(dc) / 1000.f + .001f);
 
 				e.vx += dx / ds * strength * dt;
 				e.vy += dy / ds * strength * dt;
@@ -2297,7 +2296,7 @@ struct Flock
 			{
 				const float dx = mx - e.px;
 				const float dy = my - e.py;
-				const float ds = std::hypot(dx, dy);
+				const float ds = hypotf(dx, dy);
 
 				const float strength = 100.f;
 
@@ -2316,7 +2315,7 @@ struct Flock
 
 			if (false)
 			{
-				const float v = std::hypot(e.vx, e.vy);
+				const float v = hypotf(e.vx, e.vy);
 				const float kMaxSpeed = 100.f;
 
 				if (v > kMaxSpeed)
@@ -2333,8 +2332,8 @@ struct Flock
 
 	void draw() const
 	{
-		//gxBegin(GL_LINES);
-		gxBegin(GL_POINTS);
+		//gxBegin(GX_LINES);
+		gxBegin(GX_POINTS);
 		{
 			for (const FlockElem & e : elems)
 			{
@@ -2351,6 +2350,10 @@ struct Flock
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 #if DO_COCREATE
 	createAudioCache();
 #endif
@@ -2590,7 +2593,7 @@ int main(int argc, char * argv[])
 							particle.setImmediate("colorStrength", 8.f * mouse.y / float(GFX_SY));
 
 							pushBlend(BLEND_ADD);
-							gxEmitVertices(GL_POINTS, particleCount);
+							gxEmitVertices(GX_POINTS, particleCount);
 							popBlend();
 						}
 						clearShader();
@@ -2603,10 +2606,10 @@ int main(int argc, char * argv[])
 #if DO_LIGHT_PROPAGATION
 				pushSurface(surface);
 				{
-					glPointSize(4.f);
-
-					gxBegin(GL_POINTS);
+					gxBegin(GX_QUADS);
 					{
+						const float size = 2.f;
+						
 						for (const LightVertex & v : mesh.vertices)
 						{
 							const float a = .4f;
@@ -2616,12 +2619,13 @@ int main(int argc, char * argv[])
 
 							setColorf(c[0], c[1], c[2], 1.f);
 
-							gxVertex2f(v.px, v.py);
+							gxVertex2f(v.px - size, v.py - size);
+							gxVertex2f(v.px + size, v.py - size);
+							gxVertex2f(v.px + size, v.py + size);
+							gxVertex2f(v.px - size, v.py + size);
 						}
 					}
 					gxEnd();
-
-					glPointSize(1.f);
 				}
 				popSurface();
 #endif
@@ -2629,11 +2633,7 @@ int main(int argc, char * argv[])
 #if DO_FLOCKING
 				pushSurface(surface);
 				{
-					glPointSize(5.f);
-					{
-						flock.draw();
-					}
-					glPointSize(1.f);
+					flock.draw();
 				}
 				popSurface();
 #endif
@@ -2749,8 +2749,8 @@ int main(int argc, char * argv[])
 							path.line(+100.f,    0.f);
 							path.line(   0.f, +100.f);
 							path.line(-100.f,    0.f);
-							path.curve(-200.f, +100.f, -200.f, 0.f, 0.f, -100.f -200.f * std::cos(framework.time * 0.f));
-							path.curveTo(0.f, 0.f, 0.f, +100.f, 0.f, +100.f +500.f * std::cos(framework.time * .1f));
+							path.curve(-200.f, +100.f, -200.f, 0.f, 0.f, -100.f -200.f * cosf(framework.time * 0.f));
+							path.curveTo(0.f, 0.f, 0.f, +100.f, 0.f, +100.f +500.f * cosf(framework.time * .1f));
 
 							pushBlend(BLEND_MAX);
 							{
@@ -2770,7 +2770,7 @@ int main(int argc, char * argv[])
 			#endif
 
 			#if DO_BUILTIN_SHADER
-				const float treshold = (1.f - std::cos(framework.time)) / 2.f;
+				const float treshold = (1.f - cosf(framework.time)) / 2.f;
 				setShader_Invert(surface->getTexture());
 				//setShader_TresholdLumi(surface->getTexture(), treshold, colorBlack, colorYellow);
 				//setShader_TresholdValue(surface->getTexture(), Color(treshold, treshold*2.f, treshold*3.f, 0.f), colorBlack, colorWhite);
@@ -2778,9 +2778,9 @@ int main(int argc, char * argv[])
 				//setShader_TresholdLumiPass(surface->getTexture(), treshold, colorWhite);
 				//setShader_TresholdValuePass(surface->getTexture(), Color(treshold, treshold*2.f, treshold*3.f, 0.f), colorBlack);
 				//setShader_GrayscaleLumi(surface->getTexture());
-				const float weight1 = (1.f - std::cos(framework.time / 1.1f))/2.f;
-				const float weight2 = (1.f - std::cos(framework.time / 2.3f))/2.f;
-				const float weight3 = (1.f - std::cos(framework.time / 3.4f))/2.f;
+				const float weight1 = (1.f - cosf(framework.time / 1.1f))/2.f;
+				const float weight2 = (1.f - cosf(framework.time / 2.3f))/2.f;
+				const float weight3 = (1.f - cosf(framework.time / 3.4f))/2.f;
 				const Vec3 weights = Vec3(weight1, weight2, weight3).CalcNormalized();
 				//setShader_GrayscaleWeights(surface->getTexture(), weights);
 				//setShader_Colorize(surface->getTexture(), framework.time * .1f);
