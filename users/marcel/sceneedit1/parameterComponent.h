@@ -140,6 +140,7 @@ struct ParameterVec2 : Parameter<Vec2, kParameterType_Vec2>
 		return *this;
 	}
 };
+
 struct ParameterVec3 : Parameter<Vec3, kParameterType_Vec3>
 {
 	bool hasLimits = false;
