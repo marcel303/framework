@@ -23,13 +23,6 @@ library libmediaplayer
 	with_platform macos add_dist_files macos/lib-shared/libavutil.55.dylib
 	with_platform macos add_dist_files macos/lib-shared/libswresample.2.dylib
 	with_platform macos add_dist_files macos/lib-shared/libswscale.4.dylib
-	#with_platform macos depend_library macos/lib/libavcodec.a local
-	#with_platform macos depend_library macos/lib/libavdevice.a local
-	#with_platform macos depend_library macos/lib/libavfilter.a local
-	#with_platform macos depend_library macos/lib/libavformat.a local
-	#with_platform macos depend_library macos/lib/libavutil.a local
-	#with_platform macos depend_library macos/lib/libswresample.a local
-	#with_platform macos depend_library macos/lib/libswscale.a local
 	with_platform macos depend_library CoreMedia find
 	with_platform macos depend_library VideoDecodeAcceleration find
 	with_platform macos depend_library VideoToolbox find
