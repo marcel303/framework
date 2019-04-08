@@ -53,7 +53,7 @@ AudioGraph::AudioGraph(AudioGraphGlobals * _globals, const bool _isPaused)
 	, rampDown(false)
 	, rampedDown(false)
 	, nodes()
-	, currentTickTraversalId(-1)
+	, currentTickTraversalId(0)
 #if AUDIO_GRAPH_ENABLE_TIMING
 	, graph(nullptr)
 #endif
