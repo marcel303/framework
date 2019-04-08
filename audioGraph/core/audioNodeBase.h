@@ -135,14 +135,12 @@ struct AudioFloatArray
 	
 	AudioFloat * sum;
 	std::vector<Elem> elems;
-	AudioFloat * immediateValue;
 	
 	int lastUpdateTick;
 	
 	AudioFloatArray()
 		: sum(nullptr)
 		, elems()
-		, immediateValue(nullptr)
 		, lastUpdateTick(-1)
 	{
 	}
@@ -175,6 +173,7 @@ struct AudioPlug
 	AudioPlugType type : 8;
 	bool isTriggered;
 	void * mem;
+	void * immediateMem;
 	
 	mutable AudioFloatArray floatArray;
 
@@ -182,6 +181,7 @@ struct AudioPlug
 		: type(kAudioPlugType_None)
 		, isTriggered(false)
 		, mem(nullptr)
+		, immediateMem(nullptr)
 		, floatArray()
 	{
 	}
@@ -191,9 +191,39 @@ struct AudioPlug
 	
 	void disconnect()
 	{
-		mem = nullptr;
+		mem = immediateMem;
+	}
+	
+	void disconnect(const void * dstMem)
+	{
+		Assert(dstMem != nullptr && dstMem != immediateMem);
 		
-		floatArray.immediateValue = nullptr;
+		if (type == kAudioPlugType_FloatVec)
+		{
+			bool removed = false;
+			
+			for (auto elemItr = floatArray.elems.begin(); elemItr != floatArray.elems.end(); )
+			{
+				if (elemItr->audioFloat == dstMem)
+				{
+					elemItr = floatArray.elems.erase(elemItr);
+					removed = true;
+					break;
+				}
+				
+				++elemItr;
+			}
+			
+			Assert(removed);
+			
+			Assert(mem == immediateMem);
+		}
+		else
+		{
+			Assert(mem == dstMem);
+			
+			disconnect();
+		}
 	}
 	
 	bool isConnected() const
@@ -203,9 +233,9 @@ struct AudioPlug
 		
 		if (floatArray.elems.empty() == false)
 			return true;
-		if (floatArray.immediateValue != nullptr)
-			return true;
 	
+		Assert(immediateMem == nullptr); // mem should be equal to immediateMem when we get here
+		
 		return false;
 	}
 	
@@ -237,7 +267,7 @@ struct AudioPlug
 	{
 		Assert(type == kAudioPlugType_FloatVec);
 	
-		if (mem == nullptr)
+		if (!floatArray.elems.empty())
 			return *floatArray.get();
 	
 		return *((AudioFloat*)mem);
@@ -278,10 +308,6 @@ struct AudioPlug
 	AudioFloat & getRwAudioFloat()
 	{
 		Assert(type == kAudioPlugType_FloatVec);
-	
-		if (mem == nullptr)
-			return *floatArray.get();
-	
 		return *((AudioFloat*)mem);
 	}
 };

@@ -481,10 +481,9 @@ AudioFloat * AudioFloatArray::get()
 	}
 	
 	const int numElems = elems.size();
+	Assert(numElems != 0);
 	
-	if (numElems == 0)
-		return immediateValue;
-	else if (numElems == 1)
+	if (numElems == 1)
 		return elems[0].audioFloat;
 	else
 		return sum;
@@ -517,13 +516,14 @@ void AudioPlug::connectToImmediate(void * dstMem, const AudioPlugType dstType)
 	{
 		LOG_ERR("node connection failed. type mismatch", 0);
 	}
-	else if (dstType == kAudioPlugType_FloatVec)
-	{
-		floatArray.immediateValue = (AudioFloat*)dstMem;
-	}
 	else
 	{
-		mem = dstMem;
+		immediateMem = dstMem;
+		
+		if (mem == nullptr)
+		{
+			mem = dstMem;
+		}
 	}
 }
 
