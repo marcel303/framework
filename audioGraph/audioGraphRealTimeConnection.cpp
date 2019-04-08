@@ -781,6 +781,8 @@ bool AudioRealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, 
 		if (history.isValid)
 		{
 			channels.addChannel(history.samples, history.kNumSamples, true);
+			
+			return true;
 		}
 		else
 		{
@@ -792,9 +794,11 @@ bool AudioRealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, 
 				channels.addChannel(value.samples, 1, true);
 			else
 				channels.addChannel(value.samples, AUDIO_UPDATE_SIZE, true);
+			
+			return true;
 		}
 		
-		return history.isValid;
+		return false;
 	}
 	else
 	{
@@ -837,9 +841,26 @@ bool AudioRealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, 
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
 		if (history.isValid)
+		{
 			channels.addChannel(history.samples, history.kNumSamples, true);
+			
+			return true;
+		}
+		else
+		{
+			setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
+			const AudioFloat & value = output->getAudioFloat();
+			clearCurrentAudioGraphTraversalId();
+			
+			if (value.isScalar)
+				channels.addChannel(value.samples, 1, true);
+			else
+				channels.addChannel(value.samples, AUDIO_UPDATE_SIZE, true);
+			
+			return true;
+		}
 		
-		return true;
+		return false;
 	}
 	else
 	{
