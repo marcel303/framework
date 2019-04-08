@@ -9,20 +9,13 @@ library libmediaplayer
 	with_platform macos header_path macos/include
 	with_platform windows header_path win32/include
 	
-	with_platform macos depend_library macos/lib-shared/libavcodec.57.dylib local
-	with_platform macos depend_library macos/lib-shared/libavdevice.57.dylib local
-	with_platform macos depend_library macos/lib-shared/libavfilter.6.dylib local
-	with_platform macos depend_library macos/lib-shared/libavformat.57.dylib local
-	with_platform macos depend_library macos/lib-shared/libavutil.55.dylib local
-	with_platform macos depend_library macos/lib-shared/libswresample.2.dylib local
-	with_platform macos depend_library macos/lib-shared/libswscale.4.dylib local
-	with_platform macos add_dist_files macos/lib-shared/libavcodec.57.dylib
-	with_platform macos add_dist_files macos/lib-shared/libavdevice.57.dylib
-	with_platform macos add_dist_files macos/lib-shared/libavfilter.6.dylib
-	with_platform macos add_dist_files macos/lib-shared/libavformat.57.dylib
-	with_platform macos add_dist_files macos/lib-shared/libavutil.55.dylib
-	with_platform macos add_dist_files macos/lib-shared/libswresample.2.dylib
-	with_platform macos add_dist_files macos/lib-shared/libswscale.4.dylib
+	with_platform macos depend_library macos/lib-shared/libavcodec.57.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libavdevice.57.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libavfilter.6.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libavformat.57.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libavutil.55.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libswresample.2.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libswscale.4.dylib local embed_framework
 	with_platform macos depend_library CoreMedia find
 	with_platform macos depend_library VideoDecodeAcceleration find
 	with_platform macos depend_library VideoToolbox find
