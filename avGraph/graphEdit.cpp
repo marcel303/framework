@@ -3210,8 +3210,8 @@ bool GraphEdit::tickTouches()
 		return false;
 	}
 	
-	const float sx = 1920/2;
-	const float sy = 1080/2;
+	const float sx = 1920*2/3;
+	const float sy = 1080*2/3;
 	
 	for (auto & event : framework.events)
 	{
@@ -3360,7 +3360,7 @@ bool GraphEdit::tickTouches()
 			
 			auto & finger = event.tfinger.fingerId == touches.finger1.id ? touches.finger1 : touches.finger2;
 			
-			const float dragSpeed = 1.f / 2.f / std::max(1.f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
+			const float dragSpeed = 1.f / 2.f / std::max(.02f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
 			
 			const Vec2 position(event.tfinger.x * sx, event.tfinger.y * sy);
 			const Vec2 delta = position - finger.position;
@@ -5775,6 +5775,12 @@ void GraphEdit::nodeRemove(const GraphNodeId nodeId)
 			i = visualizers.erase(i);
 		else
 			++i;
+	}
+	
+	if (realTimeSocketCapture.visualizer.nodeId == nodeId)
+	{
+		//logDebug("reset realTimeSocketCapture");
+		realTimeSocketCapture = RealTimeSocketCapture();
 	}
 }
 
