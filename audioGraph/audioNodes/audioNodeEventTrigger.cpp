@@ -43,7 +43,7 @@ AudioNodeEventTrigger::AudioNodeEventTrigger()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Name, kAudioPlugType_String);
-	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, this);
 }
 
 AudioNodeEventTrigger::~AudioNodeEventTrigger()

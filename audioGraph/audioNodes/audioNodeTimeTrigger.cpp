@@ -52,7 +52,7 @@ AudioNodeTimeTrigger::AudioNodeTimeTrigger()
 	addInput(kInput_IntervalMin, kAudioPlugType_FloatVec);
 	addInput(kInput_IntervalMax, kAudioPlugType_FloatVec);
 	addInput(kInput_Start, kAudioPlugType_Trigger);
-	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, this);
 }
 
 void AudioNodeTimeTrigger::tick(const float dt)

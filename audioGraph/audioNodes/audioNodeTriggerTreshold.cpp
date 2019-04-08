@@ -47,8 +47,8 @@ AudioNodeTriggerThreshold::AudioNodeTriggerThreshold()
 	addInput(kInput_Value, kAudioPlugType_FloatVec);
 	addInput(kInput_UpThreshold, kAudioPlugType_FloatVec);
 	addInput(kInput_DownThreshold, kAudioPlugType_FloatVec);
-	addOutput(kOutput_WentUp, kAudioPlugType_Trigger, nullptr);
-	addOutput(kOutput_WentDown, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_WentUp, kAudioPlugType_Trigger, this);
+	addOutput(kOutput_WentDown, kAudioPlugType_Trigger, this);
 }
 
 void AudioNodeTriggerThreshold::tick(const float dt)
