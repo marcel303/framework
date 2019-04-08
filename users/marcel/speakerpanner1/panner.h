@@ -3,22 +3,27 @@
 #include "Vec3.h"
 #include <vector>
 
+#include "Debugging.h" // todo : move to cpp
+
+struct SpatialSound
+{
+	struct Source
+	{
+		Vec3 position;
+	};
+};
+
 namespace SpeakerPanning
 {
 	struct SpeakerDescription
 	{
 		Vec3 position;
 	};
-	
-	struct Source
-	{
-		Vec3 position;
-	};
 
 	struct Panner
 	{
-		virtual void addSource(Source * source) = 0;
-		virtual void removeSource(Source * source) = 0;
+		virtual void addSource(SpatialSound::Source * source) = 0;
+		virtual void removeSource(SpatialSound::Source * source) = 0;
 	};
 
 	struct GridDescription
@@ -39,7 +44,7 @@ namespace SpeakerPanning
 				float amount = 0.f;
 			};
 
-			Source * source = nullptr;
+			SpatialSound::Source * source = nullptr;
 			PanningElem panning[8];
 		};
 
@@ -53,8 +58,8 @@ namespace SpeakerPanning
 
 		bool init(const GridDescription & in_gridDescription);
 
-		virtual void addSource(Source * source) override;
-		virtual void removeSource(Source * source) override;
+		virtual void addSource(SpatialSound::Source * source) override;
+		virtual void removeSource(SpatialSound::Source * source) override;
 
 		void updatePanning();
 		void updatePanning(SourceElem & elem) const;
@@ -110,6 +115,24 @@ namespace SpeakerPanning
 			}
 			
 			return calculateSpeakerPosition(x, y, z);
+		}
+		
+		SourceElem & getSourceElemForSource(SpatialSound::Source * source)
+		{
+			SourceElem * result = nullptr;
+			
+			for (auto & sourceElem : sources)
+			{
+				if (sourceElem.source == source)
+				{
+					result = &sourceElem;
+					break;
+				}
+			}
+			
+			Assert(result != nullptr);
+			
+			return *result;
 		}
 	};
 }

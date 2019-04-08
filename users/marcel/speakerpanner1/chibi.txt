@@ -4,7 +4,9 @@ library speakerpanner
 	header_path . expose
 
 app speakerpanner-test
+	depend_library audiograph
 	depend_library framework
 	depend_library imgui-framework
 	depend_library speakerpanner
 	add_files test.cpp
+	resource_path data

@@ -16,7 +16,7 @@ namespace SpeakerPanning
 		return true;
 	}
 
-	void Panner_Grid::addSource(Source * source)
+	void Panner_Grid::addSource(SpatialSound::Source * source)
 	{
 		SourceElem elem;
 		elem.source = source;
@@ -24,7 +24,7 @@ namespace SpeakerPanning
 		sources.push_back(elem);
 	}
 
-	void Panner_Grid::removeSource(Source * source)
+	void Panner_Grid::removeSource(SpatialSound::Source * source)
 	{
 		for (auto i = sources.begin(); i != sources.end(); ++i)
 		{
