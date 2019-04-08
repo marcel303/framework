@@ -1,0 +1,10 @@
+library speakerpanner
+	add_files panner.cpp panner.h
+	depend_library libgg
+	header_path . expose
+
+app speakerpanner-test
+	depend_library framework
+	depend_library imgui-framework
+	depend_library speakerpanner
+	add_files test.cpp

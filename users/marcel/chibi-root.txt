@@ -31,6 +31,7 @@ add resonate1
 add resonate2
 add sceneedit1
 add serial-to-osc
+add speakerpanner1
 add speakwithus
 add sRGB
 add twinkle
