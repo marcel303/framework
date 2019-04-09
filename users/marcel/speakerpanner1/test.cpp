@@ -253,6 +253,144 @@ struct SoundSystem
 	}
 };
 
+struct MonitorVisualizer
+{
+	struct GridPannerOptions
+	{
+		bool visible = true;
+		bool showSpeakers = true;
+		float speakerSize = .02f;
+		Color speakerColor = Color(.5f, .5f, .5f);
+		bool modulateSpeakerSizeWithPanningAmplitude = false;
+		bool modulateSpeakerSizeWithSpeakerVu = false;
+		bool showSources = true;
+	};
+	
+	GridPannerOptions gridPannerOptions;
+	
+	void draw(const SoundSystem & soundSystem)
+	{
+		pushBlend(BLEND_OPAQUE);
+		pushDepthTest(true, DEPTH_LESS);
+		{
+			for (auto * panner : soundSystem.panners)
+			{
+				if (panner->type == SpeakerPanning::kPannerType_Grid)
+				{
+					auto * panner_grid = static_cast<const SpeakerPanning::Panner_Grid*>(panner);
+					
+					drawPannerGrid_grid(panner_grid);
+					
+					drawPannerGrid_speakers(panner_grid);
+				}
+			}
+			
+			drawSoundObjects(soundSystem);
+		}
+		popDepthTest();
+		popBlend();
+		
+		pushBlend(BLEND_ALPHA);
+		pushDepthTest(true, DEPTH_LESS, false);
+		{
+			for (auto * panner : soundSystem.panners)
+			{
+				if (panner->type == SpeakerPanning::kPannerType_Grid)
+				{
+					auto * panner_grid = static_cast<const SpeakerPanning::Panner_Grid*>(panner);
+					
+					drawPannerGrid_soundObjectPanningAmplitudes(soundSystem, panner_grid);
+				}
+			}
+		}
+		popDepthTest();
+		popBlend();
+	}
+	
+	void drawSoundObjects(const SoundSystem & soundSystem)
+	{
+		beginCubeBatch();
+		{
+			for (auto & soundObject : soundSystem.soundObjects)
+			{
+				setColor(colorGreen);
+				fillCube(soundObject->position, Vec3(.02f, .02f, .02f));
+			}
+		}
+		endCubeBatch();
+	}
+	
+	void drawPannerGrid_speakers(const SpeakerPanning::Panner_Grid * panner)
+	{
+		if (gridPannerOptions.visible == false)
+			return;
+		if (gridPannerOptions.showSpeakers == false)
+			return;
+		
+		beginCubeBatch();
+		{
+			for (int x = 0; x < panner->gridDescription.size[0]; ++x)
+			{
+				for (int y = 0; y < panner->gridDescription.size[1]; ++y)
+				{
+					for (int z = 0; z < panner->gridDescription.size[2]; ++z)
+					{
+						setColor(gridPannerOptions.speakerColor);
+						fillCube(
+							panner->calculateSpeakerPosition(x, y, z),
+							Vec3(
+								gridPannerOptions.speakerSize,
+								gridPannerOptions.speakerSize,
+								gridPannerOptions.speakerSize));
+					}
+				}
+			}
+		}
+		endCubeBatch();
+	}
+	
+	void drawPannerGrid_grid(const SpeakerPanning::Panner_Grid * panner)
+	{
+		if (gridPannerOptions.visible == false)
+			return;
+		
+		setColor(colorWhite);
+		lineCube(
+			(panner->gridDescription.min + panner->gridDescription.max) / 2.f,
+			(panner->gridDescription.max - panner->gridDescription.min) / 2.f);
+	}
+	
+	void drawPannerGrid_soundObjectPanningAmplitudes(const SoundSystem & soundSystem, const SpeakerPanning::Panner_Grid * panner)
+	{
+		if (gridPannerOptions.visible == false)
+			return;
+		if (gridPannerOptions.showSources == false)
+			return;
+		
+		pushBlend(BLEND_ADD);
+		beginCubeBatch();
+		{
+			for (auto * soundObject : soundSystem.soundObjects)
+			{
+				auto * source = soundObject;
+				auto & source_elem = panner->getSourceElemForSource(source);
+				
+				for (int i = 0; i < 8; ++i)
+				{
+					const int speakerIndex = source_elem.panning[i].speakerIndex;
+					const Vec3 speakerPosition = panner->calculateSpeakerPosition(speakerIndex);
+					
+					setColor(source->color);
+					setAlphaf(source_elem.panning[i].amount);
+					fillCube(speakerPosition, Vec3(.1f, .1f, .1f));
+				}
+			}
+		}
+		endCubeBatch();
+		popBlend();
+	}
+};
+
 struct MonitorGui
 {
 	enum Tab
@@ -267,7 +405,7 @@ struct MonitorGui
 	
 	Tab activeTab = kTab_Panner;
 	
-	void doGui(SoundSystem & soundSystem)
+	void doGui(SoundSystem & soundSystem, MonitorVisualizer & visualizer)
 	{
 		if (ImGui::Button("Audio device"))
 			activeTab = kTab_AudioDevice;
@@ -297,7 +435,7 @@ struct MonitorGui
 			doAudioOutputGui();
 			break;
 		case kTab_Visibility:
-			doVisibilityGui();
+			doVisibilityGui(visualizer);
 			break;
 		case kTab_Panner:
 			doPannerGui(soundSystem);
@@ -436,9 +574,16 @@ struct MonitorGui
 		ImGui::Text("todo");
 	}
 	
-	void doVisibilityGui()
+	void doVisibilityGui(MonitorVisualizer & visualizer)
 	{
-		ImGui::Text("todo");
+		ImGui::Text("Grid panner");
+		ImGui::Checkbox("Visible", &visualizer.gridPannerOptions.visible);
+		ImGui::Checkbox("Show speakers", &visualizer.gridPannerOptions.showSpeakers);
+		ImGui::SliderFloat("Speaker size", &visualizer.gridPannerOptions.speakerSize, 0.f, 1.f);
+		ImGui::ColorPicker3("Speaker color", &visualizer.gridPannerOptions.speakerColor.r);
+		ImGui::Checkbox("Speaker x panning amplitude", &visualizer.gridPannerOptions.modulateSpeakerSizeWithPanningAmplitude);
+		ImGui::Checkbox("Speaker x speaker vu", &visualizer.gridPannerOptions.modulateSpeakerSizeWithSpeakerVu);
+		ImGui::Checkbox("Show sources", &visualizer.gridPannerOptions.showSources);
 	}
 	
 	void doPannerGui_grid(SpeakerPanning::Panner_Grid * panner)
@@ -469,85 +614,13 @@ struct MonitorGui
 	}
 };
 
-struct MonitorVisualizer
-{
-	void draw(const SoundSystem & soundSystem)
-	{
-		for (auto * panner : soundSystem.panners)
-		{
-			if (panner->type == SpeakerPanning::kPannerType_Grid)
-			{
-				auto * panner_grid = static_cast<const SpeakerPanning::Panner_Grid*>(panner);
-				
-				drawPannerGrid_grid(panner_grid);
-			}
-		}
-		
-		drawSoundObjects(soundSystem);
-		
-		for (auto * panner : soundSystem.panners)
-		{
-			if (panner->type == SpeakerPanning::kPannerType_Grid)
-			{
-				auto * panner_grid = static_cast<const SpeakerPanning::Panner_Grid*>(panner);
-				
-				drawPannerGrid_soundObjectPanningAmplitudes(soundSystem, panner_grid);
-			}
-		}
-	}
-	
-	void drawSoundObjects(const SoundSystem & soundSystem)
-	{
-		beginCubeBatch();
-		{
-			for (auto & soundObject : soundSystem.soundObjects)
-			{
-				setColor(colorGreen);
-				fillCube(soundObject->position, Vec3(.02f, .02f, .02f));
-			}
-		}
-		endCubeBatch();
-	}
-	
-	void drawPannerGrid_grid(const SpeakerPanning::Panner_Grid * panner)
-	{
-		setColor(colorWhite);
-		lineCube(
-			(panner->gridDescription.min + panner->gridDescription.max) / 2.f,
-			(panner->gridDescription.max - panner->gridDescription.min) / 2.f);
-	}
-	
-	void drawPannerGrid_soundObjectPanningAmplitudes(const SoundSystem & soundSystem, const SpeakerPanning::Panner_Grid * panner)
-	{
-		pushBlend(BLEND_ADD);
-		beginCubeBatch();
-		{
-			for (auto * soundObject : soundSystem.soundObjects)
-			{
-				auto * source = soundObject;
-				auto & source_elem = panner->getSourceElemForSource(source);
-				
-				for (int i = 0; i < 8; ++i)
-				{
-					const int speakerIndex = source_elem.panning[i].speakerIndex;
-					const Vec3 speakerPosition = panner->calculateSpeakerPosition(speakerIndex);
-					
-					setColor(source->color);
-					setAlphaf(source_elem.panning[i].amount);
-					fillCube(speakerPosition, Vec3(.1f, .1f, .1f));
-				}
-			}
-		}
-		endCubeBatch();
-		popBlend();
-	}
-};
-
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
+	
+	framework.enableDepthBuffer = true;
 	
 	if (!framework.init(800, 600))
 		return -1;
@@ -632,7 +705,7 @@ int main(int argc, char * argv[])
 				
 				ImGui::Begin("Monitor");
 				{
-					monitorGui.doGui(soundSystem);
+					monitorGui.doGui(soundSystem, visualizer);
 				}
 				ImGui::End();
 			}
