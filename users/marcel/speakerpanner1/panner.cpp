@@ -4,6 +4,11 @@
 
 namespace SpeakerPanning
 {
+	Panner_Grid::Panner_Grid()
+		: Panner(kPannerType_Grid)
+	{
+	}
+	
 	Panner_Grid::~Panner_Grid()
 	{
 		Assert(sources.empty());

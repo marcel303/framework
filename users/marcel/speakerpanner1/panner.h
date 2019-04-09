@@ -19,11 +19,25 @@ namespace SpeakerPanning
 	{
 		Vec3 position;
 	};
+	
+	enum PannerType
+	{
+		kPannerType_Grid
+	};
 
 	struct Panner
 	{
+		PannerType type;
+		
+		Panner(const PannerType in_type)
+			: type(in_type)
+		{
+		}
+		
 		virtual void addSource(SpatialSound::Source * source) = 0;
 		virtual void removeSource(SpatialSound::Source * source) = 0;
+		
+		virtual void updatePanning() = 0;
 	};
 
 	struct GridDescription
@@ -54,6 +68,7 @@ namespace SpeakerPanning
 		
 		bool applyConstantPowerCurve = true;
 
+		Panner_Grid();
 		~Panner_Grid();
 
 		bool init(const GridDescription & in_gridDescription);
@@ -61,7 +76,7 @@ namespace SpeakerPanning
 		virtual void addSource(SpatialSound::Source * source) override;
 		virtual void removeSource(SpatialSound::Source * source) override;
 
-		void updatePanning();
+		virtual void updatePanning() override;
 		void updatePanning(SourceElem & elem) const;
 
 		void generateAudio(float * __restrict samples, const int numSamples, const int numChannels);
@@ -117,9 +132,9 @@ namespace SpeakerPanning
 			return calculateSpeakerPosition(x, y, z);
 		}
 		
-		SourceElem & getSourceElemForSource(SpatialSound::Source * source)
+		const SourceElem & getSourceElemForSource(const SpatialSound::Source * source) const
 		{
-			SourceElem * result = nullptr;
+			const SourceElem * result = nullptr;
 			
 			for (auto & sourceElem : sources)
 			{
