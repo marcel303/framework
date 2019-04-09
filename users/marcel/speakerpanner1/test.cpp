@@ -51,6 +51,13 @@ struct AudioDevice
 	
 	bool init(const AudioDeviceSettings & settings)
 	{
+		logDebug("%s: ins=%d, outs=%d, bufferSize=%d, sampleRate=%d",
+			__FUNCTION__,
+			settings.numInputChannels,
+			settings.numOutputChannels,
+			settings.bufferSize,
+			settings.sampleRate);
+		
 		const bool wantsInput = settings.numInputChannels > 0;
 		const bool wantsOutput = settings.numOutputChannels > 0;
 		
@@ -377,7 +384,17 @@ struct MonitorGui
 			settingsChanged = true;
 		
 		{
-			int bufferSizeIndex = 0;
+			const int values[] =
+			{
+				32,
+				64,
+				128,
+				256,
+				512,
+				1024,
+				2048,
+				4096
+			};
 			
 			const char * items[] =
 			{
@@ -393,8 +410,17 @@ struct MonitorGui
 			
 			const int numItems = sizeof(items) / sizeof(items[0]);
 			
-			if (ImGui::Combo("Buffer size", &bufferSizeIndex, items, numItems))
+			int selectedItem = -1;
+			
+			for (int i = 0; i < numItems; ++i)
+				if (settings.bufferSize == values[i])
+					selectedItem = i;
+			
+			if (ImGui::Combo("Buffer size", &selectedItem, items, numItems))
+			{
+				settings.bufferSize = values[selectedItem];
 				settingsChanged = true;
+			}
 		}
 		
 		if (settingsChanged)
@@ -676,6 +702,11 @@ int main(int argc, char * argv[])
 	while (soundSystem.soundObjects.empty() == false)
 	{
 		soundSystem.removeSoundObject(soundSystem.soundObjects.front());
+	}
+	
+	while (soundSystem.panners.empty() == false)
+	{
+		soundSystem.removePanner(soundSystem.panners.front());
 	}
 	
 	guiContext.shut();
