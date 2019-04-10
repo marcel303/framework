@@ -249,6 +249,10 @@ struct AudioMixer
 	{
 	}
 	
+	virtual ~AudioMixer()
+	{
+	}
+	
 	virtual void addSoundObject(SoundObject * soundObject) = 0;
 	virtual void removeSoundObject(SoundObject * soundObject) = 0;
 	
@@ -270,7 +274,7 @@ struct AudioMixer_Grid : AudioMixer
 	{
 	}
 	
-	~AudioMixer_Grid()
+	virtual ~AudioMixer_Grid() override
 	{
 		Assert(soundObjects.empty());
 	}
@@ -283,14 +287,21 @@ struct AudioMixer_Grid : AudioMixer
 	virtual void addSoundObject(SoundObject * soundObject) override
 	{
 		soundObjects.push_back(soundObject);
+		
+		auto * source = soundObject;
+		panner.addSource(source);
 	}
 	
 	virtual void removeSoundObject(SoundObject * soundObject) override
 	{
-		// todo
+		auto * source = soundObject;
+		panner.removeSource(source);
+		
+		auto i = std::find(soundObjects.begin(), soundObjects.end(), soundObject);
+		Assert(i != soundObjects.end());
+		soundObjects.erase(i);
 	}
 	
-// todo : remove vector of sound objects. use registration system
 	virtual void mix(float ** in_channelData, const int in_numChannels, const int in_numSamples) override
 	{
 		mixBegin(in_channelData, in_numChannels, in_numSamples);
@@ -348,7 +359,6 @@ struct SoundSystem : AudioDeviceCallback
 {
 	AudioDevice audioDevice;
 	
-	std::vector<SpeakerPanning::Panner*> panners;
 	std::vector<AudioMixer*> mixers;
 	
 	std::vector<SoundObject*> soundObjects;
@@ -358,7 +368,7 @@ struct SoundSystem : AudioDeviceCallback
 	
 	~SoundSystem()
 	{
-		Assert(panners.empty());
+		Assert(mixers.empty());
 		Assert(soundObjects.empty());
 	}
 	
@@ -370,18 +380,6 @@ struct SoundSystem : AudioDeviceCallback
 		AudioDeviceSettings settings;
 		
 		audioDevice.init(settings, this);
-	}
-	
-	void addPanner(SpeakerPanning::Panner * panner)
-	{
-		panners.push_back(panner);
-	}
-	
-	void removePanner(SpeakerPanning::Panner * panner)
-	{
-		auto i = std::find(panners.begin(), panners.end(), panner);
-		Assert(i != panners.end());
-		panners.erase(i);
 	}
 	
 	void addMixer(AudioMixer * mixer)
@@ -400,13 +398,7 @@ struct SoundSystem : AudioDeviceCallback
 	{
 		soundObjects.push_back(soundObject);
 		
-		// add the sound source to all of the panners
-		
-		for (auto * panner : panners)
-		{
-			auto * source = soundObject;
-			panner->addSource(source);
-		}
+		// add the sound source to all of the mixers
 		
 		for (auto * mixer : mixers)
 		{
@@ -416,14 +408,6 @@ struct SoundSystem : AudioDeviceCallback
 	
 	void removeSoundObject(SoundObject * soundObject)
 	{
-		// remove the sound object from all of the panners
-		
-		for (auto * panner : panners)
-		{
-			auto * source = soundObject;
-			panner->removeSource(source);
-		}
-		
 		// remove the sound object from all of the mixers
 		
 		for (auto * mixer : mixers)
@@ -520,11 +504,13 @@ struct MonitorVisualizer
 		pushBlend(BLEND_OPAQUE);
 		pushDepthTest(true, DEPTH_LESS);
 		{
-			for (auto * panner : soundSystem.panners)
+			for (auto * mixer : soundSystem.mixers)
 			{
-				if (panner->type == SpeakerPanning::kPannerType_Grid)
+				if (mixer->type == kAudioMixer_Grid)
 				{
-					auto * panner_grid = static_cast<const SpeakerPanning::Panner_Grid*>(panner);
+					auto * mixer_grid = static_cast<const AudioMixer_Grid*>(mixer);
+					
+					auto * panner_grid = &mixer_grid->panner;
 					
 					drawPannerGrid_grid(panner_grid);
 					
@@ -540,11 +526,13 @@ struct MonitorVisualizer
 		pushBlend(BLEND_ALPHA);
 		pushDepthTest(true, DEPTH_LESS, false);
 		{
-			for (auto * panner : soundSystem.panners)
+			for (auto * mixer : soundSystem.mixers)
 			{
-				if (panner->type == SpeakerPanning::kPannerType_Grid)
+				if (mixer->type == kAudioMixer_Grid)
 				{
-					auto * panner_grid = static_cast<const SpeakerPanning::Panner_Grid*>(panner);
+					auto * mixer_grid = static_cast<const AudioMixer_Grid*>(mixer);
+					
+					auto * panner_grid = &mixer_grid->panner;
 					
 					drawPannerGrid_soundObjectPanningAmplitudes(soundSystem, panner_grid);
 				}
@@ -840,13 +828,14 @@ struct MonitorGui
 	
 	void doPannerGui(SoundSystem & soundSystem)
 	{
-		for (auto * panner : soundSystem.panners)
+		for (auto * mixer : soundSystem.mixers)
 		{
-			ImGui::PushID(panner);
+			ImGui::PushID(mixer);
 			{
-				if (panner->type == SpeakerPanning::kPannerType_Grid)
+				if (mixer->type == kAudioMixer_Grid)
 				{
-					auto * panner_grid = static_cast<SpeakerPanning::Panner_Grid*>(panner);
+					auto * mixer_grid = static_cast<AudioMixer_Grid*>(mixer);
+					auto * panner_grid = &mixer_grid->panner;
 					
 					doPannerGui_grid(panner_grid);
 				}
@@ -895,16 +884,16 @@ int main(int argc, char * argv[])
 	soundSystem.init(&audioGraphMgr, &audioVoiceMgr);
 	
 	{
-		auto * panner = new SpeakerPanning::Panner_Grid();
+		AudioMixer_Grid * mixer = new AudioMixer_Grid();
 		SpeakerPanning::GridDescription gridDescription;
 		gridDescription.size[0] = 8;
 		gridDescription.size[1] = 8;
 		gridDescription.size[2] = 8;
 		gridDescription.min.Set(-2.f, -2.f, -2.f);
 		gridDescription.max.Set(+2.f, +2.f, +2.f);
-		panner->init(gridDescription);
+		mixer->init(gridDescription);
 		
-		soundSystem.addPanner(panner);
+		soundSystem.addMixer(mixer);
 	}
 	
 	auto * instance = audioGraphMgr.createInstance("soundObject1.xml");
@@ -984,9 +973,14 @@ int main(int argc, char * argv[])
 			source->position[2] = sinf(framework.time / 1.45f * speed) * 1.8f;
 		}
 		
-		for (auto * panner : soundSystem.panners)
+		for (auto * mixer : soundSystem.mixers)
 		{
-			panner->updatePanning();
+			if (mixer->type == kAudioMixer_Grid)
+			{
+				auto * mixer_grid = static_cast<AudioMixer_Grid*>(mixer);
+				
+				mixer_grid->panner.updatePanning();
+			}
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -1018,14 +1012,14 @@ int main(int argc, char * argv[])
 		soundObject = nullptr;
 	}
 	
-	while (soundSystem.panners.empty() == false)
+	while (soundSystem.mixers.empty() == false)
 	{
-		auto * panner = soundSystem.panners.front();
+		auto * mixer = soundSystem.mixers.front();
 		
-		soundSystem.removePanner(panner);
+		soundSystem.removeMixer(mixer);
 		
-		delete panner;
-		panner = nullptr;
+		delete mixer;
+		mixer = nullptr;
 	}
 	
 	audioGraphMgr.free(instance, false);
