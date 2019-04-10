@@ -34,6 +34,10 @@ namespace SpeakerPanning
 		{
 		}
 		
+		virtual ~Panner()
+		{
+		}
+		
 		virtual void addSource(SpatialSound::Source * source) = 0;
 		virtual void removeSource(SpatialSound::Source * source) = 0;
 		
@@ -69,7 +73,7 @@ namespace SpeakerPanning
 		bool applyConstantPowerCurve = true;
 
 		Panner_Grid();
-		~Panner_Grid();
+		virtual ~Panner_Grid() override;
 
 		bool init(const GridDescription & in_gridDescription);
 
