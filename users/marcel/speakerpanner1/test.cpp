@@ -6,6 +6,7 @@
 #include "imgui-framework.h"
 #include "panner.h"
 #include "paobject.h"
+#include "soundmix.h"
 #include "ui.h"
 #include <algorithm>
 
@@ -32,16 +33,13 @@ struct AudioDeviceSettings
 	int numOutputChannels = 2;
 };
 
-static int portaudioCallback(
-	const void * inputBuffer,
-	void * outputBuffer,
-	unsigned long framesPerBuffer,
-	const PaStreamCallbackTimeInfo * timeInfo,
-	PaStreamCallbackFlags statusFlags,
-	void * userData)
+struct AudioDeviceCallback
 {
-	return paContinue;
-}
+	virtual void provide(
+		float * outputBuffer,
+		const int bufferSize,
+		const int numChannels) = 0;
+};
 
 struct AudioDevice
 {
@@ -49,7 +47,9 @@ struct AudioDevice
 	
 	PaStream * stream = nullptr;
 	
-	bool init(const AudioDeviceSettings & settings)
+	AudioDeviceCallback * callback = nullptr;
+	
+	bool init(const AudioDeviceSettings & in_settings, AudioDeviceCallback * in_callback)
 	{
 		logDebug("%s: ins=%d, outs=%d, bufferSize=%d, sampleRate=%d",
 			__FUNCTION__,
@@ -57,6 +57,9 @@ struct AudioDevice
 			settings.numOutputChannels,
 			settings.bufferSize,
 			settings.sampleRate);
+		
+		settings = in_settings;
+		callback = in_callback;
 		
 		const bool wantsInput = settings.numInputChannels > 0;
 		const bool wantsOutput = settings.numOutputChannels > 0;
@@ -108,22 +111,28 @@ struct AudioDevice
 		PaStreamParameters inputParameters;
 		memset(&inputParameters, 0, sizeof(inputParameters));
 		
-		inputParameters.device = inputDeviceIndex;
-		inputParameters.channelCount = settings.numInputChannels;
-		inputParameters.sampleFormat = paFloat32;
-		inputParameters.suggestedLatency = Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
-		inputParameters.hostApiSpecificStreamInfo = nullptr;
+		if (inputDeviceIndex != paNoDevice)
+		{
+			inputParameters.device = inputDeviceIndex;
+			inputParameters.channelCount = settings.numInputChannels;
+			inputParameters.sampleFormat = paFloat32;
+			inputParameters.suggestedLatency = Pa_GetDeviceInfo(inputParameters.device)->defaultLowInputLatency;
+			inputParameters.hostApiSpecificStreamInfo = nullptr;
+		}
 		
 		//
 		
 		PaStreamParameters outputParameters;
 		memset(&outputParameters, 0, sizeof(outputParameters));
 		
-		outputParameters.device = outputDeviceIndex;
-		outputParameters.channelCount = settings.numOutputChannels;
-		outputParameters.sampleFormat = paFloat32;
-		outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
-		outputParameters.hostApiSpecificStreamInfo = nullptr;
+		if (outputDeviceIndex != paNoDevice)
+		{
+			outputParameters.device = outputDeviceIndex;
+			outputParameters.channelCount = settings.numOutputChannels;
+			outputParameters.sampleFormat = paFloat32;
+			outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
+			outputParameters.hostApiSpecificStreamInfo = nullptr;
+		}
 		
 		//
 		
@@ -194,20 +203,173 @@ struct AudioDevice
 		
 		return true;
 	}
+	
+	static int portaudioCallback(
+		const void * inputBuffer,
+		void * outputBuffer,
+		unsigned long framesPerBuffer,
+		const PaStreamCallbackTimeInfo * timeInfo,
+		PaStreamCallbackFlags statusFlags,
+		void * userData)
+	{
+		AudioDevice * self = (AudioDevice*)userData;
+		
+		Assert(framesPerBuffer == self->settings.bufferSize);
+		
+		if (self->callback != nullptr)
+		{
+			self->callback->provide(
+				(float*)outputBuffer,
+				self->settings.bufferSize,
+				self->settings.numOutputChannels);
+		}
+		else
+		{
+			memset(outputBuffer, 0, self->settings.numOutputChannels * self->settings.bufferSize * sizeof(float));
+		}
+		
+		return paContinue;
+	}
 };
 
-struct SoundSystem
+enum AudioMixerType
+{
+	kAudioMixer_Grid
+};
+
+struct AudioMixer
+{
+	// todo : define mixer interface
+	// for efficiency: hide internal details. use methods to register sources
+	
+	AudioMixerType type;
+	
+	AudioMixer(const AudioMixerType in_type)
+		: type(in_type)
+	{
+	}
+	
+	virtual void addSoundObject(SoundObject * soundObject) = 0;
+	virtual void removeSoundObject(SoundObject * soundObject) = 0;
+	
+	virtual void mix(float ** in_channelData, const int in_numChannels, const int in_numSamples) = 0;
+};
+
+struct AudioMixer_Grid : AudioMixer
+{
+	SpeakerPanning::Panner_Grid panner;
+	
+	std::vector<SoundObject*> soundObjects;
+	
+	float ** channelData = nullptr;
+	int numChannels = 0;
+	int numSamples = 0;
+	
+	AudioMixer_Grid()
+		: AudioMixer(kAudioMixer_Grid)
+	{
+	}
+	
+	~AudioMixer_Grid()
+	{
+		Assert(soundObjects.empty());
+	}
+	
+	void init(const SpeakerPanning::GridDescription & gridDescription)
+	{
+		panner.init(gridDescription);
+	}
+	
+	virtual void addSoundObject(SoundObject * soundObject) override
+	{
+		soundObjects.push_back(soundObject);
+	}
+	
+	virtual void removeSoundObject(SoundObject * soundObject) override
+	{
+		// todo
+	}
+	
+// todo : remove vector of sound objects. use registration system
+	virtual void mix(float ** in_channelData, const int in_numChannels, const int in_numSamples) override
+	{
+		mixBegin(in_channelData, in_numChannels, in_numSamples);
+		{
+			for (auto * soundObject : soundObjects)
+			{
+				mixSoundObject(soundObject);
+			}
+		}
+		mixEnd();
+	}
+	
+	void mixBegin(float ** in_channelData, const int in_numChannels, const int in_numSamples)
+	{
+		channelData = in_channelData;
+		numChannels = in_numChannels;
+		numSamples = in_numSamples;
+	}
+	
+	void mixEnd()
+	{
+		channelData = nullptr;
+		numChannels = 0;
+		numSamples = 0;
+	}
+	
+	void mixSoundObject(const SoundObject * soundObject)
+	{
+		auto & sourceElem = panner.getSourceElemForSource(soundObject);
+		
+		for (auto * voice : soundObject->graphInstance->audioGraph->audioVoices)
+		{
+			float voiceSamples[numSamples];
+			voice->source->generate(voiceSamples, numSamples);
+		
+			for (int i = 0; i < 8; ++i)
+			{
+				if (sourceElem.panning[i].amount != 0.f)
+				{
+					if (sourceElem.panning[i].speakerIndex < numChannels)
+					{
+						audioBufferAdd(
+							channelData[sourceElem.panning[i].speakerIndex],
+							voiceSamples,
+							numSamples,
+							sourceElem.panning[i].amount);
+					}
+				}
+			}
+		}
+	}
+};
+
+struct SoundSystem : AudioDeviceCallback
 {
 	AudioDevice audioDevice;
 	
 	std::vector<SpeakerPanning::Panner*> panners;
+	std::vector<AudioMixer*> mixers;
 	
 	std::vector<SoundObject*> soundObjects;
+	
+	AudioGraphManager * audioGraphMgr = nullptr;
+	AudioVoiceManager * audioVoiceMgr = nullptr;
 	
 	~SoundSystem()
 	{
 		Assert(panners.empty());
 		Assert(soundObjects.empty());
+	}
+	
+	void init(AudioGraphManager * in_audioGraphMgr, AudioVoiceManager * in_audioVoiceMgr)
+	{
+		audioGraphMgr = in_audioGraphMgr;
+		audioVoiceMgr = in_audioVoiceMgr;
+		
+		AudioDeviceSettings settings;
+		
+		audioDevice.init(settings, this);
 	}
 	
 	void addPanner(SpeakerPanning::Panner * panner)
@@ -222,6 +384,18 @@ struct SoundSystem
 		panners.erase(i);
 	}
 	
+	void addMixer(AudioMixer * mixer)
+	{
+		mixers.push_back(mixer);
+	}
+	
+	void removeMixer(AudioMixer * mixer)
+	{
+		auto i = std::find(mixers.begin(), mixers.end(), mixer);
+		Assert(i != mixers.end());
+		mixers.erase(i);
+	}
+	
 	void addSoundObject(SoundObject * soundObject)
 	{
 		soundObjects.push_back(soundObject);
@@ -232,6 +406,11 @@ struct SoundSystem
 		{
 			auto * source = soundObject;
 			panner->addSource(source);
+		}
+		
+		for (auto * mixer : mixers)
+		{
+			mixer->addSoundObject(soundObject);
 		}
 	}
 	
@@ -245,11 +424,79 @@ struct SoundSystem
 			panner->removeSource(source);
 		}
 		
+		// remove the sound object from all of the mixers
+		
+		for (auto * mixer : mixers)
+		{
+			mixer->removeSoundObject(soundObject);
+		}
+		
 		// remove the sound object
 		
 		auto i = std::find(soundObjects.begin(), soundObjects.end(), soundObject);
 		Assert(i != soundObjects.end());
 		soundObjects.erase(i);
+	}
+	
+	virtual void provide(
+		float * outputBuffer,
+		const int bufferSize,
+		const int numChannels) override
+	{
+		const float dt = 1.f / audioDevice.settings.sampleRate;
+		
+		if (audioGraphMgr != nullptr)
+		{
+			audioGraphMgr->tickAudio(dt);
+		}
+		
+		memset(outputBuffer, 0, numChannels * bufferSize * sizeof(float));
+
+		for (auto * soundObject : soundObjects)
+		{
+			if (soundObject->graphInstance != nullptr &&
+				soundObject->graphInstance->audioGraph != nullptr)
+			{
+				auto * audioGraph = soundObject->graphInstance->audioGraph;
+				
+				for (auto * voice : audioGraph->audioVoices)
+				{
+					float voiceSamples[bufferSize];
+					voice->source->generate(voiceSamples, bufferSize);
+					
+					//soundObject
+					
+				// todo : apply panning and mix
+				//        for now as a workaroumd, add the sound to all channels
+				
+					for (int channelIndex = 0; channelIndex < numChannels; ++channelIndex)
+					{
+						// interleave voice samples into destination buffer
+						
+						float * __restrict dstPtr = outputBuffer + channelIndex;
+				
+						for (int i = 0; i < bufferSize; ++i)
+						{
+							*dstPtr = voiceSamples[i];
+							
+							dstPtr += numChannels;
+						}
+					}
+				}
+			}
+		}
+		
+		/*
+		if (audioVoiceMgr != nullptr)
+		{
+			audioVoiceMgr->generateAudio((float*)outputBuffer, bufferSize, numChannels);
+		}
+		*/
+		
+		if (audioGraphMgr != nullptr)
+		{
+			audioGraphMgr->tickVisualizers();
+		}
 	}
 };
 
@@ -565,7 +812,7 @@ struct MonitorGui
 		{
 			audioDevice.shut();
 			
-			audioDevice.init(audioDevice.settings);
+			audioDevice.init(audioDevice.settings, audioDevice.callback);
 		}
 	}
 	
@@ -634,7 +881,18 @@ int main(int argc, char * argv[])
 	
 	bool showGui = true;
 	
+	AudioMutex audioMutex;
+	audioMutex.init();
+	
+	AudioVoiceManagerBasic audioVoiceMgr;
+	audioVoiceMgr.init(audioMutex.mutex, 256, 256);
+	audioVoiceMgr.outputStereo = true;
+	
+	AudioGraphManager_RTE audioGraphMgr(800, 600);
+	audioGraphMgr.init(audioMutex.mutex, &audioVoiceMgr);
+	
 	SoundSystem soundSystem;
+	soundSystem.init(&audioGraphMgr, &audioVoiceMgr);
 	
 	{
 		auto * panner = new SpeakerPanning::Panner_Grid();
@@ -649,6 +907,13 @@ int main(int argc, char * argv[])
 		soundSystem.addPanner(panner);
 	}
 	
+	auto * instance = audioGraphMgr.createInstance("soundObject1.xml");
+	audioGraphMgr.selectInstance(instance);
+	
+	Camera3d camera;
+	camera.position.Set(0.f, 1.f, -2.f);
+	camera.pitch = 15.f;
+	
 	for (int i = 0; i < 10; ++i)
 	{
 		SoundObject * soundObject = new SoundObject();
@@ -656,33 +921,13 @@ int main(int argc, char * argv[])
 		const float hue = i / float(10);
 		soundObject->color = Color::fromHSL(hue, .5f, .5f);
 		
+		auto * instance = audioGraphMgr.createInstance("soundObject1.xml");
+		audioGraphMgr.selectInstance(instance);
+		
+		soundObject->graphInstance = instance;
+		
 		soundSystem.addSoundObject(soundObject);
 	}
-	
-	AudioMutex audioMutex;
-	audioMutex.init();
-	
-	AudioVoiceManagerBasic audioVoiceMgr;
-	audioVoiceMgr.init(audioMutex.mutex, 256, 256);
-	audioVoiceMgr.outputStereo = true;
-	
-	AudioGraphManager_RTE audioGraphMgr(800, 600);
-	audioGraphMgr.init(audioMutex.mutex, &audioVoiceMgr);
-	
-	AudioUpdateHandler audioUpdateHandler;
-	audioUpdateHandler.init(audioMutex.mutex, nullptr, 0);
-	audioUpdateHandler.voiceMgr = &audioVoiceMgr;
-	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
-	
-	PortAudioObject paObject;
-	paObject.init(SAMPLE_RATE, 2, 0, 256, &audioUpdateHandler);
-	
-	auto * instance = audioGraphMgr.createInstance("soundObject1.xml");
-	audioGraphMgr.selectInstance(instance);
-	
-	Camera3d camera;
-	camera.position.Set(0.f, 1.f, -2.f);
-	camera.pitch = 15.f;
 	
 	MonitorGui monitorGui;
 	
@@ -701,7 +946,7 @@ int main(int argc, char * argv[])
 		{
 			if (showGui)
 			{
-				ImGui::SetNextWindowSize(ImVec2(300, 400));
+				ImGui::SetNextWindowSize(ImVec2(600, 400));
 				
 				ImGui::Begin("Monitor");
 				{
@@ -732,7 +977,7 @@ int main(int argc, char * argv[])
 		{
 			auto * source = soundSystem.soundObjects[i];
 			
-			const float speed = 1.f + i / float(soundSystem.soundObjects.size()) * 10.f;
+			const float speed = .2f + i / float(soundSystem.soundObjects.size()) * 1.f;
 			
 			source->position[0] = cosf(framework.time / 1.23f * speed) * 1.8f;
 			source->position[1] = sinf(framework.time / 1.34f * speed) * 1.8f;
@@ -762,25 +1007,32 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	}
 	
-	paObject.shut();
+	while (soundSystem.soundObjects.empty() == false)
+	{
+		auto * soundObject = soundSystem.soundObjects.front();
+		
+		audioGraphMgr.free(soundObject->graphInstance, false);
+		soundSystem.removeSoundObject(soundObject);
+		
+		delete soundObject;
+		soundObject = nullptr;
+	}
 	
-	audioUpdateHandler.shut();
+	while (soundSystem.panners.empty() == false)
+	{
+		auto * panner = soundSystem.panners.front();
+		
+		soundSystem.removePanner(panner);
+		
+		delete panner;
+		panner = nullptr;
+	}
 	
 	audioGraphMgr.free(instance, false);
 	
 	audioGraphMgr.shut();
 	audioVoiceMgr.shut();
 	audioMutex.shut();
-	
-	while (soundSystem.soundObjects.empty() == false)
-	{
-		soundSystem.removeSoundObject(soundSystem.soundObjects.front());
-	}
-	
-	while (soundSystem.panners.empty() == false)
-	{
-		soundSystem.removePanner(soundSystem.panners.front());
-	}
 	
 	guiContext.shut();
 	
