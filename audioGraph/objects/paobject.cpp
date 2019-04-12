@@ -45,7 +45,7 @@ static int portaudioCallback(
 {
 	PortAudioObject * pa = (PortAudioObject*)userData;
 	
-	pa->handler->portAudioCallback(inputBuffer, pa->numInputChannels, outputBuffer, framesPerBuffer);
+	pa->handler->portAudioCallback(inputBuffer, pa->numInputChannels, outputBuffer, pa->numOutputChannels, framesPerBuffer);
 
 	return paContinue;
 }

@@ -39,6 +39,7 @@ struct PortAudioHandler
 		const void * inputBuffer,
 		const int numInputChannels,
 		void * outputBuffer,
+		const int numOutputChannels,
 		const int framesPerBuffer) = 0;
 };
 

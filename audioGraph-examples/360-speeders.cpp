@@ -314,6 +314,7 @@ struct MyPortAudioHandler : PortAudioHandler
 		const void * inputBuffer,
 		const int numInputChannels,
 		void * outputBuffer,
+		const int numOutputChannels,
 		const int framesPerBuffer) override
 	{
 		Assert(framesPerBuffer == AUDIO_UPDATE_SIZE);
