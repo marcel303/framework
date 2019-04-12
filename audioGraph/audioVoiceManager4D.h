@@ -235,7 +235,6 @@ struct AudioVoiceManager4D : AudioVoiceManager
 {
 	AudioMutex_Shared audioMutex;
 	
-	int numChannels;
 	int numDynamicChannels;
 	std::list<AudioVoice4D> voices;
 	bool outputStereo;
@@ -275,10 +274,10 @@ struct AudioVoiceManager4D : AudioVoiceManager
 	void updateChannelIndices();
 	int numDynamicChannelsUsed() const;
 	
-	virtual void generateAudio(float * __restrict samples, const int numSamples) override;
+	virtual void generateAudio(float * __restrict samples, const int numSamples, const int numChannels) override;
 	
 	void generateAudio(
-		float * __restrict samples, const int numSamples,
+		float * __restrict samples, const int numSamples, const int numChannels,
 		const bool doLimiting,
 		const float limiterPeak,
 		const OutputMode outputMode,

@@ -145,14 +145,13 @@ struct AudioVoiceManager
 	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) = 0;
 	virtual void freeVoice(AudioVoice *& voice) = 0;
 	
-	virtual void generateAudio(float * __restrict samples, const int numSamples) = 0;
+	virtual void generateAudio(float * __restrict samples, const int numSamples, const int numChannels) = 0;
 };
 
 struct AudioVoiceManagerBasic : AudioVoiceManager
 {
 	AudioMutex_Shared audioMutex;
 	
-	int numChannels;
 	int numDynamicChannels;
 	std::list<AudioVoice> voices;
 	bool outputStereo;
@@ -168,5 +167,5 @@ struct AudioVoiceManagerBasic : AudioVoiceManager
 	void updateChannelIndices();
 	int numDynamicChannelsUsed() const;
 	
-	virtual void generateAudio(float * __restrict samples, const int numSamples) override;
+	virtual void generateAudio(float * __restrict samples, const int numSamples, const int numChannels) override;
 };

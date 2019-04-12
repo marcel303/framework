@@ -319,7 +319,6 @@ void AudioVoiceManager::generateAudio(
 AudioVoiceManagerBasic::AudioVoiceManagerBasic()
 	: AudioVoiceManager(kType_Basic)
 	, audioMutex()
-	, numChannels(0)
 	, numDynamicChannels(0)
 	, voices()
 	, outputStereo(false)
@@ -329,9 +328,6 @@ AudioVoiceManagerBasic::AudioVoiceManagerBasic()
 void AudioVoiceManagerBasic::init(SDL_mutex * _audioMutex, const int _numChannels, const int _numDynamicChannels)
 {
 	Assert(voices.empty());
-	
-	Assert(numChannels == 0);
-	numChannels = _numChannels;
 	
 	Assert(numDynamicChannels == 0);
 	numDynamicChannels = _numDynamicChannels;
@@ -347,7 +343,6 @@ void AudioVoiceManagerBasic::shut()
 	
 	voices.clear();
 	
-	numChannels = 0;
 	numDynamicChannels = 0;
 }
 
@@ -355,11 +350,7 @@ bool AudioVoiceManagerBasic::allocVoice(AudioVoice *& voice, AudioSource * sourc
 {
 	Assert(voice == nullptr);
 	Assert(source != nullptr);
-	Assert(channelIndex < 0 || (channelIndex >= 0 && channelIndex < numChannels));
-
-	if (channelIndex >= numChannels)
-		return false;
-
+	
 	audioMutex.lock();
 	{
 		voices.push_back(AudioVoice());
@@ -474,7 +465,7 @@ int AudioVoiceManagerBasic::numDynamicChannelsUsed() const
 	return result;
 }
 
-void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int numSamples)
+void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int numSamples, const int numChannels)
 {
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
 	const float limiterPeak = 1.f;

@@ -33,7 +33,6 @@
 AudioVoiceManager4D::AudioVoiceManager4D()
 	: AudioVoiceManager(kType_4DSOUND)
 	, audioMutex()
-	, numChannels(0)
 	, numDynamicChannels(0)
 	, voices()
 	, outputStereo(false)
@@ -46,9 +45,6 @@ AudioVoiceManager4D::AudioVoiceManager4D()
 void AudioVoiceManager4D::init(SDL_mutex * _audioMutex, const int _numChannels, const int _numDynamicChannels)
 {
 	Assert(voices.empty());
-	
-	Assert(numChannels == 0);
-	numChannels = _numChannels;
 	
 	Assert(numDynamicChannels == 0);
 	numDynamicChannels = _numDynamicChannels;
@@ -64,7 +60,6 @@ void AudioVoiceManager4D::shut()
 	
 	voices.clear();
 	
-	numChannels = 0;
 	numDynamicChannels = 0;
 }
 
@@ -72,10 +67,6 @@ bool AudioVoiceManager4D::allocVoice(AudioVoice *& out_voice, AudioSource * sour
 {
 	Assert(out_voice == nullptr);
 	Assert(source != nullptr);
-	Assert(channelIndex < 0 || (channelIndex >= 0 && channelIndex < numChannels));
-
-	if (channelIndex >= numChannels)
-		return false;
 
 	audioMutex.lock();
 	{
@@ -216,15 +207,15 @@ int AudioVoiceManager4D::numDynamicChannelsUsed() const
 	return result;
 }
 
-void AudioVoiceManager4D::generateAudio(float * __restrict samples, const int numSamples)
+void AudioVoiceManager4D::generateAudio(float * __restrict samples, const int numSamples, const int numChannels)
 {
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
 	
-	generateAudio(samples, numSamples, true, 1.f, outputMode, true);
+	generateAudio(samples, numSamples, numChannels, true, 1.f, outputMode, true);
 }
 
 void AudioVoiceManager4D::generateAudio(
-	float * __restrict samples, const int numSamples,
+	float * __restrict samples, const int numSamples, const int numChannels,
 	const bool doLimiting,
 	const float limiterPeak,
 	const OutputMode outputMode,
