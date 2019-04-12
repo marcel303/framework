@@ -304,6 +304,8 @@ struct AudioMixer_Grid : AudioMixer
 	
 	virtual void mix(float ** in_channelData, const int in_numChannels, const int in_numSamples) override
 	{
+		panner.updatePanning();
+		
 		mixBegin(in_channelData, in_numChannels, in_numSamples);
 		{
 			for (auto * soundObject : soundObjects)
@@ -341,10 +343,12 @@ struct AudioMixer_Grid : AudioMixer
 			{
 				if (sourceElem.panning[i].amount != 0.f)
 				{
-					if (sourceElem.panning[i].speakerIndex < numChannels)
+					const int speakerIndex = sourceElem.panning[i].speakerIndex;
+					
+					if (speakerIndex >= 0 && speakerIndex < numChannels)
 					{
 						audioBufferAdd(
-							channelData[sourceElem.panning[i].speakerIndex],
+							channelData[speakerIndex],
 							voiceSamples,
 							numSamples,
 							sourceElem.panning[i].amount);
@@ -363,6 +367,8 @@ struct SoundSystem : AudioDeviceCallback
 	
 	std::vector<SoundObject*> soundObjects;
 	
+	AudioMutex * audioMutex = nullptr;
+	
 	AudioGraphManager * audioGraphMgr = nullptr;
 	AudioVoiceManager * audioVoiceMgr = nullptr;
 	
@@ -372,8 +378,10 @@ struct SoundSystem : AudioDeviceCallback
 		Assert(soundObjects.empty());
 	}
 	
-	void init(AudioGraphManager * in_audioGraphMgr, AudioVoiceManager * in_audioVoiceMgr)
+	void init(AudioMutex * in_mutex, AudioGraphManager * in_audioGraphMgr, AudioVoiceManager * in_audioVoiceMgr)
 	{
+		audioMutex = in_mutex;
+		
 		audioGraphMgr = in_audioGraphMgr;
 		audioVoiceMgr = in_audioVoiceMgr;
 		
@@ -382,44 +390,70 @@ struct SoundSystem : AudioDeviceCallback
 		audioDevice.init(settings, this);
 	}
 	
+	void shut()
+	{
+		audioDevice.shut();
+		
+		audioGraphMgr = nullptr;
+		audioVoiceMgr = nullptr;
+		
+		audioMutex = nullptr;
+	}
+	
 	void addMixer(AudioMixer * mixer)
 	{
-		mixers.push_back(mixer);
+		audioMutex->lock();
+		{
+			mixers.push_back(mixer);
+		}
+		audioMutex->unlock();
 	}
 	
 	void removeMixer(AudioMixer * mixer)
 	{
-		auto i = std::find(mixers.begin(), mixers.end(), mixer);
-		Assert(i != mixers.end());
-		mixers.erase(i);
+		audioMutex->lock();
+		{
+			auto i = std::find(mixers.begin(), mixers.end(), mixer);
+			Assert(i != mixers.end());
+			mixers.erase(i);
+		}
+		audioMutex->unlock();
 	}
 	
 	void addSoundObject(SoundObject * soundObject)
 	{
-		soundObjects.push_back(soundObject);
-		
-		// add the sound source to all of the mixers
-		
-		for (auto * mixer : mixers)
+		audioMutex->lock();
 		{
-			mixer->addSoundObject(soundObject);
+			soundObjects.push_back(soundObject);
+			
+			// add the sound source to all of the mixers
+			
+			for (auto * mixer : mixers)
+			{
+				mixer->addSoundObject(soundObject);
+			}
 		}
+		audioMutex->unlock();
 	}
 	
 	void removeSoundObject(SoundObject * soundObject)
 	{
-		// remove the sound object from all of the mixers
-		
-		for (auto * mixer : mixers)
+		audioMutex->lock();
 		{
-			mixer->removeSoundObject(soundObject);
+			// remove the sound object from all of the mixers
+			
+			for (auto * mixer : mixers)
+			{
+				mixer->removeSoundObject(soundObject);
+			}
+			
+			// remove the sound object
+			
+			auto i = std::find(soundObjects.begin(), soundObjects.end(), soundObject);
+			Assert(i != soundObjects.end());
+			soundObjects.erase(i);
 		}
-		
-		// remove the sound object
-		
-		auto i = std::find(soundObjects.begin(), soundObjects.end(), soundObject);
-		Assert(i != soundObjects.end());
-		soundObjects.erase(i);
+		audioMutex->unlock();
 	}
 	
 	virtual void provide(
@@ -436,6 +470,32 @@ struct SoundSystem : AudioDeviceCallback
 		
 		memset(outputBuffer, 0, numChannels * bufferSize * sizeof(float));
 
+	#if 1
+		float ** channelData = new float*[numChannels];
+		for (int i = 0; i < numChannels; ++i)
+			channelData[i] = new float[bufferSize];
+		
+		audioMutex->lock();
+		{
+			for (auto * mixer : mixers)
+			{
+				mixer->mix(channelData, numChannels, bufferSize);
+			}
+		}
+		audioMutex->unlock();
+		
+		float * dst = outputBuffer;
+		
+		for (int i = 0; i < bufferSize; ++i)
+		{
+			for (int c = 0; c < numChannels; ++c)
+				*dst++ = channelData[c][i];
+		}
+		
+		for (int i = 0; i < numChannels; ++i)
+			delete [] channelData[i];
+		delete [] channelData;
+	#else
 		for (auto * soundObject : soundObjects)
 		{
 			if (soundObject->graphInstance != nullptr &&
@@ -469,13 +529,7 @@ struct SoundSystem : AudioDeviceCallback
 				}
 			}
 		}
-		
-		/*
-		if (audioVoiceMgr != nullptr)
-		{
-			audioVoiceMgr->generateAudio((float*)outputBuffer, bufferSize, numChannels);
-		}
-		*/
+	#endif
 		
 		if (audioGraphMgr != nullptr)
 		{
@@ -875,13 +929,12 @@ int main(int argc, char * argv[])
 	
 	AudioVoiceManagerBasic audioVoiceMgr;
 	audioVoiceMgr.init(audioMutex.mutex, 256, 256);
-	audioVoiceMgr.outputStereo = true;
 	
 	AudioGraphManager_RTE audioGraphMgr(800, 600);
 	audioGraphMgr.init(audioMutex.mutex, &audioVoiceMgr);
 	
 	SoundSystem soundSystem;
-	soundSystem.init(&audioGraphMgr, &audioVoiceMgr);
+	soundSystem.init(&audioMutex, &audioGraphMgr, &audioVoiceMgr);
 	
 	{
 		AudioMixer_Grid * mixer = new AudioMixer_Grid();
@@ -895,9 +948,6 @@ int main(int argc, char * argv[])
 		
 		soundSystem.addMixer(mixer);
 	}
-	
-	auto * instance = audioGraphMgr.createInstance("soundObject1.xml");
-	audioGraphMgr.selectInstance(instance);
 	
 	Camera3d camera;
 	camera.position.Set(0.f, 1.f, -2.f);
@@ -968,19 +1018,9 @@ int main(int argc, char * argv[])
 			
 			const float speed = .2f + i / float(soundSystem.soundObjects.size()) * 1.f;
 			
-			source->position[0] = cosf(framework.time / 1.23f * speed) * 1.8f;
-			source->position[1] = sinf(framework.time / 1.34f * speed) * 1.8f;
-			source->position[2] = sinf(framework.time / 1.45f * speed) * 1.8f;
-		}
-		
-		for (auto * mixer : soundSystem.mixers)
-		{
-			if (mixer->type == kAudioMixer_Grid)
-			{
-				auto * mixer_grid = static_cast<AudioMixer_Grid*>(mixer);
-				
-				mixer_grid->panner.updatePanning();
-			}
+			source->position[0] = cosf(framework.time / 1.23f * speed) * 2.1f;
+			source->position[1] = sinf(framework.time / 1.34f * speed) * 2.1f;
+			source->position[2] = sinf(framework.time / 1.45f * speed) * 4.2f;
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -994,7 +1034,7 @@ int main(int argc, char * argv[])
 			
 			projectScreen2d();
 			
-			//audioGraphMgr.drawEditor(800, 600);
+			audioGraphMgr.drawEditor(800, 600);
 			
 			guiContext.draw();
 		}
@@ -1022,7 +1062,7 @@ int main(int argc, char * argv[])
 		mixer = nullptr;
 	}
 	
-	audioGraphMgr.free(instance, false);
+	soundSystem.shut();
 	
 	audioGraphMgr.shut();
 	audioVoiceMgr.shut();
@@ -1033,6 +1073,8 @@ int main(int argc, char * argv[])
 	shutUi();
 	
 	Pa_Terminate();
+	
+	Font("calibri.ttf").saveCache();
 	
 	framework.shutdown();
 	
