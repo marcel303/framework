@@ -320,14 +320,14 @@ AudioVoiceManagerBasic::AudioVoiceManagerBasic()
 	: AudioVoiceManager(kType_Basic)
 	, audioMutex()
 	, numDynamicChannels(0)
-	, voices()
+	, firstVoice(nullptr)
 	, outputStereo(false)
 {
 }
 
 void AudioVoiceManagerBasic::init(SDL_mutex * _audioMutex, const int _numChannels, const int _numDynamicChannels)
 {
-	Assert(voices.empty());
+	Assert(firstVoice == nullptr);
 	
 	Assert(numDynamicChannels == 0);
 	numDynamicChannels = _numDynamicChannels;
@@ -337,24 +337,29 @@ void AudioVoiceManagerBasic::init(SDL_mutex * _audioMutex, const int _numChannel
 
 void AudioVoiceManagerBasic::shut()
 {
-	Assert(voices.empty());
+	Assert(firstVoice == nullptr);
 	
 	audioMutex.mutex = nullptr;
 	
-	voices.clear();
+	while (firstVoice != nullptr)
+		freeVoice(firstVoice);
 	
 	numDynamicChannels = 0;
 }
 
-bool AudioVoiceManagerBasic::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
+bool AudioVoiceManagerBasic::allocVoice(AudioVoice *& out_voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
 {
-	Assert(voice == nullptr);
+	Assert(out_voice == nullptr);
 	Assert(source != nullptr);
 	
 	audioMutex.lock();
 	{
-		voices.push_back(AudioVoice());
-		voice = &voices.back();
+		AudioVoice * voice = new AudioVoice();
+		voice->next_in_list = firstVoice;
+		firstVoice = voice;
+		
+		out_voice = voice;
+		
 		voice->source = source;
 		
 		if (channelIndex < 0)
@@ -396,22 +401,31 @@ void AudioVoiceManagerBasic::freeVoice(AudioVoice *& voice)
 	
 	audioMutex.lock();
 	{
-		auto i = voices.end();
-		for (auto j = voices.begin(); j != voices.end(); ++j)
-			if (&(*j) == voice)
-				i = j;
+		AudioVoice ** voice_itr = &firstVoice;
 		
-		Assert(i != voices.end());
-		if (i != voices.end())
+		for (;;)
 		{
-			voices.erase(i);
+			AudioVoice *& voice_ptr = *voice_itr;
 			
-			updateChannelIndices();
+			Assert(voice_ptr != nullptr);
+			if (voice_ptr == nullptr)
+				break;
+			
+			if (voice_ptr == voice)
+			{
+				voice_ptr = voice_ptr->next_in_list;
+				break;
+			}
+			
+			voice_itr = &voice_ptr->next_in_list;
 		}
+		
+		delete voice;
+		voice = nullptr;
+		
+		updateChannelIndices();
 	}
 	audioMutex.unlock();
-	
-	voice = nullptr;
 }
 
 void AudioVoiceManagerBasic::updateChannelIndices()
@@ -423,17 +437,17 @@ void AudioVoiceManagerBasic::updateChannelIndices()
 #endif
 	memset(used, 0, sizeof(used));
 	
-	for (auto & voice : voices)
+	for (auto * voice = firstVoice; voice != nullptr; voice = voice->next_in_list)
 	{
-		if (voice.channelIndex != -1 && voice.channelIndex < numDynamicChannels)
+		if (voice->channelIndex != -1 && voice->channelIndex < numDynamicChannels)
 		{
-			used[voice.channelIndex] = true;
+			used[voice->channelIndex] = true;
 		}
 	}
 	
-	for (auto & voice : voices)
+	for (auto * voice = firstVoice; voice != nullptr; voice = voice->next_in_list)
 	{
-		if (voice.channelIndex == -1)
+		if (voice->channelIndex == -1)
 		{
 			for (int i = 0; i < numDynamicChannels; ++i)
 			{
@@ -441,7 +455,7 @@ void AudioVoiceManagerBasic::updateChannelIndices()
 				{
 					used[i] = true;
 					
-					voice.channelIndex = i;
+					voice->channelIndex = i;
 					
 					break;
 				}
@@ -456,8 +470,8 @@ int AudioVoiceManagerBasic::numDynamicChannelsUsed() const
 	
 	audioMutex.lock();
 	{
-		for (auto & voice : voices)
-			if (voice.channelIndex != -1 && voice.channelIndex < numDynamicChannels)
+		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next_in_list)
+			if (voice->channelIndex != -1 && voice->channelIndex < numDynamicChannels)
 				result++;
 	}
 	audioMutex.unlock();
@@ -472,15 +486,19 @@ void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int
 	
 	audioMutex.lock();
 	{
-		const int numVoices = voices.size();
+		int numVoices = 0;
+		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next_in_list)
+			numVoices++;
+		
 	#ifdef _MSC_VER
 		AudioVoice ** voiceArray = (AudioVoice**)alloca(numVoices * sizeof(AudioVoice*));
 	#else
 		AudioVoice * voiceArray[numVoices + 1];
 	#endif
+	
 		int voiceIndex = 0;
-		for (auto & voice : voices)
-			voiceArray[voiceIndex++] = &voice;
+		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next_in_list)
+			voiceArray[voiceIndex++] = voice;
 		
 		const bool interleaveOptimize = (outputMode == kOutputMode_Stereo && numVoices >= 8);
 		

@@ -233,12 +233,15 @@ struct AudioVoice4D : AudioVoice
 
 struct AudioVoiceManager4D : AudioVoiceManager
 {
+private:
 	AudioMutex_Shared audioMutex;
 	
-	int numDynamicChannels;
-	std::list<AudioVoice4D> voices;
-	bool outputStereo;
+	AudioVoice * firstVoice;
 	int colorIndex;
+	
+public:
+	int numDynamicChannels;
+	bool outputStereo;
 	
 	struct Spatialisation
 	{
@@ -271,7 +274,7 @@ struct AudioVoiceManager4D : AudioVoiceManager
 	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
 	virtual void freeVoice(AudioVoice *& voice) override;
 	
-	void updateChannelIndices();
+	void updateChannelIndices(); // todo : make this method private
 	int numDynamicChannelsUsed() const;
 	
 	virtual void generateAudio(float * __restrict samples, const int numSamples, const int numChannels) override;

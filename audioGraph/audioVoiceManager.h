@@ -30,7 +30,6 @@
 #include "audioThreading.h"
 #include "audioTypes.h"
 #include "limiter.h"
-#include <list>
 
 struct AudioSource;
 
@@ -95,6 +94,8 @@ struct AudioVoice
 	
 	Limiter limiter;
 	
+	AudioVoice * next_in_list;
+	
 	AudioVoice(const Type _type = kType_Basic)
 		: channelIndex(-1)
 		, type(_type)
@@ -103,6 +104,7 @@ struct AudioVoice
 		, gain(1.f)
 		, rampInfo()
 		, limiter()
+		, next_in_list(nullptr)
 	{
 	}
 	
@@ -126,7 +128,7 @@ struct AudioVoiceManager
 		kOutputMode_MultiChannel
 	};
 	
-	Type type;
+	const Type type;
 	
 	AudioVoiceManager(const Type _type);
     virtual ~AudioVoiceManager() { }
@@ -150,10 +152,13 @@ struct AudioVoiceManager
 
 struct AudioVoiceManagerBasic : AudioVoiceManager
 {
+private:
 	AudioMutex_Shared audioMutex;
 	
 	int numDynamicChannels;
-	std::list<AudioVoice> voices;
+	AudioVoice * firstVoice;
+	
+public:
 	bool outputStereo;
 	
 	AudioVoiceManagerBasic();
@@ -164,7 +169,7 @@ struct AudioVoiceManagerBasic : AudioVoiceManager
 	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
 	virtual void freeVoice(AudioVoice *& voice) override;
 	
-	void updateChannelIndices();
+	void updateChannelIndices(); // todo : make this method private
 	int numDynamicChannelsUsed() const;
 	
 	virtual void generateAudio(float * __restrict samples, const int numSamples, const int numChannels) override;
