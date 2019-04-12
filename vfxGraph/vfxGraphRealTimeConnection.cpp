@@ -358,8 +358,6 @@ void RealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNodeId 
 		}
 	}
 	
-	// todo : we should reconnect with the node socket's editor value when set here
-	
 	// if this is a link hooked up to a trigger, remove the TriggerTarget from dstNode
 	
 	auto input = srcNode->tryGetInput(srcSocketIndex);
