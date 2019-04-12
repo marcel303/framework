@@ -289,7 +289,7 @@ bool PortAudioObject::shut()
 	
 	if (stream != nullptr)
 	{
-		if (Pa_IsStreamActive(stream) != 0)
+		if (Pa_IsStreamActive(stream) == 1)
 		{
 			if ((err = Pa_StopStream(stream)) != paNoError)
 			{

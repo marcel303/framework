@@ -116,7 +116,7 @@ bool AudioOutput_PortAudio::shutPortAudio()
 	
 	if (m_paStream != nullptr)
 	{
-		if (Pa_IsStreamActive(m_paStream) != 0)
+		if (Pa_IsStreamActive(m_paStream) == 1)
 		{
 			if ((err = Pa_StopStream(m_paStream)) != paNoError)
 			{
