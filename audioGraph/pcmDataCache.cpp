@@ -27,83 +27,111 @@
 
 #include "framework.h" // listFiles
 #include "Log.h"
-#include "Path.h"
+#include "Path.h" // GetExtension
 #include "pcmDataCache.h"
 #include "soundmix.h" // PcmData
-#include "StringEx.h"
+#include "StringEx.h" // ToLower
 #include "Timer.h"
 #include <map>
 
-static std::map<std::string, PcmData*> s_pcmDataCache;
-
-void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths, const bool createCaches)
+struct PcmDataCache
 {
-	LOG_DBG("filling PCM data cache with path: %s", path);
-	
-	const auto t1 = g_TimerRT.TimeUS_get();
-	
-	const auto filenames = listFiles(path, recurse);
-	
-	for (auto & filename : filenames)
+	std::map<std::string, PcmData*> elems;
+
+	void addPath(const char * path, const bool recurse, const bool stripPaths, const bool createCaches)
 	{
-		const auto extension = Path::GetExtension(filename, true);
+		LOG_DBG("filling PCM data cache with path: %s", path);
 		
-		if (extension == "cache")
-			continue;
+		const auto t1 = g_TimerRT.TimeUS_get();
 		
-		if (extension != "wav" && extension != "ogg")
-			continue;
+		const auto filenames = listFiles(path, recurse);
 		
+		for (auto & filename : filenames)
+		{
+			const auto extension = Path::GetExtension(filename, true);
+			
+			if (extension == "cache")
+				continue;
+			
+			if (extension != "wav" && extension != "ogg")
+				continue;
+			
+			const std::string filenameLower = String::ToLower(filename);
+			
+			PcmData * pcmData = new PcmData();
+			
+			if (pcmData->load(filenameLower.c_str(), 0, createCaches) == false)
+			{
+				delete pcmData;
+				pcmData = nullptr;
+			}
+			else
+			{
+				const std::string name = stripPaths ? Path::GetFileName(filenameLower) : filenameLower;
+				
+				// check if this is a duplicate element. this could happen if different folders contain
+				// a file with the same name, due to stripping paths
+				
+				auto & elem = elems[name];
+				
+				if (elem != nullptr)
+				{
+					delete pcmData;
+					pcmData = nullptr;
+				}
+				else
+				{
+					elem = pcmData;
+				}
+			}
+		}
+		
+		const auto t2 = g_TimerRT.TimeUS_get();
+		
+		printf("loading PCM data from %s took %.2fms\n", path, (t2 - t1) / 1000.0);
+	}
+
+	void clear()
+	{
+		for (auto & i : elems)
+		{
+			delete i.second;
+			i.second = nullptr;
+		}
+		
+		elems.clear();
+	}
+
+	const PcmData * get(const char * filename) const
+	{
 		const std::string filenameLower = String::ToLower(filename);
 		
-		PcmData * pcmData = new PcmData();
+		auto i = elems.find(filenameLower);
 		
-		if (pcmData->load(filenameLower.c_str(), 0, createCaches) == false)
+		if (i == elems.end())
 		{
-			delete pcmData;
-			pcmData = nullptr;
+			return nullptr;
 		}
 		else
 		{
-			const std::string name = stripPaths ? Path::GetFileName(filenameLower) : filenameLower;
-			
-			auto & elem = s_pcmDataCache[name];
-			
-			delete elem;
-			elem = nullptr;
-			
-			elem = pcmData;
+			return i->second;
 		}
 	}
-	
-	const auto t2 = g_TimerRT.TimeUS_get();
-	
-	printf("loading PCM data from %s took %.2fms\n", path, (t2 - t1) / 1000.0);
+};
+
+static PcmDataCache s_pcmDataCache;
+
+void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths, const bool createCaches)
+{
+	s_pcmDataCache.addPath(path, recurse, stripPaths, createCaches);
 }
 
 void clearPcmDataCache()
 {
-	for (auto & i : s_pcmDataCache)
-	{
-		delete i.second;
-		i.second = nullptr;
-	}
-	
 	s_pcmDataCache.clear();
 }
 
 const PcmData * getPcmData(const char * filename)
 {
-	const std::string filenameLower = String::ToLower(filename);
-	
-	auto i = s_pcmDataCache.find(filenameLower);
-	
-	if (i == s_pcmDataCache.end())
-	{
-		return nullptr;
-	}
-	else
-	{
-		return i->second;
-	}
+	return s_pcmDataCache.get(filename);
 }
