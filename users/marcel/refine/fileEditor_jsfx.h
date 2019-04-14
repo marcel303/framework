@@ -110,6 +110,7 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 		const void * inputBuffer,
 		const int numInputChannels,
 		void * outputBuffer,
+		const int numOutputChannels,
 		const int framesPerBuffer) override;
 	
 	virtual void doButtonBar() override;

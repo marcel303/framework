@@ -44,10 +44,11 @@ struct VfxNodeAudioGraph : VfxNodeBase
 		{
 		}
 		
-		virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
+		virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex = -1) override;
 		virtual void freeVoice(AudioVoice *& voice) override;
+		virtual int calculateNumVoices() const override;
 		
-		virtual void generateAudio(float * __restrict samples, const int numSamples) override { }
+		virtual void generateAudio(float * __restrict samples, const int numSamples, const int numChannels) override { }
 	};
 	
 	enum Input

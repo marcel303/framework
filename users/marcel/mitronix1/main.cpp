@@ -896,7 +896,7 @@ int main(int argc, char * argv[])
 		SDL_mutex * audioMutex = SDL_CreateMutex();
 		
 		AudioVoiceManagerBasic * audioVoiceMgr = new AudioVoiceManagerBasic();
-		audioVoiceMgr->init(audioMutex, 16, 16);
+		audioVoiceMgr->init(audioMutex, 16);
 		audioVoiceMgr->outputStereo = true;
 		
 		AudioGraphManager_RTE * audioGraphMgr = new AudioGraphManager_RTE(GFX_SX, GFX_SY);

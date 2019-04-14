@@ -20,7 +20,7 @@ int main(int argc, char * argv[])
 	SDL_mutex * audioMutex = SDL_CreateMutex();
 	
 	AudioVoiceManagerBasic voiceMgr;
-	voiceMgr.init(audioMutex, 256, 256);
+	voiceMgr.init(audioMutex, 256);
 	voiceMgr.outputStereo = true;
 	
 	AudioGraphManager_RTE audioGraphMgr(800, 600);

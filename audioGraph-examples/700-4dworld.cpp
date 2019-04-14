@@ -2237,7 +2237,7 @@ int main(int argc, char * argv[])
 				}
 			}
 			
-			const std::string voiceCount = String::FormatC("voices: %d / %d", voiceMgr.calculateNumDynamicChannelsUsed(), voiceMgr.numDynamicChannels);
+			const std::string voiceCount = String::FormatC("voices: %d / %d", voiceMgr.calculateNumDynamicChannelsUsed(), voiceMgr.getNumDynamicChannels());
 			doLabel(voiceCount.c_str(), 0.f);
 		}
 		popMenu();

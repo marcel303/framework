@@ -55,6 +55,11 @@ void VoiceMgr_VoiceGroup::freeVoice(AudioVoice *& voice)
 	g_vfxAudioVoiceMgr->freeVoice(voice);
 }
 
+int VoiceMgr_VoiceGroup::calculateNumVoices() const
+{
+	return voices.size();
+}
+
 VFX_NODE_TYPE(VfxNodeAudioGraphPoly)
 {
 	typeName = "audioGraph.poly";

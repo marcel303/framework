@@ -254,7 +254,7 @@ struct SatellitesApp
 		audioMutex = SDL_CreateMutex();
 		
 		voiceMgr = new AudioVoiceManagerBasic();
-		voiceMgr->init(audioMutex, CHANNEL_COUNT, CHANNEL_COUNT);
+		voiceMgr->init(audioMutex, CHANNEL_COUNT);
 		voiceMgr->outputStereo = outputStereo;
 		
 		audioGraphMgr = new AudioGraphManager_RTE(GFX_SX, GFX_SY);

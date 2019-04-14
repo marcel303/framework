@@ -9,7 +9,7 @@ FileEditor_AudioGraph::FileEditor_AudioGraph(const char * path)
 {
 	// init audio graph
 	audioMutex.init();
-	audioVoiceMgr.init(audioMutex.mutex, 64, 64);
+	audioVoiceMgr.init(audioMutex.mutex, 64);
 	audioVoiceMgr.outputStereo = true;
 	audioGraphMgr.init(audioMutex.mutex, &audioVoiceMgr);
 	

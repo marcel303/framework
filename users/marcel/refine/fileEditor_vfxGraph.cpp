@@ -20,7 +20,7 @@ FileEditor_VfxGraph::FileEditor_VfxGraph(const char * path)
 	
 	// init audio graph
 	audioMutex.init();
-	audioVoiceMgr.init(audioMutex.mutex, 64, 64);
+	audioVoiceMgr.init(audioMutex.mutex, 64);
 	audioGraphMgr.init(audioMutex.mutex, &audioVoiceMgr);
 	
 	g_vfxAudioMutex = audioMutex.mutex;

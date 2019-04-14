@@ -743,7 +743,7 @@ int main(int argc, char * argv[])
 	s_audioMutex = audioMutex;
 	
 	AudioVoiceManager4D voiceMgr;
-	voiceMgr.init(audioMutex, CHANNEL_COUNT, CHANNEL_COUNT);
+	voiceMgr.init(audioMutex, CHANNEL_COUNT);
 	voiceMgr.outputStereo = outputStereo;
 	s_voiceMgr = &voiceMgr;
 	

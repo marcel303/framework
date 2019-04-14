@@ -82,6 +82,11 @@ void VfxNodeAudioGraph::VoiceMgr::freeVoice(AudioVoice *& voice)
 	g_vfxAudioVoiceMgr->freeVoice(voice);
 }
 
+int VfxNodeAudioGraph::VoiceMgr::calculateNumVoices() const
+{
+	return voices.size();
+}
+
 VfxNodeAudioGraph::VfxNodeAudioGraph()
 	: VfxNodeBase()
 	, voiceMgr()

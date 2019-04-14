@@ -42,6 +42,7 @@ struct MyAudioHandler : PortAudioHandler
 		const void * inputBuffer,
 		const int numInputChannels,
 		void * outputBuffer,
+		const int numOutputChannels,
 		const int framesPerBuffer) override
 	{
 		const double dt = AUDIO_BUFFER_SIZE / 44100.0;
