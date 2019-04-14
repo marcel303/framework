@@ -7,6 +7,7 @@
 #include "Noise.h"
 #include "objects/paobject.h"
 #include "oscEndpointMgr.h"
+#include "pcmDataCache.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 #include "vfxNodeBase.h"

@@ -37,6 +37,7 @@
 #include "graphEdit.h"
 #include "MemAlloc.h"
 #include "Path.h"
+#include "pcmDataCache.h"
 #include "StringEx.h"
 #include "ui.h"
 #include "Vec3.h"

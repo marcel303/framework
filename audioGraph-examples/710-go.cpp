@@ -30,6 +30,7 @@
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #include "Debugging.h"
+#include "pcmDataCache.h"
 #include <SDL2/SDL.h>
 
 #if defined(MACOS) || defined(LINUX)

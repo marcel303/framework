@@ -37,6 +37,7 @@
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #include "oscEndpointMgr.h"
+#include "pcmDataCache.h"
 #include <algorithm>
 #include <cmath>
 

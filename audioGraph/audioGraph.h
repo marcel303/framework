@@ -266,10 +266,6 @@ struct AudioGraphGlobals
 		float value4 = 0.f;
 	};
 	
-	std::vector<AudioControlValue> controlValues;
-	
-	std::map<std::string, Memf> memf;
-	
 	SDL_mutex * audioMutex;
 	
 	AudioVoiceManager * voiceMgr;
@@ -277,6 +273,10 @@ struct AudioGraphGlobals
 	AudioGraphManager * audioGraphMgr;
 	
 	AudioThreadId mainThreadId;
+	
+	std::vector<AudioControlValue> controlValues;
+	
+	std::map<std::string, Memf> memf;
 	
 	AudioGraphGlobals();
 	
@@ -304,38 +304,6 @@ void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefiniti
 AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & typeName, AudioGraph * audioGraph);
 
 AudioGraph * constructAudioGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals, const bool createdPaused);
-
-//
-
-// todo : replace this with a decent PCM data cache object and make it a global
-// todo : move PCM data cache to somewhere else
-
-struct PcmData;
-
-void fillPcmDataCache(const char * path, const bool recurse, const bool stripPaths, const bool createCaches);
-void clearPcmDataCache();
-const PcmData * getPcmData(const char * filename);
-
-//
-
-// todo : replace this with a decent sample set cache object and make it a global
-// todo : move binaural sample set cache to somewhere else
-
-namespace binaural
-{
-	struct HRIRSampleSet;
-}
-
-enum HRIRSampleSetType
-{
-	kHRIRSampleSetType_Cipic,
-	kHRIRSampleSetType_Ircam,
-	kHRIRSampleSetType_Mit
-};
-
-void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSampleSetType type);
-void clearHrirSampleSetCache();
-const binaural::HRIRSampleSet * getHrirSampleSet(const char * name);
 
 //
 
