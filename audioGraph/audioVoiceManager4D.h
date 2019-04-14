@@ -33,8 +33,16 @@
 
 struct Osc4DStream;
 
+/**
+ * 4DSOUND engine version 1.6 audio voice.
+ * The 4D audio voice contains various spatial parameters which can be set to control how the 4DSOUND engine
+ * will process audio for the voice and pan it.
+ */
 struct AudioVoice4D : AudioVoice
 {
+	/**
+	 * Spatial compression effect.
+	 */
 	struct SpatialCompressor
 	{
 		bool enable = false;
@@ -58,6 +66,9 @@ struct AudioVoice4D : AudioVoice
 		}
 	};
 	
+	/**
+	 * Doppler shift DSP effect.
+	 */
 	struct Doppler
 	{
 		bool enable = true;
@@ -73,6 +84,9 @@ struct AudioVoice4D : AudioVoice
 		}
 	};
 	
+	/**
+	 * Distance intensity DSP effect.
+	 */
 	struct DistanceIntensity
 	{
 		bool enable = false;
@@ -88,6 +102,9 @@ struct AudioVoice4D : AudioVoice
 		}
 	};
 	
+	/**
+	 * Distance damping DSP effect.
+	 */
 	struct DistanceDamping
 	{
 		bool enable = false;
@@ -103,6 +120,9 @@ struct AudioVoice4D : AudioVoice
 		}
 	};
 	
+	/**
+	 * Distance diffusion DSP effect.
+	 */
 	struct DistanceDiffusion
 	{
 		bool enable = false;
@@ -118,6 +138,9 @@ struct AudioVoice4D : AudioVoice
 		}
 	};
 	
+	/**
+	 * Spatial delay DSP effect.
+	 */
 	struct SpatialDelay
 	{
 		bool enable = false;
@@ -143,20 +166,23 @@ struct AudioVoice4D : AudioVoice
 		}
 	};
 	
+	/**
+	 * All spatial 'sound object' parameters.
+	 */
 	struct Spatialisation
 	{
-		Vec3 color;
-		std::string name;
-		int sendIndex;
+		Vec3 color; ///< Color of the sound object inside the monitor.
+		std::string name; ///< Name of the sound object inside the monitor.
+		int sendIndex; ///< Channel index of the 'return' channel.
 		
-		Vec3 pos;
-		Vec3 size;
-		Vec3 rot;
+		Vec3 pos; ///< Position.
+		Vec3 size; ///< Dimensions.
+		Vec3 rot; ///< Euler rotation.
 		Osc4D::OrientationMode orientationMode;
 		Vec3 orientationCenter;
 		
 		SpatialCompressor spatialCompressor;
-		float articulation;
+		float articulation; ///< Grid panner specific parameter to control how smooth or not a source is panned across speakers.
 		Doppler doppler;
 		DistanceIntensity distanceIntensity;
 		DistanceDamping distanceDampening;
@@ -164,7 +190,7 @@ struct AudioVoice4D : AudioVoice
 		SpatialDelay spatialDelay;
 		Osc4D::SubBoost subBoost;
 		
-		bool globalEnable;
+		bool globalEnable; ///< Global transformations are enabled for this voice when true.
 		
 		Spatialisation()
 			: color(1.f, 0.f, 0.f)
@@ -188,6 +214,9 @@ struct AudioVoice4D : AudioVoice
 		}
 	};
 	
+	/**
+	 * Information regarding projecting sound from the 'return' channel back into the engine.
+	 */
 	struct ReturnSideInfo
 	{
 		bool enabled = false;
@@ -195,6 +224,9 @@ struct AudioVoice4D : AudioVoice
 		float scatter = 0.f;
 	};
 	
+	/**
+	 * Information regarding projecting sound from the 'return' channel back into the engine.
+	 */
 	struct ReturnInfo
 	{
 		int returnIndex;
@@ -216,7 +248,7 @@ struct AudioVoice4D : AudioVoice
 	
 	ReturnInfo returnInfo;
 	
-	bool initOsc;
+	bool initOsc; ///< When set to true, this will trigger a sync of all spatialization parameters across OSC.
 	
 	AudioVoice4D()
 		: AudioVoice(kType_4DSOUND)
@@ -231,6 +263,11 @@ struct AudioVoice4D : AudioVoice
 	}
 };
 
+/**
+ * 4DSOUND engine version 1.6 implementation of AudioVoiceManager.
+ * The 4D voice manager creates and maintains 4DSOUND voices, and sends OSC updates
+ * when spatial parameters for voices and globals are changed.
+ */
 struct AudioVoiceManager4D : AudioVoiceManager
 {
 private:
@@ -244,6 +281,9 @@ private:
 public:
 	bool outputStereo;
 	
+	/**
+	 * Global spatialisation parameters.
+	 */
 	struct Spatialisation
 	{
 		float globalGain;
@@ -288,6 +328,12 @@ public:
 		const bool updateRamping,
 		const OutputMode outputMode,
 		const bool interleaved);
+	
+	/**
+	 * Generates OSC messages for voices and global parameters that changed, or for all parameters when forceSync is set to true.
+	 * @param stream The stream to which to output OSC messages.
+	 * @param forceSync When true, OSC messages will be sent for all spatialization parameters, not just the ones that changed. This can be helpful when the spatialization engine is started after the app, or for debugging purposes. Note it's generally not recommended to always set this to true, as it creates a lot of OSC traffic.
+	 */
 	void generateOsc(Osc4DStream & stream, const bool forceSync);
 	
 private:
