@@ -128,10 +128,6 @@ namespace SpeakerPanning
 			remainder /= gridDescription.size[2];
 			
 			Assert(remainder == 0);
-			if (remainder != 0)
-			{
-				printf("???\n");
-			}
 			
 			return calculateSpeakerPosition(x, y, z);
 		}
