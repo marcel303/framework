@@ -30,7 +30,7 @@
 #include "soundmix.h" // audio buffer routines
 #include <string.h>
 
-void AudioVoice::applyRamping(RampInfo & rampInfo, float * __restrict samples, const int numSamples, const int durationInSamples)
+static void applyRamping(AudioVoice::RampInfo & rampInfo, float * __restrict samples, const int numSamples, const int durationInSamples)
 {
 	rampInfo.hasRamped = false;
 	
@@ -107,6 +107,20 @@ void AudioVoice::applyRamping(RampInfo & rampInfo, float * __restrict samples, c
 		{
 			audioBufferSetZero(samples, numSamples);
 		}
+	}
+}
+
+void AudioVoice::applyRamping(float * __restrict samples, const int numSamples, const int durationInSamples, const bool updateRamping)
+{
+	if (updateRamping)
+	{
+		::applyRamping(rampInfo, samples, numSamples, durationInSamples);
+	}
+	else
+	{
+		AudioVoice::RampInfo rampInfoCopy = rampInfo;
+		
+		::applyRamping(rampInfoCopy, samples, numSamples, durationInSamples);
 	}
 }
 
@@ -191,14 +205,7 @@ void AudioVoiceManager::generateAudio(
 			
 			// apply volume ramping
 			
-			if (updateRamping)
-				voice.applyRamping(voice.rampInfo, voiceSamples, numSamples, SAMPLE_RATE * voice.rampInfo.rampTime);
-			else
-			{
-				AudioVoice::RampInfo rampInfo = voice.rampInfo;
-				
-				voice.applyRamping(rampInfo, voiceSamples, numSamples, SAMPLE_RATE * voice.rampInfo.rampTime);
-			}
+			voice.applyRamping(voiceSamples, numSamples, SAMPLE_RATE * voice.rampInfo.rampTime, updateRamping);
 			
 			if (voice.channelIndex != -1)
 			{
@@ -325,7 +332,7 @@ AudioVoiceManagerBasic::AudioVoiceManagerBasic()
 {
 }
 
-void AudioVoiceManagerBasic::init(SDL_mutex * _audioMutex, const int _numChannels, const int _numDynamicChannels)
+void AudioVoiceManagerBasic::init(SDL_mutex * _audioMutex, const int _numDynamicChannels)
 {
 	Assert(firstVoice == nullptr);
 	
@@ -355,7 +362,7 @@ bool AudioVoiceManagerBasic::allocVoice(AudioVoice *& out_voice, AudioSource * s
 	audioMutex.lock();
 	{
 		AudioVoice * voice = new AudioVoice();
-		voice->next_in_list = firstVoice;
+		voice->next = firstVoice;
 		firstVoice = voice;
 		
 		out_voice = voice;
@@ -364,7 +371,7 @@ bool AudioVoiceManagerBasic::allocVoice(AudioVoice *& out_voice, AudioSource * s
 		
 		if (channelIndex < 0)
 		{
-			updateChannelIndices();
+			updateDynamicChannelIndices();
 		}
 		else
 		{
@@ -413,70 +420,33 @@ void AudioVoiceManagerBasic::freeVoice(AudioVoice *& voice)
 			
 			if (voice_ptr == voice)
 			{
-				voice_ptr = voice_ptr->next_in_list;
+				voice_ptr = voice_ptr->next;
 				break;
 			}
 			
-			voice_itr = &voice_ptr->next_in_list;
+			voice_itr = &voice_ptr->next;
 		}
 		
 		delete voice;
 		voice = nullptr;
 		
-		updateChannelIndices();
+		updateDynamicChannelIndices();
 	}
 	audioMutex.unlock();
 }
 
-void AudioVoiceManagerBasic::updateChannelIndices()
+int AudioVoiceManagerBasic::calculateNumVoices() const
 {
-#ifdef WIN32
-	bool used[1024]; // fixme : use a general fix for variable sized arrays
-#else
-	bool used[numDynamicChannels];
-#endif
-	memset(used, 0, sizeof(used));
-	
-	for (auto * voice = firstVoice; voice != nullptr; voice = voice->next_in_list)
-	{
-		if (voice->channelIndex != -1 && voice->channelIndex < numDynamicChannels)
-		{
-			used[voice->channelIndex] = true;
-		}
-	}
-	
-	for (auto * voice = firstVoice; voice != nullptr; voice = voice->next_in_list)
-	{
-		if (voice->channelIndex == -1)
-		{
-			for (int i = 0; i < numDynamicChannels; ++i)
-			{
-				if (used[i] == false)
-				{
-					used[i] = true;
-					
-					voice->channelIndex = i;
-					
-					break;
-				}
-			}
-		}
-	}
-}
-
-int AudioVoiceManagerBasic::numDynamicChannelsUsed() const
-{
-	int result = 0;
+	int numVoices = 0;
 	
 	audioMutex.lock();
 	{
-		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next_in_list)
-			if (voice->channelIndex != -1 && voice->channelIndex < numDynamicChannels)
-				result++;
+		for (AudioVoice * voice = firstVoice; voice != nullptr; voice = voice->next)
+			numVoices++;
 	}
 	audioMutex.unlock();
 	
-	return result;
+	return numVoices;
 }
 
 void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int numSamples, const int numChannels)
@@ -487,7 +457,7 @@ void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int
 	audioMutex.lock();
 	{
 		int numVoices = 0;
-		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next_in_list)
+		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
 			numVoices++;
 		
 	#ifdef _MSC_VER
@@ -497,7 +467,7 @@ void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int
 	#endif
 	
 		int voiceIndex = 0;
-		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next_in_list)
+		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
 			voiceArray[voiceIndex++] = voice;
 		
 		const bool interleaveOptimize = (outputMode == kOutputMode_Stereo && numVoices >= 8);
@@ -540,4 +510,60 @@ void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int
 		}
 	}
 	audioMutex.unlock();
+}
+
+int AudioVoiceManagerBasic::calculateNumDynamicChannelsUsed() const
+{
+	int result = 0;
+	
+	audioMutex.lock();
+	{
+		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
+			if (voice->channelIndex != -1 && voice->channelIndex < numDynamicChannels)
+				result++;
+	}
+	audioMutex.unlock();
+	
+	return result;
+}
+
+int AudioVoiceManagerBasic::getNumDynamicChannels() const
+{
+	return numDynamicChannels;
+}
+
+void AudioVoiceManagerBasic::updateDynamicChannelIndices()
+{
+#ifdef WIN32
+	bool used[1024]; // fixme : use a general fix for variable sized arrays
+#else
+	bool used[numDynamicChannels];
+#endif
+	memset(used, 0, sizeof(used));
+	
+	for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
+	{
+		if (voice->channelIndex != -1 && voice->channelIndex < numDynamicChannels)
+		{
+			used[voice->channelIndex] = true;
+		}
+	}
+	
+	for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
+	{
+		if (voice->channelIndex == -1)
+		{
+			for (int i = 0; i < numDynamicChannels; ++i)
+			{
+				if (used[i] == false)
+				{
+					used[i] = true;
+					
+					voice->channelIndex = i;
+					
+					break;
+				}
+			}
+		}
+	}
 }

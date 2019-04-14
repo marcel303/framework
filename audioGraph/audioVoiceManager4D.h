@@ -239,8 +239,9 @@ private:
 	AudioVoice * firstVoice;
 	int colorIndex;
 	
-public:
 	int numDynamicChannels;
+	
+public:
 	bool outputStereo;
 	
 	struct Spatialisation
@@ -268,14 +269,15 @@ public:
 	
 	AudioVoiceManager4D();
 	
-	void init(SDL_mutex * audioMutex, const int numChannels, const int numDynamicChannels);
+	void init(SDL_mutex * audioMutex, const int numDynamicChannels);
 	void shut();
 	
-	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex) override;
+	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex = -1) override;
 	virtual void freeVoice(AudioVoice *& voice) override;
+	virtual int calculateNumVoices() const override;
 	
-	void updateChannelIndices(); // todo : make this method private
-	int numDynamicChannelsUsed() const;
+	int calculateNumDynamicChannelsUsed() const;
+	int getNumDynamicChannels() const;
 	
 	virtual void generateAudio(float * __restrict samples, const int numSamples, const int numChannels) override;
 	
@@ -283,7 +285,11 @@ public:
 		float * __restrict samples, const int numSamples, const int numChannels,
 		const bool doLimiting,
 		const float limiterPeak,
+		const bool updateRamping,
 		const OutputMode outputMode,
 		const bool interleaved);
 	void generateOsc(Osc4DStream & stream, const bool forceSync);
+	
+private:
+	void updateDynamicChannelIndices();
 };
