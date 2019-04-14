@@ -27,6 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioGraph.h"
 #include "audioNodePcm.h"
+#include "pcmDataCache.h"
 
 AUDIO_NODE_TYPE(AudioNodeSourcePcm)
 {
