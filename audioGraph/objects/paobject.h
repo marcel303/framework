@@ -29,12 +29,24 @@
 
 typedef void PaStream;
 
+/**
+ * Callback interface for audio input and output using the portaudio library.
+ */
 struct PortAudioHandler
 {
 	virtual ~PortAudioHandler()
 	{
 	}
 	
+	/**
+	 * Called whenever the audio system requests a new audio buffer to output and/or when the audio system has input data available.
+	 * Note that when both audio is requested and input data is available, portaudio will call this callback only once. The input samples may be fed into some audio effect and the result outputted in a single callback.
+	 * @param inputBuffer Buffer with input samples. The type of the buffer (float[] or int16[]) depends on how the portaudio object is initialized.
+	 * @param numInputChannels The number of channels interleaved in the input buffer.
+	 * @param outputBuffer Buffer with output samples to fill. The type of the buffer (float[] or int16[]) depends on how the portaudio object is initialized.
+	 * @param numOutputChannels The number of channels to interleave in the output buffer.
+	 * @param framesPerBuffer The number of frames contained in the input and output buffers. The total length of the buffers is 'framesPerBuffer x numChannels'.
+	 */
 	virtual void portAudioCallback(
 		const void * inputBuffer,
 		const int numInputChannels,
