@@ -577,7 +577,7 @@ int main(int argc, char * argv[])
 	//
 	
 	AudioVoiceManagerBasic voiceMgr;
-	voiceMgr.init(mutex, kNumChannels, kNumChannels);
+	voiceMgr.init(mutex, kNumChannels);
 	voiceMgr.outputStereo = true;
 	s_voiceMgr = &voiceMgr;
 	

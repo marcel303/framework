@@ -156,7 +156,7 @@ int main(int argc, char * argv[])
 		Assert(mutex != nullptr);
 
 		AudioVoiceManagerBasic voiceMgr;
-		voiceMgr.init(mutex, CHANNEL_COUNT, CHANNEL_COUNT);
+		voiceMgr.init(mutex, CHANNEL_COUNT);
 		voiceMgr.outputStereo = true;
 
 		AudioGraphManager_Basic audioGraphMgr(true);
@@ -272,9 +272,7 @@ int main(int argc, char * argv[])
 					
 					// show CPU usage of the audio thread
 					
-					voiceMgr.audioMutex.lock();
-					const int numVoices = voiceMgr.voices.size();
-					voiceMgr.audioMutex.unlock();
+					const int numVoices = voiceMgr.calculateNumVoices();
 					
 					// go a little bit overboard with the polish and show a nice background with rounded corners
 					// and an opacity fade that kicks in when the mouse cursor moves to the top of the window

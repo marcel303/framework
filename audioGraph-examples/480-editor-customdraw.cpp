@@ -273,7 +273,7 @@ int main(int argc, char * argv[])
 		Assert(mutex != nullptr);
 
 		AudioVoiceManagerBasic voiceMgr;
-		voiceMgr.init(mutex, CHANNEL_COUNT, CHANNEL_COUNT);
+		voiceMgr.init(mutex, CHANNEL_COUNT);
 		voiceMgr.outputStereo = true;
 
 		AudioGraphManager_RTE audioGraphMgr(GFX_SX, GFX_SY);
@@ -354,7 +354,7 @@ int main(int argc, char * argv[])
 					projectScreen2d();
 					
 					float samples[AUDIO_UPDATE_SIZE * 2];
-					voiceMgr.generateAudio(samples, AUDIO_UPDATE_SIZE);
+					voiceMgr.generateAudio(samples, AUDIO_UPDATE_SIZE, 2);
 					float magnitudeSq = 0.f;
 					for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 						magnitudeSq += samples[i] * samples[i];

@@ -1913,10 +1913,8 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	const int kNumChannels = CHANNEL_COUNT;
-	
 	AudioVoiceManager4D voiceMgr;
-	voiceMgr.init(mutex, CHANNEL_COUNT, DYNAMIC_CHANNEL_COUNT);
+	voiceMgr.init(mutex, DYNAMIC_CHANNEL_COUNT);
 	voiceMgr.outputStereo = STEREO_OUTPUT;
 	s_voiceMgr = &voiceMgr;
 	
@@ -1954,7 +1952,7 @@ int main(int argc, char * argv[])
 	
 	PortAudioObject pa;
 	
-	pa.init(SAMPLE_RATE, STEREO_OUTPUT ? 2 : kNumChannels, STEREO_OUTPUT ? 2 : kNumChannels, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex);
+	pa.init(SAMPLE_RATE, STEREO_OUTPUT ? 2 : CHANNEL_COUNT, STEREO_OUTPUT ? 2 : CHANNEL_COUNT, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex);
 	
 	//
 	
@@ -2239,7 +2237,7 @@ int main(int argc, char * argv[])
 				}
 			}
 			
-			const std::string voiceCount = String::FormatC("voices: %d / %d", voiceMgr.numDynamicChannelsUsed(), voiceMgr.numDynamicChannels);
+			const std::string voiceCount = String::FormatC("voices: %d / %d", voiceMgr.calculateNumDynamicChannelsUsed(), voiceMgr.numDynamicChannels);
 			doLabel(voiceCount.c_str(), 0.f);
 		}
 		popMenu();
