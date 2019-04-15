@@ -19,7 +19,7 @@ cd %~dp0 || exit /b
 
 rem generate cmake files using chibi
 mkdir "chibi-build\cmake-files-for-build"
-%chibi_bin% . chibi-build/cmake-files-for-build || cd %~dp0 && exit /b
+%chibi_bin% -g . chibi-build/cmake-files-for-build || cd %~dp0 && exit /b
 cd %~dp0 || exit /b
 
 rem build all of the libraries and example and test app binaries. this will take a while

@@ -19,7 +19,7 @@ cd %~dp0 || exit /b
 
 rem generate cmake files using chibi
 mkdir "chibi-build\cmake-files"
-%chibi_bin% . chibi-build/cmake-files || cd %~dp0 && exit /b
+%chibi_bin% -g . chibi-build/cmake-files || cd %~dp0 && exit /b
 cd %~dp0 || exit /b
 
 rem generate Visual Studio project file

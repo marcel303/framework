@@ -38,7 +38,7 @@ cd "$root"
 
 # generate cmake files using chibi
 mkdir -p chibi-build/cmake-files
-"$chibi_bin" . chibi-build/cmake-files $target_arg
+"$chibi_bin" -g . chibi-build/cmake-files $target_arg
 
 if [ "$os" == "mac" ]; then
 	# generate Xcode project file
