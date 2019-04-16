@@ -1,3 +1,8 @@
+app codingChallenges-050-circlePacking-a
+	depend_library framework
+	add_files 050-circlePacking-a.cpp
+	resource_path data
+
 app codingChallenges-051-astar
 	depend_library framework
 	add_files 051-astar.cpp
