@@ -1,3 +1,8 @@
+app codingChallenges-051-astar
+	depend_library framework
+	add_files 051-astar.cpp
+	resource_path data
+
 app codingChallenges-086-cubeWave
 	depend_library framework
 	depend_library imgui-framework
@@ -20,3 +25,7 @@ app codingChallenges-129-kochFractalSnowflake
 app codingChallenges-u01-extrusion
 	depend_library framework
 	add_files u01-extrusion.cpp
+
+app codingChallenges-u02-portals
+	depend_library framework
+	add_files u02-portals.cpp
