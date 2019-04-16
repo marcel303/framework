@@ -149,6 +149,9 @@ int main(int argc, const char * argv[])
         if (framework.quitRequested)
             break;
 
+		if (mouse.wentDown(BUTTON_LEFT))
+			restart();
+		
         if (reached == false && active_queue.empty() == false)
         {
             auto elem = active_queue.top();
@@ -215,12 +218,12 @@ int main(int argc, const char * argv[])
 			
 			hqBegin(HQ_FILLED_CIRCLES);
 			{
-				setColor(100, 100, 100);
+				setColor(140, 140, 140);
 				
 				for (int x = 0; x < kGridSx; ++x)
 					for (int y = 0; y < kGridSy; ++y)
 						if (grid.cells[x][y].blocked)
-							hqFillCircle(x + .5f, y + .5f, .4f);
+							hqFillCircle(x + .5f, y + .5f, .3f);
 			}
             hqEnd();
 			
@@ -254,7 +257,7 @@ int main(int argc, const char * argv[])
 			
             // draw nodes leading up to the current node
 
-			hqBegin(HQ_FILLED_CIRCLES);
+			hqBegin(HQ_LINES);
 			{
 				setColor(200, 200, 255);
 
@@ -269,7 +272,7 @@ int main(int argc, const char * argv[])
 					
 					auto & node = i->second;
 
-					hqFillCircle(node.coord.x + .5f, node.coord.y + .5f, .45f);
+					hqLine(node.coord.x + .5f, node.coord.y + .5f, .25f, node.parent_coord.x + .5f, node.parent_coord.y + .5f, .25f);
 					
 					coord = node.parent_coord;
 				}
