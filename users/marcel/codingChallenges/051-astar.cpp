@@ -213,7 +213,7 @@ int main(int argc, const char * argv[])
         	restart();
 		}
 
-        framework.beginDraw(255, 255, 255, 0);
+        framework.beginDraw(0, 0, 0, 0);
         {
         	gxScalef(20, 20, 1);
 			
@@ -262,7 +262,7 @@ int main(int argc, const char * argv[])
 
 			hqBegin(HQ_LINES);
 			{
-				setColor(200, 200, 255);
+				setColor(120, 40, 255);
 
 				Coord coord = current_coord;
 
@@ -281,6 +281,19 @@ int main(int argc, const char * argv[])
 				}
 			}
 			hqEnd();
+			
+			if (!active_queue.empty())
+			{
+				auto & top = active_queue.top();
+				
+				const int left_x = destination_coord.x - top.coord.x;
+				const int left_y = destination_coord.y - top.coord.y;
+				const float distance_to_destination = hypotf(left_x, left_y);
+				
+				setLumi(255);
+				setAlphaf(powf(1.f - distance_to_destination / (hypotf(kGridSx, kGridSy) * 1.1f), 3.f));
+				drawRect(0, 0, 800, 600);
+			}
         }
         framework.endDraw();
     }
