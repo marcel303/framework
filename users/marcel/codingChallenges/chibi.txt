@@ -39,3 +39,7 @@ app codingChallenges-u01-extrusion
 app codingChallenges-u02-portals
 	depend_library framework
 	add_files u02-portals.cpp
+
+app codingChallenges-u03-reactionDiffusion
+	depend_library framework
+	add_files u03-reactionDiffusion
