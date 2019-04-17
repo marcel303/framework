@@ -10,6 +10,8 @@ struct Circle
 	float x;
 	float y;
 	float radius;
+	
+	Color color;
 };
 
 int main(int argc, const char * argv[])
@@ -49,14 +51,28 @@ int main(int argc, const char * argv[])
 		if (mouse.wentDown(BUTTON_LEFT))
 			circles.clear();
 		
-		// grow our current circles
+		// grow or shrink our current circles
 		
 		for (auto & circle : circles)
 		{
-			const float new_radius = circle.radius + 10.f * framework.timeStep;
+			// or the circle when possible
 			
+			const float new_radius = circle.radius + 10.f * framework.timeStep;
+		
 			if (isValid(circle.x, circle.y, new_radius, &circle))
 				circle.radius = new_radius;
+			
+			// shrink the circle if the mouse is near it
+			
+			const float dx = circle.x - mouse.x;
+			const float dy = circle.y - mouse.y;
+			
+			const float d = hypotf(dx, dy);
+			
+			if (d <= circle.radius + 40.f)
+			{
+				circle.radius *= powf(.1f, framework.timeStep);
+			}
 		}
 		
 		// add a new circle whenever the timer elapses
@@ -67,16 +83,22 @@ int main(int argc, const char * argv[])
 		{
 			timer += .01f;
 			
-			// add a new circle
-			
-			Circle c;
-			c.x = random<float>(0.f, 800.f);
-			c.y = random<float>(0.f, 600.f);
-			c.radius = 1.f;
-			
-			if (isValid(c.x, c.y, c.radius, nullptr))
+			for (int i = 0; i < 100; ++i) // retry a few times in case isValid returns false for our random location
 			{
-				circles.push_back(c);
+				// add a new circle
+				
+				Circle c;
+				c.x = random<float>(0.f, 800.f);
+				c.y = random<float>(0.f, 600.f);
+				c.radius = 1.f;
+				c.color = Color::fromHSL(powf(1.f / (circles.size() / 10.f + 1), .1f), .3f, .6f);
+				
+				if (isValid(c.x, c.y, c.radius, nullptr))
+				{
+					circles.push_back(c);
+					
+					break;
+				}
 			}
 		}
 		
@@ -88,7 +110,10 @@ int main(int argc, const char * argv[])
 			{
 				for (auto & circle : circles)
 				{
-					hqStrokeCircle(circle.x, circle.y, circle.radius, fminf(1.f + circle.radius / 10.f, 3.f));
+					setColor(circle.color);
+					
+					for (int i = 0; i < 3; ++i)
+						hqStrokeCircle(circle.x, circle.y, circle.radius / (i + 1), fminf(1.f + circle.radius / 10.f, 3.f));
 				}
 			}
 			hqEnd();
