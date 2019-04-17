@@ -6,36 +6,34 @@ include engine/ShaderPS.txt
 
 uniform sampler2D tex;
 
-uniform float u;
-uniform float v;
-
 shader_in vec2 v_texcoord0;
 
-vec2 laplacian2D(in vec2 texcoord, in float u, in float v)
+vec2 laplacian2D(in ivec2 texelCoord)
 {
 	vec2 AB =
-		+0.05 * texture(tex, texcoord + vec2(-u, -v)).xy
-		+0.2  * texture(tex, texcoord + vec2( 0, -v)).xy
-		+0.05 * texture(tex, texcoord + vec2(+u, -v)).xy
- 		+0.2  * texture(tex, texcoord + vec2(-u,  0)).xy
- 		-1.0  * texture(tex, texcoord + vec2( 0,  0)).xy
- 		+0.2  * texture(tex, texcoord + vec2(+u,  0)).xy
-		+0.05 * texture(tex, texcoord + vec2(-u, +v)).xy
-		+0.2  * texture(tex, texcoord + vec2( 0, +v)).xy
-		+0.05 * texture(tex, texcoord + vec2(+u, +v)).xy;
-	
+		+0.05 * texelFetchOffset(tex, texelCoord, 0, ivec2(-1, -1)).xy
+		+0.2  * texelFetchOffset(tex, texelCoord, 0, ivec2( 0, -1)).xy
+		+0.05 * texelFetchOffset(tex, texelCoord, 0, ivec2(+1, -1)).xy
+ 		+0.2  * texelFetchOffset(tex, texelCoord, 0, ivec2(-1,  0)).xy
+ 		-1.0  * texelFetchOffset(tex, texelCoord, 0, ivec2( 0,  0)).xy
+ 		+0.2  * texelFetchOffset(tex, texelCoord, 0, ivec2(+1,  0)).xy
+		+0.05 * texelFetchOffset(tex, texelCoord, 0, ivec2(-1, +1)).xy
+		+0.2  * texelFetchOffset(tex, texelCoord, 0, ivec2( 0, +1)).xy
+		+0.05 * texelFetchOffset(tex, texelCoord, 0, ivec2(+1, +1)).xy;
+
 	return AB;
 }
 
 void main()
 {
-	vec2 texcoord = v_texcoord0;
-
-	vec2 AB = texture(tex, texcoord).xy;
+	ivec2 texelSize = textureSize(tex, 0);
+	ivec2 texelCoord = ivec2(v_texcoord0 * texelSize);
+	
+	vec2 AB = texelFetch(tex, texelCoord, 0).xy;
 	float A = AB.x;
 	float B = AB.y;
 	
-	vec2 laplacian = laplacian2D(texcoord, u, v);
+	vec2 laplacian = laplacian2D(texelCoord);
 
 	float A_1 = A + (0.9  * laplacian.x - A * B * B + 0.0545 * (1 - A));
 	float B_1 = B + (0.18 * laplacian.y + A * B * B - (0.062 + 0.0545) * B);
@@ -99,8 +97,6 @@ int main(int argc, const char * argv[])
 
 			setShader(shader);
 			shader.setTexture("tex", 0, surface.getTexture());
-			shader.setImmediate("u", 1.f / surface.getWidth());
-			shader.setImmediate("v", 1.f / surface.getHeight());
 			surface.postprocess();
 			clearShader();
 		}
