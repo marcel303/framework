@@ -2251,6 +2251,10 @@ bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBu
 			glFormat = GL_R16F;
 		if (format == SURFACE_R32F)
 			glFormat = GL_R32F;
+		if (format == SURFACE_RG16F)
+			glFormat = GL_RG16F;
+		if (format == SURFACE_RG32F)
+			glFormat = GL_RG32F;
 		
 	#if USE_LEGACY_OPENGL
 		GLenum uploadFormat = GL_INVALID_ENUM;
@@ -2512,26 +2516,11 @@ void Surface::postprocess()
 	swapBuffers();
 
 	pushSurface(this);
+	pushDepthTest(false, DEPTH_EQUAL, false); // todo : surface push should set depth state, blend mode (anything affecting how to draw to the surface)
 	{
-		GLint restoreDepthTest;
-		glGetIntegerv(GL_DEPTH_TEST, &restoreDepthTest);
-		checkErrorGL();
-		glDisable(GL_DEPTH_TEST);
-		checkErrorGL();
-		glDepthMask(GL_FALSE);
-		checkErrorGL();
-		
 		drawRect(0.f, 0.f, m_size[0], m_size[1]);
-		
-		glDepthMask(GL_TRUE);
-		checkErrorGL();
-		
-		if (restoreDepthTest)
-		{
-			glEnable(GL_DEPTH_TEST);
-			checkErrorGL();
-		}
 	}
+	popDepthTest();
 	popSurface();	
 }
 
@@ -2540,6 +2529,7 @@ void Surface::postprocess(Shader & shader)
 	swapBuffers();
 	
 	pushSurface(this);
+	pushDepthTest(false, DEPTH_EQUAL, false);
 	{
 		setShader(shader);
 		{
@@ -2547,6 +2537,7 @@ void Surface::postprocess(Shader & shader)
 		}
 		clearShader();
 	}
+	popDepthTest();
 	popSurface();
 }
 
