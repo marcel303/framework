@@ -48,7 +48,10 @@ static void randomizeLeafs(Tree & tree)
 		leaf.reached = false;
 		
 		const float angle = random<float>(0.f, 2.f * float(M_PI));
-		const float distance = random<float>(0.f, 400.f);
+		float distance = random<float>(0.f, 1.f);
+		distance = powf(distance, .4f);
+		distance *= 400.f;
+		
 		leaf.x = cosf(angle) * distance;
 		leaf.y = sinf(angle) * distance;
 	}
