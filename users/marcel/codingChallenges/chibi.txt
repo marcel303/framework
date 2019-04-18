@@ -3,6 +3,11 @@ app codingChallenges-017-spaceColonization
 	add_files 017-spaceColonization.cpp
 	resource_path data
 
+app codingChallenges-033-poissonDiscSampling
+	depend_library framework
+	add_files 033-poissonDiscSampling.cpp
+	resource_path data
+
 app codingChallenges-050-circlePacking-a
 	depend_library framework
 	add_files 050-circlePacking-a.cpp
