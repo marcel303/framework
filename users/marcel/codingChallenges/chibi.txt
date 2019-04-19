@@ -18,6 +18,11 @@ app codingChallenges-051-astar
 	add_files 051-astar.cpp
 	resource_path data
 
+app codingChallenges-064.2-inverseKinematics
+	depend_library framework
+	add_files 064.2-inverseKinematics.cpp
+	resource_path data
+
 app codingChallenges-086-cubeWave
 	depend_library framework
 	depend_library imgui-framework
