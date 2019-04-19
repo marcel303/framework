@@ -5,8 +5,8 @@ Coding Challenge #34: Diffusion-Limited Aggregation
 https://www.youtube.com/watch?v=Cl_Gjj80gPE
 */
 
-const int GFX_SX = 400;
-const int GFX_SY = 400;
+const int GFX_SX = 800;
+const int GFX_SY = 800;
 
 const int kPointRadius = 6;
 const int kWalkerRadius = 6;
@@ -49,11 +49,13 @@ int main(int argc, const char * argv[])
 
 	std::vector<Point> points;
 
-	Point middle;
-	middle.x = GFX_SX/2;
-	middle.y = GFX_SY/2;
-	points.push_back(middle);
-
+	{
+		Point middle;
+		middle.x = GFX_SX/2;
+		middle.y = GFX_SY/2;
+		points.push_back(middle);
+	}
+	
 	std::vector<Walker> walkers;
 
 	bool first_frame = true;
@@ -65,9 +67,55 @@ int main(int argc, const char * argv[])
 		if (framework.quitRequested)
 			break;
 		
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			// reset
+			
+			walkers.clear();
+			points.clear();
+			
+			const int mode = rand() % 3;
+			
+			if (mode == 0)
+			{
+				// add initial point in the middle
+				
+				Point middle;
+				middle.x = GFX_SX/2;
+				middle.y = GFX_SY/2;
+				points.push_back(middle);
+			}
+			else if (mode == 1)
+			{
+				// add initial points down along the bottom
+				
+				for (int i = 0; i < 10; ++i)
+				{
+					Point point;
+					point.x = rand() % GFX_SX;
+					point.y = GFX_SY - 1;
+					points.push_back(point);
+				}
+			}
+			else if (mode == 2)
+			{
+				// add initial points in a circle
+				
+				for (int i = 0; i < 100; ++i)
+				{
+					Point point;
+					const float angle = 2.f * float(M_PI) * i / 100.f;
+					const float distance = 60;
+					point.x = GFX_SX/2 + cosf(angle) * distance;
+					point.y = GFX_SY/2 + sinf(angle) * distance;
+					points.push_back(point);
+				}
+			}
+		}
+		
 		// add a new walker when there are not walkers anymore
 		
-		while (points.size() + walkers.size() < 200)
+		while (points.size() + walkers.size() < 1000)
 		{
 			Walker walker;
 			
@@ -99,7 +147,7 @@ int main(int argc, const char * argv[])
 		
 		const int kCollisionRadiusSquared = kCollisionRadius * kCollisionRadius;
 		
-	for (int i = 0; i < 20; ++i) // loop to speed up the animation
+	for (int i = 0; i < 100; ++i) // loop to speed up the animation
 		for (auto & walker : walkers)
 		{
 			walker.update();
