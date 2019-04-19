@@ -6,6 +6,9 @@ Coding Challenge #33: Poisson-disc Sampling
 https://www.youtube.com/watch?v=flQgnCUxHlw
 */
 
+const int GFX_SX = 800;
+const int GFX_SY = 600;
+
 const float r = 5.f;
 const float w = r / sqrtf(2); // grid cell spacing. 2 = number of dimensions
 
@@ -13,13 +16,13 @@ const int k = 20;
 
 int main(int argc, const char * argv[])
 {
-	if (!framework.init(800, 600))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	// create a grid large enough to store points for the entire screen
 	
-	const int grid_sx = floorf(800 / w);
-	const int grid_sy = floorf(600 / w);
+	const int grid_sx = floorf(GFX_SX / w);
+	const int grid_sy = floorf(GFX_SY / w);
 	const int grid_size = grid_sx * grid_sy;
 	
 	std::vector<Vec2> grid;
@@ -50,8 +53,8 @@ int main(int argc, const char * argv[])
 		
 		for (int i = 0; i < 2; ++i)
 		{
-			const float start_x = random<float>(0.f, 800.f);
-			const float start_y = random<float>(0.f, 600.f);
+			const float start_x = random<float>(0.f, GFX_SX);
+			const float start_y = random<float>(0.f, GFX_SY);
 			const Vec2 start_point = Vec2(start_x, start_y);
 			const int grid_x = floorf(start_point[0] / w);
 			const int grid_y = floorf(start_point[1] / w);
