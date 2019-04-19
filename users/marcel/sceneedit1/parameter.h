@@ -5,6 +5,7 @@
 #include "Vec4.h"
 #include <string>
 #include <typeindex>
+#include <vector>
 
 enum ParameterType
 {
@@ -200,3 +201,36 @@ struct ParameterVec4 : Parameter<Vec4, kParameterType_Vec4>
 };
 
 typedef Parameter<std::string, kParameterType_String> ParameterString;
+
+//
+
+struct ParameterMgr
+{
+private:
+	std::string prefix;
+	
+	std::vector<ParameterBase*> parameters;
+	
+public:
+	void init(const char * prefix);
+	
+	void add(ParameterBase * parameter);
+	
+	ParameterBool * addBool(const char * name, const bool defaultValue);
+	ParameterInt * addInt(const char * name, const int defaultValue);
+	ParameterFloat * addFloat(const char * name, const float defaultValue);
+	ParameterVec2 * addVec2(const char * name, const Vec2 & defaultValue);
+	ParameterVec3 * addVec3(const char * name, const Vec3 & defaultValue);
+	ParameterVec4 * addVec4(const char * name, const Vec4 & defaultValue);
+	ParameterString * addString(const char * name, const char * defaultValue);
+	
+	const std::string & access_prefix()
+	{
+		return prefix;
+	}
+	
+	const std::vector<ParameterBase*> & access_parameters() const
+	{
+		return parameters;
+	}
+};

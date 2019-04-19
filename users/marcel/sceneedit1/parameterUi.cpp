@@ -114,25 +114,25 @@ void doParameterUi(ParameterComponent & component, const char * filter)
 {
 	const bool do_filter = filter != nullptr && filter[0] != 0;
 	
-	ParameterBase ** parameters = (ParameterBase**)alloca(component.parameters.size() * sizeof(ParameterBase*));
+	ParameterBase ** parameters = (ParameterBase**)alloca(component.access_parameters().size() * sizeof(ParameterBase*));
 	
 	int numParameters = 0;
 	
 	if (do_filter)
 	{
-		for (auto * parameter : component.parameters)
+		for (auto * parameter : component.access_parameters())
 			if (strcasestr(parameter->name.c_str(), filter))
 				parameters[numParameters++] = parameter;
 	}
 	else
 	{
-		for (auto * parameter : component.parameters)
+		for (auto * parameter : component.access_parameters())
 			parameters[numParameters++] = parameter;
 	}
 	
 	if (numParameters > 0)
 	{
-		if (ImGui::TreeNodeEx(&component, ImGuiTreeNodeFlags_Framed, "%s", component.prefix.c_str()))
+		if (ImGui::TreeNodeEx(&component, ImGuiTreeNodeFlags_Framed, "%s", component.access_prefix().c_str()))
 		{
 			for (int i = 0; i < numParameters; ++i)
 				doParameterUi(*parameters[i]);
@@ -152,7 +152,7 @@ void doParameterUi(ParameterComponentMgr & componentMgr, const char * filter)
 		
 		bool operator<(const Elem & other) const
 		{
-			const int prefix_cmp = strcmp(comp->prefix.c_str(), other.comp->prefix.c_str());
+			const int prefix_cmp = strcmp(comp->access_prefix().c_str(), other.comp->access_prefix().c_str());
 			if (prefix_cmp != 0)
 				return prefix_cmp < 0;
 			
@@ -168,7 +168,7 @@ void doParameterUi(ParameterComponentMgr & componentMgr, const char * filter)
 	
 	for (auto * comp = componentMgr.head; comp != nullptr; comp = comp->next)
 	{
-		if (!comp->parameters.empty())
+		if (!comp->access_parameters().empty())
 			numComponents++;
 	}
 	
@@ -177,7 +177,7 @@ void doParameterUi(ParameterComponentMgr & componentMgr, const char * filter)
 	int numElems = 0;
 	
 	for (auto * comp = componentMgr.head; comp != nullptr; comp = comp->next)
-		if (!comp->parameters.empty())
+		if (!comp->access_parameters().empty())
 			elems[numElems++].comp = comp;
 	
 	std::sort(elems, elems + numElems);

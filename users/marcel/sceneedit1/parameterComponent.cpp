@@ -4,61 +4,49 @@
 
 void ParameterComponent::add(ParameterBase * parameter)
 {
-	parameters.push_back(parameter);
+	parameterMgr.add(parameter);
 }
 
 ParameterBool * ParameterComponent::addBool(const char * name, const bool defaultValue)
 {
-	auto * parameter = new ParameterBool(name, defaultValue);
-	add(parameter);
-	return parameter;
+	return parameterMgr.addBool(name, defaultValue);
 }
 
 ParameterInt * ParameterComponent::addInt(const char * name, const int defaultValue)
 {
-	auto * parameter = new ParameterInt(name, defaultValue);
-	add(parameter);
-	return parameter;
+	return parameterMgr.addInt(name, defaultValue);
 }
 
 ParameterFloat * ParameterComponent::addFloat(const char * name, const float defaultValue)
 {
-	auto * parameter = new ParameterFloat(name, defaultValue);
-	add(parameter);
-	return parameter;
+	return parameterMgr.addFloat(name, defaultValue);
 }
 
 ParameterVec2 * ParameterComponent::addVec2(const char * name, const Vec2 & defaultValue)
 {
-	auto * parameter = new ParameterVec2(name, defaultValue);
-	add(parameter);
-	return parameter;
+	return parameterMgr.addVec2(name, defaultValue);
 }
 
 ParameterVec3 * ParameterComponent::addVec3(const char * name, const Vec3 & defaultValue)
 {
-	auto * parameter = new ParameterVec3(name, defaultValue);
-	add(parameter);
-	return parameter;
+	return parameterMgr.addVec3(name, defaultValue);
 }
 
 ParameterVec4 * ParameterComponent::addVec4(const char * name, const Vec4 & defaultValue)
 {
-	auto * parameter = new ParameterVec4(name, defaultValue);
-	add(parameter);
-	return parameter;
+	return parameterMgr.addVec4(name, defaultValue);
 }
 
 ParameterString * ParameterComponent::addString(const char * name, const char * defaultValue)
 {
-	auto * parameter = new ParameterString(name, defaultValue);
-	add(parameter);
-	return parameter;
+	return parameterMgr.addString(name, defaultValue);
 }
 
 bool ParameterComponent::init()
 {
 	bool result = true;
+	
+	parameterMgr.init(prefix.c_str());
 	
 	for (auto & definition : parameterDefinitions)
 	{

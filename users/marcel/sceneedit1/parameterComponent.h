@@ -17,12 +17,16 @@ struct ParameterDefinition
 
 struct ParameterComponent : Component<ParameterComponent>
 {
-	std::string prefix;
+	friend struct ParameterComponentType;
 	
-	std::vector<ParameterBase*> parameters;
+private:
+	std::string prefix;
 	
 	std::vector<ParameterDefinition> parameterDefinitions;
 	
+	ParameterMgr parameterMgr;
+	
+public:
 	virtual bool init() override final;
 	virtual void tick(const float dt) override final;
 	
@@ -35,6 +39,16 @@ struct ParameterComponent : Component<ParameterComponent>
 	ParameterVec3 * addVec3(const char * name, const Vec3 & defaultValue);
 	ParameterVec4 * addVec4(const char * name, const Vec4 & defaultValue);
 	ParameterString * addString(const char * name, const char * defaultValue);
+	
+	const std::string & access_prefix()
+	{
+		return parameterMgr.access_prefix();
+	}
+	
+	const std::vector<ParameterBase*> & access_parameters() const
+	{
+		return parameterMgr.access_parameters();
+	}
 };
 
 //
