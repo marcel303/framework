@@ -1,0 +1,4 @@
+library ecs-parameter
+	depend_library libgg
+	add_files parameter.cpp parameter.h
+	header_path . expose

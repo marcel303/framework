@@ -1,7 +1,4 @@
-library ecs-parameter
-	depend_library libgg
-	add_files parameter.cpp parameter.h
-	header_path . expose
+add ecs-parameter
 
 app marcel-sceneedit1
 	depend_library ecs-parameter
@@ -12,5 +9,4 @@ app marcel-sceneedit1
 	#depend_library vfxgraph
 	scan_files *.cpp
 	scan_files *.h
-	exclude_files parameter.cpp parameter.h
 	resource_path data
