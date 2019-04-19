@@ -10,8 +10,10 @@ Coding Challenge #51: A* Path Finding
 	Part 3: https://youtu.be/jwRT4PCT6RU
 */
 
-static const int kGridSx = 40;
-static const int kGridSy = 30;
+// todo : trigger sounds at the location of the new top position
+
+static const int kGridSx = 80;
+static const int kGridSy = 60;
 
 struct Cell
 {
@@ -66,9 +68,6 @@ static void randomizeGrid(Grid & grid)
         for (auto & cell : column)
             cell.blocked = (random() % 3) == 0;
     }
-
-    grid.cells[0][0].blocked = false;
-    grid.cells[kGridSx - 1][kGridSy - 1].blocked = false;
 }
 
 int main(int argc, const char * argv[])
@@ -128,10 +127,16 @@ int main(int argc, const char * argv[])
 			visited_node.parent_coord.x = -1;
 			visited_node.parent_coord.y = -1;
 			visited_set[visited_node.coord] = visited_node;
+			
+			//
+			
+			grid.cells[start_elem.coord.x][start_elem.coord.y].blocked = false;
 		}
 		
 		destination_coord.x = kGridSx - 1;
     	destination_coord.y = kGridSy - 1;
+		
+    	grid.cells[destination_coord.x][destination_coord.y].blocked = false;
 		
 		reached = false;
 		
@@ -155,6 +160,7 @@ int main(int argc, const char * argv[])
 		if (mouse.wentDown(BUTTON_LEFT))
 			restart();
 		
+	for (int i = 0; i < 8; ++i) // todo : add controls
         if (reached == false && active_queue.empty() == false)
         {
             auto elem = active_queue.top();
@@ -215,7 +221,7 @@ int main(int argc, const char * argv[])
 
         framework.beginDraw(0, 0, 0, 0);
         {
-        	gxScalef(20, 20, 1);
+        	gxScalef(800 / float(kGridSx), 600 / float(kGridSy), 1);
 			
 			// draw grid
 			
@@ -249,7 +255,7 @@ int main(int argc, const char * argv[])
 			
 			hqBegin(HQ_FILLED_CIRCLES);
 			{
-				setColor(255, 255, 200);
+				setColor(255/4, 255/5, 200/4);
 				
 				for (auto & coord : processed_set)
 				{
@@ -274,7 +280,10 @@ int main(int argc, const char * argv[])
 						break;
 					
 					auto & node = i->second;
-
+					
+					if (node.parent_coord.x == -1)
+						break;
+					
 					hqLine(node.coord.x + .5f, node.coord.y + .5f, .25f, node.parent_coord.x + .5f, node.parent_coord.y + .5f, .25f);
 					
 					coord = node.parent_coord;
