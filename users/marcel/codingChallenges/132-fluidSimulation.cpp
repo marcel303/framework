@@ -1,6 +1,12 @@
 #include "framework.h"
 #include <vector>
 
+/*
+https://mikeash.com/pyblog/fluid-simulation-for-dummies.html
+Coding Challenge #132: Fluid Simulation
+https://www.youtube.com/watch?v=alhpH6ECFvQ
+*/
+
 #define SCALE 3
 
 #define THREE_DIMENSIONAL 0
@@ -81,6 +87,8 @@ static void lin_solve2d(const int b, float * x, const float * x0, const float a,
 {
     float cRecip = 1.f / c;
 
+// todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
+
     for (int k = 0; k < iter; ++k)
     {
 		for (int j = 1; j < N - 1; ++j)
@@ -125,6 +133,50 @@ static void lin_solve2d(const int b, float * x, const float * x0, const float a,
     }
 }
 
+static void lin_solve2d_xy(float * x, const float * x0, float * y, const float * y0, const float a, const float c, const int iter, const int N)
+{
+    float cRecip = 1.f / c;
+
+// todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
+
+    for (int k = 0; k < iter; ++k)
+    {
+		for (int j = 1; j < N - 1; ++j)
+		{
+			const int index = IX_2D(0, j);
+			
+			const float * x0_line = x0 + index;
+			      float * x_line  = x  + index;
+			
+			const float * y0_line = y0 + index;
+			      float * y_line  = y  + index;
+			
+			float prev_x = x_line[0];
+			float prev_y = y_line[0];
+			
+			for (int i = 1; i < N - 1; ++i)
+			{
+			#if 0
+				x_line[i] = (x0_line[i] + a * (x_line[i - 1] + x_line[i + 1] + x_line[i - N] + x_line[i + N])) * cRecip;
+				y_line[i] = (y0_line[i] + a * (y_line[i - 1] + y_line[i + 1] + y_line[i - N] + y_line[i + N])) * cRecip;
+			#else
+				const float curr_x = x_line[i];
+				const float curr_y = x_line[i];
+				
+				x_line[i] = (x0_line[i] + a * ((prev_x + x_line[i + 1]) + (x_line[i - N] + x_line[i + N]))) * cRecip;
+				y_line[i] = (y0_line[i] + a * ((prev_y + y_line[i + 1]) + (y_line[i - N] + y_line[i + N]))) * cRecip;
+				
+				prev_x = curr_x;
+				prev_y = curr_y;
+			#endif
+			}
+		}
+
+        set_bnd2d(1, x, N);
+        set_bnd2d(2, x, N);
+    }
+}
+
 static void lin_solve3d(const int b, float * x, const float * x0, const float a, const float c, const int iter, const int N)
 {
     float cRecip = 1.f / c;
@@ -156,6 +208,12 @@ static void diffuse2d(const int b, float * x, const float * x0, const float diff
 	lin_solve2d(b, x, x0, a, 1 + 4 * a, iter, N);
 }
 
+static void diffuse2d_xy(float * x, const float * x0, float * y, const float * y0, const float diff, const float dt, const int iter, const int N)
+{
+	const float a = dt * diff * (N - 2);
+	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, N);
+}
+
 static void diffuse3d(const int b, float * x, const float * x0, const float diff, const float dt, const int iter, const int N)
 {
 	const float a = dt * diff * (N - 2) * (N - 2);
@@ -169,12 +227,10 @@ static void project2d(float * velocX, float * velocY, float * p, float * div, co
 		for (int i = 1; i < N - 1; ++i)
 		{
 			div[IX_2D(i, j)] =
-				-0.255f *
+				-0.25f *
 					(
-						+ velocX[IX_2D(i+1, j  )]
-						- velocX[IX_2D(i-1, j  )]
-						+ velocY[IX_2D(i  , j+1)]
-						- velocY[IX_2D(i  , j-1)]
+						+ (+ velocX[IX_2D(i+1, j  )] - velocX[IX_2D(i-1, j  )])
+						+ (+ velocY[IX_2D(i  , j+1)] - velocY[IX_2D(i  , j-1)])
 					);
 		}
 	}
@@ -458,8 +514,7 @@ struct FluidCube
 		
 	    advect3d(0, density.data(), s.data(), Vx.data(), Vy.data(), Vz.data(), dt, N);
 	#else
-		diffuse2d(1, Vx0.data(), Vx.data(), visc, dt, iter, N);
-	    diffuse2d(2, Vy0.data(), Vy.data(), visc, dt, iter, N);
+		diffuse2d_xy(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), visc, dt, iter, N);
 		
 		project2d(Vx0.data(), Vy0.data(), Vx.data(), Vy.data(), iter, N);
 		
@@ -512,10 +567,10 @@ int main(int argc, const char * argv[])
 	if (!framework.init(600, 600))
 		return -1;
 
-	FluidCube * cube = createFluidCube(200, 0.01f, 0.001f, 1.f / 30.f);
+	FluidCube * cube = createFluidCube(200, 0.001f, 0.0001f, 1.f / 30.f);
 	
 	GxTexture texture;
-	texture.allocate(200, 200, GX_R32_FLOAT, false, true);
+	texture.allocate(cube->size, cube->size, GX_R32_FLOAT, false, true);
 	texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
 	for (;;)
