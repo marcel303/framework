@@ -57,17 +57,17 @@ static void set_bnd3d(const int b, float * x, const int N)
         }
     }
 
-    x[IX_3D(0, 0, 0)]       = 0.333f * (x[IX_3D(  1,   0,   0)] + x[IX_3D(  0,   1,   0)] + x[IX_3D(  0,   0,   1)]);
-    x[IX_3D(0, N-1, 0)]     = 0.333f * (x[IX_3D(  1, N-1,   0)] + x[IX_3D(  0, N-2,   0)] + x[IX_3D(  0, N-1,   1)]);
-    x[IX_3D(0, 0, N-1)]     = 0.333f * (x[IX_3D(  1,   0, N-1)] + x[IX_3D(  0,   1, N-1)] + x[IX_3D(  0,   0, N-1)]);
-    x[IX_3D(0, N-1, N-1)]   = 0.333f * (x[IX_3D(  1, N-1, N-1)] + x[IX_3D(  0, N-2, N-1)] + x[IX_3D(  0, N-1, N-2)]);
-    x[IX_3D(N-1, 0, 0)]     = 0.333f * (x[IX_3D(N-2,   0,   0)] + x[IX_3D(N-1,   1,   0)] + x[IX_3D(N-1,   0,   1)]);
-    x[IX_3D(N-1, N-1, 0)]   = 0.333f * (x[IX_3D(N-2, N-1,   0)] + x[IX_3D(N-1, N-2,   0)] + x[IX_3D(N-1, N-1,   1)]);
-    x[IX_3D(N-1, 0, N-1)]   = 0.333f * (x[IX_3D(N-2,   0, N-1)] + x[IX_3D(N-1,   1, N-1)] + x[IX_3D(N-1,   0, N-2)]);
+    x[IX_3D(  0,   0,   0)] = 0.333f * (x[IX_3D(  1,   0,   0)] + x[IX_3D(  0,   1,   0)] + x[IX_3D(  0,   0,   1)]);
+    x[IX_3D(  0, N-1,   0)] = 0.333f * (x[IX_3D(  1, N-1,   0)] + x[IX_3D(  0, N-2,   0)] + x[IX_3D(  0, N-1,   1)]);
+    x[IX_3D(  0,   0, N-1)] = 0.333f * (x[IX_3D(  1,   0, N-1)] + x[IX_3D(  0,   1, N-1)] + x[IX_3D(  0,   0, N-1)]);
+    x[IX_3D(  0, N-1, N-1)] = 0.333f * (x[IX_3D(  1, N-1, N-1)] + x[IX_3D(  0, N-2, N-1)] + x[IX_3D(  0, N-1, N-2)]);
+    x[IX_3D(N-1,   0,   0)] = 0.333f * (x[IX_3D(N-2,   0,   0)] + x[IX_3D(N-1,   1,   0)] + x[IX_3D(N-1,   0,   1)]);
+    x[IX_3D(N-1, N-1,   0)] = 0.333f * (x[IX_3D(N-2, N-1,   0)] + x[IX_3D(N-1, N-2,   0)] + x[IX_3D(N-1, N-1,   1)]);
+    x[IX_3D(N-1,   0, N-1)] = 0.333f * (x[IX_3D(N-2,   0, N-1)] + x[IX_3D(N-1,   1, N-1)] + x[IX_3D(N-1,   0, N-2)]);
     x[IX_3D(N-1, N-1, N-1)] = 0.333f * (x[IX_3D(N-2, N-1, N-1)] + x[IX_3D(N-1, N-2, N-1)] + x[IX_3D(N-1, N-1, N-2)]);
 }
 
-static void lin_solve2d(const int b, float * x, const float * x0, const float a, const float c, const int iter, const int N)
+static void lin_solve2d(const int b, float * __restrict x, const float * __restrict x0, const float a, const float c, const int iter, const int N)
 {
     float cRecip = 1.f / c;
 
@@ -117,7 +117,10 @@ static void lin_solve2d(const int b, float * x, const float * x0, const float a,
     }
 }
 
-static void lin_solve2d_xy(float * x, const float * x0, float * y, const float * y0, const float a, const float c, const int iter, const int N)
+static void lin_solve2d_xy(
+	float * __restrict x, const float * __restrict x0,
+	float * __restrict y, const float * __restrict y0,
+	const float a, const float c, const int iter, const int N)
 {
     float cRecip = 1.f / c;
 
@@ -161,24 +164,35 @@ static void lin_solve2d_xy(float * x, const float * x0, float * y, const float *
     }
 }
 
-static void lin_solve3d(const int b, float * x, const float * x0, const float a, const float c, const int iter, const int N)
+static void lin_solve3d(const int b, float * __restrict x, const float * __restrict x0, const float a, const float c, const int iter, const int N)
 {
     float cRecip = 1.f / c;
 
-    for (int k = 0; k < iter; k++) {
-        for (int m = 1; m < N - 1; m++) {
-            for (int j = 1; j < N - 1; j++) {
-                for (int i = 1; i < N - 1; i++) {
-                    x[IX_3D(i, j, m)] =
-						(x0[IX_3D(i, j, m)]
-                            + a *
+    for (int k = 0; k < iter; k++)
+    {
+        for (int m = 1; m < N - 1; m++)
+        {
+            for (int j = 1; j < N - 1; j++)
+            {
+				int index = IX_3D(1, j, m);
+				
+            	const int step_x = 1;
+            	const int step_y = N;
+            	const int step_z = N * N;
+				
+                for (int i = 1; i < N - 1; i++, index++)
+                {
+                    x[index] =
+						(
+							x0[index] +
+								a *
                             	(
-									+ x[IX_3D(i+1, j  , m  )]
-									+ x[IX_3D(i-1, j  , m  )]
-									+ x[IX_3D(i  , j+1, m  )]
-									+ x[IX_3D(i  , j-1, m  )]
-									+ x[IX_3D(i  , j  , m+1)]
-									+ x[IX_3D(i  , j  , m-1)]
+									+ x[index + step_x]
+									+ x[index - step_x]
+									+ x[index + step_y]
+									+ x[index - step_y]
+									+ x[index + step_z]
+									+ x[index - step_z]
 								)
 						) * cRecip;
                 }
@@ -186,6 +200,70 @@ static void lin_solve3d(const int b, float * x, const float * x0, const float a,
         }
 
         set_bnd3d(b, x, N);
+    }
+}
+
+static void lin_solve3d_xyz(
+	float * __restrict x, const float * __restrict x0,
+	float * __restrict y, const float * __restrict y0,
+	float * __restrict z, const float * __restrict z0,
+	const float a, const float c, const int iter, const int N)
+{
+    float cRecip = 1.f / c;
+
+    for (int k = 0; k < iter; k++)
+    {
+        for (int m = 1; m < N - 1; m++)
+        {
+            for (int j = 1; j < N - 1; j++)
+            {
+				int index = IX_3D(1, j, m);
+				
+            	const int step_x = 1;
+            	const int step_y = N;
+            	const int step_z = N * N;
+				
+                for (int i = 1; i < N - 1; i++, index++)
+                {
+                    x[index] =
+						(
+							x0[index] +
+								a *
+                            	(
+									+ (x[index + step_x] + x[index - step_x])
+									+ (x[index + step_y] + x[index - step_y])
+									+ (x[index + step_z] + x[index - step_z])
+								)
+						) * cRecip;
+					
+                    y[index] =
+						(
+							y0[index] +
+								a *
+                            	(
+									+ (y[index + step_x] + y[index - step_x])
+									+ (y[index + step_y] + y[index - step_y])
+									+ (y[index + step_z] + y[index - step_z])
+								)
+						) * cRecip;
+					
+                    z[index] =
+						(
+							z0[index] +
+								a *
+                            	(
+									+ (z[index + step_x] + z[index - step_x])
+									+ (z[index + step_y] + z[index - step_y])
+									+ (z[index + step_z] + z[index - step_z])
+								)
+						) * cRecip;
+                }
+            }
+        }
+
+        set_bnd3d(1, x, N);
+        set_bnd3d(2, y, N);
+        set_bnd3d(3, z, N);
     }
 }
 
@@ -205,6 +283,16 @@ static void diffuse3d(const int b, float * x, const float * x0, const float diff
 {
 	const float a = dt * diff * (N - 2) * (N - 2);
 	lin_solve3d(b, x, x0, a, 1 + 6 * a, iter, N);
+}
+
+static void diffuse3d_xyz(
+	float * x, const float * x0,
+	float * y, const float * y0,
+	float * z, const float * z0,
+	const float diff, const float dt, const int iter, const int N)
+{
+	const float a = dt * diff * (N - 2) * (N - 2);
+	lin_solve3d_xyz(x, x0, y, y0, z, z0, a, 1 + 6 * a, iter, N);
 }
 
 static void project2d(float * velocX, float * velocY, float * p, float * div, const int iter, const int N)
@@ -395,6 +483,15 @@ static void advect3d(const int b, float * d, const float * d0, const float * vel
                 int k0i = k0;
                 int k1i = k1;
 				
+				/*
+                Assert(i0i >= 0 && i0i < N);
+				Assert(i1i >= 0 && i1i < N);
+				Assert(j0i >= 0 && j0i < N);
+				Assert(j1i >= 0 && j1i < N);
+				Assert(k0i >= 0 && k0i < N);
+				Assert(k1i >= 0 && k1i < N);
+				*/
+				
                 d[IX_3D(i, j, k)] =
 					+ s0 *
 						+ ( t0 * (u0 * d0[IX_3D(i0i, j0i, k0i)] + u1 * d0[IX_3D(i0i, j0i, k1i)])
@@ -533,9 +630,7 @@ struct FluidCube3d
 		
 	    const int iter = 4;
 	
-		diffuse3d(1, Vx0.data(), Vx.data(), visc, dt, iter, N);
-	    diffuse3d(2, Vy0.data(), Vy.data(), visc, dt, iter, N);
-	    diffuse3d(3, Vz0.data(), Vz.data(), visc, dt, iter, N);
+		diffuse3d_xyz(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), Vz0.data(), Vz.data(), visc, dt, iter, N);
 		
 		project3d(Vx0.data(), Vy0.data(), Vz0.data(), Vx.data(), Vy.data(), iter, N);
 		
