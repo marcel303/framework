@@ -237,7 +237,8 @@ static void advect2d(int b, float * d, float * d0, float * velocX, float * veloc
     const float dtx = dt * (N - 2);
     const float dty = dt * (N - 2);
 	
-    float Nfloat = N;
+	const float XY_max = N - 1.5f;
+	
     float ifloat, jfloat;
     int i, j;
 	
@@ -252,13 +253,13 @@ static void advect2d(int b, float * d, float * d0, float * velocX, float * veloc
 			float y = jfloat - tmp2;
 			
 			if(x < 0.5f) x = 0.5f;
-			if(x > Nfloat + 0.5f) x = Nfloat + 0.5f;
+			if(x > XY_max) x = XY_max;
 			float i0, i1;
 			i0 = floorf(x);
 			i1 = i0 + 1.0f;
 			
 			if(y < 0.5f) y = 0.5f;
-			if(y > Nfloat + 0.5f) y = Nfloat + 0.5f;
+			if(y > XY_max) y = XY_max;
 			float j0, j1;
 			j0 = floorf(y);
 			j1 = j0 + 1.0f;
@@ -273,6 +274,11 @@ static void advect2d(int b, float * d, float * d0, float * velocX, float * veloc
 			const int i1i = i1;
 			const int j0i = j0;
 			const int j1i = j1;
+			
+			//Assert(i0i >= 0 && i0i < N);
+			//Assert(i1i >= 0 && i1i < N);
+			//Assert(j0i >= 0 && j0i < N);
+			//Assert(j1i >= 0 && j1i < N);
 			
 			d[IX_2D(i, j)] =
 				s0 * (t0 * d0[IX_2D(i0i, j0i)] + t1 * d0[IX_2D(i0i, j1i)]) +
