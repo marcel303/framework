@@ -7,9 +7,9 @@ Coding Challenge #132: Fluid Simulation
 https://www.youtube.com/watch?v=alhpH6ECFvQ
 */
 
-#define SCALE 3
+#define SCALE 2
 
-#define THREE_DIMENSIONAL 1
+#define THREE_DIMENSIONAL 0
 
 #define IX_2D(x, y) ((x) + (y) * N)
 #define IX_3D(x, y, z) ((x) + (y) * N + (z) * N * N)
@@ -77,27 +77,25 @@ static void lin_solve2d(const int b, float * __restrict x, const float * __restr
     {
 		for (int j = 1; j < N - 1; ++j)
 		{
-			const float * prev_line = x0 + IX_2D(0, j    );
-			const float * src_line1 = x  + IX_2D(0, j - 1);
-			const float * src_line2 = x  + IX_2D(0, j    );
-			const float * src_line3 = x  + IX_2D(0, j + 1);
-			      float * dest_line = x  + IX_2D(0, j    );
+			const int index = IX_2D(0, j);
+			
+			const float * x0_line = x0 + index;
+			      float * x_line  = x  + index;
+			
+			float prev_x = x_line[0];
 			
 			for (int i = 1; i < N - 1; ++i)
 			{
-			#if 1
-				dest_line[i] =
-					(
-						prev_line[i]
-						+ a *
-							(
-								+src_line2[i + 1]
-								+src_line2[i - 1]
-								+src_line3[i    ]
-								+src_line1[i    ]
-							)
-					) * cRecip;
+			#if 0
+				x_line[i] = (x0_line[i] + a * (x_line[i - 1] + x_line[i + 1] + x_line[i - N] + x_line[i + N])) * cRecip;
+			#elif 1
+				const float curr_x = x_line[i];
+				
+				x_line[i] = (x0_line[i] + a * ((prev_x + x_line[i + 1]) + (x_line[i - N] + x_line[i + N]))) * cRecip;
+				
+				prev_x = curr_x;
 			#else
+				// note : we keep this verion around since it's easier to port to a shader
 				x[IX_2D(i, j)] =
 					(
 						x0[IX_2D(i, j)]
@@ -182,6 +180,7 @@ static void lin_solve3d(const int b, float * __restrict x, const float * __restr
 				
                 for (int i = 1; i < N - 1; i++, index++)
                 {
+				#if 1
                     x[index] =
 						(
 							x0[index] +
@@ -195,7 +194,22 @@ static void lin_solve3d(const int b, float * __restrict x, const float * __restr
 									+ x[index - step_z]
 								)
 						) * cRecip;
-                }
+				#else
+					// note : we keep this verion around since it's easier to port to a shader
+                    x[IX_3D(i, j, m)] =
+						(x0[IX_3D(i, j, m)]
+                            + a *
+                            	(
+									+ x[IX_3D(i+1, j  , m  )]
+									+ x[IX_3D(i-1, j  , m  )]
+									+ x[IX_3D(i  , j+1, m  )]
+									+ x[IX_3D(i  , j-1, m  )]
+									+ x[IX_3D(i  , j  , m+1)]
+									+ x[IX_3D(i  , j  , m-1)]
+								)
+						) * cRecip;
+				#endif
+				}
             }
         }
 
@@ -634,6 +648,7 @@ struct FluidCube3d
 		
 		project3d(Vx0.data(), Vy0.data(), Vz0.data(), Vx.data(), Vy.data(), iter, N);
 		
+	// todo : add advect3d_xyz function. this one woudl benefit considerably from combining all three
 		advect3d(1, Vx.data(), Vx0.data(), Vx0.data(), Vy0.data(), Vz0.data(), dt, N);
 	    advect3d(2, Vy.data(), Vy0.data(), Vx0.data(), Vy0.data(), Vz0.data(), dt, N);
 	    advect3d(3, Vz.data(), Vz0.data(), Vx0.data(), Vy0.data(), Vz0.data(), dt, N);
@@ -703,11 +718,11 @@ int main(int argc, const char * argv[])
 #if THREE_DIMENSIONAL
 	FluidCube3d * cube = createFluidCube3d(48, 0.001f, 0.0001f, 1.f / 30.f);
 #else
-	FluidCube2d * cube = createFluidCube2d(200, 0.001f, 0.0001f, 1.f / 30.f);
+	FluidCube2d * cube = createFluidCube2d(300, 0.001f, 0.0001f, 1.f / 30.f);
 #endif
 
 	GxTexture texture;
-	texture.allocate(cube->size, cube->size, GX_R32_FLOAT, false, true);
+	texture.allocate(cube->size, cube->size, GX_R32_FLOAT, true, true);
 	texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
 	for (;;)
@@ -721,8 +736,9 @@ int main(int argc, const char * argv[])
 			d *= .99f;
 		
 	#if THREE_DIMENSIONAL
-		cube->addDensity(mouse.x / SCALE, mouse.y / SCALE, cube->size/2, 100.f);
-		cube->addVelocity(mouse.x / SCALE, mouse.y / SCALE, cube->size/2, mouse.dx, mouse.dy, cosf(framework.time) * 20.f);
+		const int z = cube->size/2 + cos(framework.time / 1.23f) * cube->size/3.f;
+		cube->addDensity(mouse.x / SCALE, mouse.y / SCALE, z, 100.f);
+		cube->addVelocity(mouse.x / SCALE, mouse.y / SCALE, z, mouse.dx, mouse.dy, cosf(framework.time) * 20.f);
 	#else
 		for (int x = -4; x <= +4; ++x)
 		{
@@ -745,7 +761,7 @@ int main(int argc, const char * argv[])
 			
 			setBlend(BLEND_ADD);
 			setColor(colorWhite);
-			setAlphaf(.3f);
+			setAlphaf(.4f);
 			
 			for (int z = 0; z < cube->size; ++z)
 			{
