@@ -18,7 +18,8 @@ void doParameterUi(ParameterBase & parameterBase)
 		{
 			auto & parameter = static_cast<ParameterBool&>(parameterBase);
 			
-			ImGui::Checkbox(parameter.name.c_str(), &parameter.value);
+			if (ImGui::Checkbox(parameter.name.c_str(), &parameter.access_rw()))
+				parameter.setDirty();
 		}
 		break;
 	case kParameterType_Int:
@@ -27,11 +28,13 @@ void doParameterUi(ParameterBase & parameterBase)
 			
 			if (parameter.hasLimits)
 			{
-				ImGui::SliderInt(parameter.name.c_str(), &parameter.value, parameter.min, parameter.max);
+				if (ImGui::SliderInt(parameter.name.c_str(), &parameter.access_rw(), parameter.min, parameter.max))
+					parameter.setDirty();
 			}
 			else
 			{
-				ImGui::InputInt(parameter.name.c_str(), &parameter.value);
+				if (ImGui::InputInt(parameter.name.c_str(), &parameter.access_rw()))
+					parameter.setDirty();
 			}
 		}
 		break;
@@ -41,11 +44,13 @@ void doParameterUi(ParameterBase & parameterBase)
 			
 			if (parameter.hasLimits)
 			{
-				ImGui::SliderFloat(parameter.name.c_str(), &parameter.value, parameter.min, parameter.max, "%.3f", parameter.editingCurveExponential);
+				if (ImGui::SliderFloat(parameter.name.c_str(), &parameter.access_rw(), parameter.min, parameter.max, "%.3f", parameter.editingCurveExponential))
+					parameter.setDirty();
 			}
 			else
 			{
-				ImGui::InputFloat(parameter.name.c_str(), &parameter.value);
+				if (ImGui::InputFloat(parameter.name.c_str(), &parameter.access_rw()))
+					parameter.setDirty();
 			}
 		}
 		break;
@@ -56,11 +61,13 @@ void doParameterUi(ParameterBase & parameterBase)
 			if (parameter.hasLimits)
 			{
 				// fixme : no separate min/max for each dimension
-				ImGui::SliderFloat2(parameter.name.c_str(), &parameter.value[0], parameter.min[0], parameter.max[0]);
+				if (ImGui::SliderFloat2(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0]))
+					parameter.setDirty();
 			}
 			else
 			{
-				ImGui::InputFloat2(parameter.name.c_str(), &parameter.value[0]);
+				if (ImGui::InputFloat2(parameter.name.c_str(), &parameter.access_rw()[0]))
+					parameter.setDirty();
 			}
 		}
 		break;
@@ -71,11 +78,13 @@ void doParameterUi(ParameterBase & parameterBase)
 			if (parameter.hasLimits)
 			{
 				// fixme : no separate min/max for each dimension
-				ImGui::SliderFloat3(parameter.name.c_str(), &parameter.value[0], parameter.min[0], parameter.max[0]);
+				if (ImGui::SliderFloat3(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0]))
+					parameter.setDirty();
 			}
 			else
 			{
-				ImGui::InputFloat3(parameter.name.c_str(), &parameter.value[0]);
+				if (ImGui::InputFloat3(parameter.name.c_str(), &parameter.access_rw()[0]))
+					parameter.setDirty();
 			}
 		}
 		break;
@@ -86,11 +95,13 @@ void doParameterUi(ParameterBase & parameterBase)
 			if (parameter.hasLimits)
 			{
 				// fixme : no separate min/max for each dimension
-				ImGui::SliderFloat4(parameter.name.c_str(), &parameter.value[0], parameter.min[0], parameter.max[0]);
+				if (ImGui::SliderFloat4(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0]))
+					parameter.setDirty();
 			}
 			else
 			{
-				ImGui::InputFloat4(parameter.name.c_str(), &parameter.value[0]);
+				if (ImGui::InputFloat4(parameter.name.c_str(), &parameter.access_rw()[0]))
+					parameter.setDirty();
 			}
 		}
 		break;
@@ -99,11 +110,11 @@ void doParameterUi(ParameterBase & parameterBase)
 			auto & parameter = static_cast<ParameterString&>(parameterBase);
 			
 			char buffer[1024];
-			strcpy_s(buffer, sizeof(buffer), parameter.value.c_str());
+			strcpy_s(buffer, sizeof(buffer), parameter.get().c_str());
 			
 			if (ImGui::InputText(parameter.name.c_str(), buffer, sizeof(buffer)))
 			{
-				parameter.value = buffer;
+				parameter.set(buffer);
 			}
 		}
 		break;
