@@ -118,6 +118,35 @@ void doParameterUi(ParameterBase & parameterBase)
 			}
 		}
 		break;
+	case kParameterType_Enum:
+		{
+			auto & parameter = static_cast<ParameterEnum&>(parameterBase);
+			
+			auto & elems = parameter.getElems();
+			
+			int currentItemIndex = -1;
+			
+			const int numItems = elems.size();
+			const char ** items = (const char **)alloca(numItems * sizeof(char*));
+			
+			int itemIndex = 0;
+			
+			for (auto & elem : elems)
+			{
+				items[itemIndex] = elem.key;
+				
+				if (elem.value == parameter.get())
+					currentItemIndex = itemIndex;
+				
+				itemIndex++;
+			}
+			
+			if (ImGui::Combo(parameter.name.c_str(), &currentItemIndex, items, numItems))
+			{
+				parameter.set(elems[currentItemIndex].value);
+			}
+		}
+		break;
 	}
 }
 
