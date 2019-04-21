@@ -1,7 +1,7 @@
 #include "cameraComponent.h"
 #include "modelComponent.h"
 #include "parameterComponent.h"
-#include "parameterUi.h"
+#include "parameterComponentUi.h"
 #include "transformComponent.h"
 
 #include "component.h"

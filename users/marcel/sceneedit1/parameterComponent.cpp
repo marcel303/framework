@@ -139,6 +139,10 @@ bool ParameterComponent::init()
 		}
 	}
 	
+	addInt("int-test", 2);
+	addFloat("float-test", 3.f);
+	addVec2("vec2-test", Vec2(4.f, 5.f));
+	
 	return result;
 }
 
