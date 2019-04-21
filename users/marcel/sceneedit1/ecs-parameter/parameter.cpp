@@ -58,3 +58,10 @@ ParameterString * ParameterMgr::addString(const char * name, const char * defaul
 	add(parameter);
 	return parameter;
 }
+
+ParameterEnum * ParameterMgr::addEnum(const char * name, const int defaultValue, const std::vector<ParameterEnum::Elem> & elems)
+{
+	auto * parameter = new ParameterEnum(name, defaultValue, elems);
+	add(parameter);
+	return parameter;
+}

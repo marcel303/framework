@@ -15,7 +15,8 @@ enum ParameterType
 	kParameterType_Vec2,
 	kParameterType_Vec3,
 	kParameterType_Vec4,
-	kParameterType_String
+	kParameterType_String,
+	kParameterType_Enum
 };
 
 struct ParameterBase
@@ -35,9 +36,11 @@ struct ParameterBase
 template <typename T, ParameterType kType>
 struct Parameter : ParameterBase
 {
+protected:
 	T value;
 	T defaultValue;
 	
+public:
 	explicit Parameter(const char * name, const T & in_defaultValue)
 		: ParameterBase(kType, name)
 		, value(in_defaultValue)
@@ -49,6 +52,20 @@ struct Parameter : ParameterBase
 	{
 		return std::type_index(typeid(T));
 	}
+	
+	const T & get() const
+	{
+		return value;
+	}
+	
+	T & access_rw() // read-write access. be careful to invalidate the value when you change it!
+	{
+		return value;
+	}
+	
+	void setDirty()
+	{
+	}
 };
 
 struct ParameterBool : Parameter<bool, kParameterType_Bool>
@@ -56,6 +73,11 @@ struct ParameterBool : Parameter<bool, kParameterType_Bool>
 	ParameterBool(const char * name, const bool defaultValue)
 		: Parameter(name, defaultValue)
 	{
+	}
+	
+	void set(const bool in_value)
+	{
+		value = in_value;
 	}
 };
 
@@ -77,6 +99,18 @@ struct ParameterInt : Parameter<int, kParameterType_Int>
 		max = in_max;
 		
 		return *this;
+	}
+	
+	void set(const int in_value)
+	{
+		if (hasLimits)
+		{
+			value = in_value < min ? min : in_value > max ? max : in_value;
+		}
+		else
+		{
+			value = in_value;
+		}
 	}
 };
 
@@ -108,6 +142,18 @@ struct ParameterFloat : Parameter<float, kParameterType_Float>
 		
 		return *this;
 	}
+	
+	void set(const float in_value)
+	{
+		if (hasLimits)
+		{
+			value = in_value < min ? min : in_value > max ? max : in_value;
+		}
+		else
+		{
+			value = in_value;
+		}
+	}
 };
 
 struct ParameterVec2 : Parameter<Vec2, kParameterType_Vec2>
@@ -137,6 +183,13 @@ struct ParameterVec2 : Parameter<Vec2, kParameterType_Vec2>
 		editingCurveExponential = in_exponential;
 		
 		return *this;
+	}
+	
+	void set(Vec2Arg in_value)
+	{
+		value = in_value;
+		
+		// todo : apply limits
 	}
 };
 
@@ -168,6 +221,13 @@ struct ParameterVec3 : Parameter<Vec3, kParameterType_Vec3>
 		
 		return *this;
 	}
+	
+	void set(Vec3Arg in_value)
+	{
+		value = in_value;
+		
+		// todo : apply limits
+	}
 };
 
 struct ParameterVec4 : Parameter<Vec4, kParameterType_Vec4>
@@ -198,9 +258,62 @@ struct ParameterVec4 : Parameter<Vec4, kParameterType_Vec4>
 		
 		return *this;
 	}
+	
+	void set(Vec4Arg in_value)
+	{
+		value = in_value;
+		
+		// todo : apply limits
+	}
 };
 
-typedef Parameter<std::string, kParameterType_String> ParameterString;
+struct ParameterString : Parameter<std::string, kParameterType_String>
+{
+	ParameterString(const char * name, const char * defaultValue)
+		: Parameter(name, defaultValue)
+	{
+	}
+	
+	void set(const char * in_value)
+	{
+		value = in_value;
+	}
+};
+
+struct ParameterEnum : ParameterBase
+{
+	struct Elem
+	{
+		const char * key;
+		const int value;
+	};
+	
+protected:
+	int value;
+	int defaultValue;
+	
+	std::vector<Elem> elems;
+	
+public:
+	ParameterEnum(const char * name, const int in_defaultValue, const std::vector<Elem> & in_elems)
+		: ParameterBase(kParameterType_Enum, name)
+		, value(in_defaultValue)
+		, defaultValue(in_defaultValue)
+		, elems(in_elems)
+	{
+		// todo : assert the default value exists within the given enumeration elements
+	}
+	
+	virtual std::type_index typeIndex() const override final
+	{
+		return std::type_index(typeid(ParameterEnum));
+	}
+	
+	int get() const
+	{
+		return value;
+	}
+};
 
 //
 
@@ -223,6 +336,7 @@ public:
 	ParameterVec3 * addVec3(const char * name, const Vec3 & defaultValue);
 	ParameterVec4 * addVec4(const char * name, const Vec4 & defaultValue);
 	ParameterString * addString(const char * name, const char * defaultValue);
+	ParameterEnum * addEnum(const char * name, const int defaultValue, const std::vector<ParameterEnum::Elem> & elems);
 	
 	const std::string & access_prefix()
 	{
