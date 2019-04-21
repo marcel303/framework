@@ -313,6 +313,25 @@ public:
 	{
 		return value;
 	}
+	
+	void set(const int in_value)
+	{
+		value = in_value;
+	}
+	
+	int & access_rw() // read-write access. be careful to invalidate the value when you change it!
+	{
+		return value;
+	}
+	
+	const std::vector<Elem> & getElems() const
+	{
+		return elems;
+	}
+	
+	void setDirty()
+	{
+	}
 };
 
 //
