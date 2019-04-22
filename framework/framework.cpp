@@ -1457,7 +1457,7 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 					g_soundCache.findOrCreate(f);
 			}
 		}
-		else if (e == "ttf")
+		else if (e == "ttf" || e == "otf")
 		{
 			g_fontCache.findOrCreate(f);
 		#if ENABLE_MSDF_FONTS
@@ -5750,7 +5750,8 @@ void setDrawRect(int x, int y, int sx, int sy)
 	}
 	else
 	{
-		y = globals.displaySize[1] - y - sy;
+		if (globals.currentWindow == globals.mainWindow->getWindow())
+			y = globals.displaySize[1] - y - sy;
 
 		ScaleX(x);
 		ScaleY(y);
