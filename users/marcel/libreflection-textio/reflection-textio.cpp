@@ -61,7 +61,7 @@ static bool extract_word(const char *& in_text, char * __restrict out_word, cons
 	}
 }
 
-bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void * object, const char * text)
+bool plain_type_fromtext(const PlainType * plain_type, void * object, const char * text)
 {
 // todo : I definitely need better parse functions. ones which return a success code
 
@@ -154,7 +154,7 @@ bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void *
 #include "rapidjson/internal/dtoa.h"
 #include "rapidjson/internal/itoa.h"
 
-static bool plain_type_totext(const PlainType * plain_type, const void * object, char * out_text, const int out_text_size)
+bool plain_type_totext(const PlainType * plain_type, const void * object, char * out_text, const int out_text_size)
 {
 	switch (plain_type->dataType)
 	{
@@ -364,7 +364,7 @@ bool object_fromlines_recursive(
 		{
 			auto * plain_type = static_cast<const PlainType*>(type);
 			
-			if (object_fromtext(typeDB, plain_type, object, line) == false)
+			if (plain_type_fromtext(plain_type, object, line) == false)
 			{
 				LOG_ERR("failed to deserialize plain type from text", 0);
 				
@@ -434,7 +434,7 @@ bool member_fromlines_recursive(
 				
 				auto * vector_object = member_interface->vector_access(object, member_interface->vector_size(object) - 1);
 			
-				result &= object_fromtext(typeDB, plain_type, vector_object, element);
+				result &= plain_type_fromtext(plain_type, vector_object, element);
 			}
 		}
 	}
