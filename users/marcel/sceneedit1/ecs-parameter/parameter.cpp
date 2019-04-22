@@ -1,8 +1,27 @@
+#include "Debugging.h"
 #include "parameter.h"
 
 void ParameterMgr::init(const char * in_prefix)
 {
 	prefix = in_prefix;
+}
+
+void ParameterMgr::tick()
+{
+	// todo : make a separate list for parameters that can trigger
+	
+	for (auto * parameter : parameters)
+	{
+		if (parameter->isDirty)
+		{
+			parameter->isDirty = false;
+			parameter->hasChanged = true;
+		}
+		else if (parameter->hasChanged)
+		{
+			parameter->hasChanged = false;
+		}
+	}
 }
 
 void ParameterMgr::add(ParameterBase * parameter)

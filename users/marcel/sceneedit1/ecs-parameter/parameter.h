@@ -7,6 +7,23 @@
 #include <typeindex>
 #include <vector>
 
+// forward declarations
+
+struct ParameterBase;
+
+struct ParameterBool;
+struct ParameterEnum;
+struct ParameterFloat;
+struct ParameterInt;
+struct ParameterString;
+struct ParameterVec2;
+struct ParameterVec3;
+struct ParameterVec4;
+
+struct ParameterMgr;
+
+//
+
 enum ParameterType
 {
 	kParameterType_Bool,
@@ -19,10 +36,14 @@ enum ParameterType
 	kParameterType_Enum
 };
 
+//
+
 struct ParameterBase
 {
 	ParameterType type;
 	std::string name;
+	bool isDirty = false;
+	bool hasChanged = false;
 	
 	explicit ParameterBase(const ParameterType in_type, const std::string & in_name)
 		: type(in_type)
@@ -31,7 +52,14 @@ struct ParameterBase
 	}
 	
 	virtual std::type_index typeIndex() const = 0;
+	
+	void setDirty()
+	{
+		isDirty = true;
+	}
 };
+
+//
 
 template <typename T, ParameterType kType>
 struct Parameter : ParameterBase
@@ -61,10 +89,6 @@ public:
 	T & access_rw() // read-write access. be careful to invalidate the value when you change it!
 	{
 		return value;
-	}
-	
-	void setDirty()
-	{
 	}
 };
 
@@ -174,6 +198,15 @@ struct ParameterVec2 : Parameter<Vec2, kParameterType_Vec2>
 		hasLimits = true;
 		min = in_min;
 		max = in_max;
+		
+		return *this;
+	}
+	
+	ParameterVec2 & setLimits(const float in_min, const float in_max)
+	{
+		hasLimits = true;
+		min = Vec2(in_min, in_min);
+		max = Vec2(in_max, in_max);
 		
 		return *this;
 	}
@@ -345,6 +378,7 @@ private:
 	
 public:
 	void init(const char * prefix);
+	void tick();
 	
 	void add(ParameterBase * parameter);
 	
