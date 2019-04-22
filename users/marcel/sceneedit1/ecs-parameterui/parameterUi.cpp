@@ -3,6 +3,8 @@
 #include "parameterUi.h"
 #include "StringEx.h"
 #include <algorithm>
+#include <map>
+#include <sstream>
 
 #ifdef WIN32
 	#include <malloc.h>
@@ -180,4 +182,280 @@ void doParameterUi(ParameterMgr & parameterMgr, const char * filter)
 			ImGui::TreePop();
 		}
 	}
+}
+
+//
+
+void copyParametersToClipboard(ParameterBase * const * const parameters, const int numParameters)
+{
+	// create a list of all parameter values for each parameter which is no longer set to its default and copy the list to the clipboard
+
+	std::ostringstream text;
+
+	for (int i = 0; i < numParameters; ++i)
+	{
+		auto * parameterBase = parameters[i];
+		const auto & name = parameterBase->name;
+		
+		if (parameterBase->isSetToDefault())
+			continue;
+		
+		text << name << "\n";
+		
+		switch (parameterBase->type)
+		{
+		case kParameterType_Bool:
+			{
+				auto * parameter = static_cast<ParameterBool*>(parameterBase);
+				text << '\t' << (parameter->get() ? 1 : 0);
+			}
+			break;
+		case kParameterType_Int:
+			{
+				auto * parameter = static_cast<ParameterInt*>(parameterBase);
+				text << '\t' << parameter->get();
+			}
+			break;
+		case kParameterType_Float:
+			{
+				auto * parameter = static_cast<ParameterFloat*>(parameterBase);
+				text << '\t' << parameter->get();
+			}
+			break;
+		case kParameterType_Vec2:
+			{
+				auto * parameter = static_cast<ParameterVec2*>(parameterBase);
+				text << '\t' << parameter->get()[0];
+				text << '\t' << parameter->get()[1];
+			}
+			break;
+		case kParameterType_Vec3:
+			{
+				auto * parameter = static_cast<ParameterVec3*>(parameterBase);
+				text << '\t' << parameter->get()[0];
+				text << '\t' << parameter->get()[1];
+				text << '\t' << parameter->get()[2];
+			}
+			break;
+		case kParameterType_Vec4:
+			{
+				auto * parameter = static_cast<ParameterVec4*>(parameterBase);
+				text << '\t' << parameter->get()[0];
+				text << '\t' << parameter->get()[1];
+				text << '\t' << parameter->get()[2];
+				text << '\t' << parameter->get()[3];
+			}
+			break;
+		case kParameterType_String:
+			{
+				auto * parameter = static_cast<ParameterString*>(parameterBase);
+				text << '\t' << parameter->get();
+			}
+			break;
+		case kParameterType_Enum:
+			{
+				auto * parameter = static_cast<ParameterEnum*>(parameterBase);
+				text << '\t' << parameter->get();
+			}
+			break;
+		}
+		
+		text << "\n";
+	}
+
+	ImGui::SetClipboardText(text.str().c_str());
+}
+
+void copyParametersToClipboard(ParameterMgr * const * const parameterMgrs, const int numParameterMgrs, const char * filter)
+{
+	const bool do_filter = filter != nullptr && filter[0] != 0;
+
+	int max_parameters = 0;
+	
+	for (int i = 0; i < numParameterMgrs; ++i)
+		max_parameters += parameterMgrs[i]->access_parameters().size();
+	
+	ParameterBase ** const parameters = (ParameterBase ** const)alloca(max_parameters * sizeof(ParameterBase*));
+	
+	int numParameters = 0;
+	
+	if (do_filter)
+	{
+		for (int i = 0; i < numParameterMgrs; ++i)
+			for (auto * parameter : parameterMgrs[i]->access_parameters())
+				if (strcasestr(parameter->name.c_str(), filter))
+					parameters[numParameters++] = parameter;
+	}
+	else
+	{
+		for (int i = 0; i < numParameterMgrs; ++i)
+			for (auto * parameter : parameterMgrs[i]->access_parameters())
+				parameters[numParameters++] = parameter;
+	}
+	
+	copyParametersToClipboard(parameters, numParameters);
+}
+
+void pasteParametersFromClipboard(ParameterBase * const * const parameters, const int numParameters)
+{
+	// parse the list of parameter values from clipboard and update all of the known parameters accordingly
+	
+	const char * text = ImGui::GetClipboardText();
+	
+	struct Elem
+	{
+		std::string line;
+	};
+
+	std::map<std::string, Elem> elems;
+
+	std::istringstream str(text);
+
+	std::string line;
+
+	int index = 0;
+
+	Elem * elem = nullptr;
+
+	for (;;)
+	{
+		std::getline(str, line);
+		
+		if (str.eof() || str.fail())
+			break;
+		
+		if (index == 0)
+		{
+			elem = &elems[line];
+		}
+		else
+		{
+			std::swap(elem->line, line);
+		}
+		
+		index++;
+		
+		if (index == 2)
+			index = 0;
+	}
+
+	//
+	
+	for (int i = 0; i < numParameters; ++i)
+	{
+		auto * parameterBase = parameters[i];
+		const auto & name = parameterBase->name;
+		
+		auto elem_itr = elems.find(name);
+		
+		if (elem_itr == elems.end())
+			continue;
+		
+		auto & elem = elem_itr->second;
+		auto * line = elem.line.c_str();
+		
+		switch (parameterBase->type)
+		{
+		case kParameterType_Bool:
+			{
+				auto * parameter = static_cast<ParameterBool*>(parameterBase);
+				
+				int value;
+				if (sscanf(line, "%d", &value) == 1)
+					parameter->set(value != 0);
+			}
+			break;
+		case kParameterType_Int:
+			{
+				auto * parameter = static_cast<ParameterInt*>(parameterBase);
+				
+				int value;
+				if (sscanf(line, "%d", &value) == 1)
+					parameter->set(value);
+			}
+			break;
+		case kParameterType_Float:
+			{
+				auto * parameter = static_cast<ParameterFloat*>(parameterBase);
+				
+				float value;
+				if (sscanf(line, "%f", &value) == 1)
+					parameter->set(value);
+			}
+			break;
+		case kParameterType_Vec2:
+			{
+				auto * parameter = static_cast<ParameterVec2*>(parameterBase);
+				
+				float values[2];
+				if (sscanf(line, "%f %f", &values[0], &values[1]) == 2)
+					parameter->set(Vec2(values[0], values[1]));
+			}
+			break;
+		case kParameterType_Vec3:
+			{
+				auto * parameter = static_cast<ParameterVec3*>(parameterBase);
+				
+				float values[3];
+				if (sscanf(line, "%f %f %f", &values[0], &values[1], &values[2]) == 3)
+					parameter->set(Vec3(values[0], values[1], values[2]));
+			}
+			break;
+		case kParameterType_Vec4:
+			{
+				auto * parameter = static_cast<ParameterVec4*>(parameterBase);
+				
+				float values[4];
+				if (sscanf(line, "%f %f %f %f", &values[0], &values[1], &values[2], &values[3]) == 4)
+					parameter->set(Vec4(values[0], values[1], values[2], values[3]));
+			}
+			break;
+		case kParameterType_String:
+			{
+				auto * parameter = static_cast<ParameterString*>(parameterBase);
+				
+				parameter->set(line);
+			}
+			break;
+		case kParameterType_Enum:
+			{
+				auto * parameter = static_cast<ParameterEnum*>(parameterBase);
+				
+				int value;
+				if (sscanf(line, "%d", &value) == 1)
+					parameter->set(value);
+			}
+			break;
+		}
+	}
+}
+
+void pasteParametersFromClipboard(ParameterMgr * const * const parameterMgrs, const int numParameterMgrs, const char * filter)
+{
+	const bool do_filter = filter != nullptr && filter[0] != 0;
+
+	int max_parameters = 0;
+	
+	for (int i = 0; i < numParameterMgrs; ++i)
+		max_parameters += parameterMgrs[i]->access_parameters().size();
+	
+	ParameterBase ** const parameters = (ParameterBase ** const)alloca(max_parameters * sizeof(ParameterBase*));
+	
+	int numParameters = 0;
+	
+	if (do_filter)
+	{
+		for (int i = 0; i < numParameterMgrs; ++i)
+			for (auto * parameter : parameterMgrs[i]->access_parameters())
+				if (strcasestr(parameter->name.c_str(), filter))
+					parameters[numParameters++] = parameter;
+	}
+	else
+	{
+		for (int i = 0; i < numParameterMgrs; ++i)
+			for (auto * parameter : parameterMgrs[i]->access_parameters())
+				parameters[numParameters++] = parameter;
+	}
+	
+	pasteParametersFromClipboard(parameters, numParameters);
 }
