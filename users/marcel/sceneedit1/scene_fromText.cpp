@@ -84,7 +84,7 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 		{
 			// only one level of identation may be added per line
 			
-			LOG_ERR("more than one level of identation added one line %d", line_reader.line_index);
+			LOG_ERR("more than one level of identation added one line %d", line_reader.get_current_line_index());
 			return false;
 		}
 		
@@ -266,7 +266,7 @@ bool parseSceneObjectFromLines(const TypeDB & typeDB, LineReader & line_reader, 
 		{
 			// only one level of identation may be added per line
 			
-			LOG_ERR("more than one level of identation added one line %d", line_reader.line_index);
+			LOG_ERR("more than one level of identation added one line %d", line_reader.get_current_line_index());
 			return false;
 		}
 		
@@ -293,7 +293,7 @@ bool parseSceneObjectFromLines(const TypeDB & typeDB, LineReader & line_reader, 
 		}
 		else
 		{
-			LOG_ERR("syntax error on line %d", line_reader.line_index);
+			LOG_ERR("syntax error on line %d", line_reader.get_current_line_index());
 			return false;
 		}
 	}
@@ -319,7 +319,7 @@ bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, LineReader & line
 		{
 			// only one level of identation may be added per line
 			
-			LOG_ERR("more than one level of identation added one line %d", line_reader.line_index);
+			LOG_ERR("more than one level of identation added one line %d", line_reader.get_current_line_index());
 			return false;
 		}
 		

@@ -1026,7 +1026,7 @@ int main(int argc, char * argv[])
 				logError("failed to save scene to lines");
 			else
 			{
-				auto lines = line_writer.ToLines();
+				auto lines = line_writer.to_lines();
 		
 				if (TextIO::save("testScene.txt", lines, TextIO::kLineEndings_Unix) == false)
 					logError("failed to save lines to file");
@@ -1126,7 +1126,7 @@ int main(int argc, char * argv[])
 							LineWriter line_writer;
 							object_tolines_recursive(g_typeDB, componentType, component, line_writer, 0);
 							
-							std::vector<std::string> lines = line_writer.ToLines();
+							std::vector<std::string> lines = line_writer.to_lines();
 							
 							//for (auto & line : lines)
 							//	logInfo("%s", line.c_str());

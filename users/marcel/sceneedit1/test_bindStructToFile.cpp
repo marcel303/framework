@@ -68,12 +68,11 @@ bool bindObjectToFile(const TypeDB * typeDB, const Type * type, void * object, c
 		}
 		else
 		{
-			auto lines = line_writer.ToLines();
+			auto lines = line_writer.to_lines();
 			if (TextIO::save(filename, lines, TextIO::kLineEndings_Unix) == false)
 				LOG_WRN("failed to save lines to file %s", filename);
 		}
 	}
-
 
 	return true;
 }

@@ -73,7 +73,7 @@ static void createFallbackTemplateForComponent(const TypeDB & typeDB, const char
 			continue;
 		}
 		
-		template_property.value_lines = line_writer.ToLines(); // todo : optimize
+		template_property.value_lines = line_writer.to_lines(); // todo : optimize
 		
 		template_component.properties.push_back(template_property);
 	}
@@ -332,7 +332,7 @@ bool saveTemplateInstanceToString(const TypeDB & typeDB, const std::vector<Templ
 					LineWriter line_writer;
 					result &= member_tolines_recursive(typeDB, member, component.component, line_writer, 0);
 					
-					std::vector<std::string> lines = line_writer.ToLines();
+					std::vector<std::string> lines = line_writer.to_lines();
 					
 					out << "\t" << member->name << "\n";
 					for (auto & line : lines)

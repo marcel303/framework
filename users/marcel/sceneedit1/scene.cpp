@@ -385,7 +385,7 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 		
 		char node_definition[128];
 		sprintf(node_definition, "entity %d", node->id);
-		line_writer.AppendIndentedLine(indent, node_definition);
+		line_writer.append_indented_line(indent, node_definition);
 		
 		indent++;
 		{
@@ -405,11 +405,11 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 				{
 					char component_definition[128];
 					sprintf(component_definition, "%s %s", componentType->typeName, component->id);
-					line_writer.AppendIndentedLine(indent, component_definition);
+					line_writer.append_indented_line(indent, component_definition);
 				}
 				else
 				{
-					line_writer.AppendIndentedLine(indent, componentType->typeName);
+					line_writer.append_indented_line(indent, componentType->typeName);
 				}
 				
 				indent++;
@@ -424,11 +424,11 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 	
 	//
 	
-	line_writer.AppendIndentedLine(indent, "scene");
+	line_writer.append_indented_line(indent, "scene");
 	
 	indent++;
 	{
-		line_writer.AppendIndentedLine(indent, "nodes");
+		line_writer.append_indented_line(indent, "nodes");
 		
 		indent++;
 		{

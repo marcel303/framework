@@ -20,8 +20,8 @@ class LineWriter
 		size_t capacity;
 	};
 	
-	void addBlock();
-	void newBlock(const size_t capacity);
+	void add_block();
+	void new_block(const size_t capacity);
 	
 	Block * blocks_tail = nullptr;
 	
@@ -32,12 +32,12 @@ class LineWriter
 public:
 	~LineWriter();
 	
-	void Append(const char c)
+	void append(const char c)
 	{
 		if (text_size == text_capacity)
 		{
-			addBlock();
-			newBlock(kDefaultBlockSize);
+			add_block();
+			new_block(kDefaultBlockSize);
 		}
 		
 		text[text_size] = c;
@@ -45,7 +45,7 @@ public:
 		text_size += 1;
 	}
 	
-	void Append(const char * __restrict in_text)
+	void append(const char * __restrict in_text)
 	{
 		size_t in_text_size = 0;
 		
@@ -62,8 +62,8 @@ public:
 		{
 			const size_t block_size = size > kDefaultBlockSize ? size : kDefaultBlockSize;
 			
-			addBlock();
-			newBlock(block_size);
+			add_block();
+			new_block(block_size);
 		}
 		
 		char * __restrict text_ptr = text + text_size;
@@ -74,7 +74,7 @@ public:
 		text_size += size;
 	}
 	
-	void AppendIndentedLine(const int indentation, const char * __restrict in_text)
+	void append_indented_line(const int indentation, const char * __restrict in_text)
 	{
 		// compute space requirement
 		
@@ -95,8 +95,8 @@ public:
 		{
 			const size_t block_size = size > kDefaultBlockSize ? size : kDefaultBlockSize;
 			
-			addBlock();
-			newBlock(block_size);
+			add_block();
+			new_block(block_size);
 		}
 		
 		// copy data
@@ -116,7 +116,7 @@ public:
 		text_size += size;
 	}
 	
-	void AppendFormat(const char * format, ...);
+	void append_format(const char * format, ...);
 	
-	std::vector<std::string> ToLines(); // todo : remove
+	std::vector<std::string> to_lines(); // todo : remove
 };

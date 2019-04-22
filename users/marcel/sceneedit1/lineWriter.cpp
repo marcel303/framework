@@ -1,6 +1,6 @@
 #include "lineWriter.h"
 
-void LineWriter::addBlock()
+void LineWriter::add_block()
 {
 	if (text_size == 0)
 		return;
@@ -19,7 +19,7 @@ void LineWriter::addBlock()
 	text_capacity = 0;
 }
 
-void LineWriter::newBlock(const size_t capacity)
+void LineWriter::new_block(const size_t capacity)
 {
 	text = new char[capacity];
 	text_size = 0;
@@ -48,7 +48,7 @@ LineWriter::~LineWriter()
 	}
 }
 
-void LineWriter::AppendFormat(const char * format, ...)
+void LineWriter::append_format(const char * format, ...)
 {
 	va_list va;
 	va_start(va, format);
@@ -56,10 +56,10 @@ void LineWriter::AppendFormat(const char * format, ...)
 	vsprintf(text, format, va);
 	va_end(va);
 
-	Append(text);
+	append(text);
 }
 	
-std::vector<std::string> LineWriter::ToLines() // todo : remove
+std::vector<std::string> LineWriter::to_lines() // todo : remove
 {
 	std::vector<std::string> result;
 	
@@ -67,7 +67,7 @@ std::vector<std::string> LineWriter::ToLines() // todo : remove
 	
 	if (text_size > 0)
 	{
-		addBlock();
+		add_block();
 	}
 	
 	// early out when empty

@@ -865,7 +865,7 @@ bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * stru
 				{
 					auto * vector_object = member_interface->vector_access((void*)object, i);
 					
-					line_writer.AppendIndentedLine(currentIndent, "-");
+					line_writer.append_indented_line(currentIndent, "-");
 					
 					result &= object_tolines_recursive(typeDB, vector_type, vector_object, line_writer, currentIndent + 1);
 				}
@@ -1082,7 +1082,7 @@ bool object_tolines_recursive(
 		
 		for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
 		{
-			line_writer.AppendIndentedLine(currentIndent, member->name);
+			line_writer.append_indented_line(currentIndent, member->name);
 			
 			result &= member_tolines_recursive(typeDB, structured_type, object, member, line_writer, currentIndent + 1);
 		}
@@ -1103,7 +1103,7 @@ bool object_tolines_recursive(
 		}
 		else
 		{
-			line_writer.AppendIndentedLine(currentIndent, text);
+			line_writer.append_indented_line(currentIndent, text);
 			return true;
 		}
 	}

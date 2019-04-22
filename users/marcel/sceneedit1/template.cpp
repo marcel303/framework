@@ -29,7 +29,7 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 		{
 			// only one level of identation may be added per line
 			
-			LOG_ERR("more than one level of identation added one line %d", line_reader.line_index);
+			LOG_ERR("more than one level of identation added one line %d", line_reader.get_current_line_index());
 			return false;
 		}
 		
