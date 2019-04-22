@@ -570,58 +570,6 @@ bool member_tojson(const TypeDB & typeDB, const Member * member, const void * ob
 
 // member <-> text serialization
 
-#include "Parse.h"
-#include "StringEx.h" // strcpy_s
-
-inline bool is_whitespace(const char c)
-{
-	return c == ' ' || c == '\t';
-}
-
-static bool extract_word(const char *& in_text, char * __restrict out_word, const int max_word_size)
-{
-	const char * __restrict text = in_text;
-	
-	while (*text != 0 && is_whitespace(*text) == true)
-		text++;
-	
-	if (*text == 0)
-		return false;
-	
-	const char * word = text;
-	
-	while (*text != 0 && is_whitespace(*text) == false)
-		text++;
-	
-	if (text > word)
-	{
-		const size_t size = text - word;
-		
-		if (*text != 0)
-		{
-			text++;
-		}
-		
-		if (size + 1 > max_word_size)
-			return false;
-		else
-		{
-			for (size_t i = 0; i < size; ++i)
-				out_word[i] = word[i];
-			
-			out_word[size] = 0;
-			
-			in_text = text;
-			
-			return true;
-		}
-	}
-	else
-	{
-		return false;
-	}
-}
-
 // todo : remove. belongs to -textio
 bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object, const char * text)
 {
@@ -644,7 +592,7 @@ bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object
 	
 	auto * plain_type = static_cast<const PlainType*>(member_type);
 	
-	return object_fromtext(typeDB, plain_type, member_object, text);
+	return plain_type_fromtext(plain_type, member_object, text);
 }
 
 
