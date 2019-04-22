@@ -6,6 +6,9 @@
 
 #include <vector> // todo : remove. use LineReader to read individual lines
 
+/**
+ * LineWriter provides a fast and efficient way to write indented text.
+ */
 class LineWriter
 {
 	static const int kMaxFormattedTextSize = 1 << 12;

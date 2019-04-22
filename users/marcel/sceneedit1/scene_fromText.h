@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-struct LineReader;
+class LineReader;
 struct Scene;
 
 bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene);

@@ -4,7 +4,7 @@
 #include <vector>
 
 struct ComponentSet;
-struct LineReader;
+class LineReader;
 struct TypeDB;
 
 struct TemplateComponentProperty

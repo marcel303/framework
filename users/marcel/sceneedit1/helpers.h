@@ -10,7 +10,7 @@ struct ComponentMgrBase;
 struct ComponentSet;
 struct ComponentTypeBase;
 
-struct LineReader;
+class LineReader;
 class LineWriter;
 
 void registerBuiltinTypes();
