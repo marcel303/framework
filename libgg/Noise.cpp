@@ -31,3 +31,8 @@ float scaled_octave_noise_1d(
 		x,
 		0.f);
 }
+
+float raw_noise_1d(const float x)
+{
+	return raw_noise_2d(x, 0.f);
+}
