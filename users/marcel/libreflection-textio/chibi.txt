@@ -1,0 +1,4 @@
+library libreflection-textio
+	add_files lineReader.cpp lineReader.h
+	add_files lineWriter.cpp lineWriter.h
+	header_path . expose
