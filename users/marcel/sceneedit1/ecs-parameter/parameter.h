@@ -53,6 +53,8 @@ struct ParameterBase
 	
 	virtual std::type_index typeIndex() const = 0;
 	
+	virtual bool isSetToDefault() const = 0;
+	
 	void setDirty()
 	{
 		isDirty = true;
@@ -79,6 +81,55 @@ public:
 	virtual std::type_index typeIndex() const override final
 	{
 		return std::type_index(typeid(T));
+	}
+	
+	inline bool equals(const bool value1, const bool value2) const
+	{
+		return value1 == value2;
+	}
+	
+	inline bool equals(const int value1, const int value2) const
+	{
+		return value1 == value2;
+	}
+	
+	inline bool equals(const float value1, const float value2) const
+	{
+		return value1 == value2;
+	}
+	
+	inline bool equals(Vec2Arg value1, Vec2Arg value2) const
+	{
+		return
+			value1[0] == value2[0] &&
+			value1[1] == value2[1];
+	}
+	
+	inline bool equals(Vec3Arg value1, Vec3Arg value2) const
+	{
+		return
+			value1[0] == value2[0] &&
+			value1[1] == value2[1] &&
+			value1[2] == value2[2];
+	}
+	
+	inline bool equals(Vec4Arg value1, Vec4Arg value2) const
+	{
+		return
+			value1[0] == value2[0] &&
+			value1[1] == value2[1] &&
+			value1[2] == value2[2] &&
+			value1[3] == value2[3];
+	}
+	
+	inline bool equals(const std::string & value1, const std::string & value2) const
+	{
+		return value1 == value2;
+	}
+	
+	virtual bool isSetToDefault() const override final
+	{
+		return equals(value, defaultValue);
 	}
 	
 	const T & get() const
@@ -340,6 +391,11 @@ public:
 	virtual std::type_index typeIndex() const override final
 	{
 		return std::type_index(typeid(ParameterEnum));
+	}
+	
+	virtual bool isSetToDefault() const override final
+	{
+		return value == defaultValue;
 	}
 	
 	int get() const
