@@ -28,25 +28,10 @@ bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object
 bool member_tojson_recursive(const TypeDB & typeDB, const Type * type, const void * object, ComponentJson & j);
 bool member_tojson(const TypeDB & typeDB, const Member * member, const void * object, ComponentJson & j);
 
-bool object_fromtext(const TypeDB & typeDB, const PlainType * plain_type, void * object, const char * text);
 bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object, const char * text);
 bool member_totext(const TypeDB & typeDB, const Member * member, const void * object, std::string & out_text);
 
-bool member_tolines_recursive(const TypeDB & typeDB, const StructuredType * structured_type, const void * object, const Member * member, LineWriter & line_writer, const int currentIndent);
-
-bool object_fromlines_recursive(
-	const TypeDB & typeDB, const Type * type, void * object,
-	LineReader & line_reader);
-bool member_fromlines_recursive(
-	const TypeDB & typeDB, const Member * member, void * object,
-	LineReader & line_reader);
-
-bool object_tolines_recursive(
-	const TypeDB & typeDB, const Type * type, const void * object,
-	LineWriter & line_Writer, const int currentIndent);
-bool member_tolines_recursive(
-	const TypeDB & typeDB, const Member * member, const void * object,
-	LineWriter & line_Writer, const int currentIndent);
+#include "reflection-textio.h"
 
 extern TypeDB g_typeDB;
 
