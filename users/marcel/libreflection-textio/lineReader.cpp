@@ -1,5 +1,4 @@
 #include "lineReader.h"
-#include "Log.h"
 #include <string.h>
 
 static int isEmptyLineOrComment(const char * line)
