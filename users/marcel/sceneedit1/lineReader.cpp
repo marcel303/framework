@@ -2,7 +2,7 @@
 #include "Log.h"
 #include <string.h>
 
-static bool isEmptyLineOrComment(const char * line)
+static int isEmptyLineOrComment(const char * line)
 {
 	for (int i = 0; line[i] != 0; ++i)
 	{
@@ -42,7 +42,7 @@ LineReader::~LineReader()
 	//LOG_DBG("indentation level when line reader disposed: %d", indentation_level);
 }
 
-const char * LineReader::get_next_line(const bool skipEmptyLines)
+const char * LineReader::get_next_line(const bool skipEmptyLinesAndComments)
 {
 	// at end? return nullptr
 	
@@ -51,10 +51,10 @@ const char * LineReader::get_next_line(const bool skipEmptyLines)
 	
 	const char * line = lines[line_index].c_str();
 	
-	if (skipEmptyLines && isEmptyLineOrComment(line))
+	if (skipEmptyLinesAndComments && isEmptyLineOrComment(line))
 	{
 		line_index++;
-		return get_next_line(skipEmptyLines);
+		return get_next_line(skipEmptyLinesAndComments);
 	}
 	else
 	{

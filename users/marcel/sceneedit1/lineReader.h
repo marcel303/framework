@@ -8,6 +8,8 @@
  * When reading lines, its scope is limited by the indentation level that you set.
  * This allows it to read structured data, similar to how scoping works in Python,
  * with the exception LineReader will always use tabs for indentation, for efficiency reasons.
+ *
+ * LineReader supports skipping empty lines, or commented lines starting with '#'.
  */
 class LineReader
 {
@@ -22,7 +24,7 @@ public:
 		const int in_indentation_level);
 	~LineReader();
 	
-	const char * get_next_line(const bool skipEmptyLines);
+	const char * get_next_line(const bool skipEmptyLinesAndComments);
 	int get_current_line_index() const { return line_index; }
 	
 	void push_indent()
