@@ -152,7 +152,11 @@ struct ParameterBool : Parameter<bool, kParameterType_Bool>
 	
 	void set(const bool in_value)
 	{
-		value = in_value;
+		if (value != in_value)
+		{
+			value = in_value;
+			setDirty();
+		}
 	}
 };
 
@@ -180,11 +184,21 @@ struct ParameterInt : Parameter<int, kParameterType_Int>
 	{
 		if (hasLimits)
 		{
-			value = in_value < min ? min : in_value > max ? max : in_value;
+			const int new_value = in_value < min ? min : in_value > max ? max : in_value;
+			
+			if (value != new_value)
+			{
+				value = new_value;
+				setDirty();
+			}
 		}
 		else
 		{
-			value = in_value;
+			if (value != in_value)
+			{
+				value = in_value;
+				setDirty();
+			}
 		}
 	}
 };
@@ -222,11 +236,21 @@ struct ParameterFloat : Parameter<float, kParameterType_Float>
 	{
 		if (hasLimits)
 		{
-			value = in_value < min ? min : in_value > max ? max : in_value;
+			const float new_value = in_value < min ? min : in_value > max ? max : in_value;
+			
+			if (value != new_value)
+			{
+				value = new_value;
+				setDirty();
+			}
 		}
 		else
 		{
-			value = in_value;
+			if (value != in_value)
+			{
+				value = in_value;
+				setDirty();
+			}
 		}
 	}
 };
@@ -271,9 +295,27 @@ struct ParameterVec2 : Parameter<Vec2, kParameterType_Vec2>
 	
 	void set(Vec2Arg in_value)
 	{
-		value = in_value;
-		
-		// todo : apply limits
+		if (hasLimits)
+		{
+			for (int i = 0; i < 2; ++i)
+			{
+				const float new_value = in_value[i] < min[i] ? min[i] : in_value[i] > max[i] ? max[i] : in_value[i];
+				
+				if (value[i] != new_value)
+				{
+					value[i] = new_value;
+					setDirty();
+				}
+			}
+		}
+		else
+		{
+			if (value != in_value)
+			{
+				value = in_value;
+				setDirty();
+			}
+		}
 	}
 };
 
@@ -308,9 +350,27 @@ struct ParameterVec3 : Parameter<Vec3, kParameterType_Vec3>
 	
 	void set(Vec3Arg in_value)
 	{
-		value = in_value;
-		
-		// todo : apply limits
+		if (hasLimits)
+		{
+			for (int i = 0; i < 3; ++i)
+			{
+				const float new_value = in_value[i] < min[i] ? min[i] : in_value[i] > max[i] ? max[i] : in_value[i];
+				
+				if (value[i] != new_value)
+				{
+					value[i] = new_value;
+					setDirty();
+				}
+			}
+		}
+		else
+		{
+			if (value != in_value)
+			{
+				value = in_value;
+				setDirty();
+			}
+		}
 	}
 };
 
@@ -345,9 +405,27 @@ struct ParameterVec4 : Parameter<Vec4, kParameterType_Vec4>
 	
 	void set(Vec4Arg in_value)
 	{
-		value = in_value;
-		
-		// todo : apply limits
+		if (hasLimits)
+		{
+			for (int i = 0; i < 4; ++i)
+			{
+				const float new_value = in_value[i] < min[i] ? min[i] : in_value[i] > max[i] ? max[i] : in_value[i];
+				
+				if (value[i] != new_value)
+				{
+					value[i] = new_value;
+					setDirty();
+				}
+			}
+		}
+		else
+		{
+			if (value != in_value)
+			{
+				value = in_value;
+				setDirty();
+			}
+		}
 	}
 };
 
@@ -360,7 +438,11 @@ struct ParameterString : Parameter<std::string, kParameterType_String>
 	
 	void set(const char * in_value)
 	{
-		value = in_value;
+		if (value != in_value)
+		{
+			value = in_value;
+			setDirty();
+		}
 	}
 };
 
@@ -405,7 +487,11 @@ public:
 	
 	void set(const int in_value)
 	{
-		value = in_value;
+		if (value != in_value)
+		{
+			value = in_value;
+			setDirty();
+		}
 	}
 	
 	int & access_rw() // read-write access. be careful to invalidate the value when you change it!
@@ -417,10 +503,6 @@ public:
 	{
 		return elems;
 	}
-	
-	void setDirty()
-	{
-	}
 };
 
 //
@@ -429,11 +511,16 @@ struct ParameterMgr
 {
 private:
 	std::string prefix;
+	int index = -1;
 	
 	std::vector<ParameterBase*> parameters;
 	
+	std::vector<ParameterMgr*> children;
+	
+	bool strictStructuringEnabled = false;
+	
 public:
-	void init(const char * prefix);
+	void init(const char * prefix, const int in_index = -1);
 	void tick();
 	
 	void add(ParameterBase * parameter);
@@ -447,13 +534,40 @@ public:
 	ParameterString * addString(const char * name, const char * defaultValue);
 	ParameterEnum * addEnum(const char * name, const int defaultValue, const std::vector<ParameterEnum::Elem> & elems);
 	
-	const std::string & access_prefix()
+	ParameterBase * find(const char * name) const;
+	
+	void addChild(ParameterMgr * child)
+	{
+		children.push_back(child);
+	}
+	
+	bool getStrictStructuringEnabled() const
+	{
+		return strictStructuringEnabled;
+	}
+	
+	void setStrictStructuringEnabled(const bool enabled)
+	{
+		strictStructuringEnabled = enabled;
+	}
+	
+	const std::string & access_prefix() const
 	{
 		return prefix;
+	}
+	
+	const int access_index() const
+	{
+		return index;
 	}
 	
 	const std::vector<ParameterBase*> & access_parameters() const
 	{
 		return parameters;
+	}
+	
+	const std::vector<ParameterMgr*> & access_children() const
+	{
+		return children;
 	}
 };

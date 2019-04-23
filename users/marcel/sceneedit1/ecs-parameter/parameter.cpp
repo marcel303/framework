@@ -1,9 +1,10 @@
 #include "Debugging.h"
 #include "parameter.h"
 
-void ParameterMgr::init(const char * in_prefix)
+void ParameterMgr::init(const char * in_prefix, const int in_index)
 {
 	prefix = in_prefix;
+	index = in_index;
 }
 
 void ParameterMgr::tick()
@@ -83,4 +84,13 @@ ParameterEnum * ParameterMgr::addEnum(const char * name, const int defaultValue,
 	auto * parameter = new ParameterEnum(name, defaultValue, elems);
 	add(parameter);
 	return parameter;
+}
+
+ParameterBase * ParameterMgr::find(const char * name) const
+{
+	for (auto * parameter : parameters)
+		if (parameter->name == name)
+			return parameter;
+	
+	return nullptr;
 }
