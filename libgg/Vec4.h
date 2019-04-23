@@ -209,25 +209,23 @@ public:
 
 		return r;
 	}
-
-	inline Vec4 & operator=(const Vec2 & v)
+	
+	inline bool operator==(const Vec4 & other) const
 	{
-		m_v[0] = v[0];
-		m_v[1] = v[1];
-		m_v[2] = 0.0f;
-		m_v[3] = 0.0f;
-
-		return *this;
+		return
+			m_v[0] == other.m_v[0] &&
+			m_v[1] == other.m_v[1] &&
+			m_v[2] == other.m_v[2] &&
+			m_v[3] == other.m_v[3];
 	}
 
-	inline Vec4 & operator=(const Vec3 & v)
+	inline bool operator!=(const Vec4 & other) const
 	{
-		m_v[0] = v[0];
-		m_v[1] = v[1];
-		m_v[2] = v[2];
-		m_v[3] = 0.0f;
-
-		return *this;
+		return
+			m_v[0] != other.m_v[0] ||
+			m_v[1] != other.m_v[1] ||
+			m_v[2] != other.m_v[2] ||
+			m_v[3] != other.m_v[3];
 	}
 
 	inline float & operator[](int index)
