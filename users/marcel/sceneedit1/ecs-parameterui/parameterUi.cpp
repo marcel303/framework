@@ -184,6 +184,43 @@ void doParameterUi(ParameterMgr & parameterMgr, const char * filter)
 	}
 }
 
+void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
+{
+	for (auto * child : parameterMgr.access_children())
+	{
+		if (ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s", child->access_prefix().c_str()))
+		{
+			doParameterUi_recursive(*child, filter);
+			
+			ImGui::TreePop();
+		}
+	}
+	
+	const bool do_filter = filter != nullptr && filter[0] != 0;
+	
+	ParameterBase ** parameters = (ParameterBase**)alloca(parameterMgr.access_parameters().size() * sizeof(ParameterBase*));
+	
+	int numParameters = 0;
+	
+	if (do_filter)
+	{
+		for (auto * parameter : parameterMgr.access_parameters())
+			if (strcasestr(parameter->name.c_str(), filter))
+				parameters[numParameters++] = parameter;
+	}
+	else
+	{
+		for (auto * parameter : parameterMgr.access_parameters())
+			parameters[numParameters++] = parameter;
+	}
+	
+	if (numParameters > 0)
+	{
+		for (int i = 0; i < numParameters; ++i)
+			doParameterUi(*parameters[i]);
+	}
+}
+
 //
 
 void copyParametersToClipboard(ParameterBase * const * const parameters, const int numParameters)
