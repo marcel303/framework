@@ -31,6 +31,8 @@
 #include <stdint.h>
 #include <typeindex>
 
+// todo : add flags to types
+
 struct MemberFlagBase
 {
 	MemberFlagBase * next;
@@ -151,6 +153,7 @@ enum DataType // just for convenience and efficiency reasons, this enum allows f
 	kDataType_Float2,
 	kDataType_Float3,
 	kDataType_Float4,
+	kDataType_Double,
 	kDataType_String // std::string
 };
 

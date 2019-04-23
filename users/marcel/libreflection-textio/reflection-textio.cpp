@@ -139,6 +139,10 @@ bool plain_type_fromtext(const PlainType * plain_type, void * object, const char
 		}
 		return true;
 		
+	case kDataType_Double:
+		plain_type->access<double>(object) = Parse::Float(text); // todo : parse doubles using more accuracy
+		return true;
+		
 	case kDataType_String:
 		plain_type->access<std::string>(object) = text;
 		return true;
@@ -206,6 +210,13 @@ bool plain_type_totext(const PlainType * plain_type, const void * object, char *
 			text_ptr = rapidjson::internal::dtoa(value[1], text_ptr); *text_ptr++ = ' ';
 			text_ptr = rapidjson::internal::dtoa(value[2], text_ptr); *text_ptr++ = ' ';
 			text_ptr = rapidjson::internal::dtoa(value[3], text_ptr); *text_ptr++ = 0;
+		}
+		return true;
+		
+	case kDataType_Double:
+		{
+			char * text_ptr = rapidjson::internal::dtoa(plain_type->access<double>(object), out_text);
+			*text_ptr++ = 0;
 		}
 		return true;
 		
