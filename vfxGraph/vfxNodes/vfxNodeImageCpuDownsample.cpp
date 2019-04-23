@@ -32,9 +32,9 @@
 #ifdef __SSE2__
 	#include <xmmintrin.h>
 
-	#if !__AVX__
+	#if !__AVX2__
 		#ifndef WIN32
-			#warning AVX support disabled. image cpu downsample methods will use slower SSE2 code paths
+			#warning AVX2 support disabled. image cpu downsample methods will use slower SSE2 code paths
 		#endif
 	#else
 		#include <immintrin.h>
@@ -371,7 +371,7 @@ static int downsampleLine4x4_1channel_SSE(
 
 #endif
 
-#if __AVX__
+#if __AVX2__
 
 static int downsampleLine2x2_1channel_AVX(
 	const uint8_t * __restrict _srcLine1,
@@ -437,7 +437,7 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 			#ifdef __SSSE3__
 				if (((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(dstItr)) & 0xf) == 0)
 				{
-				#if __AVX__
+				#if __AVX2__
 					numPixelsProcessed = downsampleLine2x2_1channel_AVX(srcItr1, srcItr2, downsampledSx, dstItr);
 				#else
 					numPixelsProcessed = downsampleLine2x2_1channel_SSE(srcItr1, srcItr2, downsampledSx, dstItr);
