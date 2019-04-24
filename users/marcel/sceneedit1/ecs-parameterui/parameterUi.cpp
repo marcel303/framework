@@ -188,11 +188,23 @@ void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 {
 	for (auto * child : parameterMgr.access_children())
 	{
-		if (ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s", child->access_prefix().c_str()))
+		if (child->access_index() != -1)
 		{
-			doParameterUi_recursive(*child, filter);
-			
-			ImGui::TreePop();
+			if (ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s [%d]", child->access_prefix().c_str(), child->access_index()))
+			{
+				doParameterUi_recursive(*child, filter);
+				
+				ImGui::TreePop();
+			}
+		}
+		else
+		{
+			if (ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s", child->access_prefix().c_str()))
+			{
+				doParameterUi_recursive(*child, filter);
+				
+				ImGui::TreePop();
+			}
 		}
 	}
 	
