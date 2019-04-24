@@ -473,7 +473,10 @@ struct SoundSystem : AudioDeviceCallback
 	#if 1
 		float ** channelData = new float*[numChannels];
 		for (int i = 0; i < numChannels; ++i)
+		{
 			channelData[i] = new float[bufferSize];
+			memset(channelData[i], 0, bufferSize * sizeof(float));
+		}
 		
 		audioMutex->lock();
 		{
@@ -696,47 +699,53 @@ struct MonitorGui
 	
 	void doGui(SoundSystem & soundSystem, MonitorVisualizer & visualizer)
 	{
-		if (ImGui::Button("Audio device"))
+		const ImVec2 buttonSize(142, 36);
+		
+		if (ImGui::Button("Audio device", buttonSize))
 			activeTab = kTab_AudioDevice;
 		
 		ImGui::SameLine();
-		if (ImGui::Button("Audio output"))
+		if (ImGui::Button("Audio output", buttonSize))
 			activeTab = kTab_AudioOutput;
 		
 		ImGui::SameLine();
-		if (ImGui::Button("Visibility"))
+		if (ImGui::Button("Visibility", buttonSize))
 			activeTab = kTab_Visibility;
 		
 		ImGui::SameLine();
-		if (ImGui::Button("Panner"))
+		if (ImGui::Button("Panner", buttonSize))
 			activeTab = kTab_Panner;
 		
 		ImGui::SameLine();
-		if (ImGui::Button("Messages"))
+		if (ImGui::Button("Messages", buttonSize))
 			activeTab = kTab_Messages;
 		
-		switch (activeTab)
+		ImGui::PushItemWidth(300.f);
 		{
-		case kTab_AudioDevice:
-			doAudioDeviceGui(soundSystem.audioDevice);
-			break;
-		case kTab_AudioOutput:
-			doAudioOutputGui();
-			break;
-		case kTab_Visibility:
-			doVisibilityGui(visualizer);
-			break;
-		case kTab_Panner:
-			doPannerGui(soundSystem);
-			break;
-		case kTab_Messages:
-			doMessagesGui();
-			break;
-			
-		case kTab_COUNT:
-			Assert(false);
-			break;
+			switch (activeTab)
+			{
+			case kTab_AudioDevice:
+				doAudioDeviceGui(soundSystem.audioDevice);
+				break;
+			case kTab_AudioOutput:
+				doAudioOutputGui();
+				break;
+			case kTab_Visibility:
+				doVisibilityGui(visualizer);
+				break;
+			case kTab_Panner:
+				doPannerGui(soundSystem);
+				break;
+			case kTab_Messages:
+				doMessagesGui();
+				break;
+				
+			case kTab_COUNT:
+				Assert(false);
+				break;
+			}
 		}
+		ImGui::PopItemWidth();
 	}
 	
 	void doAudioDeviceGui(AudioDevice & audioDevice)
@@ -921,6 +930,12 @@ int main(int argc, char * argv[])
 	
 	FrameworkImGuiContext guiContext;
 	guiContext.init();
+	
+	guiContext.pushImGuiContext();
+	{
+		ImGui::StyleColorsClassic();
+	}
+	guiContext.popImGuiContext();
 	
 	bool showGui = true;
 	
