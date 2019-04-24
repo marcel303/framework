@@ -1,3 +1,4 @@
+#include "Debugging.h"
 #include "imgui.h"
 #include "parameter.h"
 #include "parameterUi.h"
@@ -186,10 +187,44 @@ void doParameterUi(ParameterMgr & parameterMgr, const char * filter)
 	}
 }
 
-void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
+static bool checkFilterPassesAtLeastOnce_recursive(const ParameterMgr & parameterMgr, const char * filter)
 {
+	Assert(filter != nullptr);
+	
+	// check the name of the parameter mgr
+	
+	if (strcasestr(parameterMgr.access_prefix().c_str(), filter))
+		return true;
+	
+	// check the parameters first before recursing
+	
+	for (auto * parameter : parameterMgr.access_parameters())
+		if (strcasestr(parameter->name.c_str(), filter))
+			return true;
+	
+	// recurse
+	
 	for (auto * child : parameterMgr.access_children())
 	{
+		if (checkFilterPassesAtLeastOnce_recursive(*child, filter))
+			return true;
+	}
+	
+	return false;
+}
+
+void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
+{
+	const bool do_filter = filter != nullptr && filter[0] != 0;
+	
+	for (auto * child : parameterMgr.access_children())
+	{
+		if (do_filter)
+		{
+			if (checkFilterPassesAtLeastOnce_recursive(*child, filter) == false)
+				continue;
+		}
+		
 		if (child->access_index() != -1)
 		{
 			if (ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s [%d]", child->access_prefix().c_str(), child->access_index()))
@@ -209,8 +244,6 @@ void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 			}
 		}
 	}
-	
-	const bool do_filter = filter != nullptr && filter[0] != 0;
 	
 	ParameterBase ** parameters = (ParameterBase**)alloca(parameterMgr.access_parameters().size() * sizeof(ParameterBase*));
 	
