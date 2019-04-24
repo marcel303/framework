@@ -91,7 +91,7 @@ int main(int argc, const char * argv[])
 				c.x = random<float>(0.f, 800.f);
 				c.y = random<float>(0.f, 600.f);
 				c.radius = 1.f;
-				c.color = Color::fromHSL(powf(1.f / (circles.size() / 10.f + 1), .1f), .3f, .6f);
+				c.color = Color::fromHSL(powf(1.f / (circles.size() / 10.f + 1), .1f), .7f, .3f);
 				
 				if (isValid(c.x, c.y, c.radius, nullptr))
 				{
@@ -102,7 +102,7 @@ int main(int argc, const char * argv[])
 			}
 		}
 		
-		framework.beginDraw(0, 0, 0, 0);
+		framework.beginDraw(200, 200, 200, 0);
 		{
 			setColor(colorWhite);
 			
