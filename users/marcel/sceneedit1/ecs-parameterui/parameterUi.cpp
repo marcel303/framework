@@ -191,11 +191,6 @@ static bool checkFilterPassesAtLeastOnce_recursive(const ParameterMgr & paramete
 {
 	Assert(filter != nullptr);
 	
-	// check the name of the parameter mgr
-	
-	if (strcasestr(parameterMgr.access_prefix().c_str(), filter))
-		return true;
-	
 	// check the parameters first before recursing
 	
 	for (auto * parameter : parameterMgr.access_parameters())
@@ -219,9 +214,15 @@ void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 	
 	for (auto * child : parameterMgr.access_children())
 	{
+		const char * child_filter = filter;
+		
 		if (do_filter)
 		{
-			if (checkFilterPassesAtLeastOnce_recursive(*child, filter) == false)
+			// check the name of the parameter mgr. if it matches, show all of the child's parameters, as the filter has passed at the parent level
+	
+			if (strcasestr(child->access_prefix().c_str(), filter))
+				child_filter = nullptr;
+			else if (checkFilterPassesAtLeastOnce_recursive(*child, filter) == false)
 				continue;
 		}
 		
@@ -229,7 +230,7 @@ void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 		{
 			if (ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s [%d]", child->access_prefix().c_str(), child->access_index()))
 			{
-				doParameterUi_recursive(*child, filter);
+				doParameterUi_recursive(*child, child_filter);
 				
 				ImGui::TreePop();
 			}
@@ -238,7 +239,7 @@ void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 		{
 			if (ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s", child->access_prefix().c_str()))
 			{
-				doParameterUi_recursive(*child, filter);
+				doParameterUi_recursive(*child, child_filter);
 				
 				ImGui::TreePop();
 			}
