@@ -176,8 +176,10 @@ void doParameterUi(ParameterMgr & parameterMgr, const char * filter)
 	{
 		if (ImGui::TreeNodeEx(&parameterMgr, ImGuiTreeNodeFlags_Framed, "%s", parameterMgr.access_prefix().c_str()))
 		{
+			ImGui::PushItemWidth(200.f);
 			for (int i = 0; i < numParameters; ++i)
 				doParameterUi(*parameters[i]);
+			ImGui::PopItemWidth();
 			
 			ImGui::TreePop();
 		}
@@ -228,8 +230,10 @@ void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 	
 	if (numParameters > 0)
 	{
+		ImGui::PushItemWidth(200.f);
 		for (int i = 0; i < numParameters; ++i)
 			doParameterUi(*parameters[i]);
+		ImGui::PopItemWidth();
 	}
 }
 
