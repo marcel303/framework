@@ -71,7 +71,7 @@ bool bindObjectToFile(const TypeDB * typeDB, const Type * type, void * object, c
 
 	if (FileStream::Exists(filename))
 	{
-		if (objectToFileBinding.loadFromFile())
+		if (objectToFileBinding.loadFromFile() == false)
 		{
 			result = false;
 		}
