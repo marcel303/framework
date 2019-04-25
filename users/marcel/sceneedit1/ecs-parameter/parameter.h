@@ -485,13 +485,37 @@ public:
 		return value;
 	}
 	
-	void set(const int in_value)
+	bool set(const int in_value)
 	{
 		if (value != in_value)
 		{
-			value = in_value;
-			setDirty();
+			bool valueExists = false;
+			for (auto & elem : elems)
+				if (elem.value == in_value)
+					valueExists = true;
+			
+			if (valueExists)
+			{
+				value = in_value;
+				setDirty();
+				
+				return true;
+			}
+			else
+			{
+				return false;
+			}
 		}
+		
+		return true;
+	}
+	
+	int translateKeyToValue(const char * key) const
+	{
+		for (auto & elem : elems)
+			if (strcmp(elem.key, key) == 0)
+				return elem.value;
+		return -1;
 	}
 	
 	int & access_rw() // read-write access. be careful to invalidate the value when you change it!
