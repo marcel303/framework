@@ -30,8 +30,8 @@ struct AudioDeviceSettings
 	std::string outputDeviceName;
 	int sampleRate = SAMPLE_RATE;
 	int bufferSize = 256;
-	int numInputChannels = 2;
-	int numOutputChannels = 2;
+	int numInputChannels = 0;
+	int numOutputChannels = 4;
 };
 
 struct AudioDeviceCallback
@@ -340,6 +340,19 @@ struct AudioMixer_Grid : AudioMixer
 			float voiceSamples[numSamples];
 			voice->source->generate(voiceSamples, numSamples);
 		
+			// speaker protection. check if the voice contains weird invalid sample values,
+			// and mute the voice when it does
+			bool voiceContainsWeirdSamples = false;
+			for (int i = 0; i < numSamples; ++i)
+				if (isinf(voiceSamples[i]) || isnan(voiceSamples[i]))
+					voiceContainsWeirdSamples = true;
+			
+			assert(voiceContainsWeirdSamples == false);
+			if (voiceContainsWeirdSamples)
+				continue;
+			
+			// todo : apply DC offset removal
+			
 			for (int i = 0; i < 8; ++i)
 			{
 				if (sourceElem.panning[i].amount != 0.f)
@@ -348,7 +361,7 @@ struct AudioMixer_Grid : AudioMixer
 					
 					if (speakerIndex >= 0 && speakerIndex < numChannels)
 					{
-						const float amount = sourceElem.panning[i].amount;
+						const float amount = sourceElem.panning[i].amount * voice->gain;
 						
 						audioBufferAdd(
 							channelData[speakerIndex],
@@ -922,9 +935,9 @@ struct MonitorGui
 	void doAudioOutput_masterGain(SoundSystem & soundSystem)
 	{
 		float db = log10(soundSystem.masterGain) * 20.f;
-		if (db < -48.f)
-			db = -48.f;
-		if (ImGui::SliderFloat("Master gain", &db, -48.f, 0.f))
+		if (db < -60.f)
+			db = -60.f;
+		if (ImGui::SliderFloat("Master gain", &db, -60.f, 0.f))
 			soundSystem.masterGain = powf(10.f, db / 20.f);
 	}
 	
@@ -1049,9 +1062,9 @@ int main(int argc, char * argv[])
 	{
 		AudioMixer_Grid * mixer = new AudioMixer_Grid();
 		SpeakerPanning::GridDescription gridDescription;
-		gridDescription.size[0] = 8;
-		gridDescription.size[1] = 8;
-		gridDescription.size[2] = 8;
+		gridDescription.size[0] = 2;
+		gridDescription.size[1] = 1;
+		gridDescription.size[2] = 2;
 		gridDescription.min.Set(-2.f, -2.f, -2.f);
 		gridDescription.max.Set(+2.f, +2.f, +2.f);
 		mixer->init(gridDescription);
@@ -1063,7 +1076,7 @@ int main(int argc, char * argv[])
 	camera.position.Set(0.f, 1.f, -2.f);
 	camera.pitch = 15.f;
 	
-	for (int i = 0; i < 10; ++i)
+	for (int i = 0; i < 1; ++i)
 	{
 		SoundObject * soundObject = new SoundObject();
 		
@@ -1126,7 +1139,7 @@ int main(int argc, char * argv[])
 		{
 			auto * source = soundSystem.soundObjects[i];
 			
-			const float speed = .2f + i / float(soundSystem.soundObjects.size()) * 1.f;
+			const float speed = .2f + (i + .5f) / float(soundSystem.soundObjects.size()) * 1.f;
 			
 			source->position[0] = cosf(framework.time / 1.23f * speed) * 2.1f;
 			source->position[1] = sinf(framework.time / 1.34f * speed) * 2.1f;
