@@ -27,6 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #pragma once
 
+#include <assert.h>
 #include <cmath>
 
 #define BIQUAD_OPTIMIZE 1
@@ -83,6 +84,9 @@ struct BiquadFilter
 	
 	void make(const BiquadType type, const real Fc, const real Q, const real peakGainDB)
 	{
+		assert(Fc >= 0.f && Fc < .5f); // Fc = 0.5 will cause infinity due to tan(half_pi)
+		assert(Q > 0.f); // Q = 0.0 will cause a divide by zero
+		
 		switch (type)
 		{
 		case kBiquadLowpass:

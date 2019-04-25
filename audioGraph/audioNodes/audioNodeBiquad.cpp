@@ -76,7 +76,7 @@ void AudioNodeBiquad::tick(const float dt)
 	const AudioFloat * Q_in = getInputAudioFloat(kInput_Q, &defaultQ);
 	const AudioFloat * peakGain = getInputAudioFloat(kInput_PeakGain, &defaultPeakGain);
 	
-	const double Fc = frequency->getMean() / SAMPLE_RATE;
+	const double Fc = fmin(frequency->getMean() / SAMPLE_RATE, 0.49);
 	
 	const float Q = Q_in->getMean();
 	
