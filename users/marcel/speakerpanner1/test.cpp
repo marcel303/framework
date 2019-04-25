@@ -6,6 +6,7 @@
 #include "imgui-framework.h"
 #include "panner.h"
 #include "paobject.h"
+#include "Random.h" // PinkNumber, for speaker test
 #include "soundmix.h"
 #include "ui.h"
 #include <algorithm>
@@ -269,8 +270,11 @@ struct AudioMixer_Grid : AudioMixer
 	int numChannels = 0;
 	int numSamples = 0;
 	
+	RNG::PinkNumber pinkNumber;
+	
 	AudioMixer_Grid()
 		: AudioMixer(kAudioMixer_Grid)
+		, pinkNumber(2001)
 	{
 	}
 	
@@ -312,6 +316,23 @@ struct AudioMixer_Grid : AudioMixer
 			{
 				mixSoundObject(soundObject);
 			}
+			
+		// todo : move speaker test to audio output
+			if (panner.speakerTest.enabled &&
+				panner.speakerTest.channelIndex >= 0 &&
+				panner.speakerTest.channelIndex < numChannels)
+			{
+				float * __restrict channel = channelData[panner.speakerTest.channelIndex];
+				
+				const float range_rcp = 2.f / pinkNumber.range;
+				
+				for (int i = 0; i < numSamples; ++i)
+				{
+					const float value = (pinkNumber.next() * range_rcp) - 1.f;
+					
+					channel[i] = panner.masterGain * value;
+				}
+			}
 		}
 		mixEnd();
 	}
@@ -347,11 +368,13 @@ struct AudioMixer_Grid : AudioMixer
 					
 					if (speakerIndex >= 0 && speakerIndex < numChannels)
 					{
+						const float amount = sourceElem.panning[i].amount * panner.masterGain;
+						
 						audioBufferAdd(
 							channelData[speakerIndex],
 							voiceSamples,
 							numSamples,
-							sourceElem.panning[i].amount);
+							amount);
 					}
 				}
 			}
@@ -886,7 +909,45 @@ struct MonitorGui
 	
 	void doPannerGui_grid(SpeakerPanning::Panner_Grid * panner)
 	{
+		float db = log10(panner->masterGain) * 20.f;
+		if (db < -48.f)
+			db = -48.f;
+		if (ImGui::SliderFloat("Master gain", &db, -48.f, 0.f))
+			panner->masterGain = powf(10.f, db / 20.f);
+		
 		ImGui::Checkbox("Apply constant power curve", &panner->applyConstantPowerCurve);
+		
+		ImGui::Checkbox("Enable speaker test", &panner->speakerTest.enabled);
+		
+		if (panner->speakerTest.enabled == false)
+			panner->speakerTest.channelIndex = -1;
+		else
+		{
+			const int numSpeakers =
+				panner->gridDescription.size[0] *
+				panner->gridDescription.size[1] *
+				panner->gridDescription.size[2];
+			
+			if (panner->speakerTest.channelIndex >= numSpeakers)
+				panner->speakerTest.channelIndex = -1;
+			
+			ImGui::BeginGroup();
+			{
+				for (int i = 0; i < numSpeakers; ++i)
+				{
+					ImGui::PushID(i);
+					{
+						if ((i % 16) != 0)
+							ImGui::SameLine();
+						
+						if (ImGui::RadioButton("", i == panner->speakerTest.channelIndex))
+							panner->speakerTest.channelIndex = i;
+					}
+					ImGui::PopID();
+				}
+			}
+			ImGui::EndGroup();
+		}
 	}
 	
 	void doPannerGui(SoundSystem & soundSystem)
