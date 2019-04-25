@@ -270,11 +270,8 @@ struct AudioMixer_Grid : AudioMixer
 	int numChannels = 0;
 	int numSamples = 0;
 	
-	RNG::PinkNumber pinkNumber;
-	
 	AudioMixer_Grid()
 		: AudioMixer(kAudioMixer_Grid)
-		, pinkNumber(2001)
 	{
 	}
 	
@@ -316,23 +313,6 @@ struct AudioMixer_Grid : AudioMixer
 			{
 				mixSoundObject(soundObject);
 			}
-			
-		// todo : move speaker test to audio output
-			if (panner.speakerTest.enabled &&
-				panner.speakerTest.channelIndex >= 0 &&
-				panner.speakerTest.channelIndex < numChannels)
-			{
-				float * __restrict channel = channelData[panner.speakerTest.channelIndex];
-				
-				const float range_rcp = 2.f / pinkNumber.range;
-				
-				for (int i = 0; i < numSamples; ++i)
-				{
-					const float value = (pinkNumber.next() * range_rcp) - 1.f;
-					
-					channel[i] = panner.masterGain * value;
-				}
-			}
 		}
 		mixEnd();
 	}
@@ -368,7 +348,7 @@ struct AudioMixer_Grid : AudioMixer
 					
 					if (speakerIndex >= 0 && speakerIndex < numChannels)
 					{
-						const float amount = sourceElem.panning[i].amount * panner.masterGain;
+						const float amount = sourceElem.panning[i].amount;
 						
 						audioBufferAdd(
 							channelData[speakerIndex],
@@ -384,6 +364,19 @@ struct AudioMixer_Grid : AudioMixer
 
 struct SoundSystem : AudioDeviceCallback
 {
+	struct SpeakerTest
+	{
+		bool enabled = false;
+		int channelIndex = -1;
+		
+		RNG::PinkNumber pinkNumber;
+		
+		SpeakerTest()
+			: pinkNumber(2001)
+		{
+		}
+	};
+	
 	AudioDevice audioDevice;
 	
 	std::vector<AudioMixer*> mixers;
@@ -394,6 +387,10 @@ struct SoundSystem : AudioDeviceCallback
 	
 	AudioGraphManager * audioGraphMgr = nullptr;
 	AudioVoiceManager * audioVoiceMgr = nullptr;
+	
+	SpeakerTest speakerTest;
+	
+	float masterGain = 0.f;
 	
 	~SoundSystem()
 	{
@@ -501,6 +498,8 @@ struct SoundSystem : AudioDeviceCallback
 			memset(channelData[i], 0, bufferSize * sizeof(float));
 		}
 		
+		// apply mixing
+		
 		audioMutex->lock();
 		{
 			for (auto * mixer : mixers)
@@ -509,6 +508,36 @@ struct SoundSystem : AudioDeviceCallback
 			}
 		}
 		audioMutex->unlock();
+		
+		// apply speaker test
+		
+		if (speakerTest.enabled &&
+			speakerTest.channelIndex >= 0 &&
+			speakerTest.channelIndex < numChannels)
+		{
+			float * __restrict channel = channelData[speakerTest.channelIndex];
+			
+			const float range_rcp = 2.f / speakerTest.pinkNumber.range;
+			
+			for (int i = 0; i < bufferSize; ++i)
+			{
+				const float value = (speakerTest.pinkNumber.next() * range_rcp) - 1.f;
+				
+				channel[i] += value;
+			}
+		}
+		
+		// apply master gain
+		
+		for (int i = 0; i < numChannels; ++i)
+		{
+			float * __restrict channel = channelData[i];
+			
+			for (int j = 0; j < bufferSize; ++j)
+			{
+				channel[j] *= masterGain;
+			}
+		}
 		
 		float * dst = outputBuffer;
 		
@@ -751,7 +780,7 @@ struct MonitorGui
 				doAudioDeviceGui(soundSystem.audioDevice);
 				break;
 			case kTab_AudioOutput:
-				doAudioOutputGui();
+				doAudioOutputGui(soundSystem);
 				break;
 			case kTab_Visibility:
 				doVisibilityGui(visualizer);
@@ -890,9 +919,52 @@ struct MonitorGui
 		}
 	}
 	
-	void doAudioOutputGui()
+	void doAudioOutput_masterGain(SoundSystem & soundSystem)
 	{
-		ImGui::Text("todo");
+		float db = log10(soundSystem.masterGain) * 20.f;
+		if (db < -48.f)
+			db = -48.f;
+		if (ImGui::SliderFloat("Master gain", &db, -48.f, 0.f))
+			soundSystem.masterGain = powf(10.f, db / 20.f);
+	}
+	
+	void doAudioOutput_speakerTest(SoundSystem & soundSystem)
+	{
+		ImGui::Checkbox("Enable speaker test", &soundSystem.speakerTest.enabled);
+		
+		if (soundSystem.speakerTest.enabled == false)
+			soundSystem.speakerTest.channelIndex = -1;
+		else
+		{
+			const int numSpeakers = soundSystem.audioDevice.settings.numOutputChannels;
+			
+			if (soundSystem.speakerTest.channelIndex >= numSpeakers)
+				soundSystem.speakerTest.channelIndex = -1;
+			
+			ImGui::BeginGroup();
+			{
+				for (int i = 0; i < numSpeakers; ++i)
+				{
+					ImGui::PushID(i);
+					{
+						if ((i % 16) != 0)
+							ImGui::SameLine();
+						
+						if (ImGui::RadioButton("", i == soundSystem.speakerTest.channelIndex))
+							soundSystem.speakerTest.channelIndex = i;
+					}
+					ImGui::PopID();
+				}
+			}
+			ImGui::EndGroup();
+		}
+	}
+	
+	void doAudioOutputGui(SoundSystem & soundSystem)
+	{
+		doAudioOutput_masterGain(soundSystem);
+		
+		doAudioOutput_speakerTest(soundSystem);
 	}
 	
 	void doVisibilityGui(MonitorVisualizer & visualizer)
@@ -909,45 +981,7 @@ struct MonitorGui
 	
 	void doPannerGui_grid(SpeakerPanning::Panner_Grid * panner)
 	{
-		float db = log10(panner->masterGain) * 20.f;
-		if (db < -48.f)
-			db = -48.f;
-		if (ImGui::SliderFloat("Master gain", &db, -48.f, 0.f))
-			panner->masterGain = powf(10.f, db / 20.f);
-		
 		ImGui::Checkbox("Apply constant power curve", &panner->applyConstantPowerCurve);
-		
-		ImGui::Checkbox("Enable speaker test", &panner->speakerTest.enabled);
-		
-		if (panner->speakerTest.enabled == false)
-			panner->speakerTest.channelIndex = -1;
-		else
-		{
-			const int numSpeakers =
-				panner->gridDescription.size[0] *
-				panner->gridDescription.size[1] *
-				panner->gridDescription.size[2];
-			
-			if (panner->speakerTest.channelIndex >= numSpeakers)
-				panner->speakerTest.channelIndex = -1;
-			
-			ImGui::BeginGroup();
-			{
-				for (int i = 0; i < numSpeakers; ++i)
-				{
-					ImGui::PushID(i);
-					{
-						if ((i % 16) != 0)
-							ImGui::SameLine();
-						
-						if (ImGui::RadioButton("", i == panner->speakerTest.channelIndex))
-							panner->speakerTest.channelIndex = i;
-					}
-					ImGui::PopID();
-				}
-			}
-			ImGui::EndGroup();
-		}
 	}
 	
 	void doPannerGui(SoundSystem & soundSystem)
