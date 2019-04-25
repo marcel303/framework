@@ -15,6 +15,13 @@
 
 void doParameterUi(ParameterBase & parameterBase)
 {
+	ImGui::PushID(&parameterBase);
+	
+	if (ImGui::Button("Default"))
+		parameterBase.setToDefault();
+	
+	ImGui::SameLine();
+	
 	switch (parameterBase.type)
 	{
 	case kParameterType_Bool:
@@ -150,7 +157,13 @@ void doParameterUi(ParameterBase & parameterBase)
 			}
 		}
 		break;
+		
+	default:
+		Assert(false);
+		break;
 	}
+	
+	ImGui::PopID();
 }
 
 void doParameterUi(ParameterMgr & parameterMgr, const char * filter)
@@ -345,6 +358,10 @@ void copyParametersToClipboard(ParameterBase * const * const parameters, const i
 				text << '\t' << parameter->get();
 			}
 			break;
+			
+		default:
+			Assert(false);
+			break;
 		}
 		
 		text << "\n";
@@ -512,6 +529,10 @@ void pasteParametersFromClipboard(ParameterBase * const * const parameters, cons
 				if (sscanf(line, "%d", &value) == 1)
 					parameter->set(value);
 			}
+			break;
+			
+		default:
+			Assert(false);
 			break;
 		}
 	}
