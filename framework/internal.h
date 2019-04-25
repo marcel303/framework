@@ -369,8 +369,8 @@ public:
 	}
 	
 	Window * mainWindow;
-	SDL_Window * currentWindow;
-	WindowData * currentWindowData;
+	Window * currentWindow;
+	WindowData * currentWindowData; // todo : remove
 	SDL_GLContext glContext;
 	int displaySize[2]; // size as passed to init
 #if ENABLE_PROFILING

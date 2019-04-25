@@ -119,7 +119,7 @@ static float scale255(const float v)
 }
 
 static void getCurrentBackingSize(int & sx, int & sy);
-static void getCurrentSurfaceSize(int & sx, int & sy);
+static void getCurrentViewportSize(int & sx, int & sy);
 
 // -----
 
@@ -151,6 +151,7 @@ Framework::Framework()
 	fullscreen = false;
 	exclusiveFullscreen = true;
 	useClosestDisplayMode = false;
+	msaaLevel = 0;
 	basicOpenGL = false;
 	enableDepthBuffer = false;
 	enableDrawTiming = true;
@@ -176,6 +177,9 @@ Framework::Framework()
 	fillCachesUnknownResourceCallback = 0;
 	realTimeEditCallback = 0;
 	initErrorHandler = 0;
+	
+	events.clear();
+	changedFiles.clear();
 	
 	quitRequested = false;
 	time = 0.f;
@@ -256,6 +260,9 @@ bool Framework::init(int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+	
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, msaaLevel >= 2 ? 1 : 0);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, msaaLevel >= 2 ? msaaLevel : 0);
 	
 	if (enableDepthBuffer)
 	{
@@ -383,7 +390,7 @@ bool Framework::init(int sx, int sy)
 	
 	fassert(globals.currentWindow == nullptr);
 	fassert(globals.currentWindowData == nullptr);
-	globals.currentWindow = globals.mainWindow->m_window;
+	globals.currentWindow = globals.mainWindow;
 	globals.currentWindowData = globals.mainWindow->m_windowData;
 	
 	windowSx = sx;
@@ -391,7 +398,7 @@ bool Framework::init(int sx, int sy)
 	
 	int drawableSx;
 	int drawableSy;
-	SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
+	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
 	s_backingScale = (int)roundf(fmaxf(drawableSx / float(actualSx), drawableSy / float(actualSy)));
 	if (s_backingScale < 1)
 		s_backingScale = 1;
@@ -539,7 +546,7 @@ bool Framework::init(int sx, int sy)
 	
 	// make sure we are focused
 	
-	SDL_RaiseWindow(globals.currentWindow);
+	SDL_RaiseWindow(globals.currentWindow->getWindow());
 
 	SDL_DisableScreenSaver();
 
@@ -621,7 +628,7 @@ bool Framework::shutdown()
 	
 	if (globals.mainWindow)
 	{
-		fassert(globals.currentWindow == globals.mainWindow->m_window);
+		fassert(globals.currentWindow == globals.mainWindow);
 		fassert(globals.currentWindowData == globals.mainWindow->m_windowData);
 		
 		delete globals.mainWindow;
@@ -648,6 +655,7 @@ bool Framework::shutdown()
 	fullscreen = false;
 	exclusiveFullscreen = true;
 	useClosestDisplayMode = false;
+	msaaLevel = 0;
 	basicOpenGL = false;
 	enableDepthBuffer = false;
 	enableDrawTiming = true;
@@ -675,7 +683,6 @@ bool Framework::shutdown()
 	initErrorHandler = 0;
 	
 	events.clear();
-	
 	changedFiles.clear();
 	
 	m_lastTick = -1;
@@ -1420,7 +1427,7 @@ void showErrorMessage(const char * caption, const char * format, ...)
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption, text, globals.currentWindow);
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption, text, globals.currentWindow->getWindow());
 }
 
 void Framework::fillCachesWithPath(const char * path, bool recurse)
@@ -1505,7 +1512,7 @@ Window & Framework::getMainWindow()
 Window & Framework::getCurrentWindow()
 {
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
-		if (window->m_window == globals.currentWindow)
+		if (window == globals.currentWindow)
 			return *window;
 	
 	logError("failed to find current window. this should not be possible unless framework failed to initialize!");
@@ -1514,10 +1521,12 @@ Window & Framework::getCurrentWindow()
 
 void Framework::setFullscreen(bool fullscreen)
 {
-	if (fullscreen)
-		SDL_SetWindowFullscreen(globals.mainWindow->m_window, SDL_WINDOW_FULLSCREEN);
-	else
-		SDL_SetWindowFullscreen(globals.mainWindow->m_window, 0);
+	globals.mainWindow->setFullscreen(fullscreen);
+}
+
+void Framework::getCurrentViewportSize(int & sx, int & sy) const
+{
+	::getCurrentViewportSize(sx, sy);
 }
 
 static void updateViewport(Surface * surface, SDL_Window * window)
@@ -1534,7 +1543,7 @@ static void updateViewport(Surface * surface, SDL_Window * window)
 	{
 		int drawableSx;
 		int drawableSy;
-		SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
+		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
 		
 		glViewport(
 			0,
@@ -1558,7 +1567,7 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 	
 	// initialize viewport and OpenGL matrices
 	
-	updateViewport(nullptr, globals.currentWindow);
+	updateViewport(nullptr, globals.currentWindow->getWindow());
 	
 	applyTransform();
 	
@@ -1599,7 +1608,7 @@ void Framework::endDraw()
 	
 	// flip back buffers
 	
-	SDL_GL_SwapWindow(globals.currentWindow);
+	SDL_GL_SwapWindow(globals.currentWindow->getWindow());
 #else
 	
 #endif
@@ -1619,7 +1628,7 @@ void Framework::beginScreenshot(int r, int g, int b, int a, int scale)
 	
 	int sx;
 	int sy;
-	getCurrentSurfaceSize(sx, sy);
+	getCurrentViewportSize(sx, sy);
 	
 	sx *= scale;
 	sy *= scale;
@@ -1654,7 +1663,7 @@ void Framework::endScreenshot(const char * name, const int index, const bool omi
 	
 	int sx;
 	int sy;
-	getCurrentSurfaceSize(sx, sy);
+	getCurrentViewportSize(sx, sy);
 	
 	pushBlend(BLEND_OPAQUE);
 	gxSetTexture(surface->getTexture());
@@ -1988,6 +1997,17 @@ void Window::setSize(const int sx, const int sy)
 	SDL_SetWindowSize(m_window, sx, sy);
 }
 
+void Window::setFullscreen(const bool fullscreen)
+{
+	// https://wiki.libsdl.org/SDL_SetWindowFullscreen
+	// SDL_WINDOW_FULLSCREEN, SDL_WINDOW_FULLSCREEN_DESKTOP or 0
+	
+	if (fullscreen)
+		SDL_SetWindowFullscreen(m_window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0);
+	else
+		SDL_SetWindowFullscreen(m_window, 0);
+}
+
 void Window::show()
 {
 	SDL_ShowWindow(m_window);
@@ -2053,7 +2073,7 @@ WindowData * Window::getWindowData() const
 	return m_windowData;
 }
 
-static Stack<SDL_Window*, 32> s_windowStack(nullptr);
+static Stack<Window*, 32> s_windowStack(nullptr);
 static Stack<WindowData*, 32> s_windowDataStack(nullptr);
 
 void pushWindow(Window & window)
@@ -2061,22 +2081,22 @@ void pushWindow(Window & window)
 	s_windowStack.push(globals.currentWindow);
 	s_windowDataStack.push(globals.currentWindowData);
 	
-	globals.currentWindow = window.getWindow();
+	globals.currentWindow = &window;
 	globals.currentWindowData = window.getWindowData();
 	
-	SDL_GL_MakeCurrent(globals.currentWindow, globals.glContext);
+	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 	globals.currentWindowData->makeActive();
 }
 
 void popWindow()
 {
-	SDL_Window * window = s_windowStack.popValue();
+	Window * window = s_windowStack.popValue();
 	WindowData * windowData = s_windowDataStack.popValue();
 	
 	globals.currentWindow = window;
 	globals.currentWindowData = windowData;
 	
-	SDL_GL_MakeCurrent(globals.currentWindow, globals.glContext);
+	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 	globals.currentWindowData->makeActive();
 }
 
@@ -2639,7 +2659,7 @@ void blitBackBufferToSurface(Surface * surface)
 {
 	int drawableSx;
 	int drawableSy;
-	SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
+	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
 	
 	int oldDrawBuffer = 0;
 
@@ -5419,14 +5439,14 @@ static void getCurrentBackingSize(int & sx, int & sy)
 		
 		int drawableSx;
 		int drawableSy;
-		SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
+		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
 		
 		sx = drawableSx;
 		sy = drawableSy;
 	}
 }
 
-static void getCurrentSurfaceSize(int & sx, int & sy)
+static void getCurrentViewportSize(int & sx, int & sy)
 {
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
 	
@@ -5439,7 +5459,7 @@ static void getCurrentSurfaceSize(int & sx, int & sy)
 	{
 		// todo : fix for case with fullscreen desktop mode
 		// fixme : add specific code for setting screen matrix
-		if (globals.currentWindow == globals.mainWindow->getWindow() && false)
+		if (globals.currentWindow == globals.mainWindow && false)
 		{
 			sx = globals.displaySize[0];
 			sy = globals.displaySize[1];
@@ -5448,7 +5468,7 @@ static void getCurrentSurfaceSize(int & sx, int & sy)
 		{
 			int windowSx;
 			int windowSy;
-			SDL_GetWindowSize(globals.currentWindow, &windowSx, &windowSy);
+			SDL_GetWindowSize(globals.currentWindow->getWindow(), &windowSx, &windowSy);
 
 			sx = windowSx * framework.minification;
 			sy = windowSy * framework.minification;
@@ -5472,7 +5492,7 @@ void applyTransform()
 {
 	int sx;
 	int sy;
-	getCurrentSurfaceSize(sx, sy);
+	getCurrentViewportSize(sx, sy);
 	
 	applyTransformWithViewportSize(sx, sy);
 }
@@ -5593,7 +5613,7 @@ void projectPerspective3d(const float fov, const float nearZ, const float farZ)
 	
 	int sx;
 	int sy;
-	getCurrentSurfaceSize(sx, sy);
+	getCurrentViewportSize(sx, sy);
 	
 	transform.MakePerspectiveLH(fov / 180.f * M_PI, sy / float(sx), nearZ, farZ);
 	
@@ -5659,7 +5679,7 @@ static void setSurface(Surface * surface)
 	const GLuint framebuffer = surface ? surface->getFramebuffer() : 0;
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	
-	updateViewport(surface, globals.currentWindow);
+	updateViewport(surface, globals.currentWindow->getWindow());
 	
 	applyTransform();
 }
@@ -5689,7 +5709,7 @@ void pushSurface(Surface * surface)
 	{
 		int sx;
 		int sy;
-		SDL_GetWindowSize(globals.currentWindow, &sx, &sy);
+		SDL_GetWindowSize(globals.currentWindow->getWindow(), &sx, &sy);
 		const float scaleX = surface->getWidth() / float(sx);
 		const float scaleY = surface->getHeight() / float(sy);
 		gxScalef(scaleX, scaleY, 1);
@@ -5724,7 +5744,7 @@ void setDrawRect(int x, int y, int sx, int sy)
 {
 	int surfaceSx;
 	int surfaceSy;
-	getCurrentSurfaceSize(surfaceSx, surfaceSy);
+	getCurrentViewportSize(surfaceSx, surfaceSy);
 	
 	int backingSx;
 	int backingSy;
@@ -5750,7 +5770,7 @@ void setDrawRect(int x, int y, int sx, int sy)
 	}
 	else
 	{
-		if (globals.currentWindow == globals.mainWindow->getWindow())
+		if (globals.currentWindow == globals.mainWindow)
 			y = globals.displaySize[1] - y - sy;
 
 		ScaleX(x);

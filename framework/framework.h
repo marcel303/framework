@@ -384,6 +384,8 @@ public:
 	Window & getMainWindow();
 	Window & getCurrentWindow();
 	void setFullscreen(bool fullscreen);
+	
+	void getCurrentViewportSize(int & sx, int & sy) const;
 
 	void beginDraw(int r, int g, int b, int a, float depth = 1.f);
 	void endDraw();
@@ -408,6 +410,7 @@ public:
 	bool fullscreen;
 	bool useClosestDisplayMode;
 	bool exclusiveFullscreen;
+	int msaaLevel;
 	bool basicOpenGL;
 	bool enableDepthBuffer;
 	bool enableDrawTiming;
@@ -472,6 +475,7 @@ public:
 	void setPosition(const int x, const int y);
 	void setPositionCentered();
 	void setSize(const int sx, const int sy);
+	void setFullscreen(const bool fullscreen);
 	
 	void show();
 	void hide();
