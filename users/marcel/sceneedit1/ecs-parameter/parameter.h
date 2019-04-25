@@ -54,6 +54,7 @@ struct ParameterBase
 	virtual std::type_index typeIndex() const = 0;
 	
 	virtual bool isSetToDefault() const = 0;
+	virtual void setToDefault() = 0;
 	
 	void setDirty()
 	{
@@ -158,6 +159,11 @@ struct ParameterBool : Parameter<bool, kParameterType_Bool>
 			setDirty();
 		}
 	}
+	
+	virtual void setToDefault() override final
+	{
+		set(defaultValue);
+	}
 };
 
 struct ParameterInt : Parameter<int, kParameterType_Int>
@@ -200,6 +206,11 @@ struct ParameterInt : Parameter<int, kParameterType_Int>
 				setDirty();
 			}
 		}
+	}
+	
+	virtual void setToDefault() override final
+	{
+		set(defaultValue);
 	}
 };
 
@@ -252,6 +263,11 @@ struct ParameterFloat : Parameter<float, kParameterType_Float>
 				setDirty();
 			}
 		}
+	}
+	
+	virtual void setToDefault() override final
+	{
+		set(defaultValue);
 	}
 };
 
@@ -317,6 +333,11 @@ struct ParameterVec2 : Parameter<Vec2, kParameterType_Vec2>
 			}
 		}
 	}
+	
+	virtual void setToDefault() override final
+	{
+		set(defaultValue);
+	}
 };
 
 struct ParameterVec3 : Parameter<Vec3, kParameterType_Vec3>
@@ -371,6 +392,11 @@ struct ParameterVec3 : Parameter<Vec3, kParameterType_Vec3>
 				setDirty();
 			}
 		}
+	}
+	
+	virtual void setToDefault() override final
+	{
+		set(defaultValue);
 	}
 };
 
@@ -427,6 +453,11 @@ struct ParameterVec4 : Parameter<Vec4, kParameterType_Vec4>
 			}
 		}
 	}
+	
+	virtual void setToDefault() override final
+	{
+		set(defaultValue);
+	}
 };
 
 struct ParameterString : Parameter<std::string, kParameterType_String>
@@ -443,6 +474,11 @@ struct ParameterString : Parameter<std::string, kParameterType_String>
 			value = in_value;
 			setDirty();
 		}
+	}
+	
+	virtual void setToDefault() override final
+	{
+		set(defaultValue.c_str());
 	}
 };
 
@@ -478,6 +514,11 @@ public:
 	virtual bool isSetToDefault() const override final
 	{
 		return value == defaultValue;
+	}
+	
+	virtual void setToDefault() override final
+	{
+		set(defaultValue);
 	}
 	
 	int get() const
