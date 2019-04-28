@@ -253,11 +253,15 @@ int main(int argc, char * argv[])
 				time += getTimeUS();
 				logDebug("draw took %.2fms", time / 1000.f);
 				
-				setFont("calibri.ttf");
-				setColor(200, 200, 200);
-				const Vec2 s = transformToScreen(Vec3(0.f, 0.f, 0.f));
-				debugDrawText(s[0], s[1], 14, 0, 0, "root");
-				setColor(255, 255, 255);
+				float w = 0.f;
+				const Vec2 s = transformToScreen(Vec3(0.f, 0.f, 0.f), w);
+				if (w > 0.f)
+				{
+					setFont("calibri.ttf");
+					setColor(200, 200, 200);
+					debugDrawText(s[0], s[1], 14, 0, 0, "root");
+					setColor(255, 255, 255);
+				}
 				
 				popBlend();
 			}

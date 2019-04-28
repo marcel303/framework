@@ -2312,27 +2312,27 @@ bool Surface::init(const SurfaceProperties & properties)
 		GLenum uploadFormat = GL_INVALID_ENUM;
 		GLenum uploadType = GL_INVALID_ENUM;
 		
-		if (format == SURFACE_RGBA8)
+		if (properties.colorTarget.format == SURFACE_RGBA8)
 		{
 			uploadFormat = GL_RGBA;
 			uploadType = GL_UNSIGNED_BYTE;
 		}
-		if (format == SURFACE_RGBA16F)
+		if (properties.colorTarget.format == SURFACE_RGBA16F)
 		{
 			uploadFormat = GL_RGBA;
 			uploadType = GL_FLOAT;
 		}
-		if (format == SURFACE_R8)
+		if (properties.colorTarget.format == SURFACE_R8)
 		{
 			uploadFormat = GL_RED;
 			uploadType = GL_UNSIGNED_BYTE;
 		}
-		if (format == SURFACE_R16F)
+		if (properties.colorTarget.format == SURFACE_R16F)
 		{
 			uploadFormat = GL_RED;
 			uploadType = GL_FLOAT;
 		}
-		if (format == SURFACE_R32F)
+		if (properties.colorTarget.format == SURFACE_R32F)
 		{
 			uploadFormat = GL_RED;
 			uploadType = GL_FLOAT;
