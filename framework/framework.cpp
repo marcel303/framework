@@ -2188,12 +2188,49 @@ void Surface::swapBuffers()
 	m_bufferId = (m_bufferId + 1) % 2;
 }
 
-bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
+static GLenum translateSurfaceColorFormat(const SURFACE_FORMAT format)
+{
+	GLenum glFormat = GL_INVALID_ENUM;
+
+	if (format == SURFACE_RGBA8)
+		glFormat = GL_RGBA8;
+	if (format == SURFACE_RGBA16F)
+		glFormat = GL_RGBA16F;
+	if (format == SURFACE_R8)
+		glFormat = GL_R8;
+	if (format == SURFACE_R16F)
+		glFormat = GL_R16F;
+	if (format == SURFACE_R32F)
+		glFormat = GL_R32F;
+	if (format == SURFACE_RG16F)
+		glFormat = GL_RG16F;
+	if (format == SURFACE_RG32F)
+		glFormat = GL_RG32F;
+	
+	return glFormat;
+}
+
+static GLenum translateSurfaceDepthFormat(const DEPTH_FORMAT format)
+{
+	GLenum glFormat = GL_INVALID_ENUM;
+
+	if (format == DEPTH_FLOAT16)
+		glFormat = GL_DEPTH_COMPONENT16;
+	if (format == DEPTH_FLOAT32)
+		glFormat = GL_DEPTH_COMPONENT32;
+	
+	return glFormat;
+}
+
+bool Surface::init(const SurfaceProperties & properties)
 {
 	fassert(m_buffer[0] == 0);
 	
-	const int sx = in_sx / framework.minification;
-	const int sy = in_sy / framework.minification;
+	// todo : honor if colorTarget enabled is false
+	// todo : honor depthTarget doubleBuffered flag
+	
+	const int sx = properties.dimensions.width  / framework.minification;
+	const int sy = properties.dimensions.height / framework.minification;
 	
 	GLuint oldBuffer = 0;
 	GLuint oldTexture = 0;
@@ -2206,18 +2243,18 @@ bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBu
 	
 	bool result = true;
 	
-	m_size[0] = in_sx;
-	m_size[1] = in_sy;
+	m_size[0] = properties.dimensions.width;
+	m_size[1] = properties.dimensions.height;
 	m_backingScale = s_backingScale;
 	
-	m_format = format;
+	m_format = properties.colorTarget.format;
 	
-	m_doubleBuffered = doubleBuffered;
+	m_doubleBuffered = properties.colorTarget.doubleBuffered;
 
 	const int backingSx = sx * m_backingScale;
 	const int backingSy = sy * m_backingScale;
 	
-	if (result && withDepthBuffer)
+	if (result && properties.depthTarget.enabled)
 	{
 		fassert(m_depthTexture == 0);
 		glGenTextures(1, &m_depthTexture);
@@ -2232,9 +2269,19 @@ bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBu
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 			checkErrorGL();
+			
+			const GLenum glFormat = translateSurfaceDepthFormat(properties.depthTarget.format);
 
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, backingSx, backingSy, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
+		#if USE_LEGACY_OPENGL
+			GLenum uploadFormat = GL_DEPTH_COMPONENT;
+			GLenum uploadType = GL_FLOAT;
+			
+			glTexImage2D(GL_TEXTURE_2D, 0, glFormat, backingSx, backingSy, 0, uploadFormat, uploadType, 0);
 			checkErrorGL();
+		#else
+			glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, backingSx, backingSy);
+			checkErrorGL();
+		#endif
 
 			// set filtering
 
@@ -2246,7 +2293,7 @@ bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBu
 		}
 	}
 
-	for (int i = 0; result && i < (doubleBuffered ? 2 : 1); ++i)
+	for (int i = 0; result && i < (properties.colorTarget.doubleBuffered ? 2 : 1); ++i)
 	{
 		// allocate storage
 		
@@ -2259,22 +2306,7 @@ bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBu
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 		checkErrorGL();
 
-		GLenum glFormat = GL_INVALID_ENUM;
-
-		if (format == SURFACE_RGBA8)
-			glFormat = GL_RGBA8;
-		if (format == SURFACE_RGBA16F)
-			glFormat = GL_RGBA16F;
-		if (format == SURFACE_R8)
-			glFormat = GL_R8;
-		if (format == SURFACE_R16F)
-			glFormat = GL_R16F;
-		if (format == SURFACE_R32F)
-			glFormat = GL_R32F;
-		if (format == SURFACE_RG16F)
-			glFormat = GL_RG16F;
-		if (format == SURFACE_RG32F)
-			glFormat = GL_RG32F;
+		const GLenum glFormat = translateSurfaceColorFormat(properties.colorTarget.format);
 		
 	#if USE_LEGACY_OPENGL
 		GLenum uploadFormat = GL_INVALID_ENUM;
@@ -2331,7 +2363,7 @@ bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBu
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texture[i], 0);
 		checkErrorGL();
 		
-		if (withDepthBuffer)
+		if (properties.depthTarget.enabled)
 		{
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_depthTexture, 0);
 			checkErrorGL();
@@ -2352,7 +2384,7 @@ bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBu
 	#endif
 	}
 
-	if (result && doubleBuffered == false)
+	if (result && properties.colorTarget.doubleBuffered == false)
 	{
 		m_texture[1] = m_texture[0];
 		m_buffer[1] = m_buffer[0];
@@ -2372,7 +2404,35 @@ bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBu
 	glBindTexture(GL_TEXTURE_2D, oldTexture);
 	checkErrorGL();
 	
+	// set color swizzle
+	
+	setSwizzle(
+		properties.colorTarget.swizzle[0],
+		properties.colorTarget.swizzle[1],
+		properties.colorTarget.swizzle[2],
+		properties.colorTarget.swizzle[3]);
+	
 	return result;
+}
+
+bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
+{
+	SurfaceProperties properties;
+	
+	properties.dimensions.width = in_sx;
+	properties.dimensions.height = in_sy;
+	properties.colorTarget.enabled = true;
+	properties.colorTarget.format = format;
+	properties.colorTarget.doubleBuffered = doubleBuffered;
+	
+	if (withDepthBuffer)
+	{
+		properties.depthTarget.enabled = true;
+		properties.depthTarget.format = DEPTH_FLOAT32;
+		properties.depthTarget.doubleBuffered = false;
+	}
+	
+	return init(properties);
 }
 
 // todo : perhaps use GxTextures internally
