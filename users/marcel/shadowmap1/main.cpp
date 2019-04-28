@@ -3,6 +3,8 @@
 #define SHADOWMAP_SIZE 1024
 #define LIGHT_ORTHO_SIZE 4.f
 #define PERSPECTIVE_LIGHT true
+#define LINEAR_DEPTH_FOR_CAMERA false
+#define LINEAR_DEPTH_FOR_LIGHT false
 
 static const char * s_depthToLinearVs = R"SHADER(
 	include engine/ShaderVS.txt
@@ -98,7 +100,17 @@ static const char * s_shadedObjectPs = R"SHADER(
 		else if (false)
 			shader_fragColor.rgb = vec3(coords.z > depth ? 0.5 : 1.0); // correct shadow mapping with serious acne
 		else
-			shader_fragColor.rgb = vec3(coords.z > depth + 0.005 ? 0.5 : 1.0); // less acne with depth bias
+			shader_fragColor.rgb = vec3(coords.z > depth + 0.001 ? 0.3 : 1.0); // less acne with depth bias
+		
+		// apply some color
+		
+		shader_fragColor.rgb += color.rgb * 0.3;
+		
+		// apply a bit of lighting here
+		
+		float distance = length(projected.xy);
+		shader_fragColor.rgb *= max(0.0, 1.0 - distance);
+		shader_fragColor.rgb += vec3(0.1);
 	}
 )SHADER";
 
@@ -111,7 +123,7 @@ int main(int argc, const char * argv[])
 	
 	Camera3d camera;
 	
-	const int kNumCubes = 128;
+	const int kNumCubes = 256;
 	Vec3 cube_positions[kNumCubes];
 	Color cube_colors[kNumCubes];
 	for (int i = 0; i < kNumCubes; ++i)
@@ -142,16 +154,45 @@ int main(int argc, const char * argv[])
 	
 	DrawMode drawMode = kDrawMode_CameraColor;
 	
-	const float znear = 1.f;
+	const float znear = .1f;
 	const float zfar = 100.f;
 	
-	Surface view_camera(800, 600, true, false, SURFACE_RGBA8);
-	Surface view_camera_linear(800, 600, false, false, SURFACE_R32F);
-	view_camera_linear.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
-	
-	Surface view_light(SHADOWMAP_SIZE, SHADOWMAP_SIZE, true, false, SURFACE_RGBA8);
-	Surface view_light_linear(SHADOWMAP_SIZE, SHADOWMAP_SIZE, false, false, SURFACE_R32F);
-	view_light_linear.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
+	Surface view_camera;
+	{
+		SurfaceProperties properties;
+		properties.dimensions.init(800, 600);
+		properties.colorTarget.init(SURFACE_RGBA8, false);
+		properties.depthTarget.init(DEPTH_FLOAT32, false);
+		view_camera.init(properties);
+	}
+#if LINEAR_DEPTH_FOR_CAMERA
+	Surface view_camera_linear;
+	{
+		SurfaceProperties properties;
+		properties.dimensions.init(800, 600);
+		properties.colorTarget.init(SURFACE_R32F, false);
+		properties.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
+		view_camera_linear.init(properties);
+	}
+#endif
+
+	Surface view_light;
+	{
+		SurfaceProperties properties;
+		properties.dimensions.init(SHADOWMAP_SIZE, SHADOWMAP_SIZE);
+		properties.depthTarget.init(DEPTH_FLOAT32, false);
+		view_light.init(properties);
+	}
+#if LINEAR_DEPTH_FOR_LIGHT
+	Surface view_light_linear;
+	{
+		SurfaceProperties properties;
+		properties.dimensions.init(SHADOWMAP_SIZE, SHADOWMAP_SIZE);
+		properties.colorTarget.init(SURFACE_R32F, false);
+		properties.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
+		view_light_linear.init(properties);
+	}
+#endif
 	
 	shaderSource("depthToLinear.vs", s_depthToLinearVs);
 	shaderSource("depthToLinear.ps", s_depthToLinearPs);
@@ -210,28 +251,44 @@ int main(int argc, const char * argv[])
 				setShader(shader);
 				shader.setImmediateMatrix4x4("lightMVP", lightMVP.m_v);
 				shader.setTexture("depthTexture", 0, view_light.getDepthTexture());
+			#if LINEAR_DEPTH_FOR_LIGHT
 				shader.setTexture("linearDepthTexture", 1, view_light_linear.getTexture());
+			#endif
 			}
 			
-			for (int i = 0; i < kNumCubes; ++i)
+			const Vec3 cube_size(.4f, .4f, .4f);
+			
+		#if 1
+			pushWireframe(true);
+			beginCubeBatch();
 			{
-				//const Vec3 size(.2f, .2f, .2f);
-				const Vec3 size(.4f, .4f, .4f);
-				
-				setColor(40, 40, 40);
-				lineCube(cube_positions[i], size);
-				
-				setColor(cube_colors[i]);
-				fillCube(cube_positions[i], size);
-				
-				if (captureScreenPositions)
+				for (int i = 0; i < kNumCubes; ++i)
 				{
-					float w;
-					cube_cornerPositions[i] = cube_positions[i] + size;
-					cube_screenPositions[i] = transformToScreen(cube_cornerPositions[i], w);
-					cube_screenVisible[i] = w > 0.f;
+					setColor(40, 40, 40);
+					fillCube(cube_positions[i], cube_size);
 				}
 			}
+			endCubeBatch();
+			popWireframe();
+		#endif
+			
+			beginCubeBatch();
+			{
+				for (int i = 0; i < kNumCubes; ++i)
+				{
+					setColor(cube_colors[i]);
+					fillCube(cube_positions[i], cube_size);
+					
+					if (captureScreenPositions)
+					{
+						float w;
+						cube_cornerPositions[i] = cube_positions[i] + cube_size;
+						cube_screenPositions[i] = transformToScreen(cube_cornerPositions[i], w);
+						cube_screenVisible[i] = w > 0.f;
+					}
+				}
+			}
+			endCubeBatch();
 			
 			clearShader();
 			
@@ -302,6 +359,7 @@ int main(int argc, const char * argv[])
 		}
 		popSurface();
 		
+	#if LINEAR_DEPTH_FOR_LIGHT
 		// convert light depth image to linear depth
 		
 		pushSurface(&view_light_linear);
@@ -319,7 +377,8 @@ int main(int argc, const char * argv[])
 			popBlend();
 		}
 		popSurface();
-		
+	#endif
+	
 		// draw scene from the viewpoint of the camera
 		
 		pushSurface(&view_camera);
@@ -343,6 +402,7 @@ int main(int argc, const char * argv[])
 		}
 		popSurface();
 		
+	#if LINEAR_DEPTH_FOR_CAMERA
 		// convert camera depth image to linear depth
 		
 		pushSurface(&view_camera_linear);
@@ -360,6 +420,7 @@ int main(int argc, const char * argv[])
 			popBlend();
 		}
 		popSurface();
+	#endif
 		
 		//
 		
@@ -385,6 +446,7 @@ int main(int argc, const char * argv[])
 			}
 			else if (drawMode == kDrawMode_CameraDepthLinear)
 			{
+			#if LINEAR_DEPTH_FOR_CAMERA
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_camera_linear.getTexture());
 				setLumif(depthLinearDrawScale);
@@ -394,6 +456,7 @@ int main(int argc, const char * argv[])
 				
 				setColor(100, 100, 100);
 				drawText(10, 10, 12.f, 0, 0, "linear draw range: %f .. %f", 0.f, 1.f / depthLinearDrawScale);
+			#endif
 			}
 			else if (drawMode == kDrawMode_LightDepth)
 			{
@@ -414,6 +477,8 @@ int main(int argc, const char * argv[])
 				gxSetTexture(0);
 				popBlend();
 			}
+		#endif
+		#if LINEAR_DEPTH_FOR_LIGHT
 			{
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_light_linear.getTexture());
@@ -425,20 +490,28 @@ int main(int argc, const char * argv[])
 			}
 		#endif
 			
-			// show distance markers
-			
-			for (int i = 0; i < kNumCubes; ++i)
+			if (mouse.isDown(BUTTON_LEFT))
 			{
-				if (cube_screenVisible[i])
+				// show distance markers
+				
+				beginTextBatch();
 				{
-					const Vec3 delta = cube_cornerPositions[i] - camera.position;
-					const float distance = delta.CalcSize();
-					
-					setColor(255, 0, 127);
-					fillCircle(cube_screenPositions[i][0], cube_screenPositions[i][1], 2.f, 20);
-					setColor(100, 100, 100);
-					drawText(cube_screenPositions[i][0], cube_screenPositions[i][1], 12.f, 0, 0, "distance: %f", distance);
+					for (int i = 0; i < kNumCubes; ++i)
+					{
+						if (cube_screenVisible[i])
+						{
+							const Vec3 delta = cube_cornerPositions[i] - camera.position;
+							const float distance = delta.CalcSize();
+							
+							//setColor(255, 0, 127);
+							//fillCircle(cube_screenPositions[i][0], cube_screenPositions[i][1], 2.f, 20);
+							
+							setColor(100, 100, 100);
+							drawText(cube_screenPositions[i][0], cube_screenPositions[i][1], 12.f, 0, 0, "distance: %f", distance);
+						}
+					}
 				}
+				endTextBatch();
 			}
 		}
 		framework.endDraw();
