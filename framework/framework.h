@@ -595,10 +595,11 @@ class Surface
 	
 	int m_bufferId;
 	SURFACE_FORMAT m_format;
-	bool m_doubleBuffered;
+	bool m_colorIsDoubleBuffered;
+	bool m_depthIsDoubleBuffered;
 	uint32_t m_buffer[2];
-	GxTextureId m_texture[2];
-	GxTextureId m_depthTexture;
+	GxTextureId m_colorTexture[2];
+	GxTextureId m_depthTexture[2];
 	
 	void construct();
 	void destruct();
