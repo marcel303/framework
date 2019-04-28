@@ -4,8 +4,7 @@
 #define LIGHT_ORTHO_SIZE 1.f
 #define PERSPECTIVE_LIGHT true
 #define LINEAR_DEPTH_FOR_CAMERA false
-#define LINEAR_DEPTH_FOR_LIGHT false
-#define DEPTH_TO_WORLD true
+#define DEPTH_TO_WORLD false
 
 // depth to linear shader
 
@@ -71,7 +70,6 @@ static const char * s_shadedObjectPs = R"SHADER(
 	include engine/ShaderPS.txt
 
 	uniform sampler2D depthTexture;
-	uniform sampler2D linearDepthTexture;
 
 	shader_in vec4 color;
 	shader_in vec4 position_lightSpace;
@@ -84,7 +82,6 @@ static const char * s_shadedObjectPs = R"SHADER(
 		
 		vec3 coords = projected * 0.5 + vec3(0.5);
 		float depth = texture(depthTexture, coords.xy).x;
-		float linearDepth = texture(linearDepthTexture, coords.xy).x;
 		
 		//projected.z = (projected.z + 1.0) * 0.5;
 		
@@ -98,8 +95,6 @@ static const char * s_shadedObjectPs = R"SHADER(
 			shader_fragColor.rgb = vec3(projected.z);
 		else if (false)
 			shader_fragColor.rgb = vec3(coords); // RGB color cube
-		else if (false)
-			shader_fragColor.rgb = vec3(linearDepth * 0.1);
 		else if (false)
 			shader_fragColor.rgb = vec3(depth);
 		else if (false)
@@ -339,7 +334,180 @@ int main(int argc, const char * argv[])
 		}
 	};
 	
+	class LightDrawer
+	{
+	public:
+		struct Properties
+		{
+			int lightMapWidth = 0;
+			int lightMapHeight = 0;
+			
+			int shadowMapSize = 1024;
+			
+			void setLightMapSize(const int in_lightMapWidth, const int in_lightMapHeight)
+			{
+				lightMapWidth = in_lightMapWidth;
+				lightMapHeight = in_lightMapHeight;
+			}
+			
+			void setShadowMapSize(const int in_shadowMapSize)
+			{
+				shadowMapSize = in_shadowMapSize;
+			}
+		};
+		
+		bool init(const Properties & in_properties)
+		{
+			properties = in_properties;
+			
+			//
+			
+			bool result = true;
+			
+			// allocate shadow map
+			
+			{
+				SurfaceProperties surface_properties;
+				surface_properties.dimensions.init(properties.shadowMapSize, properties.shadowMapSize);
+				surface_properties.depthTarget.init(DEPTH_FLOAT32, false);
+				shadowMap = new Surface();
+				result &= shadowMap->init(surface_properties);
+			}
+	
+			// allocate light map
+			
+			{
+				SurfaceProperties surface_properties;
+				surface_properties.dimensions.init(properties.lightMapWidth, properties.lightMapHeight);
+				surface_properties.colorTarget.init(SURFACE_RGBA16F, false);
+				lightMap = new Surface();
+				result &= lightMap->init(surface_properties);
+			}
+			
+			//
+			
+			if (result == false)
+			{
+				shut();
+			}
+			
+			return result;
+		}
+		
+		void shut()
+		{
+			delete lightMap;
+			lightMap = nullptr;
+			
+			delete shadowMap;
+			shadowMap = nullptr;
+		}
+		
+		void captureSceneMatrices()
+		{
+			Mat4x4 projectionMatrix;
+			Mat4x4 modelViewMatrix;
+			
+			gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+			gxGetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+			
+			drawState.worldToProjection = projectionMatrix * modelViewMatrix;
+			drawState.projectionToWorld = drawState.worldToProjection.CalcInv();
+		}
+		
+		void drawBegin(const GxTextureId sceneDepthTexture)
+		{
+			drawState.sceneDepthTexture = sceneDepthTexture;
+			
+			lightMap->clear();
+			
+			pushSurface(lightMap);
+		}
+		
+		void drawEnd()
+		{
+			popSurface();
+		}
+		
+		void drawShadowLightBegin(const Light & light)
+		{
+			pushSurface(shadowMap);
+			shadowMap->clearDepth(1.f);
+			
+			gxMatrixMode(GX_PROJECTION);
+			gxPushMatrix();
+			gxLoadMatrixf(light.worldToClip_transform.m_v);
+			
+			pushDepthTest(true, DEPTH_LESS, true);
+			pushBlend(BLEND_OPAQUE);
+		}
+		
+		void drawShadowLightEnd(const Light & light)
+		{
+			popBlend();
+			popDepthTest();
+			gxPopMatrix();
+			popSurface();
+
+			//
+			
+			setColorClamp(false);
+			pushBlend(BLEND_ADD);
+			{
+				Shader shader("deferredShadow");
+				setShader(shader);
+				shader.setTexture("depthTexture", 0, drawState.sceneDepthTexture);
+				shader.setImmediateMatrix4x4("projectionToWorld", drawState.projectionToWorld.m_v);
+				shader.setTexture("lightDepthTexture", 1, shadowMap->getDepthTexture());
+				shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
+				drawRect(0, 0, 800, 600);
+			}
+			popBlend();
+			setColorClamp(true);
+		}
+		
+		void drawLight(const Light & light)
+		{
+		}
+		
+		Surface * getLightMapSurface()
+		{
+			return lightMap;
+		}
+		
+	private:
+		Properties properties;
+		
+		Surface * lightMap = nullptr;
+		Surface * shadowMap = nullptr;
+		
+		struct
+		{
+			GxTextureId sceneDepthTexture;
+			Mat4x4 worldToProjection; // todo : remove ?
+			Mat4x4 projectionToWorld;
+		} drawState;
+	};
+	
+	LightDrawer lightDrawer;
+	{
+		LightDrawer::Properties properties;
+		properties.setLightMapSize(800, 600);
+		properties.setShadowMapSize(SHADOWMAP_SIZE);
+		lightDrawer.init(properties);
+	}
+	
 	Light light;
+	light.isPerspective = true;
+	light.depthRange.min = .5f;
+	light.depthRange.max = 10.f;
+	light.fov = 60.f;
+	
+	Light light2;
+	light2.isPerspective = true;
+	light2.depthRange.min = .5f;
+	light2.depthRange.max = 10.f;
+	light2.fov = 60.f;
 	
 	enum DrawMode
 	{
@@ -375,24 +543,6 @@ int main(int argc, const char * argv[])
 	}
 #endif
 
-	Surface view_light;
-	{
-		SurfaceProperties properties;
-		properties.dimensions.init(SHADOWMAP_SIZE, SHADOWMAP_SIZE);
-		properties.depthTarget.init(DEPTH_FLOAT32, false);
-		view_light.init(properties);
-	}
-#if LINEAR_DEPTH_FOR_LIGHT
-	Surface view_light_linear;
-	{
-		SurfaceProperties properties;
-		properties.dimensions.init(SHADOWMAP_SIZE, SHADOWMAP_SIZE);
-		properties.colorTarget.init(SURFACE_R32F, false);
-		properties.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
-		view_light_linear.init(properties);
-	}
-#endif
-
 #if DEPTH_TO_WORLD
 	Surface view_camera_world_position;
 	{
@@ -402,14 +552,6 @@ int main(int argc, const char * argv[])
 		view_camera_world_position.init(properties);
 	}
 #endif
-
-	Surface view_camera_light_accumulation;
-	{
-		SurfaceProperties properties;
-		properties.dimensions.init(800, 600);
-		properties.colorTarget.init(SURFACE_RGBA16F, false);
-		view_camera_light_accumulation.init(properties);
-	}
 
 	shaderSource("depthToLinear.vs", s_depthToLinearVs);
 	shaderSource("depthToLinear.ps", s_depthToLinearPs);
@@ -457,23 +599,30 @@ int main(int argc, const char * argv[])
 		
 		if (mouse.isDown(BUTTON_LEFT))
 			light.lightToWorld_transform = camera.getWorldMatrix();
+		light.calculateTransforms();
 		
-			light.calculateTransforms();
+		light2.lightToWorld_transform.MakeLookat(
+				Vec3(cosf(framework.time / 3.45f) * 3.f, 6, sinf(framework.time / 4.56f) * 3.f),
+				Vec3(cosf(framework.time) * 6.f, 0, sinf(framework.time) * 6.f),
+				Vec3(0, 1, 0));
+		light2.lightToWorld_transform = light2.lightToWorld_transform.CalcInv();
+		light2.calculateTransforms();
 		
-		auto drawScene = [&](const bool applyForwardLighting, const bool captureScreenPositions)
+		auto drawScene = [&](const bool captureScreenPositions)
 		{
 			Shader shader("shadedObject");
 			
+		/*
+			// would be necessary to capture shadow map textures for forward shadow casting lights
+		 
 			if (applyForwardLighting)
 			{
 				setShader(shader);
 				shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
 				shader.setTexture("depthTexture", 0, view_light.getDepthTexture());
-			#if LINEAR_DEPTH_FOR_LIGHT
-				shader.setTexture("linearDepthTexture", 1, view_light_linear.getTexture());
-			#endif
 			}
-			
+		*/
+		
 			const Vec3 cube_size(.4f, .4f, .4f);
 			
 		#if 1
@@ -533,75 +682,37 @@ int main(int argc, const char * argv[])
 			}
 			gxPopMatrix();
 		};
-		
-		// draw scene from the viewpoint of the light
-		
-		pushSurface(&view_light);
-		{
-			view_light.clearDepth(1.f);
-			
-			gxMatrixMode(GX_PROJECTION);
-			gxPushMatrix();
-			gxLoadMatrixf(light.worldToClip_transform.m_v);
-			
-			pushDepthTest(true, DEPTH_LESS, true);
-			pushBlend(BLEND_OPAQUE);
-			{
-				drawScene(false, false);
-			}
-			popBlend();
-			popDepthTest();
-			
-			gxPopMatrix();
-		}
-		popSurface();
-		
-	#if LINEAR_DEPTH_FOR_LIGHT
-		// convert light depth image to linear depth
-		
-		pushSurface(&view_light_linear);
-		{
-			view_light_linear.clear();
-			
-			pushBlend(BLEND_OPAQUE);
-			{
-				Shader depthLinear("depthToLinear");
-				depthLinear.setImmediate("projection_zNear", light.zNear);
-				depthLinear.setImmediate("projection_zFar", light.zFar);
-				depthLinear.setTexture("depthTexture", 0, view_light.getDepthTexture());
-				drawRect(0, 0, view_light_linear.getWidth(), view_light_linear.getHeight());
-			}
-			popBlend();
-		}
-		popSurface();
-	#endif
 	
 		// draw scene from the viewpoint of the camera
 		
 		Mat4x4 view_camera_world_to_projection_matrix;
-		view_camera_world_to_projection_matrix.MakePerspectiveGL(60.f * float(M_PI) / 180.f, view_camera.getHeight() / float(view_camera.getWidth()), znear, zfar);
-		view_camera_world_to_projection_matrix = view_camera_world_to_projection_matrix.Scale(1, -1, 1);
-		view_camera_world_to_projection_matrix = view_camera_world_to_projection_matrix * camera.getViewMatrix();
 		
 		pushSurface(&view_camera);
 		{
 			view_camera.clear();
 			view_camera.clearDepth(1.f);
 		
-			gxMatrixMode(GX_PROJECTION);
-			gxLoadMatrixf(view_camera_world_to_projection_matrix.m_v);
-			gxMatrixMode(GX_MODELVIEW);
-			gxLoadIdentity();
+			projectPerspective3d(60.f, znear, zfar);
 			
-			pushDepthTest(true, DEPTH_LESS, true);
-			pushBlend(BLEND_OPAQUE);
+			camera.pushViewMatrix();
 			{
-				const bool doForwardLighting = keyboard.isDown(SDLK_LSHIFT);
+				Mat4x4 mat_p;
+				Mat4x4 mat_v;
+				gxGetMatrixf(GX_PROJECTION, mat_p.m_v);
+				gxGetMatrixf(GX_MODELVIEW, mat_v.m_v);
+				view_camera_world_to_projection_matrix = mat_p * mat_v;
 				
-				drawScene(doForwardLighting, true);
+				lightDrawer.captureSceneMatrices();
+				
+				pushDepthTest(true, DEPTH_LESS, true);
+				pushBlend(BLEND_OPAQUE);
+				{
+					drawScene(true);
+				}
+				popBlend();
+				popDepthTest();
 			}
-			popBlend();
-			popDepthTest();
+			camera.popViewMatrix();
 			
 			projectScreen2d();
 		}
@@ -688,12 +799,16 @@ int main(int argc, const char * argv[])
 			}
 			else if (drawMode == kDrawMode_LightDepth)
 			{
+			/*
+			// todo : cache shadow maps for light somewhere ?
+			
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_light.getDepthTexture());
 				setColor(colorWhite);
 				drawRect(0, 0, 800, 600);
 				gxSetTexture(0);
 				popBlend();
+			*/
 			}
 			else if (drawMode == kDrawMode_CameraWorldPosition)
 			{
@@ -708,105 +823,41 @@ int main(int argc, const char * argv[])
 			}
 			else if (drawMode == kDrawMode_DeferredShadow)
 			{
-				pushSurface(&view_camera_light_accumulation);
+				// accumulate lights
+				
+				lightDrawer.drawBegin(view_camera.getDepthTexture());
 				{
-					view_camera_light_accumulation.clear();
-					
-					// accumulate lights
-					
-					const Mat4x4 projectionToWorld = view_camera_world_to_projection_matrix.CalcInv();
-					
-					setColorClamp(false);
-					pushBlend(BLEND_ADD);
+					lightDrawer.drawShadowLightBegin(light);
 					{
-						{
-							Shader shader("deferredShadow");
-							setShader(shader);
-							shader.setTexture("depthTexture", 0, view_camera.getDepthTexture());
-							shader.setImmediateMatrix4x4("projectionToWorld", projectionToWorld.m_v);
-							shader.setTexture("lightDepthTexture", 1, view_light.getDepthTexture());
-							shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
-							drawRect(0, 0, 800, 600);
-							clearShader();
-						}
-						
-					#if 0 // todo : refactor
-						Light light2;
-						light2.isPerspective = true;
-						light2.lightToWorld_transform.MakeLookat(
-							Vec3(cosf(framework.time / 3.45f) * 3.f, 6, sinf(framework.time / 4.56f) * 3.f),
-							Vec3(cosf(framework.time) * 6.f, 0, sinf(framework.time) * 6.f),
-							Vec3(0, 1, 0));
-						light2.lightToWorld_transform = light2.lightToWorld_transform.CalcInv();
-						light2.depthRange.min = light.depthRange.min;
-						light2.depthRange.max = light.depthRange.max;
-						light2.fov = 60.f;
-						light2.calculateTransforms();
-						
-						pushSurface(&view_light);
-						{
-							view_light.clearDepth(1.f);
-							
-							gxMatrixMode(GX_PROJECTION);
-							gxPushMatrix();
-							{
-								gxLoadMatrixf(light2.worldToClip_transform.m_v);
-								
-								pushDepthTest(true, DEPTH_LESS, true);
-								pushBlend(BLEND_OPAQUE);
-								{
-									drawScene(false, false);
-								}
-								popBlend();
-								popDepthTest();
-							}
-							gxPopMatrix();
-						}
-						popSurface();
-						
-						{
-							Shader shader("deferredShadow");
-							setShader(shader);
-							shader.setTexture("depthTexture", 0, view_camera.getDepthTexture());
-							shader.setImmediateMatrix4x4("projectionToWorld", projectionToWorld.m_v);
-							shader.setTexture("lightDepthTexture", 1, view_light.getDepthTexture());
-							shader.setImmediateMatrix4x4("lightMVP", light2.worldToClip_transform.m_v);
-							drawRect(0, 0, 800, 600);
-							clearShader();
-						}
-					#endif
+						drawScene(false);
 					}
-					popBlend();
-					setColorClamp(true);
+					lightDrawer.drawShadowLightEnd(light);
+					
+					lightDrawer.drawShadowLightBegin(light2);
+					{
+						drawScene(false);
+					}
+					lightDrawer.drawShadowLightEnd(light2);
 				}
-				popSurface();
+				lightDrawer.drawEnd();
+				
+				// apply light to color image
 				
 				pushBlend(BLEND_OPAQUE);
 				Shader shader("lightApplication");
 				shader.setTexture("colorTexture", 0, view_camera.getTexture());
-				shader.setTexture("lightTexture", 1, view_camera_light_accumulation.getTexture());
+				shader.setTexture("lightTexture", 1, lightDrawer.getLightMapSurface()->getTexture());
 				shader.setImmediate("ambient", .1f, .08f, .06f);
 				drawRect(0, 0, 800, 600);
 				popBlend();
 			}
 			
-		#if 1
+		#if 0
 			{
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_light.getDepthTexture());
 				setColor(colorWhite);
 				drawRect(0, 500, 100, 600);
-				gxSetTexture(0);
-				popBlend();
-			}
-		#endif
-		#if LINEAR_DEPTH_FOR_LIGHT
-			{
-				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(view_light_linear.getTexture());
-				//setColor(colorWhite);
-				setLumif(depthLinearDrawScale);
-				drawRect(100, 500, 200, 600);
 				gxSetTexture(0);
 				popBlend();
 			}
