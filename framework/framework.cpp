@@ -5544,6 +5544,13 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 		case TRANSFORM_3D:
 		{
 			gxLoadMatrixf(globals.transform3d.m_v);
+			
+			if (surfaceStackSize != 0 && surfaceStack[surfaceStackSize - 1] != nullptr)
+			{
+				// flip Y axis so the vertical axis runs bottom to top
+				gxScalef(1.f, -1.f, 1.f);
+			}
+			
 			break;
 		}
 		default:
@@ -5615,7 +5622,11 @@ void projectPerspective3d(const float fov, const float nearZ, const float farZ)
 	int sy;
 	getCurrentViewportSize(sx, sy);
 	
+#if ENABLE_OPENGL
+	transform.MakePerspectiveGL(fov / 180.f * M_PI, sy / float(sx), nearZ, farZ);
+#else
 	transform.MakePerspectiveLH(fov / 180.f * M_PI, sy / float(sx), nearZ, farZ);
+#endif
 	
 	globals.transform3d = transform;
 	
@@ -5647,7 +5658,7 @@ Vec4 transformToWorld(const Vec4 & v)
 	return t;
 }
 
-Vec2 transformToScreen(const Vec3 & v)
+Vec2 transformToScreen(const Vec3 & v, float & w)
 {
 	Mat4x4 matP;
 	Mat4x4 matM;
@@ -5661,6 +5672,8 @@ Vec2 transformToScreen(const Vec3 & v)
 	Vec4 t = matP * matM * Vec4(v[0], v[1], v[2], 1.f);
 	
 	// perspective divide
+	
+	w = t[3];
 	
 	if (t[3] != 0.f)
 		t /= t[3];
@@ -5676,6 +5689,23 @@ Vec2 transformToScreen(const Vec3 & v)
 
 static void setSurface(Surface * surface)
 {
+	// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
+	// as this would cause issues where the driver may perform an optimization where it detects no texture
+	// state change happened in a future gxSetTexture or Shader::setTexture call (because the texture ids
+	// are the same), making it fail to flush GPU render target caches, fail to perform texture decompression,
+	// fail to perform whatever is needed to transition a render target texture from being 'renderable' resource
+	// to being a shader accessible resource
+	
+	for (int i = 0; i < 8; ++i)
+	{
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, 0);
+	}
+	
+	checkErrorGL();
+	
+	//
+	
 	const GLuint framebuffer = surface ? surface->getFramebuffer() : 0;
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	
@@ -8243,6 +8273,9 @@ void gxSetTexture(GxTextureId texture)
 	}
 	else
 	{
+		glBindTexture(GL_TEXTURE_2D, 0);
+		checkErrorGL();
+		
 		s_gxTextureEnabled = false;
 	}
 }
