@@ -1,11 +1,13 @@
 #include "framework.h"
 
 #define SHADOWMAP_SIZE 1024
-#define LIGHT_ORTHO_SIZE 4.f
+#define LIGHT_ORTHO_SIZE 1.f
 #define PERSPECTIVE_LIGHT true
 #define LINEAR_DEPTH_FOR_CAMERA false
 #define LINEAR_DEPTH_FOR_LIGHT false
 #define DEPTH_TO_WORLD true
+
+// depth to linear shader
 
 static const char * s_depthToLinearVs = R"SHADER(
 	include engine/ShaderVS.txt
@@ -44,6 +46,8 @@ static const char * s_depthToLinearPs = R"SHADER(
 		shader_fragColor = vec4(z_e);
 	}
 )SHADER";
+
+// shaded object (forward lighting) shader
 
 static const char * s_shadedObjectVs = R"SHADER(
 	include engine/ShaderVS.txt
@@ -115,18 +119,7 @@ static const char * s_shadedObjectPs = R"SHADER(
 	}
 )SHADER";
 
-static const char * s_depthToWorldVs = R"SHADER(
-	include engine/ShaderVS.txt
-
-	shader_out vec2 texcoord;
-
-	void main()
-	{
-		gl_Position = ModelViewProjectionMatrix * in_position4;
-		
-		texcoord = unpackTexcoord(0);
-	}
-)SHADER";
+// shadow mapping utility functions include
 
 static const char * s_shadowUtilsTxt = R"SHADER(
 	vec3 depthToWorldPosition(float depth, vec2 texcoord, mat4x4 projectionToWorld)
@@ -139,6 +132,21 @@ static const char * s_shadowUtilsTxt = R"SHADER(
 		position_world /= position_world.w;
 
 		return position_world.xyz;
+	}
+)SHADER";
+
+// depth to world shader
+
+static const char * s_depthToWorldVs = R"SHADER(
+	include engine/ShaderVS.txt
+
+	shader_out vec2 texcoord;
+
+	void main()
+	{
+		gl_Position = ModelViewProjectionMatrix * in_position4;
+		
+		texcoord = unpackTexcoord(0);
 	}
 )SHADER";
 
@@ -160,6 +168,8 @@ static const char * s_depthToWorldPs = R"SHADER(
 		shader_fragColor = vec4(position_world, 1.0);
 	}
 )SHADER";
+
+// deferred shadow light shader
 
 static const char * s_deferredShadowVs = R"SHADER(
 	include engine/ShaderVS.txt
@@ -188,10 +198,6 @@ static const char * s_deferredShadowPs = R"SHADER(
 
 	void main()
 	{
-		vec4 color = vec4(1.0);
-		
-		shader_fragColor = color;
-		
 		float camera_view_depth = texture(depthTexture, texcoord).x;
 		
 		if (camera_view_depth == 1.0)
@@ -225,15 +231,59 @@ static const char * s_deferredShadowPs = R"SHADER(
 		else
 			shader_fragColor.rgb = vec3(coords.z > depth + 0.001 ? 0.3 : 1.0); // less acne with depth bias
 		
-		// apply some color
-		
-		shader_fragColor.rgb += color.rgb * 0.3;
-		
 		// apply a bit of lighting here
 		
 		float distance = length(projected.xy);
 		shader_fragColor.rgb *= max(0.0, 1.0 - distance);
-		shader_fragColor.rgb += vec3(0.1);
+		
+		shader_fragColor.a = 1.0;
+	}
+)SHADER";
+
+// light application shader
+
+static const char * s_lightApplicationVs = R"SHADER(
+	include engine/ShaderVS.txt
+
+	shader_out vec2 texcoord;
+
+	void main()
+	{
+		gl_Position = ModelViewProjectionMatrix * in_position4;
+		
+		texcoord = unpackTexcoord(0);
+	}
+)SHADER";
+
+static const char * s_lightApplicationPs = R"SHADER(
+	include engine/ShaderPS.txt
+
+	uniform sampler2D colorTexture;
+	uniform sampler2D lightTexture;
+
+	uniform vec3 ambient;
+
+	shader_in vec2 texcoord;
+
+	void main()
+	{
+		vec3 color = texture(colorTexture, texcoord).xyz;
+		vec3 light = texture(lightTexture, texcoord).xyz;
+		
+	#if 1
+		vec3 result = color * light;
+	#else
+		// experimental colors
+		vec3 result;
+		result = vec3(1.0);
+		result += color * 0.3;
+		result *= light;
+		result += vec3(0.1);
+	#endif
+	
+		result += ambient;
+	
+		shader_fragColor = vec4(result, 1.0);
 	}
 )SHADER";
 
@@ -329,6 +379,14 @@ int main(int argc, const char * argv[])
 	}
 #endif
 
+	Surface view_camera_light_accumulation;
+	{
+		SurfaceProperties properties;
+		properties.dimensions.init(800, 600);
+		properties.colorTarget.init(SURFACE_RGBA16F, false);
+		view_camera_light_accumulation.init(properties);
+	}
+
 	shaderSource("depthToLinear.vs", s_depthToLinearVs);
 	shaderSource("depthToLinear.ps", s_depthToLinearPs);
 	shaderSource("shadedObject.vs", s_shadedObjectVs);
@@ -338,6 +396,8 @@ int main(int argc, const char * argv[])
 	shaderSource("depthToWorld.ps", s_depthToWorldPs);
 	shaderSource("deferredShadow.vs", s_deferredShadowVs);
 	shaderSource("deferredShadow.ps", s_deferredShadowPs);
+	shaderSource("lightApplication.vs", s_lightApplicationVs);
+	shaderSource("lightApplication.ps", s_lightApplicationPs);
 	
 	setFont("calibri.ttf");
 	
@@ -391,11 +451,11 @@ int main(int argc, const char * argv[])
 			lightMVP = projection * worldToView;
 		}
 		
-		auto drawScene = [&](const bool isShadowPass, const bool captureScreenPositions)
+		auto drawScene = [&](const bool applyForwardLighting, const bool captureScreenPositions)
 		{
 			Shader shader("shadedObject");
 			
-			if (isShadowPass == false)
+			if (applyForwardLighting)
 			{
 				setShader(shader);
 				shader.setImmediateMatrix4x4("lightMVP", lightMVP.m_v);
@@ -494,7 +554,7 @@ int main(int argc, const char * argv[])
 			pushDepthTest(true, DEPTH_LESS, true);
 			pushBlend(BLEND_OPAQUE);
 			{
-				drawScene(true, false);
+				drawScene(false, false);
 			}
 			popBlend();
 			popDepthTest();
@@ -545,7 +605,9 @@ int main(int argc, const char * argv[])
 			pushDepthTest(true, DEPTH_LESS, true);
 			pushBlend(BLEND_OPAQUE);
 			{
-				drawScene(false, true);
+				const bool doForwardLighting = keyboard.isDown(SDLK_LSHIFT);
+				
+				drawScene(doForwardLighting, true);
 			}
 			popBlend();
 			popDepthTest();
@@ -655,14 +717,32 @@ int main(int argc, const char * argv[])
 			}
 			else if (drawMode == kDrawMode_DeferredShadow)
 			{
-				const Mat4x4 projectionToWorld = view_camera_world_to_projection_matrix.CalcInv();
+				pushSurface(&view_camera_light_accumulation);
+				{
+					view_camera_light_accumulation.clear();
+					
+					// accumulate lights
+					
+					const Mat4x4 projectionToWorld = view_camera_world_to_projection_matrix.CalcInv();
+					
+					setColorClamp(false);
+					pushBlend(BLEND_ADD);
+					Shader shader("deferredShadow");
+					shader.setTexture("depthTexture", 0, view_camera.getDepthTexture());
+					shader.setImmediateMatrix4x4("projectionToWorld", projectionToWorld.m_v);
+					shader.setTexture("lightDepthTexture", 1, view_light.getDepthTexture());
+					shader.setImmediateMatrix4x4("lightMVP", lightMVP.m_v);
+					drawRect(0, 0, 800, 600);
+					popBlend();
+					setColorClamp(true);
+				}
+				popSurface();
 				
 				pushBlend(BLEND_OPAQUE);
-				Shader shader("deferredShadow");
-				shader.setTexture("depthTexture", 0, view_camera.getDepthTexture());
-				shader.setImmediateMatrix4x4("projectionToWorld", projectionToWorld.m_v);
-				shader.setTexture("lightDepthTexture", 1, view_light.getDepthTexture());
-				shader.setImmediateMatrix4x4("lightMVP", lightMVP.m_v);
+				Shader shader("lightApplication");
+				shader.setTexture("colorTexture", 0, view_camera.getTexture());
+				shader.setTexture("lightTexture", 1, view_camera_light_accumulation.getTexture());
+				shader.setImmediate("ambient", .1f, .08f, .06f);
 				drawRect(0, 0, 800, 600);
 				popBlend();
 			}
