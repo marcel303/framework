@@ -2,7 +2,7 @@
 
 #define SHADOWMAP_SIZE 1024
 #define LIGHT_ORTHO_SIZE 1.f
-#define PERSPECTIVE_LIGHT false
+#define PERSPECTIVE_LIGHT true
 #define LINEAR_DEPTH_FOR_CAMERA false
 #define LINEAR_DEPTH_FOR_LIGHT false
 #define DEPTH_TO_WORLD true
@@ -270,18 +270,9 @@ static const char * s_lightApplicationPs = R"SHADER(
 		vec3 color = texture(colorTexture, texcoord).xyz;
 		vec3 light = texture(lightTexture, texcoord).xyz;
 		
-	#if 1
+		light += ambient;
+		
 		vec3 result = color * light;
-	#else
-		// experimental colors
-		vec3 result;
-		result = vec3(1.0);
-		result += color * 0.3;
-		result *= light;
-		result += vec3(0.1);
-	#endif
-	
-		result += ambient;
 	
 		shader_fragColor = vec4(result, 1.0);
 	}
@@ -302,7 +293,7 @@ int main(int argc, const char * argv[])
 	for (int i = 0; i < kNumCubes; ++i)
 	{
 		cube_positions[i].Set(random<float>(-10.f, +10.f), random<float>(0.f, +2.f), random<float>(-10.f, +10.f));
-		cube_colors[i] = Color::fromHSL(random<float>(0.f, 1.f), .5f, .5f);
+		cube_colors[i] = Color::fromHSL(random<float>(0.f, 1.f), .3f, .8f);
 	}
 	Vec3 cube_cornerPositions[kNumCubes];
 	Vec2 cube_screenPositions[kNumCubes];
@@ -547,7 +538,6 @@ int main(int argc, const char * argv[])
 		
 		pushSurface(&view_light);
 		{
-			view_light.clear();
 			view_light.clearDepth(1.f);
 			
 			gxMatrixMode(GX_PROJECTION);
@@ -729,12 +719,62 @@ int main(int argc, const char * argv[])
 					setColorClamp(false);
 					pushBlend(BLEND_ADD);
 					{
-						Shader shader("deferredShadow");
-						shader.setTexture("depthTexture", 0, view_camera.getDepthTexture());
-						shader.setImmediateMatrix4x4("projectionToWorld", projectionToWorld.m_v);
-						shader.setTexture("lightDepthTexture", 1, view_light.getDepthTexture());
-						shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
-						drawRect(0, 0, 800, 600);
+						{
+							Shader shader("deferredShadow");
+							setShader(shader);
+							shader.setTexture("depthTexture", 0, view_camera.getDepthTexture());
+							shader.setImmediateMatrix4x4("projectionToWorld", projectionToWorld.m_v);
+							shader.setTexture("lightDepthTexture", 1, view_light.getDepthTexture());
+							shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
+							drawRect(0, 0, 800, 600);
+							clearShader();
+						}
+						
+					#if 0 // todo : refactor
+						Light light2;
+						light2.isPerspective = true;
+						light2.lightToWorld_transform.MakeLookat(
+							Vec3(cosf(framework.time / 3.45f) * 3.f, 6, sinf(framework.time / 4.56f) * 3.f),
+							Vec3(cosf(framework.time) * 6.f, 0, sinf(framework.time) * 6.f),
+							Vec3(0, 1, 0));
+						light2.lightToWorld_transform = light2.lightToWorld_transform.CalcInv();
+						light2.depthRange.min = light.depthRange.min;
+						light2.depthRange.max = light.depthRange.max;
+						light2.fov = 60.f;
+						light2.calculateTransforms();
+						
+						pushSurface(&view_light);
+						{
+							view_light.clearDepth(1.f);
+							
+							gxMatrixMode(GX_PROJECTION);
+							gxPushMatrix();
+							{
+								gxLoadMatrixf(light2.worldToClip_transform.m_v);
+								
+								pushDepthTest(true, DEPTH_LESS, true);
+								pushBlend(BLEND_OPAQUE);
+								{
+									drawScene(false, false);
+								}
+								popBlend();
+								popDepthTest();
+							}
+							gxPopMatrix();
+						}
+						popSurface();
+						
+						{
+							Shader shader("deferredShadow");
+							setShader(shader);
+							shader.setTexture("depthTexture", 0, view_camera.getDepthTexture());
+							shader.setImmediateMatrix4x4("projectionToWorld", projectionToWorld.m_v);
+							shader.setTexture("lightDepthTexture", 1, view_light.getDepthTexture());
+							shader.setImmediateMatrix4x4("lightMVP", light2.worldToClip_transform.m_v);
+							drawRect(0, 0, 800, 600);
+							clearShader();
+						}
+					#endif
 					}
 					popBlend();
 					setColorClamp(true);
