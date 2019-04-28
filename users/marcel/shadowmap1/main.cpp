@@ -2,7 +2,7 @@
 
 #define SHADOWMAP_SIZE 1024
 #define LIGHT_ORTHO_SIZE 1.f
-#define PERSPECTIVE_LIGHT true
+#define PERSPECTIVE_LIGHT false
 #define LINEAR_DEPTH_FOR_CAMERA false
 #define LINEAR_DEPTH_FOR_LIGHT false
 #define DEPTH_TO_WORLD true
@@ -310,9 +310,42 @@ int main(int argc, const char * argv[])
 	
 	struct Light
 	{
-		Mat4x4 transform = Mat4x4(true);
-		float zNear = .5f;
-		float zFar = 10.f;
+		Mat4x4 lightToWorld_transform = Mat4x4(true);
+		Mat4x4 worldToClip_transform = Mat4x4(true);
+		
+		struct
+		{
+			float min = .5f;
+			float max = 10.f;
+		} depthRange;
+		
+		bool isPerspective = PERSPECTIVE_LIGHT;
+		float fov = 60.f;
+		
+		void calculateTransforms()
+		{
+			Mat4x4 projection;
+		
+			if (isPerspective)
+			{
+				projection.MakePerspectiveGL(
+					fov * float(M_PI) / 180.f, 1.f,
+					depthRange.min,
+					depthRange.max);
+			}
+			else
+			{
+				projection.MakeOrthoGL(
+					-LIGHT_ORTHO_SIZE, +LIGHT_ORTHO_SIZE,
+					-LIGHT_ORTHO_SIZE, +LIGHT_ORTHO_SIZE,
+					depthRange.min,
+					depthRange.max);
+			}
+		
+			const Mat4x4 worldToLight = lightToWorld_transform.CalcInv();
+			
+			worldToClip_transform = projection * worldToLight;
+		}
 	};
 	
 	Light light;
@@ -429,27 +462,12 @@ int main(int argc, const char * argv[])
 		
 		camera.tick(framework.timeStep, true);
 		
-		// update light transform
+		// update light transforms
 		
 		if (mouse.isDown(BUTTON_LEFT))
-			light.transform = camera.getWorldMatrix();
+			light.lightToWorld_transform = camera.getWorldMatrix();
 		
-		Mat4x4 lightMVP;
-		{
-			Mat4x4 projection;
-		#if PERSPECTIVE_LIGHT
-			projection.MakePerspectiveGL(60.f * float(M_PI) / 180.f, 1.f, light.zNear, light.zFar);
-		#else
-			projection.MakeOrthoGL(
-				-LIGHT_ORTHO_SIZE, +LIGHT_ORTHO_SIZE,
-				-LIGHT_ORTHO_SIZE, +LIGHT_ORTHO_SIZE,
-				light.zNear, light.zFar);
-		#endif
-		
-			Mat4x4 worldToView = light.transform.CalcInv();
-			
-			lightMVP = projection * worldToView;
-		}
+			light.calculateTransforms();
 		
 		auto drawScene = [&](const bool applyForwardLighting, const bool captureScreenPositions)
 		{
@@ -458,7 +476,7 @@ int main(int argc, const char * argv[])
 			if (applyForwardLighting)
 			{
 				setShader(shader);
-				shader.setImmediateMatrix4x4("lightMVP", lightMVP.m_v);
+				shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
 				shader.setTexture("depthTexture", 0, view_light.getDepthTexture());
 			#if LINEAR_DEPTH_FOR_LIGHT
 				shader.setTexture("linearDepthTexture", 1, view_light_linear.getTexture());
@@ -505,12 +523,12 @@ int main(int argc, const char * argv[])
 			
 			gxPushMatrix();
 			{
-				gxMultMatrixf(light.transform.m_v);
+				gxMultMatrixf(light.lightToWorld_transform.m_v);
 				
 				setColor(100, 100, 100);
 				lineCube(
-					Vec3(0, 0, (light.zNear + light.zFar) / 2.f),
-					Vec3(LIGHT_ORTHO_SIZE, LIGHT_ORTHO_SIZE, (light.zFar - light.zNear) / 2.f));
+					Vec3(0, 0, (light.depthRange.min + light.depthRange.max) / 2.f),
+					Vec3(LIGHT_ORTHO_SIZE, LIGHT_ORTHO_SIZE, (light.depthRange.max - light.depthRange.min) / 2.f));
 				
 				gxBegin(GX_LINES);
 				gxVertex3f(0, 0, 0);
@@ -532,24 +550,9 @@ int main(int argc, const char * argv[])
 			view_light.clear();
 			view_light.clearDepth(1.f);
 			
-			Mat4x4 projection;
-		#if PERSPECTIVE_LIGHT
-			projection.MakePerspectiveGL(60.f * float(M_PI) / 180.f, 1.f, light.zNear, light.zFar);
-		#else
-			projection.MakeOrthoGL(
-				-LIGHT_ORTHO_SIZE,
-				+LIGHT_ORTHO_SIZE,
-				-LIGHT_ORTHO_SIZE,
-				+LIGHT_ORTHO_SIZE,
-				light.zNear, light.zFar);
-		#endif
-		
 			gxMatrixMode(GX_PROJECTION);
 			gxPushMatrix();
-			gxLoadMatrixf(projection.m_v);
-			
-			Mat4x4 worldToView = light.transform.CalcInv();
-			gxMultMatrixf(worldToView.m_v);
+			gxLoadMatrixf(light.worldToClip_transform.m_v);
 			
 			pushDepthTest(true, DEPTH_LESS, true);
 			pushBlend(BLEND_OPAQUE);
@@ -560,8 +563,6 @@ int main(int argc, const char * argv[])
 			popDepthTest();
 			
 			gxPopMatrix();
-			
-			projectScreen2d();
 		}
 		popSurface();
 		
@@ -727,12 +728,14 @@ int main(int argc, const char * argv[])
 					
 					setColorClamp(false);
 					pushBlend(BLEND_ADD);
-					Shader shader("deferredShadow");
-					shader.setTexture("depthTexture", 0, view_camera.getDepthTexture());
-					shader.setImmediateMatrix4x4("projectionToWorld", projectionToWorld.m_v);
-					shader.setTexture("lightDepthTexture", 1, view_light.getDepthTexture());
-					shader.setImmediateMatrix4x4("lightMVP", lightMVP.m_v);
-					drawRect(0, 0, 800, 600);
+					{
+						Shader shader("deferredShadow");
+						shader.setTexture("depthTexture", 0, view_camera.getDepthTexture());
+						shader.setImmediateMatrix4x4("projectionToWorld", projectionToWorld.m_v);
+						shader.setTexture("lightDepthTexture", 1, view_light.getDepthTexture());
+						shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
+						drawRect(0, 0, 800, 600);
+					}
 					popBlend();
 					setColorClamp(true);
 				}
