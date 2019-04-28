@@ -2196,6 +2196,8 @@ static GLenum translateSurfaceColorFormat(const SURFACE_FORMAT format)
 		glFormat = GL_RGBA8;
 	if (format == SURFACE_RGBA16F)
 		glFormat = GL_RGBA16F;
+	if (format == SURFACE_RGBA32F)
+		glFormat = GL_RGBA32F;
 	if (format == SURFACE_R8)
 		glFormat = GL_R8;
 	if (format == SURFACE_R16F)
@@ -2318,6 +2320,11 @@ bool Surface::init(const SurfaceProperties & properties)
 			uploadType = GL_UNSIGNED_BYTE;
 		}
 		if (properties.colorTarget.format == SURFACE_RGBA16F)
+		{
+			uploadFormat = GL_RGBA;
+			uploadType = GL_FLOAT;
+		}
+		if (properties.colorTarget.format == SURFACE_RGBA32F)
 		{
 			uploadFormat = GL_RGBA;
 			uploadType = GL_FLOAT;
