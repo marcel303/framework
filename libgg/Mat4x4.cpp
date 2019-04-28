@@ -127,6 +127,22 @@ void Mat4x4::MakeOrthoLH(float left, float right, float top, float bottom, float
 	m30 = tx;   m31 = ty;   m32 = tz;   m33 = 1.0f;
 }
 
+void Mat4x4::MakeOrthoGL(float left, float right, float top, float bottom, float nearCP, float farCP)
+{
+	const float rl = 2.0f / (right - left);
+	const float tb = 2.0f / (top - bottom);
+	const float fn = 2.0f / (farCP - nearCP);
+	
+	const float tx = (right + left) / (left - right);
+	const float ty = (top + bottom) / (bottom - top);
+	const float tz = (farCP + nearCP) / (nearCP - farCP);
+	
+	m00 = rl;   m01 = 0.0f; m02 = 0.0f; m03 = 0.0f;
+	m10 = 0.0f; m11 = tb;   m12 = 0.0f; m13 = 0.0f;
+	m20 = 0.0f; m21 = 0.0f; m22 = fn;   m23 = 0.0f;
+	m30 = tx;   m31 = ty;   m32 = tz;   m33 = 1.0f;
+}
+
 void Mat4x4::MakeLookat(const Vec3& position, const Vec3& target, const Vec3& up)
 {
 	Mat4x4 orient;

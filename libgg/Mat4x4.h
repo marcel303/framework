@@ -93,6 +93,7 @@ public:
 	void MakePerspectiveLH(float fov, float aspect, float nearCP, float farCP);
 	void MakePerspectiveGL(float fov, float aspect, float nearCP, float farCP);
 	void MakeOrthoLH(float left, float right, float top, float bottom, float nearCP, float farCP);
+	void MakeOrthoGL(float left, float right, float top, float bottom, float nearCP, float farCP);
 	void MakeLookat(const Vec3& position, const Vec3& target, const Vec3& up);
 	
 	void SetTranslation(float x, float y, float z)
