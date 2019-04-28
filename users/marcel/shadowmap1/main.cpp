@@ -5,6 +5,7 @@
 #define PERSPECTIVE_LIGHT true
 #define LINEAR_DEPTH_FOR_CAMERA false
 #define LINEAR_DEPTH_FOR_LIGHT false
+#define DEPTH_TO_WORLD true
 
 static const char * s_depthToLinearVs = R"SHADER(
 	include engine/ShaderVS.txt
@@ -114,6 +115,42 @@ static const char * s_shadedObjectPs = R"SHADER(
 	}
 )SHADER";
 
+static const char * s_depthToWorldVs = R"SHADER(
+	include engine/ShaderVS.txt
+
+	shader_out vec2 texcoord;
+
+	void main()
+	{
+		gl_Position = ModelViewProjectionMatrix * in_position4;
+		
+		texcoord = unpackTexcoord(0);
+	}
+)SHADER";
+
+static const char * s_depthToWorldPs = R"SHADER(
+	include engine/ShaderPS.txt
+
+	uniform sampler2D depthTexture;
+	uniform mat4x4 projectionToWorld;
+
+	shader_in vec2 texcoord;
+
+	void main()
+	{
+		float depth = texture(depthTexture, texcoord).x;
+		
+		vec3 coord = vec3(texcoord, depth) * 2.0 - vec3(1.0);
+		
+		vec4 position_projection = vec4(coord, 1.0);
+		vec4 position_world = projectionToWorld * position_projection;
+		
+		position_world /= position_world.w;
+		
+		shader_fragColor = vec4(position_world.xyz, 1.0);
+	}
+)SHADER";
+
 int main(int argc, const char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
@@ -149,7 +186,8 @@ int main(int argc, const char * argv[])
 		kDrawMode_CameraColor,
 		kDrawMode_CameraDepth,
 		kDrawMode_CameraDepthLinear,
-		kDrawMode_LightDepth
+		kDrawMode_LightDepth,
+		kDrawMode_CameraWorldPosition
 	};
 	
 	DrawMode drawMode = kDrawMode_CameraColor;
@@ -193,11 +231,23 @@ int main(int argc, const char * argv[])
 		view_light_linear.init(properties);
 	}
 #endif
-	
+
+#if DEPTH_TO_WORLD
+	Surface view_camera_world_position;
+	{
+		SurfaceProperties properties;
+		properties.dimensions.init(800, 600);
+		properties.colorTarget.init(SURFACE_RGBA32F, false);
+		view_camera_world_position.init(properties);
+	}
+#endif
+
 	shaderSource("depthToLinear.vs", s_depthToLinearVs);
 	shaderSource("depthToLinear.ps", s_depthToLinearPs);
 	shaderSource("shadedObject.vs", s_shadedObjectVs);
 	shaderSource("shadedObject.ps", s_shadedObjectPs);
+	shaderSource("depthToWorld.vs", s_depthToWorldVs);
+	shaderSource("depthToWorld.ps", s_depthToWorldPs);
 	
 	setFont("calibri.ttf");
 	
@@ -218,6 +268,8 @@ int main(int argc, const char * argv[])
 			drawMode = kDrawMode_CameraDepthLinear;
 		if (keyboard.wentDown(SDLK_4))
 			drawMode = kDrawMode_LightDepth;
+		if (keyboard.wentDown(SDLK_5))
+			drawMode = kDrawMode_CameraWorldPosition;
 		if (keyboard.wentDown(SDLK_o))
 			depthLinearDrawScale /= 2.f;
 		if (keyboard.wentDown(SDLK_p))
@@ -381,14 +433,21 @@ int main(int argc, const char * argv[])
 	
 		// draw scene from the viewpoint of the camera
 		
+		Mat4x4 view_camera_world_to_projection_matrix;
+		view_camera_world_to_projection_matrix.MakePerspectiveGL(60.f * float(M_PI) / 180.f, view_camera.getHeight() / float(view_camera.getWidth()), znear, zfar);
+		view_camera_world_to_projection_matrix = view_camera_world_to_projection_matrix.Scale(1, -1, 1);
+		view_camera_world_to_projection_matrix = view_camera_world_to_projection_matrix * camera.getViewMatrix();
+		
 		pushSurface(&view_camera);
 		{
 			view_camera.clear();
 			view_camera.clearDepth(1.f);
 		
-			projectPerspective3d(60.f, znear, zfar);
+			gxMatrixMode(GX_PROJECTION);
+			gxLoadMatrixf(view_camera_world_to_projection_matrix.m_v);
+			gxMatrixMode(GX_MODELVIEW);
+			gxLoadIdentity();
 			
-			camera.pushViewMatrix();
 			pushDepthTest(true, DEPTH_LESS, true);
 			pushBlend(BLEND_OPAQUE);
 			{
@@ -396,7 +455,6 @@ int main(int argc, const char * argv[])
 			}
 			popBlend();
 			popDepthTest();
-			camera.popViewMatrix();
 			
 			projectScreen2d();
 		}
@@ -416,6 +474,29 @@ int main(int argc, const char * argv[])
 				depthLinear.setImmediate("projection_zFar", zfar);
 				depthLinear.setTexture("depthTexture", 0, view_camera.getDepthTexture());
 				drawRect(0, 0, view_camera_linear.getWidth(), view_camera_linear.getHeight());
+			}
+			popBlend();
+		}
+		popSurface();
+	#endif
+	
+		//
+		
+	#if DEPTH_TO_WORLD
+		// convert camera depth image to XYZ world coordinates
+		
+		pushSurface(&view_camera_world_position);
+		{
+			view_camera_world_position.clear();
+			
+			const Mat4x4 projectionToWorld = view_camera_world_to_projection_matrix.CalcInv();
+			
+			pushBlend(BLEND_OPAQUE);
+			{
+				Shader depthLinear("depthToWorld");
+				depthLinear.setImmediateMatrix4x4("projectionToWorld", projectionToWorld.m_v);
+				depthLinear.setTexture("depthTexture", 0, view_camera.getDepthTexture());
+				drawRect(0, 0, view_camera_world_position.getWidth(), view_camera_world_position.getHeight());
 			}
 			popBlend();
 		}
@@ -466,6 +547,17 @@ int main(int argc, const char * argv[])
 				drawRect(0, 0, 800, 600);
 				gxSetTexture(0);
 				popBlend();
+			}
+			else if (drawMode == kDrawMode_CameraWorldPosition)
+			{
+			#if DEPTH_TO_WORLD
+				pushBlend(BLEND_OPAQUE);
+				gxSetTexture(view_camera_world_position.getTexture());
+				setColor(colorWhite);
+				drawRect(0, 0, 800, 600);
+				gxSetTexture(0);
+				popBlend();
+			#endif
 			}
 			
 		#if 1
