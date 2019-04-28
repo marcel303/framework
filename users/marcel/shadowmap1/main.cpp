@@ -188,6 +188,7 @@ static const char * s_deferredShadowPs = R"SHADER(
 
 	uniform sampler2D lightDepthTexture;
 	uniform mat4x4 lightMVP;
+	uniform vec3 lightColor;
 
 	shader_in vec2 texcoord;
 
@@ -227,6 +228,8 @@ static const char * s_deferredShadowPs = R"SHADER(
 			shader_fragColor.rgb = vec3(coords.z > depth + 0.001 ? 0.3 : 1.0); // less acne with depth bias
 		
 		// apply a bit of lighting here
+		
+		shader_fragColor.rgb *= lightColor;
 		
 		float distance = length(projected.xy);
 		shader_fragColor.rgb *= max(0.0, 1.0 - distance);
@@ -307,6 +310,8 @@ int main(int argc, const char * argv[])
 		
 		bool isPerspective = PERSPECTIVE_LIGHT;
 		float fov = 60.f;
+		
+		Color color = colorWhite;
 		
 		void calculateTransforms()
 		{
@@ -460,6 +465,10 @@ int main(int argc, const char * argv[])
 				shader.setImmediateMatrix4x4("projectionToWorld", drawState.projectionToWorld.m_v);
 				shader.setTexture("lightDepthTexture", 1, shadowMap->getDepthTexture());
 				shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
+				shader.setImmediate("lightColor",
+					light.color.r * light.color.a,
+					light.color.g * light.color.a,
+					light.color.b * light.color.a);
 				drawRect(0, 0, 800, 600);
 			}
 			popBlend();
@@ -599,6 +608,7 @@ int main(int argc, const char * argv[])
 		
 		if (mouse.isDown(BUTTON_LEFT))
 			light.lightToWorld_transform = camera.getWorldMatrix();
+		light.color.a = (cosf(framework.time * 10.f) + 1.f) / 2.f;
 		light.calculateTransforms();
 		
 		light2.lightToWorld_transform.MakeLookat(
@@ -606,6 +616,7 @@ int main(int argc, const char * argv[])
 				Vec3(cosf(framework.time) * 6.f, 0, sinf(framework.time) * 6.f),
 				Vec3(0, 1, 0));
 		light2.lightToWorld_transform = light2.lightToWorld_transform.CalcInv();
+		light2.color = Color::fromHSL(framework.time * 1.45f, .2f, .5f);
 		light2.calculateTransforms();
 		
 		auto drawScene = [&](const bool captureScreenPositions)
