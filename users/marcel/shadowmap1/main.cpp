@@ -257,7 +257,9 @@ static const char * s_deferredShadowPs = R"SHADER(
 		
 		float distanceXY = length(projected.xy);
 		float distanceZ = max(0.0, coords.z);
-		shader_fragColor.rgb *= max(0.0, 1.0 - distanceXY) * max(0.0, 1.0 - distanceZ);
+	// todo : make curve value a uniform
+		float curveValue = 0.5;
+		shader_fragColor.rgb *= pow(max(0.0, 1.0 - distanceXY), curveValue) * max(0.0, 1.0 - distanceZ);
 		
 		shader_fragColor.a = 1.0;
 	}
@@ -323,7 +325,9 @@ static const char * s_deferredLightPs = R"SHADER(
 		
 		float distanceXY = length(projected.xy);
 		float distanceZ = max(0.0, coords.z);
-		shader_fragColor.rgb *= max(0.0, 1.0 - distanceXY) * max(0.0, 1.0 - distanceZ);
+	// todo : make curve value a uniform
+		float curveValue = 0.5;
+		shader_fragColor.rgb *= pow(max(0.0, 1.0 - distanceXY), 0.5) * max(0.0, 1.0 - distanceZ);
 		
 		shader_fragColor.a = 1.0;
 	}
@@ -405,6 +409,7 @@ int main(int argc, const char * argv[])
 		
 		bool isPerspective = true;
 		float fov = 60.f;
+		float orthoSize = 1.f;
 		
 		Color color = colorWhite;
 		
@@ -424,8 +429,8 @@ int main(int argc, const char * argv[])
 			else
 			{
 				projection.MakeOrthoGL(
-					-LIGHT_ORTHO_SIZE, +LIGHT_ORTHO_SIZE,
-					-LIGHT_ORTHO_SIZE, +LIGHT_ORTHO_SIZE,
+					-orthoSize, +orthoSize,
+					-orthoSize, +orthoSize,
 					depthRange.min,
 					depthRange.max);
 			}
@@ -625,6 +630,7 @@ int main(int argc, const char * argv[])
 	light.depthRange.min = .5f;
 	light.depthRange.max = 10.f;
 	light.fov = 60.f;
+	light.orthoSize = LIGHT_ORTHO_SIZE;
 	
 	Light light2;
 	light2.isPerspective = true;
@@ -632,6 +638,14 @@ int main(int argc, const char * argv[])
 	light2.depthRange.min = .5f;
 	light2.depthRange.max = 10.f;
 	light2.fov = 60.f;
+	light2.orthoSize = LIGHT_ORTHO_SIZE;
+	
+	Light light3;
+	light3.isPerspective = false;
+	light3.isShadowCasting = false;
+	light3.depthRange.min = .1f;
+	light3.depthRange.max = 1000.f;
+	light3.orthoSize = 1000000.f;
 	
 	enum DrawMode
 	{
@@ -724,9 +738,12 @@ int main(int argc, const char * argv[])
 		// update light transforms
 		
 		if (mouse.isDown(BUTTON_LEFT))
+		{
 			light.lightToWorld_transform = camera.getWorldMatrix();
-		//light.color.a = lerp<float>((cosf(framework.time * 10.f) + 1.f) / 2.f, .5f, 1.3f);
-		light.color.a = 8.f;
+			light.color.a = 16.f;
+		}
+		//light.color.a = lerp<float>(.5f, 1.3f, (cosf(framework.time * 10.f) + 1.f) / 2.f);
+		light.color.a *= powf(.4f, framework.timeStep);
 		light.calculateTransforms();
 		
 		light2.lightToWorld_transform.MakeLookat(
@@ -737,6 +754,13 @@ int main(int argc, const char * argv[])
 		light2.color = Color::fromHSL(framework.time / 1.45f, .1f, .8f);
 		light2.color.a = 8.f;
 		light2.calculateTransforms();
+		
+		light3.lightToWorld_transform.MakeLookat(
+				Vec3(cosf(framework.time / 10.f) * 3.f, 6, sinf(framework.time / 10.f) * 3.f),
+				Vec3(0, 0, 0),
+				Vec3(0, 1, 0));
+		light3.color = Color(255, 127, 63, 31);
+		light3.calculateTransforms();
 		
 		auto drawLightVolume = [](const Light & light)
 		{
@@ -777,7 +801,7 @@ int main(int argc, const char * argv[])
 			}
 		*/
 		
-			const Vec3 cube_size(.5f, .5f, .5f);
+			const Vec3 cube_size_base(.5f, .5f, .5f);
 			
 		#if 0
 			pushWireframe(true);
@@ -797,6 +821,9 @@ int main(int argc, const char * argv[])
 			{
 				for (int i = 0; i < kNumCubes; ++i)
 				{
+					const float t = (cosf(framework.time * (1.f + i / 100.f)) + 1.f) / 2.f;
+					const Vec3 cube_size = cube_size_base * lerp<float>(.2f, 1.f, t);
+					
 					setColor(cube_colors[i]);
 					fillCube(cube_positions[i], cube_size);
 					
@@ -819,10 +846,14 @@ int main(int argc, const char * argv[])
 			
 			clearShader();
 			
-			// draw light volume and direction
-			
-			drawLightVolume(light);
-			drawLightVolume(light2);
+			if (keyboard.isDown(SDLK_RSHIFT))
+			{
+				// draw light volume and direction
+				
+				drawLightVolume(light);
+				drawLightVolume(light2);
+				drawLightVolume(light3);
+			}
 		};
 	
 		// draw scene from the viewpoint of the camera
@@ -991,6 +1022,7 @@ int main(int argc, const char * argv[])
 					
 					drawLight(light);
 					drawLight(light2);
+					drawLight(light3);
 				}
 				lightDrawer.drawEnd();
 				
@@ -1016,7 +1048,7 @@ int main(int argc, const char * argv[])
 			}
 		#endif
 			
-			if (mouse.isDown(BUTTON_LEFT))
+			if (keyboard.isDown(SDLK_RSHIFT))
 			{
 				// show distance markers
 				
