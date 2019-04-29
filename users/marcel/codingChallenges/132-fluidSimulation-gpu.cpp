@@ -33,12 +33,88 @@ Cohesive forces can be approximated by using a tracer image to track different f
 
 */
 
-#define SCALE 2
+#define TODO 0
 
-#define THREE_DIMENSIONAL 0
+#define SCALE 2
 
 #define IX_2D(x, y) ((x) + (y) * N)
 #define IX_3D(x, y, z) ((x) + (y) * N + (z) * N * N)
+
+// -----
+
+#include "StringEx.h"
+#include <set>
+#include <string>
+
+static std::set<std::string> s_createdShaders;
+
+static void getOrCreateShader(const char * name, const char * code, const char * globals)
+{
+	if (s_createdShaders.count(name) == 0)
+	{
+		s_createdShaders.insert(name);
+		
+		// todo : create shader sources
+		
+		const char * vs =
+			R"SHADER(
+				include engine/ShaderVS.txt
+
+				shader_out vec2 v_texcoord;
+
+				void main()
+				{
+					vec4 position = unpackPosition();
+
+					gl_Position = objectToProjection(position);
+					
+					v_texcoord = unpackTexcoord(0);
+				}
+			)SHADER";
+		
+		const char * ps_template =
+			R"SHADER(
+				include engine/ShaderPS.txt
+
+				%s
+		
+				shader_in vec2 v_texcoord;
+
+				float samp(sampler2D s, float x, float y)
+				{
+					vec2 size = textureSize(s, 0);
+					
+					return texture(s, v_texcoord + vec2(x, y) / size).x; // fixme : divide x, y by texture size
+				}
+		
+				float process()
+				{
+					%s;
+				}
+		
+				void main()
+				{
+					shader_fragColor = vec4(process());
+					//shader_fragColor = vec4(0.1, 0, 0, 1);
+				}
+			)SHADER";
+		
+		char ps[1024];
+		sprintf_s(ps, sizeof(ps), ps_template, globals, code);
+		
+		char vs_name[64];
+		char ps_name[64];
+		sprintf_s(vs_name, sizeof(vs_name), "%s.vs", name);
+		sprintf_s(ps_name, sizeof(ps_name), "%s.ps", name);
+		shaderSource(vs_name, vs);
+		shaderSource(ps_name, ps);
+		
+		Shader shader(name, vs_name, ps_name);
+		checkErrorGL();
+	}
+}
+
+// -----
 
 static void set_bnd2d(const int b, float * x, const int N)
 {
@@ -60,654 +136,204 @@ static void set_bnd2d(const int b, float * x, const int N)
     x[IX_2D(N-1, N-1)]   = 0.5f * (x[IX_2D(N-2, N-1)] + x[IX_2D(N-1, N-2)]);
 }
 
-static void set_bnd3d(const int b, float * x, const int N)
-{
-    for(int j = 1; j < N - 1; j++) {
-        for(int i = 1; i < N - 1; i++) {
-            x[IX_3D(i, j, 0  )] = b == 3 ? -x[IX_3D(i, j, 1  )] : x[IX_3D(i, j, 1  )];
-            x[IX_3D(i, j, N-1)] = b == 3 ? -x[IX_3D(i, j, N-2)] : x[IX_3D(i, j, N-2)];
-        }
-    }
-
-    for(int k = 1; k < N - 1; k++) {
-        for(int i = 1; i < N - 1; i++) {
-            x[IX_3D(i, 0  , k)] = b == 2 ? -x[IX_3D(i, 1  , k)] : x[IX_3D(i, 1  , k)];
-            x[IX_3D(i, N-1, k)] = b == 2 ? -x[IX_3D(i, N-2, k)] : x[IX_3D(i, N-2, k)];
-        }
-    }
-
-    for(int k = 1; k < N - 1; k++) {
-        for(int j = 1; j < N - 1; j++) {
-            x[IX_3D(0  , j, k)] = b == 1 ? -x[IX_3D(1  , j, k)] : x[IX_3D(1  , j, k)];
-            x[IX_3D(N-1, j, k)] = b == 1 ? -x[IX_3D(N-2, j, k)] : x[IX_3D(N-2, j, k)];
-        }
-    }
-
-    x[IX_3D(  0,   0,   0)] = 0.333f * (x[IX_3D(  1,   0,   0)] + x[IX_3D(  0,   1,   0)] + x[IX_3D(  0,   0,   1)]);
-    x[IX_3D(  0, N-1,   0)] = 0.333f * (x[IX_3D(  1, N-1,   0)] + x[IX_3D(  0, N-2,   0)] + x[IX_3D(  0, N-1,   1)]);
-    x[IX_3D(  0,   0, N-1)] = 0.333f * (x[IX_3D(  1,   0, N-1)] + x[IX_3D(  0,   1, N-1)] + x[IX_3D(  0,   0, N-1)]);
-    x[IX_3D(  0, N-1, N-1)] = 0.333f * (x[IX_3D(  1, N-1, N-1)] + x[IX_3D(  0, N-2, N-1)] + x[IX_3D(  0, N-1, N-2)]);
-    x[IX_3D(N-1,   0,   0)] = 0.333f * (x[IX_3D(N-2,   0,   0)] + x[IX_3D(N-1,   1,   0)] + x[IX_3D(N-1,   0,   1)]);
-    x[IX_3D(N-1, N-1,   0)] = 0.333f * (x[IX_3D(N-2, N-1,   0)] + x[IX_3D(N-1, N-2,   0)] + x[IX_3D(N-1, N-1,   1)]);
-    x[IX_3D(N-1,   0, N-1)] = 0.333f * (x[IX_3D(N-2,   0, N-1)] + x[IX_3D(N-1,   1, N-1)] + x[IX_3D(N-1,   0, N-2)]);
-    x[IX_3D(N-1, N-1, N-1)] = 0.333f * (x[IX_3D(N-2, N-1, N-1)] + x[IX_3D(N-1, N-2, N-1)] + x[IX_3D(N-1, N-1, N-2)]);
-}
-
-static void lin_solve2d(const int b, float * __restrict x, const float * __restrict x0, const float a, const float c, const int iter, const int N)
+static void lin_solve2d(const int b, Surface * x, const Surface * x0, const float a, const float c, const int iter, const int N)
 {
     float cRecip = 1.f / c;
 
-// todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
-
+	getOrCreateShader("lin_solve2d",
+		R"SHADER(
+			return
+				(
+					samp(x0, 0, 0)
+					+ a *
+						(
+							+samp(x, +1,  0)
+							+samp(x, -1,  0)
+							+samp(x,  0, +1)
+							+samp(x,  0, -1)
+						)
+				) * cRecip;
+		)SHADER",
+		"sampler2D x; sampler2D x0; uniform float a; uniform float cRecip;");
+	
     for (int k = 0; k < iter; ++k)
     {
-		for (int j = 1; j < N - 1; ++j)
-		{
-			const int index = IX_2D(0, j);
-			
-			const float * __restrict x0_line = x0 + index;
-			      float * __restrict x_line  = x  + index;
-			
-			float prev_x = x_line[0];
-			
-			for (int i = 1; i < N - 1; ++i)
-			{
-			#if 0
-				x_line[i] = (x0_line[i] + a * (x_line[i - 1] + x_line[i + 1] + x_line[i - N] + x_line[i + N])) * cRecip;
-			#elif 1
-				const float curr_x = x_line[i];
-				
-				x_line[i] = (x0_line[i] + a * ((prev_x + x_line[i + 1]) + (x_line[i - N] + x_line[i + N]))) * cRecip;
-				
-				prev_x = curr_x;
-			#else
-				// note : we keep this verion around since it's easier to port to a shader
-				x[IX_2D(i, j)] =
-					(
-						x0[IX_2D(i, j)]
-						+ a *
-							(
-								+x[IX_2D(i+1, j  )]
-								+x[IX_2D(i-1, j  )]
-								+x[IX_2D(i  , j+1)]
-								+x[IX_2D(i  , j-1)]
-							)
-					) * cRecip;
-			#endif
-			}
-		}
+		Shader shader("lin_solve2d");
+		shader.setTexture("x", 0, x->getTexture());
+		shader.setTexture("x0", 1, x0->getTexture());
+		shader.setImmediate("a", a);
+		shader.setImmediate("cRecip", cRecip);
+    	x->postprocess(shader);
 
+	#if TODO
         set_bnd2d(b, x, N);
+	#endif
     }
 }
 
 static void lin_solve2d_xy(
-	float * __restrict x, const float * __restrict x0,
-	float * __restrict y, const float * __restrict y0,
+	Surface * x, const Surface * x0,
+	Surface * y, const Surface * y0,
 	const float a, const float c, const int iter, const int N)
 {
     float cRecip = 1.f / c;
 
-// todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
-
-    for (int k = 0; k < iter; ++k)
+	getOrCreateShader("lin_solve2d",
+		R"SHADER(
+			return
+				(
+					samp(x0, 0, 0)
+					+ a *
+						(
+							+samp(x, +1,  0)
+							+samp(x, -1,  0)
+							+samp(x,  0, +1)
+							+samp(x,  0, -1)
+						)
+				) * cRecip;
+		)SHADER",
+		"uniform sampler2D x; uniform sampler2D x0; uniform float a; uniform float cRecip;");
+	
+	for (int k = 0; k < iter; ++k)
     {
-		for (int j = 1; j < N - 1; ++j)
-		{
-			const int index = IX_2D(0, j);
-			
-			const float * __restrict x0_line = x0 + index;
-			      float * __restrict x_line  = x  + index;
-			
-			const float * __restrict y0_line = y0 + index;
-			      float * __restrict y_line  = y  + index;
-			
-			float prev_x = x_line[0];
-			float prev_y = y_line[0];
-			
-			for (int i = 1; i < N - 1; ++i)
-			{
-			#if 0
-				x_line[i] = (x0_line[i] + a * (x_line[i - 1] + x_line[i + 1] + x_line[i - N] + x_line[i + N])) * cRecip;
-				y_line[i] = (y0_line[i] + a * (y_line[i - 1] + y_line[i + 1] + y_line[i - N] + y_line[i + N])) * cRecip;
-			#else
-				const float curr_x = x_line[i];
-				const float curr_y = x_line[i];
-				
-				x_line[i] = (x0_line[i] + a * ((prev_x + x_line[i + 1]) + (x_line[i - N] + x_line[i + N]))) * cRecip;
-				y_line[i] = (y0_line[i] + a * ((prev_y + y_line[i + 1]) + (y_line[i - N] + y_line[i + N]))) * cRecip;
-				
-				prev_x = curr_x;
-				prev_y = curr_y;
-			#endif
-			}
-		}
-
+		Shader shader("lin_solve2d");
+		shader.setTexture("x", 0, x->getTexture());
+		shader.setTexture("x0", 1, x0->getTexture());
+		shader.setImmediate("a", a);
+		shader.setImmediate("cRecip", cRecip);
+    	x->postprocess(shader);
+		
+    	shader.setTexture("y", 0, y->getTexture());
+		shader.setTexture("y0", 1, y0->getTexture());
+		shader.setImmediate("a", a);
+		shader.setImmediate("cRecip", cRecip);
+    	y->postprocess(shader);
+		
+	#if TODO
         set_bnd2d(1, x, N);
         set_bnd2d(2, x, N);
+	#endif
     }
 }
 
-static void lin_solve3d(const int b, float * __restrict x, const float * __restrict x0, const float a, const float c, const int iter, const int N)
-{
-    float cRecip = 1.f / c;
-
-    for (int k = 0; k < iter; k++)
-    {
-        for (int m = 1; m < N - 1; m++)
-        {
-            for (int j = 1; j < N - 1; j++)
-            {
-				int index = IX_3D(0, j, m);
-				
-            	const int step_x = 1;
-            	const int step_y = N;
-            	const int step_z = N * N;
-				
-				const float * __restrict x0_line = x0 + index;
-					  float * __restrict x_line  = x  + index;
-			
-				float prev_x = x_line[0];
-			
-                for (int i = 1; i < N - 1; i++, index++)
-                {
-				#if 1
-					const float curr_x = x_line[i];
-					
-                    x_line[i] =
-						(
-							x0_line[i] +
-								a *
-                            	(
-									+ (prev_x             + x_line[i + step_x])
-									+ (x_line[i - step_y] + x_line[i + step_y])
-									+ (x_line[i - step_z] + x_line[i + step_z])
-								)
-						) * cRecip;
-					
-					prev_x = curr_x;
-				#else
-					// note : we keep this verion around since it's easier to port to a shader
-                    x[IX_3D(i, j, m)] =
-						(x0[IX_3D(i, j, m)]
-                            + a *
-                            	(
-									+ x[IX_3D(i+1, j  , m  )]
-									+ x[IX_3D(i-1, j  , m  )]
-									+ x[IX_3D(i  , j+1, m  )]
-									+ x[IX_3D(i  , j-1, m  )]
-									+ x[IX_3D(i  , j  , m+1)]
-									+ x[IX_3D(i  , j  , m-1)]
-								)
-						) * cRecip;
-				#endif
-				}
-            }
-        }
-
-        set_bnd3d(b, x, N);
-    }
-}
-
-static void lin_solve3d_xyz(
-	float * __restrict x, const float * __restrict x0,
-	float * __restrict y, const float * __restrict y0,
-	float * __restrict z, const float * __restrict z0,
-	const float a, const float c, const int iter, const int N)
-{
-    float cRecip = 1.f / c;
-
-    for (int k = 0; k < iter; k++)
-    {
-        for (int m = 1; m < N - 1; m++)
-        {
-            for (int j = 1; j < N - 1; j++)
-            {
-				int index = IX_3D(0, j, m);
-				
-            	const int step_x = 1;
-            	const int step_y = N;
-            	const int step_z = N * N;
-				
-				const float * __restrict x0_line = x0 + index;
-					  float * __restrict x_line  = x  + index;
-				
-				const float * __restrict y0_line = y0 + index;
-					  float * __restrict y_line  = y  + index;
-				
-				const float * __restrict z0_line = z0 + index;
-					  float * __restrict z_line  = z  + index;
-			
-				float prev_x = x_line[0];
-				float prev_y = y_line[0];
-				float prev_z = z_line[0];
-				
-                for (int i = 1; i < N - 1; i++)
-                {
-					const float curr_x = x_line[i];
-					const float curr_y = y_line[i];
-					const float curr_z = z_line[i];
-					
-                   x_line[i] =
-						(
-							x0_line[i] +
-								a *
-                            	(
-									+ (x_line[i + step_x] +             prev_x)
-									+ (x_line[i + step_y] + x_line[i - step_y])
-									+ (x_line[i + step_z] + x_line[i - step_z])
-								)
-						) * cRecip;
-					
-                    y_line[i] =
-						(
-							y0_line[i] +
-								a *
-                            	(
-									+ (y_line[i + step_x] +             prev_y)
-									+ (y_line[i + step_y] + y_line[i - step_y])
-									+ (y_line[i + step_z] + y_line[i - step_z])
-								)
-						) * cRecip;
-					
-                    z_line[i] =
-						(
-							z0_line[i] +
-								a *
-                            	(
-									+ (z_line[i + step_x] +             prev_z)
-									+ (z_line[i + step_y] + z_line[i - step_y])
-									+ (z_line[i + step_z] + z_line[i - step_z])
-								)
-						) * cRecip;
-					
-					prev_x = curr_x;
-					prev_y = curr_y;
-					prev_z = curr_z;
-                }
-            }
-        }
-
-        set_bnd3d(1, x, N);
-        set_bnd3d(2, y, N);
-        set_bnd3d(3, z, N);
-    }
-}
-
-static void diffuse2d(const int b, float * x, const float * x0, const float diff, const float dt, const int iter, const int N)
+static void diffuse2d(const int b, Surface * x, const Surface * x0, const float diff, const float dt, const int iter, const int N)
 {
 	const float a = dt * diff * (N - 2);
 	lin_solve2d(b, x, x0, a, 1 + 4 * a, iter, N);
 }
 
-static void diffuse2d_xy(float * x, const float * x0, float * y, const float * y0, const float diff, const float dt, const int iter, const int N)
+static void diffuse2d_xy(Surface * x, const Surface * x0, Surface * y, const Surface * y0, const float diff, const float dt, const int iter, const int N)
 {
 	const float a = dt * diff * (N - 2);
 	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, N);
 }
 
-static void diffuse3d(const int b, float * x, const float * x0, const float diff, const float dt, const int iter, const int N)
-{
-	const float a = dt * diff * (N - 2) * (N - 2);
-	lin_solve3d(b, x, x0, a, 1 + 6 * a, iter, N);
-}
-
-static void diffuse3d_xyz(
-	float * x, const float * x0,
-	float * y, const float * y0,
-	float * z, const float * z0,
-	const float diff, const float dt, const int iter, const int N)
-{
-	const float a = dt * diff * (N - 2) * (N - 2);
-	lin_solve3d_xyz(x, x0, y, y0, z, z0, a, 1 + 6 * a, iter, N);
-}
-
 static void project2d(
-	float * __restrict velocX,
-	float * __restrict velocY,
-	float * __restrict p,
-	float * __restrict div, const int iter, const int N)
+	Surface * velocX,
+	Surface * velocY,
+	Surface * p,
+	Surface * div, const int iter, const int N)
 {
-	for (int j = 1; j < N - 1; ++j)
-	{
-		for (int i = 1; i < N - 1; ++i)
-		{
-			div[IX_2D(i, j)] =
+	getOrCreateShader("project2d_div",
+		R"SHADER(
+			return
 				-0.25f *
 					(
-						+ (+ velocX[IX_2D(i+1, j  )] - velocX[IX_2D(i-1, j  )])
-						+ (+ velocY[IX_2D(i  , j+1)] - velocY[IX_2D(i  , j-1)])
+						+ (+ samp(velocX, +1,  0) - samp(velocX, -1,  0))
+						+ (+ samp(velocY,  0, +1) - samp(velocY,  0, -1))
 					);
-		}
+		)SHADER",
+		"uniform sampler2D velocX; uniform sampler2D velocY;");
+	
+	pushSurface(div);
+	{
+		Shader shader("project2d_div");
+		setShader(shader);
+		shader.setTexture("velocX", 0, velocX->getTexture());
+		shader.setTexture("velocY", 1, velocY->getTexture());
+		drawRect(0, 0, div->getWidth(), div->getHeight());
 	}
+	popSurface();
 	
+#if TODO
     set_bnd2d(0, div, N);
+#endif
 	
-    memset(p, 0, N * N * sizeof(float));
+	p->clear();
 	lin_solve2d(0, p, div, 1, 4, iter, N);
 	
-	for (int j = 1; j < N - 1; ++j)
+	getOrCreateShader("project2d_veloc_x",
+		R"SHADER(
+			return - ( samp(p, +1, 0) - samp(p, -1, 0) );
+		)SHADER",
+		"uniform sampler2D p;");
+	
+	getOrCreateShader("project2d_veloc_y",
+		R"SHADER(
+			return - ( samp(p, 0, +1) - samp(p, 0, -1) );
+		)SHADER",
+		"uniform sampler2D p;");
+	
+	pushSurface(velocX);
+	pushBlend(BLEND_ADD);
 	{
-		for (int i = 1; i < N - 1; ++i)
-		{
-			velocX[IX_2D(i, j)] -= ( p[IX_2D(i+1, j)] - p[IX_2D(i-1, j)] );
-			velocY[IX_2D(i, j)] -= ( p[IX_2D(i, j+1)] - p[IX_2D(i, j-1)] );
-		}
+		Shader shader("project2d_veloc_x");
+		setShader(shader);
+		shader.setTexture("p", 0, p->getTexture());
+		drawRect(0, 0, velocX->getWidth(), velocX->getHeight());
 	}
+	popBlend();
+	popSurface();
 
+	pushSurface(velocY);
+	pushBlend(BLEND_ADD);
+	{
+		Shader shader("project2d_veloc_y");
+		setShader(shader);
+		shader.setTexture("p", 0, p->getTexture());
+		drawRect(0, 0, velocY->getWidth(), velocY->getHeight());
+	}
+	popBlend();
+	popSurface();
+	
+#if TODO
     set_bnd2d(1, velocX, N);
     set_bnd2d(2, velocY, N);
+#endif
 }
 
-static void project3d(
-	float * __restrict velocX,
-	float * __restrict velocY,
-	float * __restrict velocZ,
-	float * __restrict p,
-	float * __restrict div,
-	const int iter, const int N)
-{
-    for (int k = 1; k < N - 1; k++)
-    {
-        for (int j = 1; j < N - 1; j++)
-        {
-        	int index = IX_3D(1, j, k);
-			
-        	const int step_x = 1;
-        	const int step_y = N;
-        	const int step_z = N * N;
-			
-            for (int i = 1; i < N - 1; i++, index++)
-            {
-                div[index] =
-                	-0.25f *
-						(
-							+ velocX[index + step_x] - velocX[index - step_x]
-							+ velocY[index + step_y] - velocY[index - step_y]
-							+ velocZ[index + step_z] - velocZ[index - step_z]
-                    	);
-            }
-        }
-    }
-	
-    set_bnd3d(0, div, N);
-	
-    memset(p, 0, N * N * N * sizeof(float));
-    lin_solve3d(0, p, div, 1, 6, iter, N);
-	
-    for (int k = 1; k < N - 1; k++)
-    {
-        for (int j = 1; j < N - 1; j++)
-        {
-        	int index = IX_3D(1, j, k);
-			
-        	const int step_x = 1;
-        	const int step_y = N;
-        	const int step_z = N * N;
-			
-            for (int i = 1; i < N - 1; i++, index++)
-            {
-                velocX[index] -= ( p[index + step_x] - p[index - step_x] );
-                velocY[index] -= ( p[index + step_y] - p[index - step_y] );
-                velocZ[index] -= ( p[index + step_z] - p[index - step_z] );
-            }
-        }
-    }
-	
-    set_bnd3d(1, velocX, N);
-    set_bnd3d(2, velocY, N);
-    set_bnd3d(3, velocZ, N);
-}
-
-static void advect2d(const int b, float * d, const float * d0, const float * velocX, const float * velocY, const float dt, const int N)
+static void advect2d(const int b, Surface * d, const Surface * d0, const Surface * velocX, const Surface * velocY, const float dt, const int N)
 {
     const float dtx = dt * (N - 2);
     const float dty = dt * (N - 2);
 	
-	const float XY_max = N - 1.5f;
+    getOrCreateShader("advect2d",
+	R"SHADER(
+		float tmp1 = dtx * samp(velocX, 0, 0);
+		float tmp2 = dty * samp(velocY, 0, 0);
+			
+		return samp(d0, tmp1, tmp2);
+	)SHADER",
+	"uniform sampler2D velocX; uniform sampler2D velocY; uniform sampler2D d0; uniform float dtx; uniform float dty;");
 	
-    float ifloat, jfloat;
-    int i, j;
-	
-	for (j = 1, jfloat = 1; j < N - 1; ++j, ++jfloat)
-	{
-		for (i = 1, ifloat = 1; i < N - 1; ++i, ++ifloat)
-		{
-			const float tmp1 = dtx * velocX[IX_2D(i, j)];
-			const float tmp2 = dty * velocY[IX_2D(i, j)];
-			
-			float x = ifloat - tmp1;
-			float y = jfloat - tmp2;
-			
-			if(x < 0.5f) x = 0.5f;
-			if(x > XY_max) x = XY_max;
-			float i0, i1;
-			i0 = floorf(x);
-			i1 = i0 + 1.0f;
-			
-			if(y < 0.5f) y = 0.5f;
-			if(y > XY_max) y = XY_max;
-			float j0, j1;
-			j0 = floorf(y);
-			j1 = j0 + 1.0f;
-			
-			float s0, s1, t0, t1;
-			s1 = x - i0;
-			s0 = 1.0f - s1;
-			t1 = y - j0;
-			t0 = 1.0f - t1;
-			
-			const int i0i = i0;
-			const int i1i = i1;
-			const int j0i = j0;
-			const int j1i = j1;
-			
-			//Assert(i0i >= 0 && i0i < N);
-			//Assert(i1i >= 0 && i1i < N);
-			//Assert(j0i >= 0 && j0i < N);
-			//Assert(j1i >= 0 && j1i < N);
-			
-			d[IX_2D(i, j)] =
-				s0 * (t0 * d0[IX_2D(i0i, j0i)] + t1 * d0[IX_2D(i0i, j1i)]) +
-				s1 * (t0 * d0[IX_2D(i1i, j0i)] + t1 * d0[IX_2D(i1i, j1i)]);
-		}
+    pushSurface(d);
+    pushBlend(BLEND_OPAQUE);
+    {
+		Shader shader("advect2d");
+		setShader(shader);
+		shader.setTexture("velocX", 0, velocX->getTexture());
+		shader.setTexture("velocY", 1, velocY->getTexture());
+		shader.setTexture("d0", 2, d0->getTexture());
+		shader.setImmediate("dtx", dtx);
+		shader.setImmediate("dty", dty);
+		drawRect(0, 0, d->getWidth(), d->getHeight());
 	}
+	popBlend();
+    popSurface();
 	
+#if TODO
     set_bnd2d(b, d, N);
-}
-
-static void advect3d(const int b, float * __restrict d, const float * __restrict d0, const float * velocX, const float * velocY, const float * velocZ, const float dt, const int N)
-{
-    float i0, i1, j0, j1, k0, k1;
-    
-    float dtx = dt * (N - 2);
-    float dty = dt * (N - 2);
-    float dtz = dt * (N - 2);
-    
-    float s0, s1, t0, t1, u0, u1;
-    
-    float Nfloat = N;
-    float ifloat, jfloat, kfloat;
-    int i, j, k;
-	
-    for (k = 1, kfloat = 1; k < N - 1; k++, kfloat++)
-    {
-        for (j = 1, jfloat = 1; j < N - 1; j++, jfloat++)
-        {
-            for (i = 1, ifloat = 1; i < N - 1; i++, ifloat++)
-            {
-                const float tmp1 = dtx * velocX[IX_3D(i, j, k)];
-                const float tmp2 = dty * velocY[IX_3D(i, j, k)];
-                const float tmp3 = dtz * velocZ[IX_3D(i, j, k)];
-				
-                float x = ifloat - tmp1;
-                float y = jfloat - tmp2;
-                float z = kfloat - tmp3;
-				
-                if(x < 0.5f) x = 0.5f; 
-                if(x > Nfloat - 1.5f) x = Nfloat - 1.5f;
-                i0 = floorf(x); 
-                i1 = i0 + 1.0f;
-				
-                if(y < 0.5f) y = 0.5f; 
-                if(y > Nfloat - 1.5f) y = Nfloat - 1.5f;
-                j0 = floorf(y);
-                j1 = j0 + 1.0f;
-				
-                if(z < 0.5f) z = 0.5f;
-                if(z > Nfloat - 1.5f) z = Nfloat - 1.5f;
-                k0 = floorf(z);
-                k1 = k0 + 1.0f;
-				
-                s1 = x - i0; 
-                s0 = 1.0f - s1; 
-                t1 = y - j0; 
-                t0 = 1.0f - t1;
-                u1 = z - k0;
-                u0 = 1.0f - u1;
-				
-                int i0i = i0;
-                int i1i = i1;
-                int j0i = j0;
-                int j1i = j1;
-                int k0i = k0;
-                int k1i = k1;
-				
-				/*
-                Assert(i0i >= 0 && i0i < N);
-				Assert(i1i >= 0 && i1i < N);
-				Assert(j0i >= 0 && j0i < N);
-				Assert(j1i >= 0 && j1i < N);
-				Assert(k0i >= 0 && k0i < N);
-				Assert(k1i >= 0 && k1i < N);
-				*/
-				
-                d[IX_3D(i, j, k)] =
-					+ s0 *
-						+ ( t0 * (u0 * d0[IX_3D(i0i, j0i, k0i)] + u1 * d0[IX_3D(i0i, j0i, k1i)])
-                        + ( t1 * (u0 * d0[IX_3D(i0i, j1i, k0i)] + u1 * d0[IX_3D(i0i, j1i, k1i)])))
-					+ s1 *
-						+ ( t0 * (u0 * d0[IX_3D(i1i, j0i, k0i)] + u1 * d0[IX_3D(i1i, j0i, k1i)])
-                        + ( t1 * (u0 * d0[IX_3D(i1i, j1i, k0i)] + u1 * d0[IX_3D(i1i, j1i, k1i)])));
-            }
-        }
-    }
-	
-    set_bnd3d(b, d, N);
-}
-
-static void advect3d_xyz(
-	float * __restrict _x, const float * __restrict x0,
-	float * __restrict _y, const float * __restrict y0,
-	float * __restrict _z, const float * __restrict z0,
-	const float * velocX, const float * velocY, const float * velocZ, const float dt, const int N)
-{
-    float i0, i1, j0, j1, k0, k1;
-	
-    float dtx = dt * (N - 2);
-    float dty = dt * (N - 2);
-    float dtz = dt * (N - 2);
-	
-    float s0, s1, t0, t1, u0, u1;
-	
-    float Nfloat = N;
-    float ifloat, jfloat, kfloat;
-    int i, j, k;
-	
-    for (k = 1, kfloat = 1; k < N - 1; k++, kfloat++)
-    {
-        for (j = 1, jfloat = 1; j < N - 1; j++, jfloat++)
-        {
-            for (i = 1, ifloat = 1; i < N - 1; i++, ifloat++)
-            {
-            	const int index = IX_3D(i, j, k);
-				
-                const float tmp1 = dtx * velocX[index];
-                const float tmp2 = dty * velocY[index];
-                const float tmp3 = dtz * velocZ[index];
-				
-                float x = ifloat - tmp1;
-                float y = jfloat - tmp2;
-                float z = kfloat - tmp3;
-				
-                if(x < 0.5f) x = 0.5f;
-                if(x > Nfloat - 1.5f) x = Nfloat - 1.5f;
-                i0 = floorf(x);
-                i1 = i0 + 1.0f;
-				
-                if(y < 0.5f) y = 0.5f;
-                if(y > Nfloat - 1.5f) y = Nfloat - 1.5f;
-                j0 = floorf(y);
-                j1 = j0 + 1.0f;
-				
-                if(z < 0.5f) z = 0.5f;
-                if(z > Nfloat - 1.5f) z = Nfloat - 1.5f;
-                k0 = floorf(z);
-                k1 = k0 + 1.0f;
-				
-                s1 = x - i0;
-                s0 = 1.0f - s1;
-                t1 = y - j0;
-                t0 = 1.0f - t1;
-                u1 = z - k0;
-                u0 = 1.0f - u1;
-				
-                int i0i = i0;
-                int i1i = i1;
-                int j0i = j0;
-                int j1i = j1;
-                int k0i = k0;
-                int k1i = k1;
-				
-				/*
-                Assert(i0i >= 0 && i0i < N);
-				Assert(i1i >= 0 && i1i < N);
-				Assert(j0i >= 0 && j0i < N);
-				Assert(j1i >= 0 && j1i < N);
-				Assert(k0i >= 0 && k0i < N);
-				Assert(k1i >= 0 && k1i < N);
-				*/
-				
-				const int i000 = IX_3D(i0i, j0i, k0i);
-				const int i010 = IX_3D(i0i, j1i, k0i);
-				const int i001 = IX_3D(i0i, j0i, k1i);
-				const int i011 = IX_3D(i0i, j1i, k1i);
-				
-				const int i100 = IX_3D(i1i, j0i, k0i);
-				const int i101 = IX_3D(i1i, j0i, k1i);
-				const int i110 = IX_3D(i1i, j1i, k0i);
-				const int i111 = IX_3D(i1i, j1i, k1i);
-				
-                _x[index] =
-					+ s0 *
-						+ ( t0 * (u0 * x0[i000] + u1 * x0[i001])
-                        + ( t1 * (u0 * x0[i010] + u1 * x0[i011])))
-					+ s1 *
-						+ ( t0 * (u0 * x0[i100] + u1 * x0[i101])
-                        + ( t1 * (u0 * x0[i110] + u1 * x0[i111])));
-				
-				_y[index] =
-					+ s0 *
-						+ ( t0 * (u0 * y0[i000] + u1 * y0[i001])
-                        + ( t1 * (u0 * y0[i010] + u1 * y0[i011])))
-					+ s1 *
-						+ ( t0 * (u0 * y0[i100] + u1 * y0[i101])
-                        + ( t1 * (u0 * y0[i110] + u1 * y0[i111])));
-				
-				_z[index] =
-					+ s0 *
-						+ ( t0 * (u0 * z0[i000] + u1 * z0[i001])
-                        + ( t1 * (u0 * z0[i010] + u1 * z0[i011])))
-					+ s1 *
-						+ ( t0 * (u0 * z0[i100] + u1 * z0[i101])
-                        + ( t1 * (u0 * z0[i110] + u1 * z0[i111])));
-            }
-        }
-    }
-	
-    set_bnd3d(1, _x, N);
-    set_bnd3d(2, _y, N);
-    set_bnd3d(3, _z, N);
+#endif
 }
 
 struct FluidCube2d
@@ -718,14 +344,16 @@ struct FluidCube2d
 	float diff; // diffusion amount
 	float visc; // viscosity
 
-	std::vector<float> s;
-	std::vector<float> density;
-
-	std::vector<float> Vx;
-	std::vector<float> Vy;
-
-	std::vector<float> Vx0;
-	std::vector<float> Vy0;
+	Surface s;
+	Surface density;
+	
+	Surface Vx;
+	Surface Vy;
+	Surface Vz;
+	
+	Surface Vx0;
+	Surface Vy0;
+	Surface Vz0;
 
 	void addDensity(const int x, const int y, const float amount)
 	{
@@ -735,10 +363,18 @@ struct FluidCube2d
 			return;
 		}
 		
-		const int N = size;
-		const int index = IX_2D(x, y);
-		
-		density[index] += amount;
+		pushSurface(&density);
+		pushBlend(BLEND_ADD);
+		{
+			gxBegin(GX_POINTS);
+			{
+				gxColor4f(amount, amount, amount, amount);
+				gxVertex2f(x, y);
+			}
+			gxEnd();
+		}
+		popBlend();
+		popSurface();
 	}
 	
 	void addVelocity(const int x, const int y, const float amountX, const float amountY)
@@ -749,106 +385,55 @@ struct FluidCube2d
 			return;
 		}
 		
-		const int N = size;
-		const int index = IX_2D(x, y);
-
-		Vx[index] += amountX;
-		Vy[index] += amountY;
+		pushSurface(&Vx);
+		pushBlend(BLEND_ADD);
+		{
+			gxBegin(GX_POINTS);
+			{
+				gxColor4f(amountX, amountX, amountX, amountX);
+				gxVertex2f(x, y);
+			}
+			gxEnd();
+		}
+		popBlend();
+		popSurface();
+		
+		pushSurface(&Vy);
+		pushBlend(BLEND_ADD);
+		{
+			gxBegin(GX_POINTS);
+			{
+				gxColor4f(amountY, amountY, amountY, amountY);
+				gxVertex2f(x, y);
+			}
+			gxEnd();
+		}
+		popBlend();
+		popSurface();
 	}
 
 	void step()
 	{
-	    const int N = size;
-		
-	    const int iter = 4;
-	
-		diffuse2d_xy(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), visc, dt, iter, N);
-		
-		project2d(Vx0.data(), Vy0.data(), Vx.data(), Vy.data(), iter, N);
-		
-		advect2d(1, Vx.data(), Vx0.data(), Vx0.data(), Vy0.data(), dt, N);
-	    advect2d(2, Vy.data(), Vy0.data(), Vx0.data(), Vy0.data(), dt, N);
-		
-		project2d(Vx.data(), Vy.data(), Vx0.data(), Vy0.data(), iter, N);
-		
-		diffuse2d(0, s.data(), density.data(), diff, dt, iter, N);
-		
-		advect2d(0, density.data(), s.data(), Vx.data(), Vy.data(), dt, N);
-	}
-};
-
-struct FluidCube3d
-{
-	int size;
-
-	float dt;
-	float diff; // diffusion amount
-	float visc; // viscosity
-
-	std::vector<float> s;
-	std::vector<float> density;
-
-	std::vector<float> Vx;
-	std::vector<float> Vy;
-	std::vector<float> Vz;
-
-	std::vector<float> Vx0;
-	std::vector<float> Vy0;
-	std::vector<float> Vz0;
-
-	void addDensity(const int x, const int y, const int z, const float amount)
-	{
-		if (x < 0 || x >= size ||
-			y < 0 || y >= size ||
-			z < 0 || z >= size)
+		pushBlend(BLEND_OPAQUE);
 		{
-			return;
+			const int N = size;
+		
+			const int iter = 4;
+		
+			diffuse2d_xy(&Vx0, &Vx, &Vy0, &Vy, visc, dt, iter, N);
+		
+			project2d(&Vx0, &Vy0, &Vx, &Vy, iter, N);
+		
+			advect2d(1, &Vx, &Vx0, &Vx0, &Vy0, dt, N);
+			advect2d(2, &Vy, &Vy0, &Vx0, &Vy0, dt, N);
+		
+			project2d(&Vx, &Vy, &Vx0, &Vy0, iter, N);
+		
+			diffuse2d(0, &s, &density, diff, dt, iter, N);
+		
+			advect2d(0, &density, &s, &Vx, &Vy, dt, N);
 		}
-		
-		const int N = size;
-		const int index = IX_3D(x, y, z);
-		
-		density[index] += amount;
-	}
-	
-	void addVelocity(const int x, const int y, const int z, const float amountX, const float amountY, const float amountZ)
-	{
-		if (x < 0 || x >= size ||
-			y < 0 || y >= size ||
-			z < 0 || z >= size)
-		{
-			return;
-		}
-		
-		const int N = size;
-		const int index = IX_3D(x, y, z);
-
-		Vx[index] += amountX;
-		Vy[index] += amountY;
-		Vz[index] += amountZ;
-	}
-
-	void step()
-	{
-	    const int N = size;
-		
-	    const int iter = 4;
-	
-		diffuse3d_xyz(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), Vz0.data(), Vz.data(), visc, dt, iter, N);
-		
-		project3d(Vx0.data(), Vy0.data(), Vz0.data(), Vx.data(), Vy.data(), iter, N);
-		
-		advect3d_xyz(
-			Vx.data(), Vx0.data(),
-			Vy.data(), Vy0.data(),
-			Vz.data(), Vz0.data(),
-			Vx0.data(), Vy0.data(), Vz0.data(), dt, N);
-	
-		project3d(Vx.data(), Vy.data(), Vz.data(), Vx0.data(), Vy0.data(), iter, N);
-		
-		diffuse3d(0, s.data(), density.data(), diff, dt, iter, N);
-		
-	    advect3d(0, density.data(), s.data(), Vx.data(), Vy.data(), Vz.data(), dt, N);
+		popBlend();
 	}
 };
 
@@ -861,42 +446,31 @@ FluidCube2d * createFluidCube2d(const int size, const float diffusion, const flo
 	cube->diff = diffusion;
 	cube->visc = viscosity;
 
-	//const int N = size * size * size;
-	const int N = size * size;
+	// initialize surfaces
+	
+	SurfaceProperties surfaceProperties;
+	surfaceProperties.dimensions.init(size, size);
+	surfaceProperties.colorTarget.init(SURFACE_R32F, true);
+	//surfaceProperties.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
+	
+	cube->s.init(surfaceProperties);
+	cube->density.init(surfaceProperties);
 
-	cube->s.resize(N, 0.f);
-	cube->density.resize(N, 0.f);
+	cube->Vx.init(surfaceProperties);
+	cube->Vy.init(surfaceProperties);
 
-	cube->Vx.resize(N, 0.f);
-	cube->Vy.resize(N, 0.f);
-
-	cube->Vx0.resize(N, 0.f);
-	cube->Vy0.resize(N, 0.f);
-
-	return cube;
-}
-
-FluidCube3d * createFluidCube3d(const int size, const float diffusion, const float viscosity, const float dt)
-{
-	FluidCube3d * cube = new FluidCube3d();
-
-	cube->size = size;
-	cube->dt = dt;
-	cube->diff = diffusion;
-	cube->visc = viscosity;
-
-	const int N = size * size * size;
-
-	cube->s.resize(N, 0.f);
-	cube->density.resize(N, 0.f);
-
-	cube->Vx.resize(N, 0.f);
-	cube->Vy.resize(N, 0.f);
-	cube->Vz.resize(N, 0.f);
-
-	cube->Vx0.resize(N, 0.f);
-	cube->Vy0.resize(N, 0.f);
-	cube->Vz0.resize(N, 0.f);
+	cube->Vx0.init(surfaceProperties);
+	cube->Vy0.init(surfaceProperties);
+	
+	// clear surfaces
+	
+	cube->s.clear();
+	cube->density.clear();
+	
+	cube->Vx.clear();
+	cube->Vy.clear();
+	cube->Vx0.clear();
+	cube->Vy0.clear();
 
 	return cube;
 }
@@ -906,11 +480,7 @@ int main(int argc, const char * argv[])
 	if (!framework.init(600, 600))
 		return -1;
 
-#if THREE_DIMENSIONAL
-	FluidCube3d * cube = createFluidCube3d(50, 0.0001f, 0.0001f, 1.f / 30.f);
-#else
 	FluidCube2d * cube = createFluidCube2d(300, 0.001f, 0.0001f, 1.f / 30.f);
-#endif
 
 	GxTexture texture;
 	texture.allocate(cube->size, cube->size, GX_R32_FLOAT, true, true);
@@ -925,14 +495,8 @@ int main(int argc, const char * argv[])
 		if (framework.quitRequested)
 			break;
 
-		for (auto & d : cube->density)
-			d *= .99f;
+		cube->density.mulf(.99f, .99f, .99f);
 		
-	#if THREE_DIMENSIONAL
-		const int z = cube->size/2 + cos(framework.time / 1.23f) * cube->size/3.f;
-		cube->addDensity(mouse.x / 8, mouse.y / 8, z, 100.f);
-		cube->addVelocity(mouse.x / 8, mouse.y / 8, z, mouse.dx, mouse.dy, cosf(framework.time) * 20.f);
-	#else
 		for (int x = -4; x <= +4; ++x)
 		{
 			for (int y = -4; y <= +4; ++y)
@@ -941,7 +505,6 @@ int main(int argc, const char * argv[])
 				cube->addVelocity(mouse.x / SCALE, mouse.y / SCALE, mouse.dx / 100.f, mouse.dy / 100.f);
 			}
 		}
-	#endif
 		
 		const auto t1 = g_TimerRT.TimeUS_get();
 		
@@ -951,46 +514,25 @@ int main(int argc, const char * argv[])
 		
 		//printf("step duration: %gms\n", (t2 - t1) / 1000.f);
 		
-	#if THREE_DIMENSIONAL
-		framework.beginDraw(0, 0, 0, 0);
-		{
-			projectPerspective3d(60.f, .01f, 100.f);
-			gxTranslatef(0, 0, 2);
-			gxRotatef(framework.time * 10.f, 0, 1, 0);
-			
-			setBlend(BLEND_ADD);
-			setColor(colorWhite);
-			setAlphaf(.4f);
-			
-			for (int z = 0; z < cube->size; ++z)
-			{
-				gxPushMatrix();
-				gxTranslatef(0, 0, lerp<float>(-.5f, +.5f, z / float(cube->size - 1)));
-				const int N = cube->size;
-				texture.upload(cube->density.data() + IX_3D(0, 0, z), 4, 0);
-				
-				gxSetTexture(texture.id);
-				drawRect(-.5f, -.5f, .5f, .5f);
-				gxSetTexture(0);
-				gxPopMatrix();
-			}
-			
-			lineCube(Vec3(), Vec3(.5f, .5f, .5f));
-		}
-		framework.endDraw();
-	#else
 		framework.beginDraw(255, 255, 255, 0);
 		{
 			gxScalef(SCALE, SCALE, 1);
 			
-			texture.upload(cube->density.data(), 4, 0);
-			gxSetTexture(texture.id);
-			setColorClamp(false);
-			setColor(2000, 2000, 2000);
-			drawRect(0, 0, cube->size, cube->size);
-			setColorClamp(true);
-			gxSetTexture(0);
+			pushBlend(BLEND_OPAQUE);
+			{
+				//texture.upload(cube->density.data(), 4, 0);
+				//gxSetTexture(texture.id);
+				gxSetTexture(cube->density.getTexture());
+				setColorClamp(false);
+				//setColor(2000, 2000, 2000);
+				setColor(colorWhite);
+				drawRect(0, 0, cube->size, cube->size);
+				setColorClamp(true);
+				gxSetTexture(0);
+			}
+			popBlend();
 			
+		#if TODO
 			pushBlend(BLEND_ADD);
 			hqBegin(HQ_LINES);
 			{
@@ -1011,9 +553,9 @@ int main(int argc, const char * argv[])
 			}
 			hqEnd();
 			popBlend();
+		#endif
 		}
 		framework.endDraw();
-	#endif
 	}
 	
 	texture.free();
