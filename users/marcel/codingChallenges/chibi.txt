@@ -52,6 +52,10 @@ app codingChallenges-132-fluidSimulation
 	depend_library framework
 	add_files 132-fluidSimulation.cpp
 
+app codingChallenges-132-fluidSimulation-gpu
+	depend_library framework
+	add_files 132-fluidSimulation-gpu.cpp
+
 app codingChallenges-u01-extrusion
 	depend_library framework
 	add_files u01-extrusion.cpp
