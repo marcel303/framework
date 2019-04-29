@@ -264,7 +264,7 @@ static const char * s_deferredShadowPs = R"SHADER(
 		float curveValue = 0.5;
 		shader_fragColor.rgb *= pow(max(0.0, 1.0 - distanceXY), curveValue) * max(0.0, 1.0 - distanceZ);
 		
-		shader_fragColor.a = 1.0;
+		shader_fragColor.a = 1.0; // has to be 1.0 because BLEND_ADD multiplies the rgb with this value before addition
 	}
 )SHADER";
 
@@ -332,7 +332,7 @@ static const char * s_deferredLightPs = R"SHADER(
 		float curveValue = 0.5;
 		shader_fragColor.rgb *= pow(max(0.0, 1.0 - distanceXY), 0.5) * max(0.0, 1.0 - distanceZ);
 		
-		shader_fragColor.a = 1.0;
+		shader_fragColor.a = 1.0; // has to be 1.0 because BLEND_ADD multiplies the rgb with this value before addition
 	}
 )SHADER";
 
@@ -378,7 +378,7 @@ int main(int argc, const char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
 	
-	//framework.allowHighDpi = true;
+	framework.allowHighDpi = false;
 	//framework.fullscreen = true;
 	
 	if (!framework.init(GFX_SX, GFX_SY))

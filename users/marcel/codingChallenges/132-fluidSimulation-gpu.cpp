@@ -37,6 +37,8 @@ Cohesive forces can be approximated by using a tracer image to track different f
 
 #define SCALE 2
 
+#define LINEAR_SAMPLE_DISCRETE_OFFSETS false // should be false
+
 #define IX_2D(x, y) ((x) + (y) * N)
 #define IX_3D(x, y, z) ((x) + (y) * N + (z) * N * N)
 
@@ -84,18 +86,18 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 				{
 					vec2 size = textureSize(s, 0);
 					
-					return texture(s, v_texcoord + vec2(x, y) / size).x; // fixme : divide x, y by texture size
+					return texture(s, v_texcoord + vec2(x, y) / size).x;
 				}
 		
 				float process()
 				{
-					%s;
+					%s
 				}
 		
 				void main()
 				{
 					shader_fragColor = vec4(process());
-					//shader_fragColor = vec4(0.1, 0, 0, 1);
+					shader_fragColor.a = 1.0; // has to be 1.0 because BLEND_ADD multiplies the rgb with this value before addition
 				}
 			)SHADER";
 		
@@ -116,7 +118,38 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 
 // -----
 
-static void set_bnd2d(const int b, float * x, const int N)
+#include <GL/glew.h>
+#include <SDL2/SDL_opengl.h>
+
+static float s_values[4][300 * 300];
+
+static float * xfer_begin(const Surface * surface, const int index)
+{
+	Assert(surface->getWidth() == 300);
+	Assert(surface->getHeight() == 300);
+	Assert(index >= 0 && index < 4);
+	
+	pushSurface((Surface*)surface);
+	glReadPixels(0, 0, 300, 300, GL_RED, GL_FLOAT, s_values[index]);
+	checkErrorGL();
+	popSurface();
+	
+	return s_values[index];
+}
+
+static void xfer_end(Surface * surface, const int index)
+{
+	Assert(surface->getWidth() == 300);
+	Assert(surface->getHeight() == 300);
+	Assert(index >= 0 && index < 4);
+	
+	gxSetTexture(surface->getTexture());
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 300, 300, GL_RED, GL_FLOAT, s_values[index]);
+	checkErrorGL();
+	gxSetTexture(0);
+}
+
+static void set_bnd2d_cpu(const int b, float * x, const int N)
 {
 	for (int i = 1; i < N - 1; ++i)
 	{
@@ -136,46 +169,93 @@ static void set_bnd2d(const int b, float * x, const int N)
     x[IX_2D(N-1, N-1)]   = 0.5f * (x[IX_2D(N-2, N-1)] + x[IX_2D(N-1, N-2)]);
 }
 
-static void lin_solve2d(const int b, Surface * x, const Surface * x0, const float a, const float c, const int iter, const int N)
+static void set_bnd2d(const int b, Surface * in_x, const int N)
+{
+#if TODO || 1
+	float * x = xfer_begin(in_x, 0);
+	
+	for (int i = 1; i < N - 1; ++i)
+	{
+		x[IX_2D(i, 0  )] = b == 2 ? -x[IX_2D(i, 1  )] : x[IX_2D(i, 1  )];
+		x[IX_2D(i, N-1)] = b == 2 ? -x[IX_2D(i, N-2)] : x[IX_2D(i, N-2)];
+	}
+	
+	for (int j = 1; j < N - 1; ++j)
+	{
+		x[IX_2D(0  , j)] = b == 1 ? -x[IX_2D(1  , j)] : x[IX_2D(1  , j)];
+		x[IX_2D(N-1, j)] = b == 1 ? -x[IX_2D(N-2, j)] : x[IX_2D(N-2, j)];
+	}
+
+	x[IX_2D(0,     0)]   = 0.5f * (x[IX_2D(1,     0)] + x[IX_2D(0,     1)]);
+	x[IX_2D(0,   N-1)]   = 0.5f * (x[IX_2D(1,   N-1)] + x[IX_2D(0,   N-2)]);
+	x[IX_2D(N-1,   0)]   = 0.5f * (x[IX_2D(N-2,   0)] + x[IX_2D(N-1,   1)]);
+	x[IX_2D(N-1, N-1)]   = 0.5f * (x[IX_2D(N-2, N-1)] + x[IX_2D(N-1, N-2)]);
+	
+	xfer_end(in_x, 0);
+#endif
+}
+
+static void lin_solve2d_cpu(const int b, float * __restrict x, const float * __restrict x0, const float a, const float c, const int iter, const int N)
 {
     float cRecip = 1.f / c;
 
-	getOrCreateShader("lin_solve2d",
-		R"SHADER(
-			return
-				(
-					samp(x0, 0, 0)
-					+ a *
-						(
-							+samp(x, +1,  0)
-							+samp(x, -1,  0)
-							+samp(x,  0, +1)
-							+samp(x,  0, -1)
-						)
-				) * cRecip;
-		)SHADER",
-		"sampler2D x; sampler2D x0; uniform float a; uniform float cRecip;");
-	
+// todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
+
     for (int k = 0; k < iter; ++k)
     {
-		Shader shader("lin_solve2d");
-		shader.setTexture("x", 0, x->getTexture());
-		shader.setTexture("x0", 1, x0->getTexture());
-		shader.setImmediate("a", a);
-		shader.setImmediate("cRecip", cRecip);
-    	x->postprocess(shader);
+		for (int j = 1; j < N - 1; ++j)
+		{
+			const int index = IX_2D(0, j);
+			
+			const float * __restrict x0_line = x0 + index;
+			      float * __restrict x_line  = x  + index;
+			
+			float prev_x = x_line[0];
+			
+			for (int i = 1; i < N - 1; ++i)
+			{
+			#if 0
+				x_line[i] = (x0_line[i] + a * (x_line[i - 1] + x_line[i + 1] + x_line[i - N] + x_line[i + N])) * cRecip;
+			#elif 1
+				const float curr_x = x_line[i];
+				
+				x_line[i] = (x0_line[i] + a * ((prev_x + x_line[i + 1]) + (x_line[i - N] + x_line[i + N]))) * cRecip;
+				
+				prev_x = curr_x;
+			#else
+				// note : we keep this verion around since it's easier to port to a shader
+				x[IX_2D(i, j)] =
+					(
+						x0[IX_2D(i, j)]
+						+ a *
+							(
+								+x[IX_2D(i+1, j  )]
+								+x[IX_2D(i-1, j  )]
+								+x[IX_2D(i  , j+1)]
+								+x[IX_2D(i  , j-1)]
+							)
+					) * cRecip;
+			#endif
+			}
+		}
 
-	#if TODO
-        set_bnd2d(b, x, N);
-	#endif
+        set_bnd2d_cpu(b, x, N);
     }
 }
 
-static void lin_solve2d_xy(
-	Surface * x, const Surface * x0,
-	Surface * y, const Surface * y0,
-	const float a, const float c, const int iter, const int N)
+static void lin_solve2d(const int b, Surface * x, const Surface * x0, const float a, const float c, const int iter, const int N)
 {
+#if 0
+	float * x_copy = xfer_begin(x, 0);
+	float * x0_copy = xfer_begin(x0, 1);
+	
+	lin_solve2d_cpu(b, x_copy, x0_copy, a, c, iter, N);
+	
+	xfer_end(x, 0);
+	
+	return;
+#endif
+
     float cRecip = 1.f / c;
 
 	getOrCreateShader("lin_solve2d",
@@ -194,25 +274,70 @@ static void lin_solve2d_xy(
 		)SHADER",
 		"uniform sampler2D x; uniform sampler2D x0; uniform float a; uniform float cRecip;");
 	
-	for (int k = 0; k < iter; ++k)
+    for (int k = 0; k < iter; ++k)
     {
 		Shader shader("lin_solve2d");
-		shader.setTexture("x", 0, x->getTexture());
-		shader.setTexture("x0", 1, x0->getTexture());
+		shader.setTexture("x", 0, x->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("x0", 1, x0->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
     	x->postprocess(shader);
 		
-    	shader.setTexture("y", 0, y->getTexture());
-		shader.setTexture("y0", 1, y0->getTexture());
+        set_bnd2d(b, x, N);
+    }
+}
+
+static void lin_solve2d_xy(
+	Surface * x, const Surface * x0,
+	Surface * y, const Surface * y0,
+	const float a, const float c, const int iter, const int N)
+{
+#if 0
+	lin_solve2d(1, x, x0, a, c, iter, N);
+	lin_solve2d(2, y, y0, a, c, iter, N);
+	return;
+#endif
+
+    float cRecip = 1.f / c;
+
+	getOrCreateShader("lin_solve2d_xy",
+		R"SHADER(
+			return
+				(
+					samp(x0, 0, 0)
+					+ a *
+						(
+							+samp(x, +1,  0)
+							+samp(x, -1,  0)
+							+samp(x,  0, +1)
+							+samp(x,  0, -1)
+						)
+				) * cRecip;
+		)SHADER",
+		"uniform sampler2D x; uniform sampler2D x0; uniform float a; uniform float cRecip;");
+	
+	for (int k = 0; k < iter; ++k)
+    {
+		Shader shader("lin_solve2d_xy");
+		shader.setTexture("x", 0, x->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("x0", 1, x0->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setImmediate("a", a);
+		shader.setImmediate("cRecip", cRecip);
+    	x->postprocess(shader);
+		
+        set_bnd2d(1, x, N);
+	}
+	
+	for (int k = 0; k < iter; ++k)
+    {
+		Shader shader("lin_solve2d_xy");
+    	shader.setTexture("x", 0, y->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("x0", 1, y0->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
     	y->postprocess(shader);
 		
-	#if TODO
-        set_bnd2d(1, x, N);
-        set_bnd2d(2, x, N);
-	#endif
+        set_bnd2d(2, y, N);
     }
 }
 
@@ -228,12 +353,65 @@ static void diffuse2d_xy(Surface * x, const Surface * x0, Surface * y, const Sur
 	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, N);
 }
 
+static void project2d_cpu(
+	float * __restrict velocX,
+	float * __restrict velocY,
+	float * __restrict p,
+	float * __restrict div, const int iter, const int N)
+{
+	for (int j = 1; j < N - 1; ++j)
+	{
+		for (int i = 1; i < N - 1; ++i)
+		{
+			div[IX_2D(i, j)] =
+				-0.25f *
+					(
+						+ (+ velocX[IX_2D(i+1, j  )] - velocX[IX_2D(i-1, j  )])
+						+ (+ velocY[IX_2D(i  , j+1)] - velocY[IX_2D(i  , j-1)])
+					);
+		}
+	}
+	
+    set_bnd2d_cpu(0, div, N);
+	
+    memset(p, 0, N * N * sizeof(float));
+	lin_solve2d_cpu(0, p, div, 1, 4, iter, N);
+	
+	for (int j = 1; j < N - 1; ++j)
+	{
+		for (int i = 1; i < N - 1; ++i)
+		{
+			velocX[IX_2D(i, j)] -= ( p[IX_2D(i+1, j)] - p[IX_2D(i-1, j)] );
+			velocY[IX_2D(i, j)] -= ( p[IX_2D(i, j+1)] - p[IX_2D(i, j-1)] );
+		}
+	}
+
+    set_bnd2d_cpu(1, velocX, N);
+    set_bnd2d_cpu(2, velocY, N);
+}
+
 static void project2d(
 	Surface * velocX,
 	Surface * velocY,
 	Surface * p,
 	Surface * div, const int iter, const int N)
 {
+#if 0
+	float * velocX_copy = xfer_begin(velocX, 0);
+	float * velocY_copy = xfer_begin(velocY, 1);
+	float * p_copy = xfer_begin(p, 2);
+	float * div_copy = xfer_begin(div, 3);
+	
+	project2d_cpu(velocX_copy, velocY_copy, p_copy, div_copy, iter, N);
+	
+	xfer_end(velocX, 0);
+	xfer_end(velocY, 1);
+	xfer_end(p, 2);
+	xfer_end(div, 3);
+	
+	return;
+#endif
+
 	getOrCreateShader("project2d_div",
 		R"SHADER(
 			return
@@ -249,19 +427,35 @@ static void project2d(
 	{
 		Shader shader("project2d_div");
 		setShader(shader);
-		shader.setTexture("velocX", 0, velocX->getTexture());
-		shader.setTexture("velocY", 1, velocY->getTexture());
+		shader.setTexture("velocX", 0, velocX->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("velocY", 1, velocY->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
 		drawRect(0, 0, div->getWidth(), div->getHeight());
+		clearShader();
 	}
 	popSurface();
 	
-#if TODO
     set_bnd2d(0, div, N);
-#endif
 	
 	p->clear();
 	lin_solve2d(0, p, div, 1, 4, iter, N);
 	
+#if 0
+	float * velocX_copy = xfer_begin(velocX, 0);
+	float * velocY_copy = xfer_begin(velocY, 1);
+	float * p_copy = xfer_begin(p, 2);
+	
+	for (int j = 1; j < N - 1; ++j)
+	{
+		for (int i = 1; i < N - 1; ++i)
+		{
+			velocX_copy[IX_2D(i, j)] -= ( p_copy[IX_2D(i+1, j)] - p_copy[IX_2D(i-1, j)] );
+			velocY_copy[IX_2D(i, j)] -= ( p_copy[IX_2D(i, j+1)] - p_copy[IX_2D(i, j-1)] );
+		}
+	}
+	
+	xfer_end(velocX, 0);
+	xfer_end(velocY, 1);
+#else
 	getOrCreateShader("project2d_veloc_x",
 		R"SHADER(
 			return - ( samp(p, +1, 0) - samp(p, -1, 0) );
@@ -279,8 +473,9 @@ static void project2d(
 	{
 		Shader shader("project2d_veloc_x");
 		setShader(shader);
-		shader.setTexture("p", 0, p->getTexture());
+		shader.setTexture("p", 0, p->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
 		drawRect(0, 0, velocX->getWidth(), velocX->getHeight());
+		clearShader();
 	}
 	popBlend();
 	popSurface();
@@ -290,16 +485,16 @@ static void project2d(
 	{
 		Shader shader("project2d_veloc_y");
 		setShader(shader);
-		shader.setTexture("p", 0, p->getTexture());
+		shader.setTexture("p", 0, p->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
 		drawRect(0, 0, velocY->getWidth(), velocY->getHeight());
+		clearShader();
 	}
 	popBlend();
 	popSurface();
-	
-#if TODO
+#endif
+
     set_bnd2d(1, velocX, N);
     set_bnd2d(2, velocY, N);
-#endif
 }
 
 static void advect2d(const int b, Surface * d, const Surface * d0, const Surface * velocX, const Surface * velocY, const float dt, const int N)
@@ -311,8 +506,8 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
 	R"SHADER(
 		float tmp1 = dtx * samp(velocX, 0, 0);
 		float tmp2 = dty * samp(velocY, 0, 0);
-			
-		return samp(d0, tmp1, tmp2);
+		
+		return samp(d0, - tmp1, - tmp2);
 	)SHADER",
 	"uniform sampler2D velocX; uniform sampler2D velocY; uniform sampler2D d0; uniform float dtx; uniform float dty;");
 	
@@ -321,19 +516,18 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
     {
 		Shader shader("advect2d");
 		setShader(shader);
-		shader.setTexture("velocX", 0, velocX->getTexture());
-		shader.setTexture("velocY", 1, velocY->getTexture());
-		shader.setTexture("d0", 2, d0->getTexture());
+		shader.setTexture("velocX", 0, velocX->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("velocY", 1, velocY->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("d0", 2, d0->getTexture(), true, true);
 		shader.setImmediate("dtx", dtx);
 		shader.setImmediate("dty", dty);
 		drawRect(0, 0, d->getWidth(), d->getHeight());
+		clearShader();
 	}
 	popBlend();
     popSurface();
 	
-#if TODO
     set_bnd2d(b, d, N);
-#endif
 }
 
 struct FluidCube2d
@@ -349,11 +543,9 @@ struct FluidCube2d
 	
 	Surface Vx;
 	Surface Vy;
-	Surface Vz;
 	
 	Surface Vx0;
 	Surface Vy0;
-	Surface Vz0;
 
 	void addDensity(const int x, const int y, const float amount)
 	{
@@ -366,12 +558,14 @@ struct FluidCube2d
 		pushSurface(&density);
 		pushBlend(BLEND_ADD);
 		{
+			setColorClamp(false);
 			gxBegin(GX_POINTS);
 			{
 				gxColor4f(amount, amount, amount, amount);
 				gxVertex2f(x, y);
 			}
 			gxEnd();
+			setColorClamp(true);
 		}
 		popBlend();
 		popSurface();
@@ -388,12 +582,14 @@ struct FluidCube2d
 		pushSurface(&Vx);
 		pushBlend(BLEND_ADD);
 		{
+			setColorClamp(false);
 			gxBegin(GX_POINTS);
 			{
-				gxColor4f(amountX, amountX, amountX, amountX);
+				gxColor4f(amountX, 0, 0, 1);
 				gxVertex2f(x, y);
 			}
 			gxEnd();
+			setColorClamp(true);
 		}
 		popBlend();
 		popSurface();
@@ -401,12 +597,14 @@ struct FluidCube2d
 		pushSurface(&Vy);
 		pushBlend(BLEND_ADD);
 		{
+			setColorClamp(false);
 			gxBegin(GX_POINTS);
 			{
-				gxColor4f(amountY, amountY, amountY, amountY);
+				gxColor4f(amountY, 0, 0, 1);
 				gxVertex2f(x, y);
 			}
 			gxEnd();
+			setColorClamp(true);
 		}
 		popBlend();
 		popSurface();
@@ -421,7 +619,7 @@ struct FluidCube2d
 			const int iter = 4;
 		
 			diffuse2d_xy(&Vx0, &Vx, &Vy0, &Vy, visc, dt, iter, N);
-		
+			
 			project2d(&Vx0, &Vy0, &Vx, &Vy, iter, N);
 		
 			advect2d(1, &Vx, &Vx0, &Vx0, &Vy0, dt, N);
@@ -430,7 +628,7 @@ struct FluidCube2d
 			project2d(&Vx, &Vy, &Vx0, &Vy0, iter, N);
 		
 			diffuse2d(0, &s, &density, diff, dt, iter, N);
-		
+			
 			advect2d(0, &density, &s, &Vx, &Vy, dt, N);
 		}
 		popBlend();
@@ -451,7 +649,7 @@ FluidCube2d * createFluidCube2d(const int size, const float diffusion, const flo
 	SurfaceProperties surfaceProperties;
 	surfaceProperties.dimensions.init(size, size);
 	surfaceProperties.colorTarget.init(SURFACE_R32F, true);
-	//surfaceProperties.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
+	surfaceProperties.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
 	cube->s.init(surfaceProperties);
 	cube->density.init(surfaceProperties);
@@ -464,27 +662,38 @@ FluidCube2d * createFluidCube2d(const int size, const float diffusion, const flo
 	
 	// clear surfaces
 	
-	cube->s.clear();
-	cube->density.clear();
-	
-	cube->Vx.clear();
-	cube->Vy.clear();
-	cube->Vx0.clear();
-	cube->Vy0.clear();
+	for (int i = 0; i < 2; ++i)
+	{
+		cube->s.clear();
+		cube->density.clear();
+		
+		cube->Vx.clear();
+		cube->Vy.clear();
+		cube->Vx0.clear();
+		cube->Vy0.clear();
+		
+		//
+		
+		cube->s.swapBuffers();
+		cube->density.swapBuffers();
+		
+		cube->Vx.swapBuffers();
+		cube->Vy.swapBuffers();
+		cube->Vx0.swapBuffers();
+		cube->Vy0.swapBuffers();
+	}
 
 	return cube;
 }
 
 int main(int argc, const char * argv[])
 {
+	framework.allowHighDpi = false;
+	
 	if (!framework.init(600, 600))
 		return -1;
 
 	FluidCube2d * cube = createFluidCube2d(300, 0.001f, 0.0001f, 1.f / 30.f);
-
-	GxTexture texture;
-	texture.allocate(cube->size, cube->size, GX_R32_FLOAT, true, true);
-	texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
 	mouse.showCursor(false);
 	
@@ -502,6 +711,7 @@ int main(int argc, const char * argv[])
 			for (int y = -4; y <= +4; ++y)
 			{
 				cube->addDensity(mouse.x / SCALE + x, mouse.y / SCALE + y, .1f);
+				//cube->addVelocity(mouse.x / SCALE + x, mouse.y / SCALE + y, mouse.dx / 100.f, mouse.dy / 100.f);
 				cube->addVelocity(mouse.x / SCALE, mouse.y / SCALE, mouse.dx / 100.f, mouse.dy / 100.f);
 			}
 		}
@@ -514,18 +724,32 @@ int main(int argc, const char * argv[])
 		
 		//printf("step duration: %gms\n", (t2 - t1) / 1000.f);
 		
-		framework.beginDraw(255, 255, 255, 0);
+		framework.beginDraw(0, 0, 255, 0);
 		{
 			gxScalef(SCALE, SCALE, 1);
 			
 			pushBlend(BLEND_OPAQUE);
 			{
-				//texture.upload(cube->density.data(), 4, 0);
-				//gxSetTexture(texture.id);
-				gxSetTexture(cube->density.getTexture());
+				if (keyboard.isDown(SDLK_s))
+					gxSetTexture(cube->s.getTexture());
+				else if (keyboard.isDown(SDLK_v))
+				{
+					static int n = -1;
+					if (keyboard.wentDown(SDLK_v))
+						n = (n + 1) % 4;
+					if (n == 0)
+						gxSetTexture(cube->Vx.getTexture());
+					if (n == 1)
+						gxSetTexture(cube->Vy.getTexture());
+					if (n == 2)
+						gxSetTexture(cube->Vx0.getTexture());
+					if (n == 3)
+						gxSetTexture(cube->Vy0.getTexture());
+				}
+				else
+					gxSetTexture(cube->density.getTexture());
 				setColorClamp(false);
-				//setColor(2000, 2000, 2000);
-				setColor(colorWhite);
+				setColor(2000, 2000, 2000);
 				drawRect(0, 0, cube->size, cube->size);
 				setColorClamp(true);
 				gxSetTexture(0);
@@ -557,8 +781,6 @@ int main(int argc, const char * argv[])
 		}
 		framework.endDraw();
 	}
-	
-	texture.free();
 
 	delete cube;
 	cube = nullptr;
