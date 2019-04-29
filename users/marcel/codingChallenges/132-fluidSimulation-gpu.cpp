@@ -414,6 +414,8 @@ struct FluidCube2d
 	Surface s;
 	Surface density;
 	
+// todo : some considerable speedup could probably be had when combining Vx and Vy and Vx0 and Vy0
+//        this will require changes to most shaders and functions though
 	Surface Vx;
 	Surface Vy;
 	
@@ -490,14 +492,14 @@ struct FluidCube2d
 			const int N = size;
 		
 			const int iter = 4;
-		
+			
 			diffuse2d_xy(&Vx0, &Vx, &Vy0, &Vy, visc, dt, iter, N);
 			
 			project2d(&Vx0, &Vy0, &Vx, &Vy, iter, N);
 		
 			advect2d(1, &Vx, &Vx0, &Vx0, &Vy0, dt, N);
 			advect2d(2, &Vy, &Vy0, &Vx0, &Vy0, dt, N);
-		
+			
 			project2d(&Vx, &Vy, &Vx0, &Vy0, iter, N);
 		
 			diffuse2d(0, &s, &density, diff, dt, iter, N);
@@ -521,11 +523,20 @@ FluidCube2d * createFluidCube2d(const int size, const float diffusion, const flo
 	
 	SurfaceProperties surfaceProperties;
 	surfaceProperties.dimensions.init(size, size);
-	surfaceProperties.colorTarget.init(SURFACE_R32F, true);
+	surfaceProperties.colorTarget.init(SURFACE_R16F, true);
 	surfaceProperties.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
-	cube->s.init(surfaceProperties);
-	cube->density.init(surfaceProperties);
+#if 0 // attempt to use 8 bit backing for density field failed. but has a nice aesthetic, so keeping it around!
+	SurfaceProperties surfaceProperties_d;
+	surfaceProperties_d.dimensions.init(size, size);
+	surfaceProperties_d.colorTarget.init(SURFACE_R8, true);
+	surfaceProperties_d.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
+#else
+	SurfaceProperties surfaceProperties_d = surfaceProperties;
+#endif
+	
+	cube->s.init(surfaceProperties_d);
+	cube->density.init(surfaceProperties_d);
 
 	cube->Vx.init(surfaceProperties);
 	cube->Vy.init(surfaceProperties);
@@ -622,7 +633,7 @@ int main(int argc, const char * argv[])
 		const auto t1 = g_TimerRT.TimeUS_get();
 	#endif
 		
-		for (int i = 0; i < 10; ++i)
+		for (int i = 0; i < 1; ++i)
 		{
 			cube->step();
 		}
