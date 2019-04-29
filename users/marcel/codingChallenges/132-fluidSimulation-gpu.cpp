@@ -33,16 +33,26 @@ Cohesive forces can be approximated by using a tracer image to track different f
 
 */
 
+#if defined(DEBUG)
+	#include <SDL2/SDL_opengl.h> // so we can call glFinish to measure GPU time
+#endif
+
 #define TODO 0
 
-#define SCALE 2
-
-#define LINEAR_SAMPLE_DISCRETE_OFFSETS false // should be false
+#define SCALE 1
 
 #define IX_2D(x, y) ((x) + (y) * N)
-#define IX_3D(x, y, z) ((x) + (y) * N + (z) * N * N)
 
 // -----
+
+/*
+getOrCreateShader is a helper function, which constructs a shader given the pixel shader code in 'code',
+and the uniforms (and optionally other things) specified in 'globals'. it will use a basic vertex shader
+which outputs the position and texture coordinate, and a pixel shader template which will call the
+provided code
+
+getOrCreateShader is used throughout the code when a GPU shader is needed
+*/
 
 #include "StringEx.h"
 #include <set>
@@ -52,11 +62,15 @@ static std::set<std::string> s_createdShaders;
 
 static void getOrCreateShader(const char * name, const char * code, const char * globals)
 {
+	// don't do anything if the shader already exists
+	
 	if (s_createdShaders.count(name) == 0)
 	{
+		// remember we processed this shader
+		
 		s_createdShaders.insert(name);
 		
-		// todo : create shader sources
+		// define the vertex shader
 		
 		const char * vs =
 			R"SHADER(
@@ -74,6 +88,8 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 				}
 			)SHADER";
 		
+		// define the pixel shader, using a template and the code and globals passed into this function
+		
 		const char * ps_template =
 			R"SHADER(
 				include engine/ShaderPS.txt
@@ -82,7 +98,9 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 		
 				shader_in vec2 v_texcoord;
 
-				float samp(sampler2D s, float x, float y)
+				#define samp(in_s, in_x, in_y) textureOffset(in_s, v_texcoord, ivec2(in_x, in_y)).x
+		
+				float samp_filter(sampler2D s, float x, float y)
 				{
 					vec2 size = textureSize(s, 0);
 					
@@ -104,6 +122,8 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 		char ps[1024];
 		sprintf_s(ps, sizeof(ps), ps_template, globals, code);
 		
+		// register shader sources with framework
+		
 		char vs_name[64];
 		char ps_name[64];
 		sprintf_s(vs_name, sizeof(vs_name), "%s.vs", name);
@@ -111,12 +131,19 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 		shaderSource(vs_name, vs);
 		shaderSource(ps_name, ps);
 		
+		// construct the shader, so we can catch any errors here
+		// note this step is optional and just here for convenience
 		Shader shader(name, vs_name, ps_name);
 		checkErrorGL();
 	}
 }
 
 // -----
+
+#if TODO
+
+// the xfer stuff below is helper code to allow working with cpu fallback code
+// todo : remove this fallback code
 
 #include <GL/glew.h>
 #include <SDL2/SDL_opengl.h>
@@ -149,29 +176,11 @@ static void xfer_end(Surface * surface, const int index)
 	gxSetTexture(0);
 }
 
-static void set_bnd2d_cpu(const int b, float * x, const int N)
-{
-	for (int i = 1; i < N - 1; ++i)
-	{
-		x[IX_2D(i, 0  )] = b == 2 ? -x[IX_2D(i, 1  )] : x[IX_2D(i, 1  )];
-		x[IX_2D(i, N-1)] = b == 2 ? -x[IX_2D(i, N-2)] : x[IX_2D(i, N-2)];
-	}
-	
-	for (int j = 1; j < N - 1; ++j)
-	{
-		x[IX_2D(0  , j)] = b == 1 ? -x[IX_2D(1  , j)] : x[IX_2D(1  , j)];
-		x[IX_2D(N-1, j)] = b == 1 ? -x[IX_2D(N-2, j)] : x[IX_2D(N-2, j)];
-	}
-
-    x[IX_2D(0,     0)]   = 0.5f * (x[IX_2D(1,     0)] + x[IX_2D(0,     1)]);
-    x[IX_2D(0,   N-1)]   = 0.5f * (x[IX_2D(1,   N-1)] + x[IX_2D(0,   N-2)]);
-    x[IX_2D(N-1,   0)]   = 0.5f * (x[IX_2D(N-2,   0)] + x[IX_2D(N-1,   1)]);
-    x[IX_2D(N-1, N-1)]   = 0.5f * (x[IX_2D(N-2, N-1)] + x[IX_2D(N-1, N-2)]);
-}
+#endif
 
 static void set_bnd2d(const int b, Surface * in_x, const int N)
 {
-#if TODO || 1
+#if TODO
 	float * x = xfer_begin(in_x, 0);
 	
 	for (int i = 1; i < N - 1; ++i)
@@ -195,67 +204,8 @@ static void set_bnd2d(const int b, Surface * in_x, const int N)
 #endif
 }
 
-static void lin_solve2d_cpu(const int b, float * __restrict x, const float * __restrict x0, const float a, const float c, const int iter, const int N)
-{
-    float cRecip = 1.f / c;
-
-// todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
-
-    for (int k = 0; k < iter; ++k)
-    {
-		for (int j = 1; j < N - 1; ++j)
-		{
-			const int index = IX_2D(0, j);
-			
-			const float * __restrict x0_line = x0 + index;
-			      float * __restrict x_line  = x  + index;
-			
-			float prev_x = x_line[0];
-			
-			for (int i = 1; i < N - 1; ++i)
-			{
-			#if 0
-				x_line[i] = (x0_line[i] + a * (x_line[i - 1] + x_line[i + 1] + x_line[i - N] + x_line[i + N])) * cRecip;
-			#elif 1
-				const float curr_x = x_line[i];
-				
-				x_line[i] = (x0_line[i] + a * ((prev_x + x_line[i + 1]) + (x_line[i - N] + x_line[i + N]))) * cRecip;
-				
-				prev_x = curr_x;
-			#else
-				// note : we keep this verion around since it's easier to port to a shader
-				x[IX_2D(i, j)] =
-					(
-						x0[IX_2D(i, j)]
-						+ a *
-							(
-								+x[IX_2D(i+1, j  )]
-								+x[IX_2D(i-1, j  )]
-								+x[IX_2D(i  , j+1)]
-								+x[IX_2D(i  , j-1)]
-							)
-					) * cRecip;
-			#endif
-			}
-		}
-
-        set_bnd2d_cpu(b, x, N);
-    }
-}
-
 static void lin_solve2d(const int b, Surface * x, const Surface * x0, const float a, const float c, const int iter, const int N)
 {
-#if 0
-	float * x_copy = xfer_begin(x, 0);
-	float * x0_copy = xfer_begin(x0, 1);
-	
-	lin_solve2d_cpu(b, x_copy, x0_copy, a, c, iter, N);
-	
-	xfer_end(x, 0);
-	
-	return;
-#endif
-
     float cRecip = 1.f / c;
 
 	getOrCreateShader("lin_solve2d",
@@ -277,8 +227,8 @@ static void lin_solve2d(const int b, Surface * x, const Surface * x0, const floa
     for (int k = 0; k < iter; ++k)
     {
 		Shader shader("lin_solve2d");
-		shader.setTexture("x", 0, x->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
-		shader.setTexture("x0", 1, x0->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("x", 0, x->getTexture(), false, true);
+		shader.setTexture("x0", 1, x0->getTexture(), false, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
     	x->postprocess(shader);
@@ -292,12 +242,6 @@ static void lin_solve2d_xy(
 	Surface * y, const Surface * y0,
 	const float a, const float c, const int iter, const int N)
 {
-#if 0
-	lin_solve2d(1, x, x0, a, c, iter, N);
-	lin_solve2d(2, y, y0, a, c, iter, N);
-	return;
-#endif
-
     float cRecip = 1.f / c;
 
 	getOrCreateShader("lin_solve2d_xy",
@@ -319,8 +263,8 @@ static void lin_solve2d_xy(
 	for (int k = 0; k < iter; ++k)
     {
 		Shader shader("lin_solve2d_xy");
-		shader.setTexture("x", 0, x->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
-		shader.setTexture("x0", 1, x0->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("x", 0, x->getTexture(), false, true);
+		shader.setTexture("x0", 1, x0->getTexture(), false, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
     	x->postprocess(shader);
@@ -331,8 +275,8 @@ static void lin_solve2d_xy(
 	for (int k = 0; k < iter; ++k)
     {
 		Shader shader("lin_solve2d_xy");
-    	shader.setTexture("x", 0, y->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
-		shader.setTexture("x0", 1, y0->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+    	shader.setTexture("x", 0, y->getTexture(), false, true);
+		shader.setTexture("x0", 1, y0->getTexture(), false, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
     	y->postprocess(shader);
@@ -353,65 +297,12 @@ static void diffuse2d_xy(Surface * x, const Surface * x0, Surface * y, const Sur
 	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, N);
 }
 
-static void project2d_cpu(
-	float * __restrict velocX,
-	float * __restrict velocY,
-	float * __restrict p,
-	float * __restrict div, const int iter, const int N)
-{
-	for (int j = 1; j < N - 1; ++j)
-	{
-		for (int i = 1; i < N - 1; ++i)
-		{
-			div[IX_2D(i, j)] =
-				-0.25f *
-					(
-						+ (+ velocX[IX_2D(i+1, j  )] - velocX[IX_2D(i-1, j  )])
-						+ (+ velocY[IX_2D(i  , j+1)] - velocY[IX_2D(i  , j-1)])
-					);
-		}
-	}
-	
-    set_bnd2d_cpu(0, div, N);
-	
-    memset(p, 0, N * N * sizeof(float));
-	lin_solve2d_cpu(0, p, div, 1, 4, iter, N);
-	
-	for (int j = 1; j < N - 1; ++j)
-	{
-		for (int i = 1; i < N - 1; ++i)
-		{
-			velocX[IX_2D(i, j)] -= ( p[IX_2D(i+1, j)] - p[IX_2D(i-1, j)] );
-			velocY[IX_2D(i, j)] -= ( p[IX_2D(i, j+1)] - p[IX_2D(i, j-1)] );
-		}
-	}
-
-    set_bnd2d_cpu(1, velocX, N);
-    set_bnd2d_cpu(2, velocY, N);
-}
-
 static void project2d(
 	Surface * velocX,
 	Surface * velocY,
 	Surface * p,
 	Surface * div, const int iter, const int N)
 {
-#if 0
-	float * velocX_copy = xfer_begin(velocX, 0);
-	float * velocY_copy = xfer_begin(velocY, 1);
-	float * p_copy = xfer_begin(p, 2);
-	float * div_copy = xfer_begin(div, 3);
-	
-	project2d_cpu(velocX_copy, velocY_copy, p_copy, div_copy, iter, N);
-	
-	xfer_end(velocX, 0);
-	xfer_end(velocY, 1);
-	xfer_end(p, 2);
-	xfer_end(div, 3);
-	
-	return;
-#endif
-
 	getOrCreateShader("project2d_div",
 		R"SHADER(
 			return
@@ -427,8 +318,8 @@ static void project2d(
 	{
 		Shader shader("project2d_div");
 		setShader(shader);
-		shader.setTexture("velocX", 0, velocX->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
-		shader.setTexture("velocY", 1, velocY->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("velocX", 0, velocX->getTexture(), false, true);
+		shader.setTexture("velocY", 1, velocY->getTexture(), false, true);
 		drawRect(0, 0, div->getWidth(), div->getHeight());
 		clearShader();
 	}
@@ -439,23 +330,6 @@ static void project2d(
 	p->clear();
 	lin_solve2d(0, p, div, 1, 4, iter, N);
 	
-#if 0
-	float * velocX_copy = xfer_begin(velocX, 0);
-	float * velocY_copy = xfer_begin(velocY, 1);
-	float * p_copy = xfer_begin(p, 2);
-	
-	for (int j = 1; j < N - 1; ++j)
-	{
-		for (int i = 1; i < N - 1; ++i)
-		{
-			velocX_copy[IX_2D(i, j)] -= ( p_copy[IX_2D(i+1, j)] - p_copy[IX_2D(i-1, j)] );
-			velocY_copy[IX_2D(i, j)] -= ( p_copy[IX_2D(i, j+1)] - p_copy[IX_2D(i, j-1)] );
-		}
-	}
-	
-	xfer_end(velocX, 0);
-	xfer_end(velocY, 1);
-#else
 	getOrCreateShader("project2d_veloc_x",
 		R"SHADER(
 			return - ( samp(p, +1, 0) - samp(p, -1, 0) );
@@ -473,7 +347,7 @@ static void project2d(
 	{
 		Shader shader("project2d_veloc_x");
 		setShader(shader);
-		shader.setTexture("p", 0, p->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("p", 0, p->getTexture(), false, true);
 		drawRect(0, 0, velocX->getWidth(), velocX->getHeight());
 		clearShader();
 	}
@@ -485,13 +359,12 @@ static void project2d(
 	{
 		Shader shader("project2d_veloc_y");
 		setShader(shader);
-		shader.setTexture("p", 0, p->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("p", 0, p->getTexture(), false, true);
 		drawRect(0, 0, velocY->getWidth(), velocY->getHeight());
 		clearShader();
 	}
 	popBlend();
 	popSurface();
-#endif
 
     set_bnd2d(1, velocX, N);
     set_bnd2d(2, velocY, N);
@@ -507,7 +380,7 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
 		float tmp1 = dtx * samp(velocX, 0, 0);
 		float tmp2 = dty * samp(velocY, 0, 0);
 		
-		return samp(d0, - tmp1, - tmp2);
+		return samp_filter(d0, - tmp1, - tmp2);
 	)SHADER",
 	"uniform sampler2D velocX; uniform sampler2D velocY; uniform sampler2D d0; uniform float dtx; uniform float dty;");
 	
@@ -516,8 +389,8 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
     {
 		Shader shader("advect2d");
 		setShader(shader);
-		shader.setTexture("velocX", 0, velocX->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
-		shader.setTexture("velocY", 1, velocY->getTexture(), LINEAR_SAMPLE_DISCRETE_OFFSETS, true);
+		shader.setTexture("velocX", 0, velocX->getTexture(), false, true);
+		shader.setTexture("velocY", 1, velocY->getTexture(), false, true);
 		shader.setTexture("d0", 2, d0->getTexture(), true, true);
 		shader.setImmediate("dtx", dtx);
 		shader.setImmediate("dty", dty);
@@ -690,10 +563,10 @@ int main(int argc, const char * argv[])
 {
 	framework.allowHighDpi = false;
 	
-	if (!framework.init(600, 600))
+	if (!framework.init(900, 900))
 		return -1;
 
-	FluidCube2d * cube = createFluidCube2d(300, 0.001f, 0.0001f, 1.f / 30.f);
+	FluidCube2d * cube = createFluidCube2d(900, 0.001f, 0.0001f, 1.f / 30.f);
 	
 	mouse.showCursor(false);
 	
@@ -706,6 +579,34 @@ int main(int argc, const char * argv[])
 
 		cube->density.mulf(.99f, .99f, .99f);
 		
+	#if 1
+		pushBlend(BLEND_ADD);
+		pushSurface(&cube->density);
+		{
+			hqBegin(HQ_FILLED_CIRCLES);
+			setColorf(.01f, 0.f, 0.f, 1.f);
+			hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, 12.f);
+			hqEnd();
+		}
+		popSurface();
+		pushSurface(&cube->Vx);
+		{
+			hqBegin(HQ_FILLED_CIRCLES);
+			setColorf(mouse.dx / 100.f, 0.f, 0.f, 1.f);
+			hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, 8.f);
+			hqEnd();
+		}
+		popSurface();
+		pushSurface(&cube->Vy);
+		{
+			hqBegin(HQ_FILLED_CIRCLES);
+			setColorf(mouse.dy / 100.f, 0.f, 0.f, 1.f);
+			hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, 8.f);
+			hqEnd();
+		}
+		popSurface();
+		popBlend();
+	#else
 		for (int x = -4; x <= +4; ++x)
 		{
 			for (int y = -4; y <= +4; ++y)
@@ -715,14 +616,25 @@ int main(int argc, const char * argv[])
 				cube->addVelocity(mouse.x / SCALE, mouse.y / SCALE, mouse.dx / 100.f, mouse.dy / 100.f);
 			}
 		}
+	#endif
 		
+	#if defined(DEBUG)
 		const auto t1 = g_TimerRT.TimeUS_get();
+	#endif
 		
-		cube->step();
+		for (int i = 0; i < 10; ++i)
+		{
+			cube->step();
+		}
+		
+	#if defined(DEBUG)
+		glFlush();
+		glFinish();
 		
 		const auto t2 = g_TimerRT.TimeUS_get();
 		
-		//printf("step duration: %gms\n", (t2 - t1) / 1000.f);
+		printf("step duration: %gms\n", (t2 - t1) / 1000.f);
+	#endif
 		
 		framework.beginDraw(0, 0, 255, 0);
 		{
