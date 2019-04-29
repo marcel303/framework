@@ -1,5 +1,8 @@
 #include "framework.h"
 
+#define GFX_SX 1200
+#define GFX_SY 800
+
 #define SHADOWMAP_SIZE 1024
 #define LIGHT_ORTHO_SIZE 1.f // size of the orthographic viewport for lights when not perspective
 #define PERSPECTIVE_LIGHT true // quick toggle to select if light #1 is perspective or not
@@ -375,9 +378,10 @@ int main(int argc, const char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
 	
+	//framework.allowHighDpi = true;
 	//framework.fullscreen = true;
 	
-	if (!framework.init(800, 600))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	Camera3d camera;
@@ -476,7 +480,7 @@ int main(int argc, const char * argv[])
 			{
 				SurfaceProperties surface_properties;
 				surface_properties.dimensions.init(properties.shadowMapSize, properties.shadowMapSize);
-				surface_properties.depthTarget.init(DEPTH_FLOAT32, false);
+				surface_properties.depthTarget.init(DEPTH_FLOAT16, false);
 				shadowMap = new Surface();
 				result &= shadowMap->init(surface_properties);
 			}
@@ -571,7 +575,7 @@ int main(int argc, const char * argv[])
 					light.color.r * light.color.a,
 					light.color.g * light.color.a,
 					light.color.b * light.color.a);
-				drawRect(0, 0, 800, 600);
+				drawRect(0, 0, GFX_SX, GFX_SY);
 			}
 			popBlend();
 			setColorClamp(true);
@@ -591,7 +595,7 @@ int main(int argc, const char * argv[])
 					light.color.r * light.color.a,
 					light.color.g * light.color.a,
 					light.color.b * light.color.a);
-				drawRect(0, 0, 800, 600);
+				drawRect(0, 0, GFX_SX, GFX_SY);
 			}
 			popBlend();
 			setColorClamp(true);
@@ -619,7 +623,7 @@ int main(int argc, const char * argv[])
 	LightDrawer lightDrawer;
 	{
 		LightDrawer::Properties properties;
-		properties.setLightMapSize(800, 600);
+		properties.setLightMapSize(GFX_SX, GFX_SY);
 		properties.setShadowMapSize(SHADOWMAP_SIZE);
 		lightDrawer.init(properties);
 	}
@@ -665,17 +669,17 @@ int main(int argc, const char * argv[])
 	Surface view_camera;
 	{
 		SurfaceProperties properties;
-		properties.dimensions.init(800, 600);
+		properties.dimensions.init(GFX_SX, GFX_SY);
 		properties.colorTarget.init(SURFACE_RGBA8, false);
-		properties.depthTarget.init(DEPTH_FLOAT32, false);
+		properties.depthTarget.init(DEPTH_FLOAT16, false);
 		view_camera.init(properties);
 	}
 #if LINEAR_DEPTH_FOR_CAMERA
 	Surface view_camera_linear;
 	{
 		SurfaceProperties properties;
-		properties.dimensions.init(800, 600);
-		properties.colorTarget.init(SURFACE_R32F, false);
+		properties.dimensions.init(GFX_SX, GFX_SY);
+		properties.colorTarget.init(SURFACE_R16F, false);
 		properties.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		view_camera_linear.init(properties);
 	}
@@ -685,8 +689,8 @@ int main(int argc, const char * argv[])
 	Surface view_camera_world_position;
 	{
 		SurfaceProperties properties;
-		properties.dimensions.init(800, 600);
-		properties.colorTarget.init(SURFACE_RGBA32F, false);
+		properties.dimensions.init(GFX_SX, GFX_SY);
+		properties.colorTarget.init(SURFACE_RGBA16F, false);
 		view_camera_world_position.init(properties);
 	}
 #endif
@@ -947,7 +951,7 @@ int main(int argc, const char * argv[])
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_camera.getTexture());
 				setColor(colorWhite);
-				drawRect(0, 0, 800, 600);
+				drawRect(0, 0, GFX_SX, GFX_SY);
 				gxSetTexture(0);
 				popBlend();
 			}
@@ -956,7 +960,7 @@ int main(int argc, const char * argv[])
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_camera.getDepthTexture());
 				setColor(colorWhite);
-				drawRect(0, 0, 800, 600);
+				drawRect(0, 0, GFX_SX, GFX_SY);
 				gxSetTexture(0);
 				popBlend();
 			}
@@ -966,7 +970,7 @@ int main(int argc, const char * argv[])
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_camera_linear.getTexture());
 				setLumif(depthLinearDrawScale);
-				drawRect(0, 0, 800, 600);
+				drawRect(0, 0, GFX_SX, GFX_SY);
 				gxSetTexture(0);
 				popBlend();
 				
@@ -982,7 +986,7 @@ int main(int argc, const char * argv[])
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_light.getDepthTexture());
 				setColor(colorWhite);
-				drawRect(0, 0, 800, 600);
+				drawRect(0, 0, GFX_SX, GFX_SY);
 				gxSetTexture(0);
 				popBlend();
 			*/
@@ -993,7 +997,7 @@ int main(int argc, const char * argv[])
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_camera_world_position.getTexture());
 				setColor(colorWhite);
-				drawRect(0, 0, 800, 600);
+				drawRect(0, 0, GFX_SX, GFX_SY);
 				gxSetTexture(0);
 				popBlend();
 			#endif
@@ -1033,7 +1037,7 @@ int main(int argc, const char * argv[])
 				shader.setTexture("colorTexture", 0, view_camera.getTexture());
 				shader.setTexture("lightTexture", 1, lightDrawer.getLightMapSurface()->getTexture());
 				shader.setImmediate("ambient", .1f, .08f, .06f);
-				drawRect(0, 0, 800, 600);
+				drawRect(0, 0, GFX_SX, GFX_SY);
 				popBlend();
 			}
 			
