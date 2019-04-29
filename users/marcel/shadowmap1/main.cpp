@@ -1,10 +1,10 @@
 #include "framework.h"
 
 #define SHADOWMAP_SIZE 1024
-#define LIGHT_ORTHO_SIZE 1.f
-#define PERSPECTIVE_LIGHT true
-#define LINEAR_DEPTH_FOR_CAMERA false
-#define DEPTH_TO_WORLD false
+#define LIGHT_ORTHO_SIZE 1.f // size of the orthographic viewport for lights when not perspective
+#define PERSPECTIVE_LIGHT true // quick toggle to select if light #1 is perspective or not
+#define LINEAR_DEPTH_FOR_CAMERA false // maps depth texture to linear depth texture. for debugging purposes only
+#define DEPTH_TO_WORLD false // maps depth texture to XYZ texture. for debugging purposes only
 
 // depth to linear shader
 
@@ -82,8 +82,6 @@ static const char * s_shadedObjectPs = R"SHADER(
 		
 		vec3 coords = projected * 0.5 + vec3(0.5);
 		float depth = texture(depthTexture, coords.xy).x;
-		
-		//projected.z = (projected.z + 1.0) * 0.5;
 		
 		if (projected.x < -1.0 || projected.x > +1.0)
 			shader_fragColor.rgb = vec3(0.5, 0.0, 0.0);
@@ -183,6 +181,8 @@ static const char * s_deferredShadowPs = R"SHADER(
 	include engine/ShaderPS.txt
 	include shadowUtils.txt
 
+	#define DEBUG 0
+
 	uniform sampler2D depthTexture;
 	uniform mat4x4 projectionToWorld;
 
@@ -198,6 +198,107 @@ static const char * s_deferredShadowPs = R"SHADER(
 		
 		if (camera_view_depth == 1.0)
 		{
+			// scene background
+			shader_fragColor = vec4(0.0);
+			return;
+		}
+		
+		vec3 position_world = depthToWorldPosition(camera_view_depth, texcoord, projectionToWorld);
+		vec4 position_lightSpace = lightMVP * vec4(position_world, 1.0);
+	
+		if (position_lightSpace.w <= 0.0)
+		{
+			// facing in the other direction
+			shader_fragColor = vec4(0.0);
+			return;
+		}
+		
+		vec3 projected = position_lightSpace.xyz / position_lightSpace.w;
+		
+		//
+		
+		vec3 coords = projected * 0.5 + vec3(0.5);
+		float depth = texture(lightDepthTexture, coords.xy).x;
+		
+		vec3 shadowColor;
+		
+		if (depth == 1.0)
+		{
+			// maximum
+			shadowColor = vec3(1.0);
+		}
+		else
+		{
+		#if DEBUG
+			if (projected.x < -1.0 || projected.x > +1.0)
+				shadowColor = vec3(0.5, 0.0, 0.0);
+			else if (projected.y < -1.0 || projected.y > +1.0)
+				shadowColor = vec3(0.0, 0.5, 0.0);
+			else if (projected.z < -1.0 || projected.z > +1.0)
+				shadowColor = vec3(0.0, 0.0, 0.5);
+			else if (false)
+				shadowColor = vec3(projected.z);
+			else if (false)
+				shadowColor = vec3(coords); // RGB color cube
+			else if (false)
+				shadowColor = vec3(depth);
+			else if (false)
+				shadowColor = vec3(coords.z > depth ? 0.5 : 1.0); // correct shadow mapping with serious acne
+			else
+				shadowColor = vec3(coords.z > depth + 0.001 ? 0.3 : 1.0); // less acne with depth bias
+		#else
+			shadowColor = vec3(coords.z > depth + 0.001 ? 0.3 : 1.0); // less acne with depth bias
+		#endif
+		}
+	
+		// apply a bit of lighting here
+		
+		shader_fragColor.rgb = shadowColor * lightColor;
+		
+		float distanceXY = length(projected.xy);
+		float distanceZ = max(0.0, coords.z);
+		shader_fragColor.rgb *= max(0.0, 1.0 - distanceXY) * max(0.0, 1.0 - distanceZ);
+		
+		shader_fragColor.a = 1.0;
+	}
+)SHADER";
+
+// deferred light shader
+
+static const char * s_deferredLightVs = R"SHADER(
+	include engine/ShaderVS.txt
+
+	shader_out vec2 texcoord;
+
+	void main()
+	{
+		gl_Position = ModelViewProjectionMatrix * in_position4;
+		
+		texcoord = unpackTexcoord(0);
+	}
+)SHADER";
+
+static const char * s_deferredLightPs = R"SHADER(
+	include engine/ShaderPS.txt
+	include shadowUtils.txt
+
+	#define DEBUG 0
+
+	uniform sampler2D depthTexture;
+	uniform mat4x4 projectionToWorld;
+
+	uniform mat4x4 lightMVP;
+	uniform vec3 lightColor;
+
+	shader_in vec2 texcoord;
+
+	void main()
+	{
+		float camera_view_depth = texture(depthTexture, texcoord).x;
+		
+		if (camera_view_depth == 1.0)
+		{
+			// scene background
 			shader_fragColor = vec4(0.0);
 			return;
 		}
@@ -205,34 +306,24 @@ static const char * s_deferredShadowPs = R"SHADER(
 		vec3 position_world = depthToWorldPosition(camera_view_depth, texcoord, projectionToWorld);
 		vec4 position_lightSpace = lightMVP * vec4(position_world, 1.0);
 		
+		if (position_lightSpace.w <= 0.0)
+		{
+			// facing in the other direction
+			shader_fragColor = vec4(0.0);
+			return;
+		}
+		
 		vec3 projected = position_lightSpace.xyz / position_lightSpace.w;
 		
 		vec3 coords = projected * 0.5 + vec3(0.5);
-		float depth = texture(lightDepthTexture, coords.xy).x;
-		
-		if (projected.x < -1.0 || projected.x > +1.0)
-			shader_fragColor.rgb = vec3(0.5, 0.0, 0.0);
-		else if (projected.y < -1.0 || projected.y > +1.0)
-			shader_fragColor.rgb = vec3(0.0, 0.5, 0.0);
-		else if (projected.z < -1.0 || projected.z > +1.0)
-			shader_fragColor.rgb = vec3(0.0, 0.0, 0.5);
-		else if (false)
-			shader_fragColor.rgb = vec3(projected.z);
-		else if (false)
-			shader_fragColor.rgb = vec3(coords); // RGB color cube
-		else if (false)
-			shader_fragColor.rgb = vec3(depth);
-		else if (false)
-			shader_fragColor.rgb = vec3(coords.z > depth ? 0.5 : 1.0); // correct shadow mapping with serious acne
-		else
-			shader_fragColor.rgb = vec3(coords.z > depth + 0.001 ? 0.3 : 1.0); // less acne with depth bias
-		
+	
 		// apply a bit of lighting here
 		
-		shader_fragColor.rgb *= lightColor;
+		shader_fragColor.rgb = lightColor;
 		
-		float distance = length(projected.xy);
-		shader_fragColor.rgb *= max(0.0, 1.0 - distance);
+		float distanceXY = length(projected.xy);
+		float distanceZ = max(0.0, coords.z);
+		shader_fragColor.rgb *= max(0.0, 1.0 - distanceXY) * max(0.0, 1.0 - distanceZ);
 		
 		shader_fragColor.a = 1.0;
 	}
@@ -280,10 +371,13 @@ int main(int argc, const char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
 	
+	//framework.fullscreen = true;
+	
 	if (!framework.init(800, 600))
 		return -1;
 	
 	Camera3d camera;
+	camera.position.Set(0, 2, -2);
 	
 	const int kNumCubes = 256;
 	Vec3 cube_positions[kNumCubes];
@@ -292,6 +386,7 @@ int main(int argc, const char * argv[])
 	{
 		cube_positions[i].Set(random<float>(-10.f, +10.f), random<float>(0.f, +2.f), random<float>(-10.f, +10.f));
 		cube_colors[i] = Color::fromHSL(random<float>(0.f, 1.f), .3f, .8f);
+		//cube_colors[i] = colorWhite;
 	}
 	Vec3 cube_cornerPositions[kNumCubes];
 	Vec2 cube_screenPositions[kNumCubes];
@@ -308,10 +403,12 @@ int main(int argc, const char * argv[])
 			float max = 10.f;
 		} depthRange;
 		
-		bool isPerspective = PERSPECTIVE_LIGHT;
+		bool isPerspective = true;
 		float fov = 60.f;
 		
 		Color color = colorWhite;
+		
+		bool isShadowCasting = false;
 		
 		void calculateTransforms()
 		{
@@ -477,6 +574,22 @@ int main(int argc, const char * argv[])
 		
 		void drawLight(const Light & light)
 		{
+			setColorClamp(false);
+			pushBlend(BLEND_ADD);
+			{
+				Shader shader("deferredLight");
+				setShader(shader);
+				shader.setTexture("depthTexture", 0, drawState.sceneDepthTexture);
+				shader.setImmediateMatrix4x4("projectionToWorld", drawState.projectionToWorld.m_v);
+				shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
+				shader.setImmediate("lightColor",
+					light.color.r * light.color.a,
+					light.color.g * light.color.a,
+					light.color.b * light.color.a);
+				drawRect(0, 0, 800, 600);
+			}
+			popBlend();
+			setColorClamp(true);
 		}
 		
 		Surface * getLightMapSurface()
@@ -507,13 +620,15 @@ int main(int argc, const char * argv[])
 	}
 	
 	Light light;
-	light.isPerspective = true;
+	light.isPerspective = PERSPECTIVE_LIGHT;
+	light.isShadowCasting = true;
 	light.depthRange.min = .5f;
 	light.depthRange.max = 10.f;
 	light.fov = 60.f;
 	
 	Light light2;
 	light2.isPerspective = true;
+	light2.isShadowCasting = true;
 	light2.depthRange.min = .5f;
 	light2.depthRange.max = 10.f;
 	light2.fov = 60.f;
@@ -571,6 +686,8 @@ int main(int argc, const char * argv[])
 	shaderSource("depthToWorld.ps", s_depthToWorldPs);
 	shaderSource("deferredShadow.vs", s_deferredShadowVs);
 	shaderSource("deferredShadow.ps", s_deferredShadowPs);
+	shaderSource("deferredLight.vs", s_deferredLightVs);
+	shaderSource("deferredLight.ps", s_deferredLightPs);
 	shaderSource("lightApplication.vs", s_lightApplicationVs);
 	shaderSource("lightApplication.ps", s_lightApplicationPs);
 	
@@ -608,16 +725,42 @@ int main(int argc, const char * argv[])
 		
 		if (mouse.isDown(BUTTON_LEFT))
 			light.lightToWorld_transform = camera.getWorldMatrix();
-		light.color.a = (cosf(framework.time * 10.f) + 1.f) / 2.f;
+		//light.color.a = lerp<float>((cosf(framework.time * 10.f) + 1.f) / 2.f, .5f, 1.3f);
+		light.color.a = 8.f;
 		light.calculateTransforms();
 		
 		light2.lightToWorld_transform.MakeLookat(
-				Vec3(cosf(framework.time / 3.45f) * 3.f, 6, sinf(framework.time / 4.56f) * 3.f),
+				Vec3(cosf(framework.time / 2.34f) * 3.f, 6, sinf(framework.time / 3.45f) * 3.f),
 				Vec3(cosf(framework.time) * 6.f, 0, sinf(framework.time) * 6.f),
 				Vec3(0, 1, 0));
 		light2.lightToWorld_transform = light2.lightToWorld_transform.CalcInv();
-		light2.color = Color::fromHSL(framework.time * 1.45f, .2f, .5f);
+		light2.color = Color::fromHSL(framework.time / 1.45f, .1f, .8f);
+		light2.color.a = 8.f;
 		light2.calculateTransforms();
+		
+		auto drawLightVolume = [](const Light & light)
+		{
+			gxPushMatrix();
+			{
+				gxMultMatrixf(light.lightToWorld_transform.m_v);
+				
+				setColor(100, 100, 100);
+				lineCube(
+					Vec3(0, 0, (light.depthRange.min + light.depthRange.max) / 2.f),
+					Vec3(LIGHT_ORTHO_SIZE, LIGHT_ORTHO_SIZE, (light.depthRange.max - light.depthRange.min) / 2.f));
+				
+				gxBegin(GX_LINES);
+				gxVertex3f(0, 0, 0);
+				gxVertex3f(0, 0, 2);
+				gxEnd();
+				
+				gxPushMatrix();
+				gxScalef(.2f, .2f, 1.f);
+				drawGrid3d(1, 1, 0, 1);
+				gxPopMatrix();
+			}
+			gxPopMatrix();
+		};
 		
 		auto drawScene = [&](const bool captureScreenPositions)
 		{
@@ -634,9 +777,9 @@ int main(int argc, const char * argv[])
 			}
 		*/
 		
-			const Vec3 cube_size(.4f, .4f, .4f);
+			const Vec3 cube_size(.5f, .5f, .5f);
 			
-		#if 1
+		#if 0
 			pushWireframe(true);
 			beginCubeBatch();
 			{
@@ -668,35 +811,25 @@ int main(int argc, const char * argv[])
 			}
 			endCubeBatch();
 			
+			// draw floor
+			fillCube(Vec3(0, -1, 0), Vec3(10, .4f, 10));
+			
+			// draw walls
+			fillCube(Vec3(-10, 10, 0), Vec3(.1f, 10, 10));
+			
 			clearShader();
 			
 			// draw light volume and direction
 			
-			gxPushMatrix();
-			{
-				gxMultMatrixf(light.lightToWorld_transform.m_v);
-				
-				setColor(100, 100, 100);
-				lineCube(
-					Vec3(0, 0, (light.depthRange.min + light.depthRange.max) / 2.f),
-					Vec3(LIGHT_ORTHO_SIZE, LIGHT_ORTHO_SIZE, (light.depthRange.max - light.depthRange.min) / 2.f));
-				
-				gxBegin(GX_LINES);
-				gxVertex3f(0, 0, 0);
-				gxVertex3f(0, 0, 2);
-				gxEnd();
-				
-				gxPushMatrix();
-				gxScalef(.2f, .2f, 1.f);
-				drawGrid3d(1, 1, 0, 1);
-				gxPopMatrix();
-			}
-			gxPopMatrix();
+			drawLightVolume(light);
+			drawLightVolume(light2);
 		};
 	
 		// draw scene from the viewpoint of the camera
 		
+	#if DEPTH_TO_WORLD
 		Mat4x4 view_camera_world_to_projection_matrix;
+	#endif
 		
 		pushSurface(&view_camera);
 		{
@@ -707,12 +840,14 @@ int main(int argc, const char * argv[])
 			
 			camera.pushViewMatrix();
 			{
+			#if DEPTH_TO_WORLD
 				Mat4x4 mat_p;
 				Mat4x4 mat_v;
 				gxGetMatrixf(GX_PROJECTION, mat_p.m_v);
 				gxGetMatrixf(GX_MODELVIEW, mat_v.m_v);
 				view_camera_world_to_projection_matrix = mat_p * mat_v;
-				
+			#endif
+			
 				lightDrawer.captureSceneMatrices();
 				
 				pushDepthTest(true, DEPTH_LESS, true);
@@ -838,17 +973,24 @@ int main(int argc, const char * argv[])
 				
 				lightDrawer.drawBegin(view_camera.getDepthTexture());
 				{
-					lightDrawer.drawShadowLightBegin(light);
+					auto drawLight = [&](const Light & light)
 					{
-						drawScene(false);
-					}
-					lightDrawer.drawShadowLightEnd(light);
+						if (light.isShadowCasting)
+						{
+							lightDrawer.drawShadowLightBegin(light);
+							{
+								drawScene(false);
+							}
+							lightDrawer.drawShadowLightEnd(light);
+						}
+						else
+						{
+							lightDrawer.drawLight(light);
+						}
+					};
 					
-					lightDrawer.drawShadowLightBegin(light2);
-					{
-						drawScene(false);
-					}
-					lightDrawer.drawShadowLightEnd(light2);
+					drawLight(light);
+					drawLight(light2);
 				}
 				lightDrawer.drawEnd();
 				
