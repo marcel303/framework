@@ -184,7 +184,7 @@ static void lin_solve2d_xy(
 		}
 
         set_bnd2d(1, x, N);
-        set_bnd2d(2, x, N);
+        set_bnd2d(2, y, N);
     }
 }
 

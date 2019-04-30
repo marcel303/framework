@@ -436,7 +436,7 @@ struct FluidCube2d
 			setColorClamp(false);
 			gxBegin(GX_POINTS);
 			{
-				gxColor4f(amount, amount, amount, amount);
+				gxColor4f(amount, 0, 0, 1);
 				gxVertex2f(x, y);
 			}
 			gxEnd();
@@ -577,7 +577,7 @@ int main(int argc, const char * argv[])
 	if (!framework.init(900, 900))
 		return -1;
 
-	FluidCube2d * cube = createFluidCube2d(900, 0.001f, 0.0001f, 1.f / 30.f);
+	FluidCube2d * cube = createFluidCube2d(900, 0.0001f, 0.0001f, 1.f / 30.f);
 	
 	mouse.showCursor(false);
 	
@@ -595,24 +595,27 @@ int main(int argc, const char * argv[])
 		pushSurface(&cube->density);
 		{
 			hqBegin(HQ_FILLED_CIRCLES);
-			setColorf(.01f, 0.f, 0.f, 1.f);
-			hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, 12.f);
+			setColorf(.008f, 0.f, 0.f, 1.f / 100);
+			for (int i = 0; i < 100; ++i)
+				hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, i * 60.f / 100);
 			hqEnd();
 		}
 		popSurface();
 		pushSurface(&cube->Vx);
 		{
 			hqBegin(HQ_FILLED_CIRCLES);
-			setColorf(mouse.dx / 100.f, 0.f, 0.f, 1.f);
-			hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, 8.f);
+			setColorf(mouse.dx / 10.f, 0.f, 0.f, 1.f / 10);
+			for (int i = 0; i < 10; ++i)
+				hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, i * 8.f / 10);
 			hqEnd();
 		}
 		popSurface();
 		pushSurface(&cube->Vy);
 		{
 			hqBegin(HQ_FILLED_CIRCLES);
-			setColorf(mouse.dy / 100.f, 0.f, 0.f, 1.f);
-			hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, 8.f);
+			setColorf(mouse.dy / 10.f, 0.f, 0.f, 1.f / 10);
+			for (int i = 0; i < 10; ++i)
+				hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, i * 8.f / 10);
 			hqEnd();
 		}
 		popSurface();
@@ -672,7 +675,7 @@ int main(int argc, const char * argv[])
 				else
 					gxSetTexture(cube->density.getTexture());
 				setColorClamp(false);
-				setColor(2000, 2000, 2000);
+				setColor(4000, 3000, 2000);
 				drawRect(0, 0, cube->size, cube->size);
 				setColorClamp(true);
 				gxSetTexture(0);
