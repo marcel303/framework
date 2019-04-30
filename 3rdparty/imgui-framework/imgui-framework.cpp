@@ -370,6 +370,9 @@ void FrameworkImGuiContext::setClipboardText(void * user_data, const char * text
 
 void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 {
+	// todo : scale clips rects depending on backing scale
+	// draw_data->ScaleClipRects(io.DisplayFramebufferScale);
+	
 	for (int i = 0; i < draw_data->CmdListsCount; ++i)
 	{
 		const ImDrawList * cmd_list = draw_data->CmdLists[i];
