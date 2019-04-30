@@ -1,7 +1,7 @@
 # libreflection
-libreflection is a tiny type reflection library for c++. It's application is to provide type reflection information for structured types, basic data types, and arrays (std::vector).
+libreflection is a tiny type reflection library for c++. It's intended use is to provide type reflection information for structured types, basic data types, and arrays (std::vector).
 
-libreflection is optimized for fast compile times. It uses a minimum of c++ template magic to keep the compiler happy. Some magic is however needed, but it shouldn't push the compiler to its limits to such an extent that it will bloat compile times.
+libreflection is optimized for fast compile times. It uses a minimum of c++ template magic to keep the compiler happy. Some magic is however needed, but it shouldn't push the compiler to such an extent that it will bloat compile times.
 
 libreflection takes the approach to explicitly build a type database. There is no global type database. The user of the library has to take care to explicitly create a type database and fill it with type information. The rationale behind this is that there are use cases where it is desirable to expose only a subset of data for (de)serialization purposes.
 
@@ -28,7 +28,7 @@ typeDB.addStructured<ChromaticSomething>("ChromaticSomething")
 ```
 
 ## Iterating a structured data type
-Below is an example of iterating a structured type's fields and dumping its contents. Note that this example doesn't handle types recursively. It only dumps plain data type fields of the type being inspected. For a more elaborate example, see the example app 'libreflection-020-structured', which illustrated how to traverse structured data recursively.
+Below is an example of iterating a structured type's fields and dumping its contents. Note that the code doesn't handle structured types recursively. It only dumps the plain data fields of the type being inspected. For a more elaborate example, see the example app 'libreflection-020-structured', which shows by example how to traverse structured data types recursively.
 
 ```cpp
 ChromaticSomething something;
@@ -98,7 +98,7 @@ Array members are added to structured types in the same way as any other type.
 		.add("subsets", &Dataset::subsets);
 ```
 
-However, where single valued members add a Member_Scalar to the type database, vector types add a Member_Vector<T>, which derives from Member_VectorInterface. Member_VectorInterface provides the interface for working with vector types.
+However, where single valued members add a `Member_Scalar` to the type database, vector types add a `Member_Vector<T>`, which derives from `Member_VectorInterface`. `Member_VectorInterface` provides the interface for working with vector types.
 
 ```cpp
 struct Member_VectorInterface : Member
@@ -108,20 +108,15 @@ struct Member_VectorInterface : Member
 	virtual void vector_resize(void * object, const size_t size) const = 0;
 	virtual void * vector_access(void * object, const size_t index) const = 0;
 	virtual void vector_swap(void * object, const size_t index1, const size_t index2) const = 0;
-	
-	const void * vector_access(const void * object, const size_t index) const
-	{
-		return vector_access((void*)object, index);
-	}
 };
 ```
 
-The values inside a vector can be iterate as follows.
+The values inside a vector can be iterated as follows.
 
 ```cpp
 if (member->isVector)
 {
-	auto * member_vector = static_cast<const 	Member_VectorInterface*>(member);
+	auto * member_vector = static_cast<const Member_VectorInterface*>(member);
 				
 	auto * vector_type = typeDB.findType(member_vector->vector_type());
 	
@@ -146,13 +141,12 @@ if (member->isVector)
 }			
 ```
 
-
 ## More examples
-libreflection is bundle with a number of examples. Use chibi to build all libreflection targets and you will find them in your project file or solution.
+libreflection is bundled with the below example apps. Use chibi to build all libreflection targets and you will find them in your project file or solution.
 
 List of examples:
 
-- libreflection-000-typedb: Shows how to populate a type database.
-- libreflection-010-reflection: Shows how to do basic reflection to print the contents of a structured type.
-- libreflection-020-structured: Shows how to do recursive reflection to print the contents of structured types and arrays.
-- libreflection-100-flags: Shows how to add flags to members.
+- **libreflection-000-typedb**: Shows how to populate a type database.
+- **libreflection-010-reflection**: Shows how to do basic reflection to print the contents of a structured type.
+- **libreflection-020-structured**: Shows how to do recursive reflection to print the contents of structured types and arrays.
+- **libreflection-100-flags**: Shows how to add flags to members.
