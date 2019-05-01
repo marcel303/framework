@@ -34,14 +34,19 @@ struct FileEditor_Sprite : FileEditor
 		if (hasFocus == false)
 			return;
 		
-		// process input
-		
-		if (keyboard.wentDown(SDLK_EQUALS, true))
-			desiredScale *= 1.5f;
-		if (keyboard.wentDown(SDLK_MINUS, true))
-			desiredScale /= 1.5f;
-		
-		desiredScale *= powf(1.2f, mouse.scrollY);
+		if (inputIsCaptured == false)
+		{
+			// process input
+			
+			inputIsCaptured = true;
+			
+			if (keyboard.wentDown(SDLK_EQUALS, true))
+				desiredScale *= 1.5f;
+			if (keyboard.wentDown(SDLK_MINUS, true))
+				desiredScale /= 1.5f;
+			
+			desiredScale *= powf(1.2f, mouse.scrollY);
+		}
 		
 		// update smoothed changes
 		
