@@ -1,6 +1,7 @@
 #include "parameterComponent.h"
 #include "parameterComponentUi.h"
 #include "parameterUi.h"
+#include <algorithm>
 
 void doParameterUi(ParameterComponentMgr & componentMgr, const char * filter)
 {
