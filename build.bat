@@ -10,6 +10,10 @@ IF ERRORLEVEL 1 (
 rem todo : verify all submodules are synced somehow
 rem git submodule update --init --recursive
 
+echo Updating Git submodules..
+git submodule update
+echo ..Done!
+
 set chibi_bin="chibi-build/chibi/Debug/chibi.exe"
 
 rem build chibi binary
