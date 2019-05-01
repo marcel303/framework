@@ -5,6 +5,7 @@
 
 #include "fileEditor_jsfx.h"
 #include "imgui.h"
+#include <algorithm>
 
 void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, MidiBuffer & midiBuffer, const bool doTick, const bool doDraw, int & out_sx, int & out_sy, bool & inputIsCaptured)
 {

@@ -1,4 +1,5 @@
 #include "fileEditor_font.h"
+#include <algorithm>
 
 FileEditor_Font::FileEditor_Font(const char * in_path)
 	: path(in_path)

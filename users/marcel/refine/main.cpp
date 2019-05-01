@@ -31,6 +31,13 @@
 #if CHIBI_INTEGRATION
 	#include "chibi.h"
 	#include "nfd.h"
+
+	#ifdef _MSC_VER
+		#ifndef PATH_MAX
+			#include <Windows.h>
+			#define PATH_MAX _MAX_PATH
+		#endif
+	#endif
 #endif
 
 static const int VIEW_SX = 1200;
