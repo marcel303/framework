@@ -1841,7 +1841,7 @@ void Framework::blinkTaskbarIcon(int count)
 	memset(&info, 0, sizeof(info));
 	SDL_VERSION(&info.version);
 
-	if (SDL_GetWindowWMInfo(globals.currentWindow, &info))
+	if (SDL_GetWindowWMInfo(globals.currentWindow->getWindow(), &info))
 	{
 		FLASHWINFO flashInfo;
 		memset(&flashInfo, 0, sizeof(flashInfo));
