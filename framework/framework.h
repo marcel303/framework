@@ -408,8 +408,9 @@ public:
 	
 	bool waitForEvents;
 	bool fullscreen;
-	bool useClosestDisplayMode;
 	bool exclusiveFullscreen;
+	bool useClosestDisplayMode;
+	bool enableVsync;
 	int msaaLevel;
 	bool basicOpenGL;
 	bool enableDepthBuffer;

@@ -151,6 +151,7 @@ Framework::Framework()
 	fullscreen = false;
 	exclusiveFullscreen = true;
 	useClosestDisplayMode = false;
+	enableVsync = true;
 	msaaLevel = 0;
 	basicOpenGL = false;
 	enableDepthBuffer = false;
@@ -463,7 +464,7 @@ bool Framework::init(int sx, int sy)
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
 	
-	SDL_GL_SetSwapInterval(1);
+	SDL_GL_SetSwapInterval(enableVsync ? 1 : 0);
 
 	gxInitialize();
 	
@@ -655,6 +656,7 @@ bool Framework::shutdown()
 	fullscreen = false;
 	exclusiveFullscreen = true;
 	useClosestDisplayMode = false;
+	enableVsync = true;
 	msaaLevel = 0;
 	basicOpenGL = false;
 	enableDepthBuffer = false;
@@ -2734,8 +2736,8 @@ void Surface::blitTo(Surface * surface) const
 	checkErrorGL();
 
 	glBlitFramebuffer(
-		0, 0, getWidth(), getHeight(),
-		0, 0, surface->getWidth(), surface->getHeight(),
+		0, 0, getWidth() * m_backingScale, getHeight() * m_backingScale,
+		0, 0, surface->getWidth() * surface->m_backingScale, surface->getHeight() * surface->m_backingScale,
 		GL_COLOR_BUFFER_BIT,
 		GL_NEAREST);
 	checkErrorGL();
@@ -5792,23 +5794,6 @@ Vec2 transformToScreen(const Vec3 & v, float & w)
 
 static void setSurface(Surface * surface)
 {
-	// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
-	// as this would cause issues where the driver may perform an optimization where it detects no texture
-	// state change happened in a future gxSetTexture or Shader::setTexture call (because the texture ids
-	// are the same), making it fail to flush GPU render target caches, fail to perform texture decompression,
-	// fail to perform whatever is needed to transition a render target texture from being 'renderable' resource
-	// to being a shader accessible resource
-	
-	for (int i = 0; i < 8; ++i)
-	{
-		glActiveTexture(GL_TEXTURE0 + i);
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
-	
-	checkErrorGL();
-	
-	//
-	
 	const GLuint framebuffer = surface ? surface->getFramebuffer() : 0;
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	
@@ -6386,6 +6371,23 @@ void clearShader()
 		globals.shader = 0;
 	
 		glUseProgram(0);
+		
+		// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
+		// as this would cause issues where the driver may perform an optimization where it detects no texture
+		// state change happened in a future gxSetTexture or Shader::setTexture call (because the texture ids
+		// are the same), making it fail to flush GPU render target caches, fail to perform texture decompression,
+		// fail to perform whatever is needed to transition a render target texture from being 'renderable' resource
+		// to being a shader accessible resource
+		
+		for (int i = 0; i < 8; ++i)
+		{
+			glActiveTexture(GL_TEXTURE0 + i);
+			glBindTexture(GL_TEXTURE_2D, 0);
+			checkErrorGL();
+		}
+	
+		glActiveTexture(GL_TEXTURE0);
+		checkErrorGL();
 	}
 }
 
