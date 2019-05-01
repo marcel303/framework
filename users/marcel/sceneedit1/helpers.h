@@ -1,17 +1,21 @@
 #pragma once
 
-#include "reflection.h"
 #include <string> // member_totext
 #include <typeindex> // todo : remove and replace with opaque type wrapping type index or type hash
 #include <vector>
+
+// forward declarations
 
 struct ComponentJson;
 struct ComponentMgrBase;
 struct ComponentSet;
 struct ComponentTypeBase;
 
-class LineReader;
-class LineWriter;
+struct Member;
+struct Type;
+struct TypeDB;
+
+//
 
 void registerBuiltinTypes();
 

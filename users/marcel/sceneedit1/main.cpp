@@ -344,6 +344,7 @@ struct SceneEditor
 					if (componentType != nullptr)
 					{
 						ImGui::LabelText("", "%s", componentType->typeName);
+						ImGui::Indent();
 						
 						bool isSet = true;
 						void * changedMemberObject = nullptr;
@@ -353,6 +354,8 @@ struct SceneEditor
 							// signal component one of its properties has changed
 							component->propertyChanged(changedMemberObject);
 						}
+						
+						ImGui::Unindent();
 					}
 				}
 				ImGui::PopID();
@@ -1227,12 +1230,12 @@ int main(int argc, char * argv[])
 		
 		s_transformComponentMgr.calculateTransforms(editor.scene);
 		
-		for (auto * type : g_componentTypes)
-		{
-			type->componentMgr->tick(dt);
-		}
-		
-		s_transformComponentMgr.calculateTransforms(editor.scene);
+			for (auto * type : g_componentTypes)
+			{
+				type->componentMgr->tick(dt);
+			}
+			
+			s_transformComponentMgr.calculateTransforms(editor.scene);
 		
 		//
 		

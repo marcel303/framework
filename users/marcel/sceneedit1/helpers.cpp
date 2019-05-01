@@ -4,6 +4,7 @@
 #include "lineReader.h"
 #include "lineWriter.h"
 #include "Log.h"
+#include "reflection.h"
 #include "scene.h"
 
 #define DEFINE_COMPONENT_TYPES

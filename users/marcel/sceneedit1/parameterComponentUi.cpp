@@ -36,9 +36,15 @@ void doParameterUi(ParameterComponentMgr & componentMgr, const char * component_
 	int numElems = 0;
 	
 	for (auto * comp = componentMgr.head; comp != nullptr; comp = comp->next)
-		if (!comp->access_parameterMgr().access_parameters().empty())
-			if (showAnonymousComponents || !comp->access_parameterMgr().access_prefix().empty())
-					elems[numElems++].comp = comp;
+	{
+		if (comp->access_parameterMgr().access_parameters().empty())
+			continue;
+			
+		if (showAnonymousComponents == false && comp->access_parameterMgr().access_prefix().empty())
+			continue;
+		
+		elems[numElems++].comp = comp;
+	}
 	
 	std::sort(elems, elems + numElems);
 	
