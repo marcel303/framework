@@ -1,4 +1,5 @@
 #include "framework.h"
+#include <algorithm>
 #include <map>
 #include <queue>
 #include <set>
@@ -66,7 +67,7 @@ static void randomizeGrid(Grid & grid)
     for (auto & column : grid.cells)
     {
         for (auto & cell : column)
-            cell.blocked = (random() % 3) == 0;
+            cell.blocked = (rand() % 3) == 0;
     }
 }
 

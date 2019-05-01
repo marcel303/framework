@@ -1,4 +1,5 @@
 #include "framework.h"
+#include <algorithm>
 
 /*
 Coding Challenge #34: Diffusion-Limited Aggregation

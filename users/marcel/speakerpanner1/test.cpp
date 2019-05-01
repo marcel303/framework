@@ -337,7 +337,7 @@ struct AudioMixer_Grid : AudioMixer
 		
 		for (auto * voice : soundObject->graphInstance->audioGraph->audioVoices)
 		{
-			float voiceSamples[numSamples];
+			float * voiceSamples = (float*)alloca(numSamples * sizeof(float));
 			voice->source->generate(voiceSamples, numSamples);
 		
 			// speaker protection. check if the voice contains weird invalid sample values,

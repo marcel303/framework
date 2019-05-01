@@ -1,3 +1,5 @@
+#ifndef WIN32
+
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
@@ -145,3 +147,15 @@ int main(int argc, char * argv[])
 	
 	return 0;
 }
+
+#else
+
+#include <stdio.h>
+
+int main(int argc, char * argv[])
+{
+	printf("no TTY/serial on Windows. sorry.\n");
+	return -1;
+}
+
+#endif
