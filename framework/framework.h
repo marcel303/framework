@@ -386,6 +386,7 @@ public:
 	void setFullscreen(bool fullscreen);
 	
 	void getCurrentViewportSize(int & sx, int & sy) const;
+	int getCurrentBackingScale() const;
 
 	void beginDraw(int r, int g, int b, int a, float depth = 1.f);
 	void endDraw();

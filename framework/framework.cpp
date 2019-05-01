@@ -118,6 +118,7 @@ static float scale255(const float v)
 	return v * m;
 }
 
+static int getCurrentBackingScale();
 static void getCurrentBackingSize(int & sx, int & sy);
 static void getCurrentViewportSize(int & sx, int & sy);
 
@@ -1529,6 +1530,11 @@ void Framework::setFullscreen(bool fullscreen)
 void Framework::getCurrentViewportSize(int & sx, int & sy) const
 {
 	::getCurrentViewportSize(sx, sy);
+}
+
+int Framework::getCurrentBackingScale() const
+{
+	return ::getCurrentBackingScale();
 }
 
 static void updateViewport(Surface * surface, SDL_Window * window)
@@ -5526,6 +5532,16 @@ static Stack<bool, 32> lineSmoothStack(false);
 static Stack<bool, 32> wireframeStack(false);
 static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
 static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
+
+static int getCurrentBackingScale()
+{
+	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	
+	if (surface != nullptr)
+		return surface->getBackingScale();
+	else
+		return s_backingScale;
+}
 
 static void getCurrentBackingSize(int & sx, int & sy)
 {
