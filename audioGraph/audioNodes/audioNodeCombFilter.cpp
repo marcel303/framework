@@ -34,7 +34,7 @@ AUDIO_NODE_TYPE(AudioNodeCombFilter)
 	typeName = "filter.comb";
 	
 	in("value", "audioValue");
-	in("maxDelay", "float");
+	in("maxDelay", "float", "0.1");
 	in("delay", "audioValue");
 	in("feedforward", "audioValue", "0.5");
 	in("feedback", "audioValue", "0");
@@ -67,7 +67,7 @@ void AudioNodeCombFilter::tick(const float dt)
 {
 	audioCpuTimingBlock(AudioNodeCombFilter);
 	
-	const float maxDelay = getInputFloat(kInput_MaxDelay, 0.f);
+	const float maxDelay = getInputFloat(kInput_MaxDelay, .1f);
 	
 	const AudioFloat * value = getInputAudioFloat(kInput_Value, &AudioFloat::Zero);
 	const AudioFloat * delay = getInputAudioFloat(kInput_Delay, &AudioFloat::Zero);
