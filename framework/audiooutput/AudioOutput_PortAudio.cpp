@@ -152,8 +152,13 @@ void AudioOutput_PortAudio::portAudioCallback(
 	void * outputBuffer,
 	const int framesPerBuffer)
 {
-	AudioSample * __restrict samples = (AudioSample*)outputBuffer;
+	AudioSample * __restrict samples;
 	const int numSamples = framesPerBuffer;
+
+	if (m_numChannels == 2)
+		samples = (AudioSample*)outputBuffer;
+	else
+		samples = (AudioSample*)alloca(numSamples * sizeof(AudioSample));
 	
 	bool generateSilence = true;
 	
@@ -175,19 +180,33 @@ void AudioOutput_PortAudio::portAudioCallback(
 	
 	if (generateSilence)
 	{
-		memset(outputBuffer, 0, framesPerBuffer * sizeof(AudioSample));
+		memset(outputBuffer, 0, numSamples * sizeof(int16_t) * m_numChannels);
+	}
+	else if (m_numChannels == 1)
+	{
+		const int volume = std::max(0, std::min(1024, m_volume.load()));
+
+		int16_t * __restrict values = (int16_t*)outputBuffer;
+	
+		for (int i = 0; i < numSamples; ++i)
+			values[i] = (int(samples[i].channel[0] + samples[i].channel[1]) * volume) >> 11;
 	}
 	else
 	{
+		Assert(m_numChannels == 2);
+		Assert(samples == outputBuffer);
+		
 		const int volume = std::max(0, std::min(1024, m_volume.load()));
-	
+
 		if (volume != 1024)
 		{
-			short * __restrict values = (short*)samples;
+			int16_t * __restrict values = (int16_t*)outputBuffer;
 			const int numValues = numSamples * 2;
-			
+		
 			for (int i = 0; i < numValues; ++i)
+			{
 				values[i] = (int(values[i]) * volume) >> 10;
+			}
 		}
 	}
 }
@@ -218,6 +237,14 @@ AudioOutput_PortAudio::~AudioOutput_PortAudio()
 
 bool AudioOutput_PortAudio::Initialize(const int numChannels, const int sampleRate, const int bufferSize)
 {
+	fassert(numChannels == 1 || numChannels == 2);
+
+	if (numChannels != 1 && numChannels != 2)
+	{
+		logError("portaudio: invalid number of channels");
+		return false;
+	}
+
 	return initPortAudio(numChannels, sampleRate, bufferSize);
 }
 
