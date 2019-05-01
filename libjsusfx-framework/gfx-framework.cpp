@@ -811,8 +811,10 @@ void JsusFxGfx_Framework::gfx_getpixel(EEL_F * r, EEL_F * g, EEL_F * b)
 	glPixelStorei(GL_PACK_ALIGNMENT, 4);
 	checkErrorGL();
 	
+	const int backingScale = framework.getCurrentBackingScale();
+	
 	glReadPixels(
-		x, y,
+		x * backingScale, y * backingScale,
 		1, 1,
 		GL_RGBA, GL_FLOAT,
 		rgba);
