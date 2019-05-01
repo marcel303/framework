@@ -582,6 +582,8 @@ public:
 	void init(const char * prefix, const int in_index = -1);
 	void tick();
 	
+	void setPrefix(const char * prefix);
+	
 	void add(ParameterBase * parameter);
 	
 	ParameterBool * addBool(const char * name, const bool defaultValue);

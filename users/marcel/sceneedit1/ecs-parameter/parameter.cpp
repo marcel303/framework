@@ -38,6 +38,11 @@ void ParameterMgr::tick()
 	}
 }
 
+void ParameterMgr::setPrefix(const char * in_prefix)
+{
+	prefix = in_prefix;
+}
+
 void ParameterMgr::add(ParameterBase * parameter)
 {
 	parameters.push_back(parameter);

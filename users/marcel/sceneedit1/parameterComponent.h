@@ -30,6 +30,8 @@ public:
 	virtual bool init() override final;
 	virtual void tick(const float dt) override final;
 	
+	virtual void propertyChanged(void * address) override final;
+	
 	void add(ParameterBase * parameter);
 	
 	ParameterBool * addBool(const char * name, const bool defaultValue);

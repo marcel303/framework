@@ -149,3 +149,9 @@ bool ParameterComponent::init()
 void ParameterComponent::tick(const float dt)
 {
 }
+
+void ParameterComponent::propertyChanged(void * address)
+{
+	if (address == &prefix)
+		parameterMgr.setPrefix(prefix.c_str());
+}

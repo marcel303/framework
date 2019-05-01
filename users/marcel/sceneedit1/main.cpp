@@ -133,9 +133,12 @@ struct SceneEditor
 	
 	std::set<int> selectedNodes;
 	
-	bool drawGroundPlane = true;
-	bool drawNodes = true;
-	bool drawNodeBoundingBoxes = true;
+	struct
+	{
+		bool drawGroundPlane = true;
+		bool drawNodes = true;
+		bool drawNodeBoundingBoxes = true;
+	} visibility;
 	
 	FrameworkImGuiContext guiContext;
 	
@@ -145,8 +148,25 @@ struct SceneEditor
 	
 	Mat4x4 projectionMatrix;
 	
+	static const int kMaxNodeDisplayNameFilter = 100;
+	static const int kMaxComponentTypeNameFilter = 100;
+	
+	struct
+	{
+		char nodeDisplayNameFilter[kMaxNodeDisplayNameFilter] = { };
+		char componentTypeNameFilter[kMaxComponentTypeNameFilter] = { };
+		std::set<int> visibleNodes;
+	} nodeUi;
+	
 	static const int kMaxParameterFilter = 100;
-	char parameterFilter[kMaxParameterFilter] = { };
+	
+	struct
+	{
+		char component_filter[kMaxParameterFilter] = { };
+		char parameter_filter[kMaxParameterFilter] = { };
+		
+		bool showAnonymousComponents = false;
+	} parameterUi;
 	
 	SceneEditor()
 	{
@@ -306,30 +326,37 @@ struct SceneEditor
 	
 	void editNode(SceneNode & node, const bool editChildren)
 	{
+		const bool do_filter = nodeUi.nodeDisplayNameFilter[0] != 0;
+		
+		const bool passes_filter = do_filter == false || strcasestr(node.displayName.c_str(), nodeUi.nodeDisplayNameFilter) != nullptr;
+		
 		// todo : make a separate function to edit a data structure (recursively)
 	#if 1
-		for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
+		if (passes_filter)
 		{
-			ImGui::PushID(component);
+			for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 			{
-				auto * componentType = findComponentType(component->typeIndex());
-				
-				Assert(componentType != nullptr);
-				if (componentType != nullptr)
+				ImGui::PushID(component);
 				{
-					ImGui::LabelText("", "%s", componentType->typeName);
+					auto * componentType = findComponentType(component->typeIndex());
 					
-					bool isSet = true;
-					void * changedMemberObject = nullptr;
-					
-					if (doReflection_StructuredType(g_typeDB, *componentType, component, isSet, nullptr, &changedMemberObject))
+					Assert(componentType != nullptr);
+					if (componentType != nullptr)
 					{
-						// signal component one of its properties has changed
-						component->propertyChanged(changedMemberObject);
+						ImGui::LabelText("", "%s", componentType->typeName);
+						
+						bool isSet = true;
+						void * changedMemberObject = nullptr;
+						
+						if (doReflection_StructuredType(g_typeDB, *componentType, component, isSet, nullptr, &changedMemberObject))
+						{
+							// signal component one of its properties has changed
+							component->propertyChanged(changedMemberObject);
+						}
 					}
 				}
+				ImGui::PopID();
 			}
-			ImGui::PopID();
 		}
 	#endif
 	
@@ -343,6 +370,9 @@ struct SceneEditor
 				if (childNodeItr != scene.nodes.end())
 				{
 					auto * childNode = childNodeItr->second;
+					
+					if (do_filter && nodeUi.visibleNodes.count(childNode->id) == 0)
+						continue;
 					
 					if (ImGui::TreeNodeEx(childNode, ImGuiTreeNodeFlags_CollapsingHeader, "%s", childNode->displayName.c_str()))
 					{
@@ -401,6 +431,13 @@ struct SceneEditor
 						scene.nodes[childNode->id] = childNode;
 						
 						scene.nodes[nodeId]->childNodeIds.push_back(childNode->id);
+					}
+					
+					if (nodeUi.nodeDisplayNameFilter[0] != 0)
+					{
+						// when a display name filter is set the node would just disappear. set the filter to the name of the newly
+						// added node in this case, to avoid confusion
+						strcpy_s(nodeUi.nodeDisplayNameFilter, sizeof(nodeUi.nodeDisplayNameFilter), childNode->displayName.c_str());
 					}
 				}
 				
@@ -552,12 +589,51 @@ struct SceneEditor
 				ImGui::SetNextWindowSize(ImVec2(370, VIEW_SY * 2/3));
 				if (ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 				{
-					ImGui::Checkbox("Draw ground plane", &drawGroundPlane);
-					ImGui::Checkbox("Draw nodes", &drawNodes);
-					ImGui::Checkbox("Draw node bounding boxes", &drawNodeBoundingBoxes);
+					ImGui::Checkbox("Draw ground plane", &visibility.drawGroundPlane);
+					ImGui::Checkbox("Draw nodes", &visibility.drawNodes);
+					ImGui::Checkbox("Draw node bounding boxes", &visibility.drawNodeBoundingBoxes);
 					
 					if (selectedNodes.empty())
 					{
+						ImGui::InputText("Display name", nodeUi.nodeDisplayNameFilter, kMaxNodeDisplayNameFilter);
+						ImGui::InputText("Component type", nodeUi.componentTypeNameFilter, kMaxComponentTypeNameFilter);
+						
+						if (nodeUi.nodeDisplayNameFilter[0] != 0)
+						{
+							nodeUi.visibleNodes.clear();
+							
+							for (auto & node_itr : scene.nodes)
+							{
+								auto nodeId = node_itr.first;
+								auto * node = node_itr.second;
+								
+								if (nodeUi.visibleNodes.count(nodeId) != 0)
+									continue;
+								
+								const bool is_visible = strcasestr(node->displayName.c_str(), nodeUi.nodeDisplayNameFilter);
+								
+								if (is_visible)
+								{
+									nodeUi.visibleNodes.insert(nodeId);
+									
+									int parentId = node->parentId;
+									
+									while (parentId != -1)
+									{
+										if (nodeUi.visibleNodes.count(parentId) != 0)
+											break;
+										
+										nodeUi.visibleNodes.insert(parentId);
+										
+										auto parentNode_itr = scene.nodes.find(parentId);
+										Assert(parentNode_itr != scene.nodes.end());
+										if (parentNode_itr != scene.nodes.end())
+											parentId = parentNode_itr->second->parentId;
+									}
+								}
+							}
+						}
+						
 						ImGui::Text("Root node");
 						editNodeListTraverse(scene.rootNodeId, true);
 					}
@@ -577,9 +653,11 @@ struct SceneEditor
 				
 				if (ImGui::Begin("Parameter UI"))
 				{
-					ImGui::InputText("Filter", parameterFilter, kMaxParameterFilter);
+					ImGui::InputText("Component filter", parameterUi.component_filter, kMaxParameterFilter);
+					ImGui::InputText("Parameter filter", parameterUi.parameter_filter, kMaxParameterFilter);
+					ImGui::Checkbox("Show components with empty prefix", &parameterUi.showAnonymousComponents);
 					
-					doParameterUi(s_parameterComponentMgr, parameterFilter);
+					doParameterUi(s_parameterComponentMgr, parameterUi.component_filter, parameterUi.parameter_filter, parameterUi.showAnonymousComponents);
 				}
 				ImGui::End();
 			}
@@ -701,48 +779,22 @@ struct SceneEditor
 		setColor(isSelected ? colorYellow : colorWhite);
 		fillCube(Vec3(), Vec3(.1f, .1f, .1f));
 		
-		const ModelComponent * modelComp = node.components.find<ModelComponent>();
-		
-		if (modelComp != nullptr)
+		if (visibility.drawNodeBoundingBoxes)
 		{
-			const Vec3 & min = modelComp->aabbMin;
-			const Vec3 & max = modelComp->aabbMax;
+			const ModelComponent * modelComp = node.components.find<ModelComponent>();
 			
-			const Vec3 position = (min + max) / 2.f;
-			const Vec3 size = (max - min) / 2.f;
-			
-			setColor(isSelected ? 255 : 60, 0, 0, 40);
-			fillCube(position, size);
-		}
-		
-	#if 0 // todo : remove ?
-		const CameraComponent * cameraComp = node.components.find<CameraComponent>();
-		
-		if (cameraComp != nullptr)
-		{
-		// todo : draw camera frustum
-		
-			const Vec3 origin = cameraComp->viewMatrix.Mul4(Vec3(0, 0, 0));
-			
-			gxBegin(GX_LINES);
+			if (modelComp != nullptr)
 			{
-				for (int dx = -1; dx <= +1; dx += 2)
-				{
-					for (int dy = -1; dy <= +1; dy += 2)
-					{
-						const int dz = 1;
-						
-						const Vec3 vertex(dx, dy, dz);
-						
-						setColor(colorWhite);
-						gxVertex3f(origin[0], origin[1], origin[2]);
-						gxVertex3f(vertex[0], vertex[1], vertex[2]);
-					}
-				}
+				const Vec3 & min = modelComp->aabbMin;
+				const Vec3 & max = modelComp->aabbMax;
+				
+				const Vec3 position = (min + max) / 2.f;
+				const Vec3 size = (max - min) / 2.f;
+				
+				setColor(isSelected ? 255 : 60, 0, 0, 40);
+				fillCube(position, size);
 			}
-			gxEnd();
 		}
-	#endif
 	}
 	
 	void drawNodesTraverse(const SceneNode & node) const
@@ -802,7 +854,7 @@ struct SceneEditor
 				popDepthTest();
 			}
 			
-			if (drawGroundPlane)
+			if (visibility.drawGroundPlane)
 			{
 				pushLineSmooth(true);
 				pushDepthTest(true, DEPTH_LESS, false);
@@ -823,7 +875,7 @@ struct SceneEditor
 				popLineSmooth();
 			}
 			
-			if (drawNodes)
+			if (visibility.drawNodes)
 			{
 				pushDepthWrite(false);
 				pushBlend(BLEND_ADD);
