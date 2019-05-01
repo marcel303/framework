@@ -10,6 +10,7 @@
 #include "soundmix.h"
 #include "ui.h"
 #include <algorithm>
+#include <math.h>
 
 #if LINUX
 	#include <portaudio.h>
