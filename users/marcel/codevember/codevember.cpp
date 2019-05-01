@@ -2,8 +2,8 @@
 #include "framework.h"
 #include "Noise.h"
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+const int GFX_SX = 800;
+const int GFX_SY = 600;
 
 void codevember1()
 {
@@ -90,4 +90,15 @@ void codevember1()
 		
 	}
 	while (!keyboard.wentDown(SDLK_SPACE));
+}
+
+int main(int argc, char * argv[])
+{
+	framework.init(GFX_SX, GFX_SY);
+
+	codevember1();
+
+	framework.shutdown();
+	
+	return 0;
 }
