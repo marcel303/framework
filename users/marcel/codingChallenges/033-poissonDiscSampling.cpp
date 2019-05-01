@@ -14,7 +14,7 @@ const float w = r / sqrtf(2); // grid cell spacing. 2 = number of dimensions
 
 const int k = 20;
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
 	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;

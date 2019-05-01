@@ -70,7 +70,7 @@ static void randomizeGrid(Grid & grid)
     }
 }
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
 	

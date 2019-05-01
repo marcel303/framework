@@ -901,7 +901,7 @@ FluidCube3d * createFluidCube3d(const int size, const float diffusion, const flo
 	return cube;
 }
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
 	if (!framework.init(600, 600))
 		return -1;

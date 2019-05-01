@@ -88,7 +88,7 @@ void main()
 
 )SHADER";
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
 	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;

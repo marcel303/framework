@@ -374,7 +374,7 @@ static const char * s_lightApplicationPs = R"SHADER(
 	}
 )SHADER";
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
 	

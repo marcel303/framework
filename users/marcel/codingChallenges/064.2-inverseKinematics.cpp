@@ -45,7 +45,7 @@ struct Segment
 	}
 };
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
 	if (!framework.init(800, 600))
 		return -1;

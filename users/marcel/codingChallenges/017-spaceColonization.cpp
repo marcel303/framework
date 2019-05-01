@@ -98,7 +98,7 @@ static void drawBranches(const Tree & tree)
 	hqEnd();
 }
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
 	if (!framework.init(800, 600))
 		return -1;
