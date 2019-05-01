@@ -2,7 +2,7 @@ include engine/ShaderPS.txt
 
 shader_in vec2 v_texcoord;
 
-uniform sampler2D texture;
+uniform sampler2D u_texture;
 uniform float lod;
 uniform float numLods;
 
@@ -12,12 +12,12 @@ void main()
 	
 	if (lod >= 0.0)
 	{
-		color = textureLod(texture, v_texcoord, lod);
+		color = textureLod(u_texture, v_texcoord, lod);
 	}
 	else
 	{
 		for (int i = 0; i < numLods; ++i)
-			color += textureLod(texture, v_texcoord, i);
+			color += textureLod(u_texture, v_texcoord, i);
 		color /= numLods;
 	}
 	

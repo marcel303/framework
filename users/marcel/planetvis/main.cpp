@@ -1727,7 +1727,7 @@ int main(int argc, char * argv[])
 						gxMultMatrixf(mat.m_v);
 
 						Shader shader("VirtualTexture");
-						shader.setTexture("texture", 0, sparseTextureObject.texture);
+						shader.setTexture("u_texture", 0, sparseTextureObject.texture);
 						setShader(shader);
 						{
 							gxBegin(GX_QUADS);
@@ -1832,7 +1832,7 @@ int main(int argc, char * argv[])
 
 						Shader shader("TexLod");
 						setShader(shader);
-						shader.setTexture("texture", 0, quadTree.texture);
+						shader.setTexture("u_texture", 0, quadTree.texture);
 						shader.setImmediate("lod", mouse.isDown(BUTTON_RIGHT) ? (mouse.x / float(GFX_SX) * quadTree.numAllocatedLevels) : -1);
 						shader.setImmediate("numLods", quadTree.numAllocatedLevels);
 						{
