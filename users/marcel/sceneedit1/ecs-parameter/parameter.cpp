@@ -1,5 +1,18 @@
 #include "Debugging.h"
 #include "parameter.h"
+#include <string.h>
+
+//
+
+int ParameterEnum::translateKeyToValue(const char * key) const
+{
+	for (auto & elem : elems)
+		if (strcmp(elem.key, key) == 0)
+			return elem.value;
+	return -1;
+}
+
+//
 
 void ParameterMgr::init(const char * in_prefix, const int in_index)
 {

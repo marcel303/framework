@@ -551,13 +551,7 @@ public:
 		return true;
 	}
 	
-	int translateKeyToValue(const char * key) const
-	{
-		for (auto & elem : elems)
-			if (strcmp(elem.key, key) == 0)
-				return elem.value;
-		return -1;
-	}
+	int translateKeyToValue(const char * key) const;
 	
 	int & access_rw() // read-write access. be careful to invalidate the value when you change it!
 	{
