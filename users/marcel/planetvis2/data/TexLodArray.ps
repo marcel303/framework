@@ -1,0 +1,53 @@
+include engine/ShaderPS.txt
+
+shader_in vec2 v_texcoord;
+
+uniform sampler2DArray texture;
+
+uniform float textureIndex;
+uniform float lod;
+uniform float numLods;
+
+vec4 sampleTexture(vec2 texcoord, float _lod)
+{
+	return textureLod(texture, vec3(v_texcoord, textureIndex), _lod);
+}
+
+void main()
+{
+	vec4 color = vec4(0.0);
+	
+	if (lod >= 0.0)
+	{
+		color = sampleTexture(v_texcoord, lod);
+	}
+	else if (false)
+	{
+		float numUsed = 0.0;
+		for (int i = 0; i < numLods; ++i)
+		{
+			vec4 texcolor = sampleTexture(v_texcoord, i);
+			color += texcolor;
+			numUsed += texcolor.a;
+		}
+		//if (numUsed != 0.0)
+		//	color /= numUsed;
+		color /= numLods;
+		color.a = 1.0;
+	}
+	else
+	{
+		for (int i = 0; i < numLods; ++i)
+		{
+			color = sampleTexture(v_texcoord, i);
+			if (color.a != 0.0)
+			{
+				color = color / color.a;
+				color.rgb /= (1.0 + i / float(numLods) * 2.0);
+				break;
+			}
+		}
+	}
+	
+	shader_fragColor = color;
+}

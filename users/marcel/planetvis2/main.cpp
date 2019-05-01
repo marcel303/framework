@@ -1893,7 +1893,7 @@ enum ControllerMode
 
 int main(int argc, char * argv[])
 {
-	changeDirectory("data");
+	changeDirectory(CHIBI_RESOURCE_PATH);
 
 	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;
@@ -1902,8 +1902,6 @@ int main(int argc, char * argv[])
 	{
 		framework.fillCachesWithPath(".", true);
 		
-		changeDirectory("D:/temp/planetvis2/data");
-
 		if (false)
 		{
 			const int baseSize = CUBE_BASE_SIZE;

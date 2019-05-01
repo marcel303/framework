@@ -11,8 +11,8 @@
 
 #define DO_VOXELTRACE 0
 #define DO_DISTANCE_TEXTURE 0
-#define DO_SPARSE_TEXTURE 0
-#define DO_QUADTREE 1
+#define DO_SPARSE_TEXTURE 1
+#define DO_QUADTREE 0
 
 #define INVERTED_DISTANCE_METRIC 0
 
@@ -1346,7 +1346,7 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 
 int main(int argc, char * argv[])
 {
-	changeDirectory("data");
+	changeDirectory(CHIBI_RESOURCE_PATH);
 
 	framework.enableDepthBuffer = true;
 
@@ -1874,6 +1874,8 @@ int main(int argc, char * argv[])
 				}
 				gxPopMatrix();
 			#endif
+
+				popDepthTest();
 			}
 			framework.endDraw();
 		}

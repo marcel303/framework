@@ -1,0 +1,25 @@
+include engine/ShaderPS.txt
+
+shader_in vec2 v_texcoord;
+
+uniform sampler2D texture;
+uniform float lod;
+uniform float numLods;
+
+void main()
+{
+	vec4 color = vec4(0.0);
+	
+	if (lod >= 0.0)
+	{
+		color = textureLod(texture, v_texcoord, lod);
+	}
+	else
+	{
+		for (int i = 0; i < numLods; ++i)
+			color += textureLod(texture, v_texcoord, i);
+		color /= numLods;
+	}
+	
+	shader_fragColor = color;
+}
