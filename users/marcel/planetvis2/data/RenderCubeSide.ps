@@ -2,7 +2,7 @@ include engine/ShaderPS.txt
 
 shader_in vec2 v_texcoord;
 
-uniform sampler2D texture;
+uniform sampler2D u_texture;
 uniform float cubeSide;
 
 float pi = 3.1415926535897932384626433832795;
@@ -21,7 +21,7 @@ void main()
 	float sampleX = cubeSide * 0.25 + t * 0.5;
 	float sampleY = v_texcoord.y;
 	
-	vec4 color = texture(texture, vec2(sampleX, sampleY));
+	vec4 color = texture(u_texture, vec2(sampleX, sampleY));
 	
 	color.r = (color.r + color.g + color.b) / 3.0;
 	

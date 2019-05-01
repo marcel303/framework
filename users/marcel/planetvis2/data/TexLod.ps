@@ -2,7 +2,7 @@ include engine/ShaderPS.txt
 
 shader_in vec2 v_texcoord;
 
-uniform sampler2D texture;
+uniform sampler2D u_texture;
 
 uniform float textureIndex;
 uniform float lod;
@@ -10,7 +10,7 @@ uniform float numLods;
 
 vec4 sampleTexture(vec2 texcoord, float _lod)
 {
-	return textureLod(texture, v_texcoord, _lod);
+	return textureLod(u_texture, v_texcoord, _lod);
 }
 
 void main()

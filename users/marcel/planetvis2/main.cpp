@@ -12,15 +12,16 @@
 #include <cmath>
 
 #define GFX_SX 1024
-#define GFX_SY 1024
+#define GFX_SY 800
 
-#define CUBE_BASE_SIZE (1024 * 16)
-//#define CUBE_BASE_SIZE (1024 * 4)
+//#define CUBE_BASE_SIZE (1024 * 16) // requires 1Gb of memory just to fill one cube side, and more to generate mip levels. this may not run on a 32 bit process!
+#define CUBE_BASE_SIZE (1024 * 8) // requires 256Mb of memory for a single cube side. this is safe to work on a 32 bit process
+//#define CUBE_BASE_SIZE (1024 * 4) // requires 64Mb of memory for a single cube side. this is safe to work on a 32 bit process
 #define CUBE_PAGE_SIZE 256
 #define CUBE_PAGE_NAME "test"
 
 #define DO_CUBE_QUADS 0
-#define DO_CUBE_QUADS_INFOS 0
+#define DO_CUBE_QUADS_INFOS 1
 #define DO_CUBE_POINTS 0
 #define DO_CUBE_LINES 0
 #define DO_CUBE_SAMPLING 1
@@ -31,7 +32,7 @@
 #define DO_PAGELOAD 1
 #define DO_PAGELOAD_TEST 0
 #define DO_PAGELOAD_ASYNC 1
-#define DO_ADDTIVE_BLENDING 0
+#define DO_ADDTIVE_BLENDING 1
 #define DO_ALEX_BATHOLOMEUS 0
 
 struct Cube;
@@ -739,7 +740,7 @@ void QuadNode::traverse(const int level, const int x, const int y, const int siz
 
 		#if DO_CUBE_SAMPLING_QUADS && 0
 		#else
-		shader.setTextureArray("texture", 0, params.cube->m_texture);
+		shader.setTextureArray("u_texture", 0, params.cube->m_texture);
 		shader.setImmediate("textureIndex", params.cubeSideIndex);
 		shader.setImmediate("lod", params.debugLod);
 		shader.setImmediate("numLods", params.cube->m_numAllocatedLevels);
@@ -790,6 +791,7 @@ void QuadNode::traverse(const int level, const int x, const int y, const int siz
 
 #if DO_CUBE_QUADS_INFOS
 		setColorf(1.f, 1.f, 1.f, 1.f / (d / 200.f + 1.f));
+		pushLineSmooth(true);
 		gxBegin(GX_LINE_LOOP);
 		{
 			const int x1 = x;
@@ -805,6 +807,7 @@ void QuadNode::traverse(const int level, const int x, const int y, const int siz
 			gxVertex3f(x1, y2, z);
 		}
 		gxEnd();
+		popLineSmooth();
 
 		setColor(colorWhite);
 		drawText(x + size/2, y + size/2, 20, 0, 0, "%d", int(d));
@@ -905,6 +908,7 @@ void CubeSide::eval(const QuadParams & params)
 		gxTranslatef(-cubeSize/2, -cubeSize/2, -cubeSize/2);
 
 		setColor(colorWhite);
+		pushLineSmooth(true);
 		gxBegin(GX_LINES);
 		{
 			const int cubeSize = m_quadTree.m_initSize;
@@ -916,6 +920,7 @@ void CubeSide::eval(const QuadParams & params)
 			gxVertex3f(v2[0], v2[1], v2[2]);
 		}
 		gxEnd();
+		pushLineSmooth(false);
 	}
 	gxPopMatrix();
 
@@ -936,6 +941,7 @@ void CubeSide::eval(const QuadParams & params)
 		drawRectLine(0, 0, m_quadTree.m_initSize, m_quadTree.m_initSize);
 
 	#if 1
+		pushLineSmooth(true);
 		gxBegin(GX_LINES);
 		{
 			setColor(255, 255, 0);
@@ -950,6 +956,7 @@ void CubeSide::eval(const QuadParams & params)
 			gxVertex3f(0.f, localParams.viewY, 0.f);
 		}
 		gxEnd();
+		pushLineSmooth(false);
 
 		setColor(colorRed);
 		drawCircle(localParams.viewX, localParams.viewY, 64.f, 20);
@@ -1199,7 +1206,7 @@ static void setPlanarTexShader(const Cube * cube, const int debugCubeSideIndex)
 
 	static Shader shader("PlanarTex");
 	setShader(shader);
-	shader.setTextureArray("texture", 0, cube->m_texture);
+	shader.setTextureArray("u_texture", 0, cube->m_texture);
 	shader.setImmediate("textureBaseSize", cube->m_initSize);
 	shader.setImmediate("lod", -1.f);
 	shader.setImmediate("numLods", cube->m_numAllocatedLevels);
@@ -1671,11 +1678,13 @@ void convertHeightValuesToPageData(const int levelSize, const int pageSize, cons
 	}
 }
 
-static void writeMip(const char * name, const int baseSize, const int cubeSide, const int levelSize, const float * heightMap, const int pageSize)
+static bool writeMip(const char * name, const int baseSize, const int cubeSide, const int levelSize, const float * heightMap, const int pageSize)
 {
 	const int numPages = (levelSize + pageSize - 1) / pageSize;
 	Assert(numPages * pageSize == levelSize);
 	Assert(pageSize == PageData::kPageSize);
+
+	bool result = true;
 
 	for (int pageX = 0; pageX < numPages; ++pageX)
 	{
@@ -1694,16 +1703,20 @@ static void writeMip(const char * name, const int baseSize, const int cubeSide, 
 
 			convertHeightValuesToPageData(levelSize, pageSize, pageX, pageY, heightMap, pageData);
 
-			pageSave(name, baseSize, pageSize, cubeSide, levelSize, pageX, pageY, pageData);
+			result &= pageSave(name, baseSize, pageSize, cubeSide, levelSize, pageX, pageY, pageData);
 		}
 	}
+
+	return result;
 }
 
-static void writeMips(const char * name, const int baseSize, const int pageSize, const int cubeSide, float *& heightMap)
+static bool writeMips(const char * name, const int baseSize, const int pageSize, const int cubeSide, float *& heightMap)
 {
+	bool result = true;
+
 	for (int size = baseSize; size >= pageSize; size /= 2)
 	{
-		writeMip(name, baseSize, cubeSide, size, heightMap, pageSize);
+		result &= writeMip(name, baseSize, cubeSide, size, heightMap, pageSize);
 
 		float * nextHeightMap = nextMip(heightMap, size);
 
@@ -1715,6 +1728,8 @@ static void writeMips(const char * name, const int baseSize, const int pageSize,
 
 	delete[] heightMap;
 	heightMap = nullptr;
+
+	return result;
 }
 
 static void generateTextureArray(const char * name, const int baseSize, const int pageSize, const char * imageFilename)
@@ -1774,7 +1789,7 @@ static void generateTextureArray(const char * name, const int baseSize, const in
 					Shader shader("RenderCubeSide");
 					setShader(shader);
 					{
-						shader.setTexture("texture", 0, texture);
+						shader.setTexture("u_texture", 0, texture);
 						shader.setImmediate("cubeSide", cubeSide);
 
 						drawRect(0, 0, cubeSideSurface->getWidth(), cubeSideSurface->getHeight());
@@ -1832,7 +1847,9 @@ static void generateTextureArray(const char * name, const int baseSize, const in
 					values[i] *= random(.5f, 1.f);
 				}
 
-				writeMips(name, baseSize, pageSize, cubeSide, values);
+				if (writeMips(name, baseSize, pageSize, cubeSide, values) == false)
+					logError("failed to write mips for cube side %d", cubeSide);
+
 				Assert(values == nullptr);
 			}
 
@@ -1843,8 +1860,8 @@ static void generateTextureArray(const char * name, const int baseSize, const in
 
 static void generateTextureArray(const char * name, const int baseSize, const int pageSize)
 {
-	generateTextureArray(name, baseSize, pageSize, "highres-cylinder04.png");
-	return;
+	//generateTextureArray(name, baseSize, pageSize, "highres-cylinder04.png");
+	//return;
 
 	char lastFilename[1024];
 	if (!pageFilename(name, baseSize, pageSize, 5, pageSize, 0, 0, lastFilename, sizeof(lastFilename)))
@@ -1858,6 +1875,8 @@ static void generateTextureArray(const char * name, const int baseSize, const in
 
 		for (int y = 0; y < baseSize; ++y)
 		{
+			printf("generating cube map side %d/6, line %d/%d\n", cubeSide + 1, y + 1, baseSize);
+
 			float * __restrict heightMapLine = heightMap + y * baseSize;
 
 			for (int x = 0; x < baseSize; ++x)
@@ -1902,7 +1921,7 @@ int main(int argc, char * argv[])
 	{
 		framework.fillCachesWithPath(".", true);
 		
-		if (false)
+		if (true)
 		{
 			const int baseSize = CUBE_BASE_SIZE;
 			const int pageSize = CUBE_PAGE_SIZE;
@@ -2030,8 +2049,7 @@ int main(int argc, char * argv[])
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
-				Mat4x4 matP;
-				matP.MakePerspectiveLH(Calc::DegToRad(90.f), GFX_SY / float(GFX_SX), 1.f, 100000.f);
+				projectPerspective3d(90.f, 1.f, 100000.f);
 				
 				Mat4x4 matV;
 				if (controllerMode == kControl_ViewCam)
@@ -2047,11 +2065,9 @@ int main(int argc, char * argv[])
 					matV = matV.CalcInv();
 				}
 
-				matP = matP * matV;
-
 				gxMatrixMode(GX_PROJECTION);
 				gxPushMatrix();
-				gxLoadMatrixf(matP.m_v);
+				gxMultMatrixf(matV.m_v);
 				gxMatrixMode(GX_MODELVIEW);
 				gxPushMatrix();
 				gxLoadIdentity();
@@ -2059,9 +2075,7 @@ int main(int argc, char * argv[])
 #if DO_ADDTIVE_BLENDING
 					setBlend(BLEND_ADD);
 #else
-					glEnable(GL_DEPTH_TEST);
-					glDepthFunc(GL_LESS);
-
+					setDepthTest(true, DEPTH_LESS, true);
 					setBlend(BLEND_OPAQUE);
 #endif
 
@@ -2112,7 +2126,7 @@ int main(int argc, char * argv[])
 					}
 
 #if !DO_ADDTIVE_BLENDING
-					glDisable(GL_DEPTH_TEST);
+					setDepthTest(false, DEPTH_LESS, true);
 #endif
 
 					setBlend(BLEND_ALPHA);
@@ -2122,10 +2136,12 @@ int main(int argc, char * argv[])
 				gxMatrixMode(GX_MODELVIEW);
 				gxPopMatrix();
 
+				projectScreen2d();
+
 			#if 0
 				Shader shader("TextureArray");
 				setShader(shader);
-				shader.setTextureArray("texture", 0, cube->m_texture);
+				shader.setTextureArray("u_texture", 0, cube->m_texture);
 				const float t = framework.time / 5.f;
 				shader.setImmediate("textureIndex", int(t) % 6);
 				shader.setImmediate("lod", int(t * cube->m_numAllocatedLevels) % cube->m_numAllocatedLevels);
@@ -2140,7 +2156,7 @@ int main(int argc, char * argv[])
 				setBlend(BLEND_OPAQUE);
 				Shader shader("TextureArray");
 				setShader(shader);
-				shader.setTextureArray("texture", 0, cube->m_residencyMap);
+				shader.setTextureArray("u_texture", 0, cube->m_residencyMap);
 				shader.setImmediate("textureIndex", 0);
 				shader.setImmediate("lod", 0);
 				{
@@ -2156,7 +2172,7 @@ int main(int argc, char * argv[])
 
 					Shader shader("TextureArray");
 					setShader(shader);
-					shader.setTextureArray("texture", 0, textureArrayObject.texture);
+					shader.setTextureArray("u_texture", 0, textureArrayObject.texture);
 					shader.setImmediate("textureIndex", taIndex);
 					shader.setImmediate("lod", taLod);
 					{
