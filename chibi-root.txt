@@ -34,6 +34,7 @@ push_group libraries
 	add users/marcel/libjgmod-audiograph
 	add users/marcel/libreflection
 	add users/marcel/libreflection-bindtofile
+	add users/marcel/libreflection-jsonio
 	add users/marcel/libreflection-textio
 	add users/marcel/optionmenu
 

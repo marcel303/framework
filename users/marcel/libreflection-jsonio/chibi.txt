@@ -1,0 +1,9 @@
+library libreflection-jsonio
+	depend_library libgg
+	depend_library libreflection
+	depend_library rapidjson
+	add_files reflection-jsonio.cpp reflection-jsonio.h
+
+app libreflection-jsonio-test
+	depend_library libreflection-jsonio
+	add_files main.cpp
