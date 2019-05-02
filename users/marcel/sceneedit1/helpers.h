@@ -6,6 +6,7 @@
 
 // forward declarations
 
+struct ComponentBase;
 struct ComponentJson;
 struct ComponentMgrBase;
 struct ComponentSet;
@@ -26,6 +27,7 @@ ComponentTypeBase * findComponentType(const char * typeName);
 ComponentTypeBase * findComponentType(const std::type_index & typeIndex);
 
 void freeComponentsInComponentSet(ComponentSet & componentSet);
+void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase * component);
 
 bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * object, const ComponentJson & j);
 bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object, const ComponentJson & j);

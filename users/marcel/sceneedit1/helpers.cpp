@@ -137,6 +137,19 @@ void freeComponentsInComponentSet(ComponentSet & componentSet)
 	componentSet.head = nullptr;
 }
 
+void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase * component)
+{
+	componentSet.remove(component);
+	
+	auto * componentType = findComponentType(component->typeIndex());
+	Assert(componentType != nullptr);
+	
+	auto * componentMgr = componentType->componentMgr;
+
+	componentMgr->destroyComponent(component);
+	Assert(component == nullptr);
+}
+
 // member <-> json serialization
 
 #if ENABLE_COMPONENT_JSON
