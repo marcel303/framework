@@ -19,3 +19,6 @@ url=https://github.com/marcel303/SDL-mirror.git
 [submodule "3rdparty/box2d"]
 	path = 3rdparty/box2d
 	url = https://github.com/erincatto/Box2D
+[submodule "3rdparty/rapidjson"]
+	path = 3rdparty/rapidjson
+	url = https://github.com/Tencent/rapidjson.git
