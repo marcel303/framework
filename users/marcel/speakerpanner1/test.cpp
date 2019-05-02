@@ -10,7 +10,7 @@
 #include "soundmix.h"
 #include "ui.h"
 #include <algorithm>
-#include <math.h>
+#include <cmath>
 
 #if LINUX
 	#include <portaudio.h>
@@ -345,7 +345,7 @@ struct AudioMixer_Grid : AudioMixer
 			// and mute the voice when it does
 			bool voiceContainsWeirdSamples = false;
 			for (int i = 0; i < numSamples; ++i)
-				if (isinf(voiceSamples[i]) || isnan(voiceSamples[i]))
+				if (std::isinf(voiceSamples[i]) || std::isnan(voiceSamples[i]))
 					voiceContainsWeirdSamples = true;
 			
 			assert(voiceContainsWeirdSamples == false);
