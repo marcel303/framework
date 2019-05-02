@@ -18,6 +18,86 @@ int main(int argc, char * argv[])
 	auto & double_type = typeDB.addPlain<double>("double", kDataType_Double);
 	auto & string_type = typeDB.addPlain<std::string>("string", kDataType_String);
 	
+	printf("-- plain_type_fromjson tests --\n");
+	printf("\n");
+	
+	{
+		rapidjson::Document document;
+		document.Parse("true");
+		bool value = false;
+		plain_type_fromjson(&bool_type, &value, document);
+		
+		printf("bool from json: %s\n", value ? "true" : "false");
+	}
+	
+	{
+		rapidjson::Document document;
+		document.Parse("42");
+		int value = 0;
+		plain_type_fromjson(&int_type, &value, document);
+		
+		printf("int from json: %d\n", value);
+	}
+	
+	{
+		rapidjson::Document document;
+		document.Parse("42.1");
+		float value = 0.f;
+		plain_type_fromjson(&float_type, &value, document);
+		
+		printf("float from json: %f\n", value);
+	}
+	
+	{
+		rapidjson::Document document;
+		document.Parse("{ \"x\": 1.0, \"y\": 2.0 }");
+		Vec2 value;
+		plain_type_fromjson(&vec2_type, &value, document);
+		
+		printf("vec2 from json: (%f, %f)\n", value[0], value[1]);
+	}
+	
+	{
+		rapidjson::Document document;
+		document.Parse("{ \"x\": 1.0, \"y\": 2.0, \"z\": 3.0  }");
+		Vec3 value;
+		plain_type_fromjson(&vec3_type, &value, document);
+		
+		printf("vec3 from json: (%f, %f, %f)\n", value[0], value[1], value[2]);
+	}
+	
+	{
+		rapidjson::Document document;
+		document.Parse("{ \"x\": 1.0, \"y\": 2.0, \"z\": 3.0, \"w\": 4.0  }");
+		Vec4 value;
+		plain_type_fromjson(&vec4_type, &value, document);
+		
+		printf("vec4 from json: (%f, %f, %f, %f)\n", value[0], value[1], value[2], value[3]);
+	}
+	
+	{
+		rapidjson::Document document;
+		document.Parse("42.1");
+		double value = 0.0;
+		plain_type_fromjson(&double_type, &value, document);
+		
+		printf("double from json: %f\n", value);
+	}
+	
+	{
+		rapidjson::Document document;
+		document.Parse("\"hello json\"");
+		std::string value;
+		plain_type_fromjson(&string_type, &value, document);
+		
+		printf("string from json: %s\n", value.c_str());
+	}
+	
+	printf("\n");
+	
+	printf("-- plain_type_tojson tests --\n");
+	printf("\n");
+	
 	{
 		rapidjson::StringBuffer json;
 		bool value = true;
@@ -81,6 +161,8 @@ int main(int argc, char * argv[])
 		
 		printf("string json: %s\n", json.GetString());
 	}
+	
+	printf("\n");
 	
 	return 0;
 }

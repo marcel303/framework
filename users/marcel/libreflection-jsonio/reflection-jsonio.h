@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 
 // forward declarations
@@ -12,7 +13,7 @@ struct TypeDB;
 
 // plain type from and to json
 
-bool plain_type_fromjson(const PlainType * plain_type, void * object, const char * json);
+bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapidjson::Document & document);
 
 bool plain_type_tojson(const PlainType * plain_type, const void * object, rapidjson::StringBuffer & out_json);
 
