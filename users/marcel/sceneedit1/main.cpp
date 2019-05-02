@@ -28,6 +28,23 @@
 #include "componentJson.h" // todo : remove
 #include <json.hpp> // todo : remove
 
+/*
+
+todo :
+
+- add libreflection-jsonio
+- remove json references from scene edit
+- add general monitor camera. or extend framework's Camera3d to support perspective, orbit and ortho modes
+- avoid UI from jumping around
+	- add independent scrolling area for scene structure
+	- add independent scrolling area for selected node
+- use scene structure tree to select nodes. remove inline editing
+- add lookat/focus option to scene structure view
+	- as a context menu
+- separate node traversal/scene structure view from node editor
+
+*/
+
 extern void test_templates();
 extern bool test_scenefiles();
 extern bool test_templateEditor();
@@ -139,6 +156,12 @@ struct SceneEditor
 		bool drawNodes = true;
 		bool drawNodeBoundingBoxes = true;
 	} visibility;
+	
+	struct
+	{
+		bool tickScene = false;
+		bool drawScene = false;
+	} preview;
 	
 	FrameworkImGuiContext guiContext;
 	
@@ -324,15 +347,15 @@ struct SceneEditor
 	#endif
 	}
 	
-	void editNode(SceneNode & node, const bool editChildren)
+	void editNode(SceneNode & node, const bool editComponents, const bool editChildren)
 	{
 		const bool do_filter = nodeUi.nodeDisplayNameFilter[0] != 0;
 		
 		const bool passes_filter = do_filter == false || strcasestr(node.displayName.c_str(), nodeUi.nodeDisplayNameFilter) != nullptr;
 		
 		// todo : make a separate function to edit a data structure (recursively)
-	#if 1
-		if (passes_filter)
+		
+		if (editComponents && passes_filter)
 		{
 			if (node.components.head == nullptr)
 			{
@@ -408,7 +431,6 @@ struct SceneEditor
 				}
 			}
 		}
-	#endif
 	
 		if (editChildren)
 		{
@@ -424,11 +446,27 @@ struct SceneEditor
 					if (do_filter && nodeUi.visibleNodes.count(childNode->id) == 0)
 						continue;
 					
-					if (ImGui::TreeNodeEx(childNode, ImGuiTreeNodeFlags_CollapsingHeader, "%s", childNode->displayName.c_str()))
+					const bool isSelected = selectedNodes.count(childNode->id) != 0;
+					const bool isLeaf = childNode->childNodeIds.empty();
+					
+					const bool isOpen = ImGui::TreeNodeEx(childNode,
+						(ImGuiTreeNodeFlags_OpenOnArrow * 1) |
+						(ImGuiTreeNodeFlags_Selected * isSelected) |
+						(ImGuiTreeNodeFlags_Leaf * isLeaf) |
+						(ImGuiTreeNodeFlags_FramePadding * 0), "%s", childNode->displayName.c_str());
+					const bool isClicked = ImGui::IsItemClicked();
+					
+					if (isClicked)
 					{
-						ImGui::Indent();
-						editNodeListTraverse(childNodeId, editChildren);
-						ImGui::Unindent();
+						selectedNodes.clear();
+						selectedNodes.insert(childNode->id);
+					}
+					
+					if (isOpen)
+					{
+						editNodeListTraverse(childNodeId, editComponents, editChildren);
+						
+						ImGui::TreePop();
 					}
 				}
 			}
@@ -528,7 +566,7 @@ struct SceneEditor
 		return result;
 	}
 	
-	void editNodeListTraverse(const int nodeId, const bool editChildren)
+	void editNodeListTraverse(const int nodeId, const bool editComponents, const bool editChildren)
 	{
 		auto nodeItr = scene.nodes.find(nodeId);
 		Assert(nodeItr != scene.nodes.end());
@@ -539,17 +577,20 @@ struct SceneEditor
 		
 		ImGui::PushID(nodeId);
 		{
-			ImGui::Text("Node");
-			ImGui::Indent();
+			if (editComponents)
 			{
-				char name[256];
-				sprintf_s(name, sizeof(name), "%s", node.displayName.c_str());
-				if (ImGui::InputText("Name", name, sizeof(name)))
-					node.displayName = name;
+				ImGui::Text("Node");
+				ImGui::Indent();
+				{
+					char name[256];
+					sprintf_s(name, sizeof(name), "%s", node.displayName.c_str());
+					if (ImGui::InputText("Name", name, sizeof(name)))
+						node.displayName = name;
+				}
+				ImGui::Unindent();
 			}
-			ImGui::Unindent();
 			
-			editNode(node, editChildren);
+			editNode(node, editComponents, editChildren);
 		}
 		ImGui::PopID();
 	}
@@ -666,7 +707,7 @@ struct SceneEditor
 			guiContext.processBegin(dt, VIEW_SX, VIEW_SY, inputIsCaptured);
 			{
 				ImGui::SetNextWindowPos(ImVec2(4, 4));
-				ImGui::SetNextWindowSize(ImVec2(370, VIEW_SY * 2/3));
+				ImGui::SetNextWindowSize(ImVec2(370, VIEW_SY * 4/5));
 				if (ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 				{
 					if (ImGui::CollapsingHeader("Visibility", ImGuiTreeNodeFlags_DefaultOpen))
@@ -680,13 +721,24 @@ struct SceneEditor
 						ImGui::Unindent();
 					}
 					
-					if (ImGui::CollapsingHeader("Scene structure", ImGuiTreeNodeFlags_DefaultOpen))
+					if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						ImGui::Indent();
 						{
-							ImGui::InputText("Display name", nodeUi.nodeDisplayNameFilter, kMaxNodeDisplayNameFilter);
-							ImGui::InputText("Component type", nodeUi.componentTypeNameFilter, kMaxComponentTypeNameFilter);
+							ImGui::Checkbox("Tick", &preview.tickScene);
+							ImGui::SameLine();
+							ImGui::Checkbox("Draw", &preview.drawScene);
+						}
+						ImGui::Unindent();
+					}
+					
+					if (ImGui::CollapsingHeader("Scene structure", ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						ImGui::InputText("Display name", nodeUi.nodeDisplayNameFilter, kMaxNodeDisplayNameFilter);
+						ImGui::InputText("Component type", nodeUi.componentTypeNameFilter, kMaxComponentTypeNameFilter);
 						
+						ImGui::BeginChild("Scene structure", ImVec2(0, 200), ImGuiWindowFlags_AlwaysVerticalScrollbar);
+						{
 							if (nodeUi.nodeDisplayNameFilter[0] != 0)
 							{
 								nodeUi.visibleNodes.clear();
@@ -724,21 +776,21 @@ struct SceneEditor
 							}
 						
 							ImGui::Text("Root node");
-							editNodeListTraverse(scene.rootNodeId, true);
+							editNodeListTraverse(scene.rootNodeId, false, true);
 						}
-						ImGui::Unindent();
+						ImGui::EndChild();
 					}
 					
 					if (ImGui::CollapsingHeader("Selected node(s)", ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						ImGui::Indent();
+						ImGui::BeginChild("Selected nodes", ImVec2(0, 200), ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
 							for (auto & selectedNodeId : selectedNodes)
 							{
-								editNodeListTraverse(selectedNodeId, false);
+								editNodeListTraverse(selectedNodeId, true, false);
 							}
 						}
-						ImGui::Unindent();
+						ImGui::EndChild();
 					}
 					
 					removeNodesToRemove();
@@ -941,7 +993,7 @@ struct SceneEditor
 		projectPerspective3d(60.f, .1f, 100.f);
 		camera.pushViewMatrix();
 		{
-			if (true)
+			if (preview.drawScene)
 			{
 				pushDepthTest(true, DEPTH_LESS);
 				pushBlend(BLEND_OPAQUE);
@@ -1323,12 +1375,15 @@ int main(int argc, char * argv[])
 		
 		s_transformComponentMgr.calculateTransforms(editor.scene);
 		
+		if (editor.preview.tickScene)
+		{
 			for (auto * type : g_componentTypes)
 			{
 				type->componentMgr->tick(dt);
 			}
 			
 			s_transformComponentMgr.calculateTransforms(editor.scene);
+		}
 		
 		//
 		
