@@ -51,7 +51,7 @@ void ModelComponent::draw(const Mat4x4 & objectToWorld) const
 		const float finalScale = scale * (centimetersToMeters ? .01f : 1.f);
 		
 		setColor(colorWhite);
-		Model(filename.c_str()).drawEx(Vec3(), rotation.axis, rotation.angle, finalScale, drawFlags);
+		Model(filename.c_str()).drawEx(Vec3(), rotation.axis, rotation.angle * float(M_PI) / 180.f, finalScale, drawFlags);
 	}
 	gxPopMatrix();
 }
