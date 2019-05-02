@@ -2,6 +2,7 @@
 #include "parameterComponentUi.h"
 #include "parameterUi.h"
 #include <algorithm>
+#include <string.h>
 
 void doParameterUi(ParameterComponentMgr & componentMgr, const char * component_filter, const char * parameter_filter, const bool showAnonymousComponents)
 {
