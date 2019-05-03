@@ -182,6 +182,8 @@ int main(int argc, char * argv[])
 		Vec4 v4 = Vec4(9.f, 10.f, 11.f, 12.f);
 		std::string s = "hello json";
 		std::vector<TestStruct> children;
+		std::vector<int> int_children;
+		std::vector<Vec2> vec2_children;
 		
 		void dump(const int indent)
 		{
@@ -202,6 +204,18 @@ int main(int argc, char * argv[])
 				print_indent(indent); printf("child [%d]\n", int(i));
 				children[i].dump(indent + 1);
 			}
+			
+			print_indent(indent); printf("int_children:\n");
+			for (auto & i : int_children)
+			{
+				print_indent(indent + 1); printf("%d\n", i);
+			}
+			
+			print_indent(indent); printf("vec2_children:\n");
+			for (auto & v : vec2_children)
+			{
+				print_indent(indent + 1); printf("%(%f, %f)\n", v[0], v[1]);
+			}
 		}
 	};
 	
@@ -213,7 +227,9 @@ int main(int argc, char * argv[])
 		.add("v3", &TestStruct::v3)
 		.add("v4", &TestStruct::v4)
 		.add("s", &TestStruct::s)
-		.add("children", &TestStruct::children);
+		.add("children", &TestStruct::children)
+		.add("int_children", &TestStruct::int_children)
+		.add("vec2_children", &TestStruct::vec2_children);
 	
 	{
 		rapidjson::StringBuffer json;
@@ -234,12 +250,21 @@ int main(int argc, char * argv[])
 	{
 		TestStruct object;
 		object.children.resize(2);
+		object.children[0].i = 123456;
+		object.children[1].i = 234567;
+		object.children[0].s = "ok! 1";
+		object.children[1].s = "ok! 2";
+		object.int_children.resize(4, 42);
+		object.vec2_children.resize(4, Vec2(4.f, 2.f));
 		
 		const Type * object_type = typeDB.findType(object);
 		
 		rapidjson::StringBuffer json;
 		REFLECTIONIO_JSON_WRITER writer(json);
 		object_tojson_recursive(typeDB, object_type, &object, writer);
+		
+		printf("object at time of object_tojson_recursive:\n");
+		object.dump(1);
 		
 		rapidjson::Document document;
 		document.Parse(json.GetString());
@@ -252,6 +277,8 @@ int main(int argc, char * argv[])
 		object.v4.SetZero();
 		object.s.clear();
 		object.children.clear();
+		object.int_children.clear();
+		object.vec2_children.clear();
 		
 		printf("object before object_fromjson_recursive:\n");
 		object.dump(1);

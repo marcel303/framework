@@ -9,29 +9,29 @@
 #include "Vec4.h"
 #include <string>
 
-bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapidjson::Document::ValueType & document /* todo : rename to json */)
+bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapidjson::Document::ValueType & json)
 {
 // todo : handle errors
 
 	switch (plain_type->dataType)
 	{
 	case kDataType_Bool:
-		plain_type->access<bool>(object) = document.GetBool();
+		plain_type->access<bool>(object) = json.GetBool();
 		return true;
 		
 	case kDataType_Int:
-		plain_type->access<int>(object) = document.GetInt();
+		plain_type->access<int>(object) = json.GetInt();
 		return true;
 
 	case kDataType_Float:
-		plain_type->access<float>(object) = document.GetFloat();
+		plain_type->access<float>(object) = json.GetFloat();
 		return true;
 		
 	case kDataType_Float2:
 		{
 			auto & value = plain_type->access<Vec2>(object);
 			
-			auto object = document.GetObject();
+			auto object = json.GetObject();
 			
 			for (auto member = object.begin(); member != object.end(); ++member)
 			{
@@ -49,7 +49,7 @@ bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapi
 		{
 			auto & value = plain_type->access<Vec3>(object);
 			
-			auto object = document.GetObject();
+			auto object = json.GetObject();
 			
 			for (auto member = object.begin(); member != object.end(); ++member)
 			{
@@ -69,7 +69,7 @@ bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapi
 		{
 			auto & value = plain_type->access<Vec4>(object);
 			
-			auto object = document.GetObject();
+			auto object = json.GetObject();
 			
 			for (auto member = object.begin(); member != object.end(); ++member)
 			{
@@ -88,11 +88,11 @@ bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapi
 		return true;
 		
 	case kDataType_Double:
-		plain_type->access<double>(object) = document.GetDouble();
+		plain_type->access<double>(object) = json.GetDouble();
 		return true;
 		
 	case kDataType_String:
-		plain_type->access<std::string>(object) = document.GetString();
+		plain_type->access<std::string>(object) = json.GetString();
 		return true;
 		
 	case kDataType_Other:
@@ -227,15 +227,15 @@ bool member_tojson_recursive(
 			}
 			else
 			{
+				const PlainType * plain_type = static_cast<const PlainType*>(vector_type);
+				
 				writer.StartArray();
 				{
 					for (size_t i = 0; i < vector_size; ++i)
 					{
 						auto * vector_object = member_interface->vector_access((void*)object, i);
 						
-					// todo : optimize if it's a plain type ?
-					// todo : also optimize in -textio
-						result &= object_tojson_recursive(typeDB, vector_type, vector_object, writer);
+						result &= plain_type_tojson(plain_type, vector_object, writer);
 					}
 				}
 				writer.EndArray();
@@ -291,7 +291,7 @@ bool object_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * 
 			
 			if (member == nullptr)
 			{
-				// the lines contain data for a member we don't know. skip it
+				// the member json contains data for a member we don't know. skip it
 				
 				LOG_WRN("unknown member: %s", name);
 			}
@@ -340,29 +340,32 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Member * member, voi
 		{
 			auto json_array = document.GetArray();
 			
-			for (auto json_element = json_array.begin(); json_element != json_array.end(); ++json_element)
+			member_interface->vector_resize(object, json_array.Size());
+			
+			int index = 0;
+			
+			for (auto json_element = json_array.begin(); json_element != json_array.end(); ++json_element, ++index)
 			{
-				member_interface->vector_resize(object, member_interface->vector_size(object) + 1);
-				
-				auto * vector_object = member_interface->vector_access(object, member_interface->vector_size(object) - 1);
+				auto * vector_object = member_interface->vector_access(object, index);
 				
 				result &= object_fromjson_recursive(typeDB, vector_type, vector_object, *json_element);
 			}
 		}
 		else
 		{
-			// more condensed format for plain data
+			// optimization for plain type data. call plain_type_fromjson(..) directly
 			
 			auto * plain_type = static_cast<const PlainType*>(vector_type);
 			
 			auto json_array = document.GetArray();
 			
-			for (auto json_element = json_array.begin(); json_element != json_array.end(); ++json_element)
+			member_interface->vector_resize(object, json_array.Size());
+			
+			int index = 0;
+			
+			for (auto json_element = json_array.begin(); json_element != json_array.end(); ++json_element, ++index)
 			{
-			// todo : optimize vector resizes since we already know the size it will be
-				member_interface->vector_resize(object, member_interface->vector_size(object) + 1);
-				
-				auto * vector_object = member_interface->vector_access(object, member_interface->vector_size(object) - 1);
+				auto * vector_object = member_interface->vector_access(object, index);
 			
 				result &= plain_type_fromjson(plain_type, vector_object, *json_element);
 			}
@@ -403,8 +406,6 @@ bool object_tojson_recursive(const TypeDB & typeDB, const Type * type, const voi
 			{
 				writer.Key(member->name);
 				
-				writer.Flush();
-				
 				result &= member_tojson_recursive(typeDB, structured_type, object, member, writer);
 			}
 		}
@@ -415,8 +416,6 @@ bool object_tojson_recursive(const TypeDB & typeDB, const Type * type, const voi
 	else
 	{
 		auto * plain_type = static_cast<const PlainType*>(type);
-		
-		writer.Flush();
 		
 		if (plain_type_tojson(plain_type, object, writer) == false)
 		{
