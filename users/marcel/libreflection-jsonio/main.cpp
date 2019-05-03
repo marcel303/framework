@@ -266,6 +266,9 @@ int main(int argc, char * argv[])
 		printf("object at time of object_tojson_recursive:\n");
 		object.dump(1);
 		
+		printf("json:\n");
+		printf("%s\n", json.GetString());
+		
 		rapidjson::Document document;
 		document.Parse(json.GetString());
 		

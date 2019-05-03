@@ -11,24 +11,31 @@
 
 bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapidjson::Document::ValueType & json)
 {
-// todo : handle errors
-
 	switch (plain_type->dataType)
 	{
 	case kDataType_Bool:
+		if (json.IsBool() == false)
+			return false;
 		plain_type->access<bool>(object) = json.GetBool();
 		return true;
 		
 	case kDataType_Int:
+		if (json.IsInt() == false)
+			return false;
 		plain_type->access<int>(object) = json.GetInt();
 		return true;
 
 	case kDataType_Float:
+		if (json.IsFloat() == false)
+			return false;
 		plain_type->access<float>(object) = json.GetFloat();
 		return true;
 		
 	case kDataType_Float2:
 		{
+			if (json.IsObject() == false)
+				return false;
+			
 			auto & value = plain_type->access<Vec2>(object);
 			
 			auto object = json.GetObject();
@@ -47,6 +54,9 @@ bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapi
 		
 	case kDataType_Float3:
 		{
+			if (json.IsObject() == false)
+				return false;
+			
 			auto & value = plain_type->access<Vec3>(object);
 			
 			auto object = json.GetObject();
@@ -67,6 +77,9 @@ bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapi
 		
 	case kDataType_Float4:
 		{
+			if (json.IsObject() == false)
+				return false;
+			
 			auto & value = plain_type->access<Vec4>(object);
 			
 			auto object = json.GetObject();
@@ -88,10 +101,14 @@ bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapi
 		return true;
 		
 	case kDataType_Double:
+		if (json.IsDouble() == false)
+			return false;
 		plain_type->access<double>(object) = json.GetDouble();
 		return true;
 		
 	case kDataType_String:
+		if (json.IsString() == false)
+			return false;
 		plain_type->access<std::string>(object) = json.GetString();
 		return true;
 		
