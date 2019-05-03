@@ -100,69 +100,171 @@ int main(int argc, char * argv[])
 	
 	{
 		rapidjson::StringBuffer json;
+		REFLECTIONIO_JSON_WRITER writer(json);
 		bool value = true;
-		plain_type_tojson(&bool_type, &value, json);
+		plain_type_tojson(&bool_type, &value, writer);
 		
 		printf("bool json: %s\n", json.GetString());
 	}
 	
 	{
 		rapidjson::StringBuffer json;
+		REFLECTIONIO_JSON_WRITER writer(json);
 		int value = 42;
-		plain_type_tojson(&int_type, &value, json);
+		plain_type_tojson(&int_type, &value, writer);
 		
 		printf("int json: %s\n", json.GetString());
 	}
 	
 	{
 		rapidjson::StringBuffer json;
+		REFLECTIONIO_JSON_WRITER writer(json);
 		float value = .42f;
-		plain_type_tojson(&float_type, &value, json);
+		plain_type_tojson(&float_type, &value, writer);
 		
 		printf("float json: %s\n", json.GetString());
 	}
 	
 	{
 		rapidjson::StringBuffer json;
+		REFLECTIONIO_JSON_WRITER writer(json);
 		Vec2 value(.12f, .34f);
-		plain_type_tojson(&vec2_type, &value, json);
+		plain_type_tojson(&vec2_type, &value, writer);
 		
 		printf("vec2 json: %s\n", json.GetString());
 	}
 	
 	{
 		rapidjson::StringBuffer json;
+		REFLECTIONIO_JSON_WRITER writer(json);
 		Vec3 value(.12f, .34f, .56f);
-		plain_type_tojson(&vec3_type, &value, json);
+		plain_type_tojson(&vec3_type, &value, writer);
 		
 		printf("vec3 json: %s\n", json.GetString());
 	}
 	
 	{
 		rapidjson::StringBuffer json;
+		REFLECTIONIO_JSON_WRITER writer(json);
 		Vec4 value(.12f, .34f, .56f, .67f);
-		plain_type_tojson(&vec4_type, &value, json);
+		plain_type_tojson(&vec4_type, &value, writer);
 		
 		printf("vec4 json: %s\n", json.GetString());
 	}
 	
 	{
 		rapidjson::StringBuffer json;
+		REFLECTIONIO_JSON_WRITER writer(json);
 		double value = 0.42;
-		plain_type_tojson(&double_type, &value, json);
+		plain_type_tojson(&double_type, &value, writer);
 		
 		printf("doubld json: %s\n", json.GetString());
 	}
 	
 	{
 		rapidjson::StringBuffer json;
+		REFLECTIONIO_JSON_WRITER writer(json);
 		std::string value = "hello json";
-		plain_type_tojson(&string_type, &value, json);
+		plain_type_tojson(&string_type, &value, writer);
 		
 		printf("string json: %s\n", json.GetString());
 	}
 	
 	printf("\n");
+	
+	struct TestStruct
+	{
+		int i = 1;
+		float f = 2.f;
+		double d = 3.0;
+		Vec2 v2 = Vec2(4.f, 5.f);
+		Vec3 v3 = Vec3(6.f, 7.f, 8.f);
+		Vec4 v4 = Vec4(9.f, 10.f, 11.f, 12.f);
+		std::string s = "hello json";
+		std::vector<TestStruct> children;
+		
+		void dump(const int indent)
+		{
+			auto print_indent = [](const int indent)
+			{
+				for (int i = 0; i < indent; ++i)
+					printf("\t");
+			};
+			
+			print_indent(indent); printf("%d, %f, %f\n", i, f, d);
+			print_indent(indent); printf("(%f, %f)\n", v2[0], v2[1]);
+			print_indent(indent); printf("(%f, %f, %f)\n", v3[0], v3[1], v3[2]);
+			print_indent(indent); printf("(%f, %f, %f, %f)\n", v4[0], v4[1], v4[2], v4[3]);
+			print_indent(indent); printf("%s\n", s.c_str());
+			
+			for (size_t i = 0; i < children.size(); ++i)
+			{
+				print_indent(indent); printf("child [%d]\n", int(i));
+				children[i].dump(indent + 1);
+			}
+		}
+	};
+	
+	typeDB.addStructured<TestStruct>("TestStruct")
+		.add("i", &TestStruct::i)
+		.add("f", &TestStruct::f)
+		.add("d", &TestStruct::d)
+		.add("v2", &TestStruct::v2)
+		.add("v3", &TestStruct::v3)
+		.add("v4", &TestStruct::v4)
+		.add("s", &TestStruct::s)
+		.add("children", &TestStruct::children);
+	
+	{
+		rapidjson::StringBuffer json;
+		REFLECTIONIO_JSON_WRITER writer(json);
+		
+		TestStruct object;
+		const Type * object_type = typeDB.findType(object);
+		
+		if (object_tojson_recursive(typeDB, object_type, &object, writer) == false)
+			printf("object_tojson_recursive failed\n");
+		else
+		{
+			printf("object_tojson_recursive succeeded\n");
+			printf("%s\n", json.GetString());
+		}
+	}
+	
+	{
+		TestStruct object;
+		object.children.resize(2);
+		
+		const Type * object_type = typeDB.findType(object);
+		
+		rapidjson::StringBuffer json;
+		REFLECTIONIO_JSON_WRITER writer(json);
+		object_tojson_recursive(typeDB, object_type, &object, writer);
+		
+		rapidjson::Document document;
+		document.Parse(json.GetString());
+		
+		object.i = 0;
+		object.f = 0.f;
+		object.d = 0.0;
+		object.v2.SetZero();
+		object.v3.SetZero();
+		object.v4.SetZero();
+		object.s.clear();
+		object.children.clear();
+		
+		printf("object before object_fromjson_recursive:\n");
+		object.dump(1);
+		
+		if (object_fromjson_recursive(typeDB, object_type, &object, document) == false)
+			printf("object_fromjson_recursive failed\n");
+		else
+		{
+			printf("object_fromjson_recursive succeeded\n");
+			printf("object after object_fromjson_recursive:\n");
+			object.dump(1);
+		}
+	}
 	
 	return 0;
 }
