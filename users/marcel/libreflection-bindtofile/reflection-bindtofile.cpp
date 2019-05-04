@@ -1,5 +1,6 @@
 #include "reflection.h"
 #include "reflection-bindtofile.h"
+#include "reflection-jsonio.h"
 #include "reflection-textio.h"
 
 #include "lineReader.h"
@@ -8,6 +9,7 @@
 #include "FileStream.h"
 #include "framework.h"
 #include "Log.h"
+#include "Path.h"
 #include "TextIO.h"
 
 struct ObjectToFileBinding
@@ -17,7 +19,7 @@ struct ObjectToFileBinding
 	void * object;
 	const char * filename;
 	
-	bool loadFromFile()
+	bool loadFromTextFile()
 	{
 		std::vector<std::string> lines;
 		TextIO::LineEndings lineEndings;
@@ -37,6 +39,109 @@ struct ObjectToFileBinding
 		}
 		
 		return true;
+	}
+	
+	bool loadFromJsonFile()
+	{
+		char * text = nullptr;
+		size_t textSize = 0;
+		
+		if (TextIO::loadFileContents(filename, text, textSize) == false)
+		{
+			LOG_ERR("failed to load contents from file %s", filename);
+			return false;
+		}
+	
+		rapidjson::Document document;
+		
+		document.Parse(text, textSize);
+		
+		if (document.HasParseError())
+		{
+			LOG_ERR("failed to parse json contents for file %s", filename);
+			return false;
+		}
+		
+		return object_fromjson_recursive(*typeDB, type, object, document);
+	}
+	
+	bool loadFromFile()
+	{
+		if (Path::GetExtension(filename, true) == "json")
+			return loadFromJsonFile();
+		else
+			return loadFromTextFile();
+	}
+	
+	//
+	
+	bool saveToTextFile()
+	{
+		bool result = true;
+		
+		LineWriter line_writer;
+		
+		if (object_tolines_recursive(
+			*typeDB, type, object,
+			line_writer, 0) == false)
+		{
+			LOG_WRN("failed to serialize object to lines", 0);
+			result = false;
+		}
+		else
+		{
+			auto lines = line_writer.to_lines();
+			
+			if (TextIO::save(filename, lines, TextIO::kLineEndings_Unix) == false)
+			{
+				LOG_WRN("failed to save lines to file %s", filename);
+				result = false;
+			}
+		}
+		
+		return result;
+	}
+	
+	bool saveToJsonFile()
+	{
+		bool result = true;
+		
+		rapidjson::StringBuffer stringBuffer;
+		REFLECTIONIO_JSON_WRITER writer(stringBuffer);
+		
+		if (object_tojson_recursive(*typeDB, type, object, writer) == false)
+		{
+			LOG_WRN("failed to serialize object to json", 0);
+			result = false;
+		}
+		else
+		{
+			const char * text = stringBuffer.GetString();
+			
+			FILE * file = fopen(filename, "wt");
+			
+			if (file == nullptr || fprintf(file, "%s", text) < 0)
+			{
+				LOG_WRN("failed to save lines to file %s", filename);
+				result = false;
+			}
+			
+			if (file != nullptr)
+			{
+				fclose(file);
+				file = nullptr;
+			}
+		}
+		
+		return result;
+	}
+	
+	bool saveToFile()
+	{
+		if (Path::GetExtension(filename, true) == "json")
+			return saveToJsonFile();
+		else
+			return saveToTextFile();
 	}
 };
 
@@ -78,24 +183,9 @@ bool bindObjectToFile(const TypeDB * typeDB, const Type * type, void * object, c
 	}
 	else
 	{
-		LineWriter line_writer;
-		
-		if (object_tolines_recursive(
-			*typeDB, type, object,
-			line_writer, 0) == false)
+		if (objectToFileBinding.saveToFile() == false)
 		{
-			LOG_WRN("failed to serialize object to lines", 0);
 			result = false;
-		}
-		else
-		{
-			auto lines = line_writer.to_lines();
-			
-			if (TextIO::save(filename, lines, TextIO::kLineEndings_Unix) == false)
-			{
-				LOG_WRN("failed to save lines to file %s", filename);
-				result = false;
-			}
 		}
 	}
 
