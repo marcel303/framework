@@ -1481,7 +1481,10 @@ namespace AnimModel
 		BoneNameToBoneIndexMap boneNameToBoneIndex;
 		
 		for (int i = 0; i < boneSet->m_numBones; ++i)
+		{
+			fassert(boneNameToBoneIndex.count(boneSet->m_bones[i].name) == 0);
 			boneNameToBoneIndex[boneSet->m_bones[i].name] = i;
+		}
 		
 		//
 		
@@ -1933,7 +1936,9 @@ namespace AnimModel
 				if (fbxMesh->deformers.size() == 0)
 				{
 					const std::string & boneName = fbxMesh->name;
-					fassert(boneNameToBoneIndex.count(boneName) != 0);
+					if (boneNameToBoneIndex.count(boneName) == 0)
+						continue;
+					
 					const int boneIndex = boneNameToBoneIndex[boneName];
 					
 					fbxMesh->deformers.resize(fbxMesh->vertices.size());
@@ -2323,7 +2328,10 @@ namespace AnimModel
 		BoneNameToBoneIndexMap boneNameToBoneIndex;
 		
 		for (int i = 0; i < boneSet->m_numBones; ++i)
+		{
+			fassert(boneNameToBoneIndex.count(boneSet->m_bones[i].name) == 0);
 			boneNameToBoneIndex[boneSet->m_bones[i].name] = i;
+		}
 		
 		//
 		
@@ -2435,6 +2443,7 @@ namespace AnimModel
 			{
 				const std::string & modelName = i->first;
 				const FbxAnimTransform & animTransform = i->second;
+				fassert(boneNameToBoneIndex.count(modelName) != 0);
 				const int boneIndex = boneNameToBoneIndex[modelName];
 				boneIndexToAnimTransform[boneIndex] = &animTransform;
 			}
