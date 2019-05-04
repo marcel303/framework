@@ -347,16 +347,36 @@ struct SceneEditor
 	#endif
 	}
 	
-	void editNode(SceneNode & node, const bool editComponents, const bool editChildren)
+	void editNode(const int nodeId)
 	{
 		const bool do_filter = nodeUi.nodeDisplayNameFilter[0] != 0;
+		
+		auto nodeItr = scene.nodes.find(nodeId);
+		
+		Assert(nodeItr != scene.nodes.end());
+		if (nodeItr == scene.nodes.end())
+			return;
+		
+		auto & node = *nodeItr->second;
 		
 		const bool passes_filter = do_filter == false || strcasestr(node.displayName.c_str(), nodeUi.nodeDisplayNameFilter) != nullptr;
 		
 		// todo : make a separate function to edit a data structure (recursively)
 		
-		if (editComponents && passes_filter)
+		if (passes_filter)
 		{
+			ImGui::PushID(nodeId);
+			
+			ImGui::Text("Node");
+			ImGui::Indent();
+			{
+				char name[256];
+				sprintf_s(name, sizeof(name), "%s", node.displayName.c_str());
+				if (ImGui::InputText("Name", name, sizeof(name)))
+					node.displayName = name;
+			}
+			ImGui::Unindent();
+
 			if (node.components.head == nullptr)
 			{
 				// no components exist, but we still need some area for the user to click to add nodes and components
@@ -405,7 +425,7 @@ struct SceneEditor
 					
 						// see if we should open the node context menu
 						
-						NodeContentMenuResult result = kNodeContentMenuResult_None;
+						NodeContextMenuResult result = kNodeContextMenuResult_None;
 					
 						if (ImGui::BeginPopupContextItem("NodeMenu"))
 						{
@@ -414,7 +434,7 @@ struct SceneEditor
 							ImGui::EndPopup();
 						}
 					
-						if (result == kNodeContentMenuResult_ComponentShouldBeRemoved)
+						if (result == kNodeContextMenuResult_ComponentShouldBeRemoved)
 						{
 							auto * next = component->next_in_set;
 							
@@ -430,74 +450,34 @@ struct SceneEditor
 					ImGui::PopID();
 				}
 			}
-		}
-	
-		if (editChildren)
-		{
-			for (auto & childNodeId : node.childNodeIds)
-			{
-				auto childNodeItr = scene.nodes.find(childNodeId);
-				
-				Assert(childNodeItr != scene.nodes.end());
-				if (childNodeItr != scene.nodes.end())
-				{
-					auto * childNode = childNodeItr->second;
-					
-					if (do_filter && nodeUi.visibleNodes.count(childNode->id) == 0)
-						continue;
-					
-					const bool isSelected = selectedNodes.count(childNode->id) != 0;
-					const bool isLeaf = childNode->childNodeIds.empty();
-					
-					const bool isOpen = ImGui::TreeNodeEx(childNode,
-						(ImGuiTreeNodeFlags_OpenOnArrow * 1) |
-						(ImGuiTreeNodeFlags_Selected * isSelected) |
-						(ImGuiTreeNodeFlags_Leaf * isLeaf) |
-						(ImGuiTreeNodeFlags_FramePadding * 0), "%s", childNode->displayName.c_str());
-					const bool isClicked = ImGui::IsItemClicked();
-					
-					if (isClicked)
-					{
-						selectedNodes.clear();
-						selectedNodes.insert(childNode->id);
-					}
-					
-					if (isOpen)
-					{
-						editNodeListTraverse(childNodeId, editComponents, editChildren);
-						
-						ImGui::TreePop();
-					}
-				}
-			}
+			
+			ImGui::PopID();
 		}
 	}
 	
-	enum NodeContentMenuResult
+	enum NodeStructureContextMenuResult
 	{
-		kNodeContentMenuResult_None,
-		kNodeContentMenuResult_NodeQueuedForRemove,
-		kNodeContentMenuResult_NodeAdded,
-		kNodeContentMenuResult_ComponentShouldBeRemoved,
-		kNodeContentMenuResult_ComponentAdded
+		kNodeStructureContextMenuResult_None,
+		kNodeStructureContextMenuResult_NodeQueuedForRemove,
+		kNodeStructureContextMenuResult_NodeAdded
 	};
 	
-	NodeContentMenuResult doNodeContextMenu(SceneNode & node, ComponentBase * component)
+	NodeStructureContextMenuResult doNodeStructureContextMenu(SceneNode & node, ComponentBase * component)
 	{
 		//logDebug("context window for %d", node.id);
 		
-		NodeContentMenuResult result = kNodeContentMenuResult_None;
+		NodeStructureContextMenuResult result = kNodeStructureContextMenuResult_None;
 
-		if (ImGui::MenuItem("Remove node"))
+		if (ImGui::MenuItem("Remove"))
 		{
-			result = kNodeContentMenuResult_NodeQueuedForRemove;
+			result = kNodeStructureContextMenuResult_NodeQueuedForRemove;
 			
 			nodesToRemove.insert(node.id);
 		}
 
-		if (ImGui::MenuItem("Insert node"))
+		if (ImGui::MenuItem("Add child node"))
 		{
-			result = kNodeContentMenuResult_NodeAdded;
+			result = kNodeStructureContextMenuResult_NodeAdded;
 			
 			SceneNode * childNode = new SceneNode();
 			childNode->id = scene.allocNodeId();
@@ -518,6 +498,10 @@ struct SceneEditor
 				scene.nodes[childNode->id] = childNode;
 				
 				scene.nodes[node.id]->childNodeIds.push_back(childNode->id);
+				
+				// select the newly added child node
+				selectedNodes.clear();
+				selectedNodes.insert(childNode->id);
 			}
 			
 			if (nodeUi.nodeDisplayNameFilter[0] != 0)
@@ -528,11 +512,27 @@ struct SceneEditor
 			}
 		}
 		
+		return result;
+	}
+	
+	enum NodeContextMenuResult
+	{
+		kNodeContextMenuResult_None,
+		kNodeContextMenuResult_ComponentShouldBeRemoved,
+		kNodeContextMenuResult_ComponentAdded
+	};
+	
+	NodeContextMenuResult doNodeContextMenu(SceneNode & node, ComponentBase * component)
+	{
+		//logDebug("context window for %d", node.id);
+		
+		NodeContextMenuResult result = kNodeContextMenuResult_None;
+		
 		if (component != nullptr)
 		{
 			if (ImGui::MenuItem("Remove component"))
 			{
-				result = kNodeContentMenuResult_ComponentShouldBeRemoved;
+				result = kNodeContextMenuResult_ComponentShouldBeRemoved;
 			}
 		}
 
@@ -551,7 +551,7 @@ struct SceneEditor
 				
 				if (ImGui::MenuItem(text))
 				{
-					result = kNodeContentMenuResult_ComponentAdded;
+					result = kNodeContextMenuResult_ComponentAdded;
 					
 					auto * component = componentType->componentMgr->createComponent(nullptr);
 					
@@ -566,33 +566,61 @@ struct SceneEditor
 		return result;
 	}
 	
-	void editNodeListTraverse(const int nodeId, const bool editComponents, const bool editChildren)
+	void editNodeStructure_traverse(const int nodeId)
 	{
+		const bool do_filter = nodeUi.nodeDisplayNameFilter[0] != 0;
+		
 		auto nodeItr = scene.nodes.find(nodeId);
+		
 		Assert(nodeItr != scene.nodes.end());
 		if (nodeItr == scene.nodes.end())
 			return;
 		
-		SceneNode & node = *nodeItr->second;
+		auto & node = *nodeItr->second;
 		
-		ImGui::PushID(nodeId);
+		for (auto & childNodeId : node.childNodeIds)
 		{
-			if (editComponents)
-			{
-				ImGui::Text("Node");
-				ImGui::Indent();
-				{
-					char name[256];
-					sprintf_s(name, sizeof(name), "%s", node.displayName.c_str());
-					if (ImGui::InputText("Name", name, sizeof(name)))
-						node.displayName = name;
-				}
-				ImGui::Unindent();
-			}
+			auto childNodeItr = scene.nodes.find(childNodeId);
 			
-			editNode(node, editComponents, editChildren);
+			Assert(childNodeItr != scene.nodes.end());
+			if (childNodeItr != scene.nodes.end())
+			{
+				auto * childNode = childNodeItr->second;
+				
+				if (do_filter && nodeUi.visibleNodes.count(childNode->id) == 0)
+					continue;
+				
+				const bool isSelected = selectedNodes.count(childNode->id) != 0;
+				const bool isLeaf = childNode->childNodeIds.empty();
+				
+				const bool isOpen = ImGui::TreeNodeEx(childNode,
+					(ImGuiTreeNodeFlags_OpenOnArrow * 1) |
+					(ImGuiTreeNodeFlags_Selected * isSelected) |
+					(ImGuiTreeNodeFlags_Leaf * isLeaf) |
+					(ImGuiTreeNodeFlags_FramePadding * 0), "%s", childNode->displayName.c_str());
+				const bool isClicked = ImGui::IsItemClicked();
+				
+				if (isClicked)
+				{
+					selectedNodes.clear();
+					selectedNodes.insert(childNode->id);
+				}
+				
+				if (ImGui::BeginPopupContextItem("NodeStructureMenu"))
+				{
+					doNodeStructureContextMenu(*childNode, nullptr);
+
+					ImGui::EndPopup();
+				}
+				
+				if (isOpen)
+				{
+					editNodeStructure_traverse(childNodeId);
+					
+					ImGui::TreePop();
+				}
+			}
 		}
-		ImGui::PopID();
 	}
 	
 	void addNodeFromTemplate_v1(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
@@ -776,7 +804,7 @@ struct SceneEditor
 							}
 						
 							ImGui::Text("Root node");
-							editNodeListTraverse(scene.rootNodeId, false, true);
+							editNodeStructure_traverse(scene.rootNodeId);
 						}
 						ImGui::EndChild();
 					}
@@ -787,7 +815,7 @@ struct SceneEditor
 						{
 							for (auto & selectedNodeId : selectedNodes)
 							{
-								editNodeListTraverse(selectedNodeId, true, false);
+								editNode(selectedNodeId);
 							}
 						}
 						ImGui::EndChild();
