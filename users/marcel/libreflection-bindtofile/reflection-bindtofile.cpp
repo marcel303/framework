@@ -207,3 +207,14 @@ void tickObjectToFileBinding()
 		}
 	}
 }
+
+bool flushObjectToFile(const void * object)
+{
+	bool result = true;
+	
+	for (auto & objectToFileBinding : s_objectToFileBindings)
+		if (objectToFileBinding.object == object)
+			result &= objectToFileBinding.saveToFile();
+	
+	return result;
+}

@@ -13,3 +13,5 @@ inline bool bindObjectToFile(const TypeDB * typeDB, T * object, const char * fil
 }
 
 void tickObjectToFileBinding();
+
+bool flushObjectToFile(const void * object);
