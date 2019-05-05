@@ -116,9 +116,15 @@ static void fillFileInfos()
 				fi.filename = file;
 				fi.time = s.st_mtime;
 
+			#if 0 // note : we want to track all files now, to ensure Framework::fileHasChanged works as expected and not just for a subset of files
 				if (String::EndsWith(file, ".vs") || String::EndsWith(file, ".ps") || String::EndsWith(file, ".cs") || String::EndsWith(file, ".xml") || String::EndsWith(file, ".txt") ||
 					String::EndsWith(file, ".png") || String::EndsWith(file, ".jpg"))
+				{
 					s_fileInfos.push_back(fi);
+				}
+			#else
+				s_fileInfos.push_back(fi);
+			#endif
 			}
 
 			fclose(f);
