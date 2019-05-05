@@ -665,12 +665,12 @@ struct SceneEditor
 		}
 	}
 	
-	void addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
+	int addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
 	{
 		Template t;
 		
 		if (!loadTemplateWithOverlaysFromFile("textfiles/base-entity-v1-overlay.txt", t, false))
-			return;
+			return -1;
 		
 		//
 		
@@ -696,7 +696,7 @@ struct SceneEditor
 			delete node;
 			node = nullptr;
 			
-			return;
+			return -1;
 		}
 		
 		{
@@ -721,6 +721,8 @@ struct SceneEditor
 			
 			parentNode.childNodeIds.push_back(node->id);
 		}
+		
+		return node->id;
 	}
 	
 	void tickEditor(const float dt, bool & inputIsCaptured)
@@ -897,14 +899,22 @@ struct SceneEditor
 									{
 										const Vec3 groundPosition_parent = sceneNodeComp->objectToWorld.CalcInv().Mul4(groundPosition);
 										
-										addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
+										auto nodeId = addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
+										
+										// select the newly added node
+										selectedNodes.clear();
+										selectedNodes.insert(nodeId);
 									}
 								}
 							}
 						}
 						else
 						{
-							addNodeFromTemplate_v2(groundPosition, AngleAxis(), scene.rootNodeId);
+							auto nodeId = addNodeFromTemplate_v2(groundPosition, AngleAxis(), scene.rootNodeId);
+							
+							// select the newly added node
+							selectedNodes.clear();
+							selectedNodes.insert(nodeId);
 						}
 					}
 				}
