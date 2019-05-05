@@ -8,7 +8,7 @@ static int isEmptyLineOrComment(const char * line)
 		if (line[i] == '#')
 			return true;
 		
-		if (line[i] != ' ' || line[i] != '\t')
+		if (line[i] != ' ' && line[i] != '\t')
 			return false;
 	}
 	
