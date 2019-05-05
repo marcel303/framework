@@ -112,6 +112,19 @@ bool plain_type_fromjson(const PlainType * plain_type, void * object, const rapi
 		plain_type->access<std::string>(object) = json.GetString();
 		return true;
 		
+	case kDataType_Enum:
+		{
+			if (json.IsString() == false)
+				return false;
+			
+			auto * enum_type = static_cast<const EnumType*>(plain_type);
+			
+			if (enum_type->set(object, json.GetString()) == false)
+				return false;
+			
+			return true;
+		}
+		
 	case kDataType_Other:
 		Assert(false);
 		break;
@@ -194,6 +207,19 @@ bool plain_type_tojson(const PlainType * plain_type, const void * object, REFLEC
 	case kDataType_String:
 		writer.String(plain_type->access<std::string>(object).c_str());
 		return true;
+		
+	case kDataType_Enum:
+		{
+			auto * enum_type = static_cast<const EnumType*>(plain_type);
+			
+			const char * key;
+			if (enum_type->get_key(object, key) == false)
+				return false;
+			
+			writer.String(key);
+			
+			return true;
+		}
 		
 	case kDataType_Other:
 		Assert(false);
@@ -328,7 +354,7 @@ bool object_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * 
 		
 		if (plain_type_fromjson(plain_type, object, json) == false)
 		{
-			LOG_ERR("failed to deserialize plain type from text", 0);
+			LOG_ERR("failed to deserialize plain type from json", 0);
 			
 			return false;
 		}

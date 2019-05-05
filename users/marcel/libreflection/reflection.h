@@ -154,7 +154,8 @@ enum DataType // just for convenience and efficiency reasons, this enum allows f
 	kDataType_Float3,
 	kDataType_Float4,
 	kDataType_Double,
-	kDataType_String // std::string
+	kDataType_String, // std::string
+	kDataType_Enum // EnumType
 };
 
 struct PlainType : Type
@@ -184,6 +185,34 @@ struct PlainType : Type
 		
 		return *(T*)object;
 	}
+};
+
+struct EnumType : PlainType
+{
+	struct EnumElem
+	{
+		EnumElem * next;
+		
+		const char * key;
+		int value;
+	};
+	
+	int enumSize;
+	EnumElem * firstElem;
+
+	EnumType(const char * in_enumName, const int in_enumSize)
+		: PlainType(in_enumName, kDataType_Enum)
+		, enumSize(in_enumSize)
+		, firstElem(nullptr)
+	{
+	}
+	
+	EnumType & add(const char * key, const int value);
+	
+	bool set(void * object, const char * key) const;
+	
+	bool get_key(const void * object, const char *& key) const;
+	bool get_value(const void * object, int & value) const;
 };
 
 struct StructuredType : Type
@@ -265,6 +294,16 @@ struct TypeDB
 	{
 		PlainType * type = new PlainType(typeName, dataType);
 
+		add(std::type_index(typeid(T)), type);
+		
+		return *type;
+	}
+	
+	template <typename T>
+	EnumType & addEnum(const char * enumName)
+	{
+		EnumType * type = new EnumType(enumName, sizeof(T));
+		
 		add(std::type_index(typeid(T)), type);
 		
 		return *type;

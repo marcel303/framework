@@ -26,6 +26,80 @@
 */
 
 #include "reflection.h"
+#include <assert.h>
+#include <string.h>
+
+//
+
+EnumType & EnumType::add(const char * key, const int value)
+{
+	EnumElem * elem = new EnumElem();
+	elem->key = key;
+	elem->value = value;
+	elem->next = firstElem;
+	
+	firstElem = elem;
+	
+	return *this;
+}
+
+bool EnumType::set(void * object, const char * key) const
+{
+	for (const EnumElem * elem = firstElem; elem != nullptr; elem = elem->next)
+	{
+		if (strcmp(elem->key, key) == 0)
+		{
+			if (enumSize == 1)
+				*(uint8_t*)object = elem->value;
+			else if (enumSize == 2)
+				*(uint16_t*)object = elem->value;
+			else if (enumSize == 4)
+				*(uint32_t*)object = elem->value;
+			else
+				assert(false);
+			
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+bool EnumType::get_key(const void * object, const char *& key) const
+{
+	int value;
+	
+	if (get_value(object, value) == false)
+		return false;
+	
+	for (const EnumElem * elem = firstElem; elem != nullptr; elem = elem->next)
+	{
+		if (elem->value == value)
+		{
+			key = elem->key;
+			return true;
+		}
+	}
+	
+	return false;
+}
+
+bool EnumType::get_value(const void * object, int & value) const
+{
+	if (enumSize == 1)
+		value = *(uint8_t*)object;
+	else if (enumSize == 2)
+		value = *(uint16_t*)object;
+	else if (enumSize == 4)
+		value = *(uint32_t*)object;
+	else
+	{
+		assert(false);
+		return false;
+	}
+	
+	return true;
+}
 
 //
 

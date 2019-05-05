@@ -147,6 +147,16 @@ bool plain_type_fromtext(const PlainType * plain_type, void * object, const char
 		plain_type->access<std::string>(object) = text;
 		return true;
 		
+	case kDataType_Enum:
+		{
+			auto * enum_type = static_cast<const EnumType*>(plain_type);
+			
+			if (enum_type->set(object, text) == false)
+				return false;
+			
+			return true;
+		}
+		
 	case kDataType_Other:
 		Assert(false);
 		break;
@@ -223,6 +233,19 @@ bool plain_type_totext(const PlainType * plain_type, const void * object, char *
 	case kDataType_String:
 		strcpy_s(out_text, out_text_size, plain_type->access<std::string>(object).c_str());
 		return true;
+		
+	case kDataType_Enum:
+		{
+			auto * enum_type = static_cast<const EnumType*>(plain_type);
+			
+			const char * key;
+			if (enum_type->get_key(object, key) == false)
+				return false;
+			
+			strcpy_s(out_text, out_text_size, key);
+			
+			return true;
+		}
 		
 	case kDataType_Other:
 		Assert(false);
