@@ -36,9 +36,12 @@ EnumType & EnumType::add(const char * key, const int value)
 	EnumElem * elem = new EnumElem();
 	elem->key = key;
 	elem->value = value;
-	elem->next = firstElem;
+	elem->next = nullptr;
 	
-	firstElem = elem;
+	EnumElem ** tail = &firstElem;
+	while (*tail)
+		tail = &(*tail)->next;
+	*tail = elem;
 	
 	return *this;
 }
