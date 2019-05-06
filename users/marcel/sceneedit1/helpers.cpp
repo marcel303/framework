@@ -64,7 +64,7 @@ void registerBuiltinTypes()
 			.addFlag(new ComponentMemberFlag_EditorType_Angle)
 		.add("axis", &AngleAxis::axis)
 			.addFlag(new ComponentMemberFlag_EditorType_Axis);
-			
+	
 	//
 	
 	g_typeDB.add(std::type_index(typeid(TransformComponent)), new TransformComponentType());
@@ -309,9 +309,20 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Type * type, void * 
 			plain_type->access<Vec4>(object) = j.j.get<Vec4>();
 			return true;
 			
+		case kDataType_Double:
+			plain_type->access<double>(object) = j.j.get<double>();
+			return true;
+		
 		case kDataType_String:
 			plain_type->access<std::string>(object) = j.j.get<std::string>();
 			return true;
+			
+		case kDataType_Enum:
+			{
+				const EnumType * enum_type = static_cast<const EnumType*>(plain_type);
+				
+				return enum_type->set(object, j.j.get<std::string>().c_str());
+			}
 			
 		case kDataType_Other:
 			Assert(false);
@@ -374,10 +385,21 @@ bool member_fromjson(const TypeDB & typeDB, const Member * member, void * object
 	case kDataType_Float4:
 		plain_type->access<Vec4>(member_object) = j.j.value(member->name, Vec4());
 		return true;
+
+	case kDataType_Double:
+		plain_type->access<double>(member_object) = j.j.value(member->name, 0.0);
+		return true;
 		
 	case kDataType_String:
 		plain_type->access<std::string>(member_object) = j.j.value(member->name, std::string());
 		return true;
+		
+	case kDataType_Enum:
+		{
+			const EnumType * enum_type = static_cast<const EnumType*>(plain_type);
+			
+			return enum_type->set(object, j.j.value(member->name, std::string()).c_str());
+		}
 		
 	case kDataType_Other:
 		Assert(false);
@@ -480,9 +502,25 @@ bool member_tojson_recursive(const TypeDB & typeDB, const Type * type, const voi
 			j.j = plain_type->access<Vec4>(object);
 			return true;
 			
+		case kDataType_Double:
+			j.j = plain_type->access<double>(object);
+			return true;
+			
 		case kDataType_String:
 			j.j = plain_type->access<std::string>(object);
 			return true;
+			
+		case kDataType_Enum:
+			{
+				const EnumType * enum_type = static_cast<const EnumType*>(plain_type);
+				
+				const char * key;
+				if (enum_type->get_key(object, key) == false)
+					return false;
+				
+				j.j = key;
+				return true;
+			}
 			
 		case kDataType_Other:
 			Assert(false);
@@ -545,11 +583,27 @@ bool member_tojson(const TypeDB & typeDB, const Member * member, const void * ob
 	case kDataType_Float4:
 		j.j[member->name] = plain_type->access<Vec4>(member_object);
 		return true;
+
+	case kDataType_Double:
+		j.j[member->name] = plain_type->access<double>(member_object);
+		return true;
 		
 	case kDataType_String:
 		j.j[member->name] = plain_type->access<std::string>(member_object);
 		return true;
 		
+	case kDataType_Enum:
+		{
+			const EnumType * enum_type = static_cast<const EnumType*>(plain_type);
+			
+			const char * key;
+			if (enum_type->get_key(object, key) == false)
+				return false;
+			
+			j.j[member->name] = key;
+			return true;
+		}
+	
 	case kDataType_Other:
 		Assert(false);
 		break;
