@@ -173,10 +173,9 @@ struct SceneEditor
 	FrameworkImGuiContext guiContext;
 	
 	std::set<int> nodesToRemove;
+	std::vector<SceneNode*> nodesToAdd;
 	
 	bool cameraIsActive = false;
-	
-	Mat4x4 projectionMatrix;
 	
 	static const int kMaxNodeDisplayNameFilter = 100;
 	static const int kMaxComponentTypeNameFilter = 100;
@@ -343,10 +342,24 @@ struct SceneEditor
 		}
 	}
 	
+	void addNodesToAdd()
+	{
+		for (SceneNode * node : nodesToAdd)
+		{
+			scene.nodes[node->id] = node;
+			
+			auto parentNode_itr = scene.nodes.find(node->parentId);
+			Assert(parentNode_itr != scene.nodes.end());
+			
+			auto * parentNode = parentNode_itr->second;
+			parentNode->childNodeIds.push_back(node->id);
+		}
+		
+		nodesToAdd.clear();
+	}
+	
 	void removeNodesToRemove()
 	{
-		// todo : remove nodesToRemove and directly call removeNodeTraverse ?
-		
 		while (!nodesToRemove.empty())
 		{
 			auto nodeToRemoveItr = nodesToRemove.begin();
@@ -496,13 +509,11 @@ struct SceneEditor
 			}
 		}
 		
-		if (ImGui::MenuItem("Paste"))
+		auto pasteNodeFromClipboard = [&](const int parentId)
 		{
-			result = kNodeStructureContextMenuResult_NodePaste;
-			
 			SceneNode * childNode = new SceneNode();
 			childNode->id = scene.allocNodeId();
-			childNode->parentId = node.id;
+			childNode->parentId = parentId;
 			childNode->displayName = String::FormatC("Node %d", childNode->id);
 			
 			const char * text = SDL_GetClipboardText();
@@ -526,17 +537,30 @@ struct SceneEditor
 				}
 				else
 				{
-				// fixme : not safe while traversing scene structure. add 'nodesToAdd' array
-				
-					scene.nodes[childNode->id] = childNode;
-					
-					scene.nodes[node.id]->childNodeIds.push_back(childNode->id);
+					nodesToAdd.push_back(childNode);
 					
 					// select the newly added child node
 					selectedNodes.clear();
 					selectedNodes.insert(childNode->id);
 				}
 			}
+			
+			SDL_free((void*)text);
+			text = nullptr;
+		};
+		
+		if (ImGui::MenuItem("Paste as child", nullptr, false, SDL_HasClipboardText()))
+		{
+			result = kNodeStructureContextMenuResult_NodePaste;
+			
+			pasteNodeFromClipboard(node.id);
+		}
+		
+		if (ImGui::MenuItem("Paste as sibling", nullptr, false, SDL_HasClipboardText()))
+		{
+			result = kNodeStructureContextMenuResult_NodePaste;
+			
+			pasteNodeFromClipboard(node.parentId);
 		}
 		
 		if (ImGui::MenuItem("Remove"))
@@ -566,9 +590,7 @@ struct SceneEditor
 			}
 			else
 			{
-				scene.nodes[childNode->id] = childNode;
-				
-				scene.nodes[node.id]->childNodeIds.push_back(childNode->id);
+				nodesToAdd.push_back(childNode);
 				
 				// select the newly added child node
 				selectedNodes.clear();
@@ -814,11 +836,6 @@ struct SceneEditor
 	
 	void tickEditor(const float dt, bool & inputIsCaptured)
 	{
-	// todo : this is a bit of a hack. avoid projectPerspective3d altogether ?
-		projectPerspective3d(60.f, .1f, 100.f);
-		gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
-		projectScreen2d();
-		
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_a) && keyboard.isDown(SDLK_LGUI))
 		{
 			inputIsCaptured = true;
@@ -864,14 +881,23 @@ struct SceneEditor
 							ImGui::PopID();
 							ImGui::PopItemWidth();
 							ImGui::SameLine();
-							if (ImGui::Button("x1"))
+							if (ImGui::Button("100%"))
+							{
+								preview.tickScene = true;
 								preview.tickMultiplier = 1.f;
+							}
 							ImGui::SameLine();
-							if (ImGui::Button("-25%"))
+							if (ImGui::Button("--"))
+							{
+								preview.tickScene = true;
 								preview.tickMultiplier /= 1.25f;
+							}
 							ImGui::SameLine();
-							if (ImGui::Button("+25%"))
+							if (ImGui::Button("++"))
+							{
+								preview.tickScene = true;
 								preview.tickMultiplier *= 1.25f;
+							}
 						}
 						ImGui::Unindent();
 					}
@@ -955,6 +981,8 @@ struct SceneEditor
 						ImGui::EndChild();
 					}
 					
+					addNodesToAdd();
+					
 					if (ImGui::CollapsingHeader("Selected node(s)", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						ImGui::BeginChild("Selected nodes", ImVec2(0, 300), ImGuiWindowFlags_AlwaysVerticalScrollbar);
@@ -992,6 +1020,13 @@ struct SceneEditor
 	
 		Mat4x4 cameraToWorld;
 		camera.calculateWorldMatrix(cameraToWorld);
+		
+		int viewportSx;
+		int viewportSy;
+		framework.getCurrentViewportSize(viewportSx, viewportSy);
+		
+		Mat4x4 projectionMatrix;
+		camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
 		
 		const Vec3 cameraPosition = cameraToWorld.GetTranslation();
 		
