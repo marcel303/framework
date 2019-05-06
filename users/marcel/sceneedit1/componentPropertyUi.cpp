@@ -286,6 +286,43 @@ bool doReflection_PlainType(
 			}
 		}
 		break;
+	case kDataType_Double:
+		{
+			auto & value = plain_type.access<double>(member_object);
+			
+			if (isSet == false)
+			{
+				if (default_member_object != nullptr)
+				{
+					value = plain_type.access<double>(default_member_object);
+				}
+			}
+
+			auto * limits = member.findFlag<ComponentMemberFlag_FloatLimits>();
+			
+			if (limits != nullptr)
+			{
+				auto * curveExponential = member.findFlag<ComponentMemberFlag_FloatEditorCurveExponential>();
+				
+				float value_as_float = float(value);
+				
+				if (ImGui::SliderFloat(member.name, &value_as_float, limits->min, limits->max, "%.3f",
+					curveExponential == nullptr ? 1.f : curveExponential->exponential))
+				{
+					value = value_as_float;
+					
+					result = true;
+				}
+			}
+			else
+			{
+				if (ImGui::InputDouble(member.name, &value))
+				{
+					result = true;
+				}
+			}
+		}
+		break;
 	case kDataType_String:
 		{
 			auto & value = plain_type.access<std::string>(member_object);
@@ -306,6 +343,44 @@ bool doReflection_PlainType(
 				value = buffer;
 				
 				result = true;
+			}
+		}
+		break;
+	case kDataType_Enum:
+		{
+			const EnumType & enum_type = static_cast<const EnumType&>(plain_type);
+			
+			int value;
+			
+			if (enum_type.get_value(member_object, value) == false)
+				isSet = false;
+
+			if (isSet == false)
+			{
+				if (default_member_object != nullptr)
+				{
+					enum_type.get_value(default_member_object, value);
+				}
+			}
+			
+			std::vector<const char*> items;
+			int selectedItem = -1;
+			
+			for (auto * elem = enum_type.firstElem; elem != nullptr; elem = elem->next)
+			{
+				if (elem->value == value)
+					selectedItem = items.size();
+				items.push_back(elem->key);
+			}
+			
+			if (!items.empty())
+			{
+				if (ImGui::Combo(member.name, &selectedItem, items.data(), items.size()))
+				{
+					enum_type.set(member_object, items[selectedItem]);
+					
+					result = true;
+				}
 			}
 		}
 		break;
