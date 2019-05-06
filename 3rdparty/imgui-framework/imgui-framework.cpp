@@ -100,6 +100,12 @@ void FrameworkImGuiContext::init(const bool enableIniFiles)
 
 void FrameworkImGuiContext::shut()
 {
+	if (clipboard_text != nullptr)
+    {
+        SDL_free((void*)clipboard_text);
+        clipboard_text = nullptr;
+	}
+	
 	if (font_texture.id != 0)
 	{
 		font_texture.free();
@@ -342,7 +348,7 @@ const char * FrameworkImGuiContext::getClipboardText(void * user_data)
 	
     if (context->clipboard_text != nullptr)
     {
-        SDL_free(context->clipboard_text);
+        SDL_free((void*)context->clipboard_text);
         context->clipboard_text = nullptr;
 	}
 	
@@ -359,7 +365,7 @@ void FrameworkImGuiContext::setClipboardText(void * user_data, const char * text
 	
 	if (context->clipboard_text != nullptr)
     {
-        SDL_free(context->clipboard_text);
+        SDL_free((void*)context->clipboard_text);
         context->clipboard_text = nullptr;
 	}
 	

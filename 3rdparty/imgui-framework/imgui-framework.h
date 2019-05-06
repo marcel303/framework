@@ -39,7 +39,7 @@ struct FrameworkImGuiContext
 	
 	SDL_Cursor * mouse_cursors[ImGuiMouseCursor_COUNT] = { };
 	
-	char * clipboard_text = nullptr;
+	const char * clipboard_text = nullptr;
 	
 	GxTexture font_texture;
 	
