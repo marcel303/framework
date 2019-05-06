@@ -237,7 +237,7 @@ namespace AnimModel
 									const int vertexBoneIndex = numVertexBones[vertexIndex]++;
 									
 									mesh->m_vertices[vertexIndex].boneIndices[vertexBoneIndex] = boneIndex;
-									mesh->m_vertices[vertexIndex].boneWeights[vertexBoneIndex] = weight * 255.f;
+									mesh->m_vertices[vertexIndex].boneWeights[vertexBoneIndex] = uint8_t(weight * 255.f);
 								}
 							}
 							

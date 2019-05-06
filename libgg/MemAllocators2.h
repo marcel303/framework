@@ -25,6 +25,8 @@ typedef FastList<MemAllocInfo> MemAllocInfoList;
 class IMemAllocator
 {
 public:
+	virtual ~IMemAllocator() { }
+	
 	virtual void * Alloc(size_t size, uint32_t tag = 0) = 0;
 	virtual void Free(void * p) = 0;
 
@@ -72,6 +74,8 @@ public:
 class IMemAllocationIterator
 {
 public:
+	virtual ~IMemAllocationIterator() { }
+	
 	virtual bool HasValue() = 0;
 	virtual void Next() = 0;
 	virtual MemAllocInfo * Value() = 0;
@@ -80,6 +84,8 @@ public:
 class IMemAllocationReporter
 {
 public:
+	virtual ~IMemAllocationReporter() { }
+	
 	virtual IMemAllocationIterator * GetAllocationIterator() = 0;
 };
 

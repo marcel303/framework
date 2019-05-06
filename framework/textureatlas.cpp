@@ -167,7 +167,7 @@ bool TextureAtlas::makeBigger(const int sx, const int sy)
 
 bool TextureAtlas::optimize()
 {
-	BoxAtlasElem elems[a.kMaxElems];
+	BoxAtlasElem elems[BoxAtlas::kMaxElems];
 	memcpy(elems, a.elems, sizeof(elems));
 	
 	if (a.optimize() == false)
@@ -181,10 +181,10 @@ bool TextureAtlas::optimize()
 	
 	newTexture->clearf(0, 0, 0, 0);
 	
-	GxTexture::CopyRegion regions[a.kMaxElems];
+	GxTexture::CopyRegion regions[BoxAtlas::kMaxElems];
 	int numRegions = 0;
 	
-	for (int i = 0; i < a.kMaxElems; ++i)
+	for (int i = 0; i < BoxAtlas::kMaxElems; ++i)
 	{
 		auto & eSrc = elems[i];
 		auto & eDst = a.elems[i];
@@ -220,7 +220,7 @@ bool TextureAtlas::optimize()
 
 bool TextureAtlas::makeBiggerAndOptimize(const int sx, const int sy)
 {
-	BoxAtlasElem elems[a.kMaxElems];
+	BoxAtlasElem elems[BoxAtlas::kMaxElems];
 	memcpy(elems, a.elems, sizeof(elems));
 	
 	if (a.makeBigger(sx, sy) == false)
@@ -239,10 +239,10 @@ bool TextureAtlas::makeBiggerAndOptimize(const int sx, const int sy)
 	
 	newTexture->clearf(0, 0, 0, 0);
 	
-	GxTexture::CopyRegion regions[a.kMaxElems];
+	GxTexture::CopyRegion regions[BoxAtlas::kMaxElems];
 	int numRegions = 0;
 	
-	for (int i = 0; i < a.kMaxElems; ++i)
+	for (int i = 0; i < BoxAtlas::kMaxElems; ++i)
 	{
 		auto & eSrc = elems[i];
 		auto & eDst = a.elems[i];

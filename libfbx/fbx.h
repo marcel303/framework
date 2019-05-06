@@ -324,7 +324,7 @@ inline void FbxRecord::capturePropertyArray(int index, std::vector<T> & result) 
 				result.resize(numValues);
 				
 				for (size_t i = 0; i < numValues; ++i)
-					result[i] = valueArray.getDouble(i);
+					result[i] = (T)valueArray.getDouble(i);
 				
 				return;
 			}

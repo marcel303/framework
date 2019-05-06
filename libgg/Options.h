@@ -29,6 +29,7 @@ protected:
 	float m_step;
 
 	OptionBase(const char * path, const char * name);
+	virtual ~OptionBase() { }
 
 public:
 	enum OptionType

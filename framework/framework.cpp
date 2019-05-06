@@ -6902,6 +6902,7 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 			int gsx = glyph.sx;
 			int gsy = glyph.sy;
 			
+		// todo : why not float ?
 			int dx1 = x - MSDF_GLYPH_PADDING_INNER + glyph.lsb;
 			int dy1 = y + MSDF_GLYPH_PADDING_INNER;
 			int dx2 = dx1 + gsx;
@@ -6980,7 +6981,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 		
 		float yTop;
 
-		measureText_FreeType(face, size, glyphs, textLength, sx, sy, yTop);
+		measureText_FreeType(face, sizei, glyphs, textLength, sx, sy, yTop);
 	#endif
 	}
 #if ENABLE_MSDF_FONTS
@@ -7115,7 +7116,7 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 		
 		for (size_t i = 0; i < textLength; ++i)
 		{
-			glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
+			glyphs[i] = &g_glyphCache.findOrCreate(face, sizei, text[i]);
 		}
 		
 		float sx, sy, yTop;

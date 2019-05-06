@@ -51,6 +51,10 @@ struct ParameterBase
 	{
 	}
 	
+	virtual ~ParameterBase()
+	{
+	}
+	
 	virtual std::type_index typeIndex() const = 0;
 	
 	virtual bool isSetToDefault() const = 0;
