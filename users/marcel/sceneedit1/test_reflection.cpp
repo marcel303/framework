@@ -86,8 +86,19 @@ static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type
 				plain_type->access<Vec4>(object)[2],
 				plain_type->access<Vec4>(object)[3]);
 			break;
+		case kDataType_Double:
+			printf("(double) %f\n", plain_type->access<double>(object));
+			break;
 		case kDataType_String:
 			printf("(string) %s\n", plain_type->access<std::string>(object).c_str());
+			break;
+		case kDataType_Enum:
+			{
+				const EnumType * enum_type = static_cast<const EnumType*>(plain_type);
+				const char * key;
+				if (enum_type->get_key(object, key))
+					printf("(enum) %s\n", key);
+			}
 			break;
 			
 		case kDataType_Other:
@@ -96,6 +107,13 @@ static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type
 		}
 	}
 }
+
+enum TestEnum
+{
+	OptionA,
+	OptionB,
+	OptionC
+};
 
 struct TestStruct_1
 {
@@ -120,6 +138,7 @@ struct TestStruct_3
 	Vec3 v3 = Vec3(3.1f, 3.2f, 3.3f);
 	Vec4 v4 = Vec4(4.1f, 4.2f, 4.3f, 4.4f);
 	std::string s = "hey!";
+	TestEnum e = TestEnum::OptionB;
 };
 
 #define TYPEDB_ADD_STRUCT(typeDB, type) \
@@ -136,6 +155,11 @@ void test_reflection_1()
 	typeDB.addPlain<Vec3>("Vec3", kDataType_Float3);
 	typeDB.addPlain<Vec4>("Vec4", kDataType_Float4);
 	typeDB.addPlain<std::string>("std::string", kDataType_String);
+	
+	typeDB.addEnum<TestEnum>("TestEnum")
+		.add("OptionA", TestEnum::OptionA)
+		.add("OptionB", TestEnum::OptionB)
+		.add("OptionC", TestEnum::OptionC);
 	
 	{
 		TYPEDB_ADD_STRUCT(typeDB, TestStruct_1)
@@ -157,7 +181,8 @@ void test_reflection_1()
 			.add("v2", &TestStruct_3::v2)
 			.add("v3", &TestStruct_3::v3)
 			.add("v4", &TestStruct_3::v4)
-			.add("s", &TestStruct_3::s);
+			.add("s", &TestStruct_3::s)
+			.add("e", &TestStruct_3::e);
 	}
 	
 	int x = 3;
