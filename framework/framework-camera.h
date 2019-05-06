@@ -1,7 +1,10 @@
 #pragma once
 
-struct Camera
+#include "framework.h"
+
+class Camera
 {
+public:
 	enum Mode
 	{
 		kMode_Orbit,
@@ -74,18 +77,18 @@ struct Camera
 				}
 			}
 		}
-		
-		void calculateTransform(Mat4x4 & out_transform, const int viewportSx, const int viewportSy) const
+
+		void calculateWorldMatrix(Mat4x4 & out_matrix) const
 		{
-			Mat4x4 perspective;
-			perspective.MakePerspectiveLH(60.f * float(M_PI) / 180.f, viewportSy / float(viewportSx), .01f, 100.f);
-			
-			const Mat4x4 transform = Mat4x4(true)
+			out_matrix = Mat4x4(true)
 				.RotateY(azimuth * float(M_PI) / 180.f)
 				.RotateX(elevation * float(M_PI) / 180.f)
 				.Translate(0, 0, distance);
-			
-			out_transform = perspective * transform.CalcInv();
+		}
+		
+		void calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
+		{
+			out_matrix.MakePerspectiveLH(60.f * float(M_PI) / 180.f, viewportSy / float(viewportSx), .01f, 100.f);
 		}
 	};
 	
@@ -137,28 +140,29 @@ struct Camera
 				
 				// position movement
 			
-				const Mat4x4 worldTransform = calculateWorldTransform();
+				Mat4x4 cameraToWorld;
+				calculateWorldMatrix(cameraToWorld);
 				
 				Vec3 direction;
 				
 				if (keyboard.isDown(SDLK_LEFT))
 				{
-					direction -= worldTransform.GetAxis(0);
+					direction -= cameraToWorld.GetAxis(0);
 					inputIsCaptured = true;
 				}
 				if (keyboard.isDown(SDLK_RIGHT))
 				{
-					direction += worldTransform.GetAxis(0);
+					direction += cameraToWorld.GetAxis(0);
 					inputIsCaptured = true;
 				}
 				if (keyboard.isDown(SDLK_DOWN))
 				{
-					direction -= worldTransform.GetAxis(1);
+					direction -= cameraToWorld.GetAxis(1);
 					inputIsCaptured = true;
 				}
 				if (keyboard.isDown(SDLK_UP))
 				{
-					direction += worldTransform.GetAxis(1);
+					direction += cameraToWorld.GetAxis(1);
 					inputIsCaptured = true;
 				}
 				
@@ -176,7 +180,7 @@ struct Camera
 			}
 		}
 		
-		Mat4x4 calculateWorldTransform() const
+		void calculateWorldMatrix(Mat4x4 & out_matrix) const
 		{
 			float elevation = 0.f;
 			float azimuth = 0.f;
@@ -201,24 +205,18 @@ struct Camera
 				break;
 			}
 			
-			return Mat4x4(true)
+			out_matrix = Mat4x4(true)
 				.Translate(position)
 				.RotateY(azimuth * float(M_PI) / 180.f)
 				.RotateX(elevation * float(M_PI) / 180.f)
 				.Scale(scale, scale, scale);
 		}
 		
-		void calculateTransform(Mat4x4 & out_transform, const int viewportSx, const int viewportSy) const
+		void calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
 		{
 			const float sx = viewportSx / float(viewportSy);
 			
-			Mat4x4 projection;
-			projection.MakeOrthoLH(-sx, +sx, +1.f, -1.f, .01f, 100.f);
-			
-			const Mat4x4 transform = calculateWorldTransform();
-			const Mat4x4 transform_inv = transform.CalcInv();
-			
-			out_transform = projection * transform_inv;
+			out_matrix.MakeOrthoLH(-sx, +sx, +1.f, -1.f, .01f, 100.f);
 		}
 	};
 	
@@ -245,17 +243,17 @@ struct Camera
 		{
 			if (keyboard.wentDown(SDLK_1))
 			{
-				setMode(Camera::kMode_Orbit);
+				mode = Camera::kMode_Orbit;
 				inputIsCaptured = true;
 			}
 			if (keyboard.wentDown(SDLK_2))
 			{
-				setMode(Camera::kMode_Ortho);
+				mode = Camera::kMode_Ortho;
 				inputIsCaptured = true;
 			}
 			if (keyboard.wentDown(SDLK_3))
 			{
-				setMode(Camera::kMode_FirstPerson);
+				mode = Camera::kMode_FirstPerson;
 				inputIsCaptured = true;
 			}
 		}
@@ -274,54 +272,116 @@ struct Camera
 		}
 	}
 	
-	void setMode(const Mode in_mode)
+	void calculateWorldMatrix(Mat4x4 & out_matrix) const
 	{
-		mode = in_mode;
+		switch (mode)
+		{
+		case kMode_Orbit:
+			orbit.calculateWorldMatrix(out_matrix);
+			break;
+		case kMode_Ortho:
+			ortho.calculateWorldMatrix(out_matrix);
+			break;
+		case kMode_FirstPerson:
+			out_matrix.MakeIdentity();
+			break;
+		}
+	}
+
+	void calculateViewMatrix(Mat4x4 & out_matrix) const
+	{
+		Mat4x4 worldMatrix;
+		calculateWorldMatrix(worldMatrix);
+		out_matrix = worldMatrix.CalcInv();
+	}
+
+	void calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
+	{
+		switch (mode)
+		{
+		case kMode_Orbit:
+			orbit.calculateProjectionMatrix(viewportSx, viewportSy, out_matrix);
+			break;
+		case kMode_Ortho:
+			ortho.calculateProjectionMatrix(viewportSx, viewportSy, out_matrix);
+			break;
+		case kMode_FirstPerson:
+			out_matrix.MakeIdentity();
+			break;
+		}
 	}
 	
-	Mat4x4 getViewProjectionMatrix(const int viewportSx, const int viewportSy) const
+	Mat4x4 calculateViewProjectionMatrix(const int viewportSx, const int viewportSy) const
 	{
-		Mat4x4 matrix;
+		Mat4x4 projectionMatrix;
+		Mat4x4 worldMatrix;
 		
 		switch (mode)
 		{
 		case kMode_Orbit:
-			orbit.calculateTransform(matrix, viewportSx, viewportSy);
+			orbit.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
+			orbit.calculateWorldMatrix(worldMatrix);
 			break;
 		case kMode_Ortho:
-			ortho.calculateTransform(matrix, viewportSx, viewportSy);
+			ortho.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
+			ortho.calculateWorldMatrix(worldMatrix);
 			break;
 		case kMode_FirstPerson:
-			matrix.MakeIdentity();
+			projectionMatrix.MakeIdentity();
+			worldMatrix.MakeIdentity();
 			break;
 		}
 		
-		return matrix;
+		return projectionMatrix * worldMatrix.CalcInv();
 	}
-	
-	void pushViewProjectionMatrix() const
+
+	void pushProjectionMatrix()
 	{
 		int viewportSx = 0;
 		int viewportSy = 0;
 		framework.getCurrentViewportSize(viewportSx, viewportSy);
 		
-		const Mat4x4 matrix = getViewProjectionMatrix(viewportSx, viewportSy);
+		Mat4x4 matrix;
+		calculateProjectionMatrix(viewportSx, viewportSy, matrix);
 		
 		const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
 		{
 			gxMatrixMode(GX_PROJECTION);
 			gxPushMatrix();
-			gxLoadIdentity();
-			gxMultMatrixf(matrix.m_v);
+			gxLoadMatrixf(matrix.m_v);
 		}
 		gxMatrixMode(restoreMatrixMode);
 	}
 
-	void popViewProjectionMatrix() const
+	void popProjectionMatrix()
 	{
 		const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
 		{
 			gxMatrixMode(GX_PROJECTION);
+			gxPopMatrix();
+		}
+		gxMatrixMode(restoreMatrixMode);
+	}
+	
+	void pushViewMatrix() const
+	{
+		Mat4x4 matrix;
+		calculateViewMatrix(matrix);
+		
+		const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+		{
+			gxMatrixMode(GX_MODELVIEW);
+			gxPushMatrix();
+			gxLoadMatrixf(matrix.m_v);
+		}
+		gxMatrixMode(restoreMatrixMode);
+	}
+
+	void popViewMatrix() const
+	{
+		const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+		{
+			gxMatrixMode(GX_MODELVIEW);
 			gxPopMatrix();
 		}
 		gxMatrixMode(restoreMatrixMode);
