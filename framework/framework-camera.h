@@ -74,13 +74,30 @@ public:
 	
 	struct FirstPerson
 	{
-		void tick(const float dt, bool & inputIsCaptured)
-		{
-			if (inputIsCaptured == false)
-			{
-				// todo
-			}
-		}
+	private:
+		double mouseDx = 0.0;
+		double mouseDy = 0.0;
+		
+	public:
+		Vec3 position;
+		
+		float yaw = 0.f;
+		float pitch = 0.f;
+		float roll = 0.f;
+		
+		double mouseSmooth = 0.75;
+		float mouseRotationSpeed = 1.f;
+		float movementSpeed = 1.f;
+		float forwardSpeedMultiplier = 1.f;
+		float strafeSpeedMultiplier = 1.f;
+		float upSpeedMultiplier = 1.f;
+	
+		int gamepadIndex = -1;
+		
+		void tick(const float dt, bool & inputIsCaptured);
+		
+		void calculateWorldMatrix(Mat4x4 & out_matrix) const;
+		void calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const;
 	};
 	
 public:
@@ -91,7 +108,7 @@ public:
 	FirstPerson firstPerson;
 	
 public:
-	void tick(const float dt, bool & inputIsCaptured);
+	void tick(const float dt, bool & inputIsCaptured, const bool movementIsLocked);
 	
 	void calculateWorldMatrix(Mat4x4 & out_matrix) const;
 	void calculateViewMatrix(Mat4x4 & out_matrix) const;
@@ -100,8 +117,8 @@ public:
 	
 	void calculateViewProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const;
 
-	void pushProjectionMatrix();
-	void popProjectionMatrix();
+	void pushProjectionMatrix() const;
+	void popProjectionMatrix() const;
 	
 	void pushViewMatrix() const;
 	void popViewMatrix() const;

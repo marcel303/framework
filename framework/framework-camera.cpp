@@ -28,6 +28,8 @@
 #include "framework.h"
 #include "framework-camera.h"
 
+// todo : make fov a parameter or pass it when calculating projection matrix
+
 void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 {
 	if (inputIsCaptured == false)
@@ -218,7 +220,94 @@ void Camera::Ortho::calculateProjectionMatrix(const int viewportSx, const int vi
 
 //
 
-void Camera::tick(const float dt, bool & inputIsCaptured)
+void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
+{
+	float forwardSpeed = 0.f;
+	float strafeSpeed = 0.f;
+	float upSpeed = 0.f;
+	
+	if (inputIsCaptured == false)
+	{
+		// keyboard
+		
+		if (keyboard.isDown(SDLK_DOWN) || keyboard.isDown(SDLK_s))
+			forwardSpeed -= 1.f;
+		if (keyboard.isDown(SDLK_UP) || keyboard.isDown(SDLK_w))
+			forwardSpeed += 1.f;
+		if (keyboard.isDown(SDLK_LEFT) || keyboard.isDown(SDLK_a))
+			strafeSpeed -= 1.f;
+		if (keyboard.isDown(SDLK_RIGHT) || keyboard.isDown(SDLK_d))
+			strafeSpeed += 1.f;
+		
+		// gamepad
+		
+		if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD && gamepad[gamepadIndex].isConnected)
+		{
+			strafeSpeed += gamepad[gamepadIndex].getAnalog(0, ANALOG_X);
+			forwardSpeed -= gamepad[gamepadIndex].getAnalog(0, ANALOG_Y);
+		
+			yaw -= gamepad[gamepadIndex].getAnalog(1, ANALOG_X);
+			pitch -= gamepad[gamepadIndex].getAnalog(1, ANALOG_Y);
+		}
+		
+		// mouse + mouse smoothing
+		
+		mouseDx += mouse.dx;
+		mouseDy += mouse.dy;
+		
+		const double retain = pow(mouseSmooth, dt * 100.0);
+		
+		const double newDx = mouseDx * retain;
+		const double newDy = mouseDy * retain;
+		
+		const double thisDx = mouseDx - newDx;
+		const double thisDy = mouseDy - newDy;
+		
+		mouseDx = newDx;
+		mouseDy = newDy;
+		
+		yaw -= thisDx * mouseRotationSpeed;
+		pitch -= thisDy * mouseRotationSpeed;
+	}
+	else
+	{
+		mouseDx = 0.f;
+		mouseDy = 0.f;
+	}
+	
+	// go from normalized input values to values directly used to add to position
+	
+	forwardSpeed *= movementSpeed * forwardSpeedMultiplier * dt;
+	strafeSpeed *= movementSpeed * strafeSpeedMultiplier * dt;
+	upSpeed *= movementSpeed * upSpeedMultiplier * dt;
+	
+	Mat4x4 worldMatrix;
+	calculateWorldMatrix(worldMatrix);
+	
+	const Vec3 xAxis = worldMatrix.GetAxis(0);
+	const Vec3 yAxis = worldMatrix.GetAxis(1);
+	const Vec3 zAxis = worldMatrix.GetAxis(2);
+	
+	position = position + xAxis * strafeSpeed + yAxis * upSpeed + zAxis * forwardSpeed;
+}
+
+void Camera::FirstPerson::calculateWorldMatrix(Mat4x4 & out_matrix) const
+{
+	out_matrix = Mat4x4(true)
+		.Translate(position)
+		.RotateZ(roll / 180.f * float(M_PI))
+		.RotateY(yaw / 180.f * float(M_PI))
+		.RotateX(pitch / 180.f * float(M_PI));
+}
+
+void Camera::FirstPerson::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
+{
+	out_matrix.MakePerspectiveLH(60.f * float(M_PI) / 180.f, viewportSy / float(viewportSx), .01f, 100.f);
+}
+
+//
+
+void Camera::tick(const float dt, bool & inputIsCaptured, const bool movementIsLocked)
 {
 	if (inputIsCaptured == false)
 	{
@@ -239,17 +328,20 @@ void Camera::tick(const float dt, bool & inputIsCaptured)
 		}
 	}
 	
-	switch (mode)
+	if (movementIsLocked == false)
 	{
-	case kMode_Orbit:
-		orbit.tick(dt, inputIsCaptured);
-		break;
-	case kMode_Ortho:
-		ortho.tick(dt, inputIsCaptured);
-		break;
-	case kMode_FirstPerson:
-		firstPerson.tick(dt, inputIsCaptured);
-		break;
+		switch (mode)
+		{
+		case kMode_Orbit:
+			orbit.tick(dt, inputIsCaptured);
+			break;
+		case kMode_Ortho:
+			ortho.tick(dt, inputIsCaptured);
+			break;
+		case kMode_FirstPerson:
+			firstPerson.tick(dt, inputIsCaptured);
+			break;
+		}
 	}
 }
 
@@ -264,7 +356,7 @@ void Camera::calculateWorldMatrix(Mat4x4 & out_matrix) const
 		ortho.calculateWorldMatrix(out_matrix);
 		break;
 	case kMode_FirstPerson:
-		out_matrix.MakeIdentity();
+		firstPerson.calculateWorldMatrix(out_matrix);
 		break;
 	}
 }
@@ -287,7 +379,7 @@ void Camera::calculateProjectionMatrix(const int viewportSx, const int viewportS
 		ortho.calculateProjectionMatrix(viewportSx, viewportSy, out_matrix);
 		break;
 	case kMode_FirstPerson:
-		out_matrix.MakeIdentity();
+		firstPerson.calculateProjectionMatrix(viewportSx, viewportSy, out_matrix);
 		break;
 	}
 }
@@ -308,15 +400,15 @@ void Camera::calculateViewProjectionMatrix(const int viewportSx, const int viewp
 		ortho.calculateWorldMatrix(worldMatrix);
 		break;
 	case kMode_FirstPerson:
-		projectionMatrix.MakeIdentity();
-		worldMatrix.MakeIdentity();
+		firstPerson.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
+		firstPerson.calculateWorldMatrix(worldMatrix);
 		break;
 	}
 	
 	out_matrix = projectionMatrix * worldMatrix.CalcInv();
 }
 
-void Camera::pushProjectionMatrix()
+void Camera::pushProjectionMatrix() const
 {
 	int viewportSx = 0;
 	int viewportSy = 0;
@@ -334,7 +426,7 @@ void Camera::pushProjectionMatrix()
 	gxMatrixMode(restoreMatrixMode);
 }
 
-void Camera::popProjectionMatrix()
+void Camera::popProjectionMatrix() const
 {
 	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
 	{
