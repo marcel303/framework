@@ -8,6 +8,7 @@
 #include "componentPropertyUi.h"
 #include "componentType.h"
 #include "framework.h"
+#include "framework-camera.h"
 #include "imgui-framework.h"
 #include "scene.h"
 #include "scene_fromText.h"
@@ -58,6 +59,10 @@ static const int VIEW_SY = 800;
 TransformComponentMgr s_transformComponentMgr;
 ModelComponentMgr s_modelComponentMgr;
 extern ParameterComponentMgr s_parameterComponentMgr;
+
+// todo : move to helpers
+static bool node_to_clipboard_text(const SceneNode & node, std::string & text);
+static bool node_from_clipboard_text(const char * text, SceneNode & node);
 
 //
 
@@ -144,7 +149,7 @@ struct SceneEditor
 		kState_NodeDrag
 	};
 	
-	Camera3d camera;
+	Camera camera;
 	
 	Scene scene;
 	
@@ -160,6 +165,8 @@ struct SceneEditor
 	struct
 	{
 		bool tickScene = false;
+		float tickMultiplier = 1.f;
+		
 		bool drawScene = false;
 	} preview;
 	
@@ -179,6 +186,7 @@ struct SceneEditor
 		char nodeDisplayNameFilter[kMaxNodeDisplayNameFilter] = { };
 		char componentTypeNameFilter[kMaxComponentTypeNameFilter] = { };
 		std::set<int> visibleNodes;
+		std::set<int> openNodes;
 	} nodeUi;
 	
 	static const int kMaxParameterFilter = 100;
@@ -193,12 +201,19 @@ struct SceneEditor
 	
 	SceneEditor()
 	{
-		camera.position = Vec3(0, 1, -2);
+		camera.mode = Camera::kMode_Orbit;
+		camera.orbit.distance = -4.f;
+		camera.ortho.scale = 4.f;
+		camera.firstPerson.position = Vec3(0, 1, -2);
 	}
 	
 	void init()
 	{
 		guiContext.init();
+		
+		guiContext.pushImGuiContext();
+		ImGui::StyleColorsClassic();
+		guiContext.popImGuiContext();
 		
 		scene.createRootNode();
 	}
@@ -372,7 +387,7 @@ struct SceneEditor
 			{
 				char name[256];
 				sprintf_s(name, sizeof(name), "%s", node.displayName.c_str());
-				if (ImGui::InputText("Name", name, sizeof(name)))
+				if (ImGui::InputText("name", name, sizeof(name)))
 					node.displayName = name;
 			}
 			ImGui::Unindent();
@@ -458,16 +473,72 @@ struct SceneEditor
 	enum NodeStructureContextMenuResult
 	{
 		kNodeStructureContextMenuResult_None,
+		kNodeStructureContextMenuResult_NodeCopy,
+		kNodeStructureContextMenuResult_NodePaste,
 		kNodeStructureContextMenuResult_NodeQueuedForRemove,
 		kNodeStructureContextMenuResult_NodeAdded
 	};
 	
-	NodeStructureContextMenuResult doNodeStructureContextMenu(SceneNode & node, ComponentBase * component)
+	NodeStructureContextMenuResult doNodeStructureContextMenu(SceneNode & node)
 	{
 		//logDebug("context window for %d", node.id);
 		
 		NodeStructureContextMenuResult result = kNodeStructureContextMenuResult_None;
 
+		if (ImGui::MenuItem("Copy"))
+		{
+			result = kNodeStructureContextMenuResult_NodeCopy;
+			
+			std::string text;
+			if (node_to_clipboard_text(node, text))
+			{
+				SDL_SetClipboardText(text.c_str());
+			}
+		}
+		
+		if (ImGui::MenuItem("Paste"))
+		{
+			result = kNodeStructureContextMenuResult_NodePaste;
+			
+			SceneNode * childNode = new SceneNode();
+			childNode->id = scene.allocNodeId();
+			childNode->parentId = node.id;
+			childNode->displayName = String::FormatC("Node %d", childNode->id);
+			
+			const char * text = SDL_GetClipboardText();
+			
+			if (node_from_clipboard_text(text, *childNode) == false)
+			{
+				delete childNode;
+				childNode = nullptr;
+			}
+			else
+			{
+				if (childNode->components.find<SceneNodeComponent>() == nullptr)
+					childNode->components.add(new SceneNodeComponent());
+				
+				if (childNode->initComponents() == false)
+				{
+					childNode->freeComponents();
+					
+					delete childNode;
+					childNode = nullptr;
+				}
+				else
+				{
+				// fixme : not safe while traversing scene structure. add 'nodesToAdd' array
+				
+					scene.nodes[childNode->id] = childNode;
+					
+					scene.nodes[node.id]->childNodeIds.push_back(childNode->id);
+					
+					// select the newly added child node
+					selectedNodes.clear();
+					selectedNodes.insert(childNode->id);
+				}
+			}
+		}
+		
 		if (ImGui::MenuItem("Remove"))
 		{
 			result = kNodeStructureContextMenuResult_NodeQueuedForRemove;
@@ -536,31 +607,36 @@ struct SceneEditor
 			}
 		}
 
-		for (auto * componentType : g_componentTypes)
+		if (ImGui::BeginMenu("Add component.."))
 		{
-			bool isAdded = false;
-			
-			for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
-				if (component->typeIndex() == componentType->componentMgr->typeIndex())
-					isAdded = true;
-			
-			if (isAdded == false)
+			for (auto * componentType : g_componentTypes)
 			{
-				char text[256];
-				sprintf_s(text, sizeof(text), "Add %s", componentType->typeName);
+				bool isAdded = false;
 				
-				if (ImGui::MenuItem(text))
+				for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
+					if (component->typeIndex() == componentType->componentMgr->typeIndex())
+						isAdded = true;
+				
+				if (isAdded == false)
 				{
-					result = kNodeContextMenuResult_ComponentAdded;
+					char text[256];
+					sprintf_s(text, sizeof(text), "Add %s", componentType->typeName);
 					
-					auto * component = componentType->componentMgr->createComponent(nullptr);
-					
-					if (component->init())
-						node.components.add(component);
-					else
-						componentType->componentMgr->destroyComponent(component);
+					if (ImGui::MenuItem(text))
+					{
+						result = kNodeContextMenuResult_ComponentAdded;
+						
+						auto * component = componentType->componentMgr->createComponent(nullptr);
+						
+						if (component->init())
+							node.components.add(component);
+						else
+							componentType->componentMgr->destroyComponent(component);
+					}
 				}
 			}
+			
+			ImGui::EndMenu();
 		}
 		
 		return result;
@@ -578,49 +654,60 @@ struct SceneEditor
 		
 		auto & node = *nodeItr->second;
 		
-		for (auto & childNodeId : node.childNodeIds)
+		//
+		
+		const bool isSelected = selectedNodes.count(node.id) != 0;
+		const bool isLeaf = node.childNodeIds.empty();
+		const bool isRoot = node.parentId == -1;
+		
+		ImGui::PushID(&node);
 		{
-			auto childNodeItr = scene.nodes.find(childNodeId);
-			
-			Assert(childNodeItr != scene.nodes.end());
-			if (childNodeItr != scene.nodes.end())
-			{
-				auto * childNode = childNodeItr->second;
-				
-				if (do_filter && nodeUi.visibleNodes.count(childNode->id) == 0)
-					continue;
-				
-				const bool isSelected = selectedNodes.count(childNode->id) != 0;
-				const bool isLeaf = childNode->childNodeIds.empty();
-				
-				const bool isOpen = ImGui::TreeNodeEx(childNode,
-					(ImGuiTreeNodeFlags_OpenOnArrow * 1) |
-					(ImGuiTreeNodeFlags_Selected * isSelected) |
-					(ImGuiTreeNodeFlags_Leaf * isLeaf) |
-					(ImGuiTreeNodeFlags_FramePadding * 0), "%s", childNode->displayName.c_str());
-				const bool isClicked = ImGui::IsItemClicked();
-				
-				if (isClicked)
-				{
-					selectedNodes.clear();
-					selectedNodes.insert(childNode->id);
-				}
-				
-				if (ImGui::BeginPopupContextItem("NodeStructureMenu"))
-				{
-					doNodeStructureContextMenu(*childNode, nullptr);
+			if (nodeUi.openNodes.count(node.id) != 0)
+				ImGui::SetNextTreeNodeOpen(true);
 
-					ImGui::EndPopup();
-				}
-				
-				if (isOpen)
+			const bool isOpen = ImGui::TreeNodeEx(&node,
+				(ImGuiTreeNodeFlags_OpenOnArrow * 1) |
+				(ImGuiTreeNodeFlags_Selected * isSelected) |
+				(ImGuiTreeNodeFlags_Leaf * isLeaf) |
+				(ImGuiTreeNodeFlags_DefaultOpen * isRoot) |
+				(ImGuiTreeNodeFlags_FramePadding * 0), "%s", node.displayName.c_str());
+			const bool isClicked = ImGui::IsItemClicked();
+
+			if (isClicked)
+			{
+				selectedNodes.clear();
+				selectedNodes.insert(node.id);
+			}
+		
+			if (ImGui::BeginPopupContextItem("NodeStructureMenu"))
+			{
+				doNodeStructureContextMenu(node);
+
+				ImGui::EndPopup();
+			}
+
+			if (isOpen)
+			{
+				for (auto & childNodeId : node.childNodeIds)
 				{
-					editNodeStructure_traverse(childNodeId);
+					auto childNodeItr = scene.nodes.find(childNodeId);
 					
-					ImGui::TreePop();
+					Assert(childNodeItr != scene.nodes.end());
+					if (childNodeItr != scene.nodes.end())
+					{
+						auto * childNode = childNodeItr->second;
+						
+						if (do_filter && nodeUi.visibleNodes.count(childNode->id) == 0)
+							continue;
+
+						editNodeStructure_traverse(childNodeId);
+					}
 				}
+			
+				ImGui::TreePop();
 			}
 		}
+		ImGui::PopID();
 	}
 	
 	void addNodeFromTemplate_v1(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
@@ -732,12 +819,24 @@ struct SceneEditor
 		gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 		projectScreen2d();
 		
-		if (cameraIsActive == false)
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_a) && keyboard.isDown(SDLK_LGUI))
+		{
+			inputIsCaptured = true;
+			preview.tickMultiplier *= 1.25f;
+		}
+		
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_z) && keyboard.isDown(SDLK_LGUI))
+		{
+			inputIsCaptured = true;
+			preview.tickMultiplier /= 1.25f;
+		}
+		
+		//if (mouse.isCaptured == false)
 		{
 			guiContext.processBegin(dt, VIEW_SX, VIEW_SY, inputIsCaptured);
 			{
 				ImGui::SetNextWindowPos(ImVec2(4, 4));
-				ImGui::SetNextWindowSize(ImVec2(370, VIEW_SY * 4/5));
+				ImGui::SetNextWindowSize(ImVec2(370, VIEW_SY - 8));
 				if (ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 				{
 					if (ImGui::CollapsingHeader("Visibility", ImGuiTreeNodeFlags_DefaultOpen))
@@ -758,6 +857,21 @@ struct SceneEditor
 							ImGui::Checkbox("Tick", &preview.tickScene);
 							ImGui::SameLine();
 							ImGui::Checkbox("Draw", &preview.drawScene);
+							ImGui::SameLine();
+							ImGui::PushItemWidth(80.f);
+							ImGui::PushID("Tick Mult");
+							ImGui::SliderFloat("", &preview.tickMultiplier, 0.f, 100.f, "%.2f", 4.f);
+							ImGui::PopID();
+							ImGui::PopItemWidth();
+							ImGui::SameLine();
+							if (ImGui::Button("x1"))
+								preview.tickMultiplier = 1.f;
+							ImGui::SameLine();
+							if (ImGui::Button("-25%"))
+								preview.tickMultiplier /= 1.25f;
+							ImGui::SameLine();
+							if (ImGui::Button("+25%"))
+								preview.tickMultiplier *= 1.25f;
 						}
 						ImGui::Unindent();
 					}
@@ -767,12 +881,13 @@ struct SceneEditor
 						ImGui::InputText("Display name", nodeUi.nodeDisplayNameFilter, kMaxNodeDisplayNameFilter);
 						ImGui::InputText("Component type", nodeUi.componentTypeNameFilter, kMaxComponentTypeNameFilter);
 						
-						ImGui::BeginChild("Scene structure", ImVec2(0, 200), ImGuiWindowFlags_AlwaysVerticalScrollbar);
+						ImGui::BeginChild("Scene structure", ImVec2(0, 140), ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
+							// determine the set of visible nodes, given any filters applied to the list
+							// note that when a child node is visible, all its elders are visible as well
+							
 							if (nodeUi.nodeDisplayNameFilter[0] != 0)
 							{
-								nodeUi.visibleNodes.clear();
-								
 								for (auto & node_itr : scene.nodes)
 								{
 									auto nodeId = node_itr.first;
@@ -804,16 +919,45 @@ struct SceneEditor
 									}
 								}
 							}
+							
+							// determine the set of 'open' nodes. where open means the tree node entry for the
+							// node is unfolded. open nodes are all selected nodes and any of its elders
+							
+							for (auto & nodeId : selectedNodes)
+							{
+								auto node_itr = scene.nodes.find(nodeId);
+								Assert(node_itr != scene.nodes.end());
+								if (node_itr == scene.nodes.end())
+									continue;
+								
+								auto * node = node_itr->second;
+								int parentId = node->parentId;
 						
-							ImGui::Text("Root node");
+								while (parentId != -1)
+								{
+									if (nodeUi.openNodes.count(parentId) != 0)
+										break;
+									
+									nodeUi.openNodes.insert(parentId);
+									
+									auto parentNode_itr = scene.nodes.find(parentId);
+									Assert(parentNode_itr != scene.nodes.end());
+									if (parentNode_itr != scene.nodes.end())
+										parentId = parentNode_itr->second->parentId;
+								}
+							}
+							
 							editNodeStructure_traverse(scene.rootNodeId);
+							
+							nodeUi.visibleNodes.clear();
+							nodeUi.openNodes.clear();
 						}
 						ImGui::EndChild();
 					}
 					
 					if (ImGui::CollapsingHeader("Selected node(s)", ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						ImGui::BeginChild("Selected nodes", ImVec2(0, 200), ImGuiWindowFlags_AlwaysVerticalScrollbar);
+						ImGui::BeginChild("Selected nodes", ImVec2(0, 300), ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
 							for (auto & selectedNodeId : selectedNodes)
 							{
@@ -829,6 +973,7 @@ struct SceneEditor
 				
 				//
 				
+			#if 0 // todo : re-enable parameter UI
 				if (ImGui::Begin("Parameter UI"))
 				{
 					ImGui::InputText("Component filter", parameterUi.component_filter, kMaxParameterFilter);
@@ -838,12 +983,18 @@ struct SceneEditor
 					doParameterUi(s_parameterComponentMgr, parameterUi.component_filter, parameterUi.parameter_filter, parameterUi.showAnonymousComponents);
 				}
 				ImGui::End();
+			#endif
 			}
 			guiContext.processEnd();
 		}
 		
 		// transform mouse coordinates into a world space direction vector
 	
+		Mat4x4 cameraToWorld;
+		camera.calculateWorldMatrix(cameraToWorld);
+		
+		const Vec3 cameraPosition = cameraToWorld.GetTranslation();
+		
 		const Vec2 mousePosition_screen(
 			mouse.x,
 			mouse.y);
@@ -851,7 +1002,7 @@ struct SceneEditor
 			mousePosition_screen[0] / float(VIEW_SX) * 2.f - 1.f,
 			mousePosition_screen[1] / float(VIEW_SY) * 2.f - 1.f);
 		const Vec2 mousePosition_view = projectionMatrix.CalcInv().Mul(mousePosition_clip);
-		const Vec3 mouseDirection_world = camera.getWorldMatrix().Mul3(
+		const Vec3 mouseDirection_world = cameraToWorld.Mul3(
 			Vec3(
 				+mousePosition_view[0],
 				-mousePosition_view[1],
@@ -859,7 +1010,7 @@ struct SceneEditor
 		
 		// determine which node is underneath the mouse cursor
 		
-		const SceneNode * hoverNode = raycast(camera.position, mouseDirection_world);
+		const SceneNode * hoverNode = raycast(cameraPosition, mouseDirection_world);
 		
 		static SDL_Cursor * cursorHand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 		SDL_SetCursor(hoverNode == nullptr ? SDL_GetDefaultCursor() : cursorHand);
@@ -876,14 +1027,16 @@ struct SceneEditor
 			
 				if (mouseDirection_world[1] != 0.f)
 				{
-					const float t = -camera.position[1] / mouseDirection_world[1];
+					const float t = -cameraPosition[1] / mouseDirection_world[1];
 					
 					if (t >= 0.f)
 					{
-						const Vec3 groundPosition = camera.position + mouseDirection_world * t;
+						const Vec3 groundPosition = cameraPosition + mouseDirection_world * t;
 						
 						if (keyboard.isDown(SDLK_c))
 						{
+							std::set<int> nodesToSelect;
+							
 							for (auto & parentNodeId : selectedNodes)
 							{
 								auto parentNode_itr = scene.nodes.find(parentNodeId);
@@ -902,11 +1055,13 @@ struct SceneEditor
 										auto nodeId = addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
 										
 										// select the newly added node
-										selectedNodes.clear();
-										selectedNodes.insert(nodeId);
+										nodesToSelect.insert(nodeId);
 									}
 								}
 							}
+							
+							if (nodesToSelect.empty() == false)
+								selectedNodes = nodesToSelect;
 						}
 						else
 						{
@@ -943,19 +1098,26 @@ struct SceneEditor
 			removeNodesToRemove();
 		}
 		
-		if (inputIsCaptured == false)
+		if (camera.mode == Camera::kMode_FirstPerson)
 		{
-			if (mouse.wentDown(BUTTON_LEFT))
-				cameraIsActive = true;
+			if (inputIsCaptured == false)
+			{
+				if (mouse.wentDown(BUTTON_LEFT))
+					cameraIsActive = true;
+			}
+			
+			if (cameraIsActive)
+			{
+				if (mouse.wentUp(BUTTON_LEFT))
+					cameraIsActive = false;
+			}
+		}
+		else
+		{
+			cameraIsActive = true;
 		}
 		
-		if (cameraIsActive)
-		{
-			if (inputIsCaptured || mouse.wentUp(BUTTON_LEFT))
-				cameraIsActive = false;
-		}
-		
-		camera.tick(dt, cameraIsActive);
+		camera.tick(dt, inputIsCaptured, cameraIsActive == false);
 	}
 	
 	void drawNode(const SceneNode & node) const
@@ -1028,7 +1190,7 @@ struct SceneEditor
 	
 	void drawEditor() const
 	{
-		projectPerspective3d(60.f, .1f, 100.f);
+		camera.pushProjectionMatrix();
 		camera.pushViewMatrix();
 		{
 			if (preview.drawScene)
@@ -1071,6 +1233,7 @@ struct SceneEditor
 			}
 		}
 		camera.popViewMatrix();
+		camera.popProjectionMatrix();
 		
 		projectScreen2d();
 		
@@ -1088,7 +1251,7 @@ static void testResources()
 
 //
 
-#if 00
+#if 0
 
 #include "vfxgraphComponent.h"
 
@@ -1159,6 +1322,89 @@ static bool testResourcePointers()
 }
 
 #endif
+
+static bool node_to_clipboard_text(const SceneNode & node, std::string & text)
+{
+	LineWriter line_writer;
+	
+	line_writer.append(":node\n");
+	
+	for (ComponentBase * component = node.components.head; component != nullptr; component = component->next_in_set)
+	{
+		auto * component_type = findComponentType(component->typeIndex());
+		
+		Assert(component_type != nullptr);
+		if (component_type == nullptr)
+			return false;
+		
+		line_writer.append_format("%s\n", component_type->typeName);
+		
+		if (object_tolines_recursive(g_typeDB, component_type, component, line_writer, 1) == false)
+			continue;
+	}
+	
+// todo : add more efficient to_string()
+	auto lines = line_writer.to_lines();
+	
+	for (auto & line : lines)
+	{
+		text += line;
+		text += '\n';
+	}
+	
+	return true;
+}
+
+static bool node_from_clipboard_text(const char * text, SceneNode & node)
+{
+	std::vector<std::string> lines;
+	TextIO::LineEndings lineEndings;
+	
+	if (TextIO::loadText(text, lines, lineEndings) == false)
+		return false;
+	
+	LineReader line_reader(lines, 0, 0);
+	
+	const char * id = line_reader.get_next_line(true);
+	
+	if (strcmp(id, ":node") != 0)
+	{
+		return false;
+	}
+	
+	for (;;)
+	{
+		const char * component_type_name = line_reader.get_next_line(true);
+		
+		if (component_type_name == nullptr)
+			break;
+		
+		auto * component_type = findComponentType(component_type_name);
+		
+		Assert(component_type != nullptr);
+		if (component_type == nullptr)
+		{
+			node.freeComponents();
+			return false;
+		}
+		
+		auto * component = component_type->componentMgr->createComponent(nullptr);
+		
+		line_reader.push_indent();
+		{
+			if (object_fromlines_recursive(g_typeDB, component_type, component, line_reader) == false)
+			{
+				node.freeComponents();
+				return false;
+			}
+		}
+		line_reader.pop_indent();
+		
+		node.components.add(component);
+	}
+	
+	return true;
+}
 
 int main(int argc, char * argv[])
 {
@@ -1415,9 +1661,11 @@ int main(int argc, char * argv[])
 		
 		if (editor.preview.tickScene)
 		{
+			const float dt_scene = dt * editor.preview.tickMultiplier;
+			
 			for (auto * type : g_componentTypes)
 			{
-				type->componentMgr->tick(dt);
+				type->componentMgr->tick(dt_scene);
 			}
 			
 			s_transformComponentMgr.calculateTransforms(editor.scene);
