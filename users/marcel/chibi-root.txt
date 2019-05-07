@@ -16,6 +16,7 @@ add gltf1
 add grooop-cocompose
 add hackerPoet/010-particleLife
 add homography
+add interpolation1
 add jsusfx1
 add libgg-psd
 add magiclines
