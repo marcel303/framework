@@ -47,14 +47,15 @@ struct ArtnetPacket
 	uint8_t data[kMaxSize]; ///< The data to be sent to the ArtNet client.
 	uint16_t dataSize = 0;  ///< The size of the packet. Use this size when sending the data over UDP.
 
-	/*
-	Create a ArtNet-DMX packet with 1 to 512 DMX values.
-	@values: The array of DMX values between 0 and 255.
-	@numValues: The number of values in the DMX values array. This can be anywhere between 1 and 512
-	@sequenceNumber: The DMX packet sequence number. If 0, the sequence number is ignored. If between 1 and 255, the receiver will use these numbers to re-order data packets.
-	@physical: The physical ID of the sender. Usually ignored and 0.
-	@universe: The universe of the DMX values. Usually 0 when the DMX setup isn't segmented into universes.
-	*/
+	/**
+	 * Create a ArtNet-DMX packet with 1 to 512 DMX values.
+	 * @param values: The array of DMX values between 0 and 255.
+	 * @param numValues: The number of values in the DMX values array. This can be anywhere between 1 and 512
+	 * @param sequenceNumber: The DMX packet sequence number. If 0, the sequence number is ignored. If between 1 and 255, the receiver will use these numbers to re-order data packets.
+	 * @param physical: The physical ID of the sender. Usually ignored and 0.
+	 * @param universe: The universe of the DMX values. Usually 0 when the DMX setup isn't segmented into universes.
+	 * @return True on success. False otherwise.
+	 */
 	bool makeDMX512(
 		const uint8_t * __restrict values, const int numValues,
 		const uint8_t sequenceNumber = 0, const uint8_t physical = 0, const uint16_t universe = 0);
