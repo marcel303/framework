@@ -68,6 +68,8 @@ struct FrameworkImGuiContext
 	void updateMouseCursor();
 	void updateFontTexture();
 	
+	void setFrameworkStyleColors();
+	
 	static const char * getClipboardText(void * user_data);
 	static void setClipboardText(void * user_data, const char * text);
 	static void render(const ImDrawData * draw_data);
