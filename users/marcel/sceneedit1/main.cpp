@@ -143,17 +143,14 @@ static bool intersectBoundingBox3d_simd(SimdVecArg rayOrigin, SimdVecArg rayDire
 
 struct SceneEditor
 {
-	enum State
-	{
-		kState_Idle,
-		kState_NodeDrag
-	};
-	
-	Camera camera;
-	
 	Scene scene;
 	
+	Camera camera;
+	bool cameraIsActive = false;
+	
 	std::set<int> selectedNodes;
+	
+	int nodeToGiveFocus = -1;
 	
 	struct
 	{
@@ -172,10 +169,18 @@ struct SceneEditor
 	
 	FrameworkImGuiContext guiContext;
 	
-	std::set<int> nodesToRemove;
-	std::vector<SceneNode*> nodesToAdd;
-	
-	bool cameraIsActive = false;
+	struct
+	{
+		std::set<int> nodesToRemove;
+		std::vector<SceneNode*> nodesToAdd;
+		
+		bool isFlushed() const
+		{
+			return
+				nodesToRemove.empty() &&
+				nodesToAdd.empty();
+		}
+	} deferred;
 	
 	static const int kMaxNodeDisplayNameFilter = 100;
 	static const int kMaxComponentTypeNameFilter = 100;
@@ -198,6 +203,8 @@ struct SceneEditor
 		bool showAnonymousComponents = false;
 	} parameterUi;
 	
+	//
+	
 	SceneEditor()
 	{
 		camera.mode = Camera::kMode_Orbit;
@@ -209,10 +216,6 @@ struct SceneEditor
 	void init()
 	{
 		guiContext.init();
-		
-		guiContext.pushImGuiContext();
-		ImGui::StyleColorsClassic();
-		guiContext.popImGuiContext();
 		
 		scene.createRootNode();
 	}
@@ -268,6 +271,18 @@ struct SceneEditor
 		}
 		
 		return result;
+	}
+	
+	void deferredBegin()
+	{
+		Assert(deferred.isFlushed());
+	}
+	
+	void deferredEnd()
+	{
+		addNodesToAdd();
+		
+		removeNodesToRemove();
 	}
 	
 	void removeNodeTraverse(const int nodeId, const bool removeFromParent)
@@ -338,37 +353,55 @@ struct SceneEditor
 			
 			selectedNodes.erase(nodeId);
 			
-			nodesToRemove.erase(nodeId);
+			deferred.nodesToRemove.erase(nodeId);
 		}
 	}
 	
 	void addNodesToAdd()
 	{
-		for (SceneNode * node : nodesToAdd)
+		if (deferred.nodesToAdd.empty() == false)
 		{
-			scene.nodes[node->id] = node;
+			selectedNodes.clear();
 			
-			auto parentNode_itr = scene.nodes.find(node->parentId);
-			Assert(parentNode_itr != scene.nodes.end());
+			for (SceneNode * node : deferred.nodesToAdd)
+			{
+				scene.nodes[node->id] = node;
+				
+				auto parentNode_itr = scene.nodes.find(node->parentId);
+				Assert(parentNode_itr != scene.nodes.end());
+				
+				// insert the node into the scene
+				auto * parentNode = parentNode_itr->second;
+				parentNode->childNodeIds.push_back(node->id);
+				
+				// select the newly added child node
+				selectedNodes.insert(node->id);
+				nodeToGiveFocus = node->id;
+				
+				
+				// when a display name filter is set the node would just disappear. set the filter to the name of the newly
+				// added node in this case, to avoid confusion
+				if (nodeUi.nodeDisplayNameFilter[0] != 0)
+				{
+					strcpy_s(nodeUi.nodeDisplayNameFilter, sizeof(nodeUi.nodeDisplayNameFilter), node->displayName.c_str());
+				}
+			}
 			
-			auto * parentNode = parentNode_itr->second;
-			parentNode->childNodeIds.push_back(node->id);
+			deferred.nodesToAdd.clear();
 		}
-		
-		nodesToAdd.clear();
 	}
 	
 	void removeNodesToRemove()
 	{
-		while (!nodesToRemove.empty())
+		while (!deferred.nodesToRemove.empty())
 		{
-			auto nodeToRemoveItr = nodesToRemove.begin();
+			auto nodeToRemoveItr = deferred.nodesToRemove.begin();
 			auto nodeId = *nodeToRemoveItr;
 			
 			removeNodeTraverse(nodeId, true);
 		}
 
-		Assert(nodesToRemove.empty());
+		Assert(deferred.nodesToRemove.empty());
 	#if defined(DEBUG)
 		for (auto & selectedNodeId : selectedNodes)
 			Assert(scene.nodes.find(selectedNodeId) != scene.nodes.end());
@@ -537,11 +570,7 @@ struct SceneEditor
 				}
 				else
 				{
-					nodesToAdd.push_back(childNode);
-					
-					// select the newly added child node
-					selectedNodes.clear();
-					selectedNodes.insert(childNode->id);
+					deferred.nodesToAdd.push_back(childNode);
 				}
 			}
 			
@@ -567,7 +596,7 @@ struct SceneEditor
 		{
 			result = kNodeStructureContextMenuResult_NodeQueuedForRemove;
 			
-			nodesToRemove.insert(node.id);
+			deferred.nodesToRemove.insert(node.id);
 		}
 
 		if (ImGui::MenuItem("Add child node"))
@@ -590,18 +619,7 @@ struct SceneEditor
 			}
 			else
 			{
-				nodesToAdd.push_back(childNode);
-				
-				// select the newly added child node
-				selectedNodes.clear();
-				selectedNodes.insert(childNode->id);
-			}
-			
-			if (nodeUi.nodeDisplayNameFilter[0] != 0)
-			{
-				// when a display name filter is set the node would just disappear. set the filter to the name of the newly
-				// added node in this case, to avoid confusion
-				strcpy_s(nodeUi.nodeDisplayNameFilter, sizeof(nodeUi.nodeDisplayNameFilter), childNode->displayName.c_str());
+				deferred.nodesToAdd.push_back(childNode);
 			}
 		}
 		
@@ -684,6 +702,12 @@ struct SceneEditor
 		
 		ImGui::PushID(&node);
 		{
+			if (nodeToGiveFocus == nodeId)
+			{
+				nodeToGiveFocus = -1;
+				ImGui::SetScrollHereY();
+			}
+			
 			if (nodeUi.openNodes.count(node.id) != 0)
 				ImGui::SetNextTreeNodeOpen(true);
 
@@ -836,18 +860,6 @@ struct SceneEditor
 	
 	void tickEditor(const float dt, bool & inputIsCaptured)
 	{
-		if (inputIsCaptured == false && keyboard.wentDown(SDLK_a) && keyboard.isDown(SDLK_LGUI))
-		{
-			inputIsCaptured = true;
-			preview.tickMultiplier *= 1.25f;
-		}
-		
-		if (inputIsCaptured == false && keyboard.wentDown(SDLK_z) && keyboard.isDown(SDLK_LGUI))
-		{
-			inputIsCaptured = true;
-			preview.tickMultiplier /= 1.25f;
-		}
-		
 		//if (mouse.isCaptured == false)
 		{
 			guiContext.processBegin(dt, VIEW_SX, VIEW_SY, inputIsCaptured);
@@ -973,7 +985,11 @@ struct SceneEditor
 								}
 							}
 							
-							editNodeStructure_traverse(scene.rootNodeId);
+							deferredBegin();
+							{
+								editNodeStructure_traverse(scene.rootNodeId);
+							}
+							deferredEnd();
 							
 							nodeUi.visibleNodes.clear();
 							nodeUi.openNodes.clear();
@@ -981,10 +997,9 @@ struct SceneEditor
 						ImGui::EndChild();
 					}
 					
-					addNodesToAdd();
-					
 					if (ImGui::CollapsingHeader("Selected node(s)", ImGuiTreeNodeFlags_DefaultOpen))
 					{
+						deferredBegin();
 						ImGui::BeginChild("Selected nodes", ImVec2(0, 300), ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
 							for (auto & selectedNodeId : selectedNodes)
@@ -993,9 +1008,8 @@ struct SceneEditor
 							}
 						}
 						ImGui::EndChild();
+						deferredEnd();
 					}
-					
-					removeNodesToRemove();
 				}
 				ImGui::End();
 				
@@ -1012,8 +1026,22 @@ struct SceneEditor
 				}
 				ImGui::End();
 			#endif
+			
+				guiContext.updateMouseCursor();
 			}
 			guiContext.processEnd();
+		}
+		
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_a) && keyboard.isDown(SDLK_LGUI))
+		{
+			inputIsCaptured = true;
+			preview.tickMultiplier *= 1.25f;
+		}
+		
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_z) && keyboard.isDown(SDLK_LGUI))
+		{
+			inputIsCaptured = true;
+			preview.tickMultiplier /= 1.25f;
 		}
 		
 		// transform mouse coordinates into a world space direction vector
@@ -1047,8 +1075,11 @@ struct SceneEditor
 		
 		const SceneNode * hoverNode = raycast(cameraPosition, mouseDirection_world);
 		
-		static SDL_Cursor * cursorHand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
-		SDL_SetCursor(hoverNode == nullptr ? SDL_GetDefaultCursor() : cursorHand);
+		if (inputIsCaptured == false)
+		{
+			static SDL_Cursor * cursorHand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+			SDL_SetCursor(hoverNode == nullptr ? SDL_GetDefaultCursor() : cursorHand);
+		}
 		
 		if (inputIsCaptured == false && mouse.wentDown(BUTTON_LEFT))
 		{
@@ -1091,6 +1122,7 @@ struct SceneEditor
 										
 										// select the newly added node
 										nodesToSelect.insert(nodeId);
+										nodeToGiveFocus = nodeId;
 									}
 								}
 							}
@@ -1105,6 +1137,7 @@ struct SceneEditor
 							// select the newly added node
 							selectedNodes.clear();
 							selectedNodes.insert(nodeId);
+							nodeToGiveFocus = nodeId;
 						}
 					}
 				}
@@ -1114,7 +1147,10 @@ struct SceneEditor
 				selectedNodes.clear();
 				
 				if (hoverNode != nullptr)
+				{
 					selectedNodes.insert(hoverNode->id);
+					nodeToGiveFocus = hoverNode->id;
+				}
 			}
 		}
 		
@@ -1122,15 +1158,17 @@ struct SceneEditor
 		{
 			inputIsCaptured = true;
 			
-			for (auto nodeId : selectedNodes)
+			deferredBegin();
 			{
-				if (nodeId == scene.rootNodeId)
-					continue;
-				
-				nodesToRemove.insert(nodeId);
+				for (auto nodeId : selectedNodes)
+				{
+					if (nodeId == scene.rootNodeId)
+						continue;
+					
+					deferred.nodesToRemove.insert(nodeId);
+				}
 			}
-			
-			removeNodesToRemove();
+			deferredEnd();
 		}
 		
 		if (camera.mode == Camera::kMode_FirstPerson)
@@ -1530,9 +1568,12 @@ int main(int argc, char * argv[])
 						logError("failed to load scene from json");
 					else
 					{
-						for (auto & node_itr : editor.scene.nodes)
-							editor.nodesToRemove.insert(node_itr.second->id);
-						editor.removeNodesToRemove();
+						editor.deferredBegin();
+						{
+							for (auto & node_itr : editor.scene.nodes)
+								editor.deferred.nodesToRemove.insert(node_itr.second->id);
+						}
+						editor.deferredEnd();
 						
 						editor.scene = tempScene;
 					}
@@ -1568,9 +1609,12 @@ int main(int argc, char * argv[])
 			
 			if (tempScene.loadFromFile("testScene.json"))
 			{
-				for (auto & node_itr : editor.scene.nodes)
-					editor.nodesToRemove.insert(node_itr.second->id);
-				editor.removeNodesToRemove();
+				editor.deferredBegin();
+				{
+					for (auto & node_itr : editor.scene.nodes)
+						editor.deferred.nodesToRemove.insert(node_itr.second->id);
+				}
+				editor.deferredEnd();
 				
 				editor.scene = tempScene;
 			}
@@ -1603,9 +1647,12 @@ int main(int argc, char * argv[])
 				}
 				else
 				{
-					for (auto & node_itr : editor.scene.nodes)
-						editor.nodesToRemove.insert(node_itr.second->id);
-					editor.removeNodesToRemove();
+					editor.deferredBegin();
+					{
+						for (auto & node_itr : editor.scene.nodes)
+							editor.deferred.nodesToRemove.insert(node_itr.second->id);
+					}
+					editor.deferredEnd();
 					Assert(editor.scene.nodes.empty());
 					
 					editor.scene = tempScene;
