@@ -7,6 +7,7 @@ struct TranslationGizmo
 		kState_Hidden,
 		kState_Visible,
 		kState_DragArrow,
+		kState_DragPad,
 		kState_DragRing
 	};
 	
@@ -16,7 +17,7 @@ struct TranslationGizmo
 		kElement_XAxis,
 		kElement_YAxis,
 		kElement_ZAxis,
-		kElement_XZAxis,
+		kElement_XZPad,
 		kElement_XRing,
 		kElement_YRing,
 		kElement_ZRing
@@ -44,11 +45,16 @@ struct TranslationGizmo
 	float ring_radius = 1.8f;
 	float ring_tubeRadius = .1f;
 	
-	struct DragAxis
+	struct DragArrow
 	{
-		bool active_axis[4] = { };
+		int axis = 0;
 		Vec3 initialPosition;
-	} dragAxis;
+	} dragArrow;
+	
+	struct DragPad
+	{
+		Vec3 initialPosition;
+	} dragPad;
 	
 	struct DragRing
 	{

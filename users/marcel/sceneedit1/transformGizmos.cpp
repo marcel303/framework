@@ -30,31 +30,50 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 	{
 		const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 		
-		auto origin_gizmo = worldToGizmo * ray_origin;
-		auto direction_gizmo = worldToGizmo.Mul3(ray_direction);
+		const Vec3 origin_gizmo = worldToGizmo * ray_origin;
+		const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
 		
-		for (int i = 0; i < 4; ++i)
+		const int projection_axis = (dragArrow.axis + 1) % 3;
+		const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
+		const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
+		
+		//logDebug("initial_pos: %f, current_pos: %f", dragAxis.initialPosition[i], position_gizmo[i]);
+		
+		const Vec3 delta = position_gizmo - dragArrow.initialPosition;
+		
+		Vec3 drag;
+		drag[dragArrow.axis] = delta[dragArrow.axis];
+		
+		gizmoToWorld = gizmoToWorld.Translate(drag[0], drag[1], drag[2]);
+		
+		if (mouse.wentUp(BUTTON_LEFT))
 		{
-			if (dragAxis.active_axis[i])
-			{
-				const int projection_axis = i < 3 ? ((i + 1) % 3) : 1;
-				const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
-				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
-				
-				//logDebug("initial_pos: %f, current_pos: %f", dragAxis.initialPosition[i], position_gizmo[i]);
-				
-				const Vec3 delta = position_gizmo - dragAxis.initialPosition;
-				
-				Vec3 drag;
-				
-				if (i < 3)
-					drag[i] = delta[i];
-				else
-					drag.Set(delta[0], 0.f, delta[2]);
-				
-				gizmoToWorld = gizmoToWorld.Translate(drag[0], drag[1], drag[2]);
-			}
+			state = kState_Visible;
 		}
+		else
+		{
+			inputIsCaptured = true;
+		}
+	}
+	else if (state == kState_DragPad)
+	{
+		const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
+		
+		const Vec3 origin_gizmo = worldToGizmo * ray_origin;
+		const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
+		
+		const int projection_axis = 1;
+		const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
+		const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
+		
+		//logDebug("initial_pos: %f, current_pos: %f", dragAxis.initialPosition[i], position_gizmo[i]);
+		
+		const Vec3 delta = position_gizmo - dragPad.initialPosition;
+		
+		Vec3 drag;
+		drag.Set(delta[0], 0.f, delta[2]);
+		
+		gizmoToWorld = gizmoToWorld.Translate(drag[0], drag[1], drag[2]);
 		
 		if (mouse.wentUp(BUTTON_LEFT))
 		{
@@ -115,30 +134,29 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 				inputIsCaptured = true;
 				state = kState_DragArrow;
 				
-				dragAxis = DragAxis();
-				const int axis_index = intersectionResult.element - kElement_XAxis;
-				dragAxis.active_axis[axis_index] = true;
+				dragArrow = DragArrow();
+				const int axis = intersectionResult.element - kElement_XAxis;
+				dragArrow.axis = axis;
 				
 				//
 				const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 				const Vec3 origin_gizmo = worldToGizmo * ray_origin;
 				const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
-				const int projection_axis = (axis_index + 1) % 3;
+				const int projection_axis = (axis + 1) % 3;
 				const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
 				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
-				dragAxis.initialPosition = position_gizmo;
+				dragArrow.initialPosition = position_gizmo;
 			}
 		}
 		
-		if (intersectionResult.element == kElement_XZAxis)
+		if (intersectionResult.element == kElement_XZPad)
 		{
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
 				inputIsCaptured = true;
 				
-				state = kState_DragArrow;
-				dragAxis = DragAxis();
-				dragAxis.active_axis[3] = true;
+				state = kState_DragPad;
+				dragPad = DragPad();
 				
 				//
 				const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
@@ -147,7 +165,7 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 				const int projection_axis = 1;
 				const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
 				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
-				dragAxis.initialPosition = position_gizmo;
+				dragPad.initialPosition = position_gizmo;
 			}
 		}
 		
@@ -170,7 +188,8 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 	
 	return
 		state == kState_DragRing ||
-		state == kState_DragArrow;
+		state == kState_DragArrow ||
+		state == kState_DragPad;
 }
 
 static void drawRing(const Vec3 & position, const int axis, const float radius, const float tubeRadius)
@@ -245,7 +264,7 @@ void TranslationGizmo::draw() const
 		const Color pad_color(100, 100, 100);
 		const Color pad_color_highlight(200, 200, 200);
 		
-		setColor(intersectionResult.element == kElement_XZAxis ? pad_color_highlight : pad_color);
+		setColor(intersectionResult.element == kElement_XZPad ? pad_color_highlight : pad_color);
 		fillCube(
 			Vec3(pad_offset, 0.f, pad_offset),
 			Vec3(pad_size, pad_thickness, pad_size));
@@ -266,9 +285,8 @@ void TranslationGizmo::beginPad(Vec3Arg origin_world, Vec3Arg direction_world)
 {
 	// todo : update tick to use this method
 	
-	state = kState_DragArrow;
-	dragAxis = DragAxis();
-	dragAxis.active_axis[3] = true;
+	state = kState_DragPad;
+	dragPad = DragPad();
 
 	//
 	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
@@ -277,7 +295,7 @@ void TranslationGizmo::beginPad(Vec3Arg origin_world, Vec3Arg direction_world)
 	const int projection_axis = 1;
 	const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
 	const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
-	dragAxis.initialPosition = position_gizmo;
+	dragPad.initialPosition = position_gizmo;
 }
 
 TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_world, Vec3Arg direction_world) const
@@ -345,7 +363,7 @@ TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_
 			1.f / direction_gizmo[0], 1.f / direction_gizmo[1], 1.f / direction_gizmo[2], t) && t < best_t)
 		{
 			best_t = t;
-			result.element = kElement_XZAxis;
+			result.element = kElement_XZPad;
 		}
 	}
 
@@ -390,7 +408,7 @@ void TranslationGizmo::setColorForArrow(const int axis) const
 {
 	const Color colors[3] = { colorRed, colorGreen, colorBlue };
 	
-	if (state == kState_DragArrow && dragAxis.active_axis[axis])
+	if (state == kState_DragArrow && dragArrow.axis == axis)
 		setColor(colorWhite);
 	else if (intersectionResult.element == kElement_XAxis + axis)
 		setColor(colorYellow);
