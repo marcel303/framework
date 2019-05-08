@@ -5,6 +5,7 @@ void showInterpolation(
 	const float * values, const int num_values,
 	const std::function<float(const float * values, const int num_values, const float pos)> & sample_function)
 {
+	pushLineSmooth(true);
 	gxBegin(GX_LINE_STRIP);
 	{
 		for (int i = 0; i < 800; ++i)
@@ -17,6 +18,7 @@ void showInterpolation(
 		}
 	}
 	gxEnd();
+	popLineSmooth();
 }
 
 int main(int argc, char * argv[])
@@ -192,6 +194,10 @@ int main(int argc, char * argv[])
 
 	std::function<float(const float * values, const int num_values, const float pos)> function = interp_linear;
 	
+	int selected_value = -1;
+	
+	const float circle_radius = 6.f;
+	
 	for (;;)
 	{
 		framework.process();
@@ -210,17 +216,42 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_5))
 			function = interp_cubic_hermite;
 		
+		if (mouse.wentDown(BUTTON_LEFT))
+		{
+			for (int i = 0; i < num_values; ++i)
+			{
+				const float x = i * 800 / (num_values - 1);
+				const float y = values[i];
+				
+				const float dx = mouse.x - x;
+				const float dy = mouse.y - y;
+				
+				if (hypotf(dx, dy) <= circle_radius)
+					selected_value = i;
+			}
+		}
+		
+		if (selected_value != -1)
+		{
+			if (mouse.wentUp(BUTTON_LEFT))
+				selected_value = -1;
+			else
+			{
+				values[selected_value] = mouse.y;
+			}
+		}
+		
 		framework.beginDraw(200, 200, 200, 255);
 		{
 			setColor(colorBlack);
 			showInterpolation(values, num_values, function);
 			
-			setColor(colorRed);
 			hqBegin(HQ_FILLED_CIRCLES);
 			{
 				for (int i = 0; i < num_values; ++i)
 				{
-					hqFillCircle(i * 800 / (num_values - 1), values[i], 6.f);
+					setColor(i == selected_value ? colorWhite : colorRed);
+					hqFillCircle(i * 800 / (num_values - 1), values[i], circle_radius);
 				}
 			}
 			hqEnd();
