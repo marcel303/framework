@@ -15,6 +15,7 @@
 #include "sceneNodeComponent.h"
 #include "StringEx.h"
 #include "TextIO.h"
+#include "transformGizmos.h"
 
 #include "helpers.h"
 #include "lineReader.h"
@@ -28,6 +29,8 @@
 
 #include "componentJson.h" // todo : remove
 #include <json.hpp> // todo : remove
+
+#define ENABLE_TRANSFORM_GIZMOS 1
 
 /*
 
@@ -151,6 +154,10 @@ struct SceneEditor
 	std::set<int> selectedNodes;
 	
 	int nodeToGiveFocus = -1;
+	
+#if ENABLE_TRANSFORM_GIZMOS
+	TranslationGizmo translationGizmo;
+#endif
 	
 	struct
 	{
@@ -1009,6 +1016,11 @@ struct SceneEditor
 						}
 						ImGui::EndChild();
 						deferredEnd();
+						
+						// one or more transforms may have been edited or invalidated due to a parent node being invalidated
+						// ensure the transforms are up to date by recalculating them. this is needed for transform gizmos
+						// to work
+						s_transformComponentMgr.calculateTransforms(scene);
 					}
 				}
 				ImGui::End();
@@ -1046,31 +1058,111 @@ struct SceneEditor
 		
 		// transform mouse coordinates into a world space direction vector
 	
-		Mat4x4 cameraToWorld;
-		camera.calculateWorldMatrix(cameraToWorld);
-		
 		int viewportSx;
 		int viewportSy;
 		framework.getCurrentViewportSize(viewportSx, viewportSy);
-		
+	
 		Mat4x4 projectionMatrix;
 		camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
 		
-		const Vec3 cameraPosition = cameraToWorld.GetTranslation();
+		Mat4x4 cameraToWorld;
+		camera.calculateWorldMatrix(cameraToWorld);
 		
-		const Vec2 mousePosition_screen(
-			mouse.x,
-			mouse.y);
-		const Vec2 mousePosition_clip(
-			mousePosition_screen[0] / float(VIEW_SX) * 2.f - 1.f,
-			mousePosition_screen[1] / float(VIEW_SY) * 2.f - 1.f);
-		const Vec2 mousePosition_view = projectionMatrix.CalcInv().Mul(mousePosition_clip);
-		const Vec3 mouseDirection_world = cameraToWorld.Mul3(
-			Vec3(
-				+mousePosition_view[0],
-				-mousePosition_view[1],
-				1.f));
+		Vec3 cameraPosition;
+		Vec3 mouseDirection_world;
 		
+		if (camera.mode == Camera::kMode_Ortho)
+		{
+			const Vec2 mousePosition_screen(
+				mouse.x,
+				mouse.y);
+			const Vec3 mousePosition_clip(
+				mousePosition_screen[0] / float(viewportSx) * 2.f - 1.f,
+				mousePosition_screen[1] / float(viewportSy) * 2.f - 1.f,
+				0.f);
+			Vec3 mousePosition_camera = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
+			mousePosition_camera[1] = -mousePosition_camera[1];
+			
+			cameraPosition = cameraToWorld.Mul4(mousePosition_camera) - cameraToWorld.GetAxis(2) * 10.f;
+			
+			mouseDirection_world = cameraToWorld.GetAxis(2);
+		}
+		else
+		{
+			cameraPosition = cameraToWorld.GetTranslation();
+			
+			const Vec2 mousePosition_screen(
+				mouse.x,
+				mouse.y);
+			const Vec2 mousePosition_clip(
+				mousePosition_screen[0] / float(viewportSx) * 2.f - 1.f,
+				mousePosition_screen[1] / float(viewportSy) * 2.f - 1.f);
+			Vec2 mousePosition_camera = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
+			
+			mouseDirection_world = cameraToWorld.Mul3(
+				Vec3(
+					+mousePosition_camera[0],
+					-mousePosition_camera[1],
+					1.f));
+		}
+		
+	#if ENABLE_TRANSFORM_GIZMOS
+		if (selectedNodes.size() != 1)
+		{
+			translationGizmo.hide();
+		}
+		else
+		{
+			auto node_itr = scene.nodes.find(*selectedNodes.begin());
+			Assert(node_itr != scene.nodes.end());
+			
+			auto * node = node_itr->second;
+			
+			// determine the current global transform
+			
+			Mat4x4 globalTransform(true);
+			
+			auto * sceneNodeComponent = node->components.find<SceneNodeComponent>();
+			Assert(sceneNodeComponent != nullptr);
+			
+			if (sceneNodeComponent != nullptr)
+				globalTransform = sceneNodeComponent->objectToWorld;
+			
+			// let the gizmo do it's thing
+			
+			translationGizmo.show(globalTransform);
+			
+			translationGizmo.tick(projectionMatrix, cameraToWorld, cameraPosition, mouseDirection_world.CalcNormalized(), inputIsCaptured);
+			
+			// transform the global transform into local space
+			
+			Mat4x4 localTransform = translationGizmo.gizmoToWorld;
+			
+			if (node->parentId != -1)
+			{
+				auto parent_itr = scene.nodes.find(node->parentId);
+				Assert(parent_itr != scene.nodes.end());
+				
+				auto * parent = parent_itr->second;
+				
+				auto * sceneNodeComponent_parent = parent->components.find<SceneNodeComponent>();
+				Assert(sceneNodeComponent_parent != nullptr);
+			
+				if (sceneNodeComponent_parent != nullptr)
+					localTransform = sceneNodeComponent_parent->objectToWorld.CalcInv() * localTransform;
+			}
+			
+			// assign the translation in local space to the transform component
+			
+			auto * transformComponent = node->components.find<TransformComponent>();
+			
+			if (transformComponent != nullptr)
+			{
+				transformComponent->position = localTransform.GetTranslation();
+			}
+		}
+	#endif
+	
 		// determine which node is underneath the mouse cursor
 		
 		const SceneNode * hoverNode = raycast(cameraPosition, mouseDirection_world);
@@ -1197,7 +1289,7 @@ struct SceneEditor
 	{
 		const bool isSelected = selectedNodes.count(node.id) != 0;
 		
-		setColor(isSelected ? colorYellow : colorWhite);
+		setColor(isSelected ? Color(100, 100, 0) : Color(100, 100, 100));
 		fillCube(Vec3(), Vec3(.1f, .1f, .1f));
 		
 		if (visibility.drawNodeBoundingBoxes)
@@ -1274,6 +1366,19 @@ struct SceneEditor
 				popBlend();
 				popDepthTest();
 			}
+		
+		#if ENABLE_TRANSFORM_GIZMOS
+			if (true)
+			{
+				pushDepthTest(true, DEPTH_LESS);
+				pushBlend(BLEND_OPAQUE);
+				
+				translationGizmo.draw();
+				
+				popBlend();
+				popDepthTest();
+			}
+		#endif
 			
 			if (visibility.drawGroundPlane)
 			{
@@ -1298,11 +1403,11 @@ struct SceneEditor
 			
 			if (visibility.drawNodes)
 			{
-				pushDepthWrite(false);
+				pushDepthTest(true, DEPTH_LESS, false);
 				pushBlend(BLEND_ADD);
 				drawNodesTraverse(scene.getRootNode());
 				popBlend();
-				popDepthWrite();
+				popDepthTest();
 			}
 		}
 		camera.popViewMatrix();
