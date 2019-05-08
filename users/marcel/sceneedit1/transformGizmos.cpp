@@ -16,7 +16,7 @@ void TranslationGizmo::hide()
 	state = kState_Hidden;
 }
 
-void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & cameraToWorld, Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured)
+void TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured)
 {
 	if (inputIsCaptured)
 	{
@@ -28,35 +28,29 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 	}
 	else if (state == kState_DragArrow)
 	{
-		const float dragSpeed = keyboard.isDown(SDLK_LSHIFT) ? 1.f : 10.f;
+		const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 		
-	#if 1
-		int viewportSx;
-		int viewportSy;
-		framework.getCurrentViewportSize(viewportSx, viewportSy);
+		auto origin_gizmo = worldToGizmo * ray_origin;
+		auto direction_gizmo = worldToGizmo.Mul3(ray_direction);
 		
-		const Vec3 mouseDelta_clip(mouse.dx / float(viewportSx), -mouse.dy / float(viewportSy), 0.f);
-		Vec3 mouseDelta_camera = projectionMatrix.CalcInv() * mouseDelta_clip;
-		mouseDelta_camera[2] = 0.f;
-		
-	#else
-	// fixme : use projection matrix instead ..
-		int viewportSx;
-		int viewportSy;
-		framework.getCurrentViewportSize(viewportSx, viewportSy);
-		const float mouseScale = 2.f / viewportSy;
-		
-		const Vec3 mouseDelta_camera = Vec3(+mouse.dx * mouseScale, -mouse.dy * mouseScale, 0.f);
-	#endif
-		const Vec3 mouseDelta_world = cameraToWorld.Mul3(mouseDelta_camera);
-		const Vec3 mouseDelta_gizmo = gizmoToWorld.CalcInv().Mul3(mouseDelta_world);
-		
-		for (int i = 0; i < 3; ++i)
+		for (int i = 0; i < 4; ++i)
 		{
 			if (dragAxis.active_axis[i])
 			{
+				const int projection_axis = i < 3 ? ((i + 1) % 3) : 1;
+				const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
+				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
+				
+				//logDebug("initial_pos: %f, current_pos: %f", dragAxis.initialPosition[i], position_gizmo[i]);
+				
+				const Vec3 delta = position_gizmo - dragAxis.initialPosition;
+				
 				Vec3 drag;
-				drag[i] = mouseDelta_gizmo[i] * dragSpeed;
+				
+				if (i < 3)
+					drag[i] = delta[i];
+				else
+					drag.Set(delta[0], 0.f, delta[2]);
 				
 				gizmoToWorld = gizmoToWorld.Translate(drag[0], drag[1], drag[2]);
 			}
@@ -124,6 +118,15 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 				dragAxis = DragAxis();
 				const int axis_index = intersectionResult.element - kElement_XAxis;
 				dragAxis.active_axis[axis_index] = true;
+				
+				//
+				const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
+				const Vec3 origin_gizmo = worldToGizmo * ray_origin;
+				const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
+				const int projection_axis = (axis_index + 1) % 3;
+				const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
+				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
+				dragAxis.initialPosition = position_gizmo;
 			}
 		}
 		
@@ -135,8 +138,16 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 				
 				state = kState_DragArrow;
 				dragAxis = DragAxis();
-				dragAxis.active_axis[0] = true;
-				dragAxis.active_axis[2] = true;
+				dragAxis.active_axis[3] = true;
+				
+				//
+				const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
+				const Vec3 origin_gizmo = worldToGizmo * ray_origin;
+				const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
+				const int projection_axis = 1;
+				const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
+				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
+				dragAxis.initialPosition = position_gizmo;
 			}
 		}
 		
@@ -151,8 +162,8 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 				
 				dragRing = DragRing();
 				dragRing.axis = intersectionResult.element - kElement_XRing;
-				const Vec3 position = ray_origin + ray_direction * intersectionResult.t;
-				dragRing.initialAngle = calculateRingAngle(position, dragRing.axis);
+				const Vec3 position_world = ray_origin + ray_direction * intersectionResult.t;
+				dragRing.initialAngle = calculateRingAngle(position_world, dragRing.axis);
 			}
 		}
 	}

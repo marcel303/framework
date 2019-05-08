@@ -46,7 +46,8 @@ struct TranslationGizmo
 	
 	struct DragAxis
 	{
-		bool active_axis[3] = { };
+		bool active_axis[4] = { };
+		Vec3 initialPosition;
 	} dragAxis;
 	
 	struct DragRing
@@ -58,7 +59,7 @@ struct TranslationGizmo
 	void show(const Mat4x4 & transform);
 	void hide();
 	
-	void tick(const Mat4x4 & projectionMatrix, const Mat4x4 & cameraToWorld, Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured);
+	void tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured);
 	
 	void draw() const;
 

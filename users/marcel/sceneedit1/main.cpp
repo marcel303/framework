@@ -1059,7 +1059,7 @@ struct SceneEditor
 			
 			translationGizmo.show(globalTransform);
 			
-			translationGizmo.tick(projectionMatrix, cameraToWorld, cameraPosition, mouseDirection_world.CalcNormalized(), inputIsCaptured);
+			translationGizmo.tick(cameraPosition, mouseDirection_world.CalcNormalized(), inputIsCaptured);
 			
 			// transform the global transform into local space
 			
