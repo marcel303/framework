@@ -14,7 +14,8 @@ struct TranslationGizmo
 		kElement_None,
 		kElement_XAxis,
 		kElement_YAxis,
-		kElement_ZAxis
+		kElement_ZAxis,
+		kElement_XZAxis
 	};
 	
 	struct IntersectionResult
@@ -30,10 +31,13 @@ struct TranslationGizmo
 	
 	float radius = .08f;
 	float length = 1.f;
+	float pad_offset = .5f;
+	float pad_size = .3f;
+	float pad_thickness = .04f;
 	
 	struct DragAxis
 	{
-		int axis = -1;
+		bool active_axis[3] = { };
 	} dragAxis;
 	
 	void show(const Mat4x4 & transform);

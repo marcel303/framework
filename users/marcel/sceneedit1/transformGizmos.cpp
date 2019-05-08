@@ -1,10 +1,7 @@
 #include "draw.h"
 #include "framework.h"
+#include "raycast.h"
 #include "transformGizmos.h"
-
-static bool intersectCircle(const float x, const float y, const float dx, const float dy, const float cx, const float cy, const float cr, float & distance);
-
-//
 
 void TranslationGizmo::show(const Mat4x4 & transform)
 {
@@ -54,12 +51,16 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 		const Vec3 mouseDelta_world = cameraToWorld.Mul3(mouseDelta_camera);
 		const Vec3 mouseDelta_gizmo = gizmoToWorld.CalcInv().Mul3(mouseDelta_world);
 		
-		Vec3 axis;
-		axis[dragAxis.axis] = 1;
-		
-		const Vec3 drag = axis * (mouseDelta_gizmo * axis) * dragSpeed;
-		
-		gizmoToWorld = gizmoToWorld.Translate(drag[0], drag[1], drag[2]);
+		for (int i = 0; i < 3; ++i)
+		{
+			if (dragAxis.active_axis[i])
+			{
+				Vec3 drag;
+				drag[i] = mouseDelta_gizmo[i] * dragSpeed;
+				
+				gizmoToWorld = gizmoToWorld.Translate(drag[0], drag[1], drag[2]);
+			}
+		}
 		
 		if (mouse.wentUp(BUTTON_LEFT))
 		{
@@ -82,7 +83,22 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 			{
 				inputIsCaptured = true;
 				state = kState_DragAxis;
-				dragAxis.axis = intersectionResult.element - kElement_XAxis;
+				dragAxis = DragAxis();
+				const int axis_index = intersectionResult.element - kElement_XAxis;
+				dragAxis.active_axis[axis_index] = true;
+			}
+		}
+		
+		if (intersectionResult.element == kElement_XZAxis)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				inputIsCaptured = true;
+				
+				state = kState_DragAxis;
+				dragAxis = DragAxis();
+				dragAxis.active_axis[0] = true;
+				dragAxis.active_axis[2] = true;
 			}
 		}
 	}
@@ -96,6 +112,8 @@ void TranslationGizmo::draw() const
 	gxPushMatrix();
 	gxMultMatrixf(gizmoToWorld.m_v);
 	{
+		// draw axis arrows
+		
 		setColorForAxis(0);
 		drawAxisArrow(Vec3(), 0, radius, length);
 		
@@ -104,35 +122,18 @@ void TranslationGizmo::draw() const
 		
 		setColorForAxis(2);
 		drawAxisArrow(Vec3(), 2, radius, length);
+		
+		// draw pads
+		
+		const Color pad_color(100, 100, 100);
+		const Color pad_color_highlight(200, 200, 200);
+		
+		setColor(intersectionResult.element == kElement_XZAxis ? pad_color_highlight : pad_color);
+		fillCube(
+			Vec3(pad_offset, 0.f, pad_offset),
+			Vec3(pad_size, pad_thickness, pad_size));
 	}
 	gxPopMatrix();
-}
-
-static bool intersectCircle(const float x, const float y, const float dx, const float dy, const float cx, const float cy, const float cr, float & distance)
-{
-	const float a = dx * dx + dy * dy;
-	const float b = 2.f * (dx * (x - cx) + dy * (y - cy));
-	
-	float c = cx * cx + cy * cy;
-	c += x * x + y * y;
-	c -= 2.f * (cx * x + cy * y);
-	c -= cr * cr;
-	
-	float det = b * b - 4.f * a * c;
-
-  	if (det < 0.f)
-		return false;
-	else
-	{
-		const float t = (- b - sqrtf(det)) / (2.f * a);
-		
-		if (t < 0.f)
-			return false;
-		
-		distance = t;
-		
-		return true;
-	}
 }
 
 TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_world, Vec3Arg direction_world) const
@@ -175,6 +176,30 @@ TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_
 		}
 	}
 	
+	{
+		const float min[3] =
+		{
+			+ pad_offset - pad_size,
+			- pad_thickness,
+			+ pad_offset - pad_size
+		};
+		
+		const float max[3] =
+		{
+			+ pad_offset + pad_size,
+			+ pad_thickness,
+			+ pad_offset + pad_size
+		};
+		
+		if (intersectBoundingBox3d(
+			min, max,
+			origin_gizmo[0], origin_gizmo[1], origin_gizmo[2],
+			1.f / direction_gizmo[0], 1.f / direction_gizmo[1], 1.f / direction_gizmo[2], t) && t < best_t)
+		{
+			result.element = kElement_XZAxis;
+		}
+	}
+	
 	return result;
 }
 
@@ -182,7 +207,7 @@ void TranslationGizmo::setColorForAxis(const int axis) const
 {
 	const Color colors[3] = { colorRed, colorGreen, colorBlue };
 	
-	if (state == kState_DragAxis && dragAxis.axis == axis)
+	if (state == kState_DragAxis && dragAxis.active_axis[axis])
 		setColor(colorWhite);
 	else if (intersectionResult.element == kElement_XAxis + axis)
 		setColor(colorYellow);
