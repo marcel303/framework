@@ -10,6 +10,7 @@
 #include "framework.h"
 #include "framework-camera.h"
 #include "imgui-framework.h"
+#include "Quat.h"
 #include "raycast.h"
 #include "scene.h"
 #include "scene_fromText.h"
@@ -1085,6 +1086,11 @@ struct SceneEditor
 			if (transformComponent != nullptr)
 			{
 				transformComponent->position = localTransform.GetTranslation();
+				
+				Quat q;
+				q.fromMatrix(localTransform);
+				q.toAxisAngle(transformComponent->angleAxis.axis, transformComponent->angleAxis.angle);
+				transformComponent->angleAxis.angle = transformComponent->angleAxis.angle * 180.f / float(M_PI);
 			}
 		}
 	#endif

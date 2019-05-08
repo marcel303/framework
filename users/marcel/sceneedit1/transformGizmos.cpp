@@ -73,7 +73,12 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 	}
 	else if (state == kState_DragRing)
 	{
-		gizmoToWorld = gizmoToWorld.RotateX(.1f);
+		if (dragRing.axis_index == 0)
+			gizmoToWorld = gizmoToWorld.RotateX(.02f);
+		if (dragRing.axis_index == 1)
+			gizmoToWorld = gizmoToWorld.RotateY(.02f);
+		if (dragRing.axis_index == 2)
+			gizmoToWorld = gizmoToWorld.RotateZ(.02f);
 		
 		if (mouse.wentUp(BUTTON_LEFT))
 		{
