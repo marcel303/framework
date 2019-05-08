@@ -11,11 +11,11 @@ void drawCylinder(
 	gxPushMatrix();
 	gxTranslatef(position[0], position[1], position[2]);
 	
-	float coords[2][100][3];
-	
 	const int axis1 = axis;
 	const int axis2 = (axis + 1) % 3;
 	const int axis3 = (axis + 2) % 3;
+	
+	float coords[2][100][3];
 	
 	for (int i = 0; i < 100; ++i)
 	{

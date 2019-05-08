@@ -26,7 +26,7 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 	{
 		//
 	}
-	else if (state == kState_DragAxis)
+	else if (state == kState_DragArrow)
 	{
 		const float dragSpeed = keyboard.isDown(SDLK_LSHIFT) ? 1.f : 10.f;
 		
@@ -71,6 +71,19 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 			inputIsCaptured = true;
 		}
 	}
+	else if (state == kState_DragRing)
+	{
+		gizmoToWorld = gizmoToWorld.RotateX(.1f);
+		
+		if (mouse.wentUp(BUTTON_LEFT))
+		{
+			state = kState_Visible;
+		}
+		else
+		{
+			inputIsCaptured = true;
+		}
+	}
 	else
 	{
 		intersectionResult = intersect(ray_origin, ray_direction);
@@ -82,7 +95,8 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
 				inputIsCaptured = true;
-				state = kState_DragAxis;
+				state = kState_DragArrow;
+				
 				dragAxis = DragAxis();
 				const int axis_index = intersectionResult.element - kElement_XAxis;
 				dragAxis.active_axis[axis_index] = true;
@@ -95,13 +109,75 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 			{
 				inputIsCaptured = true;
 				
-				state = kState_DragAxis;
+				state = kState_DragArrow;
 				dragAxis = DragAxis();
 				dragAxis.active_axis[0] = true;
 				dragAxis.active_axis[2] = true;
 			}
 		}
+		
+		if (intersectionResult.element == kElement_XRing ||
+			intersectionResult.element == kElement_YRing ||
+			intersectionResult.element == kElement_ZRing)
+		{
+			if (mouse.wentDown(BUTTON_LEFT))
+			{
+				inputIsCaptured = true;
+				state = kState_DragRing;
+				
+				dragRing = DragRing();
+				dragRing.axis_index = intersectionResult.element - kElement_XRing;
+			}
+		}
 	}
+}
+
+static void drawRing(const Vec3 & position, const int axis, const float radius, const float tubeRadius)
+{
+	gxPushMatrix();
+	gxTranslatef(position[0], position[1], position[2]);
+	
+	const int axis1 = axis;
+	const int axis2 = (axis + 1) % 3;
+	const int axis3 = (axis + 2) % 3;
+	
+	const float radius1 = radius - tubeRadius;
+	const float radius2 = radius + tubeRadius;
+	
+	float coords[100][2][3];
+	
+	for (int i = 0; i < 100; ++i)
+	{
+		const float angle = 2.f * float(M_PI) * i / 100.f;
+		
+		const float c = cosf(angle);
+		const float s = sinf(angle);
+		
+		coords[i][0][axis1] = 0.f;
+		coords[i][0][axis2] = c * radius1;
+		coords[i][0][axis3] = s * radius1;
+		
+		coords[i][1][axis1] = 0.f;
+		coords[i][1][axis2] = c * radius2;
+		coords[i][1][axis3] = s * radius2;
+	}
+	
+	gxBegin(GX_QUADS);
+	{
+		for (int i = 0; i < 100; ++i)
+		{
+			const int i1 = i;
+			const int i2 = i + 1 < 100 ? i + 1 : 0;
+			
+			gxVertex3fv(coords[i1][0]);
+			gxVertex3fv(coords[i1][1]);
+			gxVertex3fv(coords[i2][1]);
+			gxVertex3fv(coords[i2][0]);
+		}
+	}
+	gxEnd();
+	
+	gxPopMatrix();
 }
 
 void TranslationGizmo::draw() const
@@ -114,14 +190,14 @@ void TranslationGizmo::draw() const
 	{
 		// draw axis arrows
 		
-		setColorForAxis(0);
-		drawAxisArrow(Vec3(), 0, radius, length);
+		setColorForArrow(0);
+		drawAxisArrow(Vec3(), 0, arrow_radius, arrow_length);
 		
-		setColorForAxis(1);
-		drawAxisArrow(Vec3(), 1, radius, length);
+		setColorForArrow(1);
+		drawAxisArrow(Vec3(), 1, arrow_radius, arrow_length);
 		
-		setColorForAxis(2);
-		drawAxisArrow(Vec3(), 2, radius, length);
+		setColorForArrow(2);
+		drawAxisArrow(Vec3(), 2, arrow_radius, arrow_length);
 		
 		// draw pads
 		
@@ -132,6 +208,15 @@ void TranslationGizmo::draw() const
 		fillCube(
 			Vec3(pad_offset, 0.f, pad_offset),
 			Vec3(pad_size, pad_thickness, pad_size));
+		
+		setColorForRing(0);
+		drawRing(Vec3(), 0, 2.f, .2f);
+		
+		setColorForRing(1);
+		drawRing(Vec3(), 1, 2.f, .2f);
+		
+		setColorForRing(2);
+		drawRing(Vec3(), 2, 2.f, .2f);
 	}
 	gxPopMatrix();
 }
@@ -149,6 +234,8 @@ TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_
 	
 	float t;
 	
+	// intersect the arrows
+	
 	for (int i = 0; i < 3; ++i)
 	{
 		const int axis1 = (i + 1) % 3;
@@ -159,7 +246,7 @@ TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_
 			origin_gizmo[axis2],
 			direction_gizmo[axis1],
 			direction_gizmo[axis2],
-			0.f, 0.f, radius, t) && t < best_t)
+			0.f, 0.f, arrow_radius, t) && t < best_t)
 		{
 			const Vec3 intersection_pos = origin_gizmo + direction_gizmo * t;
 			
@@ -168,13 +255,15 @@ TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_
 			
 			const float distance = intersection_pos * axis;
 			
-			if (distance >= 0.f && distance < length)
+			if (distance >= 0.f && distance < arrow_length)
 			{
 				best_t = t;
 				result.element = (Element)(kElement_XAxis + i);
 			}
 		}
 	}
+	
+	// intersect the XZ pad
 	
 	{
 		const float min[3] =
@@ -196,20 +285,55 @@ TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_
 			origin_gizmo[0], origin_gizmo[1], origin_gizmo[2],
 			1.f / direction_gizmo[0], 1.f / direction_gizmo[1], 1.f / direction_gizmo[2], t) && t < best_t)
 		{
+			best_t = t;
 			result.element = kElement_XZAxis;
 		}
 	}
+
+	// intersect the rings
+	
+	for (int i = 0; i < 3; ++i)
+	{
+		const float t = -origin_gizmo[i] / direction_gizmo[i];
+		
+		if (t >= 0.f && t < best_t)
+		{
+			const Vec3 intersectionPoint = origin_gizmo + direction_gizmo * t;
+			const float distanceToCenterOfGizmo = intersectionPoint.CalcSize();
+			
+			if (distanceToCenterOfGizmo >= ring_radius - ring_tubeRadius &&
+				distanceToCenterOfGizmo <= ring_radius + ring_tubeRadius)
+			{
+				best_t = t;
+				result.element = (Element)(kElement_XRing + i);
+			}
+		}
+	}
+	
+	result.t = t;
 	
 	return result;
 }
 
-void TranslationGizmo::setColorForAxis(const int axis) const
+void TranslationGizmo::setColorForArrow(const int axis) const
 {
 	const Color colors[3] = { colorRed, colorGreen, colorBlue };
 	
-	if (state == kState_DragAxis && dragAxis.active_axis[axis])
+	if (state == kState_DragArrow && dragAxis.active_axis[axis])
 		setColor(colorWhite);
 	else if (intersectionResult.element == kElement_XAxis + axis)
+		setColor(colorYellow);
+	else
+		setColor(colors[axis]);
+}
+
+void TranslationGizmo::setColorForRing(const int axis) const
+{
+	const Color colors[3] = { colorRed, colorGreen, colorBlue };
+	
+	if (state == kState_DragRing && dragRing.axis_index == axis)
+		setColor(colorWhite);
+	else if (intersectionResult.element == kElement_XRing + axis)
 		setColor(colorYellow);
 	else
 		setColor(colors[axis]);
