@@ -207,15 +207,14 @@ void Camera::Ortho::calculateWorldMatrix(Mat4x4 & out_matrix) const
 	out_matrix = Mat4x4(true)
 		.Translate(position)
 		.RotateY(azimuth * float(M_PI) / 180.f)
-		.RotateX(elevation * float(M_PI) / 180.f)
-		.Scale(scale, scale, scale);
+		.RotateX(elevation * float(M_PI) / 180.f);
 }
 
 void Camera::Ortho::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
 {
 	const float sx = viewportSx / float(viewportSy);
 	
-	out_matrix.MakeOrthoLH(-sx, +sx, +1.f, -1.f, .01f, 100.f);
+	out_matrix.MakeOrthoLH(-sx * scale, +sx * scale, +1.f * scale, -1.f * scale, -100.f, 100.f);
 }
 
 //
