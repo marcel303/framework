@@ -73,12 +73,31 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 	}
 	else if (state == kState_DragRing)
 	{
-		if (dragRing.axis_index == 0)
-			gizmoToWorld = gizmoToWorld.RotateX(.02f);
-		if (dragRing.axis_index == 1)
-			gizmoToWorld = gizmoToWorld.RotateY(.02f);
-		if (dragRing.axis_index == 2)
-			gizmoToWorld = gizmoToWorld.RotateZ(.02f);
+		const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
+	
+		// intersect the ray with the projection plane for the ring
+		
+		auto origin_gizmo = worldToGizmo * ray_origin;
+		auto direction_gizmo = worldToGizmo.Mul3(ray_direction);
+		
+		// determine the intersection point with the plane, and check its angle relative to the center of the gizmo
+		
+		const float t = - origin_gizmo[dragRing.axis] / direction_gizmo[dragRing.axis];
+		
+		const Vec3 position_world = ray_origin + ray_direction * t;
+		
+		const float angle = calculateRingAngle(position_world, dragRing.axis);
+		
+		// determine how much rotation occurred and rotate to match
+		
+		const float delta = dragRing.initialAngle - angle;
+		
+		if (dragRing.axis == 0)
+			gizmoToWorld = gizmoToWorld.RotateX(delta);
+		if (dragRing.axis == 1)
+			gizmoToWorld = gizmoToWorld.RotateY(delta);
+		if (dragRing.axis == 2)
+			gizmoToWorld = gizmoToWorld.RotateZ(delta);
 		
 		if (mouse.wentUp(BUTTON_LEFT))
 		{
@@ -131,7 +150,9 @@ void TranslationGizmo::tick(const Mat4x4 & projectionMatrix, const Mat4x4 & came
 				state = kState_DragRing;
 				
 				dragRing = DragRing();
-				dragRing.axis_index = intersectionResult.element - kElement_XRing;
+				dragRing.axis = intersectionResult.element - kElement_XRing;
+				const Vec3 position = ray_origin + ray_direction * intersectionResult.t;
+				dragRing.initialAngle = calculateRingAngle(position, dragRing.axis);
 			}
 		}
 	}
@@ -315,9 +336,21 @@ TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_
 		}
 	}
 	
-	result.t = t;
+	result.t = best_t;
 	
 	return result;
+}
+
+float TranslationGizmo::calculateRingAngle(Vec3Arg position_world, const int axis) const
+{
+	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
+	
+	const Vec3 position_gizmo = worldToGizmo * position_world;
+	
+	const int axis2 = (axis + 1) % 3;
+	const int axis3 = (axis + 2) % 3;
+	
+	return atan2f(position_gizmo[axis3], position_gizmo[axis2]);
 }
 
 void TranslationGizmo::setColorForArrow(const int axis) const
@@ -336,7 +369,7 @@ void TranslationGizmo::setColorForRing(const int axis) const
 {
 	const Color colors[3] = { colorRed, colorGreen, colorBlue };
 	
-	if (state == kState_DragRing && dragRing.axis_index == axis)
+	if (state == kState_DragRing && dragRing.axis == axis)
 		setColor(colorWhite);
 	else if (intersectionResult.element == kElement_XRing + axis)
 		setColor(colorYellow);

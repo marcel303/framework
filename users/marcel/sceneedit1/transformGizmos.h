@@ -51,7 +51,8 @@ struct TranslationGizmo
 	
 	struct DragRing
 	{
-		int axis_index = 0;
+		int axis = 0;
+		float initialAngle = 0.f;
 	} dragRing;
 	
 	void show(const Mat4x4 & transform);
@@ -63,6 +64,7 @@ struct TranslationGizmo
 
 private:
 	IntersectionResult intersect(Vec3Arg origin_world, Vec3Arg direction_world) const;
+	float calculateRingAngle(Vec3Arg position_world, const int axis) const;
 	
 	void setColorForArrow(const int axis) const;
 	void setColorForRing(const int axis) const;
