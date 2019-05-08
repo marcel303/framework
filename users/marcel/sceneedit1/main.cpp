@@ -34,6 +34,8 @@
 
 #define ENABLE_TRANSFORM_GIZMOS 1
 
+#define ENABLE_QUAT_FIXUP 1
+
 /*
 
 todo :
@@ -81,6 +83,7 @@ struct SceneEditor
 	std::set<int> selectedNodes;
 	
 	int nodeToGiveFocus = -1;
+	bool enablePadGizmo = false;
 	
 #if ENABLE_TRANSFORM_GIZMOS
 	TranslationGizmo translationGizmo;
@@ -1013,6 +1016,7 @@ struct SceneEditor
 			cameraPosition = cameraToWorld.Mul4(mousePosition_camera) - cameraToWorld.GetAxis(2) * 10.f;
 			
 			mouseDirection_world = cameraToWorld.GetAxis(2);
+			mouseDirection_world = mouseDirection_world.CalcNormalized();
 		}
 		else
 		{
@@ -1031,6 +1035,7 @@ struct SceneEditor
 					+mousePosition_camera[0],
 					-mousePosition_camera[1],
 					1.f));
+			mouseDirection_world = mouseDirection_world.CalcNormalized();
 		}
 		
 	#if ENABLE_TRANSFORM_GIZMOS
@@ -1059,38 +1064,70 @@ struct SceneEditor
 			
 			translationGizmo.show(globalTransform);
 			
-			translationGizmo.tick(cameraPosition, mouseDirection_world.CalcNormalized(), inputIsCaptured);
-			
-			// transform the global transform into local space
-			
-			Mat4x4 localTransform = translationGizmo.gizmoToWorld;
-			
-			if (node->parentId != -1)
+			if (enablePadGizmo)
 			{
-				auto parent_itr = scene.nodes.find(node->parentId);
-				Assert(parent_itr != scene.nodes.end());
+				enablePadGizmo = false;
 				
-				auto * parent = parent_itr->second;
-				
-				auto * sceneNodeComponent_parent = parent->components.find<SceneNodeComponent>();
-				Assert(sceneNodeComponent_parent != nullptr);
-			
-				if (sceneNodeComponent_parent != nullptr)
-					localTransform = sceneNodeComponent_parent->objectToWorld.CalcInv() * localTransform;
+				if (inputIsCaptured == false)
+				{
+					translationGizmo.beginPad(cameraPosition, mouseDirection_world);
+				}
 			}
 			
-			// assign the translation in local space to the transform component
-			
-			auto * transformComponent = node->components.find<TransformComponent>();
-			
-			if (transformComponent != nullptr)
+			if (translationGizmo.tick(cameraPosition, mouseDirection_world, inputIsCaptured))
 			{
-				transformComponent->position = localTransform.GetTranslation();
+				// transform the global transform into local space
 				
-				Quat q;
-				q.fromMatrix(localTransform);
-				q.toAxisAngle(transformComponent->angleAxis.axis, transformComponent->angleAxis.angle);
-				transformComponent->angleAxis.angle = transformComponent->angleAxis.angle * 180.f / float(M_PI);
+				Mat4x4 localTransform = translationGizmo.gizmoToWorld;
+				
+				if (node->parentId != -1)
+				{
+					auto parent_itr = scene.nodes.find(node->parentId);
+					Assert(parent_itr != scene.nodes.end());
+					
+					auto * parent = parent_itr->second;
+					
+					auto * sceneNodeComponent_parent = parent->components.find<SceneNodeComponent>();
+					Assert(sceneNodeComponent_parent != nullptr);
+				
+					if (sceneNodeComponent_parent != nullptr)
+						localTransform = sceneNodeComponent_parent->objectToWorld.CalcInv() * localTransform;
+				}
+				
+				// assign the translation in local space to the transform component
+				
+				auto * transformComponent = node->components.find<TransformComponent>();
+				
+				if (transformComponent != nullptr)
+				{
+					transformComponent->position = localTransform.GetTranslation();
+					
+					Quat q;
+					q.fromMatrix(localTransform);
+					
+				#if ENABLE_QUAT_FIXUP
+					// todo : not entirely sure if this is correct. need a proper look at the maths and logic here
+					int max_axis = 0;
+					if (fabsf(transformComponent->angleAxis.axis[1]) > fabsf(transformComponent->angleAxis.axis[max_axis]))
+						max_axis = 1;
+					if (fabsf(transformComponent->angleAxis.axis[2]) > fabsf(transformComponent->angleAxis.axis[max_axis]))
+						max_axis = 2;
+					const bool neg_before = transformComponent->angleAxis.axis[max_axis] < 0.f;
+				#endif
+				
+					q.toAxisAngle(transformComponent->angleAxis.axis, transformComponent->angleAxis.angle);
+					
+				#if ENABLE_QUAT_FIXUP
+					const bool neg_after = transformComponent->angleAxis.axis[max_axis] < 0.f;
+					if (neg_before != neg_after)
+					{
+						transformComponent->angleAxis.axis = -transformComponent->angleAxis.axis;
+						transformComponent->angleAxis.angle = -transformComponent->angleAxis.angle;
+					}
+				#endif
+				
+					transformComponent->angleAxis.angle = transformComponent->angleAxis.angle * 180.f / float(M_PI);
+				}
 			}
 		}
 	#endif
@@ -1162,6 +1199,7 @@ struct SceneEditor
 							selectedNodes.clear();
 							selectedNodes.insert(nodeId);
 							nodeToGiveFocus = nodeId;
+							enablePadGizmo = true;
 						}
 					}
 				}

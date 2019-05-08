@@ -41,8 +41,8 @@ struct TranslationGizmo
 	float pad_size = .3f;
 	float pad_thickness = .04f;
 	
-	float ring_radius = 2.f;
-	float ring_tubeRadius = .2f;
+	float ring_radius = 1.8f;
+	float ring_tubeRadius = .1f;
 	
 	struct DragAxis
 	{
@@ -59,9 +59,16 @@ struct TranslationGizmo
 	void show(const Mat4x4 & transform);
 	void hide();
 	
-	void tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured);
-	
+	/**
+	 * Handles interaction between the user's mouse (where the cursor position is translated to a
+	 * world space ray with an origin and direction) and the gizmo. The gizmo supports translation
+	 * by clicking on arrows and a pad, and rotation by clicking and dragging rings.
+	 * @return True if the user is interacting with the object.
+	 */
+	bool tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured);
 	void draw() const;
+	
+	void beginPad(Vec3Arg origin_world, Vec3Arg direction_world);
 
 private:
 	IntersectionResult intersect(Vec3Arg origin_world, Vec3Arg direction_world) const;

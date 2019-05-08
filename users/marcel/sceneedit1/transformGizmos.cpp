@@ -16,7 +16,7 @@ void TranslationGizmo::hide()
 	state = kState_Hidden;
 }
 
-void TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured)
+bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured)
 {
 	if (inputIsCaptured)
 	{
@@ -167,6 +167,10 @@ void TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 			}
 		}
 	}
+	
+	return
+		state == kState_DragRing ||
+		state == kState_DragArrow;
 }
 
 static void drawRing(const Vec3 & position, const int axis, const float radius, const float tubeRadius)
@@ -247,15 +251,33 @@ void TranslationGizmo::draw() const
 			Vec3(pad_size, pad_thickness, pad_size));
 		
 		setColorForRing(0);
-		drawRing(Vec3(), 0, 2.f, .2f);
+		drawRing(Vec3(), 0, ring_radius, ring_tubeRadius);
 		
 		setColorForRing(1);
-		drawRing(Vec3(), 1, 2.f, .2f);
+		drawRing(Vec3(), 1, ring_radius, ring_tubeRadius);
 		
 		setColorForRing(2);
-		drawRing(Vec3(), 2, 2.f, .2f);
+		drawRing(Vec3(), 2, ring_radius, ring_tubeRadius);
 	}
 	gxPopMatrix();
+}
+
+void TranslationGizmo::beginPad(Vec3Arg origin_world, Vec3Arg direction_world)
+{
+	// todo : update tick to use this method
+	
+	state = kState_DragArrow;
+	dragAxis = DragAxis();
+	dragAxis.active_axis[3] = true;
+
+	//
+	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
+	const Vec3 origin_gizmo = worldToGizmo * origin_world;
+	const Vec3 direction_gizmo = worldToGizmo.Mul3(direction_world);
+	const int projection_axis = 1;
+	const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
+	const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
+	dragAxis.initialPosition = position_gizmo;
 }
 
 TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_world, Vec3Arg direction_world) const
