@@ -4,6 +4,7 @@ include engine/ShaderVS.txt
 
 shader_out vec4 v_color;
 shader_out vec2 v_texcoord0;
+shader_out vec3 v_normal;
 
 void main()
 {
@@ -17,8 +18,9 @@ void main()
 	{
 		position = objectToProjection(position);
 
-		normal = objectToProjection(unpackNormal()).xyz;
+		normal = unpackNormal().xyz;
 
+		normal = objectToView3(normal);
 		normal = normalize(normal);
 	}
 	else if (drawHardSkinned())
@@ -26,18 +28,19 @@ void main()
 		ivec4 skinningBlendIndices = unpackSkinningBlendIndices();
 		vec4 skinningBlendWeights = unpackSkinningBlendWeights();
 
-		position = objectToWorld_HardSkinned(
+		position = boneToObject_HardSkinned(
 			skinningBlendIndices,
 			skinningBlendWeights,
 			position);
 		
 		position = objectToProjection(position);
 		
-		normal = objectToWorld_HardSkinned(
+		normal = boneToObject_HardSkinned(
 			skinningBlendIndices,
 			skinningBlendWeights,
 			unpackNormal()).xyz;
-		
+
+		normal = objectToView3(normal);
 		normal = normalize(normal);
 	}
 	else
@@ -45,18 +48,19 @@ void main()
 		ivec4 skinningBlendIndices = unpackSkinningBlendIndices();
 		vec4 skinningBlendWeights = unpackSkinningBlendWeights();
 		
-		position = objectToWorld_Skinned(
+		position = boneToObject_Skinned(
 			skinningBlendIndices,
 			skinningBlendWeights,
 			position);
 		
 		position = objectToProjection(position);
 		
-		normal = objectToWorld_Skinned(
+		normal = boneToObject_Skinned(
 			skinningBlendIndices,
 			skinningBlendWeights,
 			unpackNormal()).xyz;
 		
+		normal = objectToView3(normal);
 		normal = normalize(normal);
 
 		// debug color
@@ -82,6 +86,7 @@ void main()
 	
 	v_color = color;
 	v_texcoord0 = texcoord;
+	v_normal = normal;
 }
 
 )SHADER";

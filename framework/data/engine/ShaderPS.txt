@@ -5,7 +5,11 @@ include engine/ShaderCommon.txt
 #if LEGACY_GL
 	#define shader_fragColor gl_FragColor
 #else
-	out vec4 shader_fragColor;
+	/*
+	note : these exist, but are automatically generated when loading shaders. see setShaderOutputs for details
+		out vec4 shader_fragColor;
+		out vec4 shader_fragNormal;
+	*/
 #endif
 
 )SHADER";

@@ -39,6 +39,16 @@ vec4 objectToWorld(vec4 v)
 	return ModelViewMatrix * v;
 }
 
+vec4 objectToView(vec4 v)
+{
+	return ModelViewMatrix * v;
+}
+
+vec3 objectToView3(vec3 v)
+{
+	return (ModelViewMatrix * vec4(v, 0.0)).xyz;
+}
+
 vec4 objectToProjection(vec4 v)
 {
 	return ModelViewProjectionMatrix * v;
@@ -49,7 +59,7 @@ vec4 worldToProjection(vec4 v)
 	return ProjectionMatrix * v;
 }
 
-vec4 objectToWorld_Skinned(ivec4 indices, vec4 weights, vec4 v)
+vec4 boneToObject_Skinned(ivec4 indices, vec4 weights, vec4 v)
 {
 	return
 		skinningMatrices[indices.x] * v * weights.x +
@@ -58,7 +68,7 @@ vec4 objectToWorld_Skinned(ivec4 indices, vec4 weights, vec4 v)
 		skinningMatrices[indices.w] * v * weights.w;
 }
 
-vec4 objectToWorld_HardSkinned(ivec4 indices, vec4 weights, vec4 v)
+vec4 boneToObject_HardSkinned(ivec4 indices, vec4 weights, vec4 v)
 {
 	return
 		skinningMatrices[indices.x] * v;
