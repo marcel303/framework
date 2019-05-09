@@ -1258,23 +1258,9 @@ struct SceneEditor
 		}
 		
 		if (camera.mode == Camera::kMode_FirstPerson)
-		{
-			if (inputIsCaptured == false)
-			{
-				if (mouse.wentDown(BUTTON_LEFT))
-					cameraIsActive = true;
-			}
-			
-			if (cameraIsActive)
-			{
-				if (mouse.wentUp(BUTTON_LEFT))
-					cameraIsActive = false;
-			}
-		}
+			cameraIsActive = mouse.isDown(BUTTON_LEFT);
 		else
-		{
 			cameraIsActive = true;
-		}
 		
 		camera.tick(dt, inputIsCaptured, cameraIsActive == false);
 	}

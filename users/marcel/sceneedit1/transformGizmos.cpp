@@ -40,6 +40,8 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 	}
 	else if (state == kState_DragArrow)
 	{
+		inputIsCaptured = true;
+		
 		const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 		
 		const Vec3 origin_gizmo = worldToGizmo * ray_origin;
@@ -61,13 +63,11 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 		{
 			state = kState_Visible;
 		}
-		else
-		{
-			inputIsCaptured = true;
-		}
 	}
 	else if (state == kState_DragPad)
 	{
+		inputIsCaptured = true;
+		
 		const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 		
 		const Vec3 origin_gizmo = worldToGizmo * ray_origin;
@@ -90,13 +90,11 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 		{
 			state = kState_Visible;
 		}
-		else
-		{
-			inputIsCaptured = true;
-		}
 	}
 	else if (state == kState_DragRing)
 	{
+		inputIsCaptured = true;
+		
 		const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 	
 		// intersect the ray with the projection plane for the ring
@@ -127,12 +125,8 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 		{
 			state = kState_Visible;
 		}
-		else
-		{
-			inputIsCaptured = true;
-		}
 	}
-	else
+	else if (state == kState_Visible)
 	{
 		intersectionResult = intersect(ray_origin, ray_direction);
 		
@@ -143,8 +137,9 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
 				inputIsCaptured = true;
-				state = kState_DragArrow;
 				
+				state = kState_DragArrow;
+
 				dragArrow = DragArrow();
 				const int axis = intersectionResult.element - kElement_XAxis;
 				dragArrow.axis = axis;
@@ -167,6 +162,7 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 				inputIsCaptured = true;
 				
 				state = kState_DragPad;
+				
 				dragPad = DragPad();
 				
 				//
