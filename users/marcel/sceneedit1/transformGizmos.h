@@ -48,6 +48,7 @@ struct TranslationGizmo
 	struct DragArrow
 	{
 		int axis = 0;
+		int projection_axis = 0;
 		Vec3 initialPosition;
 	} dragArrow;
 	

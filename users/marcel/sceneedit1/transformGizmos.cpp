@@ -16,6 +16,18 @@ void TranslationGizmo::hide()
 	state = kState_Hidden;
 }
 
+static int determineProjectionAxis(const int axis, Vec3Arg ray_direction)
+{
+	int projection_axis = (axis + 1) % 3;
+	
+	if (ray_direction[projection_axis] == 0.f)
+		projection_axis = (projection_axis + 1) % 3;
+	
+	Assert(ray_direction[projection_axis] != 0.f);
+	
+	return projection_axis;
+}
+
 bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured)
 {
 	if (inputIsCaptured)
@@ -33,8 +45,7 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 		const Vec3 origin_gizmo = worldToGizmo * ray_origin;
 		const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
 		
-		const int projection_axis = (dragArrow.axis + 1) % 3;
-		const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
+		const float t = - origin_gizmo[dragArrow.projection_axis] / direction_gizmo[dragArrow.projection_axis];
 		const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
 		
 		//logDebug("initial_pos: %f, current_pos: %f", dragAxis.initialPosition[i], position_gizmo[i]);
@@ -142,8 +153,8 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 				const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 				const Vec3 origin_gizmo = worldToGizmo * ray_origin;
 				const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
-				const int projection_axis = (axis + 1) % 3;
-				const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
+				dragArrow.projection_axis = determineProjectionAxis(axis, direction_gizmo);
+				const float t = - origin_gizmo[dragArrow.projection_axis] / direction_gizmo[dragArrow.projection_axis];
 				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
 				dragArrow.initialPosition = position_gizmo;
 			}
@@ -222,8 +233,15 @@ static void drawRing(const Vec3 & position, const int axis, const float radius, 
 		coords[i][1][axis3] = s * radius2;
 	}
 	
+	float normal[3];
+	normal[axis1] = 1.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 0.f;
+	
 	gxBegin(GX_QUADS);
 	{
+		gxNormal3fv(normal);
+		
 		for (int i = 0; i < 100; ++i)
 		{
 			const int i1 = i;

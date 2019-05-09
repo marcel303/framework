@@ -453,6 +453,42 @@ struct SceneEditor
 		}
 	}
 	
+	void pasteNodeFromClipboard(const int parentId)
+	{
+		SceneNode * childNode = new SceneNode();
+		childNode->id = scene.allocNodeId();
+		childNode->parentId = parentId;
+		childNode->displayName = String::FormatC("Node %d", childNode->id);
+		
+		const char * text = SDL_GetClipboardText();
+		
+		if (node_from_clipboard_text(text, *childNode) == false)
+		{
+			delete childNode;
+			childNode = nullptr;
+		}
+		else
+		{
+			if (childNode->components.find<SceneNodeComponent>() == nullptr)
+				childNode->components.add(new SceneNodeComponent());
+			
+			if (childNode->initComponents() == false)
+			{
+				childNode->freeComponents();
+				
+				delete childNode;
+				childNode = nullptr;
+			}
+			else
+			{
+				deferred.nodesToAdd.push_back(childNode);
+			}
+		}
+		
+		SDL_free((void*)text);
+		text = nullptr;
+	}
+
 	enum NodeStructureContextMenuResult
 	{
 		kNodeStructureContextMenuResult_None,
@@ -478,42 +514,6 @@ struct SceneEditor
 				SDL_SetClipboardText(text.c_str());
 			}
 		}
-		
-		auto pasteNodeFromClipboard = [&](const int parentId)
-		{
-			SceneNode * childNode = new SceneNode();
-			childNode->id = scene.allocNodeId();
-			childNode->parentId = parentId;
-			childNode->displayName = String::FormatC("Node %d", childNode->id);
-			
-			const char * text = SDL_GetClipboardText();
-			
-			if (node_from_clipboard_text(text, *childNode) == false)
-			{
-				delete childNode;
-				childNode = nullptr;
-			}
-			else
-			{
-				if (childNode->components.find<SceneNodeComponent>() == nullptr)
-					childNode->components.add(new SceneNodeComponent());
-				
-				if (childNode->initComponents() == false)
-				{
-					childNode->freeComponents();
-					
-					delete childNode;
-					childNode = nullptr;
-				}
-				else
-				{
-					deferred.nodesToAdd.push_back(childNode);
-				}
-			}
-			
-			SDL_free((void*)text);
-			text = nullptr;
-		};
 		
 		if (ImGui::MenuItem("Paste as child", nullptr, false, SDL_HasClipboardText()))
 		{
@@ -986,6 +986,30 @@ struct SceneEditor
 			preview.tickMultiplier /= 1.25f;
 		}
 		
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_c) && keyboard.isDown(SDLK_LGUI))
+		{
+			inputIsCaptured = true;
+			
+			if (selectedNodes.empty() == false)
+			{
+				auto nodeId = *selectedNodes.begin(); // todo : handle multiple nodes
+				auto node_itr = scene.nodes.find(nodeId);
+				Assert(node_itr != scene.nodes.end());
+				auto * node = node_itr->second;
+				std::string text;
+				if (node_to_clipboard_text(*node, text))
+					SDL_SetClipboardText(text.c_str());
+			}
+		}
+		
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_v) && keyboard.isDown(SDLK_LGUI))
+		{
+			inputIsCaptured = true;
+			deferredBegin();
+			pasteNodeFromClipboard(scene.rootNodeId);
+			deferredEnd();
+		}
+		
 		// transform mouse coordinates into a world space direction vector
 	
 		int viewportSx;
@@ -1323,62 +1347,65 @@ struct SceneEditor
 		gxPopMatrix();
 	}
 	
+	void drawSceneOpaque() const
+	{
+		pushDepthTest(true, DEPTH_LESS);
+		pushBlend(BLEND_OPAQUE);
+		
+		if (preview.drawScene)
+		{
+			s_modelComponentMgr.draw();
+		}
+	
+	#if ENABLE_TRANSFORM_GIZMOS
+		translationGizmo.draw();
+	#endif
+	
+		popBlend();
+		popDepthTest();
+	}
+	
+	void drawSceneTranslucent() const
+	{
+		pushDepthTest(true, DEPTH_LESS, false);
+		pushBlend(BLEND_ALPHA);
+		
+		if (visibility.drawGroundPlane)
+		{
+			pushLineSmooth(true);
+			gxPushMatrix();
+			{
+				gxScalef(100, 1, 100);
+				
+				setLumi(200);
+				drawGrid3dLine(100, 100, 0, 2, true);
+				
+				setLumi(50);
+				drawGrid3dLine(500, 500, 0, 2, true);
+			}
+			gxPopMatrix();
+			popLineSmooth();
+		}
+		
+		if (visibility.drawNodes)
+		{
+			pushBlend(BLEND_ADD);
+			drawNodesTraverse(scene.getRootNode());
+			popBlend();
+		}
+		
+		popBlend();
+		popDepthTest();
+	}
+	
 	void drawEditor() const
 	{
 		camera.pushProjectionMatrix();
 		camera.pushViewMatrix();
 		{
-			if (preview.drawScene)
-			{
-				pushDepthTest(true, DEPTH_LESS);
-				pushBlend(BLEND_OPAQUE);
-				s_modelComponentMgr.draw();
-				popBlend();
-				popDepthTest();
-			}
-		
-		#if ENABLE_TRANSFORM_GIZMOS
-			if (true)
-			{
-				pushDepthTest(true, DEPTH_LESS);
-				pushBlend(BLEND_OPAQUE);
-				
-				translationGizmo.draw();
-				
-				popBlend();
-				popDepthTest();
-			}
-		#endif
+			drawSceneOpaque();
 			
-			if (visibility.drawGroundPlane)
-			{
-				pushLineSmooth(true);
-				pushDepthTest(true, DEPTH_LESS, false);
-				pushBlend(BLEND_ALPHA);
-				gxPushMatrix();
-				{
-					gxScalef(100, 1, 100);
-					
-					setLumi(200);
-					drawGrid3dLine(100, 100, 0, 2, true);
-					
-					setLumi(50);
-					drawGrid3dLine(500, 500, 0, 2, true);
-				}
-				gxPopMatrix();
-				popBlend();
-				popDepthTest();
-				popLineSmooth();
-			}
-			
-			if (visibility.drawNodes)
-			{
-				pushDepthTest(true, DEPTH_LESS, false);
-				pushBlend(BLEND_ADD);
-				drawNodesTraverse(scene.getRootNode());
-				popBlend();
-				popDepthTest();
-			}
+			drawSceneTranslucent();
 		}
 		camera.popViewMatrix();
 		camera.popProjectionMatrix();
@@ -1599,7 +1626,7 @@ int main(int argc, char * argv[])
 	
 	registerBuiltinTypes();
 	registerComponentTypes();
-
+	
 	testResources(); // todo : remove
 	
 	SceneEditor editor;

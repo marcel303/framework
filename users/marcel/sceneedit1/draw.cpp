@@ -16,6 +16,7 @@ void drawCylinder(
 	const int axis3 = (axis + 2) % 3;
 	
 	float coords[2][100][3];
+	float normals[100][3];
 	
 	for (int i = 0; i < 100; ++i)
 	{
@@ -31,12 +32,22 @@ void drawCylinder(
 		coords[1][i][axis1] = length;
 		coords[1][i][axis2] = c * radius2;
 		coords[1][i][axis3] = s * radius2;
+		
+		normals[i][axis1] = 0.f;
+		normals[i][axis2] = c;
+		normals[i][axis3] = s;
 	}
 	
 	// begin cap
 	
 	gxBegin(GX_TRIANGLE_FAN);
 	{
+		float normal[3];
+		normal[axis1] = -1.f;
+		normal[axis2] = 0.f;
+		normal[axis3] = 0.f;
+		gxNormal3fv(normal);
+		
 		for (int i = 0; i < 100; ++i)
 		{
 			gxVertex3fv(coords[0][i]);
@@ -48,6 +59,12 @@ void drawCylinder(
 	
 	gxBegin(GX_TRIANGLE_FAN);
 	{
+		float normal[3];
+		normal[axis1] = +1.f;
+		normal[axis2] = 0.f;
+		normal[axis3] = 0.f;
+		gxNormal3fv(normal);
+		
 		for (int i = 0; i < 100; ++i)
 		{
 			gxVertex3fv(coords[1][i]);
@@ -64,8 +81,11 @@ void drawCylinder(
 			const int index1 = i;
 			const int index2 = i + 1 == 100 ? 0 : i + 1;
 			
+			gxNormal3fv(normals[index1]);
 			gxVertex3fv(coords[0][index1]);
 			gxVertex3fv(coords[1][index1]);
+			
+			gxNormal3fv(normals[index2]);
 			gxVertex3fv(coords[1][index2]);
 			gxVertex3fv(coords[0][index2]);
 		}
