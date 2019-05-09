@@ -82,7 +82,7 @@ void Quat::fromMatrix(const Mat4x4 & matrix)
 
 	if (1.0f + matrix(0, 0) + matrix(1, 1) + matrix(2, 2) > eps)
 	{
-		const float s = 0.5f / sqrt(1.0f + matrix(0, 0) + matrix(1, 1) + matrix(2, 2));
+		const float s = 0.5f / sqrtf(1.0f + matrix(0, 0) + matrix(1, 1) + matrix(2, 2));
 		
 		m_xyz[0] = (matrix(1, 2) - matrix(2, 1)) * s; 
 		m_xyz[1] = (matrix(2, 0) - matrix(0, 2)) * s;
@@ -98,11 +98,11 @@ void Quat::fromMatrix(const Mat4x4 & matrix)
 			if (matrix(i, i) > matrix(max, max))
 				max = i;
 		
-		int a0 = max;
-		int a1 = a0 == 2 ? 0 : a0 + 1;
-		int a2 = a1 == 2 ? 0 : a1 + 1;
+		const int a0 = max;
+		const int a1 = a0 == 2 ? 0 : a0 + 1;
+		const int a2 = a1 == 2 ? 0 : a1 + 1;
 		
-		const float s = sqrt(1.0f + matrix(a0, a0) - matrix(a1, a1) - matrix(a2, a2));
+		const float s = sqrtf(1.0f + matrix(a0, a0) - matrix(a1, a1) - matrix(a2, a2));
 		
 		const float sRcp = s != 0.f ? 1.f / s : 0.f;
 		
