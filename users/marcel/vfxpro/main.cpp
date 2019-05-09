@@ -1511,7 +1511,7 @@ int main(int argc, char * argv[])
 					if (index - base < 0 || index - base > 9)
 						continue;
 
-					if (keyboard.wentDown((SDLKey)(SDLK_0 + index - base)))
+					if (keyboard.wentDown(SDLK_0 + (index - base)))
 					{
 						Effect * effect = (*i)->m_effect;
 
@@ -1528,7 +1528,7 @@ int main(int argc, char * argv[])
 					if (int(i) - base < 0 || int(i) - base > 9)
 						continue;
 
-					if (keyboard.wentDown((SDLKey)(SDLK_0 + i - base)))
+					if (keyboard.wentDown(SDLK_0 + (i - base)))
 					{
 						g_scene->triggerEvent(g_scene->m_events[i]->m_name.c_str());
 					}
@@ -1543,7 +1543,7 @@ int main(int argc, char * argv[])
 					if (i - base < 0 || i - base > 9)
 						continue;
 
-					if (keyboard.wentDown((SDLKey)(SDLK_0 + i - base)))
+					if (keyboard.wentDown(SDLK_0 + (i - base)))
 					{
 						SceneLayer * layer = g_scene->m_layers[i];
 
