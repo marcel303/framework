@@ -671,11 +671,11 @@ class Shader : public ShaderBase
 
 public:
 	Shader();
-	Shader(const char * filename);
-	Shader(const char * name, const char * filenameVs, const char * filenamePs);
+	Shader(const char * name, const char * outputs = nullptr);
+	Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
 	virtual ~Shader();
 	
-	void load(const char * name, const char * filenameVs, const char * filenamePs);
+	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
 	virtual bool isValid() const override;
 	virtual GxShaderId getProgram() const override; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
@@ -1465,6 +1465,8 @@ void popFontMode();
 void setShader(const ShaderBase & shader);
 void clearShader();
 void shaderSource(const char * filename, const char * text);
+void pushShaderOutputs(const char * outputs);
+void popShaderOutputs();
 
 void drawPoint(float x, float y);
 void drawLine(float x1, float y1, float x2, float y2);

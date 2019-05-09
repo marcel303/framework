@@ -444,7 +444,7 @@ void Camera::pushViewMatrix() const
 	{
 		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
-		gxLoadMatrixf(matrix.m_v);
+		gxMultMatrixf(matrix.m_v);
 	}
 	gxMatrixMode(restoreMatrixMode);
 }

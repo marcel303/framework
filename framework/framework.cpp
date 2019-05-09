@@ -2793,26 +2793,29 @@ void blitBackBufferToSurface(Surface * surface)
 
 // -----
 
+static Stack<std::string, 32> s_shaderOutputsStack("");
+static std::string s_shaderOutputs = "c";
+
 Shader::Shader()
 {
 	m_shader = 0;
 }
 
-Shader::Shader(const char * filename)
+Shader::Shader(const char * name, const char * outputs)
 {
 	m_shader = 0;
 
-	const std::string vs = std::string(filename) + ".vs";
-	const std::string ps = std::string(filename) + ".ps";
+	const std::string vs = std::string(name) + ".vs";
+	const std::string ps = std::string(name) + ".ps";
 
-	load(filename, vs.c_str(), ps.c_str());
+	load(name, vs.c_str(), ps.c_str(), outputs);
 }
 
-Shader::Shader(const char * name, const char * filenameVs, const char * filenamePs)
+Shader::Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	m_shader = 0;
 
-	load(name, filenameVs, filenamePs);
+	load(name, filenameVs, filenamePs, outputs);
 }
 
 Shader::~Shader()
@@ -2821,9 +2824,12 @@ Shader::~Shader()
 		clearShader();
 }
 
-void Shader::load(const char * name, const char * filenameVs, const char * filenamePs)
+void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
-	m_shader = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs);
+	if (outputs == nullptr)
+		outputs = s_shaderOutputs.c_str();
+	
+	m_shader = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs);
 }
 
 bool Shader::isValid() const
@@ -5471,7 +5477,7 @@ void Camera3d::pushViewMatrix() const
 	
 	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
 	{
-		gxMatrixMode(GX_PROJECTION);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
         gxMultMatrixf(matrix.m_v);
 	}
@@ -5482,7 +5488,7 @@ void Camera3d::popViewMatrix() const
 {
 	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
 	{
-		gxMatrixMode(GX_PROJECTION);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPopMatrix();
 	}
 	gxMatrixMode(restoreMatrixMode);
@@ -6410,6 +6416,17 @@ void clearShader()
 void shaderSource(const char * filename, const char * text)
 {
 	framework.registerShaderSource(filename, text);
+}
+
+void pushShaderOutputs(const char * outputs)
+{
+	s_shaderOutputsStack.push(s_shaderOutputs);
+	s_shaderOutputs = outputs;
+}
+
+void popShaderOutputs()
+{
+	s_shaderOutputs = s_shaderOutputsStack.popValue();
 }
 
 void drawPoint(float x, float y)
@@ -7377,8 +7394,15 @@ void drawRect3d(int axis1, int axis2)
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
+	float normal[3];
+	normal[axis1] = 0.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 1.f;
+	
 	gxBegin(GX_QUADS);
 	{
+		gxNormal3fv(normal);
+		
 		float xyz[3];
 		
 		xyz[axis1] = -1;
@@ -7402,8 +7426,15 @@ void drawGrid3d(int resolution1, int resolution2, int axis1, int axis2)
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
+	float normal[3];
+	normal[axis1] = 0.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 1.f;
+	
 	gxBegin(GX_QUADS);
 	{
+		gxNormal3fv(normal);
+		
 		for (int i = 0; i < resolution1; ++i)
 		{
 			for (int j = 0; j < resolution2; ++j)
@@ -7442,10 +7473,17 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
+	float normal[3];
+	normal[axis1] = 0.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 1.f;
+	
 	if (optimized)
 	{
 		gxBegin(GX_LINES);
 		{
+			gxNormal3fv(normal);
+			
 			for (int i = 0; i <= resolution1; ++i)
 			{
 				const float u = i / float(resolution1);
@@ -7482,6 +7520,8 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 	{
 		gxBegin(GX_LINES);
 		{
+			gxNormal3fv(normal);
+			
 			for (int i = 0; i < resolution1; ++i)
 			{
 				for (int j = 0; j < resolution2; ++j)
@@ -8024,7 +8064,9 @@ static void gxFlush(bool endOfBatch)
 	{
 		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
 
-		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
+		Shader genericShader("engine/Generic");
+		
+		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
 
 		setShader(shader);
 		

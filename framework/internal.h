@@ -543,6 +543,7 @@ public:
 	std::string name;
 	std::string vs;
 	std::string ps;
+	std::string outputs;
 	
 	GLuint program;
 	
@@ -561,20 +562,36 @@ public:
 
 	ShaderCacheElem();
 	void free();
-	void load(const char * name, const char * filenameVs, const char * filenamePs);
+	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 	void reload();
 };
 
 class ShaderCache
 {
 public:
-	typedef std::map<std::string, ShaderCacheElem> Map;
+	class Key
+	{
+	public:
+		std::string name;
+		std::string outputs;
+		
+		inline bool operator<(const Key & other) const
+		{
+			if (name != other.name)
+				return name < other.name;
+			if (outputs != other.outputs)
+				return outputs < other.outputs;
+			return false;
+		}
+	};
+	
+	typedef std::map<Key, ShaderCacheElem> Map;
 	
 	Map m_map;
 	
 	void clear();
 	void reload();
-	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs);
+	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 };
 
 //
@@ -980,7 +997,7 @@ public:
 			const std::string vs = std::string(filename) + ".vs";
 			const std::string ps = std::string(filename) + ".ps";
 			
-			shader.load(filename.c_str(), vs.c_str(), ps.c_str());
+			shader.load(filename.c_str(), vs.c_str(), ps.c_str(), "c");
 		}
 		
 		return shader;

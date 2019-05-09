@@ -188,9 +188,9 @@ namespace AnimModel
 		glBindVertexArray(0);
 		checkErrorGL();
 		
-		if (!m_material.shader.isValid())
+		if (m_material.shader.empty())
 		{
-			m_material.shader = Shader("engine/BasicSkinned");
+			m_material.shader = "engine/BasicSkinned";
 		}
 	}
 	
@@ -896,7 +896,9 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			if (mesh->m_numIndices == 0)
 				continue;
 			
-			Shader & shader = (overrideShader != nullptr) ? *overrideShader : mesh->m_material.shader;
+			Shader materialShader(mesh->m_material.shader.c_str());
+			
+			Shader & shader = (overrideShader != nullptr) ? *overrideShader : materialShader;
 			
 			setShader(shader);
 			

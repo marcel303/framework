@@ -74,7 +74,7 @@ namespace AnimModel
 	class Material
 	{
 	public:
-		Shader shader;
+		std::string shader;
 	};
 	
 	class Mesh
