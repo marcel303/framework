@@ -1,4 +1,4 @@
 app marcel-shadowmap1
 	depend_library framework
-	add_files main.cpp
+	add_files main.cpp shaders.h
 	resource_path data
