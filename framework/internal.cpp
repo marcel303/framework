@@ -844,58 +844,55 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 		}
 		else
 		{
-			if (result)
+			//printf("shader source:\n%s", source.c_str());
+
+			shader = glCreateShader(type);
+
+		#if USE_LEGACY_OPENGL
+			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
+		#elif FRAMEWORK_USE_OPENGL_ES
+			const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+		#else
+			#if OPENGL_VERSION == 410
+				const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+			#elif OPENGL_VERSION == 430
+				const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+			#else
+				const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
+			#endif
+		#endif
+
+		#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+			const GLchar * debugs = "#define _SHADER_DEBUGGING_ 1\n";
+		#else
+			const GLchar * debugs = "#define _SHADER_DEBUGGING_ 0\n";
+		#endif
+		
+			const GLchar * sourceData = (const GLchar*)source.c_str();
+			const GLchar * sources[] = { version, debugs, defines, bindings, sourceData };
+
+			glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
+			checkErrorGL();
+
+			delete [] bytes;
+			bytes = 0;
+			numBytes = 0;
+
+			glCompileShader(shader);
+			checkErrorGL();
+
+			GLint success = GL_FALSE;
+
+			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+			checkErrorGL();
+
+			if (success != GL_TRUE)
 			{
-				//printf("shader source:\n%s", source.c_str());
+				result = false;
 
-				shader = glCreateShader(type);
-
-			#if USE_LEGACY_OPENGL
-				const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
-			#elif FRAMEWORK_USE_OPENGL_ES
-				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-			#else
-				#if OPENGL_VERSION == 410
-					const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-				#elif OPENGL_VERSION == 430
-					const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-				#else
-					const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
-				#endif
-			#endif
-
-			#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
-				const GLchar * debugs = "#define _SHADER_DEBUGGING_ 1\n";
-			#else
-				const GLchar * debugs = "#define _SHADER_DEBUGGING_ 0\n";
-			#endif
-			
-				const GLchar * sourceData = (const GLchar*)source.c_str();
-				const GLchar * sources[] = { version, debugs, defines, bindings, sourceData };
-
-				glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
-				checkErrorGL();
-
-				delete [] bytes;
-				bytes = 0;
-				numBytes = 0;
-
-				glCompileShader(shader);
-				checkErrorGL();
-
-				GLint success = GL_FALSE;
-
-				glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-				checkErrorGL();
-
-				if (success != GL_TRUE)
-				{
-					result = false;
-
-					showShaderInfoLog(shader, source.c_str());
-					
-					getShaderInfoLog(shader, source.c_str(), errorMessages);
-				}
+				showShaderInfoLog(shader, source.c_str());
+				
+				getShaderInfoLog(shader, source.c_str(), errorMessages);
 			}
 		}
 	}
