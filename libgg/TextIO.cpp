@@ -187,6 +187,9 @@ namespace TextIO
 		
 		FILE * file = nullptr;
 		
+		text = nullptr;
+		size = 0;
+		
 		//
 		
 		file = fopen(filename, "rb");
