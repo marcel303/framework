@@ -416,23 +416,47 @@ struct SceneEditor
 			{
 				const bool do_filter = nodeUi.componentTypeNameFilter[0] != 0;
 				
-				for (auto * component = node.components.head; component != nullptr; )
+				const int kMaxComponents = 256;
+				ComponentBase * sorted_components[kMaxComponents];
+				int num_components = 0;
+				
+				for (auto * component = node.components.head; component != nullptr && num_components < kMaxComponents; component = component->next_in_set)
 				{
+					bool passes_filter = true;
+					
 					if (do_filter)
 					{
 						auto * component_type = findComponentType(component->typeIndex());
 						
-						const bool passes_filter =
-							do_filter == false ||
-							(component_type != nullptr && strcasestr(component_type->typeName, nodeUi.componentTypeNameFilter) != nullptr);
-						
-						if (passes_filter == false)
-						{
-							component = component->next_in_set;
-							continue;
-						}
+						passes_filter =
+							component_type != nullptr &&
+							strcasestr(component_type->typeName, nodeUi.componentTypeNameFilter) != nullptr;
 					}
-			
+					
+					if (passes_filter)
+					{
+						sorted_components[num_components++] = component;
+					}
+				}
+				
+				Assert(num_components < kMaxComponents);
+				
+				std::sort(sorted_components, sorted_components + num_components,
+					[](const ComponentBase * first, const ComponentBase * second) -> bool
+						{
+							auto * first_type = findComponentType(first->typeIndex());
+							auto * second_type = findComponentType(second->typeIndex());
+							
+							if (first_type == nullptr || second_type == nullptr)
+								return first_type > second_type;
+							else
+								return strcmp(first_type->typeName, second_type->typeName) < 0;
+						});
+				
+				for (int i = 0; i < num_components; ++i)
+				{
+					ComponentBase * component = sorted_components[i];
+					
 					ImGui::PushID(component);
 					{
 						// note : we group component properties here, so the node context menu can be opened by
@@ -475,15 +499,7 @@ struct SceneEditor
 					
 						if (result == kNodeContextMenuResult_ComponentShouldBeRemoved)
 						{
-							auto * next = component->next_in_set;
-							
 							freeComponentInComponentSet(node.components, component);
-							
-							component = next;
-						}
-						else
-						{
-							component = component->next_in_set;
 						}
 					}
 					ImGui::PopID();

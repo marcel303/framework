@@ -21,7 +21,7 @@ struct ComponentBase
 	virtual void tick(const float dt) { }
 	virtual bool init() { return true; }
 	
-	virtual std::type_index typeIndex() = 0;
+	virtual std::type_index typeIndex() const = 0;
 	
 	virtual void propertyChanged(void * address) { };
 };
@@ -32,7 +32,7 @@ struct Component : ComponentBase
 	T * next = nullptr;
 	T * prev = nullptr;
 	
-	virtual std::type_index typeIndex() override final
+	virtual std::type_index typeIndex() const override final
 	{
 		return std::type_index(typeid(T));
 	}
@@ -58,7 +58,7 @@ struct ComponentMgrBase
 	
 	virtual void tick(const float dt) = 0;
 	
-	virtual std::type_index typeIndex() = 0;
+	virtual std::type_index typeIndex() const = 0;
 };
 
 template <typename T>
@@ -130,7 +130,7 @@ struct ComponentMgr : ComponentMgrBase
 		return static_cast<T*>(component);
 	}
 	
-	virtual std::type_index typeIndex() override final
+	virtual std::type_index typeIndex() const override final
 	{
 		return std::type_index(typeid(T));
 	}
