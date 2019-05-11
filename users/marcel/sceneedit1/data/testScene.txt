@@ -1,13 +1,13 @@
 entity 0
-	SceneNodeComponent
+	scene-node
 		name
 			root
 
 entity 1
-	RotateTransformComponent
+	rotate-transform
 		speed
 			5.0
-	TransformComponent
+	transform
 		position
 			-0.7439023852348328 0.0 6.4490251541137699
 		angleAxis
@@ -17,7 +17,7 @@ entity 1
 				0.4230000078678131 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -33,15 +33,15 @@ entity 1
 			true
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			1
 
 entity 2
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	TransformComponent
+	transform
 		position
 			2.250396251678467 0.0 0.548640251159668
 		angleAxis
@@ -51,7 +51,7 @@ entity 2
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -67,15 +67,15 @@ entity 2
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			2
 
 entity 3
-	RotateTransformComponent
+	rotate-transform
 		speed
 			100.0
-	TransformComponent
+	transform
 		position
 			0.7480514049530029 0.0 -2.6992993354797365
 		angleAxis
@@ -85,7 +85,7 @@ entity 3
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -101,12 +101,12 @@ entity 3
 			true
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			3
 
 entity 4
-	TransformComponent
+	transform
 		position
 			-0.27050328254699709 0.0 -2.6131527423858644
 		angleAxis
@@ -116,7 +116,7 @@ entity 4
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -132,15 +132,15 @@ entity 4
 			true
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			4
 
 entity 5
-	RotateTransformComponent
+	rotate-transform
 		speed
 			200.0
-	TransformComponent
+	transform
 		position
 			-14.345989227294922 0.0 19.522541046142579
 		angleAxis
@@ -150,7 +150,7 @@ entity 5
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -166,12 +166,12 @@ entity 5
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			5
 
 entity 6
-	TransformComponent
+	transform
 		position
 			-5.876728057861328 0.0 2.5093860626220705
 		angleAxis
@@ -181,7 +181,7 @@ entity 6
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -197,12 +197,12 @@ entity 6
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			6
 
 entity 7
-	TransformComponent
+	transform
 		position
 			34.918617248535159 -1.000093936920166 -20.50613021850586
 		angleAxis
@@ -212,7 +212,7 @@ entity 7
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -228,12 +228,12 @@ entity 7
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			7
 
 entity 8
-	TransformComponent
+	transform
 		position
 			29.240253448486329 -0.47759389877319338 -16.194412231445314
 		angleAxis
@@ -243,7 +243,7 @@ entity 8
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -259,12 +259,12 @@ entity 8
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			8
 
 entity 9
-	TransformComponent
+	transform
 		position
 			30.497425079345704 -1.0093767642974854 -13.651670455932618
 		angleAxis
@@ -274,7 +274,7 @@ entity 9
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -290,12 +290,12 @@ entity 9
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			9
 
 entity 10
-	TransformComponent
+	transform
 		position
 			11.279102325439454 0.8774614334106445 -7.755099773406982
 		angleAxis
@@ -305,7 +305,7 @@ entity 10
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -321,12 +321,12 @@ entity 10
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			10
 
 entity 11
-	TransformComponent
+	transform
 		position
 			11.8917875289917 0.6182956695556641 -6.8068156242370609
 		angleAxis
@@ -336,7 +336,7 @@ entity 11
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -352,12 +352,12 @@ entity 11
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			11
 
 entity 12
-	TransformComponent
+	transform
 		position
 			12.381373405456543 0.41120123863220217 -5.8874616622924809
 		angleAxis
@@ -367,7 +367,7 @@ entity 12
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -383,12 +383,12 @@ entity 12
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			12
 
 entity 13
-	TransformComponent
+	transform
 		position
 			0.27739810943603518 1.3501546382904053 -6.406614303588867
 		angleAxis
@@ -398,7 +398,7 @@ entity 13
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -414,12 +414,12 @@ entity 13
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			13
 
 entity 14
-	TransformComponent
+	transform
 		position
 			0.8146510124206543 1.1228963136672974 -6.404687404632568
 		angleAxis
@@ -429,7 +429,7 @@ entity 14
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -445,12 +445,12 @@ entity 14
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			14
 
 entity 15
-	TransformComponent
+	transform
 		position
 			1.3284387588500977 0.9055639505386353 -6.35293436050415
 		angleAxis
@@ -460,7 +460,7 @@ entity 15
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -476,12 +476,12 @@ entity 15
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			15
 
 entity 16
-	TransformComponent
+	transform
 		position
 			7.254134654998779 -1.7941513061523438 20.48406982421875
 		angleAxis
@@ -491,7 +491,7 @@ entity 16
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -507,12 +507,12 @@ entity 16
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			16
 
 entity 17
-	TransformComponent
+	transform
 		position
 			5.898652076721191 -1.2207820415496827 20.95600700378418
 		angleAxis
@@ -522,7 +522,7 @@ entity 17
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -538,12 +538,12 @@ entity 17
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			17
 
 entity 18
-	TransformComponent
+	transform
 		position
 			4.268009185791016 -0.5310201048851013 21.376171112060548
 		angleAxis
@@ -553,7 +553,7 @@ entity 18
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -569,12 +569,12 @@ entity 18
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			18
 
 entity 19
-	TransformComponent
+	transform
 		position
 			-3.8728833198547365 -0.08895193040370941 -2.6534862518310549
 		angleAxis
@@ -584,7 +584,7 @@ entity 19
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -600,12 +600,12 @@ entity 19
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			19
 
 entity 20
-	TransformComponent
+	transform
 		position
 			-3.654745101928711 -0.1812240183353424 -2.94246768951416
 		angleAxis
@@ -615,7 +615,7 @@ entity 20
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -631,12 +631,12 @@ entity 20
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			20
 
 entity 21
-	TransformComponent
+	transform
 		position
 			-3.412827730178833 -0.28355512022972109 -3.212526321411133
 		angleAxis
@@ -646,7 +646,7 @@ entity 21
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -662,12 +662,12 @@ entity 21
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			21
 
 entity 22
-	TransformComponent
+	transform
 		position
 			45.084205627441409 10.154534339904786 70.02129364013672
 		angleAxis
@@ -677,7 +677,7 @@ entity 22
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -693,12 +693,12 @@ entity 22
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			22
 
 entity 23
-	TransformComponent
+	transform
 		position
 			37.54344177246094 12.719093322753907 73.08060455322266
 		angleAxis
@@ -708,7 +708,7 @@ entity 23
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -724,12 +724,12 @@ entity 23
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			23
 
 entity 24
-	TransformComponent
+	transform
 		position
 			31.543380737304689 15.257125854492188 75.3942642211914
 		angleAxis
@@ -739,7 +739,7 @@ entity 24
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -755,12 +755,12 @@ entity 24
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			24
 
 entity 25
-	TransformComponent
+	transform
 		position
 			10.712364196777344 14.484636306762696 54.19124984741211
 		angleAxis
@@ -770,7 +770,7 @@ entity 25
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -786,12 +786,12 @@ entity 25
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			25
 
 entity 26
-	TransformComponent
+	transform
 		position
 			7.195285320281982 15.732536315917969 54.752525329589847
 		angleAxis
@@ -801,7 +801,7 @@ entity 26
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -817,12 +817,12 @@ entity 26
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			26
 
 entity 27
-	TransformComponent
+	transform
 		position
 			3.646066665649414 16.356355667114259 52.790122985839847
 		angleAxis
@@ -832,7 +832,7 @@ entity 27
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -848,12 +848,12 @@ entity 27
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			27
 
 entity 28
-	TransformComponent
+	transform
 		position
 			0.035622596740722659 17.40799903869629 52.35270690917969
 		angleAxis
@@ -863,7 +863,7 @@ entity 28
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -879,12 +879,12 @@ entity 28
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			28
 
 entity 29
-	TransformComponent
+	transform
 		position
 			-4.0485992431640629 18.82577896118164 51.388893127441409
 		angleAxis
@@ -894,7 +894,7 @@ entity 29
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -910,12 +910,12 @@ entity 29
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			29
 
 entity 30
-	TransformComponent
+	transform
 		position
 			-7.160344123840332 18.422487258911134 46.51140594482422
 		angleAxis
@@ -925,7 +925,7 @@ entity 30
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -941,12 +941,12 @@ entity 30
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			30
 
 entity 31
-	TransformComponent
+	transform
 		position
 			-9.65460205078125 17.94165802001953 42.01052474975586
 		angleAxis
@@ -956,7 +956,7 @@ entity 31
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -972,12 +972,12 @@ entity 31
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			31
 
 entity 32
-	TransformComponent
+	transform
 		position
 			-11.798185348510743 17.468231201171876 37.78388977050781
 		angleAxis
@@ -987,7 +987,7 @@ entity 32
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1003,12 +1003,12 @@ entity 32
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			32
 
 entity 33
-	TransformComponent
+	transform
 		position
 			-13.327406883239746 16.559383392333986 32.902339935302737
 		angleAxis
@@ -1018,7 +1018,7 @@ entity 33
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1034,12 +1034,12 @@ entity 33
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			33
 
 entity 34
-	TransformComponent
+	transform
 		position
 			-12.555709838867188 14.039937973022461 25.818275451660158
 		angleAxis
@@ -1049,7 +1049,7 @@ entity 34
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1065,12 +1065,12 @@ entity 34
 			true
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			34
 
 entity 35
-	TransformComponent
+	transform
 		position
 			-13.196538925170899 13.275713920593262 22.303613662719728
 		angleAxis
@@ -1080,7 +1080,7 @@ entity 35
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1096,12 +1096,12 @@ entity 35
 			true
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			35
 
 entity 36
-	TransformComponent
+	transform
 		position
 			-12.67877197265625 12.163854598999024 18.91455078125
 		angleAxis
@@ -1111,7 +1111,7 @@ entity 36
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1127,12 +1127,12 @@ entity 36
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			36
 
 entity 37
-	TransformComponent
+	transform
 		position
 			-12.066133499145508 11.264360427856446 16.391620635986329
 		angleAxis
@@ -1142,7 +1142,7 @@ entity 37
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1158,12 +1158,12 @@ entity 37
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			37
 
 entity 38
-	TransformComponent
+	transform
 		position
 			-9.00238037109375 8.604094505310059 12.04592227935791
 		angleAxis
@@ -1173,7 +1173,7 @@ entity 38
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1189,12 +1189,12 @@ entity 38
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			38
 
 entity 39
-	TransformComponent
+	transform
 		position
 			-8.38418960571289 8.35588550567627 11.415104866027832
 		angleAxis
@@ -1204,7 +1204,7 @@ entity 39
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1220,12 +1220,12 @@ entity 39
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			39
 
 entity 40
-	TransformComponent
+	transform
 		position
 			-7.096702575683594 7.361780643463135 9.808575630187989
 		angleAxis
@@ -1235,7 +1235,7 @@ entity 40
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1251,12 +1251,12 @@ entity 40
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			40
 
 entity 41
-	TransformComponent
+	transform
 		position
 			-4.843685626983643 5.857367038726807 8.170998573303223
 		angleAxis
@@ -1266,7 +1266,7 @@ entity 41
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1282,12 +1282,12 @@ entity 41
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			41
 
 entity 42
-	TransformComponent
+	transform
 		position
 			-3.738133430480957 5.0196757316589359 7.120140552520752
 		angleAxis
@@ -1297,7 +1297,7 @@ entity 42
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1313,12 +1313,12 @@ entity 42
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			42
 
 entity 43
-	TransformComponent
+	transform
 		position
 			-2.230618953704834 4.05305290222168 6.3850250244140629
 		angleAxis
@@ -1328,7 +1328,7 @@ entity 43
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1344,12 +1344,12 @@ entity 43
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			43
 
 entity 44
-	TransformComponent
+	transform
 		position
 			-1.191044807434082 3.0686700344085695 5.277250289916992
 		angleAxis
@@ -1359,7 +1359,7 @@ entity 44
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1375,12 +1375,12 @@ entity 44
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			44
 
 entity 45
-	TransformComponent
+	transform
 		position
 			-0.5461897850036621 2.4464738368988039 4.618025779724121
 		angleAxis
@@ -1390,7 +1390,7 @@ entity 45
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1406,12 +1406,12 @@ entity 45
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			45
 
 entity 46
-	TransformComponent
+	transform
 		position
 			0.517733097076416 1.4391520023345948 3.7206857204437258
 		angleAxis
@@ -1421,7 +1421,7 @@ entity 46
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1437,12 +1437,12 @@ entity 46
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			46
 
 entity 47
-	TransformComponent
+	transform
 		position
 			1.3768744468688965 0.648402214050293 3.1522207260131838
 		angleAxis
@@ -1452,7 +1452,7 @@ entity 47
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1468,12 +1468,12 @@ entity 47
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			47
 
 entity 48
-	TransformComponent
+	transform
 		position
 			1.3470940589904786 0.4324139356613159 2.7471680641174318
 		angleAxis
@@ -1483,7 +1483,7 @@ entity 48
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1499,12 +1499,12 @@ entity 48
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			48
 
 entity 49
-	TransformComponent
+	transform
 		position
 			1.5828664302825928 -0.06535136699676514 2.096510648727417
 		angleAxis
@@ -1514,7 +1514,7 @@ entity 49
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1530,12 +1530,12 @@ entity 49
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			49
 
 entity 50
-	TransformComponent
+	transform
 		position
 			1.6990809440612794 -0.38645875453948977 1.669603705406189
 		angleAxis
@@ -1545,7 +1545,7 @@ entity 50
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1561,12 +1561,12 @@ entity 50
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			50
 
 entity 51
-	TransformComponent
+	transform
 		position
 			1.1311450004577637 -0.3265557289123535 1.0373797416687012
 		angleAxis
@@ -1576,7 +1576,7 @@ entity 51
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1592,12 +1592,12 @@ entity 51
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			51
 
 entity 52
-	TransformComponent
+	transform
 		position
 			-0.5023903846740723 0.37870705127716067 0.04155087471008301
 		angleAxis
@@ -1607,7 +1607,7 @@ entity 52
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1623,12 +1623,12 @@ entity 52
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			52
 
 entity 53
-	TransformComponent
+	transform
 		position
 			-2.6618285179138185 1.6272861957550049 -0.8644328117370606
 		angleAxis
@@ -1638,7 +1638,7 @@ entity 53
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1654,12 +1654,12 @@ entity 53
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			53
 
 entity 54
-	TransformComponent
+	transform
 		position
 			-4.1786980628967289 2.6072235107421877 -1.5455632209777833
 		angleAxis
@@ -1669,7 +1669,7 @@ entity 54
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1685,12 +1685,12 @@ entity 54
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			54
 
 entity 55
-	TransformComponent
+	transform
 		position
 			-6.957271575927734 4.367611885070801 -3.0332579612731935
 		angleAxis
@@ -1700,7 +1700,7 @@ entity 55
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1716,12 +1716,12 @@ entity 55
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			55
 
 entity 56
-	TransformComponent
+	transform
 		position
 			-10.355637550354004 6.612905979156494 -5.044732093811035
 		angleAxis
@@ -1731,7 +1731,7 @@ entity 56
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1747,12 +1747,12 @@ entity 56
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			56
 
 entity 57
-	TransformComponent
+	transform
 		position
 			-14.833308219909668 9.53976821899414 -8.280908584594727
 		angleAxis
@@ -1762,7 +1762,7 @@ entity 57
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1778,12 +1778,12 @@ entity 57
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			57
 
 entity 58
-	TransformComponent
+	transform
 		position
 			-16.98861312866211 10.839886665344239 -11.226935386657715
 		angleAxis
@@ -1793,7 +1793,7 @@ entity 58
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1809,12 +1809,12 @@ entity 58
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			58
 
 entity 59
-	TransformComponent
+	transform
 		position
 			-18.871994018554689 12.008094787597657 -14.604633331298829
 		angleAxis
@@ -1824,7 +1824,7 @@ entity 59
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1840,12 +1840,12 @@ entity 59
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			59
 
 entity 60
-	TransformComponent
+	transform
 		position
 			-21.762001037597658 13.860947608947754 -19.235612869262697
 		angleAxis
@@ -1855,7 +1855,7 @@ entity 60
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1871,12 +1871,12 @@ entity 60
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			60
 
 entity 61
-	TransformComponent
+	transform
 		position
 			-24.08641815185547 15.099918365478516 -25.260982513427736
 		angleAxis
@@ -1886,7 +1886,7 @@ entity 61
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1902,12 +1902,12 @@ entity 61
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			61
 
 entity 62
-	TransformComponent
+	transform
 		position
 			-25.585878372192384 15.968799591064454 -31.193004608154298
 		angleAxis
@@ -1917,7 +1917,7 @@ entity 62
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1933,12 +1933,12 @@ entity 62
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			62
 
 entity 63
-	TransformComponent
+	transform
 		position
 			-23.681814193725587 14.503121376037598 -34.940181732177737
 		angleAxis
@@ -1948,7 +1948,7 @@ entity 63
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1964,12 +1964,12 @@ entity 63
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			63
 
 entity 64
-	TransformComponent
+	transform
 		position
 			-23.003704071044923 13.957537651062012 -40.16079330444336
 		angleAxis
@@ -1979,7 +1979,7 @@ entity 64
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -1995,12 +1995,12 @@ entity 64
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			64
 
 entity 65
-	TransformComponent
+	transform
 		position
 			-21.02577018737793 12.449213981628418 -44.30983352661133
 		angleAxis
@@ -2010,7 +2010,7 @@ entity 65
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2026,12 +2026,12 @@ entity 65
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			65
 
 entity 66
-	TransformComponent
+	transform
 		position
 			-17.25153923034668 9.650343894958496 -47.052040100097659
 		angleAxis
@@ -2041,7 +2041,7 @@ entity 66
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2057,12 +2057,12 @@ entity 66
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			66
 
 entity 67
-	TransformComponent
+	transform
 		position
 			-13.899492263793946 7.450928211212158 -49.74971389770508
 		angleAxis
@@ -2072,7 +2072,7 @@ entity 67
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2088,12 +2088,12 @@ entity 67
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			67
 
 entity 68
-	TransformComponent
+	transform
 		position
 			-10.184383392333985 4.955682277679443 -51.586219787597659
 		angleAxis
@@ -2103,7 +2103,7 @@ entity 68
 				0.0 1.0 0.0
 		scale
 			1.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2119,12 +2119,12 @@ entity 68
 			false
 		centimetersToMeters
 			false
-	SceneNodeComponent
+	scene-node
 		name
 			68
 
 entity 69
-	TransformComponent
+	transform
 		position
 			0.0 0.0 0.0
 		angleAxis
@@ -2134,7 +2134,7 @@ entity 69
 				0.0 1.0 0.0
 		scale
 			1.0
-	CameraComponent
+	camera
 		controller
 			controller 1
 		fov
@@ -2143,15 +2143,15 @@ entity 69
 			0.009999999776482582
 		farDistance
 			100.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			-50.0
-	SceneNodeComponent
+	scene-node
 		name
 			69
 
 entity 70
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2167,7 +2167,7 @@ entity 70
 			false
 		centimetersToMeters
 			false
-	TransformComponent
+	transform
 		position
 			6.60178804397583 -2.3313965797424318 2.161309242248535
 		angleAxis
@@ -2177,12 +2177,12 @@ entity 70
 				0.0 1.0 0.0
 		scale
 			1.0
-	SceneNodeComponent
+	scene-node
 		name
 			70
 
 entity 71
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2198,7 +2198,7 @@ entity 71
 			false
 		centimetersToMeters
 			false
-	TransformComponent
+	transform
 		position
 			8.339040756225586 -2.4974734783172609 5.240268707275391
 		angleAxis
@@ -2208,12 +2208,12 @@ entity 71
 				0.0 1.0 0.0
 		scale
 			1.0
-	SceneNodeComponent
+	scene-node
 		name
 			71
 
 entity 72
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2229,7 +2229,7 @@ entity 72
 			false
 		centimetersToMeters
 			false
-	TransformComponent
+	transform
 		position
 			8.273646354675293 -1.6597497463226319 7.858277320861816
 		angleAxis
@@ -2239,15 +2239,15 @@ entity 72
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			200.0
-	SceneNodeComponent
+	scene-node
 		name
 			72
 
 entity 73
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2263,7 +2263,7 @@ entity 73
 			false
 		centimetersToMeters
 			false
-	TransformComponent
+	transform
 		position
 			-0.5818801522254944 0.662010669708252 2.2229485511779787
 		angleAxis
@@ -2273,12 +2273,12 @@ entity 73
 				0.0 1.0 0.0
 		scale
 			1.0
-	SceneNodeComponent
+	scene-node
 		name
 			73
 
 entity 74
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2294,7 +2294,7 @@ entity 74
 			false
 		centimetersToMeters
 			false
-	TransformComponent
+	transform
 		position
 			-1.5608956813812256 1.7828638553619385 4.023364067077637
 		angleAxis
@@ -2304,12 +2304,12 @@ entity 74
 				0.0 1.0 0.0
 		scale
 			1.0
-	SceneNodeComponent
+	scene-node
 		name
 			74
 
 entity 75
-	TransformComponent
+	transform
 		position
 			4.805697917938232 0.0 -2.0277700424194338
 		angleAxis
@@ -2319,10 +2319,10 @@ entity 75
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2338,16 +2338,16 @@ entity 75
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			75
 
 entity 76
-	TransformComponent
+	transform
 		position
 			2.1485390663146974 0.0 -1.2049379348754883
 		angleAxis
@@ -2357,10 +2357,10 @@ entity 76
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2376,16 +2376,16 @@ entity 76
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			76
 
 entity 77
-	TransformComponent
+	transform
 		position
 			1.4343338012695313 0.0 -1.508143663406372
 		angleAxis
@@ -2395,10 +2395,10 @@ entity 77
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2414,16 +2414,16 @@ entity 77
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			77
 
 entity 78
-	TransformComponent
+	transform
 		position
 			0.7040519714355469 0.0 -1.791555643081665
 		angleAxis
@@ -2433,10 +2433,10 @@ entity 78
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2452,16 +2452,16 @@ entity 78
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			78
 
 entity 79
-	TransformComponent
+	transform
 		position
 			9.122634887695313 -8.117149353027344 -1.2480390071868897
 		angleAxis
@@ -2471,10 +2471,10 @@ entity 79
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2490,16 +2490,16 @@ entity 79
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			79
 
 entity 80
-	TransformComponent
+	transform
 		position
 			8.795292854309082 -8.002385139465332 -1.2496778964996338
 		angleAxis
@@ -2509,10 +2509,10 @@ entity 80
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2528,16 +2528,16 @@ entity 80
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			80
 
 entity 81
-	TransformComponent
+	transform
 		position
 			8.17916202545166 -7.814804553985596 -0.552520751953125
 		angleAxis
@@ -2547,10 +2547,10 @@ entity 81
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2566,16 +2566,16 @@ entity 81
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			81
 
 entity 82
-	TransformComponent
+	transform
 		position
 			7.711470127105713 -7.616971015930176 -0.5022130012512207
 		angleAxis
@@ -2585,10 +2585,10 @@ entity 82
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2604,16 +2604,16 @@ entity 82
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			82
 
 entity 83
-	TransformComponent
+	transform
 		position
 			7.217886924743652 -7.408184051513672 -0.479339599609375
 		angleAxis
@@ -2623,10 +2623,10 @@ entity 83
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2642,16 +2642,16 @@ entity 83
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			83
 
 entity 84
-	TransformComponent
+	transform
 		position
 			-14.948616981506348 14.486448287963868 -3.5982725620269777
 		angleAxis
@@ -2661,10 +2661,10 @@ entity 84
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2680,16 +2680,16 @@ entity 84
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			84
 
 entity 85
-	TransformComponent
+	transform
 		position
 			-7.530675411224365 6.542445182800293 -2.8013858795166017
 		angleAxis
@@ -2699,10 +2699,10 @@ entity 85
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2718,16 +2718,16 @@ entity 85
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			85
 
 entity 86
-	TransformComponent
+	transform
 		position
 			-7.722940921783447 6.623775482177734 -3.392117977142334
 		angleAxis
@@ -2737,10 +2737,10 @@ entity 86
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2756,16 +2756,16 @@ entity 86
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			86
 
 entity 87
-	TransformComponent
+	transform
 		position
 			-7.856940746307373 6.680456638336182 -3.842639207839966
 		angleAxis
@@ -2775,10 +2775,10 @@ entity 87
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2794,16 +2794,16 @@ entity 87
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			87
 
 entity 88
-	TransformComponent
+	transform
 		position
 			-7.996816158294678 6.739621162414551 -4.3565473556518559
 		angleAxis
@@ -2813,10 +2813,10 @@ entity 88
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2832,16 +2832,16 @@ entity 88
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			88
 
 entity 89
-	TransformComponent
+	transform
 		position
 			-8.134902954101563 6.798034191131592 -4.921215057373047
 		angleAxis
@@ -2851,10 +2851,10 @@ entity 89
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2870,16 +2870,16 @@ entity 89
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			89
 
 entity 90
-	TransformComponent
+	transform
 		position
 			-8.246644973754883 6.845300674438477 -5.434898376464844
 		angleAxis
@@ -2889,10 +2889,10 @@ entity 90
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2908,16 +2908,16 @@ entity 90
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			90
 
 entity 91
-	TransformComponent
+	transform
 		position
 			-8.345596313476563 6.887157440185547 -5.949612617492676
 		angleAxis
@@ -2927,10 +2927,10 @@ entity 91
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2946,16 +2946,16 @@ entity 91
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			91
 
 entity 92
-	TransformComponent
+	transform
 		position
 			-8.433989524841309 6.9245500564575199 -6.478879451751709
 		angleAxis
@@ -2965,10 +2965,10 @@ entity 92
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -2984,16 +2984,16 @@ entity 92
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			92
 
 entity 93
-	TransformComponent
+	transform
 		position
 			-8.51546859741211 6.95901346206665 -7.058404445648193
 		angleAxis
@@ -3003,10 +3003,10 @@ entity 93
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3022,16 +3022,16 @@ entity 93
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			93
 
 entity 94
-	TransformComponent
+	transform
 		position
 			-8.575926780700684 6.984585285186768 -7.586189270019531
 		angleAxis
@@ -3041,10 +3041,10 @@ entity 94
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3060,16 +3060,16 @@ entity 94
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			94
 
 entity 95
-	TransformComponent
+	transform
 		position
 			-8.619729042053223 7.003114700317383 -8.067342758178711
 		angleAxis
@@ -3079,10 +3079,10 @@ entity 95
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3098,16 +3098,16 @@ entity 95
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			95
 
 entity 96
-	TransformComponent
+	transform
 		position
 			-8.658455848693848 7.019495487213135 -8.650045394897461
 		angleAxis
@@ -3117,10 +3117,10 @@ entity 96
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3136,16 +3136,16 @@ entity 96
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			96
 
 entity 97
-	TransformComponent
+	transform
 		position
 			-8.681976318359375 7.029447078704834 -9.247838973999024
 		angleAxis
@@ -3155,10 +3155,10 @@ entity 97
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3174,16 +3174,16 @@ entity 97
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			97
 
 entity 98
-	TransformComponent
+	transform
 		position
 			-8.689005851745606 7.0324201583862309 -9.725234985351563
 		angleAxis
@@ -3193,10 +3193,10 @@ entity 98
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3212,16 +3212,16 @@ entity 98
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			98
 
 entity 99
-	TransformComponent
+	transform
 		position
 			-8.684228897094727 7.030398845672607 -10.273176193237305
 		angleAxis
@@ -3231,10 +3231,10 @@ entity 99
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3250,16 +3250,16 @@ entity 99
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			99
 
 entity 100
-	TransformComponent
+	transform
 		position
 			-8.66628646850586 7.022809982299805 -10.80870246887207
 		angleAxis
@@ -3269,10 +3269,10 @@ entity 100
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3288,16 +3288,16 @@ entity 100
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			100
 
 entity 101
-	TransformComponent
+	transform
 		position
 			-8.638845443725586 7.011201858520508 -11.29128360748291
 		angleAxis
@@ -3307,10 +3307,10 @@ entity 101
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3326,16 +3326,16 @@ entity 101
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			101
 
 entity 102
-	TransformComponent
+	transform
 		position
 			-8.595235824584961 6.992753982543945 -11.833158493041993
 		angleAxis
@@ -3345,10 +3345,10 @@ entity 102
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3364,16 +3364,16 @@ entity 102
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			102
 
 entity 103
-	TransformComponent
+	transform
 		position
 			-8.544708251953125 6.971381664276123 -12.317590713500977
 		angleAxis
@@ -3383,10 +3383,10 @@ entity 103
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3402,16 +3402,16 @@ entity 103
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			103
 
 entity 104
-	TransformComponent
+	transform
 		position
 			-8.476177215576172 6.942391872406006 -12.852343559265137
 		angleAxis
@@ -3421,10 +3421,10 @@ entity 104
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3440,16 +3440,16 @@ entity 104
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			104
 
 entity 105
-	TransformComponent
+	transform
 		position
 			-8.411033630371094 6.914837837219238 -13.283756256103516
 		angleAxis
@@ -3459,10 +3459,10 @@ entity 105
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3478,16 +3478,16 @@ entity 105
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			105
 
 entity 106
-	TransformComponent
+	transform
 		position
 			-8.317964553833008 6.875471591949463 -13.818225860595704
 		angleAxis
@@ -3497,10 +3497,10 @@ entity 106
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3516,16 +3516,16 @@ entity 106
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			106
 
 entity 107
-	TransformComponent
+	transform
 		position
 			-8.222044944763184 6.834896087646484 -14.30068588256836
 		angleAxis
@@ -3535,10 +3535,10 @@ entity 107
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3554,16 +3554,16 @@ entity 107
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			107
 
 entity 108
-	TransformComponent
+	transform
 		position
 			-8.091676712036133 6.779747486114502 -14.879948616027832
 		angleAxis
@@ -3573,10 +3573,10 @@ entity 108
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3592,16 +3592,16 @@ entity 108
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			108
 
 entity 109
-	TransformComponent
+	transform
 		position
 			-7.959555149078369 6.723862648010254 -15.402538299560547
 		angleAxis
@@ -3611,10 +3611,10 @@ entity 109
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3630,16 +3630,16 @@ entity 109
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			109
 
 entity 110
-	TransformComponent
+	transform
 		position
 			-7.827990531921387 6.668210506439209 -15.874994277954102
 		angleAxis
@@ -3649,10 +3649,10 @@ entity 110
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3668,16 +3668,16 @@ entity 110
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			110
 
 entity 111
-	TransformComponent
+	transform
 		position
 			-7.681591033935547 6.6062822341918949 -16.35713768005371
 		angleAxis
@@ -3687,10 +3687,10 @@ entity 111
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3706,16 +3706,16 @@ entity 111
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			111
 
 entity 112
-	TransformComponent
+	transform
 		position
 			-7.527287483215332 6.541011333465576 -16.825695037841798
 		angleAxis
@@ -3725,10 +3725,10 @@ entity 112
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3744,16 +3744,16 @@ entity 112
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			112
 
 entity 113
-	TransformComponent
+	transform
 		position
 			-7.360302925109863 6.470378398895264 -17.29556655883789
 		angleAxis
@@ -3763,10 +3763,10 @@ entity 113
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3782,16 +3782,16 @@ entity 113
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			113
 
 entity 114
-	TransformComponent
+	transform
 		position
 			-7.178893089294434 6.393640041351318 -17.77000617980957
 		angleAxis
@@ -3801,10 +3801,10 @@ entity 114
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3820,16 +3820,16 @@ entity 114
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			114
 
 entity 115
-	TransformComponent
+	transform
 		position
 			-6.991049766540527 6.314183712005615 -18.228300094604493
 		angleAxis
@@ -3839,10 +3839,10 @@ entity 115
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3858,16 +3858,16 @@ entity 115
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			115
 
 entity 116
-	TransformComponent
+	transform
 		position
 			-6.796839714050293 6.2320332527160648 -18.672340393066408
 		angleAxis
@@ -3877,10 +3877,10 @@ entity 116
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3896,16 +3896,16 @@ entity 116
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			116
 
 entity 117
-	TransformComponent
+	transform
 		position
 			-6.565210819244385 6.134053707122803 -19.168224334716798
 		angleAxis
@@ -3915,10 +3915,10 @@ entity 117
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3934,16 +3934,16 @@ entity 117
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			117
 
 entity 118
-	TransformComponent
+	transform
 		position
 			-6.320165634155273 6.030400276184082 -19.658740997314454
 		angleAxis
@@ -3953,10 +3953,10 @@ entity 118
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -3972,16 +3972,16 @@ entity 118
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			118
 
 entity 119
-	TransformComponent
+	transform
 		position
 			-6.114804267883301 5.943531036376953 -20.046409606933595
 		angleAxis
@@ -3991,10 +3991,10 @@ entity 119
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4010,16 +4010,16 @@ entity 119
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			119
 
 entity 120
-	TransformComponent
+	transform
 		position
 			-5.820831298828125 5.819180965423584 -20.56906509399414
 		angleAxis
@@ -4029,10 +4029,10 @@ entity 120
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4048,16 +4048,16 @@ entity 120
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			120
 
 entity 121
-	TransformComponent
+	transform
 		position
 			-5.593896865844727 5.723188877105713 -20.949527740478517
 		angleAxis
@@ -4067,10 +4067,10 @@ entity 121
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4086,16 +4086,16 @@ entity 121
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			121
 
 entity 122
-	TransformComponent
+	transform
 		position
 			-5.330451011657715 5.611751079559326 -21.368934631347658
 		angleAxis
@@ -4105,10 +4105,10 @@ entity 122
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4124,16 +4124,16 @@ entity 122
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			122
 
 entity 123
-	TransformComponent
+	transform
 		position
 			-5.029745578765869 5.484553337097168 -21.821470260620118
 		angleAxis
@@ -4143,10 +4143,10 @@ entity 123
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4162,16 +4162,16 @@ entity 123
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			123
 
 entity 124
-	TransformComponent
+	transform
 		position
 			-4.750811576843262 5.3665618896484379 -22.218822479248048
 		angleAxis
@@ -4181,10 +4181,10 @@ entity 124
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4200,16 +4200,16 @@ entity 124
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			124
 
 entity 125
-	TransformComponent
+	transform
 		position
 			-4.426278114318848 5.22928524017334 -22.65671157836914
 		angleAxis
@@ -4219,10 +4219,10 @@ entity 125
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4238,16 +4238,16 @@ entity 125
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			125
 
 entity 126
-	TransformComponent
+	transform
 		position
 			-4.122366428375244 5.100730895996094 -23.045150756835939
 		angleAxis
@@ -4257,10 +4257,10 @@ entity 126
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4276,16 +4276,16 @@ entity 126
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			126
 
 entity 127
-	TransformComponent
+	transform
 		position
 			-3.7781002521514894 4.955104351043701 -23.462200164794923
 		angleAxis
@@ -4295,10 +4295,10 @@ entity 127
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4314,16 +4314,16 @@ entity 127
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			127
 
 entity 128
-	TransformComponent
+	transform
 		position
 			-3.456920623779297 4.819247722625732 -23.831134796142579
 		angleAxis
@@ -4333,10 +4333,10 @@ entity 128
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4352,16 +4352,16 @@ entity 128
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			128
 
 entity 129
-	TransformComponent
+	transform
 		position
 			-3.1286110877990724 4.680371284484863 -24.189748764038087
 		angleAxis
@@ -4371,10 +4371,10 @@ entity 129
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4390,16 +4390,16 @@ entity 129
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			129
 
 entity 130
-	TransformComponent
+	transform
 		position
 			-2.792113780975342 4.538033485412598 -24.53929901123047
 		angleAxis
@@ -4409,10 +4409,10 @@ entity 130
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4428,16 +4428,16 @@ entity 130
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			130
 
 entity 131
-	TransformComponent
+	transform
 		position
 			-2.4462485313415529 4.3917317390441898 -24.88092041015625
 		angleAxis
@@ -4447,10 +4447,10 @@ entity 131
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4466,16 +4466,16 @@ entity 131
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			131
 
 entity 132
-	TransformComponent
+	transform
 		position
 			-2.057063341140747 4.227107524871826 -25.245376586914064
 		angleAxis
@@ -4485,10 +4485,10 @@ entity 132
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4504,16 +4504,16 @@ entity 132
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			132
 
 entity 133
-	TransformComponent
+	transform
 		position
 			-1.7269545793533326 4.087470531463623 -25.53900146484375
 		angleAxis
@@ -4523,10 +4523,10 @@ entity 133
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4542,16 +4542,16 @@ entity 133
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			133
 
 entity 134
-	TransformComponent
+	transform
 		position
 			-1.3552731275558472 3.930250644683838 -25.85359764099121
 		angleAxis
@@ -4561,10 +4561,10 @@ entity 134
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4580,16 +4580,16 @@ entity 134
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			134
 
 entity 135
-	TransformComponent
+	transform
 		position
 			-0.9356696605682373 3.7527570724487306 -26.189556121826173
 		angleAxis
@@ -4599,10 +4599,10 @@ entity 135
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4618,16 +4618,16 @@ entity 135
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			135
 
 entity 136
-	TransformComponent
+	transform
 		position
 			-0.5428831577301025 3.586608409881592 -26.486652374267579
 		angleAxis
@@ -4637,10 +4637,10 @@ entity 136
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4656,16 +4656,16 @@ entity 136
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			136
 
 entity 137
-	TransformComponent
+	transform
 		position
 			-0.14784836769104005 3.419508934020996 -26.769378662109376
 		angleAxis
@@ -4675,10 +4675,10 @@ entity 137
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4694,16 +4694,16 @@ entity 137
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			137
 
 entity 138
-	TransformComponent
+	transform
 		position
 			0.2489335536956787 3.2516722679138185 -27.03795051574707
 		angleAxis
@@ -4713,10 +4713,10 @@ entity 138
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4732,16 +4732,16 @@ entity 138
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			138
 
 entity 139
-	TransformComponent
+	transform
 		position
 			0.659875750541687 3.0778417587280275 -27.30057716369629
 		angleAxis
@@ -4751,10 +4751,10 @@ entity 139
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4770,16 +4770,16 @@ entity 139
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			139
 
 entity 140
-	TransformComponent
+	transform
 		position
 			1.0295449495315552 2.9214730262756349 -27.523906707763673
 		angleAxis
@@ -4789,10 +4789,10 @@ entity 140
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4808,16 +4808,16 @@ entity 140
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			140
 
 entity 141
-	TransformComponent
+	transform
 		position
 			1.5494537353515626 2.7015509605407717 -27.81818389892578
 		angleAxis
@@ -4827,10 +4827,10 @@ entity 141
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4846,16 +4846,16 @@ entity 141
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			141
 
 entity 142
-	TransformComponent
+	transform
 		position
 			1.9331181049346924 2.5392608642578127 -28.02108383178711
 		angleAxis
@@ -4865,10 +4865,10 @@ entity 142
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4884,16 +4884,16 @@ entity 142
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			142
 
 entity 143
-	TransformComponent
+	transform
 		position
 			2.319288730621338 2.3759093284606935 -28.213529586791993
 		angleAxis
@@ -4903,10 +4903,10 @@ entity 143
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4922,16 +4922,16 @@ entity 143
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			143
 
 entity 144
-	TransformComponent
+	transform
 		position
 			2.8534531593322756 2.1499600410461427 -28.460927963256837
 		angleAxis
@@ -4941,10 +4941,10 @@ entity 144
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4960,16 +4960,16 @@ entity 144
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			144
 
 entity 145
-	TransformComponent
+	transform
 		position
 			3.2521114349365236 1.9813265800476075 -28.631807327270509
 		angleAxis
@@ -4979,10 +4979,10 @@ entity 145
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -4998,16 +4998,16 @@ entity 145
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			145
 
 entity 146
-	TransformComponent
+	transform
 		position
 			3.699777126312256 1.7919631004333497 -28.810115814208986
 		angleAxis
@@ -5017,10 +5017,10 @@ entity 146
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5036,16 +5036,16 @@ entity 146
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			146
 
 entity 147
-	TransformComponent
+	transform
 		position
 			4.100358963012695 1.6225175857543946 -28.95779800415039
 		angleAxis
@@ -5055,10 +5055,10 @@ entity 147
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5074,16 +5074,16 @@ entity 147
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			147
 
 entity 148
-	TransformComponent
+	transform
 		position
 			4.607050895690918 1.408186435699463 -29.12897491455078
 		angleAxis
@@ -5093,10 +5093,10 @@ entity 148
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5112,16 +5112,16 @@ entity 148
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			148
 
 entity 149
-	TransformComponent
+	transform
 		position
 			5.075007438659668 1.210240364074707 -29.271921157836915
 		angleAxis
@@ -5131,10 +5131,10 @@ entity 149
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5150,16 +5150,16 @@ entity 149
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			149
 
 entity 150
-	TransformComponent
+	transform
 		position
 			5.486725807189941 1.0360841751098633 -29.385921478271486
 		angleAxis
@@ -5169,10 +5169,10 @@ entity 150
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5188,16 +5188,16 @@ entity 150
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			150
 
 entity 151
-	TransformComponent
+	transform
 		position
 			6.005928039550781 0.816462516784668 -29.51428985595703
 		angleAxis
@@ -5207,10 +5207,10 @@ entity 151
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5226,16 +5226,16 @@ entity 151
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			151
 
 entity 152
-	TransformComponent
+	transform
 		position
 			6.480875015258789 0.6155600547790527 -29.616947174072267
 		angleAxis
@@ -5245,10 +5245,10 @@ entity 152
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5264,16 +5264,16 @@ entity 152
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			152
 
 entity 153
-	TransformComponent
+	transform
 		position
 			7.011277198791504 0.39119815826416018 -29.71517562866211
 		angleAxis
@@ -5283,10 +5283,10 @@ entity 153
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5302,16 +5302,16 @@ entity 153
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			153
 
 entity 154
-	TransformComponent
+	transform
 		position
 			7.492546081542969 0.1876225471496582 -29.78952407836914
 		angleAxis
@@ -5321,10 +5321,10 @@ entity 154
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5340,16 +5340,16 @@ entity 154
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			154
 
 entity 155
-	TransformComponent
+	transform
 		position
 			7.973604202270508 -0.015865325927734376 -29.849964141845704
 		angleAxis
@@ -5359,10 +5359,10 @@ entity 155
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5378,16 +5378,16 @@ entity 155
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			155
 
 entity 156
-	TransformComponent
+	transform
 		position
 			8.459644317626954 -0.22146034240722657 -29.897052764892579
 		angleAxis
@@ -5397,10 +5397,10 @@ entity 156
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5416,16 +5416,16 @@ entity 156
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			156
 
 entity 157
-	TransformComponent
+	transform
 		position
 			8.94851303100586 -0.4282522201538086 -29.930343627929689
 		angleAxis
@@ -5435,10 +5435,10 @@ entity 157
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5454,16 +5454,16 @@ entity 157
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			157
 
 entity 158
-	TransformComponent
+	transform
 		position
 			9.384230613708496 -0.6125588417053223 -29.948184967041017
 		angleAxis
@@ -5473,10 +5473,10 @@ entity 158
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5492,16 +5492,16 @@ entity 158
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			158
 
 entity 159
-	TransformComponent
+	transform
 		position
 			9.929689407348633 -0.8432879447937012 -29.95484161376953
 		angleAxis
@@ -5511,10 +5511,10 @@ entity 159
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5530,16 +5530,16 @@ entity 159
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			159
 
 entity 160
-	TransformComponent
+	transform
 		position
 			10.450980186462403 -1.0637946128845215 -29.944934844970704
 		angleAxis
@@ -5549,10 +5549,10 @@ entity 160
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5568,16 +5568,16 @@ entity 160
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			160
 
 entity 161
-	TransformComponent
+	transform
 		position
 			10.997718811035157 -1.2950642108917237 -29.917423248291017
 		angleAxis
@@ -5587,10 +5587,10 @@ entity 161
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5606,16 +5606,16 @@ entity 161
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			161
 
 entity 162
-	TransformComponent
+	transform
 		position
 			11.480663299560547 -1.4993510246276856 -29.878490447998048
 		angleAxis
@@ -5625,10 +5625,10 @@ entity 162
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5644,16 +5644,16 @@ entity 162
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			162
 
 entity 163
-	TransformComponent
+	transform
 		position
 			11.90719223022461 -1.6797704696655274 -29.832626342773439
 		angleAxis
@@ -5663,10 +5663,10 @@ entity 163
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5682,16 +5682,16 @@ entity 163
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			163
 
 entity 164
-	TransformComponent
+	transform
 		position
 			12.448429107666016 -1.9087154865264893 -29.758808135986329
 		angleAxis
@@ -5701,10 +5701,10 @@ entity 164
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5720,16 +5720,16 @@ entity 164
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			164
 
 entity 165
-	TransformComponent
+	transform
 		position
 			12.831860542297364 -2.070906162261963 -29.695842742919923
 		angleAxis
@@ -5739,10 +5739,10 @@ entity 165
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5758,16 +5758,16 @@ entity 165
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			165
 
 entity 166
-	TransformComponent
+	transform
 		position
 			13.421815872192383 -2.320458173751831 -29.581453323364259
 		angleAxis
@@ -5777,10 +5777,10 @@ entity 166
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5796,16 +5796,16 @@ entity 166
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			166
 
 entity 167
-	TransformComponent
+	transform
 		position
 			13.90489387512207 -2.5247998237609865 -29.471759796142579
 		angleAxis
@@ -5815,10 +5815,10 @@ entity 167
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5834,16 +5834,16 @@ entity 167
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			167
 
 entity 168
-	TransformComponent
+	transform
 		position
 			14.38691520690918 -2.7286953926086427 -29.34766387939453
 		angleAxis
@@ -5853,10 +5853,10 @@ entity 168
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5872,16 +5872,16 @@ entity 168
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			168
 
 entity 169
-	TransformComponent
+	transform
 		position
 			14.863944053649903 -2.930478096008301 -29.21017837524414
 		angleAxis
@@ -5891,10 +5891,10 @@ entity 169
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5910,16 +5910,16 @@ entity 169
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			169
 
 entity 170
-	TransformComponent
+	transform
 		position
 			15.339200973510743 -3.131511688232422 -29.058374404907228
 		angleAxis
@@ -5929,10 +5929,10 @@ entity 170
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5948,16 +5948,16 @@ entity 170
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			170
 
 entity 171
-	TransformComponent
+	transform
 		position
 			15.759550094604493 -3.3093197345733644 -28.91149139404297
 		angleAxis
@@ -5967,10 +5967,10 @@ entity 171
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -5986,16 +5986,16 @@ entity 171
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			171
 
 entity 172
-	TransformComponent
+	transform
 		position
 			16.281147003173829 -3.5299549102783205 -28.712329864501954
 		angleAxis
@@ -6005,10 +6005,10 @@ entity 172
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6024,16 +6024,16 @@ entity 172
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			172
 
 entity 173
-	TransformComponent
+	transform
 		position
 			16.691904067993165 -3.703705310821533 -28.541948318481447
 		angleAxis
@@ -6043,10 +6043,10 @@ entity 173
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6062,16 +6062,16 @@ entity 173
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			173
 
 entity 174
-	TransformComponent
+	transform
 		position
 			17.20123291015625 -3.9191510677337648 -28.31359100341797
 		angleAxis
@@ -6081,10 +6081,10 @@ entity 174
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6100,16 +6100,16 @@ entity 174
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			174
 
 entity 175
-	TransformComponent
+	transform
 		position
 			17.611482620239259 -4.092687129974365 -28.115436553955079
 		angleAxis
@@ -6119,10 +6119,10 @@ entity 175
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6138,16 +6138,16 @@ entity 175
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			175
 
 entity 176
-	TransformComponent
+	transform
 		position
 			18.115394592285158 -4.305842876434326 -27.854026794433595
 		angleAxis
@@ -6157,10 +6157,10 @@ entity 176
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6176,16 +6176,16 @@ entity 176
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			176
 
 entity 177
-	TransformComponent
+	transform
 		position
 			18.510204315185548 -4.472846508026123 -27.634811401367189
 		angleAxis
@@ -6195,10 +6195,10 @@ entity 177
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6214,16 +6214,16 @@ entity 177
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			177
 
 entity 178
-	TransformComponent
+	transform
 		position
 			18.99553871154785 -4.678142547607422 -27.347230911254884
 		angleAxis
@@ -6233,10 +6233,10 @@ entity 178
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6252,16 +6252,16 @@ entity 178
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			178
 
 entity 179
-	TransformComponent
+	transform
 		position
 			19.38690185546875 -4.843689441680908 -27.10015869140625
 		angleAxis
@@ -6271,10 +6271,10 @@ entity 179
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6290,16 +6290,16 @@ entity 179
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			179
 
 entity 180
-	TransformComponent
+	transform
 		position
 			19.772611618041993 -5.006845474243164 -26.842782974243165
 		angleAxis
@@ -6309,10 +6309,10 @@ entity 180
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6328,16 +6328,16 @@ entity 180
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			180
 
 entity 181
-	TransformComponent
+	transform
 		position
 			20.194072723388673 -5.185123443603516 -26.545053482055665
 		angleAxis
@@ -6347,10 +6347,10 @@ entity 181
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6366,16 +6366,16 @@ entity 181
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			181
 
 entity 182
-	TransformComponent
+	transform
 		position
 			20.607946395874025 -5.36019229888916 -26.235034942626954
 		angleAxis
@@ -6385,10 +6385,10 @@ entity 182
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6404,16 +6404,16 @@ entity 182
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			182
 
 entity 183
-	TransformComponent
+	transform
 		position
 			21.01836585998535 -5.5338006019592289 -25.90933609008789
 		angleAxis
@@ -6423,10 +6423,10 @@ entity 183
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6442,16 +6442,16 @@ entity 183
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			183
 
 entity 184
-	TransformComponent
+	transform
 		position
 			21.375354766845704 -5.684806823730469 -25.610363006591798
 		angleAxis
@@ -6461,10 +6461,10 @@ entity 184
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6480,16 +6480,16 @@ entity 184
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			184
 
 entity 185
-	TransformComponent
+	transform
 		position
 			21.78112030029297 -5.856443881988525 -25.251712799072267
 		angleAxis
@@ -6499,10 +6499,10 @@ entity 185
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6518,16 +6518,16 @@ entity 185
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			185
 
 entity 186
-	TransformComponent
+	transform
 		position
 			22.11900520324707 -5.999368190765381 -24.93679428100586
 		angleAxis
@@ -6537,10 +6537,10 @@ entity 186
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6556,16 +6556,16 @@ entity 186
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			186
 
 entity 187
-	TransformComponent
+	transform
 		position
 			22.497474670410158 -6.15946102142334 -24.56524658203125
 		angleAxis
@@ -6575,10 +6575,10 @@ entity 187
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6594,16 +6594,16 @@ entity 187
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			187
 
 entity 188
-	TransformComponent
+	transform
 		position
 			22.903396606445314 -6.3311662673950199 -24.14297103881836
 		angleAxis
@@ -6613,10 +6613,10 @@ entity 188
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6632,16 +6632,16 @@ entity 188
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			188
 
 entity 189
-	TransformComponent
+	transform
 		position
 			23.221593856811525 -6.465764045715332 -23.79334259033203
 		angleAxis
@@ -6651,10 +6651,10 @@ entity 189
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6670,16 +6670,16 @@ entity 189
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			189
 
 entity 190
-	TransformComponent
+	transform
 		position
 			23.605655670166017 -6.628222465515137 -23.347599029541017
 		angleAxis
@@ -6689,10 +6689,10 @@ entity 190
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6708,16 +6708,16 @@ entity 190
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			190
 
 entity 191
-	TransformComponent
+	transform
 		position
 			23.942108154296876 -6.770541667938232 -22.933795928955079
 		angleAxis
@@ -6727,10 +6727,10 @@ entity 191
 				0.0 1.0 0.0
 		scale
 			1.0
-	RotateTransformComponent
+	rotate-transform
 		speed
 			500.0
-	ModelComponent
+	model
 		filename
 			model.txt
 		rotation
@@ -6746,11 +6746,11 @@ entity 191
 			false
 		centimetersToMeters
 			false
-	ParameterComponent
+	parameter
 		prefix
 			
 		parameters
-	SceneNodeComponent
+	scene-node
 		name
 			191
 
