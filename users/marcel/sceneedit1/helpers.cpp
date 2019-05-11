@@ -173,67 +173,6 @@ void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase * co
 	Assert(component == nullptr);
 }
 
-// member <-> text serialization
-
-// todo : remove. belongs to -textio
-bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object, const char * text)
-{
-	if (member->isVector) // todo : add support for deserialization of vectors
-		return false;
-	
-	auto * member_scalar = static_cast<const Member_Scalar*>(member);
-	
-	auto * member_type = typeDB.findType(member_scalar->typeIndex);
-	auto * member_object = member_scalar->scalar_access(object);
-	
-	if (member_type == nullptr)
-	{
-		LOG_ERR("failed to find type for member %s", member->name);
-		return false;
-	}
-	
-	if (member_type->isStructured) // todo : add support for deserialization of structured types
-		return false;
-	
-	auto * plain_type = static_cast<const PlainType*>(member_type);
-	
-	return plain_type_fromtext(plain_type, member_object, text);
-}
-
-
-// todo : remove. belongs to -textio
-bool member_totext(const TypeDB & typeDB, const Member * member, const void * object, std::string & out_text)
-{
-	if (member->isVector) // todo : add support for serialization of vectors
-		return false;
-	
-	auto * member_scalar = static_cast<const Member_Scalar*>(member);
-	
-	auto * member_type = typeDB.findType(member_scalar->typeIndex);
-	auto * member_object = member_scalar->scalar_access(object);
-	
-	if (member_type == nullptr)
-	{
-		LOG_ERR("failed to find type for member %s", member->name);
-		return false;
-	}
-	
-	if (member_type->isStructured) // todo : add support for serialization of structured types
-		return false;
-	
-	auto * plain_type = static_cast<const PlainType*>(member_type);
-	
-	const int text_size = 1024;
-	char text[text_size];
-
-	if (plain_type_totext(plain_type, member_object, text, text_size) == false)
-		return false;
-	
-	out_text = text;
-	
-	return true;
-}
-
 //
 
 #include "helpers.h"

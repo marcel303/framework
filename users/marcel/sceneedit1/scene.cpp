@@ -152,8 +152,12 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 			{
 				auto * componentType = findComponentType(component->typeIndex());
 				
-				if (componentType == nullptr) // todo : error
+				if (componentType == nullptr)
+				{
+					LOG_ERR("didn't find component type for component @ %p", component);
+					result &= false;
 					continue;
+				}
 				
 				// check if the component type name ends with 'Component'. in this case
 				// we'll want to write a short hand component name which is easier

@@ -31,9 +31,6 @@ ComponentTypeBase * findComponentType(const std::type_index & typeIndex);
 void freeComponentsInComponentSet(ComponentSet & componentSet);
 void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase * component);
 
-bool member_fromtext(const TypeDB & typeDB, const Member * member, void * object, const char * text);
-bool member_totext(const TypeDB & typeDB, const Member * member, const void * object, std::string & out_text);
-
 #include "reflection-textio.h"
 
 extern TypeDB g_typeDB;

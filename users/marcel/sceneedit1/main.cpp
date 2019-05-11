@@ -41,13 +41,19 @@ todo :
 + add libreflection-jsonio
 + remove json references from scene edit
 + add general monitor camera. or extend framework's Camera3d to support perspective, orbit and ortho modes
-- avoid UI from jumping around
-	- add independent scrolling area for scene structure
-	- add independent scrolling area for selected node
++ avoid UI from jumping around
+	+ add independent scrolling area for scene structure
+	+ add independent scrolling area for selected node
 + use scene structure tree to select nodes. remove inline editing
 - add lookat/focus option to scene structure view
 	- as a context menu
 + separate node traversal/scene structure view from node editor
+- add 'Paste tree' to scene structure context menu
+- add support for copying node tree 'Copy tree'
+
+- add template list
+- add support for template editing
+- add option to add nodes from template
 
 */
 
@@ -163,6 +169,7 @@ struct SceneEditor
 		char nodeDisplayNameFilter[kMaxNodeDisplayNameFilter] = { };
 		char componentTypeNameFilter[kMaxComponentTypeNameFilter] = { };
 		std::set<int> visibleNodes;
+		std::set<int> openNodes;
 	} nodeUi;
 	
 	static const int kMaxParameterFilter = 100;
@@ -180,8 +187,9 @@ struct SceneEditor
 	SceneEditor()
 	{
 		camera.mode = Camera::kMode_Orbit;
-		camera.orbit.distance = -4.f;
-		camera.ortho.scale = 4.f;
+		camera.orbit.distance = -8.f;
+		camera.ortho.side = Camera::kOrthoSide_Top;
+		camera.ortho.scale = 16.f;
 		camera.firstPerson.position = Vec3(0, 1, -2);
 	}
 	
@@ -303,24 +311,6 @@ struct SceneEditor
 				}
 			}
 			
-			/*
-			// optimize : set parent id to -1 to avoid the child from removing itself from the parent's child list. since we are removing the parent itself here the child doesn't need to do this itself
-			// todo : pass a boolean to the child instructing it to remove itself or not ?
-			for (auto childNodeId : node.childNodeIds)
-			{
-				auto childNodeItr = scene.nodes.find(childNodeId);
-		
-				Assert(childNodeItr != scene.nodes.end());
-				if (childNodeItr != scene.nodes.end())
-				{
-					auto & childNode = childNodeItr->second;
-					childNode.parentId = -1;
-				}
-				
-				removeNodeTraverse(childNodeId);
-			}
-			*/
-			
 			node.freeComponents();
 			
 			delete &node;
@@ -353,15 +343,6 @@ struct SceneEditor
 				// select the newly added child node
 				selectedNodes.insert(node->id);
 				nodeToGiveFocus = node->id;
-				
-				// when a display name filter is set the node would just disappear. set the filter to the name of the newly
-				// added node in this case, to avoid confusion
-			// todo : only apply filter when it is changed
-			// todo : change filtering so it 1) makes visible all nodes passing the filter
-			//                               2) all selected nodes
-			//        .. and add this node to the set of selected nodes
-				if (nodeUi.nodeDisplayNameFilter[0] != 0)
-					nodeUi.nodeDisplayNameFilter[0] = 0;
 			}
 			
 			deferred.nodesToAdd.clear();
@@ -704,7 +685,7 @@ struct SceneEditor
 				ImGui::SetScrollHereY();
 			}
 			
-			if (nodeUi.visibleNodes.count(node.id) != 0)
+			if (nodeUi.visibleNodes.count(node.id) != 0 || nodeUi.openNodes.count(node.id) != 0)
 				ImGui::SetNextTreeNodeOpen(true);
 
 			const char * name = "(noname)";
@@ -719,9 +700,11 @@ struct SceneEditor
 				(ImGuiTreeNodeFlags_Selected * isSelected) |
 				(ImGuiTreeNodeFlags_Leaf * isLeaf) |
 				(ImGuiTreeNodeFlags_DefaultOpen * isRoot) |
-				(ImGuiTreeNodeFlags_FramePadding * 0), "%s", name);
+				(ImGuiTreeNodeFlags_FramePadding * 0 |
+				(ImGuiTreeNodeFlags_NavLeftJumpsBackHere * 1)), "%s", name);
+			
 			const bool isClicked = ImGui::IsItemClicked();
-
+			
 			if (isClicked)
 			{
 				selectedNodes.clear();
@@ -739,18 +722,12 @@ struct SceneEditor
 			{
 				for (auto & childNodeId : node.childNodeIds)
 				{
-					auto childNodeItr = scene.nodes.find(childNodeId);
-					
-					Assert(childNodeItr != scene.nodes.end());
-					if (childNodeItr != scene.nodes.end())
+					if (do_filter && nodeUi.visibleNodes.count(childNodeId) == 0)
 					{
-						auto * childNode = childNodeItr->second;
-						
-						if (do_filter && nodeUi.visibleNodes.count(childNode->id) == 0)
-							continue;
-
-						editNodeStructure_traverse(childNodeId);
+						continue;
 					}
+
+					editNodeStructure_traverse(childNodeId);
 				}
 			
 				ImGui::TreePop();
@@ -838,15 +815,41 @@ struct SceneEditor
 		}
 	}
 	
-	void markSelectedNodesVisible()
+	void markNodeOpenUntilRoot(const int in_nodeId)
 	{
+		int nodeId = in_nodeId;
+
+		while (nodeId != -1)
+		{
+			if (nodeUi.openNodes.count(nodeId) != 0)
+				break;
+			
+			nodeUi.openNodes.insert(nodeId);
+			
+			auto parentNode_itr = scene.nodes.find(nodeId);
+			Assert(parentNode_itr != scene.nodes.end());
+			if (parentNode_itr == scene.nodes.end())
+				break;
+			nodeId = parentNode_itr->second->parentId;
+		}
+	}
+	
+	void markSelectedNodesOpen()
+	{
+		nodeUi.openNodes.clear();
+		
 		for (auto & nodeId : selectedNodes)
 		{
-			if (nodeUi.visibleNodes.empty() == false)
-			{
-				if (nodeUi.visibleNodes.count(nodeId) == 0)
-					markNodeVisibleUntilRoot(nodeId);
-			}
+			auto node_itr = scene.nodes.find(nodeId);
+			Assert(node_itr != scene.nodes.end());
+			if (node_itr == scene.nodes.end())
+				continue;
+			
+			auto * node = node_itr->second;
+			
+			markNodeOpenUntilRoot(node->parentId);
+			
+			markNodeVisibleUntilRoot(nodeId);
 		}
 	}
 	
@@ -1027,11 +1030,18 @@ struct SceneEditor
 						
 						ImGui::BeginChild("Scene structure", ImVec2(0, 140), ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
-							markSelectedNodesVisible();
+							markSelectedNodesOpen();
 							
 							deferredBegin();
 							{
 								editNodeStructure_traverse(scene.rootNodeId);
+								
+								if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)) ||
+									ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
+								{
+									for (auto nodeId : selectedNodes)
+										deferred.nodesToRemove.insert(nodeId);
+								}
 							}
 							deferredEnd();
 						}
