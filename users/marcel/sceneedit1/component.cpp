@@ -18,8 +18,12 @@ void ComponentSet::add(ComponentBase * component)
 	Assert(component->componentSet == nullptr);
 	component->componentSet = this;
 	
-	component->next_in_set = head;
-	head = component;
+	ComponentBase ** tail = &head;
+	
+	while (*tail != nullptr)
+		tail = &(*tail)->next_in_set;
+	
+	*tail = component;
 }
 
 void ComponentSet::remove(ComponentBase * component)
