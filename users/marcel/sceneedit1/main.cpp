@@ -387,8 +387,6 @@ struct SceneEditor
 	
 	void editNode(const int nodeId)
 	{
-		const bool do_filter = nodeUi.nodeDisplayNameFilter[0] != 0;
-		
 		auto nodeItr = scene.nodes.find(nodeId);
 		
 		Assert(nodeItr != scene.nodes.end());
@@ -397,18 +395,10 @@ struct SceneEditor
 		
 		auto & node = *nodeItr->second;
 		
-		auto * sceneNodeComponent = node.components.find<SceneNodeComponent>();
-		
-		const bool passes_filter =
-			do_filter == false ||
-			(sceneNodeComponent != nullptr && strcasestr(sceneNodeComponent->name.c_str(), nodeUi.nodeDisplayNameFilter) != nullptr);
-		
 		// todo : make a separate function to edit a data structure (recursively)
 		
-		if (passes_filter)
+		ImGui::PushID(nodeId);
 		{
-			ImGui::PushID(nodeId);
-			
 			if (node.components.head == nullptr)
 			{
 				// no components exist, but we still need some area for the user to click to add nodes and components
@@ -424,8 +414,25 @@ struct SceneEditor
 			}
 			else
 			{
+				const bool do_filter = nodeUi.componentTypeNameFilter[0] != 0;
+				
 				for (auto * component = node.components.head; component != nullptr; )
 				{
+					if (do_filter)
+					{
+						auto * component_type = findComponentType(component->typeIndex());
+						
+						const bool passes_filter =
+							do_filter == false ||
+							(component_type != nullptr && strcasestr(component_type->typeName, nodeUi.componentTypeNameFilter) != nullptr);
+						
+						if (passes_filter == false)
+						{
+							component = component->next_in_set;
+							continue;
+						}
+					}
+			
 					ImGui::PushID(component);
 					{
 						// note : we group component properties here, so the node context menu can be opened by
@@ -482,9 +489,8 @@ struct SceneEditor
 					ImGui::PopID();
 				}
 			}
-			
-			ImGui::PopID();
 		}
+		ImGui::PopID();
 	}
 	
 	void pasteNodeFromClipboard(const int parentId)
@@ -772,7 +778,7 @@ struct SceneEditor
 		
 		nodeUi.visibleNodes.clear();
 		
-		if (nodeUi.nodeDisplayNameFilter[0] != 0)
+		if (nodeUi.nodeDisplayNameFilter[0] != 0 || nodeUi.componentTypeNameFilter[0] != 0)
 		{
 			for (auto & node_itr : scene.nodes)
 			{
@@ -782,11 +788,31 @@ struct SceneEditor
 				if (nodeUi.visibleNodes.count(nodeId) != 0)
 					continue;
 				
-				auto * sceneNodeComponent = node->components.find<SceneNodeComponent>();
+				bool is_visible = true;
 				
-				const bool is_visible =
-					sceneNodeComponent != nullptr &&
-					strcasestr(sceneNodeComponent->name.c_str(), nodeUi.nodeDisplayNameFilter);
+				if (nodeUi.nodeDisplayNameFilter[0] != 0)
+				{
+					auto * sceneNodeComponent = node->components.find<SceneNodeComponent>();
+					
+					is_visible &=
+						sceneNodeComponent != nullptr &&
+						strcasestr(sceneNodeComponent->name.c_str(), nodeUi.nodeDisplayNameFilter);
+				}
+				
+				if (nodeUi.componentTypeNameFilter[0] != 0)
+				{
+					bool passes_component_filter = false;
+					
+					for (auto * component = node->components.head; component != nullptr; component = component->next_in_set)
+					{
+						auto * component_type = findComponentType(component->typeIndex());
+						Assert(component_type != nullptr);
+						if (component_type != nullptr)
+							passes_component_filter |= strcasestr(component_type->typeName, nodeUi.componentTypeNameFilter) != nullptr;
+					}
+					
+					is_visible &= passes_component_filter;
+				}
 				
 				if (is_visible)
 				{
@@ -978,7 +1004,10 @@ struct SceneEditor
 							updateNodeVisibility();
 						}
 						
-						ImGui::InputText("Component type", nodeUi.componentTypeNameFilter, kMaxComponentTypeNameFilter);
+						if (ImGui::InputText("Component type", nodeUi.componentTypeNameFilter, kMaxComponentTypeNameFilter))
+						{
+							updateNodeVisibility();
+						}
 						
 						ImGui::BeginChild("Scene structure", ImVec2(0, 140), ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
