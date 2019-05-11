@@ -51,6 +51,5 @@ struct Scene
 	bool loadFromFile(const char * filename);
 	
 	bool saveToLines(const TypeDB & typeDB, LineWriter & line_writer);
-	bool loadFromLines(const TypeDB & typeDB, LineReader & line_reader);
 #endif
 };

@@ -63,6 +63,7 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 		// apply conversion to the type name:
 		// 'transform' becomes TransformComponent
 		// 'rotate-transform' becomes RotateTransformComponent
+		// 'TransformComponent' remains TransformComponent, due to it ending with 'Component'
 		
 	// todo : detect if the type name already has a 'Component' suffix
 	
@@ -83,10 +84,18 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 				full_name[length++] = typeName[i];
 		}
 		
+		bool appendSuffix = false;
+		
 		const char * suffix = "Component";
 		
-		for (int i = 0; suffix[i] != 0 && length < 1024; ++i)
-			full_name[length++] = suffix[i];
+		if (strstr(typeName, suffix) == nullptr) // todo : check if the suffix is at the end of the type name
+			appendSuffix = true;
+		
+		if (appendSuffix)
+		{
+			for (int i = 0; suffix[i] != 0 && length < 1024; ++i)
+				full_name[length++] = suffix[i];
+		}
 		
 		if (length < 1024)
 			full_name[length++] = 0;

@@ -1778,7 +1778,24 @@ int main(int argc, char * argv[])
 					logError("failed to save lines to file");
 				else
 				{
-					// todo : load it
+				#if 1
+					Scene tempScene;
+					tempScene.createRootNode();
+					
+					if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
+						logError("failed to load scene from lines");
+					else
+					{
+						editor.deferredBegin();
+						{
+							for (auto & node_itr : editor.scene.nodes)
+								editor.deferred.nodesToRemove.insert(node_itr.second->id);
+						}
+						editor.deferredEnd();
+						
+						editor.scene = tempScene;
+					}
+				#endif
 				}
 			}
 			
@@ -1791,18 +1808,50 @@ int main(int argc, char * argv[])
 		{
 			inputIsCaptured = true;
 			
-			Scene tempScene;
-			
-			if (tempScene.loadFromFile("testScene.json"))
+			if (!keyboard.isDown(SDLK_LSHIFT))
 			{
-				editor.deferredBegin();
-				{
-					for (auto & node_itr : editor.scene.nodes)
-						editor.deferred.nodesToRemove.insert(node_itr.second->id);
-				}
-				editor.deferredEnd();
+				Scene tempScene;
 				
-				editor.scene = tempScene;
+				if (tempScene.loadFromFile("testScene.json"))
+				{
+					editor.deferredBegin();
+					{
+						for (auto & node_itr : editor.scene.nodes)
+							editor.deferred.nodesToRemove.insert(node_itr.second->id);
+					}
+					editor.deferredEnd();
+					
+					editor.scene = tempScene;
+				}
+			}
+			else
+			{
+				std::vector<std::string> lines;
+				TextIO::LineEndings lineEndings;
+				
+				if (!TextIO::load("testScene.txt", lines, lineEndings))
+				{
+					logError("failed to load text file");
+				}
+				else
+				{
+					Scene tempScene;
+					tempScene.createRootNode();
+			
+					if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
+						logError("failed to load scene from lines");
+					else
+					{
+						editor.deferredBegin();
+						{
+							for (auto & node_itr : editor.scene.nodes)
+								editor.deferred.nodesToRemove.insert(node_itr.second->id);
+						}
+						editor.deferredEnd();
+						
+						editor.scene = tempScene;
+					}
+				}
 			}
 		}
 	#endif

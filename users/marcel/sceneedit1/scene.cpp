@@ -450,8 +450,3 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 
 	return result;
 }
-
-bool Scene::loadFromLines(const TypeDB & typeDB, LineReader & line_reader)
-{
-
-}
