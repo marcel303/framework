@@ -358,10 +358,12 @@ struct SceneEditor
 				
 				// when a display name filter is set the node would just disappear. set the filter to the name of the newly
 				// added node in this case, to avoid confusion
+			// todo : only apply filter when it is changed
+			// todo : change filtering so it 1) makes visible all nodes passing the filter
+			//                               2) all selected nodes
+			//        .. and add this node to the set of selected nodes
 				if (nodeUi.nodeDisplayNameFilter[0] != 0)
-				{
-					strcpy_s(nodeUi.nodeDisplayNameFilter, sizeof(nodeUi.nodeDisplayNameFilter), node->displayName.c_str());
-				}
+					nodeUi.nodeDisplayNameFilter[0] = 0;
 			}
 			
 			deferred.nodesToAdd.clear();
@@ -397,7 +399,11 @@ struct SceneEditor
 		
 		auto & node = *nodeItr->second;
 		
-		const bool passes_filter = do_filter == false || strcasestr(node.displayName.c_str(), nodeUi.nodeDisplayNameFilter) != nullptr;
+		auto * sceneNodeComponent = node.components.find<SceneNodeComponent>();
+		
+		const bool passes_filter =
+			do_filter == false ||
+			(sceneNodeComponent != nullptr && strcasestr(sceneNodeComponent->name.c_str(), nodeUi.nodeDisplayNameFilter) != nullptr);
 		
 		// todo : make a separate function to edit a data structure (recursively)
 		
@@ -405,16 +411,6 @@ struct SceneEditor
 		{
 			ImGui::PushID(nodeId);
 			
-			ImGui::Text("Node");
-			ImGui::Indent();
-			{
-				char name[256];
-				sprintf_s(name, sizeof(name), "%s", node.displayName.c_str());
-				if (ImGui::InputText("name", name, sizeof(name)))
-					node.displayName = name;
-			}
-			ImGui::Unindent();
-
 			if (node.components.head == nullptr)
 			{
 				// no components exist, but we still need some area for the user to click to add nodes and components
@@ -498,7 +494,6 @@ struct SceneEditor
 		SceneNode * childNode = new SceneNode();
 		childNode->id = scene.allocNodeId();
 		childNode->parentId = parentId;
-		childNode->displayName = String::FormatC("Node %d", childNode->id);
 		
 		const char * text = SDL_GetClipboardText();
 		
@@ -509,8 +504,11 @@ struct SceneEditor
 		}
 		else
 		{
-			if (childNode->components.find<SceneNodeComponent>() == nullptr)
+			if (childNode->components.contains<SceneNodeComponent>() == false)
 				childNode->components.add(new SceneNodeComponent());
+			
+			auto * sceneNodeComponent = childNode->components.find<SceneNodeComponent>();
+			sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
 			
 			if (childNode->initComponents() == false)
 			{
@@ -583,9 +581,10 @@ struct SceneEditor
 			SceneNode * childNode = new SceneNode();
 			childNode->id = scene.allocNodeId();
 			childNode->parentId = node.id;
-			childNode->displayName = String::FormatC("Node %d", childNode->id);
 			
-			childNode->components.add(new SceneNodeComponent());
+			auto * sceneNodeComponent = new SceneNodeComponent();
+			sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
+			childNode->components.add(sceneNodeComponent);
 			
 			if (childNode->initComponents() == false)
 			{
@@ -688,12 +687,19 @@ struct SceneEditor
 			if (nodeUi.openNodes.count(node.id) != 0)
 				ImGui::SetNextTreeNodeOpen(true);
 
+			const char * name = "(noname)";
+			
+			auto * sceneNodeComponent = node.components.find<SceneNodeComponent>();
+			Assert(sceneNodeComponent != nullptr);
+			if (sceneNodeComponent != nullptr)
+				name = sceneNodeComponent->name.c_str();
+			
 			const bool isOpen = ImGui::TreeNodeEx(&node,
 				(ImGuiTreeNodeFlags_OpenOnArrow * 1) |
 				(ImGuiTreeNodeFlags_Selected * isSelected) |
 				(ImGuiTreeNodeFlags_Leaf * isLeaf) |
 				(ImGuiTreeNodeFlags_DefaultOpen * isRoot) |
-				(ImGuiTreeNodeFlags_FramePadding * 0), "%s", node.displayName.c_str());
+				(ImGuiTreeNodeFlags_FramePadding * 0), "%s", name);
 			const bool isClicked = ImGui::IsItemClicked();
 
 			if (isClicked)
@@ -738,9 +744,10 @@ struct SceneEditor
 		SceneNode * node = new SceneNode();
 		node->id = scene.allocNodeId();
 		node->parentId = parentId;
-		node->displayName = String::FormatC("Node %d", node->id);
 		
-		node->components.add(new SceneNodeComponent());
+		auto * sceneNodeComponent = new SceneNodeComponent();
+		sceneNodeComponent->name = String::FormatC("Node %d", node->id);
+		node->components.add(sceneNodeComponent);
 		
 		auto * modelComp = s_modelComponentMgr.createComponent(nullptr);
 		modelComp->filename = "model.txt";
@@ -787,13 +794,17 @@ struct SceneEditor
 		SceneNode * node = new SceneNode();
 		node->id = scene.allocNodeId();
 		node->parentId = parentId;
-		node->displayName = String::FormatC("Node %d", node->id);
-		
-		node->components.add(new SceneNodeComponent());
 		
 		bool init_ok = true;
 		
 		init_ok &= instantiateComponentsFromTemplate(g_typeDB, t, node->components);
+		
+		if (node->components.contains<SceneNodeComponent>() == false)
+		{
+			auto * sceneNodeComponent = new SceneNodeComponent();
+			sceneNodeComponent->name = String::FormatC("Node %d", node->id);
+			node->components.add(sceneNodeComponent);
+		}
 		
 		init_ok &= node->initComponents();
 		
@@ -911,7 +922,11 @@ struct SceneEditor
 									if (nodeUi.visibleNodes.count(nodeId) != 0)
 										continue;
 									
-									const bool is_visible = strcasestr(node->displayName.c_str(), nodeUi.nodeDisplayNameFilter);
+									auto * sceneNodeComponent = node->components.find<SceneNodeComponent>();
+									
+									const bool is_visible =
+										sceneNodeComponent != nullptr &&
+										strcasestr(sceneNodeComponent->name.c_str(), nodeUi.nodeDisplayNameFilter);
 									
 									if (is_visible)
 									{

@@ -72,9 +72,10 @@ void Scene::createRootNode()
 	
 	SceneNode * rootNode = new SceneNode();
 	rootNode->id = allocNodeId();
-	rootNode->displayName = "root";
 	
-	rootNode->components.add(new SceneNodeComponent());
+	auto * sceneNodeComponent = new SceneNodeComponent();
+	sceneNodeComponent->name = "root";
+	rootNode->components.add(sceneNodeComponent);
 	
 	if (rootNode->initComponents() == false)
 	{
@@ -148,9 +149,6 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 				auto * componentType = findComponentType(component->typeIndex());
 				
 				if (componentType == nullptr) // todo : error
-					continue;
-				
-				if (strcmp(componentType->typeName, "SceneNodeComponent") == 0)
 					continue;
 				
 				// todo : make short version of component type name

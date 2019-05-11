@@ -16,7 +16,6 @@ struct SceneNode
 {
 	int id = -1;
 	int parentId = -1; // note : not serialized, but inferred when loading a scene
-	std::string displayName;
 	
 	std::vector<int> childNodeIds;
 	

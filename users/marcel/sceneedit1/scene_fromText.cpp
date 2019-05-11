@@ -358,9 +358,6 @@ bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, LineReader & line
 		SceneNode * node = new SceneNode();
 		node->id = out_scene.allocNodeId();
 		node->parentId = node_stack.back()->id;
-		node->displayName = name;
-		
-		node->components.add(new SceneNodeComponent());
 		
 		if (!instantiateComponentsFromTemplate(typeDB, t, node->components))
 		{
@@ -372,6 +369,13 @@ bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, LineReader & line
 			node = nullptr;
 			
 			return false;
+		}
+		
+		if (node->components.contains<SceneNodeComponent>() == false)
+		{
+			auto * sceneNodeComponent = new SceneNodeComponent();
+			sceneNodeComponent->name = name;
+			node->components.add(sceneNodeComponent);
 		}
 		
 		auto parentNode_itr = out_scene.nodes.find(node->parentId);

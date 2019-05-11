@@ -166,4 +166,16 @@ struct ComponentSet
 		
 		return nullptr;
 	}
+	
+	template <typename T>
+	bool contains() const
+	{
+		for (auto * component = head; component != nullptr; component = component->next_in_set)
+		{
+			if (component->typeIndex() == std::type_index(typeid(T)))
+				return true;
+		}
+		
+		return false;
+	}
 };
