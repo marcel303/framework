@@ -2,13 +2,12 @@
 #include "componentType.h"
 #include "helpers.h"
 #include "imgui.h"
+#include "lineReader.h"
+#include "lineWriter.h"
 #include "StringEx.h"
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Vec4.h"
-
-#include "componentJson.h"
-#include "json.hpp" // todo : add a json replacement for structured data
 
 bool doComponentProperty(
 	const TypeDB & typeDB,
@@ -87,20 +86,19 @@ bool doComponentProperty(
 			
 			if (defaultComponent != nullptr)
 			{
-			#if 0
-				std::string text;
-				member_totext(typeDB, &member, defaultComponent, text);
-				member_fromtext(typeDB, &member, component, text.c_str());
-			#else
-				// todo : replace with more efficient (de)serialization functions
-				nlohmann::json json;
-				ComponentJson json_wrapped(json);
-				const bool result =
-					member_tojson_recursive(typeDB, member_type, member_object, json_wrapped) &&
-					member_fromjson_recursive(typeDB, member_type, member_object, json_wrapped);
+				LineWriter line_writer;
+				const bool result = member_tolines_recursive(typeDB, &member, defaultComponent, line_writer, 0);
 				Assert(result);
 				(void)result;
-			#endif
+				
+				if (result)
+				{
+					auto lines = line_writer.to_lines();
+					LineReader line_reader(lines, 0, 0);
+					const bool result = member_fromlines_recursive(typeDB, &member, component, line_reader);
+					Assert(result);
+					(void)result;
+				}
 			}
 		}
 		

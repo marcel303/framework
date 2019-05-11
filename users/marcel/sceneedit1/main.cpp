@@ -30,9 +30,6 @@
 #include <set>
 #include <typeindex>
 
-#include "componentJson.h" // todo : remove
-#include <json.hpp> // todo : remove
-
 #define ENABLE_TRANSFORM_GIZMOS 1
 
 #define ENABLE_QUAT_FIXUP 1
@@ -1734,7 +1731,6 @@ int main(int argc, char * argv[])
 		
 		editor.tickEditor(dt, inputIsCaptured);
 		
-	#if ENABLE_COMPONENT_JSON
 		// save load test. todo : remove test code
 		
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_s))
@@ -1743,36 +1739,12 @@ int main(int argc, char * argv[])
 			
 			auto t1 = SDL_GetTicks();
 			
-			if (!keyboard.isDown(SDLK_LSHIFT))
-			{
-				if (editor.scene.saveToFile("testScene.json") == false)
-					logError("failed to save scene to json");
-				else
-				{
-				#if 1
-					Scene tempScene;
-					
-					if (tempScene.loadFromFile("testScene.json") == false)
-						logError("failed to load scene from json");
-					else
-					{
-						editor.deferredBegin();
-						{
-							for (auto & node_itr : editor.scene.nodes)
-								editor.deferred.nodesToRemove.insert(node_itr.second->id);
-						}
-						editor.deferredEnd();
-						
-						editor.scene = tempScene;
-						tempScene.nodes.clear();
-					}
-				#endif
-				}
-			}
-			
 			LineWriter line_writer;
+			
 			if (editor.scene.saveToLines(g_typeDB, line_writer) == false)
+			{
 				logError("failed to save scene to lines");
+			}
 			else
 			{
 				auto lines = line_writer.to_lines();
@@ -1816,77 +1788,60 @@ int main(int argc, char * argv[])
 			}
 			
 			auto t2 = SDL_GetTicks();
-			printf("time: %ums\n", (t2 - t1));
-			printf("(done)\n");
+			printf("save time: %ums\n", (t2 - t1));
 		}
 		
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_l))
 		{
 			inputIsCaptured = true;
 			
-			if (!keyboard.isDown(SDLK_LSHIFT))
+			auto t1 = SDL_GetTicks();
+			
+			std::vector<std::string> lines;
+			TextIO::LineEndings lineEndings;
+			
+			if (!TextIO::load("testScene.txt", lines, lineEndings))
 			{
-				Scene tempScene;
-				
-				if (tempScene.loadFromFile("testScene.json"))
-				{
-					editor.deferredBegin();
-					{
-						for (auto & node_itr : editor.scene.nodes)
-							editor.deferred.nodesToRemove.insert(node_itr.second->id);
-					}
-					editor.deferredEnd();
-					
-					editor.scene = tempScene;
-					tempScene.nodes.clear();
-				}
+				logError("failed to load text file");
 			}
 			else
 			{
-				std::vector<std::string> lines;
-				TextIO::LineEndings lineEndings;
-				
-				if (!TextIO::load("testScene.txt", lines, lineEndings))
-				{
-					logError("failed to load text file");
-				}
+				Scene tempScene;
+				tempScene.createRootNode();
+		
+				if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
+					logError("failed to load scene from lines");
 				else
 				{
-					Scene tempScene;
-					tempScene.createRootNode();
-			
-					if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
-						logError("failed to load scene from lines");
+					// todo : create helper function to initialize scene after loading it
+					
+					bool init_ok = true;
+					
+					for (auto node_itr : tempScene.nodes)
+						init_ok &= node_itr.second->initComponents();
+					
+					if (init_ok == false)
+					{
+						tempScene.freeAllNodesAndComponents();
+					}
 					else
 					{
-						// todo : create helper function to initialize scene after loading it
-						
-						bool init_ok = true;
-						
-						for (auto node_itr : tempScene.nodes)
-							init_ok &= node_itr.second->initComponents();
-						
-						if (init_ok == false)
+						editor.deferredBegin();
 						{
-							tempScene.freeAllNodesAndComponents();
+							for (auto & node_itr : editor.scene.nodes)
+								editor.deferred.nodesToRemove.insert(node_itr.second->id);
 						}
-						else
-						{
-							editor.deferredBegin();
-							{
-								for (auto & node_itr : editor.scene.nodes)
-									editor.deferred.nodesToRemove.insert(node_itr.second->id);
-							}
-							editor.deferredEnd();
-							
-							editor.scene = tempScene;
-							tempScene.nodes.clear();
-						}
+						editor.deferredEnd();
+						
+						editor.scene = tempScene;
+						tempScene.nodes.clear();
 					}
 				}
 			}
+			
+			auto t2 = SDL_GetTicks();
+			printf("load time: %ums\n", (t2 - t1));
 		}
-	#endif
 	
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_t))
 		{
@@ -1951,6 +1906,8 @@ int main(int argc, char * argv[])
 			}
 		}
 		
+	// performance test. todo : remove this code
+	
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_p))
 		{
 			inputIsCaptured = true;
@@ -1975,48 +1932,28 @@ int main(int argc, char * argv[])
 						if (componentType != nullptr)
 						{
 							auto t1 = SDL_GetTicks();
+							
 							for (int i = 0; i < 100000; ++i)
 							{
-						#if 1
-							LineWriter line_writer;
-							object_tolines_recursive(g_typeDB, componentType, component, line_writer, 0);
-							
-							std::vector<std::string> lines = line_writer.to_lines();
-							
-							//for (auto & line : lines)
-							//	logInfo("%s", line.c_str());
-							
-							auto * component_copy = componentType->componentMgr->createComponent(nullptr);
-							
-							LineReader line_reader(lines, 0, 0);
-							if (object_fromlines_recursive(g_typeDB, componentType, component_copy, line_reader))
-							{
-								//logDebug("success!");
+								LineWriter line_writer;
+								object_tolines_recursive(g_typeDB, componentType, component, line_writer, 0);
+								
+								std::vector<std::string> lines = line_writer.to_lines();
+								
+								//for (auto & line : lines)
+								//	logInfo("%s", line.c_str());
+								
+								auto * component_copy = componentType->componentMgr->createComponent(nullptr);
+								
+								LineReader line_reader(lines, 0, 0);
+								if (object_fromlines_recursive(g_typeDB, componentType, component_copy, line_reader))
+								{
+									//logDebug("success!");
+								}
+								
+								componentType->componentMgr->destroyComponent(component_copy);
 							}
 							
-							componentType->componentMgr->destroyComponent(component_copy);
-						#else
-							nlohmann::json json;
-							ComponentJson j1(json);
-							
-							member_tojson_recursive(g_typeDB, componentType, component, j1);
-							
-							auto str = json.dump(4);
-							//printf("%s", str.c_str());
-							
-							json = json.parse(str);
-							ComponentJson j2(json);
-							
-							auto * component_copy = componentType->componentMgr->createComponent(nullptr);
-							
-							if (member_fromjson_recursive(g_typeDB, componentType, component_copy, j2))
-							{
-								//logDebug("success!");
-							}
-							
-							componentType->componentMgr->destroyComponent(component_copy);
-						#endif
-							}
 							auto t2 = SDL_GetTicks();
 							printf("time: %ums\n", (t2 - t1));
 							printf("(done)\n");

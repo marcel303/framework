@@ -3,8 +3,6 @@
 #include "Debugging.h"
 #include <typeindex>
 
-#define ENABLE_COMPONENT_JSON 1
-
 //
 
 struct ComponentBase;

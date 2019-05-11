@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-struct ComponentJson;
 class LineReader;
 class LineWriter;
 struct Scene;
@@ -46,13 +45,5 @@ struct Scene
 	SceneNode & getRootNode();
 	const SceneNode & getRootNode() const;
 	
-#if ENABLE_COMPONENT_JSON
-	bool save(ComponentJson & j);
-	bool saveToFile(const char * filename);
-	
-	bool load(const ComponentJson & j);
-	bool loadFromFile(const char * filename);
-	
 	bool saveToLines(const TypeDB & typeDB, LineWriter & line_writer);
-#endif
 };
