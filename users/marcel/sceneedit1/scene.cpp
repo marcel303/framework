@@ -379,6 +379,26 @@ bool Scene::loadFromFile(const char * filename)
 
 #endif
 
+static void write_node_children_traverse(const Scene & scene, const int nodeId, LineWriter & line_writer, const int indent)
+{
+	auto node_itr = scene.nodes.find(nodeId);
+	Assert(node_itr != scene.nodes.end());
+	if (node_itr == scene.nodes.end())
+		return;
+	
+	auto * node = node_itr->second;
+	
+	for (auto child_node_id : node->childNodeIds)
+	{
+		char id[32];
+		sprintf(id, "%d", child_node_id); // todo : use a faster conversion function
+	
+		line_writer.append_indented_line(indent, id);
+		
+		write_node_children_traverse(scene, child_node_id, line_writer, indent + 1);
+	}
+}
+
 bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 {
 	bool result = true;
@@ -428,6 +448,8 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 			}
 		}
 		indent--;
+		
+		line_writer.append('\n');
 	}
 	
 	//
@@ -440,7 +462,9 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 		
 		indent++;
 		{
-			// todo : write node hierarchy
+			// write node hierarchy
+			
+			write_node_children_traverse(*this, rootNodeId, line_writer, indent);
 		}
 		indent--;
 	}
@@ -449,4 +473,9 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 	Assert(indent == 0);
 
 	return result;
+}
+
+bool Scene::loadFromLines(const TypeDB & typeDB, LineReader & line_reader)
+{
+
 }

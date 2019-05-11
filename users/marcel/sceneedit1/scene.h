@@ -7,6 +7,7 @@
 #include <vector>
 
 struct ComponentJson;
+class LineReader;
 class LineWriter;
 struct Scene;
 struct SceneNode;
@@ -15,7 +16,7 @@ struct TypeDB;
 struct SceneNode
 {
 	int id = -1;
-	int parentId = -1;
+	int parentId = -1; // note : not serialized, but inferred when loading a scene
 	std::string displayName;
 	
 	std::vector<int> childNodeIds;
@@ -50,5 +51,6 @@ struct Scene
 	bool loadFromFile(const char * filename);
 	
 	bool saveToLines(const TypeDB & typeDB, LineWriter & line_writer);
+	bool loadFromLines(const TypeDB & typeDB, LineReader & line_reader);
 #endif
 };
