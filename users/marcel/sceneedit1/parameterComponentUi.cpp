@@ -58,6 +58,6 @@ void doParameterUi(ParameterComponentMgr & componentMgr, const char * component_
 			continue;
 		}
 		
-		doParameterUi(elems[i].comp->access_parameterMgr(), parameter_filter);
+		doParameterUi(elems[i].comp->access_parameterMgr(), parameter_filter, true);
 	}
 }

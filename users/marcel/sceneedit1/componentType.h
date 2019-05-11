@@ -11,6 +11,7 @@ enum ComponentPriority
 	kComponentPriority_Parameter = 100,
 	kComponentPriority_Transform = 200,
 	kComponentPriority_Camera = 400,
+	kComponentPriority_Light = 420,
 	kComponentPriority_Default = 1000
 };
 

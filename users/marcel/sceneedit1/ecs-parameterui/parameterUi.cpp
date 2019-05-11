@@ -166,7 +166,7 @@ void doParameterUi(ParameterBase & parameterBase)
 	ImGui::PopID();
 }
 
-void doParameterUi(ParameterMgr & parameterMgr, const char * filter)
+void doParameterUi(ParameterMgr & parameterMgr, const char * filter, const bool showCollapsingHeader)
 {
 	const bool do_filter = filter != nullptr && filter[0] != 0;
 	
@@ -188,14 +188,36 @@ void doParameterUi(ParameterMgr & parameterMgr, const char * filter)
 	
 	if (numParameters > 0)
 	{
-		if (ImGui::TreeNodeEx(&parameterMgr, ImGuiTreeNodeFlags_Framed, "%s", parameterMgr.access_prefix().c_str()))
+		bool isOpen = true;
+		
+		if (showCollapsingHeader)
+		{
+		// todo : this could be solved more nicely if the traversing version adds the headers
+		//        and this function just does the parameter mgr UI
+		
+			isOpen = ImGui::TreeNodeEx(&parameterMgr, ImGuiTreeNodeFlags_Framed, "%s", parameterMgr.access_prefix().c_str());
+		}
+		else
+		{
+			ImGui::PushID(&parameterMgr);
+		}
+		
+		if (isOpen)
 		{
 			ImGui::PushItemWidth(200.f);
 			for (int i = 0; i < numParameters; ++i)
 				doParameterUi(*parameters[i]);
 			ImGui::PopItemWidth();
-			
-			ImGui::TreePop();
+		}
+		
+		if (showCollapsingHeader)
+		{
+			if (isOpen)
+				ImGui::TreePop();
+		}
+		else
+		{
+			ImGui::PopID();
 		}
 	}
 }

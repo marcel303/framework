@@ -51,6 +51,9 @@ struct ComponentMgrBase
 {
 	virtual ~ComponentMgrBase() { }
 	
+	virtual bool init() { return true; }
+	virtual void shut() { }
+	
 	virtual ComponentBase * createComponent(const char * id) = 0;
 	virtual void addComponent(ComponentBase * component) = 0;
 	virtual void destroyComponentImpl(ComponentBase * component) = 0;

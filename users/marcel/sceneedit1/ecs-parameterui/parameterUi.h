@@ -5,7 +5,7 @@ struct parameterMgr;
 struct ParameterComponentMgr;
 
 void doParameterUi(ParameterBase & parameter);
-void doParameterUi(ParameterMgr & parameterMgr, const char * filter);
+void doParameterUi(ParameterMgr & parameterMgr, const char * filter, const bool showCollapsingHeader);
 void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter);
 
 void copyParametersToClipboard(ParameterBase * const * const parameters, const int numParameters);

@@ -9,6 +9,7 @@
 
 #define DEFINE_COMPONENT_TYPES
 #include "cameraComponent.h"
+#include "lightComponent.h"
 #include "modelComponent.h"
 #include "parameterComponent.h"
 #include "rotateTransformComponent.h"
@@ -21,11 +22,12 @@
 
 // todo : remove component mgr globals
 CameraComponentMgr s_cameraComponentMgr;
-extern TransformComponentMgr s_transformComponentMgr;
-RotateTransformComponentMgr s_rotateTransformComponentMgr;
-extern ModelComponentMgr s_modelComponentMgr;
+LightComponentMgr s_lightComponentMgr;
+ModelComponentMgr s_modelComponentMgr;
 ParameterComponentMgr s_parameterComponentMgr;
+RotateTransformComponentMgr s_rotateTransformComponentMgr;
 SceneNodeComponentMgr s_sceneNodeComponentMgr;
+TransformComponentMgr s_transformComponentMgr;
 //VfxgraphComponentMgr s_vfxgraphComponentMgr;
 
 TypeDB g_typeDB;
@@ -79,12 +81,33 @@ void registerBuiltinTypes()
 void registerComponentTypes()
 {
 	registerComponentType(new CameraComponentType(), &s_cameraComponentMgr);
+	registerComponentType(new LightComponentType(), &s_lightComponentMgr);
 	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);
 	registerComponentType(new ParameterComponentType(), &s_parameterComponentMgr);
 	registerComponentType(new RotateTransformComponentType(), &s_rotateTransformComponentMgr);
 	registerComponentType(new SceneNodeComponentType(), &s_sceneNodeComponentMgr);
 	registerComponentType(new TransformComponentType(), &s_transformComponentMgr);
 	//registerComponentType(new VfxgraphComponentType(), &s_vfxgraphComponentMgr);
+}
+
+bool initComponentMgrs()
+{
+	bool result = true;
+	
+	for (auto * componentType : g_componentTypes)
+	{
+		result &= componentType->componentMgr->init();
+	}
+	
+	return result;
+}
+
+void shutComponentMgrs()
+{
+	for (auto * componentType : g_componentTypes)
+	{
+		componentType->componentMgr->shut();
+	}
 }
 
 static ComponentTypeBase * findComponentType(const std::vector<ComponentTypeBase*> & componentTypes, const char * typeName)

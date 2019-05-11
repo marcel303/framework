@@ -23,6 +23,9 @@ void registerBuiltinTypes();
 void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase * componentMgr);
 void registerComponentTypes();
 
+bool initComponentMgrs();
+void shutComponentMgrs();
+
 ComponentTypeBase * findComponentType(const char * typeName);
 ComponentTypeBase * findComponentType(const std::type_index & typeIndex);
 

@@ -2,6 +2,7 @@
 #include "modelComponent.h"
 #include "parameterComponent.h"
 #include "parameterComponentUi.h"
+#include "parameterUi.h"
 #include "transformComponent.h"
 
 #include "component.h"
@@ -40,16 +41,16 @@
 
 todo :
 
-- add libreflection-jsonio
++ add libreflection-jsonio
 - remove json references from scene edit
-- add general monitor camera. or extend framework's Camera3d to support perspective, orbit and ortho modes
++ add general monitor camera. or extend framework's Camera3d to support perspective, orbit and ortho modes
 - avoid UI from jumping around
 	- add independent scrolling area for scene structure
 	- add independent scrolling area for selected node
-- use scene structure tree to select nodes. remove inline editing
++ use scene structure tree to select nodes. remove inline editing
 - add lookat/focus option to scene structure view
 	- as a context menu
-- separate node traversal/scene structure view from node editor
++ separate node traversal/scene structure view from node editor
 
 */
 
@@ -63,13 +64,49 @@ static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
 
 // todo : move these instances to helpers.cpp
-TransformComponentMgr s_transformComponentMgr;
-ModelComponentMgr s_modelComponentMgr;
+extern TransformComponentMgr s_transformComponentMgr;
+extern ModelComponentMgr s_modelComponentMgr;
 extern ParameterComponentMgr s_parameterComponentMgr;
 
 // todo : move to helpers
 static bool node_to_clipboard_text(const SceneNode & node, std::string & text);
 static bool node_from_clipboard_text(const char * text, SceneNode & node);
+
+//
+
+struct Renderer
+{
+	enum Mode
+	{
+		kMode_Wireframe,
+		kMode_Colors,
+		kMode_Normals,
+		kMode_Lit,
+		kMode_LitWithShadows
+	};
+	
+	ParameterMgr parameterMgr;
+	
+	ParameterEnum * mode = nullptr;
+	
+	bool init()
+	{
+		bool result = true;
+
+		parameterMgr.init("renderer");
+		
+		mode = parameterMgr.addEnum("mode", kMode_Colors,
+			{
+				{ "Wireframe", kMode_Wireframe },
+				{ "Colors", kMode_Colors },
+				{ "Normals", kMode_Normals },
+				{ "Lit", kMode_Lit },
+				{ "Lit + Shadows", kMode_LitWithShadows }
+			});
+		
+		return result;
+	}
+};
 
 //
 
@@ -88,6 +125,8 @@ struct SceneEditor
 #if ENABLE_TRANSFORM_GIZMOS
 	TranslationGizmo translationGizmo;
 #endif
+
+	Renderer renderer;
 	
 	struct
 	{
@@ -155,6 +194,8 @@ struct SceneEditor
 		guiContext.init();
 		
 		scene.createRootNode();
+		
+		renderer.init();
 	}
 	
 	void shut()
@@ -801,8 +842,8 @@ struct SceneEditor
 		{
 			guiContext.processBegin(dt, VIEW_SX, VIEW_SY, inputIsCaptured);
 			{
-				ImGui::SetNextWindowPos(ImVec2(4, 4));
-				ImGui::SetNextWindowSize(ImVec2(370, VIEW_SY - 8));
+				ImGui::SetNextWindowPos(ImVec2(4, 20 + 4 + 4));
+				ImGui::SetNextWindowSize(ImVec2(370, VIEW_SY - 20 - 4 - 4));
 				if (ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 				{
 					if (ImGui::CollapsingHeader("Visibility", ImGuiTreeNodeFlags_DefaultOpen))
@@ -957,16 +998,28 @@ struct SceneEditor
 				
 				//
 				
-			#if 0 // todo : re-enable parameter UI
-				if (ImGui::Begin("Parameter UI"))
+			#if 1
+				if (ImGui::BeginMainMenuBar())
 				{
-					ImGui::InputText("Component filter", parameterUi.component_filter, kMaxParameterFilter);
-					ImGui::InputText("Parameter filter", parameterUi.parameter_filter, kMaxParameterFilter);
-					ImGui::Checkbox("Show components with empty prefix", &parameterUi.showAnonymousComponents);
+					if (ImGui::BeginMenu("Renderer"))
+					{
+						doParameterUi(renderer.parameterMgr, nullptr, false);
+						
+						ImGui::EndMenu();
+					}
 					
-					doParameterUi(s_parameterComponentMgr, parameterUi.component_filter, parameterUi.parameter_filter, parameterUi.showAnonymousComponents);
+					if (ImGui::BeginMenu("Parameters"))
+					{
+						ImGui::InputText("Component filter", parameterUi.component_filter, kMaxParameterFilter);
+						ImGui::InputText("Parameter filter", parameterUi.parameter_filter, kMaxParameterFilter);
+						ImGui::Checkbox("Show components with empty prefix", &parameterUi.showAnonymousComponents);
+						
+						doParameterUi(s_parameterComponentMgr, parameterUi.component_filter, parameterUi.parameter_filter, parameterUi.showAnonymousComponents);
+						
+						ImGui::EndMenu();
+					}
 				}
-				ImGui::End();
+				ImGui::EndMainMenuBar();
 			#endif
 			
 				guiContext.updateMouseCursor();
@@ -1351,6 +1404,20 @@ struct SceneEditor
 		popDepthTest();
 	}
 	
+	void drawSceneColors() const
+	{
+		pushShaderOutputs("c");
+		drawSceneOpaque();
+		popShaderOutputs();
+	}
+	
+	void drawSceneNormals() const
+	{
+		pushShaderOutputs("n");
+		drawSceneOpaque();
+		popShaderOutputs();
+	}
+	
 	void drawSceneTranslucent() const
 	{
 		pushDepthTest(true, DEPTH_LESS, false);
@@ -1389,7 +1456,10 @@ struct SceneEditor
 		camera.pushProjectionMatrix();
 		camera.pushViewMatrix();
 		{
-			drawSceneOpaque();
+			if (renderer.mode->get() == Renderer::kMode_Colors)
+				drawSceneColors();
+			if (renderer.mode->get() == Renderer::kMode_Normals)
+				drawSceneNormals();
 			
 			drawSceneTranslucent();
 		}
@@ -1571,6 +1641,8 @@ int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
 #endif
 
 	framework.enableDepthBuffer = true;
@@ -1612,6 +1684,7 @@ int main(int argc, char * argv[])
 	
 	registerBuiltinTypes();
 	registerComponentTypes();
+	initComponentMgrs();
 	
 	testResources(); // todo : remove
 	
@@ -1851,6 +1924,8 @@ int main(int argc, char * argv[])
 	}
 	
 	editor.shut();
+	
+	shutComponentMgrs();
 	
 	framework.shutdown();
 
