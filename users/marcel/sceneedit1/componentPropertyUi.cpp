@@ -333,14 +333,38 @@ bool doReflection_PlainType(
 				}
 			}
 			
-			char buffer[1024];
-			strcpy_s(buffer, sizeof(buffer), value.c_str());
+			const bool isFilePath = member.hasFlag<ComponentMemberFlag_EditorType_FilePath>();
 			
-			if (ImGui::InputText(member.name, buffer, sizeof(buffer)))
+			if (isFilePath)
 			{
-				value = buffer;
+				ImGui::PushID(member.name);
+				{
+					char buffer[1024];
+					strcpy_s(buffer, sizeof(buffer), value.c_str());
+					
+					if (ImGui::InputText("", buffer, sizeof(buffer)))
+					{
+						value = buffer;
+						
+						result = true;
+					}
+					
+					ImGui::SameLine();
+					ImGui::Button("..");
+				}
+				ImGui::PopID();
+			}
+			else
+			{
+				char buffer[1024];
+				strcpy_s(buffer, sizeof(buffer), value.c_str());
 				
-				result = true;
+				if (ImGui::InputText(member.name, buffer, sizeof(buffer)))
+				{
+					value = buffer;
+					
+					result = true;
+				}
 			}
 		}
 		break;

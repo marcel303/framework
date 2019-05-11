@@ -52,6 +52,10 @@ struct ComponentMemberFlag_EditorType_Axis : MemberFlag<ComponentMemberFlag_Edit
 {
 };
 
+struct ComponentMemberFlag_EditorType_FilePath : MemberFlag<ComponentMemberFlag_EditorType_FilePath>
+{
+};
+
 struct ComponentMemberAdder_Int
 {
 	Member * member;

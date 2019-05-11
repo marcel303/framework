@@ -46,7 +46,8 @@ struct ModelComponentType : ComponentType<ModelComponent>
 	ModelComponentType()
 		: ComponentType("ModelComponent")
 	{
-		add("filename", &ModelComponent::filename);
+		add("filename", &ModelComponent::filename)
+			.addFlag(new ComponentMemberFlag_EditorType_FilePath);
 		add("rotation", &ModelComponent::rotation);
 		in("scale", &ModelComponent::scale)
 			.setLimits(0.f, 100.f)
