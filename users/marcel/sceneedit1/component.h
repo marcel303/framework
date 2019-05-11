@@ -3,7 +3,6 @@
 #include "Debugging.h"
 #include <typeindex>
 
-#define ENABLE_COMPONENT_IDS 0 // not yet ready to trash them immediately. but for now I don't see a use for them
 #define ENABLE_COMPONENT_JSON 1
 
 //
@@ -19,13 +18,7 @@ struct ComponentBase
 	ComponentSet * componentSet = nullptr;
 	ComponentBase * next_in_set = nullptr; // next component in the component set
 	
-#if ENABLE_COMPONENT_IDS
-	const char * id = "";
-#endif
-	
 	virtual ~ComponentBase();
-	
-	void setId(const char * id);
 	
 	virtual void tick(const float dt) { }
 	virtual bool init() { return true; }
@@ -79,10 +72,6 @@ struct ComponentMgr : ComponentMgrBase
 	virtual T * createComponent(const char * id) override final
 	{
 		T * component = new T();
-		
-	#if ENABLE_COMPONENT_IDS
-		component->setId(id);
-	#endif
 		
 		addComponent(component);
 		
@@ -155,10 +144,6 @@ struct ComponentSet
 	
 	void add(ComponentBase * component);
 	void remove(ComponentBase * component);
-	
-#if ENABLE_COMPONENT_IDS
-	ComponentBase * find(const char * id);
-#endif
 	
 	template <typename T>
 	T * find()

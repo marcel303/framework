@@ -18,12 +18,7 @@ bool SceneNode::initComponents()
 		{
 			auto * componentType = findComponentType(component->typeIndex());
 			
-			LOG_ERR("failed to initialize component '%s' of type %s",
-			#if ENABLE_COMPONENT_IDS
-				component->id,
-			#else
-				"'id'",
-			#endif
+			LOG_ERR("failed to initialize component of type %s",
 				componentType == nullptr
 					? "(unknown)"
 					: componentType->typeName);
@@ -81,13 +76,6 @@ static void to_json(nlohmann::json & j, const SceneNode * node_ptr)
 			auto & component_json = components_json[component_index++];
 			
 			component_json["typeName"] = componentType->typeName;
-			
-		#if ENABLE_COMPONENT_IDS
-			if (component->id[0] != 0)
-			{
-				component_json["id"] = component->id;
-			}
-		#endif
 			
 			ComponentJson component_json_wrapped(component_json);
 			
@@ -425,20 +413,8 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 				if (strcmp(componentType->typeName, "SceneNodeComponent") == 0)
 					continue;
 				
-			#if ENABLE_COMPONENT_IDS
 				// todo : make short version of component type name
-				
-				if (component->id[0] != 0)
-				{
-					char component_definition[128];
-					sprintf(component_definition, "%s %s", componentType->typeName, component->id);
-					line_writer.append_indented_line(indent, component_definition);
-				}
-				else
-			#endif
-				{
-					line_writer.append_indented_line(indent, componentType->typeName);
-				}
+				line_writer.append_indented_line(indent, componentType->typeName);
 				
 				indent++;
 				{

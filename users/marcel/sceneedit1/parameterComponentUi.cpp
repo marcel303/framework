@@ -16,12 +16,6 @@ void doParameterUi(ParameterComponentMgr & componentMgr, const char * component_
 			if (prefix_cmp != 0)
 				return prefix_cmp < 0;
 			
-		#if ENABLE_COMPONENT_IDS
-			const int id_cmp = strcmp(comp->id, other.comp->id);
-			if (id_cmp != 0)
-				return id_cmp < 0;
-		#endif
-			
 			return false;
 		}
 	};
