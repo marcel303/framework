@@ -108,14 +108,16 @@ const SceneNode & Scene::getRootNode() const
 	return *i->second;
 }
 
-static void write_node_children_traverse(const Scene & scene, const int nodeId, LineWriter & line_writer, const int indent)
+static bool write_node_children_traverse(const Scene & scene, const int nodeId, LineWriter & line_writer, const int indent)
 {
 	auto node_itr = scene.nodes.find(nodeId);
 	Assert(node_itr != scene.nodes.end());
 	if (node_itr == scene.nodes.end())
-		return;
+		return false;
 	
 	auto * node = node_itr->second;
+	
+	bool result = true;
 	
 	for (auto child_node_id : node->childNodeIds)
 	{
@@ -124,8 +126,10 @@ static void write_node_children_traverse(const Scene & scene, const int nodeId, 
 	
 		line_writer.append_indented_line(indent, id);
 		
-		write_node_children_traverse(scene, child_node_id, line_writer, indent + 1);
+		result &= write_node_children_traverse(scene, child_node_id, line_writer, indent + 1);
 	}
+	
+	return result;
 }
 
 bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
@@ -151,8 +155,53 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 				if (componentType == nullptr) // todo : error
 					continue;
 				
-				// todo : make short version of component type name
-				line_writer.append_indented_line(indent, componentType->typeName);
+				// check if the component type name ends with 'Component'. in this case
+				// we'll want to write a short hand component name which is easier
+				// to hand-edit
+				
+				const char * suffix = strstr(componentType->typeName, "Component");
+				const int suffix_length = 9;
+				
+				if (suffix != nullptr && suffix[suffix_length] == 0)
+				{
+					// make a short version of the component type name
+					// e.g. RotateTransformComponent becomes 'rotate-transform'
+					
+					char short_name[1024];
+					int length = 0;
+					
+					for (int i = 0; componentType->typeName + i < suffix && length < 1024; ++i)
+					{
+						if (isupper(componentType->typeName[i]))
+						{
+							if (i != 0)
+								short_name[length++] = '-';
+							
+							short_name[length++] = tolower(componentType->typeName[i]);
+						}
+						else
+							short_name[length++] = componentType->typeName[i];
+					}
+					
+					if (length == 1024)
+					{
+						LOG_ERR("component type name too long: %s", componentType->typeName);
+						result &= false;
+					}
+					else
+					{
+						short_name[length++] = 0;
+						
+						line_writer.append_indented_line(indent, short_name);
+					}
+				}
+				else
+				{
+					// write the full name if the type name doesn't match the pattern
+					
+					LOG_WRN("writing full component type name. this is unexpected. typeName=%s", componentType->typeName);
+					line_writer.append_indented_line(indent, componentType->typeName);
+				}
 				
 				indent++;
 				{
@@ -178,7 +227,7 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 		{
 			// write node hierarchy
 			
-			write_node_children_traverse(*this, rootNodeId, line_writer, indent);
+			result &= write_node_children_traverse(*this, rootNodeId, line_writer, indent);
 		}
 		indent--;
 	}
