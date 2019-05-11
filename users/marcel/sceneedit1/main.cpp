@@ -112,9 +112,9 @@ struct Renderer
 
 struct SceneEditor
 {
-	Scene scene;
+	Scene scene; // todo : this should live outside the editor, but referenced
 	
-	Camera camera;
+	Camera camera; // todo : this should live outside the editor, but referenced
 	bool cameraIsActive = false;
 	
 	std::set<int> selectedNodes;
@@ -126,7 +126,7 @@ struct SceneEditor
 	TranslationGizmo translationGizmo;
 #endif
 
-	Renderer renderer;
+	Renderer renderer; // todo : this should live outside the editor
 	
 	struct
 	{
@@ -1388,41 +1388,56 @@ struct SceneEditor
 	
 	void drawSceneOpaque() const
 	{
-		pushDepthTest(true, DEPTH_LESS);
-		pushBlend(BLEND_OPAQUE);
-		
-		if (preview.drawScene)
-		{
-			s_modelComponentMgr.draw();
-		}
+		s_modelComponentMgr.draw();
+	}
 	
+	void drawEditorOpaque() const
+	{
 	#if ENABLE_TRANSFORM_GIZMOS
 		translationGizmo.draw();
 	#endif
+	}
 	
+	void drawOpaque() const
+	{
+		pushDepthTest(true, DEPTH_LESS);
+		pushBlend(BLEND_OPAQUE);
+		{
+			if (preview.drawScene)
+			{
+				drawSceneOpaque();
+			}
+			
+			drawEditorOpaque();
+		}
 		popBlend();
 		popDepthTest();
 	}
 	
-	void drawSceneColors() const
+	void drawColors() const
 	{
 		pushShaderOutputs("c");
-		drawSceneOpaque();
+		{
+			drawOpaque();
+		}
 		popShaderOutputs();
 	}
 	
-	void drawSceneNormals() const
+	void drawNormals() const
 	{
 		pushShaderOutputs("n");
-		drawSceneOpaque();
+		{
+			drawOpaque();
+		}
 		popShaderOutputs();
 	}
 	
 	void drawSceneTranslucent() const
 	{
-		pushDepthTest(true, DEPTH_LESS, false);
-		pushBlend(BLEND_ALPHA);
-		
+	}
+	
+	void drawEditorTranslucent() const
+	{
 		if (visibility.drawGroundPlane)
 		{
 			pushLineSmooth(true);
@@ -1446,7 +1461,17 @@ struct SceneEditor
 			drawNodesTraverse(scene.getRootNode());
 			popBlend();
 		}
-		
+	}
+	
+	void drawTranslucent() const
+	{
+		pushDepthTest(true, DEPTH_LESS, false);
+		pushBlend(BLEND_ALPHA);
+		{
+			drawSceneTranslucent();
+			
+			drawEditorTranslucent();
+		}
 		popBlend();
 		popDepthTest();
 	}
@@ -1457,11 +1482,11 @@ struct SceneEditor
 		camera.pushViewMatrix();
 		{
 			if (renderer.mode->get() == Renderer::kMode_Colors)
-				drawSceneColors();
+				drawColors();
 			if (renderer.mode->get() == Renderer::kMode_Normals)
-				drawSceneNormals();
+				drawNormals();
 			
-			drawSceneTranslucent();
+			drawTranslucent();
 		}
 		camera.popViewMatrix();
 		camera.popProjectionMatrix();
