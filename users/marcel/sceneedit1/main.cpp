@@ -39,7 +39,7 @@
 todo :
 
 + add libreflection-jsonio
-- remove json references from scene edit
++ remove json references from scene edit
 + add general monitor camera. or extend framework's Camera3d to support perspective, orbit and ortho modes
 - avoid UI from jumping around
 	- add independent scrolling area for scene structure
@@ -163,7 +163,6 @@ struct SceneEditor
 		char nodeDisplayNameFilter[kMaxNodeDisplayNameFilter] = { };
 		char componentTypeNameFilter[kMaxComponentTypeNameFilter] = { };
 		std::set<int> visibleNodes;
-		std::set<int> openNodes;
 	} nodeUi;
 	
 	static const int kMaxParameterFilter = 100;
@@ -354,7 +353,6 @@ struct SceneEditor
 				// select the newly added child node
 				selectedNodes.insert(node->id);
 				nodeToGiveFocus = node->id;
-				
 				
 				// when a display name filter is set the node would just disappear. set the filter to the name of the newly
 				// added node in this case, to avoid confusion
@@ -684,7 +682,7 @@ struct SceneEditor
 				ImGui::SetScrollHereY();
 			}
 			
-			if (nodeUi.openNodes.count(node.id) != 0)
+			if (nodeUi.visibleNodes.count(node.id) != 0)
 				ImGui::SetNextTreeNodeOpen(true);
 
 			const char * name = "(noname)";
@@ -737,6 +735,77 @@ struct SceneEditor
 			}
 		}
 		ImGui::PopID();
+	}
+	
+	void markNodeVisibleUntilRoot(const int nodeId)
+	{
+		nodeUi.visibleNodes.insert(nodeId);
+
+		auto node_itr = scene.nodes.find(nodeId);
+		Assert(node_itr != scene.nodes.end());
+		if (node_itr == scene.nodes.end())
+			return;
+		
+		auto * node = node_itr->second;
+		
+		int parentId = node->parentId;
+
+		while (parentId != -1)
+		{
+			if (nodeUi.visibleNodes.count(parentId) != 0)
+				break;
+			
+			nodeUi.visibleNodes.insert(parentId);
+			
+			auto parentNode_itr = scene.nodes.find(parentId);
+			Assert(parentNode_itr != scene.nodes.end());
+			if (parentNode_itr == scene.nodes.end())
+				break;
+			parentId = parentNode_itr->second->parentId;
+		}
+	}
+	
+	void updateNodeVisibility()
+	{
+		// determine the set of visible nodes, given any filters applied to the list
+		// note that when a child node is visible, all its elders are visible as well
+		
+		nodeUi.visibleNodes.clear();
+		
+		if (nodeUi.nodeDisplayNameFilter[0] != 0)
+		{
+			for (auto & node_itr : scene.nodes)
+			{
+				auto nodeId = node_itr.first;
+				auto * node = node_itr.second;
+				
+				if (nodeUi.visibleNodes.count(nodeId) != 0)
+					continue;
+				
+				auto * sceneNodeComponent = node->components.find<SceneNodeComponent>();
+				
+				const bool is_visible =
+					sceneNodeComponent != nullptr &&
+					strcasestr(sceneNodeComponent->name.c_str(), nodeUi.nodeDisplayNameFilter);
+				
+				if (is_visible)
+				{
+					markNodeVisibleUntilRoot(nodeId);
+				}
+			}
+		}
+	}
+	
+	void markSelectedNodesVisible()
+	{
+		for (auto & nodeId : selectedNodes)
+		{
+			if (nodeUi.visibleNodes.empty() == false)
+			{
+				if (nodeUi.visibleNodes.count(nodeId) == 0)
+					markNodeVisibleUntilRoot(nodeId);
+			}
+		}
 	}
 	
 	void addNodeFromTemplate_v1(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
@@ -904,87 +973,22 @@ struct SceneEditor
 					
 					if (ImGui::CollapsingHeader("Scene structure", ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						ImGui::InputText("Display name", nodeUi.nodeDisplayNameFilter, kMaxNodeDisplayNameFilter);
+						if (ImGui::InputText("Display name", nodeUi.nodeDisplayNameFilter, kMaxNodeDisplayNameFilter))
+						{
+							updateNodeVisibility();
+						}
+						
 						ImGui::InputText("Component type", nodeUi.componentTypeNameFilter, kMaxComponentTypeNameFilter);
 						
 						ImGui::BeginChild("Scene structure", ImVec2(0, 140), ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
-							// determine the set of visible nodes, given any filters applied to the list
-							// note that when a child node is visible, all its elders are visible as well
-							
-							if (nodeUi.nodeDisplayNameFilter[0] != 0)
-							{
-								for (auto & node_itr : scene.nodes)
-								{
-									auto nodeId = node_itr.first;
-									auto * node = node_itr.second;
-									
-									if (nodeUi.visibleNodes.count(nodeId) != 0)
-										continue;
-									
-									auto * sceneNodeComponent = node->components.find<SceneNodeComponent>();
-									
-									const bool is_visible =
-										sceneNodeComponent != nullptr &&
-										strcasestr(sceneNodeComponent->name.c_str(), nodeUi.nodeDisplayNameFilter);
-									
-									if (is_visible)
-									{
-										nodeUi.visibleNodes.insert(nodeId);
-										
-										int parentId = node->parentId;
-										
-										while (parentId != -1)
-										{
-											if (nodeUi.visibleNodes.count(parentId) != 0)
-												break;
-											
-											nodeUi.visibleNodes.insert(parentId);
-											
-											auto parentNode_itr = scene.nodes.find(parentId);
-											Assert(parentNode_itr != scene.nodes.end());
-											if (parentNode_itr != scene.nodes.end())
-												parentId = parentNode_itr->second->parentId;
-										}
-									}
-								}
-							}
-							
-							// determine the set of 'open' nodes. where open means the tree node entry for the
-							// node is unfolded. open nodes are all selected nodes and any of its elders
-							
-							for (auto & nodeId : selectedNodes)
-							{
-								auto node_itr = scene.nodes.find(nodeId);
-								Assert(node_itr != scene.nodes.end());
-								if (node_itr == scene.nodes.end())
-									continue;
-								
-								auto * node = node_itr->second;
-								int parentId = node->parentId;
-						
-								while (parentId != -1)
-								{
-									if (nodeUi.openNodes.count(parentId) != 0)
-										break;
-									
-									nodeUi.openNodes.insert(parentId);
-									
-									auto parentNode_itr = scene.nodes.find(parentId);
-									Assert(parentNode_itr != scene.nodes.end());
-									if (parentNode_itr != scene.nodes.end())
-										parentId = parentNode_itr->second->parentId;
-								}
-							}
+							markSelectedNodesVisible();
 							
 							deferredBegin();
 							{
 								editNodeStructure_traverse(scene.rootNodeId);
 							}
 							deferredEnd();
-							
-							nodeUi.visibleNodes.clear();
-							nodeUi.openNodes.clear();
 						}
 						ImGui::EndChild();
 					}
