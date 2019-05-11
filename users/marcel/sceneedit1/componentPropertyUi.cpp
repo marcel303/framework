@@ -4,6 +4,7 @@
 #include "imgui.h"
 #include "lineReader.h"
 #include "lineWriter.h"
+#include "nfd.h"
 #include "StringEx.h"
 #include "Vec2.h"
 #include "Vec3.h"
@@ -350,7 +351,23 @@ bool doReflection_PlainType(
 					}
 					
 					ImGui::SameLine();
-					ImGui::Button("..");
+					if (ImGui::Button(".."))
+					{
+						nfdchar_t * filename = nullptr;
+					
+						if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
+						{
+							value = filename;
+							
+							result = true;
+						}
+					
+						if (filename != nullptr)
+						{
+							free(filename);
+							filename = nullptr;
+						}
+					}
 				}
 				ImGui::PopID();
 			}

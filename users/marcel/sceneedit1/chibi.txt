@@ -7,6 +7,7 @@ app marcel-sceneedit1
 	depend_library framework
 	depend_library imgui-framework
 	depend_library jsoncpp
+	depend_library libnfd
 	depend_library libreflection
 	depend_library libreflection-bindtofile
 	depend_library libreflection-jsonio
