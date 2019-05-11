@@ -144,9 +144,31 @@ Scene::Scene()
 {
 }
 
+Scene::~Scene()
+{
+	Assert(nodes.empty());
+}
+
 int Scene::allocNodeId()
 {
 	return nextNodeId++;
+}
+
+void Scene::freeAllNodesAndComponents()
+{
+	for (auto node_itr : nodes)
+	{
+		auto * node = node_itr.second;
+		
+		node->freeComponents();
+		
+		delete node;
+		node = nullptr;
+	}
+	
+	nodes.clear();
+	
+	rootNodeId = -1;
 }
 
 void Scene::createRootNode()

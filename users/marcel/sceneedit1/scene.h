@@ -36,8 +36,11 @@ struct Scene
 	int rootNodeId = -1;
 	
 	Scene();
+	~Scene();
 	
 	int allocNodeId();
+	
+	void freeAllNodesAndComponents();
 	
 	void createRootNode();
 	SceneNode & getRootNode();

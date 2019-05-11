@@ -200,6 +200,8 @@ struct SceneEditor
 	
 	void shut()
 	{
+		scene.freeAllNodesAndComponents();
+		
 		guiContext.shut();
 	}
 	
@@ -1762,6 +1764,7 @@ int main(int argc, char * argv[])
 						editor.deferredEnd();
 						
 						editor.scene = tempScene;
+						tempScene.nodes.clear();
 					}
 				#endif
 				}
@@ -1786,14 +1789,27 @@ int main(int argc, char * argv[])
 						logError("failed to load scene from lines");
 					else
 					{
-						editor.deferredBegin();
-						{
-							for (auto & node_itr : editor.scene.nodes)
-								editor.deferred.nodesToRemove.insert(node_itr.second->id);
-						}
-						editor.deferredEnd();
+						bool init_ok = true;
 						
-						editor.scene = tempScene;
+						for (auto node_itr : tempScene.nodes)
+							init_ok &= node_itr.second->initComponents();
+						
+						if (init_ok == false)
+						{
+							tempScene.freeAllNodesAndComponents();
+						}
+						else
+						{
+							editor.deferredBegin();
+							{
+								for (auto & node_itr : editor.scene.nodes)
+									editor.deferred.nodesToRemove.insert(node_itr.second->id);
+							}
+							editor.deferredEnd();
+							
+							editor.scene = tempScene;
+							tempScene.nodes.clear();
+						}
 					}
 				#endif
 				}
@@ -1822,6 +1838,7 @@ int main(int argc, char * argv[])
 					editor.deferredEnd();
 					
 					editor.scene = tempScene;
+					tempScene.nodes.clear();
 				}
 			}
 			else
@@ -1842,14 +1859,29 @@ int main(int argc, char * argv[])
 						logError("failed to load scene from lines");
 					else
 					{
-						editor.deferredBegin();
-						{
-							for (auto & node_itr : editor.scene.nodes)
-								editor.deferred.nodesToRemove.insert(node_itr.second->id);
-						}
-						editor.deferredEnd();
+						// todo : create helper function to initialize scene after loading it
 						
-						editor.scene = tempScene;
+						bool init_ok = true;
+						
+						for (auto node_itr : tempScene.nodes)
+							init_ok &= node_itr.second->initComponents();
+						
+						if (init_ok == false)
+						{
+							tempScene.freeAllNodesAndComponents();
+						}
+						else
+						{
+							editor.deferredBegin();
+							{
+								for (auto & node_itr : editor.scene.nodes)
+									editor.deferred.nodesToRemove.insert(node_itr.second->id);
+							}
+							editor.deferredEnd();
+							
+							editor.scene = tempScene;
+							tempScene.nodes.clear();
+						}
 					}
 				}
 			}
@@ -1867,18 +1899,42 @@ int main(int argc, char * argv[])
 			std::vector<std::string> lines;
 			TextIO::LineEndings lineEndings;
 			
+			Scene tempScene;
+			
+			bool load_ok = true;
+			
 			if (!TextIO::load("scene-v1.txt", lines, lineEndings))
 			{
 				logError("failed to load text file");
+				load_ok = false;
 			}
 			else
 			{
-				Scene tempScene;
 				tempScene.createRootNode();
-
+				
 				if (!parseSceneFromLines(g_typeDB, lines, tempScene))
 				{
 					logError("failed to parse scene from lines");
+					load_ok = false;
+				}
+			}
+			
+			changeDirectory(".."); // fixme : remove
+			
+			if (load_ok == false)
+			{
+				tempScene.freeAllNodesAndComponents();
+			}
+			else
+			{
+				bool init_ok = true;
+				
+				for (auto node_itr : tempScene.nodes)
+					init_ok &= node_itr.second->initComponents();
+			
+				if (init_ok == false)
+				{
+					tempScene.freeAllNodesAndComponents();
 				}
 				else
 				{
@@ -1888,13 +1944,11 @@ int main(int argc, char * argv[])
 							editor.deferred.nodesToRemove.insert(node_itr.second->id);
 					}
 					editor.deferredEnd();
-					Assert(editor.scene.nodes.empty());
 					
 					editor.scene = tempScene;
+					tempScene.nodes.clear();
 				}
 			}
-			
-			changeDirectory(".."); // fixme : remove
 		}
 		
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_p))
