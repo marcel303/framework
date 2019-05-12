@@ -32,46 +32,55 @@ int main(int arg, char * argv[])
 			break;
 		
 		metal_make_active(window1);
-		//metal_draw_begin(1.0f, 0.3f, 0.0f, 1.0f);
-		metal_draw_begin(0.2f, 0.3f, 0.0f, 1.0f);
-		//for (int i = 0; i < 1000; ++i)
-		//metal_drawtest();
-		
-	#if 1
-		gxBegin(GX_TRIANGLES);
-		for (int i = 0; i < 100; ++i)
+		metal_draw_begin(1.0f, 0.3f, 0.0f, 1.0f);
 		{
-			const float x = (rand() % 100) / 100.f;
-			const float y = (rand() % 100) / 100.f;
-			
-			gxColor4f(1, 0, 0, 1);
-			gxVertex2f(x, y);
-			gxColor4f(0, 1, 0, 1);
-			gxVertex2f(0.f, 1.f);
-			gxColor4f(0, 0, 1, 1);
-			gxVertex2f(1.f, 1.f);
+			gxPushMatrix();
+			{
+				static float t = 0.f;
+				t += 1.f / 60.f;
+				
+				const float scale = cosf(t);
+				gxScalef(scale, scale, scale);
+				
+				gxBegin(GX_TRIANGLES);
+				{
+					for (int i = 0; i < 100; ++i)
+					{
+						const float x = (rand() % 100) / 100.f;
+						const float y = (rand() % 100) / 100.f;
+						
+						gxColor4f(1, 0, 0, 1);
+						gxVertex2f(x, y);
+						gxColor4f(0, 1, 0, 1);
+						gxVertex2f(0.f, 1.f);
+						gxColor4f(0, 0, 1, 1);
+						gxVertex2f(1.f, 1.f);
+					}
+				}
+				gxEnd();
+			}
+			gxPopMatrix();
 		}
-		gxEnd();
-	#else
-		gxBegin(GX_LINES);
-		for (int i = 0; i < 100; ++i)
-		{
-			const float x = (rand() % 100) / 100.f;
-			const float y = (rand() % 100) / 100.f;
-			
-			gxColor4f(1, 0, 0, 1);
-			gxVertex2f(x, y);
-			gxColor4f(0, 1, 0, 1);
-			gxVertex2f(1.f, 1.f);
-		}
-		gxEnd();
-	#endif
-		
 		metal_draw_end();
 		
 		metal_make_active(window2);
 		metal_draw_begin(0.0f, 0.3f, 1.0f, 1.0f);
-		//metal_drawtest();
+		{
+			gxBegin(GX_LINES);
+			{
+				for (int i = 0; i < 100; ++i)
+				{
+					const float x = (rand() % 100) / 100.f;
+					const float y = (rand() % 100) / 100.f;
+					
+					gxColor4f(1, 0, 0, 1);
+					gxVertex2f(x, y);
+					gxColor4f(0, 1, 0, 1);
+					gxVertex2f(1.f, 1.f);
+				}
+			}
+			gxEnd();
+		}
 		metal_draw_end();
 	}
 	

@@ -169,90 +169,218 @@ struct ShaderCache
 
 };
 
-void metal_drawtest()
-{
-	@autoreleasepool
-	{
-	#if 1
-		printf("sizeof(RenderState): %d\n", sizeof(RenderState));
-		
-		//MTLCompileOptions * options = [[[MTLCompileOptions alloc] init] autorelease];
-		//options.fastMathEnabled = false;
-		//option.preprocessorMacros;
-		MTLCompileOptions * options = nullptr;
-		
-		NSError * error = nullptr;
-		
-		id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:s_shaderVs encoding:NSASCIIStringEncoding] options:options error:&error];
-		id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:s_shaderPs encoding:NSASCIIStringEncoding] options:options error:&error];
-		
-		id <MTLFunction> vs = [library_vs newFunctionWithName:@"shader_main"];
-		id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
-		
-		MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
-			// position
-		vertexDescriptor.attributes[0].format = MTLVertexFormatFloat4;
-		vertexDescriptor.attributes[0].offset = 0;
-		vertexDescriptor.attributes[0].bufferIndex = 0;
-		
-		vertexDescriptor.layouts[0].stride = 52;
-		vertexDescriptor.layouts[0].stepRate = 1;
-		vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
-		
-		MTLRenderPipelineDescriptor * pipelineDescriptor = [[[MTLRenderPipelineDescriptor alloc] init] autorelease];
-		pipelineDescriptor.label = @"hello pipeline";
-		pipelineDescriptor.sampleCount = 1;
-		pipelineDescriptor.vertexFunction = vs;
-		pipelineDescriptor.fragmentFunction = ps;
-		pipelineDescriptor.vertexDescriptor = vertexDescriptor;
-		pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-		//pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
-		pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
-		
-		id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
-		
-		//NSLog(@"%@", pipelineState);
-		
-		//
-		
-		struct Vertex
-		{
-			float x, y, z;
-		};
-		
-		const Vertex vertices[3] =
-		{
-			{ -1.f, -1.f, .5f },
-			{ +1.f, -1.f, .5f },
-			{ -1.f, +1.f, .5f }
-		};
-		
-		[activeWindowData->encoder setViewport:(MTLViewport){0.0, 0.0, 300, 600, 0.0, 1.0 }];
-
-		[activeWindowData->encoder setRenderPipelineState:pipelineState];
-		
-		[activeWindowData->encoder setVertexBytes:vertices length:sizeof(vertices) atIndex:0];
-		
-		[activeWindowData->encoder drawPrimitives:MTLPrimitiveTypeTriangle vertexStart:0 vertexCount:3];
-		
-		//
-		
-		[pipelineState release];
-		
-		[vs release];
-		[ps release];
-		
-		[library_vs release];
-		[library_ps release];
-	#endif
-	}
-}
-
 // -- gx api implementation --
 
+#include "Mat4x4.h"
+#include "Quat.h"
 #include <assert.h>
 #define fassert assert
 #define Assert fassert
+
+#define TODO 0
+
+class GxMatrixStack
+{
+public:
+	static const int kSize = 32;
+	Mat4x4 stack[kSize];
+	int stackDepth;
+	bool isDirty;
+	
+	GxMatrixStack()
+	{
+		stackDepth = 0;
+		stack[0].MakeIdentity();
+		
+		isDirty = true;
+	}
+	
+	void push()
+	{
+		fassert(stackDepth + 1 < kSize);
+		stackDepth++;
+		stack[stackDepth] = stack[stackDepth - 1];
+	}
+	
+	void pop()
+	{
+		fassert(stackDepth > 0);
+		stackDepth--;
+		
+		isDirty = true;
+	}
+	
+	const Mat4x4 & get() const
+	{
+		return stack[stackDepth];
+	}
+	
+	Mat4x4 & getRw()
+	{
+		isDirty = true;
+		
+		return stack[stackDepth];
+	}
+	
+	void makeDirty()
+	{
+		isDirty = true;
+	}
+};
+
+static GxMatrixStack s_gxModelView;
+static GxMatrixStack s_gxProjection;
+static GxMatrixStack * s_gxMatrixStack = &s_gxModelView;
+
+void gxMatrixMode(GX_MATRIX mode)
+{
+	switch (mode)
+	{
+		case GX_MODELVIEW:
+			s_gxMatrixStack = &s_gxModelView;
+			break;
+		case GX_PROJECTION:
+			s_gxMatrixStack = &s_gxProjection;
+			break;
+		default:
+			fassert(false);
+			break;
+	}
+}
+
+GX_MATRIX gxGetMatrixMode()
+{
+	if (s_gxMatrixStack == &s_gxModelView)
+		return GX_MODELVIEW;
+	if (s_gxMatrixStack == &s_gxProjection)
+		return GX_PROJECTION;
+	else
+	{
+		Assert(false);
+		return GX_MODELVIEW;
+	}
+}
+
+void gxPopMatrix()
+{
+	s_gxMatrixStack->pop();
+}
+
+void gxPushMatrix()
+{
+	s_gxMatrixStack->push();
+}
+
+void gxLoadIdentity()
+{
+	s_gxMatrixStack->getRw().MakeIdentity();
+}
+
+void gxLoadMatrixf(const float * m)
+{
+	memcpy(s_gxMatrixStack->getRw().m_v, m, sizeof(float) * 16);
+}
+
+void gxGetMatrixf(GX_MATRIX mode, float * m)
+{
+	switch (mode)
+	{
+		case GX_PROJECTION:
+			memcpy(m, s_gxProjection.get().m_v, sizeof(float) * 16);
+			break;
+		case GX_MODELVIEW:
+			memcpy(m, s_gxModelView.get().m_v, sizeof(float) * 16);
+			break;
+		default:
+			fassert(false);
+			break;
+	}
+}
+
+void gxSetMatrixf(GX_MATRIX mode, const float * m)
+{
+	switch (mode)
+	{
+		case GX_PROJECTION:
+			memcpy(s_gxProjection.getRw().m_v, m, sizeof(float) * 16);
+			break;
+		case GX_MODELVIEW:
+			memcpy(s_gxModelView.getRw().m_v, m, sizeof(float) * 16);
+			break;
+		default:
+			fassert(false);
+			break;
+	}
+}
+
+void gxMultMatrixf(const float * _m)
+{
+	Mat4x4 m;
+	memcpy(m.m_v, _m, sizeof(m.m_v));
+
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+}
+
+void gxTranslatef(float x, float y, float z)
+{
+	Mat4x4 m;
+	m.MakeTranslation(x, y, z);
+	
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+}
+
+void gxRotatef(float angle, float x, float y, float z)
+{
+	Quat q;
+	q.fromAxisAngle(Vec3(x, y, z), angle * M_PI / 180.f);
+	
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * q.toMatrix();
+}
+
+void gxScalef(float x, float y, float z)
+{
+	Mat4x4 m;
+	m.MakeScaling(x, y, z);
+	
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+}
+
+void gxValidateMatrices()
+{
+#if TODO
+	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
+	
+	//printf("validate1\n");
+	
+	if (globals.shader && globals.shader->getType() == SHADER_VSPS)
+	{
+		Shader * shader = static_cast<Shader*>(globals.shader);
+
+		const ShaderCacheElem & shaderElem = shader->getCacheElem();
+		
+		// check if matrices are dirty
+		
+		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index >= 0)
+		{
+			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index, s_gxModelView.get().m_v);
+			//printf("validate2\n");
+		}
+		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index >= 0)
+		{
+			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index, (s_gxProjection.get() * s_gxModelView.get()).m_v);
+			//printf("validate3\n");
+		}
+		if ((globals.gxShaderIsDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index >= 0)
+		{
+			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index, s_gxProjection.get().m_v);
+			//printf("validate4\n");
+		}
+	}
+#endif
+
+	s_gxModelView.isDirty = false;
+	s_gxProjection.isDirty = false;
+}
 
 struct GxVertex
 {
@@ -277,8 +405,6 @@ static float scale255(const float v)
 	static const float m = 1.f / 255.f;
 	return v * m;
 }
-
-#define TODO 0
 
 void gxEmitVertex();
 
@@ -394,9 +520,9 @@ static void gxFlush(bool endOfBatch)
 		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
 
 		setShader(shader);
-		
-		gxValidateMatrices();
 	#endif
+	
+		gxValidateMatrices();
 	
 		gxValidatePipelineState();
 	
@@ -603,9 +729,11 @@ void gxEmitVertices(int primitiveType, int numVertices)
 	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
 
 	setShader(shader);
+#endif
 
 	gxValidateMatrices();
 
+#if TODO
 	//
 
 	const int vaoIndex = 0;

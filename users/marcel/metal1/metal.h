@@ -8,8 +8,6 @@ void metal_make_active(SDL_Window * window);
 void metal_draw_begin(const float r, const float g, const float b, const float a);
 void metal_draw_end();
 
-void metal_drawtest();
-
 // --- gx api implementation ---
 
 enum GX_PRIMITIVE_TYPE
@@ -24,6 +22,26 @@ enum GX_PRIMITIVE_TYPE
 	GX_TRIANGLE_STRIP,
 	GX_QUADS
 };
+
+enum GX_MATRIX
+{
+	GX_MODELVIEW,
+	GX_PROJECTION
+};
+
+void gxMatrixMode(GX_MATRIX mode);
+GX_MATRIX gxGetMatrixMode();
+void gxPopMatrix();
+void gxPushMatrix();
+void gxLoadIdentity();
+void gxLoadMatrixf(const float * m);
+void gxGetMatrixf(GX_MATRIX mode, float * m);
+void gxSetMatrixf(GX_MATRIX mode, float * m);
+void gxMultMatrixf(const float * m);
+void gxTranslatef(float x, float y, float z);
+void gxRotatef(float angle, float x, float y, float z);
+void gxScalef(float x, float y, float z);
+void gxValidateMatrices();
 
 void gxBegin(GX_PRIMITIVE_TYPE primitiveType);
 void gxEnd();

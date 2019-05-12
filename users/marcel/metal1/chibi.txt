@@ -1,4 +1,5 @@
 app marcel-metal1
+	depend_library libgg
 	depend_library libsdl2
 	depend_library Cocoa find
 	depend_library Metal find
