@@ -83,14 +83,20 @@ int main(int arg, char * argv[])
 			#else
 				gxBegin(GX_QUADS);
 				{
-					gxColor4f(1, 0, 0, 1);
-					gxVertex2f(-1.f, -1.f);
-					gxColor4f(0, 1, 0, 1);
-					gxVertex2f(+1.f, -1.f);
-					gxColor4f(0, 0, 1, 1);
-					gxVertex2f(+1.f, +1.f);
-					gxColor4f(1, 1, 1, 1);
-					gxVertex2f(-1.f, +1.f);
+					for (int i = 0; i < 10; ++i)
+					{
+						const float x = (i % 3) / 2.f - .5f;
+						const float y = (i % 5) / 4.f - .5f;
+						
+						gxColor4f(1, 0, 0, 1);
+						gxVertex2f(x-1.f, y-1.f);
+						gxColor4f(0, 1, 0, 1);
+						gxVertex2f(x+1.f, y-1.f);
+						gxColor4f(0, 0, 1, 1);
+						gxVertex2f(x+1.f, y+1.f);
+						gxColor4f(1, 1, 1, 1);
+						gxVertex2f(x-1.f, y+1.f);
+					}
 				}
 				gxEnd();
 			#endif

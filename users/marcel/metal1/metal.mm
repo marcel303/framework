@@ -438,6 +438,10 @@ static int s_gxMaxVertexCount = 0;
 static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 
+static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
+static int s_gxLastVertexCount = -1;
+
+static id <MTLBuffer> s_gxVertexBufferCopy = nullptr; // todo : remove s_gxVertexBuffer and write directly into this one
 static id <MTLBuffer> s_gxIndexBuffer = nullptr;
 
 static float scale255(const float v)
@@ -465,41 +469,19 @@ void gxInitialize()
 	s_gxVertex.cw = 1.f;
 
 #if 1
+// todo : should double buffer this I guess and add a semaphore or something to signal it's ok to reuse
+	s_gxVertexBufferCopy = [device newBufferWithLength:sizeof(s_gxIndexBuffer) options:MTLResourceCPUCacheModeWriteCombined];
+	
 	const int maxVertexCount = sizeof(s_gxVertexBuffer) / sizeof(s_gxVertexBuffer[0]);
 	const int maxQuads = maxVertexCount / 4;
 	const int maxIndicesForQuads = maxQuads * 6;
 	
 	s_gxIndexBuffer = [device newBufferWithLength:maxIndicesForQuads * sizeof(INDEX_TYPE) options:MTLResourceCPUCacheModeWriteCombined];
 #elif TODO
-	fassert(s_gxVertexBufferObject[0] == 0);
-	glGenBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
-	
-	fassert(s_gxIndexBufferObject[0] == 0);
-	glGenBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
-	
-	// create vertex array
-	fassert(s_gxVertexArrayObject[0] == 0);
-	glGenVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
+	glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[i]);
 	checkErrorGL();
+	bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
 
-	for (int i = 0; i < GX_VAO_COUNT; ++i)
-	{
-		glBindVertexArray(s_gxVertexArrayObject[i]);
-		checkErrorGL();
-		{
-			#if GX_USE_ELEMENT_ARRAY_BUFFER
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[i]);
-			checkErrorGL();
-			#endif
-			glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[i]);
-			checkErrorGL();
-			bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
-		}
-	}
-
-	glBindVertexArray(0);
-	checkErrorGL();
-	
 	// enable seamless cube map sampling along the edges
 	
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -508,38 +490,28 @@ void gxInitialize()
 
 void gxShutdown()
 {
+	[s_gxVertexBufferCopy release];
+	s_gxVertexBufferCopy = nullptr;
+	
+	[s_gxIndexBuffer release];
+	s_gxIndexBuffer = nullptr;
+	
 #if TODO
 	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-	
-	if (s_gxVertexArrayObject[0] != 0)
-	{
-		glDeleteVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
-		memset(s_gxVertexArrayObject, 0, sizeof(s_gxVertexArrayObject));
-	}
-	
-	if (s_gxVertexBufferObject[0] != 0)
-	{
-		glDeleteBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
-		memset(s_gxVertexBufferObject, 0, sizeof(s_gxVertexBufferObject));
-	}
+#endif
 
-	if (s_gxIndexBufferObject[0] != 0)
-	{
-		glDeleteBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
-		memset(s_gxIndexBufferObject, 0, sizeof(s_gxIndexBufferObject));
-	}
-	
 	s_gxPrimitiveType = GX_INVALID_PRIM;
 	s_gxVertices = nullptr;
 	s_gxVertexCount = 0;
 	s_gxMaxVertexCount = 0;
 	s_gxPrimitiveSize = 0;
 	s_gxVertex = GxVertex();
+#if TODO
 	s_gxTextureEnabled = false;
+#endif
 	
 	s_gxLastPrimitiveType = GX_INVALID_PRIM;
 	s_gxLastVertexCount = -1;
-#endif
 }
 
 static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
@@ -672,7 +644,6 @@ static void gxFlush(bool endOfBatch)
 
 		bool needToRegenerateIndexBuffer = false;
 		
-	#if TODO
 		if (s_gxPrimitiveType != s_gxLastPrimitiveType || s_gxVertexCount != s_gxLastVertexCount)
 		{
 			s_gxLastPrimitiveType = s_gxPrimitiveType;
@@ -680,9 +651,6 @@ static void gxFlush(bool endOfBatch)
 
 			needToRegenerateIndexBuffer = true;
 		}
-	#else
-		needToRegenerateIndexBuffer = true;
-	#endif
 	
 		// convert quads to triangles
 		
