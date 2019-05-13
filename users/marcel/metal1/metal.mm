@@ -24,11 +24,98 @@ struct WindowData
 	id <MTLRenderCommandEncoder> encoder;
 };
 
+struct
+{
+	bool gxShaderIsDirty = true;
+} globals; // todo : remove
+
+struct ShaderCacheElem
+{
+	enum ShaderParam
+	{
+		kSp_ModelViewMatrix,
+		kSp_ModelViewProjectionMatrix,
+		kSp_ProjectionMatrix,
+		kSp_SkinningMatrices,
+		kSp_Texture,
+		kSp_Params,
+		kSp_ShadingParams,
+		kSp_GradientInfo,
+		kSp_GradientMatrix,
+		kSp_TextureMatrix,
+		kSp_MAX
+	};
+
+	struct
+	{
+		int offset = -1;
+
+		void set(const int offset)
+		{
+			this->offset = offset;
+		}
+	} params[kSp_MAX];
+	
+	int uniformBufferIndex = -1;
+	int uniformBufferSize = 0;
+	
+	void init(MTLRenderPipelineReflection * reflection)
+	{
+	/*
+		// todo : VS_POSITION etc
+		glBindAttribLocation(program, VS_POSITION,      "in_position4");
+		glBindAttribLocation(program, VS_NORMAL,        "in_normal");
+		glBindAttribLocation(program, VS_COLOR,         "in_color");
+		glBindAttribLocation(program, VS_TEXCOORD0,     "in_texcoord0");
+		glBindAttribLocation(program, VS_TEXCOORD1,     "in_texcoord1");
+		glBindAttribLocation(program, VS_BLEND_INDICES, "in_skinningBlendIndices");
+		glBindAttribLocation(program, VS_BLEND_WEIGHTS, "in_skinningBlendWeights");
+		checkErrorGL();
+	*/
+
+		// cache uniform offsets
+		
+		if (reflection != nullptr)
+		{
+			for (MTLArgument * arg in reflection.vertexArguments)
+			{
+				if (arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
+				{
+					uniformBufferIndex = arg.index;
+					uniformBufferSize = arg.bufferDataSize;
+					
+					for (MTLStructMember * uniform in arg.bufferStructType.members)
+					{
+					#define CASE(param, string) if ([uniform.name isEqualToString:@string]) { params[param].set(uniform.offset); }
+						{
+							CASE(kSp_ModelViewMatrix, "ModelViewMatrix");
+							CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
+							CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
+							CASE(kSp_SkinningMatrices, "skinningMatrices");
+							CASE(kSp_Texture, "texture0");
+							CASE(kSp_Params, "params");
+							CASE(kSp_ShadingParams, "shadingParams");
+							CASE(kSp_GradientInfo, "gradientInfo");
+							CASE(kSp_GradientMatrix, "gmat");
+							CASE(kSp_TextureMatrix, "tmat");
+						}
+					#undef CASE
+					}
+					
+					break;
+				}
+			}
+		}
+	}
+};
+
 static std::map<SDL_Window*, WindowData*> windowDatas;
 
 static WindowData * activeWindowData = nullptr;
 
 static MTLRenderPipelineReflection * activeRenderPipelineReflection = nullptr;
+
+static ShaderCacheElem shaderCacheElem;
 
 #if 1 // todo : move elsewhere
 
@@ -148,6 +235,9 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 		/* The drawable's texture is cleared to the specified color here. */
 		activeWindowData->encoder = [[activeWindowData->cmdbuf renderCommandEncoderWithDescriptor:activeWindowData->renderdesc] retain];
 		activeWindowData->encoder.label = @"hello encoder";
+		
+		const CGSize size = activeWindowData->metalview.frame.size;
+		metal_set_viewport(size.width, size.height);
 	}
 }
 
@@ -176,7 +266,13 @@ void metal_draw_end()
 	activeWindowData->cmdbuf = nullptr;
 }
 
+void metal_set_viewport(const int sx, const int sy)
+{
+	[activeWindowData->encoder setViewport:(MTLViewport){ 0, 0, (double)sx, (double)sy, 0.0, 1.0 }];
+}
 
+/*
+// todo : remove
 struct __attribute__((packed)) RenderState
 {
 	int blendMode = 0;
@@ -188,6 +284,7 @@ struct ShaderCache
 {
 
 };
+*/
 
 // -- gx api implementation --
 
@@ -367,57 +464,50 @@ void gxScalef(float x, float y, float z)
 
 void gxValidateMatrices()
 {
-#if 1
-	if (activeRenderPipelineReflection != nullptr)
-	{
-		for (MTLArgument * arg in activeRenderPipelineReflection.vertexArguments)
-		{
-        	if (arg.bufferDataType == MTLDataTypeStruct)
-        	{
-        		uint8_t * data = (uint8_t*)alloca(arg.bufferDataSize);
-				
-				for (MTLStructMember * uniform in arg.bufferStructType.members)
-				{
-					if ([uniform.name isEqualToString:@"ModelViewProjectionMatrix"])
-					{
-						memcpy(data + uniform.offset, (s_gxProjection.get() * s_gxModelView.get()).m_v, sizeof(Mat4x4));
-					}
-				}
-				
-				[activeWindowData->encoder setVertexBytes:data length:arg.bufferDataSize atIndex:arg.index];
-			}
-		}
-	}
-#elif TODO
+#if TODO
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
 	
 	//printf("validate1\n");
 	
 	if (globals.shader && globals.shader->getType() == SHADER_VSPS)
+#endif
 	{
+	#if TODO
 		Shader * shader = static_cast<Shader*>(globals.shader);
-
+		
 		const ShaderCacheElem & shaderElem = shader->getCacheElem();
+	#else
+		const ShaderCacheElem & shaderElem = shaderCacheElem;
+	#endif
+	
+		if (shaderElem.uniformBufferIndex != -1)
+		{
+			uint8_t * data = (uint8_t*)alloca(shaderElem.uniformBufferSize);
 		
-		// check if matrices are dirty
-		
-		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index >= 0)
-		{
-			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index, s_gxModelView.get().m_v);
-			//printf("validate2\n");
-		}
-		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index >= 0)
-		{
-			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index, (s_gxProjection.get() * s_gxModelView.get()).m_v);
-			//printf("validate3\n");
-		}
-		if ((globals.gxShaderIsDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index >= 0)
-		{
-			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index, s_gxProjection.get().m_v);
-			//printf("validate4\n");
+			// check if matrices are dirty
+			
+			if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].offset >= 0)
+			{
+				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].offset);
+				*dst = s_gxModelView.get();
+				//printf("validate2\n");
+			}
+			if ((globals.gxShaderIsDirty || s_gxModelView.isDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].offset >= 0)
+			{
+				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].offset);
+				*dst = s_gxProjection.get() * s_gxModelView.get();
+				//printf("validate3\n");
+			}
+			if ((globals.gxShaderIsDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].offset >= 0)
+			{
+				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].offset);
+				*dst = s_gxProjection.get();
+				//printf("validate4\n");
+			}
+			
+			[activeWindowData->encoder setVertexBytes:data length:shaderCacheElem.uniformBufferSize atIndex:shaderCacheElem.uniformBufferIndex];
 		}
 	}
-#endif
 
 	s_gxModelView.isDirty = false;
 	s_gxProjection.isDirty = false;
@@ -598,11 +688,13 @@ static void gxValidatePipelineState()
 		id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&activeRenderPipelineReflection error:&error];
 		[activeRenderPipelineReflection retain];
 		
+	// todo : cache shader elems and pipeline states
+		shaderCacheElem = ShaderCacheElem();
+		shaderCacheElem.init(activeRenderPipelineReflection);
+		
 		//NSLog(@"%@", pipelineState);
 
 		//
-
-		[activeWindowData->encoder setViewport:(MTLViewport){0.0, 0.0, 300, 600, 0.0, 1.0 }];
 
 		[activeWindowData->encoder setRenderPipelineState:pipelineState];
 
