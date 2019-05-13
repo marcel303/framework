@@ -26,6 +26,8 @@ static std::map<SDL_Window*, WindowData*> windowDatas;
 
 static WindowData * activeWindowData = nullptr;
 
+static MTLRenderPipelineReflection * activeRenderPipelineReflection = nullptr;
+
 #if 1 // todo : move elsewhere
 
 static const char * s_shaderVs = R"SHADER(
@@ -52,6 +54,7 @@ static const char * s_shaderVs = R"SHADER(
 	{
 		float4x4 projectionMatrix;
 		float4x4 modelViewMatrix;
+		float4x4 ModelViewProjectionMatrix;
 	};
 
 	vertex ShaderOutputs shader_main(
@@ -60,10 +63,7 @@ static const char * s_shaderVs = R"SHADER(
 	{
 		ShaderOutputs outputs;
 		
-		//outputs.position = uniforms.projectionMatrix * uniforms.modelViewMatrix * float4(inputs.position, 1);
-		
-		outputs.position.xyz = inputs.position.xyz * .5f;
-		outputs.position.w = 1.f;
+		outputs.position = uniforms.ModelViewProjectionMatrix * inputs.position;
 		outputs.color = inputs.color;
 		
 		return outputs;
@@ -147,6 +147,10 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 
 void metal_draw_end()
 {
+	activeRenderPipelineReflection = nullptr;
+	
+	//
+	
 	[activeWindowData->encoder endEncoding];
 
 	[activeWindowData->cmdbuf presentDrawable:activeWindowData->current_drawable];
@@ -347,7 +351,28 @@ void gxScalef(float x, float y, float z)
 
 void gxValidateMatrices()
 {
-#if TODO
+#if 1
+	if (activeRenderPipelineReflection != nullptr)
+	{
+		for (MTLArgument * arg in activeRenderPipelineReflection.vertexArguments)
+		{
+        	if (arg.bufferDataType == MTLDataTypeStruct)
+        	{
+        		uint8_t * data = (uint8_t*)alloca(arg.bufferDataSize);
+				
+				for (MTLStructMember * uniform in arg.bufferStructType.members)
+				{
+					if ([uniform.name isEqualToString:@"ModelViewProjectionMatrix"])
+					{
+						memcpy(data + uniform.offset, (s_gxProjection.get() * s_gxModelView.get()).m_v, sizeof(Mat4x4));
+					}
+				}
+				
+				[activeWindowData->encoder setVertexBytes:data length:arg.bufferDataSize atIndex:arg.index];
+			}
+		}
+	}
+#elif TODO
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
 	
 	//printf("validate1\n");
@@ -482,8 +507,11 @@ static void gxValidatePipelineState()
 		//pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
 		pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 
-		id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
-
+		activeRenderPipelineReflection = nullptr;
+		
+		const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
+		id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&activeRenderPipelineReflection error:&error];
+		
 		//NSLog(@"%@", pipelineState);
 
 		//
@@ -522,9 +550,9 @@ static void gxFlush(bool endOfBatch)
 		setShader(shader);
 	#endif
 	
-		gxValidateMatrices();
-	
 		gxValidatePipelineState();
+		
+		gxValidateMatrices();
 	
 		[activeWindowData->encoder setVertexBytes:s_gxVertices length:sizeof(GxVertex) * s_gxVertexCount atIndex:0];
 		
@@ -731,6 +759,8 @@ void gxEmitVertices(int primitiveType, int numVertices)
 	setShader(shader);
 #endif
 
+	gxValidatePipelineState();
+	
 	gxValidateMatrices();
 
 #if TODO
