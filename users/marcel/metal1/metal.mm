@@ -1,5 +1,6 @@
 #import "metal.h"
 #import "metalView.h"
+#import "shader.h"
 #import "window_data.h"
 #import <Cocoa/Cocoa.h>
 #import <map>
@@ -14,106 +15,8 @@ static id <MTLDevice> device;
 struct
 {
 	bool gxShaderIsDirty = true;
+	Shader * shader = nullptr;
 } globals; // todo : remove
-
-struct ShaderCacheElem
-{
-	enum ShaderParam
-	{
-		kSp_ModelViewMatrix,
-		kSp_ModelViewProjectionMatrix,
-		kSp_ProjectionMatrix,
-		kSp_SkinningMatrices,
-		kSp_Texture,
-		kSp_Params,
-		kSp_ShadingParams,
-		kSp_GradientInfo,
-		kSp_GradientMatrix,
-		kSp_TextureMatrix,
-		kSp_MAX
-	};
-
-	struct StageInfo
-	{
-		struct
-		{
-			int offset = -1;
-
-			void set(const int offset)
-			{
-				this->offset = offset;
-			}
-		} params[kSp_MAX];
-		
-		int uniformBufferIndex = -1;
-		int uniformBufferSize = 0;
-		
-		void init(MTLArgument * arg)
-		{
-			uniformBufferIndex = arg.index;
-			uniformBufferSize = arg.bufferDataSize;
-		
-			for (MTLStructMember * uniform in arg.bufferStructType.members)
-			{
-			#define CASE(param, string) if ([uniform.name isEqualToString:@string]) { params[param].set(uniform.offset); }
-				{
-					CASE(kSp_ModelViewMatrix, "ModelViewMatrix");
-					CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
-					CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
-					CASE(kSp_SkinningMatrices, "skinningMatrices");
-					CASE(kSp_Texture, "texture0");
-					CASE(kSp_Params, "params");
-					CASE(kSp_ShadingParams, "shadingParams");
-					CASE(kSp_GradientInfo, "gradientInfo");
-					CASE(kSp_GradientMatrix, "gmat");
-					CASE(kSp_TextureMatrix, "tmat");
-				}
-			#undef CASE
-			}
-		}
-	};
-	
-	StageInfo vsInfo;
-	StageInfo psInfo;
-	
-	void init(MTLRenderPipelineReflection * reflection)
-	{
-	/*
-		// todo : VS_POSITION etc
-		glBindAttribLocation(program, VS_POSITION,      "in_position4");
-		glBindAttribLocation(program, VS_NORMAL,        "in_normal");
-		glBindAttribLocation(program, VS_COLOR,         "in_color");
-		glBindAttribLocation(program, VS_TEXCOORD0,     "in_texcoord0");
-		glBindAttribLocation(program, VS_TEXCOORD1,     "in_texcoord1");
-		glBindAttribLocation(program, VS_BLEND_INDICES, "in_skinningBlendIndices");
-		glBindAttribLocation(program, VS_BLEND_WEIGHTS, "in_skinningBlendWeights");
-		checkErrorGL();
-	*/
-
-		// cache uniform offsets
-		
-		if (reflection != nullptr)
-		{
-			for (MTLArgument * arg in reflection.vertexArguments)
-			{
-				if (arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
-				{
-					vsInfo.init(arg);
-					break;
-				}
-			}
-			
-			for (MTLArgument * arg in reflection.fragmentArguments)
-			{
-				if (arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
-				{
-					psInfo.init(arg);
-					break;
-				}
-			}
-		}
-	}
-};
 
 static std::map<SDL_Window*, WindowData*> windowDatas;
 
@@ -121,7 +24,7 @@ static WindowData * activeWindowData = nullptr;
 
 static MTLRenderPipelineReflection * activeRenderPipelineReflection = nullptr;
 
-static ShaderCacheElem shaderCacheElem;
+static Shader s_shader;
 
 static std::vector<id <MTLResource>> s_resourcesToFree;
 
@@ -686,19 +589,17 @@ void gxValidateMatrices()
 {
 #if TODO
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
-	
+#endif
+
 	//printf("validate1\n");
 	
+#if TODO
 	if (globals.shader && globals.shader->getType() == SHADER_VSPS)
 #endif
 	{
-	#if TODO
 		Shader * shader = static_cast<Shader*>(globals.shader);
 		
 		const ShaderCacheElem & shaderElem = shader->getCacheElem();
-	#else
-		const ShaderCacheElem & shaderElem = shaderCacheElem;
-	#endif
 	
 		if (shaderElem.vsInfo.uniformBufferIndex != -1)
 		{
@@ -725,7 +626,7 @@ void gxValidateMatrices()
 				//printf("validate4\n");
 			}
 			
-			[activeWindowData->encoder setVertexBytes:data length:shaderCacheElem.vsInfo.uniformBufferSize atIndex:shaderCacheElem.vsInfo.uniformBufferIndex];
+			[activeWindowData->encoder setVertexBytes:data length:shaderElem.vsInfo.uniformBufferSize atIndex:shaderElem.vsInfo.uniformBufferIndex];
 		}
 	}
 
@@ -1022,8 +923,9 @@ static void gxValidatePipelineState()
 		[activeRenderPipelineReflection retain];
 		
 	// todo : cache shader elems and pipeline states
-		shaderCacheElem = ShaderCacheElem();
-		shaderCacheElem.init(activeRenderPipelineReflection);
+		s_shader = Shader();
+		s_shader.m_cacheElem.init(vs, activeRenderPipelineReflection);
+		globals.shader = &s_shader;
 		
 		//NSLog(@"%@", pipelineState);
 
@@ -1059,6 +961,10 @@ static void gxFlush(bool endOfBatch)
 		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
 
 		setShader(shader);
+	#else
+		gxValidatePipelineState(); // todo : remove. just to ensure a shader is set
+		
+		Shader & shader = *globals.shader;
 	#endif
 	
 		gxValidatePipelineState();
@@ -1129,11 +1035,7 @@ static void gxFlush(bool endOfBatch)
 			indexed = true;
 		}
 		
-	#if TODO
 		const ShaderCacheElem & shaderElem = shader.getCacheElem();
-	#else
-		const ShaderCacheElem & shaderElem = shaderCacheElem;
-	#endif
 		
 		uint8_t * data = (uint8_t*)alloca(shaderElem.psInfo.uniformBufferSize);
 		
@@ -1158,7 +1060,7 @@ static void gxFlush(bool endOfBatch)
 		}
 	#endif
 	
-		[activeWindowData->encoder setFragmentBytes:data length:shaderCacheElem.psInfo.uniformBufferSize atIndex:shaderCacheElem.psInfo.uniformBufferIndex];
+		[activeWindowData->encoder setFragmentBytes:data length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
 		
 	#if TODO
 		if (shader.isValid())
