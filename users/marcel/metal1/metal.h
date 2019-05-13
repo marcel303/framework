@@ -51,6 +51,7 @@ enum CULL_WINDING
 
 void setBlend(BLEND_MODE blendMode);
 void setLineSmooth(bool enabled);
+void setWireframe(bool enabled);
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
 

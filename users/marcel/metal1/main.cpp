@@ -57,6 +57,7 @@ int main(int arg, char * argv[])
 		{
 			//setDepthTest(false, DEPTH_ALWAYS);
 			setDepthTest(true, DEPTH_LESS);
+			setWireframe(false);
 			
 			Mat4x4 projectionMatrix;
 			projectionMatrix.MakePerspectiveLH(90.f * float(M_PI) / 180.f, 600.f / 300.f, .01f, 100.f);

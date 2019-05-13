@@ -364,7 +364,12 @@ void setBlend(BLEND_MODE blendMode)
 
 void setLineSmooth(bool enabled)
 {
+	//Assert(false);
+}
 
+void setWireframe(bool enabled)
+{
+	[activeWindowData->encoder setTriangleFillMode:enabled ? MTLTriangleFillModeLines : MTLTriangleFillModeFill];
 }
 
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
@@ -422,7 +427,18 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 {
-
+	const MTLCullMode metalCullMode =
+		mode == CULL_NONE ? MTLCullModeNone :
+		mode == CULL_FRONT ? MTLCullModeFront :
+		MTLCullModeBack;
+	
+	[activeWindowData->encoder setCullMode:metalCullMode];
+	
+	const MTLWinding metalFrontFaceWinding =
+		frontFaceWinding == CULL_CCW ? MTLWindingCounterClockwise :
+		MTLWindingClockwise;
+	
+	[activeWindowData->encoder setFrontFacingWinding:metalFrontFaceWinding];
 }
 
 // -- gpu resources --
