@@ -46,18 +46,48 @@ struct ShaderCacheElem
 		kSp_MAX
 	};
 
-	struct
+	struct StageInfo
 	{
-		int offset = -1;
-
-		void set(const int offset)
+		struct
 		{
-			this->offset = offset;
+			int offset = -1;
+
+			void set(const int offset)
+			{
+				this->offset = offset;
+			}
+		} params[kSp_MAX];
+		
+		int uniformBufferIndex = -1;
+		int uniformBufferSize = 0;
+		
+		void init(MTLArgument * arg)
+		{
+			uniformBufferIndex = arg.index;
+			uniformBufferSize = arg.bufferDataSize;
+		
+			for (MTLStructMember * uniform in arg.bufferStructType.members)
+			{
+			#define CASE(param, string) if ([uniform.name isEqualToString:@string]) { params[param].set(uniform.offset); }
+				{
+					CASE(kSp_ModelViewMatrix, "ModelViewMatrix");
+					CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
+					CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
+					CASE(kSp_SkinningMatrices, "skinningMatrices");
+					CASE(kSp_Texture, "texture0");
+					CASE(kSp_Params, "params");
+					CASE(kSp_ShadingParams, "shadingParams");
+					CASE(kSp_GradientInfo, "gradientInfo");
+					CASE(kSp_GradientMatrix, "gmat");
+					CASE(kSp_TextureMatrix, "tmat");
+				}
+			#undef CASE
+			}
 		}
-	} params[kSp_MAX];
+	};
 	
-	int uniformBufferIndex = -1;
-	int uniformBufferSize = 0;
+	StageInfo vsInfo;
+	StageInfo psInfo;
 	
 	void init(MTLRenderPipelineReflection * reflection)
 	{
@@ -81,27 +111,16 @@ struct ShaderCacheElem
 			{
 				if (arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
 				{
-					uniformBufferIndex = arg.index;
-					uniformBufferSize = arg.bufferDataSize;
-					
-					for (MTLStructMember * uniform in arg.bufferStructType.members)
-					{
-					#define CASE(param, string) if ([uniform.name isEqualToString:@string]) { params[param].set(uniform.offset); }
-						{
-							CASE(kSp_ModelViewMatrix, "ModelViewMatrix");
-							CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
-							CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
-							CASE(kSp_SkinningMatrices, "skinningMatrices");
-							CASE(kSp_Texture, "texture0");
-							CASE(kSp_Params, "params");
-							CASE(kSp_ShadingParams, "shadingParams");
-							CASE(kSp_GradientInfo, "gradientInfo");
-							CASE(kSp_GradientMatrix, "gmat");
-							CASE(kSp_TextureMatrix, "tmat");
-						}
-					#undef CASE
-					}
-					
+					vsInfo.init(arg);
+					break;
+				}
+			}
+			
+			for (MTLArgument * arg in reflection.fragmentArguments)
+			{
+				if (arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
+				{
+					psInfo.init(arg);
 					break;
 				}
 			}
@@ -179,15 +198,27 @@ static const char * s_shaderPs = R"SHADER(
 		float2 texcoord;
 	};
 
+	struct ShaderUniforms
+	{
+		float textureEnabled;
+		float colorMode;
+		float colorPost;
+		float colorClamp;
+	};
+
 	fragment float4 shader_main(
 		ShaderInputs inputs [[stage_in]],
-		texture2d<float> colorTexture [[texture(0)]])
+		constant ShaderUniforms & uniforms [[buffer(0)]],
+		texture2d<float> textureResource [[texture(0)]])
 	{
-		constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
-		
 		float4 color = inputs.color;
 		
-		color *= colorTexture.sample(textureSampler, inputs.texcoord);
+		if (uniforms.textureEnabled != 0.0)
+		{
+			constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
+			
+			color *= textureResource.sample(textureSampler, inputs.texcoord);
+		}
 		
 		return color;
 	}
@@ -557,60 +588,37 @@ void gxValidateMatrices()
 		const ShaderCacheElem & shaderElem = shaderCacheElem;
 	#endif
 	
-		if (shaderElem.uniformBufferIndex != -1)
+		if (shaderElem.vsInfo.uniformBufferIndex != -1)
 		{
-			uint8_t * data = (uint8_t*)alloca(shaderElem.uniformBufferSize);
+			uint8_t * data = (uint8_t*)alloca(shaderElem.vsInfo.uniformBufferSize);
 		
 			// check if matrices are dirty
 			
-			if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].offset >= 0)
+			if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) && shaderElem.vsInfo.params[ShaderCacheElem::kSp_ModelViewMatrix].offset >= 0)
 			{
-				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].offset);
+				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.vsInfo.params[ShaderCacheElem::kSp_ModelViewMatrix].offset);
 				*dst = s_gxModelView.get();
 				//printf("validate2\n");
 			}
-			if ((globals.gxShaderIsDirty || s_gxModelView.isDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].offset >= 0)
+			if ((globals.gxShaderIsDirty || s_gxModelView.isDirty || s_gxProjection.isDirty) && shaderElem.vsInfo.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].offset >= 0)
 			{
-				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].offset);
+				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.vsInfo.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].offset);
 				*dst = s_gxProjection.get() * s_gxModelView.get();
 				//printf("validate3\n");
 			}
-			if ((globals.gxShaderIsDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].offset >= 0)
+			if ((globals.gxShaderIsDirty || s_gxProjection.isDirty) && shaderElem.vsInfo.params[ShaderCacheElem::kSp_ProjectionMatrix].offset >= 0)
 			{
-				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].offset);
+				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.vsInfo.params[ShaderCacheElem::kSp_ProjectionMatrix].offset);
 				*dst = s_gxProjection.get();
 				//printf("validate4\n");
 			}
 			
-			[activeWindowData->encoder setVertexBytes:data length:shaderCacheElem.uniformBufferSize atIndex:shaderCacheElem.uniformBufferIndex];
+			[activeWindowData->encoder setVertexBytes:data length:shaderCacheElem.vsInfo.uniformBufferSize atIndex:shaderCacheElem.vsInfo.uniformBufferIndex];
 		}
 	}
 
 	s_gxModelView.isDirty = false;
 	s_gxProjection.isDirty = false;
-}
-
-//
-
-static GxTextureId s_gxTexture = 0;
-
-void gxValidateShaderResources()
-{
-	if (s_gxTexture)
-	{
-		auto i = s_textures.find(s_gxTexture);
-		
-		Assert(i != s_textures.end());
-		if (i != s_textures.end())
-		{
-			auto & texture = i->second;
-			[activeWindowData->encoder setFragmentTexture:texture atIndex:0];
-		}
-	}
-	else
-	{
-		[activeWindowData->encoder setFragmentTexture:nullptr atIndex:0];
-	}
 }
 
 struct GxVertex
@@ -630,6 +638,8 @@ static int s_gxVertexCount = 0;
 static int s_gxMaxVertexCount = 0;
 static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
+static GxTextureId s_gxTexture = 0;
+static bool s_gxTextureEnabled = false;
 
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
@@ -644,6 +654,7 @@ static float scale255(const float v)
 }
 
 void gxEmitVertex();
+void gxValidateShaderResources();
 
 void gxInitialize()
 {
@@ -903,23 +914,34 @@ static void gxFlush(bool endOfBatch)
 		
 	#if TODO
 		const ShaderCacheElem & shaderElem = shader.getCacheElem();
+	#else
+		const ShaderCacheElem & shaderElem = shaderCacheElem;
+	#endif
 		
-		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+		uint8_t * data = (uint8_t*)alloca(shaderElem.psInfo.uniformBufferSize);
+		
+		if (shaderElem.psInfo.params[ShaderCacheElem::kSp_Params].offset != -1)
 		{
-			shader.setImmediate(
-				shaderElem.params[ShaderCacheElem::kSp_Params].index,
-				s_gxTextureEnabled ? 1 : 0,
-				globals.colorMode,
-				globals.colorPost,
-				globals.colorClamp);
+			float * values = (float*)(data + shaderElem.psInfo.params[ShaderCacheElem::kSp_Params].offset);
+			
+			values[0] = s_gxTextureEnabled ? 1.f : 0.f,
+			//globals.colorMode, // todo : re-add globals.colorMode etc
+			//globals.colorPost,
+			//globals.colorClamp);
+			values[1] = 0;
+			values[2] = 0;
+			values[3] = 0;
 		}
 
+	#if TODO
 		if (globals.gxShaderIsDirty)
 		{
 			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
 		}
 	#endif
+	
+		[activeWindowData->encoder setFragmentBytes:data length:shaderCacheElem.psInfo.uniformBufferSize atIndex:shaderCacheElem.psInfo.uniformBufferIndex];
 		
 	#if TODO
 		if (shader.isValid())
@@ -1191,5 +1213,26 @@ void gxEmitVertex()
 		{
 			gxFlush(false);
 		}
+	}
+}
+
+//
+
+void gxValidateShaderResources()
+{
+	if (s_gxTexture)
+	{
+		auto i = s_textures.find(s_gxTexture);
+		
+		Assert(i != s_textures.end());
+		if (i != s_textures.end())
+		{
+			auto & texture = i->second;
+			[activeWindowData->encoder setFragmentTexture:texture atIndex:0];
+		}
+	}
+	else
+	{
+		[activeWindowData->encoder setFragmentTexture:nullptr atIndex:0];
 	}
 }
