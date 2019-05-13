@@ -5,6 +5,8 @@
 #import <Metal/Metal.h>
 #import <SDL2/SDL_syswm.h>
 
+#define INDEX_TYPE uint32_t
+
 static id <MTLDevice> device;
 
 struct WindowData
@@ -436,6 +438,8 @@ static int s_gxMaxVertexCount = 0;
 static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 
+static id <MTLBuffer> s_gxIndexBuffer = nullptr;
+
 static float scale255(const float v)
 {
 	static const float m = 1.f / 255.f;
@@ -443,6 +447,100 @@ static float scale255(const float v)
 }
 
 void gxEmitVertex();
+
+void gxInitialize()
+{
+#if TODO
+	fassert(s_shaderSources.empty());
+	
+	registerBuiltinShaders();
+
+	s_gxShader.load("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
+#endif
+
+	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
+	s_gxVertex.cx = 1.f;
+	s_gxVertex.cy = 1.f;
+	s_gxVertex.cz = 1.f;
+	s_gxVertex.cw = 1.f;
+
+#if 1
+	const int maxVertexCount = sizeof(s_gxVertexBuffer) / sizeof(s_gxVertexBuffer[0]);
+	const int maxQuads = maxVertexCount / 4;
+	const int maxIndicesForQuads = maxQuads * 6;
+	
+	s_gxIndexBuffer = [device newBufferWithLength:maxIndicesForQuads * sizeof(INDEX_TYPE) options:MTLResourceCPUCacheModeWriteCombined];
+#elif TODO
+	fassert(s_gxVertexBufferObject[0] == 0);
+	glGenBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
+	
+	fassert(s_gxIndexBufferObject[0] == 0);
+	glGenBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
+	
+	// create vertex array
+	fassert(s_gxVertexArrayObject[0] == 0);
+	glGenVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
+	checkErrorGL();
+
+	for (int i = 0; i < GX_VAO_COUNT; ++i)
+	{
+		glBindVertexArray(s_gxVertexArrayObject[i]);
+		checkErrorGL();
+		{
+			#if GX_USE_ELEMENT_ARRAY_BUFFER
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[i]);
+			checkErrorGL();
+			#endif
+			glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[i]);
+			checkErrorGL();
+			bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
+		}
+	}
+
+	glBindVertexArray(0);
+	checkErrorGL();
+	
+	// enable seamless cube map sampling along the edges
+	
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+#endif
+}
+
+void gxShutdown()
+{
+#if TODO
+	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+	
+	if (s_gxVertexArrayObject[0] != 0)
+	{
+		glDeleteVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
+		memset(s_gxVertexArrayObject, 0, sizeof(s_gxVertexArrayObject));
+	}
+	
+	if (s_gxVertexBufferObject[0] != 0)
+	{
+		glDeleteBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
+		memset(s_gxVertexBufferObject, 0, sizeof(s_gxVertexBufferObject));
+	}
+
+	if (s_gxIndexBufferObject[0] != 0)
+	{
+		glDeleteBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
+		memset(s_gxIndexBufferObject, 0, sizeof(s_gxIndexBufferObject));
+	}
+	
+	s_gxPrimitiveType = GX_INVALID_PRIM;
+	s_gxVertices = nullptr;
+	s_gxVertexCount = 0;
+	s_gxMaxVertexCount = 0;
+	s_gxPrimitiveSize = 0;
+	s_gxVertex = GxVertex();
+	s_gxTextureEnabled = false;
+	
+	s_gxLastPrimitiveType = GX_INVALID_PRIM;
+	s_gxLastVertexCount = -1;
+#endif
+}
 
 static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
 {
@@ -582,9 +680,10 @@ static void gxFlush(bool endOfBatch)
 
 			needToRegenerateIndexBuffer = true;
 		}
+	#else
+		needToRegenerateIndexBuffer = true;
 	#endif
 	
-	#if TODO
 		// convert quads to triangles
 		
 		if (s_gxPrimitiveType == GX_QUADS)
@@ -598,10 +697,10 @@ static void gxFlush(bool endOfBatch)
 
 			if (needToRegenerateIndexBuffer)
 			{
-				indices = (glindex_t*)alloca(sizeof(glindex_t) * numIndices);
+				indices = (INDEX_TYPE*)s_gxIndexBuffer.contents;
 
-				glindex_t * __restrict indexPtr = indices;
-				glindex_t baseIndex = 0;
+				INDEX_TYPE * __restrict indexPtr = indices;
+				INDEX_TYPE baseIndex = 0;
 			
 				for (int i = 0; i < numQuads; ++i)
 				{
@@ -615,14 +714,12 @@ static void gxFlush(bool endOfBatch)
 				
 					baseIndex += 4;
 				}
-			
-			#if GX_USE_ELEMENT_ARRAY_BUFFER
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[vaoIndex]);
-				#if GX_USE_BUFFER_RENAMING
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, 0, GX_BUFFER_DRAW_MODE);
-				#endif
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, indices, GX_BUFFER_DRAW_MODE);
-				checkErrorGL();
+				
+			#if 0 // didModifyRange only applies to managed resources. not write combined
+				NSRange range;
+				range.location = 0;
+				range.length = (indexPtr - indices) * sizeof(INDEX_TYPE);
+				[s_gxIndexBuffer didModifyRange:range];
 			#endif
 			}
 			
@@ -631,7 +728,6 @@ static void gxFlush(bool endOfBatch)
 			
 			indexed = true;
 		}
-	#endif
 		
 	#if TODO
 		const ShaderCacheElem & shaderElem = shader.getCacheElem();
@@ -661,8 +757,7 @@ static void gxFlush(bool endOfBatch)
 
 			if (indexed)
 			{
-				fassert(false); // todo
-				//[activeWindowData->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:indices indexBufferOffset:0];
+				[activeWindowData->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:s_gxIndexBuffer indexBufferOffset:0];
 			}
 			else
 			{

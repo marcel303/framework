@@ -43,6 +43,8 @@ void gxRotatef(float angle, float x, float y, float z);
 void gxScalef(float x, float y, float z);
 void gxValidateMatrices();
 
+void gxInitialize();
+void gxShutdown();
 void gxBegin(GX_PRIMITIVE_TYPE primitiveType);
 void gxEnd();
 void gxEmitVertices(int primitiveType, int numVertices);
