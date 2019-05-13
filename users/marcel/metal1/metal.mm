@@ -137,14 +137,17 @@ static const char * s_shaderVs = R"SHADER(
 	{
 		float4 position [[position]];
 		float4 color;
+		float2 texcoord;
 	};
 
 	struct ShaderUniforms
 	{
-		float4x4 projectionMatrix;
-		float4x4 modelViewMatrix;
+		float4x4 ProjectionMatrix;
+		float4x4 ModelViewMatrix;
 		float4x4 ModelViewProjectionMatrix;
 	};
+
+	#define unpackPosition() inputs.position
 
 	vertex ShaderOutputs shader_main(
 		ShaderInputs inputs [[stage_in]],
@@ -152,8 +155,11 @@ static const char * s_shaderVs = R"SHADER(
 	{
 		ShaderOutputs outputs;
 		
-		outputs.position = uniforms.ModelViewProjectionMatrix * inputs.position;
+		outputs.position = uniforms.ModelViewProjectionMatrix * unpackPosition();
+		//outputs.position = uniforms.ModelViewMatrix * inputs.position;
+		//outputs.position = uniforms.ProjectionMatrix * float4(inputs.position.xy, 2, 1);
 		outputs.color = inputs.color;
+		outputs.texcoord = inputs.texcoord;
 		
 		return outputs;
 	}
@@ -164,15 +170,26 @@ static const char * s_shaderPs = R"SHADER(
 
 	#include <metal_stdlib>
 
+	using namespace metal;
+
 	struct ShaderInputs
 	{
 		float4 position [[position]];
 		float4 color;
+		float2 texcoord;
 	};
 
-	fragment float4 shader_main(ShaderInputs inputs [[stage_in]])
+	fragment float4 shader_main(
+		ShaderInputs inputs [[stage_in]],
+		texture2d<float> colorTexture [[texture(0)]])
 	{
-		return inputs.color;
+		constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
+		
+		float4 color = inputs.color;
+		
+		color *= colorTexture.sample(textureSampler, inputs.texcoord);
+		
+		return color;
 	}
 
 )SHADER";
@@ -286,13 +303,73 @@ struct ShaderCache
 };
 */
 
+// -- gpu resources --
+
+#include <assert.h>
+#define fassert assert
+#define Assert fassert
+
+static std::map<int, id <MTLTexture>> s_textures;
+static int s_nextTextureId = 1;
+
+GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	@autoreleasepool
+	{
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:sx height:sy mipmapped:NO];
+		
+		id <MTLTexture> texture = [device newTextureWithDescriptor:descriptor];
+		
+		if (texture == nullptr)
+			return 0;
+		else
+		{
+			const int pitch = sx * 4;
+			
+			const MTLRegion region =
+			{
+				{ 0, 0, 0 },
+				{ (NSUInteger)sx, (NSUInteger)sy, 1 }
+			};
+			
+			[texture replaceRegion:region mipmapLevel:0 withBytes:source bytesPerRow:pitch];
+			
+			const GxTextureId textureId = s_nextTextureId++;
+			
+			s_textures[textureId] = texture;
+			
+			return textureId;
+		}
+	}
+}
+
+void freeTexture(GxTextureId & textureId)
+{
+	if (textureId != 0)
+	{
+		// todo : defer freeing the memory
+		
+		auto i = s_textures.find(textureId);
+		
+		Assert(i != s_textures.end());
+		if (i != s_textures.end())
+		{
+			auto & texture = i->second;
+			
+			[texture release];
+			texture = nullptr;
+			
+			s_textures.erase(i);
+		}
+		
+		textureId = 0;
+	}
+}
+
 // -- gx api implementation --
 
 #include "Mat4x4.h"
 #include "Quat.h"
-#include <assert.h>
-#define fassert assert
-#define Assert fassert
 
 #define TODO 0
 
@@ -513,6 +590,29 @@ void gxValidateMatrices()
 	s_gxProjection.isDirty = false;
 }
 
+//
+
+static GxTextureId s_gxTexture = 0;
+
+void gxValidateShaderResources()
+{
+	if (s_gxTexture)
+	{
+		auto i = s_textures.find(s_gxTexture);
+		
+		Assert(i != s_textures.end());
+		if (i != s_textures.end())
+		{
+			auto & texture = i->second;
+			[activeWindowData->encoder setFragmentTexture:texture atIndex:0];
+		}
+	}
+	else
+	{
+		[activeWindowData->encoder setFragmentTexture:nullptr atIndex:0];
+	}
+}
+
 struct GxVertex
 {
 	float px, py, pz, pw;
@@ -647,8 +747,13 @@ static void gxValidatePipelineState()
 		NSError * error = nullptr;
 
 		id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:s_shaderVs encoding:NSASCIIStringEncoding] options:options error:&error];
+		if (library_vs == nullptr && error != nullptr)
+			NSLog(@"%@", error);
+		
 		id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:s_shaderPs encoding:NSASCIIStringEncoding] options:options error:&error];
-
+		if (library_ps == nullptr && error != nullptr)
+			NSLog(@"%@", error);
+		
 		id <MTLFunction> vs = [library_vs newFunctionWithName:@"shader_main"];
 		id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
 
@@ -731,6 +836,8 @@ static void gxFlush(bool endOfBatch)
 		gxValidatePipelineState();
 		
 		gxValidateMatrices();
+		
+		gxValidateShaderResources();
 	
 		[activeWindowData->encoder setVertexBytes:s_gxVertices length:sizeof(GxVertex) * s_gxVertexCount atIndex:0];
 		
@@ -933,6 +1040,8 @@ void gxEmitVertices(int primitiveType, int numVertices)
 	gxValidatePipelineState();
 	
 	gxValidateMatrices();
+	
+	gxValidateShaderResources();
 
 #if TODO
 	//
@@ -1060,6 +1169,16 @@ void gxVertex3fv(const float * v)
 void gxVertex4fv(const float * v)
 {
 	gxVertex4f(v[0], v[1], v[2], v[3]);
+}
+
+void gxSetTexture(GxTextureId texture)
+{
+	s_gxTexture = texture;
+}
+
+void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
+{
+
 }
 
 void gxEmitVertex()

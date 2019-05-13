@@ -9,6 +9,14 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 void metal_draw_end();
 void metal_set_viewport(const int sx, const int sy);
 
+// --- gpu resources ---
+
+typedef int GxTextureId;
+
+GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
+
+void freeTexture(GxTextureId & textureId);
+
 // --- gx api implementation ---
 
 enum GX_PRIMITIVE_TYPE
@@ -28,6 +36,12 @@ enum GX_MATRIX
 {
 	GX_MODELVIEW,
 	GX_PROJECTION
+};
+
+enum GX_SAMPLE_FILTER
+{
+	GX_SAMPLE_NEAREST,
+	GX_SAMPLE_LINEAR
 };
 
 void gxMatrixMode(GX_MATRIX mode);
@@ -61,3 +75,5 @@ void gxVertex3f(float x, float y, float z);
 void gxVertex3fv(const float * v);
 void gxVertex4f(float x, float y, float z, float w);
 void gxVertex4fv(const float * v);
+void gxSetTexture(GxTextureId texture);
+void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);

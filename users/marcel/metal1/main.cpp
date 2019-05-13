@@ -18,6 +18,15 @@ int main(int arg, char * argv[])
 	metal_attach(window1);
 	metal_attach(window2);
 	
+	uint8_t * texture1_data = new uint8_t[128 * 128 * 4];
+	for (int i = 0; i < 128 * 128 * 4; ++i)
+		texture1_data[i] = i;
+	
+	GxTextureId texture1 = createTextureFromRGBA8(texture1_data, 128, 128, true, true);
+	
+	delete [] texture1_data;
+	texture1_data = nullptr;
+	
 	for (;;)
 	{
 		bool stop = false;
@@ -81,6 +90,7 @@ int main(int arg, char * argv[])
 				}
 				gxEnd();
 			#else
+				gxSetTexture(texture1);
 				gxBegin(GX_QUADS);
 				{
 					for (int i = 0; i < 10; ++i)
@@ -88,17 +98,25 @@ int main(int arg, char * argv[])
 						const float x = (i % 3) / 2.f - .5f;
 						const float y = (i % 5) / 4.f - .5f;
 						
+						gxTexCoord2f(0, 0);
 						gxColor4f(1, 0, 0, 1);
 						gxVertex2f(x-1.f, y-1.f);
+						
+						gxTexCoord2f(1, 0);
 						gxColor4f(0, 1, 0, 1);
 						gxVertex2f(x+1.f, y-1.f);
+						
+						gxTexCoord2f(1, 1);
 						gxColor4f(0, 0, 1, 1);
 						gxVertex2f(x+1.f, y+1.f);
+						
+						gxTexCoord2f(0, 1);
 						gxColor4f(1, 1, 1, 1);
 						gxVertex2f(x-1.f, y+1.f);
 					}
 				}
 				gxEnd();
+				gxSetTexture(0);
 			#endif
 			}
 			gxPopMatrix();
@@ -135,6 +153,8 @@ int main(int arg, char * argv[])
 		}
 		metal_draw_end();
 	}
+	
+	freeTexture(texture1);
 	
 	gxShutdown();
 	
