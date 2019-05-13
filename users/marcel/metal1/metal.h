@@ -9,7 +9,52 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 void metal_draw_end();
 void metal_set_viewport(const int sx, const int sy);
 
-// --- gpu resources ---
+// -- render states --
+
+enum BLEND_MODE // setBlend
+{
+	BLEND_OPAQUE,
+	BLEND_ALPHA,
+	BLEND_PREMULTIPLIED_ALPHA,
+	BLEND_PREMULTIPLIED_ALPHA_DRAW,
+	BLEND_ADD,
+	BLEND_ADD_OPAQUE,
+	BLEND_SUBTRACT,
+	BLEND_INVERT,
+	BLEND_MUL,
+	BLEND_MIN,
+	BLEND_MAX
+};
+
+enum DEPTH_TEST
+{
+	DEPTH_EQUAL,
+	DEPTH_LESS,
+	DEPTH_LEQUAL,
+	DEPTH_GREATER,
+	DEPTH_GEQUAL,
+	DEPTH_ALWAYS
+};
+
+enum CULL_MODE
+{
+	CULL_NONE,
+	CULL_FRONT,
+	CULL_BACK
+};
+
+enum CULL_WINDING
+{
+	CULL_CCW,
+	CULL_CW
+};
+
+void setBlend(BLEND_MODE blendMode);
+void setLineSmooth(bool enabled);
+void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
+void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
+
+// -- gpu resources --
 
 typedef int GxTextureId;
 
@@ -17,7 +62,7 @@ GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool fil
 
 void freeTexture(GxTextureId & textureId);
 
-// --- gx api implementation ---
+// -- gx api implementation --
 
 enum GX_PRIMITIVE_TYPE
 {

@@ -200,10 +200,7 @@ static const char * s_shaderPs = R"SHADER(
 
 	struct ShaderUniforms
 	{
-		float textureEnabled;
-		float colorMode;
-		float colorPost;
-		float colorClamp;
+		float4 params;
 	};
 
 	fragment float4 shader_main(
@@ -213,7 +210,7 @@ static const char * s_shaderPs = R"SHADER(
 	{
 		float4 color = inputs.color;
 		
-		if (uniforms.textureEnabled != 0.0)
+		if (uniforms.params.x != 0.0)
 		{
 			constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
 			
@@ -333,6 +330,30 @@ struct ShaderCache
 
 };
 */
+
+// -- render states --
+
+static BLEND_MODE s_blendMode = BLEND_ALPHA;
+
+void setBlend(BLEND_MODE blendMode)
+{
+	s_blendMode = blendMode;
+}
+
+void setLineSmooth(bool enabled)
+{
+
+}
+
+void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
+{
+
+}
+
+void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
+{
+
+}
 
 // -- gpu resources --
 
@@ -710,9 +731,7 @@ void gxShutdown()
 	s_gxMaxVertexCount = 0;
 	s_gxPrimitiveSize = 0;
 	s_gxVertex = GxVertex();
-#if TODO
 	s_gxTextureEnabled = false;
-#endif
 	
 	s_gxLastPrimitiveType = GX_INVALID_PRIM;
 	s_gxLastVertexCount = -1;
@@ -793,7 +812,111 @@ static void gxValidatePipelineState()
 		pipelineDescriptor.vertexFunction = vs;
 		pipelineDescriptor.fragmentFunction = ps;
 		pipelineDescriptor.vertexDescriptor = vertexDescriptor;
+		
 		pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+		
+		auto * att = pipelineDescriptor.colorAttachments[0];
+		switch (s_blendMode)
+		{
+		case BLEND_OPAQUE:
+			att.blendingEnabled = false;
+			break;
+		case BLEND_ALPHA:
+			att.blendingEnabled = true;
+			att.rgbBlendOperation = MTLBlendOperationAdd;
+			att.alphaBlendOperation = MTLBlendOperationAdd;
+			att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+			att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+			att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+			att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+			break;
+		case BLEND_PREMULTIPLIED_ALPHA:
+			att.blendingEnabled = true;
+			att.rgbBlendOperation = MTLBlendOperationAdd;
+			att.alphaBlendOperation = MTLBlendOperationAdd;
+			att.sourceRGBBlendFactor = MTLBlendFactorOne;
+			att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+			att.destinationRGBBlendFactor = MTLBlendFactorOne;
+			att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+			break;
+		case BLEND_PREMULTIPLIED_ALPHA_DRAW:
+		// todo : remove ?
+			att.blendingEnabled = true;
+			att.rgbBlendOperation = MTLBlendOperationAdd;
+			att.alphaBlendOperation = MTLBlendOperationAdd;
+			att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+			att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+			att.destinationRGBBlendFactor = MTLBlendFactorOne;
+			att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+			break;
+		case BLEND_ADD:
+			att.blendingEnabled = true;
+			att.rgbBlendOperation = MTLBlendOperationAdd;
+			att.alphaBlendOperation = MTLBlendOperationAdd;
+			att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+			att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+			att.destinationRGBBlendFactor = MTLBlendFactorOne;
+			att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+			break;
+		case BLEND_ADD_OPAQUE:
+			att.blendingEnabled = true;
+			att.rgbBlendOperation = MTLBlendOperationAdd;
+			att.alphaBlendOperation = MTLBlendOperationAdd;
+			att.sourceRGBBlendFactor = MTLBlendFactorOne;
+			att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+			att.destinationRGBBlendFactor = MTLBlendFactorOne;
+			att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+			break;
+		case BLEND_SUBTRACT:
+			att.blendingEnabled = true;
+			att.rgbBlendOperation = MTLBlendOperationReverseSubtract;
+			att.alphaBlendOperation = MTLBlendOperationReverseSubtract;
+			att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+			att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+			att.destinationRGBBlendFactor = MTLBlendFactorOne;
+			att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+			break;
+		case BLEND_INVERT:
+			att.blendingEnabled = true;
+			att.rgbBlendOperation = MTLBlendOperationAdd;
+			att.alphaBlendOperation = MTLBlendOperationAdd;
+			att.sourceRGBBlendFactor = MTLBlendFactorOneMinusDestinationColor;
+			att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusDestinationAlpha;
+			att.destinationRGBBlendFactor = MTLBlendFactorZero;
+			att.destinationAlphaBlendFactor = MTLBlendFactorZero;
+			break;
+		case BLEND_MUL:
+			att.blendingEnabled = true;
+			att.rgbBlendOperation = MTLBlendOperationAdd;
+			att.alphaBlendOperation = MTLBlendOperationAdd;
+			att.sourceRGBBlendFactor = MTLBlendFactorZero;
+			att.sourceAlphaBlendFactor = MTLBlendFactorZero;
+			att.destinationRGBBlendFactor = MTLBlendFactorSourceColor;
+			att.destinationAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+			break;
+		case BLEND_MIN:
+			att.blendingEnabled = true;
+			att.rgbBlendOperation = MTLBlendOperationMin;
+			att.alphaBlendOperation = MTLBlendOperationMin;
+			att.sourceRGBBlendFactor = MTLBlendFactorOne;
+			att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+			att.destinationRGBBlendFactor = MTLBlendFactorOne;
+			att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+			break;
+		case BLEND_MAX:
+			att.blendingEnabled = true;
+			att.rgbBlendOperation = MTLBlendOperationMax;
+			att.alphaBlendOperation = MTLBlendOperationMax;
+			att.sourceRGBBlendFactor = MTLBlendFactorOne;
+			att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+			att.destinationRGBBlendFactor = MTLBlendFactorOne;
+			att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+			break;
+		default:
+			fassert(false);
+			break;
+		}
+		
 		//pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
 		pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 
@@ -1196,6 +1319,7 @@ void gxVertex4fv(const float * v)
 void gxSetTexture(GxTextureId texture)
 {
 	s_gxTexture = texture;
+	s_gxTextureEnabled = texture != 0;
 }
 
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
