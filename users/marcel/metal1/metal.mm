@@ -153,6 +153,7 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 
 void metal_draw_end()
 {
+	[activeRenderPipelineReflection release];
 	activeRenderPipelineReflection = nullptr;
 	
 	//
@@ -161,6 +162,8 @@ void metal_draw_end()
 
 	[activeWindowData->cmdbuf presentDrawable:activeWindowData->current_drawable];
 	[activeWindowData->cmdbuf commit];
+	
+	//[activeWindowData->cmdbuf waitUntilCompleted];
 	
 	//
 	
@@ -588,10 +591,12 @@ static void gxValidatePipelineState()
 		//pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
 		pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 
+		[activeRenderPipelineReflection release];
 		activeRenderPipelineReflection = nullptr;
 		
 		const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
 		id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&activeRenderPipelineReflection error:&error];
+		[activeRenderPipelineReflection retain];
 		
 		//NSLog(@"%@", pipelineState);
 
