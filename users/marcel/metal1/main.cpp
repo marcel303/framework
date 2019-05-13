@@ -55,6 +55,9 @@ int main(int arg, char * argv[])
 		metal_make_active(window1);
 		metal_draw_begin(1.0f, 0.3f, 0.0f, 1.0f);
 		{
+			//setDepthTest(false, DEPTH_ALWAYS);
+			setDepthTest(true, DEPTH_LESS);
+			
 			Mat4x4 projectionMatrix;
 			projectionMatrix.MakePerspectiveLH(90.f * float(M_PI) / 180.f, 600.f / 300.f, .01f, 100.f);
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
@@ -67,9 +70,10 @@ int main(int arg, char * argv[])
 				gxRotatef(sinf(t * 1.23f) * 30.f, 0, 1, 0);
 				gxTranslatef(0, 0, 1);
 				
-				const float scale = cosf(t * 8.90f) * .2f;
-				gxScalef(scale, scale, scale);
+				const float scale = (cosf(t * 8.90f) * .2f + 1.f) * .5f;
 				gxRotatef(t * 220.f, 0, 0, 1);
+				gxRotatef(t * 22.f, 0, 1, 0);
+				gxScalef(scale, scale, .1f);
 				
 			#if 0
 				gxBegin(GX_TRIANGLES);
@@ -90,33 +94,37 @@ int main(int arg, char * argv[])
 				}
 				gxEnd();
 			#else
+				setBlend(BLEND_OPAQUE);
 				gxSetTexture(texture1);
 				gxBegin(GX_QUADS);
 				{
+					const float alpha = .1f;
+					
 					for (int i = 0; i < 10; ++i)
 					{
 						const float x = (i % 3) / 2.f - .5f;
 						const float y = (i % 5) / 4.f - .5f;
 						
 						gxTexCoord2f(0, 0);
-						gxColor4f(1, 0, 0, 1);
-						gxVertex2f(x-1.f, y-1.f);
+						gxColor4f(1, 0, 0, alpha);
+						gxVertex3f(x-1.f, y-1.f, i);
 						
 						gxTexCoord2f(1, 0);
-						gxColor4f(0, 1, 0, 1);
-						gxVertex2f(x+1.f, y-1.f);
+						gxColor4f(0, 1, 0, alpha);
+						gxVertex3f(x+1.f, y-1.f, i);
 						
 						gxTexCoord2f(1, 1);
-						gxColor4f(0, 0, 1, 1);
-						gxVertex2f(x+1.f, y+1.f);
+						gxColor4f(0, 0, 1, alpha);
+						gxVertex3f(x+1.f, y+1.f, i);
 						
 						gxTexCoord2f(0, 1);
-						gxColor4f(1, 1, 1, 1);
-						gxVertex2f(x-1.f, y+1.f);
+						gxColor4f(1, 1, 1, alpha);
+						gxVertex3f(x-1.f, y+1.f, i);
 					}
 				}
 				gxEnd();
 				gxSetTexture(0);
+				setBlend(BLEND_OPAQUE);
 			#endif
 			}
 			gxPopMatrix();

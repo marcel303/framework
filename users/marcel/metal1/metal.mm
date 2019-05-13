@@ -22,6 +22,8 @@ struct WindowData
 	id <CAMetalDrawable> current_drawable;
 	
 	id <MTLRenderCommandEncoder> encoder;
+	
+	id <MTLTexture> depth_texture;
 };
 
 struct
@@ -245,6 +247,16 @@ void metal_attach(SDL_Window * window)
 	
 	windowData->queue = [windowData->metalview.metalLayer.device newCommandQueue];
 	
+	// create depth texture
+	
+	{
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float width:300 height:600 mipmapped:NO];
+		descriptor.resourceOptions = MTLResourceStorageModePrivate;
+		descriptor.usage = MTLTextureUsageRenderTarget;
+		
+		windowData->depth_texture = [device newTextureWithDescriptor:descriptor];
+	}
+	
 	windowDatas[window] = windowData;
 }
 
@@ -268,7 +280,7 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 
 		activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
 		[activeWindowData->current_drawable retain];
-
+		
 		MTLRenderPassColorAttachmentDescriptor * colorattachment = activeWindowData->renderdesc.colorAttachments[0];
 		colorattachment.texture = activeWindowData->current_drawable.texture;
 		
@@ -276,6 +288,12 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 		colorattachment.clearColor  = MTLClearColorMake(r, g, b, a);
 		colorattachment.loadAction  = MTLLoadActionClear;
 		colorattachment.storeAction = MTLStoreActionStore;
+		
+		MTLRenderPassDepthAttachmentDescriptor * depthattachment = activeWindowData->renderdesc.depthAttachment;
+		depthattachment.texture = activeWindowData->depth_texture;
+		depthattachment.clearDepth = 1.0;
+		depthattachment.loadAction = MTLLoadActionClear;
+		depthattachment.storeAction = MTLStoreActionDontCare;
 
 		/* The drawable's texture is cleared to the specified color here. */
 		activeWindowData->encoder = [[activeWindowData->cmdbuf renderCommandEncoderWithDescriptor:activeWindowData->renderdesc] retain];
@@ -335,6 +353,10 @@ struct ShaderCache
 
 static BLEND_MODE s_blendMode = BLEND_ALPHA;
 
+static bool s_depthTestEnabled = false;
+static DEPTH_TEST s_depthTest = DEPTH_ALWAYS;
+static bool s_depthWriteEnabled = false;
+
 void setBlend(BLEND_MODE blendMode)
 {
 	s_blendMode = blendMode;
@@ -347,7 +369,55 @@ void setLineSmooth(bool enabled)
 
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 {
-
+	s_depthTestEnabled = enabled;
+	s_depthTest = test;
+	s_depthWriteEnabled = writeEnabled;
+	
+	// depth state
+	
+	MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
+	
+	if (enabled)
+	{
+		switch (test)
+		{
+		case DEPTH_EQUAL:
+			descriptor.depthCompareFunction = MTLCompareFunctionEqual;
+			break;
+		case DEPTH_LESS:
+			descriptor.depthCompareFunction = MTLCompareFunctionLess;
+			break;
+		case DEPTH_LEQUAL:
+			descriptor.depthCompareFunction = MTLCompareFunctionLessEqual;
+			break;
+		case DEPTH_GREATER:
+			descriptor.depthCompareFunction = MTLCompareFunctionGreater;
+			break;
+		case DEPTH_GEQUAL:
+			descriptor.depthCompareFunction = MTLCompareFunctionGreaterEqual;
+			break;
+		case DEPTH_ALWAYS:
+			descriptor.depthCompareFunction = MTLCompareFunctionAlways;
+			break;
+		}
+		
+		descriptor.depthWriteEnabled = writeEnabled;
+	}
+	else
+	{
+		descriptor.depthCompareFunction = MTLCompareFunctionAlways;
+		descriptor.depthWriteEnabled = false;
+	}
+	
+	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+	
+	[activeWindowData->encoder setDepthStencilState:state];
+	
+	[state release];
+	state = nullptr;
+	
+	[descriptor release];
+	descriptor = nullptr;
 }
 
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
@@ -816,6 +886,9 @@ static void gxValidatePipelineState()
 		pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
 		
 		auto * att = pipelineDescriptor.colorAttachments[0];
+		
+		// blend state
+		
 		switch (s_blendMode)
 		{
 		case BLEND_OPAQUE:
@@ -917,8 +990,8 @@ static void gxValidatePipelineState()
 			break;
 		}
 		
-		//pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
-		pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
+		pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+		//pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 
 		[activeRenderPipelineReflection release];
 		activeRenderPipelineReflection = nullptr;
