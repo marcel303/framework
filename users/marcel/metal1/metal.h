@@ -36,7 +36,7 @@ void gxPushMatrix();
 void gxLoadIdentity();
 void gxLoadMatrixf(const float * m);
 void gxGetMatrixf(GX_MATRIX mode, float * m);
-void gxSetMatrixf(GX_MATRIX mode, float * m);
+void gxSetMatrixf(GX_MATRIX mode, const float * m);
 void gxMultMatrixf(const float * m);
 void gxTranslatef(float x, float y, float z);
 void gxRotatef(float angle, float x, float y, float z);

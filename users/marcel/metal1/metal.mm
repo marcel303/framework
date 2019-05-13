@@ -128,21 +128,25 @@ void metal_make_active(SDL_Window * window)
 
 void metal_draw_begin(const float r, const float g, const float b, const float a)
 {
-	activeWindowData->cmdbuf = [[activeWindowData->queue commandBuffer] retain];
+	@autoreleasepool
+	{
+		activeWindowData->cmdbuf = [[activeWindowData->queue commandBuffer] retain];
 
-	activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
+		activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
+		[activeWindowData->current_drawable retain];
 
-	MTLRenderPassColorAttachmentDescriptor * colorattachment = activeWindowData->renderdesc.colorAttachments[0];
-	colorattachment.texture = activeWindowData->current_drawable.texture;
-	
-	/* Clear to a red-orange color when beginning the render pass. */
-	colorattachment.clearColor  = MTLClearColorMake(r, g, b, a);
-	colorattachment.loadAction  = MTLLoadActionClear;
-	colorattachment.storeAction = MTLStoreActionStore;
+		MTLRenderPassColorAttachmentDescriptor * colorattachment = activeWindowData->renderdesc.colorAttachments[0];
+		colorattachment.texture = activeWindowData->current_drawable.texture;
+		
+		/* Clear to a red-orange color when beginning the render pass. */
+		colorattachment.clearColor  = MTLClearColorMake(r, g, b, a);
+		colorattachment.loadAction  = MTLLoadActionClear;
+		colorattachment.storeAction = MTLStoreActionStore;
 
-	/* The drawable's texture is cleared to the specified color here. */
-	activeWindowData->encoder = [activeWindowData->cmdbuf renderCommandEncoderWithDescriptor:activeWindowData->renderdesc];
-	activeWindowData->encoder.label = @"hello encoder";
+		/* The drawable's texture is cleared to the specified color here. */
+		activeWindowData->encoder = [[activeWindowData->cmdbuf renderCommandEncoderWithDescriptor:activeWindowData->renderdesc] retain];
+		activeWindowData->encoder.label = @"hello encoder";
+	}
 }
 
 void metal_draw_end()
@@ -156,7 +160,14 @@ void metal_draw_end()
 	[activeWindowData->cmdbuf presentDrawable:activeWindowData->current_drawable];
 	[activeWindowData->cmdbuf commit];
 	
+	//
+	
+	[activeWindowData->encoder release];
+	[activeWindowData->current_drawable release];
 	[activeWindowData->cmdbuf release];
+	
+	activeWindowData->encoder = nullptr;
+	activeWindowData->current_drawable = nullptr;
 	activeWindowData->cmdbuf = nullptr;
 }
 
@@ -416,7 +427,7 @@ struct GxVertex
 };
 
 //static GxVertex s_gxVertexBuffer[1024*16];
-static GxVertex s_gxVertexBuffer[64];
+static GxVertex s_gxVertexBuffer[64]; // todo : create vertex buffer and restore size
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
 static GxVertex * s_gxVertices = nullptr;
