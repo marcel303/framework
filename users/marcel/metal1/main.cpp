@@ -143,20 +143,34 @@ int main(int arg, char * argv[])
 			{
 				gxTranslatef(0, 0, 2);
 				
-				gxBegin(GX_LINES);
+				uint8_t texture2_data[16*16*4];
+				for (int i = 0; i < 16 * 16; ++i)
 				{
-					for (int i = 0; i < 100; ++i)
+					texture2_data[i * 4 + 0] = 0;
+					texture2_data[i * 4 + 1] = 0;
+					texture2_data[i * 4 + 2] = rand() % 256;
+					texture2_data[i * 4 + 3] = 255;
+				}
+				
+				GxTextureId texture2 = createTextureFromRGBA8(texture2_data, 16, 16, true, true);
+				
+				gxSetTexture(texture2);
+				gxBegin(GX_TRIANGLE_STRIP);
+				{
+					for (int i = 0; i < 10; ++i)
 					{
 						const float x = (rand() % 100) / 100.f;
 						const float y = (rand() % 100) / 100.f;
 						
-						gxColor4f(1, 0, 0, 1);
+						gxTexCoord2f(x, y);
+						gxColor4f(1, 1, 1, 1);
 						gxVertex2f(x, y);
-						gxColor4f(0, 1, 0, 1);
-						gxVertex2f(1.f, 1.f);
 					}
 				}
 				gxEnd();
+				gxSetTexture(0);
+				
+				freeTexture(texture2);
 			}
 			gxPopMatrix();
 		}

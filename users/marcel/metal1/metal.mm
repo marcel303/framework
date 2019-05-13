@@ -1,30 +1,15 @@
 #import "metal.h"
 #import "metalView.h"
+#import "window_data.h"
 #import <Cocoa/Cocoa.h>
 #import <map>
 #import <Metal/Metal.h>
 #import <SDL2/SDL_syswm.h>
+#import <vector>
 
 #define INDEX_TYPE uint32_t
 
 static id <MTLDevice> device;
-
-struct WindowData
-{
-	MetalView * metalview = nullptr;
-	
-	MTLRenderPassDescriptor * renderdesc = nullptr;
-
-	id <MTLCommandQueue> queue;
-	
-	id <MTLCommandBuffer> cmdbuf;
-	
-	id <CAMetalDrawable> current_drawable;
-	
-	id <MTLRenderCommandEncoder> encoder;
-	
-	id <MTLTexture> depth_texture;
-};
 
 struct
 {
@@ -137,6 +122,19 @@ static WindowData * activeWindowData = nullptr;
 static MTLRenderPipelineReflection * activeRenderPipelineReflection = nullptr;
 
 static ShaderCacheElem shaderCacheElem;
+
+static std::vector<id <MTLResource>> s_resourcesToFree;
+
+static void freeResourcesToFree()
+{
+	for (id <MTLResource> & resource : s_resourcesToFree)
+	{
+		[resource release];
+		resource = nullptr;
+	}
+	
+	s_resourcesToFree.clear();
+}
 
 #if 1 // todo : move elsewhere
 
@@ -312,11 +310,19 @@ void metal_draw_end()
 	//
 	
 	[activeWindowData->encoder endEncoding];
-
+	
+	[activeWindowData->cmdbuf addCompletedHandler:
+		^(id<MTLCommandBuffer> _Nonnull)
+		{
+			//NSLog(@"hello done!");
+		}];
+	
 	[activeWindowData->cmdbuf presentDrawable:activeWindowData->current_drawable];
 	[activeWindowData->cmdbuf commit];
 	
-	//[activeWindowData->cmdbuf waitUntilCompleted];
+// todo : remove and use addCompletedHandler instead
+	[activeWindowData->cmdbuf waitUntilCompleted];
+	freeResourcesToFree(); // todo : call in response to completion handler
 	
 	//
 	
@@ -494,8 +500,7 @@ void freeTexture(GxTextureId & textureId)
 		{
 			auto & texture = i->second;
 			
-			[texture release];
-			texture = nullptr;
+			s_resourcesToFree.push_back(texture);
 			
 			s_textures.erase(i);
 		}
