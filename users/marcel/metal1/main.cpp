@@ -113,7 +113,7 @@ int main(int arg, char * argv[])
 				gxTranslatef(0, 0, -.1f);
 				Shader shader("test");
 				setShader(shader);
-				shader.setImmediate("imms", 1, 2, 3, 4);
+				shader.setImmediate("imms", 0, .5f, 0, 0);
 				gxBegin(GX_TRIANGLE_STRIP);
 				{
 					gxColor4f(1, 1, 1, 1);

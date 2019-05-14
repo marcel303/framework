@@ -94,6 +94,7 @@ static const char * s_shaderPs = R"SHADER(
 	struct ShaderUniforms
 	{
 		float4 params;
+		float4 imms;
 	};
 
 	fragment float4 shader_main(
@@ -109,6 +110,8 @@ static const char * s_shaderPs = R"SHADER(
 			
 			color *= textureResource.sample(textureSampler, inputs.texcoord);
 		}
+		
+		color += uniforms.imms;
 		
 		return color;
 	}
@@ -129,30 +132,23 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 		{
 			id <MTLDevice> device = metal_get_device();
 			
-			//MTLCompileOptions * options = [[[MTLCompileOptions alloc] init] autorelease];
-			//options.fastMathEnabled = false;
-			//option.preprocessorMacros;
-			MTLCompileOptions * options = nullptr;
-
 			NSError * error = nullptr;
 
-			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:s_shaderVs encoding:NSASCIIStringEncoding] options:options error:&error];
+			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:s_shaderVs encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_vs == nullptr && error != nullptr)
 				NSLog(@"%@", error);
 			
-			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:s_shaderPs encoding:NSASCIIStringEncoding] options:options error:&error];
+			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:s_shaderPs encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_ps == nullptr && error != nullptr)
 				NSLog(@"%@", error);
 			
 			id <MTLFunction> vs = [library_vs newFunctionWithName:@"shader_main"];
 			id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
-			[vs retain]; // this fixes the occasional pipeline building crash I was seeing. not sure why this is needed
-			[ps retain]; // fixme : remove these retain calls
 			
 			// get reflection info for this shader
 			
 			MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
-			pipelineDescriptor.label = @"hello pipeline";
+			pipelineDescriptor.label = @"reflection pipeline";
 			pipelineDescriptor.vertexFunction = vs;
 			pipelineDescriptor.fragmentFunction = ps;
 			pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -203,6 +199,13 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			
 			[pipelineState release];
 			
+			NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
+			NSLog(@"library_ps retain count: %lu", [library_vs retainCount]);
+			[library_vs release];
+			[library_ps release];
+			NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
+			NSLog(@"library_ps retain count: %lu", [library_vs retainCount]);
+			
 			m_cacheElem.init(reflection);
 			m_cacheElem.vs = vs;
 			m_cacheElem.ps = ps;
@@ -251,6 +254,32 @@ void Shader::setImmediate(const char * name, float x)
 {
 	const GxImmediateIndex index = getImmediate(name);
 	
+	setImmediate(index, x);
+}
+
+void Shader::setImmediate(const char * name, float x, float y)
+{
+	const GxImmediateIndex index = getImmediate(name);
+	
+	setImmediate(index, x, y);
+}
+
+void Shader::setImmediate(const char * name, float x, float y, float z)
+{
+	const GxImmediateIndex index = getImmediate(name);
+	
+	setImmediate(index, x, y, z);
+}
+
+void Shader::setImmediate(const char * name, float x, float y, float z, float w)
+{
+	const GxImmediateIndex index = getImmediate(name);
+	
+	setImmediate(index, x, y, z, w);
+}
+
+void Shader::setImmediate(GxImmediateIndex index, float x)
+{
 	if (index >= 0)
 	{
 		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 1);
@@ -269,20 +298,54 @@ void Shader::setImmediate(const char * name, float x)
 	}
 }
 
-void Shader::setImmediate(const char * name, float x, float y)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 {
-
+	if (index >= 0)
+	{
+		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 2);
+		
+		if (info.vsOffset != -1)
+		{
+			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsOffset);
+			dst[0] = x;
+			dst[1] = y;
+		}
+		
+		if (info.psOffset != -1)
+		{
+			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psOffset);
+			dst[0] = x;
+			dst[1] = y;
+		}
+	}
 }
 
-void Shader::setImmediate(const char * name, float x, float y, float z)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 {
-
+	if (index >= 0)
+	{
+		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 3);
+		
+		if (info.vsOffset != -1)
+		{
+			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsOffset);
+			dst[0] = x;
+			dst[1] = y;
+			dst[2] = z;
+		}
+		
+		if (info.psOffset != -1)
+		{
+			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psOffset);
+			dst[0] = x;
+			dst[1] = y;
+			dst[2] = z;
+		}
+	}
 }
 
-void Shader::setImmediate(const char * name, float x, float y, float z, float w)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
 {
-	const GxImmediateIndex index = getImmediate(name);
-	
 	if (index >= 0)
 	{
 		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 4);
@@ -307,32 +370,29 @@ void Shader::setImmediate(const char * name, float x, float y, float z, float w)
 	}
 }
 
-void Shader::setImmediate(GxImmediateIndex index, float x)
-{
-
-}
-
-void Shader::setImmediate(GxImmediateIndex index, float x, float y)
-{
-
-}
-
-void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
-{
-
-}
-
-void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
-{
-
-}
-
 void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
 {
-
+	const GxImmediateIndex index = getImmediate(name);
+	
+	setImmediateMatrix4x4(index, matrix);
 }
 
 void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 {
-
+	if (index >= 0)
+	{
+		auto & info = getUniformInfo(*m_cacheElem, index, 'm', 16);
+		
+		if (info.vsOffset != -1)
+		{
+			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsOffset);
+			memcpy(dst, matrix, 16 * sizeof(float));
+		}
+		
+		if (info.psOffset != -1)
+		{
+			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psOffset);
+			memcpy(dst, matrix, 16 * sizeof(float));
+		}
+	}
 }

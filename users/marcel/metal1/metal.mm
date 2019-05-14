@@ -339,8 +339,6 @@ void freeTexture(GxTextureId & textureId)
 {
 	if (textureId != 0)
 	{
-		// todo : defer freeing the memory
-		
 		auto i = s_textures.find(textureId);
 		
 		Assert(i != s_textures.end());
@@ -532,15 +530,11 @@ void gxScalef(float x, float y, float z)
 
 void gxValidateMatrices()
 {
-#if TODO
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
-#endif
 
 	//printf("validate1\n");
 	
-#if TODO
 	if (globals.shader && globals.shader->getType() == SHADER_VSPS)
-#endif
 	{
 		Shader * shader = static_cast<Shader*>(globals.shader);
 		
@@ -701,36 +695,14 @@ static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveTy
 
 static void gxValidatePipelineState()
 {
+	Shader shader("test");
+	
+	auto & shaderElem = shader.getCacheElem();
+	
 	@autoreleasepool
 	{
-	#if 1
-		Shader shader("test");
-		
-		auto & shaderElem = shader.getCacheElem();
-		
 		id <MTLFunction> vs = (id <MTLFunction>)shaderElem.vs;
 		id <MTLFunction> ps = (id <MTLFunction>)shaderElem.ps;
-	#else
-		//MTLCompileOptions * options = [[[MTLCompileOptions alloc] init] autorelease];
-		//options.fastMathEnabled = false;
-		//option.preprocessorMacros;
-		MTLCompileOptions * options = nullptr;
-
-		NSError * error = nullptr;
-
-		id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:s_shaderVs encoding:NSASCIIStringEncoding] options:options error:&error];
-		if (library_vs == nullptr && error != nullptr)
-			NSLog(@"%@", error);
-		
-		id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:s_shaderPs encoding:NSASCIIStringEncoding] options:options error:&error];
-		if (library_ps == nullptr && error != nullptr)
-			NSLog(@"%@", error);
-		
-		id <MTLFunction> vs = [library_vs newFunctionWithName:@"shader_main"];
-		id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
-		[vs retain]; // this fixes the occasional pipeline building crash I was seeing. not sure why this is needed
-		[ps retain]; // fixme : remove these retain calls
-	#endif
 	
 		MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 	
@@ -894,16 +866,6 @@ static void gxValidatePipelineState()
 		
 		[activeRenderPipelineReflection retain];
 		
-	// todo : cache shader elems and pipeline states
-		//s_shader = Shader();
-		//s_shader.m_cacheElem->init(activeRenderPipelineReflection);
-		globals.shader = s_shader;
-		
-	#if 0 // todo : remove. test if setting immediates works
-		const int params_offset = s_shader.getImmediate("params");
-		s_shader.setImmediate("params", 1, 2, 3, 4);
-	#endif
-		
 		//NSLog(@"%@", pipelineState);
 
 		//
@@ -926,9 +888,7 @@ static void gxValidatePipelineState()
 
 static void gxFlush(bool endOfBatch)
 {
-#if TODO
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
-#endif
 
 	if (s_gxVertexCount)
 	{
@@ -964,21 +924,12 @@ static void gxFlush(bool endOfBatch)
 		}
 		
 		bindVsInputs(vsInputs, sizeof(vsInputs) / sizeof(vsInputs[0]), sizeof(GxVertex));
-	
-	#if 1
-		if (s_shader == nullptr)
-			s_shader = new Shader("test");
-			
-		globals.shader = s_shader; // todo : remove. just to ensure a shader is set
-	#endif
-	
+		
 		Shader genericShader("engine/Generic");
 		
 		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
 	
-	#if 0 // todo
 		setShader(shader);
-	#endif
 	
 		gxValidatePipelineState();
 		
@@ -1006,8 +957,6 @@ static void gxFlush(bool endOfBatch)
 		if (s_gxPrimitiveType == GX_QUADS)
 		{
 			fassert(s_gxVertexCount < 65536);
-			
-			// todo: use triangle strip + compute index buffer once at init time
 			
 			const int numQuads = s_gxVertexCount / 4;
 			numIndices = numQuads * 6;
@@ -1068,9 +1017,7 @@ static void gxFlush(bool endOfBatch)
 	
 		[activeWindowData->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
 		
-	#if TODO
 		if (shader.isValid())
-	#endif
 		{
 			const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(s_gxPrimitiveType);
 
@@ -1085,7 +1032,7 @@ static void gxFlush(bool endOfBatch)
 				[activeWindowData->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numElements];
 			}
 		}
-	#if TODO
+	#if TODO // requires logDebug
 		else
 		{
 			logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
@@ -1121,6 +1068,11 @@ static void gxFlush(bool endOfBatch)
 				default:
 					s_gxVertexCount = 0;
 			}
+		}
+		
+		if (&shader == &genericShader)
+		{
+			clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
 		}
 		
 	#if TODO
@@ -1180,11 +1132,11 @@ void gxEnd()
 
 void gxEmitVertices(int primitiveType, int numVertices)
 {
-#if TODO
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
+	Shader genericShader("engine/Generic");
+	
+	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
 
 	setShader(shader);
-#endif
 
 	gxValidatePipelineState();
 	

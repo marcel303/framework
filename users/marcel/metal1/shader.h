@@ -216,7 +216,24 @@ struct ShaderCacheElem
 
 typedef int GxImmediateIndex;
 
-class Shader
+enum SHADER_TYPE
+{
+	SHADER_VSPS,
+	SHADER_CS
+};
+
+class ShaderBase
+{
+public:
+	virtual ~ShaderBase() { }
+	
+	virtual bool isValid() const = 0;
+	virtual SHADER_TYPE getType() const = 0;
+	virtual int getVersion() const = 0;
+	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const = 0;
+};
+
+class Shader : public ShaderBase
 {
 public:
 	ShaderCacheElem * m_cacheElem = nullptr; // todo : make private
@@ -226,11 +243,10 @@ public:
 	
 // todo
 	//void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
-	//virtual bool isValid() const override;
-	//virtual GxShaderId getProgram() const override; // todo : make internally accessible only and add functionality on a per use-case basis
-	//virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
-	//virtual int getVersion() const override;
-	//virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
+	virtual bool isValid() const override { return true; } // todo
+	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
+	virtual int getVersion() const override { return 1; } // todo
+	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override { return false; } // todo
 
 	GxImmediateIndex getImmediate(const char * name);
 	
