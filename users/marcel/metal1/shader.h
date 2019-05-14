@@ -78,7 +78,15 @@ struct ShaderCacheElem
 
 	std::vector<UniformInfo> uniformInfos;
 	
-	void init(id <MTLFunction> vs, MTLRenderPipelineReflection * reflection)
+	void * vsUniformData = nullptr;
+	void * psUniformData = nullptr;
+	
+	~ShaderCacheElem()
+	{
+		shut();
+	}
+	
+	void init(MTLRenderPipelineReflection * reflection)
 	{
 	/*
 		// todo : VS_POSITION etc
@@ -106,6 +114,8 @@ struct ShaderCacheElem
 				{
 					vsInfo.init(arg);
 					addUniforms(arg, 'v');
+					//Assert(vsUniformData == nullptr); // todo : enable assert
+					vsUniformData = malloc(arg.bufferDataSize);
 					break;
 				}
 			}
@@ -116,10 +126,21 @@ struct ShaderCacheElem
 				{
 					psInfo.init(arg);
 					addUniforms(arg, 'p');
+					//Assert(psUniformData == nullptr); // todo : enable assert
+					psUniformData = malloc(arg.bufferDataSize);
 					break;
 				}
 			}
 		}
+	}
+	
+	void shut()
+	{
+		free(vsUniformData);
+		free(psUniformData);
+		
+		vsUniformData = nullptr;
+		psUniformData = nullptr;
 	}
 	
 	void addUniforms(MTLArgument * arg, const char type)
@@ -154,15 +175,58 @@ struct ShaderCacheElem
 					uniformInfo.vsOffset = uniform.offset;
 				else
 					uniformInfo.psOffset = uniform.offset;
+				
+				switch (uniform.dataType)
+				{
+				case MTLDataTypeFloat:
+					uniformInfo.elemType = 'f';
+					uniformInfo.numElems = 1;
+					break;
+				case MTLDataTypeFloat2:
+					uniformInfo.elemType = 'f';
+					uniformInfo.numElems = 2;
+					break;
+				case MTLDataTypeFloat3:
+					uniformInfo.elemType = 'f';
+					uniformInfo.numElems = 3;
+					break;
+				case MTLDataTypeFloat4:
+					uniformInfo.elemType = 'f';
+					uniformInfo.numElems = 4;
+					break;
+				case MTLDataTypeFloat4x4:
+					uniformInfo.elemType = 'm';
+					uniformInfo.numElems = 16;
+					break;
+				default:
+					//Assert(false); // todo : enable assert
+					break;
+				}
 			}
 		}
 	}
 };
 
-struct Shader
+class Shader
 {
-	ShaderCacheElem m_cacheElem;
+	ShaderCacheElem::UniformInfo & getUniformInfo(const int index, const int type, const int numElems);
+	
+	template <typename T>
+	T * getVsUniformPtr(const int offset)
+	{
+		return (T*)(((uint8_t*)m_cacheElem.vsUniformData) + offset);
+	}
+	
+	template <typename T>
+	T * getPsUniformPtr(const int offset)
+	{
+		return (T*)(((uint8_t*)m_cacheElem.psUniformData) + offset);
+	}
+	
+public:
+	ShaderCacheElem m_cacheElem; // todo : make private
 
+public:
 // todo
 	//void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
 	//virtual bool isValid() const override;

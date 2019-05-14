@@ -11,6 +11,8 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 void metal_draw_end();
 void metal_set_viewport(const int sx, const int sy);
 
+typedef int GxTextureId;
+
 // -- render states --
 
 enum BLEND_MODE // setBlend
@@ -51,6 +53,11 @@ enum CULL_WINDING
 	CULL_CW
 };
 
+#include "surface.h"
+
+void pushSurface(Surface * surface);
+void popSurface();
+
 void setBlend(BLEND_MODE blendMode);
 void setLineSmooth(bool enabled);
 void setWireframe(bool enabled);
@@ -58,8 +65,6 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
 
 // -- gpu resources --
-
-typedef int GxTextureId;
 
 GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
 

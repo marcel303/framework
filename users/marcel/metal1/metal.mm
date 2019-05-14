@@ -664,8 +664,7 @@ struct GxVertex
 	float tx, ty;
 };
 
-//static GxVertex s_gxVertexBuffer[1024*16];
-static GxVertex s_gxVertexBuffer[64]; // todo : create vertex buffer and restore size
+static GxVertex s_gxVertexBuffer[1024*64];
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
 static GxVertex * s_gxVertices = nullptr;
@@ -965,8 +964,13 @@ static void gxValidatePipelineState()
 		
 	// todo : cache shader elems and pipeline states
 		s_shader = Shader();
-		s_shader.m_cacheElem.init(vs, activeRenderPipelineReflection);
+		s_shader.m_cacheElem.init(activeRenderPipelineReflection);
 		globals.shader = &s_shader;
+		
+	#if 0 // todo : remove. test if setting immediates works
+		const int params_offset = s_shader.getImmediate("params");
+		s_shader.setImmediate("params", 1, 2, 3, 4);
+	#endif
 		
 		//NSLog(@"%@", pipelineState);
 
@@ -1017,20 +1021,28 @@ static void gxFlush(bool endOfBatch)
 		};
 		
 	// todo : refactor s_gxVertices to use a GxVertexBuffer object
-	// todo : optimize using setVertexBytes when the draw call is small
 	
-		auto * elem = s_gxVertexBufferPool.allocBuffer();
-		[activeWindowData->cmdbuf addCompletedHandler:
-			^(id<MTLCommandBuffer> _Nonnull)
-			{
-				s_gxVertexBufferPool.freeBuffer(elem);
-			}];
-		id <MTLBuffer> buffer = (id <MTLBuffer>)elem->m_buffer;
 		const int vertexDataSize = s_gxVertexCount * sizeof(GxVertex);
-		memcpy(buffer.contents, s_gxVertices, vertexDataSize);
+		
+		if (vertexDataSize <= 4096)
+		{
+			// optimize using setVertexBytes when the draw call is small
+			[activeWindowData->encoder setVertexBytes:s_gxVertices length:vertexDataSize atIndex:0];
+		}
+		else
+		{
+			auto * elem = s_gxVertexBufferPool.allocBuffer();
+			[activeWindowData->cmdbuf addCompletedHandler:
+				^(id<MTLCommandBuffer> _Nonnull)
+				{
+					s_gxVertexBufferPool.freeBuffer(elem);
+				}];
+			id <MTLBuffer> buffer = (id <MTLBuffer>)elem->m_buffer;
+			memcpy(buffer.contents, s_gxVertices, vertexDataSize);
+			[activeWindowData->encoder setVertexBuffer:buffer offset:0 atIndex:0];
+		}
 		
 		bindVsInputs(vsInputs, sizeof(vsInputs) / sizeof(vsInputs[0]));
-		[activeWindowData->encoder setVertexBuffer:buffer offset:0 atIndex:0];
 	
 		gxValidatePipelineState();
 		
