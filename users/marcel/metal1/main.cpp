@@ -76,30 +76,11 @@ int main(int arg, char * argv[])
 				gxRotatef(t * 22.f, 0, 1, 0);
 				gxScalef(scale, scale, .1f);
 				
-			#if 0
-				gxBegin(GX_TRIANGLES);
-				{
-					gxColor4f(1, 0, 0, 1);
-					gxVertex2f(-1.f, -1.f);
-					gxColor4f(0, 1, 0, 1);
-					gxVertex2f(+1.f, -1.f);
-					gxColor4f(0, 0, 1, 1);
-					gxVertex2f(+1.f, +1.f);
-					
-					gxColor4f(1, 0, 0, 1);
-					gxVertex2f(-1.f, -1.f);
-					gxColor4f(0, 1, 0, 1);
-					gxVertex2f(+1.f, +1.f);
-					gxColor4f(0, 0, 1, 1);
-					gxVertex2f(-1.f, +1.f);
-				}
-				gxEnd();
-			#else
 				setBlend(BLEND_OPAQUE);
 				gxSetTexture(texture1);
 				gxBegin(GX_QUADS);
 				{
-					const float alpha = .1f;
+					const float alpha = 1.f;
 					
 					for (int i = 0; i < 10; ++i)
 					{
@@ -126,12 +107,12 @@ int main(int arg, char * argv[])
 				gxEnd();
 				gxSetTexture(0);
 				setBlend(BLEND_OPAQUE);
-			#endif
 			}
 			gxPopMatrix();
 		}
 		metal_draw_end();
 		
+	#if 1
 		metal_make_active(window2);
 		metal_draw_begin(0.0f, 0.3f, 1.0f, 1.0f);
 		{
@@ -157,7 +138,7 @@ int main(int arg, char * argv[])
 				gxSetTexture(texture2);
 				gxBegin(GX_TRIANGLE_STRIP);
 				{
-					for (int i = 0; i < 10; ++i)
+					for (int i = 0; i < 1000; ++i)
 					{
 						const float x = (rand() % 100) / 100.f;
 						const float y = (rand() % 100) / 100.f;
@@ -175,6 +156,7 @@ int main(int arg, char * argv[])
 			gxPopMatrix();
 		}
 		metal_draw_end();
+	#endif
 	}
 	
 	freeTexture(texture1);

@@ -209,6 +209,7 @@ struct ShaderCacheElem
 
 class Shader
 {
+public:
 	ShaderCacheElem::UniformInfo & getUniformInfo(const int index, const int type, const int numElems);
 	
 	template <typename T>
@@ -223,10 +224,8 @@ class Shader
 		return (T*)(((uint8_t*)m_cacheElem.psUniformData) + offset);
 	}
 	
-public:
 	ShaderCacheElem m_cacheElem; // todo : make private
-
-public:
+	
 // todo
 	//void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
 	//virtual bool isValid() const override;

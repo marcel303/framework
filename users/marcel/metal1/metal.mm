@@ -625,7 +625,7 @@ void gxValidateMatrices()
 	
 		if (shaderElem.vsInfo.uniformBufferIndex != -1)
 		{
-			uint8_t * data = (uint8_t*)alloca(shaderElem.vsInfo.uniformBufferSize);
+			uint8_t * data = (uint8_t*)shader->m_cacheElem.vsUniformData;
 		
 			// check if matrices are dirty
 			
@@ -1107,7 +1107,7 @@ static void gxFlush(bool endOfBatch)
 		
 		const ShaderCacheElem & shaderElem = shader.getCacheElem();
 		
-		uint8_t * data = (uint8_t*)alloca(shaderElem.psInfo.uniformBufferSize);
+		uint8_t * data = (uint8_t*)shaderElem.psUniformData;
 		
 		if (shaderElem.psInfo.params[ShaderCacheElem::kSp_Params].offset != -1)
 		{
@@ -1130,7 +1130,7 @@ static void gxFlush(bool endOfBatch)
 		}
 	#endif
 	
-		[activeWindowData->encoder setFragmentBytes:data length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
+		[activeWindowData->encoder setFragmentBytes:shader.m_cacheElem.psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
 		
 	#if TODO
 		if (shader.isValid())
