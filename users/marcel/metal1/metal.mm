@@ -677,9 +677,10 @@ static bool s_gxTextureEnabled = false;
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
 
-static id <MTLBuffer> s_gxVertexBufferCopy = nullptr; // todo : remove s_gxVertexBuffer and write directly into this one
-static id <MTLBuffer> s_gxIndexBuffer = nullptr;
+static GxVertexBuffer s_gxVertexBufferCopy;
+static GxIndexBuffer s_gxIndexBuffer;
 
+// todo : separate low level things from these type of things needed for GX vertex/matrix/generic shader API
 static GxVertexInput s_gxVertexInputs[16];
 static int s_gxVertexInputCount = 0;
 
@@ -708,20 +709,15 @@ void gxInitialize()
 	s_gxVertex.cz = 1.f;
 	s_gxVertex.cw = 1.f;
 
-#if 1
-// todo : should double buffer this I guess and add a semaphore or something to signal it's ok to reuse
-	s_gxVertexBufferCopy = [device newBufferWithLength:sizeof(s_gxIndexBuffer) options:MTLResourceCPUCacheModeWriteCombined];
-	
+	s_gxVertexBufferCopy.init(sizeof(s_gxVertexBuffer));
+
 	const int maxVertexCount = sizeof(s_gxVertexBuffer) / sizeof(s_gxVertexBuffer[0]);
 	const int maxQuads = maxVertexCount / 4;
 	const int maxIndicesForQuads = maxQuads * 6;
 	
-	s_gxIndexBuffer = [device newBufferWithLength:maxIndicesForQuads * sizeof(INDEX_TYPE) options:MTLResourceCPUCacheModeWriteCombined];
-#elif TODO
-	glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[i]);
-	checkErrorGL();
-	bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
+	s_gxIndexBuffer.init(maxIndicesForQuads, sizeof(INDEX_TYPE) == 2 ? GX_INDEX_16 : GX_INDEX_32);
 
+#if TODO
 	// enable seamless cube map sampling along the edges
 	
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -730,12 +726,10 @@ void gxInitialize()
 
 void gxShutdown()
 {
-	[s_gxVertexBufferCopy release];
-	s_gxVertexBufferCopy = nullptr;
+	s_gxVertexBufferCopy.free();
 	
-	[s_gxIndexBuffer release];
-	s_gxIndexBuffer = nullptr;
-	
+	s_gxIndexBuffer.free();
+
 #if TODO
 	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 #endif
@@ -1019,15 +1013,19 @@ static void gxFlush(bool endOfBatch)
 		};
 		
 	// todo : refactor s_gxVertices to use a GxVertexBuffer object
-		gxSetVertexBuffer(vsInputs, sizeof(vsInputs) / sizeof(vsInputs[0]));
+	
+		void * vertexData = s_gxVertexBufferCopy.updateBegin();
+		const int vertexDataSize = s_gxVertexCount * sizeof(GxVertex);
+		memcpy(vertexData, s_gxVertices, vertexDataSize);
+		s_gxVertexBufferCopy.updateEnd(0, vertexDataSize);
+		
+		gxSetVertexBuffer(&s_gxVertexBufferCopy, vsInputs, sizeof(vsInputs) / sizeof(vsInputs[0]));
 	
 		gxValidatePipelineState();
 		
 		gxValidateMatrices();
 		
 		gxValidateShaderResources();
-	
-		[activeWindowData->encoder setVertexBytes:s_gxVertices length:sizeof(GxVertex) * s_gxVertexCount atIndex:0];
 		
 		bool indexed = false;
 		uint32_t * indices = 0;
@@ -1057,7 +1055,7 @@ static void gxFlush(bool endOfBatch)
 
 			if (needToRegenerateIndexBuffer)
 			{
-				indices = (INDEX_TYPE*)s_gxIndexBuffer.contents;
+				indices = (INDEX_TYPE*)s_gxIndexBuffer.updateBegin();
 
 				INDEX_TYPE * __restrict indexPtr = indices;
 				INDEX_TYPE baseIndex = 0;
@@ -1075,12 +1073,7 @@ static void gxFlush(bool endOfBatch)
 					baseIndex += 4;
 				}
 				
-			#if 0 // didModifyRange only applies to managed resources. not write combined
-				NSRange range;
-				range.location = 0;
-				range.length = (indexPtr - indices) * sizeof(INDEX_TYPE);
-				[s_gxIndexBuffer didModifyRange:range];
-			#endif
+				s_gxIndexBuffer.updateEnd(0, indexPtr - indices);
 			}
 			
 			s_gxPrimitiveType = GX_TRIANGLES;
@@ -1124,7 +1117,9 @@ static void gxFlush(bool endOfBatch)
 
 			if (indexed)
 			{
-				[activeWindowData->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:s_gxIndexBuffer indexBufferOffset:0];
+				id <MTLBuffer> buffer = (id <MTLBuffer>)s_gxIndexBuffer.getMetalBuffer();
+				
+				[activeWindowData->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:buffer indexBufferOffset:0];
 			}
 			else
 			{
@@ -1377,13 +1372,18 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 	Assert(false); // todo
 }
 
-void gxSetVertexBuffer(const GxVertexInput * vsInputs, const int numVsInputs)
+//
+
+void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs)
 {
 	const int maxVsInputs = sizeof(s_gxVertexInputs) / sizeof(s_gxVertexInputs[0]);
 	Assert(numVsInputs <= maxVsInputs);
 	const int numVsInputsToCopy = numVsInputs < maxVsInputs ? numVsInputs : maxVsInputs;
 	memcpy(s_gxVertexInputs, vsInputs, numVsInputsToCopy * sizeof(GxVertexInput));
 	s_gxVertexInputCount = numVsInputsToCopy;
+	
+	id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
+	[activeWindowData->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
 }
 
 void gxEmitVertex()
