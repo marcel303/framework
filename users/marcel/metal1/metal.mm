@@ -25,6 +25,8 @@
 	#define VS_BLEND_WEIGHTS 6
 #endif
 
+static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs);
+
 static id <MTLDevice> device;
 
 struct
@@ -241,9 +243,9 @@ void metal_draw_end()
 	[activeWindowData->cmdbuf addCompletedHandler:
 		^(id<MTLCommandBuffer> _Nonnull)
 		{
-			//NSLog(@"hello done!");
+			//NSLog(@"hello done! %@", activeWindowData);
 		}];
-	
+
 	[activeWindowData->cmdbuf presentDrawable:activeWindowData->current_drawable];
 	[activeWindowData->cmdbuf commit];
 	
@@ -677,7 +679,7 @@ static bool s_gxTextureEnabled = false;
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
 
-static GxVertexBuffer s_gxVertexBufferCopy;
+static DynamicBufferPool s_gxVertexBufferPool;
 static GxIndexBuffer s_gxIndexBuffer;
 
 // todo : separate low level things from these type of things needed for GX vertex/matrix/generic shader API
@@ -709,7 +711,7 @@ void gxInitialize()
 	s_gxVertex.cz = 1.f;
 	s_gxVertex.cw = 1.f;
 
-	s_gxVertexBufferCopy.init(sizeof(s_gxVertexBuffer));
+	s_gxVertexBufferPool.init(sizeof(s_gxVertexBuffer));
 
 	const int maxVertexCount = sizeof(s_gxVertexBuffer) / sizeof(s_gxVertexBuffer[0]);
 	const int maxQuads = maxVertexCount / 4;
@@ -726,7 +728,7 @@ void gxInitialize()
 
 void gxShutdown()
 {
-	s_gxVertexBufferCopy.free();
+	s_gxVertexBufferPool.free();
 	
 	s_gxIndexBuffer.free();
 
@@ -795,6 +797,8 @@ static void gxValidatePipelineState()
 		
 		id <MTLFunction> vs = [library_vs newFunctionWithName:@"shader_main"];
 		id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
+		[vs retain]; // this fixes the occasional pipeline building crash I was seeing. not sure why this is needed
+		[ps retain]; // fixme : remove these retain calls
 
 		MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 			// position
@@ -1013,13 +1017,20 @@ static void gxFlush(bool endOfBatch)
 		};
 		
 	// todo : refactor s_gxVertices to use a GxVertexBuffer object
+	// todo : optimize using setVertexBytes when the draw call is small
 	
-		void * vertexData = s_gxVertexBufferCopy.updateBegin();
+		auto * elem = s_gxVertexBufferPool.allocBuffer();
+		[activeWindowData->cmdbuf addCompletedHandler:
+			^(id<MTLCommandBuffer> _Nonnull)
+			{
+				s_gxVertexBufferPool.freeBuffer(elem);
+			}];
+		id <MTLBuffer> buffer = (id <MTLBuffer>)elem->m_buffer;
 		const int vertexDataSize = s_gxVertexCount * sizeof(GxVertex);
-		memcpy(vertexData, s_gxVertices, vertexDataSize);
-		s_gxVertexBufferCopy.updateEnd(0, vertexDataSize);
+		memcpy(buffer.contents, s_gxVertices, vertexDataSize);
 		
-		gxSetVertexBuffer(&s_gxVertexBufferCopy, vsInputs, sizeof(vsInputs) / sizeof(vsInputs[0]));
+		bindVsInputs(vsInputs, sizeof(vsInputs) / sizeof(vsInputs[0]));
+		[activeWindowData->encoder setVertexBuffer:buffer offset:0 atIndex:0];
 	
 		gxValidatePipelineState();
 		
@@ -1374,13 +1385,18 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 
 //
 
-void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs)
+static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs)
 {
 	const int maxVsInputs = sizeof(s_gxVertexInputs) / sizeof(s_gxVertexInputs[0]);
 	Assert(numVsInputs <= maxVsInputs);
 	const int numVsInputsToCopy = numVsInputs < maxVsInputs ? numVsInputs : maxVsInputs;
 	memcpy(s_gxVertexInputs, vsInputs, numVsInputsToCopy * sizeof(GxVertexInput));
 	s_gxVertexInputCount = numVsInputsToCopy;
+}
+
+void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs)
+{
+	bindVsInputs(vsInputs, numVsInputs);
 	
 	id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
 	[activeWindowData->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
@@ -1403,7 +1419,7 @@ void gxEmitVertex()
 
 void gxValidateShaderResources()
 {
-	if (s_gxTexture)
+	if (s_gxTextureEnabled)
 	{
 		auto i = s_textures.find(s_gxTexture);
 		
