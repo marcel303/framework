@@ -26,7 +26,7 @@
 	#define VS_BLEND_WEIGHTS 6
 #endif
 
-static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs);
+static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 
 static id <MTLDevice> device;
 
@@ -42,7 +42,7 @@ WindowData * activeWindowData = nullptr;
 
 static MTLRenderPipelineReflection * activeRenderPipelineReflection = nullptr;
 
-static Shader s_shader;
+static Shader * s_shader = nullptr;
 
 static std::vector<id <MTLResource>> s_resourcesToFree;
 
@@ -58,94 +58,6 @@ static void freeResourcesToFree()
 	
 	s_resourcesToFree.clear();
 }
-
-#if 1 // todo : move elsewhere
-
-static const char * s_shaderVs = R"SHADER(
-
-	#include <metal_stdlib>
-
-	using namespace metal;
-
-	struct ShaderInputs
-	{
-		float4 position [[attribute(0)]];
-		float3 normal [[attribute(1)]];
-		float4 color [[attribute(2)]];
-		float2 texcoord [[attribute(3)]];
-	};
-
-	struct ShaderOutputs
-	{
-		float4 position [[position]];
-		float4 color;
-		float2 texcoord;
-	};
-
-	struct ShaderUniforms
-	{
-		float4x4 ProjectionMatrix;
-		float4x4 ModelViewMatrix;
-		float4x4 ModelViewProjectionMatrix;
-	};
-
-	#define unpackPosition() inputs.position
-
-	vertex ShaderOutputs shader_main(
-		ShaderInputs inputs [[stage_in]],
-		constant ShaderUniforms & uniforms [[buffer(1)]])
-	{
-		ShaderOutputs outputs;
-		
-		outputs.position = uniforms.ModelViewProjectionMatrix * unpackPosition();
-		//outputs.position = uniforms.ModelViewMatrix * inputs.position;
-		//outputs.position = uniforms.ProjectionMatrix * float4(inputs.position.xy, 2, 1);
-		outputs.color = inputs.color;
-		outputs.texcoord = inputs.texcoord;
-		
-		return outputs;
-	}
-
-)SHADER";
-
-static const char * s_shaderPs = R"SHADER(
-
-	#include <metal_stdlib>
-
-	using namespace metal;
-
-	struct ShaderInputs
-	{
-		float4 position [[position]];
-		float4 color;
-		float2 texcoord;
-	};
-
-	struct ShaderUniforms
-	{
-		float4 params;
-	};
-
-	fragment float4 shader_main(
-		ShaderInputs inputs [[stage_in]],
-		constant ShaderUniforms & uniforms [[buffer(0)]],
-		texture2d<float> textureResource [[texture(0)]])
-	{
-		float4 color = inputs.color;
-		
-		if (uniforms.params.x != 0.0)
-		{
-			constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
-			
-			color *= textureResource.sample(textureSampler, inputs.texcoord);
-		}
-		
-		return color;
-	}
-
-)SHADER";
-
-#endif
 
 void metal_init()
 {
@@ -375,6 +287,16 @@ void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 		MTLWindingClockwise;
 	
 	[activeWindowData->encoder setFrontFacingWinding:metalFrontFaceWinding];
+}
+
+void setShader(Shader & shader)
+{
+	globals.shader = &shader;
+}
+
+void clearShader()
+{
+	globals.shader = nullptr;
 }
 
 // -- gpu resources --
@@ -626,7 +548,7 @@ void gxValidateMatrices()
 	
 		if (shaderElem.vsInfo.uniformBufferIndex != -1)
 		{
-			uint8_t * data = (uint8_t*)shader->m_cacheElem.vsUniformData;
+			uint8_t * data = (uint8_t*)shader->m_cacheElem->vsUniformData;
 		
 			// check if matrices are dirty
 			
@@ -683,8 +605,9 @@ static DynamicBufferPool s_gxVertexBufferPool;
 static GxIndexBuffer s_gxIndexBuffer;
 
 // todo : separate low level things from these type of things needed for GX vertex/matrix/generic shader API
-static GxVertexInput s_gxVertexInputs[16];
-static int s_gxVertexInputCount = 0;
+GxVertexInput s_gxVertexInputs[16];
+int s_gxVertexInputCount = 0;
+int s_gxVertexStride = 0;
 
 static float scale255(const float v)
 {
@@ -780,6 +703,14 @@ static void gxValidatePipelineState()
 {
 	@autoreleasepool
 	{
+	#if 1
+		Shader shader("test");
+		
+		auto & shaderElem = shader.getCacheElem();
+		
+		id <MTLFunction> vs = (id <MTLFunction>)shaderElem.vs;
+		id <MTLFunction> ps = (id <MTLFunction>)shaderElem.ps;
+	#else
 		//MTLCompileOptions * options = [[[MTLCompileOptions alloc] init] autorelease];
 		//options.fastMathEnabled = false;
 		//option.preprocessorMacros;
@@ -799,9 +730,9 @@ static void gxValidatePipelineState()
 		id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
 		[vs retain]; // this fixes the occasional pipeline building crash I was seeing. not sure why this is needed
 		[ps retain]; // fixme : remove these retain calls
-
+	#endif
+	
 		MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
-			// position
 	
 		for (int i = 0; i < s_gxVertexInputCount; ++i)
 		{
@@ -830,8 +761,7 @@ static void gxValidatePipelineState()
 			}
 		}
 		
-	// todo : stride should come from the gxSetVertexBuffer call
-		vertexDescriptor.layouts[0].stride = sizeof(GxVertex);
+		vertexDescriptor.layouts[0].stride = s_gxVertexStride;
 		vertexDescriptor.layouts[0].stepRate = 1;
 		vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
 
@@ -957,6 +887,7 @@ static void gxValidatePipelineState()
 		
 		const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
 		
+		NSError * error;
 		id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&activeRenderPipelineReflection error:&error];
 		if (error != nullptr)
 			NSLog(@"%@", error);
@@ -964,9 +895,9 @@ static void gxValidatePipelineState()
 		[activeRenderPipelineReflection retain];
 		
 	// todo : cache shader elems and pipeline states
-		s_shader = Shader();
-		s_shader.m_cacheElem.init(activeRenderPipelineReflection);
-		globals.shader = &s_shader;
+		//s_shader = Shader();
+		//s_shader.m_cacheElem->init(activeRenderPipelineReflection);
+		globals.shader = s_shader;
 		
 	#if 0 // todo : remove. test if setting immediates works
 		const int params_offset = s_shader.getImmediate("params");
@@ -983,11 +914,13 @@ static void gxValidatePipelineState()
 
 		[pipelineState release];
 
+	#if 0
 		[vs release];
 		[ps release];
 
 		[library_vs release];
 		[library_ps release];
+	#endif
 	}
 }
 
@@ -1001,18 +934,6 @@ static void gxFlush(bool endOfBatch)
 	{
 		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
 
-	#if 1
-		globals.shader = &s_shader; // todo : remove. just to ensure a shader is set
-	#endif
-	
-		Shader genericShader("engine/Generic");
-		
-		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
-
-	#if 0 // todo
-		setShader(shader);
-	#endif
-	
 		const GxVertexInput vsInputs[] =
 		{
 			{ VS_POSITION, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px), 0 },
@@ -1042,7 +963,22 @@ static void gxFlush(bool endOfBatch)
 			[activeWindowData->encoder setVertexBuffer:elem->m_buffer offset:0 atIndex:0];
 		}
 		
-		bindVsInputs(vsInputs, sizeof(vsInputs) / sizeof(vsInputs[0]));
+		bindVsInputs(vsInputs, sizeof(vsInputs) / sizeof(vsInputs[0]), sizeof(GxVertex));
+	
+	#if 1
+		if (s_shader == nullptr)
+			s_shader = new Shader("test");
+			
+		globals.shader = s_shader; // todo : remove. just to ensure a shader is set
+	#endif
+	
+		Shader genericShader("engine/Generic");
+		
+		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	
+	#if 0 // todo
+		setShader(shader);
+	#endif
 	
 		gxValidatePipelineState();
 		
@@ -1130,7 +1066,7 @@ static void gxFlush(bool endOfBatch)
 		}
 	#endif
 	
-		[activeWindowData->encoder setFragmentBytes:shader.m_cacheElem.psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
+		[activeWindowData->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
 		
 	#if TODO
 		if (shader.isValid())
@@ -1397,18 +1333,19 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 
 //
 
-static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs)
+static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
 	const int maxVsInputs = sizeof(s_gxVertexInputs) / sizeof(s_gxVertexInputs[0]);
 	Assert(numVsInputs <= maxVsInputs);
 	const int numVsInputsToCopy = numVsInputs < maxVsInputs ? numVsInputs : maxVsInputs;
 	memcpy(s_gxVertexInputs, vsInputs, numVsInputsToCopy * sizeof(GxVertexInput));
 	s_gxVertexInputCount = numVsInputsToCopy;
+	s_gxVertexStride = vsStride;
 }
 
-void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs)
+void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
-	bindVsInputs(vsInputs, numVsInputs);
+	bindVsInputs(vsInputs, numVsInputs, vsStride);
 	
 	id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
 	[activeWindowData->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];

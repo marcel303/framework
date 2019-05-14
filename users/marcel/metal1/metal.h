@@ -3,6 +3,7 @@
 struct SDL_Window;
 
 class GxVertexBuffer;
+class Shader;
 
 void metal_init();
 void metal_attach(SDL_Window * window);
@@ -63,6 +64,9 @@ void setLineSmooth(bool enabled);
 void setWireframe(bool enabled);
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
+
+void setShader(Shader & shader);
+void clearShader();
 
 // -- gpu resources --
 
@@ -133,4 +137,4 @@ void gxVertex4fv(const float * v);
 void gxSetTexture(GxTextureId texture);
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
-void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs);
+void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);

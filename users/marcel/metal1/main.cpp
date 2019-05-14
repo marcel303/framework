@@ -2,6 +2,7 @@
 
 #include "Mat4x4.h"
 #include "metal.h"
+#include "shader.h"
 #include <stdlib.h>
 
 int main(int arg, char * argv[])
@@ -107,6 +108,22 @@ int main(int arg, char * argv[])
 				gxEnd();
 				gxSetTexture(0);
 				setBlend(BLEND_OPAQUE);
+				
+				gxPushMatrix();
+				gxTranslatef(0, 0, -.1f);
+				Shader shader("test");
+				setShader(shader);
+				shader.setImmediate("imms", 1, 2, 3, 4);
+				gxBegin(GX_TRIANGLE_STRIP);
+				{
+					gxColor4f(1, 1, 1, 1);
+					gxVertex2f(0.f, 0.f);
+					gxVertex2f(.3f, 0.f);
+					gxVertex2f(.3f, .3f);
+				}
+				gxEnd();
+				clearShader();
+				gxPopMatrix();
 			}
 			gxPopMatrix();
 		}

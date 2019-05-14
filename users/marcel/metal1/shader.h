@@ -1,11 +1,13 @@
 #pragma once
 
-#import <Metal/Metal.h>
-
 #import <string>
 #import <vector>
 
-typedef int GxImmediateIndex;
+struct ShaderCacheElem;
+
+#ifdef __OBJC__
+
+#import <Metal/Metal.h>
 
 struct ShaderCacheElem
 {
@@ -72,6 +74,9 @@ struct ShaderCacheElem
 		int elemType = -1;
 		int numElems = 0;
 	};
+	
+	void * vs = nullptr;
+	void * ps = nullptr;
 	
 	StageInfo vsInfo;
 	StageInfo psInfo;
@@ -207,27 +212,17 @@ struct ShaderCacheElem
 	}
 };
 
+#endif
+
+typedef int GxImmediateIndex;
+
 class Shader
 {
 public:
-	ShaderCacheElem::UniformInfo & getUniformInfo(const int index, const int type, const int numElems);
-	
-	template <typename T>
-	T * getVsUniformPtr(const int offset)
-	{
-		return (T*)(((uint8_t*)m_cacheElem.vsUniformData) + offset);
-	}
-	
-	template <typename T>
-	T * getPsUniformPtr(const int offset)
-	{
-		return (T*)(((uint8_t*)m_cacheElem.psUniformData) + offset);
-	}
-	
-	ShaderCacheElem m_cacheElem; // todo : make private
+	ShaderCacheElem * m_cacheElem = nullptr; // todo : make private
 	
 	Shader() { }
-	Shader(const char * name) { }
+	Shader(const char * name);
 	
 // todo
 	//void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
@@ -250,5 +245,5 @@ public:
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
 
-	const ShaderCacheElem & getCacheElem() const { return m_cacheElem; }
+	const ShaderCacheElem & getCacheElem() const { return *m_cacheElem; }
 };
