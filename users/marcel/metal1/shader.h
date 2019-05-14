@@ -226,6 +226,9 @@ public:
 	
 	ShaderCacheElem m_cacheElem; // todo : make private
 	
+	Shader() { }
+	Shader(const char * name) { }
+	
 // todo
 	//void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
 	//virtual bool isValid() const override;

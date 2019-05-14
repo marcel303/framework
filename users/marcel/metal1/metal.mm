@@ -1,3 +1,4 @@
+#import "bufferPool.h"
 #import "metal.h"
 #import "metalView.h"
 #import "shader.h"
@@ -1000,16 +1001,16 @@ static void gxFlush(bool endOfBatch)
 	{
 		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
 
-	#if TODO
+	#if 1
+		globals.shader = &s_shader; // todo : remove. just to ensure a shader is set
+	#endif
+	
 		Shader genericShader("engine/Generic");
 		
 		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
 
+	#if 0 // todo
 		setShader(shader);
-	#else
-		globals.shader = &s_shader; // todo : remove. just to ensure a shader is set
-		
-		Shader & shader = *globals.shader;
 	#endif
 	
 		const GxVertexInput vsInputs[] =
@@ -1037,9 +1038,8 @@ static void gxFlush(bool endOfBatch)
 				{
 					s_gxVertexBufferPool.freeBuffer(elem);
 				}];
-			id <MTLBuffer> buffer = (id <MTLBuffer>)elem->m_buffer;
-			memcpy(buffer.contents, s_gxVertices, vertexDataSize);
-			[activeWindowData->encoder setVertexBuffer:buffer offset:0 atIndex:0];
+			memcpy(elem->m_buffer.contents, s_gxVertices, vertexDataSize);
+			[activeWindowData->encoder setVertexBuffer:elem->m_buffer offset:0 atIndex:0];
 		}
 		
 		bindVsInputs(vsInputs, sizeof(vsInputs) / sizeof(vsInputs[0]));

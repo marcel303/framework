@@ -64,32 +64,3 @@ public:
 	
 	void * getMetalBuffer() const { return m_buffer; }
 };
-
-// todo : move this to an internal header and replace opaque buffer to with the proper MTLBuffer type. this is not part of the public API!
-
-#include <mutex>
-
-struct DynamicBufferPool
-{
-	struct PoolElem
-	{
-		PoolElem * m_next = nullptr;
-		void * m_buffer = nullptr;
-	};
-	
-	std::mutex m_mutex;
-	
-	PoolElem * m_freeList = nullptr;
-	
-	int m_numBytesPerBuffer = 0;
-	
-	DynamicBufferPool();
-	~DynamicBufferPool();
-	
-	void init(const int numBytesPerBuffer);
-	void free();
-	
-	PoolElem * allocBuffer();
-	void freeBuffer(PoolElem * buffer);
-};
-
