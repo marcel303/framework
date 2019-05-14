@@ -1,6 +1,8 @@
 #pragma once
 
+#import "metalView.h"
 #import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
 
 struct WindowData
 {
@@ -17,4 +19,6 @@ struct WindowData
 	id <MTLRenderCommandEncoder> encoder;
 	
 	id <MTLTexture> depth_texture;
+	
+	void create_depth_texture_matching_metal_view();
 };

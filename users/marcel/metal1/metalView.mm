@@ -41,10 +41,12 @@
 - (void)updateDrawableSize
 {
     CGSize size  = self.bounds.size;
-    //size.width  *= self.contentScaleFactor;
-    //size.height *= self.contentScaleFactor;
+    size.width  *= self.layer.contentsScale;
+    size.height *= self.layer.contentsScale;
 
     _metalLayer.drawableSize = size;
+	
+    //NSLog(@"updateDrawableSize");
 }
 
 - (void)resizeWithOldSuperviewSize:(NSSize)oldSize

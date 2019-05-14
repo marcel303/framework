@@ -8,7 +8,22 @@
 #import <SDL2/SDL_syswm.h>
 #import <vector>
 
+#include <assert.h> // todo : remove once integrated w/ framework
+#define fassert assert
+#define Assert fassert
+
 #define INDEX_TYPE uint32_t
+
+#if 1 // todo : remove
+	#define VS_POSITION      0
+	#define VS_NORMAL        1
+	#define VS_COLOR         2
+	#define VS_TEXCOORD0     3
+	#define VS_TEXCOORD      VS_TEXCOORD0
+	#define VS_TEXCOORD1     4
+	#define VS_BLEND_INDICES 5
+	#define VS_BLEND_WEIGHTS 6
+#endif
 
 static id <MTLDevice> device;
 
@@ -20,7 +35,7 @@ struct
 
 static std::map<SDL_Window*, WindowData*> windowDatas;
 
-static WindowData * activeWindowData = nullptr;
+WindowData * activeWindowData = nullptr;
 
 static MTLRenderPipelineReflection * activeRenderPipelineReflection = nullptr;
 
@@ -32,6 +47,8 @@ static void freeResourcesToFree()
 {
 	for (id <MTLResource> & resource : s_resourcesToFree)
 	{
+		//NSLog(@"resource release, retain count: %lu", [resource retainCount]);
+		
 		[resource release];
 		resource = nullptr;
 	}
@@ -134,43 +151,51 @@ void metal_init()
 
 void metal_attach(SDL_Window * window)
 {
-	SDL_SysWMinfo info;
-	SDL_VERSION(&info.version);
-	SDL_GetWindowWMInfo(window, &info);
-	
-	NSView * sdl_view = info.info.cocoa.window.contentView;
-
-	WindowData * windowData = new WindowData();
-	windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device];
-	[sdl_view addSubview:windowData->metalview];
-
-	windowData->renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
-	
-	windowData->queue = [windowData->metalview.metalLayer.device newCommandQueue];
-	
-	// create depth texture
-	
+	@autoreleasepool
 	{
-		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float width:300 height:600 mipmapped:NO];
-		descriptor.resourceOptions = MTLResourceStorageModePrivate;
-		descriptor.usage = MTLTextureUsageRenderTarget;
+		SDL_SysWMinfo info;
+		SDL_VERSION(&info.version);
+		SDL_GetWindowWMInfo(window, &info);
 		
-		windowData->depth_texture = [device newTextureWithDescriptor:descriptor];
+		NSView * sdl_view = info.info.cocoa.window.contentView;
+
+		WindowData * windowData = new WindowData();
+		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device];
+		[sdl_view addSubview:windowData->metalview];
+
+		windowData->renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
+		[windowData->renderdesc retain];
+		
+		windowData->queue = [windowData->metalview.metalLayer.device newCommandQueue];
+		
+		// create depth texture
+		windowData->create_depth_texture_matching_metal_view();
+		
+		windowDatas[window] = windowData;
 	}
-	
-	windowDatas[window] = windowData;
 }
 
 void metal_make_active(SDL_Window * window)
 {
 	auto i = windowDatas.find(window);
 	
-	// todo : assert
-	
+	Assert(i != windowDatas.end());
 	if (i == windowDatas.end())
 		activeWindowData = nullptr;
 	else
 		activeWindowData = i->second;
+	
+	if (activeWindowData != nullptr)
+	{
+		if (activeWindowData->depth_texture != nullptr)
+		{
+			if (activeWindowData->depth_texture.width != activeWindowData->metalview.metalLayer.drawableSize.width ||
+				activeWindowData->depth_texture.height != activeWindowData->metalview.metalLayer.drawableSize.height)
+			{
+				activeWindowData->create_depth_texture_matching_metal_view();
+			}
+		}
+	}
 }
 
 void metal_draw_begin(const float r, const float g, const float b, const float a)
@@ -207,10 +232,9 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 
 void metal_draw_end()
 {
+	//NSLog(@"activeRenderPipelineReflection release, retain count: %lu", [activeRenderPipelineReflection retainCount]);
 	[activeRenderPipelineReflection release];
 	activeRenderPipelineReflection = nullptr;
-	
-	//
 	
 	[activeWindowData->encoder endEncoding];
 	
@@ -224,13 +248,16 @@ void metal_draw_end()
 	[activeWindowData->cmdbuf commit];
 	
 // todo : remove and use addCompletedHandler instead
-	[activeWindowData->cmdbuf waitUntilCompleted];
+	//[activeWindowData->cmdbuf waitUntilCompleted];
 	freeResourcesToFree(); // todo : call in response to completion handler
 	
 	//
 	
+	//NSLog(@"encoder release, retain count: %lu", [activeWindowData->encoder retainCount]);
 	[activeWindowData->encoder release];
+	//NSLog(@"current_drawable release, retain count: %lu", [activeWindowData->current_drawable retainCount]);
 	[activeWindowData->current_drawable release];
+	//NSLog(@"cmdbuf release, retain count: %lu", [activeWindowData->cmdbuf retainCount]);
 	[activeWindowData->cmdbuf release];
 	
 	activeWindowData->encoder = nullptr;
@@ -243,24 +270,21 @@ void metal_set_viewport(const int sx, const int sy)
 	[activeWindowData->encoder setViewport:(MTLViewport){ 0, 0, (double)sx, (double)sy, 0.0, 1.0 }];
 }
 
-/*
-// todo : remove
-struct __attribute__((packed)) RenderState
+id <MTLDevice> metal_get_device()
 {
-	int blendMode = 0;
-	bool depthTestEnabled = false;
-	int depthTestFunction = 0;
-};
-
-struct ShaderCache
-{
-
-};
-*/
+	return device;
+}
 
 // -- render states --
 
-static BLEND_MODE s_blendMode = BLEND_ALPHA;
+struct RenderPipelineState
+{
+	BLEND_MODE blendMode = BLEND_ALPHA;
+};
+
+static RenderPipelineState renderState;
+
+// render states independent from render pipeline state
 
 static bool s_depthTestEnabled = false;
 static DEPTH_TEST s_depthTest = DEPTH_ALWAYS;
@@ -268,7 +292,7 @@ static bool s_depthWriteEnabled = false;
 
 void setBlend(BLEND_MODE blendMode)
 {
-	s_blendMode = blendMode;
+	renderState.blendMode = blendMode;
 }
 
 void setLineSmooth(bool enabled)
@@ -351,10 +375,6 @@ void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 }
 
 // -- gpu resources --
-
-#include <assert.h>
-#define fassert assert
-#define Assert fassert
 
 static std::map<int, id <MTLTexture>> s_textures;
 static int s_nextTextureId = 1;
@@ -660,6 +680,9 @@ static int s_gxLastVertexCount = -1;
 static id <MTLBuffer> s_gxVertexBufferCopy = nullptr; // todo : remove s_gxVertexBuffer and write directly into this one
 static id <MTLBuffer> s_gxIndexBuffer = nullptr;
 
+static GxVertexInput s_gxVertexInputs[16];
+static int s_gxVertexInputCount = 0;
+
 static float scale255(const float v)
 {
 	static const float m = 1.f / 255.f;
@@ -781,24 +804,40 @@ static void gxValidatePipelineState()
 
 		MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 			// position
-		vertexDescriptor.attributes[0].format = MTLVertexFormatFloat4;
-		vertexDescriptor.attributes[0].offset = 0;
-		vertexDescriptor.attributes[0].bufferIndex = 0;
-		vertexDescriptor.attributes[1].format = MTLVertexFormatFloat3;
-		vertexDescriptor.attributes[1].offset = 16;
-		vertexDescriptor.attributes[1].bufferIndex = 0;
-		vertexDescriptor.attributes[2].format = MTLVertexFormatFloat4;
-		vertexDescriptor.attributes[2].offset = 28;
-		vertexDescriptor.attributes[2].bufferIndex = 0;
-		vertexDescriptor.attributes[3].format = MTLVertexFormatFloat2;
-		vertexDescriptor.attributes[3].offset = 44;
-		vertexDescriptor.attributes[3].bufferIndex = 0;
-
+	
+		for (int i = 0; i < s_gxVertexInputCount; ++i)
+		{
+			auto & e = s_gxVertexInputs[i];
+			auto * a = vertexDescriptor.attributes[e.id];
+			
+			MTLVertexFormat metalFormat = MTLVertexFormatInvalid;
+			
+			if (e.type == GX_ELEMENT_FLOAT32)
+			{
+				if (e.numComponents == 1)
+					metalFormat = MTLVertexFormatFloat;
+				else if (e.numComponents == 2)
+					metalFormat = MTLVertexFormatFloat2;
+				else if (e.numComponents == 3)
+					metalFormat = MTLVertexFormatFloat3;
+				else if (e.numComponents == 4)
+					metalFormat = MTLVertexFormatFloat4;
+			}
+			
+			Assert(metalFormat != MTLVertexFormatInvalid);
+			if (metalFormat != MTLVertexFormatInvalid)
+			{
+				a.format = metalFormat;
+				a.offset = e.offset;
+			}
+		}
+		
+	// todo : stride should come from the gxSetVertexBuffer call
 		vertexDescriptor.layouts[0].stride = sizeof(GxVertex);
 		vertexDescriptor.layouts[0].stepRate = 1;
 		vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
 
-		MTLRenderPipelineDescriptor * pipelineDescriptor = [[[MTLRenderPipelineDescriptor alloc] init] autorelease];
+		MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
 		pipelineDescriptor.label = @"hello pipeline";
 		pipelineDescriptor.sampleCount = 1;
 		pipelineDescriptor.vertexFunction = vs;
@@ -811,7 +850,7 @@ static void gxValidatePipelineState()
 		
 		// blend state
 		
-		switch (s_blendMode)
+		switch (renderState.blendMode)
 		{
 		case BLEND_OPAQUE:
 			att.blendingEnabled = false;
@@ -919,7 +958,11 @@ static void gxValidatePipelineState()
 		activeRenderPipelineReflection = nullptr;
 		
 		const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
+		
 		id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&activeRenderPipelineReflection error:&error];
+		if (error != nullptr)
+			NSLog(@"%@", error);
+		
 		[activeRenderPipelineReflection retain];
 		
 	// todo : cache shader elems and pipeline states
@@ -962,10 +1005,21 @@ static void gxFlush(bool endOfBatch)
 
 		setShader(shader);
 	#else
-		gxValidatePipelineState(); // todo : remove. just to ensure a shader is set
+		globals.shader = &s_shader; // todo : remove. just to ensure a shader is set
 		
 		Shader & shader = *globals.shader;
 	#endif
+	
+		const GxVertexInput vsInputs[] =
+		{
+			{ VS_POSITION, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px), 0 },
+			{ VS_NORMAL,   3, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, nx), 0 },
+			{ VS_COLOR,    4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, cx), 0 },
+			{ VS_TEXCOORD, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx), 0 }
+		};
+		
+	// todo : refactor s_gxVertices to use a GxVertexBuffer object
+		gxSetVertexBuffer(vsInputs, sizeof(vsInputs) / sizeof(vsInputs[0]));
 	
 		gxValidatePipelineState();
 		
@@ -1320,7 +1374,16 @@ void gxSetTexture(GxTextureId texture)
 
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 {
+	Assert(false); // todo
+}
 
+void gxSetVertexBuffer(const GxVertexInput * vsInputs, const int numVsInputs)
+{
+	const int maxVsInputs = sizeof(s_gxVertexInputs) / sizeof(s_gxVertexInputs[0]);
+	Assert(numVsInputs <= maxVsInputs);
+	const int numVsInputsToCopy = numVsInputs < maxVsInputs ? numVsInputs : maxVsInputs;
+	memcpy(s_gxVertexInputs, vsInputs, numVsInputsToCopy * sizeof(GxVertexInput));
+	s_gxVertexInputCount = numVsInputsToCopy;
 }
 
 void gxEmitVertex()

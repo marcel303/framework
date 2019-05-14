@@ -90,6 +90,21 @@ enum GX_SAMPLE_FILTER
 	GX_SAMPLE_LINEAR
 };
 
+enum GX_ELEMENT_TYPE
+{
+	GX_ELEMENT_FLOAT32
+};
+
+struct GxVertexInput
+{
+	int id;               // vertex stream id or index. given by VS_POSITION, VS_TEXCOORD, .. for built-in shaders
+	int numComponents;    // the number of components per element
+	GX_ELEMENT_TYPE type; // the type of element inside the vertex stream
+	bool normalize;       // (if integer) should the element be normalized into the range 0..1?
+	int offset;           // byte offset within vertex buffer for the start of this input
+	int stride;           // byte stride between elements. use zero when elements are tightly packed
+};
+
 void gxMatrixMode(GX_MATRIX mode);
 GX_MATRIX gxGetMatrixMode();
 void gxPopMatrix();
@@ -123,3 +138,5 @@ void gxVertex4f(float x, float y, float z, float w);
 void gxVertex4fv(const float * v);
 void gxSetTexture(GxTextureId texture);
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
+
+void gxSetVertexBuffer(const GxVertexInput * vsInputs, const int numVsInputs);
