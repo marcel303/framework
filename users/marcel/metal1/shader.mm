@@ -1,3 +1,4 @@
+#import "metal.h"
 #import "shader.h"
 
 #include <assert.h> // todo : use framework assert
@@ -24,10 +25,6 @@ ShaderCache g_shaderCache;
 //
 
 #include "mesh.h"
-
-extern GxVertexInput s_gxVertexInputs[];
-extern int s_gxVertexInputCount;
-extern int s_gxVertexStride;
 
 #if 1 // todo : move elsewhere
 
@@ -159,9 +156,9 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 		//         before the shader is set. when a shader is set, construct the pipeline state
 		//         only thing allowed after a shader is set is set to immediates, and to
 		//         do draw calls
-			for (int i = 0; i < s_gxVertexInputCount; ++i)
+			for (int i = 0; i < renderState.vertexInputCount; ++i)
 			{
-				auto & e = s_gxVertexInputs[i];
+				auto & e = renderState.vertexInputs[i];
 				auto * a = vertexDescriptor.attributes[e.id];
 				
 				MTLVertexFormat metalFormat = MTLVertexFormatInvalid;
@@ -186,7 +183,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 				}
 			}
 		
-			vertexDescriptor.layouts[0].stride = s_gxVertexStride;
+			vertexDescriptor.layouts[0].stride = renderState.vertexStride;
 			vertexDescriptor.layouts[0].stepRate = 1;
 			vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
 			pipelineDescriptor.vertexDescriptor = vertexDescriptor;
@@ -199,12 +196,14 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			
 			[pipelineState release];
 			
+		#if 0
 			NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
-			NSLog(@"library_ps retain count: %lu", [library_vs retainCount]);
+			NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
 			[library_vs release];
 			[library_ps release];
 			NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
-			NSLog(@"library_ps retain count: %lu", [library_vs retainCount]);
+			NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
+		#endif
 			
 			m_cacheElem.init(reflection);
 			m_cacheElem.vs = vs;

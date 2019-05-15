@@ -138,3 +138,16 @@ void gxSetTexture(GxTextureId texture);
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
+
+// -- render states --
+
+struct __attribute__((packed)) RenderPipelineState
+{
+	BLEND_MODE blendMode = BLEND_ALPHA;
+	
+	GxVertexInput vertexInputs[8] = { };
+	int vertexInputCount = 0;
+	int vertexStride = 0;
+};
+
+extern RenderPipelineState renderState;

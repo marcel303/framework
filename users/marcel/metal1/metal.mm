@@ -15,6 +15,8 @@
 
 #define INDEX_TYPE uint32_t
 
+#define FETCH_PIPELINESTATE_REFLECTION 0
+
 #if 1 // todo : remove
 	#define VS_POSITION      0
 	#define VS_NORMAL        1
@@ -40,9 +42,9 @@ static std::map<SDL_Window*, WindowData*> windowDatas;
 
 WindowData * activeWindowData = nullptr;
 
+#if FETCH_PIPELINESTATE_REFLECTION
 static MTLRenderPipelineReflection * activeRenderPipelineReflection = nullptr;
-
-static Shader * s_shader = nullptr;
+#endif
 
 static std::vector<id <MTLResource>> s_resourcesToFree;
 
@@ -147,10 +149,12 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 
 void metal_draw_end()
 {
+#if FETCH_PIPELINESTATE_REFLECTION
 	//NSLog(@"activeRenderPipelineReflection release, retain count: %lu", [activeRenderPipelineReflection retainCount]);
 	[activeRenderPipelineReflection release];
 	activeRenderPipelineReflection = nullptr;
-	
+#endif
+
 	[activeWindowData->encoder endEncoding];
 	
 	[activeWindowData->cmdbuf addCompletedHandler:
@@ -192,12 +196,7 @@ id <MTLDevice> metal_get_device()
 
 // -- render states --
 
-struct RenderPipelineState
-{
-	BLEND_MODE blendMode = BLEND_ALPHA;
-};
-
-static RenderPipelineState renderState;
+RenderPipelineState renderState;
 
 // render states independent from render pipeline state
 
@@ -598,10 +597,13 @@ static int s_gxLastVertexCount = -1;
 static DynamicBufferPool s_gxVertexBufferPool;
 static GxIndexBuffer s_gxIndexBuffer;
 
-// todo : separate low level things from these type of things needed for GX vertex/matrix/generic shader API
-GxVertexInput s_gxVertexInputs[16];
-int s_gxVertexInputCount = 0;
-int s_gxVertexStride = 0;
+static const GxVertexInput s_gxVsInputs[] =
+{
+	{ VS_POSITION, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px), 0 },
+	{ VS_NORMAL,   3, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, nx), 0 },
+	{ VS_COLOR,    4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, cx), 0 },
+	{ VS_TEXCOORD, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx), 0 }
+};
 
 static float scale255(const float v)
 {
@@ -636,6 +638,8 @@ void gxInitialize()
 	
 	s_gxIndexBuffer.init(maxIndicesForQuads, sizeof(INDEX_TYPE) == 2 ? GX_INDEX_16 : GX_INDEX_32);
 
+	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
+	
 #if TODO
 	// enable seamless cube map sampling along the edges
 	
@@ -693,197 +697,241 @@ static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveTy
 	}
 }
 
+#define FNV_Offset32 2166136261
+#define FNV_Prime32 16777619
+
+static uint32_t computeHash(const void* bytes, int byteCount)
+{
+	uint32_t hash = FNV_Offset32;
+	
+#if 0 // todo : profile and use optimized hash function
+	const int wordCount = byteCount / 4;
+	
+	for (int i = 0; i < wordCount; ++i)
+	{
+		hash = hash ^ ((uint32_t*)bytes)[i];
+		hash = hash * FNV_Prime32;
+	}
+	
+	for (int i = wordCount * 4; i < byteCount; ++i)
+	{
+		hash = hash ^ ((uint8_t*)bytes)[i];
+		hash = hash * FNV_Prime32;
+	}
+#else
+	for (int i = 0; i < byteCount; ++i)
+	{
+		hash = hash ^ ((uint8_t*)bytes)[i];
+		hash = hash * FNV_Prime32;
+	}
+#endif
+	
+	return hash;
+}
+
 static void gxValidatePipelineState()
 {
 	Shader shader("test");
 	
 	auto & shaderElem = shader.getCacheElem();
 	
-	@autoreleasepool
+	/*
+	pipeline state dependencies:
+	- render target format(s)
+	- vs bindings
+	- blend mode
+	- vs/ps function (shader)
+	*/
+	
+	const uint32_t hash = computeHash(&renderState, sizeof(renderState));
+	
+	id <MTLRenderPipelineState> pipelineState = shaderElem.findPipelineState(hash);
+
+	if (pipelineState == nullptr)
 	{
-		id <MTLFunction> vs = (id <MTLFunction>)shaderElem.vs;
-		id <MTLFunction> ps = (id <MTLFunction>)shaderElem.ps;
-	
-		MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
-	
-		for (int i = 0; i < s_gxVertexInputCount; ++i)
+		@autoreleasepool
 		{
-			auto & e = s_gxVertexInputs[i];
-			auto * a = vertexDescriptor.attributes[e.id];
-			
-			MTLVertexFormat metalFormat = MTLVertexFormatInvalid;
-			
-			if (e.type == GX_ELEMENT_FLOAT32)
+			id <MTLFunction> vs = (id <MTLFunction>)shaderElem.vs;
+			id <MTLFunction> ps = (id <MTLFunction>)shaderElem.ps;
+		
+			MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
+		
+			for (int i = 0; i < renderState.vertexInputCount; ++i)
 			{
-				if (e.numComponents == 1)
-					metalFormat = MTLVertexFormatFloat;
-				else if (e.numComponents == 2)
-					metalFormat = MTLVertexFormatFloat2;
-				else if (e.numComponents == 3)
-					metalFormat = MTLVertexFormatFloat3;
-				else if (e.numComponents == 4)
-					metalFormat = MTLVertexFormatFloat4;
+				auto & e = renderState.vertexInputs[i];
+				auto * a = vertexDescriptor.attributes[e.id];
+				
+				MTLVertexFormat metalFormat = MTLVertexFormatInvalid;
+				
+				if (e.type == GX_ELEMENT_FLOAT32)
+				{
+					if (e.numComponents == 1)
+						metalFormat = MTLVertexFormatFloat;
+					else if (e.numComponents == 2)
+						metalFormat = MTLVertexFormatFloat2;
+					else if (e.numComponents == 3)
+						metalFormat = MTLVertexFormatFloat3;
+					else if (e.numComponents == 4)
+						metalFormat = MTLVertexFormatFloat4;
+				}
+				
+				Assert(metalFormat != MTLVertexFormatInvalid);
+				if (metalFormat != MTLVertexFormatInvalid)
+				{
+					a.format = metalFormat;
+					a.offset = e.offset;
+				}
 			}
 			
-			Assert(metalFormat != MTLVertexFormatInvalid);
-			if (metalFormat != MTLVertexFormatInvalid)
+			vertexDescriptor.layouts[0].stride = renderState.vertexStride;
+			vertexDescriptor.layouts[0].stepRate = 1;
+			vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+
+			MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
+			pipelineDescriptor.label = @"hello pipeline";
+			pipelineDescriptor.sampleCount = 1;
+			pipelineDescriptor.vertexFunction = vs;
+			pipelineDescriptor.fragmentFunction = ps;
+			pipelineDescriptor.vertexDescriptor = vertexDescriptor;
+			
+			pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+			
+			auto * att = pipelineDescriptor.colorAttachments[0];
+			
+			// blend state
+			
+			switch (renderState.blendMode)
 			{
-				a.format = metalFormat;
-				a.offset = e.offset;
+			case BLEND_OPAQUE:
+				att.blendingEnabled = false;
+				break;
+			case BLEND_ALPHA:
+				att.blendingEnabled = true;
+				att.rgbBlendOperation = MTLBlendOperationAdd;
+				att.alphaBlendOperation = MTLBlendOperationAdd;
+				att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+				att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+				att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+				att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+				break;
+			case BLEND_PREMULTIPLIED_ALPHA:
+				att.blendingEnabled = true;
+				att.rgbBlendOperation = MTLBlendOperationAdd;
+				att.alphaBlendOperation = MTLBlendOperationAdd;
+				att.sourceRGBBlendFactor = MTLBlendFactorOne;
+				att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+				att.destinationRGBBlendFactor = MTLBlendFactorOne;
+				att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+				break;
+			case BLEND_PREMULTIPLIED_ALPHA_DRAW:
+			// todo : remove ?
+				att.blendingEnabled = true;
+				att.rgbBlendOperation = MTLBlendOperationAdd;
+				att.alphaBlendOperation = MTLBlendOperationAdd;
+				att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+				att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+				att.destinationRGBBlendFactor = MTLBlendFactorOne;
+				att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+				break;
+			case BLEND_ADD:
+				att.blendingEnabled = true;
+				att.rgbBlendOperation = MTLBlendOperationAdd;
+				att.alphaBlendOperation = MTLBlendOperationAdd;
+				att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+				att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+				att.destinationRGBBlendFactor = MTLBlendFactorOne;
+				att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+				break;
+			case BLEND_ADD_OPAQUE:
+				att.blendingEnabled = true;
+				att.rgbBlendOperation = MTLBlendOperationAdd;
+				att.alphaBlendOperation = MTLBlendOperationAdd;
+				att.sourceRGBBlendFactor = MTLBlendFactorOne;
+				att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+				att.destinationRGBBlendFactor = MTLBlendFactorOne;
+				att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+				break;
+			case BLEND_SUBTRACT:
+				att.blendingEnabled = true;
+				att.rgbBlendOperation = MTLBlendOperationReverseSubtract;
+				att.alphaBlendOperation = MTLBlendOperationReverseSubtract;
+				att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+				att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+				att.destinationRGBBlendFactor = MTLBlendFactorOne;
+				att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+				break;
+			case BLEND_INVERT:
+				att.blendingEnabled = true;
+				att.rgbBlendOperation = MTLBlendOperationAdd;
+				att.alphaBlendOperation = MTLBlendOperationAdd;
+				att.sourceRGBBlendFactor = MTLBlendFactorOneMinusDestinationColor;
+				att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusDestinationAlpha;
+				att.destinationRGBBlendFactor = MTLBlendFactorZero;
+				att.destinationAlphaBlendFactor = MTLBlendFactorZero;
+				break;
+			case BLEND_MUL:
+				att.blendingEnabled = true;
+				att.rgbBlendOperation = MTLBlendOperationAdd;
+				att.alphaBlendOperation = MTLBlendOperationAdd;
+				att.sourceRGBBlendFactor = MTLBlendFactorZero;
+				att.sourceAlphaBlendFactor = MTLBlendFactorZero;
+				att.destinationRGBBlendFactor = MTLBlendFactorSourceColor;
+				att.destinationAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+				break;
+			case BLEND_MIN:
+				att.blendingEnabled = true;
+				att.rgbBlendOperation = MTLBlendOperationMin;
+				att.alphaBlendOperation = MTLBlendOperationMin;
+				att.sourceRGBBlendFactor = MTLBlendFactorOne;
+				att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+				att.destinationRGBBlendFactor = MTLBlendFactorOne;
+				att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+				break;
+			case BLEND_MAX:
+				att.blendingEnabled = true;
+				att.rgbBlendOperation = MTLBlendOperationMax;
+				att.alphaBlendOperation = MTLBlendOperationMax;
+				att.sourceRGBBlendFactor = MTLBlendFactorOne;
+				att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+				att.destinationRGBBlendFactor = MTLBlendFactorOne;
+				att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+				break;
+			default:
+				fassert(false);
+				break;
 			}
+			
+			pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
+			//pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
+
+		#if FETCH_PIPELINESTATE_REFLECTION
+			[activeRenderPipelineReflection release];
+			activeRenderPipelineReflection = nullptr;
+		#endif
+			
+		#if FETCH_PIPELINESTATE_REFLECTION
+			const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
+			
+			NSError * error;
+			pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&activeRenderPipelineReflection error:&error];
+			if (error != nullptr)
+				NSLog(@"%@", error);
+			
+			[activeRenderPipelineReflection retain];
+		#else
+			NSError * error;
+			pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
+			if (error != nullptr)
+				NSLog(@"%@", error);
+		#endif
+			
+			//NSLog(@"%@", pipelineState);
+			
+			shaderElem.addPipelineState(hash, pipelineState);
 		}
-		
-		vertexDescriptor.layouts[0].stride = s_gxVertexStride;
-		vertexDescriptor.layouts[0].stepRate = 1;
-		vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
-
-		MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
-		pipelineDescriptor.label = @"hello pipeline";
-		pipelineDescriptor.sampleCount = 1;
-		pipelineDescriptor.vertexFunction = vs;
-		pipelineDescriptor.fragmentFunction = ps;
-		pipelineDescriptor.vertexDescriptor = vertexDescriptor;
-		
-		pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-		
-		auto * att = pipelineDescriptor.colorAttachments[0];
-		
-		// blend state
-		
-		switch (renderState.blendMode)
-		{
-		case BLEND_OPAQUE:
-			att.blendingEnabled = false;
-			break;
-		case BLEND_ALPHA:
-			att.blendingEnabled = true;
-			att.rgbBlendOperation = MTLBlendOperationAdd;
-			att.alphaBlendOperation = MTLBlendOperationAdd;
-			att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-			att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
-			att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-			att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-			break;
-		case BLEND_PREMULTIPLIED_ALPHA:
-			att.blendingEnabled = true;
-			att.rgbBlendOperation = MTLBlendOperationAdd;
-			att.alphaBlendOperation = MTLBlendOperationAdd;
-			att.sourceRGBBlendFactor = MTLBlendFactorOne;
-			att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-			att.destinationRGBBlendFactor = MTLBlendFactorOne;
-			att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-			break;
-		case BLEND_PREMULTIPLIED_ALPHA_DRAW:
-		// todo : remove ?
-			att.blendingEnabled = true;
-			att.rgbBlendOperation = MTLBlendOperationAdd;
-			att.alphaBlendOperation = MTLBlendOperationAdd;
-			att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-			att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-			att.destinationRGBBlendFactor = MTLBlendFactorOne;
-			att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-			break;
-		case BLEND_ADD:
-			att.blendingEnabled = true;
-			att.rgbBlendOperation = MTLBlendOperationAdd;
-			att.alphaBlendOperation = MTLBlendOperationAdd;
-			att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-			att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
-			att.destinationRGBBlendFactor = MTLBlendFactorOne;
-			att.destinationAlphaBlendFactor = MTLBlendFactorOne;
-			break;
-		case BLEND_ADD_OPAQUE:
-			att.blendingEnabled = true;
-			att.rgbBlendOperation = MTLBlendOperationAdd;
-			att.alphaBlendOperation = MTLBlendOperationAdd;
-			att.sourceRGBBlendFactor = MTLBlendFactorOne;
-			att.sourceAlphaBlendFactor = MTLBlendFactorOne;
-			att.destinationRGBBlendFactor = MTLBlendFactorOne;
-			att.destinationAlphaBlendFactor = MTLBlendFactorOne;
-			break;
-		case BLEND_SUBTRACT:
-			att.blendingEnabled = true;
-			att.rgbBlendOperation = MTLBlendOperationReverseSubtract;
-			att.alphaBlendOperation = MTLBlendOperationReverseSubtract;
-			att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-			att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
-			att.destinationRGBBlendFactor = MTLBlendFactorOne;
-			att.destinationAlphaBlendFactor = MTLBlendFactorOne;
-			break;
-		case BLEND_INVERT:
-			att.blendingEnabled = true;
-			att.rgbBlendOperation = MTLBlendOperationAdd;
-			att.alphaBlendOperation = MTLBlendOperationAdd;
-			att.sourceRGBBlendFactor = MTLBlendFactorOneMinusDestinationColor;
-			att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusDestinationAlpha;
-			att.destinationRGBBlendFactor = MTLBlendFactorZero;
-			att.destinationAlphaBlendFactor = MTLBlendFactorZero;
-			break;
-		case BLEND_MUL:
-			att.blendingEnabled = true;
-			att.rgbBlendOperation = MTLBlendOperationAdd;
-			att.alphaBlendOperation = MTLBlendOperationAdd;
-			att.sourceRGBBlendFactor = MTLBlendFactorZero;
-			att.sourceAlphaBlendFactor = MTLBlendFactorZero;
-			att.destinationRGBBlendFactor = MTLBlendFactorSourceColor;
-			att.destinationAlphaBlendFactor = MTLBlendFactorSourceAlpha;
-			break;
-		case BLEND_MIN:
-			att.blendingEnabled = true;
-			att.rgbBlendOperation = MTLBlendOperationMin;
-			att.alphaBlendOperation = MTLBlendOperationMin;
-			att.sourceRGBBlendFactor = MTLBlendFactorOne;
-			att.sourceAlphaBlendFactor = MTLBlendFactorOne;
-			att.destinationRGBBlendFactor = MTLBlendFactorOne;
-			att.destinationAlphaBlendFactor = MTLBlendFactorOne;
-			break;
-		case BLEND_MAX:
-			att.blendingEnabled = true;
-			att.rgbBlendOperation = MTLBlendOperationMax;
-			att.alphaBlendOperation = MTLBlendOperationMax;
-			att.sourceRGBBlendFactor = MTLBlendFactorOne;
-			att.sourceAlphaBlendFactor = MTLBlendFactorOne;
-			att.destinationRGBBlendFactor = MTLBlendFactorOne;
-			att.destinationAlphaBlendFactor = MTLBlendFactorOne;
-			break;
-		default:
-			fassert(false);
-			break;
-		}
-		
-		pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
-		//pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
-
-		[activeRenderPipelineReflection release];
-		activeRenderPipelineReflection = nullptr;
-		
-		const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
-		
-		NSError * error;
-		id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&activeRenderPipelineReflection error:&error];
-		if (error != nullptr)
-			NSLog(@"%@", error);
-		
-		[activeRenderPipelineReflection retain];
-		
-		//NSLog(@"%@", pipelineState);
-
-		//
-
-		[activeWindowData->encoder setRenderPipelineState:pipelineState];
-
-		//
-
-		[pipelineState release];
-
-	#if 0
-		[vs release];
-		[ps release];
-
-		[library_vs release];
-		[library_ps release];
-	#endif
 	}
+	
+	[activeWindowData->encoder setRenderPipelineState:pipelineState];
 }
 
 static void gxFlush(bool endOfBatch)
@@ -894,14 +942,6 @@ static void gxFlush(bool endOfBatch)
 	{
 		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
 
-		const GxVertexInput vsInputs[] =
-		{
-			{ VS_POSITION, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px), 0 },
-			{ VS_NORMAL,   3, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, nx), 0 },
-			{ VS_COLOR,    4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, cx), 0 },
-			{ VS_TEXCOORD, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx), 0 }
-		};
-		
 	// todo : refactor s_gxVertices to use a GxVertexBuffer object
 	
 		const int vertexDataSize = s_gxVertexCount * sizeof(GxVertex);
@@ -923,7 +963,7 @@ static void gxFlush(bool endOfBatch)
 			[activeWindowData->encoder setVertexBuffer:elem->m_buffer offset:0 atIndex:0];
 		}
 		
-		bindVsInputs(vsInputs, sizeof(vsInputs) / sizeof(vsInputs[0]), sizeof(GxVertex));
+		bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 		
 		Shader genericShader("engine/Generic");
 		
@@ -1287,12 +1327,14 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
-	const int maxVsInputs = sizeof(s_gxVertexInputs) / sizeof(s_gxVertexInputs[0]);
+	const int maxVsInputs = sizeof(renderState.vertexInputs) / sizeof(renderState.vertexInputs[0]);
 	Assert(numVsInputs <= maxVsInputs);
 	const int numVsInputsToCopy = numVsInputs < maxVsInputs ? numVsInputs : maxVsInputs;
-	memcpy(s_gxVertexInputs, vsInputs, numVsInputsToCopy * sizeof(GxVertexInput));
-	s_gxVertexInputCount = numVsInputsToCopy;
-	s_gxVertexStride = vsStride;
+	memcpy(renderState.vertexInputs, vsInputs, numVsInputsToCopy * sizeof(GxVertexInput));
+	if (numVsInputsToCopy < maxVsInputs)
+		memset(renderState.vertexInputs + numVsInputsToCopy, 0, (maxVsInputs - numVsInputsToCopy) * sizeof(GxVertexInput)); // set the remainder of the inputs to zero, to ensure the contents of the render state struct stays deterministics, so we can hash it to look up pipeline states
+	renderState.vertexInputCount = numVsInputsToCopy;
+	renderState.vertexStride = vsStride;
 }
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)

@@ -7,6 +7,7 @@ struct ShaderCacheElem;
 
 #ifdef __OBJC__
 
+#import <map>
 #import <Metal/Metal.h>
 
 struct ShaderCacheElem
@@ -209,6 +210,18 @@ struct ShaderCacheElem
 				}
 			}
 		}
+	}
+	
+	mutable std::map<uint32_t, id <MTLRenderPipelineState>> m_pipelines;
+	
+	id <MTLRenderPipelineState> findPipelineState(const uint32_t hash) const
+	{
+		return m_pipelines[hash]; // todo : nice iterator lookup etc
+	}
+	
+	void addPipelineState(const uint32_t hash, id <MTLRenderPipelineState> state) const
+	{
+		m_pipelines[hash] = state;
 	}
 };
 
