@@ -13,7 +13,6 @@ app codingChallenges-034-DLA
 	add_files 034-DLA.cpp
 	resource_path data
 
-
 app codingChallenges-050-circlePacking-a
 	depend_library framework
 	add_files 050-circlePacking-a.cpp
@@ -55,6 +54,10 @@ app codingChallenges-132-fluidSimulation
 app codingChallenges-132-fluidSimulation-gpu
 	depend_library framework
 	add_files 132-fluidSimulation-gpu.cpp
+
+app codingChallenges-132-fluidSimulation-gpu-3d
+	depend_library framework
+	add_files 132-fluidSimulation-gpu-3d.cpp
 
 app codingChallenges-u01-extrusion
 	depend_library framework

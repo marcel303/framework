@@ -199,15 +199,15 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 
 				%s
 		
-				shader_in vec2 v_texcoord;
-
-				#define samp(in_s, in_x, in_y, in_z) textureOffset(in_s, v_texcoord, ivec2(in_x, in_y)).x
+				#define samp(in_s, in_x, in_y, in_z) textureLodOffset(in_s, vec3(gl_GlobalInvocationID.xyz), 0, ivec3(in_x, in_y, in_z)).x
 		
 				float samp_filter(sampler3D s, float x, float y, float z)
 				{
-					vec2 size = textureSize(s, 0);
+					//vec2 size = textureSize(s, 0);
 					
-					return texture(s, v_texcoord + vec2(x, y) / size).x;
+					//return texture(s, v_texcoord + vec2(x, y) / size).x;
+					
+					return 0.0;
 				}
 		
 				float process()
@@ -217,8 +217,7 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 		
 				void main()
 				{
-					shader_fragColor = vec4(process());
-					shader_fragColor.a = 1.0; // has to be 1.0 because BLEND_ADD multiplies the rgb with this value before addition
+					float result = process();
 				}
 			)SHADER";
 		
