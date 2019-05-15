@@ -65,36 +65,45 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 		// 'rotate-transform' becomes RotateTransformComponent
 		// 'TransformComponent' remains TransformComponent, due to it ending with 'Component'
 		
-	// todo : detect if the type name already has a 'Component' suffix
+		bool hasComponentSuffix = false;
+		
+		const char * componentSuffix = "Component";
+		
+		// detect if the type name already has a 'Component' suffix
+		
+		if (strstr(typeName, componentSuffix) != nullptr)
+			hasComponentSuffix = true;
 	
 		char full_name[1024];
 		int length = 0;
-		bool capitalize = true;
 		
-		for (int i = 0; typeName[i] != 0 && !isspace(typeName[i]) && length < 1024; ++i)
+		// if the type name has a 'Component' suffix, just keep the type name
+		// otherwise, apply conversion
+		
+		if (hasComponentSuffix)
 		{
-			if (typeName[i] == '-')
-				capitalize = true;
-			else if (capitalize)
-			{
-				capitalize = false;
-				full_name[length++] = toupper(typeName[i]);
-			}
-			else
+			for (int i = 0; typeName[i] != 0 && !isspace(typeName[i]) && length < 1024; ++i)
 				full_name[length++] = typeName[i];
 		}
-		
-		bool appendSuffix = false;
-		
-		const char * suffix = "Component";
-		
-		if (strstr(typeName, suffix) == nullptr) // todo : check if the suffix is at the end of the type name
-			appendSuffix = true;
-		
-		if (appendSuffix)
+		else
 		{
-			for (int i = 0; suffix[i] != 0 && length < 1024; ++i)
-				full_name[length++] = suffix[i];
+			bool capitalize = true;
+			
+			for (int i = 0; typeName[i] != 0 && !isspace(typeName[i]) && length < 1024; ++i)
+			{
+				if (typeName[i] == '-')
+					capitalize = true;
+				else if (capitalize)
+				{
+					capitalize = false;
+					full_name[length++] = toupper(typeName[i]);
+				}
+				else
+					full_name[length++] = typeName[i];
+			}
+		
+			for (int i = 0; componentSuffix[i] != 0 && length < 1024; ++i)
+				full_name[length++] = componentSuffix[i];
 		}
 		
 		if (length < 1024)
@@ -166,7 +175,6 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 	
 	return true;
 }
-
 
 bool loadTemplateFromFile(const char * filename, Template & t)
 {

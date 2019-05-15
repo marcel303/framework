@@ -112,7 +112,11 @@ bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & in
 		
 		// determine how much rotation occurred and rotate to match
 		
+	#if 0 // todo : make smoothing amout a parameter
+		const float delta = (dragRing.initialAngle - angle) * .5f;
+	#else
 		const float delta = dragRing.initialAngle - angle;
+	#endif
 		
 		if (dragRing.axis == 0)
 			gizmoToWorld = gizmoToWorld.RotateX(delta);

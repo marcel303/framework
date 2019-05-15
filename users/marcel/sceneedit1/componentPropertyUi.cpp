@@ -357,6 +357,7 @@ bool doReflection_PlainType(
 					
 						if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
 						{
+						// todo : compute relative path
 							value = filename;
 							
 							result = true;

@@ -51,9 +51,11 @@ todo :
 - add 'Paste tree' to scene structure context menu
 - add support for copying node tree 'Copy tree'
 
-- add template list
+- add template file list / browser
 - add support for template editing
 - add option to add nodes from template
+
++ add 'path' editor type hint. show a browser button and prompt a file dialog when pressed
 
 */
 
@@ -77,6 +79,10 @@ static bool node_from_clipboard_text(const char * text, SceneNode & node);
 
 //
 
+#include <functional>
+
+typedef std::function<void()> RenderSceneCallback;
+
 struct Renderer
 {
 	enum Mode
@@ -91,6 +97,18 @@ struct Renderer
 	ParameterMgr parameterMgr;
 	
 	ParameterEnum * mode = nullptr;
+	
+	RenderSceneCallback drawOpaque = nullptr;
+	RenderSceneCallback drawTranslucent = nullptr;
+	
+	mutable Surface colorMap;
+	mutable Surface normalMap;
+	
+	struct
+	{
+		Mat4x4 projectionMatrix;
+		Mat4x4 viewMatrix;
+	} mutable drawState;
 	
 	bool init()
 	{
@@ -107,7 +125,131 @@ struct Renderer
 				{ "Lit + Shadows", kMode_LitWithShadows }
 			});
 		
+		result &= colorMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, true, false);
+		
+		result &= normalMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, true, false);
+		
 		return result;
+	}
+	
+	void drawColorPass() const
+	{
+		pushShaderOutputs("c");
+		{
+			if (drawOpaque != nullptr)
+				drawOpaque();
+		}
+		popShaderOutputs();
+	}
+	
+	void drawNormalPass() const
+	{
+		pushShaderOutputs("n");
+		{
+			if (drawOpaque != nullptr)
+				drawOpaque();
+		}
+		popShaderOutputs();
+	}
+	
+	void drawTranslucentPass() const
+	{
+		pushDepthTest(true, DEPTH_LESS, false);
+		pushBlend(BLEND_ALPHA);
+		{
+			if (drawTranslucent != nullptr)
+				drawTranslucent();
+		}
+		popBlend();
+		popDepthTest();
+	}
+	
+	void pushMatrices(const bool drawToSurface) const
+	{
+		applyTransform();
+		gxMatrixMode(GX_PROJECTION);
+		gxPushMatrix();
+		gxLoadMatrixf(drawState.projectionMatrix.m_v);
+		
+		if (drawToSurface)
+		{
+		// fixme : horrible hack to make texture coordinates work
+			// flip Y axis so the vertical axis runs bottom to top
+			gxScalef(1.f, -1.f, 1.f);
+		}
+		
+		gxMatrixMode(GX_MODELVIEW);
+		gxPushMatrix();
+		gxLoadMatrixf(drawState.viewMatrix.m_v);
+	}
+	
+	void popMatrices() const
+	{
+		gxMatrixMode(GX_PROJECTION);
+		gxPopMatrix();
+		gxMatrixMode(GX_MODELVIEW);
+		gxPopMatrix();
+	}
+	
+	void draw(const Mat4x4 & projectionMatrix, const Mat4x4 & viewMatrix) const
+	{
+		drawState.projectionMatrix = projectionMatrix;
+		drawState.viewMatrix = viewMatrix;
+		
+		if (mode->get() == kMode_Colors)
+		{
+			pushMatrices(false);
+			{
+				drawColorPass();
+				drawTranslucentPass();
+			}
+			popMatrices();
+		}
+		else if (mode->get() == kMode_Normals)
+		{
+			pushMatrices(false);
+			{
+				drawNormalPass();
+				drawTranslucentPass();
+			}
+			popMatrices();
+		}
+		else if (mode->get() == kMode_Lit)
+		{
+			pushSurface(&normalMap);
+			{
+				pushMatrices(true);
+				{
+					normalMap.clear();
+					normalMap.clearDepth(1.f);
+				
+					drawNormalPass();
+				}
+				popMatrices();
+			}
+			popSurface();
+			
+			pushSurface(&colorMap);
+			{
+				pushMatrices(true);
+				{
+					colorMap.clear();
+					colorMap.clearDepth(1.f);
+					
+					drawColorPass();
+				}
+				popMatrices();
+			}
+			popSurface();
+			
+			normalMap.blit(BLEND_OPAQUE);
+			
+			pushMatrices(false);
+			{
+				drawTranslucentPass();
+			}
+			popMatrices();
+		}
 	}
 };
 
@@ -200,6 +342,8 @@ struct SceneEditor
 		scene.createRootNode();
 		
 		renderer.init();
+		renderer.drawOpaque = [&]() { drawOpaque(); };
+		renderer.drawTranslucent = [&]() { drawTranslucent(); };
 	}
 	
 	void shut()
@@ -1048,6 +1192,32 @@ struct SceneEditor
 						ImGui::EndChild();
 					}
 					
+				#if 0
+					if (ImGui::CollapsingHeader("Templates"))
+					{
+						static std::vector<std::string> templates;
+						static bool init = false;
+						if (init == false)
+						{
+							init = true;
+							templates = listFiles("textfiles", false);
+						}
+						
+						int item = -1;
+						ImGui::ListBox("Templates", &item, [](void * obj, int index, const char ** item) -> bool
+						{
+							auto & items = *(std::vector<std::string>*)obj;
+							*item = items[index].c_str();
+							return true;
+						}, &templates, templates.size());
+						
+						//for (auto & t : templates)
+						{
+						
+						}
+					}
+				#endif
+					
 					if (ImGui::CollapsingHeader("Selected node(s)", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						deferredBegin();
@@ -1487,24 +1657,6 @@ struct SceneEditor
 		popDepthTest();
 	}
 	
-	void drawColors() const
-	{
-		pushShaderOutputs("c");
-		{
-			drawOpaque();
-		}
-		popShaderOutputs();
-	}
-	
-	void drawNormals() const
-	{
-		pushShaderOutputs("n");
-		{
-			drawOpaque();
-		}
-		popShaderOutputs();
-	}
-	
 	void drawSceneTranslucent() const
 	{
 	}
@@ -1551,20 +1703,17 @@ struct SceneEditor
 	
 	void drawEditor() const
 	{
-		camera.pushProjectionMatrix();
-		camera.pushViewMatrix();
-		{
-			if (renderer.mode->get() == Renderer::kMode_Colors)
-				drawColors();
-			if (renderer.mode->get() == Renderer::kMode_Normals)
-				drawNormals();
-			
-			drawTranslucent();
-		}
-		camera.popViewMatrix();
-		camera.popProjectionMatrix();
+		int viewportSx = 0;
+		int viewportSy = 0;
+		framework.getCurrentViewportSize(viewportSx, viewportSy);
+	
+		Mat4x4 projectionMatrix;
+		camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
 		
-		projectScreen2d();
+		Mat4x4 viewMatrix;
+		camera.calculateViewMatrix(viewMatrix);
+		
+		renderer.draw(projectionMatrix, viewMatrix);
 		
 		const_cast<SceneEditor*>(this)->guiContext.draw();
 	}

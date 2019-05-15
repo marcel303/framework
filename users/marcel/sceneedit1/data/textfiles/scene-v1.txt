@@ -10,17 +10,11 @@
 
 template locally-defined-template
 
-	model m1
+	model
 		filename
 			model.txt
 		scale
 			0.01
-	model m2
-		filename
-			model.txt
-		scale
-			0.016
-
 	transform
 		scale
 			1.1
@@ -59,6 +53,9 @@ entity b
 
 	base base-entity-v2.txt
 
+	model
+		colorTexcoords
+			1
 	transform
 		position
 			8 8 8
