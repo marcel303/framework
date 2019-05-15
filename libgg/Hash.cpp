@@ -25,7 +25,7 @@ namespace HashFunc
 	
 	Hash Hash_FNV1(const void* bytes, int byteCount)
 	{
-		Hash hash = FNV_Prime32;
+		Hash hash = FNV_Offset32;
 		
 		for (int i = 0; i < byteCount; ++i)
 		{
@@ -38,7 +38,7 @@ namespace HashFunc
 	
 	Hash Hash_FNV1a(const void* bytes, int byteCount)
 	{
-		Hash hash = FNV_Prime32;
+		Hash hash = FNV_Offset32;
 		
 		for (int i = 0; i < byteCount; ++i)
 		{
