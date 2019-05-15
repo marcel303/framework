@@ -1,0 +1,7 @@
+# resources
+
+boneset file:model01.fbx
+meshset file:model01.fbx show:BlackKnight_Mesh
+animset file:model01.fbx name:anim01
+
+model rootnode:b_MF_Pelvis scale:1 right:-x up:+z forward:+y
