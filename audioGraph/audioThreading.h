@@ -31,6 +31,10 @@
 
 struct SDL_mutex;
 
+/**
+ * AudioMutex_Shared contains a shared reference to a SDL mutex.
+ * It provides lock and unlock methods which will lock and unlock the mutex, as well as perform some additional checks in debug mode.
+ */
 struct AudioMutex_Shared
 {
 	SDL_mutex * mutex;
@@ -38,33 +42,41 @@ struct AudioMutex_Shared
 	AudioMutex_Shared();
 	AudioMutex_Shared(SDL_mutex * mutex);
 	
-	void lock() const;
-	void unlock() const;
+	void lock() const; ///< Locks the mutex. Asserts the lock operation succeeds in debug mode.
+	void unlock() const; ///< Unlocks the mutex. Assers the unlock operation succeeds in debug mode.
 };
 
+/**
+ * AudioMutex provides an interface for locking and unlocking a SDL mutex.
+ * The AudioMutex must first be initialized using init(), which will create the mutex.
+ * shut() must explicitly be called to free the mutex again.
+ */
 struct AudioMutex
 {
-	SDL_mutex * mutex;
+	SDL_mutex * mutex; ///< Reference to the SDL mutex owned by this AudioMutex. Exposed here for convience when direct usage of the SDL mutex is needed.
 	
 	AudioMutex();
-	~AudioMutex();
+	~AudioMutex(); ///< Asserts shut() has been called before the AudioMutex leaves scope.
 	
-	void init();
-	void shut();
+	void init(); ///< Creates the SDL mutex.
+	void shut(); ///< Destroys the SDL mutex.
 	
-	void lock() const;
-	void unlock() const;
+	void lock() const; ///< Locks the mutex. Asserts the lock operation succeeds in debug mode.
+	void unlock() const; ///< Unlocks the mutex. Assers the unlock operation succeeds in debug mode.
 
-	void debugCheckIsLocked();
+	void debugCheckIsLocked(); ///< Asserts the mutex has been locked in debug mode.
 };
 
+/**
+ * Helper object which can be locked to the current thread (using initThreadId), and which can be used to check if the current thread is equal to the thread previously locked to, using checkThreadId.
+ */
 struct AudioThreadId
 {
-	int64_t id;
+	int64_t id; ///< The thread id this object has been assigned. Set to -1 by default.
 	
 	AudioThreadId();
 	
-	void initThreadId();
+	void initThreadId(); ///< Assigns the id of the current thread to 'id'.
 	
-	bool checkThreadId() const;
+	bool checkThreadId() const; ///< Asserts the current thread is equal to the thread the object was previously assigned to.
 };
