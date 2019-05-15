@@ -8241,28 +8241,28 @@ void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 	
 	switch (primitiveType)
 	{
-		case GL_TRIANGLES:
+		case GX_TRIANGLES:
 			s_gxPrimitiveSize = 3;
 			break;
-		case GL_QUADS:
+		case GX_QUADS:
 			s_gxPrimitiveSize = 4;
 			break;
-		case GL_LINES:
+		case GX_LINES:
 			s_gxPrimitiveSize = 2;
 			break;
-		case GL_LINE_LOOP:
+		case GX_LINE_LOOP:
 			s_gxPrimitiveSize = 1;
 			break;
-		case GL_LINE_STRIP:
+		case GX_LINE_STRIP:
 			s_gxPrimitiveSize = 1;
 			break;
-		case GL_POINTS:
+		case GX_POINTS:
 			s_gxPrimitiveSize = 1;
 			break;
-		case GL_TRIANGLE_FAN:
+		case GX_TRIANGLE_FAN:
 			s_gxPrimitiveSize = 1;
 			break;
-		case GL_TRIANGLE_STRIP:
+		case GX_TRIANGLE_STRIP:
 			s_gxPrimitiveSize = 1;
 			break;
 		default:
