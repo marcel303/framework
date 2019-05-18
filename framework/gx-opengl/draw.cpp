@@ -44,7 +44,7 @@
 	typedef unsigned short glindex_t;
 #endif
 
-extern std::map<std::string, std::string> s_shaderSources;
+extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
 
 class GxMatrixStack
 {
