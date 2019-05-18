@@ -5208,6 +5208,7 @@ void popSurface()
 
 void setDrawRect(int x, int y, int sx, int sy)
 {
+#if ENABLE_OPENGL // todo : metal impl setDrawRect
 	int surfaceSx;
 	int surfaceSy;
 	getCurrentViewportSize(surfaceSx, surfaceSy);
@@ -5250,11 +5251,14 @@ void setDrawRect(int x, int y, int sx, int sy)
 		glEnable(GL_SCISSOR_TEST);
 		checkErrorGL();
 	}
+#endif
 }
 
 void clearDrawRect()
 {
+#if ENABLE_OPENGL // todo : metal impl clearDrawRect
 	glDisable(GL_SCISSOR_TEST);
+#endif
 }
 
 void setColorMode(COLOR_MODE colorMode)
@@ -7363,7 +7367,6 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 		Mat4x4 matM;
 		
 		gxGetMatrixf(GX_MODELVIEW, matM.m_v);
-		checkErrorGL();
 		
 		const float scale = matM.GetAxis(0).CalcSize();
 		

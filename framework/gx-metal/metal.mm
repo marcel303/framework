@@ -8,6 +8,7 @@
 #import "metal.h"
 #import "metalView.h"
 #import "shader.h"
+#import "texture.h"
 #import "window_data.h"
 #import <Cocoa/Cocoa.h>
 #import <map>
@@ -427,9 +428,6 @@ void popCullMode()
 }
 
 // -- gpu resources --
-
-static std::map<int, id <MTLTexture>> s_textures;
-static int s_nextTextureId = 1;
 
 GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
