@@ -26,8 +26,10 @@
 */
 
 #import "framework.h"
+
+#if ENABLE_METAL
+
 #import "texture.h"
-//#include <algorithm>
 #import <Metal/Metal.h>
 
 #define TODO 0
@@ -439,3 +441,5 @@ void GxTexture::copyRegionsFromTexture(const GxTexture & src, const CopyRegion *
 	checkErrorGL();
 #endif
 }
+
+#endif

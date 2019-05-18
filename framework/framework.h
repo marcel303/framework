@@ -75,7 +75,7 @@
 	#define ENABLE_PROFILING 1
 #endif
 
-#if defined(MACOS) && !defined(ENABLE_METAL) && 1
+#if defined(MACOS) && !defined(ENABLE_METAL) && 0
 	#define ENABLE_METAL 1
 	#define ENABLE_HQ_PRIMITIVES 0
 #elif !defined(ENABLE_OPENGL)
