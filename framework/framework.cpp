@@ -3449,8 +3449,6 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 				gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, rsy);
 			}
 			gxEnd();
-
-			checkErrorGL();
 		}
 		gxPopMatrix();
 
@@ -4983,7 +4981,6 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 	
 	gxMatrixMode(GX_MODELVIEW);
 	gxLoadIdentity();
-	checkErrorGL();
 }
 
 void setTransform2d(const Mat4x4 & transform)
@@ -5069,7 +5066,6 @@ Vec4 transformToWorld(const Vec4 & v)
 	Mat4x4 matM;
 	
 	gxGetMatrixf(GX_MODELVIEW, matM.m_v);
-	checkErrorGL();
 	
 	// from current transfor to world
 	
@@ -5085,7 +5081,6 @@ Vec2 transformToScreen(const Vec3 & v, float & w)
 	
 	gxGetMatrixf(GX_PROJECTION, matP.m_v);
 	gxGetMatrixf(GX_MODELVIEW, matM.m_v);
-	checkErrorGL();
 	
 	// from current transfor to view
 	
@@ -5111,6 +5106,7 @@ static void setSurface(Surface * surface)
 {
 	const GLuint framebuffer = surface ? surface->getFramebuffer() : 0;
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	checkErrorGL();
 	
 	updateViewport(surface, globals.currentWindow->getWindow());
 	
@@ -5134,7 +5130,6 @@ void pushSurface(Surface * surface)
 	fassert(surfaceStackSize < kMaxSurfaceStackSize);
 	surfaceStack[surfaceStackSize++] = surface;
 	setSurface(surface);
-	checkErrorGL();
 
 	//
 
@@ -5152,6 +5147,7 @@ void pushSurface(Surface * surface)
 void popSurface()
 {
 #if defined(MACOS)
+// todo : remove this hack
 	// fix for driver issue where the results of drawing are possibly not yet flushed when accessing a surface texture,
 	// causing artefacts due to texel fetches returning inconsistent results
 	if (glTextureBarrierNV != nullptr)
@@ -5165,7 +5161,6 @@ void popSurface()
 	surfaceStack[--surfaceStackSize] = 0;
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
 	setSurface(surface);
-	checkErrorGL();
 
 	gxMatrixMode(GX_PROJECTION);
 	gxPopMatrix();
