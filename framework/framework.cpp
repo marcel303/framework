@@ -6642,12 +6642,12 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 
 	SDL_Window * getWindow()
 	{
-		return globals.currentWindow;
+		return globals.currentWindow->getWindow();
 	}
 
 	SDL_Surface * getWindowSurface()
 	{
-		return SDL_GetWindowSurface(globals.currentWindow);
+		return SDL_GetWindowSurface(globals.currentWindow->getWindow());
 	}
 
 #elif !USE_LEGACY_OPENGL

@@ -25,8 +25,11 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "data/engine/ShaderCommon.txt" // VS_ constants
 #include "framework.h"
+
+#if ENABLE_OPENGL
+
+#include "data/engine/ShaderCommon.txt" // VS_ constants
 #include "internal.h"
 #include "Quat.h"
 #include "shaders.h" // registerBuiltinShaders
@@ -834,3 +837,5 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 		checkErrorGL();
 	}
 }
+
+#endif

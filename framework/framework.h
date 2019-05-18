@@ -75,7 +75,9 @@
 	#define ENABLE_PROFILING 1
 #endif
 
-#if !defined(ENABLE_OPENGL)
+#if defined(MACOS) && !defined(ENABLE_METAL) && false
+	#define ENABLE_METAL 1
+#elif !defined(ENABLE_OPENGL)
 	#define ENABLE_OPENGL 1
 #endif
 
@@ -1510,6 +1512,7 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 SDL_Surface * getWindowSurface();
 
 static inline void gxMatrixMode(GX_MATRIX mode) { }
+static inline GX_MATRIX gxGetMatrixMode() { return GX_MODELVIEW; }
 static inline void gxPopMatrix() { }
 static inline void gxPushMatrix() { }
 static inline void gxLoadIdentity() { }
@@ -1525,6 +1528,7 @@ static inline void gxInitialize() { }
 static inline void gxShutdown() { }
 static inline void gxBegin(GX_PRIMITIVE_TYPE primitiveType) { }
 static inline void gxEnd() { }
+static inline void gxEmitVertices(int primitiveType, int numVertices) { }
 static inline void gxColor4f(float r, float g, float b, float a) { }
 static inline void gxColor4fv(const float * rgba) { }
 static inline void gxColor3ub(int r, int g, int b) { }
@@ -1534,8 +1538,11 @@ static inline void gxNormal3f(float x, float y, float z) { }
 static inline void gxNormal3fv(const float  * v) { }
 static inline void gxVertex2f(float x, float y) { }
 static inline void gxVertex3f(float x, float y, float z) { }
+static inline void gxVertex3fv(const float * v) { }
 static inline void gxVertex4f(float x, float y, float z, float w) { }
+static inline void gxVertex4fv(const float * v) { }
 static inline void gxSetTexture(GxTextureId texture) { }
+static inline void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp) { }
 
 #elif !USE_LEGACY_OPENGL
 
