@@ -54,6 +54,9 @@ library framework
 	scan_files cpp path audiooutput          group audiooutput
 	scan_files h   path audiooutput          group audiooutput
 
+	scan_files cpp path gx-opengl            group gx-opengl
+	scan_files h   path gx-opengl            group gx-opengl
+
 	header_path . expose
 	
 	compile_definition NO_SDL_GLEXT            * expose

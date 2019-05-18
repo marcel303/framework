@@ -27,34 +27,14 @@
 
 #pragma once
 
-#include <stdint.h>
+#include "gx_mesh.h"
 
-enum GX_INDEX_FORMAT
-{
-	GX_INDEX_16, // indices are 16-bits (uint16_t)
-	GX_INDEX_32  // indices are 32-bits (uint32_t)
-};
-
-enum GX_ELEMENT_TYPE
-{
-	GX_ELEMENT_FLOAT32
-};
-
-struct GxVertexInput
-{
-	uint8_t id : 6;            // vertex stream id or index. given by VS_POSITION, VS_TEXCOORD, .. for built-in shaders
-	uint8_t numComponents : 2; // the number of components per element
-	GX_ELEMENT_TYPE type : 4;  // the type of element inside the vertex stream
-	bool normalize : 4;        // (if integer) should the element be normalized into the range 0..1?
-	uint8_t offset;            // byte offset within vertex buffer for the start of this input
-	uint8_t stride;            // byte stride between elements. use zero when elements are tightly packed
-};
-
-#include "gx-opengl/mesh.h"
-
-/*
 class GxVertexBuffer
 {
+	friend class GxMesh;
+	
+	uint32_t m_vertexArray;
+	
 public:
 	GxVertexBuffer();
 	~GxVertexBuffer();
@@ -64,6 +44,13 @@ public:
 
 class GxIndexBuffer
 {
+	friend class GxMesh;
+	
+	int m_numIndices;
+	GX_INDEX_FORMAT m_format;
+	
+	uint32_t m_indexArray;
+	
 public:
 	GxIndexBuffer();
 	~GxIndexBuffer();
@@ -76,6 +63,13 @@ public:
 
 class GxMesh
 {
+	const GxVertexBuffer * m_vertexBuffer;
+	const GxIndexBuffer * m_indexBuffer;
+	
+	uint32_t m_vertexArrayObject;
+	
+	void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs);
+	
 public:
 	GxMesh();
 	~GxMesh();
@@ -85,4 +79,3 @@ public:
 	
 	void draw() const;
 };
-*/

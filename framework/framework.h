@@ -1610,7 +1610,6 @@ void gxEnd();
 void gxSetTexture(GxTextureId texture);
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
-
 #endif
 
 #if FRAMEWORK_ENABLE_GL_ERROR_LOG
