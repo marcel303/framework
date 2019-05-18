@@ -75,7 +75,7 @@
 	#define ENABLE_PROFILING 1
 #endif
 
-#if defined(MACOS) && !defined(ENABLE_METAL) && false
+#if defined(MACOS) && !defined(ENABLE_METAL) && true
 	#define ENABLE_METAL 1
 #elif !defined(ENABLE_OPENGL)
 	#define ENABLE_OPENGL 1
@@ -665,6 +665,12 @@ public:
 
 //
 
+#if ENABLE_METAL
+
+#include "gx-metal/shader.h"
+
+#else
+
 class Shader : public ShaderBase
 {
 	class ShaderCacheElem * m_shader;
@@ -711,7 +717,11 @@ public:
 	void reload();
 };
 
+#endif
+
 //
+
+#if ENABLE_OPENGL
 
 class ComputeShader : public ShaderBase
 {
@@ -765,6 +775,8 @@ public:
 	const ComputeShaderCacheElem & getCacheElem() const { return *m_shader; }
 	void reload();
 };
+
+#endif
 
 //
 
@@ -1507,7 +1519,7 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 
 // OpenGL legacy mode drawing
 
-#if !ENABLE_OPENGL
+#if !ENABLE_OPENGL && !ENABLE_METAL
 
 SDL_Surface * getWindowSurface();
 

@@ -1,4 +1,5 @@
 #import "bufferPool.h"
+#import "internal.h"
 #import "metal.h"
 #import "metalView.h"
 #import "shader.h"
@@ -8,10 +9,6 @@
 #import <Metal/Metal.h>
 #import <SDL2/SDL_syswm.h>
 #import <vector>
-
-#include <assert.h> // todo : remove once integrated w/ framework
-#define fassert assert
-#define Assert fassert
 
 #define INDEX_TYPE uint32_t
 
@@ -32,15 +29,9 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 
 static id <MTLDevice> device;
 
-struct
-{
-	bool gxShaderIsDirty = true;
-	Shader * shader = nullptr;
-} globals; // todo : remove
+static std::map<SDL_Window*, MetalWindowData*> windowDatas;
 
-static std::map<SDL_Window*, WindowData*> windowDatas;
-
-WindowData * activeWindowData = nullptr;
+MetalWindowData * activeWindowData = nullptr;
 
 #if FETCH_PIPELINESTATE_REFLECTION
 static MTLRenderPipelineReflection * activeRenderPipelineReflection = nullptr;
@@ -76,7 +67,7 @@ void metal_attach(SDL_Window * window)
 		
 		NSView * sdl_view = info.info.cocoa.window.contentView;
 
-		WindowData * windowData = new WindowData();
+		MetalWindowData * windowData = new MetalWindowData();
 		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:YES];
 		[sdl_view addSubview:windowData->metalview];
 
@@ -181,6 +172,12 @@ id <MTLDevice> metal_get_device()
 
 // -- render states --
 
+static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
+static Stack<bool, 32> lineSmoothStack(false);
+static Stack<bool, 32> wireframeStack(false);
+static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
+static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
+
 RenderPipelineState renderState;
 
 // render states independent from render pipeline state
@@ -189,7 +186,7 @@ static bool s_depthTestEnabled = false;
 static DEPTH_TEST s_depthTest = DEPTH_ALWAYS;
 static bool s_depthWriteEnabled = false;
 
-#include "renderTarget.h"
+//#include "renderTarget.h"
 
 struct RenderPassData
 {
@@ -201,6 +198,8 @@ struct RenderPassData
 };
 
 std::vector<RenderPassData> s_renderPasses;
+
+#if TODO // todo : implement render passes
 
 void pushRenderPass(ColorTarget * target, DepthTarget * depthTarget, const bool clearDepth)
 {
@@ -266,9 +265,25 @@ void popRenderPass()
 	s_renderPasses.pop_back();
 }
 
+#endif
+
 void setBlend(BLEND_MODE blendMode)
 {
 	renderState.blendMode = blendMode;
+}
+
+void pushBlend(BLEND_MODE blendMode)
+{
+	blendModeStack.push(globals.blendMode);
+	
+	setBlend(blendMode);
+}
+
+void popBlend()
+{
+	const BLEND_MODE blendMode = blendModeStack.popValue();
+	
+	setBlend(blendMode);
 }
 
 void setLineSmooth(bool enabled)
@@ -276,9 +291,37 @@ void setLineSmooth(bool enabled)
 	//Assert(false);
 }
 
+void pushLineSmooth(bool enabled)
+{
+	lineSmoothStack.push(globals.lineSmoothEnabled);
+	
+	setLineSmooth(enabled);
+}
+
+void popLineSmooth()
+{
+	const bool value = lineSmoothStack.popValue();
+	
+	setLineSmooth(value);
+}
+
 void setWireframe(bool enabled)
 {
 	[activeWindowData->encoder setTriangleFillMode:enabled ? MTLTriangleFillModeLines : MTLTriangleFillModeFill];
+}
+
+void pushWireframe(bool enabled)
+{
+	wireframeStack.push(globals.wireframeEnabled);
+	
+	setWireframe(enabled);
+}
+
+void popWireframe()
+{
+	const bool value = wireframeStack.popValue();
+	
+	setWireframe(value);
 }
 
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
@@ -334,6 +377,37 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	descriptor = nullptr;
 }
 
+void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
+{
+	const DepthTestInfo info =
+	{
+		globals.depthTestEnabled,
+		globals.depthTest,
+		globals.depthTestWriteEnabled
+	};
+	
+	depthTestStack.push(info);
+	
+	setDepthTest(enabled, test, writeEnabled);
+}
+
+void popDepthTest()
+{
+	const DepthTestInfo depthTestInfo = depthTestStack.popValue();
+	
+	setDepthTest(depthTestInfo.testEnabled, depthTestInfo.test, depthTestInfo.writeEnabled);
+}
+
+void pushDepthWrite(bool enabled)
+{
+	pushDepthTest(globals.depthTestEnabled, globals.depthTest, enabled);
+}
+
+void popDepthWrite()
+{
+	popDepthTest();
+}
+
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 {
 	const MTLCullMode metalCullMode =
@@ -350,14 +424,24 @@ void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 	[activeWindowData->encoder setFrontFacingWinding:metalFrontFaceWinding];
 }
 
-void setShader(Shader & shader)
+void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 {
-	globals.shader = &shader;
+	const CullModeInfo info =
+	{
+		globals.cullMode,
+		globals.cullWinding
+	};
+	
+	cullModeStack.push(info);
+	
+	setCullMode(mode, frontFaceWinding);
 }
 
-void clearShader()
+void popCullMode()
 {
-	globals.shader = nullptr;
+	const CullModeInfo cullMode = cullModeStack.popValue();
+	
+	setCullMode(cullMode.mode, cullMode.winding);
 }
 
 // -- gpu resources --
@@ -673,7 +757,6 @@ static float scale255(const float v)
 	return v * m;
 }
 
-void gxEmitVertex();
 void gxValidateShaderResources();
 
 void gxInitialize()
@@ -1282,6 +1365,19 @@ void gxEmitVertices(int primitiveType, int numVertices)
 #endif
 }
 
+void gxEmitVertex()
+{
+	s_gxVertices[s_gxVertexCount++] = s_gxVertex;
+	
+	if (s_gxVertexCount + s_gxPrimitiveSize > s_gxMaxVertexCount)
+	{
+		if (s_gxVertexCount % s_gxPrimitiveSize == 0)
+		{
+			gxFlush(false);
+		}
+	}
+}
+
 void gxColor4f(float r, float g, float b, float a)
 {
 	s_gxVertex.cx = r;
@@ -1405,19 +1501,6 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 	
 	id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
 	[activeWindowData->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
-}
-
-void gxEmitVertex()
-{
-	s_gxVertices[s_gxVertexCount++] = s_gxVertex;
-	
-	if (s_gxVertexCount + s_gxPrimitiveSize > s_gxMaxVertexCount)
-	{
-		if (s_gxVertexCount % s_gxPrimitiveSize == 0)
-		{
-			gxFlush(false);
-		}
-	}
 }
 
 //

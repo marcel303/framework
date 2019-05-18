@@ -1,9 +1,6 @@
 #import "metal.h"
 #import "shader.h"
 
-#include <assert.h> // todo : use framework assert
-#define Assert assert
-
 // todo : assert the shader is the active shader when setting immediates
 
 //
@@ -11,14 +8,6 @@
 id <MTLDevice> metal_get_device();
 
 //
-
-class ShaderCache
-{
-	ShaderCacheElem m_cacheElem; // todo : make private
-	
-public:
-	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
-};
 
 ShaderCache g_shaderCache;
 
@@ -205,13 +194,14 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
 		#endif
 			
-			m_cacheElem.init(reflection);
-			m_cacheElem.vs = vs;
-			m_cacheElem.ps = ps;
+			m_cacheElem = new ShaderCacheElem();
+			m_cacheElem->init(reflection);
+			m_cacheElem->vs = vs;
+			m_cacheElem->ps = ps;
 		}
 	}
 	
-	return m_cacheElem;
+	return *m_cacheElem;
 }
 
 //
@@ -236,12 +226,30 @@ T * getPsUniformPtr(ShaderCacheElem & cacheElem, const int offset)
 	return (T*)(((uint8_t*)cacheElem.psUniformData) + offset);
 }
 
-ShaderMetal::ShaderMetal(const char * name)
+Shader::Shader()
 {
-	m_cacheElem = &g_shaderCache.findOrCreate(name, nullptr, nullptr, "c");
 }
 
-GxImmediateIndex ShaderMetal::getImmediate(const char * name)
+Shader::Shader(const char * name, const char * outputs)
+{
+	m_cacheElem = &g_shaderCache.findOrCreate(name, nullptr, nullptr, outputs);
+}
+
+Shader::Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
+{
+	load(name, filenameVs, filenamePs, outputs);
+}
+
+Shader::~Shader()
+{
+}
+
+void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
+{
+	m_cacheElem = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs);
+}
+
+GxImmediateIndex Shader::getImmediate(const char * name)
 {
 	for (size_t i = 0; i < m_cacheElem->uniformInfos.size(); ++i)
 		if (m_cacheElem->uniformInfos[i].name == name)
@@ -249,35 +257,35 @@ GxImmediateIndex ShaderMetal::getImmediate(const char * name)
 	return -1;
 }
 
-void ShaderMetal::setImmediate(const char * name, float x)
+void Shader::setImmediate(const char * name, float x)
 {
 	const GxImmediateIndex index = getImmediate(name);
 	
 	setImmediate(index, x);
 }
 
-void ShaderMetal::setImmediate(const char * name, float x, float y)
+void Shader::setImmediate(const char * name, float x, float y)
 {
 	const GxImmediateIndex index = getImmediate(name);
 	
 	setImmediate(index, x, y);
 }
 
-void ShaderMetal::setImmediate(const char * name, float x, float y, float z)
+void Shader::setImmediate(const char * name, float x, float y, float z)
 {
 	const GxImmediateIndex index = getImmediate(name);
 	
 	setImmediate(index, x, y, z);
 }
 
-void ShaderMetal::setImmediate(const char * name, float x, float y, float z, float w)
+void Shader::setImmediate(const char * name, float x, float y, float z, float w)
 {
 	const GxImmediateIndex index = getImmediate(name);
 	
 	setImmediate(index, x, y, z, w);
 }
 
-void ShaderMetal::setImmediate(GxImmediateIndex index, float x)
+void Shader::setImmediate(GxImmediateIndex index, float x)
 {
 	if (index >= 0)
 	{
@@ -297,7 +305,7 @@ void ShaderMetal::setImmediate(GxImmediateIndex index, float x)
 	}
 }
 
-void ShaderMetal::setImmediate(GxImmediateIndex index, float x, float y)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 {
 	if (index >= 0)
 	{
@@ -319,7 +327,7 @@ void ShaderMetal::setImmediate(GxImmediateIndex index, float x, float y)
 	}
 }
 
-void ShaderMetal::setImmediate(GxImmediateIndex index, float x, float y, float z)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 {
 	if (index >= 0)
 	{
@@ -343,7 +351,7 @@ void ShaderMetal::setImmediate(GxImmediateIndex index, float x, float y, float z
 	}
 }
 
-void ShaderMetal::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
 {
 	if (index >= 0)
 	{
@@ -369,14 +377,14 @@ void ShaderMetal::setImmediate(GxImmediateIndex index, float x, float y, float z
 	}
 }
 
-void ShaderMetal::setImmediateMatrix4x4(const char * name, const float * matrix)
+void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
 {
 	const GxImmediateIndex index = getImmediate(name);
 	
 	setImmediateMatrix4x4(index, matrix);
 }
 
-void ShaderMetal::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
+void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 {
 	if (index >= 0)
 	{
@@ -394,4 +402,66 @@ void ShaderMetal::setImmediateMatrix4x4(GxImmediateIndex index, const float * ma
 			memcpy(dst, matrix, 16 * sizeof(float));
 		}
 	}
+}
+
+#define not_implemented Assert(false) // todo : implement shader stubs
+
+void Shader::setTextureUnit(const char * name, int unit)
+{
+	not_implemented;
+}
+
+void Shader::setTextureUnit(GxImmediateIndex index, int unit)
+{
+	not_implemented;
+}
+
+void Shader::setTexture(const char * name, int unit, GxTextureId texture)
+{
+	not_implemented;
+}
+
+void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
+{
+	not_implemented;
+}
+
+void Shader::setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture)
+{
+	not_implemented;
+}
+
+void Shader::setTextureArray(const char * name, int unit, GxTextureId texture)
+{
+	not_implemented;
+}
+
+void Shader::setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
+{
+	not_implemented;
+}
+
+void Shader::setTextureCube(const char * name, int unit, GxTextureId texture)
+{
+	not_implemented;
+}
+
+void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
+{
+	not_implemented;
+}
+
+void Shader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer)
+{
+	not_implemented;
+}
+
+void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
+{
+	not_implemented;
+}
+
+void Shader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
+{
+	not_implemented;
 }

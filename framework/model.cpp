@@ -912,11 +912,13 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 				
 				const ShaderCacheElem & shaderElem = shader.getCacheElem();
 				
+			#if ENABLE_OPENGL // todo : enable for metal
 				if (shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index >= 0)
 				{
 					glUniformMatrix4fv(shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index, numBones, GL_FALSE, (GLfloat*)globalMatrices);
 					checkErrorGL();
 				}
+			#endif
 				
 			// todo : use constant locations for drawColor and drawSkin
 			

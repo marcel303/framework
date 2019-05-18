@@ -1,5 +1,6 @@
 #pragma once
 
+#import "framework.h"
 #import <string>
 #import <vector>
 
@@ -227,19 +228,32 @@ struct ShaderCacheElem
 
 #endif
 
-typedef int GxImmediateIndex;
+class ShaderCache
+{
+	ShaderCacheElem * m_cacheElem = nullptr; // todo : make private
+	
+public:
+	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
+	
+	void clear() { }
+	void reload() { }
+};
 
-class ShaderMetal : public ShaderBase
+//
+
+class Shader : public ShaderBase
 {
 public:
 	ShaderCacheElem * m_cacheElem = nullptr; // todo : make private
 	
-	ShaderMetal() { }
-	ShaderMetal(const char * name);
+	Shader();
+	Shader(const char * name, const char * outputs = nullptr);
+	Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
+	virtual ~Shader();
 	
-// todo
-	//void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
+	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
 	virtual bool isValid() const override { return true; } // todo
+	virtual GxShaderId getProgram() const override { return 0; }; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	virtual int getVersion() const override { return 1; } // todo
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override { return false; } // todo
@@ -256,6 +270,22 @@ public:
 	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
+	
+// todo : texture units do not make much sense ..
+	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
+	void setTextureUnit(GxImmediateIndex index, int unit); // bind <name> to GL_TEXTURE0 + unit
+	void setTexture(const char * name, int unit, GxTextureId texture);
+	void setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
+	void setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture);
+	void setTextureArray(const char * name, int unit, GxTextureId texture);
+	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
+	void setTextureCube(const char * name, int unit, GxTextureId texture);
+	void setBuffer(const char * name, const ShaderBuffer & buffer);
+	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
+	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
+	void setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer);
 
 	const ShaderCacheElem & getCacheElem() const { return *m_cacheElem; }
 };
+
+extern ShaderCache g_shaderCache;

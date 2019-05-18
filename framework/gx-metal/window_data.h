@@ -4,7 +4,7 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
-struct WindowData
+struct MetalWindowData
 {
 	MetalView * metalview = nullptr;
 	

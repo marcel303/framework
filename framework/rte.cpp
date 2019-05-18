@@ -39,6 +39,7 @@ static void handleFileChange(const std::string & filename)
 {
 	const std::string extension = Path::GetExtension(filename, true);
 
+#if ENABLE_OPENGL // todo : enable for vs and ps for metal
 	if (extension == "vs")
 	{
 		for (auto & i : g_shaderCache.m_map)
@@ -69,7 +70,9 @@ static void handleFileChange(const std::string & filename)
 				elem.reload();
 		}
 	}
-	else if (extension == "inc")
+	else
+#endif
+	if (extension == "inc")
 	{
 		clearCaches(CACHE_SHADER);
 	}

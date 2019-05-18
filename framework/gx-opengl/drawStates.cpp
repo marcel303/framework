@@ -26,11 +26,12 @@
 */
 
 #include "framework.h"
+
+#if ENABLE_OPENGL
+
 #include "internal.h"
 
 static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
-static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
-static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
 static Stack<bool, 32> lineSmoothStack(false);
 static Stack<bool, 32> wireframeStack(false);
 static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
@@ -127,65 +128,6 @@ void popBlend()
 	const BLEND_MODE blendMode = blendModeStack.popValue();
 	
 	setBlend(blendMode);
-}
-
-void setColorMode(COLOR_MODE colorMode)
-{
-	globals.colorMode = colorMode;
-	
-#if USE_LEGACY_OPENGL
-	switch (colorMode)
-	{
-	case COLOR_MUL:
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
-		break;
-	case COLOR_ADD:
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_ADD);
-		break;
-	case COLOR_SUB:
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_SUBTRACT);
-		break;
-	case COLOR_IGNORE:
-		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
-		break;
-	default:
-		fassert(false);
-		break;
-	}
-#endif
-}
-
-void pushColorMode(COLOR_MODE colorMode)
-{
-	colorModeStack.push(globals.colorMode);
-	
-	setColorMode(colorMode);
-}
-
-void popColorMode()
-{
-	const COLOR_MODE value = colorModeStack.popValue();
-	
-	setColorMode(value);
-}
-
-void setColorPost(COLOR_POST colorPost)
-{
-	globals.colorPost = colorPost;
-}
-
-void pushColorPost(COLOR_POST colorPost)
-{
-	colorPostStack.push(globals.colorPost);
-	
-	setColorPost(colorPost);
-}
-
-void popColorPost()
-{
-	const COLOR_POST value = colorPostStack.popValue();
-	
-	setColorPost(value);
 }
 
 static void setLineSmooth(bool enabled)
@@ -362,3 +304,5 @@ void popCullMode()
 	
 	setCullMode(cullMode.mode, cullMode.winding);
 }
+
+#endif

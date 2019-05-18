@@ -130,6 +130,9 @@ std::map<std::string, std::string> s_shaderSources;
 
 int s_backingScale = 1.f; // global backing scale multiplier. a bit of a hack as it assumed the scale never changes, but works well for most apps in most situations for now..
 
+static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
+static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
+
 Framework::Framework()
 {
 	waitForEvents = false;
@@ -1464,12 +1467,14 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			name = name.substr(0, name.rfind('.'));
 			Shader(name.c_str());
 		}
+	 #if ENABLE_OPENGL // todo : metal compute shader implementation
 		else if (strstr(f, ".cs") == f + fl - 3)
 		{
 			std::string name = f;
 			name = name.substr(0, name.rfind('.'));
 			ComputeShader(name.c_str());
 		}
+	#endif
 		else
 		{
 			if (fillCachesUnknownResourceCallback)
@@ -1769,6 +1774,7 @@ void Framework::registerShaderSource(const char * name, const char * text)
 
 	// refresh shaders which are using this source
 	
+#if ENABLE_OPENGL // todo : metal shader reload
 	for (auto & shaderCacheItr : g_shaderCache.m_map)
 	{
 		ShaderCacheElem & cacheElem = shaderCacheItr.second;
@@ -1783,6 +1789,7 @@ void Framework::registerShaderSource(const char * name, const char * text)
 			}
 		}
 	}
+#endif
 }
 
 void Framework::unregisterShaderSource(const char * name)
@@ -2094,6 +2101,8 @@ void popWindow()
 static Stack<std::string, 32> s_shaderOutputsStack("");
 static std::string s_shaderOutputs = "c";
 
+#if ENABLE_OPENGL
+
 Shader::Shader()
 {
 	m_shader = 0;
@@ -2391,7 +2400,11 @@ void Shader::reload()
 	m_shader->reload();
 }
 
+#endif
+
 // -----
+
+#if ENABLE_OPENGL // todo : metal compute shader implementation
 
 ComputeShader::ComputeShader()
 {
@@ -2661,6 +2674,8 @@ void ComputeShader::reload()
 	m_shader->reload();
 }
 
+#endif
+
 // -----
 
 static std::vector<GLuint> s_bufferPool;
@@ -2669,6 +2684,7 @@ static bool s_useBufferPool = false;
 ShaderBuffer::ShaderBuffer()
 	: m_buffer(0)
 {
+#if ENABLE_OPENGL // todo : metal implementation shader buffer
 	if (!s_useBufferPool || s_bufferPool.empty())
 	{
 		glGenBuffers(1, &m_buffer);
@@ -2679,10 +2695,12 @@ ShaderBuffer::ShaderBuffer()
 		m_buffer = s_bufferPool.back();
 		s_bufferPool.pop_back();
 	}
+#endif
 }
 
 ShaderBuffer::~ShaderBuffer()
 {
+#if ENABLE_OPENGL // todo : metal implementation shader buffer
 	if (m_buffer)
 	{
 		if (s_useBufferPool)
@@ -2697,6 +2715,7 @@ ShaderBuffer::~ShaderBuffer()
 			checkErrorGL();
 		}
 	}
+#endif
 }
 
 GxShaderBufferId ShaderBuffer::getBuffer() const
@@ -5216,6 +5235,65 @@ void clearDrawRect()
 	glDisable(GL_SCISSOR_TEST);
 }
 
+void setColorMode(COLOR_MODE colorMode)
+{
+	globals.colorMode = colorMode;
+	
+#if USE_LEGACY_OPENGL
+	switch (colorMode)
+	{
+	case COLOR_MUL:
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+		break;
+	case COLOR_ADD:
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_ADD);
+		break;
+	case COLOR_SUB:
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_SUBTRACT);
+		break;
+	case COLOR_IGNORE:
+		glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+		break;
+	default:
+		fassert(false);
+		break;
+	}
+#endif
+}
+
+void pushColorMode(COLOR_MODE colorMode)
+{
+	colorModeStack.push(globals.colorMode);
+	
+	setColorMode(colorMode);
+}
+
+void popColorMode()
+{
+	const COLOR_MODE value = colorModeStack.popValue();
+	
+	setColorMode(value);
+}
+
+void setColorPost(COLOR_POST colorPost)
+{
+	globals.colorPost = colorPost;
+}
+
+void pushColorPost(COLOR_POST colorPost)
+{
+	colorPostStack.push(globals.colorPost);
+	
+	setColorPost(colorPost);
+}
+
+void popColorPost()
+{
+	const COLOR_POST value = colorPostStack.popValue();
+	
+	setColorPost(value);
+}
+
 void setColor(const Color & color)
 {
 	setColorf(color.r, color.g, color.b, color.a);
@@ -5338,7 +5416,9 @@ void setShader(const ShaderBase & shader)
 	{
 		globals.shader = const_cast<ShaderBase*>(&shader);
 	
+	#if ENABLE_OPENGL
 		glUseProgram(shader.getProgram());
+	#endif
 		
 		globals.gxShaderIsDirty = true;
 	}
@@ -5350,6 +5430,7 @@ void clearShader()
 	{
 		globals.shader = 0;
 	
+	#if ENABLE_OPENGL
 		glUseProgram(0);
 		
 		// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
@@ -5368,6 +5449,7 @@ void clearShader()
 	
 		glActiveTexture(GL_TEXTURE0);
 		checkErrorGL();
+	#endif
 	}
 }
 
@@ -6521,6 +6603,8 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 	}
 }
 
+#if ENABLE_OPENGL
+
 static GxTextureId createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
 {
 	checkErrorGL();
@@ -6612,6 +6696,8 @@ void freeTexture(GxTextureId & textureId)
 	glDeleteTextures(1, &textureId);
 	textureId = 0;
 }
+
+#endif
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
 {
@@ -7058,6 +7144,7 @@ static void applyHqShaderConstants()
 	
 	const ShaderCacheElem & shaderElem = shader.getCacheElem();
 	
+#if ENABLE_OPENGL // todo : add metal implementation
 	if (shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index != -1)
 	{
 		shader.setImmediate(
@@ -7111,7 +7198,7 @@ static void applyHqShaderConstants()
 		
 		shader.setTextureUnit("source", 0);
 	}
-	
+#endif
 
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 	//shader.setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
