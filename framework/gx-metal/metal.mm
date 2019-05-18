@@ -8,6 +8,7 @@
 #import "metal.h"
 #import "metalView.h"
 #import "shader.h"
+#import "shaders.h" // registerBuiltinShaders
 #import "texture.h"
 #import "window_data.h"
 #import <Cocoa/Cocoa.h>
@@ -27,6 +28,8 @@ static std::map<SDL_Window*, MetalWindowData*> windowDatas;
 MetalWindowData * activeWindowData = nullptr;
 
 static std::vector<id <MTLResource>> s_resourcesToFree;
+
+extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
 
 static void freeResourcesToFree()
 {
@@ -706,6 +709,8 @@ struct GxVertex
 	float tx, ty;
 };
 
+static Shader s_gxShader;
+
 static GxVertex s_gxVertexBuffer[1024*64];
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
@@ -741,13 +746,13 @@ void gxValidateShaderResources();
 
 void gxInitialize()
 {
-#if TODO
 	fassert(s_shaderSources.empty());
+	
+	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 	
 	registerBuiltinShaders();
 
 	s_gxShader.load("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
-#endif
 
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
@@ -1151,21 +1156,16 @@ static void gxFlush(bool endOfBatch)
 			float * values = (float*)(data + shaderElem.psInfo.params[ShaderCacheElem::kSp_Params].offset);
 			
 			values[0] = s_gxTextureEnabled ? 1.f : 0.f,
-			//globals.colorMode, // todo : re-add globals.colorMode etc
-			//globals.colorPost,
-			//globals.colorClamp);
-			values[1] = 0;
-			values[2] = 0;
-			values[3] = 0;
+			values[1] = globals.colorMode;
+			values[2] = globals.colorPost;
+			values[3] = globals.colorClamp;
 		}
 
-	#if TODO
 		if (globals.gxShaderIsDirty)
 		{
-			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+			if (shaderElem.psInfo.params[ShaderCacheElem::kSp_Texture].offset != -1)
+				shader.setTextureUnit(shaderElem.psInfo.params[ShaderCacheElem::kSp_Texture].offset, 0);
 		}
-	#endif
 	
 		[activeWindowData->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
 		
@@ -1184,12 +1184,10 @@ static void gxFlush(bool endOfBatch)
 				[activeWindowData->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numElements];
 			}
 		}
-	#if TODO // requires logDebug
 		else
 		{
 			logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 		}
-	#endif
 	
 		if (endOfBatch)
 		{
@@ -1227,9 +1225,7 @@ static void gxFlush(bool endOfBatch)
 			clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
 		}
 		
-	#if TODO
 		globals.gxShaderIsDirty = false;
-	#endif
 
 		s_gxPrimitiveType = primitiveType;
 	}

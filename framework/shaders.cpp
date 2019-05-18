@@ -27,7 +27,7 @@
 
 #include "framework.h"
 
-#if ENABLE_OPENGL
+#if ENABLE_OPENGL || ENABLE_METAL
 
 #include "shaders.h"
 

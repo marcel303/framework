@@ -80,6 +80,8 @@ struct ShaderCacheElem
 		int numElems = 0;
 	};
 	
+	std::string name;
+	
 	void * vs = nullptr;
 	void * ps = nullptr;
 	
