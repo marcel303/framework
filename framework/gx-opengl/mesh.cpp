@@ -27,23 +27,23 @@
 
 #include <GL/glew.h>
 #include "framework.h"
-#include "gx_mesh.h"
+#include "mesh.h"
 
-GxVertexBuffer::GxVertexBuffer()
+GxVertexBufferGL::GxVertexBufferGL()
 	: m_vertexArray(0)
 {
 	glGenBuffers(1, &m_vertexArray);
 	checkErrorGL();
 }
 
-GxVertexBuffer::~GxVertexBuffer()
+GxVertexBufferGL::~GxVertexBufferGL()
 {
 	glDeleteBuffers(1, &m_vertexArray);
 	m_vertexArray = 0;
 	checkErrorGL();
 }
 
-void GxVertexBuffer::setData(const void * bytes, const int numBytes)
+void GxVertexBufferGL::setData(const void * bytes, const int numBytes)
 {
 	// fill the buffer with data
 	glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
@@ -52,7 +52,7 @@ void GxVertexBuffer::setData(const void * bytes, const int numBytes)
 	checkErrorGL();
 }
 
-GxIndexBuffer::GxIndexBuffer()
+GxIndexBufferGL::GxIndexBufferGL()
 	: m_numIndices(0)
 	, m_format(GX_INDEX_16)
 	, m_indexArray(0)
@@ -61,14 +61,14 @@ GxIndexBuffer::GxIndexBuffer()
 	checkErrorGL();
 }
 
-GxIndexBuffer::~GxIndexBuffer()
+GxIndexBufferGL::~GxIndexBufferGL()
 {
 	glDeleteBuffers(1, &m_indexArray);
 	m_indexArray = 0;
 	checkErrorGL();
 }
 
-void GxIndexBuffer::setData(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
+void GxIndexBufferGL::setData(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
 {
 	// fill the buffer with data
 	
@@ -86,12 +86,12 @@ void GxIndexBuffer::setData(const void * bytes, const int numIndices, const GX_I
 	m_format = format;
 }
 
-int GxIndexBuffer::getNumIndices() const
+int GxIndexBufferGL::getNumIndices() const
 {
 	return m_numIndices;
 }
 
-GX_INDEX_FORMAT GxIndexBuffer::getFormat() const
+GX_INDEX_FORMAT GxIndexBufferGL::getFormat() const
 {
 	return m_format;
 }

@@ -50,29 +50,27 @@ struct GxVertexInput
 	uint8_t stride;            // byte stride between elements. use zero when elements are tightly packed
 };
 
-#include "gx-opengl/mesh.h"
+class GxVertexBufferBase
+{
+public:
+	virtual ~GxVertexBufferBase() { }
+	
+	virtual void setData(const void * bytes, const int numBytes) = 0;
+};
+
+class GxIndexBufferBase
+{
+public:
+	virtual ~GxIndexBufferBase() { }
+	
+	virtual void setData(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format) = 0;
+	
+	virtual int getNumIndices() const = 0;
+	virtual GX_INDEX_FORMAT getFormat() const = 0;
+};
 
 /*
-class GxVertexBuffer
-{
-public:
-	GxVertexBuffer();
-	~GxVertexBuffer();
-	
-	void setData(const void * bytes, const int numBytes);
-};
-
-class GxIndexBuffer
-{
-public:
-	GxIndexBuffer();
-	~GxIndexBuffer();
-	
-	void setData(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format);
-	
-	int getNumIndices() const;
-	GX_INDEX_FORMAT getFormat() const;
-};
+// todo : GxMesh should not be a api dependent and use shared functions to draw using index and vertex buffers
 
 class GxMesh
 {

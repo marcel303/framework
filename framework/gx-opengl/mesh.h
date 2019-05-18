@@ -29,20 +29,20 @@
 
 #include "gx_mesh.h"
 
-class GxVertexBuffer
+class GxVertexBufferGL : public GxVertexBufferBase
 {
 	friend class GxMesh;
 	
 	uint32_t m_vertexArray;
 	
 public:
-	GxVertexBuffer();
-	~GxVertexBuffer();
+	GxVertexBufferGL();
+	virtual ~GxVertexBufferGL() override final;
 	
-	void setData(const void * bytes, const int numBytes);
+	virtual void setData(const void * bytes, const int numBytes) override final;
 };
 
-class GxIndexBuffer
+class GxIndexBufferGL : public GxIndexBufferBase
 {
 	friend class GxMesh;
 	
@@ -52,14 +52,17 @@ class GxIndexBuffer
 	uint32_t m_indexArray;
 	
 public:
-	GxIndexBuffer();
-	~GxIndexBuffer();
+	GxIndexBufferGL();
+	virtual ~GxIndexBufferGL() override final;
 	
-	void setData(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format);
+	virtual void setData(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format) override final;
 	
-	int getNumIndices() const;
-	GX_INDEX_FORMAT getFormat() const;
+	virtual int getNumIndices() const override final;
+	virtual GX_INDEX_FORMAT getFormat() const override final;
 };
+
+typedef GxVertexBufferGL GxVertexBuffer;
+typedef GxIndexBufferGL GxIndexBuffer;
 
 class GxMesh
 {
