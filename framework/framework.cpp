@@ -1584,7 +1584,7 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 #endif
 
 #if ENABLE_METAL
-	metal_draw_begin(scale255(r), scale255(g), scale255(b), scale255(a));
+	metal_draw_begin(scale255(r), scale255(g), scale255(b), scale255(a)); // todo : add clear depth
 	
 	applyTransform();
 	

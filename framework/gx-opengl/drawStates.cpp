@@ -130,7 +130,7 @@ void popBlend()
 	setBlend(blendMode);
 }
 
-static void setLineSmooth(bool enabled)
+void setLineSmooth(bool enabled)
 {
 	if (enabled)
 	{
@@ -159,7 +159,7 @@ void popLineSmooth()
 	setLineSmooth(value);
 }
 
-static void setWireframe(bool enabled)
+void setWireframe(bool enabled)
 {
 	glPolygonMode(GL_FRONT_AND_BACK, enabled ? GL_LINE : GL_FILL);
 	checkErrorGL();
@@ -254,7 +254,7 @@ void popDepthWrite()
 	popDepthTest();
 }
 
-static void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
+void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 {
 	globals.cullMode = mode;
 	globals.cullWinding = frontFaceWinding;

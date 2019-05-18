@@ -3,6 +3,7 @@
 #if ENABLE_METAL
 
 #import "bufferPool.h"
+#import "data/engine/ShaderCommon.txt" // VS_ constants
 #import "internal.h"
 #import "metal.h"
 #import "metalView.h"
@@ -16,19 +17,6 @@
 
 #define INDEX_TYPE uint32_t
 
-#define FETCH_PIPELINESTATE_REFLECTION 0
-
-#if 1 // todo : remove
-	#define VS_POSITION      0
-	#define VS_NORMAL        1
-	#define VS_COLOR         2
-	#define VS_TEXCOORD0     3
-	#define VS_TEXCOORD      VS_TEXCOORD0
-	#define VS_TEXCOORD1     4
-	#define VS_BLEND_INDICES 5
-	#define VS_BLEND_WEIGHTS 6
-#endif
-
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 
 static id <MTLDevice> device;
@@ -36,10 +24,6 @@ static id <MTLDevice> device;
 static std::map<SDL_Window*, MetalWindowData*> windowDatas;
 
 MetalWindowData * activeWindowData = nullptr;
-
-#if FETCH_PIPELINESTATE_REFLECTION
-static MTLRenderPipelineReflection * activeRenderPipelineReflection = nullptr;
-#endif
 
 static std::vector<id <MTLResource>> s_resourcesToFree;
 
@@ -129,12 +113,6 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 
 void metal_draw_end()
 {
-#if FETCH_PIPELINESTATE_REFLECTION
-	//NSLog(@"activeRenderPipelineReflection release, retain count: %lu", [activeRenderPipelineReflection retainCount]);
-	[activeRenderPipelineReflection release];
-	activeRenderPipelineReflection = nullptr;
-#endif
-
 	[activeWindowData->encoder endEncoding];
 	
 	[activeWindowData->cmdbuf addCompletedHandler:
@@ -1053,26 +1031,10 @@ static void gxValidatePipelineState()
 			pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
 			//pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 
-		#if FETCH_PIPELINESTATE_REFLECTION
-			[activeRenderPipelineReflection release];
-			activeRenderPipelineReflection = nullptr;
-		#endif
-			
-		#if FETCH_PIPELINESTATE_REFLECTION
-			const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
-			
-			NSError * error;
-			pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&activeRenderPipelineReflection error:&error];
-			if (error != nullptr)
-				NSLog(@"%@", error);
-			
-			[activeRenderPipelineReflection retain];
-		#else
 			NSError * error;
 			pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
 			if (error != nullptr)
 				NSLog(@"%@", error);
-		#endif
 			
 			//NSLog(@"%@", pipelineState);
 			
@@ -1102,6 +1064,9 @@ static void gxFlush(bool endOfBatch)
 		}
 		else
 		{
+		// todo : keep a reference to the current buffer and allocate vertices from the same buffer
+		//        when possible. once the buffer is depleted, or when the command buffer is scheduled,
+		//        add the completion handler
 			auto * elem = s_gxVertexBufferPool.allocBuffer();
 			[activeWindowData->cmdbuf addCompletedHandler:
 				^(id<MTLCommandBuffer> _Nonnull)

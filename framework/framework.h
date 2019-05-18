@@ -75,8 +75,9 @@
 	#define ENABLE_PROFILING 1
 #endif
 
-#if defined(MACOS) && !defined(ENABLE_METAL) && true
+#if defined(MACOS) && !defined(ENABLE_METAL) && 1
 	#define ENABLE_METAL 1
+	#define ENABLE_HQ_PRIMITIVES 0
 #elif !defined(ENABLE_OPENGL)
 	#define ENABLE_OPENGL 1
 #endif
@@ -1442,9 +1443,11 @@ void setColorPost(COLOR_POST colorPost);
 void pushColorPost(COLOR_POST colorPost);
 void popColorPost();
 
+void setLineSmooth(bool enabled);
 void pushLineSmooth(bool enabled);
 void popLineSmooth();
 
+void setWireframe(bool enabled);
 void pushWireframe(bool enabled);
 void popWireframe();
 
@@ -1455,6 +1458,7 @@ void popDepthTest();
 void pushDepthWrite(bool enabled);
 void popDepthWrite();
 
+void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
 void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
 void popCullMode();
 

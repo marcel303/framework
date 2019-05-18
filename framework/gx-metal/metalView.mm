@@ -29,10 +29,10 @@
 		self.wantsDepthBuffer = wantsDepthBuffer;
 		self.depthTexture = nil;
 
-        _metalLayer = (CAMetalLayer *)self.layer;
-        _metalLayer.opaque = YES;
-        _metalLayer.device = device;
-        _metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        self.metalLayer = (CAMetalLayer *)self.layer;
+        self.metalLayer.opaque = YES;
+        self.metalLayer.device = device;
+        self.metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
 
         [self updateDrawableSize];
     }
@@ -46,7 +46,7 @@
     size.width  *= self.layer.contentsScale;
     size.height *= self.layer.contentsScale;
 
-    _metalLayer.drawableSize = size;
+    self.metalLayer.drawableSize = size;
 	
 	@autoreleasepool
 	{
