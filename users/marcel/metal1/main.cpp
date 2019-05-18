@@ -2,6 +2,7 @@
 
 #include "Mat4x4.h"
 #include "metal.h"
+#include "renderTarget.h"
 #include "shader.h"
 #include <stdlib.h>
 
@@ -28,6 +29,26 @@ int main(int arg, char * argv[])
 	delete [] texture1_data;
 	texture1_data = nullptr;
 	
+#if 0
+	{
+		ColorTarget colorTarget;
+		DepthTarget depthTarget;
+		
+		ColorTargetProperties colorProperties;
+		colorProperties.init(640, 480, SURFACE_RGBA8, colorBlack);
+		colorTarget.init(colorProperties);
+		
+		DepthTargetProperties depthProperties;
+		depthProperties.init(640, 80, DEPTH_FLOAT32, 1.f);
+		depthTarget.init(depthProperties);
+		
+		pushRenderPass(&colorTarget, &depthTarget, true);
+		{
+		}
+		popRenderPass();
+	}
+#endif
+
 	for (;;)
 	{
 		bool stop = false;

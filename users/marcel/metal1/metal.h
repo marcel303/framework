@@ -2,6 +2,9 @@
 
 struct SDL_Window;
 
+class ColorTarget;
+class DepthTarget;
+
 class GxVertexBuffer;
 class Shader;
 
@@ -58,6 +61,10 @@ enum CULL_WINDING
 
 void pushSurface(Surface * surface);
 void popSurface();
+
+void pushRenderPass(ColorTarget * target, DepthTarget * depthTarget, const bool clearDepth);
+void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * depthTarget, const bool clearDepth);
+void popRenderPass();
 
 void setBlend(BLEND_MODE blendMode);
 void setLineSmooth(bool enabled);

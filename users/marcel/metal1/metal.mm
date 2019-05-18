@@ -204,6 +204,83 @@ static bool s_depthTestEnabled = false;
 static DEPTH_TEST s_depthTest = DEPTH_ALWAYS;
 static bool s_depthWriteEnabled = false;
 
+#include "renderTarget.h"
+
+struct RenderPassData
+{
+	id <MTLCommandBuffer> cmdbuf;
+	
+	MTLRenderPassDescriptor * renderdesc = nullptr;
+	
+	id <MTLRenderCommandEncoder> encoder;
+};
+
+std::vector<RenderPassData> s_renderPasses;
+
+void pushRenderPass(ColorTarget * target, DepthTarget * depthTarget, const bool clearDepth)
+{
+	pushRenderPass(&target, target == nullptr ? 0 : 1, depthTarget, clearDepth);
+}
+
+void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * depthTarget, const bool clearDepth)
+{
+	RenderPassData pd;
+	
+	@autoreleasepool
+	{
+		pd.cmdbuf = [[activeWindowData->queue commandBuffer] retain];
+
+	 	pd.renderdesc = [[MTLRenderPassDescriptor renderPassDescriptor] retain];
+		
+		for (int i = 0; i < numTargets; ++i)
+		{
+			MTLRenderPassColorAttachmentDescriptor * colorattachment = activeWindowData->renderdesc.colorAttachments[i];
+			colorattachment.texture = (id <MTLTexture>)targets[i]->getMetalTexture();
+			
+			colorattachment.clearColor  = MTLClearColorMake(
+				targets[i]->clearColor.r,
+				targets[i]->clearColor.g,
+				targets[i]->clearColor.b,
+				targets[i]->clearColor.a);
+			colorattachment.loadAction  = MTLLoadActionClear;
+			colorattachment.storeAction = MTLStoreActionStore;
+		}
+	
+		if (depthTarget != nullptr)
+		{
+			MTLRenderPassDepthAttachmentDescriptor * depthattachment = pd.renderdesc.depthAttachment;
+			depthattachment.texture = (id <MTLTexture>)depthTarget->m_depthTexture;
+			depthattachment.clearDepth = depthTarget->clearDepth;
+			depthattachment.loadAction = MTLLoadActionClear;
+			depthattachment.storeAction = MTLStoreActionDontCare;
+		}
+
+		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
+		pd.encoder.label = @"hello encoder";
+		
+		// todo : set viewport
+		// todo : set blend mode
+		
+		s_renderPasses.push_back(pd);
+	}
+}
+
+void popRenderPass()
+{
+	auto & pd = s_renderPasses.back();
+	
+	[pd.encoder endEncoding];
+	
+	[pd.cmdbuf commit];
+	
+	//
+	
+	[pd.encoder release];
+	[pd.cmdbuf release];
+	
+	s_renderPasses.pop_back();
+}
+
 void setBlend(BLEND_MODE blendMode)
 {
 	renderState.blendMode = blendMode;
