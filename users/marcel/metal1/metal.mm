@@ -77,16 +77,13 @@ void metal_attach(SDL_Window * window)
 		NSView * sdl_view = info.info.cocoa.window.contentView;
 
 		WindowData * windowData = new WindowData();
-		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device];
+		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:YES];
 		[sdl_view addSubview:windowData->metalview];
 
 		windowData->renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
 		[windowData->renderdesc retain];
 		
 		windowData->queue = [windowData->metalview.metalLayer.device newCommandQueue];
-		
-		// create depth texture
-		windowData->create_depth_texture_matching_metal_view();
 		
 		windowDatas[window] = windowData;
 	}
@@ -101,18 +98,6 @@ void metal_make_active(SDL_Window * window)
 		activeWindowData = nullptr;
 	else
 		activeWindowData = i->second;
-	
-	if (activeWindowData != nullptr)
-	{
-		if (activeWindowData->depth_texture != nullptr)
-		{
-			if (activeWindowData->depth_texture.width != activeWindowData->metalview.metalLayer.drawableSize.width ||
-				activeWindowData->depth_texture.height != activeWindowData->metalview.metalLayer.drawableSize.height)
-			{
-				activeWindowData->create_depth_texture_matching_metal_view();
-			}
-		}
-	}
 }
 
 void metal_draw_begin(const float r, const float g, const float b, const float a)
@@ -133,7 +118,7 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 		colorattachment.storeAction = MTLStoreActionStore;
 		
 		MTLRenderPassDepthAttachmentDescriptor * depthattachment = activeWindowData->renderdesc.depthAttachment;
-		depthattachment.texture = activeWindowData->depth_texture;
+		depthattachment.texture = activeWindowData->metalview.depthTexture;
 		depthattachment.clearDepth = 1.0;
 		depthattachment.loadAction = MTLLoadActionClear;
 		depthattachment.storeAction = MTLStoreActionDontCare;

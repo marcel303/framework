@@ -17,8 +17,4 @@ struct WindowData
 	id <CAMetalDrawable> current_drawable;
 	
 	id <MTLRenderCommandEncoder> encoder;
-	
-	id <MTLTexture> depth_texture;
-	
-	void create_depth_texture_matching_metal_view();
 };

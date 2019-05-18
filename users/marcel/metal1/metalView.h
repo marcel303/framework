@@ -6,7 +6,10 @@
 @interface MetalView : NSView
 
 @property (nonatomic, assign) CAMetalLayer *metalLayer;
+@property (nonatomic, assign) bool wantsDepthBuffer;
 
-- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device;
+@property (nonatomic, assign) id <MTLTexture> depthTexture;
+
+- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer;
 
 @end

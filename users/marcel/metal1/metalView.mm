@@ -20,12 +20,14 @@
     return [self.class.layerClass layer];
 }
 
-- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device
+- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer
 {
     if ((self = [super initWithFrame:frame]))
     {
 		self.wantsLayer = YES;
 		self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+		self.wantsDepthBuffer = wantsDepthBuffer;
+		self.depthTexture = nil;
 
         _metalLayer = (CAMetalLayer *)self.layer;
         _metalLayer.opaque = YES;
@@ -45,6 +47,18 @@
     size.height *= self.layer.contentsScale;
 
     _metalLayer.drawableSize = size;
+	
+	@autoreleasepool
+	{
+		[self.depthTexture release];
+		self.depthTexture = nullptr;
+		
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float width:size.width height:size.height mipmapped:NO];
+		descriptor.resourceOptions = MTLResourceStorageModePrivate;
+		descriptor.usage = MTLTextureUsageRenderTarget;
+		
+		self.depthTexture = [_metalLayer.device newTextureWithDescriptor:descriptor];
+	}
 	
     //NSLog(@"updateDrawableSize");
 }
