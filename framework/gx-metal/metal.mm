@@ -1,3 +1,7 @@
+#import "framework.h"
+
+#if ENABLE_METAL
+
 #import "bufferPool.h"
 #import "internal.h"
 #import "metal.h"
@@ -1523,3 +1527,5 @@ void gxValidateShaderResources()
 		[activeWindowData->encoder setFragmentTexture:nullptr atIndex:0];
 	}
 }
+
+#endif

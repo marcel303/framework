@@ -42,8 +42,8 @@ enum GX_ELEMENT_TYPE
 
 struct GxVertexInput
 {
-	uint8_t id : 6;            // vertex stream id or index. given by VS_POSITION, VS_TEXCOORD, .. for built-in shaders
-	uint8_t numComponents : 2; // the number of components per element
+	uint8_t id : 5;            // vertex stream id or index. given by VS_POSITION, VS_TEXCOORD, .. for built-in shaders
+	uint8_t numComponents : 3; // the number of components per element
 	GX_ELEMENT_TYPE type : 4;  // the type of element inside the vertex stream
 	bool normalize : 4;        // (if integer) should the element be normalized into the range 0..1?
 	uint8_t offset;            // byte offset within vertex buffer for the start of this input

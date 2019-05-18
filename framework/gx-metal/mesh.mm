@@ -1,4 +1,7 @@
 #import "framework.h"
+
+#if ENABLE_METAL
+
 #import "mesh.h"
 #import <Metal/Metal.h>
 
@@ -161,3 +164,5 @@ GX_INDEX_FORMAT GxIndexBufferMetal::getFormat() const
 {
 	return m_format;
 }
+
+#endif

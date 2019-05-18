@@ -1,3 +1,7 @@
+#import "framework.h"
+
+#if ENABLE_METAL
+
 #import "metal.h"
 #import "shader.h"
 
@@ -465,3 +469,5 @@ void Shader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
 {
 	not_implemented;
 }
+
+#endif

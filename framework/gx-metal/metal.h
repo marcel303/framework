@@ -1,6 +1,9 @@
 #pragma once
 
 #include "framework.h"
+
+#if ENABLE_METAL
+
 #include "mesh.h"
 
 #define REMOVEME 0
@@ -172,3 +175,5 @@ struct __attribute__((packed)) RenderPipelineState
 };
 
 extern RenderPipelineState renderState;
+
+#endif

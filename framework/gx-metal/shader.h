@@ -1,6 +1,9 @@
 #pragma once
 
 #import "framework.h"
+
+#if ENABLE_METAL
+
 #import <string>
 #import <vector>
 
@@ -289,3 +292,5 @@ public:
 };
 
 extern ShaderCache g_shaderCache;
+
+#endif

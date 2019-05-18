@@ -69,10 +69,14 @@
 #include "StringEx.h"
 #include "Timer.h"
 
+#if ENABLE_METAL
+	#include "gx-metal/metal.h"
+#endif
+
 // -----
 
 #if ENABLE_UTF8_SUPPORT
-#include "utf8rewind.h"
+	#include "utf8rewind.h"
 #endif
 
 #define MAX_TEXT_LENGTH 2048
@@ -385,6 +389,7 @@ bool Framework::init(int sx, int sy)
 	windowSx = sx;
 	windowSy = sy;
 	
+#if ENABLE_OPENGL
 	int drawableSx;
 	int drawableSy;
 	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
@@ -392,7 +397,6 @@ bool Framework::init(int sx, int sy)
 	if (s_backingScale < 1)
 		s_backingScale = 1;
 	
-#if ENABLE_OPENGL
 	fassert(globals.glContext == nullptr);
 	globals.glContext = SDL_GL_CreateContext(globals.mainWindow->m_window);
 	checkErrorGL();
@@ -447,12 +451,20 @@ bool Framework::init(int sx, int sy)
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 	}
 #endif
+
+	SDL_GL_SetSwapInterval(enableVsync ? 1 : 0);
+#endif
+
+#if ENABLE_METAL
+	metal_init();
+	
+	metal_attach(globals.mainWindow->getWindow());
+	
+	metal_make_active(globals.mainWindow->getWindow());
 #endif
 	
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
-	
-	SDL_GL_SetSwapInterval(enableVsync ? 1 : 0);
 
 	gxInitialize();
 	
@@ -1570,11 +1582,18 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 	
 	setBlend(BLEND_ALPHA);
 #endif
+
+#if ENABLE_METAL
+	metal_draw_begin(scale255(r), scale255(g), scale255(b), scale255(a));
+	
+	applyTransform();
+	
+	setBlend(BLEND_ALPHA);
+#endif
 }
 
 void Framework::endDraw()
 {
-#if ENABLE_OPENGL
 	// process debug draw
 
 	setTransform(TRANSFORM_SCREEN);
@@ -1599,6 +1618,7 @@ void Framework::endDraw()
 	if (enableDrawTiming)
 		gpuTimingEnd();
 
+#if ENABLE_OPENGL
 	// check for errors
 	
 	checkErrorGL();
@@ -1606,8 +1626,10 @@ void Framework::endDraw()
 	// flip back buffers
 	
 	SDL_GL_SwapWindow(globals.currentWindow->getWindow());
-#else
-	
+#endif
+
+#if ENABLE_METAL
+	metal_draw_end();
 #endif
 }
 

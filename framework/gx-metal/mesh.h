@@ -1,5 +1,9 @@
 #pragma once
 
+#include "framework.h"
+
+#if ENABLE_METAL
+
 #include "gx_mesh.h"
 
 class GxVertexBufferMetal : public GxVertexBufferBase
@@ -48,3 +52,5 @@ public:
 
 typedef GxVertexBufferMetal GxVertexBuffer;
 typedef GxIndexBufferMetal GxIndexBuffer;
+
+#endif
