@@ -2066,12 +2066,10 @@ WindowData * Window::getWindowData() const
 }
 
 static Stack<Window*, 32> s_windowStack(nullptr);
-static Stack<WindowData*, 32> s_windowDataStack(nullptr);
 
 void pushWindow(Window & window)
 {
 	s_windowStack.push(globals.currentWindow);
-	s_windowDataStack.push(globals.currentWindowData);
 	
 	globals.currentWindow = &window;
 	globals.currentWindowData = window.getWindowData();
@@ -2083,10 +2081,9 @@ void pushWindow(Window & window)
 void popWindow()
 {
 	Window * window = s_windowStack.popValue();
-	WindowData * windowData = s_windowDataStack.popValue();
 	
 	globals.currentWindow = window;
-	globals.currentWindowData = windowData;
+	globals.currentWindowData = window->getWindowData();
 	
 	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 	globals.currentWindowData->makeActive();
