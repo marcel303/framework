@@ -592,13 +592,11 @@ public:
 
 class Surface
 {
-	int m_size[2];
+	SurfaceProperties m_properties;
+	
 	int m_backingScale; // backing scale puts a multiplier on the physical size (in pixels) of the surface. it's like MSAA, but fully super-sampled. it's used t orender to retina screens, where the 'resolve' operation just copies pixels 1:1, where a resolve onto a non-retina screen would downsample the surface instead
 	
 	int m_bufferId;
-	SURFACE_FORMAT m_format;
-	bool m_colorIsDoubleBuffered;
-	bool m_depthIsDoubleBuffered;
 	uint32_t m_buffer[2];
 	GxTextureId m_colorTexture[2];
 	GxTextureId m_depthTexture[2];

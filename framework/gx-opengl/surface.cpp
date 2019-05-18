@@ -33,17 +33,10 @@ extern int s_backingScale; // todo : can this be exposed/determined more nicely?
 
 void Surface::construct()
 {
-	m_size[0] = 0;
-	m_size[1] = 0;
 	m_backingScale = 1;
 	
 	m_bufferId = 0;
 	
-	m_format = (SURFACE_FORMAT)-1;
-	
-	m_colorIsDoubleBuffered = false;
-	m_depthIsDoubleBuffered = false;
-
 	m_buffer[0] = 0;
 	m_buffer[1] = 0;
 	m_colorTexture[0] = 0;
@@ -54,12 +47,6 @@ void Surface::construct()
 
 void Surface::destruct()
 {
-	m_size[0] = 0;
-	m_size[1] = 0;
-	m_backingScale = 1;
-	
-	m_bufferId = 0;
-	
 	for (int i = 0; i < 2; ++i)
 	{
 		if (m_buffer[i])
@@ -70,36 +57,42 @@ void Surface::destruct()
 		}
 	}
 	
-	for (int i = 0; i < (m_colorIsDoubleBuffered ? 2 : 1); ++i)
+	if (m_properties.colorTarget.enabled)
 	{
-		if (m_colorTexture[i])
+		for (int i = 0; i < (m_properties.colorTarget.doubleBuffered ? 2 : 1); ++i)
 		{
-			glDeleteTextures(1, &m_colorTexture[i]);
-			m_colorTexture[i] = 0;
-			checkErrorGL();
+			if (m_colorTexture[i])
+			{
+				glDeleteTextures(1, &m_colorTexture[i]);
+				m_colorTexture[i] = 0;
+				checkErrorGL();
+			}
 		}
+		
+		m_colorTexture[0] = 0;
+		m_colorTexture[1] = 0;
 	}
 	
-	m_colorTexture[0] = 0;
-	m_colorTexture[1] = 0;
-	
-	for (int i = 0; i < (m_depthIsDoubleBuffered ? 2 : 1); ++i)
+	if (m_properties.depthTarget.enabled)
 	{
-		if (m_depthTexture[i])
+		for (int i = 0; i < (m_properties.depthTarget.doubleBuffered ? 2 : 1); ++i)
 		{
-			glDeleteTextures(1, &m_depthTexture[i]);
-			m_depthTexture[i] = 0;
-			checkErrorGL();
+			if (m_depthTexture[i])
+			{
+				glDeleteTextures(1, &m_depthTexture[i]);
+				m_depthTexture[i] = 0;
+				checkErrorGL();
+			}
 		}
 	}
 	
 	m_depthTexture[0] = 0;
 	m_depthTexture[1] = 0;
 	
-	m_format = (SURFACE_FORMAT)-1;
+	m_properties = SurfaceProperties();
+	m_backingScale = 1;
 	
-	m_colorIsDoubleBuffered = false;
-	m_depthIsDoubleBuffered = false;
+	m_bufferId = 0;
 }
 
 Surface::Surface()
@@ -128,7 +121,7 @@ Surface::~Surface()
 
 void Surface::swapBuffers()
 {
-	fassert(m_colorIsDoubleBuffered || m_depthIsDoubleBuffered);
+	fassert(m_properties.colorTarget.doubleBuffered || m_properties.depthTarget.doubleBuffered);
 
 	m_bufferId = (m_bufferId + 1) % 2;
 }
@@ -173,6 +166,8 @@ bool Surface::init(const SurfaceProperties & properties)
 {
 	fassert(m_buffer[0] == 0);
 	
+	m_properties = properties;
+	
 	// todo : honor if colorTarget enabled is false
 	// todo : honor depthTarget doubleBuffered flag
 	
@@ -190,139 +185,138 @@ bool Surface::init(const SurfaceProperties & properties)
 	
 	bool result = true;
 	
-	m_size[0] = properties.dimensions.width;
-	m_size[1] = properties.dimensions.height;
 	m_backingScale = s_backingScale;
 	
-	m_format = properties.colorTarget.format;
-	
-	m_colorIsDoubleBuffered = properties.colorTarget.enabled && properties.colorTarget.doubleBuffered;
-	m_depthIsDoubleBuffered = properties.depthTarget.enabled && properties.depthTarget.doubleBuffered;
-
 	const int backingSx = sx * m_backingScale;
 	const int backingSy = sy * m_backingScale;
 	
 	// allocate color target backing storage
 
-	for (int i = 0; result && properties.colorTarget.enabled && i < (properties.colorTarget.doubleBuffered ? 2 : 1); ++i)
+	if (properties.colorTarget.enabled)
 	{
-		// allocate storage
-		
-		fassert(m_colorTexture[i] == 0);
-		glGenTextures(1, &m_colorTexture[i]);
-		result &= m_colorTexture[i] != 0;
-		checkErrorGL();
-		
-		if (result == false)
-			continue;
-		
-		glBindTexture(GL_TEXTURE_2D, m_colorTexture[i]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-		checkErrorGL();
+		for (int i = 0; result && i < (properties.colorTarget.doubleBuffered ? 2 : 1); ++i)
+		{
+			// allocate storage
+			
+			fassert(m_colorTexture[i] == 0);
+			glGenTextures(1, &m_colorTexture[i]);
+			result &= m_colorTexture[i] != 0;
+			checkErrorGL();
+			
+			if (result == false)
+				continue;
+			
+			glBindTexture(GL_TEXTURE_2D, m_colorTexture[i]);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+			checkErrorGL();
 
-		const GLenum glFormat = translateSurfaceColorFormat(properties.colorTarget.format);
-		
-	#if USE_LEGACY_OPENGL
-		GLenum uploadFormat = GL_INVALID_ENUM;
-		GLenum uploadType = GL_INVALID_ENUM;
-		
-		if (properties.colorTarget.format == SURFACE_RGBA8)
-		{
-			uploadFormat = GL_RGBA;
-			uploadType = GL_UNSIGNED_BYTE;
-		}
-		if (properties.colorTarget.format == SURFACE_RGBA16F)
-		{
-			uploadFormat = GL_RGBA;
-			uploadType = GL_FLOAT;
-		}
-		if (properties.colorTarget.format == SURFACE_RGBA32F)
-		{
-			uploadFormat = GL_RGBA;
-			uploadType = GL_FLOAT;
-		}
-		if (properties.colorTarget.format == SURFACE_R8)
-		{
-			uploadFormat = GL_RED;
-			uploadType = GL_UNSIGNED_BYTE;
-		}
-		if (properties.colorTarget.format == SURFACE_R16F)
-		{
-			uploadFormat = GL_RED;
-			uploadType = GL_FLOAT;
-		}
-		if (properties.colorTarget.format == SURFACE_R32F)
-		{
-			uploadFormat = GL_RED;
-			uploadType = GL_FLOAT;
-		}
-		
-		glTexImage2D(GL_TEXTURE_2D, 0, glFormat, backingSx, backingSy, 0, uploadFormat, uploadType, nullptr);
-		checkErrorGL();
-	#else
-		glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, backingSx, backingSy);
-		checkErrorGL();
-	#endif
+			const GLenum glFormat = translateSurfaceColorFormat(properties.colorTarget.format);
+			
+		#if USE_LEGACY_OPENGL
+			GLenum uploadFormat = GL_INVALID_ENUM;
+			GLenum uploadType = GL_INVALID_ENUM;
+			
+			if (properties.colorTarget.format == SURFACE_RGBA8)
+			{
+				uploadFormat = GL_RGBA;
+				uploadType = GL_UNSIGNED_BYTE;
+			}
+			if (properties.colorTarget.format == SURFACE_RGBA16F)
+			{
+				uploadFormat = GL_RGBA;
+				uploadType = GL_FLOAT;
+			}
+			if (properties.colorTarget.format == SURFACE_RGBA32F)
+			{
+				uploadFormat = GL_RGBA;
+				uploadType = GL_FLOAT;
+			}
+			if (properties.colorTarget.format == SURFACE_R8)
+			{
+				uploadFormat = GL_RED;
+				uploadType = GL_UNSIGNED_BYTE;
+			}
+			if (properties.colorTarget.format == SURFACE_R16F)
+			{
+				uploadFormat = GL_RED;
+				uploadType = GL_FLOAT;
+			}
+			if (properties.colorTarget.format == SURFACE_R32F)
+			{
+				uploadFormat = GL_RED;
+				uploadType = GL_FLOAT;
+			}
+			
+			glTexImage2D(GL_TEXTURE_2D, 0, glFormat, backingSx, backingSy, 0, uploadFormat, uploadType, nullptr);
+			checkErrorGL();
+		#else
+			glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, backingSx, backingSy);
+			checkErrorGL();
+		#endif
 
-		// set filtering
+			// set filtering
+			
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			checkErrorGL();
+		}
 		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		checkErrorGL();
-	}
-	
-	if (result && properties.colorTarget.doubleBuffered == false)
-	{
-		m_colorTexture[1] = m_colorTexture[0];
+		if (result && properties.colorTarget.doubleBuffered == false)
+		{
+			m_colorTexture[1] = m_colorTexture[0];
+		}
 	}
 	
 	// allocate depth target backing storage
 	
-	for (int i = 0; result && properties.depthTarget.enabled && i < (properties.depthTarget.doubleBuffered ? 2 : 1); ++i)
+	if (properties.depthTarget.enabled)
 	{
-		fassert(m_depthTexture[i] == 0);
-		glGenTextures(1, &m_depthTexture[i]);
-		result &= m_depthTexture[i] != 0;
-		checkErrorGL();
+		for (int i = 0; result && i < (properties.depthTarget.doubleBuffered ? 2 : 1); ++i)
+		{
+			fassert(m_depthTexture[i] == 0);
+			glGenTextures(1, &m_depthTexture[i]);
+			result &= m_depthTexture[i] != 0;
+			checkErrorGL();
 
-		if (result == false)
-			continue;
+			if (result == false)
+				continue;
+			
+			glBindTexture(GL_TEXTURE_2D, m_depthTexture[i]);
+			checkErrorGL();
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+			checkErrorGL();
+			
+			const GLenum glFormat = translateSurfaceDepthFormat(properties.depthTarget.format);
+
+		#if USE_LEGACY_OPENGL
+			GLenum uploadFormat = GL_DEPTH_COMPONENT;
+			GLenum uploadType = GL_FLOAT;
+			
+			glTexImage2D(GL_TEXTURE_2D, 0, glFormat, backingSx, backingSy, 0, uploadFormat, uploadType, 0);
+			checkErrorGL();
+		#else
+			glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, backingSx, backingSy);
+			checkErrorGL();
+		#endif
+
+			// set filtering
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			checkErrorGL();
+		}
 		
-		glBindTexture(GL_TEXTURE_2D, m_depthTexture[i]);
-		checkErrorGL();
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-		checkErrorGL();
-		
-		const GLenum glFormat = translateSurfaceDepthFormat(properties.depthTarget.format);
-
-	#if USE_LEGACY_OPENGL
-		GLenum uploadFormat = GL_DEPTH_COMPONENT;
-		GLenum uploadType = GL_FLOAT;
-		
-		glTexImage2D(GL_TEXTURE_2D, 0, glFormat, backingSx, backingSy, 0, uploadFormat, uploadType, 0);
-		checkErrorGL();
-	#else
-		glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, backingSx, backingSy);
-		checkErrorGL();
-	#endif
-
-		// set filtering
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		checkErrorGL();
-	}
-	
-	if (result && properties.depthTarget.doubleBuffered == false)
-	{
-		m_depthTexture[1] = m_depthTexture[0];
+		if (result && properties.depthTarget.doubleBuffered == false)
+		{
+			m_depthTexture[1] = m_depthTexture[0];
+		}
 	}
 	
 	for (int i = 0; result && i < 2; ++i)
@@ -429,6 +423,10 @@ static GLint toOpenGLTextureSwizzle(const int value)
 
 void Surface::setSwizzle(int r, int g, int b, int a)
 {
+	fassert(m_properties.colorTarget.enabled);
+	if (m_properties.colorTarget.enabled == false)
+		return;
+	
 	// capture previous OpenGL state
 	
 	GLuint oldTexture = 0;
@@ -445,7 +443,7 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 		toOpenGLTextureSwizzle(a)
 	};
 
-	for (int i = 0; i < (m_colorIsDoubleBuffered ? 2 : 1); ++i)
+	for (int i = 0; i < (m_properties.colorTarget.doubleBuffered ? 2 : 1); ++i)
 	{
 		glBindTexture(GL_TEXTURE_2D, m_colorTexture[i]);
 		glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
@@ -480,12 +478,12 @@ GxTextureId Surface::getDepthTexture() const
 
 int Surface::getWidth() const
 {
-	return m_size[0];
+	return m_properties.dimensions.width;
 }
 
 int Surface::getHeight() const
 {
-	return m_size[1];
+	return m_properties.dimensions.height;
 }
 
 int Surface::getBackingScale() const
@@ -495,7 +493,8 @@ int Surface::getBackingScale() const
 
 SURFACE_FORMAT Surface::getFormat() const
 {
-	return m_format;
+	fassert(m_properties.colorTarget.enabled);
+	return m_properties.colorTarget.format;
 }
 
 static const float s255 = 1.f / 255.f;
@@ -550,7 +549,7 @@ void Surface::setAlphaf(float a)
 		setColorf(1.f, 1.f, 1.f, a);
 		glColorMask(0, 0, 0, 1);
 		{
-			drawRect(0.f, 0.f, m_size[0], m_size[1]);
+			drawRect(0.f, 0.f, m_properties.dimensions.width, m_properties.dimensions.height);
 		}
 		glColorMask(1, 1, 1, 1);
 		popBlend();
@@ -564,7 +563,7 @@ void Surface::mulf(float r, float g, float b, float a)
 	{
 		pushBlend(BLEND_MUL);
 		setColorf(r, g, b, a);
-		drawRect(0.f, 0.f, m_size[0], m_size[1]);
+		drawRect(0.f, 0.f, m_properties.dimensions.width, m_properties.dimensions.height);
 		popBlend();
 	}
 	popSurface();
@@ -577,7 +576,7 @@ void Surface::postprocess()
 	pushSurface(this);
 	pushDepthTest(false, DEPTH_EQUAL, false); // todo : surface push should set depth state, blend mode (anything affecting how to draw to the surface)
 	{
-		drawRect(0.f, 0.f, m_size[0], m_size[1]);
+		drawRect(0.f, 0.f, m_properties.dimensions.width, m_properties.dimensions.height);
 	}
 	popDepthTest();
 	popSurface();	
@@ -592,7 +591,7 @@ void Surface::postprocess(Shader & shader)
 	{
 		setShader(shader);
 		{
-			drawRect(0.f, 0.f, m_size[0], m_size[1]);
+			drawRect(0.f, 0.f, m_properties.dimensions.width, m_properties.dimensions.height);
 		}
 		clearShader();
 	}
@@ -606,7 +605,7 @@ void Surface::invert()
 	{
 		pushBlend(BLEND_INVERT);
 		setColorf(1.f, 1.f, 1.f, 1.f);
-		drawRect(0.f, 0.f, m_size[0], m_size[1]);
+		drawRect(0.f, 0.f, m_properties.dimensions.width, m_properties.dimensions.height);
 		popBlend();
 	}
 	popSurface();
