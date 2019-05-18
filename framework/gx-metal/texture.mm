@@ -32,6 +32,8 @@
 
 #define TODO 0
 
+#define ENABLE_TEXTURE_CONVERSIONS 0
+
 id <MTLDevice> metal_get_device();
 
 std::map<int, id <MTLTexture>> s_textures;
@@ -47,31 +49,29 @@ static MTLPixelFormat toMetalFormat(const GX_TEXTURE_FORMAT format)
 	C(GX_RGBA8_UNORM, MTLPixelFormatRGBA8Unorm);
 	C(GX_R16_FLOAT, MTLPixelFormatR16Float);
 	C(GX_R32_FLOAT, MTLPixelFormatR32Float);
-	C(GX_RGB32_FLOAT, MTLPixelFormatInvalid);
+	C(GX_RGB32_FLOAT, MTLPixelFormatRGBA32Float);
+	C(GX_RGBA32_FLOAT, MTLPixelFormatRGBA32Float);
 #undef C
 
 	return MTLPixelFormatInvalid;
 }
 
-/*
-static GLint toOpenGLTextureSwizzle(const int value)
+static int getMetalFormatBytesPerPixel(const GX_TEXTURE_FORMAT format)
 {
-	if (value == GX_SWIZZLE_ZERO)
-		return GL_ZERO;
-	else if (value == GX_SWIZZLE_ONE)
-		return GL_ONE;
-	else if (value == 0)
-		return GL_RED;
-	else if (value == 1)
-		return GL_GREEN;
-	else if (value == 2)
-		return GL_BLUE;
-	else if (value == 3)
-		return GL_ALPHA;
-	else
-		return GL_INVALID_ENUM;
+#define C(src, dst) if (format == src) return dst
+	C(GX_UNKNOWN_FORMAT, 0);
+	C(GX_R8_UNORM, 1);
+	C(GX_RG8_UNORM, 2);
+	C(GX_RGB8_UNORM, 3);
+	C(GX_RGBA8_UNORM, 4);
+	C(GX_R16_FLOAT, 2);
+	C(GX_R32_FLOAT, 4);
+	C(GX_RGB32_FLOAT, 16);
+	C(GX_RGBA32_FLOAT, 16);
+#undef C
+
+	return MTLPixelFormatInvalid;
 }
-*/
 
 //
 
@@ -297,101 +297,100 @@ void GxTexture::clearAreaToZero(const int x, const int y, const int sx, const in
 #endif
 }
 
+static void * make_compatible(const void * src, const int srcSx, const int srcSy, const int srcPitch, const GX_TEXTURE_FORMAT format)
+{
+#if ENABLE_TEXTURE_CONVERSIONS
+	if (format == GX_RGB32_FLOAT)
+	{
+		float * __restrict copy_src = (float*)src;
+		float * __restrict copy_dst = new float[srcSx * srcSy * 4];
+		
+		for (int y = 0; y < srcSy; ++y)
+		{
+			float * src_line = copy_src + y * srcPitch * 3;
+			float * dst_line = copy_dst + y * srcSx    * 4;
+			
+			for (int x = 0; x < srcSx; ++x)
+			{
+				dst_line[x * 4 + 0] = src_line[x * 3 + 0];
+				dst_line[x * 4 + 1] = src_line[x * 3 + 1];
+				dst_line[x * 4 + 2] = src_line[x * 3 + 2];
+				dst_line[x * 4 + 3] = 0.f;
+			}
+		}
+		
+		return copy_dst;
+	}
+#endif
+
+	return nullptr;
+}
+
 void GxTexture::upload(const void * src, const int _srcAlignment, const int _srcPitch)
 {
-#if TODO
 	Assert(id != 0);
 	if (id == 0)
 		return;
 	
+	const MTLRegion region =
+	{
+		{ 0, 0, 0 },
+		{ (NSUInteger)sx, (NSUInteger)sy, 1 }
+	};
+
+	auto texture = s_textures[id];
+	
 	const int srcPitch = _srcPitch == 0 ? sx : _srcPitch;
+	const int bytesPerPixel = getMetalFormatBytesPerPixel(format);
 	
-	const int srcAlignment = ((srcPitch & (_srcAlignment - 1)) == 0) ? _srcAlignment : 1;
+	void * copy = make_compatible(src, srcPitch, sx, sy, format);
 	
-	// capture current OpenGL states before we change them
-
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	GLint restoreUnpack;
-	glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
-	GLint restorePitch;
-	glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restorePitch);
-	checkErrorGL();
-
-	//
-	
-	GLenum uploadFormat;
-	GLenum uploadElementType;
-	toOpenGLUploadType(format, uploadFormat, uploadElementType);
-
-	glBindTexture(GL_TEXTURE_2D, id);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, std::min(8, srcAlignment));
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, srcPitch);
-	checkErrorGL();
-	
-	glTexSubImage2D(
-		GL_TEXTURE_2D,
-		0, 0, 0,
-		sx, sy,
-		uploadFormat,
-		uploadElementType,
-		src);
-	checkErrorGL();
-
-	// restore previous OpenGL states
-
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, restorePitch);
-	checkErrorGL();
-#endif
+	if (copy != nullptr)
+	{
+		[texture replaceRegion:region mipmapLevel:0 withBytes:copy bytesPerRow:sx * bytesPerPixel];
+		
+		::free(copy);
+	}
+	else
+	{
+		[texture replaceRegion:region mipmapLevel:0 withBytes:src bytesPerRow:srcPitch * bytesPerPixel];
+	}
 }
 
 void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _srcPitch, const int srcSx, const int srcSy, const int dstX, const int dstY)
 {
-#if TODO
 	Assert(id != 0);
 	if (id == 0)
 		return;
 	
+	const MTLRegion region =
+	{
+		{ (NSUInteger)dstX, (NSUInteger)dstY, 0 },
+		{ (NSUInteger)srcSx, (NSUInteger)srcSy, 1 }
+	};
+	
+	auto texture = s_textures[id];
+	
 	const int srcPitch = _srcPitch == 0 ? srcSx : _srcPitch;
+	const int bytesPerPixel = getMetalFormatBytesPerPixel(format);
 	
-	// capture current OpenGL states before we change them
+	void * copy = make_compatible(src, srcSx, srcSy, srcPitch, format);
 	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	GLint restoreUnpack;
-	glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
-	GLint restorePitch;
-	glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restorePitch);
-	checkErrorGL();
-	
-	//
-	
-	GLenum uploadFormat;
-	GLenum uploadElementType;
-	toOpenGLUploadType(format, uploadFormat, uploadElementType);
-
-	glBindTexture(GL_TEXTURE_2D, id);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, std::min(8, srcAlignment));
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, srcPitch);
-	checkErrorGL();
-
-	glTexSubImage2D(GL_TEXTURE_2D, 0, dstX, dstY, srcSx, srcSy, uploadFormat, uploadElementType, src);
-	checkErrorGL();
-
-	// restore previous OpenGL states
-
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, restorePitch);
-	checkErrorGL();
-#endif
+	if (copy != nullptr)
+	{
+		[texture replaceRegion:region mipmapLevel:0 withBytes:copy bytesPerRow:srcSx * bytesPerPixel];
+		
+		::free(copy);
+	}
+	else
+	{
+		[texture replaceRegion:region mipmapLevel:0 withBytes:src bytesPerRow:srcPitch * bytesPerPixel];
+	}
 }
 
 void GxTexture::copyRegionsFromTexture(const GxTexture & src, const CopyRegion * regions, const int numRegions)
 {
-#if TODO
+#if TODO // todo : copyRegionsFromTexture
 	// capture current OpenGL states before we change them
 	
 	GLuint restoreBuffer = 0;

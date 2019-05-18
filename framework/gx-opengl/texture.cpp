@@ -41,6 +41,7 @@ static GLenum toOpenGLInternalFormat(const GX_TEXTURE_FORMAT format)
 	C(GX_R16_FLOAT, GL_R16F);
 	C(GX_R32_FLOAT, GL_R32F);
 	C(GX_RGB32_FLOAT, GL_RGB32F);
+	C(GX_RGBA32_FLOAT, GL_RGBA32F);
 #undef C
 
 	return GL_INVALID_ENUM;

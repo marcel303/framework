@@ -815,7 +815,7 @@ static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveTy
 	case GX_TRIANGLES:
 		return MTLPrimitiveTypeTriangle;
 	case GX_TRIANGLE_FAN:
-		return MTLPrimitiveTypeTriangleStrip; // fixme !
+		return MTLPrimitiveTypeTriangle;
 	case GX_TRIANGLE_STRIP:
 		return MTLPrimitiveTypeTriangleStrip;
 	case GX_QUADS:
@@ -1136,6 +1136,40 @@ static void gxFlush(bool endOfBatch)
 					*indexPtr++ = baseIndex + 3;
 				
 					baseIndex += 4;
+				}
+				
+				s_gxIndexBuffer.updateEnd(0, indexPtr - indices);
+			}
+			
+			s_gxPrimitiveType = GX_TRIANGLES;
+			numElements = numIndices;
+			
+			indexed = true;
+		}
+		
+		// convert triangle fan to triangles
+		
+		if (s_gxPrimitiveType == GX_TRIANGLE_FAN)
+		{
+			fassert(s_gxVertexCount < 65536);
+			
+			const int numTriangles = s_gxVertexCount - 2;
+			numIndices = numTriangles * 3;
+
+			if (needToRegenerateIndexBuffer)
+			{
+				indices = (INDEX_TYPE*)s_gxIndexBuffer.updateBegin();
+
+				INDEX_TYPE * __restrict indexPtr = indices;
+				INDEX_TYPE baseIndex = 0;
+			
+				for (int i = 0; i < numTriangles; ++i)
+				{
+					*indexPtr++ = 0;
+					*indexPtr++ = baseIndex + 1;
+					*indexPtr++ = baseIndex + 2;
+				
+					baseIndex += 1;
 				}
 				
 				s_gxIndexBuffer.updateEnd(0, indexPtr - indices);
