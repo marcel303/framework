@@ -60,8 +60,10 @@
 Globals globals;
 
 TextureCache g_textureCache;
+#if ENABLE_OPENGL
 ShaderCache g_shaderCache;
 ComputeShaderCache g_computeShaderCache;
+#endif
 AnimCache g_animCache;
 SpriterCache g_spriterCache;
 SoundCache g_soundCache;
@@ -924,6 +926,8 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 
 // -----
 
+#if ENABLE_OPENGL
+
 ShaderCacheElem::ShaderCacheElem()
 {
 	program = 0;
@@ -1184,7 +1188,11 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 	}
 }
 
+#endif
+
 // -----
+
+#if ENABLE_OPENGL
 
 ComputeShaderCacheElem::ComputeShaderCacheElem()
 {
@@ -1324,6 +1332,8 @@ ComputeShaderCacheElem & ComputeShaderCache::findOrCreate(const char * name, con
 		return i->second;
 	}
 }
+
+#endif
 
 // -----
 

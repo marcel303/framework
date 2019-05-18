@@ -57,23 +57,36 @@ GxIndexBufferGL::GxIndexBufferGL()
 	, m_format(GX_INDEX_16)
 	, m_indexArray(0)
 {
-	glGenBuffers(1, &m_indexArray);
-	checkErrorGL();
 }
 
 GxIndexBufferGL::~GxIndexBufferGL()
+{
+}
+
+void GxIndexBufferGL::init(const int numIndices, const GX_INDEX_FORMAT format)
+{
+	glGenBuffers(1, &m_indexArray);
+	checkErrorGL();
+	
+	m_numIndices = numIndices;
+	m_format = format;
+}
+
+void GxIndexBufferGL::free()
 {
 	glDeleteBuffers(1, &m_indexArray);
 	m_indexArray = 0;
 	checkErrorGL();
 }
 
-void GxIndexBufferGL::setData(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
+void GxIndexBufferGL::setData(const void * bytes, const int numIndices)
 {
+	Assert(numIndices <= m_numIndices);
+	
 	// fill the buffer with data
 	
 	const int numBytes =
-		format == GX_INDEX_16
+		m_format == GX_INDEX_16
 		? numIndices * 2
 		: numIndices * 4;
 	
@@ -81,9 +94,6 @@ void GxIndexBufferGL::setData(const void * bytes, const int numIndices, const GX
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, numBytes, bytes, GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	checkErrorGL();
-	
-	m_numIndices = numIndices;
-	m_format = format;
 }
 
 int GxIndexBufferGL::getNumIndices() const

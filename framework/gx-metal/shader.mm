@@ -236,12 +236,12 @@ T * getPsUniformPtr(ShaderCacheElem & cacheElem, const int offset)
 	return (T*)(((uint8_t*)cacheElem.psUniformData) + offset);
 }
 
-Shader::Shader(const char * name)
+ShaderMetal::ShaderMetal(const char * name)
 {
 	m_cacheElem = &g_shaderCache.findOrCreate(name, nullptr, nullptr, "c");
 }
 
-GxImmediateIndex Shader::getImmediate(const char * name)
+GxImmediateIndex ShaderMetal::getImmediate(const char * name)
 {
 	for (size_t i = 0; i < m_cacheElem->uniformInfos.size(); ++i)
 		if (m_cacheElem->uniformInfos[i].name == name)
@@ -249,35 +249,35 @@ GxImmediateIndex Shader::getImmediate(const char * name)
 	return -1;
 }
 
-void Shader::setImmediate(const char * name, float x)
+void ShaderMetal::setImmediate(const char * name, float x)
 {
 	const GxImmediateIndex index = getImmediate(name);
 	
 	setImmediate(index, x);
 }
 
-void Shader::setImmediate(const char * name, float x, float y)
+void ShaderMetal::setImmediate(const char * name, float x, float y)
 {
 	const GxImmediateIndex index = getImmediate(name);
 	
 	setImmediate(index, x, y);
 }
 
-void Shader::setImmediate(const char * name, float x, float y, float z)
+void ShaderMetal::setImmediate(const char * name, float x, float y, float z)
 {
 	const GxImmediateIndex index = getImmediate(name);
 	
 	setImmediate(index, x, y, z);
 }
 
-void Shader::setImmediate(const char * name, float x, float y, float z, float w)
+void ShaderMetal::setImmediate(const char * name, float x, float y, float z, float w)
 {
 	const GxImmediateIndex index = getImmediate(name);
 	
 	setImmediate(index, x, y, z, w);
 }
 
-void Shader::setImmediate(GxImmediateIndex index, float x)
+void ShaderMetal::setImmediate(GxImmediateIndex index, float x)
 {
 	if (index >= 0)
 	{
@@ -297,7 +297,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x)
 	}
 }
 
-void Shader::setImmediate(GxImmediateIndex index, float x, float y)
+void ShaderMetal::setImmediate(GxImmediateIndex index, float x, float y)
 {
 	if (index >= 0)
 	{
@@ -319,7 +319,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 	}
 }
 
-void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
+void ShaderMetal::setImmediate(GxImmediateIndex index, float x, float y, float z)
 {
 	if (index >= 0)
 	{
@@ -343,7 +343,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 	}
 }
 
-void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
+void ShaderMetal::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
 {
 	if (index >= 0)
 	{
@@ -369,14 +369,14 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, flo
 	}
 }
 
-void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
+void ShaderMetal::setImmediateMatrix4x4(const char * name, const float * matrix)
 {
 	const GxImmediateIndex index = getImmediate(name);
 	
 	setImmediateMatrix4x4(index, matrix);
 }
 
-void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
+void ShaderMetal::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 {
 	if (index >= 0)
 	{

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "framework.h"
+#include "mesh.h"
 
 #define REMOVEME 0
 
@@ -12,7 +13,6 @@ class ColorTarget;
 class DepthTarget;
 
 #if REMOVEME
-class GxVertexBuffer;
 class Shader;
 #endif
 

@@ -229,30 +229,13 @@ struct ShaderCacheElem
 
 typedef int GxImmediateIndex;
 
-enum SHADER_TYPE
-{
-	SHADER_VSPS,
-	SHADER_CS
-};
-
-class ShaderBase
-{
-public:
-	virtual ~ShaderBase() { }
-	
-	virtual bool isValid() const = 0;
-	virtual SHADER_TYPE getType() const = 0;
-	virtual int getVersion() const = 0;
-	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const = 0;
-};
-
-class Shader : public ShaderBase
+class ShaderMetal : public ShaderBase
 {
 public:
 	ShaderCacheElem * m_cacheElem = nullptr; // todo : make private
 	
-	Shader() { }
-	Shader(const char * name);
+	ShaderMetal() { }
+	ShaderMetal(const char * name);
 	
 // todo
 	//void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);

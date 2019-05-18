@@ -522,6 +522,8 @@ public:
 
 //
 
+#if ENABLE_OPENGL
+
 class ShaderCacheElem
 {
 public:
@@ -594,7 +596,11 @@ public:
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 };
 
+#endif
+
 //
+
+#if ENABLE_OPENGL
 
 class ComputeShaderCacheElem
 {
@@ -626,6 +632,8 @@ public:
 	void reload();
 	ComputeShaderCacheElem & findOrCreate(const char * filename, const int groupSx, const int groupSy, const int groupSz);
 };
+
+#endif
 
 //
 
@@ -1039,8 +1047,10 @@ public:
 extern Globals globals;
 
 extern TextureCache g_textureCache;
+#if ENABLE_OPENGL
 extern ShaderCache g_shaderCache;
 extern ComputeShaderCache g_computeShaderCache;
+#endif
 extern AnimCache g_animCache;
 extern SpriterCache g_spriterCache;
 extern SoundCache g_soundCache;
