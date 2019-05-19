@@ -478,6 +478,7 @@ void main()
 static const char * s_testShader2Ps = R"SHADER(
 
 include ShaderPS.txt
+include ShaderUtil.txt
 
 uniform vec4 params;
 //uniform sampler2D source;
@@ -532,11 +533,11 @@ void main()
 			result.a   = texColor.a;
 		}
 	}
+#endif
 
 	// color post
 
 	result = applyColorPost(result, params.z);
-#endif
 
 	shader_fragColor = result;
 	shader_fragNormal = vec4(v_normal, 0.0);
