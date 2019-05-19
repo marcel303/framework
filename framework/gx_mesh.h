@@ -46,8 +46,8 @@ struct GxVertexInput
 	uint8_t numComponents : 3; // the number of components per element
 	GX_ELEMENT_TYPE type : 4;  // the type of element inside the vertex stream
 	bool normalize : 4;        // (if integer) should the element be normalized into the range 0..1?
-	uint8_t offset;            // byte offset within vertex buffer for the start of this input
-	uint8_t stride;            // byte stride between elements. use zero when elements are tightly packed
+	uint32_t offset : 24;      // byte offset within vertex buffer for the start of this input
+	uint32_t stride : 8;       // byte stride between elements. use zero when elements are tightly packed
 };
 
 class GxVertexBufferBase
@@ -90,3 +90,13 @@ public:
 	void draw() const;
 };
 */
+
+#include "framework.h"
+
+#if ENABLE_METAL
+	#include "gx-metal/mesh.h"
+#endif
+
+#if ENABLE_OPENGL
+	#include "gx-opengl/mesh.h"
+#endif
