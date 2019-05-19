@@ -112,11 +112,11 @@ struct ShaderCacheElem
 		{
 			for (MTLArgument * arg in reflection.vertexArguments)
 			{
-				if (arg.bufferDataSize == MTLDataTypeStruct && [arg.name isEqualToString:@"inputs"])
+				if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataSize == MTLDataTypeStruct && [arg.name isEqualToString:@"inputs"])
 				{
 					NSLog(@"found inputs");
 				}
-				else if (arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
+				else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
 				{
 					vsInfo.init(arg);
 					addUniforms(arg, 'v');
@@ -128,7 +128,7 @@ struct ShaderCacheElem
 			
 			for (MTLArgument * arg in reflection.fragmentArguments)
 			{
-				if (arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
+				if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
 				{
 					psInfo.init(arg);
 					addUniforms(arg, 'p');

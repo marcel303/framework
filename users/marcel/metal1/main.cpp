@@ -4,6 +4,7 @@
 #include "metal.h"
 #include "renderTarget.h"
 #include "shader.h"
+#include "shaderBuilder.h"
 #include <stdlib.h>
 
 int main(int arg, char * argv[])
@@ -19,6 +20,8 @@ int main(int arg, char * argv[])
 	
 	metal_attach(window1);
 	metal_attach(window2);
+	
+	metal_shadertest();
 	
 	uint8_t * texture1_data = new uint8_t[128 * 128 * 4];
 	for (int i = 0; i < 128 * 128 * 4; ++i)
