@@ -637,6 +637,7 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			{
 				Shader depthLinear("depthToLinear");
+				setShader(depthLinear);
 				depthLinear.setImmediate("projection_zNear", znear);
 				depthLinear.setImmediate("projection_zFar", zfar);
 				depthLinear.setTexture("depthTexture", 0, view_camera.getDepthTexture());
@@ -661,6 +662,7 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			{
 				Shader depthLinear("depthToWorld");
+				setShader(depthLinear);
 				depthLinear.setImmediateMatrix4x4("projectionToWorld", projectionToWorld.m_v);
 				depthLinear.setTexture("depthTexture", 0, view_camera.getDepthTexture());
 				drawRect(0, 0, view_camera_world_position.getWidth(), view_camera_world_position.getHeight());
@@ -762,6 +764,7 @@ int main(int argc, char * argv[])
 				
 				pushBlend(BLEND_OPAQUE);
 				Shader shader("lightApplication");
+				setShader(shader);
 				shader.setTexture("colorTexture", 0, view_camera.getTexture());
 				shader.setTexture("lightTexture", 1, lightDrawer.getLightMapSurface()->getTexture());
 				shader.setImmediate("ambient", .1f, .08f, .06f);

@@ -224,6 +224,7 @@ static void blurSurface(Surface * src, Surface * dst, const float blurAmount)
 		const char * shaderName = (i % 2) == 0 ? "guassian-h.ps" : "guassian-v.ps";
 
 		Shader shader(shaderName, "effect.vs", shaderName);
+		setShader(shader);
 		shader.setTexture("colormap", 0, src->getTexture(), true, true);
 		shader.setImmediate("amount", blurAmount);
 
@@ -655,6 +656,7 @@ int main(int argc, char * argv[])
 					if (false)
 					{
 						Shader shader("kaleido.ps", "effect.vs", "kaleido.ps");
+						setShader(shader);
 						shader.setTexture("colormap", 0, particleSurface->getTexture(), true, false);
 						shader.setImmediate("param1", 0);
 						shader.setImmediate("param2", 10);

@@ -1248,6 +1248,7 @@ int main(int argc, char * argv[])
 							
 						#if 0
 							Shader shader("shader");
+							setShader(shader);
 							
 							shader.setTexture("source", 0, textureId);
 							shader.setImmediate("color", color.r, color.g, color.b, color.a);
@@ -1257,6 +1258,7 @@ int main(int argc, char * argv[])
 						
 						#if SHADER_SPECULAR_GLOSSINESS
 							Shader shader("shader-pbr-specularGlossiness");
+							setShader(shader);
 							
 							shader.setImmediate("scene_camPos",
 								camera.position[0],
@@ -1305,6 +1307,7 @@ int main(int argc, char * argv[])
 						
 						#if SHADER_METALLIC_ROUGHNESS
 							Shader shader("shader-pbr");
+							setShader(shader);
 							
 							shader.setImmediate("scene_camPos",
 								camera.position[0],

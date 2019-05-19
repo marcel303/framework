@@ -260,6 +260,7 @@ static void drawExtrusion(const int numX, const int numY, const GxTextureId text
 	gxPopMatrix();
 
 	Shader shader("extrusion");
+	setShader(shader);
 	shader.setImmediate("mode", 0);
 	shader.setImmediate("lightPosition", lightPosition[0], lightPosition[1], lightPosition[2]);
 	shader.setImmediate("lightDirection", lightDirection[0], lightDirection[1], lightDirection[2]);
@@ -296,8 +297,8 @@ static void drawExtrusion(const int numX, const int numY, const GxTextureId text
 	}
 	clearShader();
 
-	shader.setImmediate("mode", 1);
 	setShader(shader);
+	shader.setImmediate("mode", 1);
 	{
 		gxBegin(GX_QUADS);
 		{
@@ -806,14 +807,15 @@ int main(int argc, char * argv[])
 					pushSurface(surface);
 					{
 						Shader shader("anaglyph.ps", "effect.vs", "anaglyph.ps");
-						shader.setTexture("colormapL", 0, colormapL, true, false);
-						shader.setTexture("colormapR", 1, colormapR, true, false);
-						shader.setImmediate("mode",
-							keyboard.isDown(SDLK_1) ? 1 :
-							keyboard.isDown(SDLK_2) ? 2 :
-							0);
 						setShader(shader);
 						{
+							shader.setTexture("colormapL", 0, colormapL, true, false);
+							shader.setTexture("colormapR", 1, colormapR, true, false);
+							shader.setImmediate("mode",
+								keyboard.isDown(SDLK_1) ? 1 :
+								keyboard.isDown(SDLK_2) ? 2 :
+								0);
+								
 							pushBlend(BLEND_OPAQUE);
 							drawRect(0.f, 0.f, GFX_SX, GFX_SY);
 							popBlend();

@@ -1178,6 +1178,7 @@ struct Picture : Editable
 			if (extension == "ps")
 			{
 				Shader shader(filename.c_str(), "effect.vs", filename.c_str());
+				setShader(shader);
 				shader.setImmediate("colormapSize", GFX_SX, GFX_SY);
 				//shader.setImmediate("time", g_creation->time); // fixme
 				shader.setImmediate("time", framework.time);
@@ -2671,6 +2672,7 @@ int main(int argc, char * argv[])
 							const char * shaderName = (j % 2) == 0 ? "guassian-h.ps" : "guassian-v.ps";
 
 							Shader shader(shaderName, "effect.vs", shaderName);
+							setShader(shader);
 							shader.setTexture("colormap", 0, (j == 0) ? srcSurface->getTexture() : dstSurface->getTexture(), true, true);
 							shader.setImmediate("amount", mouse.x / float(GFX_SX) * 2.f);
 

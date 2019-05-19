@@ -589,10 +589,10 @@ void SceneLayer::draw()
 				break;
 			case kBlendMode_AlphaTest:
 				setBlend(BLEND_OPAQUE);
+				setShader(alphaTestShader);
 				alphaTestShader.setImmediate("alphaRef", 0.f);
 				alphaTestShader.setTexture("srcColormap", 0, m_surface->getTexture(), false, true);
 				alphaTestShader.setTexture("dstColormap", 0, g_currentSurface->getTexture(), false, true);
-				setShader(alphaTestShader);
 				checkErrorGL();
 				break;
 			case kBlendMode_Multiply:

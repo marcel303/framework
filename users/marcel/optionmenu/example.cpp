@@ -90,9 +90,9 @@ int main(int argc, char * argv[])
 			
 			setFont("calibri.ttf");
 			
+			setShader(shader);
 			shader.setImmediate("time", framework.time);
 			shader.setImmediate("flash", s_flash);
-			setShader(shader);
 			drawRect(0, 0, 800, 600);
 			clearShader();
 			

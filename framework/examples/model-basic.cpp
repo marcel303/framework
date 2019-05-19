@@ -109,8 +109,10 @@ int main(int argc, char * argv[])
 				gxScalef(+1, -1, -1); // make sure the model is facing us initially
 				
 				Shader shader("basic-lighting");
+				setShader(shader);
 				shader.setImmediate("time", framework.time);
 				shader.setImmediate("cameraPosition", camera.position[0], camera.position[1], camera.position[2]);
+				clearShader();
 				model.overrideShader = &shader;
 				
 				for (int i = 0; i < 3; ++i)

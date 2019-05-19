@@ -511,11 +511,11 @@ int main(int argc, char * argv[])
 					#if DO_RGBSPACE
 							{
 								Shader shader("colordots");
+								setShader(shader);
 								shader.setTexture("texture0", 0, rgbSurface.getTexture(), false, true);
 								shader.setImmediate("time", time);
 								shader.setImmediate("donutStr", donutStr);
 								shader.setImmediate("colorStr", colorStr);
-								setShader(shader);
 								if (true)
 								{
 									gxBegin(GX_POINTS);
@@ -569,10 +569,10 @@ int main(int argc, char * argv[])
 								setBlend(BLEND_OPAQUE);
 
 								Shader shader("integralimage");
+								setShader(shader);
 								shader.setTexture("texture", 0, integralTexture, false, true);
 								shader.setImmediate("maxValue", totalValue);
 								shader.setImmediate("windowSize", (1.f - std::cos(time * .5f)) / 2.f * 40.f);
-								setShader(shader);
 								{
 									const float scale = .001f;
 									gxScalef(scale, scale, scale);

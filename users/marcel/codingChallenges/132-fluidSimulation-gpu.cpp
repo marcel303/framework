@@ -227,6 +227,7 @@ static void lin_solve2d(const int b, Surface * x, const Surface * x0, const floa
     for (int k = 0; k < iter; ++k)
     {
 		Shader shader("lin_solve2d");
+		setShader(shader);
 		shader.setTexture("x", 0, x->getTexture(), false, true);
 		shader.setTexture("x0", 1, x0->getTexture(), false, true);
 		shader.setImmediate("a", a);
@@ -263,6 +264,7 @@ static void lin_solve2d_xy(
 	for (int k = 0; k < iter; ++k)
     {
 		Shader shader("lin_solve2d_xy");
+		setShader(shader);
 		shader.setTexture("x", 0, x->getTexture(), false, true);
 		shader.setTexture("x0", 1, x0->getTexture(), false, true);
 		shader.setImmediate("a", a);
@@ -275,6 +277,7 @@ static void lin_solve2d_xy(
 	for (int k = 0; k < iter; ++k)
     {
 		Shader shader("lin_solve2d_xy");
+		setShader(shader);
     	shader.setTexture("x", 0, y->getTexture(), false, true);
 		shader.setTexture("x0", 1, y0->getTexture(), false, true);
 		shader.setImmediate("a", a);

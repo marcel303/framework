@@ -459,7 +459,11 @@ static void showUniforms(Shader & shader)
 			checkErrorGL();
 			
 			if (ImGui::InputFloat(name, value))
+			{
+				setShader(shader);
 				shader.setImmediate(name, value[0]);
+				clearShader();
+			}
 		}
 		else if (type == GL_FLOAT_VEC2)
 		{
@@ -468,7 +472,11 @@ static void showUniforms(Shader & shader)
 			checkErrorGL();
 			
 			if (ImGui::InputFloat2(name, value))
+			{
+				setShader(shader);
 				shader.setImmediate(name, value[0], value[1]);
+				clearShader();
+			}
 		}
 		else if (type == GL_FLOAT_VEC3)
 		{
@@ -477,7 +485,11 @@ static void showUniforms(Shader & shader)
 			checkErrorGL();
 			
 			if (ImGui::InputFloat3(name, value))
+			{
+				setShader(shader);
 				shader.setImmediate(name, value[0], value[1], value[2]);
+				clearShader();
+			}
 		}
 		else if (type == GL_FLOAT_VEC4)
 		{
@@ -486,7 +498,11 @@ static void showUniforms(Shader & shader)
 			checkErrorGL();
 			
 			if (ImGui::InputFloat4(name, value))
+			{
+				setShader(shader);
 				shader.setImmediate(name, value[0], value[1], value[2], value[3]);
+				clearShader();
+			}
 		}
 		/*
 		else if (type == GL_SAMPLER_2D)
@@ -585,6 +601,7 @@ static void loadUniforms(Shader & shader, const std::vector<SavedUniform> & unif
 	
 	for (auto & uniform : uniforms)
 	{
+		setShader(shader);
 		if (uniform.type == GL_FLOAT)
 			shader.setImmediate(uniform.name, uniform.floatValue[0]);
 		else if (uniform.type == GL_FLOAT_VEC2)
@@ -595,6 +612,7 @@ static void loadUniforms(Shader & shader, const std::vector<SavedUniform> & unif
 			shader.setImmediate(uniform.name, uniform.floatValue[0], uniform.floatValue[1], uniform.floatValue[2], uniform.floatValue[3]);
 		//else if (uniform.type == GL_SAMPLER_2D)
 		//	shader.setTexture(uniform.name, textureUnit, uniform.intValue);
+		clearShader();
 		
 		const GLint location = glGetUniformLocation(program, uniform.name);
 		

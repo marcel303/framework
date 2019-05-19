@@ -93,8 +93,10 @@ void testMsdfgen()
 				
 				if (verify == false)
 				{
+					setShader(msdfShader);
 					msdfShader.setImmediate("sampleMethod", sampleMethod);
 					msdfShader.setImmediate("useSuperSampling", useSuperSampling);
+					clearShader();
 					
 					pushFontMode(FONT_SDF);
 					beginTextBatch(&msdfShader);
