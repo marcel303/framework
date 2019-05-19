@@ -55,10 +55,8 @@ class GxVertexBufferBase
 public:
 	virtual ~GxVertexBufferBase() { }
 	
-	virtual void init(const int numBytes) = 0;
+	virtual void alloc(const void * bytes, const int numBytes) = 0;
 	virtual void free() = 0;
-	
-	virtual void setData(const void * bytes, const int numBytes) = 0;
 };
 
 class GxIndexBufferBase
@@ -66,10 +64,8 @@ class GxIndexBufferBase
 public:
 	virtual ~GxIndexBufferBase() { }
 	
-	virtual void init(const int numIndices, const GX_INDEX_FORMAT format) = 0;
+	virtual void alloc(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format) = 0;
 	virtual void free() = 0;
-	
-	virtual void setData(const void * bytes, const int numIndices) = 0;
 	
 	virtual int getNumIndices() const = 0;
 	virtual GX_INDEX_FORMAT getFormat() const = 0;

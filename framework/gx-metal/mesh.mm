@@ -48,13 +48,20 @@ GxVertexBufferMetal::~GxVertexBufferMetal()
 	free();
 }
 
-void GxVertexBufferMetal::init(const int numBytes)
+void GxVertexBufferMetal::alloc(const void * bytes, const int numBytes)
 {
 	Assert(m_buffer == nullptr);
 	
 	id <MTLDevice> device = metal_get_device();
 	
 	id <MTLBuffer> buffer = [device newBufferWithLength:numBytes options:MTLResourceStorageModeManaged];
+	
+	memcpy(buffer.contents, bytes, numBytes);
+	
+	NSRange range;
+	range.location = 0;
+	range.length = numBytes;
+	[buffer didModifyRange:range];
 	
 	m_buffer = buffer;
 }
@@ -71,18 +78,6 @@ void GxVertexBufferMetal::free()
 		
 		m_buffer = nullptr;
 	}
-}
-
-void GxVertexBufferMetal::setData(const void * bytes, const int numBytes)
-{
-	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
-	
-	memcpy(buffer.contents, bytes, numBytes);
-	
-	NSRange range;
-	range.location = 0;
-	range.length = numBytes;
-	[buffer didModifyRange:range];
 }
 
 void * GxVertexBufferMetal::updateBegin()
@@ -116,9 +111,12 @@ GxIndexBufferMetal::~GxIndexBufferMetal()
 	free();
 }
 
-void GxIndexBufferMetal::init(const int numIndices, const GX_INDEX_FORMAT format)
+void GxIndexBufferMetal::alloc(const int numIndices, const GX_INDEX_FORMAT format)
 {
 	Assert(m_buffer == nullptr);
+	
+	m_numIndices = numIndices;
+	m_format = format;
 	
 	const int indexSize = (m_format == GX_INDEX_16) ? 2 : 4;
 	const int numBytes = numIndices * indexSize;
@@ -127,8 +125,30 @@ void GxIndexBufferMetal::init(const int numIndices, const GX_INDEX_FORMAT format
 	
 	id <MTLBuffer> buffer = [device newBufferWithLength:numBytes options:MTLResourceStorageModeManaged];
 	
+	m_buffer = buffer;
+}
+
+void GxIndexBufferMetal::alloc(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
+{
+	Assert(m_buffer == nullptr);
+	
 	m_numIndices = numIndices;
 	m_format = format;
+	
+	const int indexSize = (m_format == GX_INDEX_16) ? 2 : 4;
+	const int numBytes = numIndices * indexSize;
+	
+	id <MTLDevice> device = metal_get_device();
+	
+	id <MTLBuffer> buffer = [device newBufferWithLength:numBytes options:MTLResourceStorageModeManaged];
+	
+	memcpy(buffer.contents, bytes, numBytes);
+	
+	NSRange range;
+	range.location = 0;
+	range.length = numBytes;
+	[buffer didModifyRange:range];
+	
 	m_buffer = buffer;
 }
 
@@ -144,21 +164,6 @@ void GxIndexBufferMetal::free()
 		
 		m_buffer = nullptr;
 	}
-}
-
-void GxIndexBufferMetal::setData(const void * bytes, const int numIndices)
-{
-	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
-	
-	const int indexSize = (m_format == GX_INDEX_16) ? 2 : 4;
-	const int numBytes = numIndices * indexSize;
-	
-	memcpy(buffer.contents, bytes, numBytes);
-	
-	NSRange range;
-	range.location = 0;
-	range.length = numBytes;
-	[buffer didModifyRange:range];
 }
 
 void * GxIndexBufferMetal::updateBegin()

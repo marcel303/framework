@@ -42,9 +42,15 @@ GxVertexBufferGL::~GxVertexBufferGL()
 	free();
 }
 
-void GxVertexBufferGL::init(const int numBytes)
+void GxVertexBufferGL::alloc(const void * bytes, const int numBytes)
 {
 	glGenBuffers(1, &m_vertexArray);
+	checkErrorGL();
+	
+	// fill the buffer with data
+	glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
+	glBufferData(GL_ARRAY_BUFFER, numBytes, bytes, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	checkErrorGL();
 }
 
@@ -56,15 +62,6 @@ void GxVertexBufferGL::free()
 		m_vertexArray = 0;
 		checkErrorGL();
 	}
-}
-
-void GxVertexBufferGL::setData(const void * bytes, const int numBytes)
-{
-	// fill the buffer with data
-	glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
-	glBufferData(GL_ARRAY_BUFFER, numBytes, bytes, GL_STATIC_DRAW);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	checkErrorGL();
 }
 
 GxIndexBufferGL::GxIndexBufferGL()
@@ -79,28 +76,13 @@ GxIndexBufferGL::~GxIndexBufferGL()
 	free();
 }
 
-void GxIndexBufferGL::init(const int numIndices, const GX_INDEX_FORMAT format)
+void GxIndexBufferGL::alloc(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
 {
-	glGenBuffers(1, &m_indexArray);
-	checkErrorGL();
-	
 	m_numIndices = numIndices;
 	m_format = format;
-}
-
-void GxIndexBufferGL::free()
-{
-	if (m_indexArray != 0)
-	{
-		glDeleteBuffers(1, &m_indexArray);
-		m_indexArray = 0;
-		checkErrorGL();
-	}
-}
-
-void GxIndexBufferGL::setData(const void * bytes, const int numIndices)
-{
-	Assert(numIndices <= m_numIndices);
+	
+	glGenBuffers(1, &m_indexArray);
+	checkErrorGL();
 	
 	// fill the buffer with data
 	
@@ -113,6 +95,16 @@ void GxIndexBufferGL::setData(const void * bytes, const int numIndices)
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, numBytes, bytes, GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	checkErrorGL();
+}
+
+void GxIndexBufferGL::free()
+{
+	if (m_indexArray != 0)
+	{
+		glDeleteBuffers(1, &m_indexArray);
+		m_indexArray = 0;
+		checkErrorGL();
+	}
 }
 
 int GxIndexBufferGL::getNumIndices() const

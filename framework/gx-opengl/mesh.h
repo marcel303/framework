@@ -43,10 +43,8 @@ public:
 	GxVertexBufferGL();
 	virtual ~GxVertexBufferGL() override final;
 	
-	virtual void init(const int numBytes) override final;
+	virtual void alloc(const void * bytes, const int numBytes) override final;
 	virtual void free() override final;
-	
-	virtual void setData(const void * bytes, const int numBytes) override final;
 };
 
 class GxIndexBufferGL : public GxIndexBufferBase
@@ -62,10 +60,8 @@ public:
 	GxIndexBufferGL();
 	virtual ~GxIndexBufferGL() override final;
 	
-	virtual void init(const int numIndices, const GX_INDEX_FORMAT format) override final;
+	virtual void alloc(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format) override final;
 	virtual void free() override final;
-	
-	virtual void setData(const void * bytes, const int numIndices) override final;
 	
 	virtual int getNumIndices() const override final;
 	virtual GX_INDEX_FORMAT getFormat() const override final;

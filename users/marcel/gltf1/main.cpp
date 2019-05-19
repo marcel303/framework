@@ -960,8 +960,7 @@ int main(int argc, char * argv[])
 	for (auto & buffer : scene.buffers)
 	{
 		GxVertexBuffer * vertexBuffer = new GxVertexBuffer();
-		
-		vertexBuffer->setData(&buffer.data.front(), buffer.byteLength);
+		vertexBuffer->alloc(&buffer.data.front(), buffer.byteLength);
 		
 		Assert(vertexBuffers[bufferIndex] == nullptr);
 		vertexBuffers[bufferIndex++] = vertexBuffer;
@@ -1010,7 +1009,7 @@ int main(int argc, char * argv[])
 						? GX_INDEX_16
 						: GX_INDEX_32;
 					
-					indexBuffer->setData(index_mem, accessor->count, format);
+					indexBuffer->alloc(index_mem, accessor->count, format);
 					
 					Assert(indexBuffers[primitive.indices] == nullptr);
 					indexBuffers[primitive.indices] = indexBuffer;

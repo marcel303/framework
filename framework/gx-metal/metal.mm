@@ -801,7 +801,7 @@ void gxInitialize()
 	const int maxQuads = maxVertexCount / 4;
 	const int maxIndicesForQuads = maxQuads * 6;
 	
-	s_gxIndexBuffer.init(maxIndicesForQuads, sizeof(INDEX_TYPE) == 2 ? GX_INDEX_16 : GX_INDEX_32);
+	s_gxIndexBuffer.alloc(maxIndicesForQuads, sizeof(INDEX_TYPE) == 2 ? GX_INDEX_16 : GX_INDEX_32);
 
 	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 	
