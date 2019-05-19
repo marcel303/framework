@@ -297,104 +297,142 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 		sb.Append("#define mat4 float4x4\n");
 		sb.Append("\n");
 	
-		sb.Append("class ShaderMain\n");
-		sb.Append("{\n");
-		sb.Append("public:\n");
+		if (shaderType == 'v')
 		{
-			sb.Append("\t// attributes\n");
-			for (auto & a : attributes)
-				sb.AppendFormat("\t%s %s;\n", a.type.c_str(), a.name.c_str());
-			sb.Append("\t\n");
-			
-			sb.Append("\t// uniforms\n");
-			for (auto & u : uniforms)
-				sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
-			sb.Append("\t\n");
-			
-			if (shaderType == 'v')
+			sb.Append("class ShaderMain\n");
+			sb.Append("{\n");
+			sb.Append("public:\n");
 			{
+				sb.Append("\t// attributes\n");
+				for (auto & a : attributes)
+					sb.AppendFormat("\t%s %s;\n", a.type.c_str(), a.name.c_str());
+				sb.Append("\t\n");
+				
+				sb.Append("\t// uniforms\n");
+				for (auto & u : uniforms)
+					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+				sb.Append("\t\n");
+				
 				sb.Append("\t// outputs\n");
 				for (auto & io : inputOutputs)
 					sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
 				sb.Append("\t\n");
+				
+				for (auto & line : contents)
+					sb.AppendFormat("\t%s\n", line.c_str());
 			}
+			sb.Append("};\n");
+			sb.Append("\n");
 			
-			if (shaderType == 'p')
+			sb.Append("struct ShaderInputs\n");
+			sb.Append("{\n");
 			{
-				sb.Append("\t// outputs\n");
-				sb.Append("\tfloat4 shader_fragColor;\n");
-				sb.Append("\tfloat4 shader_fragNormal;\n");
-				sb.Append("\t\n");
+				for (auto & a : attributes)
+					sb.AppendFormat("\t%s %s [[attribute(%s)]];\n", a.type.c_str(), a.name.c_str(), a.index.c_str());
 			}
-		}
-		for (auto & line : contents)
-			sb.AppendFormat("\t%s\n", line.c_str());
-		sb.Append("};\n");
-		sb.Append("\n");
-		
-		sb.Append("struct ShaderInputs\n");
-		sb.Append("{\n");
-		{
-			for (auto & a : attributes)
-				sb.AppendFormat("\t%s %s [[attribute(%s)]];\n", a.type.c_str(), a.name.c_str(), a.index.c_str());
-		}
-		sb.Append("};\n");
-		sb.Append("\n");
-		
-		sb.Append("struct ShaderVaryings\n");
-		sb.Append("{\n");
-		{
-			if (shaderType == 'v')
-				sb.Append("\tfloat4 position [[position]];\n");
+			sb.Append("};\n");
+			sb.Append("\n");
 			
-			for (auto & io : inputOutputs)
-				sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
-		}
-		sb.Append("};\n");
-		sb.Append("\n");
+			sb.Append("struct ShaderVaryings\n");
+			sb.Append("{\n");
+			{
+				sb.Append("\tfloat4 position [[position]];\n");
+				for (auto & io : inputOutputs)
+					sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
+			}
+			sb.Append("};\n");
+			sb.Append("\n");
 
-		sb.Append("struct ShaderUniforms\n");
-		sb.Append("{\n");
-		{
-			for (auto & u : uniforms)
-				sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
-		}
-		sb.Append("};\n");
-		sb.Append("\n");
-		
-		sb.Append("struct ShaderTextures\n");
-		sb.Append("{\n");
-		sb.Append("};\n");
-		sb.Append("\n");
-		
-		if (shaderType == 'v')
+			sb.Append("struct ShaderUniforms\n");
+			sb.Append("{\n");
+			{
+				for (auto & u : uniforms)
+					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+			}
+			sb.Append("};\n");
+			sb.Append("\n");
+			
 			sb.Append("vertex ShaderVaryings shader_main(\n");
-		else
-			sb.Append("fragment float4 shader_main(\n");
-		sb.Append("\tShaderInputs inputs [[stage_in]],\n");
-		sb.Append("\tconstant ShaderUniforms & uniforms [[buffer(0)]],\n");
-		sb.Append("\tShaderTextures textures)\n");
-		sb.Append("{\n");
-		sb.Append("\tShaderMain m;\n");
-		{
-			for (auto & a : attributes)
-				sb.AppendFormat("\tm.%s = inputs.%s;\n", a.name.c_str(), a.name.c_str());
-			for (auto & u : uniforms)
-				sb.AppendFormat("\tm.%s = uniforms.%s;\n", u.name.c_str(), u.name.c_str());
-		}
-		sb.Append("\t\n");
-		sb.Append("\tm.main();\n");
-		sb.Append("\t\n");
-		if (shaderType == 'v')
-		{
+			sb.Append("\tShaderInputs inputs [[stage_in]],\n");
+			sb.Append("\tconstant ShaderUniforms & uniforms [[buffer(0)]])\n");
+			sb.Append("{\n");
+			sb.Append("\tShaderMain m;\n");
+			{
+				for (auto & a : attributes)
+					sb.AppendFormat("\tm.%s = inputs.%s;\n", a.name.c_str(), a.name.c_str());
+				for (auto & u : uniforms)
+					sb.AppendFormat("\tm.%s = uniforms.%s;\n", u.name.c_str(), u.name.c_str());
+			}
+			sb.Append("\t\n");
+			sb.Append("\tm.main();\n");
+			sb.Append("\t\n");
 			sb.Append("\tShaderVaryings outputs;\n");
 			for (auto & io : inputOutputs)
 				sb.AppendFormat("\toutputs.%s = m.%s;\n", io.name.c_str(), io.name.c_str());
 			sb.Append("\treturn outputs;\n");
+			sb.Append("}\n");
 		}
-		if (shaderType == 'p')
+		else
+		{
+			sb.Append("class ShaderMain\n");
+			sb.Append("{\n");
+			sb.Append("public:\n");
+			{
+				sb.Append("\t// uniforms\n");
+				for (auto & u : uniforms)
+					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+				sb.Append("\t\n");
+				
+				sb.Append("\t// outputs\n");
+				sb.Append("\tfloat4 shader_fragColor;\n");
+				sb.Append("\tfloat4 shader_fragNormal;\n");
+				sb.Append("\t\n");
+				
+				for (auto & line : contents)
+					sb.AppendFormat("\t%s\n", line.c_str());
+			}
+			sb.Append("};\n");
+			sb.Append("\n");
+			
+			sb.Append("struct ShaderVaryings\n");
+			sb.Append("{\n");
+			{
+				for (auto & io : inputOutputs)
+					sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
+			}
+			sb.Append("};\n");
+			sb.Append("\n");
+
+			sb.Append("struct ShaderUniforms\n");
+			sb.Append("{\n");
+			{
+				for (auto & u : uniforms)
+					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+			}
+			sb.Append("};\n");
+			sb.Append("\n");
+			
+			sb.Append("struct ShaderTextures\n");
+			sb.Append("{\n");
+			sb.Append("};\n");
+			sb.Append("\n");
+			
+			sb.Append("fragment float4 shader_main(\n");
+			sb.Append("\tShaderInputs inputs [[stage_in]],\n");
+			sb.Append("\tconstant ShaderUniforms & uniforms [[buffer(0)]],\n");
+			sb.Append("\tShaderTextures textures)\n");
+			sb.Append("{\n");
+			sb.Append("\tShaderMain m;\n");
+			{
+				for (auto & u : uniforms)
+					sb.AppendFormat("\tm.%s = uniforms.%s;\n", u.name.c_str(), u.name.c_str());
+			}
+			sb.Append("\t\n");
+			sb.Append("\tm.main();\n");
+			sb.Append("\t\n");
 			sb.Append("\treturn m.shader_fragColor;\n");
-		sb.Append("}\n");
+			sb.Append("}\n");
+		}
 		
 		result = sb.ToString();
 		
