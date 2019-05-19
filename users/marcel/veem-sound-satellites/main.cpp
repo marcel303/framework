@@ -260,6 +260,7 @@ struct SatellitesApp
 		
 		audioGraphMgr = new AudioGraphManager_RTE(GFX_SX, GFX_SY);
 		audioGraphMgr->init(audioMutex, voiceMgr);
+		g_vfxAudioGraphMgr = audioGraphMgr;
 		
 		audioUpdateHandler = new AudioUpdateHandler();
 		audioUpdateHandler->init(audioMutex, "127.0.0.1", 2000);
