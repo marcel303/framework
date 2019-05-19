@@ -102,6 +102,7 @@ int main(int argc, char * argv[])
 						size[2] /= float(halfSize + 1);
 						
 						Shader shader("086-cube");
+						setShader(shader);
 						shader.setImmediate("color1", color1.r, color1.g, color1.b, color1.a);
 						shader.setImmediate("color2", color2.r, color2.g, color2.b, color2.a);
 						shader.setImmediate("color3", color3.r, color3.g, color3.b, color3.a);

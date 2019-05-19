@@ -588,6 +588,8 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int
 
 // -----
 
+#if ENABLE_OPENGL
+
 static void getShaderInfoLog(GLuint shader, const char * source, std::vector<std::string> & lines)
 {
 	GLint logSize = 0;
@@ -923,6 +925,8 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 
 	return result;
 }
+
+#endif
 
 // -----
 

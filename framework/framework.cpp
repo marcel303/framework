@@ -2696,8 +2696,10 @@ void ComputeShader::reload()
 
 // -----
 
+#if ENABLE_OPENGL
 static std::vector<GLuint> s_bufferPool;
 static bool s_useBufferPool = false;
+#endif
 
 ShaderBuffer::ShaderBuffer()
 	: m_buffer(0)
