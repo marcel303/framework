@@ -20,4 +20,10 @@ void main()
 	normal = normalize(normal);
 	
 	vec2 texcoord = unpackTexcoord(0);
+
+	gl_Position = position;
+	
+	v_normal = normal;
+	v_color = color;
+	v_texcoord0 = texcoord;
 }

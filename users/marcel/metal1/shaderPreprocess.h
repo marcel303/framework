@@ -20,4 +20,3 @@ bool preprocessShaderFromFile(
 	std::string & destination,
 	const int flags,
 	std::vector<std::string> & errorMessages);
-

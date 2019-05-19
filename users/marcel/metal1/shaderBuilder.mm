@@ -305,6 +305,8 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 	
 		if (shaderType == 'v')
 		{
+			// --- vertex shader generation --
+			
 			sb.Append("class ShaderMain\n");
 			sb.Append("{\n");
 			sb.Append("public:\n");
@@ -320,6 +322,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 				sb.Append("\t\n");
 				
 				sb.Append("\t// outputs\n");
+				sb.Append("\tfloat4 gl_Position;\n");
 				for (auto & io : inputOutputs)
 					sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
 				sb.Append("\t\n");
@@ -362,7 +365,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			
 			sb.Append("vertex ShaderVaryings shader_main(\n");
 			sb.Append("\tShaderInputs inputs [[stage_in]],\n");
-			sb.Append("\tconstant ShaderUniforms & uniforms [[buffer(0)]])\n");
+			sb.Append("\tconstant ShaderUniforms & uniforms [[buffer(1)]])\n");
 			sb.Append("{\n");
 			sb.Append("\tShaderMain m;\n");
 			{
@@ -375,13 +378,16 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			sb.Append("\tm.main();\n");
 			sb.Append("\t\n");
 			sb.Append("\tShaderVaryings outputs;\n");
+			sb.Append("\toutputs.position = m.gl_Position;\n");
 			for (auto & io : inputOutputs)
 				sb.AppendFormat("\toutputs.%s = m.%s;\n", io.name.c_str(), io.name.c_str());
 			sb.Append("\treturn outputs;\n");
 			sb.Append("}\n");
 		}
-		else
+		else if (shaderType == 'p')
 		{
+			// --- fragment shader generation ---
+			
 			sb.Append("class ShaderMain\n");
 			sb.Append("{\n");
 			sb.Append("public:\n");
@@ -428,6 +434,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			sb.Append("struct ShaderVaryings\n");
 			sb.Append("{\n");
 			{
+				sb.Append("\tfloat4 position [[position]];\n");
 				for (auto & io : inputOutputs)
 					sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
 			}
@@ -465,7 +472,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			
 			sb.Append("fragment float4 shader_main(\n");
 			sb.Append("\tShaderVaryings varyings [[stage_in]],\n");
-			sb.Append("\tconstant ShaderUniforms & uniforms [[buffer(0)]],\n");
+			sb.Append("\tconstant ShaderUniforms & uniforms [[buffer(1)]],\n");
 			sb.Append("\tShaderTextures textures)\n");
 			sb.Append("{\n");
 			sb.Append("\tShaderMain m;\n");

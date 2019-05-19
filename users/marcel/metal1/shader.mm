@@ -1,5 +1,7 @@
 #import "metal.h"
 #import "shader.h"
+#import "shaderBuilder.h"
+#import "shaderPreprocess.h"
 
 #include <assert.h> // todo : use framework assert
 #define Assert assert
@@ -96,7 +98,7 @@ static const char * s_shaderPs = R"SHADER(
 
 	fragment float4 shader_main(
 		ShaderInputs inputs [[stage_in]],
-		constant ShaderUniforms & uniforms [[buffer(0)]],
+		constant ShaderUniforms & uniforms [[buffer(1)]],
 		texture2d<float> textureResource [[texture(0)]])
 	{
 		float4 color = inputs.color;
@@ -130,7 +132,35 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			id <MTLDevice> device = metal_get_device();
 			
 			NSError * error = nullptr;
+			
+		#if 1
+			std::vector<std::string> errorMessages;
+			std::string shaderVs_opengl;
+			std::string shaderPs_opengl;
+			
+			preprocessShaderFromFile("testShader.vs", shaderVs_opengl, 0, errorMessages);
+			preprocessShaderFromFile("testShader.ps", shaderPs_opengl, 0, errorMessages);
+			
+			std::string shaderVs;
+			std::string shaderPs;
+			
+			buildMetalText(shaderVs_opengl.c_str(), 'v', shaderVs);
+			buildMetalText(shaderPs_opengl.c_str(), 'p', shaderPs);
 
+			printf("vs text:\n%s", shaderVs.c_str());
+			
+			printf("\n\n\n");
+			
+			printf("ps text:\n%s", shaderPs.c_str());
+			
+			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:shaderVs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
+			if (library_vs == nullptr && error != nullptr)
+				NSLog(@"%@", error);
+			
+			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:shaderPs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
+			if (library_ps == nullptr && error != nullptr)
+				NSLog(@"%@", error);
+		#else
 			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:s_shaderVs encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_vs == nullptr && error != nullptr)
 				NSLog(@"%@", error);
@@ -138,7 +168,8 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:s_shaderPs encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_ps == nullptr && error != nullptr)
 				NSLog(@"%@", error);
-			
+		#endif
+		
 			id <MTLFunction> vs = [library_vs newFunctionWithName:@"shader_main"];
 			id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
 			
