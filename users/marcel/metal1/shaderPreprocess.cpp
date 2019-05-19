@@ -147,3 +147,41 @@ bool preprocessShader(
 
 	return result;
 }
+
+bool preprocessShaderFromFile(
+	const char * filename,
+	std::string & destination,
+	const int flags,
+	std::vector<std::string> & errorMessages)
+{
+	bool result = true;
+	
+	char * bytes;
+	int numBytes;
+
+	if (!loadFileContents(filename, true, bytes, numBytes))
+	{
+		errorMessages.push_back(String::FormatC("failed to load file %s", filename));
+		
+		LOG_ERR("failed to load include file %s", filename);
+		
+		result = false;
+	}
+	else
+	{
+		std::string temp(bytes, numBytes);
+		
+		int fileId = 0;
+		
+		if (!preprocessShader(temp, destination, flags, errorMessages, fileId))
+		{
+			result = false;
+		}
+		
+		delete [] bytes;
+		bytes = 0;
+		numBytes = 0;
+	}
+	
+	return result;
+}

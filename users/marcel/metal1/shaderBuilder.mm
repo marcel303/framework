@@ -294,13 +294,13 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 		sb.Append("\n");
 		sb.Append("using namespace metal;\n");
 		sb.Append("\n");
-		sb.Append("#define vec2 float2\n");
-		sb.Append("#define vec3 float3\n");
-		sb.Append("#define vec4 float4\n");
-		sb.Append("#define ivec2 int2\n");
-		sb.Append("#define ivec3 int3\n");
-		sb.Append("#define ivec4 int4\n");
-		sb.Append("#define mat4 float4x4\n");
+		sb.Append("typedef float2 vec2;\n");
+		sb.Append("typedef float3 vec3;\n");
+		sb.Append("typedef float4 vec4;\n");
+		sb.Append("typedef int2 ivec2;\n");
+		sb.Append("typedef int3 ivec3;\n");
+		sb.Append("typedef int4 ivec4;\n");
+		sb.Append("typedef float4x4 mat4;\n");
 		sb.Append("\n");
 	
 		if (shaderType == 'v')
@@ -492,102 +492,6 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 	}
 }
 
-static const char * s_testShader2Vs = R"SHADER(
-
-include ShaderVS.txt
-
-//
-
-shader_out vec4 v_color;
-shader_out vec3 v_normal;
-shader_out vec2 v_texcoord0;
-
-void main()
-{
-	vec4 position = unpackPosition();
-	
-	position = objectToProjection(position);
-	
-	vec4 color = unpackColor();
-	
-	vec3 normal = unpackNormal().xyz;
-
-	normal = objectToView3(normal);
-	normal = normalize(normal);
-	
-	vec2 texcoord = unpackTexcoord(0);
-}
-
-)SHADER";
-
-static const char * s_testShader2Ps = R"SHADER(
-
-include ShaderPS.txt
-include ShaderUtil.txt
-
-uniform vec4 params;
-uniform sampler2D source;
-
-shader_in vec4 v_color;
-shader_in vec3 v_normal;
-shader_in vec2 v_texcoord0;
-
-void main()
-{
-	vec4 result = v_color;
-
-	// color clamp
-
-	if (params.w != 0.0)
-	{
-		result = clamp(result, vec4(0.0), vec4(1.0));
-	}
-
-	// texture
-	
-	if (params.x != 0.0)
-	{
-		vec4 texColor = texture(source, v_texcoord0);
-		
-		/*
-		COLOR_MUL,
-		COLOR_ADD,
-		COLOR_SUB,
-		COLOR_IGNORE
-		*/
-		
-		if (params.y == 0.0)
-		{
-			result.rgb = result.rgb * texColor.rgb;
-			result.a   = result.a   * texColor.a;
-		}
-		else if (params.y == 1.0)
-		{
-			result.rgb = result.rgb + texColor.rgb;
-			result.a   = result.a   * texColor.a;
-		}
-		else if (params.y == 2.0)
-		{
-			result.rgb = result.rgb - texColor.rgb;
-			result.a   = result.a   * texColor.a;
-		}
-		else if (params.y == 3.0)
-		{
-			result.rgb = texColor.rgb;
-			result.a   = texColor.a;
-		}
-	}
-
-	// color post
-
-	result = applyColorPost(result, params.z);
-
-	shader_fragColor = result;
-	shader_fragNormal = vec4(v_normal, 0.0);
-}
-
-)SHADER";
-
 //
 
 #include "shaderPreprocess.h"
@@ -614,14 +518,12 @@ void metal_shadertest()
 		
 		{
 			std::vector<std::string> errorMessages;
-			int fileId = 0;
 			
 			// process vs
 			
 			std::string preprocessedVs;
-			preprocessShader(s_testShader2Vs, preprocessedVs, 0, errorMessages, fileId);
-			printf("preprocessedVs:\n%s", preprocessedVs.c_str());
-			
+			preprocessShaderFromFile("testShader.vs", preprocessedVs, 0, errorMessages);
+		
 			std::string metalTextVs;
 			buildMetalText(preprocessedVs.c_str(), 'v', metalTextVs);
 			printf("metalTextVs:\n%s", metalTextVs.c_str());
@@ -629,8 +531,7 @@ void metal_shadertest()
 			// process ps
 			
 			std::string preprocessedPs;
-			preprocessShader(s_testShader2Ps, preprocessedPs, 0, errorMessages, fileId);
-			printf("preprocessedPs:\n%s", preprocessedPs.c_str());
+			preprocessShaderFromFile("testShader.ps", preprocessedPs, 0, errorMessages);
 			
 			std::string metalTextPs;
 			buildMetalText(preprocessedPs.c_str(), 'p', metalTextPs);

@@ -14,3 +14,10 @@ bool preprocessShader(
 	const int flags,
 	std::vector<std::string> & errorMessages,
 	int & fileId);
+
+bool preprocessShaderFromFile(
+	const char * filename,
+	std::string & destination,
+	const int flags,
+	std::vector<std::string> & errorMessages);
+
