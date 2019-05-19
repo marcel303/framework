@@ -1577,19 +1577,15 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 	// initialize viewport and OpenGL matrices
 	
 	updateViewport(nullptr, globals.currentWindow->getWindow());
-	
-	applyTransform();
-	
-	setBlend(BLEND_ALPHA);
 #endif
 
 #if ENABLE_METAL
 	metal_draw_begin(scale255(r), scale255(g), scale255(b), scale255(a)); // todo : add clear depth
-	
+#endif
+
 	applyTransform();
 	
 	setBlend(BLEND_ALPHA);
-#endif
 }
 
 void Framework::endDraw()

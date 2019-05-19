@@ -73,7 +73,7 @@ struct ShaderCacheElem
 		int uniformBufferIndex = -1;
 		int uniformBufferSize = 0;
 		
-		void init(MTLArgument * arg)
+		void initUniforms(MTLArgument * arg)
 		{
 			uniformBufferIndex = arg.index;
 			uniformBufferSize = arg.bufferDataSize;
@@ -107,6 +107,13 @@ struct ShaderCacheElem
 		int numElems = 0;
 	};
 	
+	struct TextureInfo
+	{
+		std::string name;
+		int vsOffset = -1;
+		int psOffset = -1;
+	};
+	
 	std::string name;
 	
 	void * vs = nullptr;
@@ -119,6 +126,8 @@ struct ShaderCacheElem
 	
 	void * vsUniformData = nullptr;
 	void * psUniformData = nullptr;
+	
+	std::vector<TextureInfo> textureInfos;
 	
 	~ShaderCacheElem()
 	{
@@ -145,29 +154,41 @@ struct ShaderCacheElem
 		{
 			for (MTLArgument * arg in reflection.vertexArguments)
 			{
-				if (arg.bufferDataSize == MTLDataTypeStruct && [arg.name isEqualToString:@"inputs"])
+				if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"inputs"])
 				{
 					NSLog(@"found inputs");
 				}
-				else if (arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
+				else if (arg.type == MTLArgumentTypeTexture)
 				{
-					vsInfo.init(arg);
+					NSLog(@"found texture");
+					addTexture(arg, 'v');
+				}
+				else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
+				{
+					vsInfo.initUniforms(arg);
 					addUniforms(arg, 'v');
 					//Assert(vsUniformData == nullptr); // todo : enable assert
 					vsUniformData = malloc(arg.bufferDataSize);
-					break;
 				}
 			}
 			
 			for (MTLArgument * arg in reflection.fragmentArguments)
 			{
-				if (arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
+				if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"inputs"])
 				{
-					psInfo.init(arg);
+					NSLog(@"found inputs");
+				}
+				else if (arg.type == MTLArgumentTypeTexture)
+				{
+					NSLog(@"found texture");
+					addTexture(arg, 'p');
+				}
+				else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
+				{
+					psInfo.initUniforms(arg);
 					addUniforms(arg, 'p');
 					//Assert(psUniformData == nullptr); // todo : enable assert
 					psUniformData = malloc(arg.bufferDataSize);
-					break;
 				}
 			}
 		}
@@ -245,6 +266,40 @@ struct ShaderCacheElem
 		}
 	}
 	
+	void addTexture(MTLArgument * arg, const char type)
+	{
+		Assert(arg.type == MTLArgumentTypeTexture);
+		
+		textureInfos.resize(textureInfos.size() + 1);
+		
+		TextureInfo & info = textureInfos.back();
+		info.name = [arg.name cStringUsingEncoding:NSASCIIStringEncoding];
+		
+		if (type == 'v')
+			info.vsOffset = arg.index;
+		else
+			info.psOffset = arg.index;
+	}
+	
+	void addTextures(MTLArgument * arg, const char type)
+	{
+		for (MTLStructMember * member in arg.bufferStructType.members)
+		{
+			if (member.dataType == MTLDataTypeTexture)
+			{
+				textureInfos.resize(textureInfos.size() + 1);
+				
+				TextureInfo & info = textureInfos.back();
+				info.name = [member.name cStringUsingEncoding:NSASCIIStringEncoding];
+				
+				if (type == 'v')
+					info.vsOffset = member.offset;
+				else
+					info.psOffset = member.offset;
+			}
+		}
+	}
+	
 	mutable std::map<uint32_t, id <MTLRenderPipelineState>> m_pipelines;
 	
 	id <MTLRenderPipelineState> findPipelineState(const uint32_t hash) const
@@ -260,9 +315,13 @@ struct ShaderCacheElem
 
 #endif
 
+#include <map>
+
 class ShaderCache
 {
-	ShaderCacheElem * m_cacheElem = nullptr; // todo : make private
+	typedef std::map<std::string, ShaderCacheElem*> Map;
+	
+	Map m_map;
 	
 public:
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);

@@ -765,10 +765,13 @@ static GxIndexBuffer s_gxIndexBuffer;
 
 static const GxVertexInput s_gxVsInputs[] =
 {
-	{ VS_POSITION, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px), 0 },
-	{ VS_NORMAL,   3, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, nx), 0 },
-	{ VS_COLOR,    4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, cx), 0 },
-	{ VS_TEXCOORD, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx), 0 }
+	{ VS_POSITION,  4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px), 0 },
+	{ VS_NORMAL,    3, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, nx), 0 },
+	{ VS_COLOR,     4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, cx), 0 },
+	{ VS_TEXCOORD0, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx), 0 },
+	{ VS_TEXCOORD1, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx), 0 }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
+	{ VS_BLEND_INDICES, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px), 0 }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
+	{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px), 0 } // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
 };
 
 static float scale255(const float v)
@@ -896,9 +899,14 @@ static uint32_t computeHash(const void* bytes, int byteCount)
 
 static void gxValidatePipelineState()
 {
-	Shader shader("test");
+	if (globals.shader == nullptr || globals.shader->getType() != SHADER_VSPS)
+	{
+		return;
+	}
 	
-	auto & shaderElem = shader.getCacheElem();
+	Shader * shader = static_cast<Shader*>(globals.shader);
+	
+	auto & shaderElem = shader->getCacheElem();
 	
 	/*
 	pipeline state dependencies:
@@ -954,7 +962,7 @@ static void gxValidatePipelineState()
 			vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
 
 			MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
-			pipelineDescriptor.label = @"hello pipeline";
+			pipelineDescriptor.label = [NSString stringWithCString:shaderElem.name.c_str() encoding:NSASCIIStringEncoding];
 			pipelineDescriptor.sampleCount = 1;
 			pipelineDescriptor.vertexFunction = vs;
 			pipelineDescriptor.fragmentFunction = ps;
@@ -1113,6 +1121,7 @@ static void gxFlush(bool endOfBatch)
 				if (s_gxVertexBufferElem != nullptr)
 				{
 					auto * elem = s_gxVertexBufferElem;
+					[activeWindowData->cmdbuf setLabel:@"GxBufferPool Release (gxFlush)"];
 					[activeWindowData->cmdbuf addCompletedHandler:
 						^(id<MTLCommandBuffer> _Nonnull)
 						{
@@ -1367,6 +1376,7 @@ static void gxEndDraw()
 	if (s_gxVertexBufferElem != nullptr)
 	{
 		auto * elem = s_gxVertexBufferElem;
+		[activeWindowData->cmdbuf setLabel:@"GxBufferPool Release (gxEndDraw)"];
 		[activeWindowData->cmdbuf addCompletedHandler:
 			^(id<MTLCommandBuffer> _Nonnull)
 			{

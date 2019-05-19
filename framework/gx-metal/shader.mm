@@ -31,8 +31,14 @@
 
 #import "metal.h"
 #import "shader.h"
+#import "shaderBuilder.h"
+#import "shaderPreprocess.h"
+#import "texture.h"
+#import "window_data.h"
 
 // todo : assert the shader is the active shader when setting immediates
+
+extern MetalWindowData * activeWindowData;
 
 //
 
@@ -139,18 +145,50 @@ static const char * s_shaderPs = R"SHADER(
 
 ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
-	static bool init = false;
+	auto i = m_map.find(name);
 	
-	if (init == false)
+	if (i != m_map.end())
 	{
-		init = true;
+		return *i->second;
+	}
+	else
+	{
+		ShaderCacheElem * elem = new ShaderCacheElem();
 		
 		@autoreleasepool
 		{
 			id <MTLDevice> device = metal_get_device();
 			
 			NSError * error = nullptr;
+			
+		#if 1
+			std::vector<std::string> errorMessages;
+			std::string shaderVs_opengl;
+			std::string shaderPs_opengl;
+			
+			preprocessShaderFromFile(filenameVs, shaderVs_opengl, 0, errorMessages);
+			preprocessShaderFromFile(filenamePs, shaderPs_opengl, 0, errorMessages);
+			
+			std::string shaderVs;
+			std::string shaderPs;
+			
+			buildMetalText(shaderVs_opengl.c_str(), 'v', shaderVs);
+			buildMetalText(shaderPs_opengl.c_str(), 'p', shaderPs);
 
+			printf("vs text:\n%s", shaderVs.c_str());
+			
+			printf("\n\n\n");
+			
+			printf("ps text:\n%s", shaderPs.c_str());
+			
+			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:shaderVs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
+			if (library_vs == nullptr && error != nullptr)
+				NSLog(@"%@", error);
+			
+			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:shaderPs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
+			if (library_ps == nullptr && error != nullptr)
+				NSLog(@"%@", error);
+		#else
 			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:s_shaderVs encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_vs == nullptr && error != nullptr)
 				NSLog(@"%@", error);
@@ -158,7 +196,8 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:s_shaderPs encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_ps == nullptr && error != nullptr)
 				NSLog(@"%@", error);
-			
+		#endif
+		
 			id <MTLFunction> vs = [library_vs newFunctionWithName:@"shader_main"];
 			id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
 			
@@ -200,6 +239,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 				{
 					a.format = metalFormat;
 					a.offset = e.offset;
+					a.bufferIndex = 0;
 				}
 			}
 		
@@ -225,14 +265,15 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
 		#endif
 			
-			m_cacheElem = new ShaderCacheElem();
-			m_cacheElem->init(reflection);
-			m_cacheElem->vs = vs;
-			m_cacheElem->ps = ps;
+			elem->init(reflection);
+			elem->vs = vs;
+			elem->ps = ps;
 		}
+		
+		m_map[name] = elem;
+		
+		return *elem;
 	}
-	
-	return *m_cacheElem;
 }
 
 //
@@ -263,11 +304,18 @@ Shader::Shader()
 
 Shader::Shader(const char * name, const char * outputs)
 {
-	m_cacheElem = &g_shaderCache.findOrCreate(name, nullptr, nullptr, outputs);
+	const std::string vs = std::string(name) + ".vs";
+	const std::string ps = std::string(name) + ".ps";
+	
+	m_cacheElem = &g_shaderCache.findOrCreate(name, vs.c_str(), ps.c_str(), outputs);
 }
 
 Shader::Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
+// todo : s_shaderOutputs
+	//if (outputs == nullptr)
+	//	outputs = s_shaderOutputs.c_str();
+	
 	load(name, filenameVs, filenamePs, outputs);
 }
 
@@ -437,6 +485,14 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 
 #define not_implemented Assert(false) // todo : implement shader stubs
 
+inline int getTextureIndex(const ShaderCacheElem & elem, const char * name)
+{
+	for (size_t i = 0; i < elem.textureInfos.size(); ++i)
+		if (elem.textureInfos[i].name == name)
+			return i;
+	return -1;
+}
+
 void Shader::setTextureUnit(const char * name, int unit)
 {
 	not_implemented;
@@ -447,9 +503,27 @@ void Shader::setTextureUnit(GxImmediateIndex index, int unit)
 	not_implemented;
 }
 
-void Shader::setTexture(const char * name, int unit, GxTextureId texture)
+void Shader::setTexture(const char * name, int unit, GxTextureId textureId)
 {
-	not_implemented;
+	const int index = getTextureIndex(*m_cacheElem, name);
+	
+	if (index >= 0)
+	{
+		auto & info = m_cacheElem->textureInfos[index];
+		
+		auto i = s_textures.find(textureId);
+		Assert(i != s_textures.end());
+		
+		if (i != s_textures.end())
+		{
+			auto texture = i->second;
+			
+			if (info.vsOffset >= 0)
+				[activeWindowData->encoder setFragmentTexture:texture atIndex:info.vsOffset];
+			if (info.psOffset >= 0)
+				[activeWindowData->encoder setFragmentTexture:texture atIndex:info.psOffset];
+		}
+	}
 }
 
 void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)

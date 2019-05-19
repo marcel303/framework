@@ -86,7 +86,9 @@ void registerBuiltinShaders()
 {
 	shaderSource("engine/ShaderCommon.txt",
 		R"SHADER(
-		#if LEGACY_GL
+		#if defined(__METAL_VERSION__)
+			// ...
+		#elif LEGACY_GL
 			#define shader_attrib attribute
 			#define shader_in varying
 			#define shader_out varying
