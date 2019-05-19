@@ -254,10 +254,12 @@ AudioGraphFile::~AudioGraphFile()
 //
 
 AudioGraphGlobals::AudioGraphGlobals()
-	: controlValues()
-	, memf()
-	, audioMutex(nullptr)
+	: audioMutex(nullptr)
+	, voiceMgr(nullptr)
 	, audioGraphMgr(nullptr)
+	, mainThreadId()
+	, controlValues()
+	, memf()
 {
 }
 
