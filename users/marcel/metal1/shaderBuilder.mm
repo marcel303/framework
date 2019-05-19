@@ -230,7 +230,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 				
 				attributes.push_back(a);
 			}
-			else if (eat_word(linePtr, "shader_out"))
+			else if (eat_word(linePtr, "shader_out") || eat_word(linePtr, "shader_in"))
 			{
 				const char * type;
 				const char * name;
@@ -383,6 +383,11 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
 				sb.Append("\t\n");
 				
+				sb.Append("\t// varyings\n");
+				for (auto & io : inputOutputs)
+					sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
+				sb.Append("\t\n");
+				
 				sb.Append("\t// outputs\n");
 				sb.Append("\tfloat4 shader_fragColor;\n");
 				sb.Append("\tfloat4 shader_fragNormal;\n");
@@ -418,7 +423,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			sb.Append("\n");
 			
 			sb.Append("fragment float4 shader_main(\n");
-			sb.Append("\tShaderInputs inputs [[stage_in]],\n");
+			sb.Append("\tShaderVaryings varyings [[stage_in]],\n");
 			sb.Append("\tconstant ShaderUniforms & uniforms [[buffer(0)]],\n");
 			sb.Append("\tShaderTextures textures)\n");
 			sb.Append("{\n");
@@ -426,6 +431,8 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			{
 				for (auto & u : uniforms)
 					sb.AppendFormat("\tm.%s = uniforms.%s;\n", u.name.c_str(), u.name.c_str());
+				for (auto & io : inputOutputs)
+					sb.AppendFormat("\tm.%s = varyings.%s;\n", io.name.c_str(), io.name.c_str());
 			}
 			sb.Append("\t\n");
 			sb.Append("\tm.main();\n");
@@ -468,6 +475,75 @@ void main()
 
 )SHADER";
 
+static const char * s_testShader2Ps = R"SHADER(
+
+include ShaderPS.txt
+
+uniform vec4 params;
+//uniform sampler2D source;
+
+shader_in vec4 v_color;
+shader_in vec3 v_normal;
+shader_in vec2 v_texcoord0;
+
+void main()
+{
+	vec4 result = v_color;
+
+	// color clamp
+
+	if (params.w != 0.0)
+	{
+		result = clamp(result, vec4(0.0), vec4(1.0));
+	}
+
+#if 0
+	// texture
+	
+	if (params.x != 0.0)
+	{
+		vec4 texColor = texture(source, v_texcoord0);
+		
+		/*
+		COLOR_MUL,
+		COLOR_ADD,
+		COLOR_SUB,
+		COLOR_IGNORE
+		*/
+		
+		if (params.y == 0.0)
+		{
+			result.rgb = result.rgb * texColor.rgb;
+			result.a   = result.a   * texColor.a;
+		}
+		else if (params.y == 1.0)
+		{
+			result.rgb = result.rgb + texColor.rgb;
+			result.a   = result.a   * texColor.a;
+		}
+		else if (params.y == 2.0)
+		{
+			result.rgb = result.rgb - texColor.rgb;
+			result.a   = result.a   * texColor.a;
+		}
+		else if (params.y == 3.0)
+		{
+			result.rgb = texColor.rgb;
+			result.a   = texColor.a;
+		}
+	}
+
+	// color post
+
+	result = applyColorPost(result, params.z);
+#endif
+
+	shader_fragColor = result;
+	shader_fragNormal = vec4(v_normal, 0.0);
+}
+
+)SHADER";
+
 //
 
 #include "shaderPreprocess.h"
@@ -493,28 +569,50 @@ void metal_shadertest()
 		}
 		
 		{
-			std::string preprocessed;
 			std::vector<std::string> errorMessages;
 			int fileId = 0;
-			preprocessShader(s_testShader2Vs, preprocessed, 0, errorMessages, fileId);
-			printf("preprocessed:\n%s", preprocessed.c_str());
 			
-			std::string metalText;
-			buildMetalText(preprocessed.c_str(), 'v', metalText);
-			printf("metalText:\n%s", metalText.c_str());
+			// process vs
+			
+			std::string preprocessedVs;
+			preprocessShader(s_testShader2Vs, preprocessedVs, 0, errorMessages, fileId);
+			printf("preprocessedVs:\n%s", preprocessedVs.c_str());
+			
+			std::string metalTextVs;
+			buildMetalText(preprocessedVs.c_str(), 'v', metalTextVs);
+			printf("metalTextVs:\n%s", metalTextVs.c_str());
+			
+			// process ps
+			
+			std::string preprocessedPs;
+			preprocessShader(s_testShader2Ps, preprocessedPs, 0, errorMessages, fileId);
+			printf("preprocessedPs:\n%s", preprocessedPs.c_str());
+			
+			std::string metalTextPs;
+			buildMetalText(preprocessedPs.c_str(), 'p', metalTextPs);
+			printf("metalTextPs:\n%s", metalTextPs.c_str());
+			
+			//
 			
 			id <MTLDevice> device = metal_get_device();
 			
 			NSError * error = nullptr;
 			
-			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:metalText.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
+			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:metalTextVs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
+			if (library_vs == nullptr && error != nullptr)
+				NSLog(@"%@", error);
+			
+			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:metalTextPs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_ps == nullptr && error != nullptr)
 				NSLog(@"%@", error);
 
+			id <MTLFunction> vs = [library_vs newFunctionWithName:@"shader_main"];
 			id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
 			
+			[vs release];
 			[ps release];
 			
+			[library_vs release];
 			[library_ps release];
 		}
 	}
