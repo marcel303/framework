@@ -27,6 +27,10 @@
 
 #pragma once
 
+#include "framework.h"
+
+#if ENABLE_OPENGL
+
 #include "gx_mesh.h"
 
 class GxVertexBufferGL : public GxVertexBufferBase
@@ -88,3 +92,5 @@ public:
 	
 	void draw() const;
 };
+
+#endif

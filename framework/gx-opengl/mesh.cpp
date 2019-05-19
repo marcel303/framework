@@ -27,20 +27,35 @@
 
 #include <GL/glew.h>
 #include "framework.h"
+
+#if ENABLE_OPENGL
+
 #include "mesh.h"
 
 GxVertexBufferGL::GxVertexBufferGL()
 	: m_vertexArray(0)
 {
-	glGenBuffers(1, &m_vertexArray);
-	checkErrorGL();
 }
 
 GxVertexBufferGL::~GxVertexBufferGL()
 {
-	glDeleteBuffers(1, &m_vertexArray);
-	m_vertexArray = 0;
+	free();
+}
+
+void GxVertexBufferGL::init(const int numBytes)
+{
+	glGenBuffers(1, &m_vertexArray);
 	checkErrorGL();
+}
+
+void GxVertexBufferGL::free()
+{
+	if (m_vertexArray != 0)
+	{
+		glDeleteBuffers(1, &m_vertexArray);
+		m_vertexArray = 0;
+		checkErrorGL();
+	}
 }
 
 void GxVertexBufferGL::setData(const void * bytes, const int numBytes)
@@ -61,6 +76,7 @@ GxIndexBufferGL::GxIndexBufferGL()
 
 GxIndexBufferGL::~GxIndexBufferGL()
 {
+	free();
 }
 
 void GxIndexBufferGL::init(const int numIndices, const GX_INDEX_FORMAT format)
@@ -74,9 +90,12 @@ void GxIndexBufferGL::init(const int numIndices, const GX_INDEX_FORMAT format)
 
 void GxIndexBufferGL::free()
 {
-	glDeleteBuffers(1, &m_indexArray);
-	m_indexArray = 0;
-	checkErrorGL();
+	if (m_indexArray != 0)
+	{
+		glDeleteBuffers(1, &m_indexArray);
+		m_indexArray = 0;
+		checkErrorGL();
+	}
 }
 
 void GxIndexBufferGL::setData(const void * bytes, const int numIndices)
@@ -200,3 +219,5 @@ void GxMesh::draw() const
 	glBindVertexArray(0);
 	checkErrorGL();
 }
+
+#endif
