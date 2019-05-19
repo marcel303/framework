@@ -48,6 +48,10 @@
 
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 
+static void gxEndDraw();
+
+//
+
 static id <MTLDevice> device;
 
 static std::map<SDL_Window*, MetalWindowData*> windowDatas;
@@ -144,6 +148,8 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 
 void metal_draw_end()
 {
+	gxEndDraw();
+	
 	[activeWindowData->encoder endEncoding];
 	
 	[activeWindowData->cmdbuf addCompletedHandler:
@@ -753,6 +759,8 @@ static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
 
 static DynamicBufferPool s_gxVertexBufferPool;
+static DynamicBufferPool::PoolElem * s_gxVertexBufferElem = nullptr;
+static int s_gxVertexBufferElemOffset = 0;
 static GxIndexBuffer s_gxIndexBuffer;
 
 static const GxVertexInput s_gxVsInputs[] =
@@ -937,6 +945,7 @@ static void gxValidatePipelineState()
 				{
 					a.format = metalFormat;
 					a.offset = e.offset;
+					a.bufferIndex = 0;
 				}
 			}
 			
@@ -1097,14 +1106,28 @@ static void gxFlush(bool endOfBatch)
 		// todo : keep a reference to the current buffer and allocate vertices from the same buffer
 		//        when possible. once the buffer is depleted, or when the command buffer is scheduled,
 		//        add the completion handler
-			auto * elem = s_gxVertexBufferPool.allocBuffer();
-			[activeWindowData->cmdbuf addCompletedHandler:
-				^(id<MTLCommandBuffer> _Nonnull)
+			const int remaining = (s_gxVertexBufferElem == nullptr) ? 0 : (s_gxVertexBufferPool.m_numBytesPerBuffer - s_gxVertexBufferElemOffset);
+			
+			if (vertexDataSize > remaining)
+			{
+				if (s_gxVertexBufferElem != nullptr)
 				{
-					s_gxVertexBufferPool.freeBuffer(elem);
-				}];
-			memcpy(elem->m_buffer.contents, s_gxVertices, vertexDataSize);
-			[activeWindowData->encoder setVertexBuffer:elem->m_buffer offset:0 atIndex:0];
+					auto * elem = s_gxVertexBufferElem;
+					[activeWindowData->cmdbuf addCompletedHandler:
+						^(id<MTLCommandBuffer> _Nonnull)
+						{
+							s_gxVertexBufferPool.freeBuffer(elem);
+						}];
+				}
+				
+				s_gxVertexBufferElem = s_gxVertexBufferPool.allocBuffer();
+				s_gxVertexBufferElemOffset = 0;
+			}
+			
+			memcpy((uint8_t*)s_gxVertexBufferElem->m_buffer.contents + s_gxVertexBufferElemOffset, s_gxVertices, vertexDataSize);
+			[activeWindowData->encoder setVertexBuffer:s_gxVertexBufferElem->m_buffer offset:s_gxVertexBufferElemOffset atIndex:0];
+			
+			s_gxVertexBufferElemOffset += vertexDataSize;
 		}
 		
 		bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
@@ -1337,6 +1360,22 @@ void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 void gxEnd()
 {
 	gxFlush(true);
+}
+
+static void gxEndDraw()
+{
+	if (s_gxVertexBufferElem != nullptr)
+	{
+		auto * elem = s_gxVertexBufferElem;
+		[activeWindowData->cmdbuf addCompletedHandler:
+			^(id<MTLCommandBuffer> _Nonnull)
+			{
+				s_gxVertexBufferPool.freeBuffer(elem);
+			}];
+		
+		s_gxVertexBufferElem = nullptr;
+		s_gxVertexBufferElemOffset = 0;
+	}
 }
 
 void gxEmitVertices(int primitiveType, int numVertices)
