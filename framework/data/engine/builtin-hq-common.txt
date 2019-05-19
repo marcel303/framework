@@ -17,7 +17,6 @@ include engine/ShaderUtil.txt
 #endif
 
 shader_in vec2 v_p;
-shader_in vec2 v_texcoord;
 
 // color coordinate matrix
 uniform mat4x4 gmat;
@@ -42,8 +41,10 @@ uniform sampler2D source;
 // global params
 uniform vec4 params;
 
-float computeDistance(vec2 p);
-float distanceFade(float distance);
+#if !defined(__METAL_VERSION__)
+	float computeDistance(vec2 p);
+	float distanceFade(float distance);
+#endif
 
 bool sampleDistanceFunctionHasBeenCalled = false;
 

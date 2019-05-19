@@ -5,7 +5,7 @@ const float kLinearToSrgb = 1.0 / kSrgbToLinear;
 
 // -- exposed functions --
 
-/*
+#if !defined(__METAL_VERSION__)
 
 vec4 applyColorMode(vec4 color1, vec4 color2, float mode);
 vec4 applyColorPost(vec4 color, float post);
@@ -32,7 +32,7 @@ float colorDither8(sampler2D ditherTexture, vec2 sampleCoord);
 vec3 colorDither8ScreenSpace(vec2 sampleCoord);
 vec3 colorDitherScreenSpace(vec2 sampleCoord, float dither_bit);
 
-*/
+#endif
 
 // -- implementation --
 
