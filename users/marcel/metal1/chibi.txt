@@ -11,3 +11,4 @@ app marcel-metal1
 	scan_files cpp
 	scan_files h
 	scan_files mm
+	resource_path data

@@ -159,7 +159,7 @@ static void report_error(const char * line, const char * format, ...)
 	printf("error: %s\n", text);
 }
 
-static bool preprocessShader(const char * text, const char shaderType, std::string & result)
+bool buildMetalText(const char * text, const char shaderType, std::string & result)
 {
 	std::vector<std::string> lines;
 	TextIO::LineEndings lineEndings;
@@ -404,140 +404,7 @@ static bool preprocessShader(const char * text, const char shaderType, std::stri
 
 static const char * s_testShader2Vs = R"SHADER(
 
-#define VS_POSITION      0
-#define VS_NORMAL        1
-#define VS_COLOR         2
-#define VS_TEXCOORD0     3
-#define VS_TEXCOORD      VS_TEXCOORD0
-#define VS_TEXCOORD1     4
-#define VS_BLEND_INDICES 5
-#define VS_BLEND_WEIGHTS 6
-
-// vertex streams
-
-shader_attrib vec4 in_position4            VS_POSITION
-shader_attrib vec3 in_normal               VS_NORMAL
-shader_attrib vec4 in_color                VS_COLOR
-shader_attrib vec2 in_texcoord0            VS_TEXCOORD0
-shader_attrib vec2 in_texcoord1            VS_TEXCOORD1
-shader_attrib vec4 in_skinningBlendIndices VS_BLEND_INDICES
-shader_attrib vec4 in_skinningBlendWeights VS_BLEND_WEIGHTS
-
-#define in_position in_position4.xyz
-
-uniform mat4 ModelViewMatrix;
-uniform mat4 ModelViewProjectionMatrix;
-uniform mat4 ProjectionMatrix;
-
-// vertex shader constants
-
-uniform vec4 drawColor;
-uniform vec4 drawSkin;
-uniform mat4 skinningMatrices[32];
-
-// functions
-
-vec4 objectToWorld(vec4 v)
-{
-	return ModelViewMatrix * v;
-}
-
-vec4 objectToView(vec4 v)
-{
-	return ModelViewMatrix * v;
-}
-
-vec3 objectToView3(vec3 v)
-{
-	return (ModelViewMatrix * vec4(v, 0.0)).xyz;
-}
-
-vec4 objectToProjection(vec4 v)
-{
-	return ModelViewProjectionMatrix * v;
-}
-
-vec4 worldToProjection(vec4 v)
-{
-	return ProjectionMatrix * v;
-}
-
-vec4 boneToObject_Skinned(ivec4 indices, vec4 weights, vec4 v)
-{
-	return
-		skinningMatrices[indices.x] * v * weights.x +
-		skinningMatrices[indices.y] * v * weights.y +
-		skinningMatrices[indices.z] * v * weights.z +
-		skinningMatrices[indices.w] * v * weights.w;
-}
-
-vec4 boneToObject_HardSkinned(ivec4 indices, vec4 weights, vec4 v)
-{
-	return
-		skinningMatrices[indices.x] * v;
-}
-
-ivec4 unpackSkinningBlendIndices()
-{
-	return ivec4(in_skinningBlendIndices);
-}
-
-vec4 unpackSkinningBlendWeights()
-{
-	return in_skinningBlendWeights;
-}
-
-vec4 unpackPosition()
-{
-	return vec4(in_position, 1.0);
-}
-
-vec4 unpackNormal()
-{
-	return vec4(in_normal, 0.0);
-}
-
-vec4 unpackColor()
-{
-	return in_color;
-}
-
-vec2 unpackTexcoord(int index)
-{
-	if (index == 0) return in_texcoord0;
-	if (index == 1) return in_texcoord1;
-	return vec2(0.0, 0.0);
-}
-
-bool drawColorTexcoords()
-{
-	return drawColor.x != 0.0;
-}
-
-bool drawColorNormals()
-{
-	return drawColor.y != 0.0;
-}
-
-bool drawColorBlendIndices()
-{
-	return drawColor.z != 0.0f;
-}
-
-bool drawColorBlendWeights()
-{
-	return drawColor.w != 0.0;
-}
-
-bool drawUnSkinned()
-{
-	return drawSkin.x != 0.0;
-}
-
-bool drawHardSkinned()
-{
-	return drawSkin.y != 0.0;
-}
+include ShaderVS.txt
 
 //
 
@@ -563,6 +430,10 @@ void main()
 
 )SHADER";
 
+//
+
+#include "shaderPreprocess.h"
+
 void metal_shadertest()
 {
 	@autoreleasepool
@@ -585,15 +456,20 @@ void metal_shadertest()
 		
 		{
 			std::string preprocessed;
-			preprocessShader(s_testShader2Vs, 'v', preprocessed);
-			
+			std::vector<std::string> errorMessages;
+			int fileId = 0;
+			preprocessShader(s_testShader2Vs, preprocessed, 0, errorMessages, fileId);
 			printf("preprocessed:\n%s", preprocessed.c_str());
+			
+			std::string metalText;
+			buildMetalText(preprocessed.c_str(), 'v', metalText);
+			printf("metalText:\n%s", metalText.c_str());
 			
 			id <MTLDevice> device = metal_get_device();
 			
 			NSError * error = nullptr;
 			
-			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:preprocessed.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
+			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:metalText.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_ps == nullptr && error != nullptr)
 				NSLog(@"%@", error);
 

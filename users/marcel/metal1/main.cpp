@@ -6,9 +6,12 @@
 #include "shader.h"
 #include "shaderBuilder.h"
 #include <stdlib.h>
+#include <unistd.h>
 
 int main(int arg, char * argv[])
 {
+	chdir(CHIBI_RESOURCE_PATH);
+	
 	SDL_Init(SDL_INIT_EVERYTHING);
 
 	metal_init();
