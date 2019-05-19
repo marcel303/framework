@@ -1,0 +1,1 @@
+#define texture(s, c) s.sample(s ## _sampler, c)

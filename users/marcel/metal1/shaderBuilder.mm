@@ -181,6 +181,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 		{
 			std::string type;
 			std::string name;
+			int index = 0;
 		};
 		
 		struct InputOutput
@@ -194,6 +195,8 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 		std::vector<InputOutput> inputOutputs;
 		
 		std::vector<std::string> contents;
+		
+		int texture_index = 0;
 		
 		for (auto & line : lines)
 		{
@@ -274,6 +277,9 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 				u.type = type;
 				u.name = name;
 				
+				if (strcmp(type, "sampler2D") == 0)
+					u.index = texture_index++;
+				
 				uniforms.push_back(u);
 			}
 			else
@@ -323,6 +329,8 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			}
 			sb.Append("};\n");
 			sb.Append("\n");
+			
+			sb.Append("#undef texture\n");
 			
 			sb.Append("struct ShaderInputs\n");
 			sb.Append("{\n");
@@ -380,7 +388,23 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			{
 				sb.Append("\t// uniforms\n");
 				for (auto & u : uniforms)
-					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+				{
+					if (u.type != "sampler2D")
+					{
+						sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+					}
+				}
+				sb.Append("\t\n");
+				
+				sb.Append("\t// textures\n");
+				for (auto & u : uniforms)
+				{
+					if (u.type == "sampler2D")
+					{
+						sb.AppendFormat("\ttexture2d<float> %s;\n", u.name.c_str());
+						sb.AppendFormat("\tsampler %s_sampler;\n", u.name.c_str());
+					}
+				}
 				sb.Append("\t\n");
 				
 				sb.Append("\t// varyings\n");
@@ -399,6 +423,8 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			sb.Append("};\n");
 			sb.Append("\n");
 			
+			sb.Append("#undef texture\n");
+			
 			sb.Append("struct ShaderVaryings\n");
 			sb.Append("{\n");
 			{
@@ -412,13 +438,28 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			sb.Append("{\n");
 			{
 				for (auto & u : uniforms)
-					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+				{
+					if (u.type != "sampler2D")
+					{
+						sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+					}
+				}
 			}
 			sb.Append("};\n");
 			sb.Append("\n");
 			
 			sb.Append("struct ShaderTextures\n");
 			sb.Append("{\n");
+			{
+				for (auto & u : uniforms)
+				{
+					if (u.type == "sampler2D")
+					{
+						sb.AppendFormat("\ttexture2d<float> %s [[texture(%d)]];\n", u.name.c_str(), u.index);
+						sb.AppendFormat("\tsampler %s_sampler [[sampler(%d)]];\n", u.name.c_str(), u.index);
+					}
+				}
+			}
 			sb.Append("};\n");
 			sb.Append("\n");
 			
@@ -430,7 +471,11 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			sb.Append("\tShaderMain m;\n");
 			{
 				for (auto & u : uniforms)
-					sb.AppendFormat("\tm.%s = uniforms.%s;\n", u.name.c_str(), u.name.c_str());
+					if (u.type != "sampler2D")
+						sb.AppendFormat("\tm.%s = uniforms.%s;\n", u.name.c_str(), u.name.c_str());
+				for (auto & u : uniforms)
+					if (u.type == "sampler2D")
+						sb.AppendFormat("\tm.%s = textures.%s;\n", u.name.c_str(), u.name.c_str());
 				for (auto & io : inputOutputs)
 					sb.AppendFormat("\tm.%s = varyings.%s;\n", io.name.c_str(), io.name.c_str());
 			}
@@ -481,7 +526,7 @@ include ShaderPS.txt
 include ShaderUtil.txt
 
 uniform vec4 params;
-//uniform sampler2D source;
+uniform sampler2D source;
 
 shader_in vec4 v_color;
 shader_in vec3 v_normal;
@@ -498,7 +543,6 @@ void main()
 		result = clamp(result, vec4(0.0), vec4(1.0));
 	}
 
-#if 0
 	// texture
 	
 	if (params.x != 0.0)
@@ -533,7 +577,6 @@ void main()
 			result.a   = texColor.a;
 		}
 	}
-#endif
 
 	// color post
 
