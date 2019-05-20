@@ -107,9 +107,9 @@ float sampleMsdf_aa(sampler2D msdf, vec2 texcoord, int sampleMethod, bool useSup
 		{
 			for (int j = -kernelSize; j <= +kernelSize; ++j)
 			{
-				vec2 texcoord = texcoord + du * i + dv * j;
+				vec2 texcoord2 = texcoord + du * i + dv * j;
 
-	    		opacity += sampleMsdf(msdf, texcoord, sampleMethod);
+	    		opacity += sampleMsdf(msdf, texcoord2, sampleMethod);
 			}
 		}
 
