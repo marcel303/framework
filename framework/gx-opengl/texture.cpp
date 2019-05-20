@@ -91,6 +91,7 @@ GxTexture::GxTexture()
 	, format(GX_UNKNOWN_FORMAT)
 	, filter(false)
 	, clamp(false)
+	, mipmapped(false)
 {
 }
 
@@ -313,7 +314,7 @@ void GxTexture::clearAreaToZero(const int x, const int y, const int sx, const in
 		::free(zeroes);
 }
 
-void GxTexture::upload(const void * src, const int _srcAlignment, const int _srcPitch)
+void GxTexture::upload(const void * src, const int _srcAlignment, const int _srcPitch, const bool updateMipmaps)
 {
 	Assert(id != 0);
 	if (id == 0)
@@ -359,6 +360,13 @@ void GxTexture::upload(const void * src, const int _srcAlignment, const int _src
 	glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, restorePitch);
 	checkErrorGL();
+	
+	// generate mipmaps if needed
+	
+	if (updateMipmaps && mipmapped)
+	{
+		generateMipmaps();
+	}
 }
 
 void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _srcPitch, const int srcSx, const int srcSy, const int dstX, const int dstY)

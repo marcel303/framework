@@ -85,6 +85,7 @@ GxTexture::GxTexture()
 	, format(GX_UNKNOWN_FORMAT)
 	, filter(false)
 	, clamp(false)
+	, mipmapped(false)
 {
 }
 
@@ -93,15 +94,27 @@ GxTexture::~GxTexture()
 	free();
 }
 
-void GxTexture::allocate(const int _sx, const int _sy, const GX_TEXTURE_FORMAT _format, const bool filter, const bool clamp)
+void GxTexture::allocate(const int sx, const int sy, const GX_TEXTURE_FORMAT format, const bool filter, const bool clamp)
+{
+	GxTextureProperties properties;
+	properties.dimensions.sx = sx;
+	properties.dimensions.sy = sy;
+	properties.format = format;
+	properties.sampling.filter = filter;
+	properties.sampling.clamp = clamp;
+	
+	allocate(properties);
+}
+
+void GxTexture::allocate(const GxTextureProperties & properties)
 {
 	free();
 
 	//
 
-	sx = _sx;
-	sy = _sy;
-	format = _format;
+	sx = properties.dimensions.sx;
+	sy = properties.dimensions.sy;
+	format = properties.format;
 	
 	//
 
@@ -115,12 +128,12 @@ void GxTexture::allocate(const int _sx, const int _sy, const GX_TEXTURE_FORMAT _
 		
 		auto device = metal_get_device();
 		
-		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalFormat width:sx height:sy mipmapped:NO];
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalFormat width:sx height:sy mipmapped:properties.mipmapped];
 		
 		texture = [device newTextureWithDescriptor:descriptor];
 	}
 	
-	setSampling(filter, clamp);
+	setSampling(properties.sampling.filter, properties.sampling.clamp);
 }
 
 void GxTexture::free()
@@ -350,7 +363,7 @@ static void * make_compatible(const void * src, const int srcSx, const int srcSy
 	return nullptr;
 }
 
-void GxTexture::upload(const void * src, const int _srcAlignment, const int _srcPitch)
+void GxTexture::upload(const void * src, const int _srcAlignment, const int _srcPitch, bool updateMipmaps)
 {
 	Assert(id != 0);
 	if (id == 0)
@@ -361,7 +374,7 @@ void GxTexture::upload(const void * src, const int _srcAlignment, const int _src
 		{ 0, 0, 0 },
 		{ (NSUInteger)sx, (NSUInteger)sy, 1 }
 	};
-
+	
 	auto texture = s_textures[id];
 	
 	const int srcPitch = _srcPitch == 0 ? sx : _srcPitch;
@@ -379,6 +392,13 @@ void GxTexture::upload(const void * src, const int _srcAlignment, const int _src
 	{
 		[texture replaceRegion:region mipmapLevel:0 withBytes:src bytesPerRow:srcPitch * bytesPerPixel];
 	}
+	
+	// generate mipmaps if needed
+	
+	if (updateMipmaps && mipmapped)
+	{
+		generateMipmaps();
+	}
 }
 
 void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _srcPitch, const int srcSx, const int srcSy, const int dstX, const int dstY)
@@ -387,28 +407,80 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _
 	if (id == 0)
 		return;
 	
-	const MTLRegion region =
+	@autoreleasepool
 	{
-		{ (NSUInteger)dstX, (NSUInteger)dstY, 0 },
-		{ (NSUInteger)srcSx, (NSUInteger)srcSy, 1 }
-	};
-	
-	auto texture = s_textures[id];
-	
-	const int srcPitch = _srcPitch == 0 ? srcSx : _srcPitch;
-	const int bytesPerPixel = getMetalFormatBytesPerPixel(format);
-	
-	void * copy = make_compatible(src, srcSx, srcSy, srcPitch, format);
-	
-	if (copy != nullptr)
-	{
-		[texture replaceRegion:region mipmapLevel:0 withBytes:copy bytesPerRow:srcSx * bytesPerPixel];
+	#if 1
+		// we update the texture asynchronously here. which means we first have to
+		// create a staging texture containing the source data, and perform a blit
+		// later on, when the GPU has processed its pending draw commands
 		
-		::free(copy);
-	}
-	else
-	{
-		[texture replaceRegion:region mipmapLevel:0 withBytes:src bytesPerRow:srcPitch * bytesPerPixel];
+		// 1. create the staging texture
+		
+		auto device = metal_get_device();
+		
+		const MTLPixelFormat metalFormat = toMetalFormat(format);
+
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalFormat width:srcSx height:srcSy mipmapped:NO];
+		
+		auto src_texture = [device newTextureWithDescriptor:descriptor];
+
+		// 2. set the contents of the staging texture to our source data
+		
+		const MTLRegion region =
+		{
+			{ 0, 0, 0 },
+			{ (NSUInteger)srcSx, (NSUInteger)srcSy, 1 }
+		};
+		
+		const int srcPitch = _srcPitch == 0 ? srcSx : _srcPitch;
+		const int bytesPerPixel = getMetalFormatBytesPerPixel(format);
+		
+		void * copy = make_compatible(src, srcSx, srcSy, srcPitch, format);
+		
+		if (copy != nullptr)
+		{
+			[src_texture replaceRegion:region mipmapLevel:0 withBytes:copy bytesPerRow:srcSx * bytesPerPixel];
+			
+			::free(copy);
+		}
+		else
+		{
+			[src_texture replaceRegion:region mipmapLevel:0 withBytes:src bytesPerRow:srcPitch * bytesPerPixel];
+		}
+		
+		// 3. asynchronously copy from the source texture to our own texture
+		
+		auto & dst_texture = s_textures[id];
+		
+		metal_copy_texture_to_texture(src_texture, srcSx * bytesPerPixel, 0, 0, srcSx, srcSy, dst_texture, dstX, dstY, metalFormat);
+		
+		[src_texture release]; // todo : defer release ?
+	#else
+	// todo : remove this dead code
+		const MTLRegion region =
+		{
+			{ (NSUInteger)dstX, (NSUInteger)dstY, 0 },
+			{ (NSUInteger)srcSx, (NSUInteger)srcSy, 1 }
+		};
+		
+		auto texture = s_textures[id];
+		
+		const int srcPitch = _srcPitch == 0 ? srcSx : _srcPitch;
+		const int bytesPerPixel = getMetalFormatBytesPerPixel(format);
+		
+		void * copy = make_compatible(src, srcSx, srcSy, srcPitch, format);
+		
+		if (copy != nullptr)
+		{
+			[texture replaceRegion:region mipmapLevel:0 withBytes:copy bytesPerRow:srcSx * bytesPerPixel];
+			
+			::free(copy);
+		}
+		else
+		{
+			[texture replaceRegion:region mipmapLevel:0 withBytes:src bytesPerRow:srcPitch * bytesPerPixel];
+		}
+	#endif
 	}
 }
 
@@ -423,6 +495,13 @@ void GxTexture::copyRegionsFromTexture(const GxTexture & src, const CopyRegion *
 		
 		metal_copy_texture_to_texture(src_texture, src.sx, region.srcX, region.srcY, region.sx, region.sy, dst_texture, region.dstX, region.dstY, toMetalFormat(format));
 	}
+}
+
+void GxTexture::generateMipmaps()
+{
+	auto texture = s_textures[id];
+
+	metal_generate_mipmaps(texture);
 }
 
 #endif

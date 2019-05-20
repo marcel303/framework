@@ -207,11 +207,9 @@ void metal_upload_texture_area(const void * src, const int srcPitch, const int s
 {
 	@autoreleasepool
 	{
-		id <MTLTexture> src_texture = nullptr;
-		
 		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:pixelFormat width:srcSx height:srcSy mipmapped:NO];
 		
-		src_texture = [device newTextureWithDescriptor:descriptor];
+		id <MTLTexture> src_texture = [device newTextureWithDescriptor:descriptor];
 		
 		const MTLOrigin src_origin = { 0, 0, 0 };
 		const MTLSize src_size = { (NSUInteger)srcSx, (NSUInteger)srcSy, 1 };
@@ -261,6 +259,33 @@ void metal_copy_texture_to_texture(id <MTLTexture> src, const int srcPitch, cons
 			{
 				[blit_encoder waitForFence:waitForDraw];
 				[blit_encoder copyFromTexture:src sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+				[blit_encoder updateFence:waitForBlit];
+			}
+			[activeWindowData->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
+			
+			[waitForDraw release];
+			[waitForBlit release];
+		}
+		[blit_encoder endEncoding];
+		[blit_cmdbuf commit];
+	}
+}
+
+void metal_generate_mipmaps(id <MTLTexture> texture)
+{
+	@autoreleasepool
+	{
+		auto blit_cmdbuf = [activeWindowData->queue commandBuffer];
+		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
+		{
+		// todo : reuse fences
+			id <MTLFence> waitForDraw = [device newFence];
+			id <MTLFence> waitForBlit = [device newFence];
+			
+			[activeWindowData->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
+			{
+				[blit_encoder waitForFence:waitForDraw];
+				[blit_encoder generateMipmapsForTexture:texture];
 				[blit_encoder updateFence:waitForBlit];
 			}
 			[activeWindowData->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
@@ -1705,6 +1730,26 @@ void gxValidateShaderResources()
 		{
 			auto & texture = i->second;
 			[activeWindowData->encoder setFragmentTexture:texture atIndex:0];
+			
+		#if 0 // todo : add sampler state cache and implement gxSetTextureSampler
+			@autoreleasepool
+			{
+				auto * descriptor = [[MTLSamplerDescriptor new] autorelease];
+			#if 1
+				descriptor.minFilter = MTLSamplerMinMagFilterNearest;
+				descriptor.magFilter = MTLSamplerMinMagFilterNearest;
+				descriptor.mipFilter = MTLSamplerMipFilterNotMipmapped;
+			#else
+				descriptor.minFilter = MTLSamplerMinMagFilterLinear;
+				descriptor.magFilter = MTLSamplerMinMagFilterLinear;
+				descriptor.mipFilter = MTLSamplerMipFilterLinear;
+			#endif
+				descriptor.sAddressMode = MTLSamplerAddressModeClampToEdge;
+				descriptor.tAddressMode = MTLSamplerAddressModeClampToEdge;
+				auto samplerState = [[device newSamplerStateWithDescriptor:descriptor] autorelease];
+				[activeWindowData->encoder setFragmentSamplerState:samplerState atIndex:0];
+			}
+		#endif
 		}
 	}
 	else

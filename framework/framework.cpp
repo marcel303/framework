@@ -3289,7 +3289,7 @@ GxTextureId getTexture(const char * filename)
 	const TextureCacheElem & elem = g_textureCache.findOrCreate(filename, 1, 1);
 
 	if (elem.textures)
-		return elem.textures[0];
+		return elem.textures[0].id;
 	else
 		return 0;
 }
@@ -3440,7 +3440,7 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 			
 			fassert(cellIndex >= 0 && cellIndex < (m_anim->m_gridSize[0] * m_anim->m_gridSize[1]));
 			
-			gxSetTexture(m_texture->textures[cellIndex]);
+			gxSetTexture(m_texture->textures[cellIndex].id);
 			
 		#if ENABLE_OPENGL // todo : add a common way to set filtering for textures
 			if (filter == FILTER_POINT)
@@ -3704,7 +3704,7 @@ int Sprite::getHeight() const
 GxTextureId Sprite::getTexture() const
 {
 	if (m_texture->textures)
-		return m_texture->textures[0];
+		return m_texture->textures[0].id;
 	else
 		return 0;
 }

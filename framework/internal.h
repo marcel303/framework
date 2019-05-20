@@ -89,6 +89,7 @@ void splitString(const std::string & str, std::vector<std::string> & result, cha
 struct BoxAtlasElem;
 class BuiltinShaders;
 class FontCacheElem;
+struct GxTexture;
 class MsdfFontCache;
 struct TextureAtlas;
 
@@ -478,7 +479,7 @@ class TextureCacheElem
 {
 public:
 	std::string name;
-	GxTextureId * textures;
+	GxTexture * textures;
 	int sx;
 	int sy;
 	int gridSx;

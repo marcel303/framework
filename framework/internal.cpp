@@ -271,19 +271,10 @@ void TextureCacheElem::free()
 {
 	if (textures != 0)
 	{
-	#if ENABLE_METAL
 		const int numTextures = gridSx * gridSy;
 		for (int i = 0; i < numTextures; ++i)
-			freeTexture(textures[i]);
+			textures[i].free();
 		delete [] textures;
-	#endif
-	
-	#if ENABLE_OPENGL
-		const int numTextures = gridSx * gridSy;
-		glDeleteTextures(numTextures, textures);
-		delete [] textures;
-		checkErrorGL();
-	#endif
 		
 		name.clear();
 		textures = 0;
@@ -337,11 +328,6 @@ static std::string getCacheFilename(const char * filename, bool forRead)
 
 	return "";
 }
-#endif
-
-#if ENABLE_METAL
-// todo : make this nicer
-GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, int sourcePitch, bool filter, bool clamp);
 #endif
 
 void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
@@ -445,9 +431,17 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 			const int cellSx = imageData->sx / gridSx;
 			const int cellSy = imageData->sy / gridSy;
 			
-			textures = new GxTextureId[numTextures];
+			textures = new GxTexture[numTextures];
 			
 		#if ENABLE_METAL
+			GxTextureProperties textureProperties;
+			textureProperties.dimensions.sx = cellSx;
+			textureProperties.dimensions.sy = cellSy;
+			textureProperties.format = GX_RGBA8_UNORM;
+			textureProperties.sampling.filter = false;
+			textureProperties.sampling.clamp = true;
+			textureProperties.mipmapped = true;
+			
 			for (int i = 0; i < numTextures; ++i)
 			{
 				const int cellX = i % gridSx;
@@ -458,7 +452,8 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 				
 				const void * source = ((int*)imageData->imageData) + sourceOffset;
 				
-				textures[i] = createTextureFromRGBA8(source, cellSx, cellSy, imageData->sx, false, true);
+				textures[i].allocate(textureProperties);
+				textures[i].upload(source, 0, imageData->sx, true);
 			}
 		#endif
 		
