@@ -2348,7 +2348,7 @@ void MsdfGlyphCache::allocTextureAtlas()
 	m_textureAtlas = nullptr;
 	
 	m_textureAtlas = new TextureAtlas();
-	m_textureAtlas->init(kAtlasSx, kAtlasSy, GX_RGB32_FLOAT, true, true, nullptr);
+	m_textureAtlas->init(kAtlasSx, kAtlasSy, GX_RGBA32_FLOAT, true, true, nullptr);
 	
 	m_map.clear();
 }
@@ -2497,7 +2497,7 @@ void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
 		logDebug("bitmap size: %d x %d", bitmapSx, bitmapSy);
 		
 		msdfgen::edgeColoringSimple(shape, 3.f);
-		msdfgen::Bitmap<msdfgen::FloatRGB> msdf(bitmapSx, bitmapSy);
+		msdfgen::Bitmap<msdfgen::FloatRGBA> msdf(bitmapSx, bitmapSy);
 		
 		const msdfgen::Vector2 scaleVec(scale, scale);
 		const msdfgen::Vector2 transVec(

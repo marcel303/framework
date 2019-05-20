@@ -10,7 +10,7 @@ struct MultiDistance {
     double med;
 };
 
-static inline bool pixelClash(const FloatRGB &a, const FloatRGB &b, double threshold) {
+static inline bool pixelClash(const FloatRGBA &a, const FloatRGBA &b, double threshold) {
     // Only consider pair where both are on the inside or both are on the outside
     bool aIn = (a.r > .5f)+(a.g > .5f)+(a.b > .5f) >= 2;
     bool bIn = (b.r > .5f)+(b.g > .5f)+(b.b > .5f) >= 2;
@@ -44,7 +44,7 @@ static inline bool pixelClash(const FloatRGB &a, const FloatRGB &b, double thres
         && fabsf(ac-.5f) >= fabsf(bc-.5f); // Out of the pair, only flag the pixel farther from a shape edge
 }
 
-void msdfErrorCorrection(Bitmap<FloatRGB> &output, const Vector2 &threshold) {
+void msdfErrorCorrection(Bitmap<FloatRGBA> &output, const Vector2 &threshold) {
     std::vector<std::pair<int, int> > clashes;
     int w = output.width(), h = output.height();
     for (int y = 0; y < h; ++y)
@@ -56,7 +56,7 @@ void msdfErrorCorrection(Bitmap<FloatRGB> &output, const Vector2 &threshold) {
                 clashes.push_back(std::make_pair(x, y));
         }
     for (std::vector<std::pair<int, int> >::const_iterator clash = clashes.begin(); clash != clashes.end(); ++clash) {
-        FloatRGB &pixel = output(clash->first, clash->second);
+        FloatRGBA &pixel = output(clash->first, clash->second);
         float med = median(pixel.r, pixel.g, pixel.b);
         pixel.r = med, pixel.g = med, pixel.b = med;
     }
@@ -204,7 +204,7 @@ void generatePseudoSDF(Bitmap<float> &output, const Shape &shape, double range, 
     }
 }
 
-void generateMSDF(Bitmap<FloatRGB> &output, const Shape &shape, double range, const Vector2 &scale, const Vector2 &translate, double edgeThreshold) {
+void generateMSDF(Bitmap<FloatRGBA> &output, const Shape &shape, double range, const Vector2 &scale, const Vector2 &translate, double edgeThreshold) {
     int contourCount = shape.contours.size();
     int w = output.width(), h = output.height();
     std::vector<int> windings;
@@ -327,12 +327,14 @@ void generateMSDF(Bitmap<FloatRGB> &output, const Shape &shape, double range, co
 					output(x, row).r = float(msd.r);
 					output(x, row).g = float(msd.g);
 					output(x, row).b = float(msd.b);
+					output(x, row).a = 1.f;
 				}
 				else
 				{
 					output(x, row).r = float(msd.r/range+.5);
 					output(x, row).g = float(msd.g/range+.5);
 					output(x, row).b = float(msd.b/range+.5);
+					output(x, row).a = 1.f;
 				}
             }
         }
@@ -393,7 +395,7 @@ void generatePseudoSDF_legacy(Bitmap<float> &output, const Shape &shape, double 
     }
 }
 
-void generateMSDF_legacy(Bitmap<FloatRGB> &output, const Shape &shape, double range, const Vector2 &scale, const Vector2 &translate, double edgeThreshold) {
+void generateMSDF_legacy(Bitmap<FloatRGBA> &output, const Shape &shape, double range, const Vector2 &scale, const Vector2 &translate, double edgeThreshold) {
     int w = output.width(), h = output.height();
 #ifdef MSDFGEN_USE_OPENMP
     #pragma omp parallel for
@@ -441,6 +443,7 @@ void generateMSDF_legacy(Bitmap<FloatRGB> &output, const Shape &shape, double ra
             output(x, row).r = float(r.minDistance.distance/range+.5);
             output(x, row).g = float(g.minDistance.distance/range+.5);
             output(x, row).b = float(b.minDistance.distance/range+.5);
+            output(x, row).a = 1.f;
         }
     }
 
