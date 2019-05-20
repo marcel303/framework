@@ -37,6 +37,8 @@
 
 #define ENABLE_TEXTURE_CONVERSIONS 0
 
+#define ENABLE_ASYNC_TEXTURE_UPLOADS 1
+
 id <MTLDevice> metal_get_device();
 
 std::map<int, id <MTLTexture>> s_textures;
@@ -115,6 +117,7 @@ void GxTexture::allocate(const GxTextureProperties & properties)
 	sx = properties.dimensions.sx;
 	sy = properties.dimensions.sy;
 	format = properties.format;
+	mipmapped = properties.mipmapped;
 	
 	//
 
@@ -128,7 +131,7 @@ void GxTexture::allocate(const GxTextureProperties & properties)
 		
 		auto device = metal_get_device();
 		
-		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalFormat width:sx height:sy mipmapped:properties.mipmapped];
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalFormat width:sx height:sy mipmapped:mipmapped];
 		
 		texture = [device newTextureWithDescriptor:descriptor];
 	}
@@ -363,7 +366,7 @@ static void * make_compatible(const void * src, const int srcSx, const int srcSy
 	return nullptr;
 }
 
-void GxTexture::upload(const void * src, const int _srcAlignment, const int _srcPitch, bool updateMipmaps)
+void GxTexture::upload(const void * src, const int _srcAlignment, const int _srcPitch, const bool updateMipmaps)
 {
 	Assert(id != 0);
 	if (id == 0)
@@ -409,7 +412,7 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _
 	
 	@autoreleasepool
 	{
-	#if 1
+	#if ENABLE_ASYNC_TEXTURE_UPLOADS
 		// we update the texture asynchronously here. which means we first have to
 		// create a staging texture containing the source data, and perform a blit
 		// later on, when the GPU has processed its pending draw commands

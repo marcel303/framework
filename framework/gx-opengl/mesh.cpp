@@ -32,17 +32,17 @@
 
 #include "gx_mesh.h"
 
-GxVertexBufferGL::GxVertexBufferGL()
+GxVertexBuffer::GxVertexBuffer()
 	: m_vertexArray(0)
 {
 }
 
-GxVertexBufferGL::~GxVertexBufferGL()
+GxVertexBuffer::~GxVertexBuffer()
 {
 	free();
 }
 
-void GxVertexBufferGL::alloc(const void * bytes, const int numBytes)
+void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 {
 	glGenBuffers(1, &m_vertexArray);
 	checkErrorGL();
@@ -54,7 +54,7 @@ void GxVertexBufferGL::alloc(const void * bytes, const int numBytes)
 	checkErrorGL();
 }
 
-void GxVertexBufferGL::free()
+void GxVertexBuffer::free()
 {
 	if (m_vertexArray != 0)
 	{
@@ -64,19 +64,19 @@ void GxVertexBufferGL::free()
 	}
 }
 
-GxIndexBufferGL::GxIndexBufferGL()
+GxIndexBuffer::GxIndexBuffer()
 	: m_numIndices(0)
 	, m_format(GX_INDEX_16)
 	, m_indexArray(0)
 {
 }
 
-GxIndexBufferGL::~GxIndexBufferGL()
+GxIndexBuffer::~GxIndexBuffer()
 {
 	free();
 }
 
-void GxIndexBufferGL::alloc(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
+void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
 {
 	m_numIndices = numIndices;
 	m_format = format;
@@ -97,7 +97,7 @@ void GxIndexBufferGL::alloc(const void * bytes, const int numIndices, const GX_I
 	checkErrorGL();
 }
 
-void GxIndexBufferGL::free()
+void GxIndexBuffer::free()
 {
 	if (m_indexArray != 0)
 	{
@@ -107,12 +107,12 @@ void GxIndexBufferGL::free()
 	}
 }
 
-int GxIndexBufferGL::getNumIndices() const
+int GxIndexBuffer::getNumIndices() const
 {
 	return m_numIndices;
 }
 
-GX_INDEX_FORMAT GxIndexBufferGL::getFormat() const
+GX_INDEX_FORMAT GxIndexBuffer::getFormat() const
 {
 	return m_format;
 }

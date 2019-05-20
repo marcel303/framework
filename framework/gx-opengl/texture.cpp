@@ -100,7 +100,19 @@ GxTexture::~GxTexture()
 	free();
 }
 
-void GxTexture::allocate(const int _sx, const int _sy, const GX_TEXTURE_FORMAT _format, const bool filter, const bool clamp)
+void GxTexture::allocate(const int sx, const int sy, const GX_TEXTURE_FORMAT format, const bool filter, const bool clamp)
+{
+	GxTextureProperties properties;
+	properties.dimensions.sx = sx;
+	properties.dimensions.sy = sy;
+	properties.format = format;
+	properties.sampling.filter = filter;
+	properties.sampling.clamp = clamp;
+	
+	allocate(properties);
+}
+
+void GxTexture::allocate(const GxTextureProperties & properties)
 {
 	free();
 
@@ -112,9 +124,10 @@ void GxTexture::allocate(const int _sx, const int _sy, const GX_TEXTURE_FORMAT _
 
 	//
 
-	sx = _sx;
-	sy = _sy;
-	format = _format;
+	sx = properties.dimensions.sx;
+	sy = properties.dimensions.sy;
+	format = properties.format;
+	mipmapped = properties.mipmapped;
 	
 	//
 
@@ -137,7 +150,7 @@ void GxTexture::allocate(const int _sx, const int _sy, const GX_TEXTURE_FORMAT _
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	checkErrorGL();
 	
-	setSampling(filter, clamp);
+	setSampling(properties.sampling.filter, properties.sampling.clamp);
 
 	// restore previous OpenGL states
 
@@ -457,4 +470,13 @@ void GxTexture::copyRegionsFromTexture(const GxTexture & src, const CopyRegion *
 	glBindFramebuffer(GL_FRAMEBUFFER, restoreBuffer);
 	glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	checkErrorGL();
+}
+
+void GxTexture::generateMipmaps()
+{
+	if (glGenerateMipmap != nullptr)
+	{
+		glGenerateMipmap(GL_TEXTURE_2D);
+		checkErrorGL();
+	}
 }

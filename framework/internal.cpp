@@ -433,7 +433,6 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 			
 			textures = new GxTexture[numTextures];
 			
-		#if ENABLE_METAL
 			GxTextureProperties textureProperties;
 			textureProperties.dimensions.sx = cellSx;
 			textureProperties.dimensions.sy = cellSy;
@@ -455,56 +454,26 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 				textures[i].allocate(textureProperties);
 				textures[i].upload(source, 0, imageData->sx, true);
 			}
-		#endif
 		
 		#if ENABLE_OPENGL
-			glGenTextures(numTextures, textures);
-			
 			for (int i = 0; i < numTextures; ++i)
 			{
-				fassert(textures[i] != 0);
+				fassert(textures[i].id != 0);
 				
-				if (textures[i] != 0)
+				if (textures[i].id != 0)
 				{
-					const int cellX = i % gridSx;
-					const int cellY = i / gridSx;
-					const int sourceX = cellX * cellSx;
-					const int sourceY = cellY * cellSy;
-					const int sourceOffset = sourceX + sourceY * imageData->sx;
-					
 					// capture current OpenGL states before we change them
 					
 					GLuint restoreTexture;
 					glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-					GLint restoreUnpackAlignment;
-					glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpackAlignment);
-					GLint restoreUnpackRowLength;
-					glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restoreUnpackRowLength);
 					
-					// copy image data
-									
-					const void * source = ((int*)imageData->imageData) + sourceOffset;
-					
-					glBindTexture(GL_TEXTURE_2D, textures[i]);
+					glBindTexture(GL_TEXTURE_2D, textures[i].id);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 				#if !ENABLE_MIPMAPS
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 				#endif
 					checkErrorGL();
 
-					glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-					glPixelStorei(GL_UNPACK_ROW_LENGTH, imageData->sx);
-					glTexImage2D(
-						GL_TEXTURE_2D,
-						0,
-						GL_RGBA8,
-						cellSx,
-						cellSy,
-						0,
-						GL_RGBA,
-						GL_UNSIGNED_BYTE,
-						source);
-					
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 					checkErrorGL();
@@ -539,8 +508,6 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 					// restore previous OpenGL states
 					
 					glBindTexture(GL_TEXTURE_2D, restoreTexture);
-					glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpackAlignment);
-					glPixelStorei(GL_UNPACK_ROW_LENGTH, restoreUnpackRowLength);
 					checkErrorGL();
 				}
 			}
