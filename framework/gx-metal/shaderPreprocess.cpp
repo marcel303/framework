@@ -1,12 +1,36 @@
-#include "Log.h"
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+#include "framework.h"
+
+#if ENABLE_METAL
+
 #include "shaderPreprocess.h"
 #include "StringEx.h"
-
-#define FRAMEWORK_INTEGRATION 1 // todo : remove
-
-#if FRAMEWORK_INTEGRATION
-	#include "framework.h"
-#endif
 
 extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
@@ -38,7 +62,6 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 
 		fclose(file);
 	}
-#if FRAMEWORK_INTEGRATION
 	else if (framework.tryGetShaderSource(filename, text))
 	{
 		const size_t textLength = strlen(text);
@@ -48,7 +71,6 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 
 		memcpy(bytes, text, textLength * sizeof(char));
 	}
-#endif
 	else
 	{
 		result = false;
@@ -120,7 +142,7 @@ bool preprocessShader(
 			{
 				errorMessages.push_back(String::FormatC("failed to load include file %s", filename));
 				
-				LOG_ERR("failed to load include file %s", filename);
+				logError("failed to load include file %s", filename);
 				
 				result = false;
 			}
@@ -170,7 +192,7 @@ bool preprocessShaderFromFile(
 	{
 		errorMessages.push_back(String::FormatC("failed to load file %s", filename));
 		
-		LOG_ERR("failed to load include file %s", filename);
+		logError("failed to load include file %s", filename);
 		
 		result = false;
 	}
@@ -192,3 +214,5 @@ bool preprocessShaderFromFile(
 	
 	return result;
 }
+
+#endif
