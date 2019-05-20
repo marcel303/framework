@@ -78,12 +78,9 @@ std::vector<std::string> String::Split(const std::string& text, const std::strin
 		{
 			if (!Contains(separators, text[index1]))
 			{
-				std::string temp = text.substr(index1, index2 - index1 + 1);
+				const std::string temp = text.substr(index1, index2 - index1 + 1);
 
-//				for (size_t j = index1; j <= index2; ++j)
-//					temp.push_back(text[j]);
-
-				result.push_back(temp);
+				result.emplace_back(temp);
 			}
 
 			index1 = i + 1;
@@ -99,12 +96,9 @@ std::vector<std::string> String::Split(const std::string& text, const std::strin
 	{
 		if (!Contains(separators, text[index1]))
 		{
-			std::string temp = text.substr(index1, index2 - index1 + 1);
+			const std::string temp = text.substr(index1, index2 - index1 + 1);
 
-//			for (size_t j = index1; j <= index2; ++j)
-//				temp.push_back(text[j]);
-
-			result.push_back(temp);
+			result.emplace_back(temp);
 		}
 	}
 
