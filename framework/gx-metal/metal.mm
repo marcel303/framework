@@ -119,7 +119,7 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 	@autoreleasepool
 	{
 		activeWindowData->cmdbuf = [[activeWindowData->queue commandBuffer] retain];
-
+		
 		activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
 		[activeWindowData->current_drawable retain];
 		
@@ -167,11 +167,8 @@ void metal_draw_end()
 	
 	//
 	
-	//NSLog(@"encoder release, retain count: %lu", [activeWindowData->encoder retainCount]);
 	[activeWindowData->encoder release];
-	//NSLog(@"current_drawable release, retain count: %lu", [activeWindowData->current_drawable retainCount]);
 	[activeWindowData->current_drawable release];
-	//NSLog(@"cmdbuf release, retain count: %lu", [activeWindowData->cmdbuf retainCount]);
 	[activeWindowData->cmdbuf release];
 	
 	activeWindowData->encoder = nullptr;
@@ -184,9 +181,96 @@ void metal_set_viewport(const int sx, const int sy)
 	[activeWindowData->encoder setViewport:(MTLViewport){ 0, 0, (double)sx, (double)sy, 0.0, 1.0 }];
 }
 
+void metal_set_scissor(const int x, const int y, const int sx, const int sy)
+{
+	const MTLScissorRect rect = { (NSUInteger)x, (NSUInteger)y, (NSUInteger)sx, (NSUInteger)sy };
+	
+	[activeWindowData->encoder setScissorRect:rect];
+}
+
+void metal_clear_scissor()
+{
+	const NSUInteger sx = activeWindowData->renderdesc.colorAttachments[0].texture.width;
+	const NSUInteger sy = activeWindowData->renderdesc.colorAttachments[0].texture.height;
+	
+	const MTLScissorRect rect = { 0, 0, sx, sy };
+	
+	[activeWindowData->encoder setScissorRect:rect];
+}
+
 id <MTLDevice> metal_get_device()
 {
 	return device;
+}
+
+void metal_upload_texture_area(const void * src, const int srcPitch, const int srcSx, const int srcSy, id <MTLTexture> dst, const int dstX, const int dstY, const MTLPixelFormat pixelFormat)
+{
+	@autoreleasepool
+	{
+		id <MTLTexture> src_texture = nullptr;
+		
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:pixelFormat width:srcSx height:srcSy mipmapped:NO];
+		
+		src_texture = [device newTextureWithDescriptor:descriptor];
+		
+		const MTLOrigin src_origin = { 0, 0, 0 };
+		const MTLSize src_size = { (NSUInteger)srcSx, (NSUInteger)srcSy, 1 };
+		const MTLOrigin dst_origin = { (NSUInteger)dstX, (NSUInteger)dstY, 0 };
+		
+		auto blit_cmdbuf = [activeWindowData->queue commandBuffer];
+		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
+		{
+		// todo : reuse fences
+			id <MTLFence> waitForDraw = [device newFence];
+			id <MTLFence> waitForBlit = [device newFence];
+			
+			[activeWindowData->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
+			{
+				[blit_encoder waitForFence:waitForDraw];
+				[blit_encoder copyFromTexture:src_texture sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+				[blit_encoder updateFence:waitForBlit];
+			}
+			[activeWindowData->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
+			
+			[waitForDraw release];
+			[waitForBlit release];
+		}
+		[blit_encoder endEncoding];
+		[blit_cmdbuf commit];
+		
+		s_resourcesToFree.push_back(src_texture);
+	}
+}
+
+void metal_copy_texture_to_texture(id <MTLTexture> src, const int srcPitch, const int srcX, const int srcY, const int srcSx, const int srcSy, id <MTLTexture> dst, const int dstX, const int dstY, const MTLPixelFormat pixelFormat)
+{
+	@autoreleasepool
+	{
+		const MTLOrigin src_origin = { (NSUInteger)srcX, (NSUInteger)srcY, 0 };
+		const MTLSize src_size = { (NSUInteger)srcSx, (NSUInteger)srcSy, 1 };
+		const MTLOrigin dst_origin = { (NSUInteger)dstX, (NSUInteger)dstY, 0 };
+		
+		auto blit_cmdbuf = [activeWindowData->queue commandBuffer];
+		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
+		{
+		// todo : reuse fences
+			id <MTLFence> waitForDraw = [device newFence];
+			id <MTLFence> waitForBlit = [device newFence];
+			
+			[activeWindowData->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
+			{
+				[blit_encoder waitForFence:waitForDraw];
+				[blit_encoder copyFromTexture:src sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+				[blit_encoder updateFence:waitForBlit];
+			}
+			[activeWindowData->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
+			
+			[waitForDraw release];
+			[waitForBlit release];
+		}
+		[blit_encoder endEncoding];
+		[blit_cmdbuf commit];
+	}
 }
 
 // -- render states --

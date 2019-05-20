@@ -34,25 +34,35 @@
 class ColorTarget;
 class DepthTarget;
 
+// --- functions for framework interop ---
+
 void metal_init();
 void metal_attach(SDL_Window * window);
 void metal_make_active(SDL_Window * window);
 void metal_draw_begin(const float r, const float g, const float b, const float a);
 void metal_draw_end();
 void metal_set_viewport(const int sx, const int sy);
+void metal_set_scissor(const int x, const int y, const int sx, const int sy);
+void metal_clear_scissor();
+
+// --- experimental functions for merge into framework at some point ---
+
+// todo : move to framework header
 
 void pushRenderPass(ColorTarget * target, DepthTarget * depthTarget, const bool clearDepth);
 void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * depthTarget, const bool clearDepth);
 void popRenderPass();
 
-// todo : move to framework header
 class GxVertexBuffer;
 struct GxVertexInput;
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 
-// -- render states --
+#ifdef __OBJC__
 
+// --- private data and helper functions ---
+
+#import <Metal/Metal.h>
 #include "gx_mesh.h"
 
 struct __attribute__((packed)) RenderPipelineState
@@ -65,5 +75,10 @@ struct __attribute__((packed)) RenderPipelineState
 };
 
 extern RenderPipelineState renderState;
+
+void metal_upload_texture_area(const void * src, const int srcPitch, const int srcSx, const int srcSy, id <MTLTexture> dst, const int dstX, const int dstY, const MTLPixelFormat pixelFormat);
+void metal_copy_texture_to_texture(id <MTLTexture> src, const int srcPitch, const int srcX, const int srcY, const int srcSx, const int srcSy, id <MTLTexture> dst, const int dstX, const int dstY, const MTLPixelFormat pixelFormat);
+
+#endif
 
 #endif

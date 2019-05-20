@@ -29,6 +29,7 @@
 
 #if ENABLE_METAL
 
+#import "metal.h"
 #import "texture.h"
 #import <Metal/Metal.h>
 
@@ -302,7 +303,28 @@ void GxTexture::clearAreaToZero(const int x, const int y, const int sx, const in
 static void * make_compatible(const void * src, const int srcSx, const int srcSy, const int srcPitch, const GX_TEXTURE_FORMAT format)
 {
 #if ENABLE_TEXTURE_CONVERSIONS
-	if (format == GX_RGB32_FLOAT)
+	if (format == GX_RGB8_UNORM)
+	{
+		uint8_t * __restrict copy_src = (uint8_t*)src;
+		uint8_t * __restrict copy_dst = new uint8_t[srcSx * srcSy * 4];
+		
+		for (int y = 0; y < srcSy; ++y)
+		{
+			uint8_t * src_line = copy_src + y * srcPitch * 3;
+			uint8_t * dst_line = copy_dst + y * srcSx    * 4;
+			
+			for (int x = 0; x < srcSx; ++x)
+			{
+				dst_line[x * 4 + 0] = src_line[x * 3 + 0];
+				dst_line[x * 4 + 1] = src_line[x * 3 + 1];
+				dst_line[x * 4 + 2] = src_line[x * 3 + 2];
+				dst_line[x * 4 + 3] = 255;
+			}
+		}
+		
+		return copy_dst;
+	}
+	else if (format == GX_RGB32_FLOAT)
 	{
 		float * __restrict copy_src = (float*)src;
 		float * __restrict copy_dst = new float[srcSx * srcSy * 4];
@@ -317,7 +339,7 @@ static void * make_compatible(const void * src, const int srcSx, const int srcSy
 				dst_line[x * 4 + 0] = src_line[x * 3 + 0];
 				dst_line[x * 4 + 1] = src_line[x * 3 + 1];
 				dst_line[x * 4 + 2] = src_line[x * 3 + 2];
-				dst_line[x * 4 + 3] = 0.f;
+				dst_line[x * 4 + 3] = 1.f;
 			}
 		}
 		
@@ -392,54 +414,15 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _
 
 void GxTexture::copyRegionsFromTexture(const GxTexture & src, const CopyRegion * regions, const int numRegions)
 {
-#if TODO // todo : copyRegionsFromTexture
-	// capture current OpenGL states before we change them
-	
-	GLuint restoreBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&restoreBuffer);
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-	
-	//
-	
-	glBindTexture(GL_TEXTURE_2D, id);
-	checkErrorGL();
-	
-	GLuint frameBuffer = 0;
-	
-	glGenFramebuffers(1, &frameBuffer);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, src.id, 0);
-	checkErrorGL();
-	
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	checkErrorGL();
+	auto src_texture = s_textures[src.id];
+	auto dst_texture = s_textures[id];
 	
 	for (int i = 0; i < numRegions; ++i)
 	{
 		auto & region = regions[i];
 		
-		glCopyTexSubImage2D(
-			GL_TEXTURE_2D, 0,
-			region.dstX, region.dstY,
-			region.srcX, region.srcY,
-			region.sx, region.sy);
-		checkErrorGL();
+		metal_copy_texture_to_texture(src_texture, src.sx, region.srcX, region.srcY, region.sx, region.sy, dst_texture, region.dstX, region.dstY, toMetalFormat(format));
 	}
-	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
-	checkErrorGL();
-	
-	// restore previous OpenGL states
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, restoreBuffer);
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-#endif
 }
 
 #endif

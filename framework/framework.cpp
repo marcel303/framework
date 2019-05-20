@@ -5208,7 +5208,6 @@ void popSurface()
 
 void setDrawRect(int x, int y, int sx, int sy)
 {
-#if ENABLE_OPENGL // todo : metal impl setDrawRect
 	int surfaceSx;
 	int surfaceSy;
 	getCurrentViewportSize(surfaceSx, surfaceSy);
@@ -5228,34 +5227,51 @@ void setDrawRect(int x, int y, int sx, int sy)
 		ScaleY(y);
 		ScaleX(sx);
 		ScaleY(sy);
-
+	
+	#if ENABLE_METAL
+		metal_set_scissor(x, y, sx, sy);
+	#endif
+	
+	#if ENABLE_OPENGL // todo : metal impl setDrawRect
 		glScissor(x, y, sx, sy);
 		checkErrorGL();
 
 		glEnable(GL_SCISSOR_TEST);
 		checkErrorGL();
+	#endif
 	}
 	else
 	{
+	#if ENABLE_OPENGL
 		if (globals.currentWindow == globals.mainWindow)
 			y = globals.displaySize[1] - y - sy;
+	#endif
 
 		ScaleX(x);
 		ScaleY(y);
 		ScaleX(sx);
 		ScaleY(sy);
 
+	#if ENABLE_METAL
+		metal_set_scissor(x, y, sx, sy);
+	#endif
+	
+	#if ENABLE_OPENGL // todo : metal impl setDrawRect
 		glScissor(x, y, sx, sy);
 		checkErrorGL();
 
 		glEnable(GL_SCISSOR_TEST);
 		checkErrorGL();
+	#endif
 	}
-#endif
 }
 
 void clearDrawRect()
 {
+#if ENABLE_METAL
+	metal_clear_scissor();
+#endif
+
 #if ENABLE_OPENGL // todo : metal impl clearDrawRect
 	glDisable(GL_SCISSOR_TEST);
 #endif
