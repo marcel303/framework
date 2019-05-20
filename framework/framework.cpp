@@ -2193,7 +2193,7 @@ GxImmediateIndex Shader::getImmediate(const char * name)
 #define SET_UNIFORM(name, op) \
 	if (getProgram()) \
 	{ \
-		setShader(*this); \
+		Assert(globals.shader == this); \
 		const GLint index = glGetUniformLocation(getProgram(), name); \
 		if (index == -1) \
 		{ \
