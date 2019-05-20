@@ -271,10 +271,19 @@ void TextureCacheElem::free()
 {
 	if (textures != 0)
 	{
+	#if ENABLE_METAL
+		const int numTextures = gridSx * gridSy;
+		for (int i = 0; i < numTextures; ++i)
+			freeTexture(textures[i]);
+		delete [] textures;
+	#endif
+	
+	#if ENABLE_OPENGL
 		const int numTextures = gridSx * gridSy;
 		glDeleteTextures(numTextures, textures);
 		delete [] textures;
 		checkErrorGL();
+	#endif
 		
 		name.clear();
 		textures = 0;
@@ -328,6 +337,11 @@ static std::string getCacheFilename(const char * filename, bool forRead)
 
 	return "";
 }
+#endif
+
+#if ENABLE_METAL
+// todo : make this nicer
+GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, int sourcePitch, bool filter, bool clamp);
 #endif
 
 void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
@@ -431,8 +445,24 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 			const int cellSx = imageData->sx / gridSx;
 			const int cellSy = imageData->sy / gridSy;
 			
-			textures = new GLuint[numTextures];
+			textures = new GxTextureId[numTextures];
 			
+		#if ENABLE_METAL
+			for (int i = 0; i < numTextures; ++i)
+			{
+				const int cellX = i % gridSx;
+				const int cellY = i / gridSx;
+				const int sourceX = cellX * cellSx;
+				const int sourceY = cellY * cellSy;
+				const int sourceOffset = sourceX + sourceY * imageData->sx;
+				
+				const void * source = ((int*)imageData->imageData) + sourceOffset;
+				
+				textures[i] = createTextureFromRGBA8(source, cellSx, cellSy, imageData->sx, false, true);
+			}
+		#endif
+		
+		#if ENABLE_OPENGL
 			glGenTextures(numTextures, textures);
 			
 			for (int i = 0; i < numTextures; ++i)
@@ -518,12 +548,13 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 					glPixelStorei(GL_UNPACK_ROW_LENGTH, restoreUnpackRowLength);
 					checkErrorGL();
 				}
-				
-				this->sx = imageData->sx;
-				this->sy = imageData->sy;
-				this->gridSx = gridSx;
-				this->gridSy = gridSy;
 			}
+		#endif
+			
+			this->sx = imageData->sx;
+			this->sy = imageData->sy;
+			this->gridSx = gridSx;
+			this->gridSy = gridSy;
 			
 			logInfo("loaded %s (%dx%d)", filename, gridSx, gridSy);
 		}

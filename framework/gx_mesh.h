@@ -96,3 +96,29 @@ public:
 #if ENABLE_OPENGL
 	#include "gx-opengl/mesh.h"
 #endif
+
+#if !ENABLE_OPENGL
+
+// todo : add gxSetVertexBuffer impl OpenGL
+
+class GxMesh
+{
+	static const int kMaxVertexInputs = 16;
+	
+	const GxVertexBuffer * m_vertexBuffer = nullptr;
+	const GxIndexBuffer * m_indexBuffer = nullptr;
+	
+	GxVertexInput vertexInputs[kMaxVertexInputs];
+	int numVertexInputs = 0;
+	
+public:
+	GxMesh();
+	~GxMesh();
+	
+	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs);
+	void setIndexBuffer(const GxIndexBuffer * buffer);
+	
+	void draw() const;
+};
+
+#endif

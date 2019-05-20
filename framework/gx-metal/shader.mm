@@ -61,7 +61,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 	}
 	else
 	{
-		ShaderCacheElem * elem = new ShaderCacheElem();
+		ShaderCacheElem_Metal * elem = new ShaderCacheElem_Metal();
 		
 		@autoreleasepool
 		{
@@ -176,7 +176,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 
 //
 
-static ShaderCacheElem::UniformInfo & getUniformInfo(ShaderCacheElem & cacheElem, const int index, const int type, const int numElems)
+static ShaderCacheElem_Metal::UniformInfo & getUniformInfo(ShaderCacheElem_Metal & cacheElem, const int index, const int type, const int numElems)
 {
 	Assert(index >= 0 && index < cacheElem.uniformInfos.size());
 	auto & info = cacheElem.uniformInfos[index];
@@ -185,13 +185,13 @@ static ShaderCacheElem::UniformInfo & getUniformInfo(ShaderCacheElem & cacheElem
 }
 
 template <typename T>
-T * getVsUniformPtr(ShaderCacheElem & cacheElem, const int offset)
+T * getVsUniformPtr(ShaderCacheElem_Metal & cacheElem, const int offset)
 {
 	return (T*)(((uint8_t*)cacheElem.vsUniformData) + offset);
 }
 
 template <typename T>
-T * getPsUniformPtr(ShaderCacheElem & cacheElem, const int offset)
+T * getPsUniformPtr(ShaderCacheElem_Metal & cacheElem, const int offset)
 {
 	return (T*)(((uint8_t*)cacheElem.psUniformData) + offset);
 }
@@ -205,7 +205,7 @@ Shader::Shader(const char * name, const char * outputs)
 	const std::string vs = std::string(name) + ".vs";
 	const std::string ps = std::string(name) + ".ps";
 	
-	m_cacheElem = &g_shaderCache.findOrCreate(name, vs.c_str(), ps.c_str(), outputs);
+	m_cacheElem = static_cast<ShaderCacheElem_Metal*>(&g_shaderCache.findOrCreate(name, vs.c_str(), ps.c_str(), outputs));
 }
 
 Shader::Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
@@ -225,7 +225,7 @@ Shader::~Shader()
 
 void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
-	m_cacheElem = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs);
+	m_cacheElem = static_cast<ShaderCacheElem_Metal*>(&g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs));
 }
 
 GxImmediateIndex Shader::getImmediate(const char * name)
@@ -385,7 +385,7 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 
 #define not_implemented Assert(false) // todo : implement shader stubs
 
-inline int getTextureIndex(const ShaderCacheElem & elem, const char * name)
+inline int getTextureIndex(const ShaderCacheElem_Metal & elem, const char * name)
 {
 	for (size_t i = 0; i < elem.textureInfos.size(); ++i)
 		if (elem.textureInfos[i].name == name)
@@ -469,6 +469,11 @@ void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
 void Shader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
 {
 	not_implemented;
+}
+
+const ShaderCacheElem & Shader::getCacheElem() const
+{
+	return *m_cacheElem;
 }
 
 #endif

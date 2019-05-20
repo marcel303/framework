@@ -478,7 +478,7 @@ class TextureCacheElem
 {
 public:
 	std::string name;
-	GLuint * textures;
+	GxTextureId * textures;
 	int sx;
 	int sy;
 	int gridSx;

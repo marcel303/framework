@@ -30,7 +30,7 @@
 
 #if ENABLE_OPENGL
 
-#include "mesh.h"
+#include "gx_mesh.h"
 
 GxVertexBufferGL::GxVertexBufferGL()
 	: m_vertexArray(0)

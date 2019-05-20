@@ -3442,6 +3442,7 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 			
 			gxSetTexture(m_texture->textures[cellIndex]);
 			
+		#if ENABLE_OPENGL // todo : add a common way to set filtering for textures
 			if (filter == FILTER_POINT)
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -3473,6 +3474,7 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 			}
 			
 			checkErrorGL();
+		#endif
 
 			const float rsx = float(m_texture->sx / m_anim->m_gridSize[0]);
 			const float rsy = float(m_texture->sy / m_anim->m_gridSize[1]);
@@ -7168,7 +7170,6 @@ static void applyHqShaderConstants()
 	
 	const ShaderCacheElem & shaderElem = shader.getCacheElem();
 	
-#if ENABLE_OPENGL // todo : add metal implementation
 	if (shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index != -1)
 	{
 		shader.setImmediate(
@@ -7222,7 +7223,6 @@ static void applyHqShaderConstants()
 		
 		shader.setTextureUnit("source", 0);
 	}
-#endif
 
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 	//shader.setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);

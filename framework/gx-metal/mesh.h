@@ -31,15 +31,15 @@
 
 #if ENABLE_METAL
 
-#include "gx_mesh.h"
+// note : do not include this file directly. please include gx_mesh.h instead
 
-class GxVertexBufferMetal : public GxVertexBufferBase
+class GxVertexBuffer : public GxVertexBufferBase
 {
 	void * m_buffer;
 	
 public:
-	GxVertexBufferMetal();
-	virtual ~GxVertexBufferMetal() override final;
+	GxVertexBuffer();
+	virtual ~GxVertexBuffer() override final;
 	
 	virtual void alloc(const void * bytes, const int numBytes) override final;
 	virtual void free() override final;
@@ -50,7 +50,7 @@ public:
 	void * getMetalBuffer() const { return m_buffer; }
 };
 
-class GxIndexBufferMetal : public GxIndexBufferBase
+class GxIndexBuffer : public GxIndexBufferBase
 {
 	int m_numIndices;
 	GX_INDEX_FORMAT m_format;
@@ -58,8 +58,8 @@ class GxIndexBufferMetal : public GxIndexBufferBase
 	void * m_buffer;
 	
 public:
-	GxIndexBufferMetal();
-	virtual ~GxIndexBufferMetal() override final;
+	GxIndexBuffer();
+	virtual ~GxIndexBuffer() override final;
 	
 	void alloc(const int numIndices, const GX_INDEX_FORMAT format);
 	
@@ -74,8 +74,5 @@ public:
 	
 	void * getMetalBuffer() const { return m_buffer; }
 };
-
-typedef GxVertexBufferMetal GxVertexBuffer;
-typedef GxIndexBufferMetal GxIndexBuffer;
 
 #endif

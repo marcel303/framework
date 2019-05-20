@@ -31,8 +31,6 @@
 
 #if ENABLE_METAL
 
-#include "mesh.h"
-
 class ColorTarget;
 class DepthTarget;
 
@@ -47,9 +45,15 @@ void pushRenderPass(ColorTarget * target, DepthTarget * depthTarget, const bool 
 void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * depthTarget, const bool clearDepth);
 void popRenderPass();
 
+// todo : move to framework header
+class GxVertexBuffer;
+struct GxVertexInput;
+
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 
 // -- render states --
+
+#include "gx_mesh.h"
 
 struct __attribute__((packed)) RenderPipelineState
 {

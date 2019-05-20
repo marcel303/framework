@@ -465,11 +465,14 @@ void popCullMode()
 
 // -- gpu resources --
 
-GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
+static GxTextureId createTexture(
+	const void * source, const int sx, const int sy, const int bytesPerPixel, const int sourcePitch,
+	const bool filter, const bool clamp,
+	const MTLPixelFormat pixelFormat)
 {
 	@autoreleasepool
 	{
-		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm width:sx height:sy mipmapped:NO];
+		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:pixelFormat width:sx height:sy mipmapped:NO];
 		
 		id <MTLTexture> texture = [device newTextureWithDescriptor:descriptor];
 		
@@ -477,7 +480,7 @@ GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool fil
 			return 0;
 		else
 		{
-			const int pitch = sx * 4;
+			const int pitch = (sourcePitch == 0 ? sx : sourcePitch) * bytesPerPixel;
 			
 			const MTLRegion region =
 			{
@@ -494,6 +497,22 @@ GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool fil
 			return textureId;
 		}
 	}
+}
+
+GxTextureId createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, 1, 0, filter, clamp, MTLPixelFormatR8Unorm);
+}
+
+GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, 4, 0, filter, clamp, MTLPixelFormatRGBA8Unorm);
+}
+
+// --- internal texture creation functions ---
+GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, int sourcePitch, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, 4, sourcePitch, filter, clamp, MTLPixelFormatRGBA8Unorm);
 }
 
 void freeTexture(GxTextureId & textureId)
@@ -699,7 +718,7 @@ void gxValidateMatrices()
 	{
 		Shader * shader = static_cast<Shader*>(globals.shader);
 		
-		const ShaderCacheElem & shaderElem = shader->getCacheElem();
+		const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
 	
 		if (shaderElem.vsInfo.uniformBufferIndex != -1)
 		{
@@ -897,6 +916,8 @@ static uint32_t computeHash(const void* bytes, int byteCount)
 	return hash;
 }
 
+static id <MTLRenderPipelineState> s_currentRenderPipelineState = nullptr;
+
 static void gxValidatePipelineState()
 {
 	if (globals.shader == nullptr || globals.shader->getType() != SHADER_VSPS)
@@ -906,7 +927,7 @@ static void gxValidatePipelineState()
 	
 	Shader * shader = static_cast<Shader*>(globals.shader);
 	
-	auto & shaderElem = shader->getCacheElem();
+	auto & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
 	
 	/*
 	pipeline state dependencies:
@@ -1089,7 +1110,12 @@ static void gxValidatePipelineState()
 		}
 	}
 	
-	[activeWindowData->encoder setRenderPipelineState:pipelineState];
+	if (pipelineState != s_currentRenderPipelineState)
+	{
+		s_currentRenderPipelineState = pipelineState;
+		
+		[activeWindowData->encoder setRenderPipelineState:pipelineState];
+	}
 }
 
 static void gxFlush(bool endOfBatch)
@@ -1240,7 +1266,7 @@ static void gxFlush(bool endOfBatch)
 			indexed = true;
 		}
 		
-		const ShaderCacheElem & shaderElem = shader.getCacheElem();
+		const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 		
 		uint8_t * data = (uint8_t*)shaderElem.psUniformData;
 		
@@ -1386,6 +1412,8 @@ static void gxEndDraw()
 		s_gxVertexBufferElem = nullptr;
 		s_gxVertexBufferElemOffset = 0;
 	}
+	
+	s_currentRenderPipelineState = nullptr;
 }
 
 void gxEmitVertices(int primitiveType, int numVertices)
@@ -1582,6 +1610,10 @@ void gxValidateShaderResources()
 {
 	if (s_gxTextureEnabled)
 	{
+	// todo : avoid setting textures when not needed
+	//        needed when: texture changed
+	//                  or shader changed
+	
 		auto i = s_textures.find(s_gxTexture);
 		
 		Assert(i != s_textures.end());

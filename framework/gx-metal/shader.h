@@ -35,11 +35,7 @@
 #import <vector>
 
 struct ShaderCacheElem;
-
-#ifdef __OBJC__
-
-#import <map>
-#import <Metal/Metal.h>
+struct ShaderCacheElem_Metal;
 
 struct ShaderCacheElem
 {
@@ -57,7 +53,25 @@ struct ShaderCacheElem
 		kSp_TextureMatrix,
 		kSp_MAX
 	};
+	
+	struct
+	{
+		int index = -1;
 
+		void set(const int index)
+		{
+			this->index = index;
+		}
+	} params[kSp_MAX];
+};
+
+#ifdef __OBJC__
+
+#import <map>
+#import <Metal/Metal.h>
+
+struct ShaderCacheElem_Metal : ShaderCacheElem
+{
 	struct StageInfo
 	{
 		struct
@@ -124,22 +138,12 @@ struct ShaderCacheElem
 
 	std::vector<UniformInfo> uniformInfos;
 	
-	struct
-	{
-		int index = -1;
-
-		void set(const int index)
-		{
-			this->index = index;
-		}
-	} params[kSp_MAX];
-	
 	void * vsUniformData = nullptr;
 	void * psUniformData = nullptr;
 	
 	std::vector<TextureInfo> textureInfos;
 	
-	~ShaderCacheElem()
+	~ShaderCacheElem_Metal()
 	{
 		shut();
 	}
@@ -342,7 +346,7 @@ struct ShaderCacheElem
 
 class ShaderCache
 {
-	typedef std::map<std::string, ShaderCacheElem*> Map;
+	typedef std::map<std::string, ShaderCacheElem_Metal*> Map;
 	
 	Map m_map;
 	
@@ -358,7 +362,7 @@ public:
 class Shader : public ShaderBase
 {
 public:
-	ShaderCacheElem * m_cacheElem = nullptr; // todo : make private
+	ShaderCacheElem_Metal * m_cacheElem = nullptr; // todo : make private
 	
 	Shader();
 	Shader(const char * name, const char * outputs = nullptr);
@@ -399,7 +403,7 @@ public:
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
 	void setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer);
 
-	const ShaderCacheElem & getCacheElem() const { return *m_cacheElem; }
+	const ShaderCacheElem & getCacheElem() const;
 };
 
 extern ShaderCache g_shaderCache;

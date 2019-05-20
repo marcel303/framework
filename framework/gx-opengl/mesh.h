@@ -31,23 +31,23 @@
 
 #if ENABLE_OPENGL
 
-#include "gx_mesh.h"
+// note : do not include this file directly. please include gx_mesh.h instead
 
-class GxVertexBufferGL : public GxVertexBufferBase
+class GxVertexBuffer : public GxVertexBufferBase
 {
 	friend class GxMesh;
 	
 	uint32_t m_vertexArray;
 	
 public:
-	GxVertexBufferGL();
-	virtual ~GxVertexBufferGL() override final;
+	GxVertexBuffer();
+	virtual ~GxVertexBuffer() override final;
 	
 	virtual void alloc(const void * bytes, const int numBytes) override final;
 	virtual void free() override final;
 };
 
-class GxIndexBufferGL : public GxIndexBufferBase
+class GxIndexBuffer : public GxIndexBufferBase
 {
 	friend class GxMesh;
 	
@@ -57,8 +57,8 @@ class GxIndexBufferGL : public GxIndexBufferBase
 	uint32_t m_indexArray;
 	
 public:
-	GxIndexBufferGL();
-	virtual ~GxIndexBufferGL() override final;
+	GxIndexBuffer();
+	virtual ~GxIndexBuffer() override final;
 	
 	virtual void alloc(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format) override final;
 	virtual void free() override final;
@@ -66,9 +66,6 @@ public:
 	virtual int getNumIndices() const override final;
 	virtual GX_INDEX_FORMAT getFormat() const override final;
 };
-
-typedef GxVertexBufferGL GxVertexBuffer;
-typedef GxIndexBufferGL GxIndexBuffer;
 
 class GxMesh
 {

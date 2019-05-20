@@ -29,7 +29,7 @@
 
 #if ENABLE_METAL
 
-#import "mesh.h"
+#import "gx_mesh.h"
 #import <Metal/Metal.h>
 
 // todo : create separate vertex and index buffer types for static data?
@@ -38,17 +38,17 @@ id <MTLDevice> metal_get_device();
 
 //
 
-GxVertexBufferMetal::GxVertexBufferMetal()
+GxVertexBuffer::GxVertexBuffer()
 	: m_buffer(nullptr)
 {
 }
 
-GxVertexBufferMetal::~GxVertexBufferMetal()
+GxVertexBuffer::~GxVertexBuffer()
 {
 	free();
 }
 
-void GxVertexBufferMetal::alloc(const void * bytes, const int numBytes)
+void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 {
 	Assert(m_buffer == nullptr);
 	
@@ -66,7 +66,7 @@ void GxVertexBufferMetal::alloc(const void * bytes, const int numBytes)
 	m_buffer = buffer;
 }
 
-void GxVertexBufferMetal::free()
+void GxVertexBuffer::free()
 {
 	// free buffer
 	
@@ -80,14 +80,14 @@ void GxVertexBufferMetal::free()
 	}
 }
 
-void * GxVertexBufferMetal::updateBegin()
+void * GxVertexBuffer::updateBegin()
 {
 	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
 	
 	return buffer.contents;
 }
 
-void GxVertexBufferMetal::updateEnd(const int firstByte, const int numBytes)
+void GxVertexBuffer::updateEnd(const int firstByte, const int numBytes)
 {
 	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
 	
@@ -99,19 +99,19 @@ void GxVertexBufferMetal::updateEnd(const int firstByte, const int numBytes)
 
 //
 
-GxIndexBufferMetal::GxIndexBufferMetal()
+GxIndexBuffer::GxIndexBuffer()
 	: m_numIndices(0)
 	, m_format(GX_INDEX_32)
 	, m_buffer(nullptr)
 {
 }
 
-GxIndexBufferMetal::~GxIndexBufferMetal()
+GxIndexBuffer::~GxIndexBuffer()
 {
 	free();
 }
 
-void GxIndexBufferMetal::alloc(const int numIndices, const GX_INDEX_FORMAT format)
+void GxIndexBuffer::alloc(const int numIndices, const GX_INDEX_FORMAT format)
 {
 	Assert(m_buffer == nullptr);
 	
@@ -128,7 +128,7 @@ void GxIndexBufferMetal::alloc(const int numIndices, const GX_INDEX_FORMAT forma
 	m_buffer = buffer;
 }
 
-void GxIndexBufferMetal::alloc(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
+void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
 {
 	Assert(m_buffer == nullptr);
 	
@@ -152,7 +152,7 @@ void GxIndexBufferMetal::alloc(const void * bytes, const int numIndices, const G
 	m_buffer = buffer;
 }
 
-void GxIndexBufferMetal::free()
+void GxIndexBuffer::free()
 {
 	// free buffer
 	
@@ -166,14 +166,14 @@ void GxIndexBufferMetal::free()
 	}
 }
 
-void * GxIndexBufferMetal::updateBegin()
+void * GxIndexBuffer::updateBegin()
 {
 	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
 	
 	return buffer.contents;
 }
 
-void GxIndexBufferMetal::updateEnd(const int firstIndex, const int numIndices)
+void GxIndexBuffer::updateEnd(const int firstIndex, const int numIndices)
 {
 	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
 	
@@ -187,12 +187,12 @@ void GxIndexBufferMetal::updateEnd(const int firstIndex, const int numIndices)
 	[buffer didModifyRange:range];
 }
 
-int GxIndexBufferMetal::getNumIndices() const
+int GxIndexBuffer::getNumIndices() const
 {
 	return m_numIndices;
 }
 
-GX_INDEX_FORMAT GxIndexBufferMetal::getFormat() const
+GX_INDEX_FORMAT GxIndexBuffer::getFormat() const
 {
 	return m_format;
 }
