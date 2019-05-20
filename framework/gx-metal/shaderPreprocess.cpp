@@ -8,6 +8,8 @@
 	#include "framework.h"
 #endif
 
+extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
+
 static bool loadFileContents(const char * filename, bool normalizeLineEndings, char *& bytes, int & numBytes)
 {
 	bool result = true;
@@ -91,7 +93,9 @@ bool preprocessShader(
 {
 	bool result = true;
 
-	std::vector<std::string> lines = String::Split(source, '\n');
+	std::vector<std::string> lines;
+	
+	splitString(source, lines, '\n');
 	
 	for (size_t i = 0; i < lines.size(); ++i)
 	{
