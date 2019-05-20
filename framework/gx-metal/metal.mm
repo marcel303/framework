@@ -1508,6 +1508,8 @@ void gxEnd()
 
 static void gxEndDraw()
 {
+	// add completion handler if there's still a buffer pool element in use
+	
 	if (s_gxVertexBufferElem != nullptr)
 	{
 		auto * elem = s_gxVertexBufferElem;
@@ -1521,6 +1523,16 @@ static void gxEndDraw()
 		s_gxVertexBufferElem = nullptr;
 		s_gxVertexBufferElemOffset = 0;
 	}
+	
+	// clear textures to avoid freed textures from being reused (prefer to crash instead)
+	
+	[activeWindowData->cmdbuf setLabel:@"Clear textures (gxEndDraw)"];
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
+		[activeWindowData->encoder setVertexTexture:nullptr atIndex:i];
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
+		[activeWindowData->encoder setFragmentTexture:nullptr atIndex:i];
+	
+	// reset the current pipeline state, to ensure we set it again when recording the next command buffer
 	
 	s_currentRenderPipelineState = nullptr;
 }
@@ -1754,7 +1766,16 @@ void gxValidateShaderResources()
 	}
 	else
 	{
-		[activeWindowData->encoder setFragmentTexture:nullptr atIndex:0];
+		auto * shader = static_cast<Shader*>(globals.shader);
+		auto & cacheElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
+		
+		for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
+			if (cacheElem.vsTextures[i] != nullptr)
+				[activeWindowData->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
+		
+		for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
+			if (cacheElem.psTextures[i] != nullptr)
+				[activeWindowData->encoder setFragmentTexture:cacheElem.psTextures[i] atIndex:i];
 	}
 }
 

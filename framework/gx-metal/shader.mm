@@ -95,7 +95,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 				printf("ps text:\n%s", shaderPs.c_str());
 				NSLog(@"%@", error);
 			}
-		
+			
 			id <MTLFunction> vs = [library_vs newFunctionWithName:@"shader_main"];
 			id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
 			
@@ -418,10 +418,10 @@ void Shader::setTexture(const char * name, int unit, GxTextureId textureId)
 		{
 			auto texture = i->second;
 			
-			if (info.vsOffset >= 0)
-				[activeWindowData->encoder setFragmentTexture:texture atIndex:info.vsOffset];
-			if (info.psOffset >= 0)
-				[activeWindowData->encoder setFragmentTexture:texture atIndex:info.psOffset];
+			if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
+				m_cacheElem->vsTextures[info.vsOffset] = texture;
+			if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
+				m_cacheElem->psTextures[info.psOffset] = texture;
 		}
 	}
 }

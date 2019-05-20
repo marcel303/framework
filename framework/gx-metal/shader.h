@@ -72,6 +72,9 @@ struct ShaderCacheElem
 
 struct ShaderCacheElem_Metal : ShaderCacheElem
 {
+	static const int kMaxVsTextures = 2;
+	static const int kMaxPsTextures = 8;
+	
 	struct StageInfo
 	{
 		struct
@@ -142,6 +145,9 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 	void * psUniformData = nullptr;
 	
 	std::vector<TextureInfo> textureInfos;
+	
+	id <MTLTexture> vsTextures[kMaxVsTextures] = { };
+	id <MTLTexture> psTextures[kMaxPsTextures] = { };
 	
 	~ShaderCacheElem_Metal()
 	{
