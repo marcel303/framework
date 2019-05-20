@@ -124,6 +124,16 @@ struct ShaderCacheElem
 
 	std::vector<UniformInfo> uniformInfos;
 	
+	struct
+	{
+		int index = -1;
+
+		void set(const int index)
+		{
+			this->index = index;
+		}
+	} params[kSp_MAX];
+	
 	void * vsUniformData = nullptr;
 	void * psUniformData = nullptr;
 	
@@ -136,18 +146,6 @@ struct ShaderCacheElem
 	
 	void init(MTLRenderPipelineReflection * reflection)
 	{
-	/*
-		// todo : VS_POSITION etc
-		glBindAttribLocation(program, VS_POSITION,      "in_position4");
-		glBindAttribLocation(program, VS_NORMAL,        "in_normal");
-		glBindAttribLocation(program, VS_COLOR,         "in_color");
-		glBindAttribLocation(program, VS_TEXCOORD0,     "in_texcoord0");
-		glBindAttribLocation(program, VS_TEXCOORD1,     "in_texcoord1");
-		glBindAttribLocation(program, VS_BLEND_INDICES, "in_skinningBlendIndices");
-		glBindAttribLocation(program, VS_BLEND_WEIGHTS, "in_skinningBlendWeights");
-		checkErrorGL();
-	*/
-
 		// cache uniform offsets
 		
 		if (reflection != nullptr)
@@ -191,6 +189,8 @@ struct ShaderCacheElem
 					psUniformData = malloc(arg.bufferDataSize);
 				}
 			}
+			
+			initParamIndicesFromUniforms();
 		}
 	}
 	
@@ -263,6 +263,29 @@ struct ShaderCacheElem
 					break;
 				}
 			}
+		}
+	}
+	
+	void initParamIndicesFromUniforms()
+	{
+		for (int i = 0; i < uniformInfos.size(); ++i)
+		{
+			auto & uniform = uniformInfos[i];
+			
+		#define CASE(param, string) if (uniform.name == string) { params[param].set(i); }
+			{
+				CASE(kSp_ModelViewMatrix, "ModelViewMatrix");
+				CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
+				CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
+				CASE(kSp_SkinningMatrices, "skinningMatrices");
+				CASE(kSp_Texture, "texture0");
+				CASE(kSp_Params, "params");
+				CASE(kSp_ShadingParams, "shadingParams");
+				CASE(kSp_GradientInfo, "gradientInfo");
+				CASE(kSp_GradientMatrix, "gmat");
+				CASE(kSp_TextureMatrix, "tmat");
+			}
+		#undef CASE
 		}
 	}
 	
