@@ -177,6 +177,7 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 					addUniforms(arg, 'v');
 					//Assert(vsUniformData == nullptr); // todo : enable assert
 					vsUniformData = malloc(arg.bufferDataSize);
+					memset(vsUniformData, 0, arg.bufferDataSize);
 				}
 			}
 			
@@ -197,6 +198,7 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 					addUniforms(arg, 'p');
 					//Assert(psUniformData == nullptr); // todo : enable assert
 					psUniformData = malloc(arg.bufferDataSize);
+					memset(psUniformData, 0, arg.bufferDataSize);
 				}
 			}
 			

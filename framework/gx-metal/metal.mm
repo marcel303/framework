@@ -1521,7 +1521,8 @@ static void gxFlush(bool endOfBatch)
 				shader.setTextureUnit(shaderElem.psInfo.params[ShaderCacheElem::kSp_Texture].offset, 0);
 		}
 	
-		[s_activeRenderPass->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
+		if (shaderElem.psInfo.uniformBufferIndex != -1)
+			[s_activeRenderPass->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
 		
 		if (shader.isValid())
 		{
@@ -1867,7 +1868,8 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 
-	[s_activeRenderPass->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
+	if (shaderElem.psInfo.uniformBufferIndex != -1)
+		[s_activeRenderPass->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
 
 	if (shader.isValid())
 	{
