@@ -295,7 +295,18 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 				
 				sb.Append("\t// uniforms\n");
 				for (auto & u : uniforms)
-					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+				{
+					const char * array_start = strchr(u.name.c_str(), '[');
+					if (array_start != nullptr)
+					{
+						auto name = u.name.substr(0, array_start - u.name.c_str());
+						sb.AppendFormat("\tconstant %s * %s;\n", u.type.c_str(), name.c_str());
+					}
+					else
+					{
+						sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+					}
+				}
 				sb.Append("\t\n");
 				
 				sb.Append("\t// outputs\n");
@@ -354,10 +365,16 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 					sb.AppendFormat("\tm.%s = inputs.%s;\n", a.name.c_str(), a.name.c_str());
 				for (auto & u : uniforms)
 				{
-					if (strstr(u.name.c_str(), "skinningMatrices") != nullptr) // fixme : remove this hack! need some solution to assign arrays. for now disabled, since assignment like 'array[32] = inputs.array[32];' corrupts data
-						continue;
-					
-					sb.AppendFormat("\tm.%s = uniforms.%s;\n", u.name.c_str(), u.name.c_str());
+					const char * array_start = strchr(u.name.c_str(), '[');
+					if (array_start != nullptr)
+					{
+						auto name = u.name.substr(0, array_start - u.name.c_str());
+						sb.AppendFormat("\tm.%s = uniforms.%s;\n", name.c_str(), name.c_str());
+					}
+					else
+					{
+						sb.AppendFormat("\tm.%s = uniforms.%s;\n", u.name.c_str(), u.name.c_str());
+					}
 				}
 			}
 			sb.Append("\t\n");
