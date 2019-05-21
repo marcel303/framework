@@ -311,6 +311,8 @@ void metal_copy_texture_to_texture(id <MTLTexture> src, const int srcPitch, cons
 		
 		auto blit_cmdbuf = [queue commandBuffer];
 		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
+		
+		if (s_activeRenderPass != nullptr)
 		{
 		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
@@ -327,6 +329,11 @@ void metal_copy_texture_to_texture(id <MTLTexture> src, const int srcPitch, cons
 			[waitForDraw release];
 			[waitForBlit release];
 		}
+		else
+		{
+			[blit_encoder copyFromTexture:src sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+		}
+		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
 	}
@@ -338,6 +345,8 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 	{
 		auto blit_cmdbuf = [queue commandBuffer];
 		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
+		
+		if (s_activeRenderPass != nullptr)
 		{
 		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
@@ -354,6 +363,11 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 			[waitForDraw release];
 			[waitForBlit release];
 		}
+		else
+		{
+			[blit_encoder generateMipmapsForTexture:texture];
+		}
+		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
 	}

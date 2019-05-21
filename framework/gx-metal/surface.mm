@@ -114,50 +114,11 @@ void Surface::swapBuffers()
 	m_bufferId = (m_bufferId + 1) % 2;
 }
 
-static MTLPixelFormat translateSurfaceColorFormat(const SURFACE_FORMAT format)
-{
-	MTLPixelFormat metalFormat = MTLPixelFormatInvalid;
-
-	if (format == SURFACE_RGBA8)
-		metalFormat = MTLPixelFormatRGBA8Unorm;
-	if (format == SURFACE_RGBA16F)
-		metalFormat = MTLPixelFormatRGBA16Float;
-	if (format == SURFACE_RGBA32F)
-		metalFormat = MTLPixelFormatRGBA32Float;
-	if (format == SURFACE_R8)
-		metalFormat = MTLPixelFormatR8Unorm;
-	if (format == SURFACE_R16F)
-		metalFormat = MTLPixelFormatR16Float;
-	if (format == SURFACE_R32F)
-		metalFormat = MTLPixelFormatR32Float;
-	if (format == SURFACE_RG16F)
-		metalFormat = MTLPixelFormatRG16Float;
-	if (format == SURFACE_RG32F)
-		metalFormat = MTLPixelFormatRG32Float;
-	
-	return metalFormat;
-}
-
-static MTLPixelFormat translateSurfaceDepthFormat(const DEPTH_FORMAT format)
-{
-	MTLPixelFormat metalFormat = MTLPixelFormatInvalid;
-
-	if (format == DEPTH_FLOAT16)
-		metalFormat = MTLPixelFormatDepth16Unorm;
-	if (format == DEPTH_FLOAT32)
-		metalFormat = MTLPixelFormatDepth32Float;
-	
-	return metalFormat;
-}
-
 bool Surface::init(const SurfaceProperties & properties)
 {
 	fassert(m_colorTarget[0] == nullptr);
 	
 	m_properties = properties;
-	
-	// todo : honor if colorTarget enabled is false
-	// todo : honor depthTarget doubleBuffered flag
 	
 	const int sx = properties.dimensions.width  / framework.minification;
 	const int sy = properties.dimensions.height / framework.minification;
@@ -176,8 +137,8 @@ bool Surface::init(const SurfaceProperties & properties)
 	if (properties.colorTarget.enabled)
 	{
 		ColorTargetProperties targetProperties;
-		targetProperties.dimensions.width = properties.dimensions.width;
-		targetProperties.dimensions.height = properties.dimensions.height;
+		targetProperties.dimensions.width = backingSx;
+		targetProperties.dimensions.height = backingSy;
 		targetProperties.format = properties.colorTarget.format;
 		
 		for (int i = 0; result && i < (properties.colorTarget.doubleBuffered ? 2 : 1); ++i)
@@ -186,16 +147,6 @@ bool Surface::init(const SurfaceProperties & properties)
 			
 			m_colorTarget[i] = new ColorTarget();
 			result &= m_colorTarget[i]->init(targetProperties);
-			
-		#if TODO
-			// set filtering
-			
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			checkErrorGL();
-		#endif
 		}
 		
 		if (result && properties.colorTarget.doubleBuffered == false)
@@ -209,27 +160,14 @@ bool Surface::init(const SurfaceProperties & properties)
 	if (properties.depthTarget.enabled)
 	{
 		DepthTargetProperties targetProperties;
-		targetProperties.dimensions.width = properties.dimensions.width;
-		targetProperties.dimensions.height = properties.dimensions.height;
+		targetProperties.dimensions.width = backingSx;
+		targetProperties.dimensions.height = backingSy;
 		targetProperties.format = properties.depthTarget.format;
 		
 		for (int i = 0; result && i < (properties.depthTarget.doubleBuffered ? 2 : 1); ++i)
 		{
 			m_depthTarget[i] = new DepthTarget();
 			result &= m_depthTarget[i]->init(targetProperties);
-			
-			if (result == false)
-				continue;
-
-		#if TODO
-			// set filtering
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			checkErrorGL();
-		#endif
 		}
 		
 		if (result && properties.depthTarget.doubleBuffered == false)
