@@ -27,6 +27,9 @@
 
 #include <GL/glew.h>
 #include "framework.h"
+
+#if ENABLE_OPENGL
+
 #include "gx_texture.h"
 #include <algorithm>
 
@@ -480,3 +483,5 @@ void GxTexture::generateMipmaps()
 		checkErrorGL();
 	}
 }
+
+#endif

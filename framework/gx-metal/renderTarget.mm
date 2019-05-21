@@ -5,6 +5,14 @@ id <MTLDevice> metal_get_device();
 
 //
 
+ColorTarget::~ColorTarget()
+{
+	id <MTLTexture> colorTexture = (id <MTLTexture>)m_colorTexture;
+	[colorTexture release];
+	colorTexture = nullptr;
+	m_colorTexture = nullptr;
+}
+
 bool ColorTarget::init(const ColorTargetProperties & in_properties)
 {
 	bool result = true;
@@ -23,8 +31,8 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 		MTLTextureDescriptor * descriptor =
 			[MTLTextureDescriptor
 				texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
-				width:properties.width
-				height:properties.height
+				width:properties.dimensions.width
+				height:properties.dimensions.height
 				mipmapped:NO];
 
 		descriptor.resourceOptions = MTLResourceStorageModePrivate;
@@ -42,6 +50,14 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 
 
 //
+
+DepthTarget::~DepthTarget()
+{
+	id <MTLTexture> depthTexture = (id <MTLTexture>)m_depthTexture;
+	[depthTexture release];
+	depthTexture = nullptr;
+	m_depthTexture = nullptr;
+}
 
 bool DepthTarget::init(const DepthTargetProperties & in_properties)
 {
@@ -61,8 +77,8 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 		MTLTextureDescriptor * descriptor =
 			[MTLTextureDescriptor
 				texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
-				width:properties.width
-				height:properties.height
+				width:properties.dimensions.width
+				height:properties.dimensions.height
 				mipmapped:NO];
 
 		descriptor.resourceOptions = MTLResourceStorageModePrivate;

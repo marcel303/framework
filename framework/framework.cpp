@@ -1540,6 +1540,27 @@ int Framework::getCurrentBackingScale() const
 
 static void updateViewport(Surface * surface, SDL_Window * window)
 {
+#if ENABLE_METAL
+// todo : let Metal implementation handle viewport setting internally
+	if (surface != nullptr)
+	{
+		metal_set_viewport(
+			surface->getWidth() / framework.minification * surface->getBackingScale(),
+			surface->getHeight() / framework.minification * surface->getBackingScale());
+	}
+	else
+	{
+		int drawableSx;
+		int drawableSy;
+		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
+		
+		metal_set_viewport(
+			drawableSx,
+			drawableSy);
+	}
+#endif
+
+#if ENABLE_OPENGL
 	if (surface != nullptr)
 	{
 		glViewport(
@@ -1560,6 +1581,7 @@ static void updateViewport(Surface * surface, SDL_Window * window)
 			drawableSx,
 			drawableSy);
 	}
+#endif
 }
 
 void Framework::beginDraw(int r, int g, int b, int a, float depth)
@@ -1580,7 +1602,7 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 #endif
 
 #if ENABLE_METAL
-	metal_draw_begin(scale255(r), scale255(g), scale255(b), scale255(a)); // todo : add clear depth
+	metal_draw_begin(scale255(r), scale255(g), scale255(b), scale255(a), depth);
 #endif
 
 	applyTransform();
@@ -3442,6 +3464,14 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 			
 			gxSetTexture(m_texture->textures[cellIndex].id);
 			
+		#if 0
+			gxSetTextureSampler(
+				filter == FILTER_POINT ? GX_SAMPLE_NEAREST :
+				filter == FILTER_LINEAR ? GX_SAMPLE_LINEAR :
+				filter == FILTER_MIPMAP ? GX_SAMPLE_MIPMAP : GX_SAMPLE_NEAREST,
+				true);
+		#endif
+			
 		#if ENABLE_OPENGL // todo : add a common way to set filtering for textures
 			if (filter == FILTER_POINT)
 			{
@@ -5142,9 +5172,11 @@ Vec2 transformToScreen(const Vec3 & v, float & w)
 
 static void setSurface(Surface * surface)
 {
+#if ENABLE_OPENGL
 	const GLuint framebuffer = surface ? surface->getFramebuffer() : 0;
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 	checkErrorGL();
+#endif
 	
 	updateViewport(surface, globals.currentWindow->getWindow());
 	
@@ -5158,6 +5190,12 @@ void pushSurface(Surface * surface)
 	if (screenshotMode)
 		surface = s_screenshotSurfaceStack.stack[s_screenshotSurfaceStack.stackSize - 1];
 	
+	//
+	
+#if ENABLE_METAL
+	pushRenderPass(surface->getColorTarget(), surface->getDepthTarget(), false, "Surface");
+#endif
+
 	//
 
 	gxMatrixMode(GX_PROJECTION);
@@ -5184,7 +5222,11 @@ void pushSurface(Surface * surface)
 
 void popSurface()
 {
-#if defined(MACOS)
+#if ENABLE_METAL
+	popRenderPass();
+#endif
+
+#if ENABLE_OPENGL && defined(MACOS)
 // todo : remove this hack
 	// fix for driver issue where the results of drawing are possibly not yet flushed when accessing a surface texture,
 	// causing artefacts due to texel fetches returning inconsistent results

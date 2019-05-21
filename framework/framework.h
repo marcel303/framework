@@ -593,8 +593,25 @@ public:
 	} depthTarget;
 };
 
+#if ENABLE_METAL
+	class ColorTarget;
+	class DepthTarget;
+#endif
+
 class Surface
 {
+#if ENABLE_METAL
+	SurfaceProperties m_properties;
+	
+	int m_backingScale; // backing scale puts a multiplier on the physical size (in pixels) of the surface. it's like MSAA, but fully super-sampled. it's used t orender to retina screens, where the 'resolve' operation just copies pixels 1:1, where a resolve onto a non-retina screen would downsample the surface instead
+	
+	int m_bufferId;
+	
+	ColorTarget * m_colorTarget[2];
+	DepthTarget * m_depthTarget[2];
+#endif
+
+#if ENABLE_OPENGL
 	SurfaceProperties m_properties;
 	
 	int m_backingScale; // backing scale puts a multiplier on the physical size (in pixels) of the surface. it's like MSAA, but fully super-sampled. it's used t orender to retina screens, where the 'resolve' operation just copies pixels 1:1, where a resolve onto a non-retina screen would downsample the surface instead
@@ -603,7 +620,8 @@ class Surface
 	uint32_t m_buffer[2];
 	GxTextureId m_colorTexture[2];
 	GxTextureId m_depthTexture[2];
-	
+#endif
+
 	void construct();
 	void destruct();
 	
@@ -619,6 +637,10 @@ public:
 	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
 	void setSwizzle(int r, int g, int b, int a);
 	
+#if ENABLE_METAL
+	ColorTarget * getColorTarget();
+	DepthTarget * getDepthTarget();
+#endif
 	uint32_t getFramebuffer() const; // todo : make internally accessible only
 	GxTextureId getTexture() const;
 	bool hasDepthTexture() const;
