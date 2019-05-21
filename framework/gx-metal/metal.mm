@@ -52,13 +52,34 @@ static void gxEndDraw();
 
 //
 
-static id <MTLDevice> device;
+static id <MTLDevice> device = nullptr;
+
+static id <MTLCommandQueue> queue = nullptr;
 
 static std::map<SDL_Window*, MetalWindowData*> windowDatas;
 
 MetalWindowData * activeWindowData = nullptr;
 
 static std::vector<id <MTLResource>> s_resourcesToFree;
+
+//
+
+struct RenderPassData
+{
+	id <MTLCommandBuffer> cmdbuf;
+	
+	MTLRenderPassDescriptor * renderdesc = nullptr;
+	
+	id <MTLRenderCommandEncoder> encoder;
+	
+	RenderPipelineState::RenderPass renderPass;
+};
+
+static std::vector<RenderPassData> s_renderPasses;
+
+static RenderPassData * s_activeRenderPass = nullptr;
+
+//
 
 extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
 
@@ -78,6 +99,8 @@ static void freeResourcesToFree()
 void metal_init()
 {
 	device = MTLCreateSystemDefaultDevice();
+	
+	queue = [device newCommandQueue];
 }
 
 void metal_attach(SDL_Window * window)
@@ -94,11 +117,6 @@ void metal_attach(SDL_Window * window)
 		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:YES];
 		[sdl_view addSubview:windowData->metalview];
 
-		windowData->renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
-		[windowData->renderdesc retain];
-		
-		windowData->queue = [windowData->metalview.metalLayer.device newCommandQueue];
-		
 		windowDatas[window] = windowData;
 	}
 }
@@ -114,33 +132,55 @@ void metal_make_active(SDL_Window * window)
 		activeWindowData = i->second;
 }
 
-void metal_draw_begin(const float r, const float g, const float b, const float a)
+void metal_draw_begin(const float r, const float g, const float b, const float a, const float depth)
 {
 	@autoreleasepool
 	{
-		activeWindowData->cmdbuf = [[activeWindowData->queue commandBuffer] retain];
+		RenderPassData pd;
+		
+		pd.cmdbuf = [[queue commandBuffer] retain];
 		
 		activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
 		[activeWindowData->current_drawable retain];
 		
-		MTLRenderPassColorAttachmentDescriptor * colorattachment = activeWindowData->renderdesc.colorAttachments[0];
+		pd.renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
+		[pd.renderdesc retain];
+		
+		// specify the color and depth attachment(s)
+		
+		MTLRenderPassColorAttachmentDescriptor * colorattachment = pd.renderdesc.colorAttachments[0];
 		colorattachment.texture = activeWindowData->current_drawable.texture;
 		
-		/* Clear to a red-orange color when beginning the render pass. */
 		colorattachment.clearColor  = MTLClearColorMake(r, g, b, a);
 		colorattachment.loadAction  = MTLLoadActionClear;
 		colorattachment.storeAction = MTLStoreActionStore;
 		
-		MTLRenderPassDepthAttachmentDescriptor * depthattachment = activeWindowData->renderdesc.depthAttachment;
-		depthattachment.texture = activeWindowData->metalview.depthTexture;
-		depthattachment.clearDepth = 1.0;
-		depthattachment.loadAction = MTLLoadActionClear;
-		depthattachment.storeAction = MTLStoreActionDontCare;
+		pd.renderPass.colorFormat[0] = colorattachment.texture.pixelFormat;
 
-		/* The drawable's texture is cleared to the specified color here. */
-		activeWindowData->encoder = [[activeWindowData->cmdbuf renderCommandEncoderWithDescriptor:activeWindowData->renderdesc] retain];
-		activeWindowData->encoder.label = @"hello encoder";
+		if (activeWindowData->metalview.depthTexture != nullptr)
+		{
+			MTLRenderPassDepthAttachmentDescriptor * depthattachment = pd.renderdesc.depthAttachment;
+			depthattachment.texture = activeWindowData->metalview.depthTexture;
+			depthattachment.clearDepth = depth;
+			depthattachment.loadAction = MTLLoadActionClear;
+			depthattachment.storeAction = MTLStoreActionDontCare;
+			
+			pd.renderPass.depthFormat = depthattachment.texture.pixelFormat;
+		}
 		
+		// begin encoding
+		
+		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
+		pd.encoder.label = @"hello encoder";
+		
+		s_renderPasses.push_back(pd);
+		
+		s_activeRenderPass = &s_renderPasses.back();
+		
+		renderState.renderPass = s_activeRenderPass->renderPass;
+
+		// set viewport
+
 		const CGSize size = activeWindowData->metalview.frame.size;
 		metal_set_viewport(size.width, size.height);
 	}
@@ -150,16 +190,18 @@ void metal_draw_end()
 {
 	gxEndDraw();
 	
-	[activeWindowData->encoder endEncoding];
+	auto & pd = s_renderPasses.back();
 	
-	[activeWindowData->cmdbuf addCompletedHandler:
+	[pd.encoder endEncoding];
+	
+	[pd.cmdbuf addCompletedHandler:
 		^(id<MTLCommandBuffer> _Nonnull)
 		{
 			//NSLog(@"hello done! %@", activeWindowData);
 		}];
 
-	[activeWindowData->cmdbuf presentDrawable:activeWindowData->current_drawable];
-	[activeWindowData->cmdbuf commit];
+	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
+	[pd.cmdbuf commit];
 	
 // todo : remove and use addCompletedHandler instead
 	//[activeWindowData->cmdbuf waitUntilCompleted];
@@ -167,35 +209,51 @@ void metal_draw_end()
 	
 	//
 	
-	[activeWindowData->encoder release];
-	[activeWindowData->current_drawable release];
-	[activeWindowData->cmdbuf release];
+	[pd.encoder release];
+	[pd.cmdbuf release];
 	
-	activeWindowData->encoder = nullptr;
+	pd.encoder = nullptr;
+	pd.cmdbuf = nullptr;
+	
+	[activeWindowData->current_drawable release];
 	activeWindowData->current_drawable = nullptr;
-	activeWindowData->cmdbuf = nullptr;
+	
+	s_renderPasses.pop_back();
+	
+	if (s_renderPasses.empty())
+	{
+		s_activeRenderPass = nullptr;
+		
+		renderState.renderPass = RenderPipelineState::RenderPass();
+	}
+	else
+	{
+		s_activeRenderPass = &s_renderPasses.back();
+		
+		renderState.renderPass = s_activeRenderPass->renderPass;
+	}
 }
 
 void metal_set_viewport(const int sx, const int sy)
 {
-	[activeWindowData->encoder setViewport:(MTLViewport){ 0, 0, (double)sx, (double)sy, 0.0, 1.0 }];
+	[s_activeRenderPass->encoder setViewport:(MTLViewport){ 0, 0, (double)sx, (double)sy, 0.0, 1.0 }];
 }
 
 void metal_set_scissor(const int x, const int y, const int sx, const int sy)
 {
 	const MTLScissorRect rect = { (NSUInteger)x, (NSUInteger)y, (NSUInteger)sx, (NSUInteger)sy };
 	
-	[activeWindowData->encoder setScissorRect:rect];
+	[s_activeRenderPass->encoder setScissorRect:rect];
 }
 
 void metal_clear_scissor()
 {
-	const NSUInteger sx = activeWindowData->renderdesc.colorAttachments[0].texture.width;
-	const NSUInteger sy = activeWindowData->renderdesc.colorAttachments[0].texture.height;
+	const NSUInteger sx = s_activeRenderPass->renderdesc.colorAttachments[0].texture.width;
+	const NSUInteger sy = s_activeRenderPass->renderdesc.colorAttachments[0].texture.height;
 	
 	const MTLScissorRect rect = { 0, 0, sx, sy };
 	
-	[activeWindowData->encoder setScissorRect:rect];
+	[s_activeRenderPass->encoder setScissorRect:rect];
 }
 
 id <MTLDevice> metal_get_device()
@@ -215,20 +273,20 @@ void metal_upload_texture_area(const void * src, const int srcPitch, const int s
 		const MTLSize src_size = { (NSUInteger)srcSx, (NSUInteger)srcSy, 1 };
 		const MTLOrigin dst_origin = { (NSUInteger)dstX, (NSUInteger)dstY, 0 };
 		
-		auto blit_cmdbuf = [activeWindowData->queue commandBuffer];
+		auto blit_cmdbuf = [queue commandBuffer];
 		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
 		{
 		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
 			id <MTLFence> waitForBlit = [device newFence];
 			
-			[activeWindowData->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
+			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
 			{
 				[blit_encoder waitForFence:waitForDraw];
 				[blit_encoder copyFromTexture:src_texture sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
 				[blit_encoder updateFence:waitForBlit];
 			}
-			[activeWindowData->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
+			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
 			
 			[waitForDraw release];
 			[waitForBlit release];
@@ -248,20 +306,20 @@ void metal_copy_texture_to_texture(id <MTLTexture> src, const int srcPitch, cons
 		const MTLSize src_size = { (NSUInteger)srcSx, (NSUInteger)srcSy, 1 };
 		const MTLOrigin dst_origin = { (NSUInteger)dstX, (NSUInteger)dstY, 0 };
 		
-		auto blit_cmdbuf = [activeWindowData->queue commandBuffer];
+		auto blit_cmdbuf = [queue commandBuffer];
 		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
 		{
 		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
 			id <MTLFence> waitForBlit = [device newFence];
 			
-			[activeWindowData->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
+			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
 			{
 				[blit_encoder waitForFence:waitForDraw];
 				[blit_encoder copyFromTexture:src sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
 				[blit_encoder updateFence:waitForBlit];
 			}
-			[activeWindowData->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
+			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
 			
 			[waitForDraw release];
 			[waitForBlit release];
@@ -275,20 +333,20 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 {
 	@autoreleasepool
 	{
-		auto blit_cmdbuf = [activeWindowData->queue commandBuffer];
+		auto blit_cmdbuf = [queue commandBuffer];
 		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
 		{
 		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
 			id <MTLFence> waitForBlit = [device newFence];
 			
-			[activeWindowData->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
+			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
 			{
 				[blit_encoder waitForFence:waitForDraw];
 				[blit_encoder generateMipmapsForTexture:texture];
 				[blit_encoder updateFence:waitForBlit];
 			}
-			[activeWindowData->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
+			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
 			
 			[waitForDraw release];
 			[waitForBlit release];
@@ -314,66 +372,85 @@ static bool s_depthTestEnabled = false;
 static DEPTH_TEST s_depthTest = DEPTH_ALWAYS;
 static bool s_depthWriteEnabled = false;
 
-//#include "renderTarget.h"
+#include "renderTarget.h"
 
-struct RenderPassData
+void pushRenderPass(ColorTarget * target, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
 {
-	id <MTLCommandBuffer> cmdbuf;
-	
-	MTLRenderPassDescriptor * renderdesc = nullptr;
-	
-	id <MTLRenderCommandEncoder> encoder;
-};
-
-std::vector<RenderPassData> s_renderPasses;
-
-#if TODO // todo : implement render passes
-
-void pushRenderPass(ColorTarget * target, DepthTarget * depthTarget, const bool clearDepth)
-{
-	pushRenderPass(&target, target == nullptr ? 0 : 1, depthTarget, clearDepth);
+	pushRenderPass(&target, target == nullptr ? 0 : 1, depthTarget, clearDepth, passName);
 }
 
-void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * depthTarget, const bool clearDepth)
+void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
 {
+	Assert(numTargets >= 0 && numTargets <= 4);
+	
 	RenderPassData pd;
 	
 	@autoreleasepool
 	{
-		pd.cmdbuf = [[activeWindowData->queue commandBuffer] retain];
+		pd.cmdbuf = [[queue commandBuffer] retain];
 
 	 	pd.renderdesc = [[MTLRenderPassDescriptor renderPassDescriptor] retain];
 		
+		int viewportSx = 0;
+		int viewportSy = 0;
+		
+		// specify the color and depth attachment(s)
+		
 		for (int i = 0; i < numTargets; ++i)
 		{
-			MTLRenderPassColorAttachmentDescriptor * colorattachment = activeWindowData->renderdesc.colorAttachments[i];
+			MTLRenderPassColorAttachmentDescriptor * colorattachment = pd.renderdesc.colorAttachments[i];
 			colorattachment.texture = (id <MTLTexture>)targets[i]->getMetalTexture();
 			
+			const Color & clearColor = targets[i]->getClearColor();
+			
 			colorattachment.clearColor  = MTLClearColorMake(
-				targets[i]->clearColor.r,
-				targets[i]->clearColor.g,
-				targets[i]->clearColor.b,
-				targets[i]->clearColor.a);
+				clearColor.r,
+				clearColor.g,
+				clearColor.b,
+				clearColor.a);
 			colorattachment.loadAction  = MTLLoadActionClear;
 			colorattachment.storeAction = MTLStoreActionStore;
+			
+			pd.renderPass.colorFormat[i] = colorattachment.texture.pixelFormat;
+			
+			if (colorattachment.texture.width > viewportSx)
+				viewportSx = colorattachment.texture.width;
+			if (colorattachment.texture.height > viewportSy)
+				viewportSy = colorattachment.texture.height;
 		}
-	
+		
 		if (depthTarget != nullptr)
 		{
 			MTLRenderPassDepthAttachmentDescriptor * depthattachment = pd.renderdesc.depthAttachment;
-			depthattachment.texture = (id <MTLTexture>)depthTarget->m_depthTexture;
-			depthattachment.clearDepth = depthTarget->clearDepth;
+			depthattachment.texture = (id <MTLTexture>)depthTarget->getMetalTexture();
+			depthattachment.clearDepth = depthTarget->getClearDepth();
 			depthattachment.loadAction = MTLLoadActionClear;
 			depthattachment.storeAction = MTLStoreActionDontCare;
+			
+			pd.renderPass.depthFormat = depthattachment.texture.pixelFormat;
+			
+			if (depthattachment.texture.width > viewportSx)
+				viewportSx = depthattachment.texture.width;
+			if (depthattachment.texture.height > viewportSy)
+				viewportSy = depthattachment.texture.height;
 		}
-
-		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
-		pd.encoder.label = @"hello encoder";
 		
-		// todo : set viewport
-		// todo : set blend mode
+		// begin encoding
+		
+		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
+		pd.encoder.label = [NSString stringWithCString:passName encoding:NSASCIIStringEncoding];
 		
 		s_renderPasses.push_back(pd);
+		
+		renderState.renderPass = pd.renderPass;
+		
+		s_activeRenderPass = &s_renderPasses.back();
+		
+		// set viewport
+		
+		metal_set_viewport(viewportSx, viewportSy);
+		
+		// todo : set blend mode
 	}
 }
 
@@ -391,9 +468,20 @@ void popRenderPass()
 	[pd.cmdbuf release];
 	
 	s_renderPasses.pop_back();
+	
+	if (s_renderPasses.empty())
+	{
+		s_activeRenderPass = nullptr;
+		
+		renderState.renderPass = RenderPipelineState::RenderPass();
+	}
+	else
+	{
+		s_activeRenderPass = &s_renderPasses.back();
+		
+		renderState.renderPass = s_activeRenderPass->renderPass;
+	}
 }
-
-#endif
 
 void setBlend(BLEND_MODE blendMode)
 {
@@ -435,7 +523,7 @@ void popLineSmooth()
 
 void setWireframe(bool enabled)
 {
-	[activeWindowData->encoder setTriangleFillMode:enabled ? MTLTriangleFillModeLines : MTLTriangleFillModeFill];
+	[s_activeRenderPass->encoder setTriangleFillMode:enabled ? MTLTriangleFillModeLines : MTLTriangleFillModeFill];
 }
 
 void pushWireframe(bool enabled)
@@ -496,7 +584,7 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	
 	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
 	
-	[activeWindowData->encoder setDepthStencilState:state];
+	[s_activeRenderPass->encoder setDepthStencilState:state];
 	
 	[state release];
 	state = nullptr;
@@ -543,13 +631,13 @@ void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 		mode == CULL_FRONT ? MTLCullModeFront :
 		MTLCullModeBack;
 	
-	[activeWindowData->encoder setCullMode:metalCullMode];
+	[s_activeRenderPass->encoder setCullMode:metalCullMode];
 	
 	const MTLWinding metalFrontFaceWinding =
 		frontFaceWinding == CULL_CCW ? MTLWindingCounterClockwise :
 		MTLWindingClockwise;
 	
-	[activeWindowData->encoder setFrontFacingWinding:metalFrontFaceWinding];
+	[s_activeRenderPass->encoder setFrontFacingWinding:metalFrontFaceWinding];
 }
 
 void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
@@ -854,7 +942,7 @@ void gxValidateMatrices()
 				//printf("validate4\n");
 			}
 			
-			[activeWindowData->encoder setVertexBytes:data length:shaderElem.vsInfo.uniformBufferSize atIndex:shaderElem.vsInfo.uniformBufferIndex];
+			[s_activeRenderPass->encoder setVertexBytes:data length:shaderElem.vsInfo.uniformBufferSize atIndex:shaderElem.vsInfo.uniformBufferIndex];
 		}
 	}
 
@@ -1098,115 +1186,123 @@ static void gxValidatePipelineState()
 			pipelineDescriptor.fragmentFunction = ps;
 			pipelineDescriptor.vertexDescriptor = vertexDescriptor;
 			
-			pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-			
-			auto * att = pipelineDescriptor.colorAttachments[0];
-			
-			// blend state
-			
-			switch (renderState.blendMode)
+			for (int i = 0; i < 4; ++i)
 			{
-			case BLEND_OPAQUE:
-				att.blendingEnabled = false;
-				break;
-			case BLEND_ALPHA:
-				att.blendingEnabled = true;
-				att.rgbBlendOperation = MTLBlendOperationAdd;
-				att.alphaBlendOperation = MTLBlendOperationAdd;
-				att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-				att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
-				att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-				att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-				break;
-			case BLEND_PREMULTIPLIED_ALPHA:
-				att.blendingEnabled = true;
-				att.rgbBlendOperation = MTLBlendOperationAdd;
-				att.alphaBlendOperation = MTLBlendOperationAdd;
-				att.sourceRGBBlendFactor = MTLBlendFactorOne;
-				att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-				att.destinationRGBBlendFactor = MTLBlendFactorOne;
-				att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-				break;
-			case BLEND_PREMULTIPLIED_ALPHA_DRAW:
-			// todo : remove ?
-				att.blendingEnabled = true;
-				att.rgbBlendOperation = MTLBlendOperationAdd;
-				att.alphaBlendOperation = MTLBlendOperationAdd;
-				att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-				att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-				att.destinationRGBBlendFactor = MTLBlendFactorOne;
-				att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-				break;
-			case BLEND_ADD:
-				att.blendingEnabled = true;
-				att.rgbBlendOperation = MTLBlendOperationAdd;
-				att.alphaBlendOperation = MTLBlendOperationAdd;
-				att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-				att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
-				att.destinationRGBBlendFactor = MTLBlendFactorOne;
-				att.destinationAlphaBlendFactor = MTLBlendFactorOne;
-				break;
-			case BLEND_ADD_OPAQUE:
-				att.blendingEnabled = true;
-				att.rgbBlendOperation = MTLBlendOperationAdd;
-				att.alphaBlendOperation = MTLBlendOperationAdd;
-				att.sourceRGBBlendFactor = MTLBlendFactorOne;
-				att.sourceAlphaBlendFactor = MTLBlendFactorOne;
-				att.destinationRGBBlendFactor = MTLBlendFactorOne;
-				att.destinationAlphaBlendFactor = MTLBlendFactorOne;
-				break;
-			case BLEND_SUBTRACT:
-				att.blendingEnabled = true;
-				att.rgbBlendOperation = MTLBlendOperationReverseSubtract;
-				att.alphaBlendOperation = MTLBlendOperationReverseSubtract;
-				att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-				att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
-				att.destinationRGBBlendFactor = MTLBlendFactorOne;
-				att.destinationAlphaBlendFactor = MTLBlendFactorOne;
-				break;
-			case BLEND_INVERT:
-				att.blendingEnabled = true;
-				att.rgbBlendOperation = MTLBlendOperationAdd;
-				att.alphaBlendOperation = MTLBlendOperationAdd;
-				att.sourceRGBBlendFactor = MTLBlendFactorOneMinusDestinationColor;
-				att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusDestinationAlpha;
-				att.destinationRGBBlendFactor = MTLBlendFactorZero;
-				att.destinationAlphaBlendFactor = MTLBlendFactorZero;
-				break;
-			case BLEND_MUL:
-				att.blendingEnabled = true;
-				att.rgbBlendOperation = MTLBlendOperationAdd;
-				att.alphaBlendOperation = MTLBlendOperationAdd;
-				att.sourceRGBBlendFactor = MTLBlendFactorZero;
-				att.sourceAlphaBlendFactor = MTLBlendFactorZero;
-				att.destinationRGBBlendFactor = MTLBlendFactorSourceColor;
-				att.destinationAlphaBlendFactor = MTLBlendFactorSourceAlpha;
-				break;
-			case BLEND_MIN:
-				att.blendingEnabled = true;
-				att.rgbBlendOperation = MTLBlendOperationMin;
-				att.alphaBlendOperation = MTLBlendOperationMin;
-				att.sourceRGBBlendFactor = MTLBlendFactorOne;
-				att.sourceAlphaBlendFactor = MTLBlendFactorOne;
-				att.destinationRGBBlendFactor = MTLBlendFactorOne;
-				att.destinationAlphaBlendFactor = MTLBlendFactorOne;
-				break;
-			case BLEND_MAX:
-				att.blendingEnabled = true;
-				att.rgbBlendOperation = MTLBlendOperationMax;
-				att.alphaBlendOperation = MTLBlendOperationMax;
-				att.sourceRGBBlendFactor = MTLBlendFactorOne;
-				att.sourceAlphaBlendFactor = MTLBlendFactorOne;
-				att.destinationRGBBlendFactor = MTLBlendFactorOne;
-				att.destinationAlphaBlendFactor = MTLBlendFactorOne;
-				break;
-			default:
-				fassert(false);
-				break;
+				if (renderState.renderPass.colorFormat[i] == 0)
+					continue;
+				
+				auto * att = pipelineDescriptor.colorAttachments[i];
+
+				att.pixelFormat = (MTLPixelFormat)renderState.renderPass.colorFormat[i];
+
+				// blend state
+				
+				switch (renderState.blendMode)
+				{
+				case BLEND_OPAQUE:
+					att.blendingEnabled = false;
+					break;
+				case BLEND_ALPHA:
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationAdd;
+					att.alphaBlendOperation = MTLBlendOperationAdd;
+					att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+					att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+					att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+					break;
+				case BLEND_PREMULTIPLIED_ALPHA:
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationAdd;
+					att.alphaBlendOperation = MTLBlendOperationAdd;
+					att.sourceRGBBlendFactor = MTLBlendFactorOne;
+					att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+					att.destinationRGBBlendFactor = MTLBlendFactorOne;
+					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+					break;
+				case BLEND_PREMULTIPLIED_ALPHA_DRAW:
+				// todo : remove ?
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationAdd;
+					att.alphaBlendOperation = MTLBlendOperationAdd;
+					att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+					att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+					att.destinationRGBBlendFactor = MTLBlendFactorOne;
+					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+					break;
+				case BLEND_ADD:
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationAdd;
+					att.alphaBlendOperation = MTLBlendOperationAdd;
+					att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+					att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+					att.destinationRGBBlendFactor = MTLBlendFactorOne;
+					att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+					break;
+				case BLEND_ADD_OPAQUE:
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationAdd;
+					att.alphaBlendOperation = MTLBlendOperationAdd;
+					att.sourceRGBBlendFactor = MTLBlendFactorOne;
+					att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+					att.destinationRGBBlendFactor = MTLBlendFactorOne;
+					att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+					break;
+				case BLEND_SUBTRACT:
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationReverseSubtract;
+					att.alphaBlendOperation = MTLBlendOperationReverseSubtract;
+					att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
+					att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+					att.destinationRGBBlendFactor = MTLBlendFactorOne;
+					att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+					break;
+				case BLEND_INVERT:
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationAdd;
+					att.alphaBlendOperation = MTLBlendOperationAdd;
+					att.sourceRGBBlendFactor = MTLBlendFactorOneMinusDestinationColor;
+					att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusDestinationAlpha;
+					att.destinationRGBBlendFactor = MTLBlendFactorZero;
+					att.destinationAlphaBlendFactor = MTLBlendFactorZero;
+					break;
+				case BLEND_MUL:
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationAdd;
+					att.alphaBlendOperation = MTLBlendOperationAdd;
+					att.sourceRGBBlendFactor = MTLBlendFactorZero;
+					att.sourceAlphaBlendFactor = MTLBlendFactorZero;
+					att.destinationRGBBlendFactor = MTLBlendFactorSourceColor;
+					att.destinationAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+					break;
+				case BLEND_MIN:
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationMin;
+					att.alphaBlendOperation = MTLBlendOperationMin;
+					att.sourceRGBBlendFactor = MTLBlendFactorOne;
+					att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+					att.destinationRGBBlendFactor = MTLBlendFactorOne;
+					att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+					break;
+				case BLEND_MAX:
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationMax;
+					att.alphaBlendOperation = MTLBlendOperationMax;
+					att.sourceRGBBlendFactor = MTLBlendFactorOne;
+					att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+					att.destinationRGBBlendFactor = MTLBlendFactorOne;
+					att.destinationAlphaBlendFactor = MTLBlendFactorOne;
+					break;
+				default:
+					fassert(false);
+					break;
+				}
 			}
 			
-			pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatDepth32Float;
-			//pipelineDescriptor.depthAttachmentPixelFormat = MTLPixelFormatInvalid;
+			if (renderState.renderPass.depthFormat != 0)
+			{
+				pipelineDescriptor.depthAttachmentPixelFormat = (MTLPixelFormat)renderState.renderPass.depthFormat;
+			}
 
 			NSError * error;
 			pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor error:&error];
@@ -1223,7 +1319,7 @@ static void gxValidatePipelineState()
 	{
 		s_currentRenderPipelineState = pipelineState;
 		
-		[activeWindowData->encoder setRenderPipelineState:pipelineState];
+		[s_activeRenderPass->encoder setRenderPipelineState:pipelineState];
 	}
 }
 
@@ -1242,7 +1338,7 @@ static void gxFlush(bool endOfBatch)
 		if (vertexDataSize <= 4096)
 		{
 			// optimize using setVertexBytes when the draw call is small
-			[activeWindowData->encoder setVertexBytes:s_gxVertices length:vertexDataSize atIndex:0];
+			[s_activeRenderPass->encoder setVertexBytes:s_gxVertices length:vertexDataSize atIndex:0];
 		}
 		else
 		{
@@ -1256,8 +1352,8 @@ static void gxFlush(bool endOfBatch)
 				if (s_gxVertexBufferElem != nullptr)
 				{
 					auto * elem = s_gxVertexBufferElem;
-					[activeWindowData->cmdbuf setLabel:@"GxBufferPool Release (gxFlush)"];
-					[activeWindowData->cmdbuf addCompletedHandler:
+					[s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxFlush)"];
+					[s_activeRenderPass->cmdbuf addCompletedHandler:
 						^(id<MTLCommandBuffer> _Nonnull)
 						{
 							s_gxVertexBufferPool.freeBuffer(elem);
@@ -1269,7 +1365,7 @@ static void gxFlush(bool endOfBatch)
 			}
 			
 			memcpy((uint8_t*)s_gxVertexBufferElem->m_buffer.contents + s_gxVertexBufferElemOffset, s_gxVertices, vertexDataSize);
-			[activeWindowData->encoder setVertexBuffer:s_gxVertexBufferElem->m_buffer offset:s_gxVertexBufferElemOffset atIndex:0];
+			[s_activeRenderPass->encoder setVertexBuffer:s_gxVertexBufferElem->m_buffer offset:s_gxVertexBufferElemOffset atIndex:0];
 			
 			s_gxVertexBufferElemOffset += vertexDataSize;
 		}
@@ -1395,7 +1491,7 @@ static void gxFlush(bool endOfBatch)
 				shader.setTextureUnit(shaderElem.psInfo.params[ShaderCacheElem::kSp_Texture].offset, 0);
 		}
 	
-		[activeWindowData->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
+		[s_activeRenderPass->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
 		
 		if (shader.isValid())
 		{
@@ -1405,11 +1501,11 @@ static void gxFlush(bool endOfBatch)
 			{
 				id <MTLBuffer> buffer = (id <MTLBuffer>)s_gxIndexBuffer.getMetalBuffer();
 				
-				[activeWindowData->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:buffer indexBufferOffset:0];
+				[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:buffer indexBufferOffset:0];
 			}
 			else
 			{
-				[activeWindowData->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numElements];
+				[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numElements];
 			}
 		}
 		else
@@ -1513,8 +1609,8 @@ static void gxEndDraw()
 	if (s_gxVertexBufferElem != nullptr)
 	{
 		auto * elem = s_gxVertexBufferElem;
-		[activeWindowData->cmdbuf setLabel:@"GxBufferPool Release (gxEndDraw)"];
-		[activeWindowData->cmdbuf addCompletedHandler:
+		[s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxEndDraw)"];
+		[s_activeRenderPass->cmdbuf addCompletedHandler:
 			^(id<MTLCommandBuffer> _Nonnull)
 			{
 				s_gxVertexBufferPool.freeBuffer(elem);
@@ -1526,11 +1622,11 @@ static void gxEndDraw()
 	
 	// clear textures to avoid freed textures from being reused (prefer to crash instead)
 	
-	[activeWindowData->cmdbuf setLabel:@"Clear textures (gxEndDraw)"];
+	[s_activeRenderPass->cmdbuf setLabel:@"Clear textures (gxEndDraw)"];
 	for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
-		[activeWindowData->encoder setVertexTexture:nullptr atIndex:i];
+		[s_activeRenderPass->encoder setVertexTexture:nullptr atIndex:i];
 	for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
-		[activeWindowData->encoder setFragmentTexture:nullptr atIndex:i];
+		[s_activeRenderPass->encoder setFragmentTexture:nullptr atIndex:i];
 	
 	// reset the current pipeline state, to ensure we set it again when recording the next command buffer
 	
@@ -1722,7 +1818,7 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 	bindVsInputs(vsInputs, numVsInputs, vsStride);
 	
 	id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
-	[activeWindowData->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
+	[s_activeRenderPass->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
 }
 
 //
@@ -1741,7 +1837,7 @@ void gxValidateShaderResources()
 		if (i != s_textures.end())
 		{
 			auto & texture = i->second;
-			[activeWindowData->encoder setFragmentTexture:texture atIndex:0];
+			[s_activeRenderPass->encoder setFragmentTexture:texture atIndex:0];
 			
 		#if 0 // todo : add sampler state cache and implement gxSetTextureSampler
 			@autoreleasepool
@@ -1759,7 +1855,7 @@ void gxValidateShaderResources()
 				descriptor.sAddressMode = MTLSamplerAddressModeClampToEdge;
 				descriptor.tAddressMode = MTLSamplerAddressModeClampToEdge;
 				auto samplerState = [[device newSamplerStateWithDescriptor:descriptor] autorelease];
-				[activeWindowData->encoder setFragmentSamplerState:samplerState atIndex:0];
+				[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
 			}
 		#endif
 		}
@@ -1771,11 +1867,11 @@ void gxValidateShaderResources()
 		
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
 			if (cacheElem.vsTextures[i] != nullptr)
-				[activeWindowData->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
+				[s_activeRenderPass->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
 		
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
 			if (cacheElem.psTextures[i] != nullptr)
-				[activeWindowData->encoder setFragmentTexture:cacheElem.psTextures[i] atIndex:i];
+				[s_activeRenderPass->encoder setFragmentTexture:cacheElem.psTextures[i] atIndex:i];
 	}
 }
 

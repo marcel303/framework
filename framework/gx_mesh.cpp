@@ -27,6 +27,8 @@
 
 #include "gx_mesh.h"
 
+#if 0 // todo : implement Metal GxMesh
+
 GxMesh::GxMesh()
 {
 }
@@ -64,3 +66,5 @@ void GxMesh::draw() const
 		Assert(false); // not implemented yet
 	}
 }
+
+#endif
