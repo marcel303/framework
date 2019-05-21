@@ -1,73 +1,6 @@
 #import "shaderBuilder.h"
-#import <Metal/Metal.h>
 
-id <MTLDevice> metal_get_device();
-
-static const char * s_testShaderPs = R"SHADER(
-
-	#include <metal_stdlib>
-
-	using namespace metal;
-
-	struct ShaderInputs
-	{
-		float4 position [[attribute(0)]];
-		float4 color [[attribute(1)]];
-		float2 texcoord [[attribute(2)]];
-	};
-
-	struct ShaderUniforms
-	{
-		float4 params;
-	};
-
-	struct ShaderTextures
-	{
-		texture2d<float> texture [[texture(0)]];
-	};
-
-	class ShaderMain
-	{
-	public:
-		ShaderInputs inputs;
-		ShaderUniforms uniforms;
-
-		texture2d<float> textureResource;
-		
-		ShaderTextures textures;
-		
-		float4 member;
-		
-		float4 main()
-		{
-			float4 color = inputs.color;
-			
-			if (uniforms.params.x != 0.0)
-			{
-				constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
-				
-				color *= textures.texture.sample(textureSampler, inputs.texcoord);
-			}
-			
-			return color;
-		}
-	};
-
-	fragment float4 shader_main(
-		ShaderInputs inputs [[stage_in]],
-		constant ShaderUniforms & uniforms [[buffer(0)]],
-		ShaderTextures textures)
-	{
-		ShaderMain m;
-		
-		m.inputs = inputs;
-		m.uniforms = uniforms;
-		m.textures = textures;
-		
-		return m.main();
-	}
-	
-)SHADER";
+// todo : should be .cpp file
 
 #include "StringBuilder.h"
 #include "StringEx.h"
@@ -334,6 +267,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			sb.Append("\n");
 			
 			sb.Append("#undef texture\n");
+			sb.Append("\n");
 			
 			sb.Append("struct ShaderInputs\n");
 			sb.Append("{\n");
@@ -430,6 +364,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			sb.Append("\n");
 			
 			sb.Append("#undef texture\n");
+			sb.Append("\n");
 			
 			sb.Append("struct ShaderVaryings\n");
 			sb.Append("{\n");
@@ -501,7 +436,76 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 
 //
 
-#include "shaderPreprocess.h"
+#import "shaderPreprocess.h"
+#import <Metal/Metal.h>
+
+id <MTLDevice> metal_get_device();
+
+static const char * s_testShaderPs = R"SHADER(
+
+	#include <metal_stdlib>
+
+	using namespace metal;
+
+	struct ShaderInputs
+	{
+		float4 position [[attribute(0)]];
+		float4 color [[attribute(1)]];
+		float2 texcoord [[attribute(2)]];
+	};
+
+	struct ShaderUniforms
+	{
+		float4 params;
+	};
+
+	struct ShaderTextures
+	{
+		texture2d<float> texture [[texture(0)]];
+	};
+
+	class ShaderMain
+	{
+	public:
+		ShaderInputs inputs;
+		ShaderUniforms uniforms;
+
+		texture2d<float> textureResource;
+		
+		ShaderTextures textures;
+		
+		float4 member;
+		
+		float4 main()
+		{
+			float4 color = inputs.color;
+			
+			if (uniforms.params.x != 0.0)
+			{
+				constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
+				
+				color *= textures.texture.sample(textureSampler, inputs.texcoord);
+			}
+			
+			return color;
+		}
+	};
+
+	fragment float4 shader_main(
+		ShaderInputs inputs [[stage_in]],
+		constant ShaderUniforms & uniforms [[buffer(0)]],
+		ShaderTextures textures)
+	{
+		ShaderMain m;
+		
+		m.inputs = inputs;
+		m.uniforms = uniforms;
+		m.textures = textures;
+		
+		return m.main();
+	}
+
+)SHADER";
 
 void metal_shadertest()
 {

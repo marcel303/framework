@@ -195,11 +195,11 @@ void metal_draw_end()
 	
 	//
 	
-	//NSLog(@"encoder release, retain count: %lu", [activeWindowData->encoder retainCount]);
+	//NSLog(@"encoder release, retain count: %lu", [s_activeRenderPass->encoder retainCount]);
 	[pd.encoder release];
 	//NSLog(@"current_drawable release, retain count: %lu", [activeWindowData->current_drawable retainCount]);
 	[activeWindowData->current_drawable release];
-	//NSLog(@"cmdbuf release, retain count: %lu", [activeWindowData->cmdbuf retainCount]);
+	//NSLog(@"cmdbuf release, retain count: %lu", [s_activeRenderPass->cmdbuf retainCount]);
 	[pd.cmdbuf release];
 	
 	pd.encoder = nullptr;

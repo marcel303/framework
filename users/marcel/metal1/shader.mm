@@ -28,97 +28,6 @@ ShaderCache g_shaderCache;
 
 #include "mesh.h"
 
-#if 1 // todo : move elsewhere
-
-static const char * s_shaderVs = R"SHADER(
-
-	#include <metal_stdlib>
-
-	using namespace metal;
-
-	struct ShaderInputs
-	{
-		float4 position [[attribute(0)]];
-		float3 normal [[attribute(1)]];
-		float4 color [[attribute(2)]];
-		float2 texcoord [[attribute(3)]];
-	};
-
-	struct ShaderOutputs
-	{
-		float4 position [[position]];
-		float4 color;
-		float2 texcoord;
-	};
-
-	struct ShaderUniforms
-	{
-		float4x4 ProjectionMatrix;
-		float4x4 ModelViewMatrix;
-		float4x4 ModelViewProjectionMatrix;
-	};
-
-	#define unpackPosition() inputs.position
-
-	vertex ShaderOutputs shader_main(
-		ShaderInputs inputs [[stage_in]],
-		constant ShaderUniforms & uniforms [[buffer(1)]])
-	{
-		ShaderOutputs outputs;
-		
-		outputs.position = uniforms.ModelViewProjectionMatrix * unpackPosition();
-		//outputs.position = uniforms.ModelViewMatrix * inputs.position;
-		//outputs.position = uniforms.ProjectionMatrix * float4(inputs.position.xy, 2, 1);
-		outputs.color = inputs.color;
-		outputs.texcoord = inputs.texcoord;
-		
-		return outputs;
-	}
-
-)SHADER";
-
-static const char * s_shaderPs = R"SHADER(
-
-	#include <metal_stdlib>
-
-	using namespace metal;
-
-	struct ShaderInputs
-	{
-		float4 position [[position]];
-		float4 color;
-		float2 texcoord;
-	};
-
-	struct ShaderUniforms
-	{
-		float4 params;
-		float4 imms;
-	};
-
-	fragment float4 shader_main(
-		ShaderInputs inputs [[stage_in]],
-		constant ShaderUniforms & uniforms [[buffer(1)]],
-		texture2d<float> textureResource [[texture(0)]])
-	{
-		float4 color = inputs.color;
-		
-		if (uniforms.params.x != 0.0)
-		{
-			constexpr sampler textureSampler(mag_filter::linear, min_filter::linear);
-			
-			color *= textureResource.sample(textureSampler, inputs.texcoord);
-		}
-		
-		color += uniforms.imms;
-		
-		return color;
-	}
-
-)SHADER";
-
-#endif
-
 ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	static bool init = false;
@@ -131,9 +40,6 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 		{
 			id <MTLDevice> device = metal_get_device();
 			
-			NSError * error = nullptr;
-			
-		#if 1
 			std::vector<std::string> errorMessages;
 			std::string shaderVs_opengl;
 			std::string shaderPs_opengl;
@@ -153,6 +59,8 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			
 			printf("ps text:\n%s", shaderPs.c_str());
 			
+			NSError * error = nullptr;
+			
 			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:shaderVs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_vs == nullptr && error != nullptr)
 				NSLog(@"%@", error);
@@ -160,15 +68,6 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:shaderPs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_ps == nullptr && error != nullptr)
 				NSLog(@"%@", error);
-		#else
-			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:s_shaderVs encoding:NSASCIIStringEncoding] options:nullptr error:&error];
-			if (library_vs == nullptr && error != nullptr)
-				NSLog(@"%@", error);
-			
-			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:s_shaderPs encoding:NSASCIIStringEncoding] options:nullptr error:&error];
-			if (library_ps == nullptr && error != nullptr)
-				NSLog(@"%@", error);
-		#endif
 		
 			id <MTLFunction> vs = [library_vs newFunctionWithName:@"shader_main"];
 			id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
