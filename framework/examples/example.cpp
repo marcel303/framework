@@ -98,7 +98,9 @@ int main(int argc, char * argv[])
 	
 	mouse.showCursor(false);
 	
+#if TEST_SURFACE
 	Surface surface(sx, sy, false);
+#endif
 	
 	bool down = false;
 	float x = sx/2.f;
