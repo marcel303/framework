@@ -56,8 +56,6 @@ void popRenderPass();
 class GxVertexBuffer;
 struct GxVertexInput;
 
-void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
-
 #ifdef __OBJC__
 
 // --- private data and helper functions ---

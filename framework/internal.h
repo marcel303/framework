@@ -445,6 +445,8 @@ public:
 
 //
 
+#if ENABLE_OPENGL
+
 struct VsInput
 {
 	int id;
@@ -455,6 +457,8 @@ struct VsInput
 };
 
 void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride);
+
+#endif
 
 //
 

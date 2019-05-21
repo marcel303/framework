@@ -185,6 +185,8 @@ public:
 
 //
 
+#if ENABLE_OPENGL // todo : remove bindVsInputs
+
 void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
 {
 	checkErrorGL();
@@ -200,6 +202,8 @@ void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
 		checkErrorGL();
 	}
 }
+
+#endif
 
 // -----
 

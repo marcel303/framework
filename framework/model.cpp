@@ -52,6 +52,7 @@ ModelCache g_modelCache;
 
 namespace AnimModel
 {
+#if ENABLE_OPENGL // todo : remove OpenGL version vsInputs
 	static const VsInput vsInputs[] =
 	{
 		{ VS_POSITION,      3, GL_FLOAT,         0, offsetof(Vertex, px)          },
@@ -62,7 +63,20 @@ namespace AnimModel
 		{ VS_BLEND_WEIGHTS, 4, GL_UNSIGNED_BYTE, 1, offsetof(Vertex, boneWeights) }
 	};
 	const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
-	
+#else
+	static const GxVertexInput vsInputs[] =
+	{
+		{ VS_POSITION,      3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, px)          },
+		{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, nx)          },
+		{ VS_COLOR,         4, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, cx)          },
+		{ VS_TEXCOORD0,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx)          },
+		{ VS_TEXCOORD1,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx)          }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
+		{ VS_BLEND_INDICES, 4, GX_ELEMENT_UINT8,   0, offsetof(Vertex, boneIndices) },
+		{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_UINT8,   1, offsetof(Vertex, boneWeights) }
+	};
+	const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
+#endif
+
 	//
 	
 	Mesh::Mesh()
@@ -75,14 +89,22 @@ namespace AnimModel
 		m_indices = 0;
 		m_numIndices = 0;
 		
+	#if ENABLE_OPENGL
 		m_vertexArray = 0;
 		m_indexArray = 0;
 		
 		m_vertexArrayObject = 0;
+	#endif
 	}
 	
 	Mesh::~Mesh()
 	{
+	#if ENABLE_METAL
+		m_vertexBuffer.free();
+		m_indexBuffer.free();
+	#endif
+	
+	#if ENABLE_OPENGL
 		if (m_vertexArrayObject)
 		{
 			glDeleteVertexArrays(1, &m_vertexArrayObject);
@@ -100,6 +122,7 @@ namespace AnimModel
 			glDeleteBuffers(1, &m_indexArray);
 			m_indexArray = 0;
 		}
+	#endif
 		
 		allocateVB(0);
 		allocateIB(0);
@@ -143,6 +166,12 @@ namespace AnimModel
 	
 	void Mesh::finalize()
 	{
+	#if ENABLE_METAL
+		m_vertexBuffer.alloc(m_vertices, sizeof(Vertex) * m_numVertices);
+		m_indexBuffer.alloc(m_indices, sizeof(int) * m_numIndices, GX_INDEX_32); // todo : GX_INDEX_16 when possible
+	#endif
+	
+	#if ENABLE_OPENGL
 		fassert(!m_vertexArray && !m_indexArray);
 		
 		// create vertex buffer
@@ -187,6 +216,7 @@ namespace AnimModel
 		}
 		glBindVertexArray(0);
 		checkErrorGL();
+	#endif
 		
 		if (m_material.shader.empty())
 		{
@@ -912,41 +942,42 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 				
 				const ShaderCacheElem & shaderElem = shader.getCacheElem();
 				
-			#if ENABLE_OPENGL // todo : enable for metal
 				if (shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index >= 0)
 				{
-					glUniformMatrix4fv(shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index, numBones, GL_FALSE, (GLfloat*)globalMatrices);
-					checkErrorGL();
+					shader.setImmediateMatrix4x4Array(shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index, (float*)globalMatrices, numBones);
 				}
-			#endif
 				
 			// todo : use constant locations for drawColor and drawSkin
 			
-				const GLint drawColor = shader.getImmediate("drawColor");
+				const GxImmediateIndex drawColor = shader.getImmediate("drawColor");
 				
 				if (drawColor != -1)
 				{
-					glUniform4f(drawColor,
+					shader.setImmediate(drawColor,
 						(drawFlags & DrawColorTexCoords)    ? 1.f : 0.f,
 						(drawFlags & DrawColorNormals)      ? 1.f : 0.f,
 						(drawFlags & DrawColorBlendIndices) ? 1.f : 0.f,
 						(drawFlags & DrawColorBlendWeights) ? 1.f : 0.f);
-					checkErrorGL();
 				}
 				
-				const GLint drawSkin = shader.getImmediate("drawSkin");
+				const GxImmediateIndex drawSkin = shader.getImmediate("drawSkin");
 				
 				if (drawSkin != -1)
 				{
-					glUniform4f(drawSkin,
+					shader.setImmediate(drawSkin,
 						(drawFlags & DrawUnSkinned)   ? 1.f : 0.f,
 						(drawFlags & DrawHardSkinned) ? 1.f : 0.f,
 						0.f,
 						0.f);
-					checkErrorGL();
 				}
 			}
-			
+		
+		#if ENABLE_METAL
+			gxSetVertexBuffer(&mesh->m_vertexBuffer, vsInputs, numVsInputs, sizeof(Vertex));
+			gxDrawIndexedPrimitives(GX_TRIANGLES, mesh->m_numIndices, &mesh->m_indexBuffer);
+		#endif
+		
+		#if ENABLE_OPENGL
 			// bind vertex arrays
 			
 			fassert(mesh->m_vertexArray);
@@ -960,6 +991,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			
 			glBindVertexArray(0);
 			checkErrorGL();
+		#endif
 		}
 		
 		clearShader();
@@ -1067,11 +1099,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	
 	if (drawFlags & DrawBones)
 	{
-		GLint restoreDepthTest;
-		glGetIntegerv(GL_DEPTH_TEST, &restoreDepthTest);
-		checkErrorGL();
-		glDisable(GL_DEPTH_TEST);
-		checkErrorGL();
+		pushDepthTest(false, DEPTH_LESS);
 
 		// bone to object matrix translation
 		gxColor3ub(127, 127, 127);
@@ -1102,20 +1130,12 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		}
 		gxEnd();
 		
-		if (restoreDepthTest)
-		{
-			glEnable(GL_DEPTH_TEST);
-			checkErrorGL();
-		}
+		popDepthTest();
 	}
 	
 	if (drawFlags & DrawPoseMatrices)
 	{
-		GLint restoreDepthTest;
-		glGetIntegerv(GL_DEPTH_TEST, &restoreDepthTest);
-		checkErrorGL();
-		glDisable(GL_DEPTH_TEST);
-		checkErrorGL();
+		pushDepthTest(false, DEPTH_LESS);
 
 		// object to bone matrix translation
 		gxColor3ub(127, 127, 127);
@@ -1147,11 +1167,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		}
 		gxEnd();
 		
-		if (restoreDepthTest)
-		{
-			glEnable(GL_DEPTH_TEST);
-			checkErrorGL();
-		}
+		popDepthTest();
 	}
 }
 

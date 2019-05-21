@@ -37,7 +37,8 @@ enum GX_INDEX_FORMAT
 
 enum GX_ELEMENT_TYPE
 {
-	GX_ELEMENT_FLOAT32
+	GX_ELEMENT_FLOAT32,
+	GX_ELEMENT_UINT8
 };
 
 struct GxVertexInput
@@ -47,7 +48,6 @@ struct GxVertexInput
 	GX_ELEMENT_TYPE type : 4;  // the type of element inside the vertex stream
 	bool normalize : 4;        // (if integer) should the element be normalized into the range 0..1?
 	uint32_t offset : 24;      // byte offset within vertex buffer for the start of this input
-	uint32_t stride : 8;       // byte stride between elements. use zero when elements are tightly packed
 };
 
 class GxVertexBufferBase
@@ -120,5 +120,8 @@ public:
 	
 	void draw() const;
 };
+
+void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer);
 
 #endif

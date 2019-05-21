@@ -383,6 +383,26 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 	}
 }
 
+void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrix, const int numMatrices)
+{
+	if (index >= 0)
+	{
+		auto & info = getUniformInfo(*m_cacheElem, index, 'm', 16 * numMatrices);
+		
+		if (info.vsOffset != -1)
+		{
+			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsOffset);
+			memcpy(dst, matrix, 16 * sizeof(float) * numMatrices);
+		}
+		
+		if (info.psOffset != -1)
+		{
+			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psOffset);
+			memcpy(dst, matrix, 16 * sizeof(float) * numMatrices);
+		}
+	}
+}
+
 #define not_implemented Assert(false) // todo : implement shader stubs
 
 inline int getTextureIndex(const ShaderCacheElem_Metal & elem, const char * name)

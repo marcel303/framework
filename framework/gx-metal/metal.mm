@@ -1000,13 +1000,13 @@ static GxIndexBuffer s_gxIndexBuffer;
 
 static const GxVertexInput s_gxVsInputs[] =
 {
-	{ VS_POSITION,  4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px), 0 },
-	{ VS_NORMAL,    3, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, nx), 0 },
-	{ VS_COLOR,     4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, cx), 0 },
-	{ VS_TEXCOORD0, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx), 0 },
-	{ VS_TEXCOORD1, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx), 0 }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
-	{ VS_BLEND_INDICES, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px), 0 }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
-	{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px), 0 } // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
+	{ VS_POSITION,  4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px) },
+	{ VS_NORMAL,    3, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, nx) },
+	{ VS_COLOR,     4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, cx) },
+	{ VS_TEXCOORD0, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx) },
+	{ VS_TEXCOORD1, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx) }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
+	{ VS_BLEND_INDICES, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px) }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
+	{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px) } // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
 };
 
 static float scale255(const float v)
@@ -1183,6 +1183,17 @@ static void gxValidatePipelineState()
 						metalFormat = MTLVertexFormatFloat3;
 					else if (e.numComponents == 4)
 						metalFormat = MTLVertexFormatFloat4;
+				}
+				else if (e.type == GX_ELEMENT_UINT8)
+				{
+					if (e.numComponents == 1)
+						metalFormat = e.normalize ? MTLVertexFormatUCharNormalized : MTLVertexFormatUChar;
+					else if (e.numComponents == 2)
+						metalFormat = e.normalize ? MTLVertexFormatUChar2Normalized : MTLVertexFormatUChar2;
+					else if (e.numComponents == 3)
+						metalFormat = e.normalize ? MTLVertexFormatUChar3Normalized : MTLVertexFormatUChar3;
+					else if (e.numComponents == 4)
+						metalFormat = e.normalize ? MTLVertexFormatUChar4Normalized : MTLVertexFormatUChar4;
 				}
 				
 				Assert(metalFormat != MTLVertexFormatInvalid);
@@ -1838,6 +1849,52 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 	
 	id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
 	[s_activeRenderPass->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
+}
+
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer)
+{
+	Shader genericShader("engine/Generic");
+
+	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+
+	setShader(shader);
+
+	gxValidatePipelineState();
+
+	gxValidateMatrices();
+
+	gxValidateShaderResources();
+
+	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
+
+	[s_activeRenderPass->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
+
+	if (shader.isValid())
+	{
+		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
+
+		if (indexBuffer != nullptr)
+		{
+			id <MTLBuffer> buffer = (id <MTLBuffer>)indexBuffer->getMetalBuffer();
+			
+			[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:buffer indexBufferOffset:0];
+		}
+		else
+		{
+			[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numElements];
+		}
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+
+	if (&shader == &genericShader)
+	{
+		clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
+	}
+
+	globals.gxShaderIsDirty = false;
 }
 
 //

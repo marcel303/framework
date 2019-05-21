@@ -59,7 +59,7 @@ void GxMesh::draw() const
 	{
 		const int numIndices = m_indexBuffer->getNumIndices();
 
-		gxDrawIndexedPrimitives(GL_TRIANGLES, numIndices, m_indexBuffer);
+		gxDrawIndexedPrimitives(GX_TRIANGLES, numIndices, m_indexBuffer);
 	}
 	else
 	{

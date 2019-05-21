@@ -66,7 +66,7 @@ void main()
 		// debug color
 
 		if (drawColorBlendIndices())
-			color.rgb *= skinningBlendIndices.xyz / 32.0;
+			color.rgb *= vec3(skinningBlendIndices.xyz) / 32.0;
 		if (drawColorBlendWeights())
 			color.rgb *= skinningBlendWeights.xyz;
 	}
