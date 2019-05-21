@@ -25,8 +25,10 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h>
 #include "framework.h"
+
+#if ENABLE_METAL
+
 #include "gx_render.h"
 #include "internal.h"
 
@@ -328,11 +330,7 @@ uint32_t Surface::getFramebuffer() const
 
 GxTextureId Surface::getTexture() const
 {
-#if TODO
-	return m_colorTarget[m_bufferId];
-#else
-	return 0;
-#endif
+	return m_colorTarget[m_bufferId]->getTextureId();
 }
 
 bool Surface::hasDepthTexture() const
@@ -342,11 +340,7 @@ bool Surface::hasDepthTexture() const
 
 GxTextureId Surface::getDepthTexture() const
 {
-#if TODO
-	return m_depthTarget[m_bufferId];
-#else
-	return 0;
-#endif
+	return m_depthTarget[m_bufferId]->getTextureId();
 }
 
 int Surface::getWidth() const
@@ -384,28 +378,20 @@ void Surface::clear(int r, int g, int b, int a)
 
 void Surface::clearf(float r, float g, float b, float a)
 {
-	pushSurface(this);
+	getColorTarget()->setClearColor(r, g, b, a);
+	pushRenderPass(getColorTarget(), nullptr, false, "Surface::clear");
 	{
-	#if TODO
-		glClearColor(r, g, b, a);
-		glClear(GL_COLOR_BUFFER_BIT);
-		checkErrorGL();
-	#endif
 	}
-	popSurface();
+	popRenderPass();
 }
 
 void Surface::clearDepth(float d)
 {
-	pushSurface(this);
+	getDepthTarget()->setClearDepth(d);
+	pushRenderPass(nullptr, getDepthTarget(), true, "Surface::clearDepth");
 	{
-	#if TODO
-		glClearDepth(d);
-		glClear(GL_DEPTH_BUFFER_BIT);
-		checkErrorGL();
-	#endif
 	}
-	popSurface();
+	popRenderPass();
 }
 
 void Surface::clearAlpha()
@@ -604,3 +590,5 @@ void blitBackBufferToSurface(Surface * surface)
 	checkErrorGL();
 #endif
 }
+
+#endif

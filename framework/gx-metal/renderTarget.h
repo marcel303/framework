@@ -7,6 +7,7 @@
 class ColorTarget : ColorTargetBase
 {
 	void * m_colorTexture = nullptr;
+	int m_colorTextureId = 0;
 	
 	ColorTargetProperties properties;
 	
@@ -39,6 +40,8 @@ public:
 		return clearColor;
 	}
 	
+	virtual GxTextureId getTextureId() const override final;
+	
 	void * getMetalTexture() const { return m_colorTexture; }
 };
 
@@ -47,6 +50,7 @@ public:
 class DepthTarget : DepthTargetBase
 {
 	void * m_depthTexture = nullptr;
+	int m_depthTextureId = 0;
 	
 	DepthTargetProperties properties;
 	
@@ -74,6 +78,8 @@ public:
 	{
 		return clearDepth;
 	}
+	
+	virtual GxTextureId getTextureId() const override final;
 	
 	void * getMetalTexture() const { return m_depthTexture; }
 };

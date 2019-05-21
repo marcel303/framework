@@ -1,4 +1,9 @@
+#import "framework.h"
+
+#if ENABLE_METAL
+
 #import "renderTarget.h"
+#import "texture.h"
 #import <Metal/Metal.h>
 
 id <MTLDevice> metal_get_device();
@@ -36,18 +41,29 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 				mipmapped:NO];
 
 		descriptor.resourceOptions = MTLResourceStorageModePrivate;
-		descriptor.usage = MTLTextureUsageRenderTarget;
+		descriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
 		
 		id <MTLDevice> device = metal_get_device();
-		m_colorTexture = [device newTextureWithDescriptor:descriptor];
+		colorTexture = [device newTextureWithDescriptor:descriptor];
 
-		if (m_colorTexture == nullptr)
+		if (colorTexture == nullptr)
 			result = false;
+		else
+		{
+		// todo : free texture ID when done with the texture
+			m_colorTexture = colorTexture;
+			m_colorTextureId = s_nextTextureId++;
+			s_textures[m_colorTextureId] = colorTexture;
+		}
 	}
 
 	return result;
 }
 
+GxTextureId ColorTarget::getTextureId() const
+{
+	return m_colorTextureId;
+}
 
 //
 
@@ -82,14 +98,28 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 				mipmapped:NO];
 
 		descriptor.resourceOptions = MTLResourceStorageModePrivate;
-		descriptor.usage = MTLTextureUsageRenderTarget;
+		descriptor.usage = MTLTextureUsageRenderTarget | MTLTextureUsageShaderRead;
 		
 		id <MTLDevice> device = metal_get_device();
-		m_depthTexture = [device newTextureWithDescriptor:descriptor];
+		depthTexture = [device newTextureWithDescriptor:descriptor];
 
-		if (m_depthTexture == nullptr)
+		if (depthTexture == nullptr)
 			result = false;
+		else
+		{
+		// todo : free texture ID when done with the texture
+			m_depthTexture = depthTexture;
+			m_depthTextureId = s_nextTextureId++;
+			s_textures[m_depthTextureId] = depthTexture;
+		}
 	}
 
 	return result;
 }
+
+GxTextureId DepthTarget::getTextureId() const
+{
+	return m_depthTextureId;
+}
+
+#endif

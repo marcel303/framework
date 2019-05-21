@@ -32,6 +32,8 @@ public:
 	
 	virtual void setClearColor(const float r, const float g, const float b, const float a) = 0;
 	virtual const Color & getClearColor() const = 0;
+	
+	virtual GxTextureId getTextureId() const = 0;
 };
 
 //
@@ -66,6 +68,8 @@ public:
 	
 	virtual void setClearDepth(const float depth) = 0;
 	virtual float getClearDepth() const = 0;
+	
+	virtual GxTextureId getTextureId() const = 0;
 };
 
 #if ENABLE_METAL

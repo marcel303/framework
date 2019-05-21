@@ -4991,12 +4991,19 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 		gxPushMatrix();
 		{
 			gxLoadIdentity();
-			
+		
+		#if ENABLE_METAL
+			// flip Y axis so the vertical axis runs top to bottom
+			gxScalef(1.f, -1.f, 1.f);
+		#endif
+		
+		#if USE_OPENGL
 			if (surfaceStackSize == 0 || surfaceStack[surfaceStackSize - 1] == nullptr)
 			{
 				// flip Y axis so the vertical axis runs top to bottom
 				gxScalef(1.f, -1.f, 1.f);
 			}
+		#endif
 		
 			// convert from (0,0),(1,1) to (-1,-1),(+1+1)
 			gxTranslatef(-1.f, -1.f, 0.f);
@@ -5031,11 +5038,18 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 		{
 			gxLoadMatrixf(globals.transform3d.m_v);
 			
+		#if ENABLE_METAL
+			// flip Y axis so the vertical axis runs bottom to top
+			gxScalef(1.f, -1.f, 1.f);
+		#endif
+		
+		#if USE_OPENGL
 			if (surfaceStackSize != 0 && surfaceStack[surfaceStackSize - 1] != nullptr)
 			{
 				// flip Y axis so the vertical axis runs bottom to top
 				gxScalef(1.f, -1.f, 1.f);
 			}
+		#endif
 			
 			break;
 		}

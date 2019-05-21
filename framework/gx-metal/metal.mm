@@ -236,7 +236,8 @@ void metal_draw_end()
 
 void metal_set_viewport(const int sx, const int sy)
 {
-if (!s_activeRenderPass) return; // todo : hack. remove
+if (!s_activeRenderPass)
+	return; // todo : hack. remove
 
 	[s_activeRenderPass->encoder setViewport:(MTLViewport){ 0, 0, (double)sx, (double)sy, 0.0, 1.0 }];
 }
