@@ -77,7 +77,7 @@
 
 #if defined(MACOS) && !defined(ENABLE_METAL) && 0
 	#define ENABLE_METAL 1
-	#define ENABLE_HQ_PRIMITIVES 0
+	#define ENABLE_HQ_PRIMITIVES 1
 #elif !defined(ENABLE_OPENGL)
 	#define ENABLE_OPENGL 1
 #endif
