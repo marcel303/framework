@@ -24,7 +24,7 @@ int main(int arg, char * argv[])
 	metal_attach(window1);
 	metal_attach(window2);
 	
-	metal_shadertest();
+	//metal_shadertest();
 	
 	uint8_t * texture1_data = new uint8_t[128 * 128 * 4];
 	for (int i = 0; i < 128 * 128 * 4; ++i)
@@ -35,25 +35,21 @@ int main(int arg, char * argv[])
 	delete [] texture1_data;
 	texture1_data = nullptr;
 	
-#if 0
-	{
-		ColorTarget colorTarget;
-		DepthTarget depthTarget;
-		
-		ColorTargetProperties colorProperties;
-		colorProperties.init(640, 480, SURFACE_RGBA8, colorBlack);
-		colorTarget.init(colorProperties);
-		
-		DepthTargetProperties depthProperties;
-		depthProperties.init(640, 80, DEPTH_FLOAT32, 1.f);
-		depthTarget.init(depthProperties);
-		
-		pushRenderPass(&colorTarget, &depthTarget, true);
-		{
-		}
-		popRenderPass();
-	}
-#endif
+	ColorTarget colorTarget;
+	ColorTarget normalTarget;
+	DepthTarget depthTarget;
+	
+	ColorTargetProperties colorProperties;
+	colorProperties.init(640, 480, SURFACE_RGBA8, colorBlack);
+	colorTarget.init(colorProperties);
+	
+	ColorTargetProperties normalProperties;
+	normalProperties.init(640, 480, SURFACE_RGBA16F, colorBlack);
+	normalTarget.init(normalProperties);
+	
+	DepthTargetProperties depthProperties;
+	depthProperties.init(640, 480, DEPTH_FLOAT32, 1.f);
+	depthTarget.init(depthProperties);
 
 	for (;;)
 	{
@@ -80,9 +76,49 @@ int main(int arg, char * argv[])
 		if (stop)
 			break;
 		
-		metal_make_active(window1);
-		metal_draw_begin(1.0f, 0.3f, 0.0f, 1.0f);
+		pushRenderPass(nullptr, &depthTarget, true, "Depth Pass");
 		{
+		}
+		popRenderPass();
+	
+		metal_make_active(window1);
+		metal_draw_begin(1.0f, 0.3f, 0.0f, 1.0f, 1.f);
+		{
+		#if 1
+			ColorTarget * targets[] = { &colorTarget, &normalTarget };
+			pushRenderPass(targets, 2, &depthTarget, true, "Color + Normal Pass");
+			{
+				setDepthTest(true, DEPTH_LESS);
+				
+				Mat4x4 projectionMatrix;
+				projectionMatrix.MakePerspectiveLH(90.f * float(M_PI) / 180.f, 600.f / 300.f, .01f, 100.f);
+				gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+				
+				gxPushMatrix();
+				{
+					gxTranslatef(0, 0, 2);
+					
+					gxBegin(GX_TRIANGLE_STRIP);
+					{
+						for (int i = 0; i < 10; ++i)
+						{
+							const float x = (rand() % 100) / 100.f;
+							const float y = (rand() % 100) / 100.f;
+							
+							gxTexCoord2f(x, y);
+							gxColor4f(1.f, .5f, .25f, 1.f);
+							gxVertex2f(x, y);
+						}
+					}
+					gxEnd();
+				}
+				gxPopMatrix();
+				
+				setDepthTest(false, DEPTH_LESS);
+			}
+			popRenderPass();
+		#endif
+		
 			//setDepthTest(false, DEPTH_ALWAYS);
 			setDepthTest(true, DEPTH_LESS);
 			setWireframe(false);
@@ -156,7 +192,7 @@ int main(int arg, char * argv[])
 		}
 		metal_draw_end();
 		
-	#if 1
+	#if 0
 		metal_make_active(window2);
 		metal_draw_begin(0.0f, 0.3f, 1.0f, 1.0f);
 		{

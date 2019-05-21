@@ -11,7 +11,7 @@ class Shader;
 void metal_init();
 void metal_attach(SDL_Window * window);
 void metal_make_active(SDL_Window * window);
-void metal_draw_begin(const float r, const float g, const float b, const float a);
+void metal_draw_begin(const float r, const float g, const float b, const float a, const float depth);
 void metal_draw_end();
 void metal_set_viewport(const int sx, const int sy);
 
@@ -62,8 +62,8 @@ enum CULL_WINDING
 void pushSurface(Surface * surface);
 void popSurface();
 
-void pushRenderPass(ColorTarget * target, DepthTarget * depthTarget, const bool clearDepth);
-void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * depthTarget, const bool clearDepth);
+void pushRenderPass(ColorTarget * target, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
+void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
 void popRenderPass();
 
 void setBlend(BLEND_MODE blendMode);
@@ -151,10 +151,14 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 struct __attribute__((packed)) RenderPipelineState
 {
 	BLEND_MODE blendMode = BLEND_ALPHA;
-	
 	GxVertexInput vertexInputs[8] = { };
-	int vertexInputCount = 0;
-	int vertexStride = 0;
+	uint8_t vertexInputCount = 0;
+	uint8_t vertexStride = 0;
+	struct RenderPass
+	{
+		uint16_t colorFormat[4] = { };
+		uint16_t depthFormat = 0;
+	} renderPass;
 };
 
 extern RenderPipelineState renderState;

@@ -27,17 +27,25 @@ public:
 	}
 };
 
-class ColorTarget
+class ColorTargetBase
 {
-public:
+	virtual bool init(const int width, const int height, SURFACE_FORMAT format, const Color & clearColor) = 0;
+	virtual bool init(const ColorTargetProperties & properties) = 0;
+	
+	virtual void setClearColor(const float r, const float g, const float b, const float a) = 0;
+	virtual const Color & getClearColor() const = 0;
+};
+
+class ColorTarget : ColorTargetBase
+{
 	void * m_colorTexture = nullptr;
 	
 	ColorTargetProperties properties;
 	
 	Color clearColor = colorBlack;
 
-//public:
-	bool init(const int width, const int height, SURFACE_FORMAT format, const Color & clearColor)
+public:
+	virtual bool init(const int width, const int height, SURFACE_FORMAT format, const Color & clearColor) override final
 	{
 		ColorTargetProperties properties;
 		
@@ -46,14 +54,19 @@ public:
 		return init(properties);
 	}
 	
-	bool init(const ColorTargetProperties & properties);
+	virtual bool init(const ColorTargetProperties & properties) override final;
 	
-	void setClearColor(const float r, const float g, const float b, const float a)
+	virtual void setClearColor(const float r, const float g, const float b, const float a) override final
 	{
 		clearColor.r = r;
 		clearColor.g = g;
 		clearColor.b = b;
 		clearColor.a = a;
+	}
+	
+	virtual const Color & getClearColor() const override final
+	{
+		return clearColor;
 	}
 	
 	void * getMetalTexture() const { return m_colorTexture; }
@@ -76,17 +89,26 @@ public:
 	}
 };
 
-class DepthTarget
+class DepthTargetBase
 {
 public:
+	virtual bool init(const int width, const int height, DEPTH_FORMAT format, const float clearDepth) = 0;
+	virtual bool init(const DepthTargetProperties & properties) = 0;
+	
+	virtual void setClearDepth(const float depth) = 0;
+	virtual float getClearDepth() const = 0;
+};
+
+class DepthTarget : DepthTargetBase
+{
 	void * m_depthTexture = nullptr;
 	
 	DepthTargetProperties properties;
 	
 	float clearDepth = 1.f;
 	
-//public:
-	bool init(const int width, const int height, DEPTH_FORMAT format, const float clearDepth)
+public:
+	virtual bool init(const int width, const int height, DEPTH_FORMAT format, const float clearDepth) override final
 	{
 		DepthTargetProperties properties;
 		properties.init(width, height, format, clearDepth);
@@ -94,10 +116,17 @@ public:
 		return init(properties);
 	}
 	
-	bool init(const DepthTargetProperties & properties);
+	virtual bool init(const DepthTargetProperties & properties) override final;
 	
-	void setClearDepth(const float depth)
+	virtual void setClearDepth(const float depth) override final
 	{
 		clearDepth = depth;
 	}
+	
+	virtual float getClearDepth() const override final
+	{
+		return clearDepth;
+	}
+	
+	void * getMetalTexture() const { return m_depthTexture; }
 };
