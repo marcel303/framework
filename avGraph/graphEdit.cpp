@@ -527,12 +527,9 @@ void GraphEdit_Visualizer::measure(
 	{
 		sy += kElemPadding;
 		
-		GLint baseTextureSx;
-		GLint baseTextureSy;
-		gxSetTexture(texture);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &baseTextureSx);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &baseTextureSy);
-		gxSetTexture(0);
+		int baseTextureSx;
+		int baseTextureSy;
+		gxGetTextureSize(texture, baseTextureSx, baseTextureSy);
 		
 		if (baseTextureSy == 1)
 			baseTextureSy = std::max(1, baseTextureSx/4);
@@ -718,12 +715,9 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	{
 		sy += kElemPadding;
 		
-		GLint baseTextureSx;
-		GLint baseTextureSy;
-		gxSetTexture(texture);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &baseTextureSx);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &baseTextureSy);
-		gxSetTexture(0);
+		int baseTextureSx;
+		int baseTextureSy;
+		gxGetTextureSize(texture, baseTextureSx, baseTextureSy);
 		
 		if (baseTextureSy == 1)
 			baseTextureSy = std::max(1, baseTextureSx/4);
