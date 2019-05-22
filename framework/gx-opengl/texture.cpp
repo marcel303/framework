@@ -64,6 +64,7 @@ static void toOpenGLUploadType(const GX_TEXTURE_FORMAT format, GLenum & uploadFo
 	C(GX_R16_FLOAT, GL_RED, GL_FLOAT);
 	C(GX_R32_FLOAT, GL_RED, GL_FLOAT);
 	C(GX_RGB32_FLOAT, GL_RGB, GL_FLOAT);
+	C(GX_RGBA32_FLOAT, GL_RGBA, GL_FLOAT);
 #undef C
 }
 

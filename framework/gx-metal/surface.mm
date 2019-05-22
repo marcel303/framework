@@ -268,7 +268,10 @@ uint32_t Surface::getFramebuffer() const
 
 GxTextureId Surface::getTexture() const
 {
-	return m_colorTarget[m_bufferId]->getTextureId();
+	if (m_colorTarget[m_bufferId] == nullptr)
+		return 0;
+	else
+		return m_colorTarget[m_bufferId]->getTextureId();
 }
 
 bool Surface::hasDepthTexture() const
@@ -278,7 +281,10 @@ bool Surface::hasDepthTexture() const
 
 GxTextureId Surface::getDepthTexture() const
 {
-	return m_depthTarget[m_bufferId]->getTextureId();
+	if (m_depthTarget[m_bufferId] == nullptr)
+		return 0;
+	else
+		return m_depthTarget[m_bufferId]->getTextureId();
 }
 
 int Surface::getWidth() const

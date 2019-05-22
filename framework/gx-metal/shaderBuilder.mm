@@ -278,6 +278,10 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 		sb.Append("#define dFdx dfdx\n");
 		sb.Append("#define dFdy dfdy\n");
 		sb.Append("#define inversesqrt rsqrt\n");
+		sb.Append("float mod(float x, float y) { return fmod(x, y); }\n");
+		sb.Append("vec2 mod(vec2 x, vec2 y) { return fmod(x, y); }\n");
+		sb.Append("vec3 mod(vec3 x, vec3 y) { return fmod(x, y); }\n");
+		sb.Append("vec4 mod(vec4 x, vec4 y) { return fmod(x, y); }\n");
 		sb.Append("\n");
 	
 		if (shaderType == 'v')

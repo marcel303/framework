@@ -131,6 +131,17 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 					else if (e.numComponents == 4)
 						metalFormat = MTLVertexFormatFloat4;
 				}
+				else if (e.type == GX_ELEMENT_UINT8)
+				{
+					if (e.numComponents == 1)
+						metalFormat = e.normalize ? MTLVertexFormatUCharNormalized : MTLVertexFormatUChar;
+					else if (e.numComponents == 2)
+						metalFormat = e.normalize ? MTLVertexFormatUChar2Normalized : MTLVertexFormatUChar2;
+					else if (e.numComponents == 3)
+						metalFormat = e.normalize ? MTLVertexFormatUChar3Normalized : MTLVertexFormatUChar3;
+					else if (e.numComponents == 4)
+						metalFormat = e.normalize ? MTLVertexFormatUChar4Normalized : MTLVertexFormatUChar4;
+				}
 				
 				Assert(metalFormat != MTLVertexFormatInvalid);
 				if (metalFormat != MTLVertexFormatInvalid)
@@ -383,7 +394,7 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 	}
 }
 
-void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrix, const int numMatrices)
+void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices)
 {
 	if (index >= 0)
 	{
@@ -392,13 +403,13 @@ void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * ma
 		if (info.vsOffset != -1)
 		{
 			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsOffset);
-			memcpy(dst, matrix, 16 * sizeof(float) * numMatrices);
+			memcpy(dst, matrices, 16 * sizeof(float) * numMatrices);
 		}
 		
 		if (info.psOffset != -1)
 		{
 			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psOffset);
-			memcpy(dst, matrix, 16 * sizeof(float) * numMatrices);
+			memcpy(dst, matrices, 16 * sizeof(float) * numMatrices);
 		}
 	}
 }

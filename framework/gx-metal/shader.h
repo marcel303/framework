@@ -396,7 +396,7 @@ public:
 	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
-	void setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrix, const int numMatrices);
+	void setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices);
 	
 // todo : texture units do not make much sense ..
 	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit

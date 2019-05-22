@@ -723,6 +723,7 @@ public:
 	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
+	void setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices);
 	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTextureUnit(GxImmediateIndex index, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTexture(const char * name, int unit, GxTextureId texture);
@@ -1582,6 +1583,8 @@ static inline void gxVertex4fv(const float * v) { }
 static inline void gxSetTexture(GxTextureId texture) { }
 static inline void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp) { }
 
+static inline void gxGetTextureSize(GxTextureId texture, int & width, int & height) { width = 0; height = 0; }
+
 #elif !USE_LEGACY_OPENGL
 
 void gxMatrixMode(GX_MATRIX mode);
@@ -1618,6 +1621,8 @@ void gxVertex4fv(const float * v);
 void gxSetTexture(GxTextureId texture);
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
+void gxGetTextureSize(GxTextureId texture, int & width, int & height);
+
 #else
 
 #define gxMatrixMode glMatrixMode
@@ -1652,6 +1657,8 @@ void gxEnd();
 #define gxVertex4fv glVertex4fv
 void gxSetTexture(GxTextureId texture);
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
+
+void gxGetTextureSize(GxTextureId texture, int & width, int & height);
 
 #endif
 

@@ -74,13 +74,13 @@ class GxMesh
 	
 	uint32_t m_vertexArrayObject;
 	
-	void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs);
+	void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 	
 public:
 	GxMesh();
 	~GxMesh();
 	
-	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs);
+	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vsStride);
 	void setIndexBuffer(const GxIndexBuffer * buffer);
 	
 	void draw() const;

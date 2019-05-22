@@ -507,4 +507,22 @@ void GxTexture::generateMipmaps()
 	metal_generate_mipmaps(texture);
 }
 
+//
+
+void gxGetTextureSize(GxTextureId id, int & width, int & height)
+{
+	if (id == 0)
+	{
+		width = 0;
+		height = 0;
+	}
+	else
+	{
+		auto texture = s_textures[id];
+	
+		width = texture.width;
+		height = texture.height;
+	}
+}
+
 #endif

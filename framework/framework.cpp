@@ -2297,6 +2297,14 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 	checkErrorGL();
 }
 
+void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniformMatrix4fv(index, numMatrices, GL_FALSE, matrices);
+	checkErrorGL();
+}
+
 void Shader::setTextureUnit(const char * name, int unit)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
@@ -4997,7 +5005,7 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 			gxScalef(1.f, -1.f, 1.f);
 		#endif
 		
-		#if USE_OPENGL
+		#if ENABLE_OPENGL
 			if (surfaceStackSize == 0 || surfaceStack[surfaceStackSize - 1] == nullptr)
 			{
 				// flip Y axis so the vertical axis runs top to bottom
@@ -5037,13 +5045,8 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 		case TRANSFORM_3D:
 		{
 			gxLoadMatrixf(globals.transform3d.m_v);
-			
-		#if ENABLE_METAL
-			// flip Y axis so the vertical axis runs bottom to top
-			gxScalef(1.f, -1.f, 1.f);
-		#endif
 		
-		#if USE_OPENGL
+		#if ENABLE_OPENGL
 			if (surfaceStackSize != 0 && surfaceStack[surfaceStackSize - 1] != nullptr)
 			{
 				// flip Y axis so the vertical axis runs bottom to top
@@ -6922,6 +6925,33 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 		checkErrorGL();
+	}
+}
+
+void gxGetTextureSize(GxTextureId texture, int & width, int & height)
+{
+	// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
+
+/*
+	if (glGetTextureLevelParameteriv != nullptr)
+	{
+		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &height);
+		checkErrorGL();
+	}
+	else
+*/
+	{
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	}
 }
 

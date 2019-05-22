@@ -838,4 +838,32 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 	}
 }
 
+void gxGetTextureSize(GxTextureId texture, int & width, int & height)
+{
+	// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
+
+/*
+	if (glGetTextureLevelParameteriv != nullptr)
+	{
+		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &height);
+		checkErrorGL();
+	}
+	else
+*/
+	{
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
+		checkErrorGL();
+	}
+}
+
 #endif

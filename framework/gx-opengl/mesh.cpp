@@ -133,7 +133,7 @@ GxMesh::~GxMesh()
 	checkErrorGL();
 }
 
-void GxMesh::bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs)
+void GxMesh::bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
 	for (int i = 0; i < numVsInputs; ++i)
 	{
@@ -148,12 +148,12 @@ void GxMesh::bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs)
 
 		Assert(type != GL_INVALID_ENUM);
 		
-		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].numComponents, type, vsInputs[i].normalize, vsInputs[i].stride, (void*)(intptr_t)vsInputs[i].offset);
+		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].numComponents, type, vsInputs[i].normalize, vsStride, (void*)(intptr_t)vsInputs[i].offset);
 		checkErrorGL();
 	}
 }
 
-void GxMesh::setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs)
+void GxMesh::setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vsStride)
 {
 	m_vertexBuffer = buffer;
 	
@@ -165,7 +165,7 @@ void GxMesh::setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput 
 		glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer->m_vertexArray);
 		checkErrorGL();
 		
-		bindVsInputs(vertexInputs, numVertexInputs);
+		bindVsInputs(vertexInputs, numVertexInputs, vsStride);
 	}
 	glBindVertexArray(0);
 	checkErrorGL();
