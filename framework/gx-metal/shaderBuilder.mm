@@ -252,7 +252,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			}
 		}
 		
-		StringBuilder<16000> sb; // todo : replace with a more efficient and growing string builder
+		StringBuilder<32 * 1024> sb; // todo : replace with a more efficient and growing string builder
 		
 		sb.Append("#include <metal_stdlib>\n");
 		sb.Append("\n");
@@ -266,6 +266,8 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 		sb.Append("typedef int4 ivec4;\n");
 		sb.Append("typedef float2x2 mat2;\n");
 		sb.Append("typedef float2x2 mat2x2;\n");
+		sb.Append("typedef float3x3 mat3;\n");
+		sb.Append("typedef float3x3 mat3x3;\n");
 		sb.Append("typedef float4x4 mat4;\n");
 		sb.Append("typedef float4x4 mat4x4;\n");
 		sb.Append("\n");
@@ -277,6 +279,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 		sb.Append("#define textureSize(t, level) float2(t.get_width(level), t.get_height(level))\n");
 		sb.Append("#define dFdx dfdx\n");
 		sb.Append("#define dFdy dfdy\n");
+		sb.Append("#define discard discard_fragment\n");
 		sb.Append("#define inversesqrt rsqrt\n");
 		sb.Append("float mod(float x, float y) { return fmod(x, y); }\n");
 		sb.Append("vec2 mod(vec2 x, vec2 y) { return fmod(x, y); }\n");

@@ -27,7 +27,7 @@
 
 #include "gx_mesh.h"
 
-#if 0 // todo : implement Metal GxMesh
+#if ENABLE_METAL // todo : use this GxMesh implementation for all backends
 
 GxMesh::GxMesh()
 {
@@ -37,13 +37,14 @@ GxMesh::~GxMesh()
 {
 }
 
-void GxMesh::setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs)
+void GxMesh::setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vertexStride)
 {
 	m_vertexBuffer = buffer;
 
 	Assert(numVertexInputs <= kMaxVertexInputs);
-	m_numVertexInputs = numVertexInputs <= kMaxVertexInputs ? in_numVertexInputs : kMaxVertexInputs;
-	memcpy(m_vertexInputs, vertexInputs, m_numVertexInputs * sizeof(VertexInput));
+	m_numVertexInputs = numVertexInputs <= kMaxVertexInputs ? numVertexInputs : kMaxVertexInputs;
+	memcpy(m_vertexInputs, vertexInputs, m_numVertexInputs * sizeof(GxVertexInput));
+	m_vertexStride = vertexStride;
 }
 
 void GxMesh::setIndexBuffer(const GxIndexBuffer * buffer)
@@ -53,7 +54,7 @@ void GxMesh::setIndexBuffer(const GxIndexBuffer * buffer)
 
 void GxMesh::draw() const
 {
-	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs);
+	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
 
 	if (m_indexBuffer)
 	{

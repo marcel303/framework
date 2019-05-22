@@ -108,14 +108,15 @@ class GxMesh
 	const GxVertexBuffer * m_vertexBuffer = nullptr;
 	const GxIndexBuffer * m_indexBuffer = nullptr;
 	
-	GxVertexInput vertexInputs[kMaxVertexInputs];
-	int numVertexInputs = 0;
+	GxVertexInput m_vertexInputs[kMaxVertexInputs];
+	int m_numVertexInputs = 0;
+	int m_vertexStride = 0;
 	
 public:
 	GxMesh();
 	~GxMesh();
 	
-	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs);
+	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vertexStride);
 	void setIndexBuffer(const GxIndexBuffer * buffer);
 	
 	void draw() const;
