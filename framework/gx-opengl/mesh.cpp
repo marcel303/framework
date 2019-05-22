@@ -147,8 +147,15 @@ void GxMesh::bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs,
 			GL_INVALID_ENUM;
 
 		Assert(type != GL_INVALID_ENUM);
+		if (type == GL_INVALID_ENUM)
+			continue;
 		
-		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].numComponents, type, vsInputs[i].normalize, vsStride, (void*)(intptr_t)vsInputs[i].offset);
+		const int stride = vsStride ? vsStride : vsInputs[i].stride;
+		Assert(stride != 0);
+		if (stride == 0)
+			continue;
+		
+		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].numComponents, type, vsInputs[i].normalize, stride, (void*)(intptr_t)vsInputs[i].offset);
 		checkErrorGL();
 	}
 }
