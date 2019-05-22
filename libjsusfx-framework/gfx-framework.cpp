@@ -856,23 +856,9 @@ EEL_F JsusFxGfx_Framework::gfx_loadimg(JsusFx & jsusFx, int index, EEL_F loadFro
 		}
 		else
 		{
-			GLuint restoreTexture;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-			checkErrorGL();
-		
-			GLint sx;
-			GLint sy;
-			
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
-			checkErrorGL();
-		
-			glBindTexture(GL_TEXTURE_2D, restoreTexture);
-			checkErrorGL();
+			int sx;
+			int sy;
+			gxGetTextureSize(texture, sx, sy);
 			
 			//
 			
