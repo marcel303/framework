@@ -61,27 +61,8 @@ int VfxImage_Texture::getSx() const
 	
 	if (texture != 0)
 	{
-		// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
-		
-		/*
-		if (glGetTextureLevelParameteriv)
-		{
-			glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &result);
-			checkErrorGL();
-		}
-		else
-		*/
-		{
-			GLuint restoreTexture;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &result);
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, restoreTexture);
-		}
+		int temp;
+		gxGetTextureSize(texture, result, temp);
 	}
 	
 	return result;
@@ -93,27 +74,8 @@ int VfxImage_Texture::getSy() const
 	
 	if (texture != 0)
 	{
-		// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
-		
-		/*
-		if (glGetTextureLevelParameteriv)
-		{
-			glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &result);
-			checkErrorGL();
-		}
-		else
-		*/
-		{
-			GLuint restoreTexture;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &result);
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, restoreTexture);
-		}
+		int temp;
+		gxGetTextureSize(texture, temp, result);
 	}
 	
 	return result;
@@ -900,6 +862,8 @@ void VfxNodeDescription::addGxTexture(const char * name, const GxTexture & textu
 
 void VfxNodeDescription::addOpenglTexture(const char * name, const uint32_t id)
 {
+// todo : rename this method to addGxTexture, use GX functions below
+
 	if (id == 0)
 	{
 		add("%s. id: %d", name, id);
