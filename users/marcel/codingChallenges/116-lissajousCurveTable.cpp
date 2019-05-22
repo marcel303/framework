@@ -80,7 +80,7 @@ int main(int argc, char * argv[])
 					gxPushMatrix();
 					{
 						gxTranslatef(x * 100, y * 100, 0);
-						setDrawRect(x * 100, y * 100, (x + 1) * 100, (y + 1) * 100);
+						setDrawRect(x * 100, y * 100, 100, 100);
 						drawLissajous(x + 1, y + 1, 1000, phase);
 						clearDrawRect();
 					}
