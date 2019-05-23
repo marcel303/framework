@@ -33,11 +33,13 @@ Cohesive forces can be approximated by using a tracer image to track different f
 
 */
 
-#if defined(DEBUG)
+#if ENABLE_OPENGL && defined(DEBUG)
 	#include <SDL2/SDL_opengl.h> // so we can call glFinish to measure GPU time
 #endif
 
 #define TODO 0
+
+#define ENABLE_SETBND 0
 
 #define SCALE 1
 
@@ -142,7 +144,7 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 
 // -----
 
-#if TODO
+#if ENABLE_OPENGL && ENABLE_SETBND
 
 // the xfer stuff below is helper code to allow working with cpu fallback code
 // todo : remove this fallback code
@@ -182,7 +184,7 @@ static void xfer_end(Surface * surface, const int index)
 
 static void set_bnd2d(const int b, Surface * in_x, const int N)
 {
-#if TODO
+#if ENABLE_SETBND
 	float * x = xfer_begin(in_x, 0);
 	
 	for (int i = 1; i < N - 1; ++i)
@@ -656,7 +658,7 @@ int main(int argc, char * argv[])
 		}
 	#endif
 		
-	#if defined(DEBUG)
+	#if ENABLE_OPENGL && defined(DEBUG)
 		const auto t1 = g_TimerRT.TimeUS_get();
 	#endif
 		
@@ -673,7 +675,7 @@ int main(int argc, char * argv[])
 		
 		printf("step duration: %gms\n", (t2 - t1) / 1000.f);
 	#endif
-		
+	
 		framework.beginDraw(0, 0, 255, 0);
 		{
 			gxScalef(SCALE, SCALE, 1);
