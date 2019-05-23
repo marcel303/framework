@@ -53,7 +53,11 @@ ShaderCache g_shaderCache;
 
 ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
-	auto i = m_map.find(name);
+	Key key;
+	key.name = name;
+	key.outputs = outputs;
+	
+	auto i = m_map.find(key);
 	
 	if (i != m_map.end())
 	{
@@ -79,8 +83,8 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			std::string shaderVs;
 			std::string shaderPs;
 			
-			buildMetalText(shaderVs_opengl.c_str(), 'v', shaderVs);
-			buildMetalText(shaderPs_opengl.c_str(), 'p', shaderPs);
+			buildMetalText(shaderVs_opengl.c_str(), 'v', outputs, shaderVs);
+			buildMetalText(shaderPs_opengl.c_str(), 'p', outputs, shaderPs);
 			
 			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:shaderVs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_vs == nullptr && error != nullptr)
@@ -179,7 +183,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			elem->ps = ps;
 		}
 		
-		m_map[name] = elem;
+		m_map[key] = elem;
 		
 		return *elem;
 	}
@@ -216,15 +220,11 @@ Shader::Shader(const char * name, const char * outputs)
 	const std::string vs = std::string(name) + ".vs";
 	const std::string ps = std::string(name) + ".ps";
 	
-	m_cacheElem = static_cast<ShaderCacheElem_Metal*>(&g_shaderCache.findOrCreate(name, vs.c_str(), ps.c_str(), outputs));
+	load(name, vs.c_str(), ps.c_str(), outputs);
 }
 
 Shader::Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
-// todo : s_shaderOutputs
-	//if (outputs == nullptr)
-	//	outputs = s_shaderOutputs.c_str();
-	
 	load(name, filenameVs, filenamePs, outputs);
 }
 
@@ -234,8 +234,13 @@ Shader::~Shader()
 		clearShader();
 }
 
+extern std::string s_shaderOutputs; // todo : cleanup
+
 void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
+	if (outputs == nullptr)
+		outputs = s_shaderOutputs.c_str();
+	
 	m_cacheElem = static_cast<ShaderCacheElem_Metal*>(&g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs));
 }
 
@@ -434,37 +439,42 @@ void Shader::setTextureUnit(GxImmediateIndex index, int unit)
 	not_implemented;
 }
 
-void Shader::setTexture(const char * name, int unit, GxTextureId textureId)
+void Shader::setTexture(const char * name, int unit, GxTextureId texture)
 {
 	const int index = getTextureIndex(*m_cacheElem, name);
 	
 	if (index >= 0)
 	{
-		auto & info = m_cacheElem->textureInfos[index];
-		
-		auto i = s_textures.find(textureId);
-		Assert(i != s_textures.end());
-		
-		if (i != s_textures.end())
-		{
-			auto texture = i->second;
-			
-			if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
-				m_cacheElem->vsTextures[info.vsOffset] = texture;
-			if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
-				m_cacheElem->psTextures[info.psOffset] = texture;
-		}
+		setTextureUniform(index, unit, texture);
 	}
 }
 
 void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
 {
 	not_implemented;
+	
+	setTexture(name, unit, texture);
 }
 
 void Shader::setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture)
 {
 	not_implemented;
+	
+	Assert(index >= 0 && index < m_cacheElem->textureInfos.size());
+	auto & info = m_cacheElem->textureInfos[index];
+	
+	auto i = s_textures.find(texture);
+	Assert(i != s_textures.end());
+
+	if (i != s_textures.end())
+	{
+		auto metal_texture = i->second;
+		
+		if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
+			m_cacheElem->vsTextures[info.vsOffset] = metal_texture;
+		if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
+			m_cacheElem->psTextures[info.psOffset] = metal_texture;
+	}
 }
 
 void Shader::setTextureArray(const char * name, int unit, GxTextureId texture)

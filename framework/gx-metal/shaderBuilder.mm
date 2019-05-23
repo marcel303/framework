@@ -123,7 +123,7 @@ static void report_error(const char * line, const char * format, ...)
 	printf("error: %s\n", text);
 }
 
-bool buildMetalText(const char * text, const char shaderType, std::string & result)
+bool buildMetalText(const char * text, const char shaderType, const char * outputs, std::string & result)
 {
 	std::vector<std::string> lines;
 	TextIO::LineEndings lineEndings;
@@ -506,7 +506,15 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			sb.Append("\t\n");
 			sb.Append("\tm.main();\n");
 			sb.Append("\t\n");
-			sb.Append("\treturn m.shader_fragColor;\n");
+			
+			for (int i = 0; outputs[i] != 0; ++i)
+			{
+			// todo : support MRT
+				if (outputs[i] == 'c')
+					sb.Append("\treturn m.shader_fragColor;\n");
+				if (outputs[i] == 'n')
+					sb.Append("\treturn m.shader_fragNormal;\n");
+			}
 			sb.Append("}\n");
 		}
 		

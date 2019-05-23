@@ -2139,7 +2139,7 @@ void popWindow()
 // -----
 
 static Stack<std::string, 32> s_shaderOutputsStack("");
-static std::string s_shaderOutputs = "c";
+std::string s_shaderOutputs = "c"; // todo : move to internal / globals
 
 #if ENABLE_OPENGL
 

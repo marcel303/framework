@@ -354,7 +354,23 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 
 class ShaderCache
 {
-	typedef std::map<std::string, ShaderCacheElem_Metal*> Map;
+	class Key
+	{
+	public:
+		std::string name;
+		std::string outputs;
+		
+		inline bool operator<(const Key & other) const
+		{
+			if (name != other.name)
+				return name < other.name;
+			if (outputs != other.outputs)
+				return outputs < other.outputs;
+			return false;
+		}
+	};
+	
+	typedef std::map<Key, ShaderCacheElem*> Map;
 	
 	Map m_map;
 	
