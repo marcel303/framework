@@ -429,6 +429,10 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 					sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
 				sb.Append("\t\n");
 				
+				sb.Append("\t// inputs\n");
+				sb.Append("\tfloat4 gl_FragCoord;\n");
+				sb.Append("\t\n");
+				
 				sb.Append("\t// outputs\n");
 				sb.Append("\tfloat4 shader_fragColor;\n");
 				sb.Append("\tfloat4 shader_fragNormal;\n");
@@ -498,6 +502,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 				for (auto & io : inputOutputs)
 					sb.AppendFormat("\tm.%s = varyings.%s;\n", io.name.c_str(), io.name.c_str());
 			}
+			sb.Append("\tm.gl_FragCoord = varyings.position;\n");
 			sb.Append("\t\n");
 			sb.Append("\tm.main();\n");
 			sb.Append("\t\n");
