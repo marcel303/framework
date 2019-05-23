@@ -171,12 +171,14 @@ struct Renderer
 		gxPushMatrix();
 		gxLoadMatrixf(drawState.projectionMatrix.m_v);
 		
+	#if ENABLE_OPENGL
 		if (drawToSurface)
 		{
 		// fixme : horrible hack to make texture coordinates work
 			// flip Y axis so the vertical axis runs bottom to top
 			gxScalef(1.f, -1.f, 1.f);
 		}
+	#endif
 		
 		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
