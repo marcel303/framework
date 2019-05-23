@@ -273,8 +273,9 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 		sb.Append("\n");
 	// todo : use per-texture samplers
 		//sb.Append("#define texture(s, c) s.sample(s ## _sampler, c)\n");
-		sb.Append("constexpr sampler sampler_linear_wrap(mag_filter::linear, min_filter::linear);\n");
+		sb.Append("constexpr sampler sampler_linear_wrap(mag_filter::linear, min_filter::linear, address::clamp_to_edge);\n");
 		sb.Append("#define texture(s, c) s.sample(sampler_linear_wrap, c)\n");
+		sb.Append("#define textureOffset(s, c, o) s.sample(sampler_linear_wrap, c, o)\n");
 		sb.Append("#define sampler2D texture2d<float>\n");
 		sb.Append("#define textureSize(t, level) float2(t.get_width(level), t.get_height(level))\n");
 		sb.Append("#define dFdx dfdx\n");
