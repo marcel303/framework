@@ -134,7 +134,9 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 		// construct the shader, so we can catch any errors here
 		// note this step is optional and just here for convenience
 		Shader shader(name, vs_name, ps_name);
+	#if ENABLE_OPENGL
 		checkErrorGL();
+	#endif
 	}
 }
 
@@ -222,7 +224,12 @@ static void lin_solve2d(const int b, Surface * x, const Surface * x0, const floa
 						)
 				) * cRecip;
 		)SHADER",
-		"uniform sampler2D x; uniform sampler2D x0; uniform float a; uniform float cRecip;");
+		R"SHADER(
+			uniform sampler2D x;
+			uniform sampler2D x0;
+			uniform float a;
+			uniform float cRecip;
+		)SHADER");
 	
     for (int k = 0; k < iter; ++k)
     {
@@ -259,7 +266,12 @@ static void lin_solve2d_xy(
 						)
 				) * cRecip;
 		)SHADER",
-		"uniform sampler2D x; uniform sampler2D x0; uniform float a; uniform float cRecip;");
+		R"SHADER(
+			uniform sampler2D x;
+			uniform sampler2D x0;
+			uniform float a;
+			uniform float cRecip;
+		)SHADER");
 	
 	for (int k = 0; k < iter; ++k)
     {
@@ -315,7 +327,10 @@ static void project2d(
 						+ (+ samp(velocY,  0, +1) - samp(velocY,  0, -1))
 					);
 		)SHADER",
-		"uniform sampler2D velocX; uniform sampler2D velocY;");
+		R"SHADER(
+			uniform sampler2D velocX;
+			uniform sampler2D velocY;
+		)SHADER");
 	
 	pushSurface(div);
 	{
@@ -385,7 +400,13 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
 		
 		return samp_filter(d0, - tmp1, - tmp2);
 	)SHADER",
-	"uniform sampler2D velocX; uniform sampler2D velocY; uniform sampler2D d0; uniform float dtx; uniform float dty;");
+	R"SHADER(
+		uniform sampler2D velocX;
+		uniform sampler2D velocY;
+		uniform sampler2D d0;
+		uniform float dtx;
+		uniform float dty;
+	)SHADER");
 	
     pushSurface(d);
     pushBlend(BLEND_OPAQUE);
@@ -644,7 +665,7 @@ int main(int argc, char * argv[])
 			cube->step();
 		}
 		
-	#if defined(DEBUG)
+	#if ENABLE_OPENGL && defined(DEBUG)
 		glFlush();
 		glFinish();
 		
