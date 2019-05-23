@@ -7,11 +7,15 @@ shader_out vec4 v_color;
 shader_out vec2 v_texcoord0;
 
 void integrateDirectionalLight(
+#if defined(__METAL_VERSION__)
+	thread vec3 & totalLightColor,
+#else
 	inout vec3 totalLightColor,
-	in vec3 position,
-	in vec3 normal,
-	in vec3 lightDirection,
-	in vec3 lightColor)
+#endif
+	vec3 position,
+	vec3 normal,
+	vec3 lightDirection,
+	vec3 lightColor)
 {
 	float diffuse = max(0.0, - dot(lightDirection, normal));
 
@@ -26,12 +30,16 @@ void integrateDirectionalLight(
 }
 
 void integrateOmniLight(
+#if defined(__METAL_VERSION__)
+	thread vec3 & totalLightColor,
+#else
 	inout vec3 totalLightColor,
-	in vec3 position,
-	in vec3 normal,
-	in vec3 lightPosition,
-	in vec3 lightColor,
-	in float lightIntensity)
+#endif
+	vec3 position,
+	vec3 normal,
+	vec3 lightPosition,
+	vec3 lightColor,
+	float lightIntensity)
 {
 	vec3 delta = position - lightPosition;
 	float distance = length(delta);
