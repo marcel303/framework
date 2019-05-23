@@ -1121,7 +1121,7 @@ int main(int argc, char * argv[])
 			GxVertexBuffer * vertexBuffer = vertexBuffers[vertexBufferIndex];
 			
 			GxMesh * gxMesh = new GxMesh();
-			gxMesh->setVertexBuffer(vertexBuffer, &vertexInputs.front(), vertexInputs.size());
+			gxMesh->setVertexBuffer(vertexBuffer, &vertexInputs.front(), vertexInputs.size(), 0);
 			gxMesh->setIndexBuffer(indexBuffer);
 			
 			Assert(meshes[&mesh] == nullptr);
