@@ -69,17 +69,17 @@
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0 // do not alter
 #endif
 
-#if defined(LINUX)
-	#define ENABLE_PROFILING 0
-#else
-	#define ENABLE_PROFILING 1
-#endif
-
 #if defined(MACOS) && !defined(ENABLE_METAL) && 0
 	#define ENABLE_METAL 1
 	#define ENABLE_HQ_PRIMITIVES 1
 #elif !defined(ENABLE_OPENGL)
 	#define ENABLE_OPENGL 1
+#endif
+
+#if ENABLE_OPENGL && !defined(LINUX)
+	#define ENABLE_PROFILING 1
+#else
+	#define ENABLE_PROFILING 0
 #endif
 
 /*
