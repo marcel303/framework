@@ -48,6 +48,7 @@ struct GxVertexInput
 	GX_ELEMENT_TYPE type : 4;  // the type of element inside the vertex stream
 	bool normalize : 4;        // (if integer) should the element be normalized into the range 0..1?
 	uint32_t offset : 24;      // byte offset within vertex buffer for the start of this input
+	uint32_t stride : 8;       // byte offset within vertex buffer for the start of this input
 };
 
 class GxVertexBufferBase
