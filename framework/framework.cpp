@@ -5210,7 +5210,7 @@ void pushSurface(Surface * surface)
 	//
 	
 #if ENABLE_METAL
-	pushRenderPass(surface->getColorTarget(), surface->getDepthTarget(), false, "Surface");
+	pushRenderPass(surface->getColorTarget(), false, surface->getDepthTarget(), false, "Surface");
 #endif
 
 	//

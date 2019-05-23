@@ -62,6 +62,9 @@ void Surface::destruct()
 		}
 	}
 	
+	m_colorTarget[0] = nullptr;
+	m_colorTarget[1] = nullptr;
+	
 	if (m_properties.depthTarget.enabled)
 	{
 		for (int i = 0; i < (m_properties.depthTarget.doubleBuffered ? 2 : 1); ++i)
@@ -116,7 +119,7 @@ void Surface::swapBuffers()
 
 bool Surface::init(const SurfaceProperties & properties)
 {
-	fassert(m_colorTarget[0] == nullptr);
+	fassert(m_colorTarget[0] == nullptr && m_depthTarget[0] == nullptr);
 	
 	m_properties = properties;
 	
@@ -143,8 +146,6 @@ bool Surface::init(const SurfaceProperties & properties)
 		
 		for (int i = 0; result && i < (properties.colorTarget.doubleBuffered ? 2 : 1); ++i)
 		{
-			// allocate storage
-			
 			m_colorTarget[i] = new ColorTarget();
 			result &= m_colorTarget[i]->init(targetProperties);
 		}
@@ -194,12 +195,12 @@ bool Surface::init(const SurfaceProperties & properties)
 	return result;
 }
 
-bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
+bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
 {
 	SurfaceProperties properties;
 	
-	properties.dimensions.width = in_sx;
-	properties.dimensions.height = in_sy;
+	properties.dimensions.width = sx;
+	properties.dimensions.height = sy;
 	properties.colorTarget.enabled = true;
 	properties.colorTarget.format = format;
 	properties.colorTarget.doubleBuffered = doubleBuffered;
@@ -323,8 +324,9 @@ void Surface::clear(int r, int g, int b, int a)
 void Surface::clearf(float r, float g, float b, float a)
 {
 	getColorTarget()->setClearColor(r, g, b, a);
-	pushRenderPass(getColorTarget(), nullptr, false, "Surface::clear");
+	pushRenderPass(getColorTarget(), true, nullptr, false, "Surface::clear");
 	{
+		// target gets cleared during push
 	}
 	popRenderPass();
 }
@@ -332,8 +334,9 @@ void Surface::clearf(float r, float g, float b, float a)
 void Surface::clearDepth(float d)
 {
 	getDepthTarget()->setClearDepth(d);
-	pushRenderPass(nullptr, getDepthTarget(), true, "Surface::clearDepth");
+	pushRenderPass(nullptr, false, getDepthTarget(), true, "Surface::clearDepth");
 	{
+		// target gets cleared during push
 	}
 	popRenderPass();
 }
@@ -354,13 +357,11 @@ void Surface::setAlphaf(float a)
 	{
 		pushBlend(BLEND_OPAQUE);
 		setColorf(1.f, 1.f, 1.f, a);
-	#if TODO
-		glColorMask(0, 0, 0, 1);
+		setColorWriteMask(0, 0, 0, 1); // todo : use push/pop
 		{
 			drawRect(0.f, 0.f, m_properties.dimensions.width, m_properties.dimensions.height);
 		}
-		glColorMask(1, 1, 1, 1);
-	#endif
+		setColorWriteMask(1, 1, 1, 1);
 		popBlend();
 	}
 	popSurface();
@@ -422,24 +423,20 @@ void Surface::invert()
 
 void Surface::invertColor()
 {
-#if TODO
-	glColorMask(1, 1, 1, 0);
+	setColorWriteMask(1, 1, 1, 0); // todo : use push/pop
 	{
 		invert();
 	}
-	glColorMask(1, 1, 1, 1);
-#endif
+	setColorWriteMask(1, 1, 1, 1);
 }
 
 void Surface::invertAlpha()
 {
-#if TODO
-	glColorMask(0, 0, 0, 1);
+	setColorWriteMask(0, 0, 0, 1); // todo : use push/pop
 	{
 		invert();
 	}
-	glColorMask(1, 1, 1, 1);
-#endif
+	setColorWriteMask(1, 1, 1, 1);
 }
 
 void Surface::gaussianBlur(const float strengthH, const float strengthV, const int _kernelSize)

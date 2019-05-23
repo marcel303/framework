@@ -10,6 +10,22 @@ id <MTLDevice> metal_get_device();
 
 //
 
+static MTLPixelFormat toMetalFormat(const SURFACE_FORMAT format)
+{
+#define C(src, dst) if (format == src) return dst
+	C(SURFACE_RGBA8,   MTLPixelFormatRGBA8Unorm);
+	C(SURFACE_RGBA16F, MTLPixelFormatRGBA16Float);
+	C(SURFACE_RGBA32F, MTLPixelFormatRGBA32Float);
+	C(SURFACE_R8,      MTLPixelFormatR8Unorm);
+	C(SURFACE_R16F,    MTLPixelFormatR16Float);
+	C(SURFACE_R32F,    MTLPixelFormatR32Float);
+	C(SURFACE_RG16F,   MTLPixelFormatRG16Float);
+	C(SURFACE_RG32F,   MTLPixelFormatRG32Float);
+#undef C
+
+	return MTLPixelFormatInvalid;
+}
+
 ColorTarget::~ColorTarget()
 {
 	id <MTLTexture> colorTexture = (id <MTLTexture>)m_colorTexture;
@@ -35,7 +51,7 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 		
 		MTLTextureDescriptor * descriptor =
 			[MTLTextureDescriptor
-				texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
+				texture2DDescriptorWithPixelFormat:toMetalFormat(properties.format)
 				width:properties.dimensions.width
 				height:properties.dimensions.height
 				mipmapped:NO];
@@ -92,7 +108,7 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 		
 		MTLTextureDescriptor * descriptor =
 			[MTLTextureDescriptor
-				texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
+				texture2DDescriptorWithPixelFormat:(properties.format == DEPTH_FLOAT16) ? MTLPixelFormatDepth16Unorm : MTLPixelFormatDepth32Float
 				width:properties.dimensions.width
 				height:properties.dimensions.height
 				mipmapped:NO];

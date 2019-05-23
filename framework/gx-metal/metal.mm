@@ -139,7 +139,7 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 		RenderPassData pd;
 		
 		pd.cmdbuf = [[queue commandBuffer] retain];
-		
+
 		activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
 		[activeWindowData->current_drawable retain];
 		
@@ -171,7 +171,7 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 		// begin encoding
 		
 		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
-		pd.encoder.label = @"hello encoder";
+		pd.encoder.label = @"Framebuffer Pass";
 		
 		s_renderPasses.push_back(pd);
 		
@@ -246,6 +246,9 @@ void metal_set_scissor(const int x, const int y, const int sx, const int sy)
 {
 	const MTLScissorRect rect = { (NSUInteger)x, (NSUInteger)y, (NSUInteger)sx, (NSUInteger)sy };
 	
+// todo : assert x/y >= 0 and x+sx/y+sy <= width/height
+// todo : clip coords to be within render target size
+
 	[s_activeRenderPass->encoder setScissorRect:rect];
 }
 
@@ -373,30 +376,16 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 	}
 }
 
-// -- render states --
-
-static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
-static Stack<bool, 32> lineSmoothStack(false);
-static Stack<bool, 32> wireframeStack(false);
-static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
-static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
-
-RenderPipelineState renderState;
-
-// render states independent from render pipeline state
-
-static bool s_depthTestEnabled = false;
-static DEPTH_TEST s_depthTest = DEPTH_ALWAYS;
-static bool s_depthWriteEnabled = false;
+// -- render passes --
 
 #include "renderTarget.h"
 
-void pushRenderPass(ColorTarget * target, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
+void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
 {
-	pushRenderPass(&target, target == nullptr ? 0 : 1, depthTarget, clearDepth, passName);
+	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
 }
 
-void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
+void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName)
 {
 	Assert(numTargets >= 0 && numTargets <= 4);
 	
@@ -425,7 +414,7 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * 
 				clearColor.g,
 				clearColor.b,
 				clearColor.a);
-			colorattachment.loadAction  = MTLLoadActionClear;
+			colorattachment.loadAction  = in_clearColor ? MTLLoadActionClear : MTLLoadActionLoad;
 			colorattachment.storeAction = MTLStoreActionStore;
 			
 			pd.renderPass.colorFormat[i] = colorattachment.texture.pixelFormat;
@@ -441,7 +430,7 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * 
 			MTLRenderPassDepthAttachmentDescriptor * depthattachment = pd.renderdesc.depthAttachment;
 			depthattachment.texture = (id <MTLTexture>)depthTarget->getMetalTexture();
 			depthattachment.clearDepth = depthTarget->getClearDepth();
-			depthattachment.loadAction = MTLLoadActionClear;
+			depthattachment.loadAction = in_clearDepth ? MTLLoadActionClear : MTLLoadActionLoad;
 			depthattachment.storeAction = MTLStoreActionDontCare;
 			
 			pd.renderPass.depthFormat = depthattachment.texture.pixelFormat;
@@ -501,6 +490,34 @@ void popRenderPass()
 		renderState.renderPass = s_activeRenderPass->renderPass;
 	}
 }
+
+void setColorWriteMask(int r, int g, int b, int a)
+{
+	int mask = 0;
+	
+	if (r) mask |= 1;
+	if (g) mask |= 2;
+	if (b) mask |= 4;
+	if (a) mask |= 8;
+	
+	renderState.colorWriteMask = mask;
+}
+
+// -- render states --
+
+static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
+static Stack<bool, 32> lineSmoothStack(false);
+static Stack<bool, 32> wireframeStack(false);
+static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
+static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
+
+RenderPipelineState renderState;
+
+// render states independent from render pipeline state
+
+static bool s_depthTestEnabled = false;
+static DEPTH_TEST s_depthTest = DEPTH_ALWAYS;
+static bool s_depthWriteEnabled = false;
 
 void setBlend(BLEND_MODE blendMode)
 {
@@ -1205,10 +1222,15 @@ static void gxValidatePipelineState()
 				}
 			}
 			
+		// todo : add shader version which has multiple vertex buffers, one for each attribute, so we can
+		//        choose between 'one vertex buffer with packed vertices' or
+		//        'many vertex buffers with a per-attribute vertex stream'
+		//        use gxSetVertexBuffers(vsInputs, numVsInputs, vsInputBuffers)
+		
 			vertexDescriptor.layouts[0].stride = renderState.vertexStride;
 			vertexDescriptor.layouts[0].stepRate = 1;
 			vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
-
+		
 			MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
 			pipelineDescriptor.label = [NSString stringWithCString:shaderElem.name.c_str() encoding:NSASCIIStringEncoding];
 			pipelineDescriptor.sampleCount = 1;
@@ -1225,6 +1247,13 @@ static void gxValidatePipelineState()
 
 				att.pixelFormat = (MTLPixelFormat)renderState.renderPass.colorFormat[i];
 
+				int writeMask = 0;
+				if ((renderState.colorWriteMask & 1) != 0) writeMask |= MTLColorWriteMaskRed;
+				if ((renderState.colorWriteMask & 2) != 0) writeMask |= MTLColorWriteMaskGreen;
+				if ((renderState.colorWriteMask & 4) != 0) writeMask |= MTLColorWriteMaskBlue;
+				if ((renderState.colorWriteMask & 8) != 0) writeMask |= MTLColorWriteMaskAlpha;
+				att.writeMask = writeMask;
+				
 				// blend state
 				
 				switch (renderState.blendMode)
@@ -1382,7 +1411,7 @@ static void gxFlush(bool endOfBatch)
 				if (s_gxVertexBufferElem != nullptr)
 				{
 					auto * elem = s_gxVertexBufferElem;
-					[s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxFlush)"];
+					// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxFlush)"];
 					[s_activeRenderPass->cmdbuf addCompletedHandler:
 						^(id<MTLCommandBuffer> _Nonnull)
 						{
@@ -1640,7 +1669,7 @@ static void gxEndDraw()
 	if (s_gxVertexBufferElem != nullptr)
 	{
 		auto * elem = s_gxVertexBufferElem;
-		[s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxEndDraw)"];
+		// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxEndDraw)"];
 		[s_activeRenderPass->cmdbuf addCompletedHandler:
 			^(id<MTLCommandBuffer> _Nonnull)
 			{
@@ -1653,7 +1682,7 @@ static void gxEndDraw()
 	
 	// clear textures to avoid freed textures from being reused (prefer to crash instead)
 	
-	[s_activeRenderPass->cmdbuf setLabel:@"Clear textures (gxEndDraw)"];
+	// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"Clear textures (gxEndDraw)"];
 	for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
 		[s_activeRenderPass->encoder setVertexTexture:nullptr atIndex:i];
 	for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)

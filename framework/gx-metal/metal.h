@@ -49,12 +49,11 @@ void metal_clear_scissor();
 
 // todo : move to framework header
 
-void pushRenderPass(ColorTarget * target, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
-void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
+void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
+void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
 void popRenderPass();
 
-class GxVertexBuffer;
-struct GxVertexInput;
+void setColorWriteMask(int r, int g, int b, int a);
 
 #ifdef __OBJC__
 
@@ -66,6 +65,7 @@ struct GxVertexInput;
 struct __attribute__((packed)) RenderPipelineState
 {
 	BLEND_MODE blendMode = BLEND_ALPHA;
+	uint8_t colorWriteMask = 0xf;
 	
 	GxVertexInput vertexInputs[8] = { };
 	uint8_t vertexInputCount = 0;
