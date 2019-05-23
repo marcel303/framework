@@ -27,7 +27,7 @@
 
 #include "framework.h"
 
-#if ENABLE_OPENGL
+#if ENABLE_OPENGL && !USE_LEGACY_OPENGL
 
 #include "data/engine/ShaderCommon.txt" // VS_ constants
 #include "internal.h"
