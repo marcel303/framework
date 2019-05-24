@@ -167,6 +167,7 @@ namespace AnimModel
 	void Mesh::finalize()
 	{
 	#if ENABLE_METAL
+	// todo : vb/ib for OpenGL too
 		m_vertexBuffer.alloc(m_vertices, sizeof(Vertex) * m_numVertices);
 		m_indexBuffer.alloc(m_indices, sizeof(int) * m_numIndices, GX_INDEX_32); // todo : GX_INDEX_16 when possible
 	#endif

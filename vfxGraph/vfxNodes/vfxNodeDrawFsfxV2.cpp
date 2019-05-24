@@ -81,7 +81,9 @@ static const char * s_fsfxCommonInc = R"SHADER(
 
 	shader_in vec2 texcoord;
 
+#if !defined(__METAL_VERSION__)
 	vec4 fsfx();
+#endif
 
 	float fsfxOpacity = 1.0;
 
@@ -181,6 +183,8 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 		{
 			std::vector<DynamicInput> inputs;
 			
+		// todo : add functions to query shader uniforms
+		
 			GLsizei uniformCount = 0;
 			glGetProgramiv(shader->getProgram(), GL_ACTIVE_UNIFORMS, &uniformCount);
 			checkErrorGL();

@@ -99,6 +99,7 @@ static GxTextureId copyTexture(const GxTextureId texture)
 
 	//
 	
+// todo : use GX functions to retrieve texture size and format
 	glBindTexture(GL_TEXTURE_2D, texture);
 	checkErrorGL();
 	

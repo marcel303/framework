@@ -428,7 +428,7 @@ static void drawCubeSlices(const Cube & cube)
 
 	// send output towards hardware by blitting it to the screen!
 	
-#if ENABLE_OPENGL
+#if ENABLE_OPENGL || ENABLE_METAL
 	GxTextureId texture = createTextureFromRGBA8(slices, SX * SZ, SY, true, true);
 
 	if (texture)
@@ -744,7 +744,7 @@ int main(int argc, char * argv[])
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
-			#if ENABLE_OPENGL
+			#if ENABLE_OPENGL || ENABLE_METAL
 				// draw debug visualisation
 
 				setFont("calibri.ttf");
