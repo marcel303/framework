@@ -1,7 +1,8 @@
 library libetherdream shared
-	add_files etherdream.c
+	add_files etherdream.c etherdream.h
 	header_path . expose
-	depend_library pthread find
+	with_platform macos depend_library pthread find
+	with_platform windows depend_library ws2_32 find
 
 app libetherdream-test
 	depend_library libetherdream

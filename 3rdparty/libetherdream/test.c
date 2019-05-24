@@ -2,8 +2,11 @@
 
 #include <math.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
+
+#ifndef WIN32
+#include <unistd.h>
+#endif
 
 #include "etherdream.h"
 
@@ -97,9 +100,13 @@ void fill_circle(float phase, int mode) {
 int main(int argc, char **argv) {
 	etherdream_lib_start();
 
+#ifdef WIN32
+	_sleep(1200);
+#else
 	/* Sleep for a bit over a second, to ensure that we see broadcasts
 	 * from all available DACs. */
 	usleep(1200000);
+#endif
 
 	int cc = etherdream_dac_count();
 	if (!cc) {

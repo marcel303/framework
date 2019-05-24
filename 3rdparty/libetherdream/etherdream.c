@@ -19,6 +19,17 @@
 #define _POSIX_C_SOURCE 199309L
 #define _DARWIN_C_SOURCE 1
 
+#ifdef WIN32
+#define _CRT_SECURE_NO_WARNINGS
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <WinSock2.h>
+#include <Windows.h>
+#include <time.h>
+#else
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -33,6 +44,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
+#endif
 
 #ifdef __MACH__
 #include <mach/mach.h>
@@ -48,6 +60,71 @@
 #define MIN_SEND_POINTS		40
 #define DEFAULT_TIMEOUT		2000000
 #define DEBUG_THRESHOLD_POINTS	800
+
+#ifdef WIN32
+
+typedef HANDLE pthread_t;
+typedef CRITICAL_SECTION pthread_mutex_t;
+typedef CONDITION_VARIABLE pthread_cond_t;
+
+static int pthread_create(pthread_t * t, void * p, LPTHREAD_START_ROUTINE proc, void * d)
+{
+	*t = CreateThread(NULL, 16 * 1024, proc, d, 0, NULL);
+
+	return 0;
+}
+
+static void pthread_join(pthread_t * t, void * p)
+{
+	WaitForSingleObject(t, INFINITE);
+}
+
+static void pthread_mutex_init(CRITICAL_SECTION * cs, void * p)
+{
+	InitializeCriticalSection(cs);
+}
+
+static void pthread_mutex_lock(CRITICAL_SECTION * cs)
+{
+	EnterCriticalSection(cs);
+}
+
+static void pthread_mutex_unlock(CRITICAL_SECTION * cs)
+{
+	LeaveCriticalSection(cs);
+}
+
+static void pthread_cond_init(CONDITION_VARIABLE * c, void * p)
+{
+	InitializeConditionVariable(c);
+}
+
+static void pthread_cond_wait(CONDITION_VARIABLE * c, CRITICAL_SECTION * cs)
+{
+	SleepConditionVariableCS(c, cs, INFINITE);
+}
+
+static void pthread_cond_signal(CONDITION_VARIABLE * c)
+{
+	WakeConditionVariable(c);
+}
+
+static void pthread_cond_broadcast(CONDITION_VARIABLE * c)
+{
+	WakeAllConditionVariable(c);
+}
+
+static int ioctl(SOCKET s, long cmd, void * arg)
+{
+	return ioctlsocket(s, cmd, arg);
+}
+
+static void close(SOCKET s)
+{
+	closesocket(s);
+}
+
+#endif
 
 struct etherdream_conn {
 	int dc_sock;
@@ -110,7 +187,9 @@ struct etherdream {
 };
 
 static FILE *trace_fp = NULL;
-#if __MACH__
+#ifdef WIN32
+static struct timespec start_time;
+#elif __MACH__
 static long long timer_start, timer_freq_numer, timer_freq_denom;
 #else
 static struct timespec start_time;
@@ -123,7 +202,12 @@ static struct etherdream *dac_list = NULL;
  * Return the number of microseconds since library initialization.
  */
 static long long microseconds(void) {
-#if __MACH__
+#ifdef WIN32
+	struct timespec t;
+	timespec_get(&t, TIME_UTC);
+	return (t.tv_sec - start_time.tv_sec) * 1000000 +
+		(t.tv_nsec - start_time.tv_nsec) / 1000;
+#elif __MACH__
 	long long time_diff = mach_absolute_time() - timer_start;
 	return time_diff * timer_freq_numer / timer_freq_denom;
 #else
@@ -139,10 +223,14 @@ static long long microseconds(void) {
  * Like usleep().
  */
 static void microsleep(long long us) {
+#ifdef WIN32
+	Sleep(us / 1000);
+#else
 	struct timespec t;
 	t.tv_sec = us / 1000000;
 	t.tv_nsec = (us % 1000000) * 1000;
 	nanosleep(&t, NULL);
+#endif
 }
 
 /* trace(d, fmt, ...)
@@ -525,7 +613,11 @@ static int dac_send_data(struct etherdream *d, struct dac_point *data,
  *
  * Main thread function for sending data to the DAC.
  */
+#ifdef WIN32
+static DWORD WINAPI dac_loop(void *dv) {
+#else
 static void *dac_loop(void *dv) {
+#endif
 	struct etherdream *d = (struct etherdream *)dv;
 	int res = 0;
 
@@ -820,20 +912,24 @@ int etherdream_stop(struct etherdream *d) {
  * Thread function for the broadcast monitor thread. This listens for UDP
  * broadcasts from Ether Dream boards on the network and adds them to our list.
  */
+#ifdef WIN32
+static DWORD WINAPI watch_for_dacs(void *arg) {
+#else
 static void *watch_for_dacs(void *arg) {
+#endif
 	(void)arg;
 
 	int sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
 		log_socket_error(NULL, "socket");
-		return NULL;
+		return 0;
 	}
 
 	int opt = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt,
 	                                                     sizeof opt) < 0) {
 		log_socket_error(NULL, "setsockopt SO_REUSEADDR");
-		return NULL;
+		return 0;
 	}
 
 	struct sockaddr_in addr = {
@@ -842,7 +938,7 @@ static void *watch_for_dacs(void *arg) {
 	};
 	if (bind(sock, (struct sockaddr *)&addr, sizeof addr) < 0) {
 		log_socket_error(NULL, "bind");
-		return NULL;
+		return 0;
 	}
 
 	trace(NULL, "_: listening for DACs...\n");
@@ -855,7 +951,7 @@ static void *watch_for_dacs(void *arg) {
 		                   (struct sockaddr *)&src, &srclen);
 		if (len < 0) {
 			log_socket_error(NULL, "recvfrom");
-			return NULL;
+			return 0;
 		}
 
 		/* See if this is a DAC we already knew about */
@@ -903,7 +999,7 @@ static void *watch_for_dacs(void *arg) {
 	}
 
 	trace(NULL, "_: Exiting\n");
-	return NULL;
+	return 0;
 }
 
 /* etherdream_lib_start()
@@ -912,7 +1008,9 @@ static void *watch_for_dacs(void *arg) {
  */
 int etherdream_lib_start(void) {
 	// Get high-resolution timer info
-#if __MACH__
+#ifdef WIN32
+	timespec_get(&start_time, TIME_UTC);
+#elif __MACH__
 	timer_start = mach_absolute_time();
 	mach_timebase_info_data_t timebase_info;
 	mach_timebase_info(&timebase_info);
