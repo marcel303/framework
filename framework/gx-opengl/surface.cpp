@@ -31,6 +31,7 @@
 #if ENABLE_OPENGL
 
 #include "internal.h"
+#include <algorithm>
 
 extern int s_backingScale; // todo : can this be exposed/determined more nicely?
 

@@ -214,7 +214,7 @@ int main(int argc, char * argv[])
 			print_indent(indent); printf("vec2_children:\n");
 			for (auto & v : vec2_children)
 			{
-				print_indent(indent + 1); printf("%(%f, %f)\n", v[0], v[1]);
+				print_indent(indent + 1); printf("(%f, %f)\n", v[0], v[1]);
 			}
 		}
 	};
