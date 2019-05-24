@@ -10,6 +10,7 @@
 #include "componentType.h"
 #include "framework.h"
 #include "framework-camera.h"
+#include "gx_render.h"
 #include "imgui-framework.h"
 #include "Quat.h"
 #include "raycast.h"
@@ -101,8 +102,10 @@ struct Renderer
 	RenderSceneCallback drawOpaque = nullptr;
 	RenderSceneCallback drawTranslucent = nullptr;
 	
-	mutable Surface colorMap;
-	mutable Surface normalMap;
+	mutable DepthTarget depthMap;
+	mutable ColorTarget normalMap;
+	mutable ColorTarget colorMap;
+	mutable ColorTarget lightMap;
 	
 	struct
 	{
@@ -125,9 +128,10 @@ struct Renderer
 				{ "Lit + Shadows", kMode_LitWithShadows }
 			});
 		
-		result &= colorMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, true, false);
-		
-		result &= normalMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, true, false);
+		result &= depthMap.init(VIEW_SX, VIEW_SY, DEPTH_FLOAT32, 1.f);
+		result &= normalMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, colorBlackTranslucent);
+		result &= colorMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
+		result &= lightMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
 		
 		return result;
 	}
@@ -218,33 +222,43 @@ struct Renderer
 		}
 		else if (mode->get() == kMode_Lit)
 		{
-			pushSurface(&normalMap);
+			pushRenderPass(&normalMap, true, &depthMap, true, "Depth Normal");
 			{
 				pushMatrices(true);
 				{
-					normalMap.clear();
-					normalMap.clearDepth(1.f);
-				
 					drawNormalPass();
 				}
 				popMatrices();
 			}
-			popSurface();
+			popRenderPass();
 			
-			pushSurface(&colorMap);
+			pushRenderPass(&colorMap, true, &depthMap, false, "Color");
 			{
 				pushMatrices(true);
 				{
-					colorMap.clear();
-					colorMap.clearDepth(1.f);
-					
 					drawColorPass();
 				}
 				popMatrices();
 			}
-			popSurface();
+			popRenderPass();
 			
-			normalMap.blit(BLEND_OPAQUE);
+			pushRenderPass(&lightMap, true, &depthMap, false, "Light");
+			{
+				pushMatrices(true);
+				{
+					// todo : draw lights using depth and normal maps as inputs
+				}
+				popMatrices();
+			}
+			popRenderPass();
+			
+			// todo : apply light map using light and color maps as inputs
+			
+			pushBlend(BLEND_OPAQUE);
+			gxSetTexture(colorMap.getTextureId());
+			drawRect(0, 0, VIEW_SX, VIEW_SY); // todo : getWidht, height
+			gxSetTexture(0);
+			popBlend();
 			
 			pushMatrices(false);
 			{
@@ -1645,7 +1659,7 @@ struct SceneEditor
 	
 	void drawOpaque() const
 	{
-		pushDepthTest(true, DEPTH_LESS);
+		pushDepthTest(true, DEPTH_LEQUAL);
 		pushBlend(BLEND_OPAQUE);
 		{
 			if (preview.drawScene)
