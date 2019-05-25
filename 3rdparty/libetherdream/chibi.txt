@@ -6,4 +6,5 @@ library libetherdream shared
 
 app libetherdream-test
 	depend_library libetherdream
+	with_platform linux depend_library m find
 	add_files test.c
