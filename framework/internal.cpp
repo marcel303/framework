@@ -2534,7 +2534,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 		
 		result &= fread(&version, 4, 1, file) == 1;
 		
-		if (version != 1)
+		if (version != 2)
 		{
 			logDebug("loadCache: version mismatch");
 			result = false;
@@ -2592,7 +2592,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 			
 			if (atlasElemSx > 0 && atlasElemSy > 0)
 			{
-				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 3;
+				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 4;
 				uint8_t * bytes = new uint8_t[numBytes];
 				
 				result &= fread(bytes, numBytes, 1, file) == 1;
@@ -2674,7 +2674,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 	
 	if (result == true)
 	{
-		const int32_t version = 1;
+		const int32_t version = 2;
 		
 		result &= fwrite(&version, 4, 1, file) == 1;
 	}
@@ -2751,10 +2751,10 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 			
 			if (atlasElemSx > 0 && atlasElemSy > 0)
 			{
-				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 3;
+				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 4;
 				uint8_t * bytes = new uint8_t[numBytes];
 				
-				glReadPixels(ae->x, ae->y, ae->sx, ae->sy, GL_RGB, GL_FLOAT, bytes);
+				glReadPixels(ae->x, ae->y, ae->sx, ae->sy, GL_RGBA, GL_FLOAT, bytes);
 				checkErrorGL();
 				
 				result &= fwrite(bytes, numBytes, 1, file) == 1;
