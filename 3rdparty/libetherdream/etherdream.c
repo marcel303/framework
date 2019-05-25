@@ -64,25 +64,35 @@
 
 #ifdef WIN32
 
+#include <assert.h>
+
 typedef HANDLE pthread_t;
 typedef CRITICAL_SECTION pthread_mutex_t;
 typedef CONDITION_VARIABLE pthread_cond_t;
 
-static int pthread_create(pthread_t * t, void * p, LPTHREAD_START_ROUTINE proc, void * d)
+static int pthread_create(pthread_t * t, void * attr, LPTHREAD_START_ROUTINE proc, void * arg)
 {
-	*t = CreateThread(NULL, 16 * 1024, proc, d, 0, NULL);
+	assert(t != NULL);
+	assert(attr == NULL);
+
+	*t = CreateThread(NULL, 16 * 1024, proc, arg, 0, NULL);
 
 	return 0;
 }
 
-static void pthread_join(pthread_t * t, void * p)
+static void pthread_join(pthread_t * t, void ** retval)
 {
+	assert(t != NULL);
+	assert(retval == NULL);
+
 	WaitForSingleObject(t, INFINITE);
 }
 
-static void pthread_mutex_init(CRITICAL_SECTION * cs, void * p)
+static void pthread_mutex_init(CRITICAL_SECTION * cs, void * attr)
 {
-	InitializeCriticalSection(cs);
+	assert(attr == NULL);
+
+	InitializeCriticalSectionAndSpinCount(cs, 256);
 }
 
 static void pthread_mutex_lock(CRITICAL_SECTION * cs)
@@ -95,14 +105,17 @@ static void pthread_mutex_unlock(CRITICAL_SECTION * cs)
 	LeaveCriticalSection(cs);
 }
 
-static void pthread_cond_init(CONDITION_VARIABLE * c, void * p)
+static void pthread_cond_init(CONDITION_VARIABLE * c, void * attr)
 {
+	assert(attr == NULL);
+
 	InitializeConditionVariable(c);
 }
 
 static void pthread_cond_wait(CONDITION_VARIABLE * c, CRITICAL_SECTION * cs)
 {
-	SleepConditionVariableCS(c, cs, INFINITE);
+	BOOL result = SleepConditionVariableCS(c, cs, INFINITE);
+	assert(result == TRUE);
 }
 
 static void pthread_cond_signal(CONDITION_VARIABLE * c)
@@ -248,15 +261,15 @@ static void trace(struct etherdream *d, const char *fmt, ...) {
 	int len;
 
 	if (d)
-		len = snprintf(buf, sizeof buf, "[%d.%06d] %06lx ",
+		len = snprintf(buf, sizeof(buf), "[%d.%06d] %06lx ",
 			(int)(v / 1000000), (int)(v % 1000000), d->dac_id);
 	else
-		len = snprintf(buf, sizeof buf, "[%d.%06d]        ",
+		len = snprintf(buf, sizeof(buf), "[%d.%06d]        ",
 			(int)(v / 1000000), (int)(v % 1000000));
 
 	va_list args;
 	va_start(args, fmt);
-	vsnprintf(buf + len, sizeof buf - len, fmt, args);
+	vsnprintf(buf + len, sizeof(buf) - len, fmt, args);
 	va_end(args);
 
 	fputs(buf, trace_fp);
@@ -396,7 +409,7 @@ static void dump_resp(struct etherdream *d) {
  */
 static int dac_connect(struct etherdream *d) {
 	struct etherdream_conn *conn = &d->conn;
-	memset(conn, 0, sizeof *conn);
+	memset(conn, 0, sizeof(*conn));
 
 	// Open socket
 	conn->dc_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
@@ -415,7 +428,7 @@ static int dac_connect(struct etherdream *d) {
 	addr.sin_port = htons(7765);
 
 	// Because the socket is nonblocking, this will always error...
-	connect(conn->dc_sock, (struct sockaddr *)&addr, (int)sizeof addr);
+	connect(conn->dc_sock, (struct sockaddr *)&addr, (int)sizeof(addr));
 
 #ifdef WIN32
 	if (WSAGetLastError() != WSAEWOULDBLOCK) {
@@ -443,9 +456,8 @@ static int dac_connect(struct etherdream *d) {
 	// See if we have *actually* connected
 	{
 		int error = 0;
-		unsigned int len = sizeof error;
-		if (getsockopt(conn->dc_sock, SOL_SOCKET, SO_ERROR, (char *)&error,
-		                                                           &len) < 0) {
+		unsigned int len = sizeof(error);
+		if (getsockopt(conn->dc_sock, SOL_SOCKET, SO_ERROR, (char *)&error, &len) < 0) {
 			log_socket_error(d, "getsockopt");
 			goto bail;
 		}
@@ -459,8 +471,7 @@ static int dac_connect(struct etherdream *d) {
 
 	{
 		int ndelay = 1;
-		if (setsockopt(conn->dc_sock, IPPROTO_TCP, TCP_NODELAY,
-		                                (char *)&ndelay, sizeof(ndelay)) < 0) {
+		if (setsockopt(conn->dc_sock, IPPROTO_TCP, TCP_NODELAY, (char *)&ndelay, sizeof(ndelay)) < 0) {
 			log_socket_error(d, "setsockopt TCP_NODELAY");
 			goto bail;
 		}
@@ -534,8 +545,7 @@ static int check_data_response(struct etherdream *d) {
  * Read any ACKs we are owed, waiting up to 'wait' microseconds.
  */
 static int dac_get_acks(struct etherdream *d, int wait) {
-	while (d->conn.pending_meta_acks
-	       || (d->conn.ackbuf_prod != d->conn.ackbuf_cons)) {
+	while (d->conn.pending_meta_acks || (d->conn.ackbuf_prod != d->conn.ackbuf_cons)) {
 		int res = wait_for_fd_activity(d, wait, 0);
 		if (res <= 0)
 			return res;
@@ -552,15 +562,14 @@ static int dac_get_acks(struct etherdream *d, int wait) {
  * Send points to the DAC, including prepare or begin commands and changing
  * the point rate as necessary.
  */
-static int dac_send_data(struct etherdream *d, struct dac_point *data,
-                         int npoints, int rate) {
+static int dac_send_data(struct etherdream *d, struct dac_point *data, int npoints, int rate) {
 	int res;
 	const struct dac_status *st = &d->conn.resp.dac_status;
 
 	if (st->playback_state == 0) {
 		trace(d, "L: Sending prepare command...\n");
 		char c = 'p';
-		if ((res = send_all(d, &c, sizeof c)) < 0)
+		if ((res = send_all(d, &c, sizeof(c))) < 0)
 			return res;
 
 		d->conn.pending_meta_acks++;
@@ -572,13 +581,12 @@ static int dac_send_data(struct etherdream *d, struct dac_point *data,
 		trace(d, "L: prepare ACKed\n");
 	}
 
-	if (st->buffer_fullness > 1600 && st->playback_state == 1 \
-	    && !d->conn.dc_begin_sent) {
+	if (st->buffer_fullness > 1600 && st->playback_state == 1 && !d->conn.dc_begin_sent) {
 		trace(d, "L: Sending begin command...\n");
 
 		struct begin_command b = { .command = 'b', .point_rate = (uint32_t)rate,
 		                           .low_water_mark = 0 };
-		if ((res = send_all(d, (const char *)&b, sizeof b)) < 0)
+		if ((res = send_all(d, (const char *)&b, sizeof(b))) < 0)
 			return res;
 
 		d->conn.dc_begin_sent = 1;
@@ -603,8 +611,7 @@ static int dac_send_data(struct etherdream *d, struct dac_point *data,
 	d->conn.dc_local_buffer.data[0].control |= DAC_CTRL_RATE_CHANGE;
 
 	/* Write the data */
-	if ((res = send_all(d, (const char *)&d->conn.dc_local_buffer,
-		8 + npoints * sizeof(struct dac_point))) < 0)
+	if ((res = send_all(d, (const char *)&d->conn.dc_local_buffer, 8 + npoints * sizeof(struct dac_point))) < 0)
 		return res;
 
 	/* Expect two ACKs */
@@ -655,8 +662,7 @@ static void *dac_loop(void *dv) {
 
 			/* Estimate how much data has been consumed since the
 			 * last time we got an ACK. */
-			long long time_diff = microseconds()
-			                    - d->conn.dc_last_ack_time;
+			long long time_diff = microseconds() - d->conn.dc_last_ack_time;
 
 			expected_used = time_diff * b->pps / 1000000;
 
@@ -669,6 +675,9 @@ static void *dac_loop(void *dv) {
 
 			/* Now, see how much data we should write. */
 			cap = 1700 - expected_fullness;
+
+			if (cap < 0)
+				cap = 0;
 
 			if (cap > MIN_SEND_POINTS)
 				break;
@@ -957,9 +966,8 @@ static void *watch_for_dacs(void *arg) {
 	while (1) {
 		struct sockaddr_in src;
 		struct dac_broadcast buf;
-		unsigned int srclen = sizeof src;
-		int len = recvfrom(sock, (char *)&buf, sizeof buf, 0,
-		                   (struct sockaddr *)&src, &srclen);
+		unsigned int srclen = sizeof(src);
+		int len = recvfrom(sock, (char *)&buf, sizeof(buf), 0, (struct sockaddr *)&src, &srclen);
 		if (len < 0) {
 			log_socket_error(NULL, "recvfrom");
 			return 0;
@@ -983,13 +991,13 @@ static void *watch_for_dacs(void *arg) {
 
 		/* Make a new DAC entry */
 		struct etherdream *new_dac;
-		new_dac = (struct etherdream *)malloc(sizeof (struct etherdream));
+		new_dac = (struct etherdream *)malloc(sizeof(struct etherdream));
 		if (!new_dac) {
 			trace(NULL, "!! malloc(struct etherdream) failed\n");
 			continue;
 		}
 
-		memset(new_dac, 0, sizeof *new_dac);
+		memset(new_dac, 0, sizeof(*new_dac));
 		pthread_cond_init(&new_dac->loop_cond, NULL);
 		pthread_mutex_init(&new_dac->mutex, NULL);
 
