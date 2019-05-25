@@ -28,6 +28,7 @@
 #include <string.h>
 #include <WinSock2.h>
 #include <Windows.h>
+#include <WS2tcpip.h>
 #include <time.h>
 #else
 #include <arpa/inet.h>
@@ -114,7 +115,7 @@ static void pthread_cond_broadcast(CONDITION_VARIABLE * c)
 	WakeAllConditionVariable(c);
 }
 
-static int ioctl(SOCKET s, long cmd, void * arg)
+static int ioctl(SOCKET s, long cmd, u_long * arg)
 {
 	return ioctlsocket(s, cmd, arg);
 }
@@ -398,7 +399,7 @@ static int dac_connect(struct etherdream *d) {
 	memset(conn, 0, sizeof *conn);
 
 	// Open socket
-	conn->dc_sock = socket(AF_INET, SOCK_STREAM, 0);
+	conn->dc_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (conn->dc_sock < 0) {
 		log_socket_error(d, "socket");
 		return -1;
@@ -407,17 +408,26 @@ static int dac_connect(struct etherdream *d) {
 	unsigned long nonblocking = 1;
 	ioctl(conn->dc_sock, FIONBIO, &nonblocking);
 
-	struct sockaddr_in addr = {
-		.sin_family = AF_INET,
-		.sin_addr.s_addr = d->addr.s_addr, .sin_port = htons(7765)
-	};
+	struct sockaddr_in addr;
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = d->addr.s_addr;
+	addr.sin_port = htons(7765);
 
 	// Because the socket is nonblocking, this will always error...
 	connect(conn->dc_sock, (struct sockaddr *)&addr, (int)sizeof addr);
+
+#ifdef WIN32
+	if (WSAGetLastError() != WSAEWOULDBLOCK) {
+		log_socket_error(d, "connect");
+		goto bail;
+	}
+#else
 	if (errno != EINPROGRESS) {
 		log_socket_error(d, "connect");
 		goto bail;
 	}
+#endif
 
 	// Wait for connection to go through
 	{
@@ -432,7 +442,7 @@ static int dac_connect(struct etherdream *d) {
 
 	// See if we have *actually* connected
 	{
-		int error;
+		int error = 0;
 		unsigned int len = sizeof error;
 		if (getsockopt(conn->dc_sock, SOL_SOCKET, SO_ERROR, (char *)&error,
 		                                                           &len) < 0) {
@@ -926,17 +936,18 @@ static void *watch_for_dacs(void *arg) {
 	}
 
 	int opt = 1;
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt,
-	                                                     sizeof opt) < 0) {
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *)&opt, sizeof(opt)) < 0) {
 		log_socket_error(NULL, "setsockopt SO_REUSEADDR");
 		return 0;
 	}
 
-	struct sockaddr_in addr = {
-		.sin_family = AF_INET,
-		.sin_addr.s_addr = htonl(INADDR_ANY), .sin_port = htons(7654)
-	};
-	if (bind(sock, (struct sockaddr *)&addr, sizeof addr) < 0) {
+	struct sockaddr_in addr;
+	memset(&addr, 0, sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	addr.sin_port = htons(7654);
+	
+	if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		log_socket_error(NULL, "bind");
 		return 0;
 	}
@@ -1009,6 +1020,8 @@ static void *watch_for_dacs(void *arg) {
 int etherdream_lib_start(void) {
 	// Get high-resolution timer info
 #ifdef WIN32
+	WSADATA wsa;
+	WSAStartup(MAKEWORD(2, 2), &wsa);
 	timespec_get(&start_time, TIME_UTC);
 #elif __MACH__
 	timer_start = mach_absolute_time();
