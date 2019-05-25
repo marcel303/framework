@@ -2138,8 +2138,8 @@ void popWindow()
 
 // -----
 
-static Stack<std::string, 32> s_shaderOutputsStack("");
-std::string s_shaderOutputs = "c"; // todo : move to internal / globals
+static Stack<std::string, 32> s_shaderOutputsStack;
+std::string s_shaderOutputs; // todo : move to internal / globals
 
 #if ENABLE_OPENGL
 
@@ -2174,7 +2174,7 @@ Shader::~Shader()
 void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	if (outputs == nullptr)
-		outputs = s_shaderOutputs.c_str();
+		outputs = s_shaderOutputs.empty() ? "c" : s_shaderOutputs.c_str();
 	
 	m_shader = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs);
 }
