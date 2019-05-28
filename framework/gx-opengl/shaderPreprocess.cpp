@@ -29,6 +29,7 @@
 
 #if ENABLE_OPENGL
 
+#include "internal.h" // fopen_s
 #include "shaderPreprocess.h"
 #include "StringEx.h"
 
@@ -45,7 +46,7 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 
 	FILE * file = 0;
 
-	if ((file = fopen(filename, "rb")) != 0)
+	if (fopen_s(&file, filename, "rb") == 0)
 	{
 		// load source from file
 
@@ -116,7 +117,7 @@ bool preprocessShader(
 	bool result = true;
 
 	std::vector<std::string> lines;
-	
+
 	splitString(source, lines, '\n');
 	
 	for (size_t i = 0; i < lines.size(); ++i)
@@ -163,9 +164,9 @@ bool preprocessShader(
 				
 				if ((flags & kPreprocessShader_AddOpenglLineAndFileMarkers) != 0)
 				{
-					addLineAndFileMarker(destination, i + 1, fileId);
-				}
+				addLineAndFileMarker(destination, i + 1, fileId);
 			}
+		}
 		}
 		else
 		{
@@ -200,16 +201,18 @@ bool preprocessShaderFromFile(
 	{
 		std::string temp(bytes, numBytes);
 		
+		delete [] bytes;
+		bytes = 0;
+		numBytes = 0;
+		
+		//
+		
 		int fileId = 0;
 		
 		if (!preprocessShader(temp, destination, flags, errorMessages, fileId))
 		{
 			result = false;
 		}
-		
-		delete [] bytes;
-		bytes = 0;
-		numBytes = 0;
 	}
 	
 	return result;

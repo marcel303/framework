@@ -688,247 +688,78 @@ static bool fileExists(const char * filename)
 	}
 }
 
-#if 0
-
-static bool loadFileContents(const char * filename, bool normalizeLineEndings, char *& bytes, int & numBytes)
-{
-	bool result = true;
-
-	bytes = 0;
-	numBytes = 0;
-
-	const char * text = nullptr;
-
-	FILE * file = 0;
-
-	if (fopen_s(&file, filename, "rb") == 0)
-	{
-		// load source from file
-
-		fseek(file, 0, SEEK_END);
-		numBytes = ftell(file);
-		fseek(file, 0, SEEK_SET);
-
-		bytes = new char[numBytes];
-
-		if (fread(bytes, 1, numBytes, file) != (size_t)numBytes)
-		{
-			result = false;
-		}
-
-		fclose(file);
-	}
-	else if (framework.tryGetShaderSource(filename, text))
-	{
-		const size_t textLength = strlen(text);
-
-		bytes = new char[textLength];
-		numBytes = textLength;
-
-		memcpy(bytes, text, textLength * sizeof(char));
-	}
-	else
-	{
-		result = false;
-	}
-
-	if (result)
-	{
-		if (normalizeLineEndings)
-		{
-			for (int i = 0; i < numBytes; ++i)
-				if (bytes[i] == '\r')
-					bytes[i] = '\n';
-		}
-	}
-	else
-	{
-		if (bytes)
-		{
-			delete [] bytes;
-			bytes = 0;
-		}
-
-		numBytes = 0;
-	}
-
-	return result;
-}
-
-static void addLineAndFileMarker(std::string & destination, const int lineNumber, const int fileId)
-{
-	char lineText[128];
-	sprintf_s(lineText, sizeof(lineText), "#line %d %d\n", int(lineNumber), fileId);
-	destination.append(lineText);
-}
-
-static bool preprocessShader(const std::string & source, std::string & destination, std::vector<std::string> & errorMessages, int & fileId)
-{
-	bool result = true;
-
-	std::vector<std::string> lines;
-
-	splitString(source, lines, '\n');
-	
-	for (size_t i = 0; i < lines.size(); ++i)
-	{
-		if (i == 0)
-		{
-			addLineAndFileMarker(destination, i, fileId);
-		}
-		
-		const std::string & line = lines[i];
-		const std::string trimmedLine = String::TrimLeft(lines[i]);
-
-		const char * includeStr = "include ";
-
-		if (strstr(trimmedLine.c_str(), includeStr) == trimmedLine.c_str())
-		{
-			const char * filename = trimmedLine.c_str() + strlen(includeStr);
-
-			char * bytes;
-			int numBytes;
-
-			if (!loadFileContents(filename, true, bytes, numBytes))
-			{
-				errorMessages.push_back(String::FormatC("failed to load include file %s", filename));
-				
-				logError("failed to load include file %s", filename);
-				
-				result = false;
-			}
-			else
-			{
-				std::string temp(bytes, numBytes);
-				
-				int nextFileId = fileId + 1;
-
-				if (!preprocessShader(temp, destination, errorMessages, nextFileId))
-				{
-					result = false;
-				}
-
-				delete [] bytes;
-				bytes = 0;
-				numBytes = 0;
-				
-				addLineAndFileMarker(destination, i + 1, fileId);
-			}
-		}
-		else
-		{
-			destination.append(line);
-			destination.append("\n");
-		}
-	}
-
-	return result;
-}
-
-#endif
-
 static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages, const char * bindings)
 {
 	bool result = true;
 
-#if 0
-	char * bytes;
-	int numBytes;
-
-	if (!loadFileContents(filename, true, bytes, numBytes))
+	std::string source;
+	
+	if (!preprocessShaderFromFile(filename, source, kPreprocessShader_AddOpenglLineAndFileMarkers, errorMessages))
 	{
-		errorMessages.push_back("failed to load file contents");
-		
 		result = false;
 	}
 	else
 	{
-		std::string source;
-		std::string temp(bytes, numBytes);
-		
-		int fileId = 0;
+		//printf("shader source:\n%s", source.c_str());
 
-		if (!preprocessShader(temp, source, errorMessages, fileId))
-#endif
-
-		std::string source;
+		shader = glCreateShader(type);
+		checkErrorGL();
 		
-		if (!preprocessShaderFromFile(filename, source, kPreprocessShader_AddOpenglLineAndFileMarkers, errorMessages))
+		if (shader == 0)
 		{
 			result = false;
+			
+			if (type == GL_COMPUTE_SHADER)
+				logError("compute shader creation failed. compute is possibly not supported?");
+			else
+				logError("shader creation failed");
 		}
 		else
 		{
-			//printf("shader source:\n%s", source.c_str());
+		#if USE_LEGACY_OPENGL
+			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
+		#elif FRAMEWORK_USE_OPENGL_ES
+			const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+		#else
+			#if OPENGL_VERSION == 410
+				const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+			#elif OPENGL_VERSION == 430
+				const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+			#else
+				const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
+			#endif
+		#endif
 
-			shader = glCreateShader(type);
+		#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+			const GLchar * debugs = "#define _SHADER_DEBUGGING_ 1\n";
+		#else
+			const GLchar * debugs = "#define _SHADER_DEBUGGING_ 0\n";
+		#endif
+		
+			const GLchar * sourceData = (const GLchar*)source.c_str();
+			const GLchar * sources[] = { version, debugs, defines, bindings, sourceData };
+
+			glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
 			checkErrorGL();
-			
-			if (shader == 0)
+
+			glCompileShader(shader);
+			checkErrorGL();
+
+			GLint success = GL_FALSE;
+
+			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+			checkErrorGL();
+
+			if (success != GL_TRUE)
 			{
 				result = false;
+
+				showShaderInfoLog(shader, source.c_str());
 				
-				if (type == GL_COMPUTE_SHADER)
-					logError("compute shader creation failed. compute is possibly not supported?");
-				else
-					logError("shader creation failed");
-			}
-			else
-			{
-			#if USE_LEGACY_OPENGL
-				const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
-			#elif FRAMEWORK_USE_OPENGL_ES
-				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-			#else
-				#if OPENGL_VERSION == 410
-					const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-				#elif OPENGL_VERSION == 430
-					const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-				#else
-					const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
-				#endif
-			#endif
-
-			#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
-				const GLchar * debugs = "#define _SHADER_DEBUGGING_ 1\n";
-			#else
-				const GLchar * debugs = "#define _SHADER_DEBUGGING_ 0\n";
-			#endif
-			
-				const GLchar * sourceData = (const GLchar*)source.c_str();
-				const GLchar * sources[] = { version, debugs, defines, bindings, sourceData };
-
-				glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
-				checkErrorGL();
-
-			#if 0
-				delete [] bytes;
-				bytes = 0;
-				numBytes = 0;
-			#endif
-
-				glCompileShader(shader);
-				checkErrorGL();
-
-				GLint success = GL_FALSE;
-
-				glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-				checkErrorGL();
-
-				if (success != GL_TRUE)
-				{
-					result = false;
-
-					showShaderInfoLog(shader, source.c_str());
-					
-					getShaderInfoLog(shader, source.c_str(), errorMessages);
-				}
+				getShaderInfoLog(shader, source.c_str(), errorMessages);
 			}
 		}
-		
-#if 0
 	}
-#endif
 
 	if (result)
 	{
