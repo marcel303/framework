@@ -61,38 +61,38 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 		GLenum uploadFormat = GL_INVALID_ENUM;
 		GLenum uploadType = GL_INVALID_ENUM;
 
-		if (properties.colorTarget.format == SURFACE_RGBA8)
+		if (properties.format == SURFACE_RGBA8)
 		{
 			uploadFormat = GL_RGBA;
 			uploadType = GL_UNSIGNED_BYTE;
 		}
-		if (properties.colorTarget.format == SURFACE_RGBA16F)
+		if (properties.format == SURFACE_RGBA16F)
 		{
 			uploadFormat = GL_RGBA;
 			uploadType = GL_FLOAT;
 		}
-		if (properties.colorTarget.format == SURFACE_RGBA32F)
+		if (properties.format == SURFACE_RGBA32F)
 		{
 			uploadFormat = GL_RGBA;
 			uploadType = GL_FLOAT;
 		}
-		if (properties.colorTarget.format == SURFACE_R8)
+		if (properties.format == SURFACE_R8)
 		{
 			uploadFormat = GL_RED;
 			uploadType = GL_UNSIGNED_BYTE;
 		}
-		if (properties.colorTarget.format == SURFACE_R16F)
+		if (properties.format == SURFACE_R16F)
 		{
 			uploadFormat = GL_RED;
 			uploadType = GL_FLOAT;
 		}
-		if (properties.colorTarget.format == SURFACE_R32F)
+		if (properties.format == SURFACE_R32F)
 		{
 			uploadFormat = GL_RED;
 			uploadType = GL_FLOAT;
 		}
 
-		glTexImage2D(GL_TEXTURE_2D, 0, glFormat, backingSx, backingSy, 0, uploadFormat, uploadType, nullptr);
+		glTexImage2D(GL_TEXTURE_2D, 0, glFormat, properties.dimensions.width, properties.dimensions.height, 0, uploadFormat, uploadType, nullptr);
 		checkErrorGL();
 	#else
 		glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, properties.dimensions.width, properties.dimensions.height);
@@ -166,7 +166,7 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 		GLenum uploadFormat = GL_DEPTH_COMPONENT;
 		GLenum uploadType = GL_FLOAT;
 
-		glTexImage2D(GL_TEXTURE_2D, 0, glFormat, backingSx, backingSy, 0, uploadFormat, uploadType, 0);
+		glTexImage2D(GL_TEXTURE_2D, 0, glFormat, properties.dimensions.width, properties.dimensions.height, 0, uploadFormat, uploadType, 0);
 		checkErrorGL();
 	#else
 		glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, properties.dimensions.width, properties.dimensions.height);
