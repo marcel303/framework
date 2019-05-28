@@ -146,7 +146,7 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 					if (hasColor)
 					{
 						logError("color output binding appears more than once");
-						result = false;
+						return false;
 					}
 					else
 					{
@@ -159,7 +159,7 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 					if (hasNormal)
 					{
 						logError("normal output binding appears more than once");
-						result = false;
+						return false;
 					}
 					else
 					{
@@ -170,7 +170,7 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 				else
 				{
 					logError("unknown output binding: %c", outputs[i]);
-					result = false;
+					return false;
 				}
 			}
 			
