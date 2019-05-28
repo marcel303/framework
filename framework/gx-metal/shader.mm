@@ -239,7 +239,7 @@ extern std::string s_shaderOutputs; // todo : cleanup
 void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	if (outputs == nullptr)
-		outputs = s_shaderOutputs.c_str();
+		outputs = s_shaderOutputs.empty() ? "c" : s_shaderOutputs.c_str();
 	
 	m_cacheElem = static_cast<ShaderCacheElem_Metal*>(&g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs));
 }
