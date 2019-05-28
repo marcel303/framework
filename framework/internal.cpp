@@ -55,6 +55,10 @@
 	#include "Timer.h"
 #endif
 
+#if ENABLE_OPENGL
+	#include "gx-opengl/shaderPreprocess.h"
+#endif
+
 #define ENABLE_MIPMAPS 0 // todo : add per-texture control over the creation of mipmaps
 
 Globals globals;
@@ -684,6 +688,8 @@ static bool fileExists(const char * filename)
 	}
 }
 
+#if 0
+
 static bool loadFileContents(const char * filename, bool normalizeLineEndings, char *& bytes, int & numBytes)
 {
 	bool result = true;
@@ -819,10 +825,13 @@ static bool preprocessShader(const std::string & source, std::string & destinati
 	return result;
 }
 
+#endif
+
 static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages, const char * bindings)
 {
 	bool result = true;
 
+#if 0
 	char * bytes;
 	int numBytes;
 
@@ -840,6 +849,11 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 		int fileId = 0;
 
 		if (!preprocessShader(temp, source, errorMessages, fileId))
+#endif
+
+		std::string source;
+		
+		if (!preprocessShaderFromFile(filename, source, kPreprocessShader_AddOpenglLineAndFileMarkers, errorMessages))
 		{
 			result = false;
 		}
@@ -887,9 +901,11 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 				glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
 				checkErrorGL();
 
+			#if 0
 				delete [] bytes;
 				bytes = 0;
 				numBytes = 0;
+			#endif
 
 				glCompileShader(shader);
 				checkErrorGL();
@@ -909,7 +925,10 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 				}
 			}
 		}
+		
+#if 0
 	}
+#endif
 
 	if (result)
 	{
