@@ -79,3 +79,7 @@ void popRenderPass();
 #if ENABLE_METAL
 	#include "gx-metal/renderTarget.h"
 #endif
+
+#if ENABLE_OPENGL
+	#include "gx-opengl/renderTarget.h"
+#endif

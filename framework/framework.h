@@ -284,6 +284,9 @@ namespace spriter
 	class Scene;
 }
 
+class ColorTarget;
+class DepthTarget;
+
 // globals
 
 extern Framework framework;
@@ -592,11 +595,6 @@ public:
 		}
 	} depthTarget;
 };
-
-#if ENABLE_METAL
-	class ColorTarget;
-	class DepthTarget;
-#endif
 
 class Surface
 {
