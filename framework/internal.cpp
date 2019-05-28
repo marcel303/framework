@@ -56,6 +56,7 @@
 #endif
 
 #if ENABLE_OPENGL
+	#include "gx-opengl/shaderBuilder.h"
 	#include "gx-opengl/shaderPreprocess.h"
 #endif
 
@@ -688,7 +689,7 @@ static bool fileExists(const char * filename)
 	}
 }
 
-static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages, const char * bindings)
+static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages, const char * outputs)
 {
 	bool result = true;
 
@@ -700,63 +701,74 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 	}
 	else
 	{
-		//printf("shader source:\n%s", source.c_str());
-
-		shader = glCreateShader(type);
-		checkErrorGL();
-		
-		if (shader == 0)
+		if (!buildOpenglText(source.c_str(),
+			type == GL_VERTEX_SHADER   ? 'v' :
+			type == GL_FRAGMENT_SHADER ? 'p' :
+			type == GL_COMPUTE_SHADER  ? 'c' : 'u',
+			outputs, source))
 		{
 			result = false;
-			
-			if (type == GL_COMPUTE_SHADER)
-				logError("compute shader creation failed. compute is possibly not supported?");
-			else
-				logError("shader creation failed");
 		}
 		else
 		{
-		#if USE_LEGACY_OPENGL
-			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
-		#elif FRAMEWORK_USE_OPENGL_ES
-			const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-		#else
-			#if OPENGL_VERSION == 410
-				const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-			#elif OPENGL_VERSION == 430
-				const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-			#else
-				const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
-			#endif
-		#endif
+			//printf("shader source:\n%s", source.c_str());
 
-		#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
-			const GLchar * debugs = "#define _SHADER_DEBUGGING_ 1\n";
-		#else
-			const GLchar * debugs = "#define _SHADER_DEBUGGING_ 0\n";
-		#endif
-		
-			const GLchar * sourceData = (const GLchar*)source.c_str();
-			const GLchar * sources[] = { version, debugs, defines, bindings, sourceData };
-
-			glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
+			shader = glCreateShader(type);
 			checkErrorGL();
-
-			glCompileShader(shader);
-			checkErrorGL();
-
-			GLint success = GL_FALSE;
-
-			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-			checkErrorGL();
-
-			if (success != GL_TRUE)
+			
+			if (shader == 0)
 			{
 				result = false;
-
-				showShaderInfoLog(shader, source.c_str());
 				
-				getShaderInfoLog(shader, source.c_str(), errorMessages);
+				if (type == GL_COMPUTE_SHADER)
+					logError("compute shader creation failed. compute is possibly not supported?");
+				else
+					logError("shader creation failed");
+			}
+			else
+			{
+			#if USE_LEGACY_OPENGL
+				const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
+			#elif FRAMEWORK_USE_OPENGL_ES
+				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+			#else
+				#if OPENGL_VERSION == 410
+					const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+				#elif OPENGL_VERSION == 430
+					const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+				#else
+					const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
+				#endif
+			#endif
+
+			#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+				const GLchar * debugs = "#define _SHADER_DEBUGGING_ 1\n";
+			#else
+				const GLchar * debugs = "#define _SHADER_DEBUGGING_ 0\n";
+			#endif
+			
+				const GLchar * sourceData = (const GLchar*)source.c_str();
+				const GLchar * sources[] = { version, debugs, defines, sourceData };
+
+				glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
+				checkErrorGL();
+
+				glCompileShader(shader);
+				checkErrorGL();
+
+				GLint success = GL_FALSE;
+
+				glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+				checkErrorGL();
+
+				if (success != GL_TRUE)
+				{
+					result = false;
+
+					showShaderInfoLog(shader, source.c_str());
+					
+					getShaderInfoLog(shader, source.c_str(), errorMessages);
+				}
 			}
 		}
 	}
@@ -831,65 +843,9 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 
 	if (hasPs)
 	{
-		char bindings[1024];
-		bindings[0] = 0;
-	
-	#if !LEGACY_GL
-		bool hasColor = false;
-		bool hasNormal = false;
-		
-		char * dst = bindings;
-		
-		for (int i = 0; outputs[i] != 0; ++i)
-		{
-			if (outputs[i] == 'c')
-			{
-				if (hasColor)
-				{
-					logError("color output binding appears more than once");
-					result = false;
-				}
-				else
-				{
-					hasColor = true;
-					char temp[64];
-					sprintf_s(temp, sizeof(temp), "layout(location = %d) out vec4 shader_fragColor;\n", i);
-					dst = strcat(dst, temp);
-				}
-			}
-			else if (outputs[i] == 'n')
-			{
-				if (hasNormal)
-				{
-					logError("normal output binding appears more than once");
-					result = false;
-				}
-				else
-				{
-					hasNormal = true;
-					char temp[64];
-					sprintf_s(temp, sizeof(temp), "layout(location = %d) out vec4 shader_fragNormal;\n", i);
-					dst = strcat(dst, temp);
-				}
-			}
-			else
-			{
-				logError("unknown output binding: %c", outputs[i]);
-				result = false;
-			}
-		}
-		
-		// use regular variables for unused outputs
-		
-		if (hasColor == false)
-			dst = strcat(dst, "vec4 shader_fragColor;\n");
-		if (hasNormal == false)
-			dst = strcat(dst, "vec4 shader_fragNormal;\n");
-	#endif
-	
 		if (result)
 		{
-			result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "", errorMessages, bindings);
+			result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "", errorMessages, outputs);
 		}
 	}
 	
