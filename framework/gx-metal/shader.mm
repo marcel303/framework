@@ -160,8 +160,8 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 		[pipelineState release];
 		
 	#if 1
-		NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
-		NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
+		//NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
+		//NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
 		[library_vs release];
 		[library_ps release];
 		//NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
