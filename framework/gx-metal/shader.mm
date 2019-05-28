@@ -53,6 +53,10 @@ ShaderCache g_shaderCache;
 
 void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameVs, const char * in_filenamePs, const char * in_outputs)
 {
+	//ScopedLoadTimer loadTimer(_name);
+
+	shut();
+	
 	@autoreleasepool
 	{
 		id <MTLDevice> device = metal_get_device();
@@ -155,18 +159,20 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 		
 		[pipelineState release];
 		
-	#if 0
+	#if 1
 		NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
 		NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
 		[library_vs release];
 		[library_ps release];
-		NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
-		NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
+		//NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
+		//NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
 	#endif
 		
 		//
 		
 		init(reflection);
+		
+		//NSLog(@"reflection retain count: %d\n", (int)reflection.retainCount);
 		
 		name = in_name;
 		vs = in_filenameVs;
@@ -195,6 +201,27 @@ void ShaderCache::reload()
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
 		i->second->reload();
+	}
+}
+
+void ShaderCache::handleSourceChanged(const char * name)
+{
+	for (auto & shaderCacheItr : m_map)
+	{
+		ShaderCacheElem_Metal * cacheElem = shaderCacheItr.second;
+		
+		if (name == cacheElem->vs || name == cacheElem->ps)
+		{
+			cacheElem->reload();
+			
+			if (globals.shader != nullptr && globals.shader->getType() == SHADER_VSPS)
+			{
+				Shader * shader = static_cast<Shader*>(globals.shader);
+				
+				if (&shader->getCacheElem() == cacheElem)
+					clearShader();
+			}
+		}
 	}
 }
 

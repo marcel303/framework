@@ -1814,22 +1814,7 @@ void Framework::registerShaderSource(const char * name, const char * text)
 
 	// refresh shaders which are using this source
 	
-#if ENABLE_OPENGL // todo : metal shader reload
-	for (auto & shaderCacheItr : g_shaderCache.m_map)
-	{
-		ShaderCacheElem & cacheElem = shaderCacheItr.second;
-		
-		if (name == cacheElem.vs || name == cacheElem.ps)
-		{
-			cacheElem.reload();
-			
-			if (globals.shader != nullptr && globals.shader->getProgram() == cacheElem.program)
-			{
-				clearShader();
-			}
-		}
-	}
-#endif
+	g_shaderCache.handleSourceChanged(name);
 }
 
 void Framework::unregisterShaderSource(const char * name)

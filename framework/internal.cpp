@@ -971,6 +971,24 @@ void ShaderCache::reload()
 	}
 }
 
+void ShaderCache::handleSourceChanged(const char * name)
+{
+	for (auto & shaderCacheItr : m_map)
+	{
+		ShaderCacheElem & cacheElem = shaderCacheItr.second;
+		
+		if (name == cacheElem.vs || name == cacheElem.ps)
+		{
+			cacheElem.reload();
+			
+			if (globals.shader != nullptr && globals.shader->getProgram() == cacheElem.program)
+			{
+				clearShader();
+			}
+		}
+	}
+}
+
 ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	Key key;

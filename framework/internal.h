@@ -598,6 +598,7 @@ public:
 	
 	void clear();
 	void reload();
+	void handleSourceChanged(const char * name);
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 };
 

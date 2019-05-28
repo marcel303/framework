@@ -230,6 +230,10 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 		for (auto & psTexture : psTextures)
 			psTexture = nullptr;
 		
+		//
+		
+		memset(params, -1, sizeof(params));
+		
 		textureInfos.clear();
 		
 		free(vsUniformData);
@@ -424,6 +428,7 @@ class ShaderCache
 public:
 	void clear();
 	void reload();
+	void handleSourceChanged(const char * name);
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 };
 
