@@ -1178,8 +1178,8 @@ static void gxValidatePipelineState()
 	{
 		@autoreleasepool
 		{
-			id <MTLFunction> vs = (id <MTLFunction>)shaderElem.vs;
-			id <MTLFunction> ps = (id <MTLFunction>)shaderElem.ps;
+			id <MTLFunction> vsFunction = (id <MTLFunction>)shaderElem.vsFunction;
+			id <MTLFunction> psFunction = (id <MTLFunction>)shaderElem.psFunction;
 		
 			MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 		
@@ -1234,8 +1234,8 @@ static void gxValidatePipelineState()
 			MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
 			pipelineDescriptor.label = [NSString stringWithCString:shaderElem.name.c_str() encoding:NSASCIIStringEncoding];
 			pipelineDescriptor.sampleCount = 1;
-			pipelineDescriptor.vertexFunction = vs;
-			pipelineDescriptor.fragmentFunction = ps;
+			pipelineDescriptor.vertexFunction = vsFunction;
+			pipelineDescriptor.fragmentFunction = psFunction;
 			pipelineDescriptor.vertexDescriptor = vertexDescriptor;
 			
 			for (int i = 0; i < 4; ++i)

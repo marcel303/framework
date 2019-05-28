@@ -132,9 +132,14 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 	};
 	
 	std::string name;
+	std::string vs;
+	std::string ps;
+	std::string outputs;
 	
-	void * vs = nullptr;
-	void * ps = nullptr;
+	int version = 0;
+	
+	id <MTLFunction> vsFunction = nullptr;
+	id <MTLFunction> psFunction = nullptr;
 	
 	StageInfo vsInfo;
 	StageInfo psInfo;
@@ -148,6 +153,8 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 	
 	id <MTLTexture> vsTextures[kMaxVsTextures] = { };
 	id <MTLTexture> psTextures[kMaxPsTextures] = { };
+	
+	mutable std::map<uint32_t, id <MTLRenderPipelineState>> m_pipelines;
 	
 	~ShaderCacheElem_Metal()
 	{
@@ -208,11 +215,51 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 	
 	void shut()
 	{
+		for (auto & pipeline : m_pipelines)
+		{
+			[pipeline.second release];
+			pipeline.second = nullptr;
+		}
+		
+		m_pipelines.clear();
+		
+		//
+		
+		for (auto & vsTexture : vsTextures)
+			vsTexture = nullptr;
+		for (auto & psTexture : psTextures)
+			psTexture = nullptr;
+		
+		textureInfos.clear();
+		
 		free(vsUniformData);
 		free(psUniformData);
-		
 		vsUniformData = nullptr;
 		psUniformData = nullptr;
+		
+		uniformInfos.clear();
+		
+		vsInfo = StageInfo();
+		psInfo = StageInfo();
+		
+		[vsFunction release];
+		[psFunction release];
+		vsFunction = nullptr;
+		psFunction = nullptr;
+		
+		name.clear();
+	}
+	
+	void load(const char * in_name, const char * in_filenameVs, const char * in_filenamePs, const char * in_outputs);
+	
+	void reload()
+	{
+		const std::string oldName = name;
+		const std::string oldVs = vs;
+		const std::string oldPs = ps;
+		const std::string oldOutputs = outputs;
+
+		load(oldName.c_str(), oldVs.c_str(), oldPs.c_str(), oldOutputs.c_str());
 	}
 	
 	void addUniforms(MTLArgument * arg, const char type)
@@ -335,8 +382,6 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 		}
 	}
 	
-	mutable std::map<uint32_t, id <MTLRenderPipelineState>> m_pipelines;
-	
 	id <MTLRenderPipelineState> findPipelineState(const uint32_t hash) const
 	{
 		return m_pipelines[hash]; // todo : nice iterator lookup etc
@@ -351,6 +396,8 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 #endif
 
 #include <map>
+
+// todo : make shader cache stuff internal
 
 class ShaderCache
 {
@@ -370,15 +417,14 @@ class ShaderCache
 		}
 	};
 	
-	typedef std::map<Key, ShaderCacheElem*> Map;
+	typedef std::map<Key, ShaderCacheElem_Metal*> Map;
 	
 	Map m_map;
 	
 public:
+	void clear();
+	void reload();
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
-	
-	void clear() { }
-	void reload() { }
 };
 
 //
@@ -397,7 +443,7 @@ public:
 	virtual bool isValid() const override { return true; } // todo
 	virtual GxShaderId getProgram() const override { return 0; }; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
-	virtual int getVersion() const override { return 1; } // todo
+	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override { return false; } // todo
 
 	GxImmediateIndex getImmediate(const char * name);
