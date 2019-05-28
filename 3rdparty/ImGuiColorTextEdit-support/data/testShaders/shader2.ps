@@ -22,8 +22,7 @@ void main()
 	
 	result.b = mouse_down != 0.0 ? 1.0 : 0.0;
 	result += base_color;
-	result.rg += mouse / vec2(600, 600);
+	result.rg += mouse;
 	
 	shader_fragColor = result;
 }
-
