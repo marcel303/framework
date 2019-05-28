@@ -251,20 +251,25 @@ struct Renderer
 				popMatrices();
 			}
 			popRenderPass();
+
+			pushRenderPass(&colorMap, false, &depthMap, false, "Translucent");
+			{
+				pushMatrices(true);
+				{
+					drawTranslucentPass();
+				}
+				popMatrices();
+			}
+			popRenderPass();
 			
 			// todo : apply light map using light and color maps as inputs
 			
 			pushBlend(BLEND_OPAQUE);
 			gxSetTexture(colorMap.getTextureId());
+			setColor(colorWhite);
 			drawRect(0, 0, VIEW_SX, VIEW_SY); // todo : getWidht, height
 			gxSetTexture(0);
 			popBlend();
-			
-			pushMatrices(false);
-			{
-				drawTranslucentPass();
-			}
-			popMatrices();
 		}
 	}
 };
