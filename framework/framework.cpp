@@ -160,6 +160,7 @@ Framework::Framework()
 	windowX = -1;
 	windowY = -1;
 	windowBorder = true;
+	windowIsResizable = false;
 	windowTitle.clear();
 	windowSx = 0;
 	windowSy = 0;
@@ -283,7 +284,7 @@ bool Framework::init(int sx, int sy)
 	
 	flags |= SDL_WINDOW_OPENGL;
 #endif
-	
+
 	if (fullscreen && minification == 1)
 	{
 		flags |= SDL_WINDOW_FULLSCREEN;
@@ -358,6 +359,9 @@ bool Framework::init(int sx, int sy)
 
 	if (!windowBorder)
 		flags |= SDL_WINDOW_BORDERLESS;
+	
+	if (windowIsResizable)
+		flags |= SDL_WINDOW_RESIZABLE;
 	
 	if (allowHighDpi)
 		flags |= SDL_WINDOW_ALLOW_HIGHDPI;
@@ -674,6 +678,7 @@ bool Framework::shutdown()
 	windowX = -1;
 	windowY = -1;
 	windowBorder = true;
+	windowIsResizable = false;
 	windowTitle.clear();
 	windowSx = 0;
 	windowSy = 0;

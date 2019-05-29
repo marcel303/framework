@@ -435,6 +435,7 @@ public:
 	int windowX;
 	int windowY;
 	bool windowBorder;
+	bool windowIsResizable;
 	std::string windowTitle;
 	std::string windowIcon;
 	int windowSx;
@@ -1565,7 +1566,7 @@ static inline void gxInitialize() { }
 static inline void gxShutdown() { }
 static inline void gxBegin(GX_PRIMITIVE_TYPE primitiveType) { }
 static inline void gxEnd() { }
-static inline void gxEmitVertices(int primitiveType, int numVertices) { }
+static inline void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices) { }
 static inline void gxColor4f(float r, float g, float b, float a) { }
 static inline void gxColor4fv(const float * rgba) { }
 static inline void gxColor3ub(int r, int g, int b) { }
@@ -1603,7 +1604,7 @@ void gxInitialize();
 void gxShutdown();
 void gxBegin(GX_PRIMITIVE_TYPE primitiveType);
 void gxEnd();
-void gxEmitVertices(int primitiveType, int numVertices);
+void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices);
 void gxColor4f(float r, float g, float b, float a);
 void gxColor4fv(const float * rgba);
 void gxColor3ub(int r, int g, int b);
