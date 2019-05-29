@@ -632,8 +632,10 @@ void gxEnd()
 	gxFlush(true);
 }
 
-void gxEmitVertices(int primitiveType, int numVertices)
+void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 {
+	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES);
+	
 	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
 
 	setShader(shader);

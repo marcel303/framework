@@ -540,7 +540,7 @@ void popBlend()
 
 void setLineSmooth(bool enabled)
 {
-	//Assert(false);
+	//fassert(false);
 }
 
 void pushLineSmooth(bool enabled)
@@ -852,7 +852,7 @@ GX_MATRIX gxGetMatrixMode()
 		return GX_PROJECTION;
 	else
 	{
-		Assert(false);
+		fassert(false);
 		return GX_MODELVIEW;
 	}
 }
@@ -1111,10 +1111,9 @@ static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveTy
 	case GX_TRIANGLE_STRIP:
 		return MTLPrimitiveTypeTriangleStrip;
 	case GX_QUADS:
-		fassert(false);
-		return MTLPrimitiveTypeTriangle; // fixme !
+		return MTLPrimitiveTypeTriangle;
 	default:
-		Assert(false);
+		fassert(false);
 		return (MTLPrimitiveType)-1;
 	}
 }
@@ -1624,11 +1623,6 @@ static void gxFlush(bool endOfBatch)
 			}
 		}
 		
-		if (&shader == &genericShader)
-		{
-			clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
-		}
-		
 		globals.gxShaderIsDirty = false;
 
 		s_gxPrimitiveType = primitiveType;
@@ -1715,8 +1709,12 @@ static void gxEndDraw()
 	s_currentRenderPipelineState = nullptr;
 }
 
-void gxEmitVertices(int primitiveType, int numVertices)
+void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 {
+	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES);
+	
+	bindVsInputs(nullptr, 0, 0);
+	
 	Shader genericShader("engine/Generic");
 	
 	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
@@ -1728,13 +1726,6 @@ void gxEmitVertices(int primitiveType, int numVertices)
 	gxValidateMatrices();
 	
 	gxValidateShaderResources();
-
-#if TODO
-	//
-
-	const int vaoIndex = 0;
-	glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
-	checkErrorGL();
 
 	//
 
@@ -1757,12 +1748,12 @@ void gxEmitVertices(int primitiveType, int numVertices)
 	}
 
 	//
+	
+	const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(primitiveType);
 
-	glDrawArrays(primitiveType, 0, numVertices);
-	checkErrorGL();
+	[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numVertices];
 
 	globals.gxShaderIsDirty = false;
-#endif
 }
 
 void gxEmitVertex()
@@ -1878,7 +1869,7 @@ void gxSetTexture(GxTextureId texture)
 
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 {
-	Assert(false); // todo
+	fassert(false); // todo
 }
 
 //
