@@ -370,6 +370,7 @@ void main()
 #else    
         vec2 p = (-u_resolution.xy + 2.0*pixelCoord.xy)/u_resolution.y;
 #endif
+        p.y = -p.y;
 
         // camera
         vec3 rd = (u_invView * normalize( vec4(p.xy, 2.0, 0.0) )).xyz;
