@@ -1010,6 +1010,9 @@ static bool s_gxTextureEnabled = false;
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
 
+static GxVertex s_gxFirstVertex;
+static bool s_gxHasFirstVertex = false;
+
 static DynamicBufferPool s_gxVertexBufferPool;
 static DynamicBufferPool::PoolElem * s_gxVertexBufferElem = nullptr;
 static int s_gxVertexBufferElemOffset = 0;
@@ -1098,8 +1101,7 @@ static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveTy
 	case GX_LINES:
 		return MTLPrimitiveTypeLine;
 	case GX_LINE_LOOP:
-		fassert(false);
-		return MTLPrimitiveTypeLine; // fixme !
+		return MTLPrimitiveTypeLineStrip;
 	case GX_LINE_STRIP:
 		return MTLPrimitiveTypeLineStrip;
 	case GX_TRIANGLES:
@@ -1389,6 +1391,22 @@ static void gxFlush(bool endOfBatch)
 	if (s_gxVertexCount)
 	{
 		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
+		
+		// Metal doesn't support line loops. so we emulate support for it here by duplicating
+		// the first point at the end of the vertex buffer if this is a line loop
+		if (primitiveType == GX_LINE_LOOP)
+		{
+			if (s_gxHasFirstVertex == false)
+			{
+				s_gxFirstVertex = s_gxVertices[0];
+				s_gxHasFirstVertex = true;
+			}
+			
+			if (endOfBatch)
+			{
+				s_gxVertices[s_gxVertexCount++] = s_gxFirstVertex;
+			}
+		}
 
 	// todo : refactor s_gxVertices to use a GxVertexBuffer object
 	
@@ -1507,6 +1525,8 @@ static void gxFlush(bool endOfBatch)
 
 			if (needToRegenerateIndexBuffer)
 			{
+			// fixme : updateBegin/updateEnd approach isn't thread safe. the GPU may read data being modified here
+			//         we need an allocation scheme similar to the buffer pool we use for setting uniforms
 				indices = (INDEX_TYPE*)s_gxIndexBuffer.updateBegin();
 
 				INDEX_TYPE * __restrict indexPtr = indices;
@@ -1636,7 +1656,7 @@ void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 			s_gxPrimitiveSize = 2;
 			break;
 		case GX_LINE_LOOP:
-			s_gxPrimitiveSize = 1;
+			s_gxPrimitiveSize = 2; // +1 to ensure we can append the first vertex to close the line loop
 			break;
 		case GX_LINE_STRIP:
 			s_gxPrimitiveSize = 1;
@@ -1655,6 +1675,8 @@ void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 	}
 	
 	fassert(s_gxVertexCount == 0);
+	
+	s_gxHasFirstVertex = false;
 }
 
 void gxEnd()
