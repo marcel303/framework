@@ -301,7 +301,10 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		
 		// todo : set viewport
 		
-		//glViewport(0, 0, viewportSx, viewportSy);
+	// todo : applyTransformWithViewportSize should be called here
+	// todo : getCurrentViewportSize should be updated to know about the active render targets, otherwise applyTransformWithViewportSize will be passed the incorrect size
+	
+		glViewport(0, 0, viewportSx, viewportSy);
 		
 		// todo : set blend mode
 	}
