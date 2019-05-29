@@ -35,6 +35,7 @@ add resonate2
 add sceneedit1
 add serial-to-osc
 add shadowmap1
+add signedDistance1
 add speakerpanner1
 add speakwithus
 add sRGB
