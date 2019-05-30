@@ -62,6 +62,8 @@
 #include "shaders.h"
 #include "spriter.h"
 
+#define ENABLE_DISPLAY_SIZE_SCALING 0 // todo : make this work with resizable windows
+
 #if USE_GLYPH_ATLAS
 	#include "textureatlas.h"
 #endif
@@ -974,11 +976,15 @@ void Framework::process()
 					int windowSy;
 					SDL_GetWindowSize(window, &windowSx, &windowSy);
 					
+				#if ENABLE_DISPLAY_SIZE_SCALING
 					SDL_Event scaledEvent = e;
 					scaledEvent.motion.x = e.motion.x * globals.displaySize[0] / windowSx;
 					scaledEvent.motion.y = e.motion.y * globals.displaySize[1] / windowSy;
 					
 					windowData->mouseData.addEvent(scaledEvent);
+				#else
+					windowData->mouseData.addEvent(e);
+				#endif
 					
 					//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, windowData->mouseX, windowData->mouseY);
 				}
@@ -4896,6 +4902,10 @@ static const int kMaxSurfaceStackSize = 32;
 static Surface * surfaceStack[kMaxSurfaceStackSize] = { };
 static int surfaceStackSize = 0;
 
+#if ENABLE_OPENGL
+extern bool s_renderPassesIsEmpty; // todo : unify surfaces and render passes. currently it's too difficult to figure out viewport size and whether to flip the clip space Y axis or not
+#endif
+
 static int getCurrentBackingScale()
 {
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
@@ -4991,12 +5001,13 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 			gxLoadIdentity();
 		
 		#if ENABLE_METAL
+			// in Metal clip-space, (-1, -1) is the bottom-left cordiner, (+1, +1) is top-right
 			// flip Y axis so the vertical axis runs top to bottom
 			gxScalef(1.f, -1.f, 1.f);
 		#endif
 		
 		#if ENABLE_OPENGL
-			if (surfaceStackSize == 0 || surfaceStack[surfaceStackSize - 1] == nullptr)
+			if ((surfaceStackSize == 0 || surfaceStack[surfaceStackSize - 1] == nullptr) && s_renderPassesIsEmpty)
 			{
 				// flip Y axis so the vertical axis runs top to bottom
 				gxScalef(1.f, -1.f, 1.f);
@@ -5293,7 +5304,7 @@ void setDrawRect(int x, int y, int sx, int sy)
 	{
 	#if ENABLE_OPENGL
 		if (globals.currentWindow == globals.mainWindow)
-			y = globals.displaySize[1] - y - sy;
+			y = surfaceSy - y - sy;
 	#endif
 
 		ScaleX(x);
@@ -6854,6 +6865,32 @@ void gxGetMatrixf(GX_MATRIX mode, float * m)
 		fassert(false);
 		break;
 	}
+}
+
+void gxSetMatrixf(GX_MATRIX mode, const float * m)
+{
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+	{
+		switch (mode)
+		{
+		case GX_PROJECTION:
+			glMatrixMode(GL_PROJECTION);
+			glLoadMatrixf(m);
+			checkErrorGL();
+			break;
+
+		case GX_MODELVIEW:
+			glMatrixMode(GL_MODELVIEW);
+			glLoadMatrixf(m);
+			checkErrorGL();
+			break;
+
+		default:
+			fassert(false);
+			break;
+		}
+	}
+	gxMatrixMode(restoreMatrixMode);
 }
 
 GX_MATRIX gxGetMatrixMode()

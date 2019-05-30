@@ -286,6 +286,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 		sb.Append("vec2 mod(vec2 x, vec2 y) { return fmod(x, y); }\n");
 		sb.Append("vec3 mod(vec3 x, vec3 y) { return fmod(x, y); }\n");
 		sb.Append("vec4 mod(vec4 x, vec4 y) { return fmod(x, y); }\n");
+		sb.Append("float atan(float x, float y) { return atan2(x, y); }\n");
 		sb.Append("\n");
 	
 		if (shaderType == 'v')
@@ -486,7 +487,21 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			sb.Append("};\n");
 			sb.Append("\n");
 			
-			sb.Append("fragment float4 shader_main(\n");
+			sb.Append("struct ShaderOutputs\n");
+			sb.Append("{\n");
+			{
+				for (int i = 0; outputs[i] != 0; ++i)
+				{
+					if (outputs[i] == 'c')
+						sb.AppendFormat("\tfloat4 fragColor [[color(%d)]];\n", i);
+					if (outputs[i] == 'n')
+						sb.AppendFormat("\tfloat4 fragNormal [[color(%d)]];\n", i);
+				}
+			}
+			sb.Append("};\n");
+			sb.Append("\n");
+			
+			sb.Append("fragment ShaderOutputs shader_main(\n");
 			sb.Append("\tShaderVaryings varyings [[stage_in]],\n");
 			sb.Append("\tconstant ShaderUniforms & uniforms [[buffer(1)]],\n");
 			sb.Append("\tShaderTextures textures)\n");
@@ -507,14 +522,16 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			sb.Append("\tm.main();\n");
 			sb.Append("\t\n");
 			
+			sb.Append("\tShaderOutputs outputs;\n");
 			for (int i = 0; outputs[i] != 0; ++i)
 			{
 			// todo : support MRT
 				if (outputs[i] == 'c')
-					sb.Append("\treturn m.shader_fragColor;\n");
+					sb.Append("\toutputs.fragColor = m.shader_fragColor;\n");
 				if (outputs[i] == 'n')
-					sb.Append("\treturn m.shader_fragNormal;\n");
+					sb.Append("\toutputs.fragNormal = m.shader_fragNormal;\n");
 			}
+			sb.Append("\treturn outputs;\n");
 			sb.Append("}\n");
 		}
 		

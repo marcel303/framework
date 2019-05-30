@@ -1556,6 +1556,7 @@ static inline void gxPushMatrix() { }
 static inline void gxLoadIdentity() { }
 static inline void gxLoadMatrixf(const float * m) { }
 static inline void gxGetMatrixf(GX_MATRIX mode, float * m) { }
+static inline void gxSetMatrixf(GX_MATRIX mode, const float * m) { }
 static inline void gxMultMatrixf(const float * m) { }
 static inline void gxTranslatef(float x, float y, float z) { }
 static inline void gxRotatef(float angle, float x, float y, float z) { }
@@ -1631,6 +1632,7 @@ GX_MATRIX gxGetMatrixMode();
 #define gxLoadIdentity glLoadIdentity
 #define gxLoadMatrixf glLoadMatrixf
 void gxGetMatrixf(GX_MATRIX mode, float * m);
+void gxSetMatrixf(GX_MATRIX mode, const float * m);
 #define gxMultMatrixf glMultMatrixf
 #define gxTranslatef glTranslatef
 #define gxRotatef glRotatef

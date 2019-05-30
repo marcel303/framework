@@ -209,9 +209,12 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 struct RenderPassData
 {
 	GLuint frameBufferId = 0;
+	GLenum drawBuffers[32];
+	int numDrawBuffers = 0;
 };
 
 std::stack<RenderPassData> s_renderPasses;
+bool s_renderPassesIsEmpty = true;
 
 void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
 {
@@ -250,8 +253,13 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 					viewportSx = targets[i]->getWidth();
 				if (targets[i]->getHeight() > viewportSy)
 					viewportSy = targets[i]->getHeight();
+				
+				pd.drawBuffers[pd.numDrawBuffers++] = GL_COLOR_ATTACHMENT0 + i;
 			}
 		}
+		
+    	glDrawBuffers(pd.numDrawBuffers, pd.drawBuffers);
+    	checkErrorGL();
 		
 		if (depthTarget != nullptr)
 		{
@@ -303,6 +311,8 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		
 		s_renderPasses.push(pd);
 		
+		s_renderPassesIsEmpty = false;
+		
 		// todo : set viewport
 		
 	// todo : applyTransformWithViewportSize should be called here
@@ -330,6 +340,8 @@ void popRenderPass()
 	{
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		checkErrorGL();
+		
+		s_renderPassesIsEmpty = true;
 	}
 	else
 	{
@@ -338,6 +350,8 @@ void popRenderPass()
 		glBindFramebuffer(GL_FRAMEBUFFER, new_pd.frameBufferId);
 		checkErrorGL();
 	}
+	
+	applyTransform();
 }
 
 
