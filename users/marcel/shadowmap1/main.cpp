@@ -32,19 +32,6 @@ struct Scene
 	
 	void draw(const bool captureScreenPositions) const
 	{
-		Shader shader("shadedObject");
-	
-	/*
-		// would be necessary to capture shadow map textures for forward shadow casting lights
-	 
-		if (applyForwardLighting)
-		{
-			setShader(shader);
-			shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
-			shader.setTexture("depthTexture", 0, view_light.getDepthTexture());
-		}
-	*/
-	
 		const Vec3 cube_size_base(.5f, .3f, .5f);
 	
 	#if 0
@@ -142,18 +129,33 @@ struct Light
 	
 		if (isPerspective)
 		{
+		#if ENABLE_OPENGL
 			projection.MakePerspectiveGL(
 				fov * float(M_PI) / 180.f, 1.f,
 				depthRange.min,
 				depthRange.max);
+		#else
+			projection.MakePerspectiveLH(
+				fov * float(M_PI) / 180.f, 1.f,
+				depthRange.min,
+				depthRange.max);
+		#endif
 		}
 		else
 		{
+		#if ENABLE_OPENGL
 			projection.MakeOrthoGL(
 				-orthoSize, +orthoSize,
 				-orthoSize, +orthoSize,
 				depthRange.min,
 				depthRange.max);
+		#else
+			projection.MakeOrthoLH(
+				-orthoSize, +orthoSize,
+				-orthoSize, +orthoSize,
+				depthRange.min,
+				depthRange.max);
+		#endif
 		}
 	
 		const Mat4x4 worldToLight = lightToWorld_transform.CalcInv();
@@ -266,7 +268,11 @@ public:
 		
 		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
-		gxLoadMatrixf(light.worldToClip_transform.m_v);
+		gxLoadIdentity();
+	#if ENABLE_METAL
+		gxScalef(1, -1, 1); // Metal NDC/clip-space bottom-y is -1
+	#endif
+		gxMultMatrixf(light.worldToClip_transform.m_v);
 		
 		pushDepthTest(true, DEPTH_LESS, true);
 		pushBlend(BLEND_OPAQUE);
@@ -374,13 +380,13 @@ int main(int argc, char * argv[])
 		lightDrawer.init(properties);
 	}
 	
-	Light light;
-	light.isPerspective = PERSPECTIVE_LIGHT;
-	light.isShadowCasting = true;
-	light.depthRange.min = .5f;
-	light.depthRange.max = 10.f;
-	light.fov = 60.f;
-	light.orthoSize = LIGHT_ORTHO_SIZE;
+	Light light1;
+	light1.isPerspective = PERSPECTIVE_LIGHT;
+	light1.isShadowCasting = true;
+	light1.depthRange.min = .5f;
+	light1.depthRange.max = 10.f;
+	light1.fov = 60.f;
+	light1.orthoSize = LIGHT_ORTHO_SIZE;
 	
 	Light light2;
 	light2.isPerspective = true;
@@ -405,7 +411,8 @@ int main(int argc, char * argv[])
 		kDrawMode_LightDepth,
 		kDrawMode_CameraWorldPosition,
 		kDrawMode_DeferredShadow,
-		kDrawMode_CameraNormal
+		kDrawMode_CameraNormal,
+		kDrawMode_LightBuffer
 	};
 	
 	DrawMode drawMode = kDrawMode_CameraColor;
@@ -491,6 +498,8 @@ int main(int argc, char * argv[])
 			drawMode = kDrawMode_DeferredShadow;
 		if (keyboard.wentDown(SDLK_7))
 			drawMode = kDrawMode_CameraNormal;
+		if (keyboard.wentDown(SDLK_8))
+			drawMode = kDrawMode_LightBuffer;
 		if (keyboard.wentDown(SDLK_o))
 			depthLinearDrawScale /= 2.f;
 		if (keyboard.wentDown(SDLK_p))
@@ -502,12 +511,12 @@ int main(int argc, char * argv[])
 		
 		if (mouse.isDown(BUTTON_LEFT))
 		{
-			light.lightToWorld_transform = camera.getWorldMatrix();
-			light.color.a = 8.f;
+			light1.lightToWorld_transform = camera.getWorldMatrix();
+			light1.color.a = 8.f;
 		}
 		//light.color.a = lerp<float>(.5f, 1.3f, (cosf(framework.time * 10.f) + 1.f) / 2.f);
-		light.color.a *= powf(.4f, framework.timeStep);
-		light.calculateTransforms();
+		light1.color.a *= powf(.4f, framework.timeStep);
+		light1.calculateTransforms();
 		
 		light2.lightToWorld_transform.MakeLookat(
 				Vec3(cosf(framework.time / 2.34f) * 3.f, 4, sinf(framework.time / 3.45f) * 3.f),
@@ -557,7 +566,7 @@ int main(int argc, char * argv[])
 			{
 				// draw light volume and direction
 				
-				drawLightVolume(light);
+				drawLightVolume(light1);
 				drawLightVolume(light2);
 				drawLightVolume(light3);
 			}
@@ -678,12 +687,42 @@ int main(int argc, char * argv[])
 		{
 			if (drawMode == kDrawMode_CameraColor)
 			{
+			#if 1
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_camera.getTexture());
 				setColor(colorWhite);
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				gxSetTexture(0);
 				popBlend();
+			#else
+				// would be necessary to capture shadow map textures for forward shadow casting lights
+				
+			// this is some old coded for drawing forward lit shaded objects
+			// currently not in use, but will want to get this back working again
+			// requires the light drawer to cache shadow maps first
+				Shader shader("shadedObject");
+				setShader(shader);
+				shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
+				shader.setTexture("depthTexture", 0, view_camera.getTexture());
+				
+				projectPerspective3d(60.f, znear, zfar);
+			
+				camera.pushViewMatrix();
+				{
+					pushDepthTest(true, DEPTH_LESS, true);
+					pushBlend(BLEND_OPAQUE);
+					{
+						drawScene(false);
+					}
+					popBlend();
+					popDepthTest();
+				}
+				camera.popViewMatrix();
+				
+				projectScreen2d();
+				
+				clearShader();
+			#endif
 			}
 			else if (drawMode == kDrawMode_CameraDepth)
 			{
@@ -754,7 +793,7 @@ int main(int argc, char * argv[])
 						}
 					};
 					
-					drawLight(light);
+					drawLight(light1);
 					drawLight(light2);
 					drawLight(light3);
 				}
@@ -776,6 +815,43 @@ int main(int argc, char * argv[])
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_camera_normal.getTexture());
 				setColor(colorWhite);
+				drawRect(0, 0, GFX_SX, GFX_SY);
+				gxSetTexture(0);
+				popBlend();
+			}
+			else if (drawMode == kDrawMode_LightBuffer)
+			{
+				// accumulate lights
+				
+				lightDrawer.drawBegin(view_camera.getDepthTexture(), view_camera_normal.getTexture());
+				{
+					auto drawLight = [&](const Light & light)
+					{
+						if (light.isShadowCasting)
+						{
+							lightDrawer.drawShadowLightBegin(light);
+							{
+								drawScene(false);
+							}
+							lightDrawer.drawShadowLightEnd(light);
+						}
+						else
+						{
+							lightDrawer.drawLight(light);
+						}
+					};
+					
+					drawLight(light1);
+					drawLight(light2);
+					drawLight(light3);
+				}
+				lightDrawer.drawEnd();
+				
+				// apply light to color image
+				
+				pushBlend(BLEND_OPAQUE);
+				setColor(colorWhite);
+				gxSetTexture(lightDrawer.getLightMapSurface()->getTexture());
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				gxSetTexture(0);
 				popBlend();
