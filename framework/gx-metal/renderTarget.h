@@ -65,10 +65,10 @@ class DepthTarget : DepthTargetBase
 public:
 	virtual ~DepthTarget() override final;
 	
-	virtual bool init(const int width, const int height, DEPTH_FORMAT format, const float clearDepth) override final
+	virtual bool init(const int width, const int height, DEPTH_FORMAT format, const bool enableTexture, const float clearDepth) override final
 	{
 		DepthTargetProperties properties;
-		properties.init(width, height, format, clearDepth);
+		properties.init(width, height, format, enableTexture, clearDepth);
 		
 		return init(properties);
 	}
@@ -85,9 +85,14 @@ public:
 		return properties.clearDepth;
 	}
 	
+	virtual bool isTextureEnabled() const override final
+	{
+		return properties.enableTexture;
+	}
+	
 	virtual GxTextureId getTextureId() const override final;
 	
-		virtual int getWidth() const override final
+	virtual int getWidth() const override final
 	{
 		return properties.dimensions.width;
 	}

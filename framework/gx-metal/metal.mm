@@ -431,7 +431,7 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 			depthattachment.texture = (id <MTLTexture>)depthTarget->getMetalTexture();
 			depthattachment.clearDepth = depthTarget->getClearDepth();
 			depthattachment.loadAction = in_clearDepth ? MTLLoadActionClear : MTLLoadActionLoad;
-			depthattachment.storeAction = MTLStoreActionDontCare;
+			depthattachment.storeAction = depthTarget->isTextureEnabled() ? MTLStoreActionStore : MTLStoreActionDontCare;
 			
 			pd.renderPass.depthFormat = depthattachment.texture.pixelFormat;
 			
@@ -1009,6 +1009,7 @@ static bool s_gxTextureEnabled = false;
 
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
+static int s_gxLastIndexOffset = -1;
 
 static GxVertex s_gxFirstVertex;
 static bool s_gxHasFirstVertex = false;
@@ -1016,7 +1017,10 @@ static bool s_gxHasFirstVertex = false;
 static DynamicBufferPool s_gxVertexBufferPool;
 static DynamicBufferPool::PoolElem * s_gxVertexBufferElem = nullptr;
 static int s_gxVertexBufferElemOffset = 0;
-static GxIndexBuffer s_gxIndexBuffer;
+
+static DynamicBufferPool s_gxIndexBufferPool;
+static DynamicBufferPool::PoolElem * s_gxIndexBufferElem = nullptr;
+static int s_gxIndexBufferElemOffset = 0;
 
 static const GxVertexInput s_gxVsInputs[] =
 {
@@ -1059,9 +1063,7 @@ void gxInitialize()
 	const int maxQuads = maxVertexCount / 4;
 	const int maxIndicesForQuads = maxQuads * 6;
 	
-	s_gxIndexBuffer.alloc(maxIndicesForQuads, sizeof(INDEX_TYPE) == 2 ? GX_INDEX_16 : GX_INDEX_32);
-
-	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
+	s_gxIndexBufferPool.init(maxIndicesForQuads * sizeof(INDEX_TYPE));
 	
 #if TODO
 	// enable seamless cube map sampling along the edges
@@ -1074,7 +1076,7 @@ void gxShutdown()
 {
 	s_gxVertexBufferPool.free();
 	
-	s_gxIndexBuffer.free();
+	s_gxIndexBufferPool.free();
 
 #if TODO
 	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -1383,6 +1385,28 @@ static void gxValidatePipelineState()
 	}
 }
 
+static void ensureIndexBufferCapacity(const int numIndices)
+{
+	const int remaining = (s_gxIndexBufferElem == nullptr) ? 0 : (s_gxIndexBufferPool.m_numBytesPerBuffer - s_gxIndexBufferElemOffset);
+	
+	if (numIndices * sizeof(INDEX_TYPE) > remaining)
+	{
+		if (s_gxIndexBufferElem != nullptr)
+		{
+			auto * elem = s_gxIndexBufferElem;
+			// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxFlush)"];
+			[s_activeRenderPass->cmdbuf addCompletedHandler:
+				^(id<MTLCommandBuffer> _Nonnull)
+				{
+					s_gxIndexBufferPool.freeBuffer(elem);
+				}];
+		}
+		
+		s_gxIndexBufferElem = s_gxIndexBufferPool.allocBuffer();
+		s_gxIndexBufferElemOffset = 0;
+	}
+}
+
 static void gxFlush(bool endOfBatch)
 {
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
@@ -1418,7 +1442,7 @@ static void gxFlush(bool endOfBatch)
 		}
 		else
 		{
-		// todo : keep a reference to the current buffer and allocate vertices from the same buffer
+		// note : keep a reference to the current buffer and allocate vertices from the same buffer
 		//        when possible. once the buffer is depleted, or when the command buffer is scheduled,
 		//        add the completion handler
 			const int remaining = (s_gxVertexBufferElem == nullptr) ? 0 : (s_gxVertexBufferPool.m_numBytesPerBuffer - s_gxVertexBufferElemOffset);
@@ -1461,9 +1485,7 @@ static void gxFlush(bool endOfBatch)
 		gxValidateShaderResources();
 		
 		bool indexed = false;
-		uint32_t * indices = 0;
 		int numElements = s_gxVertexCount;
-		int numIndices = 0;
 
 		bool needToRegenerateIndexBuffer = false;
 		
@@ -1482,11 +1504,15 @@ static void gxFlush(bool endOfBatch)
 			fassert(s_gxVertexCount < 65536);
 			
 			const int numQuads = s_gxVertexCount / 4;
-			numIndices = numQuads * 6;
+			const int numIndices = numQuads * 6;
 
 			if (needToRegenerateIndexBuffer)
 			{
-				indices = (INDEX_TYPE*)s_gxIndexBuffer.updateBegin();
+				ensureIndexBufferCapacity(numIndices);
+			
+				s_gxLastIndexOffset = s_gxIndexBufferElemOffset;
+				
+				INDEX_TYPE * indices = (INDEX_TYPE*)((uint8_t*)s_gxIndexBufferElem->m_buffer.contents + s_gxIndexBufferElemOffset);
 
 				INDEX_TYPE * __restrict indexPtr = indices;
 				INDEX_TYPE baseIndex = 0;
@@ -1504,7 +1530,7 @@ static void gxFlush(bool endOfBatch)
 					baseIndex += 4;
 				}
 				
-				s_gxIndexBuffer.updateEnd(0, indexPtr - indices);
+				s_gxIndexBufferElemOffset += numIndices * sizeof(INDEX_TYPE);
 			}
 			
 			s_gxPrimitiveType = GX_TRIANGLES;
@@ -1520,13 +1546,15 @@ static void gxFlush(bool endOfBatch)
 			fassert(s_gxVertexCount < 65536);
 			
 			const int numTriangles = s_gxVertexCount - 2;
-			numIndices = numTriangles * 3;
+			const int numIndices = numTriangles * 3;
 
 			if (needToRegenerateIndexBuffer)
 			{
-			// fixme : updateBegin/updateEnd approach isn't thread safe. the GPU may read data being modified here
-			//         we need an allocation scheme similar to the buffer pool we use for setting uniforms
-				indices = (INDEX_TYPE*)s_gxIndexBuffer.updateBegin();
+				ensureIndexBufferCapacity(numIndices);
+				
+				s_gxLastIndexOffset = s_gxIndexBufferElemOffset;
+				
+				INDEX_TYPE * indices = (INDEX_TYPE*)((uint8_t*)s_gxIndexBufferElem->m_buffer.contents + s_gxIndexBufferElemOffset);
 
 				INDEX_TYPE * __restrict indexPtr = indices;
 				INDEX_TYPE baseIndex = 0;
@@ -1540,7 +1568,7 @@ static void gxFlush(bool endOfBatch)
 					baseIndex += 1;
 				}
 				
-				s_gxIndexBuffer.updateEnd(0, indexPtr - indices);
+				s_gxIndexBufferElemOffset += numIndices * sizeof(INDEX_TYPE);
 			}
 			
 			s_gxPrimitiveType = GX_TRIANGLES;
@@ -1578,9 +1606,7 @@ static void gxFlush(bool endOfBatch)
 
 			if (indexed)
 			{
-				id <MTLBuffer> buffer = (id <MTLBuffer>)s_gxIndexBuffer.getMetalBuffer();
-				
-				[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:buffer indexBufferOffset:0];
+				[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:s_gxIndexBufferElem->m_buffer indexBufferOffset:s_gxLastIndexOffset];
 			}
 			else
 			{
@@ -1695,6 +1721,25 @@ static void gxEndDraw()
 		s_gxVertexBufferElem = nullptr;
 		s_gxVertexBufferElemOffset = 0;
 	}
+	
+	// add completion handler if there's still a buffer pool element in use
+	
+	if (s_gxIndexBufferElem != nullptr)
+	{
+		auto * elem = s_gxIndexBufferElem;
+		// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxEndDraw)"];
+		[s_activeRenderPass->cmdbuf addCompletedHandler:
+			^(id<MTLCommandBuffer> _Nonnull)
+			{
+				s_gxIndexBufferPool.freeBuffer(elem);
+			}];
+		
+		s_gxIndexBufferElem = nullptr;
+		s_gxIndexBufferElemOffset = 0;
+	}
+	
+	s_gxLastVertexCount = -1; // reset, to ensure the index buffer gets regenerated
+	s_gxLastIndexOffset = -1; // reset, to ensure we don't reuse old index buffers
 	
 	// clear textures to avoid freed textures from being reused (prefer to crash instead)
 	

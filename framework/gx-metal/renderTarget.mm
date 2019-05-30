@@ -135,6 +135,7 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 
 GxTextureId DepthTarget::getTextureId() const
 {
+	Assert(properties.enableTexture);
 	return m_depthTextureId;
 }
 
