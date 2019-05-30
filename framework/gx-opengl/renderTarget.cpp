@@ -106,6 +106,10 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		checkErrorGL();
+		
+	// todo : properly restore previous texture
+		glBindTexture(GL_TEXTURE_2D, 0);
+		checkErrorGL();
 	}
 	
 	if (result == false)
@@ -180,6 +184,10 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		checkErrorGL();
+		
+	// todo : properly restore previous texture
+		glBindTexture(GL_TEXTURE_2D, 0);
+		checkErrorGL();
 	}
 	
 	if (result == false)
@@ -237,29 +245,25 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 			{
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, targets[i]->getTextureId(), 0);
 				checkErrorGL();
+				
+				if (targets[i]->getWidth() > viewportSx)
+					viewportSx = targets[i]->getWidth();
+				if (targets[i]->getHeight() > viewportSy)
+					viewportSy = targets[i]->getHeight();
 			}
 		}
-		
-	#if 0 // todo : work out viewport size
-		if (colorattachment.texture.width > viewportSx)
-			viewportSx = colorattachment.texture.width;
-		if (colorattachment.texture.height > viewportSy)
-			viewportSy = colorattachment.texture.height;
-	#endif
 		
 		if (depthTarget != nullptr)
 		{
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTarget->getTextureId(), 0);
 			checkErrorGL();
+			
+			if (depthTarget->getWidth() > viewportSx)
+				viewportSx = depthTarget->getWidth();
+			if (depthTarget->getHeight() > viewportSy)
+				viewportSy = depthTarget->getHeight();
 		}
 		
-	#if 0
-		if (depthattachment.texture.width > viewportSx)
-			viewportSx = depthattachment.texture.width;
-		if (depthattachment.texture.height > viewportSy)
-			viewportSy = depthattachment.texture.height;
-	#endif
-	
 	#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 		// check if all went well
 		// note : we only do this when debugging OpenGL, as this call can be rather expensive

@@ -40,6 +40,16 @@ public:
 	
 	virtual GxTextureId getTextureId() const override final;
 	
+	virtual int getWidth() const override final
+	{
+		return properties.dimensions.width;
+	}
+	
+	virtual int getHeight() const override final
+	{
+		return properties.dimensions.height;
+	}
+	
 	void * getMetalTexture() const { return m_colorTexture; }
 };
 
@@ -76,6 +86,16 @@ public:
 	}
 	
 	virtual GxTextureId getTextureId() const override final;
+	
+		virtual int getWidth() const override final
+	{
+		return properties.dimensions.width;
+	}
+	
+	virtual int getHeight() const override final
+	{
+		return properties.dimensions.height;
+	}
 	
 	void * getMetalTexture() const { return m_depthTexture; }
 };

@@ -34,6 +34,9 @@ public:
 	virtual const Color & getClearColor() const = 0;
 	
 	virtual GxTextureId getTextureId() const = 0;
+	
+	virtual int getWidth() const = 0;
+	virtual int getHeight() const = 0;
 };
 
 //
@@ -70,6 +73,9 @@ public:
 	virtual float getClearDepth() const = 0;
 	
 	virtual GxTextureId getTextureId() const = 0;
+	
+	virtual int getWidth() const = 0;
+	virtual int getHeight() const = 0;
 };
 
 void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
