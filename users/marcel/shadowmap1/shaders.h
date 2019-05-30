@@ -91,8 +91,13 @@ static const char * s_shadedObjectPs = R"SHADER(
 			shader_fragColor.rgb = vec3(0.5, 0.0, 0.0);
 		else if (projected.y < -1.0 || projected.y > +1.0)
 			shader_fragColor.rgb = vec3(0.0, 0.5, 0.0);
-		else if (projected.z < -1.0 || projected.z > +1.0)
+	#if defined(GL_core_profile)
+		else if (projected.z < -1.0 || projected.z > +1.0) // GLSL clip space has z go from -1, +1
 			shader_fragColor.rgb = vec3(0.0, 0.0, 0.5);
+	#else
+		else if (projected.z < 0.0 || projected.z > +1.0) // non-GLSL clip space has z go from 0, +1
+			shader_fragColor.rgb = vec3(0.0, 0.0, 0.5);
+	#endif
 		else if (false)
 			shader_fragColor.rgb = vec3(projected.z);
 		else if (false)
@@ -126,7 +131,11 @@ static const char * s_shadedObjectPs = R"SHADER(
 static const char * s_shadowUtilsTxt = R"SHADER(
 	vec3 depthToWorldPosition(float depth, vec2 texcoord, mat4x4 projectionToWorld)
 	{
+	#if defined(GL_core_profile)
 		vec3 coord = vec3(texcoord, depth) * 2.0 - vec3(1.0);
+	#else
+		vec3 coord = vec3(vec2(texcoord.x, 1.0 - texcoord.y) * 2.0 - vec2(1.0), depth);
+	#endif
 
 		vec4 position_projection = vec4(coord, 1.0);
 		vec4 position_world = projectionToWorld * position_projection;
@@ -302,6 +311,9 @@ static const char * s_deferredLightWithShadowPs = R"SHADER(
 		
 		vec3 projected = position_lightSpace.xyz / position_lightSpace.w;
 		vec3 coords = projected * 0.5 + vec3(0.5);
+	#if !defined(GL_core_profile)
+		coords.z = projected.z;
+	#endif
 		
 		// perform shadow map lookup
 		
@@ -321,8 +333,13 @@ static const char * s_deferredLightWithShadowPs = R"SHADER(
 				shadowColor = vec3(0.5, 0.0, 0.0);
 			else if (projected.y < -1.0 || projected.y > +1.0)
 				shadowColor = vec3(0.0, 0.5, 0.0);
-			else if (projected.z < -1.0 || projected.z > +1.0)
-				shadowColor = vec3(0.0, 0.0, 0.5);
+		#if defined(GL_core_profile)
+			else if (projected.z < -1.0 || projected.z > +1.0) // GLSL clip space has z go from -1, +1
+				shader_fragColor.rgb = vec3(0.0, 0.0, 0.5);
+		#else
+			else if (projected.z < 0.0 || projected.z > +1.0) // non-GLSL clip space has z go from 0, +1
+				shader_fragColor.rgb = vec3(0.0, 0.0, 0.5);
+		#endif
 			else if (false)
 				shadowColor = vec3(projected.z);
 			else if (false)
