@@ -106,6 +106,7 @@ struct Renderer
 	mutable ColorTarget normalMap;
 	mutable ColorTarget colorMap;
 	mutable ColorTarget lightMap;
+	mutable ColorTarget compositeMap;
 	
 	struct
 	{
@@ -132,6 +133,7 @@ struct Renderer
 		result &= normalMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, colorBlackTranslucent);
 		result &= colorMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
 		result &= lightMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
+		result &= compositeMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
 		
 		return result;
 	}
@@ -241,18 +243,50 @@ struct Renderer
 				popMatrices();
 			}
 			popRenderPass();
-			
-			pushRenderPass(&lightMap, true, &depthMap, false, "Light");
+		
+			pushRenderPass(&lightMap, true, nullptr, false, "Light");
 			{
-				pushMatrices(true);
-				{
-					// todo : draw lights using depth and normal maps as inputs
-				}
-				popMatrices();
+				Mat4x4 identity(true);
+				gxSetMatrixf(GX_PROJECTION, identity.m_v);
+				gxSetMatrixf(GX_MODELVIEW, identity.m_v);
+				
+				// todo : draw lights using depth and normal maps as inputs
+					
+				const Vec3 lightDir_world(1, -1, 1);
+				const Vec3 lightDir_view = viewMatrix.Mul3(lightDir_world);
+				const Vec3 lightColor1(1.f, .5f, .25f); // light color when the light is coming from 'above'
+				const Vec3 lightColor2(.125f, .15f, .2f); // light color when the light is coming from 'below'
+				
+				Shader shader("shaders/directional-light");
+				setShader(shader);
+				shader.setTexture("depthTexture", 0, depthMap.getTextureId());
+				shader.setTexture("normalTexture", 1, normalMap.getTextureId());
+				shader.setImmediateMatrix4x4("projectionToView", projectionMatrix.CalcInv().m_v);
+				shader.setImmediate("lightDir_view", lightDir_view[0], lightDir_view[1], lightDir_view[2]);
+				shader.setImmediate("lightColor1", lightColor1[0], lightColor1[1], lightColor1[2]);
+				shader.setImmediate("lightColor2", lightColor2[0], lightColor2[1], lightColor2[2]);
+				drawRect(-1, -1, +1, +1);
+				clearShader();
 			}
 			popRenderPass();
+			
+			pushRenderPass(&compositeMap, true, nullptr, false, "Composite");
+			{
+				Mat4x4 identity(true);
+				gxSetMatrixf(GX_PROJECTION, identity.m_v);
+				gxSetMatrixf(GX_MODELVIEW, identity.m_v);
+				
+				Shader shader("shaders/light-application");
+				setShader(shader);
+				shader.setTexture("colorTexture", 0, colorMap.getTextureId());
+				shader.setTexture("lightTexture", 1, lightMap.getTextureId());
+				drawRect(-1, -1, +1, +1);
+				clearShader();
+			}
+			popRenderPass();
+			
 
-			pushRenderPass(&colorMap, false, &depthMap, false, "Translucent");
+			pushRenderPass(&compositeMap, false, &depthMap, false, "Translucent");
 			{
 				pushMatrices(true);
 				{
@@ -265,7 +299,7 @@ struct Renderer
 			// todo : apply light map using light and color maps as inputs
 			
 			pushBlend(BLEND_OPAQUE);
-			gxSetTexture(colorMap.getTextureId());
+			gxSetTexture(compositeMap.getTextureId());
 			setColor(colorWhite);
 			drawRect(0, 0, VIEW_SX, VIEW_SY); // todo : getWidht, height
 			gxSetTexture(0);
@@ -1913,6 +1947,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
+	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;
 	framework.allowHighDpi = false;
 
