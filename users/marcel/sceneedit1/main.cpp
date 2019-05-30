@@ -129,7 +129,7 @@ struct Renderer
 				{ "Lit + Shadows", kMode_LitWithShadows }
 			});
 		
-		result &= depthMap.init(VIEW_SX, VIEW_SY, DEPTH_FLOAT32, 1.f);
+		result &= depthMap.init(VIEW_SX, VIEW_SY, DEPTH_FLOAT32, true, 1.f);
 		result &= normalMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, colorBlackTranslucent);
 		result &= colorMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
 		result &= lightMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
@@ -224,6 +224,9 @@ struct Renderer
 		}
 		else if (mode->get() == kMode_Lit)
 		{
+			// draw to the normal and depth maps
+			
+		#if 0
 			pushRenderPass(&normalMap, true, &depthMap, true, "Depth Normal");
 			{
 				pushMatrices(true);
@@ -243,14 +246,36 @@ struct Renderer
 				popMatrices();
 			}
 			popRenderPass();
+		#else
+			ColorTarget * targets[2] = { &normalMap, &colorMap };
+			
+			pushRenderPass(targets, 2, true, &depthMap, true, "Depth Normal Color");
+			{
+				pushMatrices(true);
+				{
+					pushShaderOutputs("nc");
+					{
+						if (drawOpaque != nullptr)
+							drawOpaque();
+					}
+					popShaderOutputs();
+				}
+				popMatrices();
+			}
+			popRenderPass();
+		#endif
 		
+			// accumulate lights for the opaque part of the scene into the light map
+			
 			pushRenderPass(&lightMap, true, nullptr, false, "Light");
 			{
-				Mat4x4 identity(true);
-				gxSetMatrixf(GX_PROJECTION, identity.m_v);
-				gxSetMatrixf(GX_MODELVIEW, identity.m_v);
+				projectScreen2d();
 				
-				// todo : draw lights using depth and normal maps as inputs
+			// todo : invoke light rendering system
+			// todo : create light rendering system
+			// todo : register lights through a light component with the light rendering system
+			
+				// draw full screen directional light
 					
 				const Vec3 lightDir_world(1, -1, 1);
 				const Vec3 lightDir_view = viewMatrix.Mul3(lightDir_world);
@@ -265,26 +290,30 @@ struct Renderer
 				shader.setImmediate("lightDir_view", lightDir_view[0], lightDir_view[1], lightDir_view[2]);
 				shader.setImmediate("lightColor1", lightColor1[0], lightColor1[1], lightColor1[2]);
 				shader.setImmediate("lightColor2", lightColor2[0], lightColor2[1], lightColor2[2]);
-				drawRect(-1, -1, +1, +1);
+				drawRect(0, 0, lightMap.getWidth(), lightMap.getHeight());
 				clearShader();
+				
+				// todo : draw lights using depth and normal maps as inputs
 			}
 			popRenderPass();
 			
+			// perform light application. the light application pass combines
+			// the color and light maps to produce a lit result
+			
 			pushRenderPass(&compositeMap, true, nullptr, false, "Composite");
 			{
-				Mat4x4 identity(true);
-				gxSetMatrixf(GX_PROJECTION, identity.m_v);
-				gxSetMatrixf(GX_MODELVIEW, identity.m_v);
+				projectScreen2d();
 				
 				Shader shader("shaders/light-application");
 				setShader(shader);
 				shader.setTexture("colorTexture", 0, colorMap.getTextureId());
 				shader.setTexture("lightTexture", 1, lightMap.getTextureId());
-				drawRect(-1, -1, +1, +1);
+				drawRect(0, 0, compositeMap.getWidth(), compositeMap.getHeight());
 				clearShader();
 			}
 			popRenderPass();
 			
+			// draw translucent pass on top of the composited result
 
 			pushRenderPass(&compositeMap, false, &depthMap, false, "Translucent");
 			{
@@ -295,8 +324,6 @@ struct Renderer
 				popMatrices();
 			}
 			popRenderPass();
-			
-			// todo : apply light map using light and color maps as inputs
 			
 			pushBlend(BLEND_OPAQUE);
 			gxSetTexture(compositeMap.getTextureId());
