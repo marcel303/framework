@@ -821,6 +821,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	name = _name;
 	vs = filenameVs;
 	ps = filenamePs;
+	this->outputs = outputs;
 	
 	version++;
 	
