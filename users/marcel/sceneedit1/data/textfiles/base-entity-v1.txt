@@ -10,6 +10,6 @@ model
 
 parameter
 
-vfxgraph
-	path
-		vfxgraphs/test.xml
+#vfxgraph
+#	path
+#		vfxgraphs/test.xml
