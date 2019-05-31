@@ -253,12 +253,12 @@ public:
 		
 		lightMap->clear();
 		
-		pushSurface(lightMap);
+		//pushSurface(lightMap); // todo : either decide to disallow surface reuse within the context of a parent surface (since all of the surfaces inside a parent will execute first, reuse and usage inside the parent context is not guaranteed to 'interleave' the results. or commit current command buffer and start a new one when a child is pushed and popped
 	}
 	
 	void drawEnd()
 	{
-		popSurface();
+		//popSurface();
 	}
 	
 	void drawShadowLightBegin(const Light & light)
@@ -287,9 +287,12 @@ public:
 
 		//
 		
+		pushSurface(lightMap); // todo : remove. we want to push it only once
 		setColorClamp(false);
 		pushBlend(BLEND_ADD);
 		{
+			projectScreen2d();
+			
 			Shader shader("deferredLightWithShadow");
 			setShader(shader);
 			shader.setTexture("depthTexture", 0, drawState.sceneDepthTexture);
@@ -309,6 +312,7 @@ public:
 		}
 		popBlend();
 		setColorClamp(true);
+		popSurface();
 	}
 	
 	void drawLight(const Light & light)
@@ -371,6 +375,9 @@ int main(int argc, char * argv[])
 	
 	Camera3d camera;
 	camera.position.Set(0, 2, -2);
+	//camera.maxForwardSpeed *= 2.f;
+	//camera.maxStrafeSpeed *= 2.f;
+	//camera.maxUpSpeed *= 2.f;
 	
 	LightDrawer lightDrawer;
 	{
@@ -393,15 +400,15 @@ int main(int argc, char * argv[])
 	light2.isShadowCasting = true;
 	light2.depthRange.min = .5f;
 	light2.depthRange.max = 10.f;
-	light2.fov = 60.f;
+	light2.fov = 130.f;
 	light2.orthoSize = LIGHT_ORTHO_SIZE;
 	
 	Light light3;
 	light3.isPerspective = false;
-	light3.isShadowCasting = false;
+	light3.isShadowCasting = true;
 	light3.depthRange.min = .1f;
 	light3.depthRange.max = 1000.f;
-	light3.orthoSize = 1000000.f;
+	light3.orthoSize = 200.f;
 	
 	enum DrawMode
 	{
@@ -514,8 +521,8 @@ int main(int argc, char * argv[])
 			light1.lightToWorld_transform = camera.getWorldMatrix();
 			light1.color.a = 8.f;
 		}
-		//light.color.a = lerp<float>(.5f, 1.3f, (cosf(framework.time * 10.f) + 1.f) / 2.f);
-		light1.color.a *= powf(.4f, framework.timeStep);
+		light1.color.a = lerp<float>(2.f, 23.f, (cosf(framework.time * 10.f) + 1.f) / 2.f);
+		//light1.color.a *= powf(.4f, framework.timeStep);
 		light1.calculateTransforms();
 		
 		light2.lightToWorld_transform.MakeLookat(
@@ -523,15 +530,17 @@ int main(int argc, char * argv[])
 				Vec3(cosf(framework.time / 1.23f) * 6.f, 0, sinf(framework.time / 4.56f) * 6.f),
 				Vec3(0, 1, 0));
 		light2.lightToWorld_transform = light2.lightToWorld_transform.CalcInv();
-		light2.color = Color::fromHSL(framework.time / 1.45f, .1f, .8f);
-		light2.color.a = 16.f;
+		light2.color = Color::fromHSL(framework.time / 6.54f, .4f, .6f);
+		light2.color.a = 32.f;
 		light2.calculateTransforms();
 		
 		light3.lightToWorld_transform.MakeLookat(
 				Vec3(cosf(framework.time / 10.f) * 3.f, 6, sinf(framework.time / 10.f) * 3.f),
 				Vec3(0, 0, 0),
 				Vec3(0, 1, 0));
+		light3.lightToWorld_transform = light3.lightToWorld_transform.CalcInv();
 		light3.color = Color(255, 127, 63, 31);
+		light3.color.a = .8f;
 		light3.calculateTransforms();
 		
 		auto drawLightVolume = [](const Light & light)
@@ -541,9 +550,56 @@ int main(int argc, char * argv[])
 				gxMultMatrixf(light.lightToWorld_transform.m_v);
 				
 				setColor(100, 100, 100);
-				lineCube(
-					Vec3(0, 0, (light.depthRange.min + light.depthRange.max) / 2.f),
-					Vec3(LIGHT_ORTHO_SIZE, LIGHT_ORTHO_SIZE, (light.depthRange.max - light.depthRange.min) / 2.f));
+				
+				if (light.isPerspective)
+				{
+					const int resolution = 20;
+					
+					gxBegin(GX_TRIANGLES);
+					{
+						const float fov_rad = light.fov * float(M_PI) / 180.f;
+						const float w = tanf(fov_rad / 2.f);
+						
+						for (int i = 0; i < resolution; ++i)
+						{
+							if ((i % 2) != 0)
+								continue;
+							
+							const float t1 = (i + 0) / float(resolution);
+							const float t2 = (i + .1f) / float(resolution);
+							
+							const float angle1 = t1 * 2.f * float(M_PI);
+							const float angle2 = t2 * 2.f * float(M_PI);
+							
+							const Vec3 p1 = Vec3(0, 0, 0);
+							const Vec3 p2 = Vec3(
+								cosf(angle1) * w * light.depthRange.max,
+								sinf(angle1) * w * light.depthRange.max,
+								light.depthRange.max);
+							const Vec3 p3 = Vec3(
+								cosf(angle2) * w * light.depthRange.max,
+								sinf(angle2) * w * light.depthRange.max,
+								light.depthRange.max);
+							
+							const Vec3 d1 = p2 - p1;
+							const Vec3 d2 = p3 - p1;
+							const Vec3 n = -(d1 % d2).CalcNormalized();
+							
+							gxNormal3fv(&n[0]);
+							gxVertex3fv(&p1[0]);
+							gxVertex3fv(&p2[0]);
+							gxVertex3fv(&p3[0]);
+						}
+					}
+					gxEnd();
+				}
+				else
+				{
+					lineCube(
+						Vec3(0, 0, (light.depthRange.min + light.depthRange.max) / 2.f),
+						Vec3(light.orthoSize, light.orthoSize, (light.depthRange.max - light.depthRange.min) / 2.f));
+				}
+				
 				
 				gxBegin(GX_LINES);
 				gxVertex3f(0, 0, 0);
@@ -552,7 +608,9 @@ int main(int argc, char * argv[])
 				
 				gxPushMatrix();
 				gxScalef(.2f, .2f, 1.f);
-				drawGrid3d(1, 1, 0, 1);
+				fillCube(
+					Vec3(0, 0, 0),
+					Vec3(1, 1, fminf(.02f, light.depthRange.min / 2.f)));
 				gxPopMatrix();
 			}
 			gxPopMatrix();
