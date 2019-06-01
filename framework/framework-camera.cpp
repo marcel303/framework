@@ -85,6 +85,7 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 void Camera::Orbit::calculateWorldMatrix(Mat4x4 & out_matrix) const
 {
 	out_matrix = Mat4x4(true)
+		.Translate(origin[0], origin[1], origin[2])
 		.RotateY(azimuth * float(M_PI) / 180.f)
 		.RotateX(elevation * float(M_PI) / 180.f)
 		.Translate(0, 0, distance);
@@ -251,22 +252,25 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 		
 		// mouse + mouse smoothing
 		
-		mouseDx += mouse.dx;
-		mouseDy += mouse.dy;
-		
-		const double retain = pow(mouseSmooth, dt * 100.0);
-		
-		const double newDx = mouseDx * retain;
-		const double newDy = mouseDy * retain;
-		
-		const double thisDx = mouseDx - newDx;
-		const double thisDy = mouseDy - newDy;
-		
-		mouseDx = newDx;
-		mouseDy = newDy;
-		
-		yaw -= thisDx * mouseRotationSpeed;
-		pitch -= thisDy * mouseRotationSpeed;
+		if (mouse.isDown(BUTTON_LEFT))
+		{
+			mouseDx += mouse.dx;
+			mouseDy += mouse.dy;
+			
+			const double retain = pow(mouseSmooth, dt * 100.0);
+			
+			const double newDx = mouseDx * retain;
+			const double newDy = mouseDy * retain;
+			
+			const double thisDx = mouseDx - newDx;
+			const double thisDy = mouseDy - newDy;
+			
+			mouseDx = newDx;
+			mouseDy = newDy;
+			
+			yaw -= thisDx * mouseRotationSpeed;
+			pitch -= thisDy * mouseRotationSpeed;
+		}
 	}
 	else
 	{

@@ -50,6 +50,8 @@ public:
 	
 	struct Orbit
 	{
+		Vec3 origin;
+		
 		float elevation = -25.f;
 		float azimuth = -25.f;
 		float distance = -10.f;
