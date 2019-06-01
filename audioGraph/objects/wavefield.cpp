@@ -31,9 +31,6 @@
 #include <cmath>
 #include <string.h>
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
 #define MAX_IMPULSE_PER_SECOND 1000.0
 
 //
