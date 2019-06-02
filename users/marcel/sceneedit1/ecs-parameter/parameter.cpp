@@ -112,3 +112,15 @@ ParameterBase * ParameterMgr::find(const char * name) const
 	
 	return nullptr;
 }
+
+void ParameterMgr::setToDefault(const bool recurse)
+{
+	for (auto * parameter : parameters)
+		parameter->setToDefault();
+	
+	if (recurse)
+	{
+		for (auto * child : children)
+			child->setToDefault(recurse);
+	}
+}

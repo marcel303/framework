@@ -601,6 +601,8 @@ public:
 	
 	ParameterBase * find(const char * name) const;
 	
+	void setToDefault(const bool recurse);
+	
 	void addChild(ParameterMgr * child)
 	{
 		children.push_back(child);
