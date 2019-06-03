@@ -5856,7 +5856,10 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 #if USE_GLYPH_ATLAS
 	if (globals.isInTextBatch == false)
 	{
-		gxSetTexture(globals.font->textureAtlas->texture->id);
+		Shader & shader = globals.builtinShaders->bitmappedText.get();
+		setShader(shader);
+		
+		shader.setTexture("source", 0, globals.font->textureAtlas->texture->id);
 		
 		gxBegin(GX_QUADS);
 	}
@@ -5899,7 +5902,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 	{
 		gxEnd();
 		
-		gxSetTexture(0);
+		clearShader();
 	}
 #else
 	for (size_t i = 0; i < numGlyphs; ++i)
@@ -6178,7 +6181,18 @@ void beginTextBatch(Shader * overrideShader)
 		Assert(!globals.isInTextBatch);
 		globals.isInTextBatch = true;
 		
-		gxSetTexture(globals.font->textureAtlas->texture->id);
+		Shader & shader = overrideShader
+			? *overrideShader
+			: globals.builtinShaders->bitmappedText.get();
+		
+	// fixme : setting texture here is unsafe
+	//         texture atlas may grow while drawing text ..
+	//         need to apply the texture after fetching font cache elems (which may grow the atlas)
+	//         and before the actual drawing takes place
+	//      -> same apply to MSDF implementation
+		setShader(shader);
+		shader.setTexture("source", 0, globals.font->textureAtlas->texture->id);
+		
 		gxBegin(GX_QUADS);
 	#endif
 	}
@@ -6212,7 +6226,8 @@ void endTextBatch()
 		globals.isInTextBatch = false;
 		
 		gxEnd();
-		gxSetTexture(0);
+		
+		clearShader();
 	#endif
 	}
 	else if (globals.fontMode == FONT_SDF)
