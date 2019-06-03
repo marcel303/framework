@@ -517,12 +517,10 @@ RenderPipelineState renderState;
 
 // render states independent from render pipeline state
 
-static bool s_depthTestEnabled = false;
-static DEPTH_TEST s_depthTest = DEPTH_ALWAYS;
-static bool s_depthWriteEnabled = false;
-
 void setBlend(BLEND_MODE blendMode)
 {
+	globals.blendMode = blendMode;
+	
 	renderState.blendMode = blendMode;
 }
 
@@ -580,9 +578,9 @@ void popWireframe()
 
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 {
-	s_depthTestEnabled = enabled;
-	s_depthTest = test;
-	s_depthWriteEnabled = writeEnabled;
+	globals.depthTestEnabled = enabled;
+	globals.depthTest = test;
+	globals.depthTestWriteEnabled = writeEnabled;
 	
 	// depth state
 	
@@ -1046,6 +1044,10 @@ void gxValidateShaderResources();
 void gxInitialize()
 {
 	fassert(s_shaderSources.empty());
+	
+	memset(&renderState, 0, sizeof(renderState));
+	renderState.blendMode = BLEND_ALPHA;
+	renderState.colorWriteMask = 0xf;
 	
 	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 	
