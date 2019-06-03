@@ -365,6 +365,7 @@ int main(int argc, char * argv[])
 				shader.setImmediate("time", framework.time);
 				shader.setImmediate("mouse", mouse.x / float(viewSx), mouse.y / float(viewSy));
 				shader.setImmediate("mouse_down", mouse.isDown(BUTTON_LEFT));
+				shader.setTexture("s", 0, framework_context.font_texture.id);
 			};
 			
 			framework.beginDraw(0, 0, 0, 0);
