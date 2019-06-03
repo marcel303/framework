@@ -5863,6 +5863,14 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 		
 		gxBegin(GX_QUADS);
 	}
+	else
+	{
+		// update the texture here. we need to do this for every drawText call, to ensure that
+		// when the text finally does get rendered, it uses the latest contents of the texture
+		// atlas
+		Shader * shader = static_cast<Shader*>(globals.shader);
+		shader->setTexture("source", 0, globals.font->textureAtlas->texture->id);
+	}
 	
 	for (size_t i = 0; i < numGlyphs; ++i)
 	{
@@ -6027,6 +6035,14 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		
 		gxBegin(GX_QUADS);
 	}
+	else
+	{
+		// update the texture here. we need to do this for every drawText call, to ensure that
+		// when the text finally does get rendered, it uses the latest contents of the texture
+		// atlas
+		Shader * shader = static_cast<Shader*>(globals.shader);
+		shader->setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id);
+	}
 	
 	const float scale = stbtt_ScaleForPixelHeight(&glyphCache.m_font.fontInfo, size);
 	
@@ -6185,13 +6201,12 @@ void beginTextBatch(Shader * overrideShader)
 			? *overrideShader
 			: globals.builtinShaders->bitmappedText.get();
 		
-	// fixme : setting texture here is unsafe
-	//         texture atlas may grow while drawing text ..
-	//         need to apply the texture after fetching font cache elems (which may grow the atlas)
-	//         and before the actual drawing takes place
-	//      -> same apply to MSDF implementation
+		// note : before we were setting the texture here. this is unsafe however,
+		//        since the texture atlas may grow while drawing text ..
+		//        so we now apply the texture during drawText (after fetching the
+		//        font cache elems, which may grow the atlas)
+		//        and before the actual drawing takes place
 		setShader(shader);
-		shader.setTexture("source", 0, globals.font->textureAtlas->texture->id);
 		
 		gxBegin(GX_QUADS);
 	#endif
