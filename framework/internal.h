@@ -1000,6 +1000,9 @@ public:
 		, shaderIsInit(false)
 		, shader()
 	{
+	#if !defined(DEBUG)
+		get();
+	#endif
 	}
 	
 	Shader & get()
@@ -1046,6 +1049,8 @@ public:
 	BuiltinShader hqShadedTriangle;
 	
 	BuiltinShader msdfText;
+	
+	BuiltinShader bitmappedText;
 };
 
 //

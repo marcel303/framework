@@ -1793,10 +1793,8 @@ void FontCacheElem::load(const char * filename)
 #if USE_GLYPH_ATLAS
 	if (loaded)
 	{
-		const int swizzleMask[4] = { GX_SWIZZLE_ONE, GX_SWIZZLE_ONE, GX_SWIZZLE_ONE, 0 };
-		
 		textureAtlas = new TextureAtlas();
-		textureAtlas->init(256, 16, GX_R8_UNORM, false, false, swizzleMask);
+		textureAtlas->init(256, 16, GX_R8_UNORM, false, false, nullptr);
 	}
 #endif
 }
@@ -2711,5 +2709,6 @@ BuiltinShaders::BuiltinShaders()
 	, hqStrokedRoundedRect("engine/builtin-hq-stroked-rounded-rect")
 	, hqShadedTriangle("engine/builtin-hq-shaded-triangle")
 	, msdfText("engine/builtin-msdf-text")
+	, bitmappedText("engine/builtin-bitmapped-text")
 {
 }
