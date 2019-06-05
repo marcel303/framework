@@ -122,7 +122,7 @@ struct ObjectToFileBinding
 			
 			if (file == nullptr || fprintf(file, "%s", text) < 0)
 			{
-				LOG_WRN("failed to save lines to file %s", filename);
+				LOG_WRN("failed to save json text to file %s", filename);
 				result = false;
 			}
 			
@@ -217,4 +217,30 @@ bool flushObjectToFile(const void * object)
 			result &= objectToFileBinding.saveToFile();
 	
 	return result;
+}
+
+// --- helper functions ---
+
+bool saveObjectToFile(const TypeDB * typeDB, const Type * type, const void * object, const char * filename)
+{
+// todo : refactor. let ObjectToFileBinding use these functions, instead of the other way around
+
+	ObjectToFileBinding binding;
+	binding.typeDB = typeDB;
+	binding.type = type;
+	binding.object = (void*)object;
+	binding.filename = filename;
+	
+	return binding.saveToFile();
+}
+
+bool loadObjectFromFile(const TypeDB * typeDB, const Type * type, void * object, const char * filename)
+{
+	ObjectToFileBinding binding;
+	binding.typeDB = typeDB;
+	binding.type = type;
+	binding.object = object;
+	binding.filename = filename;
+	
+	return binding.loadFromFile();
 }
