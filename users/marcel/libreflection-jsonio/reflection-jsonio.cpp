@@ -451,6 +451,11 @@ bool object_tojson_recursive(const TypeDB & typeDB, const Type * type, const voi
 				
 				result &= member_tojson_recursive(typeDB, structured_type, object, member, writer);
 			}
+			
+			if (result == false)
+			{
+				return false;
+			}
 		}
 		writer.EndObject();
 		
