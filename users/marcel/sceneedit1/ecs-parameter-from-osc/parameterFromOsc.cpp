@@ -17,6 +17,8 @@ bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage 
 					parameter->set(i->AsBoolUnchecked());
 				if (i->IsInt32())
 					parameter->set(i->AsInt32Unchecked() != 0);
+				if (i->IsFloat())
+					parameter->set(i->AsFloatUnchecked() != 0.f);
 			}
 		}
 		break;
