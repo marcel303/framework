@@ -133,7 +133,7 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 	{
 		StringBuilder<32 * 1024> sb; // todo : replace with a more efficient and growing string builder
 		
-	#if !LEGACY_GL
+	#if !USE_LEGACY_OPENGL
 		if (shaderType == 'p')
 		{
 			bool hasColor = false;

@@ -446,6 +446,11 @@ bool Framework::init(int sx, int sy)
 				initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
 			return false;
 		}
+		
+		if (glBlendEquation == nullptr)
+			logWarning("OpenGL extension glBlendEquation not found");
+		if (glClampColor == nullptr)
+			logWarning("OpenGL extension glClampColor not found");
 	#endif
 	}
 
@@ -5425,8 +5430,11 @@ void setColorClamp(bool clamp)
 	globals.colorClamp = clamp;
 	
 #if USE_LEGACY_OPENGL
-	glClampColor(GL_CLAMP_VERTEX_COLOR, clamp ? GL_TRUE : GL_FALSE);
-	checkErrorGL();
+	if (glClampColor != nullptr)
+	{
+		glClampColor(GL_CLAMP_VERTEX_COLOR, clamp ? GL_TRUE : GL_FALSE);
+		checkErrorGL();
+	}
 #endif
 }
 
