@@ -428,7 +428,11 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Member * member, voi
 		}
 		else
 		{
-			result &= object_fromjson_recursive(typeDB, member_type, member_object, document);
+			if (object_fromjson_recursive(typeDB, member_type, member_object, document) == false)
+			{
+				LOG_ERR("failed to deserialize member %s", member->name);
+				result &= false;
+			}
 		}
 	}
 	
