@@ -200,12 +200,8 @@ namespace max
 	};
 }
 
-namespace ControlSurfaceGenerator
+namespace ControlSurfaceDefinition
 {
-	struct SurfaceEditor;
-	struct GroupEditor;
-	struct KnobEditor;
-
 	enum ElementType
 	{
 		kElementType_None,
@@ -260,39 +256,6 @@ namespace ControlSurfaceGenerator
 			int paddingY = 0;
 		};
 		
-		struct LayoutEditor
-		{
-			Surface * surface = nullptr;
-			Layout * layout = nullptr;
-			
-			LayoutEditor & size(const int sx, const int sy)
-			{
-				layout->sx = sx;
-				layout->sy = sy;
-				return *this;
-			}
-			
-			LayoutEditor & margin(const int x, const int y)
-			{
-				layout->marginX = x;
-				layout->marginY = y;
-				return *this;
-			}
-			
-			LayoutEditor & padding(const int x, const int y)
-			{
-				layout->paddingX = x;
-				layout->paddingY = y;
-				return *this;
-			}
-			
-			Surface & layoutEnd()
-			{
-				surface->performLayout();
-				return *surface;
-			}
-		};
-		
 		std::vector<Group*> groups;
 		
 		Layout layout;
@@ -315,14 +278,6 @@ namespace ControlSurfaceGenerator
 					}
 				}
 			}
-		}
-		
-		LayoutEditor layoutBegin()
-		{
-			LayoutEditor editor;
-			editor.surface = this;
-			editor.layout = &layout;
-			return editor;
 		}
 		
 		void performLayout()
@@ -364,25 +319,74 @@ namespace ControlSurfaceGenerator
 			}
 		}
 	};
+}
+
+namespace ControlSurfaceDefinition
+{
+	struct SurfaceEditor;
+	struct SurfaceLayoutEditor;
+	struct GroupEditor;
+	struct KnobEditor;
 
 	struct SurfaceEditor
 	{
-		Surface * surface = nullptr;
+		ControlSurfaceDefinition::Surface * surface = nullptr;
 		
-		SurfaceEditor(Surface * in_surface)
+		SurfaceEditor(ControlSurfaceDefinition::Surface * in_surface)
 			: surface(in_surface)
 		{
 		}
 		
 		GroupEditor pushGroup(const char * name);
+		
+		SurfaceLayoutEditor layoutBegin();
 	};
 
+	struct SurfaceLayoutEditor
+	{
+		SurfaceEditor surfaceEditor;
+		ControlSurfaceDefinition::Surface::Layout * layout = nullptr;
+		
+		SurfaceLayoutEditor(SurfaceEditor & in_surfaceEditor, ControlSurfaceDefinition::Surface::Layout * in_layout)
+			: surfaceEditor(in_surfaceEditor)
+			, layout(in_layout)
+		{
+		}
+		
+		SurfaceLayoutEditor & size(const int sx, const int sy)
+		{
+			layout->sx = sx;
+			layout->sy = sy;
+			return *this;
+		}
+		
+		SurfaceLayoutEditor & margin(const int x, const int y)
+		{
+			layout->marginX = x;
+			layout->marginY = y;
+			return *this;
+		}
+		
+		SurfaceLayoutEditor & padding(const int x, const int y)
+		{
+			layout->paddingX = x;
+			layout->paddingY = y;
+			return *this;
+		}
+		
+		SurfaceEditor & layoutEnd()
+		{
+			surfaceEditor.surface->performLayout();
+			return surfaceEditor;
+		}
+	};
+	
 	struct GroupEditor
 	{
 		SurfaceEditor surfaceEditor;
-		Group * group = nullptr;
+		ControlSurfaceDefinition::Group * group = nullptr;
 		
-		GroupEditor(const SurfaceEditor & in_surfaceEditor, Group * in_group)
+		GroupEditor(const SurfaceEditor & in_surfaceEditor, ControlSurfaceDefinition::Group * in_group)
 			: surfaceEditor(in_surfaceEditor)
 			, group(in_group)
 		{
@@ -401,9 +405,9 @@ namespace ControlSurfaceGenerator
 	struct KnobEditor
 	{
 		GroupEditor groupEditor;
-		Knob * knob = nullptr;
+		ControlSurfaceDefinition::Knob * knob = nullptr;
 		
-		KnobEditor(const GroupEditor & in_groupEditor, Knob * in_knob)
+		KnobEditor(const GroupEditor & in_groupEditor, ControlSurfaceDefinition::Knob * in_knob)
 			: groupEditor(in_groupEditor)
 			, knob(in_knob)
 		{
@@ -448,18 +452,23 @@ namespace ControlSurfaceGenerator
 
 	GroupEditor SurfaceEditor::pushGroup(const char * name)
 	{
-		auto * group = new Group();
+		auto * group = new ControlSurfaceDefinition::Group();
 		group->name = name;
 		surface->groups.push_back(group);
 
 		return GroupEditor(*this, group);
+	}
+	
+	SurfaceLayoutEditor SurfaceEditor::layoutBegin()
+	{
+		return SurfaceLayoutEditor(*this, &surface->layout);
 	}
 
 	//
 
 	KnobEditor GroupEditor::pushKnob(const char * name)
 	{
-		auto * knob = new Knob();
+		auto * knob = new ControlSurfaceDefinition::Knob();
 		knob->name = name;
 		group->elems.push_back(knob);
 		
@@ -472,7 +481,6 @@ namespace ControlSurfaceGenerator
 	}
 
 	//
-
 
 	GroupEditor KnobEditor::popKnob()
 	{
@@ -506,9 +514,9 @@ int main(int arg, char * argv[])
 	
 #if 1
 	{
-		ControlSurfaceGenerator::Surface surface;
+		ControlSurfaceDefinition::Surface surface;
 		
-		ControlSurfaceGenerator::SurfaceEditor surfaceEditor(&surface);
+		ControlSurfaceDefinition::SurfaceEditor surfaceEditor(&surface);
 	
 		surfaceEditor
 			.pushGroup("master")
@@ -559,7 +567,7 @@ int main(int arg, char * argv[])
 		
 		surface.initializeDefaultValues();
 		
-		surface.layoutBegin()
+		surfaceEditor.layoutBegin()
 			.size(800, 200)
 			.margin(10, 10)
 			.padding(4, 4)
@@ -569,7 +577,7 @@ int main(int arg, char * argv[])
 		{
 			struct Elem
 			{
-				ControlSurfaceGenerator::Element * elem = nullptr;
+				ControlSurfaceDefinition::Element * elem = nullptr;
 				float value = 0.f;
 				float defaultValue = 0.f;
 				float doubleClickTimer = 0.f;
@@ -592,16 +600,16 @@ int main(int arg, char * argv[])
 				return *this;
 			}
 			
-			void addElem(ControlSurfaceGenerator::Element * elem)
+			void addElem(ControlSurfaceDefinition::Element * elem)
 			{
 				elems.resize(elems.size() + 1);
 				
 				auto & e = elems.back();
 				e.elem = elem;
 				
-				if (elem->type == ControlSurfaceGenerator::kElementType_Knob)
+				if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 				{
-					auto * knob = static_cast<ControlSurfaceGenerator::Knob*>(elem);
+					auto * knob = static_cast<ControlSurfaceDefinition::Knob*>(elem);
 					Assert(knob->hasDefaultValue);
 					
 					if (knob->hasDefaultValue)
@@ -633,9 +641,9 @@ int main(int arg, char * argv[])
 					if (isInside)
 						hoverElem = &e;
 					
-					if (elem->type == ControlSurfaceGenerator::kElementType_Knob)
+					if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 					{
-						auto * knob = static_cast<ControlSurfaceGenerator::Knob*>(elem);
+						auto * knob = static_cast<ControlSurfaceDefinition::Knob*>(elem);
 						
 						if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 						{
@@ -713,9 +721,9 @@ int main(int arg, char * argv[])
 					{
 						e.valueHasChanged = false;
 						
-						if (e.elem->type == ControlSurfaceGenerator::kElementType_Knob)
+						if (e.elem->type == ControlSurfaceDefinition::kElementType_Knob)
 						{
-							auto * knob = static_cast<ControlSurfaceGenerator::Knob*>(e.elem);
+							auto * knob = static_cast<ControlSurfaceDefinition::Knob*>(e.elem);
 							
 							if (!knob->oscAddress.empty())
 							{
@@ -748,9 +756,9 @@ int main(int arg, char * argv[])
 				{
 					auto * elem = e.elem;
 					
-					if (elem->type == ControlSurfaceGenerator::kElementType_Knob)
+					if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 					{
-						auto * knob = static_cast<ControlSurfaceGenerator::Knob*>(elem);
+						auto * knob = static_cast<ControlSurfaceDefinition::Knob*>(elem);
 						
 						hqBegin(HQ_FILLED_ROUNDED_RECTS);
 						{
@@ -826,9 +834,9 @@ int main(int arg, char * argv[])
 					{
 						auto * elem = activeElem->elem;
 						
-						if (elem->type == ControlSurfaceGenerator::kElementType_Knob)
+						if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 						{
-							auto * knob = static_cast<ControlSurfaceGenerator::Knob*>(elem);
+							auto * knob = static_cast<ControlSurfaceDefinition::Knob*>(elem);
 							
 							hqBegin(HQ_FILLED_ROUNDED_RECTS);
 							{
