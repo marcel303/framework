@@ -237,55 +237,60 @@ int main(int arg, char * argv[])
 	
 		surfaceEditor
 			.pushGroup("master")
-				.pushKnob("intensity")
+				.beginKnob("intensity")
 					.defaultValue(5.f)
 					.limits(0.f, 10.f)
 					.exponential(2.f)
 					.osc("/master/intensity")
-					.popKnob()
-				.pushKnob("VU")
+					.end()
+				.beginKnob("VU")
 					.limits(0.f, 1.f)
 					.exponential(2.f)
 					.osc("/master/vu")
-					.popKnob()
-				.pushKnob("A/B")
+					.end()
+				.beginKnob("A/B")
 					.limits(0.f, 1.f)
 					.exponential(2.f)
 					.osc("/master/ab")
-					.popKnob()
+					.end()
+				.beginListbox("mode")
+					.item("a")
+					.item("b")
+					.osc("/master/mode")
+					.end()
 				.popGroup();
 		
 		for (int i = 0; i < 7; ++i)
 		{
 			surfaceEditor
 				.pushGroup("source")
-					.pushKnob("position")
+					.beginKnob("position")
 						.limits(0.f, 1.f)
 						.exponential(2.f)
-						.popKnob()
-					.pushKnob("speed")
+						.end()
+					.beginKnob("speed")
 						.limits(0.f, 1.f)
 						.exponential(2.f)
 						.defaultValue(.3f)
-						.popKnob()
-					.pushKnob("scale")
+						.end()
+					.beginKnob("scale")
 						.limits(0.f, 1.f)
 						.exponential(2.f)
 						.defaultValue(.2f)
-						.popKnob()
-					.pushKnob("position")
+						.end()
+					.beginKnob("position")
 						.limits(0.f, 1.f)
 						.exponential(2.f)
-						.popKnob()
-					.pushKnob("speed")
+						.end()
+					.beginKnob("speed")
 						.limits(0.f, 10.f)
 						.exponential(2.f)
 						.defaultValue(8.f)
-						.popKnob()
-					.pushKnob("scale")
+						.end()
+					.beginKnob("scale")
 						.limits(0.f, 1.f)
 						.exponential(2.f)
-						.popKnob()
+						.end()
 					.popGroup();
 		}
 		
@@ -401,6 +406,45 @@ int main(int arg, char * argv[])
 							
 							if (e.value != oldValue)
 							{
+								e.valueHasChanged = true;
+							}
+						}
+					}
+					else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
+					{
+						auto & listbox = elem->listbox;
+						
+						if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
+						{
+							activeElem = &e;
+							SDL_CaptureMouse(SDL_TRUE);
+							
+							if (e.doubleClickTimer > 0.f)
+							{
+								if (listbox.hasDefaultValue)
+									e.value = e.defaultValue;
+							}
+							else
+								e.doubleClickTimer = .2f;
+						}
+						
+						if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
+						{
+							activeElem = nullptr;
+							SDL_CaptureMouse(SDL_FALSE);
+						}
+						
+						if (&e == activeElem)
+						{
+							const float speed = 1.f / 100.f;
+							
+							const float oldValue = e.value;
+							
+							e.value = clamp<float>(e.value + mouse.dy * speed, 0.f, listbox.items.size());
+							
+							if (e.value != oldValue)
+							{
+							// todo: only changed when item index changes
 								e.valueHasChanged = true;
 							}
 						}
@@ -546,6 +590,43 @@ int main(int arg, char * argv[])
 						setColor(40, 40, 40);
 						setFont("calibri.ttf");
 						drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy - 2, 10, 0, -1, "%s", knob.name.c_str());
+					}
+					else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
+					{
+						hqBegin(HQ_FILLED_ROUNDED_RECTS);
+						{
+							if (&e == activeElem)
+								setLumi(190);
+							else if (&e == hoverElem)
+								setLumi(210);
+							else
+								setLumi(200);
+							hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
+						}
+						hqEnd();
+						
+						auto & listbox = elem->listbox;
+						
+						setColor(40, 40, 40);
+						setFont("calibri.ttf");
+						
+						if (listbox.items.empty() == false)
+						{
+							const int index = clamp<int>((int)floorf(e.value),  0, listbox.items.size() - 1);
+							drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy / 2.f, 10, 0, 0, "%s", listbox.items[index].c_str());
+						}
+						
+						const float midY = elem->y + elem->sy / 2.f;
+						
+						hqBegin(HQ_FILLED_TRIANGLES);
+						{
+							setLumi(100);
+							hqFillTriangle(elem->x + 8, midY - 4, elem->x + 4, midY, elem->x + 8, midY + 4);
+							
+							setLumi(100);
+							hqFillTriangle(elem->x + elem->sx - 8, midY - 4, elem->x + elem->sx - 4, midY, elem->x + elem->sx - 8, midY + 4);
+						}
+						hqEnd();
 					}
 				}
 			}

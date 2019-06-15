@@ -2,19 +2,23 @@
 
 #include "controlSurfaceDefinition.h"
 
+// todo : remove ControlSurfaceDefinition::
+
 namespace ControlSurfaceDefinition
 {
 	struct Group;
 	struct Knob;
+	struct Listbox;
 	struct Surface;
 	struct SurfaceLayout;
 	
 	//
 	
-	struct SurfaceEditor;
-	struct SurfaceLayoutEditor;
 	struct GroupEditor;
 	struct KnobEditor;
+	struct ListboxEditor;
+	struct SurfaceEditor;
+	struct SurfaceLayoutEditor;
 
 	struct SurfaceEditor
 	{
@@ -80,7 +84,8 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
-		KnobEditor pushKnob(const char * name);
+		KnobEditor beginKnob(const char * name);
+		ListboxEditor beginListbox(const char * name);
 		
 		SurfaceEditor popGroup();
 		
@@ -133,6 +138,45 @@ namespace ControlSurfaceDefinition
 			return *this;
 		}
 		
-		GroupEditor popKnob();
+		GroupEditor end();
+	};
+	
+	struct ListboxEditor
+	{
+		GroupEditor groupEditor;
+		ControlSurfaceDefinition::Listbox * listbox = nullptr;
+		
+		ListboxEditor(const GroupEditor & in_groupEditor, ControlSurfaceDefinition::Listbox * in_listbox)
+			: groupEditor(in_groupEditor)
+			, listbox(in_listbox)
+		{
+		}
+		
+		ListboxEditor & name(const char * name)
+		{
+			listbox->name = name;
+			return *this;
+		}
+		
+		ListboxEditor & defaultValue(const char * defaultValue)
+		{
+			listbox->defaultValue = defaultValue;
+			listbox->hasDefaultValue = true;
+			return *this;
+		}
+		
+		ListboxEditor & item(const char * name)
+		{
+			listbox->items.push_back(name);
+			return *this;
+		}
+		
+		ListboxEditor & osc(const char * address)
+		{
+			listbox->oscAddress = address;
+			return *this;
+		}
+		
+		GroupEditor end();
 	};
 }

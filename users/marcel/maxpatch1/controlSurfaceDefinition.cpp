@@ -68,7 +68,8 @@ namespace ControlSurfaceDefinition
 	{
 		typeDB.addEnum<ElementType>("ControlSurfaceDefinition::ElementType")
 			.add("none", kElementType_None)
-			.add("knob", kElementType_Knob);
+			.add("knob", kElementType_Knob)
+			.add("listbox", kElementType_Listbox);
 
 		typeDB.addStructured<Knob>("ControlSurfaceDefinition::Knob")
 			.add("name", &Knob::name)
@@ -79,13 +80,21 @@ namespace ControlSurfaceDefinition
 			.add("exponential", &Knob::exponential)
 			.add("oscAddress", &Knob::oscAddress);
 		
+		typeDB.addStructured<Listbox>("ControlSurfaceDefinition::Listbox")
+			.add("name", &Listbox::name)
+			.add("items", &Listbox::items)
+			.add("defaultValue", &Listbox::defaultValue)
+			.add("hasDefaultValue", &Listbox::hasDefaultValue)
+			.add("oscAddress", &Listbox::oscAddress);
+		
 		typeDB.addStructured<Element>("ControlSurfaceDefinition::Element")
 			.add("type", &Element::type)
 			.add("x", &Element::x)
 			.add("y", &Element::y)
 			.add("width", &Element::sx)
 			.add("height", &Element::sy)
-			.add("knob", &Element::knob);
+			.add("knob", &Element::knob)
+			.add("listbox", &Element::listbox);
 		
 		typeDB.addStructured<Group>("ControlSurfaceDefinition::Group")
 			.add("name", &Group::name)

@@ -11,7 +11,8 @@ namespace ControlSurfaceDefinition
 	enum ElementType
 	{
 		kElementType_None,
-		kElementType_Knob
+		kElementType_Knob,
+		kElementType_Listbox
 	};
 
 	struct Knob
@@ -22,6 +23,15 @@ namespace ControlSurfaceDefinition
 		float min = 0.f;
 		float max = 1.f;
 		float exponential = 1.f;
+		std::string oscAddress;
+	};
+	
+	struct Listbox
+	{
+		std::string name;
+		std::vector<std::string> items;
+		std::string defaultValue;
+		bool hasDefaultValue = false;
 		std::string oscAddress;
 	};
 	
@@ -36,12 +46,22 @@ namespace ControlSurfaceDefinition
 		
 		Knob knob;
 		
+		Listbox listbox;
+		
 		void makeKnob()
 		{
 			type = kElementType_Knob;
 			
 			sx = 40;
 			sy = 40;
+		}
+		
+		void makeListbox()
+		{
+			type = kElementType_Listbox;
+			
+			sx = 100;
+			sy = 20;
 		}
 	};
 

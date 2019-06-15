@@ -18,7 +18,7 @@ namespace ControlSurfaceDefinition
 
 	//
 
-	KnobEditor GroupEditor::pushKnob(const char * name)
+	KnobEditor GroupEditor::beginKnob(const char * name)
 	{
 		ControlSurfaceDefinition::Element element;
 		element.makeKnob();
@@ -26,6 +26,16 @@ namespace ControlSurfaceDefinition
 		group->elems.push_back(element);
 		
 		return KnobEditor(*this, &group->elems.back().knob);
+	}
+	
+	ListboxEditor GroupEditor::beginListbox(const char * name)
+	{
+		ControlSurfaceDefinition::Element element;
+		element.makeListbox();
+		element.listbox.name = name;
+		group->elems.push_back(element);
+		
+		return ListboxEditor(*this, &group->elems.back().listbox);
 	}
 
 	SurfaceEditor GroupEditor::popGroup()
@@ -35,7 +45,14 @@ namespace ControlSurfaceDefinition
 
 	//
 
-	GroupEditor KnobEditor::popKnob()
+	GroupEditor KnobEditor::end()
+	{
+		return groupEditor;
+	}
+	
+	//
+	
+	GroupEditor ListboxEditor::end()
 	{
 		return groupEditor;
 	}
