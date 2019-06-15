@@ -3,5 +3,6 @@ app marcel-maxpatch1
 	depend_library libgg
 	depend_library libosc
 	depend_library libreflection-bindtofile
-	add_files main.cpp
+	scan_files cpp
+	scan_files h
 	resource_path data
