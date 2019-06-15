@@ -236,7 +236,7 @@ int main(int arg, char * argv[])
 		ControlSurfaceDefinition::SurfaceEditor surfaceEditor(&surface);
 	
 		surfaceEditor
-			.pushGroup("master")
+			.beginGroup("master")
 				.beginKnob("intensity")
 					.defaultValue(5.f)
 					.limits(0.f, 10.f)
@@ -258,12 +258,12 @@ int main(int arg, char * argv[])
 					.item("b")
 					.osc("/master/mode")
 					.end()
-				.popGroup();
+				.endGroup();
 		
 		for (int i = 0; i < 7; ++i)
 		{
 			surfaceEditor
-				.pushGroup("source")
+				.beginGroup("source")
 					.beginKnob("position")
 						.limits(0.f, 1.f)
 						.exponential(2.f)
@@ -291,16 +291,16 @@ int main(int arg, char * argv[])
 						.limits(0.f, 1.f)
 						.exponential(2.f)
 						.end()
-					.popGroup();
+					.endGroup();
 		}
 		
 		surface.initializeDefaultValues();
 		
-		surfaceEditor.layoutBegin()
+		surfaceEditor.beginLayout()
 			.size(800, 200)
 			.margin(10, 10)
 			.padding(4, 4)
-			.layoutEnd();
+			.end();
 		
 		saveObjectToFile(&typeDB, typeDB.findType(surface), &surface, "surface-definition.json");
 		

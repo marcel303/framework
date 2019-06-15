@@ -1,7 +1,5 @@
 #pragma once
 
-#include "controlSurfaceDefinition.h"
-
 namespace ControlSurfaceDefinition
 {
 	struct Group;
@@ -27,14 +25,14 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
-		GroupEditor pushGroup(const char * name);
+		GroupEditor beginGroup(const char * name);
 		
-		SurfaceLayoutEditor layoutBegin();
+		SurfaceLayoutEditor beginLayout();
 	};
 
 	struct SurfaceLayoutEditor
 	{
-		SurfaceEditor surfaceEditor;
+		SurfaceEditor & surfaceEditor;
 		SurfaceLayout * layout = nullptr;
 		
 		SurfaceLayoutEditor(SurfaceEditor & in_surfaceEditor, SurfaceLayout * in_layout)
@@ -43,138 +41,68 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
-		SurfaceLayoutEditor & size(const int sx, const int sy)
-		{
-			layout->sx = sx;
-			layout->sy = sy;
-			return *this;
-		}
+		SurfaceLayoutEditor & size(const int sx, const int sy);
+		SurfaceLayoutEditor & margin(const int x, const int y);
+		SurfaceLayoutEditor & padding(const int x, const int y);
 		
-		SurfaceLayoutEditor & margin(const int x, const int y)
-		{
-			layout->marginX = x;
-			layout->marginY = y;
-			return *this;
-		}
-		
-		SurfaceLayoutEditor & padding(const int x, const int y)
-		{
-			layout->paddingX = x;
-			layout->paddingY = y;
-			return *this;
-		}
-		
-		SurfaceEditor & layoutEnd()
-		{
-			surfaceEditor.surface->performLayout();
-			return surfaceEditor;
-		}
+		SurfaceEditor & end();
 	};
 	
 	struct GroupEditor
 	{
-		SurfaceEditor surfaceEditor;
+		SurfaceEditor & surfaceEditor;
 		Group * group = nullptr;
 		
-		GroupEditor(const SurfaceEditor & in_surfaceEditor, Group * in_group)
+		GroupEditor(SurfaceEditor & in_surfaceEditor, Group * in_group)
 			: surfaceEditor(in_surfaceEditor)
 			, group(in_group)
 		{
 		}
 		
+		void name(const char * name);
+		
 		KnobEditor beginKnob(const char * name);
 		ListboxEditor beginListbox(const char * name);
 		
-		SurfaceEditor popGroup();
-		
-		void name(const char * name)
-		{
-			group->name = name;
-		}
+		SurfaceEditor & endGroup();
 	};
 
 	struct KnobEditor
 	{
-		GroupEditor groupEditor;
+		GroupEditor & groupEditor;
 		Knob * knob = nullptr;
 		
-		KnobEditor(const GroupEditor & in_groupEditor, Knob * in_knob)
+		KnobEditor(GroupEditor & in_groupEditor, Knob * in_knob)
 			: groupEditor(in_groupEditor)
 			, knob(in_knob)
 		{
 		}
 		
-		KnobEditor & name(const char * name)
-		{
-			knob->name = name;
-			return *this;
-		}
+		KnobEditor & name(const char * name);
+		KnobEditor & defaultValue(const float defaultValue);
+		KnobEditor & limits(const float min, const float max);
+		KnobEditor & exponential(const float exponential);
+		KnobEditor & osc(const char * address);
 		
-		KnobEditor & defaultValue(const float defaultValue)
-		{
-			knob->defaultValue = defaultValue;
-			knob->hasDefaultValue = true;
-			return *this;
-		}
-		
-		KnobEditor & limits(const float min, const float max)
-		{
-			knob->min = min;
-			knob->max = max;
-			return *this;
-		}
-		
-		KnobEditor & exponential(const float exponential)
-		{
-			knob->exponential = exponential;
-			return *this;
-		}
-		
-		KnobEditor & osc(const char * address)
-		{
-			knob->oscAddress = address;
-			return *this;
-		}
-		
-		GroupEditor end();
+		GroupEditor & end();
 	};
 	
 	struct ListboxEditor
 	{
-		GroupEditor groupEditor;
+		GroupEditor & groupEditor;
 		Listbox * listbox = nullptr;
 		
-		ListboxEditor(const GroupEditor & in_groupEditor, Listbox * in_listbox)
+		ListboxEditor(GroupEditor & in_groupEditor, Listbox * in_listbox)
 			: groupEditor(in_groupEditor)
 			, listbox(in_listbox)
 		{
 		}
 		
-		ListboxEditor & name(const char * name)
-		{
-			listbox->name = name;
-			return *this;
-		}
+		ListboxEditor & name(const char * name);
+		ListboxEditor & defaultValue(const char * defaultValue);
+		ListboxEditor & item(const char * name);
+		ListboxEditor & osc(const char * address);
 		
-		ListboxEditor & defaultValue(const char * defaultValue)
-		{
-			listbox->defaultValue = defaultValue;
-			listbox->hasDefaultValue = true;
-			return *this;
-		}
-		
-		ListboxEditor & item(const char * name)
-		{
-			listbox->items.push_back(name);
-			return *this;
-		}
-		
-		ListboxEditor & osc(const char * address)
-		{
-			listbox->oscAddress = address;
-			return *this;
-		}
-		
-		GroupEditor end();
+		GroupEditor & end();
 	};
 }
