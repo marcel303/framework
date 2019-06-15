@@ -4,11 +4,23 @@
 #include <string>
 #include <vector>
 
-// app includes
+// UI app includes
+#include "framework.h"
+#include "osc/OscOutboundPacketStream.h"
+#include "oscSender.h"
+
+// Max/MSP generator app includes
 #include "framework.h"
 #include "StringEx.h"
 #include <stdio.h>
 #include <unistd.h> // fixme
+
+// todo : move UI generator to a separate source file
+// todo : refine UI generator
+// todo : move Max/MSP patch generator to its own source file
+// todo : determine a way to include Max/MSP patch snippets, so complicated stuff can be generated externally
+// todo : add reflection type UI structure
+// todo : create UI app, which reads reflected UI structure from file and allows knob control, OSC output and creating presets
 
 namespace max
 {
@@ -292,7 +304,10 @@ struct PatchBuilder
 					auto * knob = static_cast<Knob*>(elem);
 					
 					if (knob->hasDefaultValue == false)
+					{
 						knob->defaultValue = knob->min;
+						knob->hasDefaultValue = true;
+					}
 				}
 			}
 		}
@@ -557,7 +572,9 @@ int main(int arg, char * argv[])
 			{
 				PatchBuilder::Elem * elem = nullptr;
 				float value = 0.f;
+				float defaultValue = 0.f;
 				float doubleClickTimer = 0.f;
+				bool valueHasChanged = false;
 			};
 			
 			std::vector<Elem> elems;
@@ -565,6 +582,16 @@ int main(int arg, char * argv[])
 			Elem * hoverElem = nullptr;
 			
 			Elem * activeElem = nullptr;
+			
+			std::vector<OscSender*> oscSenders;
+			
+			LiveUi & osc(const char * ipAddress, const int udpPort)
+			{
+				OscSender * sender = new OscSender();
+				sender->init(ipAddress, udpPort);
+				oscSenders.push_back(sender);
+				return *this;
+			}
 			
 			void addElem(PatchBuilder::Elem * elem)
 			{
@@ -583,6 +610,7 @@ int main(int arg, char * argv[])
 						const float t = (knob->defaultValue - knob->min) / (knob->max - knob->min);
 						
 						e.value = powf(t, 1.f / knob->exponential);
+						e.defaultValue = e.value;
 					}
 				}
 			}
@@ -610,30 +638,109 @@ int main(int arg, char * argv[])
 					{
 						auto * knob = static_cast<PatchBuilder::Knob*>(elem);
 						
-						if (isInside && mouse.wentDown(BUTTON_LEFT))
+						if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 						{
 							activeElem = &e;
+							SDL_CaptureMouse(SDL_TRUE);
 							
 							if (e.doubleClickTimer > 0.f)
 							{
 								if (knob->hasDefaultValue)
-									e.value = knob->defaultValue;
+									e.value = e.defaultValue;
 							}
 							else
 								e.doubleClickTimer = .2f;
 						}
 						
 						if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
+						{
 							activeElem = nullptr;
+							SDL_CaptureMouse(SDL_FALSE);
+						}
 						
 						if (&e == activeElem)
 						{
 							const float speed = 1.f / (keyboard.isDown(SDLK_LSHIFT) ? 400.f : 100.f);
 							
+							const float oldValue = e.value;
+							
 							e.value = saturate<float>(e.value + mouse.dy * speed);
+							
+							if (e.value != oldValue)
+							{
+								e.valueHasChanged = true;
+							}
 						}
 					}
 				}
+				
+				// send changed values over OSC
+				
+				char buffer[1200];
+				osc::OutboundPacketStream s(buffer, 1200);
+				int initialSize = 0;
+				
+				auto beginBundle = [&]()
+				{
+					s = osc::OutboundPacketStream(buffer, 1200);
+					
+					s << osc::BeginBundle();
+					
+					initialSize = s.Size();
+				};
+				
+				auto sendBundle = [&]()
+				{
+					Assert(s.Size() != initialSize);
+					
+					try
+					{
+						s << osc::EndBundle;
+						
+						for (auto * oscSender : oscSenders)
+							oscSender->send(s.Data(), s.Size());
+					}
+					catch (std::exception & e)
+					{
+						logError("%s", e.what());
+					}
+				};
+				
+				beginBundle();
+				
+				for (auto & e : elems)
+				{
+					if (e.valueHasChanged)
+					{
+						e.valueHasChanged = false;
+						
+						if (e.elem->type == PatchBuilder::kElemType_Knob)
+						{
+							auto * knob = static_cast<PatchBuilder::Knob*>(e.elem);
+							
+							if (!knob->oscAddress.empty())
+							{
+								const float t = powf(activeElem->value, knob->exponential);
+								const float value = knob->min * (1.f - t) + knob->max * t;
+								
+								if (s.Size() + knob->oscAddress.size() + 100 > 1200)
+								{
+									sendBundle();
+									beginBundle();
+								}
+								
+								s << osc::BeginMessage(knob->oscAddress.c_str());
+								{
+									s << value;
+								}
+								s << osc::EndMessage;
+							}
+						}
+					}
+				}
+				
+				if (s.Size() != initialSize)
+					sendBundle();
 			}
 			
 			void draw() const
@@ -755,9 +862,16 @@ int main(int arg, char * argv[])
 			}
 		}
 		
+		liveUi
+			.osc("127.0.0.1", 2000)
+			.osc("127.0.0.1", 2002);
+		
 		for (;;)
 		{
 			framework.process();
+			
+			if (framework.quitRequested)
+				break;
 			
 			liveUi.tick(framework.timeStep);
 			
