@@ -4,7 +4,7 @@ namespace ControlSurfaceDefinition
 {
 	GroupEditor SurfaceEditor::pushGroup(const char * name)
 	{
-		ControlSurfaceDefinition::Group group;
+		Group group;
 		group.name = name;
 		surface->groups.push_back(group);
 
@@ -20,7 +20,7 @@ namespace ControlSurfaceDefinition
 
 	KnobEditor GroupEditor::beginKnob(const char * name)
 	{
-		ControlSurfaceDefinition::Element element;
+		Element element;
 		element.makeKnob();
 		element.knob.name = name;
 		group->elems.push_back(element);
@@ -30,7 +30,7 @@ namespace ControlSurfaceDefinition
 	
 	ListboxEditor GroupEditor::beginListbox(const char * name)
 	{
-		ControlSurfaceDefinition::Element element;
+		Element element;
 		element.makeListbox();
 		element.listbox.name = name;
 		group->elems.push_back(element);

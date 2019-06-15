@@ -2,8 +2,6 @@
 
 #include "controlSurfaceDefinition.h"
 
-// todo : remove ControlSurfaceDefinition::
-
 namespace ControlSurfaceDefinition
 {
 	struct Group;
@@ -22,9 +20,9 @@ namespace ControlSurfaceDefinition
 
 	struct SurfaceEditor
 	{
-		ControlSurfaceDefinition::Surface * surface = nullptr;
+		Surface * surface = nullptr;
 		
-		SurfaceEditor(ControlSurfaceDefinition::Surface * in_surface)
+		SurfaceEditor(Surface * in_surface)
 			: surface(in_surface)
 		{
 		}
@@ -37,9 +35,9 @@ namespace ControlSurfaceDefinition
 	struct SurfaceLayoutEditor
 	{
 		SurfaceEditor surfaceEditor;
-		ControlSurfaceDefinition::SurfaceLayout * layout = nullptr;
+		SurfaceLayout * layout = nullptr;
 		
-		SurfaceLayoutEditor(SurfaceEditor & in_surfaceEditor, ControlSurfaceDefinition::SurfaceLayout * in_layout)
+		SurfaceLayoutEditor(SurfaceEditor & in_surfaceEditor, SurfaceLayout * in_layout)
 			: surfaceEditor(in_surfaceEditor)
 			, layout(in_layout)
 		{
@@ -76,9 +74,9 @@ namespace ControlSurfaceDefinition
 	struct GroupEditor
 	{
 		SurfaceEditor surfaceEditor;
-		ControlSurfaceDefinition::Group * group = nullptr;
+		Group * group = nullptr;
 		
-		GroupEditor(const SurfaceEditor & in_surfaceEditor, ControlSurfaceDefinition::Group * in_group)
+		GroupEditor(const SurfaceEditor & in_surfaceEditor, Group * in_group)
 			: surfaceEditor(in_surfaceEditor)
 			, group(in_group)
 		{
@@ -98,9 +96,9 @@ namespace ControlSurfaceDefinition
 	struct KnobEditor
 	{
 		GroupEditor groupEditor;
-		ControlSurfaceDefinition::Knob * knob = nullptr;
+		Knob * knob = nullptr;
 		
-		KnobEditor(const GroupEditor & in_groupEditor, ControlSurfaceDefinition::Knob * in_knob)
+		KnobEditor(const GroupEditor & in_groupEditor, Knob * in_knob)
 			: groupEditor(in_groupEditor)
 			, knob(in_knob)
 		{
@@ -144,9 +142,9 @@ namespace ControlSurfaceDefinition
 	struct ListboxEditor
 	{
 		GroupEditor groupEditor;
-		ControlSurfaceDefinition::Listbox * listbox = nullptr;
+		Listbox * listbox = nullptr;
 		
-		ListboxEditor(const GroupEditor & in_groupEditor, ControlSurfaceDefinition::Listbox * in_listbox)
+		ListboxEditor(const GroupEditor & in_groupEditor, Listbox * in_listbox)
 			: groupEditor(in_groupEditor)
 			, listbox(in_listbox)
 		{
