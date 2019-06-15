@@ -200,32 +200,32 @@ namespace max
 	};
 }
 
-struct PatchBuilder_MainInterface;
-struct PatchBuilder_GroupInterface;
-struct PatchBuilder_KnobInterface;
-
-struct PatchBuilder
+namespace ControlSurfaceGenerator
 {
-	enum ElemType
+	struct SurfaceEditor;
+	struct GroupEditor;
+	struct KnobEditor;
+
+	enum ElementType
 	{
-		kElemType_None,
-		kElemType_Knob
+		kElementType_None,
+		kElementType_Knob
 	};
-	
-	struct Elem
+
+	struct Element
 	{
-		ElemType type = kElemType_None;
+		ElementType type = kElementType_None;
 		int x = 0;
 		int y = 0;
 		int sx = 0;
 		int sy = 0;
 	};
-	
-	struct Knob : Elem
+
+	struct Knob : Element
 	{
 		Knob()
 		{
-			type = kElemType_Knob;
+			type = kElementType_Knob;
 			
 			sx = 40;
 			sy = 40;
@@ -239,246 +239,245 @@ struct PatchBuilder
 		float exponential = 1.f;
 		std::string oscAddress;
 	};
-	
+
 	struct Group
 	{
 		std::string name;
-		std::vector<Elem*> elems;
+		std::vector<Element*> elems;
 	};
 	
-	struct Layout
+	struct Surface
 	{
-		int sx = 0;
-		int sy = 0;
-		
-		int marginX = 0;
-		int marginY = 0;
-		
-		int paddingX = 0;
-		int paddingY = 0;
-	};
-	
-	struct LayoutInterface
-	{
-		PatchBuilder * patch = nullptr;
-		
-		LayoutInterface & size(const int sx, const int sy)
+		struct Layout
 		{
-			patch->layout.sx = sx;
-			patch->layout.sy = sy;
-			return *this;
-		}
+			int sx = 0;
+			int sy = 0;
+			
+			int marginX = 0;
+			int marginY = 0;
+			
+			int paddingX = 0;
+			int paddingY = 0;
+		};
 		
-		LayoutInterface & margin(const int x, const int y)
+		struct LayoutEditor
 		{
-			patch->layout.marginX = x;
-			patch->layout.marginY = y;
-			return *this;
-		}
-		
-		LayoutInterface & padding(const int x, const int y)
-		{
-			patch->layout.paddingX = x;
-			patch->layout.paddingY = y;
-			return *this;
-		}
-		
-		void layoutEnd()
-		{
-			patch->layoutEnd();
-		}
-	};
-	
-	std::vector<Group*> groups;
-	
-	Layout layout;
-	
-	void initializeDefaultValues()
-	{
-		for (auto * group : groups)
-		{
-			for (auto * elem : group->elems)
+			Surface * surface = nullptr;
+			Layout * layout = nullptr;
+			
+			LayoutEditor & size(const int sx, const int sy)
 			{
-				if (elem->type == kElemType_Knob)
+				layout->sx = sx;
+				layout->sy = sy;
+				return *this;
+			}
+			
+			LayoutEditor & margin(const int x, const int y)
+			{
+				layout->marginX = x;
+				layout->marginY = y;
+				return *this;
+			}
+			
+			LayoutEditor & padding(const int x, const int y)
+			{
+				layout->paddingX = x;
+				layout->paddingY = y;
+				return *this;
+			}
+			
+			Surface & layoutEnd()
+			{
+				surface->performLayout();
+				return *surface;
+			}
+		};
+		
+		std::vector<Group*> groups;
+		
+		Layout layout;
+		
+		void initializeDefaultValues()
+		{
+			for (auto * group : groups)
+			{
+				for (auto * elem : group->elems)
 				{
-					auto * knob = static_cast<Knob*>(elem);
-					
-					if (knob->hasDefaultValue == false)
+					if (elem->type == kElementType_Knob)
 					{
-						knob->defaultValue = knob->min;
-						knob->hasDefaultValue = true;
+						auto * knob = static_cast<Knob*>(elem);
+						
+						if (knob->hasDefaultValue == false)
+						{
+							knob->defaultValue = knob->min;
+							knob->hasDefaultValue = true;
+						}
 					}
 				}
 			}
 		}
-	}
-	
-	LayoutInterface layoutBegin()
-	{
-		LayoutInterface layout;
-		layout.patch = this;
 		
-		return layout;
-	}
-	
-	void layoutEnd()
-	{
-		int x = layout.marginX;
-		int y = layout.marginY;
-		
-		for (auto * group : groups)
+		LayoutEditor layoutBegin()
 		{
-			int sx = 0;
+			LayoutEditor editor;
+			editor.surface = this;
+			editor.layout = &layout;
+			return editor;
+		}
+		
+		void performLayout()
+		{
+			int x = layout.marginX;
+			int y = layout.marginY;
 			
-			for (auto * elem : group->elems)
+			for (auto * group : groups)
 			{
-				const bool fits = y + elem->sy + layout.paddingY <= layout.sy - layout.marginY;
+				int sx = 0;
 				
-				if (fits == false)
+				for (auto * elem : group->elems)
 				{
-					x += sx;
-					y = layout.marginY;
+					const bool fits = y + elem->sy + layout.paddingY <= layout.sy - layout.marginY;
 					
-					sx = 0;
+					if (fits == false)
+					{
+						x += sx;
+						y = layout.marginY;
+						
+						sx = 0;
+					}
+					
+					elem->x = x;
+					elem->y = y;
+					
+					y += elem->sy + layout.paddingY;
+					
+					if (elem->sx > sx)
+						sx = elem->sx + layout.paddingX;
 				}
 				
-				elem->x = x;
-				elem->y = y;
+				// end the current group
 				
-				y += elem->sy + layout.paddingY;
+				x += sx;
+				y = layout.marginY;
 				
-				if (elem->sx > sx)
-					sx = elem->sx + layout.paddingX;
+				sx = 0;
 			}
-			
-			// end the current group
-			
-			x += sx;
-			y = layout.marginY;
-			
-			sx = 0;
 		}
-	}
-};
+	};
 
-struct PatchBuilder_MainInterface
-{
-	PatchBuilder * patch = nullptr;
-	
-	PatchBuilder_MainInterface(PatchBuilder * in_patch)
-		: patch(in_patch)
+	struct SurfaceEditor
 	{
-	}
-	
-	PatchBuilder_GroupInterface pushGroup(const char * name);
-};
+		Surface * surface = nullptr;
+		
+		SurfaceEditor(Surface * in_surface)
+			: surface(in_surface)
+		{
+		}
+		
+		GroupEditor pushGroup(const char * name);
+	};
 
-struct PatchBuilder_GroupInterface
-{
-	PatchBuilder_MainInterface patch;
-	PatchBuilder::Group * group = nullptr;
-	
-	PatchBuilder_GroupInterface(const PatchBuilder_MainInterface & in_patch, PatchBuilder::Group * in_group)
-		: patch(in_patch)
-		, group(in_group)
+	struct GroupEditor
 	{
-	}
-	
-	PatchBuilder_KnobInterface pushKnob(const char * name);
-	
-	PatchBuilder_MainInterface popGroup();
-	
-	void name(const char * name)
-	{
-	}
-};
+		SurfaceEditor surfaceEditor;
+		Group * group = nullptr;
+		
+		GroupEditor(const SurfaceEditor & in_surfaceEditor, Group * in_group)
+			: surfaceEditor(in_surfaceEditor)
+			, group(in_group)
+		{
+		}
+		
+		KnobEditor pushKnob(const char * name);
+		
+		SurfaceEditor popGroup();
+		
+		void name(const char * name)
+		{
+			group->name = name;
+		}
+	};
 
-struct PatchBuilder_KnobInterface
-{
-	PatchBuilder_GroupInterface group;
-	PatchBuilder::Knob * knob = nullptr;
-	
-	PatchBuilder_KnobInterface(const PatchBuilder_GroupInterface & in_group, PatchBuilder::Knob * in_knob)
-		: group(in_group)
-		, knob(in_knob)
+	struct KnobEditor
 	{
+		GroupEditor groupEditor;
+		Knob * knob = nullptr;
+		
+		KnobEditor(const GroupEditor & in_groupEditor, Knob * in_knob)
+			: groupEditor(in_groupEditor)
+			, knob(in_knob)
+		{
+		}
+		
+		KnobEditor & name(const char * name)
+		{
+			knob->name = name;
+			return *this;
+		}
+		
+		KnobEditor & defaultValue(const float defaultValue)
+		{
+			knob->defaultValue = defaultValue;
+			knob->hasDefaultValue = true;
+			return *this;
+		}
+		
+		KnobEditor & limits(const float min, const float max)
+		{
+			knob->min = min;
+			knob->max = max;
+			return *this;
+		}
+		
+		KnobEditor & exponential(const float exponential)
+		{
+			knob->exponential = exponential;
+			return *this;
+		}
+		
+		KnobEditor & osc(const char * address)
+		{
+			knob->oscAddress = address;
+			return *this;
+		}
+		
+		GroupEditor popKnob();
+	};
+
+	//
+
+	GroupEditor SurfaceEditor::pushGroup(const char * name)
+	{
+		auto * group = new Group();
+		group->name = name;
+		surface->groups.push_back(group);
+
+		return GroupEditor(*this, group);
 	}
-	
-	PatchBuilder_KnobInterface & name(const char * name)
+
+	//
+
+	KnobEditor GroupEditor::pushKnob(const char * name)
 	{
+		auto * knob = new Knob();
 		knob->name = name;
+		group->elems.push_back(knob);
 		
-		return *this;
+		return KnobEditor(*this, knob);
 	}
-	
-	PatchBuilder_KnobInterface & defaultValue(const float defaultValue)
+
+	SurfaceEditor GroupEditor::popGroup()
 	{
-		knob->defaultValue = defaultValue;
-		knob->hasDefaultValue = true;
-		
-		return *this;
+		return surfaceEditor;
 	}
-	
-	PatchBuilder_KnobInterface & limits(const float min, const float max)
+
+	//
+
+
+	GroupEditor KnobEditor::popKnob()
 	{
-		knob->min = min;
-		knob->max = max;
-		
-		return *this;
+		return groupEditor;
 	}
-	
-	PatchBuilder_KnobInterface & exponential(const float exponential)
-	{
-		knob->exponential = exponential;
-		
-		return *this;
-	}
-	
-	PatchBuilder_KnobInterface & osc(const char * address)
-	{
-		knob->oscAddress = address;
-		
-		return *this;
-	}
-	
-	PatchBuilder_GroupInterface popKnob();
-};
-
-//
-
-PatchBuilder_GroupInterface PatchBuilder_MainInterface::pushGroup(const char * name)
-{
-	auto * group = new PatchBuilder::Group();
-	group->name = name;
-	
-	patch->groups.push_back(group);
-
-	return PatchBuilder_GroupInterface(patch, group);
-}
-
-//
-
-PatchBuilder_KnobInterface PatchBuilder_GroupInterface::pushKnob(const char * name)
-{
-	auto * knob = new PatchBuilder::Knob();
-	knob->name = name;
-	
-	group->elems.push_back(knob);
-	
-	return PatchBuilder_KnobInterface(*this, knob);
-}
-
-PatchBuilder_MainInterface PatchBuilder_GroupInterface::popGroup()
-{
-	return patch;
-}
-
-//
-
-
-PatchBuilder_GroupInterface PatchBuilder_KnobInterface::popKnob()
-{
-	return group;
 }
 
 //
@@ -507,11 +506,11 @@ int main(int arg, char * argv[])
 	
 #if 1
 	{
-		PatchBuilder _patch;
+		ControlSurfaceGenerator::Surface surface;
 		
-		PatchBuilder_MainInterface patch(&_patch);
+		ControlSurfaceGenerator::SurfaceEditor surfaceEditor(&surface);
 	
-		patch
+		surfaceEditor
 			.pushGroup("master")
 				.pushKnob("intensity")
 					.defaultValue(5.f)
@@ -558,9 +557,9 @@ int main(int arg, char * argv[])
 					.popKnob()
 				.popGroup();
 		
-		_patch.initializeDefaultValues();
+		surface.initializeDefaultValues();
 		
-		_patch.layoutBegin()
+		surface.layoutBegin()
 			.size(800, 200)
 			.margin(10, 10)
 			.padding(4, 4)
@@ -570,7 +569,7 @@ int main(int arg, char * argv[])
 		{
 			struct Elem
 			{
-				PatchBuilder::Elem * elem = nullptr;
+				ControlSurfaceGenerator::Element * elem = nullptr;
 				float value = 0.f;
 				float defaultValue = 0.f;
 				float doubleClickTimer = 0.f;
@@ -593,16 +592,16 @@ int main(int arg, char * argv[])
 				return *this;
 			}
 			
-			void addElem(PatchBuilder::Elem * elem)
+			void addElem(ControlSurfaceGenerator::Element * elem)
 			{
 				elems.resize(elems.size() + 1);
 				
 				auto & e = elems.back();
 				e.elem = elem;
 				
-				if (elem->type == PatchBuilder::kElemType_Knob)
+				if (elem->type == ControlSurfaceGenerator::kElementType_Knob)
 				{
-					auto * knob = static_cast<PatchBuilder::Knob*>(elem);
+					auto * knob = static_cast<ControlSurfaceGenerator::Knob*>(elem);
 					Assert(knob->hasDefaultValue);
 					
 					if (knob->hasDefaultValue)
@@ -634,9 +633,9 @@ int main(int arg, char * argv[])
 					if (isInside)
 						hoverElem = &e;
 					
-					if (elem->type == PatchBuilder::kElemType_Knob)
+					if (elem->type == ControlSurfaceGenerator::kElementType_Knob)
 					{
-						auto * knob = static_cast<PatchBuilder::Knob*>(elem);
+						auto * knob = static_cast<ControlSurfaceGenerator::Knob*>(elem);
 						
 						if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 						{
@@ -714,9 +713,9 @@ int main(int arg, char * argv[])
 					{
 						e.valueHasChanged = false;
 						
-						if (e.elem->type == PatchBuilder::kElemType_Knob)
+						if (e.elem->type == ControlSurfaceGenerator::kElementType_Knob)
 						{
-							auto * knob = static_cast<PatchBuilder::Knob*>(e.elem);
+							auto * knob = static_cast<ControlSurfaceGenerator::Knob*>(e.elem);
 							
 							if (!knob->oscAddress.empty())
 							{
@@ -749,9 +748,9 @@ int main(int arg, char * argv[])
 				{
 					auto * elem = e.elem;
 					
-					if (elem->type == PatchBuilder::kElemType_Knob)
+					if (elem->type == ControlSurfaceGenerator::kElementType_Knob)
 					{
-						auto * knob = static_cast<PatchBuilder::Knob*>(elem);
+						auto * knob = static_cast<ControlSurfaceGenerator::Knob*>(elem);
 						
 						hqBegin(HQ_FILLED_ROUNDED_RECTS);
 						{
@@ -827,9 +826,9 @@ int main(int arg, char * argv[])
 					{
 						auto * elem = activeElem->elem;
 						
-						if (elem->type == PatchBuilder::kElemType_Knob)
+						if (elem->type == ControlSurfaceGenerator::kElementType_Knob)
 						{
-							auto * knob = static_cast<PatchBuilder::Knob*>(elem);
+							auto * knob = static_cast<ControlSurfaceGenerator::Knob*>(elem);
 							
 							hqBegin(HQ_FILLED_ROUNDED_RECTS);
 							{
@@ -854,7 +853,7 @@ int main(int arg, char * argv[])
 		
 		LiveUi liveUi;
 		
-		for (auto * group : _patch.groups)
+		for (auto * group : surface.groups)
 		{
 			for (auto * elem : group->elems)
 			{
