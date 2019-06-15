@@ -3,6 +3,9 @@
 #include <string>
 #include <vector>
 
+struct StructuredType;
+struct TypeDB;
+
 namespace ControlSurfaceDefinition
 {
 	enum ElementType
@@ -11,25 +14,8 @@ namespace ControlSurfaceDefinition
 		kElementType_Knob
 	};
 
-	struct Element
+	struct Knob
 	{
-		ElementType type = kElementType_None;
-		int x = 0;
-		int y = 0;
-		int sx = 0;
-		int sy = 0;
-	};
-
-	struct Knob : Element
-	{
-		Knob()
-		{
-			type = kElementType_Knob;
-			
-			sx = 40;
-			sy = 40;
-		}
-		
 		std::string name;
 		float defaultValue = 0.f;
 		bool hasDefaultValue = false;
@@ -38,32 +24,54 @@ namespace ControlSurfaceDefinition
 		float exponential = 1.f;
 		std::string oscAddress;
 	};
+	
+	struct Element
+	{
+		ElementType type = kElementType_None;
+		
+		int x = 0;
+		int y = 0;
+		int sx = 0;
+		int sy = 0;
+		
+		Knob knob;
+		
+		void makeKnob()
+		{
+			type = kElementType_Knob;
+			
+			sx = 40;
+			sy = 40;
+		}
+	};
 
 	struct Group
 	{
 		std::string name;
-		std::vector<Element*> elems;
+		std::vector<Element> elems;
+	};
+	
+	struct SurfaceLayout
+	{
+		int sx = 0;
+		int sy = 0;
+		
+		int marginX = 0;
+		int marginY = 0;
+		
+		int paddingX = 0;
+		int paddingY = 0;
 	};
 	
 	struct Surface
 	{
-		struct Layout
-		{
-			int sx = 0;
-			int sy = 0;
-			
-			int marginX = 0;
-			int marginY = 0;
-			
-			int paddingX = 0;
-			int paddingY = 0;
-		};
+		std::vector<Group> groups;
 		
-		std::vector<Group*> groups;
-		
-		Layout layout;
+		SurfaceLayout layout;
 		
 		void initializeDefaultValues();
 		void performLayout();
 	};
+	
+	void reflect(TypeDB & typeDB);
 }

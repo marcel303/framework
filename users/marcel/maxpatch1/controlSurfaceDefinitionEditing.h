@@ -4,6 +4,13 @@
 
 namespace ControlSurfaceDefinition
 {
+	struct Group;
+	struct Knob;
+	struct Surface;
+	struct SurfaceLayout;
+	
+	//
+	
 	struct SurfaceEditor;
 	struct SurfaceLayoutEditor;
 	struct GroupEditor;
@@ -26,9 +33,9 @@ namespace ControlSurfaceDefinition
 	struct SurfaceLayoutEditor
 	{
 		SurfaceEditor surfaceEditor;
-		ControlSurfaceDefinition::Surface::Layout * layout = nullptr;
+		ControlSurfaceDefinition::SurfaceLayout * layout = nullptr;
 		
-		SurfaceLayoutEditor(SurfaceEditor & in_surfaceEditor, ControlSurfaceDefinition::Surface::Layout * in_layout)
+		SurfaceLayoutEditor(SurfaceEditor & in_surfaceEditor, ControlSurfaceDefinition::SurfaceLayout * in_layout)
 			: surfaceEditor(in_surfaceEditor)
 			, layout(in_layout)
 		{

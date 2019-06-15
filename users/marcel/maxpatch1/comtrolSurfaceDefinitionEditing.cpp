@@ -4,11 +4,11 @@ namespace ControlSurfaceDefinition
 {
 	GroupEditor SurfaceEditor::pushGroup(const char * name)
 	{
-		auto * group = new ControlSurfaceDefinition::Group();
-		group->name = name;
+		ControlSurfaceDefinition::Group group;
+		group.name = name;
 		surface->groups.push_back(group);
 
-		return GroupEditor(*this, group);
+		return GroupEditor(*this, &surface->groups.back());
 	}
 	
 	SurfaceLayoutEditor SurfaceEditor::layoutBegin()
@@ -20,11 +20,12 @@ namespace ControlSurfaceDefinition
 
 	KnobEditor GroupEditor::pushKnob(const char * name)
 	{
-		auto * knob = new ControlSurfaceDefinition::Knob();
-		knob->name = name;
-		group->elems.push_back(knob);
+		ControlSurfaceDefinition::Element element;
+		element.makeKnob();
+		element.knob.name = name;
+		group->elems.push_back(element);
 		
-		return KnobEditor(*this, knob);
+		return KnobEditor(*this, &group->elems.back().knob);
 	}
 
 	SurfaceEditor GroupEditor::popGroup()

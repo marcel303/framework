@@ -10,6 +10,7 @@
 #include "framework.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "oscSender.h"
+#include "reflection-bindtofile.h"
 
 // Max/MSP generator app includes
 #include "framework.h"
@@ -224,6 +225,8 @@ int main(int arg, char * argv[])
 	max::Patcher::reflect(typeDB);
 	max::Patch::reflect(typeDB);
 	
+	ControlSurfaceDefinition::reflect(typeDB);
+	
 	//
 	
 #if 1
@@ -250,34 +253,41 @@ int main(int arg, char * argv[])
 					.exponential(2.f)
 					.osc("/master/ab")
 					.popKnob()
-				.popGroup()
-		
-			.pushGroup("source")
-				.pushKnob("position")
-					.limits(0.f, 1.f)
-					.exponential(2.f)
-					.popKnob()
-				.pushKnob("speed")
-					.limits(0.f, 1.f)
-					.exponential(2.f)
-					.popKnob()
-				.pushKnob("scale")
-					.limits(0.f, 1.f)
-					.exponential(2.f)
-					.popKnob()
-				.pushKnob("position")
-					.limits(0.f, 1.f)
-					.exponential(2.f)
-					.popKnob()
-				.pushKnob("speed")
-					.limits(0.f, 1.f)
-					.exponential(2.f)
-					.popKnob()
-				.pushKnob("scale")
-					.limits(0.f, 1.f)
-					.exponential(2.f)
-					.popKnob()
 				.popGroup();
+		
+		for (int i = 0; i < 7; ++i)
+		{
+			surfaceEditor
+				.pushGroup("source")
+					.pushKnob("position")
+						.limits(0.f, 1.f)
+						.exponential(2.f)
+						.popKnob()
+					.pushKnob("speed")
+						.limits(0.f, 1.f)
+						.exponential(2.f)
+						.defaultValue(.3f)
+						.popKnob()
+					.pushKnob("scale")
+						.limits(0.f, 1.f)
+						.exponential(2.f)
+						.defaultValue(.2f)
+						.popKnob()
+					.pushKnob("position")
+						.limits(0.f, 1.f)
+						.exponential(2.f)
+						.popKnob()
+					.pushKnob("speed")
+						.limits(0.f, 10.f)
+						.exponential(2.f)
+						.defaultValue(8.f)
+						.popKnob()
+					.pushKnob("scale")
+						.limits(0.f, 1.f)
+						.exponential(2.f)
+						.popKnob()
+					.popGroup();
+		}
 		
 		surface.initializeDefaultValues();
 		
@@ -286,6 +296,8 @@ int main(int arg, char * argv[])
 			.margin(10, 10)
 			.padding(4, 4)
 			.layoutEnd();
+		
+		saveObjectToFile(&typeDB, typeDB.findType(surface), &surface, "surface-definition.json");
 		
 		struct LiveUi
 		{
@@ -323,14 +335,14 @@ int main(int arg, char * argv[])
 				
 				if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 				{
-					auto * knob = static_cast<ControlSurfaceDefinition::Knob*>(elem);
-					Assert(knob->hasDefaultValue);
+					auto & knob = elem->knob;
+					Assert(knob.hasDefaultValue);
 					
-					if (knob->hasDefaultValue)
+					if (knob.hasDefaultValue)
 					{
-						const float t = (knob->defaultValue - knob->min) / (knob->max - knob->min);
+						const float t = (knob.defaultValue - knob.min) / (knob.max - knob.min);
 						
-						e.value = powf(t, 1.f / knob->exponential);
+						e.value = powf(t, 1.f / knob.exponential);
 						e.defaultValue = e.value;
 					}
 				}
@@ -357,7 +369,7 @@ int main(int arg, char * argv[])
 					
 					if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 					{
-						auto * knob = static_cast<ControlSurfaceDefinition::Knob*>(elem);
+						auto & knob = elem->knob;
 						
 						if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 						{
@@ -366,7 +378,7 @@ int main(int arg, char * argv[])
 							
 							if (e.doubleClickTimer > 0.f)
 							{
-								if (knob->hasDefaultValue)
+								if (knob.hasDefaultValue)
 									e.value = e.defaultValue;
 							}
 							else
@@ -437,20 +449,20 @@ int main(int arg, char * argv[])
 						
 						if (e.elem->type == ControlSurfaceDefinition::kElementType_Knob)
 						{
-							auto * knob = static_cast<ControlSurfaceDefinition::Knob*>(e.elem);
+							auto & knob = e.elem->knob;
 							
-							if (!knob->oscAddress.empty())
+							if (!knob.oscAddress.empty())
 							{
-								const float t = powf(activeElem->value, knob->exponential);
-								const float value = knob->min * (1.f - t) + knob->max * t;
+								const float t = powf(activeElem->value, knob.exponential);
+								const float value = knob.min * (1.f - t) + knob.max * t;
 								
-								if (s.Size() + knob->oscAddress.size() + 100 > 1200)
+								if (s.Size() + knob.oscAddress.size() + 100 > 1200)
 								{
 									sendBundle();
 									beginBundle();
 								}
 								
-								s << osc::BeginMessage(knob->oscAddress.c_str());
+								s << osc::BeginMessage(knob.oscAddress.c_str());
 								{
 									s << value;
 								}
@@ -472,8 +484,6 @@ int main(int arg, char * argv[])
 					
 					if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 					{
-						auto * knob = static_cast<ControlSurfaceDefinition::Knob*>(elem);
-						
 						hqBegin(HQ_FILLED_ROUNDED_RECTS);
 						{
 							if (&e == activeElem)
@@ -482,9 +492,11 @@ int main(int arg, char * argv[])
 								setLumi(210);
 							else
 								setLumi(200);
-							hqFillRoundedRect(knob->x, knob->y, knob->x + knob->sx, knob->y + knob->sy, 4);
+							hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
 						}
 						hqEnd();
+						
+						auto & knob = elem->knob;
 						
 						const float angle1 = (- 120 - 90) * float(M_PI) / 180.f;
 						const float angle2 = (+ 120 - 90) * float(M_PI) / 180.f;
@@ -533,7 +545,7 @@ int main(int arg, char * argv[])
 						
 						setColor(40, 40, 40);
 						setFont("calibri.ttf");
-						drawText(knob->x + knob->sx / 2.f, knob->y + knob->sy - 2, 10, 0, -1, "%s", knob->name.c_str());
+						drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy - 2, 10, 0, -1, "%s", knob.name.c_str());
 					}
 				}
 			}
@@ -550,7 +562,7 @@ int main(int arg, char * argv[])
 						
 						if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 						{
-							auto * knob = static_cast<ControlSurfaceDefinition::Knob*>(elem);
+							auto & knob = elem->knob;
 							
 							hqBegin(HQ_FILLED_ROUNDED_RECTS);
 							{
@@ -559,8 +571,8 @@ int main(int arg, char * argv[])
 							}
 							hqEnd();
 							
-							const float t = powf(activeElem->value, knob->exponential);
-							const float value = knob->min * (1.f - t) + knob->max * t;
+							const float t = powf(activeElem->value, knob.exponential);
+							const float value = knob.min * (1.f - t) + knob.max * t;
 							
 							setLumi(20);
 							drawText(10, 10, 20, +1, +1, "%.2f", value);
@@ -575,11 +587,11 @@ int main(int arg, char * argv[])
 		
 		LiveUi liveUi;
 		
-		for (auto * group : surface.groups)
+		for (auto & group : surface.groups)
 		{
-			for (auto * elem : group->elems)
+			for (auto & elem : group.elems)
 			{
-				liveUi.addElem(elem);
+				liveUi.addElem(&elem);
 			}
 		}
 		
