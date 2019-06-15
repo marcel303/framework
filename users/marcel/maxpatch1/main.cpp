@@ -59,9 +59,9 @@ namespace max
 		}
 	};
 	
-	static bool savedAttributeAttributesToJson(const TypeDB & typeDB, const void * object, const Member * member, REFLECTIONIO_JSON_WRITER & writer)
+	static bool savedAttributeAttributesToJson(const TypeDB & typeDB, const Member * member, const void * member_object, REFLECTIONIO_JSON_WRITER & writer)
 	{
-		SavedAttributeAttributes * attrs = (SavedAttributeAttributes*)object;
+		SavedAttributeAttributes * attrs = (SavedAttributeAttributes*)member_object;
 		
 		writer.StartObject();
 		{
