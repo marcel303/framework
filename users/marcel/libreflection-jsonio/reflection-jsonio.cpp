@@ -214,7 +214,13 @@ bool plain_type_tojson(const PlainType * plain_type, const void * object, REFLEC
 			
 			const char * key;
 			if (enum_type->get_key(object, key) == false)
+			{
+				int value;
+				if (!enum_type->get_value(object, value))
+					value = -1;
+				LOG_ERR("failed to find key for enum %s, value %d", enum_type->typeName, value);
 				return false;
+			}
 			
 			writer.String(key);
 			
@@ -248,11 +254,13 @@ bool member_tojson_recursive(
 		
 		if (vector_type == nullptr)
 		{
-			LOG_ERR("failed to find type for type name %s", structured_type->typeName);
+			LOG_ERR("failed to find type for vector member %s", member_interface->name);
 			result &= false;
 		}
 		else
 		{
+			writer.Key(member->name);
+			
 			const size_t vector_size = member_interface->vector_size(object);
 			
 			if (vector_type->isStructured)
@@ -297,8 +305,18 @@ bool member_tojson_recursive(
 			LOG_ERR("failed to find type for member %s", member->name);
 			result &= false;
 		}
+		else if (member->hasFlag<MemberFlag_CustomJsonSerialization>())
+		{
+			writer.Key(member->name);
+			
+			auto * customJsonSerialization = member->findFlag<MemberFlag_CustomJsonSerialization>();
+			
+			customJsonSerialization->tojson(typeDB, member, member_object, writer);
+		}
 		else
 		{
+			writer.Key(member->name);
+			
 			result &= object_tojson_recursive(typeDB, member_type, member_object, writer);
 		}
 	}
@@ -451,8 +469,6 @@ bool object_tojson_recursive(const TypeDB & typeDB, const Type * type, const voi
 		{
 			for (auto * member = structured_type->members_head; member != nullptr; member = member->next)
 			{
-				writer.Key(member->name);
-				
 				result &= member_tojson_recursive(typeDB, structured_type, object, member, writer);
 			}
 			
@@ -471,7 +487,7 @@ bool object_tojson_recursive(const TypeDB & typeDB, const Type * type, const voi
 		
 		if (plain_type_tojson(plain_type, object, writer) == false)
 		{
-			LOG_ERR("failed to serialize plain type to text", 0);
+			LOG_ERR("failed to serialize plain type to text. typeName: %s", plain_type->typeName);
 			return false;
 		}
 		else
@@ -505,11 +521,28 @@ bool member_tojson_recursive(const TypeDB & typeDB, const Member * member, const
 			LOG_ERR("failed to find type for member %s", member->name);
 			result &= false;
 		}
+		else if (member->hasFlag<MemberFlag_CustomJsonSerialization>())
+		{
+			AssertMsg(false, "not yet implemented", 0);
+			
+			//auto * customJsonSerialization = member->findFlag<MemberFlag_CustomJsonSerialization>();
+			
+			//customJsonSerialization->tojson(typeDB, member, member_object, json);
+		}
 		else
 		{
 			result &= object_tojson_recursive(typeDB, member_type, member_object, json);
 		}
 	}
+	
+	return result;
+}
+
+MemberFlag_CustomJsonSerialization * customJsonSerializationFlag(MemberToJsonFunction tojson)
+{
+	auto * result = new MemberFlag_CustomJsonSerialization();
+	
+	result->tojson = tojson;
 	
 	return result;
 }

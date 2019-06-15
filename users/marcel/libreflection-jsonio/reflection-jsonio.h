@@ -11,6 +11,7 @@
 // forward declarations
 
 struct Member;
+struct MemberFlag_CustomJsonSerialization;
 struct PlainType;
 struct StructuredType;
 struct Type;
@@ -31,3 +32,16 @@ bool member_fromjson_recursive(const TypeDB & typeDB, const Member * member, voi
 
 bool object_tojson_recursive(const TypeDB & typeDB, const Type * type, const void * object, REFLECTIONIO_JSON_WRITER & json);
 bool member_tojson_recursive(const TypeDB & typeDB, const Member * member, const void * object, REFLECTIONIO_JSON_WRITER & json);
+
+// type DB
+
+#include "reflection.h"
+
+typedef bool (*MemberToJsonFunction)(const TypeDB & typeDB, const Member * member, const void * member_object, REFLECTIONIO_JSON_WRITER & writer);
+
+struct MemberFlag_CustomJsonSerialization : MemberFlag<MemberFlag_CustomJsonSerialization>
+{
+	MemberToJsonFunction tojson = nullptr;
+};
+
+MemberFlag_CustomJsonSerialization * customJsonSerializationFlag(MemberToJsonFunction tojson);
