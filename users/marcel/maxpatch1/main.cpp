@@ -256,6 +256,7 @@ int main(int arg, char * argv[])
 				.beginListbox("mode")
 					.item("a")
 					.item("b")
+					.defaultValue("b")
 					.osc("/master/mode")
 					.end()
 				.endGroup();
@@ -349,6 +350,23 @@ int main(int arg, char * argv[])
 						
 						e.value = powf(t, 1.f / knob.exponential);
 						e.defaultValue = e.value;
+					}
+				}
+				else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
+				{
+					auto & listbox = elem->listbox;
+					Assert(listbox.hasDefaultValue);
+					
+					if (listbox.hasDefaultValue)
+					{
+						int index = 0;
+						
+						for (int i = 0; i < listbox.items.size(); ++i)
+							if (listbox.items[i] == listbox.defaultValue)
+								index = i;
+						
+						e.value = index;
+						e.defaultValue = index;
 					}
 				}
 			}
@@ -509,6 +527,27 @@ int main(int arg, char * argv[])
 								s << osc::BeginMessage(knob.oscAddress.c_str());
 								{
 									s << value;
+								}
+								s << osc::EndMessage;
+							}
+						}
+						else if (e.elem->type == ControlSurfaceDefinition::kElementType_Listbox)
+						{
+							auto & listbox = e.elem->listbox;
+							
+							if (!listbox.oscAddress.empty())
+							{
+								const int index = clamp<int>((int)floorf(e.value), 0, listbox.items.size() -1);
+								
+								if (s.Size() + listbox.oscAddress.size() + listbox.items[index].size() + 100 > 1200)
+								{
+									sendBundle();
+									beginBundle();
+								}
+								
+								s << osc::BeginMessage(listbox.oscAddress.c_str());
+								{
+									s << listbox.items[index].c_str();
 								}
 								s << osc::EndMessage;
 							}
