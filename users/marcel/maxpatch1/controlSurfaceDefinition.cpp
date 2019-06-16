@@ -30,16 +30,29 @@ namespace ControlSurfaceDefinition
 		
 		for (auto & group : groups)
 		{
+			int initialY = layout.marginY;
+			
 			int sx = 0;
 			
 			for (auto & elem : group.elems)
 			{
+				if (elem.divideLeft)
+				{
+					x += sx;
+					y = initialY;
+					
+					sx = 0;
+				}
+				
+				if (elem.type == kElementType_Separator)
+					elem.sy = layout.sy - initialY - layout.marginY;
+				
 				const bool fits = y + elem.sy + layout.paddingY <= layout.sy - layout.marginY;
 				
 				if (fits == false)
 				{
 					x += sx;
-					y = layout.marginY;
+					y = initialY;
 					
 					sx = 0;
 				}
@@ -51,6 +64,21 @@ namespace ControlSurfaceDefinition
 				
 				if (elem.sx > sx)
 					sx = elem.sx + layout.paddingX;
+				
+				if (elem.divideRight)
+				{
+					x += sx;
+					y = initialY;
+					
+					sx = 0;
+				}
+				
+				if (elem.divideBottom)
+				{
+					initialY = y;
+					
+					sx = 0;
+				}
 			}
 			
 			// end the current group
@@ -68,9 +96,14 @@ namespace ControlSurfaceDefinition
 	{
 		typeDB.addEnum<ElementType>("ControlSurfaceDefinition::ElementType")
 			.add("none", kElementType_None)
+			.add("label", kElementType_Label)
 			.add("knob", kElementType_Knob)
-			.add("listbox", kElementType_Listbox);
+			.add("listbox", kElementType_Listbox)
+			.add("separator", kElementType_Separator);
 
+		typeDB.addStructured<Label>("ControlSurfaceDefinition::Label")
+			.add("text", &Label::text);
+			
 		typeDB.addStructured<Knob>("ControlSurfaceDefinition::Knob")
 			.add("name", &Knob::name)
 			.add("defaultValue", &Knob::defaultValue)
@@ -93,6 +126,7 @@ namespace ControlSurfaceDefinition
 			.add("y", &Element::y)
 			.add("width", &Element::sx)
 			.add("height", &Element::sy)
+			.add("label", &Element::label)
 			.add("knob", &Element::knob)
 			.add("listbox", &Element::listbox);
 		

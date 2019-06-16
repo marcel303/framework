@@ -8,11 +8,20 @@ struct TypeDB;
 
 namespace ControlSurfaceDefinition
 {
+	struct Element;
+	
 	enum ElementType
 	{
 		kElementType_None,
+		kElementType_Label,
 		kElementType_Knob,
-		kElementType_Listbox
+		kElementType_Listbox,
+		kElementType_Separator
+	};
+	
+	struct Label
+	{
+		std::string text;
 	};
 
 	struct Knob
@@ -44,9 +53,23 @@ namespace ControlSurfaceDefinition
 		int sx = 0;
 		int sy = 0;
 		
+		bool divideLeft = false;
+		bool divideRight = false;
+		bool divideBottom = false;
+		
+		Label label;
+		
 		Knob knob;
 		
 		Listbox listbox;
+		
+		void makeLabel()
+		{
+			type = kElementType_Label;
+			
+			sx = 100;
+			sy = 16;
+		}
 		
 		void makeKnob()
 		{
@@ -62,6 +85,17 @@ namespace ControlSurfaceDefinition
 			
 			sx = 100;
 			sy = 20;
+		}
+		
+		void makeSeparator()
+		{
+			type = kElementType_Separator;
+			
+			sx = 6;
+			sy = 6;
+			
+			divideLeft = true;
+			divideRight = true;
 		}
 	};
 

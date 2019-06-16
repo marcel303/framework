@@ -2,8 +2,10 @@
 
 namespace ControlSurfaceDefinition
 {
+	struct Element;
 	struct Group;
 	struct Knob;
+	struct Label;
 	struct Listbox;
 	struct Surface;
 	struct SurfaceLayout;
@@ -12,6 +14,7 @@ namespace ControlSurfaceDefinition
 	
 	struct GroupEditor;
 	struct KnobEditor;
+	struct LabelEditor;
 	struct ListboxEditor;
 	struct SurfaceEditor;
 	struct SurfaceLayoutEditor;
@@ -61,12 +64,45 @@ namespace ControlSurfaceDefinition
 		
 		void name(const char * name);
 		
+		LabelEditor beginLabel(const char * text);
 		KnobEditor beginKnob(const char * name);
 		ListboxEditor beginListbox(const char * name);
+		
+		GroupEditor & label(const char * text);
+		GroupEditor & separator();
 		
 		SurfaceEditor & endGroup();
 	};
 
+	template <typename T>
+	struct ElementEditor
+	{
+		Element * element = nullptr;
+		
+		ElementEditor(Element * in_element)
+			: element(in_element)
+		{
+		}
+		
+		T & size(const int sx, const int sy);
+		
+		T & divideBottom();
+		T & divideLeft();
+		T & divideRight();
+	};
+	
+	struct LabelEditor : ElementEditor<LabelEditor>
+	{
+		GroupEditor & groupEditor;
+		Label * label = nullptr;
+		
+		LabelEditor(GroupEditor & in_groupEditor, Element * in_element, Label * in_label);
+		
+		LabelEditor & text(const char * text);
+		
+		GroupEditor & end();
+	};
+	
 	struct KnobEditor
 	{
 		GroupEditor & groupEditor;

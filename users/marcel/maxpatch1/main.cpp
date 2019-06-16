@@ -237,6 +237,10 @@ int main(int arg, char * argv[])
 	
 		surfaceEditor
 			.beginGroup("master")
+				.beginLabel("master")
+					.divideBottom()
+					.size(400, 40)
+					.end()
 				.beginKnob("intensity")
 					.defaultValue(5.f)
 					.limits(0.f, 10.f)
@@ -248,6 +252,7 @@ int main(int arg, char * argv[])
 					.exponential(2.f)
 					.osc("/master/vu")
 					.end()
+				.separator()
 				.beginKnob("A/B")
 					.limits(0.f, 1.f)
 					.exponential(2.f)
@@ -265,6 +270,9 @@ int main(int arg, char * argv[])
 		{
 			surfaceEditor
 				.beginGroup("source")
+					.beginLabel("source")
+						.divideBottom()
+						.end()
 					.beginKnob("position")
 						.limits(0.f, 1.f)
 						.exponential(2.f)
@@ -565,7 +573,14 @@ int main(int arg, char * argv[])
 				{
 					auto * elem = e.elem;
 					
-					if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
+					if (elem->type == ControlSurfaceDefinition::kElementType_Label)
+					{
+						auto & label = elem->label;
+						
+						setColor(40, 40, 40);
+						drawText(elem->x, elem->y + elem->sy / 2.f, 12, +1, 0, "%s", label.text.c_str());
+					}
+					else if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 					{
 						hqBegin(HQ_FILLED_ROUNDED_RECTS);
 						{
@@ -627,7 +642,6 @@ int main(int arg, char * argv[])
 						hqEnd();
 						
 						setColor(40, 40, 40);
-						setFont("calibri.ttf");
 						drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy - 2, 10, 0, -1, "%s", knob.name.c_str());
 					}
 					else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
@@ -664,6 +678,15 @@ int main(int arg, char * argv[])
 							
 							setLumi(100);
 							hqFillTriangle(elem->x + elem->sx - 8, midY - 4, elem->x + elem->sx - 4, midY, elem->x + elem->sx - 8, midY + 4);
+						}
+						hqEnd();
+					}
+					else if (elem->type == ControlSurfaceDefinition::kElementType_Separator)
+					{
+						hqBegin(HQ_FILLED_ROUNDED_RECTS);
+						{
+							setLumi(200);
+							hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
 						}
 						hqEnd();
 					}
@@ -732,6 +755,8 @@ int main(int arg, char * argv[])
 			
 			framework.beginDraw(c, c, c, 0);
 			{
+				setFont("calibri.ttf");
+				
 				liveUi.draw();
 				
 				liveUi.drawTooltip();

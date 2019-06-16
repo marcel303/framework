@@ -53,6 +53,16 @@ namespace ControlSurfaceDefinition
 		group->name = name;
 	}
 	
+	LabelEditor GroupEditor::beginLabel(const char * text)
+	{
+		Element element;
+		element.makeLabel();
+		element.label.text = text;
+		group->elems.push_back(element);
+		
+		return LabelEditor(*this, &group->elems.back(), &group->elems.back().label);
+	}
+	
 	KnobEditor GroupEditor::beginKnob(const char * name)
 	{
 		Element element;
@@ -72,10 +82,80 @@ namespace ControlSurfaceDefinition
 		
 		return ListboxEditor(*this, &group->elems.back().listbox);
 	}
+	
+	GroupEditor & GroupEditor::label(const char * text)
+	{
+		Element element;
+		element.makeLabel();
+		element.label.text = text;
+		group->elems.push_back(element);
+		
+		return *this;
+	}
 
+	GroupEditor & GroupEditor::separator()
+	{
+		Element element;
+		element.makeSeparator();
+		group->elems.push_back(element);
+		
+		return *this;
+	}
+	
 	SurfaceEditor & GroupEditor::endGroup()
 	{
 		return surfaceEditor;
+	}
+	
+	//
+	
+	template <typename T>
+	T & ElementEditor<T>::size(const int sx, const int sy)
+	{
+		element->sx = sx;
+		element->sy = sy;
+		return static_cast<T&>(*this);
+	}
+	
+	template <typename T>
+	T & ElementEditor<T>::divideBottom()
+	{
+		element->divideBottom = true;
+		return static_cast<T&>(*this);
+	}
+
+	template <typename T>
+	T & ElementEditor<T>::divideLeft()
+	{
+		element->divideLeft = true;
+		return static_cast<T&>(*this);
+	}
+
+	template <typename T>
+	T & ElementEditor<T>::divideRight()
+	{
+		element->divideRight = true;
+		return static_cast<T&>(*this);
+	}
+	
+	//
+	
+	LabelEditor::LabelEditor(GroupEditor & in_groupEditor, Element * in_element, Label * in_label)
+		: ElementEditor(in_element)
+		, groupEditor(in_groupEditor)
+		, label(in_label)
+	{
+	}
+	
+	LabelEditor & LabelEditor::text(const char * text)
+	{
+		label->text = text;
+		return *this;
+	}
+	
+	GroupEditor & LabelEditor::end()
+	{
+		return groupEditor;
 	}
 
 	//
@@ -148,4 +228,8 @@ namespace ControlSurfaceDefinition
 	{
 		return groupEditor;
 	}
+	
+	//
+	
+	template struct ElementEditor<LabelEditor>;
 }
