@@ -1,6 +1,4 @@
 // max objects includes
-#include "reflection.h"
-#include "reflection-jsonio.h"
 #include <string>
 #include <vector>
 
@@ -14,194 +12,20 @@
 
 // Max/MSP generator app includes
 #include "framework.h"
+#include "maxPatchGenerator.h"
+#include "reflection-jsonio.h"
 #include "StringEx.h"
 #include <stdio.h>
 #include <unistd.h> // fixme
 
-// todo : move UI generator to a separate source file
-// todo : refine UI generator
+// ++++ : move UI generator to a separate source file
+// ++++ : refine UI generator
+// ++++ : add reflection type UI structure
+
 // todo : move Max/MSP patch generator to its own source file
 // todo : determine a way to include Max/MSP patch snippets, so complicated stuff can be generated externally
-// todo : add reflection type UI structure
-// todo : create UI app, which reads reflected UI structure from file and allows knob control, OSC output and creating presets
 
-namespace max
-{
-	struct AppVersion
-	{
-		int major = 7;
-		int minor = 2;
-		int revision = 0;
-		
-		static void reflect(TypeDB & typeDB)
-		{
-			typeDB.addStructured<max::AppVersion>("max::AppVersion")
-				.add("major", &AppVersion::major)
-				.add("minor", &AppVersion::minor)
-				.add("revision", &AppVersion::revision);
-		}
-	};
-	
-	struct SavedAttribute
-	{
-		std::string name;
-		std::string value;
-	};
-	
-	struct SavedAttributeAttributes
-	{
-		std::vector<SavedAttribute> valueof;
-		
-		static void reflect(TypeDB & typeDB)
-		{
-		// todo : custom json serialization flag should be set here
-			typeDB.addStructured<max::SavedAttributeAttributes>("max::SavedAttributeAttributes");
-		}
-	};
-	
-	static bool savedAttributeAttributesToJson(const TypeDB & typeDB, const Member * member, const void * member_object, REFLECTIONIO_JSON_WRITER & writer)
-	{
-		SavedAttributeAttributes * attrs = (SavedAttributeAttributes*)member_object;
-		
-		writer.StartObject();
-		{
-			writer.Key("valueof");
-			writer.StartObject();
-			{
-				for (auto & attr : attrs->valueof)
-				{
-					writer.Key(attr.name.c_str());
-					writer.String(attr.value.c_str());
-				}
-			}
-			writer.EndObject();
-		}
-		writer.EndObject();
-		
-		return true;
-	}
-	
-	struct Box
-	{
-		std::string comment;
-		std::string id; // unique id
-		std::string maxclass = "newobj";
-		int numinlets = 0;
-		int numoutlets = 0;
-		std::vector<std::string> outlettype;
-		std::vector<float> patching_rect = { 0, 0, 10, 10 };
-		bool presentation = false;
-		std::vector<float> presentation_rect = { 0, 0, 10, 10 };
-		std::string text; // this contains the arguments passed to the node
-		
-		// this member requires custom serialization, since Max stores it rather oddly.. not as structured data
-		SavedAttributeAttributes saved_attribute_attributes;
-		bool parameter_enable = false;
-		std::string varname;
-		
-		// todo : a box may contain a sub-patcher (Patcher patcher)
-		
-		static void reflect(TypeDB & typeDB)
-		{
-			typeDB.addStructured<max::Box>("max::Box")
-				.add("comment", &Box::comment)
-				.add("id", &Box::id)
-				.add("maxclass", &Box::maxclass)
-				.add("numinlets", &Box::numinlets)
-				.add("numoutlets", &Box::numoutlets)
-				.add("outlettype", &Box::outlettype)
-				.add("patching_rect", &Box::patching_rect)
-				.add("presentation", &Box::presentation)
-				.add("presentation_rect", &Box::presentation_rect)
-				.add("text", &Box::text)
-				.add("saved_attribute_attributes", &Box::saved_attribute_attributes)
-					.addFlag(customJsonSerializationFlag(savedAttributeAttributesToJson))
-				.add("parameter_enable", &Box::parameter_enable)
-				.add("varname", &Box::varname);
-		}
-	};
-	
-	struct Line
-	{
-		std::vector<std::string> destination = { "", "0" }; // name and index
-		bool disabled = false;
-		bool hidden = false;
-		std::vector<std::string> source = { "", "0" }; // name and index
-		
-		static void reflect(TypeDB & typeDB)
-		{
-			typeDB.addStructured<max::Line>("max::Line")
-				.add("destination", &Line::destination)
-				.add("disabled", &Line::disabled)
-				.add("hidden", &Line::hidden)
-				.add("source", &Line::source);
-		}
-	};
-	
-	// --- Patcher ---
-	
-	struct PatchBox
-	{
-		Box box;
-		
-		static void reflect(TypeDB & typeDB)
-		{
-			typeDB.addStructured<max::PatchBox>("max::PatchBox")
-				.add("box", &PatchBox::box);
-		}
-	};
-	
-	struct PatchLine
-	{
-		Line patchline;
-		
-		static void reflect(TypeDB & typeDB)
-		{
-			typeDB.addStructured<max::PatchLine>("max::PatchLine")
-				.add("patchline", &PatchLine::patchline);
-		}
-	};
-	
-	struct Patcher
-	{
-		int fileversion = 1;
-		AppVersion appversion;
-		std::vector<float> rect = { 0, 0, 800, 600 };
-		bool openinpresentation = true;
-		float default_fontsize = 12.f;
-		int default_fontface = 0;
-		std::string default_fontname = "Andale Mono";
-		std::string description;
-		std::vector<PatchBox> boxes;
-		std::vector<PatchLine> lines;
-		
-		static void reflect(TypeDB & typeDB)
-		{
-			typeDB.addStructured<max::Patcher>("max::Patcher")
-				.add("fileversion", &Patcher::fileversion)
-				.add("appversion", &Patcher::appversion)
-				.add("rect", &Patcher::rect)
-				.add("openinpresentation", &Patcher::openinpresentation)
-				.add("default_fontsize", &Patcher::default_fontsize)
-				.add("default_fontface", &Patcher::default_fontface)
-				.add("default_fontname", &Patcher::default_fontname)
-				.add("description", &Patcher::description)
-				.add("boxes", &Patcher::boxes)
-				.add("lines", &Patcher::lines);
-		}
-	};
-	
-	struct Patch
-	{
-		Patcher patcher;
-		
-		static void reflect(TypeDB & typeDB)
-		{
-			typeDB.addStructured<max::Patch>("max::Patch")
-				.add("patcher", &Patch::patcher);
-		}
-	};
-}
+// todo : create UI app, which reads reflected UI structure from file and allows knob control, OSC output and creating presets
 
 //
 

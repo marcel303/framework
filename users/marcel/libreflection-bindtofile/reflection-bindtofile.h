@@ -1,7 +1,6 @@
 #pragma once
 
-struct Type;
-struct TypeDB;
+#include "reflection.h" // bindObjectToFile<T>
 
 //
 
