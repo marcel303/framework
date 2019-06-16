@@ -22,7 +22,7 @@
 // ++++ : refine UI generator
 // ++++ : add reflection type UI structure
 
-// todo : move Max/MSP patch generator to its own source file
+// ++++ : move Max/MSP patch generator to its own source file
 // todo : determine a way to include Max/MSP patch snippets, so complicated stuff can be generated externally
 
 // todo : create UI app, which reads reflected UI structure from file and allows knob control, OSC output and creating presets
@@ -610,75 +610,61 @@ int main(int arg, char * argv[])
 		patch.patcher.lines.push_back(line);
 	};
 	
+	max::PatchEditor patchEditor(patch);
+	
 	std::string previousId;
 	
 	for (int i = 0; i < 100; ++i)
 	{
-		max::PatchBox box;
-		box.box.comment = "My First Box";
-		box.box.id = allocObjectId();
-		box.box.maxclass = "newobj";
-		box.box.numinlets = 1;
-		box.box.numoutlets = 1;
-		box.box.patching_rect = { 10, i * 30.f, 40, 20 };
-		box.box.presentation = true;
-		box.box.presentation_rect = { 10, i * 30.f, 40, 20 };
-		box.box.text = "gate";
-		patch.patcher.boxes.push_back(box);
+		const std::string id = allocObjectId();
+		patchEditor
+			.beginBox(id.c_str(), 1, 1)
+				.comment("My First Box")
+				.maxclass("newobj")
+				.patching_rect(10, i * 30, 40, 20)
+				.presentation(true)
+				.presentation_rect(10, i * 30, 40, 20)
+				.text("gate")
+				.end();
 		
 		if (!previousId.empty())
 		{
-			connect(previousId, 0, box.box.id, 0);
+			connect(previousId, 0, id, 0);
 		}
 		
-		previousId = box.box.id;
+		previousId = id;
 	}
 	
 	for (int i = 0; i < 10; ++i)
 	{
-		std::string osc_id;
-		std::string knob_id;
+		const std::string osc_id = allocObjectId();
+		patchEditor
+			.beginBox(osc_id.c_str(), 1, 1)
+				.patching_rect(100, 30 + i * 100, 40, 20)
+				.text("4d.paramOsc /filterbankPlayerMidiChannel")
+				.end();
 		
-		{
-			max::PatchBox box;
-			box.box.id = allocObjectId();
-			box.box.numinlets = 1;
-			box.box.numoutlets = 1;
-			box.box.patching_rect = { 100, 30 + i * 100.f, 40, 20 };
-			box.box.text = "4d.paramOsc /filterbankPlayerMidiChannel";
-			patch.patcher.boxes.push_back(box);
-			
-			osc_id = box.box.id;
-		}
-		
-		{
-			max::PatchBox box;
-			box.box.id = allocObjectId();
-			box.box.maxclass = "live.dial";
-			box.box.numinlets = 1;
-			box.box.numoutlets = 2;
-			box.box.patching_rect = { 100, 60 + i * 100.f, 40, 20 };
-			box.box.presentation = true;
-			box.box.presentation_rect = { 100 + i * 40.f, 60, 40, 20 };
-			box.box.parameter_enable = true;
-			box.box.varname = "filterbankDecay"; // script variable name
-			
-			box.box.saved_attribute_attributes.valueof =
-			{
-				{ "parameter_mmin", "1.0" },
-				{ "parameter_mmax", "10.0" },
-				{ "parameter_exponent", "2.0" },
-				{ "parameter_longname", "filterbankDecay[1]" },
-				{ "parameter_shortname",  "decay" },
-				{ "parameter_type",  "0" },
-				{ "parameter_unitstyle", "1" },
-				{ "parameter_linknames", "1" }
-			};
-			
-			patch.patcher.boxes.push_back(box);
-			
-			knob_id = box.box.id;
-		}
+		const std::string knob_id = allocObjectId();
+		patchEditor
+			.beginBox(knob_id.c_str(), 1, 2)
+				.maxclass("live.dial")
+				.patching_rect(100, 60 + i * 100, 40, 20)
+				.presentation(true)
+				.presentation_rect(100 + i * 40, 60, 40, 20)
+				.parameter_enable(true)
+				.varname("filterbankDecay")
+				.saved_attribute_attributes(
+					{
+						{ "parameter_mmin", "1.0" },
+						{ "parameter_mmax", "10.0" },
+						{ "parameter_exponent", "2.0" },
+						{ "parameter_longname", "filterbankDecay[1]" },
+						{ "parameter_shortname",  "decay" },
+						{ "parameter_type",  "0" },
+						{ "parameter_unitstyle", "1" },
+						{ "parameter_linknames", "1" }
+					})
+				.end();
 		
 		connect(osc_id, 0, knob_id, 0);
 		connect(knob_id, 0, osc_id, 0);

@@ -37,9 +37,9 @@ namespace max
 		int numinlets = 0;
 		int numoutlets = 0;
 		std::vector<std::string> outlettype;
-		std::vector<float> patching_rect = { 0, 0, 10, 10 };
+		std::vector<int> patching_rect = { 0, 0, 10, 10 };
 		bool presentation = false;
-		std::vector<float> presentation_rect = { 0, 0, 10, 10 };
+		std::vector<int> presentation_rect = { 0, 0, 10, 10 };
 		std::string text; // this contains the arguments passed to the node
 		
 		// this member requires custom serialization, since Max stores it rather oddly.. not as structured data
@@ -99,5 +99,51 @@ namespace max
 		Patcher patcher;
 		
 		static void reflect(TypeDB & typeDB);
+	};
+}
+
+namespace max
+{
+	struct BoxEditor;
+	
+	struct PatchEditor
+	{
+		Patch & patch;
+		
+		PatchEditor(Patch & in_patch)
+			: patch(in_patch)
+		{
+		}
+		
+		BoxEditor beginBox(const char * id, const int numInlets, const int numOutlets);
+		
+		void connect(const char * sourceBoxId, const int outletIndex, const char * destinationBoxId, const int inletIndex);
+		void beginConnection();
+	};
+	
+	struct BoxEditor
+	{
+		PatchEditor & patchEditor;
+		Box & box;
+		
+		BoxEditor(PatchEditor & in_patchEditor, Box & in_box)
+			: patchEditor(in_patchEditor)
+			, box(in_box)
+		{
+		}
+		
+		BoxEditor & comment(const char * comment);
+		BoxEditor & maxclass(const char * maxclass);
+		//std::vector<std::string> outlettype;
+		BoxEditor & patching_rect(const int x, const int y, const int width, const int height);
+		BoxEditor & presentation(const bool presentation);
+		BoxEditor & presentation_rect(const int x, const int y, const int width, const int height);
+		BoxEditor & text(const char * text);
+		
+		BoxEditor & saved_attribute_attributes(const std::vector<SavedAttribute> & saved_attribute_attributes);
+		BoxEditor & parameter_enable(const bool parameter_enable);
+		BoxEditor & varname(const char * varname);
+		
+		PatchEditor & end();
 	};
 }
