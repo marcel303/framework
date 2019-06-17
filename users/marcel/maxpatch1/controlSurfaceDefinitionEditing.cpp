@@ -165,7 +165,13 @@ namespace ControlSurfaceDefinition
 		knob->name = name;
 		return *this;
 	}
-
+	
+	KnobEditor & KnobEditor::displayName(const char * displayName)
+	{
+		knob->displayName = displayName;
+		return *this;
+	}
+	
 	KnobEditor & KnobEditor::defaultValue(const float defaultValue)
 	{
 		knob->defaultValue = defaultValue;
@@ -183,6 +189,12 @@ namespace ControlSurfaceDefinition
 	KnobEditor & KnobEditor::exponential(const float exponential)
 	{
 		knob->exponential = exponential;
+		return *this;
+	}
+	
+	KnobEditor & KnobEditor::unit(const Unit unit)
+	{
+		knob->unit = unit;
 		return *this;
 	}
 

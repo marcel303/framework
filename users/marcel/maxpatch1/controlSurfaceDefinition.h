@@ -19,6 +19,16 @@ namespace ControlSurfaceDefinition
 		kElementType_Separator
 	};
 	
+	enum Unit
+	{
+		kUnit_Int,
+		kUnit_Float,
+		kUnit_Time,
+		kUnit_Hertz,
+		kUnit_Decibel,
+		kUnit_Percentage
+	};
+	
 	struct Label
 	{
 		std::string text;
@@ -27,11 +37,13 @@ namespace ControlSurfaceDefinition
 	struct Knob
 	{
 		std::string name;
+		std::string displayName;
 		float defaultValue = 0.f;
 		bool hasDefaultValue = false;
 		float min = 0.f;
 		float max = 1.f;
 		float exponential = 1.f;
+		Unit unit = kUnit_Float;
 		std::string oscAddress;
 	};
 	
@@ -124,6 +136,7 @@ namespace ControlSurfaceDefinition
 		SurfaceLayout layout;
 		
 		void initializeDefaultValues();
+		void initializeDisplayNames();
 		void performLayout();
 	};
 	

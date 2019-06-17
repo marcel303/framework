@@ -67,19 +67,22 @@ int main(int arg, char * argv[])
 					.end()
 				.beginKnob("intensity")
 					.defaultValue(5.f)
-					.limits(0.f, 10.f)
+					.limits(0.f, 100.f)
 					.exponential(2.f)
+					.unit(ControlSurfaceDefinition::kUnit_Percentage)
 					.osc("/master/intensity")
 					.end()
 				.beginKnob("VU")
 					.limits(0.f, 1.f)
 					.exponential(2.f)
-					.osc("/master/vu")
+					.unit(ControlSurfaceDefinition::kUnit_Time)
+					.osc("/master/duration")
 					.end()
 				.separator()
 				.beginKnob("A/B")
 					.limits(0.f, 1.f)
 					.exponential(2.f)
+					.unit(ControlSurfaceDefinition::kUnit_Float)
 					.osc("/master/ab")
 					.end()
 				.beginListbox("mode")
@@ -124,10 +127,12 @@ int main(int arg, char * argv[])
 						.limits(0.f, 1.f)
 						.exponential(2.f)
 						.end()
+					.separator()
 					.endGroup();
 		}
 		
 		surface.initializeDefaultValues();
+		surface.initializeDisplayNames();
 		
 		surfaceEditor.beginLayout()
 			.size(800, 200)
@@ -466,7 +471,7 @@ int main(int arg, char * argv[])
 						hqEnd();
 						
 						setColor(40, 40, 40);
-						drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy - 2, 10, 0, -1, "%s", knob.name.c_str());
+						drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy - 2, 10, 0, -1, "%s", knob.displayName.c_str());
 					}
 					else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
 					{
@@ -549,7 +554,7 @@ int main(int arg, char * argv[])
 				gxPopMatrix();
 			}
 		};
-		
+	
 		framework.init(800, 200);
 		
 		LiveUi liveUi;
@@ -693,6 +698,30 @@ int main(int arg, char * argv[])
 			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Knob)
 			{
+				max::UnitStyle unitStyle = max::kUnitStyle_Float;
+				
+				switch (elem.knob.unit)
+				{
+					case ControlSurfaceDefinition::kUnit_Int:
+						unitStyle = max::kUnitStyle_Int;
+						break;
+					case ControlSurfaceDefinition::kUnit_Float:
+						unitStyle = max::kUnitStyle_Float;
+						break;
+					case ControlSurfaceDefinition::kUnit_Time:
+						unitStyle = max::kUnitStyle_Time;
+						break;
+					case ControlSurfaceDefinition::kUnit_Hertz:
+						unitStyle = max::kUnitStyle_Hertz;
+						break;
+					case ControlSurfaceDefinition::kUnit_Decibel:
+						unitStyle = max::kUnitStyle_Decibel;
+						break;
+					case ControlSurfaceDefinition::kUnit_Percentage:
+						unitStyle = max::kUnitStyle_Percentage;
+						break;
+				}
+				
 			// todo : fill in the correct details
 				const std::string knob_id = allocObjectId();
 				patchEditor
@@ -708,10 +737,10 @@ int main(int arg, char * argv[])
 						.saved_attribute("parameter_initial_enable", 1)
 						.saved_attribute("parameter_initial", elem.knob.defaultValue)
 						.saved_attribute("parameter_exponent", elem.knob.exponential)
-						.saved_attribute("parameter_longname", "filterbankDecay[1]")
-						.saved_attribute("parameter_shortname",  elem.knob.name)
-						.saved_attribute("parameter_type", 0)
-						.saved_attribute("parameter_unitstyle", 1)
+						.saved_attribute("parameter_longname", elem.knob.name)
+						.saved_attribute("parameter_shortname",  elem.knob.displayName)
+						.saved_attribute("parameter_type", max::kParameterType_Float)
+						.saved_attribute("parameter_unitstyle", unitStyle)
 						.saved_attribute("parameter_linknames", 1)
 						.end();
 				patching_y += 60;
@@ -740,25 +769,23 @@ int main(int arg, char * argv[])
 					if (listbox.items[i] == listbox.defaultValue)
 						defaultIndex = i;
 				
-				max::SavedAttribute attr("parameter_mmin", String::FormatC("%d", 0));
-				
 				const std::string listbox_id = allocObjectId();
 				patchEditor
-					.beginBox(listbox_id.c_str(), 1, 2)
+					.beginBox(listbox_id.c_str(), 1, 3)
 						.maxclass("live.menu")
 						.patching_rect(patching_x, patching_y, 40, 48) // live.dial has a fixed height of 48
 						.presentation(true)
 						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
 						.parameter_enable(true)
-						.varname("filterbankDecay")
+						.varname(listbox.name.c_str())
 						.saved_attribute("parameter_mmin", 0)
 						.saved_attribute("parameter_mmax", (int)listbox.items.size() - 1)
 						.saved_attribute("parameter_initial_enable", 1)
 						.saved_attribute("parameter_initial", defaultIndex)
-						.saved_attribute("parameter_longname", "filterbankDecay[1]") // todo
+						.saved_attribute("parameter_longname", listbox.name)
 						.saved_attribute("parameter_shortname", listbox.name)
 						.saved_attribute("parameter_enum", listbox.items)
-						.saved_attribute("parameter_type", 2)
+						.saved_attribute("parameter_type", max::kParameterType_Enum)
 						.saved_attribute("parameter_linknames", 1)
 						.end();
 				patching_y += 60;
@@ -776,6 +803,19 @@ int main(int arg, char * argv[])
 					connect(osc_id, 0, listbox_id, 0);
 					connect(listbox_id, 0, osc_id, 0);
 				}
+			}
+			else if (elem.type == ControlSurfaceDefinition::kElementType_Separator)
+			{
+				patchEditor
+					.beginBox(allocObjectId().c_str(), 1, 0)
+						.maxclass("live.line")
+						//.border(4) // todo
+						//"linecolor" : [ 0.192156862745098, 0.192156862745098, 0.192156862745098, 0.6 ],
+						.patching_rect(patching_x, patching_y, 40, 40)
+						.presentation(true)
+						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
+						.end();
+				patching_y += 60;
 			}
 		}
 		

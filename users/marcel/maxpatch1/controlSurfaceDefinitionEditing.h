@@ -1,5 +1,7 @@
 #pragma once
 
+#include "controlSurfaceDefinition.h" // Unit
+
 namespace ControlSurfaceDefinition
 {
 	struct Element;
@@ -115,9 +117,11 @@ namespace ControlSurfaceDefinition
 		}
 		
 		KnobEditor & name(const char * name);
+		KnobEditor & displayName(const char * displayName);
 		KnobEditor & defaultValue(const float defaultValue);
 		KnobEditor & limits(const float min, const float max);
 		KnobEditor & exponential(const float exponential);
+		KnobEditor & unit(const Unit unit);
 		KnobEditor & osc(const char * address);
 		
 		GroupEditor & end();

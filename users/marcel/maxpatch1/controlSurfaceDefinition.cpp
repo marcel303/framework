@@ -23,6 +23,23 @@ namespace ControlSurfaceDefinition
 		}
 	}
 	
+	void Surface::initializeDisplayNames()
+	{
+		for (auto & group : groups)
+		{
+			for (auto & elem : group.elems)
+			{
+				if (elem.type == kElementType_Knob)
+				{
+					auto & knob = elem.knob;
+					
+					if (knob.displayName.empty())
+						knob.displayName = knob.name;
+				}
+			}
+		}
+	}
+	
 	void Surface::performLayout()
 	{
 		int x = layout.marginX;

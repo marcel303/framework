@@ -7,6 +7,24 @@ struct TypeDB;
 
 namespace max
 {
+	enum ParameterType // todo : reflection, make member
+	{
+		kParameterType_Float,
+		kParameterType_Uint8,
+		kParameterType_Enum
+	};
+
+// applies to live.dial, live.numbox
+	enum UnitStyle // todo : reflection, make member
+	{
+		kUnitStyle_Int,
+		kUnitStyle_Float,
+		kUnitStyle_Time,
+		kUnitStyle_Hertz,
+		kUnitStyle_Decibel,
+		kUnitStyle_Percentage
+	};
+	
 	struct AppVersion
 	{
 		int major = 7;
