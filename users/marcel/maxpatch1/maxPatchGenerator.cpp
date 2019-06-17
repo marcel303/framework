@@ -30,7 +30,42 @@ namespace max
 				for (auto & attr : attrs->valueof)
 				{
 					writer.Key(attr.name.c_str());
-					writer.String(attr.value.c_str());
+					
+					if (attr.type == SavedAttribute::kType_Int)
+						writer.Int(attr.intValue);
+					else if (attr.type == SavedAttribute::kType_Float)
+						writer.Double(attr.floatValue);
+					else if (attr.type == SavedAttribute::kType_String)
+						writer.String(attr.stringValue.c_str());
+					
+					if (attr.type == SavedAttribute::kType_IntArray)
+					{
+						writer.StartArray();
+						{
+							for (auto & value : attr.intArrayValue)
+								writer.Int(value);
+						}
+						writer.EndArray();
+					}
+					else if (attr.type == SavedAttribute::kType_FloatArray)
+					{
+						writer.StartArray();
+						{
+							for (auto & value : attr.floatArrayValue)
+								writer.Double(value);
+						}
+						writer.EndArray();
+					}
+					else if (attr.type == SavedAttribute::kType_StringArray)
+					{
+						writer.StartArray();
+						{
+							for (auto & value : attr.stringArrayValue)
+								writer.String(value.c_str());
+						}
+						writer.EndArray();
+					}
+					
 				}
 			}
 			writer.EndObject();
@@ -161,6 +196,42 @@ namespace max
 	BoxEditor & BoxEditor::saved_attribute_attributes(const std::vector<SavedAttribute> & saved_attribute_attributes)
 	{
 		box.saved_attribute_attributes.valueof = saved_attribute_attributes;
+		return *this;
+	}
+	
+	BoxEditor & BoxEditor::saved_attribute(const char * name, const int value)
+	{
+		box.saved_attribute_attributes.valueof.push_back(SavedAttribute(name, value));
+		return *this;
+	}
+	
+	BoxEditor & BoxEditor::saved_attribute(const char * name, const float value)
+	{
+		box.saved_attribute_attributes.valueof.push_back(SavedAttribute(name, value));
+		return *this;
+	}
+	
+	BoxEditor & BoxEditor::saved_attribute(const char * name, const std::string & value)
+	{
+		box.saved_attribute_attributes.valueof.push_back(SavedAttribute(name, value));
+		return *this;
+	}
+	
+	BoxEditor & BoxEditor::saved_attribute(const char * name, const std::vector<int> & value)
+	{
+		box.saved_attribute_attributes.valueof.push_back(SavedAttribute(name, value));
+		return *this;
+	}
+	
+	BoxEditor & BoxEditor::saved_attribute(const char * name, const std::vector<float> & value)
+	{
+		box.saved_attribute_attributes.valueof.push_back(SavedAttribute(name, value));
+		return *this;
+	}
+	
+	BoxEditor & BoxEditor::saved_attribute(const char * name, const std::vector<std::string> & value)
+	{
+		box.saved_attribute_attributes.valueof.push_back(SavedAttribute(name, value));
 		return *this;
 	}
 

@@ -54,7 +54,7 @@ int main(int arg, char * argv[])
 	//
 	
 #if 1
-	{
+	//{
 		ControlSurfaceDefinition::Surface surface;
 		
 		ControlSurfaceDefinition::SurfaceEditor surfaceEditor(&surface);
@@ -252,7 +252,7 @@ int main(int arg, char * argv[])
 							
 							const float oldValue = e.value;
 							
-							e.value = saturate<float>(e.value + mouse.dy * speed);
+							e.value = saturate<float>(e.value - mouse.dy * speed);
 							
 							if (e.value != oldValue)
 							{
@@ -587,7 +587,7 @@ int main(int arg, char * argv[])
 			}
 			framework.endDraw();
 		}
-	}
+	//}
 #endif
 
 	//
@@ -612,6 +612,7 @@ int main(int arg, char * argv[])
 	
 	max::PatchEditor patchEditor(patch);
 	
+#if 0
 	std::string previousId;
 	
 	for (int i = 0; i < 100; ++i)
@@ -669,6 +670,119 @@ int main(int arg, char * argv[])
 		connect(osc_id, 0, knob_id, 0);
 		connect(knob_id, 0, osc_id, 0);
 	}
+#else
+	int patching_x = 10;
+	int patching_y = 10;
+	
+	for (auto & group : surface.groups)
+	{
+		for (auto & elem : group.elems)
+		{
+			if (elem.type == ControlSurfaceDefinition::kElementType_Label)
+			{
+				const std::string id = allocObjectId();
+				patchEditor
+					.beginBox(id.c_str(), 1, 2)
+						.maxclass("comment")
+						.text(elem.label.text.c_str())
+						.patching_rect(patching_x, patching_y, 40, 48) // live.dial has a fixed height of 48
+						.presentation(true)
+						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
+						.end();
+				patching_y += 60;
+			}
+			else if (elem.type == ControlSurfaceDefinition::kElementType_Knob)
+			{
+			// todo : fill in the correct details
+				const std::string knob_id = allocObjectId();
+				patchEditor
+					.beginBox(knob_id.c_str(), 1, 2)
+						.maxclass("live.dial")
+						.patching_rect(patching_x, patching_y, 40, 48) // live.dial has a fixed height of 48
+						.presentation(true)
+						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
+						.parameter_enable(true)
+						.varname(elem.knob.name.c_str())
+						.saved_attribute("parameter_mmin", elem.knob.min)
+						.saved_attribute("parameter_mmax", elem.knob.max)
+						.saved_attribute("parameter_initial_enable", 1)
+						.saved_attribute("parameter_initial", elem.knob.defaultValue)
+						.saved_attribute("parameter_exponent", elem.knob.exponential)
+						.saved_attribute("parameter_longname", "filterbankDecay[1]")
+						.saved_attribute("parameter_shortname",  elem.knob.name)
+						.saved_attribute("parameter_type", 0)
+						.saved_attribute("parameter_unitstyle", 1)
+						.saved_attribute("parameter_linknames", 1)
+						.end();
+				patching_y += 60;
+				
+				if (elem.knob.oscAddress.empty() == false)
+				{
+					const std::string osc_id = allocObjectId();
+					patchEditor
+						.beginBox(osc_id.c_str(), 1, 1)
+							.patching_rect(patching_x, patching_y, 40, 22) // automatic height will be 22 for 4d.paramOsc
+							.text(String::FormatC("4d.paramOsc %s", elem.knob.oscAddress.c_str()).c_str())
+							.end();
+					patching_y += 60;
+					
+					connect(osc_id, 0, knob_id, 0);
+					connect(knob_id, 0, osc_id, 0);
+				}
+			}
+			else if (elem.type == ControlSurfaceDefinition::kElementType_Listbox)
+			{
+			// todo : fill in the correct details
+				auto & listbox = elem.listbox;
+				
+				int defaultIndex = 0;
+				for (int i = 0; i < listbox.items.size(); ++i)
+					if (listbox.items[i] == listbox.defaultValue)
+						defaultIndex = i;
+				
+				max::SavedAttribute attr("parameter_mmin", String::FormatC("%d", 0));
+				
+				const std::string listbox_id = allocObjectId();
+				patchEditor
+					.beginBox(listbox_id.c_str(), 1, 2)
+						.maxclass("live.menu")
+						.patching_rect(patching_x, patching_y, 40, 48) // live.dial has a fixed height of 48
+						.presentation(true)
+						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
+						.parameter_enable(true)
+						.varname("filterbankDecay")
+						.saved_attribute("parameter_mmin", 0)
+						.saved_attribute("parameter_mmax", (int)listbox.items.size() - 1)
+						.saved_attribute("parameter_initial_enable", 1)
+						.saved_attribute("parameter_initial", defaultIndex)
+						.saved_attribute("parameter_longname", "filterbankDecay[1]") // todo
+						.saved_attribute("parameter_shortname", listbox.name)
+						.saved_attribute("parameter_enum", listbox.items)
+						.saved_attribute("parameter_type", 2)
+						.saved_attribute("parameter_linknames", 1)
+						.end();
+				patching_y += 60;
+				
+				if (elem.listbox.oscAddress.empty() == false)
+				{
+					const std::string osc_id = allocObjectId();
+					patchEditor
+						.beginBox(osc_id.c_str(), 1, 1)
+							.patching_rect(patching_x, patching_y, 40, 22) // automatic height will be 22 for 4d.paramOsc
+							.text(String::FormatC("4d.paramOsc %s", listbox.oscAddress.c_str()).c_str())
+							.end();
+					patching_y += 60;
+					
+					connect(osc_id, 0, listbox_id, 0);
+					connect(listbox_id, 0, osc_id, 0);
+				}
+			}
+		}
+		
+		patching_x += 300;
+		patching_y = 10;
+	}
+#endif
 	
 	rapidjson::StringBuffer buffer;
 	REFLECTIONIO_JSON_WRITER json_writer(buffer);

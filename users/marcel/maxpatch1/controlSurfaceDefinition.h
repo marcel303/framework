@@ -75,8 +75,8 @@ namespace ControlSurfaceDefinition
 		{
 			type = kElementType_Knob;
 			
-			sx = 40;
-			sy = 40;
+			sx = 48;
+			sy = 48;
 		}
 		
 		void makeListbox()

@@ -18,8 +18,39 @@ namespace max
 	
 	struct SavedAttribute
 	{
+		enum Type
+		{
+			kType_None,
+			
+			kType_Int,
+			kType_Float,
+			kType_String,
+			
+			kType_IntArray,
+			kType_FloatArray,
+			kType_StringArray,
+		};
+		
+		Type type = kType_None;
 		std::string name;
-		std::string value;
+		
+		int intValue = 0;
+		float floatValue = 0.f;
+		std::string stringValue;
+		
+		std::vector<int> intArrayValue;
+		std::vector<float> floatArrayValue;
+		std::vector<std::string> stringArrayValue;
+		
+		SavedAttribute() { }
+		
+		explicit SavedAttribute(const char * in_name, const int value) { type = kType_Int; name = in_name; intValue = value; }
+		explicit SavedAttribute(const char * in_name, const float value) { type = kType_Float; name = in_name; floatValue = value; }
+		explicit SavedAttribute(const char * in_name, const char * value) { type = kType_String; name = in_name; stringValue = value; }
+		explicit SavedAttribute(const char * in_name, const std::string & value) { type = kType_String; name = in_name; stringValue = value; }
+		explicit SavedAttribute(const char * in_name, const std::vector<int> & value) { type = kType_IntArray; name = in_name; intArrayValue = value; }
+		explicit SavedAttribute(const char * in_name, const std::vector<float> & value) { type = kType_FloatArray; name = in_name; floatArrayValue = value; }
+		explicit SavedAttribute(const char * in_name, const std::vector<std::string> & value) { type = kType_StringArray; name = in_name; stringArrayValue = value; }
 	};
 	
 	struct SavedAttributeAttributes
@@ -141,6 +172,12 @@ namespace max
 		BoxEditor & text(const char * text);
 		
 		BoxEditor & saved_attribute_attributes(const std::vector<SavedAttribute> & saved_attribute_attributes);
+		BoxEditor & saved_attribute(const char * name, const int value);
+		BoxEditor & saved_attribute(const char * name, const float value);
+		BoxEditor & saved_attribute(const char * name, const std::string & value);
+		BoxEditor & saved_attribute(const char * name, const std::vector<int> & value);
+		BoxEditor & saved_attribute(const char * name, const std::vector<float> & value);
+		BoxEditor & saved_attribute(const char * name, const std::vector<std::string> & value);
 		BoxEditor & parameter_enable(const bool parameter_enable);
 		BoxEditor & varname(const char * varname);
 		
