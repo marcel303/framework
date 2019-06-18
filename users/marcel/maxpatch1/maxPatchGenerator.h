@@ -90,6 +90,8 @@ namespace max
 		bool presentation = false;
 		std::vector<int> presentation_rect = { 0, 0, 10, 10 };
 		std::string text; // this contains the arguments passed to the node
+		std::vector<float> linecolor = { 0, 0, 0, 1 };
+		int border = 1;
 		
 		// this member requires custom serialization, since Max stores it rather oddly.. not as structured data
 		SavedAttributeAttributes saved_attribute_attributes;
@@ -190,6 +192,8 @@ namespace max
 		BoxEditor & presentation(const bool presentation);
 		BoxEditor & presentation_rect(const int x, const int y, const int width, const int height);
 		BoxEditor & text(const char * text);
+		BoxEditor & linecolor(const float r, const float g, const float b, const float a);
+		BoxEditor & border(const int border);
 		
 		BoxEditor & saved_attribute_attributes(const std::vector<SavedAttribute> & saved_attribute_attributes);
 		BoxEditor & saved_attribute(const char * name, const int value);

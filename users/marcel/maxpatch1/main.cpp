@@ -37,6 +37,9 @@ int main(int arg, char * argv[])
 	typeDB.addPlain<bool>("bool", kDataType_Bool);
 	typeDB.addPlain<int>("int", kDataType_Int);
 	typeDB.addPlain<float>("float", kDataType_Float);
+	typeDB.addPlain<Vec2>("Vec2", kDataType_Float2);
+	typeDB.addPlain<Vec3>("Vec3", kDataType_Float3);
+	typeDB.addPlain<Vec4>("Vec4", kDataType_Float4);
 	typeDB.addPlain<std::string>("string", kDataType_String);
 	
 	max::reflect(typeDB);
@@ -68,7 +71,9 @@ int main(int arg, char * argv[])
 				.unit(ControlSurfaceDefinition::kUnit_Time)
 				.osc("/master/duration")
 				.end()
-			.separator()
+			.beginSeparator()
+				.borderColor(1.f, .5f, .25f, 1.f)
+				.end()
 			.beginKnob("A/B")
 				.limits(0.f, 1.f)
 				.exponential(2.f)
@@ -574,9 +579,12 @@ int main(int arg, char * argv[])
 		
 		const int c = 160;
 		
-		framework.beginDraw(c, c, c, 0);
+		framework.beginDraw(c/2, c/2, c/2, 0);
 		{
 			setFont("calibri.ttf");
+			
+			setLumi(c);
+			drawRect(0, 0, surface.layout.sx, surface.layout.sy);
 			
 			liveUi.draw();
 			

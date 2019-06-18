@@ -18,6 +18,7 @@ namespace ControlSurfaceDefinition
 	struct KnobEditor;
 	struct LabelEditor;
 	struct ListboxEditor;
+	struct SeparatorEditor;
 	struct SurfaceEditor;
 	struct SurfaceLayoutEditor;
 
@@ -69,6 +70,7 @@ namespace ControlSurfaceDefinition
 		LabelEditor beginLabel(const char * text);
 		KnobEditor beginKnob(const char * name);
 		ListboxEditor beginListbox(const char * name);
+		SeparatorEditor beginSeparator();
 		
 		GroupEditor & label(const char * text);
 		GroupEditor & separator();
@@ -144,6 +146,24 @@ namespace ControlSurfaceDefinition
 		ListboxEditor & defaultValue(const char * defaultValue);
 		ListboxEditor & item(const char * name);
 		ListboxEditor & osc(const char * address);
+		
+		GroupEditor & end();
+	};
+	
+	struct SeparatorEditor : ElementEditor<SeparatorEditor>
+	{
+		GroupEditor & groupEditor;
+		Separator * separator = nullptr;
+		
+		SeparatorEditor(GroupEditor & in_groupEditor, Element * in_element, Separator * in_separator)
+			: ElementEditor(in_element)
+			, groupEditor(in_groupEditor)
+			, separator(in_separator)
+		{
+		}
+		
+		SeparatorEditor & borderColor(const float r, const float g, const float b, const float a);
+		SeparatorEditor & thickness(const int thickness);
 		
 		GroupEditor & end();
 	};

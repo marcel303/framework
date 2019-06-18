@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Vec4.h"
 #include <string>
 #include <vector>
 
@@ -56,6 +57,13 @@ namespace ControlSurfaceDefinition
 		std::string oscAddress;
 	};
 	
+	struct Separator
+	{
+		Vec4 borderColor;
+		bool hasBorderColor = false;
+		int thickness = 1;
+	};
+	
 	struct Element
 	{
 		ElementType type = kElementType_None;
@@ -74,6 +82,8 @@ namespace ControlSurfaceDefinition
 		Knob knob;
 		
 		Listbox listbox;
+		
+		Separator separator;
 		
 		void makeLabel()
 		{

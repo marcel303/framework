@@ -90,6 +90,8 @@ namespace max
 			.add("presentation", &Box::presentation)
 			.add("presentation_rect", &Box::presentation_rect)
 			.add("text", &Box::text)
+			.add("linecolor", &Box::linecolor)
+			.add("border", &Box::border)
 			.add("saved_attribute_attributes", &Box::saved_attribute_attributes)
 				.addFlag(customJsonSerializationFlag(savedAttributeAttributesToJson))
 			.add("parameter_enable", &Box::parameter_enable)
@@ -204,6 +206,18 @@ namespace max
 	BoxEditor & BoxEditor::text(const char * text)
 	{
 		box.text = text;
+		return *this;
+	}
+	
+	BoxEditor & BoxEditor::linecolor(const float r, const float g, const float b, const float a)
+	{
+		box.linecolor = { r, g, b, a };
+		return *this;
+	}
+	
+	BoxEditor & BoxEditor::border(const int border)
+	{
+		box.border = border;
 		return *this;
 	}
 	

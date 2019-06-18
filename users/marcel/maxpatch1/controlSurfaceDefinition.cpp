@@ -137,6 +137,11 @@ namespace ControlSurfaceDefinition
 			.add("hasDefaultValue", &Listbox::hasDefaultValue)
 			.add("oscAddress", &Listbox::oscAddress);
 		
+		typeDB.addStructured<Separator>("ControlSurfaceDefinition::Separator")
+			.add("borderColor", &Separator::borderColor)
+			.add("hasBorderColor", &Separator::hasBorderColor)
+			.add("thickness", &Separator::thickness);
+		
 		typeDB.addStructured<Element>("ControlSurfaceDefinition::Element")
 			.add("type", &Element::type)
 			.add("x", &Element::x)
@@ -145,7 +150,8 @@ namespace ControlSurfaceDefinition
 			.add("height", &Element::sy)
 			.add("label", &Element::label)
 			.add("knob", &Element::knob)
-			.add("listbox", &Element::listbox);
+			.add("listbox", &Element::listbox)
+			.add("separator", &Element::separator);
 		
 		typeDB.addStructured<Group>("ControlSurfaceDefinition::Group")
 			.add("name", &Group::name)

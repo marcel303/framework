@@ -23,8 +23,8 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 	
 	max::PatchEditor patchEditor(patch);
 	
-	int patching_x = 10;
-	int patching_y = 10;
+	int patching_x = 30;
+	int patching_y = 20;
 	
 	for (auto & group : surface.groups)
 	{
@@ -37,7 +37,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					.beginBox(id.c_str(), 1, 2)
 						.maxclass("comment")
 						.text(elem.label.text.c_str())
-						.patching_rect(patching_x, patching_y, 20, 20) // comment will auto-size so size here doesn't really matter, only the position
+						.patching_rect(patching_x, patching_y, 200, 20) // comment will auto-size so size here doesn't really matter, only the position
 						.presentation(true)
 						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
 						.end();
@@ -69,6 +69,19 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						break;
 				}
 				
+				std::string osc_id;
+				
+				if (elem.knob.oscAddress.empty() == false)
+				{
+					osc_id = allocObjectId();
+					patchEditor
+						.beginBox(osc_id.c_str(), 1, 1)
+							.patching_rect(patching_x, patching_y, 200, 22) // automatic height will be 22 for 4d.paramOsc
+							.text(String::FormatC("4d.paramOsc %s", elem.knob.oscAddress.c_str()).c_str())
+							.end();
+					patching_y += 40;
+				}
+				
 				const std::string knob_id = allocObjectId();
 				patchEditor
 					.beginBox(knob_id.c_str(), 1, 2)
@@ -93,14 +106,6 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				
 				if (elem.knob.oscAddress.empty() == false)
 				{
-					const std::string osc_id = allocObjectId();
-					patchEditor
-						.beginBox(osc_id.c_str(), 1, 1)
-							.patching_rect(patching_x, patching_y, 40, 22) // automatic height will be 22 for 4d.paramOsc
-							.text(String::FormatC("4d.paramOsc %s", elem.knob.oscAddress.c_str()).c_str())
-							.end();
-					patching_y += 60;
-					
 					connect(osc_id, 0, knob_id, 0);
 					connect(knob_id, 0, osc_id, 0);
 				}
@@ -113,6 +118,19 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				for (int i = 0; i < listbox.items.size(); ++i)
 					if (listbox.items[i] == listbox.defaultValue)
 						defaultIndex = i;
+				
+				std::string osc_id;
+				
+				if (elem.listbox.oscAddress.empty() == false)
+				{
+					osc_id = allocObjectId();
+					patchEditor
+						.beginBox(osc_id.c_str(), 1, 1)
+							.patching_rect(patching_x, patching_y, 200, 22) // automatic height will be 22 for 4d.paramOsc
+							.text(String::FormatC("4d.paramOsc %s", listbox.oscAddress.c_str()).c_str())
+							.end();
+					patching_y += 40;
+				}
 				
 				const std::string listbox_id = allocObjectId();
 				patchEditor
@@ -137,29 +155,32 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				
 				if (elem.listbox.oscAddress.empty() == false)
 				{
-					const std::string osc_id = allocObjectId();
-					patchEditor
-						.beginBox(osc_id.c_str(), 1, 1)
-							.patching_rect(patching_x, patching_y, 40, 22) // automatic height will be 22 for 4d.paramOsc
-							.text(String::FormatC("4d.paramOsc %s", listbox.oscAddress.c_str()).c_str())
-							.end();
-					patching_y += 60;
-					
 					connect(osc_id, 0, listbox_id, 0);
 					connect(listbox_id, 0, osc_id, 0);
 				}
 			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Separator)
 			{
-				patchEditor
+				auto & separator = elem.separator;
+				
+				auto & box = patchEditor
 					.beginBox(allocObjectId().c_str(), 1, 0)
 						.maxclass("live.line")
-						//.border(4) // todo
-						//"linecolor" : [ 0.192156862745098, 0.192156862745098, 0.192156862745098, 0.6 ],
 						.patching_rect(patching_x, patching_y, 40, 40)
 						.presentation(true)
-						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
-						.end();
+						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy);
+				
+				if (separator.hasBorderColor)
+				{
+					box.linecolor(
+						separator.borderColor[0],
+						separator.borderColor[1],
+						separator.borderColor[2],
+						separator.borderColor[3]);
+				}
+				
+				box.end();
+				
 				patching_y += 60;
 			}
 		}

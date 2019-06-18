@@ -83,6 +83,15 @@ namespace ControlSurfaceDefinition
 		return ListboxEditor(*this, &group->elems.back(), &group->elems.back().listbox);
 	}
 	
+	SeparatorEditor GroupEditor::beginSeparator()
+	{
+		Element element;
+		element.makeSeparator();
+		group->elems.push_back(element);
+		
+		return SeparatorEditor(*this, &group->elems.back(), &group->elems.back().separator);
+	}
+	
 	GroupEditor & GroupEditor::label(const char * text)
 	{
 		Element element;
@@ -237,6 +246,26 @@ namespace ControlSurfaceDefinition
 	}
 	
 	GroupEditor & ListboxEditor::end()
+	{
+		return groupEditor;
+	}
+	
+	//
+	
+	SeparatorEditor & SeparatorEditor::borderColor(const float r, const float g, const float b, const float a)
+	{
+		separator->borderColor.Set(r, g, b, a);
+		separator->hasBorderColor = true;
+		return *this;
+	}
+	
+	SeparatorEditor & SeparatorEditor::thickness(const int thickness)
+	{
+		separator->thickness = thickness;
+		return *this;
+	}
+	
+	GroupEditor & SeparatorEditor::end()
 	{
 		return groupEditor;
 	}
