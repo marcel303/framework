@@ -105,13 +105,14 @@ namespace ControlSurfaceDefinition
 		GroupEditor & end();
 	};
 	
-	struct KnobEditor
+	struct KnobEditor : ElementEditor<KnobEditor>
 	{
 		GroupEditor & groupEditor;
 		Knob * knob = nullptr;
 		
-		KnobEditor(GroupEditor & in_groupEditor, Knob * in_knob)
-			: groupEditor(in_groupEditor)
+		KnobEditor(GroupEditor & in_groupEditor, Element * in_element, Knob * in_knob)
+			: ElementEditor(in_element)
+			, groupEditor(in_groupEditor)
 			, knob(in_knob)
 		{
 		}
@@ -127,13 +128,14 @@ namespace ControlSurfaceDefinition
 		GroupEditor & end();
 	};
 	
-	struct ListboxEditor
+	struct ListboxEditor : ElementEditor<ListboxEditor>
 	{
 		GroupEditor & groupEditor;
 		Listbox * listbox = nullptr;
 		
-		ListboxEditor(GroupEditor & in_groupEditor, Listbox * in_listbox)
-			: groupEditor(in_groupEditor)
+		ListboxEditor(GroupEditor & in_groupEditor, Element * in_element, Listbox * in_listbox)
+			: ElementEditor(in_element)
+			, groupEditor(in_groupEditor)
 			, listbox(in_listbox)
 		{
 		}

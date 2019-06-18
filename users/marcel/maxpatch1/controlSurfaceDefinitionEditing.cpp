@@ -70,7 +70,7 @@ namespace ControlSurfaceDefinition
 		element.knob.name = name;
 		group->elems.push_back(element);
 		
-		return KnobEditor(*this, &group->elems.back().knob);
+		return KnobEditor(*this, &group->elems.back(), &group->elems.back().knob);
 	}
 	
 	ListboxEditor GroupEditor::beginListbox(const char * name)
@@ -80,7 +80,7 @@ namespace ControlSurfaceDefinition
 		element.listbox.name = name;
 		group->elems.push_back(element);
 		
-		return ListboxEditor(*this, &group->elems.back().listbox);
+		return ListboxEditor(*this, &group->elems.back(), &group->elems.back().listbox);
 	}
 	
 	GroupEditor & GroupEditor::label(const char * text)
@@ -244,4 +244,6 @@ namespace ControlSurfaceDefinition
 	//
 	
 	template struct ElementEditor<LabelEditor>;
+	template struct ElementEditor<KnobEditor>;
+	template struct ElementEditor<ListboxEditor>;
 }
