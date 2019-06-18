@@ -144,6 +144,20 @@ namespace max
 			.add("patcher", &Patch::patcher);
 	}
 	
+	//
+	
+	void reflect(TypeDB & typeDB)
+	{
+		AppVersion::reflect(typeDB);
+		SavedAttributeAttributes::reflect(typeDB);
+		Box::reflect(typeDB);
+		Line::reflect(typeDB);
+		PatchBox::reflect(typeDB);
+		PatchLine::reflect(typeDB);
+		Patcher::reflect(typeDB);
+		Patch::reflect(typeDB);
+	}
+	
 	// --- editing ---
 	
 	BoxEditor PatchEditor::beginBox(const char * id, const int numInlets, const int numOutlets)

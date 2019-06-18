@@ -149,6 +149,8 @@ namespace max
 		
 		static void reflect(TypeDB & typeDB);
 	};
+	
+	void reflect(TypeDB & typeDB);
 }
 
 namespace max
