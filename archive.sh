@@ -46,5 +46,7 @@ cd chibi-build/archive && cmake -DCMAKE_BUILD_TYPE=Distribution ../cmake-files-f
 cd "$root"
 
 if [ "$os" == "mac" ]; then
-	open -a Finder -R "chibi-build/archive/$1.app"
+	DATETIME=`date +%Y-%m-%d_%H-%M-%S`
+	zip -r "chibi-build/archive/$1-$DATETIME.zip" "chibi-build/archive/$1.app"
+	open -a Finder -R "chibi-build/archive/$1-$DATETIME.zip"
 fi
