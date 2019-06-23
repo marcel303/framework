@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Vec4.h"
 #include <string>
 #include <vector>
 
@@ -28,6 +27,23 @@ namespace ControlSurfaceDefinition
 		kUnit_Hertz,
 		kUnit_Decibel,
 		kUnit_Percentage
+	};
+	
+	struct Color
+	{
+		float r, g, b, a;
+		
+		void set(
+			const float in_r,
+			const float in_g,
+			const float in_b,
+			const float in_a)
+		{
+			r = in_r;
+			g = in_g;
+			b = in_b;
+			a = in_a;
+		}
 	};
 	
 	struct Label
@@ -59,7 +75,7 @@ namespace ControlSurfaceDefinition
 	
 	struct Separator
 	{
-		Vec4 borderColor;
+		Color borderColor;
 		bool hasBorderColor = false;
 		int thickness = 1;
 	};

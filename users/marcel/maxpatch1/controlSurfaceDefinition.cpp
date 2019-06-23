@@ -118,6 +118,8 @@ namespace ControlSurfaceDefinition
 			.add("listbox", kElementType_Listbox)
 			.add("separator", kElementType_Separator);
 
+		typeDB.addPlain<Color>("ControlSurfaceDefinition::Color", kDataType_Float4);
+		
 		typeDB.addStructured<Label>("ControlSurfaceDefinition::Label")
 			.add("text", &Label::text);
 			

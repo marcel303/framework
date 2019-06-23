@@ -2,8 +2,6 @@
 
 namespace max
 {
-	// --- editing ---
-	
 	BoxEditor PatchEditor::beginBox(const char * id, const int numInlets, const int numOutlets)
 	{
 		patch.patcher.boxes.resize(patch.patcher.boxes.size() + 1);

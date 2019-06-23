@@ -254,7 +254,7 @@ namespace ControlSurfaceDefinition
 	
 	SeparatorEditor & SeparatorEditor::borderColor(const float r, const float g, const float b, const float a)
 	{
-		separator->borderColor.Set(r, g, b, a);
+		separator->borderColor.set(r, g, b, a);
 		separator->hasBorderColor = true;
 		return *this;
 	}

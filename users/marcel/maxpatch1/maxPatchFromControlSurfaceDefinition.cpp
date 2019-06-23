@@ -173,10 +173,10 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				if (separator.hasBorderColor)
 				{
 					box.linecolor(
-						separator.borderColor[0],
-						separator.borderColor[1],
-						separator.borderColor[2],
-						separator.borderColor[3]);
+						separator.borderColor.r,
+						separator.borderColor.g,
+						separator.borderColor.b,
+						separator.borderColor.a);
 				}
 				
 				box.end();
