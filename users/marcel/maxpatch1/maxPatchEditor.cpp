@@ -1,4 +1,4 @@
-#include "maxPatchGenerator.h"
+#include "maxPatchEditor.h"
 #include "reflection.h"
 #include "reflection-jsonio.h"
 

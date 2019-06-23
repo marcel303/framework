@@ -1,6 +1,6 @@
 #include "controlSurfaceDefinition.h"
 #include "maxPatchFromControlSurfaceDefinition.h"
-#include "maxPatchGenerator.h"
+#include "maxPatchEditor.h"
 #include "StringEx.h"
 
 bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surface & surface, max::Patch & patch)

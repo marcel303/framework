@@ -13,7 +13,7 @@
 // Max/MSP generator app includes
 #include "framework.h"
 #include "maxPatchFromControlSurfaceDefinition.h"
-#include "maxPatchGenerator.h"
+#include "maxPatchEditor.h"
 #include "reflection-jsonio.h"
 #include <stdio.h> // FILE
 
