@@ -27,10 +27,12 @@
 
 #pragma once
 
+#include <map>
 #include <stdint.h>
 
 struct Graph;
 struct GraphEdit;
+struct Graph_TypeDefinitionLibrary;
 struct RealTimeConnection;
 struct VfxGraph;
 
