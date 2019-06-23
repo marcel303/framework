@@ -36,7 +36,7 @@
 
 //
 
-extern OscEndpointMgr g_oscEndpointMgr;
+OscEndpointMgr g_oscEndpointMgr;
 
 //
 
