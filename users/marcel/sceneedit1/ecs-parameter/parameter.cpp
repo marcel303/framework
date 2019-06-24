@@ -113,6 +113,127 @@ ParameterBase * ParameterMgr::find(const char * name) const
 	return nullptr;
 }
 
+static ParameterBase * findParameter(const ParameterMgr & paramMgr, const char * path, const char pathSeparator)
+{
+	Assert(path[0] == pathSeparator);
+	
+	if (path[0] != pathSeparator)
+	{
+		// invalid path
+		
+		return nullptr;
+	}
+	else
+	{
+		const char * name = path + 1;
+		const char * nameSeparator = strchr(name, pathSeparator);
+		
+		if (nameSeparator == nullptr || paramMgr.getStrictStructuringEnabled() == false)
+		{
+			// the path specifies a parameter. look it up and return it
+			
+			ParameterBase * parameter = paramMgr.find(name);
+			
+			if (parameter == nullptr)
+			{
+				if (paramMgr.getStrictStructuringEnabled())
+				{
+					return nullptr;
+				}
+			}
+			else
+			{
+				return parameter;
+			}
+		}
+		
+		if (nameSeparator != nullptr)
+		{
+			// the path specifies a parameter within a child. find the child and let it handle the OSC message
+			
+			ParameterMgr * child = nullptr;
+			
+			const char * nextName = nullptr;
+			const char * nextNameSeparator = nullptr;
+			
+			bool foundIndexed = false;
+			
+			//
+			
+			const_cast<char*>(nameSeparator)[0] = 0;
+			{
+				// see if there's a next name and see if the next name is a number. if so, it may be an OSC address of the format "/items/0/value". where /0 specifies the index into an array
+				
+				nextName = nameSeparator + 1;
+				nextNameSeparator = strchr(nextName, pathSeparator);
+				
+				bool nextNameIsNumber = false;
+				int nextNumberValue = -1;
+				
+				if (nextNameSeparator != nullptr)
+				{
+					nextNameIsNumber = true;
+					
+					for (const char * c = nextName; c < nextNameSeparator; ++c)
+						nextNameIsNumber &= c[0] >= '0' && c[0] <= '9';
+					
+					if (nextNameIsNumber)
+					{
+						const_cast<char*>(nextNameSeparator)[0] = 0;
+						{
+							nextNumberValue = atoi(nextName);
+						}
+						const_cast<char*>(nextNameSeparator)[0] = pathSeparator;
+					}
+				}
+			
+				for (auto * child_itr : paramMgr.access_children())
+				{
+					const std::string & child_name = child_itr->access_prefix();
+					const int child_index = child_itr->access_index();
+					
+					if (child_name == name)
+					{
+						if (child_index == -1)
+						{
+							child = child_itr;
+							break;
+						}
+						else if (nextNameIsNumber && child_index == nextNumberValue)
+						{
+							child = child_itr;
+							foundIndexed = true;
+							break;
+						}
+					}
+				}
+			}
+			const_cast<char*>(nameSeparator)[0] = pathSeparator;
+			
+			if (child == nullptr)
+			{
+				return nullptr;
+			}
+			else
+			{
+				return findParameter(
+					*child,
+					foundIndexed
+					? nextNameSeparator
+					: nameSeparator,
+					pathSeparator);
+			}
+		}
+	}
+	
+	return nullptr;
+}
+
+ParameterBase * ParameterMgr::findRecursively(const char * path, const char pathSeparator) const
+{
+	return findParameter(*this, path, pathSeparator);
+}
+
 void ParameterMgr::setToDefault(const bool recurse)
 {
 	for (auto * parameter : parameters)

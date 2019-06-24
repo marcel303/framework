@@ -176,7 +176,7 @@ bool handleOscMessage(ParameterMgr & paramMgr, const osc::ReceivedMessage & m, c
 		
 		if (nameSeparator == nullptr || paramMgr.getStrictStructuringEnabled() == false)
 		{
-			// the address pattern specifies the cvalue. look it up and let it handle the OSC message
+			// the address pattern specifies a parameter. look it up and let it handle the OSC message
 			
 			ParameterBase * parameter = paramMgr.find(name);
 			
@@ -195,7 +195,7 @@ bool handleOscMessage(ParameterMgr & paramMgr, const osc::ReceivedMessage & m, c
 		
 		if (nameSeparator != nullptr)
 		{
-			// the address pattern specifies a cvalue within a child. find the child and let it handle the OSC message
+			// the address pattern specifies a parameter within a child. find the child and let it handle the OSC message
 			
 			ParameterMgr * child = nullptr;
 			

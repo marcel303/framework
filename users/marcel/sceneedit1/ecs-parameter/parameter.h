@@ -146,6 +146,11 @@ public:
 	{
 		return value;
 	}
+	
+	const T & getDefaultValue() const
+	{
+		return defaultValue;
+	}
 };
 
 struct ParameterBool : Parameter<bool, kParameterType_Bool>
@@ -582,6 +587,8 @@ private:
 	
 	bool strictStructuringEnabled = false;
 	
+	bool isHiddenFromUi = false;
+	
 public:
 	void init(const char * prefix, const int in_index = -1);
 	void tick();
@@ -600,6 +607,7 @@ public:
 	ParameterEnum * addEnum(const char * name, const int defaultValue, const std::vector<ParameterEnum::Elem> & elems);
 	
 	ParameterBase * find(const char * name) const;
+	ParameterBase * findRecursively(const char * path, const char pathSeparator) const;
 	
 	void setToDefault(const bool recurse);
 	
@@ -616,6 +624,16 @@ public:
 	void setStrictStructuringEnabled(const bool enabled)
 	{
 		strictStructuringEnabled = enabled;
+	}
+	
+	bool getIsHiddenFromUi() const
+	{
+		return isHiddenFromUi;
+	}
+	
+	void setIsHiddenFromUi(const bool isHidden)
+	{
+		isHiddenFromUi = isHidden;
 	}
 	
 	const std::string & access_prefix() const
