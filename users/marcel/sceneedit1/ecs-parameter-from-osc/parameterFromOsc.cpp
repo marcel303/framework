@@ -5,6 +5,8 @@
 
 bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage & m)
 {
+	bool result = true;
+
 	switch (parameterBase->type)
 	{
 	case kParameterType_Bool:
@@ -15,10 +17,16 @@ bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage 
 			{
 				if (i->IsBool())
 					parameter->set(i->AsBoolUnchecked());
-				if (i->IsInt32())
+				else if (i->IsInt32())
 					parameter->set(i->AsInt32Unchecked() != 0);
-				if (i->IsFloat())
+				else if (i->IsInt64())
+					parameter->set(i->AsInt64Unchecked() != 0);
+				else if (i->IsFloat())
 					parameter->set(i->AsFloatUnchecked() != 0.f);
+				else if (i->IsDouble())
+					parameter->set(i->AsDoubleUnchecked() != 0.f);
+				else
+					result = false;
 			}
 		}
 		break;
@@ -30,8 +38,10 @@ bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage 
 			{
 				if (i->IsInt32())
 					parameter->set(i->AsInt32Unchecked());
-				if (i->IsInt64())
+				else if (i->IsInt64())
 					parameter->set(i->AsInt64Unchecked());
+				else
+					result = false;
 			}
 		}
 		break;
@@ -43,8 +53,14 @@ bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage 
 			{
 				if (i->IsFloat())
 					parameter->set(i->AsFloatUnchecked());
-				if (i->IsDouble())
+				else if (i->IsDouble())
 					parameter->set(i->AsDoubleUnchecked());
+				else if (i->IsInt32())
+					parameter->set(i->AsInt32Unchecked() != 0);
+				else if (i->IsInt64())
+					parameter->set(i->AsInt64Unchecked() != 0);
+				else
+					result = false;
 			}
 		}
 		break;
@@ -60,12 +76,20 @@ bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage 
 			{
 				if (i->IsFloat())
 					value[index++] = i->AsFloatUnchecked();
-				if (i->IsDouble())
+				else if (i->IsDouble())
 					value[index++] = i->AsDoubleUnchecked();
+				else if (i->IsInt32())
+					value[index++] = i->AsInt32Unchecked();
+				else if (i->IsInt64())
+					value[index++] = i->AsInt64Unchecked();
+				else
+					result = false;
 			}
 			
 			if (index == 2)
 				parameter->set(value);
+			else
+				result = false;
 		}
 		break;
 	case kParameterType_Vec3:
@@ -80,12 +104,20 @@ bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage 
 			{
 				if (i->IsFloat())
 					value[index++] = i->AsFloatUnchecked();
-				if (i->IsDouble())
+				else if (i->IsDouble())
 					value[index++] = i->AsDoubleUnchecked();
+				else if (i->IsInt32())
+					value[index++] = i->AsInt32Unchecked();
+				else if (i->IsInt64())
+					value[index++] = i->AsInt64Unchecked();
+				else
+					result = false;
 			}
 			
 			if (index == 3)
 				parameter->set(value);
+			else
+				result = false;
 		}
 		break;
 	case kParameterType_Vec4:
@@ -100,12 +132,20 @@ bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage 
 			{
 				if (i->IsFloat())
 					value[index++] = i->AsFloatUnchecked();
-				if (i->IsDouble())
+				else if (i->IsDouble())
 					value[index++] = i->AsDoubleUnchecked();
+				else if (i->IsInt32())
+					value[index++] = i->AsInt32Unchecked();
+				else if (i->IsInt64())
+					value[index++] = i->AsInt64Unchecked();
+				else
+					result = false;
 			}
 			
 			if (index == 4)
 				parameter->set(value);
+			else
+				result = false;
 		}
 		break;
 	case kParameterType_String:
@@ -116,6 +156,8 @@ bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage 
 			{
 				if (i->IsString())
 					parameter->set(i->AsStringUnchecked());
+				else
+					result = false;
 			}
 		}
 		break;
@@ -132,31 +174,34 @@ bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage 
 					Assert(value != -1);
 					if (value != -1)
 						parameter->set(value);
+					else
+						result = false;
 				}
 				else if (i->IsInt32())
 				{
 					const int value = i->AsInt32Unchecked();
 					
-					const bool success = parameter->set(value);
-					Assert(success);
+					result &= parameter->set(value);
 				}
 				else if (i->IsInt64())
 				{
 					const int value = i->AsInt64Unchecked();
 					
-					const bool success = parameter->set(value);
-					Assert(success);
+					result &= parameter->set(value);
 				}
+				else
+					result = false;
 			}
 		}
 		break;
 		
 	default:
 		Assert(false);
+		result = false;
 		break;
 	}
-	
-	return false;
+
+	return result;
 }
 
 bool handleOscMessage(ParameterMgr & paramMgr, const osc::ReceivedMessage & m, const char * addressPattern)
@@ -262,14 +307,12 @@ bool handleOscMessage(ParameterMgr & paramMgr, const osc::ReceivedMessage & m, c
 			}
 			else
 			{
-				handleOscMessage(
+				return handleOscMessage(
 					*child,
 					m,
 					foundIndexed
 					? nextNameSeparator
 					: nameSeparator);
-				
-				return true;
 			}
 		}
 	}
