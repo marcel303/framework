@@ -80,11 +80,14 @@ public:
 		double mouseDx = 0.0;
 		double mouseDy = 0.0;
 		float currentHeight = 0.f;
+		float currentBobbingPhase = 0.f;
 		
 	public:
 		Vec3 position;
 		float height = 1.8f;
 		float duckAmount = .5f;
+		float bobbingAmount = 0.f;
+		float bobbingSpeed = 1.f;
 		
 		float yaw = 0.f;
 		float pitch = 0.f;

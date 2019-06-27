@@ -302,7 +302,9 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 	const Vec3 yAxis = worldMatrix.GetAxis(1);
 	const Vec3 zAxis = worldMatrix.GetAxis(2);
 	
-	position = position + xAxis * strafeSpeed + yAxis * upSpeed + zAxis * forwardSpeed;
+	const Vec3 positionIncrement = xAxis * strafeSpeed + yAxis * upSpeed + zAxis * forwardSpeed;
+	
+	position = position + positionIncrement;
 	
 	// animate height
 	
@@ -318,12 +320,17 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 	const float leanRetain = powf(.02f, dt);
 	
 	leanAngle = leanAngle * leanRetain + desiredLeanAngle * (1.f - leanRetain);
+	
+	// animate bobbing
+	
+	currentBobbingPhase = fmodf(currentBobbingPhase + positionIncrement.CalcSize() * bobbingSpeed, 1.f);
 }
 
 void Camera::FirstPerson::calculateWorldMatrix(Mat4x4 & out_matrix) const
 {
 	out_matrix = Mat4x4(true)
 		.Translate(0, currentHeight, 0)
+		.Translate(0, sinf(currentBobbingPhase * 2.f * float(M_PI)) * bobbingAmount, 0)
 		.Translate(position)
 		.RotateZ(roll / 180.f * float(M_PI))
 		.RotateY(yaw / 180.f * float(M_PI))
