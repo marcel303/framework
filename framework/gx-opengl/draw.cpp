@@ -463,7 +463,7 @@ static void gxFlush(bool endOfBatch)
 		
 		if (s_gxPrimitiveType == GX_QUADS)
 		{
-			fassert(s_gxVertexCount < 65536);
+			fassert(s_gxVertexCount <= 65536);
 			
 			// todo: use triangle strip + compute index buffer once at init time
 			

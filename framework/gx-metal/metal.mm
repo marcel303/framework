@@ -1505,7 +1505,7 @@ static void gxFlush(bool endOfBatch)
 		
 		if (s_gxPrimitiveType == GX_QUADS)
 		{
-			fassert(s_gxVertexCount < 65536);
+			fassert(s_gxVertexCount <= 65536);
 			
 			const int numQuads = s_gxVertexCount / 4;
 			const int numIndices = numQuads * 6;
@@ -1547,7 +1547,7 @@ static void gxFlush(bool endOfBatch)
 		
 		if (s_gxPrimitiveType == GX_TRIANGLE_FAN)
 		{
-			fassert(s_gxVertexCount < 65536);
+			fassert(s_gxVertexCount <= 65536);
 			
 			const int numTriangles = s_gxVertexCount - 2;
 			const int numIndices = numTriangles * 3;
@@ -1803,6 +1803,9 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 	[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numVertices];
 
 	globals.gxShaderIsDirty = false;
+	
+// todo : bind VS inputs on gxBegin call ?
+	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 }
 
 void gxEmitVertex()

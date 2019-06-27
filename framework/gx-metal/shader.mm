@@ -157,6 +157,11 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 		
 		id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&reflection error:&error];
 		
+		if (pipelineState == nullptr && error != nullptr)
+		{
+			NSLog(@"%@", error);
+		}
+		
 		[pipelineState release];
 		
 	#if 1
