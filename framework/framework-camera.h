@@ -79,9 +79,12 @@ public:
 	private:
 		double mouseDx = 0.0;
 		double mouseDy = 0.0;
+		float currentHeight = 0.f;
 		
 	public:
 		Vec3 position;
+		float height = 1.8f;
+		float duckAmount = .5f;
 		
 		float yaw = 0.f;
 		float pitch = 0.f;
@@ -93,6 +96,7 @@ public:
 		float forwardSpeedMultiplier = 1.f;
 		float strafeSpeedMultiplier = 1.f;
 		float upSpeedMultiplier = 1.f;
+		float leanAngle = 0.f;
 	
 		int gamepadIndex = -1;
 		
