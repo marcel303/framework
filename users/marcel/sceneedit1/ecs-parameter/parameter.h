@@ -561,6 +561,7 @@ public:
 	}
 	
 	int translateKeyToValue(const char * key) const;
+	const char * translateValueToKey(const int value) const;
 	
 	int & access_rw() // read-write access. be careful to invalidate the value when you change it!
 	{
@@ -570,6 +571,16 @@ public:
 	const std::vector<Elem> & getElems() const
 	{
 		return elems;
+	}
+	
+	const int getDefaultValue() const
+	{
+		return defaultValue;
+	}
+	
+	void setDefaultValue(const int value)
+	{
+		defaultValue = value;
 	}
 };
 
@@ -590,7 +601,7 @@ private:
 	bool isHiddenFromUi = false;
 	
 public:
-	void init(const char * prefix, const int in_index = -1);
+	void init(const char * prefix);
 	void tick();
 	
 	void setPrefix(const char * prefix);
@@ -611,8 +622,10 @@ public:
 	
 	void setToDefault(const bool recurse);
 	
-	void addChild(ParameterMgr * child)
+	void addChild(ParameterMgr * child, const int childIndex = -1)
 	{
+		child->index = childIndex;
+		
 		children.push_back(child);
 	}
 	

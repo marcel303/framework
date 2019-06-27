@@ -12,12 +12,19 @@ int ParameterEnum::translateKeyToValue(const char * key) const
 	return -1;
 }
 
+const char * ParameterEnum::translateValueToKey(const int value) const
+{
+	for (auto & elem : elems)
+		if (elem.value == value)
+			return elem.key;
+	return nullptr;
+}
+
 //
 
-void ParameterMgr::init(const char * in_prefix, const int in_index)
+void ParameterMgr::init(const char * in_prefix)
 {
 	prefix = in_prefix;
-	index = in_index;
 }
 
 void ParameterMgr::tick()
