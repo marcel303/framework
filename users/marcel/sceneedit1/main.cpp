@@ -415,6 +415,7 @@ struct SceneEditor
 		camera.ortho.side = Camera::kOrthoSide_Top;
 		camera.ortho.scale = 16.f;
 		camera.firstPerson.position = Vec3(0, 1, -2);
+		camera.firstPerson.height = 0.f;
 	}
 	
 	void init()
