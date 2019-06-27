@@ -570,6 +570,8 @@ int main(int arg, char * argv[])
 	
 	for (;;)
 	{
+		framework.waitForEvents = true;
+		
 		framework.process();
 		
 		if (framework.quitRequested)
@@ -584,6 +586,7 @@ int main(int arg, char * argv[])
 			setFont("calibri.ttf");
 			
 			setLumi(c);
+			setAlpha(255);
 			drawRect(0, 0, surface.layout.sx, surface.layout.sy);
 			
 			liveUi.draw();
