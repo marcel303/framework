@@ -51,6 +51,185 @@ ShaderCache g_shaderCache;
 
 //
 
+void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameVs, const char * in_filenamePs, const char * in_outputs)
+{
+	//ScopedLoadTimer loadTimer(_name);
+
+	shut();
+	
+	@autoreleasepool
+	{
+		id <MTLDevice> device = metal_get_device();
+		
+		NSError * error = nullptr;
+		
+		std::vector<std::string> errorMessages;
+		std::string shaderVs_opengl;
+		std::string shaderPs_opengl;
+		
+		preprocessShaderFromFile(in_filenameVs, shaderVs_opengl, 0, errorMessages);
+		preprocessShaderFromFile(in_filenamePs, shaderPs_opengl, 0, errorMessages);
+		
+		std::string shaderVs;
+		std::string shaderPs;
+		
+		buildMetalText(shaderVs_opengl.c_str(), 'v', in_outputs, shaderVs);
+		buildMetalText(shaderPs_opengl.c_str(), 'p', in_outputs, shaderPs);
+		
+		id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:shaderVs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
+		if (library_vs == nullptr && error != nullptr)
+		{
+			printf("vs text:\n%s", shaderVs.c_str());
+			NSLog(@"%@", error);
+		}
+		
+		id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:shaderPs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
+		if (library_ps == nullptr && error != nullptr)
+		{
+			printf("ps text:\n%s", shaderPs.c_str());
+			NSLog(@"%@", error);
+		}
+		
+		vsFunction = [library_vs newFunctionWithName:@"shader_main"];
+		psFunction = [library_ps newFunctionWithName:@"shader_main"];
+		
+		// get reflection info for this shader
+		
+		MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
+		pipelineDescriptor.label = @"reflection pipeline";
+		pipelineDescriptor.vertexFunction = vsFunction;
+		pipelineDescriptor.fragmentFunction = psFunction;
+		pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
+		
+		MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
+		
+	// fixme : this is duplicated code. perhaps we should enforce everything is set
+	//         before the shader is set. when a shader is set, construct the pipeline state
+	//         only thing allowed after a shader is set is set to immediates, and to
+	//         do draw calls
+		for (int i = 0; i < renderState.vertexInputCount; ++i)
+		{
+			auto & e = renderState.vertexInputs[i];
+			auto * a = vertexDescriptor.attributes[e.id];
+			
+			MTLVertexFormat metalFormat = MTLVertexFormatInvalid;
+			
+			if (e.type == GX_ELEMENT_FLOAT32)
+			{
+				if (e.numComponents == 1)
+					metalFormat = MTLVertexFormatFloat;
+				else if (e.numComponents == 2)
+					metalFormat = MTLVertexFormatFloat2;
+				else if (e.numComponents == 3)
+					metalFormat = MTLVertexFormatFloat3;
+				else if (e.numComponents == 4)
+					metalFormat = MTLVertexFormatFloat4;
+			}
+			else if (e.type == GX_ELEMENT_UINT8)
+			{
+				if (e.numComponents == 1)
+					metalFormat = e.normalize ? MTLVertexFormatUCharNormalized : MTLVertexFormatUChar;
+				else if (e.numComponents == 2)
+					metalFormat = e.normalize ? MTLVertexFormatUChar2Normalized : MTLVertexFormatUChar2;
+				else if (e.numComponents == 3)
+					metalFormat = e.normalize ? MTLVertexFormatUChar3Normalized : MTLVertexFormatUChar3;
+				else if (e.numComponents == 4)
+					metalFormat = e.normalize ? MTLVertexFormatUChar4Normalized : MTLVertexFormatUChar4;
+			}
+			
+			Assert(metalFormat != MTLVertexFormatInvalid);
+			if (metalFormat != MTLVertexFormatInvalid)
+			{
+				a.format = metalFormat;
+				a.offset = e.offset;
+				a.bufferIndex = 0;
+			}
+		}
+	
+		vertexDescriptor.layouts[0].stride = renderState.vertexStride;
+		vertexDescriptor.layouts[0].stepRate = 1;
+		vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+		pipelineDescriptor.vertexDescriptor = vertexDescriptor;
+		
+		const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
+		
+		MTLRenderPipelineReflection * reflection;
+		
+		id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&reflection error:&error];
+		
+		if (pipelineState == nullptr && error != nullptr)
+		{
+			NSLog(@"%@", error);
+		}
+		
+		[pipelineState release];
+		
+	#if 1
+		//NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
+		//NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
+		[library_vs release];
+		[library_ps release];
+		//NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
+		//NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
+	#endif
+		
+		//
+		
+		init(reflection);
+		
+		//NSLog(@"reflection retain count: %d\n", (int)reflection.retainCount);
+		
+		name = in_name;
+		vs = in_filenameVs;
+		ps = in_filenamePs;
+		outputs = in_outputs;
+		
+		version++;
+	}
+}
+
+//
+
+void ShaderCache::clear()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		delete i->second;
+		i->second = nullptr;
+	}
+	
+	m_map.clear();
+}
+
+void ShaderCache::reload()
+{
+	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
+	{
+		i->second->reload();
+	}
+}
+
+void ShaderCache::handleSourceChanged(const char * name)
+{
+	for (auto & shaderCacheItr : m_map)
+	{
+		ShaderCacheElem_Metal * cacheElem = shaderCacheItr.second;
+		
+		if (name == cacheElem->vs || name == cacheElem->ps)
+		{
+			cacheElem->reload();
+			
+			if (globals.shader != nullptr && globals.shader->getType() == SHADER_VSPS)
+			{
+				Shader * shader = static_cast<Shader*>(globals.shader);
+				
+				if (&shader->getCacheElem() == cacheElem)
+					clearShader();
+			}
+		}
+	}
+}
+
 ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	Key key;
@@ -67,121 +246,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 	{
 		ShaderCacheElem_Metal * elem = new ShaderCacheElem_Metal();
 		
-		@autoreleasepool
-		{
-			id <MTLDevice> device = metal_get_device();
-			
-			NSError * error = nullptr;
-			
-			std::vector<std::string> errorMessages;
-			std::string shaderVs_opengl;
-			std::string shaderPs_opengl;
-			
-			preprocessShaderFromFile(filenameVs, shaderVs_opengl, 0, errorMessages);
-			preprocessShaderFromFile(filenamePs, shaderPs_opengl, 0, errorMessages);
-			
-			std::string shaderVs;
-			std::string shaderPs;
-			
-			buildMetalText(shaderVs_opengl.c_str(), 'v', outputs, shaderVs);
-			buildMetalText(shaderPs_opengl.c_str(), 'p', outputs, shaderPs);
-			
-			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:shaderVs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
-			if (library_vs == nullptr && error != nullptr)
-			{
-				printf("vs text:\n%s", shaderVs.c_str());
-				NSLog(@"%@", error);
-			}
-			
-			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:shaderPs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
-			if (library_ps == nullptr && error != nullptr)
-			{
-				printf("ps text:\n%s", shaderPs.c_str());
-				NSLog(@"%@", error);
-			}
-			
-			id <MTLFunction> vs = [library_vs newFunctionWithName:@"shader_main"];
-			id <MTLFunction> ps = [library_ps newFunctionWithName:@"shader_main"];
-			
-			// get reflection info for this shader
-			
-			MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
-			pipelineDescriptor.label = @"reflection pipeline";
-			pipelineDescriptor.vertexFunction = vs;
-			pipelineDescriptor.fragmentFunction = ps;
-			pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-			
-			MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
-			
-		// fixme : this is duplicated code. perhaps we should enforce everything is set
-		//         before the shader is set. when a shader is set, construct the pipeline state
-		//         only thing allowed after a shader is set is set to immediates, and to
-		//         do draw calls
-			for (int i = 0; i < renderState.vertexInputCount; ++i)
-			{
-				auto & e = renderState.vertexInputs[i];
-				auto * a = vertexDescriptor.attributes[e.id];
-				
-				MTLVertexFormat metalFormat = MTLVertexFormatInvalid;
-				
-				if (e.type == GX_ELEMENT_FLOAT32)
-				{
-					if (e.numComponents == 1)
-						metalFormat = MTLVertexFormatFloat;
-					else if (e.numComponents == 2)
-						metalFormat = MTLVertexFormatFloat2;
-					else if (e.numComponents == 3)
-						metalFormat = MTLVertexFormatFloat3;
-					else if (e.numComponents == 4)
-						metalFormat = MTLVertexFormatFloat4;
-				}
-				else if (e.type == GX_ELEMENT_UINT8)
-				{
-					if (e.numComponents == 1)
-						metalFormat = e.normalize ? MTLVertexFormatUCharNormalized : MTLVertexFormatUChar;
-					else if (e.numComponents == 2)
-						metalFormat = e.normalize ? MTLVertexFormatUChar2Normalized : MTLVertexFormatUChar2;
-					else if (e.numComponents == 3)
-						metalFormat = e.normalize ? MTLVertexFormatUChar3Normalized : MTLVertexFormatUChar3;
-					else if (e.numComponents == 4)
-						metalFormat = e.normalize ? MTLVertexFormatUChar4Normalized : MTLVertexFormatUChar4;
-				}
-				
-				Assert(metalFormat != MTLVertexFormatInvalid);
-				if (metalFormat != MTLVertexFormatInvalid)
-				{
-					a.format = metalFormat;
-					a.offset = e.offset;
-					a.bufferIndex = 0;
-				}
-			}
-		
-			vertexDescriptor.layouts[0].stride = renderState.vertexStride;
-			vertexDescriptor.layouts[0].stepRate = 1;
-			vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
-			pipelineDescriptor.vertexDescriptor = vertexDescriptor;
-			
-			const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
-			
-			MTLRenderPipelineReflection * reflection;
-			
-			id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&reflection error:&error];
-			
-			[pipelineState release];
-			
-		#if 0
-			NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
-			NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
-			[library_vs release];
-			[library_ps release];
-			NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
-			NSLog(@"library_ps retain count: %lu", [library_ps retainCount]);
-		#endif
-			
-			elem->init(reflection);
-			elem->vs = vs;
-			elem->ps = ps;
-		}
+		elem->load(name, filenameVs, filenamePs, outputs);
 		
 		m_map[key] = elem;
 		
@@ -239,9 +304,14 @@ extern std::string s_shaderOutputs; // todo : cleanup
 void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	if (outputs == nullptr)
-		outputs = s_shaderOutputs.c_str();
+		outputs = s_shaderOutputs.empty() ? "c" : s_shaderOutputs.c_str();
 	
 	m_cacheElem = static_cast<ShaderCacheElem_Metal*>(&g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs));
+}
+
+int Shader::getVersion() const
+{
+	return m_cacheElem->version;
 }
 
 GxImmediateIndex Shader::getImmediate(const char * name)

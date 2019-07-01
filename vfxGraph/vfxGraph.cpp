@@ -27,7 +27,6 @@
 
 #include "framework.h"
 #include "graphEdit.h"
-#include "oscEndpointMgr.h" // g_oscEndpointMgr
 #include "Parse.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
@@ -49,10 +48,6 @@ int VFXGRAPH_SY = 0;
 VfxGraph * g_currentVfxGraph = nullptr;
 
 Surface * g_currentVfxSurface = nullptr;
-
-//
-
-OscEndpointMgr g_oscEndpointMgr;
 
 //
 

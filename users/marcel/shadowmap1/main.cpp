@@ -32,19 +32,6 @@ struct Scene
 	
 	void draw(const bool captureScreenPositions) const
 	{
-		Shader shader("shadedObject");
-	
-	/*
-		// would be necessary to capture shadow map textures for forward shadow casting lights
-	 
-		if (applyForwardLighting)
-		{
-			setShader(shader);
-			shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
-			shader.setTexture("depthTexture", 0, view_light.getDepthTexture());
-		}
-	*/
-	
 		const Vec3 cube_size_base(.5f, .3f, .5f);
 	
 	#if 0
@@ -142,18 +129,33 @@ struct Light
 	
 		if (isPerspective)
 		{
+		#if ENABLE_OPENGL
 			projection.MakePerspectiveGL(
 				fov * float(M_PI) / 180.f, 1.f,
 				depthRange.min,
 				depthRange.max);
+		#else
+			projection.MakePerspectiveLH(
+				fov * float(M_PI) / 180.f, 1.f,
+				depthRange.min,
+				depthRange.max);
+		#endif
 		}
 		else
 		{
+		#if ENABLE_OPENGL
 			projection.MakeOrthoGL(
 				-orthoSize, +orthoSize,
 				-orthoSize, +orthoSize,
 				depthRange.min,
 				depthRange.max);
+		#else
+			projection.MakeOrthoLH(
+				-orthoSize, +orthoSize,
+				-orthoSize, +orthoSize,
+				depthRange.min,
+				depthRange.max);
+		#endif
 		}
 	
 		const Mat4x4 worldToLight = lightToWorld_transform.CalcInv();
@@ -251,12 +253,12 @@ public:
 		
 		lightMap->clear();
 		
-		pushSurface(lightMap);
+		//pushSurface(lightMap); // todo : either decide to disallow surface reuse within the context of a parent surface (since all of the surfaces inside a parent will execute first, reuse and usage inside the parent context is not guaranteed to 'interleave' the results. or commit current command buffer and start a new one when a child is pushed and popped
 	}
 	
 	void drawEnd()
 	{
-		popSurface();
+		//popSurface();
 	}
 	
 	void drawShadowLightBegin(const Light & light)
@@ -266,7 +268,11 @@ public:
 		
 		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
-		gxLoadMatrixf(light.worldToClip_transform.m_v);
+		gxLoadIdentity();
+	#if ENABLE_METAL
+		gxScalef(1, -1, 1); // Metal NDC/clip-space bottom-y is -1
+	#endif
+		gxMultMatrixf(light.worldToClip_transform.m_v);
 		
 		pushDepthTest(true, DEPTH_LESS, true);
 		pushBlend(BLEND_OPAQUE);
@@ -281,9 +287,12 @@ public:
 
 		//
 		
+		pushSurface(lightMap); // todo : remove. we want to push it only once
 		setColorClamp(false);
 		pushBlend(BLEND_ADD);
 		{
+			projectScreen2d();
+			
 			Shader shader("deferredLightWithShadow");
 			setShader(shader);
 			shader.setTexture("depthTexture", 0, drawState.sceneDepthTexture);
@@ -303,6 +312,7 @@ public:
 		}
 		popBlend();
 		setColorClamp(true);
+		popSurface();
 	}
 	
 	void drawLight(const Light & light)
@@ -365,6 +375,9 @@ int main(int argc, char * argv[])
 	
 	Camera3d camera;
 	camera.position.Set(0, 2, -2);
+	//camera.maxForwardSpeed *= 2.f;
+	//camera.maxStrafeSpeed *= 2.f;
+	//camera.maxUpSpeed *= 2.f;
 	
 	LightDrawer lightDrawer;
 	{
@@ -374,28 +387,28 @@ int main(int argc, char * argv[])
 		lightDrawer.init(properties);
 	}
 	
-	Light light;
-	light.isPerspective = PERSPECTIVE_LIGHT;
-	light.isShadowCasting = true;
-	light.depthRange.min = .5f;
-	light.depthRange.max = 10.f;
-	light.fov = 60.f;
-	light.orthoSize = LIGHT_ORTHO_SIZE;
+	Light light1;
+	light1.isPerspective = PERSPECTIVE_LIGHT;
+	light1.isShadowCasting = true;
+	light1.depthRange.min = .5f;
+	light1.depthRange.max = 10.f;
+	light1.fov = 60.f;
+	light1.orthoSize = LIGHT_ORTHO_SIZE;
 	
 	Light light2;
 	light2.isPerspective = true;
 	light2.isShadowCasting = true;
 	light2.depthRange.min = .5f;
 	light2.depthRange.max = 10.f;
-	light2.fov = 60.f;
+	light2.fov = 130.f;
 	light2.orthoSize = LIGHT_ORTHO_SIZE;
 	
 	Light light3;
 	light3.isPerspective = false;
-	light3.isShadowCasting = false;
+	light3.isShadowCasting = true;
 	light3.depthRange.min = .1f;
 	light3.depthRange.max = 1000.f;
-	light3.orthoSize = 1000000.f;
+	light3.orthoSize = 200.f;
 	
 	enum DrawMode
 	{
@@ -405,7 +418,8 @@ int main(int argc, char * argv[])
 		kDrawMode_LightDepth,
 		kDrawMode_CameraWorldPosition,
 		kDrawMode_DeferredShadow,
-		kDrawMode_CameraNormal
+		kDrawMode_CameraNormal,
+		kDrawMode_LightBuffer
 	};
 	
 	DrawMode drawMode = kDrawMode_CameraColor;
@@ -491,6 +505,8 @@ int main(int argc, char * argv[])
 			drawMode = kDrawMode_DeferredShadow;
 		if (keyboard.wentDown(SDLK_7))
 			drawMode = kDrawMode_CameraNormal;
+		if (keyboard.wentDown(SDLK_8))
+			drawMode = kDrawMode_LightBuffer;
 		if (keyboard.wentDown(SDLK_o))
 			depthLinearDrawScale /= 2.f;
 		if (keyboard.wentDown(SDLK_p))
@@ -502,27 +518,29 @@ int main(int argc, char * argv[])
 		
 		if (mouse.isDown(BUTTON_LEFT))
 		{
-			light.lightToWorld_transform = camera.getWorldMatrix();
-			light.color.a = 8.f;
+			light1.lightToWorld_transform = camera.getWorldMatrix();
+			light1.color.a = 8.f;
 		}
-		//light.color.a = lerp<float>(.5f, 1.3f, (cosf(framework.time * 10.f) + 1.f) / 2.f);
-		light.color.a *= powf(.4f, framework.timeStep);
-		light.calculateTransforms();
+		light1.color.a = lerp<float>(2.f, 23.f, (cosf(framework.time * 10.f) + 1.f) / 2.f);
+		//light1.color.a *= powf(.4f, framework.timeStep);
+		light1.calculateTransforms();
 		
 		light2.lightToWorld_transform.MakeLookat(
 				Vec3(cosf(framework.time / 2.34f) * 3.f, 4, sinf(framework.time / 3.45f) * 3.f),
 				Vec3(cosf(framework.time / 1.23f) * 6.f, 0, sinf(framework.time / 4.56f) * 6.f),
 				Vec3(0, 1, 0));
 		light2.lightToWorld_transform = light2.lightToWorld_transform.CalcInv();
-		light2.color = Color::fromHSL(framework.time / 1.45f, .1f, .8f);
-		light2.color.a = 16.f;
+		light2.color = Color::fromHSL(framework.time / 6.54f, .4f, .6f);
+		light2.color.a = 32.f;
 		light2.calculateTransforms();
 		
 		light3.lightToWorld_transform.MakeLookat(
 				Vec3(cosf(framework.time / 10.f) * 3.f, 6, sinf(framework.time / 10.f) * 3.f),
 				Vec3(0, 0, 0),
 				Vec3(0, 1, 0));
+		light3.lightToWorld_transform = light3.lightToWorld_transform.CalcInv();
 		light3.color = Color(255, 127, 63, 31);
+		light3.color.a = .8f;
 		light3.calculateTransforms();
 		
 		auto drawLightVolume = [](const Light & light)
@@ -532,9 +550,56 @@ int main(int argc, char * argv[])
 				gxMultMatrixf(light.lightToWorld_transform.m_v);
 				
 				setColor(100, 100, 100);
-				lineCube(
-					Vec3(0, 0, (light.depthRange.min + light.depthRange.max) / 2.f),
-					Vec3(LIGHT_ORTHO_SIZE, LIGHT_ORTHO_SIZE, (light.depthRange.max - light.depthRange.min) / 2.f));
+				
+				if (light.isPerspective)
+				{
+					const int resolution = 20;
+					
+					gxBegin(GX_TRIANGLES);
+					{
+						const float fov_rad = light.fov * float(M_PI) / 180.f;
+						const float w = tanf(fov_rad / 2.f);
+						
+						for (int i = 0; i < resolution; ++i)
+						{
+							if ((i % 2) != 0)
+								continue;
+							
+							const float t1 = (i + 0) / float(resolution);
+							const float t2 = (i + .1f) / float(resolution);
+							
+							const float angle1 = t1 * 2.f * float(M_PI);
+							const float angle2 = t2 * 2.f * float(M_PI);
+							
+							const Vec3 p1 = Vec3(0, 0, 0);
+							const Vec3 p2 = Vec3(
+								cosf(angle1) * w * light.depthRange.max,
+								sinf(angle1) * w * light.depthRange.max,
+								light.depthRange.max);
+							const Vec3 p3 = Vec3(
+								cosf(angle2) * w * light.depthRange.max,
+								sinf(angle2) * w * light.depthRange.max,
+								light.depthRange.max);
+							
+							const Vec3 d1 = p2 - p1;
+							const Vec3 d2 = p3 - p1;
+							const Vec3 n = -(d1 % d2).CalcNormalized();
+							
+							gxNormal3fv(&n[0]);
+							gxVertex3fv(&p1[0]);
+							gxVertex3fv(&p2[0]);
+							gxVertex3fv(&p3[0]);
+						}
+					}
+					gxEnd();
+				}
+				else
+				{
+					lineCube(
+						Vec3(0, 0, (light.depthRange.min + light.depthRange.max) / 2.f),
+						Vec3(light.orthoSize, light.orthoSize, (light.depthRange.max - light.depthRange.min) / 2.f));
+				}
+				
 				
 				gxBegin(GX_LINES);
 				gxVertex3f(0, 0, 0);
@@ -543,7 +608,9 @@ int main(int argc, char * argv[])
 				
 				gxPushMatrix();
 				gxScalef(.2f, .2f, 1.f);
-				drawGrid3d(1, 1, 0, 1);
+				fillCube(
+					Vec3(0, 0, 0),
+					Vec3(1, 1, fminf(.02f, light.depthRange.min / 2.f)));
 				gxPopMatrix();
 			}
 			gxPopMatrix();
@@ -557,7 +624,7 @@ int main(int argc, char * argv[])
 			{
 				// draw light volume and direction
 				
-				drawLightVolume(light);
+				drawLightVolume(light1);
 				drawLightVolume(light2);
 				drawLightVolume(light3);
 			}
@@ -678,12 +745,42 @@ int main(int argc, char * argv[])
 		{
 			if (drawMode == kDrawMode_CameraColor)
 			{
+			#if 1
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_camera.getTexture());
 				setColor(colorWhite);
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				gxSetTexture(0);
 				popBlend();
+			#else
+				// would be necessary to capture shadow map textures for forward shadow casting lights
+				
+			// this is some old coded for drawing forward lit shaded objects
+			// currently not in use, but will want to get this back working again
+			// requires the light drawer to cache shadow maps first
+				Shader shader("shadedObject");
+				setShader(shader);
+				shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
+				shader.setTexture("depthTexture", 0, view_camera.getTexture());
+				
+				projectPerspective3d(60.f, znear, zfar);
+			
+				camera.pushViewMatrix();
+				{
+					pushDepthTest(true, DEPTH_LESS, true);
+					pushBlend(BLEND_OPAQUE);
+					{
+						drawScene(false);
+					}
+					popBlend();
+					popDepthTest();
+				}
+				camera.popViewMatrix();
+				
+				projectScreen2d();
+				
+				clearShader();
+			#endif
 			}
 			else if (drawMode == kDrawMode_CameraDepth)
 			{
@@ -754,7 +851,7 @@ int main(int argc, char * argv[])
 						}
 					};
 					
-					drawLight(light);
+					drawLight(light1);
 					drawLight(light2);
 					drawLight(light3);
 				}
@@ -776,6 +873,43 @@ int main(int argc, char * argv[])
 				pushBlend(BLEND_OPAQUE);
 				gxSetTexture(view_camera_normal.getTexture());
 				setColor(colorWhite);
+				drawRect(0, 0, GFX_SX, GFX_SY);
+				gxSetTexture(0);
+				popBlend();
+			}
+			else if (drawMode == kDrawMode_LightBuffer)
+			{
+				// accumulate lights
+				
+				lightDrawer.drawBegin(view_camera.getDepthTexture(), view_camera_normal.getTexture());
+				{
+					auto drawLight = [&](const Light & light)
+					{
+						if (light.isShadowCasting)
+						{
+							lightDrawer.drawShadowLightBegin(light);
+							{
+								drawScene(false);
+							}
+							lightDrawer.drawShadowLightEnd(light);
+						}
+						else
+						{
+							lightDrawer.drawLight(light);
+						}
+					};
+					
+					drawLight(light1);
+					drawLight(light2);
+					drawLight(light3);
+				}
+				lightDrawer.drawEnd();
+				
+				// apply light to color image
+				
+				pushBlend(BLEND_OPAQUE);
+				setColor(colorWhite);
+				gxSetTexture(lightDrawer.getLightMapSurface()->getTexture());
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				gxSetTexture(0);
 				popBlend();

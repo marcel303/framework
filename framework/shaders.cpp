@@ -82,6 +82,9 @@
 #include "data/engine/builtin-msdf-text.ps"
 #include "data/engine/builtin-msdf-text.vs"
 
+#include "data/engine/builtin-bitmapped-text.ps"
+#include "data/engine/builtin-bitmapped-text.vs"
+
 void registerBuiltinShaders()
 {
 	shaderSource("engine/ShaderCommon.txt",
@@ -170,6 +173,9 @@ void registerBuiltinShaders()
 	shaderSource("engine/MsdfUtil.txt", s_msdfUtil);
 	shaderSource("engine/builtin-msdf-text.ps", s_msdfTextPs);
 	shaderSource("engine/builtin-msdf-text.vs", s_msdfTextVs);
+	
+	shaderSource("engine/builtin-bitmapped-text.ps", s_bitmappedTextPs);
+	shaderSource("engine/builtin-bitmapped-text.vs", s_bitmappedTextVs);
 }
 
 #endif

@@ -1,4 +1,5 @@
 add ecs-parameter
+add ecs-parameter-from-osc
 add ecs-parameterui
 
 app marcel-sceneedit1

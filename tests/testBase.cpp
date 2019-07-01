@@ -261,7 +261,10 @@ static bool doMenu(const bool tickMenu, const bool drawMenu)
 		s_testState.drawX = GFX_SX - 25;
 		if (doButton(s_testState.drawX, GFX_SY - 25, -1, -1, "About") == kButtonHover)
 		{
-			drawTextbox(mouse.x, mouse.y, s_testState.about);
+			if (s_testState.drawMenu)
+			{
+				drawTextbox(mouse.x, mouse.y, s_testState.about);
+			}
 		}
 	}
 	

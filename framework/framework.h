@@ -284,6 +284,9 @@ namespace spriter
 	class Scene;
 }
 
+class ColorTarget;
+class DepthTarget;
+
 // globals
 
 extern Framework framework;
@@ -432,6 +435,7 @@ public:
 	int windowX;
 	int windowY;
 	bool windowBorder;
+	bool windowIsResizable;
 	std::string windowTitle;
 	std::string windowIcon;
 	int windowSx;
@@ -592,11 +596,6 @@ public:
 		}
 	} depthTarget;
 };
-
-#if ENABLE_METAL
-	class ColorTarget;
-	class DepthTarget;
-#endif
 
 class Surface
 {
@@ -1557,6 +1556,7 @@ static inline void gxPushMatrix() { }
 static inline void gxLoadIdentity() { }
 static inline void gxLoadMatrixf(const float * m) { }
 static inline void gxGetMatrixf(GX_MATRIX mode, float * m) { }
+static inline void gxSetMatrixf(GX_MATRIX mode, const float * m) { }
 static inline void gxMultMatrixf(const float * m) { }
 static inline void gxTranslatef(float x, float y, float z) { }
 static inline void gxRotatef(float angle, float x, float y, float z) { }
@@ -1567,7 +1567,7 @@ static inline void gxInitialize() { }
 static inline void gxShutdown() { }
 static inline void gxBegin(GX_PRIMITIVE_TYPE primitiveType) { }
 static inline void gxEnd() { }
-static inline void gxEmitVertices(int primitiveType, int numVertices) { }
+static inline void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices) { }
 static inline void gxColor4f(float r, float g, float b, float a) { }
 static inline void gxColor4fv(const float * rgba) { }
 static inline void gxColor3ub(int r, int g, int b) { }
@@ -1605,7 +1605,7 @@ void gxInitialize();
 void gxShutdown();
 void gxBegin(GX_PRIMITIVE_TYPE primitiveType);
 void gxEnd();
-void gxEmitVertices(int primitiveType, int numVertices);
+void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices);
 void gxColor4f(float r, float g, float b, float a);
 void gxColor4fv(const float * rgba);
 void gxColor3ub(int r, int g, int b);
@@ -1632,6 +1632,7 @@ GX_MATRIX gxGetMatrixMode();
 #define gxLoadIdentity glLoadIdentity
 #define gxLoadMatrixf glLoadMatrixf
 void gxGetMatrixf(GX_MATRIX mode, float * m);
+void gxSetMatrixf(GX_MATRIX mode, const float * m);
 #define gxMultMatrixf glMultMatrixf
 #define gxTranslatef glTranslatef
 #define gxRotatef glRotatef

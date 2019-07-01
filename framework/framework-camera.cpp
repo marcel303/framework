@@ -85,6 +85,7 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 void Camera::Orbit::calculateWorldMatrix(Mat4x4 & out_matrix) const
 {
 	out_matrix = Mat4x4(true)
+		.Translate(origin[0], origin[1], origin[2])
 		.RotateY(azimuth * float(M_PI) / 180.f)
 		.RotateX(elevation * float(M_PI) / 180.f)
 		.Translate(0, 0, distance);
@@ -92,7 +93,7 @@ void Camera::Orbit::calculateWorldMatrix(Mat4x4 & out_matrix) const
 
 void Camera::Orbit::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
 {
-	out_matrix.MakePerspectiveLH(60.f * float(M_PI) / 180.f, viewportSy / float(viewportSx), .01f, 100.f);
+	out_matrix.MakePerspectiveLH(60.f * float(M_PI) / 180.f, viewportSy / float(viewportSx), .01f, 1000.f);
 }
 
 //
@@ -214,7 +215,7 @@ void Camera::Ortho::calculateProjectionMatrix(const int viewportSx, const int vi
 {
 	const float sx = viewportSx / float(viewportSy);
 	
-	out_matrix.MakeOrthoLH(-sx * scale, +sx * scale, +1.f * scale, -1.f * scale, -100.f, 100.f);
+	out_matrix.MakeOrthoLH(-sx * scale, +sx * scale, +1.f * scale, -1.f * scale, -1000.f, 1000.f);
 }
 
 //
@@ -224,6 +225,9 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 	float forwardSpeed = 0.f;
 	float strafeSpeed = 0.f;
 	float upSpeed = 0.f;
+	
+	float desiredHeight = height;
+	float desiredLeanAngle = 0.f;
 	
 	if (inputIsCaptured == false)
 	{
@@ -238,6 +242,14 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 		if (keyboard.isDown(SDLK_RIGHT) || keyboard.isDown(SDLK_d))
 			strafeSpeed += 1.f;
 		
+		if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+			desiredHeight *= 1.f - duckAmount;
+		
+		if (keyboard.isDown(SDLK_LEFTBRACKET))
+			desiredLeanAngle = -15.f;
+		if (keyboard.isDown(SDLK_RIGHTBRACKET))
+			desiredLeanAngle = +15.f;
+		
 		// gamepad
 		
 		if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD && gamepad[gamepadIndex].isConnected)
@@ -251,22 +263,25 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 		
 		// mouse + mouse smoothing
 		
-		mouseDx += mouse.dx;
-		mouseDy += mouse.dy;
-		
-		const double retain = pow(mouseSmooth, dt * 100.0);
-		
-		const double newDx = mouseDx * retain;
-		const double newDy = mouseDy * retain;
-		
-		const double thisDx = mouseDx - newDx;
-		const double thisDy = mouseDy - newDy;
-		
-		mouseDx = newDx;
-		mouseDy = newDy;
-		
-		yaw -= thisDx * mouseRotationSpeed;
-		pitch -= thisDy * mouseRotationSpeed;
+		if (mouse.isDown(BUTTON_LEFT))
+		{
+			mouseDx += mouse.dx;
+			mouseDy += mouse.dy;
+			
+			const double retain = pow(mouseSmooth, dt * 100.0);
+			
+			const double newDx = mouseDx * retain;
+			const double newDy = mouseDy * retain;
+			
+			const double thisDx = mouseDx - newDx;
+			const double thisDy = mouseDy - newDy;
+			
+			mouseDx = newDx;
+			mouseDy = newDy;
+			
+			yaw -= thisDx * mouseRotationSpeed;
+			pitch -= thisDy * mouseRotationSpeed;
+		}
 	}
 	else
 	{
@@ -287,21 +302,45 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 	const Vec3 yAxis = worldMatrix.GetAxis(1);
 	const Vec3 zAxis = worldMatrix.GetAxis(2);
 	
-	position = position + xAxis * strafeSpeed + yAxis * upSpeed + zAxis * forwardSpeed;
+	const Vec3 positionIncrement = xAxis * strafeSpeed + yAxis * upSpeed + zAxis * forwardSpeed;
+	
+	position = position + positionIncrement;
+	
+	// animate height
+	
+	const float heightRetain = powf(.02f, dt);
+	
+	if (currentHeight == 0.f)
+		currentHeight = desiredHeight;
+	else
+		currentHeight = currentHeight * heightRetain + desiredHeight * (1.f - heightRetain);
+	
+	// animate lean
+	
+	const float leanRetain = powf(.02f, dt);
+	
+	leanAngle = leanAngle * leanRetain + desiredLeanAngle * (1.f - leanRetain);
+	
+	// animate bobbing
+	
+	currentBobbingPhase = fmodf(currentBobbingPhase + positionIncrement.CalcSize() * bobbingSpeed, 1.f);
 }
 
 void Camera::FirstPerson::calculateWorldMatrix(Mat4x4 & out_matrix) const
 {
 	out_matrix = Mat4x4(true)
+		.Translate(0, currentHeight, 0)
+		.Translate(0, sinf(currentBobbingPhase * 2.f * float(M_PI)) * bobbingAmount, 0)
 		.Translate(position)
 		.RotateZ(roll / 180.f * float(M_PI))
 		.RotateY(yaw / 180.f * float(M_PI))
-		.RotateX(pitch / 180.f * float(M_PI));
+		.RotateX(pitch / 180.f * float(M_PI))
+		.RotateZ(leanAngle / 180.f * float(M_PI));
 }
 
 void Camera::FirstPerson::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
 {
-	out_matrix.MakePerspectiveLH(60.f * float(M_PI) / 180.f, viewportSy / float(viewportSx), .01f, 100.f);
+	out_matrix.MakePerspectiveLH(60.f * float(M_PI) / 180.f, viewportSy / float(viewportSx), .01f, 1000.f);
 }
 
 //

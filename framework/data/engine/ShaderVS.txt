@@ -4,23 +4,13 @@ include engine/ShaderCommon.txt
 
 // vertex streams
 
-#if defined(__METAL_VERSION__)
-	shader_attrib vec4 in_position4            VS_POSITION
-	shader_attrib vec3 in_normal               VS_NORMAL
-	shader_attrib vec4 in_color                VS_COLOR
-	shader_attrib vec2 in_texcoord0            VS_TEXCOORD0
-	shader_attrib vec2 in_texcoord1            VS_TEXCOORD1
-	shader_attrib vec4 in_skinningBlendIndices VS_BLEND_INDICES
-	shader_attrib vec4 in_skinningBlendWeights VS_BLEND_WEIGHTS
-#else
-	shader_attrib vec4 in_position4;
-	shader_attrib vec3 in_normal;
-	shader_attrib vec4 in_color;
-	shader_attrib vec2 in_texcoord0;
-	shader_attrib vec2 in_texcoord1;
-	shader_attrib vec4 in_skinningBlendIndices;
-	shader_attrib vec4 in_skinningBlendWeights;
-#endif
+shader_attrib vec4 in_position4            VS_POSITION
+shader_attrib vec3 in_normal               VS_NORMAL
+shader_attrib vec4 in_color                VS_COLOR
+shader_attrib vec2 in_texcoord0            VS_TEXCOORD0
+shader_attrib vec2 in_texcoord1            VS_TEXCOORD1
+shader_attrib vec4 in_skinningBlendIndices VS_BLEND_INDICES
+shader_attrib vec4 in_skinningBlendWeights VS_BLEND_WEIGHTS
 
 #define in_position in_position4.xyz
 

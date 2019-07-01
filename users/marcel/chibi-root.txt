@@ -21,6 +21,7 @@ add jsusfx1
 add libgg-psd
 add magiclines
 with_platform macos add metal1
+add maxpatch1
 add mitronix1
 add pincushion1
 add planetvis
@@ -35,6 +36,7 @@ add resonate2
 add sceneedit1
 add serial-to-osc
 add shadowmap1
+add signedDistance1
 add speakerpanner1
 add speakwithus
 add sRGB

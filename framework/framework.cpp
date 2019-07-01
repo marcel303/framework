@@ -62,6 +62,8 @@
 #include "shaders.h"
 #include "spriter.h"
 
+#define ENABLE_DISPLAY_SIZE_SCALING 0 // todo : make this work with resizable windows
+
 #if USE_GLYPH_ATLAS
 	#include "textureatlas.h"
 #endif
@@ -160,6 +162,7 @@ Framework::Framework()
 	windowX = -1;
 	windowY = -1;
 	windowBorder = true;
+	windowIsResizable = false;
 	windowTitle.clear();
 	windowSx = 0;
 	windowSy = 0;
@@ -283,7 +286,7 @@ bool Framework::init(int sx, int sy)
 	
 	flags |= SDL_WINDOW_OPENGL;
 #endif
-	
+
 	if (fullscreen && minification == 1)
 	{
 		flags |= SDL_WINDOW_FULLSCREEN;
@@ -358,6 +361,9 @@ bool Framework::init(int sx, int sy)
 
 	if (!windowBorder)
 		flags |= SDL_WINDOW_BORDERLESS;
+	
+	if (windowIsResizable)
+		flags |= SDL_WINDOW_RESIZABLE;
 	
 	if (allowHighDpi)
 		flags |= SDL_WINDOW_ALLOW_HIGHDPI;
@@ -440,6 +446,11 @@ bool Framework::init(int sx, int sy)
 				initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
 			return false;
 		}
+		
+		if (glBlendEquation == nullptr)
+			logWarning("OpenGL extension glBlendEquation not found");
+		if (glClampColor == nullptr)
+			logWarning("OpenGL extension glClampColor not found");
 	#endif
 	}
 
@@ -674,6 +685,7 @@ bool Framework::shutdown()
 	windowX = -1;
 	windowY = -1;
 	windowBorder = true;
+	windowIsResizable = false;
 	windowTitle.clear();
 	windowSx = 0;
 	windowSy = 0;
@@ -969,11 +981,15 @@ void Framework::process()
 					int windowSy;
 					SDL_GetWindowSize(window, &windowSx, &windowSy);
 					
+				#if ENABLE_DISPLAY_SIZE_SCALING
 					SDL_Event scaledEvent = e;
 					scaledEvent.motion.x = e.motion.x * globals.displaySize[0] / windowSx;
 					scaledEvent.motion.y = e.motion.y * globals.displaySize[1] / windowSy;
 					
 					windowData->mouseData.addEvent(scaledEvent);
+				#else
+					windowData->mouseData.addEvent(e);
+				#endif
 					
 					//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, windowData->mouseX, windowData->mouseY);
 				}
@@ -1814,22 +1830,7 @@ void Framework::registerShaderSource(const char * name, const char * text)
 
 	// refresh shaders which are using this source
 	
-#if ENABLE_OPENGL // todo : metal shader reload
-	for (auto & shaderCacheItr : g_shaderCache.m_map)
-	{
-		ShaderCacheElem & cacheElem = shaderCacheItr.second;
-		
-		if (name == cacheElem.vs || name == cacheElem.ps)
-		{
-			cacheElem.reload();
-			
-			if (globals.shader != nullptr && globals.shader->getProgram() == cacheElem.program)
-			{
-				clearShader();
-			}
-		}
-	}
-#endif
+	g_shaderCache.handleSourceChanged(name);
 }
 
 void Framework::unregisterShaderSource(const char * name)
@@ -4906,6 +4907,10 @@ static const int kMaxSurfaceStackSize = 32;
 static Surface * surfaceStack[kMaxSurfaceStackSize] = { };
 static int surfaceStackSize = 0;
 
+#if ENABLE_OPENGL
+extern bool s_renderPassesIsEmpty; // todo : unify surfaces and render passes. currently it's too difficult to figure out viewport size and whether to flip the clip space Y axis or not
+#endif
+
 static int getCurrentBackingScale()
 {
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
@@ -5001,12 +5006,13 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 			gxLoadIdentity();
 		
 		#if ENABLE_METAL
+			// in Metal clip-space, (-1, -1) is the bottom-left cordiner, (+1, +1) is top-right
 			// flip Y axis so the vertical axis runs top to bottom
 			gxScalef(1.f, -1.f, 1.f);
 		#endif
 		
 		#if ENABLE_OPENGL
-			if (surfaceStackSize == 0 || surfaceStack[surfaceStackSize - 1] == nullptr)
+			if ((surfaceStackSize == 0 || surfaceStack[surfaceStackSize - 1] == nullptr) && s_renderPassesIsEmpty)
 			{
 				// flip Y axis so the vertical axis runs top to bottom
 				gxScalef(1.f, -1.f, 1.f);
@@ -5303,7 +5309,7 @@ void setDrawRect(int x, int y, int sx, int sy)
 	{
 	#if ENABLE_OPENGL
 		if (globals.currentWindow == globals.mainWindow)
-			y = globals.displaySize[1] - y - sy;
+			y = surfaceSy - y - sy;
 	#endif
 
 		ScaleX(x);
@@ -5424,8 +5430,11 @@ void setColorClamp(bool clamp)
 	globals.colorClamp = clamp;
 	
 #if USE_LEGACY_OPENGL
-	glClampColor(GL_CLAMP_VERTEX_COLOR, clamp ? GL_TRUE : GL_FALSE);
-	checkErrorGL();
+	if (glClampColor != nullptr)
+	{
+		glClampColor(GL_CLAMP_VERTEX_COLOR, clamp ? GL_TRUE : GL_FALSE);
+		checkErrorGL();
+	}
 #endif
 }
 
@@ -5855,9 +5864,20 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 #if USE_GLYPH_ATLAS
 	if (globals.isInTextBatch == false)
 	{
-		gxSetTexture(globals.font->textureAtlas->texture->id);
+		Shader & shader = globals.builtinShaders->bitmappedText.get();
+		setShader(shader);
+		
+		shader.setTexture("source", 0, globals.font->textureAtlas->texture->id);
 		
 		gxBegin(GX_QUADS);
+	}
+	else
+	{
+		// update the texture here. we need to do this for every drawText call, to ensure that
+		// when the text finally does get rendered, it uses the latest contents of the texture
+		// atlas
+		Shader * shader = static_cast<Shader*>(globals.shader);
+		shader->setTexture("source", 0, globals.font->textureAtlas->texture->id);
 	}
 	
 	for (size_t i = 0; i < numGlyphs; ++i)
@@ -5898,7 +5918,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 	{
 		gxEnd();
 		
-		gxSetTexture(0);
+		clearShader();
 	}
 #else
 	for (size_t i = 0; i < numGlyphs; ++i)
@@ -6022,6 +6042,14 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id);
 		
 		gxBegin(GX_QUADS);
+	}
+	else
+	{
+		// update the texture here. we need to do this for every drawText call, to ensure that
+		// when the text finally does get rendered, it uses the latest contents of the texture
+		// atlas
+		Shader * shader = static_cast<Shader*>(globals.shader);
+		shader->setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id);
 	}
 	
 	const float scale = stbtt_ScaleForPixelHeight(&glyphCache.m_font.fontInfo, size);
@@ -6177,7 +6205,17 @@ void beginTextBatch(Shader * overrideShader)
 		Assert(!globals.isInTextBatch);
 		globals.isInTextBatch = true;
 		
-		gxSetTexture(globals.font->textureAtlas->texture->id);
+		Shader & shader = overrideShader
+			? *overrideShader
+			: globals.builtinShaders->bitmappedText.get();
+		
+		// note : before we were setting the texture here. this is unsafe however,
+		//        since the texture atlas may grow while drawing text ..
+		//        so we now apply the texture during drawText (after fetching the
+		//        font cache elems, which may grow the atlas)
+		//        and before the actual drawing takes place
+		setShader(shader);
+		
 		gxBegin(GX_QUADS);
 	#endif
 	}
@@ -6211,7 +6249,8 @@ void endTextBatch()
 		globals.isInTextBatch = false;
 		
 		gxEnd();
-		gxSetTexture(0);
+		
+		clearShader();
 	#endif
 	}
 	else if (globals.fontMode == FONT_SDF)
@@ -6864,6 +6903,32 @@ void gxGetMatrixf(GX_MATRIX mode, float * m)
 		fassert(false);
 		break;
 	}
+}
+
+void gxSetMatrixf(GX_MATRIX mode, const float * m)
+{
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+	{
+		switch (mode)
+		{
+		case GX_PROJECTION:
+			glMatrixMode(GL_PROJECTION);
+			glLoadMatrixf(m);
+			checkErrorGL();
+			break;
+
+		case GX_MODELVIEW:
+			glMatrixMode(GL_MODELVIEW);
+			glLoadMatrixf(m);
+			checkErrorGL();
+			break;
+
+		default:
+			fassert(false);
+			break;
+		}
+	}
+	gxMatrixMode(restoreMatrixMode);
 }
 
 GX_MATRIX gxGetMatrixMode()

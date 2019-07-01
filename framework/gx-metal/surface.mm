@@ -164,6 +164,7 @@ bool Surface::init(const SurfaceProperties & properties)
 		targetProperties.dimensions.width = backingSx;
 		targetProperties.dimensions.height = backingSy;
 		targetProperties.format = properties.depthTarget.format;
+		targetProperties.enableTexture = true;
 		
 		for (int i = 0; result && i < (properties.depthTarget.doubleBuffered ? 2 : 1); ++i)
 		{

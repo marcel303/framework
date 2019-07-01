@@ -165,7 +165,7 @@ static GLenum translateSurfaceDepthFormat(const DEPTH_FORMAT format)
 		glFormat = GL_DEPTH_COMPONENT16;
 	if (format == DEPTH_FLOAT32)
 		glFormat = GL_DEPTH_COMPONENT32;
-	
+
 	return glFormat;
 }
 
@@ -341,6 +341,11 @@ bool Surface::init(const SurfaceProperties & properties)
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTexture[i], 0);
 			checkErrorGL();
 		}
+		else
+		{
+			glDrawBuffer(GL_NONE);
+			glReadBuffer(GL_NONE);
+		}
 		
 		if (m_depthTexture[i] != 0)
 		{
@@ -348,9 +353,7 @@ bool Surface::init(const SurfaceProperties & properties)
 			checkErrorGL();
 		}
 		
-	#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
 		// check if all went well
-		// note : we only do this when debugging OpenGL, as this call can be rather expensive
 		
 		const int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 		
@@ -360,7 +363,6 @@ bool Surface::init(const SurfaceProperties & properties)
 			
 			result = false;
 		}
-	#endif
 	}
 	
 	if (!result)

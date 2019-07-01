@@ -62,6 +62,8 @@ extern SDL_mutex * g_vfxAudioMutex;
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;
 
+extern OscEndpointMgr g_oscEndpointMgr;
+
 static void initAudioGraph();
 static void shutAudioGraph();
 

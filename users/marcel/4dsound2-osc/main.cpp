@@ -22,6 +22,8 @@ const int VIEW_SY = 800;
 
 //
 
+extern OscEndpointMgr g_oscEndpointMgr;
+
 static VfxGraphManager * s_vfxGraphMgr = nullptr;
 
 struct Creature

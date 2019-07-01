@@ -39,27 +39,15 @@ static void handleFileChange(const std::string & filename)
 {
 	const std::string extension = Path::GetExtension(filename, true);
 
-#if ENABLE_OPENGL // todo : enable for vs and ps for metal
 	if (extension == "vs")
 	{
-		for (auto & i : g_shaderCache.m_map)
-		{
-			ShaderCacheElem & elem = i.second;
-
-			if (elem.vs == filename)
-				elem.reload();
-		}
+		g_shaderCache.handleSourceChanged(filename.c_str());
 	}
 	else if (extension == "ps")
 	{
-		for (auto & i : g_shaderCache.m_map)
-		{
-			ShaderCacheElem & elem = i.second;
-
-			if (elem.ps == filename)
-				elem.reload();
-		}
+		g_shaderCache.handleSourceChanged(filename.c_str());
 	}
+#if ENABLE_OPENGL // todo : enable for vs and ps for metal
 	else if (extension == "cs")
 	{
 		for (auto & i : g_computeShaderCache.m_map)
@@ -70,9 +58,8 @@ static void handleFileChange(const std::string & filename)
 				elem.reload();
 		}
 	}
-	else
 #endif
-	if (extension == "inc")
+	else if (extension == "inc")
 	{
 		clearCaches(CACHE_SHADER);
 	}

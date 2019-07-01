@@ -877,6 +877,7 @@ struct GraphEdit : GraphEditConnection
 		bool autoHideUi;
 		bool showBackground;
 		bool showGrid;
+		bool showSocketNames;
 		bool snapToGrid;
 		bool showOneShotActivity;
 		bool showContinuousActivity;
@@ -892,6 +893,7 @@ struct GraphEdit : GraphEditConnection
 			, autoHideUi(false)
 			, showBackground(true)
 			, showGrid(true)
+			, showSocketNames(true)
 			, snapToGrid(false)
 			, showOneShotActivity(false)
 			, showContinuousActivity(false)

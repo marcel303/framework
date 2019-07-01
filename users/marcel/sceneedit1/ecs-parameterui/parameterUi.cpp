@@ -236,6 +236,9 @@ static bool checkFilterPassesAtLeastOnce_recursive(const ParameterMgr & paramete
 	
 	for (auto * child : parameterMgr.access_children())
 	{
+		if (child->getIsHiddenFromUi())
+			continue;
+			
 		if (checkFilterPassesAtLeastOnce_recursive(*child, filter))
 			return true;
 	}
@@ -249,6 +252,9 @@ void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 	
 	for (auto * child : parameterMgr.access_children())
 	{
+		if (child->getIsHiddenFromUi())
+			continue;
+		
 		const char * child_filter = filter;
 		
 		if (do_filter)

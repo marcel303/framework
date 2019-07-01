@@ -34,6 +34,9 @@ public:
 	virtual const Color & getClearColor() const = 0;
 	
 	virtual GxTextureId getTextureId() const = 0;
+	
+	virtual int getWidth() const = 0;
+	virtual int getHeight() const = 0;
 };
 
 //
@@ -47,13 +50,15 @@ public:
 		int height = 0;
 	} dimensions;
 	DEPTH_FORMAT format = DEPTH_FLOAT32;
+	bool enableTexture = true;
 	float clearDepth = 1.f;
 
-	void init(const int in_width, const int in_height, DEPTH_FORMAT in_format, const float in_clearDepth)
+	void init(const int in_width, const int in_height, DEPTH_FORMAT in_format, const bool in_enableTexture, const float in_clearDepth)
 	{
 		dimensions.width = in_width;
 		dimensions.height = in_height;
 		format = in_format;
+		enableTexture = in_enableTexture;
 		clearDepth = in_clearDepth;
 	}
 };
@@ -63,13 +68,17 @@ class DepthTargetBase
 public:
 	virtual ~DepthTargetBase() { }
 	
-	virtual bool init(const int width, const int height, DEPTH_FORMAT format, const float clearDepth) = 0;
+	virtual bool init(const int width, const int height, DEPTH_FORMAT format, const bool enableTexture, const float clearDepth) = 0;
 	virtual bool init(const DepthTargetProperties & properties) = 0;
 	
 	virtual void setClearDepth(const float depth) = 0;
 	virtual float getClearDepth() const = 0;
 	
+	virtual bool isTextureEnabled() const = 0;
 	virtual GxTextureId getTextureId() const = 0;
+	
+	virtual int getWidth() const = 0;
+	virtual int getHeight() const = 0;
 };
 
 void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
@@ -78,4 +87,8 @@ void popRenderPass();
 
 #if ENABLE_METAL
 	#include "gx-metal/renderTarget.h"
+#endif
+
+#if ENABLE_OPENGL
+	#include "gx-opengl/renderTarget.h"
 #endif

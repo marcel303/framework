@@ -32,11 +32,11 @@
 
 //
 
-#include "editor_oscPath.h"
+#include "editors/editor_oscPath.h"
 
 //
 
-extern OscEndpointMgr g_oscEndpointMgr;
+OscEndpointMgr g_oscEndpointMgr;
 
 //
 

@@ -1191,8 +1191,6 @@ GraphEdit::GraphEdit(
 	nodeTypeNameSelect = new GraphUi::NodeTypeNameSelect(this);
 	
 	nodeInsertMenu = new GraphEdit_NodeTypeSelect();
-	nodeInsertMenu->x = (_displaySx - nodeInsertMenu->sx)/2;
-	nodeInsertMenu->y = (_displaySy - nodeInsertMenu->sy)/2;
 	
 	displaySx = _displaySx;
 	displaySy = _displaySy;
@@ -2981,6 +2979,9 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			std::string typeName;
 			
+			nodeInsertMenu->x = (displaySx - nodeInsertMenu->sx)/2;
+			nodeInsertMenu->y = (displaySy - nodeInsertMenu->sy)/2;
+			
 			if (nodeInsertMenu->tick(*this, *typeDefinitionLibrary, dt, typeName))
 			{
 				nodeInsertMenu->cancel();
@@ -3837,6 +3838,7 @@ void GraphEdit::doEditorOptions(const float dt)
 			doCheckBox(editorOptions.autoHideUi, "auto-hide UI", false);
 			doCheckBox(editorOptions.showBackground, "show background", false);
 			doCheckBox(editorOptions.showGrid, "show grid", false);
+			doCheckBox(editorOptions.showSocketNames, "show socket names", false);
 			doParticleColor(editorOptions.backgroundColor, "background color");
 			doParticleColor(editorOptions.gridColor, "grid color");
 			doCheckBox(editorOptions.snapToGrid, "snap to grid", false);
@@ -5162,35 +5164,38 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 	
 	if (socketsAreVisible)
 	{
-		beginTextBatch();
+		if (editorOptions.showSocketNames)
 		{
-			for (auto & inputSocket : inputSockets)
+			beginTextBatch();
 			{
-				float x, y, radius;
-				getNodeInputSocketCircle(inputSocket.index, x, y, radius);
+				for (auto & inputSocket : inputSockets)
+				{
+					float x, y, radius;
+					getNodeInputSocketCircle(inputSocket.index, x, y, radius);
+					
+					const std::string name = inputSocket.displayName.empty()
+						? inputSocket.name
+						: inputSocket.displayName;
+					
+					setColor(255, 255, 255);
+					drawText(x + radius + 2, y, 12, +1.f, 0.f, "%s", name.c_str());
+				}
 				
-				const std::string name = inputSocket.displayName.empty()
-					? inputSocket.name
-					: inputSocket.displayName;
-				
-				setColor(255, 255, 255);
-				drawText(x + radius + 2, y, 12, +1.f, 0.f, "%s", name.c_str());
+				for (auto & outputSocket : outputSockets)
+				{
+					float x, y, radius;
+					getNodeOutputSocketCircle(outputSocket.index, x, y, radius);
+					
+					const std::string name = outputSocket.displayName.empty()
+						? outputSocket.name
+						: outputSocket.displayName;
+					
+					setColor(255, 255, 255);
+					drawText(x - radius - 2, y, 12, -1.f, 0.f, "%s", name.c_str());
+				}
 			}
-			
-			for (auto & outputSocket : outputSockets)
-			{
-				float x, y, radius;
-				getNodeOutputSocketCircle(outputSocket.index, x, y, radius);
-				
-				const std::string name = outputSocket.displayName.empty()
-					? outputSocket.name
-					: outputSocket.displayName;
-				
-				setColor(255, 255, 255);
-				drawText(x - radius - 2, y, 12, -1.f, 0.f, "%s", name.c_str());
-			}
+			endTextBatch();
 		}
-		endTextBatch();
 		
 		hqBegin(HQ_FILLED_CIRCLES);
 		{
@@ -5207,6 +5212,10 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 				else if (state == kState_OutputSocketConnect && node.id != socketConnect.dstNodeId && inputSocket.canConnectTo(typeDefinitionLibrary, *socketConnect.dstNodeSocket))
 				{
 					setColor(255, 255, 255);
+				}
+				else if (inputSocket.isDynamic)
+				{
+					setColor(255, 0, 100);
 				}
 				else
 				{
@@ -5239,9 +5248,13 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 				{
 					setColor(255, 255, 255);
 				}
+				else if (outputSocket.isDynamic)
+				{
+					setColor(100, 200, 100);
+				}
 				else
 				{
-					setColor(0, 255, 0);
+					setColor(0, 200, 100);
 				}
 				
 				float x, y, radius;
@@ -5610,6 +5623,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 		editorOptions.autoHideUi = boolAttrib(editorOptionsElem, "autoHideUi", defaultOptions.autoHideUi);
 		editorOptions.showBackground = boolAttrib(editorOptionsElem, "showBackground", defaultOptions.showBackground);
 		editorOptions.showGrid = boolAttrib(editorOptionsElem, "showGrid", defaultOptions.showGrid);
+		editorOptions.showSocketNames = boolAttrib(editorOptionsElem, "showSocketNames", defaultOptions.showSocketNames);
 		editorOptions.snapToGrid = boolAttrib(editorOptionsElem, "snapToGrid", defaultOptions.snapToGrid);
 		editorOptions.showOneShotActivity = boolAttrib(editorOptionsElem, "showOneShotActivity", defaultOptions.showOneShotActivity);
 		editorOptions.showContinuousActivity = boolAttrib(editorOptionsElem, "showContinuousActivity", defaultOptions.showContinuousActivity);
@@ -5706,6 +5720,7 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 		editorElem.PushAttribute("autoHideUi", editorOptions.autoHideUi);
 		editorElem.PushAttribute("showBackground", editorOptions.showBackground);
 		editorElem.PushAttribute("showGrid", editorOptions.showGrid);
+		editorElem.PushAttribute("showSocketNames", editorOptions.showSocketNames);
 		editorElem.PushAttribute("snapToGrid", editorOptions.snapToGrid);
 		editorElem.PushAttribute("showOneShotActivity", editorOptions.showOneShotActivity);
 		editorElem.PushAttribute("showContinuousActivity", editorOptions.showContinuousActivity);

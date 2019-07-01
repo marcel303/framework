@@ -62,7 +62,7 @@ void setColorWriteMask(int r, int g, int b, int a);
 #import <Metal/Metal.h>
 #include "gx_mesh.h"
 
-struct __attribute__((packed)) RenderPipelineState
+struct RenderPipelineState
 {
 	BLEND_MODE blendMode = BLEND_ALPHA;
 	uint8_t colorWriteMask = 0xf;

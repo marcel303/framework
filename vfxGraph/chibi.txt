@@ -1,3 +1,15 @@
+library vfxgraph-core
+
+	depend_library libavgraph
+
+	header_path .       expose
+
+	scan_files cpp
+	scan_files h
+
+	exclude_files vfxNodes_all.cpp
+	exclude_files vfxNodes_all-mac.mm
+
 library vfxgraph
 
 	depend_library artnet
@@ -10,6 +22,7 @@ library vfxgraph
 	depend_library libosc
 	depend_library libvideo
 	depend_library rtmidi
+	depend_library vfxgraph-core
 	
 # todo : add with_library chibi directive ?
 	with_platform linux depend_library libps3eye
@@ -23,14 +36,16 @@ library vfxgraph
 
 	with_platform windows header_path win32/include expose
 
-	scan_files cpp
-	scan_files h
+	scan_files cpp path editors  group editors
+	scan_files h   path editors  group editors
 	scan_files cpp path objects  group objects
 	scan_files h   path objects  group objects
 	scan_files cpp path vfxNodes group vfxNodes conglomerate vfxNodes_all.h
 	scan_files h   path vfxNodes group vfxNodes
 	scan_files cpp path ofxJpegGlitch group ofxJpegGlitch
 	scan_files h   path ofxJpegGlitch group ofxJpegGlitch
+
+	add_files vfxNodes_all.cpp
 
 	with_platform macos add_files vfxNodes_all-mac.mm
 	with_platform macos scan_files mm path objects group objects

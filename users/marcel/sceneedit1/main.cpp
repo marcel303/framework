@@ -106,6 +106,7 @@ struct Renderer
 	mutable ColorTarget normalMap;
 	mutable ColorTarget colorMap;
 	mutable ColorTarget lightMap;
+	mutable ColorTarget compositeMap;
 	
 	struct
 	{
@@ -128,10 +129,11 @@ struct Renderer
 				{ "Lit + Shadows", kMode_LitWithShadows }
 			});
 		
-		result &= depthMap.init(VIEW_SX, VIEW_SY, DEPTH_FLOAT32, 1.f);
+		result &= depthMap.init(VIEW_SX, VIEW_SY, DEPTH_FLOAT32, true, 1.f);
 		result &= normalMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, colorBlackTranslucent);
 		result &= colorMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
 		result &= lightMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
+		result &= compositeMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
 		
 		return result;
 	}
@@ -222,6 +224,9 @@ struct Renderer
 		}
 		else if (mode->get() == kMode_Lit)
 		{
+			// draw to the normal and depth maps
+			
+		#if 0
 			pushRenderPass(&normalMap, true, &depthMap, true, "Depth Normal");
 			{
 				pushMatrices(true);
@@ -241,30 +246,91 @@ struct Renderer
 				popMatrices();
 			}
 			popRenderPass();
+		#else
+			ColorTarget * targets[2] = { &normalMap, &colorMap };
 			
-			pushRenderPass(&lightMap, true, &depthMap, false, "Light");
+			pushRenderPass(targets, 2, true, &depthMap, true, "Depth Normal Color");
 			{
 				pushMatrices(true);
 				{
-					// todo : draw lights using depth and normal maps as inputs
+					pushShaderOutputs("nc");
+					{
+						if (drawOpaque != nullptr)
+							drawOpaque();
+					}
+					popShaderOutputs();
+				}
+				popMatrices();
+			}
+			popRenderPass();
+		#endif
+		
+			// accumulate lights for the opaque part of the scene into the light map
+			
+			pushRenderPass(&lightMap, true, nullptr, false, "Light");
+			{
+				projectScreen2d();
+				
+			// todo : invoke light rendering system
+			// todo : create light rendering system
+			// todo : register lights through a light component with the light rendering system
+			
+				// draw full screen directional light
+					
+				const Vec3 lightDir_world(1, -1, 1);
+				const Vec3 lightDir_view = viewMatrix.Mul3(lightDir_world);
+				const Vec3 lightColor1(1.f, .5f, .25f); // light color when the light is coming from 'above'
+				const Vec3 lightColor2(.125f, .15f, .2f); // light color when the light is coming from 'below'
+				
+				Shader shader("shaders/directional-light");
+				setShader(shader);
+				shader.setTexture("depthTexture", 0, depthMap.getTextureId());
+				shader.setTexture("normalTexture", 1, normalMap.getTextureId());
+				shader.setImmediateMatrix4x4("projectionToView", projectionMatrix.CalcInv().m_v);
+				shader.setImmediate("lightDir_view", lightDir_view[0], lightDir_view[1], lightDir_view[2]);
+				shader.setImmediate("lightColor1", lightColor1[0], lightColor1[1], lightColor1[2]);
+				shader.setImmediate("lightColor2", lightColor2[0], lightColor2[1], lightColor2[2]);
+				drawRect(0, 0, lightMap.getWidth(), lightMap.getHeight());
+				clearShader();
+				
+				// todo : draw lights using depth and normal maps as inputs
+			}
+			popRenderPass();
+			
+			// perform light application. the light application pass combines
+			// the color and light maps to produce a lit result
+			
+			pushRenderPass(&compositeMap, true, nullptr, false, "Composite");
+			{
+				projectScreen2d();
+				
+				Shader shader("shaders/light-application");
+				setShader(shader);
+				shader.setTexture("colorTexture", 0, colorMap.getTextureId());
+				shader.setTexture("lightTexture", 1, lightMap.getTextureId());
+				drawRect(0, 0, compositeMap.getWidth(), compositeMap.getHeight());
+				clearShader();
+			}
+			popRenderPass();
+			
+			// draw translucent pass on top of the composited result
+
+			pushRenderPass(&compositeMap, false, &depthMap, false, "Translucent");
+			{
+				pushMatrices(true);
+				{
+					drawTranslucentPass();
 				}
 				popMatrices();
 			}
 			popRenderPass();
 			
-			// todo : apply light map using light and color maps as inputs
-			
 			pushBlend(BLEND_OPAQUE);
-			gxSetTexture(colorMap.getTextureId());
+			gxSetTexture(compositeMap.getTextureId());
+			setColor(colorWhite);
 			drawRect(0, 0, VIEW_SX, VIEW_SY); // todo : getWidht, height
 			gxSetTexture(0);
 			popBlend();
-			
-			pushMatrices(false);
-			{
-				drawTranslucentPass();
-			}
-			popMatrices();
 		}
 	}
 };
@@ -349,6 +415,7 @@ struct SceneEditor
 		camera.ortho.side = Camera::kOrthoSide_Top;
 		camera.ortho.scale = 16.f;
 		camera.firstPerson.position = Vec3(0, 1, -2);
+		camera.firstPerson.height = 0.f;
 	}
 	
 	void init()
@@ -1908,6 +1975,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
+	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;
 	framework.allowHighDpi = false;
 

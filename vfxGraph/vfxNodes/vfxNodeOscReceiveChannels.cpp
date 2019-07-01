@@ -32,7 +32,7 @@
 
 //
 
-#include "editor_oscPathList.h"
+#include "editors/editor_oscPathList.h"
 
 //
 

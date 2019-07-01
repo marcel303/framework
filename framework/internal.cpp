@@ -55,6 +55,11 @@
 	#include "Timer.h"
 #endif
 
+#if ENABLE_OPENGL
+	#include "gx-opengl/shaderBuilder.h"
+	#include "gx-opengl/shaderPreprocess.h"
+#endif
+
 #define ENABLE_MIPMAPS 0 // todo : add per-texture control over the creation of mipmaps
 
 Globals globals;
@@ -684,162 +689,23 @@ static bool fileExists(const char * filename)
 	}
 }
 
-static bool loadFileContents(const char * filename, bool normalizeLineEndings, char *& bytes, int & numBytes)
+static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages, const char * outputs)
 {
 	bool result = true;
 
-	bytes = 0;
-	numBytes = 0;
-
-	const char * text = nullptr;
-
-	FILE * file = 0;
-
-	if (fopen_s(&file, filename, "rb") == 0)
-	{
-		// load source from file
-
-		fseek(file, 0, SEEK_END);
-		numBytes = ftell(file);
-		fseek(file, 0, SEEK_SET);
-
-		bytes = new char[numBytes];
-
-		if (fread(bytes, 1, numBytes, file) != (size_t)numBytes)
-		{
-			result = false;
-		}
-
-		fclose(file);
-	}
-	else if (framework.tryGetShaderSource(filename, text))
-	{
-		const size_t textLength = strlen(text);
-
-		bytes = new char[textLength];
-		numBytes = textLength;
-
-		memcpy(bytes, text, textLength * sizeof(char));
-	}
-	else
-	{
-		result = false;
-	}
-
-	if (result)
-	{
-		if (normalizeLineEndings)
-		{
-			for (int i = 0; i < numBytes; ++i)
-				if (bytes[i] == '\r')
-					bytes[i] = '\n';
-		}
-	}
-	else
-	{
-		if (bytes)
-		{
-			delete [] bytes;
-			bytes = 0;
-		}
-
-		numBytes = 0;
-	}
-
-	return result;
-}
-
-static void addLineAndFileMarker(std::string & destination, const int lineNumber, const int fileId)
-{
-	char lineText[128];
-	sprintf_s(lineText, sizeof(lineText), "#line %d %d\n", int(lineNumber), fileId);
-	destination.append(lineText);
-}
-
-static bool preprocessShader(const std::string & source, std::string & destination, std::vector<std::string> & errorMessages, int & fileId)
-{
-	bool result = true;
-
-	std::vector<std::string> lines;
-
-	splitString(source, lines, '\n');
+	std::string source;
 	
-	for (size_t i = 0; i < lines.size(); ++i)
+	if (!preprocessShaderFromFile(filename, source, kPreprocessShader_AddOpenglLineAndFileMarkers, errorMessages))
 	{
-		if (i == 0)
-		{
-			addLineAndFileMarker(destination, i, fileId);
-		}
-		
-		const std::string & line = lines[i];
-		const std::string trimmedLine = String::TrimLeft(lines[i]);
-
-		const char * includeStr = "include ";
-
-		if (strstr(trimmedLine.c_str(), includeStr) == trimmedLine.c_str())
-		{
-			const char * filename = trimmedLine.c_str() + strlen(includeStr);
-
-			char * bytes;
-			int numBytes;
-
-			if (!loadFileContents(filename, true, bytes, numBytes))
-			{
-				errorMessages.push_back(String::FormatC("failed to load include file %s", filename));
-				
-				logError("failed to load include file %s", filename);
-				
-				result = false;
-			}
-			else
-			{
-				std::string temp(bytes, numBytes);
-				
-				int nextFileId = fileId + 1;
-
-				if (!preprocessShader(temp, destination, errorMessages, nextFileId))
-				{
-					result = false;
-				}
-
-				delete [] bytes;
-				bytes = 0;
-				numBytes = 0;
-				
-				addLineAndFileMarker(destination, i + 1, fileId);
-			}
-		}
-		else
-		{
-			destination.append(line);
-			destination.append("\n");
-		}
-	}
-
-	return result;
-}
-
-static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages, const char * bindings)
-{
-	bool result = true;
-
-	char * bytes;
-	int numBytes;
-
-	if (!loadFileContents(filename, true, bytes, numBytes))
-	{
-		errorMessages.push_back("failed to load file contents");
-		
 		result = false;
 	}
 	else
 	{
-		std::string source;
-		std::string temp(bytes, numBytes);
-		
-		int fileId = 0;
-
-		if (!preprocessShader(temp, source, errorMessages, fileId))
+		if (!buildOpenglText(source.c_str(),
+			type == GL_VERTEX_SHADER   ? 'v' :
+			type == GL_FRAGMENT_SHADER ? 'p' :
+			type == GL_COMPUTE_SHADER  ? 'c' : 'u',
+			outputs, source))
 		{
 			result = false;
 		}
@@ -882,14 +748,10 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			#endif
 			
 				const GLchar * sourceData = (const GLchar*)source.c_str();
-				const GLchar * sources[] = { version, debugs, defines, bindings, sourceData };
+				const GLchar * sources[] = { version, debugs, defines, sourceData };
 
 				glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
 				checkErrorGL();
-
-				delete [] bytes;
-				bytes = 0;
-				numBytes = 0;
 
 				glCompileShader(shader);
 				checkErrorGL();
@@ -959,6 +821,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	name = _name;
 	vs = filenameVs;
 	ps = filenamePs;
+	this->outputs = outputs;
 	
 	version++;
 	
@@ -981,65 +844,9 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 
 	if (hasPs)
 	{
-		char bindings[1024];
-		bindings[0] = 0;
-	
-	#if !LEGACY_GL
-		bool hasColor = false;
-		bool hasNormal = false;
-		
-		char * dst = bindings;
-		
-		for (int i = 0; outputs[i] != 0; ++i)
-		{
-			if (outputs[i] == 'c')
-			{
-				if (hasColor)
-				{
-					logError("color output binding appears more than once");
-					result = false;
-				}
-				else
-				{
-					hasColor = true;
-					char temp[64];
-					sprintf_s(temp, sizeof(temp), "layout(location = %d) out vec4 shader_fragColor;\n", i);
-					dst = strcat(dst, temp);
-				}
-			}
-			else if (outputs[i] == 'n')
-			{
-				if (hasNormal)
-				{
-					logError("normal output binding appears more than once");
-					result = false;
-				}
-				else
-				{
-					hasNormal = true;
-					char temp[64];
-					sprintf_s(temp, sizeof(temp), "layout(location = %d) out vec4 shader_fragNormal;\n", i);
-					dst = strcat(dst, temp);
-				}
-			}
-			else
-			{
-				logError("unknown output binding: %c", outputs[i]);
-				result = false;
-			}
-		}
-		
-		// use regular variables for unused outputs
-		
-		if (hasColor == false)
-			dst = strcat(dst, "vec4 shader_fragColor;\n");
-		if (hasNormal == false)
-			dst = strcat(dst, "vec4 shader_fragNormal;\n");
-	#endif
-	
 		if (result)
 		{
-			result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "", errorMessages, bindings);
+			result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "", errorMessages, outputs);
 		}
 	}
 	
@@ -1162,6 +969,24 @@ void ShaderCache::reload()
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
 		i->second.reload();
+	}
+}
+
+void ShaderCache::handleSourceChanged(const char * name)
+{
+	for (auto & shaderCacheItr : m_map)
+	{
+		ShaderCacheElem & cacheElem = shaderCacheItr.second;
+		
+		if (name == cacheElem.vs || name == cacheElem.ps)
+		{
+			cacheElem.reload();
+			
+			if (globals.shader != nullptr && globals.shader->getProgram() == cacheElem.program)
+			{
+				clearShader();
+			}
+		}
 	}
 }
 
@@ -1968,10 +1793,8 @@ void FontCacheElem::load(const char * filename)
 #if USE_GLYPH_ATLAS
 	if (loaded)
 	{
-		const int swizzleMask[4] = { GX_SWIZZLE_ONE, GX_SWIZZLE_ONE, GX_SWIZZLE_ONE, 0 };
-		
 		textureAtlas = new TextureAtlas();
-		textureAtlas->init(256, 16, GX_R8_UNORM, false, false, swizzleMask);
+		textureAtlas->init(256, 16, GX_R8_UNORM, false, false, nullptr);
 	}
 #endif
 }
@@ -2886,5 +2709,6 @@ BuiltinShaders::BuiltinShaders()
 	, hqStrokedRoundedRect("engine/builtin-hq-stroked-rounded-rect")
 	, hqShadedTriangle("engine/builtin-hq-shaded-triangle")
 	, msdfText("engine/builtin-msdf-text")
+	, bitmappedText("engine/builtin-bitmapped-text")
 {
 }

@@ -214,45 +214,45 @@ struct WDL_FFT4_REAL
 	WDL_FFT4_REAL operator+(const WDL_FFT_REAL other) const
 	{
 		WDL_FFT4_REAL r;
-		r.v = v + other;
+		r.v = v + (float)other;
 		return r;
 	}
 	
 	WDL_FFT4_REAL operator-(const WDL_FFT_REAL other) const
 	{
 		WDL_FFT4_REAL r;
-		r.v = v - other;
+		r.v = v - (float)other;
 		return r;
 	}
 	
 	WDL_FFT4_REAL operator*(const WDL_FFT_REAL other) const
 	{
 		WDL_FFT4_REAL r;
-		r.v = v * other;
+		r.v = v * (float)other;
 		return r;
 	}
 	
 	WDL_FFT4_REAL & operator+=(const WDL_FFT_REAL other)
 	{
-		v = v + other;
+		v = v + (float)other;
 		return *this;
 	}
 	
 	WDL_FFT4_REAL & operator-=(const WDL_FFT_REAL other)
 	{
-		v = v - other;
+		v = v - (float)other;
 		return *this;
 	}
 	
 	WDL_FFT4_REAL & operator*=(const WDL_FFT_REAL other)
 	{
-		v = v * other;
+		v = v * (float)other;
 		return *this;
 	}
 	
 	WDL_FFT4_REAL & operator=(const WDL_FFT_REAL c)
 	{
-		v = float4 { c };
+		v = float4 { (float)c };
 		return *this;
 	}
 #endif
@@ -270,8 +270,8 @@ struct WDL_FFT4_COMPLEX {
   	re.v = _mm_set1_ps(c.re);
   	im.v = _mm_set1_ps(c.im);
   #else
-  	re.v = WDL_FFT4_REAL::float4 { c.re };
-  	im.v = WDL_FFT4_REAL::float4 { c.im };
+  	re.v = WDL_FFT4_REAL::float4 { (float)c.re };
+  	im.v = WDL_FFT4_REAL::float4 { (float)c.im };
   #endif
   	return *this;
   }

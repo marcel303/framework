@@ -28,7 +28,6 @@
 #include "oscReceiver.h"
 
 #include "ip/UdpSocket.h"
-#include "osc/OscOutboundPacketStream.h"
 #include <list>
 #include <mutex>
 #include <thread>

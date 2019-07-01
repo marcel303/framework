@@ -146,6 +146,11 @@ public:
 	{
 		return value;
 	}
+	
+	const T & getDefaultValue() const
+	{
+		return defaultValue;
+	}
 };
 
 struct ParameterBool : Parameter<bool, kParameterType_Bool>
@@ -556,6 +561,7 @@ public:
 	}
 	
 	int translateKeyToValue(const char * key) const;
+	const char * translateValueToKey(const int value) const;
 	
 	int & access_rw() // read-write access. be careful to invalidate the value when you change it!
 	{
@@ -565,6 +571,16 @@ public:
 	const std::vector<Elem> & getElems() const
 	{
 		return elems;
+	}
+	
+	const int getDefaultValue() const
+	{
+		return defaultValue;
+	}
+	
+	void setDefaultValue(const int value)
+	{
+		defaultValue = value;
 	}
 };
 
@@ -582,8 +598,10 @@ private:
 	
 	bool strictStructuringEnabled = false;
 	
+	bool isHiddenFromUi = false;
+	
 public:
-	void init(const char * prefix, const int in_index = -1);
+	void init(const char * prefix);
 	void tick();
 	
 	void setPrefix(const char * prefix);
@@ -600,9 +618,14 @@ public:
 	ParameterEnum * addEnum(const char * name, const int defaultValue, const std::vector<ParameterEnum::Elem> & elems);
 	
 	ParameterBase * find(const char * name) const;
+	ParameterBase * findRecursively(const char * path, const char pathSeparator) const;
 	
-	void addChild(ParameterMgr * child)
+	void setToDefault(const bool recurse);
+	
+	void addChild(ParameterMgr * child, const int childIndex = -1)
 	{
+		child->index = childIndex;
+		
 		children.push_back(child);
 	}
 	
@@ -614,6 +637,16 @@ public:
 	void setStrictStructuringEnabled(const bool enabled)
 	{
 		strictStructuringEnabled = enabled;
+	}
+	
+	bool getIsHiddenFromUi() const
+	{
+		return isHiddenFromUi;
+	}
+	
+	void setIsHiddenFromUi(const bool isHidden)
+	{
+		isHiddenFromUi = isHidden;
 	}
 	
 	const std::string & access_prefix() const

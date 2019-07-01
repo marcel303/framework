@@ -87,6 +87,10 @@ extern void testVfxNodeCreation();
 
 //
 
+extern OscEndpointMgr g_oscEndpointMgr;
+
+//
+
 struct VfxNodeResourceTest : VfxNodeBase
 {
 	enum Input

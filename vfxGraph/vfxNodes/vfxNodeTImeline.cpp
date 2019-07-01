@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "editor_vfxTimeline.h"
+#include "editors/editor_vfxTimeline.h"
 #include "vfxNodeTimeline.h"
 #include "vfxResource.h"
 #include "vfxTypes.h"

@@ -236,8 +236,8 @@ void metal_draw_end()
 
 void metal_set_viewport(const int sx, const int sy)
 {
-if (!s_activeRenderPass)
-	return; // todo : hack. remove
+	if (!s_activeRenderPass)
+		return; // todo : hack. remove
 
 	[s_activeRenderPass->encoder setViewport:(MTLViewport){ 0, 0, (double)sx, (double)sy, 0.0, 1.0 }];
 }
@@ -431,7 +431,7 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 			depthattachment.texture = (id <MTLTexture>)depthTarget->getMetalTexture();
 			depthattachment.clearDepth = depthTarget->getClearDepth();
 			depthattachment.loadAction = in_clearDepth ? MTLLoadActionClear : MTLLoadActionLoad;
-			depthattachment.storeAction = MTLStoreActionDontCare;
+			depthattachment.storeAction = depthTarget->isTextureEnabled() ? MTLStoreActionStore : MTLStoreActionDontCare;
 			
 			pd.renderPass.depthFormat = depthattachment.texture.pixelFormat;
 			
@@ -489,6 +489,8 @@ void popRenderPass()
 		
 		renderState.renderPass = s_activeRenderPass->renderPass;
 	}
+	
+	applyTransform();
 }
 
 void setColorWriteMask(int r, int g, int b, int a)
@@ -515,12 +517,10 @@ RenderPipelineState renderState;
 
 // render states independent from render pipeline state
 
-static bool s_depthTestEnabled = false;
-static DEPTH_TEST s_depthTest = DEPTH_ALWAYS;
-static bool s_depthWriteEnabled = false;
-
 void setBlend(BLEND_MODE blendMode)
 {
+	globals.blendMode = blendMode;
+	
 	renderState.blendMode = blendMode;
 }
 
@@ -540,7 +540,7 @@ void popBlend()
 
 void setLineSmooth(bool enabled)
 {
-	//Assert(false);
+	//fassert(false);
 }
 
 void pushLineSmooth(bool enabled)
@@ -578,9 +578,9 @@ void popWireframe()
 
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 {
-	s_depthTestEnabled = enabled;
-	s_depthTest = test;
-	s_depthWriteEnabled = writeEnabled;
+	globals.depthTestEnabled = enabled;
+	globals.depthTest = test;
+	globals.depthTestWriteEnabled = writeEnabled;
 	
 	// depth state
 	
@@ -852,7 +852,7 @@ GX_MATRIX gxGetMatrixMode()
 		return GX_PROJECTION;
 	else
 	{
-		Assert(false);
+		fassert(false);
 		return GX_MODELVIEW;
 	}
 }
@@ -1009,11 +1009,18 @@ static bool s_gxTextureEnabled = false;
 
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
+static int s_gxLastIndexOffset = -1;
+
+static GxVertex s_gxFirstVertex;
+static bool s_gxHasFirstVertex = false;
 
 static DynamicBufferPool s_gxVertexBufferPool;
 static DynamicBufferPool::PoolElem * s_gxVertexBufferElem = nullptr;
 static int s_gxVertexBufferElemOffset = 0;
-static GxIndexBuffer s_gxIndexBuffer;
+
+static DynamicBufferPool s_gxIndexBufferPool;
+static DynamicBufferPool::PoolElem * s_gxIndexBufferElem = nullptr;
+static int s_gxIndexBufferElemOffset = 0;
 
 static const GxVertexInput s_gxVsInputs[] =
 {
@@ -1038,6 +1045,10 @@ void gxInitialize()
 {
 	fassert(s_shaderSources.empty());
 	
+	memset(&renderState, 0, sizeof(renderState));
+	renderState.blendMode = BLEND_ALPHA;
+	renderState.colorWriteMask = 0xf;
+	
 	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 	
 	registerBuiltinShaders();
@@ -1056,9 +1067,7 @@ void gxInitialize()
 	const int maxQuads = maxVertexCount / 4;
 	const int maxIndicesForQuads = maxQuads * 6;
 	
-	s_gxIndexBuffer.alloc(maxIndicesForQuads, sizeof(INDEX_TYPE) == 2 ? GX_INDEX_16 : GX_INDEX_32);
-
-	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
+	s_gxIndexBufferPool.init(maxIndicesForQuads * sizeof(INDEX_TYPE));
 	
 #if TODO
 	// enable seamless cube map sampling along the edges
@@ -1071,7 +1080,7 @@ void gxShutdown()
 {
 	s_gxVertexBufferPool.free();
 	
-	s_gxIndexBuffer.free();
+	s_gxIndexBufferPool.free();
 
 #if TODO
 	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
@@ -1098,8 +1107,7 @@ static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveTy
 	case GX_LINES:
 		return MTLPrimitiveTypeLine;
 	case GX_LINE_LOOP:
-		fassert(false);
-		return MTLPrimitiveTypeLine; // fixme !
+		return MTLPrimitiveTypeLineStrip;
 	case GX_LINE_STRIP:
 		return MTLPrimitiveTypeLineStrip;
 	case GX_TRIANGLES:
@@ -1109,10 +1117,9 @@ static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveTy
 	case GX_TRIANGLE_STRIP:
 		return MTLPrimitiveTypeTriangleStrip;
 	case GX_QUADS:
-		fassert(false);
-		return MTLPrimitiveTypeTriangle; // fixme !
+		return MTLPrimitiveTypeTriangle;
 	default:
-		Assert(false);
+		fassert(false);
 		return (MTLPrimitiveType)-1;
 	}
 }
@@ -1178,8 +1185,8 @@ static void gxValidatePipelineState()
 	{
 		@autoreleasepool
 		{
-			id <MTLFunction> vs = (id <MTLFunction>)shaderElem.vs;
-			id <MTLFunction> ps = (id <MTLFunction>)shaderElem.ps;
+			id <MTLFunction> vsFunction = (id <MTLFunction>)shaderElem.vsFunction;
+			id <MTLFunction> psFunction = (id <MTLFunction>)shaderElem.psFunction;
 		
 			MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 		
@@ -1234,8 +1241,8 @@ static void gxValidatePipelineState()
 			MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
 			pipelineDescriptor.label = [NSString stringWithCString:shaderElem.name.c_str() encoding:NSASCIIStringEncoding];
 			pipelineDescriptor.sampleCount = 1;
-			pipelineDescriptor.vertexFunction = vs;
-			pipelineDescriptor.fragmentFunction = ps;
+			pipelineDescriptor.vertexFunction = vsFunction;
+			pipelineDescriptor.fragmentFunction = psFunction;
 			pipelineDescriptor.vertexDescriptor = vertexDescriptor;
 			
 			for (int i = 0; i < 4; ++i)
@@ -1382,6 +1389,28 @@ static void gxValidatePipelineState()
 	}
 }
 
+static void ensureIndexBufferCapacity(const int numIndices)
+{
+	const int remaining = (s_gxIndexBufferElem == nullptr) ? 0 : (s_gxIndexBufferPool.m_numBytesPerBuffer - s_gxIndexBufferElemOffset);
+	
+	if (numIndices * sizeof(INDEX_TYPE) > remaining)
+	{
+		if (s_gxIndexBufferElem != nullptr)
+		{
+			auto * elem = s_gxIndexBufferElem;
+			// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxFlush)"];
+			[s_activeRenderPass->cmdbuf addCompletedHandler:
+				^(id<MTLCommandBuffer> _Nonnull)
+				{
+					s_gxIndexBufferPool.freeBuffer(elem);
+				}];
+		}
+		
+		s_gxIndexBufferElem = s_gxIndexBufferPool.allocBuffer();
+		s_gxIndexBufferElemOffset = 0;
+	}
+}
+
 static void gxFlush(bool endOfBatch)
 {
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
@@ -1389,6 +1418,22 @@ static void gxFlush(bool endOfBatch)
 	if (s_gxVertexCount)
 	{
 		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
+		
+		// Metal doesn't support line loops. so we emulate support for it here by duplicating
+		// the first point at the end of the vertex buffer if this is a line loop
+		if (primitiveType == GX_LINE_LOOP)
+		{
+			if (s_gxHasFirstVertex == false)
+			{
+				s_gxFirstVertex = s_gxVertices[0];
+				s_gxHasFirstVertex = true;
+			}
+			
+			if (endOfBatch)
+			{
+				s_gxVertices[s_gxVertexCount++] = s_gxFirstVertex;
+			}
+		}
 
 	// todo : refactor s_gxVertices to use a GxVertexBuffer object
 	
@@ -1401,7 +1446,7 @@ static void gxFlush(bool endOfBatch)
 		}
 		else
 		{
-		// todo : keep a reference to the current buffer and allocate vertices from the same buffer
+		// note : keep a reference to the current buffer and allocate vertices from the same buffer
 		//        when possible. once the buffer is depleted, or when the command buffer is scheduled,
 		//        add the completion handler
 			const int remaining = (s_gxVertexBufferElem == nullptr) ? 0 : (s_gxVertexBufferPool.m_numBytesPerBuffer - s_gxVertexBufferElemOffset);
@@ -1444,9 +1489,7 @@ static void gxFlush(bool endOfBatch)
 		gxValidateShaderResources();
 		
 		bool indexed = false;
-		uint32_t * indices = 0;
 		int numElements = s_gxVertexCount;
-		int numIndices = 0;
 
 		bool needToRegenerateIndexBuffer = false;
 		
@@ -1462,14 +1505,18 @@ static void gxFlush(bool endOfBatch)
 		
 		if (s_gxPrimitiveType == GX_QUADS)
 		{
-			fassert(s_gxVertexCount < 65536);
+			fassert(s_gxVertexCount <= 65536);
 			
 			const int numQuads = s_gxVertexCount / 4;
-			numIndices = numQuads * 6;
+			const int numIndices = numQuads * 6;
 
 			if (needToRegenerateIndexBuffer)
 			{
-				indices = (INDEX_TYPE*)s_gxIndexBuffer.updateBegin();
+				ensureIndexBufferCapacity(numIndices);
+			
+				s_gxLastIndexOffset = s_gxIndexBufferElemOffset;
+				
+				INDEX_TYPE * indices = (INDEX_TYPE*)((uint8_t*)s_gxIndexBufferElem->m_buffer.contents + s_gxIndexBufferElemOffset);
 
 				INDEX_TYPE * __restrict indexPtr = indices;
 				INDEX_TYPE baseIndex = 0;
@@ -1487,7 +1534,7 @@ static void gxFlush(bool endOfBatch)
 					baseIndex += 4;
 				}
 				
-				s_gxIndexBuffer.updateEnd(0, indexPtr - indices);
+				s_gxIndexBufferElemOffset += numIndices * sizeof(INDEX_TYPE);
 			}
 			
 			s_gxPrimitiveType = GX_TRIANGLES;
@@ -1500,14 +1547,18 @@ static void gxFlush(bool endOfBatch)
 		
 		if (s_gxPrimitiveType == GX_TRIANGLE_FAN)
 		{
-			fassert(s_gxVertexCount < 65536);
+			fassert(s_gxVertexCount <= 65536);
 			
 			const int numTriangles = s_gxVertexCount - 2;
-			numIndices = numTriangles * 3;
+			const int numIndices = numTriangles * 3;
 
 			if (needToRegenerateIndexBuffer)
 			{
-				indices = (INDEX_TYPE*)s_gxIndexBuffer.updateBegin();
+				ensureIndexBufferCapacity(numIndices);
+				
+				s_gxLastIndexOffset = s_gxIndexBufferElemOffset;
+				
+				INDEX_TYPE * indices = (INDEX_TYPE*)((uint8_t*)s_gxIndexBufferElem->m_buffer.contents + s_gxIndexBufferElemOffset);
 
 				INDEX_TYPE * __restrict indexPtr = indices;
 				INDEX_TYPE baseIndex = 0;
@@ -1521,7 +1572,7 @@ static void gxFlush(bool endOfBatch)
 					baseIndex += 1;
 				}
 				
-				s_gxIndexBuffer.updateEnd(0, indexPtr - indices);
+				s_gxIndexBufferElemOffset += numIndices * sizeof(INDEX_TYPE);
 			}
 			
 			s_gxPrimitiveType = GX_TRIANGLES;
@@ -1559,9 +1610,7 @@ static void gxFlush(bool endOfBatch)
 
 			if (indexed)
 			{
-				id <MTLBuffer> buffer = (id <MTLBuffer>)s_gxIndexBuffer.getMetalBuffer();
-				
-				[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:buffer indexBufferOffset:0];
+				[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:s_gxIndexBufferElem->m_buffer indexBufferOffset:s_gxLastIndexOffset];
 			}
 			else
 			{
@@ -1604,11 +1653,6 @@ static void gxFlush(bool endOfBatch)
 			}
 		}
 		
-		if (&shader == &genericShader)
-		{
-			clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
-		}
-		
 		globals.gxShaderIsDirty = false;
 
 		s_gxPrimitiveType = primitiveType;
@@ -1636,7 +1680,7 @@ void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 			s_gxPrimitiveSize = 2;
 			break;
 		case GX_LINE_LOOP:
-			s_gxPrimitiveSize = 1;
+			s_gxPrimitiveSize = 2; // +1 to ensure we can append the first vertex to close the line loop
 			break;
 		case GX_LINE_STRIP:
 			s_gxPrimitiveSize = 1;
@@ -1655,6 +1699,8 @@ void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 	}
 	
 	fassert(s_gxVertexCount == 0);
+	
+	s_gxHasFirstVertex = false;
 }
 
 void gxEnd()
@@ -1680,6 +1726,25 @@ static void gxEndDraw()
 		s_gxVertexBufferElemOffset = 0;
 	}
 	
+	// add completion handler if there's still a buffer pool element in use
+	
+	if (s_gxIndexBufferElem != nullptr)
+	{
+		auto * elem = s_gxIndexBufferElem;
+		// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxEndDraw)"];
+		[s_activeRenderPass->cmdbuf addCompletedHandler:
+			^(id<MTLCommandBuffer> _Nonnull)
+			{
+				s_gxIndexBufferPool.freeBuffer(elem);
+			}];
+		
+		s_gxIndexBufferElem = nullptr;
+		s_gxIndexBufferElemOffset = 0;
+	}
+	
+	s_gxLastVertexCount = -1; // reset, to ensure the index buffer gets regenerated
+	s_gxLastIndexOffset = -1; // reset, to ensure we don't reuse old index buffers
+	
 	// clear textures to avoid freed textures from being reused (prefer to crash instead)
 	
 	// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"Clear textures (gxEndDraw)"];
@@ -1693,8 +1758,12 @@ static void gxEndDraw()
 	s_currentRenderPipelineState = nullptr;
 }
 
-void gxEmitVertices(int primitiveType, int numVertices)
+void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 {
+	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES);
+	
+	bindVsInputs(nullptr, 0, 0);
+	
 	Shader genericShader("engine/Generic");
 	
 	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
@@ -1706,13 +1775,6 @@ void gxEmitVertices(int primitiveType, int numVertices)
 	gxValidateMatrices();
 	
 	gxValidateShaderResources();
-
-#if TODO
-	//
-
-	const int vaoIndex = 0;
-	glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
-	checkErrorGL();
 
 	//
 
@@ -1735,12 +1797,15 @@ void gxEmitVertices(int primitiveType, int numVertices)
 	}
 
 	//
+	
+	const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(primitiveType);
 
-	glDrawArrays(primitiveType, 0, numVertices);
-	checkErrorGL();
+	[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numVertices];
 
 	globals.gxShaderIsDirty = false;
-#endif
+	
+// todo : bind VS inputs on gxBegin call ?
+	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 }
 
 void gxEmitVertex()
@@ -1856,7 +1921,7 @@ void gxSetTexture(GxTextureId texture)
 
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 {
-	Assert(false); // todo
+	fassert(false); // todo
 }
 
 //

@@ -12,21 +12,23 @@
 #include "Path.h"
 #include "TextIO.h"
 
+#include <string>
+
 struct ObjectToFileBinding
 {
 	const TypeDB * typeDB;
 	const Type * type;
 	void * object;
-	const char * filename;
+	std::string filename;
 	
 	bool loadFromTextFile()
 	{
 		std::vector<std::string> lines;
 		TextIO::LineEndings lineEndings;
 	
-		if (TextIO::load(filename, lines, lineEndings) == false)
+		if (TextIO::load(filename.c_str(), lines, lineEndings) == false)
 		{
-			LOG_ERR("failed to load text lines from file %s", filename);
+			LOG_ERR("failed to load text lines from file %s", filename.c_str());
 			return false;
 		}
 	
@@ -46,9 +48,9 @@ struct ObjectToFileBinding
 		char * text = nullptr;
 		size_t textSize = 0;
 		
-		if (TextIO::loadFileContents(filename, text, textSize) == false)
+		if (TextIO::loadFileContents(filename.c_str(), text, textSize) == false)
 		{
-			LOG_ERR("failed to load contents from file %s", filename);
+			LOG_ERR("failed to load contents from file %s", filename.c_str());
 			return false;
 		}
 	
@@ -58,7 +60,7 @@ struct ObjectToFileBinding
 		
 		if (document.HasParseError())
 		{
-			LOG_ERR("failed to parse json contents for file %s", filename);
+			LOG_ERR("failed to parse json contents for file %s", filename.c_str());
 			return false;
 		}
 		
@@ -67,7 +69,7 @@ struct ObjectToFileBinding
 	
 	bool loadFromFile()
 	{
-		if (Path::GetExtension(filename, true) == "json")
+		if (Path::GetExtension(filename.c_str(), true) == "json")
 			return loadFromJsonFile();
 		else
 			return loadFromTextFile();
@@ -92,9 +94,9 @@ struct ObjectToFileBinding
 		{
 			auto lines = line_writer.to_lines();
 			
-			if (TextIO::save(filename, lines, TextIO::kLineEndings_Unix) == false)
+			if (TextIO::save(filename.c_str(), lines, TextIO::kLineEndings_Unix) == false)
 			{
-				LOG_WRN("failed to save lines to file %s", filename);
+				LOG_WRN("failed to save lines to file %s", filename.c_str());
 				result = false;
 			}
 		}
@@ -118,11 +120,11 @@ struct ObjectToFileBinding
 		{
 			const char * text = stringBuffer.GetString();
 			
-			FILE * file = fopen(filename, "wt");
+			FILE * file = fopen(filename.c_str(), "wt");
 			
 			if (file == nullptr || fprintf(file, "%s", text) < 0)
 			{
-				LOG_WRN("failed to save lines to file %s", filename);
+				LOG_WRN("failed to save json text to file %s", filename.c_str());
 				result = false;
 			}
 			
@@ -138,7 +140,7 @@ struct ObjectToFileBinding
 	
 	bool saveToFile()
 	{
-		if (Path::GetExtension(filename, true) == "json")
+		if (Path::GetExtension(filename.c_str(), true) == "json")
 			return saveToJsonFile();
 		else
 			return saveToTextFile();
@@ -201,7 +203,7 @@ void tickObjectToFileBinding()
 {
 	for (auto & objectToFileBinding : s_objectToFileBindings)
 	{
-		if (framework.fileHasChanged(objectToFileBinding.filename))
+		if (framework.fileHasChanged(objectToFileBinding.filename.c_str()))
 		{
 			objectToFileBinding.loadFromFile();
 		}
@@ -217,4 +219,30 @@ bool flushObjectToFile(const void * object)
 			result &= objectToFileBinding.saveToFile();
 	
 	return result;
+}
+
+// --- helper functions ---
+
+bool saveObjectToFile(const TypeDB * typeDB, const Type * type, const void * object, const char * filename)
+{
+// todo : refactor. let ObjectToFileBinding use these functions, instead of the other way around
+
+	ObjectToFileBinding binding;
+	binding.typeDB = typeDB;
+	binding.type = type;
+	binding.object = (void*)object;
+	binding.filename = filename;
+	
+	return binding.saveToFile();
+}
+
+bool loadObjectFromFile(const TypeDB * typeDB, const Type * type, void * object, const char * filename)
+{
+	ObjectToFileBinding binding;
+	binding.typeDB = typeDB;
+	binding.type = type;
+	binding.object = object;
+	binding.filename = filename;
+	
+	return binding.loadFromFile();
 }
