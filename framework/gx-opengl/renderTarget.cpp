@@ -3,7 +3,7 @@
 
 #if ENABLE_OPENGL
 
-#import "renderTarget.h"
+#include "renderTarget.h"
 
 static GLenum translateColorFormat(const SURFACE_FORMAT format)
 {
