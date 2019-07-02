@@ -1,0 +1,5 @@
+app marcel-reaper1
+	depend_library framework
+	depend_library libosc
+	add_files main.cpp
+	resource_path data

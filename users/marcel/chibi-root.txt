@@ -31,6 +31,7 @@ with_platform macos add ps3eye-to-osc
 add rast
 add rawaudio1
 add refine
+add reaper1
 add resonate1
 add resonate2
 add sceneedit1
