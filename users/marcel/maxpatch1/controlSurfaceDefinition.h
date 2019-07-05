@@ -224,7 +224,7 @@ namespace ControlSurfaceDefinition
 			type = kElementType_Slider3;
 			
 			sx = 100;
-			sy = 20;
+			sy = 40;
 		}
 		
 		void makeListbox()
@@ -239,7 +239,7 @@ namespace ControlSurfaceDefinition
 		{
 			type = kElementType_ColorPicker;
 			
-			sx = 100;
+			sx = 200;
 			sy = 100;
 		}
 		

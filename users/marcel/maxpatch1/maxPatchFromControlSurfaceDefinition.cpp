@@ -112,6 +112,21 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Slider3)
 			{
+				const int label_y = elem.y;
+				const int label_sy = 20;
+				const int numbox_y = elem.y + 20;
+				const int numbox_sy = elem.sy - 20;
+				
+				patchEditor
+					.beginBox(allocObjectId().c_str(), 1, 2)
+						.maxclass("comment")
+						.text(elem.slider3.name.c_str())
+						.patching_rect(patching_x, patching_y, 200, 20) // comment will auto-size so size here doesn't really matter, only the position
+						.presentation(true)
+						.presentation_rect(elem.x, label_y, elem.sx, label_sy)
+						.end();
+				patching_y += 60;
+				
 				std::string elem_ids[3];
 				
 				for (int i = 0; i < 3; ++i)
@@ -128,7 +143,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 							.maxclass("live.numbox")
 							.patching_rect(patching_x, patching_y, 40, 15) // live.numbox has a fixed height of 15
 							.presentation(true)
-							.presentation_rect(elem.x + elem.sx / 3 * i, elem.y, elem.sx / 3, elem.sy)
+							.presentation_rect(elem.x + elem.sx / 3 * i, numbox_y, elem.sx / 3, numbox_sy)
 							.parameter_enable(true)
 							.saved_attribute("parameter_mmin", elem.knob.min)
 							.saved_attribute("parameter_mmax", elem.knob.max)
@@ -226,11 +241,109 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					connect(listbox_id, 0, osc_id, 0);
 				}
 			}
+			else if (elem.type == ControlSurfaceDefinition::kElementType_ColorPicker)
+			{
+				const std::string swatch_id = allocObjectId();
+				patchEditor
+					.beginBox(swatch_id.c_str(), 3, 2)
+						.maxclass("swatch")
+						.patching_rect(patching_x, patching_y, 100, 100)
+						.presentation(true)
+						.presentation_rect(elem.x, elem.y, elem.sx - 20, elem.sy)
+						.parameter_enable(true)
+						.saved_attribute("parameter_initial_enable", 1)
+						.saved_attribute("parameter_initial", std::vector<float> { elem.colorPicker.defaultValue.x, elem.colorPicker.defaultValue.y, elem.colorPicker.defaultValue.z })
+						.saved_attribute("parameter_longname", elem.colorPicker.name + ".rgb")
+						.saved_attribute("parameter_shortname",  elem.colorPicker.displayName)
+						.saved_attribute("parameter_linknames", 1)
+						.varname((elem.colorPicker.name + ".rgb").c_str())
+						.end();
+				patching_y += 100;
+				
+				const std::string zl_id = allocObjectId();
+				patchEditor
+					.beginBox(zl_id.c_str(), 2, 2)
+						.maxclass("newobj")
+						.patching_rect(patching_x, patching_y, 100, 22)
+						.text("zl slice 3")
+						.end();
+				patching_y += 30;
+				
+				const std::string slider_id = allocObjectId();
+				patchEditor
+					.beginBox(slider_id.c_str(), 1, 2)
+						.maxclass("live.slider")
+						.patching_rect(patching_x, patching_y, 20, 100)
+						.presentation(true)
+						.presentation_rect(elem.x + elem.sx - 20, elem.y, 20, elem.sy)
+						.parameter_enable(true)
+						.saved_attribute("parameter_initial_enable", 1)
+						.saved_attribute("parameter_initial", elem.colorPicker.defaultValue.w)
+						.saved_attribute("parameter_mmin", 0.f)
+						.saved_attribute("parameter_mmax", 1.f)
+						.saved_attribute("parameter_longname", elem.colorPicker.name + ".w")
+						.saved_attribute("parameter_shortname", "w")
+						.saved_attribute("parameter_type", max::kParameterType_Float)
+						.saved_attribute("parameter_unitstyle", max::kUnitStyle_Float)
+						.saved_attribute("parameter_linknames", 1)
+						.varname((elem.colorPicker.name + ".w").c_str())
+						.end();
+				patching_y += 100;
+				
+				const std::string pak_id = allocObjectId();
+				patchEditor
+					.beginBox(pak_id.c_str(), 3, 2)
+						.maxclass("newobj")
+						.patching_rect(patching_x, patching_y, 100, 22)
+						.parameter_enable(true)
+						.text("pak f f f f")
+						.end();
+				patching_y += 30;
+				
+				const std::string outputvalues_id = allocObjectId();
+				patchEditor
+					.beginBox(outputvalues_id.c_str(), 3, 3)
+						.maxclass("newobj")
+						.patching_rect(patching_x, patching_y, 200, 22)
+						.parameter_enable(true)
+						.text("sel init outputvalue")
+						.end();
+				patching_y += 30;
+				
+				const std::string hsl_id = allocObjectId();
+				patchEditor
+					.beginBox(hsl_id.c_str(), 3, 3)
+						.maxclass("message")
+						.patching_rect(patching_x, patching_y, 200, 22)
+						.parameter_enable(true)
+						.text("hsl 0 1 1")
+						.end();
+				patching_y += 30;
+				
+				connect(outputvalues_id, 0, hsl_id, 0);
+				connect(hsl_id, 0, swatch_id, 0);
+				
+				if (elem.colorPicker.oscAddress.empty() == false)
+				{
+					const std::string osc_id = allocObjectId();
+					patchEditor
+						.beginBox(osc_id.c_str(), 1, 1)
+							.patching_rect(patching_x, patching_y, 450, 22) // automatic height will be 22 for 'paramOsc' box
+							.text(String::FormatC("paramOsc %s", elem.colorPicker.oscAddress.c_str()).c_str())
+							.end();
+					patching_y += 40;
+					
+					connect(swatch_id, 0, zl_id, 0);
+					connect(zl_id, 0, pak_id, 0);
+					connect(slider_id, 0, pak_id, 3);
+					connect(pak_id, 0, osc_id, 0);
+				}
+			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Separator)
 			{
 				auto & separator = elem.separator;
 				
-				auto & box = patchEditor
+				auto box = patchEditor
 					.beginBox(allocObjectId().c_str(), 1, 0)
 						.maxclass("live.line")
 						.patching_rect(patching_x, patching_y, 40, 40)

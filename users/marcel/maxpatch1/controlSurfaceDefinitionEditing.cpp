@@ -376,7 +376,10 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
-	template struct ElementEditor<LabelEditor>;
+	template struct ElementEditor<ColorPickerEditor>;
 	template struct ElementEditor<KnobEditor>;
+	template struct ElementEditor<LabelEditor>;
 	template struct ElementEditor<ListboxEditor>;
+	template struct ElementEditor<SeparatorEditor>;
+	template struct ElementEditor<Slider3Editor>;
 }
