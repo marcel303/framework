@@ -1,8 +1,79 @@
 #include "controlSurfaceDefinition.h"
 #include "reflection.h"
+#include <assert.h>
 
 namespace ControlSurfaceDefinition
 {
+	void Color::setRgb(
+		const float in_r,
+		const float in_g,
+		const float in_b)
+	{
+		colorSpace = kColorSpace_Rgb;
+		
+		x = in_r;
+		y = in_g;
+		z = in_b;
+		w = 0.f;
+	}
+
+	bool Color::operator==(const Color & other) const
+	{
+		if (colorSpace != other.colorSpace)
+		{
+			return false;
+		}
+		
+		if (colorSpace == kColorSpace_Rgb)
+		{
+			return
+				x == other.x &&
+				y == other.y &&
+				z == other.z;
+		}
+		else if (colorSpace == kColorSpace_Rgbw)
+		{
+			return
+				x == other.x &&
+				y == other.y &&
+				z == other.z &&
+				w == other.w;
+		}
+		else if (colorSpace == kColorSpace_Hsl)
+		{
+			return
+				x == other.x &&
+				y == other.y &&
+				z == other.z;
+		}
+		else
+		{
+			assert(false);
+			return false;
+		}
+	}
+	
+	bool Color::operator!=(const Color & other) const
+	{
+		return (*this == other) == false;
+	}
+
+	//
+	
+	void ColorRgba::set(
+		const float in_r,
+		const float in_g,
+		const float in_b,
+		const float in_a)
+	{
+		r = in_r;
+		g = in_g;
+		b = in_b;
+		a = in_a;
+	}
+	
+	//
+	
 	void Surface::initializeDefaultValues()
 	{
 		for (auto & group : groups)
@@ -115,10 +186,37 @@ namespace ControlSurfaceDefinition
 			.add("none", kElementType_None)
 			.add("label", kElementType_Label)
 			.add("knob", kElementType_Knob)
+			.add("slider3", kElementType_Slider3)
 			.add("listbox", kElementType_Listbox)
+			.add("colorPicker", kElementType_ColorPicker)
 			.add("separator", kElementType_Separator);
 
-		typeDB.addPlain<Color>("ControlSurfaceDefinition::Color", kDataType_Float4);
+		typeDB.addEnum<Unit>("ControlSurfaceDefinition::Unit")
+			.add("int", kUnit_Int)
+			.add("float", kUnit_Float)
+			.add("time", kUnit_Time)
+			.add("hertz", kUnit_Hertz)
+			.add("decibel", kUnit_Decibel)
+			.add("percentage", kUnit_Percentage);
+		
+		typeDB.addEnum<ColorSpace>("ControlSurfaceDefinition::ColorSpace")
+			.add("rgb", kColorSpace_Rgb)
+			.add("rgbw", kColorSpace_Rgbw)
+			.add("hsl", kColorSpace_Hsl);
+		
+		typeDB.addStructured<Vector3>("ControlSurfaceDefinition::Vector3")
+			.add("x", &Color::x)
+			.add("y", &Color::y)
+			.add("z", &Color::z);
+		
+		typeDB.addStructured<Color>("ControlSurfaceDefinition::Color")
+			.add("colorSpace", &Color::colorSpace)
+			.add("x", &Color::x)
+			.add("y", &Color::y)
+			.add("z", &Color::z)
+			.add("w", &Color::w);
+		
+		typeDB.addPlain<ColorRgba>("ControlSurfaceDefinition::ColorRgba", kDataType_Float4);
 		
 		typeDB.addStructured<Label>("ControlSurfaceDefinition::Label")
 			.add("text", &Label::text);
@@ -130,7 +228,16 @@ namespace ControlSurfaceDefinition
 			.add("min", &Knob::min)
 			.add("max", &Knob::max)
 			.add("exponential", &Knob::exponential)
+			.add("unit", &Knob::unit)
 			.add("oscAddress", &Knob::oscAddress);
+		
+		typeDB.addStructured<Slider3>("ControlSurfaceDefinition::Slider3")
+			.add("name", &Slider3::name)
+			.add("defaultValue", &Slider3::defaultValue)
+			.add("hasDefaultValue", &Slider3::hasDefaultValue)
+			.add("min", &Slider3::min)
+			.add("max", &Slider3::max)
+			.add("oscAddress", &Slider3::oscAddress);
 		
 		typeDB.addStructured<Listbox>("ControlSurfaceDefinition::Listbox")
 			.add("name", &Listbox::name)
@@ -138,6 +245,13 @@ namespace ControlSurfaceDefinition
 			.add("defaultValue", &Listbox::defaultValue)
 			.add("hasDefaultValue", &Listbox::hasDefaultValue)
 			.add("oscAddress", &Listbox::oscAddress);
+		
+		typeDB.addStructured<ColorPicker>("ControlSurfaceDefinition::ColorPicker")
+			.add("name", &ColorPicker::name)
+			.add("displayName", &ColorPicker::displayName)
+			.add("defaultValue", &ColorPicker::defaultValue)
+			.add("hasDefaultValue", &ColorPicker::hasDefaultValue)
+			.add("oscAddress", &ColorPicker::oscAddress);
 		
 		typeDB.addStructured<Separator>("ControlSurfaceDefinition::Separator")
 			.add("borderColor", &Separator::borderColor)
@@ -152,7 +266,9 @@ namespace ControlSurfaceDefinition
 			.add("height", &Element::sy)
 			.add("label", &Element::label)
 			.add("knob", &Element::knob)
+			.add("slider3", &Element::slider3)
 			.add("listbox", &Element::listbox)
+			.add("colorPicker", &Element::colorPicker)
 			.add("separator", &Element::separator);
 		
 		typeDB.addStructured<Group>("ControlSurfaceDefinition::Group")

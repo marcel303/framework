@@ -73,6 +73,16 @@ namespace ControlSurfaceDefinition
 		return KnobEditor(*this, &group->elems.back(), &group->elems.back().knob);
 	}
 	
+	Slider3Editor GroupEditor::beginSlider3(const char * name)
+	{
+		Element element;
+		element.makeSlider3();
+		element.slider3.name = name;
+		group->elems.push_back(element);
+		
+		return Slider3Editor(*this, &group->elems.back(), &group->elems.back().slider3);
+	}
+	
 	ListboxEditor GroupEditor::beginListbox(const char * name)
 	{
 		Element element;
@@ -81,6 +91,16 @@ namespace ControlSurfaceDefinition
 		group->elems.push_back(element);
 		
 		return ListboxEditor(*this, &group->elems.back(), &group->elems.back().listbox);
+	}
+	
+	ColorPickerEditor GroupEditor::beginColorPicker(const char * name)
+	{
+		Element element;
+		element.makeColorPicker();
+		element.colorPicker.name = name;
+		group->elems.push_back(element);
+		
+		return ColorPickerEditor(*this, &group->elems.back(), &group->elems.back().colorPicker);
 	}
 	
 	SeparatorEditor GroupEditor::beginSeparator()
@@ -220,6 +240,45 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
+	Slider3Editor & Slider3Editor::name(const char * name)
+	{
+		slider->name = name;
+		return *this;
+	}
+	
+	Slider3Editor & Slider3Editor::displayName(const char * displayName)
+	{
+		slider->displayName = displayName;
+		return *this;
+	}
+	
+	Slider3Editor & Slider3Editor::defaultValue(const Vector3 & defaultValue)
+	{
+		slider->defaultValue = defaultValue;
+		slider->hasDefaultValue = true;
+		return *this;
+	}
+
+	Slider3Editor & Slider3Editor::limits(const Vector3 & min, const Vector3 & max)
+	{
+		slider->min = min;
+		slider->max = max;
+		return *this;
+	}
+
+	Slider3Editor & Slider3Editor::osc(const char * address)
+	{
+		slider->oscAddress = address;
+		return *this;
+	}
+
+	GroupEditor & Slider3Editor::end()
+	{
+		return groupEditor;
+	}
+	
+	//
+	
 	ListboxEditor & ListboxEditor::name(const char * name)
 	{
 		listbox->name = name;
@@ -246,6 +305,51 @@ namespace ControlSurfaceDefinition
 	}
 	
 	GroupEditor & ListboxEditor::end()
+	{
+		return groupEditor;
+	}
+	
+	//
+	
+	ColorPickerEditor & ColorPickerEditor::name(const char * name)
+	{
+		colorPicker->name = name;
+		return *this;
+	}
+	
+	ColorPickerEditor & ColorPickerEditor::displayName(const char * displayName)
+	{
+		colorPicker->displayName = displayName;
+		return *this;
+	}
+
+	ColorPickerEditor & ColorPickerEditor::colorSpace(const ColorSpace colorSpace)
+	{
+		colorPicker->colorSpace = colorSpace;
+		return *this;
+	}
+	
+	ColorPickerEditor & ColorPickerEditor::defaultValue(const Color & defaultValue)
+	{
+		colorPicker->defaultValue = defaultValue;
+		colorPicker->hasDefaultValue = true;
+		return *this;
+	}
+	
+	ColorPickerEditor & ColorPickerEditor::defaultValue(const float r, const float g, const float b)
+	{
+		colorPicker->defaultValue.setRgb(r, g, b);
+		colorPicker->hasDefaultValue = true;
+		return *this;
+	}
+
+	ColorPickerEditor & ColorPickerEditor::osc(const char * address)
+	{
+		colorPicker->oscAddress = address;
+		return *this;
+	}
+	
+	GroupEditor & ColorPickerEditor::end()
 	{
 		return groupEditor;
 	}

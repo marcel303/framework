@@ -14,11 +14,13 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
+	struct ColorPickerEditor;
 	struct GroupEditor;
 	struct KnobEditor;
 	struct LabelEditor;
 	struct ListboxEditor;
 	struct SeparatorEditor;
+	struct Slider3Editor;
 	struct SurfaceEditor;
 	struct SurfaceLayoutEditor;
 
@@ -69,7 +71,9 @@ namespace ControlSurfaceDefinition
 		
 		LabelEditor beginLabel(const char * text);
 		KnobEditor beginKnob(const char * name);
+		Slider3Editor beginSlider3(const char * name);
 		ListboxEditor beginListbox(const char * name);
+		ColorPickerEditor beginColorPicker(const char * name);
 		SeparatorEditor beginSeparator();
 		
 		GroupEditor & label(const char * text);
@@ -130,6 +134,27 @@ namespace ControlSurfaceDefinition
 		GroupEditor & end();
 	};
 	
+	struct Slider3Editor : ElementEditor<Slider3Editor>
+	{
+		GroupEditor & groupEditor;
+		Slider3 * slider = nullptr;
+		
+		Slider3Editor(GroupEditor & in_groupEditor, Element * in_element, Slider3 * in_slider)
+			: ElementEditor(in_element)
+			, groupEditor(in_groupEditor)
+			, slider(in_slider)
+		{
+		}
+		
+		Slider3Editor & name(const char * name);
+		Slider3Editor & displayName(const char * displayName);
+		Slider3Editor & defaultValue(const Vector3 & defaultValue);
+		Slider3Editor & limits(const Vector3 & min, const Vector3 & max);
+		Slider3Editor & osc(const char * address);
+		
+		GroupEditor & end();
+	};
+	
 	struct ListboxEditor : ElementEditor<ListboxEditor>
 	{
 		GroupEditor & groupEditor;
@@ -146,6 +171,28 @@ namespace ControlSurfaceDefinition
 		ListboxEditor & defaultValue(const char * defaultValue);
 		ListboxEditor & item(const char * name);
 		ListboxEditor & osc(const char * address);
+		
+		GroupEditor & end();
+	};
+	
+	struct ColorPickerEditor : ElementEditor<ColorPickerEditor>
+	{
+		GroupEditor & groupEditor;
+		ColorPicker * colorPicker = nullptr;
+		
+		ColorPickerEditor(GroupEditor & in_groupEditor, Element * in_element, ColorPicker * in_colorPicker)
+			: ElementEditor(in_element)
+			, groupEditor(in_groupEditor)
+			, colorPicker(in_colorPicker)
+		{
+		}
+		
+		ColorPickerEditor & name(const char * name);
+		ColorPickerEditor & displayName(const char * displayName);
+		ColorPickerEditor & colorSpace(const ColorSpace colorSpace);
+		ColorPickerEditor & defaultValue(const Color & defaultValue);
+		ColorPickerEditor & defaultValue(const float r, const float g, const float b);
+		ColorPickerEditor & osc(const char * address);
 		
 		GroupEditor & end();
 	};

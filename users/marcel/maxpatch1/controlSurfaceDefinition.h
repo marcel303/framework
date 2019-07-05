@@ -15,7 +15,9 @@ namespace ControlSurfaceDefinition
 		kElementType_None,
 		kElementType_Label,
 		kElementType_Knob,
+		kElementType_Slider3,
 		kElementType_Listbox,
+		kElementType_ColorPicker,
 		kElementType_Separator
 	};
 	
@@ -29,21 +31,76 @@ namespace ControlSurfaceDefinition
 		kUnit_Percentage
 	};
 	
+	enum ColorSpace
+	{
+		kColorSpace_Rgb,
+		kColorSpace_Rgbw,
+		kColorSpace_Hsl
+	};
+	
+	struct Vector3
+	{
+		float x = 0.f;
+		float y = 0.f;
+		float z = 0.f;
+		
+		Vector3()
+		{
+		}
+		
+		Vector3(const float in_x, const float in_y, const float in_z)
+			: x(in_x)
+			, y(in_y)
+			, z(in_z)
+		{
+		}
+	};
+	
 	struct Color
 	{
-		float r, g, b, a;
+		ColorSpace colorSpace = kColorSpace_Rgb;
 		
-		void set(
-			const float in_r,
-			const float in_g,
-			const float in_b,
-			const float in_a)
+		float x = 0.f;
+		float y = 0.f;
+		float z = 0.f;
+		float w = 0.f;
+		
+		struct Rgb
 		{
-			r = in_r;
-			g = in_g;
-			b = in_b;
-			a = in_a;
-		}
+			float r;
+			float g;
+			float b;
+		};
+		
+		struct Rgbw
+		{
+			float r;
+			float g;
+			float b;
+			float w;
+		};
+		
+		struct Hsl
+		{
+			float hue;
+			float saturation;
+			float luminance;
+		};
+		
+		void setRgb(const float r, const float g, const float b);
+		
+		bool operator==(const Color & other) const;
+		bool operator!=(const Color & other) const;
+	};
+	
+	struct ColorRgba
+	{
+		float r = 0.f;
+		float g = 0.f;
+		float b = 0.f;
+		float a = 0.f;
+
+		void set(const float r, const float g, const float b, const float a);
 	};
 	
 	struct Label
@@ -64,6 +121,17 @@ namespace ControlSurfaceDefinition
 		std::string oscAddress;
 	};
 	
+	struct Slider3
+	{
+		std::string name;
+		std::string displayName;
+		Vector3 defaultValue = { 0.f, 0.f, 0.f };
+		bool hasDefaultValue = false;
+		Vector3 min = { 0.f, 0.f, 0.f };
+		Vector3 max = { 1.f, 1.f, 1.f };
+		std::string oscAddress;
+	};
+	
 	struct Listbox
 	{
 		std::string name;
@@ -73,9 +141,19 @@ namespace ControlSurfaceDefinition
 		std::string oscAddress;
 	};
 	
+	struct ColorPicker
+	{
+		std::string name;
+		std::string displayName;
+		ColorSpace colorSpace = kColorSpace_Rgb;
+		Color defaultValue;
+		bool hasDefaultValue = false;
+		std::string oscAddress;
+	};
+	
 	struct Separator
 	{
-		Color borderColor;
+		ColorRgba borderColor;
 		bool hasBorderColor = false;
 		int thickness = 1;
 	};
@@ -97,7 +175,11 @@ namespace ControlSurfaceDefinition
 		
 		Knob knob;
 		
+		Slider3 slider3;
+		
 		Listbox listbox;
+		
+		ColorPicker colorPicker;
 		
 		Separator separator;
 		
@@ -117,12 +199,28 @@ namespace ControlSurfaceDefinition
 			sy = 48;
 		}
 		
+		void makeSlider3()
+		{
+			type = kElementType_Slider3;
+			
+			sx = 100;
+			sy = 20;
+		}
+		
 		void makeListbox()
 		{
 			type = kElementType_Listbox;
 			
 			sx = 100;
 			sy = 20;
+		}
+		
+		void makeColorPicker()
+		{
+			type = kElementType_ColorPicker;
+			
+			sx = 100;
+			sy = 100;
 		}
 		
 		void makeSeparator()
