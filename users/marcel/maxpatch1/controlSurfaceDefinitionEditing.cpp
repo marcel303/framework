@@ -329,16 +329,16 @@ namespace ControlSurfaceDefinition
 		return *this;
 	}
 	
-	ColorPickerEditor & ColorPickerEditor::defaultValue(const Color & defaultValue)
+	ColorPickerEditor & ColorPickerEditor::defaultValue(const Vector4 & defaultValue)
 	{
 		colorPicker->defaultValue = defaultValue;
 		colorPicker->hasDefaultValue = true;
 		return *this;
 	}
 	
-	ColorPickerEditor & ColorPickerEditor::defaultValue(const float r, const float g, const float b)
+	ColorPickerEditor & ColorPickerEditor::defaultValue(const float r, const float g, const float b, const float a)
 	{
-		colorPicker->defaultValue.setRgb(r, g, b);
+		colorPicker->defaultValue = Vector4(r, g, b, a);
 		colorPicker->hasDefaultValue = true;
 		return *this;
 	}

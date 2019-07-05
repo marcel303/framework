@@ -190,8 +190,8 @@ namespace ControlSurfaceDefinition
 		ColorPickerEditor & name(const char * name);
 		ColorPickerEditor & displayName(const char * displayName);
 		ColorPickerEditor & colorSpace(const ColorSpace colorSpace);
-		ColorPickerEditor & defaultValue(const Color & defaultValue);
-		ColorPickerEditor & defaultValue(const float r, const float g, const float b);
+		ColorPickerEditor & defaultValue(const Vector4 & defaultValue);
+		ColorPickerEditor & defaultValue(const float r, const float g, const float b, const float a = 1.f);
 		ColorPickerEditor & osc(const char * address);
 		
 		GroupEditor & end();

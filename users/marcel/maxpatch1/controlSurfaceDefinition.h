@@ -56,6 +56,26 @@ namespace ControlSurfaceDefinition
 		}
 	};
 	
+	struct Vector4
+	{
+		float x = 0.f;
+		float y = 0.f;
+		float z = 0.f;
+		float w = 0.f;
+		
+		Vector4()
+		{
+		}
+		
+		Vector4(const float in_x, const float in_y, const float in_z, const float in_w)
+			: x(in_x)
+			, y(in_y)
+			, z(in_z)
+			, w(in_w)
+		{
+		}
+	};
+	
 	struct Color
 	{
 		ColorSpace colorSpace = kColorSpace_Rgb;
@@ -146,7 +166,7 @@ namespace ControlSurfaceDefinition
 		std::string name;
 		std::string displayName;
 		ColorSpace colorSpace = kColorSpace_Rgb;
-		Color defaultValue;
+		Vector4 defaultValue;
 		bool hasDefaultValue = false;
 		std::string oscAddress;
 	};

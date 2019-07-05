@@ -209,6 +209,12 @@ namespace ControlSurfaceDefinition
 			.add("y", &Color::y)
 			.add("z", &Color::z);
 		
+		typeDB.addStructured<Vector4>("ControlSurfaceDefinition::Vector4")
+			.add("x", &Vector4::x)
+			.add("y", &Vector4::y)
+			.add("z", &Vector4::z)
+			.add("w", &Vector4::w);
+		
 		typeDB.addStructured<Color>("ControlSurfaceDefinition::Color")
 			.add("colorSpace", &Color::colorSpace)
 			.add("x", &Color::x)
