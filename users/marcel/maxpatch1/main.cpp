@@ -86,6 +86,11 @@ int main(int arg, char * argv[])
 				.defaultValue("b")
 				.osc("/master/mode")
 				.end()
+			.beginColorPicker("color")
+				.colorSpace(ControlSurfaceDefinition::kColorSpace_Rgbw)
+				.defaultValue(0.f, 0.f, 0.f)
+				.osc("/master/color")
+				.end()
 			.endGroup();
 	
 	for (int i = 0; i < 7; ++i)
@@ -148,6 +153,7 @@ int main(int arg, char * argv[])
 			float defaultValue = 0.f;
 			float doubleClickTimer = 0.f;
 			bool valueHasChanged = false;
+			ControlSurfaceDefinition::Color color;
 		};
 		
 		std::vector<Elem> elems;
@@ -201,6 +207,16 @@ int main(int arg, char * argv[])
 					
 					e.value = index;
 					e.defaultValue = index;
+				}
+			}
+			else if (elem->type == ControlSurfaceDefinition::kElementType_ColorPicker)
+			{
+				auto & colorPicker = elem->colorPicker;
+				Assert(colorPicker.hasDefaultValue);
+				
+				if (colorPicker.hasDefaultValue)
+				{
+					e.color = colorPicker.defaultValue;
 				}
 			}
 		}
@@ -301,6 +317,47 @@ int main(int arg, char * argv[])
 						}
 					}
 				}
+				else if (elem->type == ControlSurfaceDefinition::kElementType_ColorPicker)
+				{
+					auto & colorPicker = elem->colorPicker;
+					
+					if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
+					{
+						activeElem = &e;
+						SDL_CaptureMouse(SDL_TRUE);
+						
+						if (e.doubleClickTimer > 0.f)
+						{
+							if (colorPicker.hasDefaultValue)
+								e.color = colorPicker.defaultValue;
+						}
+						else
+							e.doubleClickTimer = .2f;
+					}
+					
+					if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
+					{
+						activeElem = nullptr;
+						SDL_CaptureMouse(SDL_FALSE);
+					}
+					
+					if (&e == activeElem)
+					{
+						ControlSurfaceDefinition::Color oldColor = e.color;
+						
+						const float hue = saturate<float>((mouse.x - elem->x) / float(elem->sx));
+						const float saturation = saturate<float>((mouse.y - elem->y) / float(elem->sy));
+						
+						e.color.x = hue;
+						e.color.y = saturation;
+						
+						if (e.color != oldColor)
+						{
+						// todo: only changed when item index changes
+							e.valueHasChanged = true;
+						}
+					}
+				}
 			}
 			
 			// send changed values over OSC
@@ -382,6 +439,43 @@ int main(int arg, char * argv[])
 							s << osc::BeginMessage(listbox.oscAddress.c_str());
 							{
 								s << listbox.items[index].c_str();
+							}
+							s << osc::EndMessage;
+						}
+					}
+					else if (e.elem->type == ControlSurfaceDefinition::kElementType_ColorPicker)
+					{
+						auto & colorPicker = e.elem->colorPicker;
+						
+						if (!colorPicker.oscAddress.empty())
+						{
+							if (s.Size() + colorPicker.oscAddress.size() + sizeof(float) * 4 + 100 > 1200)
+							{
+								sendBundle();
+								beginBundle();
+							}
+							
+							s << osc::BeginMessage(colorPicker.oscAddress.c_str());
+							{
+								if (e.color.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgb)
+								{
+									s << e.color.x;
+									s << e.color.y;
+									s << e.color.z;
+								}
+								else if (e.color.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgbw)
+								{
+									s << e.color.x;
+									s << e.color.y;
+									s << e.color.z;
+									s << e.color.w;
+								}
+								else if (e.color.colorSpace == ControlSurfaceDefinition::kColorSpace_Hsl)
+								{
+									s << e.color.x;
+									s << e.color.y;
+									s << e.color.z;
+								}
 							}
 							s << osc::EndMessage;
 						}
@@ -507,6 +601,33 @@ int main(int arg, char * argv[])
 					}
 					hqEnd();
 				}
+				else if (elem->type == ControlSurfaceDefinition::kElementType_ColorPicker)
+				{
+					hqBegin(HQ_FILLED_ROUNDED_RECTS);
+					{
+						if (&e == activeElem)
+							setLumi(190);
+						else if (&e == hoverElem)
+							setLumi(210);
+						else
+							setLumi(200);
+						hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
+					}
+					hqEnd();
+					
+					auto & colorPicker = elem->colorPicker;
+					
+					const float x = e.color.x;
+					const float y = e.color.y;
+					setLumi(100);
+					drawLine(elem->x, elem->y + elem->sy * y, elem->x + elem->sx, elem->y + elem->sy * y);
+					drawLine(elem->x + elem->sx * x, elem->y, elem->x + elem->sx * x, elem->y + elem->sy);
+					
+					setColor(40, 40, 40);
+					setFont("calibri.ttf");
+					
+					drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy / 2.f, 10, 0, 0, "%s", colorPicker.displayName.c_str());
+				}
 				else if (elem->type == ControlSurfaceDefinition::kElementType_Separator)
 				{
 					hqBegin(HQ_FILLED_ROUNDED_RECTS);
@@ -576,6 +697,45 @@ int main(int arg, char * argv[])
 		
 		if (framework.quitRequested)
 			break;
+		
+		if (keyboard.wentDown(SDLK_SPACE))
+		{
+		// todo : remove this test code and replace it with drag and drop support for files
+		
+			const char * filename = "/Users/thecat/repos/strp-laserapp/strp-laserapp/data/controlsurfaces/effectObject_colorCube_.json";
+			
+			ControlSurfaceDefinition::Surface newSurface;
+			
+			if (loadObjectFromFile(&typeDB, typeDB.findType(newSurface), &newSurface, filename))
+			{
+				surface = newSurface;
+				
+				surface.initializeDefaultValues();
+				surface.initializeDisplayNames();
+				
+				ControlSurfaceDefinition::SurfaceEditor surfaceEditor(&surface);
+				
+				surfaceEditor.beginLayout()
+					.size(800, 200)
+					.margin(10, 10)
+					.padding(4, 4)
+					.end();
+				
+				liveUi = LiveUi();
+	
+				for (auto & group : surface.groups)
+				{
+					for (auto & elem : group.elems)
+					{
+						liveUi.addElem(&elem);
+					}
+				}
+				
+				liveUi
+					.osc("127.0.0.1", 2000)
+					.osc("127.0.0.1", 2002);
+			}
+		}
 		
 		liveUi.tick(framework.timeStep);
 		
