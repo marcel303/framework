@@ -71,7 +71,7 @@ vec3 HUEtoRGB(float H)
     return saturate(vec3(R,G,B));
 }
 
-vec3 HSLtoRGB(in vec3 HSL)
+vec3 HSLtoRGB(vec3 HSL)
 {
     vec3 RGB = HUEtoRGB(HSL.x);
     float C = (1.0 - abs(2.0 * HSL.z - 1.0)) * HSL.y;
