@@ -110,6 +110,85 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					connect(knob_id, 0, osc_id, 0);
 				}
 			}
+			else if (elem.type == ControlSurfaceDefinition::kElementType_Slider2)
+			{
+				const int label_y = elem.y;
+				const int label_sy = 20;
+				const int numbox_y = elem.y + 20;
+				const int numbox_sy = elem.sy - 20;
+				
+				patchEditor
+					.beginBox(allocObjectId().c_str(), 1, 2)
+						.maxclass("comment")
+						.text(elem.slider2.name.c_str())
+						.patching_rect(patching_x, patching_y, 200, 20) // comment will auto-size so size here doesn't really matter, only the position
+						.presentation(true)
+						.presentation_rect(elem.x, label_y, elem.sx, label_sy)
+						.end();
+				patching_y += 60;
+				
+				std::string elem_ids[2];
+				
+				for (int i = 0; i < 2; ++i)
+				{
+					const char * elem_postfix = "xy";
+					
+					const std::string elem_id = allocObjectId();
+					const std::string elem_name = elem.slider2.name + "." + elem_postfix[i];
+					
+					elem_ids[i] = elem_id;
+					
+					patchEditor
+						.beginBox(elem_id.c_str(), 1, 2)
+							.maxclass("live.numbox")
+							.patching_rect(patching_x, patching_y, 40, 15) // live.numbox has a fixed height of 15
+							.presentation(true)
+							.presentation_rect(elem.x + elem.sx / 2 * i, numbox_y, elem.sx / 2, numbox_sy)
+							.parameter_enable(true)
+							.saved_attribute("parameter_mmin", elem.slider2.min[i])
+							.saved_attribute("parameter_mmax", elem.slider2.max[i])
+							.saved_attribute("parameter_initial_enable", 1)
+							.saved_attribute("parameter_initial", elem.slider2.defaultValue[i])
+							.saved_attribute("parameter_longname", elem_name)
+							.saved_attribute("parameter_shortname",  elem.slider2.displayName)
+							.saved_attribute("parameter_type", max::kParameterType_Float)
+							.saved_attribute("parameter_unitstyle", max::kUnitStyle_Float)
+							.saved_attribute("parameter_linknames", 1)
+							.varname(elem_name.c_str())
+							.end();
+					patching_y += 20;
+				}
+				
+				if (elem.slider2.oscAddress.empty() == false)
+				{
+					const std::string pak_id = allocObjectId();
+					
+					patchEditor
+						.beginBox(pak_id.c_str(), 4, 1)
+							.maxclass("newobj")
+							.patching_rect(patching_x, patching_y, 200, 22) // newobj has a fixed height of 22
+							.parameter_enable(true)
+							.text("pak f f f")
+							.end();
+					patching_y += 30;
+
+					const std::string osc_id = allocObjectId();
+					patchEditor
+						.beginBox(osc_id.c_str(), 1, 1)
+							.patching_rect(patching_x, patching_y, 450, 22) // automatic height will be 22 for 'paramOsc' box
+							.text(String::FormatC("paramOsc %s", elem.slider2.oscAddress.c_str()).c_str())
+							.end();
+					patching_y += 40;
+					
+					connect(elem_ids[0], 0, pak_id, 0);
+					connect(elem_ids[1], 0, pak_id, 1);
+					
+					connect(pak_id, 0, osc_id, 0);
+					
+					connect(osc_id, 0, elem_ids[0], 0);
+					connect(osc_id, 0, elem_ids[1], 0);
+				}
+			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Slider3)
 			{
 				const int label_y = elem.y;
@@ -134,7 +213,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					const char * elem_postfix = "xyz";
 					
 					const std::string elem_id = allocObjectId();
-					const std::string elem_name = elem.knob.name + "." + elem_postfix[i];
+					const std::string elem_name = elem.slider3.name + "." + elem_postfix[i];
 					
 					elem_ids[i] = elem_id;
 					
@@ -145,13 +224,12 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 							.presentation(true)
 							.presentation_rect(elem.x + elem.sx / 3 * i, numbox_y, elem.sx / 3, numbox_sy)
 							.parameter_enable(true)
-							.saved_attribute("parameter_mmin", elem.knob.min)
-							.saved_attribute("parameter_mmax", elem.knob.max)
+							.saved_attribute("parameter_mmin", elem.slider3.min[i])
+							.saved_attribute("parameter_mmax", elem.slider3.max[i])
 							.saved_attribute("parameter_initial_enable", 1)
-							.saved_attribute("parameter_initial", elem.knob.defaultValue)
-							.saved_attribute("parameter_exponent", elem.knob.exponential)
+							.saved_attribute("parameter_initial", elem.slider3.defaultValue[i])
 							.saved_attribute("parameter_longname", elem_name)
-							.saved_attribute("parameter_shortname",  elem.knob.displayName)
+							.saved_attribute("parameter_shortname",  elem.slider3.displayName)
 							.saved_attribute("parameter_type", max::kParameterType_Float)
 							.saved_attribute("parameter_unitstyle", max::kUnitStyle_Float)
 							.saved_attribute("parameter_linknames", 1)
@@ -249,8 +327,10 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.maxclass("swatch")
 						.patching_rect(patching_x, patching_y, 100, 100)
 						.presentation(true)
-						.presentation_rect(elem.x, elem.y, elem.sx - 20, elem.sy)
+						.presentation_rect(elem.x, elem.y, elem.sx - 25, elem.sy)
 						.parameter_enable(true)
+						.saved_attribute("parameter_mmin", 0.f)
+						.saved_attribute("parameter_mmax", 1.f)
 						.saved_attribute("parameter_initial_enable", 1)
 						.saved_attribute("parameter_initial", std::vector<float> { elem.colorPicker.defaultValue.x, elem.colorPicker.defaultValue.y, elem.colorPicker.defaultValue.z })
 						.saved_attribute("parameter_longname", elem.colorPicker.name + ".rgb")
