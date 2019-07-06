@@ -20,6 +20,7 @@ namespace ControlSurfaceDefinition
 	struct LabelEditor;
 	struct ListboxEditor;
 	struct SeparatorEditor;
+	struct Slider2Editor;
 	struct Slider3Editor;
 	struct SurfaceEditor;
 	struct SurfaceLayoutEditor;
@@ -71,6 +72,7 @@ namespace ControlSurfaceDefinition
 		
 		LabelEditor beginLabel(const char * text);
 		KnobEditor beginKnob(const char * name);
+		Slider2Editor beginSlider2(const char * name);
 		Slider3Editor beginSlider3(const char * name);
 		ListboxEditor beginListbox(const char * name);
 		ColorPickerEditor beginColorPicker(const char * name);
@@ -130,6 +132,27 @@ namespace ControlSurfaceDefinition
 		KnobEditor & exponential(const float exponential);
 		KnobEditor & unit(const Unit unit);
 		KnobEditor & osc(const char * address);
+		
+		GroupEditor & end();
+	};
+	
+	struct Slider2Editor : ElementEditor<Slider2Editor>
+	{
+		GroupEditor & groupEditor;
+		Slider2 * slider = nullptr;
+		
+		Slider2Editor(GroupEditor & in_groupEditor, Element * in_element, Slider2 * in_slider)
+			: ElementEditor(in_element)
+			, groupEditor(in_groupEditor)
+			, slider(in_slider)
+		{
+		}
+		
+		Slider2Editor & name(const char * name);
+		Slider2Editor & displayName(const char * displayName);
+		Slider2Editor & defaultValue(const Vector2 & defaultValue);
+		Slider2Editor & limits(const Vector2 & min, const Vector2 & max);
+		Slider2Editor & osc(const char * address);
 		
 		GroupEditor & end();
 	};

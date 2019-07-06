@@ -73,6 +73,16 @@ namespace ControlSurfaceDefinition
 		return KnobEditor(*this, &group->elems.back(), &group->elems.back().knob);
 	}
 	
+	Slider2Editor GroupEditor::beginSlider2(const char * name)
+	{
+		Element element;
+		element.makeSlider2();
+		element.slider2.name = name;
+		group->elems.push_back(element);
+		
+		return Slider2Editor(*this, &group->elems.back(), &group->elems.back().slider2);
+	}
+	
 	Slider3Editor GroupEditor::beginSlider3(const char * name)
 	{
 		Element element;
@@ -240,6 +250,45 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
+	Slider2Editor & Slider2Editor::name(const char * name)
+	{
+		slider->name = name;
+		return *this;
+	}
+	
+	Slider2Editor & Slider2Editor::displayName(const char * displayName)
+	{
+		slider->displayName = displayName;
+		return *this;
+	}
+	
+	Slider2Editor & Slider2Editor::defaultValue(const Vector2 & defaultValue)
+	{
+		slider->defaultValue = defaultValue;
+		slider->hasDefaultValue = true;
+		return *this;
+	}
+
+	Slider2Editor & Slider2Editor::limits(const Vector2 & min, const Vector2 & max)
+	{
+		slider->min = min;
+		slider->max = max;
+		return *this;
+	}
+
+	Slider2Editor & Slider2Editor::osc(const char * address)
+	{
+		slider->oscAddress = address;
+		return *this;
+	}
+
+	GroupEditor & Slider2Editor::end()
+	{
+		return groupEditor;
+	}
+	
+	//
+	
 	Slider3Editor & Slider3Editor::name(const char * name)
 	{
 		slider->name = name;
@@ -381,5 +430,6 @@ namespace ControlSurfaceDefinition
 	template struct ElementEditor<LabelEditor>;
 	template struct ElementEditor<ListboxEditor>;
 	template struct ElementEditor<SeparatorEditor>;
+	template struct ElementEditor<Slider2Editor>;
 	template struct ElementEditor<Slider3Editor>;
 }

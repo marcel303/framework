@@ -186,6 +186,7 @@ namespace ControlSurfaceDefinition
 			.add("none", kElementType_None)
 			.add("label", kElementType_Label)
 			.add("knob", kElementType_Knob)
+			.add("slider2", kElementType_Slider2)
 			.add("slider3", kElementType_Slider3)
 			.add("listbox", kElementType_Listbox)
 			.add("colorPicker", kElementType_ColorPicker)
@@ -204,10 +205,14 @@ namespace ControlSurfaceDefinition
 			.add("rgbw", kColorSpace_Rgbw)
 			.add("hsl", kColorSpace_Hsl);
 		
+		typeDB.addStructured<Vector2>("ControlSurfaceDefinition::Vector2")
+			.add("x", &Vector2::x)
+			.add("y", &Vector2::y);
+		
 		typeDB.addStructured<Vector3>("ControlSurfaceDefinition::Vector3")
-			.add("x", &Color::x)
-			.add("y", &Color::y)
-			.add("z", &Color::z);
+			.add("x", &Vector3::x)
+			.add("y", &Vector3::y)
+			.add("z", &Vector3::z);
 		
 		typeDB.addStructured<Vector4>("ControlSurfaceDefinition::Vector4")
 			.add("x", &Vector4::x)
@@ -236,6 +241,14 @@ namespace ControlSurfaceDefinition
 			.add("exponential", &Knob::exponential)
 			.add("unit", &Knob::unit)
 			.add("oscAddress", &Knob::oscAddress);
+		
+		typeDB.addStructured<Slider2>("ControlSurfaceDefinition::Slider2")
+			.add("name", &Slider2::name)
+			.add("defaultValue", &Slider2::defaultValue)
+			.add("hasDefaultValue", &Slider2::hasDefaultValue)
+			.add("min", &Slider2::min)
+			.add("max", &Slider2::max)
+			.add("oscAddress", &Slider2::oscAddress);
 		
 		typeDB.addStructured<Slider3>("ControlSurfaceDefinition::Slider3")
 			.add("name", &Slider3::name)
@@ -272,6 +285,7 @@ namespace ControlSurfaceDefinition
 			.add("height", &Element::sy)
 			.add("label", &Element::label)
 			.add("knob", &Element::knob)
+			.add("slider2", &Element::slider2)
 			.add("slider3", &Element::slider3)
 			.add("listbox", &Element::listbox)
 			.add("colorPicker", &Element::colorPicker)

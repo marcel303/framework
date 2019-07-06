@@ -15,6 +15,7 @@ namespace ControlSurfaceDefinition
 		kElementType_None,
 		kElementType_Label,
 		kElementType_Knob,
+		kElementType_Slider2,
 		kElementType_Slider3,
 		kElementType_Listbox,
 		kElementType_ColorPicker,
@@ -37,6 +38,27 @@ namespace ControlSurfaceDefinition
 		kColorSpace_Rgbw,
 		kColorSpace_Hsl
 	};
+
+	struct Vector2
+	{
+		float x = 0.f;
+		float y = 0.f;
+		
+		Vector2()
+		{
+		}
+		
+		Vector2(const float in_x, const float in_y)
+			: x(in_x)
+			, y(in_y)
+		{
+		}
+		
+		const float & operator[](const int index) const
+		{
+			return (&x)[index];
+		}
+	};
 	
 	struct Vector3
 	{
@@ -53,6 +75,11 @@ namespace ControlSurfaceDefinition
 			, y(in_y)
 			, z(in_z)
 		{
+		}
+		
+		const float & operator[](const int index) const
+		{
+			return (&x)[index];
 		}
 	};
 	
@@ -141,6 +168,17 @@ namespace ControlSurfaceDefinition
 		std::string oscAddress;
 	};
 	
+	struct Slider2
+	{
+		std::string name;
+		std::string displayName;
+		Vector2 defaultValue = { 0.f, 0.f };
+		bool hasDefaultValue = false;
+		Vector2 min = { 0.f, 0.f };
+		Vector2 max = { 1.f, 1.f };
+		std::string oscAddress;
+	};
+	
 	struct Slider3
 	{
 		std::string name;
@@ -195,6 +233,7 @@ namespace ControlSurfaceDefinition
 		
 		Knob knob;
 		
+		Slider2 slider2;
 		Slider3 slider3;
 		
 		Listbox listbox;
@@ -217,6 +256,14 @@ namespace ControlSurfaceDefinition
 			
 			sx = 48;
 			sy = 48;
+		}
+		
+		void makeSlider2()
+		{
+			type = kElementType_Slider2;
+			
+			sx = 100;
+			sy = 40;
 		}
 		
 		void makeSlider3()
