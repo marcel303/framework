@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
 	etherdream_lib_start();
 
 #ifdef WIN32
-	_sleep(1200);
+	_sleep(2000);
 #else
 	/* Sleep for a bit over a second, to ensure that we see broadcasts
 	 * from all available DACs. */

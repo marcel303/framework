@@ -51,6 +51,9 @@ void Surface::construct()
 
 void Surface::destruct()
 {
+	if (m_buffer[1] == m_buffer[0])
+		m_buffer[1] = 0;
+
 	for (int i = 0; i < 2; ++i)
 	{
 		if (m_buffer[i])
