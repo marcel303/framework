@@ -183,6 +183,32 @@ int main(int argc, char * argv[])
 			tension, bias);
 	};
 	
+	auto interp_gap = [&](const float * values, const int num_values, const float pos)
+	{
+		const float i1f = floorf(pos);
+		const int i1 = (int)i1f;
+		const int i2 = i1 + 1;
+		
+		float t = pos - i1f;
+		
+		if (t < .5f)
+		{
+			t = 4.f * t * t * t;
+		}
+		else
+		{
+			t = 1.f - t;
+			t = 1.f - 4.f * t * t * t;
+		}
+		
+		const float v1 = values[i1];
+		const float v2 = values[i2];
+		
+		//
+		
+		return v1 * (1.f - t) + v2 * t;
+	};
+	
 	const int num_values = 10;
 	float values[num_values];
 	values[0] = 300.f;
@@ -215,6 +241,8 @@ int main(int argc, char * argv[])
 			function = interp_cubic_catmullRom;
 		if (keyboard.wentDown(SDLK_5))
 			function = interp_cubic_hermite;
+		if (keyboard.wentDown(SDLK_6))
+			function = interp_gap;
 		
 		if (mouse.wentDown(BUTTON_LEFT))
 		{
