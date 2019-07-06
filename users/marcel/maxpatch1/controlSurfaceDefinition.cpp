@@ -4,6 +4,22 @@
 
 namespace ControlSurfaceDefinition
 {
+	bool Vector4::operator==(const Vector4 & other) const
+	{
+		return
+			x == other.x &&
+			y == other.y &&
+			z == other.z &&
+			w == other.w;
+	}
+	
+	bool Vector4::operator!=(const Vector4 & other) const
+	{
+		return (*this == other) == false;
+	}
+	
+	//
+	
 	void Color::setRgb(
 		const float in_r,
 		const float in_g,

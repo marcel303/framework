@@ -101,6 +101,9 @@ namespace ControlSurfaceDefinition
 			, w(in_w)
 		{
 		}
+		
+		bool operator==(const Vector4 & other) const;
+		bool operator!=(const Vector4 & other) const;
 	};
 	
 	struct Color

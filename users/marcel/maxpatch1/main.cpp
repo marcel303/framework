@@ -153,7 +153,7 @@ int main(int arg, char * argv[])
 			float defaultValue = 0.f;
 			float doubleClickTimer = 0.f;
 			bool valueHasChanged = false;
-			ControlSurfaceDefinition::Color color;
+			ControlSurfaceDefinition::Vector4 value4;
 		};
 		
 		std::vector<Elem> elems;
@@ -216,7 +216,7 @@ int main(int arg, char * argv[])
 				
 				if (colorPicker.hasDefaultValue)
 				{
-					e.color = colorPicker.defaultValue;
+					e.value4 = colorPicker.defaultValue;
 				}
 			}
 		}
@@ -329,7 +329,7 @@ int main(int arg, char * argv[])
 						if (e.doubleClickTimer > 0.f)
 						{
 							if (colorPicker.hasDefaultValue)
-								e.color = colorPicker.defaultValue;
+								e.value4 = colorPicker.defaultValue;
 						}
 						else
 							e.doubleClickTimer = .2f;
@@ -343,15 +343,15 @@ int main(int arg, char * argv[])
 					
 					if (&e == activeElem)
 					{
-						ControlSurfaceDefinition::Color oldColor = e.color;
+						ControlSurfaceDefinition::Vector4 oldValue = e.value4;
 						
 						const float hue = saturate<float>((mouse.x - elem->x) / float(elem->sx));
 						const float saturation = saturate<float>((mouse.y - elem->y) / float(elem->sy));
 						
-						e.color.x = hue;
-						e.color.y = saturation;
+						e.value4.x = hue;
+						e.value4.y = saturation;
 						
-						if (e.color != oldColor)
+						if (e.value4 != oldValue)
 						{
 						// todo: only changed when item index changes
 							e.valueHasChanged = true;
@@ -457,24 +457,24 @@ int main(int arg, char * argv[])
 							
 							s << osc::BeginMessage(colorPicker.oscAddress.c_str());
 							{
-								if (e.color.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgb)
+								if (e.elem->colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgb)
 								{
-									s << e.color.x;
-									s << e.color.y;
-									s << e.color.z;
+									s << e.value4.x;
+									s << e.value4.y;
+									s << e.value4.z;
 								}
-								else if (e.color.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgbw)
+								else if (e.elem->colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgbw)
 								{
-									s << e.color.x;
-									s << e.color.y;
-									s << e.color.z;
-									s << e.color.w;
+									s << e.value4.x;
+									s << e.value4.y;
+									s << e.value4.z;
+									s << e.value4.w;
 								}
-								else if (e.color.colorSpace == ControlSurfaceDefinition::kColorSpace_Hsl)
+								else if (e.elem->colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Hsl)
 								{
-									s << e.color.x;
-									s << e.color.y;
-									s << e.color.z;
+									s << e.value4.x;
+									s << e.value4.y;
+									s << e.value4.z;
 								}
 							}
 							s << osc::EndMessage;
@@ -617,8 +617,8 @@ int main(int arg, char * argv[])
 					
 					auto & colorPicker = elem->colorPicker;
 					
-					const float x = e.color.x;
-					const float y = e.color.y;
+					const float x = e.value4.x;
+					const float y = e.value4.y;
 					setLumi(100);
 					drawLine(elem->x, elem->y + elem->sy * y, elem->x + elem->sx, elem->y + elem->sy * y);
 					drawLine(elem->x + elem->sx * x, elem->y, elem->x + elem->sx * x, elem->y + elem->sy);
@@ -702,7 +702,7 @@ int main(int arg, char * argv[])
 		{
 		// todo : remove this test code and replace it with drag and drop support for files
 		
-			const char * filename = "/Users/thecat/repos/strp-laserapp/strp-laserapp/data/controlsurfaces/effectObject_colorCube_.json";
+			const char * filename = "/Users/thecat/repos/strp-laserapp/strp-laserapp/data/controlsurfaces/effectObject_explosion_1_.json";
 			
 			ControlSurfaceDefinition::Surface newSurface;
 			
