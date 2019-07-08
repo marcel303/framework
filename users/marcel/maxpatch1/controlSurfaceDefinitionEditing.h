@@ -4,6 +4,7 @@
 
 namespace ControlSurfaceDefinition
 {
+	struct Button;
 	struct Element;
 	struct Group;
 	struct Knob;
@@ -14,6 +15,7 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
+	struct ButtonEditor;
 	struct ColorPickerEditor;
 	struct GroupEditor;
 	struct KnobEditor;
@@ -72,6 +74,7 @@ namespace ControlSurfaceDefinition
 		
 		LabelEditor beginLabel(const char * text);
 		KnobEditor beginKnob(const char * name);
+		ButtonEditor beginButton(const char * name);
 		Slider2Editor beginSlider2(const char * name);
 		Slider3Editor beginSlider3(const char * name);
 		ListboxEditor beginListbox(const char * name);
@@ -132,6 +135,25 @@ namespace ControlSurfaceDefinition
 		KnobEditor & exponential(const float exponential);
 		KnobEditor & unit(const Unit unit);
 		KnobEditor & osc(const char * address);
+		
+		GroupEditor & end();
+	};
+	
+	struct ButtonEditor : ElementEditor<ButtonEditor>
+	{
+		GroupEditor & groupEditor;
+		Button * button = nullptr;
+		
+		ButtonEditor(GroupEditor & in_groupEditor, Element * in_element, Button * in_button)
+			: ElementEditor(in_element)
+			, groupEditor(in_groupEditor)
+			, button(in_button)
+		{
+		}
+		
+		ButtonEditor & name(const char * name);
+		ButtonEditor & displayName(const char * displayName);
+		ButtonEditor & osc(const char * address);
 		
 		GroupEditor & end();
 	};

@@ -73,6 +73,16 @@ namespace ControlSurfaceDefinition
 		return KnobEditor(*this, &group->elems.back(), &group->elems.back().knob);
 	}
 	
+	ButtonEditor GroupEditor::beginButton(const char * name)
+	{
+		Element element;
+		element.makeButton();
+		element.button.name = name;
+		group->elems.push_back(element);
+		
+		return ButtonEditor(*this, &group->elems.back(), &group->elems.back().button);
+	}
+	
 	Slider2Editor GroupEditor::beginSlider2(const char * name)
 	{
 		Element element;
@@ -244,6 +254,31 @@ namespace ControlSurfaceDefinition
 	}
 
 	GroupEditor & KnobEditor::end()
+	{
+		return groupEditor;
+	}
+	
+	//
+	
+	ButtonEditor & ButtonEditor::name(const char * name)
+	{
+		button->name = name;
+		return *this;
+	}
+	
+	ButtonEditor & ButtonEditor::displayName(const char * displayName)
+	{
+		button->displayName = displayName;
+		return *this;
+	}
+
+	ButtonEditor & ButtonEditor::osc(const char * address)
+	{
+		button->oscAddress = address;
+		return *this;
+	}
+
+	GroupEditor & ButtonEditor::end()
 	{
 		return groupEditor;
 	}
@@ -425,6 +460,7 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
+	template struct ElementEditor<ButtonEditor>;
 	template struct ElementEditor<ColorPickerEditor>;
 	template struct ElementEditor<KnobEditor>;
 	template struct ElementEditor<LabelEditor>;

@@ -106,6 +106,26 @@ namespace ControlSurfaceDefinition
 						knob.hasDefaultValue = true;
 					}
 				}
+				else if (elem.type == kElementType_Slider2)
+				{
+					auto & slider = elem.slider2;
+					
+					if (slider.hasDefaultValue == false)
+					{
+						slider.defaultValue = slider.min;
+						slider.hasDefaultValue = true;
+					}
+				}
+				else if (elem.type == kElementType_Slider3)
+				{
+					auto & slider = elem.slider3;
+					
+					if (slider.hasDefaultValue == false)
+					{
+						slider.defaultValue = slider.min;
+						slider.hasDefaultValue = true;
+					}
+				}
 			}
 		}
 	}
@@ -122,6 +142,34 @@ namespace ControlSurfaceDefinition
 					
 					if (knob.displayName.empty())
 						knob.displayName = knob.name;
+				}
+				else if (elem.type == kElementType_Button)
+				{
+					auto & button = elem.button;
+					
+					if (button.displayName.empty())
+						button.displayName = button.name;
+				}
+				else if (elem.type == kElementType_Slider2)
+				{
+					auto & slider = elem.slider2;
+					
+					if (slider.displayName.empty())
+						slider.displayName = slider.name;
+				}
+				else if (elem.type == kElementType_Slider3)
+				{
+					auto & slider = elem.slider3;
+					
+					if (slider.displayName.empty())
+						slider.displayName = slider.name;
+				}
+				else if (elem.type == kElementType_ColorPicker)
+				{
+					auto & colorPicker = elem.colorPicker;
+					
+					if (colorPicker.displayName.empty())
+						colorPicker.displayName = colorPicker.name;
 				}
 			}
 		}
@@ -202,6 +250,7 @@ namespace ControlSurfaceDefinition
 			.add("none", kElementType_None)
 			.add("label", kElementType_Label)
 			.add("knob", kElementType_Knob)
+			.add("button", kElementType_Button)
 			.add("slider2", kElementType_Slider2)
 			.add("slider3", kElementType_Slider3)
 			.add("listbox", kElementType_Listbox)
@@ -250,6 +299,7 @@ namespace ControlSurfaceDefinition
 			
 		typeDB.addStructured<Knob>("ControlSurfaceDefinition::Knob")
 			.add("name", &Knob::name)
+			.add("displayName", &Knob::displayName)
 			.add("defaultValue", &Knob::defaultValue)
 			.add("hasDefaultValue", &Knob::hasDefaultValue)
 			.add("min", &Knob::min)
@@ -258,8 +308,14 @@ namespace ControlSurfaceDefinition
 			.add("unit", &Knob::unit)
 			.add("oscAddress", &Knob::oscAddress);
 		
+		typeDB.addStructured<Button>("ControlSurfaceDefinition::Button")
+			.add("name", &Button::name)
+			.add("displayName", &Button::displayName)
+			.add("oscAddress", &Button::oscAddress);
+		
 		typeDB.addStructured<Slider2>("ControlSurfaceDefinition::Slider2")
 			.add("name", &Slider2::name)
+			.add("displayName", &Slider2::displayName)
 			.add("defaultValue", &Slider2::defaultValue)
 			.add("hasDefaultValue", &Slider2::hasDefaultValue)
 			.add("min", &Slider2::min)
@@ -268,6 +324,7 @@ namespace ControlSurfaceDefinition
 		
 		typeDB.addStructured<Slider3>("ControlSurfaceDefinition::Slider3")
 			.add("name", &Slider3::name)
+			.add("displayName", &Slider3::displayName)
 			.add("defaultValue", &Slider3::defaultValue)
 			.add("hasDefaultValue", &Slider3::hasDefaultValue)
 			.add("min", &Slider3::min)
@@ -301,6 +358,7 @@ namespace ControlSurfaceDefinition
 			.add("height", &Element::sy)
 			.add("label", &Element::label)
 			.add("knob", &Element::knob)
+			.add("button", &Element::button)
 			.add("slider2", &Element::slider2)
 			.add("slider3", &Element::slider3)
 			.add("listbox", &Element::listbox)

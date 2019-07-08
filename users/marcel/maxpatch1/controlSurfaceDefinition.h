@@ -15,6 +15,7 @@ namespace ControlSurfaceDefinition
 		kElementType_None,
 		kElementType_Label,
 		kElementType_Knob,
+		kElementType_Button,
 		kElementType_Slider2,
 		kElementType_Slider3,
 		kElementType_Listbox,
@@ -171,6 +172,14 @@ namespace ControlSurfaceDefinition
 		std::string oscAddress;
 	};
 	
+	struct Button
+	{
+	// todo : add button mode: click, toggle
+		std::string name;
+		std::string displayName;
+		std::string oscAddress;
+	};
+	
 	struct Slider2
 	{
 		std::string name;
@@ -236,6 +245,8 @@ namespace ControlSurfaceDefinition
 		
 		Knob knob;
 		
+		Button button;
+		
 		Slider2 slider2;
 		Slider3 slider3;
 		
@@ -259,6 +270,14 @@ namespace ControlSurfaceDefinition
 			
 			sx = 48;
 			sy = 48;
+		}
+		
+		void makeButton()
+		{
+			type = kElementType_Button;
+			
+			sx = 100;
+			sy = 40;
 		}
 		
 		void makeSlider2()
