@@ -8,6 +8,14 @@ struct Timeline
 	double length = 0.0;
 	double time = 0.0;
 	double volume = 0.0;
+	
+	struct AutomationValue
+	{
+		double time = 0.0;
+		double value = 0.0;
+	};
+	
+	std::vector<AutomationValue> volume_history;
 };
 
 
@@ -24,6 +32,8 @@ struct MyOscReceiveHandler : OscReceiveHandler
 	{
 		if (strcmp(m.AddressPattern(), "/time") == 0)
 		{
+			const double previous_time = timeline->time;
+			
 			for (auto i = m.ArgumentsBegin(); i != m.ArgumentsEnd(); ++i)
 			{
 				auto & a = *i;
@@ -35,6 +45,13 @@ struct MyOscReceiveHandler : OscReceiveHandler
 			}
 			
 			timeline->length = fmax(timeline->length, timeline->time);
+			
+			// handle loops by resetting the historic values
+			
+			if (timeline->time < previous_time)
+			{
+				timeline->volume_history.clear();
+			}
 		}
 		else if (strcmp(m.AddressPattern(), "/1/volume") == 0)
 		{
@@ -47,6 +64,11 @@ struct MyOscReceiveHandler : OscReceiveHandler
 				else if (a.IsDouble())
 					timeline->volume = a.AsDoubleUnchecked();
 			}
+			
+			Timeline::AutomationValue automation_value;
+			automation_value.time = timeline->time;
+			automation_value.value = timeline->volume;
+			timeline->volume_history.push_back(automation_value);
 		}
 	}
 };
@@ -88,6 +110,25 @@ int main(int argc, char * argv[])
 					
 					setLumi(100);
 					drawRect(0, 0, timeline.length, 1);
+					
+					if (timeline.volume_history.empty() == false)
+					{
+						setLumi(40);
+						
+						gxBegin(GX_LINES);
+						{
+							for (size_t i = 0; i < timeline.volume_history.size() - 1; ++i)
+							{
+								auto & v1 = timeline.volume_history[i + 0];
+								auto & v2 = timeline.volume_history[i + 1];
+							
+								gxVertex2f(v1.time, v1.value);
+								gxVertex2f(v2.time, v2.value);
+							}
+						}
+					
+						gxEnd();
+					}
 					
 					setLumi(200);
 					drawLine(timeline.time, 0, timeline.time, 1);
