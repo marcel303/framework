@@ -2,6 +2,12 @@
 
 namespace max
 {
+	PatchEditor & PatchEditor::rect(const float x, const float y, const float sx, const float sy)
+	{
+		patch.patcher.rect = { x, y, sx, sy };
+		return *this;
+	}
+	
 	BoxEditor PatchEditor::beginBox(const char * id, const int numInlets, const int numOutlets)
 	{
 		patch.patcher.boxes.resize(patch.patcher.boxes.size() + 1);

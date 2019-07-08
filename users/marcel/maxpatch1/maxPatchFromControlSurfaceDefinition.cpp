@@ -23,9 +23,11 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 	
 	max::PatchEditor patchEditor(patch);
 	
+	patchEditor.rect(0, 0, surface.layout.sx, surface.layout.sy);
+	
 	int patching_x = 30;
 	int patching_y = 20;
-	
+
 	for (auto & group : surface.groups)
 	{
 		for (auto & elem : group.elems)
