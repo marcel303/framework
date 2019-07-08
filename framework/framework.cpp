@@ -7659,12 +7659,22 @@ void hqClearGradient()
 	globals.hqGradientType = GRADIENT_NONE;
 }
 
-void hqSetTexture(const Mat4x4 & matrix, const GxTextureId texture)
+void hqSetTexture(const GxTextureId texture, const Mat4x4 & matrix)
 {
 	globals.hqTextureEnabled = true;
 	globals.hqTextureMatrix = matrix;
 	
 	gxSetTexture(texture);
+}
+
+void hqSetTextureScreen(const GxTextureId texture, float x1, float y1, float x2, float y2)
+{
+	const Mat4x4 matrix =
+		Mat4x4(true)
+			.Scale(1.f / fmaxf(x2 - x1, 1e-6f), 1.f / fmaxf(y2 - y1, 1e-6f), 1.f)
+			.Translate(-x1, -y1, 0.f);
+	
+	hqSetTexture(texture, matrix);
 }
 
 void hqClearTexture()

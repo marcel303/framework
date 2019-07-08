@@ -1727,7 +1727,8 @@ void hqEnd();
 void hqSetGradient(GRADIENT_TYPE gradientType, const Mat4x4 & matrix, const Color & color1, const Color & color2, const COLOR_MODE colorMode, const float bias = 0.f, const float scale = 1.f);
 void hqClearGradient();
 
-void hqSetTexture(const Mat4x4 & matrix, const GxTextureId texture);
+void hqSetTexture(const GxTextureId texture, const Mat4x4 & matrix);
+void hqSetTextureScreen(const GxTextureId texture, float x1, float y1, float x2, float y2);
 void hqClearTexture();
 
 void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2);
