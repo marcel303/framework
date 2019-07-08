@@ -154,6 +154,8 @@ int main(int arg, char * argv[])
 			float doubleClickTimer = 0.f;
 			bool valueHasChanged = false;
 			ControlSurfaceDefinition::Vector4 value4;
+			
+			int liveState[4] = { };
 		};
 		
 		std::vector<Elem> elems;
@@ -321,22 +323,57 @@ int main(int arg, char * argv[])
 				{
 					auto & colorPicker = elem->colorPicker;
 					
+					const int picker_x = 0;
+					const int picker_sx = elem->sx - 25;
+					const int slider_x = elem->sx - 20;
+					const int slider_sx = 20;
+					
 					if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 					{
-						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
+						const bool isInsidePicker =
+							mouse.x >= elem->x + picker_x &&
+							mouse.x < elem->x + picker_x + picker_sx;
 						
-						if (e.doubleClickTimer > 0.f)
+						const bool isInsideSlider =
+							mouse.x >= elem->x + slider_x &&
+							mouse.x < elem->x + slider_x + slider_sx;
+						
+						if (isInsidePicker)
 						{
-							if (colorPicker.hasDefaultValue)
-								e.value4 = colorPicker.defaultValue;
+							activeElem = &e;
+							SDL_CaptureMouse(SDL_TRUE);
+							
+							e.liveState[0] = 'p';
+							
+							if (e.doubleClickTimer > 0.f)
+							{
+								if (colorPicker.hasDefaultValue)
+									e.value4 = colorPicker.defaultValue;
+							}
+							else
+								e.doubleClickTimer = .2f;
 						}
-						else
-							e.doubleClickTimer = .2f;
+						else if (isInsideSlider)
+						{
+							activeElem = &e;
+							SDL_CaptureMouse(SDL_TRUE);
+							
+							e.liveState[0] = 's';
+							
+							if (e.doubleClickTimer > 0.f)
+							{
+								if (colorPicker.hasDefaultValue)
+									e.value4 = colorPicker.defaultValue;
+							}
+							else
+								e.doubleClickTimer = .2f;
+						}
 					}
 					
 					if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 					{
+						e.liveState[0] = 0;
+						
 						activeElem = nullptr;
 						SDL_CaptureMouse(SDL_FALSE);
 					}
@@ -345,15 +382,23 @@ int main(int arg, char * argv[])
 					{
 						ControlSurfaceDefinition::Vector4 oldValue = e.value4;
 						
-						const float hue = saturate<float>((mouse.x - elem->x) / float(elem->sx));
-						const float saturation = saturate<float>((mouse.y - elem->y) / float(elem->sy));
-						
-						e.value4.x = hue;
-						e.value4.y = saturation;
+						if (e.liveState[0] == 'p')
+						{
+							const float hue = saturate<float>((mouse.x - elem->x - picker_x) / float(picker_sx));
+							const float lightness = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							
+							e.value4.x = hue;
+							e.value4.z = lightness;
+						}
+						else if (e.liveState[0] == 's')
+						{
+							const float saturation = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							
+							e.value4.y = saturation;
+						}
 						
 						if (e.value4 != oldValue)
 						{
-						// todo: only changed when item index changes
 							e.valueHasChanged = true;
 						}
 					}
@@ -603,30 +648,109 @@ int main(int arg, char * argv[])
 				}
 				else if (elem->type == ControlSurfaceDefinition::kElementType_ColorPicker)
 				{
-					hqBegin(HQ_FILLED_ROUNDED_RECTS);
+					if (elem->colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Hsl || true)
 					{
-						if (&e == activeElem)
-							setLumi(190);
-						else if (&e == hoverElem)
-							setLumi(210);
-						else
+						const int picker_x = 0;
+						const int picker_sx = elem->sx - 25;
+						const int slider_x = elem->sx - 20;
+						const int slider_sx = 20;
+						
+						// draw color picker
+						
+						const float saturation = e.value4.y;
+						
+						uint8_t colors[128][128][4];
+						for (int y = 0; y < 128; ++y)
+						{
+							for (int x = 0; x < 128; ++x)
+							{
+								const float hue = (x + .5f) / 128.f;
+								const float luminance = 1.f - (y + .5f) / 128.f;
+								const Color color = Color::fromHSL(hue, saturation, luminance);
+								colors[y][x][0] = color.r * 255.f;
+								colors[y][x][1] = color.g * 255.f;
+								colors[y][x][2] = color.b * 255.f;
+								colors[y][x][3] = 255;
+							}
+						}
+						
+						GxTextureId texture = createTextureFromRGBA8(colors, 128, 128, true, true);
+						
+						hqSetTextureScreen(texture, elem->x + picker_x, elem->y, elem->x + picker_x + picker_sx, elem->y + elem->sy);
+						{
+							hqBegin(HQ_FILLED_ROUNDED_RECTS);
+							{
+								setLumi(255);
+								hqFillRoundedRect(elem->x + picker_x, elem->y, elem->x + picker_x + picker_sx, elem->y + elem->sy, 4);
+							}
+							hqEnd();
+						}
+						hqClearTexture();
+						
+						freeTexture(texture);
+						
+						hqBegin(HQ_STROKED_ROUNDED_RECTS);
+						{
+							if (&e == activeElem)
+								setLumi(190);
+							else if (&e == hoverElem)
+								setLumi(210);
+							else
+								setLumi(200);
+							hqStrokeRoundedRect(elem->x + picker_x, elem->y, elem->x + picker_x + picker_sx, elem->y + elem->sy, 4, 2);
+						}
+						hqEnd();
+						
+						// draw saturation slider
+						
+						hqBegin(HQ_FILLED_ROUNDED_RECTS);
+						{
+							setLumi(100);
+							hqFillRoundedRect(elem->x + slider_x, elem->y, elem->x + slider_x + slider_sx, elem->y + elem->sy, 4);
+							
 							setLumi(200);
-						hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
+							hqFillRoundedRect(elem->x + slider_x, elem->y + elem->sy * (1.f - e.value4.y), elem->x + slider_x + slider_sx, elem->y + elem->sy, 4);
+						}
+						hqEnd();
+						
+						setLumi(40);
+						hqBegin(HQ_STROKED_ROUNDED_RECTS);
+						{
+							hqStrokeRoundedRect(elem->x + slider_x, elem->y, elem->x + slider_x + slider_sx, elem->y + elem->sy, 4, 2);
+						}
+						hqEnd();
+						
+						// draw crosshair
+						
+						auto & colorPicker = elem->colorPicker;
+						
+						const float x = e.value4.x;
+						const float y = 1.f - e.value4.z;
+						setLumi(100);
+						drawLine(
+							elem->x + picker_x,
+							elem->y + elem->sy * y,
+							elem->x + picker_x + picker_sx,
+							elem->y + elem->sy * y);
+						drawLine(
+							elem->x + picker_x + picker_sx * x,
+							elem->y,
+							elem->x + picker_x + picker_sx * x,
+							elem->y + elem->sy);
+						
+						setColor(40, 40, 40);
+						setFont("calibri.ttf");
+						
+						drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy / 2.f, 10, 0, 0, "%s", colorPicker.displayName.c_str());
 					}
-					hqEnd();
+					else if (elem->colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgb)
+					{
 					
-					auto & colorPicker = elem->colorPicker;
+					}
+					else if (elem->colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgbw)
+					{
 					
-					const float x = e.value4.x;
-					const float y = e.value4.y;
-					setLumi(100);
-					drawLine(elem->x, elem->y + elem->sy * y, elem->x + elem->sx, elem->y + elem->sy * y);
-					drawLine(elem->x + elem->sx * x, elem->y, elem->x + elem->sx * x, elem->y + elem->sy);
-					
-					setColor(40, 40, 40);
-					setFont("calibri.ttf");
-					
-					drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy / 2.f, 10, 0, 0, "%s", colorPicker.displayName.c_str());
+					}
 				}
 				else if (elem->type == ControlSurfaceDefinition::kElementType_Separator)
 				{
