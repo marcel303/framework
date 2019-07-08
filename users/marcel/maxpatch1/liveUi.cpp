@@ -33,6 +33,20 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 			e.defaultValue = e.value;
 		}
 	}
+	if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
+	{
+		auto & slider = elem->slider3;
+		Assert(slider.hasDefaultValue);
+		
+		if (slider.hasDefaultValue)
+		{
+			for (int i = 0; i < 3; ++i)
+				e.value4[i] = slider.defaultValue[i];
+		
+		// todo : store default value
+			//e.defaultValue = e.value;
+		}
+	}
 	else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
 	{
 		auto & listbox = elem->listbox;
@@ -154,6 +168,49 @@ void LiveUi::tick(const float dt)
 				e.value = saturate<float>(e.value - mouse.dy * speed);
 				
 				if (e.value != oldValue)
+				{
+					e.valueHasChanged = true;
+				}
+			}
+		}
+		if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
+		{
+			auto & slider = elem->slider3;
+			
+			if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
+			{
+				activeElem = &e;
+				SDL_CaptureMouse(SDL_TRUE);
+				
+				e.liveState[0] = clamp<int>((mouse.x - elem->x) * 3 / elem->sx, 0, 2);
+				
+				if (e.doubleClickTimer > 0.f)
+				{
+				// fixme : assign value4
+					if (slider.hasDefaultValue)
+						e.value = e.defaultValue;
+				}
+				else
+					e.doubleClickTimer = .2f;
+			}
+			
+			if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
+			{
+				activeElem = nullptr;
+				SDL_CaptureMouse(SDL_FALSE);
+			}
+			
+			if (&e == activeElem)
+			{
+				const float speed = 1.f / (keyboard.isDown(SDLK_LSHIFT) ? 400.f : 100.f);
+				
+				const auto oldValue = e.value4;
+				
+				const int index = e.liveState[0];
+				
+				e.value4[index] = saturate<float>(e.value4[index] - mouse.dy * speed);
+				
+				if (e.value4 != oldValue)
 				{
 					e.valueHasChanged = true;
 				}
@@ -465,6 +522,29 @@ void LiveUi::tick(const float dt)
 					s << osc::EndMessage;
 				}
 			}
+			else if (e.elem->type == ControlSurfaceDefinition::kElementType_Slider3)
+			{
+				auto & slider = e.elem->slider3;
+				
+				if (!slider.oscAddress.empty())
+				{
+					//const float t = powf(activeElem->value, knob.exponential);
+					//const float value = knob.min * (1.f - t) + knob.max * t;
+					const auto value = activeElem->value4;
+					
+					if (s.Size() + slider.oscAddress.size() + 100 > 1200)
+					{
+						sendBundle();
+						beginBundle();
+					}
+					
+					s << osc::BeginMessage(slider.oscAddress.c_str());
+					{
+						s << value.x << value.y << value.z;
+					}
+					s << osc::EndMessage;
+				}
+			}
 			else if (e.elem->type == ControlSurfaceDefinition::kElementType_Listbox)
 			{
 				auto & listbox = e.elem->listbox;
@@ -606,6 +686,31 @@ void LiveUi::draw() const
 			
 			setColor(40, 40, 40);
 			drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy - 2, 10, 0, -1, "%s", knob.displayName.c_str());
+		}
+		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
+		{
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			{
+				if (&e == activeElem)
+					setLumi(190);
+				else if (&e == hoverElem)
+					setLumi(210);
+				else
+					setLumi(200);
+				hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
+			}
+			hqEnd();
+			
+			auto & slider = elem->slider3;
+			
+			setColor(40, 40, 40);
+			drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy/2 - 4, 10, 0, -1, "%s", slider.displayName.c_str());
+			
+			for (int i = 0; i < 3; ++i)
+			{
+				setColor(40, 40, 40);
+				drawText(elem->x + elem->sx * (i + .5f) / 3, elem->y + elem->sy/2 + 4, 10, 0, +1, "%.2f", e.value4[i]);
+			}
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
 		{

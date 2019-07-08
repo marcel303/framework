@@ -105,6 +105,16 @@ namespace ControlSurfaceDefinition
 		
 		bool operator==(const Vector4 & other) const;
 		bool operator!=(const Vector4 & other) const;
+		
+		const float & operator[](const int index) const
+		{
+			return (&x)[index];
+		}
+		
+		float & operator[](const int index)
+		{
+			return (&x)[index];
+		}
 	};
 	
 	struct Color
