@@ -3,6 +3,43 @@
 #include "maxPatchEditor.h"
 #include "StringEx.h"
 
+static bool cut_string_by_substring(
+	const std::string & str,
+	const std::string & substring,
+	std::string & before,
+	std::string & after)
+{
+	auto pos = str.find(substring);
+	
+	if (pos == std::string::npos)
+		return false;
+	else
+	{
+		before = str.substr(0, pos);
+		after = str.substr(pos + substring.length());
+		return true;
+	}
+}
+
+static std::string fixupOscAddress(const char * path)
+{
+	std::string result;
+	
+	std::string before;
+	std::string after;
+	
+	if (cut_string_by_substring(path, "/1/", before, after))
+	{
+		result = "/" + after + " @prefix " + before + "/";
+	}
+	else
+	{
+		result = std::string(path) + " @indexEnable 0";
+	}
+	
+	return result;
+}
+
 bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surface & surface, max::Patch & patch)
 {
 	int nextObjectId = 1;
@@ -79,7 +116,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					patchEditor
 						.beginBox(osc_id.c_str(), 1, 1)
 							.patching_rect(patching_x, patching_y, 450, 22) // automatic height will be 22 for 'paramOsc' box
-							.text(String::FormatC("paramOsc %s", elem.knob.oscAddress.c_str()).c_str())
+							.text(String::FormatC("paramOsc %s", fixupOscAddress(elem.knob.oscAddress.c_str()).c_str()).c_str())
 							.end();
 					patching_y += 40;
 				}
@@ -110,6 +147,41 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				{
 					connect(osc_id, 0, knob_id, 0);
 					connect(knob_id, 0, osc_id, 0);
+				}
+			}
+			else if (elem.type == ControlSurfaceDefinition::kElementType_Button)
+			{
+				std::string osc_id;
+				
+				if (elem.button.oscAddress.empty() == false)
+				{
+					osc_id = allocObjectId();
+					patchEditor
+						.beginBox(osc_id.c_str(), 1, 1)
+							.patching_rect(patching_x, patching_y, 450, 22) // automatic height will be 22 for 'paramOsc' box
+							.text(String::FormatC("paramOsc %s", fixupOscAddress(elem.button.oscAddress.c_str()).c_str()).c_str())
+							.end();
+					patching_y += 40;
+				}
+				
+				const std::string button_id = allocObjectId();
+				patchEditor
+					.beginBox(button_id.c_str(), 1, 2)
+						.maxclass("live.text")
+						.patching_rect(patching_x, patching_y, 40, 48) // live.dial has a fixed height of 48
+						.presentation(true)
+						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
+						.saved_attribute("parameter_longname", elem.button.name)
+						.saved_attribute("parameter_shortname",  elem.button.displayName)
+						.saved_attribute("parameter_linknames", 1)
+						.varname(elem.button.name.c_str())
+						.end();
+				patching_y += 60;
+				
+				if (elem.button.oscAddress.empty() == false)
+				{
+					connect(osc_id, 0, button_id, 0);
+					connect(button_id, 0, osc_id, 0);
 				}
 			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Slider2)
@@ -178,7 +250,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					patchEditor
 						.beginBox(osc_id.c_str(), 1, 1)
 							.patching_rect(patching_x, patching_y, 450, 22) // automatic height will be 22 for 'paramOsc' box
-							.text(String::FormatC("paramOsc %s", elem.slider2.oscAddress.c_str()).c_str())
+							.text(String::FormatC("paramOsc %s", fixupOscAddress(elem.slider2.oscAddress.c_str()).c_str()).c_str())
 							.end();
 					patching_y += 40;
 					
@@ -257,7 +329,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					patchEditor
 						.beginBox(osc_id.c_str(), 1, 1)
 							.patching_rect(patching_x, patching_y, 450, 22) // automatic height will be 22 for 'paramOsc' box
-							.text(String::FormatC("paramOsc %s", elem.slider3.oscAddress.c_str()).c_str())
+							.text(String::FormatC("paramOsc %s", fixupOscAddress(elem.slider3.oscAddress.c_str()).c_str()).c_str())
 							.end();
 					patching_y += 40;
 					
@@ -289,7 +361,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					patchEditor
 						.beginBox(osc_id.c_str(), 1, 1)
 							.patching_rect(patching_x, patching_y, 450, 22) // automatic height will be 22 for 'paramOsc' box
-							.text(String::FormatC("paramOsc %s", listbox.oscAddress.c_str()).c_str())
+							.text(String::FormatC("paramOsc %s", fixupOscAddress(listbox.oscAddress.c_str()).c_str()).c_str())
 							.end();
 					patching_y += 40;
 				}
@@ -411,7 +483,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					patchEditor
 						.beginBox(osc_id.c_str(), 1, 1)
 							.patching_rect(patching_x, patching_y, 450, 22) // automatic height will be 22 for 'paramOsc' box
-							.text(String::FormatC("paramOsc %s", elem.colorPicker.oscAddress.c_str()).c_str())
+							.text(String::FormatC("paramOsc %s", fixupOscAddress(elem.colorPicker.oscAddress.c_str()).c_str()).c_str())
 							.end();
 					patching_y += 40;
 					
