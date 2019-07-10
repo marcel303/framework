@@ -64,6 +64,19 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 	
 	int patching_x = 30;
 	int patching_y = 20;
+	
+	if (surface.name.empty() == false)
+	{
+		const std::string autopattr_name = String::Replace(surface.name, '/', '_');
+		
+		patchEditor.beginBox(allocObjectId().c_str(), 1, 4)
+			.maxclass("newobj")
+			.text(String::FormatC("autopattr %s", autopattr_name.c_str()).c_str())
+			.patching_rect(patching_x, patching_y, 450, 20)
+			.varname(autopattr_name.c_str())
+			.end();
+		patching_y += 60;
+	}
 
 	for (auto & group : surface.groups)
 	{
@@ -370,7 +383,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				patchEditor
 					.beginBox(listbox_id.c_str(), 1, 3)
 						.maxclass("live.menu")
-						.patching_rect(patching_x, patching_y, 40, 48) // live.dial has a fixed height of 48
+						.patching_rect(patching_x, patching_y, 100, 48) // live.dial has a fixed height of 48
 						.presentation(true)
 						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
 						.parameter_enable(true)
