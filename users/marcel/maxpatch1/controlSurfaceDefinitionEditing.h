@@ -36,6 +36,8 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
+		SurfaceEditor & name(const char * name);
+		
 		GroupEditor beginGroup(const char * name);
 		
 		SurfaceLayoutEditor beginLayout();

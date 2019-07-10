@@ -3,6 +3,12 @@
 
 namespace ControlSurfaceDefinition
 {
+	SurfaceEditor & SurfaceEditor::name(const char * name)
+	{
+		surface->name = name;
+		return *this;
+	}
+	
 	GroupEditor SurfaceEditor::beginGroup(const char * name)
 	{
 		Group group;

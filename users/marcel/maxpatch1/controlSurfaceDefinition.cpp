@@ -378,6 +378,7 @@ namespace ControlSurfaceDefinition
 			.add("paddingY", &SurfaceLayout::paddingY);
 		
 		typeDB.addStructured<Surface>("ControlSurfaceDefinition::Surface")
+			.add("name", &Surface::name)
 			.add("groups", &Surface::groups)
 			.add("layout", &Surface::layout);
 	}

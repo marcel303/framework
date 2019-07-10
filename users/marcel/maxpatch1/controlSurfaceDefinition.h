@@ -354,6 +354,8 @@ namespace ControlSurfaceDefinition
 	
 	struct Surface
 	{
+		std::string name;
+		
 		std::vector<Group> groups;
 		
 		SurfaceLayout layout;
