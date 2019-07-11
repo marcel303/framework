@@ -11,7 +11,8 @@ namespace max
 	{
 		kParameterType_Float,
 		kParameterType_Uint8,
-		kParameterType_Enum
+		kParameterType_Enum,
+		kParameterType_Blob
 	};
 
 // applies to live.dial, live.numbox

@@ -40,6 +40,38 @@ static std::string fixupOscAddress(const char * path)
 	return result;
 }
 
+static void rgbToHsl(const float r, const float g, const float b, float & hue, float & sat, float & lum)
+{
+	float max = std::max(r, std::max(g, b));
+	float min = std::min(r, std::min(g, b));
+
+	lum = (max + min) / 2.0f;
+
+	float delta = max - min;
+
+	if (delta < 1e-10f)
+	{
+		sat = 0.f;
+		hue = 0.f;
+	}
+	else
+	{
+		sat = (lum <= .5f) ? (delta / (max + min)) : (delta / (2.f - (max + min)));
+
+		if (r == max)
+			hue = (g - b) / delta;
+		else if (g == max)
+			hue = 2.f + (b - r) / delta;
+		else
+			hue = 4.f + (r - g) / delta;
+
+		if (hue < 0.f)
+			hue += 6.0f;
+
+		hue /= 6.f;
+	}
+}
+
 bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surface & surface, max::Patch & patch)
 {
 	int nextObjectId = 1;
@@ -62,7 +94,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 	
 	patchEditor.rect(0, 0, surface.layout.sx, surface.layout.sy);
 	
-	int patching_x = 30;
+	int patching_x = 30;    
 	int patching_y = 20;
 	
 	if (surface.name.empty() == false)
@@ -144,7 +176,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.parameter_enable(true)
 						.saved_attribute("parameter_mmin", elem.knob.min)
 						.saved_attribute("parameter_mmax", elem.knob.max)
-						.saved_attribute("parameter_initial_enable", 1)
+						.saved_attribute("parameter_initial_enable", elem.knob.hasDefaultValue)
 						.saved_attribute("parameter_initial", elem.knob.defaultValue)
 						.saved_attribute("parameter_exponent", elem.knob.exponential)
 						.saved_attribute("parameter_longname", elem.knob.name)
@@ -234,7 +266,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 							.parameter_enable(true)
 							.saved_attribute("parameter_mmin", elem.slider2.min[i])
 							.saved_attribute("parameter_mmax", elem.slider2.max[i])
-							.saved_attribute("parameter_initial_enable", 1)
+							.saved_attribute("parameter_initial_enable", elem.slider2.hasDefaultValue)
 							.saved_attribute("parameter_initial", elem.slider2.defaultValue[i])
 							.saved_attribute("parameter_longname", elem_name)
 							.saved_attribute("parameter_shortname",  elem.slider2.displayName)
@@ -313,7 +345,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 							.parameter_enable(true)
 							.saved_attribute("parameter_mmin", elem.slider3.min[i])
 							.saved_attribute("parameter_mmax", elem.slider3.max[i])
-							.saved_attribute("parameter_initial_enable", 1)
+							.saved_attribute("parameter_initial_enable", elem.slider3.hasDefaultValue)
 							.saved_attribute("parameter_initial", elem.slider3.defaultValue[i])
 							.saved_attribute("parameter_longname", elem_name)
 							.saved_attribute("parameter_shortname",  elem.slider3.displayName)
@@ -389,7 +421,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.parameter_enable(true)
 						.saved_attribute("parameter_mmin", 0)
 						.saved_attribute("parameter_mmax", (int)listbox.items.size() - 1)
-						.saved_attribute("parameter_initial_enable", 1)
+						.saved_attribute("parameter_initial_enable", listbox.hasDefaultValue)
 						.saved_attribute("parameter_initial", defaultIndex)
 						.saved_attribute("parameter_longname", listbox.name)
 						.saved_attribute("parameter_shortname", listbox.name)
@@ -408,6 +440,29 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_ColorPicker)
 			{
+				float defaultH;
+				float defaultS;
+				float defaultL;
+				
+				if (elem.colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Hsl)
+				{
+					defaultH = elem.colorPicker.defaultValue.x;
+					defaultS = elem.colorPicker.defaultValue.y;
+					defaultL = elem.colorPicker.defaultValue.z;
+				}
+				else
+				{
+					rgbToHsl(
+						elem.colorPicker.defaultValue.x,
+						elem.colorPicker.defaultValue.y,
+						elem.colorPicker.defaultValue.z,
+						defaultH,
+						defaultS,
+						defaultL);
+				}
+				
+				defaultS = 1.f; // fixme : perhaps add a separate slider for saturation. and set saturation to 1 when L is 0 or 1
+				
 				const std::string swatch_id = allocObjectId();
 				patchEditor
 					.beginBox(swatch_id.c_str(), 3, 2)
@@ -416,12 +471,20 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.presentation(true)
 						.presentation_rect(elem.x, elem.y, elem.sx - 25, elem.sy)
 						.parameter_enable(true)
-						.saved_attribute("parameter_mmin", 0.f)
-						.saved_attribute("parameter_mmax", 1.f)
-						.saved_attribute("parameter_initial_enable", 1)
-						.saved_attribute("parameter_initial", std::vector<float> { elem.colorPicker.defaultValue.x, elem.colorPicker.defaultValue.y, elem.colorPicker.defaultValue.z })
+						.saved_attribute("parameter_initial_enable", elem.colorPicker.hasDefaultValue)
+						.saved_attribute("parameter_initial", std::vector<float>
+							{
+								elem.colorPicker.defaultValue.x,
+								elem.colorPicker.defaultValue.y,
+								elem.colorPicker.defaultValue.z,
+								1.f,
+								defaultH,
+								defaultS,
+								defaultL
+							})
 						.saved_attribute("parameter_longname", elem.colorPicker.name + ".rgb")
 						.saved_attribute("parameter_shortname",  elem.colorPicker.displayName)
+						.saved_attribute("parameter_type", max::kParameterType_Blob)
 						.saved_attribute("parameter_linknames", 1)
 						.varname((elem.colorPicker.name + ".rgb").c_str())
 						.end();
@@ -444,7 +507,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.presentation(true)
 						.presentation_rect(elem.x + elem.sx - 20, elem.y, 20, elem.sy)
 						.parameter_enable(true)
-						.saved_attribute("parameter_initial_enable", 1)
+						.saved_attribute("parameter_initial_enable", elem.colorPicker.hasDefaultValue)
 						.saved_attribute("parameter_initial", elem.colorPicker.defaultValue.w)
 						.saved_attribute("parameter_mmin", 0.f)
 						.saved_attribute("parameter_mmax", 1.f)
