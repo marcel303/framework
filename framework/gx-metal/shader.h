@@ -103,7 +103,7 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 					CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
 					CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
 					CASE(kSp_SkinningMatrices, "skinningMatrices");
-					CASE(kSp_Texture, "texture0");
+					CASE(kSp_Texture, "source");
 					CASE(kSp_Params, "params");
 					CASE(kSp_ShadingParams, "shadingParams");
 					CASE(kSp_GradientInfo, "gradientInfo");
@@ -341,7 +341,7 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 				CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
 				CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
 				CASE(kSp_SkinningMatrices, "skinningMatrices");
-				CASE(kSp_Texture, "texture0");
+				CASE(kSp_Texture, "source");
 				CASE(kSp_Params, "params");
 				CASE(kSp_ShadingParams, "shadingParams");
 				CASE(kSp_GradientInfo, "gradientInfo");
