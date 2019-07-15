@@ -318,8 +318,8 @@ namespace ControlSurfaceDefinition
 		{
 			type = kElementType_ColorPicker;
 			
-			sx = 200;
-			sy = 100;
+			sx = 120;
+			sy = 70;
 		}
 		
 		void makeSeparator()

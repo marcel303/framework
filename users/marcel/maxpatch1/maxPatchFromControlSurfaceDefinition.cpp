@@ -463,13 +463,30 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				
 				defaultS = 1.f; // fixme : perhaps add a separate slider for saturation. and set saturation to 1 when L is 0 or 1
 				
+				//
+				
+				const int label_y = elem.y;
+				const int label_sy = 20;
+				const int colorpicker_y = elem.y + 20;
+				const int colorpicker_sy = elem.sy - 20;
+				
+				patchEditor
+					.beginBox(allocObjectId().c_str(), 1, 2)
+						.maxclass("comment")
+						.text(elem.colorPicker.name.c_str())
+						.patching_rect(patching_x, patching_y, 200, 20) // comment will auto-size so size here doesn't really matter, only the position
+						.presentation(true)
+						.presentation_rect(elem.x, label_y, elem.sx, label_sy)
+						.end();
+				patching_y += 60;
+				
 				const std::string swatch_id = allocObjectId();
 				patchEditor
 					.beginBox(swatch_id.c_str(), 3, 2)
 						.maxclass("swatch")
 						.patching_rect(patching_x, patching_y, 100, 100)
 						.presentation(true)
-						.presentation_rect(elem.x, elem.y, elem.sx - 25, elem.sy)
+						.presentation_rect(elem.x, colorpicker_y, elem.sx - 25, colorpicker_sy)
 						.parameter_enable(true)
 						.saved_attribute("parameter_initial_enable", elem.colorPicker.hasDefaultValue)
 						.saved_attribute("parameter_initial", std::vector<float>
@@ -505,7 +522,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.maxclass("live.slider")
 						.patching_rect(patching_x, patching_y, 20, 100)
 						.presentation(true)
-						.presentation_rect(elem.x + elem.sx - 20, elem.y, 20, elem.sy)
+						.presentation_rect(elem.x + elem.sx - 20, colorpicker_y, 20, colorpicker_sy)
 						.parameter_enable(true)
 						.saved_attribute("parameter_initial_enable", elem.colorPicker.hasDefaultValue)
 						.saved_attribute("parameter_initial", elem.colorPicker.defaultValue.w)
