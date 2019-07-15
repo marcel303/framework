@@ -5,6 +5,28 @@
 #include "oscSender.h"
 #include <math.h>
 
+static void convertToHsl(const float r, const float g, const float b, float & hue, float & saturation, float & luminance)
+{
+	if (r == 0.f && g == 0.f && b == 0.f)
+	{
+		hue = 0.f;
+		saturation = 1.f;
+		luminance = 0.f;
+	}
+	else if (r == 1.f && g == 1.f && b == 1.f)
+	{
+		hue = 0.f;
+		saturation = 1.f;
+		luminance = 1.f;
+	}
+	else
+	{
+		const Color color(r, g, b);
+		
+		color.toHSL(hue, saturation, luminance);
+	}
+}
+
 LiveUi & LiveUi::osc(const char * ipAddress, const int udpPort)
 {
 	OscSender * sender = new OscSender();
@@ -73,13 +95,14 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 		{
 			if (elem->colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgb)
 			{
-				const Color color(
+				float hue, saturation, luminance;
+				convertToHsl(
 					colorPicker.defaultValue.x,
 					colorPicker.defaultValue.y,
-					colorPicker.defaultValue.z);
-				
-				float hue, saturation, luminance;
-				color.toHSL(hue, saturation, luminance);
+					colorPicker.defaultValue.z,
+					hue,
+					saturation,
+					luminance);
 				
 				e.value4.x = hue;
 				e.value4.y = saturation;
@@ -87,15 +110,14 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 			}
 			else if (elem->colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgbw)
 			{
-				const Color color(
+				float hue, saturation, luminance;
+				convertToHsl(
 					colorPicker.defaultValue.x,
 					colorPicker.defaultValue.y,
-					colorPicker.defaultValue.z);
-				
-				float hue;
-				float saturation;
-				float luminance;
-				color.toHSL(hue, saturation, luminance);
+					colorPicker.defaultValue.z,
+					hue,
+					saturation,
+					luminance);
 				
 				e.value4.x = hue;
 				e.value4.y = saturation;
@@ -109,9 +131,11 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 		}
 		else
 		{
+			Assert(false);
 			e.value4.x = 0.f;
 			e.value4.y = 1.f;
 			e.value4.z = .5f;
+			e.value4.w = 0.f;
 		}
 	}
 }
@@ -522,6 +546,33 @@ void LiveUi::tick(const float dt)
 					s << osc::EndMessage;
 				}
 			}
+			else if (e.elem->type == ControlSurfaceDefinition::kElementType_Button)
+			{
+				// todo
+			}
+			else if (e.elem->type == ControlSurfaceDefinition::kElementType_Slider2)
+			{
+				auto & slider = e.elem->slider2;
+				
+				if (!slider.oscAddress.empty())
+				{
+					//const float t = powf(activeElem->value, knob.exponential);
+					//const float value = knob.min * (1.f - t) + knob.max * t;
+					const auto value = activeElem->value4;
+					
+					if (s.Size() + slider.oscAddress.size() + 100 > 1200)
+					{
+						sendBundle();
+						beginBundle();
+					}
+					
+					s << osc::BeginMessage(slider.oscAddress.c_str());
+					{
+						s << value.x << value.y;
+					}
+					s << osc::EndMessage;
+				}
+			}
 			else if (e.elem->type == ControlSurfaceDefinition::kElementType_Slider3)
 			{
 				auto & slider = e.elem->slider3;
@@ -582,15 +633,19 @@ void LiveUi::tick(const float dt)
 					{
 						if (e.elem->colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgb)
 						{
-							s << e.value4.x;
-							s << e.value4.y;
-							s << e.value4.z;
+							const Color color = Color::fromHSL(e.value4.x, e.value4.y, e.value4.z);
+							
+							s << color.r;
+							s << color.g;
+							s << color.b;
 						}
 						else if (e.elem->colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgbw)
 						{
-							s << e.value4.x;
-							s << e.value4.y;
-							s << e.value4.z;
+							const Color color = Color::fromHSL(e.value4.x, e.value4.y, e.value4.z);
+							
+							s << color.r;
+							s << color.g;
+							s << color.b;
 							s << e.value4.w;
 						}
 						else if (e.elem->colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Hsl)
@@ -810,6 +865,8 @@ void LiveUi::draw() const
 			}
 			hqEnd();
 			
+			const int slider_margin_sx = 2;
+			
 			if (colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Hsl ||
 				colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgb)
 			{
@@ -821,7 +878,7 @@ void LiveUi::draw() const
 					hqFillRoundedRect(elem->x + slider_x, elem->y, elem->x + slider_x + slider_sx, elem->y + elem->sy, 4);
 					
 					setLumi(200);
-					hqFillRoundedRect(elem->x + slider_x, elem->y + elem->sy * (1.f - e.value4.y), elem->x + slider_x + slider_sx, elem->y + elem->sy, 4);
+					hqFillRoundedRect(elem->x + slider_x + slider_margin_sx, elem->y + elem->sy * (1.f - e.value4.y), elem->x + slider_x + slider_sx - slider_margin_sx, elem->y + elem->sy, 4);
 				}
 				hqEnd();
 				
@@ -842,7 +899,7 @@ void LiveUi::draw() const
 					hqFillRoundedRect(elem->x + slider1_x, elem->y, elem->x + slider1_x + slider1_sx, elem->y + elem->sy, 4);
 					
 					setLumi(200);
-					hqFillRoundedRect(elem->x + slider1_x, elem->y + elem->sy * (1.f - e.value4.y), elem->x + slider1_x + slider1_sx, elem->y + elem->sy, 4);
+					hqFillRoundedRect(elem->x + slider1_x + slider_margin_sx, elem->y + elem->sy * (1.f - e.value4.y), elem->x + slider1_x + slider1_sx - slider_margin_sx, elem->y + elem->sy, 4);
 				}
 				hqEnd();
 				
@@ -861,7 +918,7 @@ void LiveUi::draw() const
 					hqFillRoundedRect(elem->x + slider2_x, elem->y, elem->x + slider2_x + slider2_sx, elem->y + elem->sy, 4);
 					
 					setLumi(200);
-					hqFillRoundedRect(elem->x + slider2_x, elem->y + elem->sy * (1.f - e.value4.w), elem->x + slider2_x + slider2_sx, elem->y + elem->sy, 4);
+					hqFillRoundedRect(elem->x + slider2_x + slider_margin_sx, elem->y + elem->sy * (1.f - e.value4.w), elem->x + slider2_x + slider2_sx - slider_margin_sx, elem->y + elem->sy, 4);
 				}
 				hqEnd();
 				
@@ -875,24 +932,32 @@ void LiveUi::draw() const
 			
 			// draw crosshair
 			
-			const float x = e.value4.x;
-			const float y = 1.f - e.value4.z;
-			setLumi(100);
-			drawLine(
-				elem->x + picker_x,
-				elem->y + elem->sy * y,
-				elem->x + picker_x + picker_sx,
-				elem->y + elem->sy * y);
-			drawLine(
-				elem->x + picker_x + picker_sx * x,
-				elem->y,
-				elem->x + picker_x + picker_sx * x,
-				elem->y + elem->sy);
+			{
+				const float x = e.value4.x;
+				const float y = 1.f - e.value4.z;
+				setLumi(100);
+				hqBegin(HQ_FILLED_CIRCLES);
+				hqFillCircle(elem->x + picker_x + picker_sx * x, elem->y + elem->sy * y, 3);
+				hqEnd();
+				setLumi(100);
+				drawLine(
+					elem->x + picker_x,
+					elem->y + elem->sy * y,
+					elem->x + picker_x + picker_sx,
+					elem->y + elem->sy * y);
+				drawLine(
+					elem->x + picker_x + picker_sx * x,
+					elem->y,
+					elem->x + picker_x + picker_sx * x,
+					elem->y + elem->sy);
+			}
+			
+			// draw name
 			
 			setColor(40, 40, 40);
 			setFont("calibri.ttf");
 			
-			drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy / 2.f, 10, 0, 0, "%s", colorPicker.displayName.c_str());
+			drawText(elem->x + picker_x + picker_sx / 2.f, elem->y + 8, 10, 0, 0, "%s", colorPicker.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Separator)
 		{
