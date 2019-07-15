@@ -91,7 +91,7 @@ void testHqPrimitives()
 			
 			if (enableTexturing)
 			{
-				hqSetTexture(Mat4x4(true).Scale(1.f/600.f, 1.f/600.f, 1), getTexture("picture.jpg"));
+				hqSetTexture(getTexture("picture.jpg"), Mat4x4(true).Scale(1.f/600.f, 1.f/600.f, 1));
 			}
 			
 			// lines
