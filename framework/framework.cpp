@@ -176,6 +176,7 @@ Framework::Framework()
 	
 	events.clear();
 	changedFiles.clear();
+	droppedFiles.clear();
 	
 	quitRequested = false;
 	time = 0.f;
@@ -698,6 +699,7 @@ bool Framework::shutdown()
 	
 	events.clear();
 	changedFiles.clear();
+	droppedFiles.clear();
 	
 	m_lastTick = -1;
 	
@@ -884,6 +886,7 @@ void Framework::process()
 	events.clear();
 	
 	changedFiles.clear();
+	droppedFiles.clear();
 	
 	SDL_Event e;
 	
@@ -1035,6 +1038,8 @@ void Framework::process()
 		}
 		else if (e.type == SDL_DROPFILE)
 		{
+			droppedFiles.push_back(e.drop.file);
+			
 			Dictionary args;
 			args.setString("file", e.drop.file);
 			processAction("filedrop", args);

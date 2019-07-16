@@ -449,6 +449,7 @@ public:
 	
 	std::vector<SDL_Event> events;
 	std::vector<std::string> changedFiles;
+	std::vector<std::string> droppedFiles;
 	
 private:
 	uint32_t m_lastTick;
