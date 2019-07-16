@@ -12,6 +12,7 @@ struct LiveUi
 		ControlSurfaceDefinition::Element * elem = nullptr;
 		float value = 0.f;
 		float defaultValue = 0.f;
+		ControlSurfaceDefinition::Vector4 defaultValue4;
 		float doubleClickTimer = 0.f;
 		bool valueHasChanged = false;
 		ControlSurfaceDefinition::Vector4 value4;

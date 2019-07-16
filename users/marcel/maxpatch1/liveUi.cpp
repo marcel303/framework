@@ -63,10 +63,18 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 		if (slider.hasDefaultValue)
 		{
 			for (int i = 0; i < 3; ++i)
-				e.value4[i] = slider.defaultValue[i];
+			{
+				const float range = slider.max[i] - slider.min[i];
+				if (range == 0.f)
+					e.value4[i] = 0.f;
+				else
+				{
+					const float t = (slider.defaultValue[i] - slider.min[i]) / range;
+					e.value4[i] = t;
+				}
+			}
 		
-		// todo : store default value
-			//e.defaultValue = e.value;
+			e.defaultValue4 = e.value4;
 		}
 	}
 	else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
@@ -210,9 +218,8 @@ void LiveUi::tick(const float dt)
 				
 				if (e.doubleClickTimer > 0.f)
 				{
-				// fixme : assign value4
 					if (slider.hasDefaultValue)
-						e.value = e.defaultValue;
+						e.value4 = e.defaultValue4;
 				}
 				else
 					e.doubleClickTimer = .2f;
@@ -266,7 +273,7 @@ void LiveUi::tick(const float dt)
 			
 			if (&e == activeElem)
 			{
-				const float speed = 1.f / 100.f;
+				const float speed = 1.f / 20.f;
 				
 				const float oldValue = e.value;
 				
@@ -556,10 +563,6 @@ void LiveUi::tick(const float dt)
 				
 				if (!slider.oscAddress.empty())
 				{
-					//const float t = powf(activeElem->value, knob.exponential);
-					//const float value = knob.min * (1.f - t) + knob.max * t;
-					const auto value = activeElem->value4;
-					
 					if (s.Size() + slider.oscAddress.size() + 100 > 1200)
 					{
 						sendBundle();
@@ -568,7 +571,13 @@ void LiveUi::tick(const float dt)
 					
 					s << osc::BeginMessage(slider.oscAddress.c_str());
 					{
-						s << value.x << value.y;
+						for (int i = 0; i < 2; ++i)
+						{
+							const float t = powf(activeElem->value4[i], slider.exponential[i]);
+							const float value = slider.min[i] * (1.f - t) + slider.max[i] * t;
+							
+							s << value;
+						}
 					}
 					s << osc::EndMessage;
 				}
@@ -579,10 +588,6 @@ void LiveUi::tick(const float dt)
 				
 				if (!slider.oscAddress.empty())
 				{
-					//const float t = powf(activeElem->value, knob.exponential);
-					//const float value = knob.min * (1.f - t) + knob.max * t;
-					const auto value = activeElem->value4;
-					
 					if (s.Size() + slider.oscAddress.size() + 100 > 1200)
 					{
 						sendBundle();
@@ -591,7 +596,13 @@ void LiveUi::tick(const float dt)
 					
 					s << osc::BeginMessage(slider.oscAddress.c_str());
 					{
-						s << value.x << value.y << value.z;
+						for (int i = 0; i < 3; ++i)
+						{
+							const float t = powf(activeElem->value4[i], slider.exponential[i]);
+							const float value = slider.min[i] * (1.f - t) + slider.max[i] * t;
+							
+							s << value;
+						}
 					}
 					s << osc::EndMessage;
 				}
@@ -744,28 +755,48 @@ void LiveUi::draw() const
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
 		{
+			const int lumi =
+				&e == activeElem ? 190
+				: &e == hoverElem ? 210
+				: 200;
+
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
-				if (&e == activeElem)
-					setLumi(190);
-				else if (&e == hoverElem)
-					setLumi(210);
-				else
-					setLumi(200);
+				setLumi(lumi);
 				hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
 			}
 			hqEnd();
 			
 			auto & slider = elem->slider3;
 			
-			setColor(40, 40, 40);
-			drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy/2 - 4, 10, 0, -1, "%s", slider.displayName.c_str());
-			
 			for (int i = 0; i < 3; ++i)
 			{
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				{
+					const int padding = 2;
+					const int thickness = 2;
+					
+					setLumi(lumi * 4/5);
+					const float t = e.value4[i];
+					hqFillRoundedRect(
+						elem->x + elem->sx * (i + 0) / 3 + padding,
+						elem->y + elem->sy * (1.f - t) - thickness,
+						elem->x + elem->sx * (i + 1) / 3 - padding,
+						elem->y + elem->sy * (1.f - t) + thickness,
+						4);
+				}
+				hqEnd();
+			
 				setColor(40, 40, 40);
-				drawText(elem->x + elem->sx * (i + .5f) / 3, elem->y + elem->sy/2 + 4, 10, 0, +1, "%.2f", e.value4[i]);
+				const float t = powf(e.value4[i], slider.exponential[i]);
+				const float value = slider.min[i] * (1.f - t) + slider.max[i] * t;
+				drawText(
+					elem->x + elem->sx * (i + .5f) / 3,
+					elem->y + elem->sy/2 + 4, 10, 0, +1, "%.2f", value);
 			}
+			
+			setColor(40, 40, 40);
+			drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy/2 - 4, 10, 0, -1, "%s", slider.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
 		{
