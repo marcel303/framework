@@ -55,6 +55,12 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
+		void set(const float in_x, const float in_y)
+		{
+			x = in_x;
+			y = in_y;
+		}
+		
 		const float & operator[](const int index) const
 		{
 			return (&x)[index];
@@ -76,6 +82,13 @@ namespace ControlSurfaceDefinition
 			, y(in_y)
 			, z(in_z)
 		{
+		}
+		
+		void set(const float in_x, const float in_y, const float in_z)
+		{
+			x = in_x;
+			y = in_y;
+			z = in_z;
 		}
 		
 		const float & operator[](const int index) const
@@ -198,6 +211,7 @@ namespace ControlSurfaceDefinition
 		bool hasDefaultValue = false;
 		Vector2 min = { 0.f, 0.f };
 		Vector2 max = { 1.f, 1.f };
+		Vector2 exponential = { 1.f, 1.f };
 		std::string oscAddress;
 	};
 	
@@ -209,6 +223,7 @@ namespace ControlSurfaceDefinition
 		bool hasDefaultValue = false;
 		Vector3 min = { 0.f, 0.f, 0.f };
 		Vector3 max = { 1.f, 1.f, 1.f };
+		Vector3 exponential = { 1.f, 1.f, 1.f };
 		std::string oscAddress;
 	};
 	

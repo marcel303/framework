@@ -176,6 +176,8 @@ namespace ControlSurfaceDefinition
 		Slider2Editor & displayName(const char * displayName);
 		Slider2Editor & defaultValue(const Vector2 & defaultValue);
 		Slider2Editor & limits(const Vector2 & min, const Vector2 & max);
+		Slider2Editor & exponential(const float exponential);
+		Slider2Editor & exponential(const Vector2 & exponential);
 		Slider2Editor & osc(const char * address);
 		
 		GroupEditor & end();
@@ -197,6 +199,8 @@ namespace ControlSurfaceDefinition
 		Slider3Editor & displayName(const char * displayName);
 		Slider3Editor & defaultValue(const Vector3 & defaultValue);
 		Slider3Editor & limits(const Vector3 & min, const Vector3 & max);
+		Slider3Editor & exponential(const float exponential);
+		Slider3Editor & exponential(const Vector3 & exponential);
 		Slider3Editor & osc(const char * address);
 		
 		GroupEditor & end();

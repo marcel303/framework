@@ -320,6 +320,7 @@ namespace ControlSurfaceDefinition
 			.add("hasDefaultValue", &Slider2::hasDefaultValue)
 			.add("min", &Slider2::min)
 			.add("max", &Slider2::max)
+			.add("exponential", &Slider2::exponential)
 			.add("oscAddress", &Slider2::oscAddress);
 		
 		typeDB.addStructured<Slider3>("ControlSurfaceDefinition::Slider3")
@@ -329,6 +330,7 @@ namespace ControlSurfaceDefinition
 			.add("hasDefaultValue", &Slider3::hasDefaultValue)
 			.add("min", &Slider3::min)
 			.add("max", &Slider3::max)
+			.add("exponential", &Slider3::exponential)
 			.add("oscAddress", &Slider3::oscAddress);
 		
 		typeDB.addStructured<Listbox>("ControlSurfaceDefinition::Listbox")
@@ -341,6 +343,7 @@ namespace ControlSurfaceDefinition
 		typeDB.addStructured<ColorPicker>("ControlSurfaceDefinition::ColorPicker")
 			.add("name", &ColorPicker::name)
 			.add("displayName", &ColorPicker::displayName)
+			.add("colorSpace", &ColorPicker::colorSpace)
 			.add("defaultValue", &ColorPicker::defaultValue)
 			.add("hasDefaultValue", &ColorPicker::hasDefaultValue)
 			.add("oscAddress", &ColorPicker::oscAddress);

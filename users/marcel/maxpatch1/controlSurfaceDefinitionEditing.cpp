@@ -316,6 +316,18 @@ namespace ControlSurfaceDefinition
 		slider->max = max;
 		return *this;
 	}
+	
+	Slider2Editor & Slider2Editor::exponential(const float exponential)
+	{
+		slider->exponential.set(exponential, exponential);
+		return *this;
+	}
+	
+	Slider2Editor & Slider2Editor::exponential(const Vector2 & exponential)
+	{
+		slider->exponential = exponential;
+		return *this;
+	}
 
 	Slider2Editor & Slider2Editor::osc(const char * address)
 	{
@@ -353,6 +365,18 @@ namespace ControlSurfaceDefinition
 	{
 		slider->min = min;
 		slider->max = max;
+		return *this;
+	}
+	
+	Slider3Editor & Slider3Editor::exponential(const float exponential)
+	{
+		slider->exponential.set(exponential, exponential, exponential);
+		return *this;
+	}
+	
+	Slider3Editor & Slider3Editor::exponential(const Vector3 & exponential)
+	{
+		slider->exponential = exponential;
 		return *this;
 	}
 
