@@ -172,15 +172,11 @@ int main(int arg, char * argv[])
 		if (framework.quitRequested)
 			break;
 		
-		if (keyboard.wentDown(SDLK_SPACE))
+		for (auto & filename : framework.droppedFiles)
 		{
-		// todo : remove this test code and replace it with drag and drop support for files
-		
-			const char * filename = "/Users/thecat/repos/strp-laserapp/strp-laserapp/data/controlsurfaces/effectObject_explosion_1_.json";
-			
 			ControlSurfaceDefinition::Surface newSurface;
 			
-			if (loadObjectFromFile(&typeDB, typeDB.findType(newSurface), &newSurface, filename))
+			if (loadObjectFromFile(&typeDB, typeDB.findType(newSurface), &newSurface, filename.c_str()))
 			{
 				surface = newSurface;
 				
