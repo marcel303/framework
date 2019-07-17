@@ -55,6 +55,28 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 			e.defaultValue = e.value;
 		}
 	}
+	if (elem->type == ControlSurfaceDefinition::kElementType_Slider2)
+	{
+		auto & slider = elem->slider2;
+		Assert(slider.hasDefaultValue);
+		
+		if (slider.hasDefaultValue)
+		{
+			for (int i = 0; i < 2; ++i)
+			{
+				const float range = slider.max[i] - slider.min[i];
+				if (range == 0.f)
+					e.value4[i] = 0.f;
+				else
+				{
+					const float t = (slider.defaultValue[i] - slider.min[i]) / range;
+					e.value4[i] = t;
+				}
+			}
+		
+			e.defaultValue4 = e.value4;
+		}
+	}
 	if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
 	{
 		auto & slider = elem->slider3;
@@ -193,7 +215,7 @@ void LiveUi::tick(const float dt)
 			
 			if (&e == activeElem)
 			{
-				const float speed = 1.f / (keyboard.isDown(SDLK_LSHIFT) ? 400.f : 100.f);
+				const float speed = 1.f / ((keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) ? 400.f : 100.f);
 				
 				const float oldValue = e.value;
 				
@@ -205,7 +227,49 @@ void LiveUi::tick(const float dt)
 				}
 			}
 		}
-		if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
+		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider2)
+		{
+			auto & slider = elem->slider3;
+			
+			if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
+			{
+				activeElem = &e;
+				SDL_CaptureMouse(SDL_TRUE);
+				
+				e.liveState[0] = clamp<int>((mouse.x - elem->x) * 2 / elem->sx, 0, 1);
+				
+				if (e.doubleClickTimer > 0.f)
+				{
+					if (slider.hasDefaultValue)
+						e.value4 = e.defaultValue4;
+				}
+				else
+					e.doubleClickTimer = .2f;
+			}
+			
+			if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
+			{
+				activeElem = nullptr;
+				SDL_CaptureMouse(SDL_FALSE);
+			}
+			
+			if (&e == activeElem)
+			{
+				const float speed = 1.f / ((keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) ? 400.f : 100.f);
+				
+				const auto oldValue = e.value4;
+				
+				const int index = e.liveState[0];
+				
+				e.value4[index] = saturate<float>(e.value4[index] - mouse.dy * speed);
+				
+				if (e.value4 != oldValue)
+				{
+					e.valueHasChanged = true;
+				}
+			}
+		}
+		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
 		{
 			auto & slider = elem->slider3;
 			
@@ -233,7 +297,7 @@ void LiveUi::tick(const float dt)
 			
 			if (&e == activeElem)
 			{
-				const float speed = 1.f / (keyboard.isDown(SDLK_LSHIFT) ? 400.f : 100.f);
+				const float speed = 1.f / ((keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) ? 400.f : 100.f);
 				
 				const auto oldValue = e.value4;
 				
@@ -488,6 +552,16 @@ void LiveUi::tick(const float dt)
 					}
 				}
 			}
+		}
+		else if (
+			elem->type == ControlSurfaceDefinition::kElementType_Label ||
+			elem->type == ControlSurfaceDefinition::kElementType_Separator)
+		{
+			// nothing to be done
+		}
+		else
+		{
+			AssertMsg(false, "unknown element type: %d", elem->type);
 		}
 	}
 	
@@ -752,6 +826,51 @@ void LiveUi::draw() const
 			
 			setColor(40, 40, 40);
 			drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy - 2, 10, 0, -1, "%s", knob.displayName.c_str());
+		}
+		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider2)
+		{
+			const int lumi =
+				&e == activeElem ? 190
+				: &e == hoverElem ? 210
+				: 200;
+
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			{
+				setLumi(lumi);
+				hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
+			}
+			hqEnd();
+			
+			auto & slider = elem->slider2;
+			
+			for (int i = 0; i < 2; ++i)
+			{
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				{
+					const int padding = 2;
+					const int thickness = 2;
+					
+					setLumi(lumi * 4/5);
+					const float t = e.value4[i];
+					hqFillRoundedRect(
+						elem->x + elem->sx * (i + 0) / 2 + padding,
+						elem->y + elem->sy * (1.f - t) - thickness,
+						elem->x + elem->sx * (i + 1) / 2 - padding,
+						elem->y + elem->sy * (1.f - t) + thickness,
+						4);
+				}
+				hqEnd();
+			
+				setColor(40, 40, 40);
+				const float t = powf(e.value4[i], slider.exponential[i]);
+				const float value = slider.min[i] * (1.f - t) + slider.max[i] * t;
+				drawText(
+					elem->x + elem->sx * (i + .5f) / 2,
+					elem->y + elem->sy/2 + 4, 10, 0, +1, "%.2f", value);
+			}
+			
+			setColor(40, 40, 40);
+			drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy/2 - 4, 10, 0, -1, "%s", slider.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
 		{
