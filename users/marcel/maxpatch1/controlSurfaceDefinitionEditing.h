@@ -99,6 +99,8 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
+		T & name(const char * name);
+		
 		T & size(const int sx, const int sy);
 		
 		T & divideBottom();
@@ -130,7 +132,6 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
-		KnobEditor & name(const char * name);
 		KnobEditor & displayName(const char * displayName);
 		KnobEditor & defaultValue(const float defaultValue);
 		KnobEditor & limits(const float min, const float max);
@@ -153,7 +154,6 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
-		ButtonEditor & name(const char * name);
 		ButtonEditor & displayName(const char * displayName);
 		ButtonEditor & osc(const char * address);
 		
@@ -172,7 +172,6 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
-		Slider2Editor & name(const char * name);
 		Slider2Editor & displayName(const char * displayName);
 		Slider2Editor & defaultValue(const Vector2 & defaultValue);
 		Slider2Editor & limits(const Vector2 & min, const Vector2 & max);
@@ -195,7 +194,6 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
-		Slider3Editor & name(const char * name);
 		Slider3Editor & displayName(const char * displayName);
 		Slider3Editor & defaultValue(const Vector3 & defaultValue);
 		Slider3Editor & limits(const Vector3 & min, const Vector3 & max);
@@ -218,7 +216,6 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
-		ListboxEditor & name(const char * name);
 		ListboxEditor & defaultValue(const char * defaultValue);
 		ListboxEditor & item(const char * name);
 		ListboxEditor & osc(const char * address);
@@ -238,7 +235,6 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
-		ColorPickerEditor & name(const char * name);
 		ColorPickerEditor & displayName(const char * displayName);
 		ColorPickerEditor & colorSpace(const ColorSpace colorSpace);
 		ColorPickerEditor & defaultValue(const Vector4 & defaultValue);

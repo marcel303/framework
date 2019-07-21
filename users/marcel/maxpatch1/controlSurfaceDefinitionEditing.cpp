@@ -73,7 +73,7 @@ namespace ControlSurfaceDefinition
 	{
 		Element element;
 		element.makeKnob();
-		element.knob.name = name;
+		element.name = name;
 		group->elems.push_back(element);
 		
 		return KnobEditor(*this, &group->elems.back(), &group->elems.back().knob);
@@ -83,7 +83,7 @@ namespace ControlSurfaceDefinition
 	{
 		Element element;
 		element.makeButton();
-		element.button.name = name;
+		element.name = name;
 		group->elems.push_back(element);
 		
 		return ButtonEditor(*this, &group->elems.back(), &group->elems.back().button);
@@ -93,7 +93,7 @@ namespace ControlSurfaceDefinition
 	{
 		Element element;
 		element.makeSlider2();
-		element.slider2.name = name;
+		element.name = name;
 		group->elems.push_back(element);
 		
 		return Slider2Editor(*this, &group->elems.back(), &group->elems.back().slider2);
@@ -103,7 +103,7 @@ namespace ControlSurfaceDefinition
 	{
 		Element element;
 		element.makeSlider3();
-		element.slider3.name = name;
+		element.name = name;
 		group->elems.push_back(element);
 		
 		return Slider3Editor(*this, &group->elems.back(), &group->elems.back().slider3);
@@ -113,7 +113,7 @@ namespace ControlSurfaceDefinition
 	{
 		Element element;
 		element.makeListbox();
-		element.listbox.name = name;
+		element.name = name;
 		group->elems.push_back(element);
 		
 		return ListboxEditor(*this, &group->elems.back(), &group->elems.back().listbox);
@@ -123,7 +123,7 @@ namespace ControlSurfaceDefinition
 	{
 		Element element;
 		element.makeColorPicker();
-		element.colorPicker.name = name;
+		element.name = name;
 		group->elems.push_back(element);
 		
 		return ColorPickerEditor(*this, &group->elems.back(), &group->elems.back().colorPicker);
@@ -163,6 +163,13 @@ namespace ControlSurfaceDefinition
 	}
 	
 	//
+	
+	template <typename T>
+	T & ElementEditor<T>::name(const char * name)
+	{
+		element->name = name;
+		return static_cast<T&>(*this);
+	}
 	
 	template <typename T>
 	T & ElementEditor<T>::size(const int sx, const int sy)
@@ -215,12 +222,6 @@ namespace ControlSurfaceDefinition
 
 	//
 	
-	KnobEditor & KnobEditor::name(const char * name)
-	{
-		knob->name = name;
-		return *this;
-	}
-	
 	KnobEditor & KnobEditor::displayName(const char * displayName)
 	{
 		knob->displayName = displayName;
@@ -266,12 +267,6 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
-	ButtonEditor & ButtonEditor::name(const char * name)
-	{
-		button->name = name;
-		return *this;
-	}
-	
 	ButtonEditor & ButtonEditor::displayName(const char * displayName)
 	{
 		button->displayName = displayName;
@@ -290,12 +285,6 @@ namespace ControlSurfaceDefinition
 	}
 	
 	//
-	
-	Slider2Editor & Slider2Editor::name(const char * name)
-	{
-		slider->name = name;
-		return *this;
-	}
 	
 	Slider2Editor & Slider2Editor::displayName(const char * displayName)
 	{
@@ -342,12 +331,6 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
-	Slider3Editor & Slider3Editor::name(const char * name)
-	{
-		slider->name = name;
-		return *this;
-	}
-	
 	Slider3Editor & Slider3Editor::displayName(const char * displayName)
 	{
 		slider->displayName = displayName;
@@ -393,12 +376,6 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
-	ListboxEditor & ListboxEditor::name(const char * name)
-	{
-		listbox->name = name;
-		return *this;
-	}
-
 	ListboxEditor & ListboxEditor::defaultValue(const char * defaultValue)
 	{
 		listbox->defaultValue = defaultValue;
@@ -424,12 +401,6 @@ namespace ControlSurfaceDefinition
 	}
 	
 	//
-	
-	ColorPickerEditor & ColorPickerEditor::name(const char * name)
-	{
-		colorPicker->name = name;
-		return *this;
-	}
 	
 	ColorPickerEditor & ColorPickerEditor::displayName(const char * displayName)
 	{

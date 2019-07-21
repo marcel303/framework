@@ -184,7 +184,6 @@ namespace ControlSurfaceDefinition
 
 	struct Knob
 	{
-		std::string name;
 		std::string displayName;
 		float defaultValue = 0.f;
 		bool hasDefaultValue = false;
@@ -198,14 +197,12 @@ namespace ControlSurfaceDefinition
 	struct Button
 	{
 	// todo : add button mode: click, toggle
-		std::string name;
 		std::string displayName;
 		std::string oscAddress;
 	};
 	
 	struct Slider2
 	{
-		std::string name;
 		std::string displayName;
 		Vector2 defaultValue = { 0.f, 0.f };
 		bool hasDefaultValue = false;
@@ -217,7 +214,6 @@ namespace ControlSurfaceDefinition
 	
 	struct Slider3
 	{
-		std::string name;
 		std::string displayName;
 		Vector3 defaultValue = { 0.f, 0.f, 0.f };
 		bool hasDefaultValue = false;
@@ -229,7 +225,6 @@ namespace ControlSurfaceDefinition
 	
 	struct Listbox
 	{
-		std::string name;
 		std::vector<std::string> items;
 		std::string defaultValue;
 		bool hasDefaultValue = false;
@@ -238,7 +233,6 @@ namespace ControlSurfaceDefinition
 	
 	struct ColorPicker
 	{
-		std::string name;
 		std::string displayName;
 		ColorSpace colorSpace = kColorSpace_Rgb;
 		Vector4 defaultValue;
@@ -255,6 +249,8 @@ namespace ControlSurfaceDefinition
 	
 	struct Element
 	{
+		std::string name;
+		
 		ElementType type = kElementType_None;
 		
 		int x = 0;

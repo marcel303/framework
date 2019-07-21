@@ -141,35 +141,35 @@ namespace ControlSurfaceDefinition
 					auto & knob = elem.knob;
 					
 					if (knob.displayName.empty())
-						knob.displayName = knob.name;
+						knob.displayName = elem.name;
 				}
 				else if (elem.type == kElementType_Button)
 				{
 					auto & button = elem.button;
 					
 					if (button.displayName.empty())
-						button.displayName = button.name;
+						button.displayName = elem.name;
 				}
 				else if (elem.type == kElementType_Slider2)
 				{
 					auto & slider = elem.slider2;
 					
 					if (slider.displayName.empty())
-						slider.displayName = slider.name;
+						slider.displayName = elem.name;
 				}
 				else if (elem.type == kElementType_Slider3)
 				{
 					auto & slider = elem.slider3;
 					
 					if (slider.displayName.empty())
-						slider.displayName = slider.name;
+						slider.displayName = elem.name;
 				}
 				else if (elem.type == kElementType_ColorPicker)
 				{
 					auto & colorPicker = elem.colorPicker;
 					
 					if (colorPicker.displayName.empty())
-						colorPicker.displayName = colorPicker.name;
+						colorPicker.displayName = elem.name;
 				}
 			}
 		}
@@ -298,7 +298,6 @@ namespace ControlSurfaceDefinition
 			.add("text", &Label::text);
 			
 		typeDB.addStructured<Knob>("ControlSurfaceDefinition::Knob")
-			.add("name", &Knob::name)
 			.add("displayName", &Knob::displayName)
 			.add("defaultValue", &Knob::defaultValue)
 			.add("hasDefaultValue", &Knob::hasDefaultValue)
@@ -309,12 +308,10 @@ namespace ControlSurfaceDefinition
 			.add("oscAddress", &Knob::oscAddress);
 		
 		typeDB.addStructured<Button>("ControlSurfaceDefinition::Button")
-			.add("name", &Button::name)
 			.add("displayName", &Button::displayName)
 			.add("oscAddress", &Button::oscAddress);
 		
 		typeDB.addStructured<Slider2>("ControlSurfaceDefinition::Slider2")
-			.add("name", &Slider2::name)
 			.add("displayName", &Slider2::displayName)
 			.add("defaultValue", &Slider2::defaultValue)
 			.add("hasDefaultValue", &Slider2::hasDefaultValue)
@@ -324,7 +321,6 @@ namespace ControlSurfaceDefinition
 			.add("oscAddress", &Slider2::oscAddress);
 		
 		typeDB.addStructured<Slider3>("ControlSurfaceDefinition::Slider3")
-			.add("name", &Slider3::name)
 			.add("displayName", &Slider3::displayName)
 			.add("defaultValue", &Slider3::defaultValue)
 			.add("hasDefaultValue", &Slider3::hasDefaultValue)
@@ -334,14 +330,12 @@ namespace ControlSurfaceDefinition
 			.add("oscAddress", &Slider3::oscAddress);
 		
 		typeDB.addStructured<Listbox>("ControlSurfaceDefinition::Listbox")
-			.add("name", &Listbox::name)
 			.add("items", &Listbox::items)
 			.add("defaultValue", &Listbox::defaultValue)
 			.add("hasDefaultValue", &Listbox::hasDefaultValue)
 			.add("oscAddress", &Listbox::oscAddress);
 		
 		typeDB.addStructured<ColorPicker>("ControlSurfaceDefinition::ColorPicker")
-			.add("name", &ColorPicker::name)
 			.add("displayName", &ColorPicker::displayName)
 			.add("colorSpace", &ColorPicker::colorSpace)
 			.add("defaultValue", &ColorPicker::defaultValue)
@@ -354,6 +348,7 @@ namespace ControlSurfaceDefinition
 			.add("thickness", &Separator::thickness);
 		
 		typeDB.addStructured<Element>("ControlSurfaceDefinition::Element")
+			.add("name", &Element::name)
 			.add("type", &Element::type)
 			.add("x", &Element::x)
 			.add("y", &Element::y)
