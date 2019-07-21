@@ -179,12 +179,12 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.saved_attribute("parameter_initial_enable", elem.knob.hasDefaultValue)
 						.saved_attribute("parameter_initial", elem.knob.defaultValue)
 						.saved_attribute("parameter_exponent", elem.knob.exponential)
-						.saved_attribute("parameter_longname", elem.knob.name)
+						.saved_attribute("parameter_longname", elem.name)
 						.saved_attribute("parameter_shortname",  elem.knob.displayName)
 						.saved_attribute("parameter_type", max::kParameterType_Float)
 						.saved_attribute("parameter_unitstyle", unitStyle)
 						.saved_attribute("parameter_linknames", 1)
-						.varname(elem.knob.name.c_str())
+						.varname(elem.name.c_str())
 						.end();
 				patching_y += 60;
 				
@@ -216,10 +216,10 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.patching_rect(patching_x, patching_y, 40, 48) // live.dial has a fixed height of 48
 						.presentation(true)
 						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
-						.saved_attribute("parameter_longname", elem.button.name)
+						.saved_attribute("parameter_longname", elem.name)
 						.saved_attribute("parameter_shortname",  elem.button.displayName)
 						.saved_attribute("parameter_linknames", 1)
-						.varname(elem.button.name.c_str())
+						.varname(elem.name.c_str())
 						.end();
 				patching_y += 60;
 				
@@ -239,7 +239,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				patchEditor
 					.beginBox(allocObjectId().c_str(), 1, 2)
 						.maxclass("comment")
-						.text(elem.slider2.name.c_str())
+						.text(elem.name.c_str())
 						.patching_rect(patching_x, patching_y, 200, 20) // comment will auto-size so size here doesn't really matter, only the position
 						.presentation(true)
 						.presentation_rect(elem.x, label_y, elem.sx, label_sy)
@@ -253,7 +253,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					const char * elem_postfix = "xy";
 					
 					const std::string elem_id = allocObjectId();
-					const std::string elem_name = elem.slider2.name + "." + elem_postfix[i];
+					const std::string elem_name = elem.name + "." + elem_postfix[i];
 					
 					elem_ids[i] = elem_id;
 					
@@ -318,7 +318,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				patchEditor
 					.beginBox(allocObjectId().c_str(), 1, 2)
 						.maxclass("comment")
-						.text(elem.slider3.name.c_str())
+						.text(elem.name.c_str())
 						.patching_rect(patching_x, patching_y, 200, 20) // comment will auto-size so size here doesn't really matter, only the position
 						.presentation(true)
 						.presentation_rect(elem.x, label_y, elem.sx, label_sy)
@@ -332,7 +332,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					const char * elem_postfix = "xyz";
 					
 					const std::string elem_id = allocObjectId();
-					const std::string elem_name = elem.slider3.name + "." + elem_postfix[i];
+					const std::string elem_name = elem.name + "." + elem_postfix[i];
 					
 					elem_ids[i] = elem_id;
 					
@@ -423,12 +423,12 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.saved_attribute("parameter_mmax", (int)listbox.items.size() - 1)
 						.saved_attribute("parameter_initial_enable", listbox.hasDefaultValue)
 						.saved_attribute("parameter_initial", defaultIndex)
-						.saved_attribute("parameter_longname", listbox.name)
-						.saved_attribute("parameter_shortname", listbox.name)
+						.saved_attribute("parameter_longname", elem.name)
+						.saved_attribute("parameter_shortname", elem.name)
 						.saved_attribute("parameter_enum", listbox.items)
 						.saved_attribute("parameter_type", max::kParameterType_Enum)
 						.saved_attribute("parameter_linknames", 1)
-						.varname(listbox.name.c_str())
+						.varname(elem.name.c_str())
 						.end();
 				patching_y += 60;
 				
@@ -473,7 +473,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				patchEditor
 					.beginBox(allocObjectId().c_str(), 1, 2)
 						.maxclass("comment")
-						.text(elem.colorPicker.name.c_str())
+						.text(elem.name.c_str())
 						.patching_rect(patching_x, patching_y, 200, 20) // comment will auto-size so size here doesn't really matter, only the position
 						.presentation(true)
 						.presentation_rect(elem.x, label_y, elem.sx, label_sy)
@@ -499,11 +499,11 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 								defaultS,
 								defaultL
 							})
-						.saved_attribute("parameter_longname", elem.colorPicker.name + ".rgb")
+						.saved_attribute("parameter_longname", elem.name + ".rgb")
 						.saved_attribute("parameter_shortname",  elem.colorPicker.displayName)
 						.saved_attribute("parameter_type", max::kParameterType_Blob)
 						.saved_attribute("parameter_linknames", 1)
-						.varname((elem.colorPicker.name + ".rgb").c_str())
+						.varname((elem.name + ".rgb").c_str())
 						.end();
 				patching_y += 100;
 				
@@ -528,12 +528,12 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.saved_attribute("parameter_initial", elem.colorPicker.defaultValue.w)
 						.saved_attribute("parameter_mmin", 0.f)
 						.saved_attribute("parameter_mmax", 1.f)
-						.saved_attribute("parameter_longname", elem.colorPicker.name + ".w")
+						.saved_attribute("parameter_longname", elem.name + ".w")
 						.saved_attribute("parameter_shortname", "w")
 						.saved_attribute("parameter_type", max::kParameterType_Float)
 						.saved_attribute("parameter_unitstyle", max::kUnitStyle_Float)
 						.saved_attribute("parameter_linknames", 1)
-						.varname((elem.colorPicker.name + ".w").c_str())
+						.varname((elem.name + ".w").c_str())
 						.end();
 				patching_y += 100;
 				
