@@ -31,7 +31,7 @@
 #include "image.h"
 #include "testBase.h"
 #include "Timer.h"
-#include "vfxNodes/deepbelief.h"
+#include "vfxNodes-deepbelief/deepbelief.h"
 #include "../libvideo/video.h"
 #include "mediaplayer/MPVideoBuffer.h"
 #include <cmath>
