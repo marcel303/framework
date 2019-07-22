@@ -47,7 +47,7 @@ namespace ControlSurfaceDefinition
 		int x, y;
 		
 		bool hasSize = false;
-		bool sx, sy;
+		int sx, sy;
 	};
 	
 	struct Layout
@@ -270,6 +270,7 @@ namespace ControlSurfaceDefinition
 				layout_elem.x += nearest_dx;
 				has_snap_x = true;
 			}
+			
 			if (has_nearest_dy && std::abs(nearest_dy) < 10)
 			{
 				layout_elem.y += nearest_dy;
@@ -579,6 +580,8 @@ int main(int arg, char * argv[])
 					.padding(4, 4)
 					.end();
 				
+				// recreate the live ui
+				
 				liveUi = LiveUi();
 	
 				for (auto & group : surface.groups)
@@ -592,6 +595,18 @@ int main(int arg, char * argv[])
 				liveUi
 					.osc("127.0.0.1", 2000)
 					.osc("127.0.0.1", 2002);
+				
+			#if ENABLE_LAYOUT_EDITOR
+				// recreate the layout editor
+				
+				layout = ControlSurfaceDefinition::Layout();
+				for (auto & group : surface.groups)
+					for (auto & elem : group.elems)
+						if (elem.name.empty() == false)
+							layout.addElem(group.name.c_str(), elem.name.c_str());
+				
+				layoutEditor = ControlSurfaceDefinition::LayoutEditor(&surface, &layout);
+			#endif
 			}
 		}
 		
@@ -613,23 +628,13 @@ int main(int arg, char * argv[])
 					const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->x = layout_elem.x;
 					const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->y = layout_elem.y;
 				}
-			}
-			
-			// recreate the live ui
-			
-			liveUi = LiveUi();
-	
-			for (auto & group : surface.groups)
-			{
-				for (auto & elem : group.elems)
+				
+				if (layout_elem.hasSize)
 				{
-					liveUi.addElem(&elem);
+					const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->sx = layout_elem.sx;
+					const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->sy = layout_elem.sy;
 				}
 			}
-		
-			liveUi
-				.osc("127.0.0.1", 2000)
-				.osc("127.0.0.1", 2002);
 		}
 	#endif
 	
