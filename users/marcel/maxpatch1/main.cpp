@@ -438,7 +438,7 @@ int main(int arg, char * argv[])
 		.beginGroup("master")
 			.beginLabel("master")
 				.divideBottom()
-				.size(400, 40)
+				.size(100, 40)
 				.end()
 			.beginKnob("intensity")
 				.defaultValue(5.f)
@@ -513,6 +513,7 @@ int main(int arg, char * argv[])
 				.endGroup();
 	}
 	
+	surface.initializeNames();
 	surface.initializeDefaultValues();
 	surface.initializeDisplayNames();
 	
@@ -569,6 +570,7 @@ int main(int arg, char * argv[])
 			{
 				surface = newSurface;
 				
+				surface.initializeNames();
 				surface.initializeDefaultValues();
 				surface.initializeDisplayNames();
 				

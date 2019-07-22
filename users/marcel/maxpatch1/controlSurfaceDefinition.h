@@ -371,6 +371,7 @@ namespace ControlSurfaceDefinition
 		
 		SurfaceLayout layout;
 		
+		void initializeNames();
 		void initializeDefaultValues();
 		void initializeDisplayNames();
 		void performLayout();

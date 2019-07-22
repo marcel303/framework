@@ -90,6 +90,25 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
+	void Surface::initializeNames()
+	{
+		int nextId = 1;
+		
+		for (auto & group : groups)
+		{
+			for (auto & elem : group.elems)
+			{
+				if (elem.name.empty())
+				{
+					char name[64];
+					sprintf(name, "(noname-%d)", nextId++);
+					
+					elem.name = name;
+				}
+			}
+		}
+	}
+	
 	void Surface::initializeDefaultValues()
 	{
 		for (auto & group : groups)
