@@ -66,6 +66,16 @@ namespace ControlSurfaceDefinition
 	
 	struct LayoutEditor
 	{
+		static const int kCornerSize = 7;
+		static const int kSnapSize = 10;
+		
+		enum State
+		{
+			kState_Idle,
+			kState_DragMove,
+			kState_DragSize
+		};
+		
 		struct Button
 		{
 			int x = 0;
@@ -177,9 +187,13 @@ namespace ControlSurfaceDefinition
 		
 		Layout * layout = nullptr;
 		
+		State state = kState_Idle;
+		
 		LayoutElement * selected_element = nullptr;
-		int drag_offset_x = 0;
+		int drag_offset_x = 0; // for positioning and sizing
 		int drag_offset_y = 0;
+		int drag_corner_x = 0; // for sizing only
+		int drag_corner_y = 0;
 		
 		bool has_snap_x = false;
 		bool has_snap_y = false;
@@ -265,16 +279,43 @@ namespace ControlSurfaceDefinition
 			has_snap_x = false;
 			has_snap_y = false;
 			
-			if (has_nearest_dx && std::abs(nearest_dx) < 10)
+			if (has_nearest_dx && std::abs(nearest_dx) < kSnapSize)
 			{
 				layout_elem.x += nearest_dx;
 				has_snap_x = true;
 			}
 			
-			if (has_nearest_dy && std::abs(nearest_dy) < 10)
+			if (has_nearest_dy && std::abs(nearest_dy) < kSnapSize)
 			{
 				layout_elem.y += nearest_dy;
 				has_snap_y = true;
+			}
+		}
+		
+		static void dragSizeAndConstrain(
+			int & elem_x,
+			int & elem_sx,
+			const int mouse_x,
+			const int drag_corner_x,
+			const int min_size)
+		{
+			if (drag_corner_x == 0)
+			{
+				const int new_x = mouse_x;
+				int dx = new_x - elem_x;
+				int new_sx = elem_sx - dx;
+				if (new_sx < min_size)
+					dx += new_sx - min_size;
+				elem_x += dx;
+				elem_sx -= dx;
+			}
+			else if (drag_corner_x == 1)
+			{
+				const int new_x = mouse_x;
+				const int dx = new_x - (elem_x + elem_sx);
+				elem_sx += dx;
+				if (elem_sx < min_size)
+					elem_sx = min_size;
 			}
 		}
 		
@@ -287,6 +328,7 @@ namespace ControlSurfaceDefinition
 			
 			if (inputIsCaptured)
 			{
+				state = kState_Idle;
 				selected_element = nullptr;
 				has_snap_x = false;
 				has_snap_y = false;
@@ -313,16 +355,42 @@ namespace ControlSurfaceDefinition
 						const int sx = layout_elem.hasSize ? layout_elem.sx : surface_elem->sx;
 						const int sy = layout_elem.hasSize ? layout_elem.sy : surface_elem->sy;
 
-						const bool isInside =
-							mouse.x >= x && mouse.x < x + sx &&
-							mouse.y >= y && mouse.y < y + sy;
-						
-						if (isInside)
+						const int dx1 = x - mouse.x;
+						const int dx2 = x + sx - mouse.x;
+			
+						const int dy1 = y - mouse.y;
+						const int dy2 = y + sy - mouse.y;
+			
+						const int t_drag_corner_x = dx1 < 0 && dx1 >= -kCornerSize ? 0 : dx2 >= 0 && dx2 < kCornerSize ? 1 : 2;
+						const int t_drag_corner_y = dy1 < 0 && dy1 >= -kCornerSize ? 0 : dy2 >= 0 && dy2 < kCornerSize ? 1 : 2;
+					
+						if (t_drag_corner_x != 2 && t_drag_corner_y != 2)
 						{
+							state = kState_DragSize;
+							
 							selected_element = &layout_elem;
 							
-							drag_offset_x = mouse.x - x;
-							drag_offset_y = mouse.y - y;
+							drag_offset_x = t_drag_corner_x == 0 ? dx1 : dx2;
+							drag_offset_y = t_drag_corner_y == 0 ? dy1 : dy2;
+							
+							drag_corner_x = t_drag_corner_x;
+							drag_corner_y = t_drag_corner_y;
+						}
+						else
+						{
+							const bool isInside =
+								mouse.x >= x && mouse.x < x + sx &&
+								mouse.y >= y && mouse.y < y + sy;
+							
+							if (isInside)
+							{
+								state = kState_DragMove;
+								
+								selected_element = &layout_elem;
+								
+								drag_offset_x = mouse.x - x;
+								drag_offset_y = mouse.y - y;
+							}
 						}
 					}
 				}
@@ -331,13 +399,14 @@ namespace ControlSurfaceDefinition
 				{
 					if (mouse.wentUp(BUTTON_LEFT))
 					{
+						state = kState_Idle;
 						selected_element = nullptr;
 						has_snap_x = false;
 						has_snap_y = false;
 					}
 				}
 				
-				if (selected_element != nullptr)
+				if (state == kState_DragMove)
 				{
 					if (mouse.dx != 0 || mouse.dy != 0)
 					{
@@ -358,6 +427,50 @@ namespace ControlSurfaceDefinition
 						if (btn_snapToggle.toggleValue)
 						{
 							snapToSurfaceElements(*selected_element, has_snap_x, snap_x, has_snap_y, snap_y);
+						}
+						
+						hasChanged = true;
+					}
+				}
+				else if (state == kState_DragSize)
+				{
+					if (mouse.dx != 0 || mouse.dy != 0)
+					{
+						auto * surface_elem = findSurfaceElement(
+							selected_element->groupName.c_str(),
+							selected_element->name.c_str());
+						
+						if (selected_element->hasPosition == false)
+						{
+							selected_element->hasPosition = true;
+							selected_element->x = surface_elem->x;
+							selected_element->y = surface_elem->y;
+						}
+						
+						if (selected_element->hasSize == false)
+						{
+							selected_element->hasSize = true;
+							selected_element->sx = surface_elem->sx;
+							selected_element->sy = surface_elem->sy;
+						}
+						
+						dragSizeAndConstrain(
+							selected_element->x,
+							selected_element->sx,
+							mouse.x + drag_offset_x,
+							drag_corner_x,
+							40);
+						
+						dragSizeAndConstrain(
+							selected_element->y,
+							selected_element->sy,
+							mouse.y + drag_offset_y,
+							drag_corner_y,
+							40);
+						
+						if (btn_snapToggle.toggleValue)
+						{
+							//snapToSurfaceElements(*selected_element, has_snap_x, snap_x, has_snap_y, snap_y);
 						}
 						
 						hasChanged = true;
@@ -397,8 +510,34 @@ namespace ControlSurfaceDefinition
 					const int sx = layout_elem.hasSize ? layout_elem.sx : surface_elem->sx;
 					const int sy = layout_elem.hasSize ? layout_elem.sy : surface_elem->sy;
 					
+					const int x1 = x;
+					const int y1 = y;
+					const int x2 = x + sx;
+					const int y2 = y + sy;
+					
 					setColor(127, 0, 255);
-					drawRectLine(x, y, x + sx, y + sy);
+					drawRectLine(x1, y1, x2, y2);
+					
+					const bool isInside =
+						mouse.x >= x1 && mouse.x < x2 &&
+						mouse.y >= y1 && mouse.y < y2;
+					
+					if ((isInside && selected_element == nullptr) || (&layout_elem == selected_element))
+					{
+						setColor(127, 0, 255, 100);
+						drawRect(
+							x1, y1,
+							x1 + kCornerSize, y1 + kCornerSize);
+						drawRect(
+							x2 - kCornerSize, y1,
+							x2, y1 + kCornerSize);
+						drawRect(
+							x2 - kCornerSize, y2 - kCornerSize,
+							x2, y2);
+						drawRect(
+							x1, y2 - kCornerSize,
+							x1 + kCornerSize, y2);
+					}
 				}
 			}
 			
