@@ -64,6 +64,32 @@ void getFsfxShaderList(std::vector<std::string> & shaderList)
 	shaderList = s_shaderList;
 }
 
+VFX_ENUM_TYPE(fsfxShader)
+{
+	enumName = "fsfxShader";
+	
+	getElems = []() -> std::vector<Elem>
+	{
+		// todo : create a vfxgraph-fsfx system, which requires explicit initialization
+		
+		std::vector<std::string> shaderList;
+		getFsfxShaderList(shaderList);
+		
+		std::vector<Elem> elems;
+		
+		for (auto & shader : shaderList)
+		{
+			Elem elem;
+			elem.name = shader;
+			elem.valueText = shader;
+			
+			elems.push_back(elem);
+		}
+		
+		return elems;
+	};
+}
+
 static const char * s_fsfxCommonInc = R"SHADER(
 	include engine/ShaderPS.txt
 	include engine/ShaderUtil.txt

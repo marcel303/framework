@@ -1467,6 +1467,7 @@ VfxEnumTypeRegistration::VfxEnumTypeRegistration()
 	: enumName()
 	, nextValue(0)
 	, elems()
+	, getElems(nullptr)
 {
 	next = g_vfxEnumTypeRegistrationList;
 	g_vfxEnumTypeRegistrationList = this;
@@ -1498,8 +1499,6 @@ void VfxEnumTypeRegistration::elem(const char * name, const char * valueText)
 
 #include "graph.h"
 
-extern void getFsfxShaderList(std::vector<std::string> & shaderList);
-
 void createVfxEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList)
 {
 	for (const VfxEnumTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
@@ -1517,21 +1516,23 @@ void createVfxEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLi
 			
 			enumDefinition.enumElems.push_back(dst);
 		}
-	}
-	
-	{
-		auto & enumDefinition = typeDefinitionLibrary.enumDefinitions["fsfxShader"];
 		
-		std::vector<std::string> shaderList;
-		getFsfxShaderList(shaderList);
+		// create additional elems if the enum has dynamic elements
+		// todo : remove this code. replace it with explicit methods for nodes/systems that define nodes and enum dynamically
 		
-		for (auto & shader : shaderList)
+		if (registration->getElems != nullptr)
 		{
-			Graph_EnumDefinition::Elem elem;
-			elem.name = shader;
-			elem.valueText = shader;
+			auto elems = registration->getElems();
 			
-			enumDefinition.enumElems.push_back(elem);
+			for (auto & src : elems)
+			{
+				Graph_EnumDefinition::Elem dst;
+				
+				dst.name = src.name;
+				dst.valueText = src.valueText;
+				
+				enumDefinition.enumElems.push_back(dst);
+			}
 		}
 	}
 }
