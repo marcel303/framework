@@ -3,6 +3,7 @@ app marcel-veem-sound
 	depend_library framework
 	depend_library libvideo
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	
 	scan_files *.cpp
 	scan_files *.h

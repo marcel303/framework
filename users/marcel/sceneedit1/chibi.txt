@@ -14,6 +14,7 @@ app marcel-sceneedit1
 	depend_library libreflection-jsonio
 	depend_library libreflection-textio
 	#depend_library vfxgraph
+	#depend_library vfxgraph-nodes
 	scan_files *.cpp
 	scan_files *.h
 	resource_path data

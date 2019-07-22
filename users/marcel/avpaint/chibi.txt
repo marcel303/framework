@@ -1,11 +1,13 @@
 app marcel-avpaint-avpaint
 	depend_library framework
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	add_files leapstate.cpp leapstate.h testAvpaint.cpp
 
 app marcel-avpaint-jpegstreamer
 	depend_library framework
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	add_files testJpegstreamer.cpp
 
 app marcel-avpaint-portaudio
@@ -15,4 +17,5 @@ app marcel-avpaint-portaudio
 app marcel-avpaint-welcome
 	depend_library framework
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	add_files leapstate.cpp leapstate.h main.cpp

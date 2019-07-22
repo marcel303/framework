@@ -11,6 +11,7 @@ app tests
 	depend_library libvideo
 	depend_library libwebrequest-downloadcache
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	with_platform linux depend_library xmm
 	with_platform macos depend_library xmm
 

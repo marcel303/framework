@@ -4,6 +4,7 @@ app marcel-mitronix
 	depend_library framework
 	depend_library libosc
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	
 	add_files main.cpp slideshow.cpp slideshow.h
 

@@ -1,4 +1,4 @@
-library vfxgraph-core
+library vfxgraph
 
 	depend_library libavgraph
 
@@ -10,7 +10,7 @@ library vfxgraph-core
 	exclude_files vfxNodes_all.cpp
 	exclude_files vfxNodes_all-mac.mm
 
-library vfxgraph
+library vfxgraph-nodes
 
 	depend_library artnet
 	depend_library audiograph
@@ -22,7 +22,7 @@ library vfxgraph
 	depend_library libosc
 	depend_library libvideo
 	depend_library rtmidi
-	depend_library vfxgraph-core
+	depend_library vfxgraph
 	
 # todo : add with_library chibi directive ?
 	with_platform linux depend_library libps3eye
