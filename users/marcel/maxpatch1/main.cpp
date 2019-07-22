@@ -274,14 +274,19 @@ namespace ControlSurfaceDefinition
 						if (overlap == false)
 							continue;
 						
-						for (int direction = 0; direction < 2; ++direction)
+						for (int direction = -1; direction <= +1; direction += 2)
 						{
 							const int kPadding = 4;
 							
-							const int p1 = direction == 0 ? layout_elem_p1[snap_axis] : layout_elem_p2[snap_axis];
-							const int p2 = direction == 0 ? elem_p2[snap_axis] + kPadding : elem_p1[snap_axis] - kPadding;
+							const int p1 = direction < 0 ? layout_elem_p1[snap_axis] : layout_elem_p2[snap_axis];
+							const int p2 = direction < 0 ? elem_p2[snap_axis] + kPadding : elem_p1[snap_axis] - kPadding;
 							
 							const int dp = p2 - p1;
+							
+							if (direction < 0 && dp <= 0)
+								continue;
+							if (direction > 0 && dp >= 0)
+								continue;
 							
 							if (*has_nearest_d[snap_axis] == false || std::abs(dp) < std::abs(*nearest_d[snap_axis]))
 							{
@@ -294,39 +299,42 @@ namespace ControlSurfaceDefinition
 				}
 			}
 		
-			// snap side to side (top to top, bottom to bottom, etc)
-			
-			for (auto & group : surface->groups)
+			if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 			{
-				for (auto & elem : group.elems)
+				// snap side to side (top to top, bottom to bottom, etc)
+				
+				for (auto & group : surface->groups)
 				{
-					if (&elem == self)
-						continue;
-					
-					for (int s1 = 0; s1 < 2; ++s1)
+					for (auto & elem : group.elems)
 					{
-						const int s2 = s1;
+						if (&elem == self)
+							continue;
 						
-						const int x1 = elem.x + s1 * elem.sx;
-						const int y1 = elem.y + s1 * elem.sy;
-						const int x2 = layout_elem.x + layout_elem_sx * s2;
-						const int y2 = layout_elem.y + layout_elem_sy * s2;
-						
-						const int dx = x1 - x2;
-						const int dy = y1 - y2;
-						
-						if (has_nearest_dx == false || std::abs(dx) < std::abs(nearest_dx))
+						for (int s1 = 0; s1 < 2; ++s1)
 						{
-							has_nearest_dx = true;
-							nearest_dx = dx;
-							snap_x = x1;
-						}
-						
-						if (has_nearest_dy == false || std::abs(dy) < std::abs(nearest_dy))
-						{
-							has_nearest_dy = true;
-							nearest_dy = dy;
-							snap_y = y1;
+							const int s2 = s1;
+							
+							const int x1 = elem.x + s1 * elem.sx;
+							const int y1 = elem.y + s1 * elem.sy;
+							const int x2 = layout_elem.x + layout_elem_sx * s2;
+							const int y2 = layout_elem.y + layout_elem_sy * s2;
+							
+							const int dx = x1 - x2;
+							const int dy = y1 - y2;
+							
+							if (has_nearest_dx == false || std::abs(dx) < std::abs(nearest_dx))
+							{
+								has_nearest_dx = true;
+								nearest_dx = dx;
+								snap_x = x1;
+							}
+							
+							if (has_nearest_dy == false || std::abs(dy) < std::abs(nearest_dy))
+							{
+								has_nearest_dy = true;
+								nearest_dy = dy;
+								snap_y = y1;
+							}
 						}
 					}
 				}
