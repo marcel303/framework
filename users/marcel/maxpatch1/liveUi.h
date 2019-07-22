@@ -34,7 +34,7 @@ struct LiveUi
 	
 	void addElem(ControlSurfaceDefinition::Element * elem);
 	
-	void tick(const float dt);
+	void tick(const float dt, bool & inputIsCaptured);
 	
 	void draw() const;
 	void drawTooltip() const;

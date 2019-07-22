@@ -170,398 +170,419 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 	}
 }
 
-void LiveUi::tick(const float dt)
+void LiveUi::tick(const float dt, bool & inputIsCaptured)
 {
 	hoverElem = nullptr;
 	
-	for (auto & e : elems)
+	if (inputIsCaptured)
 	{
-		auto * elem = e.elem;
-		
-		e.doubleClickTimer = fmaxf(0.f, e.doubleClickTimer - dt);
-		
-		const bool isInside =
-			mouse.x >= elem->x &&
-			mouse.x < elem->x + elem->sx &&
-			mouse.y >= elem->y &&
-			mouse.y < elem->y + elem->sy;
-		
-		if (isInside)
-			hoverElem = &e;
-		
-		if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
+		if (activeElem != nullptr)
 		{
-			auto & knob = elem->knob;
-			
-			if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
-			{
-				activeElem = &e;
-				SDL_CaptureMouse(SDL_TRUE);
-				
-				if (e.doubleClickTimer > 0.f)
-				{
-					if (knob.hasDefaultValue)
-						e.value = e.defaultValue;
-				}
-				else
-					e.doubleClickTimer = .2f;
-			}
-			
-			if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
-			{
-				activeElem = nullptr;
-				SDL_CaptureMouse(SDL_FALSE);
-			}
-			
-			if (&e == activeElem)
-			{
-				const float speed = 1.f / ((keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) ? 400.f : 100.f);
-				
-				const float oldValue = e.value;
-				
-				e.value = saturate<float>(e.value - mouse.dy * speed);
-				
-				if (e.value != oldValue)
-				{
-					e.valueHasChanged = true;
-				}
-			}
+			SDL_CaptureMouse(SDL_FALSE);
+			activeElem = nullptr;
 		}
-		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider2)
+		
+		for (auto & e : elems)
 		{
-			auto & slider = elem->slider3;
-			
-			if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
-			{
-				activeElem = &e;
-				SDL_CaptureMouse(SDL_TRUE);
-				
-				e.liveState[0] = clamp<int>((mouse.x - elem->x) * 2 / elem->sx, 0, 1);
-				
-				if (e.doubleClickTimer > 0.f)
-				{
-					if (slider.hasDefaultValue)
-						e.value4 = e.defaultValue4;
-				}
-				else
-					e.doubleClickTimer = .2f;
-			}
-			
-			if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
-			{
-				activeElem = nullptr;
-				SDL_CaptureMouse(SDL_FALSE);
-			}
-			
-			if (&e == activeElem)
-			{
-				const float speed = 1.f / ((keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) ? 400.f : 100.f);
-				
-				const auto oldValue = e.value4;
-				
-				const int index = e.liveState[0];
-				
-				e.value4[index] = saturate<float>(e.value4[index] - mouse.dy * speed);
-				
-				if (e.value4 != oldValue)
-				{
-					e.valueHasChanged = true;
-				}
-			}
+			e.doubleClickTimer = 0.f;
 		}
-		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
+	}
+	else
+	{
+		for (auto & e : elems)
 		{
-			auto & slider = elem->slider3;
+			auto * elem = e.elem;
 			
-			if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
-			{
-				activeElem = &e;
-				SDL_CaptureMouse(SDL_TRUE);
-				
-				e.liveState[0] = clamp<int>((mouse.x - elem->x) * 3 / elem->sx, 0, 2);
-				
-				if (e.doubleClickTimer > 0.f)
-				{
-					if (slider.hasDefaultValue)
-						e.value4 = e.defaultValue4;
-				}
-				else
-					e.doubleClickTimer = .2f;
-			}
+			e.doubleClickTimer = fmaxf(0.f, e.doubleClickTimer - dt);
 			
-			if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
-			{
-				activeElem = nullptr;
-				SDL_CaptureMouse(SDL_FALSE);
-			}
+			const bool isInside =
+				mouse.x >= elem->x &&
+				mouse.x < elem->x + elem->sx &&
+				mouse.y >= elem->y &&
+				mouse.y < elem->y + elem->sy;
 			
-			if (&e == activeElem)
-			{
-				const float speed = 1.f / ((keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) ? 400.f : 100.f);
-				
-				const auto oldValue = e.value4;
-				
-				const int index = e.liveState[0];
-				
-				e.value4[index] = saturate<float>(e.value4[index] - mouse.dy * speed);
-				
-				if (e.value4 != oldValue)
-				{
-					e.valueHasChanged = true;
-				}
-			}
-		}
-		else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
-		{
-			auto & listbox = elem->listbox;
+			if (isInside)
+				hoverElem = &e;
 			
-			if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
+			if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 			{
-				activeElem = &e;
-				SDL_CaptureMouse(SDL_TRUE);
-				
-				if (e.doubleClickTimer > 0.f)
-				{
-					if (listbox.hasDefaultValue)
-						e.value = e.defaultValue;
-				}
-				else
-					e.doubleClickTimer = .2f;
-			}
-			
-			if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
-			{
-				activeElem = nullptr;
-				SDL_CaptureMouse(SDL_FALSE);
-			}
-			
-			if (&e == activeElem)
-			{
-				const float speed = 1.f / 20.f;
-				
-				const float oldValue = e.value;
-				
-				e.value = clamp<float>(e.value + mouse.dy * speed, 0.f, listbox.items.size());
-				
-				if (e.value != oldValue)
-				{
-				// todo: only changed when item index changes
-					e.valueHasChanged = true;
-				}
-			}
-		}
-		else if (elem->type == ControlSurfaceDefinition::kElementType_ColorPicker)
-		{
-			auto & colorPicker = elem->colorPicker;
-			
-			if (colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Hsl ||
-				colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgb)
-			{
-				const int picker_x = 0;
-				const int picker_sx = elem->sx - 25;
-				const int slider_x = elem->sx - 20;
-				const int slider_sx = 20;
+				auto & knob = elem->knob;
 				
 				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 				{
-					const bool isInsidePicker =
-						mouse.x >= elem->x + picker_x &&
-						mouse.x < elem->x + picker_x + picker_sx;
+					activeElem = &e;
+					SDL_CaptureMouse(SDL_TRUE);
 					
-					const bool isInsideSlider =
-						mouse.x >= elem->x + slider_x &&
-						mouse.x < elem->x + slider_x + slider_sx;
-					
-					if (isInsidePicker)
+					if (e.doubleClickTimer > 0.f)
 					{
-						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
-						
-						e.liveState[0] = 'p';
-						
-						if (e.doubleClickTimer > 0.f)
-						{
-							if (colorPicker.hasDefaultValue)
-								e.value4 = colorPicker.defaultValue;
-						}
-						else
-							e.doubleClickTimer = .2f;
+						if (knob.hasDefaultValue)
+							e.value = e.defaultValue;
 					}
-					else if (isInsideSlider)
-					{
-						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
-						
-						e.liveState[0] = '1';
-						
-						if (e.doubleClickTimer > 0.f)
-						{
-							if (colorPicker.hasDefaultValue)
-								e.value4 = colorPicker.defaultValue;
-						}
-						else
-							e.doubleClickTimer = .2f;
-					}
+					else
+						e.doubleClickTimer = .2f;
 				}
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 				{
-					e.liveState[0] = 0;
-					
 					activeElem = nullptr;
 					SDL_CaptureMouse(SDL_FALSE);
 				}
-			
+				
 				if (&e == activeElem)
 				{
-					ControlSurfaceDefinition::Vector4 oldValue = e.value4;
+					const float speed = 1.f / ((keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) ? 400.f : 100.f);
 					
-					if (e.liveState[0] == 'p')
+					const float oldValue = e.value;
+					
+					e.value = saturate<float>(e.value - mouse.dy * speed);
+					
+					if (e.value != oldValue)
 					{
-						const float hue = saturate<float>((mouse.x - elem->x - picker_x) / float(picker_sx));
-						const float lightness = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
-						
-						e.value4.x = hue;
-						e.value4.z = lightness;
+						e.valueHasChanged = true;
 					}
-					else if (e.liveState[0] == '1')
+				}
+			}
+			else if (elem->type == ControlSurfaceDefinition::kElementType_Slider2)
+			{
+				auto & slider = elem->slider3;
+				
+				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
+				{
+					activeElem = &e;
+					SDL_CaptureMouse(SDL_TRUE);
+					
+					e.liveState[0] = clamp<int>((mouse.x - elem->x) * 2 / elem->sx, 0, 1);
+					
+					if (e.doubleClickTimer > 0.f)
 					{
-						const float saturation = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
-						
-						e.value4.y = saturation;
+						if (slider.hasDefaultValue)
+							e.value4 = e.defaultValue4;
 					}
-					else if (e.liveState[0] == '2')
-					{
-						const float saturation = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
-						
-						e.value4.y = saturation;
-					}
+					else
+						e.doubleClickTimer = .2f;
+				}
+				
+				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
+				{
+					activeElem = nullptr;
+					SDL_CaptureMouse(SDL_FALSE);
+				}
+				
+				if (&e == activeElem)
+				{
+					const float speed = 1.f / ((keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) ? 400.f : 100.f);
+					
+					const auto oldValue = e.value4;
+					
+					const int index = e.liveState[0];
+					
+					e.value4[index] = saturate<float>(e.value4[index] - mouse.dy * speed);
 					
 					if (e.value4 != oldValue)
 					{
 						e.valueHasChanged = true;
 					}
 				}
+			}
+			else if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
+			{
+				auto & slider = elem->slider3;
+				
+				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
+				{
+					activeElem = &e;
+					SDL_CaptureMouse(SDL_TRUE);
+					
+					e.liveState[0] = clamp<int>((mouse.x - elem->x) * 3 / elem->sx, 0, 2);
+					
+					if (e.doubleClickTimer > 0.f)
+					{
+						if (slider.hasDefaultValue)
+							e.value4 = e.defaultValue4;
+					}
+					else
+						e.doubleClickTimer = .2f;
+				}
+				
+				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
+				{
+					activeElem = nullptr;
+					SDL_CaptureMouse(SDL_FALSE);
+				}
+				
+				if (&e == activeElem)
+				{
+					const float speed = 1.f / ((keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) ? 400.f : 100.f);
+					
+					const auto oldValue = e.value4;
+					
+					const int index = e.liveState[0];
+					
+					e.value4[index] = saturate<float>(e.value4[index] - mouse.dy * speed);
+					
+					if (e.value4 != oldValue)
+					{
+						e.valueHasChanged = true;
+					}
+				}
+			}
+			else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
+			{
+				auto & listbox = elem->listbox;
+				
+				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
+				{
+					activeElem = &e;
+					SDL_CaptureMouse(SDL_TRUE);
+					
+					if (e.doubleClickTimer > 0.f)
+					{
+						if (listbox.hasDefaultValue)
+							e.value = e.defaultValue;
+					}
+					else
+						e.doubleClickTimer = .2f;
+				}
+				
+				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
+				{
+					activeElem = nullptr;
+					SDL_CaptureMouse(SDL_FALSE);
+				}
+				
+				if (&e == activeElem)
+				{
+					const float speed = 1.f / 20.f;
+					
+					const float oldValue = e.value;
+					
+					e.value = clamp<float>(e.value + mouse.dy * speed, 0.f, listbox.items.size());
+					
+					if (e.value != oldValue)
+					{
+					// todo: only changed when item index changes
+						e.valueHasChanged = true;
+					}
+				}
+			}
+			else if (elem->type == ControlSurfaceDefinition::kElementType_ColorPicker)
+			{
+				auto & colorPicker = elem->colorPicker;
+				
+				if (colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Hsl ||
+					colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgb)
+				{
+					const int picker_x = 0;
+					const int picker_sx = elem->sx - 25;
+					const int slider_x = elem->sx - 20;
+					const int slider_sx = 20;
+					
+					if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
+					{
+						const bool isInsidePicker =
+							mouse.x >= elem->x + picker_x &&
+							mouse.x < elem->x + picker_x + picker_sx;
+						
+						const bool isInsideSlider =
+							mouse.x >= elem->x + slider_x &&
+							mouse.x < elem->x + slider_x + slider_sx;
+						
+						if (isInsidePicker)
+						{
+							activeElem = &e;
+							SDL_CaptureMouse(SDL_TRUE);
+							
+							e.liveState[0] = 'p';
+							
+							if (e.doubleClickTimer > 0.f)
+							{
+								if (colorPicker.hasDefaultValue)
+									e.value4 = colorPicker.defaultValue;
+							}
+							else
+								e.doubleClickTimer = .2f;
+						}
+						else if (isInsideSlider)
+						{
+							activeElem = &e;
+							SDL_CaptureMouse(SDL_TRUE);
+							
+							e.liveState[0] = '1';
+							
+							if (e.doubleClickTimer > 0.f)
+							{
+								if (colorPicker.hasDefaultValue)
+									e.value4 = colorPicker.defaultValue;
+							}
+							else
+								e.doubleClickTimer = .2f;
+						}
+					}
+					
+					if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
+					{
+						e.liveState[0] = 0;
+						
+						activeElem = nullptr;
+						SDL_CaptureMouse(SDL_FALSE);
+					}
+				
+					if (&e == activeElem)
+					{
+						ControlSurfaceDefinition::Vector4 oldValue = e.value4;
+						
+						if (e.liveState[0] == 'p')
+						{
+							const float hue = saturate<float>((mouse.x - elem->x - picker_x) / float(picker_sx));
+							const float lightness = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							
+							e.value4.x = hue;
+							e.value4.z = lightness;
+						}
+						else if (e.liveState[0] == '1')
+						{
+							const float saturation = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							
+							e.value4.y = saturation;
+						}
+						else if (e.liveState[0] == '2')
+						{
+							const float saturation = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							
+							e.value4.y = saturation;
+						}
+						
+						if (e.value4 != oldValue)
+						{
+							e.valueHasChanged = true;
+						}
+					}
+				}
+				else
+				{
+					const int picker_x = 0;
+					const int picker_sx = elem->sx - 25;
+					const int slider1_x = elem->sx - 20;
+					const int slider1_sx = 10;
+					const int slider2_x = elem->sx - 10;
+					const int slider2_sx = 10;
+					
+					if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
+					{
+						const bool isInsidePicker =
+							mouse.x >= elem->x + picker_x &&
+							mouse.x < elem->x + picker_x + picker_sx;
+						
+						const bool isInsideSlider1 =
+							mouse.x >= elem->x + slider1_x &&
+							mouse.x < elem->x + slider1_x + slider1_sx;
+						
+						const bool isInsideSlider2 =
+							mouse.x >= elem->x + slider2_x &&
+							mouse.x < elem->x + slider2_x + slider2_sx;
+						
+						if (isInsidePicker)
+						{
+							activeElem = &e;
+							SDL_CaptureMouse(SDL_TRUE);
+							
+							e.liveState[0] = 'p';
+							
+							if (e.doubleClickTimer > 0.f)
+							{
+								if (colorPicker.hasDefaultValue)
+									e.value4 = colorPicker.defaultValue;
+							}
+							else
+								e.doubleClickTimer = .2f;
+						}
+						else if (isInsideSlider1)
+						{
+							activeElem = &e;
+							SDL_CaptureMouse(SDL_TRUE);
+							
+							e.liveState[0] = '1';
+							
+							if (e.doubleClickTimer > 0.f)
+							{
+								if (colorPicker.hasDefaultValue)
+									e.value4 = colorPicker.defaultValue;
+							}
+							else
+								e.doubleClickTimer = .2f;
+						}
+						else if (isInsideSlider2)
+						{
+							activeElem = &e;
+							SDL_CaptureMouse(SDL_TRUE);
+							
+							e.liveState[0] = '2';
+							
+							if (e.doubleClickTimer > 0.f)
+							{
+								if (colorPicker.hasDefaultValue)
+									e.value4 = colorPicker.defaultValue;
+							}
+							else
+								e.doubleClickTimer = .2f;
+						}
+					}
+				
+					if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
+					{
+						e.liveState[0] = 0;
+						
+						activeElem = nullptr;
+						SDL_CaptureMouse(SDL_FALSE);
+					}
+				
+					if (&e == activeElem)
+					{
+						ControlSurfaceDefinition::Vector4 oldValue = e.value4;
+						
+						if (e.liveState[0] == 'p')
+						{
+							const float hue = saturate<float>((mouse.x - elem->x - picker_x) / float(picker_sx));
+							const float lightness = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							
+							e.value4.x = hue;
+							e.value4.z = lightness;
+						}
+						else if (e.liveState[0] == '1')
+						{
+							const float saturation = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							
+							e.value4.y = saturation;
+						}
+						else if (e.liveState[0] == '2')
+						{
+							const float white = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							
+							e.value4.w = white;
+						}
+						
+						if (e.value4 != oldValue)
+						{
+							e.valueHasChanged = true;
+						}
+					}
+				}
+			}
+			else if (
+				elem->type == ControlSurfaceDefinition::kElementType_Label ||
+				elem->type == ControlSurfaceDefinition::kElementType_Separator)
+			{
+				// nothing to be done
 			}
 			else
 			{
-				const int picker_x = 0;
-				const int picker_sx = elem->sx - 25;
-				const int slider1_x = elem->sx - 20;
-				const int slider1_sx = 10;
-				const int slider2_x = elem->sx - 10;
-				const int slider2_sx = 10;
-				
-				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
-				{
-					const bool isInsidePicker =
-						mouse.x >= elem->x + picker_x &&
-						mouse.x < elem->x + picker_x + picker_sx;
-					
-					const bool isInsideSlider1 =
-						mouse.x >= elem->x + slider1_x &&
-						mouse.x < elem->x + slider1_x + slider1_sx;
-					
-					const bool isInsideSlider2 =
-						mouse.x >= elem->x + slider2_x &&
-						mouse.x < elem->x + slider2_x + slider2_sx;
-					
-					if (isInsidePicker)
-					{
-						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
-						
-						e.liveState[0] = 'p';
-						
-						if (e.doubleClickTimer > 0.f)
-						{
-							if (colorPicker.hasDefaultValue)
-								e.value4 = colorPicker.defaultValue;
-						}
-						else
-							e.doubleClickTimer = .2f;
-					}
-					else if (isInsideSlider1)
-					{
-						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
-						
-						e.liveState[0] = '1';
-						
-						if (e.doubleClickTimer > 0.f)
-						{
-							if (colorPicker.hasDefaultValue)
-								e.value4 = colorPicker.defaultValue;
-						}
-						else
-							e.doubleClickTimer = .2f;
-					}
-					else if (isInsideSlider2)
-					{
-						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
-						
-						e.liveState[0] = '2';
-						
-						if (e.doubleClickTimer > 0.f)
-						{
-							if (colorPicker.hasDefaultValue)
-								e.value4 = colorPicker.defaultValue;
-						}
-						else
-							e.doubleClickTimer = .2f;
-					}
-				}
-			
-				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
-				{
-					e.liveState[0] = 0;
-					
-					activeElem = nullptr;
-					SDL_CaptureMouse(SDL_FALSE);
-				}
-			
-				if (&e == activeElem)
-				{
-					ControlSurfaceDefinition::Vector4 oldValue = e.value4;
-					
-					if (e.liveState[0] == 'p')
-					{
-						const float hue = saturate<float>((mouse.x - elem->x - picker_x) / float(picker_sx));
-						const float lightness = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
-						
-						e.value4.x = hue;
-						e.value4.z = lightness;
-					}
-					else if (e.liveState[0] == '1')
-					{
-						const float saturation = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
-						
-						e.value4.y = saturation;
-					}
-					else if (e.liveState[0] == '2')
-					{
-						const float white = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
-						
-						e.value4.w = white;
-					}
-					
-					if (e.value4 != oldValue)
-					{
-						e.valueHasChanged = true;
-					}
-				}
+				AssertMsg(false, "unknown element type: %d", elem->type);
 			}
 		}
-		else if (
-			elem->type == ControlSurfaceDefinition::kElementType_Label ||
-			elem->type == ControlSurfaceDefinition::kElementType_Separator)
+		
+		if (hoverElem != nullptr || activeElem != nullptr)
 		{
-			// nothing to be done
-		}
-		else
-		{
-			AssertMsg(false, "unknown element type: %d", elem->type);
+			inputIsCaptured = true;
 		}
 	}
 	
