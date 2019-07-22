@@ -222,7 +222,12 @@ namespace ControlSurfaceDefinition
 			return nullptr;
 		}
 		
-		void snapToSurfaceElements(LayoutElement & layout_elem, bool & has_snap_x, int & snap_x, bool & has_snap_y, int & snap_y)
+		void snapToSurfaceElements(
+			LayoutElement & layout_elem,
+			bool & has_snap_x,
+			int & snap_x,
+			bool & has_snap_y,
+			int & snap_y)
 		{
 			Assert(layout_elem.hasPosition);
 			
@@ -239,6 +244,58 @@ namespace ControlSurfaceDefinition
 			int nearest_dx = 0;
 			int nearest_dy = 0;
 			
+			bool * has_nearest_d[2] = { &has_nearest_dx, &has_nearest_dy };
+			int * nearest_d[2] = { &nearest_dx, &nearest_dy };
+			int * snap[2] = { &snap_x, &snap_y };
+			
+			// snap with padding
+			
+			for (auto & group : surface->groups)
+			{
+				for (auto & elem : group.elems)
+				{
+					if (&elem == self)
+						continue;
+					
+					const int layout_elem_p1[2] = { layout_elem.x,                  layout_elem.y                  };
+					const int layout_elem_p2[2] = { layout_elem.x + layout_elem_sx, layout_elem.y + layout_elem_sy };
+					
+					const int elem_p1[2] = { elem.x,           elem.y           };
+					const int elem_p2[2] = { elem.x + elem.sx, elem.y + elem.sy };
+					
+					for (int snap_axis = 0; snap_axis < 2; ++snap_axis)
+					{
+						const int overlap_axis = 1 - snap_axis;
+						
+						const bool overlap =
+							layout_elem_p1[overlap_axis] < elem_p2[overlap_axis] &&
+							layout_elem_p2[overlap_axis] > elem_p1[overlap_axis];
+						
+						if (overlap == false)
+							continue;
+						
+						for (int direction = 0; direction < 2; ++direction)
+						{
+							const int kPadding = 4;
+							
+							const int p1 = direction == 0 ? layout_elem_p1[snap_axis] : layout_elem_p2[snap_axis];
+							const int p2 = direction == 0 ? elem_p2[snap_axis] + kPadding : elem_p1[snap_axis] - kPadding;
+							
+							const int dp = p2 - p1;
+							
+							if (*has_nearest_d[snap_axis] == false || std::abs(dp) < std::abs(*nearest_d[snap_axis]))
+							{
+								*has_nearest_d[snap_axis] = true;
+								*nearest_d[snap_axis] = dp;
+								*snap[snap_axis] = p1 + dp;
+							}
+						}
+					}
+				}
+			}
+		
+			// snap side to side (top to top, bottom to bottom, etc)
+			
 			for (auto & group : surface->groups)
 			{
 				for (auto & elem : group.elems)
@@ -248,29 +305,28 @@ namespace ControlSurfaceDefinition
 					
 					for (int s1 = 0; s1 < 2; ++s1)
 					{
-						for (int s2 = 0; s2 < 2; ++s2)
+						const int s2 = s1;
+						
+						const int x1 = elem.x + s1 * elem.sx;
+						const int y1 = elem.y + s1 * elem.sy;
+						const int x2 = layout_elem.x + layout_elem_sx * s2;
+						const int y2 = layout_elem.y + layout_elem_sy * s2;
+						
+						const int dx = x1 - x2;
+						const int dy = y1 - y2;
+						
+						if (has_nearest_dx == false || std::abs(dx) < std::abs(nearest_dx))
 						{
-							const int x1 = elem.x + s1 * elem.sx;
-							const int y1 = elem.y + s1 * elem.sy;
-							const int x2 = layout_elem.x + layout_elem_sx * s2;
-							const int y2 = layout_elem.y + layout_elem_sy * s2;
-							
-							const int dx = x1 - x2;
-							const int dy = y1 - y2;
-							
-							if (has_nearest_dx == false || std::abs(dx) < std::abs(nearest_dx))
-							{
-								has_nearest_dx = true;
-								nearest_dx = dx;
-								snap_x = x1;
-							}
-							
-							if (has_nearest_dy == false || std::abs(dy) < std::abs(nearest_dy))
-							{
-								has_nearest_dy = true;
-								nearest_dy = dy;
-								snap_y = y1;
-							}
+							has_nearest_dx = true;
+							nearest_dx = dx;
+							snap_x = x1;
+						}
+						
+						if (has_nearest_dy == false || std::abs(dy) < std::abs(nearest_dy))
+						{
+							has_nearest_dy = true;
+							nearest_dy = dy;
+							snap_y = y1;
 						}
 					}
 				}
