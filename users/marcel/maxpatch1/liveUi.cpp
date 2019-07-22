@@ -174,6 +174,20 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 {
 	hoverElem = nullptr;
 	
+	for (auto & e : elems)
+	{
+		auto * elem = e.elem;
+		
+		const bool isInside =
+			mouse.x >= elem->x &&
+			mouse.x < elem->x + elem->sx &&
+			mouse.y >= elem->y &&
+			mouse.y < elem->y + elem->sy;
+		
+		if (isInside)
+			hoverElem = &e;
+	}
+	
 	if (inputIsCaptured)
 	{
 		if (activeElem != nullptr)
@@ -195,14 +209,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 			
 			e.doubleClickTimer = fmaxf(0.f, e.doubleClickTimer - dt);
 			
-			const bool isInside =
-				mouse.x >= elem->x &&
-				mouse.x < elem->x + elem->sx &&
-				mouse.y >= elem->y &&
-				mouse.y < elem->y + elem->sy;
-			
-			if (isInside)
-				hoverElem = &e;
+			const bool isInside = (&e == hoverElem);
 			
 			if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 			{

@@ -329,7 +329,6 @@ namespace ControlSurfaceDefinition
 			if (inputIsCaptured)
 			{
 				state = kState_Idle;
-				selected_element = nullptr;
 				has_snap_x = false;
 				has_snap_y = false;
 			}
@@ -339,7 +338,7 @@ namespace ControlSurfaceDefinition
 				
 				if (mouse.wentDown(BUTTON_LEFT))
 				{
-					Assert(selected_element == nullptr);
+					selected_element = nullptr;
 					
 					for (auto & layout_elem : layout->elems)
 					{
@@ -400,7 +399,6 @@ namespace ControlSurfaceDefinition
 					if (mouse.wentUp(BUTTON_LEFT))
 					{
 						state = kState_Idle;
-						selected_element = nullptr;
 						has_snap_x = false;
 						has_snap_y = false;
 					}
@@ -515,16 +513,24 @@ namespace ControlSurfaceDefinition
 					const int x2 = x + sx;
 					const int y2 = y + sy;
 					
-					setColor(127, 0, 255);
+					const bool isSelected = (&layout_elem == selected_element);
+					
+					if (isSelected)
+						setColor(31, 31, 255);
+					else
+						setColor(127, 0, 255);
 					drawRectLine(x1, y1, x2, y2);
 					
 					const bool isInside =
 						mouse.x >= x1 && mouse.x < x2 &&
 						mouse.y >= y1 && mouse.y < y2;
 					
-					if ((isInside && selected_element == nullptr) || (&layout_elem == selected_element))
+					if (isInside || (&layout_elem == selected_element))
 					{
-						setColor(127, 0, 255, 100);
+						if (isSelected)
+							setColor(31, 31, 255, 100);
+						else
+							setColor(127, 0, 255, 100);
 						drawRect(
 							x1, y1,
 							x1 + kCornerSize, y1 + kCornerSize);
