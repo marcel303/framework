@@ -71,6 +71,7 @@ library vfxgraph-deepbelief
 	header_path vfxNodes-deepbelief expose
 
 	scan_files cpp path vfxNodes-deepbelief
+	scan_files mm  path vfxNodes-deepbelief
 	scan_files h   path vfxNodes-deepbelief
 
 	with_platform macos   compile_definition ENABLE_DEEPBELIEF 1 expose
@@ -142,8 +143,8 @@ library vfxgraph-syphon
 
 	header_path vfxNodes-syphon expose
 
-	scan_files cpp path vfxNodes-syphon
-	scan_files h   path vfxNodes-syphon
+	scan_files mm path vfxNodes-syphon
+	scan_files h  path vfxNodes-syphon
 
 	with_platform macos   compile_definition ENABLE_SYPHON 1 expose
 	with_platform linux   compile_definition ENABLE_SYPHON 0 expose
