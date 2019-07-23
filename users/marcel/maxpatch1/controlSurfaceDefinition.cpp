@@ -261,6 +261,17 @@ namespace ControlSurfaceDefinition
 		}
 	}
 	
+	Element * Surface::findElement(const char * groupName, const char * name)
+	{
+		for (auto & group : groups)
+			if (group.name == groupName)
+				for (auto & elem : group.elems)
+					if (elem.name == name)
+						return &elem;
+		
+		return nullptr;
+	}
+	
 	//
 	
 	void reflect(TypeDB & typeDB)

@@ -8,6 +8,7 @@
 #include "framework.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "oscSender.h"
+#include "Path.h"
 #include "reflection-bindtofile.h"
 #include "StringEx.h"
 
@@ -48,6 +49,19 @@ namespace ControlSurfaceDefinition
 		
 		bool hasSize = false;
 		int sx, sy;
+		
+		static void reflect(TypeDB & typeDB)
+		{
+			typeDB.addStructured<ControlSurfaceDefinition::LayoutElement>("ControlSurfaceDefinition::LayoutElement")
+				.add("groupName", &LayoutElement::groupName)
+				.add("name", &LayoutElement::name)
+				.add("hasPosition", &LayoutElement::hasPosition)
+				.add("x", &LayoutElement::x)
+				.add("y", &LayoutElement::y)
+				.add("hasSize", &LayoutElement::hasSize)
+				.add("sx", &LayoutElement::sx)
+				.add("sy", &LayoutElement::sy);
+		}
 	};
 	
 	struct Layout
@@ -61,6 +75,12 @@ namespace ControlSurfaceDefinition
 			elem.groupName = groupName;
 			elem.name = name;
 			return &elem;
+		}
+		
+		static void reflect(TypeDB & typeDB)
+		{
+			typeDB.addStructured<ControlSurfaceDefinition::Layout>("ControlSurfaceDefinition::Layout")
+				.add("elems", &Layout::elems);
 		}
 	};
 	
@@ -90,6 +110,22 @@ namespace ControlSurfaceDefinition
 			
 			bool hover = false;
 			bool isDown = false;
+			bool isClicked = false;
+			
+			void makeButton(
+				const char * in_text,
+				const int in_x,
+				const int in_y,
+				const int in_sx,
+				const int in_sy)
+			{
+				text = in_text;
+				
+				x = in_x;
+				y = in_y;
+				sx = in_sx;
+				sy = in_sy;
+			}
 			
 			void makeToggle(
 				const char * in_text,
@@ -112,7 +148,7 @@ namespace ControlSurfaceDefinition
 			
 			bool tick(bool & inputIsCaptured)
 			{
-				bool isClicked = false;
+				isClicked = false;
 				
 				const bool isInside =
 					mouse.x >= x && mouse.x < x + sx &&
@@ -145,6 +181,11 @@ namespace ControlSurfaceDefinition
 							inputIsCaptured = true;
 							isDown = true;
 						}
+					}
+					
+					if (isInside)
+					{
+						inputIsCaptured = true;
 					}
 				}
 				
@@ -202,6 +243,8 @@ namespace ControlSurfaceDefinition
 		
 		Button btn_editToggle;
 		Button btn_snapToggle;
+		Button btn_save;
+		Button btn_load;
 		
 		LayoutEditor(const Surface * in_surface, Layout * in_layout)
 			: surface(in_surface)
@@ -209,6 +252,8 @@ namespace ControlSurfaceDefinition
 		{
 			btn_editToggle.makeToggle("edit", true, 10, 10, 70, 20);
 			btn_snapToggle.makeToggle("snap", true, 10, 40, 70, 20);
+			btn_save.makeButton("save", 10, 70, 70, 20);
+			btn_load.makeButton("load", 10, 100, 70, 20);
 		}
 		
 		const Element * findSurfaceElement(const char * groupName, const char * name) const
@@ -389,6 +434,9 @@ namespace ControlSurfaceDefinition
 			
 			btn_editToggle.tick(inputIsCaptured);
 			btn_snapToggle.tick(inputIsCaptured);
+			
+			btn_save.tick(inputIsCaptured); // todo : buttons shouldn't really be a member of the layout editor directly
+			btn_load.tick(inputIsCaptured);
 			
 			if (inputIsCaptured)
 			{
@@ -613,6 +661,8 @@ namespace ControlSurfaceDefinition
 			
 			btn_editToggle.draw();
 			btn_snapToggle.draw();
+			btn_save.draw();
+			btn_load.draw();
 		}
 	};
 }
@@ -636,6 +686,9 @@ int main(int arg, char * argv[])
 	max::reflect(typeDB);
 	
 	ControlSurfaceDefinition::reflect(typeDB);
+	
+	ControlSurfaceDefinition::LayoutElement::reflect(typeDB);
+	ControlSurfaceDefinition::Layout::reflect(typeDB);
 	
 	// create control surface definition
 	
@@ -732,7 +785,7 @@ int main(int arg, char * argv[])
 		.padding(4, 4)
 		.end();
 	
-	saveObjectToFile(&typeDB, typeDB.findType(surface), &surface, "surface-definition.json");
+	saveObjectToFile(typeDB, typeDB.findType(surface), &surface, "surface-definition.json");
 	
 	// live UI app from control surface definition
 	
@@ -740,27 +793,93 @@ int main(int arg, char * argv[])
 	
 	LiveUi liveUi;
 	
+	std::string currentFilename;
+	
 #if ENABLE_LAYOUT_EDITOR
 	ControlSurfaceDefinition::Layout layout;
-	for (auto & group : surface.groups)
-		for (auto & elem : group.elems)
-			if (elem.name.empty() == false)
-				layout.addElem(group.name.c_str(), elem.name.c_str());
 	
 	ControlSurfaceDefinition::LayoutEditor layoutEditor(&surface, &layout);
 #endif
-	
-	for (auto & group : surface.groups)
+
+	auto loadLiveUi = [&](const char * filename)
 	{
-		for (auto & elem : group.elems)
+		ControlSurfaceDefinition::Surface newSurface;
+		
+		if (loadObjectFromFile(typeDB, typeDB.findType(newSurface), &newSurface, filename))
 		{
-			liveUi.addElem(&elem);
+			currentFilename = filename;
+			
+			surface = newSurface;
+			
+			surface.initializeNames();
+			surface.initializeDefaultValues();
+			surface.initializeDisplayNames();
+			
+			ControlSurfaceDefinition::SurfaceEditor surfaceEditor(&surface);
+			
+		#if 0
+			surfaceEditor.beginLayout()
+				.size(800, 200)
+				.margin(10, 10)
+				.padding(4, 4)
+				.end();
+		#endif
+			
+			// recreate the live ui
+			
+			liveUi = LiveUi();
+
+			for (auto & group : surface.groups)
+			{
+				for (auto & elem : group.elems)
+				{
+					liveUi.addElem(&elem);
+				}
+			}
+			
+			liveUi
+				.osc("127.0.0.1", 2000)
+				.osc("127.0.0.1", 2002);
+			
+		#if ENABLE_LAYOUT_EDITOR
+			// recreate the layout editor
+			
+			layout = ControlSurfaceDefinition::Layout();
+			for (auto & group : surface.groups)
+				for (auto & elem : group.elems)
+					if (elem.name.empty() == false)
+						layout.addElem(group.name.c_str(), elem.name.c_str());
+			
+			layoutEditor = ControlSurfaceDefinition::LayoutEditor(&surface, &layout);
+		#endif
 		}
-	}
+	};
 	
-	liveUi
-		.osc("127.0.0.1", 2000)
-		.osc("127.0.0.1", 2002);
+	auto updateControlSurfaceWithLayout = [](ControlSurfaceDefinition::Surface & surface, const ControlSurfaceDefinition::Layout & layout)
+	{
+		// patch control surface without information from layout
+		
+		for (auto & layout_elem : layout.elems)
+		{
+			auto * surface_elem = surface.findElement(
+				layout_elem.groupName.c_str(),
+				layout_elem.name.c_str());
+			
+			if (layout_elem.hasPosition)
+			{
+				const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->x = layout_elem.x;
+				const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->y = layout_elem.y;
+			}
+			
+			if (layout_elem.hasSize)
+			{
+				const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->sx = layout_elem.sx;
+				const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->sy = layout_elem.sy;
+			}
+		}
+	};
+	
+	loadLiveUi("surface-definition.json");
 	
 	for (;;)
 	{
@@ -773,52 +892,7 @@ int main(int arg, char * argv[])
 		
 		for (auto & filename : framework.droppedFiles)
 		{
-			ControlSurfaceDefinition::Surface newSurface;
-			
-			if (loadObjectFromFile(&typeDB, typeDB.findType(newSurface), &newSurface, filename.c_str()))
-			{
-				surface = newSurface;
-				
-				surface.initializeNames();
-				surface.initializeDefaultValues();
-				surface.initializeDisplayNames();
-				
-				ControlSurfaceDefinition::SurfaceEditor surfaceEditor(&surface);
-				
-				surfaceEditor.beginLayout()
-					.size(800, 200)
-					.margin(10, 10)
-					.padding(4, 4)
-					.end();
-				
-				// recreate the live ui
-				
-				liveUi = LiveUi();
-	
-				for (auto & group : surface.groups)
-				{
-					for (auto & elem : group.elems)
-					{
-						liveUi.addElem(&elem);
-					}
-				}
-				
-				liveUi
-					.osc("127.0.0.1", 2000)
-					.osc("127.0.0.1", 2002);
-				
-			#if ENABLE_LAYOUT_EDITOR
-				// recreate the layout editor
-				
-				layout = ControlSurfaceDefinition::Layout();
-				for (auto & group : surface.groups)
-					for (auto & elem : group.elems)
-						if (elem.name.empty() == false)
-							layout.addElem(group.name.c_str(), elem.name.c_str());
-				
-				layoutEditor = ControlSurfaceDefinition::LayoutEditor(&surface, &layout);
-			#endif
-			}
+			loadLiveUi(filename.c_str());
 		}
 		
 		bool inputIsCaptured = false;
@@ -826,25 +900,28 @@ int main(int arg, char * argv[])
 	#if ENABLE_LAYOUT_EDITOR
 		if (layoutEditor.tick(framework.timeStep, inputIsCaptured))
 		{
-			// patch control surface without information from layout
+			updateControlSurfaceWithLayout(surface, layout);
+		}
+		
+		if (layoutEditor.btn_save.isClicked)
+		{
+			const std::string layout_filename = Path::ReplaceExtension(currentFilename, "layout.json");
+			if (saveObjectToFile(typeDB, layout, layout_filename.c_str()) == false)
+				logError("failed to save layout to file");
+		}
+		
+		if (layoutEditor.btn_load.isClicked)
+		{
+			const std::string layout_filename = Path::ReplaceExtension(currentFilename, "layout.json");
+			ControlSurfaceDefinition::Layout new_layout;
 			
-			for (auto & layout_elem : layout.elems)
+			if (loadObjectFromFile(typeDB, new_layout, layout_filename.c_str()) == false)
+				logError("failed to load layout from file");
+			else
 			{
-				auto * surface_elem = layoutEditor.findSurfaceElement(
-					layout_elem.groupName.c_str(),
-					layout_elem.name.c_str());
+				layout = new_layout;
 				
-				if (layout_elem.hasPosition)
-				{
-					const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->x = layout_elem.x;
-					const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->y = layout_elem.y;
-				}
-				
-				if (layout_elem.hasSize)
-				{
-					const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->sx = layout_elem.sx;
-					const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->sy = layout_elem.sy;
-				}
+				updateControlSurfaceWithLayout(surface, layout);
 			}
 		}
 	#endif

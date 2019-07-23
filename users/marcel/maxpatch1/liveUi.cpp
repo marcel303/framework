@@ -172,24 +172,10 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 
 void LiveUi::tick(const float dt, bool & inputIsCaptured)
 {
-	hoverElem = nullptr;
-	
-	for (auto & e : elems)
-	{
-		auto * elem = e.elem;
-		
-		const bool isInside =
-			mouse.x >= elem->x &&
-			mouse.x < elem->x + elem->sx &&
-			mouse.y >= elem->y &&
-			mouse.y < elem->y + elem->sy;
-		
-		if (isInside)
-			hoverElem = &e;
-	}
-	
 	if (inputIsCaptured)
 	{
+		hoverElem = nullptr;
+		
 		if (activeElem != nullptr)
 		{
 			SDL_CaptureMouse(SDL_FALSE);
@@ -203,6 +189,24 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 	}
 	else
 	{
+		hoverElem = nullptr;
+		
+		for (auto & e : elems)
+		{
+			auto * elem = e.elem;
+			
+			const bool isInside =
+				mouse.x >= elem->x &&
+				mouse.x < elem->x + elem->sx &&
+				mouse.y >= elem->y &&
+				mouse.y < elem->y + elem->sy;
+			
+			if (isInside)
+			{
+				hoverElem = &e;
+			}
+		}
+	
 		for (auto & e : elems)
 		{
 			auto * elem = e.elem;

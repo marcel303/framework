@@ -375,6 +375,8 @@ namespace ControlSurfaceDefinition
 		void initializeDefaultValues();
 		void initializeDisplayNames();
 		void performLayout();
+		
+		Element * findElement(const char * groupName, const char * name);
 	};
 	
 	void reflect(TypeDB & typeDB);
