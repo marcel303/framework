@@ -4,6 +4,7 @@
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager4D.h"
 #include "framework.h"
+#include "graphEdit.h"
 #include "Noise.h"
 #include "objects/paobject.h"
 #include "oscEndpointMgr.h"

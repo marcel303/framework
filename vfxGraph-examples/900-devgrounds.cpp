@@ -29,6 +29,7 @@
 
 #include "framework.h"
 #include "graph.h"
+#include "graphEdit.h"
 #include "StringEx.h"
 #include "TextIO.h"
 
