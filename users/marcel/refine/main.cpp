@@ -594,6 +594,14 @@ int main(int argc, char * argv[])
 							}
 							
 							ImGui::InputText("Filter", chibi.filter, sizeof(chibi.filter));
+							ImGui::Text("%d/%d selected",
+								(int)chibi.selected_targets.size(),
+								(int)chibi.apps.size());
+							ImGui::SameLine();
+							if (chibi.selected_targets.empty())
+								ImGui::Text("(Generate all)");
+							else if (ImGui::Button("Clear selection"))
+								chibi.selected_targets.clear();
 							
 							for (auto & app : chibi.apps)
 							{
