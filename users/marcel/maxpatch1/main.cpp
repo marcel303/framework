@@ -87,7 +87,8 @@ namespace ControlSurfaceDefinition
 	struct LayoutEditor
 	{
 		static const int kCornerSize = 7;
-		static const int kSnapSize = 10;
+		static const int kSnapSize = 4;
+		static const int kPaddingSize = 4;
 		
 		enum State
 		{
@@ -274,7 +275,7 @@ namespace ControlSurfaceDefinition
 			bool & has_snap_x,
 			int & snap_x,
 			bool & has_snap_y,
-			int & snap_y)
+			int & snap_y) const
 		{
 			Assert(layout_elem.hasPosition);
 			
@@ -323,10 +324,8 @@ namespace ControlSurfaceDefinition
 						
 						for (int direction = -1; direction <= +1; direction += 2)
 						{
-							const int kPadding = 4;
-							
 							const int p1 = direction < 0 ? layout_elem_p1[snap_axis] : layout_elem_p2[snap_axis];
-							const int p2 = direction < 0 ? elem_p2[snap_axis] + kPadding : elem_p1[snap_axis] - kPadding;
+							const int p2 = direction < 0 ? elem_p2[snap_axis] + kPaddingSize : elem_p1[snap_axis] - kPaddingSize;
 							
 							const int dp = p2 - p1;
 							
@@ -403,14 +402,162 @@ namespace ControlSurfaceDefinition
 			}
 		}
 		
-		static void dragSizeAndConstrain(
+		void sizeConstrain(
+			LayoutElement & layout_elem_to_skip,
+			int & x1,
+			int & y1,
+			int & x2,
+			int & y2,
+			const int snap_direction_x, // -1, 0, +1
+			bool & has_snap_x,
+			int & snap_x,
+			const int snap_direction_y, // -1, 0, +1
+			bool & has_snap_y,
+			int & snap_y) const
+		{
+			const Element * elem_to_skip = findSurfaceElement(
+				layout_elem_to_skip.groupName.c_str(),
+				layout_elem_to_skip.name.c_str());
+			
+			bool has_nearest_dx = false;
+			bool has_nearest_dy = false;
+			
+			int nearest_dx = 0;
+			int nearest_dy = 0;
+			
+			bool * has_nearest_d[2] = { &has_nearest_dx, &has_nearest_dy };
+			int * nearest_d[2] = { &nearest_dx, &nearest_dy };
+			int * snap[2] = { &snap_x, &snap_y };
+			const int * snap_direction[2] = { &snap_direction_x, &snap_direction_y };
+			
+			// snap with padding
+			
+			for (auto & group : surface->groups)
+			{
+				for (auto & elem : group.elems)
+				{
+					if (&elem == elem_to_skip)
+						continue;
+					
+					const int layout_elem_p1[2] = { x1, y1 };
+					const int layout_elem_p2[2] = { x2, y2 };
+					
+					const int elem_p1[2] = { elem.x,           elem.y           };
+					const int elem_p2[2] = { elem.x + elem.sx, elem.y + elem.sy };
+					
+					for (int snap_axis = 0; snap_axis < 2; ++snap_axis)
+					{
+						if (snap_direction[snap_axis] == 0)
+							continue;
+						
+						const int overlap_axis = 1 - snap_axis;
+						
+						const bool overlap =
+							layout_elem_p1[overlap_axis] < elem_p2[overlap_axis] &&
+							layout_elem_p2[overlap_axis] > elem_p1[overlap_axis];
+						
+						if (overlap == false)
+							continue;
+						
+						const int direction = *snap_direction[snap_axis];
+						
+						{
+							const int p1 = direction < 0 ? layout_elem_p1[snap_axis] : layout_elem_p2[snap_axis];
+							const int p2 = direction < 0 ? elem_p2[snap_axis] + kPaddingSize : elem_p1[snap_axis] - kPaddingSize;
+							
+							const int dp = p2 - p1;
+							
+							if (direction < 0 && dp <= 0)
+								continue;
+							if (direction > 0 && dp >= 0)
+								continue;
+							
+							if (*has_nearest_d[snap_axis] == false || std::abs(dp) < std::abs(*nearest_d[snap_axis]))
+							{
+								*has_nearest_d[snap_axis] = true;
+								*nearest_d[snap_axis] = dp;
+								*snap[snap_axis] = p1 + dp;
+							}
+						}
+					}
+				}
+			}
+		
+			if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+			{
+				// snap side to side (top to top, bottom to bottom, etc)
+				
+				for (auto & group : surface->groups)
+				{
+					for (auto & elem : group.elems)
+					{
+						if (&elem == elem_to_skip)
+							continue;
+						
+						for (int direction = -1; direction <= +1; direction += 2)
+						{
+							const int px1 = direction == -1 ? elem.x : elem.x + elem.sx;
+							const int py1 = direction == -1 ? elem.y : elem.y + elem.sy;
+							const int px2 = direction == -1 ? x1 : x2;
+							const int py2 = direction == -1 ? y1 : y2;
+							
+							const int dx = px1 - px2;
+							const int dy = py1 - py2;
+							
+							if (snap_direction_x == direction && (has_nearest_dx == false || std::abs(dx) < std::abs(nearest_dx)))
+							{
+								has_nearest_dx = true;
+								nearest_dx = dx;
+								snap_x = px1;
+							}
+							
+							if (snap_direction_y == direction && (has_nearest_dy == false || std::abs(dy) < std::abs(nearest_dy)))
+							{
+								has_nearest_dy = true;
+								nearest_dy = dy;
+								snap_y = py1;
+							}
+						}
+					}
+				}
+			}
+			
+			has_snap_x = false;
+			has_snap_y = false;
+			
+			if (has_nearest_dx && std::abs(nearest_dx) < kSnapSize)
+			{
+				Assert(snap_direction_x != 0);
+				
+				if (snap_direction_x == -1)
+					x1 += nearest_dx;
+				else
+					x2 += nearest_dx;
+				
+				has_snap_x = true;
+			}
+			
+			if (has_nearest_dy && std::abs(nearest_dy) < kSnapSize)
+			{
+				Assert(snap_direction_y != 0);
+				
+				if (snap_direction_y == -1)
+					y1 += nearest_dy;
+				else
+					y2 += nearest_dy;
+				
+				has_snap_y = true;
+			}
+		}
+		
+		static void dragSize(
 			int & elem_x,
 			int & elem_sx,
 			const int mouse_x,
 			const int drag_corner_x,
 			const int min_size)
 		{
-			if (drag_corner_x == 0)
+			if (drag_corner_x == -1)
 			{
 				const int new_x = mouse_x;
 				int dx = new_x - elem_x;
@@ -420,13 +567,17 @@ namespace ControlSurfaceDefinition
 				elem_x += dx;
 				elem_sx -= dx;
 			}
-			else if (drag_corner_x == 1)
+			else if (drag_corner_x == +1)
 			{
 				const int new_x = mouse_x;
 				const int dx = new_x - (elem_x + elem_sx);
 				elem_sx += dx;
 				if (elem_sx < min_size)
 					elem_sx = min_size;
+			}
+			else
+			{
+				// nothing to do
 			}
 		}
 		
@@ -475,17 +626,17 @@ namespace ControlSurfaceDefinition
 						const int dy1 = y - mouse.y;
 						const int dy2 = y + sy - mouse.y;
 			
-						const int t_drag_corner_x = dx1 < 0 && dx1 >= -kCornerSize ? 0 : dx2 >= 0 && dx2 < kCornerSize ? 1 : 2;
-						const int t_drag_corner_y = dy1 < 0 && dy1 >= -kCornerSize ? 0 : dy2 >= 0 && dy2 < kCornerSize ? 1 : 2;
+						const int t_drag_corner_x = dx1 < 0 && dx1 >= -kCornerSize ? -1 : dx2 >= 0 && dx2 < kCornerSize ? +1 : 0;
+						const int t_drag_corner_y = dy1 < 0 && dy1 >= -kCornerSize ? -1 : dy2 >= 0 && dy2 < kCornerSize ? +1 : 0;
 					
-						if (t_drag_corner_x != 2 && t_drag_corner_y != 2)
+						if (t_drag_corner_x != 0 && t_drag_corner_y != 0)
 						{
 							state = kState_DragSize;
 							
 							selected_element = &layout_elem;
 							
-							drag_offset_x = t_drag_corner_x == 0 ? dx1 : dx2;
-							drag_offset_y = t_drag_corner_y == 0 ? dy1 : dy2;
+							drag_offset_x = t_drag_corner_x == -1 ? dx1 : dx2;
+							drag_offset_y = t_drag_corner_y == -1 ? dy1 : dy2;
 							
 							drag_corner_x = t_drag_corner_x;
 							drag_corner_y = t_drag_corner_y;
@@ -567,19 +718,40 @@ namespace ControlSurfaceDefinition
 							selected_element->sy = surface_elem->sy;
 						}
 						
-						dragSizeAndConstrain(
+						dragSize(
 							selected_element->x,
 							selected_element->sx,
 							mouse.x + drag_offset_x,
 							drag_corner_x,
 							40);
 						
-						dragSizeAndConstrain(
+						dragSize(
 							selected_element->y,
 							selected_element->sy,
 							mouse.y + drag_offset_y,
 							drag_corner_y,
 							40);
+						
+						int x1 = selected_element->x;
+						int y1 = selected_element->y;
+						int x2 = selected_element->x + selected_element->sx;
+						int y2 = selected_element->y + selected_element->sy;
+						
+						sizeConstrain(
+							*selected_element,
+							x1, y1,
+							x2, y2,
+							drag_corner_x,
+							has_snap_x,
+							snap_x,
+							drag_corner_y,
+							has_snap_y,
+							snap_y);
+						
+						selected_element->x = x1;
+						selected_element->y = y1;
+						selected_element->sx = x2 - x1;
+						selected_element->sy = y2 - y1;
 						
 						if (btn_snapToggle.toggleValue)
 						{
