@@ -35,5 +35,19 @@ bool flushObjectToFile(const void * object);
 
 // --- helper functions ---
 
-bool saveObjectToFile(const TypeDB * typeDB, const Type * type, const void * object, const char * filename);
-bool loadObjectFromFile(const TypeDB * typeDB, const Type * type, void * object, const char * filename);
+bool saveObjectToFile(const TypeDB & typeDB, const Type * type, const void * object, const char * filename);
+bool loadObjectFromFile(const TypeDB & typeDB, const Type * type, void * object, const char * filename);
+
+template <typename T>
+bool saveObjectToFile(const TypeDB & typeDB, const T & object, const char * filename)
+{
+	auto * type = typeDB.findType<T>();
+	return saveObjectToFile(typeDB, type, &object, filename);
+}
+
+template <typename T>
+bool loadObjectFromFile(const TypeDB & typeDB, T & object, const char * filename)
+{
+	auto * type = typeDB.findType<T>();
+	return loadObjectFromFile(typeDB, type, &object, filename);
+}
