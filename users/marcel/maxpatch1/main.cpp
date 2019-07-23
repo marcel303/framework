@@ -245,6 +245,7 @@ namespace ControlSurfaceDefinition
 		Button btn_snapToggle;
 		Button btn_save;
 		Button btn_load;
+		Button btn_layout;
 		
 		LayoutEditor(const Surface * in_surface, Layout * in_layout)
 			: surface(in_surface)
@@ -254,6 +255,7 @@ namespace ControlSurfaceDefinition
 			btn_snapToggle.makeToggle("snap", true, 10, 40, 70, 20);
 			btn_save.makeButton("save", 10, 70, 70, 20);
 			btn_load.makeButton("load", 10, 100, 70, 20);
+			btn_layout.makeButton("layout", 10, 130, 70, 20);
 		}
 		
 		const Element * findSurfaceElement(const char * groupName, const char * name) const
@@ -437,6 +439,7 @@ namespace ControlSurfaceDefinition
 			
 			btn_save.tick(inputIsCaptured); // todo : buttons shouldn't really be a member of the layout editor directly
 			btn_load.tick(inputIsCaptured);
+			btn_layout.tick(inputIsCaptured);
 			
 			if (inputIsCaptured)
 			{
@@ -663,6 +666,7 @@ namespace ControlSurfaceDefinition
 			btn_snapToggle.draw();
 			btn_save.draw();
 			btn_load.draw();
+			btn_layout.draw();
 		}
 	};
 }
@@ -817,14 +821,6 @@ int main(int arg, char * argv[])
 			
 			ControlSurfaceDefinition::SurfaceEditor surfaceEditor(&surface);
 			
-		#if 0
-			surfaceEditor.beginLayout()
-				.size(800, 200)
-				.margin(10, 10)
-				.padding(4, 4)
-				.end();
-		#endif
-			
 			// recreate the live ui
 			
 			liveUi = LiveUi();
@@ -923,6 +919,21 @@ int main(int arg, char * argv[])
 				
 				updateControlSurfaceWithLayout(surface, layout);
 			}
+		}
+		
+		if (layoutEditor.btn_layout.isClicked)
+		{
+			// perform layout on the control surface elements
+			
+			surfaceEditor.beginLayout()
+				.size(800, 200)
+				.margin(10, 10)
+				.padding(4, 4)
+				.end();
+			
+			// re-apply layout overrides
+			
+			updateControlSurfaceWithLayout(surface, layout);
 		}
 	#endif
 	
