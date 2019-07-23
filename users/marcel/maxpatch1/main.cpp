@@ -97,134 +97,6 @@ namespace ControlSurfaceDefinition
 			kState_DragSize
 		};
 		
-		struct Button
-		{
-			int x = 0;
-			int y = 0;
-			int sx = 0;
-			int sy = 0;
-			
-			std::string text;
-			
-			bool isToggle = false;
-			bool toggleValue = false;
-			
-			bool hover = false;
-			bool isDown = false;
-			bool isClicked = false;
-			
-			void makeButton(
-				const char * in_text,
-				const int in_x,
-				const int in_y,
-				const int in_sx,
-				const int in_sy)
-			{
-				text = in_text;
-				
-				x = in_x;
-				y = in_y;
-				sx = in_sx;
-				sy = in_sy;
-			}
-			
-			void makeToggle(
-				const char * in_text,
-				const bool in_toggleValue,
-				const int in_x,
-				const int in_y,
-				const int in_sx,
-				const int in_sy)
-			{
-				text = in_text;
-				
-				isToggle = true;
-				toggleValue = in_toggleValue;
-				
-				x = in_x;
-				y = in_y;
-				sx = in_sx;
-				sy = in_sy;
-			}
-			
-			bool tick(bool & inputIsCaptured)
-			{
-				isClicked = false;
-				
-				const bool isInside =
-					mouse.x >= x && mouse.x < x + sx &&
-					mouse.y >= y && mouse.y < y + sy;
-				
-				hover = false;
-				
-				if (inputIsCaptured)
-					isDown = false;
-				else
-				{
-					hover = isInside;
-					
-					if (isDown)
-					{
-						inputIsCaptured = true;
-						
-						if (mouse.wentUp(BUTTON_LEFT))
-						{
-							isDown = false;
-							isClicked = true;
-							if (isToggle)
-								toggleValue = !toggleValue;
-						}
-					}
-					else
-					{
-						if (isInside && mouse.wentDown(BUTTON_LEFT))
-						{
-							inputIsCaptured = true;
-							isDown = true;
-						}
-					}
-					
-					if (isInside)
-					{
-						inputIsCaptured = true;
-					}
-				}
-				
-				return isClicked;
-			}
-			
-			void draw() const
-			{
-				const float hue = .5f;
-				const float sat = .2f;
-				const ::Color colorDown = ::Color::fromHSL(hue, sat, .5f);
-				const ::Color colorSelected = ::Color::fromHSL(hue, sat, .4f);
-				const ::Color colorDeselected = ::Color::fromHSL(hue, sat, .6f);
-				const ::Color borderColorNormal = ::Color::fromHSL(hue, sat, .2f);
-				const ::Color borderColorHover = ::Color::fromHSL(hue, sat, .9f);
-				
-				if (isToggle)
-					setColor(isDown ? colorDown : toggleValue ? colorSelected : colorDeselected);
-				else
-					setColor(isDown ? colorSelected : colorDeselected);
-				hqBegin(HQ_FILLED_ROUNDED_RECTS);
-				{
-					hqFillRoundedRect(x, y, x + sx, y + sy, 4);
-				}
-				hqEnd();
-				
-				setColor(hover ? borderColorHover : borderColorNormal);
-				hqBegin(HQ_STROKED_ROUNDED_RECTS);
-				{
-					hqStrokeRoundedRect(x, y, x + sx, y + sy, 4, 2);
-				}
-				hqEnd();
-				
-				setColor(colorWhite);
-				drawText(x + sx/2, y + sy/2, 12, 0, 0, "%s", text.c_str());
-			}
-		};
-		
 		const Surface * surface = nullptr;
 		
 		Layout * layout = nullptr;
@@ -244,21 +116,10 @@ namespace ControlSurfaceDefinition
 		int snap_x = 0;
 		int snap_y = 0;
 		
-		Button btn_editToggle;
-		Button btn_snapToggle;
-		Button btn_save;
-		Button btn_load;
-		Button btn_layout;
-		
 		LayoutEditor(const Surface * in_surface, Layout * in_layout)
 			: surface(in_surface)
 			, layout(in_layout)
 		{
-			btn_editToggle.makeToggle("edit", true, 10, 10, 70, 20);
-			btn_snapToggle.makeToggle("snap", true, 10, 40, 70, 20);
-			btn_save.makeButton("save", 10, 70, 70, 20);
-			btn_load.makeButton("load", 10, 100, 70, 20);
-			btn_layout.makeButton("layout", 10, 130, 70, 20);
 		}
 		
 		const Element * findSurfaceElement(const char * groupName, const char * name) const
@@ -594,16 +455,9 @@ namespace ControlSurfaceDefinition
 			}
 		}
 		
-		bool tick(const float dt, bool & inputIsCaptured)
+		bool tick(const float dt, bool & inputIsCaptured, const bool enableEditing, const bool enableSnapping)
 		{
 			bool hasChanged = false;
-			
-			btn_editToggle.tick(inputIsCaptured);
-			btn_snapToggle.tick(inputIsCaptured);
-			
-			btn_save.tick(inputIsCaptured); // todo : buttons shouldn't really be a member of the layout editor directly
-			btn_load.tick(inputIsCaptured);
-			btn_layout.tick(inputIsCaptured);
 			
 			if (inputIsCaptured)
 			{
@@ -611,7 +465,7 @@ namespace ControlSurfaceDefinition
 				has_snap_x = false;
 				has_snap_y = false;
 			}
-			else if (btn_editToggle.toggleValue)
+			else if (enableEditing)
 			{
 				inputIsCaptured |= selected_element != nullptr;
 				
@@ -714,7 +568,7 @@ namespace ControlSurfaceDefinition
 						else if (mouse.dy > 0)
 							drag_direction_y = +1;
 						
-						if (btn_snapToggle.toggleValue)
+						if (enableSnapping)
 						{
 							snapToSurfaceElements(
 								*selected_element,
@@ -786,7 +640,7 @@ namespace ControlSurfaceDefinition
 						selected_element->sx = x2 - x1;
 						selected_element->sy = y2 - y1;
 						
-						if (btn_snapToggle.toggleValue)
+						if (enableSnapping)
 						{
 							//snapToSurfaceElements(*selected_element, has_snap_x, snap_x, has_snap_y, snap_y);
 						}
@@ -801,7 +655,7 @@ namespace ControlSurfaceDefinition
 			return hasChanged;
 		}
 		
-		void drawOverlay() const
+		void drawOverlay(const bool enableEditing) const
 		{
 			if (has_snap_x)
 			{
@@ -815,7 +669,7 @@ namespace ControlSurfaceDefinition
 				drawLine(0, snap_y, 1 << 16, snap_y);
 			}
 			
-			if (btn_editToggle.toggleValue)
+			if (enableEditing)
 			{
 				for (auto & layout_elem : layout->elems)
 				{
@@ -866,15 +720,174 @@ namespace ControlSurfaceDefinition
 					}
 				}
 			}
-			
-			btn_editToggle.draw();
-			btn_snapToggle.draw();
-			btn_save.draw();
-			btn_load.draw();
-			btn_layout.draw();
 		}
 	};
 }
+
+struct Button
+{
+	int x = 0;
+	int y = 0;
+	int sx = 0;
+	int sy = 0;
+	
+	std::string text;
+	
+	bool isToggle = false;
+	bool toggleValue = false;
+	
+	bool hover = false;
+	bool isDown = false;
+	bool isClicked = false;
+	
+	void makeButton(
+		const char * in_text,
+		const int in_x,
+		const int in_y,
+		const int in_sx,
+		const int in_sy)
+	{
+		text = in_text;
+		
+		x = in_x;
+		y = in_y;
+		sx = in_sx;
+		sy = in_sy;
+	}
+	
+	void makeToggle(
+		const char * in_text,
+		const bool in_toggleValue,
+		const int in_x,
+		const int in_y,
+		const int in_sx,
+		const int in_sy)
+	{
+		text = in_text;
+		
+		isToggle = true;
+		toggleValue = in_toggleValue;
+		
+		x = in_x;
+		y = in_y;
+		sx = in_sx;
+		sy = in_sy;
+	}
+	
+	bool tick(bool & inputIsCaptured)
+	{
+		isClicked = false;
+		
+		const bool isInside =
+			mouse.x >= x && mouse.x < x + sx &&
+			mouse.y >= y && mouse.y < y + sy;
+		
+		hover = false;
+		
+		if (inputIsCaptured)
+			isDown = false;
+		else
+		{
+			hover = isInside;
+			
+			if (isDown)
+			{
+				inputIsCaptured = true;
+				
+				if (mouse.wentUp(BUTTON_LEFT))
+				{
+					isDown = false;
+					isClicked = true;
+					if (isToggle)
+						toggleValue = !toggleValue;
+				}
+			}
+			else
+			{
+				if (isInside && mouse.wentDown(BUTTON_LEFT))
+				{
+					inputIsCaptured = true;
+					isDown = true;
+				}
+			}
+			
+			if (isInside)
+			{
+				inputIsCaptured = true;
+			}
+		}
+		
+		return isClicked;
+	}
+	
+	void draw() const
+	{
+		const float hue = .5f;
+		const float sat = .2f;
+		const ::Color colorDown = ::Color::fromHSL(hue, sat, .5f);
+		const ::Color colorSelected = ::Color::fromHSL(hue, sat, .4f);
+		const ::Color colorDeselected = ::Color::fromHSL(hue, sat, .6f);
+		const ::Color borderColorNormal = ::Color::fromHSL(hue, sat, .2f);
+		const ::Color borderColorHover = ::Color::fromHSL(hue, sat, .9f);
+		
+		if (isToggle)
+			setColor(isDown ? colorDown : toggleValue ? colorSelected : colorDeselected);
+		else
+			setColor(isDown ? colorSelected : colorDeselected);
+		hqBegin(HQ_FILLED_ROUNDED_RECTS);
+		{
+			hqFillRoundedRect(x, y, x + sx, y + sy, 4);
+		}
+		hqEnd();
+		
+		setColor(hover ? borderColorHover : borderColorNormal);
+		hqBegin(HQ_STROKED_ROUNDED_RECTS);
+		{
+			hqStrokeRoundedRect(x, y, x + sx, y + sy, 4, 2);
+		}
+		hqEnd();
+		
+		setColor(colorWhite);
+		drawText(x + sx/2, y + sy/2, 12, 0, 0, "%s", text.c_str());
+	}
+};
+
+struct LayoutEditorView
+{
+	Button btn_editToggle;
+	Button btn_snapToggle;
+	Button btn_save;
+	Button btn_load;
+	Button btn_layout;
+	
+	LayoutEditorView()
+	{
+		btn_editToggle.makeToggle("edit", true, 10, 10, 70, 20);
+		btn_snapToggle.makeToggle("snap", true, 10, 40, 70, 20);
+		btn_save.makeButton("save", 10, 70, 70, 20);
+		btn_load.makeButton("load", 10, 100, 70, 20);
+		btn_layout.makeButton("layout", 10, 130, 70, 20);
+	}
+	
+	void tick(bool & inputIsCaptured)
+	{
+		btn_editToggle.tick(inputIsCaptured);
+		btn_snapToggle.tick(inputIsCaptured);
+	
+		btn_save.tick(inputIsCaptured); // todo : buttons shouldn't really be a member of the layout editor directly
+		btn_load.tick(inputIsCaptured);
+		btn_layout.tick(inputIsCaptured);
+	}
+	
+	void drawOverlay() const
+	{
+		btn_editToggle.draw();
+		btn_snapToggle.draw();
+		btn_save.draw();
+		btn_load.draw();
+		btn_layout.draw();
+	}
+};
 
 #endif
 
@@ -1008,6 +1021,8 @@ int main(int arg, char * argv[])
 	ControlSurfaceDefinition::Layout layout;
 	
 	ControlSurfaceDefinition::LayoutEditor layoutEditor(&surface, &layout);
+	
+	LayoutEditorView layoutEditorView;
 #endif
 
 	auto loadLiveUi = [&](const char * filename)
@@ -1099,19 +1114,25 @@ int main(int arg, char * argv[])
 		bool inputIsCaptured = false;
 		
 	#if ENABLE_LAYOUT_EDITOR
-		if (layoutEditor.tick(framework.timeStep, inputIsCaptured))
+		layoutEditorView.tick(inputIsCaptured);
+		
+		if (layoutEditor.tick(
+			framework.timeStep,
+			inputIsCaptured,
+			layoutEditorView.btn_editToggle.toggleValue,
+			layoutEditorView.btn_snapToggle.toggleValue))
 		{
 			updateControlSurfaceWithLayout(surface, layout);
 		}
 		
-		if (layoutEditor.btn_save.isClicked)
+		if (layoutEditorView.btn_save.isClicked)
 		{
 			const std::string layout_filename = Path::ReplaceExtension(currentFilename, "layout.json");
 			if (saveObjectToFile(typeDB, layout, layout_filename.c_str()) == false)
 				logError("failed to save layout to file");
 		}
 		
-		if (layoutEditor.btn_load.isClicked)
+		if (layoutEditorView.btn_load.isClicked)
 		{
 			const std::string layout_filename = Path::ReplaceExtension(currentFilename, "layout.json");
 			ControlSurfaceDefinition::Layout new_layout;
@@ -1126,7 +1147,7 @@ int main(int arg, char * argv[])
 			}
 		}
 		
-		if (layoutEditor.btn_layout.isClicked)
+		if (layoutEditorView.btn_layout.isClicked)
 		{
 			// perform layout on the control surface elements
 			
@@ -1157,7 +1178,9 @@ int main(int arg, char * argv[])
 			liveUi.draw();
 			
 		#if ENABLE_LAYOUT_EDITOR
-			layoutEditor.drawOverlay();
+			layoutEditor.drawOverlay(layoutEditorView.btn_editToggle.toggleValue);
+			
+			layoutEditorView.drawOverlay();
 		#endif
 			
 			liveUi.drawTooltip();
