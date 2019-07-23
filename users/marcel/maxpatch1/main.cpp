@@ -87,7 +87,7 @@ namespace ControlSurfaceDefinition
 	struct LayoutEditor
 	{
 		static const int kCornerSize = 7;
-		static const int kSnapSize = 4;
+		static const int kSnapSize = 8;
 		static const int kPaddingSize = 4;
 		
 		enum State
@@ -234,6 +234,8 @@ namespace ControlSurfaceDefinition
 		LayoutElement * selected_element = nullptr;
 		int drag_offset_x = 0; // for positioning and sizing
 		int drag_offset_y = 0;
+		int drag_direction_x = 0;
+		int drag_direction_y = 0;
 		int drag_corner_x = 0; // for sizing only
 		int drag_corner_y = 0;
 		
@@ -272,8 +274,10 @@ namespace ControlSurfaceDefinition
 		
 		void snapToSurfaceElements(
 			LayoutElement & layout_elem,
+			const int snap_direction_x,
 			bool & has_snap_x,
 			int & snap_x,
+			const int snap_direction_y,
 			bool & has_snap_y,
 			int & snap_y) const
 		{
@@ -295,6 +299,7 @@ namespace ControlSurfaceDefinition
 			bool * has_nearest_d[2] = { &has_nearest_dx, &has_nearest_dy };
 			int * nearest_d[2] = { &nearest_dx, &nearest_dy };
 			int * snap[2] = { &snap_x, &snap_y };
+			const int * snap_direction[2] = { &snap_direction_x, &snap_direction_y };
 			
 			// snap with padding
 			
@@ -313,6 +318,9 @@ namespace ControlSurfaceDefinition
 					
 					for (int snap_axis = 0; snap_axis < 2; ++snap_axis)
 					{
+						if (*snap_direction[snap_axis] == 0)
+							continue;
+						
 						const int overlap_axis = 1 - snap_axis;
 						
 						const bool overlap =
@@ -322,7 +330,10 @@ namespace ControlSurfaceDefinition
 						if (overlap == false)
 							continue;
 						
-						for (int direction = -1; direction <= +1; direction += 2)
+						const int direction = *snap_direction[snap_axis];
+						
+						Assert(direction != 0);
+						
 						{
 							const int p1 = direction < 0 ? layout_elem_p1[snap_axis] : layout_elem_p2[snap_axis];
 							const int p2 = direction < 0 ? elem_p2[snap_axis] + kPaddingSize : elem_p1[snap_axis] - kPaddingSize;
@@ -356,26 +367,24 @@ namespace ControlSurfaceDefinition
 						if (&elem == self)
 							continue;
 						
-						for (int s1 = 0; s1 < 2; ++s1)
+						for (int direction = -1; direction <= +1; direction += 2)
 						{
-							const int s2 = s1;
-							
-							const int x1 = elem.x + s1 * elem.sx;
-							const int y1 = elem.y + s1 * elem.sy;
-							const int x2 = layout_elem.x + layout_elem_sx * s2;
-							const int y2 = layout_elem.y + layout_elem_sy * s2;
+							const int x1 = direction == -1 ? elem.x : elem.x + elem.sx;
+							const int y1 = direction == -1 ? elem.y : elem.y + elem.sy;
+							const int x2 = direction == -1 ? layout_elem.x : layout_elem.x + layout_elem_sx;
+							const int y2 = direction == -1 ? layout_elem.y : layout_elem.y + layout_elem_sy;
 							
 							const int dx = x1 - x2;
 							const int dy = y1 - y2;
 							
-							if (has_nearest_dx == false || std::abs(dx) < std::abs(nearest_dx))
+							if (snap_direction_x == direction && (has_nearest_dx == false || std::abs(dx) < std::abs(nearest_dx)))
 							{
 								has_nearest_dx = true;
 								nearest_dx = dx;
 								snap_x = x1;
 							}
 							
-							if (has_nearest_dy == false || std::abs(dy) < std::abs(nearest_dy))
+							if (snap_direction_y == direction && (has_nearest_dy == false || std::abs(dy) < std::abs(nearest_dy)))
 							{
 								has_nearest_dy = true;
 								nearest_dy = dy;
@@ -391,12 +400,16 @@ namespace ControlSurfaceDefinition
 			
 			if (has_nearest_dx && std::abs(nearest_dx) < kSnapSize)
 			{
+				Assert(snap_direction_x != 0);
+				
 				layout_elem.x += nearest_dx;
 				has_snap_x = true;
 			}
 			
 			if (has_nearest_dy && std::abs(nearest_dy) < kSnapSize)
 			{
+				Assert(snap_direction_y != 0);
+				
 				layout_elem.y += nearest_dy;
 				has_snap_y = true;
 			}
@@ -447,7 +460,7 @@ namespace ControlSurfaceDefinition
 					
 					for (int snap_axis = 0; snap_axis < 2; ++snap_axis)
 					{
-						if (snap_direction[snap_axis] == 0)
+						if (*snap_direction[snap_axis] == 0)
 							continue;
 						
 						const int overlap_axis = 1 - snap_axis;
@@ -655,6 +668,9 @@ namespace ControlSurfaceDefinition
 								
 								drag_offset_x = mouse.x - x;
 								drag_offset_y = mouse.y - y;
+								
+								drag_direction_x = 0;
+								drag_direction_y = 0;
 							}
 						}
 					}
@@ -688,9 +704,26 @@ namespace ControlSurfaceDefinition
 						selected_element->x = mouse.x - drag_offset_x;
 						selected_element->y = mouse.y - drag_offset_y;
 						
+						if (mouse.dx < 0)
+							drag_direction_x = -1;
+						else if (mouse.dx > 0)
+							drag_direction_x = +1;
+						
+						if (mouse.dy < 0)
+							drag_direction_y = -1;
+						else if (mouse.dy > 0)
+							drag_direction_y = +1;
+						
 						if (btn_snapToggle.toggleValue)
 						{
-							snapToSurfaceElements(*selected_element, has_snap_x, snap_x, has_snap_y, snap_y);
+							snapToSurfaceElements(
+								*selected_element,
+								drag_direction_x,
+								has_snap_x,
+								snap_x,
+								drag_direction_y,
+								has_snap_y,
+								snap_y);
 						}
 						
 						hasChanged = true;
