@@ -14,6 +14,7 @@
 #include "fileEditor_jsfx.h"
 #include "fileEditor_model.h"
 #include "fileEditor_particleSystem.h"
+#include "fileEditor_shader.h"
 #include "fileEditor_sprite.h"
 #include "fileEditor_spriter.h"
 #include "fileEditor_text.h"
@@ -357,9 +358,7 @@ int main(int argc, char * argv[])
 		auto filename = Path::GetFileName(path);
 		auto extension = Path::GetExtension(filename, true);
 		
-		if (extension == "ps" || // Pixel shader
-			extension == "vs" || // Vertex shader
-			extension == "frag" || // Fragment shader
+		if (extension == "frag" || // Fragment shader
 			extension == "txt" ||
 			extension == "plist" || // OSX property list
 			extension == "ini" ||
@@ -383,6 +382,10 @@ int main(int argc, char * argv[])
 				editor = new FileEditor_Model(filename.c_str());
 			else
 				editor = new FileEditor_Text(filename.c_str());
+		}
+		else if (extension == "ps" || extension == "vs")
+		{
+			editor = new FileEditor_Shader(filename.c_str());
 		}
 		else if (extension == "bmp" || extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "psd" || extension == "tga" || extension == "gif")
 		{
