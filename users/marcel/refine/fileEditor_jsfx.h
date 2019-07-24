@@ -74,6 +74,34 @@ struct MidiKeyboard
 	}
 };
 
+struct JsusFxWindow
+{
+	static const int kBorderSize = 6;
+	static const int kTitlebarSize = 30;
+
+	enum State
+	{
+		kState_Idle,
+		kState_DragMove,
+		kState_DragSize
+	};
+
+	State state = kState_Idle;
+
+	int x = 0;
+	int y = 0;
+	int clientSx = 0;
+	int clientSy = 0;
+	const char * caption = nullptr;
+
+	void init(const int x, const int y, const int clientSx, const int clientSy, const char * caption);
+
+	void tick(const float dt, bool & inputIsCaptured);
+	void drawDecoration() const;
+
+	void getClientRect(int & x, int & y, int & sx, int & sy) const;
+};
+
 struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 {
 	JsusFx_Framework jsusFx;
@@ -90,7 +118,6 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 
 	int offsetX = 0;
 	int offsetY = 0;
-	bool isDragging = false;
 	
 	bool sliderIsActive[JsusFx::kMaxSliders] = { };
 	
@@ -102,6 +129,9 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 	
 	bool showMidiKeyboard = true;
 	bool showControlSliders = false;
+
+	JsusFxWindow midiKeyboardWindow;
+	JsusFxWindow jsusFxWindow;
 
 	FileEditor_JsusFx(const char * path);
 	virtual ~FileEditor_JsusFx() override;

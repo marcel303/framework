@@ -7,25 +7,32 @@
 #include "imgui.h"
 #include <algorithm>
 
-void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, MidiBuffer & midiBuffer, const bool doTick, const bool doDraw, int & out_sx, int & out_sy, bool & inputIsCaptured)
+void doMidiKeyboard(
+	MidiKeyboard & kb,
+	const int mouseX,
+	const int mouseY,
+	MidiBuffer & midiBuffer,
+	const bool doTick,
+	const bool doDraw,
+	const int sx,
+	const int sy,
+	bool & inputIsCaptured)
 {
-	const int keySx = 16;
-	const int keySy = 64;
+	const int kOctavePadding = 4;
+	
 	const int octaveSx = 24;
-	const int octaveSy = 24;
+	const int octaveSy = std::min<int>(sy/2, 24);
+
+	const int spaceForKeys = sx - octaveSx - kOctavePadding;
+	const int keySx = spaceForKeys / MidiKeyboard::kNumKeys;
+	const int keySy = sy;
 
 	const int hoverIndex = mouseY >= 0 && mouseY <= keySy ? mouseX / keySx : -1;
 	const float velocity = clamp(mouseY / float(keySy), 0.f, 1.f);
 
 	const int octaveX = keySx * MidiKeyboard::kNumKeys + 4;
-	const int octaveY = 4;
+	const int octaveY = 0;
 	const int octaveHoverIndex = mouseX >= octaveX && mouseX <= octaveX + octaveSx ? (mouseY - octaveY) / octaveSy : -1;
-
-	const int sx = std::max(keySx * MidiKeyboard::kNumKeys, octaveX + octaveSx);
-	const int sy = std::max(keySy, octaveSy * 2);
-
-	out_sx = sx;
-	out_sy = sy;
 
 	if (doTick)
 	{
@@ -145,6 +152,97 @@ void doMidiKeyboard(MidiKeyboard & kb, const int mouseX, const int mouseY, MidiB
 	}
 }
 
+//
+
+void JsusFxWindow::init(const int x, const int y, const int clientSx, const int clientSy, const char * caption)
+{
+	this->x = x;
+	this->y = y;
+	this->clientSx = clientSx;
+	this->clientSy = clientSy;
+	this->caption = caption;
+}
+
+void JsusFxWindow::tick(const float dt, bool & inputIsCaptured)
+{
+	if (inputIsCaptured)
+	{
+		state = kState_Idle;
+	}
+	else
+	{
+		const int sx = kBorderSize + clientSx + kBorderSize;
+		const int sy = kBorderSize + kTitlebarSize + clientSy + kBorderSize;
+
+		const bool isInsideTitleBar =
+			mouse.x >= x + kBorderSize && mouse.x < x + sx - kBorderSize &&
+			mouse.y >= y + kBorderSize && mouse.y < y + kBorderSize + kTitlebarSize;
+
+		if (state == kState_Idle)
+		{
+			if (isInsideTitleBar && mouse.wentDown(BUTTON_LEFT))
+			{
+				state = kState_DragMove;
+			}
+		}
+		else if (state == kState_DragMove)
+		{
+			if (mouse.wentUp(BUTTON_LEFT))
+			{
+				state = kState_Idle;
+			}
+			else
+			{
+				x += mouse.dx;
+				y += mouse.dy;
+			}
+		}
+	}
+}
+
+void JsusFxWindow::drawDecoration() const
+{
+	gxPushMatrix();
+	{
+		gxTranslatef(x, y, 0);
+
+		const int sx = kBorderSize + clientSx + kBorderSize;
+		const int sy = kBorderSize + kTitlebarSize + clientSy + kBorderSize;
+
+		// draw borders
+
+		setColor(colorBlack);
+		drawRect(0, 0, sx, sy);
+		drawRect(kBorderSize, kBorderSize, sx - kBorderSize, sy - kBorderSize);
+
+		// draw title bar area
+
+		setColor(40, 40, 40);
+		drawRect(kBorderSize, kBorderSize, sx - kBorderSize, kBorderSize + kTitlebarSize);
+		
+		if (caption != nullptr)
+		{
+			setFont("calibri.ttf");
+			pushFontMode(FONT_SDF);
+			setColor(140, 140, 100);
+			drawText(sx/2, kBorderSize + kTitlebarSize/2, 16, 0, 0, "%s", caption);
+			popFontMode();
+		}
+	}
+	gxPopMatrix();
+}
+
+void JsusFxWindow::getClientRect(int & x, int & y, int & sx, int & sy) const
+{
+	x = this->x + kBorderSize;
+	y = this->y + kBorderSize + kTitlebarSize;;
+
+	sx = clientSx;
+	sy = clientSy;
+}
+
+//
+
 FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 	: jsusFx(pathLibary)
 	, gfx(jsusFx)
@@ -170,7 +268,15 @@ FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 		jsusFx.gfx_h = std::max(jsusFx.gfx_h, 240);
 		
 		paObject.init(44100, 2, 0, 256, this);
+		
+		jsusFxWindow.init(10, 100, jsusFx.gfx_w, jsusFx.gfx_h, nullptr);
 	}
+	else
+	{
+		jsusFxWindow.init(10, 100, 200, 100, nullptr);
+	}
+
+	midiKeyboardWindow.init(10, 10, 300, 40, "Midi Keyboard");
 }
 
 FileEditor_JsusFx::~FileEditor_JsusFx()
@@ -263,211 +369,229 @@ void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const b
 	{
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
-	
-		int midiSx;
-		int midiSy;
+		
+		jsusFxWindow.tick(dt, inputIsCaptured);
+		
+		midiKeyboardWindow.tick(dt, inputIsCaptured);
 
 		if (showMidiKeyboard)
 		{
-			doMidiKeyboard(midiKeyboard, mouse.x, mouse.y, midiBuffer, true, false, midiSx, midiSy, inputIsCaptured);
+			int x, y;
+			int sx, sy;
+			midiKeyboardWindow.getClientRect(x, y, sx, sy);
+			
+			doMidiKeyboard(
+				midiKeyboard,
+				mouse.x - x,
+				mouse.y - y,
+				midiBuffer,
+				true,
+				false,
+				sx,
+				sy,
+				inputIsCaptured);
 		}
 		
-		if (isValid == false)
+		jsusFxWindow.drawDecoration();
+		
+		gxPushMatrix();
 		{
-			setFont("calibri.ttf");
-			pushFontMode(FONT_SDF);
-			setColor(colorWhite);
-			drawText(sx/2, sy/2, 16, 0, 0, "Failed to load jsfx file");
-			popFontMode();
-		}
-		else
-		{
-			if (jsusFx.hasGraphicsSection())
+			int x, y;
+			int sx, sy;
+			jsusFxWindow.getClientRect(x, y, sx, sy);
+		
+			gxTranslatef(x, y, 0);
+			
+			if (isValid == false)
 			{
 				setFont("calibri.ttf");
 				pushFontMode(FONT_SDF);
-				setColorClamp(true);
-				{
-					const int gfxSx = jsusFx.gfx_w;
-					const int gfxSy = jsusFx.gfx_h;
-
-					if (firstFrame)
-					{
-						firstFrame = false;
-
-						offsetX = (sx - gfxSx) / 2;
-						offsetY = (sy - gfxSy) / 2;
-					}
-
-					if (inputIsCaptured == false)
-					{
-						const bool isOutside =
-							mouse.x < offsetX || mouse.x > offsetX + jsusFx.gfx_w ||
-							mouse.y < offsetY || mouse.y > offsetY + jsusFx.gfx_h;
-
-						if (isOutside && mouse.wentDown(BUTTON_LEFT))
-						{
-							isDragging = true;
-						}
-
-						if (mouse.wentUp(BUTTON_LEFT))
-						{
-							isDragging = false;
-						}
-					}
-					else
-					{
-						isDragging = false;
-					}
-				
-					if (isDragging)
-					{
-						inputIsCaptured = true;
-
-						offsetX = mouse.x - gfxSx/2;
-						offsetY = mouse.y;
-					}
-				
-					if (inputIsCaptured == false)
-					{
-						if (keyboard.wentDown(SDLK_f) && keyboard.isDown(SDLK_LSHIFT))
-						{
-							inputIsCaptured = true;
-						
-							jsusFx.gfx_w = sx;
-							jsusFx.gfx_h = sy;
-						
-							offsetX = 0;
-							offsetY = 0;
-						}
-					}
-
-					mouse.x -= offsetX;
-					mouse.y -= offsetY;
-					{
-						setDrawRect(offsetX, offsetY, gfxSx, gfxSy);
-						gfx.drawTransform.MakeTranslation(offsetX, offsetY, 0.f);
-
-						gfx.setup(surface, gfxSx, gfxSy, mouse.x, mouse.y, inputIsCaptured == false);
-
-						jsusFx.draw();
-
-						clearDrawRect();
-					}
-					mouse.x += offsetX;
-					mouse.y += offsetY;
-				}
-				setColorClamp(false);
+				setColor(colorWhite);
+				drawText(sx/2, sy/2, 16, 0, 0, "Failed to load jsfx file");
 				popFontMode();
 			}
-		
-			if (showControlSliders)
+			else
 			{
-				setFont("calibri.ttf");
-				pushFontMode(FONT_SDF);
+				if (jsusFx.hasGraphicsSection())
 				{
-					const int margin = 10;
-
-					int numSliders = 0;
-				
-					for (auto & slider : jsusFx.sliders)
-						if (slider.exists && slider.desc[0] != '-')
-							numSliders++;
-				
-					const int sx = 200;
-					const int sy = 20;
-					const int advanceY = 22;
-					
-					const int totalSx = sx + margin * 2;
-					const int totalSy = advanceY * numSliders + margin * 2;
-					
-					if (firstFrame)
+					setFont("calibri.ttf");
+					pushFontMode(FONT_SDF);
+					setColorClamp(true);
 					{
-						firstFrame = false;
-						
-						offsetX = (surface->getWidth() - totalSx) / 2;
-						offsetY = (surface->getWidth() - totalSy) / 2;
-					}
-					
-					int x = offsetX;
-					int y = offsetY;
-					
-					int sliderIndex = 0;
-					
-					auto doSlider = [&](JsusFx & fx, JsusFx_Slider & slider, int x, int y, bool & isActive)
+						const int gfxSx = jsusFx.gfx_w;
+						const int gfxSy = jsusFx.gfx_h;
+
+						if (firstFrame)
 						{
-							const bool isInside =
-								x >= 0 && x <= sx &&
-								y >= 0 && y <= sy;
+							firstFrame = false;
+
+							offsetX = (sx - gfxSx) / 2;
+							offsetY = (sy - gfxSy) / 2;
+						}
 						
-							if (isInside && mouse.wentDown(BUTTON_LEFT))
-								isActive = true;
-						
-							if (mouse.wentUp(BUTTON_LEFT))
-								isActive = false;
-						
-							if (isActive)
+						if (inputIsCaptured == false)
+						{
+							if (keyboard.wentDown(SDLK_f) && keyboard.isDown(SDLK_LSHIFT))
 							{
-								const float t = x / float(sx);
-								const float v = slider.min + (slider.max - slider.min) * t;
-								fx.moveSlider(&slider - fx.sliders, v);
-							}
-						
-							setColor(0, 0, 255, 127);
-							const float t = (slider.getValue() - slider.min) / (slider.max - slider.min);
-							drawRect(0, 0, sx * t, sy);
-						
-							if (slider.isEnum)
-							{
-								const int enumIndex = (int)slider.getValue();
+								inputIsCaptured = true;
 							
-								if (enumIndex >= 0 && enumIndex < slider.enumNames.size())
+								jsusFx.gfx_w = sx;
+								jsusFx.gfx_h = sy;
+							
+								offsetX = 0;
+								offsetY = 0;
+							}
+						}
+
+						mouse.x -= x + offsetX;
+						mouse.y -= y + offsetY;
+						{
+							setDrawRect(x + offsetX, y + offsetY, gfxSx, gfxSy);
+							gfx.drawTransform.MakeTranslation(x + offsetX, y + offsetY, 0.f);
+
+							gfx.setup(surface, gfxSx, gfxSy, mouse.x, mouse.y, inputIsCaptured == false);
+
+							jsusFx.draw();
+
+							clearDrawRect();
+						}
+						mouse.x += x + offsetX;
+						mouse.y += y + offsetY;
+					}
+					setColorClamp(false);
+					popFontMode();
+				}
+			
+				if (showControlSliders)
+				{
+					setFont("calibri.ttf");
+					pushFontMode(FONT_SDF);
+					{
+						const int margin = 10;
+
+						int numSliders = 0;
+					
+						for (auto & slider : jsusFx.sliders)
+							if (slider.exists && slider.desc[0] != '-')
+								numSliders++;
+					
+						const int sx = 200;
+						const int sy = 20;
+						const int advanceY = 22;
+						
+						const int totalSx = sx + margin * 2;
+						const int totalSy = advanceY * numSliders + margin * 2;
+						
+						if (firstFrame)
+						{
+							firstFrame = false;
+							
+							offsetX = (surface->getWidth() - totalSx) / 2;
+							offsetY = (surface->getWidth() - totalSy) / 2;
+						}
+						
+						int x = offsetX;
+						int y = offsetY;
+						
+						int sliderIndex = 0;
+						
+						auto doSlider = [&](JsusFx & fx, JsusFx_Slider & slider, int x, int y, bool & isActive)
+							{
+								const bool isInside =
+									x >= 0 && x <= sx &&
+									y >= 0 && y <= sy;
+							
+								if (isInside && mouse.wentDown(BUTTON_LEFT))
+									isActive = true;
+							
+								if (mouse.wentUp(BUTTON_LEFT))
+									isActive = false;
+							
+								if (isActive)
+								{
+									const float t = x / float(sx);
+									const float v = slider.min + (slider.max - slider.min) * t;
+									fx.moveSlider(&slider - fx.sliders, v);
+								}
+							
+								setColor(0, 0, 255, 127);
+								const float t = (slider.getValue() - slider.min) / (slider.max - slider.min);
+								drawRect(0, 0, sx * t, sy);
+							
+								if (slider.isEnum)
+								{
+									const int enumIndex = (int)slider.getValue();
+								
+									if (enumIndex >= 0 && enumIndex < slider.enumNames.size())
+									{
+										setColor(colorWhite);
+										drawText(sx/2.f, sy/2.f, 14.f, 0.f, 0.f, "%s", slider.enumNames[enumIndex].c_str());
+									}
+								}
+								else
 								{
 									setColor(colorWhite);
-									drawText(sx/2.f, sy/2.f, 14.f, 0.f, 0.f, "%s", slider.enumNames[enumIndex].c_str());
+									drawText(sx/2.f, sy/2.f, 14.f, 0.f, 0.f, "%s", slider.desc);
 								}
-							}
-							else
-							{
-								setColor(colorWhite);
-								drawText(sx/2.f, sy/2.f, 14.f, 0.f, 0.f, "%s", slider.desc);
-							}
-						
-							setColor(63, 31, 255, 127);
-							drawRectLine(0, 0, sx, sy);
-						};
+							
+								setColor(63, 31, 255, 127);
+								drawRectLine(0, 0, sx, sy);
+							};
 
-					if (numSliders > 0)
-					{
-						setColor(0, 0, 0, 127);
-						drawRect(x, y, x + totalSx, y + totalSy);
-					
-						x += margin;
-						y += margin;
-						
-						for (auto & slider : jsusFx.sliders)
+						if (numSliders > 0)
 						{
-							if (slider.exists && slider.desc[0] != '-')
+							setColor(0, 0, 0, 127);
+							drawRect(x, y, x + totalSx, y + totalSy);
+						
+							x += margin;
+							y += margin;
+							
+							for (auto & slider : jsusFx.sliders)
 							{
-								gxPushMatrix();
-								gxTranslatef(x, y, 0);
-								doSlider(jsusFx, slider, mouse.x - x, mouse.y - y, sliderIsActive[sliderIndex]);
-								gxPopMatrix();
+								if (slider.exists && slider.desc[0] != '-')
+								{
+									gxPushMatrix();
+									gxTranslatef(x, y, 0);
+									doSlider(jsusFx, slider, mouse.x - x, mouse.y - y, sliderIsActive[sliderIndex]);
+									gxPopMatrix();
 
-								y += advanceY;
+									y += advanceY;
+								}
+
+								sliderIndex++;
 							}
-
-							sliderIndex++;
 						}
 					}
+					popFontMode();
 				}
-				popFontMode();
 			}
 		}
+		gxPopMatrix();
 
+		midiKeyboardWindow.drawDecoration();
+		
 		if (showMidiKeyboard)
 		{
-			doMidiKeyboard(midiKeyboard, mouse.x, mouse.y, midiBuffer, false, true, midiSx, midiSy, inputIsCaptured);
+			int x, y;
+			int sx, sy;
+			midiKeyboardWindow.getClientRect(x, y, sx, sy);
+			
+			gxPushMatrix();
+			{
+				gxTranslatef(x, y, 0);
+			
+				doMidiKeyboard(
+					midiKeyboard,
+					mouse.x - x,
+					mouse.y - y,
+					midiBuffer,
+					false,
+					true,
+					sx,
+					sy,
+					inputIsCaptured);
+			}
+			gxPopMatrix();
 		}
 	}
 	popSurface();
