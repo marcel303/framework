@@ -13,6 +13,7 @@ add rapidjson-support
 add utf8rewind
 add tinyxml2
 add tinyxml2-helpers
+add turbojpeg
 
 library imgui
 	header_path imgui expose

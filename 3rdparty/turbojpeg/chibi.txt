@@ -1,0 +1,12 @@
+library turbojpeg
+	add_files dummy.c
+
+	with_platform macos   header_path macos/include expose
+	with_platform windows header_path win32/include expose
+	
+	with_platform macos depend_library macos/lib/libturbojpeg.0.dylib local embed_framework
+	
+	with_platform linux depend_library turbojpeg find
+
+	with_platform windows depend_library win32/lib/turbojpeg.lib local
+	with_platform windows add_dist_files win32/dll/turbojpeg.dll
