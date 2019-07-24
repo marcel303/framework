@@ -1,0 +1,14 @@
+app marcel-videosync-master
+	depend_library framework
+	depend_library libreflection-bindtofile
+	depend_library libosc
+	add_files main-master.cpp
+
+app marcel-videosync-slave
+	depend_library framework
+	depend_library libosc
+	depend_library libreflection-bindtofile
+	depend_library libvideo
+	add_files main-slave.cpp
+	add_files videoloop.h
+	resource_path data
