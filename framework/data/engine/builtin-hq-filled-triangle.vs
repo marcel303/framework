@@ -4,6 +4,7 @@ include engine/ShaderVS.txt
 include engine/builtin-hq-common-vs.txt
 
 shader_out vec2 v_p;
+shader_out vec2 v_g;
 shader_out vec3 v_edgePlane1;
 shader_out vec3 v_edgePlane2;
 shader_out vec3 v_edgePlane3;
@@ -114,6 +115,7 @@ void main()
 	// output the rest
 	
 	v_p = position.xy;
+	v_g = hqGradientCoord(v_p);
 	v_edgePlane1 = edgePlane1;
 	v_edgePlane2 = edgePlane2;
 	v_edgePlane3 = edgePlane3;
