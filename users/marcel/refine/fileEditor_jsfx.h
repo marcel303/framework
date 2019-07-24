@@ -93,6 +93,8 @@ struct JsusFxWindow
 	int clientSx = 0;
 	int clientSy = 0;
 	const char * caption = nullptr;
+	
+	bool isVisible = true;
 
 	void init(const int x, const int y, const int clientSx, const int clientSy, const char * caption);
 
@@ -126,12 +128,10 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 
 	MidiBuffer midiBuffer;
 	MidiKeyboard midiKeyboard;
-	
-	bool showMidiKeyboard = true;
-	bool showControlSliders = false;
 
 	JsusFxWindow midiKeyboardWindow;
 	JsusFxWindow jsusFxWindow;
+	JsusFxWindow controlSlidersWindow;
 
 	FileEditor_JsusFx(const char * path);
 	virtual ~FileEditor_JsusFx() override;
