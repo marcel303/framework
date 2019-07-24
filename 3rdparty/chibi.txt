@@ -9,6 +9,7 @@ add liboscpack
 add midifile
 add msdfgen
 add oggvorbis
+add portaudio
 add rapidjson-support
 add utf8rewind
 add tinyxml2
