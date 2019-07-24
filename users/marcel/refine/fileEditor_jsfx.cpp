@@ -16,6 +16,7 @@ void doMidiKeyboard(
 	MidiBuffer & midiBuffer,
 	const bool doTick,
 	const bool doDraw,
+	const bool isFocused,
 	const int sx,
 	const int sy,
 	bool & inputIsCaptured)
@@ -30,7 +31,7 @@ void doMidiKeyboard(
 	const int keySy = sy;
 
 	const int hoverIndex = inputIsCaptured ? -1 : (mouseY >= 0 && mouseY <= keySy ? mouseX / keySx : -1);
-	const float velocity = clamp(mouseY / float(keySy), 0.f, 1.f);
+	float velocity = clamp(mouseY / float(keySy), 0.f, 1.f);
 
 	const int octaveX = keySx * MidiKeyboard::kNumKeys + 4;
 	const int octaveY = 0;
@@ -45,6 +46,18 @@ void doMidiKeyboard(
 		{
 			if (mouse.isDown(BUTTON_LEFT) && hoverIndex >= 0 && hoverIndex < MidiKeyboard::kNumKeys)
 				isDown[hoverIndex] = true;
+			
+			if (isFocused)
+			{
+				for (int i = 1; i < 10 && i < MidiKeyboard::kNumKeys; ++i)
+				{
+					if (keyboard.isDown(SDLK_0 + i))
+					{
+						isDown[i] = true;
+						velocity = 1.f;
+					}
+				}
+			}
 		}
 
 		for (int i = 0; i < MidiKeyboard::kNumKeys; ++i)
@@ -170,22 +183,35 @@ void JsusFxWindow::tick(const float dt, bool & inputIsCaptured)
 	if (inputIsCaptured || isVisible == false)
 	{
 		state = kState_Idle;
+		isFocused = false;
 	}
 	else
 	{
 		const int sx = kBorderSize + clientSx + kBorderSize;
-		//const int sy = kBorderSize + kTitlebarSize + clientSy + kBorderSize;
+		const int sy = kBorderSize + kTitlebarSize + clientSy + kBorderSize;
 
+		const bool isInside =
+			mouse.x >= x && mouse.x < x + sx &&
+			mouse.y >= y && mouse.y < y + sy;
+		
 		const bool isInsideTitleBar =
 			mouse.x >= x + kBorderSize && mouse.x < x + sx - kBorderSize &&
 			mouse.y >= y + kBorderSize && mouse.y < y + kBorderSize + kTitlebarSize;
 
 		if (state == kState_Idle)
 		{
-			if (isInsideTitleBar && mouse.wentDown(BUTTON_LEFT))
+			if (mouse.wentDown(BUTTON_LEFT))
 			{
-				state = kState_DragMove;
-				inputIsCaptured = true;
+				if (isInside)
+					isFocused = true;
+				else
+					isFocused = false;
+				
+				if (isInsideTitleBar)
+				{
+					state = kState_DragMove;
+					inputIsCaptured = true;
+				}
 			}
 		}
 		else if (state == kState_DragMove)
@@ -227,7 +253,8 @@ void JsusFxWindow::drawDecoration() const
 
 		// draw title bar area
 
-		setColor(40, 40, 40);
+		setAlpha(255);
+		setLumi(isFocused ? 60 : 40);
 		drawRect(kBorderSize, kBorderSize, sx - kBorderSize, kBorderSize + kTitlebarSize);
 		
 		if (caption != nullptr)
@@ -506,6 +533,7 @@ void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const b
 				midiBuffer,
 				true,
 				false,
+				midiKeyboardWindow.isFocused,
 				sx,
 				sy,
 				inputIsCaptured);
@@ -603,6 +631,7 @@ void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const b
 					midiBuffer,
 					false,
 					true,
+					midiKeyboardWindow.isFocused,
 					sx,
 					sy,
 					inputIsCaptured);

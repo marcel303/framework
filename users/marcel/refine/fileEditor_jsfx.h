@@ -89,7 +89,8 @@ struct JsusFxWindow
 	};
 
 	State state = kState_Idle;
-
+	bool isFocused = false;
+	
 	int x = 0;
 	int y = 0;
 	int clientSx = 0;
