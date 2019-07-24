@@ -368,6 +368,8 @@ struct RealtimeShaderEditor
 		{
 			setShader(shader);
 			setShaderConstants(GFX_SX, GFX_SY);
+			setColor(colorWhite);
+			gxNormal3f(0, 0, 1);
 			drawRect(0, 0, GFX_SX, GFX_SY);
 			clearShader();
 		}
