@@ -5,6 +5,8 @@
 #include "jsusfx_file.h"
 #include "jsusfx-framework.h"
 #include "paobject.h"
+#include "Random.h"
+#include <atomic>
 
 #define MIDI_OFF 0x80
 #define MIDI_ON 0x90
@@ -106,6 +108,17 @@ struct JsusFxWindow
 
 struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 {
+	enum AudioSource
+	{
+		// note : must update doButtonBar when this is changed !
+		kAudioSource_Silence,
+		kAudioSource_PinkNoise,
+		kAudioSource_WhiteNoise,
+		kAudioSource_Sine,
+		kAudioSource_Tent,
+		kAudioSource_Sample // todo
+	};
+	
 	JsusFx_Framework jsusFx;
 
 	JsusFxGfx_Framework gfx;
@@ -125,6 +138,12 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 	
 	PortAudioObject paObject;
 	SDL_mutex * mutex = nullptr;
+	std::atomic<AudioSource> audioSource;
+	std::atomic<int> volume;
+	std::atomic<int> frequency;
+	std::atomic<int> sharpness;
+	RNG::PinkNumber pinkNumber;
+	float sinePhase = 0.f;
 
 	MidiBuffer midiBuffer;
 	MidiKeyboard midiKeyboard;

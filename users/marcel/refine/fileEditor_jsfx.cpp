@@ -257,6 +257,11 @@ FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 	: jsusFx(pathLibary)
 	, gfx(jsusFx)
 	, pathLibary(".")
+	, audioSource(kAudioSource_PinkNoise)
+	, volume(64)
+	, pinkNumber(1 << 16)
+	, frequency(440)
+	, sharpness(0)
 {
 	jsusFx.init();
 
@@ -317,17 +322,51 @@ void FileEditor_JsusFx::portAudioCallback(
 	
 	float inputSamples[2][256];
 	
-	if (false)
-		memset(inputSamples, 0, sizeof(inputSamples));
-	else
+	const AudioSource audioSource = this->audioSource.load();
+	const float volume = this->volume.load() / 100.f;
+	const float frequency = this->frequency.load();
+	const float sharpness = this->sharpness.load() / 100.f;
+	
+	if (audioSource == kAudioSource_Silence)
 	{
-		const float s = .1f;
-
-		for (int i = 0; i < 256; ++i)
+		memset(inputSamples, 0, sizeof(inputSamples));
+	}
+	else if (audioSource == kAudioSource_PinkNoise)
+	{
+		const float scale = volume * 2.f / (1 << 16);
+		
+		for (int i = 0; i < framesPerBuffer; ++i)
 		{
-			inputSamples[0][i] = random(-1.f, +1.f) * s;
-			inputSamples[1][i] = random(-1.f, +1.f) * s;
+			inputSamples[0][i] = pinkNumber.next() * scale - 1.f;
+			inputSamples[1][i] = pinkNumber.next() * scale - 1.f;
 		}
+	}
+	else if (audioSource == kAudioSource_WhiteNoise)
+	{
+		for (int i = 0; i < framesPerBuffer; ++i)
+		{
+			inputSamples[0][i] = random(-1.f, +1.f) * volume;
+			inputSamples[1][i] = random(-1.f, +1.f) * volume;
+		}
+	}
+	else if (audioSource == kAudioSource_Sine)
+	{
+		const float twoPi = 2.f * float(M_PI);
+		const float phaseStep = frequency * twoPi / 44100.f;
+		
+		sinePhase = fmodf(sinePhase, twoPi);
+		
+		for (int i = 0; i < framesPerBuffer; ++i)
+		{
+			inputSamples[0][i] = sinf(sinePhase) * volume;
+			inputSamples[1][i] = sinf(sinePhase) * volume;
+			
+			sinePhase += phaseStep;
+		}
+	}
+	else if (audioSource == kAudioSource_Tent)
+	{
+		memset(inputSamples, 0, sizeof(inputSamples));
 	}
 	
 	float outputSamples[2][256];
@@ -364,6 +403,36 @@ void FileEditor_JsusFx::doButtonBar()
 	
 	ImGui::SameLine();
 	ImGui::Checkbox("Control sliders", &controlSlidersWindow.isVisible);
+	
+	const char * items[] =
+	{
+		"Silence",
+		"Pink noise",
+		"White noise",
+		"Sine wave",
+		"Tent wave"
+	};
+	
+	if (ImGui::BeginMenu("Audio source"))
+	{
+		int audioSource = this->audioSource.load();
+		if (ImGui::Combo("Type", &audioSource, items, sizeof(items) / sizeof(items[0])))
+			this->audioSource.store((AudioSource)audioSource);
+		
+		int volume = this->volume.load();
+		if (ImGui::SliderInt("Volume", &volume, 0, 100))
+			this->volume.store(volume);
+		
+		int frequency = this->frequency.load();
+		if (ImGui::SliderInt("Hz", &frequency, 0, 4000))
+			this->frequency.store(frequency);
+		
+		int sharpness = this->sharpness.load();
+		if (ImGui::SliderInt("Sharpness", &sharpness, 0, 100))
+			this->sharpness.store(sharpness);
+		
+		ImGui::EndMenu();
+	}
 }
 
 void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured)
