@@ -1,0 +1,8 @@
+library remotery
+	
+	depend_library glew
+	depend_library libsdl2
+
+	add_files remotery.cpp remotery.h
+	
+	header_path . expose

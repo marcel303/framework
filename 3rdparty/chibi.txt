@@ -5,12 +5,14 @@ with_platform windows add libsdl2-win32
 add libetherdream
 
 add box2d-support
+add glew
 add liboscpack
 add midifile
 add msdfgen
 add oggvorbis
 add portaudio
 add rapidjson-support
+add remotery
 add utf8rewind
 add tinyxml2
 add tinyxml2-helpers

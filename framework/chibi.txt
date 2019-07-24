@@ -43,8 +43,10 @@ library framework
 	depend_library audioio
 	depend_library audiostream
 	depend_library audiostream-vorbis
+	depend_library glew
 	depend_library msdfgen
 	depend_library portaudio
+	depend_library remotery
 	depend_library tinyxml2
 	depend_library tinyxml2-helpers
 	depend_library utf8rewind
@@ -87,7 +89,6 @@ library framework
 # note : freetype dylib was updated using : install_name_tool -id "@rpath/libfreetype.6.dylib" libfreetype.6.dylib
 	with_platform macos header_path macos/include          expose
 	with_platform macos header_path macos/include/freetype
-	with_platform macos depend_library macos/glew/lib/libGLEW.a local
 	with_platform macos depend_library macos/lib/libfreeimage.a local
 	with_platform macos depend_library macos/lib/libfreetype.6.dylib local embed_framework
 	with_platform macos depend_library Metal find
@@ -98,14 +99,12 @@ library framework
 	with_platform windows header_path win32/include/freetype
 	with_platform windows depend_library win32/lib/FreeImage.lib local
 	with_platform windows depend_library win32/lib/freetype.lib local
-	with_platform windows depend_library win32/lib/glew32.lib local
 	with_platform windows depend_library win32/lib/OpenAL32.lib local
 	with_platform windows depend_library win32/lib/XInput9_1_0.lib local
 	with_platform windows depend_library Winmm.lib global
 	with_platform windows depend_library OpenGL32.lib global
 	with_platform windows add_dist_files win32/dll/FreeImage.dll
 	with_platform windows add_dist_files win32/dll/freetype.dll
-	with_platform windows add_dist_files win32/dll/glew32.dll
 	with_platform windows add_dist_files win32/dll/OpenAL32.dll
 	with_platform windows add_dist_files win32/dll/XInput9_1_0.dll
 
@@ -116,7 +115,6 @@ library framework
 	with_platform linux depend_library pthread find
 	with_platform linux depend_library freeimage find
 	with_platform linux depend_package OpenGL
-	with_platform linux depend_package GLEW
 	with_platform linux depend_package Freetype
 
 app framework-example-aniplay
