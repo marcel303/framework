@@ -7359,9 +7359,18 @@ static void applyHqShaderConstants()
 	{
 		if (shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index != -1)
 		{
-			const Mat4x4 & cmat = globals.hqGradientMatrix;
+			// note: we multiply the gradient matrix with the inverse of the modelView matrix here,
+			// so we go back from screen-space coordinates inside the shader to local coordinates
+			// for the gradient. this makes it much more easy to define gradients on elements,
+			// since you can freely scale and translate them around without having to worry
+			// about how this affects your gradient
 			
-			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index, cmat.m_v);
+			Mat4x4 modelView;
+			gxGetMatrixf(GX_MODELVIEW, modelView.m_v);
+			
+			const Mat4x4 gmat = globals.hqGradientMatrix * modelView.CalcInv();
+			
+			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index, gmat.m_v);
 		}
 		
 		if (shaderElem.params[ShaderCacheElem::kSp_GradientInfo].index != -1)
