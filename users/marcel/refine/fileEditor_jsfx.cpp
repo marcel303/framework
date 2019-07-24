@@ -258,10 +258,10 @@ FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 	, gfx(jsusFx)
 	, pathLibary(".")
 	, audioSource(kAudioSource_PinkNoise)
-	, volume(64)
-	, pinkNumber(1 << 16)
+	, volume(25)
 	, frequency(440)
 	, sharpness(0)
+	, pinkNumber(1 << 16)
 {
 	jsusFx.init();
 
@@ -333,20 +333,25 @@ void FileEditor_JsusFx::portAudioCallback(
 	}
 	else if (audioSource == kAudioSource_PinkNoise)
 	{
-		const float scale = volume * 2.f / (1 << 16);
+		const float scale1 = 1.f / (1 << 16);
+		const float scale2 = 2.f * volume;
 		
 		for (int i = 0; i < framesPerBuffer; ++i)
 		{
-			inputSamples[0][i] = pinkNumber.next() * scale - 1.f;
-			inputSamples[1][i] = pinkNumber.next() * scale - 1.f;
+			const float value = (pinkNumber.next() * scale1 - .5f) * scale2;
+			
+			inputSamples[0][i] = value;
+			inputSamples[1][i] = value;
 		}
 	}
 	else if (audioSource == kAudioSource_WhiteNoise)
 	{
 		for (int i = 0; i < framesPerBuffer; ++i)
 		{
-			inputSamples[0][i] = random(-1.f, +1.f) * volume;
-			inputSamples[1][i] = random(-1.f, +1.f) * volume;
+			const float value = random(-1.f, +1.f) * volume;
+			
+			inputSamples[0][i] = value;
+			inputSamples[1][i] = value;
 		}
 	}
 	else if (audioSource == kAudioSource_Sine)
@@ -358,8 +363,10 @@ void FileEditor_JsusFx::portAudioCallback(
 		
 		for (int i = 0; i < framesPerBuffer; ++i)
 		{
-			inputSamples[0][i] = sinf(sinePhase) * volume;
-			inputSamples[1][i] = sinf(sinePhase) * volume;
+			const float value = sinf(sinePhase) * volume;
+			
+			inputSamples[0][i] = value;
+			inputSamples[1][i] = value;
 			
 			sinePhase += phaseStep;
 		}
@@ -367,6 +374,34 @@ void FileEditor_JsusFx::portAudioCallback(
 	else if (audioSource == kAudioSource_Tent)
 	{
 		memset(inputSamples, 0, sizeof(inputSamples));
+		
+		const float phaseStep = frequency / 44100.f;
+		
+		const float scale = 1.f / (1.f - sharpness + 1e-6f);
+		
+		for (int i = 0; i < framesPerBuffer; ++i)
+		{
+			// 0.0 --> 0.5 --> 0.0
+			float value = tentPhase < .5f ? tentPhase : 1.f - tentPhase;
+			
+			// -1.0 --> +1.0 --> -1.0
+			value = value * 4.f - 1.f;
+			
+			// sharpness : -SCALE --> +SCALE --> -SCALE
+			value *= scale;
+			
+			// clamp : -1.0 --> +1.0 --> -1.0 (with sharpness applied)
+			value = value < -1.f ? -1.f : value > +1.f ? +1.f : value;
+			
+			value *= volume;
+			
+			inputSamples[0][i] = value;
+			inputSamples[1][i] = value;
+			
+			tentPhase += phaseStep;
+			
+			tentPhase = fmodf(tentPhase, 1.f);
+		}
 	}
 	
 	float outputSamples[2][256];

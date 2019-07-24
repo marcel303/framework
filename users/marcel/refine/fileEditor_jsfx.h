@@ -144,6 +144,7 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 	std::atomic<int> sharpness;
 	RNG::PinkNumber pinkNumber;
 	float sinePhase = 0.f;
+	float tentPhase = 0.f;
 
 	MidiBuffer midiBuffer;
 	MidiKeyboard midiKeyboard;
