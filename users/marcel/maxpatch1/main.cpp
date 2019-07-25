@@ -88,6 +88,25 @@ namespace ControlSurfaceDefinition
 			return nullptr;
 		}
 		
+		void getElementPositionAndSize(const char * groupName, const char * name, int & x, int & y, int & sx, int & sy) const
+		{
+			x = 0;
+			y = 0;
+			
+			sx = 0;
+			sy = 0;
+			
+			auto * base_layout_element = surface->layout.findElement(groupName, name);
+			
+			auto * layout_element = layout->findElement(groupName, name);
+			
+			x = layout_element->hasPosition ? layout_element->x : base_layout_element->x;
+			y = layout_element->hasPosition ? layout_element->y : base_layout_element->y;
+			
+			sx = layout_element->hasSize ? layout_element->sx : base_layout_element->sx;
+			sy = layout_element->hasSize ? layout_element->sy : base_layout_element->sy;
+		}
+		
 		void snapToSurfaceElements(
 			ElementLayout & layout_elem,
 			const int snap_direction_x,
@@ -103,8 +122,12 @@ namespace ControlSurfaceDefinition
 				layout_elem.groupName.c_str(),
 				layout_elem.name.c_str());
 			
-			const int layout_elem_sx = layout_elem.hasSize ? layout_elem.sx : self->initialSx;
-			const int layout_elem_sy = layout_elem.hasSize ? layout_elem.sy : self->initialSy;
+			auto * base_layout_elem = surface->layout.findElement(
+				layout_elem.groupName.c_str(),
+				layout_elem.name.c_str());
+			
+			const int layout_elem_sx = layout_elem.hasSize ? layout_elem.sx : base_layout_elem->sx;
+			const int layout_elem_sy = layout_elem.hasSize ? layout_elem.sy : base_layout_elem->sy;
 			
 			bool has_nearest_dx = false;
 			bool has_nearest_dy = false;
@@ -126,13 +149,14 @@ namespace ControlSurfaceDefinition
 					if (&elem == self)
 						continue;
 					
-					auto * elem_layout = surface->layout.findElement(group.name.c_str(), elem.name.c_str());
-
 					const int layout_elem_p1[2] = { layout_elem.x,                  layout_elem.y                  };
 					const int layout_elem_p2[2] = { layout_elem.x + layout_elem_sx, layout_elem.y + layout_elem_sy };
 					
-					const int elem_p1[2] = { elem_layout->x,                   elem_layout->y                   };
-					const int elem_p2[2] = { elem_layout->x + elem_layout->sx, elem_layout->y + elem_layout->sy };
+					int elem_p1[2];
+					int elem_p2[2];
+					getElementPositionAndSize(group.name.c_str(), elem.name.c_str(), elem_p1[0], elem_p1[1], elem_p2[0], elem_p2[1]);
+					elem_p2[0] += elem_p1[0];
+					elem_p2[1] += elem_p1[1];
 					
 					for (int snap_axis = 0; snap_axis < 2; ++snap_axis)
 					{
@@ -184,13 +208,24 @@ namespace ControlSurfaceDefinition
 					{
 						if (&elem == self)
 							continue;
+
+						int other_x;
+						int other_y;
+						int other_sx;
+						int other_sy;
 						
-						auto * elem_layout = surface->layout.findElement(group.name.c_str(), elem.name.c_str());
+						getElementPositionAndSize(
+							group.name.c_str(),
+							elem.name.c_str(),
+							other_x,
+							other_y,
+							other_sx,
+							other_sy);
 						
 						for (int direction = -1; direction <= +1; direction += 2)
 						{
-							const int x1 = direction == -1 ? elem_layout->x : elem_layout->x + elem_layout->sx;
-							const int y1 = direction == -1 ? elem_layout->y : elem_layout->y + elem_layout->sy;
+							const int x1 = direction == -1 ? other_x : other_x + other_sx;
+							const int y1 = direction == -1 ? other_y : other_y + other_sy;
 							const int x2 = direction == -1 ? layout_elem.x : layout_elem.x + layout_elem_sx;
 							const int y2 = direction == -1 ? layout_elem.y : layout_elem.y + layout_elem_sy;
 							
@@ -272,13 +307,14 @@ namespace ControlSurfaceDefinition
 					if (&elem == elem_to_skip)
 						continue;
 					
-					auto * elem_layout = surface->layout.findElement(group.name.c_str(), elem.name.c_str());
-					
 					const int layout_elem_p1[2] = { x1, y1 };
 					const int layout_elem_p2[2] = { x2, y2 };
 					
-					const int elem_p1[2] = { elem_layout->x,                   elem_layout->y                   };
-					const int elem_p2[2] = { elem_layout->x + elem_layout->sx, elem_layout->y + elem_layout->sy };
+					int elem_p1[2];
+					int elem_p2[2];
+					getElementPositionAndSize(group.name.c_str(), elem.name.c_str(), elem_p1[0], elem_p1[1], elem_p2[0], elem_p2[1]);
+					elem_p2[0] += elem_p1[0];
+					elem_p2[1] += elem_p1[1];
 					
 					for (int snap_axis = 0; snap_axis < 2; ++snap_axis)
 					{
@@ -328,13 +364,24 @@ namespace ControlSurfaceDefinition
 					{
 						if (&elem == elem_to_skip)
 							continue;
+
+						int other_x;
+						int other_y;
+						int other_sx;
+						int other_sy;
 						
-						auto * elem_layout = surface->layout.findElement(group.name.c_str(), elem.name.c_str());
+						getElementPositionAndSize(
+							group.name.c_str(),
+							elem.name.c_str(),
+							other_x,
+							other_y,
+							other_sx,
+							other_sy);
 						
 						for (int direction = -1; direction <= +1; direction += 2)
 						{
-							const int px1 = direction == -1 ? elem_layout->x : elem_layout->x + elem_layout->sx;
-							const int py1 = direction == -1 ? elem_layout->y : elem_layout->y + elem_layout->sy;
+							const int px1 = direction == -1 ? other_x : other_x + other_sx;
+							const int py1 = direction == -1 ? other_y : other_y + other_sy;
 							const int px2 = direction == -1 ? x1 : x2;
 							const int py2 = direction == -1 ? y1 : y2;
 							
