@@ -39,42 +39,26 @@
 
 namespace ControlSurfaceDefinition
 {
-	struct LayoutElement
-	{
-		std::string groupName;
-		std::string name;
-		
-		bool hasPosition = false;
-		int x, y;
-		
-		bool hasSize = false;
-		int sx, sy;
-		
-		static void reflect(TypeDB & typeDB)
-		{
-			typeDB.addStructured<ControlSurfaceDefinition::LayoutElement>("ControlSurfaceDefinition::LayoutElement")
-				.add("groupName", &LayoutElement::groupName)
-				.add("name", &LayoutElement::name)
-				.add("hasPosition", &LayoutElement::hasPosition)
-				.add("x", &LayoutElement::x)
-				.add("y", &LayoutElement::y)
-				.add("hasSize", &LayoutElement::hasSize)
-				.add("sx", &LayoutElement::sx)
-				.add("sy", &LayoutElement::sy);
-		}
-	};
-	
 	struct Layout
 	{
-		std::vector<LayoutElement> elems;
+		std::vector<ElementLayout> elems;
 		
-		LayoutElement * addElem(const char * groupName, const char * name)
+		ElementLayout * addElem(const char * groupName, const char * name)
 		{
-			elems.push_back(LayoutElement());
+			elems.push_back(ElementLayout());
 			auto & elem = elems.back();
 			elem.groupName = groupName;
 			elem.name = name;
 			return &elem;
+		}
+		
+		const ElementLayout * findElem(const char * groupName, const char * name) const
+		{
+			for (auto & elem : elems)
+				if (elem.groupName == groupName && elem.name == name)
+					return &elem;
+			
+			return nullptr;
 		}
 		
 		static void reflect(TypeDB & typeDB)
@@ -103,7 +87,7 @@ namespace ControlSurfaceDefinition
 		
 		State state = kState_Idle;
 		
-		LayoutElement * selected_element = nullptr;
+		ElementLayout * selected_element = nullptr;
 		int drag_offset_x = 0; // for positioning and sizing
 		int drag_offset_y = 0;
 		int drag_direction_x = 0;
@@ -134,7 +118,7 @@ namespace ControlSurfaceDefinition
 		}
 		
 		void snapToSurfaceElements(
-			LayoutElement & layout_elem,
+			ElementLayout & layout_elem,
 			const int snap_direction_x,
 			bool & has_snap_x,
 			int & snap_x,
@@ -148,8 +132,8 @@ namespace ControlSurfaceDefinition
 				layout_elem.groupName.c_str(),
 				layout_elem.name.c_str());
 			
-			const int layout_elem_sx = layout_elem.hasSize ? layout_elem.sx : self->sx;
-			const int layout_elem_sy = layout_elem.hasSize ? layout_elem.sy : self->sy;
+			const int layout_elem_sx = layout_elem.hasSize ? layout_elem.sx : self->initialSx;
+			const int layout_elem_sy = layout_elem.hasSize ? layout_elem.sy : self->initialSy;
 			
 			bool has_nearest_dx = false;
 			bool has_nearest_dy = false;
@@ -171,11 +155,13 @@ namespace ControlSurfaceDefinition
 					if (&elem == self)
 						continue;
 					
+					auto * elem_layout = surface->layout.findElementLayout(group.name.c_str(), elem.name.c_str());
+
 					const int layout_elem_p1[2] = { layout_elem.x,                  layout_elem.y                  };
 					const int layout_elem_p2[2] = { layout_elem.x + layout_elem_sx, layout_elem.y + layout_elem_sy };
 					
-					const int elem_p1[2] = { elem.x,           elem.y           };
-					const int elem_p2[2] = { elem.x + elem.sx, elem.y + elem.sy };
+					const int elem_p1[2] = { elem_layout->x,                   elem_layout->y                   };
+					const int elem_p2[2] = { elem_layout->x + elem_layout->sx, elem_layout->y + elem_layout->sy };
 					
 					for (int snap_axis = 0; snap_axis < 2; ++snap_axis)
 					{
@@ -228,10 +214,12 @@ namespace ControlSurfaceDefinition
 						if (&elem == self)
 							continue;
 						
+						auto * elem_layout = surface->layout.findElementLayout(group.name.c_str(), elem.name.c_str());
+						
 						for (int direction = -1; direction <= +1; direction += 2)
 						{
-							const int x1 = direction == -1 ? elem.x : elem.x + elem.sx;
-							const int y1 = direction == -1 ? elem.y : elem.y + elem.sy;
+							const int x1 = direction == -1 ? elem_layout->x : elem_layout->x + elem_layout->sx;
+							const int y1 = direction == -1 ? elem_layout->y : elem_layout->y + elem_layout->sy;
 							const int x2 = direction == -1 ? layout_elem.x : layout_elem.x + layout_elem_sx;
 							const int y2 = direction == -1 ? layout_elem.y : layout_elem.y + layout_elem_sy;
 							
@@ -277,7 +265,7 @@ namespace ControlSurfaceDefinition
 		}
 		
 		void sizeConstrain(
-			LayoutElement & layout_elem_to_skip,
+			ElementLayout & layout_elem_to_skip,
 			int & x1,
 			int & y1,
 			int & x2,
@@ -313,11 +301,13 @@ namespace ControlSurfaceDefinition
 					if (&elem == elem_to_skip)
 						continue;
 					
+					auto * elem_layout = surface->layout.findElementLayout(group.name.c_str(), elem.name.c_str());
+					
 					const int layout_elem_p1[2] = { x1, y1 };
 					const int layout_elem_p2[2] = { x2, y2 };
 					
-					const int elem_p1[2] = { elem.x,           elem.y           };
-					const int elem_p2[2] = { elem.x + elem.sx, elem.y + elem.sy };
+					const int elem_p1[2] = { elem_layout->x,                   elem_layout->y                   };
+					const int elem_p2[2] = { elem_layout->x + elem_layout->sx, elem_layout->y + elem_layout->sy };
 					
 					for (int snap_axis = 0; snap_axis < 2; ++snap_axis)
 					{
@@ -368,10 +358,12 @@ namespace ControlSurfaceDefinition
 						if (&elem == elem_to_skip)
 							continue;
 						
+						auto * elem_layout = surface->layout.findElementLayout(group.name.c_str(), elem.name.c_str());
+						
 						for (int direction = -1; direction <= +1; direction += 2)
 						{
-							const int px1 = direction == -1 ? elem.x : elem.x + elem.sx;
-							const int py1 = direction == -1 ? elem.y : elem.y + elem.sy;
+							const int px1 = direction == -1 ? elem_layout->x : elem_layout->x + elem_layout->sx;
+							const int py1 = direction == -1 ? elem_layout->y : elem_layout->y + elem_layout->sy;
 							const int px2 = direction == -1 ? x1 : x2;
 							const int py2 = direction == -1 ? y1 : y2;
 							
@@ -475,17 +467,15 @@ namespace ControlSurfaceDefinition
 					
 					for (auto & layout_elem : layout->elems)
 					{
-						auto * surface_elem = findSurfaceElement(
-							layout_elem.groupName.c_str(),
-							layout_elem.name.c_str());
+						auto * base_layout_elem = surface->layout.findElementLayout(layout_elem.groupName.c_str(), layout_elem.name.c_str());
 						
-						if (surface_elem == nullptr)
+						if (base_layout_elem == nullptr)
 							continue;
 						
-						const int x = layout_elem.hasPosition ? layout_elem.x : surface_elem->x;
-						const int y = layout_elem.hasPosition ? layout_elem.y : surface_elem->y;
-						const int sx = layout_elem.hasSize ? layout_elem.sx : surface_elem->sx;
-						const int sy = layout_elem.hasSize ? layout_elem.sy : surface_elem->sy;
+						const int x = layout_elem.hasPosition ? layout_elem.x : base_layout_elem->x;
+						const int y = layout_elem.hasPosition ? layout_elem.y : base_layout_elem->y;
+						const int sx = layout_elem.hasSize ? layout_elem.sx : base_layout_elem->sx;
+						const int sy = layout_elem.hasSize ? layout_elem.sy : base_layout_elem->sy;
 
 						const int dx1 = x - mouse.x;
 						const int dx2 = x + sx - mouse.x;
@@ -544,15 +534,15 @@ namespace ControlSurfaceDefinition
 				{
 					if (mouse.dx != 0 || mouse.dy != 0)
 					{
-						auto * surface_elem = findSurfaceElement(
+						auto * base_layout_elem = surface->layout.findElementLayout(
 							selected_element->groupName.c_str(),
 							selected_element->name.c_str());
-
+						
 						if (selected_element->hasPosition == false)
 						{
 							selected_element->hasPosition = true;
-							selected_element->x = surface_elem->x;
-							selected_element->y = surface_elem->y;
+							selected_element->x = base_layout_elem->x;
+							selected_element->y = base_layout_elem->y;
 						}
 						
 						selected_element->x = mouse.x - drag_offset_x;
@@ -587,22 +577,22 @@ namespace ControlSurfaceDefinition
 				{
 					if (mouse.dx != 0 || mouse.dy != 0)
 					{
-						auto * surface_elem = findSurfaceElement(
+						auto * base_layout_elem = surface->layout.findElementLayout(
 							selected_element->groupName.c_str(),
 							selected_element->name.c_str());
 						
 						if (selected_element->hasPosition == false)
 						{
 							selected_element->hasPosition = true;
-							selected_element->x = surface_elem->x;
-							selected_element->y = surface_elem->y;
+							selected_element->x = base_layout_elem->x;
+							selected_element->y = base_layout_elem->y;
 						}
 						
 						if (selected_element->hasSize == false)
 						{
 							selected_element->hasSize = true;
-							selected_element->sx = surface_elem->sx;
-							selected_element->sy = surface_elem->sy;
+							selected_element->sx = base_layout_elem->sx;
+							selected_element->sy = base_layout_elem->sy;
 						}
 						
 						dragSize(
@@ -673,14 +663,14 @@ namespace ControlSurfaceDefinition
 			{
 				for (auto & layout_elem : layout->elems)
 				{
-					auto * surface_elem = findSurfaceElement(
+					auto * base_layout_elem = surface->layout.findElementLayout(
 						layout_elem.groupName.c_str(),
 						layout_elem.name.c_str());
 					
-					const int x = layout_elem.hasPosition ? layout_elem.x : surface_elem->x;
-					const int y = layout_elem.hasPosition ? layout_elem.y : surface_elem->y;
-					const int sx = layout_elem.hasSize ? layout_elem.sx : surface_elem->sx;
-					const int sy = layout_elem.hasSize ? layout_elem.sy : surface_elem->sy;
+					const int x = layout_elem.hasPosition ? layout_elem.x : base_layout_elem->x;
+					const int y = layout_elem.hasPosition ? layout_elem.y : base_layout_elem->y;
+					const int sx = layout_elem.hasSize ? layout_elem.sx : base_layout_elem->sx;
+					const int sy = layout_elem.hasSize ? layout_elem.sy : base_layout_elem->sy;
 					
 					const int x1 = x;
 					const int y1 = y;
@@ -859,6 +849,7 @@ struct LayoutEditorView
 	Button btn_save;
 	Button btn_load;
 	Button btn_layout;
+	Button btn_reset;
 	
 	LayoutEditorView()
 	{
@@ -867,6 +858,7 @@ struct LayoutEditorView
 		btn_save.makeButton("save", 10, 70, 70, 20);
 		btn_load.makeButton("load", 10, 100, 70, 20);
 		btn_layout.makeButton("layout", 10, 130, 70, 20);
+		btn_reset.makeButton("reset", 10, 160, 70, 20);
 	}
 	
 	void tick(bool & inputIsCaptured)
@@ -877,6 +869,7 @@ struct LayoutEditorView
 		btn_save.tick(inputIsCaptured); // todo : buttons shouldn't really be a member of the layout editor directly
 		btn_load.tick(inputIsCaptured);
 		btn_layout.tick(inputIsCaptured);
+		btn_reset.tick(inputIsCaptured);
 	}
 	
 	void drawOverlay() const
@@ -886,6 +879,7 @@ struct LayoutEditorView
 		btn_save.draw();
 		btn_load.draw();
 		btn_layout.draw();
+		btn_reset.draw();
 	}
 };
 
@@ -909,7 +903,6 @@ int main(int arg, char * argv[])
 	
 	ControlSurfaceDefinition::reflect(typeDB);
 	
-	ControlSurfaceDefinition::LayoutElement::reflect(typeDB);
 	ControlSurfaceDefinition::Layout::reflect(typeDB);
 	
 	// create control surface definition
@@ -1049,7 +1042,9 @@ int main(int arg, char * argv[])
 			{
 				for (auto & elem : group.elems)
 				{
-					liveUi.addElem(&elem);
+					auto * elemLayout = surface.layout.findElementLayout(group.name.c_str(), elem.name.c_str());
+					
+					liveUi.addElem(&elem, elemLayout);
 				}
 			}
 			
@@ -1071,26 +1066,51 @@ int main(int arg, char * argv[])
 		}
 	};
 	
-	auto updateControlSurfaceWithLayout = [](ControlSurfaceDefinition::Surface & surface, const ControlSurfaceDefinition::Layout & layout)
+	auto updateLiveUiWithLayout = [](LiveUi & liveUi, const ControlSurfaceDefinition::Surface & surface, const ControlSurfaceDefinition::Layout & layout)
 	{
-		// patch control surface without information from layout
+		// patch live UI with information from layout
 		
-		for (auto & layout_elem : layout.elems)
+		for (auto & group : surface.groups)
 		{
-			auto * surface_elem = surface.findElement(
-				layout_elem.groupName.c_str(),
-				layout_elem.name.c_str());
-			
-			if (layout_elem.hasPosition)
+			for (auto & elem : group.elems)
 			{
-				const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->x = layout_elem.x;
-				const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->y = layout_elem.y;
-			}
-			
-			if (layout_elem.hasSize)
-			{
-				const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->sx = layout_elem.sx;
-				const_cast<ControlSurfaceDefinition::Element*>(surface_elem)->sy = layout_elem.sy;
+				auto * base_elem_layout = surface.layout.findElementLayout(group.name.c_str(), elem.name.c_str());
+				
+				auto * elem_layout = layout.findElem(group.name.c_str(), elem.name.c_str());
+				
+				auto * ui_elem = liveUi.findElem(&elem);
+				
+				if (elem_layout->hasPosition)
+				{
+					ui_elem->x = elem_layout->x;
+					ui_elem->y = elem_layout->y;
+				}
+				else if (base_elem_layout->hasPosition)
+				{
+					ui_elem->x = base_elem_layout->x;
+					ui_elem->y = base_elem_layout->y;
+				}
+				else
+				{
+					ui_elem->x = 0;
+					ui_elem->y = 0;
+				}
+				
+				if (elem_layout->hasSize)
+				{
+					ui_elem->sx = elem_layout->sx;
+					ui_elem->sy = elem_layout->sy;
+				}
+				else if (base_elem_layout->hasSize)
+				{
+					ui_elem->sx = base_elem_layout->sx;
+					ui_elem->sy = base_elem_layout->sy;
+				}
+				else
+				{
+					ui_elem->sx = 0;
+					ui_elem->sy = 0;
+				}
 			}
 		}
 	};
@@ -1122,7 +1142,7 @@ int main(int arg, char * argv[])
 			layoutEditorView.btn_editToggle.toggleValue,
 			layoutEditorView.btn_snapToggle.toggleValue))
 		{
-			updateControlSurfaceWithLayout(surface, layout);
+			updateLiveUiWithLayout(liveUi, surface, layout);
 		}
 		
 		if (layoutEditorView.btn_save.isClicked)
@@ -1143,7 +1163,7 @@ int main(int arg, char * argv[])
 			{
 				layout = new_layout;
 				
-				updateControlSurfaceWithLayout(surface, layout);
+				updateLiveUiWithLayout(liveUi, surface, layout);
 			}
 		}
 		
@@ -1159,7 +1179,24 @@ int main(int arg, char * argv[])
 			
 			// re-apply layout overrides
 			
-			updateControlSurfaceWithLayout(surface, layout);
+			updateLiveUiWithLayout(liveUi, surface, layout);
+		}
+		
+		if (layoutEditorView.btn_reset.isClicked)
+		{
+			layout = ControlSurfaceDefinition::Layout();
+			
+		// todo : layout editor should automatically populate layout ?
+			for (auto & group : surface.groups)
+				for (auto & elem : group.elems)
+					if (elem.name.empty() == false)
+						layout.addElem(group.name.c_str(), elem.name.c_str());
+			
+			layoutEditor = ControlSurfaceDefinition::LayoutEditor(&surface, &layout);
+			
+			// re-apply layout overrides
+			
+			updateLiveUiWithLayout(liveUi, surface, layout);
 		}
 	#endif
 	
