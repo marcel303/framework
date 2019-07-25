@@ -174,8 +174,8 @@ namespace ControlSurfaceDefinition
 	template <typename T>
 	T & ElementEditor<T>::size(const int sx, const int sy)
 	{
-		element->sx = sx;
-		element->sy = sy;
+		element->initialSx = sx;
+		element->initialSy = sy;
 		return static_cast<T&>(*this);
 	}
 	

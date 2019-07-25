@@ -90,6 +90,22 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
+	ElementLayout * SurfaceLayout::findElementLayout(const char * groupName, const char * name)
+	{
+		for (auto & elem : elems)
+			if (elem.groupName == groupName && elem.name == name)
+				return &elem;
+		
+		return nullptr;
+	}
+	
+	const ElementLayout * SurfaceLayout::findElementLayout(const char * groupName, const char * name) const
+	{
+		return const_cast<SurfaceLayout*>(this)->findElementLayout(groupName, name);
+	}
+	
+	//
+	
 	void Surface::initializeNames()
 	{
 		int nextId = 1;
@@ -215,10 +231,21 @@ namespace ControlSurfaceDefinition
 					sx = 0;
 				}
 				
-				if (elem.type == kElementType_Separator)
-					elem.sy = layout.sy - initialY - layout.marginY;
+				layout.elems.resize(layout.elems.size() + 1);
 				
-				const bool fits = y + elem.sy + layout.paddingY <= layout.sy - layout.marginY;
+				auto & elemLayout = layout.elems.back();
+				
+				elemLayout.groupName = group.name;
+				elemLayout.name = elem.name;
+				
+				elemLayout.hasSize = true;
+				elemLayout.sx = elem.initialSx;
+				elemLayout.sy = elem.initialSy;
+				
+				if (elem.type == kElementType_Separator)
+					elemLayout.sy = layout.sy - initialY - layout.marginY;
+				
+				const bool fits = y + elemLayout.sy + layout.paddingY <= layout.sy - layout.marginY;
 				
 				if (fits == false)
 				{
@@ -228,13 +255,14 @@ namespace ControlSurfaceDefinition
 					sx = 0;
 				}
 				
-				elem.x = x;
-				elem.y = y;
+				elemLayout.hasPosition = true;
+				elemLayout.x = x;
+				elemLayout.y = y;
 				
-				y += elem.sy + layout.paddingY;
+				y += elemLayout.sy + layout.paddingY;
 				
-				if (elem.sx > sx)
-					sx = elem.sx + layout.paddingX;
+				if (elemLayout.sx > sx)
+					sx = elemLayout.sx + layout.paddingX;
 				
 				if (elem.divideRight)
 				{
@@ -380,10 +408,8 @@ namespace ControlSurfaceDefinition
 		typeDB.addStructured<Element>("ControlSurfaceDefinition::Element")
 			.add("name", &Element::name)
 			.add("type", &Element::type)
-			.add("x", &Element::x)
-			.add("y", &Element::y)
-			.add("width", &Element::sx)
-			.add("height", &Element::sy)
+			.add("width", &Element::initialSx)
+			.add("height", &Element::initialSy)
 			.add("label", &Element::label)
 			.add("knob", &Element::knob)
 			.add("button", &Element::button)
@@ -392,6 +418,16 @@ namespace ControlSurfaceDefinition
 			.add("listbox", &Element::listbox)
 			.add("colorPicker", &Element::colorPicker)
 			.add("separator", &Element::separator);
+		
+		typeDB.addStructured<ElementLayout>("ControlSurfaceDefinition::ElementLayout")
+			.add("groupName", &ElementLayout::groupName)
+			.add("name", &ElementLayout::name)
+			.add("hasPosition", &ElementLayout::hasPosition)
+			.add("x", &ElementLayout::x)
+			.add("y", &ElementLayout::y)
+			.add("hasSize", &ElementLayout::hasSize)
+			.add("width", &ElementLayout::sx)
+			.add("height", &ElementLayout::sy);
 		
 		typeDB.addStructured<Group>("ControlSurfaceDefinition::Group")
 			.add("name", &Group::name)
@@ -403,7 +439,8 @@ namespace ControlSurfaceDefinition
 			.add("marginX", &SurfaceLayout::marginX)
 			.add("marginY", &SurfaceLayout::marginY)
 			.add("paddingX", &SurfaceLayout::paddingX)
-			.add("paddingY", &SurfaceLayout::paddingY);
+			.add("paddingY", &SurfaceLayout::paddingY)
+			.add("elements", &SurfaceLayout::elems);
 		
 		typeDB.addStructured<Surface>("ControlSurfaceDefinition::Surface")
 			.add("name", &Surface::name)

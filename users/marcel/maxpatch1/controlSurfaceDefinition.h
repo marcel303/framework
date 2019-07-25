@@ -253,10 +253,8 @@ namespace ControlSurfaceDefinition
 		
 		ElementType type = kElementType_None;
 		
-		int x = 0;
-		int y = 0;
-		int sx = 0;
-		int sy = 0;
+		int initialSx = 0;
+		int initialSy = 0;
 		
 		bool divideLeft = false;
 		bool divideRight = false;
@@ -281,68 +279,82 @@ namespace ControlSurfaceDefinition
 		{
 			type = kElementType_Label;
 			
-			sx = 100;
-			sy = 16;
+			initialSx = 100;
+			initialSy = 16;
 		}
 		
 		void makeKnob()
 		{
 			type = kElementType_Knob;
 			
-			sx = 48;
-			sy = 48;
+			initialSx = 48;
+			initialSy = 48;
 		}
 		
 		void makeButton()
 		{
 			type = kElementType_Button;
 			
-			sx = 100;
-			sy = 40;
+			initialSx = 100;
+			initialSy = 40;
 		}
 		
 		void makeSlider2()
 		{
 			type = kElementType_Slider2;
 			
-			sx = 100;
-			sy = 40;
+			initialSx = 100;
+			initialSy = 40;
 		}
 		
 		void makeSlider3()
 		{
 			type = kElementType_Slider3;
 			
-			sx = 100;
-			sy = 40;
+			initialSx = 100;
+			initialSy = 40;
 		}
 		
 		void makeListbox()
 		{
 			type = kElementType_Listbox;
 			
-			sx = 100;
-			sy = 20;
+			initialSx = 100;
+			initialSy = 20;
 		}
 		
 		void makeColorPicker()
 		{
 			type = kElementType_ColorPicker;
 			
-			sx = 120;
-			sy = 70;
+			initialSx = 120;
+			initialSy = 70;
 		}
 		
 		void makeSeparator()
 		{
 			type = kElementType_Separator;
 			
-			sx = 6;
-			sy = 6;
+			initialSx = 6;
+			initialSy = 6;
 			
 			divideLeft = true;
 			divideRight = true;
 		}
+	};
+	
+	struct ElementLayout
+	{
+		std::string groupName;
+		std::string name;
+		
+		bool hasPosition = false;
+		int x, y;
+		
+		bool hasSize = false;
+		int sx, sy;
+		
+		static void reflect(TypeDB & typeDB);
 	};
 
 	struct Group
@@ -361,6 +373,11 @@ namespace ControlSurfaceDefinition
 		
 		int paddingX = 0;
 		int paddingY = 0;
+		
+		std::vector<ElementLayout> elems;
+		
+		ElementLayout * findElementLayout(const char * groupName, const char * name);
+		const ElementLayout * findElementLayout(const char * groupName, const char * name) const;
 	};
 	
 	struct Surface
