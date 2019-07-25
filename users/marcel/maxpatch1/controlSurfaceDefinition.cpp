@@ -434,8 +434,8 @@ namespace ControlSurfaceDefinition
 			.add("elements", &Group::elems);
 	
 		typeDB.addStructured<SurfaceLayout>("ControlSurfaceDefinition::SurfaceLayout")
-			.add("sx", &SurfaceLayout::sx)
-			.add("sy", &SurfaceLayout::sy)
+			.add("width", &SurfaceLayout::sx)
+			.add("height", &SurfaceLayout::sy)
 			.add("marginX", &SurfaceLayout::marginX)
 			.add("marginY", &SurfaceLayout::marginY)
 			.add("paddingX", &SurfaceLayout::paddingX)
