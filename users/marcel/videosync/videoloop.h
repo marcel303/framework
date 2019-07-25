@@ -72,10 +72,10 @@ struct VideoLoop
 		mediaPlayer2->tick(mediaPlayer2->context, true);
 	}
 	
-	void seekTo(const float targetTime)
+	void seekTo(const float targetTime, const bool nearest = true)
 	{
 		if (mediaPlayer1 != nullptr)
-			mediaPlayer1->seek(targetTime, true);
+			mediaPlayer1->seek(targetTime, nearest);
 	}
 	
 	void switchVideos()

@@ -4,6 +4,8 @@
 #include "reflection.h"
 #include "reflection-bindtofile.h"
 
+#include "mediaplayer/MPVideoBuffer.h"
+
 #define DEBUG_MASTER_TIME 0
 
 struct Settings
@@ -27,7 +29,7 @@ struct Settings
 
 struct MasterTimer : OscReceiveHandler
 {
-	bool isStarted = false;
+	bool isStarted = true;
 	
 	float time = 0.f;
 	float extrapolatedReceivedTime = 0.f;
@@ -44,7 +46,7 @@ struct MasterTimer : OscReceiveHandler
 		const float delta1 = fabsf(extrapolatedReceivedTime - extrapolatedReceivedTime_exact);
 		extrapolatedReceivedTime = lerp<float>(extrapolatedReceivedTime, extrapolatedReceivedTime_exact, .2f);\
 		const float delta2 = fabsf(extrapolatedReceivedTime - extrapolatedReceivedTime_exact);
-		logDebug("extrapolated time diff: %dms -> %dms", int(delta1 * 1000.f), int(delta2 * 1000.f));
+		//logDebug("extrapolated time diff: %dms -> %dms", int(delta1 * 1000.f), int(delta2 * 1000.f));
 	}
 	
 	virtual void handleOscMessage(const osc::ReceivedMessage & m, const IpEndpointName & remoteEndpoint) override
@@ -102,7 +104,7 @@ struct MasterTimer : OscReceiveHandler
 			extrapolatedReceivedTime_exact = time;
 			
 			const float delta = fabsf(extrapolatedReceivedTime - extrapolatedReceivedTime_exact);
-			logDebug("extrapolated time diff with exact time: %dms", int(delta * 1000.f));
+			//logDebug("extrapolated time diff with exact time: %dms", int(delta * 1000.f));
 		}
 	}
 };
@@ -116,6 +118,7 @@ int main(int argc, char * argv[])
 #endif
 	
 	TypeDB typeDB;
+	typeDB.addPlain<bool>("bool", kDataType_Bool);
 	typeDB.addPlain<int>("int", kDataType_Int);
 	typeDB.addPlain<std::string>("string", kDataType_String);
 	Settings::reflect(typeDB);
@@ -155,6 +158,8 @@ int main(int argc, char * argv[])
 	
 	VideoLoop videoLoop(settings.videoFilename.c_str());
 	
+	double actualTime = 0.0;
+	
 	for (;;)
 	{
 		framework.process();
@@ -190,22 +195,43 @@ int main(int argc, char * argv[])
 		}
 	#endif
 		
-		if (targetTime - 1.f > masterTimer.extrapolatedReceivedTime)
+		targetTime = masterTimer.extrapolatedReceivedTime;
+		
+	#if 1
+		// forward/backward skip detection and compensation for running out of sync too much
+		
 		{
-			targetTime = masterTimer.extrapolatedReceivedTime;
+			const float kSkipTreshold = 4.f;
 			
-			logDebug("seek back detected. switching videos");
-			
-			videoLoop.switchVideos();
-			
-			if (targetTime > 1.f)
+			if (videoLoop.mediaPlayer1->videoFrame != nullptr)
 			{
-				logDebug("seeking video");
-				videoLoop.seekTo(targetTime);
+				actualTime = videoLoop.mediaPlayer1->videoFrame->m_time;
+			}
+			
+			if (actualTime - kSkipTreshold > targetTime)
+			{
+				logDebug("seek back detected. switching videos");
+				
+				videoLoop.switchVideos();
+				
+				if (targetTime > kSkipTreshold)
+				{
+					logDebug("seeking video");
+					videoLoop.seekTo(targetTime, false);
+					
+					actualTime = videoLoop.mediaPlayer1->presentTime;
+				}
+			}
+			else if (actualTime + kSkipTreshold < targetTime)
+			{
+				logDebug("seek forward detected. seeking video");
+				
+				videoLoop.seekTo(targetTime, false);
+				
+				actualTime = videoLoop.mediaPlayer1->presentTime;
 			}
 		}
-		
-		targetTime = masterTimer.extrapolatedReceivedTime;
+	#endif
 		
 		videoLoop.tick(targetTime, framework.timeStep);
 		
