@@ -35,12 +35,34 @@ LiveUi & LiveUi::osc(const char * ipAddress, const int udpPort)
 	return *this;
 }
 
-void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
+void LiveUi::addElem(ControlSurfaceDefinition::Element * elem, ControlSurfaceDefinition::ElementLayout * layoutElement)
 {
 	elems.resize(elems.size() + 1);
 	
 	auto & e = elems.back();
 	e.elem = elem;
+	
+	if (layoutElement != nullptr && layoutElement->hasPosition)
+	{
+		e.x = layoutElement->x;
+		e.y = layoutElement->y;
+	}
+	else
+	{
+		e.x = 0;
+		e.y = 0;
+	}
+	
+	if (layoutElement != nullptr && layoutElement->hasSize)
+	{
+		e.sx = layoutElement->sx;
+		e.sy = layoutElement->sy;
+	}
+	else
+	{
+		e.sx = elem->initialSx;
+		e.sy = elem->initialSy;
+	}
 	
 	if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 	{
@@ -170,6 +192,15 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 	}
 }
 
+LiveUi::Elem * LiveUi::findElem(const ControlSurfaceDefinition::Element * surfaceElement)
+{
+	for (auto & elem : elems)
+		if (elem.elem == surfaceElement)
+			return &elem;
+	
+	return nullptr;
+}
+
 void LiveUi::tick(const float dt, bool & inputIsCaptured)
 {
 	if (inputIsCaptured)
@@ -196,10 +227,10 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 			auto * elem = e.elem;
 			
 			const bool isInside =
-				mouse.x >= elem->x &&
-				mouse.x < elem->x + elem->sx &&
-				mouse.y >= elem->y &&
-				mouse.y < elem->y + elem->sy;
+				mouse.x >= e.x &&
+				mouse.x < e.x + e.sx &&
+				mouse.y >= e.y &&
+				mouse.y < e.y + e.sy;
 			
 			if (isInside)
 			{
@@ -262,7 +293,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					activeElem = &e;
 					SDL_CaptureMouse(SDL_TRUE);
 					
-					e.liveState[0] = clamp<int>((mouse.x - elem->x) * 2 / elem->sx, 0, 1);
+					e.liveState[0] = clamp<int>((mouse.x - e.x) * 2 / e.sx, 0, 1);
 					
 					if (e.doubleClickTimer > 0.f)
 					{
@@ -304,7 +335,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					activeElem = &e;
 					SDL_CaptureMouse(SDL_TRUE);
 					
-					e.liveState[0] = clamp<int>((mouse.x - elem->x) * 3 / elem->sx, 0, 2);
+					e.liveState[0] = clamp<int>((mouse.x - e.x) * 3 / e.sx, 0, 2);
 					
 					if (e.doubleClickTimer > 0.f)
 					{
@@ -384,19 +415,19 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgb)
 				{
 					const int picker_x = 0;
-					const int picker_sx = elem->sx - 25;
-					const int slider_x = elem->sx - 20;
+					const int picker_sx = e.sx - 25;
+					const int slider_x = e.sx - 20;
 					const int slider_sx = 20;
 					
 					if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 					{
 						const bool isInsidePicker =
-							mouse.x >= elem->x + picker_x &&
-							mouse.x < elem->x + picker_x + picker_sx;
+							mouse.x >= e.x + picker_x &&
+							mouse.x < e.x + picker_x + picker_sx;
 						
 						const bool isInsideSlider =
-							mouse.x >= elem->x + slider_x &&
-							mouse.x < elem->x + slider_x + slider_sx;
+							mouse.x >= e.x + slider_x &&
+							mouse.x < e.x + slider_x + slider_sx;
 						
 						if (isInsidePicker)
 						{
@@ -444,21 +475,21 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 						
 						if (e.liveState[0] == 'p')
 						{
-							const float hue = saturate<float>((mouse.x - elem->x - picker_x) / float(picker_sx));
-							const float lightness = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							const float hue = saturate<float>((mouse.x - e.x - picker_x) / float(picker_sx));
+							const float lightness = saturate<float>(1.f - (mouse.y - e.y) / float(e.sy));
 							
 							e.value4.x = hue;
 							e.value4.z = lightness;
 						}
 						else if (e.liveState[0] == '1')
 						{
-							const float saturation = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							const float saturation = saturate<float>(1.f - (mouse.y - e.y) / float(e.sy));
 							
 							e.value4.y = saturation;
 						}
 						else if (e.liveState[0] == '2')
 						{
-							const float saturation = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							const float saturation = saturate<float>(1.f - (mouse.y - e.y) / float(e.sy));
 							
 							e.value4.y = saturation;
 						}
@@ -472,25 +503,25 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				else
 				{
 					const int picker_x = 0;
-					const int picker_sx = elem->sx - 25;
-					const int slider1_x = elem->sx - 20;
+					const int picker_sx = e.sx - 25;
+					const int slider1_x = e.sx - 20;
 					const int slider1_sx = 10;
-					const int slider2_x = elem->sx - 10;
+					const int slider2_x = e.sx - 10;
 					const int slider2_sx = 10;
 					
 					if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 					{
 						const bool isInsidePicker =
-							mouse.x >= elem->x + picker_x &&
-							mouse.x < elem->x + picker_x + picker_sx;
+							mouse.x >= e.x + picker_x &&
+							mouse.x < e.x + picker_x + picker_sx;
 						
 						const bool isInsideSlider1 =
-							mouse.x >= elem->x + slider1_x &&
-							mouse.x < elem->x + slider1_x + slider1_sx;
+							mouse.x >= e.x + slider1_x &&
+							mouse.x < e.x + slider1_x + slider1_sx;
 						
 						const bool isInsideSlider2 =
-							mouse.x >= elem->x + slider2_x &&
-							mouse.x < elem->x + slider2_x + slider2_sx;
+							mouse.x >= e.x + slider2_x &&
+							mouse.x < e.x + slider2_x + slider2_sx;
 						
 						if (isInsidePicker)
 						{
@@ -553,21 +584,21 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 						
 						if (e.liveState[0] == 'p')
 						{
-							const float hue = saturate<float>((mouse.x - elem->x - picker_x) / float(picker_sx));
-							const float lightness = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							const float hue = saturate<float>((mouse.x - e.x - picker_x) / float(picker_sx));
+							const float lightness = saturate<float>(1.f - (mouse.y - e.y) / float(e.sy));
 							
 							e.value4.x = hue;
 							e.value4.z = lightness;
 						}
 						else if (e.liveState[0] == '1')
 						{
-							const float saturation = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							const float saturation = saturate<float>(1.f - (mouse.y - e.y) / float(e.sy));
 							
 							e.value4.y = saturation;
 						}
 						else if (e.liveState[0] == '2')
 						{
-							const float white = saturate<float>(1.f - (mouse.y - elem->y) / float(elem->sy));
+							const float white = saturate<float>(1.f - (mouse.y - e.y) / float(e.sy));
 							
 							e.value4.w = white;
 						}
@@ -793,7 +824,7 @@ void LiveUi::draw() const
 			auto & label = elem->label;
 			
 			setColor(40, 40, 40);
-			drawText(elem->x, elem->y + elem->sy / 2.f, 12, +1, 0, "%s", label.text.c_str());
+			drawText(e.x, e.y + e.sy / 2.f, 12, +1, 0, "%s", label.text.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 		{
@@ -805,7 +836,7 @@ void LiveUi::draw() const
 					setLumi(210);
 				else
 					setLumi(200);
-				hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
+				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, 4);
 			}
 			hqEnd();
 			
@@ -818,8 +849,8 @@ void LiveUi::draw() const
 			
 			const float radius = 14.f;
 			
-			const float midX = elem->x + elem->sx / 2.f;
-			const float midY = elem->y + elem->sy / 2.f;
+			const float midX = e.x + e.sx / 2.f;
+			const float midY = e.y + e.sy / 2.f;
 			
 			hqBegin(HQ_LINES);
 			{
@@ -857,7 +888,7 @@ void LiveUi::draw() const
 			hqEnd();
 			
 			setColor(40, 40, 40);
-			drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy - 2, 10, 0, -1, "%s", knob.displayName.c_str());
+			drawText(e.x + e.sx / 2.f, e.y + e.sy - 2, 10, 0, -1, "%s", knob.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider2)
 		{
@@ -869,7 +900,7 @@ void LiveUi::draw() const
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
 				setLumi(lumi);
-				hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
+				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, 4);
 			}
 			hqEnd();
 			
@@ -885,10 +916,10 @@ void LiveUi::draw() const
 					setLumi(lumi * 4/5);
 					const float t = e.value4[i];
 					hqFillRoundedRect(
-						elem->x + elem->sx * (i + 0) / 2 + padding,
-						elem->y + elem->sy * (1.f - t) - thickness,
-						elem->x + elem->sx * (i + 1) / 2 - padding,
-						elem->y + elem->sy * (1.f - t) + thickness,
+						e.x + e.sx * (i + 0) / 2 + padding,
+						e.y + e.sy * (1.f - t) - thickness,
+						e.x + e.sx * (i + 1) / 2 - padding,
+						e.y + e.sy * (1.f - t) + thickness,
 						4);
 				}
 				hqEnd();
@@ -897,12 +928,12 @@ void LiveUi::draw() const
 				const float t = powf(e.value4[i], slider.exponential[i]);
 				const float value = slider.min[i] * (1.f - t) + slider.max[i] * t;
 				drawText(
-					elem->x + elem->sx * (i + .5f) / 2,
-					elem->y + elem->sy/2 + 4, 10, 0, +1, "%.2f", value);
+					e.x + e.sx * (i + .5f) / 2,
+					e.y + e.sy/2 + 4, 10, 0, +1, "%.2f", value);
 			}
 			
 			setColor(40, 40, 40);
-			drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy/2 - 4, 10, 0, -1, "%s", slider.displayName.c_str());
+			drawText(e.x + e.sx / 2.f, e.y + e.sy/2 - 4, 10, 0, -1, "%s", slider.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
 		{
@@ -914,7 +945,7 @@ void LiveUi::draw() const
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
 				setLumi(lumi);
-				hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
+				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, 4);
 			}
 			hqEnd();
 			
@@ -930,10 +961,10 @@ void LiveUi::draw() const
 					setLumi(lumi * 4/5);
 					const float t = e.value4[i];
 					hqFillRoundedRect(
-						elem->x + elem->sx * (i + 0) / 3 + padding,
-						elem->y + elem->sy * (1.f - t) - thickness,
-						elem->x + elem->sx * (i + 1) / 3 - padding,
-						elem->y + elem->sy * (1.f - t) + thickness,
+						e.x + e.sx * (i + 0) / 3 + padding,
+						e.y + e.sy * (1.f - t) - thickness,
+						e.x + e.sx * (i + 1) / 3 - padding,
+						e.y + e.sy * (1.f - t) + thickness,
 						4);
 				}
 				hqEnd();
@@ -942,12 +973,12 @@ void LiveUi::draw() const
 				const float t = powf(e.value4[i], slider.exponential[i]);
 				const float value = slider.min[i] * (1.f - t) + slider.max[i] * t;
 				drawText(
-					elem->x + elem->sx * (i + .5f) / 3,
-					elem->y + elem->sy/2 + 4, 10, 0, +1, "%.2f", value);
+					e.x + e.sx * (i + .5f) / 3,
+					e.y + e.sy/2 + 4, 10, 0, +1, "%.2f", value);
 			}
 			
 			setColor(40, 40, 40);
-			drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy/2 - 4, 10, 0, -1, "%s", slider.displayName.c_str());
+			drawText(e.x + e.sx / 2.f, e.y + e.sy/2 - 4, 10, 0, -1, "%s", slider.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
 		{
@@ -959,7 +990,7 @@ void LiveUi::draw() const
 					setLumi(210);
 				else
 					setLumi(200);
-				hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
+				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, 4);
 			}
 			hqEnd();
 			
@@ -971,18 +1002,18 @@ void LiveUi::draw() const
 			if (listbox.items.empty() == false)
 			{
 				const int index = clamp<int>((int)floorf(e.value),  0, listbox.items.size() - 1);
-				drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy / 2.f, 10, 0, 0, "%s", listbox.items[index].c_str());
+				drawText(e.x + e.sx / 2.f, e.y + e.sy / 2.f, 10, 0, 0, "%s", listbox.items[index].c_str());
 			}
 			
-			const float midY = elem->y + elem->sy / 2.f;
+			const float midY = e.y + e.sy / 2.f;
 			
 			hqBegin(HQ_FILLED_TRIANGLES);
 			{
 				setLumi(100);
-				hqFillTriangle(elem->x + 8, midY - 4, elem->x + 4, midY, elem->x + 8, midY + 4);
+				hqFillTriangle(e.x + 8, midY - 4, e.x + 4, midY, e.x + 8, midY + 4);
 				
 				setLumi(100);
-				hqFillTriangle(elem->x + elem->sx - 8, midY - 4, elem->x + elem->sx - 4, midY, elem->x + elem->sx - 8, midY + 4);
+				hqFillTriangle(e.x + e.sx - 8, midY - 4, e.x + e.sx - 4, midY, e.x + e.sx - 8, midY + 4);
 			}
 			hqEnd();
 		}
@@ -991,14 +1022,14 @@ void LiveUi::draw() const
 			const ControlSurfaceDefinition::ColorPicker & colorPicker = elem->colorPicker;
 			
 			const int picker_x = 0;
-			const int picker_sx = elem->sx - 25;
+			const int picker_sx = e.sx - 25;
 			
-			const int slider_x = elem->sx - 20;
+			const int slider_x = e.sx - 20;
 			const int slider_sx = 20;
 			
-			const int slider1_x = elem->sx - 20;
+			const int slider1_x = e.sx - 20;
 			const int slider1_sx = 10;
-			const int slider2_x = elem->sx - 10;
+			const int slider2_x = e.sx - 10;
 			const int slider2_sx = 10;
 			
 			// draw color picker
@@ -1022,12 +1053,12 @@ void LiveUi::draw() const
 			
 			GxTextureId texture = createTextureFromRGBA8(colors, 128, 128, true, true);
 			
-			hqSetTextureScreen(texture, elem->x + picker_x, elem->y, elem->x + picker_x + picker_sx, elem->y + elem->sy);
+			hqSetTextureScreen(texture, e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy);
 			{
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
 					setLumi(255);
-					hqFillRoundedRect(elem->x + picker_x, elem->y, elem->x + picker_x + picker_sx, elem->y + elem->sy, 4);
+					hqFillRoundedRect(e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy, 4);
 				}
 				hqEnd();
 			}
@@ -1043,7 +1074,7 @@ void LiveUi::draw() const
 					setLumi(210);
 				else
 					setLumi(200);
-				hqStrokeRoundedRect(elem->x + picker_x, elem->y, elem->x + picker_x + picker_sx, elem->y + elem->sy, 4, 2);
+				hqStrokeRoundedRect(e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy, 4, 2);
 			}
 			hqEnd();
 			
@@ -1057,17 +1088,17 @@ void LiveUi::draw() const
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
 					setLumi(100);
-					hqFillRoundedRect(elem->x + slider_x, elem->y, elem->x + slider_x + slider_sx, elem->y + elem->sy, 4);
+					hqFillRoundedRect(e.x + slider_x, e.y, e.x + slider_x + slider_sx, e.y + e.sy, 4);
 					
 					setLumi(200);
-					hqFillRoundedRect(elem->x + slider_x + slider_margin_sx, elem->y + elem->sy * (1.f - e.value4.y), elem->x + slider_x + slider_sx - slider_margin_sx, elem->y + elem->sy, 4);
+					hqFillRoundedRect(e.x + slider_x + slider_margin_sx, e.y + e.sy * (1.f - e.value4.y), e.x + slider_x + slider_sx - slider_margin_sx, e.y + e.sy, 4);
 				}
 				hqEnd();
 				
 				setLumi(40);
 				hqBegin(HQ_STROKED_ROUNDED_RECTS);
 				{
-					hqStrokeRoundedRect(elem->x + slider_x, elem->y, elem->x + slider_x + slider_sx, elem->y + elem->sy, 4, 2);
+					hqStrokeRoundedRect(e.x + slider_x, e.y, e.x + slider_x + slider_sx, e.y + e.sy, 4, 2);
 				}
 				hqEnd();
 			}
@@ -1078,17 +1109,17 @@ void LiveUi::draw() const
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
 					setLumi(100);
-					hqFillRoundedRect(elem->x + slider1_x, elem->y, elem->x + slider1_x + slider1_sx, elem->y + elem->sy, 4);
+					hqFillRoundedRect(e.x + slider1_x, e.y, e.x + slider1_x + slider1_sx, e.y + e.sy, 4);
 					
 					setLumi(200);
-					hqFillRoundedRect(elem->x + slider1_x + slider_margin_sx, elem->y + elem->sy * (1.f - e.value4.y), elem->x + slider1_x + slider1_sx - slider_margin_sx, elem->y + elem->sy, 4);
+					hqFillRoundedRect(e.x + slider1_x + slider_margin_sx, e.y + e.sy * (1.f - e.value4.y), e.x + slider1_x + slider1_sx - slider_margin_sx, e.y + e.sy, 4);
 				}
 				hqEnd();
 				
 				setLumi(40);
 				hqBegin(HQ_STROKED_ROUNDED_RECTS);
 				{
-					hqStrokeRoundedRect(elem->x + slider1_x, elem->y, elem->x + slider1_x + slider1_sx, elem->y + elem->sy, 4, 2);
+					hqStrokeRoundedRect(e.x + slider1_x, e.y, e.x + slider1_x + slider1_sx, e.y + e.sy, 4, 2);
 				}
 				hqEnd();
 				
@@ -1097,17 +1128,17 @@ void LiveUi::draw() const
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
 					setLumi(100);
-					hqFillRoundedRect(elem->x + slider2_x, elem->y, elem->x + slider2_x + slider2_sx, elem->y + elem->sy, 4);
+					hqFillRoundedRect(e.x + slider2_x, e.y, e.x + slider2_x + slider2_sx, e.y + e.sy, 4);
 					
 					setLumi(200);
-					hqFillRoundedRect(elem->x + slider2_x + slider_margin_sx, elem->y + elem->sy * (1.f - e.value4.w), elem->x + slider2_x + slider2_sx - slider_margin_sx, elem->y + elem->sy, 4);
+					hqFillRoundedRect(e.x + slider2_x + slider_margin_sx, e.y + e.sy * (1.f - e.value4.w), e.x + slider2_x + slider2_sx - slider_margin_sx, e.y + e.sy, 4);
 				}
 				hqEnd();
 				
 				setLumi(40);
 				hqBegin(HQ_STROKED_ROUNDED_RECTS);
 				{
-					hqStrokeRoundedRect(elem->x + slider2_x, elem->y, elem->x + slider2_x + slider2_sx, elem->y + elem->sy, 4, 2);
+					hqStrokeRoundedRect(e.x + slider2_x, e.y, e.x + slider2_x + slider2_sx, e.y + e.sy, 4, 2);
 				}
 				hqEnd();
 			}
@@ -1119,19 +1150,19 @@ void LiveUi::draw() const
 				const float y = 1.f - e.value4.z;
 				setLumi(100);
 				hqBegin(HQ_FILLED_CIRCLES);
-				hqFillCircle(elem->x + picker_x + picker_sx * x, elem->y + elem->sy * y, 3);
+				hqFillCircle(e.x + picker_x + picker_sx * x, e.y + e.sy * y, 3);
 				hqEnd();
 				setLumi(100);
 				drawLine(
-					elem->x + picker_x,
-					elem->y + elem->sy * y,
-					elem->x + picker_x + picker_sx,
-					elem->y + elem->sy * y);
+					e.x + picker_x,
+					e.y + e.sy * y,
+					e.x + picker_x + picker_sx,
+					e.y + e.sy * y);
 				drawLine(
-					elem->x + picker_x + picker_sx * x,
-					elem->y,
-					elem->x + picker_x + picker_sx * x,
-					elem->y + elem->sy);
+					e.x + picker_x + picker_sx * x,
+					e.y,
+					e.x + picker_x + picker_sx * x,
+					e.y + e.sy);
 			}
 			
 			// draw name
@@ -1139,14 +1170,14 @@ void LiveUi::draw() const
 			setColor(40, 40, 40);
 			setFont("calibri.ttf");
 			
-			drawText(elem->x + picker_x + picker_sx / 2.f, elem->y + 8, 10, 0, 0, "%s", colorPicker.displayName.c_str());
+			drawText(e.x + picker_x + picker_sx / 2.f, e.y + 8, 10, 0, 0, "%s", colorPicker.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Separator)
 		{
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
 				setLumi(200);
-				hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
+				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, 4);
 			}
 			hqEnd();
 		}
