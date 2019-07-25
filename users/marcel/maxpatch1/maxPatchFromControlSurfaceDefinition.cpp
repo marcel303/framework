@@ -114,6 +114,8 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 	{
 		for (auto & elem : group.elems)
 		{
+			auto * elemLayout = surface.layout.findElement(group.name.c_str(), elem.name.c_str());
+			
 			if (elem.type == ControlSurfaceDefinition::kElementType_Label)
 			{
 				const std::string id = allocObjectId();
@@ -123,7 +125,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.text(elem.label.text.c_str())
 						.patching_rect(patching_x, patching_y, 200, 20) // comment will auto-size so size here doesn't really matter, only the position
 						.presentation(true)
-						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
+						.presentation_rect(elemLayout->x, elemLayout->y, elemLayout->sx, elemLayout->sy)
 						.end();
 				patching_y += 60;
 			}
@@ -172,7 +174,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.maxclass("live.dial")
 						.patching_rect(patching_x, patching_y, 40, 48) // live.dial has a fixed height of 48
 						.presentation(true)
-						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
+						.presentation_rect(elemLayout->x, elemLayout->y, elemLayout->sx, elemLayout->sy)
 						.parameter_enable(true)
 						.saved_attribute("parameter_mmin", elem.knob.min)
 						.saved_attribute("parameter_mmax", elem.knob.max)
@@ -215,7 +217,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.maxclass("live.text")
 						.patching_rect(patching_x, patching_y, 40, 48) // live.dial has a fixed height of 48
 						.presentation(true)
-						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
+						.presentation_rect(elemLayout->x, elemLayout->y, elemLayout->sx, elemLayout->sy)
 						.saved_attribute("parameter_longname", elem.name)
 						.saved_attribute("parameter_shortname",  elem.button.displayName)
 						.saved_attribute("parameter_linknames", 1)
@@ -231,10 +233,10 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Slider2)
 			{
-				const int label_y = elem.y;
+				const int label_y = elemLayout->y;
 				const int label_sy = 20;
-				const int numbox_y = elem.y + 20;
-				const int numbox_sy = elem.sy - 20;
+				const int numbox_y = elemLayout->y + 20;
+				const int numbox_sy = elemLayout->sy - 20;
 				
 				patchEditor
 					.beginBox(allocObjectId().c_str(), 1, 2)
@@ -242,7 +244,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.text(elem.name.c_str())
 						.patching_rect(patching_x, patching_y, 200, 20) // comment will auto-size so size here doesn't really matter, only the position
 						.presentation(true)
-						.presentation_rect(elem.x, label_y, elem.sx, label_sy)
+						.presentation_rect(elemLayout->x, label_y, elemLayout->sx, label_sy)
 						.end();
 				patching_y += 60;
 				
@@ -262,7 +264,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 							.maxclass("live.numbox")
 							.patching_rect(patching_x, patching_y, 40, 15) // live.numbox has a fixed height of 15
 							.presentation(true)
-							.presentation_rect(elem.x + elem.sx / 2 * i, numbox_y, elem.sx / 2, numbox_sy)
+							.presentation_rect(elemLayout->x + elemLayout->sx / 2 * i, numbox_y, elemLayout->sx / 2, numbox_sy)
 							.parameter_enable(true)
 							.saved_attribute("parameter_mmin", elem.slider2.min[i])
 							.saved_attribute("parameter_mmax", elem.slider2.max[i])
@@ -310,10 +312,10 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Slider3)
 			{
-				const int label_y = elem.y;
+				const int label_y = elemLayout->y;
 				const int label_sy = 20;
-				const int numbox_y = elem.y + 20;
-				const int numbox_sy = elem.sy - 20;
+				const int numbox_y = elemLayout->y + 20;
+				const int numbox_sy = elemLayout->sy - 20;
 				
 				patchEditor
 					.beginBox(allocObjectId().c_str(), 1, 2)
@@ -321,7 +323,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.text(elem.name.c_str())
 						.patching_rect(patching_x, patching_y, 200, 20) // comment will auto-size so size here doesn't really matter, only the position
 						.presentation(true)
-						.presentation_rect(elem.x, label_y, elem.sx, label_sy)
+						.presentation_rect(elemLayout->x, label_y, elemLayout->sx, label_sy)
 						.end();
 				patching_y += 60;
 				
@@ -341,7 +343,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 							.maxclass("live.numbox")
 							.patching_rect(patching_x, patching_y, 40, 15) // live.numbox has a fixed height of 15
 							.presentation(true)
-							.presentation_rect(elem.x + elem.sx / 3 * i, numbox_y, elem.sx / 3, numbox_sy)
+							.presentation_rect(elemLayout->x + elemLayout->sx / 3 * i, numbox_y, elemLayout->sx / 3, numbox_sy)
 							.parameter_enable(true)
 							.saved_attribute("parameter_mmin", elem.slider3.min[i])
 							.saved_attribute("parameter_mmax", elem.slider3.max[i])
@@ -417,7 +419,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.maxclass("live.menu")
 						.patching_rect(patching_x, patching_y, 100, 48) // live.dial has a fixed height of 48
 						.presentation(true)
-						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy)
+						.presentation_rect(elemLayout->x, elemLayout->y, elemLayout->sx, elemLayout->sy)
 						.parameter_enable(true)
 						.saved_attribute("parameter_mmin", 0)
 						.saved_attribute("parameter_mmax", (int)listbox.items.size() - 1)
@@ -465,10 +467,10 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				
 				//
 				
-				const int label_y = elem.y;
+				const int label_y = elemLayout->y;
 				const int label_sy = 20;
-				const int colorpicker_y = elem.y + 20;
-				const int colorpicker_sy = elem.sy - 20;
+				const int colorpicker_y = elemLayout->y + 20;
+				const int colorpicker_sy = elemLayout->sy - 20;
 				
 				patchEditor
 					.beginBox(allocObjectId().c_str(), 1, 2)
@@ -476,7 +478,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.text(elem.name.c_str())
 						.patching_rect(patching_x, patching_y, 200, 20) // comment will auto-size so size here doesn't really matter, only the position
 						.presentation(true)
-						.presentation_rect(elem.x, label_y, elem.sx, label_sy)
+						.presentation_rect(elemLayout->x, label_y, elemLayout->sx, label_sy)
 						.end();
 				patching_y += 60;
 				
@@ -486,7 +488,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.maxclass("swatch")
 						.patching_rect(patching_x, patching_y, 100, 100)
 						.presentation(true)
-						.presentation_rect(elem.x, colorpicker_y, elem.sx - 25, colorpicker_sy)
+						.presentation_rect(elemLayout->x, colorpicker_y, elemLayout->sx - 25, colorpicker_sy)
 						.parameter_enable(true)
 						.saved_attribute("parameter_initial_enable", elem.colorPicker.hasDefaultValue)
 						.saved_attribute("parameter_initial", std::vector<float>
@@ -522,7 +524,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.maxclass("live.slider")
 						.patching_rect(patching_x, patching_y, 20, 100)
 						.presentation(true)
-						.presentation_rect(elem.x + elem.sx - 20, colorpicker_y, 20, colorpicker_sy)
+						.presentation_rect(elemLayout->x + elemLayout->sx - 20, colorpicker_y, 20, colorpicker_sy)
 						.parameter_enable(true)
 						.saved_attribute("parameter_initial_enable", elem.colorPicker.hasDefaultValue)
 						.saved_attribute("parameter_initial", elem.colorPicker.defaultValue.w)
@@ -595,7 +597,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.maxclass("live.line")
 						.patching_rect(patching_x, patching_y, 40, 40)
 						.presentation(true)
-						.presentation_rect(elem.x, elem.y, elem.sx, elem.sy);
+						.presentation_rect(elemLayout->x, elemLayout->y, elemLayout->sx, elemLayout->sy);
 				
 				if (separator.hasBorderColor)
 				{
