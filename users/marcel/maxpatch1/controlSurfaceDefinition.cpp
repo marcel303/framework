@@ -90,7 +90,16 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
-	ElementLayout * SurfaceLayout::findElementLayout(const char * groupName, const char * name)
+	ElementLayout * SurfaceLayout::addElement(const char * groupName, const char * name)
+	{
+		elems.push_back(ElementLayout());
+		auto & elem = elems.back();
+		elem.groupName = groupName;
+		elem.name = name;
+		return &elem;
+	}
+	
+	ElementLayout * SurfaceLayout::findElement(const char * groupName, const char * name)
 	{
 		for (auto & elem : elems)
 			if (elem.groupName == groupName && elem.name == name)
@@ -99,9 +108,9 @@ namespace ControlSurfaceDefinition
 		return nullptr;
 	}
 	
-	const ElementLayout * SurfaceLayout::findElementLayout(const char * groupName, const char * name) const
+	const ElementLayout * SurfaceLayout::findElement(const char * groupName, const char * name) const
 	{
-		return const_cast<SurfaceLayout*>(this)->findElementLayout(groupName, name);
+		return const_cast<SurfaceLayout*>(this)->findElement(groupName, name);
 	}
 	
 	//
@@ -212,6 +221,8 @@ namespace ControlSurfaceDefinition
 	
 	void Surface::performLayout()
 	{
+		layout.elems.clear();
+		
 		int x = layout.marginX;
 		int y = layout.marginY;
 		
@@ -298,6 +309,11 @@ namespace ControlSurfaceDefinition
 						return &elem;
 		
 		return nullptr;
+	}
+	
+	const Element * Surface::findElement(const char * groupName, const char * name) const
+	{
+		return const_cast<Surface*>(this)->findElement(groupName, name);
 	}
 	
 	//

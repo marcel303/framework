@@ -35,34 +35,12 @@ LiveUi & LiveUi::osc(const char * ipAddress, const int udpPort)
 	return *this;
 }
 
-void LiveUi::addElem(ControlSurfaceDefinition::Element * elem, ControlSurfaceDefinition::ElementLayout * layoutElement)
+void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 {
 	elems.resize(elems.size() + 1);
 	
 	auto & e = elems.back();
 	e.elem = elem;
-	
-	if (layoutElement != nullptr && layoutElement->hasPosition)
-	{
-		e.x = layoutElement->x;
-		e.y = layoutElement->y;
-	}
-	else
-	{
-		e.x = 0;
-		e.y = 0;
-	}
-	
-	if (layoutElement != nullptr && layoutElement->hasSize)
-	{
-		e.sx = layoutElement->sx;
-		e.sy = layoutElement->sy;
-	}
-	else
-	{
-		e.sx = elem->initialSx;
-		e.sy = elem->initialSy;
-	}
 	
 	if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 	{
@@ -199,6 +177,45 @@ LiveUi::Elem * LiveUi::findElem(const ControlSurfaceDefinition::Element * surfac
 			return &elem;
 	
 	return nullptr;
+}
+
+void LiveUi::applyLayouts(const ControlSurfaceDefinition::Surface & surface, const ControlSurfaceDefinition::SurfaceLayout * layouts[], const int numLayouts)
+{
+	// first reset everything back to its default
+	
+	for (auto & e : elems)
+	{
+		e.x = 0;
+		e.y = 0;
+		e.sx = e.elem->initialSx;
+		e.sy = e.elem->initialSy;
+	}
+	
+	// apply base layout and overrides
+	
+	for (int i = 0; i < numLayouts; ++i)
+	{
+		auto * layout = layouts[i];
+		
+		for (auto & elem_layout : layout->elems)
+		{
+			auto * surface_elem = surface.findElement(elem_layout.groupName.c_str(), elem_layout.name.c_str());
+		
+			auto * ui_elem = findElem(surface_elem);
+			
+			if (elem_layout.hasPosition)
+			{
+				ui_elem->x = elem_layout.x;
+				ui_elem->y = elem_layout.y;
+			}
+			
+			if (elem_layout.hasSize)
+			{
+				ui_elem->sx = elem_layout.sx;
+				ui_elem->sy = elem_layout.sy;
+			}
+		}
+	}
 }
 
 void LiveUi::tick(const float dt, bool & inputIsCaptured)

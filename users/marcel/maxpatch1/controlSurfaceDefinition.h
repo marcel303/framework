@@ -376,8 +376,9 @@ namespace ControlSurfaceDefinition
 		
 		std::vector<ElementLayout> elems;
 		
-		ElementLayout * findElementLayout(const char * groupName, const char * name);
-		const ElementLayout * findElementLayout(const char * groupName, const char * name) const;
+		ElementLayout * addElement(const char * groupName, const char * name);
+		ElementLayout * findElement(const char * groupName, const char * name);
+		const ElementLayout * findElement(const char * groupName, const char * name) const;
 	};
 	
 	struct Surface
@@ -394,6 +395,7 @@ namespace ControlSurfaceDefinition
 		void performLayout();
 		
 		Element * findElement(const char * groupName, const char * name);
+		const Element * findElement(const char * groupName, const char * name) const;
 	};
 	
 	void reflect(TypeDB & typeDB);

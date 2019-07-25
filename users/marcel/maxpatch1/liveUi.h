@@ -37,9 +37,15 @@ struct LiveUi
 	
 	LiveUi & osc(const char * ipAddress, const int udpPort);
 	
-	void addElem(ControlSurfaceDefinition::Element * elem, ControlSurfaceDefinition::ElementLayout * layoutElement);
+	void addElem(ControlSurfaceDefinition::Element * elem);
 	
 	Elem * findElem(const ControlSurfaceDefinition::Element * surfaceElement);
+	
+	/**
+	 * Apply to layouts. The first layout is considered the 'base' layout, while subsequent layouts (if any)
+	 * apply overrides to the base layout.
+	 */
+	void applyLayouts(const ControlSurfaceDefinition::Surface & surface, const ControlSurfaceDefinition::SurfaceLayout * layouts[], const int numLayouts);
 	
 	void tick(const float dt, bool & inputIsCaptured);
 	
