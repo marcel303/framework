@@ -21,18 +21,20 @@ bool TcpServer::init(const int tcpPort)
 	
 	if ((bind(m_socket, (struct sockaddr *)&m_socketAddress, sizeof(m_socketAddress))) < 0)
 	{
-		LOG_DBG("server bind failed", 0);
+		LOG_ERR("server bind failed", 0);
 		result = false;
 	}
 	else
 	{
 		if (listen(m_socket, 5) < 0)
 		{
-			LOG_DBG("server listen failed", 0);
+			LOG_ERR("server listen failed", 0);
 			result = false;
 		}
 		else
 		{
+			wantsDisconnect = false;
+			
 			m_mutex = SDL_CreateMutex();
 			
 			m_listenThread = SDL_CreateThread(listenProc, "TCP Listen", this);
@@ -49,21 +51,28 @@ bool TcpServer::init(const int tcpPort)
 
 void TcpServer::shut()
 {
-	if (m_socket != 0)
+	if (m_socket >= 0)
+	{
 		close(m_socket);
+		m_socket = -1;
+	}
 }
 
 bool TcpServer::accept(int & clientSocket)
 {
-	clientSocket = 0;
+	clientSocket = -1;
 	
 	sockaddr_in clientAddress;
+	memset(&clientAddress, 0, sizeof(clientAddress));
 	socklen_t clientAddressSize = sizeof(clientAddress);
 
 	clientSocket = ::accept(m_socket, (struct sockaddr*)&clientAddress, &clientAddressSize);
 	
-	if (clientSocket == 0)
+	if (clientSocket < 0)
 		return false;
+	
+	int set = 1;
+	setsockopt(clientSocket, SOL_SOCKET, SO_NOSIGPIPE, (void *)&set, sizeof(int));
 	
 	return true;
 }
@@ -81,7 +90,11 @@ int TcpServer::listenProc(void * obj)
 	{
 		int clientSocket = 0;
 		
-		if (self->accept(clientSocket))
+		if (self->accept(clientSocket) == false)
+		{
+			LOG_ERR("server accept: failed to accept connection", 0);
+		}
+		else
 		{
 			LOG_DBG("server accept: clientSocket=%d", clientSocket);
 			
@@ -107,7 +120,7 @@ int TcpServer::listenProc(void * obj)
 			
 			uint8_t * compressed = (uint8_t*)malloc(1024 * 1024);
 			
-			for (;;)
+			while (self->wantsDisconnect == false)
 			{
 				uint8_t bytes[1024];
 				const int numBytes = recv(clientSocket, bytes, 1024, 0);
@@ -183,11 +196,16 @@ int TcpServer::listenProc(void * obj)
 				}
 			}
 			
+			self->wantsDisconnect = false;
+			
 			free(compressed);
 			compressed = nullptr;
 			
-			close(clientSocket);
-			clientSocket = 0;
+			if (clientSocket >= 0)
+			{
+				close(clientSocket);
+				clientSocket = -1;
+			}
 		}
 	}
 	

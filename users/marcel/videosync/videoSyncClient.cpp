@@ -17,7 +17,7 @@ bool TcpClient::connect(const char * ipAddress, const int tcpPort)
 	
 	if (::connect(m_clientSocket, (struct sockaddr *)&m_serverSocketAddress, serverAddressSize) < 0)
 	{
-		LOG_DBG("client: connect failed", 0);
+		LOG_ERR("client: connect failed", 0);
 		result = false;
 	}
 	
@@ -31,14 +31,14 @@ bool TcpClient::connect(const char * ipAddress, const int tcpPort)
 
 void TcpClient::disconnect()
 {
-	if (m_clientSocket != 0)
+	if (m_clientSocket >= 0)
 	{
 		close(m_clientSocket);
-		m_clientSocket = 0;
+		m_clientSocket = -1;
 	}
 }
 
 bool TcpClient::isConnected() const
 {
-	return m_clientSocket != 0;
+	return m_clientSocket >= 0;
 }

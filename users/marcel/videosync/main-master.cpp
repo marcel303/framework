@@ -160,12 +160,23 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 
+		// process input
+		
 		oscReceiver.flushMessages(&oscReceiveHandler);
+		
+		if (keyboard.wentDown(SDLK_d))
+		{
+			server.wantsDisconnect = true;
+		}
+		
+		// update video
 		
 		if (videoLoop.mediaPlayer1->presentedLastFrame(videoLoop.mediaPlayer1->context))
 			videoLoop.switchVideos();
 		
 		videoLoop.tick(-1.f, framework.timeStep);
+		
+		// send video frame over tcp to client(s)
 		
 		if (videoLoop.mediaPlayer1->videoFrame != nullptr)
 		{
@@ -193,8 +204,11 @@ int main(int argc, char * argv[])
 							compressedSize
 						};
 						
-						send(client.m_clientSocket, header, 3 * sizeof(int), 0);
-						send(client.m_clientSocket, compressed, compressedSize, 0);
+						if (send(client.m_clientSocket, header, 3 * sizeof(int), 0) < 0 ||
+							send(client.m_clientSocket, compressed, compressedSize, 0) < 0)
+						{
+							LOG_ERR("server: failed to send data to client", 0);
+						}
 					}
 				}
 				
@@ -243,6 +257,10 @@ int main(int argc, char * argv[])
 			drawRect(VIEW_SX/2, 0, VIEW_SX, VIEW_SY);
 			gxSetTexture(0);
 			popBlend();
+			
+			setFont("unispace.ttf");
+			setColor(colorWhite);
+			drawText(10, 10, 12, +1, +1, "Press 'd' to disconnect client");
 		}
 		framework.endDraw();
 	}

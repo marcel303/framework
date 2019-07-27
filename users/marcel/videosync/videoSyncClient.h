@@ -5,7 +5,7 @@
 
 struct TcpClient
 {
-	int m_clientSocket = 0;
+	int m_clientSocket = -1;
 	
 	sockaddr_in m_serverSocketAddress;
 	
