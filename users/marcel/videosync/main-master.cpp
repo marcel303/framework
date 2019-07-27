@@ -452,40 +452,27 @@ struct TcpServer
 
 struct TcpClient
 {
-	sockaddr_in m_clientSocketAddress;
 	int m_clientSocket = 0;
 	
 	sockaddr_in m_serverSocketAddress;
 	
-	bool init(const int tcpPort, const char * serverIpAddress, const int serverTcpPort)
+	bool connect(const char * ipAddress, const int tcpPort)
 	{
-	// inet_aton
-	
 		bool result = true;
-	
-		memset(&m_clientSocketAddress, 0, sizeof(m_clientSocketAddress));
-		m_clientSocketAddress.sin_family = AF_INET;
-		m_clientSocketAddress.sin_addr.s_addr = htonl(INADDR_ANY);
-		m_clientSocketAddress.sin_port = htons(tcpPort);
 		
 		m_clientSocket = socket(AF_INET, SOCK_STREAM, 0);
 		
-		//if ((bind(m_clientSocket, (struct sockaddr *)&m_clientSocketAddress, sizeof(m_clientSocketAddress))) < 0)
-		//	result = false;
-		//else
+		memset(&m_serverSocketAddress, 0, sizeof(m_serverSocketAddress));
+		m_serverSocketAddress.sin_family = AF_INET;
+		m_serverSocketAddress.sin_addr.s_addr = inet_addr(ipAddress);
+		m_serverSocketAddress.sin_port = htons(tcpPort);
+		
+		socklen_t serverAddressSize = sizeof(m_serverSocketAddress);
+		
+		if (::connect(m_clientSocket, (struct sockaddr *)&m_serverSocketAddress, serverAddressSize) < 0)
 		{
-			memset(&m_serverSocketAddress, 0, sizeof(m_serverSocketAddress));
-			m_serverSocketAddress.sin_family = AF_INET;
-			m_serverSocketAddress.sin_addr.s_addr = inet_addr(serverIpAddress);
-			m_serverSocketAddress.sin_port = htons(serverTcpPort);
-			
-			socklen_t serverAddressSize = sizeof(m_serverSocketAddress);
-			
-			if (connect(m_clientSocket, (struct sockaddr *)&m_serverSocketAddress, serverAddressSize) < 0)
-			{
-				logDebug("client: connect failed");
-				result = false;
-			}
+			logDebug("client: connect failed");
+			result = false;
 		}
 		
 		if (result == false)
@@ -513,7 +500,7 @@ int main(int argc, char * argv[])
 	SDL_Delay(500);
 	
 	TcpClient client;
-	client.init(1802, "127.0.0.1", 1800);
+	client.connect("127.0.0.1", 1800);
 	
 #if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
