@@ -14,6 +14,9 @@
 	#include <turbojpeg/turbojpeg.h>
 #endif
 
+const int VIEW_SX = 1200;
+const int VIEW_SY = 600;
+
 struct SlaveInfo
 {
 	std::string oscSendAddress = "127.0.0.1";
@@ -406,7 +409,7 @@ struct TcpServer
 							
 							if (receiveState.stateBytes == compressedSize)
 							{
-								//Benchmark bm("decompress");
+								Benchmark bm("decompress");
 								
 								JpegLoadData * data = new JpegLoadData();
 								
@@ -532,7 +535,7 @@ int main(int argc, char * argv[])
 	
 	framework.windowIsResizable = true;
 	
-	if (!framework.init(400, 300))
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
 	//
@@ -549,7 +552,7 @@ int main(int argc, char * argv[])
 	
 	MyOscReceiveHandler oscReceiveHandler;
 	
-	VideoLoop videoLoop("fluidSim1.mov");
+	VideoLoop videoLoop("lasers.mp4");
 	
 	GxTexture texture;
 	
@@ -569,7 +572,7 @@ int main(int argc, char * argv[])
 		
 		if (videoLoop.mediaPlayer1->videoFrame != nullptr)
 		{
-			//Benchmark bm("compress");
+			Benchmark bm("compress");
 			
 			auto * videoFrame = videoLoop.mediaPlayer1->videoFrame;
 			
@@ -630,9 +633,14 @@ int main(int argc, char * argv[])
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			pushBlend(BLEND_OPAQUE);
-			//gxSetTexture(videoLoop.getTexture());
+			gxSetTexture(videoLoop.getTexture());
+			drawRect(0, 0, VIEW_SX/2, VIEW_SY);
+			gxSetTexture(0);
+			popBlend();
+			
+			pushBlend(BLEND_OPAQUE);
 			gxSetTexture(texture.id);
-			drawRect(0, 0, 400, 300);
+			drawRect(VIEW_SX/2, 0, VIEW_SX, VIEW_SY);
 			gxSetTexture(0);
 			popBlend();
 		}
