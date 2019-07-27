@@ -4,8 +4,11 @@ app marcel-videosync-master
 	depend_library libosc
 	depend_library libvideo
 	depend_library turbojpeg
+	add_files jpegCompression.cpp jpegCompression.h
 	add_files main-master.cpp
 	add_files videoloop.h
+	add_files videoSyncClient.cpp videoSyncClient.h
+	add_files videoSyncServer.cpp videoSyncServer.h
 	resource_path data
 
 app marcel-videosync-slave
