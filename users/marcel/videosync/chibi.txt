@@ -2,7 +2,11 @@ app marcel-videosync-master
 	depend_library framework
 	depend_library libreflection-bindtofile
 	depend_library libosc
+	depend_library libvideo
+	depend_library turbojpeg
 	add_files main-master.cpp
+	add_files videoloop.h
+	resource_path data
 
 app marcel-videosync-slave
 	depend_library framework
