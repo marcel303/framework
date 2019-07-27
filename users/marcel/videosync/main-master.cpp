@@ -44,6 +44,18 @@ struct Settings
 	}
 };
 
+struct ServerState
+{
+	TcpServer tcpServer;
+	
+	GxTexture texture;
+};
+
+struct ClientState
+{
+	TcpClient tcpClient;
+};
+
 struct MyOscReceiveHandler : OscReceiveHandler
 {
 	bool isStarted = false;
@@ -106,8 +118,11 @@ int main(int argc, char * argv[])
 {
 	// create a fake server to connect to
 	// todo : move this to the slave app
-	TcpServer server;
-	server.init(1800);
+	std::list<ServerState> serverStates;
+	serverStates.emplace_back();
+	serverStates.back().tcpServer.init(1800);
+	serverStates.emplace_back();
+	serverStates.back().tcpServer.init(1802);
 	SDL_Delay(500);
 	
 #if defined(CHIBI_RESOURCE_PATH)
@@ -139,21 +154,19 @@ int main(int argc, char * argv[])
 	if (!oscReceiver.init("255.255.255.255", settings.oscReceivePort))
 		logError("failed to initialzie OSC receiver");
 	
-	std::list<TcpClient> clients;
+	std::list<ClientState> clientStates;
 	for (auto & slave : settings.slaves)
 	{
-		clients.emplace_back();
+		clientStates.emplace_back();
 		
-		auto & client = clients.back();
+		auto & clientState = clientStates.back();
 		
-		client.connect(slave.ipAddress.c_str(), slave.tcpPort);
+		clientState.tcpClient.connect(slave.ipAddress.c_str(), slave.tcpPort);
 	}
 	
 	MyOscReceiveHandler oscReceiveHandler;
 	
 	VideoLoop videoLoop("lasers.mp4");
-	
-	GxTexture texture;
 	
 	for (;;)
 	{
@@ -168,7 +181,8 @@ int main(int argc, char * argv[])
 		
 		if (keyboard.wentDown(SDLK_d))
 		{
-			server.wantsDisconnect = true;
+			for (auto & serverState : serverStates)
+				serverState.tcpServer.wantsDisconnect = true;
 		}
 		
 		// update video
@@ -195,8 +209,10 @@ int main(int argc, char * argv[])
 			
 			if (saveImage_turbojpeg(data, sx * sy * 4, sx, sy, compressed, compressedSize))
 			{
-				for (auto & client : clients)
+				for (auto & clientState : clientStates)
 				{
+					auto & client = clientState.tcpClient;
+					
 					if (client.isConnected())
 					{
 						const int header[3] =
@@ -240,29 +256,35 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		// update received image texture
-		
-		JpegLoadData * data = nullptr;
-		
-	// todo : use a condition variable to wait for frames or disconnects
-	
-		SDL_LockMutex(server.m_mutex);
+		for (auto & serverState : serverStates)
 		{
-			data = server.m_jpegData;
-			server.m_jpegData = nullptr;
-		}
-		SDL_UnlockMutex(server.m_mutex);
+			auto & server = serverState.tcpServer;
+			auto & texture = serverState.texture;
+			
+			// update received image texture
+			
+			JpegLoadData * data = nullptr;
+			
+		// todo : use a condition variable to wait for frames or disconnects
 		
-		if (data != nullptr)
-		{
-			if (texture.isChanged(data->sx, data->sy, GX_RGBA8_UNORM))
+			SDL_LockMutex(server.m_mutex);
 			{
-				texture.allocate(data->sx, data->sy, GX_RGBA8_UNORM, true, true);
+				data = server.m_jpegData;
+				server.m_jpegData = nullptr;
 			}
+			SDL_UnlockMutex(server.m_mutex);
 			
-			texture.upload(data->buffer, 1, 0);
-			
-			delete data;
+			if (data != nullptr)
+			{
+				if (texture.isChanged(data->sx, data->sy, GX_RGBA8_UNORM))
+				{
+					texture.allocate(data->sx, data->sy, GX_RGBA8_UNORM, true, true);
+				}
+				
+				texture.upload(data->buffer, 1, 0);
+				
+				delete data;
+			}
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -273,11 +295,28 @@ int main(int argc, char * argv[])
 			gxSetTexture(0);
 			popBlend();
 			
-			pushBlend(BLEND_OPAQUE);
-			gxSetTexture(texture.id);
-			drawRect(VIEW_SX/2, 0, VIEW_SX, VIEW_SY);
-			gxSetTexture(0);
-			popBlend();
+			const int numServers = serverStates.size();
+			if (numServers > 0)
+			{
+				int index = 0;
+				
+				for (auto & serverState : serverStates)
+				{
+					auto & texture = serverState.texture;
+					
+					pushBlend(BLEND_OPAQUE);
+					gxSetTexture(texture.id);
+					drawRect(
+						VIEW_SX/2,
+						(index + 0) * VIEW_SY / numServers,
+						VIEW_SX,
+						(index + 1) * VIEW_SY / numServers);
+					gxSetTexture(0);
+					popBlend();
+					
+					index++;
+				}
+			}
 			
 			setFont("unispace.ttf");
 			setColor(colorWhite);
@@ -286,11 +325,13 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	}
 	
-	for (auto & client : clients)
-		client.disconnect();
-	clients.clear();
+	for (auto & clientState : clientStates)
+		clientState.tcpClient.disconnect();
+	clientStates.clear();
 	
-	server.shut();
+	for (auto & serverState : serverStates)
+		serverState.tcpServer.shut();
+	serverStates.clear();
 
 	framework.shutdown();
 

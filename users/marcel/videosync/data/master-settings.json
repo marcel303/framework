@@ -4,5 +4,10 @@
     	{
     		"ipAddress": "127.0.0.1",
     		"tcpPort": 1800
-    	}]
+    	},
+    	{
+    		"ipAddress": "127.0.0.1",
+    		"tcpPort": 1802
+    	}
+    ]
 }
