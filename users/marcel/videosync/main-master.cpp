@@ -15,6 +15,8 @@
 const int VIEW_SX = 1200;
 const int VIEW_SY = 600;
 
+const float kReconnectTime = 2.f;
+
 struct SlaveInfo
 {
 	std::string ipAddress = "127.0.0.1";
@@ -208,6 +210,25 @@ int main(int argc, char * argv[])
 							send(client.m_clientSocket, compressed, compressedSize, 0) < 0)
 						{
 							LOG_ERR("server: failed to send data to client", 0);
+							
+							client.disconnect();
+							
+							client.reconnectTimer = kReconnectTime;
+						}
+					}
+					else
+					{
+						if (client.reconnectTimer > 0.f)
+						{
+							client.reconnectTimer = fmaxf(0.f, client.reconnectTimer - framework.timeStep);
+							
+							if (client.reconnectTimer == 0.f)
+							{
+								if (client.reconnect() == false)
+								{
+									client.reconnectTimer = kReconnectTime;
+								}
+							}
 						}
 					}
 				}

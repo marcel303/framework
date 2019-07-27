@@ -16,6 +16,9 @@ bool TcpServer::init(const int tcpPort)
 	
 	m_socket = socket(AF_INET, SOCK_STREAM, 0);
 	
+	int set = 1;
+	setsockopt(m_socket, SOL_SOCKET, SO_NOSIGPIPE, (void *)&set, sizeof(int));
+	
 // todo : disable nagle
 // todo : disable linger
 	

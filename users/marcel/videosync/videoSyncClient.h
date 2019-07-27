@@ -9,8 +9,12 @@ struct TcpClient
 	
 	sockaddr_in m_serverSocketAddress;
 	
+	float reconnectTimer = 0.f;
+	
 	bool connect(const char * ipAddress, const int tcpPort);
 	void disconnect();
+	
+	bool reconnect();
 	
 	bool isConnected() const;
 };
