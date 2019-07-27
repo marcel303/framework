@@ -10,6 +10,7 @@ struct TcpClient
 	sockaddr_in m_serverSocketAddress;
 	
 	bool connect(const char * ipAddress, const int tcpPort);
+	void disconnect();
 	
-	void shut();
+	bool isConnected() const;
 };

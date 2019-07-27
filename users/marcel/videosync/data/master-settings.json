@@ -1,0 +1,8 @@
+{
+    "oscReceivePort": 2000,
+    "slaves": [
+    	{
+    		"ipAddress": "127.0.0.1",
+    		"tcpPort": 1800
+    	}]
+}

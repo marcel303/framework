@@ -10,6 +10,8 @@ struct JpegLoadData;
 
 struct TcpServer
 {
+// todo : make members private
+
 	int m_socket = 0;
 	sockaddr_in m_socketAddress;
 	

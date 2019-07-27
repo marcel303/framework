@@ -17,14 +17,14 @@ const int VIEW_SY = 600;
 
 struct SlaveInfo
 {
-	std::string oscSendAddress = "127.0.0.1";
-	int oscSendPort = 2002;
+	std::string ipAddress = "127.0.0.1";
+	int tcpPort = 1800;
 	
 	static void reflect(TypeDB & typeDB)
 	{
 		typeDB.addStructured<SlaveInfo>("SlaveInfo")
-			.add("oscSendAddress", &SlaveInfo::oscSendAddress)
-			.add("oscReceivePort", &SlaveInfo::oscSendPort);
+			.add("ipAddress", &SlaveInfo::ipAddress)
+			.add("tcpPort", &SlaveInfo::tcpPort);
 	}
 };
 
@@ -102,12 +102,11 @@ struct MyOscReceiveHandler : OscReceiveHandler
 
 int main(int argc, char * argv[])
 {
+	// create a fake server to connect to
+	// todo : move this to the slave app
 	TcpServer server;
 	server.init(1800);
 	SDL_Delay(500);
-	
-	TcpClient client;
-	client.connect("127.0.0.1", 1800);
 	
 #if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
@@ -138,11 +137,15 @@ int main(int argc, char * argv[])
 	if (!oscReceiver.init("255.255.255.255", settings.oscReceivePort))
 		logError("failed to initialzie OSC receiver");
 	
-	std::vector<OscReceiver> oscSenders;
-	oscSenders.resize(settings.slaves.size());
-	for (size_t i = 0; i < settings.slaves.size(); ++i)
-		if (!oscSenders[i].init(settings.slaves[i].oscSendAddress.c_str(), settings.slaves[i].oscSendPort))
-			logError("failed to initialzie OSC sender");
+	std::list<TcpClient> clients;
+	for (auto & slave : settings.slaves)
+	{
+		clients.emplace_back();
+		
+		auto & client = clients.back();
+		
+		client.connect(slave.ipAddress.c_str(), slave.tcpPort);
+	}
 	
 	MyOscReceiveHandler oscReceiveHandler;
 	
@@ -179,17 +182,20 @@ int main(int argc, char * argv[])
 			
 			if (saveImage_turbojpeg(data, sx * sy * 4, sx, sy, compressed, compressedSize))
 			{
-				if (client.m_clientSocket != 0)
+				for (auto & client : clients)
 				{
-					const int header[3] =
+					if (client.isConnected())
 					{
-						sx,
-						sy,
-						compressedSize
-					};
-					
-					send(client.m_clientSocket, header, 3 * sizeof(int), 0);
-					send(client.m_clientSocket, compressed, compressedSize, 0);
+						const int header[3] =
+						{
+							sx,
+							sy,
+							compressedSize
+						};
+						
+						send(client.m_clientSocket, header, 3 * sizeof(int), 0);
+						send(client.m_clientSocket, compressed, compressedSize, 0);
+					}
 				}
 				
 				free(compressed);
@@ -241,7 +247,10 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	}
 	
-	client.shut();
+	for (auto & client : clients)
+		client.disconnect();
+	clients.clear();
+	
 	server.shut();
 
 	framework.shutdown();

@@ -23,17 +23,22 @@ bool TcpClient::connect(const char * ipAddress, const int tcpPort)
 	
 	if (result == false)
 	{
-		shut();
+		disconnect();
 	}
 	
 	return result;
 }
 
-void TcpClient::shut()
+void TcpClient::disconnect()
 {
 	if (m_clientSocket != 0)
 	{
 		close(m_clientSocket);
 		m_clientSocket = 0;
 	}
+}
+
+bool TcpClient::isConnected() const
+{
+	return m_clientSocket != 0;
 }

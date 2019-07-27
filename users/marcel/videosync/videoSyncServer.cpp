@@ -77,112 +77,118 @@ int TcpServer::listenProc(void * obj)
 {
 	TcpServer * self = (TcpServer*)obj;
 	
-	int clientSocket = 0;
-	
-	if (self->accept(clientSocket))
+	for (;;)
 	{
-		LOG_DBG("server accept: clientSocket=%d", clientSocket);
+		int clientSocket = 0;
 		
-		struct ReceiveState
+		if (self->accept(clientSocket))
 		{
-			enum State
+			LOG_DBG("server accept: clientSocket=%d", clientSocket);
+			
+			struct ReceiveState
 			{
-				kState_ReceiveHeader,
-				kState_ReceiveCompressedImage
+				enum State
+				{
+					kState_ReceiveHeader,
+					kState_ReceiveCompressedImage
+				};
+				
+				State state = kState_ReceiveHeader;
+				int stateBytes = 0;
 			};
 			
-			State state = kState_ReceiveHeader;
-			int stateBytes = 0;
-		};
-		
-		ReceiveState receiveState;
-		
-		int header[3];
-		
-		int sx = 0;
-		int sy = 0;
-		int compressedSize = 0;
-		
-		uint8_t * compressed = (uint8_t*)malloc(1024 * 1024);
-		
-		for (;;)
-		{
-			uint8_t bytes[1024];
-			const int numBytes = recv(clientSocket, bytes, 1024, 0);
+			ReceiveState receiveState;
 			
-			if (numBytes < 0)
+			int header[3];
+			
+			int sx = 0;
+			int sy = 0;
+			int compressedSize = 0;
+			
+			uint8_t * compressed = (uint8_t*)malloc(1024 * 1024);
+			
+			for (;;)
 			{
-				LOG_DBG("server: client socket disconnected", 0);
-				break;
-			}
-			else
-			{
-				//LOG_DBG("server: received %d bytes", numBytes);
+				uint8_t bytes[1024];
+				const int numBytes = recv(clientSocket, bytes, 1024, 0);
 				
-				for (int i = 0; i < numBytes; ++i)
+				if (numBytes < 0)
 				{
-					if (receiveState.state == ReceiveState::kState_ReceiveHeader)
+					LOG_DBG("server: client socket disconnected", 0);
+					break;
+				}
+				else
+				{
+					//LOG_DBG("server: received %d bytes", numBytes);
+					
+					for (int i = 0; i < numBytes; ++i)
 					{
-						setByte(header, receiveState.stateBytes++, bytes[i]);
-						
-						if (receiveState.stateBytes == sizeof(int) * 3)
+						if (receiveState.state == ReceiveState::kState_ReceiveHeader)
 						{
-							sx = header[0];
-							sy = header[1];
-							compressedSize = header[2];
+							setByte(header, receiveState.stateBytes++, bytes[i]);
 							
-						/*
-							LOG_DBG("header: sx=%d, sy=%d, compressedSize=%d",
-								sx,
-								sy,
-								compressedSize);
-						*/
-						
-							receiveState.state = ReceiveState::kState_ReceiveCompressedImage;
-							receiveState.stateBytes = 0;
-						}
-					}
-					else if (receiveState.state == ReceiveState::kState_ReceiveCompressedImage)
-					{
-						compressed[receiveState.stateBytes++] = bytes[i];
-						
-						if (receiveState.stateBytes == compressedSize)
-						{
-							Benchmark bm("decompress");
-							
-							JpegLoadData * data = new JpegLoadData();
-							
-							if (loadImage_turbojpeg(compressed, compressedSize, *data))
+							if (receiveState.stateBytes == sizeof(int) * 3)
 							{
-								LOG_DBG("decompressed image: sx=%d, sy=%d", data->sx, data->sy);
+								sx = header[0];
+								sy = header[1];
+								compressedSize = header[2];
 								
-								JpegLoadData * oldData = nullptr;
-								
-								SDL_LockMutex(self->m_mutex);
-								{
-									oldData = self->m_jpegData;
-									self->m_jpegData = data;
-								}
-								SDL_UnlockMutex(self->m_mutex);
-								
-								delete oldData;
-								oldData = nullptr;
+							/*
+								LOG_DBG("header: sx=%d, sy=%d, compressedSize=%d",
+									sx,
+									sy,
+									compressedSize);
+							*/
+							
+								receiveState.state = ReceiveState::kState_ReceiveCompressedImage;
+								receiveState.stateBytes = 0;
 							}
+						}
+						else if (receiveState.state == ReceiveState::kState_ReceiveCompressedImage)
+						{
+							compressed[receiveState.stateBytes++] = bytes[i];
 							
-							sx = 0;
-							sy = 0;
-							compressedSize = 0;
-							
-							receiveState.state = ReceiveState::kState_ReceiveHeader;
-							receiveState.stateBytes = 0;
+							if (receiveState.stateBytes == compressedSize)
+							{
+								Benchmark bm("decompress");
+								
+								JpegLoadData * data = new JpegLoadData();
+								
+								if (loadImage_turbojpeg(compressed, compressedSize, *data))
+								{
+									LOG_DBG("decompressed image: sx=%d, sy=%d", data->sx, data->sy);
+									
+									JpegLoadData * oldData = nullptr;
+									
+									SDL_LockMutex(self->m_mutex);
+									{
+										oldData = self->m_jpegData;
+										self->m_jpegData = data;
+									}
+									SDL_UnlockMutex(self->m_mutex);
+									
+									delete oldData;
+									oldData = nullptr;
+								}
+								
+								sx = 0;
+								sy = 0;
+								compressedSize = 0;
+								
+								receiveState.state = ReceiveState::kState_ReceiveHeader;
+								receiveState.stateBytes = 0;
+							}
 						}
 					}
 				}
 			}
+			
+			free(compressed);
+			compressed = nullptr;
+			
+			close(clientSocket);
+			clientSocket = 0;
 		}
-		
-		free(compressed);
-		compressed = nullptr;
 	}
 	
 	return 0;
