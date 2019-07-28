@@ -166,7 +166,7 @@ int main(int argc, char * argv[])
 	
 	MyOscReceiveHandler oscReceiveHandler;
 	
-	VideoLoop videoLoop("cameras.mp4");
+	VideoLoop videoLoop("lasers2.mp4");
 	
 	double lastFrameTime = 0.0;
 	
@@ -293,9 +293,12 @@ int main(int argc, char * argv[])
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			int sx, sy;
+			framework.getCurrentViewportSize(sx, sy);
+			
 			pushBlend(BLEND_OPAQUE);
 			gxSetTexture(videoLoop.getTexture());
-			drawRect(0, 0, VIEW_SX/2, VIEW_SY);
+			drawRect(0, 0, sx/2, sy);
 			gxSetTexture(0);
 			popBlend();
 			
@@ -314,10 +317,10 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_OPAQUE);
 					gxSetTexture(texture.id);
 					drawRect(
-						VIEW_SX/2,
-						(index + 0) * VIEW_SY / numServers,
-						VIEW_SX,
-						(index + 1) * VIEW_SY / numServers);
+						sx/2,
+						(index + 0) * sy / numServers,
+						sx,
+						(index + 1) * sy / numServers);
 					gxSetTexture(0);
 					popBlend();
 					
