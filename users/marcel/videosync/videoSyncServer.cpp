@@ -125,76 +125,87 @@ int TcpServer::listenProc(void * obj)
 			
 			while (self->wantsDisconnect == false)
 			{
-				uint8_t bytes[1024];
-				const int numBytes = recv(clientSocket, bytes, 1024, 0);
+				//LOG_DBG("server: received %d bytes", numBytes);
 				
-				if (numBytes < 0)
+				if (receiveState.state == ReceiveState::kState_ReceiveHeader)
 				{
-					LOG_DBG("server: client socket disconnected", 0);
-					break;
-				}
-				else
-				{
-					//LOG_DBG("server: received %d bytes", numBytes);
+					const int remaining = sizeof(header) - receiveState.stateBytes;
+					
+					uint8_t bytes[sizeof(header)];
+					const int numBytes = recv(clientSocket, bytes, remaining, 0);
+					
+					if (numBytes < 0)
+					{
+						LOG_DBG("server: client socket disconnected", 0);
+						break;
+					}
 					
 					for (int i = 0; i < numBytes; ++i)
 					{
-						if (receiveState.state == ReceiveState::kState_ReceiveHeader)
+						setByte(header, receiveState.stateBytes++, bytes[i]);
+					}
+					
+					if (receiveState.stateBytes == sizeof(header))
+					{
+						sx = header[0];
+						sy = header[1];
+						compressedSize = header[2];
+						
+					/*
+						LOG_DBG("header: sx=%d, sy=%d, compressedSize=%d",
+							sx,
+							sy,
+							compressedSize);
+					*/
+					
+						receiveState.state = ReceiveState::kState_ReceiveCompressedImage;
+						receiveState.stateBytes = 0;
+					}
+				}
+				else if (receiveState.state == ReceiveState::kState_ReceiveCompressedImage)
+				{
+					const int remaining = compressedSize - receiveState.stateBytes;
+					
+					uint8_t * bytes = compressed + receiveState.stateBytes;
+					const int numBytes = recv(clientSocket, bytes, remaining, 0);
+					
+					if (numBytes < 0)
+					{
+						LOG_DBG("server: client socket disconnected", 0);
+						break;
+					}
+					
+					receiveState.stateBytes += numBytes;
+					
+					if (receiveState.stateBytes == compressedSize)
+					{
+						//Benchmark bm("decompress");
+						
+						JpegLoadData * data = new JpegLoadData();
+						
+						if (loadImage_turbojpeg(compressed, compressedSize, *data))
 						{
-							setByte(header, receiveState.stateBytes++, bytes[i]);
+							LOG_DBG("decompressed image: sx=%d, sy=%d", data->sx, data->sy);
 							
-							if (receiveState.stateBytes == sizeof(int) * 3)
+							JpegLoadData * oldData = nullptr;
+							
+							SDL_LockMutex(self->m_mutex);
 							{
-								sx = header[0];
-								sy = header[1];
-								compressedSize = header[2];
-								
-							/*
-								LOG_DBG("header: sx=%d, sy=%d, compressedSize=%d",
-									sx,
-									sy,
-									compressedSize);
-							*/
-							
-								receiveState.state = ReceiveState::kState_ReceiveCompressedImage;
-								receiveState.stateBytes = 0;
+								oldData = self->m_jpegData;
+								self->m_jpegData = data;
 							}
-						}
-						else if (receiveState.state == ReceiveState::kState_ReceiveCompressedImage)
-						{
-							compressed[receiveState.stateBytes++] = bytes[i];
+							SDL_UnlockMutex(self->m_mutex);
 							
-							if (receiveState.stateBytes == compressedSize)
-							{
-								Benchmark bm("decompress");
-								
-								JpegLoadData * data = new JpegLoadData();
-								
-								if (loadImage_turbojpeg(compressed, compressedSize, *data))
-								{
-									LOG_DBG("decompressed image: sx=%d, sy=%d", data->sx, data->sy);
-									
-									JpegLoadData * oldData = nullptr;
-									
-									SDL_LockMutex(self->m_mutex);
-									{
-										oldData = self->m_jpegData;
-										self->m_jpegData = data;
-									}
-									SDL_UnlockMutex(self->m_mutex);
-									
-									delete oldData;
-									oldData = nullptr;
-								}
-								
-								sx = 0;
-								sy = 0;
-								compressedSize = 0;
-								
-								receiveState.state = ReceiveState::kState_ReceiveHeader;
-								receiveState.stateBytes = 0;
-							}
+							delete oldData;
+							oldData = nullptr;
 						}
+						
+						sx = 0;
+						sy = 0;
+						compressedSize = 0;
+						
+						receiveState.state = ReceiveState::kState_ReceiveHeader;
+						receiveState.stateBytes = 0;
 					}
 				}
 			}
