@@ -166,7 +166,9 @@ int main(int argc, char * argv[])
 	
 	MyOscReceiveHandler oscReceiveHandler;
 	
-	VideoLoop videoLoop("lasers.mp4");
+	VideoLoop videoLoop("cameras.mp4");
+	
+	double lastFrameTime = 0.0;
 	
 	for (;;)
 	{
@@ -194,9 +196,11 @@ int main(int argc, char * argv[])
 		
 		// send video frame over tcp to client(s)
 		
-		if (videoLoop.mediaPlayer1->videoFrame != nullptr)
+		if (videoLoop.mediaPlayer1->videoFrame != nullptr && videoLoop.mediaPlayer1->videoFrame->m_time != lastFrameTime)
 		{
-			Benchmark bm("compress");
+			lastFrameTime = videoLoop.mediaPlayer1->videoFrame->m_time;
+			
+			//Benchmark bm("compress");
 			
 			auto * videoFrame = videoLoop.mediaPlayer1->videoFrame;
 			
@@ -295,7 +299,10 @@ int main(int argc, char * argv[])
 			gxSetTexture(0);
 			popBlend();
 			
+			// draw the frames received on the server side
+			
 			const int numServers = serverStates.size();
+			
 			if (numServers > 0)
 			{
 				int index = 0;
@@ -320,7 +327,7 @@ int main(int argc, char * argv[])
 			
 			setFont("unispace.ttf");
 			setColor(colorWhite);
-			drawText(10, 10, 12, +1, +1, "Press 'd' to disconnect client");
+			drawText(10, 10, 12, +1, +1, "Press 'd' to disconnect client(s)");
 		}
 		framework.endDraw();
 	}
