@@ -61,13 +61,19 @@ struct VideoLoop
 	
 	void tick(const float targetTime, const float dt)
 	{
-		if (mediaPlayer1->context->hasPresentedLastFrame)
+		if (targetTime < 0.f)
 		{
-			//switchVideos();
+			if (mediaPlayer1->context->hasPresentedLastFrame)
+				switchVideos();
+			
+			mediaPlayer1->tick(mediaPlayer1->context, true);
+			mediaPlayer1->presentTime += dt;
 		}
-		
-		mediaPlayer1->presentTime = targetTime;
-		mediaPlayer1->tick(mediaPlayer1->context, true);
+		else
+		{
+			mediaPlayer1->presentTime = targetTime;
+			mediaPlayer1->tick(mediaPlayer1->context, true);
+		}
 		
 		mediaPlayer2->tick(mediaPlayer2->context, true);
 	}

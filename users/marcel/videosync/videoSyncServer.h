@@ -9,25 +9,29 @@ struct SDL_Thread;
 
 struct JpegLoadData;
 
-struct TcpServer
+namespace Videosync
 {
-// todo : make members private
+	struct Slave
+	{
+	private:
+		int m_socket = -1;
+		sockaddr_in m_socketAddress;
+		
+		SDL_mutex * m_mutex = nullptr;
+		SDL_Thread * m_listenThread = nullptr;
+		
+		JpegLoadData * m_jpegData = nullptr;
+		
+	public:
+		std::atomic<bool> wantsDisconnect;
+		
+		bool init(const int tcpPort);
+		void shut();
+		
+		bool accept(int & clientSocket);
+		
+		JpegLoadData * consumeFrame();
 
-	int m_socket = -1;
-	sockaddr_in m_socketAddress;
-	
-	SDL_mutex * m_mutex = nullptr;
-	SDL_Thread * m_listenThread = nullptr;
-	
-	JpegLoadData * m_jpegData = nullptr;
-	
-public:
-	std::atomic<bool> wantsDisconnect;
-	
-	bool init(const int tcpPort);
-	void shut();
-	
-	bool accept(int & clientSocket);
-
-	static int listenProc(void * obj);
-};
+		static int listenProc(void * obj);
+	};
+}

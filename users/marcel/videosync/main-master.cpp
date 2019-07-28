@@ -44,16 +44,16 @@ struct Settings
 	}
 };
 
-struct ServerState
+struct SlaveState
 {
-	TcpServer tcpServer;
+	Videosync::Slave slave;
 	
 	GxTexture texture;
 };
 
-struct ClientState
+struct MasterState
 {
-	TcpClient tcpClient;
+	Videosync::Master master;
 };
 
 struct MyOscReceiveHandler : OscReceiveHandler
@@ -116,13 +116,13 @@ struct MyOscReceiveHandler : OscReceiveHandler
 
 int main(int argc, char * argv[])
 {
-	// create a fake server to connect to
+	// create a fake slave to connect to
 	// todo : move this to the slave app
-	std::list<ServerState> serverStates;
-	serverStates.emplace_back();
-	serverStates.back().tcpServer.init(1800);
-	serverStates.emplace_back();
-	serverStates.back().tcpServer.init(1802);
+	std::list<SlaveState> slaveStates;
+	slaveStates.emplace_back();
+	slaveStates.back().slave.init(1800);
+	slaveStates.emplace_back();
+	slaveStates.back().slave.init(1802);
 	SDL_Delay(500);
 	
 #if defined(CHIBI_RESOURCE_PATH)
@@ -154,14 +154,14 @@ int main(int argc, char * argv[])
 	if (!oscReceiver.init("255.255.255.255", settings.oscReceivePort))
 		logError("failed to initialzie OSC receiver");
 	
-	std::list<ClientState> clientStates;
+	std::list<MasterState> masterStates;
 	for (auto & slave : settings.slaves)
 	{
-		clientStates.emplace_back();
+		masterStates.emplace_back();
 		
-		auto & clientState = clientStates.back();
+		auto & masterState = masterStates.back();
 		
-		clientState.tcpClient.connect(slave.ipAddress.c_str(), slave.tcpPort);
+		masterState.master.connect(slave.ipAddress.c_str(), slave.tcpPort);
 	}
 	
 	MyOscReceiveHandler oscReceiveHandler;
@@ -169,6 +169,8 @@ int main(int argc, char * argv[])
 	VideoLoop videoLoop("lasers2.mp4");
 	
 	double lastFrameTime = 0.0;
+	
+	bool isPaused = false;
 	
 	for (;;)
 	{
@@ -183,8 +185,27 @@ int main(int argc, char * argv[])
 		
 		if (keyboard.wentDown(SDLK_d))
 		{
-			for (auto & serverState : serverStates)
-				serverState.tcpServer.wantsDisconnect = true;
+			for (auto & slaveState : slaveStates)
+				slaveState.slave.wantsDisconnect = true;
+		}
+		
+		if (keyboard.wentDown(SDLK_c))
+		{
+			if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+			{
+				for (auto & masterState : masterStates)
+					masterState.master.reconnect();
+			}
+			else
+			{
+				for (auto & masterState : masterStates)
+					masterState.master.disconnect();
+			}
+		}
+		
+		if (keyboard.wentDown(SDLK_SPACE))
+		{
+			isPaused = !isPaused;
 		}
 		
 		// update video
@@ -192,9 +213,12 @@ int main(int argc, char * argv[])
 		if (videoLoop.mediaPlayer1->presentedLastFrame(videoLoop.mediaPlayer1->context))
 			videoLoop.switchVideos();
 		
-		videoLoop.tick(-1.f, framework.timeStep);
+		if (isPaused == false)
+		{
+			videoLoop.tick(-1.f, framework.timeStep);
+		}
 		
-		// send video frame over tcp to client(s)
+		// send video frame over tcp to slave(s)
 		
 		if (videoLoop.mediaPlayer1->videoFrame != nullptr && videoLoop.mediaPlayer1->videoFrame->m_time != lastFrameTime)
 		{
@@ -213,11 +237,11 @@ int main(int argc, char * argv[])
 			
 			if (saveImage_turbojpeg(data, sx * sy * 4, sx, sy, compressed, compressedSize))
 			{
-				for (auto & clientState : clientStates)
+				for (auto & masterState : masterStates)
 				{
-					auto & client = clientState.tcpClient;
+					auto & master = masterState.master;
 					
-					if (client.isConnected())
+					if (master.isConnected())
 					{
 						const int header[3] =
 						{
@@ -226,27 +250,27 @@ int main(int argc, char * argv[])
 							compressedSize
 						};
 						
-						if (send(client.m_clientSocket, header, 3 * sizeof(int), 0) < 0 ||
-							send(client.m_clientSocket, compressed, compressedSize, 0) < 0)
+						if (send(master.m_clientSocket, header, 3 * sizeof(int), 0) < 0 ||
+							send(master.m_clientSocket, compressed, compressedSize, 0) < 0)
 						{
-							LOG_ERR("server: failed to send data to client", 0);
+							LOG_ERR("master: failed to send data to slave", 0);
 							
-							client.disconnect();
+							master.disconnect();
 							
-							client.reconnectTimer = kReconnectTime;
+							master.reconnectTimer = kReconnectTime;
 						}
 					}
 					else
 					{
-						if (client.reconnectTimer > 0.f)
+						if (master.reconnectTimer > 0.f)
 						{
-							client.reconnectTimer = fmaxf(0.f, client.reconnectTimer - framework.timeStep);
+							master.reconnectTimer = fmaxf(0.f, master.reconnectTimer - framework.timeStep);
 							
-							if (client.reconnectTimer == 0.f)
+							if (master.reconnectTimer == 0.f)
 							{
-								if (client.reconnect() == false)
+								if (master.reconnect() == false)
 								{
-									client.reconnectTimer = kReconnectTime;
+									master.reconnectTimer = kReconnectTime;
 								}
 							}
 						}
@@ -260,23 +284,15 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		for (auto & serverState : serverStates)
+		for (auto & slaveState : slaveStates)
 		{
-			auto & server = serverState.tcpServer;
-			auto & texture = serverState.texture;
+			auto & slave = slaveState.slave;
+			auto & texture = slaveState.texture;
 			
 			// update received image texture
 			
-			JpegLoadData * data = nullptr;
-			
 		// todo : use a condition variable to wait for frames or disconnects
-		
-			SDL_LockMutex(server.m_mutex);
-			{
-				data = server.m_jpegData;
-				server.m_jpegData = nullptr;
-			}
-			SDL_UnlockMutex(server.m_mutex);
+			JpegLoadData * data = slave.consumeFrame();
 			
 			if (data != nullptr)
 			{
@@ -302,25 +318,25 @@ int main(int argc, char * argv[])
 			gxSetTexture(0);
 			popBlend();
 			
-			// draw the frames received on the server side
+			// draw the frames received on the slave side
 			
-			const int numServers = serverStates.size();
+			const int numSlaves = slaveStates.size();
 			
-			if (numServers > 0)
+			if (numSlaves > 0)
 			{
 				int index = 0;
 				
-				for (auto & serverState : serverStates)
+				for (auto & slaveState : slaveStates)
 				{
-					auto & texture = serverState.texture;
+					auto & texture = slaveState.texture;
 					
 					pushBlend(BLEND_OPAQUE);
 					gxSetTexture(texture.id);
 					drawRect(
 						sx/2,
-						(index + 0) * sy / numServers,
+						(index + 0) * sy / numSlaves,
 						sx,
-						(index + 1) * sy / numServers);
+						(index + 1) * sy / numSlaves);
 					gxSetTexture(0);
 					popBlend();
 					
@@ -330,18 +346,29 @@ int main(int argc, char * argv[])
 			
 			setFont("unispace.ttf");
 			setColor(colorWhite);
-			drawText(10, 10, 12, +1, +1, "Press 'd' to disconnect client(s)");
+			drawText(10, 10, 12, +1, +1, "Press 'd' to disconnect slave(s)");
+			drawText(10, 30, 12, +1, +1, "Press 'c' to disconnect masters(s)");
+			drawText(10, 50, 12, +1, +1, "Press 'c' + SHIFT to reconnect masters(s)");
+			drawText(10, 70, 12, +1, +1, "Press SPACE to pause/resume");
+			
+			int y = 200;
+			
+			for (auto & masterState : masterStates)
+			{
+				drawText(10, y, 10, +1, -1, "master: isConnected=%s, reconnectTimer=%.2f", masterState.master.isConnected() ? "yes" : "no", masterState.master.reconnectTimer);
+				y += 18;
+			}
 		}
 		framework.endDraw();
 	}
 	
-	for (auto & clientState : clientStates)
-		clientState.tcpClient.disconnect();
-	clientStates.clear();
+	for (auto & masterState : masterStates)
+		masterState.master.disconnect();
+	masterStates.clear();
 	
-	for (auto & serverState : serverStates)
-		serverState.tcpServer.shut();
-	serverStates.clear();
+	for (auto & slaveState : slaveStates)
+		slaveState.slave.shut();
+	slaveStates.clear();
 
 	framework.shutdown();
 
