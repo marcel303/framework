@@ -22,7 +22,9 @@ namespace Videosync
 		int set_false = 0;
 		int set_true = 1;
 		
+	#if defined(MACOS)
 		setsockopt(m_socket, SOL_SOCKET, SO_NOSIGPIPE, (void*)&set_true, sizeof(set_true));
+	#endif
 		setsockopt(m_socket, SOL_SOCKET, SO_LINGER, (void*)&set_false, sizeof(set_false));
 		setsockopt(m_socket, SOL_SOCKET, SO_REUSEPORT, (void*)&set_true, sizeof(set_true));
 		setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &set_true, sizeof(set_true));
@@ -85,7 +87,9 @@ namespace Videosync
 		int set_false = 0;
 		int set_true = 1;
 		
+	#if defined(MACOS)
 		setsockopt(clientSocket, SOL_SOCKET, SO_NOSIGPIPE, (void*)&set_true, sizeof(set_true));
+	#endif
 		setsockopt(clientSocket, SOL_SOCKET, SO_LINGER, (void*)&set_false, sizeof(set_false));
 		setsockopt(clientSocket, SOL_SOCKET, SO_REUSEPORT, (void*)&set_true, sizeof(set_true));
 		setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, &set_true, sizeof(set_true));
