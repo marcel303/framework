@@ -99,13 +99,13 @@ bool AudioOutput_PortAudio::initPortAudio(const int numChannels, const int sampl
 		return false;
 	}
 
+	m_numChannels = numChannels;
+	
 	if ((err = Pa_StartStream(m_paStream)) != paNoError)
 	{
 		logError("portaudio: failed to start stream: %s", Pa_GetErrorText(err));
 		return false;
 	}
-	
-	m_numChannels = numChannels;
 
 	return true;
 }
