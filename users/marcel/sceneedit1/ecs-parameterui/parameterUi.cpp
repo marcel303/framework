@@ -447,7 +447,7 @@ void copyParametersToText_recursive(ParameterMgr * const parameterMgr, const cha
 			if (parameter->isSetToDefault())
 				continue;
 			
-			const std::string name = parameter->name = prefix + parameter->name;
+			const std::string name = prefix + parameter->name;
 		
 			if (do_filter)
 			{
