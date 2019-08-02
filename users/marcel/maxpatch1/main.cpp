@@ -444,11 +444,6 @@ int main(int arg, char * argv[])
 		
 		framework.process();
 		
-		if (framework.waitForEvents)
-		{
-			framework.timeStep = 0.f;
-		}
-		
 		if (framework.quitRequested)
 			break;
 		
@@ -513,8 +508,11 @@ int main(int arg, char * argv[])
 		const int desired_ui_x = keyboard.isDown(SDLK_l) ? 240 : 120; // fixme : remove this animation hack
 		const int desired_ui_y = 10;
 		
-		ui_x = lerp<float>(desired_ui_x, ui_x, powf(.5f, framework.timeStep * 60.f));
-		ui_y = lerp<float>(desired_ui_y, ui_y, powf(.5f, framework.timeStep * 60.f));
+		if (framework.waitForEvents == false)
+		{
+			ui_x = lerp<float>(desired_ui_x, ui_x, powf(.5f, framework.timeStep * 60.f));
+			ui_y = lerp<float>(desired_ui_y, ui_y, powf(.5f, framework.timeStep * 60.f));
+		}
 		
 		if (fabsf(ui_x - desired_ui_x) < .02f &&
 			fabsf(ui_y - desired_ui_y) < .02f)
@@ -579,10 +577,15 @@ int main(int arg, char * argv[])
 							surfaceSy = y + sy;
 					}
 				}
-				surfaceSx += surface.layout.paddingX;
-				surfaceSy += surface.layout.paddingY;
+				surfaceSx += surface.layout.marginX;
+				surfaceSy += surface.layout.marginY;
 				
-				drawRect(0, 0, surfaceSx, surfaceSy);
+				hqSetGradient(GRADIENT_RADIAL, Mat4x4(true).Scale(1.f / 1000.f).Translate(-300, 0, 0), Color::fromHSL(.5f, .5f, .5f), Color::fromHSL(.2f, .5f, .5f), COLOR_IGNORE);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				hqFillRoundedRect(0, 0, surfaceSx, surfaceSy, 4);
+				hqEnd();
+				hqClearGradient();
+				//drawRect(0, 0, surfaceSx, surfaceSy);
 				
 				liveUi.draw();
 

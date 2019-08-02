@@ -167,6 +167,8 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 			e.value4.z = .5f;
 			e.value4.w = 0.f;
 		}
+		
+		e.defaultValue4 = e.value4;
 	}
 }
 
@@ -241,8 +243,6 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 		
 		for (auto & e : elems)
 		{
-			auto * elem = e.elem;
-			
 			const bool isInside =
 				mouse.x >= e.x &&
 				mouse.x < e.x + e.sx &&
@@ -456,7 +456,10 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 							if (e.doubleClickTimer > 0.f)
 							{
 								if (colorPicker.hasDefaultValue)
-									e.value4 = colorPicker.defaultValue;
+								{
+									e.value4.x = e.defaultValue4.x;
+									e.value4.z = e.defaultValue4.z;
+								}
 							}
 							else
 								e.doubleClickTimer = .2f;
@@ -471,7 +474,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 							if (e.doubleClickTimer > 0.f)
 							{
 								if (colorPicker.hasDefaultValue)
-									e.value4 = colorPicker.defaultValue;
+									e.value4.y = e.defaultValue4.y;
 							}
 							else
 								e.doubleClickTimer = .2f;
@@ -488,7 +491,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 					if (&e == activeElem)
 					{
-						ControlSurfaceDefinition::Vector4 oldValue = e.value4;
+						const ControlSurfaceDefinition::Vector4 oldValue = e.value4;
 						
 						if (e.liveState[0] == 'p')
 						{
@@ -504,11 +507,9 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 							
 							e.value4.y = saturation;
 						}
-						else if (e.liveState[0] == '2')
+						else
 						{
-							const float saturation = saturate<float>(1.f - (mouse.y - e.y) / float(e.sy));
-							
-							e.value4.y = saturation;
+							Assert(false);
 						}
 						
 						if (e.value4 != oldValue)
@@ -542,48 +543,61 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 						
 						if (isInsidePicker)
 						{
-							activeElem = &e;
-							SDL_CaptureMouse(SDL_TRUE);
-							
-							e.liveState[0] = 'p';
-							
 							if (e.doubleClickTimer > 0.f)
 							{
 								if (colorPicker.hasDefaultValue)
-									e.value4 = colorPicker.defaultValue;
+								{
+									e.value4.x = e.defaultValue4.x;
+									e.value4.z = e.defaultValue4.z;
+								}
 							}
 							else
+							{
+								activeElem = &e;
+								SDL_CaptureMouse(SDL_TRUE);
+								
+								e.liveState[0] = 'p';
+							
 								e.doubleClickTimer = .2f;
+							}
 						}
 						else if (isInsideSlider1)
 						{
-							activeElem = &e;
-							SDL_CaptureMouse(SDL_TRUE);
-							
-							e.liveState[0] = '1';
-							
 							if (e.doubleClickTimer > 0.f)
 							{
 								if (colorPicker.hasDefaultValue)
-									e.value4 = colorPicker.defaultValue;
+									e.value4.y = e.defaultValue4.y;
 							}
 							else
+							{
+								activeElem = &e;
+								SDL_CaptureMouse(SDL_TRUE);
+								
+								e.liveState[0] = '1';
+								
 								e.doubleClickTimer = .2f;
+							}
 						}
 						else if (isInsideSlider2)
 						{
-							activeElem = &e;
-							SDL_CaptureMouse(SDL_TRUE);
-							
-							e.liveState[0] = '2';
-							
 							if (e.doubleClickTimer > 0.f)
 							{
 								if (colorPicker.hasDefaultValue)
-									e.value4 = colorPicker.defaultValue;
+									e.value4.w = e.defaultValue4.w;
 							}
 							else
+							{
+								activeElem = &e;
+								SDL_CaptureMouse(SDL_TRUE);
+							
+								e.liveState[0] = '2';
+								
 								e.doubleClickTimer = .2f;
+							}
+						}
+						else
+						{
+							Assert(false);
 						}
 					}
 				
@@ -597,7 +611,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 					if (&e == activeElem)
 					{
-						ControlSurfaceDefinition::Vector4 oldValue = e.value4;
+						const ControlSurfaceDefinition::Vector4 oldValue = e.value4;
 						
 						if (e.liveState[0] == 'p')
 						{
