@@ -486,6 +486,7 @@ public:
 	void setPositionCentered();
 	void setSize(const int sx, const int sy);
 	void setFullscreen(const bool fullscreen);
+	void setTitle(const char * title);
 	
 	void show();
 	void hide();
@@ -1442,6 +1443,8 @@ void setTransform2d(const Mat4x4 & transform);
 void setTransform3d(const Mat4x4 & transform);
 void pushTransform();
 void popTransform();
+void pushScroll(const int scrollX, const int scrollY);
+void popScroll();
 
 void projectScreen2d();
 void projectPerspective3d(const float fov, const float nearZ, const float farZ);

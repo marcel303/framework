@@ -2053,6 +2053,11 @@ void Window::setFullscreen(const bool fullscreen)
 		SDL_SetWindowFullscreen(m_window, 0);
 }
 
+void Window::setTitle(const char * title)
+{
+	SDL_SetWindowTitle(m_window, title);
+}
+
 void Window::show()
 {
 	SDL_ShowWindow(m_window);
@@ -5120,6 +5125,48 @@ void popTransform()
 	gxLoadMatrixf(t.projection.m_v);
 	gxMatrixMode(GX_MODELVIEW);
 	gxLoadMatrixf(t.modelView.m_v);
+}
+
+struct ScrollData
+{
+	int scrollX = 0;;
+	int scrollY = 0;
+};
+
+static Stack<ScrollData, 32> s_scrollStack;
+
+void pushScroll(const int scrollX, const int scrollY)
+{
+	ScrollData s;
+	s.scrollX = scrollX;
+	s.scrollY = scrollY;
+	s_scrollStack.push(s);
+	
+	mouse.x -= scrollX;
+	mouse.y -= scrollY;
+	
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+	{
+		gxMatrixMode(GX_PROJECTION);
+		gxPushMatrix();
+		gxTranslatef(scrollX, scrollY, 0);
+	}
+	gxMatrixMode(restoreMatrixMode);
+}
+
+void popScroll()
+{
+	ScrollData s = s_scrollStack.popValue();
+	
+	mouse.x += s.scrollX;
+	mouse.y += s.scrollY;
+	
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+	{
+		gxMatrixMode(GX_PROJECTION);
+		gxPopMatrix();
+	}
+	gxMatrixMode(restoreMatrixMode);
 }
 
 void projectScreen2d()
