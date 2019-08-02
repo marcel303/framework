@@ -73,7 +73,7 @@ void doParameterUi(ParameterBase & parameterBase)
 			if (parameter.hasLimits)
 			{
 				// fixme : no separate min/max for each dimension
-				if (ImGui::SliderFloat2(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0]))
+				if (ImGui::SliderFloat2(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
 					parameter.setDirty();
 			}
 			else
@@ -90,7 +90,7 @@ void doParameterUi(ParameterBase & parameterBase)
 			if (parameter.hasLimits)
 			{
 				// fixme : no separate min/max for each dimension
-				if (ImGui::SliderFloat3(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0]))
+				if (ImGui::SliderFloat3(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
 					parameter.setDirty();
 			}
 			else
@@ -107,7 +107,7 @@ void doParameterUi(ParameterBase & parameterBase)
 			if (parameter.hasLimits)
 			{
 				// fixme : no separate min/max for each dimension
-				if (ImGui::SliderFloat4(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0]))
+				if (ImGui::SliderFloat4(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
 					parameter.setDirty();
 			}
 			else
