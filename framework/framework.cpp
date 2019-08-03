@@ -625,7 +625,14 @@ bool Framework::shutdown()
 	gxShutdown();
 	
 	s_shaderSources.clear();
+	
+#if ENABLE_METAL
+	// destroy metal context
+	
+	metal_detach(globals.mainWindow->getWindow());
+#endif
 
+#if ENABLE_OPENGL
 	glBlendEquation = 0;
 	glClampColor = 0;
 	
@@ -636,6 +643,7 @@ bool Framework::shutdown()
 		SDL_GL_DeleteContext(globals.glContext);
 		globals.glContext = 0;
 	}
+#endif
 	
 	// destroy SDL window
 	
@@ -2006,9 +2014,17 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 	, m_window(nullptr)
 	, m_windowData(nullptr)
 {
-	const int flags = SDL_WINDOW_OPENGL | (SDL_WINDOW_ALLOW_HIGHDPI * framework.allowHighDpi) | (SDL_WINDOW_RESIZABLE * resizable);
+	int flags = (SDL_WINDOW_ALLOW_HIGHDPI * framework.allowHighDpi) | (SDL_WINDOW_RESIZABLE * resizable);
 	
+#if ENABLE_OPENGL
+	flags |= SDL_WINDOW_OPENGL;
+#endif
+
 	m_window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sx, sy, flags);
+	
+#if ENABLE_METAL
+	metal_attach(m_window);
+#endif
 	
 	m_windowData = new WindowData();
 	memset(m_windowData, 0, sizeof(WindowData));
@@ -2022,7 +2038,11 @@ Window::~Window()
 	
 	delete m_windowData;
 	m_windowData = nullptr;
-	
+
+#if ENABLE_METAL
+	metal_detach(m_window);
+#endif
+
 	SDL_DestroyWindow(m_window);
 	m_window = nullptr;
 }
@@ -2132,8 +2152,15 @@ void pushWindow(Window & window)
 	globals.currentWindow = &window;
 	globals.currentWindowData = window.getWindowData();
 	
-	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 	globals.currentWindowData->makeActive();
+	
+#if ENABLE_OPENGL
+	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
+#endif
+
+#if ENABLE_METAL
+	metal_make_active(globals.currentWindow->getWindow());
+#endif
 }
 
 void popWindow()
@@ -2143,8 +2170,15 @@ void popWindow()
 	globals.currentWindow = window;
 	globals.currentWindowData = window->getWindowData();
 	
-	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 	globals.currentWindowData->makeActive();
+	
+#if ENABLE_OPENGL
+	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
+#endif
+
+#if ENABLE_METAL
+	metal_make_active(globals.currentWindow->getWindow());
+#endif
 }
 
 // -----

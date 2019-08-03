@@ -121,6 +121,35 @@ void metal_attach(SDL_Window * window)
 	}
 }
 
+void metal_detach(SDL_Window * window)
+{
+	@autoreleasepool
+	{
+		auto i = windowDatas.find(window);
+		
+		if (i != windowDatas.end())
+		{
+			auto * windowData = i->second;
+			
+			SDL_SysWMinfo info;
+			SDL_VERSION(&info.version);
+			SDL_GetWindowWMInfo(window, &info);
+			
+			NSView * sdl_view = info.info.cocoa.window.contentView;
+			
+			[sdl_view willRemoveSubview:windowData->metalview];
+
+			[windowData->metalview release];
+			windowData->metalview = nullptr;
+			
+			delete windowData;
+			windowData = nullptr;
+			
+			windowDatas.erase(i);
+		}
+	}
+}
+
 void metal_make_active(SDL_Window * window)
 {
 	auto i = windowDatas.find(window);
@@ -194,11 +223,13 @@ void metal_draw_end()
 	
 	[pd.encoder endEncoding];
 	
+#if 0
 	[pd.cmdbuf addCompletedHandler:
 		^(id<MTLCommandBuffer> _Nonnull)
 		{
-			//NSLog(@"hello done! %@", activeWindowData);
+			NSLog(@"hello done! %@", activeWindowData);
 		}];
+#endif
 
 	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
 	[pd.cmdbuf commit];
@@ -210,9 +241,11 @@ void metal_draw_end()
 	//
 	
 	[pd.encoder release];
+	[pd.renderdesc release];
 	[pd.cmdbuf release];
 	
 	pd.encoder = nullptr;
+	pd.renderdesc = nullptr;
 	pd.cmdbuf = nullptr;
 	
 	[activeWindowData->current_drawable release];
@@ -473,6 +506,7 @@ void popRenderPass()
 	//
 	
 	[pd.encoder release];
+	[pd.renderdesc release];
 	[pd.cmdbuf release];
 	
 	s_renderPasses.pop_back();
