@@ -35,6 +35,11 @@ namespace RNG
 			return value;
 		}
 		
+		int nexti(const int min, const int max)
+		{
+			return min + (next() % (max - min + 1));
+		}
+		
 		float nextf(const float min, const float max)
 		{
 			const float t = (next() % 1000) / 999.f;
@@ -69,6 +74,11 @@ namespace RNG
 		
 		uint32_t next();
 		
+		int nexti(const int min, const int max)
+		{
+			return min + (next() % (max - min + 1));
+		}
+		
 		float nextf(const float min, const float max)
 		{
 			const float t = (next() % 1000) / 999.f;
@@ -100,6 +110,11 @@ namespace RNG
 		void init(const uint32_t seed);
 		
 		uint32_t next();
+		
+		int nexti(const int min, const int max)
+		{
+			return min + (next() % (max - min + 1));
+		}
 		
 		float nextf(const float min, const float max)
 		{
@@ -149,6 +164,11 @@ namespace RNG
 			XORSHIFT_w = (XORSHIFT_w ^ (XORSHIFT_w >> 19)) ^ (t ^ (t >> 8));
 
 			return XORSHIFT_w;
+		}
+		
+		int nexti(const int min, const int max)
+		{
+			return min + (next() % (max - min + 1));
 		}
 		
 		float nextf(const float min, const float max)
