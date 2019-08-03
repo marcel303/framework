@@ -29,6 +29,9 @@ library libsdl2 shared
 	scan_files c path ../libsdl2/src/video/dummy group video/dummy
 	scan_files c path ../libsdl2/src/video/yuv2rgb group video/yuv2rgb
 
+	scan_files h path ../libsdl2/src/ traverse 
+	group headers
+
 	with_platform macos scan_files m path ../libsdl2/src/audio/coreaudio group audio/coreaudio
 	with_platform macos scan_files m path ../libsdl2/src/file/cocoa group file/cocoa
 	with_platform macos scan_files m path ../libsdl2/src/filesystem/cocoa group filesystem/cocoa
