@@ -3,6 +3,9 @@ library libsdl2 shared
 	# SDL_config is overridden for macos. the header path _must_ come before SDL itself
 	with_platform macos header_path libsdl2-support/macos expose
 
+	# SDL_config is overridden for linux. the header path _must_ come before SDL itself
+	with_platform linux header_path libsdl2-support/linux expose
+
 	header_path libsdl2/include
 	header_path libsdl2/include alias_through_copy SDL2 expose
 
@@ -51,6 +54,16 @@ library libsdl2 shared
 	with_platform macos depend_library OpenGL find
 	# weak : QuartzCore
 	# weak : Metal
+
+	with_platform linux scan_files c path libsdl2/src/audio/alsa
+	with_platform linux scan_files c path libsdl2/src/filesystem/unix
+	with_platform linux scan_files c path libsdl2/src/haptic/linux
+	with_platform linux scan_files c path libsdl2/src/joystick/linux
+	with_platform linux scan_files c path libsdl2/src/loadso/dlopen
+	with_platform linux scan_files c path libsdl2/src/power/linux
+	with_platform linux scan_files c path libsdl2/src/loadso/dlopen
+	with_platform linux scan_files c path libsdl2/src/timer/unix
+	with_platform linux depend_package OpenGL
 
 app libsdl2-test-basic
 	add_files libsdl2-support/test-basic.cpp
