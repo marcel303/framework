@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // glReadPixels
 #include "framework.h"
 #include "image.h"
 #include "testBase.h"
@@ -48,10 +49,7 @@ void testDotDetector()
 	Surface surface(sx, sy, false, false, SURFACE_R8);
 	
 	// make sure the surface turns up black and white instead of shades of red when we draw it, by applying a swizzle mask
-	glBindTexture(GL_TEXTURE_2D, surface.getTexture());
-	GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-	checkErrorGL();
+	surface.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
 	uint8_t * surfaceData = new uint8_t[sx * sy];
 	memset(surfaceData, 0xff, sizeof(uint8_t) * sx * sy);
@@ -108,11 +106,11 @@ void testDotDetector()
 	
 	if (useVideo)
 	{
-		mp.openAsync("mocapb.mp4", MP::kOutputMode_PlanarYUV);
+		mp.openAsync("mocap2.mp4", MP::kOutputMode_PlanarYUV);
 	}
 	
 	DotTracker dotTracker;
-	bool useDotTracker = true;
+	bool useDotTracker = false;
 	
 	//
 	
@@ -121,8 +119,8 @@ void testDotDetector()
 	uint64_t averageTimeM = 0;
 	
 	bool useGrid = true;
-	int tresholdFunction = 1;
-	int tresholdValue = 32;
+	int thresholdFunction = 1;
+	int thresholdValue = 32;
 	int maxRadius = 10;
 	
 #if USE_READPIXELS_OPTIMIZE
@@ -160,11 +158,11 @@ void testDotDetector()
 		if (keyboard.wentDown(SDLK_g))
 			useGrid = !useGrid;
 		if (keyboard.wentDown(SDLK_t))
-			tresholdFunction = (tresholdFunction + 1) % 2;
+			thresholdFunction = (thresholdFunction + 1) % 2;
 		if (keyboard.wentDown(SDLK_UP, true))
-			tresholdValue += 1;
+			thresholdValue += 1;
 		if (keyboard.wentDown(SDLK_DOWN, true))
-			tresholdValue -= 1;
+			thresholdValue -= 1;
 		if (keyboard.wentDown(SDLK_a, true))
 			maxRadius += 1;
 		if (keyboard.wentDown(SDLK_z, true) && maxRadius > 1)
@@ -312,10 +310,10 @@ void testDotDetector()
 			checkErrorGL();
 		#endif
 			
-			const int treshold = tresholdFunction == 0 ? 255 - tresholdValue : tresholdValue;
-			const DotDetector::TresholdTest test = tresholdFunction == 0 ? DotDetector::kTresholdTest_GreaterEqual : DotDetector::kTresholdTest_LessEqual;
+			const int threshold = thresholdFunction == 0 ? 255 - thresholdValue : thresholdValue;
+			const DotDetector::ThresholdTest test = thresholdFunction == 0 ? DotDetector::kThresholdTest_GreaterEqual : DotDetector::kThresholdTest_LessEqual;
 			
-			DotDetector::treshold(surfaceData, sx, maskedData, sx, sx, sy, test, treshold);
+			DotDetector::threshold(surfaceData, sx, maskedData, sx, sx, sy, test, threshold);
 			
 		#if USE_READPIXELS_OPTIMIZE
 			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -428,13 +426,13 @@ void testDotDetector()
 			
 			drawText(5, y, fontSize, +1, +1, "detected %d dots. process took %.02fms, average %.02fms", numIslands, (td2 - td1) / 1000.f, averageTime / 1000.f);
 			y += spacing;
-			drawText(5, y, fontSize, +1, +1, "opengl-read took %.02fms, treshold took %.02fms", averageTimeR / 1000.f, averageTimeM / 1000.f);
+			drawText(5, y, fontSize, +1, +1, "opengl-read took %.02fms, threshold took %.02fms", averageTimeR / 1000.f, averageTimeM / 1000.f);
 			y += spacing;
-			drawText(5, y, fontSize, +1, +1, "useGrid: %d, tresholdFunction: %d, tresholdValue: %d", useGrid ? 1 : 0, tresholdFunction, tresholdValue);
+			drawText(5, y, fontSize, +1, +1, "useGrid: %d, thresholdFunction: %d, thresholdValue: %d", useGrid ? 1 : 0, thresholdFunction, thresholdValue);
 			y += spacing;
-			drawText(5, y, fontSize, +1, +1, "G = toggle grid. T = next treshold function. UP/DOWN = change treshold");
+			drawText(5, y, fontSize, +1, +1, "G = toggle grid. T = next threshold function. UP/DOWN = change threshold");
 			y += spacing;
-			drawText(5, y, fontSize, +1, +1, "SPACE = quit test. MOUSE_LBUTTON = enable speed/radius test");
+			drawText(5, y, fontSize, +1, +1, "MOUSE_LBUTTON = enable speed/radius test");
 			y += spacing;
 			y += spacing;
 			drawText(5, y, fontSize, +1, +1, "dotTracker enabled: %d. I = toggle dot tracking", useDotTracker);

@@ -1,0 +1,3 @@
+library tinyxml2 shared
+	add_files tinyxml2.cpp tinyxml2.h
+	header_path . expose

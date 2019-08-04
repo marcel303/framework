@@ -1,0 +1,25 @@
+//#extension GL_EXT_sparse_texture2 : enable
+
+include engine/ShaderPS.txt
+
+shader_in vec2 v_texcoord;
+
+uniform sampler2D u_texture;
+
+void main()
+{
+#if 0
+	vec4 color;
+	
+	int code = sparseTextureEXT(u_texture, v_texcoord, color);
+	
+	if (!sparseTexelsResidentEXT(code))
+	{
+		color = vec4(1.0, 0.0, 0.0, 1.0);
+	}
+#else
+	vec4 color = texture2D(u_texture, v_texcoord);
+#endif
+	
+	shader_fragColor = color;
+}

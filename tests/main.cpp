@@ -1,6 +1,6 @@
 #include "framework.h"
 #include "mediaplayer/MPUtil.h"
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -36,7 +36,7 @@ int main(int argc, char * argv[])
 	//framework.exclusiveFullscreen = true;
 #endif
 	
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		initUi();
 		

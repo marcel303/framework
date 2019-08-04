@@ -27,7 +27,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioNodeTriggerDenom.h"
 
-AUDIO_NODE_TYPE(trigger_denom, AudioNodeTriggerDenom)
+AUDIO_NODE_TYPE(AudioNodeTriggerDenom)
 {
 	typeName = "trigger.denom";
 	
@@ -43,7 +43,7 @@ AudioNodeTriggerDenom::AudioNodeTriggerDenom()
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Interval, kAudioPlugType_Int);
 	addInput(kInput_Trigger, kAudioPlugType_Trigger);
-	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, this);
 }
 
 void AudioNodeTriggerDenom::handleTrigger(const int inputSocketIndex)

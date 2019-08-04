@@ -7,6 +7,8 @@ class MatrixStack;
 class MatrixHandler
 {
 public:
+	virtual ~MatrixHandler() { }
+	
 	virtual void OnMatrixUpdate(MatrixStack* stack, const Mat4x4& mat) = 0;
 };
 

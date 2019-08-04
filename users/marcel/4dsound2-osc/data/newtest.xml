@@ -1,0 +1,95 @@
+<graph nextNodeId="53" nextLinkId="59">
+    <node id="31" typeName="draw.display"/>
+    <node id="32" typeName="draw.surface">
+        <input socket="clear" value="0"/>
+        <input socket="clearColor" value="5750ffff"/>
+        <input socket="format" value="1"/>
+        <input socket="multiply" value="1"/>
+        <input socket="multiplyColor" value="fff6eaff"/>
+        <input socket="viewMode" value="0"/>
+    </node>
+    <node id="34" typeName="draw.text">
+        <input socket="color" value="ffffff15"/>
+        <input socket="sizeMode" value="0"/>
+        <input socket="text" value="Ab"/>
+    </node>
+    <node id="35" typeName="draw.sequence"/>
+    <node id="40" typeName="draw.transform2d">
+        <input socket="scale" value="0.800000"/>
+    </node>
+    <node id="41" typeName="gen.sine">
+        <input socket="frequency" value="0.100000"/>
+    </node>
+    <node id="42" typeName="in.string">
+        <input socket="name" value="id"/>
+    </node>
+    <node id="46" typeName="osc.sheet">
+        <input socket="" value="0.800000"/>
+        <input socket="Enable" value="1"/>
+        <input socket="Speed" value="1.000000"/>
+        <input socket="XEnable" value="1"/>
+        <input socket="YEnable" value="1"/>
+        <input socket="YFrequency" value="2.000000"/>
+        <input socket="ZEnable" value="1"/>
+        <input socket="ZFrequency" value="3.000000"/>
+        <input socket="colorHue" value="170"/>
+        <input socket="enableControlByAuto" value="1"/>
+        <input socket="enabled" value="1"/>
+        <input socket="groupPrefix" value="0"/>
+        <input socket="noteEnabled" value="1"/>
+        <input socket="oscEndpoint" value="newpath"/>
+        <input socket="oscPrefix" value="/creature/0"/>
+        <input socket="oscSheet" value="newpath.txt"/>
+        <input socket="particleOpacity" value="0.800000"/>
+        <input socket="startX" value="3"/>
+        <input socket="startY" value="2"/>
+    </node>
+    <node id="48" typeName="osc.endpoint">
+        <input socket="name" value="newpath"/>
+        <input socket="recv" value="0"/>
+        <input socket="sendIpAddress" value="127.0.0.1"/>
+        <input socket="sendPort" value="8000"/>
+    </node>
+    <node id="50" typeName="string.append">
+        <input socket="a" value="/creature/"/>
+    </node>
+    <node id="52" typeName="in.string">
+        <input socket="name" value="id"/>
+    </node>
+    <link id="44" srcNodeId="31" srcNodeSocketName="image" dstNodeId="32" dstNodeSocketName="image"/>
+    <link id="47" srcNodeId="32" srcNodeSocketName="source" dstNodeId="35" dstNodeSocketName="any"/>
+    <link id="49" srcNodeId="35" srcNodeSocketName="01" dstNodeId="40" dstNodeSocketName="transform"/>
+    <link id="50" srcNodeId="40" srcNodeSocketName="any" dstNodeId="34" dstNodeSocketName="any"/>
+    <link id="51" srcNodeId="40" srcNodeSocketName="angle_norm" dstNodeId="41" dstNodeSocketName="value">
+        <param name="out.max" value="0.200000"/>
+        <param name="out.min" value="-2.000000"/>
+    </link>
+    <link id="53" srcNodeId="34" srcNodeSocketName="text" dstNodeId="42" dstNodeSocketName="value"/>
+    <link id="57" srcNodeId="50" srcNodeSocketName="b" dstNodeId="52" dstNodeSocketName="value"/>
+    <link id="58" srcNodeId="46" srcNodeSocketName="oscPrefix" dstNodeId="50" dstNodeSocketName="result"/>
+    <editor nextZKey="397">
+        <dragAndZoom x="444.1031494140625" y="551.533935546875" zoom="0.78208649158477783"/>
+        <nodeDatas>
+            <nodeData nodeId="31" x="512" y="528" zKey="266"/>
+            <nodeData nodeId="32" x="384" y="528" zKey="363"/>
+            <nodeData nodeId="34" x="-16" y="528" zKey="362"/>
+            <nodeData nodeId="35" x="256" y="528" zKey="342"/>
+            <nodeData nodeId="40" x="128" y="528" zKey="361"/>
+            <nodeData nodeId="41" x="-16" y="736" zKey="356"/>
+            <nodeData nodeId="42" x="-144" y="528" displayName="id" zKey="290"/>
+            <nodeData nodeId="46" x="688" y="240" zKey="396"/>
+            <nodeData nodeId="48" x="400" y="272" zKey="380" folded="1"/>
+            <nodeData nodeId="50" x="480" y="336" zKey="391"/>
+            <nodeData nodeId="52" x="352" y="352" zKey="393"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="43" x="512" y="592" zKey="294" nodeId="32" dstSocketName="image" sx="134" sy="158"/>
+        </visualizers>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="192743cc" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0.0050000054761767387" r="0.19463661313056946" g="0.24416729807853699" b="1" a="1"/>
+                <key t="1" r="1" g="0.16160249710083008" b="0.62492763996124268" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

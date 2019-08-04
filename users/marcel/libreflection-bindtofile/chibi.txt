@@ -1,0 +1,8 @@
+library libreflection-bindtofile
+	# note : we depend on framework to detect file changes
+	depend_library framework
+	depend_library libreflection
+	depend_library libreflection-jsonio
+	depend_library libreflection-textio
+	add_files reflection-bindtofile.cpp reflection-bindtofile.h
+	header_path . expose

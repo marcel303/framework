@@ -1,9 +1,9 @@
 #include "particle.h"
 #include "tinyxml2.h"
 #include <algorithm>
-#include <assert.h>
 #include <cmath>
 
+#include "Debugging.h" // Assert
 #include "Log.h" // LOG_ functions
 #include "StringEx.h" // _s functions
 #include "ui.h" // srgb <-> linear
@@ -14,7 +14,7 @@ using namespace tinyxml2;
 
 //
 
-#if __SSE2__
+#ifdef __SSE2__
 	#include <xmmintrin.h>
 
 	#if defined(__GNUC__)
@@ -71,16 +71,6 @@ ParticleColor::ParticleColor(float r, float g, float b, float a)
 	rgba[1] = g;
 	rgba[2] = b;
 	rgba[3] = a;
-}
-
-bool ParticleColor::operator==(const ParticleColor & other) const
-{
-	return memcmp(this, &other, sizeof(ParticleColor)) == 0;
-}
-
-bool ParticleColor::operator!=(const ParticleColor & other) const
-{
-	return !(*this == other);
 }
 
 void ParticleColor::set(float r, float g, float b, float a)
@@ -157,45 +147,49 @@ bool ParticleCurve::Key::operator<(const Key & other) const
 }
 
 ParticleCurve::ParticleCurve()
+	: keys(nullptr)
+	, numKeys(0)
 {
 	setLinear(0.f, 1.f);
 }
 
 void ParticleCurve::setLinear(float v1, float v2)
 {
-	memset(this, 0, sizeof(*this));
-
-	keys[0].t = 0.f;
-	keys[0].value = v1;
-	keys[1].t = 1.f;
-	keys[1].value = v2;
-	numKeys = 2;
+	clearKeys();
+	
+	Key * k1 = allocKey();
+	k1->t = 0.f;
+	k1->value = v1;
+	
+	Key * k2 = allocKey();
+	k2->t = 1.f;
+	k2->value = v2;
 }
 
-bool ParticleCurve::allocKey(Key *& key)
+ParticleCurve::Key * ParticleCurve::allocKey()
 {
-	if (numKeys == kMaxKeys)
-		return false;
-	else
-	{
-		key = &keys[numKeys++];
-		return true;
-	}
+	keys = (Key*)realloc(keys, (numKeys + 1) * sizeof(Key));
+	
+	return &keys[numKeys++];
 }
 
 void ParticleCurve::freeKey(Key *& key)
 {
 	const int index = key - keys;
+	
 	for (int i = index + 1; i < numKeys; ++i)
 		keys[i - 1] = keys[i];
+	
+	keys = (Key*)realloc(keys, (numKeys - 1) * sizeof(Key));
+	
 	numKeys--;
 }
 
 void ParticleCurve::clearKeys()
 {
-	for (int i = 0; i < numKeys; ++i)
-		keys[i] = Key();
-
+	free(keys);
+	keys = nullptr;
+	
 	numKeys = 0;
 }
 
@@ -210,9 +204,9 @@ ParticleCurve::Key * ParticleCurve::sortKeys(Key * keyToReturn)
 
 	if (keyToReturn)
 	{
-		Key keyValues[kMaxKeys];
+		Key * keyValues = (Key*)alloca(numKeys * sizeof(Key));
 		memcpy(keyValues, keys, sizeof(Key) * numKeys);
-		Key * keysForSorting[kMaxKeys];
+		Key ** keysForSorting = (Key**)alloca(numKeys * sizeof(Key*));
 		for (int i = 0; i < numKeys; ++i)
 			keysForSorting[i] = &keys[i];
         std::sort(keysForSorting, keysForSorting + numKeys, compareKeysByTime);
@@ -283,17 +277,16 @@ void ParticleCurve::save(XMLPrinter * printer) const
 
 void ParticleCurve::load(const XMLElement * elem)
 {
-	memset(this, 0, sizeof(*this));
-
+	clearKeys();
+	
+	//
+	
 	for (const XMLElement * keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
 	{
-		if (numKeys < kMaxKeys)
-		{
-			Key & key = keys[numKeys++];
+		Key * key = allocKey();
 
-			key.t = floatAttrib(keyElem, "t", 0.f);
-			key.value = floatAttrib(keyElem, "value", 0.f);
-		}
+		key->t = floatAttrib(keyElem, "t", 0.f);
+		key->value = floatAttrib(keyElem, "value", 0.f);
 	}
 
 	if (numKeys == 0)
@@ -315,58 +308,39 @@ bool ParticleColorCurve::Key::operator<(const Key & other) const
 	return t < other.t;
 }
 
-bool ParticleColorCurve::Key::operator==(const Key & other) const
-{
-	return memcmp(this, &other, sizeof(Key)) == 0;
-}
-
-bool ParticleColorCurve::Key::operator!=(const Key & other) const
-{
-	return !(*this == other);
-}
-
 //
 
 ParticleColorCurve::ParticleColorCurve()
-	: numKeys(0)
+	: keys(nullptr)
+	, numKeys(0)
 	, useLinearColorSpace(true)
 {
 }
 
-bool ParticleColorCurve::operator==(const ParticleColorCurve & other) const
+ParticleColorCurve::Key * ParticleColorCurve::allocKey()
 {
-	return memcmp(this, &other, sizeof(ParticleColorCurve)) == 0;
-}
-
-bool ParticleColorCurve::operator!=(const ParticleColorCurve & other) const
-{
-	return !(*this == other);
-}
-
-bool ParticleColorCurve::allocKey(Key *& key)
-{
-	if (numKeys == kMaxKeys)
-		return false;
-	else
-	{
-		key = &keys[numKeys++];
-		return true;
-	}
+	keys = (Key*)realloc(keys, (numKeys + 1) * sizeof(Key));
+	
+	return &keys[numKeys++];
 }
 
 void ParticleColorCurve::freeKey(Key *& key)
 {
 	const int index = key - keys;
+	
 	for (int i = index + 1; i < numKeys; ++i)
 		keys[i - 1] = keys[i];
+	
+	keys = (Key*)realloc(keys, (numKeys - 1) * sizeof(Key));
+	
 	numKeys--;
 }
 
 void ParticleColorCurve::clearKeys()
 {
-	for (int i = 0; i < numKeys; ++i)
-		keys[i] = Key();
-
+	free(keys);
+	keys = nullptr;
+	
 	numKeys = 0;
 }
 
@@ -377,13 +351,13 @@ static bool compareKeysByTime2(const ParticleColorCurve::Key * k1, const Particl
 
 ParticleColorCurve::Key * ParticleColorCurve::sortKeys(Key * keyToReturn)
 {
-	Key * result = 0;
+	Key * result = nullptr;
 
 	if (keyToReturn)
 	{
-		Key keyValues[kMaxKeys];
-		memcpy(keyValues, keys, sizeof(Key) * numKeys);
-		Key * keysForSorting[kMaxKeys];
+		Key * keyValues = (Key*)alloca(numKeys * sizeof(Key));
+		memcpy(keyValues, keys, numKeys * sizeof(Key));
+		Key ** keysForSorting = (Key**)alloca(numKeys * sizeof(Key*));
 		for (int i = 0; i < numKeys; ++i)
 			keysForSorting[i] = &keys[i];
         std::sort(keysForSorting, keysForSorting + numKeys, compareKeysByTime2);
@@ -407,19 +381,13 @@ void ParticleColorCurve::setLinear(const ParticleColor & v1, const ParticleColor
 {
 	clearKeys();
 
-	Key * k1;
-	if (allocKey(k1))
-	{
-		k1->t = 0.f;
-		k1->color = v1;
-	}
+	Key * k1 = allocKey();
+	k1->t = 0.f;
+	k1->color = v1;
 
-	Key * k2;
-	if (allocKey(k2))
-	{
-		k2->t = 1.f;
-		k2->color = v2;
-	}
+	Key * k2 = allocKey();
+	k2->t = 1.f;
+	k2->color = v2;
 
 	sortKeys();
 }
@@ -428,19 +396,13 @@ void ParticleColorCurve::setLinearAlpha(float v1, float v2)
 {
 	clearKeys();
 
-	Key * k1;
-	if (allocKey(k1))
-	{
-		k1->t = 0.f;
-		k1->color.set(1.f, 1.f, 1.f, v1);
-	}
+	Key * k1 = allocKey();
+	k1->t = 0.f;
+	k1->color.set(1.f, 1.f, 1.f, v1);
 
-	Key * k2;
-	if (allocKey(k2))
-	{
-		k2->t = 1.f;
-		k2->color.set(1.f, 1.f, 1.f, v2);
-	}
+	Key * k2 = allocKey();
+	k2->t = 1.f;
+	k2->color.set(1.f, 1.f, 1.f, v2);
 
 	sortKeys();
 }
@@ -506,17 +468,9 @@ void ParticleColorCurve::load(const XMLElement * elem)
 	
 	for (auto keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
 	{
-		Key * key;
-
-		if (allocKey(key))
-		{
-			key->t = floatAttrib(keyElem, "t", 0.f);
-			key->color.load(keyElem);
-		}
-		else
-		{
-			LOG_WRN("color key allocation failed. too many keys. maxKeys=%d", kMaxKeys);
-		}
+		Key * key = allocKey();
+		key->t = floatAttrib(keyElem, "t", 0.f);
+		key->color.load(keyElem);
 	}
 
 	sortKeys();
@@ -542,16 +496,6 @@ ParticleEmitterInfo::ParticleEmitterInfo()
 {
 	memset(name, 0, sizeof(name));
 	memset(materialName, 0, sizeof(materialName));
-}
-
-bool ParticleEmitterInfo::operator==(const ParticleEmitterInfo & other) const
-{
-	return memcmp(this, &other, sizeof(ParticleEmitterInfo)) == 0;
-}
-
-bool ParticleEmitterInfo::operator!=(const ParticleEmitterInfo & other) const
-{
-	return !(*this == other);
 }
 
 void ParticleEmitterInfo::save(XMLPrinter * printer) const
@@ -668,16 +612,6 @@ ParticleInfo::ParticleInfo()
 	, sortMode(kSortMode_YoungestFirst)
 	, blendMode(kBlendMode_AlphaBlended)
 {
-}
-
-bool ParticleInfo::operator==(const ParticleInfo & other) const
-{
-	return memcmp(this, &other, sizeof(ParticleInfo)) == 0;
-}
-
-bool ParticleInfo::operator!=(const ParticleInfo & other) const
-{
-	return !(*this == other);
 }
 
 bool ParticleInfo::allocBurst(Burst *& burst)
@@ -1030,8 +964,8 @@ ParticlePool::ParticlePool()
 
 ParticlePool::~ParticlePool()
 {
-	assert(head == 0);
-	assert(tail == 0);
+	Assert(head == 0);
+	Assert(tail == 0);
 }
 
 Particle * ParticlePool::allocParticle()
@@ -1075,8 +1009,8 @@ Particle * ParticlePool::freeParticle(Particle * p)
 ParticleSystem::~ParticleSystem()
 {
 	emitter.clearParticles(pool);
-	assert(pool.head == 0);
-	assert(pool.tail == 0);
+	Assert(pool.head == 0);
+	Assert(pool.tail == 0);
 }
 
 bool ParticleSystem::tick(const ParticleCallbacks & cbs, const float gravityX, const float gravityY, float dt)
@@ -1099,7 +1033,7 @@ void ParticleSystem::restart()
 
 bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float _timeStep, const float gravityX, const float gravityY, Particle & p)
 {
-	assert(p.life > 0.f);
+	Assert(p.life > 0.f);
 
 	// clamp timeStep to available life
 	
@@ -1151,7 +1085,7 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 			p.speed[0] -= nx * d * (1.f + pi.bounciness);
 			p.speed[1] -= ny * d * (1.f + pi.bounciness);
 			
-		#if __SSE2__
+		#ifdef __SSE2__
 			const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])), 0);
 		#else
 			const float particleSpeed = hypotf(p.speed[0], p.speed[1] * p.speed[1]);
@@ -1178,7 +1112,7 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 	}
 
 	const float particleLife = 1.f - p.life;
-#if __SSE2__
+#ifdef __SSE2__
 	const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])), 0);
 #else
 	const float particleSpeed = hypotf(p.speed[0], p.speed[1]);
@@ -1235,7 +1169,7 @@ void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, co
 			// Sub-emitter cannot be the same as the current emitter. Otherwise, we may get into a loop.
 			// Note that this doesn't protect against getting into a loop in a roundabout fashion.. be
 			// guarding against this is much more complicated than this simple check here.
-			assert(subPi != &pi);
+			Assert(subPi != &pi);
 
 			if (subPi != &pi)
 			{

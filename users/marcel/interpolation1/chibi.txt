@@ -1,0 +1,4 @@
+app marcel-interpolation1
+	depend_library framework
+	depend_library imgui-framework
+	add_files main.cpp

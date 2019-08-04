@@ -1,3 +1,4 @@
+#include <GL/glew.h> // glReadPixels
 #include "AmbisonicEncoder.h"
 #include "AmbisonicEncoderDist.h"
 #include "AmbisonicMicrophone.h"
@@ -300,6 +301,8 @@ struct ImageCapture
 
 typedef std::function<void(PcmAudioCapture&)> AVCapture_AudioCaptureHandler;
 
+// todo : make AV capture object shared
+
 struct AVCaptureObject
 {
 	int audioChannelCount;
@@ -439,7 +442,7 @@ struct AVCaptureObject
 
 int main(int argc, char * argv[])
 {
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	PcmAudioCapture audioCapture;

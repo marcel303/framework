@@ -1,4 +1,3 @@
-#include <algorithm>
 #include "Channel.h"
 #include "ChannelManager.h"
 #include "NetDiag.h"
@@ -6,6 +5,7 @@
 #include "NetStats.h"
 #include "NetTimer.h"
 #include "PacketDispatcher.h"
+#include <algorithm>
 
 #define LOG_CHANNEL_DBG(fmt, ...) LOG_DBG("channel [%09u]: " # fmt, static_cast<uint32_t>(m_id), __VA_ARGS__)
 //#define LOG_CHANNEL_DBG(fmt, ...) LOG_INF("channel [%09u]: " # fmt, static_cast<uint32_t>(m_id), __VA_ARGS__)

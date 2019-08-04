@@ -27,9 +27,10 @@
 
 #include "framework.h"
 #include "graph.h"
+#include "graphEdit.h"
+#include "ui.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
-#include "../libparticle/ui.h"
 #include <algorithm>
 
 #define FILENAME "testRibbon2.xml"
@@ -55,11 +56,11 @@ int main(int argc, char * argv[])
 
 	framework.enableRealTimeEditing = true;
 	
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		initUi();
 		
-		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
+		Graph_TypeDefinitionLibrary typeDefinitionLibrary;
 		createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 		
 		VfxGraph * vfxGraph = nullptr;
@@ -87,7 +88,7 @@ int main(int argc, char * argv[])
 			
 			vfxGraph->tick(VISUALS_SX, VISUALS_SY, timeStep);
 			
-			const GLuint texture = vfxGraph->traverseDraw(VISUALS_SX, VISUALS_SY);
+			const GxTextureId texture = vfxGraph->traverseDraw(VISUALS_SX, VISUALS_SY);
 			
 			pushWindow(visualsWindow);
 			{
@@ -120,6 +121,8 @@ int main(int argc, char * argv[])
 		vfxGraph = nullptr;
 		
 		shutUi();
+
+		Font("calibri.ttf").saveCache();
 		
 		framework.shutdown();
 	}

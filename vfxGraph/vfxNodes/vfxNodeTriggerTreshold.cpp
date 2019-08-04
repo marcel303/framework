@@ -27,7 +27,7 @@
 
 #include "vfxNodeTriggerTreshold.h"
 
-VFX_NODE_TYPE(VfxNodeTriggerTreshold)
+VFX_NODE_TYPE(VfxNodeTriggerThreshold)
 {
 	typeName = "trigger.treshold";
 	
@@ -40,14 +40,14 @@ VFX_NODE_TYPE(VfxNodeTriggerTreshold)
 	out("wentDown!", "trigger");
 }
 
-VfxNodeTriggerTreshold::VfxNodeTriggerTreshold()
+VfxNodeTriggerThreshold::VfxNodeTriggerThreshold()
 	: VfxNodeBase()
 	, oldValue(0.f)
 	, outputValue(0.f)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Value, kVfxPlugType_Float);
-	addInput(kInput_Treshold, kVfxPlugType_Float);
+	addInput(kInput_Threshold, kVfxPlugType_Float);
 	addInput(kInput_UpValue, kVfxPlugType_Float);
 	addInput(kInput_DownValue, kVfxPlugType_Float);
 	addOutput(kOutput_Value, kVfxPlugType_Float, &outputValue);
@@ -55,18 +55,18 @@ VfxNodeTriggerTreshold::VfxNodeTriggerTreshold()
 	addOutput(kOutput_WentDown, kVfxPlugType_Trigger, nullptr);
 }
 
-void VfxNodeTriggerTreshold::tick(const float dt)
+void VfxNodeTriggerThreshold::tick(const float dt)
 {
-	vfxCpuTimingBlock(VfxNodeTriggerTreshold);
+	vfxCpuTimingBlock(VfxNodeTriggerThreshold);
 	
 	const float value = getInputFloat(kInput_Value, 0.f);
-	const float treshold = getInputFloat(kInput_Treshold, 0.f);
+	const float threshold = getInputFloat(kInput_Threshold, 0.f);
 	
-	const bool wasDown = oldValue < treshold;
-	const bool wasUp = oldValue > treshold;
+	const bool wasDown = oldValue < threshold;
+	const bool wasUp = oldValue > threshold;
 
-	const bool isDown = value < treshold;
-	const bool isUp = value > treshold;
+	const bool isDown = value < threshold;
+	const bool isUp = value > threshold;
 
 	oldValue = value;
 

@@ -1,0 +1,44 @@
+include engine/ShaderPS.txt
+
+uniform mat4x4 projectionToView;
+
+uniform vec3 lightDir_view;
+uniform vec3 lightColor1;
+uniform vec3 lightColor2;
+
+uniform sampler2D depthTexture;
+uniform sampler2D normalTexture;
+
+shader_in vec2 texcoord;
+
+vec3 depthToViewPosition(float depth, vec2 texcoord, mat4x4 projectionToView)
+{
+	vec3 coord = vec3(texcoord, depth) * 2.0 - vec3(1.0);
+
+	vec4 position_projection = vec4(coord, 1.0);
+	vec4 position_view = projectionToView * position_projection;
+
+	position_view /= position_view.w;
+
+	return position_view.xyz;
+}
+
+void main()
+{
+	float camera_view_depth = texture(depthTexture, texcoord).x;
+
+	if (camera_view_depth == 1.0)
+	{
+		// scene background
+		shader_fragColor = vec4(0.0);
+		return;
+	}
+
+	vec3 normal_view = texture(normalTexture, texcoord).xyz;
+
+	float value = dot(lightDir_view, normal_view);
+
+	vec3 lightColor = mix(lightColor1, lightColor2, (value + 1.0) * 0.5);
+
+	shader_fragColor = vec4(lightColor, 1.0);
+}

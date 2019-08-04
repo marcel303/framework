@@ -40,9 +40,10 @@
 
 #define EXTENDED_INPUTS 1
 
+struct Graph_TypeDefinitionLibrary;
 struct GraphEdit_ResourceEditorBase;
-struct GraphEdit_TypeDefinitionLibrary;
 struct GraphNode;
+struct GxTexture;
 class Surface;
 
 struct VfxTransform;
@@ -437,7 +438,7 @@ struct VfxPlug
 	mutable VfxFloatArray floatArray;
 #endif
 
-	bool editorIsTriggered; // only here for real-time connection with graph editor
+	int editorIsTriggeredTick; // only here for real-time connection with graph editor
 	
 	VfxPlug()
 		: type(kVfxPlugType_None)
@@ -449,7 +450,7 @@ struct VfxPlug
 	#if EXTENDED_INPUTS
 		, floatArray()
 	#endif
-		, editorIsTriggered(false)
+		, editorIsTriggeredTick(false)
 	{
 	}
 	
@@ -565,6 +566,7 @@ struct VfxNodeDescription
 	void add(const char * name, const VfxImageBase & image);
 	void add(const char * name, const VfxImageCpu & image);
 	void add(const VfxChannel & channel);
+	void addGxTexture(const char * name, const GxTexture & texture);
 	void addOpenglTexture(const char * name, const uint32_t id);
 	
 	void newline();
@@ -589,8 +591,17 @@ struct VfxNodeBase
 	
 	struct DynamicInput
 	{
+		struct EnumElem
+		{
+			std::string name;
+			std::string valueText;
+		};
+		
 		std::string name;
 		VfxPlugType type;
+		std::string defaultValue;
+		
+		std::vector<EnumElem> enumElems;
 	};
 	
 	struct DynamicOutput
@@ -614,7 +625,7 @@ struct VfxNodeBase
 	
 	int lastTickTraversalId;
 	int lastDrawTraversalId;
-	bool editorIsTriggered; // only here for real-time connection with graph editor
+	int editorIsTriggeredTick; // only here for real-time connection with graph editor
 	mutable std::string editorIssue;
 	
 	bool isPassthrough;
@@ -666,7 +677,7 @@ struct VfxNodeBase
 		}
 	}
 	
-	void reconnectDynamicInputs(const int dstNodeId = -1);
+	void reconnectDynamicInputs();
 	void setDynamicInputs(const DynamicInput * newInputs, const int numInputs);
 	void setDynamicOutputs(const DynamicOutput * newOutputs, const int numOutputs);
 	
@@ -835,6 +846,8 @@ struct VfxEnumTypeRegistration
 	
 	std::vector<Elem> elems;
 	
+	std::vector<Elem> (*getElems)();
+	
 	VfxEnumTypeRegistration();
 	
 	void elem(const char * name, const int value = -1);
@@ -888,7 +901,7 @@ struct VfxNodeTypeRegistration
 	
 	VfxNodeBase * (*create)();
 	
-	GraphEdit_ResourceEditorBase * (*createResourceEditor)();
+	GraphEdit_ResourceEditorBase * (*createResourceEditor)(void * data);
 	
 	std::string typeName;
 	std::string displayName;
@@ -925,8 +938,8 @@ struct VfxNodeTypeRegistration
 extern VfxEnumTypeRegistration * g_vfxEnumTypeRegistrationList;
 extern VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList;
 
-void createVfxValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
-void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList);
-void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxNodeTypeRegistration * registrationList);
+void createVfxValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
+void createVfxEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList);
+void createVfxNodeTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxNodeTypeRegistration * registrationList);
 
-void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * enumRegistrationList, const VfxNodeTypeRegistration * nodeRegistrationList);
+void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * enumRegistrationList, const VfxNodeTypeRegistration * nodeRegistrationList);

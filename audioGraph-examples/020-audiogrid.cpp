@@ -28,8 +28,8 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "framework.h"
-#include "soundmix.h"
 #include <algorithm>
 #include <cmath>
 
@@ -63,7 +63,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		// initialize audio related systems
 		
@@ -71,7 +71,7 @@ int main(int argc, char * argv[])
 		Assert(mutex != nullptr);
 
 		AudioVoiceManagerBasic voiceMgr;
-		voiceMgr.init(mutex, CHANNEL_COUNT, CHANNEL_COUNT);
+		voiceMgr.init(mutex, CHANNEL_COUNT);
 		voiceMgr.outputStereo = true;
 
 		AudioGraphManager_Basic audioGraphMgr(true);
@@ -147,7 +147,7 @@ int main(int argc, char * argv[])
 				}
 			}
 			
-			// when using ramping when freeing instances, instances are actually still processed after being 'freed'. to ensure they're really freed once ramping is done, tickMain needs to be called regularly. we avoid freeing audio graphs on the audio thread, as the operation could be quite heavy and we don't want our audio to hitch
+			// when using ramping when freeing instances, instances are actually still being processed after being 'freed'. to ensure they're really freed once ramping is done, tickMain needs to be called regularly. we avoid freeing audio graphs on the audio thread, as the operation could be quite heavy and we don't want our audio to hitch
 			audioGraphMgr.tickMain();
 			
 			// draw

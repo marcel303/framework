@@ -4,12 +4,13 @@ include engine/ShaderCommon.txt
 
 // vertex streams
 
-shader_attrib vec4 in_position4;
-shader_attrib vec3 in_normal;
-shader_attrib vec4 in_color;
-shader_attrib vec2 in_texcoord;
-shader_attrib vec4 in_skinningBlendIndices;
-shader_attrib vec4 in_skinningBlendWeights;
+shader_attrib vec4 in_position4            VS_POSITION
+shader_attrib vec3 in_normal               VS_NORMAL
+shader_attrib vec4 in_color                VS_COLOR
+shader_attrib vec2 in_texcoord0            VS_TEXCOORD0
+shader_attrib vec2 in_texcoord1            VS_TEXCOORD1
+shader_attrib vec4 in_skinningBlendIndices VS_BLEND_INDICES
+shader_attrib vec4 in_skinningBlendWeights VS_BLEND_WEIGHTS
 
 #define in_position in_position4.xyz
 
@@ -38,6 +39,16 @@ vec4 objectToWorld(vec4 v)
 	return ModelViewMatrix * v;
 }
 
+vec4 objectToView(vec4 v)
+{
+	return ModelViewMatrix * v;
+}
+
+vec3 objectToView3(vec3 v)
+{
+	return (ModelViewMatrix * vec4(v, 0.0)).xyz;
+}
+
 vec4 objectToProjection(vec4 v)
 {
 	return ModelViewProjectionMatrix * v;
@@ -48,7 +59,7 @@ vec4 worldToProjection(vec4 v)
 	return ProjectionMatrix * v;
 }
 
-vec4 objectToWorld_Skinned(ivec4 indices, vec4 weights, vec4 v)
+vec4 boneToObject_Skinned(ivec4 indices, vec4 weights, vec4 v)
 {
 	return
 		skinningMatrices[indices.x] * v * weights.x +
@@ -57,7 +68,7 @@ vec4 objectToWorld_Skinned(ivec4 indices, vec4 weights, vec4 v)
 		skinningMatrices[indices.w] * v * weights.w;
 }
 
-vec4 objectToWorld_HardSkinned(ivec4 indices, vec4 weights, vec4 v)
+vec4 boneToObject_HardSkinned(ivec4 indices, vec4 weights, vec4 v)
 {
 	return
 		skinningMatrices[indices.x] * v;
@@ -90,7 +101,8 @@ vec4 unpackColor()
 
 vec2 unpackTexcoord(int index)
 {
-	if (index == 0) return in_texcoord;
+	if (index == 0) return in_texcoord0;
+	if (index == 1) return in_texcoord1;
 	return vec2(0.0, 0.0);
 }
 

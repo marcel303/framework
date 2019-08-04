@@ -4,18 +4,21 @@
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager4D.h"
 #include "framework.h"
+#include "graphEdit.h"
 #include "Noise.h"
 #include "objects/paobject.h"
+#include "oscEndpointMgr.h"
+#include "pcmDataCache.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 #include "vfxNodeBase.h"
 #include "vfxNodes/vfxNodeDisplay.h"
-#include "vfxNodes/oscEndpointMgr.h"
+#include <algorithm>
 
 #include "mechanism.h"
 #include "thermalizer.h"
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 //
 
@@ -38,6 +41,8 @@ static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 extern SDL_mutex * g_vfxAudioMutex;
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;
+
+extern OscEndpointMgr g_oscEndpointMgr;
 
 enum Editor
 {
@@ -158,7 +163,7 @@ struct AudioNodeMechanism : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(mechanism, AudioNodeMechanism)
+AUDIO_NODE_TYPE(AudioNodeMechanism)
 {
 	typeName = "mechanism";
 	
@@ -563,7 +568,7 @@ struct AudioNodeRandom : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(random, AudioNodeRandom)
+AUDIO_NODE_TYPE(AudioNodeRandom)
 {
 	typeName = "random";
 	
@@ -577,7 +582,7 @@ AUDIO_NODE_TYPE(random, AudioNodeRandom)
 
 #if DO_AUDIODEVICE_SELECT
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 #if LINUX
 	#include <portaudio.h>
@@ -658,24 +663,26 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 
 int main(int argc, char * argv[])
 {
-#if DEPLOYMENT_BUILD
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#elif DEPLOYMENT_BUILD
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
 #endif
 
 	framework.windowX = 10 + 140 + 10;
 	
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	initUi();
 	
 #if ENABLE_AUDIO
-	fillPcmDataCache("bang", false, false);
-	fillPcmDataCache("droplets", false, false);
-	fillPcmDataCache("droplets2", false, false);
-	fillPcmDataCache("env", false, false);
-	fillPcmDataCache("sats", false, false);
+	fillPcmDataCache("bang", false, false, true);
+	fillPcmDataCache("droplets", false, false, true);
+	fillPcmDataCache("droplets2", false, false, true);
+	fillPcmDataCache("env", false, false, true);
+	fillPcmDataCache("sats", false, false, true);
 #endif
 
 	int inputDeviceIndex = -1;
@@ -740,7 +747,7 @@ int main(int argc, char * argv[])
 	s_audioMutex = audioMutex;
 	
 	AudioVoiceManager4D voiceMgr;
-	voiceMgr.init(audioMutex, CHANNEL_COUNT, CHANNEL_COUNT);
+	voiceMgr.init(audioMutex, CHANNEL_COUNT);
 	voiceMgr.outputStereo = outputStereo;
 	s_voiceMgr = &voiceMgr;
 	
@@ -763,7 +770,7 @@ int main(int argc, char * argv[])
 	VfxGraph * vfxGraph = new VfxGraph();
 	RealTimeConnection realTimeConnection(vfxGraph);
 	
-	GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
+	Graph_TypeDefinitionLibrary typeDefinitionLibrary;
 	createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 	GraphEdit graphEdit(GFX_SX, GFX_SY, &typeDefinitionLibrary, &realTimeConnection);
 #if DEPLOYMENT_BUILD && 0
@@ -801,7 +808,7 @@ int main(int argc, char * argv[])
 		}
 		else
 		{
-			inputIsCaptured |= audioGraphMgr.tickEditor(dt, inputIsCaptured);
+			inputIsCaptured |= audioGraphMgr.tickEditor(GFX_SX, GFX_SY, dt, inputIsCaptured);
 			
 			bool isEditing = false;
 			
@@ -875,7 +882,7 @@ int main(int argc, char * argv[])
 		#if ENABLE_AUDIO
 			if (s_editor == kEditor_AudioGraph)
 			{
-				audioGraphMgr.drawEditor();
+				audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 			}
 		#endif
 			

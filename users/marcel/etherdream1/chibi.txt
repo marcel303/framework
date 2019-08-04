@@ -1,0 +1,16 @@
+app marcel-etherdream1
+	depend_library framework
+	depend_library libetherdream
+	add_files main1.cpp
+
+app marcel-etherdream2
+	depend_library framework
+	depend_library imgui-framework
+	depend_library libetherdream
+	add_files main2.cpp
+	add_files laserTypes.h
+	add_files edreamUtils.cpp edreamUtils.h
+	add_files homography.cpp homography.h
+	add_files calibration.cpp calibration.h
+	add_files masking.cpp masking.h
+	add_files noiseModulator.cpp noiseModulator.h

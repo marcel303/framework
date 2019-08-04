@@ -29,11 +29,11 @@
 #include "testBase.h"
 #include "vfxNodeBase.h"
 #include "vfxNodes/imageCpuDelayLine.h"
-#include "vfxNodes/openglTexture.h"
 
 #include "../libvideo/video.h"
 #include "mediaplayer/MPVideoBuffer.h"
 
+#include <algorithm>
 #include <cmath>
 
 extern const int GFX_SX;
@@ -57,7 +57,7 @@ void testImageCpuDelayLine()
 	MediaPlayer * mediaPlayer = new MediaPlayer();
 	mediaPlayer->openAsync(videoFilename, MP::kOutputMode_PlanarYUV);
 	
-	OpenglTexture texture;
+	GxTexture texture;
 	
 	float offset = .5f;
 	
@@ -191,13 +191,13 @@ void testImageCpuDelayLine()
 				{
 					x += padding;
 					
-					if (texture.isChanged(delayedImage.image.sx, delayedImage.image.sy, GL_R8))
+					if (texture.isChanged(delayedImage.image.sx, delayedImage.image.sy, GX_R8_UNORM))
 					{
-						texture.allocate(delayedImage.image.sx, delayedImage.image.sy, GL_R8, true, true);
-						texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+						texture.allocate(delayedImage.image.sx, delayedImage.image.sy, GX_R8_UNORM, true, true);
+						texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 					}
 					
-					texture.upload(delayedImage.image.channel[0].data, 1, delayedImage.image.channel[0].pitch / 1, GL_RED, GL_UNSIGNED_BYTE);
+					texture.upload(delayedImage.image.channel[0].data, 1, delayedImage.image.channel[0].pitch / 1);
 					
 					//
 					

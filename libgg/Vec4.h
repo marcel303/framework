@@ -2,7 +2,12 @@
 
 #include "Vec2.h"
 #include "Vec3.h"
-#include <math.h>
+
+#if defined(__clang__)
+	// use builtin for sqrtf
+#else
+	#include <math.h>
+#endif
 
 class Vec4
 {
@@ -27,6 +32,19 @@ public:
 		m_v[2] = xyz[2];
 		m_v[3] = w;
 	}
+	
+	inline void Set(float x, float y, float z, float w)
+	{
+		m_v[0] = x;
+		m_v[1] = y;
+		m_v[2] = z;
+		m_v[3] = w;
+	}
+	
+	inline void SetZero()
+	{
+		m_v[0] = m_v[1] = m_v[2] = m_v[3] = 0.0f;
+	}
 
 	inline float CalcSize() const
 	{
@@ -36,7 +54,11 @@ public:
 			m_v[2] * m_v[2] +
 			m_v[3] * m_v[3];
 		
+	#if defined(__clang__)
+		return __builtin_sqrtf(sq);
+	#else
 		return sqrtf(sq);
+	#endif
 	}
 
 	inline float CalcSizeSq() const
@@ -187,25 +209,23 @@ public:
 
 		return r;
 	}
-
-	inline Vec4 & operator=(const Vec2 & v)
+	
+	inline bool operator==(const Vec4 & other) const
 	{
-		m_v[0] = v[0];
-		m_v[1] = v[1];
-		m_v[2] = 0.0f;
-		m_v[3] = 0.0f;
-
-		return *this;
+		return
+			m_v[0] == other.m_v[0] &&
+			m_v[1] == other.m_v[1] &&
+			m_v[2] == other.m_v[2] &&
+			m_v[3] == other.m_v[3];
 	}
 
-	inline Vec4 & operator=(const Vec3 & v)
+	inline bool operator!=(const Vec4 & other) const
 	{
-		m_v[0] = v[0];
-		m_v[1] = v[1];
-		m_v[2] = v[2];
-		m_v[3] = 0.0f;
-
-		return *this;
+		return
+			m_v[0] != other.m_v[0] ||
+			m_v[1] != other.m_v[1] ||
+			m_v[2] != other.m_v[2] ||
+			m_v[3] != other.m_v[3];
 	}
 
 	inline float & operator[](int index)

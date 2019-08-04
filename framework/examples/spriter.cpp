@@ -39,30 +39,45 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	if (!framework.init(argc, (const char**)argv, VIEW_SX, VIEW_SY))
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
+	
+	// load the spriter file and create a new state for storing animation progress etc
 	
 	Spriter spriter("character/Sprite.scml");
 	SpriterState spriterState;
 	
+	// begin the idle animation
+	
 	spriterState.startAnim(spriter, "Idle");
 	
-	float direction = 0.f;
+	// set the position and scale of the spriter
 	
 	spriterState.x = VIEW_SX/2;
 	spriterState.y = VIEW_SY*3/4;
 	spriterState.scale = .4f;
 	
+	// direction and (jumping) speed
+	
+	float direction = 0.f;
 	float speedY = 0.f;
 	
+	// collision detection with the ground. if true, the character is standing on solid ground
+	
 	bool isGrounded = true;
+	
+	// keep running until the app is asked to quit
 	
 	while (!framework.quitRequested)
 	{
 		framework.process();
 		
+		// ask to quit the app when escape is pressed
+		
 		if (keyboard.wentDown(SDLK_ESCAPE))
 			framework.quitRequested = true;
+		
+		// jump when grounded and SPACE is pressed. or randomly every so often
 		
 		if (isGrounded && ((rand() % 100) == 0 || keyboard.wentDown(SDLK_SPACE)))
 		{
@@ -71,11 +86,17 @@ int main(int argc, char * argv[])
 			spriterState.startAnim(spriter, "Jump");
 		}
 		
+		// movement
+		
 		spriterState.x += direction * 400.f * framework.timeStep;
+		
+		// apply gravity force to the speed and integrate position
 		
 		speedY += 2000.f * framework.timeStep;
 		
 		spriterState.y += speedY * framework.timeStep;
+		
+		// check for collision with the ground
 		
 		if (spriterState.y > VIEW_SY*3/4)
 		{
@@ -84,10 +105,14 @@ int main(int argc, char * argv[])
 			
 			if (isGrounded == false)
 			{
+				// start the walking animation if we just transitioned to being grounded
+				
 				isGrounded = true;
 				spriterState.startAnim(spriter, "Walk");
 			}
 		}
+		
+		// change direction when LEFT is pressed or when bumping into the right wall
 		
 		if (spriterState.x > VIEW_SX - 120 || keyboard.wentDown(SDLK_LEFT) || direction == 0.f)
 		{
@@ -98,6 +123,8 @@ int main(int argc, char * argv[])
 				spriterState.startAnim(spriter, "Walk");
 		}
 		
+		// change direction when RIGHT is pressed or when bumping into the left wall
+		
 		if (spriterState.x < 120 || keyboard.wentDown(SDLK_RIGHT))
 		{
 			spriterState.x = std::max(120.f, spriterState.x);
@@ -107,29 +134,39 @@ int main(int argc, char * argv[])
 				spriterState.startAnim(spriter, "Walk");
 		}
 		
+		// update spriter animation state
+		
 		spriterState.updateAnim(spriter, framework.timeStep);
 		
 		framework.beginDraw(200, 200, 200, 0);
 		{
+			// draw a dark-ish line to hint the ground
+			
 			hqBegin(HQ_LINES);
 			setColor(100, 100, 100);
 			hqLine(VIEW_SX/2-100, VIEW_SY*3/4 + 20, .3f, VIEW_SX/2+100, VIEW_SY*3/4 + 20, .5f);
 			hqEnd();
 			
+			// draw the sprite
+			
 			setColor(colorWhite);
 			spriter.draw(spriterState);
 			
-			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.1f, 1.f, 1.f).RotateZ(+M_PI_2).Translate(-VIEW_SX/2, -10, 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
+			// draw a nice looking gradient above and below the animation area
+			
+			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.1f, 1.f, 1.f).RotateZ(+float(M_PI_2)).Translate(-VIEW_SX/2, -10, 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			hqFillRoundedRect(10, 10, VIEW_SX - 10, 100, 10.f);
 			hqEnd();
 			hqClearGradient();
 			
-			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.1f, 1.f, 1.f).RotateZ(-M_PI_2).Translate(-VIEW_SX/2, -(VIEW_SY-10), 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
+			hqSetGradient(GRADIENT_LINEAR, Mat4x4(true).Scale(.1f, 1.f, 1.f).RotateZ(-float(M_PI_2)).Translate(-VIEW_SX/2, -(VIEW_SY-10), 0), Color(100, 100, 100), Color(200, 200, 200), COLOR_MUL);
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			hqFillRoundedRect(10, VIEW_SY - 10, VIEW_SX - 10, VIEW_SY - 100, 10.f);
 			hqEnd();
 			hqClearGradient();
+			
+			// show the help text
 			
 			setFont("calibri.ttf");
 			setColor(80, 80, 80);

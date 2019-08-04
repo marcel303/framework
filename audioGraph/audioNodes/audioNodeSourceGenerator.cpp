@@ -41,7 +41,7 @@ AUDIO_ENUM_TYPE(audioSineMode)
 	elem("minMax");
 }
 
-AUDIO_NODE_TYPE(audioSourceSine, AudioNodeSourceSine)
+AUDIO_NODE_TYPE(AudioNodeSourceSine)
 {
 	typeName = "audio.sine";
 	
@@ -79,7 +79,7 @@ void AudioNodeSourceSine::drawSine()
 	const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
 	const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::One);
 	
-	const float twoPi = 2.f * M_PI;
+	const float twoPi = float(2.f * M_PI);
 	
 	const double dt = 1.0 / SAMPLE_RATE;
 	
@@ -147,10 +147,10 @@ void AudioNodeSourceSine::drawTriangle()
 	const AudioFloat * a = getInputAudioFloat(kInput_A, &AudioFloat::Zero);
 	const AudioFloat * b = getInputAudioFloat(kInput_B, &AudioFloat::One);
 	
-	const double dt = 1.0 / SAMPLE_RATE;
-	
-	if (fine || true)
+	if (fine)
 	{
+		const double dt = 1.0 / SAMPLE_RATE;
+		
 		audioOutput.setVector();
 		
 		frequency->expand();
@@ -204,6 +204,57 @@ void AudioNodeSourceSine::drawTriangle()
 				phase += dt * frequency->samples[i];
 				phase = phase - floorf(phase);
 			}
+		}
+	}
+	else
+	{
+		const double dt = AUDIO_UPDATE_SIZE / double(SAMPLE_RATE);
+		
+		const float frequency_scalar = frequency->getMean();
+		const float a_scalar = a->getMean();
+		const float b_scalar = b->getMean();
+		
+		if (mode == kMode_BaseScale)
+		{
+			const float mulA = 1.f / skew;
+			const float mulB = 2.f / (1.f - skew);
+			
+			float value;
+			
+			if (phase < skew)
+			{
+				value = -1.f + 2.f * phase * mulA;
+			}
+			else
+			{
+				value = +1.f - (phase - skew) * mulB;
+			}
+				
+			audioOutput.setScalar(a_scalar + value * b_scalar);
+				
+			phase += dt * frequency_scalar;
+			phase = phase - floorf(phase);
+		}
+		else if (mode == kMode_MinMax)
+		{
+			const float mulA = 1.f / skew;
+			const float mulB = 1.f / (1.f - skew);
+			
+			float value;
+			
+			if (phase < skew)
+			{
+				value = phase * mulA;
+			}
+			else
+			{
+				value = 1.f - (phase - skew) * mulB;
+			}
+			
+			audioOutput.setScalar(a_scalar + value * (b_scalar - a_scalar));
+			
+			phase += dt * frequency_scalar;
+			phase = phase - floorf(phase);
 		}
 	}
 }

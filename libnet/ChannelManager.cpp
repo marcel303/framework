@@ -1,11 +1,11 @@
-#include <algorithm>
-#include <vector>
 #include "ChannelManager.h"
 #include "ChannelTypes.h"
 #include "NetDiag.h"
 #include "NetProtocols.h"
 #include "NetStats.h"
 #include "PacketDispatcher.h"
+#include <algorithm>
+#include <vector>
 
 ChannelManager::ChannelManager()
 	: m_socket()

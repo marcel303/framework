@@ -34,7 +34,7 @@ static stbtt_bakedchar cdata[96]; // ASCII 32..126 is 95 glyphs
 static void stbTruetype_Print(float x, float y, const char *text)
 {
 	// assume orthographic projection with units = screen pixels, origin at top left
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		while (*text)
 		{
@@ -66,7 +66,7 @@ void testStbTruetype()
 	stbtt_BakeFontBitmap(ttf_buffer, 0, 32.0, temp_bitmap, 512, 512, 32, 96, cdata); // no guarantee this fits!
 
 	// can free ttf_buffer at this point
-	GLuint fontTexture = createTextureFromR8(temp_bitmap, 512, 512, false, true);
+	GxTextureId fontTexture = createTextureFromR8(temp_bitmap, 512, 512, false, true);
 	
 	Path2d path;
 	
@@ -78,7 +78,7 @@ void testStbTruetype()
 		{
 			auto myDrawRect = [](float x1, float y1, float x2, float y2)
 			{
-				gxBegin(GL_QUADS);
+				gxBegin(GX_QUADS);
 				{
 					gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 					gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
@@ -113,4 +113,6 @@ void testStbTruetype()
 		framework.endDraw();
 	}
 	while (tickTestUi());
+	
+	freeTexture(fontTexture);
 }

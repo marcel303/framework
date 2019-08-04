@@ -3,6 +3,7 @@
 #include "audiostream/AudioStream.h"
 #include "Calc.h"
 #include "Debugging.h"
+#include <string.h>
 
 static audiofft::AudioFFT s_fft;
 

@@ -1,0 +1,7 @@
+vfxgraph vfxgraph
+	path
+		vfxgraphs/test.xml
+
+resource-ptr-test
+	texture
+		vfxgraph.texture

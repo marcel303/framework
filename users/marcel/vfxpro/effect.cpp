@@ -1,8 +1,11 @@
+#include <GL/glew.h> // GL_TEXTURE_2D_ARRAY
 #include "effect.h"
 #include "Parse.h"
+#include "StringEx.h"
 #include "tinyxml2.h"
 #include "videoloop.h"
 #include "xml.h"
+#include <cmath>
 
 //
 
@@ -70,9 +73,18 @@ bool EffectInfosByName::load(const char * filename)
 					effectInfo.paramName[2] = param3;
 					effectInfo.paramName[3] = param4;
 
-					// todo : check not already set
-
-					(*this)[name] = effectInfo;
+					// check not already set
+					
+					if (count(name) != 0)
+					{
+						logError("effect with name %s already exists", name.c_str());
+						
+						result = false;
+					}
+					else
+					{
+						(*this)[name] = effectInfo;
+					}
 				}
 			}
 		}
@@ -203,12 +215,12 @@ Vec3 Effect::localToWorld(Vec3Arg v, const bool withTranslation) const
 void Effect::setTextures(Shader & shader)
 {
 	shader.setTexture("colormap", 0, g_currentSurface->getTexture(), true, false);
-	// fixme : setting colormap_clamp will override sampler settings colormap
+	// fixme-vfxpro : setting colormap_clamp will override sampler settings colormap
 	//shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, true);
 	shader.setTexture("colormap_clamp", 1, g_currentSurface->getTexture(), true, false);
-	shader.setTexture("pcm", 2, g_pcmTexture, true, false);
-	shader.setTexture("fft", 3, g_fftTexture, true, false);
-	shader.setTexture("fft_faded", 4, g_fftTextureWithFade, true, false);
+	shader.setTexture("pcm", 2, g_pcmTexture.id, true, false);
+	shader.setTexture("fft", 3, g_fftTexture.id, true, false);
+	shader.setTexture("fft_faded", 4, g_fftTextureWithFade.id, true, false);
 }
 
 void Effect::applyBlendMode() const
@@ -393,7 +405,7 @@ void Effect_StarCluster::draw()
 Effect_Cloth::Effect_Cloth(const char * name)
 	: Effect(name)
 {
-	// todo : set is2D (?)
+	// todo-vfxpro : set is2D (?)
 
 	sx = 0;
 	sy = 0;
@@ -518,7 +530,7 @@ void Effect_Cloth::draw(DrawableList & list)
 	new (list) EffectDrawable(this);
 }
 
-// todo : make the transform a part of the drawable or effect
+// todo-vfxpro : make the transform a part of the drawable or effect
 
 void Effect_Cloth::draw()
 {
@@ -540,7 +552,7 @@ void Effect_Cloth::doDraw()
 {
 	gxColor4f(1.f, 1.f, 1.f, .2f);
 
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		for (int x = 0; x < sx - 1; ++x)
 		{
@@ -1075,7 +1087,7 @@ void Effect_Boxes::draw(DrawableList & list)
 void Effect_Boxes::draw()
 {
 	if (m_outline)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		pushWireframe(true);
 
 	gxPushMatrix();
 	{
@@ -1119,7 +1131,7 @@ void Effect_Boxes::draw()
 				else if (b.m_axis == 2)
 					gxRotatef(90, 1, 0, 0);
 
-				gxBegin(GL_QUADS);
+				gxBegin(GX_QUADS);
 				{
 					gxNormal3f(0.f, 0.f, -1.f);
 					gxVertex3f(-1.f, -1.f, -1.f);
@@ -1154,7 +1166,8 @@ void Effect_Boxes::draw()
 	}
 	gxPopMatrix();
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (m_outline)
+		popWireframe();
 }
 
 void Effect_Boxes::handleSignal(const std::string & message)
@@ -1333,7 +1346,7 @@ Effect_Video::Effect_Video(const char * name, const char * filename, const char 
 
 	if (kVideoPreload)
 	{
-		m_mediaPlayer.openAsync(m_filename.c_str(), m_yuv);
+		m_mediaPlayer.openAsync(m_filename.c_str(), m_yuv ? MP::kOutputMode_PlanarYUV : MP::kOutputMode_RGBA);
 	}
 
 	if (play)
@@ -1353,11 +1366,11 @@ void Effect_Video::tick(const float dt)
 	{
 		m_mediaPlayer.presentTime = m_time;
 
-		m_mediaPlayer.tick(m_mediaPlayer.context);
+		m_mediaPlayer.tick(m_mediaPlayer.context, true);
 
 		if (m_hideWhenDone && m_mediaPlayer.presentedLastFrame(m_mediaPlayer.context))
 		{
-			m_mediaPlayer.close();
+			m_mediaPlayer.close(false);
 
 			m_playing = false;
 		}
@@ -1384,9 +1397,10 @@ void Effect_Video::draw()
 	{
 		gxPushMatrix();
 		{
-			const int sx = m_mediaPlayer.textureSx;
-			const int sy = m_mediaPlayer.textureSy;
+			const int sx = m_mediaPlayer.texture->sx;
+			const int sy = m_mediaPlayer.texture->sy;
 			const float scaleX = SCREEN_SX / float(sx);
+			
 			const float scaleY = SCREEN_SY / float(sy);
 			const float scale = Calc::Min(scaleX, scaleY);
 
@@ -1400,14 +1414,14 @@ void Effect_Video::draw()
 				setShader(shader);
 				shader.setTexture("colormap", 0, texture, true, true);
 				setColorf(1.f, 1.f, 1.f, m_alpha);
-				drawRect(0, 0, m_mediaPlayer.textureSx, m_mediaPlayer.textureSy);
+				drawRect(0, 0, m_mediaPlayer.texture->sx, m_mediaPlayer.texture->sy);
 				clearShader();
 			}
 			else
 			{
 				setColorf(1.f, 1.f, 1.f, m_alpha);
 				gxSetTexture(texture);
-				drawRect(0, 0, m_mediaPlayer.textureSx, m_mediaPlayer.textureSy);
+				drawRect(0, 0, m_mediaPlayer.texture->sx, m_mediaPlayer.texture->sy);
 				gxSetTexture(0);
 			}
 		}
@@ -1423,10 +1437,10 @@ void Effect_Video::handleSignal(const std::string & name)
 		{
 			if (m_mediaPlayer.isActive(m_mediaPlayer.context))
 			{
-				m_mediaPlayer.close();
+				m_mediaPlayer.close(false);
 			}
 
-			m_mediaPlayer.openAsync(m_filename.c_str(), m_yuv);
+			m_mediaPlayer.openAsync(m_filename.c_str(), m_yuv ? MP::kOutputMode_PlanarYUV : MP::kOutputMode_RGBA);
 		}
 
 		m_startTime = g_currentScene->m_time;
@@ -1444,7 +1458,7 @@ void Effect_Video::syncTime(const float time)
 		if (videoTime >= 0.0)
 		{
 			m_mediaPlayer.presentTime = -1.0;
-			m_mediaPlayer.seek(videoTime);
+			m_mediaPlayer.seek(videoTime, true);
 			m_mediaPlayer.presentTime = videoTime;
 
 			m_time = videoTime;
@@ -1510,11 +1524,14 @@ void Effect_VideoLoop::draw()
 	int sx;
 	int sy;
 	double duration;
+	double sampleAspectRatio;
 	
 	const uint32_t texture = m_videoLoop->getTexture();
 
-	if (texture != 0 && m_videoLoop->getVideoProperties(sx, sy, duration))
+	if (texture != 0 && m_videoLoop->getVideoProperties(sx, sy, duration, sampleAspectRatio))
 	{
+		Assert(sampleAspectRatio == 1.0);
+		
 		gxPushMatrix();
 		{
 			const float scaleX = SCREEN_SX / float(sx);
@@ -1977,7 +1994,7 @@ void Effect_Blit::draw()
 		gxColor4f(1.f, 1.f, 1.f, m_alpha);
 		gxSetTexture(layer->m_surface->getTexture());
 		{
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 			{
 				float x1, y1, x2, y2;
 				float u1, v1, u2, v2;
@@ -2084,7 +2101,7 @@ void Effect_Blocks::draw()
 		shader.setImmediate("imageAlpha", imageAlpha);
 		shader.setImmediate("alpha", alpha);
 
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			gxTexCoord2f(0.f, 0.f); gxVertex2f(b.x - sx, b.y - sy);
 			gxTexCoord2f(1.f, 0.f); gxVertex2f(b.x + sx, b.y - sy);
@@ -2279,7 +2296,7 @@ void Effect_Bars::initializeBars()
 
 		while (x < GFX_SX)
 		{
-			const float t = std::powf(random(0.f, 1.f), m_sizePow);
+			const float t = powf(random(0.f, 1.f), m_sizePow);
 
 			Bar bar;
 
@@ -2294,7 +2311,7 @@ void Effect_Bars::initializeBars()
 			}
 			else
 			{
-				const float s = 1.f / std::powf(layer + 1.f, m_sizePow);
+				const float s = 1.f / powf(layer + 1.f, m_sizePow);
 
 				bar.skipSize = m_baseSize * s;
 				bar.drawSize = Calc::Lerp(m_minSize, m_maxSize, t) * s;
@@ -2369,7 +2386,7 @@ void Effect_Bars::draw()
 	if (m_alpha <= 0.f)
 		return;
 
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int layer = 0; layer < kNumLayers; ++layer)
 		{
@@ -2539,7 +2556,7 @@ static float mixValue(const float t1, const float t2, const float o, const float
 
 	const float v = (t - o1) / (o2 - o1);
 
-	return (1.f - std::cosf(v * Calc::m2PI)) / 2.f;
+	return (1.f - cosf(v * Calc::m2PI)) / 2.f;
 }
 
 void Effect_Bezier::draw()
@@ -2584,10 +2601,9 @@ void Effect_Bezier::draw()
 			BezierPath path;
 			path.ConstructFromNodes(&nodes.front(), nodes.size());
 
-			glEnable(GL_LINE_SMOOTH);
-			glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+			pushLineSmooth(true);
 
-			gxBegin(GL_LINE_STRIP);
+			gxBegin(GX_LINE_STRIP);
 			{
 				const Color color = baseColor.mulRGBA(s.color);
 
@@ -2604,7 +2620,7 @@ void Effect_Bezier::draw()
 			}
 			gxEnd();
 
-			glDisable(GL_LINE_SMOOTH);
+			popLineSmooth();
 		}
 	}
 }
@@ -2676,17 +2692,17 @@ Vec2F sampleThrowPoint(const float t)
 
 	// right -> center
 	x[0] = 500.f - (mt - d0) * 500.f;
-	y[0] = + std::cosf((mt - d0 + 0.f) * Calc::mPI) * h;
+	y[0] = + cosf((mt - d0 + 0.f) * Calc::mPI) * h;
 	w[0] = mixValue(d0, d1, o, mt);
 
 	// center circle
-	x[1] = - std::sinf((mt - d1) * Calc::mPI) * h;
-	y[1] = - std::cosf((mt - d1) * Calc::mPI) * h;
+	x[1] = - sinf((mt - d1) * Calc::mPI) * h;
+	y[1] = - cosf((mt - d1) * Calc::mPI) * h;
 	w[1] = mixValue(d1, d2, o, mt);
 
 	// center -> left
 	x[2] = - (mt - d2) * 500.f;
-	y[2] = + std::cosf((mt - d2 + 1.f) * Calc::mPI) * h;
+	y[2] = + cosf((mt - d2 + 1.f) * Calc::mPI) * h;
 	w[2] = mixValue(d2, d3, o, mt);
 
 	// sample
@@ -2897,8 +2913,6 @@ void Effect_Smoke::draw()
 
 		setBlend(BLEND_OPAQUE);
 		setColor(colorWhite);
-
-		// todo : effect parameters
 
 		Shader shader("smoke");
 		setShader(shader);
@@ -3291,10 +3305,9 @@ void Effect_Fireworks::draw(DrawableList & list)
 
 void Effect_Fireworks::draw()
 {
-	glEnable(GL_LINE_SMOOTH);
-	glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+	pushLineSmooth(true);
 
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		for (int i = 0; i < PS; ++i)
 		{
@@ -3302,7 +3315,7 @@ void Effect_Fireworks::draw()
 
 			if (p.life != 0.f)
 			{
-				gxColor4f(p.color.r, p.color.g, p.color.b, std::powf(p.life * p.lifeRcp, .25f));
+				gxColor4f(p.color.r, p.color.g, p.color.b, powf(p.life * p.lifeRcp, .25f));
 
 				gxVertex2f(+p.oldX, p.oldY);
 				gxVertex2f(+p.x,    p.y);
@@ -3314,7 +3327,7 @@ void Effect_Fireworks::draw()
 	}
 	gxEnd();
 
-	glDisable(GL_LINE_SMOOTH);
+	popLineSmooth();
 }
 
 //
@@ -3354,8 +3367,8 @@ void Effect_Sparklies::tick(const float dt)
 				m_particleSystem.y[id] = random(0.f, (float)GFX_SY);
 				m_particleSystem.sx[id] = m_size;
 				m_particleSystem.sy[id] = m_size;
-				m_particleSystem.vx[id] = std::cosf(speedAngle) * m_speed;
-				m_particleSystem.vy[id] = std::sinf(speedAngle) * m_speed;
+				m_particleSystem.vx[id] = cosf(speedAngle) * m_speed;
+				m_particleSystem.vy[id] = sinf(speedAngle) * m_speed;
 			}
 		}
 	}
@@ -3384,7 +3397,7 @@ void Effect_Sparklies::draw()
 	setShader(shader);
 	shader.setTexture("image", 5, Sprite(m_image.c_str()).getTexture(), true, true);
 
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int i = 0; i < m_particleSystem.numParticles; ++i)
 		{
@@ -3394,10 +3407,10 @@ void Effect_Sparklies::draw()
 				const float x = m_particleSystem.x[i];
 				const float y = m_particleSystem.y[i];
 
-				gxColor4f(x, y, 1.f, (1.f - std::cosf(value * Calc::m2PI)) / 2.f * m_alpha);
+				gxColor4f(x, y, 1.f, (1.f - cosf(value * Calc::m2PI)) / 2.f * m_alpha);
 
-				const float s = std::sinf(m_particleSystem.angle[i]);
-				const float c = std::cosf(m_particleSystem.angle[i]);
+				const float s = sinf(m_particleSystem.angle[i]);
+				const float c = cosf(m_particleSystem.angle[i]);
 
 				const float sx_2 = m_particleSystem.sx[i] * .5f;
 				const float sy_2 = m_particleSystem.sy[i] * .5f;
@@ -3557,8 +3570,8 @@ double Effect_Wobbly::WaterDrop::checkIntersection(const WaterSim & sim, const d
 
 Effect_Wobbly::Effect_Wobbly(const char * name, const char * shader)
 	: Effect(name)
-	, m_showDrops(1.f)
 	, m_drop(0.f)
+	, m_showDrops(1.f)
 	, m_wobbliness(20000.f)
 	, m_closedEnds(1.f)
 	, m_stretch(1.f)
@@ -3722,7 +3735,7 @@ void Effect_Wobbly::draw()
 			opacity *= 1.0 - drop.fadeInTime * drop.fadeInTimeRcp;
 			
 			double radius = drop.applyRadius;
-			radius *= Calc::Lerp(1.f, .7f, (std::cosf(drop.x / 40.f) + 1.f) / 2.f);
+			radius *= Calc::Lerp(1.f, .7f, (cosf(drop.x / 40.f) + 1.f) / 2.f);
 			radius *= 0.5;
 			radius *= drop.applyTime * drop.applyTimeRcp;
 			

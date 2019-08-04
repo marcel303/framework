@@ -1,5 +1,40 @@
-library framework
+library audiostream
+
+	depend_library libgg
+
+	add_files audiostream/AudioMixer.cpp
+	add_files audiostream/AudioMixer.h
+
+	add_files audiostream/AudioStream.h
+
+	header_path . expose
+
+library audiostream-vorbis
 	
+	depend_library audiostream
+	depend_library oggvorbis
+
+	add_files audiostream/AudioStreamVorbis.cpp
+	add_files audiostream/AudioStreamVorbis.h
+
+	header_path . expose
+
+library audioio
+
+# todo : add WAVE audio stream library and depend on it here
+
+	depend_library audiostream
+	depend_library audiostream-vorbis
+
+# todo : move AudioIO file to its own directory
+
+	add_files audiostream/AudioIO.cpp
+	add_files audiostream/AudioIO.h
+
+	header_path . expose
+
+library framework
+
 	depend_library libgg
 	depend_library libfbx
 
@@ -7,18 +42,31 @@ library framework
 	#with_platform linux depend_library libsdl2
 	with_platform windows depend_library libsdl2
 
-	scan_files cpp
-	scan_files c   path audiostream          group audiostream
-	scan_files cpp path audiostream          group audiostream
-	scan_files cpp path msdfgen     traverse group msdfgen
+	depend_library audioio
+	depend_library audiostream
+	depend_library audiostream-vorbis
+	depend_library glew
+	depend_library msdfgen
+	depend_library portaudio
+	depend_library remotery
+	depend_library tinyxml2
+	depend_library tinyxml2-helpers
+	depend_library utf8rewind
 
+	scan_files cpp
 	scan_files h
-	scan_files h path audiostream                    group audiostream
-	scan_files h path audiostream/oggvorbis traverse group audiostream/oggvorbis
-	scan_files h path msdfgen               traverse group msdfgen
+	
+	scan_files cpp path audiooutput          group audiooutput
+	scan_files h   path audiooutput          group audiooutput
+
+	scan_files cpp path gx-opengl            group gx-opengl
+	scan_files h   path gx-opengl            group gx-opengl
+
+	with_platform macos scan_files cpp path gx-metal group gx-metal
+	with_platform macos scan_files h   path gx-metal group gx-metal
+	with_platform macos scan_files mm  path gx-metal group gx-metal
 
 	header_path . expose
-	header_path audiostream/oggvorbis expose
 	
 	compile_definition NO_SDL_GLEXT            * expose
 	compile_definition FRAMEWORK_USE_OPENAL    0 expose
@@ -33,33 +81,34 @@ library framework
 	with_platform linux.raspberry-pi compile_definition ENABLE_HQ_PRIMITIVES 0 expose
 	with_platform linux.raspberry-pi compile_definition ENABLE_MSDF_FONTS    0 expose
 
+# For testing with Travis-CI, these are enabled for now. Once everything compiles, the follow up step is to make things compile on Linux with below compile definitions removed
+	with_platform linux compile_definition USE_LEGACY_OPENGL    1 expose
+	with_platform linux compile_definition ENABLE_HQ_PRIMITIVES 0 expose
+	with_platform linux compile_definition ENABLE_MSDF_FONTS    0 expose
+
 # Macos header file includes and libraries
+# note : freetype was configured using : ./configure --disable-static --without-zlib --without-png --without-bzip2
+# note : freetype dylib was updated using : install_name_tool -id "@rpath/libfreetype.6.dylib" libfreetype.6.dylib
 	with_platform macos header_path macos/include          expose
 	with_platform macos header_path macos/include/freetype
-	with_platform macos depend_library macos/glew/lib/libGLEW.a local
 	with_platform macos depend_library macos/lib/libfreeimage.a local
-	with_platform macos depend_library macos/lib/libfreetype.a  local
-	with_platform macos depend_library macos/lib/libportaudio.a local
+	with_platform macos depend_library macos/lib/libfreetype.6.dylib local embed_framework
+	with_platform macos depend_library Metal find
+	with_platform macos depend_library QuartzCore find
 
 # Windows header file includes and libraries
 	with_platform windows header_path win32/include          expose
 	with_platform windows header_path win32/include/freetype
 	with_platform windows depend_library win32/lib/FreeImage.lib local
-	with_platform windows depend_library win32/lib/freetype252.lib local
-	with_platform windows depend_library win32/lib/glew32.lib local
+	with_platform windows depend_library win32/lib/freetype.lib local
 	with_platform windows depend_library win32/lib/OpenAL32.lib local
-	with_platform windows depend_library win32/lib/SDL2.lib local
-	with_platform windows depend_library win32/lib/SDL2main.lib local
 	with_platform windows depend_library win32/lib/XInput9_1_0.lib local
-	with_platform windows depend_library win32/lib/portaudio_x86.lib local
 	with_platform windows depend_library Winmm.lib global
 	with_platform windows depend_library OpenGL32.lib global
 	with_platform windows add_dist_files win32/dll/FreeImage.dll
-	with_platform windows add_dist_files win32/dll/glew32.dll
+	with_platform windows add_dist_files win32/dll/freetype.dll
 	with_platform windows add_dist_files win32/dll/OpenAL32.dll
-	with_platform windows add_dist_files win32/dll/SDL2.dll
 	with_platform windows add_dist_files win32/dll/XInput9_1_0.dll
-	with_platform windows add_dist_files win32/dll/portaudio_x86.dll
 
 # Linux header file includes and libraries
 
@@ -71,17 +120,23 @@ library framework
 	with_platform linux depend_library freeimage find
 	with_platform linux depend_package SDL2
 
+app framework-example-aniplay
+	add_files examples/aniplay.cpp
+	resource_path examples/data
+	depend_library framework
+	group framework-examples
+
 app framework-example-basic
 	add_files examples/example.cpp
 	resource_path examples/data
 	depend_library framework
 	group framework-examples
 
-#app framework-example-model-basic
-#	add_files examples/model-basic.cpp
-#	resource_path examples/data
-#	depend_library framework
-#	group framework-examples
+app framework-example-model-basic
+	add_files examples/model-basic.cpp
+	resource_path examples/data
+	depend_library framework
+	group framework-examples
 
 app framework-example-model-advanced
 	add_files examples/model.cpp

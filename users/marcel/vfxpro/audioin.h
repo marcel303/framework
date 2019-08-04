@@ -2,15 +2,12 @@
 
 #ifdef WIN32
 
-#include <Windows.h>
-
+struct AudioInWave;
 struct AudioSample;
 
 class AudioIn
 {
-	HWAVEIN m_waveIn;
-	WAVEFORMATEX m_waveFormat;
-	WAVEHDR m_waveHeader;
+	AudioInWave * m_wave;
 	short * m_buffer;
 
 public:
@@ -29,6 +26,7 @@ struct AudioSample;
 
 class AudioIn
 {
+	bool m_paInitialized;
 	void * m_stream;
 	AudioSample * m_sampleBuffer;
 	int m_sampleBufferSize;

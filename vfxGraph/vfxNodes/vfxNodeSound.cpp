@@ -25,8 +25,9 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStreamVorbis.h"
+#include "FileStream.h"
 #include "vfxNodeSound.h"
 #include <math.h>
 #include <SDL2/SDL.h>
@@ -44,6 +45,9 @@ int VfxNodeSound_AudioStream::Provide(int numSamples, AudioSample * __restrict b
 			const int numSamplesRead = soundNode->audioStream->Provide(numSamples, buffer);
 			
 			timeInSamples += numSamplesRead;
+			
+			if (soundNode->audioStream->HasLooped_get())
+				hasLooped = true;
 			
 			result = numSamplesRead;
 		}
@@ -72,6 +76,7 @@ VFX_NODE_TYPE(VfxNodeSound)
 	out("time", "float");
 	out("play!", "trigger");
 	out("pause!", "trigger");
+	out("loop!", "trigger");
 	out("beat!", "trigger");
 	out("beatCount", "int");
 }
@@ -99,6 +104,7 @@ VfxNodeSound::VfxNodeSound()
 	addOutput(kOutput_Time, kVfxPlugType_Float, &timeOutput);
 	addOutput(kOutput_Play, kVfxPlugType_Trigger, nullptr);
 	addOutput(kOutput_Pause, kVfxPlugType_Trigger, nullptr);
+	addOutput(kOutput_Loop, kVfxPlugType_Trigger, nullptr);
 	addOutput(kOutput_Beat, kVfxPlugType_Trigger, nullptr);
 	addOutput(kOutput_BeatCount, kVfxPlugType_Int, &beatCountOutput);
 	
@@ -134,6 +140,7 @@ void VfxNodeSound::tick(const float dt)
 		audioStream = nullptr;
 	
 		mixingAudioStream.timeInSamples = 0;
+		mixingAudioStream.hasLooped = false;
 		
 		isPaused = false;
 		
@@ -146,13 +153,15 @@ void VfxNodeSound::tick(const float dt)
 	
 	//
 	
-	const char * source = getInputString(kInput_Source, "");
+	const char * source = getInputString(kInput_Source, nullptr);
 	const bool loop = getInputBool(kInput_Loop, true);
 	const bool autoPlay = getInputBool(kInput_AutoPlay, true);
 	const float volume = getInputFloat(kInput_Volume, 1.f);
 	
 	if (audioStream == nullptr)
 	{
+		// ensure audio stream exists
+		
 		Assert(audioStream == nullptr);
 		audioStream = new AudioStream_Vorbis();
 		
@@ -160,6 +169,9 @@ void VfxNodeSound::tick(const float dt)
 			audioStream->Open(source, loop);
 		
 		Assert(mixingAudioStream.timeInSamples == 0);
+		Assert(mixingAudioStream.hasLooped == false);
+		
+		// ensure audio output exists
 		
 		Assert(audioOutput == nullptr);
 		audioOutput = new AudioOutput_PortAudio();
@@ -170,23 +182,45 @@ void VfxNodeSound::tick(const float dt)
 	
 	//
 	
-	if (audioStream->IsOpen_get() || autoPlay)
+	if (source == nullptr)
 	{
-		if (strcmp(source, audioStream->FileName_get()) != 0 || loop != audioStream->Loop_get())
+		SDL_LockMutex(mutex);
 		{
-			SDL_LockMutex(mutex);
-			{
-				audioStream->Open(source, loop);
-				
-				mixingAudioStream.timeInSamples = 0;
-			}
-			SDL_UnlockMutex(mutex);
+			audioStream->Close();
+			
+			mixingAudioStream.timeInSamples = 0;
+			mixingAudioStream.hasLooped = false;
 		}
+		SDL_UnlockMutex(mutex);
+		
+		timeOutput = 0.f;
+		
+		beatCountOutput = 0;
 	}
+	else
+	{
+		if (audioStream->IsOpen_get() || autoPlay)
+		{
+			if (strcmp(source, audioStream->FileName_get()) != 0 || loop != audioStream->Loop_get())
+			{
+				SDL_LockMutex(mutex);
+				{
+					if (FileStream::Exists(source))
+						audioStream->Open(source, loop);
+					else
+						audioStream->Close();
+					
+					mixingAudioStream.timeInSamples = 0;
+					mixingAudioStream.hasLooped = false;
+				}
+				SDL_UnlockMutex(mutex);
+			}
+		}
+		
+		audioOutput->Volume_set(volume);
 	
-	audioOutput->Volume_set(volume);
-	
-	audioOutput->Update();
+		audioOutput->Update();
+	}
 	
 	{
 		const double bpm = getInputFloat(kInput_BPM, 60.f);
@@ -209,36 +243,44 @@ void VfxNodeSound::tick(const float dt)
 			trigger(kOutput_Beat);
 		}
 	}
+	
+	{
+		const bool hasLooped = mixingAudioStream.hasLooped.exchange(false);
+		
+		if (hasLooped)
+		{
+			trigger(kOutput_Loop);
+		}
+	}
 }
 
 void VfxNodeSound::init(const GraphNode & node)
 {
-	const char * source = getInputString(kInput_Source, "");
+	if (isPassthrough)
+		return;
+	
+	const char * source = getInputString(kInput_Source, nullptr);
 	const bool loop = getInputBool(kInput_Loop, true);
 	const bool autoPlay = getInputBool(kInput_AutoPlay, true);
 	const float volume = getInputFloat(kInput_Volume, 1.f);
 	
-	if (autoPlay)
+	audioStream = new AudioStream_Vorbis();
+	
+	if (autoPlay && source != nullptr)
 	{
-		audioStream = new AudioStream_Vorbis();
 		audioStream->Open(source, loop);
 		
 		mixingAudioStream.timeInSamples = 0;
-		
-		isPaused = false;
-		
-		audioOutput = new AudioOutput_PortAudio();
-		audioOutput->Initialize(2, 44100, 256);
-		audioOutput->Volume_set(volume);
-		audioOutput->Play(&mixingAudioStream);
+		mixingAudioStream.hasLooped = false;
 		
 		Assert(timeOutput == 0.f);
 		Assert(beatCountOutput == 0);
 	}
-	else
-	{
-		isPaused = true;
-	}
+	
+	audioOutput = new AudioOutput_PortAudio();
+	audioOutput->Initialize(2, 44100, 256);
+	audioOutput->Volume_set(volume);
+	audioOutput->Play(&mixingAudioStream);
 }
 
 void VfxNodeSound::handleTrigger(const int inputSocketIndex)
@@ -252,9 +294,13 @@ void VfxNodeSound::handleTrigger(const int inputSocketIndex)
 			
 			SDL_LockMutex(mutex);
 			{
-				audioStream->Open(source, loop);
+				if (FileStream::Exists(source))
+					audioStream->Open(source, loop);
+				else
+					audioStream->Close();
 				
 				mixingAudioStream.timeInSamples = 0;
+				mixingAudioStream.hasLooped = false;
 			}
 			SDL_UnlockMutex(mutex);
 			
@@ -274,6 +320,7 @@ void VfxNodeSound::handleTrigger(const int inputSocketIndex)
 			audioStream->Close();
 			
 			mixingAudioStream.timeInSamples = 0;
+			mixingAudioStream.hasLooped = false;
 		}
 		SDL_UnlockMutex(mutex);
 		
@@ -288,9 +335,13 @@ void VfxNodeSound::handleTrigger(const int inputSocketIndex)
 		
 		SDL_LockMutex(mutex);
 		{
-			audioStream->Open(source, loop);
+			if (FileStream::Exists(source))
+				audioStream->Open(source, loop);
+			else
+				audioStream->Close();
 			
 			mixingAudioStream.timeInSamples = 0;
+			mixingAudioStream.hasLooped = false;
 		}
 		SDL_UnlockMutex(mutex);
 		

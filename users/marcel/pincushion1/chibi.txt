@@ -1,0 +1,3 @@
+app marcel-pincushion1
+	depend_library framework
+	add_files main.cpp

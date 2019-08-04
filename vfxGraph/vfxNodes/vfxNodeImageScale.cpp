@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "vfxNodeImageScale.h"
+#include <math.h>
 
 VFX_NODE_TYPE(VfxNodeImageScale)
 {
@@ -95,8 +96,8 @@ void VfxNodeImageScale::draw() const
 		}
 		else
 		{
-			const int sx = int(std::ceil(image->getSx() * scale));
-			const int sy = int(std::ceil(image->getSy() * scale));
+			const int sx = int(ceilf(image->getSx() * scale));
+			const int sy = int(ceilf(image->getSy() * scale));
 			
 			if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight())
 			{

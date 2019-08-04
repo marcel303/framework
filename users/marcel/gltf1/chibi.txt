@@ -1,0 +1,5 @@
+app gltf1
+	depend_library framework
+	depend_library jsoncpp
+	add_files main.cpp
+	resource_path data

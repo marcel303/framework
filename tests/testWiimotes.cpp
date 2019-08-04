@@ -30,7 +30,7 @@
 #include "framework.h"
 #include "objects/wiimote.h"
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 void testWiimotes()
 {

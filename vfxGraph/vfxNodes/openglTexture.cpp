@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_TEXTURE_SWIZZLE_RGBA
 #include "framework.h"
 #include "openglTexture.h"
 #include "vfxProfiling.h"

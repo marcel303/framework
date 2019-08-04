@@ -28,9 +28,12 @@
 #include "Log.h"
 #include "oscEndpointMgr.h"
 #include "osc/OscOutboundPacketStream.h"
+#include "vfxGraph.h"
 #include "vfxNodeOscSend.h"
 
 #define OSC_BUFFER_SIZE 1024
+
+extern OscEndpointMgr g_oscEndpointMgr;
 
 VFX_ENUM_TYPE(oscSendMode)
 {
@@ -193,7 +196,7 @@ void VfxNodeOscSend::sendValue(const char * path, const float value)
 	
 	//
 	
-	editorIsTriggered = true;
+	editorIsTriggeredTick = g_currentVfxGraph->currentTickTraversalId;
 	
 	//
 	

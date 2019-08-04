@@ -36,6 +36,7 @@
 #include "model_fbx.h"
 #include "model_ogre.h"
 #include "Path.h"
+#include "StringEx.h"
 
 #define DEBUG_TRS 0
 
@@ -51,6 +52,7 @@ ModelCache g_modelCache;
 
 namespace AnimModel
 {
+#if ENABLE_OPENGL // todo : remove OpenGL version vsInputs
 	static const VsInput vsInputs[] =
 	{
 		{ VS_POSITION,      3, GL_FLOAT,         0, offsetof(Vertex, px)          },
@@ -61,25 +63,48 @@ namespace AnimModel
 		{ VS_BLEND_WEIGHTS, 4, GL_UNSIGNED_BYTE, 1, offsetof(Vertex, boneWeights) }
 	};
 	const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
-	
+#else
+	static const GxVertexInput vsInputs[] =
+	{
+		{ VS_POSITION,      3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, px)          },
+		{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, nx)          },
+		{ VS_COLOR,         4, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, cx)          },
+		{ VS_TEXCOORD0,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx)          },
+		{ VS_TEXCOORD1,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx)          }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
+		{ VS_BLEND_INDICES, 4, GX_ELEMENT_UINT8,   0, offsetof(Vertex, boneIndices) },
+		{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_UINT8,   1, offsetof(Vertex, boneWeights) }
+	};
+	const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
+#endif
+
 	//
 	
 	Mesh::Mesh()
 	{
+		m_isVisible = true;
+		
 		m_vertices = 0;
 		m_numVertices = 0;
 		
 		m_indices = 0;
 		m_numIndices = 0;
 		
+	#if ENABLE_OPENGL
 		m_vertexArray = 0;
 		m_indexArray = 0;
 		
 		m_vertexArrayObject = 0;
+	#endif
 	}
 	
 	Mesh::~Mesh()
 	{
+	#if ENABLE_METAL
+		m_vertexBuffer.free();
+		m_indexBuffer.free();
+	#endif
+	
+	#if ENABLE_OPENGL
 		if (m_vertexArrayObject)
 		{
 			glDeleteVertexArrays(1, &m_vertexArrayObject);
@@ -97,6 +122,7 @@ namespace AnimModel
 			glDeleteBuffers(1, &m_indexArray);
 			m_indexArray = 0;
 		}
+	#endif
 		
 		allocateVB(0);
 		allocateIB(0);
@@ -140,6 +166,13 @@ namespace AnimModel
 	
 	void Mesh::finalize()
 	{
+	#if ENABLE_METAL
+	// todo : vb/ib for OpenGL too
+		m_vertexBuffer.alloc(m_vertices, sizeof(Vertex) * m_numVertices);
+		m_indexBuffer.alloc(m_indices, sizeof(int) * m_numIndices, GX_INDEX_32); // todo : GX_INDEX_16 when possible
+	#endif
+	
+	#if ENABLE_OPENGL
 		fassert(!m_vertexArray && !m_indexArray);
 		
 		// create vertex buffer
@@ -184,10 +217,11 @@ namespace AnimModel
 		}
 		glBindVertexArray(0);
 		checkErrorGL();
+	#endif
 		
-		if (!m_material.shader.isValid())
+		if (m_material.shader.empty())
 		{
-			m_material.shader = Shader("engine/BasicSkinned");
+			m_material.shader = "engine/BasicSkinned";
 		}
 	}
 	
@@ -684,7 +718,7 @@ namespace AnimModel
 		
 		for (std::map<std::string, Anim*>::iterator i = m_animations.begin(); i != m_animations.end(); ++i)
 		{
-			const std::string newName = name;
+			const std::string & newName = name;
 			
 			Anim * anim = i->second;
 			
@@ -732,6 +766,9 @@ Model::Model(const char * filename, const bool autoUpdate)
 	ctor();
 	
 	m_model = &g_modelCache.findOrCreate(filename);
+	
+	ctorEnd();
+	
 }
 
 Model::Model(ModelCacheElem & cacheElem, const bool autoUpdate)
@@ -740,6 +777,8 @@ Model::Model(ModelCacheElem & cacheElem, const bool autoUpdate)
 	ctor();
 	
 	m_model = &cacheElem;
+	
+	ctorEnd();
 }
 
 void Model::ctor()
@@ -765,13 +804,27 @@ void Model::ctor()
 	animLoopCount = 0;
 	animSpeed = 1.f;
 	animRootMotionEnabled = true;
+	m_boneTransforms = nullptr;
 	
 	if (m_autoUpdate)
 		framework.registerModel(this);
 }
 
+void Model::ctorEnd()
+{
+	const int numBones = m_model->boneSet->m_numBones;
+	
+	m_boneTransforms = new BoneTransform[numBones];
+	
+	for (int i = 0; i < numBones; ++i)
+		m_boneTransforms[i] = m_model->boneSet->m_bones[i].transform;
+}
+
 Model::~Model()
 {
+	delete [] m_boneTransforms;
+	m_boneTransforms = nullptr;
+	
 	if (m_autoUpdate)
 		framework.unregisterModel(this);
 }
@@ -866,12 +919,17 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 		{
-			// todo: hide meshes that shouldn't render
-			//if (i != 0)
-			//	continue;
-			
 			Mesh * mesh = m_model->meshSet->m_meshes[i];
-			Shader & shader = (overrideShader != nullptr) ? *overrideShader : mesh->m_material.shader;
+			
+			if (mesh->m_isVisible == false)
+				continue;
+			
+			if (mesh->m_numIndices == 0)
+				continue;
+			
+			Shader materialShader(mesh->m_material.shader.c_str());
+			
+			Shader & shader = (overrideShader != nullptr) ? *overrideShader : materialShader;
 			
 			setShader(shader);
 			
@@ -881,42 +939,46 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			{
 				previousShader = &shader;
 				
-				// todo: use constant locations for skinningMatrices and drawColor, and move this setting to outside of the loop
 				// set uniform constants for skinning matrices
 				
-				const GLint boneMatrices = shader.getImmediate("skinningMatrices");
+				const ShaderCacheElem & shaderElem = shader.getCacheElem();
 				
-				if (boneMatrices != -1)
+				if (shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index >= 0)
 				{
-					glUniformMatrix4fv(boneMatrices, numBones, GL_FALSE, (GLfloat*)globalMatrices);
-					checkErrorGL();
+					shader.setImmediateMatrix4x4Array(shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index, (float*)globalMatrices, numBones);
 				}
 				
-				const GLint drawColor = shader.getImmediate("drawColor");
+			// todo : use constant locations for drawColor and drawSkin
+			
+				const GxImmediateIndex drawColor = shader.getImmediate("drawColor");
 				
 				if (drawColor != -1)
 				{
-					glUniform4f(drawColor,
+					shader.setImmediate(drawColor,
 						(drawFlags & DrawColorTexCoords)    ? 1.f : 0.f,
 						(drawFlags & DrawColorNormals)      ? 1.f : 0.f,
 						(drawFlags & DrawColorBlendIndices) ? 1.f : 0.f,
 						(drawFlags & DrawColorBlendWeights) ? 1.f : 0.f);
-					checkErrorGL();
 				}
 				
-				const GLint drawSkin = shader.getImmediate("drawSkin");
+				const GxImmediateIndex drawSkin = shader.getImmediate("drawSkin");
 				
 				if (drawSkin != -1)
 				{
-					glUniform4f(drawSkin,
+					shader.setImmediate(drawSkin,
 						(drawFlags & DrawUnSkinned)   ? 1.f : 0.f,
 						(drawFlags & DrawHardSkinned) ? 1.f : 0.f,
 						0.f,
 						0.f);
-					checkErrorGL();
 				}
 			}
-			
+		
+		#if ENABLE_METAL
+			gxSetVertexBuffer(&mesh->m_vertexBuffer, vsInputs, numVsInputs, sizeof(Vertex));
+			gxDrawIndexedPrimitives(GX_TRIANGLES, mesh->m_numIndices, &mesh->m_indexBuffer);
+		#endif
+		
+		#if ENABLE_OPENGL
 			// bind vertex arrays
 			
 			fassert(mesh->m_vertexArray);
@@ -930,6 +992,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			
 			glBindVertexArray(0);
 			checkErrorGL();
+		#endif
 		}
 		
 		clearShader();
@@ -942,12 +1005,12 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	
 	if (drawFlags & DrawNormals)
 	{
-		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
+		gxBegin(GX_LINES);
 		{
-			const Mesh * mesh = m_model->meshSet->m_meshes[i];
-			
-			gxBegin(GL_LINES);
+			for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
 			{
+				const Mesh * mesh = m_model->meshSet->m_meshes[i];
+			
 				for (int j = 0; j < mesh->m_numVertices; ++j)
 				{
 					const Vertex & vertex = mesh->m_vertices[j];
@@ -988,10 +1051,8 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 						// -- software vertex blend (soft skinned) --
 					}
 					
-					const float scale = 3.f;
-					
 					const Vec3 & p1 = p;
-					const Vec3   p2 = p + n * scale;
+					const Vec3   p2 = p + n * drawNormalsScale;
 					
 					gxColor3ub(127, 127, 127);
 					gxNormal3f(n[0], n[1], n[2]);
@@ -999,21 +1060,51 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 					gxVertex3f(p2[0], p2[1], p2[2]);
 				}
 			}
+		}
+		gxEnd();
+	}
+	
+	if (drawFlags & DrawBoundingBox)
+	{
+		Vec3 min;
+		Vec3 max;
+		
+		calculateAABB(min, max, false);
+		
+		gxPushMatrix();
+		gxMultMatrixf(matrix.m_v);
+		{
+			gxBegin(GX_LINES);
+			{
+				const float x[2] = { min[0], max[0] };
+				const float y[2] = { min[1], max[1] };
+				const float z[2] = { min[2], max[2] };
+				
+				gxColor3ub(127, 127, 127);
+				for (int x1 = 0; x1 <= 1; ++x1)
+					for (int y1 = 0; y1 <= 1; ++y1)
+						for (int z1 = 0; z1 <= 1; ++z1)
+							for (int x2 = 0; x2 <= 1; ++x2)
+								for (int y2 = 0; y2 <= 1; ++y2)
+									for (int z2 = 0; z2 <= 1; ++z2)
+										if (std::abs(x1-x2) + std::abs(y1-y2) + std::abs(z2-z1) == 1)
+										{
+											gxVertex3f(x[x1], y[y1], z[z1]);
+											gxVertex3f(x[x2], y[y2], z[z2]);
+										}
+			}
 			gxEnd();
 		}
+		gxPopMatrix();
 	}
 	
 	if (drawFlags & DrawBones)
 	{
-		GLint restoreDepthTest;
-		glGetIntegerv(GL_DEPTH_TEST, &restoreDepthTest);
-		checkErrorGL();
-		glDisable(GL_DEPTH_TEST);
-		checkErrorGL();
+		pushDepthTest(false, DEPTH_LESS);
 
 		// bone to object matrix translation
 		gxColor3ub(127, 127, 127);
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
@@ -1030,7 +1121,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		gxEnd();
 		gxColor3ub(0, 255, 0);
 		glPointSize(5.f);
-		gxBegin(GL_POINTS);
+		gxBegin(GX_POINTS);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
@@ -1040,24 +1131,16 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		}
 		gxEnd();
 		
-		if (restoreDepthTest)
-		{
-			glEnable(GL_DEPTH_TEST);
-			checkErrorGL();
-		}
+		popDepthTest();
 	}
 	
 	if (drawFlags & DrawPoseMatrices)
 	{
-		GLint restoreDepthTest;
-		glGetIntegerv(GL_DEPTH_TEST, &restoreDepthTest);
-		checkErrorGL();
-		glDisable(GL_DEPTH_TEST);
-		checkErrorGL();
+		pushDepthTest(false, DEPTH_LESS);
 
 		// object to bone matrix translation
 		gxColor3ub(127, 127, 127);
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
@@ -1075,7 +1158,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		gxColor3ub(255, 0, 0);
 		glPointSize(7.f);
 		checkErrorGL();
-		gxBegin(GL_POINTS);
+		gxBegin(GX_POINTS);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
 			{
@@ -1085,11 +1168,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		}
 		gxEnd();
 		
-		if (restoreDepthTest)
-		{
-			glEnable(GL_DEPTH_TEST);
-			checkErrorGL();
-		}
+		popDepthTest();
 	}
 }
 
@@ -1153,57 +1232,13 @@ int Model::calculateBoneMatrices(
 	
 	Assert(numMatrices == m_model->boneSet->m_numBones);
 	
-	// calculate transforms in local bone space
-	
-	BoneTransform * transforms = (BoneTransform*)ALIGNED_ALLOCA(sizeof(BoneTransform) * m_model->boneSet->m_numBones, 16);
-	
-	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
-	{
-		transforms[i] = m_model->boneSet->m_bones[i].transform;
-	}
-	
-	// apply animations
-	
-	// todo: move to updateAnimation
-	if (m_isAnimStarted && m_animSegment && !animIsPaused)
-	{
-		Anim * anim = reinterpret_cast<Anim*>(m_animSegment);
-		
-		const bool isDone = anim->evaluate(animTime, transforms);
-		
-		if (anim->m_rootMotion)
-		{
-			int boneIndex = m_model->boneSet->findBone(m_model->rootNode);
-			
-			if (boneIndex != -1)
-			{
-				transforms[boneIndex].translation = m_model->boneSet->m_bones[boneIndex].transform.translation;
-			}
-		}
-		
-		if (isDone)
-		{
-			if (animLoop > 0 || animLoop < 0)
-			{
-				animTime = 0.f;
-				animLoopCount++;
-				if (animLoop > 0)
-					animLoop--;
-			}
-			else
-			{
-				animIsActive = false;
-			}
-		}
-	}
-	
 	// convert translation / rotation pairs into matrices
 	
 	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
 	{
-		// todo: scale?
+		// todo : scale?
 		
-		const BoneTransform & transform = transforms[i];
+		const BoneTransform & transform = m_boneTransforms[i];
 		
 		Mat4x4 & boneMatrix = localMatrices[i];
 		
@@ -1455,13 +1490,55 @@ void Model::updateAnimationSegment()
 
 void Model::updateAnimation(float timeStep)
 {
-	// todo: evaluate bone transforms, and update root motion
-	
 	animRootMotion.SetZero();
 	
 	const float oldTime = animTime;
-	animTime += animSpeed * timeStep;
+	if (!animIsPaused)
+		animTime += animSpeed * timeStep;
 	const float newTime = animTime;
+	
+	// calculate transforms in local bone space
+	
+	for (int i = 0; i < m_model->boneSet->m_numBones; ++i)
+	{
+		m_boneTransforms[i] = m_model->boneSet->m_bones[i].transform;
+	}
+	
+	// apply animations
+	
+	if (m_isAnimStarted && m_animSegment)
+	{
+		Anim * anim = reinterpret_cast<Anim*>(m_animSegment);
+		
+		const bool isDone = anim->evaluate(animTime, m_boneTransforms);
+		
+		if (anim->m_rootMotion)
+		{
+			int boneIndex = m_model->boneSet->findBone(m_model->rootNode);
+			
+			if (boneIndex != -1)
+			{
+				m_boneTransforms[boneIndex].translation = m_model->boneSet->m_bones[boneIndex].transform.translation;
+			}
+		}
+		
+		if (isDone)
+		{
+			if (animLoop > 0 || animLoop < 0)
+			{
+				animTime = 0.f;
+				animLoopCount++;
+				if (animLoop > 0)
+					animLoop--;
+			}
+			else
+			{
+				animIsActive = false;
+			}
+		}
+	}
+	
+	// update root motion
 	
 	Anim * anim = static_cast<Anim*>(m_animSegment);
 	
@@ -1602,6 +1679,8 @@ void ModelCacheElem::load(const char * filename)
 	// animation name:walk loop:<loopcount> rootmotion:<enabled>
 	//     trigger time:<second> loop:<loop> actions:<action,action,..> [params]
 	
+	const std::string path = Path::GetDirectory(filename);
+	
 	float scale = 1.f;
 	
 	int right   = +1;
@@ -1667,13 +1746,15 @@ void ModelCacheElem::load(const char * filename)
 					logError("%s: mandatory property 'file' not specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
 				else
 				{
-					logDebug("using bone set from %s", file.c_str());
+					const std::string file_path = path.empty() ? file : (path + "/" + file);
 					
-					Loader * loader = createLoader(file.c_str());
+					logDebug("using bone set from %s", file_path.c_str());
+					
+					Loader * loader = createLoader(file_path.c_str());
 					
 					if (loader)
 					{
-						boneSet = loader->loadBoneSet(file.c_str());
+						boneSet = loader->loadBoneSet(file_path.c_str());
 						delete loader;
 					}
 				}
@@ -1713,14 +1794,69 @@ void ModelCacheElem::load(const char * filename)
 					logError("%s: mandatory property 'file' not specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
 				else
 				{
-					logDebug("using mesh set from %s", file.c_str());
+					const std::string file_path = path.empty() ? file : (path + "/" + file);
 					
-					Loader * loader = createLoader(file.c_str());
+					logDebug("using mesh set from %s", file_path.c_str());
+					
+					Loader * loader = createLoader(file_path.c_str());
 					
 					if (loader)
 					{
-						meshSet = loader->loadMeshSet(file.c_str(), boneSet);
+						meshSet = loader->loadMeshSet(file_path.c_str(), boneSet);
 						delete loader;
+						
+						if (meshSet)
+						{
+							const std::string show = record.args.getString("show", "");
+							const std::string hide = record.args.getString("hide", "");
+							
+							if (!show.empty())
+							{
+								// first mark everything invisible
+								
+								for (int i = 0; i < meshSet->m_numMeshes; ++i)
+									meshSet->m_meshes[i]->m_isVisible = false;
+								
+								// mark selected meshes visible
+								
+								std::vector<std::string> wildcards;
+								splitString(show, wildcards, ',');
+								
+								for (int i = 0; i < meshSet->m_numMeshes; ++i)
+								{
+									Mesh * mesh = meshSet->m_meshes[i];
+									
+									for (auto & wildcard : wildcards)
+									{
+										if (String::MatchesWildcard(mesh->m_name.c_str(), wildcard.c_str()))
+										{
+											mesh->m_isVisible = true;
+										}
+									}
+								}
+							}
+							
+							if (!hide.empty())
+							{
+								// mark selected meshes invisible
+								
+								std::vector<std::string> wildcards;
+								splitString(hide, wildcards, ',');
+								
+								for (int i = 0; i < meshSet->m_numMeshes; ++i)
+								{
+									Mesh * mesh = meshSet->m_meshes[i];
+									
+									for (auto & wildcard : wildcards)
+									{
+										if (String::MatchesWildcard(mesh->m_name.c_str(), wildcard.c_str()))
+										{
+											mesh->m_isVisible = false;
+										}
+									}
+								}
+							}
+						}
 					}
 				}
 			}
@@ -1736,25 +1872,34 @@ void ModelCacheElem::load(const char * filename)
 				logError("%s: mandatory property 'file' not specified: %s (%s)", filename, record.line.c_str(), record.name.c_str());
 			else
 			{
-				logDebug("using anim set from %s", file.c_str());
+				const std::string file_path = path.empty() ? file : (path + "/" + file);
 				
-				Loader * loader = createLoader(file.c_str());
+				logDebug("using anim set from %s", file_path.c_str());
+				
+				Loader * loader = createLoader(file_path.c_str());
 				
 				if (loader)
 				{
-					AnimSet * temp = loader->loadAnimSet(file.c_str(), boneSet);
+					AnimSet * temp = loader->loadAnimSet(file_path.c_str(), boneSet);
 					
-					// todo: apply name when not merging
-					
-					const std::string name = record.args.getString("name", "");
-					
-					if (!name.empty())
-						temp->rename(name);
-					
-					if (!animSet)
-						animSet = temp;
+					if (temp == nullptr)
+					{
+						logError("failed to load anim set from file %s", file_path.c_str());
+					}
 					else
-						animSet->mergeFromAndFree(temp);
+					{
+						// todo: apply name when not merging
+						
+						const std::string name = record.args.getString("name", "");
+						
+						if (!name.empty())
+							temp->rename(name);
+						
+						if (!animSet)
+							animSet = temp;
+						else
+							animSet->mergeFromAndFree(temp);
+					}
 						
 					delete loader;
 				}

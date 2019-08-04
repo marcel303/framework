@@ -31,25 +31,26 @@
 //        which should hopefully rarely be needed
 // for now we seem to depend mostly on: SDL_event, SDL_mutex, SDL_thread and SDL_timer
 
-#include <GL/glew.h>
-#include <SDL2/SDL.h>
-#include <float.h>
-#include <map>
-#include <string>
-#include <vector>
+#if USE_LEGACY_OPENGL
+	#include <GL/glew.h>
+	#include <SDL2/SDL_opengl.h>
+#endif
+
 #include "Debugging.h"
+#include "gx_texture.h"
 #include "Mat4x4.h"
+#include "Vec2.h"
 #include "Vec3.h"
 #include "Vec4.h"
+#include <float.h> // FLT_MAX (sprite draw)
+#include <SDL2/SDL.h> // SDL_Event
+#include <string>
+#include <vector>
 
 #if defined(DEBUG)
 	#define fassert(x) Assert(x)
 #else
 	#define fassert(x) do { } while (false)
-#endif
-
-#if LINUX
-	typedef int SDLKey;
 #endif
 
 // configuration
@@ -68,14 +69,17 @@
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0 // do not alter
 #endif
 
-#if defined(LINUX)
-	#define ENABLE_PROFILING 0
-#else
-	#define ENABLE_PROFILING 1
+#if defined(MACOS) && !defined(ENABLE_METAL) && 0
+	#define ENABLE_METAL 1
+	#define ENABLE_HQ_PRIMITIVES 1
+#elif !defined(ENABLE_OPENGL)
+	#define ENABLE_OPENGL 1
 #endif
 
-#if !defined(ENABLE_OPENGL)
-	#define ENABLE_OPENGL 1
+#if ENABLE_OPENGL && !defined(LINUX)
+	#define ENABLE_PROFILING 1
+#else
+	#define ENABLE_PROFILING 0
 #endif
 
 /*
@@ -140,6 +144,29 @@ enum COLOR_POST
 	POST_BLEND_MUL_FIX = POST_RGB_MIX_ALPHA_TO_ONE,
 	POST_SET_ALPHA_TO_ONE,
 	POST_RGB_TO_LUMI
+};
+
+enum DEPTH_TEST
+{
+	DEPTH_EQUAL,
+	DEPTH_LESS,
+	DEPTH_LEQUAL,
+	DEPTH_GREATER,
+	DEPTH_GEQUAL,
+	DEPTH_ALWAYS
+};
+
+enum CULL_MODE
+{
+	CULL_NONE,
+	CULL_FRONT,
+	CULL_BACK
+};
+
+enum CULL_WINDING
+{
+	CULL_CCW,
+	CULL_CW
 };
 
 enum FONT_MODE // setFontMode
@@ -246,16 +273,23 @@ struct SpriterState;
 class Surface;
 class Window;
 
+namespace AnimModel
+{
+	class BoneTransform;
+}
+
 namespace spriter
 {
 	struct Drawable;
 	class Scene;
 }
 
+class ColorTarget;
+class DepthTarget;
+
 // globals
 
 extern Framework framework;
-extern Dictionary settings;
 extern Mouse mouse;
 extern Keyboard keyboard;
 extern Gamepad gamepad[MAX_GAMEPAD];
@@ -271,6 +305,70 @@ typedef void (*InitErrorHandler)(INIT_ERROR error);
 
 //
 
+typedef int32_t GxImmediateIndex;
+typedef uint32_t GxShaderId;
+typedef uint32_t GxShaderBufferId;
+
+#if USE_LEGACY_OPENGL
+
+// these must match the OpenGL definition for things to work when mapping GX calls to legacy OpenGL
+
+enum GX_PRIMITIVE_TYPE
+{
+	GX_INVALID_PRIM = -1,
+	GX_POINTS = GL_POINTS,
+	GX_LINES = GL_LINES,
+	GX_LINE_LOOP = GL_LINE_LOOP,
+	GX_LINE_STRIP = GL_LINE_STRIP,
+	GX_TRIANGLES = GL_TRIANGLES,
+	GX_TRIANGLE_FAN = GL_TRIANGLE_FAN,
+	GX_TRIANGLE_STRIP = GL_TRIANGLE_STRIP,
+	GX_QUADS = GL_QUADS
+};
+
+enum GX_MATRIX
+{
+	GX_MODELVIEW = GL_MODELVIEW,
+	GX_PROJECTION = GL_PROJECTION
+};
+
+enum GX_SAMPLE_FILTER
+{
+	GX_SAMPLE_NEAREST = GL_NEAREST,
+	GX_SAMPLE_LINEAR = GL_LINEAR
+};
+
+#else
+
+enum GX_PRIMITIVE_TYPE
+{
+	GX_INVALID_PRIM = -1,
+	GX_POINTS,
+	GX_LINES,
+	GX_LINE_LOOP,
+	GX_LINE_STRIP,
+	GX_TRIANGLES,
+	GX_TRIANGLE_FAN,
+	GX_TRIANGLE_STRIP,
+	GX_QUADS
+};
+
+enum GX_MATRIX
+{
+	GX_MODELVIEW,
+	GX_PROJECTION
+};
+
+enum GX_SAMPLE_FILTER
+{
+	GX_SAMPLE_NEAREST,
+	GX_SAMPLE_LINEAR
+};
+
+#endif
+
+//
+
 class Framework
 {
 public:
@@ -281,7 +379,7 @@ public:
 	Framework();
 	~Framework();
 	
-	bool init(int argc, const char * argv[], int sx, int sy);
+	bool init(int sx, int sy);
 	bool shutdown();
 	void process();
 	void processAction(const std::string & action, const Dictionary & args);
@@ -289,7 +387,12 @@ public:
 	void reloadCaches();
 	void fillCachesWithPath(const char * path, bool recurse);
 	
+	Window & getMainWindow();
+	Window & getCurrentWindow();
 	void setFullscreen(bool fullscreen);
+	
+	void getCurrentViewportSize(int & sx, int & sy) const;
+	int getCurrentBackingScale() const;
 
 	void beginDraw(int r, int g, int b, int a, float depth = 1.f);
 	void endDraw();
@@ -301,6 +404,8 @@ public:
 	void registerShaderSource(const char * name, const char * text);
 	void unregisterShaderSource(const char * name);
 	bool tryGetShaderSource(const char * name, const char *& text) const;
+	
+	bool fileHasChanged(const char * filename) const;
 
 	void blinkTaskbarIcon(int count);
 
@@ -310,12 +415,15 @@ public:
 	
 	bool waitForEvents;
 	bool fullscreen;
-	bool useClosestDisplayMode;
 	bool exclusiveFullscreen;
+	bool useClosestDisplayMode;
+	bool enableVsync;
+	int msaaLevel;
 	bool basicOpenGL;
 	bool enableDepthBuffer;
 	bool enableDrawTiming;
 	bool enableProfiling;
+	bool allowHighDpi;
 	int minification;
 	bool enableMidi;
 	int midiDeviceIndex;
@@ -327,6 +435,7 @@ public:
 	int windowX;
 	int windowY;
 	bool windowBorder;
+	bool windowIsResizable;
 	std::string windowTitle;
 	std::string windowIcon;
 	int windowSx;
@@ -339,13 +448,15 @@ public:
 	InitErrorHandler initErrorHandler;
 	
 	std::vector<SDL_Event> events;
+	std::vector<std::string> changedFiles;
+	std::vector<std::string> droppedFiles;
 	
 private:
+	uint32_t m_lastTick;
+	
 	Sprite * m_sprites;
 	Model * m_models;
 	Window * m_windows;
-	
-	std::map<std::string, std::string> m_shaderSources;
 
 	void registerSprite(Sprite * sprite);
 	void unregisterSprite(Sprite * sprite);
@@ -362,6 +473,9 @@ private:
 
 class Window
 {
+private:
+	Window(SDL_Window * window);
+	
 public:
 	friend class Framework;
 	
@@ -371,11 +485,14 @@ public:
 	void setPosition(const int x, const int y);
 	void setPositionCentered();
 	void setSize(const int sx, const int sy);
+	void setFullscreen(const bool fullscreen);
+	void setTitle(const char * title);
 	
 	void show();
 	void hide();
 	
 	bool isHidden() const;
+	bool hasFocus() const;
 	
 	void raise();
 	
@@ -409,21 +526,103 @@ enum SURFACE_FORMAT
 {
 	SURFACE_RGBA8,
 	SURFACE_RGBA16F,
+	SURFACE_RGBA32F,
 	SURFACE_R8,
 	SURFACE_R16F,
-	SURFACE_R32F
+	SURFACE_R32F,
+	SURFACE_RG16F,
+	SURFACE_RG32F
+};
+
+enum DEPTH_FORMAT
+{
+	DEPTH_FLOAT16,
+	DEPTH_FLOAT32
+};
+
+class SurfaceProperties
+{
+public:
+	struct
+	{
+		int width = 0;
+		int height = 0;
+		int backingScale = 0; // the backing scale is a multiplier applied to the size of the surface. 0 = automatically select the backing scale, any other value will be used to multiply the width and height of the storage used to back the surface
+		
+		void init(const int sx, const int sy)
+		{
+			width = sx;
+			height = sy;
+		}
+		
+		void setBackingScale(const int in_backingScale)
+		{
+			backingScale = in_backingScale;
+		}
+	} dimensions;
+	
+	struct
+	{
+		bool enabled = false;
+		SURFACE_FORMAT format = SURFACE_RGBA8;
+		int swizzle[4] = { 0, 1, 2, 3 };
+		bool doubleBuffered = false;
+		
+		void init(const SURFACE_FORMAT in_format, const bool in_doubleBuffered)
+		{
+			enabled = true;
+			format = in_format;
+			doubleBuffered = in_doubleBuffered;
+		}
+		
+		void setSwizzle(const int r, const int g, const int b, const int a)
+		{
+			swizzle[0] = r;
+			swizzle[1] = g;
+			swizzle[2] = b;
+			swizzle[3] = a;
+		}
+	} colorTarget;
+	
+	struct
+	{
+		bool enabled = false;
+		DEPTH_FORMAT format = DEPTH_FLOAT32;
+		bool doubleBuffered = false;
+		
+		void init(const DEPTH_FORMAT in_format, const bool in_doubleBuffered)
+		{
+			enabled = true;
+			format = in_format;
+			doubleBuffered = in_doubleBuffered;
+		}
+	} depthTarget;
 };
 
 class Surface
 {
-	int m_size[2];
-	int m_bufferId;
-	SURFACE_FORMAT m_format;
-	bool m_doubleBuffered;
-	GLuint m_buffer[2];
-	GLuint m_texture[2];
-	GLuint m_depthTexture;
+#if ENABLE_METAL
+	SurfaceProperties m_properties;
 	
+	int m_backingScale; // backing scale puts a multiplier on the physical size (in pixels) of the surface. it's like MSAA, but fully super-sampled. it's used t orender to retina screens, where the 'resolve' operation just copies pixels 1:1, where a resolve onto a non-retina screen would downsample the surface instead
+	
+	int m_bufferId;
+	
+	ColorTarget * m_colorTarget[2];
+	DepthTarget * m_depthTarget[2];
+#endif
+
+#if ENABLE_OPENGL
+	SurfaceProperties m_properties;
+	
+	int m_backingScale; // backing scale puts a multiplier on the physical size (in pixels) of the surface. it's like MSAA, but fully super-sampled. it's used t orender to retina screens, where the 'resolve' operation just copies pixels 1:1, where a resolve onto a non-retina screen would downsample the surface instead
+	
+	int m_bufferId;
+	uint32_t m_buffer[2];
+	GxTextureId m_colorTexture[2];
+	GxTextureId m_depthTexture[2];
+#endif
+
 	void construct();
 	void destruct();
 	
@@ -435,13 +634,21 @@ public:
 	
 	void swapBuffers();
 
+	bool init(const SurfaceProperties & properties);
 	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
-	GLuint getFramebuffer() const;
-	GLuint getTexture() const;
+	void setSwizzle(int r, int g, int b, int a);
+	
+#if ENABLE_METAL
+	ColorTarget * getColorTarget();
+	DepthTarget * getDepthTarget();
+#endif
+	uint32_t getFramebuffer() const; // todo : make internally accessible only
+	GxTextureId getTexture() const;
 	bool hasDepthTexture() const;
-	GLuint getDepthTexture() const;
+	GxTextureId getDepthTexture() const;
 	int getWidth() const;
 	int getHeight() const;
+	int getBackingScale() const;
 	SURFACE_FORMAT getFormat() const;
 	
 	void clear(int r = 0, int g = 0, int b = 0, int a = 0);
@@ -473,7 +680,8 @@ class ShaderBase
 public:
 	virtual ~ShaderBase() { }
 	
-	virtual GLuint getProgram() const = 0;
+	virtual bool isValid() const = 0;
+	virtual GxShaderId getProgram() const = 0; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const = 0;
 	virtual int getVersion() const = 0;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const = 0;
@@ -481,53 +689,64 @@ public:
 
 //
 
+#if ENABLE_METAL
+
+#include "gx-metal/shader.h"
+
+#else
+
 class Shader : public ShaderBase
 {
 	class ShaderCacheElem * m_shader;
 
 public:
 	Shader();
-	Shader(const char * filename);
-	Shader(const char * name, const char * filenameVs, const char * filenamePs);
+	Shader(const char * name, const char * outputs = nullptr);
+	Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
 	virtual ~Shader();
 	
-	void load(const char * name, const char * filenameVs, const char * filenamePs);
-	bool isValid() const;
-	virtual GLuint getProgram() const override;
+	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
+	virtual bool isValid() const override;
+	virtual GxShaderId getProgram() const override; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
 	
-	GLint getImmediate(const char * name);
-	GLint getAttribute(const char * name);
+	GxImmediateIndex getImmediate(const char * name);
 	
 	void setImmediate(const char * name, float x);	
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
-	void setImmediate(GLint index, float x);
-	void setImmediate(GLint index, float x, float y);
-	void setImmediate(GLint index, float x, float y, float z);
-	void setImmediate(GLint index, float x, float y, float z, float w);
+	void setImmediate(GxImmediateIndex index, float x);
+	void setImmediate(GxImmediateIndex index, float x, float y);
+	void setImmediate(GxImmediateIndex index, float x, float y, float z);
+	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
-	void setImmediateMatrix4x4(GLint index, const float * matrix);
+	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
+	void setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices);
 	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
-	void setTextureUnit(GLint index, int unit); // bind <name> to GL_TEXTURE0 + unit
-	void setTexture(const char * name, int unit, GLuint texture);
-	void setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
-	void setTextureUniform(GLint index, int unit, GLuint texture);
-	void setTextureArray(const char * name, int unit, GLuint texture);
-	void setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
+	void setTextureUnit(GxImmediateIndex index, int unit); // bind <name> to GL_TEXTURE0 + unit
+	void setTexture(const char * name, int unit, GxTextureId texture);
+	void setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
+	void setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture);
+	void setTextureArray(const char * name, int unit, GxTextureId texture);
+	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
+	void setTextureCube(const char * name, int unit, GxTextureId texture);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
-	void setBuffer(GLint index, const ShaderBuffer & buffer);
+	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
-	void setBufferRw(GLint index, const ShaderBufferRw & buffer);
+	void setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer);
 
 	const ShaderCacheElem & getCacheElem() const { return *m_shader; }
 	void reload();
 };
 
+#endif
+
 //
+
+#if ENABLE_OPENGL
 
 class ComputeShader : public ShaderBase
 {
@@ -545,8 +764,8 @@ public:
 	virtual ~ComputeShader();
 
 	void load(const char * filename, const int groupSx = kDefaultGroupSx, const int groupSy = kDefaultGroupSy, const int groupSz = kDefaultGroupSz);
-	bool isValid() const { return m_shader != 0; }
-	virtual GLuint getProgram() const override;
+	virtual bool isValid() const override { return m_shader != 0; }
+	virtual GxShaderId getProgram() const override; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_CS; }
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
@@ -558,24 +777,23 @@ public:
 	int toThreadSy(const int sy) const;
 	int toThreadSz(const int sz) const;
 
-	GLint getImmediate(const char * name);
-	GLint getAttribute(const char * name);
+	GxImmediateIndex getImmediate(const char * name);
 
 	void setImmediate(const char * name, float x);	
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
-	void setImmediate(GLint index, float x, float y);
-	void setImmediate(GLint index, float x, float y, float z, float w);
+	void setImmediate(GxImmediateIndex index, float x, float y);
+	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
-	void setImmediateMatrix4x4(GLint index, const float * matrix);
-	void setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
-	void setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamp = true);
-	void setTextureRw(const char * name, int unit, GLuint texture, GLuint format, bool filtered, bool clamp = true);
+	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
+	void setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
+	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
+	void setTextureRw(const char * name, int unit, GxTextureId texture, uint32_t format, bool filtered, bool clamp = true); // todo : add enum for graphics api independent buffer formats
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
-	void setBuffer(GLint index, const ShaderBuffer & buffer);
+	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
-	void setBufferRw(GLint index, const ShaderBufferRw & buffer);
+	void setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer);
 
 	void dispatch(const int dispatchSx, const int dispatchSy, const int dispatchSz);
 
@@ -583,17 +801,19 @@ public:
 	void reload();
 };
 
+#endif
+
 //
 
 class ShaderBuffer
 {
-	GLuint m_buffer;
+	GxShaderBufferId m_buffer;
 
 public:
 	ShaderBuffer();
 	~ShaderBuffer();
 
-	GLuint getBuffer() const;
+	GxShaderBufferId getBuffer() const; // todo : make internally accessible only
 
 	void setData(const void * bytes, int numBytes);
 };
@@ -602,13 +822,13 @@ public:
 
 class ShaderBufferRw
 {
-	GLuint m_buffer;
+	GxShaderBufferId m_buffer;
 
 public:
 	ShaderBufferRw();
 	~ShaderBufferRw();
 
-	GLuint getBuffer() const;
+	GxShaderBufferId getBuffer() const; // todo : make internally accessible only
 
 	void setDataRaw(const void * bytes, int numBytes);
 
@@ -645,12 +865,17 @@ public:
 
 //
 
+class DictionaryStorage;
+
 class Dictionary
 {
-	typedef std::map<std::string, std::string> Map;
-	Map m_map;
+	DictionaryStorage * m_storage;
 	
 public:
+	Dictionary();
+	Dictionary(const Dictionary & other);
+	~Dictionary();
+	
 	bool load(const char * filename);
 	bool save(const char * filename);
 	bool parse(const std::string & line, bool clear = true); // line = key1:value1 key2:value2 key3:value3 ..
@@ -673,11 +898,13 @@ public:
 	template <typename T> T * getPtrType(const char * name, T * _default) const { return (T*)getPtr(name, _default); }
 	
 	std::string & operator[](const char * name);
+	
+	Dictionary & operator=(const Dictionary & other);
 };
 
 //
 
-GLuint getTexture(const char * filename);
+GxTextureId getTexture(const char * filename);
 
 //
 
@@ -722,7 +949,7 @@ public:
 	
 	int getWidth() const;
 	int getHeight() const;
-	GLuint getTexture() const;
+	GxTextureId getTexture() const;
 	
 	// animation
 	float animSpeed;
@@ -787,15 +1014,16 @@ public:
 	float scale;
 	Shader * overrideShader;
 	
-	// fixme : remove mutable qualifiers
-	mutable bool animIsActive;
+	bool animIsActive;
 	bool animIsPaused;
-	mutable float animTime;
-	mutable int animLoop;
-	mutable int animLoopCount;
+	float animTime;
+	int animLoop;
+	int animLoopCount;
 	float animSpeed;
 	Vec3 animRootMotion;
 	bool animRootMotionEnabled;
+	
+	float drawNormalsScale = 1.f;
 	
 	Model(const char * filename, bool autoUpdate = false);
 	Model(class ModelCacheElem & cacheElem, bool autoUpdate);
@@ -834,6 +1062,7 @@ public:
 	
 private:
 	void ctor();
+	void ctorEnd();
 	
 	// book keeping
 	Model * m_prev;
@@ -847,6 +1076,7 @@ private:
 	void * m_currentAnim;
 	void * m_animSegment;
 	bool m_isAnimStarted;
+	AnimModel::BoneTransform * m_boneTransforms;
 	
 	bool m_autoUpdate;
 
@@ -903,6 +1133,7 @@ public:
 	void draw(const SpriterState & state, const spriter::Drawable * drawables, int numDrawables);
 
 	int getAnimCount() const;
+	const char * getAnimName(const int animIndex) const;
 	int getAnimIndexByName(const char * name) const;
 	float getAnimLength(int animIndex) const;
 	bool isAnimDoneAtTime(int animIndex, float time) const;
@@ -1118,10 +1349,10 @@ class Keyboard
 public:
 	std::vector<SDL_Event> events;
 	
-	bool isDown(SDLKey key) const;
-	bool wentDown(SDLKey key, bool allowRepeat = false) const;
-	bool wentUp(SDLKey key) const;
-	bool keyRepeat(SDLKey key) const;
+	bool isDown(int key) const;
+	bool wentDown(int key, bool allowRepeat = false) const;
+	bool wentUp(int key) const;
+	bool keyRepeat(int key) const;
 
 	bool isIdle() const; // return true when there are no buttons being pressed
 };
@@ -1207,17 +1438,19 @@ void clearCaches(int caches);
 void setTransform(TRANSFORM transform);
 TRANSFORM getTransform();
 void applyTransform();
-void applyTransformWithViewportSize(const float sx, const float sy);
+void applyTransformWithViewportSize(const int sx, const int sy);
 void setTransform2d(const Mat4x4 & transform);
 void setTransform3d(const Mat4x4 & transform);
 void pushTransform();
 void popTransform();
+void pushScroll(const int scrollX, const int scrollY);
+void popScroll();
 
 void projectScreen2d();
 void projectPerspective3d(const float fov, const float nearZ, const float farZ);
 void viewLookat3d(const float originX, const float originY, const float originZ, const float targetX, const float targetY, const float targetZ, const float upX, const float upY, const float upZ);
 Vec4 transformToWorld(const Vec4 & v);
-Vec2 transformToScreen(const Vec3 & v);
+Vec2 transformToScreen(const Vec3 & v, float & w);
 
 void pushSurface(Surface * surface);
 void popSurface();
@@ -1235,6 +1468,25 @@ void popColorMode();
 void setColorPost(COLOR_POST colorPost);
 void pushColorPost(COLOR_POST colorPost);
 void popColorPost();
+
+void setLineSmooth(bool enabled);
+void pushLineSmooth(bool enabled);
+void popLineSmooth();
+
+void setWireframe(bool enabled);
+void pushWireframe(bool enabled);
+void popWireframe();
+
+void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
+void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
+void popDepthTest();
+
+void pushDepthWrite(bool enabled);
+void popDepthWrite();
+
+void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
+void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
+void popCullMode();
 
 void setColor(const Color & color);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
@@ -1255,6 +1507,8 @@ void popFontMode();
 void setShader(const ShaderBase & shader);
 void clearShader();
 void shaderSource(const char * filename, const char * text);
+void pushShaderOutputs(const char * outputs);
+void popShaderOutputs();
 
 void drawPoint(float x, float y);
 void drawLine(float x1, float y1, float x2, float y2);
@@ -1263,7 +1517,7 @@ void drawRectLine(float x1, float y1, float x2, float y2);
 void drawCircle(float x, float y, float radius, int numSegments);
 void fillCircle(float x, float y, float radius, int numSegments);
 void measureText(float size, float & sx, float & sy, const char * format, ...);
-void beginTextBatch();
+void beginTextBatch(Shader * overrideShader = nullptr);
 void endTextBatch();
 void drawText(float x, float y, float size, float alignX, float alignY, const char * format, ...);
 void measureTextArea(float size, float maxSx, float & sx, float & sy, const char * format, ...);
@@ -1275,28 +1529,38 @@ void drawLine3d(int axis = 0);
 void drawRect3d(int axis1 = 0, int axis2 = 1);
 void drawGrid3d(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1);
 void drawGrid3dLine(int resolution1, int resolution2, int axis1 = 0, int axis2 = 1, bool optimized = false);
+void lineCube(Vec3Arg position, Vec3Arg size);
+void fillCube(Vec3Arg position, Vec3Arg size);
+void fillCylinder(Vec3Arg position, const float radius, const float height, const int resolution, const float angleOffset = 0.f);
+void fillHexagon(Vec3Arg position, const float radius, const float height, const float angleOffset = 0.f);
+void beginCubeBatch();
+void endCubeBatch();
 
-GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
-GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);
-GLuint createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp);
-GLuint createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp);
-GLuint createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp);
-GLuint createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp);
+
+void freeTexture(GxTextureId & textureId);
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
 
 // OpenGL legacy mode drawing
 
-#if !ENABLE_OPENGL
+#if !ENABLE_OPENGL && !ENABLE_METAL
 
 SDL_Surface * getWindowSurface();
 
-static inline void gxMatrixMode(GLenum mode) { }
+static inline void gxMatrixMode(GX_MATRIX mode) { }
+static inline GX_MATRIX gxGetMatrixMode() { return GX_MODELVIEW; }
 static inline void gxPopMatrix() { }
 static inline void gxPushMatrix() { }
 static inline void gxLoadIdentity() { }
 static inline void gxLoadMatrixf(const float * m) { }
-static inline void gxGetMatrixf(GLenum mode, float * m) { }
+static inline void gxGetMatrixf(GX_MATRIX mode, float * m) { }
+static inline void gxSetMatrixf(GX_MATRIX mode, const float * m) { }
 static inline void gxMultMatrixf(const float * m) { }
 static inline void gxTranslatef(float x, float y, float z) { }
 static inline void gxRotatef(float angle, float x, float y, float z) { }
@@ -1305,29 +1569,36 @@ static inline void gxValidateMatrices() { }
 
 static inline void gxInitialize() { }
 static inline void gxShutdown() { }
-static inline void gxBegin(int primitiveType) { }
+static inline void gxBegin(GX_PRIMITIVE_TYPE primitiveType) { }
 static inline void gxEnd() { }
+static inline void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices) { }
 static inline void gxColor4f(float r, float g, float b, float a) { }
 static inline void gxColor4fv(const float * rgba) { }
 static inline void gxColor3ub(int r, int g, int b) { }
 static inline void gxColor4ub(int r, int g, int b, int a) { }
 static inline void gxTexCoord2f(float u, float v) { }
 static inline void gxNormal3f(float x, float y, float z) { }
+static inline void gxNormal3fv(const float  * v) { }
 static inline void gxVertex2f(float x, float y) { }
 static inline void gxVertex3f(float x, float y, float z) { }
+static inline void gxVertex3fv(const float * v) { }
 static inline void gxVertex4f(float x, float y, float z, float w) { }
-static inline void gxSetTexture(GLuint texture) { }
+static inline void gxVertex4fv(const float * v) { }
+static inline void gxSetTexture(GxTextureId texture) { }
+static inline void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp) { }
+
+static inline void gxGetTextureSize(GxTextureId texture, int & width, int & height) { width = 0; height = 0; }
 
 #elif !USE_LEGACY_OPENGL
 
-void gxMatrixMode(GLenum mode);
-GLenum gxGetMatrixMode();
+void gxMatrixMode(GX_MATRIX mode);
+GX_MATRIX gxGetMatrixMode();
 void gxPopMatrix();
 void gxPushMatrix();
 void gxLoadIdentity();
 void gxLoadMatrixf(const float * m);
-void gxGetMatrixf(GLenum mode, float * m);
-void gxSetMatrixf(GLenum mode, float * m);
+void gxGetMatrixf(GX_MATRIX mode, float * m);
+void gxSetMatrixf(GX_MATRIX mode, const float * m);
 void gxMultMatrixf(const float * m);
 void gxTranslatef(float x, float y, float z);
 void gxRotatef(float angle, float x, float y, float z);
@@ -1336,9 +1607,9 @@ void gxValidateMatrices();
 
 void gxInitialize();
 void gxShutdown();
-void gxBegin(int primitiveType);
+void gxBegin(GX_PRIMITIVE_TYPE primitiveType);
 void gxEnd();
-void gxEmitVertices(int primitiveType, int numVertices);
+void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices);
 void gxColor4f(float r, float g, float b, float a);
 void gxColor4fv(const float * rgba);
 void gxColor3ub(int r, int g, int b);
@@ -1351,17 +1622,21 @@ void gxVertex3f(float x, float y, float z);
 void gxVertex3fv(const float * v);
 void gxVertex4f(float x, float y, float z, float w);
 void gxVertex4fv(const float * v);
-void gxSetTexture(GLuint texture);
+void gxSetTexture(GxTextureId texture);
+void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
+
+void gxGetTextureSize(GxTextureId texture, int & width, int & height);
 
 #else
 
 #define gxMatrixMode glMatrixMode
-GLenum gxGetMatrixMode();
+GX_MATRIX gxGetMatrixMode();
 #define gxPopMatrix glPopMatrix
 #define gxPushMatrix glPushMatrix
 #define gxLoadIdentity glLoadIdentity
 #define gxLoadMatrixf glLoadMatrixf
-void gxGetMatrixf(GLenum mode, float * m);
+void gxGetMatrixf(GX_MATRIX mode, float * m);
+void gxSetMatrixf(GX_MATRIX mode, const float * m);
 #define gxMultMatrixf glMultMatrixf
 #define gxTranslatef glTranslatef
 #define gxRotatef glRotatef
@@ -1378,14 +1653,17 @@ void gxEnd();
 #define gxColor4ub glColor4ub
 #define gxTexCoord2f glTexCoord2f
 #define gxNormal3f glNormal3f
+#define gxNormal3fv glNormal3fv
 #define gxVertex2f glVertex2f
 #define gxVertex2fv glVertex2fv
 #define gxVertex3f glVertex3f
 #define gxVertex3fv glVertex3fv
 #define gxVertex4f glVertex4f
 #define gxVertex4fv glVertex4fv
-void gxSetTexture(GLuint texture);
+void gxSetTexture(GxTextureId texture);
+void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
+void gxGetTextureSize(GxTextureId texture, int & width, int & height);
 
 #endif
 
@@ -1407,22 +1685,22 @@ void showErrorMessage(const char * caption, const char * format, ...);
 
 void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma = 1.632f);
 
-void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius);
-void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius);
-void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);
-void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity);
-void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity);
-void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor, const float opacity);
+void setShader_GaussianBlurH(const GxTextureId source, const int kernelSize, const float radius);
+void setShader_GaussianBlurV(const GxTextureId source, const int kernelSize, const float radius);
+void setShader_ThresholdLumi(const GxTextureId source, const float lumi, const Color & failColor, const Color & passColor, const float opacity);
+void setShader_ThresholdLumiFail(const GxTextureId source, const float lumi, const Color & failColor, const float opacity);
+void setShader_ThresholdLumiPass(const GxTextureId source, const float lumi, const Color & passColor, const float opacity);
+void setShader_ThresholdValue(const GxTextureId source, const Color & value, const Color & failColor, const Color & passColor, const float opacity);
 // todo : implement these shaders .. ! and make source code shared/includable
-void setShader_GrayscaleLumi(const GLuint source, const float opacity);
-void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity);
-void setShader_Colorize(const GLuint source, const float hue, const float opacity);
-void setShader_HueShift(const GLuint source, const float hue, const float opacity);
-void setShader_Composite(const GLuint source1, const GLuint source2);
-void setShader_CompositePremultiplied(const GLuint source1, const GLuint source2);
-void setShader_Premultiply(const GLuint source);
-void setShader_ColorMultiply(const GLuint source, const Color & color, const float opacity);
-void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity);
+void setShader_GrayscaleLumi(const GxTextureId source, const float opacity);
+void setShader_GrayscaleWeights(const GxTextureId source, const Vec3 & weights, const float opacity);
+void setShader_Colorize(const GxTextureId source, const float hue, const float opacity);
+void setShader_HueShift(const GxTextureId source, const float hue, const float opacity);
+void setShader_Composite(const GxTextureId source1, const GxTextureId source2);
+void setShader_CompositePremultiplied(const GxTextureId source1, const GxTextureId source2);
+void setShader_Premultiply(const GxTextureId source);
+void setShader_ColorMultiply(const GxTextureId source, const Color & color, const float opacity);
+void setShader_ColorTemperature(const GxTextureId source, const float temperature, const float opacity);
 
 // high quality rendering
 
@@ -1453,7 +1731,8 @@ void hqEnd();
 void hqSetGradient(GRADIENT_TYPE gradientType, const Mat4x4 & matrix, const Color & color1, const Color & color2, const COLOR_MODE colorMode, const float bias = 0.f, const float scale = 1.f);
 void hqClearGradient();
 
-void hqSetTexture(const Mat4x4 & matrix, const GLuint texture);
+void hqSetTexture(const GxTextureId texture, const Mat4x4 & matrix);
+void hqSetTextureScreen(const GxTextureId texture, float x1, float y1, float x2, float y2);
 void hqClearTexture();
 
 void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2);

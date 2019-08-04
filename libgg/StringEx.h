@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <string.h>
 #include <vector>
 #include <stddef.h>
 #include <stdint.h>
@@ -29,8 +30,10 @@ public:
 	static std::string SubString(const std::string& text, size_t offset);
 	static std::string SubString(const std::string& text, size_t offset, size_t length);
 	static bool Equals(const char* text1, const char* text2);
+	static bool MatchesWildcard(const char * text, const char * wildcard);
 	static std::string Join(const std::vector<std::string>& strings);
 	static std::string Join(const std::vector<std::string>& strings, const std::string& separator);
+	
 };
 
 #if defined(PSP) || defined(__GNUC__)
@@ -39,4 +42,9 @@ public:
     #define vsprintf_s(s, ss, f, a) vsnprintf(s, ss, f, a)
     #define strcpy_s(d, ds, s) strcpy(d, s)
     #define sscanf_s sscanf
+#endif
+
+#if defined(WINDOWS)
+	#define strcasecmp _stricmp
+	extern char * strcasestr(const char * haystack, const char * needle);
 #endif

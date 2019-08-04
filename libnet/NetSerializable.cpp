@@ -1,7 +1,7 @@
-#include <algorithm>
 #include "BitStream.h"
 #include "NetDiag.h"
 #include "NetSerializable.h"
+#include <algorithm>
 
 NetSerializationContext::NetSerializationContext()
 	: m_init(false)

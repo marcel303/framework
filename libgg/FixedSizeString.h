@@ -27,6 +27,16 @@ public:
 	{
 		return mSize == 0;
 	}
+	
+	inline int size() const
+	{
+		return mSize;
+	}
+	
+	inline int capacity() const
+	{
+		return SIZE;
+	}
 
 	const char* c_str() const { const_cast<FixedSizeString<SIZE>*>(this)->mText[mSize] = 0; return mText; }
 

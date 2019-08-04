@@ -1,6 +1,10 @@
 #pragma once
 
-#include <math.h>
+#if defined(__clang__)
+	// use builtin for sqrtf
+#else
+	#include <math.h>
+#endif
 
 class Vec2
 {
@@ -33,7 +37,11 @@ public:
 			m_v[0] * m_v[0] +
 			m_v[1] * m_v[1];
 		
+	#if defined(__clang__)
+		return __builtin_sqrtf(sq);
+	#else
 		return sqrtf(sq);
+	#endif
 	}
 
 	inline float CalcSizeSq() const

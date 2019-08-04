@@ -1,0 +1,16 @@
+app refine
+	depend_library framework
+	depend_library imgui-framework
+	depend_library ImGuiColorTextEdit
+	depend_library jsusfx
+	depend_library jsusfx-framework
+	depend_library libchibi
+	depend_library libjgmod
+	depend_library libjgmod-vis
+	depend_library libparticle
+	depend_library libvideo
+	depend_library vfxgraph
+	depend_library vfxgraph-nodes
+	scan_files cpp
+	scan_files h
+	resource_path data

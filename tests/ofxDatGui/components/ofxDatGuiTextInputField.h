@@ -22,6 +22,7 @@
 
 #pragma once
 #include "../core/ofxDatGuiIntObject.h"
+#include <algorithm>
 
 class ofxDatGuiTextInputField : public ofxDatGuiInteractiveObject{
 

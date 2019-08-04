@@ -2,6 +2,7 @@
 #include "BinaryDiff.h"
 #include "ChannelHandler.h"
 #include "ChannelManager.h"
+#include "Exception.h"
 #include "Log.h"
 #include "NetArray.h"
 #include "NetDiag.h"
@@ -1431,7 +1432,7 @@ static void presentImage(ImageMem & image)
 {
 	framework.beginDraw(0, 0, 0, 0);
 	{
-		GLuint texture = createTextureFromRGBA8(image.pixels, image.sx, image.sy, false, true);
+		GxTextureId texture = createTextureFromRGBA8(image.pixels, image.sx, image.sy, false, true);
 		
 		if (texture != 0)
 		{
@@ -1441,8 +1442,8 @@ static void presentImage(ImageMem & image)
 			gxSetTexture(0);
 			popBlend();
 			
-			glDeleteTextures(1, &texture);
-			texture = 0;
+			freeTexture(texture);
+			Assert(texture == 0);
 		}
 	}
 	framework.endDraw();
@@ -1455,10 +1456,10 @@ int main(int argc, char * argv[])
 		const uint32_t displaySx = 256;
 		const uint32_t displaySy = 256;
 
-		if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
-			throw std::exception();//"failed to initialize SDL");
+		if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO) < 0)
+			throw ExceptionVA("failed to initialize SDL");
 		
-		framework.init(0, 0, displaySx, displaySy);
+		framework.init(displaySx, displaySy);
 		
 		ImageMem image(displaySx, displaySy);
 

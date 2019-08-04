@@ -1,0 +1,9 @@
+# C++ classes for reading/writing Standard MIDI Files
+#   http://midifile.sapp.org
+#   https://github.com/craigsapp/midifile
+
+library midifile
+
+	scan_files *.* path midifile
+	
+	header_path . expose

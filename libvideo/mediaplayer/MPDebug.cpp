@@ -26,6 +26,7 @@
 */
 
 #include "MPDebug.h"
+#include <SDL2/SDL.h>
 #include <stdarg.h>
 #include <stdio.h>
 
@@ -39,7 +40,7 @@ namespace MP
 	{
 		void Print(const char * format, ...)
 		{
-		#if DEBUG_MEDIAPLAYER
+		#if DEBUG_MEDIAPLAYER_LOGGING
 			static char string[4096];
 
 			va_list list;
@@ -53,6 +54,12 @@ namespace MP
 			OutputDebugString(string);
 		#endif
 		#endif
+		}
+		
+		void SimulateHickup()
+		{
+			if ((rand() % 20) == 0)
+				SDL_Delay(10);
 		}
 	};
 };

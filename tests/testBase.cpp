@@ -25,9 +25,11 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "DownloadCache.h"
 #include "Ease.h"
 #include "framework.h"
 #include "testBase.h"
+#include <algorithm>
 #include <map>
 
 extern const int GFX_SX;
@@ -259,7 +261,10 @@ static bool doMenu(const bool tickMenu, const bool drawMenu)
 		s_testState.drawX = GFX_SX - 25;
 		if (doButton(s_testState.drawX, GFX_SY - 25, -1, -1, "About") == kButtonHover)
 		{
-			drawTextbox(mouse.x, mouse.y, s_testState.about);
+			if (s_testState.drawMenu)
+			{
+				drawTextbox(mouse.x, mouse.y, s_testState.about);
+			}
 		}
 	}
 	
@@ -347,4 +352,130 @@ void setInstructions(const char * instructions)
 void setAbout(const char * about)
 {
 	s_testState.about = about;
+}
+
+bool downloadTestFiles(const char * urls_and_filenames[], const int numFiles)
+{
+	enum State
+	{
+		kState_AskConfirmation,
+		kState_Download,
+		kState_DownloadDone,
+		kState_Done,
+	};
+	
+	State state = kState_AskConfirmation;
+	
+	bool result = false;
+	
+	DownloadCache downloadCache;
+	
+	for (int i = 0; i < numFiles; ++i)
+	{
+		downloadCache.add(
+			urls_and_filenames[i * 2 + 0],
+			urls_and_filenames[i * 2 + 1]);
+	}
+	
+	if (downloadCache.readyFiles.size() == numFiles)
+		return true;
+	
+	do
+	{
+		framework.process();
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setFont("calibri.ttf");
+			pushFontMode(FONT_SDF);
+			setColor(colorWhite);
+			
+			if (state == kState_AskConfirmation)
+			{
+				int y = GFX_SY/2 - 100;
+				int x = GFX_SX/4;
+				
+				setLumi(255);
+				drawText(x, y, 24, +1, 0, "The following files will need to be downloaded,");
+				y += 26;
+				x += 12;
+				
+				y += 12;
+				for (auto & e : downloadCache.downloadQueue.queuedElems)
+				{
+					setLumi(200);
+					drawText(x, y, 16, +1, 0, "%s", e.second.filename.c_str());
+					y += 18;
+				}
+				y += 12;
+				
+				y += 8;
+				setLumi(255);
+				drawText(x, y, 24, +1, 0, "Proceed?");
+				y += 26;
+				y += 8;
+				
+				s_testState.tickMenu = true;
+				s_testState.drawMenu = true;
+				
+				s_testState.drawX = x;
+				
+				if (doButton(s_testState.drawX, y, 1, 1, "Ok") == kButtonPress)
+					state = kState_Download;
+				if (doButton(s_testState.drawX, y, 1, 1, "Cancel") == kButtonPress)
+					state = kState_Done;
+			}
+			else if (state == kState_Download)
+			{
+				downloadCache.tick(4);
+				
+				//
+				
+				int y = GFX_SY/2 - 100;
+				int x = GFX_SX/4;
+				
+				setLumi(255);
+				drawText(x, y, 24, +1, 0, "Downloading files..");
+				y += 26;
+				x += 12;
+			
+				y += 12;
+				for (auto & e : downloadCache.downloadQueue.activeElems)
+				{
+					setLumi(200);
+					drawText(x + 10, y, 16, +1, 0, "Downloading %s.. (%dkb)", e.first.c_str(), e.second.getProgress() / 1024);
+					y += 18;
+				}
+				y += 12;
+				
+				s_testState.tickMenu = true;
+				s_testState.drawMenu = true;
+				
+				s_testState.drawX = x;
+				
+				if (doButton(s_testState.drawX, y, 1, 1, "Cancel") == kButtonPress)
+					state = kState_Done;
+				
+				if (downloadCache.downloadQueue.isEmpty())
+				{
+					result = true;
+					
+					for (auto & file : downloadCache.readyFiles)
+						result &= file.second;
+					
+					state = kState_DownloadDone;
+				}
+			}
+			else if (state == kState_DownloadDone)
+			{
+				state = kState_Done;
+			}
+			
+			drawTestUi();
+			popFontMode();
+		}
+		framework.endDraw();
+	} while (tickTestUi() && state != kState_Done);
+	
+	return result;
 }

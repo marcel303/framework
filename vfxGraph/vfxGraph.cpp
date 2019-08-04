@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "graphEdit.h"
 #include "Parse.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
@@ -39,7 +40,7 @@
 extern int VFXGRAPH_SX;
 extern int VFXGRAPH_SY;
 
-int VFXGRAPH_SX = 0;
+int VFXGRAPH_SX = 0; // todo : remove. make these members
 int VFXGRAPH_SY = 0;
 
 //
@@ -48,7 +49,104 @@ VfxGraph * g_currentVfxGraph = nullptr;
 
 Surface * g_currentVfxSurface = nullptr;
 
+//
+
 static Surface * s_dummySurface = nullptr; // todo : add explicit vfx graph init and shutdown ?
+
+//
+
+void MemoryComponent::registerMemf(const char * name, const int numElements)
+{
+	auto & mem = memf[name];
+	
+	mem.refCount++;
+	
+	if (numElements > mem.numElements)
+		mem.numElements = numElements;
+}
+
+void MemoryComponent::unregisterMemf(const char * name)
+{
+	auto mem_itr = memf.find(name);
+	Assert(mem_itr != memf.end());
+	
+	mem_itr->second.refCount--;
+	
+	if (mem_itr->second.refCount == 0)
+	{
+		memf.erase(mem_itr);
+	}
+}
+
+void MemoryComponent::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
+{
+	auto mem_itr = memf.find(name);
+	
+	if (mem_itr != memf.end())
+	{
+		auto & mem = mem_itr->second;
+		
+		mem.value = Vec4(value1, value2, value3, value4);
+	}
+}
+
+bool MemoryComponent::getMemf(const char * name, Vec4 & result) const
+{
+	auto i = memf.find(name);
+	
+	if (i == memf.end())
+		return false;
+	else
+	{
+		result = i->second.value;
+		return true;
+	}
+}
+
+void MemoryComponent::registerMems(const char * name)
+{
+	auto & mem = mems[name];
+	
+	mem.refCount++;
+}
+
+void MemoryComponent::unregisterMems(const char * name)
+{
+	auto mem_itr = mems.find(name);
+	Assert(mem_itr != mems.end());
+	
+	mem_itr->second.refCount--;
+	
+	if (mem_itr->second.refCount == 0)
+	{
+		mems.erase(mem_itr);
+	}
+}
+
+void MemoryComponent::setMems(const char * name, const char * value)
+{
+	auto mem_itr = mems.find(name);
+	
+	if (mem_itr != mems.end())
+	{
+		auto & mem = mem_itr->second;
+		
+		mem.value = value;
+	}
+}
+
+bool MemoryComponent::getMems(const char * name, std::string & result) const
+{
+	auto i = mems.find(name);
+	
+	if (i == mems.end())
+		return false;
+	else
+	{
+		result = i->second.value;
+		return true;
+	}
+}
 
 //
 
@@ -59,6 +157,7 @@ VfxGraph::VfxGraph()
 	, currentTickTraversalId(-1)
 	, nextDrawTraversalId(0)
 	, valuesToFree()
+	, memory()
 	, time(0.0)
 {
 	dynamicData = new VfxDynamicData();
@@ -71,8 +170,6 @@ VfxGraph::~VfxGraph()
 
 void VfxGraph::destroy()
 {
-	displayNodeIds.clear();
-	
 	for (auto i : valuesToFree)
 	{
 		switch (i.type)
@@ -129,6 +226,8 @@ void VfxGraph::destroy()
 		logDebug("delete %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
 	#endif
 	}
+	
+	Assert(displayNodeIds.empty());
 	
 	g_currentVfxGraph = nullptr;
 	
@@ -270,7 +369,7 @@ void VfxGraph::tick(const int sx, const int sy, const float dt)
 
 void VfxGraph::draw(const int sx, const int sy) const
 {
-	const GLuint texture = traverseDraw(sx, sy);
+	const GxTextureId texture = traverseDraw(sx, sy);
 	
 	if (texture != 0)
 	{
@@ -406,9 +505,16 @@ float VfxDynamicLink::floatParam(const char * name, const float defaultValue) co
 
 extern void linkVfxNodes();
 
-void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+#if MACOS
+extern void linkVfxNodes_Mac();
+#endif
+
+void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
 	linkVfxNodes();
+#if MACOS
+	linkVfxNodes_Mac();
+#endif
 
 	createVfxTypeDefinitionLibrary(typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 }
@@ -443,7 +549,7 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 
 //
 
-VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary)
+VfxGraph * constructVfxGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary)
 {
 	VfxGraph * vfxGraph = new VfxGraph();
 	

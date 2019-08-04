@@ -1,0 +1,9 @@
+library msdfgen
+	scan_files cpp traverse conglomerate msdfgen_all.cxx
+	scan_files h   traverse
+
+	compile_definition HAVE_M_PI               * expose toolchain msvc
+	compile_definition _USE_MATH_DEFINES       * expose toolchain msvc
+	compile_definition _CRT_SECURE_NO_WARNINGS * expose toolchain msvc
+
+	header_path . expose

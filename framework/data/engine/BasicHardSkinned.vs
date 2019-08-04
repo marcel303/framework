@@ -3,6 +3,7 @@ static const char * s_basicHardSkinnedVs = R"SHADER(
 include engine/ShaderVS.txt
 
 shader_out vec4 v_color;
+shader_out vec3 v_normal;
 shader_out vec2 v_texcoord0;
 
 void main()
@@ -11,15 +12,16 @@ void main()
 
 	position = objectToProjection(position);
 	
-	vec3 normal = objectToWorld(unpackNormal()).xyz;
-	
+	vec3 normal = unpackNormal().xyz;
+
+	normal = objectToView3(normal);
 	normal = normalize(normal);
 	
 	vec2 texcoord = unpackTexcoord(0);
 	
+	vec4 color = unpackColor();
+
 	// debug color
-	
-	vec4 color = vec4(1.0);
 	
 	if (drawColorTexcoords())
 		color.rg *= texcoord.xy;
@@ -31,6 +33,7 @@ void main()
 	gl_Position = position;
 	
 	v_color = color;
+	v_normal = normal;
 	v_texcoord0 = texcoord;
 }
 

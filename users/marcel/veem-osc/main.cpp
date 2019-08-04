@@ -4,8 +4,10 @@
 #include "Timer.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
+#include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <map>
 
 // for inbound OSC messages
 #include "osc/OscPacketListener.h"
@@ -220,13 +222,13 @@ struct OscPacketListener : osc::OscPacketListener
 	{
 		SDL_LockMutex(s_mutex);
 		{
-			// todo : check address
+			// check address
 			
 			const char * address = m.AddressPattern();
 			
 			if (address != nullptr)
 			{
-				// todo : record value
+				// record value
 				
 				OscMessageHistory::Elem & elem = s_oscMessageHistory.getElem(address);
 				
@@ -693,12 +695,16 @@ static int drawValueGrid(const std::vector<float> & values, const int gridSx, co
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
+#endif
 	
 	const int kFontSize = 14;
 	
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	// load OSC settings

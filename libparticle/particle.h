@@ -1,8 +1,5 @@
 #pragma once
 
-#pragma pack(push)
-#pragma pack(1)
-
 namespace tinyxml2
 {
 	class XMLElement;
@@ -27,9 +24,6 @@ struct ParticleColor
 	ParticleColor(bool noinit) { }
 	ParticleColor(float r, float g, float b, float a);
 
-	bool operator==(const ParticleColor & other) const;
-	bool operator!=(const ParticleColor & other) const;
-
 	void set(float r, float g, float b, float a);
 	void modulateWith(const ParticleColor & other);
 	void interpolateBetween(const ParticleColor & v1, const ParticleColor & v2, const float t);
@@ -41,8 +35,6 @@ struct ParticleColor
 
 struct ParticleCurve
 {
-	static const int kMaxKeys = 8;
-
 	struct Key
 	{
 		float t;
@@ -53,12 +45,12 @@ struct ParticleCurve
 		bool operator<(const Key & other) const;
 	};
 	
-	Key keys[kMaxKeys];
+	Key * keys;
 	int numKeys;
 
 	ParticleCurve();
 
-	bool allocKey(Key *& key);
+	Key * allocKey();
 	void freeKey(Key *& key);
 	void clearKeys();
 	Key * sortKeys(Key * keyToReturn = 0);
@@ -72,8 +64,6 @@ struct ParticleCurve
 
 struct ParticleColorCurve
 {
-	static const int kMaxKeys = 10;
-
 	struct Key
 	{
 		float t;
@@ -82,21 +72,16 @@ struct ParticleColorCurve
 		Key();
 
 		bool operator<(const Key & other) const;
-		bool operator==(const Key & other) const;
-		bool operator!=(const Key & other) const;
 	};
 
-	Key keys[kMaxKeys];
+	Key * keys;
 	int numKeys;
 	
 	bool useLinearColorSpace;
 
 	ParticleColorCurve();
 
-	bool operator==(const ParticleColorCurve & other) const;
-	bool operator!=(const ParticleColorCurve & other) const;
-
-	bool allocKey(Key *& key);
+	Key * allocKey();
 	void freeKey(Key *& key);
 	void clearKeys();
 	Key * sortKeys(Key * keyToReturn = 0);
@@ -131,9 +116,6 @@ struct ParticleEmitterInfo
 	//
 
 	ParticleEmitterInfo();
-
-	bool operator==(const ParticleEmitterInfo & other) const;
-	bool operator!=(const ParticleEmitterInfo & other) const;
 
 	void save(tinyxml2::XMLPrinter * printer) const;
 	void load(const tinyxml2::XMLElement * elem);
@@ -293,9 +275,6 @@ struct ParticleInfo
 
 	ParticleInfo();
 
-	bool operator==(const ParticleInfo & other) const;
-	bool operator!=(const ParticleInfo & other) const;
-
 	bool allocBurst(Burst *& burst);
 	void clearBursts();
 
@@ -387,5 +366,3 @@ float computeParticleSize(const ParticleEmitterInfo & pei, const ParticleInfo & 
 float computeParticleRotation(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float particleLife, const float particleSpeed, const float particleRotation);
 
 bool tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeStep, const float gravityX, const float gravityY, ParticleEmitter & pe);
-
-#pragma pack(pop)

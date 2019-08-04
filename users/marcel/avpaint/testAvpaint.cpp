@@ -1,14 +1,10 @@
-#define DO_VIDEOLOOPS 0
-#define ENABLE_LEAPMOTION 1
-
-#if DO_VIDEOLOOPS
-
 #include "avtypes.h"
 #include "Calc.h"
 #include "framework.h"
 #include "leapstate.h"
 #include "Traveller.h"
 #include "videoloop.h"
+#include <math.h>
 
 #if ENABLE_LEAPMOTION
 	#include "leap/Leap.h"
@@ -17,10 +13,8 @@
 #define MAX_LAYERS 3
 #define NUM_LAYERS 3
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
-extern void applyFsfx(Surface & surface, const char * name, const float strength = 1.f, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f, GLuint texture1 = 0);
+const int GFX_SX = 1024;
+const int GFX_SY = 768;
 
 //
 
@@ -52,8 +46,8 @@ struct GrainsEffect
 		for (int i = 0; i < kMaxGrains; ++i)
 		{
 			grains[i].life -= dt;
-			grains[i].vx *= std::powf(1.f - grains[i].vfalloff, dt);
-			grains[i].vy *= std::powf(1.f - grains[i].vfalloff, dt);
+			grains[i].vx *= powf(1.f - grains[i].vfalloff, dt);
+			grains[i].vy *= powf(1.f - grains[i].vfalloff, dt);
 			grains[i].px += grains[i].vx * dt;
 			grains[i].py += grains[i].vy * dt;
 		}
@@ -84,7 +78,7 @@ struct GrainsEffect
 	}
 };
 
-static void applyMask(GLuint a, GLuint b, GLuint mask)
+static void applyMask(GxTextureId a, GxTextureId b, GxTextureId mask)
 {
 	Shader shader("mask");
 	setShader(shader);
@@ -92,7 +86,7 @@ static void applyMask(GLuint a, GLuint b, GLuint mask)
 		shader.setTexture("colormapA", 0, a);
 		shader.setTexture("colormapB", 1, b);
 		shader.setTexture("mask", 2, mask);
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f * GFX_SX, 0.f * GFX_SY);
 			gxTexCoord2f(1.f, 0.f); gxVertex2f(1.f * GFX_SX, 0.f * GFX_SY);
@@ -104,11 +98,25 @@ static void applyMask(GLuint a, GLuint b, GLuint mask)
 	clearShader();
 }
 
-void testAvpaint()
+void applyFsfx(Surface & surface, const char * name, const float strength = 1.f, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f, GxTextureId texture1 = 0)
 {
-	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome");
+	Shader shader(name, "fsfx/fsfx.vs", name);
+	setShader(shader);
+	{
+		shader.setImmediate("params1", strength, 0.f, 0.f, 0.f);
+		shader.setImmediate("params2", param1, param2, param3, param4);
+		shader.setTexture("colormap", 0, surface.getTexture());
+		shader.setTexture("texture1", 1, texture1);
+		surface.postprocess();
+	}
+	clearShader();
+}
 
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+int main(int argc, char * argv[])
+{
+	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome/app");
+
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 	#if ENABLE_LEAPMOTION
 		// initialise LeapMotion controller
@@ -186,9 +194,15 @@ void testAvpaint()
 		GrainsEffect grainsEffect;
 		int nextGrainIndex = 0;
 		
-		while (!framework.quitRequested)
+		for (;;)
 		{
 			framework.process();
+			
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				framework.quitRequested = true;
+			
+			if (framework.quitRequested)
+				break;
 
 		#if ENABLE_LEAPMOTION
 			// process LeapMotion input
@@ -222,7 +236,7 @@ void testAvpaint()
 
 			const float dt = framework.timeStep;
 			
-			blurStrength = Calc::Lerp(desiredBlurStrength, blurStrength, std::powf(.5f, dt));
+			blurStrength = Calc::Lerp(desiredBlurStrength, blurStrength, powf(.5f, dt));
 			
 			grainsEffect.tick(dt);
 			
@@ -315,7 +329,7 @@ void testAvpaint()
 									Shader shader("paint-smudge");
 									setShader(shader);
 									{
-										const GLuint brush = getTexture("brushes/brush1006.png");
+										const GxTextureId brush = getTexture("brushes/brush1006.png");
 										shader.setTexture("brush", 0, brush);
 										shader.setTexture("colormap", 1, surface->getTexture());
 										
@@ -324,7 +338,7 @@ void testAvpaint()
 										pushSurface(surface);
 										{
 											setColor(colorWhite);
-											gxBegin(GL_QUADS);
+											gxBegin(GX_QUADS);
 											{
 												const float s = 30.f;
 												gxTexCoord2f(0.f, 0.f); gxVertex4f(e.x - s, e.y - s, e.dx, e.dy);
@@ -360,10 +374,10 @@ void testAvpaint()
 							{
 								gxTranslatef(GFX_SX/2.f, GFX_SY/2.f, 0.f);
 								
-								const float scale = std::cos(framework.time * .1f) + 1.2f;
+								const float scale = cosf(framework.time * .1f) + 1.2f;
 								gxScalef(scale, scale, 1.f);
 								
-								const float angle = std::cos(framework.time * .1f) * 360.f;
+								const float angle = cosf(framework.time * .1f) * 360.f;
 								gxRotatef(angle, 0.f, 0.f, 1.f);
 								
 								hqBegin(HQ_STROKED_CIRCLES);
@@ -420,7 +434,7 @@ void testAvpaint()
 				const float speed = random(5.f, 15.f);
 				grain.vx = mouse.dx * speed;
 				grain.vy = mouse.dy * speed;
-				grain.vfalloff = .9;
+				grain.vfalloff = .9f;
 				
 			#if 1
 				pushSurface(layerAlphas[activeLayer]);
@@ -469,7 +483,7 @@ void testAvpaint()
 				}
 				else
 				{
-					GLuint layerVideos[NUM_LAYERS] = { };
+					GxTextureId layerVideos[NUM_LAYERS] = { };
 					
 					for (int i = 0; i < NUM_LAYERS; ++i)
 					{
@@ -559,7 +573,7 @@ void testAvpaint()
 						if (g_leapState.hands[0].active)
 						{
 							pushBlend(BLEND_OPAQUE);
-							setShader_GaussianBlurH(surface.getTexture(), 60, std::cosf(g_leapState.hands[0].fingers[2].position[1] / 255.f * 5.f) * 100.f);
+							setShader_GaussianBlurH(surface.getTexture(), 60, cosf(g_leapState.hands[0].fingers[2].position[1] / 255.f * 5.f) * 100.f);
 							surface.postprocess();
 							clearShader();
 							popBlend();
@@ -568,7 +582,7 @@ void testAvpaint()
 						if (g_leapState.hands[0].active)
 						{
 							pushBlend(BLEND_OPAQUE);
-							setShader_GaussianBlurV(surface.getTexture(), 60, std::cosf(g_leapState.hands[0].fingers[1].position[1] / 255.f * 5.f) * 100.f);
+							setShader_GaussianBlurV(surface.getTexture(), 60, cosf(g_leapState.hands[0].fingers[1].position[1] / 255.f * 5.f) * 100.f);
 							surface.postprocess();
 							clearShader();
 							popBlend();
@@ -578,14 +592,14 @@ void testAvpaint()
 					
 				#if 0
 					pushBlend(BLEND_OPAQUE);
-					setShader_GaussianBlurH(surface.getTexture(), 5, blurStrength * std::cos(framework.time / 2.345f) * 40.f);
+					setShader_GaussianBlurH(surface.getTexture(), 5, blurStrength * cosf(framework.time / 2.345f) * 40.f);
 					surface.postprocess();
 					clearShader();
 					popBlend();
 				#elif 1
 					{
 						pushBlend(BLEND_OPAQUE);
-						GLuint texture = surface.getTexture();
+						GxTextureId texture = surface.getTexture();
 						surface.swapBuffers();
 						pushSurface(&surface);
 						{
@@ -595,10 +609,10 @@ void testAvpaint()
 								const float t2 = (i + 1) / 20.f;
 								const float y1 = t1 * GFX_SY;
 								const float y2 = t2 * GFX_SY;
-								const float blurStrengthModifier = std::cos(i / 10.f + framework.time);
-								const float radius = blurStrength * blurStrengthModifier * std::cos(framework.time / 6.789f) * 200.f;
+								const float blurStrengthModifier = cosf(i / 10.f + framework.time);
+								const float radius = blurStrength * blurStrengthModifier * cosf(framework.time / 6.789f) * 200.f;
 								setShader_GaussianBlurH(texture, 63, radius);
-								gxBegin(GL_QUADS);
+								gxBegin(GX_QUADS);
 								{
 									gxTexCoord2f(0.f, t1); gxVertex2f(0,      y1);
 									gxTexCoord2f(1.f, t1); gxVertex2f(GFX_SX, y1);
@@ -616,13 +630,13 @@ void testAvpaint()
 					
 				#if 0
 					pushBlend(BLEND_OPAQUE);
-					setShader_GaussianBlurV(surface.getTexture(), 5, blurStrength * std::cos(framework.time / 1.123f) * 20.f);
+					setShader_GaussianBlurV(surface.getTexture(), 5, blurStrength * cosf(framework.time / 1.123f) * 20.f);
 					surface.postprocess();
 					clearShader();
 					popBlend();
 				#elif 1
 					pushBlend(BLEND_OPAQUE);
-					GLuint texture = surface.getTexture();
+					GxTextureId texture = surface.getTexture();
 					surface.swapBuffers();
 					pushSurface(&surface);
 					{
@@ -632,10 +646,10 @@ void testAvpaint()
 							const float t2 = (i + 1) / 30.f;
 							const float x1 = t1 * GFX_SX;
 							const float x2 = t2 * GFX_SX;
-							const float blurStrengthModifier = std::cos(i / 10.f + framework.time);
-							const float radius = blurStrength * blurStrengthModifier * std::cos(framework.time / 3.456f) * 100.f;
+							const float blurStrengthModifier = cosf(i / 10.f + framework.time);
+							const float radius = blurStrength * blurStrengthModifier * cosf(framework.time / 3.456f) * 100.f;
 							setShader_GaussianBlurV(texture, 63, radius);
-							gxBegin(GL_QUADS);
+							gxBegin(GX_QUADS);
 							{
 								gxTexCoord2f(t1, 0.f); gxVertex2f(x1, 0.f);
 								gxTexCoord2f(t2, 0.f); gxVertex2f(x2, 0.f);
@@ -649,10 +663,10 @@ void testAvpaint()
 					popSurface();
 					popBlend();
 				
-					applyFsfx(surface, "fsfx/invert.ps", (-std::cosf(invertValue.value * Calc::m2PI) + 1.f) / 2.f);
+					applyFsfx(surface, "fsfx/invert.ps", (-cosf(invertValue.value * Calc::m2PI) + 1.f) / 2.f);
 					
 					pushBlend(BLEND_OPAQUE);
-					setShader_ColorTemperature(surface.getTexture(), (std::cosf(framework.time / 2.f) + 1.f) / 2.f, 1.f);
+					setShader_ColorTemperature(surface.getTexture(), (cosf(framework.time / 2.f) + 1.f) / 2.f, 1.f);
 					surface.postprocess();
 					clearShader();
 					popBlend();
@@ -691,12 +705,6 @@ void testAvpaint()
 	
 		framework.shutdown();
 	}
+
+	return 0;
 }
-
-#else
-
-void testAvpaint()
-{
-}
-
-#endif

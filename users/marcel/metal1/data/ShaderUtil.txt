@@ -1,0 +1,319 @@
+const float kSrgbToLinear = 2.2;
+const float kLinearToSrgb = 1.0 / kSrgbToLinear;
+
+// -- exposed functions --
+
+#if 0
+
+vec4 applyColorMode(vec4 color1, vec4 color2, float mode);
+vec4 applyColorPost(vec4 color, float post);
+
+float makeTaps(float v, float min, float max, float numTaps);
+vec3 makeTaps(vec3 v, float min, float max, float numTaps);
+
+float rgbLuminance(vec3 rgb);
+
+vec3 srgbToLinear(vec3 rgb);
+vec3 linearToSrgb(vec3 rgb);
+vec3 lerpSrgbLinear(vec3 a, vec3 b, float t);
+
+// todo : add functions for evaluating gradient color and matrix texturing
+// todo : add grayscaleLumi, grayscaleWeights
+// todo : add colorTemperature
+// todo : add treshold (with settable gradient)
+
+vec3 colorFromHSL(vec3 hsl);
+vec3 colorToHSL(vec3 rgb);
+vec3 hueShift(vec3 rgb, float amount);
+
+float colorDither8(sampler2D ditherTexture, vec2 sampleCoord);
+vec3 colorDither8ScreenSpace(vec2 sampleCoord);
+vec3 colorDitherScreenSpace(vec2 sampleCoord, float dither_bit);
+
+#endif
+
+// -- implementation --
+
+vec4 applyColorMode(vec4 color1, vec4 color2, float mode)
+{
+	/*
+	COLOR_MUL,
+	COLOR_ADD,
+	COLOR_SUB,
+	COLOR_IGNORE
+	*/
+
+	vec4 result = color1;
+	vec4 texColor = color2;
+
+	if (mode == 0.0)
+	{
+		result.rgb = result.rgb * texColor.rgb;
+		result.a   = result.a   * texColor.a;
+	}
+	else if (mode == 1.0)
+	{
+		result.rgb = result.rgb + texColor.rgb;
+		result.a   = result.a   * texColor.a;
+	}
+	else if (mode == 2.0)
+	{
+		result.rgb = result.rgb - texColor.rgb;
+		result.a   = result.a   * texColor.a;
+	}
+	else if (mode == 3.0)
+	{
+		result.rgb = texColor.rgb;
+		result.a   = texColor.a;
+	}
+
+	return result;
+}
+
+vec4 applyColorPost(vec4 color, float post)
+{
+	/*
+	POST_NONE,
+	POST_RGB_MIX_ALPHA_TO_ZERO,
+	POST_RGB_MIX_ALPHA_TO_ONE,
+	POST_SET_ALPHA_TO_ONE,
+	POST_RGB_TO_LUMI
+	*/
+
+	vec4 result = color;
+
+	if (post != 0.0)
+	{
+		if (post == 1.0)
+		{
+			result.rgb = mix(vec3(0.0), result.rgb, result.a);
+		}
+		else if (post == 2.0)
+		{
+			result.rgb = mix(vec3(1.0), result.rgb, result.a);
+		}
+		else if (post == 3.0)
+		{
+			result.a = 1.0;
+		}
+		else if (post == 4.0)
+		{
+			result.rgb = vec3(rgbLuminance(result.rgb));
+		}
+	}
+
+	return result;
+}
+
+float makeTaps(float v, float min, float max, float numTaps)
+{
+	numTaps -= 1.0;
+	return round((v - min) / (max - min) * numTaps) / numTaps;
+}
+
+vec3 makeTaps(vec3 v, float min, float max, float numTaps)
+{
+	return vec3(
+		makeTaps(v.x, min, max, numTaps),
+		makeTaps(v.y, min, max, numTaps),
+		makeTaps(v.z, min, max, numTaps));
+}
+
+vec3 srgbToLinear(vec3 rgb)
+{
+	return vec3(
+		pow(rgb.r, kSrgbToLinear),
+		pow(rgb.g, kSrgbToLinear),
+		pow(rgb.b, kSrgbToLinear));
+}
+
+vec3 linearToSrgb(vec3 rgb)
+{
+	return vec3(
+		pow(rgb.r, kLinearToSrgb),
+		pow(rgb.g, kLinearToSrgb),
+		pow(rgb.b, kLinearToSrgb));
+}
+
+vec3 lerpSrgbLinear(vec3 a, vec3 b, float t)
+{
+	vec3 aLinear = srgbToLinear(a);
+	vec3 bLinear = srgbToLinear(b);
+
+	vec3 rLinear = mix(aLinear, bLinear, t);
+
+	return linearToSrgb(rLinear);
+}
+
+float rgbLuminance(vec3 rgb)
+{
+	return
+		rgb.r * 0.30 +
+		rgb.g * 0.59 +
+		rgb.b * 0.11;
+}
+
+vec3 colorFromHSL(vec3 hsl)
+{
+#ifdef __METAL_VERSION__
+	float hue = fmod(hsl.x, 1.0);
+#else
+	float hue = mod(hsl.x, 1.0);
+#endif
+	float sat = clamp(hsl.y, 0.0, 1.0);
+	float lum = clamp(hsl.z, 0.0, 1.0);
+
+	float r, g, b;
+
+	float m2 = (lum <= .5) ? (lum + (lum * sat)) : (lum + sat - lum * sat);
+	float m1 = lum + lum - m2;
+
+	hue = hue * 6.0;
+
+	if (hue < 0.0)
+	{
+		hue += 6.0;
+	}
+
+	if (hue < 3.0)
+	{
+		if (hue < 2.0)
+		{
+			if (hue < 1.0)
+			{
+				r = m2;
+				g = m1 + (m2 - m1) * hue;
+				b = m1;
+			}
+			else
+			{
+				r = (m1 + (m2 - m1) * (2.0 - hue));
+				g = m2;
+				b = m1;
+			}
+		}
+		else
+		{
+			r = m1;
+			g = m2;
+			b = (m1 + (m2 - m1) * (hue - 2.0));
+		}
+	}
+	else
+	{
+		if (hue < 5.0)
+		{
+			if (hue < 4.0)
+			{
+				r = m1;
+				g = (m1 + (m2 - m1) * (4.0 - hue));
+				b = m2;
+			}
+			else
+			{
+				r = (m1 + (m2 - m1) * (hue - 4.0));
+				g = m1;
+				b = m2;
+			}
+		}
+		else
+		{
+			r = m2;
+			g = m1;
+			b = (m1 + (m2 - m1) * (6.0 - hue));
+		}
+	}
+
+	return vec3(r, g, b);
+}
+
+vec3 colorToHSL(vec3 rgb)
+{
+	float eps = 1.192092896e-07;
+
+	float r = clamp(rgb.r, 0.0, 1.0);
+	float g = clamp(rgb.g, 0.0, 1.0);
+	float b = clamp(rgb.b, 0.0, 1.0);
+
+	float hue;
+	float sat;
+	float lum;
+
+	float _max = max(r, max(g, b));
+	float _min = min(r, min(g, b));
+
+	lum = (_max + _min) / 2.0;
+
+	float delta = _max - _min;
+
+	if (delta < eps)
+	{
+		sat = 0.0;
+		hue = 0.0;
+	}
+	else
+	{
+		sat = (lum <= 0.5) ? (delta / (_max + _min)) : (delta / (2.0 - (_max + _min)));
+
+		if (r == _max)
+			hue = (g - b) / delta;
+		else if (g == _max)
+			hue = 2.0 + (b - r) / delta;
+		else
+			hue = 4.0 + (r - g) / delta;
+
+		if (hue < 0.0)
+			hue += 6.0;
+
+		hue /= 6.0;
+	}
+
+	return vec3(hue, sat, lum);
+}
+
+vec3 hueShift(vec3 rgb, float amount)
+{
+	vec3 hsl = colorToHSL(rgb);
+
+	hsl.x += amount;
+
+	return colorFromHSL(hsl);
+}
+
+#if !defined(__METAL_VERSION__)
+
+float colorDither8(sampler2D ditherTexture, vec2 sampleCoord)
+{
+	return texture(ditherTexture, sampleCoord / 8.0).r / 32.0 - (1.0 / 128.0);
+}
+
+#endif
+
+vec3 colorDither8ScreenSpace(vec2 sampleCoord)
+{
+	// Iestyn's RGB dither (7 asm instructions) from Portal 2 X360, slightly modified for VR
+    vec3 vDither = vec3( dot( vec2( 171.0, 231.0 ), sampleCoord ) );
+    vDither.rgb = fract( vDither.rgb / vec3( 103.0, 71.0, 97.0 ) );
+    return vDither.rgb / 255.0;
+}
+
+vec3 colorDitherScreenSpace(vec2 sampleCoord, float dither_bit)
+{
+	//note: from comment by CeeJayDK
+	float dither_num = pow(2.0,dither_bit);
+
+	//Calculate grid position
+	float grid_position = fract( dot( sampleCoord.xy - vec2(0.5,0.5) , vec2(1.0/16.0,10.0/36.0) + 0.25 ) );
+
+	//Calculate how big the shift should be
+	float dither_shift = (0.25) * (1.0 / (dither_num - 1.0));
+
+	//Shift the individual colors differently, thus making it even harder to see the dithering pattern
+	vec3 dither_shift_RGB = vec3(dither_shift, -dither_shift, dither_shift); //subpixel dithering
+
+	//modify shift acording to grid position.
+	dither_shift_RGB = mix(2.0 * dither_shift_RGB, -2.0 * dither_shift_RGB, grid_position); //shift acording to grid position.
+
+	//shift the color by dither_shift
+	return vec3(0.5/(dither_num - 1.0)) + dither_shift_RGB;
+}

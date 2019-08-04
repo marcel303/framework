@@ -1,0 +1,14 @@
+app marcel-metal1
+	depend_library libgg
+	depend_library libsdl2
+	depend_library Cocoa find
+	depend_library Metal find
+	depend_library Carbon find
+	depend_library CoreFoundation find
+	depend_library CoreVideo find
+	depend_library IOKit find
+	depend_library QuartzCore find
+	scan_files cpp
+	scan_files h
+	scan_files mm
+	resource_path data

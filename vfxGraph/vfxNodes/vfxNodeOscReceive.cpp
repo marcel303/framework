@@ -32,7 +32,11 @@
 
 //
 
-#include "editor_oscPath.h"
+#include "editors/editor_oscPath.h"
+
+//
+
+OscEndpointMgr g_oscEndpointMgr;
 
 //
 
@@ -42,7 +46,7 @@ VFX_NODE_TYPE(VfxNodeOscReceive)
 	
 	resourceTypeName = "osc.path";
 	
-	createResourceEditor = []() -> GraphEdit_ResourceEditorBase*
+	createResourceEditor = [](void * data) -> GraphEdit_ResourceEditorBase*
 	{
 		return new ResourceEditor_OscPath();
 	};

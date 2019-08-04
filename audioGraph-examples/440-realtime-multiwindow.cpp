@@ -28,8 +28,8 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "framework.h"
-#include "soundmix.h"
 
 const int GFX_SX = 640;
 const int GFX_SY = 480;
@@ -44,7 +44,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		// initialize audio related systems
 		
@@ -52,7 +52,7 @@ int main(int argc, char * argv[])
 		Assert(mutex != nullptr);
 
 		AudioVoiceManagerBasic voiceMgr;
-		voiceMgr.init(mutex, CHANNEL_COUNT, CHANNEL_COUNT);
+		voiceMgr.init(mutex, CHANNEL_COUNT);
 		voiceMgr.outputStereo = true;
 
 		AudioGraphManager_MultiRTE audioGraphMgr(GFX_SX, GFX_SY);
@@ -87,11 +87,11 @@ int main(int argc, char * argv[])
 			pushWindow(window);
 			{
 				audioGraphMgr.selectInstance(instance1);
-				audioGraphMgr.tickEditor(framework.timeStep, false);
+				audioGraphMgr.tickEditor(GFX_SX, GFX_SY, framework.timeStep, false);
 				
 				framework.beginDraw(15, 31, 63, 0);
 				{
-					audioGraphMgr.drawEditor();
+					audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 				}
 				framework.endDraw();
 			}
@@ -100,11 +100,11 @@ int main(int argc, char * argv[])
 			//
 			
 			audioGraphMgr.selectInstance(instance2);
-			audioGraphMgr.tickEditor(framework.timeStep, false);
+			audioGraphMgr.tickEditor(GFX_SX, GFX_SY, framework.timeStep, false);
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
-				audioGraphMgr.drawEditor();
+				audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 			}
 			framework.endDraw();
 		}

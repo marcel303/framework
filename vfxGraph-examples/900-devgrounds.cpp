@@ -25,19 +25,26 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // glBlendFuncSeparate. todo : extend Framework's blending
+
 #include "framework.h"
 #include "graph.h"
+#include "graphEdit.h"
 #include "StringEx.h"
+#include "TextIO.h"
 
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
-#include "vfxNodes/oscEndpointMgr.h"
+#include "vfxNodes/vfxNodeVfxGraph.h"
 #include "vfxTypes.h"
 
+#include "imgui-framework.h"
+#include "imgui/TextEditor.h"
 #include "mediaplayer/MPUtil.h"
-#include "../libparticle/ui.h"
+#include "oscEndpointMgr.h"
 #include "Timer.h"
 #include "tinyxml2.h"
+#include "ui.h"
 #include "vfxNodeBase.h"
 #include <algorithm>
 #include <cmath>
@@ -72,6 +79,16 @@ extern const int GFX_SY;
 
 const int GFX_SX = 1024;
 const int GFX_SY = 768;
+
+//
+
+extern void testDynamicInputs();
+extern void testRoutingEditor();
+extern void testVfxNodeCreation();
+
+//
+
+extern OscEndpointMgr g_oscEndpointMgr;
 
 //
 
@@ -160,207 +177,97 @@ VFX_NODE_TYPE(VfxNodeResourceTest)
 
 //
 
-static VfxPlugType stringToVfxPlugType(const std::string & typeName)
+struct VfxNodeTestDynamicSockets : VfxNodeBase
 {
-	VfxPlugType type = kVfxPlugType_None;
-
-	if (typeName == "bool")
-		type = kVfxPlugType_Bool;
-	else if (typeName == "int")
-		type = kVfxPlugType_Int;
-	else if (typeName == "float")
-		type = kVfxPlugType_Float;
-	else if (typeName == "string")
-		type = kVfxPlugType_String;
-	else if (typeName == "channel")
-		type = kVfxPlugType_Channel;
-	else if (typeName == "color")
-		type = kVfxPlugType_Color;
-	else if (typeName == "image")
-		type = kVfxPlugType_Image;
-	else if (typeName == "image_cpu")
-		type = kVfxPlugType_ImageCpu;
-	else if (typeName == "draw")
-		type = kVfxPlugType_Draw;
-	else if (typeName == "trigger")
-		type = kVfxPlugType_Trigger;
-	
-	return type;
-}
-
-static void testVfxNodeCreation()
-{
-	VfxGraph vfxGraph;
-	
-	Assert(g_currentVfxGraph == nullptr);
-	g_currentVfxGraph = &vfxGraph;
-	
-	for (VfxNodeTypeRegistration * registration = g_vfxNodeTypeRegistrationList; registration != nullptr; registration = registration->next)
+	enum Inputs
 	{
-		const int64_t t1 = g_TimerRT.TimeUS_get();
+		kInput_TestInputs,
+		kInput_TestOutputs,
+		kInput_COUNT
+	};
+	
+	enum Outputs
+	{
+		kOutput_COUNT
+	};
+	
+	VfxNodeTestDynamicSockets()
+		: VfxNodeBase()
+	{
+		resizeSockets(kInput_COUNT, kOutput_COUNT);
+		addInput(kInput_TestInputs, kVfxPlugType_Bool);
+		addInput(kInput_TestOutputs, kVfxPlugType_Bool);
+	}
+	
+	virtual void tick(const float dt)
+	{
+		const bool testInputs = getInputBool(kInput_TestInputs, false);
+		const bool testOutputs = getInputBool(kInput_TestOutputs, false);
 		
-		VfxNodeBase * vfxNode = registration->create();
-		
-		GraphNode node;
-		
-		vfxNode->initSelf(node);
-		
-		vfxNode->init(node);
-		
-		// check if vfx node is created properly
-		
-		Assert(vfxNode->inputs.size() == registration->inputs.size());
-		const int numInputs = std::max(vfxNode->inputs.size(), registration->inputs.size());
-		for (int i = 0; i < numInputs; ++i)
+		if (testInputs)
 		{
-			if (i >= vfxNode->inputs.size())
+			// test dynamically growing and shrinking list of inputs as a stress test
+			
+			const int kNumInputs = std::round(std::sin(framework.time) * 4.f + 5.f);
+
+			if (kNumInputs == 0)
+				setDynamicInputs(nullptr, 0);
+			else
 			{
-				logError("input in registration doesn't exist in vfx node: index=%d, name=%s", i, registration->inputs[i].name.c_str());
+				std::vector<DynamicInput> inputs;
+				inputs.resize(kNumInputs);
+			
+				for (int i = 0; i < kNumInputs; ++i)
+				{
+					char name[32];
+					sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
+				
+					inputs[i].name = name;
+					inputs[i].type = kVfxPlugType_Float;
+				}
+			
+				setDynamicInputs(&inputs.front(), kNumInputs);
 			}
-			else if (i >= registration->inputs.size())
+		}
+
+		if (testOutputs)
+		{
+			// test dynamically growing and shrinking list of inputs as a stress test
+			
+			const int kNumOutputs = std::round(std::sin(framework.time) * 4.f + 5.f);
+
+			if (kNumOutputs == 0)
 			{
-				logError("input in vfx node doesn't exist in registration: index=%d, type=%d", i, vfxNode->inputs[i].type);
+				setDynamicOutputs(nullptr, 0);
 			}
 			else
 			{
-				auto & r = registration->inputs[i];
+				std::vector<DynamicOutput> outputs;
+				outputs.resize(kNumOutputs);
+			
+				static float value = 1.f;
+			
+				for (int i = 0; i < kNumOutputs; ++i)
+				{
+					char name[32];
+					sprintf_s(name, sizeof(name), "dynamic%d", i + 1);
 				
-				const VfxPlugType type = stringToVfxPlugType(r.typeName);
-				
-				if (type == kVfxPlugType_None)
-					logError("unknown type name in registration: index=%d, typeName=%s", i, r.typeName.c_str());
-				else if (type != vfxNode->inputs[i].type)
-					logError("different types in registration vs vfx node. index=%d, typeName=%s", i, r.typeName.c_str());
+					outputs[i].name = name;
+					outputs[i].type = kVfxPlugType_Float;
+					outputs[i].mem = &value;
+				}
+			
+				setDynamicOutputs(&outputs.front(), kNumOutputs);
 			}
 		}
-		
-		Assert(vfxNode->outputs.size() == registration->outputs.size());
-		const int numOutputs = std::max(vfxNode->outputs.size(), registration->outputs.size());
-		for (int i = 0; i < numOutputs; ++i)
-		{
-			if (i >= vfxNode->outputs.size())
-			{
-				logError("output in registration doesn't exist in vfx node: index=%d, name=%s", i, registration->outputs[i].name.c_str());
-			}
-			else if (i >= registration->outputs.size())
-			{
-				logError("output in vfx node doesn't exist in registration: index=%d, type=%d", i, vfxNode->outputs[i].type);
-			}
-			else
-			{
-				auto & r = registration->outputs[i];
-				
-				const VfxPlugType type = stringToVfxPlugType(r.typeName);
-				
-				if (type == kVfxPlugType_None)
-					logError("unknown type name in registration: index=%d, typeName=%s", i, r.typeName.c_str());
-				else if (type != vfxNode->outputs[i].type)
-					logError("different types in registration vs vfx node. index=%d, typeName=%s", i, r.typeName.c_str());
-			}
-		}
-		
-		delete vfxNode;
-		vfxNode = nullptr;
-		
-		const int64_t t2 = g_TimerRT.TimeUS_get();
-		
-		logDebug("node create/destroy took %dus. nodeType=%s", t2 - t1, registration->typeName.c_str()); (void)t1; (void)t2;
 	}
-	
-	g_currentVfxGraph = nullptr;
-}
+};
 
-//
-
-static void testDynamicInputs()
+VFX_NODE_TYPE(VfxNodeTestDynamicSockets)
 {
-	VfxGraph g;
-	
-	VfxNodeBase * node1 = new VfxNodeBase();
-	VfxNodeBase * node2 = new VfxNodeBase();
-	
-	g.nodes[0] = node1;
-	g.nodes[1] = node2;
-	
-	float values[32];
-	for (int i = 0; i < 32; ++i)
-		values[i] = i;
-	
-	node1->resizeSockets(1, 2);
-	node2->resizeSockets(2, 1);
-	
-	node1->addInput(0, kVfxPlugType_Float);
-	node1->addOutput(0, kVfxPlugType_Float, &values[0]);
-	node1->addOutput(1, kVfxPlugType_Float, &values[1]);
-	node2->addInput(0, kVfxPlugType_Float);
-	node2->addInput(1, kVfxPlugType_Float);
-	node2->addOutput(0, kVfxPlugType_Float, &values[16]);
-	
-	node1->tryGetInput(0)->connectTo(*node2->tryGetOutput(0));
-	node2->tryGetInput(0)->connectTo(*node1->tryGetOutput(0));
-	node2->tryGetInput(1)->connectTo(*node1->tryGetOutput(1));
-	
-	{
-		VfxDynamicLink link;
-		link.srcNodeId = 0;
-		link.srcSocketName = "a";
-		link.srcSocketIndex = -1;
-		link.dstNodeId = 1;
-		link.dstSocketIndex = 0;
-		g.dynamicData->links.push_back(link);
-	}
-	
-	{
-		VfxDynamicLink link;
-		link.srcNodeId = 0;
-		link.srcSocketName = "b";
-		link.srcSocketIndex = -1;
-		link.dstNodeId = 1;
-		link.dstSocketIndex = 0;
-		g.dynamicData->links.push_back(link);
-	}
-	
-	{
-		VfxDynamicLink link;
-		link.srcNodeId = 0;
-		link.srcSocketName = "b";
-		link.srcSocketIndex = -1;
-		link.dstNodeId = 1;
-		link.dstSocketName = "a";
-		link.dstSocketIndex = -1;
-		g.dynamicData->links.push_back(link);
-	}
-	
-	g_currentVfxGraph = &g;
-	{
-		VfxNodeBase::DynamicInput inputs[2];
-		inputs[0].name = "a";
-		inputs[0].type = kVfxPlugType_Float;
-		inputs[1].name = "b";
-		inputs[1].type = kVfxPlugType_Float;
-		
-		node1->setDynamicInputs(inputs, 2);
-		
-		node1->setDynamicInputs(nullptr, 0);
-		
-		node1->setDynamicInputs(inputs, 2);
-		
-		//
-		
-		float value = 1.f;
-		
-		VfxNodeBase::DynamicOutput outputs[1];
-		outputs[0].name = "a";
-		outputs[0].type = kVfxPlugType_Float;
-		outputs[0].mem = &value;
-		
-		node2->setDynamicOutputs(outputs, 1);
-		
-		node2->setDynamicOutputs(nullptr, 0);
-		
-		node2->setDynamicOutputs(outputs, 1);
-	}
-	g_currentVfxGraph = nullptr;
+	typeName = "test.dynamicSockets";
+	in("testInputs", "bool", "0");
+	in("testOutputs", "bool", "0");
 }
 
 //
@@ -402,7 +309,7 @@ int main(int argc, char * argv[])
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
 	
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		initUi();
 		
@@ -414,6 +321,8 @@ int main(int argc, char * argv[])
 		
 		//testDynamicInputs();
 		
+		//testRoutingEditor();
+		
 		//
 		
 	#ifndef DEBUG
@@ -422,7 +331,7 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+		Graph_TypeDefinitionLibrary * typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 		
 		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 		
@@ -458,7 +367,7 @@ int main(int argc, char * argv[])
 						vfxGraph = nullptr;
 						
 						auto t2 = g_TimerRT.TimeUS_get();
-						printf("construct %003d + tick took %dus\n", i, int(t2 - t1));
+						printf("construct %03d + tick took %dus\n", i, int(t2 - t1));
 						
 						++i;
 					}
@@ -473,6 +382,290 @@ int main(int argc, char * argv[])
 		RealTimeConnection * realTimeConnection = new RealTimeConnection(vfxGraph);
 		
 		GraphEdit * graphEdit = new GraphEdit(GFX_SX, GFX_SY, typeDefinitionLibrary, realTimeConnection);
+		
+		//
+		
+		struct WindowBase
+		{
+			virtual ~WindowBase()
+			{
+			}
+			
+			virtual void process(const float dt) = 0;
+			
+			virtual bool getQuitRequested() const = 0;
+		};
+		
+		struct GraphEditWindow : WindowBase
+		{
+			Window * window = nullptr;
+			
+			VfxGraph * vfxGraph = nullptr;
+			
+			RealTimeConnection * realTimeConnection = nullptr;
+			
+			GraphEdit * graphEdit = nullptr;
+			
+			GraphEditWindow(Graph_TypeDefinitionLibrary * typeDefinitionLibrary, const char * filename)
+			{
+				window = new Window(filename, 640, 480, true);
+				
+				vfxGraph = new VfxGraph();
+				
+				realTimeConnection = new RealTimeConnection(vfxGraph);
+				
+				graphEdit = new GraphEdit(window->getWidth(), window->getHeight(), typeDefinitionLibrary, realTimeConnection);
+				
+				graphEdit->load(filename);
+			}
+			
+			virtual ~GraphEditWindow() override
+			{
+				delete graphEdit;
+				graphEdit = nullptr;
+				
+				delete realTimeConnection;
+				realTimeConnection = nullptr;
+				
+				delete vfxGraph;
+				vfxGraph = nullptr;
+				
+				delete window;
+				window = nullptr;
+			}
+			
+			virtual void process(const float dt) override
+			{
+				if (window->hasFocus())
+				{
+					pushWindow(*window);
+					{
+						const int sx = window->getWidth();
+						const int sy = window->getHeight();
+						
+						graphEdit->displaySx = sx;
+						graphEdit->displaySy = sy;
+						
+						graphEdit->tick(dt, false);
+						
+						vfxGraph->tick(sx, sy, dt);
+						
+						framework.beginDraw(0, 0, 0, 0);
+						{
+							vfxGraph->draw(sx, sy);
+							
+							graphEdit->tickVisualizers(dt);
+							
+							graphEdit->draw();
+						}
+						framework.endDraw();
+					}
+					popWindow();
+				}
+			}
+			
+			virtual bool getQuitRequested() const override
+			{
+				return window->getQuitRequested();
+			}
+		};
+		
+		struct ShaderEditWindow : WindowBase
+		{
+			std::string filename;
+			
+			Window * window = nullptr;
+			
+			FrameworkImGuiContext uiContext;
+			
+			TextEditor textEditor;
+			
+			TextIO::LineEndings lineEndings = TextIO::kLineEndings_Unix;
+			
+			bool textIsValid = false;
+			
+			bool quitRequested = false;
+			
+			ShaderEditWindow(const char * in_filename)
+			{
+				filename = in_filename;
+				
+				window = new Window(filename.c_str(), 640, 480, true);
+				
+				uiContext.init();
+				
+				textEditor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
+				
+				load(filename.c_str());
+			}
+			
+			virtual ~ShaderEditWindow() override
+			{
+				uiContext.shut();
+				
+				delete window;
+				window = nullptr;
+			}
+			
+			bool load(const char * filename)
+			{
+				textEditor.SetText("");
+				
+				textIsValid = false;
+				
+				//
+				
+				std::vector<std::string> lines;
+				
+				if (TextIO::load(filename, lines, lineEndings) == false)
+				{
+					logError("failed to read file contents");
+					
+					return false;
+				}
+				else
+				{
+					textEditor.SetTextLines(lines);
+					
+					textIsValid = true;
+					
+					return true;
+				}
+			}
+			
+			virtual void process(const float dt) override
+			{
+				if (window->hasFocus())
+				{
+					pushWindow(*window);
+					{
+						const int sx = window->getWidth();
+						const int sy = window->getHeight();
+						
+						bool inputIsCaptured = false;
+						
+						uiContext.processBegin(dt, sx, sy, inputIsCaptured);
+						{
+							ImGui::SetNextWindowPos(ImVec2(0, 0));
+							ImGui::SetNextWindowSize(ImVec2(sx, sy));
+							
+							if (ImGui::Begin("Text Editor", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_MenuBar))
+							{
+							#if 1
+								if (ImGui::BeginMenuBar())
+								{
+									if (ImGui::BeginMenu("File"))
+									{
+										if (ImGui::MenuItem("Save"))
+										{
+											auto lines = textEditor.GetTextLines();
+											
+											if (TextIO::save(filename.c_str(), lines, lineEndings) == false)
+											{
+												logError("failed to save shader file");
+											}
+										}
+										
+										ImGui::Separator();
+										if (ImGui::MenuItem("Reload"))
+											load(filename.c_str());
+										
+										ImGui::Separator();
+										quitRequested = ImGui::MenuItem("Close");
+										
+										ImGui::EndMenu();
+									}
+									
+									if (ImGui::BeginMenu("Edit"))
+									{
+										if (ImGui::MenuItem("Undo"))
+											textEditor.Undo();
+										if (ImGui::MenuItem("Redo"))
+											textEditor.Redo();
+										
+										ImGui::EndMenu();
+									}
+									
+									if (ImGui::BeginMenu("View"))
+									{
+										if (ImGui::BeginMenu("Line Endings"))
+										{
+											if (ImGui::MenuItem("Unix (LF)", nullptr, lineEndings == TextIO::kLineEndings_Unix))
+												lineEndings = TextIO::kLineEndings_Unix;
+											if (ImGui::MenuItem("Windows (CRLF)", nullptr, lineEndings == TextIO::kLineEndings_Windows))
+												lineEndings = TextIO::kLineEndings_Windows;
+											
+											ImGui::EndMenu();
+										}
+										
+										ImGui::EndMenu();
+									}
+									
+									ImGui::EndMenuBar();
+								}
+							#endif
+							
+								textEditor.Render("Pixel Shader");
+								
+								ImGui::End();
+							}
+						}
+						uiContext.processEnd();
+						
+						framework.beginDraw(0, 0, 0, 0);
+						{
+							uiContext.draw();
+						}
+						framework.endDraw();
+					}
+					popWindow();
+				}
+			}
+			
+			virtual bool getQuitRequested() const override
+			{
+				return window->getQuitRequested() || quitRequested;
+			}
+		};
+		
+		std::list<WindowBase*> windows;
+		
+		graphEdit->handleNodeDoubleClicked = [&](const GraphNodeId nodeId)
+		{
+			auto node = graphEdit->tryGetNode(nodeId);
+			
+			if (node == nullptr)
+				return;
+			
+			//
+			
+			if (node->typeName == "vfxGraph")
+			{
+				auto value = node->inputValues.find("file");
+				
+				if (value != node->inputValues.end())
+				{
+					const char * filename = value->second.c_str();
+					
+					GraphEditWindow * window = new GraphEditWindow(typeDefinitionLibrary, filename);
+					
+					windows.push_back(window);
+				}
+			}
+			else if (node->typeName == "draw.fsfx")
+			{
+				auto value = node->inputValues.find("shader");
+				
+				if (value != node->inputValues.end())
+				{
+					const std::string filename = value->second + ".ps";
+					
+					ShaderEditWindow * window = new ShaderEditWindow(filename.c_str());
+					
+					windows.push_back(window);
+				}
+			}
+		};
 		
 		//
 		
@@ -494,40 +687,6 @@ int main(int argc, char * argv[])
 		{
 			vfxCpuTimingBlock(tick);
 			vfxGpuTimingBlock(tick);
-			
-			// todo : remove. test here to estimate how much memory using serialization as the undo/redo mechanism would use
-			if (false && keyboard.wentDown(SDLK_m))
-			{
-				std::vector<std::string> historyList;
-				historyList.resize(1000);
-				
-				for (auto & history : historyList)
-				{
-					bool result = true;
-					
-					tinyxml2::XMLPrinter xmlGraph;
-					
-					xmlGraph.OpenElement("graph");
-					{
-						result &= graphEdit->graph->saveXml(xmlGraph, graphEdit->typeDefinitionLibrary);
-						
-						xmlGraph.OpenElement("editor");
-						{
-							result &= graphEdit->saveXml(xmlGraph);
-						}
-						xmlGraph.CloseElement();
-					}
-					xmlGraph.CloseElement();
-					
-					Assert(result);
-					if (result)
-					{
-						history = xmlGraph.CStr();
-					}
-				}
-				
-				for (;;);
-			}
 			
 			// when real-time preview is disabled and all animations are done, wait for events to arrive. otherwise just keep processing and drawing frames
 			
@@ -683,6 +842,25 @@ int main(int argc, char * argv[])
 				}
 			}
 			framework.endDraw();
+			
+			//
+			
+			for (auto i = windows.begin(); i != windows.end(); )
+			{
+				WindowBase *& window = *i;
+				
+				window->process(dt);
+				
+				if (window->getQuitRequested())
+				{
+					delete window;
+					window = nullptr;
+					
+					i = windows.erase(i);
+				}
+				else
+					++i;
+			}
 		}
 		
 		SDL_StopTextInput();

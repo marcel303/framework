@@ -1,25 +1,74 @@
-#define DO_PORTAUDIO 1
 #define DO_PORTAUDIO_BASIC_OSCS 0
 #define DO_PORTAUDIO_SPRING_OSC1D 0
 #define DO_PORTAUDIO_SPRING_OSC2D 1
 #define DO_PORTAUDIO_AUDIODSP 0
 #define DO_MONDRIAAN 0
 
-#if DO_PORTAUDIO
-
 #include "Calc.h"
 #include "framework.h"
 #include "image.h"
 #include "Noise.h"
+#include <algorithm>
 #include <cmath>
 #include <emmintrin.h>
 #include <immintrin.h>
-#include <portaudio/portaudio.h>
+#include <math.h>
+#include <set>
+
+#if LINUX
+	#include <portaudio.h>
+#else
+	#include <portaudio/portaudio.h>
+#endif
 
 #define SAMPLERATE (44100.0)
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+#if defined(MACOS) || defined(LINUX)
+	#define ALIGN16 __attribute__((aligned(16)))
+	#define ALIGN32 __attribute__((aligned(32)))
+#else
+	#define ALIGN16 __declspec(align(16))
+	#define ALIGN32 __declspec(align(32))
+#endif
+
+#if defined(WIN32)
+
+// Clang and GCC support this nice syntax where vector types support the same basic operations as floats or integers. on Windows we need to re-implement a subset here to make the code compile
+
+inline __m128 operator+(__m128 a, __m128 b)
+{
+	return _mm_add_ps(a, b);
+}
+
+inline __m128 operator-(__m128 a, __m128 b)
+{
+	return _mm_sub_ps(a, b);
+}
+
+inline __m128 operator*(__m128 a, __m128 b)
+{
+	return _mm_mul_ps(a, b);
+}
+
+inline __m128d operator+(__m128d a, __m128d b)
+{
+	return _mm_add_pd(a, b);
+}
+
+inline __m128d operator-(__m128d a, __m128d b)
+{
+	return _mm_sub_pd(a, b);
+}
+
+inline __m128d operator*(__m128d a, __m128d b)
+{
+	return _mm_mul_pd(a, b);
+}
+
+#endif
+
+const int GFX_SX = 1024;
+const int GFX_SY = 768;
 
 static float mousePx = 0.f;
 static float mousePy = 0.f;
@@ -57,12 +106,12 @@ struct SineOsc : BaseOsc
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			samples[i] = std::sinf(phase);
+			samples[i] = sinf(phase);
 			
 			phase += phaseStep;
 		}
 		
-		phase = std::fmodf(phase, M_PI * 2.f);
+		phase = fmodf(phase, M_PI * 2.f);
 	}
 };
 
@@ -87,12 +136,12 @@ struct SawOsc : BaseOsc
 		
 		for (int i = 0; i < numSamples; ++i)
 		{
-			samples[i] = std::fmodf(phase, 2.f) - 1.f;
+			samples[i] = fmodf(phase, 2.f) - 1.f;
 			
 			phase += phaseStep;
 		}
 		
-		phase = std::fmodf(phase, 2.f);
+		phase = fmodf(phase, 2.f);
 	}
 };
 
@@ -100,6 +149,8 @@ struct TriangleOsc : BaseOsc
 {
 	float phase;
 	float phaseStep;
+	
+	float currentPhaseStep;
 	
 	virtual ~TriangleOsc() override
 	{
@@ -109,15 +160,15 @@ struct TriangleOsc : BaseOsc
 	{
 		phase = 0.f;
 		phaseStep = frequency / SAMPLERATE * 2.f;
+		
+		currentPhaseStep = phaseStep;
 	}
 	
 	virtual void generate(float * __restrict samples, const int numSamples) override
 	{
-		//const float phaseStep = this->phaseStep * mousePx;
-		
 		const float targetPhaseStep = this->phaseStep * (mousePx + 1.f);
 		
-		static float phaseStep = this->phaseStep; // fixme : non-static
+		float phaseStep = this->currentPhaseStep;
 		
 		const float retain1 = .999f;
 		const float retain2 = 1.f - retain1;
@@ -126,12 +177,12 @@ struct TriangleOsc : BaseOsc
 		{
 			phaseStep = phaseStep * retain1 + targetPhaseStep * retain2;
 			
-			samples[i] = (std::abs(std::fmodf(phase, 2.f) - 1.f) - .5f) * 2.f;
+			samples[i] = (std::abs(fmodf(phase, 2.f) - 1.f) - .5f) * 2.f;
 			
 			phase += phaseStep;
 		}
 		
-		phase = std::fmodf(phase, 2.f);
+		phase = fmodf(phase, 2.f);
 	}
 };
 
@@ -156,12 +207,12 @@ struct SquareOsc : BaseOsc
 
 		for (int i = 0; i < numSamples; ++i)
 		{
-			samples[i] = std::fmodf(phase, 2.f) < 1.f ? -1.f : +1.f;
+			samples[i] = fmodf(phase, 2.f) < 1.f ? -1.f : +1.f;
 			
 			phase += phaseStep;
 		}
 		
-		phase = std::fmodf(phase, 2.f);
+		phase = fmodf(phase, 2.f);
 	}
 };
 
@@ -175,9 +226,9 @@ struct SpringOsc1D : BaseOsc
 	{
 		static const int kNumElems = 256;
 		
-		__attribute__((aligned(32))) double p[kNumElems];
-		__attribute__((aligned(32))) double v[kNumElems];
-		__attribute__((aligned(32))) double f[kNumElems];
+		ALIGN32 double p[kNumElems];
+		ALIGN32 double v[kNumElems];
+		ALIGN32 double f[kNumElems];
 		
 		WaterSim()
 		{
@@ -190,8 +241,8 @@ struct SpringOsc1D : BaseOsc
 		
 		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool closedEnds)
 		{
-			const double vRetain = std::pow(vRetainPerSecond, dt);
-			const double pRetain = std::pow(pRetainPerSecond, dt);
+			const double vRetain = pow(vRetainPerSecond, dt);
+			const double pRetain = pow(pRetainPerSecond, dt);
 			
 			for (int i = 0; i < kNumElems; ++i)
 			{
@@ -313,7 +364,7 @@ struct SpringOsc1D : BaseOsc
 				for (int i = -r; i <= +r; ++i)
 				{
 					const int x = spot + i;
-					const double value = std::pow((1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0, 2.0);
+					const double value = pow((1.0 + cos(i / double(r) * Calc::mPI)) / 2.0, 2.0);
 					
 					if (x >= 0 && x < WaterSim::kNumElems)
 						m_waterSim.p[x] += value * s;
@@ -352,10 +403,10 @@ struct SpringOsc1D : BaseOsc
 				m_waterSim.f[x] = 1.0;
 				
 				m_waterSim.f[x] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
-				m_waterSim.f[x] *= Calc::Lerp(1.0, (std::cos(x * xRatio) + 1.0) / 2.0, cosFactor);
-				//m_waterSim.f[x] = 1.0 - std::pow(m_waterSim.f[x], 2.0);
+				m_waterSim.f[x] *= Calc::Lerp(1.0, (cos(x * xRatio) + 1.0) / 2.0, cosFactor);
+				//m_waterSim.f[x] = 1.0 - pow(m_waterSim.f[x], 2.0);
 				
-				//m_waterSim.f[x] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+				//m_waterSim.f[x] = 1.0 - pow(random(0.f, 1.f), 2.0) * (cos(x / 4.32) + 1.0)/2.0 * (cos(y / 3.21) + 1.0)/2.0;
 				m_waterSim.f[x] *= Calc::Lerp(1.0, scaled_octave_noise_1d(16, .4f, 1.f / 20.f, 0.f, 1.f, x), perlinFactor);
 			}
 		}
@@ -394,10 +445,10 @@ struct SpringOsc2D : BaseOsc
 	{
 		static const int kNumElems = 32;
 		
-		__attribute__((aligned(32))) double p[kNumElems][kNumElems];
-		__attribute__((aligned(32))) double v[kNumElems][kNumElems];
-		__attribute__((aligned(32))) double f[kNumElems][kNumElems];
-		__attribute__((aligned(32))) double d[kNumElems][kNumElems];
+		ALIGN32 double p[kNumElems][kNumElems];
+		ALIGN32 double v[kNumElems][kNumElems];
+		ALIGN32 double f[kNumElems][kNumElems];
+		ALIGN32 double d[kNumElems][kNumElems];
 		
 		WaterSim()
 		{
@@ -413,8 +464,8 @@ struct SpringOsc2D : BaseOsc
 		
 		void tick(const double dt, const double c, const double vRetainPerSecond, const double pRetainPerSecond, const bool _closedEnds)
 		{
-			const double vRetain = std::pow(vRetainPerSecond, dt);
-			const double pRetain = std::pow(pRetainPerSecond, dt);
+			const double vRetain = pow(vRetainPerSecond, dt);
+			const double pRetain = pow(pRetainPerSecond, dt);
 			
 			const bool closedEnds = _closedEnds && false;
 			
@@ -651,10 +702,10 @@ struct SpringOsc2D : BaseOsc
 					m_waterSim.f[x][y] = 1.0;
 					
 					m_waterSim.f[x][y] *= Calc::Lerp(1.0, random(0.f, 1.f), randomFactor);
-					m_waterSim.f[x][y] *= Calc::Lerp(1.0, (std::cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
-					//m_waterSim.f[x][y] = 1.0 - std::pow(m_waterSim.f[x][y], 2.0);
+					m_waterSim.f[x][y] *= Calc::Lerp(1.0, (cos(x * xRatio + y * yRatio) + 1.0) / 2.0, cosFactor);
+					//m_waterSim.f[x][y] = 1.0 - pow(m_waterSim.f[x][y], 2.0);
 					
-					//m_waterSim.f[x][y] = 1.0 - std::pow(random(0.f, 1.f), 2.0) * (std::cos(x / 4.32) + 1.0)/2.0 * (std::cos(y / 3.21) + 1.0)/2.0;
+					//m_waterSim.f[x][y] = 1.0 - pow(random(0.f, 1.f), 2.0) * (cos(x / 4.32) + 1.0)/2.0 * (cos(y / 3.21) + 1.0)/2.0;
 					m_waterSim.f[x][y] *= Calc::Lerp(1.0, scaled_octave_noise_2d(16, .4f, 1.f / 20.f, 0.f, 1.f, x, y), perlinFactor);
 				}
 			}
@@ -708,10 +759,10 @@ struct SpringOsc2D : BaseOsc
 				const int y = spotY + j;
 				
 				double value = 1.0;
-				value *= (1.0 + std::cos(i / double(r) * Calc::mPI)) / 2.0;
-				value *= (1.0 + std::cos(j / double(r) * Calc::mPI)) / 2.0;
+				value *= (1.0 + cos(i / double(r) * Calc::mPI)) / 2.0;
+				value *= (1.0 + cos(j / double(r) * Calc::mPI)) / 2.0;
 				
-				//value = std::pow(value, 2.0);
+				//value = pow(value, 2.0);
 				
 				if (x >= 0 && x < WaterSim::kNumElems)
 				{
@@ -744,6 +795,16 @@ struct SpringOsc2D : BaseOsc
 		const float v = v0 * ty1 + v1 * ty2;
 		
 		return v;
+	}
+
+	void * operator new(size_t size)
+	{
+		return _mm_malloc(size, 32);
+	}
+	
+	void operator delete(void * mem)
+	{
+		_mm_free(mem);
 	}
 };
 
@@ -821,7 +882,7 @@ struct DelayLine
 	
 	float readInterp(const float offset) const
 	{
-		const float index = std::fmodf(samples.size() + nextWriteIndex + offset, samples.size());
+		const float index = fmodf(samples.size() + nextWriteIndex + offset, samples.size());
 		const int index1 = int(index);
 		const int index2 = (index1 + 1) % samples.size();
 		
@@ -875,7 +936,7 @@ struct AudioDspOsc : BaseOsc
 				float value = (pcmData[nextReadIndex].channel[0] + pcmData[nextReadIndex].channel[1]) / 65536.f / 3.f;
 				
 				//const float offset = delayLine.samples.size() * mouse.x / float(GFX_SX) / 10.f;
-				const float offset = delayLine.samples.size() * mouse.x / float(GFX_SX) / 10.f + (float)std::sin(t * 2.0 * M_PI * 5.0) * 100.0;
+				const float offset = delayLine.samples.size() * mouse.x / float(GFX_SX) / 10.f + (float)sin(t * 2.0 * M_PI * 5.0) * 100.0;
 				
 				t += tStep;
 				if (t >= 1.0)
@@ -1157,8 +1218,11 @@ static void floodFill(SpringOsc2D & osc, const ImageData * image, std::set<int> 
 
 #endif
 
-void testPortaudio()
+int main(int argc, char * argv[])
 {
+	if (!framework.init(GFX_SX, GFX_SY))
+		return -1;
+	
 	initOsc();
 	
 	if (initAudioOutput())
@@ -1211,9 +1275,15 @@ void testPortaudio()
 	#endif
 	#endif
 		
-		do
+		for (;;)
 		{
 			framework.process();
+			
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				framework.quitRequested = true;
+			
+			if (framework.quitRequested)
+				break;
 			
 			mousePx = mouse.x / float(GFX_SX);
 			mousePy = mouse.y / float(GFX_SY);
@@ -1245,7 +1315,7 @@ void testPortaudio()
 				}
 				hqEnd();
 				
-				hqBegin(HQ_LINES);
+				hqBegin(HQ_LINES, true);
 				{
 					for (int i = 0; i < osc.m_waterSim.kNumElems; ++i)
 					{
@@ -1365,18 +1435,12 @@ void testPortaudio()
 			}
 			framework.endDraw();
 		#endif
-		} while (!keyboard.wentDown(SDLK_SPACE));
+		}
 	}
 	
 	shutAudioOutput();
 	
 	shutOsc();
+
+	return 0;
 }
-
-#else
-
-void testPortaudio()
-{
-}
-
-#endif

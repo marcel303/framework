@@ -93,7 +93,7 @@ void drawShape(const Shape & shape)
 	
 	const auto & poly = poly_in;
 	
-	gxBegin(GL_TRIANGLE_FAN);
+	gxBegin(GX_TRIANGLE_FAN);
 	{
 		for (const auto & vertex : poly)
 			gxVertex2f(vertex[0], vertex[1]);
@@ -103,7 +103,7 @@ void drawShape(const Shape & shape)
 
 int main(int argc, char * argv[])
 {
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		std::vector<Particle> particles;
 		
@@ -192,7 +192,7 @@ int main(int argc, char * argv[])
 				drawShape(shape);
 				
 				setColor(colorGreen);
-				gxBegin(GL_POINTS);
+				gxBegin(GX_POINTS);
 				for (const auto & particle : particles)
 					gxVertex2f(particle.p[0], particle.p[1]);
 				gxEnd();

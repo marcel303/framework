@@ -1,0 +1,34 @@
+app tests
+
+	depend_library audiograph
+	depend_library audiograph-jsusfx
+	depend_library framework
+	depend_library framework-ofx
+	depend_library jgmod-audiograph
+# todo : add with_library ?
+	with_platform linux depend_library libps3eye
+	with_platform macos depend_library libps3eye
+	depend_library libvideo
+	depend_library libwebrequest-downloadcache
+	depend_library vfxgraph
+	depend_library vfxgraph-nodes
+	depend_library vfxgraph-deepbelief
+	depend_library vfxgraph-kinect
+	depend_library vfxgraph-leapmotion
+	depend_library vfxgraph-ps3eye
+	depend_library vfxgraph-syphon
+	depend_library vfxgraph-wiimote
+	with_platform linux depend_library xmm
+	with_platform macos depend_library xmm
+
+	scan_files c
+	scan_files cpp
+	scan_files h
+	scan_files hpp
+	scan_files mm
+
+	scan_files *.* path ofxDatGui group ofxDatGui traverse
+	scan_files *.* path nanovg group nanovg traverse
+
+	resource_path data
+

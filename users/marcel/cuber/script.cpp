@@ -1,5 +1,6 @@
 #include "cube.h"
 #include "script.h"
+#include <math.h>
 #include <stdlib.h>
 
 //
@@ -221,7 +222,7 @@ public:
 
 		case kTransformMode_Scale:
 			{
-				const float s = std::sinf(m_time);
+				const float s = sinf(m_time);
 
 				m_testMatrix.scale(s, s, s);
 			}
@@ -237,12 +238,15 @@ public:
 
 		case kTransformMode_Translate:
 			{
-				const float dx = std::sinf(m_time / 1.111f);
-				const float dy = std::sinf(m_time / 1.333f);
-				const float dz = std::sinf(m_time / 1.777f);
+				const float dx = sinf(m_time / 1.111f);
+				const float dy = sinf(m_time / 1.333f);
+				const float dz = sinf(m_time / 1.777f);
 
 				m_testMatrix.translate(dx, dy, dz);
 			}
+			break;
+			
+		case kTransformMode_COUNT:
 			break;
 		}
 
@@ -425,6 +429,10 @@ public:
 
 		case kTest_Torus88:
 			d = computeTorus88(testCoord, 1.f, .25f);
+			break;
+			
+		case kTest_COUNT:
+			d = 0.f;
 			break;
 		}
 

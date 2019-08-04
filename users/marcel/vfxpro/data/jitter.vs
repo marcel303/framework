@@ -6,5 +6,5 @@ void main()
 {
 	gl_Position = ModelViewProjectionMatrix * in_position4;
 	
-	texcoord = vec2(in_texcoord);
+	texcoord = unpackTexcoord(0);
 }

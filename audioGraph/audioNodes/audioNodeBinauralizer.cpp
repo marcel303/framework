@@ -25,10 +25,10 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audioGraph.h" // getHrirSampleSet
 #include "audioNodeBinauralizer.h"
+#include "hrirSampleSetCache.h"
 
-AUDIO_NODE_TYPE(binauralizer, AudioNodeBinauralizer)
+AUDIO_NODE_TYPE(AudioNodeBinauralizer)
 {
 	typeName = "binauralizer";
 	

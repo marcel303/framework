@@ -29,14 +29,22 @@
 #include "vfxNodeImageCpuDownsample.h"
 #include <algorithm>
 
-#if __SSE2__
-	#include <immintrin.h>
+#ifdef __SSE2__
 	#include <xmmintrin.h>
 
-	#if !__AVX__
+	#if !__AVX2__
 		#ifndef WIN32
-			#warning AVX support disabled. wave field methods will use slower SSE code paths
+			#warning AVX2 support disabled. image cpu downsample methods will use slower SSE2 code paths
 		#endif
+	#else
+		#include <immintrin.h>
+	#endif
+
+	#ifndef __SSSE3__
+		#warning SSSE3 support disabled. image cpu downsample methods will use slower SSE2 code paths
+	#else
+		#include <immintrin.h> // fixme : _mm_extract_epi32 : argh! this is SSE 4.1 !
+		#include <tmmintrin.h>
 	#endif
 #endif
 
@@ -283,7 +291,7 @@ void VfxNodeImageCpuDownsample::freeImage()
 	imageOutput.reset();
 }
 
-#if __SSE2__
+#ifdef __SSSE3__
 
 static int downsampleLine2x2_1channel_SSE(
 	const uint8_t * __restrict _srcLine1,
@@ -363,7 +371,7 @@ static int downsampleLine4x4_1channel_SSE(
 
 #endif
 
-#if __AVX__
+#if __AVX2__
 
 static int downsampleLine2x2_1channel_AVX(
 	const uint8_t * __restrict _srcLine1,
@@ -426,10 +434,10 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				
 				int numPixelsProcessed = 0;
 				
-			#if __SSE2__
+			#ifdef __SSSE3__
 				if (((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(dstItr)) & 0xf) == 0)
 				{
-				#if __AVX__
+				#if __AVX2__
 					numPixelsProcessed = downsampleLine2x2_1channel_AVX(srcItr1, srcItr2, downsampledSx, dstItr);
 				#else
 					numPixelsProcessed = downsampleLine2x2_1channel_SSE(srcItr1, srcItr2, downsampledSx, dstItr);
@@ -481,7 +489,7 @@ void VfxNodeImageCpuDownsample::downsample(const VfxImageCpu & src, VfxImageCpu 
 				
 				int numPixelsProcessed = 0;
 				
-			#if __SSE2__
+			#ifdef __SSSE3__
 				if (((uintptr_t(srcItr1) | uintptr_t(srcItr2) | uintptr_t(srcItr3) | uintptr_t(srcItr4) | uintptr_t(dstItr)) & 0xf) == 0)
 				{
 					numPixelsProcessed = downsampleLine4x4_1channel_SSE(srcItr1, srcItr2, srcItr3, srcItr4, downsampledSx, dstItr);

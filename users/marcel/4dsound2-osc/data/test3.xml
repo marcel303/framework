@@ -1,0 +1,70 @@
+<graph nextNodeId="48" nextLinkId="57">
+    <node id="4" typeName="osc.endpoint">
+        <input socket="name" value="local"/>
+        <input socket="recv" value="0"/>
+        <input socket="sendIpAddress" value="127.0.0.1"/>
+        <input socket="sendPort" value="7000"/>
+    </node>
+    <node id="46" typeName="osc.sheet">
+        <input socket="0/3/modulation" value="1.000000"/>
+        <input socket="0/5/modulation" value="1.000000"/>
+        <input socket="0/blend" value="0.500000"/>
+        <input socket="0/noise/3" value="1.000000"/>
+        <input socket="0/rotation/3" value="1.000000"/>
+        <input socket="0/rotation/5" value="1.000000"/>
+        <input socket="0/synccolor" value="1.000000"/>
+        <input socket="0/tracer/2" value="1.000000"/>
+        <input socket="0/tracer/3" value="1.000000"/>
+        <input socket="1/blend" value="1.000000"/>
+        <input socket="1/endposition.x" value="0.800000"/>
+        <input socket="1/endposition.y" value="0.500000"/>
+        <input socket="1/intensity" value="0.300000"/>
+        <input socket="1/noise/1" value="0.100000"/>
+        <input socket="1/random" value="1.000000"/>
+        <input socket="1/scale" value="0.800000"/>
+        <input socket="1/startposition.x" value="0.200000"/>
+        <input socket="1/startposition.y" value="0.600000"/>
+        <input socket="1/tracer/1" value="1.000000"/>
+        <input socket="3/1/modulation" value="0.100000"/>
+        <input socket="3/blend" value="0.500000"/>
+        <input socket="3/endposition.x" value="0.200000"/>
+        <input socket="3/endposition.y" value="0.300000"/>
+        <input socket="3/intensity" value="0.290000"/>
+        <input socket="3/random" value="1.000000"/>
+        <input socket="3/scale" value="0.700000"/>
+        <input socket="3/startposition.x" value="1.000000"/>
+        <input socket="3/tracer/1" value="1.000000"/>
+        <input socket="Enable" value="1"/>
+        <input socket="Speed" value="1.000000"/>
+        <input socket="XEnable" value="1"/>
+        <input socket="YEnable" value="1"/>
+        <input socket="YFrequency" value="2.000000"/>
+        <input socket="ZEnable" value="1"/>
+        <input socket="ZFrequency" value="3.000000"/>
+        <input socket="blend" value="0.100000"/>
+        <input socket="endposition.y" value="1.000000"/>
+        <input socket="groupPrefix" value="0"/>
+        <input socket="intensity" value="0.400000"/>
+        <input socket="oscEndpoint" value="local"/>
+        <input socket="oscPrefix" value="/1"/>
+        <input socket="oscSheet" value="laser-sheet.txt"/>
+        <input socket="particleOpacity" value="0.800000"/>
+        <input socket="random" value="1.000000"/>
+        <input socket="startposition.y" value="1.000000"/>
+        <input socket="tracer/1" value="1.000000"/>
+    </node>
+    <editor nextZKey="389">
+        <dragAndZoom x="-77.381851196289062" y="11.783610343933105" zoom="0.6352342963218689"/>
+        <nodeDatas>
+            <nodeData nodeId="4" x="-304" y="-192" zKey="189" folded="1"/>
+            <nodeData nodeId="46" x="-144" y="-352" zKey="388"/>
+        </nodeDatas>
+        <visualizers/>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="192743cc" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0.0050000054761767387" r="0.19463661313056946" g="0.24416729807853699" b="1" a="1"/>
+                <key t="1" r="1" g="0.16160249710083008" b="0.62492763996124268" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

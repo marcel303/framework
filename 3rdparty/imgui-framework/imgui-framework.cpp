@@ -31,16 +31,21 @@
 
 FrameworkImGuiContext::~FrameworkImGuiContext()
 {
-	fassert(font_texture_id == 0);
+	fassert(font_texture.id == 0);
 }
 
-void FrameworkImGuiContext::init()
+void FrameworkImGuiContext::init(const bool enableIniFiles)
 {
 	imgui_context = ImGui::CreateContext();
 	
 	pushImGuiContext();
 	
 	auto & io = ImGui::GetIO();
+	
+	if (enableIniFiles == false)
+	{
+		io.IniFilename = nullptr;
+	}
 	
 	io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 	io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
@@ -86,24 +91,26 @@ void FrameworkImGuiContext::init()
 	mouse_cursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
 	mouse_cursors[ImGuiMouseCursor_Hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 	
-	// create font texture
-	
-	int sx, sy;
-	uint8_t * pixels = nullptr;
-	io.Fonts->GetTexDataAsRGBA32(&pixels, &sx, &sy);
-	
-	font_texture_id = createTextureFromRGBA8(pixels, sx, sy, false, true);
-	io.Fonts->TexID = (void*)(uintptr_t)font_texture_id;
+	setFrameworkStyleColors();
 	
 	popImGuiContext();
+	
+	// update the font texture
+	
+	updateFontTexture();
 }
 
 void FrameworkImGuiContext::shut()
 {
-	if (font_texture_id != 0)
+	if (clipboard_text != nullptr)
+    {
+        SDL_free((void*)clipboard_text);
+        clipboard_text = nullptr;
+	}
+	
+	if (font_texture.id != 0)
 	{
-		glDeleteTextures(1, &font_texture_id);
-		font_texture_id = 0;
+		font_texture.free();
 	}
 	
 	for (int i = 0; i < ImGuiMouseCursor_COUNT; ++i)
@@ -148,6 +155,13 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 		io.KeySuper = false;
 		
 		memset(io.KeysDown, 0, sizeof(io.KeysDown));
+		
+	#if DO_KINETIC_SCROLL
+	#if DO_TOUCH_SCROLL
+		num_touches = 0;
+	#endif
+		kinetic_scroll.SetZero();
+	#endif
 	}
 	else
 	{
@@ -155,15 +169,82 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 		io.MouseDown[1] = mouse.isDown(BUTTON_RIGHT);
 		
 	#if DO_KINETIC_SCROLL
-	// todo : add kinectic scrolling
+	#if DO_TOUCH_SCROLL
+		Vec2 new_kinetic_scroll;
+		const bool hasWindowFocus = framework.getCurrentWindow().hasFocus();
+		for (auto & e : framework.events)
+		{
+			if (hasWindowFocus == false)
+			{
+				kinetic_scroll.SetZero();
+				
+				num_touches = 0;
+			}
+			else if (e.type == SDL_FINGERDOWN)
+			{
+				kinetic_scroll.SetZero();
+				kinetic_scroll_smoothed[0] = 0.0;
+				kinetic_scroll_smoothed[1] = 0.0;
+				
+				num_touches++;
+			}
+			else if (e.type == SDL_FINGERUP)
+			{
+				num_touches--;
+				
+				if (num_touches < 0)
+					num_touches = 0;
+				
+				if (num_touches == 1)
+				{
+					if (abs(kinetic_scroll_smoothed[0]) < 1.2f)
+						kinetic_scroll_smoothed[0] = 0.0;
+					if (abs(kinetic_scroll_smoothed[1]) < 1.2f)
+						kinetic_scroll_smoothed[1] = 0.0;
+					
+					kinetic_scroll = Vec2(kinetic_scroll_smoothed[0], kinetic_scroll_smoothed[1]);
+					
+					kinetic_scroll_smoothed[0] = 0.0;
+					kinetic_scroll_smoothed[1] = 0.0;
+				}
+			}
+			else if (e.type == SDL_FINGERMOTION && num_touches == 2 && dt > 0.f/* && e.tfinger.firstMove == false*/)
+			{
+				new_kinetic_scroll += Vec2(e.tfinger.dx * 100.f, e.tfinger.dy * 10.f) / dt;
+			}
+		}
+		
+		const double retain = pow(0.6, dt * 100.0);
+		const double attain = 1.0 - retain;
+		kinetic_scroll_smoothed[0] = kinetic_scroll_smoothed[0] * retain + new_kinetic_scroll[0] * attain;
+		kinetic_scroll_smoothed[1] = kinetic_scroll_smoothed[1] * retain + new_kinetic_scroll[1] * attain;
+		
+		if (num_touches == 2)
+			kinetic_scroll = new_kinetic_scroll;
+		else
+			kinetic_scroll *= powf(.1f, dt);
+		
+		io.MouseWheelH = kinetic_scroll[0] * dt;
+		io.MouseWheel = kinetic_scroll[1] * dt;
+	#else
 		if (mouse.scrollY == 0)
 			kinetic_scroll *= powf(.1f, dt);
 		else
-			kinetic_scroll = mouse.scrollY * -.1f;
-		io.MouseWheel = kinetic_scroll;
-	#else
-		io.MouseWheel = mouse.scrollY * -.1f;
+			kinetic_scroll = Vec2(0.f, mouse.scrollY * -.1f);
+		io.MouseWheel = kinetic_scroll[1];
 	#endif
+	#endif
+
+		if (SDL_GetNumTouchDevices() == 0)
+		{
+		#if DO_KINETIC_SCROLL
+			if (mouse.scrollY != 0)
+				kinetic_scroll += Vec2(0.f, mouse.scrollY * -10.f);
+			kinetic_scroll *= powf(.01f, dt);
+		#else
+			io.MouseWheel = mouse.scrollY;
+		#endif
+		}
 
 		io.KeyCtrl = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
 		io.KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
@@ -247,13 +328,86 @@ void FrameworkImGuiContext::updateMouseCursor()
 	}
 }
 
+void FrameworkImGuiContext::updateFontTexture()
+{
+	pushImGuiContext();
+	
+	auto & io = ImGui::GetIO();
+	
+	if (font_texture.id != 0)
+	{
+		font_texture.free();
+	}
+	
+	// create font texture
+	
+	int sx, sy;
+	uint8_t * pixels = nullptr;
+	io.Fonts->GetTexDataAsRGBA32(&pixels, &sx, &sy);
+	
+	font_texture.allocate(sx, sy, GX_RGBA8_UNORM, false, true);
+	font_texture.upload(pixels, 1, 0);
+	io.Fonts->TexID = (void*)(uintptr_t)font_texture.id;
+	
+	popImGuiContext();
+}
+
+void FrameworkImGuiContext::setFrameworkStyleColors()
+{
+	ImVec4 * colors = ImGui::GetStyle().Colors;
+	
+	colors[ImGuiCol_Text]                   = ImVec4(0.60f, 0.59f, 0.54f, 1.00f);
+	colors[ImGuiCol_TextDisabled]           = ImVec4(0.40f, 0.40f, 0.35f, 1.00f);
+	colors[ImGuiCol_WindowBg]               = ImVec4(0.01f, 0.01f, 0.04f, 1.00f);
+	colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_PopupBg]                = ImVec4(0.11f, 0.11f, 0.14f, 0.92f);
+	colors[ImGuiCol_Border]                 = ImVec4(0.39f, 0.39f, 0.39f, 0.50f);
+	colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+	colors[ImGuiCol_FrameBg]                = ImVec4(0.43f, 0.43f, 0.43f, 0.39f);
+	colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.19f, 0.19f, 0.57f, 0.52f);
+	colors[ImGuiCol_FrameBgActive]          = ImVec4(0.23f, 0.21f, 0.54f, 0.69f);
+	colors[ImGuiCol_TitleBg]                = ImVec4(0.09f, 0.11f, 0.17f, 0.83f);
+	colors[ImGuiCol_TitleBgActive]          = ImVec4(0.08f, 0.09f, 0.13f, 0.87f);
+	colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.40f, 0.40f, 0.80f, 0.20f);
+	colors[ImGuiCol_MenuBarBg]              = ImVec4(0.09f, 0.09f, 0.18f, 0.80f);
+	colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.13f, 0.13f, 0.13f, 0.60f);
+	colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.79f, 0.79f, 1.00f, 0.30f);
+	colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.40f, 0.40f, 0.80f, 0.40f);
+	colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.41f, 0.39f, 0.80f, 0.60f);
+	colors[ImGuiCol_CheckMark]              = ImVec4(0.68f, 0.66f, 0.53f, 0.50f);
+	colors[ImGuiCol_SliderGrab]             = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
+	colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.41f, 0.39f, 0.80f, 0.60f);
+	colors[ImGuiCol_Button]                 = ImVec4(0.32f, 0.34f, 0.44f, 0.62f);
+	colors[ImGuiCol_ButtonHovered]          = ImVec4(0.40f, 0.48f, 0.71f, 0.79f);
+	colors[ImGuiCol_ButtonActive]           = ImVec4(0.46f, 0.54f, 0.80f, 1.00f);
+	colors[ImGuiCol_Header]                 = ImVec4(0.40f, 0.40f, 0.90f, 0.45f);
+	colors[ImGuiCol_HeaderHovered]          = ImVec4(0.19f, 0.19f, 0.51f, 0.68f);
+	colors[ImGuiCol_HeaderActive]           = ImVec4(0.22f, 0.22f, 0.69f, 0.80f);
+	colors[ImGuiCol_Separator]              = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+	colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.60f, 0.60f, 0.70f, 1.00f);
+	colors[ImGuiCol_SeparatorActive]        = ImVec4(0.70f, 0.70f, 0.90f, 1.00f);
+	colors[ImGuiCol_ResizeGrip]             = ImVec4(1.00f, 1.00f, 1.00f, 0.16f);
+	colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.78f, 0.82f, 1.00f, 0.60f);
+	colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.78f, 0.82f, 1.00f, 0.90f);
+	colors[ImGuiCol_PlotLines]              = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+	colors[ImGuiCol_PlotLinesHovered]       = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+	colors[ImGuiCol_PlotHistogram]          = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+	colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+	colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.00f, 0.00f, 1.00f, 0.35f);
+	colors[ImGuiCol_DragDropTarget]         = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
+	colors[ImGuiCol_NavHighlight]           = ImVec4(0.45f, 0.45f, 0.90f, 0.80f);
+	colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+	colors[ImGuiCol_NavWindowingDimBg]      = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+	colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+}
+
 const char * FrameworkImGuiContext::getClipboardText(void * user_data)
 {
 	FrameworkImGuiContext * context = (FrameworkImGuiContext*)user_data;
 	
     if (context->clipboard_text != nullptr)
     {
-        SDL_free(context->clipboard_text);
+        SDL_free((void*)context->clipboard_text);
         context->clipboard_text = nullptr;
 	}
 	
@@ -270,7 +424,7 @@ void FrameworkImGuiContext::setClipboardText(void * user_data, const char * text
 	
 	if (context->clipboard_text != nullptr)
     {
-        SDL_free(context->clipboard_text);
+        SDL_free((void*)context->clipboard_text);
         context->clipboard_text = nullptr;
 	}
 	
@@ -281,7 +435,8 @@ void FrameworkImGuiContext::setClipboardText(void * user_data, const char * text
 
 void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 {
-	glEnable(GL_SCISSOR_TEST);
+	// todo : scale clips rects depending on backing scale
+	// draw_data->ScaleClipRects(io.DisplayFramebufferScale);
 	
 	for (int i = 0; i < draw_data->CmdListsCount; ++i)
 	{
@@ -313,17 +468,17 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
                 	clip_rect.w < 0)
                 	continue;
 				
-				glScissor(
+				setDrawRect(
 					(int)clip_rect.x,
-					(int)(draw_data->DisplaySize.y - clip_rect.w),
+					(int)clip_rect.y,
 					(int)(clip_rect.z - clip_rect.x),
 					(int)(clip_rect.w - clip_rect.y));
 				
-				const GLuint textureId = (GLuint)(uintptr_t)cmd->TextureId;
+				const GxTextureId textureId = (GxTextureId)(uintptr_t)cmd->TextureId;
 				
 				gxSetTexture(textureId);
 				{
-					gxBegin(GL_TRIANGLES);
+					gxBegin(GX_TRIANGLES);
 					{
 						for (int e = 0; e < cmd->ElemCount; ++e)
 						{
@@ -361,5 +516,18 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 		}
 	}
 	
-	glDisable(GL_SCISSOR_TEST);
+	clearDrawRect();
+}
+
+namespace ImGui
+{
+	void Image(
+		GxTextureId user_texture_id,
+		const ImVec2& size,
+		const ImVec2& uv0, const ImVec2& uv1,
+		const ImVec4& tint_col,
+		const ImVec4& border_col)
+	{
+		ImGui::Image((ImTextureID)(uintptr_t)user_texture_id, size, uv0, uv1, tint_col, border_col);
+	}
 }

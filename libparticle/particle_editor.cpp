@@ -5,7 +5,7 @@
 #include "particle_framework.h"
 #include "tinyxml2.h"
 #include "ui.h"
-#include <cmath>
+#include <math.h>
 
 #include "StringEx.h" // _s functions
 
@@ -159,6 +159,42 @@ struct Menu_LoadSave
 	}
 };
 
+bool load(const char * path)
+{
+	XMLDocument d;
+
+	if (d.LoadFile(path) != XML_NO_ERROR)
+	{
+		return false;
+	}
+	else
+	{
+		for (int i = 0; i < kMaxParticleInfos; ++i)
+		{
+			g_peiList[i] = ParticleEmitterInfo();
+			g_piList[i] = ParticleInfo();
+			g_pe[i].clearParticles(g_pool[i]);
+			fassert(g_pool[i].head == 0);
+			fassert(g_pool[i].tail == 0);
+			g_pe[i] = ParticleEmitter();
+		}
+
+		int peiIdx = 0;
+		for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
+		{
+			g_peiList[peiIdx++].load(emitterElem);
+		}
+
+		int piIdx = 0;
+		for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
+		{
+			g_piList[piIdx++].load(particleElem);
+		}
+		
+		return true;
+	}
+}
+
 void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
 {
 	if (doButton("Load", 0.f, 1.f, true))
@@ -168,37 +204,12 @@ void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
 
 		if (result == NFD_OKAY)
 		{
-			XMLDocument d;
+			load(path);
+			
+			menu.activeFilename = path;
 
-			if (d.LoadFile(path) == XML_NO_ERROR)
-			{
-				for (int i = 0; i < kMaxParticleInfos; ++i)
-				{
-					g_peiList[i] = ParticleEmitterInfo();
-					g_piList[i] = ParticleInfo();
-					g_pe[i].clearParticles(g_pool[i]);
-					fassert(g_pool[i].head == 0);
-					fassert(g_pool[i].tail == 0);
-					g_pe[i] = ParticleEmitter();
-				}
-
-				int peiIdx = 0;
-				for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
-				{
-					g_peiList[peiIdx++].load(emitterElem);
-				}
-
-				int piIdx = 0;
-				for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
-				{
-					g_piList[piIdx++].load(particleElem);
-				}
-
-				menu.activeFilename = path;
-
-				g_activeEditingIndex = 0;
-				refreshUi();
-			}
+			g_activeEditingIndex = 0;
+			refreshUi();
 		}
 	}
 
@@ -638,8 +649,7 @@ void draw(const bool menuActive, const float sx, const float sy)
 	for (int i = 0; i < kMaxParticleInfos; ++i)
 	{
 		gxSetTexture(Sprite(g_peiList[i].materialName).getTexture());
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
 
 		if (g_piList[i].blendMode == ParticleInfo::kBlendMode_AlphaBlended)
 			setBlend(BLEND_ALPHA);
@@ -651,21 +661,21 @@ void draw(const bool menuActive, const float sx, const float sy)
 		//if (rand() % 2)
 		if (true)
 		{
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 			{
 				for (Particle * p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? g_pool[i].head : g_pool[i].tail;
 							 p; p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
 				{
 					const float particleLife = 1.f - p->life;
-					//const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+					//const float particleSpeed = sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
 					const float particleSpeed = p->speedScalar;
 
 					ParticleColor color(true);
 					computeParticleColor(g_peiList[i], g_piList[i], particleLife, particleSpeed, color);
 					const float size_div_2 = computeParticleSize(g_peiList[i], g_piList[i], particleLife, particleSpeed) / 2.f;
 
-					const float s = std::sinf(-p->rotation * float(M_PI) / 180.f);
-					const float c = std::cosf(-p->rotation * float(M_PI) / 180.f);
+					const float s = sinf(-p->rotation * float(M_PI) / 180.f);
+					const float c = cosf(-p->rotation * float(M_PI) / 180.f);
 
 					gxColor4fv(color.rgba);
 					gxTexCoord2f(0.f, 1.f); gxVertex2f(p->position[0] + (- c - s) * size_div_2, p->position[1] + (+ s - c) * size_div_2);
@@ -682,7 +692,7 @@ void draw(const bool menuActive, const float sx, const float sy)
 						 p; p = (g_piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
 			{
 				const float particleLife = 1.f - p->life;
-				const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+				const float particleSpeed = sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
 
 				ParticleColor color;
 				computeParticleColor(g_peiList[i], g_piList[i], particleLife, particleSpeed, color);
@@ -725,6 +735,11 @@ ParticleEditor::~ParticleEditor()
 {
 	delete state;
 	state = nullptr;
+}
+
+bool ParticleEditor::load(const char * filename)
+{
+	return state->load(filename);
 }
 
 void ParticleEditor::tick(const bool menuActive, const float sx, const float sy, const float dt)

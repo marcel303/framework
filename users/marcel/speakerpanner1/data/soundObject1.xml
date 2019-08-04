@@ -1,0 +1,54 @@
+<graph nextNodeId="9" nextLinkId="10">
+    <node id="1" typeName="voice">
+        <input socket="gain" value="0.300000"/>
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="2" typeName="audio.sine">
+        <input socket="frequency" value="100.000000"/>
+        <input socket="mode" value="0"/>
+        <input socket="skew" value="0.930000"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="3" typeName="filter.comb">
+        <input socket="delay" value="0.006000"/>
+        <input socket="feedback" value="0.800000"/>
+        <input socket="feedforward" value="0.700000"/>
+        <input socket="maxDelay" value="1.000000"/>
+    </node>
+    <node id="4" typeName="noise.1d">
+        <input socket="min" value="-1.000000"/>
+        <input socket="type" value="3"/>
+    </node>
+    <node id="6" typeName="filter.biquad">
+        <input socket="Q" value="1.000000"/>
+        <input socket="frequency" value="3000.000000"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="8" typeName="audio.sine">
+        <input socket="a" value="10.000000"/>
+        <input socket="b" value="300.000000"/>
+        <input socket="frequency" value="12.000000"/>
+        <input socket="skew" value="0.930000"/>
+        <input socket="type" value="1"/>
+    </node>
+    <link id="3" srcNodeId="3" srcNodeSocketName="value" dstNodeId="2" dstNodeSocketName="audio"/>
+    <link id="5" srcNodeId="3" srcNodeSocketName="value" dstNodeId="4" dstNodeSocketName="result"/>
+    <link id="7" srcNodeId="1" srcNodeSocketName="audio" dstNodeId="6" dstNodeSocketName="out"/>
+    <link id="8" srcNodeId="6" srcNodeSocketName="in" dstNodeId="3" dstNodeSocketName="value"/>
+    <link id="9" srcNodeId="2" srcNodeSocketName="frequency" dstNodeId="8" dstNodeSocketName="audio"/>
+    <editor nextZKey="68">
+        <dragAndZoom x="-126.82876586914062" y="-53.446212768554688" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="1" x="81" y="0" zKey="44"/>
+            <nodeData nodeId="2" x="-320" y="48" zKey="65" folded="1"/>
+            <nodeData nodeId="3" x="-176" y="1.975189208984375" zKey="57"/>
+            <nodeData nodeId="4" x="-445.40328979492188" y="-35.490913391113281" zKey="64" folded="1"/>
+            <nodeData nodeId="6" x="-48.322509765625" y="0.8905029296875" zKey="67"/>
+            <nodeData nodeId="8" x="-448" y="48" zKey="66" folded="1"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="7" x="-56.27947998046875" y="-195.91387939453125" zKey="55" nodeId="6" dstSocketName="out" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="5757572a" gridColor="ffffff1d"/>
+    </editor>
+</graph>

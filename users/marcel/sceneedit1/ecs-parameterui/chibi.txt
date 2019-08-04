@@ -1,0 +1,5 @@
+library ecs-parameterui
+	depend_library ecs-parameter
+	depend_library imgui
+	add_files parameterUi.cpp parameterUi.h
+	header_path . expose

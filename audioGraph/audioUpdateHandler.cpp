@@ -31,7 +31,6 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioUpdateHandler.h"
 #include "Debugging.h"
 #include "osc4d.h"
-#include "soundmix.h"
 #include "Timer.h"
 #include <SDL2/SDL.h>
 
@@ -109,6 +108,7 @@ void AudioUpdateHandler::portAudioCallback(
 	const void * inputBuffer,
 	const int numInputChannels,
 	void * outputBuffer,
+	const int numOutputChannels,
 	const int framesPerBuffer)
 {
 	audioCpuTimingBlock(audioUpdateHandler);
@@ -142,7 +142,7 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	if (voiceMgr != nullptr)
 	{
-		voiceMgr->generateAudio((float*)outputBuffer, framesPerBuffer);
+		voiceMgr->generateAudio((float*)outputBuffer, framesPerBuffer, numOutputChannels);
 		
 		//
 		

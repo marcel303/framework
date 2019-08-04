@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "vfxNodeDrawModel.h"
+#include <math.h>
 
 template <typename T>
 static inline T pad(T value, int align)
@@ -141,7 +142,7 @@ void VfxNodeDrawModel::tick(const float dt)
 	}
 	
 	model->animSpeed = animSpeed;
-	model->animLoop = int(std::round(animLoopCount));
+	model->animLoop = int(roundf(animLoopCount));
 	model->animRootMotionEnabled = animRootMotionEnabled;
 	
 	model->tick(dt);

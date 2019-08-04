@@ -24,6 +24,8 @@
         <input socket="name" value="freq"/>
     </node>
     <node id="108" typeName="wavefield.1d" passthrough="1">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="16" f="0000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff30000000000000ff3"/>
+]]></resource>
         <input socket="pos.dampen" value="0.200000"/>
         <input socket="tension" value="100.000000"/>
         <input socket="vel.dampen" value="0.200000"/>
@@ -48,10 +50,10 @@
     <link id="161" srcNodeId="110" srcNodeSocketName="value" dstNodeId="108" dstNodeSocketName="audio"/>
     <link id="162" srcNodeId="110" srcNodeSocketName="value" dstNodeId="69" dstNodeSocketName="value"/>
     <link id="163" srcNodeId="102" srcNodeSocketName="b" dstNodeId="110" dstNodeSocketName="value"/>
-    <editor nextZKey="1365">
+    <editor nextZKey="1368">
         <dragAndZoom x="832.44073486328125" y="-38.96832275390625" zoom="0.73814678192138672"/>
         <nodeDatas>
-            <nodeData nodeId="69" x="656" y="-208" zKey="1357"/>
+            <nodeData nodeId="69" x="656" y="-208" zKey="1366"/>
             <nodeData nodeId="94" x="176" y="-128" zKey="1326"/>
             <nodeData nodeId="95" x="1088" y="-224" zKey="1231"/>
             <nodeData nodeId="96" x="336" y="-400" zKey="1325"/>
@@ -59,7 +61,7 @@
             <nodeData nodeId="101" x="656" y="-480" zKey="1296"/>
             <nodeData nodeId="102" x="944" y="-224" zKey="1232"/>
             <nodeData nodeId="104" x="320" y="16" zKey="1331"/>
-            <nodeData nodeId="108" x="656.89990234375" y="-64.03564453125" zKey="1363"/>
+            <nodeData nodeId="108" x="656.89990234375" y="-64.03564453125" zKey="1367"/>
             <nodeData nodeId="109" x="512" y="16" zKey="1330"/>
             <nodeData nodeId="110" x="800.15478515625" y="-208.01416015625" zKey="1364"/>
         </nodeDatas>
@@ -67,7 +69,7 @@
             <visualizer id="70" x="640" y="-336" zKey="1321" nodeId="69" dstSocketName="value" sx="144.1986083984375" sy="116.84088134765625"/>
             <visualizer id="107" x="448" y="-336" zKey="1324" nodeId="104" dstSocketName="value1" sx="159.10076904296875" sy="116.84088134765625"/>
         </visualizers>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="6767677f" gridColor="b600ff96">
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="6767677f" gridColor="b600ff96">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
                 <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>

@@ -23,7 +23,7 @@
 #define FPS 187
 
 #include "framework.h"
-#include "../../../libparticle/ui.h" // todo : rename
+#include "ui.h"
 
 #include "../../../vfxGraph/objects/blobDetector.h"
 #include "../../../vfxGraph/objects/blobDetector.cpp"
@@ -114,7 +114,7 @@ static OscSender * s_oscSender = nullptr;
 
 //
 
-static void applyTreshold(
+static void applyThreshold(
 	const uint8_t * __restrict color_surface,
 	const int sx, const int sy,
 	const int _threshold,
@@ -154,7 +154,7 @@ struct FrameData
 	
 	uint8_t cameraImage[CAM_SX * CAM_SY];
 	
-	uint8_t tresholdedValues[CAM_SX * CAM_SY];
+	uint8_t thresholdedValues[CAM_SX * CAM_SY];
 	
 	uint8_t mask[CAM_SX * CAM_SY];
 	
@@ -166,7 +166,7 @@ struct FrameData
 	
 	void doDotDetection()
 	{
-		DotDetector::treshold(tresholdedValues, CAM_SX, mask, CAM_SX, CAM_SX, CAM_SY, DotDetector::kTresholdTest_GreaterEqual, 127);
+		DotDetector::threshold(thresholdedValues, CAM_SX, mask, CAM_SX, CAM_SX, CAM_SY, DotDetector::kThresholdTest_GreaterEqual, 127);
 		
 		numIslands = DotDetector::detectDots(mask, CAM_SX, CAM_SY, 20.f, islands, kMaxIslands, true);
 		
@@ -178,7 +178,7 @@ struct FrameData
 		Benchmark bm("blobDetection");
 		
 		uint8_t values[CAM_SX * CAM_SY];
-		memcpy(values, tresholdedValues, sizeof(values));
+		memcpy(values, thresholdedValues, sizeof(values));
 		
 		numBlobs = BlobDetector::detectBlobs(values, CAM_SX, CAM_SY, blobs, kMaxBlobs);
 		
@@ -464,9 +464,9 @@ struct Recorder
 			
 			//LOG_DBG("got frame data!", 0);
 			
-			applyTreshold(self->frameData.cameraImage, CAM_SX, CAM_SY, self->threshold, self->frameData.tresholdedValues);
+			applyThreshold(self->frameData.cameraImage, CAM_SX, CAM_SY, self->threshold, self->frameData.thresholdedValues);
 			
-			self->downsampledImage.downsample(self->frameData.tresholdedValues, 4.f);
+			self->downsampledImage.downsample(self->frameData.thresholdedValues, 4.f);
 			
 			self->frameData.doDotDetection();
 			
@@ -619,28 +619,22 @@ struct Controller
 	{
 		Recorder * recorder = getRecorder(index);
 		
-		if (recorder != nullptr && recorder->frameData.cameraImage != nullptr)
+		if (recorder != nullptr)
 		{
-			//GLuint texture = createTextureFromR8(recorder->frameData, CAM_SX, CAM_SY, false, true);
-			GLuint texture = createTextureFromR8(recorder->frameData.tresholdedValues, CAM_SX, CAM_SY, false, true);
+			GxTexture texture;
+			texture.allocate(CAM_SX, CAM_SY, GX_R8_UNORM, false, true);
 			
-			if (texture != 0)
+			if (texture.isValid())
 			{
-				glBindTexture(GL_TEXTURE_2D, texture);
-				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-				checkErrorGL();
-				glBindTexture(GL_TEXTURE_2D, 0);
-				checkErrorGL();
-
-				gxSetTexture(texture);
+				//texture.upload(recorder->frameData.cameraImage, 1, 0);
+				texture.upload(recorder->frameData.thresholdedValues, 1, 0);
+				
+				texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
+			
+				gxSetTexture(texture.id);
 				setColor(colorWhite);
 				drawRect(0, 0, CAMVIEW_SX, CAMVIEW_SY);
 				gxSetTexture(0);
-				
-				glDeleteTextures(1, &texture);
-				texture = 0;
-				checkErrorGL();
 			}
 		}
 		
@@ -677,8 +671,12 @@ void changeDirectory(const char * path);
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
+#endif
 	
 #if 1
 	// show connected devices
@@ -696,7 +694,7 @@ int main(int argc, char * argv[])
 	}
 #endif
 
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	Recorder recorder1;

@@ -28,6 +28,7 @@
 #pragma once
 
 #include "graph.h"
+#include "graph_typeDefinitionLibrary.h" // todo : remove
 #include <map>
 #include <set>
 #include <string>
@@ -39,8 +40,10 @@
 	#define VFX_GRAPH_ENABLE_TIMING 0
 #endif
 
+// framework forward declarations
 class Surface;
 
+// vfxgraph forward declarations
 struct VfxDynamicData;
 struct VfxDynamicInputSocketValue;
 struct VfxDynamicLink;
@@ -53,8 +56,40 @@ struct VfxResourceBase;
 struct VfxNodeDisplay;
 struct VfxNodeOutput;
 
+// vfxgraph traversal state
 extern VfxGraph * g_currentVfxGraph;
 extern Surface * g_currentVfxSurface;
+
+struct MemoryComponent
+{
+	struct Memf
+	{
+		int refCount = 0;
+		int numElements = 0;
+		
+		Vec4 value;
+	};
+	
+	struct Mems
+	{
+		int refCount = 0;
+		
+		std::string value;
+	};
+	
+	std::map<std::string, Memf> memf;
+	std::map<std::string, Mems> mems;
+	
+	void registerMemf(const char * name, const int numElements);
+	void unregisterMemf(const char * name);
+	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
+	bool getMemf(const char * name, Vec4 & result) const;
+	
+	void registerMems(const char * name);
+	void unregisterMems(const char * name);
+	void setMems(const char * name, const char * value);
+	bool getMems(const char * name, std::string & result) const;
+};
 
 struct VfxGraph
 {
@@ -100,6 +135,8 @@ struct VfxGraph
 	mutable int nextDrawTraversalId;
 	
 	std::vector<ValueToFree> valuesToFree;
+	
+	MemoryComponent memory;
 	
 	double time;
 	
@@ -170,10 +207,12 @@ struct VfxDynamicData
 
 //
 
-void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary);
+struct Graph_TypeDefinitionLibrary;
+
+void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
 
 VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName);
 
-VfxGraph * constructVfxGraph(const Graph & graph, const GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary);
+VfxGraph * constructVfxGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary);
 
 void connectVfxSockets(VfxNodeBase * srcNode, const int srcNodeSocketIndex, VfxPlug * srcSocket, VfxNodeBase * dstNode, const int dstNodeSocketIndex, VfxPlug * dstSocket, const std::map<std::string, std::string> & linkParams, const bool addPredep);

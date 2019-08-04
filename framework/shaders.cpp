@@ -27,7 +27,7 @@
 
 #include "framework.h"
 
-#if ENABLE_OPENGL
+#if ENABLE_OPENGL || ENABLE_METAL
 
 #include "shaders.h"
 
@@ -78,14 +78,20 @@
 #include "data/engine/builtin-hq-stroked-triangle.ps"
 #include "data/engine/builtin-hq-stroked-triangle.vs"
 
+#include "data/engine/MsdfUtil.txt"
 #include "data/engine/builtin-msdf-text.ps"
 #include "data/engine/builtin-msdf-text.vs"
+
+#include "data/engine/builtin-bitmapped-text.ps"
+#include "data/engine/builtin-bitmapped-text.vs"
 
 void registerBuiltinShaders()
 {
 	shaderSource("engine/ShaderCommon.txt",
 		R"SHADER(
-		#if LEGACY_GL
+		#if defined(__METAL_VERSION__)
+			// ...
+		#elif LEGACY_GL
 			#define shader_attrib attribute
 			#define shader_in varying
 			#define shader_out varying
@@ -106,9 +112,11 @@ void registerBuiltinShaders()
 		#define VS_POSITION      0
 		#define VS_NORMAL        1
 		#define VS_COLOR         2
-		#define VS_TEXCOORD      3
-		#define VS_BLEND_INDICES 4
-		#define VS_BLEND_WEIGHTS 5
+		#define VS_TEXCOORD0     3
+		#define VS_TEXCOORD      VS_TEXCOORD0
+		#define VS_TEXCOORD1     4
+		#define VS_BLEND_INDICES 5
+		#define VS_BLEND_WEIGHTS 6
 		)SHADER"
 	);
 	
@@ -134,10 +142,10 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-gaussian-h.vs", s_guassianHVs);
 	shaderSource("engine/builtin-gaussian-v.ps", s_guassianVPs);
 	shaderSource("engine/builtin-gaussian-v.vs", s_guassianVVs);
-	shaderSource("engine/builtin-treshold.ps", s_tresholdPs);
-	shaderSource("engine/builtin-treshold.vs", s_tresholdVs);
-	shaderSource("engine/builtin-treshold-componentwise.ps", s_tresholdComponentwisePs);
-	shaderSource("engine/builtin-treshold-componentwise.vs", s_tresholdComponentwiseVs);
+	shaderSource("engine/builtin-threshold.ps", s_tresholdPs);
+	shaderSource("engine/builtin-threshold.vs", s_tresholdVs);
+	shaderSource("engine/builtin-threshold-componentwise.ps", s_tresholdComponentwisePs);
+	shaderSource("engine/builtin-threshold-componentwise.vs", s_tresholdComponentwiseVs);
 	
 	shaderSource("engine/builtin-hq-common.txt", s_hqCommonPs);
 	shaderSource("engine/builtin-hq-common-vs.txt", s_hqCommonVs);
@@ -162,8 +170,12 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-hq-stroked-triangle.ps", s_hqStrokedTrianglePs);
 	shaderSource("engine/builtin-hq-stroked-triangle.vs", s_hqStrokedTriangleVs);
 	
+	shaderSource("engine/MsdfUtil.txt", s_msdfUtil);
 	shaderSource("engine/builtin-msdf-text.ps", s_msdfTextPs);
 	shaderSource("engine/builtin-msdf-text.vs", s_msdfTextVs);
+	
+	shaderSource("engine/builtin-bitmapped-text.ps", s_bitmappedTextPs);
+	shaderSource("engine/builtin-bitmapped-text.vs", s_bitmappedTextVs);
 }
 
 #endif

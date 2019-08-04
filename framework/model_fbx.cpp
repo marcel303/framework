@@ -28,11 +28,10 @@
 #include <algorithm>
 #include <list>
 #include <time.h>
+#include "fbx.h"
 #include "framework.h"
 #include "internal.h"
 #include "model_fbx.h"
-
-#include "../libfbx/fbx.h" // todo: move to framework
 
 /*
 
@@ -1482,7 +1481,10 @@ namespace AnimModel
 		BoneNameToBoneIndexMap boneNameToBoneIndex;
 		
 		for (int i = 0; i < boneSet->m_numBones; ++i)
+		{
+			fassert(boneNameToBoneIndex.count(boneSet->m_bones[i].name) == 0);
 			boneNameToBoneIndex[boneSet->m_bones[i].name] = i;
+		}
 		
 		//
 		
@@ -1502,7 +1504,16 @@ namespace AnimModel
 		
 		FbxReader reader;
 		
-		reader.openFromMemory(&bytes[0], bytes.size());
+		try
+		{
+			reader.openFromMemory(&bytes[0], bytes.size());
+		}
+		catch (std::exception & e)
+		{
+			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			(void)e;
+			return 0;
+		}
 		
 		// gather a list of all objects
 		
@@ -1909,7 +1920,8 @@ namespace AnimModel
 		
 		// finalize meshes by invoking the powers of the awesome vertex welding machine
 		
-		std::list<MeshBuilder> meshes; // todo: deprecate and use framework classes
+		std::list<MeshBuilder> meshes;
+		std::list<std::string> meshNames;
 		
 		for (ObjectsByName::iterator i = objectsByName.begin(); i != objectsByName.end(); ++i)
 		{
@@ -1924,7 +1936,9 @@ namespace AnimModel
 				if (fbxMesh->deformers.size() == 0)
 				{
 					const std::string & boneName = fbxMesh->name;
-					fassert(boneNameToBoneIndex.count(boneName) != 0);
+					if (boneNameToBoneIndex.count(boneName) == 0)
+						continue;
+					
 					const int boneIndex = boneNameToBoneIndex[boneName];
 					
 					fbxMesh->deformers.resize(fbxMesh->vertices.size());
@@ -1934,6 +1948,8 @@ namespace AnimModel
 				}
 				
 				meshes.push_back(MeshBuilder());
+				meshNames.push_back(fbxMesh->name);
+				
 				MeshBuilder & meshBuilder = meshes.back();
 				
 				// weld vertices and triangulate mesh
@@ -1962,15 +1978,24 @@ namespace AnimModel
 		
 		std::vector<Mesh*> meshes2;
 		
-		for (std::list<MeshBuilder>::iterator i = meshes.begin(); i != meshes.end(); ++i)
+		auto mesh_itr = meshes.begin();
+		auto meshName_itr = meshNames.begin();
+		
+		for (; mesh_itr != meshes.end(); ++mesh_itr, ++meshName_itr)
 		{
-			const MeshBuilder & meshBuilder = *i;
+			const MeshBuilder & meshBuilder = *mesh_itr;
+			const std::string & meshName = *meshName_itr;
 			
 			Mesh * mesh = new Mesh();
 			
+			mesh->m_name = meshName;
+			
 			mesh->allocateVB(meshBuilder.m_vertices.size());
 			
-			memcpy(mesh->m_vertices, &meshBuilder.m_vertices[0], sizeof(mesh->m_vertices[0]) * mesh->m_numVertices);
+			if (!meshBuilder.m_vertices.empty())
+			{
+				memcpy(mesh->m_vertices, &meshBuilder.m_vertices[0], sizeof(mesh->m_vertices[0]) * mesh->m_numVertices);
+			}
 			
 			mesh->allocateIB(meshBuilder.m_indices.size());
 			
@@ -2019,7 +2044,16 @@ namespace AnimModel
 		
 		FbxReader reader;
 		
-		reader.openFromMemory(&bytes[0], bytes.size());
+		try
+		{
+			reader.openFromMemory(&bytes[0], bytes.size());
+		}
+		catch (std::exception & e)
+		{
+			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			(void)e;
+			return 0;
+		}
 		
 		// gather a list of all meshes
 		
@@ -2294,7 +2328,10 @@ namespace AnimModel
 		BoneNameToBoneIndexMap boneNameToBoneIndex;
 		
 		for (int i = 0; i < boneSet->m_numBones; ++i)
+		{
+			fassert(boneNameToBoneIndex.count(boneSet->m_bones[i].name) == 0);
 			boneNameToBoneIndex[boneSet->m_bones[i].name] = i;
+		}
 		
 		//
 		
@@ -2314,7 +2351,16 @@ namespace AnimModel
 		
 		FbxReader reader;
 		
-		reader.openFromMemory(&bytes[0], bytes.size());
+		try
+		{
+			reader.openFromMemory(&bytes[0], bytes.size());
+		}
+		catch (std::exception & e)
+		{
+			fbxLog(logIndent, "failed to open FBX from memory: %s", e.what());
+			(void)e;
+			return 0;
+		}
 		
 		// read take data
 		
@@ -2397,6 +2443,7 @@ namespace AnimModel
 			{
 				const std::string & modelName = i->first;
 				const FbxAnimTransform & animTransform = i->second;
+				fassert(boneNameToBoneIndex.count(modelName) != 0);
 				const int boneIndex = boneNameToBoneIndex[modelName];
 				boneIndexToAnimTransform[boneIndex] = &animTransform;
 			}

@@ -63,7 +63,7 @@ void PicEdit::drawMove(const float x, const float y, const float moveX, const fl
 	static float v = 0.f;
 	const float dx = drawState.endX - x;
 	const float dy = drawState.endY - y;
-	const float ds = std::sqrtf(dx * dx + dy * dy);
+	const float ds = sqrtf(dx * dx + dy * dy);
 	drawState.color = Color::fromHSL(v / 360.f, 1.f, .5f);
 	v += ds * .1f;
 
@@ -82,7 +82,7 @@ void PicEdit::drawMove(const float x, const float y, const float moveX, const fl
 			Sprite sprite("brush.png");
 			sprite.pivotX = sprite.getWidth() / 2.f;
 			sprite.pivotY = sprite.getHeight() / 2.f;
-			sprite.drawEx(drawState.endX, drawState.endY, Calc::RadToDeg(-std::atan2f(moveX, moveY)), .4f, .4f, false, FILTER_LINEAR);
+			sprite.drawEx(drawState.endX, drawState.endY, Calc::RadToDeg(-atan2f(moveX, moveY)), .4f, .4f, false, FILTER_LINEAR);
 #else
 			fillCircle(
 				drawState.endX,
@@ -102,10 +102,10 @@ void PicEdit::drawMove(const float x, const float y, const float moveX, const fl
 			{
 				const float dx = drawState.endX - drawState.beginX;
 				const float dy = drawState.endY - drawState.beginY;
-				const float size = std::min(std::fabsf(dx), std::fabsf(dy));
+				const float size = fminf(fabsf(dx), fabsf(dy));
 
-				const float x = std::min(drawState.beginX, drawState.endX);
-				const float y = std::min(drawState.beginY, drawState.endY);
+				const float x = fminf(drawState.beginX, drawState.endX);
+				const float y = fminf(drawState.beginY, drawState.endY);
 
 				drawRect(
 					drawState.beginX,
@@ -130,9 +130,9 @@ void PicEdit::drawMove(const float x, const float y, const float moveX, const fl
 		surfaceEditing.clear(0, 0, 0, 0);
 		pushSurface(&surfaceEditing);
 		{
-			const float dx = std::fabsf(drawState.endX - drawState.beginX);
-			const float dy = std::fabsf(drawState.endY - drawState.beginY);
-			const float radius = std::min(dx, dy);
+			const float dx = fabsf(drawState.endX - drawState.beginX);
+			const float dy = fabsf(drawState.endY - drawState.beginY);
+			const float radius = fminf(dx, dy);
 
 			fillCircle(
 				drawState.beginX,
@@ -153,7 +153,7 @@ void PicEdit::drawMove(const float x, const float y, const float moveX, const fl
 				const float dx = drawState.endX - drawState.beginX;
 				const float dy = drawState.endY - drawState.beginY;
 
-				if (std::fabsf(dx) > std::fabsf(dy))
+				if (fabsf(dx) > fabsf(dy))
 				{
 					drawLine(
 						drawState.beginX,
@@ -351,7 +351,7 @@ void PicEdit::blitTo(Surface * surface) const
 	surfaceComposed.blitTo(surface);
 }
 
-GLuint PicEdit::getTexture() const
+GxTextureId PicEdit::getTexture() const
 {
 	return surfaceComposed.getTexture();
 }

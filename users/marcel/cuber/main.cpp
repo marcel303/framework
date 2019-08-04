@@ -6,7 +6,7 @@
 #include "Path.h"
 #include "script.h"
 
-#include "audiostream/AudioOutput.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStreamVorbis.h"
 
 #if defined(WIN32)
@@ -26,7 +26,6 @@ static const int kFFTBucketCount = 32;
 static audiofft::AudioFFT s_fft;
 
 static float s_fftInputBuffer[4096];
-static float s_fftInput[kFFTSize] = { };
 static float s_fftReal[kFFTComplexSize] = { };
 static float s_fftImaginary[kFFTComplexSize] = { };
 static float s_fftBuckets[kFFTBucketCount] = { };
@@ -78,7 +77,7 @@ static void fftProcess()
 
 //
 
-// fixme : move these
+// todo : move these
 
 float EffectCtxImpl::fftBucketValue(int index) const
 {
@@ -190,6 +189,7 @@ public:
 		catch (std::exception & e)
 		{
 			logError(e.what());
+			(void)e;
 			return false;
 		}
 	}
@@ -208,6 +208,7 @@ public:
 		catch (std::exception & e)
 		{
 			logError(e.what());
+			(void)e;
 		}
 	}
 
@@ -321,7 +322,7 @@ static void drawCube(const Cube & cube)
 
 	#if 1
 		// the most beautiful way ever to draw the edges of a cube..
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			gxColor4f(1.f, 1.f, 1.f, .25f);
 			for (int x1 = 0; x1 <= 1; ++x1)
@@ -339,14 +340,15 @@ static void drawCube(const Cube & cube)
 		gxEnd();
 	#endif
 
-	#if VIDEO_RECORDING_MODE
-		glPointSize(2.f);
-	#endif
-		glPointSize(2.f);
 		setBlend(BLEND_ADD);
-
-		gxBegin(GL_POINTS);
+		beginCubeBatch();
 		{
+		#if VIDEO_RECORDING_MODE
+			const Vec3 cubeSize(.04f, .04f, .04f);
+		#else
+			const Vec3 cubeSize(.02f, .02f, .02f);
+		#endif
+			
 			for (int x = 0; x < SX; ++x)
 			{
 				for (int y = 0; y < SY; ++y)
@@ -355,17 +357,21 @@ static void drawCube(const Cube & cube)
 					{
 						const float value = cube.m_value[x][y][z];
 
-						//gxColor4f(value, value, value, 1.f);
+					#if 1
+						gxColor4f(value, value, value, 1.f);
+					#else
 						gxColor4f(
 							value * cube.m_color[x][y][z][0],
 							value * cube.m_color[x][y][z][1],
 							value * cube.m_color[x][y][z][2], 1.f);
-						gxVertex3f(x, y, z);
+					#endif
+					
+						fillCube(Vec3(x, y, z), cubeSize);
 					}
 				}
 			}
 		}
-		gxEnd();
+		endCubeBatch();
 
 		setBlend(BLEND_ALPHA);
 	}
@@ -420,8 +426,10 @@ static void drawCubeSlices(const Cube & cube)
 		}
 	}
 
-#if ENABLE_OPENGL
-	GLuint texture = createTextureFromRGBA8(slices, SX * SZ, SY, true, true);
+	// send output towards hardware by blitting it to the screen!
+	
+#if ENABLE_OPENGL || ENABLE_METAL
+	GxTextureId texture = createTextureFromRGBA8(slices, SX * SZ, SY, true, true);
 
 	if (texture)
 	{
@@ -435,7 +443,7 @@ static void drawCubeSlices(const Cube & cube)
 		gxPopMatrix();
 		gxSetTexture(0);
 
-		glDeleteTextures(1, &texture);
+		freeTexture(texture);
 	}
 #else
 	SDL_Surface * surface = getWindowSurface();
@@ -639,6 +647,10 @@ public:
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 #if USE_AUDIO_INPUT
 	AudioIn audioIn;
 
@@ -648,7 +660,7 @@ int main(int argc, char * argv[])
 	framework.windowX = 0;
 	framework.windowY = 0;
 
-	if (!framework.init(0, 0, 1100, 800))
+	if (!framework.init(1100, 800))
 	{
 		showErrorMessage("Startup Error", "Failed to initialise framework.");
 	}
@@ -663,10 +675,10 @@ int main(int argc, char * argv[])
 		AudioStream_Capture audioStream;
 		audioStream.mSource = &audioStreamOGG;
 
-		AudioOutput_OpenAL audioOutput;
-		audioOutput.Initialize(2, audioStreamOGG.mSampleRate, 1 << 14);
+		AudioOutput_PortAudio audioOutput;
+		audioOutput.Initialize(2, audioStreamOGG.SampleRate_get(), 256);
 		audioOutput.Volume_set(1.f);
-		audioOutput.Play();
+		audioOutput.Play(&audioStreamOGG);
 	#endif
 
 		Cube cube;
@@ -714,7 +726,10 @@ int main(int argc, char * argv[])
 				s_fftProvideTime = framework.time;
 			}
 		#else
-			audioOutput.Update(&audioStream);
+			audioOutput.Update();
+			
+			for (int i = 0; i < 4096; ++i)
+				s_fftInputBuffer[i] = random(-.1f, +.1f);
 		#endif
 
 			// generate FFT
@@ -727,24 +742,22 @@ int main(int argc, char * argv[])
 
 			evalCube(cube, &effect);
 
-			// todo : send output towards hardware
-
 			framework.beginDraw(0, 0, 0, 0);
 			{
-			#if ENABLE_OPENGL
+			#if ENABLE_OPENGL || ENABLE_METAL
 				// draw debug visualisation
 
 				setFont("calibri.ttf");
 
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPushMatrix();
 				{
 					Mat4x4 t;
-					t.MakePerspectiveGL(M_PI/2.f, 1.f, .1f, 10.f);
+					t.MakePerspectiveGL(float(M_PI)/2.f, 1.f, .1f, 10.f);
 					gxLoadMatrixf(t.m_v);
 					gxScalef(1.f, -1.f, 1.f);
 
-					gxMatrixMode(GL_MODELVIEW);
+					gxMatrixMode(GX_MODELVIEW);
 					gxPushMatrix();
 					{
 						const float scale = 1.f;
@@ -757,10 +770,10 @@ int main(int argc, char * argv[])
 					}
 					gxPopMatrix();
 				}
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPopMatrix();
 
-				gxMatrixMode(GL_MODELVIEW);
+				gxMatrixMode(GX_MODELVIEW);
 
 				gxPushMatrix();
 				{
@@ -768,7 +781,7 @@ int main(int argc, char * argv[])
 					gxScalef(800.f, -10.f, 1.f);
 					//gxScalef(2400.f, -10.f, 1.f);
 					setColor(colorWhite);
-					gxBegin(GL_LINE_LOOP);
+					gxBegin(GX_LINE_LOOP);
 					{
 						gxVertex2f(0.f, 400.f);
 

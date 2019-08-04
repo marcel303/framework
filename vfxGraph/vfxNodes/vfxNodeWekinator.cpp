@@ -32,6 +32,8 @@
 
 #define OSC_BUFFER_SIZE 1024
 
+extern OscEndpointMgr g_oscEndpointMgr;
+
 VFX_NODE_TYPE(VfxNodeWekinator)
 {
 	typeName = "wekinator";
@@ -42,11 +44,11 @@ VFX_NODE_TYPE(VfxNodeWekinator)
 	in("recv", "bool", "1");
 	in("recvPath", "string", "/wek/outputs");
 	in("inputs", "channel");
-	in("recordBegin", "trigger");
-	in("recordEnd", "trigger");
-	in("train", "trigger");
-	in("runBegin", "trigger");
-	in("runEnd", "trigger");
+	in("recordBegin!", "trigger");
+	in("recordEnd!", "trigger");
+	in("train!", "trigger");
+	in("runBegin!", "trigger");
+	in("runEnd!", "trigger");
 	out("outputs", "channel");
 }
 

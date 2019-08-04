@@ -58,6 +58,7 @@ bool EditorTextField::tick(const float dt)
 			}
 			
 			SDL_free(text);
+			text = nullptr;
 		}
 		
 		if (commandMod && keyboard.wentDown(SDLK_a))

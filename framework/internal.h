@@ -29,10 +29,12 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include <GL/glew.h>
 #include <map>
 #include <SDL2/SDL.h>
 #include <string>
 #include "framework.h"
+#include "internal_filereader.h"
 #include "stb_truetype.h"
 
 #if FRAMEWORK_USE_OPENAL
@@ -70,7 +72,7 @@
 #endif
 
 #ifndef WIN32
-static int fopen_s(FILE ** file, const char * filename, const char * mode)
+inline int fopen_s(FILE ** file, const char * filename, const char * mode)
 {
 	*file = fopen(filename, mode);
 	return *file ? 0 : EINVAL;
@@ -82,19 +84,12 @@ static int fopen_s(FILE ** file, const char * filename, const char * mode)
 void splitString(const std::string & str, std::vector<std::string> & result);
 void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
-#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
-#if defined(WIN32)
-	void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
-#else
-	void debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
-#endif
-#endif
-
 //
 
 struct BoxAtlasElem;
 class BuiltinShaders;
 class FontCacheElem;
+struct GxTexture;
 class MsdfFontCache;
 struct TextureAtlas;
 
@@ -238,7 +233,24 @@ public:
 		if (eventIndex == numEvents)
 			events.clear();
 		else
+		{
+		#ifdef WIN32
+			std::reverse(events.begin(), events.end());
+			for (int i = 0; i < eventIndex; ++i)
+				events.pop_back();
+			std::reverse(events.begin(), events.end());
+#if 0
+			printf("size: %d\n", (int)events.size());
+			for (int i = 0; i < eventIndex; ++i)
+			{
+				auto itr = events.begin();
+				events.erase(itr);
+			}
+#endif
+		#else
 			events.erase(events.begin(), events.begin() + eventIndex);
+		#endif
+		}
 	}
 	
 	void beginProcess()
@@ -320,6 +332,23 @@ public:
 
 //
 
+struct DepthTestInfo
+{
+	bool testEnabled;
+	DEPTH_TEST test;
+	bool writeEnabled;
+};
+
+//
+
+struct CullModeInfo
+{
+	CULL_MODE mode;
+	CULL_WINDING winding;
+};
+
+//
+
 class Globals
 {
 public:
@@ -336,12 +365,13 @@ public:
 		transform2d.MakeIdentity();
 		transform3d.MakeIdentity();
 		gxShaderIsDirty = true;
+		depthTest = DEPTH_LESS;
+		depthTestWriteEnabled = true;
 	}
 	
-	SDL_Window * mainWindow;
-	WindowData mainWindowData;
-	SDL_Window * currentWindow;
-	WindowData * currentWindowData;
+	Window * mainWindow;
+	Window * currentWindow;
+	WindowData * currentWindowData; // todo : remove
 	SDL_GLContext glContext;
 	int displaySize[2]; // size as passed to init
 #if ENABLE_PROFILING
@@ -352,9 +382,16 @@ public:
 	BLEND_MODE blendMode;
 	COLOR_MODE colorMode;
 	COLOR_POST colorPost;
+	bool lineSmoothEnabled;
+	bool wireframeEnabled;
 	FONT_MODE fontMode;
 	Color color;
 	bool colorClamp;
+	bool depthTestEnabled;
+	DEPTH_TEST depthTest;
+	bool depthTestWriteEnabled;
+	CULL_MODE cullMode;
+	CULL_WINDING cullWinding;
 	GRADIENT_TYPE hqGradientType;
 	Mat4x4 hqGradientMatrix;
 	Color hqGradientColor1;
@@ -408,6 +445,8 @@ public:
 
 //
 
+#if ENABLE_OPENGL
+
 struct VsInput
 {
 	int id;
@@ -418,6 +457,8 @@ struct VsInput
 };
 
 void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride);
+
+#endif
 
 //
 
@@ -442,7 +483,7 @@ class TextureCacheElem
 {
 public:
 	std::string name;
-	GLuint * textures;
+	GxTexture * textures;
 	int sx;
 	int sy;
 	int gridSx;
@@ -486,6 +527,8 @@ public:
 
 //
 
+#if ENABLE_OPENGL
+
 class ShaderCacheElem
 {
 public:
@@ -494,6 +537,7 @@ public:
 		kSp_ModelViewMatrix,
 		kSp_ModelViewProjectionMatrix,
 		kSp_ProjectionMatrix,
+		kSp_SkinningMatrices,
 		kSp_Texture,
 		kSp_Params,
 		kSp_ShadingParams,
@@ -506,6 +550,7 @@ public:
 	std::string name;
 	std::string vs;
 	std::string ps;
+	std::string outputs;
 	
 	GLuint program;
 	
@@ -524,23 +569,44 @@ public:
 
 	ShaderCacheElem();
 	void free();
-	void load(const char * name, const char * filenameVs, const char * filenamePs);
+	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 	void reload();
 };
 
 class ShaderCache
 {
 public:
-	typedef std::map<std::string, ShaderCacheElem> Map;
+	class Key
+	{
+	public:
+		std::string name;
+		std::string outputs;
+		
+		inline bool operator<(const Key & other) const
+		{
+			if (name != other.name)
+				return name < other.name;
+			if (outputs != other.outputs)
+				return outputs < other.outputs;
+			return false;
+		}
+	};
+	
+	typedef std::map<Key, ShaderCacheElem> Map;
 	
 	Map m_map;
 	
 	void clear();
 	void reload();
-	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs);
+	void handleSourceChanged(const char * name);
+	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 };
 
+#endif
+
 //
+
+#if ENABLE_OPENGL
 
 class ComputeShaderCacheElem
 {
@@ -572,6 +638,8 @@ public:
 	void reload();
 	ComputeShaderCacheElem & findOrCreate(const char * filename, const int groupSx, const int groupSy, const int groupSz);
 };
+
+#endif
 
 //
 
@@ -920,68 +988,6 @@ struct Stack
 
 //
 
-class FileReader
-{
-public:
-	FileReader()
-	{
-		file = 0;
-	}
-	
-	~FileReader()
-	{
-		close();
-	}
-	
-	bool open(const char * filename, bool textMode)
-	{
-		fopen_s(&file, filename, textMode ? "rt" : "rb");
-		
-		return file != 0;
-	}
-	
-	void close()
-	{
-		if (file != 0)
-		{
-			fclose(file);
-			file = 0;
-		}
-	}
-	
-	template <typename T>
-	bool read(T & dst)
-	{
-		return fread(&dst, sizeof(dst), 1, file) == 1;
-	}
-	
-	bool read(void * dst, int numBytes)
-	{
-		return fread(dst, numBytes, 1, file) == 1;
-	}
-	
-	bool read(std::string & dst)
-	{
-		char line[1024];
-		if (fgets(line, sizeof(line), file) == 0)
-			return false;
-		else
-		{
-			dst = line;
-			return true;
-		}
-	}
-	
-	bool skip(int numBytes)
-	{
-		return fseek(file, numBytes, SEEK_CUR) == 0;
-	}
-	
-	FILE * file;
-};
-
-//
-
 class BuiltinShader
 {
 	std::string filename;
@@ -994,6 +1000,9 @@ public:
 		, shaderIsInit(false)
 		, shader()
 	{
+	#if !defined(DEBUG)
+		get();
+	#endif
 	}
 	
 	Shader & get()
@@ -1005,7 +1014,7 @@ public:
 			const std::string vs = std::string(filename) + ".vs";
 			const std::string ps = std::string(filename) + ".ps";
 			
-			shader.load(filename.c_str(), vs.c_str(), ps.c_str());
+			shader.load(filename.c_str(), vs.c_str(), ps.c_str(), "c");
 		}
 		
 		return shader;
@@ -1024,8 +1033,8 @@ public:
 	BuiltinShader colorMultiply;
 	BuiltinShader colorTemperature;
 	
-	BuiltinShader treshold;
-	BuiltinShader tresholdValue;
+	BuiltinShader threshold;
+	BuiltinShader thresholdValue;
 	
 	BuiltinShader hqLine;
 	BuiltinShader hqFilledTriangle;
@@ -1040,6 +1049,8 @@ public:
 	BuiltinShader hqShadedTriangle;
 	
 	BuiltinShader msdfText;
+	
+	BuiltinShader bitmappedText;
 };
 
 //
@@ -1047,8 +1058,10 @@ public:
 extern Globals globals;
 
 extern TextureCache g_textureCache;
+#if ENABLE_OPENGL
 extern ShaderCache g_shaderCache;
 extern ComputeShaderCache g_computeShaderCache;
+#endif
 extern AnimCache g_animCache;
 extern SpriterCache g_spriterCache;
 extern SoundCache g_soundCache;

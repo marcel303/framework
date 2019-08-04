@@ -25,10 +25,12 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "DownloadCache.h"
 #include "framework.h"
 #include "video.h"
 
 static void doProgressBar(const int x, const int y, const int sx, const int sy, const double time, const double duration, bool & hover, bool & seek, double & seekTime);
+static void downloadMediaFiles();
 
 int main(int argc, char * argv[])
 {
@@ -38,13 +40,13 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	if (framework.init(0, nullptr, 800, 400))
+	if (framework.init(800, 400))
 	{
-		MediaPlayer mp;
+		downloadMediaFiles();
 
-		//mp.openAsync("lucy.mp4", MP::kOutputMode_RGBA);
-		mp.openAsync("/Users/thecat/Movies/L_SNINGEN.mp4", MP::kOutputMode_RGBA);
-		//mp.openAsync("/Users/thecat/Movies/Game Capture HD Library/Mijn video 13/Segment_0001.mp4", MP::kOutputMode_RGBA);
+		MediaPlayer mp;
+		
+		mp.openAsync("newpath.mp4", MP::kOutputMode_RGBA);
 
 		SDL_Cursor * handCursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 		
@@ -73,7 +75,7 @@ int main(int argc, char * argv[])
 			{
 				// draw the video frame
 				
-				const GLuint texture = mp.getTexture();
+				const GxTextureId texture = mp.getTexture();
 
 				if (texture != 0)
 				{
@@ -90,8 +92,9 @@ int main(int argc, char * argv[])
 				int sx;
 				int sy;
 				double duration;
+				double sampleAspectRatio;
 				
-				if (mp.getVideoProperties(sx, sy, duration))
+				if (mp.getVideoProperties(sx, sy, duration, sampleAspectRatio))
 				{
 					bool hover = false;
 					bool seek = false;
@@ -138,7 +141,7 @@ static void doProgressBar(const int x, const int y, const int sx, const int sy, 
 		mouse.x < x + sx &&
 		mouse.y < y + sy;
 	
-	if (hover && mouse.wentDown(BUTTON_LEFT))
+	if (hover && (mouse.wentDown(BUTTON_LEFT) || (keyboard.isDown(SDLK_LCTRL) && mouse.isDown(BUTTON_LEFT))))
 	{
 		seek = true;
 		seekTime = clamp((mouse.x - x) / double(sx) * duration, 0.0, duration);
@@ -174,4 +177,36 @@ static void doProgressBar(const int x, const int y, const int sx, const int sy, 
 	
 	drawText(x + 10, y + sy/2, 12, +1, 0, "%02d:%02d:%02d.%02d / %02d:%02d:%02d.%02d", hours, minutes, seconds, hundreds, d_hours, d_minutes, d_seconds, d_hundreds);
 	popFontMode();
+}
+
+static void downloadMediaFiles()
+{
+	const char * url = "http://centuryofthecat.nl/shared_media/framework/libvideo-examples/newpath.mp4";
+	const char * filename = "newpath.mp4";
+
+	DownloadCache downloadCache;
+
+	downloadCache.add(url, filename);
+
+	while (downloadCache.downloadQueue.isEmpty() == false)
+	{
+		framework.process();
+
+		downloadCache.tick(4);
+
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setFont("calibri.ttf");
+			setColor(colorWhite);
+			drawText(400, 200, 16, 0, 0, "Downloading media files..");
+
+			int y = 200 + 20;
+			for (auto & e : downloadCache.downloadQueue.activeElems)
+			{
+				drawText(400, 200 + 20, 14, 0, 0, "Downloading %s/%dkb..", e.first.c_str(), e.second.getProgress());
+				y += 18;
+			}
+		}
+		framework.endDraw();
+	}
 }

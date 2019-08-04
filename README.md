@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/marcel303/framework.svg?branch=master)](https://travis-ci.com/marcel303/framework)
+
 (Building a new creative coding environment from scratch is a tremendous amount of work, but love and dedication motivate me to keep making contributions. Your continued support enables me to focus on the thing I love most, so please consider becoming a patron on Patreon!)
 <br />[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](https://www.patreon.com/marcelsmit)
 

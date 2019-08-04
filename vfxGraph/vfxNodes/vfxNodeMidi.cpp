@@ -58,7 +58,7 @@ VFX_NODE_TYPE(VfxNodeMidi)
 	in("port", "int");
 	out("key", "float");
 	out("value", "float");
-	out("trigger", "trigger");
+	out("trigger!", "trigger");
 	out("values", "channel");
 	out("frequency", "channel");
 }
@@ -215,13 +215,10 @@ void VfxNodeMidi::tick(const float dt)
 					}
 					else if (event == NOTE_OFF)
 					{
-						// todo : check if note off is implemented correctly. so far my MIDI devices don't seem to trigger OFF events
-						Assert(false);
 						const int key = message[1];
 						
 						keyOutput = key;
 						valueOutput = 0.f;
-						
 						
 						if (key >= 0 && key < kNumNotes)
 						{

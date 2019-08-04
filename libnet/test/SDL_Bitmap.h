@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../libgg/Image.h"
 #include <xmmintrin.h>
 
 struct ImageMem

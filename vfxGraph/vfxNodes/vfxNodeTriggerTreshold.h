@@ -29,12 +29,12 @@
 
 #include "vfxNodeBase.h"
 
-struct VfxNodeTriggerTreshold : VfxNodeBase
+struct VfxNodeTriggerThreshold : VfxNodeBase
 {
 	enum Input
 	{
 		kInput_Value,
-		kInput_Treshold,
+		kInput_Threshold,
 		kInput_UpValue,
 		kInput_DownValue,
 		kInput_COUNT
@@ -51,7 +51,7 @@ struct VfxNodeTriggerTreshold : VfxNodeBase
 	float oldValue;
 	float outputValue;
 	
-	VfxNodeTriggerTreshold();
+	VfxNodeTriggerThreshold();
 	
 	virtual void tick(const float dt) override;
 };

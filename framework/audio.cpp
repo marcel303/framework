@@ -26,382 +26,17 @@
 */
 
 #include "audio.h"
-#include "audiostream/AudioOutput.h"
-#include "audiostream/AudioOutput_OpenAL.h"
-#include "audiostream/AudioOutput_PortAudio.h"
+#include "audiooutput/AudioOutput.h"
+#include "audiooutput/AudioOutput_OpenAL.h"
+#include "audiooutput/AudioOutput_PortAudio.h"
 #include "audiostream/AudioStreamVorbis.h"
 #include "framework.h"
 #include "internal.h"
 #include "Path.h"
 
-// RIFF/WAVE loader constants
-
-#define WAVE_FORMAT_PCM 1
-#define WAVE_FORMAT_IEEE_FLOAT 3
-#define WAVE_FORMAT_EXTENSIBLE -2
-
 //
 
 SoundPlayer g_soundPlayer;
-
-//
-
-enum Chunk
-{
-	kChunk_RIFF,
-	kChunk_WAVE,
-	kChunk_FMT,
-	kChunk_DATA,
-	kChunk_OTHER
-};
-
-static bool checkId(const char * id, const char * match)
-{
-	for (int i = 0; i < 4; ++i)
-		if (tolower(id[i]) != tolower(match[i]))
-			return false;
-	
-	return true;
-}
-
-static bool readChunk(FileReader & r, Chunk & chunk, int32_t & size)
-{
-	char id[4];
-	
-	if (!r.read(id, 4))
-		return false;
-	
-	//logDebug("RIFF chunk: %c%c%c%c", id[0], id[1], id[2], id[3]);
-	
-	chunk = kChunk_OTHER;
-	size = 0;
-	
-	if (checkId(id, "WAVE"))
-	{
-		chunk = kChunk_WAVE;
-		return true;
-	}
-	else if (checkId(id, "fmt "))
-	{
-		chunk = kChunk_FMT;
-		return true;
-	}
-	else
-	{
-		if (checkId(id, "RIFF"))
-			chunk = kChunk_RIFF;
-		else if (checkId(id, "data"))
-			chunk = kChunk_DATA;
-		else if (checkId(id, "LIST") || checkId(id, "FLLR") || checkId(id, "JUNK") || checkId(id, "bext") || checkId(id, "fact"))
-			chunk = kChunk_OTHER;
-		else
-		{
-			logError("unknown RIFF chunk: %c%c%c%c", id[0], id[1], id[2], id[3]);
-			return false; // unknown
-		}
-		
-		if (!r.read(size))
-			return false;
-		
-		if (size < 0)
-			return false;
-		
-		return true;
-	}
-}
-
-SoundData * loadSound_WAV(const char * filename)
-{
-	FileReader r;
-	
-	if (!r.open(filename, false))
-	{
-		logError("failed to open %s", filename);
-		return 0;
-	}
-	
-	bool hasFmt = false;
-	int32_t fmtLength;
-	int16_t fmtCompressionType; // format code is a better name. 1 = PCM/integer, 2 = ADPCM, 3 = float, 7 = u-law
-	int16_t fmtChannelCount;
-	int32_t fmtSampleRate;
-	int32_t fmtByteRate;
-	int16_t fmtBlockAlign;
-	int16_t fmtBitDepth;
-	int16_t fmtExtraLength;
-	
-	uint8_t * bytes = nullptr;
-	int numBytes = 0;
-	
-	bool done = false;
-	
-	do
-	{
-		Chunk chunk;
-		int32_t byteCount;
-		
-		if (!readChunk(r, chunk, byteCount))
-			return 0;
-		
-		if (chunk == kChunk_RIFF || chunk == kChunk_WAVE)
-		{
-			// just process sub chunks
-		}
-		else if (chunk == kChunk_FMT)
-		{
-			bool ok = true;
-			
-			ok &= r.read(fmtLength);
-			ok &= r.read(fmtCompressionType);
-			ok &= r.read(fmtChannelCount);
-			ok &= r.read(fmtSampleRate);
-			ok &= r.read(fmtByteRate);
-			ok &= r.read(fmtBlockAlign);
-			ok &= r.read(fmtBitDepth);
-			if (fmtCompressionType != 1)
-				ok &= r.read(fmtExtraLength);
-			else
-				fmtExtraLength = 0;
-			
-			if (fmtCompressionType == WAVE_FORMAT_EXTENSIBLE)
-			{
-				// read WAVEFORMATEXTENSIBLE structure and change format accordingly
-				
-				int16_t numValidBits;
-				int32_t channelMask;
-				int32_t guidFormatTag;
-				int8_t guidRemainder[12];
-				
-				ok &= r.read(numValidBits);
-				ok &= r.read(channelMask);
-				ok &= r.read(guidFormatTag);
-				ok &= r.read(guidRemainder, 12);
-				
-				if (guidFormatTag == WAVE_FORMAT_PCM)
-				{
-					fmtCompressionType = WAVE_FORMAT_PCM;
-				}
-				else if (guidFormatTag == WAVE_FORMAT_IEEE_FLOAT)
-				{
-					fmtCompressionType = WAVE_FORMAT_IEEE_FLOAT;
-				}
-				else
-				{
-					logError("unknown format found in WAVEFORMATEXTENSIBLE");
-					ok = false;
-				}
-			}
-			else
-			{
-				ok &= r.skip(fmtExtraLength);
-			}
-			
-			if (!ok)
-			{
-				logError("failed to read FMT chunk");
-				return 0;
-			}
-			
-			if (fmtCompressionType != WAVE_FORMAT_PCM && fmtCompressionType != WAVE_FORMAT_IEEE_FLOAT)
-			{
-				logError("only PCM and IEEE float are supported. type: %d", fmtCompressionType);
-				ok = false;
-			}
-			if (fmtChannelCount <= 0)
-			{
-				logError("invalid channel count: %d", fmtChannelCount);
-				ok = false;
-			}
-			if (fmtBitDepth != 8 && fmtBitDepth != 16 && fmtBitDepth != 24 && fmtBitDepth != 32)
-			{
-				logError("bit depth not supported: %d", fmtBitDepth);
-				ok = false;
-			}
-			
-			if (!ok)
-				return 0;
-			
-			hasFmt = true;
-		}
-		else if (chunk == kChunk_DATA)
-		{
-			if (hasFmt == false)
-				return 0;
-			
-			bytes = new uint8_t[byteCount];
-			
-			if (!r.read(bytes, byteCount))
-			{
-				logError("failed to load WAVE data");
-				delete [] bytes;
-				return 0;
-			}
-			
-			// convert data if necessary
-			
-			if (fmtCompressionType == WAVE_FORMAT_PCM)
-			{
-				if (fmtBitDepth == 8)
-				{
-					// for 8 bit data the integers are unsigned. convert them to signed here
-					
-					const uint8_t * srcValues = bytes;
-					int8_t * dstValues = (int8_t*)bytes;
-					const int numValues = byteCount;
-					
-					for (int i = 0; i < numValues; ++i)
-					{
-						const int value = int(srcValues[i]) - 128;
-						
-						dstValues[i] = value;
-					}
-				}
-				else if (fmtBitDepth == 16)
-				{
-					// 16 bit data is already signed. no conversion needed
-				}
-				else if (fmtBitDepth == 24)
-				{
-					const int sampleCount = byteCount / 3;
-					float * samplesData = new float[sampleCount];
-					
-					for (int i = 0; i < sampleCount; ++i)
-					{
-						int32_t value = (bytes[i * 3 + 0] << 8) | (bytes[i * 3 + 1] << 16) | (bytes[i * 3 + 2] << 24);
-						
-						value >>= 8;
-						
-						samplesData[i] = value / float(1 << 23);
-					}
-					
-					delete[] bytes;
-					bytes = nullptr;
-					
-					bytes = (uint8_t*)samplesData;
-					
-					fmtBitDepth = 32;
-					byteCount = byteCount * 4 / 3;
-				}
-				else if (fmtBitDepth == 32)
-				{
-					const int32_t * srcValues = (int32_t*)bytes;
-					float * dstValues = (float*)bytes;
-					const int numValues = byteCount / 4;
-					
-					for (int i = 0; i < numValues; ++i)
-					{
-						dstValues[i] = float(srcValues[i] / double(1 << 31));
-					}
-				}
-			}
-			else if (fmtCompressionType == WAVE_FORMAT_IEEE_FLOAT)
-			{
-				if (fmtBitDepth == 32)
-				{
-					// no conversion is needed
-				}
-				else
-				{
-					logError("only 32 bit IEEE float is supported");
-					delete [] bytes;
-					return 0;
-				}
-			}
-			else
-			{
-				Assert(false);
-				
-				logError("unknown WAVE data format");
-				delete [] bytes;
-				return 0;
-			}
-			
-			numBytes = byteCount;
-			
-			done = true;
-		}
-		else if (chunk == kChunk_OTHER)
-		{
-			//logDebug("wave loader: skipping %d bytes of list chunk", size);
-			
-			r.skip(byteCount);
-		}
-	}
-	while (!done);
-	
-	if (false)
-	{
-		// suppress unused variables warnings
-		fmtLength = 0;
-		fmtByteRate = 0;
-		fmtBlockAlign = 0;
-		fmtExtraLength = 0;
-	}
-	
-	SoundData * soundData = new SoundData;
-	soundData->channelSize = fmtBitDepth / 8;
-	soundData->channelCount = fmtChannelCount;
-	soundData->sampleCount = numBytes / (fmtBitDepth / 8 * fmtChannelCount);
-	soundData->sampleRate = fmtSampleRate;
-	soundData->sampleData = bytes;
-	
-	return soundData;
-}
-
-SoundData * loadSound_OGG(const char * filename)
-{
-	static const int kMaxSamples = (1 << 14) * sizeof(short);
-	AudioSample samples[kMaxSamples];
-	
-	std::vector<AudioSample> readBuffer;
-	
-	AudioStream_Vorbis stream;
-	stream.Open(filename, false);
-	const int sampleRate = stream.mSampleRate;
-	for (;;)
-	{
-		const int numSamples = stream.Provide(kMaxSamples, samples);
-		if (numSamples == 0)
-			break;
-		else
-		{
-			readBuffer.resize(readBuffer.size() + numSamples);
-			memcpy(&readBuffer[0] + readBuffer.size() - numSamples, samples, numSamples * sizeof(AudioSample));
-		}
-	}
-	stream.Close();
-	
-	const int numSamples = readBuffer.size();
-	const int numBytes = numSamples * sizeof(AudioSample);
-	void * bytes = nullptr;
-	
-	if (numBytes > 0)
-	{
-		bytes = new char[numBytes];
-		memcpy(bytes, &readBuffer[0], numBytes);
-	}
-	
-	SoundData * soundData = new SoundData;
-	soundData->channelSize = 2;
-	soundData->channelCount = 2;
-	soundData->sampleCount = numSamples;
-	soundData->sampleRate = sampleRate;
-	soundData->sampleData = bytes;
-	
-	return soundData;
-}
-
-SoundData * loadSound(const char * filename)
-{
-	const std::string extension = Path::GetExtension(filename, true);
-	
-	if (extension == "ogg")
-		return loadSound_OGG(filename);
-	else if (extension == "wav")
-		return loadSound_WAV(filename);
-	else
-		return nullptr;
-}
 
 //
 
@@ -810,7 +445,7 @@ void SoundPlayer_OpenAL::playMusic(const char * filename, bool loop)
 		m_musicStream->Open(filename, loop);
 		m_musicOutput->Play(m_musicStream);
 		
-		Assert(m_musicStream->mSampleRate == 44100); // todo : handle different sample rates?
+		Assert(m_musicStream->SampleRate_get() == 44100); // todo : handle different sample rates?
 	}
 }
 
@@ -833,7 +468,9 @@ void SoundPlayer_OpenAL::setMusicVolume(float volume)
 
 #if FRAMEWORK_USE_PORTAUDIO
 
-void * SoundPlayer_PortAudio::createBuffer(const void * sampleData, const int sampleCount, const int channelSize, const int channelCount)
+#define RESAMPLE_FIXEDBITS 32
+
+void * SoundPlayer_PortAudio::createBuffer(const void * sampleData, const int sampleCount, const int sampleRate, const int channelSize, const int channelCount)
 {
 	if (sampleCount > 0 && channelSize == 2 && (channelCount == 1 || channelCount == 2))
 	{
@@ -843,6 +480,7 @@ void * SoundPlayer_PortAudio::createBuffer(const void * sampleData, const int sa
 		buffer->sampleData = new short[numValues];
 		memcpy(buffer->sampleData, sampleData, numValues * sizeof(short));
 		buffer->sampleCount = sampleCount;
+		buffer->sampleRate = sampleRate;
 		buffer->channelCount = channelCount;
 		
 		return buffer;
@@ -969,76 +607,78 @@ void SoundPlayer_PortAudio::generateAudio(float * __restrict samples, const int 
 		
 		for (int i = 0; i < m_numSources; ++i)
 		{
-			if (m_sources[i].playId != -1 && m_sources[i].buffer != nullptr)
+			Source & source = m_sources[i];
+			
+			if (source.playId != -1 && source.buffer != nullptr)
 			{
-				fassert(m_sources[i].buffer != nullptr);
+				fassert(source.buffer != nullptr);
 				
 				// read samples from the buffer
 				
-				const Buffer * buffer = m_sources[i].buffer;
-				int bufferPosition = m_sources[i].bufferPosition;
+				const Buffer & buffer = *source.buffer;
 				
-				int sampleIndex = 0;
+				const float scale = source.volume / (1 << 15);
 				
-				const float scale = m_sources[i].volume / (1 << 15);
+				int sampleIndex = source.bufferPosition_fp >> RESAMPLE_FIXEDBITS;
 				
-				if (buffer->channelCount == 1)
+				for (int i = 0; i < numSamples; ++i)
 				{
-					while (sampleIndex < numSamples)
+					Assert(sampleIndex >= 0 && sampleIndex < buffer.sampleCount);
+					
+					if (sampleIndex >= 0 && sampleIndex < buffer.sampleCount)
 					{
-						if (bufferPosition == buffer->sampleCount)
+						if (buffer.channelCount == 1)
 						{
-							if (m_sources[i].loop)
-							{
-								bufferPosition = 0;
-							}
-							else
-							{
-								m_sources[i].playId = -1;
-								m_sources[i].buffer = nullptr;
-								break;
-							}
+							const short * values = buffer.sampleData;
+							
+							const float value = values[sampleIndex] * scale;
+							
+							samples[i * 2 + 0] += value;
+							samples[i * 2 + 1] += value;
 						}
-						
-						const float value = buffer->sampleData[bufferPosition] * scale;
-						
-						samples[sampleIndex * 2 + 0] += value;
-						samples[sampleIndex * 2 + 1] += value;
-						
-						bufferPosition++;
-						sampleIndex++;
+						else if (buffer.channelCount == 2)
+						{
+							const short * values = buffer.sampleData;
+							
+							const float value1 = values[sampleIndex * 2 + 0] * scale;
+							const float value2 = values[sampleIndex * 2 + 1] * scale;
+							
+							samples[i * 2 + 0] += value1;
+							samples[i * 2 + 1] += value2;
+						}
+						else
+						{
+							Assert(false);
+						}
+					}
+					
+					// increment sample playback position
+					
+					source.bufferPosition_fp += source.bufferIncrement_fp;
+					
+					sampleIndex = source.bufferPosition_fp >> RESAMPLE_FIXEDBITS;
+					
+					// handle looping
+					
+					if (source.loop)
+					{
+						if (sampleIndex >= buffer.sampleCount)
+						{
+							source.bufferPosition_fp -= int64_t(buffer.sampleCount) << RESAMPLE_FIXEDBITS;
+							
+							sampleIndex = source.bufferPosition_fp >> RESAMPLE_FIXEDBITS;
+						}
+					}
+					else
+					{
+						if (sampleIndex >= buffer.sampleCount)
+						{
+							source.playId = -1;
+							source.buffer = nullptr;
+							break;
+						}
 					}
 				}
-				else if (buffer->channelCount == 2)
-				{
-					while (sampleIndex < numSamples)
-					{
-						if (bufferPosition == buffer->sampleCount)
-						{
-							if (m_sources[i].loop)
-							{
-								bufferPosition = 0;
-							}
-							else
-							{
-								m_sources[i].playId = -1;
-								m_sources[i].buffer = nullptr;
-								break;
-							}
-						}
-						
-						const float value1 = buffer->sampleData[bufferPosition * 2 + 0] * scale;
-						const float value2 = buffer->sampleData[bufferPosition * 2 + 1] * scale;
-						
-						samples[sampleIndex * 2 + 0] += value1;
-						samples[sampleIndex * 2 + 1] += value2;
-						
-						bufferPosition++;
-						sampleIndex++;
-					}
-				}
-				
-				m_sources[i].bufferPosition = bufferPosition;
 			}
 		}
 	}
@@ -1060,6 +700,9 @@ bool SoundPlayer_PortAudio::initPortAudio(const int numChannels, const int sampl
 
 	logDebug("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
 	
+	m_paInitialized = true;
+	m_sampleRate = sampleRate;
+	
 	PaStreamParameters outputParameters;
 	memset(&outputParameters, 0, sizeof(outputParameters));
 
@@ -1073,6 +716,8 @@ bool SoundPlayer_PortAudio::initPortAudio(const int numChannels, const int sampl
 		outputParameters.suggestedLatency = deviceInfo->defaultLowOutputLatency;
 
 	//
+	
+	fassert(m_paStream == nullptr);
 	
 	if ((err = Pa_OpenStream(&m_paStream, nullptr, &outputParameters, sampleRate, bufferSize, paDitherOff, portaudioCallback, this)) != paNoError)
 	{
@@ -1095,7 +740,7 @@ bool SoundPlayer_PortAudio::shutPortAudio()
 	
 	if (m_paStream != nullptr)
 	{
-		if (Pa_IsStreamActive(m_paStream) != 0)
+		if (Pa_IsStreamActive(m_paStream) == 1)
 		{
 			if ((err = Pa_StopStream(m_paStream)) != paNoError)
 			{
@@ -1113,10 +758,15 @@ bool SoundPlayer_PortAudio::shutPortAudio()
 		m_paStream = nullptr;
 	}
 	
-	if ((err = Pa_Terminate()) != paNoError)
+	if (m_paInitialized)
 	{
-		logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
-		return false;
+		m_paInitialized = false;
+		
+		if ((err = Pa_Terminate()) != paNoError)
+		{
+			logError("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+			return false;
+		}
 	}
 	
 	return true;
@@ -1140,7 +790,9 @@ SoundPlayer_PortAudio::SoundPlayer_PortAudio()
 	
 	//
 	
+	m_paInitialized = false;
 	m_paStream = nullptr;
+	m_sampleRate = 0;
 }
 
 SoundPlayer_PortAudio::~SoundPlayer_PortAudio()
@@ -1151,11 +803,14 @@ bool SoundPlayer_PortAudio::init(int numSources)
 {
 	// initialize threading
 	
+	fassert(m_mutex == nullptr);
 	m_mutex = SDL_CreateMutex();
 	fassert(m_mutex != nullptr);
 	
 	// create audio sources
 	
+	fassert(m_numSources == 0);
+	fassert(m_sources == nullptr);
 	m_numSources = numSources;
 	m_sources = new Source[numSources];
 	memset(m_sources, 0, sizeof(Source) * numSources);
@@ -1166,6 +821,7 @@ bool SoundPlayer_PortAudio::init(int numSources)
 	
 	// create music source
 	
+	fassert(m_musicStream == nullptr);
 	m_musicStream = new AudioStream_Vorbis();
 	m_musicVolume = 1.f;
 	
@@ -1232,7 +888,8 @@ int SoundPlayer_PortAudio::playSound(const void * buffer, const float volume, co
 	{
 		source->playId = m_playId++;
 		source->buffer = (Buffer*)buffer;
-		source->bufferPosition = 0;
+		source->bufferPosition_fp = 0;
+		source->bufferIncrement_fp = ((int64_t(source->buffer->sampleRate) << RESAMPLE_FIXEDBITS) / m_sampleRate);
 		source->loop = loop;
 		source->volume = volume;
 		
@@ -1309,7 +966,7 @@ void SoundPlayer_PortAudio::playMusic(const char * filename, const bool loop)
 	
 	m_musicStream->Open(filename, loop);
 	
-	Assert(m_musicStream->mSampleRate == 44100); // todo : handle different sample rates?
+	Assert(m_musicStream->SampleRate_get() == 44100); // todo : handle different sample rates?
 }
 
 void SoundPlayer_PortAudio::stopMusic()

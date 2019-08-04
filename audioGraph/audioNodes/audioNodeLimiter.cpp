@@ -28,7 +28,7 @@
 #include "audioNodeLimiter.h"
 #include <math.h>
 
-AUDIO_NODE_TYPE(limiter, AudioNodeLimiter)
+AUDIO_NODE_TYPE(AudioNodeLimiter)
 {
 	typeName = "limiter";
 	

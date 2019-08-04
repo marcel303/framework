@@ -1,0 +1,3 @@
+app marcel-codevember
+	depend_library framework
+	add_files codevember.cpp

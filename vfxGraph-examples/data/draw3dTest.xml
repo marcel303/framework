@@ -16,7 +16,7 @@
     <node id="168" typeName="draw.model">
         <input socket="anim" value="anim02"/>
         <input socket="animSpeed" value="0.200000"/>
-        <input socket="file" value="model.txt"/>
+        <input socket="file" value="../../framework/examples/data/model.txt"/>
         <input socket="scale" value="0.003000"/>
     </node>
     <node id="169" typeName="draw.sequence"/>

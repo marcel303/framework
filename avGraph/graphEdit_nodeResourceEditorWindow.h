@@ -37,15 +37,7 @@ struct GraphEdit_NodeResourceEditorWindow
 	Window * window;
 	GraphEdit_ResourceEditorBase * resourceEditor;
 	
-	GraphEdit_NodeResourceEditorWindow()
-		: graphEdit(nullptr)
-		, nodeId(kGraphNodeIdInvalid)
-		, resourceTypeName()
-		, window(nullptr)
-		, resourceEditor(nullptr)
-	{
-	}
-
+	GraphEdit_NodeResourceEditorWindow();
 	~GraphEdit_NodeResourceEditorWindow();
 	
 	bool init(GraphEdit * graphEdit, const GraphNodeId nodeId);

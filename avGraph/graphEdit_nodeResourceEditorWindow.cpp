@@ -26,9 +26,18 @@
 */
 
 #include "framework.h"
-#include "graph.h"
+#include "graphEdit.h"
 #include "graphEdit_nodeResourceEditorWindow.h"
-#include "../libparticle/ui.h"
+#include "ui.h"
+
+GraphEdit_NodeResourceEditorWindow::GraphEdit_NodeResourceEditorWindow()
+	: graphEdit(nullptr)
+	, nodeId(kGraphNodeIdInvalid)
+	, resourceTypeName()
+	, window(nullptr)
+	, resourceEditor(nullptr)
+{
+}
 
 GraphEdit_NodeResourceEditorWindow::~GraphEdit_NodeResourceEditorWindow()
 {
@@ -42,8 +51,9 @@ bool GraphEdit_NodeResourceEditorWindow::init(GraphEdit * in_graphEdit, const Gr
 	//
 	
 	graphEdit = in_graphEdit;
+	nodeId = in_nodeId;
 	
-	auto node = graphEdit->tryGetNode(in_nodeId);
+	auto node = graphEdit->tryGetNode(nodeId);
 	
 	Assert(node != nullptr);
 	if (node != nullptr)
@@ -55,10 +65,9 @@ bool GraphEdit_NodeResourceEditorWindow::init(GraphEdit * in_graphEdit, const Gr
 		{
 			if (typeDefinition->resourceTypeName.empty() == false)
 			{
-				nodeId = in_nodeId;
 				resourceTypeName = typeDefinition->resourceTypeName;
 				if (typeDefinition->resourceEditor.create != nullptr)
-					resourceEditor = typeDefinition->resourceEditor.create();
+					resourceEditor = typeDefinition->resourceEditor.create(typeDefinition->resourceEditor.createData);
 				
 				Assert(resourceEditor != nullptr);
 				if (resourceEditor != nullptr)
@@ -66,9 +75,7 @@ bool GraphEdit_NodeResourceEditorWindow::init(GraphEdit * in_graphEdit, const Gr
 					resourceEditor->setResource(*node, resourceTypeName.c_str(), "editorData");
 					
 					resourceEditor->init(0, 0, resourceEditor->initSx, resourceEditor->initSy);
-
-					//
-
+					
 					window = new Window("Resource editor", resourceEditor->sx, resourceEditor->sy, true);
 				}
 			}
@@ -82,8 +89,6 @@ void GraphEdit_NodeResourceEditorWindow::shut()
 {
 	delete window;
 	window = nullptr;
-
-	//
 	
 	delete resourceEditor;
 	resourceEditor = nullptr;
@@ -91,29 +96,24 @@ void GraphEdit_NodeResourceEditorWindow::shut()
 
 bool GraphEdit_NodeResourceEditorWindow::tick(const float dt)
 {
-	Assert(window != nullptr);
-	
 	pushWindow(*window);
 	{
-		if (resourceEditor != nullptr)
+		if (resourceEditor->sx != window->getWidth() ||
+			resourceEditor->sy != window->getHeight())
 		{
-			if (resourceEditor->sx != window->getWidth() ||
-				resourceEditor->sy != window->getHeight())
-			{
-				resourceEditor->sx = window->getWidth();
-				resourceEditor->sy = window->getHeight();
-				
-				resourceEditor->afterSizeChanged();
-			}
+			resourceEditor->sx = window->getWidth();
+			resourceEditor->sy = window->getHeight();
 			
-			resourceEditor->tick(dt, false);
-			
-			framework.beginDraw(0, 0, 0, 0);
-			{
-				resourceEditor->draw();
-			}
-			framework.endDraw();
+			resourceEditor->afterSizeChanged();
 		}
+		
+		resourceEditor->tick(dt, false);
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			resourceEditor->draw();
+		}
+		framework.endDraw();
 	}
 	popWindow();
 	
@@ -131,22 +131,19 @@ bool GraphEdit_NodeResourceEditorWindow::tick(const float dt)
 
 void GraphEdit_NodeResourceEditorWindow::save()
 {
-	if (resourceEditor != nullptr)
+	auto node = graphEdit->tryGetNode(nodeId);
+	
+	if (node != nullptr)
 	{
-		auto node = graphEdit->tryGetNode(nodeId);
+		std::string resourceData;
 		
-		if (node != nullptr)
+		if (resourceEditor->serializeResource(resourceData))
 		{
-			std::string resourceData;
-			
-			if (resourceEditor->serializeResource(resourceData))
-			{
-				node->setResource(resourceTypeName.c_str(), "editorData", resourceData.c_str());
-			}
-			else
-			{
-				node->clearResource(resourceTypeName.c_str(), "editorData");
-			}
+			node->setResource(resourceTypeName.c_str(), "editorData", resourceData.c_str());
+		}
+		else
+		{
+			node->clearResource(resourceTypeName.c_str(), "editorData");
 		}
 	}
 }

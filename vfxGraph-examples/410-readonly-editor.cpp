@@ -27,8 +27,9 @@
 
 #include "framework.h"
 #include "graph.h"
+#include "graphEdit.h"
+#include "ui.h"
 #include "vfxGraph.h"
-#include "../libparticle/ui.h"
 #include <algorithm>
 
 #define FILENAME "testRibbon2.xml"
@@ -51,11 +52,11 @@ int main(int argc, char * argv[])
 
 	framework.enableRealTimeEditing = true;
 	
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		initUi();
 		
-		GraphEdit_TypeDefinitionLibrary typeDefinitionLibrary;
+		Graph_TypeDefinitionLibrary typeDefinitionLibrary;
 		createVfxTypeDefinitionLibrary(typeDefinitionLibrary);
 		
 		GraphEdit graphEdit(GFX_SX, GFX_SY, &typeDefinitionLibrary);

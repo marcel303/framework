@@ -29,7 +29,7 @@
 
 #include "framework.h"
 #include "testBase.h"
-#include "xmm/xmm.h"
+#include "xmm.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;

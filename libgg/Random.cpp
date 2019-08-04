@@ -171,7 +171,7 @@ namespace RNG
 			
 			if (diff & (1 << i))
 			{
-				whiteValues[i] = rand() % (range/5);
+				whiteValues[i] = rng.next() % (range/5);
 			}
 			
 			sum += whiteValues[i];

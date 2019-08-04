@@ -44,6 +44,10 @@ extern "C"
 
 #define STREAM_NOT_FOUND 0xFFFF
 
+#if !defined(LIBAVCODEC_VERSION_MAJOR)
+	#error LIBAVCODEC_VERSION_MAJOR not defined
+#endif
+
 namespace MP
 {
 	Context::Context()
@@ -69,7 +73,13 @@ namespace MP
 		Assert(m_videoContext == nullptr);
 	}
 
-	bool Context::Begin(const std::string & filename, const bool enableAudioStream, const bool enableVideoStream, const OutputMode outputMode)
+	bool Context::Begin(
+		const std::string & filename,
+		const bool enableAudioStream,
+		const bool enableVideoStream,
+		const OutputMode outputMode,
+		const int desiredAudioStreamIndex,
+		const AudioOutputMode audioOutputMode)
 	{
 		Assert(m_begun == false);
 
@@ -101,7 +111,7 @@ namespace MP
 
 		if (result)
 		{
-			if (GetStreamIndices(audioStreamIndex, videoStreamIndex) != true)
+			if (GetStreamIndices(audioStreamIndex, videoStreamIndex, desiredAudioStreamIndex) != true)
 			{
 				Debug::Print("Failed to get stream indices.");
 				result &= false;
@@ -118,7 +128,7 @@ namespace MP
 			{
 				// Initialize audio stream/context.
 				m_audioContext = new AudioContext();
-				if (!m_audioContext->Initialize(this, audioStreamIndex))
+				if (!m_audioContext->Initialize(this, audioStreamIndex, audioOutputMode))
 					result &= false;
 			}
 		}
@@ -230,6 +240,23 @@ namespace MP
 		else
 			return 0;
 	}
+	
+	double Context::GetVideoSampleAspectRatio() const
+	{
+		Assert(m_begun == true);
+
+		if (m_videoContext)
+		{
+			const AVRational ratio = av_guess_sample_aspect_ratio(m_formatContext, m_formatContext->streams[m_videoContext->m_streamIndex], nullptr);
+			
+			if (ratio.num == 0 || ratio.den == 0)
+				return 1.0;
+			else
+				return ratio.num / double(ratio.den);
+		}
+		else
+			return 0;
+	}
 
 	size_t Context::GetAudioFrameRate() const
 	{
@@ -246,20 +273,12 @@ namespace MP
 		Assert(m_begun == true);
 
 		if (m_audioContext)
-			return m_audioContext->m_codecContext->channels;
+			return m_audioContext->m_outputChannelCount;
 		else
 			return 0;
 	}
 
-	double Context::GetAudioTime() const
-	{
-		if (m_audioContext)
-			return m_audioContext->GetTime();
-		else
-			return 0.0;
-	}
-
-	bool Context::RequestAudio(int16_t * __restrict out_samples, const size_t frameCount, bool & out_gotAudio)
+	bool Context::RequestAudio(int16_t * __restrict out_samples, const size_t frameCount, bool & out_gotAudio, double & out_audioTime)
 	{
 		Assert(m_begun == true);
 		Assert(m_audioContext);
@@ -268,7 +287,7 @@ namespace MP
 
 		if (m_audioContext == nullptr)
 			result = false;
-		else if (m_audioContext->RequestAudio(out_samples, frameCount, out_gotAudio) != true)
+		else if (m_audioContext->RequestAudio(out_samples, frameCount, out_gotAudio, out_audioTime) != true)
 			result = false;
 
 		return result;
@@ -461,17 +480,19 @@ namespace MP
 		return m_formatContext;
 	}
 
-	bool Context::GetStreamIndices(size_t & out_audioStreamIndex, size_t & out_videoStreamIndex)
+	bool Context::GetStreamIndices(size_t & out_audioStreamIndex, size_t & out_videoStreamIndex, const int desiredAudioStreamIndex)
 	{
 		out_audioStreamIndex = STREAM_NOT_FOUND;
 		out_videoStreamIndex = STREAM_NOT_FOUND;
-
+		
 		// Get stream info.
 		if (avformat_find_stream_info(m_formatContext, nullptr) < 0)
 		{
 			Debug::Print("unable to get stream info");
 			return false;
 		}
+		
+		int audioStreamIndex = 0;
 
 		// Find the first audio & video streams and use those during rendering.
 		for (size_t i = 0; i < static_cast<size_t>(m_formatContext->nb_streams); ++i)
@@ -479,13 +500,33 @@ namespace MP
 			// Show stream info.
 			av_dump_format(m_formatContext, i, m_filename.c_str(), false);
 			
-			if (out_audioStreamIndex == STREAM_NOT_FOUND)
-				if (m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
+		#if LIBAVCODEC_VERSION_MAJOR >= 57
+			if (m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO)
+			{
+				if (out_audioStreamIndex == STREAM_NOT_FOUND || audioStreamIndex == desiredAudioStreamIndex)
 					out_audioStreamIndex = i;
+				
+				audioStreamIndex++;
+			}
+		#else
+			if (m_formatContext->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
+			{
+				if (out_audioStreamIndex == STREAM_NOT_FOUND || audioStreamIndex == desiredAudioStreamIndex)
+					out_audioStreamIndex = i;
+				
+				audioStreamIndex++;
+			}
+		#endif
 
+		#if LIBAVCODEC_VERSION_MAJOR >= 57
 			if (out_videoStreamIndex == STREAM_NOT_FOUND)
 				if (m_formatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
 					out_videoStreamIndex = i;
+		#else
+			if (out_videoStreamIndex == STREAM_NOT_FOUND)
+				if (m_formatContext->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+					out_videoStreamIndex = i;
+		#endif
 		}
 
 		if (out_audioStreamIndex == STREAM_NOT_FOUND)
@@ -506,8 +547,13 @@ namespace MP
 
 		if (ReadPacket(packet))
 		{
+		#if LIBAVCODEC_VERSION_MAJOR >= 57
+			// todo : use the old version as default ? seems like a better implementation actually
 			AVPacket * packetCopy = av_packet_clone(&packet);
 			av_packet_unref(&packet);
+		#else
+			AVPacket * packetCopy = &packet;
+		#endif
 			
 			if (!packetCopy)
 				Debug::Print("av_packet_clone failed");
@@ -518,7 +564,13 @@ namespace MP
 					result = false;
 				
 				av_packet_unref(packetCopy);
+				
+			#if LIBAVCODEC_VERSION_MAJOR >= 57
+				av_packet_free(&packetCopy);
 				packetCopy = nullptr;
+			#else
+				packetCopy = nullptr;
+			#endif
 			}
 		}
 		else

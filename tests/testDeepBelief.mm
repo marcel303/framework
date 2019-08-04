@@ -31,7 +31,7 @@
 #include "image.h"
 #include "testBase.h"
 #include "Timer.h"
-#include "vfxNodes/deepbelief.h"
+#include "vfxNodes-deepbelief/deepbelief.h"
 #include "../libvideo/video.h"
 #include "mediaplayer/MPVideoBuffer.h"
 #include <cmath>
@@ -43,13 +43,24 @@ void testDeepbelief()
 {
 	setAbout("This example demonstrates the use of the Deep Belief SDK. The Deep Belief SDK uses machine learning to classify images. In this example Deep Belief is asked to classify objects in a video being shown to it. Can you guess the right object before Deep Belief does?");
 	
+	const char * downloads[] =
+	{
+		"http://centuryofthecat.nl/shared_media/framework/tests/deepbelief/jetpac.ntwk",
+		"deepbelief/jetpac.ntwk",
+		"http://centuryofthecat.nl/shared_media/framework/tests/deepbelief/super-zoom-craze.mp4",
+		"deepbelief/super-zoom-craze.mp4"
+	};
+	
+	if (!downloadTestFiles(downloads, sizeof(downloads) / sizeof(downloads[0]) / 2))
+		return;
+	
 	const char * networkFilename = "deepbelief/jetpac.ntwk";
 	//const char * networkFilename = "deepbelief/ccv2010.ntwk";
 	//const char * imageFilename = "deepbelief/dog.jpg";
 	//const char * imageFilename = "deepbelief/rainbow.png"; // apparently it looks like a banana! :-)
 	const char * imageFilename = "deepbelief/tea.jpg";
 	//const char * videoFilename = "mocapb.mp4";
-	const char * videoFilename = "deepbelief/objects1.mp4";
+	const char * videoFilename = "deepbelief/super-zoom-craze.mp4";
 	
 	ImageData * image = loadImage(imageFilename);
 	Assert(image);
@@ -74,7 +85,7 @@ void testDeepbelief()
 	
 	bool sampleVideo = true;
 	
-	float certaintyTreshold = .01f;
+	float certaintyThreshold = .01f;
 	
 	bool isFirstFrame = true;
 	
@@ -133,23 +144,23 @@ void testDeepbelief()
 		{
 			isFirstFrame = false;
 			
-			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyThreshold);
 		}
 		
 		if (keyboard.wentDown(SDLK_p))
 		{
-			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyThreshold);
 		}
 		
 		if (keyboard.wentDown(SDLK_w))
 		{
-			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyThreshold);
 			d->wait();
 		}
 		
 		if (keyboard.isDown(SDLK_r))
 		{
-			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyThreshold);
 		}
 		
 		if (keyboard.wentDown(SDLK_a))
@@ -178,7 +189,7 @@ void testDeepbelief()
 		
 		if (automaticUpdates)
 		{
-			d->process(buffer, sx, sy, numChannels, pitch, certaintyTreshold);
+			d->process(buffer, sx, sy, numChannels, pitch, certaintyThreshold);
 		}
 		
 		mediaPlayer.presentTime += framework.timeStep;
@@ -196,7 +207,7 @@ void testDeepbelief()
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			const GLuint texture = sampleVideo ? mediaPlayer.getTexture() : getTexture(imageFilename);
+			const GxTextureId texture = sampleVideo ? mediaPlayer.getTexture() : getTexture(imageFilename);
 			
 			const int size = 400;
 			const int padding = (GFX_SX - size * 2) / 3;
@@ -248,6 +259,7 @@ void testDeepbelief()
 			drawText(GFX_SX/2, 80, 14, +1, +1, "S: shut down deep belief object");
 			drawText(GFX_SX/2, 100, 14, +1, +1, "A: toggle automatic processing (%s)", automaticUpdates ? "on" : "off");
 			drawText(GFX_SX/2, 120, 14, +1, +1, "R: process (continuously)");
+			drawText(GFX_SX/2, 140, 14, +1, +1, "V: toggle between video or image input");
 			popFontMode();
 			
 			int index = 0;

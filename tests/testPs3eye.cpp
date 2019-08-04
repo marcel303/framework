@@ -1,9 +1,10 @@
+#if defined(MACOS) || defined(LINUX)
+
 #include "Benchmark.h"
 #include "framework.h"
-#include "vfxNodes/openglTexture.h"
 #include "ps3eye.h"
 
-#include "../libparticle/ui.h"
+#include "ui.h"
 #include "vfxNodes/dotDetector.h"
 #include "vfxNodes/dotTracker.h"
 
@@ -49,9 +50,9 @@ void testPs3eye()
 	uint8_t * lumiData = nullptr;
 	uint8_t * maskData = nullptr;
 	
-	OpenglTexture texture;
-	OpenglTexture textureLumi;
-	OpenglTexture textureMask;
+	GxTexture texture;
+	GxTexture textureLumi;
+	GxTexture textureMask;
 	
 	eye = devices.at(0);
 	
@@ -76,15 +77,15 @@ void testPs3eye()
 		
 		//
 		
-		texture.allocate(eye->getWidth(), eye->getHeight(), enableColor ? GL_RGB8 : GL_R8, true, true);
+		texture.allocate(eye->getWidth(), eye->getHeight(), enableColor ? GX_RGB8_UNORM : GX_R8_UNORM, true, true);
 		if (!enableColor)
-			texture.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+			texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		
-		textureLumi.allocate(sx, sy, GL_R8, true, true);
-		textureLumi.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+		textureLumi.allocate(sx, sy, GX_R8_UNORM, true, true);
+		textureLumi.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		
-		textureMask.allocate(sx, sy, GL_R8, true, true);
-		textureMask.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+		textureMask.allocate(sx, sy, GX_R8_UNORM, true, true);
+		textureMask.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	}
 	
 	std::atomic_bool autoGain(eye->getAutogain());
@@ -173,7 +174,7 @@ void testPs3eye()
 
 					// perform dot detection by first performing a masking operation and then detecting the dots
 
-					DotDetector::treshold(lumiData, sx, maskData, sx, sx, sy, DotDetector::kTresholdTest_GreaterEqual, 127);
+					DotDetector::threshold(lumiData, sx, maskData, sx, sx, sy, DotDetector::kThresholdTest_GreaterEqual, 127);
 
 					DotIsland islands[MAX_DOTS];
 
@@ -220,10 +221,10 @@ void testPs3eye()
 			lastFrameIndex = frameIndex;
 		}
 		
-		texture.upload(frameData, 4, 0, enableColor ? GL_RGB : GL_RED, GL_UNSIGNED_BYTE);
+		texture.upload(frameData, 4, 0);
 		
-		textureLumi.upload(lumiData, 1, 0, GL_RED, GL_UNSIGNED_BYTE);
-		textureMask.upload(maskData, 1, 0, GL_RED, GL_UNSIGNED_BYTE);
+		textureLumi.upload(lumiData, 1, 0);
+		textureMask.upload(maskData, 1, 0);
 		
 		int numDots;
 		DotIsland dots[MAX_DOTS];
@@ -242,7 +243,7 @@ void testPs3eye()
 			setFont("calibri.ttf");
 			pushFontMode(FONT_SDF);
 			
-			const GLuint textureId =
+			const GxTextureId textureId =
 				keyboard.isDown(SDLK_m) ? textureMask.id :
 				keyboard.isDown(SDLK_l) ? textureLumi.id :
 				texture.id;
@@ -350,3 +351,13 @@ void testPs3eye()
 	SDL_DestroyMutex(mutex);
 	mutex = nullptr;
 }
+
+#else
+
+// fixme
+
+void testPs3eye()
+{
+}
+
+#endif

@@ -1,0 +1,29 @@
+include engine/ShaderPS.txt
+
+shader_in vec2 v_texcoord;
+
+uniform sampler2D u_texture;
+uniform float cubeSide;
+
+float pi = 3.1415926535897932384626433832795;
+
+void main()
+{
+	float deg90 = pi / 2.0;
+	float deg180 = pi;
+	
+	float dx = (v_texcoord.x - 0.5) * 2.0;
+	float dz = sqrt(1.0 - dx * dx);
+	
+	float angle = atan(dz, -dx);
+	float t = angle / pi;
+
+	float sampleX = cubeSide * 0.25 + t * 0.5;
+	float sampleY = v_texcoord.y;
+	
+	vec4 color = texture(u_texture, vec2(sampleX, sampleY));
+	
+	color.r = (color.r + color.g + color.b) / 3.0;
+	
+	shader_fragColor = color;
+}

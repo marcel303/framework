@@ -1,0 +1,72 @@
+app codingChallenges-017-spaceColonization
+	depend_library framework
+	add_files 017-spaceColonization.cpp
+	resource_path data
+
+app codingChallenges-033-poissonDiscSampling
+	depend_library framework
+	add_files 033-poissonDiscSampling.cpp
+	resource_path data
+
+app codingChallenges-034-DLA
+	depend_library framework
+	add_files 034-DLA.cpp
+	resource_path data
+
+app codingChallenges-050-circlePacking-a
+	depend_library framework
+	add_files 050-circlePacking-a.cpp
+	resource_path data
+
+app codingChallenges-051-astar
+	depend_library framework
+	add_files 051-astar.cpp
+	resource_path data
+
+app codingChallenges-064.2-inverseKinematics
+	depend_library framework
+	add_files 064.2-inverseKinematics.cpp
+	resource_path data
+
+app codingChallenges-086-cubeWave
+	depend_library framework
+	depend_library imgui-framework
+	add_files 086-cubeWave.cpp
+	resource_path data
+
+app codingChallenges-116-lissajousCurveTable
+	depend_library framework
+	add_files 116-lissajousCurveTable.cpp
+
+app codingChallenges-127-flockingSimulation
+	depend_library framework
+	depend_library imgui-framework
+	add_files 127-flockingSimulation.cpp
+
+app codingChallenges-129-kochFractalSnowflake
+	depend_library framework
+	add_files 129-kochFractalSnowflake.cpp
+
+app codingChallenges-132-fluidSimulation
+	depend_library framework
+	add_files 132-fluidSimulation.cpp
+
+app codingChallenges-132-fluidSimulation-gpu
+	depend_library framework
+	add_files 132-fluidSimulation-gpu.cpp
+
+app codingChallenges-132-fluidSimulation-gpu-3d
+	depend_library framework
+	add_files 132-fluidSimulation-gpu-3d.cpp
+
+app codingChallenges-u01-extrusion
+	depend_library framework
+	add_files u01-extrusion.cpp
+
+app codingChallenges-u02-portals
+	depend_library framework
+	add_files u02-portals.cpp
+
+app codingChallenges-u03-reactionDiffusion
+	depend_library framework
+	add_files u03-reactionDiffusion

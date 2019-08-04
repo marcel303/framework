@@ -28,7 +28,7 @@
 #include "audioNodeMath.h"
 #include <math.h>
 
-static const float twoPi = M_PI * 2.f;
+static const float twoPi = float(M_PI * 2.f);
 
 template <AudioNodeMath::Type _type>
 inline float evalMathOp(const float a, const float b, const AudioNodeMath::Type type2)
@@ -141,7 +141,7 @@ AUDIO_ENUM_TYPE(mathType)
 	elem("semitone");
 }
 
-AUDIO_NODE_TYPE(math, AudioNodeMath)
+AUDIO_NODE_TYPE(AudioNodeMath)
 {
 	typeName = "math";
 	
@@ -262,7 +262,7 @@ struct name : AudioNodeMathBase \
 		} \
 	} \
 }; \
-AUDIO_NODE_TYPE(name, name) \
+AUDIO_NODE_TYPE(name) \
 { \
 	typeName = _typeName; \
 	in("a", "audioValue"); \

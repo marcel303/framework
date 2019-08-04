@@ -54,7 +54,7 @@ public:
 
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer)
 	{
-		float data[1 << 16][2];
+		float data[1 << 8][2];
 		memset(data, 0, sizeof(data));
 
 		int result = numSamples;

@@ -1,14 +1,18 @@
+#include <GL/glew.h> // virtual textures
 #include "Calc.h"
 #include "framework.h"
 #include "Timer.h"
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
 #define GFX_SX 1024
 #define GFX_SY 1024
 
 #define DO_VOXELTRACE 0
 #define DO_DISTANCE_TEXTURE 0
-#define DO_SPARSE_TEXTURE 0
-#define DO_QUADTREE 1
+#define DO_SPARSE_TEXTURE 1
+#define DO_QUADTREE 0
 
 #define INVERTED_DISTANCE_METRIC 0
 
@@ -144,7 +148,7 @@ struct VoxelSet
 		float & oy,
 		float & oz) const
 	{
-		const float treshold = .1f;
+		const float threshold = .1f;
 
 		float tx = px;
 		float ty = py;
@@ -154,7 +158,7 @@ struct VoxelSet
 		{
 			const float distance = sampleDistance(tx, ty, tz);
 
-			if (distance < treshold)
+			if (distance < threshold)
 			{
 				ox = tx;
 				oy = ty;
@@ -293,7 +297,7 @@ static void createVoxelSet(VoxelSet<sx, sy, sz> & voxelSet, DataSet<sx, sy, sz> 
 		{
 			for (int vz = 0; vz < sz; ++vz)
 			{
-				int minDistance = INT_MAX;
+				int minDistance = std::numeric_limits<int>::max();
 
 				for (int dsX = 0; dsX < sx; ++dsX)
 				{
@@ -923,7 +927,7 @@ struct SparseTextureObject
 
 				if (isWanted)
 				{
-					// todo : we actually want an accurate intersection test with the viewport here
+					// todo-planetvis : we actually want an accurate intersection test with the viewport here
 
 					if (min[0] > vsx ||
 						min[1] > vsy ||
@@ -1342,13 +1346,13 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 
 int main(int argc, char * argv[])
 {
-	changeDirectory("data");
+	changeDirectory(CHIBI_RESOURCE_PATH);
 
 	framework.enableDepthBuffer = true;
 
 	framework.enableRealTimeEditing = true;
 
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 	#if DO_VOXELTRACE
 		DataSet<_DS_SX, _DS_SY, _DS_SZ> * dataSet = new DataSet<_DS_SX, _DS_SY, _DS_SZ>();
@@ -1511,13 +1515,12 @@ int main(int argc, char * argv[])
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
+				pushDepthTest(true, DEPTH_LESS);
 
 				setBlend(BLEND_OPAQUE);
 
 			#if DO_VOXELTRACE
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPushMatrix();
 				{
 					Mat4x4 matP;
@@ -1532,7 +1535,7 @@ int main(int argc, char * argv[])
 
 					//
 
-					gxMatrixMode(GL_MODELVIEW);
+					gxMatrixMode(GX_MODELVIEW);
 					gxPushMatrix();
 					{
 						gxLoadIdentity();
@@ -1545,7 +1548,7 @@ int main(int argc, char * argv[])
 						gxScalef(1.f / mx, 1.f / my, 1.f / mz);
 						gxTranslatef(-mx, -my, -mz);
 
-						gxBegin(GL_POINTS);
+						gxBegin(GX_POINTS);
 						{
 							const float step = .4f;
 
@@ -1671,13 +1674,13 @@ int main(int argc, char * argv[])
 						}
 						gxEnd();
 					}
-					gxMatrixMode(GL_MODELVIEW);
+					gxMatrixMode(GX_MODELVIEW);
 					gxPopMatrix();
 				}
-				gxMatrixMode(GL_PROJECTION);
+				gxMatrixMode(GX_PROJECTION);
 				gxPopMatrix();
 
-				gxMatrixMode(GL_MODELVIEW);
+				gxMatrixMode(GX_MODELVIEW);
 			#endif
 
 			#if DO_DISTANCE_TEXTURE
@@ -1716,7 +1719,7 @@ int main(int argc, char * argv[])
 
 					//
 
-					glDisable(GL_DEPTH_TEST);
+					popDepthTest();
 					setBlend(BLEND_OPAQUE);
 
 					gxPushMatrix();
@@ -1724,10 +1727,10 @@ int main(int argc, char * argv[])
 						gxMultMatrixf(mat.m_v);
 
 						Shader shader("VirtualTexture");
-						shader.setTexture("texture", 0, sparseTextureObject.texture);
+						shader.setTexture("u_texture", 0, sparseTextureObject.texture);
 						setShader(shader);
 						{
-							gxBegin(GL_QUADS);
+							gxBegin(GX_QUADS);
 							{
 								gxTexCoord2f(0.f, 0.f); gxVertex2f(0, 0);
 								gxTexCoord2f(1.f, 0.f); gxVertex2f(sparseTextureObject.textureSx, 0);
@@ -1811,7 +1814,7 @@ int main(int argc, char * argv[])
 					//
 					
 					setBlend(BLEND_OPAQUE);
-					glEnable(GL_DEPTH_TEST);
+					pushDepthTest(true, DEPTH_LESS);
 				}
 			#endif
 
@@ -1820,7 +1823,7 @@ int main(int argc, char * argv[])
 				{
 					const float scale = quadTree.initSize / float(GFX_SX);
 
-					glDisable(GL_DEPTH_TEST);
+					popDepthTest();
 					setBlend(BLEND_ALPHA);
 
 					gxPushMatrix();
@@ -1829,11 +1832,11 @@ int main(int argc, char * argv[])
 
 						Shader shader("TexLod");
 						setShader(shader);
-						shader.setTexture("texture", 0, quadTree.texture);
+						shader.setTexture("u_texture", 0, quadTree.texture);
 						shader.setImmediate("lod", mouse.isDown(BUTTON_RIGHT) ? (mouse.x / float(GFX_SX) * quadTree.numAllocatedLevels) : -1);
 						shader.setImmediate("numLods", quadTree.numAllocatedLevels);
 						{
-							gxBegin(GL_QUADS);
+							gxBegin(GX_QUADS);
 							{
 								gxTexCoord2f(0.f, 0.f); gxVertex2f(quadTree.initSize * 0, quadTree.initSize * 0);
 								gxTexCoord2f(1.f, 0.f); gxVertex2f(quadTree.initSize * 1, quadTree.initSize * 0);
@@ -1867,10 +1870,12 @@ int main(int argc, char * argv[])
 					quadTree.root.traverse(0, 0, 0, quadTree.initSize, params);
 
 					setBlend(BLEND_OPAQUE);
-					glEnable(GL_DEPTH_TEST);
+					pushDepthTest(true, DEPTH_LESS);
 				}
 				gxPopMatrix();
 			#endif
+
+				popDepthTest();
 			}
 			framework.endDraw();
 		}

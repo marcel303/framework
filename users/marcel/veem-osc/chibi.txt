@@ -1,0 +1,7 @@
+app marcel-veem-osc
+	depend_library framework
+	depend_library libosc
+	
+	add_files main.cpp
+
+	resource_path data

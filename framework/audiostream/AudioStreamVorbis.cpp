@@ -27,16 +27,18 @@
 
 #include <stdio.h>
 #include "AudioStreamVorbis.h"
-#include "internal.h"
+#include "Debugging.h"
+#include "Log.h"
 #include "oggvorbis.h"
 
 static void DuplicateInPlace(short * buffer, int numSamples);
 
 AudioStream_Vorbis::AudioStream_Vorbis()
-	: mSampleRate(0)
-	, mFile(0)
+	: mFile(0)
 	, mVorbisFile(0)
-	, mNumChannels(0)	
+	, mNumChannels(0)
+	, mSampleRate(0)
+	, mDuration(0)
 	, mPosition(0)
 	, mLoop(false)
 	, mHasLooped(false)
@@ -114,7 +116,7 @@ int AudioStream_Vorbis::Provide(int numSamples, AudioSample* __restrict buffer)
 		}
 		else
 		{
-			fassert(currentBytesRead <= bytesRemain);
+			Assert(currentBytesRead <= bytesRemain);
 			
 			bytesRemain -= currentBytesRead;
 			bytesRead += currentBytesRead;
@@ -122,7 +124,7 @@ int AudioStream_Vorbis::Provide(int numSamples, AudioSample* __restrict buffer)
 		
 	}
 	
-	fassert((bytesRead % sizeof(AudioSample)) == 0);
+	Assert((bytesRead % sizeof(AudioSample)) == 0);
 	
 	int numReadSamples = bytesRead / sizeof(AudioSample);
 	
@@ -138,34 +140,35 @@ void AudioStream_Vorbis::Open(const char* fileName, bool loop)
 	mFileName = fileName;
 	mLoop = loop;
 	
-	fopen_s(&mFile, mFileName.c_str(), "rb");
+	mFile = fopen(mFileName.c_str(), "rb");
 	
 	if (mFile == 0)
 	{
-		logError("Vosbis Audio Stream: failed to open file (%s)", fileName);
-		fassert(mFile != 0);
+		LOG_ERR("Vosbis Audio Stream: failed to open file (%s)", fileName);
+		Assert(mFile != 0);
 		Close();
 		return;
 	}
 	
-	logDebug("Vorbis Audio Stream: opened file: %s", mFileName.c_str());
+	LOG_DBG("Vorbis Audio Stream: opened file: %s", mFileName.c_str());
 	
 	int result = ov_open(mFile, mVorbisFile, NULL, 0);
 	if (result != 0)
 	{
-		logError("Vosbis Audio Stream: failed to create vorbis decoder (%d)", result);
+		LOG_ERR("Vosbis Audio Stream: failed to create vorbis decoder (%d)", result);
 		Close();
 		return;
 	}
 	
-	logDebug("Vorbis Audio Stream: created vorbis decoder", 0);
+	LOG_DBG("Vorbis Audio Stream: created vorbis decoder", 0);
 	
 	vorbis_info* info = ov_info(mVorbisFile, -1);
 	
-	mSampleRate = static_cast<int>(info->rate);
 	mNumChannels = info->channels;
+	mSampleRate = static_cast<int>(info->rate);
+	mDuration = ov_pcm_total(mVorbisFile, -1);
 	
-	logDebug("Vorbis Audio Stream: channelCount=%d, sampleRate=%d", mNumChannels, mSampleRate);
+	LOG_DBG("Vorbis Audio Stream: channelCount=%d, sampleRate=%d", mNumChannels, mSampleRate);
 }
 
 void AudioStream_Vorbis::Close()
@@ -173,22 +176,22 @@ void AudioStream_Vorbis::Close()
 	if (mFile != 0)
 	{
 		ov_clear(mVorbisFile);
-		logDebug("Vorbis Audio Stream: destroyed vorbis decoder", 0);
+		LOG_DBG("Vorbis Audio Stream: destroyed vorbis decoder", 0);
 		
 		fclose(mFile);
 		mFile = 0;
-		logDebug("Vorbis Audio Stream: closed file", 0);
+		LOG_DBG("Vorbis Audio Stream: closed file", 0);
 		
 		mPosition = 0;
 	}
 }
 
-int AudioStream_Vorbis::Position_get()
+int AudioStream_Vorbis::Position_get() const
 {
 	return mPosition;
 }
 
-bool AudioStream_Vorbis::HasLooped_get()
+bool AudioStream_Vorbis::HasLooped_get() const
 {
 	return mHasLooped;
 }

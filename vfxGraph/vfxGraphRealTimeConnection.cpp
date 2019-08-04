@@ -26,6 +26,7 @@
 */
 
 #include "framework.h" // log
+#include "graphEdit.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 #include "vfxNodeBase.h"
@@ -35,11 +36,29 @@
 
 #define VFXGRAPH_DEBUG_PREDEPS 0
 
+struct SavedVfxMemory
+{
+	std::map<std::string, MemoryComponent::Memf> memf;
+	std::map<std::string, MemoryComponent::Mems> mems;
+};
+
 void RealTimeConnection::loadBegin()
 {
 	Assert(g_currentVfxGraph == nullptr);
 	
 	isLoading = true;
+	
+	// save memory
+	
+	Assert(savedVfxMemory == nullptr);
+	savedVfxMemory = new SavedVfxMemory();
+	if (vfxGraph != nullptr)
+	{
+		savedVfxMemory->memf = vfxGraph->memory.memf;
+		savedVfxMemory->mems = vfxGraph->memory.mems;
+	}
+	
+	//
 	
 	delete vfxGraph;
 	
@@ -49,8 +68,21 @@ void RealTimeConnection::loadBegin()
 
 void RealTimeConnection::loadEnd(GraphEdit & graphEdit)
 {
+	Assert(vfxGraph == nullptr);
 	vfxGraph = constructVfxGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary);
 	*vfxGraphPtr = vfxGraph;
+	
+	// restore saved memory
+	
+	for (auto & memf_itr : savedVfxMemory->memf)
+		vfxGraph->memory.setMemf(memf_itr.first.c_str(), memf_itr.second.value[0], memf_itr.second.value[1], memf_itr.second.value[2], memf_itr.second.value[3]);
+	for (auto & mems_itr : savedVfxMemory->mems)
+		vfxGraph->memory.setMems(mems_itr.first.c_str(), mems_itr.second.value.c_str());
+	
+	delete savedVfxMemory;
+	savedVfxMemory = nullptr;
+	
+	//
 	
 	isLoading = false;
 	
@@ -165,10 +197,7 @@ void RealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	
 	vfxGraph->nodes.erase(nodeItr);
 	
-	if (vfxGraph->displayNodeIds.count(nodeId) != 0)
-	{
-		vfxGraph->displayNodeIds.erase(nodeId);
-	}
+	Assert(vfxGraph->displayNodeIds.count(nodeId) == 0);
 }
 
 void RealTimeConnection::linkAdd(const GraphLinkId linkId, const GraphNodeId srcNodeId, const int srcSocketIndex, const GraphNodeId dstNodeId, const int dstSocketIndex)
@@ -329,8 +358,6 @@ void RealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNodeId 
 			input->disconnect(output->mem);
 		}
 	}
-	
-	// todo : we should reconnect with the node socket's editor value when set here
 	
 	// if this is a link hooked up to a trigger, remove the TriggerTarget from dstNode
 	
@@ -1011,9 +1038,14 @@ void RealTimeConnection::handleSrcSocketPressed(const GraphNodeId nodeId, const 
 	if (input == nullptr)
 		return;
 	
-	node->editorIsTriggered = true;
+	node->editorIsTriggeredTick = vfxGraph->currentTickTraversalId;
 	
-	node->handleTrigger(srcSocketIndex);
+	Assert(g_currentVfxGraph == nullptr);
+	g_currentVfxGraph = vfxGraph;
+	{
+		node->handleTrigger(srcSocketIndex);
+	}
+	g_currentVfxGraph = nullptr;
 }
 
 bool RealTimeConnection::getNodeIssues(const GraphNodeId nodeId, std::vector<std::string> & issues)
@@ -1126,11 +1158,9 @@ int RealTimeConnection::getNodeActivity(const GraphNodeId nodeId)
 	if (node->lastDrawTraversalId + 1 == vfxGraph->nextDrawTraversalId)
 		result |= kActivity_Continuous;
 	
-	if (node->editorIsTriggered)
+	if (node->editorIsTriggeredTick == vfxGraph->currentTickTraversalId)
 	{
 		result |= kActivity_OneShot;
-		
-		node->editorIsTriggered = false;
 	}
 	
 	return result;
@@ -1168,16 +1198,12 @@ int RealTimeConnection::getLinkActivity(const GraphLinkId linkId, const GraphNod
 	if (dstInput == nullptr)
 		return false;
 	
-	// todo : check if the link was triggered
+	// check if the link was triggered
 	
 	bool result = false;
 	
-	if (dstInput->editorIsTriggered)
+	if (dstInput->editorIsTriggeredTick == vfxGraph->currentTickTraversalId)
 	{
-		// fixme : setting this to false here won't work correctly when there's multiple outgoing connections for this socket. we should report true for all of these connections. we should, instead, clear all of these flags prior to processing the VfxGraph
-		
-		dstInput->editorIsTriggered = false;
-		
 		result = true;
 	}
 	
@@ -1245,6 +1271,18 @@ bool RealTimeConnection::getNodeDynamicSockets(const GraphNodeId nodeId, std::ve
 		{
 			inputs[index].name = input.name;
 			inputs[index].typeName = vfxPlugTypeToValueTypeName(input.type);
+			inputs[index].defaultValue = input.defaultValue;
+			
+			if (input.enumElems.empty() == false)
+			{
+				inputs[index].enumElems.resize(input.enumElems.size());
+				
+				for (size_t i = 0; i < input.enumElems.size(); ++i)
+				{
+					inputs[index].enumElems[i].name = input.enumElems[i].name;
+					inputs[index].enumElems[i].valueText = input.enumElems[i].valueText;
+				}
+			}
 			
 			index++;
 		}

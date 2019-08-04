@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "editor_vfxTimeline.h"
+#include "editors/editor_vfxTimeline.h"
 #include "vfxNodeTimeline.h"
 #include "vfxResource.h"
 #include "vfxTypes.h"
@@ -36,7 +36,7 @@ VFX_NODE_TYPE(VfxNodeTimeline)
 	
 	resourceTypeName = "timeline";
 	
-	createResourceEditor = []() -> GraphEdit_ResourceEditorBase*
+	createResourceEditor = [](void * data) -> GraphEdit_ResourceEditorBase*
 	{
 		return new ResourceEditor_VfxTimeline();
 	};

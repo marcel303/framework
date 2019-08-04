@@ -1,0 +1,24 @@
+library libwebrequest
+	add_files webrequest.cpp webrequest.h
+	with_platform linux add_files webrequest-linux.cpp
+	with_platform macos add_files webrequest-cocoa.mm
+	with_platform macos depend_library CoreFoundation find
+	with_platform macos depend_library Foundation find
+	with_platform windows add_files webrequest-winhttp.cpp
+	header_path . expose
+
+library libwebrequest-downloadcache
+	depend_library libgg
+	depend_library libwebrequest
+	add_files DownloadCache.cpp DownloadCache.h
+	header_path . expose
+	
+app libwebrequest-test
+	depend_library libwebrequest
+	add_files test.cpp
+
+app libwebrequest-test-downloadcache
+	depend_library framework
+	depend_library libwebrequest-downloadcache
+	add_files test-downloadcache.cpp
+	resource_path data

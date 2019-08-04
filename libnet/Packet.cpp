@@ -1,5 +1,5 @@
-#include <string.h>
 #include "Packet.h"
+#include <string.h>
 
 bool Packet::Read(void * dst, uint32_t size)
 {

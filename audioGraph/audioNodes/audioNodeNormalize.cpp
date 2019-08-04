@@ -28,7 +28,7 @@
 #include "audioNodeNormalize.h"
 #include <math.h>
 
-AUDIO_NODE_TYPE(normalize, AudioNodeNormalize)
+AUDIO_NODE_TYPE(AudioNodeNormalize)
 {
 	typeName = "normalize";
 	

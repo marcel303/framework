@@ -1,0 +1,8 @@
+library libreflection-textio
+	# note : depending on libgg for logging. todo : remove dependency
+	depend_library libgg
+	depend_library libreflection
+	add_files lineReader.cpp lineReader.h
+	add_files lineWriter.cpp lineWriter.h
+	add_files reflection-textio.cpp reflection-textio.h
+	header_path . expose

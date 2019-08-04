@@ -78,12 +78,9 @@ std::vector<std::string> String::Split(const std::string& text, const std::strin
 		{
 			if (!Contains(separators, text[index1]))
 			{
-				std::string temp = text.substr(index1, index2 - index1 + 1);
+				const std::string temp = text.substr(index1, index2 - index1 + 1);
 
-//				for (size_t j = index1; j <= index2; ++j)
-//					temp.push_back(text[j]);
-
-				result.push_back(temp);
+				result.emplace_back(temp);
 			}
 
 			index1 = i + 1;
@@ -99,12 +96,9 @@ std::vector<std::string> String::Split(const std::string& text, const std::strin
 	{
 		if (!Contains(separators, text[index1]))
 		{
-			std::string temp = text.substr(index1, index2 - index1 + 1);
+			const std::string temp = text.substr(index1, index2 - index1 + 1);
 
-//			for (size_t j = index1; j <= index2; ++j)
-//				temp.push_back(text[j]);
-
-			result.push_back(temp);
+			result.emplace_back(temp);
 		}
 	}
 
@@ -283,6 +277,50 @@ bool String::Equals(const char* text1, const char* text2)
 	return strcmp(text1, text2) == 0;
 }
 
+bool String::MatchesWildcard(const char * in_text, const char * wildcard)
+{
+	const char * text = in_text;
+	
+	while (wildcard[0] != 0)
+	{
+		if (wildcard[0] == ';')
+		{
+			text = in_text;
+			wildcard++;
+		}
+		else if (wildcard[0] == '*')
+		{
+			if (wildcard[1] == 0 || wildcard[1] == ';')
+				return true;
+			else
+			{
+				while (text[0] != 0 && text[0] != wildcard[1])
+					text++;
+				
+				if (text[0] == 0)
+					return false;
+				
+				wildcard++;
+			}
+		}
+		else
+		{
+			if (text[0] != wildcard[0])
+			{
+				while (wildcard[0] != 0 && wildcard[0] != ';')
+					wildcard++;
+			}
+			else
+			{
+				text++;
+				wildcard++;
+			}
+		}
+	}
+	
+	return text[0] == 0;
+}
+
 std::string String::Join(const std::vector<std::string>& strings)
 {
 	std::string result;
@@ -324,3 +362,31 @@ std::string String::Join(const std::vector<std::string>& strings, const std::str
 	
 	return result;
 }
+
+//
+
+#if defined(WINDOWS)
+
+char * strcasestr(const char * haystack, const char * needle)
+{
+	const auto haystack_len = strlen(haystack);
+	const auto needle_len = strlen(needle);
+
+	char * haystack_lower = (char*)alloca(haystack_len + 1);
+	char * needle_lower = (char*)alloca(needle_len + 1);
+
+	memcpy(haystack_lower, haystack, haystack_len + 1);
+	memcpy(needle_lower, needle, needle_len + 1);
+
+	_strlwr(haystack_lower);
+	_strlwr(needle_lower);
+
+	const char * pos = strstr(haystack_lower, needle_lower);
+
+	if (pos == nullptr)
+		return nullptr;
+	else
+		return (char*)haystack + (pos - haystack_lower);
+}
+
+#endif

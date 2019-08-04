@@ -28,7 +28,10 @@
 #pragma once
 
 #include "audioNodeBase.h"
+#include "audioVoiceManager.h"
 #include "soundmix.h" // AudioSource
+
+struct AudioGraph;
 
 struct AudioNodeVoice4D : AudioNodeBase
 {
@@ -63,13 +66,13 @@ struct AudioNodeVoice4D : AudioNodeBase
 		kInput_DopplerScale,
 		kInput_DopplerSmooth,
 		kInput_DistanceIntensity,
-		kInput_DistanceIntensityTreshold,
+		kInput_DistanceIntensityThreshold,
 		kInput_DistanceIntensityCurve,
 		kInput_DistanceDampening,
-		kInput_DistanceDampeningTreshold,
+		kInput_DistanceDampeningThreshold,
 		kInput_DistanceDampeningCurve,
 		kInput_DistanceDiffusion,
-		kInput_DistanceDiffusionTreshold,
+		kInput_DistanceDiffusionThreshold,
 		kInput_DistanceDiffusionCurve,
 		kInput_SpatialDelay,
 		kInput_SpatialDelayMode,
@@ -98,7 +101,7 @@ struct AudioNodeVoice4D : AudioNodeBase
 	AudioGraph * audioGraph;
 	
 	AudioNodeVoice4D();
-	~AudioNodeVoice4D() override;
+	virtual void shut() override;
 	
 	virtual void tick(const float dt) override;
 	
@@ -165,6 +168,8 @@ struct AudioNodeVoice4DReturn : AudioNodeBase
 	
 	AudioNodeVoice4DReturn();
 	virtual ~AudioNodeVoice4DReturn() override;
+	
+	virtual void shut() override;
 	
 	virtual void tick(const float dt) override;
 };

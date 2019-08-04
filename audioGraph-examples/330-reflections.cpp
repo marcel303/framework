@@ -27,10 +27,13 @@
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
+#include "audioTypes.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "delayLine.h"
 #include "framework.h"
-#include "soundmix.h"
+#include "pcmDataCache.h"
+#include "soundmix.h" // AudioSource
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -193,6 +196,8 @@ struct Source
 			monoOutput.samples[i] = sum;
 		}
 	}
+
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 #define USE_FIXEDPOINT_SAMPLING 0
@@ -543,17 +548,7 @@ struct Space
 		}
 	}
 
-#if AUDIO_USE_SSE
-	void * operator new(size_t size)
-	{
-		return _mm_malloc(size, 32);
-	}
-
-	void operator delete(void * mem)
-	{
-		_mm_free(mem);
-	}
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 #if ENABLE_MIDI || ENABLE_GAMEPAD
@@ -774,13 +769,11 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	// todo : let source audio come from audio graph instances
-	
 #if FULLSCREEN
 	framework.fullscreen = true;
 #endif
 
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 	#if ENABLE_MIDI || ENABLE_GAMEPAD
 		mouse.showCursor(false);
@@ -792,7 +785,7 @@ int main(int argc, char * argv[])
 		Assert(mutex != nullptr);
 
 		AudioVoiceManagerBasic voiceMgr;
-		voiceMgr.init(mutex, CHANNEL_COUNT, CHANNEL_COUNT);
+		voiceMgr.init(mutex, CHANNEL_COUNT);
 		voiceMgr.outputStereo = true;
 
 		AudioGraphManager_Basic audioGraphMgr(true);

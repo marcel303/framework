@@ -36,6 +36,33 @@ static SDL_mutex * s_avcodecMutex = nullptr;
 static std::atomic_int s_numVideoThreads;
 static const int kMaxVideoThreads = 64;
 
+static thread_local SDL_threadID s_mpThreadId = -1;
+
+//
+
+MediaPlayer::Context::~Context()
+{
+	if (mpTickEvent)
+	{
+		SDL_DestroyCond(mpTickEvent);
+		mpTickEvent = nullptr;
+	}
+
+	if (mpTickMutex)
+	{
+		SDL_DestroyMutex(mpTickMutex);
+		mpTickMutex = nullptr;
+	}
+	
+	if (mpSeekMutex)
+	{
+		SDL_DestroyMutex(mpSeekMutex);
+		mpSeekMutex = nullptr;
+	}
+}
+
+//
+
 static int ExecMediaPlayerThread(void * param)
 {
 	MediaPlayer::Context * context = (MediaPlayer::Context*)param;
@@ -48,7 +75,7 @@ static int ExecMediaPlayerThread(void * param)
 
 	SDL_LockMutex(context->mpTickMutex);
 
-	context->mpThreadId = SDL_GetThreadID(nullptr);
+	s_mpThreadId = SDL_GetThreadID(nullptr);
 
 	SDL_LockMutex(s_avcodecMutex);
 	{
@@ -56,15 +83,15 @@ static int ExecMediaPlayerThread(void * param)
 			context->openParams.filename,
 			context->openParams.enableAudioStream,
 			context->openParams.enableVideoStream,
-			context->openParams.outputMode);
+			context->openParams.outputMode,
+			context->openParams.desiredAudioStreamIndex,
+			context->openParams.audioOutputMode);
 	}
 	SDL_UnlockMutex(s_avcodecMutex);
 
 	while (!context->stopMpThread)
 	{
 		SDL_UnlockMutex(context->mpTickMutex);
-		
-		// todo : tick event on video or audio buffer consumption *only*
 		
 		if (context->hasBegun)
 		{
@@ -84,6 +111,8 @@ static int ExecMediaPlayerThread(void * param)
 	}
 
 	// media player thread is completely detached from the main thread at this point
+	
+	s_mpThreadId = -1;
 
 	if (context)
 	{
@@ -124,7 +153,7 @@ void MediaPlayer::Context::tick()
 
 bool MediaPlayer::Context::presentedLastFrame() const
 {
-	if (SDL_GetThreadID(nullptr) == mpThreadId)
+	if (SDL_GetThreadID(nullptr) == s_mpThreadId)
 	{
 		// todo : actually check if the frame was presented
 
@@ -177,6 +206,9 @@ void MediaPlayer::close(const bool _freeTexture)
 	
 	videoFrame = nullptr;
 	
+	audioChannelCount = -1;
+	audioSampleRate = -1;
+	
 	if (_freeTexture)
 	{
 		const int t1 = SDL_GetTicks();
@@ -227,7 +259,14 @@ void MediaPlayer::seekToStart()
 		SDL_LockMutex(context->mpSeekMutex);
 		{
 			if (context->hasBegun)
+			{
 				context->mpContext.SeekToStart();
+				
+				presentTime = 0.0;
+				audioTime = 0.0;
+				
+				SDL_CondSignal(context->mpTickEvent);
+			}
 		}
 		SDL_UnlockMutex(context->mpSeekMutex);
 	}
@@ -247,6 +286,9 @@ void MediaPlayer::seek(const double time, const bool nearest)
 				context->mpContext.SeekToTime(time, nearest, actualTime);
 				
 				presentTime = actualTime;
+				audioTime = actualTime;
+				
+				SDL_CondSignal(context->mpTickEvent);
 			}
 		}
 		SDL_UnlockMutex(context->mpSeekMutex);
@@ -263,13 +305,12 @@ bool MediaPlayer::updateVideoFrame()
 
 	Assert(context->mpContext.HasBegun());
 
-	const double time = presentTime >= 0.0 ? presentTime : context->mpContext.GetAudioTime();
+	const double time = presentTime >= 0.0 ? presentTime : 0.0;
 	
 	bool gotVideo = false;
 	context->mpContext.RequestVideo(time, &videoFrame, gotVideo);
 	
-	// fixme : there seems to be an issues with signalling .. it's possible to never awaken the media player thread again under certain conditions, so just signal it each update for now ..
-	//if (gotVideo)
+	if (gotVideo)
 	{
 		SDL_CondSignal(context->mpTickEvent);
 		
@@ -295,15 +336,13 @@ void MediaPlayer::updateTexture()
 		int sy = 0;
 		int pitch = 0;
 		
-		GLenum internalFormat = 0;
-		GLenum uploadFormat = 0;
+		GX_TEXTURE_FORMAT format = GX_UNKNOWN_FORMAT;
 		
 		if (context->openParams.outputMode == MP::kOutputMode_PlanarYUV)
 		{
 			bytes = videoFrame->getY(sx, sy, pitch);
 			
-			internalFormat = GL_R8;
-			uploadFormat = GL_RED;
+			format = GX_R8_UNORM;
 		}
 		else
 		{
@@ -316,95 +355,49 @@ void MediaPlayer::updateTexture()
 			
 			pitch = (((sx * 4) + alignment - 1) & alignmentMask) / 4;
 			
-			internalFormat = GL_RGBA8;
-			uploadFormat = GL_RGBA;
+			format = GX_RGBA8_UNORM;
 		}
 		
-		if (texture == 0 || sx != textureSx || sy != textureSy || internalFormat != textureFormat)
+		if (texture == nullptr || sx != texture->sx || sy != texture->sy || format != texture->format)
 		{
 			freeTexture();
 			
-			glGenTextures(1, &texture);
-			glBindTexture(GL_TEXTURE_2D, texture);
-		#if USE_LEGACY_OPENGL
-			const GLenum glFormat = internalFormat == GL_R8 ? GL_LUMINANCE8 : GL_RGBA8;
-			const GLenum uploadFormat = internalFormat == GL_R8 ? GL_RED : GL_RGBA;
-			const GLenum uploadType = GL_UNSIGNED_BYTE;
-			glTexImage2D(GL_TEXTURE_2D, 0, glFormat, sx, sy, 0, uploadFormat, uploadType, nullptr);
-			checkErrorGL();
-		#else
-			glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, sx, sy);
-			checkErrorGL();
+			texture = new GxTexture();
+			texture->allocate(sx, sy, format, true, true);
 			
-			if (internalFormat == GL_R8)
-			{
-				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-				checkErrorGL();
-			}
-		#endif
-			
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-			checkErrorGL();
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			checkErrorGL();
-			
-			textureSx = sx;
-			textureSy = sy;
-			textureFormat = internalFormat;
+			if (format == GX_R8_UNORM)
+				texture->setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 		}
 		
-		if (texture)
+		if (texture != nullptr)
 		{
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch);
-			checkErrorGL();
-			
-			// copy image data
-
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glTexSubImage2D(
-				GL_TEXTURE_2D,
-				0, 0, 0,
-				sx, sy,
-				uploadFormat,
-				GL_UNSIGNED_BYTE,
-				bytes);
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, 0);
-			
-			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-			checkErrorGL();
+			texture->upload(bytes, 1, pitch);
 		}
 	}
 }
 
 void MediaPlayer::freeTexture()
 {
-	if (texture != 0)
+	if (texture != nullptr)
 	{
-		glDeleteTextures(1, &texture);
-		texture = 0;
+		delete texture;
+		texture = nullptr;
 	}
 }
 
 uint32_t MediaPlayer::getTexture() const
 {
-	return texture;
+	return texture ? texture->id : 0;
 }
 
-bool MediaPlayer::getVideoProperties(int & sx, int & sy, double & duration) const
+bool MediaPlayer::getVideoProperties(int & sx, int & sy, double & duration, double & sampleAspectRatio) const
 {
 	if (context->hasBegun)
 	{
 		sx = context->mpContext.GetVideoWidth();
 		sy = context->mpContext.GetVideoHeight();
 		duration = context->mpContext.GetDuration();
+		sampleAspectRatio = context->mpContext.GetVideoSampleAspectRatio();
 		
 		return true;
 	}
@@ -451,11 +444,61 @@ bool MediaPlayer::getAudioProperties(int & channelCount, int & sampleRate) const
 
 int MediaPlayer::Provide(int numSamples, AudioSample* __restrict buffer)
 {
+	if (!context->hasBegun)
+	{
+		return 0;
+	}
+	
 	bool gotAudio = false;
 
-	context->mpContext.RequestAudio((int16_t*)buffer, numSamples, gotAudio);
+	double audioTime = this->audioTime;
+	
+	const int numChannels = context->mpContext.GetAudioChannelCount();
+	
+	int16_t * tempBuffer = (int16_t*)alloca(numSamples * numChannels * sizeof(int16_t));
+	
+	if (context->mpContext.RequestAudio(tempBuffer, numSamples, gotAudio, audioTime))
+	{
+		this->audioTime = audioTime;
 
-	SDL_CondSignal(context->mpTickEvent);
+		SDL_CondSignal(context->mpTickEvent);
+	}
+	
+	if (numChannels == 0)
+	{
+		memset(buffer, 0, numSamples * sizeof(AudioSample));
+	}
+	else if (numChannels == 1)
+	{
+		for (int i = 0; i < numSamples; ++i)
+		{
+			buffer[i].channel[0] = tempBuffer[i];
+			buffer[i].channel[1] = tempBuffer[i];
+		}
+	}
+	else if (numChannels == 2)
+	{
+		for (int i = 0; i < numSamples; ++i)
+		{
+			buffer[i].channel[0] = tempBuffer[i * 2 + 0];
+			buffer[i].channel[1] = tempBuffer[i * 2 + 1];
+		}
+	}
+	else
+	{
+		// todo : handle multi-channel the correct way and apply the multi-channel to stereo mixing matrix (with a little help from avcodec)
+		
+		for (int i = 0; i < numSamples; ++i)
+		{
+			int sum = 0;
+			
+			for (int c = 0; c < numChannels; ++c)
+				sum += tempBuffer[i * numChannels + c];
+			
+			buffer[i].channel[0] = sum;
+			buffer[i].channel[1] = sum;
+		}
+	}
 
 	return numSamples;
 }
@@ -508,10 +551,10 @@ void MediaPlayer::stopMediaPlayerThread()
 		SDL_LockMutex(context->mpTickMutex);
 		{
 			context->stopMpThread = true;
+			
+			SDL_CondSignal(context->mpTickEvent);
 		}
 		SDL_UnlockMutex(context->mpTickMutex);
-		
-		SDL_CondSignal(context->mpTickEvent);
 
 		context = nullptr;
 		mpThread = nullptr;

@@ -1,8 +1,11 @@
+#include <GL/glew.h> // GL_PROGRAM_POINT_SIZE. todo : remove ?
 #include "Calc.h"
 #include "framework.h"
 #include "Timer.h"
 #include "video.h"
+#include <cmath>
 #include <list>
+#include <math.h>
 
 #include <array>
 
@@ -99,7 +102,7 @@ struct ParticleSystem
 		glEnable(GL_PROGRAM_POINT_SIZE);
 		checkErrorGL();
 
-		gxBegin(GL_POINTS);
+		gxBegin(GX_POINTS);
 		{
 			for (int i = 0; i < kMaxParticles; ++i)
 			{
@@ -107,7 +110,7 @@ struct ParticleSystem
 				{
 					const float l = lt[i] * lr[i];
 
-					const float size = std::sin(l * Calc::mPI) * ((6.f - std::cos(l * Calc::mPI * 7.f)) / 5.f) * kMaxSize;
+					const float size = sinf(l * Calc::mPI) * ((6.f - cosf(l * Calc::mPI * 7.f)) / 5.f) * kMaxSize;
 
 					gxTexCoord2f(size, 0.f);
 					gxVertex3f(x[i], y[i], z[i]);
@@ -175,10 +178,9 @@ struct VectorMemory
 
 	void draw() const
 	{
-		glEnable(GL_LINE_SMOOTH);
-		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+		pushLineSmooth(true);
 		
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			for (int i = 0; i < kMaxLines; ++i)
 			{
@@ -197,7 +199,7 @@ struct VectorMemory
 		}
 		gxEnd();
 		
-		glDisable(GL_LINE_SMOOTH);
+		popLineSmooth();
 	}
 };
 
@@ -206,7 +208,7 @@ static void drawGrid(const int numQuadsX, const int numQuadsY)
 	const float stepX = 1.f / (numQuadsX + 1);
 	const float stepY = 1.f / (numQuadsY + 1);
 
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int x = 0; x < numQuadsX; ++x)
 		{
@@ -227,7 +229,7 @@ static void drawGrid(const int numQuadsX, const int numQuadsY)
 	gxEnd();
 }
 
-static void drawExtrusion(const int numX, const int numY, const GLuint texture)
+static void drawExtrusion(const int numX, const int numY, const GxTextureId texture)
 {
 	const float stepX = 1.f / (numX + 1);
 	const float stepY = 1.f / (numY + 1);
@@ -235,8 +237,8 @@ static void drawExtrusion(const int numX, const int numY, const GLuint texture)
 	const float sizeY = stepY * .45f;
 	
 	const float time = framework.time * .2f;
-	const Vec3 lightPosition = Vec3(std::sinf(time * 1.234f) * 200.f, 200.f + std::sinf(time * 2.345f) * 200.f, std::sinf(time * 3.456f) * 50.f - 250.f);
-	const Vec3 lightDirection = Vec3(std::sinf(framework.time), std::cosf(framework.time), -2.f).CalcNormalized();
+	const Vec3 lightPosition = Vec3(sinf(time * 1.234f) * 200.f, 200.f + sinf(time * 2.345f) * 200.f, sinf(time * 3.456f) * 50.f - 250.f);
+	const Vec3 lightDirection = Vec3(sinf(framework.time), cosf(framework.time), -2.f).CalcNormalized();
 
 	gxPushMatrix();
 	{
@@ -258,13 +260,14 @@ static void drawExtrusion(const int numX, const int numY, const GLuint texture)
 	gxPopMatrix();
 
 	Shader shader("extrusion");
+	setShader(shader);
 	shader.setImmediate("mode", 0);
 	shader.setImmediate("lightPosition", lightPosition[0], lightPosition[1], lightPosition[2]);
 	shader.setImmediate("lightDirection", lightDirection[0], lightDirection[1], lightDirection[2]);
 	shader.setTexture("source", 0, texture, true, true);
 	setShader(shader);
 	{
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			for (int x = 0; x < numX; ++x)
 			{
@@ -294,10 +297,10 @@ static void drawExtrusion(const int numX, const int numY, const GLuint texture)
 	}
 	clearShader();
 
-	shader.setImmediate("mode", 1);
 	setShader(shader);
+	shader.setImmediate("mode", 1);
 	{
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			for (int x = 0; x < numX; ++x)
 			{
@@ -357,53 +360,18 @@ static void drawExtrusion(const int numX, const int numY, const GLuint texture)
 
 struct Camera
 {
-	Vec3 position;
-	Vec3 rotation;
+	Camera3d controllerCamera;
 
 	Camera()
-		: position()
-		, rotation()
+		: controllerCamera()
 	{
+		controllerCamera.maxForwardSpeed = 200.f;
+		controllerCamera.maxStrafeSpeed = 200.f;
 	}
 
 	void tick(const float dt)
 	{
-		rotation[0] -= mouse.dy / 100.f;
-		rotation[1] -= mouse.dx / 100.f;
-
-		if (gamepad[0].isConnected)
-		{
-			rotation[0] -= gamepad[0].getAnalog(1, ANALOG_Y) * dt;
-			rotation[1] -= gamepad[0].getAnalog(1, ANALOG_X) * dt;
-		}
-
-		Mat4x4 mat;
-
-		calculateTransform(0.f, 0.f, 0.f, mat);
-
-		const Vec3 xAxis(mat(0, 0), mat(0, 1), mat(0, 2));
-		const Vec3 zAxis(mat(2, 0), mat(2, 1), mat(2, 2));
-
-		Vec3 direction;
-
-		if (keyboard.isDown(SDLK_UP))
-			direction += zAxis;
-		if (keyboard.isDown(SDLK_DOWN))
-			direction -= zAxis;
-		if (keyboard.isDown(SDLK_LEFT))
-			direction -= xAxis;
-		if (keyboard.isDown(SDLK_RIGHT))
-			direction += xAxis;
-
-		if (gamepad[0].isConnected)
-		{
-			direction -= zAxis * gamepad[0].getAnalog(0, ANALOG_Y);
-			direction += xAxis * gamepad[0].getAnalog(0, ANALOG_X);
-		}
-
-		const float speed = 200.f;
-
-		position += direction * speed * dt;
+		controllerCamera.tick(dt, true);
 	}
 
 	void calculateTransform(const float eyeOffset, const float eyeX, const float eyeY, Mat4x4 & matrix) const
@@ -419,7 +387,12 @@ struct Camera
 		// where L is the left eye, R is the right eye and O is where the head rotates around the axis
 		// in real life, the head and eyes rotate a little more complicated..
 
-		matrix = Mat4x4(true).Translate(position).Translate(eyeX, eyeY, 0.f).RotateY(rotation[1]).RotateX(rotation[0]).Translate(eyeOffset, 0.f, 0.f).Scale(1, -1, 1);
+		matrix = Mat4x4(true)
+			.Translate(controllerCamera.position)
+			.Translate(eyeX, eyeY, 0.f)
+			.RotateY(controllerCamera.yaw * M_PI / 180.f)
+			.RotateX(controllerCamera.pitch * M_PI / 180.f)
+			.Translate(eyeOffset, 0.f, 0.f).Scale(1, -1, 1);
 	}
 };
 
@@ -444,7 +417,7 @@ struct Scene
 		, vm()
 		, mp(nullptr)
 	{
-		camera.position = Vec3(0.f, 170.f, -180.f);
+		camera.controllerCamera.position = Vec3(0.f, 170.f, -180.f);
 
 		for (int x = -2; x <= +2; ++x)
 		{
@@ -578,8 +551,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 		surface->clear(0, 0, 0, 0);
 		surface->clearDepth(1.f);
 
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
+		pushDepthTest(true, DEPTH_LESS);
 
 		Mat4x4 matP;
 		matP.MakePerspectiveLH(Calc::DegToRad(60.f), surface->getHeight() / float(surface->getWidth()), .1f, 10000.f);
@@ -588,22 +560,18 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 		camera.calculateTransform(68.f/10.f/2.f * eyeOffset, eyeX, eyeY, matC);
 		matC = matC.Invert();
 
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
 		{
 			gxLoadMatrixf(matP.m_v);
 			gxMultMatrixf(matC.m_v);
 
-			gxMatrixMode(GL_MODELVIEW);
+			gxMatrixMode(GX_MODELVIEW);
 			gxPushMatrix();
 			{
 				gxLoadIdentity();
 
-				if (keyboard.isDown(SDLK_l))
-				{
-					glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-					checkErrorGL();
-				}
+				pushWireframe(keyboard.isDown(SDLK_l));
 
 				for (const Model * model : models)
 				{
@@ -625,7 +593,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 							pushBlend(BLEND_OPAQUE);
 							setColor(colorWhite);
 							gxSetTexture(getTexture("tile2.jpg"));
-							gxBegin(GL_QUADS);
+							gxBegin(GX_QUADS);
 							{
 								const float s = 70.f;
 
@@ -642,8 +610,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 					gxPopMatrix();
 				}
 
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-				checkErrorGL();
+				popWireframe();
 
 				//
 
@@ -662,8 +629,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 
 							const bool wireMode = (i == 0);
 
-							glPolygonMode(GL_FRONT_AND_BACK, wireMode ? GL_LINE : GL_FILL);
-							checkErrorGL();
+							pushWireframe(wireMode);
 
 							pushBlend(BLEND_OPAQUE);
 							Shader shader("waves");
@@ -678,8 +644,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 							clearShader();
 							popBlend();
 
-							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-							checkErrorGL();
+							popWireframe();
 						}
 						gxPopMatrix();
 					}
@@ -694,15 +659,15 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 							const float scaleZ = 50.f;
 							
 							gxTranslatef(0.f, 250.f, -400.f);
-							gxRotatef(std::sinf(framework.time * .123f) * 30.f, 0.f, 1.f, 0.f);
+							gxRotatef(sinf(framework.time * .123f) * 30.f, 0.f, 1.f, 0.f);
 							gxScalef(scaleX, scaleY, scaleZ);
 
-							const GLuint texture = mp->getTexture();
+							const GxTextureId texture = mp->getTexture();
 
 							if (texture != 0)
 							{
-								const int numX = int(std::round(scaleX / 60.f));
-								const int numY = int(std::round(scaleY / 60.f));
+								const int numX = int(roundf(scaleX / 60.f));
+								const int numY = int(roundf(scaleY / 60.f));
 								
 								pushBlend(BLEND_OPAQUE);
 								drawExtrusion(numX, numY, texture);
@@ -715,7 +680,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 					//
 
 					{
-						glDepthMask(false);
+						pushDepthWrite(false);
 						
 						setColor(127, 127, 127);
 						Shader shader("particles");
@@ -728,30 +693,30 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 						}
 						clearShader();
 
-						glDepthMask(true);
+						popDepthWrite();
 					}
 
 					//
 
 					{
-						glDepthMask(false);
+						pushDepthWrite(false);
 
 						pushBlend(BLEND_ADD);
 						setColor(127, 127, 127);
 						vm.draw();
 						popBlend();
 
-						glDepthMask(true);
+						popDepthWrite();
 					}
 				}
 			}
-			gxMatrixMode(GL_MODELVIEW);
+			gxMatrixMode(GX_MODELVIEW);
 			gxPopMatrix();
 		}
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPopMatrix();
 
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
 	}
 	popSurface();
 
@@ -767,6 +732,10 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 #if !defined(DEBUG) && 1
 	framework.fullscreen = true;
 	framework.exclusiveFullscreen = false;
@@ -780,7 +749,7 @@ int main(int argc, char * argv[])
 
 	framework.enableDepthBuffer = true;
 
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 	#if ENABLE_VIDEOIN
 		videoInput * VI = new videoInput();
@@ -821,9 +790,7 @@ int main(int argc, char * argv[])
 			const float dt = framework.timeStep;
 
 			scene->tick(dt);
-
-			// todo : colour switch background or line style after x amount of time
-
+			
 			framework.beginDraw(0, 0, 0, 0);
 			{
 				const float eyeX = 0.f;
@@ -840,14 +807,15 @@ int main(int argc, char * argv[])
 					pushSurface(surface);
 					{
 						Shader shader("anaglyph.ps", "effect.vs", "anaglyph.ps");
-						shader.setTexture("colormapL", 0, colormapL, true, false);
-						shader.setTexture("colormapR", 1, colormapR, true, false);
-						shader.setImmediate("mode",
-							keyboard.isDown(SDLK_1) ? 1 :
-							keyboard.isDown(SDLK_2) ? 2 :
-							0);
 						setShader(shader);
 						{
+							shader.setTexture("colormapL", 0, colormapL, true, false);
+							shader.setTexture("colormapR", 1, colormapR, true, false);
+							shader.setImmediate("mode",
+								keyboard.isDown(SDLK_1) ? 1 :
+								keyboard.isDown(SDLK_2) ? 2 :
+								0);
+								
 							pushBlend(BLEND_OPAQUE);
 							drawRect(0.f, 0.f, GFX_SX, GFX_SY);
 							popBlend();

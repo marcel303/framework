@@ -1,0 +1,3 @@
+library xmm shared
+	scan_files *.* path ../xmm group xmm traverse
+	header_path ../xmm expose

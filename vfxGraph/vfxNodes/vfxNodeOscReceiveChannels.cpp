@@ -32,7 +32,11 @@
 
 //
 
-#include "editor_oscPathList.h"
+#include "editors/editor_oscPathList.h"
+
+//
+
+extern OscEndpointMgr g_oscEndpointMgr;
 
 //
 
@@ -42,7 +46,7 @@ VFX_NODE_TYPE(VfxNodeOscReceiveChannels)
 	
 	resourceTypeName = "osc.pathList";
 	
-	createResourceEditor = []() -> GraphEdit_ResourceEditorBase*
+	createResourceEditor = [](void * data) -> GraphEdit_ResourceEditorBase*
 	{
 		return new ResourceEditor_OscPathList();
 	};

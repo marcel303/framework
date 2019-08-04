@@ -1,5 +1,6 @@
 #include "audio.h"
 #include "audioTypes.h"
+#include "audioThreading.h"
 #include "framework.h"
 #include "objects/paobject.h"
 #include "Path.h"
@@ -18,6 +19,16 @@ static int CHANNEL_COUNT = 0;
 
 #define PLAYER_WAIT_MIN .5f
 #define PLAYER_WAIT_MAX 1.f
+
+#if defined(DEBUG)
+	#define ENABLE_SHORTCUTS 1
+	#define ENABLE_LISTEDIT 1
+	#define ENABLE_LISTVIEW 1
+#else
+	#define ENABLE_SHORTCUTS 0
+	#define ENABLE_LISTEDIT 0
+	#define ENABLE_LISTVIEW 0
+#endif
 
 const int GFX_SX = 640;
 const int GFX_SY = 480;
@@ -81,6 +92,7 @@ struct MyPortAudioHandler : PortAudioHandler
 		const void * inputBuffer,
 		const int numInputChannels,
 		void * outputBuffer,
+		const int numOutputChannels,
 		const int framesPerBuffer) override
 	{
 		s_mutex.lock();
@@ -206,7 +218,7 @@ static void handleError(const char * format, ...)
 	#include <portaudio/portaudio.h>
 #endif
 
-#include "../../../libparticle/ui.h"
+#include "ui.h"
 
 static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inputDeviceIndex, int & outputDeviceIndex, int & numOutputChannels)
 {
@@ -394,9 +406,13 @@ static void loadRecordings()
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
 	changeDirectory(SDL_GetBasePath());
+#endif
 	
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 	{
 		handleError("Failed to initialize system");
 		return -1;
@@ -450,7 +466,7 @@ int main(int argc, char * argv[])
 	
 	loadRecordings();
 	
-	auto exampleFilenames = listFiles(".", false);
+	auto exampleFilenames = listFiles("examples", false);
 	
 	for (auto & filename : exampleFilenames)
 	{
@@ -584,7 +600,7 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-	#if 1
+	#if ENABLE_SHORTCUTS
 		if (keyboard.wentDown(SDLK_r))
 		{
 			if (s_record == false)
@@ -605,7 +621,8 @@ int main(int argc, char * argv[])
 			
 			if (s_state == kState_Idle)
 			{
-				drawText(GFX_SX/2, GFX_SY/3, 16, 0, 0, "Hello");
+				drawText(GFX_SX/2, GFX_SY*1/3, 16, 0, 0, "Hello");
+				drawText(GFX_SX/2, GFX_SY*2/3, 16, 0, 0, "~ Press SPACE ~");
 			}
 			else if (s_state == kState_Instruction)
 			{
@@ -625,7 +642,11 @@ int main(int argc, char * argv[])
 				drawText(GFX_SX/2, GFX_SY/2 + 40, 16, 0, 0, "Recording in progress..");
 			}
 			
-		#if 1
+		#if ENABLE_SHORTCUTS
+			drawText(10, GFX_SY - 10, 16, +1, -1, "Shortcut: Press R to record");
+		#endif
+			
+		#if ENABLE_LISTEDIT
 			{
 				const int ox = 140;
 				const int oy = 140;
@@ -721,7 +742,7 @@ int main(int argc, char * argv[])
 			}
 		#endif
 		
-		#if 0
+		#if ENABLE_LISTVIEW
 			{
 				int index = 0;
 				

@@ -29,7 +29,6 @@
 #include "MemAlloc.h"
 #include "vfxNodeSpectrum2D.h"
 #include <cmath>
-#include <GL/glew.h> // GL_RED
 
 VFX_ENUM_TYPE(spectrum2dImageChannel)
 {
@@ -98,7 +97,7 @@ void VfxNodeSpectrum2D::tick(const float dt)
 	{
 		freeTextures();
 	}
-	else if (texture1.isChanged(transformSx, transformSy, GL_R32F))
+	else if (texture1.isChanged(transformSx, transformSy, GX_R32_FLOAT))
 	{
 		if (image->sx == 0 || image->sy == 0)
 			freeTextures();
@@ -183,12 +182,12 @@ void VfxNodeSpectrum2D::tick(const float dt)
 		
 		// combined channel mode requires texture format change
 		
-		texture1.upload(dreal, 4, transformSx, GL_RED, GL_FLOAT);
+		texture1.upload(dreal, 4, transformSx);
 		
 		if (outputMode == kOutputMode_Channel1And2)
-			texture2.upload(dimag, 4, transformSx, GL_RED, GL_FLOAT);
+			texture2.upload(dimag, 4, transformSx);
 		else
-			texture2.upload(dreal, 4, transformSx, GL_RED, GL_FLOAT);
+			texture2.upload(dreal, 4, transformSx);
 		
 		if (outputMode == kOutputMode_Channel1And2)
 		{
@@ -214,11 +213,11 @@ void VfxNodeSpectrum2D::allocateTextures(const int sx, const int sy)
 {
 	freeTextures();
 	
-	texture1.allocate(sx, sy, GL_R32F, true, true);
-	texture2.allocate(sx, sy, GL_R32F, true, true);
+	texture1.allocate(sx, sy, GX_R32_FLOAT, true, true);
+	texture2.allocate(sx, sy, GX_R32_FLOAT, true, true);
 	
-	texture1.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
-	texture2.setSwizzle(GL_RED, GL_RED, GL_RED, GL_ONE);
+	texture1.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
+	texture2.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
 	dreal = (float*)MemAlloc(sx * sy * sizeof(float), 16);
 	dimag = (float*)MemAlloc(sx * sy * sizeof(float), 16);

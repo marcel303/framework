@@ -3,7 +3,8 @@
 #include "effect.h"
 #include "framework.h"
 #include "Parse.h"
-#include "scene.h" 
+#include "scene.h"
+#include "StringEx.h"
 #include "tinyxml2.h"
 #include "types.h"
 #include "xml.h"
@@ -588,10 +589,10 @@ void SceneLayer::draw()
 				break;
 			case kBlendMode_AlphaTest:
 				setBlend(BLEND_OPAQUE);
+				setShader(alphaTestShader);
 				alphaTestShader.setImmediate("alphaRef", 0.f);
 				alphaTestShader.setTexture("srcColormap", 0, m_surface->getTexture(), false, true);
 				alphaTestShader.setTexture("dstColormap", 0, g_currentSurface->getTexture(), false, true);
-				setShader(alphaTestShader);
 				checkErrorGL();
 				break;
 			case kBlendMode_Multiply:
@@ -1055,9 +1056,9 @@ void Scene::tick(const float dt)
 				power /= (end - begin + 1);
 			}
 
-			const bool wasBelow = b.lastValue < b.treshold;
+			const bool wasBelow = b.lastValue < b.threshold;
 			b.lastValue = power;
-			const bool isBelow = b.lastValue < b.treshold;
+			const bool isBelow = b.lastValue < b.threshold;
 
 			if (wasBelow && !isBelow)
 			{
@@ -1077,7 +1078,7 @@ void Scene::tick(const float dt)
 
 	for (auto & map : m_midiMaps)
 	{
-		const bool g_live = false; // todo : add a global live variable
+		const bool g_live = false; // todo-vfxpro : add a global live variable
 
 		if (g_live && !map.liveEnabled)
 			continue;
@@ -1430,7 +1431,7 @@ bool Scene::load(const char * filename)
 					const bool enabled = boolAttrib(xmlBucket, "enabled", true);
 					const int id = intAttrib(xmlBucket, "id", -1);
 					const std::string range = stringAttrib(xmlBucket, "range", "");
-					const float treshold = floatAttrib(xmlBucket, "treshold", .5f);
+					const float threshold = floatAttrib(xmlBucket, "treshold", .5f);
 					const std::string onUp = stringAttrib(xmlBucket, "on_up", "");
 					const std::string onDown = stringAttrib(xmlBucket, "on_down", "");
 					
@@ -1456,7 +1457,7 @@ bool Scene::load(const char * filename)
 								b.isActive = true;
 								b.rangeBegin = Parse::Int32(rangeElems[0]);
 								b.rangeEnd = Parse::Int32(rangeElems[1]);
-								b.treshold = treshold;
+								b.threshold = threshold;
 								b.onUp = onUp;
 								b.onDown = onDown;
 							}

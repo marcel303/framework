@@ -41,24 +41,13 @@ static void handleFileChange(const std::string & filename)
 
 	if (extension == "vs")
 	{
-		for (auto & i : g_shaderCache.m_map)
-		{
-			ShaderCacheElem & elem = i.second;
-
-			if (elem.vs == filename)
-				elem.reload();
-		}
+		g_shaderCache.handleSourceChanged(filename.c_str());
 	}
 	else if (extension == "ps")
 	{
-		for (auto & i : g_shaderCache.m_map)
-		{
-			ShaderCacheElem & elem = i.second;
-
-			if (elem.ps == filename)
-				elem.reload();
-		}
+		g_shaderCache.handleSourceChanged(filename.c_str());
 	}
+#if ENABLE_OPENGL // todo : enable for vs and ps for metal
 	else if (extension == "cs")
 	{
 		for (auto & i : g_computeShaderCache.m_map)
@@ -69,6 +58,7 @@ static void handleFileChange(const std::string & filename)
 				elem.reload();
 		}
 	}
+#endif
 	else if (extension == "inc")
 	{
 		clearCaches(CACHE_SHADER);
@@ -84,6 +74,8 @@ static void handleFileChange(const std::string & filename)
 	{
 		framework.realTimeEditCallback(filename);
 	}
+	
+	framework.changedFiles.push_back(filename);
 }
 
 #if 1
@@ -114,8 +106,15 @@ static void fillFileInfos()
 				fi.filename = file;
 				fi.time = s.st_mtime;
 
-				if (String::EndsWith(file, ".vs") || String::EndsWith(file, ".ps") || String::EndsWith(file, ".cs") || String::EndsWith(file, ".xml") || String::EndsWith(file, ".png") || String::EndsWith(file, ".jpg"))
+			#if 0 // note : we want to track all files now, to ensure Framework::fileHasChanged works as expected and not just for a subset of files
+				if (String::EndsWith(file, ".vs") || String::EndsWith(file, ".ps") || String::EndsWith(file, ".cs") || String::EndsWith(file, ".xml") || String::EndsWith(file, ".txt") ||
+					String::EndsWith(file, ".png") || String::EndsWith(file, ".jpg"))
+				{
 					s_fileInfos.push_back(fi);
+				}
+			#else
+				s_fileInfos.push_back(fi);
+			#endif
 			}
 
 			fclose(f);

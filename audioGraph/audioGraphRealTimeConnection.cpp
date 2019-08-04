@@ -39,7 +39,6 @@
 //
 
 #include "audioNodeBase.h"
-#include "soundmix.h"
 #include "Timer.h"
 
 AudioValueHistory::AudioValueHistory()
@@ -156,14 +155,13 @@ void AudioRealTimeConnection::updateAudioValues()
 				
 				if (input->isConnected() && input->type == kAudioPlugType_FloatVec)
 				{
-					Assert(g_currentAudioGraph == nullptr);
-					g_currentAudioGraph = audioGraph;
+					setCurrentAudioGraphTraversalId(node->lastTickTraversalId);
 					{
 						const AudioFloat & value = input->getAudioFloat();
 						
 						audioValueHistory.provide(value);
 					}
-					g_currentAudioGraph = nullptr;
+					clearCurrentAudioGraphTraversalId();
 				}
 			}
 			else if (socketRef.dstSocketIndex != -1)
@@ -187,14 +185,13 @@ void AudioRealTimeConnection::updateAudioValues()
 				
 				if (output->isConnected() && output->type == kAudioPlugType_FloatVec)
 				{
-					Assert(g_currentAudioGraph == nullptr);
-					g_currentAudioGraph = audioGraph;
+					setCurrentAudioGraphTraversalId(node->lastTickTraversalId);
 					{
 						const AudioFloat & value = output->getAudioFloat();
 						
 						audioValueHistory.provide(value);
 					}
-					g_currentAudioGraph = nullptr;
+					clearCurrentAudioGraphTraversalId();
 				}
 			}
 			
@@ -302,6 +299,8 @@ void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)
 	auto oldAudioGraph = g_currentAudioGraph;
 	g_currentAudioGraph = audioGraph;
 	{
+		node->shut();
+		
 		delete node;
 		node = nullptr;
 	}
@@ -400,114 +399,78 @@ void AudioRealTimeConnection::linkRemove(const GraphLinkId linkId, const GraphNo
 		return;
 	
 	auto srcNodeItr = audioGraph->nodes.find(srcNodeId);
+	auto dstNodeItr = audioGraph->nodes.find(dstNodeId);
 	
-	Assert(srcNodeItr != audioGraph->nodes.end());
-	if (srcNodeItr == audioGraph->nodes.end())
+	Assert(srcNodeItr != audioGraph->nodes.end() && dstNodeItr != audioGraph->nodes.end());
+	if (srcNodeItr == audioGraph->nodes.end() || dstNodeItr == audioGraph->nodes.end())
+	{
+		if (srcNodeItr == audioGraph->nodes.end())
+			LOG_ERR("source node doesn't exist", 0);
+		if (dstNodeItr == audioGraph->nodes.end())
+			LOG_ERR("destination node doesn't exist", 0);
+		
 		return;
+	}
 	
 	auto srcNode = srcNodeItr->second;
-	
-	auto input = srcNode->tryGetInput(srcSocketIndex);
-	
-	Assert(input != nullptr);
-	if (input == nullptr)
-		return;
+	auto dstNode = dstNodeItr->second;
 	
 	AUDIO_SCOPE;
-	
-	// fixme : output mem is nullptr for trigger types. change to this ptr ?
-	Assert(input->isConnected());
-	
-	if (input->type == kAudioPlugType_FloatVec)
-	{
-		auto dstNodeItr = audioGraph->nodes.find(dstNodeId);
-		
-		Assert(dstNodeItr != audioGraph->nodes.end());
-		if (dstNodeItr == audioGraph->nodes.end())
-			return;
-		
-		auto dstNode = dstNodeItr->second;
-		
-		auto output = dstNode->tryGetOutput(dstSocketIndex);
-		
-		Assert(output != nullptr);
-		if (output == nullptr)
-			return;
-		
-		bool removed = false;
-		for (auto elemItr = input->floatArray.elems.begin(); elemItr != input->floatArray.elems.end(); )
-		{
-			if (elemItr->audioFloat == output->mem)
-			{
-				elemItr = input->floatArray.elems.erase(elemItr);
-				removed = true;
-				break;
-			}
-			
-			++elemItr;
-		}
-		Assert(removed);
-	}
-	else
-	{
-		input->disconnect();
-	}
 	
 	{
 		// attempt to remove dst node from predeps
 		
-		auto dstNodeItr = audioGraph->nodes.find(dstNodeId);
+		bool foundPredep = false;
 		
-		Assert(dstNodeItr != audioGraph->nodes.end());
-		if (dstNodeItr != audioGraph->nodes.end())
+		for (auto i = srcNode->predeps.begin(); i != srcNode->predeps.end(); ++i)
 		{
-			auto dstNode = dstNodeItr->second;
+			AudioNodeBase * audioNode = *i;
 			
-			bool foundPredep = false;
-			
-			for (auto i = srcNode->predeps.begin(); i != srcNode->predeps.end(); ++i)
+			if (audioNode == dstNode)
 			{
-				AudioNodeBase * audioNode = *i;
-				
-				if (audioNode == dstNode)
-				{
-					srcNode->predeps.erase(i);
-					foundPredep = true;
-					break;
-				}
+				srcNode->predeps.erase(i);
+				foundPredep = true;
+				break;
 			}
-			
-			Assert(foundPredep);
+		}
+		
+		Assert(foundPredep);
+	}
+	
+	{
+		auto input = srcNode->tryGetInput(srcSocketIndex);
+		auto output = dstNode->tryGetOutput(dstSocketIndex);
+		
+		Assert(input != nullptr && input->isConnected());
+		Assert(output != nullptr);
+		
+		if (input != nullptr && output != nullptr)
+		{
+			input->disconnect(output->mem);
 		}
 	}
 	
 	// if this is a link hooked up to a trigger, remove the TriggerTarget from dstNode
 	
-	if (input->type == kAudioPlugType_Trigger)
+	auto input = srcNode->tryGetInput(srcSocketIndex);
+	
+	if (input != nullptr && input->type == kAudioPlugType_Trigger)
 	{
-		auto dstNodeItr = audioGraph->nodes.find(dstNodeId);
+		bool foundTriggerTarget = false;
 		
-		Assert(dstNodeItr != audioGraph->nodes.end());
-		if (dstNodeItr != audioGraph->nodes.end())
+		for (auto triggerTargetItr = dstNode->triggerTargets.begin(); triggerTargetItr != dstNode->triggerTargets.end(); ++triggerTargetItr)
 		{
-			auto dstNode = dstNodeItr->second;
+			auto & triggerTarget = *triggerTargetItr;
 			
-			bool foundTriggerTarget = false;
-			
-			for (auto triggerTargetItr = dstNode->triggerTargets.begin(); triggerTargetItr != dstNode->triggerTargets.end(); ++triggerTargetItr)
+			if (triggerTarget.srcNode == srcNode && triggerTarget.srcSocketIndex == srcSocketIndex)
 			{
-				auto & triggerTarget = *triggerTargetItr;
-				
-				if (triggerTarget.srcNode == srcNode && triggerTarget.srcSocketIndex == srcSocketIndex)
-				{
-					dstNode->triggerTargets.erase(triggerTargetItr);
-					foundTriggerTarget = true;
-					break;
-				}
+				dstNode->triggerTargets.erase(triggerTargetItr);
+				foundTriggerTarget = true;
+				break;
 			}
-			
-			Assert(foundTriggerTarget);
 		}
+		
+		Assert(foundTriggerTarget);
 	}
 }
 
@@ -562,15 +525,8 @@ bool AudioRealTimeConnection::setPlugValue(AudioGraph * audioGraph, AudioPlug * 
 		return false;
 		
 	case kAudioPlugType_FloatVec:
-		{
-			Assert(g_currentAudioGraph == nullptr);
-			g_currentAudioGraph = audioGraph;
-			{
-				plug->getRwAudioFloat().setScalar(Parse::Float(value));
-			}
-			g_currentAudioGraph = nullptr;
-			return true;
-		}
+		plug->getRwAudioFloat().setScalar(Parse::Float(value));
+		return true;
 
 	case kAudioPlugType_Trigger:
 		return false;
@@ -602,12 +558,11 @@ bool AudioRealTimeConnection::getPlugValue(AudioGraph * audioGraph, AudioPlug * 
 	case kAudioPlugType_PcmData:
 		return false;
 	case kAudioPlugType_FloatVec:
-		Assert(g_currentAudioGraph == nullptr);
-		g_currentAudioGraph = audioGraph;
+		setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
 		{
 			value = String::FormatC("%f", plug->getAudioFloat().getScalar());
 		}
-		g_currentAudioGraph = nullptr;
+		clearCurrentAudioGraphTraversalId();
 		return true;
 	case kAudioPlugType_Trigger:
 		return false;
@@ -644,22 +599,14 @@ void AudioRealTimeConnection::setSrcSocketValue(const GraphNodeId nodeId, const 
 	
 	AUDIO_SCOPE;
 	
-	if (input->isConnected())
+	if (input->isConnected() && input->immediateMem != nullptr && input->immediateMem == input->mem)
 	{
-		// fixme
-		
 		setPlugValue(audioGraph, input, value);
 	}
 	else
 	{
 		audioGraph->connectToInputLiteral(*input, value);
 	}
-	
-// fixme : keep this code or is it a hack ?
-	g_currentAudioGraph = audioGraph;
-// note : needed to refresh/reload JsusFx scripts
-	node->tick(0.f);
-	g_currentAudioGraph = nullptr;
 }
 
 bool AudioRealTimeConnection::getSrcSocketValue(const GraphNodeId nodeId, const int srcSocketIndex, const std::string & srcSocketName, std::string & value)
@@ -778,27 +725,17 @@ void AudioRealTimeConnection::clearSrcSocketValue(const GraphNodeId nodeId, cons
 	
 	if (input->isConnected())
 	{
-		// check if this link is connected to a literal value
+		AUDIO_SCOPE;
 		
-		bool isImmediate = false;
-		
-		for (auto & i : audioGraph->valuesToFree)
+		if (input->mem == input->immediateMem)
 		{
-			if (i.mem == input->mem)
-				isImmediate = true;
-				
-			for (auto & elem : input->floatArray.elems)
-				if (i.mem == elem.audioFloat)
-					isImmediate = true;
-			if (i.mem == input->floatArray.immediateValue)
-				isImmediate = true;
-		}
-		
-		if (isImmediate)
-		{
-			AUDIO_SCOPE;
+			input->immediateMem = nullptr;
 			
 			input->disconnect();
+		}
+		else
+		{
+			input->immediateMem = nullptr;
 		}
 	}
 }
@@ -842,9 +779,26 @@ bool AudioRealTimeConnection::getSrcSocketChannelData(const GraphNodeId nodeId, 
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
 		if (history.isValid)
+		{
 			channels.addChannel(history.samples, history.kNumSamples, true);
+			
+			return true;
+		}
+		else
+		{
+			setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
+			const AudioFloat & value = input->getAudioFloat();
+			clearCurrentAudioGraphTraversalId();
+			
+			if (value.isScalar)
+				channels.addChannel(value.samples, 1, true);
+			else
+				channels.addChannel(value.samples, AUDIO_UPDATE_SIZE, true);
+			
+			return true;
+		}
 		
-		return history.isValid;
+		return false;
 	}
 	else
 	{
@@ -887,9 +841,26 @@ bool AudioRealTimeConnection::getDstSocketChannelData(const GraphNodeId nodeId, 
 		history.lastUpdateTime = g_TimerRT.TimeUS_get();
 		
 		if (history.isValid)
+		{
 			channels.addChannel(history.samples, history.kNumSamples, true);
+			
+			return true;
+		}
+		else
+		{
+			setCurrentAudioGraphTraversalId(audioGraph->currentTickTraversalId);
+			const AudioFloat & value = output->getAudioFloat();
+			clearCurrentAudioGraphTraversalId();
+			
+			if (value.isScalar)
+				channels.addChannel(value.samples, 1, true);
+			else
+				channels.addChannel(value.samples, AUDIO_UPDATE_SIZE, true);
+			
+			return true;
+		}
 		
-		return true;
+		return false;
 	}
 	else
 	{

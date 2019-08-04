@@ -38,7 +38,7 @@
 #endif
 
 #if ENABLE_MSDF_FONTS
-	#include "msdfgen/msdfgen.h"
+	#include "msdfgen.h"
 #endif
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
@@ -55,11 +55,20 @@
 	#include "Timer.h"
 #endif
 
+#if ENABLE_OPENGL
+	#include "gx-opengl/shaderBuilder.h"
+	#include "gx-opengl/shaderPreprocess.h"
+#endif
+
+#define ENABLE_MIPMAPS 0 // todo : add per-texture control over the creation of mipmaps
+
 Globals globals;
 
 TextureCache g_textureCache;
+#if ENABLE_OPENGL
 ShaderCache g_shaderCache;
 ComputeShaderCache g_computeShaderCache;
+#endif
 AnimCache g_animCache;
 SpriterCache g_spriterCache;
 SoundCache g_soundCache;
@@ -181,6 +190,8 @@ public:
 
 //
 
+#if ENABLE_OPENGL // todo : remove bindVsInputs
+
 void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
 {
 	checkErrorGL();
@@ -196,6 +207,8 @@ void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
 		checkErrorGL();
 	}
 }
+
+#endif
 
 // -----
 
@@ -268,9 +281,9 @@ void TextureCacheElem::free()
 	if (textures != 0)
 	{
 		const int numTextures = gridSx * gridSy;
-		glDeleteTextures(numTextures, textures);
+		for (int i = 0; i < numTextures; ++i)
+			textures[i].free();
 		delete [] textures;
-		checkErrorGL();
 		
 		name.clear();
 		textures = 0;
@@ -363,6 +376,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 			catch (std::exception & e)
 			{
 				logError("failed to read cache data: %s", e.what());
+				(void)e;
 
 				delete imageData;
 				imageData = 0;
@@ -375,7 +389,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 	{
 		imageData = loadImage(filename);
 
-	#ifdef WIN32
+	#ifdef WIN32 // todo : enable cacheResourceData on other platforms than windows too
 		if (framework.cacheResourceData && imageData)
 		{
 			std::string cacheFilename = getCacheFilename(filename, false);
@@ -394,6 +408,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 			catch (std::exception & e)
 			{
 				logError("failed to write cache data: %s", e.what());
+				(void)e;
 			}
 		}
 	#endif
@@ -425,71 +440,92 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 			const int cellSx = imageData->sx / gridSx;
 			const int cellSy = imageData->sy / gridSy;
 			
-			textures = new GLuint[numTextures];
+			textures = new GxTexture[numTextures];
 			
-			glGenTextures(numTextures, textures);
+			GxTextureProperties textureProperties;
+			textureProperties.dimensions.sx = cellSx;
+			textureProperties.dimensions.sy = cellSy;
+			textureProperties.format = GX_RGBA8_UNORM;
+			textureProperties.sampling.filter = false;
+			textureProperties.sampling.clamp = true;
+			textureProperties.mipmapped = true;
 			
 			for (int i = 0; i < numTextures; ++i)
 			{
-				fassert(textures[i] != 0);
+				const int cellX = i % gridSx;
+				const int cellY = i / gridSx;
+				const int sourceX = cellX * cellSx;
+				const int sourceY = cellY * cellSy;
+				const int sourceOffset = sourceX + sourceY * imageData->sx;
 				
-				if (textures[i] != 0)
+				const void * source = ((int*)imageData->imageData) + sourceOffset;
+				
+				textures[i].allocate(textureProperties);
+				textures[i].upload(source, 0, imageData->sx, true);
+			}
+		
+		#if ENABLE_OPENGL
+			for (int i = 0; i < numTextures; ++i)
+			{
+				fassert(textures[i].id != 0);
+				
+				if (textures[i].id != 0)
 				{
-					const int cellX = i % gridSx;
-					const int cellY = i / gridSx;
-					const int sourceX = cellX * cellSx;
-					const int sourceY = cellY * cellSy;
-					const int sourceOffset = sourceX + sourceY * imageData->sx;
-					
 					// capture current OpenGL states before we change them
 					
 					GLuint restoreTexture;
 					glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-					GLint restoreUnpackAlignment;
-					glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpackAlignment);
-					GLint restoreUnpackRowLength;
-					glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restoreUnpackRowLength);
 					
-					// copy image data
-									
-					const void * source = ((int*)imageData->imageData) + sourceOffset;
-					
-					glBindTexture(GL_TEXTURE_2D, textures[i]);
+					glBindTexture(GL_TEXTURE_2D, textures[i].id);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+				#if !ENABLE_MIPMAPS
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+				#endif
 					checkErrorGL();
 
-					glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-					glPixelStorei(GL_UNPACK_ROW_LENGTH, imageData->sx);
-					glTexImage2D(
-						GL_TEXTURE_2D,
-						0,
-						GL_RGBA8,
-						cellSx,
-						cellSy,
-						0,
-						GL_RGBA,
-						GL_UNSIGNED_BYTE,
-						source);
-					
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+					checkErrorGL();
+					
+				#if !ENABLE_MIPMAPS
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+					checkErrorGL();
+				#else
+				// todo : try to see if there's a meta data file for this texture,
+				//        if so, load texture settings from this file (similar to Sprite)
+				//     _OR_ when getTexture is called on a .txt file, load the .txt
+				//        file and reference the texture from the .txt file or by replacing extension
+				
+					if (glGenerateMipmap != nullptr)
+					{
+						glGenerateMipmap(GL_TEXTURE_2D);
+						checkErrorGL();
+						
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+						checkErrorGL();
+					}
+					else
+					{
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+						checkErrorGL();
+					}
+				#endif
 					
 					// restore previous OpenGL states
 					
 					glBindTexture(GL_TEXTURE_2D, restoreTexture);
-					glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpackAlignment);
-					glPixelStorei(GL_UNPACK_ROW_LENGTH, restoreUnpackRowLength);
 					checkErrorGL();
 				}
-				
-				this->sx = imageData->sx;
-				this->sy = imageData->sy;
-				this->gridSx = gridSx;
-				this->gridSy = gridSy;
 			}
+		#endif
+			
+			this->sx = imageData->sx;
+			this->sy = imageData->sy;
+			this->gridSx = gridSx;
+			this->gridSy = gridSy;
 			
 			logInfo("loaded %s (%dx%d)", filename, gridSx, gridSy);
 		}
@@ -553,6 +589,8 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int
 }
 
 // -----
+
+#if ENABLE_OPENGL
 
 static void getShaderInfoLog(GLuint shader, const char * source, std::vector<std::string> & lines)
 {
@@ -651,198 +689,86 @@ static bool fileExists(const char * filename)
 	}
 }
 
-static bool loadFileContents(const char * filename, bool normalizeLineEndings, char *& bytes, int & numBytes)
+static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages, const char * outputs)
 {
 	bool result = true;
 
-	bytes = 0;
-	numBytes = 0;
-
-	const char * text = nullptr;
-
-	FILE * file = 0;
-
-	if (fopen_s(&file, filename, "rb") == 0)
-	{
-		// load source from file
-
-		fseek(file, 0, SEEK_END);
-		numBytes = ftell(file);
-		fseek(file, 0, SEEK_SET);
-
-		bytes = new char[numBytes];
-
-		if (fread(bytes, 1, numBytes, file) != (size_t)numBytes)
-		{
-			result = false;
-		}
-
-		fclose(file);
-	}
-	else if (framework.tryGetShaderSource(filename, text))
-	{
-		const size_t textLength = strlen(text);
-
-		bytes = new char[textLength];
-		numBytes = textLength;
-
-		memcpy(bytes, text, textLength * sizeof(char));
-	}
-	else
+	std::string source;
+	
+	if (!preprocessShaderFromFile(filename, source, kPreprocessShader_AddOpenglLineAndFileMarkers, errorMessages))
 	{
 		result = false;
 	}
-
-	if (result)
-	{
-		if (normalizeLineEndings)
-		{
-			for (int i = 0; i < numBytes; ++i)
-				if (bytes[i] == '\r')
-					bytes[i] = '\n';
-		}
-	}
 	else
 	{
-		if (bytes)
+		if (!buildOpenglText(source.c_str(),
+			type == GL_VERTEX_SHADER   ? 'v' :
+			type == GL_FRAGMENT_SHADER ? 'p' :
+			type == GL_COMPUTE_SHADER  ? 'c' : 'u',
+			outputs, source))
 		{
-			delete [] bytes;
-			bytes = 0;
+			result = false;
 		}
-
-		numBytes = 0;
-	}
-
-	return result;
-}
-
-static bool preprocessShader(const std::string & source, std::string & destination, std::vector<std::string> & errorMessages)
-{
-	bool result = true;
-
-	std::vector<std::string> lines;
-
-	splitString(source, lines, '\n');
-
-	for (size_t i = 0; i < lines.size(); ++i)
-	{
-		const std::string & line = lines[i];
-		const std::string trimmedLine = String::TrimLeft(lines[i]);
-
-		const char * includeStr = "include ";
-
-		if (strstr(trimmedLine.c_str(), includeStr) == trimmedLine.c_str())
+		else
 		{
-			const char * filename = trimmedLine.c_str() + strlen(includeStr);
+			//printf("shader source:\n%s", source.c_str());
 
-			char * bytes;
-			int numBytes;
-
-			if (!loadFileContents(filename, true, bytes, numBytes))
+			shader = glCreateShader(type);
+			checkErrorGL();
+			
+			if (shader == 0)
 			{
-				errorMessages.push_back(String::FormatC("failed to load include file %s", filename));
-				
-				logError("failed to load include file %s", filename);
-				
 				result = false;
+				
+				if (type == GL_COMPUTE_SHADER)
+					logError("compute shader creation failed. compute is possibly not supported?");
+				else
+					logError("shader creation failed");
 			}
 			else
 			{
-				std::string temp(bytes, numBytes);
+			#if USE_LEGACY_OPENGL
+				const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
+			#elif FRAMEWORK_USE_OPENGL_ES
+				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+			#else
+				#if OPENGL_VERSION == 410
+					const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+				#elif OPENGL_VERSION == 430
+					const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+				#else
+					const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
+				#endif
+			#endif
 
-				if (!preprocessShader(temp, destination, errorMessages))
+			#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+				const GLchar * debugs = "#define _SHADER_DEBUGGING_ 1\n";
+			#else
+				const GLchar * debugs = "#define _SHADER_DEBUGGING_ 0\n";
+			#endif
+			
+				const GLchar * sourceData = (const GLchar*)source.c_str();
+				const GLchar * sources[] = { version, debugs, defines, sourceData };
+
+				glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
+				checkErrorGL();
+
+				glCompileShader(shader);
+				checkErrorGL();
+
+				GLint success = GL_FALSE;
+
+				glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+				checkErrorGL();
+
+				if (success != GL_TRUE)
 				{
 					result = false;
+
+					showShaderInfoLog(shader, source.c_str());
+					
+					getShaderInfoLog(shader, source.c_str(), errorMessages);
 				}
-
-				delete [] bytes;
-				bytes = 0;
-				numBytes = 0;
-			}
-		}
-		else
-		{
-			destination.append(line);
-			destination.append("\n");
-		}
-	}
-
-	return result;
-}
-
-static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages)
-{
-	bool result = true;
-
-	char * bytes;
-	int numBytes;
-
-	if (!loadFileContents(filename, true, bytes, numBytes))
-	{
-		errorMessages.push_back("failed to load file contents");
-		
-		result = false;
-	}
-	else
-	{
-		std::string source;
-		std::string temp(bytes, numBytes);
-
-		if (!preprocessShader(temp, source, errorMessages))
-		{
-			result = false;
-		}
-		else
-		{
-			//logDebug("shader source: %s", source.c_str());
-
-			shader = glCreateShader(type);
-
-		#if USE_LEGACY_OPENGL
-			const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
-		#elif FRAMEWORK_USE_OPENGL_ES
-			const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-		#else
-			#if OPENGL_VERSION == 410
-				const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-			#elif OPENGL_VERSION == 430
-				const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
-			#else
-				const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
-			#endif
-		#endif
-
-		#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
-			const GLchar * debugs = "#define _SHADER_DEBUGGING_ 1\n";
-		#else
-			const GLchar * debugs = "#define _SHADER_DEBUGGING_ 0\n";
-		#endif
-
-			const GLchar * sourceData = (const GLchar*)source.c_str();
-			const GLchar * sources[] = { version, debugs, defines, sourceData };
-
-			glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
-			checkErrorGL();
-
-			delete [] bytes;
-			bytes = 0;
-			numBytes = 0;
-
-			glCompileShader(shader);
-			checkErrorGL();
-
-			GLint success = GL_FALSE;
-
-			glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-			checkErrorGL();
-
-			if (success != GL_TRUE)
-			{
-				result = false;
-
-				showShaderInfoLog(shader, source.c_str());
-				
-				getShaderInfoLog(shader, source.c_str(), errorMessages);
 			}
 		}
 	}
@@ -859,7 +785,11 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 	return result;
 }
 
+#endif
+
 // -----
+
+#if ENABLE_OPENGL
 
 ShaderCacheElem::ShaderCacheElem()
 {
@@ -880,7 +810,7 @@ void ShaderCacheElem::free()
 	memset(params, -1, sizeof(params));
 }
 
-void ShaderCacheElem::load(const char * _name, const char * filenameVs, const char * filenamePs)
+void ShaderCacheElem::load(const char * _name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	ScopedLoadTimer loadTimer(_name);
 
@@ -891,6 +821,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	name = _name;
 	vs = filenameVs;
 	ps = filenamePs;
+	this->outputs = outputs;
 	
 	version++;
 	
@@ -903,7 +834,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	GLuint shaderPs = 0;
 	
 	if (hasVs)
-		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER, "", errorMessages);
+		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER, "", errorMessages, "");
 	else
 	{
 		errorMessages.push_back(String::Format("shader %s doesn't have a vertex shader. cannot load", _name));
@@ -912,7 +843,12 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	}
 
 	if (hasPs)
-		result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "", errorMessages);
+	{
+		if (result)
+		{
+			result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "", errorMessages, outputs);
+		}
+	}
 	
 	if (result)
 	{
@@ -932,7 +868,8 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 		glBindAttribLocation(program, VS_POSITION,      "in_position4");
 		glBindAttribLocation(program, VS_NORMAL,        "in_normal");
 		glBindAttribLocation(program, VS_COLOR,         "in_color");
-		glBindAttribLocation(program, VS_TEXCOORD,      "in_texcoord");
+		glBindAttribLocation(program, VS_TEXCOORD0,     "in_texcoord0");
+		glBindAttribLocation(program, VS_TEXCOORD1,     "in_texcoord1");
 		glBindAttribLocation(program, VS_BLEND_INDICES, "in_skinningBlendIndices");
 		glBindAttribLocation(program, VS_BLEND_WEIGHTS, "in_skinningBlendWeights");
 		checkErrorGL();
@@ -971,7 +908,8 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 			params[kSp_ModelViewMatrix].set(glGetUniformLocation(program, "ModelViewMatrix"));
 			params[kSp_ModelViewProjectionMatrix].set(glGetUniformLocation(program, "ModelViewProjectionMatrix"));
 			params[kSp_ProjectionMatrix].set(glGetUniformLocation(program, "ProjectionMatrix"));
-			params[kSp_Texture].set(glGetUniformLocation(program, "texture0"));
+			params[kSp_SkinningMatrices].set(glGetUniformLocation(program, "skinningMatrices"));
+			params[kSp_Texture].set(glGetUniformLocation(program, "source"));
 			params[kSp_Params].set(glGetUniformLocation(program, "params"));
 			params[kSp_ShadingParams].set(glGetUniformLocation(program, "shadingParams"));
 			params[kSp_GradientInfo].set(glGetUniformLocation(program, "gradientInfo"));
@@ -1011,8 +949,9 @@ void ShaderCacheElem::reload()
 	const std::string oldName = name;
 	const std::string oldVs = vs;
 	const std::string oldPs = ps;
+	const std::string oldOutputs = outputs;
 
-	load(oldName.c_str(), oldVs.c_str(), oldPs.c_str());
+	load(oldName.c_str(), oldVs.c_str(), oldPs.c_str(), oldOutputs.c_str());
 }
 
 void ShaderCache::clear()
@@ -1033,9 +972,31 @@ void ShaderCache::reload()
 	}
 }
 
-ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * filenameVs, const char * filenamePs)
+void ShaderCache::handleSourceChanged(const char * name)
 {
-	Map::iterator i = m_map.find(name);
+	for (auto & shaderCacheItr : m_map)
+	{
+		ShaderCacheElem & cacheElem = shaderCacheItr.second;
+		
+		if (name == cacheElem.vs || name == cacheElem.ps)
+		{
+			cacheElem.reload();
+			
+			if (globals.shader != nullptr && globals.shader->getProgram() == cacheElem.program)
+			{
+				clearShader();
+			}
+		}
+	}
+}
+
+ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
+{
+	Key key;
+	key.name = name;
+	key.outputs = outputs;
+	
+	Map::iterator i = m_map.find(key);
 	
 	if (i != m_map.end())
 	{
@@ -1045,15 +1006,19 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 	{
 		ShaderCacheElem elem;
 		
-		elem.load(name, filenameVs, filenamePs);
+		elem.load(name, filenameVs, filenamePs, outputs);
 		
-		i = m_map.insert(Map::value_type(name, elem)).first;
+		i = m_map.insert(Map::value_type(key, elem)).first;
 		
 		return i->second;
 	}
 }
 
+#endif
+
 // -----
+
+#if ENABLE_OPENGL
 
 ComputeShaderCacheElem::ComputeShaderCacheElem()
 {
@@ -1100,7 +1065,7 @@ void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const 
 		groupSy,
 		groupSz);
 
-	result &= loadShader(name.c_str(), shaderCs, GL_COMPUTE_SHADER, defines, errorMessages);
+	result &= loadShader(name.c_str(), shaderCs, GL_COMPUTE_SHADER, defines, errorMessages, "");
 
 	if (result)
 	{
@@ -1194,6 +1159,8 @@ ComputeShaderCacheElem & ComputeShaderCache::findOrCreate(const char * name, con
 	}
 }
 
+#endif
+
 // -----
 
 AnimCacheElem::AnimCacheElem()
@@ -1211,7 +1178,7 @@ void AnimCacheElem::free()
 }
 
 template <typename Policy>
-void splitString(const std::string & str, std::vector<std::string> & result, Policy policy)
+void splitString(const std::string & str, std::vector<std::string> & result, Policy policy, const bool keepEmptyElements)
 {
 	int start = -1;
 	
@@ -1224,6 +1191,8 @@ void splitString(const std::string & str, std::vector<std::string> & result, Pol
 			// found start
 			if (!policy.isBreak(c))
 				start = i;
+			else if (keepEmptyElements)
+				result.push_back(std::string());
 		}
 		else if (policy.isBreak(c))
 		{
@@ -1247,11 +1216,18 @@ public:
 	}
 };
 
+void splitString(const std::string & str, std::vector<std::string> & result, bool keepEmptyElements)
+{
+	WhiteSpacePolicy policy;
+	
+	splitString<WhiteSpacePolicy>(str, result, policy, keepEmptyElements);
+}
+
 void splitString(const std::string & str, std::vector<std::string> & result)
 {
 	WhiteSpacePolicy policy;
 	
-	splitString<WhiteSpacePolicy>(str, result, policy);
+	splitString<WhiteSpacePolicy>(str, result, policy, false);
 }
 
 class CharPolicy
@@ -1276,7 +1252,7 @@ void splitString(const std::string & str, std::vector<std::string> & result, cha
 {
 	CharPolicy policy(c);
 	
-	splitString<CharPolicy>(str, result, policy);
+	splitString<CharPolicy>(str, result, policy, true);
 }
 
 void AnimCacheElem::load(const char * filename)
@@ -1672,7 +1648,7 @@ void SoundCacheElem::load(const char * filename)
 				soundData->channelSize);
 		}
 	#else
-		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->channelSize, soundData->channelCount);
+		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->sampleRate, soundData->channelSize, soundData->channelCount);
 
 		if (buffer != nullptr)
 		{
@@ -1810,9 +1786,6 @@ void FontCacheElem::load(const char * filename)
 		if (err != 0)
 			logWarning("failed to select FreeType unicode character map");
 		
-		// fixme : this is a work around for FreeType returning monochrome data in FT_Load_Char, instead of the 8 bit gray scale data it should be returning, when it finds a stored glyph bitmap in the font itself. since we cannot directly upload bit packed font data to OpenGL, we 'force' FreeType to always render the outline version instead, by setting num_fixed_sizes to zero here
-		//face->num_fixed_sizes = 0;
-		
 		loaded = true;
 	}
 #endif
@@ -1820,10 +1793,8 @@ void FontCacheElem::load(const char * filename)
 #if USE_GLYPH_ATLAS
 	if (loaded)
 	{
-		const GLint swizzleMask[4] = { GL_ONE, GL_ONE, GL_ONE, GL_RED };
-		
 		textureAtlas = new TextureAtlas();
-		textureAtlas->init(256, 16, GL_R8, false, false, swizzleMask);
+		textureAtlas->init(256, 16, GX_R8_UNORM, false, false, nullptr);
 	}
 #endif
 }
@@ -1944,7 +1915,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(const StbFont * font, int size, int c)
 		
 		for (;;)
 		{
-			elem.textureAtlasElem = globals.font->textureAtlas->tryAlloc(values, sx, sy, GL_RED, GL_UNSIGNED_BYTE, GLYPH_ATLAS_BORDER);
+			elem.textureAtlasElem = globals.font->textureAtlas->tryAlloc(values, sx, sy, GLYPH_ATLAS_BORDER);
 			
 			if (elem.textureAtlasElem != nullptr)
 				break;
@@ -1977,6 +1948,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(const StbFont * font, int size, int c)
 
 GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 {
+// todo : add retina support to glyph cache. scale size by backing store scale, but draw at normal size
 	fassert(face == globals.font->face);
 	
 	Key key;
@@ -1997,7 +1969,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		GlyphCacheElem elem;
 		
 		const FT_Error err = FT_Set_Pixel_Sizes(face, 0, size);
-		Assert(err == FT_Err_Ok);
+		(void)err; Assert(err == FT_Err_Ok);
 
 		// note : we use FT_LOAD_NO_BITMAP to avoid getting embedded glyph data. this embedded data uses 1 bpp monochrome pre-rendered versions of the glyphs. we currently do not support unpacking this data, although it may be beneficial (readability-wise) to do so
 		// note : we use FT_LOAD_FORCE_AUTOHINT to improve readability for some fonts at small sizes. perhaps this flag can be removed when FT_LOAD_NO_BITMAP is removed
@@ -2011,7 +1983,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 			
 			for (;;)
 			{
-				e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows, GL_RED, GL_UNSIGNED_BYTE, GLYPH_ATLAS_BORDER);
+				e = globals.font->textureAtlas->tryAlloc(elem.g.bitmap.buffer, elem.g.bitmap.width, elem.g.bitmap.rows, GLYPH_ATLAS_BORDER);
 				
 				if (e != nullptr)
 					break;
@@ -2170,7 +2142,7 @@ void MsdfGlyphCache::allocTextureAtlas()
 	m_textureAtlas = nullptr;
 	
 	m_textureAtlas = new TextureAtlas();
-	m_textureAtlas->init(kAtlasSx, kAtlasSy, GL_RGB32F, true, true, nullptr);
+	m_textureAtlas->init(kAtlasSx, kAtlasSy, GX_RGBA32_FLOAT, true, true, nullptr);
 	
 	m_map.clear();
 }
@@ -2314,12 +2286,12 @@ void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
 		const float ssx = sx2 - sx1;
 		const float ssy = sy2 - sy1;
 		
-		const int bitmapSx = std::ceil(ssx) + MSDF_GLYPH_PADDING_OUTER * 2;
-		const int bitmapSy = std::ceil(ssy) + MSDF_GLYPH_PADDING_OUTER * 2;
+		const int bitmapSx = (int)std::ceil(ssx) + MSDF_GLYPH_PADDING_OUTER * 2;
+		const int bitmapSy = (int)std::ceil(ssy) + MSDF_GLYPH_PADDING_OUTER * 2;
 		logDebug("bitmap size: %d x %d", bitmapSx, bitmapSy);
 		
 		msdfgen::edgeColoringSimple(shape, 3.f);
-		msdfgen::Bitmap<msdfgen::FloatRGB> msdf(bitmapSx, bitmapSy);
+		msdfgen::Bitmap<msdfgen::FloatRGBA> msdf(bitmapSx, bitmapSy);
 		
 		const msdfgen::Vector2 scaleVec(scale, scale);
 		const msdfgen::Vector2 transVec(
@@ -2327,12 +2299,12 @@ void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
 			-y1 + int(MSDF_GLYPH_PADDING_OUTER / scale));
 		msdfgen::generateMSDF(msdf, shape, 1.f / scale, scaleVec, transVec);
 		
-		glyph.sx = (bitmapSx - MSDF_GLYPH_PADDING_INNER * 2) / MSDF_SCALE;
-		glyph.sy = (bitmapSy - MSDF_GLYPH_PADDING_INNER * 2) / MSDF_SCALE;
+		glyph.sx = (int)ceilf((bitmapSx - MSDF_GLYPH_PADDING_INNER * 2) / MSDF_SCALE);
+		glyph.sy = (int)ceilf((bitmapSy - MSDF_GLYPH_PADDING_INNER * 2) / MSDF_SCALE);
 		
 		for (;;)
 		{
-			glyph.textureAtlasElem = m_textureAtlas->tryAlloc((uint8_t*)&msdf(0, 0), bitmapSx, bitmapSy, GL_RGB, GL_FLOAT);
+			glyph.textureAtlasElem = m_textureAtlas->tryAlloc((uint8_t*)&msdf(0, 0), bitmapSx, bitmapSy);
 			
 			if (glyph.textureAtlasElem != nullptr)
 				break;
@@ -2385,7 +2357,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 		
 		result &= fread(&version, 4, 1, file) == 1;
 		
-		if (version != 1)
+		if (version != 2)
 		{
 			logDebug("loadCache: version mismatch");
 			result = false;
@@ -2443,14 +2415,14 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 			
 			if (atlasElemSx > 0 && atlasElemSy > 0)
 			{
-				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 3;
+				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 4;
 				uint8_t * bytes = new uint8_t[numBytes];
 				
 				result &= fread(bytes, numBytes, 1, file) == 1;
 				
 				if (result)
 				{
-					ae = m_textureAtlas->tryAlloc(bytes, atlasElemSx, atlasElemSy, GL_RGB, GL_FLOAT);
+					ae = m_textureAtlas->tryAlloc(bytes, atlasElemSx, atlasElemSy);
 					
 					result &= ae != nullptr;
 				}
@@ -2498,7 +2470,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 {
 	bool result = true;
 	
-	if (globals.fontMSDF->m_glyphCache->m_isLoaded == false)
+	if (m_isLoaded == false)
 	{
 		return false;
 	}
@@ -2525,7 +2497,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 	
 	if (result == true)
 	{
-		const int32_t version = 1;
+		const int32_t version = 2;
 		
 		result &= fwrite(&version, 4, 1, file) == 1;
 	}
@@ -2548,7 +2520,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 		result &= frameBuffer != 0;
 		
 		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureAtlas->texture, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureAtlas->texture->id, 0);
 		checkErrorGL();
 		
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -2602,10 +2574,10 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 			
 			if (atlasElemSx > 0 && atlasElemSy > 0)
 			{
-				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 3;
+				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 4;
 				uint8_t * bytes = new uint8_t[numBytes];
 				
-				glReadPixels(ae->x, ae->y, ae->sx, ae->sy, GL_RGB, GL_FLOAT, bytes);
+				glReadPixels(ae->x, ae->y, ae->sx, ae->sy, GL_RGBA, GL_FLOAT, bytes);
 				checkErrorGL();
 				
 				result &= fwrite(bytes, numBytes, 1, file) == 1;
@@ -2724,8 +2696,8 @@ BuiltinShaders::BuiltinShaders()
 	, gaussianKernelBuffer()
 	, colorMultiply("engine/builtin-colormultiply")
 	, colorTemperature("engine/builtin-colortemperature")
-	, treshold("engine/builtin-treshold")
-	, tresholdValue("engine/builtin-treshold-componentwise")
+	, threshold("engine/builtin-threshold")
+	, thresholdValue("engine/builtin-threshold-componentwise")
 	, hqLine("engine/builtin-hq-line")
 	, hqFilledTriangle("engine/builtin-hq-filled-triangle")
 	, hqFilledCircle("engine/builtin-hq-filled-circle")
@@ -2737,5 +2709,6 @@ BuiltinShaders::BuiltinShaders()
 	, hqStrokedRoundedRect("engine/builtin-hq-stroked-rounded-rect")
 	, hqShadedTriangle("engine/builtin-hq-shaded-triangle")
 	, msdfText("engine/builtin-msdf-text")
+	, bitmappedText("engine/builtin-bitmapped-text")
 {
 }

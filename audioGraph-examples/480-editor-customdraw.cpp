@@ -30,8 +30,8 @@
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "framework.h"
-#include "soundmix.h"
 #include <cmath>
 
 const int GFX_SX = 1024;
@@ -46,7 +46,7 @@ static void drawChannels(const GraphEdit_ChannelData & channelData, const float 
 		if (channel.numValues < 2)
 			continue;
 		
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
 			const float xScale = sx / (channel.numValues - 1);
 			const float xOffset = -sx/2.f;
@@ -91,9 +91,8 @@ static void drawEditor(const GraphEdit & graphEdit, AudioRealTimeConnection * rt
 	const float scale = .01f;
 	const float kRadius = 40.f;
 	
-	// todo : would be nice to have an axis swizzle function
-	gxScalef(scale, scale, scale);
-	gxRotatef(180, 1, 0, 0);
+	// note : negate the y-axis to make sure text renders up-right
+	gxScalef(scale, -scale, scale);
 	
 	// draw links
 	
@@ -145,7 +144,7 @@ static void drawEditor(const GraphEdit & graphEdit, AudioRealTimeConnection * rt
 			setColor(20, 20, 20);
 			fillCircle(0, 0, kRadius, 100);
 			
-			gxTranslatef(0, 0, 1.f);
+			gxTranslatef(0, 0, -1.f);
 			
 			auto typeDefinition = graphEdit.typeDefinitionLibrary->tryGetTypeDefinition(node->typeName.c_str());
 			
@@ -199,7 +198,7 @@ static void drawEditor(const GraphEdit & graphEdit, AudioRealTimeConnection * rt
 					
 					if (audioNode->getFilterResponse(magnitude, numSteps))
 					{
-						gxBegin(GL_LINES);
+						gxBegin(GX_LINES);
 						{
 							const float sx = 30.f;
 							const float sy = 30.f;
@@ -266,7 +265,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		// initialize audio related systems
 		
@@ -274,7 +273,7 @@ int main(int argc, char * argv[])
 		Assert(mutex != nullptr);
 
 		AudioVoiceManagerBasic voiceMgr;
-		voiceMgr.init(mutex, CHANNEL_COUNT, CHANNEL_COUNT);
+		voiceMgr.init(mutex, CHANNEL_COUNT);
 		voiceMgr.outputStereo = true;
 
 		AudioGraphManager_RTE audioGraphMgr(GFX_SX, GFX_SY);
@@ -300,7 +299,7 @@ int main(int argc, char * argv[])
 		camera.position = Vec3(0.f, 1.5f, -4.f);
 		camera.pitch = -15.f;
 		
-		Surface surface(GFX_SX, GFX_SY, true, false, SURFACE_RGBA8);
+		Surface surface(GFX_SX, GFX_SY, true, true, SURFACE_RGBA8);
 		
 		bool showDefaultEditor = false;
 		
@@ -318,7 +317,7 @@ int main(int argc, char * argv[])
 			
 			camera.tick(dt, true);
 
-			audioGraphMgr.tickEditor(dt, showDefaultEditor == false);
+			audioGraphMgr.tickEditor(GFX_SX, GFX_SY, dt, showDefaultEditor == false);
 			
 			framework.beginDraw(220, 220, 220, 0);
 			{
@@ -336,8 +335,7 @@ int main(int argc, char * argv[])
 
 					camera.pushViewMatrix();
 					{
-						glEnable(GL_DEPTH_TEST);
-						glDepthFunc(GL_LEQUAL);
+						pushDepthTest(true, DEPTH_LEQUAL);
 						
 						setColor(100, 100, 100);
 						drawGrid3dLine(10, 10, 0, 2, true);
@@ -347,7 +345,7 @@ int main(int argc, char * argv[])
 							drawEditor(*audioGraphMgr.selectedFile->graphEdit, instance->realTimeConnection, instance->audioGraph);
 						}
 						
-						glDisable(GL_DEPTH_TEST);
+						popDepthTest();
 					}
 					camera.popViewMatrix();
 
@@ -356,7 +354,7 @@ int main(int argc, char * argv[])
 					projectScreen2d();
 					
 					float samples[AUDIO_UPDATE_SIZE * 2];
-					voiceMgr.generateAudio(samples, AUDIO_UPDATE_SIZE);
+					voiceMgr.generateAudio(samples, AUDIO_UPDATE_SIZE, 2);
 					float magnitudeSq = 0.f;
 					for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 						magnitudeSq += samples[i] * samples[i];
@@ -365,12 +363,12 @@ int main(int argc, char * argv[])
 					setShader_GaussianBlurV(surface.getTexture(), 30, blurStrength);
 					surface.postprocess();
 					pushBlend(BLEND_OPAQUE);
-					drawRect(0, 0, GFX_SX, GFX_SY);
+					drawRect(0, GFX_SY, GFX_SX, 0);
 					popBlend();
 					clearShader();
 					
 					if (showDefaultEditor)
-						audioGraphMgr.drawEditor();
+						audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
 					
 					// show CPU usage of the audio thread
 					

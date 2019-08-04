@@ -39,10 +39,15 @@ struct VfxNodeDisplay : VfxNodeBase
 	
 	VfxNodeDisplay()
 		: VfxNodeBase()
+		, nodeId(kGraphNodeIdInvalid)
 	{
 		resizeSockets(kInput_COUNT, 0);
 		addInput(kInput_Image, kVfxPlugType_Image);
 	}
+	
+	GraphNodeId nodeId;
+	
+	virtual ~VfxNodeDisplay() override;
 	
 	const VfxImageBase * getImage() const
 	{

@@ -26,13 +26,13 @@
 */
 
 #include "framework.h"
-#include "graph.h"
+#include "graphEdit.h"
 #include "graphEdit_nodeTypeSelect.h"
-#include "../libparticle/ui.h"
+#include "ui.h"
 
-typedef std::map<std::string, std::vector<const GraphEdit_TypeDefinition*>> TypeDefinitionsByCategory;
+typedef std::map<std::string, std::vector<const Graph_TypeDefinition*>> TypeDefinitionsByCategory;
 
-bool GraphEdit_NodeTypeSelect::Filter::isMatch(const GraphEdit_TypeDefinition & typeDefinition) const
+bool GraphEdit_NodeTypeSelect::Filter::isMatch(const Graph_TypeDefinition & typeDefinition) const
 {
 	switch (type)
 	{
@@ -61,7 +61,7 @@ bool GraphEdit_NodeTypeSelect::Filter::isMatch(const GraphEdit_TypeDefinition & 
 	return false;
 }
 
-static void getTypeDefinitionsByCategory(const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, TypeDefinitionsByCategory & result, GraphEdit_NodeTypeSelect::Filter & filter)
+static void getTypeDefinitionsByCategory(const Graph_TypeDefinitionLibrary & typeDefinitionLibrary, TypeDefinitionsByCategory & result, GraphEdit_NodeTypeSelect::Filter & filter)
 {
 	for (auto & typeDefinitonItr : typeDefinitionLibrary.typeDefinitions)
 	{
@@ -329,7 +329,7 @@ GraphEdit_NodeTypeSelect::~GraphEdit_NodeTypeSelect()
 	uiState = nullptr;
 }
 
-bool GraphEdit_NodeTypeSelect::tick(GraphEdit & graphEdit, const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const float dt, std::string & selectedNodeTypeName)
+bool GraphEdit_NodeTypeSelect::tick(GraphEdit & graphEdit, const Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const float dt, std::string & selectedNodeTypeName)
 {
 	bool result = false;
 	
@@ -339,7 +339,7 @@ bool GraphEdit_NodeTypeSelect::tick(GraphEdit & graphEdit, const GraphEdit_TypeD
 	return result;
 }
 
-void GraphEdit_NodeTypeSelect::draw(const GraphEdit & graphEdit, const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+void GraphEdit_NodeTypeSelect::draw(const GraphEdit & graphEdit, const Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
 	std::string selectedNodeTypeName;
 	
@@ -354,7 +354,7 @@ void GraphEdit_NodeTypeSelect::cancel()
 	filter = Filter();
 }
 
-bool GraphEdit_NodeTypeSelect::doMenus(GraphEdit & graphEdit, const GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, std::string & selectedNodeTypeName)
+bool GraphEdit_NodeTypeSelect::doMenus(GraphEdit & graphEdit, const Graph_TypeDefinitionLibrary & typeDefinitionLibrary, std::string & selectedNodeTypeName)
 {
 	bool result = false;
 	

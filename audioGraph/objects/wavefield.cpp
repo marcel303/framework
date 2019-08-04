@@ -31,9 +31,6 @@
 #include <cmath>
 #include <string.h>
 
-extern const int GFX_SX;
-extern const int GFX_SY;
-
 #define MAX_IMPULSE_PER_SECOND 1000.0
 
 //
@@ -126,35 +123,28 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 {
 	const int vectorSize = sizeof(T) / 8;
 	
-#ifdef WIN32
-	// fixme : use a general fix for variable sized arrays
 	ALIGN16 double p1[Wavefield1D::kMaxElems];
 	const double * __restrict p2 = p;
 	ALIGN16 double p3[Wavefield1D::kMaxElems];
-#else
-	ALIGN16 double p1[numElems];
-	const double * __restrict p2 = p;
-	ALIGN16 double p3[numElems];
-#endif
 	
 	memcpy(p1 + 1, p, (numElems - 1) * sizeof(double));
 	memcpy(p3, p + 1, (numElems - 1) * sizeof(double));
 	
 	if (closedEnds)
 	{
-		p1[0] = p1[1];
-		p3[numElems - 1] = p3[numElems - 2];
+		p1[0] = p[0];
+		p3[numElems - 1] = p[numElems - 1];
 	}
 	else
 	{
-		p1[0] = p1[numElems - 1];
-		p3[numElems - 1] = p3[0];
+		p1[0] = p[numElems - 1];
+		p3[numElems - 1] = p[0];
 	}
 	
 	//
 	
-	const double cTimesDt = c * dt;
-	const T _mm_cTimesDt = _mm_load_d<T>(cTimesDt);
+	const double cTimesDtTimesHalf = c * dt * 0.5; // times 0.5 because we're adding two spring forces
+	const T _mm_cTimesDtTimesHalf = _mm_load_d<T>(cTimesDtTimesHalf);
 	
 	const T * __restrict _mm_p1 = (T*)p1;
 	const T * __restrict _mm_p2 = (T*)p2;
@@ -171,7 +161,7 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 		
 		const T a = d1 + d2;
 		
-		_mm_v[i] = _mm_v[i] + a * _mm_cTimesDt * _mm_f[i];
+		_mm_v[i] = _mm_v[i] + a * _mm_cTimesDtTimesHalf * _mm_f[i];
 	}
 	
 	for (int i = numElemsVec * vectorSize; i < numElems; ++i)
@@ -181,7 +171,7 @@ void tickForces(const double * __restrict p, const double c, double * __restrict
 		
 		const double a = d1 + d2;
 		
-		v[i] = v[i] + a * cTimesDt * f[i];
+		v[i] = v[i] + a * cTimesDtTimesHalf * f[i];
 	}
 }
 
@@ -330,47 +320,23 @@ float Wavefield1D::sample(const float x) const
 	}
 }
 
-void Wavefield1D::doGaussianImpact(const int _x, const int _radius, const double strength)
+void Wavefield1D::doGaussianImpact(const int spotX, const int radius, const double strength, const double intensity)
 {
-	if (_x - _radius < 0 ||
-		_x + _radius >= numElems)
-	{
-		return;
-	}
-	
-	const int r = _radius;
-	const int spotX = _x;
-	const double s = strength;
-
-	for (int i = -r; i <= +r; ++i)
+	for (int i = -radius; i <= +radius; ++i)
 	{
 		const int x = spotX + i;
 		
-		float value = 1.f;
-		value *= (1.f + std::cos(i / float(r + 1.f) * M_PI)) / 2.f;
+		double value = 1.0;
+		value *= (1.0 + std::cos(i / double(radius + 1.0) * M_PI)) / 2.0;
 		
-		//value = std::pow(value, 2.0);
+		value = std::pow(value, intensity);
 		
 		if (x >= 0 && x < numElems)
 		{
-			d[x] += value * s;
+			d[x] += value * strength;
 		}
 	}
 }
-
-#if AUDIO_USE_SSE
-
-void * Wavefield1D::operator new(size_t size)
-{
-	return _mm_malloc(size, 32);
-}
-
-void Wavefield1D::operator delete(void * mem)
-{
-	_mm_free(mem);
-}
-
-#endif
 
 //
 
@@ -440,35 +406,28 @@ void tickForces(const float * __restrict p, const float c, float * __restrict v,
 {
 	const int vectorSize = sizeof(T) / 4;
 	
-#ifdef WIN32
-	// fixme : use a general fix for variable sized arrays
 	ALIGN16 float p1[Wavefield1D::kMaxElems];
 	const float * __restrict p2 = p;
 	ALIGN16 float p3[Wavefield1D::kMaxElems];
-#else
-	ALIGN16 float p1[numElems];
-	const float * __restrict p2 = p;
-	ALIGN16 float p3[numElems];
-#endif
 	
 	memcpy(p1 + 1, p, (numElems - 1) * sizeof(float));
 	memcpy(p3, p + 1, (numElems - 1) * sizeof(float));
 	
 	if (closedEnds)
 	{
-		p1[0] = p1[1];
-		p3[numElems - 1] = p3[numElems - 2];
+		p1[0] = p[0];
+		p3[numElems - 1] = p[numElems - 1];
 	}
 	else
 	{
-		p1[0] = p1[numElems - 1];
-		p3[numElems - 1] = p3[0];
+		p1[0] = p[numElems - 1];
+		p3[numElems - 1] = p[0];
 	}
 	
 	//
 	
-	const float cTimesDt = c * dt;
-	const T _mm_cTimesDt = _mm_load_s<T>(cTimesDt);
+	const float cTimesDtTimesHalf = c * dt * .5f; // times 0.5 because we're adding two spring forces
+	const T _mm_cTimesDtTimesHalf = _mm_load_s<T>(cTimesDtTimesHalf);
 	
 	const T * __restrict _mm_p1 = (T*)p1;
 	const T * __restrict _mm_p2 = (T*)p2;
@@ -485,7 +444,7 @@ void tickForces(const float * __restrict p, const float c, float * __restrict v,
 		
 		const T a = d1 + d2;
 		
-		_mm_v[i] = _mm_v[i] + a * _mm_cTimesDt * _mm_f[i];
+		_mm_v[i] = _mm_v[i] + a * _mm_cTimesDtTimesHalf * _mm_f[i];
 	}
 	
 	for (int i = numElemsVec * vectorSize; i < numElems; ++i)
@@ -495,7 +454,7 @@ void tickForces(const float * __restrict p, const float c, float * __restrict v,
 		
 		const float a = d1 + d2;
 		
-		v[i] = v[i] + a * cTimesDt * f[i];
+		v[i] = v[i] + a * cTimesDtTimesHalf * f[i];
 	}
 }
 
@@ -542,7 +501,8 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 		
 		v[i] += a * cTimesDt * f[i];
 	}
-	
+#endif
+
 	if (closedEnds)
 	{
 		v[0] = 0.f;
@@ -551,7 +511,6 @@ void Wavefield1Df::tick(const double dt, const double c, const double vRetainPer
 		p[0] = 0.f;
 		p[numElems - 1] = 0.f;
 	}
-#endif
 	
 	const float vRetain = std::pow(vRetainPerSecond, dt);
 	const float pRetain = std::pow(pRetainPerSecond, dt);
@@ -665,47 +624,23 @@ float Wavefield1Df::sample(const float x) const
 	}
 }
 
-void Wavefield1Df::doGaussianImpact(const int _x, const int _radius, const float strength)
+void Wavefield1Df::doGaussianImpact(const int spotX, const int radius, const float strength, const float intensity)
 {
-	if (_x - _radius < 0 ||
-		_x + _radius >= numElems)
-	{
-		return;
-	}
-	
-	const int r = _radius;
-	const int spotX = _x;
-	const double s = strength;
-
-	for (int i = -r; i <= +r; ++i)
+	for (int i = -radius; i <= +radius; ++i)
 	{
 		const int x = spotX + i;
 		
 		float value = 1.f;
-		value *= (1.f + std::cos(i / float(r) * M_PI)) / 2.f;
+		value *= (1.f + std::cos(i / float(radius) * M_PI)) / 2.f;
 		
-		//value = std::pow(value, 2.0);
+		value = std::pow(value, intensity);
 		
 		if (x >= 0 && x < numElems)
 		{
-			d[x] += value * s;
+			d[x] += value * strength;
 		}
 	}
 }
-
-#if AUDIO_USE_SSE
-
-void * Wavefield1Df::operator new(size_t size)
-{
-	return _mm_malloc(size, 32);
-}
-
-void Wavefield1Df::operator delete(void * mem)
-{
-	_mm_free(mem);
-}
-
-#endif
 
 //
 
@@ -747,12 +682,33 @@ void Wavefield2D::tick(const double dt, const double c, const double vRetainPerS
 	
 	tickForces(dt, c, closedEnds);
 	
+	if (closedEnds)
+	{
+		for (int x = 0; x < numElems; ++x)
+		{
+			v[x][0] = 0.f;
+			v[x][numElems - 1] = 0.f;
+			
+			p[x][0] = 0.f;
+			p[x][numElems - 1] = 0.f;
+		}
+		
+		for (int y = 0; y < numElems; ++y)
+		{
+			v[0][y] = 0.f;
+			v[numElems - 1][y] = 0.f;
+			
+			p[0][y] = 0.f;
+			p[numElems - 1][y] = 0.f;
+		}
+	}
+	
 	tickVelocity(dt, vRetainPerSecond, pRetainPerSecond);
 }
 
 void Wavefield2D::tickForces(const double dt, const double c, const bool closedEnds)
 {
-	const double cTimesDt = c * dt;
+	const double cTimesDtTimesOneQuarter = c * dt * 0.25; // times 0.25 because we're adding four spring forces
 	
 	const int sx = numElems;
 	const int sy = numElems;
@@ -812,7 +768,6 @@ void Wavefield2D::tickForces(const double dt, const double c, const bool closedE
 			pt += p[x0][y2];
 			pt += p[x2][y2];
 			
-			//const double d = pt - pMid * 4.0;
 			const double d = pt - pMid * 16.0;
 		#else
 			pt += p[x0][y1];
@@ -823,24 +778,9 @@ void Wavefield2D::tickForces(const double dt, const double c, const bool closedE
 			const double d = pt - pMid * 4.0;
 		#endif
 			
-			const double a = d * cTimesDt;
+			const double a = d * cTimesDtTimesOneQuarter;
 			
 			v[x][y] += a * f[x][y];
-		}
-	}
-	
-	if (closedEnds)
-	{
-		for (int x = 0; x < numElems; ++x)
-		{
-			v[x][0] = 0.f;
-			v[x][numElems - 1] = 0.f;
-		}
-		
-		for (int y = 0; y < numElems; ++y)
-		{
-			v[0][y] = 0.f;
-			v[numElems - 1][y] = 0.f;
 		}
 	}
 }
@@ -866,7 +806,6 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	{
 		__m256d * __restrict _mm_p = (__m256d*)p[x];
 		__m256d * __restrict _mm_v = (__m256d*)v[x];
-		__m256d * __restrict _mm_f = (__m256d*)f[x];
 		__m256d * __restrict _mm_d = (__m256d*)d[x];
 		
 		for (int i = 0; i < numElems4; ++i)
@@ -892,7 +831,6 @@ void Wavefield2D::tickVelocity(const double dt, const double vRetainPerSecond, c
 	{
 		__m128d * __restrict _mm_p = (__m128d*)p[x];
 		__m128d * __restrict _mm_v = (__m128d*)v[x];
-		__m128d * __restrict _mm_f = (__m128d*)f[x];
 		__m128d * __restrict _mm_d = (__m128d*)d[x];
 		
 		for (int i = 0; i < numElems2; ++i)
@@ -949,39 +887,26 @@ void Wavefield2D::randomize()
 	}
 }
 
-void Wavefield2D::doGaussianImpact(const int _x, const int _y, const int _radius, const double strength)
+void Wavefield2D::doGaussianImpact(const int spotX, const int spotY, const int radius, const double strength, const double intensity)
 {
-	if (_x - _radius < 0 ||
-		_y - _radius < 0 ||
-		_x + _radius >= numElems ||
-		_y + _radius >= numElems)
+	for (int i = -radius; i <= +radius; ++i)
 	{
-		return;
-	}
-	
-	const int r = _radius;
-	const int spotX = _x;
-	const int spotY = _y;
-	const double s = strength;
-
-	for (int i = -r; i <= +r; ++i)
-	{
-		for (int j = -r; j <= +r; ++j)
+		for (int j = -radius; j <= +radius; ++j)
 		{
 			const int x = spotX + i;
 			const int y = spotY + j;
 			
 			double value = 1.0;
-			value *= (1.0 + std::cos(i / double(r + 1) * M_PI)) / 2.0;
-			value *= (1.0 + std::cos(j / double(r + 1) * M_PI)) / 2.0;
+			value *= (1.0 + std::cos(i / double(radius + 1) * M_PI)) / 2.0;
+			value *= (1.0 + std::cos(j / double(radius + 1) * M_PI)) / 2.0;
 			
-			//value = std::pow(value, 2.0);
+			value = std::pow(value, intensity);
 			
 			if (x >= 0 && x < numElems)
 			{
 				if (y >= 0 && y < numElems)
 				{
-					d[x][y] += value * s;
+					d[x][y] += value * strength;
 				}
 			}
 		}
@@ -1044,20 +969,6 @@ void Wavefield2D::copyFrom(const Wavefield2D & other, const bool copyP, const bo
 	}
 }
 
-#if AUDIO_USE_SSE
-
-void * Wavefield2D::operator new(size_t size)
-{
-	return _mm_malloc(size, 32);
-}
-
-void Wavefield2D::operator delete(void * mem)
-{
-	_mm_free(mem);
-}
-
-#endif
-
 //
 
 const int Wavefield2Df::kMaxElems;
@@ -1098,12 +1009,33 @@ void Wavefield2Df::tick(const double dt, const double c, const double vRetainPer
 	
 	tickForces(dt * 1000.0, c / 1000.0, closedEnds);
 	
+	if (closedEnds)
+	{
+		for (int x = 0; x < numElems; ++x)
+		{
+			v[x][0] = 0.f;
+			v[x][numElems - 1] = 0.f;
+			
+			p[x][0] = 0.f;
+			p[x][numElems - 1] = 0.f;
+		}
+		
+		for (int y = 0; y < numElems; ++y)
+		{
+			v[0][y] = 0.f;
+			v[numElems - 1][y] = 0.f;
+			
+			p[0][y] = 0.f;
+			p[numElems - 1][y] = 0.f;
+		}
+	}
+	
 	tickVelocity(dt, vRetainPerSecond, pRetainPerSecond);
 }
 
 void Wavefield2Df::tickForces(const float dt, const float c, const bool closedEnds)
 {
-	const float cTimesDt = c * dt;
+	const float cTimesDtTimesOneQuarter = c * dt * .25f; // times 0.25 because we're adding four spring forces
 	
 	const int sx = numElems;
 	const int sy = numElems;
@@ -1163,7 +1095,6 @@ void Wavefield2Df::tickForces(const float dt, const float c, const bool closedEn
 			pt += p[x0][y2];
 			pt += p[x2][y2];
 			
-			//const float d = pt - pMid * 4.f;
 			const float d = pt - pMid * 16.f;
 		#else
 			pt += p[x0][y1];
@@ -1174,24 +1105,9 @@ void Wavefield2Df::tickForces(const float dt, const float c, const bool closedEn
 			const float d = pt - pMid * 4.f;
 		#endif
 			
-			const float a = d * cTimesDt;
+			const float a = d * cTimesDtTimesOneQuarter;
 			
 			v[x][y] += a * f[x][y];
-		}
-	}
-	
-	if (closedEnds)
-	{
-		for (int x = 0; x < numElems; ++x)
-		{
-			v[x][0] = 0.f;
-			v[x][numElems - 1] = 0.f;
-		}
-		
-		for (int y = 0; y < numElems; ++y)
-		{
-			v[0][y] = 0.f;
-			v[numElems - 1][y] = 0.f;
 		}
 	}
 }
@@ -1217,7 +1133,6 @@ void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, co
 	{
 		__m256 * __restrict _mm_p = (__m256*)p[x];
 		__m256 * __restrict _mm_v = (__m256*)v[x];
-		__m256 * __restrict _mm_f = (__m256*)f[x];
 		__m256 * __restrict _mm_d = (__m256*)d[x];
 		
 		for (int i = 0; i < numElems8; ++i)
@@ -1243,7 +1158,6 @@ void Wavefield2Df::tickVelocity(const float dt, const float vRetainPerSecond, co
 	{
 		__m128 * __restrict _mm_p = (__m128*)p[x];
 		__m128 * __restrict _mm_v = (__m128*)v[x];
-		__m128 * __restrict _mm_f = (__m128*)f[x];
 		__m128 * __restrict _mm_d = (__m128*)d[x];
 		
 		for (int i = 0; i < numElems4; ++i)
@@ -1329,39 +1243,26 @@ void Wavefield2Df::randomize()
 	}
 }
 
-void Wavefield2Df::doGaussianImpact(const int _x, const int _y, const int _radius, const float strength)
+void Wavefield2Df::doGaussianImpact(const int spotX, const int spotY, const int radius, const float strength, const float intensity)
 {
-	if (_x - _radius < 0 ||
-		_y - _radius < 0 ||
-		_x + _radius >= numElems ||
-		_y + _radius >= numElems)
+	for (int i = -radius; i <= +radius; ++i)
 	{
-		return;
-	}
-	
-	const int r = _radius;
-	const int spotX = _x;
-	const int spotY = _y;
-	const float s = strength;
-
-	for (int i = -r; i <= +r; ++i)
-	{
-		for (int j = -r; j <= +r; ++j)
+		for (int j = -radius; j <= +radius; ++j)
 		{
 			const int x = spotX + i;
 			const int y = spotY + j;
 			
 			float value = 1.f;
-			value *= (1.f + std::cos(i / float(r) * M_PI)) / 2.f;
-			value *= (1.f + std::cos(j / float(r) * M_PI)) / 2.f;
+			value *= (1.f + std::cos(i / float(radius) * M_PI)) / 2.f;
+			value *= (1.f + std::cos(j / float(radius) * M_PI)) / 2.f;
 			
-			//value = std::pow(value, 2.0);
+			value = std::pow(value, intensity);
 			
 			if (x >= 0 && x < numElems)
 			{
 				if (y >= 0 && y < numElems)
 				{
-					d[x][y] += value * s;
+					d[x][y] += value * strength;
 				}
 			}
 		}
@@ -1423,17 +1324,3 @@ void Wavefield2Df::copyFrom(const Wavefield2Df & other, const bool copyP, const 
 			memcpy(f[x], other.f[x], numElems * sizeof(float));
 	}
 }
-
-#if AUDIO_USE_SSE
-
-void * Wavefield2Df::operator new(size_t size)
-{
-	return _mm_malloc(size, 32);
-}
-
-void Wavefield2Df::operator delete(void * mem)
-{
-	_mm_free(mem);
-}
-
-#endif

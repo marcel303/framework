@@ -1,8 +1,21 @@
+library libavgraph-core
+
+	depend_library libgg
+	depend_library tinyxml2
+	depend_library tinyxml2-helpers
+
+	add_files graph.cpp graph.h graph_typeDefinitionLibrary.cpp graph_typeDefinitionLibrary.h
+
+	header_path . expose
+
 library libavgraph
 
+	depend_library libavgraph-core
 	depend_library framework
 	depend_library libparticle-ui
 
-	add_files graph.cpp graph.h graphEdit_nodeResourceEditorWindow.cpp graphEdit_nodeResourceEditorWindow.h graphEdit_nodeTypeSelect.cpp graphEdit_nodeTypeSelect.h
+	add_files graphEdit.cpp graphEdit.h
+	add_files graphEdit_nodeResourceEditorWindow.cpp graphEdit_nodeResourceEditorWindow.h
+	add_files graphEdit_nodeTypeSelect.cpp graphEdit_nodeTypeSelect.h
 
 	header_path . expose

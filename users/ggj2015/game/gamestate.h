@@ -65,7 +65,7 @@ public:
 	Resources m_resourcesGainedThisRound;
 
 	std::vector<int> m_bribedPlayers;
-	std::vector<int> m_bribedPlayersPrev; // fixme : things like this shouldn't have to be duped. but cannot be bothered changing it now
+	std::vector<int> m_bribedPlayersPrev; // fixme-ggj215 : things like this shouldn't have to be duped. but cannot be bothered changing it now
 	std::vector<int> m_targetSelectionPrev;
 
 	Player();

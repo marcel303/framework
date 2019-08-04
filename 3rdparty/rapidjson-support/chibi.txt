@@ -1,0 +1,4 @@
+library rapidjson
+	scan_files h path ../rapidjson/include traverse
+	add_files dummy.cpp
+	header_path ../rapidjson/include expose

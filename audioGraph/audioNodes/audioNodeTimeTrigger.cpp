@@ -30,7 +30,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 // todo : make it possible to have multiple delayed triggers pile up
 
-AUDIO_NODE_TYPE(trigger_time, AudioNodeTimeTrigger)
+AUDIO_NODE_TYPE(AudioNodeTimeTrigger)
 {
 	typeName = "trigger.time";
 	
@@ -52,7 +52,7 @@ AudioNodeTimeTrigger::AudioNodeTimeTrigger()
 	addInput(kInput_IntervalMin, kAudioPlugType_FloatVec);
 	addInput(kInput_IntervalMax, kAudioPlugType_FloatVec);
 	addInput(kInput_Start, kAudioPlugType_Trigger);
-	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_Trigger, kAudioPlugType_Trigger, this);
 }
 
 void AudioNodeTimeTrigger::tick(const float dt)

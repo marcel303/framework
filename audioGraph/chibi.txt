@@ -4,12 +4,67 @@ library libdelaunay
 
 	header_path . expose
 
+library binaural
+
+	depend_library audioio
+	depend_library libdelaunay
+	depend_library libgg
+
+	scan_files cpp path binaural
+	scan_files h   path binaural
+
+	header_path binaural expose
+
+library audiograph-core shared
+
+	depend_library audioio
+	depend_library libavgraph-core
+	depend_library libgg
+
+# todo : remove TARGET_IS_AUDIOGRAPH_CORE
+	compile_definition TARGET_IS_AUDIOGRAPH_CORE *
+
+	header_path core expose
+
+	add_files core/audioNodeBase.cpp core/audioNodeBase.h
+	add_files core/audioProfiling.h
+	add_files core/audioTypes.cpp core/audioTypes.h
+	add_files core/soundmix.cpp core/soundmix.h
+
+library audiograph-nodes
+
+	# todo : remove framework dependency
+	depend_library framework
+
+	# todo : remove libavgraph dependency. depending on it here due to resource editors
+	depend_library libavgraph
+
+	depend_library audiograph-core
+	depend_library binaural
+	depend_library libavgraph-core
+	depend_library libosc
+
+# fixme : conglomerate affects other libraries ?
+
+	header_path objects expose
+
+	add_files audioNodes_all.cpp audioNodes_all.h
+
+	scan_files cpp path objects    group objects
+	scan_files h   path objects    group objects
+	scan_files cpp path audioNodes conglomerate audioNodes_all.h
+	scan_files h   path audioNodes
+
 library audiograph
 
+	depend_library audiograph-core
+	# todo : depend on audiograph-nodes to provides the basic nodes
+	#depend_library audiograph-nodes
+	depend_library binaural
 	depend_library framework
 	depend_library libavgraph
-	depend_library libdelaunay
 	depend_library libosc
+	depend_library libparticle-ui
 
 	header_path .       expose
 	header_path objects expose

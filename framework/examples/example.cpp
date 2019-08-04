@@ -92,20 +92,22 @@ int main(int argc, char * argv[])
 		}
 	}
 
-	if (!framework.init(argc, (const char **)argv, sx, sy))
+	if (!framework.init(sx, sy))
 		return -1;
 	framework.fillCachesWithPath(".", true);
 	
 	mouse.showCursor(false);
 	
+#if TEST_SURFACE
 	Surface surface(sx, sy, false);
+#endif
 	
 	bool down = false;
 	float x = sx/2.f;
 	float y = sy/4.f;
 	
 	Music bgm("bgm.ogg");
-	//bgm.play();
+	bgm.play();
 
 	Shader shader("shader1");
 	Shader postprocess("shader2");

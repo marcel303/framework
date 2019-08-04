@@ -28,7 +28,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraph.h"
 #include "audioNodeFlags.h"
 
-AUDIO_NODE_TYPE(flags, AudioNodeFlags)
+AUDIO_NODE_TYPE(AudioNodeFlags)
 {
 	typeName = "flags";
 	
@@ -50,8 +50,8 @@ AudioNodeFlags::AudioNodeFlags()
 	addInput(kInput_Set, kAudioPlugType_Trigger);
 	addInput(kInput_Reset, kAudioPlugType_Trigger);
 	addOutput(kOutput_IsSet, kAudioPlugType_Bool, &isSetOutput);
-	addOutput(kOutput_Set, kAudioPlugType_Trigger, nullptr);
-	addOutput(kOutput_Reset, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_Set, kAudioPlugType_Trigger, this);
+	addOutput(kOutput_Reset, kAudioPlugType_Trigger, this);
 }
 
 void AudioNodeFlags::tick(const float dt)

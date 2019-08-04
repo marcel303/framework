@@ -2,6 +2,7 @@
 
 #include "config.h"
 #include "types.h"
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -216,7 +217,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 		bool isActive;
 		int rangeBegin;
 		int rangeEnd;
-		double treshold;
+		double threshold;
 		std::string onUp;
 		std::string onDown;
 
@@ -302,7 +303,7 @@ struct Scene : public TweenFloatCollection, public TweenFloatModifier
 			case kOp_Max:
 				return std::max(value1, value2);
 			case kOp_Pow:
-				return std::powf(value1, value2);
+				return powf(value1, value2);
 			default:
 				Assert(false);
 				return value1;

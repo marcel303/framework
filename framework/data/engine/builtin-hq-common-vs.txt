@@ -1,8 +1,22 @@
 static const char * s_hqCommonVs = R"SHADER(
 
-uniform sampler2D source;
-
 uniform vec3 shadingParams; // gradientType, textureEnabled, useScreenSize
+#define gradientType shadingParams.x
 #define useScreenSize shadingParams.z
+
+// gradient coordinate matrix
+uniform mat4x4 gmat;
+
+vec2 hqGradientCoord(vec2 p)
+{
+	if (gradientType == 0.0)
+		return vec2(0.0);
+	else
+	{
+		vec4 gradientCoord = gmat * vec4(p, 0.0, 1.0);
+
+		return gradientCoord.xy;
+	}
+}
 
 )SHADER";

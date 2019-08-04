@@ -63,7 +63,7 @@ std::ostream &operator << (std::ostream &str, Vector2<T> const &point)
 }
 
 template<typename T>
-bool operator == (Vector2<T> v1, Vector2<T> v2)
+bool operator == (const Vector2<T> &v1, const Vector2<T> &v2)
 {
 	return (v1.x == v2.x) && (v1.y == v2.y);
 }

@@ -102,5 +102,5 @@ public:
 	void draw(const float alpha) const;
 
 	void blitTo(Surface * surface) const;
-	GLuint getTexture() const;
+	GxTextureId getTexture() const;
 };

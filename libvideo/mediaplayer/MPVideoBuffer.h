@@ -27,10 +27,13 @@
 
 #pragma once
 
+#include "MPDebug.h"
 #include "MPForward.h"
 #include "MPMutex.h"
 #include <list>
 #include <stdint.h>
+
+#define MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG (0 || DEBUG_MEDIAPLAYER_VIDEO_ALLOCS) // todo : remove once decode buffer optimize issue is fixed ? or only compile in debug
 
 namespace MP
 {
@@ -54,7 +57,9 @@ namespace MP
 
 		AVFrame * m_frame;
 		uint8_t * m_frameBuffer;
-		int m_frameBufferSize; // todo : remove once decode buffer optimize issue is fixed ? or only compile in debug
+	#if MP_VIDEOFRAME_BUFFER_OPTIMIZE_DEBUG
+		int m_frameBufferSize;
+	#endif
 		double m_time;
 		bool m_isFirstFrame;
 		bool m_isValidForRead; // todo : remove once decode buffer optimize issue is fixed ?
@@ -81,7 +86,7 @@ namespace MP
 		void Clear();
 
 	//private:
-		mutable Mutex m_mutex;
+		Mutex m_mutex;
 
 		std::list<VideoFrame*> m_freeList;
 		std::list<VideoFrame*> m_consumeList;

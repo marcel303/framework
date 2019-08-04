@@ -1,12 +1,10 @@
-#ifndef REPLICATIONOBJECT_H
-#define REPLICATIONOBJECT_H
 #pragma once
 
+#include "NetSerializable.h"
+#include "Packet.h"
 #include <stdint.h>
 #include <string>
 #include <vector>
-#include "NetSerializable.h"
-#include "Packet.h"
 
 enum ReplicationChannel
 {
@@ -36,5 +34,3 @@ public:
 	void SetObjectID(uint16_t id);
 	uint16_t GetObjectID() const;
 };
-
-#endif

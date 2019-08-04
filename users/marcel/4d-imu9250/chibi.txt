@@ -1,0 +1,8 @@
+app marcel-4d-imu9250
+
+	depend_library framework
+	depend_library libosc
+	
+	add_files imu9250.cpp imu9250.h main.cpp testImu9250.cpp testImu9250.h
+
+	resource_path data

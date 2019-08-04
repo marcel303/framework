@@ -27,10 +27,12 @@
 
 #pragma once
 
+#include <GL/glew.h>
 #include <map>
 #include <string>
 #include <vector>
 #include "framework.h"
+#include "gx_mesh.h"
 #include "Mat4x4.h"
 #include "Quat.h"
 #include "Vec3.h"
@@ -73,21 +75,31 @@ namespace AnimModel
 	class Material
 	{
 	public:
-		Shader shader;
+		std::string shader;
 	};
 	
 	class Mesh
 	{
 	public:
+		std::string m_name;
+		bool m_isVisible;
+		
 		Vertex * m_vertices;
 		int m_numVertices;
 		
 		int * m_indices;
 		int m_numIndices;
 		
+	#if ENABLE_METAL
+		GxVertexBuffer m_vertexBuffer;
+		GxIndexBuffer m_indexBuffer;
+	#endif
+	
+	#if ENABLE_OPENGL
 		GLuint m_vertexArray;
 		GLuint m_indexArray;
 		GLuint m_vertexArrayObject;
+	#endif
 		
 		Material m_material;
 		

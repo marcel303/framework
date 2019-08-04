@@ -27,8 +27,8 @@
 
 #pragma once
 
-#include "audiostream/oggvorbis.h"
-#include "soundmix.h"
+#include "oggvorbis.h"
+#include "soundmix.h" // AudioSource
 #include <string>
 
 struct AudioSourceVorbis : AudioSource

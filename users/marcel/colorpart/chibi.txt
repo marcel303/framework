@@ -1,0 +1,4 @@
+app marcel-colorpart
+	depend_library framework
+	depend_library libvideo
+	add_files main.cpp srt.cpp srt.h

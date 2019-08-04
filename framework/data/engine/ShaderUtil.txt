@@ -1,9 +1,11 @@
 static const char * s_shaderUtil = R"SHADER(
 
-const float kSrgbToLinear = 2.0;
+const float kSrgbToLinear = 2.2;
 const float kLinearToSrgb = 1.0 / kSrgbToLinear;
 
 // -- exposed functions --
+
+#if !defined(__METAL_VERSION__)
 
 vec4 applyColorMode(vec4 color1, vec4 color2, float mode);
 vec4 applyColorPost(vec4 color, float post);
@@ -29,6 +31,8 @@ vec3 hueShift(vec3 rgb, float amount);
 float colorDither8(sampler2D ditherTexture, vec2 sampleCoord);
 vec3 colorDither8ScreenSpace(vec2 sampleCoord);
 vec3 colorDitherScreenSpace(vec2 sampleCoord, float dither_bit);
+
+#endif
 
 // -- implementation --
 
@@ -153,7 +157,11 @@ float rgbLuminance(vec3 rgb)
 
 vec3 colorFromHSL(vec3 hsl)
 {
+#if defined(__METAL_VERSION__)
+	float hue = fmod(hsl.x, 1.0);
+#else
 	float hue = mod(hsl.x, 1.0);
+#endif
 	float sat = clamp(hsl.y, 0.0, 1.0);
 	float lum = clamp(hsl.z, 0.0, 1.0);
 
@@ -274,10 +282,14 @@ vec3 hueShift(vec3 rgb, float amount)
 	return colorFromHSL(hsl);
 }
 
+#if !defined(__METAL_VERSION__)
+
 float colorDither8(sampler2D ditherTexture, vec2 sampleCoord)
 {
 	return texture(ditherTexture, sampleCoord / 8.0).r / 32.0 - (1.0 / 128.0);
 }
+
+#endif
 
 vec3 colorDither8ScreenSpace(vec2 sampleCoord)
 {

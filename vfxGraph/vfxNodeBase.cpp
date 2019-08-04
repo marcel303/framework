@@ -25,7 +25,9 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_R8, RG8, R16F, .. todo : remove and replace with Framework-provided texture object
 #include "framework.h"
+#include "graph_typeDefinitionLibrary.h"
 #include "MemAlloc.h"
 #include "StringEx.h"
 #include "Timer.h"
@@ -35,12 +37,13 @@
 
 //
 
-#if __SSE2__
+#ifdef __SSE2__
 	// for interleave and deinterleave methods of VfxImageCpu
 	#include <xmmintrin.h>
+#endif
 
+#ifdef __SSSE3__
 	// for _mm_shuffle_epi8 in deinterleave4
-	// todo : _mm_shuffle_epi8 requires SSSE3. check for it
 	#include <tmmintrin.h>
 #endif
 
@@ -58,27 +61,8 @@ int VfxImage_Texture::getSx() const
 	
 	if (texture != 0)
 	{
-		// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
-		
-		/*
-		if (glGetTextureLevelParameteriv)
-		{
-			glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &result);
-			checkErrorGL();
-		}
-		else
-		*/
-		{
-			GLuint restoreTexture;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &result);
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, restoreTexture);
-		}
+		int temp;
+		gxGetTextureSize(texture, result, temp);
 	}
 	
 	return result;
@@ -90,27 +74,8 @@ int VfxImage_Texture::getSy() const
 	
 	if (texture != 0)
 	{
-		// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
-		
-		/*
-		if (glGetTextureLevelParameteriv)
-		{
-			glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &result);
-			checkErrorGL();
-		}
-		else
-		*/
-		{
-			GLuint restoreTexture;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &result);
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, restoreTexture);
-		}
+		int temp;
+		gxGetTextureSize(texture, temp, result);
 	}
 	
 	return result;
@@ -275,7 +240,7 @@ void VfxImageCpu::interleave4(const Channel & channel1, const Channel & channel2
 		
 		int begin = 0;
 		
-	#if __SSE2__
+	#ifdef __SSE2__
 		/*
 		// without SSE
 			[II] Benchmark: interleave4: 0.000067 sec
@@ -398,7 +363,7 @@ void VfxImageCpu::deinterleave4(
 		
 		int begin = 0;
 		
-	#if __SSE2__
+	#if defined(__SSSE3__) // SSSE3 due to _mm_shuffle_epi8
 		/*
 		without SSE:
 			[II] Benchmark: deinterleave4: 0.000278 sec
@@ -442,6 +407,8 @@ void VfxImageCpu::deinterleave4(
 		}
 		
 		begin = sx_8 * 8;
+	#elif defined(__SSE2__)
+		#warning "__SSE2__ defined but not __SSSE3__. deinterleave4 not optimized, but possibly could be?"
 	#endif
 	
 		for (int x = begin; x < sx; ++x)
@@ -516,7 +483,7 @@ void VfxChannelData::alloc(const int _size)
 	
 	if (_size > 0)
 	{
-		data = new float[_size];
+		data = (float*)MemAlloc(_size * sizeof(float), 16);
 		size = _size;
 	}
 }
@@ -531,7 +498,7 @@ void VfxChannelData::allocOnSizeChange(const int _size)
 
 void VfxChannelData::free()
 {
-	delete[] data;
+	MemFree(data);
 	data = nullptr;
 	
 	size = 0;
@@ -862,8 +829,41 @@ void VfxNodeDescription::add(const VfxChannel & channel)
 	add("MEMORY: %.2f Kb", channel.size * sizeof(float) / 1024.0);
 }
 
+void VfxNodeDescription::addGxTexture(const char * name, const GxTexture & texture)
+{
+	if (texture.isValid() == false)
+	{
+		add("%s. id: %d", name, texture.id);
+	}
+	else
+	{
+		const char * formatString =
+			texture.format == GX_R8_UNORM ? "R8, 8 bpp (unorm)" :
+			texture.format == GX_RG8_UNORM  ? "R8G8, 16 bpp (unorm)" :
+			texture.format == GX_R16_FLOAT ? "R16F, 16 bpp (float)" :
+			texture.format == GX_R32_FLOAT ? "R32F, 32 bpp (float)" :
+			texture.format == GX_RGB8_UNORM  ? "RGB888, 24 bpp (unorm)" :
+			texture.format == GX_RGBA8_UNORM  ? "RGBA8888, 32 bpp (unorm)" :
+			"n/a";
+		
+		const int bpp =
+			texture.format == GX_R8_UNORM ? 8 :
+			texture.format == GX_RG8_UNORM ? 16 :
+			texture.format == GX_R16_FLOAT ? 16 :
+			texture.format == GX_R32_FLOAT ? 32 :
+			texture.format == GX_RGB8_UNORM ? 24 :
+			texture.format == GX_RGBA8_UNORM ? 32 :
+			0;
+		
+		add("%s. size: %d x %d, id: %d", name, texture.sx, texture.sy, texture.id);
+		add("format: %s, size: %.2f Mb (estimate)", formatString, (texture.sx * texture.sy * bpp / 8) / 1024.0 / 1024.0);
+	}
+}
+
 void VfxNodeDescription::addOpenglTexture(const char * name, const uint32_t id)
 {
+// todo : rename this method to addGxTexture, use GX functions below
+
 	if (id == 0)
 	{
 		add("%s. id: %d", name, id);
@@ -941,7 +941,7 @@ VfxNodeBase::VfxNodeBase()
 	, flags(0)
 	, lastTickTraversalId(-1)
 	, lastDrawTraversalId(-1)
-	, editorIsTriggered(false)
+	, editorIsTriggeredTick(-1)
 	, editorIssue()
 	, isPassthrough(false)
 #if ENABLE_VFXGRAPH_CPU_TIMING
@@ -1099,7 +1099,7 @@ void VfxNodeBase::traverseDraw(const int traversalId)
 
 void VfxNodeBase::trigger(const int outputSocketIndex)
 {
-	editorIsTriggered = true;
+	editorIsTriggeredTick = g_currentVfxGraph->currentTickTraversalId;
 	
 	Assert(outputSocketIndex >= 0 && outputSocketIndex < outputs.size());
 	if (outputSocketIndex >= 0 && outputSocketIndex < outputs.size())
@@ -1108,7 +1108,7 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 		Assert(outputSocket.type == kVfxPlugType_Trigger);
 		if (outputSocket.type == kVfxPlugType_Trigger)
 		{
-			outputSocket.editorIsTriggered = true;
+			outputSocket.editorIsTriggeredTick = g_currentVfxGraph->currentTickTraversalId;
 			
 			// iterate the list of outgoing connections, call queueTrigger on nodes with correct outputSocketIndex
 			
@@ -1116,7 +1116,7 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 			{
 				if (triggerTarget.dstSocketIndex == outputSocketIndex)
 				{
-					triggerTarget.srcNode->editorIsTriggered = true;
+					triggerTarget.srcNode->editorIsTriggeredTick = g_currentVfxGraph->currentTickTraversalId;
 					
 					triggerTarget.srcNode->queueTrigger(triggerTarget.srcSocketIndex);
 				}
@@ -1125,7 +1125,7 @@ void VfxNodeBase::trigger(const int outputSocketIndex)
 	}
 }
 
-void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
+void VfxNodeBase::reconnectDynamicInputs()
 {
 	const int numStaticInputs = inputs.size() - dynamicInputs.size();
 	
@@ -1147,7 +1147,7 @@ void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
 	
 		for (int i = 0; i < dynamicInputs.size(); ++i)
 		{
-			if (inputSocketValue.socketName == dynamicInputs[i].name)
+			if (inputSocketValue.nodeId == id && inputSocketValue.socketName == dynamicInputs[i].name)
 				input = &inputs[numStaticInputs + i];
 		}
 		
@@ -1163,76 +1163,68 @@ void VfxNodeBase::reconnectDynamicInputs(const int dstNodeId)
 	
 	for (auto & link : g_currentVfxGraph->dynamicData->links)
 	{
-		if (link.srcNodeId != id)
-			continue;
-		if (dstNodeId != -1 && link.dstNodeId != dstNodeId)
+		if (link.srcNodeId != id || link.srcSocketIndex != -1)
 			continue;
 		
-		if (link.srcSocketIndex == -1)
+		VfxPlug * input = nullptr;
+		
+		for (int i = 0; i < dynamicInputs.size(); ++i)
 		{
-			VfxPlug * input = nullptr;
+			if (link.srcSocketName == dynamicInputs[i].name)
+				input = &inputs[numStaticInputs + i];
+		}
+		
+		if (input == nullptr)
+		{
+			// this can happen when an input doesn't exist (yet)
+			continue;
+		}
+		
+		auto dstNodeItr = g_currentVfxGraph->nodes.find(link.dstNodeId);
+		
+		if (dstNodeItr == g_currentVfxGraph->nodes.end())
+		{
+			logError("failed to find output node. nodeId=%d", link.dstNodeId);
+			continue;
+		}
+		
+		auto dstNode = dstNodeItr->second;
+		
+		VfxPlug * output = nullptr;
+		
+		if (link.dstSocketIndex == -1)
+		{
+			const int numStaticOutputs = dstNode->outputs.size() - dstNode->dynamicOutputs.size();
 			
-			for (int i = 0; i < dynamicInputs.size(); ++i)
+			for (int i = 0; i < dstNode->dynamicOutputs.size(); ++i)
 			{
-				if (link.srcSocketName == dynamicInputs[i].name)
-					input = &inputs[numStaticInputs + i];
+				if (link.dstSocketName == dstNode->dynamicOutputs[i].name)
+					output = &dstNode->outputs[numStaticOutputs + i];
+			}
+		}
+		else
+		{
+			output = dstNode->tryGetOutput(link.dstSocketIndex);
+		}
+		
+		if (output == nullptr)
+		{
+			if (link.dstSocketIndex != -1)
+			{
+				// can happen when the output for the link doesn't exist (yet). otherwise this should not happend
+				logError("failed to find output node socket. nodeId=%d, socketIndex=%d, socketName=%s", link.dstNodeId, link.dstSocketIndex, link.dstSocketName.c_str());
 			}
 			
-			if (input == nullptr)
-			{
-				if (link.srcSocketIndex != -1)
-				{
-					logError("failed to find input node socket. nodeId=%d, socketName=%s", link.srcNodeId, link.srcSocketName.c_str());
-				}
-				
-				continue;
-			}
-			
-			auto dstNodeItr = g_currentVfxGraph->nodes.find(link.dstNodeId);
-			
-			if (dstNodeItr == g_currentVfxGraph->nodes.end())
-			{
-				logError("failed to find output node. nodeId=%d", link.dstNodeId);
-				continue;
-			}
-			
-			auto dstNode = dstNodeItr->second;
-			
-			VfxPlug * output = nullptr;
-			
-			if (link.dstSocketIndex == -1)
-			{
-				const int numStaticOutputs = dstNode->outputs.size() - dstNode->dynamicOutputs.size();
-				
-				for (int i = 0; i < dstNode->dynamicOutputs.size(); ++i)
-				{
-					if (link.dstSocketName == dstNode->dynamicOutputs[i].name)
-						output = &dstNode->outputs[numStaticOutputs + i];
-				}
-			}
-			else
-			{
-				output = dstNode->tryGetOutput(link.dstSocketIndex);
-			}
-			
-			if (output == nullptr)
-			{
-				if (link.dstSocketIndex != -1)
-				{
-					logError("failed to find output node socket. nodeId=%d, socketIndex=%d, socketName=%s", link.dstNodeId, link.dstSocketIndex, link.dstSocketName.c_str());
-				}
-				
-				continue;
-			}
-			
-			connectVfxSockets(this, link.srcSocketIndex, input, dstNode, link.dstSocketIndex, output, link.params, false);
-			
-			// make sure the output is up to date, as it may have been skipped during traversal as it was possibly ot connected
-			
-			if (dstNode->lastTickTraversalId != g_currentVfxGraph->currentTickTraversalId)
-			{
-				dstNode->traverseTick(g_currentVfxGraph->currentTickTraversalId, 0.f);
-			}
+			continue;
+		}
+		
+		connectVfxSockets(this, link.srcSocketIndex, input, dstNode, link.dstSocketIndex, output, link.params, false);
+		
+		// make sure the output is up to date, as it may have been skipped during traversal as it was possibly ot connected
+		
+		if (dstNode->lastTickTraversalId != g_currentVfxGraph->currentTickTraversalId)
+		{
+			dstNode->traverseTick(g_currentVfxGraph->currentTickTraversalId, 0.f);
 		}
 	}
 }
@@ -1297,10 +1289,33 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 		
 		auto srcNode = srcNodeItr->second;
 		
-		auto srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
+		VfxPlug * srcSocket = nullptr;
+		
+		if (link.srcSocketIndex == -1)
+		{
+			const int numStaticInputs = srcNode->inputs.size() - srcNode->dynamicInputs.size();
+			
+			for (int i = 0; i < srcNode->dynamicInputs.size(); ++i)
+			{
+				if (link.srcSocketName == srcNode->dynamicInputs[i].name)
+					srcSocket = &srcNode->inputs[numStaticInputs + i];
+			}
+		}
+		else
+		{
+			srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
+		}
 		
 		if (srcSocket == nullptr)
-			continue; // can happen when the input for the link doesn't exist (yet)
+		{
+			if (link.srcSocketIndex != -1)
+			{
+				// can happen when the input for the link doesn't exist (yet). otherwise this should not happend
+				logError("failed to find input node socket. nodeId=%d, socketName=%s", link.srcNodeId, link.srcSocketName.c_str());
+			}
+			
+			continue;
+		}
 		
 		srcSocket->disconnect(dstSocket->mem);
 	}
@@ -1354,10 +1369,33 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 		
 		auto srcNode = srcNodeItr->second;
 		
-		auto srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
+		VfxPlug * srcSocket = nullptr;
+		
+		if (link.srcSocketIndex == -1)
+		{
+			const int numStaticInputs = srcNode->inputs.size() - srcNode->dynamicInputs.size();
+			
+			for (int i = 0; i < srcNode->dynamicInputs.size(); ++i)
+			{
+				if (link.srcSocketName == srcNode->dynamicInputs[i].name)
+					srcSocket = &srcNode->inputs[numStaticInputs + i];
+			}
+		}
+		else
+		{
+			srcSocket = srcNode->tryGetInput(link.srcSocketIndex);
+		}
 		
 		if (srcSocket == nullptr)
-			continue; // can happen when the input for the link doesn't exist (yet)
+		{
+			if (link.srcSocketIndex != -1)
+			{
+				// can happen when the input for the link doesn't exist (yet). otherwise this should not happend
+				logError("failed to find input node socket. nodeId=%d, socketName=%s", link.srcNodeId, link.srcSocketName.c_str());
+			}
+			
+			continue;
+		}
 		
 		connectVfxSockets(srcNode, link.srcSocketIndex, srcSocket, this, link.dstSocketIndex, dstSocket, link.params, false);
 	}
@@ -1368,9 +1406,9 @@ void VfxNodeBase::setDynamicOutputs(const DynamicOutput * newOutputs, const int 
 #include "graph.h"
 #include "tinyxml2.h"
 
-void createVfxValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary)
+void createVfxValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
-	auto addSimple = [&](const char * typeName, const char * editor, const char * visualizer = nullptr) -> GraphEdit_ValueTypeDefinition &
+	auto addSimple = [&](const char * typeName, const char * editor, const char * visualizer = nullptr) -> Graph_ValueTypeDefinition &
 	{
 		auto & td = typeDefinitionLibrary.valueTypeDefinitions[typeName];
 		
@@ -1396,7 +1434,7 @@ void createVfxValueTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinit
 	{
 		std::pair<std::string, std::string> key("float", "float");
 		
-		GraphEdit_LinkTypeDefinition & floatLink = typeDefinitionLibrary.linkTypeDefinitions[key];
+		Graph_LinkTypeDefinition & floatLink = typeDefinitionLibrary.linkTypeDefinitions[key];
 		
 		floatLink.srcTypeName = "float";
 		floatLink.dstTypeName = "float";
@@ -1429,6 +1467,7 @@ VfxEnumTypeRegistration::VfxEnumTypeRegistration()
 	: enumName()
 	, nextValue(0)
 	, elems()
+	, getElems(nullptr)
 {
 	next = g_vfxEnumTypeRegistrationList;
 	g_vfxEnumTypeRegistrationList = this;
@@ -1460,9 +1499,7 @@ void VfxEnumTypeRegistration::elem(const char * name, const char * valueText)
 
 #include "graph.h"
 
-extern void getFsfxShaderList(std::vector<std::string> & shaderList);
-
-void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList)
+void createVfxEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList)
 {
 	for (const VfxEnumTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
 	{
@@ -1472,28 +1509,30 @@ void createVfxEnumTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 		
 		for (auto & src : registration->elems)
 		{
-			GraphEdit_EnumDefinition::Elem dst;
+			Graph_EnumDefinition::Elem dst;
 			
 			dst.name = src.name;
 			dst.valueText = src.valueText;
 			
 			enumDefinition.enumElems.push_back(dst);
 		}
-	}
-	
-	{
-		auto & enumDefinition = typeDefinitionLibrary.enumDefinitions["fsfxShader"];
 		
-		std::vector<std::string> shaderList;
-		getFsfxShaderList(shaderList);
+		// create additional elems if the enum has dynamic elements
+		// todo : remove this code. replace it with explicit methods for nodes/systems that define nodes and enum dynamically
 		
-		for (auto & shader : shaderList)
+		if (registration->getElems != nullptr)
 		{
-			GraphEdit_EnumDefinition::Elem elem;
-			elem.name = shader;
-			elem.valueText = shader;
+			auto elems = registration->getElems();
 			
-			enumDefinition.enumElems.push_back(elem);
+			for (auto & src : elems)
+			{
+				Graph_EnumDefinition::Elem dst;
+				
+				dst.name = src.name;
+				dst.valueText = src.valueText;
+				
+				enumDefinition.enumElems.push_back(dst);
+			}
 		}
 	}
 }
@@ -1562,11 +1601,11 @@ void VfxNodeTypeRegistration::outEditable(const char * name)
 
 #include "graph.h"
 
-void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxNodeTypeRegistration * registrationList)
+void createVfxNodeTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxNodeTypeRegistration * registrationList)
 {
 	for (const VfxNodeTypeRegistration * registration = registrationList; registration != nullptr; registration = registration->next)
 	{
-		GraphEdit_TypeDefinition typeDefinition;
+		Graph_TypeDefinition typeDefinition;
 		
 		typeDefinition.typeName = registration->typeName;
 		
@@ -1590,7 +1629,7 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 		{
 			auto & src = registration->inputs[i];
 			
-			GraphEdit_TypeDefinition::InputSocket inputSocket;
+			Graph_TypeDefinition::InputSocket inputSocket;
 			inputSocket.typeName = src.typeName;
 			inputSocket.name = src.name;
 			inputSocket.index = i;
@@ -1606,7 +1645,7 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 		{
 			auto & src = registration->outputs[i];
 			
-			GraphEdit_TypeDefinition::OutputSocket outputSocket;
+			Graph_TypeDefinition::OutputSocket outputSocket;
 			outputSocket.typeName = src.typeName;
 			outputSocket.name = src.name;
 			outputSocket.isEditable = src.isEditable;
@@ -1626,7 +1665,7 @@ void createVfxNodeTypeDefinitions(GraphEdit_TypeDefinitionLibrary & typeDefiniti
 
 //
 
-void createVfxTypeDefinitionLibrary(GraphEdit_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * enumRegistrationList, const VfxNodeTypeRegistration * nodeRegistrationList)
+void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * enumRegistrationList, const VfxNodeTypeRegistration * nodeRegistrationList)
 {
 	createVfxValueTypeDefinitions(typeDefinitionLibrary);
 	createVfxEnumTypeDefinitions(typeDefinitionLibrary, enumRegistrationList);

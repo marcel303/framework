@@ -1,13 +1,13 @@
 #pragma once
 
-#include <map>
-#include <vector>
 #include "Channel.h"
 #include "ChannelHandler.h"
 #include "ChannelTypes.h"
 #include "NetHandlePool.h"
 #include "NetSocket.h"
 #include "PacketListener.h"
+#include <map>
+#include <vector>
 
 class ChannelManager : public PacketListener
 {

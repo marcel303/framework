@@ -9,10 +9,16 @@
 	url = https://github.com/marcel303/chibi.git
 [submodule "3rdparty/libsdl2"]
 	path = 3rdparty/libsdl2
-	url = https://github.com/spurious/SDL-mirror.git
+url=https://github.com/marcel303/SDL-mirror.git
 [submodule "3rdparty/imgui"]
 	path = 3rdparty/imgui
 	url = https://github.com/marcel303/imgui
 [submodule "3rdparty/ImGuiColorTextEdit"]
 	path = 3rdparty/ImGuiColorTextEdit
-	url = https://github.com/BalazsJako/ImGuiColorTextEdit
+	url = https://github.com/marcel303/ImGuiColorTextEdit
+[submodule "3rdparty/box2d"]
+	path = 3rdparty/box2d
+	url = https://github.com/erincatto/Box2D
+[submodule "3rdparty/rapidjson"]
+	path = 3rdparty/rapidjson
+	url = https://github.com/Tencent/rapidjson.git

@@ -69,3 +69,9 @@ float scaled_octave_noise_4d(
 	const float y,
 	const float z,
 	const float w);
+
+float raw_noise_1d(const float x);
+float raw_noise_2d(const float x, const float y);
+float raw_noise_3d(const float x, const float y, const float z);
+float raw_noise_4d(const float x, const float y, const float, const float w);
+

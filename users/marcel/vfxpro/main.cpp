@@ -1,8 +1,8 @@
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
-#include "audiostream/AudioOutput.h"
 #include "audiofft.h"
+#include "audiooutput/AudioOutput.h"
 #include "audioin.h"
 #include "Calc.h"
 #include "config.h"
@@ -25,7 +25,7 @@
 #include <sys/stat.h>
 
 #ifdef WIN32
-	#include <Windows.h>
+	//#include <Windows.h>
 #endif
 
 #if ENABLE_VIDEO
@@ -70,9 +70,9 @@ float g_prevSceneTime = 0.f;
 float g_prevSceneTimeRcp = 0.f;
 
 float g_pcmVolume = 0.f;
-GLuint g_pcmTexture = 0;
-GLuint g_fftTexture = 0;
-GLuint g_fftTextureWithFade = 0;
+GxTexture g_pcmTexture;
+GxTexture g_fftTexture;
+GxTexture g_fftTextureWithFade;
 
 void nextScene(const char * filename)
 {
@@ -189,11 +189,11 @@ static std::vector<SceneEffect*> buildEffectsList()
 
 /*
 
-:: todo :: OSC
+:: ideas :: OSC
 
 	-
 
-:: todo :: configuration
+:: ideas :: configuration
 
 	# prompt for MIDI controller at startup. or select by name in XML config file?
 		+ defined in settings.xml instead
@@ -203,25 +203,25 @@ static std::vector<SceneEffect*> buildEffectsList()
 	+ define scene XML representation
 	+ discuss with Max what would be needed for life act
 
-:: todo :: projector output
+:: ideas :: projector output
 
 	- add brightness control
 		+ write shader which does a lookup based on the luminance of the input and transforms the input
 		- add ability to change the setting
 	- add border blends to hide projector seam. unless eg MadMapper already does this, it may be necessary to do it ourselvess
 
-:: todo :: utility functions
+:: ideas :: utility functions
 
 	+ add PCM capture
 	+ add FFT calculation PCM data
 	+ add loudness calculation PCM data
 
-:: todo :: post processing and graphics quality
+:: ideas :: post processing and graphics quality
 
 	- smooth line drawing with high AA. use a post process pass to blur the result ?
 	+ add FXAA post process
 
-:: todo :: visuals tech 2D
+:: ideas :: visuals tech 2D
 
 	+ add a box blur shader. allow it to darken the output too
 
@@ -242,7 +242,7 @@ static std::vector<SceneEffect*> buildEffectsList()
 
 	- UV displacement flow map thingy
 
-:: todo :: visuals tech 3D
+:: ideas :: visuals tech 3D
 
 	- virtual camera positioning
 		- allow positioning of the virtual camera based on settings XML
@@ -252,7 +252,7 @@ static std::vector<SceneEffect*> buildEffectsList()
 
 	+ add lighting shader code
 
-:: todo :: effects
+:: ideas :: effects
 
 	- particle effect : sea
 
@@ -264,19 +264,19 @@ static std::vector<SceneEffect*> buildEffectsList()
 
 	- particle effect :: star cluster
 
-:: todo :: particle system
+:: ideas :: particle system
 
 	- ability to toggle particle trails
 
-:: todo :: color controls
+:: ideas :: color controls
 
 	- 
 
-:: notes
+:: ideas : general
 
-	- seamless transitions between scenes
+	+ seamless transitions between scenes
 
-:: shaders
+:: ideas : shaders
 
 	- add power tween value to vignette falloff
 	- rename vignette distance to falloff and inner_radius to radius
@@ -409,6 +409,7 @@ protected:
 		catch (osc::Exception & e)
 		{
 			logError("error while parsing message: %s: %s", m.AddressPattern(), e.what());
+			(void)e;
 		}
 	}
 };
@@ -505,12 +506,12 @@ struct Camera
 
 	void beginView(int c, int & sx, int & sy) const
 	{
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
 		gxLoadMatrixf(cameraToView.m_v);
 		gxMultMatrixf(worldToCamera.m_v);
 
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 	#if NUM_SCREENS == 1
 		const int x1 = virtualToScreenX(-150);
@@ -536,9 +537,9 @@ struct Camera
 
 	void endView() const
 	{
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPopMatrix();
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPopMatrix();
 
 		// dirty hack to restore viewport
@@ -570,7 +571,7 @@ static void drawTestObjects()
 			gxRotatef(framework.time / (k + 1.234f) * Calc::rad2deg, 0.f, 1.f, 0.f);
 			gxRotatef(framework.time / (k + 1.345f) * Calc::rad2deg, 0.f, 0.f, 1.f);
 
-			gxBegin(GL_TRIANGLES);
+			gxBegin(GX_TRIANGLES);
 			{
 				gxColor4f(1.f, 0.f, 0.f, 1.f); gxVertex3f(-1.f,  0.f,  0.f); gxVertex3f(+1.f,  0.f,  0.f); gxVertex3f(+1.f, 0.3f, 0.2f);
 				gxColor4f(0.f, 1.f, 0.f, 1.f); gxVertex3f( 0.f, -1.f,  0.f); gxVertex3f( 0.f, +1.f,  0.f); gxVertex3f(0.4f, +1.f, 0.4f);
@@ -585,7 +586,7 @@ static void drawTestObjects()
 static void drawGroundPlane(const float y)
 {
 	gxColor4f(.2f, .2f, .2f, 1.f);
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		gxVertex3f(-100.f, y, -100.f);
 		gxVertex3f(+100.f, y, -100.f);
@@ -599,7 +600,7 @@ static void drawCamera(const Camera & camera, const float alpha)
 {
 	// draw local axis
 
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxPushMatrix();
 	{
 		gxMultMatrixf(camera.cameraToWorld.m_v);
@@ -608,7 +609,7 @@ static void drawCamera(const Camera & camera, const float alpha)
 		gxPushMatrix();
 		{
 			gxScalef(.2f, .2f, .2f);
-			gxBegin(GL_LINES);
+			gxBegin(GX_LINES);
 			{
 				gxColor4f(1.f, 0.f, 0.f, alpha); gxVertex3f(0.f, 0.f, 0.f); gxVertex3f(1.f, 0.f, 0.f);
 				gxColor4f(0.f, 1.f, 0.f, alpha); gxVertex3f(0.f, 0.f, 0.f); gxVertex3f(0.f, 1.f, 0.f);
@@ -632,7 +633,7 @@ static void drawCamera(const Camera & camera, const float alpha)
 		gxPushMatrix();
 		{
 			gxScalef(1.f, 1.f, 1.f);
-			gxBegin(GL_LINES);
+			gxBegin(GX_LINES);
 			{
 				for (int i = 0; i < 4; ++i)
 				{
@@ -645,7 +646,7 @@ static void drawCamera(const Camera & camera, const float alpha)
 		}
 		gxPopMatrix();
 	}
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxPopMatrix();
 }
 
@@ -668,7 +669,7 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 	setColor(colorWhite);
 	gxSetTexture(surfaceTexture);
 	{
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		{
 			gxTexCoord2f(1.f / NUM_SCREENS * (screenId + 0), 0.f); gxVertex3f(screenPoints[0][0], screenPoints[0][1], screenPoints[0][2]);
 			gxTexCoord2f(1.f / NUM_SCREENS * (screenId + 1), 0.f); gxVertex3f(screenPoints[1][0], screenPoints[1][1], screenPoints[1][2]);
@@ -683,7 +684,7 @@ static void drawScreen(const Vec3 * screenPoints, GLuint surfaceTexture, int scr
 	setBlend(BLEND_ADD);
 
 	setColor(colorWhite);
-	gxBegin(GL_LINE_LOOP);
+	gxBegin(GX_LINE_LOOP);
 	{
 		for (int i = 0; i < 4; ++i)
 			gxVertex3fv(&screenPoints[i][0]);
@@ -806,6 +807,7 @@ static void preloadSceneFiles()
 			catch (std::exception & e)
 			{
 				logError("%s", e.what());
+				(void)e;
 			}
 		}
 	}
@@ -915,7 +917,7 @@ public:
 			auto hands = frame.hands();
 			if (!hands.isEmpty())
 			{
-				// todo : track whether it's the same hand ?
+				// todo-vfxpro : track whether it's the same hand ?
 
 				auto & hand = *hands.begin();
 				auto palmPosition = hand.palmPosition();
@@ -959,7 +961,7 @@ static void showTestImage()
 
 				setColor(colorWhite);
 				setFont("calibri.ttf");
-				if (std::fmodf(framework.time, 1.f) < .5f)
+				if (fmodf(framework.time, 1.f) < .5f)
 					drawText(GFX_SX/2, GFX_SY/2-8 + 250, 32, 0.f, 0.f, "press any key to start visualizing");
 			}
 			gxPopMatrix();
@@ -974,8 +976,7 @@ static void showTestImage()
 
 			gxPushMatrix();
 			{
-				glEnable(GL_LINE_SMOOTH);
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+				pushLineSmooth(true);
 
 				Sprite sprite("testimage.jpg");
 
@@ -991,7 +992,7 @@ static void showTestImage()
 						gxTranslatef(i * 10, i * 10, i * 10);
 
 						const float rotOffset = i * 3;
-						const float rotSpeed = 2.f;// * std::sinf(framework.time);
+						const float rotSpeed = 2.f;// * std::sin(framework.time);
 						const float scale = 1.f - i / 100.f / 2.f;
 
 						gxRotatef(rotOffset + framework.time * rotSpeed * 1.234f, 1, 0, 0);
@@ -1009,7 +1010,7 @@ static void showTestImage()
 					gxPopMatrix();
 				}
 
-				glDisable(GL_LINE_SMOOTH);
+				popLineSmooth();
 			}
 			gxPopMatrix();
 
@@ -1125,6 +1126,10 @@ static void doStressTest()
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 	if (!config.load("settings.xml"))
 	{
 		logError("failed to load: settings.xml");
@@ -1243,7 +1248,7 @@ int main(int argc, char * argv[])
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
 
-	if (framework.init(0, 0, GFX_SX * GFX_SCALE, GFX_SY * GFX_SCALE))
+	if (framework.init(GFX_SX * GFX_SCALE, GFX_SY * GFX_SCALE))
 	{
 	#if ENABLE_RESOURCE_PRECACHE
 		framework.fillCachesCallback = fillCachesCallback;
@@ -1259,14 +1264,9 @@ int main(int argc, char * argv[])
 
 		g_sceneSurfacePool = new SceneSurfacePool(16);
 
-		Assert(g_pcmTexture == 0);
-		glGenTextures(1, &g_pcmTexture);
-
-		Assert(g_fftTexture == 0);
-		glGenTextures(1, &g_fftTexture);
-		
-		Assert(g_fftTextureWithFade == 0);
-		glGenTextures(1, &g_fftTextureWithFade);
+		Assert(g_pcmTexture.id == 0);
+		Assert(g_fftTexture.id == 0);
+		Assert(g_fftTextureWithFade.id == 0);
 
 		std::list<TimeDilationEffect> timeDilationEffects;
 
@@ -1355,11 +1355,11 @@ int main(int argc, char * argv[])
 					audioInProvideTime = framework.time;
 				}
 
-				// todo : increment depending on time passed, not not 1/60 assuming 60 fps
+				// todo-vfxpro : increment depending on time passed, not 1/60 assuming 60 fps
 				numSamplesThisFrame = Calc::Min(config.audioIn.sampleRate / 60, audioInHistorySize);
 				Assert(audioInHistorySize >= numSamplesThisFrame);
 
-				// todo : secure this code
+				// todo-vfxpro : secure this code
 
 				samplesThisFrame = new float[numSamplesThisFrame];
 
@@ -1511,7 +1511,7 @@ int main(int argc, char * argv[])
 					if (index - base < 0 || index - base > 9)
 						continue;
 
-					if (keyboard.wentDown((SDLKey)(SDLK_0 + index - base)))
+					if (keyboard.wentDown(SDLK_0 + (index - base)))
 					{
 						Effect * effect = (*i)->m_effect;
 
@@ -1528,7 +1528,7 @@ int main(int argc, char * argv[])
 					if (int(i) - base < 0 || int(i) - base > 9)
 						continue;
 
-					if (keyboard.wentDown((SDLKey)(SDLK_0 + i - base)))
+					if (keyboard.wentDown(SDLK_0 + (i - base)))
 					{
 						g_scene->triggerEvent(g_scene->m_events[i]->m_name.c_str());
 					}
@@ -1543,7 +1543,7 @@ int main(int argc, char * argv[])
 					if (i - base < 0 || i - base > 9)
 						continue;
 
-					if (keyboard.wentDown((SDLKey)(SDLK_0 + i - base)))
+					if (keyboard.wentDown(SDLK_0 + (i - base)))
 					{
 						SceneLayer * layer = g_scene->m_layers[i];
 
@@ -1771,44 +1771,23 @@ int main(int argc, char * argv[])
 
 			// convert PCM data to shader input texture
 
-			glBindTexture(GL_TEXTURE_2D, g_pcmTexture);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, numSamplesThisFrame, 1, 0, GL_RED, GL_FLOAT, samplesThisFrame);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
+			g_pcmTexture.allocate(numSamplesThisFrame, 1, GX_R32_FLOAT, true, true);
+			g_pcmTexture.upload(samplesThisFrame, 4, 0);
 
 			// convert FFT data to shader input texture
 
-			glBindTexture(GL_TEXTURE_2D, g_fftTexture);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 			float powerValues[kFFTComplexSize];
 			for (int i = 0; i < kFFTComplexSize; ++i)
 				powerValues[i] = fftPowerValue(i);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, kFFTComplexSize, 1, 0, GL_RED, GL_FLOAT, powerValues);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
-
-			glBindTexture(GL_TEXTURE_2D, g_fftTextureWithFade);
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+			g_fftTexture.allocate(kFFTComplexSize, 1, GX_R32_FLOAT, true, true);
+			g_fftTexture.upload(powerValues, 4, 0);
+			
 			static float powerValuesWithFade[kFFTComplexSize] = { };
-			const float fftFadeA = std::powf(g_scene->m_fftFade, dtReal);
+			const float fftFadeA = powf(g_scene->m_fftFade, dtReal);
 			for (int i = 0; i < kFFTComplexSize; ++i)
 				powerValuesWithFade[i] = std::max(powerValuesWithFade[i] * fftFadeA, powerValues[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, kFFTComplexSize, 1, 0, GL_RED, GL_FLOAT, powerValuesWithFade);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
+			g_fftTextureWithFade.allocate(kFFTComplexSize, 1, GX_R32_FLOAT, true, true);
+			g_fftTextureWithFade.upload(powerValuesWithFade, 4, 0);
 
 			//
 
@@ -1828,8 +1807,8 @@ int main(int argc, char * argv[])
 
 				Camera cameras[NUM_SCREENS];
 
-				const float dx = +sqrtf(2.f) / 2.f; // todo : rotate the screen instead of hacking their positions
-				const float dz = -sqrtf(2.f) / 2.f; // todo : rotate the screen instead of hacking their positions
+				const float dx = +sqrtf(2.f) / 2.f; // todo-vfxpro : rotate the screen instead of hacking their positions
+				const float dz = -sqrtf(2.f) / 2.f; // todo-vfxpro : rotate the screen instead of hacking their positions
 
 			#if NUM_SCREENS == 1
 				Vec3 _screenCorners[4] =
@@ -2005,7 +1984,7 @@ int main(int argc, char * argv[])
 
 					setBlend(BLEND_ALPHA);
 
-				#if 0 // todo : move to camera viewport rendering ?
+				#if 0 // todo-vfxpro : move to camera viewport rendering ?
 					// draw projector bounds
 
 					setColorf(1.f, 1.f, 1.f, .25f);
@@ -2021,11 +2000,11 @@ int main(int argc, char * argv[])
 					{
 						Mat4x4 projection;
 						projection.MakePerspectiveLH(90.f * Calc::deg2rad, float(GFX_SY) / float(GFX_SX), 0.01f, 100.f);
-						gxMatrixMode(GL_PROJECTION);
+						gxMatrixMode(GX_PROJECTION);
 						gxPushMatrix();
 						gxLoadMatrixf(projection.m_v);
 						{
-							gxMatrixMode(GL_MODELVIEW);
+							gxMatrixMode(GX_MODELVIEW);
 							gxPushMatrix();
 							gxLoadMatrixf(cameraMatrix.m_v);
 							{
@@ -2056,13 +2035,13 @@ int main(int argc, char * argv[])
 
 								setBlend(BLEND_ALPHA);
 							}
-							gxMatrixMode(GL_MODELVIEW);
+							gxMatrixMode(GX_MODELVIEW);
 							gxPopMatrix();
 						}
-						gxMatrixMode(GL_PROJECTION);
+						gxMatrixMode(GX_PROJECTION);
 						gxPopMatrix();
 
-						gxMatrixMode(GL_MODELVIEW);
+						gxMatrixMode(GX_MODELVIEW);
 					}
 					glDisable(GL_DEPTH_TEST);
 				}
@@ -2291,8 +2270,8 @@ int main(int argc, char * argv[])
 
 					setBlend(BLEND_ALPHA);
 					setColorf(s, s, s, .5f);
-					gxSetTexture(g_fftTexture);
-					gxBegin(GL_QUADS);
+					gxSetTexture(g_fftTexture.id);
+					gxBegin(GX_QUADS);
 					{
 						gxTexCoord2f(0.f, 0.f); gxVertex2f(x,      y     );
 						gxTexCoord2f(w,   0.f); gxVertex2f(x + sx, y     );
@@ -2392,14 +2371,9 @@ int main(int argc, char * argv[])
 		delete surface;
 		surface = nullptr;
 
-		glDeleteTextures(1, &g_fftTextureWithFade);
-		g_fftTextureWithFade = 0;
-
-		glDeleteTextures(1, &g_fftTexture);
-		g_fftTexture = 0;
-
-		glDeleteTextures(1, &g_pcmTexture);
-		g_pcmTexture = 0;
+		g_fftTextureWithFade.free();
+		g_fftTexture.free();
+		g_pcmTexture.free();
 
 		framework.shutdown();
 	}

@@ -50,6 +50,8 @@
 	#define _chdir chdir
 #endif
 
+#include <GL/glew.h>
+
 #include "audio.h"
 #include "data/engine/ShaderCommon.txt"
 #include "framework.h"
@@ -60,6 +62,8 @@
 #include "shaders.h"
 #include "spriter.h"
 
+#define ENABLE_DISPLAY_SIZE_SCALING 0 // todo : make this work with resizable windows
+
 #if USE_GLYPH_ATLAS
 	#include "textureatlas.h"
 #endif
@@ -67,30 +71,20 @@
 #include "StringEx.h"
 #include "Timer.h"
 
+#if ENABLE_METAL
+	#include "gx-metal/metal.h"
+#endif
+
 // -----
 
 #if ENABLE_UTF8_SUPPORT
-#include "utf8rewind.h"
-#endif
-
-#if defined(MACOS)
-    #define INDEX_TYPE GL_UNSIGNED_INT
-#else
-    #define INDEX_TYPE GL_UNSIGNED_SHORT
+	#include "utf8rewind.h"
 #endif
 
 #define MAX_TEXT_LENGTH 2048
 
-#define HIGHDPI_HACK 0 // todo : remove or make it into an init option (allowUpscaling or something) and make it nicer
-
 #if defined(_MSC_VER) && _MSC_VER >= 1900
 	#pragma comment(lib, "legacy_stdio_definitions.lib")
-#endif
-
-#if INDEX_TYPE == GL_UNSIGNED_INT
-typedef unsigned int glindex_t;
-#else
-typedef unsigned short glindex_t;
 #endif
 
 extern bool initMidi(int deviceIndex);
@@ -100,8 +94,12 @@ extern void shutMidi();
 extern void lockMidi();
 extern void unlockMidi();
 
-#if ENABLE_OPENGL && !USE_LEGACY_OPENGL
-static void gxFlush(bool endOfBatch);
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+#if defined(WIN32)
+	void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
+#else
+	void debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
+#endif
 #endif
 
 static float scale255(const float v)
@@ -110,7 +108,9 @@ static float scale255(const float v)
 	return v * m;
 }
 
-static void getViewportSize(float & sx, float & sy);
+static int getCurrentBackingScale();
+static void getCurrentBackingSize(int & sx, int & sy);
+static void getCurrentViewportSize(int & sx, int & sy);
 
 // -----
 
@@ -125,7 +125,6 @@ Color colorYellow(255, 255, 0, 255);
 //
 
 Framework framework;
-Dictionary settings;
 Mouse mouse;
 Keyboard keyboard;
 Gamepad gamepad[MAX_GAMEPAD];
@@ -133,16 +132,26 @@ Midi midi;
 
 // -----
 
+std::map<std::string, std::string> s_shaderSources;
+
+int s_backingScale = 1.f; // global backing scale multiplier. a bit of a hack as it assumed the scale never changes, but works well for most apps in most situations for now..
+
+static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
+static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
+
 Framework::Framework()
 {
 	waitForEvents = false;
 	fullscreen = false;
 	exclusiveFullscreen = true;
 	useClosestDisplayMode = false;
+	enableVsync = true;
+	msaaLevel = 0;
 	basicOpenGL = false;
 	enableDepthBuffer = false;
 	enableDrawTiming = true;
 	enableProfiling = false;
+	allowHighDpi = true;
 	minification = 1;
 	enableMidi = false;
 	midiDeviceIndex = 0;
@@ -153,6 +162,7 @@ Framework::Framework()
 	windowX = -1;
 	windowY = -1;
 	windowBorder = true;
+	windowIsResizable = false;
 	windowTitle.clear();
 	windowSx = 0;
 	windowSy = 0;
@@ -164,9 +174,15 @@ Framework::Framework()
 	realTimeEditCallback = 0;
 	initErrorHandler = 0;
 	
+	events.clear();
+	changedFiles.clear();
+	droppedFiles.clear();
+	
 	quitRequested = false;
 	time = 0.f;
 	timeStep = 1.f / 60.f;
+	
+	m_lastTick = -1;
 
 	m_sprites = 0;
 	m_models = 0;
@@ -177,10 +193,22 @@ Framework::~Framework()
 {
 }
 
-bool Framework::init(int argc, const char * argv[], int sx, int sy)
+bool Framework::init(int sx, int sy)
 {
 #ifdef WIN32
-	SetProcessDPIAware();
+	//SetProcessDPIAware();
+
+	/*
+	todo : high dpi support on Windows
+
+	Either support will need to be added to SDL, or, framework will need to implement it.
+	Idea:
+	1) Set process dpi awareness flag.
+	2) Detect DPI for default display.
+	3) Compare DPI with 'standard' dpi. If high (almost 2x more), assume a high dpi display.
+	4) If a high dpi display is detected, set backing scale to 2. This will ensure additional pixel density for surfaces.
+	5) Multiply window size times backing scale, divide mouse coordinates times backing scale. This will ensure additioal pixel density for the back buffers.
+	*/
 #endif
 
 	// initialize SDL
@@ -230,6 +258,9 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
 	SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
 	
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, msaaLevel >= 2 ? 1 : 0);
+	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, msaaLevel >= 2 ? msaaLevel : 0);
+	
 	if (enableDepthBuffer)
 	{
 	#if USE_LEGACY_OPENGL
@@ -238,7 +269,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	#else
-		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 32);
+		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	#endif
 	}
@@ -254,18 +285,12 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 #endif
 	
-	// todo: ensure VSYNC is enabled
-	
 	flags |= SDL_WINDOW_OPENGL;
 #endif
-	
+
 	if (fullscreen && minification == 1)
 	{
 		flags |= SDL_WINDOW_FULLSCREEN;
-		
-	#if ENABLE_OPENGL
-		SDL_GL_SetSwapInterval(1);
-	#endif
 	}
 
 	int actualSx = sx / minification;
@@ -338,14 +363,14 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	if (!windowBorder)
 		flags |= SDL_WINDOW_BORDERLESS;
 	
-#if HIGHDPI_HACK
-	flags |= SDL_WINDOW_ALLOW_HIGHDPI;
+	if (windowIsResizable)
+		flags |= SDL_WINDOW_RESIZABLE;
 	
-	actualSx /= 2;
-	actualSy /= 2;
-#endif
+	if (allowHighDpi)
+		flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
-	globals.mainWindow = SDL_CreateWindow(
+	fassert(globals.mainWindow == nullptr);
+	SDL_Window * mainWindow = SDL_CreateWindow(
 		windowTitle.c_str(),
 		windowX == -1 ? SDL_WINDOWPOS_CENTERED : windowX,
 		windowY == -1 ? SDL_WINDOWPOS_CENTERED : windowY,
@@ -353,7 +378,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		actualSy,
 		flags);
 
-	if (!globals.mainWindow)
+	if (!mainWindow)
 	{
 		logError("failed to set video mode (%dx%d @ %dbpp): %s", sx / minification, sy / minification, 32, SDL_GetError());
 		if (initErrorHandler)
@@ -361,15 +386,26 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		return false;
 	}
 	
-	SDL_RaiseWindow(globals.mainWindow);
+	globals.mainWindow = new Window(mainWindow);
 	
-	globals.currentWindowData = &globals.mainWindowData;
+	fassert(globals.currentWindow == nullptr);
+	fassert(globals.currentWindowData == nullptr);
+	globals.currentWindow = globals.mainWindow;
+	globals.currentWindowData = globals.mainWindow->m_windowData;
 	
 	windowSx = sx;
 	windowSy = sy;
 	
 #if ENABLE_OPENGL
-	globals.glContext = SDL_GL_CreateContext(globals.mainWindow);
+	int drawableSx;
+	int drawableSy;
+	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
+	s_backingScale = (int)roundf(fmaxf(drawableSx / float(actualSx), drawableSy / float(actualSy)));
+	if (s_backingScale < 1)
+		s_backingScale = 1;
+	
+	fassert(globals.glContext == nullptr);
+	globals.glContext = SDL_GL_CreateContext(globals.mainWindow->m_window);
 	checkErrorGL();
 	
 	if (!globals.glContext)
@@ -382,10 +418,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	if (!basicOpenGL)
 	{
-		glewExperimental = GL_TRUE; // force GLEW to resolve all supported extension methods
-	
 		const int glewStatus = glewInit();
-		glGetError(); // note : GLEW generates an error code and we're not interested in trapping it..
 		checkErrorGL();
 
 		if (glewStatus != GLEW_OK)
@@ -398,6 +431,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 		logInfo("using OpenGL %s, %s, GLEW %s", glGetString(GL_VERSION), glGetString(GL_VENDOR), glewGetString(GLEW_VERSION));
 	
+	#if !USE_LEGACY_OPENGL
 		if (!GLEW_VERSION_3_2)
 		{
 			logWarning("OpenGL 3.2 not supported");
@@ -405,6 +439,20 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 				initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
 			return false;
 		}
+	#else
+		if (!GLEW_VERSION_2_1)
+		{
+			logWarning("OpenGL 2.1 not supported");
+			if (initErrorHandler)
+				initErrorHandler(INIT_ERROR_OPENGL_EXTENSIONS);
+			return false;
+		}
+		
+		if (glBlendEquation == nullptr)
+			logWarning("OpenGL extension glBlendEquation not found");
+		if (glClampColor == nullptr)
+			logWarning("OpenGL extension glClampColor not found");
+	#endif
 	}
 
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
@@ -415,6 +463,16 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS_ARB);
 	}
 #endif
+
+	SDL_GL_SetSwapInterval(enableVsync ? 1 : 0);
+#endif
+
+#if ENABLE_METAL
+	metal_init();
+	
+	metal_attach(globals.mainWindow->getWindow());
+	
+	metal_make_active(globals.mainWindow->getWindow());
 #endif
 	
 	globals.displaySize[0] = sx;
@@ -429,6 +487,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 	
 	for (int i = 0; i < numJoysticks && i < MAX_GAMEPAD; ++i)
 	{
+		fassert(globals.joystick[i] == nullptr);
 		globals.joystick[i] = SDL_JoystickOpen(i);
 	}
 #endif
@@ -436,12 +495,14 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 #if ENABLE_PROFILING
 	if (framework.enableProfiling)
 	{
+		fassert(globals.rmt == nullptr);
 		if (rmt_CreateGlobalInstance(&globals.rmt) != RMT_ERROR_NONE)
 			return false;
 		rmt_BindOpenGL();
 	}
 #endif
 
+	fassert(globals.builtinShaders == nullptr);
 	globals.builtinShaders = new BuiltinShaders();
 
 	if (enableMidi)
@@ -457,6 +518,7 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 
 	// initialize FreeType
 	
+	fassert(globals.freeType == nullptr);
 	if (FT_Init_FreeType(&globals.freeType) != 0)
 	{
 		logError("failed to initialize FreeType");
@@ -484,26 +546,20 @@ bool Framework::init(int argc, const char * argv[], int sx, int sy)
 		initRealTimeEditing();
 	}
 
-	// load settings
-
-	settings.load("settings.txt");
-
 	// set icon
 
 	if (!windowIcon.empty())
 	{
 		ImageData * iconData = loadImage(windowIcon.c_str());
 		SDL_Surface * surface = SDL_CreateRGBSurfaceFrom(iconData->imageData, iconData->sx, iconData->sy, 32, iconData->sx * sizeof(ImageData::Pixel), 0xff << 0, 0xff << 8, 0xff << 16, 0xff << 24);
-		SDL_SetWindowIcon(globals.mainWindow, surface);
+		SDL_SetWindowIcon(globals.mainWindow->m_window, surface);
 		SDL_FreeSurface(surface);
 		delete iconData;
 	}
 	
 	// make sure we are focused
 	
-	globals.currentWindow = globals.mainWindow;
-
-	SDL_RaiseWindow(globals.currentWindow);
+	SDL_RaiseWindow(globals.currentWindow->getWindow());
 
 	SDL_DisableScreenSaver();
 
@@ -568,8 +624,15 @@ bool Framework::shutdown()
 
 	gxShutdown();
 	
-	m_shaderSources.clear();
+	s_shaderSources.clear();
+	
+#if ENABLE_METAL
+	// destroy metal context
+	
+	metal_detach(globals.mainWindow->getWindow());
+#endif
 
+#if ENABLE_OPENGL
 	glBlendEquation = 0;
 	glClampColor = 0;
 	
@@ -580,13 +643,20 @@ bool Framework::shutdown()
 		SDL_GL_DeleteContext(globals.glContext);
 		globals.glContext = 0;
 	}
+#endif
 	
 	// destroy SDL window
 	
 	if (globals.mainWindow)
 	{
-		SDL_DestroyWindow(globals.mainWindow);
-		globals.mainWindow = 0;
+		fassert(globals.currentWindow == globals.mainWindow);
+		fassert(globals.currentWindowData == globals.mainWindow->m_windowData);
+		
+		delete globals.mainWindow;
+		globals.mainWindow = nullptr;
+		
+		globals.currentWindow = nullptr;
+		globals.currentWindowData = nullptr;
 	}
 	
 	// shut down SDL
@@ -606,10 +676,13 @@ bool Framework::shutdown()
 	fullscreen = false;
 	exclusiveFullscreen = true;
 	useClosestDisplayMode = false;
+	enableVsync = true;
+	msaaLevel = 0;
 	basicOpenGL = false;
 	enableDepthBuffer = false;
 	enableDrawTiming = true;
 	enableProfiling = false;
+	allowHighDpi = true;
 	minification = 1;
 	enableMidi = false;
 	midiDeviceIndex = 0;
@@ -621,6 +694,7 @@ bool Framework::shutdown()
 	windowX = -1;
 	windowY = -1;
 	windowBorder = true;
+	windowIsResizable = false;
 	windowTitle.clear();
 	windowSx = 0;
 	windowSy = 0;
@@ -630,7 +704,13 @@ bool Framework::shutdown()
 	fillCachesUnknownResourceCallback = 0;
 	realTimeEditCallback = 0;
 	initErrorHandler = 0;
-
+	
+	events.clear();
+	changedFiles.clear();
+	droppedFiles.clear();
+	
+	m_lastTick = -1;
+	
 	return result;
 }
 
@@ -799,7 +879,6 @@ void Framework::process()
 	
 	keyboard.events.clear();
 	
-	globals.mainWindowData.beginProcess();
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		window->m_windowData->beginProcess();
 
@@ -813,7 +892,10 @@ void Framework::process()
 	unlockMidi();
 	
 	events.clear();
-
+	
+	changedFiles.clear();
+	droppedFiles.clear();
+	
 	SDL_Event e;
 	
 	bool hasWaited = false;
@@ -904,17 +986,21 @@ void Framework::process()
 			{
 				SDL_Window * window = SDL_GetWindowFromID(e.motion.windowID);
 				
-				if (window == globals.mainWindow)
+				if (window == globals.mainWindow->m_window)
 				{
 					int windowSx;
 					int windowSy;
 					SDL_GetWindowSize(window, &windowSx, &windowSy);
 					
+				#if ENABLE_DISPLAY_SIZE_SCALING
 					SDL_Event scaledEvent = e;
 					scaledEvent.motion.x = e.motion.x * globals.displaySize[0] / windowSx;
 					scaledEvent.motion.y = e.motion.y * globals.displaySize[1] / windowSy;
 					
 					windowData->mouseData.addEvent(scaledEvent);
+				#else
+					windowData->mouseData.addEvent(e);
+				#endif
 					
 					//logDebug("motion event: %d, %d -> %d, %d", e.motion.x, e.motion.y, windowData->mouseX, windowData->mouseY);
 				}
@@ -952,7 +1038,7 @@ void Framework::process()
 				if (windowData == globals.currentWindowData)
 					windowIsActive = windowData->isActive;
 				
-				if (reloadCachesOnActivate && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED && windowData == &globals.mainWindowData)
+				if (reloadCachesOnActivate && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED && windowData == globals.mainWindow->m_windowData)
 				{
 					doReload |= true;
 				}
@@ -960,6 +1046,8 @@ void Framework::process()
 		}
 		else if (e.type == SDL_DROPFILE)
 		{
+			droppedFiles.push_back(e.drop.file);
+			
 			Dictionary args;
 			args.setString("file", e.drop.file);
 			processAction("filedrop", args);
@@ -970,7 +1058,6 @@ void Framework::process()
 		}
 	}
 
-	globals.mainWindowData.endProcess();
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		window->m_windowData->endProcess();
 	
@@ -1068,7 +1155,7 @@ void Framework::process()
 				XInputSetState(i, &v);
 			}
 			
-			sprintf_s(gamepad[i].name, "XInput", i + 1);
+			sprintf_s(gamepad[i].name, "XInput %d", i + 1);
 		}
 		else
 		{
@@ -1210,12 +1297,12 @@ void Framework::process()
 	
 	//
 	
-	static int tstamp1 = SDL_GetTicks();
-	const int tstamp2 = SDL_GetTicks();
-	int delta = tstamp2 - tstamp1;
-	tstamp1 = tstamp2;
-	//if (delta == 0)
-	//	delta = 1;
+	const uint32_t tickCount = SDL_GetTicks();
+	if (m_lastTick == -1)
+		m_lastTick = tickCount;
+	const uint32_t delta = tickCount - m_lastTick;
+	m_lastTick = tickCount;
+
 	timeStep = delta / 1000.f;
 
 	time += timeStep;
@@ -1256,8 +1343,6 @@ void Framework::processActions(const std::string & actions, const Dictionary & a
 
 void Framework::reloadCaches()
 {
-	settings.load("settings.txt");
-
 	g_textureCache.reload();
 	g_shaderCache.reload();
 	g_animCache.reload();
@@ -1373,7 +1458,7 @@ void showErrorMessage(const char * caption, const char * format, ...)
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption, text, globals.currentWindow);
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption, text, globals.currentWindow->getWindow());
 }
 
 void Framework::fillCachesWithPath(const char * path, bool recurse)
@@ -1410,7 +1495,7 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 					g_soundCache.findOrCreate(f);
 			}
 		}
-		else if (e == "ttf")
+		else if (e == "ttf" || e == "otf")
 		{
 			g_fontCache.findOrCreate(f);
 		#if ENABLE_MSDF_FONTS
@@ -1423,12 +1508,14 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			name = name.substr(0, name.rfind('.'));
 			Shader(name.c_str());
 		}
+	 #if ENABLE_OPENGL // todo : metal compute shader implementation
 		else if (strstr(f, ".cs") == f + fl - 3)
 		{
 			std::string name = f;
 			name = name.substr(0, name.rfind('.'));
 			ComputeShader(name.c_str());
 		}
+	#endif
 		else
 		{
 			if (fillCachesUnknownResourceCallback)
@@ -1450,29 +1537,72 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 		fillCachesCallback(1.f);
 }
 
+Window & Framework::getMainWindow()
+{
+	return *globals.mainWindow;
+}
+
+Window & Framework::getCurrentWindow()
+{
+	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+		if (window == globals.currentWindow)
+			return *window;
+	
+	logError("failed to find current window. this should not be possible unless framework failed to initialize!");
+	return *globals.mainWindow;
+}
+
 void Framework::setFullscreen(bool fullscreen)
 {
-	if (fullscreen)
-		SDL_SetWindowFullscreen(globals.mainWindow, SDL_WINDOW_FULLSCREEN);
-	else
-		SDL_SetWindowFullscreen(globals.mainWindow, 0);
+	globals.mainWindow->setFullscreen(fullscreen);
+}
+
+void Framework::getCurrentViewportSize(int & sx, int & sy) const
+{
+	::getCurrentViewportSize(sx, sy);
+}
+
+int Framework::getCurrentBackingScale() const
+{
+	return ::getCurrentBackingScale();
 }
 
 static void updateViewport(Surface * surface, SDL_Window * window)
 {
+#if ENABLE_METAL
+// todo : let Metal implementation handle viewport setting internally
 	if (surface != nullptr)
 	{
-		glViewport(
-			0,
-			0,
-			surface->getWidth() / framework.minification,
-			surface->getHeight() / framework.minification);
+		metal_set_viewport(
+			surface->getWidth() / framework.minification * surface->getBackingScale(),
+			surface->getHeight() / framework.minification * surface->getBackingScale());
 	}
 	else
 	{
 		int drawableSx;
 		int drawableSy;
-		SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
+		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
+		
+		metal_set_viewport(
+			drawableSx,
+			drawableSy);
+	}
+#endif
+
+#if ENABLE_OPENGL
+	if (surface != nullptr)
+	{
+		glViewport(
+			0,
+			0,
+			surface->getWidth() / framework.minification * surface->getBackingScale(),
+			surface->getHeight() / framework.minification * surface->getBackingScale());
+	}
+	else
+	{
+		int drawableSx;
+		int drawableSy;
+		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
 		
 		glViewport(
 			0,
@@ -1480,6 +1610,7 @@ static void updateViewport(Surface * surface, SDL_Window * window)
 			drawableSx,
 			drawableSy);
 	}
+#endif
 }
 
 void Framework::beginDraw(int r, int g, int b, int a, float depth)
@@ -1496,17 +1627,20 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 	
 	// initialize viewport and OpenGL matrices
 	
-	updateViewport(nullptr, globals.currentWindow);
-	
+	updateViewport(nullptr, globals.currentWindow->getWindow());
+#endif
+
+#if ENABLE_METAL
+	metal_draw_begin(scale255(r), scale255(g), scale255(b), scale255(a), depth);
+#endif
+
 	applyTransform();
 	
 	setBlend(BLEND_ALPHA);
-#endif
 }
 
 void Framework::endDraw()
 {
-#if ENABLE_OPENGL
 	// process debug draw
 
 	setTransform(TRANSFORM_SCREEN);
@@ -1531,15 +1665,18 @@ void Framework::endDraw()
 	if (enableDrawTiming)
 		gpuTimingEnd();
 
+#if ENABLE_OPENGL
 	// check for errors
 	
 	checkErrorGL();
 	
 	// flip back buffers
 	
-	SDL_GL_SwapWindow(globals.currentWindow);
-#else
-	
+	SDL_GL_SwapWindow(globals.currentWindow->getWindow());
+#endif
+
+#if ENABLE_METAL
+	metal_draw_end();
 #endif
 }
 
@@ -1555,9 +1692,9 @@ void Framework::beginScreenshot(int r, int g, int b, int a, int scale)
 {
 	Assert(scale >= 1);
 	
-	float sx;
-	float sy;
-	getViewportSize(sx, sy);
+	int sx;
+	int sy;
+	getCurrentViewportSize(sx, sy);
 	
 	sx *= scale;
 	sy *= scale;
@@ -1590,9 +1727,9 @@ void Framework::endScreenshot(const char * name, const int index, const bool omi
 
 	// draw the captured image to the current surface, as if the temporary surface never happened
 	
-	float sx;
-	float sy;
-	getViewportSize(sx, sy);
+	int sx;
+	int sy;
+	getCurrentViewportSize(sx, sy);
 	
 	pushBlend(BLEND_OPAQUE);
 	gxSetTexture(surface->getTexture());
@@ -1608,14 +1745,11 @@ void Framework::endScreenshot(const char * name, const int index, const bool omi
 
 void Framework::screenshot(const char * name, int index, bool omitAlpha)
 {
-	float _sx;
-	float _sy;
-	getViewportSize(_sx, _sy);
+	int sx;
+	int sy;
+	getCurrentBackingSize(sx, sy);
 
 	// fetch the pixel data
-	
-	const int sx = int(_sx);
-	const int sy = int(_sy);
 	
 	uint8_t * bytes = new uint8_t[sx * sy * 4];
 	
@@ -1694,6 +1828,7 @@ void Framework::screenshot(const char * name, int index, bool omitAlpha)
 	catch (std::exception & e)
 	{
 		logError("failed to write image: %s", e.what());
+		(void)e;
 	}
 	
 	delete [] bytes;
@@ -1704,23 +1839,27 @@ void Framework::screenshot(const char * name, int index, bool omitAlpha)
 
 void Framework::registerShaderSource(const char * name, const char * text)
 {
-	m_shaderSources[name] = text;
+	s_shaderSources[name] = text;
+
+	// refresh shaders which are using this source
+	
+	g_shaderCache.handleSourceChanged(name);
 }
 
 void Framework::unregisterShaderSource(const char * name)
 {
-	auto i = m_shaderSources.find(name);
+	auto i = s_shaderSources.find(name);
 
-	fassert(i != m_shaderSources.end());
-	if (i != m_shaderSources.end())
-		m_shaderSources.erase(i);
+	fassert(i != s_shaderSources.end());
+	if (i != s_shaderSources.end())
+		s_shaderSources.erase(i);
 }
 
 bool Framework::tryGetShaderSource(const char * name, const char *& text) const
 {
-	auto i = m_shaderSources.find(name);
+	auto i = s_shaderSources.find(name);
 
-	if (i != m_shaderSources.end())
+	if (i != s_shaderSources.end())
 	{
 		text = i->second.c_str();
 		return true;
@@ -1731,6 +1870,15 @@ bool Framework::tryGetShaderSource(const char * name, const char *& text) const
 	}
 }
 
+bool Framework::fileHasChanged(const char * filename) const
+{
+	for (auto & file : changedFiles)
+		if (file == filename)
+			return true;
+	
+	return false;
+}
+
 void Framework::blinkTaskbarIcon(int count)
 {
 #ifdef WIN32
@@ -1738,7 +1886,7 @@ void Framework::blinkTaskbarIcon(int count)
 	memset(&info, 0, sizeof(info));
 	SDL_VERSION(&info.version);
 
-	if (SDL_GetWindowWMInfo(globals.currentWindow, &info))
+	if (SDL_GetWindowWMInfo(globals.currentWindow->getWindow(), &info))
 	{
 		FLASHWINFO flashInfo;
 		memset(&flashInfo, 0, sizeof(flashInfo));
@@ -1837,9 +1985,6 @@ void Framework::unregisterWindow(Window * window)
 
 WindowData * Framework::findWindowDataById(const int id)
 {
-	if (id == SDL_GetWindowID(globals.mainWindow))
-		return &globals.mainWindowData;
-	
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		if (SDL_GetWindowID(window->m_window) == id)
 			return window->m_windowData;
@@ -1849,15 +1994,37 @@ WindowData * Framework::findWindowDataById(const int id)
 
 // -----
 
+Window::Window(SDL_Window * window)
+	: m_prev(nullptr)
+	, m_next(nullptr)
+	, m_window(nullptr)
+	, m_windowData(nullptr)
+{
+	m_window = window;
+	
+	m_windowData = new WindowData();
+	memset(m_windowData, 0, sizeof(WindowData));
+	
+	framework.registerWindow(this);
+}
+
 Window::Window(const char * title, const int sx, const int sy, const bool resizable)
 	: m_prev(nullptr)
 	, m_next(nullptr)
 	, m_window(nullptr)
 	, m_windowData(nullptr)
 {
-	const int flags = SDL_WINDOW_OPENGL | (SDL_WINDOW_RESIZABLE * resizable);
+	int flags = (SDL_WINDOW_ALLOW_HIGHDPI * framework.allowHighDpi) | (SDL_WINDOW_RESIZABLE * resizable);
 	
+#if ENABLE_OPENGL
+	flags |= SDL_WINDOW_OPENGL;
+#endif
+
 	m_window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sx, sy, flags);
+	
+#if ENABLE_METAL
+	metal_attach(m_window);
+#endif
 	
 	m_windowData = new WindowData();
 	memset(m_windowData, 0, sizeof(WindowData));
@@ -1871,7 +2038,11 @@ Window::~Window()
 	
 	delete m_windowData;
 	m_windowData = nullptr;
-	
+
+#if ENABLE_METAL
+	metal_detach(m_window);
+#endif
+
 	SDL_DestroyWindow(m_window);
 	m_window = nullptr;
 }
@@ -1891,6 +2062,22 @@ void Window::setSize(const int sx, const int sy)
 	SDL_SetWindowSize(m_window, sx, sy);
 }
 
+void Window::setFullscreen(const bool fullscreen)
+{
+	// https://wiki.libsdl.org/SDL_SetWindowFullscreen
+	// SDL_WINDOW_FULLSCREEN, SDL_WINDOW_FULLSCREEN_DESKTOP or 0
+	
+	if (fullscreen)
+		SDL_SetWindowFullscreen(m_window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0);
+	else
+		SDL_SetWindowFullscreen(m_window, 0);
+}
+
+void Window::setTitle(const char * title)
+{
+	SDL_SetWindowTitle(m_window, title);
+}
+
 void Window::show()
 {
 	SDL_ShowWindow(m_window);
@@ -1904,6 +2091,11 @@ void Window::hide()
 bool Window::isHidden() const
 {
 	return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_HIDDEN) != 0;
+}
+
+bool Window::hasFocus() const
+{
+	return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 }
 
 void Window::raise()
@@ -1951,583 +2143,71 @@ WindowData * Window::getWindowData() const
 	return m_windowData;
 }
 
-static Stack<SDL_Window*, 32> s_windowStack(nullptr);
-static Stack<WindowData*, 32> s_windowDataStack(nullptr);
+static Stack<Window*, 32> s_windowStack(nullptr);
 
 void pushWindow(Window & window)
 {
 	s_windowStack.push(globals.currentWindow);
-	s_windowDataStack.push(globals.currentWindowData);
 	
-	globals.currentWindow = window.getWindow();
+	globals.currentWindow = &window;
 	globals.currentWindowData = window.getWindowData();
 	
-	SDL_GL_MakeCurrent(globals.currentWindow, globals.glContext);
 	globals.currentWindowData->makeActive();
+	
+#if ENABLE_OPENGL
+	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
+#endif
+
+#if ENABLE_METAL
+	metal_make_active(globals.currentWindow->getWindow());
+#endif
 }
 
 void popWindow()
 {
-	SDL_Window * window = s_windowStack.popValue();
-	WindowData * windowData = s_windowDataStack.popValue();
+	Window * window = s_windowStack.popValue();
 	
 	globals.currentWindow = window;
-	globals.currentWindowData = windowData;
+	globals.currentWindowData = window->getWindowData();
 	
-	SDL_GL_MakeCurrent(globals.currentWindow, globals.glContext);
 	globals.currentWindowData->makeActive();
+	
+#if ENABLE_OPENGL
+	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
+#endif
+
+#if ENABLE_METAL
+	metal_make_active(globals.currentWindow->getWindow());
+#endif
 }
 
 // -----
 
-void Surface::construct()
-{
-	m_size[0] = 0;
-	m_size[1] = 0;
-	
-	m_bufferId = 0;
-	
-	m_format = (SURFACE_FORMAT)-1;
-	
-	m_doubleBuffered = false;
+static Stack<std::string, 32> s_shaderOutputsStack;
+std::string s_shaderOutputs; // todo : move to internal / globals
 
-	m_buffer[0] = 0;
-	m_buffer[1] = 0;
-	m_texture[0] = 0;
-	m_texture[1] = 0;
-	m_depthTexture = 0;
-}
-
-void Surface::destruct()
-{
-	m_size[0] = 0;
-	m_size[1] = 0;
-	
-	m_bufferId = 0;
-	
-	for (int i = 0; i < (m_doubleBuffered ? 2 : 1); ++i)
-	{
-		if (m_buffer[i])
-		{
-			glDeleteFramebuffers(1, &m_buffer[i]);
-			m_buffer[i] = 0;
-			checkErrorGL();
-		}
-		
-		if (m_texture[i])
-		{
-			glDeleteTextures(1, &m_texture[i]);
-			m_texture[i] = 0;
-			checkErrorGL();
-		}
-	}
-
-	if (m_depthTexture)
-	{
-		glDeleteTextures(1, &m_depthTexture);
-		m_depthTexture = 0;
-		checkErrorGL();
-	}
-	
-	m_format = (SURFACE_FORMAT)-1;
-	
-	m_doubleBuffered = false;
-}
-
-void Surface::swapBuffers()
-{
-	fassert(m_doubleBuffered);
-
-	m_bufferId = (m_bufferId + 1) % 2;
-}
-
-Surface::Surface()
-{
-	construct();
-}
-
-Surface::Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer, bool doubleBuffered)
-{
-	construct();
-	
-	init(sx, sy, highPrecision ? SURFACE_RGBA16F : SURFACE_RGBA8, withDepthBuffer, doubleBuffered);
-}
-
-Surface::Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format)
-{
-	construct();
-
-	init(sx, sy, format, withDepthBuffer, doubleBuffered);
-}
-
-Surface::~Surface()
-{
-	destruct();
-}
-
-bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
-{
-	fassert(m_buffer[0] == 0);
-	
-	sx /= framework.minification;
-	sy /= framework.minification;
-	
-	GLuint oldBuffer = 0;
-	GLuint oldTexture = 0;
-	
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, (GLint*)&oldTexture);
-	checkErrorGL();
-	
-	//
-	
-	bool result = true;
-	
-	m_size[0] = sx * framework.minification;
-	m_size[1] = sy * framework.minification;
-	
-	m_format = format;
-	
-	m_doubleBuffered = doubleBuffered;
-
-	if (result && withDepthBuffer)
-	{
-		fassert(m_depthTexture == 0);
-		glGenTextures(1, &m_depthTexture);
-		result &= m_depthTexture != 0;
-		checkErrorGL();
-
-		if (result)
-		{
-			glBindTexture(GL_TEXTURE_2D, m_depthTexture);
-			checkErrorGL();
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-			checkErrorGL();
-
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, sx, sy, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, 0);
-			checkErrorGL();
-
-			// set filtering
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			checkErrorGL();
-		}
-	}
-
-	for (int i = 0; result && i < (doubleBuffered ? 2 : 1); ++i)
-	{
-		// allocate storage
-		
-		glGenTextures(1, &m_texture[i]);
-		result &= m_texture[i] != 0;
-		checkErrorGL();
-		
-		glBindTexture(GL_TEXTURE_2D, m_texture[i]);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-		checkErrorGL();
-
-		GLenum glFormat = GL_INVALID_ENUM;
-
-		if (format == SURFACE_RGBA8)
-			glFormat = GL_RGBA8;
-		if (format == SURFACE_RGBA16F)
-			glFormat = GL_RGBA16F;
-		if (format == SURFACE_R8)
-			glFormat = GL_R8;
-		if (format == SURFACE_R16F)
-			glFormat = GL_R16F;
-		if (format == SURFACE_R32F)
-			glFormat = GL_R32F;
-		
-	#if USE_LEGACY_OPENGL
-		GLenum uploadFormat = GL_INVALID_ENUM;
-		GLenum uploadType = GL_INVALID_ENUM;
-		
-		if (format == SURFACE_RGBA8)
-		{
-			uploadFormat = GL_RGBA;
-			uploadType = GL_UNSIGNED_BYTE;
-		}
-		if (format == SURFACE_RGBA16F)
-		{
-			uploadFormat = GL_RGBA;
-			uploadType = GL_FLOAT;
-		}
-		if (format == SURFACE_R8)
-		{
-			uploadFormat = GL_RED;
-			uploadType = GL_UNSIGNED_BYTE;
-		}
-		if (format == SURFACE_R16F)
-		{
-			uploadFormat = GL_RED;
-			uploadType = GL_FLOAT;
-		}
-		if (format == SURFACE_R32F)
-		{
-			uploadFormat = GL_RED;
-			uploadType = GL_FLOAT;
-		}
-		
-		glTexImage2D(GL_TEXTURE_2D, 0, glFormat, sx, sy, 0, uploadFormat, uploadType, nullptr);
-		checkErrorGL();
-	#else
-		glTexStorage2D(GL_TEXTURE_2D, 1, glFormat, sx, sy);
-		checkErrorGL();
-	#endif
-
-		// set filtering
-		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		checkErrorGL();
-		
-		// create attachment
-		
-		glGenFramebuffers(1, &m_buffer[i]);
-		result &= m_buffer[i] != 0;
-		checkErrorGL();
-		
-		glBindFramebuffer(GL_FRAMEBUFFER, m_buffer[i]);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_texture[i], 0);
-		checkErrorGL();
-		
-		if (withDepthBuffer)
-		{
-			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_depthTexture, 0);
-			checkErrorGL();
-		}
-		
-	#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
-		// check if all went well
-		// note : we only do this when debugging OpenGL, as this call can be rather expensive
-		
-		const int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-		
-		if (status != GL_FRAMEBUFFER_COMPLETE)
-		{
-			logError("failed to init surface. status: %d", status);
-			
-			result = false;
-		}
-	#endif
-	}
-
-	if (result && doubleBuffered == false)
-	{
-		m_texture[1] = m_texture[0];
-		m_buffer[1] = m_buffer[0];
-	}
-	
-	if (!result)
-	{
-		logError("failed to init surface. calling destruct()");
-		
-		destruct();
-	}
-	
-	// restore the old framebuffer and texture bindings
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-	checkErrorGL();
-	glBindTexture(GL_TEXTURE_2D, oldTexture);
-	checkErrorGL();
-	
-	return result;
-}
-
-GLuint Surface::getFramebuffer() const
-{
-	return m_buffer[m_bufferId];
-}
-
-GLuint Surface::getTexture() const
-{
-	return m_texture[m_bufferId];
-}
-
-bool Surface::hasDepthTexture() const
-{
-	return m_depthTexture != 0;
-}
-
-GLuint Surface::getDepthTexture() const
-{
-	return m_depthTexture;
-}
-
-int Surface::getWidth() const
-{
-	return m_size[0];
-}
-
-int Surface::getHeight() const
-{
-	return m_size[1];
-}
-
-SURFACE_FORMAT Surface::getFormat() const
-{
-	return m_format;
-}
-
-void Surface::clear(int r, int g, int b, int a)
-{
-	clearf(scale255(r), scale255(g), scale255(b), scale255(a));
-}
-
-void Surface::clearf(float r, float g, float b, float a)
-{
-	pushSurface(this);
-	{
-		glClearColor(r, g, b, a);
-		glClear(GL_COLOR_BUFFER_BIT);
-		checkErrorGL();
-	}
-	popSurface();
-}
-
-void Surface::clearDepth(float d)
-{
-	pushSurface(this);
-	{
-		glClearDepth(d);
-		glClear(GL_DEPTH_BUFFER_BIT);
-		checkErrorGL();
-	}
-	popSurface();
-}
-
-void Surface::clearAlpha()
-{
-	setAlphaf(0.f);
-}
-
-void Surface::setAlpha(int a)
-{
-	setAlphaf(scale255(a));
-}
-
-void Surface::setAlphaf(float a)
-{
-	pushSurface(this);
-	{
-		pushBlend(BLEND_OPAQUE);
-		setColorf(1.f, 1.f, 1.f, a);
-		glColorMask(0, 0, 0, 1);
-		{
-			drawRect(0.f, 0.f, m_size[0], m_size[1]);
-		}
-		glColorMask(1, 1, 1, 1);
-		popBlend();
-	}
-	popSurface();
-}
-
-void Surface::mulf(float r, float g, float b, float a)
-{
-	pushSurface(this);
-	{
-		pushBlend(BLEND_MUL);
-		setColorf(r, g, b, a);
-		drawRect(0.f, 0.f, m_size[0], m_size[1]);
-		popBlend();
-	}
-	popSurface();
-}
-
-void Surface::postprocess()
-{
-	swapBuffers();
-
-	pushSurface(this);
-	{
-		GLint restoreDepthTest;
-		glGetIntegerv(GL_DEPTH_TEST, &restoreDepthTest);
-		checkErrorGL();
-		glDisable(GL_DEPTH_TEST);
-		checkErrorGL();
-		glDepthMask(GL_FALSE);
-		checkErrorGL();
-		
-		drawRect(0.f, 0.f, m_size[0], m_size[1]);
-		
-		glDepthMask(GL_TRUE);
-		checkErrorGL();
-		
-		if (restoreDepthTest)
-		{
-			glEnable(GL_DEPTH_TEST);
-			checkErrorGL();
-		}
-	}
-	popSurface();	
-}
-
-void Surface::postprocess(Shader & shader)
-{
-	swapBuffers();
-	
-	pushSurface(this);
-	{
-		setShader(shader);
-		{
-			drawRect(0.f, 0.f, m_size[0], m_size[1]);
-		}
-		clearShader();
-	}
-	popSurface();
-}
-
-void Surface::invert()
-{
-	pushSurface(this);
-	{
-		pushBlend(BLEND_INVERT);
-		setColorf(1.f, 1.f, 1.f, 1.f);
-		drawRect(0.f, 0.f, m_size[0], m_size[1]);
-		popBlend();
-	}
-	popSurface();
-}
-
-void Surface::invertColor()
-{
-	glColorMask(1, 1, 1, 0);
-	{
-		invert();
-	}
-	glColorMask(1, 1, 1, 1);
-}
-
-void Surface::invertAlpha()
-{
-	glColorMask(0, 0, 0, 1);
-	{
-		invert();
-	}
-	glColorMask(1, 1, 1, 1);
-}
-
-void Surface::gaussianBlur(const float strengthH, const float strengthV, const int _kernelSize)
-{
-	const int kernelSize = _kernelSize < 0 ? int(ceilf(std::max(strengthH, strengthV))) : _kernelSize;
-	
-	if (kernelSize == 0)
-		return;
-	
-	if (strengthH > 0.f)
-	{
-		pushBlend(BLEND_OPAQUE);
-		setShader_GaussianBlurH(getTexture(), kernelSize, strengthH);
-		postprocess();
-		clearShader();
-		popBlend();
-	}
-	
-	if (strengthV > 0.f)
-	{
-		pushBlend(BLEND_OPAQUE);
-		setShader_GaussianBlurV(getTexture(), kernelSize, strengthV);
-		postprocess();
-		clearShader();
-		popBlend();
-	}
-}
-
-void Surface::blitTo(Surface * surface) const
-{
-	int oldReadBuffer = 0;
-	int oldDrawBuffer = 0;
-
-	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &oldReadBuffer);
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDrawBuffer);
-	checkErrorGL();
-
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, getFramebuffer());
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, surface->getFramebuffer());
-	checkErrorGL();
-
-	glBlitFramebuffer(
-		0, 0, getWidth(), getHeight(),
-		0, 0, surface->getWidth(), surface->getHeight(),
-		GL_COLOR_BUFFER_BIT,
-		GL_NEAREST);
-	checkErrorGL();
-
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, oldReadBuffer);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
-	checkErrorGL();
-}
-
-void Surface::blit(BLEND_MODE blendMode) const
-{
-	pushBlend(blendMode);
-	pushColorMode(COLOR_IGNORE);
-	{
-		gxSetTexture(getTexture());
-		drawRect(0, 0, getWidth(), getHeight());
-		gxSetTexture(0);
-	}
-	popColorMode();
-	popBlend();
-}
-
-void blitBackBufferToSurface(Surface * surface)
-{
-	int drawableSx;
-	int drawableSy;
-	SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
-	
-	int oldDrawBuffer = 0;
-
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDrawBuffer);
-	checkErrorGL();
-
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, surface->getFramebuffer());
-	checkErrorGL();
-
-	glBlitFramebuffer(
-		0, 0, drawableSx, drawableSy,
-		0, 0, surface->getWidth(), surface->getHeight(),
-		GL_COLOR_BUFFER_BIT,
-		GL_NEAREST);
-	checkErrorGL();
-
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
-	checkErrorGL();
-}
-
-// -----
+#if ENABLE_OPENGL
 
 Shader::Shader()
 {
 	m_shader = 0;
 }
 
-Shader::Shader(const char * filename)
+Shader::Shader(const char * name, const char * outputs)
 {
 	m_shader = 0;
 
-	const std::string vs = std::string(filename) + ".vs";
-	const std::string ps = std::string(filename) + ".ps";
+	const std::string vs = std::string(name) + ".vs";
+	const std::string ps = std::string(name) + ".ps";
 
-	load(filename, vs.c_str(), ps.c_str());
+	load(name, vs.c_str(), ps.c_str(), outputs);
 }
 
-Shader::Shader(const char * name, const char * filenameVs, const char * filenamePs)
+Shader::Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	m_shader = 0;
 
-	load(name, filenameVs, filenamePs);
+	load(name, filenameVs, filenamePs, outputs);
 }
 
 Shader::~Shader()
@@ -2536,9 +2216,12 @@ Shader::~Shader()
 		clearShader();
 }
 
-void Shader::load(const char * name, const char * filenameVs, const char * filenamePs)
+void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
-	m_shader = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs);
+	if (outputs == nullptr)
+		outputs = s_shaderOutputs.empty() ? "c" : s_shaderOutputs.c_str();
+	
+	m_shader = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs);
 }
 
 bool Shader::isValid() const
@@ -2546,7 +2229,7 @@ bool Shader::isValid() const
 	return m_shader != 0 && m_shader->program != 0;
 }
 
-GLuint Shader::getProgram() const
+GxShaderId Shader::getProgram() const
 {
 	return m_shader ? m_shader->program : 0;
 }
@@ -2569,20 +2252,15 @@ bool Shader::getErrorMessages(std::vector<std::string> & errorMessages) const
 	}
 }
 
-GLint Shader::getImmediate(const char * name)
+GxImmediateIndex Shader::getImmediate(const char * name)
 {
 	return glGetUniformLocation(getProgram(), name);
-}
-
-GLint Shader::getAttribute(const char * name)
-{
-	return glGetAttribLocation(getProgram(), name);
 }
 
 #define SET_UNIFORM(name, op) \
 	if (getProgram()) \
 	{ \
-		setShader(*this); \
+		Assert(globals.shader == this); \
 		const GLint index = glGetUniformLocation(getProgram(), name); \
 		if (index == -1) \
 		{ \
@@ -2618,7 +2296,7 @@ void Shader::setImmediate(const char * name, float x, float y, float z, float w)
 	checkErrorGL();
 }
 
-void Shader::setImmediate(GLint index, float x)
+void Shader::setImmediate(GxImmediateIndex index, float x)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2626,7 +2304,7 @@ void Shader::setImmediate(GLint index, float x)
 	checkErrorGL();
 }
 
-void Shader::setImmediate(GLint index, float x, float y)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2634,7 +2312,7 @@ void Shader::setImmediate(GLint index, float x, float y)
 	checkErrorGL();
 }
 
-void Shader::setImmediate(GLint index, float x, float y, float z)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2642,7 +2320,7 @@ void Shader::setImmediate(GLint index, float x, float y, float z)
 	checkErrorGL();
 }
 
-void Shader::setImmediate(GLint index, float x, float y, float z, float w)
+void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2656,11 +2334,19 @@ void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
 	checkErrorGL();
 }
 
-void Shader::setImmediateMatrix4x4(GLint index, const float * matrix)
+void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
 	glUniformMatrix4fv(index, 1, GL_FALSE, matrix);
+	checkErrorGL();
+}
+
+void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniformMatrix4fv(index, numMatrices, GL_FALSE, matrices);
 	checkErrorGL();
 }
 
@@ -2670,7 +2356,7 @@ void Shader::setTextureUnit(const char * name, int unit)
 	checkErrorGL();
 }
 
-void Shader::setTextureUnit(GLint index, int unit)
+void Shader::setTextureUnit(GxImmediateIndex index, int unit)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2678,7 +2364,7 @@ void Shader::setTextureUnit(GLint index, int unit)
 	checkErrorGL();
 }
 
-void Shader::setTexture(const char * name, int unit, GLuint texture)
+void Shader::setTexture(const char * name, int unit, GxTextureId texture)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -2689,7 +2375,7 @@ void Shader::setTexture(const char * name, int unit, GLuint texture)
 	checkErrorGL();
 }
 
-void Shader::setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
+void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -2704,7 +2390,7 @@ void Shader::setTexture(const char * name, int unit, GLuint texture, bool filter
 	checkErrorGL();
 }
 
-void Shader::setTextureUniform(GLint index, int unit, GLuint texture)
+void Shader::setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2715,7 +2401,7 @@ void Shader::setTextureUniform(GLint index, int unit, GLuint texture)
 	glBindTexture(GL_TEXTURE_2D, texture);
 }
 
-void Shader::setTextureArray(const char * name, int unit, GLuint texture)
+void Shader::setTextureArray(const char * name, int unit, GxTextureId texture)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -2726,7 +2412,7 @@ void Shader::setTextureArray(const char * name, int unit, GLuint texture)
 	checkErrorGL();
 }
 
-void Shader::setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
+void Shader::setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -2737,6 +2423,17 @@ void Shader::setTextureArray(const char * name, int unit, GLuint texture, bool f
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+}
+
+void Shader::setTextureCube(const char * name, int unit, GxTextureId texture)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
+	checkErrorGL();
+
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
 	glActiveTexture(GL_TEXTURE0);
 	checkErrorGL();
 }
@@ -2757,7 +2454,7 @@ void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 		setBuffer(index, buffer);
 }
 
-void Shader::setBuffer(GLint index, const ShaderBuffer & buffer)
+void Shader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer)
 {
 	fassert(globals.shader == this);
 
@@ -2781,7 +2478,7 @@ void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
 		setBufferRw(index, buffer);
 }
 
-void Shader::setBufferRw(GLint index, const ShaderBufferRw & buffer)
+void Shader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
 {
 	fassert(globals.shader == this);
 
@@ -2796,7 +2493,11 @@ void Shader::reload()
 	m_shader->reload();
 }
 
+#endif
+
 // -----
+
+#if ENABLE_OPENGL // todo : metal compute shader implementation
 
 ComputeShader::ComputeShader()
 {
@@ -2821,7 +2522,7 @@ void ComputeShader::load(const char * filename, const int groupSx, const int gro
 	m_shader = &g_computeShaderCache.findOrCreate(filename, groupSx, groupSy, groupSz);
 }
 
-GLuint ComputeShader::getProgram() const
+GxShaderId ComputeShader::getProgram() const
 {
 	return m_shader ? m_shader->program : 0;
 }
@@ -2882,14 +2583,9 @@ int ComputeShader::toThreadSz(const int sz) const
 	return calcThreadSize(sz, getGroupSz());
 }
 
-GLint ComputeShader::getImmediate(const char * name)
+GxImmediateIndex ComputeShader::getImmediate(const char * name)
 {
 	return glGetUniformLocation(getProgram(), name);
-}
-
-GLint ComputeShader::getAttribute(const char * name)
-{
-	return glGetAttribLocation(getProgram(), name);
 }
 
 #define SET_UNIFORM(name, op) \
@@ -2931,7 +2627,7 @@ void ComputeShader::setImmediate(const char * name, float x, float y, float z, f
 	checkErrorGL();
 }
 
-void ComputeShader::setImmediate(GLint index, float x, float y)
+void ComputeShader::setImmediate(GxImmediateIndex index, float x, float y)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2939,7 +2635,7 @@ void ComputeShader::setImmediate(GLint index, float x, float y)
 	checkErrorGL();
 }
 
-void ComputeShader::setImmediate(GLint index, float x, float y, float z, float w)
+void ComputeShader::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2953,7 +2649,7 @@ void ComputeShader::setImmediateMatrix4x4(const char * name, const float * matri
 	checkErrorGL();
 }
 
-void ComputeShader::setImmediateMatrix4x4(GLint index, const float * matrix)
+void ComputeShader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
@@ -2961,7 +2657,7 @@ void ComputeShader::setImmediateMatrix4x4(GLint index, const float * matrix)
 	checkErrorGL();
 }
 
-void ComputeShader::setTexture(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
+void ComputeShader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -2976,7 +2672,7 @@ void ComputeShader::setTexture(const char * name, int unit, GLuint texture, bool
 	checkErrorGL();
 }
 
-void ComputeShader::setTextureArray(const char * name, int unit, GLuint texture, bool filtered, bool clamped)
+void ComputeShader::setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -2991,7 +2687,7 @@ void ComputeShader::setTextureArray(const char * name, int unit, GLuint texture,
 	checkErrorGL();
 }
 
-void ComputeShader::setTextureRw(const char * name, int unit, GLuint texture, GLuint format, bool filtered, bool clamp)
+void ComputeShader::setTextureRw(const char * name, int unit, GxTextureId texture, GLuint format, bool filtered, bool clamp)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
@@ -3016,7 +2712,7 @@ void ComputeShader::setBuffer(const char * name, const ShaderBuffer & buffer)
 		setBuffer(index, buffer);
 }
 
-void ComputeShader::setBuffer(GLint index, const ShaderBuffer & buffer)
+void ComputeShader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer)
 {
 	fassert(globals.shader == this);
 
@@ -3040,7 +2736,7 @@ void ComputeShader::setBufferRw(const char * name, const ShaderBufferRw & buffer
 		setBufferRw(index, buffer);
 }
 
-void ComputeShader::setBufferRw(GLint index, const ShaderBufferRw & buffer)
+void ComputeShader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
 {
 	fassert(globals.shader == this);
 
@@ -3062,7 +2758,6 @@ void ComputeShader::dispatch(const int dispatchSx, const int dispatchSy, const i
 	checkErrorGL();
 
 	// todo : let application insert barriers
-	//glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 	glMemoryBarrier(GL_ALL_BARRIER_BITS);
 	checkErrorGL();
 }
@@ -3072,14 +2767,19 @@ void ComputeShader::reload()
 	m_shader->reload();
 }
 
+#endif
+
 // -----
 
+#if ENABLE_OPENGL
 static std::vector<GLuint> s_bufferPool;
 static bool s_useBufferPool = false;
+#endif
 
 ShaderBuffer::ShaderBuffer()
 	: m_buffer(0)
 {
+#if ENABLE_OPENGL // todo : metal implementation shader buffer
 	if (!s_useBufferPool || s_bufferPool.empty())
 	{
 		glGenBuffers(1, &m_buffer);
@@ -3090,10 +2790,12 @@ ShaderBuffer::ShaderBuffer()
 		m_buffer = s_bufferPool.back();
 		s_bufferPool.pop_back();
 	}
+#endif
 }
 
 ShaderBuffer::~ShaderBuffer()
 {
+#if ENABLE_OPENGL // todo : metal implementation shader buffer
 	if (m_buffer)
 	{
 		if (s_useBufferPool)
@@ -3108,9 +2810,10 @@ ShaderBuffer::~ShaderBuffer()
 			checkErrorGL();
 		}
 	}
+#endif
 }
 
-GLuint ShaderBuffer::getBuffer() const
+GxShaderBufferId ShaderBuffer::getBuffer() const
 {
 	return m_buffer;
 }
@@ -3148,7 +2851,7 @@ ShaderBufferRw::~ShaderBufferRw()
 	}
 }
 
-GLuint ShaderBufferRw::getBuffer() const
+GxShaderBufferId ShaderBufferRw::getBuffer() const
 {
 	return m_buffer;
 }
@@ -3192,6 +2895,9 @@ Color::Color(float r, float g, float b, float a)
 
 Color Color::fromHex(const char * str)
 {
+	if (str[0] == '#')
+		str++;
+	
 	const size_t len = strlen(str);
 	
 	if (len == 0)
@@ -3412,11 +3118,38 @@ Color Color::mulRGB(float t) const
 
 // -----
 
+class DictionaryStorage
+{
+public:
+	typedef std::map<std::string, std::string> Map;
+	Map m_map;
+};
+
+Dictionary::Dictionary()
+	: m_storage(nullptr)
+{
+	m_storage = new DictionaryStorage();
+}
+
+Dictionary::Dictionary(const Dictionary & other)
+	: m_storage(nullptr)
+{
+	m_storage = new DictionaryStorage();
+	
+	*m_storage = *other.m_storage;
+}
+
+Dictionary::~Dictionary()
+{
+	delete m_storage;
+	m_storage = nullptr;
+}
+
 bool Dictionary::load(const char * filename)
 {
 	bool result = true;
 
-	m_map.clear();
+	m_storage->m_map.clear();
 
 	FileReader reader;
 
@@ -3454,7 +3187,7 @@ bool Dictionary::save(const char * filename)
 	}
 	else
 	{
-		for (auto & i : m_map)
+		for (auto & i : m_storage->m_map)
 		{
 			const char * key = i.first.c_str();
 			const char * value = i.second.c_str();
@@ -3475,7 +3208,7 @@ bool Dictionary::parse(const std::string & line, bool clear)
 	
 	if (clear)
 	{
-		m_map.clear();
+		m_storage->m_map.clear();
 	}
 	
 	std::vector<std::string> parts;
@@ -3517,12 +3250,12 @@ bool Dictionary::parse(const std::string & line, bool clear)
 
 bool Dictionary::contains(const char * name) const
 {
-	return m_map.count(name) != 0;
+	return m_storage->m_map.count(name) != 0;
 }
 
 void Dictionary::setString(const char * name, const char * value)
 {
-	m_map[name] = value;
+	m_storage->m_map[name] = value;
 }
 
 void Dictionary::setInt(const char * name, int value)
@@ -3560,8 +3293,8 @@ void Dictionary::setPtr(const char * name, void * value)
 
 std::string Dictionary::getString(const char * name, const char * _default) const
 {
-	Map::const_iterator i = m_map.find(name);
-	if (i != m_map.end())
+	DictionaryStorage::Map::const_iterator i = m_storage->m_map.find(name);
+	if (i != m_storage->m_map.end())
 		return i->second;
 	else
 		return _default;
@@ -3569,8 +3302,8 @@ std::string Dictionary::getString(const char * name, const char * _default) cons
 
 int Dictionary::getInt(const char * name, int _default) const
 {
-	Map::const_iterator i = m_map.find(name);
-	if (i != m_map.end())
+	DictionaryStorage::Map::const_iterator i = m_storage->m_map.find(name);
+	if (i != m_storage->m_map.end())
 		return atoi(i->second.c_str());
 	else
 		return _default;
@@ -3579,14 +3312,14 @@ int Dictionary::getInt(const char * name, int _default) const
 int64_t Dictionary::getInt64(const char * name, int64_t _default) const
 {
 #if defined(WINDOWS)
-    Map::const_iterator i = m_map.find(name);
-    if (i != m_map.end())
+    DictionaryStorage::Map::const_iterator i = m_storage->m_map.find(name);
+    if (i != m_storage->m_map.end())
 		return _atoi64(i->second.c_str());
     else
         return _default;
 #else
-    Map::const_iterator i = m_map.find(name);
-    if (i != m_map.end())
+    DictionaryStorage::Map::const_iterator i = m_storage->m_map.find(name);
+    if (i != m_storage->m_map.end())
         return atoll(i->second.c_str());
     else
         return _default;
@@ -3600,8 +3333,8 @@ bool Dictionary::getBool(const char * name, bool _default) const
 
 float Dictionary::getFloat(const char * name, float _default) const
 {
-	Map::const_iterator i = m_map.find(name);
-	if (i != m_map.end())
+	DictionaryStorage::Map::const_iterator i = m_storage->m_map.find(name);
+	if (i != m_storage->m_map.end())
 		return atof(i->second.c_str());
 	else
 		return _default;
@@ -3614,17 +3347,24 @@ void * Dictionary::getPtr(const char * name, void * _default) const
 
 std::string & Dictionary::operator[](const char * name)
 {
-	return m_map[name];
+	return m_storage->m_map[name];
+}
+
+Dictionary & Dictionary::operator=(const Dictionary & other)
+{
+	*m_storage = *other.m_storage;
+	
+	return *this;
 }
 
 // -----
 
-GLuint getTexture(const char * filename)
+GxTextureId getTexture(const char * filename)
 {
 	const TextureCacheElem & elem = g_textureCache.findOrCreate(filename, 1, 1);
 
 	if (elem.textures)
-		return elem.textures[0];
+		return elem.textures[0].id;
 	else
 		return 0;
 }
@@ -3653,7 +3393,11 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 	
 	// animation
 	const char * sheetFilename = 0;
-	std::string sheetFilenameStr;
+#if WINDOWS
+	char sheetFilenameBuffer[MAX_PATH];
+#else
+	char sheetFilenameBuffer[PATH_MAX];
+#endif
 	if (hasSpriteSheet)
 	{
 		if (spritesheet)
@@ -3662,11 +3406,19 @@ Sprite::Sprite(const char * filename, float pivotX, float pivotY, const char * s
 		}
 		else
 		{
-			sheetFilenameStr = filename;
-			size_t dot = sheetFilenameStr.rfind('.');
-			if (dot != std::string::npos)
-				sheetFilenameStr = sheetFilenameStr.substr(0, dot) + ".txt";
-			sheetFilename = sheetFilenameStr.c_str();
+			strcpy_s(sheetFilenameBuffer, sizeof(sheetFilenameBuffer), filename);
+			int dot = -1;
+			for (int i = 0; filename[i] != 0; ++i)
+				if (filename[i] == '.')
+					dot = i;
+			if (dot != -1 && dot + 4 < sizeof(sheetFilenameBuffer))
+			{
+				sheetFilenameBuffer[dot + 1] = 't';
+				sheetFilenameBuffer[dot + 2] = 'x';
+				sheetFilenameBuffer[dot + 3] = 't';
+				sheetFilenameBuffer[dot + 4] = 0;
+				sheetFilename = sheetFilenameBuffer;
+			}
 		}
 	}
 	
@@ -3763,8 +3515,17 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 			
 			fassert(cellIndex >= 0 && cellIndex < (m_anim->m_gridSize[0] * m_anim->m_gridSize[1]));
 			
-			gxSetTexture(m_texture->textures[cellIndex]);
+			gxSetTexture(m_texture->textures[cellIndex].id);
 			
+		#if 0
+			gxSetTextureSampler(
+				filter == FILTER_POINT ? GX_SAMPLE_NEAREST :
+				filter == FILTER_LINEAR ? GX_SAMPLE_LINEAR :
+				filter == FILTER_MIPMAP ? GX_SAMPLE_MIPMAP : GX_SAMPLE_NEAREST,
+				true);
+		#endif
+			
+		#if ENABLE_OPENGL // todo : add a common way to set filtering for textures
 			if (filter == FILTER_POINT)
 			{
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -3796,11 +3557,12 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 			}
 			
 			checkErrorGL();
+		#endif
 
 			const float rsx = float(m_texture->sx / m_anim->m_gridSize[0]);
 			const float rsy = float(m_texture->sy / m_anim->m_gridSize[1]);
 			
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 			{
 				gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f, 0.f);
 				gxTexCoord2f(1.f, 0.f); gxVertex2f(rsx, 0.f);
@@ -3808,8 +3570,6 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 				gxTexCoord2f(0.f, 1.f); gxVertex2f(0.f, rsy);
 			}
 			gxEnd();
-
-			checkErrorGL();
 		}
 		gxPopMatrix();
 
@@ -4024,10 +3784,10 @@ int Sprite::getHeight() const
 	return m_texture->sy / m_anim->m_gridSize[1];
 }
 
-GLuint Sprite::getTexture() const
+GxTextureId Sprite::getTexture() const
 {
 	if (m_texture->textures)
-		return m_texture->textures[0];
+		return m_texture->textures[0].id;
 	else
 		return 0;
 }
@@ -4202,6 +3962,14 @@ int Spriter::getAnimCount() const
 	if (m_spriter->m_scene->m_entities.empty())
 		return 0;
 	return (int)m_spriter->m_scene->m_entities[0]->m_animations.size();
+}
+
+const char * Spriter::getAnimName(const int animIndex) const
+{
+	if (m_spriter->m_scene->m_entities.empty())
+		return 0;
+	
+	return m_spriter->m_scene->m_entities[0]->getAnimName(animIndex);
 }
 
 int Spriter::getAnimIndexByName(const char * name) const
@@ -4898,7 +4666,7 @@ bool Mouse::isIdle() const
 
 // -----
 
-bool Keyboard::isDown(SDLKey key) const
+bool Keyboard::isDown(int key) const
 {
 	for (int i = 0; i < globals.currentWindowData->keyDownCount; ++i)
 		if (globals.currentWindowData->keyDown[i] == key)
@@ -4906,7 +4674,7 @@ bool Keyboard::isDown(SDLKey key) const
 	return false;
 }
 
-static bool keyChange(SDLKey key)
+static bool keyChange(int key)
 {
 	for (int i = 0; i < globals.currentWindowData->keyChangeCount; ++i)
 		if (globals.currentWindowData->keyChange[i] == key)
@@ -4914,17 +4682,17 @@ static bool keyChange(SDLKey key)
 	return false;
 }
 
-bool Keyboard::wentDown(SDLKey key, bool allowRepeat) const
+bool Keyboard::wentDown(int key, bool allowRepeat) const
 {
 	return (isDown(key) && keyChange(key)) || (allowRepeat && keyRepeat(key));
 }
 
-bool Keyboard::wentUp(SDLKey key) const
+bool Keyboard::wentUp(int key) const
 {
 	return !isDown(key) && keyChange(key);
 }
 
-bool Keyboard::keyRepeat(SDLKey key) const
+bool Keyboard::keyRepeat(int key) const
 {
 	for (int i = 0; i < globals.currentWindowData->keyRepeatCount; ++i)
 		if (globals.currentWindowData->keyRepeat[i] == key)
@@ -5092,6 +4860,11 @@ void Camera3d::tick(float dt, bool enableInput)
 		yaw -= thisDx * mouseRotationSpeed;
 		pitch -= thisDy * mouseRotationSpeed;
 	}
+	else
+	{
+		mouseDx = 0.f;
+		mouseDy = 0.f;
+	}
 	
 	// go from normalized input values to values directly used to add to position
 	
@@ -5122,9 +4895,9 @@ void Camera3d::pushViewMatrix() const
 {
 	const Mat4x4 matrix = getViewMatrix();
 	
-	const GLenum restoreMatrixMode = gxGetMatrixMode();
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
 	{
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
         gxMultMatrixf(matrix.m_v);
 	}
@@ -5133,9 +4906,9 @@ void Camera3d::pushViewMatrix() const
 
 void Camera3d::popViewMatrix() const
 {
-	const GLenum restoreMatrixMode = gxGetMatrixMode();
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
 	{
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPopMatrix();
 	}
 	gxMatrixMode(restoreMatrixMode);
@@ -5178,11 +4951,45 @@ static const int kMaxSurfaceStackSize = 32;
 static Surface * surfaceStack[kMaxSurfaceStackSize] = { };
 static int surfaceStackSize = 0;
 
-static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
-static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
-static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
+#if ENABLE_OPENGL
+extern bool s_renderPassesIsEmpty; // todo : unify surfaces and render passes. currently it's too difficult to figure out viewport size and whether to flip the clip space Y axis or not
+#endif
 
-static void getViewportSize(float & sx, float & sy)
+static int getCurrentBackingScale()
+{
+	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	
+	if (surface != nullptr)
+		return surface->getBackingScale();
+	else
+		return s_backingScale;
+}
+
+static void getCurrentBackingSize(int & sx, int & sy)
+{
+	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	
+	if (surface != nullptr)
+	{
+		// surfaces may explicitly set a backing scale > 1, in which case the backing size will be larger than the reported size of the surface
+		
+		sx = surface->getWidth() / framework.minification * surface->getBackingScale();
+		sy = surface->getHeight() / framework.minification * surface->getBackingScale();
+	}
+	else
+	{
+		// the windowing system may apply a backing scale, in which case the backing size will be larger than the reported size of the window
+		
+		int drawableSx;
+		int drawableSy;
+		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
+		
+		sx = drawableSx;
+		sy = drawableSy;
+	}
+}
+
+static void getCurrentViewportSize(int & sx, int & sy)
 {
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
 	
@@ -5193,19 +5000,21 @@ static void getViewportSize(float & sx, float & sy)
 	}
 	else
 	{
-		if (globals.currentWindow == globals.mainWindow)
+		// todo : fix for case with fullscreen desktop mode
+		// fixme : add specific code for setting screen matrix
+		if (globals.currentWindow == globals.mainWindow && false)
 		{
 			sx = globals.displaySize[0];
 			sy = globals.displaySize[1];
 		}
 		else
 		{
-			int drawableSx;
-			int drawableSy;
-			SDL_GL_GetDrawableSize(globals.currentWindow, &drawableSx, &drawableSy);
-			
-			sx = drawableSx;
-			sy = drawableSy;
+			int windowSx;
+			int windowSy;
+			SDL_GetWindowSize(globals.currentWindow->getWindow(), &windowSx, &windowSy);
+
+			sx = windowSx * framework.minification;
+			sy = windowSy * framework.minification;
 		}
 	}
 }
@@ -5224,27 +5033,35 @@ TRANSFORM getTransform()
 
 void applyTransform()
 {
-	float sx;
-	float sy;
-	getViewportSize(sx, sy);
+	int sx;
+	int sy;
+	getCurrentViewportSize(sx, sy);
 	
 	applyTransformWithViewportSize(sx, sy);
 }
 
-void applyTransformWithViewportSize(const float sx, const float sy)
+void applyTransformWithViewportSize(const int sx, const int sy)
 {
 	// calculate screen matrix (we need it to transform vertices to screen space)
 	{
-		gxMatrixMode(GL_PROJECTION);
+		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
 		{
 			gxLoadIdentity();
-			
-			if (surfaceStackSize == 0 || surfaceStack[surfaceStackSize - 1] == nullptr)
+		
+		#if ENABLE_METAL
+			// in Metal clip-space, (-1, -1) is the bottom-left cordiner, (+1, +1) is top-right
+			// flip Y axis so the vertical axis runs top to bottom
+			gxScalef(1.f, -1.f, 1.f);
+		#endif
+		
+		#if ENABLE_OPENGL
+			if ((surfaceStackSize == 0 || surfaceStack[surfaceStackSize - 1] == nullptr) && s_renderPassesIsEmpty)
 			{
 				// flip Y axis so the vertical axis runs top to bottom
 				gxScalef(1.f, -1.f, 1.f);
 			}
+		#endif
 		
 			// convert from (0,0),(1,1) to (-1,-1),(+1+1)
 			gxTranslatef(-1.f, -1.f, 0.f);
@@ -5254,14 +5071,14 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 			gxScalef(1.f / sx, 1.f / sy, 1.f);
 			
 			// capture transform
-			gxGetMatrixf(GL_PROJECTION, globals.transformScreen.m_v);
+			gxGetMatrixf(GX_PROJECTION, globals.transformScreen.m_v);
 		}
 		gxPopMatrix();
 	}
 	
 	// apply current transform
 	
-	gxMatrixMode(GL_PROJECTION);
+	gxMatrixMode(GX_PROJECTION);
 	
 	switch (globals.transform)
 	{
@@ -5278,6 +5095,15 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 		case TRANSFORM_3D:
 		{
 			gxLoadMatrixf(globals.transform3d.m_v);
+		
+		#if ENABLE_OPENGL
+			if (surfaceStackSize != 0 && surfaceStack[surfaceStackSize - 1] != nullptr)
+			{
+				// flip Y axis so the vertical axis runs bottom to top
+				gxScalef(1.f, -1.f, 1.f);
+			}
+		#endif
+			
 			break;
 		}
 		default:
@@ -5288,9 +5114,8 @@ void applyTransformWithViewportSize(const float sx, const float sy)
 		}
 	}
 	
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxLoadIdentity();
-	checkErrorGL();
 }
 
 void setTransform2d(const Mat4x4 & transform)
@@ -5319,8 +5144,8 @@ void pushTransform()
 	TransformData t;
 	
 	t.transform = globals.transform;
-	gxGetMatrixf(GL_PROJECTION, t.projection.m_v);
-	gxGetMatrixf(GL_MODELVIEW, t.modelView.m_v);
+	gxGetMatrixf(GX_PROJECTION, t.projection.m_v);
+	gxGetMatrixf(GX_MODELVIEW, t.modelView.m_v);
 	
 	s_transformStack.push(t);
 }
@@ -5330,10 +5155,52 @@ void popTransform()
 	TransformData t = s_transformStack.popValue();
 	
 	setTransform(t.transform);
-	gxMatrixMode(GL_PROJECTION);
+	gxMatrixMode(GX_PROJECTION);
 	gxLoadMatrixf(t.projection.m_v);
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxLoadMatrixf(t.modelView.m_v);
+}
+
+struct ScrollData
+{
+	int scrollX = 0;;
+	int scrollY = 0;
+};
+
+static Stack<ScrollData, 32> s_scrollStack;
+
+void pushScroll(const int scrollX, const int scrollY)
+{
+	ScrollData s;
+	s.scrollX = scrollX;
+	s.scrollY = scrollY;
+	s_scrollStack.push(s);
+	
+	mouse.x -= scrollX;
+	mouse.y -= scrollY;
+	
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+	{
+		gxMatrixMode(GX_PROJECTION);
+		gxPushMatrix();
+		gxTranslatef(scrollX, scrollY, 0);
+	}
+	gxMatrixMode(restoreMatrixMode);
+}
+
+void popScroll()
+{
+	ScrollData s = s_scrollStack.popValue();
+	
+	mouse.x += s.scrollX;
+	mouse.y += s.scrollY;
+	
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+	{
+		gxMatrixMode(GX_PROJECTION);
+		gxPopMatrix();
+	}
+	gxMatrixMode(restoreMatrixMode);
 }
 
 void projectScreen2d()
@@ -5345,11 +5212,15 @@ void projectPerspective3d(const float fov, const float nearZ, const float farZ)
 {
 	Mat4x4 transform;
 	
-	float sx;
-	float sy;
-	getViewportSize(sx, sy);
+	int sx;
+	int sy;
+	getCurrentViewportSize(sx, sy);
 	
-	transform.MakePerspectiveLH(fov / 180.f * M_PI, sy / sx, nearZ, farZ);
+#if ENABLE_OPENGL
+	transform.MakePerspectiveGL(fov / 180.f * M_PI, sy / float(sx), nearZ, farZ);
+#else
+	transform.MakePerspectiveLH(fov / 180.f * M_PI, sy / float(sx), nearZ, farZ);
+#endif
 	
 	globals.transform3d = transform;
 	
@@ -5371,8 +5242,7 @@ Vec4 transformToWorld(const Vec4 & v)
 {
 	Mat4x4 matM;
 	
-	gxGetMatrixf(GL_MODELVIEW, matM.m_v);
-	checkErrorGL();
+	gxGetMatrixf(GX_MODELVIEW, matM.m_v);
 	
 	// from current transfor to world
 	
@@ -5381,20 +5251,21 @@ Vec4 transformToWorld(const Vec4 & v)
 	return t;
 }
 
-Vec2 transformToScreen(const Vec3 & v)
+Vec2 transformToScreen(const Vec3 & v, float & w)
 {
 	Mat4x4 matP;
 	Mat4x4 matM;
 	
-	gxGetMatrixf(GL_PROJECTION, matP.m_v);
-	gxGetMatrixf(GL_MODELVIEW, matM.m_v);
-	checkErrorGL();
+	gxGetMatrixf(GX_PROJECTION, matP.m_v);
+	gxGetMatrixf(GX_MODELVIEW, matM.m_v);
 	
 	// from current transfor to view
 	
 	Vec4 t = matP * matM * Vec4(v[0], v[1], v[2], 1.f);
 	
 	// perspective divide
+	
+	w = t[3];
 	
 	if (t[3] != 0.f)
 		t /= t[3];
@@ -5410,10 +5281,13 @@ Vec2 transformToScreen(const Vec3 & v)
 
 static void setSurface(Surface * surface)
 {
+#if ENABLE_OPENGL
 	const GLuint framebuffer = surface ? surface->getFramebuffer() : 0;
 	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+	checkErrorGL();
+#endif
 	
-	updateViewport(surface, globals.currentWindow);
+	updateViewport(surface, globals.currentWindow->getWindow());
 	
 	applyTransform();
 }
@@ -5426,16 +5300,21 @@ void pushSurface(Surface * surface)
 		surface = s_screenshotSurfaceStack.stack[s_screenshotSurfaceStack.stackSize - 1];
 	
 	//
+	
+#if ENABLE_METAL
+	pushRenderPass(surface->getColorTarget(), false, surface->getDepthTarget(), false, "Surface");
+#endif
 
-	gxMatrixMode(GL_PROJECTION);
+	//
+
+	gxMatrixMode(GX_PROJECTION);
 	gxPushMatrix();
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxPushMatrix();
 
 	fassert(surfaceStackSize < kMaxSurfaceStackSize);
 	surfaceStack[surfaceStackSize++] = surface;
 	setSurface(surface);
-	checkErrorGL();
 
 	//
 
@@ -5443,7 +5322,7 @@ void pushSurface(Surface * surface)
 	{
 		int sx;
 		int sy;
-		SDL_GetWindowSize(globals.currentWindow, &sx, &sy);
+		SDL_GetWindowSize(globals.currentWindow->getWindow(), &sx, &sy);
 		const float scaleX = surface->getWidth() / float(sx);
 		const float scaleY = surface->getHeight() / float(sy);
 		gxScalef(scaleX, scaleY, 1);
@@ -5452,127 +5331,122 @@ void pushSurface(Surface * surface)
 
 void popSurface()
 {
+#if ENABLE_METAL
+	popRenderPass();
+#endif
+
+#if ENABLE_OPENGL
+	// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
+	// as this would cause issues where the driver may perform an optimization where it detects no texture
+	// state change happened in a future gxSetTexture or Shader::setTexture call (because the texture ids
+	// are the same), making it fail to flush GPU render target caches, fail to perform texture decompression,
+	// fail to perform whatever is needed to transition a render target texture from being 'renderable' resource
+	// to being a shader accessible resource
+
+	for (int i = 0; i < 8; ++i)
+	{
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		checkErrorGL();
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+	
+	globals.gxShaderIsDirty = true;
+#endif
+
+#if ENABLE_OPENGL && defined(MACOS) && 0
+// todo : remove this hack
+	// fix for driver issue where the results of drawing are possibly not yet flushed when accessing a surface texture,
+	// causing artefacts due to texel fetches returning inconsistent results
+	if (glTextureBarrierNV != nullptr)
+	{
+		glTextureBarrierNV();
+		checkErrorGL();
+	}
+#endif
+	
 	fassert(surfaceStackSize > 0);
 	surfaceStack[--surfaceStackSize] = 0;
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
 	setSurface(surface);
-	checkErrorGL();
 
-	gxMatrixMode(GL_PROJECTION);
+	gxMatrixMode(GX_PROJECTION);
 	gxPopMatrix();
-	gxMatrixMode(GL_MODELVIEW);
+	gxMatrixMode(GX_MODELVIEW);
 	gxPopMatrix();
 }
 
 void setDrawRect(int x, int y, int sx, int sy)
 {
-	y = globals.displaySize[1] - y - sy;
+	int surfaceSx;
+	int surfaceSy;
+	getCurrentViewportSize(surfaceSx, surfaceSy);
 	
-	x /= framework.minification;
-	y /= framework.minification;
-	sx /= framework.minification;
-	sy /= framework.minification;
+	int backingSx;
+	int backingSy;
+	getCurrentBackingSize(backingSx, backingSy);
 	
-	glScissor(x, y, sx, sy);
-	glEnable(GL_SCISSOR_TEST);
+#define ScaleX(x) x = ((x) * backingSx / (surfaceSx / framework.minification))
+#define ScaleY(y) y = ((y) * backingSy / (surfaceSy / framework.minification))
+	
+	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+
+	if (surface != nullptr)
+	{
+		ScaleX(x);
+		ScaleY(y);
+		ScaleX(sx);
+		ScaleY(sy);
+	
+	#if ENABLE_METAL
+		metal_set_scissor(x, y, sx, sy);
+	#endif
+	
+	#if ENABLE_OPENGL // todo : metal impl setDrawRect
+		glScissor(x, y, sx, sy);
+		checkErrorGL();
+
+		glEnable(GL_SCISSOR_TEST);
+		checkErrorGL();
+	#endif
+	}
+	else
+	{
+	#if ENABLE_OPENGL
+		if (globals.currentWindow == globals.mainWindow)
+			y = surfaceSy - y - sy;
+	#endif
+
+		ScaleX(x);
+		ScaleY(y);
+		ScaleX(sx);
+		ScaleY(sy);
+
+	#if ENABLE_METAL
+		metal_set_scissor(x, y, sx, sy);
+	#endif
+	
+	#if ENABLE_OPENGL // todo : metal impl setDrawRect
+		glScissor(x, y, sx, sy);
+		checkErrorGL();
+
+		glEnable(GL_SCISSOR_TEST);
+		checkErrorGL();
+	#endif
+	}
 }
 
 void clearDrawRect()
 {
+#if ENABLE_METAL
+	metal_clear_scissor();
+#endif
+
+#if ENABLE_OPENGL // todo : metal impl clearDrawRect
 	glDisable(GL_SCISSOR_TEST);
-}
-
-void setBlend(BLEND_MODE blendMode)
-{
-	globals.blendMode = blendMode;
-	
-	switch (blendMode)
-	{
-	case BLEND_OPAQUE:
-		glDisable(GL_BLEND);
-		break;
-	case BLEND_ALPHA:
-		glEnable(GL_BLEND);
-		if (glBlendEquation)
-			glBlendEquation(GL_FUNC_ADD);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		break;
-	case BLEND_PREMULTIPLIED_ALPHA:
-		glEnable(GL_BLEND);
-		if (glBlendEquation)
-			glBlendEquation(GL_FUNC_ADD);
-		if (glBlendFuncSeparate)
-			glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-		break;
-	case BLEND_PREMULTIPLIED_ALPHA_DRAW:
-	// todo : remove ?
-		glEnable(GL_BLEND);
-		if (glBlendEquation)
-			glBlendEquation(GL_FUNC_ADD);
-		if (glBlendFuncSeparate)
-			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-		break;
-	case BLEND_ADD:
-		glEnable(GL_BLEND);
-		if (glBlendEquation)
-			glBlendEquation(GL_FUNC_ADD);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		break;
-	case BLEND_ADD_OPAQUE:
-		glEnable(GL_BLEND);
-		if (glBlendEquation)
-			glBlendEquation(GL_FUNC_ADD);
-		glBlendFunc(GL_ONE, GL_ONE);
-		break;
-	case BLEND_SUBTRACT:
-		glEnable(GL_BLEND);
-		fassert(glBlendEquation);
-		if (glBlendEquation)
-			glBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-		break;
-	case BLEND_INVERT:
-		glEnable(GL_BLEND);
-		if (glBlendEquation)
-			glBlendEquation(GL_FUNC_ADD);
-		glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
-		break;
-	case BLEND_MUL:
-		glEnable(GL_BLEND);
-		if (glBlendEquation)
-			glBlendEquation(GL_FUNC_ADD);
-		glBlendFunc(GL_ZERO, GL_SRC_COLOR);
-		break;
-	case BLEND_MIN:
-		glEnable(GL_BLEND);
-		if (glBlendEquation)
-			glBlendEquation(GL_MIN);
-		glBlendFunc(GL_ONE, GL_ONE);
-		break;
-	case BLEND_MAX:
-		glEnable(GL_BLEND);
-		if (glBlendEquation)
-			glBlendEquation(GL_MAX);
-		glBlendFunc(GL_ONE, GL_ONE);
-		break;
-	default:
-		fassert(false);
-		break;
-	}
-}
-
-void pushBlend(BLEND_MODE blendMode)
-{
-	blendModeStack.push(globals.blendMode);
-	
-	setBlend(blendMode);
-}
-
-void popBlend()
-{
-	const BLEND_MODE blendMode = blendModeStack.popValue();
-	
-	setBlend(blendMode);
+#endif
 }
 
 void setColorMode(COLOR_MODE colorMode)
@@ -5663,8 +5537,11 @@ void setColorClamp(bool clamp)
 	globals.colorClamp = clamp;
 	
 #if USE_LEGACY_OPENGL
-	glClampColor(GL_CLAMP_VERTEX_COLOR, clamp ? GL_TRUE : GL_FALSE);
-	checkErrorGL();
+	if (glClampColor != nullptr)
+	{
+		glClampColor(GL_CLAMP_VERTEX_COLOR, clamp ? GL_TRUE : GL_FALSE);
+		checkErrorGL();
+	}
 #endif
 }
 
@@ -5756,7 +5633,9 @@ void setShader(const ShaderBase & shader)
 	{
 		globals.shader = const_cast<ShaderBase*>(&shader);
 	
+	#if ENABLE_OPENGL
 		glUseProgram(shader.getProgram());
+	#endif
 		
 		globals.gxShaderIsDirty = true;
 	}
@@ -5768,7 +5647,9 @@ void clearShader()
 	{
 		globals.shader = 0;
 	
+	#if ENABLE_OPENGL
 		glUseProgram(0);
+	#endif
 	}
 }
 
@@ -5777,9 +5658,20 @@ void shaderSource(const char * filename, const char * text)
 	framework.registerShaderSource(filename, text);
 }
 
+void pushShaderOutputs(const char * outputs)
+{
+	s_shaderOutputsStack.push(s_shaderOutputs);
+	s_shaderOutputs = outputs;
+}
+
+void popShaderOutputs()
+{
+	s_shaderOutputs = s_shaderOutputsStack.popValue();
+}
+
 void drawPoint(float x, float y)
 {
-	gxBegin(GL_POINTS);
+	gxBegin(GX_POINTS);
 	{
 		gxVertex2f(x, y);
 	}
@@ -5788,7 +5680,7 @@ void drawPoint(float x, float y)
 
 void drawLine(float x1, float y1, float x2, float y2)
 {
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		gxVertex2f(x1, y1);
 		gxVertex2f(x2, y2);
@@ -5798,7 +5690,7 @@ void drawLine(float x1, float y1, float x2, float y2)
 
 void drawRect(float x1, float y1, float x2, float y2)
 {
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
@@ -5810,7 +5702,7 @@ void drawRect(float x1, float y1, float x2, float y2)
 
 void drawRectLine(float x1, float y1, float x2, float y2)
 {
-	gxBegin(GL_LINE_LOOP);
+	gxBegin(GX_LINE_LOOP);
 	{
 		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
@@ -5822,7 +5714,7 @@ void drawRectLine(float x1, float y1, float x2, float y2)
 
 void drawCircle(float x, float y, float radius, int numSegments)
 {
-	gxBegin(GL_LINE_LOOP);
+	gxBegin(GX_LINE_LOOP);
 	{
 		for (int i = 0; i < numSegments; ++i)
 		{
@@ -5838,7 +5730,7 @@ void drawCircle(float x, float y, float radius, int numSegments)
 
 void fillCircle(float x, float y, float radius, int numSegments)
 {
-	gxBegin(GL_TRIANGLES);
+	gxBegin(GX_TRIANGLES);
 	{
 		for (int i = 0; i < numSegments; ++i)
 		{
@@ -5991,7 +5883,7 @@ static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem 
 	{
 		gxSetTexture(globals.font->textureAtlas->texture);
 		
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 	}
 	
 	const float scale = stbtt_ScaleForPixelHeight(&font->fontInfo, size);
@@ -6062,9 +5954,20 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 #if USE_GLYPH_ATLAS
 	if (globals.isInTextBatch == false)
 	{
-		gxSetTexture(globals.font->textureAtlas->texture);
+		Shader & shader = globals.builtinShaders->bitmappedText.get();
+		setShader(shader);
 		
-		gxBegin(GL_QUADS);
+		shader.setTexture("source", 0, globals.font->textureAtlas->texture->id);
+		
+		gxBegin(GX_QUADS);
+	}
+	else
+	{
+		// update the texture here. we need to do this for every drawText call, to ensure that
+		// when the text finally does get rendered, it uses the latest contents of the texture
+		// atlas
+		Shader * shader = static_cast<Shader*>(globals.shader);
+		shader->setTexture("source", 0, globals.font->textureAtlas->texture->id);
 	}
 	
 	for (size_t i = 0; i < numGlyphs; ++i)
@@ -6105,7 +6008,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 	{
 		gxEnd();
 		
-		gxSetTexture(0);
+		clearShader();
 	}
 #else
 	for (size_t i = 0; i < numGlyphs; ++i)
@@ -6118,7 +6021,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 		{
 			gxSetTexture(elem.texture);
 			
-			gxBegin(GL_QUADS);
+			gxBegin(GX_QUADS);
 			{
 				const float bsx = float(elem.g.bitmap.width);
 				const float bsy = float(elem.g.bitmap.rows);
@@ -6148,10 +6051,6 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 //
 
 #if ENABLE_MSDF_FONTS
-
-// fixme : settle on one method
-static int sampleMethod = 3;
-static bool useSuperSampling = false;
 
 static void measureText_MSDF(const stbtt_fontinfo & fontInfo, const float size, const GlyphCode * codepoints, const MsdfGlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
 
@@ -6230,11 +6129,17 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		Shader & shader = globals.builtinShaders->msdfText.get();
 		setShader(shader);
 		
-		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture);
-		shader.setImmediate("sampleMethod", sampleMethod);
-		shader.setImmediate("useSuperSampling", useSuperSampling);
+		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id);
 		
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
+	}
+	else
+	{
+		// update the texture here. we need to do this for every drawText call, to ensure that
+		// when the text finally does get rendered, it uses the latest contents of the texture
+		// atlas
+		Shader * shader = static_cast<Shader*>(globals.shader);
+		shader->setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id);
 	}
 	
 	const float scale = stbtt_ScaleForPixelHeight(&glyphCache.m_font.fontInfo, size);
@@ -6273,6 +6178,7 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 			int gsx = glyph.sx;
 			int gsy = glyph.sy;
 			
+		// todo : why not float ?
 			int dx1 = x - MSDF_GLYPH_PADDING_INNER + glyph.lsb;
 			int dy1 = y + MSDF_GLYPH_PADDING_INNER;
 			int dx2 = dx1 + gsx;
@@ -6351,7 +6257,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 		
 		float yTop;
 
-		measureText_FreeType(face, size, glyphs, textLength, sx, sy, yTop);
+		measureText_FreeType(face, sizei, glyphs, textLength, sx, sy, yTop);
 	#endif
 	}
 #if ENABLE_MSDF_FONTS
@@ -6381,7 +6287,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 #endif
 }
 
-void beginTextBatch()
+void beginTextBatch(Shader * overrideShader)
 {
 	if (globals.fontMode == FONT_BITMAP)
 	{
@@ -6389,8 +6295,18 @@ void beginTextBatch()
 		Assert(!globals.isInTextBatch);
 		globals.isInTextBatch = true;
 		
-		gxSetTexture(globals.font->textureAtlas->texture);
-		gxBegin(GL_QUADS);
+		Shader & shader = overrideShader
+			? *overrideShader
+			: globals.builtinShaders->bitmappedText.get();
+		
+		// note : before we were setting the texture here. this is unsafe however,
+		//        since the texture atlas may grow while drawing text ..
+		//        so we now apply the texture during drawText (after fetching the
+		//        font cache elems, which may grow the atlas)
+		//        and before the actual drawing takes place
+		setShader(shader);
+		
+		gxBegin(GX_QUADS);
 	#endif
 	}
 #if ENABLE_MSDF_FONTS
@@ -6402,14 +6318,14 @@ void beginTextBatch()
 		
 		globals.isInTextBatchMSDF = true;
 		
-		Shader & shader = globals.builtinShaders->msdfText.get();
+		Shader & shader = overrideShader
+			? *overrideShader
+			: globals.builtinShaders->msdfText.get();
+		
 		setShader(shader);
+		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture->id);
 		
-		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture);
-		shader.setImmediate("sampleMethod", sampleMethod);
-		shader.setImmediate("useSuperSampling", useSuperSampling);
-		
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 	}
 #endif
 }
@@ -6423,7 +6339,8 @@ void endTextBatch()
 		globals.isInTextBatch = false;
 		
 		gxEnd();
-		gxSetTexture(0);
+		
+		clearShader();
 	#endif
 	}
 	else if (globals.fontMode == FONT_SDF)
@@ -6486,7 +6403,7 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 		
 		for (size_t i = 0; i < textLength; ++i)
 		{
-			glyphs[i] = &g_glyphCache.findOrCreate(face, size, text[i]);
+			glyphs[i] = &g_glyphCache.findOrCreate(face, sizei, text[i]);
 		}
 		
 		float sx, sy, yTop;
@@ -6500,7 +6417,7 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 		
 		drawText_FreeType(face, sizei, glyphs, textLength, x, y);
 	#else
-		gxMatrixMode(GL_MODELVIEW);
+		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 		{
 			x += sx * (alignX - 1.f) / 2.f;
@@ -6675,7 +6592,7 @@ void drawPath(const Path2d & path)
 	int numPoints = 0;
 	path.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
 
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		for (int i = 0; i < numPoints - 1; ++i)
 		{
@@ -6694,7 +6611,7 @@ void drawPath(const Path2d & path)
 
 	glLineWidth(1.f);
 
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		for (int i = 0; i < numPoints; ++i)
 		{
@@ -6718,7 +6635,7 @@ void drawPath(const Path2d & path)
 	glPointSize(5.f);
 	setColor(255, 255, 255, 31);
 
-	gxBegin(GL_POINTS);
+	gxBegin(GX_POINTS);
 	{
 		for (int i = 0; i < numPoints; ++i)
 		{
@@ -6735,7 +6652,7 @@ void drawPath(const Path2d & path)
 
 void drawLine3d(int axis)
 {
-	gxBegin(GL_LINES);
+	gxBegin(GX_LINES);
 	{
 		gxTexCoord2f(0, 0); gxVertex3f(axis == 0 ? -1 : 0, axis == 1 ? -1 : 0, axis == 2 ? -1 : 0);
 		gxTexCoord2f(1, 1); gxVertex3f(axis == 0 ? +1 : 0, axis == 1 ? +1 : 0, axis == 2 ? +1 : 0);
@@ -6747,8 +6664,15 @@ void drawRect3d(int axis1, int axis2)
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
-	gxBegin(GL_QUADS);
+	float normal[3];
+	normal[axis1] = 0.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 1.f;
+	
+	gxBegin(GX_QUADS);
 	{
+		gxNormal3fv(normal);
+		
 		float xyz[3];
 		
 		xyz[axis1] = -1;
@@ -6772,8 +6696,15 @@ void drawGrid3d(int resolution1, int resolution2, int axis1, int axis2)
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
-	gxBegin(GL_QUADS);
+	float normal[3];
+	normal[axis1] = 0.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 1.f;
+	
+	gxBegin(GX_QUADS);
 	{
+		gxNormal3fv(normal);
+		
 		for (int i = 0; i < resolution1; ++i)
 		{
 			for (int j = 0; j < resolution2; ++j)
@@ -6812,10 +6743,17 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
+	float normal[3];
+	normal[axis1] = 0.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 1.f;
+	
 	if (optimized)
 	{
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
+			gxNormal3fv(normal);
+			
 			for (int i = 0; i <= resolution1; ++i)
 			{
 				const float u = i / float(resolution1);
@@ -6850,8 +6788,10 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 	}
 	else
 	{
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		{
+			gxNormal3fv(normal);
+			
 			for (int i = 0; i < resolution1; ++i)
 			{
 				for (int j = 0; j < resolution2; ++j)
@@ -6893,7 +6833,9 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 	}
 }
 
-static GLuint createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
+#if ENABLE_OPENGL
+
+static GxTextureId createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
 {
 	checkErrorGL();
 
@@ -6949,35 +6891,43 @@ static GLuint createTexture(const void * source, int sx, int sy, bool filter, bo
 	return texture;
 }
 
-GLuint createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_RGBA8, GL_RGBA, GL_UNSIGNED_BYTE);
 }
 
-GLuint createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_RGB8, GL_RGB, GL_UNSIGNED_BYTE);
 }
 
-GLuint createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
 }
 
-GLuint createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_RGB32F, GL_RGB, GL_FLOAT);
 }
 
-GLuint createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_R16, GL_RED, GL_UNSIGNED_SHORT);
 }
 
-GLuint createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_R32F, GL_RED, GL_FLOAT);
 }
+
+void freeTexture(GxTextureId & textureId)
+{
+	glDeleteTextures(1, &textureId);
+	textureId = 0;
+}
+
+#endif
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
 {
@@ -7008,776 +6958,16 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 
 	SDL_Window * getWindow()
 	{
-		return globals.currentWindow;
+		return globals.currentWindow->getWindow();
 	}
 
 	SDL_Surface * getWindowSurface()
 	{
-		return SDL_GetWindowSurface(globals.currentWindow);
+		return SDL_GetWindowSurface(globals.currentWindow->getWindow());
 	}
 
 #elif !USE_LEGACY_OPENGL
 
-class GxMatrixStack
-{
-public:
-	static const int kSize = 32;
-	Mat4x4 stack[kSize];
-	int stackDepth;
-	bool isDirty;
-	
-	GxMatrixStack()
-	{
-		stackDepth = 0;
-		stack[0].MakeIdentity();
-		
-		isDirty = true;
-	}
-	
-	void push()
-	{
-		fassert(stackDepth + 1 < kSize);
-		stackDepth++;
-		stack[stackDepth] = stack[stackDepth - 1];
-	}
-	
-	void pop()
-	{
-		fassert(stackDepth > 0);
-		stackDepth--;
-		
-		isDirty = true;
-	}
-	
-	const Mat4x4 & get() const
-	{
-		return stack[stackDepth];
-	}
-	
-	Mat4x4 & getRw()
-	{
-		isDirty = true;
-		
-		return stack[stackDepth];
-	}
-	
-	void makeDirty()
-	{
-		isDirty = true;
-	}
-};
-
-static GxMatrixStack s_gxModelView;
-static GxMatrixStack s_gxProjection;
-static GxMatrixStack * s_gxMatrixStack = &s_gxModelView;
-
-void gxMatrixMode(GLenum mode)
-{
-	switch (mode)
-	{
-		case GL_MODELVIEW:
-			s_gxMatrixStack = &s_gxModelView;
-			break;
-		case GL_PROJECTION:
-			s_gxMatrixStack = &s_gxProjection;
-			break;
-		default:
-			fassert(false);
-			break;
-	}
-}
-
-GLenum gxGetMatrixMode()
-{
-	if (s_gxMatrixStack == &s_gxModelView)
-		return GL_MODELVIEW;
-	if (s_gxMatrixStack == &s_gxProjection)
-		return GL_PROJECTION;
-	else
-	{
-		Assert(false);
-		return GL_MODELVIEW;
-	}
-}
-
-void gxPopMatrix()
-{
-	s_gxMatrixStack->pop();
-}
-
-void gxPushMatrix()
-{
-	s_gxMatrixStack->push();
-}
-
-void gxLoadIdentity()
-{
-	s_gxMatrixStack->getRw().MakeIdentity();
-}
-
-void gxLoadMatrixf(const float * m)
-{
-	memcpy(s_gxMatrixStack->getRw().m_v, m, sizeof(float) * 16);
-}
-
-void gxGetMatrixf(GLenum mode, float * m)
-{
-	switch (mode)
-	{
-		case GL_PROJECTION:
-			memcpy(m, s_gxProjection.get().m_v, sizeof(float) * 16);
-			break;
-		case GL_MODELVIEW:
-			memcpy(m, s_gxModelView.get().m_v, sizeof(float) * 16);
-			break;
-		default:
-			fassert(false);
-			break;
-	}
-}
-
-void gxSetMatrixf(GLenum mode, const float * m)
-{
-	switch (mode)
-	{
-		case GL_PROJECTION:
-			memcpy(s_gxProjection.getRw().m_v, m, sizeof(float) * 16);
-			break;
-		case GL_MODELVIEW:
-			memcpy(s_gxModelView.getRw().m_v, m, sizeof(float) * 16);
-			break;
-		default:
-			fassert(false);
-			break;
-	}
-}
-
-void gxMultMatrixf(const float * _m)
-{
-	Mat4x4 m;
-	memcpy(m.m_v, _m, sizeof(m.m_v));
-
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
-}
-
-void gxTranslatef(float x, float y, float z)
-{
-	Mat4x4 m;
-	m.MakeTranslation(x, y, z);
-	
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
-}
-
-void gxRotatef(float angle, float x, float y, float z)
-{
-	Quat q;
-	q.fromAxisAngle(Vec3(x, y, z), angle * M_PI / 180.f);
-	
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * q.toMatrix();
-}
-
-void gxScalef(float x, float y, float z)
-{
-	Mat4x4 m;
-	m.MakeScaling(x, y, z);
-	
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
-}
-
-void gxValidateMatrices()
-{
-	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
-
-	// todo: check if matrices are dirty
-	
-	//printf("validate1\n");
-	
-#if VS_USE_LEGACY_MATRICES
-	glMatrixMode(GL_PROJECTION);
-	glLoadMatrixf(s_gxProjection.get().m_v);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadMatrixf(s_gxModelView.get().m_v);
-#else
-	if (globals.shader && globals.shader->getType() == SHADER_VSPS)
-	{
-		Shader * shader = static_cast<Shader*>(globals.shader);
-
-		const ShaderCacheElem & shaderElem = shader->getCacheElem();
-		
-		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index >= 0)
-		{
-			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index, s_gxModelView.get().m_v);
-			//printf("validate2\n");
-		}
-		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index >= 0)
-		{
-			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index, (s_gxProjection.get() * s_gxModelView.get()).m_v);
-			//printf("validate3\n");
-		}
-		if ((globals.gxShaderIsDirty || s_gxProjection.isDirty) && shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index >= 0)
-		{
-			shader->setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index, s_gxProjection.get().m_v);
-			//printf("validate4\n");
-		}
-	}
-#endif
-	
-	s_gxModelView.isDirty = false;
-	s_gxProjection.isDirty = false;
-}
-
-struct GxVertex
-{
-	float px, py, pz, pw;
-	float nx, ny, nz;
-	float cx, cy, cz, cw;
-	float tx, ty;
-};
-
-#define GX_USE_RINGBUFFER 0
-#define GX_USE_UBERBUFFER 0
-#define GX_USE_BUFFER_RENAMING 0
-#define GX_BUFFER_DRAW_MODE GL_DYNAMIC_DRAW
-//#define GX_BUFFER_DRAW_MODE GL_STREAM_DRAW
-#if defined(MACOS)
-    #define GX_USE_ELEMENT_ARRAY_BUFFER 1
-#else
-    #define GX_USE_ELEMENT_ARRAY_BUFFER 0
-#endif
-#define GX_VAO_COUNT 1
-
-static Shader s_gxShader;
-static GLuint s_gxVertexArrayObject[GX_VAO_COUNT] = { };
-static GLuint s_gxVertexBufferObject[GX_VAO_COUNT] = { };
-static GLuint s_gxIndexBufferObject[GX_VAO_COUNT] = { };
-static GxVertex s_gxVertexBuffer[1024*16];
-
-#if GX_USE_RINGBUFFER
-static GLuint s_gxVertexBufferRing = 0;
-#endif
-
-#if GX_USE_UBERBUFFER
-const int kUberVertexBufferSize = 1024 * 32;
-const int kUberIndexBufferSize = 1024 * 64;
-static int s_gxUberVertexBufferPosition = 0;
-static int s_gxUberIndexBufferPosition = 0;
-#endif
-
-static int s_gxPrimitiveType = -1;
-static GxVertex * s_gxVertices = 0;
-static int s_gxVertexCount = 0;
-static int s_gxMaxVertexCount = 0;
-static int s_gxPrimitiveSize = 0;
-static GxVertex s_gxVertex = { };
-static bool s_gxTextureEnabled = false;
-
-static const VsInput vsInputs[] =
-{
-	{ VS_POSITION, 4, GL_FLOAT, 0, offsetof(GxVertex, px) },
-	{ VS_NORMAL,   3, GL_FLOAT, 0, offsetof(GxVertex, nx) },
-	{ VS_COLOR,    4, GL_FLOAT, 0, offsetof(GxVertex, cx) },
-	{ VS_TEXCOORD, 2, GL_FLOAT, 0, offsetof(GxVertex, tx) }
-};
-const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
-
-void gxEmitVertex();
-
-void gxInitialize()
-{
-	registerBuiltinShaders();
-
-	s_gxShader.load("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
-	
-	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
-	s_gxVertex.cx = 1.f;
-	s_gxVertex.cy = 1.f;
-	s_gxVertex.cz = 1.f;
-	s_gxVertex.cw = 1.f;
-
-	fassert(s_gxVertexBufferObject[0] == 0);
-	glGenBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
-#if GX_USE_UBERBUFFER
-	glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
-	glBufferData(GL_ARRAY_BUFFER, kUberVertexBufferSize * sizeof(GxVertex), 0, GL_STREAM_DRAW);
-#endif
-	
-	fassert(s_gxIndexBufferObject[0] == 0);
-	glGenBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
-#if GX_USE_UBERBUFFER
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(glindex_t), 0, GL_STREAM_DRAW);
-#endif
-	
-	// create vertex array
-	fassert(s_gxVertexArrayObject[0] == 0);
-	glGenVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
-	checkErrorGL();
-
-	for (int i = 0; i < GX_VAO_COUNT; ++i)
-	{
-		glBindVertexArray(s_gxVertexArrayObject[i]);
-		checkErrorGL();
-		{
-			#if GX_USE_ELEMENT_ARRAY_BUFFER
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[i]);
-			checkErrorGL();
-			#endif
-			glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[i]);
-			checkErrorGL();
-			bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
-		}
-	}
-
-	glBindVertexArray(0);
-	checkErrorGL();
-	
-	#if GX_USE_RINGBUFFER
-	if (glBufferStorage)
-	{
-		const GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
-		const int bufferSize = sizeof(GxVertex) * 1024;
-		glGenBuffers(1, &s_gxVertexBufferRing);
-		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferRing);
-		glBufferStorage(GL_ARRAY_BUFFER, bufferSize, 0, flags);
-		checkErrorGL();
-		glMapBufferRange(GL_ARRAY_BUFFER, 0, bufferSize, flags);
-		checkErrorGL();
-	}
-	#endif
-}
-
-void gxShutdown()
-{
-	if (s_gxVertexArrayObject[0] != 0)
-	{
-		glDeleteVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
-		memset(s_gxVertexArrayObject, 0, sizeof(s_gxVertexArrayObject));
-	}
-	
-	if (s_gxVertexBufferObject[0] != 0)
-	{
-		glDeleteBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
-		memset(s_gxVertexBufferObject, 0, sizeof(s_gxVertexBufferObject));
-	}
-
-	if (s_gxIndexBufferObject[0] != 0)
-	{
-		glDeleteBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
-		memset(s_gxIndexBufferObject, 0, sizeof(s_gxIndexBufferObject));
-	}
-}
-
-static void gxFlush(bool endOfBatch)
-{
-	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
-
-	if (s_gxVertexCount)
-	{
-		const int primitiveType = s_gxPrimitiveType;
-
-		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
-
-		setShader(shader);
-		
-		gxValidateMatrices();
-		
-		static int vaoIndex = 0;
-		vaoIndex = (vaoIndex + 1) % GX_VAO_COUNT;
-
-	#if GX_USE_UBERBUFFER
-		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
-		if (s_gxUberVertexBufferPosition + s_gxVertexCount > kUberVertexBufferSize)
-		{
-			glBufferData(GL_ARRAY_BUFFER, kUberVertexBufferSize * sizeof(GxVertex), 0, GX_BUFFER_DRAW_MODE);
-			s_gxUberVertexBufferPosition = 0;
-		}
-		glBufferSubData(GL_ARRAY_BUFFER, s_gxUberVertexBufferPosition * sizeof(GxVertex), s_gxVertexCount * sizeof(GxVertex), s_gxVertices);
-		checkErrorGL();
-	#else
-		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[vaoIndex]);
-		#if GX_USE_BUFFER_RENAMING
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, 0, GX_BUFFER_DRAW_MODE);
-		#endif
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GX_BUFFER_DRAW_MODE);
-		checkErrorGL();
-	#endif
-		
-		bool indexed = false;
-		glindex_t * indices = 0;
-		int numElements = s_gxVertexCount;
-		int numIndices = 0;
-
-	#if !GX_USE_ELEMENT_ARRAY_BUFFER || GX_VAO_COUNT > 1
-		bool needToRegenerateIndexBuffer = true;
-	#else
-		bool needToRegenerateIndexBuffer = false;
-        
-        static int lastPrimitiveType = -1;
-        static int lastVertexCount = -1;
-        
-		if (s_gxPrimitiveType != lastPrimitiveType || s_gxVertexCount != lastVertexCount)
-		{
-			lastPrimitiveType = s_gxPrimitiveType;
-			lastVertexCount = s_gxVertexCount;
-
-			needToRegenerateIndexBuffer = true;
-		}
-	#endif
-
-	#if 1
-		if (s_gxPrimitiveType == GL_QUADS)
-		{
-			fassert(s_gxVertexCount < 65536);
-			
-			// todo: use triangle strip + compute index buffer once at init time
-			
-			const int numQuads = s_gxVertexCount / 4;
-			numIndices = numQuads * 6;
-
-			if (needToRegenerateIndexBuffer)
-			{
-				indices = (glindex_t*)alloca(sizeof(glindex_t) * numIndices);
-
-				glindex_t * __restrict indexPtr = indices;
-				glindex_t baseIndex = 0;
-			
-				for (int i = 0; i < numQuads; ++i)
-				{
-					*indexPtr++ = baseIndex + 0;
-					*indexPtr++ = baseIndex + 1;
-					*indexPtr++ = baseIndex + 2;
-				
-					*indexPtr++ = baseIndex + 0;
-					*indexPtr++ = baseIndex + 2;
-					*indexPtr++ = baseIndex + 3;
-				
-					baseIndex += 4;
-				}
-			
-			#if GX_USE_ELEMENT_ARRAY_BUFFER
-			#if GX_USE_UBERBUFFER
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
-				if (s_gxUberIndexBufferPosition + numIndices > kUberIndexBufferSize)
-				{
-					glBufferData(GL_ELEMENT_ARRAY_BUFFER, kUberIndexBufferSize * sizeof(glindex_t), 0, GX_BUFFER_DRAW_MODE);
-					s_gxUberIndexBufferPosition = 0;
-				}
-				glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, s_gxUberIndexBufferPosition * sizeof(glindex_t), numIndices * sizeof(glindex_t), indices);
-				checkErrorGL();
-			#else
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[vaoIndex]);
-				#if GX_USE_BUFFER_RENAMING
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, 0, GX_BUFFER_DRAW_MODE);
-				#endif
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, indices, GX_BUFFER_DRAW_MODE);
-				checkErrorGL();
-			#endif
-			#endif
-			}
-			
-			s_gxPrimitiveType = GL_TRIANGLES;
-			numElements = numIndices;
-			
-			indexed = true;
-		}
-	#endif
-		
-		glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
-		checkErrorGL();
-		
-		const ShaderCacheElem & shaderElem = shader.getCacheElem();
-		
-		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
-		{
-			shader.setImmediate(
-				shaderElem.params[ShaderCacheElem::kSp_Params].index,
-				s_gxTextureEnabled ? 1 : 0,
-				globals.colorMode,
-				globals.colorPost,
-				globals.colorClamp);
-		}
-
-		if (globals.gxShaderIsDirty)
-		{
-			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
-		}
-
-		if (indexed)
-		{
-			#if GX_USE_UBERBUFFER
-			glDrawElementsBaseVertex(s_gxPrimitiveType, numElements, INDEX_TYPE, (void*)(s_gxUberIndexBufferPosition * sizeof(glindex_t)), s_gxUberVertexBufferPosition);
-			#elif GX_USE_ELEMENT_ARRAY_BUFFER
-			glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, 0);
-			#else
-			glDrawElements(s_gxPrimitiveType, numElements, INDEX_TYPE, indices);
-			#endif
-			checkErrorGL();
-		}
-		else
-		{
-			#if GX_USE_UBERBUFFER
-			glDrawArrays(s_gxPrimitiveType, s_gxUberVertexBufferPosition, numElements);
-			#else
-			glDrawArrays(s_gxPrimitiveType, 0, numElements);
-			#endif
-			checkErrorGL();
-		}
-		
-	#if GX_USE_UBERBUFFER
-		//logDebug("uber offsets: %d, %d", s_gxUberVertexBufferPosition, s_gxUberIndexBufferPosition);
-		s_gxUberVertexBufferPosition += s_gxVertexCount;
-		s_gxUberIndexBufferPosition += numIndices;
-	#endif
-		
-		if (endOfBatch)
-		{
-			s_gxVertexCount = 0;
-		}
-		else
-		{
-			switch (s_gxPrimitiveType)
-			{
-				case GL_LINE_LOOP:
-					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
-					s_gxVertexCount = 1;
-					break;
-				case GL_LINE_STRIP:
-					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
-					s_gxVertexCount = 1;
-					break;
-				case GL_TRIANGLE_FAN:
-					s_gxVertices[0] = s_gxVertices[0];
-					s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
-					s_gxVertexCount = 2;
-					break;
-				case GL_TRIANGLE_STRIP:
-					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
-					s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
-					s_gxVertexCount = 2;
-					break;
-				default:
-					s_gxVertexCount = 0;
-			}
-		}
-		
-		globals.gxShaderIsDirty = false;
-
-		s_gxPrimitiveType = primitiveType;
-	}
-	
-	if (endOfBatch)
-		s_gxVertices = 0;
-}
-
-void gxBegin(int primitiveType)
-{
-	s_gxPrimitiveType = primitiveType;
-	s_gxVertices = s_gxVertexBuffer;
-	s_gxMaxVertexCount = sizeof(s_gxVertexBuffer) / sizeof(s_gxVertexBuffer[0]);
-	
-	switch (primitiveType)
-	{
-		case GL_TRIANGLES:
-			s_gxPrimitiveSize = 3;
-			break;
-		case GL_QUADS:
-			s_gxPrimitiveSize = 4;
-			break;
-		case GL_LINES:
-			s_gxPrimitiveSize = 2;
-			break;
-		case GL_LINE_LOOP:
-			s_gxPrimitiveSize = 1;
-			break;
-		case GL_LINE_STRIP:
-			s_gxPrimitiveSize = 1;
-			break;
-		case GL_POINTS:
-			s_gxPrimitiveSize = 1;
-			break;
-		case GL_TRIANGLE_FAN:
-			s_gxPrimitiveSize = 1;
-			break;
-		case GL_TRIANGLE_STRIP:
-			s_gxPrimitiveSize = 1;
-			break;
-		default:
-			fassert(false);
-	}
-	
-	fassert(s_gxVertexCount == 0);
-}
-
-void gxEnd()
-{
-	gxFlush(true);
-}
-
-void gxEmitVertices(int primitiveType, int numVertices)
-{
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
-
-	setShader(shader);
-
-	gxValidateMatrices();
-
-	//
-
-	const int vaoIndex = 0;
-	glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
-	checkErrorGL();
-
-	//
-
-	const ShaderCacheElem & shaderElem = shader.getCacheElem();
-
-	if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
-	{
-		shader.setImmediate(
-			shaderElem.params[ShaderCacheElem::kSp_Params].index,
-			s_gxTextureEnabled ? 1 : 0,
-			globals.colorMode,
-			globals.colorPost,
-			0);
-	}
-
-	if (globals.gxShaderIsDirty)
-	{
-		if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-			shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
-	}
-
-	//
-
-	glDrawArrays(primitiveType, 0, numVertices);
-	checkErrorGL();
-
-	globals.gxShaderIsDirty = false;
-}
-
-void gxColor4f(float r, float g, float b, float a)
-{
-	s_gxVertex.cx = r;
-	s_gxVertex.cy = g;
-	s_gxVertex.cz = b;
-	s_gxVertex.cw = a;
-}
-
-void gxColor4fv(const float * rgba)
-{
-	s_gxVertex.cx = rgba[0];
-	s_gxVertex.cy = rgba[1];
-	s_gxVertex.cz = rgba[2];
-	s_gxVertex.cw = rgba[3];
-}
-
-void gxColor3ub(int r, int g, int b)
-{
-	gxColor4f(
-		scale255(r),
-		scale255(g),
-		scale255(b),
-		1.f);
-}
-
-void gxColor4ub(int r, int g, int b, int a)
-{
-	gxColor4f(
-		scale255(r),
-		scale255(g),
-		scale255(b),
-		scale255(a));
-}
-
-void gxTexCoord2f(float u, float v)
-{
-	s_gxVertex.tx = u;
-	s_gxVertex.ty = v;
-}
-
-void gxNormal3f(float x, float y, float z)
-{
-	s_gxVertex.nx = x;
-	s_gxVertex.ny = y;
-	s_gxVertex.nz = z;
-}
-
-void gxNormal3fv(const float * v)
-{
-	gxNormal3f(v[0], v[1], v[2]);
-}
-
-void gxVertex2f(float x, float y)
-{
-	s_gxVertex.px = x;
-	s_gxVertex.py = y;
-	s_gxVertex.pz = 0.f;
-	s_gxVertex.pw = 1.f;
-
-	gxEmitVertex();
-}
-
-void gxVertex3f(float x, float y, float z)
-{
-	s_gxVertex.px = x;
-	s_gxVertex.py = y;
-	s_gxVertex.pz = z;
-	s_gxVertex.pw = 1.f;
-	
-	gxEmitVertex();
-}
-
-void gxVertex4f(float x, float y, float z, float w)
-{
-	s_gxVertex.px = x;
-	s_gxVertex.py = y;
-	s_gxVertex.pz = z;
-	s_gxVertex.pw = w;
-
-	gxEmitVertex();
-}
-
-void gxVertex3fv(const float * v)
-{
-	gxVertex3f(v[0], v[1], v[2]);
-}
-
-void gxVertex4fv(const float * v)
-{
-	gxVertex4f(v[0], v[1], v[2], v[3]);
-}
-
-void gxEmitVertex()
-{
-	s_gxVertices[s_gxVertexCount++] = s_gxVertex;
-	
-	if (s_gxVertexCount + s_gxPrimitiveSize > s_gxMaxVertexCount)
-	{
-		if (s_gxVertexCount % s_gxPrimitiveSize == 0)
-		{
-			gxFlush(false);
-		}
-	}
-}
-
-void gxSetTexture(GLuint texture)
-{
-	glActiveTexture(GL_TEXTURE0);
-	
-	if (texture)
-	{
-		glBindTexture(GL_TEXTURE_2D, texture);
-		checkErrorGL();
-		
-		s_gxTextureEnabled = true;
-	}
-	else
-	{
-		s_gxTextureEnabled = false;
-	}
-}
-
 #else
 
 void gxInitialize()
@@ -7785,16 +6975,16 @@ void gxInitialize()
 	registerBuiltinShaders();
 }
 
-void gxGetMatrixf(GLenum mode, float * m)
+void gxGetMatrixf(GX_MATRIX mode, float * m)
 {
 	switch (mode)
 	{
-	case GL_PROJECTION:
+	case GX_PROJECTION:
 		glGetFloatv(GL_PROJECTION_MATRIX, m);
 		checkErrorGL();
 		break;
 
-	case GL_MODELVIEW:
+	case GX_MODELVIEW:
 		glGetFloatv(GL_MODELVIEW_MATRIX, m);
 		checkErrorGL();
 		break;
@@ -7805,14 +6995,40 @@ void gxGetMatrixf(GLenum mode, float * m)
 	}
 }
 
-GLenum gxGetMatrixMode()
+void gxSetMatrixf(GX_MATRIX mode, const float * m)
+{
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+	{
+		switch (mode)
+		{
+		case GX_PROJECTION:
+			glMatrixMode(GL_PROJECTION);
+			glLoadMatrixf(m);
+			checkErrorGL();
+			break;
+
+		case GX_MODELVIEW:
+			glMatrixMode(GL_MODELVIEW);
+			glLoadMatrixf(m);
+			checkErrorGL();
+			break;
+
+		default:
+			fassert(false);
+			break;
+		}
+	}
+	gxMatrixMode(restoreMatrixMode);
+}
+
+GX_MATRIX gxGetMatrixMode()
 {
 	GLint mode = 0;
 	
 	glGetIntegerv(GL_MATRIX_MODE, &mode);
 	checkErrorGL();
 	
-	return (GLenum)mode;
+	return (GX_MATRIX)mode;
 }
 
 void gxEnd()
@@ -7821,7 +7037,7 @@ void gxEnd()
 	checkErrorGL();
 }
 
-void gxSetTexture(GLuint texture)
+void gxSetTexture(GxTextureId texture)
 {
 	if (texture)
 	{
@@ -7835,6 +7051,62 @@ void gxSetTexture(GLuint texture)
 		glDisable(GL_TEXTURE_2D);
 		checkErrorGL();
 	#endif
+	}
+}
+
+static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter)
+{
+	if (filter == GX_SAMPLE_NEAREST)
+		return GL_NEAREST;
+	else if (filter == GX_SAMPLE_LINEAR)
+		return GL_LINEAR;
+	else
+	{
+		fassert(false);
+		return GL_NEAREST;
+	}
+}
+
+void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
+{
+	if (glIsEnabled(GL_TEXTURE_2D))
+	{
+		const GLenum openglFilter = toOpenGLSampleFilter(filter);
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglFilter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, openglFilter);
+		checkErrorGL();
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		checkErrorGL();
+	}
+}
+
+void gxGetTextureSize(GxTextureId texture, int & width, int & height)
+{
+	// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
+
+/*
+	if (glGetTextureLevelParameteriv != nullptr)
+	{
+		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &height);
+		checkErrorGL();
+	}
+	else
+*/
+	{
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	}
 }
 
@@ -7882,7 +7154,7 @@ void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma)
 	kernel.setData(values, sizeof(float) * kernelSize);
 }
 
-void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const float radius)
+void setShader_GaussianBlurH(const GxTextureId source, const int kernelSize, const float radius)
 {
 	Shader & shader = globals.builtinShaders->gaussianBlurH.get();
 	setShader(shader);
@@ -7896,7 +7168,7 @@ void setShader_GaussianBlurH(const GLuint source, const int kernelSize, const fl
 	shader.setBuffer("kernel", kernel);
 }
 
-void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const float radius)
+void setShader_GaussianBlurV(const GxTextureId source, const int kernelSize, const float radius)
 {
 	Shader & shader = globals.builtinShaders->gaussianBlurV.get();
 	setShader(shader);
@@ -7910,9 +7182,9 @@ void setShader_GaussianBlurV(const GLuint source, const int kernelSize, const fl
 	shader.setBuffer("kernel", kernel);
 }
 
-static void setShader_TresholdLumiEx(
-	const GLuint source,
-	const float treshold,
+static void setShader_ThresholdLumiEx(
+	const GxTextureId source,
+	const float threshold,
 	const Vec4 weights,
 	bool doFailReplacement,
 	bool doPassReplacement,
@@ -7920,11 +7192,11 @@ static void setShader_TresholdLumiEx(
 	const Color & passColor,
 	const float opacity)
 {
-	Shader & shader = globals.builtinShaders->treshold.get();
+	Shader & shader = globals.builtinShaders->threshold.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
-	shader.setImmediate("settings", treshold, doFailReplacement, doPassReplacement, opacity);
+	shader.setImmediate("settings", threshold, doFailReplacement, doPassReplacement, opacity);
 	shader.setImmediate("weights", weights[0], weights[1], weights[2], weights[3]);
 	shader.setImmediate("failValue", failColor.r, failColor.g, failColor.b, failColor.a);
 	shader.setImmediate("passValue", passColor.r, passColor.g, passColor.b, passColor.a);
@@ -7932,9 +7204,9 @@ static void setShader_TresholdLumiEx(
 
 static const Vec4 lumiVec(.30f, .59f, .11f, 0.f);
 
-void setShader_TresholdLumi(const GLuint source, const float lumi, const Color & failColor, const Color & passColor, const float opacity)
+void setShader_ThresholdLumi(const GxTextureId source, const float lumi, const Color & failColor, const Color & passColor, const float opacity)
 {
-	setShader_TresholdLumiEx(
+	setShader_ThresholdLumiEx(
 		source,
 		lumi,
 		lumiVec,
@@ -7945,9 +7217,9 @@ void setShader_TresholdLumi(const GLuint source, const float lumi, const Color &
 		opacity);
 }
 
-void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Color & failColor, const float opacity)
+void setShader_ThresholdLumiFail(const GxTextureId source, const float lumi, const Color & failColor, const float opacity)
 {
-	setShader_TresholdLumiEx(
+	setShader_ThresholdLumiEx(
 		source,
 		lumi,
 		lumiVec,
@@ -7958,9 +7230,9 @@ void setShader_TresholdLumiFail(const GLuint source, const float lumi, const Col
 		opacity);
 }
 
-void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Color & passColor, const float opacity)
+void setShader_ThresholdLumiPass(const GxTextureId source, const float lumi, const Color & passColor, const float opacity)
 {
-	setShader_TresholdLumiEx(
+	setShader_ThresholdLumiEx(
 		source,
 		lumi,
 		lumiVec,
@@ -7971,29 +7243,29 @@ void setShader_TresholdLumiPass(const GLuint source, const float lumi, const Col
 		opacity);
 }
 
-static void setShader_TresholdValueEx(
-	const GLuint source,
-	const Vec4 treshold,
+static void setShader_ThresholdValueEx(
+	const GxTextureId source,
+	const Vec4 threshold,
 	bool doFailReplacement,
 	bool doPassReplacement,
 	const Color & failColor,
 	const Color & passColor,
 	const Vec4 opacity)
 {
-	Shader & shader = globals.builtinShaders->tresholdValue.get();
+	Shader & shader = globals.builtinShaders->thresholdValue.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("settings", 0.f, doFailReplacement, doPassReplacement, 0.f);
-	shader.setImmediate("tresholds", treshold[0], treshold[1], treshold[2], treshold[3]);
+	shader.setImmediate("tresholds", threshold[0], threshold[1], threshold[2], threshold[3]);
 	shader.setImmediate("failValue", failColor.r, failColor.g, failColor.b, failColor.a);
 	shader.setImmediate("passValue", passColor.r, passColor.g, passColor.b, passColor.a);
 	shader.setImmediate("opacities", opacity[0], opacity[1], opacity[2], opacity[3]);
 }
 
-void setShader_TresholdValue(const GLuint source, const Color & value, const Color & failColor, const Color & passColor, const float opacity)
+void setShader_ThresholdValue(const GxTextureId source, const Color & value, const Color & failColor, const Color & passColor, const float opacity)
 {
-	setShader_TresholdValueEx(
+	setShader_ThresholdValueEx(
 		source,
 		Vec4(value.r, value.g, value.b, value.a),
 		true,
@@ -8005,7 +7277,7 @@ void setShader_TresholdValue(const GLuint source, const Color & value, const Col
 
 // todo : move these shaders to BuiltinShaders and supply shader source
 
-void setShader_GrayscaleLumi(const GLuint source, const float opacity)
+void setShader_GrayscaleLumi(const GxTextureId source, const float opacity)
 {
 	//Shader & shader = globals.builtinShaders->grayscaleLumi;
 	static Shader shader("builtin-grayscale-lumi", "builtin-effect.vs", "builtin-grayscale-lumi.ps");
@@ -8015,7 +7287,7 @@ void setShader_GrayscaleLumi(const GLuint source, const float opacity)
 	shader.setTexture("source", 0, source, true, true);
 }
 
-void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const float opacity)
+void setShader_GrayscaleWeights(const GxTextureId source, const Vec3 & weights, const float opacity)
 {
 	//Shader & shader = globals.builtinShaders->grayscaleWeights;
 	static Shader shader("builtin-grayscale-weights", "builtin-effect.vs", "builtin-grayscale-weights.ps");
@@ -8026,7 +7298,7 @@ void setShader_GrayscaleWeights(const GLuint source, const Vec3 & weights, const
 	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_Colorize(const GLuint source, const float hue, const float opacity)
+void setShader_Colorize(const GxTextureId source, const float hue, const float opacity)
 {
 	//Shader & shader = globals.builtinShaders->hueAssign;
 	static Shader shader("builtin-hue-assign", "builtin-effect.vs", "builtin-hue-assign.ps");
@@ -8037,7 +7309,7 @@ void setShader_Colorize(const GLuint source, const float hue, const float opacit
 	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_HueShift(const GLuint source, const float hue, const float opacity)
+void setShader_HueShift(const GxTextureId source, const float hue, const float opacity)
 {
 	//Shader & shader = globals.builtinShaders->hueShift;
 	static Shader shader("builtin-hue-shift", "builtin-effect.vs", "builtin-hue-shift.ps");
@@ -8048,7 +7320,7 @@ void setShader_HueShift(const GLuint source, const float hue, const float opacit
 	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_Composite(const GLuint source1, const GLuint source2)
+void setShader_Composite(const GxTextureId source1, const GxTextureId source2)
 {
 	//Shader & shader = globals.builtinShaders->compositeAlpha;
 	Shader shader("builtin-composite-alpha");
@@ -8058,7 +7330,7 @@ void setShader_Composite(const GLuint source1, const GLuint source2)
 	shader.setTexture("source2", 1, source2, true, true);
 }
 
-void setShader_CompositePremultiplied(const GLuint source1, const GLuint source2)
+void setShader_CompositePremultiplied(const GxTextureId source1, const GxTextureId source2)
 {
 	//Shader & shader = globals.builtinShaders->compositeAlphaPremultiplied;
 	Shader shader("builtin-composite-alpha-premultiplied");
@@ -8068,7 +7340,7 @@ void setShader_CompositePremultiplied(const GLuint source1, const GLuint source2
 	shader.setTexture("source2", 1, source2, true, true);
 }
 
-void setShader_Premultiply(const GLuint source)
+void setShader_Premultiply(const GxTextureId source)
 {
 	//Shader & shader = globals.builtinShaders->premultiplyAlpha;
 	Shader shader("builtin-premultiply-alpha");
@@ -8077,7 +7349,7 @@ void setShader_Premultiply(const GLuint source)
 	shader.setTexture("source", 0, source, true, true);
 }
 
-void setShader_ColorMultiply(const GLuint source, const Color & color, const float opacity)
+void setShader_ColorMultiply(const GxTextureId source, const Color & color, const float opacity)
 {
 	Shader & shader = globals.builtinShaders->colorMultiply.get();
 	setShader(shader);
@@ -8088,7 +7360,7 @@ void setShader_ColorMultiply(const GLuint source, const Color & color, const flo
 
 }
 
-void setShader_ColorTemperature(const GLuint source, const float temperature, const float opacity)
+void setShader_ColorTemperature(const GxTextureId source, const float temperature, const float opacity)
 {
 	Shader & shader = globals.builtinShaders->colorTemperature.get();
 	setShader(shader);
@@ -8147,53 +7419,134 @@ static void setShader_HqStrokedRoundedRects()
 	setShader(globals.builtinShaders->hqStrokedRoundedRect.get());
 }
 
+static void applyHqShaderConstants()
+{
+	Shader & shader = *static_cast<Shader*>(globals.shader);
+	
+	fassert(shader.getType() == SHADER_VSPS);
+	
+	const ShaderCacheElem & shaderElem = shader.getCacheElem();
+	
+	if (shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index != -1)
+	{
+		shader.setImmediate(
+			shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index,
+			globals.hqGradientType,
+			globals.hqTextureEnabled,
+			globals.hqUseScreenSize);
+	}
+	
+	if (globals.hqGradientType != GRADIENT_NONE)
+	{
+		if (shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index != -1)
+		{
+			// note: we multiply the gradient matrix with the inverse of the modelView matrix here,
+			// so we go back from screen-space coordinates inside the shader to local coordinates
+			// for the gradient. this makes it much more easy to define gradients on elements,
+			// since you can freely scale and translate them around without having to worry
+			// about how this affects your gradient
+			
+			Mat4x4 modelView;
+			gxGetMatrixf(GX_MODELVIEW, modelView.m_v);
+			
+			const Mat4x4 gmat = globals.hqGradientMatrix * modelView.CalcInv();
+			
+			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index, gmat.m_v);
+		}
+		
+		if (shaderElem.params[ShaderCacheElem::kSp_GradientInfo].index != -1)
+		{
+			Mat4x4 gradientInfo;
+			gradientInfo(0, 0) = globals.hqGradientType;
+			gradientInfo(0, 1) = globals.hqGradientBias;
+			gradientInfo(0, 2) = globals.hqGradientScale;
+			gradientInfo(0, 3) = globals.hqGradientColorMode;
+			gradientInfo(1, 0) = globals.hqGradientColor1.r;
+			gradientInfo(1, 1) = globals.hqGradientColor1.g;
+			gradientInfo(1, 2) = globals.hqGradientColor1.b;
+			gradientInfo(1, 3) = globals.hqGradientColor1.a;
+			gradientInfo(2, 0) = globals.hqGradientColor2.r;
+			gradientInfo(2, 1) = globals.hqGradientColor2.g;
+			gradientInfo(2, 2) = globals.hqGradientColor2.b;
+			gradientInfo(2, 3) = globals.hqGradientColor2.a;
+			gradientInfo(3, 0) = 0.f;
+			gradientInfo(3, 1) = 0.f;
+			gradientInfo(3, 2) = 0.f;
+			gradientInfo(3, 3) = 0.f;
+			
+			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientInfo].index, gradientInfo.m_v);
+		}
+	}
+	
+	if (globals.hqTextureEnabled)
+	{
+		if (shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index != -1)
+		{
+			const Mat4x4 & tmat = globals.hqTextureMatrix;
+			
+			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index, tmat.m_v);
+		}
+		
+		shader.setTextureUnit("source", 0);
+	}
+
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+	//shader.setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
+	//shader.setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);
+
+	shader.setImmediate("disableOptimizations", 0.f);
+	shader.setImmediate("disableAA", 0.f);
+	shader.setImmediate("_debugHq", 0.f);
+#endif
+}
+
 void hqBegin(HQ_TYPE type, bool useScreenSize)
 {
 	switch (type)
 	{
 	case HQ_LINES:
 		setShader_HqLines();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_FILLED_TRIANGLES:
 		setShader_HqFilledTriangles();
-		gxBegin(GL_TRIANGLES);
+		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_FILLED_CIRCLES:
 		setShader_HqFilledCircles();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_FILLED_RECTS:
 		setShader_HqFilledRects();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 	
 	case HQ_FILLED_ROUNDED_RECTS:
 		setShader_HqFilledRoundedRects();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_TRIANGLES:
 		setShader_HqStrokedTriangles();
-		gxBegin(GL_TRIANGLES);
+		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_STROKED_CIRCLES:
 		setShader_HqStrokedCircles();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_RECTS:
 		setShader_HqStrokedRects();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 	
 	case HQ_STROKED_ROUNDED_RECTS:
 		setShader_HqStrokedRoundedRects();
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	default:
@@ -8202,6 +7555,8 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	}
 	
 	globals.hqUseScreenSize = useScreenSize;
+	
+	applyHqShaderConstants();
 }
 
 void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
@@ -8211,39 +7566,39 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 	switch (type)
 	{
 	case HQ_LINES:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_FILLED_TRIANGLES:
-		gxBegin(GL_TRIANGLES);
+		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_FILLED_CIRCLES:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_FILLED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 	
 	case HQ_FILLED_ROUNDED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_TRIANGLES:
-		gxBegin(GL_TRIANGLES);
+		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_STROKED_CIRCLES:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 		
 	case HQ_STROKED_ROUNDED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	default:
@@ -8252,82 +7607,12 @@ void hqBeginCustom(HQ_TYPE type, Shader & shader, bool useScreenSize)
 	}
 	
 	globals.hqUseScreenSize = useScreenSize;
+	
+	applyHqShaderConstants();
 }
 
 void hqEnd()
 {
-	{
-		Shader & shader = *static_cast<Shader*>(globals.shader);
-		
-		fassert(shader.getType() == SHADER_VSPS);
-		
-		const ShaderCacheElem & shaderElem = shader.getCacheElem();
-		
-		if (shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index != -1)
-		{
-			shader.setImmediate(
-				shaderElem.params[ShaderCacheElem::kSp_ShadingParams].index,
-				globals.hqGradientType,
-				globals.hqTextureEnabled,
-				globals.hqUseScreenSize);
-		}
-		
-		if (globals.hqGradientType != GRADIENT_NONE)
-		{
-			if (shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index != -1)
-			{
-				const Mat4x4 & cmat = globals.hqGradientMatrix;
-				
-				shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index, cmat.m_v);
-			}
-			
-			if (shaderElem.params[ShaderCacheElem::kSp_GradientInfo].index != -1)
-			{
-				Mat4x4 gradientInfo;
-				gradientInfo(0, 0) = globals.hqGradientType;
-				gradientInfo(0, 1) = globals.hqGradientBias;
-				gradientInfo(0, 2) = globals.hqGradientScale;
-				gradientInfo(0, 3) = globals.hqGradientColorMode;
-				gradientInfo(1, 0) = globals.hqGradientColor1.r;
-				gradientInfo(1, 1) = globals.hqGradientColor1.g;
-				gradientInfo(1, 2) = globals.hqGradientColor1.b;
-				gradientInfo(1, 3) = globals.hqGradientColor1.a;
-				gradientInfo(2, 0) = globals.hqGradientColor2.r;
-				gradientInfo(2, 1) = globals.hqGradientColor2.g;
-				gradientInfo(2, 2) = globals.hqGradientColor2.b;
-				gradientInfo(2, 3) = globals.hqGradientColor2.a;
-				gradientInfo(3, 0) = 0.f;
-				gradientInfo(3, 1) = 0.f;
-				gradientInfo(3, 2) = 0.f;
-				gradientInfo(3, 3) = 0.f;
-				
-				shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientInfo].index, gradientInfo.m_v);
-			}
-		}
-		
-		if (globals.hqTextureEnabled)
-		{
-			if (shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index != -1)
-			{
-				const Mat4x4 & tmat = globals.hqTextureMatrix;
-				
-				shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index, tmat.m_v);
-			}
-			
-			shader.setTextureUnit("source", 0);
-		}
-		
-
-	#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
-		//shader.setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
-		//shader.setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);
-
-		shader.setImmediate("disableOptimizations", 0.f);
-		shader.setImmediate("disableAA", 0.f);
-		shader.setImmediate("_debugHq", 0.f);
-	#endif
-	}
-	
 	gxEnd();
 
 	clearShader();
@@ -8345,8 +7630,7 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	{
 		Mat4x4 matM;
 		
-		gxGetMatrixf(GL_MODELVIEW, matM.m_v);
-		checkErrorGL();
+		gxGetMatrixf(GX_MODELVIEW, matM.m_v);
 		
 		const float scale = matM.GetAxis(0).CalcSize();
 		
@@ -8362,37 +7646,37 @@ void hqBegin(HQ_TYPE type, bool useScreenSize)
 	switch (type)
 	{
 	case HQ_LINES:
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		break;
 
 	case HQ_FILLED_TRIANGLES:
-		gxBegin(GL_TRIANGLES);
+		gxBegin(GX_TRIANGLES);
 		break;
 
 	case HQ_FILLED_CIRCLES:
 		break;
 
 	case HQ_FILLED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 	
 	case HQ_FILLED_ROUNDED_RECTS:
-		gxBegin(GL_QUADS);
+		gxBegin(GX_QUADS);
 		break;
 
 	case HQ_STROKED_TRIANGLES:
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		break;
 
 	case HQ_STROKED_CIRCLES:
 		break;
 
 	case HQ_STROKED_RECTS:
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		break;
 	
 	case HQ_STROKED_ROUNDED_RECTS:
-		gxBegin(GL_LINES);
+		gxBegin(GX_LINES);
 		break;
 
 	default:
@@ -8474,12 +7758,22 @@ void hqClearGradient()
 	globals.hqGradientType = GRADIENT_NONE;
 }
 
-void hqSetTexture(const Mat4x4 & matrix, const GLuint texture)
+void hqSetTexture(const GxTextureId texture, const Mat4x4 & matrix)
 {
 	globals.hqTextureEnabled = true;
 	globals.hqTextureMatrix = matrix;
 	
 	gxSetTexture(texture);
+}
+
+void hqSetTextureScreen(const GxTextureId texture, float x1, float y1, float x2, float y2)
+{
+	const Mat4x4 matrix =
+		Mat4x4(true)
+			.Scale(1.f / fmaxf(x2 - x1, 1e-6f), 1.f / fmaxf(y2 - y1, 1e-6f), 1.f)
+			.Translate(-x1, -y1, 0.f);
+	
+	hqSetTexture(texture, matrix);
 }
 
 void hqClearTexture()
@@ -8766,8 +8060,14 @@ std::string getDirectory()
 {
 	char temp[1024];
 	
-	getcwd(temp, sizeof(temp));
-	
+#if WINDOWS
+	_getcwd(temp, sizeof(temp));
+#else
+	const char * r;
+	r = getcwd(temp, sizeof(temp));
+	(void)r; // mute gcc warning about unused return value
+#endif
+
 	return temp;
 }
 

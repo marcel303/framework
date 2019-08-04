@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // GL_ACTIVE_UNIFORMS. todo : remove with Framework-provided shader inspection funcitonality
 #include "framework.h"
 #include "Path.h"
 #include "StringEx.h"
@@ -49,6 +50,7 @@ void getFsfxShaderList(std::vector<std::string> & shaderList)
 	{
 		shaderListIsInitialized = true;
 		auto files = listFiles("fsfx", true);
+		std::sort(files.begin(), files.end());
 		
 		for (auto & file : files)
 		{
@@ -60,6 +62,32 @@ void getFsfxShaderList(std::vector<std::string> & shaderList)
 	}
 	
 	shaderList = s_shaderList;
+}
+
+VFX_ENUM_TYPE(fsfxShader)
+{
+	enumName = "fsfxShader";
+	
+	getElems = []() -> std::vector<Elem>
+	{
+		// todo : create a vfxgraph-fsfx system, which requires explicit initialization
+		
+		std::vector<std::string> shaderList;
+		getFsfxShaderList(shaderList);
+		
+		std::vector<Elem> elems;
+		
+		for (auto & shader : shaderList)
+		{
+			Elem elem;
+			elem.name = shader;
+			elem.valueText = shader;
+			
+			elems.push_back(elem);
+		}
+		
+		return elems;
+	};
 }
 
 static const char * s_fsfxCommonInc = R"SHADER(
@@ -79,7 +107,9 @@ static const char * s_fsfxCommonInc = R"SHADER(
 
 	shader_in vec2 texcoord;
 
+#if !defined(__METAL_VERSION__)
 	vec4 fsfx();
+#endif
 
 	float fsfxOpacity = 1.0;
 
@@ -179,6 +209,8 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 		{
 			std::vector<DynamicInput> inputs;
 			
+		// todo : add functions to query shader uniforms
+		
 			GLsizei uniformCount = 0;
 			glGetProgramiv(shader->getProgram(), GL_ACTIVE_UNIFORMS, &uniformCount);
 			checkErrorGL();

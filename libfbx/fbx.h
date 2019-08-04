@@ -228,6 +228,7 @@ class FbxReader
 	
 	template <typename T> void read(const bool isSize, size_t & offset, T & result) const;
 	template <typename T> void read(size_t & offset, T & result, size_t numBytes) const;
+	template <typename T> void readArray(size_t & offset, T * result, size_t numElems) const;
 	void skip(size_t & offset, size_t numBytes) const;
 	void seek(size_t & offset, size_t newOffset) const;
 	template <typename T> void skipArray(size_t & offset) const;
@@ -323,7 +324,7 @@ inline void FbxRecord::capturePropertyArray(int index, std::vector<T> & result) 
 				result.resize(numValues);
 				
 				for (size_t i = 0; i < numValues; ++i)
-					result[i] = valueArray.getDouble(i);
+					result[i] = (T)valueArray.getDouble(i);
 				
 				return;
 			}

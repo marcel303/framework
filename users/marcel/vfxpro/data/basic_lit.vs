@@ -9,7 +9,7 @@ void main()
 {
 	gl_Position = ModelViewProjectionMatrix * in_position4;
 	
-	texcoord = vec2(in_texcoord);
+	texcoord = unpackTexcoord(0);
 	position = (ModelViewMatrix * in_position4).xyz;
 	normal = (ModelViewMatrix * vec4(in_normal, 0.f)).xyz;
 }

@@ -21,6 +21,8 @@
         <input socket="smoothness" value="0.200000"/>
     </node>
     <node id="76" typeName="wavefield.1d">
+        <resource type="wavefield.1d" name="editorData"><![CDATA[<value numElems="16" f="043d61cc699b7df386d777c473936ef3cef32f8c76a73ef3b287c219f81b3ef3aebb49b4cb7badf350e8a787f1347df36b73d8140ff61ef3fd4b696f55242ef391dc4f49f42bedf387c1b1200119adf3c4afc72adec18df36f32cf86e7193ef3af0b84bfe7eeaef36a0bed9ce2b28ef3768dfbe08d484ef3f74213229c297ef3"/>
+]]></resource>
         <input socket="gain" value="4.000000"/>
         <input socket="pos.dampen" value="0.200000"/>
         <input socket="sample.pos" value="0.300000"/>
@@ -71,15 +73,15 @@
     <link id="150" srcNodeId="76" srcNodeSocketName="tension" dstNodeId="105" dstNodeSocketName="result"/>
     <link id="151" srcNodeId="106" srcNodeSocketName="a" dstNodeId="104" dstNodeSocketName="value1"/>
     <link id="152" srcNodeId="69" srcNodeSocketName="strength" dstNodeId="106" dstNodeSocketName="result"/>
-    <editor nextZKey="1273">
-        <dragAndZoom x="329.46170043945312" y="-156.84202575683594" zoom="0.73814678192138672"/>
+    <editor nextZKey="1274">
+        <dragAndZoom x="329.46173095703125" y="-156.84202575683594" zoom="0.73814678192138672"/>
         <nodeDatas>
             <nodeData nodeId="68" x="416" y="-176" zKey="1194"/>
             <nodeData nodeId="69" x="256" y="-224" zKey="1265"/>
             <nodeData nodeId="71" x="544" y="-176" zKey="1193"/>
             <nodeData nodeId="72" x="416" y="-80" zKey="1195" folded="1"/>
             <nodeData nodeId="73" x="672" y="-176" zKey="1192"/>
-            <nodeData nodeId="76" x="256.05746459960938" y="-96.00732421875" zKey="1264"/>
+            <nodeData nodeId="76" x="256.05746459960938" y="-96.00732421875" zKey="1273"/>
             <nodeData nodeId="94" x="96" y="-160" zKey="1200"/>
             <nodeData nodeId="95" x="944" y="-240" zKey="1231"/>
             <nodeData nodeId="96" x="256" y="-336" zKey="1269"/>
@@ -95,7 +97,7 @@
             <visualizer id="103" x="624" y="-16" zKey="1234" nodeId="76" dstSocketName="audio" sx="216" sy="148"/>
             <visualizer id="107" x="-96" y="96" zKey="1268" nodeId="104" dstSocketName="value1" sx="216" sy="148"/>
         </visualizers>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="6767677f" gridColor="b600ff96">
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" snapToGrid="0" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="0" backgroundColor="6767677f" gridColor="b600ff96">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
                 <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>

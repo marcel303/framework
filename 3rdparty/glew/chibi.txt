@@ -1,0 +1,13 @@
+library glew
+	
+	add_files dummy.c
+
+	with_platform macos   header_path macos/include expose
+	with_platform windows header_path win32/include expose
+
+	with_platform macos depend_library macos/glew/lib/libGLEW.a local
+
+	with_platform windows depend_library win32/lib/glew32.lib local
+	with_platform windows add_dist_files win32/dll/glew32.dll
+
+	with_platform linux depend_package GLEW

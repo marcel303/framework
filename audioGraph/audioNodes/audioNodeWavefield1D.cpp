@@ -26,6 +26,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "audioNodeWavefield1D.h"
+#include "graphEdit.h"
 #include "Noise.h"
 #include "wavefield.h"
 #include <cmath>
@@ -38,11 +39,10 @@ struct AudioResource_Wavefield1D : AudioResourceBase
 {
 	double f[Wavefield1D::kMaxElems];
 	int numElems;
-	int version;
 	
 	AudioResource_Wavefield1D()
-		: numElems(0)
-		, version(0)
+		: AudioResourceBase()
+		, numElems(0)
 	{
 	}
 	
@@ -71,7 +71,7 @@ AUDIO_RESOURCE_TYPE(AudioResource_Wavefield1D, "wavefield.1d");
 #include "framework.h"
 #include "graph.h"
 #include "Noise.h"
-#include "../libparticle/ui.h"
+#include "ui.h"
 
 struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 {
@@ -95,17 +95,6 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 	{
 		freeAudioNodeResource(resource);
 		Assert(resource == nullptr);
-	}
-	
-	virtual void afterPositionChanged() override
-	{
-		uiState.x = x;
-		uiState.y = y;
-	}
-	
-	virtual void afterSizeChanged() override
-	{
-		uiState.sx = sx;
 	}
 	
 	void randomize()
@@ -220,6 +209,10 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 	
 	void doMenus(const bool doAction, const bool doDraw, const float dt)
 	{
+		uiState.sx = sx;
+		uiState.x = x;
+		uiState.y = y;
+		
 		makeActive(&uiState, doAction, doDraw);
 		pushMenu("buttons");
 		{
@@ -242,7 +235,7 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 				{
 					const int x = rand() % wavefield.numElems;
 					
-					wavefield.doGaussianImpact(x, 1, 1.f);
+					wavefield.doGaussianImpact(x, 1, 1.f, 1.f);
 				}
 			}
 			x += sx;
@@ -258,12 +251,16 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 				
 				if (numElems != resource->numElems)
 				{
-					for (int i = resource->numElems; i < numElems; ++i)
-						resource->f[i] = 1.f;
-					
-					resource->numElems = numElems;
-					
-					resource->version++;
+					resource->lock();
+					{
+						for (int i = resource->numElems; i < numElems; ++i)
+							resource->f[i] = 1.f;
+						
+						resource->numElems = numElems;
+						
+						resource->version++;
+					}
+					resource->unlock();
 					
 					//
 					
@@ -331,17 +328,19 @@ struct ResourceEditor_Wavefield1D : GraphEdit_ResourceEditorBase
 			return false;
 		}
 	}
+
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 //
 
-AUDIO_NODE_TYPE(wavefield_1d, AudioNodeWavefield1D)
+AUDIO_NODE_TYPE(AudioNodeWavefield1D)
 {
 	typeName = "wavefield.1d";
 	
 	resourceTypeName = "wavefield.1d";
 	
-	createResourceEditor = []() -> GraphEdit_ResourceEditorBase*
+	createResourceEditor = [](void * data) -> GraphEdit_ResourceEditorBase*
 	{
 		return new ResourceEditor_Wavefield1D();
 	};
@@ -451,12 +450,16 @@ void AudioNodeWavefield1D::tick(const float _dt)
 	
 	if (wavefieldData->version != currentDataVersion)
 	{
-		wavefield->init(wavefieldData->numElems);
-		
-		for (int i = 0; i < wavefield->numElems; ++i)
-			wavefield->f[i] = wavefieldData->f[i];
-		
-		currentDataVersion = wavefieldData->version;
+		wavefieldData->lock();
+		{
+			wavefield->init(wavefieldData->numElems);
+			
+			for (int i = 0; i < wavefield->numElems; ++i)
+				wavefield->f[i] = wavefieldData->f[i];
+			
+			currentDataVersion = wavefieldData->version;
+		}
+		wavefieldData->unlock();
 	}
 	
 	//

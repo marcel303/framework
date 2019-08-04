@@ -111,6 +111,7 @@ struct AudioUpdateHandler : PortAudioHandler
 		const void * inputBuffer,
 		const int numInputChannels,
 		void * outputBuffer,
+		const int numOutputChannels,
 		const int framesPerBuffer) override;
 };
 

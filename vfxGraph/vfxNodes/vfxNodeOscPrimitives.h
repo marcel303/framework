@@ -28,6 +28,7 @@
 #pragma once
 
 #include "vfxNodeBase.h"
+#include <math.h>
 
 struct PhaseHelper
 {
@@ -57,7 +58,7 @@ struct PhaseHelper
 	void increment(const float deltaPhase)
 	{
 		Assert(isStarted);
-		phase = std::fmod(phase + deltaPhase, 1.f);
+		phase = fmodf(phase + deltaPhase, 1.f);
 	}
 };
 

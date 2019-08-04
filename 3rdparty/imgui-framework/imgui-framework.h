@@ -25,9 +25,13 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#pragma once
+
+#include "framework.h"
 #include "imgui.h"
 
-#define DO_KINETIC_SCROLL 0
+#define DO_KINETIC_SCROLL 1
+#define DO_TOUCH_SCROLL 1
 
 struct FrameworkImGuiContext
 {
@@ -35,19 +39,23 @@ struct FrameworkImGuiContext
 	
 	SDL_Cursor * mouse_cursors[ImGuiMouseCursor_COUNT] = { };
 	
-	char * clipboard_text = nullptr;
+	const char * clipboard_text = nullptr;
 	
-	GLuint font_texture_id = 0;
+	GxTexture font_texture;
 	
 	ImGuiContext * previous_context = nullptr;
 	
 #if DO_KINETIC_SCROLL
-	float kinetic_scroll = 0.f;
+#if DO_TOUCH_SCROLL
+	int num_touches = 0;
+#endif
+	Vec2 kinetic_scroll;
+	double kinetic_scroll_smoothed[2] = { };
 #endif
 
 	~FrameworkImGuiContext();
 	
-	void init();
+	void init(const bool enableIniFiles = false);
 	void shut();
 	
 	void processBegin(const float dt, const int displaySx, const int displaySy, bool & inputIsCaptured);
@@ -58,8 +66,16 @@ struct FrameworkImGuiContext
 	void pushImGuiContext();
 	void popImGuiContext();
 	void updateMouseCursor();
+	void updateFontTexture();
+	
+	void setFrameworkStyleColors();
 	
 	static const char * getClipboardText(void * user_data);
 	static void setClipboardText(void * user_data, const char * text);
 	static void render(const ImDrawData * draw_data);
 };
+
+namespace ImGui
+{
+	void Image(GxTextureId user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0,0), const ImVec2& uv1 = ImVec2(1,1), const ImVec4& tint_col = ImVec4(1,1,1,1), const ImVec4& border_col = ImVec4(0,0,0,0));
+}

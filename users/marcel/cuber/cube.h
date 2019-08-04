@@ -5,6 +5,7 @@
 #include "simplexnoise.h"
 #include <cmath>
 #include <limits>
+#include <math.h>
 #include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,9 +75,9 @@ inline float lerp(const float a, const float b, const float t) { return a * (1.f
 
 inline float rand(const float min, const float max) { return min + (max - min) * (rand() % 1024) / 1023.f; }
 
-inline float length1(const float x) { return std::sqrtf(x * x); }
-inline float length2(const float x, const float y) { return std::sqrtf(x * x + y * y); }
-inline float length3(const float x, const float y, const float z) { return std::sqrtf(x * x + y * y + z * z); }
+inline float length1(const float x) { return sqrtf(x * x); }
+inline float length2(const float x, const float y) { return sqrtf(x * x + y * y); }
+inline float length3(const float x, const float y, const float z) { return sqrtf(x * x + y * y + z * z); }
 
 inline float dot3(
 	const float x1, const float y1, const float z1,
@@ -151,7 +152,7 @@ struct CubeBuffer
 
 	void fadeIncremental(const float lossPerSecond, const float dt)
 	{
-		const float loss = std::powf(lossPerSecond, dt);
+		const float loss = powf(lossPerSecond, dt);
 
 		for (int x = 0; x < SX; ++x)
 		{
@@ -497,9 +498,9 @@ public:
 	virtual float fftBucketValue(int index) const = 0;
 	virtual int fftBucketCount() const = 0;
 
-	virtual bool keyIsDown(const SDLKey key) const = 0;
-	virtual bool keyWentDown(const SDLKey key) const = 0;
-	virtual bool keyWentUp(const SDLKey key) const = 0;
+	virtual bool keyIsDown(const int key) const = 0;
+	virtual bool keyWentDown(const int key) const = 0;
+	virtual bool keyWentUp(const int key) const = 0;
 
 	virtual int mouseX() const = 0;
 	virtual int mouseY() const = 0;
@@ -515,9 +516,9 @@ public:
 	virtual float fftBucketValue(int index) const;
 	virtual int fftBucketCount() const;
 
-	virtual bool keyIsDown(const SDLKey key) const;
-	virtual bool keyWentDown(const SDLKey key) const;
-	virtual bool keyWentUp(const SDLKey key) const;
+	virtual bool keyIsDown(const int key) const;
+	virtual bool keyWentDown(const int key) const;
+	virtual bool keyWentUp(const int key) const;
 
 	virtual int mouseX() const;
 	virtual int mouseY() const;

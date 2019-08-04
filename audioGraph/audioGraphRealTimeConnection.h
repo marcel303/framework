@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "graph.h"
+#include "graphEdit.h" // todo : move real-time editing interface elsewhere, since it needs to be made shared, contrary to the graph editor itself
 
 struct AudioGraph;
 struct AudioGraphGlobals;

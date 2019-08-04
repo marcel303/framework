@@ -1,8 +1,8 @@
 #pragma once
 
-#include <stdint.h>
 #include "NetAddress.h"
 #include "SharedPtr.h"
+#include <stdint.h>
 
 #if defined(WINDOWS)
 	#ifndef WIN32_LEAN_AND_MEAN

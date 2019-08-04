@@ -4,6 +4,7 @@ include engine/ShaderVS.txt
 include engine/builtin-hq-common-vs.txt
 
 shader_out vec2 v_p;
+shader_out vec2 v_g;
 shader_out vec2 v_center;
 shader_out float v_radius;
 shader_out float v_strokeSize;
@@ -65,6 +66,7 @@ void main()
 	// output the rest
 	
 	v_p = position.xy;
+	v_g = hqGradientCoord(v_p);
 	v_center = p;
 	v_radius = scaledRadius;
 	v_strokeSize = strokeSize;

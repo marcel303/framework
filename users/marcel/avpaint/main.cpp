@@ -5,22 +5,28 @@
 #include "TweenFloat.h"
 #include "videoloop.h"
 
+#include <cmath>
+#include <math.h>
+
 #if ENABLE_LEAPMOTION
 	#include "leap/Leap.h"
 #endif
 
-extern void testAvpaint();
-extern void testJpegStreamer();
-extern void testPortaudio();
+/*
 
-// todo : integrate Facebook Messenger Node.js app with https://cloud.google.com/vision/, for inappropriate content detection
-// todo : write something to extract dominant colors from (crowd sourced) images
+ideas:
 
-// todo : mask using rotating and scaling objects as mask alpha
-// todo : grooop logo animation
-// todo : think of ways to mix/vj
-// todo : use touchpad for map-like moving and scaling videos?
-// todo : multitouch touch pad? can SDL handle this? else look for api
+* integrate Facebook Messenger Node.js app with https://cloud.google.com/vision/, for inappropriate content detection
+
+* write something to extract dominant colors from (crowd sourced) images
+
+* mask using rotating and scaling objects as mask alpha
+* grooop logo animation
+* think of ways to mix/vj
+* use touchpad for map-like moving and scaling videos?
+* multitouch touch pad? can SDL handle this? else look for api
+
+*/
 
 /*
 
@@ -150,7 +156,7 @@ struct UIMixingPanel
 
 static UIMixingPanel mixingPanel;
 
-void applyFsfx(Surface & surface, const char * name, const float strength = 1.f, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f, GLuint texture1 = 0)
+void applyFsfx(Surface & surface, const char * name, const float strength = 1.f, const float param1 = 0.f, const float param2 = 0.f, const float param3 = 0.f, const float param4 = 0.f, GxTextureId texture1 = 0)
 {
 	Shader shader(name, "fsfx/fsfx.vs", name);
 	setShader(shader);
@@ -222,9 +228,12 @@ struct VideoEffect
 		int sx;
 		int sy;
 		double duration;
+		double sampleAspectRatio;
 		
-		if (currVideoLoop != nullptr && currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, duration))
+		if (currVideoLoop != nullptr && currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, duration, sampleAspectRatio))
 		{
+			Assert(sampleAspectRatio == 1.0);
+			
 			if (surface == nullptr)
 			{
 				surface = new Surface(sx, sy, true);
@@ -236,7 +245,7 @@ struct VideoEffect
 				Shader shader("video-fade");
 				setShader(shader);
 				{
-					//const float opacity = 1.f - std::powf(.1f, dt);
+					//const float opacity = 1.f - powf(.1f, dt);
 					const float opacity = 1.f;
 					shader.setImmediate("opacity", opacity);
 					shader.setTexture("source", 0, currVideoLoop->getTexture());
@@ -251,7 +260,7 @@ struct VideoEffect
 			#if 0
 				pushBlend(BLEND_OPAQUE);
 				applyFsfx(*surface, "fsfx/godrays.ps");
-				const float luminanceStrength = (-std::cosf(framework.time / 4.567f) + 1.f) / 2.f;
+				const float luminanceStrength = (-cosf(framework.time / 4.567f) + 1.f) / 2.f;
 				applyFsfx(*surface, "fsfx/luminance.ps", luminanceStrength);
 				popBlend();
 			#endif
@@ -259,12 +268,12 @@ struct VideoEffect
 		}
 	}
 	
-	GLuint getTexture() const
+	GxTextureId getTexture() const
 	{
 		return surface ? surface->getTexture() : 0;
 	}
 	
-	GLuint getFirstFrameTexture() const
+	GxTextureId getFirstFrameTexture() const
 	{
 		return currVideoLoop->getFirstFrameTexture();
 	}
@@ -503,12 +512,17 @@ struct VideoGame
 		int sy;
 		double durationL;
 		double durationR;
+		double sampleAspectRatioL;
+		double sampleAspectRatioR;
 		
-		hasDurationL = videoEffectL->currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, durationL);
-		hasDurationR = videoEffectR->currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, durationR);
+		hasDurationL = videoEffectL->currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, durationL, sampleAspectRatioL);
+		hasDurationR = videoEffectR->currVideoLoop->mediaPlayer->getVideoProperties(sx, sy, durationR, sampleAspectRatioR);
 		
 		if (hasDurationL && hasDurationR)
 		{
+			Assert(sampleAspectRatioL == 1.0);
+			Assert(sampleAspectRatioR == 1.0);
+			
 			const double positionL = videoEffectL->currVideoLoop->mediaPlayer->presentTime;
 			const double positionR = videoEffectR->currVideoLoop->mediaPlayer->presentTime;
 			
@@ -699,22 +713,14 @@ int main(int argc, char * argv[])
 
 	//
 	
-	testAvpaint();
-	
-	testJpegStreamer();
-	
-	//
-	
 	//framework.fullscreen = true;
 	
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
-		testPortaudio();
-		
 	#ifdef WIN32
-		changeDirectory("C:/Users/Marcel/Google Drive/The Grooop - Welcome");
+		changeDirectory("C:/Users/Marcel/Google Drive/The Grooop - Welcome/app");
 	#else
-		changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome");
+		changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome/app");
 	#endif
 	
 		framework.fillCachesWithPath(".", false);
@@ -765,9 +771,15 @@ int main(int argc, char * argv[])
 		int uploadedImageIndex = 0;
 		float uploadedImageFade = 0.f;
 		
-		while (!framework.quitRequested)
+		for (;;)
 		{
 			framework.process();
+			
+			if (keyboard.wentDown(SDLK_ESCAPE))
+				framework.quitRequested = true;
+			
+			if (framework.quitRequested)
+				break;
 			
 		#if ENABLE_LEAPMOTION
 			// process LeapMotion input
@@ -788,6 +800,7 @@ int main(int argc, char * argv[])
 			
 			glitchLoop->tick(dt);
 			
+		#if ENABLE_LEAPMOTION
 			{
 				static float speed = 1.f;
 				
@@ -802,7 +815,7 @@ int main(int argc, char * argv[])
 						desiredSpeed *= maxSpeed;
 						desiredSpeed = Calc::Mid(desiredSpeed, 0.f, maxSpeed);
 						
-						speed = Calc::Lerp(desiredSpeed, speed, std::powf(.05f, dt));
+						speed = Calc::Lerp(desiredSpeed, speed, powf(.05f, dt));
 					}
 				}
 			}
@@ -821,10 +834,11 @@ int main(int argc, char * argv[])
 						desiredSpeed *= maxSpeed;
 						desiredSpeed = Calc::Mid(desiredSpeed, 0.f, maxSpeed);
 						
-						speed = Calc::Lerp(desiredSpeed, speed, std::powf(.05f, dt));
+						speed = Calc::Lerp(desiredSpeed, speed, powf(.05f, dt));
 					}
 				}
 			}
+		#endif
 			
 			videoGame->tick(dt);
 			
@@ -897,7 +911,7 @@ int main(int argc, char * argv[])
 					{
 						const char * filename = uploadedImages[uploadedImageIndex].c_str();
 						
-						const GLuint texture = getTexture(filename);
+						const GxTextureId texture = getTexture(filename);
 						
 						gxPushMatrix();
 						{
@@ -912,7 +926,7 @@ int main(int argc, char * argv[])
 							else
 								opacity = 1.f;
 							
-							//const float opacity = std::sinf(uploadedImageFade * M_PI);
+							//const float opacity = sinf(uploadedImageFade * M_PI);
 							
 							gxSetTexture(texture);
 							{
@@ -938,7 +952,7 @@ int main(int argc, char * argv[])
 						const int x = cx * (sx + px/2);
 						const int y = cy * (sy + py/2);
 						
-						const GLuint texture = getTexture(uploadedImages[i].c_str());
+						const GxTextureId texture = getTexture(uploadedImages[i].c_str());
 						
 						gxSetTexture(texture);
 						{

@@ -1,0 +1,11 @@
+app marcel-jsusfx1
+
+	depend_library jsusfx-framework
+	
+	depend_library vfxgraph
+	depend_library vfxgraph-nodes
+	#todo : depend on rtmidi instead of vfxgraph
+
+	add_files audioIO.cpp audioIO.h main.cpp
+
+	resource_path data

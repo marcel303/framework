@@ -28,8 +28,8 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "Debugging.h"
-#include "soundmix.h"
 #include <SDL2/SDL.h>
 
 #if defined(MACOS) || defined(LINUX)
@@ -38,6 +38,10 @@
 
 #if defined(WINDOWS)
 	#include <direct.h>
+#endif
+
+#ifdef WIN32
+	#define chdir _chdir
 #endif
 
 #define CHANNEL_COUNT 64
@@ -56,7 +60,7 @@ int main(int argc, char * argv[])
 		Assert(mutex != nullptr);
 
 		AudioVoiceManagerBasic voiceMgr;
-		voiceMgr.init(mutex, CHANNEL_COUNT, CHANNEL_COUNT);
+		voiceMgr.init(mutex, CHANNEL_COUNT);
 		voiceMgr.outputStereo = true;
 
 		AudioGraphManager_Basic audioGraphMgr(true);

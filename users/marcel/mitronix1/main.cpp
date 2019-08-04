@@ -1,13 +1,16 @@
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "audioNodeBase.h"
 #include "framework.h"
 #include "graph.h"
+#include "graphEdit.h"
+#include "hrirSampleSetCache.h"
 #include "Noise.h"
 #include "slideshow.h"
-#include "soundmix.h"
 #include "wavefield.h"
+#include <algorithm>
 #include <cmath>
 
 #define DEVMODE 0
@@ -389,7 +392,7 @@ struct InstrumentButtons
 		Color color;
 		std::string caption;
 		
-		float updateSpeed;
+		double updateSpeed;
 		double defaultValue;
 		double desiredValue;
 		double currentValue;
@@ -407,7 +410,7 @@ struct InstrumentButtons
 			, radius(12.f)
 			, color(colorBlue)
 			, caption()
-			, updateSpeed(1.f)
+			, updateSpeed(1.0)
 			, defaultValue(0.0)
 			, desiredValue(0.0)
 			, currentValue(0.0)
@@ -669,7 +672,7 @@ struct AudioNodeMitronix : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(mitronix, AudioNodeMitronix)
+AUDIO_NODE_TYPE(AudioNodeMitronix)
 {
 	typeName = "mitronix";
 	
@@ -679,7 +682,6 @@ AUDIO_NODE_TYPE(mitronix, AudioNodeMitronix)
 
 //
 
-#include "soundmix.h"
 #include "vfxNodes/delayLine.h"
 
 struct AudioNodeRecordPlay : AudioNodeBase
@@ -824,7 +826,7 @@ struct AudioNodeRecordPlay : AudioNodeBase
 	}
 };
 
-AUDIO_NODE_TYPE(record_play, AudioNodeRecordPlay)
+AUDIO_NODE_TYPE(AudioNodeRecordPlay)
 {
 	typeName = "recordAndPlay";
 	
@@ -862,7 +864,9 @@ static void playMenuSound()
 
 int main(int argc, char * argv[])
 {
-#if DEVMODE == 0
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#elif DEVMODE == 0
 #if MACOS
 	const char * basePath = SDL_GetBasePath();
 	changeDirectory(basePath);
@@ -871,7 +875,7 @@ int main(int argc, char * argv[])
 #endif
 #endif
 	
-	if (framework.init(0, 0, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 		for (int i = 0; i < 4; ++i)
 		{
@@ -893,7 +897,7 @@ int main(int argc, char * argv[])
 		SDL_mutex * audioMutex = SDL_CreateMutex();
 		
 		AudioVoiceManagerBasic * audioVoiceMgr = new AudioVoiceManagerBasic();
-		audioVoiceMgr->init(audioMutex, 16, 16);
+		audioVoiceMgr->init(audioMutex, 16);
 		audioVoiceMgr->outputStereo = true;
 		
 		AudioGraphManager_RTE * audioGraphMgr = new AudioGraphManager_RTE(GFX_SX, GFX_SY);
@@ -1050,7 +1054,9 @@ int main(int argc, char * argv[])
 			}
 		#endif
 		
-			inputIsCaptured |= audioGraphMgr->tickEditor(dt, inputIsCaptured);
+			inputIsCaptured |= audioGraphMgr->tickEditor(GFX_SX, GFX_SY, dt, inputIsCaptured);
+			
+			audioGraphMgr->tickMain();
 			
 			slideshow.tick(dt);
 			
@@ -1072,7 +1078,7 @@ int main(int argc, char * argv[])
 						slideshow.draw();
 					#endif
 						
-						audioGraphMgr->drawEditor();
+						audioGraphMgr->drawEditor(GFX_SX, GFX_SY);
 						
 						instrumentButtons.process(nullptr, false, true, dt);
 					}
@@ -1175,6 +1181,7 @@ int main(int argc, char * argv[])
 		handCursor = nullptr;
 		
 		Font("calibri.ttf").saveCache();
+		Font("manus.ttf").saveCache();
 		
 		framework.shutdown();
 	}

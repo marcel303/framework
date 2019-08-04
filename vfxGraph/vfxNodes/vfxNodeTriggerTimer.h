@@ -31,6 +31,8 @@
 
 struct VfxNodeTriggerTimer : VfxNodeBase
 {
+	static const int kMaxFrequency = 10000;
+	
 	enum Input
 	{
 		kInput_Auto,

@@ -1,0 +1,5 @@
+app marcel-speakwithus
+	depend_library audiograph
+	depend_library framework
+	add_files main.cpp
+	resource_path data

@@ -50,6 +50,6 @@ struct Blob
 
 struct BlobDetector
 {
-	static void computeValuesFromRGBA(const uint8_t * __restrict rgba_surface, const int sx, const int sy, const int treshold, uint8_t * __restrict value_surface);
+	static void computeValuesFromRGBA(const uint8_t * __restrict rgba_surface, const int sx, const int sy, const int threshold, uint8_t * __restrict value_surface);
 	static int detectBlobs(uint8_t * value_surface, const int sx, const int sy, Blob * blobs, const int maxBlobs);
 };

@@ -2,6 +2,7 @@
 #include "Debugging.h"
 #include "framework.h"
 #include "types.h"
+#include <algorithm>
 
 ParticleSystem::ParticleSystem(const int numElements)
 	: numParticles(0)
@@ -128,7 +129,7 @@ void ParticleSystem::tick(const float dt)
 
 void ParticleSystem::draw(const float alpha)
 {
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int i = 0; i < numParticles; ++i)
 		{
@@ -138,8 +139,8 @@ void ParticleSystem::draw(const float alpha)
 
 				gxColor4f(1.f, 1.f, 1.f, alpha * value);
 
-				const float s = std::sinf(angle[i]);
-				const float c = std::cosf(angle[i]);
+				const float s = sinf(angle[i]);
+				const float c = cosf(angle[i]);
 
 				const float sx_2 = sx[i] * .5f;
 				const float sy_2 = sy[i] * .5f;

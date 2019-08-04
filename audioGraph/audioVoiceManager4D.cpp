@@ -28,26 +28,23 @@
 #include "audioVoiceManager4D.h"
 #include "Debugging.h"
 #include "Log.h"
+#include "soundmix.h" // AudioSource, audio buffer routines
 
 AudioVoiceManager4D::AudioVoiceManager4D()
 	: AudioVoiceManager(kType_4DSOUND)
 	, audioMutex()
-	, numChannels(0)
-	, numDynamicChannels(0)
-	, voices()
-	, outputStereo(false)
+	, firstVoice(nullptr)
 	, colorIndex(0)
+	, numDynamicChannels(0)
+	, outputStereo(false)
 	, spat()
 	, lastSentSpat()
 {
 }
 	
-void AudioVoiceManager4D::init(SDL_mutex * _audioMutex, const int _numChannels, const int _numDynamicChannels)
+void AudioVoiceManager4D::init(SDL_mutex * _audioMutex, const int _numDynamicChannels)
 {
-	Assert(voices.empty());
-	
-	Assert(numChannels == 0);
-	numChannels = _numChannels;
+	Assert(firstVoice == nullptr);
 	
 	Assert(numDynamicChannels == 0);
 	numDynamicChannels = _numDynamicChannels;
@@ -57,13 +54,13 @@ void AudioVoiceManager4D::init(SDL_mutex * _audioMutex, const int _numChannels, 
 
 void AudioVoiceManager4D::shut()
 {
-	Assert(voices.empty());
+	Assert(firstVoice == nullptr);
 	
 	audioMutex.mutex = nullptr;
 	
-	voices.clear();
+	while (firstVoice != nullptr)
+		freeVoice(firstVoice);
 	
-	numChannels = 0;
 	numDynamicChannels = 0;
 }
 
@@ -71,15 +68,15 @@ bool AudioVoiceManager4D::allocVoice(AudioVoice *& out_voice, AudioSource * sour
 {
 	Assert(out_voice == nullptr);
 	Assert(source != nullptr);
-	Assert(channelIndex < 0 || (channelIndex >= 0 && channelIndex < numChannels));
-
-	if (channelIndex >= numChannels)
-		return false;
 
 	audioMutex.lock();
 	{
-		voices.push_back(AudioVoice4D());
-		AudioVoice4D * voice = &voices.back();
+		AudioVoice4D * voice = new AudioVoice4D();
+		voice->next = firstVoice;
+		firstVoice = voice;
+		
+		out_voice = voice;
+		
 		voice->source = source;
 		
 		const float hue = colorIndex / 16.f;
@@ -97,7 +94,7 @@ bool AudioVoiceManager4D::allocVoice(AudioVoice *& out_voice, AudioSource * sour
 		
 		if (channelIndex < 0)
 		{
-			updateChannelIndices();
+			updateDynamicChannelIndices();
 		}
 		else
 		{
@@ -150,68 +147,55 @@ void AudioVoiceManager4D::freeVoice(AudioVoice *& voice)
 			}
 		}
 		
-		auto i = voices.end();
-		for (auto j = voices.begin(); j != voices.end(); ++j)
-			if (&(*j) == voice)
-				i = j;
+		AudioVoice ** voice_itr = &firstVoice;
 		
-		Assert(i != voices.end());
-		if (i != voices.end())
+		for (;;)
 		{
-			voices.erase(i);
+			AudioVoice *& voice_ptr = *voice_itr;
 			
-			updateChannelIndices();
+			Assert(voice_ptr != nullptr);
+			if (voice_ptr == nullptr)
+				break;
+			
+			if (voice_ptr == voice)
+			{
+				voice_ptr = voice_ptr->next;
+				break;
+			}
+			
+			voice_itr = &voice_ptr->next;
 		}
+		
+		delete voice;
+		voice = nullptr;
+
+		updateDynamicChannelIndices();
+	}
+	audioMutex.unlock();
+}
+
+int AudioVoiceManager4D::calculateNumVoices() const
+{
+	int numVoices = 0;
+	
+	audioMutex.lock();
+	{
+		for (AudioVoice * voice = firstVoice; voice != nullptr; voice = voice->next)
+			numVoices++;
 	}
 	audioMutex.unlock();
 	
-	voice = nullptr;
+	return numVoices;
 }
 
-void AudioVoiceManager4D::updateChannelIndices()
-{
-#ifdef WIN32
-	bool used[1024]; // fixme : use a general fix for variable sized arrays
-#else
-	bool used[numDynamicChannels];
-#endif
-	memset(used, 0, sizeof(used));
-	
-	for (auto & voice : voices)
-	{
-		if (voice.channelIndex != -1 && voice.channelIndex < numDynamicChannels)
-		{
-			used[voice.channelIndex] = true;
-		}
-	}
-	
-	for (auto & voice : voices)
-	{
-		if (voice.channelIndex == -1)
-		{
-			for (int i = 0; i < numDynamicChannels; ++i)
-			{
-				if (used[i] == false)
-				{
-					used[i] = true;
-					
-					voice.channelIndex = i;
-					
-					break;
-				}
-			}
-		}
-	}
-}
-
-int AudioVoiceManager4D::numDynamicChannelsUsed() const
+int AudioVoiceManager4D::calculateNumDynamicChannelsUsed() const
 {
 	int result = 0;
 	
 	audioMutex.lock();
 	{
-		for (auto & voice : voices)
-			if (voice.channelIndex != -1 && voice.channelIndex < numDynamicChannels)
+		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
+			if (voice->channelIndex != -1 && voice->channelIndex < numDynamicChannels)
 				result++;
 	}
 	audioMutex.unlock();
@@ -219,17 +203,23 @@ int AudioVoiceManager4D::numDynamicChannelsUsed() const
 	return result;
 }
 
-void AudioVoiceManager4D::generateAudio(float * __restrict samples, const int numSamples)
+int AudioVoiceManager4D::getNumDynamicChannels() const
+{
+	return numDynamicChannels;
+}
+
+void AudioVoiceManager4D::generateAudio(float * __restrict samples, const int numSamples, const int numChannels)
 {
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
 	
-	generateAudio(samples, numSamples, true, 1.f, outputMode, true);
+	generateAudio(samples, numSamples, numChannels, true, 1.f, true, outputMode, true);
 }
 
 void AudioVoiceManager4D::generateAudio(
-	float * __restrict samples, const int numSamples,
+	float * __restrict samples, const int numSamples, const int numChannels,
 	const bool doLimiting,
 	const float limiterPeak,
+	const bool updateRamping,
 	const OutputMode outputMode,
 	const bool interleaved)
 {
@@ -252,8 +242,10 @@ void AudioVoiceManager4D::generateAudio(
 	
 	audioMutex.lock();
 	{
-		for (auto & voice : voices)
+		for (auto * voice_itr = firstVoice; voice_itr != nullptr; voice_itr = voice_itr->next)
 		{
+			AudioVoice4D & voice = static_cast<AudioVoice4D&>(*voice_itr);
+			
 			// note : we need to call applyRamping or else ramping flags may not be updated appropriately
 			//        as an optimize we could skip some processing here, but for now it seems unnecessary
 			
@@ -287,7 +279,7 @@ void AudioVoiceManager4D::generateAudio(
 				
 				// apply volume ramping
 				
-				voice.applyRamping(voice.rampInfo, voiceSamples, numSamples, SAMPLE_RATE * voice.rampInfo.rampTime);
+				voice.applyRamping(voiceSamples, numSamples, SAMPLE_RATE * voice.rampInfo.rampTime, updateRamping);
 				
 				if (voice.channelIndex != -1)
 				{
@@ -544,8 +536,10 @@ void AudioVoiceManager4D::generateOsc(Osc4DStream & stream, const bool _forceSyn
 		{
 			// generate OSC messages for each spatial voice
 			
-			for (auto & voice : voices)
+			for (auto * voice_itr = firstVoice; voice_itr != nullptr; voice_itr = voice_itr->next)
 			{
+				AudioVoice4D & voice = static_cast<AudioVoice4D&>(*voice_itr);
+				
 				if (voice.channelIndex == -1)
 					continue;
 				if (voice.isSpatial == false)
@@ -568,8 +562,10 @@ void AudioVoiceManager4D::generateOsc(Osc4DStream & stream, const bool _forceSyn
 			
 			// generate OSC messages for each return voice
 			
-			for (auto & voice : voices)
+			for (auto * voice_itr = firstVoice; voice_itr != nullptr; voice_itr = voice_itr->next)
 			{
+				AudioVoice4D & voice = static_cast<AudioVoice4D&>(*voice_itr);
+				
 				if (voice.channelIndex == -1)
 					continue;
 				if (voice.isReturn == false)
@@ -615,4 +611,36 @@ void AudioVoiceManager4D::generateOsc(Osc4DStream & stream, const bool _forceSyn
 		}
 	}
 	audioMutex.unlock();
+}
+
+void AudioVoiceManager4D::updateDynamicChannelIndices()
+{
+	bool * used = (bool*)alloca(numDynamicChannels * sizeof(bool));
+	memset(used, 0, numDynamicChannels * sizeof(bool));
+	
+	for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
+	{
+		if (voice->channelIndex != -1 && voice->channelIndex < numDynamicChannels)
+		{
+			used[voice->channelIndex] = true;
+		}
+	}
+	
+	for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
+	{
+		if (voice->channelIndex == -1)
+		{
+			for (int i = 0; i < numDynamicChannels; ++i)
+			{
+				if (used[i] == false)
+				{
+					used[i] = true;
+					
+					voice->channelIndex = i;
+					
+					break;
+				}
+			}
+		}
+	}
 }

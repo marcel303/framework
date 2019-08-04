@@ -3,87 +3,16 @@
 #include "image.h"
 #include "Noise.h"
 #include "Timer.h"
+#include <algorithm>
+#include <cmath>
 
 #define GFX_SX (1600/2)
 #define GFX_SY (1200/2)
 
 #define DO_FUNKYCAT 0
-#define DO_RGBSPACE 0
-#define DO_INTEGRALIMAGE 1
+#define DO_RGBSPACE 1
+#define DO_INTEGRALIMAGE 0
 #define DO_GUASSIAN_PDF 0
-
-struct Camera
-{
-	Vec3 position;
-	Vec3 rotation;
-
-	Camera()
-		: position()
-		, rotation()
-	{
-	}
-
-	void tick(const float dt)
-	{
-	#if defined(DEBUG)
-		if (keyboard.isDown(SDLK_LSHIFT))
-	#endif
-		{
-			rotation[0] -= mouse.dy / 100.f;
-			rotation[1] -= mouse.dx / 100.f;
-		}
-
-		if (gamepad[0].isConnected)
-		{
-			rotation[0] -= gamepad[0].getAnalog(1, ANALOG_Y) * dt;
-			rotation[1] -= gamepad[0].getAnalog(1, ANALOG_X) * dt;
-		}
-
-		Mat4x4 mat;
-
-		calculateTransform(mat);
-
-		const Vec3 xAxis(mat(0, 0), mat(0, 1), mat(0, 2));
-		const Vec3 zAxis(mat(2, 0), mat(2, 1), mat(2, 2));
-
-		Vec3 direction;
-
-		if (keyboard.isDown(SDLK_UP))
-			direction += zAxis;
-		if (keyboard.isDown(SDLK_DOWN))
-			direction -= zAxis;
-		if (keyboard.isDown(SDLK_LEFT))
-			direction -= xAxis;
-		if (keyboard.isDown(SDLK_RIGHT))
-			direction += xAxis;
-
-		if (gamepad[0].isConnected)
-		{
-			direction -= zAxis * gamepad[0].getAnalog(0, ANALOG_Y);
-			direction += xAxis * gamepad[0].getAnalog(0, ANALOG_X);
-		}
-
-		const float speed = 200.f;
-
-		position += direction * speed * dt;
-	}
-
-	void calculateTransform(Mat4x4 & matrix) const
-	{
-		// todo : use the correct eye position when we're trying to do head mounted VR
-		// right now the anatomy looks like this:
-		//
-		//      L----O----R
-		//           |
-		//           |
-		//           |
-		//
-		// where L is the left eye, R is the right eye and O is where the head rotates around the axis
-		// in real life, the head and eyes rotate a little more complicated..
-
-		matrix = Mat4x4(true).Translate(position).RotateY(rotation[1]).RotateX(rotation[0]);
-	}
-};
 
 struct QuirkyRotator
 {
@@ -121,7 +50,7 @@ static void drawGrid(const int numQuadsX, const int numQuadsY)
 	const float stepX = 1.f / (numQuadsX + 1);
 	const float stepY = 1.f / (numQuadsY + 1);
 
-	gxBegin(GL_QUADS);
+	gxBegin(GX_QUADS);
 	{
 		for (int x = 0; x < numQuadsX; ++x)
 		{
@@ -142,6 +71,8 @@ static void drawGrid(const int numQuadsX, const int numQuadsY)
 	gxEnd();
 }
 
+#if DO_FUNKYCAT
+
 static void drawPicture(const Mat4x4 & pictureTransform, const Mat4x4 & lineTransform, const GLuint texture)
 {
 	gxPushMatrix();
@@ -149,7 +80,7 @@ static void drawPicture(const Mat4x4 & pictureTransform, const Mat4x4 & lineTran
 		gxMultMatrixf(pictureTransform.m_v);
 
 		Shader shader("picture");
-		shader.setTexture("texture", 0, texture, true, true);
+		shader.setTexture("texture0", 0, texture, true, true);
 		setShader(shader);
 		{
 			drawRect(0.f, 0.f, 1.f, 1.f);
@@ -168,15 +99,21 @@ static void drawPicture(const Mat4x4 & pictureTransform, const Mat4x4 & lineTran
 	gxPopMatrix();
 }
 
+#endif
+
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
+	changeDirectory(CHIBI_RESOURCE_PATH);
+#endif
+
 #if defined(DEBUG)
 	framework.enableRealTimeEditing = true;
 	framework.windowX = 0;
 	framework.windowY = 0;
 #endif
 
-	if (framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (framework.init(GFX_SX, GFX_SY))
 	{
 	#if !defined(DEBUG)
 		mouse.setRelative(true);
@@ -186,7 +123,9 @@ int main(int argc, char * argv[])
 
 		Surface surface1(400, 400, false, false);
 
-		Camera camera;
+		Camera3d camera;
+		camera.maxForwardSpeed = 200.f;
+		camera.maxStrafeSpeed = 200.f;
 		camera.position[1] = 100.f;
 		camera.position[2] = -150.f;
 
@@ -343,7 +282,7 @@ int main(int argc, char * argv[])
 			const float dt = framework.timeStep;
 			const float time = framework.time;
 
-			camera.tick(dt);
+			camera.tick(dt, true);
 
 			rotator.tick(dt);
 
@@ -361,10 +300,10 @@ int main(int argc, char * argv[])
 						const float angle = random(0.f, Calc::m2PI);
 						const float radius1 = 1.f;
 						const float radius2 = random(0.f, radius1);
-						const float x1 = std::cosf(angle) * radius1 + .5f;
-						const float y1 = std::sinf(angle) * radius1 + .5f;
-						const float x2 = std::cosf(angle) * radius2 + .5f;
-						const float y2 = std::sinf(angle) * radius2 + .5f;
+						const float x1 = std::cos(angle) * radius1 + .5f;
+						const float y1 = std::sin(angle) * radius1 + .5f;
+						const float x2 = std::cos(angle) * radius2 + .5f;
+						const float y2 = std::sin(angle) * radius2 + .5f;
 						lineCoords[i * 2 + 0] = Vec3(x1, y1, 0.f);
 						lineCoords[i * 2 + 1] = Vec3(x2, y2, 0.f);
 					}
@@ -393,10 +332,10 @@ int main(int argc, char * argv[])
 						const float angle = random(0.f, Calc::m2PI);
 						const float radius1 = 1.f;
 						const float radius2 = random(0.f, radius1);
-						float x1 = std::cosf(angle) * radius1;
-						float y1 = std::sinf(angle) * radius1;
-						const float x2 = std::cosf(angle) * radius2 + .5f;
-						const float y2 = std::sinf(angle) * radius2 + .5f;
+						float x1 = std::cos(angle) * radius1;
+						float y1 = std::sin(angle) * radius1;
+						const float x2 = std::cos(angle) * radius2 + .5f;
+						const float y2 = std::sin(angle) * radius2 + .5f;
 						const float sx = radius1 / x1;
 						const float sy = radius1 / y1;
 						const float ss = std::min(std::abs(sx), std::abs(sy)) / 2.f;
@@ -442,26 +381,15 @@ int main(int argc, char * argv[])
 
 				pushSurface(&surface);
 				{
-					glEnable(GL_DEPTH_TEST);
-					glDepthFunc(GL_LESS);
-
+					pushDepthTest(true, DEPTH_LESS);
+					
 					setBlend(BLEND_OPAQUE);
 
-					Mat4x4 matP;
-					matP.MakePerspectiveLH(Calc::DegToRad(60.f), surface.getHeight() / float(surface.getWidth()), 1.f, 10000.f);
-					
-					Mat4x4 matC(true);
-					camera.calculateTransform(matC);
-					matC = matC.Invert();
+					projectPerspective3d(60.f, 1.f, 10000.f);
 
-					gxMatrixMode(GL_PROJECTION);
-					gxPushMatrix();
 					{
-						gxLoadMatrixf(matP.m_v);
-						gxMultMatrixf(matC.m_v);
-
-						gxMatrixMode(GL_MODELVIEW);
-						gxPushMatrix();
+						camera.pushViewMatrix();
+						
 						{
 							gxLoadIdentity();
 
@@ -476,15 +404,13 @@ int main(int argc, char * argv[])
 
 								const bool wireMode = true;
 
-								glPolygonMode(GL_FRONT_AND_BACK, wireMode ? GL_LINE : GL_FILL);
-								checkErrorGL();
+								pushWireframe(wireMode);
 
 								setBlend(BLEND_OPAQUE);
 								setColor(127, 127, 127);
 								drawGrid(40, 40);
 
-								glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-								checkErrorGL();
+								popWireframe();
 							}
 							gxPopMatrix();
 
@@ -499,12 +425,12 @@ int main(int argc, char * argv[])
 							else
 								matM2 = matM1.Translate(0.f, 0.f, .02f);
 
-							Mat4x4 matT1 = matM1.Translate(std::sinf(framework.time * .345f) * .5f, 0.f, 0.f);
+							Mat4x4 matT1 = matM1.Translate(std::sin(framework.time * .345f) * .5f, 0.f, 0.f);
 							Mat4x4 matT2;
 							if (mode == 0 || mode == 2)
-								matT2 = matM2.Translate(std::sinf(framework.time * .456f) * .5f, 0.f, 0.f);
+								matT2 = matM2.Translate(std::sin(framework.time * .456f) * .5f, 0.f, 0.f);
 							else
-								matT2 = matM2.Translate(std::sinf(framework.time * .345f) * .5f, 0.f, 0.f);
+								matT2 = matM2.Translate(std::sin(framework.time * .345f) * .5f, 0.f, 0.f);
 
 							const Mat4x4 matC1 = matT1.Invert() * matM1;
 							const Mat4x4 matC2 = matT2.Invert() * matM2;
@@ -523,8 +449,8 @@ int main(int argc, char * argv[])
 									{
 										setColor(colorBlack);
 										const float f = i + 1;
-										const float x = std::cosf(time * f) * 100.f;
-										const float y = std::sinf(time * f) * 100.f;
+										const float x = std::cos(time * f) * 100.f;
+										const float y = std::sin(time * f) * 100.f;
 										fillCircle(x, y, 50, 100);
 										const std::string text = "Andra";
 										if (i < text.length())
@@ -555,7 +481,7 @@ int main(int argc, char * argv[])
 							shader.setTexture("texture2", 1, texture2, true, true);
 							shader.setImmediate("testOr", (mode == 1 || mode == 3) ? 1.f : 0.f, 0.f);
 							{
-								gxBegin(GL_LINES);
+								gxBegin(GX_LINES);
 								{
 									for (int i = 0; i < kMaxLines; ++i)
 									{
@@ -585,15 +511,15 @@ int main(int argc, char * argv[])
 					#if DO_RGBSPACE
 							{
 								Shader shader("colordots");
-								shader.setTexture("texture", 0, rgbSurface.getTexture(), false, true);
+								setShader(shader);
+								shader.setTexture("texture0", 0, rgbSurface.getTexture(), false, true);
 								shader.setImmediate("time", time);
 								shader.setImmediate("donutStr", donutStr);
 								shader.setImmediate("colorStr", colorStr);
-								setShader(shader);
 								if (true)
 								{
-									gxBegin(GL_POINTS);
-									//gxBegin(GL_LINES);
+									gxBegin(GX_POINTS);
+									//gxBegin(GX_LINES);
 									{
 										for (int y = 0; y < rgbSy; ++y)
 											for (int x = 0; x < rgbSx; ++x)
@@ -607,7 +533,7 @@ int main(int argc, char * argv[])
 
 						#if DO_GUASSIAN_PDF
 							setColor(colorWhite);
-							gxBegin(GL_LINES);
+							gxBegin(GX_LINES);
 							{
 								auto dist = [](double x) { return 0.5 * erfc(-x * M_SQRT1_2); };
 
@@ -643,10 +569,10 @@ int main(int argc, char * argv[])
 								setBlend(BLEND_OPAQUE);
 
 								Shader shader("integralimage");
+								setShader(shader);
 								shader.setTexture("texture", 0, integralTexture, false, true);
 								shader.setImmediate("maxValue", totalValue);
 								shader.setImmediate("windowSize", (1.f - std::cos(time * .5f)) / 2.f * 40.f);
-								setShader(shader);
 								{
 									const float scale = .001f;
 									gxScalef(scale, scale, scale);
@@ -656,7 +582,7 @@ int main(int argc, char * argv[])
 									const float x2 = integralImage->sx;
 									const float y2 = integralImage->sy;
 
-									gxBegin(GL_QUADS);
+									gxBegin(GX_QUADS);
 									{
 										gxVertex2f(x1, y1);
 										gxVertex2f(x2, y1);
@@ -669,13 +595,13 @@ int main(int argc, char * argv[])
 							}
 						#endif
 						}
-						gxMatrixMode(GL_MODELVIEW);
-						gxPopMatrix();
+						
+						camera.popViewMatrix();
 					}
-					gxMatrixMode(GL_PROJECTION);
-					gxPopMatrix();
+					
+					projectScreen2d();
 
-					glDisable(GL_DEPTH_TEST);
+					popDepthTest();
 
 					//
 
@@ -705,7 +631,7 @@ int main(int argc, char * argv[])
 				{
 					setBlend(BLEND_OPAQUE);
 					setColor(colorWhite);
-					drawRect(0, 0, GFX_SX, GFX_SY);
+					drawRect(0, GFX_SY, GFX_SX, 0);
 				}
 				gxSetTexture(0);
 			}

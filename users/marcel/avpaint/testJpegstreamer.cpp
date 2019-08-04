@@ -1,18 +1,22 @@
-#define DO_JPEGSEQUENCE 1
 #define STREAM_ID "b"
 #define NUM_JPEG_LOOPS 4
 
-#if DO_JPEGSEQUENCE
-
+#include <GL/glew.h> // texture stuff
 #include "Calc.h"
 #include "framework.h"
 #include "StringEx.h"
+#include <cmath>
 #include <list>
 #include <string.h>
-#include <turbojpeg/turbojpeg.h>
 
-extern const int GFX_SX;
-extern const int GFX_SY;
+#if defined(LINUX)
+	#include <turbojpeg.h>
+#else
+	#include <turbojpeg/turbojpeg.h>
+#endif
+
+const int GFX_SX = 1024;
+const int GFX_SY = 768;
 
 static bool loadFileContents(const char * filename, void * bytes, int & numBytes)
 {
@@ -206,7 +210,7 @@ static bool saveImage_turbojpeg(const void * srcBuffer, const int srcBufferSize,
 		
 		unsigned long dstBufferSize2 = dstBufferSize;
 		
-		if (tjCompress2(h, (const unsigned char *)srcBuffer, srcSx, xPitch, srcSy, TJPF_RGBX, (unsigned char**)&dstBuffer, &dstBufferSize2, subsamp, quality, 0) < 0)
+		if (tjCompress2(h, (unsigned char *)srcBuffer, srcSx, xPitch, srcSy, TJPF_RGBX, (unsigned char**)&dstBuffer, &dstBufferSize2, subsamp, quality, 0) < 0)
 		{
 			logError("turbojpeg: %s", tjGetErrorStr());
 			
@@ -619,10 +623,13 @@ struct JpegStreamer
 			
 			//
 			
-			// fixme : stop here is not guaranteed to work (I think)
-			
 			if (fileContents == nullptr)
-				break;
+			{
+				delete imageContents;
+				imageContents = nullptr;
+				
+				continue;
+			}
 			
 			//
 			
@@ -707,7 +714,7 @@ struct JpegLoop
 	unsigned char ** dstBuffer;
 	int * dstBufferSize;
 	
-	GLuint texture;
+	GLuint texture; // todo : replace with GxTexture
 	
 	JpegLoop(const char * _baseFilename, const double _fps, unsigned char * _fileBuffer, int _fileBufferSize, unsigned char ** _dstBuffer, int * _dstBufferSize)
 		: baseFilename(_baseFilename)
@@ -830,7 +837,7 @@ static void speedup(const char * srcBasename, const char * dstBasename, const in
 	loadBufferSize = 0;
 }
 
-void testJpegStreamer()
+int main(int argc, char * argv[])
 {
 #if 0
 	int numFrames = 43200;
@@ -920,12 +927,12 @@ void testJpegStreamer()
 	dstBufferSize = 0;
 #endif
 
-	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome");
+	changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome/app");
 	
 	//
 
 #if 1
-	framework.init(0, nullptr, GFX_SX, GFX_SY);
+	framework.init(GFX_SX, GFX_SY);
 	{
 		const int fps = 24;
 		const double duration = 1800.0;
@@ -961,12 +968,15 @@ void testJpegStreamer()
 		
 		UiState uiState = UiState_Idle;
 		
-		while (!framework.quitRequested)
+		for (;;)
 		{
 			framework.process();
 			
 			if (keyboard.wentDown(SDLK_ESCAPE))
 				framework.quitRequested = true;
+			
+			if (framework.quitRequested)
+				break;
 			
 			if (keyboard.wentDown(SDLK_SPACE))
 				isPaused = !isPaused;
@@ -995,7 +1005,7 @@ void testJpegStreamer()
 			}
 			
 			const float speedInterp = (mouse.x / float(GFX_SX) - .5f) * 2.f;
-			const float speedFactor = Calc::Lerp(0.f, 1000.f, std::powf(std::abs(speedInterp), 2.5f)) * Calc::Sign(speedInterp);
+			const float speedFactor = Calc::Lerp(0.f, 1000.f, std::pow(std::abs(speedInterp), 2.5f)) * Calc::Sign(speedInterp);
 			
 			int streamIndex = 0;
 			
@@ -1158,12 +1168,6 @@ void testJpegStreamer()
 	}
 	framework.shutdown();
 #endif
+
+	return 0;
 }
-
-#else
-
-void testJpegStreamer()
-{
-}
-
-#endif

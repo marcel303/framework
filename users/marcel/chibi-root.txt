@@ -1,0 +1,55 @@
+add 4d-imu9250
+add 4dsound2-osc
+add ambisonics1
+add anaglyphic
+add avpaint
+add biquad-simd
+add box2d1
+add codevember
+add codingChallenges
+add colorpart
+add cuber
+with_platform macos add etherdream1
+add fourier
+add geopart1
+add gltf1
+add grooop-cocompose
+add hackerPoet/010-particleLife
+add homography
+add interpolation1
+add jsusfx1
+add libgg-psd
+add magiclines
+with_platform macos add metal1
+add maxpatch1
+add mitronix1
+add pincushion1
+add planetvis
+add planetvis2
+# todo : add with_library ?
+with_platform macos add ps3eye-to-osc
+add rast
+add rawaudio1
+add refine
+add reaper1
+add resonate1
+add resonate2
+add sceneedit1
+add serial-to-osc
+add shadowmap1
+add signedDistance1
+add speakerpanner1
+add speakwithus
+add sRGB
+add twinkle
+add veem-360
+# todo : add with_library ?
+with_platform macos add veem-camapp
+add veem-osc
+add veem-sound
+add veem-sound-satellites
+add vfxedit
+add vfxpro
+add videosync
+
+add ../ggj2015/game

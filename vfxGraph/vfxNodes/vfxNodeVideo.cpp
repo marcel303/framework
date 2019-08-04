@@ -249,10 +249,11 @@ void VfxNodeVideo::getDescription(VfxNodeDescription & d)
 		int sx;
 		int sy;
 		double duration;
+		double sampleAspectRatio;
 		
-		if (mediaPlayer->getVideoProperties(sx, sy, duration))
+		if (mediaPlayer->getVideoProperties(sx, sy, duration, sampleAspectRatio))
 		{
-			d.add("file: %s. size: %d x %d", mediaPlayer->context->openParams.filename.c_str(), sx, sy);
+			d.add("file: %s. size: %d x %d. pixel aspect ratio: %.2f", mediaPlayer->context->openParams.filename.c_str(), sx, sy, sampleAspectRatio);
 			
 			const int dh = duration / 3600.0;
 			duration -= dh * 3600;
@@ -278,8 +279,11 @@ void VfxNodeVideo::getDescription(VfxNodeDescription & d)
 	}
 	d.newline();
 	
-	d.addOpenglTexture("texture", mediaPlayer->getTexture());
-	d.newline();
+	if (mediaPlayer->texture != nullptr)
+	{
+		d.addGxTexture("texture", *mediaPlayer->texture);
+		d.newline();
+	}
 	
 	d.add("RGBA image", imageCpuOutputRGBA);
 	d.newline();

@@ -290,14 +290,14 @@ void testDspFilters()
 
 #if 1
 	{
-		BiquadFilter biquadFilter;
-		biquadFilter.makeLowpass(.1f, .1f, 1.f);
+		BiquadFilter<double> biquadFilter;
+		biquadFilter.makeLowpass(0.1, 0.1, 1.0);
 		
-		float srcSamples[AUDIO_UPDATE_SIZE];
+		double srcSamples[AUDIO_UPDATE_SIZE];
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-			srcSamples[i] = sinf(i / float(AUDIO_UPDATE_SIZE) * M_PI * 20);
+			srcSamples[i] = sin(i / double(AUDIO_UPDATE_SIZE) * M_PI * 20.0);
 		
-		float dstSamples[AUDIO_UPDATE_SIZE];
+		double dstSamples[AUDIO_UPDATE_SIZE];
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			dstSamples[i] = biquadFilter.processSingle(srcSamples[i]);
 		
@@ -325,7 +325,7 @@ void testDspFilters()
 		
 		if (keyboard.isDown(SDLK_b) || 1)
 		{
-			BiquadFilter biquadFilter;
+			BiquadFilter<double> biquadFilter;
 			//biquadFilter.makeLowpass(f, mouse.x / double(GFX_SX), 1.0);
 			//biquadFilter.makeHighpass(mouse.x / double(GFX_SX) / 2.0, f, 1.0);
 			//biquadFilter.makeNotch(mouse.x / double(GFX_SX) / 2.0, f, 1.0);

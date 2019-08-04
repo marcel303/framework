@@ -25,6 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#ifndef WIN32
+
 #include "framework.h"
 #include "Log.h"
 #include "Timer.h"
@@ -528,8 +530,7 @@ void testImu9250()
 				gxTranslatef(0, 0, 2);
 				gxRotatef(+90, 0, 0, 1);
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
+				pushDepthTest(true, DEPTH_LESS);
 		
 				gxPushMatrix();
 				{
@@ -543,7 +544,7 @@ void testImu9250()
 					gxPushMatrix();
 					gxTranslatef(0, 0, -.1f);
 					gxSetTexture(getTexture("imu9250-front.jpg"));
-					gxBegin(GL_QUADS);
+					gxBegin(GX_QUADS);
 					{
 						gxTexCoord2f(0.f, 0.f); gxVertex2f(-1, -1);
 						gxTexCoord2f(1.f, 0.f); gxVertex2f(-1, +1);
@@ -557,7 +558,7 @@ void testImu9250()
 					gxPushMatrix();
 					gxTranslatef(0, 0, +.1f);
 					gxSetTexture(getTexture("imu9250-back.jpg"));
-					gxBegin(GL_QUADS);
+					gxBegin(GX_QUADS);
 					{
 						gxTexCoord2f(0.f, 0.f); gxVertex2f(-1, +1);
 						gxTexCoord2f(1.f, 0.f); gxVertex2f(-1, -1);
@@ -573,7 +574,7 @@ void testImu9250()
 				gxPushMatrix();
 				{
 					gxScalef(4, 4, 4);
-					gxBegin(GL_LINES);
+					gxBegin(GX_LINES);
 					{
 						gxVertex3f(0, 0, 0);
 						gxVertex3f(magnet[0], magnet[1], magnet[2]);
@@ -592,7 +593,7 @@ void testImu9250()
 				}
 				gxPopMatrix();
 				
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
 			}
 			camera.popViewMatrix();
 			
@@ -627,3 +628,12 @@ void testImu9250()
 	
 	//exit(0);
 }
+
+#else
+
+void testImu9250()
+{
+	// todo
+}
+
+#endif

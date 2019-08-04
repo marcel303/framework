@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "graph_typeDefinitionLibrary.h"
 #include "Path.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
@@ -34,7 +35,7 @@
 
 using namespace tinyxml2;
 
-static void checkVfxGraphIntegrity(const char * filename, const GraphEdit_TypeDefinitionLibrary & tdl)
+static void checkVfxGraphIntegrity(const char * filename, const Graph_TypeDefinitionLibrary & tdl)
 {
 	XMLDocument d;
 	
@@ -195,7 +196,7 @@ static void checkVfxGraphIntegrity(const char * filename, const GraphEdit_TypeDe
 	}
 }
 
-static void checkVfxGraphs(const GraphEdit_TypeDefinitionLibrary & tdl)
+static void checkVfxGraphs(const Graph_TypeDefinitionLibrary & tdl)
 {
 	std::vector<std::string> filenames = listFiles(".", true);
 	
@@ -226,7 +227,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	GraphEdit_TypeDefinitionLibrary * typeDefinitionLibrary = new GraphEdit_TypeDefinitionLibrary();
+	Graph_TypeDefinitionLibrary * typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 	
 	createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 

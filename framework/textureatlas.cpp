@@ -31,8 +31,8 @@
 
 TextureAtlas::TextureAtlas()
 	: a()
-	, texture(0)
-	, internalFormat(GL_R32F)
+	, texture(nullptr)
+	, format(GX_UNKNOWN_FORMAT)
 	, filter(false)
 	, clamp(false)
 	, swizzleMask()
@@ -44,32 +44,37 @@ TextureAtlas::~TextureAtlas()
 	shut();
 }
 
-void TextureAtlas::init(const int sx, const int sy, const GLenum _internalFormat, const bool _filter, const bool _clamp, const GLint * _swizzleMask)
+void TextureAtlas::init(const int sx, const int sy, const GX_TEXTURE_FORMAT _format, const bool _filter, const bool _clamp, const int * _swizzleMask)
 {
 	a.init(sx, sy);
 	
-	internalFormat = _internalFormat;
+	format = _format;
 	
 	filter = _filter;
 	clamp = _clamp;
 	
 	if (_swizzleMask != nullptr)
 	{
+		Assert(
+			_swizzleMask[0] <= 3 &&
+			_swizzleMask[1] <= 3 &&
+			_swizzleMask[2] <= 3 &&
+			_swizzleMask[3] <= 3);
+		
 		memcpy(swizzleMask, _swizzleMask, sizeof(swizzleMask));
 	}
 	else
 	{
-		swizzleMask[0] = GL_RED;
-		swizzleMask[1] = GL_GREEN;
-		swizzleMask[2] = GL_BLUE;
-		swizzleMask[3] = GL_ALPHA;
+		swizzleMask[0] = 0;
+		swizzleMask[1] = 1;
+		swizzleMask[2] = 2;
+		swizzleMask[3] = 3;
 	}
 	
-	if (texture != 0)
+	if (texture != nullptr)
 	{
-		glDeleteTextures(1, &texture);
-		texture = 0;
-		checkErrorGL();
+		delete texture;
+		texture = nullptr;
 	}
 	
 	texture = allocateTexture(sx, sy);
@@ -77,10 +82,10 @@ void TextureAtlas::init(const int sx, const int sy, const GLenum _internalFormat
 
 void TextureAtlas::shut()
 {
-	init(0, 0, GL_R32F, false, false, nullptr);
+	init(0, 0, GX_R32_FLOAT, false, false, nullptr);
 }
 
-BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, const int sy, const GLenum uploadFormat, const GLenum uploadType, const int border)
+BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, const int sy, const int border)
 {
 	auto e = a.tryAlloc(sx + border * 2, sy + border * 2);
 	
@@ -88,25 +93,7 @@ BoxAtlasElem * TextureAtlas::tryAlloc(const uint8_t * values, const int sx, cons
 	{
 		if (values != nullptr)
 		{
-			GLuint restoreTexture;
-			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, texture);
-			checkErrorGL();
-			
-			GLint restoreUnpack;
-			glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
-			checkErrorGL();
-			
-			glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-			glTexSubImage2D(GL_TEXTURE_2D, 0, e->x + border, e->y + border, sx, sy, uploadFormat, uploadType, values);
-			checkErrorGL();
-			
-			glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
-			checkErrorGL();
-			glBindTexture(GL_TEXTURE_2D, restoreTexture);
-			checkErrorGL();
+			texture->uploadArea(values, 1, 0, sx, sy, e->x + border, e->y + border);
 		}
 		
 		return e;
@@ -123,84 +110,24 @@ void TextureAtlas::free(BoxAtlasElem *& e)
 	{
 		Assert(e->isAllocated);
 		
-		uint8_t * zeroes = (uint8_t*)alloca(e->sx * e->sy);
-		memset(zeroes, 0, e->sx * e->sy);
-		
-		glBindTexture(GL_TEXTURE_2D, texture);
-		checkErrorGL();
-		
-		GLint restoreUnpack;
-		glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
-		checkErrorGL();
-		
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, e->x, e->y, e->sx, e->sy, GL_RED, GL_UNSIGNED_BYTE, zeroes);
-		checkErrorGL();
-		
-		glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
-		checkErrorGL();
-		
+		texture->clearAreaToZero(e->x, e->y, e->sx, e->sy);
+	
 		a.free(e);
 	}
 }
 
-GLuint TextureAtlas::allocateTexture(const int sx, const int sy)
+GxTexture * TextureAtlas::allocateTexture(const int sx, const int sy)
 {
-	GLuint newTexture = 0;
+	GxTexture * newTexture = nullptr;
 	
 	if (sx > 0 || sy > 0)
 	{
-		GLuint restoreTexture;
-		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-		checkErrorGL();
-		
-		glGenTextures(1, &newTexture);
-		glBindTexture(GL_TEXTURE_2D, newTexture);
-		glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, sx, sy);
-		checkErrorGL();
-		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-		checkErrorGL();
-		
-		glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-		checkErrorGL();
-	
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-		
-		glBindTexture(GL_TEXTURE_2D, restoreTexture);
-		checkErrorGL();
+		newTexture = new GxTexture();
+		newTexture->allocate(sx, sy, format, filter, clamp);
+		newTexture->setSwizzle(swizzleMask[0], swizzleMask[1], swizzleMask[2], swizzleMask[3]);
 	}
 	
 	return newTexture;
-}
-
-void TextureAtlas::clearTexture(GLuint texture, float r, float g, float b, float a)
-{
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
-	{
-		GLuint frameBuffer = 0;
-		
-		glGenFramebuffers(1, &frameBuffer);
-		checkErrorGL();
-		
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-		checkErrorGL();
-		{
-			glClearColor(0, 0, 0, 0);
-			glClear(GL_COLOR_BUFFER_BIT);
-		}
-		glDeleteFramebuffers(1, &frameBuffer);
-		frameBuffer = 0;
-		checkErrorGL();
-	}
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-	checkErrorGL();
 }
 
 bool TextureAtlas::makeBigger(const int sx, const int sy)
@@ -210,52 +137,24 @@ bool TextureAtlas::makeBigger(const int sx, const int sy)
 	
 	// update texture
 	
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
-	checkErrorGL();
+	GxTexture * newTexture = allocateTexture(sx, sy);
 	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
+	newTexture->clearf(0, 0, 0, 0);
 
-	//
+	GxTexture::CopyRegion region;
+	region.srcX = 0;
+	region.srcY = 0;
+	region.dstX = 0;
+	region.dstY = 0;
+	region.sx = a.sx;
+	region.sy = a.sy;
 	
-	GLuint newTexture = allocateTexture(sx, sy);
-	
-	glBindTexture(GL_TEXTURE_2D, newTexture);
-	checkErrorGL();
-	
-	clearTexture(newTexture, 0, 0, 0, 0);
-	
-	GLuint frameBuffer = 0;
-	
-	glGenFramebuffers(1, &frameBuffer);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-	checkErrorGL();
-	
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, a.sx, a.sy);
-	checkErrorGL();
+	newTexture->copyRegionsFromTexture(*texture, &region, 1);
 	
 	//
 	
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-	checkErrorGL();
-	
-	//
-	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
-	
-	glDeleteTextures(1, &texture);
-	texture = 0;
-	checkErrorGL();
+	delete texture;
+	texture = nullptr;
 	
 	//
 	
@@ -268,7 +167,7 @@ bool TextureAtlas::makeBigger(const int sx, const int sy)
 
 bool TextureAtlas::optimize()
 {
-	BoxAtlasElem elems[a.kMaxElems];
+	BoxAtlasElem elems[BoxAtlas::kMaxElems];
 	memcpy(elems, a.elems, sizeof(elems));
 	
 	if (a.optimize() == false)
@@ -278,36 +177,14 @@ bool TextureAtlas::optimize()
 	
 	// update texture
 	
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
-	checkErrorGL();
+	GxTexture * newTexture = allocateTexture(a.sx, a.sy);
 	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-
-	//
+	newTexture->clearf(0, 0, 0, 0);
 	
-	GLuint newTexture = allocateTexture(a.sx, a.sy);
+	GxTexture::CopyRegion regions[BoxAtlas::kMaxElems];
+	int numRegions = 0;
 	
-	glBindTexture(GL_TEXTURE_2D, newTexture);
-	checkErrorGL();
-	
-	clearTexture(newTexture, 0, 0, 0, 0);
-	
-	GLuint frameBuffer = 0;
-	
-	glGenFramebuffers(1, &frameBuffer);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-	checkErrorGL();
-	
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	checkErrorGL();
-	
-	for (int i = 0; i < a.kMaxElems; ++i)
+	for (int i = 0; i < BoxAtlas::kMaxElems; ++i)
 	{
 		auto & eSrc = elems[i];
 		auto & eDst = a.elems[i];
@@ -316,28 +193,23 @@ bool TextureAtlas::optimize()
 		
 		if (eSrc.isAllocated)
 		{
-			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, eDst.x, eDst.y, eSrc.x, eSrc.y, eSrc.sx, eSrc.sy);
-			checkErrorGL();
+			auto & region = regions[numRegions++];
+			
+			region.srcX = eSrc.x;
+			region.srcY = eSrc.y;
+			region.dstX = eDst.x;
+			region.dstY = eDst.y;
+			region.sx = eSrc.sx;
+			region.sy = eSrc.sy;
 		}
 	}
 	
-	//
-	
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-	checkErrorGL();
+	newTexture->copyRegionsFromTexture(*texture, regions, numRegions);
 	
 	//
 	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
-	checkErrorGL();
-	
-	glDeleteTextures(1, &texture);
-	texture = 0;
-	checkErrorGL();
+	delete texture;
+	texture = nullptr;
 	
 	//
 	
@@ -348,7 +220,7 @@ bool TextureAtlas::optimize()
 
 bool TextureAtlas::makeBiggerAndOptimize(const int sx, const int sy)
 {
-	BoxAtlasElem elems[a.kMaxElems];
+	BoxAtlasElem elems[BoxAtlas::kMaxElems];
 	memcpy(elems, a.elems, sizeof(elems));
 	
 	if (a.makeBigger(sx, sy) == false)
@@ -363,36 +235,14 @@ bool TextureAtlas::makeBiggerAndOptimize(const int sx, const int sy)
 	
 	// update texture
 	
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
-	checkErrorGL();
+	GxTexture * newTexture = allocateTexture(sx, sy);
 	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
+	newTexture->clearf(0, 0, 0, 0);
 	
-	//
+	GxTexture::CopyRegion regions[BoxAtlas::kMaxElems];
+	int numRegions = 0;
 	
-	GLuint newTexture = allocateTexture(sx, sy);
-	
-	glBindTexture(GL_TEXTURE_2D, newTexture);
-	checkErrorGL();
-	
-	clearTexture(newTexture, 0, 0, 0, 0);
-	
-	GLuint frameBuffer = 0;
-	
-	glGenFramebuffers(1, &frameBuffer);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-	checkErrorGL();
-	
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	checkErrorGL();
-	
-	for (int i = 0; i < a.kMaxElems; ++i)
+	for (int i = 0; i < BoxAtlas::kMaxElems; ++i)
 	{
 		auto & eSrc = elems[i];
 		auto & eDst = a.elems[i];
@@ -401,28 +251,23 @@ bool TextureAtlas::makeBiggerAndOptimize(const int sx, const int sy)
 		
 		if (eSrc.isAllocated)
 		{
-			glCopyTexSubImage2D(GL_TEXTURE_2D, 0, eDst.x, eDst.y, eSrc.x, eSrc.y, eSrc.sx, eSrc.sy);
-			checkErrorGL();
+			auto & region = regions[numRegions++];
+			
+			region.srcX = eSrc.x;
+			region.srcY = eSrc.y;
+			region.dstX = eDst.x;
+			region.dstY = eDst.y;
+			region.sx = eSrc.sx;
+			region.sy = eSrc.sy;
 		}
 	}
 	
-	//
-	
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-	checkErrorGL();
+	newTexture->copyRegionsFromTexture(*texture, regions, numRegions);
 	
 	//
 	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
-	checkErrorGL();
-	
-	glDeleteTextures(1, &texture);
-	texture = 0;
-	checkErrorGL();
+	delete texture;
+	texture = nullptr;
 	
 	//
 	

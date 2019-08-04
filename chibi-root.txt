@@ -1,0 +1,41 @@
+add audioGraph
+add audioGraph-examples
+add avGraph
+add chibi
+add framework
+add framework-ofx
+add tests
+add vfxGraph
+add vfxGraph-examples
+
+push_group libraries
+
+	with_platform linux add 3rdparty/PS3EYEDriver/framework
+	with_platform macos add 3rdparty/PS3EYEDriver/framework
+	add 3rdparty
+	add 3rdparty/imgui-framework
+	add 3rdparty/jsoncpp
+	add 3rdparty/libwebrequest
+	add 3rdparty/miniz
+	with_platform linux add 3rdparty/xmm-support
+	with_platform macos add 3rdparty/xmm-support
+	add libfbx
+	add libgg
+	add libjsusfx-framework
+	add libnet
+	add libnfd
+	add libosc
+	add libparticle
+	add libvideo
+	add users/marcel/allegro2-support
+	add users/marcel/artnet1
+	add users/marcel/audiograph-jsusfx
+	add users/marcel/libjgmod
+	add users/marcel/libjgmod-audiograph
+	add users/marcel/libreflection
+	add users/marcel/libreflection-bindtofile
+	add users/marcel/libreflection-jsonio
+	add users/marcel/libreflection-textio
+	add users/marcel/optionmenu
+
+pop_group

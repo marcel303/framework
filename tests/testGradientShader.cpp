@@ -82,7 +82,7 @@ void testGradientShader()
 			const float gradientBias = mouse.x / float(GFX_SX);
 			const float gradientScale = gradientBias == 1.f ? 0.f : 1.f / (1.f - gradientBias);
 			hqSetGradient(gradientType, cmat, colorWhite, colorBlack, COLOR_MUL, gradientBias, gradientScale);
-			hqSetTexture(tmat, getTexture("happysun.jpg"));
+			hqSetTexture(getTexture("happysun.jpg"), tmat);
 			for (int i = 0; i < 360; i += 20)
 			{
 				gxPushMatrix();

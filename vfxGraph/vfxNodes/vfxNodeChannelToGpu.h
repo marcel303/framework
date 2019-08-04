@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "openglTexture.h"
+#include "gx_texture.h"
 #include "vfxNodeBase.h"
 
 struct VfxNodeChannelToGpu : VfxNodeBase
@@ -44,7 +44,7 @@ struct VfxNodeChannelToGpu : VfxNodeBase
 		kOutput_COUNT
 	};
 
-	OpenglTexture texture;
+	GxTexture texture;
 
 	VfxImage_Texture imageOutput;
 

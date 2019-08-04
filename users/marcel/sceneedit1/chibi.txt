@@ -1,0 +1,20 @@
+add ecs-parameter
+add ecs-parameter-from-osc
+add ecs-parameterui
+
+app marcel-sceneedit1
+	depend_library ecs-parameter
+	depend_library ecs-parameterui
+	depend_library framework
+	depend_library imgui-framework
+	depend_library jsoncpp
+	depend_library libnfd
+	depend_library libreflection
+	depend_library libreflection-bindtofile
+	depend_library libreflection-jsonio
+	depend_library libreflection-textio
+	#depend_library vfxgraph
+	#depend_library vfxgraph-nodes
+	scan_files *.cpp
+	scan_files *.h
+	resource_path data

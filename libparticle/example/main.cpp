@@ -211,7 +211,7 @@ static void testParticleLib()
 	}
 #endif
 
-	if (framework.init(0, nullptr, 1400, 900))
+	if (framework.init(1400, 900))
 	{
 		while (!framework.quitRequested)
 		{
@@ -240,7 +240,7 @@ static void testParticleLib()
 				for (Particle * p = pp.head; p; p = p->next)
 				{
 					const float particleLife = 1.f - p->life;
-					const float particleSpeed = std::sqrtf(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
+					const float particleSpeed = std::sqrt(p->speed[0] * p->speed[0] + p->speed[1] * p->speed[1]);
 
 					ParticleColor color;
 					computeParticleColor(pei2, pi2, particleLife, particleSpeed, color);
@@ -264,7 +264,7 @@ static void testParticleLib()
 			#endif
 
 			#if 1
-				gxBegin(GL_QUADS);
+				gxBegin(GX_QUADS);
 				{
 					const int sx = 5;
 					const int sy = 100;
@@ -283,7 +283,7 @@ static void testParticleLib()
 				gxEnd();
 
 			#if 0 // work around for weird (driver?) issue where next draw call retains the color of the previous one
-				gxBegin(GL_TRIANGLES);
+				gxBegin(GX_TRIANGLES);
 				gxColor4f(0.f, 0.f, 0.f, 0.f);
 				gxEnd();
 			#endif
@@ -321,7 +321,7 @@ int main(int argc, char * argv[])
 	const int windowSx = 1400;
 	const int windowSy = 900;
 
-	if (framework.init(argc, (const char**)argv, windowSx, windowSy))
+	if (framework.init(windowSx, windowSy))
 	{
 		initUi();
 		pushFontMode(FONT_SDF);

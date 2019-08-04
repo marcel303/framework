@@ -27,36 +27,7 @@
 
 #pragma once
 
-#include <SDL2/SDL.h>
-#include <stdlib.h>
-#include <string.h>
-
-class SoundData
-{
-public:
-	SoundData()
-	{
-		memset(this, 0, sizeof(SoundData));
-	}
-	
-	~SoundData()
-	{
-		if (sampleData != 0)
-		{
-			delete [] (char*)sampleData;
-			sampleData = 0;
-		}
-	}
-	
-	int channelSize;  // 1 or 2 bytes = int8 or int16, 4 bytes = float32
-	int channelCount; // 1 for mono, 2 for stereo
-	int sampleCount;
-	int sampleRate;
-	
-	void * sampleData;
-};
-
-SoundData * loadSound(const char * filename);
+#include "audiostream/AudioIO.h"
 
 #if FRAMEWORK_USE_OPENAL
 
@@ -116,6 +87,8 @@ public:
 
 #if FRAMEWORK_USE_PORTAUDIO
 
+#include <SDL2/SDL.h>
+
 #if LINUX
 	#include <portaudio.h>
 #else
@@ -130,13 +103,15 @@ class SoundPlayer_PortAudio
 	{
 		short * sampleData;
 		int sampleCount;
+		int sampleRate;
 		int channelCount;
 	};
 	
 	struct Source
 	{
 		Buffer * buffer;
-		int bufferPosition;
+		int64_t bufferPosition_fp;
+		int64_t bufferIncrement_fp;
 		
 		int playId;
 		bool loop;
@@ -161,7 +136,9 @@ class SoundPlayer_PortAudio
 	
 	//
 	
+	bool m_paInitialized;
 	PaStream * m_paStream;
+	int m_sampleRate;
 	
 	//
 	
@@ -173,7 +150,7 @@ class SoundPlayer_PortAudio
 		~MutexScope() { SDL_UnlockMutex(m_mutex); }
 	};
 	
-	void * createBuffer(const void * sampleData, const int sampleCount, const int channelSize, const int channelCount);
+	void * createBuffer(const void * sampleData, const int sampleCount, const int sampleRate, const int channelSize, const int channelCount);
 	void destroyBuffer(void *& buffer);
 	Source * allocSource();
 	

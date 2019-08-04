@@ -25,10 +25,10 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "audioGraph.h"
 #include "audioNodePcmData.h"
+#include "pcmDataCache.h"
 
-AUDIO_NODE_TYPE(pcmData, AudioNodePcmData)
+AUDIO_NODE_TYPE(AudioNodePcmData)
 {
 	typeName = "pcm.fromFile";
 	

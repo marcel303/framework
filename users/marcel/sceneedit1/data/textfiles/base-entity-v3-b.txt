@@ -1,0 +1,7 @@
+base base-entity-v3-a.txt
+
+transform
+	position
+		3 2 1
+
+rotate-transform rotate-transform

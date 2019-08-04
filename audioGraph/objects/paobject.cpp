@@ -45,7 +45,7 @@ static int portaudioCallback(
 {
 	PortAudioObject * pa = (PortAudioObject*)userData;
 	
-	pa->handler->portAudioCallback(inputBuffer, pa->numInputChannels, outputBuffer, framesPerBuffer);
+	pa->handler->portAudioCallback(inputBuffer, pa->numInputChannels, outputBuffer, pa->numOutputChannels, framesPerBuffer);
 
 	return paContinue;
 }
@@ -226,6 +226,8 @@ bool PortAudioObject::initImpl(const int sampleRate, const int _numOutputChannel
 	
 	LOG_DBG("portaudio: version=%d, versionText=%s", Pa_GetVersion(), Pa_GetVersionText());
 	
+	paInitialized = true;
+	
 	int inputDeviceIndex = _inputDeviceIndex;
 	int outputDeviceIndex = _outputDeviceIndex;
 	
@@ -287,7 +289,7 @@ bool PortAudioObject::shut()
 	
 	if (stream != nullptr)
 	{
-		if (Pa_IsStreamActive(stream) != 0)
+		if (Pa_IsStreamActive(stream) == 1)
 		{
 			if ((err = Pa_StopStream(stream)) != paNoError)
 			{
@@ -305,10 +307,15 @@ bool PortAudioObject::shut()
 		stream = nullptr;
 	}
 	
-	if ((err = Pa_Terminate()) != paNoError)
+	if (paInitialized)
 	{
-		LOG_ERR("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
-		return false;
+		if ((err = Pa_Terminate()) != paNoError)
+		{
+			LOG_ERR("portaudio: failed to shutdown: %s", Pa_GetErrorText(err));
+			return false;
+		}
+		
+		paInitialized = false;
 	}
 	
 	handler = nullptr;

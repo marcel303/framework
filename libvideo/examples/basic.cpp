@@ -38,7 +38,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	if (framework.init(0, nullptr, 800, 400))
+	if (framework.init(800, 400))
 	{
 		MediaPlayer mp;
 
@@ -67,7 +67,7 @@ int main(int argc, char * argv[])
 			{
 				// draw the video frame
 				
-				const GLuint texture = mp.getTexture();
+				const GxTextureId texture = mp.getTexture();
 
 				if (texture != 0)
 				{
@@ -84,8 +84,9 @@ int main(int argc, char * argv[])
 				int sx;
 				int sy;
 				double duration;
+				double sampleAspectRatio;
 				
-				if (mp.getVideoProperties(sx, sy, duration))
+				if (mp.getVideoProperties(sx, sy, duration, sampleAspectRatio))
 				{
 					drawProgressBar(20, 400-20-20, 200, 20, mp.presentTime, duration);
 				}

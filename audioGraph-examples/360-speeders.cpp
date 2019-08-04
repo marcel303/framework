@@ -1,9 +1,9 @@
+#include "audioTypes.h"
+#include "binaural_cipic.h"
+#include "binauralizer.h"
 #include "framework.h"
 #include "objects/audioSourceVorbis.h"
-#include "objects/binauralizer.h"
-#include "objects/binaural_cipic.h"
 #include "objects/paobject.h"
-#include "soundmix.h"
 #include <algorithm>
 #include <cmath>
 
@@ -192,9 +192,9 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			const Vec3 position_view = s_worldToViewTransform.Mul4(position_world);
 			
 			const float distanceToHead = position_view.CalcSize();
-			const float kDistanceToHeadTreshold = .1f; // 10cm. related to head size, but exact size is subjective
+			const float kDistanceToHeadThreshold = .1f; // 10cm. related to head size, but exact size is subjective
 			
-			const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadTreshold);
+			const float fadeAmount = std::min(1.f, distanceToHead / kDistanceToHeadThreshold);
 			
 			float elevation;
 			float azimuth;
@@ -314,6 +314,7 @@ struct MyPortAudioHandler : PortAudioHandler
 		const void * inputBuffer,
 		const int numInputChannels,
 		void * outputBuffer,
+		const int numOutputChannels,
 		const int framesPerBuffer) override
 	{
 		Assert(framesPerBuffer == AUDIO_UPDATE_SIZE);
@@ -646,28 +647,12 @@ struct RecordedFragment : AudioSource
 	#endif
 	}
 
-#if AUDIO_USE_SSE
-	// todo : add a helper macro to make objects allocate though the heap at N-alignment
-	void * operator new(size_t size)
-	{
-		return _mm_malloc(size, 32);
-	}
-
-	void operator delete(void * mem)
-	{
-		_mm_free(mem);
-	}
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 struct World
 {
-#ifdef WIN32
-	// fixme : work around for "struct 'World' has an illegal zero-sized array" error when compiling with MSVC
-	Speeder speeders[NUM_SPEEDERS + 1];
-#else
-	Speeder speeders[NUM_SPEEDERS];
-#endif
+	Speeder speeders[NUM_SPEEDERS + 1]; // note : the "+1" is a work around for "struct 'World' has an illegal zero-sized array" error when compiling with MSVC
 	
 	std::vector<RecordedFragment*> recordedFragments;
 	
@@ -714,17 +699,7 @@ struct World
 		}
 	}
 
-#if AUDIO_USE_SSE
-	void * operator new(size_t size)
-	{
-		return _mm_malloc(size, 32);
-	}
-
-	void operator delete(void * mem)
-	{
-		_mm_free(mem);
-	}
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 };
 
 static World * s_world = nullptr;
@@ -797,7 +772,7 @@ int main(int argc, char * argv[])
 	changeDirectory(SDL_GetBasePath());
 #endif
 
-	if (!framework.init(0, nullptr, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	
 	Camera3d camera;
@@ -892,11 +867,9 @@ int main(int argc, char * argv[])
 			
 			camera.pushViewMatrix();
 			{
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-				glEnable(GL_LINE_SMOOTH);
+				pushLineSmooth(true);
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
+				pushDepthTest(true, DEPTH_LESS);
 				{
 					for (int i = 0; i < numSoundVolumes; ++i)
 					{
@@ -904,13 +877,11 @@ int main(int argc, char * argv[])
 						drawSoundVolume(soundVolumes[i]);
 					}
 				}
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
 				
 				//
 				
-				glEnable(GL_DEPTH_TEST);
-				glDepthFunc(GL_LESS);
-				glDepthMask(GL_FALSE);
+				pushDepthTest(true, DEPTH_LESS, false);
 				pushBlend(BLEND_ADD);
 				{
 					gxPushMatrix();
@@ -931,8 +902,9 @@ int main(int argc, char * argv[])
 					}
 				}
 				popBlend();
-				glDepthMask(GL_TRUE);
-				glDisable(GL_DEPTH_TEST);
+				popDepthTest();
+				
+				popLineSmooth();
 			}
 			camera.popViewMatrix();
 		}

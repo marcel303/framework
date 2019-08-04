@@ -190,7 +190,7 @@ int FileStream::Length_get()
 int FileStream::Position_get()
 {
 #ifdef PSP
-	int result =(int)sceIoLseek(m_FileId, 0, SCE_SEEK_CUR);
+	int result = (int)sceIoLseek(m_FileId, 0, SCE_SEEK_CUR);
 
 	if (result < 0)
 		throw ExceptionVA("unable to determine file stream position");
@@ -242,7 +242,33 @@ void FileStream::Seek(int seek, SeekMode mode)
 
 bool FileStream::EOF_get()
 {
+#ifdef PSP
 	return Position_get() >= Length_get();
+#else
+	// note : feof is only guaranteed to return true when a previous file operation
+	//        tried to read past eof. so it behaves like a flag that gets set when
+	//        a file operation failed. this means we cannot use feof reliably unless
+	//        we add some backup code (see below) which actually tried to read beyond
+	//        eof. in which case we may as well directly detect read failure
+	
+	if (feof(m_File) != 0)
+		return true;
+	
+	// feof may not be set yet, even though we reached the end of the stream. try
+	// to read a byte and see if that fails
+	
+	char c;
+	const int count = Read(&c, 1);
+	
+	if (count == 0)
+		return true;
+	else
+	{
+		// not eof yet. rewind the file offset
+		Seek(-1, SeekMode_Offset);
+		return false;
+	}
+#endif
 }
 
 bool FileStream::IsOpen_get() const

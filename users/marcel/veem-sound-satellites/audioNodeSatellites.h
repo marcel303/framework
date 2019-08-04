@@ -31,6 +31,7 @@
 #include "soundmix.h" // AudioSource
 
 struct AudioGraph;
+struct AudioVoice;
 
 struct AudioNodeSatellites : AudioNodeBase
 {
@@ -69,7 +70,8 @@ struct AudioNodeSatellites : AudioNodeBase
 	AudioGraph * audioGraph;
 	
 	AudioNodeSatellites();
-	virtual ~AudioNodeSatellites() override;
+	
+	virtual void shut() override;
 	
 	virtual void tick(const float dt) override;
 };

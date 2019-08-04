@@ -1,0 +1,6 @@
+library ecs-parameter-from-osc
+	depend_library ecs-parameter
+	depend_library libgg
+	depend_library liboscpack
+	add_files parameterFromOsc.cpp parameterFromOsc.h
+	header_path . expose

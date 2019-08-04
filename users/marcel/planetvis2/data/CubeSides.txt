@@ -1,0 +1,20 @@
+#if _SHADER_
+include engine/ShaderCommon.txt
+#else
+#pragma once
+#endif
+
+struct CubeSideInfo
+{
+	float transforms[6*3*3];
+	float testValue;
+};
+
+#if _SHADER_
+
+layout (std430) buffer CubeSideInfoBlock
+{
+	CubeSideInfo cubeSideInfo;
+};
+
+#endif

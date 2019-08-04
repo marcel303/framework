@@ -56,9 +56,9 @@ public:
 
 /* Performs a diff operation on two byte arrays.
  * For each delta segment, a diff entry is created and added to a list.
- * Use the treshold to skip N bytes instead of emitting a new segment to reduce overhead.
+ * Use the threshold to skip N bytes instead of emitting a new segment to reduce overhead.
  */
-BinaryDiffResult BinaryDiff(const void * bytes1, const void * bytes2, uint32_t byteCount, uint32_t skipTreshold);
+BinaryDiffResult BinaryDiff(const void * bytes1, const void * bytes2, uint32_t byteCount, uint32_t skipThreshold);
 
 /* Validate the result of a binary diff.
  * Returns true if the diff is valid, false otherwise.

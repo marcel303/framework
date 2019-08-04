@@ -1,7 +1,7 @@
 library libmediaplayer
 	
 	depend_library libgg
-	depend_library framework
+	depend_library libsdl2
 
 	scan_files cpp path mediaplayer
 	scan_files h   path mediaplayer
@@ -9,13 +9,13 @@ library libmediaplayer
 	with_platform macos header_path macos/include
 	with_platform windows header_path win32/include
 	
-	with_platform macos depend_library macos/lib/libavcodec.a local
-	with_platform macos depend_library macos/lib/libavdevice.a local
-	with_platform macos depend_library macos/lib/libavfilter.a local
-	with_platform macos depend_library macos/lib/libavformat.a local
-	with_platform macos depend_library macos/lib/libavutil.a local
-	with_platform macos depend_library macos/lib/libswresample.a local
-	with_platform macos depend_library macos/lib/libswscale.a local
+	with_platform macos depend_library macos/lib-shared/libavcodec.57.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libavdevice.57.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libavfilter.6.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libavformat.57.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libavutil.55.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libswresample.2.dylib local embed_framework
+	with_platform macos depend_library macos/lib-shared/libswscale.4.dylib local embed_framework
 	with_platform macos depend_library CoreMedia find
 	with_platform macos depend_library VideoDecodeAcceleration find
 	with_platform macos depend_library VideoToolbox find
@@ -25,6 +25,7 @@ library libmediaplayer
 	with_platform linux depend_library avdevice find
 	with_platform linux depend_library avfilter find
 	with_platform linux depend_library avformat find
+	with_platform linux depend_library avresample find
 	with_platform linux depend_library avutil find
 	with_platform linux depend_library swresample find
 	with_platform linux depend_library swscale find
@@ -66,6 +67,25 @@ app libvideo-example-basic
 app libvideo-example-seeking
 
 	depend_library libvideo
+	depend_library libwebrequest-downloadcache
 
 	add_files examples/seeking.cpp
+	resource_path examples/data
+
+app libvideo-example-audio
+
+	depend_library libvideo
+	depend_library libwebrequest-downloadcache
+
+	add_files examples/audio.cpp
+	resource_path examples/data
+
+app libvideo-example-mediaplayer
+
+	depend_library artnet
+	depend_library libosc
+	depend_library libvideo
+	depend_library libwebrequest-downloadcache
+
+	add_files examples/mediaplayer.cpp
 	resource_path examples/data

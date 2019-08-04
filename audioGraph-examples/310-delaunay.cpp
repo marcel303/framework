@@ -30,7 +30,7 @@
 #include "delaunay/vector2.h"
 #include "framework.h"
 
-#include "../../libparticle/ui.h"
+#include "ui.h"
 
 const int GFX_SX = 1300;
 const int GFX_SY = 760;
@@ -94,12 +94,12 @@ int main(int argc, char * argv[])
 
 	//framework.waitForEvents = true;
 	
-	if (!framework.init(0, 0, GFX_SX, GFX_SY))
+	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 
 	initUi();
 
-	const int numPoints = 20;
+	//const int numPoints = 20;
 	
 	typedef Vector2<float> Pointf;
 	typedef Triangle<float> Trianglef;

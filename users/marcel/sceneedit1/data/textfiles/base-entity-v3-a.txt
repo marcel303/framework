@@ -1,0 +1,5 @@
+model
+	filename
+		model.txt
+	scale
+		0.01

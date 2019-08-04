@@ -27,8 +27,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "audioGraph.h"
 #include "audioNodePcm.h"
+#include "pcmDataCache.h"
 
-AUDIO_NODE_TYPE(audioSourcePcm, AudioNodeSourcePcm)
+AUDIO_NODE_TYPE(AudioNodeSourcePcm)
 {
 	typeName = "audio.pcm";
 	
@@ -70,8 +71,8 @@ AudioNodeSourcePcm::AudioNodeSourcePcm()
 	addInput(kInput_RangeLength, kAudioPlugType_FloatVec);
 	addOutput(kOutput_Audio, kAudioPlugType_FloatVec, &audioOutput);
 	addOutput(kOutput_Length, kAudioPlugType_Float, &lengthOutput);
-	addOutput(kOutput_Done, kAudioPlugType_Trigger, nullptr);
-	addOutput(kOutput_Loop, kAudioPlugType_Trigger, nullptr);
+	addOutput(kOutput_Done, kAudioPlugType_Trigger, this);
+	addOutput(kOutput_Loop, kAudioPlugType_Trigger, this);
 }
 
 void AudioNodeSourcePcm::init(const GraphNode & node)

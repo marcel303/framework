@@ -65,7 +65,41 @@ void Osc4D::setSource(const int _source)
 {
 	source = _source;
 	
+#if 1
+	// construct the full OSC prefix '/source%d/'
+	
+	// first convert the source index to a (reversed) number string
+	
+	char number[16];
+	int numberLength = 0;
+	int remainder = source + 1;
+	while (remainder != 0)
+	{
+		const int next = remainder / 10;
+		const int digit = remainder - next * 10;
+		number[numberLength++] = '0' + digit;
+		remainder = next;
+	}
+	
+	int textLength = 0;
+	
+	// add prefix
+	const char * prefix = "/source";
+	for (int i = 0; i < sizeof(prefix) - 1; ++i)
+		sourceOscName[textLength++] = prefix[i];
+	
+	// add number (in reversed order)
+	for (int i = numberLength - 1; i >= 0; --i)
+		sourceOscName[textLength++] = number[i];
+	
+	// add the final slash
+	sourceOscName[textLength++] = '/';
+	
+	// and terminate the string
+	sourceOscName[textLength] = 0;
+#else
 	sprintf_s(sourceOscName, sizeof(sourceOscName), "/source%d/", source + 1);
+#endif
 }
 
 void Osc4D::sourceColor(const float r, const float g, const float b)
@@ -205,7 +239,7 @@ void Osc4D::sourceDoppler(const bool enable, const float scale, const float smoo
 	}
 }
 
-void Osc4D::sourceDistanceIntensity(const bool enable, const float treshold, const float curve)
+void Osc4D::sourceDistanceIntensity(const bool enable, const float threshold, const float curve)
 {
 	beginSource("distanceIntensity/enable");
 	b(enable);
@@ -214,7 +248,7 @@ void Osc4D::sourceDistanceIntensity(const bool enable, const float treshold, con
 	if (enable)
 	{
 		beginSource("distanceIntensity/threshold");
-		f(treshold);
+		f(threshold);
 		end();
 
 		beginSource("distanceIntensity/curve");
@@ -223,7 +257,7 @@ void Osc4D::sourceDistanceIntensity(const bool enable, const float treshold, con
 	}
 }
 
-void Osc4D::sourceDistanceDamping(const bool enable, const float treshold, const float curve)
+void Osc4D::sourceDistanceDamping(const bool enable, const float threshold, const float curve)
 {
 	beginSource("distanceDamping/enable");
 	b(enable);
@@ -232,7 +266,7 @@ void Osc4D::sourceDistanceDamping(const bool enable, const float treshold, const
 	if (enable)
 	{
 		beginSource("distanceDamping/threshold");
-		f(treshold);
+		f(threshold);
 		end();
 
 		beginSource("distanceDamping/curve");
@@ -241,7 +275,7 @@ void Osc4D::sourceDistanceDamping(const bool enable, const float treshold, const
 	}
 }
 
-void Osc4D::sourceDistanceDiffusion(const bool enable, const float treshold, const float curve)
+void Osc4D::sourceDistanceDiffusion(const bool enable, const float threshold, const float curve)
 {
 	beginSource("distanceDiffusion/enable");
 	b(enable);
@@ -250,7 +284,7 @@ void Osc4D::sourceDistanceDiffusion(const bool enable, const float treshold, con
 	if (enable)
 	{
 		beginSource("distanceDiffusion/threshold");
-		f(treshold);
+		f(threshold);
 		end();
 
 		beginSource("distanceDiffusion/curve");
@@ -324,7 +358,7 @@ void Osc4D::setReturn(const int index, const char * path)
 	sprintf_s(returnOscName, sizeof(returnOscName), "/return%d/%s/", index + 1, path);
 }
 
-void Osc4D::returnDistanceIntensity(const int index, const bool enable, const float treshold, const float curve)
+void Osc4D::returnDistanceIntensity(const int index, const bool enable, const float threshold, const float curve)
 {
 	setReturn(index, "distanceIntensity");
 	
@@ -335,7 +369,7 @@ void Osc4D::returnDistanceIntensity(const int index, const bool enable, const fl
 	if (enable)
 	{
 		beginReturn("threshold");
-		f(treshold);
+		f(threshold);
 		end();
 		
 		beginReturn("curve");
@@ -344,7 +378,7 @@ void Osc4D::returnDistanceIntensity(const int index, const bool enable, const fl
 	}
 }
 
-void Osc4D::returnDistanceDamping(const int index, const bool enable, const float treshold, const float curve)
+void Osc4D::returnDistanceDamping(const int index, const bool enable, const float threshold, const float curve)
 {
 	setReturn(index, "distanceDamping");
 	
@@ -355,7 +389,7 @@ void Osc4D::returnDistanceDamping(const int index, const bool enable, const floa
 	if (enable)
 	{
 		beginReturn("threshold");
-		f(treshold);
+		f(threshold);
 		end();
 		
 		beginReturn("curve");

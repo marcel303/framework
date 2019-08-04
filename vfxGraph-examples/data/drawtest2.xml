@@ -117,12 +117,12 @@
     <link id="41" srcNodeId="25" srcNodeSocketName="X" dstNodeId="26" dstNodeSocketName="time"/>
     <link id="43" srcNodeId="26" srcNodeSocketName="scale" dstNodeId="29" dstNodeSocketName="value"/>
     <link id="45" srcNodeId="2" srcNodeSocketName="clearColor" dstNodeId="34" dstNodeSocketName="color"/>
-    <link id="47" srcNodeId="35" srcNodeSocketName="trigger!" dstNodeId="30" dstNodeSocketName="trigger"/>
+    <link id="47" srcNodeId="35" srcNodeSocketName="trigger!" dstNodeId="30" dstNodeSocketName="trigger!"/>
     <link id="48" srcNodeId="35" srcNodeSocketName="value" dstNodeId="30" dstNodeSocketName="value"/>
     <link id="49" srcNodeId="37" srcNodeSocketName="value" dstNodeId="30" dstNodeSocketName="value"/>
-    <link id="50" srcNodeId="37" srcNodeSocketName="trigger!" dstNodeId="30" dstNodeSocketName="trigger"/>
+    <link id="50" srcNodeId="37" srcNodeSocketName="trigger!" dstNodeId="30" dstNodeSocketName="trigger!"/>
     <link id="51" srcNodeId="34" srcNodeSocketName="Y" dstNodeId="35" dstNodeSocketName="value"/>
-    <link id="53" srcNodeId="38" srcNodeSocketName="trigger!" dstNodeId="30" dstNodeSocketName="trigger"/>
+    <link id="53" srcNodeId="38" srcNodeSocketName="trigger!" dstNodeId="30" dstNodeSocketName="trigger!"/>
     <link id="54" srcNodeId="38" srcNodeSocketName="value" dstNodeId="30" dstNodeSocketName="value"/>
     <link id="55" srcNodeId="34" srcNodeSocketName="X" dstNodeId="38" dstNodeSocketName="value"/>
     <link id="56" srcNodeId="2" srcNodeSocketName="darkenColor" dstNodeId="34" dstNodeSocketName="color"/>

@@ -27,9 +27,11 @@
 
 #pragma once
 
-#include "graph.h"
+#include "graphEdit_realTimeConnection.h"
 
 struct VfxGraph;
+
+struct SavedVfxMemory;
 
 struct RealTimeConnection : GraphEdit_RealTimeConnection
 {
@@ -37,12 +39,14 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	VfxGraph ** vfxGraphPtr;
 	
 	bool isLoading;
+	SavedVfxMemory * savedVfxMemory;
 	
 	RealTimeConnection(VfxGraph *& _vfxGraph)
 		: GraphEdit_RealTimeConnection()
 		, vfxGraph(nullptr)
 		, vfxGraphPtr(nullptr)
 		, isLoading(false)
+		, savedVfxMemory(nullptr)
 	{
 		vfxGraph = _vfxGraph;
 		vfxGraphPtr = &_vfxGraph;
