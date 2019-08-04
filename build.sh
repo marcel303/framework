@@ -30,8 +30,8 @@ fi
 
 if [ "$os" == "linux" ]; then
 	# generate Xcode project file
-	mkdir -p chibi-build/xcode
-	cd chibi-build/xcode && cmake -G "Unix Makefiles" ../cmake-files
+	#mkdir -p chibi-build/makefiles
+	#cd chibi-build/makefiles && cmake -G "Unix Makefiles" ../cmake-files
 	cd "$root"
 fi
 
