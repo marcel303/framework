@@ -3,7 +3,9 @@ library framework
 	depend_library libgg
 	depend_library libfbx
 
-	depend_library libsdl2
+	with_platform macos depend_library libsdl2
+	#with_platform linux depend_library libsdl2
+	with_platform windows depend_library libsdl2
 
 	scan_files cpp
 	scan_files c   path audiostream          group audiostream
@@ -61,14 +63,13 @@ library framework
 
 # Linux header file includes and libraries
 
-	# fixme : need a fix for the freetype2 include path
-	with_platform linux header_path /usr/include/freetype2
-	with_platform linux depend_library pthread find
-	with_platform linux depend_library portaudio find
-	with_platform linux depend_library freeimage find
 	with_platform linux depend_package OpenGL
+	with_platform linux depend_library pthread find
 	with_platform linux depend_package GLEW
+	with_platform linux depend_library portaudio find
 	with_platform linux depend_package Freetype
+	with_platform linux depend_library freeimage find
+	with_platform linux depend_package SDL2
 
 app framework-example-basic
 	add_files examples/example.cpp
