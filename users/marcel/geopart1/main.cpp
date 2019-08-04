@@ -1,5 +1,6 @@
 #include "framework.h"
 #include <assert.h>
+#include <limits>
 
 #define GFX_SX 640
 #define GFX_SY 480
