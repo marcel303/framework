@@ -198,6 +198,9 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Button)
 			{
+			#if 0
+				// todo : implement button output
+				// todo : add support for trigger type buttons and toggle buttons
 				std::string osc_id;
 				
 				if (elem.button.oscAddress.empty() == false)
@@ -230,6 +233,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					connect(osc_id, 0, button_id, 0);
 					connect(button_id, 0, osc_id, 0);
 				}
+			#endif
 			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Slider2)
 			{
