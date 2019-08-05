@@ -377,6 +377,7 @@ int main(int arg, char * argv[])
 			
 			liveUi
 				.osc("127.0.0.1", 2000)
+				.osc("192.168.1.106", 2000)
 				.osc("127.0.0.1", 2002);
 			
 			const ControlSurfaceDefinition::SurfaceLayout * layouts[] = { &surface.layout };
