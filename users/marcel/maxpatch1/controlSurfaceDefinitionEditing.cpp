@@ -3,6 +3,12 @@
 
 namespace ControlSurfaceDefinition
 {
+	SurfaceEditor & SurfaceEditor::name(const char * name)
+	{
+		surface->name = name;
+		return *this;
+	}
+	
 	GroupEditor SurfaceEditor::beginGroup(const char * name)
 	{
 		Group group;
@@ -67,20 +73,60 @@ namespace ControlSurfaceDefinition
 	{
 		Element element;
 		element.makeKnob();
-		element.knob.name = name;
+		element.name = name;
 		group->elems.push_back(element);
 		
 		return KnobEditor(*this, &group->elems.back(), &group->elems.back().knob);
+	}
+	
+	ButtonEditor GroupEditor::beginButton(const char * name)
+	{
+		Element element;
+		element.makeButton();
+		element.name = name;
+		group->elems.push_back(element);
+		
+		return ButtonEditor(*this, &group->elems.back(), &group->elems.back().button);
+	}
+	
+	Slider2Editor GroupEditor::beginSlider2(const char * name)
+	{
+		Element element;
+		element.makeSlider2();
+		element.name = name;
+		group->elems.push_back(element);
+		
+		return Slider2Editor(*this, &group->elems.back(), &group->elems.back().slider2);
+	}
+	
+	Slider3Editor GroupEditor::beginSlider3(const char * name)
+	{
+		Element element;
+		element.makeSlider3();
+		element.name = name;
+		group->elems.push_back(element);
+		
+		return Slider3Editor(*this, &group->elems.back(), &group->elems.back().slider3);
 	}
 	
 	ListboxEditor GroupEditor::beginListbox(const char * name)
 	{
 		Element element;
 		element.makeListbox();
-		element.listbox.name = name;
+		element.name = name;
 		group->elems.push_back(element);
 		
 		return ListboxEditor(*this, &group->elems.back(), &group->elems.back().listbox);
+	}
+	
+	ColorPickerEditor GroupEditor::beginColorPicker(const char * name)
+	{
+		Element element;
+		element.makeColorPicker();
+		element.name = name;
+		group->elems.push_back(element);
+		
+		return ColorPickerEditor(*this, &group->elems.back(), &group->elems.back().colorPicker);
 	}
 	
 	SeparatorEditor GroupEditor::beginSeparator()
@@ -119,10 +165,17 @@ namespace ControlSurfaceDefinition
 	//
 	
 	template <typename T>
+	T & ElementEditor<T>::name(const char * name)
+	{
+		element->name = name;
+		return static_cast<T&>(*this);
+	}
+	
+	template <typename T>
 	T & ElementEditor<T>::size(const int sx, const int sy)
 	{
-		element->sx = sx;
-		element->sy = sy;
+		element->initialSx = sx;
+		element->initialSy = sy;
 		return static_cast<T&>(*this);
 	}
 	
@@ -169,12 +222,6 @@ namespace ControlSurfaceDefinition
 
 	//
 	
-	KnobEditor & KnobEditor::name(const char * name)
-	{
-		knob->name = name;
-		return *this;
-	}
-	
 	KnobEditor & KnobEditor::displayName(const char * displayName)
 	{
 		knob->displayName = displayName;
@@ -220,12 +267,115 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
-	ListboxEditor & ListboxEditor::name(const char * name)
+	ButtonEditor & ButtonEditor::displayName(const char * displayName)
 	{
-		listbox->name = name;
+		button->displayName = displayName;
 		return *this;
 	}
 
+	ButtonEditor & ButtonEditor::osc(const char * address)
+	{
+		button->oscAddress = address;
+		return *this;
+	}
+
+	GroupEditor & ButtonEditor::end()
+	{
+		return groupEditor;
+	}
+	
+	//
+	
+	Slider2Editor & Slider2Editor::displayName(const char * displayName)
+	{
+		slider->displayName = displayName;
+		return *this;
+	}
+	
+	Slider2Editor & Slider2Editor::defaultValue(const Vector2 & defaultValue)
+	{
+		slider->defaultValue = defaultValue;
+		slider->hasDefaultValue = true;
+		return *this;
+	}
+
+	Slider2Editor & Slider2Editor::limits(const Vector2 & min, const Vector2 & max)
+	{
+		slider->min = min;
+		slider->max = max;
+		return *this;
+	}
+	
+	Slider2Editor & Slider2Editor::exponential(const float exponential)
+	{
+		slider->exponential.set(exponential, exponential);
+		return *this;
+	}
+	
+	Slider2Editor & Slider2Editor::exponential(const Vector2 & exponential)
+	{
+		slider->exponential = exponential;
+		return *this;
+	}
+
+	Slider2Editor & Slider2Editor::osc(const char * address)
+	{
+		slider->oscAddress = address;
+		return *this;
+	}
+
+	GroupEditor & Slider2Editor::end()
+	{
+		return groupEditor;
+	}
+	
+	//
+	
+	Slider3Editor & Slider3Editor::displayName(const char * displayName)
+	{
+		slider->displayName = displayName;
+		return *this;
+	}
+	
+	Slider3Editor & Slider3Editor::defaultValue(const Vector3 & defaultValue)
+	{
+		slider->defaultValue = defaultValue;
+		slider->hasDefaultValue = true;
+		return *this;
+	}
+
+	Slider3Editor & Slider3Editor::limits(const Vector3 & min, const Vector3 & max)
+	{
+		slider->min = min;
+		slider->max = max;
+		return *this;
+	}
+	
+	Slider3Editor & Slider3Editor::exponential(const float exponential)
+	{
+		slider->exponential.set(exponential, exponential, exponential);
+		return *this;
+	}
+	
+	Slider3Editor & Slider3Editor::exponential(const Vector3 & exponential)
+	{
+		slider->exponential = exponential;
+		return *this;
+	}
+
+	Slider3Editor & Slider3Editor::osc(const char * address)
+	{
+		slider->oscAddress = address;
+		return *this;
+	}
+
+	GroupEditor & Slider3Editor::end()
+	{
+		return groupEditor;
+	}
+	
+	//
+	
 	ListboxEditor & ListboxEditor::defaultValue(const char * defaultValue)
 	{
 		listbox->defaultValue = defaultValue;
@@ -252,6 +402,45 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
+	ColorPickerEditor & ColorPickerEditor::displayName(const char * displayName)
+	{
+		colorPicker->displayName = displayName;
+		return *this;
+	}
+
+	ColorPickerEditor & ColorPickerEditor::colorSpace(const ColorSpace colorSpace)
+	{
+		colorPicker->colorSpace = colorSpace;
+		return *this;
+	}
+	
+	ColorPickerEditor & ColorPickerEditor::defaultValue(const Vector4 & defaultValue)
+	{
+		colorPicker->defaultValue = defaultValue;
+		colorPicker->hasDefaultValue = true;
+		return *this;
+	}
+	
+	ColorPickerEditor & ColorPickerEditor::defaultValue(const float r, const float g, const float b, const float a)
+	{
+		colorPicker->defaultValue = Vector4(r, g, b, a);
+		colorPicker->hasDefaultValue = true;
+		return *this;
+	}
+
+	ColorPickerEditor & ColorPickerEditor::osc(const char * address)
+	{
+		colorPicker->oscAddress = address;
+		return *this;
+	}
+	
+	GroupEditor & ColorPickerEditor::end()
+	{
+		return groupEditor;
+	}
+	
+	//
+	
 	SeparatorEditor & SeparatorEditor::borderColor(const float r, const float g, const float b, const float a)
 	{
 		separator->borderColor.set(r, g, b, a);
@@ -272,7 +461,12 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
-	template struct ElementEditor<LabelEditor>;
+	template struct ElementEditor<ButtonEditor>;
+	template struct ElementEditor<ColorPickerEditor>;
 	template struct ElementEditor<KnobEditor>;
+	template struct ElementEditor<LabelEditor>;
 	template struct ElementEditor<ListboxEditor>;
+	template struct ElementEditor<SeparatorEditor>;
+	template struct ElementEditor<Slider2Editor>;
+	template struct ElementEditor<Slider3Editor>;
 }

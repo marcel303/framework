@@ -8,7 +8,9 @@
 #include "framework.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "oscSender.h"
+#include "Path.h"
 #include "reflection-bindtofile.h"
+#include "StringEx.h"
 
 // Max/MSP generator app includes
 #include "framework.h"
@@ -16,6 +18,9 @@
 #include "maxPatchEditor.h"
 #include "reflection-jsonio.h"
 #include <stdio.h> // FILE
+
+// live UI includes
+#include "liveUi.h"
 
 // ++++ : move UI generator to a separate source file
 // ++++ : refine UI generator
@@ -27,6 +32,183 @@
 // todo : create UI app, which reads reflected UI structure from file and allows knob control, OSC output and creating presets
 
 //
+
+#define ENABLE_LAYOUT_EDITOR 1
+
+#if ENABLE_LAYOUT_EDITOR
+
+#include "layoutEditor.h"
+
+struct Button
+{
+	int x = 0;
+	int y = 0;
+	int sx = 0;
+	int sy = 0;
+	
+	std::string text;
+	
+	bool isToggle = false;
+	bool toggleValue = false;
+	
+	bool hover = false;
+	bool isDown = false;
+	bool isClicked = false;
+	
+	void makeButton(
+		const char * in_text,
+		const int in_x,
+		const int in_y,
+		const int in_sx,
+		const int in_sy)
+	{
+		text = in_text;
+		
+		x = in_x;
+		y = in_y;
+		sx = in_sx;
+		sy = in_sy;
+	}
+	
+	void makeToggle(
+		const char * in_text,
+		const bool in_toggleValue,
+		const int in_x,
+		const int in_y,
+		const int in_sx,
+		const int in_sy)
+	{
+		text = in_text;
+		
+		isToggle = true;
+		toggleValue = in_toggleValue;
+		
+		x = in_x;
+		y = in_y;
+		sx = in_sx;
+		sy = in_sy;
+	}
+	
+	bool tick(bool & inputIsCaptured)
+	{
+		isClicked = false;
+		
+		const bool isInside =
+			mouse.x >= x && mouse.x < x + sx &&
+			mouse.y >= y && mouse.y < y + sy;
+		
+		hover = false;
+		
+		if (inputIsCaptured)
+			isDown = false;
+		else
+		{
+			hover = isInside;
+			
+			if (isDown)
+			{
+				inputIsCaptured = true;
+				
+				if (mouse.wentUp(BUTTON_LEFT))
+				{
+					isDown = false;
+					isClicked = true;
+					if (isToggle)
+						toggleValue = !toggleValue;
+				}
+			}
+			else
+			{
+				if (isInside && mouse.wentDown(BUTTON_LEFT))
+				{
+					inputIsCaptured = true;
+					isDown = true;
+				}
+			}
+			
+			if (isInside)
+			{
+				inputIsCaptured = true;
+			}
+		}
+		
+		return isClicked;
+	}
+	
+	void draw() const
+	{
+		const float hue = .5f;
+		const float sat = .2f;
+		const ::Color colorDown = ::Color::fromHSL(hue, sat, .5f);
+		const ::Color colorSelected = ::Color::fromHSL(hue, sat, .4f);
+		const ::Color colorDeselected = ::Color::fromHSL(hue, sat, .6f);
+		const ::Color borderColorNormal = ::Color::fromHSL(hue, sat, .2f);
+		const ::Color borderColorHover = ::Color::fromHSL(hue, sat, .9f);
+		
+		if (isToggle)
+			setColor(isDown ? colorDown : toggleValue ? colorSelected : colorDeselected);
+		else
+			setColor(isDown ? colorSelected : colorDeselected);
+		hqBegin(HQ_FILLED_ROUNDED_RECTS);
+		{
+			hqFillRoundedRect(x, y, x + sx, y + sy, 4);
+		}
+		hqEnd();
+		
+		setColor(hover ? borderColorHover : borderColorNormal);
+		hqBegin(HQ_STROKED_ROUNDED_RECTS);
+		{
+			hqStrokeRoundedRect(x, y, x + sx, y + sy, 4, 2);
+		}
+		hqEnd();
+		
+		setColor(colorWhite);
+		drawText(x + sx/2, y + sy/2, 12, 0, 0, "%s", text.c_str());
+	}
+};
+
+struct LayoutEditorView
+{
+	Button btn_editToggle;
+	Button btn_snapToggle;
+	Button btn_save;
+	Button btn_load;
+	Button btn_layout;
+	Button btn_reset;
+	
+	LayoutEditorView()
+	{
+		btn_editToggle.makeToggle("edit", true, 10, 10, 70, 20);
+		btn_snapToggle.makeToggle("snap", true, 10, 40, 70, 20);
+		btn_save.makeButton("save", 10, 70, 70, 20);
+		btn_load.makeButton("load", 10, 100, 70, 20);
+		btn_layout.makeButton("layout", 10, 130, 70, 20);
+		btn_reset.makeButton("reset", 10, 160, 70, 20);
+	}
+	
+	void tick(bool & inputIsCaptured)
+	{
+		btn_editToggle.tick(inputIsCaptured);
+		btn_snapToggle.tick(inputIsCaptured);
+	
+		btn_save.tick(inputIsCaptured); // todo : buttons shouldn't really be a member of the layout editor directly
+		btn_load.tick(inputIsCaptured);
+		btn_layout.tick(inputIsCaptured);
+		btn_reset.tick(inputIsCaptured);
+	}
+	
+	void drawOverlay() const
+	{
+		btn_editToggle.draw();
+		btn_snapToggle.draw();
+		btn_save.draw();
+		btn_load.draw();
+		btn_layout.draw();
+		btn_reset.draw();
+	}
+};
+
+#endif
 
 int main(int arg, char * argv[])
 {
@@ -56,7 +238,7 @@ int main(int arg, char * argv[])
 		.beginGroup("master")
 			.beginLabel("master")
 				.divideBottom()
-				.size(400, 40)
+				.size(100, 40)
 				.end()
 			.beginKnob("intensity")
 				.defaultValue(5.f)
@@ -86,12 +268,17 @@ int main(int arg, char * argv[])
 				.defaultValue("b")
 				.osc("/master/mode")
 				.end()
+			.beginColorPicker("color")
+				.colorSpace(ControlSurfaceDefinition::kColorSpace_Rgbw)
+				.defaultValue(1.f, 0.f, 0.f, 1.f)
+				.osc("/master/color")
+				.end()
 			.endGroup();
 	
 	for (int i = 0; i < 7; ++i)
 	{
 		surfaceEditor
-			.beginGroup("source")
+			.beginGroup(String::FormatC("source %d", i + 1).c_str())
 				.beginLabel("source")
 					.divideBottom()
 					.end()
@@ -109,16 +296,16 @@ int main(int arg, char * argv[])
 					.exponential(2.f)
 					.defaultValue(.2f)
 					.end()
-				.beginKnob("position")
+				.beginKnob("position2")
 					.limits(0.f, 1.f)
 					.exponential(2.f)
 					.end()
-				.beginKnob("speed")
+				.beginKnob("speed2")
 					.limits(0.f, 10.f)
 					.exponential(2.f)
 					.defaultValue(8.f)
 					.end()
-				.beginKnob("scale")
+				.beginKnob("scale2")
 					.limits(0.f, 1.f)
 					.exponential(2.f)
 					.end()
@@ -126,6 +313,7 @@ int main(int arg, char * argv[])
 				.endGroup();
 	}
 	
+	surface.initializeNames();
 	surface.initializeDefaultValues();
 	surface.initializeDisplayNames();
 	
@@ -135,461 +323,279 @@ int main(int arg, char * argv[])
 		.padding(4, 4)
 		.end();
 	
-	saveObjectToFile(&typeDB, typeDB.findType(surface), &surface, "surface-definition.json");
+	saveObjectToFile(typeDB, typeDB.findType(surface), &surface, "surface-definition.json");
 	
 	// live UI app from control surface definition
 	
-	struct LiveUi
-	{
-		struct Elem
-		{
-			ControlSurfaceDefinition::Element * elem = nullptr;
-			float value = 0.f;
-			float defaultValue = 0.f;
-			float doubleClickTimer = 0.f;
-			bool valueHasChanged = false;
-		};
-		
-		std::vector<Elem> elems;
-		
-		Elem * hoverElem = nullptr;
-		
-		Elem * activeElem = nullptr;
-		
-		std::vector<OscSender*> oscSenders;
-		
-		LiveUi & osc(const char * ipAddress, const int udpPort)
-		{
-			OscSender * sender = new OscSender();
-			sender->init(ipAddress, udpPort);
-			oscSenders.push_back(sender);
-			return *this;
-		}
-		
-		void addElem(ControlSurfaceDefinition::Element * elem)
-		{
-			elems.resize(elems.size() + 1);
-			
-			auto & e = elems.back();
-			e.elem = elem;
-			
-			if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
-			{
-				auto & knob = elem->knob;
-				Assert(knob.hasDefaultValue);
-				
-				if (knob.hasDefaultValue)
-				{
-					const float t = (knob.defaultValue - knob.min) / (knob.max - knob.min);
-					
-					e.value = powf(t, 1.f / knob.exponential);
-					e.defaultValue = e.value;
-				}
-			}
-			else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
-			{
-				auto & listbox = elem->listbox;
-				Assert(listbox.hasDefaultValue);
-				
-				if (listbox.hasDefaultValue)
-				{
-					int index = 0;
-					
-					for (int i = 0; i < listbox.items.size(); ++i)
-						if (listbox.items[i] == listbox.defaultValue)
-							index = i;
-					
-					e.value = index;
-					e.defaultValue = index;
-				}
-			}
-		}
-		
-		void tick(const float dt)
-		{
-			hoverElem = nullptr;
-			
-			for (auto & e : elems)
-			{
-				auto * elem = e.elem;
-				
-				e.doubleClickTimer = fmaxf(0.f, e.doubleClickTimer - dt);
-				
-				const bool isInside =
-					mouse.x >= elem->x &&
-					mouse.x < elem->x + elem->sx &&
-					mouse.y >= elem->y &&
-					mouse.y < elem->y + elem->sy;
-				
-				if (isInside)
-					hoverElem = &e;
-				
-				if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
-				{
-					auto & knob = elem->knob;
-					
-					if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
-					{
-						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
-						
-						if (e.doubleClickTimer > 0.f)
-						{
-							if (knob.hasDefaultValue)
-								e.value = e.defaultValue;
-						}
-						else
-							e.doubleClickTimer = .2f;
-					}
-					
-					if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
-					{
-						activeElem = nullptr;
-						SDL_CaptureMouse(SDL_FALSE);
-					}
-					
-					if (&e == activeElem)
-					{
-						const float speed = 1.f / (keyboard.isDown(SDLK_LSHIFT) ? 400.f : 100.f);
-						
-						const float oldValue = e.value;
-						
-						e.value = saturate<float>(e.value - mouse.dy * speed);
-						
-						if (e.value != oldValue)
-						{
-							e.valueHasChanged = true;
-						}
-					}
-				}
-				else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
-				{
-					auto & listbox = elem->listbox;
-					
-					if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
-					{
-						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
-						
-						if (e.doubleClickTimer > 0.f)
-						{
-							if (listbox.hasDefaultValue)
-								e.value = e.defaultValue;
-						}
-						else
-							e.doubleClickTimer = .2f;
-					}
-					
-					if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
-					{
-						activeElem = nullptr;
-						SDL_CaptureMouse(SDL_FALSE);
-					}
-					
-					if (&e == activeElem)
-					{
-						const float speed = 1.f / 100.f;
-						
-						const float oldValue = e.value;
-						
-						e.value = clamp<float>(e.value + mouse.dy * speed, 0.f, listbox.items.size());
-						
-						if (e.value != oldValue)
-						{
-						// todo: only changed when item index changes
-							e.valueHasChanged = true;
-						}
-					}
-				}
-			}
-			
-			// send changed values over OSC
-			
-			char buffer[1200];
-			osc::OutboundPacketStream s(buffer, 1200);
-			int initialSize = 0;
-			
-			auto beginBundle = [&]()
-			{
-				s = osc::OutboundPacketStream(buffer, 1200);
-				
-				s << osc::BeginBundle();
-				
-				initialSize = s.Size();
-			};
-			
-			auto sendBundle = [&]()
-			{
-				Assert(s.Size() != initialSize);
-				
-				try
-				{
-					s << osc::EndBundle;
-					
-					for (auto * oscSender : oscSenders)
-						oscSender->send(s.Data(), s.Size());
-				}
-				catch (std::exception & e)
-				{
-					logError("%s", e.what());
-				}
-			};
-			
-			beginBundle();
-			
-			for (auto & e : elems)
-			{
-				if (e.valueHasChanged)
-				{
-					e.valueHasChanged = false;
-					
-					if (e.elem->type == ControlSurfaceDefinition::kElementType_Knob)
-					{
-						auto & knob = e.elem->knob;
-						
-						if (!knob.oscAddress.empty())
-						{
-							const float t = powf(activeElem->value, knob.exponential);
-							const float value = knob.min * (1.f - t) + knob.max * t;
-							
-							if (s.Size() + knob.oscAddress.size() + 100 > 1200)
-							{
-								sendBundle();
-								beginBundle();
-							}
-							
-							s << osc::BeginMessage(knob.oscAddress.c_str());
-							{
-								s << value;
-							}
-							s << osc::EndMessage;
-						}
-					}
-					else if (e.elem->type == ControlSurfaceDefinition::kElementType_Listbox)
-					{
-						auto & listbox = e.elem->listbox;
-						
-						if (!listbox.oscAddress.empty())
-						{
-							const int index = clamp<int>((int)floorf(e.value), 0, listbox.items.size() -1);
-							
-							if (s.Size() + listbox.oscAddress.size() + listbox.items[index].size() + 100 > 1200)
-							{
-								sendBundle();
-								beginBundle();
-							}
-							
-							s << osc::BeginMessage(listbox.oscAddress.c_str());
-							{
-								s << listbox.items[index].c_str();
-							}
-							s << osc::EndMessage;
-						}
-					}
-				}
-			}
-			
-			if (s.Size() != initialSize)
-				sendBundle();
-		}
-		
-		void draw() const
-		{
-			for (auto & e : elems)
-			{
-				auto * elem = e.elem;
-				
-				if (elem->type == ControlSurfaceDefinition::kElementType_Label)
-				{
-					auto & label = elem->label;
-					
-					setColor(40, 40, 40);
-					drawText(elem->x, elem->y + elem->sy / 2.f, 12, +1, 0, "%s", label.text.c_str());
-				}
-				else if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
-				{
-					hqBegin(HQ_FILLED_ROUNDED_RECTS);
-					{
-						if (&e == activeElem)
-							setLumi(190);
-						else if (&e == hoverElem)
-							setLumi(210);
-						else
-							setLumi(200);
-						hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
-					}
-					hqEnd();
-					
-					auto & knob = elem->knob;
-					
-					const float angle1 = (- 120 - 90) * float(M_PI) / 180.f;
-					const float angle2 = (+ 120 - 90) * float(M_PI) / 180.f;
-					
-					const int numSteps = 100;
-					
-					const float radius = 14.f;
-					
-					const float midX = elem->x + elem->sx / 2.f;
-					const float midY = elem->y + elem->sy / 2.f;
-					
-					hqBegin(HQ_LINES);
-					{
-						float x1;
-						float y1;
-						
-						for (int i = 0; i < numSteps; ++i)
-						{
-							const float t = i / float(numSteps - 1);
-							const float angle = angle1 * (1.f - t) + angle2 * t;
-							
-							float strokeSize;
-							
-							if (t < e.value)
-							{
-								setColor(200, 100, 100);
-								strokeSize = 1.6f;
-							}
-							else
-							{
-								setColor(100, 100, 200);
-								strokeSize = 1.f;
-							}
-							
-							const float x2 = midX + cosf(angle) * radius;
-							const float y2 = midY + sinf(angle) * radius;
-							
-							if (i != 0)
-								hqLine(x1, y1, strokeSize, x2, y2, strokeSize);
-							
-							x1 = x2;
-							y1 = y2;
-						}
-					}
-					hqEnd();
-					
-					setColor(40, 40, 40);
-					drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy - 2, 10, 0, -1, "%s", knob.displayName.c_str());
-				}
-				else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
-				{
-					hqBegin(HQ_FILLED_ROUNDED_RECTS);
-					{
-						if (&e == activeElem)
-							setLumi(190);
-						else if (&e == hoverElem)
-							setLumi(210);
-						else
-							setLumi(200);
-						hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
-					}
-					hqEnd();
-					
-					auto & listbox = elem->listbox;
-					
-					setColor(40, 40, 40);
-					setFont("calibri.ttf");
-					
-					if (listbox.items.empty() == false)
-					{
-						const int index = clamp<int>((int)floorf(e.value),  0, listbox.items.size() - 1);
-						drawText(elem->x + elem->sx / 2.f, elem->y + elem->sy / 2.f, 10, 0, 0, "%s", listbox.items[index].c_str());
-					}
-					
-					const float midY = elem->y + elem->sy / 2.f;
-					
-					hqBegin(HQ_FILLED_TRIANGLES);
-					{
-						setLumi(100);
-						hqFillTriangle(elem->x + 8, midY - 4, elem->x + 4, midY, elem->x + 8, midY + 4);
-						
-						setLumi(100);
-						hqFillTriangle(elem->x + elem->sx - 8, midY - 4, elem->x + elem->sx - 4, midY, elem->x + elem->sx - 8, midY + 4);
-					}
-					hqEnd();
-				}
-				else if (elem->type == ControlSurfaceDefinition::kElementType_Separator)
-				{
-					hqBegin(HQ_FILLED_ROUNDED_RECTS);
-					{
-						setLumi(200);
-						hqFillRoundedRect(elem->x, elem->y, elem->x + elem->sx, elem->y + elem->sy, 4);
-					}
-					hqEnd();
-				}
-			}
-		}
-		
-		void drawTooltip() const
-		{
-			gxPushMatrix();
-			{
-				gxTranslatef(mouse.x, mouse.y, 0);
-				
-				if (activeElem != nullptr)
-				{
-					auto * elem = activeElem->elem;
-					
-					if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
-					{
-						auto & knob = elem->knob;
-						
-						hqBegin(HQ_FILLED_ROUNDED_RECTS);
-						{
-							setColor(200, 200, 100);
-							hqFillRoundedRect(0, 0, 100, 30, 4);
-						}
-						hqEnd();
-						
-						const float t = powf(activeElem->value, knob.exponential);
-						const float value = knob.min * (1.f - t) + knob.max * t;
-						
-						setLumi(20);
-						drawText(10, 10, 20, +1, +1, "%.2f", value);
-					}
-				}
-			}
-			gxPopMatrix();
-		}
-	};
-
-	framework.init(800, 200);
+	framework.init(1200, 200);
 	
 	LiveUi liveUi;
 	
-	for (auto & group : surface.groups)
+	std::string currentFilename;
+	
+#if ENABLE_LAYOUT_EDITOR
+	ControlSurfaceDefinition::SurfaceLayout layout;
+	
+	ControlSurfaceDefinition::LayoutEditor layoutEditor(&surface, &layout);
+	
+	LayoutEditorView layoutEditorView;
+#endif
+
+	auto loadLiveUi = [&](const char * filename) -> bool
 	{
-		for (auto & elem : group.elems)
+		bool result = false;
+		
+		ControlSurfaceDefinition::Surface newSurface;
+		
+		if (loadObjectFromFile(typeDB, typeDB.findType(newSurface), &newSurface, filename))
 		{
-			liveUi.addElem(&elem);
+			result = true;
+			
+			framework.getCurrentWindow().setTitle(filename);
+			
+			currentFilename = filename;
+			
+			surface = newSurface;
+			
+			surface.initializeNames();
+			surface.initializeDefaultValues();
+			surface.initializeDisplayNames();
+			
+			ControlSurfaceDefinition::SurfaceEditor surfaceEditor(&surface);
+			
+			// recreate the live ui
+			
+			liveUi = LiveUi();
+
+			for (auto & group : surface.groups)
+			{
+				for (auto & elem : group.elems)
+				{
+					liveUi.addElem(&elem);
+				}
+			}
+			
+			liveUi
+				.osc("127.0.0.1", 2000)
+				.osc("127.0.0.1", 2002);
+			
+			const ControlSurfaceDefinition::SurfaceLayout * layouts[] = { &surface.layout };
+			liveUi.applyLayouts(surface, layouts, 1);
+			
+		#if ENABLE_LAYOUT_EDITOR
+			// recreate the layout editor
+			
+			layout = ControlSurfaceDefinition::SurfaceLayout();
+			for (auto & group : surface.groups)
+				for (auto & elem : group.elems)
+					if (elem.name.empty() == false)
+						layout.addElement(group.name.c_str(), elem.name.c_str());
+			
+			layoutEditor = ControlSurfaceDefinition::LayoutEditor(&surface, &layout);
+		#endif
 		}
+		
+		return result;
+	};
+	
+	auto updateLiveUiWithLayout = [](LiveUi & liveUi, const ControlSurfaceDefinition::Surface & surface, const ControlSurfaceDefinition::SurfaceLayout & layout)
+	{
+		// patch live UI with information from layout
+		
+		const ControlSurfaceDefinition::SurfaceLayout * layouts[] =
+		{
+			&surface.layout,
+			&layout
+		};
+		
+		liveUi.applyLayouts(surface, layouts, sizeof(layouts) / sizeof(layouts[0]));
+	};
+	
+	auto loadLayout = [&](const char * filename)
+	{
+		ControlSurfaceDefinition::SurfaceLayout new_layout;
+	
+		if (loadObjectFromFile(typeDB, new_layout, filename) == false)
+			logError("failed to load layout from file");
+		else
+		{
+			layout = new_layout;
+			
+		// todo : ensure all elements exist within the layout. otherwise the editor will crash
+		
+			updateLiveUiWithLayout(liveUi, surface, layout);
+		}
+	};
+	
+	if (loadLiveUi("surface-definition.json"))
+	{
+		const std::string layout_filename = Path::ReplaceExtension(currentFilename, "layout.json");
+		loadLayout(layout_filename.c_str());
 	}
 	
-	liveUi
-		.osc("127.0.0.1", 2000)
-		.osc("127.0.0.1", 2002);
+	float ui_x = 0.f;
+	float ui_y = 0.f;
+	
+	bool isAnimating = false;
 	
 	for (;;)
 	{
-		framework.waitForEvents = true;
+		framework.waitForEvents = (isAnimating == false);
 		
 		framework.process();
 		
 		if (framework.quitRequested)
 			break;
 		
-		liveUi.tick(framework.timeStep);
+		isAnimating = false;
 		
+		for (auto & filename : framework.droppedFiles)
+		{
+			if (loadLiveUi(filename.c_str()))
+			{
+				const std::string layout_filename = Path::ReplaceExtension(currentFilename, "layout.json");
+				loadLayout(layout_filename.c_str());
+			}
+		}
+		
+		bool inputIsCaptured = false;
+		
+	#if ENABLE_LAYOUT_EDITOR
+		layoutEditorView.tick(inputIsCaptured);
+		
+		if (layoutEditorView.btn_save.isClicked)
+		{
+			const std::string layout_filename = Path::ReplaceExtension(currentFilename, "layout.json");
+			if (saveObjectToFile(typeDB, layout, layout_filename.c_str()) == false)
+				logError("failed to save layout to file");
+		}
+		
+		if (layoutEditorView.btn_load.isClicked)
+		{
+			const std::string layout_filename = Path::ReplaceExtension(currentFilename, "layout.json");
+			loadLayout(layout_filename.c_str());
+		}
+		
+		if (layoutEditorView.btn_layout.isClicked)
+		{
+			// perform layout on the control surface elements
+			
+			surface.performLayout();
+			
+			// re-apply layout overrides
+			
+			updateLiveUiWithLayout(liveUi, surface, layout);
+		}
+		
+		if (layoutEditorView.btn_reset.isClicked)
+		{
+			layout = ControlSurfaceDefinition::SurfaceLayout();
+			
+		// todo : layout editor should automatically populate layout ?
+			for (auto & group : surface.groups)
+				for (auto & elem : group.elems)
+					if (elem.name.empty() == false)
+						layout.addElement(group.name.c_str(), elem.name.c_str());
+			
+			layoutEditor = ControlSurfaceDefinition::LayoutEditor(&surface, &layout);
+			
+			// re-apply layout overrides
+			
+			updateLiveUiWithLayout(liveUi, surface, layout);
+		}
+	#endif
+	
+		const int desired_ui_x = keyboard.isDown(SDLK_l) ? 240 : 120; // fixme : remove this animation hack
+		const int desired_ui_y = 10;
+		
+		if (framework.waitForEvents == false)
+		{
+			ui_x = lerp<float>(desired_ui_x, ui_x, powf(.5f, framework.timeStep * 60.f));
+			ui_y = lerp<float>(desired_ui_y, ui_y, powf(.5f, framework.timeStep * 60.f));
+		}
+		
+		if (fabsf(ui_x - desired_ui_x) < .02f &&
+			fabsf(ui_y - desired_ui_y) < .02f)
+		{
+			ui_x = desired_ui_x;
+			ui_y = desired_ui_y;
+		}
+		else
+		{
+			isAnimating = true;
+		}
+		
+		pushScroll(ui_x, ui_y);
+		{
+		#if ENABLE_LAYOUT_EDITOR
+			if (layoutEditor.tick(
+				framework.timeStep,
+				inputIsCaptured,
+				layoutEditorView.btn_editToggle.toggleValue,
+				layoutEditorView.btn_snapToggle.toggleValue))
+			{
+				updateLiveUiWithLayout(liveUi, surface, layout);
+			}
+		#endif
+		
+			liveUi.tick(framework.timeStep, inputIsCaptured);
+		}
+		popScroll();
+	
 		const int c = 160;
 		
 		framework.beginDraw(c/2, c/2, c/2, 0);
 		{
+			int viewSx, viewSy;
+			framework.getCurrentViewportSize(viewSx, viewSy);
+			
 			setFont("calibri.ttf");
 			
-			setLumi(c);
-			setAlpha(255);
-			drawRect(0, 0, surface.layout.sx, surface.layout.sy);
+			pushScroll(ui_x, ui_y);
+			{
+				setLumi(c);
+				setAlpha(255);
+				int surfaceSx = 0;
+				int surfaceSy = 0;
+				for (auto & group : surface.groups)
+				{
+					for (auto & elem : group.elems)
+					{
+						auto * base_layout_element = surface.layout.findElement(group.name.c_str(), elem.name.c_str());
 			
-			liveUi.draw();
+						auto * layout_element = layout.findElement(group.name.c_str(), elem.name.c_str());
+						
+						const int x = layout_element->hasPosition ? layout_element->x : base_layout_element->x;
+						const int y = layout_element->hasPosition ? layout_element->y : base_layout_element->y;
+						
+						const int sx = layout_element->hasSize ? layout_element->sx : base_layout_element->sx;
+						const int sy = layout_element->hasSize ? layout_element->sy : base_layout_element->sy;
+			
+						if (x + sx > surfaceSx)
+							surfaceSx = x + sx;
+						if (y + sy > surfaceSy)
+							surfaceSy = y + sy;
+					}
+				}
+				surfaceSx += surface.layout.marginX;
+				surfaceSy += surface.layout.marginY;
+				
+				hqSetGradient(GRADIENT_RADIAL, Mat4x4(true).Scale(1.f / 1000.f).Translate(-300, 0, 0), Color::fromHSL(.5f, .5f, .5f), Color::fromHSL(.2f, .5f, .5f), COLOR_IGNORE);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				hqFillRoundedRect(0, 0, surfaceSx, surfaceSy, 4);
+				hqEnd();
+				hqClearGradient();
+				//drawRect(0, 0, surfaceSx, surfaceSy);
+				
+				liveUi.draw();
+
+			#if ENABLE_LAYOUT_EDITOR
+				layoutEditor.drawOverlay(layoutEditorView.btn_editToggle.toggleValue);
+			#endif
+			}
+			popScroll();
+			
+			layoutEditorView.drawOverlay();
 			
 			liveUi.drawTooltip();
 		}

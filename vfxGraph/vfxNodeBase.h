@@ -846,6 +846,8 @@ struct VfxEnumTypeRegistration
 	
 	std::vector<Elem> elems;
 	
+	std::vector<Elem> (*getElems)();
+	
 	VfxEnumTypeRegistration();
 	
 	void elem(const char * name, const int value = -1);

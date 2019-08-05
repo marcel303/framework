@@ -5,6 +5,8 @@
 #include "jsusfx_file.h"
 #include "jsusfx-framework.h"
 #include "paobject.h"
+#include "Random.h"
+#include <atomic>
 
 #define MIDI_OFF 0x80
 #define MIDI_ON 0x90
@@ -74,8 +76,50 @@ struct MidiKeyboard
 	}
 };
 
+struct JsusFxWindow
+{
+	static const int kBorderSize = 6;
+	static const int kTitlebarSize = 30;
+
+	enum State
+	{
+		kState_Idle,
+		kState_DragMove,
+		kState_DragSize
+	};
+
+	State state = kState_Idle;
+	bool isFocused = false;
+	
+	int x = 0;
+	int y = 0;
+	int clientSx = 0;
+	int clientSy = 0;
+	const char * caption = nullptr;
+	
+	bool isVisible = true;
+
+	void init(const int x, const int y, const int clientSx, const int clientSy, const char * caption);
+
+	void tick(const float dt, bool & inputIsCaptured);
+	void drawDecoration() const;
+
+	void getClientRect(int & x, int & y, int & sx, int & sy) const;
+};
+
 struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 {
+	enum AudioSource
+	{
+		// note : must update doButtonBar when this is changed !
+		kAudioSource_Silence,
+		kAudioSource_PinkNoise,
+		kAudioSource_WhiteNoise,
+		kAudioSource_Sine,
+		kAudioSource_Tent,
+		kAudioSource_Sample // todo
+	};
+	
 	JsusFx_Framework jsusFx;
 
 	JsusFxGfx_Framework gfx;
@@ -90,18 +134,25 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 
 	int offsetX = 0;
 	int offsetY = 0;
-	bool isDragging = false;
 	
 	bool sliderIsActive[JsusFx::kMaxSliders] = { };
 	
 	PortAudioObject paObject;
 	SDL_mutex * mutex = nullptr;
+	std::atomic<AudioSource> audioSource;
+	std::atomic<int> volume;
+	std::atomic<int> frequency;
+	std::atomic<int> sharpness;
+	RNG::PinkNumber pinkNumber;
+	float sinePhase = 0.f;
+	float tentPhase = 0.f;
 
 	MidiBuffer midiBuffer;
 	MidiKeyboard midiKeyboard;
-	
-	bool showMidiKeyboard = true;
-	bool showControlSliders = false;
+
+	JsusFxWindow midiKeyboardWindow;
+	JsusFxWindow jsusFxWindow;
+	JsusFxWindow controlSlidersWindow;
 
 	FileEditor_JsusFx(const char * path);
 	virtual ~FileEditor_JsusFx() override;

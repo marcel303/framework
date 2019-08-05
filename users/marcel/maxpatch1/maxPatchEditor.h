@@ -18,6 +18,8 @@ namespace max
 		{
 		}
 		
+		PatchEditor & rect(const float x, const float y, const float sx, const float sy);
+		
 		BoxEditor beginBox(const char * id, const int numInlets, const int numOutlets);
 		
 		void connect(const char * sourceBoxId, const int outletIndex, const char * destinationBoxId, const int inletIndex);

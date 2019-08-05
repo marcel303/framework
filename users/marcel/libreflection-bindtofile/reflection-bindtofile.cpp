@@ -223,26 +223,42 @@ bool flushObjectToFile(const void * object)
 
 // --- helper functions ---
 
-bool saveObjectToFile(const TypeDB * typeDB, const Type * type, const void * object, const char * filename)
+bool saveObjectToFile(const TypeDB & typeDB, const Type * type, const void * object, const char * filename)
 {
-// todo : refactor. let ObjectToFileBinding use these functions, instead of the other way around
+	if (type == nullptr)
+	{
+		logError("type is NULL");
+		return false;
+	}
+	else
+	{
+	// todo : refactor. let ObjectToFileBinding use these functions, instead of the other way around
 
-	ObjectToFileBinding binding;
-	binding.typeDB = typeDB;
-	binding.type = type;
-	binding.object = (void*)object;
-	binding.filename = filename;
-	
-	return binding.saveToFile();
+		ObjectToFileBinding binding;
+		binding.typeDB = &typeDB;
+		binding.type = type;
+		binding.object = (void*)object;
+		binding.filename = filename;
+		
+		return binding.saveToFile();
+	}
 }
 
-bool loadObjectFromFile(const TypeDB * typeDB, const Type * type, void * object, const char * filename)
+bool loadObjectFromFile(const TypeDB & typeDB, const Type * type, void * object, const char * filename)
 {
-	ObjectToFileBinding binding;
-	binding.typeDB = typeDB;
-	binding.type = type;
-	binding.object = object;
-	binding.filename = filename;
-	
-	return binding.loadFromFile();
+	if (type == nullptr)
+	{
+		logError("type is NULL");
+		return false;
+	}
+	else
+	{
+		ObjectToFileBinding binding;
+		binding.typeDB = &typeDB;
+		binding.type = type;
+		binding.object = object;
+		binding.filename = filename;
+		
+		return binding.loadFromFile();
+	}
 }

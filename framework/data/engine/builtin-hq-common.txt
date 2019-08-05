@@ -17,9 +17,7 @@ include engine/ShaderUtil.txt
 #endif
 
 shader_in vec2 v_p;
-
-// color coordinate matrix
-uniform mat4x4 gmat;
+shader_in vec2 v_g;
 
 // texture coordinate matrix
 uniform mat4x4 tmat;
@@ -78,9 +76,7 @@ float sampleDistanceFunction(vec2 p)
 
 vec4 hqGradientColor()
 {
-	mat4x4 gradientCoordMatrix = gmat;
-
-	vec4 gradientCoord = gradientCoordMatrix * vec4(v_p, 0.0, 1.0);
+	vec2 gradientCoord = v_g;
 
 	// use color gradient to determine color
 

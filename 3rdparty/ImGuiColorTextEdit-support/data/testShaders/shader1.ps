@@ -14,9 +14,9 @@ shader_in vec2 v_texcoord;
 void main()
 {
 	vec4 result = vec4(
-	sin((texcoord_mod.x + time_mod) / 1.123),
-	sin((texcoord_mod.y + time_mod) / 1.234),
-	sin((texcoord_mod.x + v_texcoord_mod.y + time_mod) / 1.345), 1.0);
+		sin((texcoord_mod.x + time_mod) / 1.123),
+		sin((texcoord_mod.y + time_mod) / 1.234),
+		sin((texcoord_mod.x + texcoord_mod.y + time_mod) / 1.345), 1.0);
 	
 	result.rgb = mix(result.rgb, vec3(rgbLuminance(result.rgb)), 0.8);
 	

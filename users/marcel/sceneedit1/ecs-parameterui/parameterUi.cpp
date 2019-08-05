@@ -13,6 +13,8 @@
 	#include <alloca.h>
 #endif
 
+#define ENABLE_BACKWARD_COMPATIBLE_ROOT_PREFIXES 1 // when set to 1, parameter names pasted from clipboard don't have to start with '/' explicitly. instead names are fixes up on the spot
+
 void doParameterUi(ParameterBase & parameterBase)
 {
 	ImGui::PushID(&parameterBase);
@@ -71,7 +73,7 @@ void doParameterUi(ParameterBase & parameterBase)
 			if (parameter.hasLimits)
 			{
 				// fixme : no separate min/max for each dimension
-				if (ImGui::SliderFloat2(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0]))
+				if (ImGui::SliderFloat2(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
 					parameter.setDirty();
 			}
 			else
@@ -88,7 +90,7 @@ void doParameterUi(ParameterBase & parameterBase)
 			if (parameter.hasLimits)
 			{
 				// fixme : no separate min/max for each dimension
-				if (ImGui::SliderFloat3(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0]))
+				if (ImGui::SliderFloat3(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
 					parameter.setDirty();
 			}
 			else
@@ -105,7 +107,7 @@ void doParameterUi(ParameterBase & parameterBase)
 			if (parameter.hasLimits)
 			{
 				// fixme : no separate min/max for each dimension
-				if (ImGui::SliderFloat4(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0]))
+				if (ImGui::SliderFloat4(parameter.name.c_str(), &parameter.access_rw()[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
 					parameter.setDirty();
 			}
 			else
@@ -314,125 +316,244 @@ void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 
 //
 
-void copyParametersToClipboard(ParameterBase * const * const parameters, const int numParameters)
+static void copyParameterToStringStream(ParameterBase * const parameterBase, const char * name, std::ostringstream & text)
 {
-	// create a list of all parameter values for each parameter which is no longer set to its default and copy the list to the clipboard
+	text << name << "\n";
 
-	std::ostringstream text;
-
-	for (int i = 0; i < numParameters; ++i)
+	switch (parameterBase->type)
 	{
-		auto * parameterBase = parameters[i];
-		const auto & name = parameterBase->name;
-		
-		if (parameterBase->isSetToDefault())
-			continue;
-		
-		text << name << "\n";
-		
-		switch (parameterBase->type)
+	case kParameterType_Bool:
 		{
-		case kParameterType_Bool:
-			{
-				auto * parameter = static_cast<ParameterBool*>(parameterBase);
-				text << '\t' << (parameter->get() ? 1 : 0);
-			}
-			break;
-		case kParameterType_Int:
-			{
-				auto * parameter = static_cast<ParameterInt*>(parameterBase);
-				text << '\t' << parameter->get();
-			}
-			break;
-		case kParameterType_Float:
-			{
-				auto * parameter = static_cast<ParameterFloat*>(parameterBase);
-				text << '\t' << parameter->get();
-			}
-			break;
-		case kParameterType_Vec2:
-			{
-				auto * parameter = static_cast<ParameterVec2*>(parameterBase);
-				text << '\t' << parameter->get()[0];
-				text << '\t' << parameter->get()[1];
-			}
-			break;
-		case kParameterType_Vec3:
-			{
-				auto * parameter = static_cast<ParameterVec3*>(parameterBase);
-				text << '\t' << parameter->get()[0];
-				text << '\t' << parameter->get()[1];
-				text << '\t' << parameter->get()[2];
-			}
-			break;
-		case kParameterType_Vec4:
-			{
-				auto * parameter = static_cast<ParameterVec4*>(parameterBase);
-				text << '\t' << parameter->get()[0];
-				text << '\t' << parameter->get()[1];
-				text << '\t' << parameter->get()[2];
-				text << '\t' << parameter->get()[3];
-			}
-			break;
-		case kParameterType_String:
-			{
-				auto * parameter = static_cast<ParameterString*>(parameterBase);
-				text << '\t' << parameter->get();
-			}
-			break;
-		case kParameterType_Enum:
-			{
-				auto * parameter = static_cast<ParameterEnum*>(parameterBase);
-				text << '\t' << parameter->get();
-			}
-			break;
-			
-		default:
-			Assert(false);
-			break;
+			auto * parameter = static_cast<ParameterBool*>(parameterBase);
+			text << '\t' << (parameter->get() ? 1 : 0);
 		}
+		break;
+	case kParameterType_Int:
+		{
+			auto * parameter = static_cast<ParameterInt*>(parameterBase);
+			text << '\t' << parameter->get();
+		}
+		break;
+	case kParameterType_Float:
+		{
+			auto * parameter = static_cast<ParameterFloat*>(parameterBase);
+			text << '\t' << parameter->get();
+		}
+		break;
+	case kParameterType_Vec2:
+		{
+			auto * parameter = static_cast<ParameterVec2*>(parameterBase);
+			text << '\t' << parameter->get()[0];
+			text << '\t' << parameter->get()[1];
+		}
+		break;
+	case kParameterType_Vec3:
+		{
+			auto * parameter = static_cast<ParameterVec3*>(parameterBase);
+			text << '\t' << parameter->get()[0];
+			text << '\t' << parameter->get()[1];
+			text << '\t' << parameter->get()[2];
+		}
+		break;
+	case kParameterType_Vec4:
+		{
+			auto * parameter = static_cast<ParameterVec4*>(parameterBase);
+			text << '\t' << parameter->get()[0];
+			text << '\t' << parameter->get()[1];
+			text << '\t' << parameter->get()[2];
+			text << '\t' << parameter->get()[3];
+		}
+		break;
+	case kParameterType_String:
+		{
+			auto * parameter = static_cast<ParameterString*>(parameterBase);
+			text << '\t' << parameter->get();
+		}
+		break;
+	case kParameterType_Enum:
+		{
+			auto * parameter = static_cast<ParameterEnum*>(parameterBase);
+			text << '\t' << parameter->get();
+		}
+		break;
 		
-		text << "\n";
+	default:
+		Assert(false);
+		break;
 	}
 
-	ImGui::SetClipboardText(text.str().c_str());
+	text << "\n";
 }
 
-void copyParametersToClipboard(ParameterMgr * const * const parameterMgrs, const int numParameterMgrs, const char * filter)
+static void collectParamMgrsAndPrefixes(
+	ParameterMgr * const rootParamMgr,
+	std::vector<ParameterMgr*> & paramMgrs,
+	std::vector<std::string> & prefixes)
 {
+	std::vector<ParameterMgr*> stack;
+	std::vector<std::string> prefixStack;
+	stack.push_back(rootParamMgr);
+	prefixStack.push_back(stack.back()->access_prefix() + "/");
+
+	while (!stack.empty())
+	{
+		ParameterMgr * paramMgr = stack.back();
+		const std::string prefix = prefixStack.back();
+		
+		paramMgrs.push_back(paramMgr);
+		prefixes.push_back(prefix);
+		
+		stack.pop_back();
+		prefixStack.pop_back();
+		
+		stack.insert(stack.end(), paramMgr->access_children().begin(), paramMgr->access_children().end());
+		
+		for (auto * child : paramMgr->access_children())
+		{
+			if (child->access_index() != -1)
+			{
+				const std::string child_prefix = String::FormatC("%s%s/%d/",
+					prefix.c_str(),
+					child->access_prefix().c_str(),
+					child->access_index());
+				
+				prefixStack.push_back(child_prefix);
+			}
+			else
+			{
+				prefixStack.push_back(prefix + child->access_prefix() + "/");
+			}
+		}
+	}
+}
+
+void copyParametersToText_recursive(ParameterMgr * const parameterMgr, const char * filter, std::string & out_text)
+{
+	std::vector<ParameterMgr*> paramMgrs;
+	std::vector<std::string> prefixes;
+	collectParamMgrsAndPrefixes(parameterMgr, paramMgrs, prefixes);
+	
+	std::ostringstream text;
+	
 	const bool do_filter = filter != nullptr && filter[0] != 0;
-
-	int max_parameters = 0;
 	
-	for (int i = 0; i < numParameterMgrs; ++i)
-		max_parameters += parameterMgrs[i]->access_parameters().size();
-	
-	ParameterBase ** const parameters = (ParameterBase ** const)alloca(max_parameters * sizeof(ParameterBase*));
-	
-	int numParameters = 0;
-	
-	if (do_filter)
+	for (int i = 0; i < paramMgrs.size(); ++i)
 	{
-		for (int i = 0; i < numParameterMgrs; ++i)
-			for (auto * parameter : parameterMgrs[i]->access_parameters())
-				if (strcasestr(parameter->name.c_str(), filter))
-					parameters[numParameters++] = parameter;
-	}
-	else
-	{
-		for (int i = 0; i < numParameterMgrs; ++i)
-			for (auto * parameter : parameterMgrs[i]->access_parameters())
-				parameters[numParameters++] = parameter;
+		auto * paramMgr = paramMgrs[i];
+		auto & prefix = prefixes[i];
+		
+		for (auto * parameter : paramMgr->access_parameters())
+		{
+			if (parameter->isSetToDefault())
+				continue;
+			
+			const std::string name = prefix + parameter->name;
+		
+			if (do_filter)
+			{
+				if (strcasestr(name.c_str(), filter) == nullptr)
+					continue;
+			}
+	
+			copyParameterToStringStream(parameter, name.c_str(), text);
+		}
 	}
 	
-	copyParametersToClipboard(parameters, numParameters);
+	out_text = text.str();
 }
 
-void pasteParametersFromClipboard(ParameterBase * const * const parameters, const int numParameters)
+void copyParametersToClipboard_recursive(ParameterMgr * const parameterMgr, const char * filter)
 {
-	// parse the list of parameter values from clipboard and update all of the known parameters accordingly
+	std::string text;
+	copyParametersToText_recursive(parameterMgr, filter, text);
 	
-	const char * text = ImGui::GetClipboardText();
+	ImGui::SetClipboardText(text.c_str());
+}
+
+static void pasteParameterFromText(ParameterBase * const parameterBase, const char * line)
+{
+	switch (parameterBase->type)
+	{
+	case kParameterType_Bool:
+		{
+			auto * parameter = static_cast<ParameterBool*>(parameterBase);
+			
+			int value;
+			if (sscanf(line, "%d", &value) == 1)
+				parameter->set(value != 0);
+		}
+		break;
+	case kParameterType_Int:
+		{
+			auto * parameter = static_cast<ParameterInt*>(parameterBase);
+			
+			int value;
+			if (sscanf(line, "%d", &value) == 1)
+				parameter->set(value);
+		}
+		break;
+	case kParameterType_Float:
+		{
+			auto * parameter = static_cast<ParameterFloat*>(parameterBase);
+			
+			float value;
+			if (sscanf(line, "%f", &value) == 1)
+				parameter->set(value);
+		}
+		break;
+	case kParameterType_Vec2:
+		{
+			auto * parameter = static_cast<ParameterVec2*>(parameterBase);
+			
+			float values[2];
+			if (sscanf(line, "%f %f", &values[0], &values[1]) == 2)
+				parameter->set(Vec2(values[0], values[1]));
+		}
+		break;
+	case kParameterType_Vec3:
+		{
+			auto * parameter = static_cast<ParameterVec3*>(parameterBase);
+			
+			float values[3];
+			if (sscanf(line, "%f %f %f", &values[0], &values[1], &values[2]) == 3)
+				parameter->set(Vec3(values[0], values[1], values[2]));
+		}
+		break;
+	case kParameterType_Vec4:
+		{
+			auto * parameter = static_cast<ParameterVec4*>(parameterBase);
+			
+			float values[4];
+			if (sscanf(line, "%f %f %f %f", &values[0], &values[1], &values[2], &values[3]) == 4)
+				parameter->set(Vec4(values[0], values[1], values[2], values[3]));
+		}
+		break;
+	case kParameterType_String:
+		{
+			auto * parameter = static_cast<ParameterString*>(parameterBase);
+			
+			parameter->set(line);
+		}
+		break;
+	case kParameterType_Enum:
+		{
+			auto * parameter = static_cast<ParameterEnum*>(parameterBase);
+			
+			int value;
+			if (sscanf(line, "%d", &value) == 1)
+				parameter->set(value);
+		}
+		break;
+		
+	default:
+		Assert(false);
+		break;
+	}
+}
+
+void pasteParametersFromText_recursive(ParameterMgr * const parameterMgr, const char * text, const char * filter)
+{
+	// decode text
 	
 	struct Elem
 	{
@@ -471,127 +592,41 @@ void pasteParametersFromClipboard(ParameterBase * const * const parameters, cons
 			index = 0;
 	}
 
-	//
+	// iterate over key-value pairs, find parameters by key, and paste value
 	
-	for (int i = 0; i < numParameters; ++i)
+	const bool do_filter = filter != nullptr && filter[0] != 0;
+	
+	for (auto & elem_itr : elems)
 	{
-		auto * parameterBase = parameters[i];
-		const auto & name = parameterBase->name;
-		
-		auto elem_itr = elems.find(name);
-		
-		if (elem_itr == elems.end())
-			continue;
-		
-		auto & elem = elem_itr->second;
+		auto & elem = elem_itr.second;
+		auto & name = elem_itr.first;
 		auto * line = elem.line.c_str();
 		
-		switch (parameterBase->type)
-		{
-		case kParameterType_Bool:
-			{
-				auto * parameter = static_cast<ParameterBool*>(parameterBase);
-				
-				int value;
-				if (sscanf(line, "%d", &value) == 1)
-					parameter->set(value != 0);
-			}
-			break;
-		case kParameterType_Int:
-			{
-				auto * parameter = static_cast<ParameterInt*>(parameterBase);
-				
-				int value;
-				if (sscanf(line, "%d", &value) == 1)
-					parameter->set(value);
-			}
-			break;
-		case kParameterType_Float:
-			{
-				auto * parameter = static_cast<ParameterFloat*>(parameterBase);
-				
-				float value;
-				if (sscanf(line, "%f", &value) == 1)
-					parameter->set(value);
-			}
-			break;
-		case kParameterType_Vec2:
-			{
-				auto * parameter = static_cast<ParameterVec2*>(parameterBase);
-				
-				float values[2];
-				if (sscanf(line, "%f %f", &values[0], &values[1]) == 2)
-					parameter->set(Vec2(values[0], values[1]));
-			}
-			break;
-		case kParameterType_Vec3:
-			{
-				auto * parameter = static_cast<ParameterVec3*>(parameterBase);
-				
-				float values[3];
-				if (sscanf(line, "%f %f %f", &values[0], &values[1], &values[2]) == 3)
-					parameter->set(Vec3(values[0], values[1], values[2]));
-			}
-			break;
-		case kParameterType_Vec4:
-			{
-				auto * parameter = static_cast<ParameterVec4*>(parameterBase);
-				
-				float values[4];
-				if (sscanf(line, "%f %f %f %f", &values[0], &values[1], &values[2], &values[3]) == 4)
-					parameter->set(Vec4(values[0], values[1], values[2], values[3]));
-			}
-			break;
-		case kParameterType_String:
-			{
-				auto * parameter = static_cast<ParameterString*>(parameterBase);
-				
-				parameter->set(line);
-			}
-			break;
-		case kParameterType_Enum:
-			{
-				auto * parameter = static_cast<ParameterEnum*>(parameterBase);
-				
-				int value;
-				if (sscanf(line, "%d", &value) == 1)
-					parameter->set(value);
-			}
-			break;
+		if (name.empty())
+			continue;
+		
+		if (do_filter && strcasestr(name.c_str(), filter) == nullptr)
+			continue;
 			
-		default:
-			Assert(false);
-			break;
+	#if ENABLE_BACKWARD_COMPATIBLE_ROOT_PREFIXES
+		auto * parameter =
+			name[0] == '/'
+			? parameterMgr->findRecursively(name.c_str(), '/')
+			: parameterMgr->findRecursively(("/" + name).c_str(), '/'); // less efficient backwards compatibility mode
+	#else
+		auto * parameter = parameterMgr->findRecursively(name.c_str(), '/');
+	#endif
+	
+		if (parameter != nullptr)
+		{
+			pasteParameterFromText(parameter, line);
 		}
 	}
 }
 
-void pasteParametersFromClipboard(ParameterMgr * const * const parameterMgrs, const int numParameterMgrs, const char * filter)
+void pasteParametersFromClipboard_recursive(ParameterMgr * const parameterMgr, const char * filter)
 {
-	const bool do_filter = filter != nullptr && filter[0] != 0;
-
-	int max_parameters = 0;
+	const char * text = ImGui::GetClipboardText();
 	
-	for (int i = 0; i < numParameterMgrs; ++i)
-		max_parameters += parameterMgrs[i]->access_parameters().size();
-	
-	ParameterBase ** const parameters = (ParameterBase ** const)alloca(max_parameters * sizeof(ParameterBase*));
-	
-	int numParameters = 0;
-	
-	if (do_filter)
-	{
-		for (int i = 0; i < numParameterMgrs; ++i)
-			for (auto * parameter : parameterMgrs[i]->access_parameters())
-				if (strcasestr(parameter->name.c_str(), filter))
-					parameters[numParameters++] = parameter;
-	}
-	else
-	{
-		for (int i = 0; i < numParameterMgrs; ++i)
-			for (auto * parameter : parameterMgrs[i]->access_parameters())
-				parameters[numParameters++] = parameter;
-	}
-	
-	pasteParametersFromClipboard(parameters, numParameters);
+ 	pasteParametersFromText_recursive(parameterMgr, text, filter);
 }

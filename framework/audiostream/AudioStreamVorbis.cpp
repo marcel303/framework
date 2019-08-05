@@ -173,17 +173,24 @@ void AudioStream_Vorbis::Open(const char* fileName, bool loop)
 
 void AudioStream_Vorbis::Close()
 {
-	if (mFile != 0)
+	if (mVorbisFile->datasource != 0)
 	{
 		ov_clear(mVorbisFile);
 		LOG_DBG("Vorbis Audio Stream: destroyed vorbis decoder", 0);
 		
+		// note : ov_clear calls fclose for us
+		mFile = 0;
+		LOG_DBG("Vorbis Audio Stream: closed file", 0);
+	}
+	
+	if (mFile != 0)
+	{
 		fclose(mFile);
 		mFile = 0;
 		LOG_DBG("Vorbis Audio Stream: closed file", 0);
-		
-		mPosition = 0;
 	}
+	
+	mPosition = 0;
 }
 
 int AudioStream_Vorbis::Position_get() const

@@ -1,9 +1,9 @@
 #include "particle.h"
 #include "tinyxml2.h"
 #include <algorithm>
-#include <assert.h>
 #include <cmath>
 
+#include "Debugging.h" // Assert
 #include "Log.h" // LOG_ functions
 #include "StringEx.h" // _s functions
 #include "ui.h" // srgb <-> linear
@@ -964,8 +964,8 @@ ParticlePool::ParticlePool()
 
 ParticlePool::~ParticlePool()
 {
-	assert(head == 0);
-	assert(tail == 0);
+	Assert(head == 0);
+	Assert(tail == 0);
 }
 
 Particle * ParticlePool::allocParticle()
@@ -1009,8 +1009,8 @@ Particle * ParticlePool::freeParticle(Particle * p)
 ParticleSystem::~ParticleSystem()
 {
 	emitter.clearParticles(pool);
-	assert(pool.head == 0);
-	assert(pool.tail == 0);
+	Assert(pool.head == 0);
+	Assert(pool.tail == 0);
 }
 
 bool ParticleSystem::tick(const ParticleCallbacks & cbs, const float gravityX, const float gravityY, float dt)
@@ -1033,7 +1033,7 @@ void ParticleSystem::restart()
 
 bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float _timeStep, const float gravityX, const float gravityY, Particle & p)
 {
-	assert(p.life > 0.f);
+	Assert(p.life > 0.f);
 
 	// clamp timeStep to available life
 	
@@ -1169,7 +1169,7 @@ void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, co
 			// Sub-emitter cannot be the same as the current emitter. Otherwise, we may get into a loop.
 			// Note that this doesn't protect against getting into a loop in a roundabout fashion.. be
 			// guarding against this is much more complicated than this simple check here.
-			assert(subPi != &pi);
+			Assert(subPi != &pi);
 
 			if (subPi != &pi)
 			{

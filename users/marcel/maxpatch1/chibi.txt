@@ -23,5 +23,7 @@ app marcel-maxpatch1
 	depend_library libosc
 	depend_library libreflection-bindtofile
 	depend_library maxpatch
+	add_files layoutEditor.cpp layoutEditor.h
+	add_files liveUi.cpp liveUi.h
 	add_files main.cpp
 	resource_path data

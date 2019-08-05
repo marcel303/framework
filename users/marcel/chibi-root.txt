@@ -3,7 +3,7 @@ add 4dsound2-osc
 add ambisonics1
 add anaglyphic
 add avpaint
-add biquad-simd
+with_platform macos add biquad-simd
 add box2d1
 add codevember
 add codingChallenges
@@ -28,11 +28,13 @@ add planetvis
 add planetvis2
 # todo : add with_library ?
 with_platform macos add ps3eye-to-osc
-add rast
+with_platform linux add ps3eye-to-osc
+with_platform macos add rast
 add rawaudio1
 add refine
-add resonate1
-add resonate2
+add reaper1
+with_platform macos add resonate1
+with_platform macos add resonate2
 add sceneedit1
 add serial-to-osc
 add shadowmap1
@@ -49,5 +51,6 @@ add veem-sound
 add veem-sound-satellites
 add vfxedit
 add vfxpro
+add videosync
 
 add ../ggj2015/game

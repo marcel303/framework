@@ -62,6 +62,9 @@ static inline uintptr_t PadAddr(uintptr_t addr, uintptr_t align) { return (addr 
 
 #if DEBUG_MEM
 
+#include "Heap.h"
+#include "MemOps.h"
+
 static void* Alloc(size_t size)
 {
 	// reserve space for debug info

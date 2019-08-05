@@ -27,7 +27,7 @@
 
 #pragma once
 
-#include "graphEdit.h" // todo : move real-time editing interface elsewhere, since it needs to be made shared, contrary to the graph editor itself
+#include "graphEdit_realTimeConnection.h"
 
 struct VfxGraph;
 

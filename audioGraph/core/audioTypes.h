@@ -306,7 +306,7 @@ struct AudioRNG
 		} \
 		void operator delete(void * mem) \
 		{ \
-			_mm_free(mem); \
+			free(mem); \
 		}
 #else
 	#define ALIGNED_AUDIO_NEW_AND_DELETE()

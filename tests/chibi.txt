@@ -11,6 +11,13 @@ app tests
 	depend_library libvideo
 	depend_library libwebrequest-downloadcache
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
+	depend_library vfxgraph-deepbelief
+	depend_library vfxgraph-kinect
+	depend_library vfxgraph-leapmotion
+	depend_library vfxgraph-ps3eye
+	depend_library vfxgraph-syphon
+	depend_library vfxgraph-wiimote
 	with_platform linux depend_library xmm
 	with_platform macos depend_library xmm
 

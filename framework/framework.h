@@ -449,6 +449,7 @@ public:
 	
 	std::vector<SDL_Event> events;
 	std::vector<std::string> changedFiles;
+	std::vector<std::string> droppedFiles;
 	
 private:
 	uint32_t m_lastTick;
@@ -485,6 +486,7 @@ public:
 	void setPositionCentered();
 	void setSize(const int sx, const int sy);
 	void setFullscreen(const bool fullscreen);
+	void setTitle(const char * title);
 	
 	void show();
 	void hide();
@@ -1441,6 +1443,8 @@ void setTransform2d(const Mat4x4 & transform);
 void setTransform3d(const Mat4x4 & transform);
 void pushTransform();
 void popTransform();
+void pushScroll(const int scrollX, const int scrollY);
+void popScroll();
 
 void projectScreen2d();
 void projectPerspective3d(const float fov, const float nearZ, const float farZ);
@@ -1727,7 +1731,8 @@ void hqEnd();
 void hqSetGradient(GRADIENT_TYPE gradientType, const Mat4x4 & matrix, const Color & color1, const Color & color2, const COLOR_MODE colorMode, const float bias = 0.f, const float scale = 1.f);
 void hqClearGradient();
 
-void hqSetTexture(const Mat4x4 & matrix, const GxTextureId texture);
+void hqSetTexture(const GxTextureId texture, const Mat4x4 & matrix);
+void hqSetTextureScreen(const GxTextureId texture, float x1, float y1, float x2, float y2);
 void hqClearTexture();
 
 void hqLine(float x1, float y1, float strokeSize1, float x2, float y2, float strokeSize2);

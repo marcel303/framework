@@ -176,6 +176,7 @@ Framework::Framework()
 	
 	events.clear();
 	changedFiles.clear();
+	droppedFiles.clear();
 	
 	quitRequested = false;
 	time = 0.f;
@@ -624,7 +625,14 @@ bool Framework::shutdown()
 	gxShutdown();
 	
 	s_shaderSources.clear();
+	
+#if ENABLE_METAL
+	// destroy metal context
+	
+	metal_detach(globals.mainWindow->getWindow());
+#endif
 
+#if ENABLE_OPENGL
 	glBlendEquation = 0;
 	glClampColor = 0;
 	
@@ -635,6 +643,7 @@ bool Framework::shutdown()
 		SDL_GL_DeleteContext(globals.glContext);
 		globals.glContext = 0;
 	}
+#endif
 	
 	// destroy SDL window
 	
@@ -698,6 +707,7 @@ bool Framework::shutdown()
 	
 	events.clear();
 	changedFiles.clear();
+	droppedFiles.clear();
 	
 	m_lastTick = -1;
 	
@@ -884,6 +894,7 @@ void Framework::process()
 	events.clear();
 	
 	changedFiles.clear();
+	droppedFiles.clear();
 	
 	SDL_Event e;
 	
@@ -1035,6 +1046,8 @@ void Framework::process()
 		}
 		else if (e.type == SDL_DROPFILE)
 		{
+			droppedFiles.push_back(e.drop.file);
+			
 			Dictionary args;
 			args.setString("file", e.drop.file);
 			processAction("filedrop", args);
@@ -2001,9 +2014,17 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 	, m_window(nullptr)
 	, m_windowData(nullptr)
 {
-	const int flags = SDL_WINDOW_OPENGL | (SDL_WINDOW_ALLOW_HIGHDPI * framework.allowHighDpi) | (SDL_WINDOW_RESIZABLE * resizable);
+	int flags = (SDL_WINDOW_ALLOW_HIGHDPI * framework.allowHighDpi) | (SDL_WINDOW_RESIZABLE * resizable);
 	
+#if ENABLE_OPENGL
+	flags |= SDL_WINDOW_OPENGL;
+#endif
+
 	m_window = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, sx, sy, flags);
+	
+#if ENABLE_METAL
+	metal_attach(m_window);
+#endif
 	
 	m_windowData = new WindowData();
 	memset(m_windowData, 0, sizeof(WindowData));
@@ -2017,7 +2038,11 @@ Window::~Window()
 	
 	delete m_windowData;
 	m_windowData = nullptr;
-	
+
+#if ENABLE_METAL
+	metal_detach(m_window);
+#endif
+
 	SDL_DestroyWindow(m_window);
 	m_window = nullptr;
 }
@@ -2046,6 +2071,11 @@ void Window::setFullscreen(const bool fullscreen)
 		SDL_SetWindowFullscreen(m_window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0);
 	else
 		SDL_SetWindowFullscreen(m_window, 0);
+}
+
+void Window::setTitle(const char * title)
+{
+	SDL_SetWindowTitle(m_window, title);
 }
 
 void Window::show()
@@ -2122,8 +2152,15 @@ void pushWindow(Window & window)
 	globals.currentWindow = &window;
 	globals.currentWindowData = window.getWindowData();
 	
-	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 	globals.currentWindowData->makeActive();
+	
+#if ENABLE_OPENGL
+	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
+#endif
+
+#if ENABLE_METAL
+	metal_make_active(globals.currentWindow->getWindow());
+#endif
 }
 
 void popWindow()
@@ -2133,8 +2170,15 @@ void popWindow()
 	globals.currentWindow = window;
 	globals.currentWindowData = window->getWindowData();
 	
-	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 	globals.currentWindowData->makeActive();
+	
+#if ENABLE_OPENGL
+	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
+#endif
+
+#if ENABLE_METAL
+	metal_make_active(globals.currentWindow->getWindow());
+#endif
 }
 
 // -----
@@ -5117,6 +5161,48 @@ void popTransform()
 	gxLoadMatrixf(t.modelView.m_v);
 }
 
+struct ScrollData
+{
+	int scrollX = 0;;
+	int scrollY = 0;
+};
+
+static Stack<ScrollData, 32> s_scrollStack;
+
+void pushScroll(const int scrollX, const int scrollY)
+{
+	ScrollData s;
+	s.scrollX = scrollX;
+	s.scrollY = scrollY;
+	s_scrollStack.push(s);
+	
+	mouse.x -= scrollX;
+	mouse.y -= scrollY;
+	
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+	{
+		gxMatrixMode(GX_PROJECTION);
+		gxPushMatrix();
+		gxTranslatef(scrollX, scrollY, 0);
+	}
+	gxMatrixMode(restoreMatrixMode);
+}
+
+void popScroll()
+{
+	ScrollData s = s_scrollStack.popValue();
+	
+	mouse.x += s.scrollX;
+	mouse.y += s.scrollY;
+	
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+	{
+		gxMatrixMode(GX_PROJECTION);
+		gxPopMatrix();
+	}
+	gxMatrixMode(restoreMatrixMode);
+}
+
 void projectScreen2d()
 {
 	setTransform(TRANSFORM_SCREEN);
@@ -5249,7 +5335,28 @@ void popSurface()
 	popRenderPass();
 #endif
 
-#if ENABLE_OPENGL && defined(MACOS)
+#if ENABLE_OPENGL
+	// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
+	// as this would cause issues where the driver may perform an optimization where it detects no texture
+	// state change happened in a future gxSetTexture or Shader::setTexture call (because the texture ids
+	// are the same), making it fail to flush GPU render target caches, fail to perform texture decompression,
+	// fail to perform whatever is needed to transition a render target texture from being 'renderable' resource
+	// to being a shader accessible resource
+
+	for (int i = 0; i < 8; ++i)
+	{
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		checkErrorGL();
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+	
+	globals.gxShaderIsDirty = true;
+#endif
+
+#if ENABLE_OPENGL && defined(MACOS) && 0
 // todo : remove this hack
 	// fix for driver issue where the results of drawing are possibly not yet flushed when accessing a surface texture,
 	// causing artefacts due to texel fetches returning inconsistent results
@@ -5542,23 +5649,6 @@ void clearShader()
 	
 	#if ENABLE_OPENGL
 		glUseProgram(0);
-		
-		// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
-		// as this would cause issues where the driver may perform an optimization where it detects no texture
-		// state change happened in a future gxSetTexture or Shader::setTexture call (because the texture ids
-		// are the same), making it fail to flush GPU render target caches, fail to perform texture decompression,
-		// fail to perform whatever is needed to transition a render target texture from being 'renderable' resource
-		// to being a shader accessible resource
-		
-		for (int i = 0; i < 8; ++i)
-		{
-			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
-		}
-	
-		glActiveTexture(GL_TEXTURE0);
-		checkErrorGL();
 	#endif
 	}
 }
@@ -7350,9 +7440,18 @@ static void applyHqShaderConstants()
 	{
 		if (shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index != -1)
 		{
-			const Mat4x4 & cmat = globals.hqGradientMatrix;
+			// note: we multiply the gradient matrix with the inverse of the modelView matrix here,
+			// so we go back from screen-space coordinates inside the shader to local coordinates
+			// for the gradient. this makes it much more easy to define gradients on elements,
+			// since you can freely scale and translate them around without having to worry
+			// about how this affects your gradient
 			
-			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index, cmat.m_v);
+			Mat4x4 modelView;
+			gxGetMatrixf(GX_MODELVIEW, modelView.m_v);
+			
+			const Mat4x4 gmat = globals.hqGradientMatrix * modelView.CalcInv();
+			
+			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_GradientMatrix].index, gmat.m_v);
 		}
 		
 		if (shaderElem.params[ShaderCacheElem::kSp_GradientInfo].index != -1)
@@ -7659,12 +7758,22 @@ void hqClearGradient()
 	globals.hqGradientType = GRADIENT_NONE;
 }
 
-void hqSetTexture(const Mat4x4 & matrix, const GxTextureId texture)
+void hqSetTexture(const GxTextureId texture, const Mat4x4 & matrix)
 {
 	globals.hqTextureEnabled = true;
 	globals.hqTextureMatrix = matrix;
 	
 	gxSetTexture(texture);
+}
+
+void hqSetTextureScreen(const GxTextureId texture, float x1, float y1, float x2, float y2)
+{
+	const Mat4x4 matrix =
+		Mat4x4(true)
+			.Scale(1.f / fmaxf(x2 - x1, 1e-6f), 1.f / fmaxf(y2 - y1, 1e-6f), 1.f)
+			.Translate(-x1, -y1, 0.f);
+	
+	hqSetTexture(texture, matrix);
 }
 
 void hqClearTexture()

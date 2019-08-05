@@ -2,6 +2,7 @@ app marcel-veem-sound-satellites
 	depend_library audiograph
 	depend_library framework
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	
 	scan_files *.cpp
 	scan_files *.h

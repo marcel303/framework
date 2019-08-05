@@ -4,6 +4,7 @@
 
 namespace ControlSurfaceDefinition
 {
+	struct Button;
 	struct Element;
 	struct Group;
 	struct Knob;
@@ -14,11 +15,15 @@ namespace ControlSurfaceDefinition
 	
 	//
 	
+	struct ButtonEditor;
+	struct ColorPickerEditor;
 	struct GroupEditor;
 	struct KnobEditor;
 	struct LabelEditor;
 	struct ListboxEditor;
 	struct SeparatorEditor;
+	struct Slider2Editor;
+	struct Slider3Editor;
 	struct SurfaceEditor;
 	struct SurfaceLayoutEditor;
 
@@ -30,6 +35,8 @@ namespace ControlSurfaceDefinition
 			: surface(in_surface)
 		{
 		}
+		
+		SurfaceEditor & name(const char * name);
 		
 		GroupEditor beginGroup(const char * name);
 		
@@ -69,7 +76,11 @@ namespace ControlSurfaceDefinition
 		
 		LabelEditor beginLabel(const char * text);
 		KnobEditor beginKnob(const char * name);
+		ButtonEditor beginButton(const char * name);
+		Slider2Editor beginSlider2(const char * name);
+		Slider3Editor beginSlider3(const char * name);
 		ListboxEditor beginListbox(const char * name);
+		ColorPickerEditor beginColorPicker(const char * name);
 		SeparatorEditor beginSeparator();
 		
 		GroupEditor & label(const char * text);
@@ -87,6 +98,8 @@ namespace ControlSurfaceDefinition
 			: element(in_element)
 		{
 		}
+		
+		T & name(const char * name);
 		
 		T & size(const int sx, const int sy);
 		
@@ -119,13 +132,74 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
-		KnobEditor & name(const char * name);
 		KnobEditor & displayName(const char * displayName);
 		KnobEditor & defaultValue(const float defaultValue);
 		KnobEditor & limits(const float min, const float max);
 		KnobEditor & exponential(const float exponential);
 		KnobEditor & unit(const Unit unit);
 		KnobEditor & osc(const char * address);
+		
+		GroupEditor & end();
+	};
+	
+	struct ButtonEditor : ElementEditor<ButtonEditor>
+	{
+		GroupEditor & groupEditor;
+		Button * button = nullptr;
+		
+		ButtonEditor(GroupEditor & in_groupEditor, Element * in_element, Button * in_button)
+			: ElementEditor(in_element)
+			, groupEditor(in_groupEditor)
+			, button(in_button)
+		{
+		}
+		
+		ButtonEditor & displayName(const char * displayName);
+		ButtonEditor & osc(const char * address);
+		
+		GroupEditor & end();
+	};
+	
+	struct Slider2Editor : ElementEditor<Slider2Editor>
+	{
+		GroupEditor & groupEditor;
+		Slider2 * slider = nullptr;
+		
+		Slider2Editor(GroupEditor & in_groupEditor, Element * in_element, Slider2 * in_slider)
+			: ElementEditor(in_element)
+			, groupEditor(in_groupEditor)
+			, slider(in_slider)
+		{
+		}
+		
+		Slider2Editor & displayName(const char * displayName);
+		Slider2Editor & defaultValue(const Vector2 & defaultValue);
+		Slider2Editor & limits(const Vector2 & min, const Vector2 & max);
+		Slider2Editor & exponential(const float exponential);
+		Slider2Editor & exponential(const Vector2 & exponential);
+		Slider2Editor & osc(const char * address);
+		
+		GroupEditor & end();
+	};
+	
+	struct Slider3Editor : ElementEditor<Slider3Editor>
+	{
+		GroupEditor & groupEditor;
+		Slider3 * slider = nullptr;
+		
+		Slider3Editor(GroupEditor & in_groupEditor, Element * in_element, Slider3 * in_slider)
+			: ElementEditor(in_element)
+			, groupEditor(in_groupEditor)
+			, slider(in_slider)
+		{
+		}
+		
+		Slider3Editor & displayName(const char * displayName);
+		Slider3Editor & defaultValue(const Vector3 & defaultValue);
+		Slider3Editor & limits(const Vector3 & min, const Vector3 & max);
+		Slider3Editor & exponential(const float exponential);
+		Slider3Editor & exponential(const Vector3 & exponential);
+		Slider3Editor & osc(const char * address);
 		
 		GroupEditor & end();
 	};
@@ -142,10 +216,30 @@ namespace ControlSurfaceDefinition
 		{
 		}
 		
-		ListboxEditor & name(const char * name);
 		ListboxEditor & defaultValue(const char * defaultValue);
 		ListboxEditor & item(const char * name);
 		ListboxEditor & osc(const char * address);
+		
+		GroupEditor & end();
+	};
+	
+	struct ColorPickerEditor : ElementEditor<ColorPickerEditor>
+	{
+		GroupEditor & groupEditor;
+		ColorPicker * colorPicker = nullptr;
+		
+		ColorPickerEditor(GroupEditor & in_groupEditor, Element * in_element, ColorPicker * in_colorPicker)
+			: ElementEditor(in_element)
+			, groupEditor(in_groupEditor)
+			, colorPicker(in_colorPicker)
+		{
+		}
+		
+		ColorPickerEditor & displayName(const char * displayName);
+		ColorPickerEditor & colorSpace(const ColorSpace colorSpace);
+		ColorPickerEditor & defaultValue(const Vector4 & defaultValue);
+		ColorPickerEditor & defaultValue(const float r, const float g, const float b, const float a = 1.f);
+		ColorPickerEditor & osc(const char * address);
 		
 		GroupEditor & end();
 	};

@@ -26,6 +26,7 @@
 */
 
 #include "framework.h" // log
+#include "graphEdit.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
 #include "vfxNodeBase.h"

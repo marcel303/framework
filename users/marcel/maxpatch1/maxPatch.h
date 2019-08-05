@@ -11,7 +11,8 @@ namespace max
 	{
 		kParameterType_Float,
 		kParameterType_Uint8,
-		kParameterType_Enum
+		kParameterType_Enum,
+		kParameterType_Blob
 	};
 
 // applies to live.dial, live.numbox
@@ -135,7 +136,7 @@ namespace max
 		AppVersion appversion;
 		std::vector<float> rect = { 0, 0, 800, 600 };
 		bool openinpresentation = true;
-		float default_fontsize = 12.f;
+		float default_fontsize = 10.f;
 		int default_fontface = 0;
 		std::string default_fontname = "Andale Mono";
 		std::string description;

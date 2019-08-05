@@ -280,7 +280,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 		sb.Append("#define textureSize(t, level) float2(t.get_width(level), t.get_height(level))\n");
 		sb.Append("#define dFdx dfdx\n");
 		sb.Append("#define dFdy dfdy\n");
-		sb.Append("#define discard discard_fragment\n");
+		sb.Append("#define discard discard_fragment()\n");
 		sb.Append("#define inversesqrt rsqrt\n");
 		sb.Append("float mod(float x, float y) { return fmod(x, y); }\n");
 		sb.Append("vec2 mod(vec2 x, vec2 y) { return fmod(x, y); }\n");

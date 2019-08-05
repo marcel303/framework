@@ -1,8 +1,8 @@
-library vfxgraph-core
+library vfxgraph
 
 	depend_library libavgraph
 
-	header_path .       expose
+	header_path . expose
 
 	scan_files cpp
 	scan_files h
@@ -10,7 +10,7 @@ library vfxgraph-core
 	exclude_files vfxNodes_all.cpp
 	exclude_files vfxNodes_all-mac.mm
 
-library vfxgraph
+library vfxgraph-nodes
 
 	depend_library artnet
 	depend_library audiograph
@@ -22,18 +22,12 @@ library vfxgraph
 	depend_library libosc
 	depend_library libvideo
 	depend_library rtmidi
-	depend_library vfxgraph-core
+	depend_library turbojpeg
+	depend_library vfxgraph
 	
-# todo : add with_library chibi directive ?
-	with_platform linux depend_library libps3eye
-	with_platform macos depend_library libps3eye
-
-	header_path .       expose
 	header_path objects expose
 
 	with_platform macos   header_path macos/include expose
-	with_platform macos   header_path ../libfreenect2/macos/include
-
 	with_platform windows header_path win32/include expose
 
 	scan_files cpp path editors  group editors
@@ -51,48 +45,122 @@ library vfxgraph
 	with_platform macos scan_files mm path objects group objects
 	with_platform macos scan_files mm path vfxNodes group vfxNodes conglomerate vfxNodes_all-mac.h
 
-	compile_definition ENABLE_KINECT1   0 expose
 	compile_definition ENABLE_TURBOJPEG 1 expose
 
-	with_platform macos compile_definition ENABLE_SYPHON     1 expose
-	with_platform macos compile_definition ENABLE_LEAPMOTION 1 expose
-	with_platform macos compile_definition ENABLE_KINECT2    1 expose
-	with_platform macos compile_definition ENABLE_DEEPBELIEF 1 expose
-	with_platform macos compile_definition ENABLE_PS3EYE     1 expose
-	with_platform macos compile_definition ENABLE_WIIMOTE    0 expose
 	with_platform macos compile_definition __MACOSX_CORE__   *
 
-	with_platform macos depend_library macos/framework/DeepBelief.framework local embed_framework
-	with_platform macos depend_library macos/framework/Syphon.framework     local embed_framework
-	with_platform macos depend_library ../libfreenect2/macos/lib/libfreenect2.0.2.0.dylib local embed_framework
-	with_platform macos depend_library macos/lib/libLeap.dylib              local embed_framework
-	with_platform macos depend_library macos/lib/libturbojpeg.0.dylib       local embed_framework
 	with_platform macos depend_library CoreImage find
 	with_platform macos depend_library CoreMIDI find
 	with_platform macos depend_library AVFoundation find
-# Wiimote
-	with_platform macos depend_library IOBluetooth find
 
-	with_platform linux compile_definition ENABLE_SYPHON     0 expose
-	with_platform linux compile_definition ENABLE_LEAPMOTION 0 expose
-	with_platform linux compile_definition ENABLE_KINECT2    0 expose
-	with_platform linux compile_definition ENABLE_DEEPBELIEF 0 expose
-	with_platform linux compile_definition ENABLE_PS3EYE     1 expose
-	with_platform linux compile_definition ENABLE_WIIMOTE    0 expose
 	with_platform linux compile_definition __LINUX_ALSA__    *
 
-	with_platform linux depend_library turbojpeg find
-
-	with_platform windows compile_definition ENABLE_SYPHON     0 expose
-	with_platform windows compile_definition ENABLE_LEAPMOTION 1 expose
-	with_platform windows compile_definition ENABLE_KINECT2    0 expose
-	with_platform windows compile_definition ENABLE_DEEPBELIEF 0 expose
-	with_platform windows compile_definition ENABLE_PS3EYE     0 expose
-	with_platform windows compile_definition ENABLE_WIIMOTE    0 expose
 	with_platform windows compile_definition __WINDOWS_MM__    *
+
+push_group vfxgraph-addons
+
+library vfxgraph-deepbelief
+
+	depend_library vfxgraph
+
+	header_path vfxNodes-deepbelief expose
+
+	scan_files cpp path vfxNodes-deepbelief
+	scan_files mm  path vfxNodes-deepbelief
+	scan_files h   path vfxNodes-deepbelief
+
+	with_platform macos   compile_definition ENABLE_DEEPBELIEF 1 expose
+	with_platform linux   compile_definition ENABLE_DEEPBELIEF 0 expose
+	with_platform windows compile_definition ENABLE_DEEPBELIEF 0 expose
+
+	with_platform macos depend_library macos/framework/DeepBelief.framework local embed_framework
+
+library vfxgraph-kinect
+
+	depend_library vfxgraph
+	
+	with_platform macos header_path ../libfreenect2/macos/include
+
+	header_path vfxNodes-kinect expose
+
+	scan_files cpp path vfxNodes-kinect
+	scan_files h   path vfxNodes-kinect
+
+	with_platform macos depend_library ../libfreenect2/macos/lib/libfreenect2.0.2.0.dylib local embed_framework
+
+	compile_definition ENABLE_KINECT1   0 expose
+
+	with_platform macos   compile_definition ENABLE_KINECT2 1 expose
+	with_platform linux   compile_definition ENABLE_KINECT2 0 expose
+	with_platform windows compile_definition ENABLE_KINECT2 0 expose
+
+library vfxgraph-leapmotion
+
+	depend_library vfxgraph
+
+	header_path vfxNodes-leapmotion expose
+
+	with_platform macos   header_path macos/include expose
+	with_platform windows header_path win32/include expose
+
+	scan_files cpp path vfxNodes-leapmotion
+	scan_files h   path vfxNodes-leapmotion
+
+	with_platform macos   compile_definition ENABLE_LEAPMOTION 1 expose
+	with_platform linux   compile_definition ENABLE_LEAPMOTION 0 expose
+	with_platform windows compile_definition ENABLE_LEAPMOTION 1 expose
+
+	with_platform macos depend_library macos/lib/libLeap.dylib local embed_framework
 
 	with_platform windows depend_library win32/lib/Leap.lib local
 	with_platform windows add_dist_files win32/dll/Leap.dll
+
+library vfxgraph-ps3eye
+
+	depend_library vfxgraph
 	
-	with_platform windows depend_library win32/lib/turbojpeg.lib local
-	with_platform windows add_dist_files win32/dll/turbojpeg.dll
+# todo : add with_library chibi directive ?
+	with_platform linux depend_library libps3eye
+	with_platform macos depend_library libps3eye
+
+	header_path vfxNodes-ps3eye expose
+
+	scan_files cpp path vfxNodes-ps3eye
+	scan_files h   path vfxNodes-ps3eye
+
+	with_platform macos   compile_definition ENABLE_PS3EYE 1 expose
+	with_platform linux   compile_definition ENABLE_PS3EYE 1 expose
+	with_platform windows compile_definition ENABLE_PS3EYE 0 expose
+
+library vfxgraph-syphon
+
+	depend_library vfxgraph
+
+	header_path vfxNodes-syphon expose
+
+	scan_files mm path vfxNodes-syphon
+	scan_files h  path vfxNodes-syphon
+
+	with_platform macos   compile_definition ENABLE_SYPHON 1 expose
+	with_platform linux   compile_definition ENABLE_SYPHON 0 expose
+	with_platform windows compile_definition ENABLE_SYPHON 0 expose
+
+	with_platform macos depend_library macos/framework/Syphon.framework     local embed_framework
+
+library vfxgraph-wiimote
+
+	depend_library vfxgraph
+
+	header_path vfxNodes-wiimote expose
+
+	scan_files cpp path vfxNodes-syphon
+	scan_files h   path vfxNodes-syphon
+	scan_files mm  path vfxNodes-syphon
+
+	with_platform macos   compile_definition ENABLE_WIIMOTE 0 expose
+	with_platform linux   compile_definition ENABLE_WIIMOTE 0 expose
+	with_platform windows compile_definition ENABLE_WIIMOTE 0 expose
+
+	with_platform macos depend_library IOBluetooth find
+
+pop_group
