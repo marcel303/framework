@@ -2,6 +2,7 @@
 #include "maxPatchFromControlSurfaceDefinition.h"
 #include "maxPatchEditor.h"
 #include "StringEx.h"
+#include <algorithm>
 
 static bool cut_string_by_substring(
 	const std::string & str,
