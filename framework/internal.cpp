@@ -727,6 +727,22 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			}
 			else
 			{
+				/*
+					GLSL Version      OpenGL Version
+					1.10              2.0
+					1.20              2.1            <-- USE_LEGACY_OPENGL = OpenGL 2.1 with basic shader support
+					1.30              3.0
+					1.40              3.1
+					1.50              3.2
+					3.30              3.3
+					4.00              4.0
+					4.10              4.1            <-- OPENGL_VERSION 410 = Maximum version on OSX
+					4.20              4.2
+					4.30              4.3            <-- OPENGL_VERSION 430 = Safe to assume on Windows
+					4.40              4.4
+					4.50              4.5
+				*/
+				
 			#if USE_LEGACY_OPENGL
 				const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
 			#elif FRAMEWORK_USE_OPENGL_ES
