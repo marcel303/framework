@@ -33,7 +33,7 @@ tput sgr0; # reset text formatting
 
 # build chibi binary
 mkdir -p chibi-build/chibi
-cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --build .
+cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --build . --config Release
 cd "$root"
 
 # generate cmake files using chibi
@@ -42,7 +42,7 @@ mkdir -p chibi-build/cmake-files-for-archive
 
 # build all of the libraries and example and test app binaries. this will take a while
 mkdir -p chibi-build/archive
-cd chibi-build/archive && cmake -DCMAKE_BUILD_TYPE=Distribution ../cmake-files-for-archive && cmake --build . -- -j6
+cd chibi-build/archive && cmake -DCMAKE_BUILD_TYPE=Distribution ../cmake-files-for-archive && cmake --build . --config Distribution -- -j6
 cd "$root"
 
 # create a zip file from the app bundle for ease of destribution and archival purposes
