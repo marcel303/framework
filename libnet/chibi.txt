@@ -7,10 +7,5 @@ library libnet
 
 	header_path . expose
 
-app libnet-test
-
-	depend_library framework
-	depend_library libnet
-
-	add_files test/SDL_Bitmap.h
-	add_files test/test.cpp
+with_platform macos add test
+with_platform windows add test
