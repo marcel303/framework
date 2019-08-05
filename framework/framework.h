@@ -1647,6 +1647,7 @@ void gxInitialize();
 static inline void gxShutdown() { }
 #define gxBegin glBegin
 void gxEnd();
+static inline void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices) { } // todo
 #define gxColor4f glColor4f
 #define gxColor4fv glColor4fv
 #define gxColor3ub glColor3ub
