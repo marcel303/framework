@@ -107,6 +107,17 @@ vec4 applyColorPost(vec4 color, float post)
 	return result;
 }
 
+#if LEGACY_GL
+float round(float value)
+{
+	float f = floor(value);
+	if (value - f < 0.5)
+		return f;
+	else
+		return f + 1.0;
+}
+#endif
+
 float makeTaps(float v, float min, float max, float numTaps)
 {
 	numTaps -= 1.0;
