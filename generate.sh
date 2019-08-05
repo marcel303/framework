@@ -33,7 +33,7 @@ fi
 
 # build chibi binary
 mkdir -p chibi-build/chibi
-cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --build .
+cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --build . --config Release
 cd "$root"
 
 # generate cmake files using chibi
