@@ -107,7 +107,11 @@ void registerBuiltinShaders()
 		
 		#define tex2D texture
 		
-		#define VS_USE_LEGACY_MATRICES 0
+		#if LEGACY_GL
+			#define VS_USE_LEGACY_MATRICES 1
+		#else
+			#define VS_USE_LEGACY_MATRICES 0
+		#endif
 		
 		#define VS_POSITION      0
 		#define VS_NORMAL        1
