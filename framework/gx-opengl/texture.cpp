@@ -373,9 +373,9 @@ void GxTexture::upload(const void * src, const int _srcAlignment, const int _src
 
 	// restore previous OpenGL states
 
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, restorePitch);
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	checkErrorGL();
 	
 	// generate mipmaps if needed
