@@ -96,13 +96,22 @@ vec4 unpackNormal()
 
 vec4 unpackColor()
 {
+#if LEGACY_GL
+	return gl_Color;
+#else
 	return in_color;
+#endif
 }
 
 vec2 unpackTexcoord(int index)
 {
+#if LEGACY_GL
+	if (index == 0) return gl_MultiTexCoord0.xy;
+	if (index == 1) return gl_MultiTexCoord1.xy;
+#else
 	if (index == 0) return in_texcoord0;
 	if (index == 1) return in_texcoord1;
+#endif
 	return vec2(0.0, 0.0);
 }
 
