@@ -416,6 +416,18 @@ bool Framework::init(int sx, int sy)
 		return false;
 	}
 	
+	{
+		const char * renderer = (char*)glGetString(GL_RENDERER);
+		const char * version = (char*)glGetString(GL_VERSION);
+		const char * vendor = (char*)glGetString(GL_VENDOR);
+		const char * glsl_version = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+		
+		logInfo("OpenGL renderer: %s", renderer ? renderer : "unknown");
+		logInfo("OpenGL version: %s", version ? version : "unknown");
+		logInfo("OpenGL vendor: %s", vendor ? vendor : "unknown");
+		logInfo("OpenGL GLSL version: %s", glsl_version ? glsl_version : "unknown");
+	}
+	
 	if (!basicOpenGL)
 	{
 		const int glewStatus = glewInit();
