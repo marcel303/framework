@@ -74,7 +74,7 @@ bool ArtnetPacket::makeDMX512(
 
 	uint8_t * __restrict p = data;
 	
-	writeBytes(p, kArtnetID, sizeof(kArtnetID));
+	writeBytes(p, kArtnetID, 8);
 	writeByte(p, lo16(opcode));
 	writeByte(p, hi16(opcode));
 	writeByte(p, hi16(version));
@@ -90,4 +90,34 @@ bool ArtnetPacket::makeDMX512(
 	dataSize = p - data;
 
 	return true;
+}
+
+uint8_t * ArtnetPacket::makeDMX512(
+	const int numValues,
+	const uint8_t sequence, const uint8_t physical, const uint16_t universe)
+{
+	if (numValues > 512)
+		return nullptr;
+
+	const uint16_t opcode = kArtnetOpcode_ArtDMX;
+	const uint16_t version = kArtnetVersion_14;
+	const uint16_t length = numValues;
+
+	uint8_t * __restrict p = data;
+	
+	writeBytes(p, kArtnetID, 8);
+	writeByte(p, lo16(opcode));
+	writeByte(p, hi16(opcode));
+	writeByte(p, hi16(version));
+	writeByte(p, lo16(version));
+	writeByte(p, sequence);
+	writeByte(p, physical);
+	writeByte(p, lo16(universe));
+	writeByte(p, hi16(universe));
+	writeByte(p, hi16(length));
+	writeByte(p, lo16(length));
+
+	dataSize = p - data + numValues * sizeof(uint8_t);
+
+	return p;
 }
