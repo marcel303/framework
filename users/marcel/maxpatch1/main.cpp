@@ -422,7 +422,11 @@ int main(int arg, char * argv[])
 		{
 			layout = new_layout;
 			
-		// todo : ensure all elements exist within the layout. otherwise the editor will crash
+		// todo : layout editor should automatically populate layout ?
+			for (auto & group : surface.groups)
+				for (auto & elem : group.elems)
+					if (layout.findElement(group.name.c_str(), elem.name.c_str()) == nullptr)
+						layout.addElement(group.name.c_str(), elem.name.c_str());
 		
 			updateLiveUiWithLayout(liveUi, surface, layout);
 		}
@@ -495,7 +499,7 @@ int main(int arg, char * argv[])
 		// todo : layout editor should automatically populate layout ?
 			for (auto & group : surface.groups)
 				for (auto & elem : group.elems)
-					if (elem.name.empty() == false)
+					if (layout.findElement(group.name.c_str(), elem.name.c_str()) == nullptr)
 						layout.addElement(group.name.c_str(), elem.name.c_str());
 			
 			layoutEditor = ControlSurfaceDefinition::LayoutEditor(&surface, &layout);
