@@ -373,7 +373,9 @@ static void copyParameterToStringStream(ParameterBase * const parameterBase, con
 	case kParameterType_Enum:
 		{
 			auto * parameter = static_cast<ParameterEnum*>(parameterBase);
-			text << '\t' << parameter->get();
+			const int value = parameter->get();
+			const char * key = parameter->translateValueToKey(value);
+			text << '\t' << key;
 		}
 		break;
 		
@@ -472,6 +474,9 @@ void copyParametersToClipboard_recursive(ParameterMgr * const parameterMgr, cons
 
 static void pasteParameterFromText(ParameterBase * const parameterBase, const char * line)
 {
+	while (*line == '\t' || *line == ' ')
+		line++;
+	
 	switch (parameterBase->type)
 	{
 	case kParameterType_Bool:
@@ -539,8 +544,8 @@ static void pasteParameterFromText(ParameterBase * const parameterBase, const ch
 		{
 			auto * parameter = static_cast<ParameterEnum*>(parameterBase);
 			
-			int value;
-			if (sscanf(line, "%d", &value) == 1)
+			const int value = parameter->translateKeyToValue(line);
+			if (value != -1)
 				parameter->set(value);
 		}
 		break;
