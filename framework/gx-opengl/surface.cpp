@@ -436,6 +436,10 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 	if (m_properties.colorTarget.enabled == false)
 		return;
 	
+#if USE_LEGACY_OPENGL
+	return; // sorry; not supported!
+#endif
+
 	// capture previous OpenGL state
 	
 	GLuint oldTexture = 0;
