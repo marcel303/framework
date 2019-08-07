@@ -62,6 +62,7 @@ struct FrameworkImGuiContext
 	void processEnd();
 	
 	void draw();
+	void skipDraw();
 	
 	void pushImGuiContext();
 	void popImGuiContext();

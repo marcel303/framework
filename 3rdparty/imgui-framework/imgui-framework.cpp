@@ -286,6 +286,17 @@ void FrameworkImGuiContext::draw()
 	popImGuiContext();
 }
 
+void FrameworkImGuiContext::skipDraw()
+{
+	pushImGuiContext();
+	{
+		ImGui::Render();
+
+		ImGui::GetDrawData();
+	}
+	popImGuiContext();
+}
+
 void FrameworkImGuiContext::pushImGuiContext()
 {
 	fassert(previous_context == nullptr);
