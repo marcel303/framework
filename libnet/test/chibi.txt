@@ -3,5 +3,5 @@ app libnet-test
 	depend_library framework
 	depend_library libnet
 
-	add_files test/SDL_Bitmap.h
-	add_files test/test.cpp
+	add_files SDL_Bitmap.h
+	add_files test.cpp

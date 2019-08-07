@@ -3,7 +3,7 @@ library libetherdream shared
 	header_path . expose
 	with_platform linux depend_library pthread find
 	with_platform macos depend_library pthread find
-	with_platform windows depend_library ws2_32 find
+	with_platform windows depend_library WSock32.lib global
 
 app libetherdream-test
 	depend_library libetherdream
