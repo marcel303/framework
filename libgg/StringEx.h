@@ -21,6 +21,7 @@ public:
 	static int Find(const std::string& text, char value);
 	static bool Contains(const std::string& text, char value);
 	static bool StartsWith(const std::string& text, const std::string& substring);
+	static bool StartsWithC(const char* text, const char* substring);
 	static bool EndsWith(const std::string& text, const std::string& substring);
 	static std::string Replace(const std::string& text, char c1, char c2);
 	static std::string ToUpper(const std::string& text);

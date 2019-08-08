@@ -140,6 +140,21 @@ bool String::StartsWith(const std::string& text, const std::string& substring)
 	return true;
 }
 
+bool String::StartsWithC(const char* text, const char* substring)
+{
+	size_t i = 0;
+	
+	while (substring[i] != 0)
+	{
+		if (text[i] != substring[i])
+			return false;
+		
+		++i;
+	}
+
+	return true;
+}
+
 bool String::EndsWith(const std::string& text, const std::string& substring)
 {
 	size_t length1 = text.length();
