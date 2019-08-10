@@ -212,10 +212,10 @@ static bool selectionMod()
 
 static bool commandMod()
 {
-#ifdef WIN32
-	return keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
-#else
+#if defined(MACOS)
 	return keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
+#else
+	return keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
 #endif
 }
 
