@@ -95,6 +95,8 @@ public:
 		
 		double mouseSmooth = 0.75;
 		float mouseRotationSpeed = 1.f;
+		bool mouseRotationEnabled = true;
+		bool limitRotation = false;
 		float movementSpeed = 1.f;
 		float forwardSpeedMultiplier = 1.f;
 		float strafeSpeedMultiplier = 1.f;

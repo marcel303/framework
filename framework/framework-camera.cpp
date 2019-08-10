@@ -263,7 +263,7 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 		
 		// mouse + mouse smoothing
 		
-		if (mouse.isDown(BUTTON_LEFT))
+		if (mouseRotationEnabled)
 		{
 			mouseDx += mouse.dx;
 			mouseDy += mouse.dy;
@@ -287,6 +287,13 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 	{
 		mouseDx = 0.f;
 		mouseDy = 0.f;
+	}
+	
+	// apply rotation limit
+	
+	if (limitRotation)
+	{
+		pitch = clamp<float>(pitch, -90.f, +90.f);
 	}
 	
 	// go from normalized input values to values directly used to add to position
