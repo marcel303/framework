@@ -1,0 +1,4 @@
+library audiosketch
+	depend_library framework
+	add_files audiosketch.cpp audiosketch.h
+	header_path . expose

@@ -1,0 +1,3 @@
+app audiosketch-000-karplusstrong
+	depend_library audiosketch
+	add_files 000-karplusstrong.cpp

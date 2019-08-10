@@ -2,6 +2,8 @@ add 4d-imu9250
 add 4dsound2-osc
 add ambisonics1
 add anaglyphic
+add audiosketch
+add audiosketches
 with_platform macos   add avpaint
 with_platform windows add avpaint
 with_platform macos add biquad-simd
