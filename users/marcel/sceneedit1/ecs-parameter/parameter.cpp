@@ -2,6 +2,87 @@
 #include "parameter.h"
 #include <string.h>
 
+ParameterInt & ParameterInt::setLimits(const int in_min, const int in_max)
+{
+	Assert(defaultValue >= in_min && defaultValue <= in_max);
+	
+	hasLimits = true;
+	min = in_min;
+	max = in_max;
+	
+	return *this;
+}
+
+//
+
+ParameterFloat & ParameterFloat::setLimits(const float in_min, const float in_max)
+{
+	Assert(defaultValue >= in_min && defaultValue <= in_max);
+	
+	hasLimits = true;
+	min = in_min;
+	max = in_max;
+	
+	return *this;
+}
+
+//
+
+ParameterVec2 & ParameterVec2::setLimits(const Vec2 & in_min, const Vec2 & in_max)
+{
+	Assert(defaultValue[0] >= in_min[0] && defaultValue[0] <= in_max[0]);
+	Assert(defaultValue[1] >= in_min[1] && defaultValue[1] <= in_max[1]);
+	
+	hasLimits = true;
+	min = in_min;
+	max = in_max;
+	
+	return *this;
+}
+
+ParameterVec2 & ParameterVec2::setLimits(const float in_min, const float in_max)
+{
+	Assert(defaultValue[0] >= in_min && defaultValue[0] <= in_max);
+	Assert(defaultValue[1] >= in_min && defaultValue[1] <= in_max);
+	
+	hasLimits = true;
+	min = Vec2(in_min, in_min);
+	max = Vec2(in_max, in_max);
+	
+	return *this;
+}
+
+//
+
+ParameterVec3 & ParameterVec3::setLimits(const Vec3 & in_min, const Vec3 & in_max)
+{
+	Assert(defaultValue[0] >= in_min[0] && defaultValue[0] <= in_max[0]);
+	Assert(defaultValue[1] >= in_min[1] && defaultValue[1] <= in_max[1]);
+	Assert(defaultValue[2] >= in_min[2] && defaultValue[2] <= in_max[2]);
+	
+	hasLimits = true;
+	min = in_min;
+	max = in_max;
+	
+	return *this;
+}
+
+//
+
+ParameterVec4 & ParameterVec4::setLimits(const Vec4 & in_min, const Vec4 & in_max)
+{
+	Assert(defaultValue[0] >= in_min[0] && defaultValue[0] <= in_max[0]);
+	Assert(defaultValue[1] >= in_min[1] && defaultValue[1] <= in_max[1]);
+	Assert(defaultValue[2] >= in_min[2] && defaultValue[2] <= in_max[2]);
+	Assert(defaultValue[3] >= in_min[3] && defaultValue[3] <= in_max[3]);
+	
+	hasLimits = true;
+	min = in_min;
+	max = in_max;
+	
+	return *this;
+}
+
 //
 
 int ParameterEnum::translateKeyToValue(const char * key) const

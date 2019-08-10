@@ -186,14 +186,7 @@ struct ParameterInt : Parameter<int, kParameterType_Int>
 	{
 	}
 	
-	ParameterInt & setLimits(const int in_min, const int in_max)
-	{
-		hasLimits = true;
-		min = in_min;
-		max = in_max;
-		
-		return *this;
-	}
+	ParameterInt & setLimits(const int in_min, const int in_max);
 	
 	void set(const int in_value)
 	{
@@ -236,14 +229,7 @@ struct ParameterFloat : Parameter<float, kParameterType_Float>
 	{
 	}
 	
-	ParameterFloat & setLimits(const float in_min, const float in_max)
-	{
-		hasLimits = true;
-		min = in_min;
-		max = in_max;
-		
-		return *this;
-	}
+	ParameterFloat & setLimits(const float in_min, const float in_max);
 	
 	ParameterFloat & setEditingCurveExponential(const float in_exponential)
 	{
@@ -293,23 +279,8 @@ struct ParameterVec2 : Parameter<Vec2, kParameterType_Vec2>
 	{
 	}
 	
-	ParameterVec2 & setLimits(const Vec2 & in_min, const Vec2 & in_max)
-	{
-		hasLimits = true;
-		min = in_min;
-		max = in_max;
-		
-		return *this;
-	}
-	
-	ParameterVec2 & setLimits(const float in_min, const float in_max)
-	{
-		hasLimits = true;
-		min = Vec2(in_min, in_min);
-		max = Vec2(in_max, in_max);
-		
-		return *this;
-	}
+	ParameterVec2 & setLimits(const Vec2 & in_min, const Vec2 & in_max);
+	ParameterVec2 & setLimits(const float in_min, const float in_max);
 	
 	ParameterVec2 & setEditingCurveExponential(const float in_exponential)
 	{
@@ -362,14 +333,7 @@ struct ParameterVec3 : Parameter<Vec3, kParameterType_Vec3>
 	{
 	}
 	
-	ParameterVec3 & setLimits(const Vec3 & in_min, const Vec3 & in_max)
-	{
-		hasLimits = true;
-		min = in_min;
-		max = in_max;
-		
-		return *this;
-	}
+	ParameterVec3 & setLimits(const Vec3 & in_min, const Vec3 & in_max);
 	
 	ParameterVec3 & setEditingCurveExponential(const float in_exponential)
 	{
@@ -422,14 +386,7 @@ struct ParameterVec4 : Parameter<Vec4, kParameterType_Vec4>
 	{
 	}
 	
-	ParameterVec4 & setLimits(const Vec4 & in_min, const Vec4 & in_max)
-	{
-		hasLimits = true;
-		min = in_min;
-		max = in_max;
-		
-		return *this;
-	}
+	ParameterVec4 & setLimits(const Vec4 & in_min, const Vec4 & in_max);
 	
 	ParameterVec4 & setEditingCurveExponential(const float in_exponential)
 	{
