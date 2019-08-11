@@ -49,6 +49,8 @@ void runAudiosketch(AudiosketchBase & sketch)
 
 	for (;;)
 	{
+		framework.waitForEvents = true;
+		
 		framework.process();
 
 		if (framework.quitRequested)
