@@ -38,7 +38,7 @@
 #endif
 
 #if AUDIO_USE_GCC_VECTOR
-	typedef float vec4f __attribute__ ((vector_size(16)));
+	typedef float vec4f __attribute__ ((vector_size(16))) __attribute__ ((aligned(16)));
 #endif
 
 //

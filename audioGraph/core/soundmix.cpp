@@ -40,7 +40,7 @@
 #define ENABLE_GCC_VECTOR (AUDIO_USE_GCC_VECTOR && 1)
 
 #if ENABLE_GCC_VECTOR
-	typedef float vec4f __attribute__ ((vector_size(16)));
+	typedef float vec4f __attribute__ ((vector_size(16))) __attribute__ ((aligned(16)));
 #endif
 
 void audioBufferSetZero(
@@ -597,8 +597,16 @@ bool PcmData::load(const char * filename, const int channel, const bool createCa
 				
 				LOG_ERR("channel index is out of range. channel=%d, numChannels=%d", channel, sound->channelCount);
 			}
+			else if (sound->channelSize != 2)
+			{
+				result = false;
+				
+				LOG_ERR("channel size must be 16-bits. channelSize=%d-bits", channel, sound->channelSize * 8);
+			}
 			else
 			{
+			// todo : add support for non-16 bit channel sizes
+			
 				const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
 				
 				for (int i = 0; i < sound->sampleCount; ++i)
