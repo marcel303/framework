@@ -575,7 +575,13 @@ public:
 	ParameterEnum * addEnum(const char * name, const int defaultValue, const std::vector<ParameterEnum::Elem> & elems);
 	
 	ParameterBase * find(const char * name) const;
+	ParameterBase * find(const char * name, const ParameterType type) const;
 	ParameterBase * findRecursively(const char * path, const char pathSeparator) const;
+	
+	template <typename T> T * find(const char * name, const ParameterType type) const
+	{
+		return static_cast<T*>(find(name, type));
+	}
 	
 	void setToDefault(const bool recurse);
 	

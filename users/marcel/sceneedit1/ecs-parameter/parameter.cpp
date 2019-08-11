@@ -201,6 +201,15 @@ ParameterBase * ParameterMgr::find(const char * name) const
 	return nullptr;
 }
 
+ParameterBase * ParameterMgr::find(const char * name, const ParameterType type) const
+{
+	for (auto * parameter : parameters)
+		if (parameter->name == name && parameter->type == type)
+			return parameter;
+	
+	return nullptr;
+}
+
 static ParameterBase * findParameter(const ParameterMgr & paramMgr, const char * path, const char pathSeparator)
 {
 	Assert(path[0] == pathSeparator);
