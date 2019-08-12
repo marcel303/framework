@@ -2,7 +2,7 @@
 
 for /f "delims=" %%a in ('wmic OS Get localdatetime  ^| find "."') do set dt=%%a
 set DATETIME_STRING=%dt:~0,8%_%dt:~8,6%
-echo %DATETIME_STRING%
+rem echo %DATETIME_STRING%
 
 where /q cmake
 IF ERRORLEVEL 1 (
@@ -46,6 +46,8 @@ rem FIXME !!! use command line argument for selecting build target
 
 	cd chibi-build/archive && cmake -E tar "cfz" %1-%DATETIME_STRING%.tgz %1
 	cd %~dp0 || exit /b
+
+	%SystemRoot%\explorer.exe /select,.\chibi-build\archive\%1-%DATETIME_STRING%.tgz
 
 	rem TODO : open explorer with the ZIP file selected
 
