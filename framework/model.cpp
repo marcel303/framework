@@ -1714,8 +1714,8 @@ void ModelCacheElem::load(const char * filename)
 	else
 	{
 		std::vector<std::string> lines;
-		lines.push_back(std::string("boneset file:") + filename);
-		lines.push_back(std::string("meshset file:") + filename);
+		lines.push_back(std::string("boneset file:") + Path::GetFileName(filename));
+		lines.push_back(std::string("meshset file:") + Path::GetFileName(filename));
 		
 		for (const std::string & line : lines)
 		{
