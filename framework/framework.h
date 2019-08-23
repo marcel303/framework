@@ -452,7 +452,7 @@ public:
 	std::vector<std::string> droppedFiles;
 	
 private:
-	uint32_t m_lastTick;
+	uint64_t m_lastTick;
 	
 	Sprite * m_sprites;
 	Model * m_models;
@@ -1702,6 +1702,7 @@ void setShader_CompositePremultiplied(const GxTextureId source1, const GxTexture
 void setShader_Premultiply(const GxTextureId source);
 void setShader_ColorMultiply(const GxTextureId source, const Color & color, const float opacity);
 void setShader_ColorTemperature(const GxTextureId source, const float temperature, const float opacity);
+void setShader_TextureSwizzle(const GxTextureId source, const int swizzleMask[4]);
 
 // high quality rendering
 

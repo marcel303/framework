@@ -544,6 +544,8 @@ bool Framework::init(int sx, int sy)
 #if !defined(LINUX) // todo : make sure PortAudio sound player works correctly on the Raspberry Pi
 	if (!g_soundPlayer.init(numSoundSources))
 	{
+	// todo : check if this now works on Linux
+	// todo : add option to enable/disable sound player at init time
 		logError("failed to initialize sound player");
 		//if (initErrorHandler)
 		//	initErrorHandler(INIT_ERROR_SOUND);
@@ -1309,6 +1311,18 @@ void Framework::process()
 	
 	//
 	
+#if 1
+	// high accuracy time steps using SDL_GetPerformanceCounter/SDL_GetPerformanceFrequency
+	const uint64_t tickCount = SDL_GetPerformanceCounter();
+	if (m_lastTick == -1)
+		m_lastTick = tickCount;
+	const uint64_t delta = tickCount - m_lastTick;
+	m_lastTick = tickCount;
+
+	timeStep = delta / (double)SDL_GetPerformanceFrequency();
+#else
+	// lower precision time steps using SDL_GetTicks. leaving this code here as the performance
+	// counter version is still in testing
 	const uint32_t tickCount = SDL_GetTicks();
 	if (m_lastTick == -1)
 		m_lastTick = tickCount;
@@ -1316,6 +1330,7 @@ void Framework::process()
 	m_lastTick = tickCount;
 
 	timeStep = delta / 1000.f;
+#endif
 
 	time += timeStep;
 	
@@ -1591,13 +1606,9 @@ static void updateViewport(Surface * surface, SDL_Window * window)
 	}
 	else
 	{
-		int drawableSx;
-		int drawableSy;
-		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
-		
 		metal_set_viewport(
-			drawableSx,
-			drawableSy);
+			globals.currentWindow->getWidth(),
+			globals.currentWindow->getHeight());
 	}
 #endif
 
@@ -4990,6 +5001,10 @@ static void getCurrentBackingSize(int & sx, int & sy)
 	}
 	else
 	{
+	#if ENABLE_METAL
+		sx = globals.currentWindow->getWidth();
+		sy = globals.currentWindow->getHeight();
+	#else
 		// the windowing system may apply a backing scale, in which case the backing size will be larger than the reported size of the window
 		
 		int drawableSx;
@@ -4998,6 +5013,7 @@ static void getCurrentBackingSize(int & sx, int & sy)
 		
 		sx = drawableSx;
 		sy = drawableSy;
+	#endif
 	}
 }
 
@@ -5314,7 +5330,28 @@ void pushSurface(Surface * surface)
 	//
 	
 #if ENABLE_METAL
-	pushRenderPass(surface->getColorTarget(), false, surface->getDepthTarget(), false, "Surface");
+	Surface * currentSurface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	
+	if (surface != currentSurface)
+	{
+	// todo : decide how to deal with surface changes:
+	// 1) - commit work for previous surface
+	//    - store previous surface
+	//    - load new surface
+	//    - when restoring previous surface: load, continue work
+	// 2) - begin new command buffer
+	//    - commit work on popSurface
+	//    - commit work for previous surface
+	// option 1) is compatible with OpenGL. allow allows rendering into a temp surface, using it as a texture
+	//           and reusing the surface for more temp work/render to texture.
+ 	// option 2) is more performant. creates nicer GPU captures
+ 	//  perhaps add support for both, explicitly..
+		
+		if (surface == nullptr)
+			pushBackbufferRenderPass(false, false, "Surface");
+		else
+			pushRenderPass(surface->getColorTarget(), false, surface->getDepthTarget(), false, "Surface");
+	}
 #endif
 
 	//
@@ -5344,7 +5381,14 @@ void pushSurface(Surface * surface)
 void popSurface()
 {
 #if ENABLE_METAL
-	popRenderPass();
+// todo : remove ? see comment above, where we avoid pushRenderPass if the new surface is the same as the previous one
+	Surface * surface1 = surfaceStackSize >= 1 ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	Surface * surface2 = surfaceStackSize >= 2 ? surfaceStack[surfaceStackSize - 2] : nullptr;
+	
+	if (surface1 != surface2)
+	{
+		popRenderPass();
+	}
 #endif
 
 #if ENABLE_OPENGL
@@ -5400,8 +5444,8 @@ void setDrawRect(int x, int y, int sx, int sy)
 	int backingSy;
 	getCurrentBackingSize(backingSx, backingSy);
 	
-#define ScaleX(x) x = ((x) * backingSx / (surfaceSx / framework.minification))
-#define ScaleY(y) y = ((y) * backingSy / (surfaceSy / framework.minification))
+	#define ScaleX(x) x = ((x) * backingSx / (surfaceSx / framework.minification))
+	#define ScaleY(y) y = ((y) * backingSy / (surfaceSy / framework.minification))
 	
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
 
@@ -7380,6 +7424,15 @@ void setShader_ColorTemperature(const GxTextureId source, const float temperatur
 	shader.setTexture("source", 0, source);
 	shader.setImmediate("temperature", temperature);
 	shader.setImmediate("opacity", opacity);
+}
+
+void setShader_TextureSwizzle(const GxTextureId source, const int swizzleMask[4])
+{
+	Shader & shader = globals.builtinShaders->textureSwizzle.get();
+	setShader(shader);
+	
+	shader.setTexture("source", 0, source);
+	shader.setImmediate("swizzleMask", swizzleMask[0], swizzleMask[1], swizzleMask[2], swizzleMask[3]);
 }
 
 //
