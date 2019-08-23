@@ -114,7 +114,7 @@ void metal_attach(SDL_Window * window)
 		NSView * sdl_view = info.info.cocoa.window.contentView;
 
 		MetalWindowData * windowData = new MetalWindowData();
-		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:YES];
+		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:YES wantsVsync:framework.enableVsync];
 		[sdl_view addSubview:windowData->metalview];
 
 		windowDatas[window] = windowData;
@@ -172,8 +172,7 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 		activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
 		[activeWindowData->current_drawable retain];
 		
-		pd.renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
-		[pd.renderdesc retain];
+		pd.renderdesc = [[MTLRenderPassDescriptor renderPassDescriptor] retain];
 		
 		// specify the color and depth attachment(s)
 		
@@ -491,6 +490,19 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		
 		// todo : set blend mode
 	}
+}
+
+void pushBackbufferRenderPass(const bool clearColor, const bool clearDepth, const char * passName)
+{
+	ColorTarget colorTarget(activeWindowData->current_drawable.texture);
+	DepthTarget depthTarget(activeWindowData->metalview.depthTexture);
+	
+	pushRenderPass(
+		&colorTarget,
+		clearColor,
+		activeWindowData->metalview.depthTexture ? &depthTarget : nullptr,
+		clearDepth,
+		passName);
 }
 
 void popRenderPass()
