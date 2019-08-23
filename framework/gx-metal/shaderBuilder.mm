@@ -346,7 +346,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			sb.Append("struct ShaderVaryings\n");
 			sb.Append("{\n");
 			{
-				sb.Append("\tfloat4 position [[position]];\n");
+				sb.Append("\tfloat4 builtin_position [[position]];\n");
 				for (auto & io : inputOutputs)
 					sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
 			}
@@ -390,7 +390,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			sb.Append("\tm.main();\n");
 			sb.Append("\t\n");
 			sb.Append("\tShaderVaryings outputs;\n");
-			sb.Append("\toutputs.position = m.gl_Position;\n");
+			sb.Append("\toutputs.builtin_position = m.gl_Position;\n");
 			for (auto & io : inputOutputs)
 				sb.AppendFormat("\toutputs.%s = m.%s;\n", io.name.c_str(), io.name.c_str());
 			sb.Append("\treturn outputs;\n");
@@ -451,7 +451,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			sb.Append("struct ShaderVaryings\n");
 			sb.Append("{\n");
 			{
-				sb.Append("\tfloat4 position [[position]];\n");
+				sb.Append("\tfloat4 builtin_position [[position]];\n");
 				for (auto & io : inputOutputs)
 					sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
 			}
@@ -517,7 +517,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 				for (auto & io : inputOutputs)
 					sb.AppendFormat("\tm.%s = varyings.%s;\n", io.name.c_str(), io.name.c_str());
 			}
-			sb.Append("\tm.gl_FragCoord = varyings.position;\n");
+			sb.Append("\tm.gl_FragCoord = varyings.builtin_position;\n");
 			sb.Append("\t\n");
 			sb.Append("\tm.main();\n");
 			sb.Append("\t\n");
