@@ -1702,7 +1702,7 @@ void setShader_CompositePremultiplied(const GxTextureId source1, const GxTexture
 void setShader_Premultiply(const GxTextureId source);
 void setShader_ColorMultiply(const GxTextureId source, const Color & color, const float opacity);
 void setShader_ColorTemperature(const GxTextureId source, const float temperature, const float opacity);
-void setShader_TextureSwizzle(const GxTextureId source, const int swizzleMask[4]);
+void setShader_TextureSwizzle(const GxTextureId source, const int r, const int g, const int b, const int a);
 
 // high quality rendering
 

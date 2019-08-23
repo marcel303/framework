@@ -7426,13 +7426,13 @@ void setShader_ColorTemperature(const GxTextureId source, const float temperatur
 	shader.setImmediate("opacity", opacity);
 }
 
-void setShader_TextureSwizzle(const GxTextureId source, const int swizzleMask[4])
+void setShader_TextureSwizzle(const GxTextureId source, const int r, const int g, const int b, const int a)
 {
 	Shader & shader = globals.builtinShaders->textureSwizzle.get();
 	setShader(shader);
 	
 	shader.setTexture("source", 0, source);
-	shader.setImmediate("swizzleMask", swizzleMask[0], swizzleMask[1], swizzleMask[2], swizzleMask[3]);
+	shader.setImmediate("swizzleMask", r, g, b, a);
 }
 
 //
