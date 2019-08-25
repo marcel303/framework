@@ -182,9 +182,16 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 		}
 		else
 		{
+		#if ENABLE_OPENGL
 			glClearColor(r / 255.f, g / 255.f, b / 255.f, 0.f);
 			glClear(GL_COLOR_BUFFER_BIT);
 			checkErrorGL();
+		#else
+			setColorf(r, g, b, 0.f);
+			pushBlend(BLEND_OPAQUE);
+			drawRect(0, 0, w, h);
+			popBlend();
+		#endif
 		}
 	}
 	
@@ -805,6 +812,7 @@ void JsusFxGfx_Framework::gfx_getpixel(EEL_F * r, EEL_F * g, EEL_F * b)
 	
 	float rgba[4] = { };
 	
+#if ENABLE_OPENGL
 	GLint restorePackAlignment;
 	glGetIntegerv(GL_PACK_ALIGNMENT, &restorePackAlignment);
 	checkErrorGL();
@@ -822,6 +830,13 @@ void JsusFxGfx_Framework::gfx_getpixel(EEL_F * r, EEL_F * g, EEL_F * b)
 	
 	glPixelStorei(GL_PACK_ALIGNMENT, restorePackAlignment);
 	checkErrorGL();
+#else
+	AssertMsg(false, "gfx_getpixel: not implemented for current graphics api", 0);
+	
+	rgba[0] = 255;
+	rgba[1] = 0;
+	rgba[2] = 255;
+#endif
 	
 	*r = rgba[0];
 	*g = rgba[1];
@@ -1048,11 +1063,15 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 				const int dstX = (int)*m_gfx_x;
 				const int dstY = (int)*m_gfx_y;
 				
+			#if ENABLE_OPENGL
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 				checkErrorGL();
+			#else
+				AssertMsg(false, "gfx_blit: sampler state not implemented for current graphics api", 0);
+			#endif
 				
 				if (scale != 1.f || rotate != 0.f)
 				{
@@ -1211,11 +1230,15 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 			
 			gxSetTexture(image.surface->getTexture());
 			{
+			#if ENABLE_OPENGL
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 				checkErrorGL();
+			#else
+				AssertMsg(false, "gfx_blitext2: sampler state not implemented for current graphics api", 0);
+			#endif
 				
 				const float x1 = 0;
 				const float y1 = 0;
