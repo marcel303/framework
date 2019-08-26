@@ -621,6 +621,8 @@ int main(int argc, char * argv[])
 	
 	changeDirectory(s_dataFolder.c_str());
 	
+	fileBrowser.shut();
+	
 	guiContext.shut();
 
 	Font("calibri.ttf").saveCache();
