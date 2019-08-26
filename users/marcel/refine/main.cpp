@@ -381,7 +381,26 @@ int main(int argc, char * argv[])
 				{
 					if (ImGui::BeginMenu("File"))
 					{
-						ImGui::MenuItem("Refresh");
+						if (ImGui::MenuItem("Refresh"))
+							fileBrowser.clearFiles();
+						if (ImGui::MenuItem("Select root"))
+						{
+							nfdchar_t * path = 0;
+							nfdresult_t result = NFD_OpenDialog("", "", &path);
+
+							if (result == NFD_OKAY)
+							{
+								const std::string dir = Path::GetDirectory(path);
+								
+								fileBrowser.init(dir.c_str());
+							}
+							
+							if (path != nullptr)
+							{
+								free(path);
+								path = nullptr;
+							}
+						}
 						
 						ImGui::EndMenu();
 					}
