@@ -102,18 +102,21 @@ void UiState::reset()
 
 void initUi()
 {
-	// create a checkered texture
-	fassert(checkersTexture.id == 0);
-	const uint8_t v1 = 31;
-	const uint8_t v2 = 63;
-	uint32_t rgba[4];
-	uint32_t c1; uint32_t c2;
-	uint8_t * rgba1 = (uint8_t*)&c1; uint8_t * rgba2 = (uint8_t*)&c2;
-	rgba1[0] = v1; rgba1[1] = v1; rgba1[2] = v1; rgba1[3] = 255;
-	rgba2[0] = v2; rgba2[1] = v2; rgba2[2] = v2; rgba2[3] = 255;
-	rgba[0] = c1; rgba[1] = c2; rgba[2] = c2; rgba[3] = c1;
-	checkersTexture.allocate(2, 2, GX_RGBA8_UNORM, false, false);
-	checkersTexture.upload(rgba, 1, 0);
+	fassert(checkersTexture.isValid() == false);
+	if (checkersTexture.isValid() == false)
+	{
+		// create a checkered texture
+		const uint8_t v1 = 31;
+		const uint8_t v2 = 63;
+		uint32_t rgba[4];
+		uint32_t c1; uint32_t c2;
+		uint8_t * rgba1 = (uint8_t*)&c1; uint8_t * rgba2 = (uint8_t*)&c2;
+		rgba1[0] = v1; rgba1[1] = v1; rgba1[2] = v1; rgba1[3] = 255;
+		rgba2[0] = v2; rgba2[1] = v2; rgba2[2] = v2; rgba2[3] = 255;
+		rgba[0] = c1; rgba[1] = c2; rgba[2] = c2; rgba[3] = c1;
+		checkersTexture.allocate(2, 2, GX_RGBA8_UNORM, false, false);
+		checkersTexture.upload(rgba, 1, 0);
+	}
 }
 
 void shutUi()
@@ -124,6 +127,9 @@ void shutUi()
 void drawUiRectCheckered(float x1, float y1, float x2, float y2, float scale)
 {
 	fassert(checkersTexture.isValid());
+	
+	if (checkersTexture.isValid() == false)
+		initUi();
 	
 	gxSetTexture(checkersTexture.id);
 	{
@@ -141,6 +147,7 @@ void drawUiRectCheckered(float x1, float y1, float x2, float y2, float scale)
 
 void drawUiCircle(const float x, const float y, const float radius, const float r, const float g, const float b, const float a)
 {
+#if ENABLE_HQ_PRIMITIVES
 	hqBegin(HQ_STROKED_CIRCLES);
 	{
 		setColorf(0.f, 0.f, 0.f, a);
@@ -149,10 +156,17 @@ void drawUiCircle(const float x, const float y, const float radius, const float 
 		hqStrokeCircle(x, y, radius, 3.f);
 	}
 	hqEnd();
+#else
+	setColorf(0.f, 0.f, 0.f, a);
+	drawCircle(x, y, radius + 1, 100);
+	setColorf(r, g, b, a);
+	drawCircle(x, y, radius, 100);
+#endif
 }
 
 void drawUiShadedTriangle(float x1, float y1, float x2, float y2, float x3, float y3, const Color & c1, const Color & c2, const Color & c3)
 {
+#if ENABLE_HQ_PRIMITIVES
 	Shader shader("engine/builtin-hq-shaded-triangle");
 	setShader(shader);
 	
@@ -168,6 +182,15 @@ void drawUiShadedTriangle(float x1, float y1, float x2, float y2, float x3, floa
 	hqEnd();
 	
 	clearShader();
+#else
+	gxBegin(GX_TRIANGLES);
+	{
+		setColor(c1); gxVertex2f(x1, y1);
+		setColor(c2); gxVertex2f(x2, y2);
+		setColor(c3); gxVertex2f(x3, y3);
+	}
+	gxEnd();
+#endif
 }
 
 void hlsToRGB(float hue, float lum, float sat, float & r, float & g, float & b)
