@@ -6,6 +6,8 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
 
+#include "fileBrowser.h"
+
 #include "fileEditor.h"
 #include "fileEditor_audioGraph.h"
 #include "fileEditor_audioStream_vorbis.h"
@@ -45,171 +47,6 @@ static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
 
 static std::string s_dataFolder;
-
-struct FileElem
-{
-	bool isFolded = true;
-
-	std::string name;
-	std::string path;
-	bool isFile = false;
-
-	std::vector<FileElem> childElems;
-
-	void fold(const bool recursive)
-	{
-		isFolded = true;
-
-		if (recursive)
-			for (auto & childElem : childElems)
-				childElem.fold(recursive);
-	}
-
-	void unfold(const bool recursive)
-	{
-		isFolded = false;
-
-		if (recursive)
-			for (auto & childElem : childElems)
-				childElem.unfold(recursive);
-	}
-};
-
-struct FileBrowser
-{
-	FileElem rootElem;
-	
-	std::function<void (const std::string & filename)> onFileSelected;
-
-	void init()
-	{
-		scanFiles();
-	}
-
-	void clearFiles()
-	{
-		rootElem = FileElem();
-	}
-
-	void scanFiles()
-	{
-		// clear the old file tree
-		
-		clearFiles();
-
-		// list files
-
-		//const char * rootFolder = "/Users/thecat/framework/vfxGraph-examples/data";
-		const char * rootFolder = "/Users/thecat/framework/";
-		//const char * rootFolder = "/Users/thecat/";
-		//const char * rootFolder = "d:/repos";
-		
-		auto files = listFiles(rootFolder, true);
-		
-		std::sort(files.begin(), files.end(), [](const std::string & s1, const std::string & s2) { return strcasecmp(s1.c_str(), s2.c_str()) < 0; });
-		
-		// build a tree structure of the files
-		
-		for (size_t i = 0; i < files.size(); ++i)
-		{
-			const std::string & path = files[i];
-			
-			std::string name = files[i];
-			
-			if (String::StartsWith(name, rootFolder))
-				name = String::SubString(name, strlen(rootFolder) + 1);
-			
-			FileElem * parent = &rootElem;
-			
-			size_t elemBegin = 0;
-			
-			for (size_t j = 0; j < name.size(); ++j)
-			{
-				if (name[j] == '/')
-				{
-					size_t elemEnd = j;
-					
-					const std::string elemName = name.substr(elemBegin, elemEnd - elemBegin);
-					
-					bool found = false;
-					
-					for (auto & childElem : parent->childElems)
-					{
-						if (childElem.name == elemName)
-						{
-							parent = &childElem;
-							found = true;
-						}
-					}
-					
-					if (found == false)
-					{
-						FileElem childElem;
-						childElem.name = elemName;
-						childElem.isFile = false;
-						
-						parent->childElems.push_back(childElem);
-						
-						parent = &parent->childElems.back();
-					}
-					
-					//
-					
-					elemBegin = elemEnd + 1;
-				}
-			}
-			
-			Assert(elemBegin < name.size());
-			if (elemBegin < name.size())
-			{
-				const std::string elemName = name.substr(elemBegin, name.size() - elemBegin);
-				
-				FileElem childElem;
-				childElem.name = elemName;
-				childElem.path = path;
-				childElem.isFile = true;
-				
-				parent->childElems.push_back(childElem);
-			}
-		}
-	}
-
-	void tickRecurse(FileElem & elem)
-	{
-		ImGui::PushID(elem.name.c_str());
-		
-		// draw foldable menu items for each file
-		
-		for (auto & childElem : elem.childElems)
-		{
-			if (childElem.isFile == false)
-			{
-				if (ImGui::CollapsingHeader(childElem.name.c_str()))
-				{
-					ImGui::Indent();
-					tickRecurse(childElem);
-					ImGui::Unindent();
-				}
-			}
-		}
-		
-		for (auto & childElem : elem.childElems)
-			if (childElem.isFile == true)
-				if (ImGui::Button(childElem.name.c_str()))
-					onFileSelected(childElem.path);
-		
-		ImGui::PopID();
-	}
-	
-	void tick()
-	{
-		ImGui::PushID("root");
-		{
-			tickRecurse(rootElem);
-		}
-		ImGui::PopID();
-	}
-};
 
 //
 
@@ -315,7 +152,7 @@ int main(int argc, char * argv[])
 
 	// file browser
 	FileBrowser fileBrowser;
-	fileBrowser.init();
+	fileBrowser.init(CHIBI_RESOURCE_PATH "/../../../..");
 
 	// file editor
 	FileEditor * editor = nullptr;
