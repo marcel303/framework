@@ -93,76 +93,79 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 		vsFunction = [library_vs newFunctionWithName:@"shader_main"];
 		psFunction = [library_ps newFunctionWithName:@"shader_main"];
 		
-		// get reflection info for this shader
+		MTLRenderPipelineReflection * reflection = nullptr;
 		
-		MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
-		pipelineDescriptor.label = @"reflection pipeline";
-		pipelineDescriptor.vertexFunction = vsFunction;
-		pipelineDescriptor.fragmentFunction = psFunction;
-		pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
-		
-		MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
-		
-	// fixme : this is duplicated code. perhaps we should enforce everything is set
-	//         before the shader is set. when a shader is set, construct the pipeline state
-	//         only thing allowed after a shader is set is set to immediates, and to
-	//         do draw calls
-		for (int i = 0; i < renderState.vertexInputCount; ++i)
+		if (vsFunction != nullptr && psFunction != nullptr)
 		{
-			auto & e = renderState.vertexInputs[i];
-			auto * a = vertexDescriptor.attributes[e.id];
+			// get reflection info for this shader
 			
-			MTLVertexFormat metalFormat = MTLVertexFormatInvalid;
+			MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
+			pipelineDescriptor.label = @"reflection pipeline";
+			pipelineDescriptor.vertexFunction = vsFunction;
+			pipelineDescriptor.fragmentFunction = psFunction;
+			pipelineDescriptor.colorAttachments[0].pixelFormat = MTLPixelFormatBGRA8Unorm;
 			
-			if (e.type == GX_ELEMENT_FLOAT32)
+			MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
+			
+		// fixme : this is duplicated code. perhaps we should enforce everything is set
+		//         before the shader is set. when a shader is set, construct the pipeline state
+		//         only thing allowed after a shader is set is set to immediates, and to
+		//         do draw calls
+			for (int i = 0; i < renderState.vertexInputCount; ++i)
 			{
-				if (e.numComponents == 1)
-					metalFormat = MTLVertexFormatFloat;
-				else if (e.numComponents == 2)
-					metalFormat = MTLVertexFormatFloat2;
-				else if (e.numComponents == 3)
-					metalFormat = MTLVertexFormatFloat3;
-				else if (e.numComponents == 4)
-					metalFormat = MTLVertexFormatFloat4;
+				auto & e = renderState.vertexInputs[i];
+				auto * a = vertexDescriptor.attributes[e.id];
+				
+				MTLVertexFormat metalFormat = MTLVertexFormatInvalid;
+				
+				if (e.type == GX_ELEMENT_FLOAT32)
+				{
+					if (e.numComponents == 1)
+						metalFormat = MTLVertexFormatFloat;
+					else if (e.numComponents == 2)
+						metalFormat = MTLVertexFormatFloat2;
+					else if (e.numComponents == 3)
+						metalFormat = MTLVertexFormatFloat3;
+					else if (e.numComponents == 4)
+						metalFormat = MTLVertexFormatFloat4;
+				}
+				else if (e.type == GX_ELEMENT_UINT8)
+				{
+					if (e.numComponents == 1)
+						metalFormat = e.normalize ? MTLVertexFormatUCharNormalized : MTLVertexFormatUChar;
+					else if (e.numComponents == 2)
+						metalFormat = e.normalize ? MTLVertexFormatUChar2Normalized : MTLVertexFormatUChar2;
+					else if (e.numComponents == 3)
+						metalFormat = e.normalize ? MTLVertexFormatUChar3Normalized : MTLVertexFormatUChar3;
+					else if (e.numComponents == 4)
+						metalFormat = e.normalize ? MTLVertexFormatUChar4Normalized : MTLVertexFormatUChar4;
+				}
+				
+				Assert(metalFormat != MTLVertexFormatInvalid);
+				if (metalFormat != MTLVertexFormatInvalid)
+				{
+					a.format = metalFormat;
+					a.offset = e.offset;
+					a.bufferIndex = 0;
+				}
 			}
-			else if (e.type == GX_ELEMENT_UINT8)
+		
+			vertexDescriptor.layouts[0].stride = renderState.vertexStride;
+			vertexDescriptor.layouts[0].stepRate = 1;
+			vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+			pipelineDescriptor.vertexDescriptor = vertexDescriptor;
+			
+			const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
+			
+			id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&reflection error:&error];
+			
+			if (pipelineState == nullptr && error != nullptr)
 			{
-				if (e.numComponents == 1)
-					metalFormat = e.normalize ? MTLVertexFormatUCharNormalized : MTLVertexFormatUChar;
-				else if (e.numComponents == 2)
-					metalFormat = e.normalize ? MTLVertexFormatUChar2Normalized : MTLVertexFormatUChar2;
-				else if (e.numComponents == 3)
-					metalFormat = e.normalize ? MTLVertexFormatUChar3Normalized : MTLVertexFormatUChar3;
-				else if (e.numComponents == 4)
-					metalFormat = e.normalize ? MTLVertexFormatUChar4Normalized : MTLVertexFormatUChar4;
+				NSLog(@"%@", error);
 			}
 			
-			Assert(metalFormat != MTLVertexFormatInvalid);
-			if (metalFormat != MTLVertexFormatInvalid)
-			{
-				a.format = metalFormat;
-				a.offset = e.offset;
-				a.bufferIndex = 0;
-			}
+			[pipelineState release];
 		}
-	
-		vertexDescriptor.layouts[0].stride = renderState.vertexStride;
-		vertexDescriptor.layouts[0].stepRate = 1;
-		vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
-		pipelineDescriptor.vertexDescriptor = vertexDescriptor;
-		
-		const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
-		
-		MTLRenderPipelineReflection * reflection;
-		
-		id <MTLRenderPipelineState> pipelineState = [device newRenderPipelineStateWithDescriptor:pipelineDescriptor options:pipelineOptions reflection:&reflection error:&error];
-		
-		if (pipelineState == nullptr && error != nullptr)
-		{
-			NSLog(@"%@", error);
-		}
-		
-		[pipelineState release];
 		
 	#if 1
 		//NSLog(@"library_vs retain count: %lu", [library_vs retainCount]);
