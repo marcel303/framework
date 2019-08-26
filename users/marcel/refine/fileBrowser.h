@@ -40,7 +40,10 @@ struct FileBrowser
 	
 	std::function<void (const std::string & filename)> onFileSelected;
 
+	~FileBrowser();
+	
 	void init(const char * in_rootPath);
+	void shut();
 
 	void clearFiles();
 	void scanFiles(const char * path);

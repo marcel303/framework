@@ -11,13 +11,29 @@
 #include <direct.h>
 #endif
 
+FileBrowser::~FileBrowser()
+{
+	Assert(elemsByPath.empty());
+	
+	shut();
+}
+
 void FileBrowser::init(const char * in_rootPath)
 {
+	shut();
+	
+	//
+	
 	rootPath = in_rootPath;
 	
 	//
 	
 	scanFiles(rootPath.c_str());
+}
+
+void FileBrowser::shut()
+{
+	clearFiles();
 }
 
 void FileBrowser::clearFiles()
