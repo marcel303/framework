@@ -1106,6 +1106,7 @@ struct SpriterState
 	int animIndex;
 	float animTime;
 	float animSpeed;
+	bool animLoop;
 
 	int characterMap;
 

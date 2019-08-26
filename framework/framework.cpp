@@ -3858,7 +3858,12 @@ bool SpriterState::updateAnim(const Spriter & spriter, float dt)
 		spriter.isAnimDoneAtTime(animIndex, animTime);
 
 	if (isDone)
-		stopAnim(spriter);
+	{
+		if (animLoop)
+			startAnim(spriter, animIndex);
+		else
+			stopAnim(spriter);
+	}
 
 	return isDone;
 }
