@@ -30,7 +30,7 @@ shader_attrib vec4 in_skinningBlendWeights VS_BLEND_WEIGHTS
 
 uniform vec4 drawColor;
 uniform vec4 drawSkin;
-uniform mat4 skinningMatrices[32];
+uniform mat4 skinningMatrices[32] buffer SkinningData;
 
 // functions
 
