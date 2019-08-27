@@ -130,6 +130,8 @@ int main(int argc, char * argv[])
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
 
+	framework.windowIsResizable = true;
+	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
@@ -156,7 +158,7 @@ int main(int argc, char * argv[])
 
 	// file editor
 	FileEditor * editor = nullptr;
-	Surface * editorSurface = new Surface(VIEW_SX - 300, VIEW_SY - 30, false, true);
+	Surface * editorSurface = nullptr;
 	
 #if CHIBI_INTEGRATION
 	struct Chibi
@@ -202,6 +204,8 @@ int main(int argc, char * argv[])
 			extension == "c" || // c
 			extension == "cpp" || // c++
 			extension == "h" || // Header file
+			extension == "m" || // objective-c
+			extension == "mm" || // objective-c++
 			extension == "py" || // Python
 			extension == "jsfx-inc" || // JsusFx include file
 			extension == "inc" || // Include file
@@ -329,6 +333,25 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 
+		const int windowSx = framework.getMainWindow().getWidth();
+		const int windowSy = framework.getMainWindow().getHeight();
+		
+		if (editorSurface == nullptr ||
+			editorSurface->getWidth() != windowSx ||
+			editorSurface->getHeight() != windowSy)
+		{
+			delete editorSurface;
+			editorSurface = nullptr;
+			
+			//
+			
+			editorSurface = new Surface(
+				windowSx - 300,
+				windowSy - 30,
+				false,
+				true);
+		}
+		
 		const float dt = framework.timeStep;
 		
 		// update editor windows
@@ -366,7 +389,7 @@ int main(int argc, char * argv[])
 
 		bool inputIsCaptured = false;
 
-		guiContext.processBegin(dt, VIEW_SX, VIEW_SY, inputIsCaptured);
+		guiContext.processBegin(dt, windowSx, windowSy, inputIsCaptured);
 		{
 			ImGui::SetNextWindowPos(ImVec2(0, 0));
 			ImGui::SetNextWindowSize(ImVec2(300, 0));
