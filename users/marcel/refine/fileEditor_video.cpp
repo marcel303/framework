@@ -1,4 +1,5 @@
 #include "fileEditor_video.h"
+#include "imgui.h" // doButtonBar
 #include "ui.h" // drawUiRectCheckered
 #include "video.h"
 
@@ -50,6 +51,13 @@ void FileEditor_Video::tick(const int sx, const int sy, const float dt, const bo
 	else if (hasAudioInfo)
 		mp.presentTime += dt;
 	
+	// update fill mode
+	
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_RETURN))
+	{
+		sizeMode = SizeMode((sizeMode + 1) % kSizeMode_COUNT);
+	}
+	
 	// update video
 
 	mp.tick(mp.context, true);
@@ -99,9 +107,27 @@ void FileEditor_Video::tick(const int sx, const int sy, const float dt, const bo
 		
 		pushBlend(BLEND_OPAQUE);
 		{
-			const float scaleX = sx / float(videoSx);
-			const float scaleY = sy / float(videoSy);
-			const float scale = fminf(1.f, fminf(scaleX, scaleY));
+			const float fillScaleX = sx / float(videoSx);
+			const float fillScaleY = sy / float(videoSy);
+			
+			float scale = 1.f;
+			
+			if (sizeMode == kSizeMode_Fill)
+			{
+				scale = fmaxf(fillScaleX, fillScaleY);
+			}
+			else if (sizeMode == kSizeMode_Contain)
+			{
+				scale = fminf(fillScaleX, fillScaleY);
+			}
+			else if (sizeMode == kSizeMode_DontScale)
+			{
+				scale = 1.f;
+			}
+			else
+			{
+				Assert(false);
+			}
 			
 			gxPushMatrix();
 			{
@@ -193,4 +219,19 @@ static void doProgressBar(const int x, const int y, const int sx, const int sy, 
 	
 	drawText(x + 10, y + sy/2, 12, +1, 0, "%02d:%02d:%02d.%02d / %02d:%02d:%02d.%02d", hours, minutes, seconds, hundreds, d_hours, d_minutes, d_seconds, d_hundreds);
 	popFontMode();
+}
+
+void FileEditor_Video::doButtonBar()
+{
+	if (ImGui::BeginMenu("Scale"))
+	{
+		if (ImGui::MenuItem("Contain", nullptr, sizeMode == kSizeMode_Contain))
+			sizeMode = kSizeMode_Contain;
+		if (ImGui::MenuItem("Fill", nullptr, sizeMode == kSizeMode_Fill))
+			sizeMode = kSizeMode_Fill;
+		if (ImGui::MenuItem("Don't scale", nullptr, sizeMode == kSizeMode_DontScale))
+			sizeMode = kSizeMode_DontScale;
+		
+		ImGui::EndMenu();
+	}
 }
