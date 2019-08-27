@@ -12,6 +12,8 @@ struct FileEditor_Video : FileEditor
 	bool hasAudioInfo = false;
 	bool audioIsStarted = false;
 	
+	float progressBarTimer = 0.f;
+	
 	FileEditor_Video(const char * path);
 	virtual ~FileEditor_Video() override;
 	
