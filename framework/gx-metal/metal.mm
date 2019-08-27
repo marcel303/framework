@@ -1028,15 +1028,17 @@ void gxValidateMatrices()
 			//printf("validate4\n");
 		}
 		
-		if (shader->m_cacheElem->vsUniformData != nullptr)
+		// set vertex stage uniform buffers
+		
+		for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
 		{
-		// todo : how are the other uniforms set ?? (like blend matrices..) maybe they just happen to get set due to this call here, due to sharing the same buffer
-		// todo : invent some way to detect dirty uniforms and set, or keep it as is, and make this the 'official'
-		//        place for setting vertex uniforms ?
+			if (shaderElem.vsInfo.uniformBufferSize[i] == 0)
+				continue;
+			
 			[s_activeRenderPass->encoder
-				setVertexBytes:shader->m_cacheElem->vsUniformData
-				length:shaderElem.vsInfo.uniformBufferSize
-				atIndex:shaderElem.vsInfo.uniformBufferIndex];
+				setVertexBytes:shader->m_cacheElem->vsUniformData[i]
+				length:shaderElem.vsInfo.uniformBufferSize[i]
+				atIndex:i];
 		}
 	}
 
@@ -1651,12 +1653,17 @@ static void gxFlush(bool endOfBatch)
 				globals.colorClamp);
 		}
 		
-		if (shaderElem.psInfo.uniformBufferIndex != -1)
+		// set fragment stage uniform buffers
+		
+		for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
 		{
+			if (shaderElem.psInfo.uniformBufferSize[i] == 0)
+				continue;
+			
 			[s_activeRenderPass->encoder
-				setFragmentBytes:shader.m_cacheElem->psUniformData
-				length:shaderElem.psInfo.uniformBufferSize
-				atIndex:shaderElem.psInfo.uniformBufferIndex];
+				setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+				length:shaderElem.psInfo.uniformBufferSize[i]
+				atIndex:i];
 		}
 		
 		if (shader.isValid())
@@ -2017,9 +2024,19 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 
-	if (shaderElem.psInfo.uniformBufferIndex != -1)
-		[s_activeRenderPass->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
-
+	// set fragment stage uniform buffers
+	
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	{
+		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
+			continue;
+		
+		[s_activeRenderPass->encoder
+			setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+			length:shaderElem.psInfo.uniformBufferSize[i]
+			atIndex:i];
+	}
+	
 	if (shader.isValid())
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);

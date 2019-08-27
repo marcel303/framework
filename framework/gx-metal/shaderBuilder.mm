@@ -147,6 +147,11 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			std::string name;
 			std::string buffer_name;
 			int index = 0;
+			
+			bool operator<(const Uniform & other) const
+			{
+				return buffer_name < other.buffer_name;
+			}
 		};
 		
 		struct InputOutput
@@ -272,7 +277,9 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 				u.name = name;
 				
 				if (buffer_name != nullptr)
-					u.buffer_name = buffer_name;
+					u.buffer_name = std::string("ShaderUniforms_") + buffer_name;
+				else
+					u.buffer_name = std::string("ShaderUniforms");
 				
 				if (strcmp(type, "sampler2D") == 0)
 					u.index = texture_index++;
@@ -284,6 +291,12 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 				contents.push_back(line);
 			}
 		}
+		
+		// sort uniforms by buffer name
+		
+		std::sort(uniforms.begin(), uniforms.end());
+		
+		// generate text
 		
 		StringBuilder<32 * 1024> sb; // todo : replace with a more efficient and growing string builder
 		
@@ -386,18 +399,51 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			sb.Append("};\n");
 			sb.Append("\n");
 
-			sb.Append("struct ShaderUniforms\n");
-			sb.Append("{\n");
+			//
+			
+			auto beginUniformBuffer = [&](const char * name)
 			{
-				for (auto & u : uniforms)
-					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+				sb.AppendFormat("struct %s\n", name);
+				sb.Append("{\n");
+			};
+			
+			auto endUniformBuffer = [&]()
+			{
+				sb.Append("};\n");
+				sb.Append("\n");
+			};
+			
+			const char * currentUniformBufferName = "";
+			int nextBufferIndex = 1;
+			std::string bufferArguments;
+			
+			for (auto & u : uniforms)
+			{
+				if (strcmp(currentUniformBufferName, u.buffer_name.c_str()) != 0)
+				{
+					if (currentUniformBufferName[0] != 0)
+						endUniformBuffer();
+					
+					currentUniformBufferName = u.buffer_name.c_str();
+					beginUniformBuffer(currentUniformBufferName);
+					
+					bufferArguments += String::FormatC("\tconstant %s & uniforms_%s [[buffer(%d)]],\n",
+						currentUniformBufferName,
+						currentUniformBufferName,
+						nextBufferIndex);
+					
+					nextBufferIndex++;
+				}
+				
+				sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
 			}
-			sb.Append("};\n");
-			sb.Append("\n");
+			
+			if (currentUniformBufferName[0] != 0)
+				endUniformBuffer();
 			
 			sb.Append("vertex ShaderVaryings shader_main(\n");
 			sb.Append("\tShaderInputs inputs [[stage_in]],\n");
-			sb.Append("\tconstant ShaderUniforms & uniforms [[buffer(1)]],\n");
+			sb.Append(bufferArguments.c_str());
 			sb.Append("\tuint vertexId [[vertex_id]])\n");
 			sb.Append("{\n");
 			sb.Append("\tShaderMain m;\n");
@@ -411,11 +457,11 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 					if (array_start != nullptr)
 					{
 						auto name = u.name.substr(0, array_start - u.name.c_str());
-						sb.AppendFormat("\tm.%s = uniforms.%s;\n", name.c_str(), name.c_str());
+						sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", name.c_str(), u.buffer_name.c_str(), name.c_str());
 					}
 					else
 					{
-						sb.AppendFormat("\tm.%s = uniforms.%s;\n", u.name.c_str(), u.name.c_str());
+						sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", u.name.c_str(), u.buffer_name.c_str(), u.name.c_str());
 					}
 				}
 			}

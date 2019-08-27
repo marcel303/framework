@@ -270,13 +270,15 @@ static ShaderCacheElem_Metal::UniformInfo & getUniformInfo(ShaderCacheElem_Metal
 template <typename T>
 T * getVsUniformPtr(ShaderCacheElem_Metal & cacheElem, const int buffer, const int offset)
 {
-	return (T*)(((uint8_t*)cacheElem.vsUniformData) + offset);
+	Assert(cacheElem.vsUniformData[buffer] != nullptr);
+	return (T*)(((uint8_t*)cacheElem.vsUniformData[buffer]) + offset);
 }
 
 template <typename T>
 T * getPsUniformPtr(ShaderCacheElem_Metal & cacheElem, const int buffer, const int offset)
 {
-	return (T*)(((uint8_t*)cacheElem.psUniformData) + offset);
+	Assert(cacheElem.psUniformData[buffer] != nullptr);
+	return (T*)(((uint8_t*)cacheElem.psUniformData[buffer]) + offset);
 }
 
 Shader::Shader()
