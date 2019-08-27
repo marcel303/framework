@@ -527,11 +527,13 @@ int main(int argc, char * argv[])
 			
 			if (editor != nullptr)
 			{
+				const ImVec2 menubarReservation(0, 30);
+				
 				ImVec2 pos(300, 0);
 				ImVec2 size(editorSurface->getWidth(), editorSurface->getHeight());
 				
 				ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
-				ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+				ImGui::SetNextWindowSize(size + menubarReservation, ImGuiCond_Always);
 				
 				pos += ImVec2(0, 30);
 				
