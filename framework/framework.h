@@ -1590,7 +1590,7 @@ static inline void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp) { }
 
 static inline void gxGetTextureSize(GxTextureId texture, int & width, int & height) { width = 0; height = 0; }
 
-#elif !USE_LEGACY_OPENGL
+#elif !USE_LEGACY_OPENGL || ENABLE_METAL
 
 void gxMatrixMode(GX_MATRIX mode);
 GX_MATRIX gxGetMatrixMode();
