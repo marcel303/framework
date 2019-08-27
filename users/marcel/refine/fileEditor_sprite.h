@@ -34,6 +34,19 @@ struct FileEditor_Sprite : FileEditor
 		if (hasFocus == false)
 			return;
 		
+		if (firstFrame)
+		{
+			firstFrame = false;
+			
+			// work out the initial scale
+			
+			const float scaleX = sx / float(sprite.getWidth());
+			const float scaleY = sy / float(sprite.getHeight());
+			const float scale = fminf(1.f, fminf(scaleX, scaleY));
+			
+			desiredScale = scale;
+		}
+		
 		// update smoothed changes
 		
 		const float retainAnimTick = .8f;
@@ -51,16 +64,6 @@ struct FileEditor_Sprite : FileEditor
 		
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
-		
-		if (firstFrame)
-		{
-			firstFrame = false;
-			const float scaleX = sx / float(sprite.getWidth());
-			const float scaleY = sy / float(sprite.getHeight());
-			const float scale = fminf(1.f, fminf(scaleX, scaleY));
-			
-			sprite.scale = scale;
-		}
 		
 		setColor(colorWhite);
 		sprite.pixelpos = false;
