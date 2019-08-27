@@ -211,6 +211,35 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 					return false;
 				}
 				
+				const char * buffer = nullptr;
+				
+				for (;;)
+				{
+					const char * option;
+					
+					if (!eat_word_v2(linePtr, option))
+						break;
+					
+					if (strcmp(option, "buffer") == 0)
+					{
+						if (!eat_word_v2(linePtr, buffer))
+						{
+							report_error(line.c_str(), "expected shader attribute buffer name");
+							return false;
+						}
+					}
+					else if (strcmp(option, "//") == 0)
+					{
+						// end looking for options when we encounter a comment
+						break;
+					}
+					else
+					{
+						report_error(line.c_str(), "unknown shader attribute option: %s", option);
+						return false;
+					}
+				}
+				
 				sb.AppendFormat("shader_attrib %s %s;\n", type, name);
 			}
 			else

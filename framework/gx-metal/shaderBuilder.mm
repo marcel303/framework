@@ -145,6 +145,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 		{
 			std::string type;
 			std::string name;
+			std::string buffer_name;
 			int index = 0;
 		};
 		
@@ -237,9 +238,41 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 					return false;
 				}
 				
+				const char * buffer_name = nullptr;
+				
+				for (;;)
+				{
+					const char * option;
+					
+					if (!eat_word_v2(linePtr, option))
+						break;
+					
+					if (strcmp(option, "buffer") == 0)
+					{
+						if (!eat_word_v2(linePtr, buffer_name))
+						{
+							report_error(line.c_str(), "expected shader attribute buffer name");
+							return false;
+						}
+					}
+					else if (strcmp(option, "//") == 0)
+					{
+						// end looking for options when we encounter a comment
+						break;
+					}
+					else
+					{
+						report_error(line.c_str(), "unknown shader attribute option: %s", option);
+						return false;
+					}
+				}
+				
 				Uniform u;
 				u.type = type;
 				u.name = name;
+				
+				if (buffer_name != nullptr)
+					u.buffer_name = buffer_name;
 				
 				if (strcmp(type, "sampler2D") == 0)
 					u.index = texture_index++;
