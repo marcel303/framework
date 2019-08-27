@@ -178,7 +178,7 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 					NSLog(@"found texture");
 					addTexture(arg, 'p');
 				}
-				else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
+				else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name hasPrefix:@"uniforms"])
 				{
 					Assert(arg.index >= 0 && arg.index < kMaxBuffers);
 					if (arg.index >= 0 && arg.index < kMaxBuffers)

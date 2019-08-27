@@ -441,6 +441,8 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			if (currentUniformBufferName[0] != 0)
 				endUniformBuffer();
 			
+			//
+		
 			sb.Append("vertex ShaderVaryings shader_main(\n");
 			sb.Append("\tShaderInputs inputs [[stage_in]],\n");
 			sb.Append(bufferArguments.c_str());
@@ -537,19 +539,52 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			sb.Append("};\n");
 			sb.Append("\n");
 
-			sb.Append("struct ShaderUniforms\n");
-			sb.Append("{\n");
+			//
+			
+			auto beginUniformBuffer = [&](const char * name)
 			{
-				for (auto & u : uniforms)
+				sb.AppendFormat("struct %s\n", name);
+				sb.Append("{\n");
+			};
+			
+			auto endUniformBuffer = [&]()
+			{
+				sb.Append("};\n");
+				sb.Append("\n");
+			};
+			
+			const char * currentUniformBufferName = "";
+			int nextBufferIndex = 1;
+			std::string bufferArguments;
+
+			for (auto & u : uniforms)
+			{
+				if (u.type != "sampler2D")
 				{
-					if (u.type != "sampler2D")
+					if (strcmp(currentUniformBufferName, u.buffer_name.c_str()) != 0)
 					{
-						sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+						if (currentUniformBufferName[0] != 0)
+							endUniformBuffer();
+						
+						currentUniformBufferName = u.buffer_name.c_str();
+						beginUniformBuffer(currentUniformBufferName);
+						
+						bufferArguments += String::FormatC("\tconstant %s & uniforms_%s [[buffer(%d)]],\n",
+							currentUniformBufferName,
+							currentUniformBufferName,
+							nextBufferIndex);
+						
+						nextBufferIndex++;
 					}
+
+					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
 				}
 			}
-			sb.Append("};\n");
-			sb.Append("\n");
+			
+			if (currentUniformBufferName[0] != 0)
+				endUniformBuffer();
+			
+			//
 			
 			sb.Append("struct ShaderTextures\n");
 			sb.Append("{\n");
@@ -582,14 +617,28 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			
 			sb.Append("fragment ShaderOutputs shader_main(\n");
 			sb.Append("\tShaderVaryings varyings [[stage_in]],\n");
-			sb.Append("\tconstant ShaderUniforms & uniforms [[buffer(1)]],\n");
+			sb.Append(bufferArguments.c_str());
 			sb.Append("\tShaderTextures textures)\n");
 			sb.Append("{\n");
 			sb.Append("\tShaderMain m;\n");
 			{
 				for (auto & u : uniforms)
+				{
 					if (u.type != "sampler2D")
-						sb.AppendFormat("\tm.%s = uniforms.%s;\n", u.name.c_str(), u.name.c_str());
+					{
+						const char * array_start = strchr(u.name.c_str(), '[');
+						if (array_start != nullptr)
+						{
+							auto name = u.name.substr(0, array_start - u.name.c_str());
+							sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", name.c_str(), u.buffer_name.c_str(), name.c_str());
+						}
+						else
+						{
+							sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", u.name.c_str(), u.buffer_name.c_str(), u.name.c_str());
+						}
+					}
+				}
+				
 				for (auto & u : uniforms)
 					if (u.type == "sampler2D")
 						sb.AppendFormat("\tm.%s = textures.%s;\n", u.name.c_str(), u.name.c_str());
