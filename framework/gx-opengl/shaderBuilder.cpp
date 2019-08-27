@@ -211,7 +211,26 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 					return false;
 				}
 				
-				const char * buffer = nullptr;
+				sb.AppendFormat("shader_attrib %s %s;\n", type, name);
+			}
+			else if (eat_word(linePtr, "uniform"))
+			{
+				const char * type;
+				const char * name;
+				
+				if (!eat_word_v2(linePtr, type))
+				{
+					report_error(line.c_str(), "uniform is missing type");
+					return false;
+				}
+				
+				if (!eat_word_v2(linePtr, name))
+				{
+					report_error(line.c_str(), "uniform is missing name");
+					return false;
+				}
+				
+				const char * buffer_name = nullptr;
 				
 				for (;;)
 				{
@@ -222,7 +241,7 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 					
 					if (strcmp(option, "buffer") == 0)
 					{
-						if (!eat_word_v2(linePtr, buffer))
+						if (!eat_word_v2(linePtr, buffer_name))
 						{
 							report_error(line.c_str(), "expected shader attribute buffer name");
 							return false;
@@ -240,7 +259,7 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 					}
 				}
 				
-				sb.AppendFormat("shader_attrib %s %s;\n", type, name);
+				sb.AppendFormat("uniform %s %s;\n", type, name);
 			}
 			else
 			{
