@@ -1119,8 +1119,12 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			}
 		}
 		gxEnd();
+		
 		gxColor3ub(0, 255, 0);
+	#if ENABLE_OPENGL
 		glPointSize(5.f);
+		checkErrorGL();
+	#endif
 		gxBegin(GX_POINTS);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
@@ -1130,7 +1134,11 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			}
 		}
 		gxEnd();
-		
+	#if ENABLE_OPENGL
+		glPointSize(1.f);
+		checkErrorGL();
+	#endif
+	
 		popDepthTest();
 	}
 	
@@ -1155,9 +1163,12 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			}
 		}
 		gxEnd();
+		
 		gxColor3ub(255, 0, 0);
+	#if ENABLE_OPENGL
 		glPointSize(7.f);
 		checkErrorGL();
+	#endif
 		gxBegin(GX_POINTS);
 		{
 			for (int boneIndex = 0; boneIndex < m_model->boneSet->m_numBones; ++boneIndex)
@@ -1167,6 +1178,10 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			}
 		}
 		gxEnd();
+	#if ENABLE_OPENGL
+		glPointSize(1.f);
+		checkErrorGL();
+	#endif
 		
 		popDepthTest();
 	}
