@@ -169,9 +169,9 @@ namespace MP
 			0, nullptr);
 	#else
 		Assert(m_swrContext == nullptr);
-		int inputChannelLayout = audioParams->channel_layout;
+		int inputChannelLayout = m_codecContext->channel_layout;
 		if (inputChannelLayout == 0)
-			inputChannelLayout = (1 << audioParams->channels) - 1;
+			inputChannelLayout = (1 << m_codecContext->channels) - 1;
 		m_swrContext = swr_alloc_set_opts(nullptr,
 			// output
 			outputChannelLayout,
