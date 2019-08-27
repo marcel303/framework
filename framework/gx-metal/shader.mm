@@ -268,13 +268,13 @@ static ShaderCacheElem_Metal::UniformInfo & getUniformInfo(ShaderCacheElem_Metal
 }
 
 template <typename T>
-T * getVsUniformPtr(ShaderCacheElem_Metal & cacheElem, const int offset)
+T * getVsUniformPtr(ShaderCacheElem_Metal & cacheElem, const int buffer, const int offset)
 {
 	return (T*)(((uint8_t*)cacheElem.vsUniformData) + offset);
 }
 
 template <typename T>
-T * getPsUniformPtr(ShaderCacheElem_Metal & cacheElem, const int offset)
+T * getPsUniformPtr(ShaderCacheElem_Metal & cacheElem, const int buffer, const int offset)
 {
 	return (T*)(((uint8_t*)cacheElem.psUniformData) + offset);
 }
@@ -361,13 +361,13 @@ void Shader::setImmediate(GxImmediateIndex index, float x)
 		
 		if (info.vsOffset != -1)
 		{
-			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsOffset);
+			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsBuffer, info.vsOffset);
 			dst[0] = x;
 		}
 		
 		if (info.psOffset != -1)
 		{
-			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psOffset);
+			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psBuffer, info.psOffset);
 			dst[0] = x;
 		}
 	}
@@ -381,14 +381,14 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 		
 		if (info.vsOffset != -1)
 		{
-			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsOffset);
+			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsBuffer, info.vsOffset);
 			dst[0] = x;
 			dst[1] = y;
 		}
 		
 		if (info.psOffset != -1)
 		{
-			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psOffset);
+			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psBuffer, info.psOffset);
 			dst[0] = x;
 			dst[1] = y;
 		}
@@ -403,7 +403,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 		
 		if (info.vsOffset != -1)
 		{
-			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsOffset);
+			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsBuffer, info.vsOffset);
 			dst[0] = x;
 			dst[1] = y;
 			dst[2] = z;
@@ -411,7 +411,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 		
 		if (info.psOffset != -1)
 		{
-			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psOffset);
+			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psBuffer, info.psOffset);
 			dst[0] = x;
 			dst[1] = y;
 			dst[2] = z;
@@ -427,7 +427,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, flo
 		
 		if (info.vsOffset != -1)
 		{
-			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsOffset);
+			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsBuffer, info.vsOffset);
 			dst[0] = x;
 			dst[1] = y;
 			dst[2] = z;
@@ -436,7 +436,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, flo
 		
 		if (info.psOffset != -1)
 		{
-			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psOffset);
+			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psBuffer, info.psOffset);
 			dst[0] = x;
 			dst[1] = y;
 			dst[2] = z;
@@ -460,13 +460,13 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 		
 		if (info.vsOffset != -1)
 		{
-			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsOffset);
+			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsBuffer, info.vsOffset);
 			memcpy(dst, matrix, 16 * sizeof(float));
 		}
 		
 		if (info.psOffset != -1)
 		{
-			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psOffset);
+			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psBuffer, info.psOffset);
 			memcpy(dst, matrix, 16 * sizeof(float));
 		}
 	}
@@ -480,13 +480,13 @@ void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * ma
 		
 		if (info.vsOffset != -1)
 		{
-			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsOffset);
+			float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsBuffer, info.vsOffset);
 			memcpy(dst, matrices, 16 * sizeof(float) * numMatrices);
 		}
 		
 		if (info.psOffset != -1)
 		{
-			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psOffset);
+			float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psBuffer, info.psOffset);
 			memcpy(dst, matrices, 16 * sizeof(float) * numMatrices);
 		}
 	}

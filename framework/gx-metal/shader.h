@@ -77,16 +77,6 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 	
 	struct StageInfo
 	{
-		struct
-		{
-			int offset = -1;
-
-			void set(const int offset)
-			{
-				this->offset = offset;
-			}
-		} params[kSp_MAX];
-		
 		int uniformBufferIndex = -1;
 		int uniformBufferSize = 0;
 		
@@ -94,31 +84,15 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 		{
 			uniformBufferIndex = arg.index;
 			uniformBufferSize = arg.bufferDataSize;
-		
-			for (MTLStructMember * uniform in arg.bufferStructType.members)
-			{
-			#define CASE(param, string) if ([uniform.name isEqualToString:@string]) { params[param].set(uniform.offset); }
-				{
-					CASE(kSp_ModelViewMatrix, "ModelViewMatrix");
-					CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
-					CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
-					CASE(kSp_SkinningMatrices, "skinningMatrices");
-					CASE(kSp_Texture, "source");
-					CASE(kSp_Params, "params");
-					CASE(kSp_ShadingParams, "shadingParams");
-					CASE(kSp_GradientInfo, "gradientInfo");
-					CASE(kSp_GradientMatrix, "gmat");
-					CASE(kSp_TextureMatrix, "tmat");
-				}
-			#undef CASE
-			}
 		}
 	};
 
 	struct UniformInfo
 	{
 		std::string name;
+		int vsBuffer = -1;
 		int vsOffset = -1;
+		int psBuffer = -1;
 		int psOffset = -1;
 		int elemType = -1;
 		int numElems = 0;
@@ -281,9 +255,15 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 					found = true;
 					
 					if (type == 'v')
+					{
+						uniformInfo.vsBuffer = 0;
 						uniformInfo.vsOffset = uniform.offset;
+					}
 					else
+					{
+						uniformInfo.psBuffer = 0;
 						uniformInfo.psOffset = uniform.offset;
+					}
 				}
 			}
 			
