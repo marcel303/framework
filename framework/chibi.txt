@@ -53,6 +53,17 @@ library framework
 	depend_library tinyxml2-helpers
 	depend_library utf8rewind
 
+	license_file ../license/framework/COPYING.txt
+	license_file ../license/freeimage/freeimage-license.txt
+	# todo : license_file ../license/freetype
+	# todo : license_file ../license/glew/
+	# todo : license_file ../license/openal
+	license_file ../license/msdfgen/LICENSE.txt
+	# todo : license_file ../license/remotery/
+	license_file ../license/tinyxml2/LICENSE.txt
+	license_file ../license/utf8rewind/LICENSE
+	# todo : license_file ../license/xinput
+
 	scan_files cpp
 	scan_files h
 	
@@ -76,11 +87,12 @@ library framework
 	compile_definition _USE_MATH_DEFINES       * expose toolchain msvc
 	compile_definition _CRT_SECURE_NO_WARNINGS * expose toolchain msvc
 
-# Not every feature works on Raspberry Pi or is just to slow, so we tweak some settings here
+# Not every feature works on Raspberry Pi or is just too slow, so we tweak some settings here
 	with_platform linux.raspberry-pi compile_definition USE_LEGACY_OPENGL    1 expose
 	with_platform linux.raspberry-pi compile_definition ENABLE_HQ_PRIMITIVES 0 expose
 	with_platform linux.raspberry-pi compile_definition ENABLE_MSDF_FONTS    0 expose
 
+# todo : disable these Linux options
 # For testing with Travis-CI, these are enabled for now. Once everything compiles, the follow up step is to make things compile on Linux with below compile definitions removed
 	with_platform linux compile_definition USE_LEGACY_OPENGL    1 expose
 	with_platform linux compile_definition ENABLE_HQ_PRIMITIVES 0 expose
