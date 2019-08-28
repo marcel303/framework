@@ -1,10 +1,18 @@
 #pragma once
 
 #include "fileEditor.h"
+#include "imgui.h"
 #include "ui.h" // drawUiRectCheckered
 
 struct FileEditor_Sprite : FileEditor
 {
+	enum SizeMode
+	{
+		kSizeMode_SpriteScale,
+		kSizeMode_Contain,
+		kSizeMode_Fill
+	};
+	
 	float desiredScale = 1.f;
 	
 	Sprite sprite;
@@ -14,6 +22,8 @@ struct FileEditor_Sprite : FileEditor
 	FrameworkImGuiContext guiContext;
 	
 	bool firstFrame = true;
+	
+	SizeMode sizeMode = kSizeMode_SpriteScale;
 	
 	FileEditor_Sprite(const char * in_path)
 		: sprite(in_path)
@@ -69,7 +79,10 @@ struct FileEditor_Sprite : FileEditor
 		sprite.pixelpos = false;
 		sprite.x = (sx - sprite.getWidth() * sprite.scale) / 2;
 		sprite.y = (sy - sprite.getHeight() * sprite.scale) / 2;
+		const float oldScale = sprite.scale;
+		sprite.scale = calculateSpriteScale(sx, sy);
 		sprite.draw();
+		sprite.scale = oldScale;
 		
 		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
 		{
@@ -130,5 +143,47 @@ struct FileEditor_Sprite : FileEditor
 		}
 		
 		guiContext.draw();
+	}
+	
+	float calculateSpriteScale(const int sx, const int sy) const
+	{
+		const int spriteSx = sprite.getWidth();
+		const int spriteSy = sprite.getHeight();
+		
+		const float fillScaleX = sx / float(spriteSx);
+		const float fillScaleY = sy / float(spriteSy);
+	
+		if (sizeMode == kSizeMode_SpriteScale)
+		{
+			return sprite.scale;
+		}
+		if (sizeMode == kSizeMode_Fill)
+		{
+			return fmaxf(fillScaleX, fillScaleY);
+		}
+		else if (sizeMode == kSizeMode_Contain)
+		{
+			return fminf(fillScaleX, fillScaleY);
+		}
+		else
+		{
+			Assert(false);
+			return 1.f;
+		}
+	}
+	
+	virtual void doButtonBar() override
+	{
+		if (ImGui::BeginMenu("Scale"))
+		{
+			if (ImGui::MenuItem("Sprite scale", nullptr, sizeMode == kSizeMode_SpriteScale))
+				sizeMode = kSizeMode_SpriteScale;
+			if (ImGui::MenuItem("Contain", nullptr, sizeMode == kSizeMode_Contain))
+				sizeMode = kSizeMode_Contain;
+			if (ImGui::MenuItem("Fill", nullptr, sizeMode == kSizeMode_Fill))
+				sizeMode = kSizeMode_Fill;
+			
+			ImGui::EndMenu();
+		}
 	}
 };
