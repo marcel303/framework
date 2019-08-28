@@ -214,6 +214,7 @@ int main(int argc, char * argv[])
 			extension == "sh" || // Shell script
 			extension == "java" ||
 			extension == "js" || // Javascript
+			extension == "maxpat" || // max/msp patch
 			extension == "pde" || // Processing sketch
 			extension == "ino") // Arduino sketch)
 		{
@@ -228,7 +229,13 @@ int main(int argc, char * argv[])
 		{
 			editor = new FileEditor_Shader(filename.c_str());
 		}
-		else if (extension == "bmp" || extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "psd" || extension == "tga" || extension == "gif")
+		else if (extension == "bmp" ||
+			extension == "jpg" ||
+			extension == "jpeg" ||
+			extension == "png" ||
+			extension == "psd" ||
+			extension == "tga" ||
+			extension == "gif")
 		{
 			editor = new FileEditor_Sprite(filename.c_str());
 		}
@@ -244,7 +251,11 @@ int main(int argc, char * argv[])
 		{
 			editor = new FileEditor_Spriter(filename.c_str());
 		}
-		else if (extension == "mpg" || extension == "mpeg" || extension == "mp4" || extension == "avi" || extension == "mov")
+		else if (extension == "mpg" ||
+			extension == "mpeg" ||
+			extension == "mp4" ||
+			extension == "avi" ||
+			extension == "mov")
 		{
 			editor = new FileEditor_Video(filename.c_str());
 		}
