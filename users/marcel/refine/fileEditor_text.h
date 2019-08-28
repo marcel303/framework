@@ -72,6 +72,22 @@ struct FileEditor_Text : FileEditor
 		if (hasFocus == false)
 			return;
 		
+	#if defined(MACOS)
+		const bool commandKeyDown = keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
+	#else
+		const bool commandKeyDown = keyboard.isDown(SDLK_LCTRL) || keyboard.isDown(SDLK_RCTRL);
+	#endif
+		
+		if ((commandKeyDown && keyboard.wentDown(SDLK_s)) && isValid)
+		{
+			const std::vector<std::string> lines = textEditor.GetTextLines();
+			
+			if (TextIO::save(path.c_str(), lines, lineEndings) == false)
+			{
+				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+			}
+		}
+		
 		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
 		{
 			auto filename = Path::GetFileName(path);
@@ -116,7 +132,7 @@ struct FileEditor_Text : FileEditor
 								filename = nullptr;
 							}
 						}
-						
+			
 						if (ImGui::MenuItem("Save", nullptr, false, isValid) && isValid)
 						{
 							const std::vector<std::string> lines = textEditor.GetTextLines();
