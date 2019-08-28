@@ -186,15 +186,7 @@ int main(int argc, char * argv[])
 		
 		//
 		
-	// fixme : ugly hack to construct an absolute path here
-	
-		auto directory = Path::GetDirectory(path);
-	#ifndef WIN32
-		directory = "/" + directory;
-	#endif
-		changeDirectory(directory.c_str());
-		
-		auto filename = Path::GetFileName(path);
+		auto filename = path;
 		auto extension = Path::GetExtension(filename, true);
 		
 		if (extension == "frag" || // Fragment shader
@@ -215,6 +207,7 @@ int main(int argc, char * argv[])
 			extension == "java" ||
 			extension == "js" || // Javascript
 			extension == "maxpat" || // max/msp patch
+			extension == "yml" || // yaml
 			extension == "pde" || // Processing sketch
 			extension == "ino") // Arduino sketch)
 		{
@@ -347,9 +340,12 @@ int main(int argc, char * argv[])
 		const int windowSx = framework.getMainWindow().getWidth();
 		const int windowSy = framework.getMainWindow().getHeight();
 		
+		const int desiredEditorSurfaceSx = windowSx - 300;
+		const int desiredEditorSurfaceSy = windowSy - 30;
+		
 		if (editorSurface == nullptr ||
-			editorSurface->getWidth() != windowSx ||
-			editorSurface->getHeight() != windowSy)
+			editorSurface->getWidth() != desiredEditorSurfaceSx ||
+			editorSurface->getHeight() != desiredEditorSurfaceSy)
 		{
 			delete editorSurface;
 			editorSurface = nullptr;
@@ -357,8 +353,8 @@ int main(int argc, char * argv[])
 			//
 			
 			editorSurface = new Surface(
-				windowSx - 300,
-				windowSy - 30,
+				desiredEditorSurfaceSx,
+				desiredEditorSurfaceSy,
 				false,
 				true);
 		}
