@@ -868,4 +868,34 @@ void gxGetTextureSize(GxTextureId texture, int & width, int & height)
 	}
 }
 
+GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
+{
+	int internalFormat = 0;
+	
+	// capture current OpenGL states before we change them
+
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	checkErrorGL();
+
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &internalFormat);
+	checkErrorGL();
+
+	// restore previous OpenGL states
+
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	checkErrorGL();
+	
+	// translate OpenGL format to GX format
+
+	if (internalFormat == GL_R8) return GX_R8_UNORM;
+	if (internalFormat == GL_RG8) return GX_RG8_UNORM;
+	if (internalFormat == GL_R16F) return GX_R16_FLOAT;
+	if (internalFormat == GL_R32F) return GX_R32_FLOAT;
+	if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
+	if (internalFormat == GL_RGBA8) return GX_RGBA8_UNORM;
+
+	return GX_UNKNOWN_FORMAT;
+}
+
 #endif

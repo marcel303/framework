@@ -69,7 +69,7 @@
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0 // do not alter
 #endif
 
-#if defined(MACOS) && !defined(ENABLE_METAL) && 0
+#if defined(MACOS) && !defined(ENABLE_METAL) && 1
 	#define ENABLE_METAL 1
 	#define ENABLE_HQ_PRIMITIVES 1
 #elif !defined(ENABLE_OPENGL)
@@ -1589,6 +1589,7 @@ static inline void gxSetTexture(GxTextureId texture) { }
 static inline void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp) { }
 
 static inline void gxGetTextureSize(GxTextureId texture, int & width, int & height) { width = 0; height = 0; }
+static inline GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture) { return GX_UNKNOWN_FORMAT; }
 
 #elif !USE_LEGACY_OPENGL || ENABLE_METAL
 
@@ -1627,6 +1628,7 @@ void gxSetTexture(GxTextureId texture);
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
 void gxGetTextureSize(GxTextureId texture, int & width, int & height);
+GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture);
 
 #else
 
@@ -1666,6 +1668,7 @@ void gxSetTexture(GxTextureId texture);
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
 void gxGetTextureSize(GxTextureId texture, int & width, int & height);
+GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture);
 
 #endif
 
