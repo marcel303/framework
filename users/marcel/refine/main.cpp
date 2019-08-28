@@ -208,6 +208,7 @@ int main(int argc, char * argv[])
 			extension == "js" || // Javascript
 			extension == "maxpat" || // max/msp patch
 			extension == "yml" || // yaml
+			extension == "lua" ||
 			extension == "pde" || // Processing sketch
 			extension == "ino") // Arduino sketch)
 		{
