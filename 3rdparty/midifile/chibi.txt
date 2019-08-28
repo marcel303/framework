@@ -7,3 +7,5 @@ library midifile
 	scan_files *.* path midifile
 	
 	header_path . expose
+
+	license_file LICENSE.txt

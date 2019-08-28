@@ -1,3 +1,4 @@
 library jsoncpp
 	add_files dummy.cpp
 	header_path . expose
+	license_file ../../license/jsoncpp/LICENSE.txt

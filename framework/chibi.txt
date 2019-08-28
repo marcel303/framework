@@ -56,7 +56,7 @@ library framework
 	license_file ../license/framework/COPYING.txt
 	license_file ../license/freeimage/freeimage-license.txt
 	# todo : license_file ../license/freetype
-	# todo : license_file ../license/glew/
+	license_file ../license/glew/COPYING.txt
 	# todo : license_file ../license/openal
 	license_file ../license/msdfgen/LICENSE.txt
 	# todo : license_file ../license/remotery/

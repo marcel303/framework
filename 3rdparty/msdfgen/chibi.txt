@@ -7,3 +7,5 @@ library msdfgen
 	compile_definition _CRT_SECURE_NO_WARNINGS * expose toolchain msvc
 
 	header_path . expose
+
+	license_file LICENSE.txt
