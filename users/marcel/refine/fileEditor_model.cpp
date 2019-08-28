@@ -57,11 +57,14 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 	guiContext.processBegin(dt, sx, sy, inputIsCaptured);
 	{
 		ImGui::SetNextWindowPos(ImVec2(8, 8), ImGuiCond_Always);
+		ImGui::SetNextWindowBgAlpha(.2f);
 		if (ImGui::Begin("Model", nullptr,
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_AlwaysAutoResize))
 		{
+			ImGui::PushItemWidth(120.f);
+			
 			auto animList = model.getAnimList();
 			
 			const char ** animItems = (const char**)alloca(animList.size() * sizeof(char*));
@@ -94,10 +97,24 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 			ImGui::Checkbox("Show colored blend indices", &showColorBlendIndices);
 			ImGui::Checkbox("Show colored blend weights", &showColorBlendWeights);
 			ImGui::Checkbox("Show bounding box", &showBoundingBox);
-			ImGui::Checkbox("Enable lighting", &enableLighting);
-			ImGui::ColorEdit3("Ambient light color", &ambientLight_color[0]);
-			ImGui::ColorEdit3("Directional light color", &directionalLight_color[0]);
+			ImGui::Checkbox("Show axis", &showAxis);
 			ImGui::SliderFloat("Scale", &scale, 0.f, 4.f, "%.2f", 2.f);
+			ImGui::Checkbox("Enable lighting", &enableLighting);
+			if (ImGui::CollapsingHeader("Lighting"))
+			{
+				ImGui::PushID("Ambient light");
+				ImGui::Text("Ambient light");
+				ImGui::ColorEdit3("Color", &ambientLight_color[0]);
+				ImGui::PopID();
+				
+				ImGui::PushID("Directional light");
+				ImGui::Text("Directional light");
+				ImGui::SliderFloat("Intensity", &directionalLight_intensity, 0.f, 10.f);
+				ImGui::ColorEdit3("Color", &directionalLight_color[0]);
+				ImGui::PopID();
+			}
+			
+			ImGui::PopItemWidth();
 		}
 		ImGui::End();
 	}
@@ -107,7 +124,7 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 	{
 		inputIsCaptured = true;
 
-		rotationX += mouse.dy;
+		rotationX -= mouse.dy;
 		rotationY -= mouse.dx;
 	}
 	
@@ -161,11 +178,13 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 					ambientLight_color[1],
 					ambientLight_color[2]);
 				
-				const Vec3 lightDirection = directionalLight_direction.CalcNormalized();
+				const Vec3 lightColor = directionalLight_color * directionalLight_intensity;
 				shader.setImmediate("directionalLight_color",
-					directionalLight_color[0],
-					directionalLight_color[1],
-					directionalLight_color[2]);
+					lightColor[0],
+					lightColor[1],
+					lightColor[2]);
+				
+				const Vec3 lightDirection = directionalLight_direction.CalcNormalized();
 				shader.setImmediate("directionalLight_direction",
 					lightDirection[0],
 					lightDirection[1],
@@ -173,18 +192,38 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 			}
 			clearShader();
 			
-			if (enableLighting)
-			{
-				model.overrideShader = &shader;
-			}
+			model.overrideShader =
+				enableLighting
+				? &shader
+				: nullptr;
 			
 			gxPushMatrix();
-			gxTranslatef(0, 0, 2.f);
-			gxScalef(1.f / maxAxis, 1.f / maxAxis, 1.f / maxAxis);
-			gxTranslatef(0.f, 0.f, 1.f);
-			gxRotatef(rotationY, 0.f, 1.f, 0.f);
-			gxRotatef(rotationX, 1.f, 0.f, 0.f);
-			model.draw(drawFlags);
+			{
+				gxTranslatef(0, 0, 2.f);
+				//gxTranslatef(0.f, 0.f, 1.f);
+				gxRotatef(rotationX, 1.f, 0.f, 0.f);
+				gxRotatef(rotationY, 0.f, 1.f, 0.f);
+				
+				// draw axis helper
+				
+				if (showAxis)
+				{
+					setColor(colorRed);
+					drawLine3d(0);
+					
+					setColor(colorGreen);
+					drawLine3d(1);
+					
+					setColor(colorBlue);
+					drawLine3d(2);
+				}
+		
+				// draw model
+				
+				gxScalef(1.f / maxAxis, 1.f / maxAxis, 1.f / maxAxis);
+				
+				model.draw(drawFlags);
+			}
 			gxPopMatrix();
 		}
 		
