@@ -61,6 +61,7 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 			ImGui::Checkbox("Show colored blend indices", &showColorBlendIndices);
 			ImGui::Checkbox("Show colored blend weights", &showColorBlendWeights);
 			ImGui::Checkbox("Show bounding box", &showBoundingBox);
+			ImGui::SliderFloat("Scale", &scale, 0.f, 4.f, "%.2f", 2.f);
 		}
 		ImGui::End();
 	}
@@ -112,6 +113,8 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 				| DrawBoundingBox * showBoundingBox;
 			
 			model.drawNormalsScale = normalsScale;
+			
+			model.scale = scale;
 			
 			gxPushMatrix();
 			gxTranslatef(0, 0, 2.f);

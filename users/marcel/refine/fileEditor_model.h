@@ -22,6 +22,7 @@ struct FileEditor_Model : FileEditor
 	bool showColorBlendIndices = false;
 	bool showColorBlendWeights = false;
 	bool showBoundingBox = false;
+	float scale = 1.f;
 	
 	FrameworkImGuiContext guiContext;
 	
