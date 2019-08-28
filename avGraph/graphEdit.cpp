@@ -4704,6 +4704,28 @@ void GraphEdit::draw() const
 	
 	std::sort(sortedElems, sortedElems + numElems, [](const SortedGraphElem & e1, const SortedGraphElem & e2) { return e1.zKey < e2.zKey; });
 	
+	// determine the maximum CPU time for mapping CPU time to the CPU heat color gradient
+	
+	maxCpuTime = 0;
+	
+	if (editorOptions.showCpuHeat && realTimeConnection != nullptr)
+	{
+		for (int i = 0; i < numElems; ++i)
+		{
+			if (sortedElems[i].node != nullptr)
+			{
+				auto & node = *sortedElems[i].node;
+				
+				const int cpuTime = realTimeConnection->getNodeCpuTimeUs(node.id);
+				
+				if (cpuTime > maxCpuTime)
+					maxCpuTime = cpuTime;
+			}
+		}
+	}
+	
+	// draw nodes
+	
 	for (int i = 0; i < numElems; ++i)
 	{
 		if (sortedElems[i].node != nullptr)
@@ -5119,15 +5141,26 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		hqSetGradient(GRADIENT_LINEAR, cmat, color1, color2, COLOR_ADD);
 	}
 	
-	if (editorOptions.showCpuHeat && realTimeConnection != nullptr)
+	if (editorOptions.showCpuHeat)
 	{
-		const int timeUs = realTimeConnection->getNodeCpuTimeUs(node.id);
-		const float t = timeUs / float(realTimeConnection->getNodeCpuHeatMax());
+		int cpuHeatMax =
+			realTimeConnection == nullptr
+			? 0
+			: realTimeConnection->getNodeCpuHeatMax();
 		
-		ParticleColor particleColor;
-		editorOptions.cpuHeatColors.sample(t, true, particleColor);
+		if (cpuHeatMax == 0)
+			cpuHeatMax = maxCpuTime;
 		
-		color = color.interp(Color(particleColor.rgba[0], particleColor.rgba[1], particleColor.rgba[2]), particleColor.rgba[3]);
+		if (cpuHeatMax > 0)
+		{
+			const int timeUs = realTimeConnection->getNodeCpuTimeUs(node.id);
+			const float t = timeUs / float(cpuHeatMax);
+			
+			ParticleColor particleColor;
+			editorOptions.cpuHeatColors.sample(t, true, particleColor);
+			
+			color = color.interp(Color(particleColor.rgba[0], particleColor.rgba[1], particleColor.rgba[2]), particleColor.rgba[3]);
+		}
 	}
 	
 	const float border = 3.f;
@@ -5636,6 +5669,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 		editorOptions.gridColor = toParticleColor(Color::fromHex(stringAttrib(editorOptionsElem, "gridColor", defaultGridColor.c_str())));
 		
 		editorOptions.cpuHeatColors = ParticleColorCurve();
+		editorOptions.cpuHeatColors.setLinear(ParticleColor(1, 0, 0, 0), ParticleColor(1, 0, 0, 1));
 		auto cpuHeatColorsElem = editorOptionsElem->FirstChildElement("cpuHeatColors");
 		if (cpuHeatColorsElem != nullptr)
 		{
