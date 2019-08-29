@@ -912,7 +912,7 @@ struct GraphEdit : GraphEditConnection
 	float idleTime;
 	float hideTime;
 	
-	mutable int maxCpuTime = 0;
+	mutable int maxNodeCpuTime = 0;
 	
 	GraphEdit(
 		const int _displaySx,

@@ -1303,7 +1303,7 @@ bool RealTimeConnection::getNodeDynamicSockets(const GraphNodeId nodeId, std::ve
 
 int RealTimeConnection::getNodeCpuHeatMax() const
 {
-	return 1000 * (1000 / 30);
+	return 0;
 }
 
 int RealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const

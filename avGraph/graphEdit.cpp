@@ -4706,20 +4706,27 @@ void GraphEdit::draw() const
 	
 	// determine the maximum CPU time for mapping CPU time to the CPU heat color gradient
 	
-	maxCpuTime = 0;
+	maxNodeCpuTime = 0;
 	
 	if (editorOptions.showCpuHeat && realTimeConnection != nullptr)
 	{
-		for (int i = 0; i < numElems; ++i)
+		maxNodeCpuTime = realTimeConnection->getNodeCpuHeatMax();
+		
+		if (maxNodeCpuTime <= 0)
 		{
-			if (sortedElems[i].node != nullptr)
+			maxNodeCpuTime = 0;
+			
+			for (int i = 0; i < numElems; ++i)
 			{
-				auto & node = *sortedElems[i].node;
-				
-				const int cpuTime = realTimeConnection->getNodeCpuTimeUs(node.id);
-				
-				if (cpuTime > maxCpuTime)
-					maxCpuTime = cpuTime;
+				if (sortedElems[i].node != nullptr)
+				{
+					auto & node = *sortedElems[i].node;
+					
+					const int cpuTime = realTimeConnection->getNodeCpuTimeUs(node.id);
+					
+					if (cpuTime > maxNodeCpuTime)
+						maxNodeCpuTime = cpuTime;
+				}
 			}
 		}
 	}
@@ -5141,26 +5148,15 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		hqSetGradient(GRADIENT_LINEAR, cmat, color1, color2, COLOR_ADD);
 	}
 	
-	if (editorOptions.showCpuHeat)
+	if (editorOptions.showCpuHeat && maxNodeCpuTime > 0)
 	{
-		int cpuHeatMax =
-			realTimeConnection == nullptr
-			? 0
-			: realTimeConnection->getNodeCpuHeatMax();
+		const int timeUs = realTimeConnection->getNodeCpuTimeUs(node.id);
+		const float t = timeUs / float(maxNodeCpuTime);
 		
-		if (cpuHeatMax == 0)
-			cpuHeatMax = maxCpuTime;
+		ParticleColor particleColor;
+		editorOptions.cpuHeatColors.sample(t, true, particleColor);
 		
-		if (cpuHeatMax > 0)
-		{
-			const int timeUs = realTimeConnection->getNodeCpuTimeUs(node.id);
-			const float t = timeUs / float(cpuHeatMax);
-			
-			ParticleColor particleColor;
-			editorOptions.cpuHeatColors.sample(t, true, particleColor);
-			
-			color = color.interp(Color(particleColor.rgba[0], particleColor.rgba[1], particleColor.rgba[2]), particleColor.rgba[3]);
-		}
+		color = color.interp(Color(particleColor.rgba[0], particleColor.rgba[1], particleColor.rgba[2]), particleColor.rgba[3]);
 	}
 	
 	const float border = 3.f;

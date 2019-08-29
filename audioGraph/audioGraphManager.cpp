@@ -171,7 +171,7 @@ struct AudioGraphFileRTC : GraphEdit_RealTimeConnection
 	virtual int getNodeCpuHeatMax() const override
 	{
 		if (file->activeInstance == nullptr)
-			return 1000 * 1000;
+			return 0;
 		else
 			return file->activeInstance->realTimeConnection->getNodeCpuHeatMax();
 	}
