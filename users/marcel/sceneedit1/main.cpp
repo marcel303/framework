@@ -1255,7 +1255,7 @@ struct SceneEditor
 							updateNodeVisibility();
 						}
 						
-						ImGui::BeginChild("Scene structure", ImVec2(0, 140), ImGuiWindowFlags_AlwaysVerticalScrollbar);
+						ImGui::BeginChild("Scene structure", ImVec2(0, 140), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
 							markSelectedNodesOpen();
 							
@@ -1304,7 +1304,7 @@ struct SceneEditor
 					if (ImGui::CollapsingHeader("Selected node(s)", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						deferredBegin();
-						ImGui::BeginChild("Selected nodes", ImVec2(0, 300), ImGuiWindowFlags_AlwaysVerticalScrollbar);
+						ImGui::BeginChild("Selected nodes", ImVec2(0, 300), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
 							for (auto & selectedNodeId : selectedNodes)
 							{
