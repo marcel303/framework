@@ -97,7 +97,7 @@ void fill_circle(float phase, int mode) {
 	}
 }
 
-int main(int argc, char **argv) {
+int main(int argc, const char **argv) {
 	etherdream_lib_start();
 
 #ifdef WIN32
