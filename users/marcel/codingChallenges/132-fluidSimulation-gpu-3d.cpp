@@ -321,7 +321,7 @@ static void lin_solve3d_xyz(
 		setShader(shader);
 		shader.setTexture("x", 0, x->getTexture(), false, true);
 		shader.setTexture("x0", 1, x0->getTexture(), false, true);
-		shader.setTexture("output", 2, x->getTexture(), GL_R16F, false);
+		shader.setTextureRw("output", 2, x->getTexture(), GL_R16F, false);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
 		shader.dispatch(N, N, N);
@@ -335,7 +335,7 @@ static void lin_solve3d_xyz(
 		setShader(shader);
     	shader.setTexture("x", 0, y->getTexture(), false, true);
 		shader.setTexture("x0", 1, y0->getTexture(), false, true);
-		shader.setTexture("output", 2, y->getTexture(), GL_R16F, false);
+		shader.setTextureRw("output", 2, y->getTexture(), GL_R16F, false);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
 		shader.dispatch(N, N, N);
@@ -349,7 +349,7 @@ static void lin_solve3d_xyz(
 		setShader(shader);
     	shader.setTexture("x", 0, z->getTexture(), false, true);
 		shader.setTexture("x0", 1, z0->getTexture(), false, true);
-		shader.setTexture("output", 2, z->getTexture(), GL_R16F, false);
+		shader.setTextureRw("output", 2, z->getTexture(), GL_R16F, false);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
 		shader.dispatch(N, N, N);
