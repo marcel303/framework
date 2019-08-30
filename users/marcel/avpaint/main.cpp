@@ -5,6 +5,7 @@
 #include "TweenFloat.h"
 #include "videoloop.h"
 
+#include <algorithm>
 #include <cmath>
 #include <math.h>
 

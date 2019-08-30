@@ -25,7 +25,9 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#define NOMINMAX
+#ifndef NOMINMAX
+	#define NOMINMAX
+#endif
 
 #include <algorithm>
 #include <cmath>

@@ -494,7 +494,7 @@ static void pasteParameterFromText(ParameterBase * const parameterBase, const ch
 			auto * parameter = static_cast<ParameterBool*>(parameterBase);
 			
 			int value;
-			if (sscanf(line, "%d", &value) == 1)
+			if (sscanf_s(line, "%d", &value) == 1)
 				parameter->set(value != 0);
 		}
 		break;
@@ -503,7 +503,7 @@ static void pasteParameterFromText(ParameterBase * const parameterBase, const ch
 			auto * parameter = static_cast<ParameterInt*>(parameterBase);
 			
 			int value;
-			if (sscanf(line, "%d", &value) == 1)
+			if (sscanf_s(line, "%d", &value) == 1)
 				parameter->set(value);
 		}
 		break;
@@ -512,7 +512,7 @@ static void pasteParameterFromText(ParameterBase * const parameterBase, const ch
 			auto * parameter = static_cast<ParameterFloat*>(parameterBase);
 			
 			float value;
-			if (sscanf(line, "%f", &value) == 1)
+			if (sscanf_s(line, "%f", &value) == 1)
 				parameter->set(value);
 		}
 		break;
@@ -521,7 +521,7 @@ static void pasteParameterFromText(ParameterBase * const parameterBase, const ch
 			auto * parameter = static_cast<ParameterVec2*>(parameterBase);
 			
 			float values[2];
-			if (sscanf(line, "%f %f", &values[0], &values[1]) == 2)
+			if (sscanf_s(line, "%f %f", &values[0], &values[1]) == 2)
 				parameter->set(Vec2(values[0], values[1]));
 		}
 		break;
@@ -530,7 +530,7 @@ static void pasteParameterFromText(ParameterBase * const parameterBase, const ch
 			auto * parameter = static_cast<ParameterVec3*>(parameterBase);
 			
 			float values[3];
-			if (sscanf(line, "%f %f %f", &values[0], &values[1], &values[2]) == 3)
+			if (sscanf_s(line, "%f %f %f", &values[0], &values[1], &values[2]) == 3)
 				parameter->set(Vec3(values[0], values[1], values[2]));
 		}
 		break;
@@ -539,7 +539,7 @@ static void pasteParameterFromText(ParameterBase * const parameterBase, const ch
 			auto * parameter = static_cast<ParameterVec4*>(parameterBase);
 			
 			float values[4];
-			if (sscanf(line, "%f %f %f %f", &values[0], &values[1], &values[2], &values[3]) == 4)
+			if (sscanf_s(line, "%f %f %f %f", &values[0], &values[1], &values[2], &values[3]) == 4)
 				parameter->set(Vec4(values[0], values[1], values[2], values[3]));
 		}
 		break;

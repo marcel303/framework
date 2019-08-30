@@ -1,4 +1,5 @@
 #include "NetAddress.h"
+#include "StringEx.h"
 #include <string.h>
 
 static int GetOctet(int address, int i)
@@ -45,7 +46,7 @@ std::string NetAddress::ToString(bool includePortNumber) const
 	char temp[64];
 	if (includePortNumber)
 	{
-		sprintf(temp, "%d.%d.%d.%d:%d",
+		sprintf_s(temp, sizeof(temp), "%d.%d.%d.%d:%d",
 			GetOctet(m_address, 0),
 			GetOctet(m_address, 1),
 			GetOctet(m_address, 2),
@@ -54,7 +55,7 @@ std::string NetAddress::ToString(bool includePortNumber) const
 	}
 	else
 	{
-		sprintf(temp, "%d.%d.%d.%d",
+		sprintf_s(temp, sizeof(temp), "%d.%d.%d.%d",
 			GetOctet(m_address, 0),
 			GetOctet(m_address, 1),
 			GetOctet(m_address, 2),

@@ -13,6 +13,7 @@ library liboscpack
 	with_platform windows scan_files h   path ip/win32 group ip/win32
 	
 	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
+	with_platform windows compile_definition _WINSOCK_DEPRECATED_NO_WARNINGS *
 
 	header_path . expose
 	

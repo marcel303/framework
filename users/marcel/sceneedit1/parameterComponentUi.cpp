@@ -1,6 +1,7 @@
 #include "parameterComponent.h"
 #include "parameterComponentUi.h"
 #include "parameterUi.h"
+#include "StringEx.h"
 #include <algorithm>
 #include <string.h>
 
