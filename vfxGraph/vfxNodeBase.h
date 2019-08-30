@@ -567,7 +567,7 @@ struct VfxNodeDescription
 	void add(const char * name, const VfxImageCpu & image);
 	void add(const VfxChannel & channel);
 	void addGxTexture(const char * name, const GxTexture & texture);
-	void addOpenglTexture(const char * name, const uint32_t id);
+	void addGxTexture(const char * name, const uint32_t id);
 	
 	void newline();
 };

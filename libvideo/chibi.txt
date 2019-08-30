@@ -6,6 +6,8 @@ library libmediaplayer
 	scan_files cpp path mediaplayer
 	scan_files h   path mediaplayer
 
+	license_file ../license/ffmpeg/LICENSE.md
+
 	with_platform macos header_path macos/include
 	with_platform windows header_path win32/include
 	

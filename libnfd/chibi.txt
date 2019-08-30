@@ -12,3 +12,5 @@ library libnfd
 	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
 
 	header_path . expose
+
+	license_file "../license/Native File Dialog/LICENSE.txt"

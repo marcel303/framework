@@ -8,6 +8,8 @@ struct FileEditor_Spriter : FileEditor
 	Spriter spriter;
 	SpriterState spriterState;
 	
+	bool showAxis = false;
+	
 	bool firstFrame = true;
 	
 	FrameworkImGuiContext guiContext;
@@ -15,7 +17,7 @@ struct FileEditor_Spriter : FileEditor
 	FileEditor_Spriter(const char * path)
 		: spriter(path)
 	{
-		spriterState.startAnim(spriter, "Idle");
+		spriterState.startAnim(spriter, 0);
 		
 		guiContext.init();
 	}
@@ -52,15 +54,49 @@ struct FileEditor_Spriter : FileEditor
 				
 				if (animCount > 0)
 				{
+					// animation selection
+					
 					const char ** animItems = (const char**)alloca(animCount * sizeof(char*));
 					int animIndex = spriterState.animIndex;
 					for (int i = 0; i < animCount; ++i)
-						animItems[i]= spriter.getAnimName(i);
+						animItems[i] = spriter.getAnimName(i);
 					if (ImGui::Combo("Animation", &animIndex, animItems, animCount))
 						spriterState.startAnim(spriter, animIndex);
+					
 					if (ImGui::Button("Restart animation"))
 						spriterState.startAnim(spriter, spriterState.animIndex);
+					
+					// previous and next animation
+					
+					ImGui::SameLine();
+					if (ImGui::Button("-"))
+					{
+						animIndex = (animIndex - 1 + animCount) % animCount;
+						spriterState.startAnim(spriter, animIndex);
+					}
+					ImGui::SameLine();
+					if (ImGui::Button("+"))
+					{
+						animIndex = (animIndex + 1) % animCount;
+						spriterState.startAnim(spriter, animIndex);
+					}
+					
+					// animation controls
+					
+					ImGui::SameLine();
+					ImGui::Checkbox("", &spriterState.animLoop);
+					
+					ImGui::SliderFloat("Speed", &spriterState.animSpeed, 0.f, 10.f);
 				}
+				
+				ImGui::SliderFloat("Angle", &spriterState.angle, -360.f, +360.f);
+				ImGui::SliderFloat("Scale", &spriterState.scale, 0.f, 10.f);
+				ImGui::Checkbox("Flip X", &spriterState.flipX);
+				ImGui::Checkbox("Flip Y", &spriterState.flipY);
+				
+				ImGui::NewLine();
+				ImGui::Text("Helpers");
+				ImGui::Checkbox("Show axis", &showAxis);
 			}
 			ImGui::End();
 		}
@@ -80,6 +116,26 @@ struct FileEditor_Spriter : FileEditor
 		
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
+		
+		if (showAxis)
+		{
+			gxPushMatrix();
+			{
+				// draw axis
+				
+				gxTranslatef(spriterState.x, spriterState.y, 0);
+				gxRotatef(spriterState.angle, 0, 0, 1);
+				
+				setColor(colorRed);
+				drawLine(-10, 0, +10, 0);
+				
+				setColor(colorGreen);
+				drawLine(0, -10, 0, +10);
+			}
+			gxPopMatrix();
+		}
+		
+		// draw spriter
 		
 		setColor(colorWhite);
 		spriter.draw(spriterState);

@@ -1,0 +1,60 @@
+desc: test
+
+slider1:0.0<0,1,0.001>slider1
+slider2:0.0<0,1,0.001>slider2
+
+@init
+
+frame = 0;
+
+@slider
+
+@block
+
+frame += 1;
+
+@sample
+
+@gfx 500 500
+
+gfx_a=1;
+gfx_r=gfx_g=gfx_b=1;
+gfx_x=10;
+gfx_y=10;
+gfx_rectto(90, 40);
+
+gfx_a=1;
+gfx_r=1;
+gfx_g=gfx_b=0;
+gfx_x=10;
+gfx_y=10;
+gfx_rectto(10 + (mouse_x < 80 ? mouse_x : 80), 25);
+
+gfx_a = 1;
+gfx_r = gfx_g = gfx_b = 1;
+gfx_circle(100, 100, 20, 1);
+
+gfx_triangle(100,100, 200, 200, 200,100);
+
+gfx_arc(300, 100, 30, 100, 20);
+
+gfx_x = 100;
+gfx_y = 50;
+gfx_lineto(200, 50);
+
+c = (1.0 + sin(frame / 11.0)) / 2.0;
+
+gfx_roundrect(220, 50, 300, 100, 60 * c);
+gfx_roundrect(220, 50, 300, 100, 50 * c);
+gfx_roundrect(220, 50, 300, 100, 40 * c);
+gfx_roundrect(220, 50, 300, 100, 30 * c);
+gfx_roundrect(220, 50, 300, 100, 20);
+
+gfx_roundrect(220, 50, 300, 100, 10);
+gfx_x = 230;
+gfx_y = 60;
+gfx_drawnumber(frame, 0);
+gfx_x = 235;
+gfx_y += 20 + sin(frame/5.0) * 10;
+gfx_r=0;gfx_g=1;gfx_b=0;
+gfx_drawstr("hello world");

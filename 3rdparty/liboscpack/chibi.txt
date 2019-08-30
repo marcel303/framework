@@ -5,6 +5,8 @@ library liboscpack
 	scan_files cpp path ip  group ip
 	scan_files h   path ip  group ip
 
+	license_file LICENSE
+
 	with_platform macos   scan_files cpp path ip/posix group ip/posix
 	with_platform macos   scan_files h   path ip/posix group ip/posix
 	with_platform linux   scan_files cpp path ip/posix group ip/posix

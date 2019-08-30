@@ -1,0 +1,9 @@
+app marcel-jsusfx2
+	
+	depend_library imgui-framework
+	depend_library ImGuiColorTextEdit
+	depend_library jsusfx-framework
+	
+	add_files main.cpp
+	
+	resource_path data

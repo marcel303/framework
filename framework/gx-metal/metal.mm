@@ -114,7 +114,7 @@ void metal_attach(SDL_Window * window)
 		NSView * sdl_view = info.info.cocoa.window.contentView;
 
 		MetalWindowData * windowData = new MetalWindowData();
-		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:YES];
+		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:YES wantsVsync:framework.enableVsync];
 		[sdl_view addSubview:windowData->metalview];
 
 		windowDatas[window] = windowData;
@@ -172,8 +172,7 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 		activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
 		[activeWindowData->current_drawable retain];
 		
-		pd.renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
-		[pd.renderdesc retain];
+		pd.renderdesc = [[MTLRenderPassDescriptor renderPassDescriptor] retain];
 		
 		// specify the color and depth attachment(s)
 		
@@ -491,6 +490,19 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		
 		// todo : set blend mode
 	}
+}
+
+void pushBackbufferRenderPass(const bool clearColor, const bool clearDepth, const char * passName)
+{
+	ColorTarget colorTarget(activeWindowData->current_drawable.texture);
+	DepthTarget depthTarget(activeWindowData->metalview.depthTexture);
+	
+	pushRenderPass(
+		&colorTarget,
+		clearColor,
+		activeWindowData->metalview.depthTexture ? &depthTarget : nullptr,
+		clearDepth,
+		passName);
 }
 
 void popRenderPass()
@@ -987,32 +999,46 @@ void gxValidateMatrices()
 		
 		const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
 	
-		if (shaderElem.vsInfo.uniformBufferIndex != -1)
-		{
-			uint8_t * data = (uint8_t*)shader->m_cacheElem->vsUniformData;
+		// check if matrices are dirty
 		
-			// check if matrices are dirty
+		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) &&
+			shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index >= 0)
+		{
+			shader->setImmediateMatrix4x4(
+				shaderElem.params[ShaderCacheElem::kSp_ModelViewMatrix].index,
+				s_gxModelView.get().m_v);
+			//printf("validate2\n");
+		}
+		
+		if ((globals.gxShaderIsDirty || s_gxModelView.isDirty || s_gxProjection.isDirty) &&
+			shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index >= 0)
+		{
+			shader->setImmediateMatrix4x4(
+				shaderElem.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].index,
+				(s_gxProjection.get() * s_gxModelView.get()).m_v);
+			//printf("validate3\n");
+		}
+		
+		if ((globals.gxShaderIsDirty || s_gxProjection.isDirty) &&
+			shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index >= 0)
+		{
+			shader->setImmediateMatrix4x4(
+				shaderElem.params[ShaderCacheElem::kSp_ProjectionMatrix].index,
+				s_gxProjection.get().m_v);
+			//printf("validate4\n");
+		}
+		
+		// set vertex stage uniform buffers
+		
+		for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+		{
+			if (shaderElem.vsInfo.uniformBufferSize[i] == 0)
+				continue;
 			
-			if ((globals.gxShaderIsDirty || s_gxModelView.isDirty) && shaderElem.vsInfo.params[ShaderCacheElem::kSp_ModelViewMatrix].offset >= 0)
-			{
-				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.vsInfo.params[ShaderCacheElem::kSp_ModelViewMatrix].offset);
-				*dst = s_gxModelView.get();
-				//printf("validate2\n");
-			}
-			if ((globals.gxShaderIsDirty || s_gxModelView.isDirty || s_gxProjection.isDirty) && shaderElem.vsInfo.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].offset >= 0)
-			{
-				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.vsInfo.params[ShaderCacheElem::kSp_ModelViewProjectionMatrix].offset);
-				*dst = s_gxProjection.get() * s_gxModelView.get();
-				//printf("validate3\n");
-			}
-			if ((globals.gxShaderIsDirty || s_gxProjection.isDirty) && shaderElem.vsInfo.params[ShaderCacheElem::kSp_ProjectionMatrix].offset >= 0)
-			{
-				Mat4x4 * dst = (Mat4x4*)(data + shaderElem.vsInfo.params[ShaderCacheElem::kSp_ProjectionMatrix].offset);
-				*dst = s_gxProjection.get();
-				//printf("validate4\n");
-			}
-			
-			[s_activeRenderPass->encoder setVertexBytes:data length:shaderElem.vsInfo.uniformBufferSize atIndex:shaderElem.vsInfo.uniformBufferIndex];
+			[s_activeRenderPass->encoder
+				setVertexBytes:shader->m_cacheElem->vsUniformData[i]
+				length:shaderElem.vsInfo.uniformBufferSize[i]
+				atIndex:i];
 		}
 	}
 
@@ -1617,26 +1643,28 @@ static void gxFlush(bool endOfBatch)
 		
 		const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 		
-		uint8_t * data = (uint8_t*)shaderElem.psUniformData;
+		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+		{
+			shader.setImmediate(
+				shaderElem.params[ShaderCacheElem::kSp_Params].index,
+				s_gxTextureEnabled ? 1.f : 0.f,
+				globals.colorMode,
+				globals.colorPost,
+				globals.colorClamp);
+		}
 		
-		if (shaderElem.psInfo.params[ShaderCacheElem::kSp_Params].offset != -1)
+		// set fragment stage uniform buffers
+		
+		for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
 		{
-			float * values = (float*)(data + shaderElem.psInfo.params[ShaderCacheElem::kSp_Params].offset);
+			if (shaderElem.psInfo.uniformBufferSize[i] == 0)
+				continue;
 			
-			values[0] = s_gxTextureEnabled ? 1.f : 0.f,
-			values[1] = globals.colorMode;
-			values[2] = globals.colorPost;
-			values[3] = globals.colorClamp;
+			[s_activeRenderPass->encoder
+				setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+				length:shaderElem.psInfo.uniformBufferSize[i]
+				atIndex:i];
 		}
-
-		if (globals.gxShaderIsDirty)
-		{
-			if (shaderElem.psInfo.params[ShaderCacheElem::kSp_Texture].offset != -1)
-				shader.setTextureUnit(shaderElem.psInfo.params[ShaderCacheElem::kSp_Texture].offset, 0);
-		}
-	
-		if (shaderElem.psInfo.uniformBufferIndex != -1)
-			[s_activeRenderPass->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
 		
 		if (shader.isValid())
 		{
@@ -1996,9 +2024,19 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 
-	if (shaderElem.psInfo.uniformBufferIndex != -1)
-		[s_activeRenderPass->encoder setFragmentBytes:shader.m_cacheElem->psUniformData length:shaderElem.psInfo.uniformBufferSize atIndex:shaderElem.psInfo.uniformBufferIndex];
-
+	// set fragment stage uniform buffers
+	
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	{
+		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
+			continue;
+		
+		[s_activeRenderPass->encoder
+			setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+			length:shaderElem.psInfo.uniformBufferSize[i]
+			atIndex:i];
+	}
+	
 	if (shader.isValid())
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);

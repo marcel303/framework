@@ -4704,6 +4704,35 @@ void GraphEdit::draw() const
 	
 	std::sort(sortedElems, sortedElems + numElems, [](const SortedGraphElem & e1, const SortedGraphElem & e2) { return e1.zKey < e2.zKey; });
 	
+	// determine the maximum CPU time for mapping CPU time to the CPU heat color gradient
+	
+	maxNodeCpuTime = 0;
+	
+	if (editorOptions.showCpuHeat && realTimeConnection != nullptr)
+	{
+		maxNodeCpuTime = realTimeConnection->getNodeCpuHeatMax();
+		
+		if (maxNodeCpuTime <= 0)
+		{
+			maxNodeCpuTime = 0;
+			
+			for (int i = 0; i < numElems; ++i)
+			{
+				if (sortedElems[i].node != nullptr)
+				{
+					auto & node = *sortedElems[i].node;
+					
+					const int cpuTime = realTimeConnection->getNodeCpuTimeUs(node.id);
+					
+					if (cpuTime > maxNodeCpuTime)
+						maxNodeCpuTime = cpuTime;
+				}
+			}
+		}
+	}
+	
+	// draw nodes
+	
 	for (int i = 0; i < numElems; ++i)
 	{
 		if (sortedElems[i].node != nullptr)
@@ -5119,10 +5148,10 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 		hqSetGradient(GRADIENT_LINEAR, cmat, color1, color2, COLOR_ADD);
 	}
 	
-	if (editorOptions.showCpuHeat && realTimeConnection != nullptr)
+	if (editorOptions.showCpuHeat && maxNodeCpuTime > 0)
 	{
 		const int timeUs = realTimeConnection->getNodeCpuTimeUs(node.id);
-		const float t = timeUs / float(realTimeConnection->getNodeCpuHeatMax());
+		const float t = timeUs / float(maxNodeCpuTime);
 		
 		ParticleColor particleColor;
 		editorOptions.cpuHeatColors.sample(t, true, particleColor);
@@ -5636,6 +5665,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 		editorOptions.gridColor = toParticleColor(Color::fromHex(stringAttrib(editorOptionsElem, "gridColor", defaultGridColor.c_str())));
 		
 		editorOptions.cpuHeatColors = ParticleColorCurve();
+		editorOptions.cpuHeatColors.setLinear(ParticleColor(1, 0, 0, 0), ParticleColor(1, 0, 0, 1));
 		auto cpuHeatColorsElem = editorOptionsElem->FirstChildElement("cpuHeatColors");
 		if (cpuHeatColorsElem != nullptr)
 		{

@@ -68,6 +68,8 @@ library libsdl2 shared
 	with_platform linux scan_files c path libsdl2/src/timer/unix
 	with_platform linux depend_package OpenGL
 
+	license_file ../libsdl2/COPYING.txt
+
 app libsdl2-test-basic
 	add_files test-basic.cpp
 	depend_library libsdl2

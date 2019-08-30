@@ -1033,6 +1033,8 @@ public:
 	BuiltinShader colorMultiply;
 	BuiltinShader colorTemperature;
 	
+	BuiltinShader textureSwizzle;
+	
 	BuiltinShader threshold;
 	BuiltinShader thresholdValue;
 	

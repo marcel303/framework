@@ -153,26 +153,32 @@ namespace MP
 
 	#if LIBAVCODEC_VERSION_MAJOR >= 57
 		Assert(m_swrContext == nullptr);
+		int inputChannelLayout = audioParams->channel_layout;
+		if (inputChannelLayout == 0)
+			inputChannelLayout = (1 << audioParams->channels) - 1;
 		m_swrContext = swr_alloc_set_opts(nullptr,
 			// output
 			outputChannelLayout,
 			AV_SAMPLE_FMT_S16,
-			// input
 			m_codecContext->sample_rate,
-			audioParams->channel_layout,
+			// input
+			inputChannelLayout,
 			(AVSampleFormat)audioParams->format,
 			audioParams->sample_rate,
 			// log
 			0, nullptr);
 	#else
 		Assert(m_swrContext == nullptr);
+		int inputChannelLayout = m_codecContext->channel_layout;
+		if (inputChannelLayout == 0)
+			inputChannelLayout = (1 << m_codecContext->channels) - 1;
 		m_swrContext = swr_alloc_set_opts(nullptr,
 			// output
 			outputChannelLayout,
 			AV_SAMPLE_FMT_S16,
-			// input
 			m_codecContext->sample_rate,
-			m_codecContext->channel_layout,
+			// input
+			inputChannelLayout,
 			m_codecContext->sample_fmt,
 			m_codecContext->sample_rate,
 			// log

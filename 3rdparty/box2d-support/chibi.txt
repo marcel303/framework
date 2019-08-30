@@ -1,6 +1,7 @@
 library box2d
 	scan_files cpp path ../box2d/Box2D traverse
 	scan_files h   path ../box2d/Box2D traverse
+	license_file ../box2d/LICENSE
 	header_path ../box2d expose
 
 app box2d-testbed-framework

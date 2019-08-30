@@ -8,8 +8,7 @@
 #include "Random.h"
 #include <atomic>
 
-#define MIDI_OFF 0x80
-#define MIDI_ON 0x90
+class RtMidiIn;
 
 struct MidiBuffer
 {
@@ -136,10 +135,21 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 	int offsetY = 0;
 	
 	bool sliderIsActive[JsusFx::kMaxSliders] = { };
+
+	// midi input
+
+	RtMidiIn * midiIn = nullptr;
+	int currentMidiPort = -1;
+	int desiredMidiPort = 0;
 	
+	// audio output
+
 	PortAudioObject paObject;
 	SDL_mutex * mutex = nullptr;
 	std::atomic<AudioSource> audioSource;
+
+	// source audio synthesis
+
 	std::atomic<int> volume;
 	std::atomic<int> frequency;
 	std::atomic<int> sharpness;
@@ -165,6 +175,8 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 		const int framesPerBuffer) override;
 	
 	virtual void doButtonBar() override;
+
+	void updateMidi();
 
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override;
 };

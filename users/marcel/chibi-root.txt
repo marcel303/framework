@@ -22,6 +22,7 @@ add hackerPoet/010-particleLife
 add homography
 add interpolation1
 add jsusfx1
+add jsusfx2
 add libgg-psd
 add magiclines
 with_platform macos add metal1

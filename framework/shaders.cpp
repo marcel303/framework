@@ -55,6 +55,9 @@
 #include "data/engine/builtin-treshold-componentwise.ps"
 #include "data/engine/builtin-treshold-componentwise.vs"
 
+#include "data/engine/builtin-textureSwizzle.ps"
+#include "data/engine/builtin-textureSwizzle.vs"
+
 #include "data/engine/builtin-hq-common.txt"
 #include "data/engine/builtin-hq-common-vs.txt"
 #include "data/engine/builtin-hq-filled-circle.ps"
@@ -150,6 +153,9 @@ void registerBuiltinShaders()
 	shaderSource("engine/builtin-threshold.vs", s_tresholdVs);
 	shaderSource("engine/builtin-threshold-componentwise.ps", s_tresholdComponentwisePs);
 	shaderSource("engine/builtin-threshold-componentwise.vs", s_tresholdComponentwiseVs);
+	
+	shaderSource("engine/builtin-textureswizzle.ps", s_textureSwizzlePs);
+	shaderSource("engine/builtin-textureswizzle.vs", s_textureSwizzleVs);
 	
 	shaderSource("engine/builtin-hq-common.txt", s_hqCommonPs);
 	shaderSource("engine/builtin-hq-common-vs.txt", s_hqCommonVs);

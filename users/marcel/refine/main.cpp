@@ -6,6 +6,8 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui_internal.h"
 
+#include "fileBrowser.h"
+
 #include "fileEditor.h"
 #include "fileEditor_audioGraph.h"
 #include "fileEditor_audioStream_vorbis.h"
@@ -45,171 +47,6 @@ static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
 
 static std::string s_dataFolder;
-
-struct FileElem
-{
-	bool isFolded = true;
-
-	std::string name;
-	std::string path;
-	bool isFile = false;
-
-	std::vector<FileElem> childElems;
-
-	void fold(const bool recursive)
-	{
-		isFolded = true;
-
-		if (recursive)
-			for (auto & childElem : childElems)
-				childElem.fold(recursive);
-	}
-
-	void unfold(const bool recursive)
-	{
-		isFolded = false;
-
-		if (recursive)
-			for (auto & childElem : childElems)
-				childElem.unfold(recursive);
-	}
-};
-
-struct FileBrowser
-{
-	FileElem rootElem;
-	
-	std::function<void (const std::string & filename)> onFileSelected;
-
-	void init()
-	{
-		scanFiles();
-	}
-
-	void clearFiles()
-	{
-		rootElem = FileElem();
-	}
-
-	void scanFiles()
-	{
-		// clear the old file tree
-		
-		clearFiles();
-
-		// list files
-
-		//const char * rootFolder = "/Users/thecat/framework/vfxGraph-examples/data";
-		const char * rootFolder = "/Users/thecat/framework/";
-		//const char * rootFolder = "/Users/thecat/";
-		//const char * rootFolder = "d:/repos";
-		
-		auto files = listFiles(rootFolder, true);
-		
-		std::sort(files.begin(), files.end(), [](const std::string & s1, const std::string & s2) { return strcasecmp(s1.c_str(), s2.c_str()) < 0; });
-		
-		// build a tree structure of the files
-		
-		for (size_t i = 0; i < files.size(); ++i)
-		{
-			const std::string & path = files[i];
-			
-			std::string name = files[i];
-			
-			if (String::StartsWith(name, rootFolder))
-				name = String::SubString(name, strlen(rootFolder) + 1);
-			
-			FileElem * parent = &rootElem;
-			
-			size_t elemBegin = 0;
-			
-			for (size_t j = 0; j < name.size(); ++j)
-			{
-				if (name[j] == '/')
-				{
-					size_t elemEnd = j;
-					
-					const std::string elemName = name.substr(elemBegin, elemEnd - elemBegin);
-					
-					bool found = false;
-					
-					for (auto & childElem : parent->childElems)
-					{
-						if (childElem.name == elemName)
-						{
-							parent = &childElem;
-							found = true;
-						}
-					}
-					
-					if (found == false)
-					{
-						FileElem childElem;
-						childElem.name = elemName;
-						childElem.isFile = false;
-						
-						parent->childElems.push_back(childElem);
-						
-						parent = &parent->childElems.back();
-					}
-					
-					//
-					
-					elemBegin = elemEnd + 1;
-				}
-			}
-			
-			Assert(elemBegin < name.size());
-			if (elemBegin < name.size())
-			{
-				const std::string elemName = name.substr(elemBegin, name.size() - elemBegin);
-				
-				FileElem childElem;
-				childElem.name = elemName;
-				childElem.path = path;
-				childElem.isFile = true;
-				
-				parent->childElems.push_back(childElem);
-			}
-		}
-	}
-
-	void tickRecurse(FileElem & elem)
-	{
-		ImGui::PushID(elem.name.c_str());
-		
-		// draw foldable menu items for each file
-		
-		for (auto & childElem : elem.childElems)
-		{
-			if (childElem.isFile == false)
-			{
-				if (ImGui::CollapsingHeader(childElem.name.c_str()))
-				{
-					ImGui::Indent();
-					tickRecurse(childElem);
-					ImGui::Unindent();
-				}
-			}
-		}
-		
-		for (auto & childElem : elem.childElems)
-			if (childElem.isFile == true)
-				if (ImGui::Button(childElem.name.c_str()))
-					onFileSelected(childElem.path);
-		
-		ImGui::PopID();
-	}
-	
-	void tick()
-	{
-		ImGui::PushID("root");
-		{
-			tickRecurse(rootElem);
-		}
-		ImGui::PopID();
-	}
-};
 
 //
 
@@ -293,6 +130,8 @@ int main(int argc, char * argv[])
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
 
+	framework.windowIsResizable = true;
+	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
@@ -315,11 +154,11 @@ int main(int argc, char * argv[])
 
 	// file browser
 	FileBrowser fileBrowser;
-	fileBrowser.init();
+	fileBrowser.init(CHIBI_RESOURCE_PATH "/../../../..");
 
 	// file editor
 	FileEditor * editor = nullptr;
-	Surface * editorSurface = new Surface(VIEW_SX - 300, VIEW_SY - 30, false, true);
+	Surface * editorSurface = nullptr;
 	
 #if CHIBI_INTEGRATION
 	struct Chibi
@@ -347,15 +186,7 @@ int main(int argc, char * argv[])
 		
 		//
 		
-	// fixme : ugly hack to construct an absolute path here
-	
-		auto directory = Path::GetDirectory(path);
-	#ifndef WIN32
-		directory = "/" + directory;
-	#endif
-		changeDirectory(directory.c_str());
-		
-		auto filename = Path::GetFileName(path);
+		auto filename = path;
 		auto extension = Path::GetExtension(filename, true);
 		
 		if (extension == "frag" || // Fragment shader
@@ -365,6 +196,8 @@ int main(int argc, char * argv[])
 			extension == "c" || // c
 			extension == "cpp" || // c++
 			extension == "h" || // Header file
+			extension == "m" || // objective-c
+			extension == "mm" || // objective-c++
 			extension == "py" || // Python
 			extension == "jsfx-inc" || // JsusFx include file
 			extension == "inc" || // Include file
@@ -373,6 +206,9 @@ int main(int argc, char * argv[])
 			extension == "sh" || // Shell script
 			extension == "java" ||
 			extension == "js" || // Javascript
+			extension == "maxpat" || // max/msp patch
+			extension == "yml" || // yaml
+			extension == "lua" ||
 			extension == "pde" || // Processing sketch
 			extension == "ino") // Arduino sketch)
 		{
@@ -387,7 +223,13 @@ int main(int argc, char * argv[])
 		{
 			editor = new FileEditor_Shader(filename.c_str());
 		}
-		else if (extension == "bmp" || extension == "jpg" || extension == "jpeg" || extension == "png" || extension == "psd" || extension == "tga" || extension == "gif")
+		else if (extension == "bmp" ||
+			extension == "jpg" ||
+			extension == "jpeg" ||
+			extension == "png" ||
+			extension == "psd" ||
+			extension == "tga" ||
+			extension == "gif")
 		{
 			editor = new FileEditor_Sprite(filename.c_str());
 		}
@@ -403,7 +245,11 @@ int main(int argc, char * argv[])
 		{
 			editor = new FileEditor_Spriter(filename.c_str());
 		}
-		else if (extension == "mpg" || extension == "mpeg" || extension == "mp4" || extension == "avi" || extension == "mov")
+		else if (extension == "mpg" ||
+			extension == "mpeg" ||
+			extension == "mp4" ||
+			extension == "avi" ||
+			extension == "mov")
 		{
 			editor = new FileEditor_Video(filename.c_str());
 		}
@@ -492,6 +338,28 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 
+		const int windowSx = framework.getMainWindow().getWidth();
+		const int windowSy = framework.getMainWindow().getHeight();
+		
+		const int desiredEditorSurfaceSx = windowSx - 300;
+		const int desiredEditorSurfaceSy = windowSy - 30;
+		
+		if (editorSurface == nullptr ||
+			editorSurface->getWidth() != desiredEditorSurfaceSx ||
+			editorSurface->getHeight() != desiredEditorSurfaceSy)
+		{
+			delete editorSurface;
+			editorSurface = nullptr;
+			
+			//
+			
+			editorSurface = new Surface(
+				desiredEditorSurfaceSx,
+				desiredEditorSurfaceSy,
+				false,
+				true);
+		}
+		
 		const float dt = framework.timeStep;
 		
 		// update editor windows
@@ -529,7 +397,7 @@ int main(int argc, char * argv[])
 
 		bool inputIsCaptured = false;
 
-		guiContext.processBegin(dt, VIEW_SX, VIEW_SY, inputIsCaptured);
+		guiContext.processBegin(dt, windowSx, windowSy, inputIsCaptured);
 		{
 			ImGui::SetNextWindowPos(ImVec2(0, 0));
 			ImGui::SetNextWindowSize(ImVec2(300, 0));
@@ -544,7 +412,26 @@ int main(int argc, char * argv[])
 				{
 					if (ImGui::BeginMenu("File"))
 					{
-						ImGui::MenuItem("Refresh");
+						if (ImGui::MenuItem("Refresh"))
+							fileBrowser.clearFiles();
+						if (ImGui::MenuItem("Select root"))
+						{
+							nfdchar_t * path = 0;
+							nfdresult_t result = NFD_OpenDialog("", "", &path);
+
+							if (result == NFD_OKAY)
+							{
+								const std::string dir = Path::GetDirectory(path);
+								
+								fileBrowser.init(dir.c_str());
+							}
+							
+							if (path != nullptr)
+							{
+								free(path);
+								path = nullptr;
+							}
+						}
 						
 						ImGui::EndMenu();
 					}
@@ -648,11 +535,13 @@ int main(int argc, char * argv[])
 			
 			if (editor != nullptr)
 			{
+				const ImVec2 menubarReservation(0, 30);
+				
 				ImVec2 pos(300, 0);
 				ImVec2 size(editorSurface->getWidth(), editorSurface->getHeight());
 				
 				ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
-				ImGui::SetNextWindowSize(size, ImGuiCond_Always);
+				ImGui::SetNextWindowSize(size + menubarReservation, ImGuiCond_Always);
 				
 				pos += ImVec2(0, 30);
 				
@@ -764,6 +653,8 @@ int main(int argc, char * argv[])
 	}
 	
 	changeDirectory(s_dataFolder.c_str());
+	
+	fileBrowser.shut();
 	
 	guiContext.shut();
 

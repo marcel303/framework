@@ -5,6 +5,7 @@ with_platform windows add libsdl2-win32
 add libetherdream
 
 add box2d-support
+add framework-ofx
 add glew
 add liboscpack
 add midifile
@@ -21,11 +22,13 @@ add turbojpeg
 library imgui
 	header_path imgui expose
 	add_files imgui/imgui.cpp imgui/imgui.h imgui/imgui_demo.cpp imgui/imgui_draw.cpp imgui/imgui_internal.h imgui/imgui_widgets.cpp
+	license_file imgui/LICENSE.txt
 
 library ImGuiColorTextEdit
 	depend_library imgui
 	header_path ImGuiColorTextEdit alias_through_copy imgui expose
 	add_files ImGuiColorTextEdit/TextEditor.cpp ImGuiColorTextEdit/TextEditor.h
+	license_file ImGuiColorTextEdit/LICENSE
 
 app ImGuiColorTextEdit-000-test
 	resource_path .

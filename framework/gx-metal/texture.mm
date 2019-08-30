@@ -525,4 +525,30 @@ void gxGetTextureSize(GxTextureId id, int & width, int & height)
 	}
 }
 
+GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
+{
+	if (id == 0)
+	{
+		return GX_UNKNOWN_FORMAT;
+	}
+	else
+	{
+		const auto texture = s_textures[id];
+		
+		const MTLPixelFormat format = texture.pixelFormat;
+		
+		// integer unsigned normalized
+		if (format == MTLPixelFormatR8Uint) return GX_R8_UNORM;
+		if (format == MTLPixelFormatRG8Uint) return GX_RG8_UNORM;
+		if (format == MTLPixelFormatRGBA8Uint) return GX_RGBA8_UNORM;
+		
+		// floating point
+		if (format == MTLPixelFormatR16Float) return GX_R16_FLOAT;
+		if (format == MTLPixelFormatR32Float) return GX_R32_FLOAT;
+		if (format == MTLPixelFormatRGBA32Float) return GX_RGBA32_FLOAT;
+		
+		return GX_UNKNOWN_FORMAT;
+	}
+}
+
 #endif

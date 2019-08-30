@@ -72,53 +72,27 @@ struct ShaderCacheElem
 
 struct ShaderCacheElem_Metal : ShaderCacheElem
 {
+	static const int kMaxBuffers = 4;
+	
 	static const int kMaxVsTextures = 2;
 	static const int kMaxPsTextures = 8;
 	
 	struct StageInfo
 	{
-		struct
-		{
-			int offset = -1;
-
-			void set(const int offset)
-			{
-				this->offset = offset;
-			}
-		} params[kSp_MAX];
-		
-		int uniformBufferIndex = -1;
-		int uniformBufferSize = 0;
+		int uniformBufferSize[kMaxBuffers] = { };
 		
 		void initUniforms(MTLArgument * arg)
 		{
-			uniformBufferIndex = arg.index;
-			uniformBufferSize = arg.bufferDataSize;
-		
-			for (MTLStructMember * uniform in arg.bufferStructType.members)
-			{
-			#define CASE(param, string) if ([uniform.name isEqualToString:@string]) { params[param].set(uniform.offset); }
-				{
-					CASE(kSp_ModelViewMatrix, "ModelViewMatrix");
-					CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
-					CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
-					CASE(kSp_SkinningMatrices, "skinningMatrices");
-					CASE(kSp_Texture, "source");
-					CASE(kSp_Params, "params");
-					CASE(kSp_ShadingParams, "shadingParams");
-					CASE(kSp_GradientInfo, "gradientInfo");
-					CASE(kSp_GradientMatrix, "gmat");
-					CASE(kSp_TextureMatrix, "tmat");
-				}
-			#undef CASE
-			}
+			uniformBufferSize[arg.index] = arg.bufferDataSize;
 		}
 	};
 
 	struct UniformInfo
 	{
 		std::string name;
+		int vsBuffer = -1;
 		int vsOffset = -1;
+		int psBuffer = -1;
 		int psOffset = -1;
 		int elemType = -1;
 		int numElems = 0;
@@ -146,8 +120,8 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 
 	std::vector<UniformInfo> uniformInfos;
 	
-	void * vsUniformData = nullptr;
-	void * psUniformData = nullptr;
+	void * vsUniformData[kMaxBuffers] = { };
+	void * psUniformData[kMaxBuffers] = { };
 	
 	std::vector<TextureInfo> textureInfos;
 	
@@ -178,13 +152,18 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 					NSLog(@"found texture");
 					addTexture(arg, 'v');
 				}
-				else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
+				else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name hasPrefix:@"uniforms"])
 				{
-					vsInfo.initUniforms(arg);
-					addUniforms(arg, 'v');
-					//Assert(vsUniformData == nullptr); // todo : enable assert
-					vsUniformData = malloc(arg.bufferDataSize);
-					memset(vsUniformData, 0, arg.bufferDataSize);
+					Assert(arg.index >= 0 && arg.index < kMaxBuffers);
+					if (arg.index >= 0 && arg.index < kMaxBuffers)
+					{
+						vsInfo.initUniforms(arg);
+						addUniforms(arg, 'v');
+						
+						Assert(vsUniformData[arg.index] == nullptr);
+						vsUniformData[arg.index] = malloc(arg.bufferDataSize);
+						memset(vsUniformData[arg.index], 0, arg.bufferDataSize);
+					}
 				}
 			}
 			
@@ -199,13 +178,18 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 					NSLog(@"found texture");
 					addTexture(arg, 'p');
 				}
-				else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"uniforms"])
+				else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name hasPrefix:@"uniforms"])
 				{
-					psInfo.initUniforms(arg);
-					addUniforms(arg, 'p');
-					//Assert(psUniformData == nullptr); // todo : enable assert
-					psUniformData = malloc(arg.bufferDataSize);
-					memset(psUniformData, 0, arg.bufferDataSize);
+					Assert(arg.index >= 0 && arg.index < kMaxBuffers);
+					if (arg.index >= 0 && arg.index < kMaxBuffers)
+					{
+						psInfo.initUniforms(arg);
+						addUniforms(arg, 'p');
+						
+						Assert(psUniformData[arg.index] == nullptr);
+						psUniformData[arg.index] = malloc(arg.bufferDataSize);
+						memset(psUniformData[arg.index], 0, arg.bufferDataSize);
+					}
 				}
 			}
 			
@@ -236,10 +220,13 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 		
 		textureInfos.clear();
 		
-		free(vsUniformData);
-		free(psUniformData);
-		vsUniformData = nullptr;
-		psUniformData = nullptr;
+		for (int i = 0; i < kMaxBuffers; ++i)
+		{
+			free(vsUniformData[i]);
+			free(psUniformData[i]);
+			vsUniformData[i] = nullptr;
+			psUniformData[i] = nullptr;
+		}
 		
 		uniformInfos.clear();
 		
@@ -281,9 +268,15 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 					found = true;
 					
 					if (type == 'v')
+					{
+						uniformInfo.vsBuffer = arg.index;
 						uniformInfo.vsOffset = uniform.offset;
+					}
 					else
+					{
+						uniformInfo.psBuffer = arg.index;
 						uniformInfo.psOffset = uniform.offset;
+					}
 				}
 			}
 			
@@ -295,9 +288,15 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 				uniformInfo.name = name;
 				
 				if (type == 'v')
+				{
+					uniformInfo.vsBuffer = arg.index;
 					uniformInfo.vsOffset = uniform.offset;
+				}
 				else
+				{
+					uniformInfo.psBuffer = arg.index;
 					uniformInfo.psOffset = uniform.offset;
+				}
 				
 				switch (uniform.dataType)
 				{

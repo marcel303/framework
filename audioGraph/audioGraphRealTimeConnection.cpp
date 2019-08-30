@@ -981,7 +981,7 @@ int AudioRealTimeConnection::getLinkActivity(const GraphLinkId linkId, const Gra
 
 int AudioRealTimeConnection::getNodeCpuHeatMax() const
 {
-	return 1000 * 2;
+	return 0;
 }
 
 int AudioRealTimeConnection::getNodeCpuTimeUs(const GraphNodeId nodeId) const

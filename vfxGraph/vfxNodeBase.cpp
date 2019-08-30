@@ -802,7 +802,7 @@ void VfxNodeDescription::add(const char * format, ...)
 
 void VfxNodeDescription::add(const char * name, const VfxImageBase & image)
 {
-	addOpenglTexture(name, image.getTexture());
+	addGxTexture(name, image.getTexture());
 }
 
 void VfxNodeDescription::add(const char * name, const VfxImageCpu & image)
@@ -860,7 +860,7 @@ void VfxNodeDescription::addGxTexture(const char * name, const GxTexture & textu
 	}
 }
 
-void VfxNodeDescription::addOpenglTexture(const char * name, const uint32_t id)
+void VfxNodeDescription::addGxTexture(const char * name, const uint32_t id)
 {
 // todo : rename this method to addGxTexture, use GX functions below
 
@@ -872,45 +872,28 @@ void VfxNodeDescription::addOpenglTexture(const char * name, const uint32_t id)
 	{
 		int sx = 0;
 		int sy = 0;
-		int internalFormat = 0;
+		gxGetTextureSize(id, sx, sy);
 		
-		// capture current OpenGL states before we change them
-
-		GLuint restoreTexture;
-		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-		checkErrorGL();
-		
-		glBindTexture(GL_TEXTURE_2D, id);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
-		checkErrorGL();
-		
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &internalFormat);
-		checkErrorGL();
-		
-		// restore previous OpenGL states
-		
-		glBindTexture(GL_TEXTURE_2D, restoreTexture);
-		checkErrorGL();
+		const GX_TEXTURE_FORMAT format = gxGetTextureFormat(id);
 		
 		//
 		
 		const char * formatString =
-			internalFormat == GL_R8 ? "R8, 8 bpp (unorm)" :
-			internalFormat == GL_RG8 ? "R8G8, 16 bpp (unorm)" :
-			internalFormat == GL_R16F ? "R16F, 16 bpp (half float)" :
-			internalFormat == GL_R32F ? "R32F, 32 bpp (float)" :
-			internalFormat == GL_RGB8 ? "RGB888, 24 bpp (unorm)" :
-			internalFormat == GL_RGBA8 ? "RGBA8888, 32 bpp (unorm)" :
+			format == GX_R8_UNORM ? "R8, 8 bpp (unorm)" :
+			format == GX_RG8_UNORM ? "R8G8, 16 bpp (unorm)" :
+			format == GX_R16_FLOAT ? "R16F, 16 bpp (half float)" :
+			format == GX_R32_FLOAT ? "R32F, 32 bpp (float)" :
+			format == GX_RGB8_UNORM ? "RGB888, 24 bpp (unorm)" :
+			format == GX_RGBA8_UNORM ? "RGBA8888, 32 bpp (unorm)" :
 			"n/a";
 		
 		const int bpp =
-			internalFormat == GL_R8 ? 8 :
-			internalFormat == GL_RG8 ? 16 :
-			internalFormat == GL_R16F ? 16 :
-			internalFormat == GL_R32F ? 32 :
-			internalFormat == GL_RGB8 ? 24 :
-			internalFormat == GL_RGBA8 ? 32 :
+			format == GX_R8_UNORM ? 8 :
+			format == GX_RG8_UNORM ? 16 :
+			format == GX_R16_FLOAT ? 16 :
+			format == GX_R32_FLOAT ? 32 :
+			format == GX_RGB8_UNORM ? 24 :
+			format == GX_RGBA8_UNORM ? 32 :
 			0;
 		
 		add("%s. size: %d x %d, id: %d", name, sx, sy, id);

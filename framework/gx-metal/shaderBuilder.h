@@ -30,4 +30,3 @@
 #include <string>
 
 bool buildMetalText(const char * text, const char shaderType, const char * outputs, std::string & result);
-

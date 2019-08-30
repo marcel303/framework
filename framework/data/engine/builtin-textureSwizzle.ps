@@ -1,0 +1,54 @@
+static const char * s_textureSwizzlePs = R"SHADER(
+
+include engine/ShaderPS.txt
+
+uniform sampler2D source;
+uniform vec4 swizzleMask;
+
+shader_in vec4 v_color;
+shader_in vec2 v_texcoord;
+
+/*
+	GX_SWIZZLE_ZERO = -1,
+	GX_SWIZZLE_ONE = -2,
+
+	R, G, B, A = 0, 1, 2, 3
+*/
+
+float applySwizzle(vec4 value, float swizzle)
+{
+	if (swizzle == -2.0)
+		return 1.0;
+
+	if (swizzle == 0.0)
+		return value.x;
+	if (swizzle == 1.0)
+		return value.y;
+	if (swizzle == 2.0)
+		return value.z;
+	if (swizzle == 3.0)
+		return value.w;
+	
+	return 0.0;
+}
+
+void main()
+{
+	vec4 texColor = texture(source, v_texcoord);
+
+	// apply swizzle mask
+
+	vec4 swizzledTexColor;
+	swizzledTexColor.r = applySwizzle(texColor, swizzleMask.r);
+	swizzledTexColor.g = applySwizzle(texColor, swizzleMask.g);
+	swizzledTexColor.b = applySwizzle(texColor, swizzleMask.b);
+	swizzledTexColor.a = applySwizzle(texColor, swizzleMask.a);
+
+	// post-multiply color
+
+	vec4 color = swizzledTexColor * v_color;
+
+	shader_fragColor = color;
+}
+
+)SHADER";

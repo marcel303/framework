@@ -9,6 +9,7 @@ app refine
 	depend_library libjgmod-vis
 	depend_library libparticle
 	depend_library libvideo
+	depend_library rtmidi
 	depend_library vfxgraph
 	depend_library vfxgraph-nodes
 	scan_files cpp

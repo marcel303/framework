@@ -452,7 +452,7 @@ public:
 	std::vector<std::string> droppedFiles;
 	
 private:
-	uint32_t m_lastTick;
+	uint64_t m_lastTick;
 	
 	Sprite * m_sprites;
 	Model * m_models;
@@ -1106,6 +1106,7 @@ struct SpriterState
 	int animIndex;
 	float animTime;
 	float animSpeed;
+	bool animLoop;
 
 	int characterMap;
 
@@ -1588,8 +1589,9 @@ static inline void gxSetTexture(GxTextureId texture) { }
 static inline void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp) { }
 
 static inline void gxGetTextureSize(GxTextureId texture, int & width, int & height) { width = 0; height = 0; }
+static inline GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture) { return GX_UNKNOWN_FORMAT; }
 
-#elif !USE_LEGACY_OPENGL
+#elif !USE_LEGACY_OPENGL || ENABLE_METAL
 
 void gxMatrixMode(GX_MATRIX mode);
 GX_MATRIX gxGetMatrixMode();
@@ -1626,6 +1628,7 @@ void gxSetTexture(GxTextureId texture);
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
 void gxGetTextureSize(GxTextureId texture, int & width, int & height);
+GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture);
 
 #else
 
@@ -1665,6 +1668,7 @@ void gxSetTexture(GxTextureId texture);
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp);
 
 void gxGetTextureSize(GxTextureId texture, int & width, int & height);
+GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture);
 
 #endif
 
@@ -1702,6 +1706,7 @@ void setShader_CompositePremultiplied(const GxTextureId source1, const GxTexture
 void setShader_Premultiply(const GxTextureId source);
 void setShader_ColorMultiply(const GxTextureId source, const Color & color, const float opacity);
 void setShader_ColorTemperature(const GxTextureId source, const float temperature, const float opacity);
+void setShader_TextureSwizzle(const GxTextureId source, const int r, const int g, const int b, const int a);
 
 // high quality rendering
 

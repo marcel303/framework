@@ -47,7 +47,7 @@
     return [self.class.layerClass layer];
 }
 
-- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer
+- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync
 {
     if ((self = [super initWithFrame:frame]))
     {
@@ -60,6 +60,9 @@
         self.metalLayer.opaque = YES;
         self.metalLayer.device = device;
         self.metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+		self.metalLayer.displaySyncEnabled = wantsVsync;
+		self.metalLayer.maximumDrawableCount = 2;
+		self.metalLayer.framebufferOnly = YES;
 
         [self updateDrawableSize];
     }

@@ -3,6 +3,7 @@
 #include "particle.h"
 #include "particle_editor.h"
 #include "particle_framework.h"
+#include "Path.h"
 #include "tinyxml2.h"
 #include "ui.h"
 #include <math.h>
@@ -42,6 +43,9 @@ struct ParticleEditorState
 {
 // ui draw state
 bool g_forceUiRefreshRequested = false;
+
+// resources
+char g_basePath[PATH_MAX] = { };
 
 // library
 static const int kMaxParticleInfos = 6;
@@ -169,6 +173,9 @@ bool load(const char * path)
 	}
 	else
 	{
+		const std::string directory = Path::GetDirectory(path);
+		strcpy_s(g_basePath, sizeof(g_basePath), directory.c_str());
+		
 		for (int i = 0; i < kMaxParticleInfos; ++i)
 		{
 			g_peiList[i] = ParticleEmitterInfo();
@@ -207,6 +214,9 @@ void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
 			load(path);
 			
 			menu.activeFilename = path;
+			
+			free(path);
+			path = nullptr;
 
 			g_activeEditingIndex = 0;
 			refreshUi();
@@ -237,6 +247,12 @@ void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
 			if (result == NFD_OKAY)
 			{
 				saveFilename = path;
+			}
+			
+			if (path != nullptr)
+			{
+				free(path);
+				path = nullptr;
 			}
 		}
 
@@ -646,9 +662,14 @@ void draw(const bool menuActive, const float sx, const float sy)
 		break;
 	}
 
+// todo : create a dedicated function to draw particles
+
 	for (int i = 0; i < kMaxParticleInfos; ++i)
 	{
-		gxSetTexture(Sprite(g_peiList[i].materialName).getTexture());
+		char materialPath[PATH_MAX];
+		sprintf_s(materialPath, sizeof(materialPath), "%s/%s", g_basePath, g_peiList[i].materialName);
+		
+		gxSetTexture(Sprite(materialPath).getTexture());
 		gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
 
 		if (g_piList[i].blendMode == ParticleInfo::kBlendMode_AlphaBlended)

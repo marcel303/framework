@@ -9,3 +9,5 @@ library midifile
 	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
 	
 	header_path . expose
+
+	license_file LICENSE.txt

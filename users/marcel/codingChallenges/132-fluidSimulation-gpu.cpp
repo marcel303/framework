@@ -550,13 +550,11 @@ FluidCube2d * createFluidCube2d(const int size, const float diffusion, const flo
 	SurfaceProperties surfaceProperties;
 	surfaceProperties.dimensions.init(size, size);
 	surfaceProperties.colorTarget.init(SURFACE_R16F, true);
-	surfaceProperties.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
 #if 0 // attempt to use 8 bit backing for density field failed. but has a nice aesthetic, so keeping it around!
 	SurfaceProperties surfaceProperties_d;
 	surfaceProperties_d.dimensions.init(size, size);
 	surfaceProperties_d.colorTarget.init(SURFACE_R8, true);
-	surfaceProperties_d.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 #else
 	SurfaceProperties surfaceProperties_d = surfaceProperties;
 #endif
@@ -682,29 +680,31 @@ int main(int argc, char * argv[])
 			
 			pushBlend(BLEND_OPAQUE);
 			{
+				GxTextureId texture;
+				
 				if (keyboard.isDown(SDLK_s))
-					gxSetTexture(cube->s.getTexture());
+					texture = cube->s.getTexture();
 				else if (keyboard.isDown(SDLK_v))
 				{
 					static int n = -1;
 					if (keyboard.wentDown(SDLK_v))
 						n = (n + 1) % 4;
 					if (n == 0)
-						gxSetTexture(cube->Vx.getTexture());
+						texture = cube->Vx.getTexture();
 					if (n == 1)
-						gxSetTexture(cube->Vy.getTexture());
+						texture = cube->Vy.getTexture();
 					if (n == 2)
-						gxSetTexture(cube->Vx0.getTexture());
+						texture = cube->Vx0.getTexture();
 					if (n == 3)
-						gxSetTexture(cube->Vy0.getTexture());
+						texture = cube->Vy0.getTexture();
 				}
 				else
-					gxSetTexture(cube->density.getTexture());
-				setColorClamp(false);
+					texture = cube->density.getTexture();
+				
+				setShader_TextureSwizzle(texture, 0, 0, 0, GX_SWIZZLE_ONE);
 				setColor(4000, 3000, 2000);
 				drawRect(0, 0, cube->size, cube->size);
-				setColorClamp(true);
-				gxSetTexture(0);
+				clearShader();
 			}
 			popBlend();
 			

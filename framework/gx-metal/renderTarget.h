@@ -8,10 +8,21 @@ class ColorTarget : ColorTargetBase
 {
 	void * m_colorTexture = nullptr;
 	int m_colorTextureId = 0;
+	bool m_ownsTexture = true;
 	
 	ColorTargetProperties properties;
 
 public:
+	ColorTarget()
+	{
+	}
+	
+	ColorTarget(void * colorTexture)
+	{
+		m_colorTexture = colorTexture;
+		m_ownsTexture = false;
+	}
+	
 	virtual ~ColorTarget() override final;
 	
 	virtual bool init(const int width, const int height, SURFACE_FORMAT format, const Color & clearColor) override final
@@ -59,10 +70,21 @@ class DepthTarget : DepthTargetBase
 {
 	void * m_depthTexture = nullptr;
 	int m_depthTextureId = 0;
+	bool m_ownsTexture = true;
 	
 	DepthTargetProperties properties;
 	
 public:
+	DepthTarget()
+	{
+	}
+	
+	DepthTarget(void * depthTexture)
+	{
+		m_depthTexture = depthTexture;
+		m_ownsTexture = false;
+	}
+	
 	virtual ~DepthTarget() override final;
 	
 	virtual bool init(const int width, const int height, DEPTH_FORMAT format, const bool enableTexture, const float clearDepth) override final
