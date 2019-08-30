@@ -7,6 +7,15 @@
 #include "imgui.h"
 #include <algorithm>
 
+#define ENABLE_MIDI 1
+
+#if ENABLE_MIDI
+	#include "rtmidi/RtMidi.h"
+#endif
+
+#define MIDI_OFF 0x80
+#define MIDI_ON 0x90
+
 static const bool kShowHiddenSliders = true;
 
 void doMidiKeyboard(
@@ -325,10 +334,19 @@ FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 	
 	controlSlidersWindow.init(20, 20, 300, 400, "Sliders");
 	controlSlidersWindow.isVisible = false;
+
+	midiIn = new RtMidiIn(RtMidi::UNSPECIFIED, "Midi Controller", 1024);
 }
 
 FileEditor_JsusFx::~FileEditor_JsusFx()
 {
+#if ENABLE_MIDI
+	midiIn->closePort();
+	
+	delete midiIn;
+	midiIn = nullptr;
+#endif
+
 	paObject.shut();
 
 	if (mutex != nullptr)
@@ -500,6 +518,52 @@ void FileEditor_JsusFx::doButtonBar()
 	}
 }
 
+void FileEditor_JsusFx::updateMidi()
+{
+#if ENABLE_MIDI
+	// open the desired midi port
+
+	if (currentMidiPort != desiredMidiPort)
+	{
+		currentMidiPort = desiredMidiPort;
+		
+		for (int i = 0; i < midiIn->getPortCount(); ++i)
+		{
+			auto name = midiIn->getPortName();
+			
+			logDebug("available MIDI port: %d: %s", i, name.c_str());
+		}
+
+		if (desiredMidiPort < midiIn->getPortCount())
+		{
+			midiIn->openPort(desiredMidiPort);
+			
+			// todo : getPortCount, getPortName
+			
+			if (midiIn->isPortOpen() == false)
+			{
+				logWarning("failed to open desired midi port %d", desiredMidiPort);
+			}
+		}
+	}
+
+	// receive midi messages
+
+	std::vector<uint8_t> messageBytes;
+
+	for (;;)
+	{
+		midiIn->getMessage(&messageBytes);
+		
+		if (messageBytes.empty())
+			break;
+		
+		if (midiBuffer.append(&messageBytes[0], messageBytes.size()) == false)
+			break;
+	}
+#endif
+}
+
 void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured)
 {
 	clearSurface(0, 0, 0, 0);
@@ -531,6 +595,10 @@ void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const b
 			sy,
 			inputIsCaptured);
 	}
+
+	updateMidi();
+
+	//
 	
 	jsusFxWindow.drawDecoration();
 	
