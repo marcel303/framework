@@ -2,9 +2,21 @@
 #include "jpegCompression.h"
 #include "Log.h"
 #include "videoSyncServer.h"
-#include <netinet/tcp.h>
 #include <SDL2/SDL.h>
 #include <string.h>
+
+#if defined(WINDOWS)
+	#include <WS2tcpip.h>
+#else
+	#include <netinet/tcp.h>
+#endif
+
+#if defined(WINDOWS)
+	#define I_HATE_WINDOWS (char*)
+#else
+	#define I_HATE_WINDOWS
+	#define closesocket close
+#endif
 
 namespace Videosync
 {
@@ -22,13 +34,18 @@ namespace Videosync
 		int set_false = 0;
 		int set_true = 1;
 		
+	#if defined(WINDOWS)
+		setsockopt(m_socket, SOL_SOCKET, SO_LINGER, I_HATE_WINDOWS &set_false, sizeof(set_false));
+		setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, I_HATE_WINDOWS &set_true, sizeof(set_true));
+	#else
 	#if defined(MACOS)
 		setsockopt(m_socket, SOL_SOCKET, SO_NOSIGPIPE, (void*)&set_true, sizeof(set_true));
 	#endif
 		setsockopt(m_socket, SOL_SOCKET, SO_LINGER, (void*)&set_false, sizeof(set_false));
 		setsockopt(m_socket, SOL_SOCKET, SO_REUSEPORT, (void*)&set_true, sizeof(set_true));
 		setsockopt(m_socket, IPPROTO_TCP, TCP_NODELAY, &set_true, sizeof(set_true));
-		
+	#endif
+
 	// todo : disable nagle
 	// todo : disable linger
 		
@@ -66,7 +83,7 @@ namespace Videosync
 	{
 		if (m_socket >= 0)
 		{
-			close(m_socket);
+			closesocket(m_socket);
 			m_socket = -1;
 		}
 	}
@@ -87,12 +104,17 @@ namespace Videosync
 		int set_false = 0;
 		int set_true = 1;
 		
+	#if defined(WINDOWS)
+		setsockopt(clientSocket, SOL_SOCKET, SO_LINGER, I_HATE_WINDOWS &set_false, sizeof(set_false));
+		setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, I_HATE_WINDOWS &set_true, sizeof(set_true));
+	#else
 	#if defined(MACOS)
 		setsockopt(clientSocket, SOL_SOCKET, SO_NOSIGPIPE, (void*)&set_true, sizeof(set_true));
 	#endif
 		setsockopt(clientSocket, SOL_SOCKET, SO_LINGER, (void*)&set_false, sizeof(set_false));
 		setsockopt(clientSocket, SOL_SOCKET, SO_REUSEPORT, (void*)&set_true, sizeof(set_true));
 		setsockopt(clientSocket, IPPROTO_TCP, TCP_NODELAY, &set_true, sizeof(set_true));
+	#endif
 		
 		return true;
 	}
@@ -163,7 +185,7 @@ namespace Videosync
 						const int remaining = sizeof(header) - receiveState.stateBytes;
 						
 						uint8_t bytes[sizeof(header)];
-						const int numBytes = recv(clientSocket, bytes, remaining, 0);
+						const int numBytes = recv(clientSocket, I_HATE_WINDOWS bytes, remaining, 0);
 						
 						if (numBytes <= 0)
 						{
@@ -198,7 +220,7 @@ namespace Videosync
 						const int remaining = compressedSize - receiveState.stateBytes;
 						
 						uint8_t * bytes = compressed + receiveState.stateBytes;
-						const int numBytes = recv(clientSocket, bytes, remaining, 0);
+						const int numBytes = recv(clientSocket, I_HATE_WINDOWS bytes, remaining, 0);
 						
 						if (numBytes <= 0)
 						{
@@ -267,7 +289,7 @@ namespace Videosync
 					}
 				#endif
 					
-					close(clientSocket);
+					closesocket(clientSocket);
 					clientSocket = -1;
 				}
 			}

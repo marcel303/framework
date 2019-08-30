@@ -1,7 +1,14 @@
 #pragma once
 
-#include <arpa/inet.h>
-#include <unistd.h>
+#if defined(WINDOWS)
+	#ifndef WIN32_LEAN_AND_MEAN
+		#define WIN32_LEAN_AND_MEAN
+	#endif
+	#include <WinSock2.h>
+#else
+	#include <arpa/inet.h>
+	#include <unistd.h>
+#endif
 
 namespace Videosync
 {

@@ -1,7 +1,19 @@
 #include "Log.h"
 #include "videoSyncClient.h"
-#include <netinet/tcp.h>
 #include <string.h>
+
+#if defined(WINDOWS)
+	#include <WS2tcpip.h>
+#else
+	#include <netinet/tcp.h>
+#endif
+
+#if defined(WINDOWS)
+	#define I_HATE_WINDOWS (char*)
+#else
+	#define I_HATE_WINDOWS
+	#define closesocket close
+#endif
 
 namespace Videosync
 {
@@ -13,13 +25,18 @@ namespace Videosync
 		
 		int set_false = 0;
 		int set_true = 1;
-		
+	
+	#if defined(WIN32)
+		setsockopt(m_clientSocket, SOL_SOCKET, SO_LINGER, I_HATE_WINDOWS &set_false, sizeof(set_false));
+		setsockopt(m_clientSocket, IPPROTO_TCP, TCP_NODELAY, I_HATE_WINDOWS &set_true, sizeof(set_true));
+	#else
 	#if defined(MACOS)
 		setsockopt(m_clientSocket, SOL_SOCKET, SO_NOSIGPIPE, (void*)&set_true, sizeof(set_true));
 	#endif
-		setsockopt(m_clientSocket, SOL_SOCKET, SO_LINGER, (void*)&set_false, sizeof(set_false));
+		setsockopt(m_clientSocket, SOL_SOCKET, SO_LINGER, (void*)&set_false, sizeof(set_false));	
 		setsockopt(m_clientSocket, SOL_SOCKET, SO_REUSEPORT, (void*)&set_true, sizeof(set_true));
 		setsockopt(m_clientSocket, IPPROTO_TCP, TCP_NODELAY, &set_true, sizeof(set_true));
+	#endif
 		
 		memset(&m_serverSocketAddress, 0, sizeof(m_serverSocketAddress));
 		m_serverSocketAddress.sin_family = AF_INET;
@@ -56,13 +73,18 @@ namespace Videosync
 		int set_false = 0;
 		int set_true = 1;
 		
+	#if defined(WIN32)
+		setsockopt(m_clientSocket, SOL_SOCKET, SO_LINGER, I_HATE_WINDOWS &set_false, sizeof(set_false));
+		setsockopt(m_clientSocket, IPPROTO_TCP, TCP_NODELAY, I_HATE_WINDOWS &set_true, sizeof(set_true));
+	#else
 	#if defined(MACOS)
 		setsockopt(m_clientSocket, SOL_SOCKET, SO_NOSIGPIPE, (void*)&set_true, sizeof(set_true));
 	#endif
 		setsockopt(m_clientSocket, SOL_SOCKET, SO_LINGER, (void*)&set_false, sizeof(set_false));
 		setsockopt(m_clientSocket, SOL_SOCKET, SO_REUSEPORT, (void*)&set_true, sizeof(set_true));
 		setsockopt(m_clientSocket, IPPROTO_TCP, TCP_NODELAY, &set_true, sizeof(set_true));
-		
+	#endif
+
 		socklen_t serverAddressSize = sizeof(m_serverSocketAddress);
 		
 		if (::connect(m_clientSocket, (struct sockaddr *)&m_serverSocketAddress, serverAddressSize) < 0)
@@ -102,7 +124,7 @@ namespace Videosync
 			}
 		#endif
 		
-			close(m_clientSocket);
+			closesocket(m_clientSocket);
 			m_clientSocket = -1;
 		}
 	}

@@ -250,14 +250,14 @@ int main(int argc, char * argv[])
 							compressedSize
 						};
 						
-					#if defined(MACOS)
+					#if defined(MACOS) || defined(WINDOWS)
 						const float flags = 0;
 					#else
 						const float flags = MSG_NOSIGNAL;
 					#endif
 					
-						if (send(master.m_clientSocket, header, 3 * sizeof(int), flags) < 0 ||
-							send(master.m_clientSocket, compressed, compressedSize, flags) < 0)
+						if (send(master.m_clientSocket, (const char*)header, 3 * sizeof(int), flags) < 0 ||
+							send(master.m_clientSocket, (const char*)compressed, compressedSize, flags) < 0)
 						{
 							LOG_ERR("master: failed to send data to slave", 0);
 							
