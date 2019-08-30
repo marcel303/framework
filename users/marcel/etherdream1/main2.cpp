@@ -824,9 +824,9 @@ int main(int argc, char * argv[])
 	static const int kNumStrings = 3;
 	
 	PhysicalString1D<kLineSize * kNumLasers> strings[kNumStrings];
-	strings[0].init(1.0, 100.0, 0.2, 0.0, 1.0);
-	strings[1].init(1.0, 100.0, 0.2, 2.0, 3.0);
-	strings[2].init(4.0, 100.0, 1.0, 0.0, kNumLasers);
+	strings[0].init(1.0, 100.0, 0.2f, 0.0f, 1.0f);
+	strings[1].init(1.0, 100.0, 0.2f, 2.0f, 3.0f);
+	strings[2].init(4.0, 100.0, 1.0, 0.0f, kNumLasers);
 	
 	GraviticSource gravitic;
 	gravitic.z = .2f;

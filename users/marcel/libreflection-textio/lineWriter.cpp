@@ -1,4 +1,5 @@
 #include "lineWriter.h"
+#include "StringEx.h"
 
 void LineWriter::add_block()
 {
@@ -53,7 +54,7 @@ void LineWriter::append_format(const char * format, ...)
 	va_list va;
 	va_start(va, format);
 	char text[kMaxFormattedTextSize];
-	vsprintf(text, format, va);
+	vsprintf_s(text, sizeof(text), format, va);
 	va_end(va);
 
 	append(text);
