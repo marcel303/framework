@@ -102,7 +102,7 @@ struct Map
 	std::vector<Edge> edges;
 };
 
-int main(int argc, const char * argv[])
+int main(int argc, char * argv[])
 {
 	framework.allowHighDpi = false;
 	
