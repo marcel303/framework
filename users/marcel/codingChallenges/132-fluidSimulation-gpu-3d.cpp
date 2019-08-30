@@ -47,6 +47,10 @@ Cohesive forces can be approximated by using a tracer image to track different f
 
 //
 
+static void getOrCreateShader(const char * name, const char * code, const char * globals, BLEND_MODE blendMode);
+
+//
+
 struct Texture3dProperties
 {
 	struct
@@ -156,8 +160,18 @@ struct Texture3d
 	
 	void clear()
 	{
-		fassert(false);
-		// todo : implement clear
+		getOrCreateShader("clear3d",
+			R"SHADER(
+				return 0.0;
+			)SHADER",
+			"",
+			BLEND_OPAQUE);
+
+		ComputeShader shader("clear3d");
+		setShader(shader);
+		shader.setTextureRw("destination", 0, getTexture(), GL_R16F, false);
+		shader.dispatch(m_size[0], m_size[1], m_size[2]);
+		clearShader();
 	}
 };
 
@@ -197,17 +211,17 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 			R"SHADER(
 				include engine/ShaderCS.txt
 
+				layout(R16F) uniform image3D destination;
+
 				%s
 		
 				#define samp(in_s, in_x, in_y, in_z) textureLodOffset(in_s, vec3(gl_GlobalInvocationID.xyz), 0, ivec3(in_x, in_y, in_z)).x
 		
 				float samp_filter(sampler3D s, float x, float y, float z)
 				{
-					//vec2 size = textureSize(s, 0);
+					vec3 size = textureSize(s, 0);
 					
-					//return texture(s, v_texcoord + vec2(x, y) / size).x;
-					
-					return 0.0;
+					return texture(s, (vec3(gl_GlobalInvocationID.xyz) + vec3(x, y, z)) / size).x;
 				}
 		
 				float process()
@@ -218,6 +232,8 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 				void main()
 				{
 					float result = process();
+
+					imageStore(destination, ivec3(gl_GlobalInvocationID.xyz), vec4(result, 0.0, 0.0, 0.0));
 				}
 			)SHADER";
 		
@@ -227,7 +243,7 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 		// register shader sources with framework
 		
 		char cs_name[64];
-		sprintf_s(cs_name, sizeof(cs_name), "%s.cs", name);
+		sprintf_s(cs_name, sizeof(cs_name), "%s", name);
 		shaderSource(cs_name, cs);
 		
 		// construct the shader, so we can catch any errors here
@@ -277,12 +293,13 @@ static void lin_solve3d(const int b, Texture3d * x, const Texture3d * x0, const 
     {
 		ComputeShader shader("lin_solve3d");
 		setShader(shader);
-		shader.setTexture("x", 0, x->getTexture(), false, true);
-		shader.setTexture("x0", 1, x0->getTexture(), false, true);
-		shader.setTextureRw("output", 2, x->getTexture(), GL_R16F, false);
+		shader.setTexture3d("x", 0, x->getTexture());
+		shader.setTexture3d("x0", 1, x0->getTexture());
+		shader.setTextureRw("destination", 2, x->getTexture(), GL_R16F, false);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
 		shader.dispatch(N, N, N);
+		clearShader();
 		
         set_bnd3d(b, x, N);
     }
@@ -319,13 +336,14 @@ static void lin_solve3d_xyz(
     {
 		ComputeShader shader("lin_solve3d_xyz");
 		setShader(shader);
-		shader.setTexture("x", 0, x->getTexture(), false, true);
-		shader.setTexture("x0", 1, x0->getTexture(), false, true);
-		shader.setTextureRw("output", 2, x->getTexture(), GL_R16F, false);
+		shader.setTexture3d("x", 0, x->getTexture());
+		shader.setTexture3d("x0", 1, x0->getTexture());
+		shader.setTextureRw("destination", 2, x->getTexture(), GL_R16F, false);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
 		shader.dispatch(N, N, N);
-		
+		clearShader();
+
         set_bnd3d(1, x, N);
 	}
 	
@@ -333,13 +351,14 @@ static void lin_solve3d_xyz(
     {
 		ComputeShader shader("lin_solve3d_xyz");
 		setShader(shader);
-    	shader.setTexture("x", 0, y->getTexture(), false, true);
-		shader.setTexture("x0", 1, y0->getTexture(), false, true);
-		shader.setTextureRw("output", 2, y->getTexture(), GL_R16F, false);
+    	shader.setTexture3d("x", 0, y->getTexture());
+		shader.setTexture3d("x0", 1, y0->getTexture());
+		shader.setTextureRw("destination", 2, y->getTexture(), GL_R16F, false);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
 		shader.dispatch(N, N, N);
-		
+		clearShader();
+
         set_bnd3d(2, y, N);
     }
 	
@@ -347,13 +366,14 @@ static void lin_solve3d_xyz(
     {
 		ComputeShader shader("lin_solve3d_xyz");
 		setShader(shader);
-    	shader.setTexture("x", 0, z->getTexture(), false, true);
-		shader.setTexture("x0", 1, z0->getTexture(), false, true);
-		shader.setTextureRw("output", 2, z->getTexture(), GL_R16F, false);
+    	shader.setTexture3d("x", 0, z->getTexture());
+		shader.setTexture3d("x0", 1, z0->getTexture());
+		shader.setTextureRw("destination", 2, z->getTexture(), GL_R16F, false);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
 		shader.dispatch(N, N, N);
-		
+		clearShader();
+
         set_bnd3d(3, y, N);
     }
 }
@@ -397,10 +417,10 @@ static void project3d(
 	{
 		ComputeShader shader("project3d_div");
 		setShader(shader);
-		shader.setTexture("velocX", 0, velocX->getTexture(), false, true);
-		shader.setTexture("velocY", 1, velocY->getTexture(), false, true);
-		shader.setTexture("velocZ", 2, velocY->getTexture(), false, true);
-		shader.setTextureRw("output", 3, div->getTexture(), GL_R16F, false);
+		shader.setTexture3d("velocX", 0, velocX->getTexture());
+		shader.setTexture3d("velocY", 1, velocY->getTexture());
+		shader.setTexture3d("velocZ", 2, velocY->getTexture());
+		shader.setTextureRw("destination", 3, div->getTexture(), GL_R16F, false);
 		shader.dispatch(div->getWidth(), div->getHeight(), div->getDepth());
 		clearShader();
 	}
@@ -414,7 +434,7 @@ static void project3d(
 		R"SHADER(
 			return - ( samp(p, +1, 0, 0) - samp(p, -1, 0, 0) );
 		)SHADER",
-		"uniform sample3D p;",
+		"uniform sampler3D p;",
 		BLEND_ADD);
 	
 	getOrCreateShader("project3d_veloc_y",
@@ -434,8 +454,8 @@ static void project3d(
 	{
 		ComputeShader shader("project3d_veloc_x");
 		setShader(shader);
-		shader.setTexture("p", 0, p->getTexture(), false, true);
-		shader.setTextureRw("output", 1, velocX->getTexture(), GL_R16F, false);
+		shader.setTexture3d("p", 0, p->getTexture());
+		shader.setTextureRw("destination", 1, velocX->getTexture(), GL_R16F, false);
 		shader.dispatch(velocX->getWidth(), velocX->getHeight(), velocX->getDepth());
 		clearShader();
 	}
@@ -443,8 +463,8 @@ static void project3d(
 	{
 		ComputeShader shader("project3d_veloc_y");
 		setShader(shader);
-		shader.setTexture("p", 0, p->getTexture(), false, true);
-		shader.setTextureRw("output", 1, velocY->getTexture(), GL_R16F, false);
+		shader.setTexture3d("p", 0, p->getTexture());
+		shader.setTextureRw("destination", 1, velocY->getTexture(), GL_R16F, false);
 		shader.dispatch(velocY->getWidth(), velocY->getHeight(), velocY->getDepth());
 		clearShader();
 	}
@@ -452,8 +472,8 @@ static void project3d(
 	{
 		ComputeShader shader("project3d_veloc_z");
 		setShader(shader);
-		shader.setTexture("p", 0, p->getTexture(), false, true);
-		shader.setTextureRw("output", 1, velocZ->getTexture(), GL_R16F, false);
+		shader.setTexture3d("p", 0, p->getTexture());
+		shader.setTextureRw("destination", 1, velocZ->getTexture(), GL_R16F, false);
 		shader.dispatch(velocZ->getWidth(), velocZ->getHeight(), velocZ->getDepth());
 		clearShader();
 	}
@@ -488,11 +508,11 @@ static void advect3d(
     {
 		ComputeShader shader("advect3d");
 		setShader(shader);
-		shader.setTexture("velocX", 0, velocX->getTexture(), false, true);
-		shader.setTexture("velocY", 1, velocY->getTexture(), false, true);
-		shader.setTexture("velocZ", 2, velocZ->getTexture(), false, true);
-		shader.setTexture("d0", 3, d0->getTexture(), true, true);
-		shader.setTextureRw("output", 4, d->getTexture(), GL_R16F, false);
+		shader.setTexture3d("velocX", 0, velocX->getTexture());
+		shader.setTexture3d("velocY", 1, velocY->getTexture());
+		shader.setTexture3d("velocZ", 2, velocZ->getTexture());
+		shader.setTexture3d("d0", 3, d0->getTexture());
+		shader.setTextureRw("destination", 4, d->getTexture(), GL_R16F, false);
 		shader.setImmediate("dtx", dtx);
 		shader.setImmediate("dty", dty);
 		shader.setImmediate("dtz", dtz);
@@ -530,10 +550,10 @@ static void advect3d_xyz(
     {
 		ComputeShader shader("advect3d");
 		setShader(shader);
-		shader.setTexture("velocX", 0, velocX->getTexture(), false, true);
-		shader.setTexture("velocY", 1, velocY->getTexture(), false, true);
-		shader.setTexture("velocZ", 2, velocZ->getTexture(), false, true);
-		shader.setTexture("d0", 3, d0->getTexture(), true, true);
+		shader.setTexture3d("velocX", 0, velocX->getTexture());
+		shader.setTexture3d("velocY", 1, velocY->getTexture());
+		shader.setTexture3d("velocZ", 2, velocZ->getTexture());
+		shader.setTexture3d("d0", 3, d0->getTexture());
 		shader.setImmediate("dtx", dtx);
 		shader.setImmediate("dty", dty);
 		shader.setImmediate("dtz", dtz);
@@ -551,6 +571,27 @@ static void advect3d_xyz(
 	advect3d(3, z, z0, velocX, velocY, velocZ, dt, N);
 #endif
 }
+
+static const char * s_addValueCs =
+R"SHADER(
+	include engine/ShaderCS.txt
+
+	layout(R16F) uniform image3D destination;
+
+	uniform vec3 location;
+	uniform float amount;
+
+	void main()
+	{
+		ivec3 location_sum = ivec3(gl_GlobalInvocationID.xyz) + ivec3(location);
+
+		float value = imageLoad(destination, ivec3(location_sum)).x;
+
+		value += amount;
+
+		imageStore(destination, location_sum, vec4(1.0, 0.0, 0.0, 0.0));
+	}
+)SHADER";
 
 struct FluidCube3d
 {
@@ -582,22 +623,15 @@ struct FluidCube3d
 			return;
 		}
 		
-	#if TODO
-		pushSurface(&density);
-		pushBlend(BLEND_ADD);
-		{
-			setColorClamp(false);
-			gxBegin(GX_POINTS);
-			{
-				gxColor4f(amount, 0, 0, 1);
-				gxVertex2f(x, y);
-			}
-			gxEnd();
-			setColorClamp(true);
-		}
-		popBlend();
-		popSurface();
-	#endif
+		shaderSource("addValue", s_addValueCs);
+
+		ComputeShader shader("addValue", 4, 4, 4);
+		setShader(shader);
+		shader.setImmediate("location", x, y, z);
+		shader.setImmediate("amount", amount);
+		shader.setTextureRw("destination", 0, density.getTexture(), GL_R16F, false, true);
+		shader.dispatch(1, 1, 1);
+		clearShader();
 	}
 	
 	void addVelocity(const int x, const int y, const int z, const float amountX, const float amountY, const float amountZ)
@@ -609,52 +643,27 @@ struct FluidCube3d
 			return;
 		}
 	
-	#if TODO
-		pushSurface(&Vx);
-		pushBlend(BLEND_ADD);
-		{
-			setColorClamp(false);
-			gxBegin(GX_POINTS);
-			{
-				gxColor4f(amountX, 0, 0, 1);
-				gxVertex3f(x, y, z);
-			}
-			gxEnd();
-			setColorClamp(true);
-		}
-		popBlend();
-		popSurface();
+		return; // todo : implement
+
+		shaderSource("addValue", s_addValueCs);
+
+		ComputeShader shader("addValue", 4, 4, 4);
+		setShader(shader);
+		shader.setImmediate("location", x, y, z);
 		
-		pushSurface(&Vy);
-		pushBlend(BLEND_ADD);
-		{
-			setColorClamp(false);
-			gxBegin(GX_POINTS);
-			{
-				gxColor4f(amountY, 0, 0, 1);
-				gxVertex3f(x, y, z);
-			}
-			gxEnd();
-			setColorClamp(true);
-		}
-		popBlend();
-		popSurface();
-		
-		pushSurface(&Vz);
-		pushBlend(BLEND_ADD);
-		{
-			setColorClamp(false);
-			gxBegin(GX_POINTS);
-			{
-				gxColor4f(amountZ, 0, 0, 1);
-				gxVertex3f(x, y, z);
-			}
-			gxEnd();
-			setColorClamp(true);
-		}
-		popBlend();
-		popSurface();
-	#endif
+		shader.setImmediate("amount", amountX);
+		shader.setTextureRw("destination", 0, Vx.getTexture(), GL_R16F, false, true);
+		shader.dispatch(1, 1, 1);
+
+		shader.setImmediate("amount", amountY);
+		shader.setTextureRw("destination", 0, Vy.getTexture(), GL_R16F, false, true);
+		shader.dispatch(1, 1, 1);
+
+		shader.setImmediate("amount", amountZ);
+		shader.setTextureRw("destination", 0, Vz.getTexture(), GL_R16F, false, true);
+		shader.dispatch(1, 1, 1);
+
+		clearShader();
 	}
 
 	void step()
@@ -739,7 +748,11 @@ FluidCube3d * createFluidCube3d(const int size, const float diffusion, const flo
 
 int main(int argc, char * argv[])
 {
+	changeDirectory(CHIBI_RESOURCE_PATH);
+
 	framework.allowHighDpi = false;
+
+	framework.enableRealTimeEditing = true;
 	
 	if (!framework.init(900, 900))
 		return -1;
@@ -806,6 +819,9 @@ int main(int argc, char * argv[])
 	#endif
 	#endif
 		
+		cube->addDensity(mouse.x / SCALE, mouse.y / SCALE, .5f, .1f);
+		cube->addVelocity(mouse.x / SCALE, mouse.y / SCALE, .5f, mouse.dx / 100.f, mouse.dy / 100.f, 0.f);
+		
 	#if defined(DEBUG)
 		const auto t1 = g_TimerRT.TimeUS_get();
 	#endif
@@ -830,6 +846,14 @@ int main(int argc, char * argv[])
 			
 			pushBlend(BLEND_OPAQUE);
 			{
+#if 1
+				Shader shader("132-gpu-draw");
+				setShader(shader);
+				shader.setTexture3d("source", 0, cube->density.getTexture());
+				shader.setImmediate("depth", 0.f);
+				drawRect(0, 0, cube->size, cube->size);
+				clearShader();
+#else
 				if (keyboard.isDown(SDLK_s))
 					gxSetTexture(cube->s.getTexture());
 				else if (keyboard.isDown(SDLK_v))
@@ -853,6 +877,7 @@ int main(int argc, char * argv[])
 				drawRect(0, 0, cube->size, cube->size);
 				setColorClamp(true);
 				gxSetTexture(0);
+#endif
 			}
 			popBlend();
 		}

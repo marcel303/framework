@@ -1,0 +1,12 @@
+include engine/ShaderPS.txt
+
+uniform sampler3D source;
+
+shader_in vec3 v_texcoord;
+
+void main()
+{
+	float value = texture(source, v_texcoord).x;
+
+	shader_fragColor = vec4(value, 0.0, 0.0, 1.0);
+}
