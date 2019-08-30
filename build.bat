@@ -28,5 +28,5 @@ cd %~dp0 || exit /b
 
 rem build all of the libraries and example and test app binaries. this will take a while
 mkdir "chibi-build\bin"
-cd chibi-build/bin && cmake -DCMAKE_BUILD_TYPE=Release ../cmake-files-for-build && cmake --build . || cd %~dp0 && exit /b
+cd chibi-build/bin && cmake -DCMAKE_BUILD_TYPE=Release ../cmake-files-for-build && cmake --build . --parallel 4 || cd %~dp0 && exit /b
 cd %~dp0 || exit /b

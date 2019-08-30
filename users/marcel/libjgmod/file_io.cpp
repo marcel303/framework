@@ -12,9 +12,8 @@
  *  File IO routines. For portability reasons. */
 
 #if defined(WINDOWS) && !defined(_CRT_SECURE_NO_WARNINGS)
-#define _CRT_SECURE_NO_WARNINGS
+	#define _CRT_SECURE_NO_WARNINGS
 #endif
-
 
 #include "file_io.h"
 #include "jgmod.h"
