@@ -396,19 +396,19 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
     const float dty = dt * (N - 2);
 	
     getOrCreateShader("advect2d",
-	R"SHADER(
-		float tmp1 = dtx * samp(velocX, 0, 0);
-		float tmp2 = dty * samp(velocY, 0, 0);
-		
-		return samp_filter(d0, - tmp1, - tmp2);
-	)SHADER",
-	R"SHADER(
-		uniform sampler2D velocX;
-		uniform sampler2D velocY;
-		uniform sampler2D d0;
-		uniform float dtx;
-		uniform float dty;
-	)SHADER");
+		R"SHADER(
+			float tmp1 = dtx * samp(velocX, 0, 0);
+			float tmp2 = dty * samp(velocY, 0, 0);
+			
+			return samp_filter(d0, - tmp1, - tmp2);
+		)SHADER",
+		R"SHADER(
+			uniform sampler2D velocX;
+			uniform sampler2D velocY;
+			uniform sampler2D d0;
+			uniform float dtx;
+			uniform float dty;
+		)SHADER");
 	
     pushSurface(d);
     pushBlend(BLEND_OPAQUE);
@@ -551,16 +551,8 @@ FluidCube2d * createFluidCube2d(const int size, const float diffusion, const flo
 	surfaceProperties.dimensions.init(size, size);
 	surfaceProperties.colorTarget.init(SURFACE_R16F, true);
 	
-#if 0 // attempt to use 8 bit backing for density field failed. but has a nice aesthetic, so keeping it around!
-	SurfaceProperties surfaceProperties_d;
-	surfaceProperties_d.dimensions.init(size, size);
-	surfaceProperties_d.colorTarget.init(SURFACE_R8, true);
-#else
-	SurfaceProperties surfaceProperties_d = surfaceProperties;
-#endif
-	
-	cube->s.init(surfaceProperties_d);
-	cube->density.init(surfaceProperties_d);
+	cube->s.init(surfaceProperties);
+	cube->density.init(surfaceProperties);
 
 	cube->Vx.init(surfaceProperties);
 	cube->Vy.init(surfaceProperties);
@@ -707,29 +699,6 @@ int main(int argc, char * argv[])
 				clearShader();
 			}
 			popBlend();
-			
-		#if TODO
-			pushBlend(BLEND_ADD);
-			hqBegin(HQ_LINES);
-			{
-				setColor(30, 20, 10);
-				
-				for (int y = 0; y < cube->size; y += 4)
-				{
-					const int N = cube->size;
-					
-					for (int x = 0; x < cube->size; x += 4)
-					{
-						const float vx = cube->Vx[IX_2D(x, y)];
-						const float vy = cube->Vy[IX_2D(x, y)];
-						
-						hqLine(x, y, 1.f, x + vx * 300.f, y + vy * 300.f, 1.f);
-					}
-				}
-			}
-			hqEnd();
-			popBlend();
-		#endif
 		}
 		framework.endDraw();
 	}
