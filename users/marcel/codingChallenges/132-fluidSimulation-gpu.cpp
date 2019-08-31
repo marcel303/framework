@@ -1,6 +1,5 @@
 #include "framework.h"
 #include "Timer.h"
-#include <vector>
 
 /*
 https://mikeash.com/pyblog/fluid-simulation-for-dummies.html
@@ -37,13 +36,9 @@ Cohesive forces can be approximated by using a tracer image to track different f
 	#include <SDL2/SDL_opengl.h> // so we can call glFinish to measure GPU time
 #endif
 
-#define TODO 0
-
 #define ENABLE_SETBND 0
 
 #define SCALE 1
-
-#define IX_2D(x, y) ((x) + (y) * N)
 
 // -----
 
@@ -151,6 +146,8 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 
 #include <GL/glew.h>
 #include <SDL2/SDL_opengl.h>
+
+#define IX_2D(x, y) ((x) + (y) * N)
 
 static float s_values[4][300 * 300];
 
