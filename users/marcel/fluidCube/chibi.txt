@@ -1,0 +1,12 @@
+library fluidCube2d
+	add_files fluidCube2d.cpp
+	add_files fluidCube2d.h
+
+library fluidCube3d
+	add_files fluidCube3d.cpp
+	add_files fluidCube3d.h
+
+library fluidCube2d-gpu
+	depend_library framework
+	add_files fluidCube2d-gpu.cpp
+	add_files fluidCube2d-gpu.h

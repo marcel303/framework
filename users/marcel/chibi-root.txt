@@ -15,6 +15,7 @@ add cuber
 with_platform macos   add etherdream1
 with_platform windows add etherdream1
 add fourier
+add fluidCube
 add geopart1
 add gltf1
 add grooop-cocompose
