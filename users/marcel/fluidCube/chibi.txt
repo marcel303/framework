@@ -10,3 +10,9 @@ library fluidCube2d-gpu
 	depend_library framework
 	add_files fluidCube2d-gpu.cpp
 	add_files fluidCube2d-gpu.h
+
+app fluidCubeDemo
+	depend_library fluidCube2d
+	depend_library fluidCube3d
+	depend_library fluidCube2d-gpu
+	add_files main.cpp

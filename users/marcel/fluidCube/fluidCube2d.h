@@ -19,6 +19,11 @@ struct FluidCube2d
 	std::vector<float> Vx0;
 	std::vector<float> Vy0;
 
+	int index(const int x, const int y) const
+	{
+	 	return x + y * size;
+	}
+	
 	void addDensity(const int x, const int y, const float amount);
 	void addVelocity(const int x, const int y, const float amountX, const float amountY);
 

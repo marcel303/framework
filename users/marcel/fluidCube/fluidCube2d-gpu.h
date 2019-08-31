@@ -2,7 +2,7 @@
 
 #include "framework.h"
 
-struct FluidCube2d
+struct FluidCube2dGpu
 {
 	int size;
 
@@ -27,4 +27,4 @@ struct FluidCube2d
 	void step();
 };
 
-FluidCube2d * createFluidCube2d(const int size, const float diffusion, const float viscosity, const float dt);
+FluidCube2dGpu * createFluidCube2dGpu(const int size, const float diffusion, const float viscosity, const float dt);

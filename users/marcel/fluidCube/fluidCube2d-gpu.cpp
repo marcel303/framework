@@ -354,7 +354,7 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
 
 //
 
-void FluidCube2d::addDensity(const int x, const int y, const float amount)
+void FluidCube2dGpu::addDensity(const int x, const int y, const float amount)
 {
 	if (x < 0 || x >= size ||
 		y < 0 || y >= size)
@@ -378,7 +378,7 @@ void FluidCube2d::addDensity(const int x, const int y, const float amount)
 	popSurface();
 }
 
-void FluidCube2d::addVelocity(const int x, const int y, const float amountX, const float amountY)
+void FluidCube2dGpu::addVelocity(const int x, const int y, const float amountX, const float amountY)
 {
 	if (x < 0 || x >= size ||
 		y < 0 || y >= size)
@@ -417,7 +417,7 @@ void FluidCube2d::addVelocity(const int x, const int y, const float amountX, con
 	popSurface();
 }
 
-void FluidCube2d::step()
+void FluidCube2dGpu::step()
 {
 	pushBlend(BLEND_OPAQUE);
 	{
@@ -443,9 +443,9 @@ void FluidCube2d::step()
 
 //
 
-FluidCube2d * createFluidCube2d(const int size, const float diffusion, const float viscosity, const float dt)
+FluidCube2dGpu * createFluidCube2dGpu(const int size, const float diffusion, const float viscosity, const float dt)
 {
-	FluidCube2d * cube = new FluidCube2d();
+	FluidCube2dGpu * cube = new FluidCube2dGpu();
 
 	cube->size = size;
 	cube->dt = dt;
