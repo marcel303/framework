@@ -58,6 +58,7 @@ app codingChallenges-132-fluidSimulation-gpu
 app codingChallenges-132-fluidSimulation-gpu-3d
 	depend_library framework
 	add_files 132-fluidSimulation-gpu-3d.cpp
+	resource_path data
 
 app codingChallenges-u01-extrusion
 	depend_library framework
