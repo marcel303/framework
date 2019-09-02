@@ -341,7 +341,8 @@ FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 FileEditor_JsusFx::~FileEditor_JsusFx()
 {
 #if ENABLE_MIDI
-	midiIn->closePort();
+	if (midiIn->isPortOpen())
+		midiIn->closePort();
 	
 	delete midiIn;
 	midiIn = nullptr;
