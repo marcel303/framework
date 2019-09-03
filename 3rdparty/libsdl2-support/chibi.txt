@@ -1,4 +1,7 @@
-library libsdl2 shared
+# note : the iphoneos library needs to be compile as a static library, due to how it links to SDL_main
+
+with_platform macos    library libsdl2 shared
+with_platform iphoneos library libsdl2
 
 	# SDL_config is overridden for macos. the header path _must_ come before SDL itself
 	with_platform macos header_path ../libsdl2-support/macos expose
@@ -21,7 +24,10 @@ library libsdl2 shared
 	scan_files c path ../libsdl2/src/joystick group joystick
 	scan_files c path ../libsdl2/src/libm group libm
 	scan_files c path ../libsdl2/src/power group power
-	scan_files c path ../libsdl2/src/render traverse group render conglomerate render_all.c
+	with_platform macos    scan_files c path ../libsdl2/src/render traverse group render conglomerate render_all.c
+	with_platform iphoneos scan_files c path ../libsdl2/src/render traverse group render
+	with_platform linux    scan_files c path ../libsdl2/src/render traverse group render conglomerate render_all.c
+	scan_files c path ../libsdl2/src/render traverse group render
 	scan_files c path ../libsdl2/src/sensor group sensor
 	scan_files c path ../libsdl2/src/sensor/dummy group sensor/dummy
 	scan_files c path ../libsdl2/src/stdlib group stdlib conglomerate stdlib_all.c
@@ -57,6 +63,28 @@ library libsdl2 shared
 	with_platform macos depend_library OpenGL find
 	# weak : QuartzCore
 	# weak : Metal
+
+	with_platform iphoneos scan_files m path ../libsdl2/src/audio/coreaudio group audio/coreaudio
+	with_platform iphoneos scan_files m path ../libsdl2/src/file/cocoa group file/cocoa
+	with_platform iphoneos scan_files m path ../libsdl2/src/filesystem/cocoa group filesystem/cocoa
+	with_platform iphoneos scan_files c path ../libsdl2/src/haptic/dummy group haptic/dummy
+	with_platform iphoneos scan_files m path ../libsdl2/src/joystick/iphoneos group joystick/iphoneos
+	with_platform iphoneos scan_files c path ../libsdl2/src/loadso/dlopen group loadso/dlopen
+	with_platform iphoneos scan_files m path ../libsdl2/src/power/uikit group power/uikit
+	with_platform iphoneos scan_files m path ../libsdl2/src/sensor/coremotion group sensor/coremotion
+	with_platform iphoneos scan_files c path ../libsdl2/src/timer/unix group timer/unix
+	with_platform iphoneos scan_files m path ../libsdl2/src/video/uikit group video/uikit conglomerate video_uikit_all.m
+	with_platform iphoneos depend_library AudioToolbox find
+	with_platform iphoneos depend_library AVFoundation find
+	with_platform iphoneos depend_library CoreAudio find
+	with_platform iphoneos depend_library CoreGraphics find
+	with_platform iphoneos depend_library CoreMotion find
+	with_platform iphoneos depend_library Foundation find
+	with_platform iphoneos depend_library GameController find
+	with_platform iphoneos depend_library Metal find
+	with_platform iphoneos depend_library OpenGLES find
+	with_platform iphoneos depend_library QuartzCore find
+	with_platform iphoneos depend_library UIKit find
 
 	with_platform linux scan_files c path libsdl2/src/audio/alsa
 	with_platform linux scan_files c path libsdl2/src/filesystem/unix
