@@ -12,7 +12,7 @@ add liboscpack
 add midifile
 add msdfgen
 add oggvorbis
-add portaudio
+add portaudio-support
 add rapidjson-support
 add remotery
 add utf8rewind
