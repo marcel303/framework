@@ -27,15 +27,20 @@
 
 #pragma once
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-#include <GL/glew.h>
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#else
+	#include <GL/glew.h>
+#endif
+
 #include <map>
 #include <SDL2/SDL.h>
 #include <string>
 #include "framework.h"
 #include "internal_filereader.h"
-#include "stb_truetype.h"
+
+#define USE_FREETYPE 1
+#define USE_STBFONT 0
 
 #if FRAMEWORK_USE_OPENAL
 	#include <OpenAL/al.h>
@@ -50,8 +55,6 @@
 		#define USE_GLYPH_ATLAS 0 // cannot use glyph cache, as it uses R8 texture storage
 	#endif
 #endif
-
-#define USE_STBFONT 0
 
 #if !defined(ENABLE_MSDF_FONTS)
 	#if !USE_LEGACY_OPENGL
@@ -71,7 +74,18 @@
 	#define MSDF_SCALE .04f
 #endif
 
+#if USE_FREETYPE
+	#include <ft2build.h>
+	#include FT_FREETYPE_H
+#endif
+
+#if USE_STBFONT || ENABLE_MSDF_FONTS
+	#include "stb_truetype.h"
+#endif
+
 #ifndef WIN32
+#include <errno.h> // EINVAL
+#include <stdio.h>
 inline int fopen_s(FILE ** file, const char * filename, const char * mode)
 {
 	*file = fopen(filename, mode);
@@ -377,7 +391,9 @@ public:
 #if ENABLE_PROFILING
 	Remotery * rmt;
 #endif
+#if USE_FREETYPE
 	FT_Library freeType;
+#endif
 	int resourceVersion;
 	BLEND_MODE blendMode;
 	COLOR_MODE colorMode;
@@ -462,6 +478,8 @@ void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride);
 
 //
 
+#if USE_STBFONT || ENABLE_MSDF_FONTS
+
 class StbFont
 {
 public:
@@ -476,6 +494,8 @@ public:
 	bool load(const char * filename);
 	void free();
 };
+
+#endif
 
 //
 
@@ -777,7 +797,7 @@ class FontCacheElem
 public:
 #if USE_STBFONT
 	StbFont * font;
-#else
+#elif USE_FREETYPE
 	FT_Face face;
 #endif
 #if USE_GLYPH_ATLAS
@@ -814,7 +834,7 @@ public:
 
 	int advance;
 	int lsb;
-#else
+#elif USE_FREETYPE
 	FT_GlyphSlotRec g;
 #endif
 
@@ -833,7 +853,7 @@ public:
 	public:
 	#if USE_STBFONT
 		const StbFont * font;
-	#else
+	#elif USE_FREETYPE
 		FT_Face face;
 	#endif
 		int size;
@@ -844,7 +864,7 @@ public:
 		#if USE_STBFONT
 			if (font != other.font)
 				return font < other.font;
-		#else
+		#elif USE_FREETYPE
 			if (face != other.face)
 				return face < other.face;
 		#endif
@@ -862,7 +882,7 @@ public:
 	void clear();
 #if USE_STBFONT
 	GlyphCacheElem & findOrCreate(const StbFont * font, int size, int c);
-#else
+#elif USE_FREETYPE
 	GlyphCacheElem & findOrCreate(FT_Face face, int size, int c);
 #endif
 };
