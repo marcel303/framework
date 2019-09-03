@@ -26,7 +26,11 @@
 */
 
 #include <algorithm>
-#include <GL/glew.h>
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#else
+	#include <GL/glew.h>
+#endif
 #include <SDL2/SDL.h>
 #include "data/engine/ShaderCommon.txt"
 #include "framework.h"
@@ -1121,7 +1125,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		gxEnd();
 		
 		gxColor3ub(0, 255, 0);
-	#if ENABLE_OPENGL
+	#if ENABLE_OPENGL && ENABLE_DESKTOP_OPENGL
 		glPointSize(5.f);
 		checkErrorGL();
 	#endif
@@ -1134,7 +1138,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			}
 		}
 		gxEnd();
-	#if ENABLE_OPENGL
+	#if ENABLE_OPENGL && ENABLE_DESKTOP_OPENGL
 		glPointSize(1.f);
 		checkErrorGL();
 	#endif
@@ -1165,7 +1169,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		gxEnd();
 		
 		gxColor3ub(255, 0, 0);
-	#if ENABLE_OPENGL
+	#if ENABLE_OPENGL && ENABLE_DESKTOP_OPENGL
 		glPointSize(7.f);
 		checkErrorGL();
 	#endif
@@ -1178,7 +1182,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 			}
 		}
 		gxEnd();
-	#if ENABLE_OPENGL
+	#if ENABLE_OPENGL && ENABLE_DESKTOP_OPENGL
 		glPointSize(1.f);
 		checkErrorGL();
 	#endif

@@ -25,7 +25,12 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h>
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#else
+	#include <GL/glew.h>
+#endif
+
 #include "audio.h"
 #include "data/engine/ShaderCommon.txt"
 #include "image.h"
@@ -67,7 +72,9 @@ Globals globals;
 TextureCache g_textureCache;
 #if ENABLE_OPENGL
 ShaderCache g_shaderCache;
+#if ENABLE_OPENGL_COMPUTE_SHADER
 ComputeShaderCache g_computeShaderCache;
+#endif
 #endif
 AnimCache g_animCache;
 SpriterCache g_spriterCache;
@@ -93,7 +100,7 @@ void checkErrorGL_internal(const char * function, int line)
 #endif
 }
 
-#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT && ENABLE_DESKTOP_OPENGL
 static void formatDebugOutputGL(char * outStr, size_t outStrSize, GLenum source, GLenum type, GLuint id, GLenum severity, const char * msg)
 {
 	char sourceStr[32];
@@ -704,7 +711,10 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 		if (!buildOpenglText(source.c_str(),
 			type == GL_VERTEX_SHADER   ? 'v' :
 			type == GL_FRAGMENT_SHADER ? 'p' :
-			type == GL_COMPUTE_SHADER  ? 'c' : 'u',
+		#if ENABLE_OPENGL_COMPUTE_SHADER
+			type == GL_COMPUTE_SHADER  ? 'c' :
+		#endif
+			'u',
 			outputs, source))
 		{
 			result = false;
@@ -720,9 +730,11 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			{
 				result = false;
 				
+			#if ENABLE_OPENGL_COMPUTE_SHADER
 				if (type == GL_COMPUTE_SHADER)
 					logError("compute shader creation failed. compute is possibly not supported?");
 				else
+			#endif
 					logError("shader creation failed");
 			}
 			else
@@ -1034,7 +1046,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 
 // -----
 
-#if ENABLE_OPENGL
+#if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER
 
 ComputeShaderCacheElem::ComputeShaderCacheElem()
 {
@@ -1730,7 +1742,7 @@ FontCacheElem::FontCacheElem()
 {
 #if USE_STBFONT
 	font = nullptr;
-#else
+#elif USE_FREETYPE
 	face = 0;
 #endif
 
@@ -1749,7 +1761,7 @@ void FontCacheElem::free()
 		delete font;
 		font = nullptr;
 	}
-#else
+#elif USE_FREETYPE
 	if (face != 0)
 	{
 		if (FT_Done_Face(face) != 0)
@@ -1787,7 +1799,7 @@ void FontCacheElem::load(const char * filename)
 	{
 		loaded = true;
 	}
-#else
+#elif USE_FREETYPE
 	if (FT_New_Face(globals.freeType, filename, 0, &face) != 0)
 	{
 		logError("%s: unable to open font", filename);
@@ -1960,7 +1972,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(const StbFont * font, int size, int c)
 	}
 }
 
-#else
+#elif USE_FREETYPE
 
 GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 {

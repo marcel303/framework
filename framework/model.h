@@ -27,7 +27,9 @@
 
 #pragma once
 
-#if !defined(IPHONEOS)
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#else
 	#include <GL/glew.h>
 #endif
 

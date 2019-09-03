@@ -626,7 +626,7 @@ public:
 
 //
 
-#if ENABLE_OPENGL
+#if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER
 
 class ComputeShaderCacheElem
 {
@@ -1082,7 +1082,9 @@ extern Globals globals;
 extern TextureCache g_textureCache;
 #if ENABLE_OPENGL
 extern ShaderCache g_shaderCache;
+#if ENABLE_OPENGL_COMPUTE_SHADER
 extern ComputeShaderCache g_computeShaderCache;
+#endif
 #endif
 extern AnimCache g_animCache;
 extern SpriterCache g_spriterCache;

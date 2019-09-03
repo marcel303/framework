@@ -76,6 +76,20 @@
 	#define ENABLE_OPENGL 1
 #endif
 
+#if defined(IPHONEOS)
+	#define ENABLE_DESKTOP_OPENGL 0
+#elif ENABLE_OPENGL
+	#define ENABLE_DESKTOP_OPENGL 1 // do not alter
+#else
+	#define ENABLE_DESKTOP_OPENGL 0 // do not alter
+#endif
+
+#if ENABLE_DESKTOP_OPENGL
+	#define ENABLE_OPENGL_COMPUTE_SHADER 1
+#else
+	#define ENABLE_OPENGL_COMPUTE_SHADER 0 // do not alter
+#endif
+
 #if ENABLE_OPENGL && !defined(LINUX) && !defined(IPHONEOS)
 	#define ENABLE_PROFILING 1
 #else
@@ -746,7 +760,7 @@ public:
 
 //
 
-#if ENABLE_OPENGL
+#if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER
 
 class ComputeShader : public ShaderBase
 {

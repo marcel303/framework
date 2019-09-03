@@ -54,6 +54,7 @@
 
 #if defined(IPHONEOS)
 	#include <OpenGLES/ES3/gl.h>
+	#include <OpenGLES/ES3/glext.h>
 #else
 	#include <GL/glew.h>
 #endif
@@ -100,7 +101,7 @@ extern void shutMidi();
 extern void lockMidi();
 extern void unlockMidi();
 
-#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT && ENABLE_DESKTOP_OPENGL
 #if defined(WIN32)
 	void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
 #else
@@ -287,7 +288,7 @@ bool Framework::init(int sx, int sy)
 	
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT && ENABLE_DESKTOP_OPENGL
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
 #endif
 	
@@ -434,6 +435,7 @@ bool Framework::init(int sx, int sy)
 		logInfo("OpenGL GLSL version: %s", glsl_version ? glsl_version : "unknown");
 	}
 	
+#if ENABLE_DESKTOP_OPENGL
 	if (!basicOpenGL)
 	{
 		const int glewStatus = glewInit();
@@ -472,8 +474,9 @@ bool Framework::init(int sx, int sy)
 			logWarning("OpenGL extension glClampColor not found");
 	#endif
 	}
+#endif
 
-#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT && ENABLE_DESKTOP_OPENGL
 	if (GLEW_ARB_debug_output)
 	{
 		logInfo("using OpenGL debug output");
@@ -534,6 +537,7 @@ bool Framework::init(int sx, int sy)
 		}
 	}
 
+#if USE_FREETYPE
 	// initialize FreeType
 	
 	fassert(globals.freeType == nullptr);
@@ -544,6 +548,7 @@ bool Framework::init(int sx, int sy)
 			initErrorHandler(INIT_ERROR_FREETYPE);
 		return false;
 	}
+#endif
 	
 	// initialize sound player
 	
@@ -616,6 +621,7 @@ bool Framework::shutdown()
 #endif
 	g_glyphCache.clear();
 	
+#if USE_FREETYPE
 	// shut down FreeType
 	
 	if (globals.freeType && FT_Done_FreeType(globals.freeType) != 0)
@@ -624,6 +630,7 @@ bool Framework::shutdown()
 		result = false;
 	}
 	globals.freeType = 0;
+#endif
 	
 	if (enableMidi)
 	{
@@ -653,8 +660,10 @@ bool Framework::shutdown()
 #endif
 
 #if ENABLE_OPENGL
+#if ENABLE_DESKTOP_OPENGL
 	glBlendEquation = 0;
 	glClampColor = 0;
+#endif
 	
 	// destroy SDL OpenGL context
 	
@@ -1541,7 +1550,7 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			name = name.substr(0, name.rfind('.'));
 			Shader(name.c_str());
 		}
-	 #if ENABLE_OPENGL // todo : metal compute shader implementation
+	 #if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER// todo : metal compute shader implementation
 		else if (strstr(f, ".cs") == f + fl - 3)
 		{
 			std::string name = f;
@@ -1651,7 +1660,11 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 	// clear back buffer
 	
 	glClearColor(scale255(r), scale255(g), scale255(b), scale255(a));
+#if ENABLE_DESKTOP_OPENGL
 	glClearDepth(depth);
+#else
+	glClearDepthf(depth);
+#endif
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	// initialize viewport and OpenGL matrices
@@ -2495,6 +2508,9 @@ void Shader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer)
 
 void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
 {
+#if ENABLE_DESKTOP_OPENGL == 0
+	AssertMsg(false, "not supported", 0);
+#else
 	const GLuint program = getProgram();
 	if (!program)
 		return;
@@ -2505,16 +2521,21 @@ void Shader::setBufferRw(const char * name, const ShaderBufferRw & buffer)
 		logWarning("unable to find block index for %s", name);
 	else
 		setBufferRw(index, buffer);
+#endif
 }
 
 void Shader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
 {
+#if ENABLE_DESKTOP_OPENGL == 0
+	AssertMsg(false, "not supported", 0);
+#else
 	fassert(globals.shader == this);
 
 	glShaderStorageBlockBinding(getProgram(), index, index);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, buffer.getBuffer());
 
 	checkErrorGL();
+#endif
 }
 
 void Shader::reload()
@@ -2526,7 +2547,7 @@ void Shader::reload()
 
 // -----
 
-#if ENABLE_OPENGL // todo : metal compute shader implementation
+#if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER // todo : metal compute shader implementation
 
 ComputeShader::ComputeShader()
 {
@@ -2887,6 +2908,9 @@ GxShaderBufferId ShaderBufferRw::getBuffer() const
 
 void ShaderBufferRw::setDataRaw(const void * bytes, int numBytes)
 {
+#if ENABLE_DESKTOP_OPENGL == 0
+	AssertMsg(false, "not supported", 0);
+#else
 	fassert(m_buffer);
 
 	if (m_buffer)
@@ -2897,6 +2921,7 @@ void ShaderBufferRw::setDataRaw(const void * bytes, int numBytes)
 		glBufferData(GL_SHADER_STORAGE_BUFFER, numBytes, bytes, GL_DYNAMIC_DRAW);
 		checkErrorGL();
 	}
+#endif
 }
 
 // -----
@@ -5883,7 +5908,7 @@ static void measureText_STBTT(const StbFont * font, int size, const GlyphCacheEl
 	yTop = y1;
 }
 
-#else
+#elif USE_FREETYPE
 
 static void measureText_FreeType(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float & sx, float & sy, float & yTop)
 {
@@ -6009,7 +6034,7 @@ static void drawText_STBTT(const StbFont * font, int size, const GlyphCacheElem 
 	}
 }
 
-#else
+#elif USE_FREETYPE
 
 static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** glyphs, const int numGlyphs, float x, float y)
 {
@@ -6310,7 +6335,7 @@ void measureText(float size, float & sx, float & sy, const char * format, ...)
 		float yTop;
 
 		measureText_STBTT(font, size, glyphs, text, textLength, sx, sy, yTop);
-	#else
+	#elif USE_FREETYPE
 		const int sizei = int(ceilf(size));
 		
 		auto face = globals.font->face;
@@ -6463,7 +6488,7 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 		y -= int(yTop);
 		
 		drawText_STBTT(font, sizei, glyphs, text, textLength, x, y);
-	#else
+	#elif USE_FREETYPE
 		auto face = globals.font->face;
 		
 		const GlyphCacheElem * glyphs[MAX_TEXT_LENGTH];
@@ -6978,10 +7003,14 @@ GxTextureId createTextureFromRGBF32(const void * source, int sx, int sy, bool fi
 	return createTexture(source, sx, sy, filter, clamp, GL_RGB32F, GL_RGB, GL_FLOAT);
 }
 
+#if ENABLE_DESKTOP_OPENGL
+
 GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_R16, GL_RED, GL_UNSIGNED_SHORT);
 }
+
+#endif
 
 GxTextureId createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp)
 {
