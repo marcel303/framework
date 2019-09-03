@@ -39,7 +39,14 @@
 #include "framework.h"
 #include "internal_filereader.h"
 
-#define USE_FREETYPE 1
+#if !defined(USE_FREETYPE)
+	#if defined(IPHONEOS)
+		#define USE_FREETYPE 0
+	#else
+		#define USE_FREETYPE 1 // do not alter
+	#endif
+#endif
+
 #define USE_STBFONT 0
 
 #if FRAMEWORK_USE_OPENAL
