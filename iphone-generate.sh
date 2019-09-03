@@ -42,7 +42,7 @@ mkdir -p chibi-build/cmake-files-ios
 
 # generate Xcode project file
 mkdir -p chibi-build/xcode-ios
-cd chibi-build/xcode-ios && cmake -G "Xcode" -DCMAKE_TOOLCHAIN_FILE=../../3rdparty/cmake-ios/ios.toolchain.cmake -DPLATFORM=OS ../cmake-files-ios
+cd chibi-build/xcode-ios && cmake -G "Xcode" -DCMAKE_TOOLCHAIN_FILE=../../3rdparty/cmake-ios/ios.toolchain.cmake -DPLATFORM=OS -DENABLE_ARC=1 ../cmake-files-ios
 # todo : -DPLATFORM=OS64COMBINED (requires CMake 3.14+)
 # todo : -DDEPLOYMENT_TARGET=9.0
 cd "$root"
