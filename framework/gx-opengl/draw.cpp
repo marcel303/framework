@@ -634,7 +634,7 @@ void gxEnd()
 
 void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 {
-	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES);
+	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES || primitiveType == GX_TRIANGLE_STRIP);
 	
 	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
 
@@ -670,7 +670,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	//
 
-	glDrawArrays(primitiveType, 0, numVertices);
+	glDrawArrays(toOpenGLPrimitiveType(primitiveType), 0, numVertices);
 	checkErrorGL();
 
 	globals.gxShaderIsDirty = false;
