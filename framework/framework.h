@@ -76,7 +76,7 @@
 	#define ENABLE_OPENGL 1
 #endif
 
-#if ENABLE_OPENGL && !defined(LINUX)
+#if ENABLE_OPENGL && !defined(LINUX) && !defined(IPHONEOS)
 	#define ENABLE_PROFILING 1
 #else
 	#define ENABLE_PROFILING 0

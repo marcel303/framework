@@ -27,7 +27,10 @@
 
 #pragma once
 
-#include <GL/glew.h>
+#if !defined(IPHONEOS)
+	#include <GL/glew.h>
+#endif
+
 #include <map>
 #include <string>
 #include <vector>

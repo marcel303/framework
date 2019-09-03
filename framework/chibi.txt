@@ -39,6 +39,7 @@ library framework
 	depend_library libfbx
 
 	with_platform macos depend_library libsdl2
+	with_platform iphoneos depend_library libsdl2
 	#with_platform linux depend_library libsdl2
 	with_platform windows depend_library libsdl2
 
@@ -48,7 +49,9 @@ library framework
 	depend_library glew
 	depend_library msdfgen
 	depend_library portaudio
-	depend_library remotery
+	with_platform macos depend_library remotery
+	with_platform linux depend_library remotery
+	with_platform windows depend_library remotery
 	depend_library tinyxml2
 	depend_library tinyxml2-helpers
 	depend_library utf8rewind
@@ -67,15 +70,24 @@ library framework
 	scan_files cpp
 	scan_files h
 	
-	scan_files cpp path audiooutput          group audiooutput
-	scan_files h   path audiooutput          group audiooutput
+	scan_files cpp path audiooutput group audiooutput
+	scan_files h   path audiooutput group audiooutput
 
-	scan_files cpp path gx-opengl            group gx-opengl
-	scan_files h   path gx-opengl            group gx-opengl
+# todo : simplify ?
+	with_platform macos   scan_files cpp path gx-opengl group gx-opengl
+	with_platform macos   scan_files h   path gx-opengl group gx-opengl
+	with_platform linux   scan_files cpp path gx-opengl group gx-opengl
+	with_platform linux   scan_files h   path gx-opengl group gx-opengl
+	with_platform windows scan_files cpp path gx-opengl group gx-opengl
+	with_platform windows scan_files h   path gx-opengl group gx-opengl
 
 	with_platform macos scan_files cpp path gx-metal group gx-metal
 	with_platform macos scan_files h   path gx-metal group gx-metal
 	with_platform macos scan_files mm  path gx-metal group gx-metal
+
+	with_platform iphoneos scan_files cpp path gx-metal group gx-metal
+	with_platform iphoneos scan_files h   path gx-metal group gx-metal
+	with_platform iphoneos scan_files mm  path gx-metal group gx-metal
 
 	header_path . expose
 	
@@ -107,6 +119,9 @@ library framework
 	with_platform macos depend_library macos/lib/libfreetype.6.dylib local embed_framework
 	with_platform macos depend_library Metal find
 	with_platform macos depend_library QuartzCore find
+
+	with_platform iphoneos depend_library Metal find
+	with_platform iphoneos depend_library QuartzCore find
 
 # Windows header file includes and libraries
 	with_platform windows header_path win32/include          expose

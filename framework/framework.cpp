@@ -52,7 +52,11 @@
 	#define _chdir chdir
 #endif
 
-#include <GL/glew.h>
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#else
+	#include <GL/glew.h>
+#endif
 
 #include "audio.h"
 #include "data/engine/ShaderCommon.txt"
