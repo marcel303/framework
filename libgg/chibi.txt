@@ -15,8 +15,9 @@ library libgg
 	compile_definition _USE_MATH_DEFINES       * toolchain msvc expose
 	compile_definition _CRT_SECURE_NO_WARNINGS * toolchain msvc
 
-	with_platform macos   compile_definition MACOS   * expose
-	with_platform linux   compile_definition LINUX   * expose
-	with_platform windows compile_definition WINDOWS * expose
+	with_platform macos    compile_definition MACOS    * expose
+	with_platform iphoneos compile_definition IPHONEOS * expose
+	with_platform linux    compile_definition LINUX    * expose
+	with_platform windows  compile_definition WINDOWS  * expose
 
 	with_platform macos depend_library CoreFoundation find
