@@ -346,14 +346,18 @@ void gxInitialize()
 	glBindVertexArray(0);
 	checkErrorGL();
 	
+#if ENABLE_DESKTOP_OPENGL
 	// enable seamless cube map sampling along the edges
 	
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+#endif
 }
 
 void gxShutdown()
 {
+#if ENABLE_DESKTOP_OPENGL
 	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+#endif
 	
 	if (s_gxVertexArrayObject[0] != 0)
 	{
@@ -403,8 +407,11 @@ static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
 		return GL_TRIANGLE_FAN;
 	case GX_TRIANGLE_STRIP:
 		return GL_TRIANGLE_STRIP;
+#if ENABLE_DESKTOP_OPENGL
+// todo : add check for legacy OpenGL here. since we cannot draw quads in modern OpenGL either
 	case GX_QUADS:
 		return GL_QUADS;
+#endif
 	default:
 		Assert(false);
 		return GL_INVALID_ENUM;
@@ -858,10 +865,15 @@ void gxGetTextureSize(GxTextureId texture, int & width, int & height)
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
 		checkErrorGL();
 		
+	#if ENABLE_DESKTOP_OPENGL
 		glBindTexture(GL_TEXTURE_2D, texture);
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
 		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
 		checkErrorGL();
+	#else
+		// todo : gles : implement gxGetTextureSize
+		AssertMsg(false, "not implemented. fetch of GL_TEXTURE_WIDTH/_HEIGHT is not available in non-desktop OpenGL", 0);
+	#endif
 		
 		glBindTexture(GL_TEXTURE_2D, restoreTexture);
 		checkErrorGL();
@@ -878,8 +890,13 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
 	checkErrorGL();
 
+#if ENABLE_DESKTOP_OPENGL
 	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &internalFormat);
 	checkErrorGL();
+#else
+	// todo : gles : implement gxGetTextureFormat
+	AssertMsg(false, "not implemented. fetch of GL_TEXTURE_INTERNAL_FORMAT is not available in non-desktop OpenGL", 0);
+#endif
 
 	// restore previous OpenGL states
 

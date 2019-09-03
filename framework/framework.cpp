@@ -7005,6 +7005,8 @@ GxTextureId createTextureFromRGBF32(const void * source, int sx, int sy, bool fi
 
 #if ENABLE_DESKTOP_OPENGL
 
+// todo : gles : R16 texture format ?
+
 GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_R16, GL_RED, GL_UNSIGNED_SHORT);

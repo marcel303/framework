@@ -25,13 +25,20 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h>
+#if !defined(IPHONEOS)
+	#include <GL/glew.h>
+#endif
+
 #include "framework.h"
 
 #if ENABLE_OPENGL
 
 #include "internal.h"
 #include <algorithm>
+
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#endif
 
 extern int s_backingScale; // todo : can this be exposed/determined more nicely?
 
@@ -163,8 +170,12 @@ static GLenum translateSurfaceDepthFormat(const DEPTH_FORMAT format)
 
 	if (format == DEPTH_FLOAT16)
 		glFormat = GL_DEPTH_COMPONENT16;
+
+#if ENABLE_DESKTOP_OPENGL
+	// todo : gles : float32 depth format ?
 	if (format == DEPTH_FLOAT32)
 		glFormat = GL_DEPTH_COMPONENT32;
+#endif
 
 	return glFormat;
 }
@@ -343,7 +354,10 @@ bool Surface::init(const SurfaceProperties & properties)
 		}
 		else
 		{
+		#if ENABLE_DESKTOP_OPENGL
+			// todo : gles : what to do here for OpenGLES ? glDrawBuffer ..
 			glDrawBuffer(GL_NONE);
+		#endif
 			glReadBuffer(GL_NONE);
 		}
 		
@@ -446,6 +460,7 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, (GLint*)&oldTexture);
 	checkErrorGL();
 	
+#if ENABLE_DESKTOP_OPENGL
 	// set swizzle on both targets
 
 	GLint swizzleMask[4] =
@@ -462,6 +477,9 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 		glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 		checkErrorGL();
 	}
+#else
+	// todo : gles : swizzle mask ?
+#endif
 	
 	// restore the previous OpenGL state
 	
@@ -537,7 +555,11 @@ void Surface::clearDepth(float d)
 {
 	pushSurface(this);
 	{
+	#if ENABLE_DESKTOP_OPENGL
 		glClearDepth(d);
+	#else
+		glClearDepthf(d);
+	#endif
 		glClear(GL_DEPTH_BUFFER_BIT);
 		checkErrorGL();
 	}
