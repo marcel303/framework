@@ -101,7 +101,11 @@ library framework
 	
 	compile_definition NO_SDL_GLEXT            * expose
 	compile_definition FRAMEWORK_USE_OPENAL    0 expose
-	compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+
+	with_platform macos    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+	with_platform linux    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+	with_platform windows  compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+	with_platform iphoneos compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
 
 	compile_definition HAVE_M_PI               * expose toolchain msvc
 	compile_definition _USE_MATH_DEFINES       * expose toolchain msvc
