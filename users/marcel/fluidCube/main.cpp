@@ -66,16 +66,39 @@ struct FluidCube2dDemo
 			pushBlend(BLEND_ADD);
 			hqBegin(HQ_LINES);
 			{
-				setColor(30, 20, 10);
+				setColor(5, 10, 20);
 				
 				for (int y = 0; y < cube->size; y += 4)
 				{
 					for (int x = 0; x < cube->size; x += 4)
 					{
-						const float vx = cube->Vx[cube->index(x, y)];
-						const float vy = cube->Vy[cube->index(x, y)];
+						const int index = cube->index(x, y);
 						
-						hqLine(x, y, 1.f, x + vx * 300.f, y + vy * 300.f, 1.f);
+						const float vx = cube->Vx[index];
+						const float vy = cube->Vy[index];
+						const float d = cube->density[index];
+						
+					#if 0
+						const float vLength = hypotf(vx, vy) + 1e-6f;
+						
+						//const float vScale = 1.f / fminf(vLength, 1.f) * 300.f;
+						//const float vScale = 1.f / vLength * fminf(vLength, .04f) * 300.f;
+						const float vScale = 1.f / vLength * fminf(vLength, .01f) * 3000.f;
+						
+						const float strokeSize = .4f + fminf(d * 20.f, 1.f) * 2.f;
+						
+						hqLine(x, y, strokeSize, x + vx * vScale, y + vy * vScale, 0.f);
+					#elif 1
+						const float vLength = sqrtf(vx * vx + vy * vy);
+						
+						//const float vScale = 1.f / fminf(vLength, 1.f) * 300.f;
+						//const float vScale = 1.f / vLength * fminf(vLength, .04f) * 300.f;
+						const float vScale = fminf(vLength, .01f) / vLength * 3000.f;
+						
+						hqLine(x, y, 2.f, x + vx * vScale, y + vy * vScale, 0.f);
+					#elif 1
+						hqLine(x, y, 2.f x + vx * 300.f, y + vy * 300.f, 0.f);
+					#endif
 					}
 				}
 			}
@@ -129,9 +152,10 @@ struct FluidCube3dDemo
 			projectPerspective3d(60.f, .01f, 100.f);
 			gxTranslatef(0, 0, 2);
 			gxRotatef(framework.time * 10.f, 0, 1, 0);
+			gxScalef(1, -1, 1);
 			
 			setBlend(BLEND_ADD);
-			setColor(colorWhite);
+			setColor(250, 100, 30);
 			setAlphaf(.4f);
 			
 			for (int z = 0; z < cube->size; ++z)
@@ -296,17 +320,20 @@ int main(int argc, char * argv[])
 			else
 				cube3dDemo.simulateAndDrawFrame();
 			
-			const Color colorActive = Color::fromHSL(.3f, .5f, .8f);
-			const Color colorInactive = Color::fromHSL(.3f, .5f, .5f);
+			Color colorActive = Color::fromHSL(.7f, .5f, .8f);
+			Color colorInactive = Color::fromHSL(.7f, .5f, .5f);
+			
+			colorActive.a = .2f;
+			colorInactive.a = .2f;
 			
 			setColor(demo == 0 ? colorActive : colorInactive);
-			drawRect(GFX_SX * 0/3, 0, GFX_SX * 1/3, kButtonSy);
+			drawRect(GFX_SX * 0/3, 0, GFX_SX * 1/3, mouse.y < kButtonSy ? GFX_SY : kButtonSy);
 			
 			setColor(demo == 1 ? colorActive : colorInactive);
-			drawRect(GFX_SX * 1/3, 0, GFX_SX * 2/3, kButtonSy);
+			drawRect(GFX_SX * 1/3, 0, GFX_SX * 2/3, mouse.y < kButtonSy ? GFX_SY : kButtonSy);
 			
 			setColor(demo == 2 ? colorActive : colorInactive);
-			drawRect(GFX_SX * 2/3, 0, GFX_SX * 3/3, kButtonSy);
+			drawRect(GFX_SX * 2/3, 0, GFX_SX * 3/3, mouse.y < kButtonSy ? GFX_SY : kButtonSy);
 		}
 		framework.endDraw();
 	}
