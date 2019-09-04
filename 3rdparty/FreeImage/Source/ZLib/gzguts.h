@@ -26,6 +26,10 @@
 #  include <limits.h>
 #endif
 
+#ifdef __APPLE__
+#  include <unistd.h>
+#endif
+
 #ifndef _POSIX_SOURCE
 #  define _POSIX_SOURCE
 #endif
