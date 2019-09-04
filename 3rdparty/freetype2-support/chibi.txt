@@ -1,4 +1,4 @@
-library freetype2
+library freetype2 shared
 	
 	compile_definition FT2_BUILD_LIBRARY *
 	compile_definition BUILDFIXED *
@@ -25,7 +25,7 @@ library freetype2
 	add_files         ../freetype2/src/gxvalid/gxvalid.c
 	scan_files h path ../freetype2/src/gxvalid group gxvalid
 	
-	add_files ../freetype2/src/gzip/ftgzip.c
+	add_files         ../freetype2/src/gzip/ftgzip.c
 	scan_files h path ../freetype2/src/gzip group gzip
 
 	add_files         ../freetype2/src/lzw/ftlzw.c
@@ -57,5 +57,7 @@ library freetype2
 	scan_files h path ../freetype2/src/type42 group type42
 	scan_files c path ../freetype2/src/winfonts group winfonts
 	scan_files h path ../freetype2/src/winfonts group winfonts
+	
+	license_file ../freetype2/docs/FTL.TXT
 	
 	header_path ../freetype2/include expose
