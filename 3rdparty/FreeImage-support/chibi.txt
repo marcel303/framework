@@ -86,6 +86,9 @@ library FreeImage shared
 	add_files ../FreeImage/Source/LibPNG/pngwtran.c
 	add_files ../FreeImage/Source/LibPNG/pngwutil.c
 
+	scan_files c path ../FreeImage/Source/LibPNG/arm
+	scan_files c path ../FreeImage/Source/LibPNG/intel
+
 	# -- FreeImage --
 
 	add_files ../FreeImage/Source/FreeImage/BitmapAccess.cpp
