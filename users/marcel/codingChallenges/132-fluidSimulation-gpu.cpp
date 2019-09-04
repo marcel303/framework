@@ -654,7 +654,7 @@ int main(int argc, char * argv[])
 			cube->step();
 		}
 		
-	#if ENABLE_OPENGL && defined(DEBUG)
+	#if ENABLE_OPENGL && ENABLE_DESKTOP_OPENGL && defined(DEBUG)
 		glFlush();
 		glFinish();
 		
