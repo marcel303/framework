@@ -104,8 +104,6 @@ void registerBuiltinShaders()
 			#define shader_attrib in
 			#define shader_in in
 			#define shader_out out
-			
-			precision mediump float;
 		#endif
 		
 		#define tex2D texture

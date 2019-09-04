@@ -761,18 +761,18 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 				
 			#if defined(IPHONEOS)
 			// todo : add FRAMEWORK_USE_OPENGL_ES3 compile definition
-				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 300\n";
+				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 300\nprecision highp float;\n";
 			#elif USE_LEGACY_OPENGL
 				const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
 			#elif FRAMEWORK_USE_OPENGL_ES
-				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\nprecision mediump float;\n";
 			#else
 				#if OPENGL_VERSION == 410
-					const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+					const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\nprecision mediump float;\n";
 				#elif OPENGL_VERSION == 430
-					const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+					const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\nprecision mediump float;\n";
 				#else
-					const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
+					const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150\nprecision mediump float;\n";
 				#endif
 			#endif
 
