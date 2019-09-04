@@ -128,6 +128,7 @@ library framework
 	with_platform macos depend_library Metal find
 	with_platform macos depend_library QuartzCore find
 
+	with_platform iphoneos depend_library FreeImage
 	with_platform iphoneos depend_library Metal find
 	with_platform iphoneos depend_library QuartzCore find
 
