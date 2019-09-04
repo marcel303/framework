@@ -41,7 +41,7 @@
 
 #if !defined(USE_FREETYPE)
 	#if defined(IPHONEOS)
-		#define USE_FREETYPE 0
+		#define USE_FREETYPE 1
 	#else
 		#define USE_FREETYPE 1 // do not alter
 	#endif

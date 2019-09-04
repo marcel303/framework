@@ -219,6 +219,8 @@ void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
 
 // -----
 
+#if USE_STBFONT || ENABLE_MSDF_FONTS
+
 StbFont::StbFont()
 	: buffer(nullptr)
 	, bufferSize(0)
@@ -273,6 +275,8 @@ void StbFont::free()
 	
 	bufferSize = 0;
 }
+
+#endif
 
 // -----
 	
@@ -755,7 +759,10 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 					4.50              4.5
 				*/
 				
-			#if USE_LEGACY_OPENGL
+			#if defined(IPHONEOS)
+			// todo : add FRAMEWORK_USE_OPENGL_ES3 compile definition
+				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 300\n";
+			#elif USE_LEGACY_OPENGL
 				const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
 			#elif FRAMEWORK_USE_OPENGL_ES
 				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
@@ -1602,7 +1609,7 @@ void SoundCacheElem::free()
 		g_soundPlayer.checkError();
 		buffer = 0;
 	}
-#else
+#elif FRAMEWORK_USE_PORTAUDIO
 	if (buffer != nullptr)
 	{
 		g_soundPlayer.stopSoundsForBuffer(buffer);
@@ -1675,7 +1682,7 @@ void SoundCacheElem::load(const char * filename)
 				soundData->channelCount,
 				soundData->channelSize);
 		}
-	#else
+	#elif FRAMEWORK_USE_PORTAUDIO
 		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->sampleRate, soundData->channelSize, soundData->channelCount);
 
 		if (buffer != nullptr)
@@ -2496,6 +2503,10 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 
 bool MsdfGlyphCache::saveCache(const char * filename) const
 {
+#if ENABLE_METAL
+	// todo : add Metal support for reading back of texture data, and saving the MSDF glyph cache
+	return false;
+#else
 	bool result = true;
 	
 	if (m_isLoaded == false)
@@ -2642,6 +2653,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 	}
 	
 	return result;
+#endif
 }
 
 // -----
