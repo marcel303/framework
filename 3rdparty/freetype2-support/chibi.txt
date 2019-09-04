@@ -3,9 +3,13 @@ library freetype2
 	compile_definition FT2_BUILD_LIBRARY *
 	compile_definition BUILDFIXED *
 
-	scan_files c path ../freetype2/src/autofit group autofit
+	add_files         ../freetype2/src/autofit/autofit.c
 	scan_files h path ../freetype2/src/autofit group autofit
-	scan_files c path ../freetype2/src/base group base
+	add_files         ../freetype2/src/base/ftbase.c
+	add_files         ../freetype2/src/base/ftbitmap.c
+	add_files         ../freetype2/src/base/ftglyph.c
+	add_files         ../freetype2/src/base/ftinit.c
+	add_files         ../freetype2/src/base/ftsystem.c
 	scan_files h path ../freetype2/src/base group base
 	add_files         ../freetype2/src/bdf/bdf.c
 	scan_files h path ../freetype2/src/bdf group bdf
@@ -24,7 +28,7 @@ library freetype2
 	add_files ../freetype2/src/gzip/ftgzip.c
 	scan_files h path ../freetype2/src/gzip group gzip
 
-	scan_files c path ../freetype2/src/lzw group lzw
+	add_files         ../freetype2/src/lzw/ftlzw.c
 	scan_files h path ../freetype2/src/lzw group lzw
 	add_files         ../freetype2/src/otvalid/otvalid.c
 	scan_files h path ../freetype2/src/otvalid group otvalid
