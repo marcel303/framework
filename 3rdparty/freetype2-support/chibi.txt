@@ -1,0 +1,57 @@
+library freetype2
+	
+	compile_definition FT2_BUILD_LIBRARY *
+	compile_definition BUILDFIXED *
+
+	scan_files c path ../freetype2/src/autofit group autofit
+	scan_files h path ../freetype2/src/autofit group autofit
+	scan_files c path ../freetype2/src/base group base
+	scan_files h path ../freetype2/src/base group base
+	add_files         ../freetype2/src/bdf/bdf.c
+	scan_files h path ../freetype2/src/bdf group bdf
+	scan_files c path ../freetype2/src/bzip2 group bzip2
+	scan_files h path ../freetype2/src/bzip2 group bzip2
+	add_files         ../freetype2/src/cache/ftcache.c
+	scan_files h path ../freetype2/src/cache group cache
+	add_files         ../freetype2/src/cff/cff.c
+	scan_files h path ../freetype2/src/cff group cff
+	add_files         ../freetype2/src/cid/type1cid.c
+	scan_files h path ../freetype2/src/cid group cid
+
+	add_files         ../freetype2/src/gxvalid/gxvalid.c
+	scan_files h path ../freetype2/src/gxvalid group gxvalid
+	
+	add_files ../freetype2/src/gzip/ftgzip.c
+	scan_files h path ../freetype2/src/gzip group gzip
+
+	scan_files c path ../freetype2/src/lzw group lzw
+	scan_files h path ../freetype2/src/lzw group lzw
+	add_files         ../freetype2/src/otvalid/otvalid.c
+	scan_files h path ../freetype2/src/otvalid group otvalid
+	add_files         ../freetype2/src/pcf/pcf.c
+	scan_files h path ../freetype2/src/pcf group pcf
+	add_files         ../freetype2/src/pfr/pfr.c
+	scan_files h path ../freetype2/src/pfr group pfr
+	add_files         ../freetype2/src/psaux/psaux.c
+	scan_files h path ../freetype2/src/psaux group psaux
+	add_files         ../freetype2/src/pshinter/pshinter.c
+	scan_files h path ../freetype2/src/pshinter group pshinter
+	add_files         ../freetype2/src/psnames/psnames.c
+	scan_files h path ../freetype2/src/psnames group psnames
+
+	add_files         ../freetype2/src/raster/raster.c
+	scan_files h path ../freetype2/src/raster group raster
+	add_files         ../freetype2/src/sfnt/sfnt.c
+	scan_files h path ../freetype2/src/sfnt group sfnt
+	add_files         ../freetype2/src/smooth/smooth.c
+	scan_files h path ../freetype2/src/smooth group smooth
+	add_files         ../freetype2/src/truetype/truetype.c
+	scan_files h path ../freetype2/src/truetype group truetype
+	add_files         ../freetype2/src/type1/type1.c
+	scan_files h path ../freetype2/src/type1 group type1
+	add_files         ../freetype2/src/type42/type42.c
+	scan_files h path ../freetype2/src/type42 group type42
+	scan_files c path ../freetype2/src/winfonts group winfonts
+	scan_files h path ../freetype2/src/winfonts group winfonts
+	
+	header_path ../freetype2/include expose
