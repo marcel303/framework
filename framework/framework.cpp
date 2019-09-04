@@ -141,7 +141,7 @@ Midi midi;
 
 std::map<std::string, std::string> s_shaderSources;
 
-int s_backingScale = 1.f; // global backing scale multiplier. a bit of a hack as it assumed the scale never changes, but works well for most apps in most situations for now..
+int s_backingScale = 1; // global backing scale multiplier. a bit of a hack as it assumed the scale never changes, but works well for most apps in most situations for now..
 
 static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
 static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
@@ -237,8 +237,17 @@ bool Framework::init(int sx, int sy)
 	
 	int flags = 0;
 
+#if defined(IPHONEOS)
+// todo : add framework option to select orientation, instead of hard-coding it here
+	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+#endif
+	
 #if ENABLE_OPENGL
-	#if USE_LEGACY_OPENGL
+	#if defined(IPHONEOS)
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	#elif USE_LEGACY_OPENGL
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
@@ -1635,6 +1644,7 @@ static void updateViewport(Surface * surface, SDL_Window * window)
 			0,
 			surface->getWidth() / framework.minification * surface->getBackingScale(),
 			surface->getHeight() / framework.minification * surface->getBackingScale());
+		checkErrorGL();
 	}
 	else
 	{
@@ -1647,6 +1657,7 @@ static void updateViewport(Surface * surface, SDL_Window * window)
 			0,
 			drawableSx,
 			drawableSy);
+		checkErrorGL();
 	}
 #endif
 }
@@ -1666,6 +1677,7 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 	glClearDepthf(depth);
 #endif
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	checkErrorGL();
 	
 	// initialize viewport and OpenGL matrices
 	
