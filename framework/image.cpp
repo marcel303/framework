@@ -35,11 +35,7 @@
 #endif
 
 #if !defined(USE_FREEIMAGE)
-	#if defined(IPHONEOS)
-		#define USE_FREEIMAGE 0
-	#else
-		#define USE_FREEIMAGE 1 // do not alter
-	#endif
+	#define USE_FREEIMAGE 1 // do not alter
 #endif
 
 #if USE_FREEIMAGE
