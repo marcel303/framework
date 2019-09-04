@@ -68,6 +68,28 @@ library FreeImage shared
 	add_files ../FreeImage/Source/LibJPEG/jutils.c
 	add_files ../FreeImage/Source/LibJPEG/transupp.c
 
+	# -- LibOpenJPEG --
+
+	add_files ../FreeImage/Source/LibOpenJPEG/bio.c
+	add_files ../FreeImage/Source/LibOpenJPEG/cio.c
+	add_files ../FreeImage/Source/LibOpenJPEG/dwt.c
+	add_files ../FreeImage/Source/LibOpenJPEG/event.c
+	add_files ../FreeImage/Source/LibOpenJPEG/function_list.c
+	add_files ../FreeImage/Source/LibOpenJPEG/image.c
+	add_files ../FreeImage/Source/LibOpenJPEG/invert.c
+	add_files ../FreeImage/Source/LibOpenJPEG/j2k.c
+	add_files ../FreeImage/Source/LibOpenJPEG/jp2.c
+	add_files ../FreeImage/Source/LibOpenJPEG/mct.c
+	add_files ../FreeImage/Source/LibOpenJPEG/mqc.c
+	add_files ../FreeImage/Source/LibOpenJPEG/openjpeg.c
+	add_files ../FreeImage/Source/LibOpenJPEG/opj_clock.c
+	add_files ../FreeImage/Source/LibOpenJPEG/pi.c
+	add_files ../FreeImage/Source/LibOpenJPEG/raw.c
+	add_files ../FreeImage/Source/LibOpenJPEG/t1.c
+	add_files ../FreeImage/Source/LibOpenJPEG/t2.c
+	add_files ../FreeImage/Source/LibOpenJPEG/tcd.c
+	add_files ../FreeImage/Source/LibOpenJPEG/tgt.c
+
 	# -- LibPNG --
 
 	add_files ../FreeImage/Source/LibPNG/png.c
@@ -105,40 +127,40 @@ library FreeImage shared
 	add_files ../FreeImage/Source/FreeImage/J2KHelper.cpp
 	add_files ../FreeImage/Source/FreeImage/MNGHelper.cpp
 	add_files ../FreeImage/Source/FreeImage/Plugin.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginBMP.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginCUT.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginDDS.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginBMP.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginCUT.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginDDS.cpp
 	#add_files ../FreeImage/Source/FreeImage/PluginEXR.cpp
 	#add_files ../FreeImage/Source/FreeImage/PluginG3.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginGIF.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginHDR.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginICO.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginIFF.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginJ2K.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginJNG.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginJP2.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginGIF.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginHDR.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginICO.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginIFF.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginJ2K.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginJNG.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginJP2.cpp
 	add_files ../FreeImage/Source/FreeImage/PluginJPEG.cpp
 	#add_files ../FreeImage/Source/FreeImage/PluginJXR.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginKOALA.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginMNG.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginPCD.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginPCX.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginPFM.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginPICT.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginKOALA.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginMNG.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPCD.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPCX.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPFM.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPICT.cpp
 	add_files ../FreeImage/Source/FreeImage/PluginPNG.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginPNM.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginPSD.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginRAS.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginRAW.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginSGI.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginTARGA.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPNM.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPSD.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginRAS.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginRAW.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginSGI.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginTARGA.cpp
 	#add_files ../FreeImage/Source/FreeImage/PluginTIFF.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginWBMP.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginWebP.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginXBM.cpp
-	#add_files ../FreeImage/Source/FreeImage/PluginXPM.cpp
-	#add_files ../FreeImage/Source/FreeImage/PSDParser.cpp
-	#add_files ../FreeImage/Source/FreeImage/TIFFLogLuv.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginWBMP.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginWebP.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginXBM.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginXPM.cpp
+	add_files ../FreeImage/Source/FreeImage/PSDParser.cpp
+	add_files ../FreeImage/Source/FreeImage/TIFFLogLuv.cpp
 	add_files ../FreeImage/Source/FreeImage/Conversion.cpp
 	add_files ../FreeImage/Source/FreeImage/Conversion16_555.cpp
 	add_files ../FreeImage/Source/FreeImage/Conversion16_565.cpp
