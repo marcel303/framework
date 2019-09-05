@@ -21,6 +21,7 @@ add tinyxml2
 add tinyxml2-helpers
 add turbojpeg
 
+with_platform macos    add FreeImage-support
 with_platform iphoneos add FreeImage-support
 
 library imgui

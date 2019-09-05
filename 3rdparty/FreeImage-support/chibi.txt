@@ -1,5 +1,7 @@
 library FreeImage shared
 
+	compile_definition PNG_INTEL_SSE *
+	
 	# -- zlib --
 
 	add_files ../FreeImage/Source/ZLib/adler32.c
@@ -151,12 +153,12 @@ library FreeImage shared
 	add_files ../FreeImage/Source/FreeImage/PluginPNM.cpp
 	add_files ../FreeImage/Source/FreeImage/PluginPSD.cpp
 	add_files ../FreeImage/Source/FreeImage/PluginRAS.cpp
-	add_files ../FreeImage/Source/FreeImage/PluginRAW.cpp
+	#add_files ../FreeImage/Source/FreeImage/PluginRAW.cpp
 	add_files ../FreeImage/Source/FreeImage/PluginSGI.cpp
 	add_files ../FreeImage/Source/FreeImage/PluginTARGA.cpp
 	#add_files ../FreeImage/Source/FreeImage/PluginTIFF.cpp
 	add_files ../FreeImage/Source/FreeImage/PluginWBMP.cpp
-	add_files ../FreeImage/Source/FreeImage/PluginWebP.cpp
+	#add_files ../FreeImage/Source/FreeImage/PluginWebP.cpp
 	add_files ../FreeImage/Source/FreeImage/PluginXBM.cpp
 	add_files ../FreeImage/Source/FreeImage/PluginXPM.cpp
 	add_files ../FreeImage/Source/FreeImage/PSDParser.cpp
@@ -193,7 +195,7 @@ library FreeImage shared
 	add_files ../FreeImage/Source/Metadata/IPTC.cpp
 	add_files ../FreeImage/Source/Metadata/TagConversion.cpp
 	add_files ../FreeImage/Source/Metadata/TagLib.cpp
-	add_files ../FreeImage/Source/Metadata/XTIFF.cpp 
+	#add_files ../FreeImage/Source/Metadata/XTIFF.cpp 
 
 	# -- FreeImage - Toolkit --
 
