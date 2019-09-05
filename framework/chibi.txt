@@ -123,7 +123,6 @@ library framework
 	with_platform linux compile_definition ENABLE_MSDF_FONTS    0 expose
 
 # Macos header file includes and libraries
-	with_platform macos header_path macos/include          expose
 	with_platform macos depend_library FreeImage
 	with_platform macos depend_library Metal find
 	with_platform macos depend_library QuartzCore find
