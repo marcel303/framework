@@ -48,6 +48,7 @@ void DynamicBufferPool::free()
 	while (m_freeList != nullptr)
 	{
 		[m_freeList->m_buffer release];
+		m_freeList->m_buffer = nullptr;
 		
 		PoolElem * next = m_freeList->m_next;
 		delete m_freeList;
