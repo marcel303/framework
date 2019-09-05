@@ -420,6 +420,11 @@ bool Framework::init(int sx, int sy)
 	if (s_backingScale < 1)
 		s_backingScale = 1;
 	
+#if defined(IPHONEOS)
+	// fixme : the backing scale is incorrect on iOS. SDL_GL_GetDrawableSize returns an invalid size
+	s_backingScale = 1;
+#endif
+	
 	fassert(globals.glContext == nullptr);
 	globals.glContext = SDL_GL_CreateContext(globals.mainWindow->m_window);
 	checkErrorGL();
