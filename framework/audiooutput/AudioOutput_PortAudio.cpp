@@ -100,6 +100,7 @@ bool AudioOutput_PortAudio::initPortAudio(const int numChannels, const int sampl
 	}
 
 	m_numChannels = numChannels;
+	m_sampleRate = sampleRate;
 	
 	if ((err = Pa_StartStream(m_paStream)) != paNoError)
 	{
@@ -217,6 +218,7 @@ AudioOutput_PortAudio::AudioOutput_PortAudio()
 	, m_mutex(nullptr)
 	, m_stream(nullptr)
 	, m_numChannels(0)
+	, m_sampleRate(0)
 	, m_isPlaying(false)
 	, m_volume(1024)
 	, m_position(0)
@@ -287,6 +289,8 @@ void AudioOutput_PortAudio::Update()
 
 void AudioOutput_PortAudio::Volume_set(float volume)
 {
+	Assert(volume >= 0.f && volume <= 1.f);
+	
 	m_volume = int(roundf(volume * 1024.f));
 }
 
@@ -302,7 +306,7 @@ bool AudioOutput_PortAudio::HasFinished_get()
 
 double AudioOutput_PortAudio::PlaybackPosition_get()
 {
-	return m_position / 44100.0;
+	return m_position / double(m_sampleRate);
 }
 
 #endif

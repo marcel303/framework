@@ -43,6 +43,7 @@ class AudioOutput_PortAudio : AudioOutput
 	SDL_mutex * m_mutex;
 	AudioStream * m_stream;
 	int m_numChannels;
+	int m_sampleRate;
 	std::atomic<bool> m_isPlaying;
 	std::atomic<int> m_volume;
 	std::atomic<int64_t> m_position;
