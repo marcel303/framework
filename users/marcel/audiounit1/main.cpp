@@ -1,12 +1,42 @@
 #include <AudioToolbox/AudioToolbox.h>
 
-#if defined(IPHONEOS)
-	#define kOutputBus 0
-	#define kInputBus 1
-#else
-	#define kOutputBus 0
-	#define kInputBus 1
-#endif
+// from : https://developer.apple.com/library/archive/documentation/MusicAudio/Conceptual/AudioUnitHostingGuide_iOS/AudioUnitHostingFundamentals/AudioUnitHostingFundamentals.html#//apple_ref/doc/uid/TP40009492-CH3-SW11,
+// --> If setting a property or parameter that applies to a scope as a whole, specify an element value of 0.
+
+#define kOutputBus 0
+#define kInputBus 1
+
+/*
+
+	kAudioOutputUnitProperty_EnableIO,
+		for enabling or disabling input or output on an I/O unit. By default, output is enabled but input is disabled.
+
+	kAudioUnitProperty_MaximumFramesPerSlice,
+		for specifying the maximum number of frames of audio data an audio unit should be prepared to produce in response to a render call.
+ 
+ 	kAudioUnitProperty_StreamFormat,
+ 		for specifying the audio stream data format for a particular audio unit input or output bus.
+ 
+--
+
+An I/O unit’s bus 0 connects to output hardware, such as for playback through a speaker. Output is enabled by default. To disable output, the bus 0 output scope must be disabled, as follows:
+
+An I/O unit’s bus 1 connects to input hardware, such as for recording from a microphone. Input is disabled by default. To enable input, the bus 1 input scope must be enabled, as follows:
+
+(AudioUnitSetProperty, kAudioOutputUnitProperty_EnableIO)
+
+--
+
+Frame count	Milliseconds at 44.1 kHz (approximate)
+	Default	1024	23
+	Screen sleep	4096	93
+	Low latency	256	5
+
+
+	You never need to set this property for I/O units because they are preconfigured to handle any slice size requested by the system. For all other audio units, you must set this property to a value of 4096 to handle screen sleep—unless audio input is running on the device. When audio input is running, the system maintains a slice size of 1024.
+
+	--> lower audio latency is maintained when input is enabled
+*/
 
 static void checkStatus(OSStatus status)
 {
@@ -53,7 +83,24 @@ static OSStatus outputCallback(
 
 int main(int argc, char * argv[])
 {
-	// todo : ios : AudioSessionSetProperty(kAudioSessionProperty_PreferredHardwareIOBufferDuration, .005f); // 5ms
+	{
+		//AVAudioSession * sessionInstance = [AVAudioSession sharedInstance];
+		
+		//NSError *error = nil;
+		//[sessionInstance setCategory:AVAudioSessionCategoryPlayAndRecord error:&error];
+		
+		// todo : ios : AudioSessionSetProperty(kAudioSessionProperty_PreferredHardwareIOBufferDuration, .005f); // 5ms
+		
+		// todo : ios : call AudioSessionSetActive
+	}
+	
+	{
+		// todo : handle AVAudioSessionInterruptionTypeBegan, AVAudioSessionInterruptionTypeEnded
+		// add interruption handler
+        //[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleInterruption:)
+        //	name:AVAudioSessionInterruptionNotification
+		//	object:sessionInstance];
+	}
 	
 	AudioComponent inputComponent = nullptr;
 	
@@ -65,11 +112,10 @@ int main(int argc, char * argv[])
 		desc.componentSubType = kAudioUnitSubType_RemoteIO;
 	#else
 		desc.componentSubType = kAudioUnitSubType_DefaultOutput;
-		//desc.componentSubType = kAudioUnitSubType_HALOutput;
 	#endif
+		desc.componentManufacturer = kAudioUnitManufacturer_Apple;
 		desc.componentFlags = 0;
 		desc.componentFlagsMask = 0;
-		desc.componentManufacturer = kAudioUnitManufacturer_Apple;
 		
 		inputComponent = AudioComponentFindNext(nullptr, &desc);
 	}
@@ -121,6 +167,7 @@ int main(int argc, char * argv[])
 		#endif
 		}
 		
+	#if 1
 		status = AudioUnitGetPropertyInfo(
 			audioUnit,
 			kAudioUnitProperty_StreamFormat,
@@ -144,14 +191,18 @@ int main(int argc, char * argv[])
 			checkStatus(status);
 		#endif
 		}
+	#endif
 	}
 
 #if defined(IPHONEOS)
 	{
+		// verified correctness : https://developer.apple.com/library/archive/samplecode/aurioTouch/Listings/Classes_AudioController_mm.html#//apple_ref/doc/uid/DTS40007770-Classes_AudioController_mm-DontLinkElementID_4
+		
 		UInt32 flag = 1;
 		
 		OSStatus status;
 		
+	#if 0
 		status = AudioUnitSetProperty(
 			audioUnit,
 			kAudioOutputUnitProperty_EnableIO,
@@ -159,7 +210,9 @@ int main(int argc, char * argv[])
 			kInputBus,
 			&flag, sizeof(flag));
 		checkStatus(status);
+	#endif
 		
+	#if 0
 		status = AudioUnitSetProperty(
 			audioUnit,
 			kAudioOutputUnitProperty_EnableIO,
@@ -167,8 +220,23 @@ int main(int argc, char * argv[])
 			kOutputBus,
 			&flag, sizeof(flag));
 		checkStatus(status);
+	#endif
 	}
 #endif
+
+	{
+		// todo : set maximum frame count
+		
+		UInt32 maxFramesPerSlice = 256;
+		
+		auto status = AudioUnitSetProperty(
+			audioUnit,
+			kAudioUnitProperty_MaximumFramesPerSlice,
+			kAudioUnitScope_Global,
+			0,
+			&maxFramesPerSlice, sizeof(maxFramesPerSlice));
+		checkStatus(status);
+	}
 
 	OSStatus status;
 	
