@@ -4,6 +4,8 @@ add ambisonics1
 add anaglyphic
 add audiosketch
 add audiosketches
+with_platform macos    add audiounit1
+with_platform iphoneos add audiounit1
 with_platform macos   add avpaint
 with_platform windows add avpaint
 with_platform macos add biquad-simd
