@@ -131,8 +131,8 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 		sdesc.mFramesPerPacket = 1;
 		sdesc.mChannelsPerFrame = numChannels;
 		sdesc.mBitsPerChannel = 16;
-		sdesc.mBytesPerFrame = 4 * numChannels;
-		sdesc.mBytesPerPacket = 4 * numChannels;
+		sdesc.mBytesPerFrame = 2 * numChannels;
+		sdesc.mBytesPerPacket = 2 * numChannels;
 		
 		OSStatus status;
 		UInt32 size;
@@ -246,7 +246,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 	
 	AURenderCallbackStruct cbs;
 	cbs.inputProc = outputCallback;
-	cbs.inputProcRefCon = (void*)0x1234; // user data
+	cbs.inputProcRefCon = this;
 	status = AudioUnitSetProperty(
 		m_audioUnit,
 		kAudioUnitProperty_SetRenderCallback,
@@ -299,30 +299,72 @@ OSStatus AudioOutput_CoreAudio::outputCallback(
 	UInt32 inNumberFrames,
 	AudioBufferList * __nullable ioData)
 {
-	for (int i = 0; i < ioData->mNumberBuffers; ++i)
+	AudioOutput_CoreAudio * self = (AudioOutput_CoreAudio*)inRefCon;
+	
+	Assert(ioData->mNumberBuffers == 1);
+	
+	for (int i = 0; i < ioData->mNumberBuffers && i < 1; ++i)
 	{
 		auto & buffer = ioData->mBuffers[i];
 		
-		memset(buffer.mData, 0, buffer.mDataByteSize);
-		
-	#if 0
-		// hack : synthesize a 440 Hz sine tone
-		
-		static double time = 0.0;
-		static const int kSampleRate = 44100;
+		AudioSample * __restrict samples;
+		const int numSamples = inNumberFrames;
 
-		float * samples = (float*)buffer.mData;
-		const int numSamples = buffer.mDataByteSize / sizeof(float);
+		if (self->m_numChannels == 2)
+			samples = (AudioSample*)buffer.mData;
+		else
+			samples = (AudioSample*)alloca(numSamples * sizeof(AudioSample));
 		
-		for (int i = 0; i < numSamples; ++i)
+		bool generateSilence = true;
+		
+		self->lock();
 		{
-			//samples[i] = sinf(time);
-			samples[i] = sinf(time * 440.0 * 2.0 * M_PI);
-			
-			time += 1.0 / kSampleRate;
-			time = fmod(time, 1.0);
+			if (self->m_stream && self->m_isPlaying)
+			{
+				generateSilence = false;
+				
+				const int numSamplesRead = self->m_stream->Provide(numSamples, samples);
+				
+				memset(samples + numSamplesRead, 0, (numSamples - numSamplesRead) * sizeof(int16_t) * self->m_numChannels);
+				
+				self->m_position += numSamplesRead;
+				self->m_isDone = numSamplesRead == 0;
+			}
 		}
-	#endif
+		self->unlock();
+		
+		if (generateSilence)
+		{
+			Assert(numSamples * sizeof(int16_t) * self->m_numChannels == buffer.mDataByteSize);
+			memset(buffer.mData, 0, numSamples * sizeof(int16_t) * self->m_numChannels);
+		}
+		else if (self->m_numChannels == 1)
+		{
+			const int volume = std::max(0, std::min(1024, self->m_volume.load()));
+
+			int16_t * __restrict values = (int16_t*)buffer.mData;
+		
+			for (int i = 0; i < numSamples; ++i)
+				values[i] = (int(samples[i].channel[0] + samples[i].channel[1]) * volume) >> 11;
+		}
+		else
+		{
+			Assert(self->m_numChannels == 2);
+			Assert(samples == buffer.mData);
+			
+			const int volume = std::max(0, std::min(1024, self->m_volume.load()));
+
+			if (volume != 1024)
+			{
+				int16_t * __restrict values = (int16_t*)buffer.mData;
+				const int numValues = numSamples * 2;
+			
+				for (int i = 0; i < numValues; ++i)
+				{
+					values[i] = (int(values[i]) * volume) >> 10;
+				}
+			}
+		}
 	}
 	
 	return noErr;
