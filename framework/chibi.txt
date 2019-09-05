@@ -124,7 +124,7 @@ library framework
 
 # Macos header file includes and libraries
 	with_platform macos header_path macos/include          expose
-	with_platform macos depend_library macos/lib/libfreeimage.a local
+	with_platform macos depend_library FreeImage
 	with_platform macos depend_library Metal find
 	with_platform macos depend_library QuartzCore find
 
