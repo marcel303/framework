@@ -7,12 +7,14 @@ library liboscpack
 
 	license_file LICENSE
 
-	with_platform macos   scan_files cpp path ip/posix group ip/posix
-	with_platform macos   scan_files h   path ip/posix group ip/posix
-	with_platform linux   scan_files cpp path ip/posix group ip/posix
-	with_platform linux   scan_files h   path ip/posix group ip/posix
-	with_platform windows scan_files cpp path ip/win32 group ip/win32
-	with_platform windows scan_files h   path ip/win32 group ip/win32
+	with_platform macos    scan_files cpp path ip/posix group ip/posix
+	with_platform macos    scan_files h   path ip/posix group ip/posix
+	with_platform iphoneos scan_files cpp path ip/posix group ip/posix
+	with_platform iphoneos scan_files h   path ip/posix group ip/posix
+	with_platform linux    scan_files cpp path ip/posix group ip/posix
+	with_platform linux    scan_files h   path ip/posix group ip/posix
+	with_platform windows  scan_files cpp path ip/win32 group ip/win32
+	with_platform windows  scan_files h   path ip/win32 group ip/win32
 	
 	with_platform windows compile_definition _CRT_SECURE_NO_WARNINGS *
 	with_platform windows compile_definition _WINSOCK_DEPRECATED_NO_WARNINGS *
