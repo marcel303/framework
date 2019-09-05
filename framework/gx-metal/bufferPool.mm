@@ -25,6 +25,10 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#import "framework.h"
+
+#if ENABLE_METAL
+
 #import "bufferPool.h"
 
 id <MTLDevice> metal_get_device();
@@ -91,3 +95,5 @@ void DynamicBufferPool::freeBuffer(PoolElem * elem)
 	}
 	m_mutex.unlock();
 }
+
+#endif
