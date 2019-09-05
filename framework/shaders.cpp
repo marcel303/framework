@@ -108,6 +108,11 @@ void registerBuiltinShaders()
 		
 		#define tex2D texture
 		
+		vec2 textureSizef(sampler2D sampler, int lod)
+		{
+			return vec2(textureSize(sampler, lod));
+		}
+		
 		#if LEGACY_GL
 			#define VS_USE_LEGACY_MATRICES 1
 		#else

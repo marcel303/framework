@@ -31,7 +31,7 @@ float sampleMsdf_Marcel2(sampler2D msdf, vec2 texcoord)
 float sampleMsdf_PHoux1a(sampler2D msdf, vec2 TexCoord)
 {
 	vec3 msdfSample = texture( msdf, TexCoord ).rgb;
-	vec2 sz = textureSize( msdf, 0 );
+	vec2 sz = textureSizef( msdf, 0 );
 	float dx = dFdx( TexCoord.x ) * sz.x;
 	float dy = dFdy( TexCoord.y ) * sz.y;
 	float toPixels = 2.0 * inversesqrt( dx * dx + dy * dy );
@@ -42,7 +42,7 @@ float sampleMsdf_PHoux1a(sampler2D msdf, vec2 TexCoord)
 float sampleMsdf_PHoux1b(sampler2D msdf, vec2 TexCoord)
 {
 	vec3 msdfSample = texture( msdf, TexCoord ).rgb;
-	vec2 sz = textureSize( msdf, 0 );
+	vec2 sz = textureSizef( msdf, 0 );
 	float dx = dFdx( TexCoord.x ) * sz.x;
 	float dy = dFdy( TexCoord.y ) * sz.y;
 	float toPixels = inversesqrt( dx * dx + dy * dy ); // originally got multiplied by 8 .. but generates very opaque looking edges .. ?
@@ -53,7 +53,7 @@ float sampleMsdf_PHoux1b(sampler2D msdf, vec2 TexCoord)
 float sampleMsdf_PHoux1_Marcel(sampler2D msdf, vec2 TexCoord)
 {
 	vec3 msdfSample = texture( msdf, TexCoord ).rgb;
-	vec2 sz = textureSize( msdf, 0 );
+	vec2 sz = textureSizef( msdf, 0 );
 	float dx = dFdx( TexCoord.x ) * sz.x;
 	float dy = dFdy( TexCoord.y ) * sz.y;
 	float toPixels = 1.4 * inversesqrt( dx * dx + dy * dy ); // originally got multiplied by 8 .. but generates very opaque looking edges .. ?
@@ -83,7 +83,7 @@ float sampleMsdf(sampler2D msdf, vec2 texcoord, int sampleMethod)
 
 float sampleMsdf_aa(sampler2D msdf, vec2 texcoord, int sampleMethod, bool useSuperSampling)
 {
-	vec2 msdfSize = textureSize(msdf, 0);
+	vec2 msdfSize = textureSizef(msdf, 0);
 
     float opacity = 0.0;
 
@@ -100,21 +100,21 @@ float sampleMsdf_aa(sampler2D msdf, vec2 texcoord, int sampleMethod, bool useSup
 	    int kernelSize = min(5, int(length(dFdx(texcoord * msdfSize))) + 1);
 
 	    // note : devision by two provides sharpening and is more correct, as we sample in the range [-0.5, +0.5] of the derivative of texcoord, for a total sampled area of 1.0 x 1.0 = 1.0
-	    vec2 du = dFdx(texcoord) / kernelSize / 2.0;
-		vec2 dv = dFdy(texcoord) / kernelSize / 2.0;
+	    vec2 du = dFdx(texcoord) / float(kernelSize) / 2.0;
+		vec2 dv = dFdy(texcoord) / float(kernelSize) / 2.0;
 
 		for (int i = -kernelSize; i <= +kernelSize; ++i)
 		{
 			for (int j = -kernelSize; j <= +kernelSize; ++j)
 			{
-				vec2 texcoord2 = texcoord + du * i + dv * j;
+				vec2 texcoord2 = texcoord + du * float(i) + dv * float(j);
 
 	    		opacity += sampleMsdf(msdf, texcoord2, sampleMethod);
 			}
 		}
 
 		int numSamples = (kernelSize*2+1) * (kernelSize*2+1);
-	    opacity /= numSamples;
+	    opacity /= float(numSamples);
 	}
 
     return opacity;

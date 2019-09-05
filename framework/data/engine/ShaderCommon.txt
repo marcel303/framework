@@ -16,6 +16,11 @@
 
 #define tex2D texture
 
+vec2 textureSizef(sampler2D sampler, int lod)
+{
+	return vec2(textureSize(sampler, lod));
+}
+
 #else
 
 class vec2
