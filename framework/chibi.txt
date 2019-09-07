@@ -107,6 +107,12 @@ library framework
 	with_platform windows  compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
 	with_platform iphoneos compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
 
+# todo : use CoreAudio on macos
+	with_platform macos    compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+	with_platform linux    compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+	with_platform windows  compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+	with_platform iphoneos compile_definition FRAMEWORK_USE_COREAUDIO 1 expose
+
 	compile_definition HAVE_M_PI               * expose toolchain msvc
 	compile_definition _USE_MATH_DEFINES       * expose toolchain msvc
 	compile_definition _CRT_SECURE_NO_WARNINGS * expose toolchain msvc
