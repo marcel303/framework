@@ -62,28 +62,27 @@ void DynamicBufferPool::free()
 
 DynamicBufferPool::PoolElem * DynamicBufferPool::allocBuffer()
 {
-	if (m_freeList == nullptr)
+	PoolElem * elem = nullptr;
+	
+	m_mutex.lock();
 	{
-		id <MTLDevice> device = metal_get_device();
-		
-		PoolElem * elem = new PoolElem();
-		elem->m_buffer = [device newBufferWithLength:m_numBytesPerBuffer options:MTLResourceCPUCacheModeWriteCombined];
-		
-		return elem;
-	}
-	else
-	{
-		PoolElem * elem;
-		
-		m_mutex.lock();
+		if (m_freeList != nullptr)
 		{
 			elem = m_freeList;
 			m_freeList = m_freeList->m_next;
 		}
-		m_mutex.unlock();
-		
-		return elem;
 	}
+	m_mutex.unlock();
+	
+	if (elem == nullptr)
+	{
+		id <MTLDevice> device = metal_get_device();
+		
+		elem = new PoolElem();
+		elem->m_buffer = [device newBufferWithLength:m_numBytesPerBuffer options:MTLResourceCPUCacheModeWriteCombined];
+	}
+	
+	return elem;
 }
 
 void DynamicBufferPool::freeBuffer(PoolElem * elem)
