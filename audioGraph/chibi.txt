@@ -1,6 +1,6 @@
 library libdelaunay
 
-	add_files delaunay/delaunay.cpp delaunay/delaunay.h delaunay/edge.h delaunay/triangle.h delaunay/vector2.h
+	add_files delaunay/delaunay.cpp delaunay/delaunay.h delaunay/edge.h delaunay/triangle.h delaunay/vector2.h - conglomerate delaunay_all.cpp
 
 	header_path . expose
 
@@ -10,8 +10,8 @@ library binaural
 	depend_library libdelaunay
 	depend_library libgg
 
-	scan_files cpp path binaural
-	scan_files h   path binaural
+	scan_files cpp path binaural conglomerate binaural_all.cpp
+	scan_files h   path binaural conglomerate binaural_all.cpp
 
 	header_path binaural expose
 
@@ -53,7 +53,7 @@ library audiograph-nodes
 	scan_files cpp path objects    group objects
 	scan_files h   path objects    group objects
 	scan_files cpp path audioNodes conglomerate audioNodes_all.h
-	scan_files h   path audioNodes
+	scan_files h   path audioNodes conglomerate audioNodes_all.h
 
 library audiograph
 
@@ -74,4 +74,4 @@ library audiograph
 	scan_files cpp path objects    group objects
 	scan_files h   path objects    group objects
 	scan_files cpp path audioNodes group audioNodes conglomerate audioNodes_all.h
-	scan_files h   path audioNodes group audioNodes
+	scan_files h   path audioNodes group audioNodes conglomerate audioNodes_all.h
