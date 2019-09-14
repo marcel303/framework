@@ -58,6 +58,9 @@ static void setTexture3d(Shader & shader, const char * name, int unit, GxTexture
 	if (index == -1)
 		return;
 
+	setShader(shader);
+	glUniform1i(index, unit);
+
 	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(GL_TEXTURE_3D, texture);
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
@@ -75,6 +78,9 @@ static void setTexture3d(ComputeShader & shader, const char * name, int unit, Gx
 	Assert(index != -1);
 	if (index == -1)
 		return;
+
+	setShader(shader);
+	glUniform1i(index, unit);
 
 	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(GL_TEXTURE_3D, texture);
@@ -281,8 +287,8 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 				float samp_filter(sampler3D s, float x, float y, float z)
 				{
 					vec3 size = textureSize(s, 0);
-					
-					return texture(s, (vec3(gl_GlobalInvocationID.xyz) + vec3(x, y, z) + vec3(0.5)) / size).x;
+					vec3 pos = (vec3(gl_GlobalInvocationID.xyz) + vec3(x, y, z) + vec3(0.5)) / size;
+					return textureLod(s, pos, 0).x;
 				}
 		
 				float process()
@@ -490,7 +496,7 @@ static void project3d(
 		setShader(shader);
 		setTexture3d(shader, "velocX", 0, velocX->getTexture(), false, true);
 		setTexture3d(shader, "velocY", 1, velocY->getTexture(), false, true);
-		setTexture3d(shader, "velocZ", 2, velocY->getTexture(), false, true);
+		setTexture3d(shader, "velocZ", 2, velocZ->getTexture(), false, true);
 		shader.setTextureRw("destination", 3, div->getTexture(), GL_R16F, false, true);
 		shader.dispatch(div->getWidth(), div->getHeight(), div->getDepth());
 		clearShader();
@@ -776,14 +782,7 @@ FluidCube3d * createFluidCube3d(const int size, const float diffusion, const flo
 	//textureProperties.colorTarget.init(SURFACE_R16F, true);
 	//textureProperties.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	
-#if 0 // attempt to use 8 bit backing for density field failed. but has a nice aesthetic, so keeping it around!
-	SurfaceProperties surfaceProperties_d;
-	surfaceProperties_d.dimensions.init(size, size);
-	surfaceProperties_d.colorTarget.init(SURFACE_R8, true);
-	surfaceProperties_d.colorTarget.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
-#else
 	Texture3dProperties textureProperties_d = textureProperties;
-#endif
 	
 	cube->s.init(textureProperties_d);
 	cube->density.init(textureProperties_d);
@@ -822,10 +821,12 @@ int main(int argc, char * argv[])
 	if (!framework.init(900, 900))
 		return -1;
 
+	const int size = 128;
+
 	Texture3d texture3d;
-	texture3d.init(64, 64, 64);
+	texture3d.init(size, size, size);
 	
-	FluidCube3d * cube = createFluidCube3d(64, 0.0001f, 0.0001f, 1.f / 30.f);
+	FluidCube3d * cube = createFluidCube3d(size, 0.0001f, 0.0001f, 1.f / 30.f);
 	
 	mouse.showCursor(false);
 	
@@ -918,7 +919,34 @@ int main(int argc, char * argv[])
 
 				Shader shader("132-gpu-draw");
 				setShader(shader);
-				setTexture3d(shader, "source", 0, cube->density.getTexture(), true, true);
+
+				GxTextureId texture = 0;
+
+				if (keyboard.isDown(SDLK_s))
+					texture = cube->s.getTexture();
+				else if (keyboard.isDown(SDLK_v))
+				{
+					static int n = -1;
+					if (keyboard.wentDown(SDLK_v))
+						n = (n + 1) % 6;
+					if (n == 0)
+						texture = cube->Vx.getTexture();
+					if (n == 1)
+						texture = cube->Vy.getTexture();
+					if (n == 2)
+						texture = cube->Vz.getTexture();
+					if (n == 3)
+						texture = cube->Vx0.getTexture();
+					if (n == 4)
+						texture = cube->Vy0.getTexture();
+					if (n == 5)
+						texture = cube->Vz0.getTexture();
+					logDebug("n=%d", n);
+				}
+				else
+					texture = cube->density.getTexture();
+
+				setTexture3d(shader, "source", 0, texture, true, true);
 
 				for (int z = 0; z < cube->size; ++z)
 				{
@@ -926,6 +954,8 @@ int main(int argc, char * argv[])
 					gxTranslatef(0, 0, lerp<float>(-.5f, +.5f, z / float(cube->size - 1)));
 					
 					shader.setImmediate("depth", (z + .5f) / float(cube->size));
+					
+					setColor(4000, 3000, 2000);
 					drawRect(-.5f, -.5f, .5f, .5f);
 
 					gxPopMatrix();
