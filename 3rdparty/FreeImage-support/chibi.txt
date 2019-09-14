@@ -1,0 +1,216 @@
+library FreeImage shared
+
+	compile_definition PNG_INTEL_SSE *
+	
+	# -- zlib --
+
+	add_files ../FreeImage/Source/ZLib/adler32.c
+	add_files ../FreeImage/Source/ZLib/compress.c
+	add_files ../FreeImage/Source/ZLib/crc32.c
+	add_files ../FreeImage/Source/ZLib/deflate.c
+	add_files ../FreeImage/Source/ZLib/gzclose.c
+	add_files ../FreeImage/Source/ZLib/gzlib.c
+	add_files ../FreeImage/Source/ZLib/gzread.c
+	add_files ../FreeImage/Source/ZLib/gzwrite.c
+	add_files ../FreeImage/Source/ZLib/infback.c
+	add_files ../FreeImage/Source/ZLib/inffast.c
+	add_files ../FreeImage/Source/ZLib/inflate.c
+	add_files ../FreeImage/Source/ZLib/inftrees.c
+	add_files ../FreeImage/Source/ZLib/trees.c
+	add_files ../FreeImage/Source/ZLib/uncompr.c
+	add_files ../FreeImage/Source/ZLib/zutil.c
+
+	# -- libJPEG --
+
+	add_files ../FreeImage/Source/LibJPEG/jaricom.c
+	add_files ../FreeImage/Source/LibJPEG/jcapimin.c
+	add_files ../FreeImage/Source/LibJPEG/jcapistd.c
+	add_files ../FreeImage/Source/LibJPEG/jcarith.c
+	add_files ../FreeImage/Source/LibJPEG/jccoefct.c
+	add_files ../FreeImage/Source/LibJPEG/jccolor.c
+	add_files ../FreeImage/Source/LibJPEG/jcdctmgr.c
+	add_files ../FreeImage/Source/LibJPEG/jchuff.c
+	add_files ../FreeImage/Source/LibJPEG/jcinit.c
+	add_files ../FreeImage/Source/LibJPEG/jcmainct.c
+	add_files ../FreeImage/Source/LibJPEG/jcmarker.c
+	add_files ../FreeImage/Source/LibJPEG/jcmaster.c
+	add_files ../FreeImage/Source/LibJPEG/jcomapi.c
+	add_files ../FreeImage/Source/LibJPEG/jcparam.c
+	add_files ../FreeImage/Source/LibJPEG/jcprepct.c
+	add_files ../FreeImage/Source/LibJPEG/jcsample.c
+	add_files ../FreeImage/Source/LibJPEG/jctrans.c
+	add_files ../FreeImage/Source/LibJPEG/jdapimin.c
+	add_files ../FreeImage/Source/LibJPEG/jdapistd.c
+	add_files ../FreeImage/Source/LibJPEG/jdarith.c
+	add_files ../FreeImage/Source/LibJPEG/jdatadst.c
+	add_files ../FreeImage/Source/LibJPEG/jdatasrc.c
+	add_files ../FreeImage/Source/LibJPEG/jdcoefct.c
+	add_files ../FreeImage/Source/LibJPEG/jdcolor.c
+	add_files ../FreeImage/Source/LibJPEG/jddctmgr.c
+	add_files ../FreeImage/Source/LibJPEG/jdhuff.c
+	add_files ../FreeImage/Source/LibJPEG/jdinput.c
+	add_files ../FreeImage/Source/LibJPEG/jdmainct.c
+	add_files ../FreeImage/Source/LibJPEG/jdmarker.c
+	add_files ../FreeImage/Source/LibJPEG/jdmaster.c
+	add_files ../FreeImage/Source/LibJPEG/jdmerge.c
+	add_files ../FreeImage/Source/LibJPEG/jdpostct.c
+	add_files ../FreeImage/Source/LibJPEG/jdsample.c
+	add_files ../FreeImage/Source/LibJPEG/jdtrans.c
+	add_files ../FreeImage/Source/LibJPEG/jerror.c
+	add_files ../FreeImage/Source/LibJPEG/jfdctflt.c
+	add_files ../FreeImage/Source/LibJPEG/jfdctfst.c
+	add_files ../FreeImage/Source/LibJPEG/jfdctint.c
+	add_files ../FreeImage/Source/LibJPEG/jidctflt.c
+	add_files ../FreeImage/Source/LibJPEG/jidctfst.c
+	add_files ../FreeImage/Source/LibJPEG/jidctint.c
+	add_files ../FreeImage/Source/LibJPEG/jmemmgr.c
+	add_files ../FreeImage/Source/LibJPEG/jmemnobs.c
+	add_files ../FreeImage/Source/LibJPEG/jquant1.c
+	add_files ../FreeImage/Source/LibJPEG/jquant2.c
+	add_files ../FreeImage/Source/LibJPEG/jutils.c
+	add_files ../FreeImage/Source/LibJPEG/transupp.c
+
+	# -- LibOpenJPEG --
+
+	add_files ../FreeImage/Source/LibOpenJPEG/bio.c
+	add_files ../FreeImage/Source/LibOpenJPEG/cio.c
+	add_files ../FreeImage/Source/LibOpenJPEG/dwt.c
+	add_files ../FreeImage/Source/LibOpenJPEG/event.c
+	add_files ../FreeImage/Source/LibOpenJPEG/function_list.c
+	add_files ../FreeImage/Source/LibOpenJPEG/image.c
+	add_files ../FreeImage/Source/LibOpenJPEG/invert.c
+	add_files ../FreeImage/Source/LibOpenJPEG/j2k.c
+	add_files ../FreeImage/Source/LibOpenJPEG/jp2.c
+	add_files ../FreeImage/Source/LibOpenJPEG/mct.c
+	add_files ../FreeImage/Source/LibOpenJPEG/mqc.c
+	add_files ../FreeImage/Source/LibOpenJPEG/openjpeg.c
+	add_files ../FreeImage/Source/LibOpenJPEG/opj_clock.c
+	add_files ../FreeImage/Source/LibOpenJPEG/pi.c
+	add_files ../FreeImage/Source/LibOpenJPEG/raw.c
+	add_files ../FreeImage/Source/LibOpenJPEG/t1.c
+	add_files ../FreeImage/Source/LibOpenJPEG/t2.c
+	add_files ../FreeImage/Source/LibOpenJPEG/tcd.c
+	add_files ../FreeImage/Source/LibOpenJPEG/tgt.c
+
+	# -- LibPNG --
+
+	add_files ../FreeImage/Source/LibPNG/png.c
+	add_files ../FreeImage/Source/LibPNG/pngerror.c
+	add_files ../FreeImage/Source/LibPNG/pngget.c
+	add_files ../FreeImage/Source/LibPNG/pngmem.c
+	add_files ../FreeImage/Source/LibPNG/pngpread.c
+	add_files ../FreeImage/Source/LibPNG/pngread.c
+	add_files ../FreeImage/Source/LibPNG/pngrio.c
+	add_files ../FreeImage/Source/LibPNG/pngrtran.c
+	add_files ../FreeImage/Source/LibPNG/pngrutil.c
+	add_files ../FreeImage/Source/LibPNG/pngset.c
+	add_files ../FreeImage/Source/LibPNG/pngtrans.c
+	add_files ../FreeImage/Source/LibPNG/pngwio.c
+	add_files ../FreeImage/Source/LibPNG/pngwrite.c
+	add_files ../FreeImage/Source/LibPNG/pngwtran.c
+	add_files ../FreeImage/Source/LibPNG/pngwutil.c
+
+	scan_files c path ../FreeImage/Source/LibPNG/arm
+	scan_files c path ../FreeImage/Source/LibPNG/intel
+
+	# -- FreeImage --
+
+	add_files ../FreeImage/Source/FreeImage/BitmapAccess.cpp
+	add_files ../FreeImage/Source/FreeImage/ColorLookup.cpp
+	add_files ../FreeImage/Source/FreeImage/ConversionRGBA16.cpp
+	add_files ../FreeImage/Source/FreeImage/ConversionRGBAF.cpp
+	add_files ../FreeImage/Source/FreeImage/FreeImage.cpp
+	add_files ../FreeImage/Source/FreeImage/FreeImageC.c
+	add_files ../FreeImage/Source/FreeImage/FreeImageIO.cpp
+	add_files ../FreeImage/Source/FreeImage/GetType.cpp
+	add_files ../FreeImage/Source/FreeImage/LFPQuantizer.cpp
+	add_files ../FreeImage/Source/FreeImage/MemoryIO.cpp
+	add_files ../FreeImage/Source/FreeImage/PixelAccess.cpp
+	add_files ../FreeImage/Source/FreeImage/J2KHelper.cpp
+	add_files ../FreeImage/Source/FreeImage/MNGHelper.cpp
+	add_files ../FreeImage/Source/FreeImage/Plugin.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginBMP.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginCUT.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginDDS.cpp
+	#add_files ../FreeImage/Source/FreeImage/PluginEXR.cpp
+	#add_files ../FreeImage/Source/FreeImage/PluginG3.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginGIF.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginHDR.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginICO.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginIFF.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginJ2K.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginJNG.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginJP2.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginJPEG.cpp
+	#add_files ../FreeImage/Source/FreeImage/PluginJXR.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginKOALA.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginMNG.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPCD.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPCX.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPFM.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPICT.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPNG.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPNM.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginPSD.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginRAS.cpp
+	#add_files ../FreeImage/Source/FreeImage/PluginRAW.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginSGI.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginTARGA.cpp
+	#add_files ../FreeImage/Source/FreeImage/PluginTIFF.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginWBMP.cpp
+	#add_files ../FreeImage/Source/FreeImage/PluginWebP.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginXBM.cpp
+	add_files ../FreeImage/Source/FreeImage/PluginXPM.cpp
+	add_files ../FreeImage/Source/FreeImage/PSDParser.cpp
+	add_files ../FreeImage/Source/FreeImage/TIFFLogLuv.cpp
+	add_files ../FreeImage/Source/FreeImage/Conversion.cpp
+	add_files ../FreeImage/Source/FreeImage/Conversion16_555.cpp
+	add_files ../FreeImage/Source/FreeImage/Conversion16_565.cpp
+	add_files ../FreeImage/Source/FreeImage/Conversion24.cpp
+	add_files ../FreeImage/Source/FreeImage/Conversion32.cpp
+	add_files ../FreeImage/Source/FreeImage/Conversion4.cpp
+	add_files ../FreeImage/Source/FreeImage/Conversion8.cpp
+	add_files ../FreeImage/Source/FreeImage/ConversionFloat.cpp
+	add_files ../FreeImage/Source/FreeImage/ConversionRGB16.cpp
+	add_files ../FreeImage/Source/FreeImage/ConversionRGBF.cpp
+	add_files ../FreeImage/Source/FreeImage/ConversionType.cpp
+	add_files ../FreeImage/Source/FreeImage/ConversionUINT16.cpp
+	add_files ../FreeImage/Source/FreeImage/Halftoning.cpp
+	add_files ../FreeImage/Source/FreeImage/tmoColorConvert.cpp
+	add_files ../FreeImage/Source/FreeImage/tmoDrago03.cpp
+	add_files ../FreeImage/Source/FreeImage/tmoFattal02.cpp
+	add_files ../FreeImage/Source/FreeImage/tmoReinhard05.cpp
+	add_files ../FreeImage/Source/FreeImage/ToneMapping.cpp
+	add_files ../FreeImage/Source/FreeImage/NNQuantizer.cpp
+	add_files ../FreeImage/Source/FreeImage/WuQuantizer.cpp
+	add_files ../FreeImage/Source/FreeImage/CacheFile.cpp
+	add_files ../FreeImage/Source/FreeImage/MultiPage.cpp
+	add_files ../FreeImage/Source/FreeImage/ZLibInterface.cpp 
+
+	# -- FreeImage - Metadata --
+
+	add_files ../FreeImage/Source/Metadata/Exif.cpp
+	add_files ../FreeImage/Source/Metadata/FIRational.cpp
+	add_files ../FreeImage/Source/Metadata/FreeImageTag.cpp
+	add_files ../FreeImage/Source/Metadata/IPTC.cpp
+	add_files ../FreeImage/Source/Metadata/TagConversion.cpp
+	add_files ../FreeImage/Source/Metadata/TagLib.cpp
+	#add_files ../FreeImage/Source/Metadata/XTIFF.cpp 
+
+	# -- FreeImage - Toolkit --
+
+	add_files ../FreeImage/Source/FreeImageToolkit/Background.cpp
+	add_files ../FreeImage/Source/FreeImageToolkit/BSplineRotate.cpp
+	add_files ../FreeImage/Source/FreeImageToolkit/Channels.cpp
+	add_files ../FreeImage/Source/FreeImageToolkit/ClassicRotate.cpp
+	add_files ../FreeImage/Source/FreeImageToolkit/Colors.cpp
+	add_files ../FreeImage/Source/FreeImageToolkit/CopyPaste.cpp
+	add_files ../FreeImage/Source/FreeImageToolkit/Display.cpp
+	add_files ../FreeImage/Source/FreeImageToolkit/Flip.cpp
+	add_files ../FreeImage/Source/FreeImageToolkit/JPEGTransform.cpp
+	add_files ../FreeImage/Source/FreeImageToolkit/MultigridPoissonSolver.cpp
+	add_files ../FreeImage/Source/FreeImageToolkit/Rescale.cpp
+	add_files ../FreeImage/Source/FreeImageToolkit/Resize.cpp
+
+
+	header_path ../FreeImage/Source expose

@@ -1558,7 +1558,8 @@ void doParticleColor(ParticleColor & color, const char * name)
         setColorf(color.rgba[0], color.rgba[1], color.rgba[2], color.rgba[3]);
         drawRect(cx1, cy1, cx2, cy2);
 
-		setColor(colorWhite);
+		const float backgroundLumi = (color.rgba[0] + color.rgba[1] + color.rgba[2]) / 3.f;
+		setColor(backgroundLumi < .5f ? colorWhite : colorBlack);
 		drawText(x1 + kPadding + kCheckButtonSize + kPadding, (y1+y2)/2, kFontSize, +1.f, 0.f, "%s", name);
 		
 		setColor(colorBlue);

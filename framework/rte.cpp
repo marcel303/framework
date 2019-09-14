@@ -47,7 +47,7 @@ static void handleFileChange(const std::string & filename)
 	{
 		g_shaderCache.handleSourceChanged(filename.c_str());
 	}
-#if ENABLE_OPENGL // todo : enable for vs and ps for metal
+#if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER // todo : enable for vs and ps for metal
 	else if (extension == "cs")
 	{
 		for (auto & i : g_computeShaderCache.m_map)

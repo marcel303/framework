@@ -1,3 +1,8 @@
+app codingChallenges-006-mitosis
+	depend_library framework
+	add_files 006-mitosis.cpp
+	resource_path data
+
 app codingChallenges-017-spaceColonization
 	depend_library framework
 	add_files 017-spaceColonization.cpp

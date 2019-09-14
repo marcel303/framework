@@ -29,6 +29,23 @@
 
 #include "audiostream/AudioIO.h"
 
+class SoundPlayer_Dummy
+{
+public:
+	bool init(const int numSources) { return false; }
+	bool shutdown() { return false; }
+	void process() { }
+	
+	int playSound(const void * buffer, const float volume, const bool loop) { return -1; }
+	void stopSound(const int playId) { }
+	void stopSoundsForBuffer(const void * buffer) { }
+	void stopAllSounds() { }
+	void setSoundVolume(const int playId, const float volume) { }
+	void playMusic(const char * filename, const bool loop) { }
+	void stopMusic() { }
+	void setMusicVolume(const float volume) { }
+};
+
 #if FRAMEWORK_USE_OPENAL
 
 #include <OpenAL/al.h>
@@ -193,6 +210,8 @@ public:
 	typedef SoundPlayer_PortAudio SoundPlayer;
 #elif FRAMEWORK_USE_OPENAL
 	typedef SoundPlayer_OpenAL SoundPlayer;
+#else
+	typedef SoundPlayer_Dummy SoundPlayer;
 #endif
 
 extern SoundPlayer g_soundPlayer;

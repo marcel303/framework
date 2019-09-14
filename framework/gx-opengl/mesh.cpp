@@ -25,12 +25,19 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h>
+#if !defined(IPHONEOS)
+	#include <GL/glew.h>
+#endif
+
 #include "framework.h"
 
 #if ENABLE_OPENGL
 
 #include "gx_mesh.h"
+
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#endif
 
 GxVertexBuffer::GxVertexBuffer()
 	: m_vertexArray(0)

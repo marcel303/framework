@@ -1,0 +1,4 @@
+app marcel-audiounit1
+	depend_library libgg
+	depend_library AudioToolbox find
+	add_files main.cpp

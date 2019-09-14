@@ -458,6 +458,7 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _
 		metal_copy_texture_to_texture(src_texture, srcSx * bytesPerPixel, 0, 0, srcSx, srcSy, dst_texture, dstX, dstY, metalFormat);
 		
 		[src_texture release]; // todo : defer release ?
+		src_texture = nullptr;
 	#else
 	// todo : remove this dead code
 		const MTLRegion region =

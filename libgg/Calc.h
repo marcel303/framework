@@ -203,22 +203,12 @@ namespace Calc
 	
 	inline float RandomMin0Max1(uint32_t v)
 	{
-#if defined(IPHONEOS) && 0
-		v = (v & 0x007fffff) | 0x40000000;
-
-		return (*((float*)&v) - 2.0f) * 0.5f;
-#else
 		return (v & 65535) / 65535.0f;
-#endif
 	}
 	
 	inline float RandomMin0Max1()
 	{
-#if defined(IPHONEOS) && 0
-		uint32_t v = (Random() & 0x007fffff) | 0x40000000;
-
-		return (*((float*)&v) - 2.0f) * 0.5f;
-#elif USE_PSPVEC
+#if USE_PSPVEC
 		return sceVfpuRandFloat(1.0f);
 #else
 		return RandomMin0Max1(Random());
@@ -227,22 +217,12 @@ namespace Calc
 	
 	inline float RandomMin1Max1(uint32_t v)
 	{
-#if defined(IPHONEOS) && 0
-		v = (v & 0x007fffff) | 0x40000000;
-
-		return *((float*)&v) - 3.0f;
-#else
 		return ((v & 65535) / 65535.0f - 0.5f) * 2.0f;
-#endif
 	}
 	
 	inline float RandomMin1Max1()
 	{
-#if defined(IPHONEOS) && 0
-		uint32_t v = (Random() & 0x007fffff) | 0x40000000;
-
-		return *((float*)&v) - 3.0f;
-#elif USE_PSPVEC
+#if USE_PSPVEC
 		return sceVfpuRandFloat(2.0f) - 1.0f;
 #else
 		return RandomMin1Max1(Random());

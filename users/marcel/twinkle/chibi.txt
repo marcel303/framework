@@ -1,4 +1,4 @@
-app marcel-twinkle
+app twinkle
 
 	depend_library framework
 	

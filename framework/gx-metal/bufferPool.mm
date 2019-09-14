@@ -25,6 +25,10 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#import "framework.h"
+
+#if ENABLE_METAL
+
 #import "bufferPool.h"
 
 id <MTLDevice> metal_get_device();
@@ -48,6 +52,7 @@ void DynamicBufferPool::free()
 	while (m_freeList != nullptr)
 	{
 		[m_freeList->m_buffer release];
+		m_freeList->m_buffer = nullptr;
 		
 		PoolElem * next = m_freeList->m_next;
 		delete m_freeList;
@@ -57,28 +62,27 @@ void DynamicBufferPool::free()
 
 DynamicBufferPool::PoolElem * DynamicBufferPool::allocBuffer()
 {
-	if (m_freeList == nullptr)
+	PoolElem * elem = nullptr;
+	
+	m_mutex.lock();
 	{
-		id <MTLDevice> device = metal_get_device();
-		
-		PoolElem * elem = new PoolElem();
-		elem->m_buffer = [device newBufferWithLength:m_numBytesPerBuffer options:MTLResourceCPUCacheModeWriteCombined];
-		
-		return elem;
-	}
-	else
-	{
-		PoolElem * elem;
-		
-		m_mutex.lock();
+		if (m_freeList != nullptr)
 		{
 			elem = m_freeList;
 			m_freeList = m_freeList->m_next;
 		}
-		m_mutex.unlock();
-		
-		return elem;
 	}
+	m_mutex.unlock();
+	
+	if (elem == nullptr)
+	{
+		id <MTLDevice> device = metal_get_device();
+		
+		elem = new PoolElem();
+		elem->m_buffer = [device newBufferWithLength:m_numBytesPerBuffer options:MTLResourceCPUCacheModeWriteCombined];
+	}
+	
+	return elem;
 }
 
 void DynamicBufferPool::freeBuffer(PoolElem * elem)
@@ -90,3 +94,5 @@ void DynamicBufferPool::freeBuffer(PoolElem * elem)
 	}
 	m_mutex.unlock();
 }
+
+#endif

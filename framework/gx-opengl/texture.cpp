@@ -25,13 +25,20 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h>
+#if !defined(IPHONEOS)
+	#include <GL/glew.h>
+#endif
+
 #include "framework.h"
 
 #if ENABLE_OPENGL
 
 #include "gx_texture.h"
 #include <algorithm>
+
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#endif
 
 static GLenum toOpenGLInternalFormat(const GX_TEXTURE_FORMAT format)
 {
@@ -204,6 +211,7 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 
 	//
 	
+#if ENABLE_DESKTOP_OPENGL
 	const int r = toOpenGLTextureSwizzle(in_r);
 	const int g = toOpenGLTextureSwizzle(in_g);
 	const int b = toOpenGLTextureSwizzle(in_b);
@@ -213,6 +221,11 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 	GLint swizzleMask[4] = { r, g, b, a };
 	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 	checkErrorGL();
+#else
+	// todo : gles : texture swizzle ?
+	
+	AssertMsg(false, "not implemented. GL_TEXTURE_SWIZZLE_RGBA is not available in non-desktop OpenGL", 0);
+#endif
 
 	// restore previous OpenGL states
 

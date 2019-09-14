@@ -27,6 +27,22 @@
 
 #pragma once
 
+// todo : separate UIView and NSView classes
+#if IPHONEOS
+
+#import <UIKit/UIView.h>
+#import <MetalKit/MTKView.h>
+
+@interface MetalView : MTKView
+
+@property (nonatomic, assign) id <MTLTexture> depthTexture;
+
+- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync;
+
+@end
+
+#else
+
 #import <Cocoa/Cocoa.h>
 #import <QuartzCore/CAMetalLayer.h>
 
@@ -40,3 +56,5 @@
 - (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync;
 
 @end
+
+#endif

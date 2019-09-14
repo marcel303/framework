@@ -90,7 +90,7 @@ void main()
 
 	for (int i = 0; i < 3; ++i)
 	{
-		float t = time * (i + 1) / 3;
+		float t = time * (float(i) + 1.0) / 3.0;
 
 		integrateOmniLight(
 			totalLightColor,

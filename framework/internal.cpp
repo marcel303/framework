@@ -25,7 +25,12 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h>
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#else
+	#include <GL/glew.h>
+#endif
+
 #include "audio.h"
 #include "data/engine/ShaderCommon.txt"
 #include "image.h"
@@ -67,7 +72,9 @@ Globals globals;
 TextureCache g_textureCache;
 #if ENABLE_OPENGL
 ShaderCache g_shaderCache;
+#if ENABLE_OPENGL_COMPUTE_SHADER
 ComputeShaderCache g_computeShaderCache;
+#endif
 #endif
 AnimCache g_animCache;
 SpriterCache g_spriterCache;
@@ -93,7 +100,7 @@ void checkErrorGL_internal(const char * function, int line)
 #endif
 }
 
-#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
+#if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT && ENABLE_DESKTOP_OPENGL
 static void formatDebugOutputGL(char * outStr, size_t outStrSize, GLenum source, GLenum type, GLuint id, GLenum severity, const char * msg)
 {
 	char sourceStr[32];
@@ -212,6 +219,8 @@ void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
 
 // -----
 
+#if USE_STBFONT || ENABLE_MSDF_FONTS
+
 StbFont::StbFont()
 	: buffer(nullptr)
 	, bufferSize(0)
@@ -266,6 +275,8 @@ void StbFont::free()
 	
 	bufferSize = 0;
 }
+
+#endif
 
 // -----
 	
@@ -705,7 +716,9 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			!buildOpenglText(source.c_str(),
 				type == GL_VERTEX_SHADER   ? 'v' :
 				type == GL_FRAGMENT_SHADER ? 'p' :
+			#if ENABLE_OPENGL_COMPUTE_SHADER
 				type == GL_COMPUTE_SHADER  ? 'c' : 'u',
+			#endif
 				outputs, source))
 		{
 			result = false;
@@ -721,9 +734,11 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			{
 				result = false;
 				
+			#if ENABLE_OPENGL_COMPUTE_SHADER
 				if (type == GL_COMPUTE_SHADER)
 					logError("compute shader creation failed. compute is possibly not supported?");
 				else
+			#endif
 					logError("shader creation failed");
 			}
 			else
@@ -744,17 +759,20 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 					4.50              4.5
 				*/
 				
-			#if USE_LEGACY_OPENGL
+			#if defined(IPHONEOS)
+			// todo : add FRAMEWORK_USE_OPENGL_ES3 compile definition
+				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 300\nprecision highp float;\n";
+			#elif USE_LEGACY_OPENGL
 				const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
 			#elif FRAMEWORK_USE_OPENGL_ES
-				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\nprecision mediump float;\n";
 			#else
 				#if OPENGL_VERSION == 410
-					const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+					const GLchar * version = "#version 410\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\nprecision mediump float;\n";
 				#elif OPENGL_VERSION == 430
-					const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\n";
+					const GLchar * version = "#version 430\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 420\nprecision mediump float;\n";
 				#else
-					const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150";
+					const GLchar * version = "#version 150\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 150\nprecision mediump float;\n";
 				#endif
 			#endif
 
@@ -1035,7 +1053,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 
 // -----
 
-#if ENABLE_OPENGL
+#if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER
 
 ComputeShaderCacheElem::ComputeShaderCacheElem()
 {
@@ -1591,7 +1609,7 @@ void SoundCacheElem::free()
 		g_soundPlayer.checkError();
 		buffer = 0;
 	}
-#else
+#elif FRAMEWORK_USE_PORTAUDIO
 	if (buffer != nullptr)
 	{
 		g_soundPlayer.stopSoundsForBuffer(buffer);
@@ -1664,7 +1682,7 @@ void SoundCacheElem::load(const char * filename)
 				soundData->channelCount,
 				soundData->channelSize);
 		}
-	#else
+	#elif FRAMEWORK_USE_PORTAUDIO
 		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->sampleRate, soundData->channelSize, soundData->channelCount);
 
 		if (buffer != nullptr)
@@ -1731,7 +1749,7 @@ FontCacheElem::FontCacheElem()
 {
 #if USE_STBFONT
 	font = nullptr;
-#else
+#elif USE_FREETYPE
 	face = 0;
 #endif
 
@@ -1750,7 +1768,7 @@ void FontCacheElem::free()
 		delete font;
 		font = nullptr;
 	}
-#else
+#elif USE_FREETYPE
 	if (face != 0)
 	{
 		if (FT_Done_Face(face) != 0)
@@ -1788,7 +1806,7 @@ void FontCacheElem::load(const char * filename)
 	{
 		loaded = true;
 	}
-#else
+#elif USE_FREETYPE
 	if (FT_New_Face(globals.freeType, filename, 0, &face) != 0)
 	{
 		logError("%s: unable to open font", filename);
@@ -1961,7 +1979,7 @@ GlyphCacheElem & GlyphCache::findOrCreate(const StbFont * font, int size, int c)
 	}
 }
 
-#else
+#elif USE_FREETYPE
 
 GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 {
@@ -2485,6 +2503,10 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 
 bool MsdfGlyphCache::saveCache(const char * filename) const
 {
+#if ENABLE_METAL
+	// todo : add Metal support for reading back of texture data, and saving the MSDF glyph cache
+	return false;
+#else
 	bool result = true;
 	
 	if (m_isLoaded == false)
@@ -2631,6 +2653,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 	}
 	
 	return result;
+#endif
 }
 
 // -----

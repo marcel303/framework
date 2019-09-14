@@ -104,11 +104,14 @@ void registerBuiltinShaders()
 			#define shader_attrib in
 			#define shader_in in
 			#define shader_out out
-			
-			precision mediump float;
 		#endif
 		
 		#define tex2D texture
+		
+		vec2 textureSizef(sampler2D sampler, int lod)
+		{
+			return vec2(textureSize(sampler, lod));
+		}
 		
 		#if LEGACY_GL
 			#define VS_USE_LEGACY_MATRICES 1

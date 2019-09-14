@@ -25,7 +25,60 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#import "framework.h"
+
+#if ENABLE_METAL
+
 #import "metalView.h"
+
+#if defined(IPHONEOS)
+
+#import <Metal/Metal.h>
+#import <QuartzCore/CAMetalLayer.h>
+
+@implementation MetalView
+
++ (Class)layerClass
+{
+    return [CAMetalLayer class];
+}
+
+- (BOOL)wantsUpdateLayer
+{
+    return YES;
+}
+
+- (CALayer*)makeBackingLayer
+{
+    return [self.class.layerClass layer];
+}
+
+- (instancetype)initWithFrame:(CGRect)frame device:(id <MTLDevice>)device wantsDepthBuffer:(BOOL)wantsDepthBuffer wantsVsync:(BOOL)wantsVsync
+{
+    if ((self = [super initWithFrame:frame]))
+    {
+		self.depthTexture = nil;
+		
+    	// todo : create iphoneos specific Metal view
+    	// todo : configure
+    	self.opaque = YES;
+    	self.device = device;
+    	self.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
+    	self.framebufferOnly = YES;
+		
+    	if (wantsDepthBuffer)
+    	{
+			self.depthStencilPixelFormat = MTLPixelFormatDepth32Float;
+		}
+    }
+
+    return self;
+}
+
+@end
+
+#else
+
 #import <Cocoa/Cocoa.h>
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
@@ -55,7 +108,7 @@
 		self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 		self.wantsDepthBuffer = wantsDepthBuffer;
 		self.depthTexture = nil;
-
+		
         self.metalLayer = (CAMetalLayer *)self.layer;
         self.metalLayer.opaque = YES;
         self.metalLayer.device = device;
@@ -101,3 +154,7 @@
 }
 
 @end
+
+#endif
+
+#endif

@@ -4,6 +4,8 @@ add ambisonics1
 add anaglyphic
 add audiosketch
 add audiosketches
+with_platform macos    add audiounit1
+with_platform iphoneos add audiounit1
 with_platform macos   add avpaint
 with_platform windows add avpaint
 with_platform macos add biquad-simd
@@ -15,8 +17,10 @@ add cuber
 with_platform macos   add etherdream1
 with_platform windows add etherdream1
 add fourier
+add fluidCube
 add geopart1
 add gltf1
+add gpupath1
 add grooop-cocompose
 add hackerPoet/010-particleLife
 add homography

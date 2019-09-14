@@ -39,6 +39,7 @@ library framework
 	depend_library libfbx
 
 	with_platform macos depend_library libsdl2
+	with_platform iphoneos depend_library libsdl2
 	#with_platform linux depend_library libsdl2
 	with_platform windows depend_library libsdl2
 
@@ -47,8 +48,16 @@ library framework
 	depend_library audiostream-vorbis
 	depend_library glew
 	depend_library msdfgen
-	depend_library portaudio
-	depend_library remotery
+	
+	with_platform macos   depend_library portaudio
+	with_platform linux   depend_library portaudio
+	with_platform windows depend_library portaudio
+
+	with_platform macos   depend_library remotery
+	with_platform linux   depend_library remotery
+	with_platform windows depend_library remotery
+
+	depend_library freetype2
 	depend_library tinyxml2
 	depend_library tinyxml2-helpers
 	depend_library utf8rewind
@@ -67,21 +76,42 @@ library framework
 	scan_files cpp
 	scan_files h
 	
-	scan_files cpp path audiooutput          group audiooutput
-	scan_files h   path audiooutput          group audiooutput
+	scan_files cpp path audiooutput group audiooutput
+	scan_files h   path audiooutput group audiooutput
 
-	scan_files cpp path gx-opengl            group gx-opengl
-	scan_files h   path gx-opengl            group gx-opengl
+# todo : simplify ?
+	with_platform macos   scan_files cpp path gx-opengl group gx-opengl
+	with_platform macos   scan_files h   path gx-opengl group gx-opengl
+	with_platform linux   scan_files cpp path gx-opengl group gx-opengl
+	with_platform linux   scan_files h   path gx-opengl group gx-opengl
+	with_platform windows scan_files cpp path gx-opengl group gx-opengl
+	with_platform windows scan_files h   path gx-opengl group gx-opengl
 
 	with_platform macos scan_files cpp path gx-metal group gx-metal
 	with_platform macos scan_files h   path gx-metal group gx-metal
 	with_platform macos scan_files mm  path gx-metal group gx-metal
 
+	with_platform iphoneos scan_files cpp path gx-opengl group gx-opengl
+	with_platform iphoneos scan_files h   path gx-opengl group gx-opengl
+	#with_platform iphoneos scan_files cpp path gx-metal group gx-metal
+	#with_platform iphoneos scan_files h   path gx-metal group gx-metal
+	#with_platform iphoneos scan_files mm  path gx-metal group gx-metal
+
 	header_path . expose
 	
 	compile_definition NO_SDL_GLEXT            * expose
 	compile_definition FRAMEWORK_USE_OPENAL    0 expose
-	compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+
+	with_platform macos    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+	with_platform linux    compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+	with_platform windows  compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
+	with_platform iphoneos compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
+
+# todo : use CoreAudio on macos
+	with_platform macos    compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+	with_platform linux    compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+	with_platform windows  compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+	with_platform iphoneos compile_definition FRAMEWORK_USE_COREAUDIO 1 expose
 
 	compile_definition HAVE_M_PI               * expose toolchain msvc
 	compile_definition _USE_MATH_DEFINES       * expose toolchain msvc
@@ -99,26 +129,22 @@ library framework
 	with_platform linux compile_definition ENABLE_MSDF_FONTS    0 expose
 
 # Macos header file includes and libraries
-# note : freetype was configured using : ./configure --disable-static --without-zlib --without-png --without-bzip2
-# note : freetype dylib was updated using : install_name_tool -id "@rpath/libfreetype.6.dylib" libfreetype.6.dylib
-	with_platform macos header_path macos/include          expose
-	with_platform macos header_path macos/include/freetype
-	with_platform macos depend_library macos/lib/libfreeimage.a local
-	with_platform macos depend_library macos/lib/libfreetype.6.dylib local embed_framework
+	with_platform macos depend_library FreeImage
 	with_platform macos depend_library Metal find
 	with_platform macos depend_library QuartzCore find
 
+	with_platform iphoneos depend_library FreeImage
+	with_platform iphoneos depend_library Metal find
+	with_platform iphoneos depend_library QuartzCore find
+
 # Windows header file includes and libraries
 	with_platform windows header_path win32/include          expose
-	with_platform windows header_path win32/include/freetype
 	with_platform windows depend_library win32/lib/FreeImage.lib local
-	with_platform windows depend_library win32/lib/freetype.lib local
 	with_platform windows depend_library win32/lib/OpenAL32.lib local
 	with_platform windows depend_library win32/lib/XInput9_1_0.lib local
 	with_platform windows depend_library Winmm.lib global
 	with_platform windows depend_library OpenGL32.lib global
 	with_platform windows add_dist_files win32/dll/FreeImage.dll
-	with_platform windows add_dist_files win32/dll/freetype.dll
 	with_platform windows add_dist_files win32/dll/OpenAL32.dll
 	with_platform windows add_dist_files win32/dll/XInput9_1_0.dll
 
@@ -128,7 +154,6 @@ library framework
 	with_platform linux depend_library pthread find
 	with_platform linux depend_package GLEW
 	with_platform linux depend_library portaudio find
-	with_platform linux depend_package Freetype
 	with_platform linux depend_library freeimage find
 	with_platform linux depend_package SDL2
 

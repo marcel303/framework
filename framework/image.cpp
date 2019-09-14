@@ -28,11 +28,19 @@
 #include "framework.h"
 #include "image.h"
 #include "MemAlloc.h"
+#include <string.h> // memset
+
 #ifdef WIN32
 	#include <Windows.h>
 #endif
-#include <FreeImage.h>
-#include <string.h>
+
+#if !defined(USE_FREEIMAGE)
+	#define USE_FREEIMAGE 1 // do not alter
+#endif
+
+#if USE_FREEIMAGE
+	#include <FreeImage.h>
+#endif
 
 //
 
@@ -66,6 +74,7 @@ ImageData::~ImageData()
 
 ImageData * loadImage(const char * filename)
 {
+#if USE_FREEIMAGE
 	FIBITMAP * bmp = FreeImage_Load(FreeImage_GetFileType(filename), filename);
 	
 	if (!bmp)
@@ -153,6 +162,9 @@ ImageData * loadImage(const char * filename)
 	imageData->imageData = (ImageData::Pixel*)data;
 	
 	return imageData;
+#else
+	return nullptr;
+#endif
 }
 
 ImageData *  imagePremultiplyAlpha(const ImageData * image)

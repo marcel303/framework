@@ -1,9 +1,16 @@
-#include <GL/glew.h>
+#if !defined(IPHONEOS)
+	#include <GL/glew.h>
+#endif
+
 #include "framework.h"
 
 #if ENABLE_OPENGL
 
 #include "renderTarget.h"
+
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#endif
 
 static GLenum translateColorFormat(const SURFACE_FORMAT format)
 {
@@ -132,9 +139,13 @@ static GLenum translateDepthFormat(const DEPTH_FORMAT format)
 
 	if (format == DEPTH_FLOAT16)
 		glFormat = GL_DEPTH_COMPONENT16;
+	
+#if ENABLE_DESKTOP_OPENGL
+	// todo : gles : float32 depth format ?
 	if (format == DEPTH_FLOAT32)
 		glFormat = GL_DEPTH_COMPONENT32;
-	
+#endif
+
 	return glFormat;
 }
 
@@ -297,7 +308,11 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 	
 		if (in_clearDepth && depthTarget != nullptr)
 		{
+		#if ENABLE_DESKTOP_OPENGL
 			glClearDepth(depthTarget->getClearDepth());
+		#else
+			glClearDepthf(depthTarget->getClearDepth());
+		#endif
 			clearFlags |= GL_DEPTH_BUFFER_BIT;
 		}
 	

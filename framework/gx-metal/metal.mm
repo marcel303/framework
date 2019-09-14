@@ -1822,10 +1822,11 @@ static void gxEndDraw()
 
 void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 {
-	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES);
+	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLE_STRIP);
 	
 	bindVsInputs(nullptr, 0, 0);
 	
+// todo : add to shaders struct, to avoid constant resource lookups here and at gxFlush
 	Shader genericShader("engine/Generic");
 	
 	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
@@ -1840,8 +1841,8 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	//
 
-	const ShaderCacheElem & shaderElem = shader.getCacheElem();
-
+	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
+	
 	if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
 	{
 		shader.setImmediate(
@@ -1858,6 +1859,19 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 			shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
 	}
 
+	// set fragment stage uniform buffers
+
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	{
+		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
+			continue;
+		
+		[s_activeRenderPass->encoder
+			setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+			length:shaderElem.psInfo.uniformBufferSize[i]
+			atIndex:i];
+	}
+	
 	//
 	
 	const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(primitiveType);

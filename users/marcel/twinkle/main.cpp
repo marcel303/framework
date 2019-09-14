@@ -909,9 +909,6 @@ bool doTitleScreen()
 	Music music("Sound Assets/Music/Twinkle_Menu_Theme_Loop.ogg");
 	music.play();
 
-	Sprite background("Art Assets/Wallpaper.jpg");
-	background.drawEx(0, 0);
-
 #if CINE
 	Spriter spriter("Cinematic/Cinematic.scml");
 #else
