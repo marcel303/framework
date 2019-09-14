@@ -384,7 +384,7 @@ bool Framework::init(int sx, int sy)
 	
 	if (allowHighDpi)
 		flags |= SDL_WINDOW_ALLOW_HIGHDPI;
-
+	
 	fassert(globals.mainWindow == nullptr);
 	SDL_Window * mainWindow = SDL_CreateWindow(
 		windowTitle.c_str(),
@@ -2185,6 +2185,11 @@ int Window::getHeight() const
 	SDL_GetWindowSize(m_window, &sx, &sy);
 	
 	return sy;
+}
+
+bool Window::isFullscreen() const
+{
+	return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_FULLSCREEN) != 0;
 }
 
 bool Window::getQuitRequested() const

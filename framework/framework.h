@@ -514,6 +514,8 @@ public:
 	int getWidth() const;
 	int getHeight() const;
 	
+	bool isFullscreen() const;
+	
 	bool getQuitRequested() const;
 	
 	SDL_Window * getWindow() const;
