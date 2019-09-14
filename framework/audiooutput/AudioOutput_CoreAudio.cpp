@@ -127,7 +127,10 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 		
 		sdesc.mSampleRate = sampleRate;
 		sdesc.mFormatID = kAudioFormatLinearPCM;
-		sdesc.mFormatFlags = kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked;
+		sdesc.mFormatFlags =
+			kAudioFormatFlagIsSignedInteger |
+			kAudioFormatFlagIsPacked |
+			kAudioFormatFlagsNativeEndian;
 		sdesc.mFramesPerPacket = 1;
 		sdesc.mChannelsPerFrame = numChannels;
 		sdesc.mBitsPerChannel = 16;
