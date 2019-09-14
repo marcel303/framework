@@ -193,7 +193,7 @@ bool preprocessShaderFromFile(
 	{
 		errorMessages.push_back(String::FormatC("failed to load file %s", filename));
 		
-		logError("failed to load include file %s", filename);
+		logError("failed to load shader file %s", filename);
 		
 		result = false;
 	}

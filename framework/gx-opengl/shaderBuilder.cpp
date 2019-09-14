@@ -122,6 +122,8 @@ static void report_error(const char * line, const char * format, ...)
 
 bool buildOpenglText(const char * text, const char shaderType, const char * outputs, std::string & result)
 {
+	Assert(shaderType == 'v' || shaderType == 'p');
+
 	std::vector<std::string> lines;
 	TextIO::LineEndings lineEndings;
 

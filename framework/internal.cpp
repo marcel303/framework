@@ -701,11 +701,12 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 	}
 	else
 	{
-		if (!buildOpenglText(source.c_str(),
-			type == GL_VERTEX_SHADER   ? 'v' :
-			type == GL_FRAGMENT_SHADER ? 'p' :
-			type == GL_COMPUTE_SHADER  ? 'c' : 'u',
-			outputs, source))
+		if ((type == GL_VERTEX_SHADER || type == GL_FRAGMENT_SHADER) &&
+			!buildOpenglText(source.c_str(),
+				type == GL_VERTEX_SHADER   ? 'v' :
+				type == GL_FRAGMENT_SHADER ? 'p' :
+				type == GL_COMPUTE_SHADER  ? 'c' : 'u',
+				outputs, source))
 		{
 			result = false;
 		}
