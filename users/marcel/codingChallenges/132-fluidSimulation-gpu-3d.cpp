@@ -49,6 +49,44 @@ Cohesive forces can be approximated by using a tracer image to track different f
 
 static void getOrCreateShader(const char * name, const char * code, const char * globals, BLEND_MODE blendMode);
 
+// 'extension' methods to handle 3d textures
+
+static void setTexture3d(Shader & shader, const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
+{
+	const GxImmediateIndex index = shader.getImmediate(name);
+	Assert(index != -1);
+	if (index == -1)
+		return;
+
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_3D, texture);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+}
+
+static void setTexture3d(ComputeShader & shader, const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
+{
+	const GxImmediateIndex index = shader.getImmediate(name);
+	Assert(index != -1);
+	if (index == -1)
+		return;
+
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_3D, texture);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+}
+
 //
 
 struct Texture3dProperties
@@ -185,7 +223,7 @@ struct Texture3d
 
 		ComputeShader shader("mul3d", 4, 4, 4);
 		setShader(shader);
-		shader.setTexture3d("s", 0, getTexture(), false, true);
+		setTexture3d(shader, "s", 0, getTexture(), false, true);
 		shader.setTextureRw("destination", 1, getTexture(), GL_R16F, false, true);
 		shader.setImmediate("value", value);
 		shader.dispatch(m_size[0], m_size[1], m_size[2]);
@@ -326,8 +364,8 @@ static void lin_solve3d(const int b, Texture3d * x, const Texture3d * x0, const 
 		ComputeShader shader("lin_solve3d");
 		setShader(shader);
 		setShader(shader);
-		shader.setTexture3d("x", 0, x->getTexture(), false, true);
-		shader.setTexture3d("x0", 1, x0->getTexture(), false, true);
+		setTexture3d(shader, "x", 0, x->getTexture(), false, true);
+		setTexture3d(shader, "x0", 1, x0->getTexture(), false, true);
 		shader.setTextureRw("destination", 2, x->getTexture(), GL_R16F, false, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
@@ -369,8 +407,8 @@ static void lin_solve3d_xyz(
     {
 		ComputeShader shader("lin_solve3d_xyz");
 		setShader(shader);
-		shader.setTexture3d("x", 0, x->getTexture(), false, true);
-		shader.setTexture3d("x0", 1, x0->getTexture(), false, true);
+		setTexture3d(shader, "x", 0, x->getTexture(), false, true);
+		setTexture3d(shader, "x0", 1, x0->getTexture(), false, true);
 		shader.setTextureRw("destination", 2, x->getTexture(), GL_R16F, false, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
@@ -384,8 +422,8 @@ static void lin_solve3d_xyz(
     {
 		ComputeShader shader("lin_solve3d_xyz");
 		setShader(shader);
-    	shader.setTexture3d("x", 0, y->getTexture(), false, true);
-		shader.setTexture3d("x0", 1, y0->getTexture(), false, true);
+    	setTexture3d(shader, "x", 0, y->getTexture(), false, true);
+		setTexture3d(shader, "x0", 1, y0->getTexture(), false, true);
 		shader.setTextureRw("destination", 2, y->getTexture(), GL_R16F, false, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
@@ -399,8 +437,8 @@ static void lin_solve3d_xyz(
     {
 		ComputeShader shader("lin_solve3d_xyz");
 		setShader(shader);
-    	shader.setTexture3d("x", 0, z->getTexture(), false, true);
-		shader.setTexture3d("x0", 1, z0->getTexture(), false, true);
+    	setTexture3d(shader, "x", 0, z->getTexture(), false, true);
+		setTexture3d(shader, "x0", 1, z0->getTexture(), false, true);
 		shader.setTextureRw("destination", 2, z->getTexture(), GL_R16F, false, true);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
@@ -441,7 +479,7 @@ static void project3d(
 					(
 						+ (+ samp(velocX, +1,  0,  0) - samp(velocX, -1,  0,  0))
 						+ (+ samp(velocY,  0, +1,  0) - samp(velocY,  0, -1,  0))
-						+ (+ samp(velocY,  0,  0, +1) - samp(velocY,  0,  0, -1))
+						+ (+ samp(velocZ,  0,  0, +1) - samp(velocZ,  0,  0, -1))
 					);
 		)SHADER",
 		"uniform sampler3D velocX; uniform sampler3D velocY; uniform sampler3D velocZ;",
@@ -450,9 +488,9 @@ static void project3d(
 	{
 		ComputeShader shader("project3d_div");
 		setShader(shader);
-		shader.setTexture3d("velocX", 0, velocX->getTexture(), false, true);
-		shader.setTexture3d("velocY", 1, velocY->getTexture(), false, true);
-		shader.setTexture3d("velocZ", 2, velocY->getTexture(), false, true);
+		setTexture3d(shader, "velocX", 0, velocX->getTexture(), false, true);
+		setTexture3d(shader, "velocY", 1, velocY->getTexture(), false, true);
+		setTexture3d(shader, "velocZ", 2, velocY->getTexture(), false, true);
 		shader.setTextureRw("destination", 3, div->getTexture(), GL_R16F, false, true);
 		shader.dispatch(div->getWidth(), div->getHeight(), div->getDepth());
 		clearShader();
@@ -487,7 +525,7 @@ static void project3d(
 	{
 		ComputeShader shader("project3d_veloc_x");
 		setShader(shader);
-		shader.setTexture3d("p", 0, p->getTexture(), false, true);
+		setTexture3d(shader, "p", 0, p->getTexture(), false, true);
 		shader.setTextureRw("destination", 1, velocX->getTexture(), GL_R16F, false, true);
 		shader.dispatch(velocX->getWidth(), velocX->getHeight(), velocX->getDepth());
 		clearShader();
@@ -496,7 +534,7 @@ static void project3d(
 	{
 		ComputeShader shader("project3d_veloc_y");
 		setShader(shader);
-		shader.setTexture3d("p", 0, p->getTexture(), false, true);
+		setTexture3d(shader, "p", 0, p->getTexture(), false, true);
 		shader.setTextureRw("destination", 1, velocY->getTexture(), GL_R16F, false, true);
 		shader.dispatch(velocY->getWidth(), velocY->getHeight(), velocY->getDepth());
 		clearShader();
@@ -505,7 +543,7 @@ static void project3d(
 	{
 		ComputeShader shader("project3d_veloc_z");
 		setShader(shader);
-		shader.setTexture3d("p", 0, p->getTexture(), false, true);
+		setTexture3d(shader, "p", 0, p->getTexture(), false, true);
 		shader.setTextureRw("destination", 1, velocZ->getTexture(), GL_R16F, false, true);
 		shader.dispatch(velocZ->getWidth(), velocZ->getHeight(), velocZ->getDepth());
 		clearShader();
@@ -541,10 +579,10 @@ static void advect3d(
     {
 		ComputeShader shader("advect3d");
 		setShader(shader);
-		shader.setTexture3d("velocX", 0, velocX->getTexture(), false, true);
-		shader.setTexture3d("velocY", 1, velocY->getTexture(), false, true);
-		shader.setTexture3d("velocZ", 2, velocZ->getTexture(), false, true);
-		shader.setTexture3d("d0", 3, d0->getTexture(), true, true);
+		setTexture3d(shader, "velocX", 0, velocX->getTexture(), false, true);
+		setTexture3d(shader, "velocY", 1, velocY->getTexture(), false, true);
+		setTexture3d(shader, "velocZ", 2, velocZ->getTexture(), false, true);
+		setTexture3d(shader, "d0", 3, d0->getTexture(), true, true);
 		shader.setTextureRw("destination", 4, d->getTexture(), GL_R16F, false, true);
 		shader.setImmediate("dtx", dtx);
 		shader.setImmediate("dty", dty);
@@ -583,10 +621,10 @@ static void advect3d_xyz(
     {
 		ComputeShader shader("advect3d");
 		setShader(shader);
-		shader.setTexture3d("velocX", 0, velocX->getTexture(), false, true);
-		shader.setTexture3d("velocY", 1, velocY->getTexture(), false, true);
-		shader.setTexture3d("velocZ", 2, velocZ->getTexture(), false, true);
-		shader.setTexture3d("d0", 3, d0->getTexture(), true, true);
+		setTexture3d(shader, "velocX", 0, velocX->getTexture(), false, true);
+		setTexture3d(shader, "velocY", 1, velocY->getTexture(), false, true);
+		setTexture3d(shader, "velocZ", 2, velocZ->getTexture(), false, true);
+		setTexture3d(shader, "d0", 3, d0->getTexture(), true, true);
 		shader.setImmediate("dtx", dtx);
 		shader.setImmediate("dty", dty);
 		shader.setImmediate("dtz", dtz);
@@ -880,7 +918,7 @@ int main(int argc, char * argv[])
 
 				Shader shader("132-gpu-draw");
 				setShader(shader);
-				shader.setTexture3d("source", 0, cube->density.getTexture(), true, true);
+				setTexture3d(shader, "source", 0, cube->density.getTexture(), true, true);
 
 				for (int z = 0; z < cube->size; ++z)
 				{
