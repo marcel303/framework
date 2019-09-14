@@ -883,8 +883,11 @@ int main(int argc, char * argv[])
 	#endif
 	#endif
 		
-		cube->addDensity(mouse.x / SCALE, mouse.y / SCALE, (cosf(framework.time) + 1.f) / 2.f * cube->size, 1.f);
-		cube->addVelocity(mouse.x / SCALE, mouse.y / SCALE, .5f, mouse.dx / 10.f, mouse.dy / 10.f, cosf(framework.time) * 1.f);
+		const float x = mouse.x / SCALE;
+		const float y = mouse.y / SCALE;
+		const float z = (cosf(framework.time) + 1.f) / 2.f * cube->size;
+		cube->addDensity(x, y, z, .2f);
+		cube->addVelocity(x, y, z, mouse.dx / 10.f, mouse.dy / 10.f, cosf(framework.time) * 1.f);
 		
 	#if defined(DEBUG)
 		const auto t1 = g_TimerRT.TimeUS_get();
