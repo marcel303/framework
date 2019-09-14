@@ -1,5 +1,6 @@
 #include "fluidCube2d.h"
 #include <math.h>
+#include <string.h>
 
 /*
 https://mikeash.com/pyblog/fluid-simulation-for-dummies.html
