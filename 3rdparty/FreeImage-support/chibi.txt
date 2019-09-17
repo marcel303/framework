@@ -4,21 +4,23 @@ library FreeImage shared
 	
 	# -- zlib --
 
-	add_files ../FreeImage/Source/ZLib/adler32.c
-	add_files ../FreeImage/Source/ZLib/compress.c
-	add_files ../FreeImage/Source/ZLib/crc32.c
-	add_files ../FreeImage/Source/ZLib/deflate.c
-	add_files ../FreeImage/Source/ZLib/gzclose.c
-	add_files ../FreeImage/Source/ZLib/gzlib.c
-	add_files ../FreeImage/Source/ZLib/gzread.c
-	add_files ../FreeImage/Source/ZLib/gzwrite.c
-	add_files ../FreeImage/Source/ZLib/infback.c
-	add_files ../FreeImage/Source/ZLib/inffast.c
-	add_files ../FreeImage/Source/ZLib/inflate.c
-	add_files ../FreeImage/Source/ZLib/inftrees.c
-	add_files ../FreeImage/Source/ZLib/trees.c
-	add_files ../FreeImage/Source/ZLib/uncompr.c
-	add_files ../FreeImage/Source/ZLib/zutil.c
+	#push_conglomerate zlib_all.c
+		add_files ../FreeImage/Source/ZLib/adler32.c
+		add_files ../FreeImage/Source/ZLib/compress.c
+		add_files ../FreeImage/Source/ZLib/crc32.c
+		add_files ../FreeImage/Source/ZLib/deflate.c
+		add_files ../FreeImage/Source/ZLib/gzclose.c
+		add_files ../FreeImage/Source/ZLib/gzlib.c
+		add_files ../FreeImage/Source/ZLib/gzread.c
+		add_files ../FreeImage/Source/ZLib/gzwrite.c
+		add_files ../FreeImage/Source/ZLib/infback.c
+		add_files ../FreeImage/Source/ZLib/inffast.c
+		add_files ../FreeImage/Source/ZLib/inflate.c
+		add_files ../FreeImage/Source/ZLib/inftrees.c
+		add_files ../FreeImage/Source/ZLib/trees.c
+		add_files ../FreeImage/Source/ZLib/uncompr.c
+		add_files ../FreeImage/Source/ZLib/zutil.c
+	#pop_conglomerate
 
 	# -- libJPEG --
 
@@ -72,46 +74,50 @@ library FreeImage shared
 
 	# -- LibOpenJPEG --
 
-	add_files ../FreeImage/Source/LibOpenJPEG/bio.c
-	add_files ../FreeImage/Source/LibOpenJPEG/cio.c
-	add_files ../FreeImage/Source/LibOpenJPEG/dwt.c
-	add_files ../FreeImage/Source/LibOpenJPEG/event.c
-	add_files ../FreeImage/Source/LibOpenJPEG/function_list.c
-	add_files ../FreeImage/Source/LibOpenJPEG/image.c
-	add_files ../FreeImage/Source/LibOpenJPEG/invert.c
-	add_files ../FreeImage/Source/LibOpenJPEG/j2k.c
-	add_files ../FreeImage/Source/LibOpenJPEG/jp2.c
-	add_files ../FreeImage/Source/LibOpenJPEG/mct.c
-	add_files ../FreeImage/Source/LibOpenJPEG/mqc.c
-	add_files ../FreeImage/Source/LibOpenJPEG/openjpeg.c
-	add_files ../FreeImage/Source/LibOpenJPEG/opj_clock.c
-	add_files ../FreeImage/Source/LibOpenJPEG/pi.c
-	add_files ../FreeImage/Source/LibOpenJPEG/raw.c
-	add_files ../FreeImage/Source/LibOpenJPEG/t1.c
-	add_files ../FreeImage/Source/LibOpenJPEG/t2.c
-	add_files ../FreeImage/Source/LibOpenJPEG/tcd.c
-	add_files ../FreeImage/Source/LibOpenJPEG/tgt.c
+	#push_conglomerate FreeImage_LibOpenJPEG_all.c
+		add_files ../FreeImage/Source/LibOpenJPEG/bio.c
+		add_files ../FreeImage/Source/LibOpenJPEG/cio.c
+		add_files ../FreeImage/Source/LibOpenJPEG/dwt.c
+		add_files ../FreeImage/Source/LibOpenJPEG/event.c
+		add_files ../FreeImage/Source/LibOpenJPEG/function_list.c
+		add_files ../FreeImage/Source/LibOpenJPEG/image.c
+		add_files ../FreeImage/Source/LibOpenJPEG/invert.c
+		add_files ../FreeImage/Source/LibOpenJPEG/j2k.c
+		add_files ../FreeImage/Source/LibOpenJPEG/jp2.c
+		add_files ../FreeImage/Source/LibOpenJPEG/mct.c
+		add_files ../FreeImage/Source/LibOpenJPEG/mqc.c
+		add_files ../FreeImage/Source/LibOpenJPEG/openjpeg.c
+		add_files ../FreeImage/Source/LibOpenJPEG/opj_clock.c
+		add_files ../FreeImage/Source/LibOpenJPEG/pi.c
+		add_files ../FreeImage/Source/LibOpenJPEG/raw.c
+		add_files ../FreeImage/Source/LibOpenJPEG/t1.c
+		add_files ../FreeImage/Source/LibOpenJPEG/t2.c
+		add_files ../FreeImage/Source/LibOpenJPEG/tcd.c
+		add_files ../FreeImage/Source/LibOpenJPEG/tgt.c
+	#pop_conglomerate
 
 	# -- LibPNG --
 
-	add_files ../FreeImage/Source/LibPNG/png.c
-	add_files ../FreeImage/Source/LibPNG/pngerror.c
-	add_files ../FreeImage/Source/LibPNG/pngget.c
-	add_files ../FreeImage/Source/LibPNG/pngmem.c
-	add_files ../FreeImage/Source/LibPNG/pngpread.c
-	add_files ../FreeImage/Source/LibPNG/pngread.c
-	add_files ../FreeImage/Source/LibPNG/pngrio.c
-	add_files ../FreeImage/Source/LibPNG/pngrtran.c
-	add_files ../FreeImage/Source/LibPNG/pngrutil.c
-	add_files ../FreeImage/Source/LibPNG/pngset.c
-	add_files ../FreeImage/Source/LibPNG/pngtrans.c
-	add_files ../FreeImage/Source/LibPNG/pngwio.c
-	add_files ../FreeImage/Source/LibPNG/pngwrite.c
-	add_files ../FreeImage/Source/LibPNG/pngwtran.c
-	add_files ../FreeImage/Source/LibPNG/pngwutil.c
+	push_conglomerate FreeImage_LibPNG_all.c
+		add_files ../FreeImage/Source/LibPNG/png.c
+		add_files ../FreeImage/Source/LibPNG/pngerror.c
+		add_files ../FreeImage/Source/LibPNG/pngget.c
+		add_files ../FreeImage/Source/LibPNG/pngmem.c
+		add_files ../FreeImage/Source/LibPNG/pngpread.c
+		add_files ../FreeImage/Source/LibPNG/pngread.c
+		add_files ../FreeImage/Source/LibPNG/pngrio.c
+		add_files ../FreeImage/Source/LibPNG/pngrtran.c
+		add_files ../FreeImage/Source/LibPNG/pngrutil.c
+		add_files ../FreeImage/Source/LibPNG/pngset.c
+		add_files ../FreeImage/Source/LibPNG/pngtrans.c
+		add_files ../FreeImage/Source/LibPNG/pngwio.c
+		add_files ../FreeImage/Source/LibPNG/pngwrite.c
+		add_files ../FreeImage/Source/LibPNG/pngwtran.c
+		add_files ../FreeImage/Source/LibPNG/pngwutil.c
 
-	scan_files c path ../FreeImage/Source/LibPNG/arm
-	scan_files c path ../FreeImage/Source/LibPNG/intel
+		scan_files c path ../FreeImage/Source/LibPNG/arm
+		scan_files c path ../FreeImage/Source/LibPNG/intel
+	pop_conglomerate
 
 	# -- FreeImage --
 
@@ -189,28 +195,31 @@ library FreeImage shared
 
 	# -- FreeImage - Metadata --
 
-	add_files ../FreeImage/Source/Metadata/Exif.cpp
-	add_files ../FreeImage/Source/Metadata/FIRational.cpp
-	add_files ../FreeImage/Source/Metadata/FreeImageTag.cpp
-	add_files ../FreeImage/Source/Metadata/IPTC.cpp
-	add_files ../FreeImage/Source/Metadata/TagConversion.cpp
-	add_files ../FreeImage/Source/Metadata/TagLib.cpp
-	#add_files ../FreeImage/Source/Metadata/XTIFF.cpp 
+	push_conglomerate FreeImage_MetaData_all.cpp
+		add_files ../FreeImage/Source/Metadata/Exif.cpp
+		add_files ../FreeImage/Source/Metadata/FIRational.cpp
+		add_files ../FreeImage/Source/Metadata/FreeImageTag.cpp
+		add_files ../FreeImage/Source/Metadata/IPTC.cpp
+		add_files ../FreeImage/Source/Metadata/TagConversion.cpp
+		add_files ../FreeImage/Source/Metadata/TagLib.cpp
+		#add_files ../FreeImage/Source/Metadata/XTIFF.cpp 
+	pop_conglomerate
 
 	# -- FreeImage - Toolkit --
 
-	add_files ../FreeImage/Source/FreeImageToolkit/Background.cpp
-	add_files ../FreeImage/Source/FreeImageToolkit/BSplineRotate.cpp
-	add_files ../FreeImage/Source/FreeImageToolkit/Channels.cpp
-	add_files ../FreeImage/Source/FreeImageToolkit/ClassicRotate.cpp
-	add_files ../FreeImage/Source/FreeImageToolkit/Colors.cpp
-	add_files ../FreeImage/Source/FreeImageToolkit/CopyPaste.cpp
-	add_files ../FreeImage/Source/FreeImageToolkit/Display.cpp
-	add_files ../FreeImage/Source/FreeImageToolkit/Flip.cpp
-	add_files ../FreeImage/Source/FreeImageToolkit/JPEGTransform.cpp
-	add_files ../FreeImage/Source/FreeImageToolkit/MultigridPoissonSolver.cpp
-	add_files ../FreeImage/Source/FreeImageToolkit/Rescale.cpp
-	add_files ../FreeImage/Source/FreeImageToolkit/Resize.cpp
-
+	push_conglomerate FreeImage_Toolkit_all.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/Background.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/BSplineRotate.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/Channels.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/ClassicRotate.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/Colors.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/CopyPaste.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/Display.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/Flip.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/JPEGTransform.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/MultigridPoissonSolver.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/Rescale.cpp
+		add_files ../FreeImage/Source/FreeImageToolkit/Resize.cpp
+	pop_conglomerate
 
 	header_path ../FreeImage/Source expose
