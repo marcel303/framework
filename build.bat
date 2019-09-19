@@ -7,9 +7,22 @@ IF ERRORLEVEL 1 (
 	exit /b
 )
 
-rem todo : verify all submodules are synced somehow
-rem git submodule update --init --recursive
+rem use command line argument for selecting build target
+set target_arg=
+:target_loop
+	IF [%1]==[] (
+		goto target_end
+	)
+	set target_arg=%target_arg%-target %1 
+	shift /1
+	goto target_loop
+:target_end
 
+IF DEFINED target_arg (
+	echo using filter: %target_arg%
+)
+
+rem verify all submodules are up to date
 echo Updating Git submodules..
 git submodule update
 echo ..Done!
@@ -23,7 +36,7 @@ cd %~dp0 || exit /b
 
 rem generate cmake files using chibi
 mkdir "chibi-build\cmake-files-for-build"
-%chibi_bin% -g . chibi-build/cmake-files-for-build || cd %~dp0 && exit /b
+%chibi_bin% -g . chibi-build/cmake-files-for-build %target_arg% || cd %~dp0 && exit /b
 cd %~dp0 || exit /b
 
 rem build all of the libraries and example and test app binaries. this will take a while

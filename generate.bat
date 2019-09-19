@@ -7,6 +7,21 @@ IF ERRORLEVEL 1 (
 	exit /b
 )
 
+rem use command line argument for selecting build target
+set target_arg=
+:target_loop
+	IF [%1]==[] (
+		goto target_end
+	)
+	set target_arg=%target_arg%-target %1 
+	shift /1
+	goto target_loop
+:target_end
+
+IF DEFINED target_arg (
+	echo using filter: %target_arg%
+)
+
 rem todo : verify all submodules are synced somehow
 rem git submodule update --init --recursive
 
@@ -19,7 +34,7 @@ cd %~dp0 || exit /b
 
 rem generate cmake files using chibi
 mkdir "chibi-build\cmake-files"
-%chibi_bin% -g . chibi-build/cmake-files || cd %~dp0 && exit /b
+%chibi_bin% -g . chibi-build/cmake-files %target_arg% || cd %~dp0 && exit /b
 cd %~dp0 || exit /b
 
 rem generate Visual Studio project file

@@ -11,9 +11,7 @@ IF ERRORLEVEL 1 (
 	exit /b
 )
 
-rem todo : verify all submodules are synced somehow
-rem git submodule update --init --recursive
-
+rem verify all submodules are up to date
 echo Updating Git submodules..
 git submodule update
 echo ..Done!
@@ -25,8 +23,7 @@ mkdir "chibi-build\chibi"
 cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --build . || cd %~dp0 && exit /b
 cd %~dp0 || exit /b
 
-rem FIXME !!! use command line argument for selecting build target
-
+rem use command line argument for selecting build target
 :build_loop
 	IF [%1]==[] (
 		goto build_end
@@ -43,13 +40,11 @@ rem FIXME !!! use command line argument for selecting build target
 	cd %~dp0 || exit /b
 
 	rem zip the target folder
-
 	cd chibi-build/archive && cmake -E tar "cfz" %1-%DATETIME_STRING%.tgz %1
 	cd %~dp0 || exit /b
 
+	rem  open explorer with the generated archive selected
 	%SystemRoot%\explorer.exe /select,.\chibi-build\archive\%1-%DATETIME_STRING%.tgz
-
-	rem TODO : open explorer with the ZIP file selected
 
 	shift /1
 	goto build_loop
