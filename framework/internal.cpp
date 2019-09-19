@@ -717,8 +717,9 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 				type == GL_VERTEX_SHADER   ? 'v' :
 				type == GL_FRAGMENT_SHADER ? 'p' :
 			#if ENABLE_OPENGL_COMPUTE_SHADER
-				type == GL_COMPUTE_SHADER  ? 'c' : 'u',
+				type == GL_COMPUTE_SHADER  ? 'c' :
 			#endif
+			 	'u',
 				outputs, source))
 		{
 			result = false;
