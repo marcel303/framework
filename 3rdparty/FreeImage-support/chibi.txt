@@ -1,6 +1,10 @@
 library FreeImage shared
 
 	compile_definition PNG_INTEL_SSE *
+
+	with_platform windows compile_definition FREEIMAGE_EXPORTS *
+
+	header_path ../FreeImage/Source/zlib
 	
 	# -- zlib --
 
@@ -74,6 +78,8 @@ library FreeImage shared
 
 	# -- LibOpenJPEG --
 
+	compile_definition OPJ_STATIC *
+	
 	#push_conglomerate FreeImage_LibOpenJPEG_all.c
 		add_files ../FreeImage/Source/LibOpenJPEG/bio.c
 		add_files ../FreeImage/Source/LibOpenJPEG/cio.c
