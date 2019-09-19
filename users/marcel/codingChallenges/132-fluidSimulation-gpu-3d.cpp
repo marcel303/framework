@@ -886,7 +886,7 @@ int main(int argc, char * argv[])
 		const float x = mouse.x / SCALE;
 		const float y = mouse.y / SCALE;
 		const float z = (cosf(framework.time) + 1.f) / 2.f * cube->size;
-		cube->addDensity(x, y, z, .2f);
+		cube->addDensity(x, y, z, 1.f);
 		cube->addVelocity(x, y, z, mouse.dx / 10.f, mouse.dy / 10.f, cosf(framework.time) * 1.f);
 		
 	#if defined(DEBUG)
@@ -958,7 +958,7 @@ int main(int argc, char * argv[])
 					
 					shader.setImmediate("depth", (z + .5f) / float(cube->size));
 					
-					setColor(4000, 3000, 2000);
+					setColor(400, 300, 200);
 					drawRect(-.5f, -.5f, .5f, .5f);
 
 					gxPopMatrix();
