@@ -2,6 +2,7 @@
 #include "fileBrowser.h"
 #include "imgui.h"
 #include "StringEx.h"
+#include <algorithm>
 
 #ifndef _MSC_VER
 #include <dirent.h>
@@ -9,6 +10,7 @@
 
 #ifdef _MSC_VER
 #include <direct.h>
+#include <Windows.h>
 #endif
 
 FileBrowser::~FileBrowser()
@@ -57,7 +59,6 @@ void FileBrowser::scanFiles(const char * path)
 	elems = new std::vector<FileElem>();
 	
 #ifdef WIN32
-#error todo : add elements
 	WIN32_FIND_DATAA ffd;
 	char wildcard[MAX_PATH];
 	sprintf_s(wildcard, sizeof(wildcard), "%s\\*", path);
@@ -66,23 +67,29 @@ void FileBrowser::scanFiles(const char * path)
 	{
 		do
 		{
+			if (strcmp(ffd.cFileName, ".") == 0 || strcmp(ffd.cFileName, "..") == 0)
+				continue;
+
 			char fullPath[MAX_PATH];
-			if (strcmp(path, "."))
-				concat(fullPath, sizeof(fullPath), path, "/", ffd.cFileName);
-			else
-				concat(fullPath, sizeof(fullPath), ffd.cFileName);
+			sprintf_s(fullPath, sizeof(fullPath), "%s/%s", path, ffd.cFileName);
 
 			if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{
-				if (recurse && strcmp(ffd.cFileName, ".") && strcmp(ffd.cFileName, ".."))
-				{
-					std::vector<std::string> subResult = listFiles(fullPath, recurse);
-					result.insert(result.end(), subResult.begin(), subResult.end());
-				}
+				FileElem elem;
+				elem.name = ffd.cFileName;
+				elem.path = fullPath;
+				elem.isFile = false;
+
+				elems->push_back(elem);
 			}
 			else
 			{
-				result.push_back(fullPath);
+				FileElem elem;
+				elem.name = ffd.cFileName;
+				elem.path = fullPath;
+				elem.isFile = true;
+
+				elems->push_back(elem);
 			}
 		} while (FindNextFileA(find, &ffd) != 0);
 
