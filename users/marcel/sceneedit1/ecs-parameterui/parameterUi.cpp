@@ -15,14 +15,50 @@
 
 #define ENABLE_BACKWARD_COMPATIBLE_ROOT_PREFIXES 1 // when set to 1, parameter names pasted from clipboard don't have to start with '/' explicitly. instead names are fixes up on the spot
 
+//
+
+static std::vector<int> s_flagsStack;
+static int s_flags = kParameterUiFlag_ShowDefaultButton;
+
+static std::vector<ParameterMgrContextMenu> s_contextMenuStack;
+static ParameterMgrContextMenu s_contextMenu = nullptr;
+
+void pushParameterUiFlags(const int flags)
+{
+	s_flagsStack.push_back(s_flags);
+	s_flags = flags;
+}
+
+void popParameterUiFlags()
+{
+	s_flags = s_flagsStack.back();
+	s_flagsStack.pop_back();
+}
+
+void pushParameterUiContextMenu(ParameterMgrContextMenu contextMenu)
+{
+	s_contextMenuStack.push_back(s_contextMenu);
+	s_contextMenu = contextMenu;
+}
+
+void popParameterUiContextMenu()
+{
+	s_contextMenu = s_contextMenuStack.back();
+	s_contextMenuStack.pop_back();
+}
+
+//
+
 void doParameterUi(ParameterBase & parameterBase)
 {
 	ImGui::PushID(&parameterBase);
 	
-	if (ImGui::Button("Default"))
-		parameterBase.setToDefault();
-	
-	ImGui::SameLine();
+	if (s_flags & kParameterUiFlag_ShowDefaultButton)
+	{
+		if (ImGui::Button("Default"))
+			parameterBase.setToDefault();
+		ImGui::SameLine();
+	}
 	
 	switch (parameterBase.type)
 	{
@@ -176,6 +212,124 @@ void doParameterUi(ParameterBase & parameterBase)
 	}
 	
 	ImGui::PopID();
+	
+	if ((s_flags & kParameterUiFlag_ShowDeveloperInfoOverlay) && ImGui::IsItemHovered())
+	{
+		doParameterTooltipUi(parameterBase);
+	}
+}
+
+void doParameterTooltipUi(ParameterBase & parameterBase)
+{
+	switch (parameterBase.type)
+	{
+	case kParameterType_Bool:
+		{
+			auto & parameter = static_cast<ParameterBool&>(parameterBase);
+			
+			ImGui::BeginTooltip();
+			ImGui::Text("Name: %s", parameter.name.c_str());
+			ImGui::Text("Value: %s", parameter.get() ? "True" : "False");
+			ImGui::EndTooltip();
+		}
+		break;
+		
+	case kParameterType_Int:
+		{
+			auto & parameter = static_cast<ParameterInt&>(parameterBase);
+			
+			ImGui::BeginTooltip();
+			ImGui::Text("Name: %s", parameter.name.c_str());
+			ImGui::Text("Value: %d", parameter.get());
+			ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
+			if (parameter.hasLimits)
+			{
+				ImGui::Text("Min: %d", parameter.min);
+				ImGui::Text("Max: %d", parameter.max);
+			}
+			ImGui::EndTooltip();
+		}
+		break;
+		
+	case kParameterType_Float:
+		{
+			auto & parameter = static_cast<ParameterFloat&>(parameterBase);
+			
+			ImGui::BeginTooltip();
+			ImGui::Text("Name: %s", parameter.name.c_str());
+			ImGui::Text("Value: %.2f", parameter.get());
+			ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
+			if (parameter.hasLimits)
+			{
+				ImGui::Text("Min: %.2f", parameter.min);
+				ImGui::Text("Max: %.2f", parameter.max);
+			}
+			ImGui::EndTooltip();
+		}
+		break;
+		
+	case kParameterType_Vec2:
+		{
+			auto & parameter = static_cast<ParameterVec2&>(parameterBase);
+			
+			ImGui::BeginTooltip();
+			ImGui::Text("Name: %s", parameter.name.c_str());
+			ImGui::Text("Value: %.2f, %.2f", parameter.get()[0], parameter.get()[1]);
+			ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
+			if (parameter.hasLimits)
+			{
+				ImGui::Text("Min: %.2f, %.2f", parameter.min[0], parameter.min[1]);
+				ImGui::Text("Max: %.2f, %.2f", parameter.max[0], parameter.max[1]);
+			}
+			ImGui::EndTooltip();
+		}
+		break;
+		
+	case kParameterType_Vec3:
+		{
+			auto & parameter = static_cast<ParameterVec3&>(parameterBase);
+			
+			ImGui::BeginTooltip();
+			ImGui::Text("Name: %s", parameter.name.c_str());
+			ImGui::Text("Value: %.2f, %.2f, %.2f", parameter.get()[0], parameter.get()[1], parameter.get()[2]);
+			ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
+			if (parameter.hasLimits)
+			{
+				ImGui::Text("Min: %.2f, %.2f, %.2f", parameter.min[0], parameter.min[1], parameter.min[2]);
+				ImGui::Text("Max: %.2f, %.2f, %.2f", parameter.max[0], parameter.max[1], parameter.max[2]);
+			}
+			ImGui::EndTooltip();
+		}
+		break;
+		
+	case kParameterType_Vec4:
+		{
+			auto & parameter = static_cast<ParameterVec4&>(parameterBase);
+			
+			ImGui::BeginTooltip();
+			ImGui::Text("Name: %s", parameter.name.c_str());
+			ImGui::Text("Value: %.2f, %.2f, %.2f, %.2f", parameter.get()[0], parameter.get()[1], parameter.get()[2], parameter.get()[3]);
+			ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
+			if (parameter.hasLimits)
+			{
+				ImGui::Text("Min: %.2f, %.2f, %.2f, %.2f", parameter.min[0], parameter.min[1], parameter.min[2], parameter.min[3]);
+				ImGui::Text("Max: %.2f, %.2f, %.2f, %.2f", parameter.max[0], parameter.max[1], parameter.max[2], parameter.max[3]);
+			}
+			ImGui::EndTooltip();
+		}
+		break;
+	
+	case kParameterType_String:
+		{
+			auto & parameter = static_cast<ParameterString&>(parameterBase);
+			
+			ImGui::BeginTooltip();
+			ImGui::Text("Name: %s", parameter.name.c_str());
+			ImGui::Text("Value: %s", parameter.get().c_str());
+			ImGui::EndTooltip();
+		}
+		break;
+	}
 }
 
 void doParameterUi(ParameterMgr & parameterMgr, const char * filter, const bool showCollapsingHeader)
@@ -258,7 +412,7 @@ static bool checkFilterPassesAtLeastOnce_recursive(const ParameterMgr & paramete
 	return false;
 }
 
-void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
+static void doParameterUi_recursive(ParameterMgr & rootParameterMgr, ParameterMgr & parameterMgr, const char * filter)
 {
 	const bool do_filter = filter != nullptr && filter[0] != 0;
 	
@@ -281,7 +435,15 @@ void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 		
 		if (child->access_index() != -1)
 		{
-			if (ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s [%d]", child->access_prefix().c_str(), child->access_index()))
+			const bool isOpen = ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s [%d]", child->access_prefix().c_str(), child->access_index());
+			
+			if (s_contextMenu != nullptr && ImGui::BeginPopupContextItem())
+			{
+				s_contextMenu(rootParameterMgr, *child);
+				ImGui::EndPopup();
+			}
+			
+			if (isOpen)
 			{
 				doParameterUi_recursive(*child, child_filter);
 				
@@ -290,7 +452,15 @@ void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 		}
 		else
 		{
-			if (ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s", child->access_prefix().c_str()))
+			const bool isOpen = ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s", child->access_prefix().c_str());
+			
+			if (s_contextMenu != nullptr && ImGui::BeginPopupContextItem())
+			{
+				s_contextMenu(rootParameterMgr, *child);
+				ImGui::EndPopup();
+			}
+			
+			if (isOpen)
 			{
 				doParameterUi_recursive(*child, child_filter);
 				
@@ -322,6 +492,11 @@ void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 			doParameterUi(*parameters[i]);
 		ImGui::PopItemWidth();
 	}
+}
+
+void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
+{
+	doParameterUi_recursive(parameterMgr, parameterMgr, filter);
 }
 
 //
