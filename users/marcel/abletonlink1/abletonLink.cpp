@@ -78,9 +78,6 @@ void AbletonLink::SessionState::commitAudio() const
 bool AbletonLink::init(const double bpm)
 {
 	link = new ableton::Link(bpm);
-
-	auto s = link->captureAppSessionState();
-	printf("tempo: %.2f\n", s.tempo());
 	
 	return true;
 }
@@ -94,17 +91,11 @@ void AbletonLink::shut()
 void AbletonLink::enable(const bool enable)
 {
 	link->enable(enable);
-	
-	auto s = link->captureAppSessionState();
-	printf("tempo: %.2f\n", s.tempo());
 }
 
 void AbletonLink::enableStartStopSync(const bool enable)
 {
 	link->enableStartStopSync(enable);
-	
-	auto s = link->captureAppSessionState();
-	printf("tempo: %.2f\n", s.tempo());
 }
 
 bool AbletonLink::isEnabled() const
@@ -119,9 +110,6 @@ uint64_t AbletonLink::getClockTick() const
 
 AbletonLink::SessionState AbletonLink::captureAppSessionState() const
 {
-	auto s = link->captureAppSessionState();
-	printf("tempo: %.2f\n", s.tempo());
-	
 	SessionState result;
 	
 	assert(sizeof(result.data) >= sizeof(ableton::Link::SessionState));

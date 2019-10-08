@@ -1,6 +1,7 @@
 library ableton-link-wrapper
 	depend_library ableton-link
 	add_files abletonLink.cpp abletonLink.h
+	header_path . expose
 
 app marcel-abletonlink1
 	depend_library ableton-link-wrapper
