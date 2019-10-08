@@ -213,7 +213,7 @@ void doParameterUi(ParameterBase & parameterBase)
 	
 	ImGui::PopID();
 	
-	if ((s_flags & kParameterUiFlag_ShowDeveloperInfoOverlay) && ImGui::IsItemHovered())
+	if ((s_flags & kParameterUiFlag_ShowDeveloperTooltip) && ImGui::IsItemHovered())
 	{
 		doParameterTooltipUi(parameterBase);
 	}
@@ -326,6 +326,26 @@ void doParameterTooltipUi(ParameterBase & parameterBase)
 			ImGui::BeginTooltip();
 			ImGui::Text("Name: %s", parameter.name.c_str());
 			ImGui::Text("Value: %s", parameter.get().c_str());
+			ImGui::EndTooltip();
+		}
+		break;
+		
+	case kParameterType_Enum:
+		{
+			auto & parameter = static_cast<ParameterEnum&>(parameterBase);
+			
+			ImGui::BeginTooltip();
+			ImGui::Text("Name: %s", parameter.name.c_str());
+			ImGui::Text("Value: %s", parameter.translateValueToKey(parameter.get()));
+			auto & elems = parameter.getElems();
+			if (!elems.empty())
+			{
+				ImGui::Text("Elements:");
+				ImGui::Indent();
+				for (auto & elem : elems)
+					ImGui::Text("%d: %s", elem.value, elem.key);
+				ImGui::Unindent();
+			}
 			ImGui::EndTooltip();
 		}
 		break;
