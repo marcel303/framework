@@ -1,0 +1,3 @@
+library deepbelief
+	with_platform macos depend_library DeepBelief.framework local embed_framework
+	add_files dummy.cpp

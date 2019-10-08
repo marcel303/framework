@@ -1,0 +1,10 @@
+library leapmotion
+
+	with_platform macos header_path macos/include expose
+	with_platform macos depend_library macos/lib/libLeap.dylib local embed_framework
+
+	with_platform windows header_path win32/include expose
+	with_platform windows depend_library win32/lib/Leap.lib local
+	with_platform windows add_dist_files win32/dll/Leap.dll
+
+	add_files dummy.cpp

@@ -6,9 +6,11 @@ with_platform windows  add libsdl2-win32
 add libetherdream
 
 add box2d-support
+add deepbelief
 add framework-ofx
 add freetype2-support
 add glew
+add leapmotion
 add liboscpack
 add midifile
 add msdfgen
@@ -16,10 +18,11 @@ add oggvorbis
 add portaudio-support
 add rapidjson-support
 add remotery
-add utf8rewind
+add syphon
 add tinyxml2
 add tinyxml2-helpers
 add turbojpeg
+add utf8rewind
 
 with_platform macos    add FreeImage-support
 with_platform iphoneos add FreeImage-support

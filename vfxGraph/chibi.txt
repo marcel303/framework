@@ -73,7 +73,7 @@ library vfxgraph-deepbelief
 	with_platform linux   compile_definition ENABLE_DEEPBELIEF 0 expose
 	with_platform windows compile_definition ENABLE_DEEPBELIEF 0 expose
 
-	with_platform macos depend_library macos/framework/DeepBelief.framework local embed_framework
+	with_platform macos depend_library deepbelief
 
 library vfxgraph-kinect
 
@@ -100,9 +100,6 @@ library vfxgraph-leapmotion
 
 	header_path vfxNodes-leapmotion expose
 
-	with_platform macos   header_path macos/include expose
-	with_platform windows header_path win32/include expose
-
 	scan_files cpp path vfxNodes-leapmotion
 	scan_files h   path vfxNodes-leapmotion
 
@@ -110,10 +107,7 @@ library vfxgraph-leapmotion
 	with_platform linux   compile_definition ENABLE_LEAPMOTION 0 expose
 	with_platform windows compile_definition ENABLE_LEAPMOTION 1 expose
 
-	with_platform macos depend_library macos/lib/libLeap.dylib local embed_framework
-
-	with_platform windows depend_library win32/lib/Leap.lib local
-	with_platform windows add_dist_files win32/dll/Leap.dll
+	depend_library leapmotion
 
 library vfxgraph-ps3eye
 
@@ -145,7 +139,7 @@ library vfxgraph-syphon
 	with_platform linux   compile_definition ENABLE_SYPHON 0 expose
 	with_platform windows compile_definition ENABLE_SYPHON 0 expose
 
-	with_platform macos depend_library macos/framework/Syphon.framework     local embed_framework
+	with_platform macos depend_library syphon
 
 library vfxgraph-wiimote
 
