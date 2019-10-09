@@ -50,7 +50,7 @@ if [ "$os" == "mac" ] && [ -e "chibi-build/archive/$1.app" ]; then
 	cwd=$PWD
 	cd "chibi-build/archive"
 	DATETIME=`date +%Y-%m-%d_%H-%M-%S`
-	zip -r "$1-$DATETIME.zip" "$1.app"
+	zip -r "$1-$DATETIME-osx.zip" "$1.app"
 	cd $cwd
-	open -a Finder -R "chibi-build/archive/$1-$DATETIME.zip"
+	open -a Finder -R "chibi-build/archive/$1-$DATETIME-osx.zip"
 fi
