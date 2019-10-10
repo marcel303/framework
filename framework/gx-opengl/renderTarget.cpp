@@ -38,16 +38,18 @@ static GLenum translateColorFormat(const SURFACE_FORMAT format)
 
 ColorTarget::~ColorTarget()
 {
-	if (m_colorTextureId != 0)
-	{
-		glDeleteTextures(1, &m_colorTextureId);
-		m_colorTextureId = 0;
-	}
+	free();
 }
 
 bool ColorTarget::init(const ColorTargetProperties & in_properties)
 {
 	bool result = true;
+	
+	//
+	
+	free();
+	
+	//
 	
 	properties = in_properties;
 	
@@ -135,6 +137,15 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 	return result;
 }
 
+void ColorTarget::free()
+{
+	if (m_colorTextureId != 0)
+	{
+		glDeleteTextures(1, &m_colorTextureId);
+		m_colorTextureId = 0;
+	}
+}
+
 //
 
 static GLenum translateDepthFormat(const DEPTH_FORMAT format)
@@ -155,11 +166,7 @@ static GLenum translateDepthFormat(const DEPTH_FORMAT format)
 
 DepthTarget::~DepthTarget()
 {
-	if (m_depthTextureId != 0)
-	{
-		glDeleteTextures(1, &m_depthTextureId);
-		m_depthTextureId = 0;
-	}
+	free();
 }
 
 bool DepthTarget::init(const DepthTargetProperties & in_properties)
@@ -219,6 +226,15 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 	}
 	
 	return result;
+}
+
+void DepthTarget::free()
+{
+	if (m_depthTextureId != 0)
+	{
+		glDeleteTextures(1, &m_depthTextureId);
+		m_depthTextureId = 0;
+	}
 }
 
 // -- render passes --

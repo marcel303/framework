@@ -23,6 +23,8 @@ public:
 	
 	virtual bool init(const ColorTargetProperties & properties) override final;
 	
+	void free();
+	
 	virtual void setClearColor(const float r, const float g, const float b, const float a) override final
 	{
 		properties.clearColor.r = r;
@@ -71,6 +73,8 @@ public:
 		return init(properties);
 	}
 	virtual bool init(const DepthTargetProperties & properties) override final;
+	
+	void free();
 	
 	virtual void setClearDepth(const float depth) override final
 	{
