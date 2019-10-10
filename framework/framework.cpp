@@ -443,6 +443,10 @@ bool Framework::init(int sx, int sy)
 		const char * version = (char*)glGetString(GL_VERSION);
 		const char * vendor = (char*)glGetString(GL_VENDOR);
 		const char * glsl_version = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+		(void)renderer;
+		(void)version;
+		(void)vendor;
+		(void)glsl_version;
 		
 		logInfo("OpenGL renderer: %s", renderer ? renderer : "unknown");
 		logInfo("OpenGL version: %s", version ? version : "unknown");
@@ -5080,89 +5084,6 @@ void pushShaderOutputs(const char * outputs)
 void popShaderOutputs()
 {
 	s_shaderOutputs = s_shaderOutputsStack.popValue();
-}
-
-void drawPoint(float x, float y)
-{
-	gxBegin(GX_POINTS);
-	{
-		gxVertex2f(x, y);
-	}
-	gxEnd();
-}
-
-void drawLine(float x1, float y1, float x2, float y2)
-{
-	gxBegin(GX_LINES);
-	{
-		gxVertex2f(x1, y1);
-		gxVertex2f(x2, y2);
-	}
-	gxEnd();
-}
-
-void drawRect(float x1, float y1, float x2, float y2)
-{
-	gxBegin(GX_QUADS);
-	{
-		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
-		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
-		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
-		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
-	}
-	gxEnd();
-}
-
-void drawRectLine(float x1, float y1, float x2, float y2)
-{
-	gxBegin(GX_LINE_LOOP);
-	{
-		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
-		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
-		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
-		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
-	}
-	gxEnd();
-}
-
-void drawCircle(float x, float y, float radius, int numSegments)
-{
-	gxBegin(GX_LINE_LOOP);
-	{
-		for (int i = 0; i < numSegments; ++i)
-		{
-			const float angle = i * (M_PI * 2.f / numSegments);
-
-			gxVertex2f(
-				x + cosf(angle) * radius,
-				y + sinf(angle) * radius);
-		}
-	}
-	gxEnd();
-}
-
-void fillCircle(float x, float y, float radius, int numSegments)
-{
-	gxBegin(GX_TRIANGLES);
-	{
-		for (int i = 0; i < numSegments; ++i)
-		{
-			const float angle1 = (i + 0) * (M_PI * 2.f / numSegments);
-			const float angle2 = (i + 1) * (M_PI * 2.f / numSegments);
-
-			gxVertex2f(
-				x,
-				y);
-
-			gxVertex2f(
-				x + cosf(angle1) * radius,
-				y + sinf(angle1) * radius);
-			gxVertex2f(
-				x + cosf(angle2) * radius,
-				y + sinf(angle2) * radius);
-		}
-	}
-	gxEnd();
 }
 
 #if USE_STBFONT
