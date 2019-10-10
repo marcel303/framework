@@ -27,10 +27,20 @@
 
 #include "gx_mesh.h"
 
-#if ENABLE_METAL // todo : use this GxMesh implementation for all backends
+#if ENABLE_OPENGL
+	#if defined(IPHONEOS)
+		#include <OpenGLES/ES3/gl.h>
+	#else
+		#include <GL/glew.h>
+	#endif
+#endif
 
 GxMesh::GxMesh()
 {
+#if ENABLE_OPENGL
+	glGenVertexArrays(1, &m_vertexArrayObject);
+	checkErrorGL();
+#endif
 }
 
 GxMesh::~GxMesh()
@@ -40,25 +50,125 @@ GxMesh::~GxMesh()
 
 void GxMesh::free()
 {
+#if ENABLE_OPENGL
+	if (m_vertexArrayObject != 0)
+	{
+		glDeleteVertexArrays(1, &m_vertexArrayObject);
+		m_vertexArrayObject = 0;
+		checkErrorGL();
+	}
+#endif
 }
+
+#if ENABLE_OPENGL
+
+static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
+{
+	for (int i = 0; i < numVsInputs; ++i)
+	{
+		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
+		
+		glEnableVertexAttribArray(vsInputs[i].id);
+		checkErrorGL();
+		
+		const GLenum type =
+			vsInputs[i].type == GX_ELEMENT_FLOAT32 ? GL_FLOAT :
+			vsInputs[i].type == GX_ELEMENT_UINT8 ? GL_UNSIGNED_BYTE :
+			GL_INVALID_ENUM;
+
+		Assert(type != GL_INVALID_ENUM);
+		if (type == GL_INVALID_ENUM)
+			continue;
+		
+		const int stride = vsStride ? vsStride : vsInputs[i].stride;
+		Assert(stride != 0);
+		if (stride == 0)
+			continue;
+		
+		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].numComponents, type, vsInputs[i].normalize, stride, (void*)(intptr_t)vsInputs[i].offset);
+		checkErrorGL();
+	}
+}
+
+#endif
 
 void GxMesh::setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vertexStride)
 {
 	m_vertexBuffer = buffer;
 
+#if ENABLE_OPENGL
+// todo : use the shared implementation for OpenGL too
+	Assert(m_vertexArrayObject != 0);
+	glBindVertexArray(m_vertexArrayObject);
+	checkErrorGL();
+	{
+		Assert(m_vertexBuffer->m_vertexArray != 0);
+		glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer->m_vertexArray);
+		checkErrorGL();
+		
+		bindVsInputs(vertexInputs, numVertexInputs, vertexStride);
+	}
+	glBindVertexArray(0);
+	checkErrorGL();
+#else
 	Assert(numVertexInputs <= kMaxVertexInputs);
 	m_numVertexInputs = numVertexInputs <= kMaxVertexInputs ? numVertexInputs : kMaxVertexInputs;
 	memcpy(m_vertexInputs, vertexInputs, m_numVertexInputs * sizeof(GxVertexInput));
 	m_vertexStride = vertexStride;
+#endif
 }
 
 void GxMesh::setIndexBuffer(const GxIndexBuffer * buffer)
 {
 	m_indexBuffer = buffer;
+	
+#if ENABLE_OPENGL
+	Assert(m_vertexArrayObject != 0);
+	glBindVertexArray(m_vertexArrayObject);
+	checkErrorGL();
+	{
+		Assert(m_indexBuffer->m_indexArray != 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer->m_indexArray);
+		checkErrorGL();
+	}
+	glBindVertexArray(0);
+	checkErrorGL();
+#endif
 }
 
 void GxMesh::draw(const GX_PRIMITIVE_TYPE type) const
 {
+#if ENABLE_OPENGL
+// todo : use the shared implementation for OpenGL too
+	Assert(type == GX_TRIANGLES); // todo : translate primitive type
+	if (type != GX_TRIANGLES)
+		return;
+	
+	gxValidateMatrices();
+	
+	const int numIndices = m_indexBuffer->getNumIndices();
+	
+	// bind vertex arrays
+
+	fassert(m_vertexBuffer && m_vertexBuffer->m_vertexArray);
+	fassert(m_indexBuffer && m_indexBuffer->m_indexArray);
+	glBindVertexArray(m_vertexArrayObject);
+	checkErrorGL();
+
+	const GLenum indexType =
+		m_indexBuffer->getFormat() == GX_INDEX_16
+		? GL_UNSIGNED_SHORT
+		: GL_UNSIGNED_INT;
+	
+	glDrawElements(GL_TRIANGLES, numIndices, indexType, 0);
+	checkErrorGL();
+
+	glBindVertexArray(0);
+	checkErrorGL();
+#else
+	fassert(m_vertexBuffer);
+	fassert(m_indexBuffer);
+	
 	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
 
 	if (m_indexBuffer)
@@ -71,6 +181,5 @@ void GxMesh::draw(const GX_PRIMITIVE_TYPE type) const
 	{
 		Assert(false); // not implemented yet
 	}
-}
-
 #endif
+}
