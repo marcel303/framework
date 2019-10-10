@@ -38,8 +38,9 @@
 
 static void setColorWriteMask(int r, int g, int b, int a)
 {
-	glColorMask(0, 0, 0, 1);
+	glColorMask(r, g, b, a);
 }
+
 #endif
 
 extern int s_backingScale; // todo : can this be exposed/determined more nicely?
