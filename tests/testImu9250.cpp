@@ -85,7 +85,8 @@ struct MyIMU9250 : IMU9250
 	
 	virtual void send(const uint8_t * bytes, const int numBytes) override
 	{
-		write(port, bytes, numBytes);
+		if (write(port, bytes, numBytes) == -1)
+			LOG_DBG("failed to write to IMU", 0);
 	}
 	
 	void init(const int _port)

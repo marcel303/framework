@@ -204,9 +204,11 @@ int main(int argc, char * argv[])
 					printf("up/down = a/z, increment/decrement = 1/2, trigger event = SPACE, quit = q\n");
 					printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
 					
-					system("/bin/stty raw");
-					c = getchar();
-					system("/bin/stty cooked");
+					Verify(system("/bin/stty raw") != -1);
+					{
+						c = getchar();
+					}
+					Verify(system("/bin/stty cooked") != -1);
 					
 					printf("\n");
 					

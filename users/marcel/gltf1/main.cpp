@@ -489,7 +489,14 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				
 				if (buffer.byteLength > 0)
 				{
-					fread(&buffer.data.front(), buffer.byteLength, 1, file);
+					if (fread(&buffer.data.front(), buffer.byteLength, 1, file) != 1)
+					{
+						fclose(file);
+						file = nullptr;
+
+						logDebug("failed to read buffer from file");
+						return false;
+					}
 				}
 				
 				fclose(file);

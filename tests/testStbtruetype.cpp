@@ -62,8 +62,21 @@ void testStbTruetype()
 	static unsigned char ttf_buffer[1<<20];
 	static unsigned char temp_bitmap[512*512];
 
-	fread(ttf_buffer, 1, 1<<20, fopen("calibri.ttf", "rb"));
-	stbtt_BakeFontBitmap(ttf_buffer, 0, 32.0, temp_bitmap, 512, 512, 32, 96, cdata); // no guarantee this fits!
+	memset(ttf_buffer, 0, sizeof(ttf_buffer));
+	memset(temp_bitmap, 0, sizeof(temp_bitmap));
+
+	FILE * f = fopen("calibri.ttf", "rb");
+
+	if (f != nullptr)
+	{
+		if (fread(ttf_buffer, 1, 1<<20, f) > 0)
+		{
+			stbtt_BakeFontBitmap(ttf_buffer, 0, 32.0, temp_bitmap, 512, 512, 32, 96, cdata); // no guarantee this fits!
+		}
+
+		fclose(f);
+		f = nullptr;
+	}
 
 	// can free ttf_buffer at this point
 	GxTextureId fontTexture = createTextureFromR8(temp_bitmap, 512, 512, false, true);
