@@ -1,6 +1,10 @@
 #include "framework.h"
 #include "internal.h"
 
+#if ENABLE_METAL
+	#include "gx-metal/metal.h"
+#endif
+
 Window::Window(SDL_Window * window)
 	: m_prev(nullptr)
 	, m_next(nullptr)
