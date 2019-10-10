@@ -5136,7 +5136,7 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 			gxLoadIdentity();
 		
 		#if ENABLE_METAL
-			// in Metal clip-space, (-1, -1) is the bottom-left cordiner, (+1, +1) is top-right
+			// in Metal clip-space, (-1, -1) is the bottom-left corner, (+1, +1) is top-right
 			// flip Y axis so the vertical axis runs top to bottom
 			gxScalef(1.f, -1.f, 1.f);
 		#endif
@@ -5365,18 +5365,7 @@ Vec2 transformToScreen(const Vec3 & v, float & w)
 	return Vec2(s[0], s[1]);
 }
 
-static void setSurface(Surface * surface)
-{
-#if ENABLE_OPENGL
-	const GLuint framebuffer = surface ? surface->getFramebuffer() : 0;
-	glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-	checkErrorGL();
-#endif
-	
-	updateViewport(surface, globals.currentWindow->getWindow());
-	
-	applyTransform();
-}
+#include "gx_render.h" // todo : move surface implementation to framework-surface.cpp
 
 void pushSurface(Surface * surface)
 {
@@ -5391,6 +5380,7 @@ void pushSurface(Surface * surface)
 	Surface * currentSurface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
 	
 	if (surface != currentSurface)
+#endif
 	{
 	// todo : decide how to deal with surface changes:
 	// 1) - commit work for previous surface
@@ -5410,18 +5400,22 @@ void pushSurface(Surface * surface)
 		else
 			pushRenderPass(surface->getColorTarget(), false, surface->getDepthTarget(), false, "Surface");
 	}
-#endif
 
+	//
+	
+	fassert(surfaceStackSize < kMaxSurfaceStackSize);
+	surfaceStack[surfaceStackSize++] = surface;
+	
 	//
 
 	gxMatrixMode(GX_PROJECTION);
 	gxPushMatrix();
 	gxMatrixMode(GX_MODELVIEW);
 	gxPushMatrix();
-
-	fassert(surfaceStackSize < kMaxSurfaceStackSize);
-	surfaceStack[surfaceStackSize++] = surface;
-	setSurface(surface);
+	
+	updateViewport(surface, globals.currentWindow->getWindow());
+	
+	applyTransform();
 
 	//
 
@@ -5444,10 +5438,10 @@ void popSurface()
 	Surface * surface2 = surfaceStackSize >= 2 ? surfaceStack[surfaceStackSize - 2] : nullptr;
 	
 	if (surface1 != surface2)
+#endif
 	{
 		popRenderPass();
 	}
-#endif
 
 #if ENABLE_OPENGL
 	// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
@@ -5483,8 +5477,11 @@ void popSurface()
 	
 	fassert(surfaceStackSize > 0);
 	surfaceStack[--surfaceStackSize] = 0;
+	
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : 0;
-	setSurface(surface);
+	updateViewport(surface, globals.currentWindow->getWindow());
+	
+	applyTransform();
 
 	gxMatrixMode(GX_PROJECTION);
 	gxPopMatrix();
@@ -5529,8 +5526,7 @@ void setDrawRect(int x, int y, int sx, int sy)
 	else
 	{
 	#if ENABLE_OPENGL
-		if (globals.currentWindow == globals.mainWindow)
-			y = surfaceSy - y - sy;
+		y = surfaceSy - y - sy;
 	#endif
 
 		ScaleX(x);

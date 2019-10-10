@@ -403,6 +403,44 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 	}
 }
 
+void pushBackbufferRenderPass(const bool in_clearColor, const bool in_clearDepth, const char * passName)
+{
+	RenderPassData pd;
+	
+	pd.frameBufferId = 0;
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, pd.frameBufferId);
+	checkErrorGL();
+	
+	//
+	
+	int clearFlags = 0;
+
+	if (in_clearColor)
+	{
+		glClearColor(0, 0, 0, 0);
+		clearFlags |= GL_COLOR_BUFFER_BIT;
+	}
+
+	if (in_clearDepth)
+	{
+	#if ENABLE_DESKTOP_OPENGL
+		glClearDepth(0.f);
+	#else
+		glClearDepthf(0.f);
+	#endif
+		clearFlags |= GL_DEPTH_BUFFER_BIT;
+	}
+
+	if (clearFlags)
+	{
+		glClear(clearFlags);
+		checkErrorGL();
+	}
+
+	s_renderPasses.push(pd);
+}
+
 void popRenderPass()
 {
 	auto & old_pd = s_renderPasses.top();
