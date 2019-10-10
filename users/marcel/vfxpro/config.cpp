@@ -171,31 +171,3 @@ bool Config::midiIsMapped(int id) const
 		return false;
 	return true;
 }
-
-bool Config::midiIsDown(int id) const
-{
-	if (!midiIsMapped(id))
-		return false;
-	return ::midi.isDown(midi.mapping[id]);
-}
-
-bool Config::midiWentDown(int id) const
-{
-	if (!midiIsMapped(id))
-		return false;
-	return ::midi.wentDown(midi.mapping[id]);
-}
-
-bool Config::midiWentUp(int id) const
-{
-	if (!midiIsMapped(id))
-		return false;
-	return ::midi.wentUp(midi.mapping[id]);
-}
-
-float Config::midiGetValue(int id, float _default) const
-{
-	if (!midiIsMapped(id))
-		return _default;
-	return ::midi.getValue(midi.mapping[id], _default);
-}
