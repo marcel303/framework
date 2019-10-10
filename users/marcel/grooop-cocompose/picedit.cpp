@@ -182,6 +182,11 @@ void PicEdit::drawMove(const float x, const float y, const float moveX, const fl
 		popSurface();
 	}
 	break;
+	case kDrawType_COUNT:
+	{
+		Assert(false);
+	}
+	break;
 	}
 }
 
