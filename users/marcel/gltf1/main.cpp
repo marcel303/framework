@@ -1352,7 +1352,7 @@ int main(int argc, char * argv[])
 							{
 								pushWireframe(keyboard.isDown(SDLK_w));
 								pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
-								gxMesh->draw();
+								gxMesh->draw(GX_TRIANGLES);
 								popCullMode();
 								popWireframe();
 							}
