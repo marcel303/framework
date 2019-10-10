@@ -69,7 +69,7 @@
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0 // do not alter
 #endif
 
-#if defined(MACOS) && !defined(ENABLE_METAL) && 0
+#if defined(MACOS) && !defined(ENABLE_METAL) && 1
 	#define ENABLE_METAL 1
 	#define ENABLE_HQ_PRIMITIVES 1
 #elif !defined(ENABLE_OPENGL)

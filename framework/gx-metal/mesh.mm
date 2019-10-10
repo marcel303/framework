@@ -142,7 +142,8 @@ void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_IND
 	
 	id <MTLBuffer> buffer = [device newBufferWithLength:numBytes options:MTLResourceStorageModeManaged];
 	
-	memcpy(buffer.contents, bytes, numBytes);
+	void * bufferContents = buffer.contents;
+	memcpy(bufferContents, bytes, numBytes);
 	
 	NSRange range;
 	range.location = 0;
