@@ -1216,6 +1216,8 @@ int main(int argc, char * argv[])
 	framework.enableDepthBuffer = true;
 #endif
 
+	framework.allowHighDpi = false;
+
 #ifdef DEBUG
 	//framework.reloadCachesOnActivate = true;
 #endif
