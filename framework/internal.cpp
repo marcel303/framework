@@ -1216,6 +1216,9 @@ void AnimCacheElem::free()
 template <typename Policy>
 void splitString(const std::string & str, std::vector<std::string> & result, Policy policy, const bool keepEmptyElements)
 {
+	if (str.empty())
+		return;
+		
 	int start = -1;
 	
 	for (size_t i = 0; i <= str.size(); ++i)
