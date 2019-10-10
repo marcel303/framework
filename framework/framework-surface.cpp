@@ -31,16 +31,16 @@
 
 #include "framework.h"
 
+#include "gx_render.h"
+#include "internal.h"
+
 #if ENABLE_OPENGL
 
-#include "internal.h"
-#include <algorithm>
-
-#if defined(IPHONEOS)
-	#include <OpenGLES/ES3/gl.h>
+static void setColorWriteMask(int r, int g, int b, int a)
+{
+	glColorMask(0, 0, 0, 1);
+}
 #endif
-
-#include "gx_render.h"
 
 extern int s_backingScale; // todo : can this be exposed/determined more nicely?
 
@@ -130,10 +130,7 @@ bool Surface::init(const SurfaceProperties & properties)
 	fassert(m_colorTarget[0] == nullptr && m_depthTarget[0] == nullptr);
 	
 	m_properties = properties;
-	
-	// todo : honor if colorTarget enabled is false
-	// todo : honor depthTarget doubleBuffered flag
-	
+
 	const int sx = properties.dimensions.width  / framework.minification;
 	const int sy = properties.dimensions.height / framework.minification;
 	
@@ -189,6 +186,13 @@ bool Surface::init(const SurfaceProperties & properties)
 		}
 	}
 	
+	if (!result)
+	{
+		logError("failed to init surface. calling destruct()");
+		
+		destruct();
+	}
+	
 	// set color swizzle
 	
 	setSwizzle(
@@ -200,12 +204,12 @@ bool Surface::init(const SurfaceProperties & properties)
 	return result;
 }
 
-bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
+bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
 {
 	SurfaceProperties properties;
 	
-	properties.dimensions.width = in_sx;
-	properties.dimensions.height = in_sy;
+	properties.dimensions.width = sx;
+	properties.dimensions.height = sy;
 	properties.colorTarget.enabled = true;
 	properties.colorTarget.format = format;
 	properties.colorTarget.doubleBuffered = doubleBuffered;
@@ -219,6 +223,8 @@ bool Surface::init(int in_sx, int in_sy, SURFACE_FORMAT format, bool withDepthBu
 	
 	return init(properties);
 }
+
+#if ENABLE_OPENGL
 
 // todo : perhaps use GxTextures internally
 
@@ -240,8 +246,13 @@ static GLint toOpenGLTextureSwizzle(const int value)
 		return GL_INVALID_ENUM;
 }
 
+#endif
+
 void Surface::setSwizzle(int r, int g, int b, int a)
 {
+#if ENABLE_METAL
+	Assert(false);
+#elif ENABLE_OPENGL
 	fassert(m_properties.colorTarget.enabled);
 	if (m_properties.colorTarget.enabled == false)
 		return;
@@ -249,7 +260,7 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 #if USE_LEGACY_OPENGL
 	return; // sorry; not supported!
 #endif
-
+	
 	// capture previous OpenGL state
 	
 	GLuint oldTexture = 0;
@@ -276,11 +287,12 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 #else
 	// todo : gles : swizzle mask ?
 #endif
-	
+
 	// restore the previous OpenGL state
 	
 	glBindTexture(GL_TEXTURE_2D, oldTexture);
 	checkErrorGL();
+#endif
 }
 
 ColorTarget * Surface::getColorTarget()
@@ -293,7 +305,7 @@ DepthTarget * Surface::getDepthTarget()
 	return m_depthTarget[m_bufferId];
 }
 
-uint32_t Surface::getFramebuffer() const
+uint32_t Surface::getFramebuffer() const // todo : remove Surface::getFramebuffer
 {
 	Assert(false);
 	return 0;
@@ -301,7 +313,10 @@ uint32_t Surface::getFramebuffer() const
 
 GxTextureId Surface::getTexture() const
 {
-	return m_colorTarget[m_bufferId]->getTextureId();
+	if (m_colorTarget[m_bufferId] == nullptr)
+		return 0;
+	else
+		return m_colorTarget[m_bufferId]->getTextureId();
 }
 
 bool Surface::hasDepthTexture() const
@@ -311,7 +326,10 @@ bool Surface::hasDepthTexture() const
 
 GxTextureId Surface::getDepthTexture() const
 {
-	return m_depthTarget[m_bufferId]->getTextureId();
+	if (m_depthTarget[m_bufferId] == nullptr)
+		return 0;
+	else
+		return m_depthTarget[m_bufferId]->getTextureId();
 }
 
 int Surface::getWidth() const
@@ -349,28 +367,34 @@ void Surface::clear(int r, int g, int b, int a)
 
 void Surface::clearf(float r, float g, float b, float a)
 {
-	pushSurface(this);
+	const Color oldClearColor = getColorTarget()->getClearColor();
+	
+	getColorTarget()->setClearColor(r, g, b, a);
+	pushRenderPass(getColorTarget(), true, nullptr, false, "Surface::clear");
 	{
-		glClearColor(r, g, b, a);
-		glClear(GL_COLOR_BUFFER_BIT);
-		checkErrorGL();
+		// target gets cleared during push
 	}
-	popSurface();
+	popRenderPass();
+	
+	getColorTarget()->setClearColor(
+		oldClearColor.r,
+		oldClearColor.g,
+		oldClearColor.b,
+		oldClearColor.a);
 }
 
 void Surface::clearDepth(float d)
 {
-	pushSurface(this);
+	const float oldClearDepth = getDepthTarget()->getClearDepth();
+	
+	getDepthTarget()->setClearDepth(d);
+	pushRenderPass(nullptr, false, getDepthTarget(), true, "Surface::clearDepth");
 	{
-	#if ENABLE_DESKTOP_OPENGL
-		glClearDepth(d);
-	#else
-		glClearDepthf(d);
-	#endif
-		glClear(GL_DEPTH_BUFFER_BIT);
-		checkErrorGL();
+		// target gets cleared during push
 	}
-	popSurface();
+	popRenderPass();
+	
+	getDepthTarget()->setClearDepth(oldClearDepth);
 }
 
 void Surface::clearAlpha()
@@ -389,11 +413,11 @@ void Surface::setAlphaf(float a)
 	{
 		pushBlend(BLEND_OPAQUE);
 		setColorf(1.f, 1.f, 1.f, a);
-		glColorMask(0, 0, 0, 1);
+		setColorWriteMask(0, 0, 0, 1); // todo : use push/pop
 		{
 			drawRect(0.f, 0.f, m_properties.dimensions.width, m_properties.dimensions.height);
 		}
-		glColorMask(1, 1, 1, 1);
+		setColorWriteMask(1, 1, 1, 1);
 		popBlend();
 	}
 	popSurface();
@@ -421,7 +445,7 @@ void Surface::postprocess()
 		drawRect(0.f, 0.f, m_properties.dimensions.width, m_properties.dimensions.height);
 	}
 	popDepthTest();
-	popSurface();	
+	popSurface();
 }
 
 void Surface::postprocess(Shader & shader)
@@ -455,20 +479,20 @@ void Surface::invert()
 
 void Surface::invertColor()
 {
-	glColorMask(1, 1, 1, 0);
+	setColorWriteMask(1, 1, 1, 0); // todo : use push/pop
 	{
 		invert();
 	}
-	glColorMask(1, 1, 1, 1);
+	setColorWriteMask(1, 1, 1, 1);
 }
 
 void Surface::invertAlpha()
 {
-	glColorMask(0, 0, 0, 1);
+	setColorWriteMask(0, 0, 0, 1); // todo : use push/pop
 	{
 		invert();
 	}
-	glColorMask(1, 1, 1, 1);
+	setColorWriteMask(1, 1, 1, 1);
 }
 
 void Surface::gaussianBlur(const float strengthH, const float strengthV, const int _kernelSize)
@@ -499,6 +523,9 @@ void Surface::gaussianBlur(const float strengthH, const float strengthV, const i
 
 void Surface::blitTo(Surface * surface) const
 {
+#if ENABLE_METAL
+	Assert(false);
+#elif ENABLE_OPENGL
 	int oldReadBuffer = 0;
 	int oldDrawBuffer = 0;
 
@@ -520,6 +547,7 @@ void Surface::blitTo(Surface * surface) const
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, oldReadBuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
 	checkErrorGL();
+#endif
 }
 
 void Surface::blit(BLEND_MODE blendMode) const
@@ -537,6 +565,9 @@ void Surface::blit(BLEND_MODE blendMode) const
 
 void blitBackBufferToSurface(Surface * surface)
 {
+#if ENABLE_METAL
+	Assert(false);
+#elif ENABLE_OPENGL
 	int drawableSx;
 	int drawableSy;
 	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
@@ -558,6 +589,5 @@ void blitBackBufferToSurface(Surface * surface)
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
 	checkErrorGL();
-}
-
 #endif
+}
