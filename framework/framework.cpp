@@ -2164,7 +2164,7 @@ void Dictionary::setInt(const char * name, int value)
 void Dictionary::setInt64(const char * name, int64_t value)
 {
     char text[32];
-    sprintf_s(text, sizeof(text), "%lld", value);
+    sprintf_s(text, sizeof(text), "%" PRId64, value);
     setString(name, text);
 }
 

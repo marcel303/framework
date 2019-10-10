@@ -94,7 +94,7 @@ void testChaosGame()
 			
 			auto t2 = g_TimerRT.TimeUS_get();
 			
-			printf("eval took %lldus\n", (t2 - t1));
+			printf("eval took %" PRId64 "us\n", (t2 - t1));
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);

@@ -49,7 +49,8 @@
 int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
-	chdir(CHIBI_RESOURCE_PATH);
+	if (chdir(CHIBI_RESOURCE_PATH) != 0)
+		return -1;
 #endif
 
 	if (SDL_Init(0) >= 0)
