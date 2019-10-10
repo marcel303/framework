@@ -80,10 +80,12 @@ public:
 	GxMesh();
 	~GxMesh();
 	
+	void free();
+	
 	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vsStride);
 	void setIndexBuffer(const GxIndexBuffer * buffer);
 	
-	void draw() const;
+	void draw(const GX_PRIMITIVE_TYPE type) const;
 };
 
 #endif

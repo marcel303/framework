@@ -35,6 +35,11 @@ GxMesh::GxMesh()
 
 GxMesh::~GxMesh()
 {
+	free();
+}
+
+void GxMesh::free()
+{
 }
 
 void GxMesh::setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vertexStride)
@@ -52,7 +57,7 @@ void GxMesh::setIndexBuffer(const GxIndexBuffer * buffer)
 	m_indexBuffer = buffer;
 }
 
-void GxMesh::draw() const
+void GxMesh::draw(const GX_PRIMITIVE_TYPE type) const
 {
 	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
 

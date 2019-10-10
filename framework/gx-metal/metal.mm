@@ -2073,7 +2073,15 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 		{
 			id <MTLBuffer> buffer = (id <MTLBuffer>)indexBuffer->getMetalBuffer();
 			
-			[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:buffer indexBufferOffset:0];
+			[s_activeRenderPass->encoder
+				drawIndexedPrimitives:metalPrimitiveType
+				indexCount:numElements
+				indexType:
+					indexBuffer->getFormat() == GX_INDEX_16
+					? MTLIndexTypeUInt16
+					: MTLIndexTypeUInt32
+				indexBuffer:buffer
+				indexBufferOffset:0];
 		}
 		else
 		{

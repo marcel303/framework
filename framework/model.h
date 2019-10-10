@@ -95,16 +95,9 @@ namespace AnimModel
 		int * m_indices;
 		int m_numIndices;
 		
-	#if ENABLE_METAL
 		GxVertexBuffer m_vertexBuffer;
 		GxIndexBuffer m_indexBuffer;
-	#endif
-	
-	#if ENABLE_OPENGL
-		GLuint m_vertexArray;
-		GLuint m_indexArray;
-		GLuint m_vertexArrayObject;
-	#endif
+		GxMesh m_drawableMesh;
 		
 		Material m_material;
 		

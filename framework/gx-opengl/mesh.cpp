@@ -71,6 +71,8 @@ void GxVertexBuffer::free()
 	}
 }
 
+//
+
 GxIndexBuffer::GxIndexBuffer()
 	: m_numIndices(0)
 	, m_format(GX_INDEX_16)
@@ -135,9 +137,17 @@ GxMesh::GxMesh()
 
 GxMesh::~GxMesh()
 {
-	glDeleteVertexArrays(1, &m_vertexArrayObject);
-	m_vertexArrayObject = 0;
-	checkErrorGL();
+	free();
+}
+
+void GxMesh::free()
+{
+	if (m_vertexArrayObject != 0)
+	{
+		glDeleteVertexArrays(1, &m_vertexArrayObject);
+		m_vertexArrayObject = 0;
+		checkErrorGL();
+	}
 }
 
 void GxMesh::bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
@@ -151,6 +161,7 @@ void GxMesh::bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs,
 		
 		const GLenum type =
 			vsInputs[i].type == GX_ELEMENT_FLOAT32 ? GL_FLOAT :
+			vsInputs[i].type == GX_ELEMENT_UINT8 ? GL_UNSIGNED_BYTE :
 			GL_INVALID_ENUM;
 
 		Assert(type != GL_INVALID_ENUM);
@@ -201,8 +212,12 @@ void GxMesh::setIndexBuffer(const GxIndexBuffer * buffer)
 	checkErrorGL();
 }
 
-void GxMesh::draw() const
+void GxMesh::draw(const GX_PRIMITIVE_TYPE type) const
 {
+	Assert(type == GX_TRIANGLES); // todo : translate primitive type
+	if (type != GX_TRIANGLES)
+		return;
+	
 	gxValidateMatrices();
 	
 	const int numIndices = m_indexBuffer->getNumIndices();

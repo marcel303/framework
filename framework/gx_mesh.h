@@ -117,10 +117,12 @@ public:
 	GxMesh();
 	~GxMesh();
 	
+	void free();
+	
 	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vertexStride);
 	void setIndexBuffer(const GxIndexBuffer * buffer);
 	
-	void draw() const;
+	void draw(const GX_PRIMITIVE_TYPE type) const;
 };
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
