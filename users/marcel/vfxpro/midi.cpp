@@ -1,5 +1,6 @@
 #include "Log.h"
 #include "midi.h"
+#include <string.h>
 
 static const uint8_t kMidi_NoteOff = 0x80;
 static const uint8_t kMidi_NoteOn = 0x90;
