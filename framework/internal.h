@@ -53,8 +53,6 @@
 	#include <OpenAL/al.h>
 #endif
 
-#define MAX_MIDI_KEYS 256
-
 #if !defined(USE_GLYPH_ATLAS)
 	#if !USE_LEGACY_OPENGL
 		#define USE_GLYPH_ATLAS 1
@@ -430,13 +428,6 @@ public:
 	MsdfFontCacheElem * fontMSDF;
 	bool isInTextBatchMSDF;
 	int xinputGamepadIdx;
-	bool midiIsSet[MAX_MIDI_KEYS];
-	bool midiIsSetAsync[MAX_MIDI_KEYS];
-	bool midiDown[MAX_MIDI_KEYS];
-	bool midiDownAsync[MAX_MIDI_KEYS];
-	bool midiChange[MAX_MIDI_KEYS];
-	bool midiChangeAsync[MAX_MIDI_KEYS];
-	float midiValue[MAX_MIDI_KEYS];
 	SDL_Joystick * joystick[GAMEPAD_MAX];
 	ShaderBase * shader;
 	TRANSFORM transform;

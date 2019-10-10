@@ -261,7 +261,6 @@ enum INIT_ERROR
 	INIT_ERROR_OPENGL,
 	INIT_ERROR_OPENGL_EXTENSIONS,
 	INIT_ERROR_SOUND,
-	INIT_ERROR_MIDI,
 	INIT_ERROR_FREETYPE
 };
 
@@ -273,7 +272,6 @@ class Font;
 class Framework;
 class Gamepad;
 class Keyboard;
-class Midi;
 class Model;
 class Mouse;
 class Music;
@@ -307,7 +305,6 @@ extern Framework framework;
 extern Mouse mouse;
 extern Keyboard keyboard;
 extern Gamepad gamepad[MAX_GAMEPAD];
-extern Midi midi;
 
 // event handlers
 
@@ -439,8 +436,6 @@ public:
 	bool enableProfiling;
 	bool allowHighDpi;
 	int minification;
-	bool enableMidi;
-	int midiDeviceIndex;
 	bool reloadCachesOnActivate;
 	bool cacheResourceData;
 	bool enableRealTimeEditing;
@@ -1386,20 +1381,6 @@ public:
 	void vibrate(float duration, float strength);
 	
 	const char * getName() const;
-};
-
-class Midi
-{
-	friend class Framework;
-
-public:
-	Midi();
-
-	bool isConnected;
-	bool isDown(int key) const;
-	bool wentDown(int key) const;
-	bool wentUp(int key) const;
-	float getValue(int key, float _default) const;
 };
 
 class Camera3d

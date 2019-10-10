@@ -94,13 +94,6 @@
 	#pragma comment(lib, "legacy_stdio_definitions.lib")
 #endif
 
-extern bool initMidi(int deviceIndex);
-extern void shutMidi();
-
-// MIDI processing lock. required since MIDI events arrive asynchronously
-extern void lockMidi();
-extern void unlockMidi();
-
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT && ENABLE_DESKTOP_OPENGL
 #if defined(WIN32)
 	void __stdcall debugOutputGL(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar*, const GLvoid*);
@@ -135,7 +128,6 @@ Framework framework;
 Mouse mouse;
 Keyboard keyboard;
 Gamepad gamepad[MAX_GAMEPAD];
-Midi midi;
 
 // -----
 
@@ -160,8 +152,6 @@ Framework::Framework()
 	enableProfiling = false;
 	allowHighDpi = true;
 	minification = 1;
-	enableMidi = false;
-	midiDeviceIndex = 0;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
 	enableRealTimeEditing = false;
@@ -544,17 +534,6 @@ bool Framework::init(int sx, int sy)
 	fassert(globals.builtinShaders == nullptr);
 	globals.builtinShaders = new BuiltinShaders();
 
-	if (enableMidi)
-	{
-		if (!initMidi(midiDeviceIndex))
-		{
-			logWarning("MIDI intialisation failed");
-			if (initErrorHandler)
-				initErrorHandler(INIT_ERROR_MIDI);
-			//return false;
-		}
-	}
-
 #if USE_FREETYPE
 	// initialize FreeType
 	
@@ -650,11 +629,6 @@ bool Framework::shutdown()
 	globals.freeType = 0;
 #endif
 	
-	if (enableMidi)
-	{
-		shutMidi();
-	}
-
 	delete globals.builtinShaders;
 	globals.builtinShaders = nullptr;
 
@@ -731,8 +705,6 @@ bool Framework::shutdown()
 	enableProfiling = false;
 	allowHighDpi = true;
 	minification = 1;
-	enableMidi = false;
-	midiDeviceIndex = 0;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
 	enableRealTimeEditing = false;
@@ -928,15 +900,6 @@ void Framework::process()
 	
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		window->m_windowData->beginProcess();
-
-	lockMidi();
-	{
-		memcpy(globals.midiIsSet, globals.midiIsSetAsync, sizeof(globals.midiIsSet));
-		memcpy(globals.midiDown, globals.midiDownAsync, sizeof(globals.midiDown));
-		memcpy(globals.midiChange, globals.midiChangeAsync, sizeof(globals.midiChange));
-		memset(globals.midiChangeAsync, 0, sizeof(globals.midiChangeAsync));
-	}
-	unlockMidi();
 	
 	events.clear();
 	
@@ -3451,45 +3414,6 @@ void Gamepad::vibrate(float duration, float strength)
 const char * Gamepad::getName() const
 {
 	return name;
-}
-
-// -----
-
-Midi::Midi()
-	: isConnected(false)
-{
-}
-
-bool Midi::isDown(int key) const
-{
-	if (key >= 0 && key < 256)
-		return globals.midiDown[key];
-	else
-		return false;
-}
-
-bool Midi::wentDown(int key) const
-{
-	if (key >= 0 && key < 256)
-		return globals.midiDown[key] && globals.midiChange[key];
-	else
-		return false;
-}
-
-bool Midi::wentUp(int key) const
-{
-	if (key >= 0 && key < 256)
-		return !globals.midiDown[key] && globals.midiChange[key];
-	else
-		return false;
-}
-
-float Midi::getValue(int key, float _default) const
-{
-	if (globals.midiIsSet[key] && isDown(key))
-		return globals.midiValue[key];
-	else
-		return _default;
 }
 
 // -----
