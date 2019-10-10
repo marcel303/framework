@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "internal.h"
 #include "StringEx.h"
+#include <limits>
 #include <stdarg.h>
 
 #if ENABLE_UTF8_SUPPORT
