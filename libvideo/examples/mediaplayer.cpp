@@ -31,7 +31,7 @@
 #include "StringEx.h"
 #include "video.h"
 
-#define ENABLE_ARTNET 1 // when enabled, the averaged smoothed RGB color of the video is sent to DMX channels 0..2 to the host defined below
+#define ENABLE_ARTNET 0 // when enabled, the averaged smoothed RGB color of the video is sent to DMX channels 0..2 to the host defined below
 
 #if ENABLE_ARTNET
 	#include "artnet.h"
@@ -60,6 +60,7 @@ int main(int argc, char * argv[])
 #endif
 
 	framework.filedrop = true;
+	framework.windowIsResizable = true;
 	
 	if (framework.init(800, 400))
 	{
@@ -118,8 +119,6 @@ int main(int argc, char * argv[])
 		
 		double videoTimeOffset = 0.0;
 		
-		Window window("Video", 640, 480, true);
-		
 	#if ENABLE_ARTNET
 		Color averageColor = colorBlack;
 	#endif
@@ -127,8 +126,6 @@ int main(int argc, char * argv[])
 		while (!framework.quitRequested)
 		{
 			framework.process();
-			
-			pushWindow(window);
 			
 			SDL_Cursor * cursor = SDL_GetDefaultCursor();
 
@@ -285,6 +282,10 @@ int main(int argc, char * argv[])
 			
 			framework.beginDraw(0, 0, 0, 0);
 			{
+				int viewportSx;
+				int viewportSy;
+				framework.getCurrentViewportSize(viewportSx, viewportSy);
+				
 				int sx;
 				int sy;
 				double duration;
@@ -300,13 +301,13 @@ int main(int argc, char * argv[])
 				{
 					sx *= sampleAspectRatio;
 					
-					const float scaleX = window.getWidth() / float(sx);
-					const float scaleY = window.getHeight() / float(sy);
+					const float scaleX = viewportSx / float(sx);
+					const float scaleY = viewportSy / float(sy);
 					const float scale = fminf(scaleX, scaleY);
 					const float scaledSx = sx * scale;
 					const float scaledSy = sy * scale;
-					const float offsetX = (window.getWidth() - scaledSx) / 2.f;
-					const float offsetY = (window.getHeight() - scaledSy) / 2.f;
+					const float offsetX = (viewportSx - scaledSx) / 2.f;
+					const float offsetY = (viewportSy - scaledSy) / 2.f;
 					
 					gxPushMatrix();
 					{
@@ -331,7 +332,7 @@ int main(int argc, char * argv[])
 					bool seek = false;
 					double seekTime;
 					
-					doProgressBar(20, window.getHeight()-20-20, window.getWidth() * 4/5, 20, mp.presentTime, duration, saturate(progressBarTimer / (1.f - .6f)), hover, seek, seekTime);
+					doProgressBar(20, viewportSy-20-20, viewportSx * 4/5, 20, mp.presentTime, duration, saturate(progressBarTimer / (1.f - .6f)), hover, seek, seekTime);
 					
 					if (hover)
 						cursor = handCursor;
@@ -354,14 +355,12 @@ int main(int argc, char * argv[])
 				if (osdOpacity > 0.f)
 				{
 					setColorf(1.f, 1.f, 1.f, osdOpacity);
-					drawText(window.getWidth() / 2, window.getHeight() / 2, 24, 0, 0, "%s", osdText.c_str());
+					drawText(viewportSx / 2, viewportSy / 2, 24, 0, 0, "%s", osdText.c_str());
 				}
 			}
 			framework.endDraw();
 			
 			SDL_SetCursor(cursor);
-			
-			popWindow();
 		}
 		
 		audioOutput.Stop();
