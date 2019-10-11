@@ -178,6 +178,8 @@ int main(int argc, char * argv[])
 					
 					Model * model = models[CoordKey(x, y, z)];
 					
+					model->animSpeed = animSpeed;
+					
 					model->tick(framework.timeStep);
 					
 					if (autoPlay &&  !model->animIsActive)
@@ -188,7 +190,6 @@ int main(int argc, char * argv[])
 						const std::string & name = animList[rand() % animList.size()];
 						
 						model->startAnim(name.c_str(), loop ? -1 : 1);
-						model->animSpeed = animSpeed;
 					}
 					
 					if (keyboard.wentDown(SDLK_o))
