@@ -361,9 +361,8 @@ int main(int argc, char * argv[])
 					magnitudeSq /= AUDIO_UPDATE_SIZE;
 					const float blurStrength = magnitudeSq * 2000.f;
 					setShader_GaussianBlurV(surface.getTexture(), 30, blurStrength);
-					surface.postprocess();
 					pushBlend(BLEND_OPAQUE);
-					drawRect(0, GFX_SY, GFX_SX, 0);
+					drawRect(0, 0, GFX_SX, GFX_SY);
 					popBlend();
 					clearShader();
 					
