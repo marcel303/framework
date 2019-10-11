@@ -25,6 +25,9 @@ void codevember1()
 	{
 		framework.process();
 		
+		if (framework.quitRequested)
+			break;
+			
 		for (int i = 0; i < kNumCircles; ++i)
 		{
 			circles[i][2] -= framework.timeStep;
