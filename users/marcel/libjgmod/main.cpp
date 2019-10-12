@@ -22,6 +22,7 @@
 #include "framework-allegro2.h"
 #include "jgmod.h"
 #include "jgvis.h"
+#include <math.h>
 #include <time.h>
 
 //
@@ -216,6 +217,7 @@ int main(int argc, char **argv)
 	framework.actionHandler = handleAction;
 	framework.enableDepthBuffer = true;
 	framework.filedrop = true;
+	framework.windowIsResizable = true;
 	
 	if (framework.init(320*3, 200*3) == false)
 	{
@@ -293,7 +295,17 @@ int main(int argc, char **argv)
 			pushBlend(BLEND_OPAQUE);
 			setColor(60, 60, 60);
 			pushColorPost(POST_RGB_TO_LUMI);
-			Sprite("jazz.png").drawEx(0, 0, 0, 3);
+			{
+				Sprite sprite("jazz.png");
+				const int windowSx = framework.getCurrentWindow().getWidth();
+				const int windowSy = framework.getCurrentWindow().getHeight();
+				const float scaleX = windowSx / float(sprite.getWidth());
+				const float scaleY = framework.getCurrentWindow().getHeight() / float(sprite.getHeight());
+				const float scale = fmaxf(scaleX, scaleY);
+				sprite.pivotX = sprite.getWidth()/2;
+				sprite.pivotY = sprite.getHeight()/2;
+				sprite.drawEx(windowSx/2, windowSy/2, 0, scale);
+			}
 			popColorPost();
 			popBlend();
 			
