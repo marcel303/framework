@@ -172,8 +172,18 @@ void metal_make_active(SDL_Window * window)
 		activeWindowData = i->second;
 }
 
+#include "renderTarget.h"
+
 void metal_draw_begin(const float r, const float g, const float b, const float a, const float depth)
 {
+#if 1
+	activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
+		[activeWindowData->current_drawable retain];
+		
+	pushBackbufferRenderPass(true, Color(r, g, b, a), true, depth, "Framebuffer pass");
+	return;
+#endif
+
 	@autoreleasepool
 	{
 		RenderPassData pd;
@@ -236,6 +246,8 @@ void metal_draw_end()
 	
 	auto & pd = *s_activeRenderPass;
 	
+	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
+	
 	[pd.encoder endEncoding];
 	
 #if 0
@@ -246,7 +258,6 @@ void metal_draw_end()
 		}];
 #endif
 
-	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
 	[pd.cmdbuf commit];
 	
 // todo : remove and use addCompletedHandler instead
@@ -273,6 +284,15 @@ void metal_draw_end()
 	s_activeRenderPass = nullptr;
 	
 	renderState.renderPass = RenderPipelineState::RenderPass();
+	
+#if 1 // todo : remove once we call popRenderPass here
+	// restore state
+	
+	gxMatrixMode(GX_PROJECTION);
+	gxPopMatrix();
+	gxMatrixMode(GX_MODELVIEW);
+	gxPopMatrix();
+#endif
 }
 
 void metal_set_viewport(const int sx, const int sy)
@@ -418,8 +438,6 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 }
 
 // -- render passes --
-
-#include "renderTarget.h"
 
 static const int kMaxColorTargets = 4;
 
