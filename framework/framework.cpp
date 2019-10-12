@@ -3141,7 +3141,7 @@ static Surface * surfaceStack[kMaxSurfaceStackSize] = { };
 static int surfaceStackSize = 0;
 
 #if ENABLE_OPENGL
-extern bool s_renderPassIsBackbufferPass; // todo : unify surfaces and render passes. currently it's too difficult to figure out viewport size and whether to flip the clip space Y axis or not
+bool s_renderPassIsBackbufferPass = false; // todo : unify surfaces and render passes. currently it's too difficult to figure out viewport size and whether to flip the clip space Y axis or not
 #endif
 
 static int getCurrentBackingScale()
