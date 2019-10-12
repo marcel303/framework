@@ -81,12 +81,17 @@ public:
 	virtual int getHeight() const = 0;
 };
 
+void beginRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
+void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
+// todo : remove. let framework expose a surface for the back buffer for all render apis
+void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName);
+void endRenderPass();
+
 void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
+// todo : remove. let framework expose a surface for the back buffer for all render apis
+void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName);
 void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
 void popRenderPass();
-
-// todo : remove. let framework expose a surface for the back buffer for all render apis
-void pushBackbufferRenderPass(const bool clearColor, const bool clearDepth, const char * passName);
 
 #if ENABLE_METAL
 	#include "gx-metal/renderTarget.h"

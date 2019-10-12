@@ -64,6 +64,8 @@ static std::vector<id <MTLResource>> s_resourcesToFree;
 
 //
 
+#include <stack>
+
 struct RenderPassData
 {
 	id <MTLCommandBuffer> cmdbuf;
@@ -75,8 +77,17 @@ struct RenderPassData
 	RenderPipelineState::RenderPass renderPass;
 };
 
-static std::vector<RenderPassData> s_renderPasses;
+struct RenderPassDataForPushPop
+{
+	ColorTarget * target[4]; // todo : kMaxColorTargets
+	int numTargets = 0;
+	DepthTarget * depthTarget = nullptr;
+	bool isBackbufferPass = false;
+};
 
+static std::stack<RenderPassDataForPushPop> s_renderPasses;
+
+static RenderPassData s_renderPassData;
 static RenderPassData * s_activeRenderPass = nullptr;
 
 //
@@ -201,9 +212,12 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
 		pd.encoder.label = @"Framebuffer Pass";
 		
-		s_renderPasses.push_back(pd);
+		s_renderPassData = pd;
+		s_activeRenderPass = &s_renderPassData;
 		
-		s_activeRenderPass = &s_renderPasses.back();
+		RenderPassDataForPushPop pd2;
+		pd2.isBackbufferPass = true;
+		s_renderPasses.push(pd2);
 		
 		renderState.renderPass = s_activeRenderPass->renderPass;
 
@@ -216,9 +230,11 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 
 void metal_draw_end()
 {
+	Assert(s_activeRenderPass != nullptr);
+	
 	gxEndDraw();
 	
-	auto & pd = s_renderPasses.back();
+	auto & pd = *s_activeRenderPass;
 	
 	[pd.encoder endEncoding];
 	
@@ -250,20 +266,13 @@ void metal_draw_end()
 	[activeWindowData->current_drawable release];
 	activeWindowData->current_drawable = nullptr;
 	
-	s_renderPasses.pop_back();
+	s_renderPasses.pop();
 	
-	if (s_renderPasses.empty())
-	{
-		s_activeRenderPass = nullptr;
-		
-		renderState.renderPass = RenderPipelineState::RenderPass();
-	}
-	else
-	{
-		s_activeRenderPass = &s_renderPasses.back();
-		
-		renderState.renderPass = s_activeRenderPass->renderPass;
-	}
+	Assert(s_renderPasses.empty());
+	
+	s_activeRenderPass = nullptr;
+	
+	renderState.renderPass = RenderPipelineState::RenderPass();
 }
 
 void metal_set_viewport(const int sx, const int sy)
@@ -412,28 +421,32 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 
 #include "renderTarget.h"
 
-void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
+static const int kMaxColorTargets = 4;
+
+void beginRenderPass(
+	ColorTarget * target,
+	const bool clearColor,
+	DepthTarget * depthTarget,
+	const bool clearDepth,
+	const char * passName)
 {
-	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
+	beginRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
 }
 
-void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName)
+void beginRenderPass(
+	ColorTarget ** targets,
+	const int numTargets,
+	const bool in_clearColor,
+	DepthTarget * depthTarget,
+	const bool in_clearDepth,
+	const char * passName)
 {
-	Assert(numTargets >= 0 && numTargets <= 4);
-	
-	//
-	
-	gxMatrixMode(GX_PROJECTION);
-	gxPushMatrix();
-	gxMatrixMode(GX_MODELVIEW);
-	gxPushMatrix();
-	
-	//
-	
-	RenderPassData pd;
+	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
 	@autoreleasepool
 	{
+		RenderPassData pd;
+		
 		pd.cmdbuf = [[queue commandBuffer] retain];
 
 	 	pd.renderdesc = [[MTLRenderPassDescriptor renderPassDescriptor] retain];
@@ -443,7 +456,7 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		
 		// specify the color and depth attachment(s)
 		
-		for (int i = 0; i < numTargets; ++i)
+		for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
 		{
 			MTLRenderPassColorAttachmentDescriptor * colorattachment = pd.renderdesc.colorAttachments[i];
 			colorattachment.texture = (id <MTLTexture>)targets[i]->getMetalTexture();
@@ -487,11 +500,10 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
 		pd.encoder.label = [NSString stringWithCString:passName encoding:NSASCIIStringEncoding];
 		
-		s_renderPasses.push_back(pd);
-		
 		renderState.renderPass = pd.renderPass;
 		
-		s_activeRenderPass = &s_renderPasses.back();
+		s_renderPassData = pd;
+		s_activeRenderPass = &s_renderPassData;
 		
 		// set viewport and apply transform
 		
@@ -501,12 +513,15 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 	}
 }
 
-void pushBackbufferRenderPass(const bool clearColor, const bool clearDepth, const char * passName)
+void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
 {
 	ColorTarget colorTarget(activeWindowData->current_drawable.texture);
-	DepthTarget depthTarget(activeWindowData->metalview.depthTexture);
+	colorTarget.setClearColor(color.r, color.g, color.b, color.a);
 	
-	pushRenderPass(
+	DepthTarget depthTarget(activeWindowData->metalview.depthTexture);
+	depthTarget.setClearDepth(depth);
+	
+	beginRenderPass(
 		&colorTarget,
 		clearColor,
 		activeWindowData->metalview.depthTexture ? &depthTarget : nullptr,
@@ -514,11 +529,13 @@ void pushBackbufferRenderPass(const bool clearColor, const bool clearDepth, cons
 		passName);
 }
 
-void popRenderPass()
+void endRenderPass()
 {
+	Assert(s_activeRenderPass != nullptr);
+	
 	gxEndDraw();
 	
-	auto & pd = s_renderPasses.back();
+	auto & pd = *s_activeRenderPass;
 	
 	[pd.encoder endEncoding];
 	
@@ -530,22 +547,103 @@ void popRenderPass()
 	[pd.renderdesc release];
 	[pd.cmdbuf release];
 	
-	s_renderPasses.pop_back();
+	s_activeRenderPass = nullptr;
+	
+	renderState.renderPass = RenderPipelineState::RenderPass();
+}
+
+// --- render passes stack ---
+
+void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
+{
+	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
+}
+
+void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName)
+{
+	Assert(numTargets >= 0 && numTargets <= 4);
+	
+	// save state
+	
+	gxMatrixMode(GX_PROJECTION);
+	gxPushMatrix();
+	gxMatrixMode(GX_MODELVIEW);
+	gxPushMatrix();
+	
+	// end the current pass and begin a new one
+	
+	if (s_renderPasses.empty() == false)
+	{
+		endRenderPass();
+	}
+	
+	beginRenderPass(targets, numTargets, in_clearColor, depthTarget, in_clearDepth, passName);
+	
+	// record the current render pass information in the render passes stack
+	
+	RenderPassDataForPushPop pd;
+	for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
+		pd.target[pd.numTargets++] = targets[i];
+	pd.depthTarget = depthTarget;
+
+	s_renderPasses.push(pd);
+}
+
+void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
+{
+	// save state
+	
+	gxMatrixMode(GX_PROJECTION);
+	gxPushMatrix();
+	gxMatrixMode(GX_MODELVIEW);
+	gxPushMatrix();
+	
+	// end the current pass and begin a new one
+	
+	if (s_renderPasses.empty() == false)
+	{
+		endRenderPass();
+	}
+	
+	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName);
+	
+	// record the current render pass information in the render passes stack
+	
+	RenderPassDataForPushPop pd;
+	pd.isBackbufferPass = true;
+	
+	s_renderPasses.push(pd);
+}
+
+void popRenderPass()
+{
+	// end the current pass
+	
+	endRenderPass();
+	
+	s_renderPasses.pop();
+	
+	// check if there was a previous pass. if so, begin a continuation of it
 	
 	if (s_renderPasses.empty())
 	{
-		s_activeRenderPass = nullptr;
-		
-		renderState.renderPass = RenderPipelineState::RenderPass();
+		//
 	}
 	else
 	{
-		s_activeRenderPass = &s_renderPasses.back();
+		auto & new_pd = s_renderPasses.top();
 		
-		renderState.renderPass = s_activeRenderPass->renderPass;
+		if (new_pd.isBackbufferPass)
+		{
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, "(cont)"); // todo : pass name
+		}
+		else
+		{
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, "(cont)"); // todo : pass name
+		}
 	}
 	
-	//
+	// restore state
 	
 	gxMatrixMode(GX_PROJECTION);
 	gxPopMatrix();

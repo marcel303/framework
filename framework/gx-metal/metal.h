@@ -48,15 +48,6 @@ void metal_clear_scissor();
 
 // --- experimental functions for merge into framework at some point ---
 
-// todo : move to framework header
-
-void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
-void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
-void popRenderPass();
-
-// todo : remove. let framework expose a surface for the back buffer for all render apis
-void pushBackbufferRenderPass(const bool clearColor, const bool clearDepth, const char * passName);
-
 void setColorWriteMask(int r, int g, int b, int a);
 
 #ifdef __OBJC__
