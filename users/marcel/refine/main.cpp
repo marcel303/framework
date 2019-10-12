@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
 #if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
 #endif
-
+	
 	framework.windowIsResizable = true;
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
@@ -193,6 +193,8 @@ int main(int argc, char * argv[])
 			extension == "txt" ||
 			extension == "plist" || // OSX property list
 			extension == "ini" ||
+			extension == "html" ||
+			extension == "json" ||
 			extension == "c" || // c
 			extension == "cpp" || // c++
 			extension == "h" || // Header file
@@ -210,7 +212,7 @@ int main(int argc, char * argv[])
 			extension == "yml" || // yaml
 			extension == "lua" ||
 			extension == "pde" || // Processing sketch
-			extension == "ino") // Arduino sketch)
+			extension == "ino") // Arduino sketch
 		{
 		// todo : think of a nicer way to open files with ambiguous filename extensions
 		// todo : investigate possibility of removing ambiguous filename extensions
