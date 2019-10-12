@@ -335,17 +335,27 @@ FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 	controlSlidersWindow.init(20, 20, 300, 400, "Sliders");
 	controlSlidersWindow.isVisible = false;
 
-	midiIn = new RtMidiIn(RtMidi::UNSPECIFIED, "Midi Controller", 1024);
+	try
+	{
+		midiIn = new RtMidiIn(RtMidi::UNSPECIFIED, "Midi Controller", 1024);
+	}
+	catch (std::exception & e)
+	{
+		logError("failed to create MIDI input: %s", e.what());
+	}
 }
 
 FileEditor_JsusFx::~FileEditor_JsusFx()
 {
 #if ENABLE_MIDI
-	if (midiIn->isPortOpen())
-		midiIn->closePort();
-	
-	delete midiIn;
-	midiIn = nullptr;
+	if (midiIn != nullptr)
+	{
+		if (midiIn->isPortOpen())
+			midiIn->closePort();
+		
+		delete midiIn;
+		midiIn = nullptr;
+	}
 #endif
 
 	paObject.shut();
@@ -522,6 +532,9 @@ void FileEditor_JsusFx::doButtonBar()
 void FileEditor_JsusFx::updateMidi()
 {
 #if ENABLE_MIDI
+	if (midiIn == nullptr)
+		return;
+	
 	// open the desired midi port
 
 	if (currentMidiPort != desiredMidiPort)
@@ -538,8 +551,6 @@ void FileEditor_JsusFx::updateMidi()
 		if (desiredMidiPort < midiIn->getPortCount())
 		{
 			midiIn->openPort(desiredMidiPort);
-			
-			// todo : getPortCount, getPortName
 			
 			if (midiIn->isPortOpen() == false)
 			{
