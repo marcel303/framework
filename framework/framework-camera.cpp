@@ -37,26 +37,53 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 		// rotation
 		
 		const float rotationSpeed = 45.f;
+		const float movementSpeed = 1.f;
 		
-		if (keyboard.isDown(SDLK_UP))
+		if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 		{
-			elevation -= rotationSpeed * dt;
-			inputIsCaptured = true;
+			if (keyboard.isDown(SDLK_UP))
+			{
+				origin[2] += movementSpeed * dt;
+				inputIsCaptured = true;
+			}
+			if (keyboard.isDown(SDLK_DOWN))
+			{
+				origin[2] -= movementSpeed * dt;
+				inputIsCaptured = true;
+			}
+			if (keyboard.isDown(SDLK_LEFT))
+			{
+				origin[0] -= movementSpeed * dt;
+				inputIsCaptured = true;
+			}
+			if (keyboard.isDown(SDLK_RIGHT))
+			{
+				origin[0] += movementSpeed * dt;
+				inputIsCaptured = true;
+			}
 		}
-		if (keyboard.isDown(SDLK_DOWN))
+		else
 		{
-			elevation += rotationSpeed * dt;
-			inputIsCaptured = true;
-		}
-		if (keyboard.isDown(SDLK_LEFT))
-		{
-			azimuth -= rotationSpeed * dt;
-			inputIsCaptured = true;
-		}
-		if (keyboard.isDown(SDLK_RIGHT))
-		{
-			azimuth += rotationSpeed * dt;
-			inputIsCaptured = true;
+			if (keyboard.isDown(SDLK_UP))
+			{
+				elevation -= rotationSpeed * dt;
+				inputIsCaptured = true;
+			}
+			if (keyboard.isDown(SDLK_DOWN))
+			{
+				elevation += rotationSpeed * dt;
+				inputIsCaptured = true;
+			}
+			if (keyboard.isDown(SDLK_LEFT))
+			{
+				azimuth -= rotationSpeed * dt;
+				inputIsCaptured = true;
+			}
+			if (keyboard.isDown(SDLK_RIGHT))
+			{
+				azimuth += rotationSpeed * dt;
+				inputIsCaptured = true;
+			}
 		}
 		
 		// distance
@@ -76,12 +103,12 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 		
 		if (keyboard.isDown(SDLK_a))
 		{
-			origin[1] += 1.f * dt; // todo : movement speed
+			origin[1] += movementSpeed * dt;
 			inputIsCaptured = true;
 		}
 		if (keyboard.isDown(SDLK_z))
 		{
-			origin[1] -= 1.f * dt; // todo : movement speed
+			origin[1] -= movementSpeed * dt;
 			inputIsCaptured = true;
 		}
 		
