@@ -135,7 +135,7 @@ struct Renderer
 		result &= depthMap.init(VIEW_SX, VIEW_SY, DEPTH_FLOAT32, true, 1.f);
 		result &= normalMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, colorBlackTranslucent);
 		result &= colorMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
-		result &= lightMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
+		result &= lightMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, colorBlackTranslucent);
 		result &= compositeMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
 		
 		return result;
@@ -185,7 +185,7 @@ struct Renderer
 		{
 		// fixme : horrible hack to make texture coordinates work
 			// flip Y axis so the vertical axis runs bottom to top
-			gxScalef(1.f, -1.f, 1.f);
+			//gxScalef(1.f, -1.f, 1.f);
 		}
 	#endif
 		
@@ -202,8 +202,15 @@ struct Renderer
 		gxPopMatrix();
 	}
 	
-	void draw(const Mat4x4 & projectionMatrix, const Mat4x4 & viewMatrix) const
+	void draw(const Mat4x4 & in_projectionMatrix, const Mat4x4 & viewMatrix) const
 	{
+	#if ENABLE_OPENGL
+	// fixme : this is a hack to make lighting calculations work correctly for deferred lights ..
+		const Mat4x4 projectionMatrix = in_projectionMatrix.Scale(1, -1, 1);
+	#else
+		const Mat4x4 & projectionMatrix = in_projectionMatrix;
+	#endif
+	
 		drawState.projectionMatrix = projectionMatrix;
 		drawState.viewMatrix = viewMatrix;
 		
@@ -247,6 +254,7 @@ struct Renderer
 			// accumulate lights for the opaque part of the scene into the light map
 			
 			pushRenderPass(&lightMap, true, nullptr, false, "Light");
+			pushBlend(BLEND_ADD_OPAQUE);
 			{
 				projectScreen2d();
 				
@@ -254,26 +262,58 @@ struct Renderer
 				
 				for (auto * light = s_lightComponentMgr.head; light != nullptr; light = light->next)
 				{
-					if (light->type != LightComponent::kLightType_Directional)
-						continue;
-					
-					// draw full screen directional light
-					
-					Vec3 lightDir_world(0, 0, 1);
-					
-					auto * sceneNode = light->componentSet->find<SceneNodeComponent>();
-					
-					if (sceneNode != nullptr)
+					if (light->type == LightComponent::kLightType_Point)
 					{
-						lightDir_world = sceneNode->objectToWorld.Mul3(lightDir_world);
+						// draw point light
+						
+						auto * sceneNode = light->componentSet->find<SceneNodeComponent>();
+						
+						Vec3 lightPosition_world;
+						
+						if (sceneNode != nullptr)
+						{
+							lightPosition_world = sceneNode->objectToWorld.GetTranslation();
+						}
+						
+						const Vec3 lightPosition_view = viewMatrix.Mul4(lightPosition_world);
+						const Vec3 lightColor = light->color * light->intensity;
+						
+						Shader shader("shaders/point-light");
+						setShader(shader);
+						shader.setTexture("depthTexture", 0, depthMap.getTextureId());
+						shader.setTexture("normalTexture", 1, normalMap.getTextureId());
+						shader.setImmediateMatrix4x4("projectionToView", projectionMatrix.CalcInv().m_v);
+						shader.setImmediate("lightPosition_view",
+							lightPosition_view[0],
+							lightPosition_view[1],
+							lightPosition_view[2]);
+						shader.setImmediate("lightColor",
+							lightColor[0],
+							lightColor[1],
+							lightColor[2]);
+						shader.setImmediate("lightAttenuationParams",
+							light->innerRadius,
+							light->outerRadius);
+						drawRect(0, 0, lightMap.getWidth(), lightMap.getHeight());
+						clearShader();
 					}
-					
-					const Vec3 lightDir_view = viewMatrix.Mul3(lightDir_world);
-					const Vec3 lightColor1 = light->color * light->intensity; // light color when the light is coming from 'above'
-					const Vec3 lightColor2 = light->bottomColor * light->intensity; // light color when the light is coming from 'below'
-					
-					pushBlend(BLEND_ADD_OPAQUE);
+					else if (light->type == LightComponent::kLightType_Directional)
 					{
+						// draw full screen directional light
+						
+						Vec3 lightDir_world(0, 0, 1);
+						
+						auto * sceneNode = light->componentSet->find<SceneNodeComponent>();
+						
+						if (sceneNode != nullptr)
+						{
+							lightDir_world = sceneNode->objectToWorld.Mul3(lightDir_world);
+						}
+						
+						const Vec3 lightDir_view = viewMatrix.Mul3(lightDir_world);
+						const Vec3 lightColor1 = light->color * light->intensity; // light color when the light is coming from 'above'
+						const Vec3 lightColor2 = light->bottomColor * light->intensity; // light color when the light is coming from 'below'
+						
 						Shader shader("shaders/directional-light");
 						setShader(shader);
 						shader.setTexture("depthTexture", 0, depthMap.getTextureId());
@@ -285,9 +325,9 @@ struct Renderer
 						drawRect(0, 0, lightMap.getWidth(), lightMap.getHeight());
 						clearShader();
 					}
-					popBlend();
 				}
 			}
+			popBlend();
 			popRenderPass();
 			
 			// perform light application. the light application pass combines
@@ -360,7 +400,7 @@ struct SceneEditor
 		bool tickScene = false;
 		float tickMultiplier = 1.f;
 		
-		bool drawScene = false;
+		bool drawScene = true;
 	} preview;
 	
 	FrameworkImGuiContext guiContext;

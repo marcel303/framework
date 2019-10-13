@@ -17,6 +17,8 @@ struct LightComponent : Component<LightComponent>
 	float intensity = 1.f;
 	Vec3 color = Vec3(1, 1, 1);
 	Vec3 bottomColor = Vec3(0, 0, 0);
+	float innerRadius = 1.f;
+	float outerRadius = 10.f;
 };
 
 struct LightComponentMgr : ComponentMgr<LightComponent>
@@ -52,6 +54,8 @@ struct LightComponentType : ComponentType<LightComponent>
 			.setEditingCurveExponential(4.f);
 		add("color", &LightComponent::color);
 		add("bottomColor", &LightComponent::bottomColor);
+		add("innerRadius", &LightComponent::innerRadius);
+		add("outerRadius", &LightComponent::outerRadius);
 	}
 };
 
