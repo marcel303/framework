@@ -1,6 +1,6 @@
 #pragma once
 
-struct TranslationGizmo
+struct TransformGizmo
 {
 	enum State
 	{
@@ -34,6 +34,9 @@ struct TranslationGizmo
 	Mat4x4 gizmoToWorld = Mat4x4(true);
 	
 	IntersectionResult intersectionResult;
+	
+	bool enableTranslation = true;
+	bool enableRotation = true;
 	
 	float arrow_radius = .08f;
 	float arrow_length = 1.f;

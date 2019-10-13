@@ -3,7 +3,7 @@
 #include "raycast.h"
 #include "transformGizmos.h"
 
-void TranslationGizmo::show(const Mat4x4 & transform)
+void TransformGizmo::show(const Mat4x4 & transform)
 {
 	if (state == kState_Hidden)
 		state = kState_Visible;
@@ -11,7 +11,7 @@ void TranslationGizmo::show(const Mat4x4 & transform)
 	gizmoToWorld = transform;
 }
 
-void TranslationGizmo::hide()
+void TransformGizmo::hide()
 {
 	state = kState_Hidden;
 }
@@ -28,7 +28,7 @@ static int determineProjectionAxis(const int axis, Vec3Arg ray_direction)
 	return projection_axis;
 }
 
-bool TranslationGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured)
+bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured)
 {
 	if (inputIsCaptured)
 	{
@@ -258,7 +258,7 @@ static void drawRing(const Vec3 & position, const int axis, const float radius, 
 	gxPopMatrix();
 }
 
-void TranslationGizmo::draw() const
+void TransformGizmo::draw() const
 {
 	if (state == kState_Hidden)
 		return;
@@ -299,7 +299,7 @@ void TranslationGizmo::draw() const
 	gxPopMatrix();
 }
 
-void TranslationGizmo::beginPad(Vec3Arg origin_world, Vec3Arg direction_world)
+void TransformGizmo::beginPad(Vec3Arg origin_world, Vec3Arg direction_world)
 {
 	// todo : update tick to use this method
 	
@@ -316,7 +316,7 @@ void TranslationGizmo::beginPad(Vec3Arg origin_world, Vec3Arg direction_world)
 	dragPad.initialPosition = position_gizmo;
 }
 
-TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_world, Vec3Arg direction_world) const
+TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_world, Vec3Arg direction_world) const
 {
 	IntersectionResult result;
 	
@@ -329,78 +329,84 @@ TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_
 	
 	float t;
 	
-	// intersect the arrows
-	
-	for (int i = 0; i < 3; ++i)
+	if (enableTranslation)
 	{
-		const int axis1 = (i + 1) % 3;
-		const int axis2 = (i + 2) % 3;
+		// intersect the arrows
 		
-		if (intersectCircle(
-			origin_gizmo[axis1],
-			origin_gizmo[axis2],
-			direction_gizmo[axis1],
-			direction_gizmo[axis2],
-			0.f, 0.f, arrow_radius, t) && t < best_t)
+		for (int i = 0; i < 3; ++i)
 		{
-			const Vec3 intersection_pos = origin_gizmo + direction_gizmo * t;
+			const int axis1 = (i + 1) % 3;
+			const int axis2 = (i + 2) % 3;
 			
-			Vec3 axis;
-			axis[i] = 1.f;
+			if (intersectCircle(
+				origin_gizmo[axis1],
+				origin_gizmo[axis2],
+				direction_gizmo[axis1],
+				direction_gizmo[axis2],
+				0.f, 0.f, arrow_radius, t) && t < best_t)
+			{
+				const Vec3 intersection_pos = origin_gizmo + direction_gizmo * t;
+				
+				Vec3 axis;
+				axis[i] = 1.f;
+				
+				const float distance = intersection_pos * axis;
+				
+				if (distance >= 0.f && distance < arrow_length)
+				{
+					best_t = t;
+					result.element = (Element)(kElement_XAxis + i);
+				}
+			}
+		}
+
+		// intersect the XZ pad
+		
+		{
+			const float min[3] =
+			{
+				+ pad_offset - pad_size,
+				- pad_thickness,
+				+ pad_offset - pad_size
+			};
 			
-			const float distance = intersection_pos * axis;
+			const float max[3] =
+			{
+				+ pad_offset + pad_size,
+				+ pad_thickness,
+				+ pad_offset + pad_size
+			};
 			
-			if (distance >= 0.f && distance < arrow_length)
+			if (intersectBoundingBox3d(
+				min, max,
+				origin_gizmo[0], origin_gizmo[1], origin_gizmo[2],
+				1.f / direction_gizmo[0], 1.f / direction_gizmo[1], 1.f / direction_gizmo[2], t) && t < best_t)
 			{
 				best_t = t;
-				result.element = (Element)(kElement_XAxis + i);
+				result.element = kElement_XZPad;
 			}
 		}
 	}
-	
-	// intersect the XZ pad
-	
-	{
-		const float min[3] =
-		{
-			+ pad_offset - pad_size,
-			- pad_thickness,
-			+ pad_offset - pad_size
-		};
-		
-		const float max[3] =
-		{
-			+ pad_offset + pad_size,
-			+ pad_thickness,
-			+ pad_offset + pad_size
-		};
-		
-		if (intersectBoundingBox3d(
-			min, max,
-			origin_gizmo[0], origin_gizmo[1], origin_gizmo[2],
-			1.f / direction_gizmo[0], 1.f / direction_gizmo[1], 1.f / direction_gizmo[2], t) && t < best_t)
-		{
-			best_t = t;
-			result.element = kElement_XZPad;
-		}
-	}
 
-	// intersect the rings
-	
-	for (int i = 0; i < 3; ++i)
+	if (enableRotation)
 	{
-		const float t = -origin_gizmo[i] / direction_gizmo[i];
+		// intersect the rings
 		
-		if (t >= 0.f && t < best_t)
+		for (int i = 0; i < 3; ++i)
 		{
-			const Vec3 intersectionPoint = origin_gizmo + direction_gizmo * t;
-			const float distanceToCenterOfGizmo = intersectionPoint.CalcSize();
+			const float t = -origin_gizmo[i] / direction_gizmo[i];
 			
-			if (distanceToCenterOfGizmo >= ring_radius - ring_tubeRadius &&
-				distanceToCenterOfGizmo <= ring_radius + ring_tubeRadius)
+			if (t >= 0.f && t < best_t)
 			{
-				best_t = t;
-				result.element = (Element)(kElement_XRing + i);
+				const Vec3 intersectionPoint = origin_gizmo + direction_gizmo * t;
+				const float distanceToCenterOfGizmo = intersectionPoint.CalcSize();
+				
+				if (distanceToCenterOfGizmo >= ring_radius - ring_tubeRadius &&
+					distanceToCenterOfGizmo <= ring_radius + ring_tubeRadius)
+				{
+					best_t = t;
+					result.element = (Element)(kElement_XRing + i);
+				}
 			}
 		}
 	}
@@ -410,7 +416,7 @@ TranslationGizmo::IntersectionResult TranslationGizmo::intersect(Vec3Arg origin_
 	return result;
 }
 
-float TranslationGizmo::calculateRingAngle(Vec3Arg position_world, const int axis) const
+float TransformGizmo::calculateRingAngle(Vec3Arg position_world, const int axis) const
 {
 	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 	
@@ -422,7 +428,7 @@ float TranslationGizmo::calculateRingAngle(Vec3Arg position_world, const int axi
 	return atan2f(position_gizmo[axis3], position_gizmo[axis2]);
 }
 
-void TranslationGizmo::setColorForArrow(const int axis) const
+void TransformGizmo::setColorForArrow(const int axis) const
 {
 	const Color colors[3] = { colorRed, colorGreen, colorBlue };
 	
@@ -434,7 +440,7 @@ void TranslationGizmo::setColorForArrow(const int axis) const
 		setColor(colors[axis]);
 }
 
-void TranslationGizmo::setColorForRing(const int axis) const
+void TransformGizmo::setColorForRing(const int axis) const
 {
 	const Color colors[3] = { colorRed, colorGreen, colorBlue };
 	

@@ -1,7 +1,7 @@
 #pragma once
 
 struct ParameterBase;
-struct parameterMgr;
+struct ParameterMgr;
 struct ParameterComponentMgr;
 
 // todo : open folders and scroll to parameter when a single parameter matches the address filter

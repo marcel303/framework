@@ -1,10 +1,3 @@
-#include "cameraComponent.h"
-#include "modelComponent.h"
-#include "parameterComponent.h"
-#include "parameterComponentUi.h"
-#include "parameterUi.h"
-#include "transformComponent.h"
-
 #include "component.h"
 #include "componentPropertyUi.h"
 #include "componentType.h"
@@ -12,14 +5,23 @@
 #include "framework-camera.h"
 #include "gx_render.h"
 #include "imgui-framework.h"
+#include "parameterComponentUi.h"
+#include "parameterUi.h"
 #include "Quat.h"
 #include "raycast.h"
 #include "scene.h"
 #include "scene_fromText.h"
-#include "sceneNodeComponent.h"
 #include "StringEx.h"
 #include "TextIO.h"
 #include "transformGizmos.h"
+
+// component types
+#include "cameraComponent.h"
+#include "lightComponent.h"
+#include "modelComponent.h"
+#include "parameterComponent.h"
+#include "sceneNodeComponent.h"
+#include "transformComponent.h"
 
 #include "helpers.h"
 #include "lineReader.h"
@@ -71,6 +73,7 @@ static const int VIEW_SY = 800;
 
 // todo : move these instances to helpers.cpp
 extern TransformComponentMgr s_transformComponentMgr;
+extern LightComponentMgr s_lightComponentMgr;
 extern ModelComponentMgr s_modelComponentMgr;
 extern ParameterComponentMgr s_parameterComponentMgr;
 
@@ -226,44 +229,20 @@ struct Renderer
 		{
 			// draw to the normal and depth maps
 			
-		#if 0
-			pushRenderPass(&normalMap, true, &depthMap, true, "Depth Normal");
-			{
-				pushMatrices(true);
-				{
-					drawNormalPass();
-				}
-				popMatrices();
-			}
-			popRenderPass();
-			
-			pushRenderPass(&colorMap, true, &depthMap, false, "Color");
-			{
-				pushMatrices(true);
-				{
-					drawColorPass();
-				}
-				popMatrices();
-			}
-			popRenderPass();
-		#else
 			ColorTarget * targets[2] = { &normalMap, &colorMap };
 			
 			pushRenderPass(targets, 2, true, &depthMap, true, "Depth Normal Color");
+			pushShaderOutputs("nc");
 			{
 				pushMatrices(true);
 				{
-					pushShaderOutputs("nc");
-					{
-						if (drawOpaque != nullptr)
-							drawOpaque();
-					}
-					popShaderOutputs();
+					if (drawOpaque != nullptr)
+						drawOpaque();
 				}
 				popMatrices();
 			}
+			popShaderOutputs();
 			popRenderPass();
-		#endif
 		
 			// accumulate lights for the opaque part of the scene into the light map
 			
@@ -271,29 +250,43 @@ struct Renderer
 			{
 				projectScreen2d();
 				
-			// todo : invoke light rendering system
-			// todo : create light rendering system
-			// todo : register lights through a light component with the light rendering system
-			
-				// draw full screen directional light
+				// draw lights using depth and normal maps as inputs
+				
+				for (auto * light = s_lightComponentMgr.head; light != nullptr; light = light->next)
+				{
+					if (light->type != LightComponent::kLightType_Directional)
+						continue;
 					
-				const Vec3 lightDir_world(1, -1, 1);
-				const Vec3 lightDir_view = viewMatrix.Mul3(lightDir_world);
-				const Vec3 lightColor1(1.f, .5f, .25f); // light color when the light is coming from 'above'
-				const Vec3 lightColor2(.125f, .15f, .2f); // light color when the light is coming from 'below'
-				
-				Shader shader("shaders/directional-light");
-				setShader(shader);
-				shader.setTexture("depthTexture", 0, depthMap.getTextureId());
-				shader.setTexture("normalTexture", 1, normalMap.getTextureId());
-				shader.setImmediateMatrix4x4("projectionToView", projectionMatrix.CalcInv().m_v);
-				shader.setImmediate("lightDir_view", lightDir_view[0], lightDir_view[1], lightDir_view[2]);
-				shader.setImmediate("lightColor1", lightColor1[0], lightColor1[1], lightColor1[2]);
-				shader.setImmediate("lightColor2", lightColor2[0], lightColor2[1], lightColor2[2]);
-				drawRect(0, 0, lightMap.getWidth(), lightMap.getHeight());
-				clearShader();
-				
-				// todo : draw lights using depth and normal maps as inputs
+					// draw full screen directional light
+					
+					Vec3 lightDir_world(0, 0, 1);
+					
+					auto * sceneNode = light->componentSet->find<SceneNodeComponent>();
+					
+					if (sceneNode != nullptr)
+					{
+						lightDir_world = sceneNode->objectToWorld.Mul3(lightDir_world);
+					}
+					
+					const Vec3 lightDir_view = viewMatrix.Mul3(lightDir_world);
+					const Vec3 lightColor1 = light->color * light->intensity; // light color when the light is coming from 'above'
+					const Vec3 lightColor2 = light->bottomColor * light->intensity; // light color when the light is coming from 'below'
+					
+					pushBlend(BLEND_ADD_OPAQUE);
+					{
+						Shader shader("shaders/directional-light");
+						setShader(shader);
+						shader.setTexture("depthTexture", 0, depthMap.getTextureId());
+						shader.setTexture("normalTexture", 1, normalMap.getTextureId());
+						shader.setImmediateMatrix4x4("projectionToView", projectionMatrix.CalcInv().m_v);
+						shader.setImmediate("lightDir_view", lightDir_view[0], lightDir_view[1], lightDir_view[2]);
+						shader.setImmediate("lightColor1", lightColor1[0], lightColor1[1], lightColor1[2]);
+						shader.setImmediate("lightColor2", lightColor2[0], lightColor2[1], lightColor2[2]);
+						drawRect(0, 0, lightMap.getWidth(), lightMap.getHeight());
+						clearShader();
+					}
+					popBlend();
+				}
 			}
 			popRenderPass();
 			
@@ -350,7 +343,7 @@ struct SceneEditor
 	bool enablePadGizmo = false;
 	
 #if ENABLE_TRANSFORM_GIZMOS
-	TranslationGizmo translationGizmo;
+	TransformGizmo transformGizmo;
 #endif
 
 	Renderer renderer; // todo : this should live outside the editor
@@ -1444,7 +1437,7 @@ struct SceneEditor
 	#if ENABLE_TRANSFORM_GIZMOS
 		if (selectedNodes.size() != 1)
 		{
-			translationGizmo.hide();
+			transformGizmo.hide();
 		}
 		else
 		{
@@ -1465,7 +1458,7 @@ struct SceneEditor
 			
 			// let the gizmo do it's thing
 			
-			translationGizmo.show(globalTransform);
+			transformGizmo.show(globalTransform);
 			
 			if (enablePadGizmo)
 			{
@@ -1473,15 +1466,15 @@ struct SceneEditor
 				
 				if (inputIsCaptured == false)
 				{
-					translationGizmo.beginPad(cameraPosition, mouseDirection_world);
+					transformGizmo.beginPad(cameraPosition, mouseDirection_world);
 				}
 			}
 			
-			if (translationGizmo.tick(cameraPosition, mouseDirection_world, inputIsCaptured))
+			if (transformGizmo.tick(cameraPosition, mouseDirection_world, inputIsCaptured))
 			{
 				// transform the global transform into local space
 				
-				Mat4x4 localTransform = translationGizmo.gizmoToWorld;
+				Mat4x4 localTransform = transformGizmo.gizmoToWorld;
 				
 				if (node->parentId != -1)
 				{
@@ -1720,7 +1713,7 @@ struct SceneEditor
 	void drawEditorOpaque() const
 	{
 	#if ENABLE_TRANSFORM_GIZMOS
-		translationGizmo.draw();
+		transformGizmo.draw();
 	#endif
 	}
 	
