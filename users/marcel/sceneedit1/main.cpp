@@ -602,6 +602,7 @@ struct SceneEditor
 				
 				// select the newly added child node
 				selectedNodes.insert(node->id);
+				markNodeOpenUntilRoot(node->id);
 				nodeToGiveFocus = node->id;
 			}
 			
@@ -750,13 +751,11 @@ struct SceneEditor
 		ImGui::PopID();
 	}
 	
-	void pasteNodeFromClipboard(const int parentId)
+	void pasteNodeFromClipboardText(const int parentId, const char * text)
 	{
 		SceneNode * childNode = new SceneNode();
 		childNode->id = scene.allocNodeId();
 		childNode->parentId = parentId;
-		
-		const char * text = SDL_GetClipboardText();
 		
 		if (node_from_clipboard_text(text, *childNode) == false)
 		{
@@ -783,9 +782,19 @@ struct SceneEditor
 				deferred.nodesToAdd.push_back(childNode);
 			}
 		}
+	}
+	
+	void pasteNodeFromClipboard(const int parentId)
+	{
+		const char * text = SDL_GetClipboardText();
 		
-		SDL_free((void*)text);
-		text = nullptr;
+		if (text != nullptr)
+		{
+			pasteNodeFromClipboardText(parentId, text);
+			
+			SDL_free((void*)text);
+			text = nullptr;
+		}
 	}
 
 	enum NodeStructureContextMenuResult
@@ -807,6 +816,7 @@ struct SceneEditor
 		{
 			result = kNodeStructureContextMenuResult_NodeCopy;
 			
+		// todo : copy nodes recursively
 			std::string text;
 			if (node_to_clipboard_text(node, text))
 			{
@@ -818,6 +828,8 @@ struct SceneEditor
 		{
 			result = kNodeStructureContextMenuResult_NodePaste;
 			
+		// todo : paste nodes recursively. and fixup parent-child id's
+		// todo : update display names
 			pasteNodeFromClipboard(node.id);
 		}
 		
@@ -825,6 +837,8 @@ struct SceneEditor
 		{
 			result = kNodeStructureContextMenuResult_NodePaste;
 			
+		// todo : paste nodes recursively. and fixup parent-child id's
+		// todo : update display names
 			pasteNodeFromClipboard(node.parentId);
 		}
 		
@@ -969,6 +983,7 @@ struct SceneEditor
 			{
 				selectedNodes.clear();
 				selectedNodes.insert(node.id);
+				markNodeOpenUntilRoot(node.id);
 			}
 		
 			if (ImGui::BeginPopupContextItem("NodeStructureMenu"))
@@ -1094,6 +1109,7 @@ struct SceneEditor
 		}
 	}
 	
+// todo : only open nodes when the user clicks on one
 	void markSelectedNodesOpen()
 	{
 		nodeUi.openNodes.clear();
@@ -1290,22 +1306,27 @@ struct SceneEditor
 						
 						ImGui::BeginChild("Scene structure", ImVec2(0, 140), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
-							markSelectedNodesOpen();
-							
 							deferredBegin();
 							{
 								editNodeStructure_traverse(scene.rootNodeId);
-								
-								if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)) ||
-									ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
-								{
-									for (auto nodeId : selectedNodes)
-										deferred.nodesToRemove.insert(nodeId);
-								}
 							}
 							deferredEnd();
+							
+							nodeUi.openNodes.clear();
 						}
 						ImGui::EndChild();
+						
+						if (ImGui::IsItemHovered())
+						{
+							if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Delete)) ||
+								ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Backspace)))
+							{
+								deferredBegin();
+								for (auto nodeId : selectedNodes)
+									deferred.nodesToRemove.insert(nodeId);
+								deferredEnd();
+							}
+						}
 					}
 					
 				#if 0
@@ -1420,6 +1441,25 @@ struct SceneEditor
 			deferredBegin();
 			pasteNodeFromClipboard(scene.rootNodeId);
 			deferredEnd();
+		}
+		
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_d) && keyboard.isDown(SDLK_LGUI))
+		{
+			inputIsCaptured = true;
+			if (selectedNodes.empty() == false)
+			{
+				auto nodeId = *selectedNodes.begin(); // todo : handle multiple nodes
+				auto node_itr = scene.nodes.find(nodeId);
+				Assert(node_itr != scene.nodes.end());
+				auto * node = node_itr->second;
+				std::string text;
+				if (node_to_clipboard_text(*node, text))
+				{
+					deferredBegin();
+					pasteNodeFromClipboardText(scene.rootNodeId, text.c_str());
+					deferredEnd();
+				}
+			}
 		}
 		
 		// transform mouse coordinates into a world space direction vector
@@ -1634,6 +1674,7 @@ struct SceneEditor
 							// select the newly added node
 							selectedNodes.clear();
 							selectedNodes.insert(nodeId);
+							markNodeOpenUntilRoot(nodeId);
 							nodeToGiveFocus = nodeId;
 							enablePadGizmo = true;
 						}
@@ -1647,6 +1688,7 @@ struct SceneEditor
 				if (hoverNode != nullptr)
 				{
 					selectedNodes.insert(hoverNode->id);
+					markNodeOpenUntilRoot(hoverNode->id);
 					nodeToGiveFocus = hoverNode->id;
 				}
 			}
