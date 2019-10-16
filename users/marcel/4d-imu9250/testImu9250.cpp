@@ -95,7 +95,8 @@ struct MyIMU9250 : IMU9250
         {
             for (int i = 0; i < 5; ++i)
             {
-                write(port, bytes, numBytes);
+                if (write(port, bytes, numBytes) == -1)
+                	LOG_DBG("failed to write to IMU", 0);
             }
         }
 	}

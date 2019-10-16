@@ -489,7 +489,14 @@ static bool loadGltf(const char * path, gltf::Scene & scene)
 				
 				if (buffer.byteLength > 0)
 				{
-					fread(&buffer.data.front(), buffer.byteLength, 1, file);
+					if (fread(&buffer.data.front(), buffer.byteLength, 1, file) != 1)
+					{
+						fclose(file);
+						file = nullptr;
+
+						logDebug("failed to read buffer from file");
+						return false;
+					}
 				}
 				
 				fclose(file);
@@ -1352,7 +1359,7 @@ int main(int argc, char * argv[])
 							{
 								pushWireframe(keyboard.isDown(SDLK_w));
 								pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
-								gxMesh->draw();
+								gxMesh->draw(GX_TRIANGLES);
 								popCullMode();
 								popWireframe();
 							}

@@ -67,23 +67,4 @@ public:
 	virtual GX_INDEX_FORMAT getFormat() const override final;
 };
 
-class GxMesh
-{
-	const GxVertexBuffer * m_vertexBuffer;
-	const GxIndexBuffer * m_indexBuffer;
-	
-	uint32_t m_vertexArrayObject;
-	
-	void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
-	
-public:
-	GxMesh();
-	~GxMesh();
-	
-	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vsStride);
-	void setIndexBuffer(const GxIndexBuffer * buffer);
-	
-	void draw() const;
-};
-
 #endif

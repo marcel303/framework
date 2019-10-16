@@ -2,6 +2,7 @@
 #include "drawable.h"
 #include "effect.h"
 #include "framework.h"
+#include "midi.h"
 #include "Parse.h"
 #include "scene.h"
 #include "StringEx.h"
@@ -13,10 +14,10 @@
 using namespace tinyxml2;
 
 // from internal.h
-void splitString(const std::string & str, std::vector<std::string> & result, char c);
+extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
 // from main.cpp
-bool getSceneFileContents(const std::string & filename, Array<uint8_t> *& out_bytes);
+extern bool getSceneFileContents(const std::string & filename, Array<uint8_t> *& out_bytes);
 
 //
 
@@ -26,6 +27,8 @@ extern int GFX_SX_SCALED;
 extern int GFX_SY_SCALED;
 
 extern Config config;
+
+extern MappedMidi mappedMidi;
 
 #if ENABLE_LEAPMOTION
 extern LeapState g_leapState;
@@ -1085,7 +1088,7 @@ void Scene::tick(const float dt)
 
 		if (map.type == SceneMidiMap::kMapType_Event)
 		{
-			if (config.midiWentDown(map.id))
+			if (mappedMidi.midiWentDown(map.id))
 			{
 				bool found = false;
 
@@ -1109,7 +1112,7 @@ void Scene::tick(const float dt)
 		}
 		else if (map.type == SceneMidiMap::kMapType_EffectVar)
 		{
-			if (config.midiIsDown(map.id))
+			if (mappedMidi.midiIsDown(map.id))
 			{
 				SceneEffect * effect = findEffectByName(map.effect.c_str(), nullptr);
 
@@ -1121,7 +1124,7 @@ void Scene::tick(const float dt)
 					{
 						if (!var->isActive())
 						{
-							const float value = config.midiGetValue(map.id, 0.f);
+							const float value = mappedMidi.midiGetValue(map.id, 0.f);
 
 							*var = map.min + (map.max - map.min) * value;
 						}

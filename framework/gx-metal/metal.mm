@@ -421,6 +421,15 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 {
 	Assert(numTargets >= 0 && numTargets <= 4);
 	
+	//
+	
+	gxMatrixMode(GX_PROJECTION);
+	gxPushMatrix();
+	gxMatrixMode(GX_MODELVIEW);
+	gxPushMatrix();
+	
+	//
+	
 	RenderPassData pd;
 	
 	@autoreleasepool
@@ -484,11 +493,11 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		
 		s_activeRenderPass = &s_renderPasses.back();
 		
-		// set viewport
+		// set viewport and apply transform
 		
 		metal_set_viewport(viewportSx, viewportSy);
 		
-		// todo : set blend mode
+		applyTransform();
 	}
 }
 
@@ -536,7 +545,12 @@ void popRenderPass()
 		renderState.renderPass = s_activeRenderPass->renderPass;
 	}
 	
-	applyTransform();
+	//
+	
+	gxMatrixMode(GX_PROJECTION);
+	gxPopMatrix();
+	gxMatrixMode(GX_MODELVIEW);
+	gxPopMatrix();
 }
 
 void setColorWriteMask(int r, int g, int b, int a)
@@ -2059,7 +2073,15 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 		{
 			id <MTLBuffer> buffer = (id <MTLBuffer>)indexBuffer->getMetalBuffer();
 			
-			[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:buffer indexBufferOffset:0];
+			[s_activeRenderPass->encoder
+				drawIndexedPrimitives:metalPrimitiveType
+				indexCount:numElements
+				indexType:
+					indexBuffer->getFormat() == GX_INDEX_16
+					? MTLIndexTypeUInt16
+					: MTLIndexTypeUInt32
+				indexBuffer:buffer
+				indexBufferOffset:0];
 		}
 		else
 		{

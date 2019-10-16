@@ -11,6 +11,7 @@
 #include "FileStream.h"
 #include "framework.h"
 #include "leap/Leap.h"
+#include "midi.h"
 #include "Path.h"
 #include "scene.h"
 #include "StringEx.h"
@@ -23,10 +24,6 @@
 #include <list>
 #include <map>
 #include <sys/stat.h>
-
-#ifdef WIN32
-	//#include <Windows.h>
-#endif
 
 #if ENABLE_VIDEO
 	#include "mediaplayer/MPContext.h"
@@ -63,6 +60,9 @@ int GFX_SY_SCALED = GFX_SY * GFX_SCALE;
 #define OSC_RECV_PORT 8000
 
 Config config;
+
+Midi midi;
+MappedMidi mappedMidi(midi, config);
 
 Scene * g_scene = nullptr;
 Scene * g_prevScene = nullptr;
@@ -1147,30 +1147,6 @@ int main(int argc, char * argv[])
 		return -1;
 	}
 
-#if ENABLE_MIDI
-	const int numMidiDevices = midiInGetNumDevs();
-
-	if (numMidiDevices > 0)
-	{
-		printf("MIDI devices:\n");
-
-		for (int i = 0; i < numMidiDevices; ++i)
-		{
-			MIDIINCAPS caps;
-			memset(&caps, 0, sizeof(caps));
-
-			if (midiInGetDevCaps(i, &caps, sizeof(caps)) == MMSYSERR_NOERROR)
-			{
-				printf("device_index=%d, driver_version=%03d.%03d, name=%s\n",
-					i,
-					(caps.vDriverVersion & 0xff00) >> 8,
-					(caps.vDriverVersion & 0x00ff) >> 0,
-					caps.szPname);
-			}
-		}
-	}
-#endif
-
 	AudioIn audioIn;
 
 	float audioInProvideTime = 0.f;
@@ -1216,6 +1192,13 @@ int main(int argc, char * argv[])
 	MP::Util::InitializeLibAvcodec();
 #endif
 
+	// initialize midi
+	
+	if (ENABLE_MIDI)
+	{
+		midi.init(config.midi.deviceIndex);
+	}
+
 	// initialise framework
 
 #if ENABLE_WINDOWED_MODE || 0
@@ -1233,8 +1216,7 @@ int main(int argc, char * argv[])
 	framework.enableDepthBuffer = true;
 #endif
 
-	framework.enableMidi = ENABLE_MIDI;
-	framework.midiDeviceIndex = config.midi.deviceIndex;
+	framework.allowHighDpi = false;
 
 #ifdef DEBUG
 	//framework.reloadCachesOnActivate = true;
@@ -1318,6 +1300,11 @@ int main(int argc, char * argv[])
 			// process
 
 			framework.process();
+			
+			if (ENABLE_MIDI)
+			{
+				midi.process();
+			}
 			
 			if (keyboard.wentDown(SDLK_TAB))
 			{

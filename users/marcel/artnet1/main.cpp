@@ -81,7 +81,7 @@ int main(int argc, char * argv[])
 				doSpring(
 					mouse.x / float(640), mouseDown,
 					springValues[i], springVelocities[i], springCenters[i],
-					40.f, .5f,
+					40.f, .1f,
 					framework.timeStep / 10.f);
 			}
 			
@@ -92,7 +92,7 @@ int main(int argc, char * argv[])
 			SDL_Delay(25);
 
 			ArtnetPacket packet;
-			packet.makeDMX512(values, 3, sequence);
+			packet.makeDMX512(values, 4, sequence);
 
 			if (sequence != 0x00)
 			{

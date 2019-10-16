@@ -28,18 +28,18 @@ static MTLPixelFormat toMetalFormat(const SURFACE_FORMAT format)
 
 ColorTarget::~ColorTarget()
 {
-	if (m_ownsTexture)
-	{
-		id <MTLTexture> colorTexture = (id <MTLTexture>)m_colorTexture;
-		[colorTexture release];
-		colorTexture = nullptr;
-		m_colorTexture = nullptr;
-	}
+	free();
 }
 
 bool ColorTarget::init(const ColorTargetProperties & in_properties)
 {
 	bool result = true;
+	
+	//
+	
+	free();
+	
+	//
 
 	properties = in_properties;
 
@@ -79,6 +79,17 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 	return result;
 }
 
+void ColorTarget::free()
+{
+	if (m_ownsTexture)
+	{
+		id <MTLTexture> colorTexture = (id <MTLTexture>)m_colorTexture;
+		[colorTexture release];
+		colorTexture = nullptr;
+		m_colorTexture = nullptr;
+	}
+}
+
 GxTextureId ColorTarget::getTextureId() const
 {
 	return m_colorTextureId;
@@ -88,19 +99,19 @@ GxTextureId ColorTarget::getTextureId() const
 
 DepthTarget::~DepthTarget()
 {
-	if (m_ownsTexture)
-	{
-		id <MTLTexture> depthTexture = (id <MTLTexture>)m_depthTexture;
-		[depthTexture release];
-		depthTexture = nullptr;
-		m_depthTexture = nullptr;
-	}
+	free();
 }
 
 bool DepthTarget::init(const DepthTargetProperties & in_properties)
 {
 	bool result = true;
 
+	//
+	
+	free();
+	
+	//
+	
 	properties = in_properties;
 
 	@autoreleasepool
@@ -137,6 +148,17 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 	}
 
 	return result;
+}
+
+void DepthTarget::free()
+{
+	if (m_ownsTexture)
+	{
+		id <MTLTexture> depthTexture = (id <MTLTexture>)m_depthTexture;
+		[depthTexture release];
+		depthTexture = nullptr;
+		m_depthTexture = nullptr;
+	}
 }
 
 GxTextureId DepthTarget::getTextureId() const

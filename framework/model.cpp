@@ -56,18 +56,6 @@ ModelCache g_modelCache;
 
 namespace AnimModel
 {
-#if ENABLE_OPENGL // todo : remove OpenGL version vsInputs
-	static const VsInput vsInputs[] =
-	{
-		{ VS_POSITION,      3, GL_FLOAT,         0, offsetof(Vertex, px)          },
-		{ VS_NORMAL,        3, GL_FLOAT,         0, offsetof(Vertex, nx)          },
-		{ VS_COLOR,         4, GL_FLOAT,         0, offsetof(Vertex, cx)          },
-		{ VS_TEXCOORD,      2, GL_FLOAT,         0, offsetof(Vertex, tx)          },
-		{ VS_BLEND_INDICES, 4, GL_UNSIGNED_BYTE, 0, offsetof(Vertex, boneIndices) },
-		{ VS_BLEND_WEIGHTS, 4, GL_UNSIGNED_BYTE, 1, offsetof(Vertex, boneWeights) }
-	};
-	const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
-#else
 	static const GxVertexInput vsInputs[] =
 	{
 		{ VS_POSITION,      3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, px)          },
@@ -79,7 +67,6 @@ namespace AnimModel
 		{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_UINT8,   1, offsetof(Vertex, boneWeights) }
 	};
 	const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
-#endif
 
 	//
 	
@@ -92,41 +79,13 @@ namespace AnimModel
 		
 		m_indices = 0;
 		m_numIndices = 0;
-		
-	#if ENABLE_OPENGL
-		m_vertexArray = 0;
-		m_indexArray = 0;
-		
-		m_vertexArrayObject = 0;
-	#endif
 	}
 	
 	Mesh::~Mesh()
 	{
-	#if ENABLE_METAL
 		m_vertexBuffer.free();
 		m_indexBuffer.free();
-	#endif
-	
-	#if ENABLE_OPENGL
-		if (m_vertexArrayObject)
-		{
-			glDeleteVertexArrays(1, &m_vertexArrayObject);
-			m_vertexArrayObject = 0;
-		}
-		
-		if (m_vertexArray)
-		{
-			glDeleteBuffers(1, &m_vertexArray);
-			m_vertexArray = 0;
-		}
-		
-		if (m_indexArray)
-		{
-			glDeleteBuffers(1, &m_indexArray);
-			m_indexArray = 0;
-		}
-	#endif
+		m_drawableMesh.free();
 		
 		allocateVB(0);
 		allocateIB(0);
@@ -170,58 +129,23 @@ namespace AnimModel
 	
 	void Mesh::finalize()
 	{
-	#if ENABLE_METAL
-	// todo : vb/ib for OpenGL too
 		m_vertexBuffer.alloc(m_vertices, sizeof(Vertex) * m_numVertices);
-		m_indexBuffer.alloc(m_indices, sizeof(int) * m_numIndices, GX_INDEX_32); // todo : GX_INDEX_16 when possible
-	#endif
-	
-	#if ENABLE_OPENGL
-		fassert(!m_vertexArray && !m_indexArray);
 		
-		// create vertex buffer
-		glGenBuffers(1, &m_vertexArray);
-		glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * m_numVertices, m_vertices, GL_STATIC_DRAW);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		checkErrorGL();
-		
-		// create index buffer
-		glGenBuffers(1, &m_indexArray);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexArray);
-		checkErrorGL();
 		if (m_numVertices < 65536)
 		{
-			unsigned short * indices = new unsigned short[m_numIndices];
+			uint16_t * indices = new uint16_t[m_numIndices];
 			for (int i = 0; i < m_numIndices; ++i)
 				indices[i] = m_indices[i];
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(short) * m_numIndices, indices, GL_STATIC_DRAW);
-			checkErrorGL();
+			m_indexBuffer.alloc(indices, m_numIndices, GX_INDEX_16);
 			delete [] indices;
 		}
 		else
 		{
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int) * m_numIndices, m_indices, GL_STATIC_DRAW);
-			checkErrorGL();
+			m_indexBuffer.alloc(m_indices, m_numIndices, GX_INDEX_32);
 		}
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		checkErrorGL();
 		
-		// create vertex array object
-		glGenVertexArrays(1, &m_vertexArrayObject);
-		checkErrorGL();
-		glBindVertexArray(m_vertexArrayObject);
-		checkErrorGL();
-		{
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexArray);
-			checkErrorGL();
-			glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
-			checkErrorGL();
-			bindVsInputs(vsInputs, numVsInputs, sizeof(Vertex));
-		}
-		glBindVertexArray(0);
-		checkErrorGL();
-	#endif
+		m_drawableMesh.setVertexBuffer(&m_vertexBuffer, vsInputs, numVsInputs, sizeof(Vertex));
+		m_drawableMesh.setIndexBuffer(&m_indexBuffer);
 		
 		if (m_material.shader.empty())
 		{
@@ -976,27 +900,8 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 						0.f);
 				}
 			}
-		
-		#if ENABLE_METAL
-			gxSetVertexBuffer(&mesh->m_vertexBuffer, vsInputs, numVsInputs, sizeof(Vertex));
-			gxDrawIndexedPrimitives(GX_TRIANGLES, mesh->m_numIndices, &mesh->m_indexBuffer);
-		#endif
-		
-		#if ENABLE_OPENGL
-			// bind vertex arrays
 			
-			fassert(mesh->m_vertexArray);
-			fassert(mesh->m_indexArray);
-			glBindVertexArray(mesh->m_vertexArrayObject);
-			checkErrorGL();
-			
-			GLenum indexType = mesh->m_numVertices < 65536 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT;
-			glDrawElements(GL_TRIANGLES, mesh->m_numIndices, indexType, 0);
-			checkErrorGL();
-			
-			glBindVertexArray(0);
-			checkErrorGL();
-		#endif
+			mesh->m_drawableMesh.draw(GX_TRIANGLES);
 		}
 		
 		clearShader();

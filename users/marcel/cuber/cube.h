@@ -3,7 +3,6 @@
 #include "config.h"
 #include "Mat4x4.h"
 #include "simplexnoise.h"
-#include <cmath>
 #include <limits>
 #include <math.h>
 #include <SDL2/SDL.h>
@@ -319,9 +318,9 @@ inline float computeCubeDistance(const Coord & c, const float sx, const float sy
 	// actually a round box
 
 	return length3(
-		max(0.f, abs(c.x) - sx),
-		max(0.f, abs(c.y) - sy),
-		max(0.f, abs(c.z) - sz));
+		fmaxf(0.f, fabsf(c.x) - sx),
+		fmaxf(0.f, fabsf(c.y) - sy),
+		fmaxf(0.f, fabsf(c.z) - sz));
 }
 
 inline float computeToroidDistance(const Coord & c, const float thickness, const float outer)
@@ -373,7 +372,7 @@ inline float computeLineDistance(const Coord & c)
 
 inline float computePlaneDistance(const Coord & c)
 {
-	return std::abs(c.x);
+	return fabsf(c.x);
 }
 
 inline float computeLineSegmentDistance(const Coord & c, const float x1, const float x2, const float r)

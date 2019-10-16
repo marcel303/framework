@@ -12,7 +12,7 @@
 using namespace tinyxml2;
 
 // from internal.h
-void splitString(const std::string & str, std::vector<std::string> & result, char c);
+extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
 //
 
@@ -3387,14 +3387,15 @@ void Effect_Sparklies::draw()
 	{
 		setBlend(BLEND_OPAQUE);
 		Shader copyShader("copy");
+		setShader(copyShader);
 		copyShader.setTexture("colormap", 0, g_currentSurface->getTexture(), false, true);
 		g_currentSurface->postprocess(copyShader);
 		applyBlendMode();
 	}
 
 	Shader shader(m_shader.c_str());
-	setTextures(shader);
 	setShader(shader);
+	setTextures(shader);
 	shader.setTexture("image", 5, Sprite(m_image.c_str()).getTexture(), true, true);
 
 	gxBegin(GX_QUADS);

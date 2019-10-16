@@ -261,7 +261,6 @@ enum INIT_ERROR
 	INIT_ERROR_OPENGL,
 	INIT_ERROR_OPENGL_EXTENSIONS,
 	INIT_ERROR_SOUND,
-	INIT_ERROR_MIDI,
 	INIT_ERROR_FREETYPE
 };
 
@@ -273,7 +272,6 @@ class Font;
 class Framework;
 class Gamepad;
 class Keyboard;
-class Midi;
 class Model;
 class Mouse;
 class Music;
@@ -307,7 +305,6 @@ extern Framework framework;
 extern Mouse mouse;
 extern Keyboard keyboard;
 extern Gamepad gamepad[MAX_GAMEPAD];
-extern Midi midi;
 
 // event handlers
 
@@ -439,8 +436,6 @@ public:
 	bool enableProfiling;
 	bool allowHighDpi;
 	int minification;
-	bool enableMidi;
-	int midiDeviceIndex;
 	bool reloadCachesOnActivate;
 	bool cacheResourceData;
 	bool enableRealTimeEditing;
@@ -617,7 +612,6 @@ public:
 
 class Surface
 {
-#if ENABLE_METAL
 	SurfaceProperties m_properties;
 	
 	int m_backingScale; // backing scale puts a multiplier on the physical size (in pixels) of the surface. it's like MSAA, but fully super-sampled. it's used t orender to retina screens, where the 'resolve' operation just copies pixels 1:1, where a resolve onto a non-retina screen would downsample the surface instead
@@ -626,18 +620,6 @@ class Surface
 	
 	ColorTarget * m_colorTarget[2];
 	DepthTarget * m_depthTarget[2];
-#endif
-
-#if ENABLE_OPENGL
-	SurfaceProperties m_properties;
-	
-	int m_backingScale; // backing scale puts a multiplier on the physical size (in pixels) of the surface. it's like MSAA, but fully super-sampled. it's used t orender to retina screens, where the 'resolve' operation just copies pixels 1:1, where a resolve onto a non-retina screen would downsample the surface instead
-	
-	int m_bufferId;
-	uint32_t m_buffer[2];
-	GxTextureId m_colorTexture[2];
-	GxTextureId m_depthTexture[2];
-#endif
 
 	void construct();
 	void destruct();
@@ -654,11 +636,9 @@ public:
 	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
 	void setSwizzle(int r, int g, int b, int a);
 	
-#if ENABLE_METAL
 	ColorTarget * getColorTarget();
 	DepthTarget * getDepthTarget();
-#endif
-	uint32_t getFramebuffer() const; // todo : make internally accessible only
+	uint32_t getFramebuffer() const; // todo : make internally accessible only or remove it
 	GxTextureId getTexture() const;
 	bool hasDepthTexture() const;
 	GxTextureId getDepthTexture() const;
@@ -1401,20 +1381,6 @@ public:
 	void vibrate(float duration, float strength);
 	
 	const char * getName() const;
-};
-
-class Midi
-{
-	friend class Framework;
-
-public:
-	Midi();
-
-	bool isConnected;
-	bool isDown(int key) const;
-	bool wentDown(int key) const;
-	bool wentUp(int key) const;
-	float getValue(int key, float _default) const;
 };
 
 class Camera3d

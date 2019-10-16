@@ -197,9 +197,9 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 				
 				if (num_touches == 1)
 				{
-					if (abs(kinetic_scroll_smoothed[0]) < 1.2f)
+					if (fabs(kinetic_scroll_smoothed[0]) < 1.2f)
 						kinetic_scroll_smoothed[0] = 0.0;
-					if (abs(kinetic_scroll_smoothed[1]) < 1.2f)
+					if (fabs(kinetic_scroll_smoothed[1]) < 1.2f)
 						kinetic_scroll_smoothed[1] = 0.0;
 					
 					kinetic_scroll = Vec2(kinetic_scroll_smoothed[0], kinetic_scroll_smoothed[1]);

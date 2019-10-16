@@ -114,7 +114,8 @@ int main(int argc, char * argv[])
 		int lineSize = 0;
 		while (lineSize < sizeof(line) - 1)
 		{
-			read(tty.port, &line[lineSize], 1);
+			if (read(tty.port, &line[lineSize], 1) != 1)
+				break;
 			if (line[lineSize] == '\n')
 				break;
 			lineSize++;

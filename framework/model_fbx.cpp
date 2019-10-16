@@ -1540,7 +1540,7 @@ namespace AnimModel
 					std::vector<std::string> objectProps = object.captureProperties<std::string>();
 					
 					char name[64];
-					sprintf_s(name, sizeof(name), "%lld", id);
+					sprintf_s(name, sizeof(name), "%" PRId64, id);
 					
 					objectName = name;
 					objectType = objectProps.size() >= 3 ? objectProps[objectProps.size() - 1] : "";
@@ -1703,8 +1703,8 @@ namespace AnimModel
 				char fromNameBuffer[64];
 				char toNameBuffer[64];
 				
-				sprintf_s(fromNameBuffer, sizeof(fromNameBuffer), "%lld", properties[1]);
-				sprintf_s(toNameBuffer, sizeof(toNameBuffer), "%lld", properties[2]);
+				sprintf_s(fromNameBuffer, sizeof(fromNameBuffer), "%" PRId64, properties[1]);
+				sprintf_s(toNameBuffer, sizeof(toNameBuffer), "%" PRId64, properties[2]);
 				
 				const std::string fromName = fromNameBuffer;
 				const std::string toName = toNameBuffer;
@@ -2078,7 +2078,7 @@ namespace AnimModel
 							std::vector<std::string> objectProps = object.captureProperties<std::string>();
 							
 							char name[64];
-							sprintf_s(name, sizeof(name), "%lld", id);
+							sprintf_s(name, sizeof(name), "%" PRId64, id);
 							
 							objectName = name;
 							objectType = objectProps.size() >= 3 ? objectProps[objectProps.size() - 1] : "";
@@ -2176,8 +2176,8 @@ namespace AnimModel
 				char fromNameBuffer[64];
 				char toNameBuffer[64];
 				
-				sprintf_s(fromNameBuffer, sizeof(fromNameBuffer), "%lld", properties[1]);
-				sprintf_s(toNameBuffer, sizeof(toNameBuffer), "%lld", properties[2]);
+				sprintf_s(fromNameBuffer, sizeof(fromNameBuffer), "%" PRId64, properties[1]);
+				sprintf_s(toNameBuffer, sizeof(toNameBuffer), "%" PRId64, properties[2]);
 				
 				const std::string fromName = fromNameBuffer;
 				const std::string toName = toNameBuffer;

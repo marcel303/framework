@@ -72,22 +72,6 @@ public:
 	virtual GX_INDEX_FORMAT getFormat() const = 0;
 };
 
-/*
-// todo : GxMesh should not be a api dependent and use shared functions to draw using index and vertex buffers
-
-class GxMesh
-{
-public:
-	GxMesh();
-	~GxMesh();
-	
-	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs);
-	void setIndexBuffer(const GxIndexBuffer * buffer);
-	
-	void draw() const;
-};
-*/
-
 #include "framework.h"
 
 #if ENABLE_METAL
@@ -98,10 +82,6 @@ public:
 	#include "gx-opengl/mesh.h"
 #endif
 
-#if !ENABLE_OPENGL
-
-// todo : add gxSetVertexBuffer impl OpenGL
-
 class GxMesh
 {
 	static const int kMaxVertexInputs = 16;
@@ -109,19 +89,29 @@ class GxMesh
 	const GxVertexBuffer * m_vertexBuffer = nullptr;
 	const GxIndexBuffer * m_indexBuffer = nullptr;
 	
+#if ENABLE_OPENGL
+	uint32_t m_vertexArrayObject = 0;
+#else
 	GxVertexInput m_vertexInputs[kMaxVertexInputs];
 	int m_numVertexInputs = 0;
 	int m_vertexStride = 0;
+#endif
 	
 public:
 	GxMesh();
 	~GxMesh();
 	
+	void free();
+	
 	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vertexStride);
 	void setIndexBuffer(const GxIndexBuffer * buffer);
 	
-	void draw() const;
+	void draw(const GX_PRIMITIVE_TYPE type) const;
 };
+
+#if !ENABLE_OPENGL
+
+// todo : add gxSetVertexBuffer, gxDrawIndexedPrimitives impl OpenGL and remove OpenGL specific code in GxMesh implementation
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer);

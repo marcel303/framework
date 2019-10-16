@@ -27,6 +27,272 @@
 
 #include "framework.h"
 
+void drawPoint(float x, float y)
+{
+	gxBegin(GX_POINTS);
+	{
+		gxVertex2f(x, y);
+	}
+	gxEnd();
+}
+
+void drawLine(float x1, float y1, float x2, float y2)
+{
+	gxBegin(GX_LINES);
+	{
+		gxVertex2f(x1, y1);
+		gxVertex2f(x2, y2);
+	}
+	gxEnd();
+}
+
+void drawRect(float x1, float y1, float x2, float y2)
+{
+	gxBegin(GX_QUADS);
+	{
+		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
+	}
+	gxEnd();
+}
+
+void drawRectLine(float x1, float y1, float x2, float y2)
+{
+	gxBegin(GX_LINE_LOOP);
+	{
+		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+		gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
+	}
+	gxEnd();
+}
+
+void drawCircle(float x, float y, float radius, int numSegments)
+{
+	gxBegin(GX_LINE_LOOP);
+	{
+		for (int i = 0; i < numSegments; ++i)
+		{
+			const float angle = i * (M_PI * 2.f / numSegments);
+
+			gxVertex2f(
+				x + cosf(angle) * radius,
+				y + sinf(angle) * radius);
+		}
+	}
+	gxEnd();
+}
+
+void fillCircle(float x, float y, float radius, int numSegments)
+{
+	gxBegin(GX_TRIANGLES);
+	{
+		for (int i = 0; i < numSegments; ++i)
+		{
+			const float angle1 = (i + 0) * (M_PI * 2.f / numSegments);
+			const float angle2 = (i + 1) * (M_PI * 2.f / numSegments);
+
+			gxVertex2f(
+				x,
+				y);
+
+			gxVertex2f(
+				x + cosf(angle1) * radius,
+				y + sinf(angle1) * radius);
+			gxVertex2f(
+				x + cosf(angle2) * radius,
+				y + sinf(angle2) * radius);
+		}
+	}
+	gxEnd();
+}
+
+void drawLine3d(int axis)
+{
+	gxBegin(GX_LINES);
+	{
+		gxTexCoord2f(0, 0); gxVertex3f(axis == 0 ? -1 : 0, axis == 1 ? -1 : 0, axis == 2 ? -1 : 0);
+		gxTexCoord2f(1, 1); gxVertex3f(axis == 0 ? +1 : 0, axis == 1 ? +1 : 0, axis == 2 ? +1 : 0);
+	}
+	gxEnd();
+}
+
+void drawRect3d(int axis1, int axis2)
+{
+	const int axis3 = 3 - axis1 - axis2;
+	
+	float normal[3];
+	normal[axis1] = 0.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 1.f;
+	
+	gxBegin(GX_QUADS);
+	{
+		gxNormal3fv(normal);
+		
+		float xyz[3];
+		
+		xyz[axis1] = -1;
+		xyz[axis2] = -1;
+		xyz[axis3] = 0;
+		gxTexCoord2f(0, 0); gxVertex3fv(xyz);
+		
+		xyz[axis1] = +1;
+		gxTexCoord2f(1, 0); gxVertex3fv(xyz);
+		
+		xyz[axis2] = +1;
+		gxTexCoord2f(1, 1); gxVertex3fv(xyz);
+		
+		xyz[axis1] = -1;
+		gxTexCoord2f(0, 1); gxVertex3fv(xyz);
+	}
+	gxEnd();
+}
+
+void drawGrid3d(int resolution1, int resolution2, int axis1, int axis2)
+{
+	const int axis3 = 3 - axis1 - axis2;
+	
+	float normal[3];
+	normal[axis1] = 0.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 1.f;
+	
+	gxBegin(GX_QUADS);
+	{
+		gxNormal3fv(normal);
+		
+		for (int i = 0; i < resolution1; ++i)
+		{
+			for (int j = 0; j < resolution2; ++j)
+			{
+				const float u1 = (i + 0) / float(resolution1);
+				const float u2 = (i + 1) / float(resolution1);
+				const float v1 = (j + 0) / float(resolution2);
+				const float v2 = (j + 1) / float(resolution2);
+				
+				const float x1 = (u1 - .5f) * 2.f;
+				const float x2 = (u2 - .5f) * 2.f;
+				const float y1 = (v1 - .5f) * 2.f;
+				const float y2 = (v2 - .5f) * 2.f;
+				
+				float p[3];
+				p[axis1] = x1;
+				p[axis2] = y1;
+				p[axis3] = 0.f;
+				gxTexCoord2f(u1, v1); gxVertex3fv(p);
+				
+				p[axis1] = x2;
+				gxTexCoord2f(u2, v1); gxVertex3fv(p);
+				
+				p[axis2] = y2;
+				gxTexCoord2f(u2, v2); gxVertex3fv(p);
+				
+				p[axis1] = x1;
+				gxTexCoord2f(u1, v2); gxVertex3fv(p);
+			}
+		}
+	}
+	gxEnd();
+}
+
+void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool optimized)
+{
+	const int axis3 = 3 - axis1 - axis2;
+	
+	float normal[3];
+	normal[axis1] = 0.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 1.f;
+	
+	if (optimized)
+	{
+		gxBegin(GX_LINES);
+		{
+			gxNormal3fv(normal);
+			
+			for (int i = 0; i <= resolution1; ++i)
+			{
+				const float u = i / float(resolution1);
+				const float x = (u - .5f) * 2.f;
+				
+				float p[3];
+				p[axis1] = x;
+				p[axis2] = -1.f;
+				p[axis3] = 0.f;
+				gxTexCoord2f(u, 0.f); gxVertex3fv(p);
+				
+				p[axis2] = +1.f;
+				gxTexCoord2f(u, 1.f); gxVertex3fv(p);
+			}
+			
+			for (int j = 0; j <= resolution2; ++j)
+			{
+				const float v = j / float(resolution2);
+				const float y = (v - .5f) * 2.f;
+				
+				float p[3];
+				p[axis1] = -1.f;
+				p[axis2] = y;
+				p[axis3] = 0.f;
+				gxTexCoord2f(0.f, v); gxVertex3fv(p);
+				
+				p[axis1] = +1.f;
+				gxTexCoord2f(1.f, v); gxVertex3fv(p);
+			}
+		}
+		gxEnd();
+	}
+	else
+	{
+		gxBegin(GX_LINES);
+		{
+			gxNormal3fv(normal);
+			
+			for (int i = 0; i < resolution1; ++i)
+			{
+				for (int j = 0; j < resolution2; ++j)
+				{
+					const float u1 = (i + 0) / float(resolution1);
+					const float u2 = (i + 1) / float(resolution1);
+					const float v1 = (j + 0) / float(resolution2);
+					const float v2 = (j + 1) / float(resolution2);
+					
+					const float x1 = (u1 - .5f) * 2.f;
+					const float x2 = (u2 - .5f) * 2.f;
+					const float y1 = (v1 - .5f) * 2.f;
+					const float y2 = (v2 - .5f) * 2.f;
+					
+					float p[3];
+					p[axis1] = x1;
+					p[axis2] = y1;
+					p[axis3] = 0.f;
+					gxTexCoord2f(u1, v1); gxVertex3fv(p);
+					
+					p[axis1] = x2;
+					gxTexCoord2f(u2, v1); gxVertex3fv(p);
+					gxTexCoord2f(u2, v1); gxVertex3fv(p);
+					
+					p[axis2] = y2;
+					gxTexCoord2f(u2, v2); gxVertex3fv(p);
+					gxTexCoord2f(u2, v2); gxVertex3fv(p);
+					
+					p[axis1] = x1;
+					gxTexCoord2f(u1, v2); gxVertex3fv(p);
+					gxTexCoord2f(u1, v2); gxVertex3fv(p);
+					
+					p[axis2] = y1;
+					gxTexCoord2f(u1, v1); gxVertex3fv(p);
+				}
+			}
+		}
+		gxEnd();
+	}
+}
+
 static bool s_isInCubeBatch = false;
 
 void lineCube(Vec3Arg position, Vec3Arg size)

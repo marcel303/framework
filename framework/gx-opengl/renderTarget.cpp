@@ -38,12 +38,18 @@ static GLenum translateColorFormat(const SURFACE_FORMAT format)
 
 ColorTarget::~ColorTarget()
 {
-
+	free();
 }
 
 bool ColorTarget::init(const ColorTargetProperties & in_properties)
 {
 	bool result = true;
+	
+	//
+	
+	free();
+	
+	//
 	
 	properties = in_properties;
 	
@@ -131,6 +137,15 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 	return result;
 }
 
+void ColorTarget::free()
+{
+	if (m_colorTextureId != 0)
+	{
+		glDeleteTextures(1, &m_colorTextureId);
+		m_colorTextureId = 0;
+	}
+}
+
 //
 
 static GLenum translateDepthFormat(const DEPTH_FORMAT format)
@@ -151,7 +166,7 @@ static GLenum translateDepthFormat(const DEPTH_FORMAT format)
 
 DepthTarget::~DepthTarget()
 {
-
+	free();
 }
 
 bool DepthTarget::init(const DepthTargetProperties & in_properties)
@@ -213,6 +228,15 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 	return result;
 }
 
+void DepthTarget::free()
+{
+	if (m_depthTextureId != 0)
+	{
+		glDeleteTextures(1, &m_depthTextureId);
+		m_depthTextureId = 0;
+	}
+}
+
 // -- render passes --
 
 #include <stack>
@@ -224,7 +248,7 @@ struct RenderPassData
 	int numDrawBuffers = 0;
 };
 
-std::stack<RenderPassData> s_renderPasses;
+static std::stack<RenderPassData> s_renderPasses;
 bool s_renderPassesIsEmpty = true;
 
 void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
@@ -235,6 +259,15 @@ void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * d
 void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName)
 {
 	Assert(numTargets >= 0 && numTargets <= 4);
+	
+	//
+	
+	gxMatrixMode(GX_PROJECTION);
+	gxPushMatrix();
+	gxMatrixMode(GX_MODELVIEW);
+	gxPushMatrix();
+	
+	//
 	
 	RenderPassData pd;
 	
@@ -267,8 +300,13 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 				
 				pd.drawBuffers[pd.numDrawBuffers++] = GL_COLOR_ATTACHMENT0 + i;
 			}
+			else
+			{
+				pd.drawBuffers[pd.numDrawBuffers++] = GL_NONE;
+			}
 		}
 		
+		// note : glDrawBuffers applies to the current GL_DRAW_FRAMEBUFFER only
     	glDrawBuffers(pd.numDrawBuffers, pd.drawBuffers);
     	checkErrorGL();
 		
@@ -297,46 +335,110 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 	
 		// clear targets when requested
 		
-		int clearFlags = 0;
-	
-		if (in_clearColor)
+		if (glClearBufferfv != nullptr)
 		{
-		// todo : use extended clear color function
-			glClearColor(0, 0, 0, 0);
-			clearFlags |= GL_COLOR_BUFFER_BIT;
+			if (in_clearColor)
+			{
+				for (int i = 0; i < numTargets; ++i)
+				{
+					if (targets[i] != nullptr)
+					{
+						const Color & color = targets[i]->getClearColor();
+						glClearBufferfv(GL_COLOR, i, &color.r);
+						checkErrorGL();
+					}
+				}
+			}
+			
+			if (in_clearDepth && depthTarget != nullptr)
+			{
+				const float depth = depthTarget->getClearDepth();
+				glClearBufferfv(GL_DEPTH, 0, &depth);
+				checkErrorGL();
+			}
 		}
-	
-		if (in_clearDepth && depthTarget != nullptr)
+		else
 		{
-		#if ENABLE_DESKTOP_OPENGL
-			glClearDepth(depthTarget->getClearDepth());
-		#else
-			glClearDepthf(depthTarget->getClearDepth());
-		#endif
-			clearFlags |= GL_DEPTH_BUFFER_BIT;
+			int clearFlags = 0;
+			
+			if (in_clearColor)
+			{
+			// todo : use extended clear color function
+				Assert(false);
+				glClearColor(0, 0, 0, 0);
+				clearFlags |= GL_COLOR_BUFFER_BIT;
+			}
+		
+			if (in_clearDepth && depthTarget != nullptr)
+			{
+			#if ENABLE_DESKTOP_OPENGL
+				glClearDepth(depthTarget->getClearDepth());
+			#else
+				glClearDepthf(depthTarget->getClearDepth());
+			#endif
+				clearFlags |= GL_DEPTH_BUFFER_BIT;
+			}
+		
+			if (clearFlags)
+			{
+				glClear(clearFlags);
+				checkErrorGL();
+			}
 		}
-	
-		if (clearFlags)
-		{
-			glClear(clearFlags);
-			checkErrorGL();
-		}
-	
+		
 		// begin encoding
 		
 		s_renderPasses.push(pd);
 		
 		s_renderPassesIsEmpty = false;
 		
-		// todo : set viewport
+		// set viewport and apply transform
 		
 	// todo : applyTransformWithViewportSize should be called here
 	// todo : getCurrentViewportSize should be updated to know about the active render targets, otherwise applyTransformWithViewportSize will be passed the incorrect size
 	
 		glViewport(0, 0, viewportSx, viewportSy);
 		
-		// todo : set blend mode
+		applyTransform();
 	}
+}
+
+void pushBackbufferRenderPass(const bool in_clearColor, const bool in_clearDepth, const char * passName)
+{
+	RenderPassData pd;
+	
+	pd.frameBufferId = 0;
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, pd.frameBufferId);
+	checkErrorGL();
+	
+	//
+	
+	int clearFlags = 0;
+
+	if (in_clearColor)
+	{
+		glClearColor(0, 0, 0, 0);
+		clearFlags |= GL_COLOR_BUFFER_BIT;
+	}
+
+	if (in_clearDepth)
+	{
+	#if ENABLE_DESKTOP_OPENGL
+		glClearDepth(0.f);
+	#else
+		glClearDepthf(0.f);
+	#endif
+		clearFlags |= GL_DEPTH_BUFFER_BIT;
+	}
+
+	if (clearFlags)
+	{
+		glClear(clearFlags);
+		checkErrorGL();
+	}
+
+	s_renderPasses.push(pd);
 }
 
 void popRenderPass()
@@ -345,6 +447,9 @@ void popRenderPass()
 	
 	if (old_pd.frameBufferId != 0)
 	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		checkErrorGL();
+		
 		glDeleteFramebuffers(1, &old_pd.frameBufferId);
 		checkErrorGL();
 	}
@@ -366,7 +471,12 @@ void popRenderPass()
 		checkErrorGL();
 	}
 	
-	applyTransform();
+	//
+	
+	gxMatrixMode(GX_PROJECTION);
+	gxPopMatrix();
+	gxMatrixMode(GX_MODELVIEW);
+	gxPopMatrix();
 }
 
 

@@ -72,6 +72,19 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 			inputIsCaptured = true;
 		}
 		
+		// origin
+		
+		if (keyboard.isDown(SDLK_a))
+		{
+			origin[1] += 1.f * dt; // todo : movement speed
+			inputIsCaptured = true;
+		}
+		if (keyboard.isDown(SDLK_z))
+		{
+			origin[1] -= 1.f * dt; // todo : movement speed
+			inputIsCaptured = true;
+		}
+		
 		// transform reset
 		
 		if (keyboard.wentDown(SDLK_o) && keyboard.isDown(SDLK_LGUI))
