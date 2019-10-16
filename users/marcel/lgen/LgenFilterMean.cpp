@@ -1,129 +1,100 @@
+#include "LgenFilterMean.h"
 #include <stdlib.h>
 #include <string.h>
-#include "LgenFilterMean.h"
 
-namespace Lgen
+namespace lgen
 {
-
-FilterMean :: FilterMean() : Filter()
-{
-
-    matrixW = 3;
-	matrixH = 3;
-    
-}
-
-FilterMean::~FilterMean()
-{
-
-}
-
-bool FilterMean::Apply(Lgen* src, Lgen* dst)
-{
-
-	int p;
-	
-	if (!src->GetSizePowers(p, p))
-	{
-		return false;
-	}
-
-	int x1, y1, x2, y2;
-	
-    GetClippingRect(src, x1, y1, x2, y2);
-    
-    int maskX = src->w - 1;
-    int maskY = src->h - 1;
-    
-    int rx = (matrixW - 1) >> 1;
-    int ry = (matrixH - 1) >> 1;
-    
-    int area = matrixW * matrixH;
-    
-    #define PIXEL(x, y) src->height[(x) & maskX][(y) & maskY]
-
-    for (int i = x1; i <= x2; ++i)
+    bool FilterMean::apply(Lgen * src, Lgen * dst)
     {
-        for (int j = y1; j <= y2; ++j)
+    	int p;
+    	
+    	if (!src->getSizePowers(p, p))
+    	{
+    		return false;
+    	}
+
+    	int x1, y1, x2, y2;
+    	
+        getClippingRect(src, x1, y1, x2, y2);
+        
+        const int maskX = src->w - 1;
+        const int maskY = src->h - 1;
+        
+        const int rx = (matrixW - 1) >> 1;
+        const int ry = (matrixH - 1) >> 1;
+        
+        const int area = matrixW * matrixH;
+        
+        #define PIXEL(x, y) src->height[(x) & maskX][(y) & maskY]
+
+        for (int i = x1; i <= x2; ++i)
         {
-			
-            int sum = 0;
-            
-            for (int k = -rx; k <= rx; ++k)
+            for (int j = y1; j <= y2; ++j)
             {
-                for (int l = -ry; l <= ry; ++l)
+                int sum = 0;
+                
+                for (int k = -rx; k <= rx; ++k)
                 {
-                    sum += PIXEL(i + k, j + l);
-				}
-			}
-			
-            dst->height[i][j] = sum / area;
-            
+                    for (int l = -ry; l <= ry; ++l)
+                    {
+                        sum += PIXEL(i + k, j + l);
+    				}
+    			}
+    			
+                dst->height[i][j] = sum / area;
+            }
         }
+
+        return true;
     }
 
-    return true;
-
-}
-
-bool FilterMean::SetOption(std::string name, char* value)
-{
-
-    if (name == "matrix.size")
+    bool FilterMean::setOption(const std::string & name, char * value)
     {
-		
-        int s = atoi(value);
-        
-        if (s & 0x1 && s >= 3)
+        if (name == "matrix.size")
         {
-			
-            matrixW = s;
-            matrixH = s;
+            int s = atoi(value);
             
+            if (s & 0x1 && s >= 3)
+            {
+                matrixW = s;
+                matrixH = s;
+            }
+    		else
+            {
+                return false;
+    		}
         }
-		else
+    	else if (name == "matrix.width")
+    	{
+            int w = atoi(value);
+            
+            if (w & 0x1 && w >= 3)
+            {
+                matrixW = w;
+    		}
+            else
+            {
+                return false;
+    		}
+        }
+    	else if (name == "matrix.height")
         {
-            return false;
-		}
-		
-    }
-	else if (name == "matrix.width")
-	{
-		
-        int w = atoi(value);
-        
-        if (w & 0x1 && w >= 3)
+            int h = atoi(value);
+            
+            if (h & 0x1 && h >= 3)
+            {
+                matrixH = h;
+    		}
+            else
+            {
+                return false;
+    		}
+        }
+    	else
         {
-            matrixW = w;
-		}
-        else
-        {
-            return false;
-		}
-		
-    }
-	else if (name == "matrix.height")
-    {
-		
-        int h = atoi(value);
-        
-        if (h & 0x1 && h >= 3)
-        {
-            matrixH = h;
-		}
-        else
-        {
-            return false;
-		}
-		
-    }
-	else
-    {
-        return Filter::SetOption(name, value);;
-	}
+            return Filter::setOption(name, value);;
+    	}
 
-   return true;
-        
+       return true;
+    }
 }
-
-};

@@ -1,31 +1,12 @@
-#ifndef __LgenFilterHighpass_h__
-#define __LgenFilterHighpass_h__
+#pragma once
 
 #include "LgenFilter.h"
 
-namespace Lgen
+namespace lgen
 {
-	
-class FilterHighpass : public Filter
-{
-
-	public:
-
-    FilterHighpass();
-    virtual ~FilterHighpass();
-
-	public:
-
-    virtual bool Apply(Lgen* src, Lgen* dst);
-    virtual bool SetOption(std::string name, char* value);
-
-	public:
-
-    int matrixW;
-	int matrixH;
-
-};
-
-};
-
-#endif // !__LgenFilterHighpass_h__
+	struct FilterHighpass : Filter
+	{
+	    virtual bool apply(Lgen * src, Lgen * dst) override;
+	    virtual bool setOption(const std::string & name, char * value) override;
+	};
+}

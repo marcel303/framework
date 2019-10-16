@@ -1,25 +1,11 @@
-#ifndef __LgenOs_h__
-#define __LgenOs_h__
+#pragma once
 
 #include "Lgen.h"
 
-namespace Lgen
+namespace lgen
 {
-	
-class LgenOs : public Lgen
-{
-
-	public:
-
-	LgenOs();
-	virtual ~LgenOs();
-
-	public:
-
-	virtual bool Generate(); ///< Generate offset-square heightfield.
-
-};
-
-};
-
-#endif // !__LgenOs_h__
+	struct LgenOs : Lgen
+	{
+		virtual bool generate() override; ///< Generate offset-square heightfield.
+	};
+}

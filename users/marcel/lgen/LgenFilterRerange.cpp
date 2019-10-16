@@ -1,51 +1,32 @@
+#include "LgenFilterRerange.h"
 #include <stdlib.h>
 #include <string.h>
-#include "LgenFilterRerange.h"
 
-namespace Lgen
+namespace lgen
 {
-	
-FilterRerange :: FilterRerange() : Filter()
-{
-
-    min = 0;
-    max = 255;
-
-}
-
-FilterRerange :: ~FilterRerange()
-{
-
-}
-
-bool FilterRerange::Apply(Lgen* src, Lgen* dst)
-{
-
-    src->Rerange(min, max);
-    src->Copy(dst);
-
-    return true;
-    
-}
-
-bool FilterRerange::SetOption(std::string name, char* value)
-{
-
-    if (name == "min")
+    bool FilterRerange::apply(Lgen * src, Lgen * dst)
     {
-        min = atoi(value);
+        src->rerange(min, max);
+        src->copy(dst);
+
+        return true;
     }
-	else if (name == "max")
+
+    bool FilterRerange::setOption(const std::string & name, char * value)
     {
-        max = atoi(value);
+        if (name == "min")
+        {
+            min = atoi(value);
+        }
+    	else if (name == "max")
+        {
+            max = atoi(value);
+        }
+    	else
+        {
+            return Filter::setOption(name, value);
+    	}
+            
+        return true;
     }
-	else
-    {
-        return Filter::SetOption(name, value);
-	}
-        
-    return true;
-
 }
-
-};

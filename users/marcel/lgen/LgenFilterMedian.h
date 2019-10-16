@@ -1,31 +1,15 @@
-#ifndef __LgenFilterMedian_h__
-#define __LgenFilterMedian_h__
+#pragma once
 
 #include "LgenFilter.h"
 
-namespace Lgen
+namespace lgen
 {
-	
-class FilterMedian : public Filter
-{
-	
-	public:
+	class FilterMedian : Filter
+	{
+		int matrixW = 3;
+		int matrixH = 3;
 
-    FilterMedian();
-    virtual ~FilterMedian();
-
-	public:
-
-    virtual bool Apply(Lgen* src, Lgen* dst);
-    virtual bool SetOption(std::string name, char* value);
-
-	public:
-
-    int matrixW;
-	int matrixH;
-
-};
-
-};
-
-#endif
+	    virtual bool apply(Lgen * src, Lgen * dst) override;
+	    virtual bool setOption(const std::string & name, char * value) override;
+	};
+}

@@ -1,36 +1,21 @@
-#ifndef __LgenFilterConvolution_h__
-#define __LgenFilterConvolution_h__
+#pragma once
 
 #include "LgenFilter.h"
 
-namespace Lgen
-{
-	
-class FilterConvolution : public Filter
-{
+namespace lgen
+{	
+    struct FilterConvolution : Filter
+    {
+        int ex = -1;
+        int ey = -1;
+        float ** matrix = nullptr; // [ex * 2 + 1][ey * 2 + 1]
 
-	public:
+        virtual ~FilterConvolution() override;
 
-    FilterConvolution();
-    ~FilterConvolution();
-
-	public:
-
-    virtual bool Apply(Lgen* src, Lgen* dst);
-    virtual bool SetOption(std::string name, char* value);
-
-	public:
-
-    int ex, ey;
-    float** matrix; // [ex * 2 + 1][ey * 2 + 1]
-    
-	public:
- 
-    void SetExtents(int ex, int ey);
-    void LoadIdentity();
-
-};
-
-};
-
-#endif // !__LgenFilterConvolution_h__
+        virtual bool apply(Lgen * src, Lgen * dst) override;
+        virtual bool setOption(const std::string & name, char * value) override;
+     
+        void setExtents(int ex, int ey);
+        void loadIdentity();
+    };
+}

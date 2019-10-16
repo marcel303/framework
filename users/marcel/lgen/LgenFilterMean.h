@@ -1,31 +1,15 @@
-#ifndef __LgenFilterMean_h__
-#define __LgenFilterMean_h__
+#pragma once
 
 #include "LgenFilter.h"
 
-namespace Lgen
-{
-	
-class FilterMean : public Filter
-{
+namespace lgen
+{	
+	struct FilterMean : Filter
+	{
+		int matrixW = 3;
+		int matrixH = 3;
 
-	public:
- 
-    FilterMean();
-    virtual ~FilterMean();
-    
-	public:
- 
-    virtual bool Apply(Lgen* src, Lgen* dst);
-    virtual bool SetOption(std::string name, char* value);
-    
-	public:
- 
-    int matrixW;
-	int matrixH;
- 
-};
-
-};
-
-#endif // !__LgenFilterMean_h__
+	    virtual bool apply(Lgen * src, Lgen * dst) override;
+	    virtual bool setOption(const std::string & name, char * value) override;
+	};
+}

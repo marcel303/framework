@@ -1,38 +1,25 @@
-#ifndef __Lgen_h__
-#define __Lgen_h__
+#pragma once
 
-namespace Lgen
+namespace lgen
 {
+	struct Lgen
+	{
+		int ** height = nullptr;
+		int w = 0;
+		int h = 0;
 
-class Lgen
-{
+		virtual ~Lgen();
 
-	public:
+		virtual bool setSize(int w, int h);
+		virtual void clear();
+		virtual bool generate();
 
-	Lgen();
-	virtual ~Lgen();
-
-	public:
-
-	int** height;
-	int w;
-	int h;
- 
-	public:
-
-	virtual bool SetSize(int w, int h); ///< Setting a size of (0, 0) will free memory.
-	virtual void Clear(); ///< Set height values to 0.
-	virtual bool Generate(); ///< Generate heightfield.
-	void Clamp(int min, int max); ///< Clamp the height values to specified range.
-	void Rerange(int min, int max); ///< Scales and translates heightvalues into range [min, max].
-	void Copy(Lgen* dst); ///< Copy heightfield into dst.
-	bool GetSizePowers(int& pw, int& ph); ///< 2**pw = w and 2**ph = h. Return false if w or h isn't a power of 2.
-        
-};
-
-};
+		void clamp(int min, int max);
+		void rerange(int min, int max);
+		void copy(Lgen* dst);
+		bool getSizePowers(int & pw, int & ph);
+	};
+}
 
 #include "LgenOs.h"
 #include "LgenDs.h"
-
-#endif // !__Lgen_h__

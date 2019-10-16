@@ -1,31 +1,15 @@
-#ifndef __LgenFilterMinimum_h__
-#define __LgenFilterMinimum_h__
+#pragma once
 
 #include "LgenFilter.h"
 
-namespace Lgen
+namespace lgen
 {
-	
-class FilterMinimum : public Filter
-{
+	struct FilterMinimum : Filter
+	{
+		int matrixW = 3;
+		int matrixH = 3;
 
-	public:
-
-    FilterMinimum();
-    virtual ~FilterMinimum();
-
-	public:
-
-    virtual bool Apply(Lgen* src, Lgen* dst);
-    virtual bool SetOption(std::string name, char* value);
-
-	public:
-
-    int matrixW;
-	int matrixH;
-
-};
-
-};
-
-#endif // !__LgenFilterMinimum_h__
+	    virtual bool apply(Lgen * src, Lgen * dst) override;
+	    virtual bool setOption(const std::string & name, char * value) override;
+	};
+}

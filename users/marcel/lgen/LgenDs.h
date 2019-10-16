@@ -1,26 +1,11 @@
-#ifndef __LgenDs_h__
-#define __LgenDs_h__
+#pragma once
 
-#include "lgen.h"
+#include "Lgen.h"
 
-namespace Lgen
+namespace lgen
 {
-	
-class LgenDs : public Lgen
-{
-
-	public:
-
-	LgenDs();
-	virtual ~LgenDs();
-
-	public:
-
-	virtual bool Generate(); ///< Generate diamond-square heightfield.
-
-};
-
-};
-
-#endif // !__LgenDs_h__
-
+	struct LgenDs : Lgen
+	{
+		virtual bool generate() override;
+	};
+}

@@ -1,31 +1,15 @@
-#ifndef __LgenFilterMaximum_h__
-#define __LgenFilterMaximum_h__
+#pragma once
 
 #include "LgenFilter.h"
 
-namespace Lgen
-{
-	
-class FilterMaximum : public Filter
-{
+namespace lgen
+{	
+	struct FilterMaximum : Filter
+	{
+		int matrixW = 3;
+		int matrixH = 3;
 
-	public:
-
-	FilterMaximum();
-	virtual ~FilterMaximum();
-
-	public:
-
-	virtual bool Apply(Lgen* src, Lgen* dst);
-	virtual bool SetOption(std::string name, char* value);
-
-	public:
-
-    int matrixW;
-	int matrixH;
-
-};
-
-};
-
-#endif // !__LgenFilterMaximum_h__
+		virtual bool apply(Lgen * src, Lgen * dst) override;
+		virtual bool setOption(const std::string & name, char * value) override;
+	};
+}

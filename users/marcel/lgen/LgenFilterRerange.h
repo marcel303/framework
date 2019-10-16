@@ -1,31 +1,15 @@
-#ifndef __LgenFilterRerange_h__
-#define __LgenFilterRerange_h__
+#pragma once
 
 #include "LgenFilter.h"
 
-namespace Lgen
+namespace lgen
 {
-	
-class FilterRerange : public Filter
-{
+	struct FilterRerange : Filter
+	{
+		int min = 0;
+		int max = 255;
 
-	public:
-
-    FilterRerange();
-    ~FilterRerange();
-
-	public:
-
-    virtual bool Apply(Lgen* src, Lgen* dst);
-    virtual bool SetOption(std::string name, char* value);
-
-	public:
-
-    int min;
-	int max;
-
-};
-
-};
-
-#endif // !__LgenFilterRerange_h__
+	    virtual bool apply(Lgen * src, Lgen * dst) override;
+	    virtual bool setOption(const std::string & name, char * value) override;
+	};
+}
