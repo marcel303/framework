@@ -1,5 +1,4 @@
 #include "LgenFilterConvolution.h"
-#include <string.h>
 
 namespace lgen
 {
@@ -58,7 +57,7 @@ namespace lgen
 	            
 	        delete [] matrix;
 	        
-	        matrix = 0;
+	        matrix = nullptr;
 	        
 	        this->ex = -1;
 			this->ey = -1;

@@ -1,6 +1,6 @@
 #include "LgenFilter.h"
-#include <math.h>
-#include <vector>
+#include <algorithm>
+#include <stdlib.h>
 
 namespace lgen
 {
@@ -62,6 +62,7 @@ namespace lgen
 			{
 				int tx = x % (lgen->w * 2 - 2);
 				int ty = y % (lgen->h * 2 - 2);
+				
 				if (tx >= lgen->w)
 				{
 					tx = lgen->w * 2 - 1 - tx;

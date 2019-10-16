@@ -12,5 +12,5 @@ namespace lgen
 	};
 }
 
-#include "Generator_DiamondSquare.h"
-#include "Generator_OffsetSquare.h"
+#include "LgenGenerator_DiamondSquare.h"
+#include "LgenGenerator_OffsetSquare.h"

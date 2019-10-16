@@ -1,3 +1,19 @@
 library lgen shared
 	scan_files cpp
 	scan_files h
+	header_path . expose
+
+app lgen-010-generate
+	depend_library framework
+	depend_library lgen
+	add_files examples/010-generate.cpp
+
+app lgen-020-filtered
+	depend_library framework
+	depend_library lgen
+	add_files examples/020-filtered.cpp
+
+app lgen-040-doublebuffered
+	depend_library framework
+	depend_library lgen
+	add_files examples/040-doublebuffered.cpp

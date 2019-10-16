@@ -1,6 +1,4 @@
 #include "LgenFilterHighpass.h"
-#include <stdlib.h>
-#include <string.h>
 
 namespace lgen
 {

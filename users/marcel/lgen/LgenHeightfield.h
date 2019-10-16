@@ -2,6 +2,8 @@
 
 namespace lgen
 {
+	struct Filter;
+	
 	struct Heighfield
 	{
 		int ** height = nullptr;
@@ -10,12 +12,44 @@ namespace lgen
 
 		virtual ~Heighfield();
 
-		virtual bool setSize(int w, int h);
-		virtual void clear();
+		bool setSize(int w, int h);
+		void clear();
+		
+		int getHeight(int x, int y) const
+		{
+			return height[x][y];
+		}
 
 		void clamp(int min, int max);
 		void rerange(int min, int max);
 		void copy(Heighfield * dst) const;
 		bool getSizePowers(int & pw, int & ph) const;
+	};
+	
+	struct DoubleBufferedHeightfield
+	{
+		Heighfield heightfield[2];
+		int currentIndex = 0;
+		
+		bool setSize(int w, int h);
+		void clear();
+		
+		Heighfield & get()
+		{
+			return heightfield[currentIndex];
+		}
+		
+		int getHeight(int x, int y) const
+		{
+			return heightfield[currentIndex].getHeight(x, y);
+		}
+
+		void clamp(int min, int max);
+		void rerange(int min, int max);
+		void copy(Heighfield * dst) const;
+		bool getSizePowers(int & pw, int & ph) const;
+		
+		void swapBuffers();
+		bool applyFilter(Filter & filter);
 	};
 }

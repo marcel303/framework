@@ -1,3 +1,4 @@
+#include "LgenFilter.h"
 #include "LgenHeightfield.h"
 
 namespace lgen
@@ -27,7 +28,7 @@ namespace lgen
 			
 			delete[] height;
 			
-			height = 0;
+			height = nullptr;
 			w = h = 0;
 		}
 		
@@ -209,5 +210,53 @@ namespace lgen
 		ph = t_ph;
 
 		return true;
+	}
+	
+	//
+	
+	bool DoubleBufferedHeightfield::setSize(int w, int h)
+	{
+		return
+			heightfield[0].setSize(w, h) &&
+			heightfield[1].setSize(w, h);
+	}
+	
+	void DoubleBufferedHeightfield::clear()
+	{
+		return heightfield[currentIndex].clear();
+	}
+
+	void DoubleBufferedHeightfield::clamp(int min, int max)
+	{
+		return heightfield[currentIndex].clamp(min, max);
+	}
+	
+	void DoubleBufferedHeightfield::rerange(int min, int max)
+	{
+		return heightfield[currentIndex].rerange(min, max);
+	}
+	
+	void DoubleBufferedHeightfield::copy(Heighfield * dst) const
+	{
+		return heightfield[currentIndex].copy(dst);
+	}
+	
+	bool DoubleBufferedHeightfield::getSizePowers(int & pw, int & ph) const
+	{
+		return heightfield[currentIndex].getSizePowers(pw, ph);
+	}
+	
+	void DoubleBufferedHeightfield::swapBuffers()
+	{
+		currentIndex = 1 - currentIndex;
+	}
+	
+	bool DoubleBufferedHeightfield::applyFilter(Filter & filter)
+	{
+		const bool result = filter.apply(&heightfield[currentIndex], &heightfield[1 - currentIndex]);
+		
+		swapBuffers();
+		
+		return result;
 	}
 }

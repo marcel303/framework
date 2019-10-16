@@ -1,4 +1,4 @@
-#include "Generator_DiamondSquare.h"
+#include "LgenGenerator_DiamondSquare.h"
 #include <math.h>	// sqrt
 #include <stdlib.h>	// rand
 
@@ -32,7 +32,7 @@ namespace lgen
 
 		// Initially seed the four corner points.
 
-		heightfield->height[0	          ][0              ] = RND(amount);
+		heightfield->height[0	           ][0              ] = RND(amount);
 		heightfield->height[(size - 1) & mx][0              ] = RND(amount);
 		heightfield->height[(size - 1) & mx][(size - 1) & my] = RND(amount);
 		heightfield->height[0              ][(size - 1) & my] = RND(amount);

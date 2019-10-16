@@ -1,9 +1,14 @@
 #include "LgenFilterMean.h"
 #include <stdlib.h>
-#include <string.h>
 
 namespace lgen
 {
+	void FilterMean::setMatrixSize(const int w, const int h)
+	{
+		matrixW = w;
+		matrixH = h;
+	}
+	
     bool FilterMean::apply(const Heighfield * src, Heighfield * dst)
     {
     	int p;

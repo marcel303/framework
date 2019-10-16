@@ -1,9 +1,14 @@
 #include "LgenFilterMinimum.h"
 #include <stdlib.h>
-#include <string.h>
 
 namespace lgen
 {
+	void FilterMedian::setMatrixSize(const int w, const int h)
+	{
+		matrixW = w;
+		matrixH = h;
+	}
+	
     static int cb_sort(const void * e1, const void * e2)
     {
         const int v1 = *((const int*)e1);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Generator.h"
+#include "LgenGenerator.h"
 #include "LgenHeightfield.h"
 #include <string>
 

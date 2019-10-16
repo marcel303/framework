@@ -1,9 +1,14 @@
 #include "LgenFilterMaximum.h"
 #include <stdlib.h>
-#include <string.h>
 
 namespace lgen
 {
+	void FilterMaximum::setMatrixSize(const int w, const int h)
+	{
+		matrixW = w;
+		matrixH = h;
+	}
+	
     bool FilterMaximum::apply(const Heighfield * src, Heighfield * dst)
     {
     	int p;

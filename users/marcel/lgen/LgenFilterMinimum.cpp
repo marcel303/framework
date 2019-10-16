@@ -1,9 +1,14 @@
 #include "LgenFilterMinimum.h"
 #include <stdlib.h>
-#include <string.h>
 
 namespace lgen
 {
+	void FilterMinimum::setMatrixSize(const int w, const int h)
+	{
+		matrixW = w;
+		matrixH = h;
+	}
+	
     bool FilterMinimum::apply(const Heighfield * src, Heighfield * dst)
     {
     	int p;

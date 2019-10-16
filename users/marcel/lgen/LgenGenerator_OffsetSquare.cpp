@@ -1,4 +1,4 @@
-#include "Generator_OffsetSquare.h"
+#include "LgenGenerator_OffsetSquare.h"
 #include <stdlib.h>
 
 namespace lgen
