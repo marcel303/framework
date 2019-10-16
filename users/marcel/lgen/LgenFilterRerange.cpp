@@ -4,7 +4,7 @@
 
 namespace lgen
 {
-    bool FilterRerange::apply(const Generator * src, Generator * dst)
+    bool FilterRerange::apply(const Heighfield * src, Heighfield * dst)
     {
     	src->copy(dst);
         dst->rerange(min, max);

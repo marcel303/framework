@@ -4,7 +4,7 @@
 
 namespace lgen
 {
-	bool FilterHighpass::apply(const Generator * src, Generator * dst)
+	bool FilterHighpass::apply(const Heighfield * src, Heighfield * dst)
 	{
 		int p;
 		

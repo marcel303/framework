@@ -4,7 +4,7 @@
 
 namespace lgen
 {
-    bool FilterMean::apply(const Generator * src, Generator * dst)
+    bool FilterMean::apply(const Heighfield * src, Heighfield * dst)
     {
     	int p;
     	

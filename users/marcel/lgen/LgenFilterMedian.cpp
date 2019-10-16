@@ -12,7 +12,7 @@ namespace lgen
         return v1 - v2;
     }
 
-    bool FilterMedian::apply(const Generator * src, Generator * dst)
+    bool FilterMedian::apply(const Heighfield * src, Heighfield * dst)
     {
     	int p;
     	

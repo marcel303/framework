@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Generator.h"
+#include "LgenHeightfield.h"
 #include <string>
 
 namespace lgen
@@ -23,11 +24,11 @@ namespace lgen
 
 		virtual ~Filter();
 
-	    int getHeight(const Generator * lgen, int x, int y) const; ///< Return height at (x, y). Applies borderMode setting.
-	    void getClippingRect(const Generator * lgen, int & x1, int & y1, int & x2, int & y2) const;
+	    int getHeight(const Heighfield * lgen, int x, int y) const; ///< Return height at (x, y). Applies borderMode setting.
+	    void getClippingRect(const Heighfield * lgen, int & x1, int & y1, int & x2, int & y2) const;
 	    void setClippingRect(int x1, int y1, int x2, int y2);
 	    
-	    virtual bool apply(const Generator * src, Generator * dst); ///< Apply filter. Store result in dst.
+	    virtual bool apply(const Heighfield * src, Heighfield * dst) = 0; ///< Apply filter. Store result in dst.
 	    virtual bool setOption(const std::string & name, char * value); ///< Set filter specific option.
 	};
 }

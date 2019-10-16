@@ -4,7 +4,7 @@
 
 namespace lgen
 {
-    bool FilterMaximum::apply(const Generator * src, Generator * dst)
+    bool FilterMaximum::apply(const Heighfield * src, Heighfield * dst)
     {
     	int p;
     	

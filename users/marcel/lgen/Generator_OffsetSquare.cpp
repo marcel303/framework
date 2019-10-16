@@ -3,11 +3,11 @@
 
 namespace lgen
 {
-	bool Generator_OffsetSquare::generate()
+	bool Generator_OffsetSquare::generate(Heighfield * heightfield)
 	{
 		// Current implementation expects w and h to be the same.
 	        
-		if (w != h)
+		if (heightfield->w != heightfield->h)
 		{
 			return false;
 		}
@@ -16,7 +16,7 @@ namespace lgen
 		
 		int p;
 		
-		if (!getSizePowers(p, p))
+		if (!heightfield->getSizePowers(p, p))
 		{
 			return false;
 		}
@@ -24,25 +24,25 @@ namespace lgen
 		#define RAND(x, y) ((x) + (rand() & (y)) - ((y) >> 1))
 	        
 		int rowOffset = 0;  // Start at zero for first row.
-		const int mask = w - 1;
+		const int mask = heightfield->w - 1;
 	    
-		for (int squareSize = w; squareSize > 1; squareSize >>= 1)
+		for (int squareSize = heightfield->w; squareSize > 1; squareSize >>= 1)
 		{
 			const int randomRange = squareSize;
 
-			for (int x1 = rowOffset; x1 < w; x1 += squareSize) 
+			for (int x1 = rowOffset; x1 < heightfield->w; x1 += squareSize)
 			{
-				for (int y1 = rowOffset; y1 < w; y1 += squareSize)
+				for (int y1 = rowOffset; y1 < heightfield->w; y1 += squareSize)
 				{
 					// Get the four corner points.
 
 					int x2 = (x1 + squareSize) & mask;
 					int y2 = (y1 + squareSize) & mask;
 
-					const int i1 = height[x1][y1];
-					const int i2 = height[x2][y1];
-					const int i3 = height[x1][y2];
-					const int i4 = height[x2][y2];
+					const int i1 = heightfield->height[x1][y1];
+					const int i2 = heightfield->height[x2][y1];
+					const int i3 = heightfield->height[x1][y2];
+					const int i4 = heightfield->height[x2][y2];
 
 					// Obtain new points by averaging the corner points.
 
@@ -65,10 +65,10 @@ namespace lgen
 					x2 = (x3 + (squareSize >> 1)) & mask;
 					y2 = (y3 + (squareSize >> 1)) & mask;
 
-					height[x3][y3] = p1;
-					height[x2][y3] = p2;
-					height[x3][y2] = p3;
-					height[x2][y2] = p4;
+					heightfield->height[x3][y3] = p1;
+					heightfield->height[x2][y3] = p2;
+					heightfield->height[x3][y2] = p3;
+					heightfield->height[x2][y2] = p4;
 				}
 			}
 

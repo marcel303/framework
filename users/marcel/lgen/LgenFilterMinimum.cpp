@@ -4,7 +4,7 @@
 
 namespace lgen
 {
-    bool FilterMinimum::apply(const Generator * src, Generator * dst)
+    bool FilterMinimum::apply(const Heighfield * src, Heighfield * dst)
     {
     	int p;
     	
