@@ -9,11 +9,11 @@ namespace lgen
 		matrixH = h;
 	}
 	
-    bool FilterMean::apply(const Heighfield * src, Heighfield * dst)
+    bool FilterMean::apply(const Heighfield & src, Heighfield & dst)
     {
     	int p;
     	
-    	if (!src->getSizePowers(p, p))
+    	if (!src.getSizePowers(p, p))
     	{
     		return false;
     	}
@@ -22,15 +22,15 @@ namespace lgen
     	
         getClippingRect(src, x1, y1, x2, y2);
         
-        const int maskX = src->w - 1;
-        const int maskY = src->h - 1;
+        const int maskX = src.w - 1;
+        const int maskY = src.h - 1;
         
         const int rx = (matrixW - 1) >> 1;
         const int ry = (matrixH - 1) >> 1;
         
         const int area = matrixW * matrixH;
         
-        #define PIXEL(x, y) src->height[(x) & maskX][(y) & maskY]
+        #define PIXEL(x, y) src.height[(x) & maskX][(y) & maskY]
 
         for (int i = x1; i <= x2; ++i)
         {
@@ -46,14 +46,14 @@ namespace lgen
     				}
     			}
     			
-                dst->height[i][j] = sum / area;
+                dst.height[i][j] = sum / area;
             }
         }
 
         return true;
     }
 
-    bool FilterMean::setOption(const std::string & name, char * value)
+    bool FilterMean::setOption(const std::string & name, const char * value)
     {
         if (name == "matrix.size")
         {

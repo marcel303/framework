@@ -13,7 +13,7 @@ namespace lgen
 	{
 	}
 
-	bool Filter::setOption(const std::string & name, char * value)
+	bool Filter::setOption(const std::string & name, const char * value)
 	{
 		if (name == "clip.x1")
 		{
@@ -39,37 +39,37 @@ namespace lgen
 	    return true;
 	}
 
-	int Filter::getHeight(const Heighfield * lgen, int x, int y) const
+	int Filter::getHeight(const Heighfield & lgen, int x, int y) const
 	{
-		if (x >= 0 && y >= 0 && x < lgen->w && y < lgen->h)
-			return lgen->height[x][y];
+		if (x >= 0 && y >= 0 && x < lgen.w && y < lgen.h)
+			return lgen.height[x][y];
 			
 		switch (borderMode)
 		{		
 		case bmClamp:
 			{
-				return lgen->height[Mid(0, x, lgen->w - 1)][Mid(0, y, lgen->h - 1)];
+				return lgen.height[Mid(0, x, lgen.w - 1)][Mid(0, y, lgen.h - 1)];
 			}
 			break;
 			
 		case bmWrap:
 			{
-				return lgen->height[x % lgen->w][y % lgen->h];
+				return lgen.height[x % lgen.w][y % lgen.h];
 			}
 			break;
 			
 		case bmMirror:
 			{
-				int tx = x % (lgen->w * 2 - 2);
-				int ty = y % (lgen->h * 2 - 2);
+				int tx = x % (lgen.w * 2 - 2);
+				int ty = y % (lgen.h * 2 - 2);
 				
-				if (tx >= lgen->w)
+				if (tx >= lgen.w)
 				{
-					tx = lgen->w * 2 - 1 - tx;
+					tx = lgen.w * 2 - 1 - tx;
 				}
-				if (ty >= lgen->h)
+				if (ty >= lgen.h)
 				{
-					ty = lgen->h * 2 - 1 - ty;
+					ty = lgen.h * 2 - 1 - ty;
 				}
 			}
 			break;
@@ -78,7 +78,7 @@ namespace lgen
 		return 0;
 	}
 
-	void Filter::getClippingRect(const Heighfield * lgen, int & x1, int & y1, int & x2, int & y2) const
+	void Filter::getClippingRect(const Heighfield & heightfield, int & x1, int & y1, int & x2, int & y2) const
 	{
 		// Transform clipping rectangle into pixel space.
 	    
@@ -105,9 +105,9 @@ namespace lgen
 	    	{ \
 	        	v = 0; \
 			} \
-			else if (v >= lgen->d) \
+			else if (v >= heightfield.d) \
 			{ \
-	        	v = lgen->d - 1; \
+	        	v = heightfield.d - 1; \
 			}
 
 		CLIP(x1, w);

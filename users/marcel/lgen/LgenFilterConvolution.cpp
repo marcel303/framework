@@ -7,7 +7,7 @@ namespace lgen
 		setExtents(-1, -1);
 	}
 	
-	bool FilterConvolution::apply(const Heighfield * src, Heighfield * dst)
+	bool FilterConvolution::apply(const Heighfield & src, Heighfield & dst)
 	{
 		int x1, y1, x2, y2;
 		
@@ -27,14 +27,14 @@ namespace lgen
 					}
 				}
 				
-				dst->height[x][y] = (int)v;
+				dst.height[x][y] = (int)v;
 			}
 		}
 		
 		return true;
 	}
 
-	bool FilterConvolution::setOption(const std::string & name, char * value)
+	bool FilterConvolution::setOption(const std::string & name, const char * value)
 	{
 	    if (name == "file.load")
 	    {

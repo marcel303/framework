@@ -17,11 +17,11 @@ namespace lgen
         return v1 - v2;
     }
 
-    bool FilterMedian::apply(const Heighfield * src, Heighfield * dst)
+    bool FilterMedian::apply(const Heighfield & src, Heighfield & dst)
     {
     	int p;
     	
-    	if (!src->getSizePowers(p, p))
+    	if (!src.getSizePowers(p, p))
     	{
     		return false;
     	}
@@ -30,8 +30,8 @@ namespace lgen
     	
         getClippingRect(src, x1, y1, x2, y2);
         
-        const int maskX = src->w - 1;
-        const int maskY = src->h - 1;
+        const int maskX = src.w - 1;
+        const int maskY = src.h - 1;
         
         const int rx = (matrixW - 1) >> 1;
         const int ry = (matrixH - 1) >> 1;
@@ -42,7 +42,7 @@ namespace lgen
         
         const int * median = &values[(area - 1) >> 1];
 
-        #define PIXEL(x, y) src->height[(x) & maskX][(y) & maskY]
+        #define PIXEL(x, y) src.height[(x) & maskX][(y) & maskY]
 
         for (int i = x1; i <= x2; ++i)
         {
@@ -60,7 +60,7 @@ namespace lgen
     			
                 qsort(values, area, sizeof(int), cb_sort);
                 
-                dst->height[i][j] = *median;
+                dst.height[i][j] = *median;
             }
         }
         
@@ -69,7 +69,7 @@ namespace lgen
         return true;
     }
 
-    bool FilterMedian::setOption(const std::string & name, char * value)
+    bool FilterMedian::setOption(const std::string & name, const char * value)
     {
         if (name == "matrix.size")
         {

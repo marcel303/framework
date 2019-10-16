@@ -3,15 +3,15 @@
 
 namespace lgen
 {
-    bool FilterRerange::apply(const Heighfield * src, Heighfield * dst)
+    bool FilterRerange::apply(const Heighfield & src, Heighfield & dst)
     {
-    	src->copy(dst);
-        dst->rerange(min, max);
+    	src.copyTo(dst);
+        dst.rerange(min, max);
 
         return true;
     }
 
-    bool FilterRerange::setOption(const std::string & name, char * value)
+    bool FilterRerange::setOption(const std::string & name, const char * value)
     {
         if (name == "min")
         {

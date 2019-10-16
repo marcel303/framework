@@ -22,7 +22,7 @@ namespace lgen
 
 		void clamp(int min, int max);
 		void rerange(int min, int max);
-		void copy(Heighfield * dst) const;
+		void copyTo(Heighfield & dst) const;
 		bool getSizePowers(int & pw, int & ph) const;
 	};
 	
@@ -46,7 +46,7 @@ namespace lgen
 
 		void clamp(int min, int max);
 		void rerange(int min, int max);
-		void copy(Heighfield * dst) const;
+		void copyTo(Heighfield & dst) const;
 		bool getSizePowers(int & pw, int & ph) const;
 		
 		void swapBuffers();

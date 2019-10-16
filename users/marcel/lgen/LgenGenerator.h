@@ -8,7 +8,7 @@ namespace lgen
 	{
 		virtual ~Generator();
 
-		virtual bool generate(Heighfield * heightfield) = 0;
+		virtual bool generate(Heighfield & heightfield) = 0;
 	};
 }
 

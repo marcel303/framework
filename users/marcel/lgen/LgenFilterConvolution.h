@@ -12,8 +12,8 @@ namespace lgen
 
         virtual ~FilterConvolution() override;
 
-        virtual bool apply(const Heighfield * src, Heighfield * dst) override;
-        virtual bool setOption(const std::string & name, char * value) override;
+        virtual bool apply(const Heighfield & src, Heighfield & dst) override;
+        virtual bool setOption(const std::string & name, const char * value) override;
      
         void setExtents(int ex, int ey);
         void loadIdentity();

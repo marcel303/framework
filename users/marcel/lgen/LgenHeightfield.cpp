@@ -162,14 +162,14 @@ namespace lgen
 		}
 	}
 
-	void Heighfield::copy(Heighfield * dst) const
+	void Heighfield::copyTo(Heighfield & dst) const
 	{
-	    dst->setSize(w, h);
+	    dst.setSize(w, h);
 	    
 	    for (int i = 0; i < w; ++i)
 	    {
 	        int * tmp1 = height[i];
-	        int * tmp2 = dst->height[i];
+	        int * tmp2 = dst.height[i];
 	        
 	        for (int j = 0; j < h; ++j)
 	        {
@@ -236,9 +236,9 @@ namespace lgen
 		return heightfield[currentIndex].rerange(min, max);
 	}
 	
-	void DoubleBufferedHeightfield::copy(Heighfield * dst) const
+	void DoubleBufferedHeightfield::copyTo(Heighfield & dst) const
 	{
-		return heightfield[currentIndex].copy(dst);
+		return heightfield[currentIndex].copyTo(dst);
 	}
 	
 	bool DoubleBufferedHeightfield::getSizePowers(int & pw, int & ph) const
@@ -253,7 +253,7 @@ namespace lgen
 	
 	bool DoubleBufferedHeightfield::applyFilter(Filter & filter)
 	{
-		const bool result = filter.apply(&heightfield[currentIndex], &heightfield[1 - currentIndex]);
+		const bool result = filter.apply(heightfield[currentIndex], heightfield[1 - currentIndex]);
 		
 		swapBuffers();
 		
