@@ -33,6 +33,12 @@
 
 */
 
+#ifdef _MSC_VER
+	#ifndef PATH_MAX
+		#define PATH_MAX _MAX_PATH
+	#endif
+#endif
+
 using namespace tinyxml2;
 
 // ui design
