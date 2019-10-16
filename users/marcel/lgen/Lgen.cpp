@@ -166,7 +166,7 @@ namespace lgen
 		}
 	}
 
-	void Lgen::copy(Lgen * dst)
+	void Lgen::copy(Lgen * dst) const
 	{
 	    dst->setSize(w, h);
 	    
@@ -182,7 +182,7 @@ namespace lgen
 	    }
 	}
 
-	bool Lgen::getSizePowers(int & pw, int & ph)
+	bool Lgen::getSizePowers(int & pw, int & ph) const
 	{
 		int t_w = w;
 		int t_h = h;

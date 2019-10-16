@@ -4,7 +4,7 @@
 
 namespace lgen
 {
-    bool FilterMinimum::apply(Lgen * src, Lgen * dst)
+    bool FilterMinimum::apply(const Lgen * src, Lgen * dst)
     {
     	int p;
     	

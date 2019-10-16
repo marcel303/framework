@@ -12,7 +12,7 @@ namespace lgen
         return v1 - v2;
     }
 
-    bool FilterMedian::apply(Lgen * src, Lgen * dst)
+    bool FilterMedian::apply(const Lgen * src, Lgen * dst)
     {
     	int p;
     	

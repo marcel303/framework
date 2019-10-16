@@ -4,10 +4,10 @@
 
 namespace lgen
 {
-    bool FilterRerange::apply(Lgen * src, Lgen * dst)
+    bool FilterRerange::apply(const Lgen * src, Lgen * dst)
     {
-        src->rerange(min, max);
-        src->copy(dst);
+    	src->copy(dst);
+        dst->rerange(min, max);
 
         return true;
     }

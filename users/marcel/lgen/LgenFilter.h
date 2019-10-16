@@ -23,10 +23,11 @@ namespace lgen
 
 		virtual ~Filter();
 
-	    int getHeight(Lgen * lgen, int x, int y); ///< Return height at (x, y). Applies borderMode setting.
-	    void getClippingRect(Lgen * lgen, int & x1, int & y1, int & x2, int & y2); 
+	    int getHeight(const Lgen * lgen, int x, int y) const; ///< Return height at (x, y). Applies borderMode setting.
+	    void getClippingRect(const Lgen * lgen, int & x1, int & y1, int & x2, int & y2) const;
+	    void setClippingRect(int x1, int y1, int x2, int y2);
 	    
-	    virtual bool apply(Lgen * src, Lgen * dst); ///< Apply filter. Store result in dst.
+	    virtual bool apply(const Lgen * src, Lgen * dst); ///< Apply filter. Store result in dst.
 	    virtual bool setOption(const std::string & name, char * value); ///< Set filter specific option.
 	};
 }

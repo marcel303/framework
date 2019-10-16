@@ -9,7 +9,7 @@ namespace lgen
 		int min = 0;
 		int max = 255;
 
-	    virtual bool apply(Lgen * src, Lgen * dst) override;
+	    virtual bool apply(const Lgen * src, Lgen * dst) override;
 	    virtual bool setOption(const std::string & name, char * value) override;
 	};
 }

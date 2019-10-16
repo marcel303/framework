@@ -16,8 +16,8 @@ namespace lgen
 
 		void clamp(int min, int max);
 		void rerange(int min, int max);
-		void copy(Lgen* dst);
-		bool getSizePowers(int & pw, int & ph);
+		void copy(Lgen * dst) const;
+		bool getSizePowers(int & pw, int & ph) const;
 	};
 }
 
