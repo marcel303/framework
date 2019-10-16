@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Lgen.h"
+#include "Generator.h"
 
 namespace lgen
 {

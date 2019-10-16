@@ -21,5 +21,5 @@ namespace lgen
 	};
 }
 
-#include "LgenOs.h"
-#include "LgenDs.h"
+#include "Generator_DiamondSquare.h"
+#include "Generator_OffsetSquare.h"

@@ -1,5 +1,5 @@
+#include "Generator_OffsetSquare.h"
 #include <stdlib.h>
-#include "LgenOs.h"
 
 namespace lgen
 {

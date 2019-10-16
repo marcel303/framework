@@ -1,4 +1,4 @@
-#include "LgenDs.h"
+#include "Generator_DiamondSquare.h"
 #include <math.h>	// sqrt
 #include <stdlib.h>	// rand
 
