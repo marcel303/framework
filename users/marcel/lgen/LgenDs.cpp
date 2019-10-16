@@ -4,7 +4,7 @@
 
 namespace lgen
 {
-	bool LgenDs::generate()
+	bool Generator_DiamondSquare::generate()
 	{
 		// Check if w and h are powers of 2.
 		

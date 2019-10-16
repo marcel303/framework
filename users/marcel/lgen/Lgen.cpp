@@ -2,12 +2,12 @@
 
 namespace lgen
 {
-	Lgen::~Lgen()
+	Generator::~Generator()
 	{
 		setSize(0, 0);
 	}
 
-	bool Lgen::setSize(int a_w, int a_h)
+	bool Generator::setSize(int a_w, int a_h)
 	{
 		// Don't bother if already this size.
 		
@@ -53,7 +53,7 @@ namespace lgen
 		return true;
 	}
 
-	void Lgen::clear()
+	void Generator::clear()
 	{
 		for (int i = 0; i < w; ++i)
 		{
@@ -64,12 +64,12 @@ namespace lgen
 		}
 	}
 
-	bool Lgen::generate()
+	bool Generator::generate()
 	{
 		return false;
 	}
 
-	void Lgen::clamp(int min, int max)
+	void Generator::clamp(int min, int max)
 	{
 		// Swap if min > max.
 		
@@ -100,7 +100,7 @@ namespace lgen
 		}
 	}
 
-	void Lgen::rerange(int a_min, int a_max)
+	void Generator::rerange(int a_min, int a_max)
 	{
 		if (height == nullptr)
 		{
@@ -166,7 +166,7 @@ namespace lgen
 		}
 	}
 
-	void Lgen::copy(Lgen * dst) const
+	void Generator::copy(Generator * dst) const
 	{
 	    dst->setSize(w, h);
 	    
@@ -182,7 +182,7 @@ namespace lgen
 	    }
 	}
 
-	bool Lgen::getSizePowers(int & pw, int & ph) const
+	bool Generator::getSizePowers(int & pw, int & ph) const
 	{
 		int t_w = w;
 		int t_h = h;

@@ -13,7 +13,7 @@ namespace lgen
 	{
 	}
 
-	bool Filter::apply(const Lgen * src, Lgen * dst)
+	bool Filter::apply(const Generator * src, Generator * dst)
 	{
 	    return true;
 	}
@@ -44,7 +44,7 @@ namespace lgen
 	    return true;
 	}
 
-	int Filter::getHeight(const Lgen * lgen, int x, int y) const
+	int Filter::getHeight(const Generator * lgen, int x, int y) const
 	{
 		if (x >= 0 && y >= 0 && x < lgen->w && y < lgen->h)
 			return lgen->height[x][y];
@@ -82,7 +82,7 @@ namespace lgen
 		return 0;
 	}
 
-	void Filter::getClippingRect(const Lgen * lgen, int & x1, int & y1, int & x2, int & y2) const
+	void Filter::getClippingRect(const Generator * lgen, int & x1, int & y1, int & x2, int & y2) const
 	{
 		// Transform clipping rectangle into pixel space.
 	    

@@ -8,7 +8,7 @@ namespace lgen
 		setExtents(-1, -1);
 	}
 	
-	bool FilterConvolution::apply(const Lgen * src, Lgen * dst)
+	bool FilterConvolution::apply(const Generator * src, Generator * dst)
 	{
 		int x1, y1, x2, y2;
 		

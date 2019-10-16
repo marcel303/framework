@@ -4,7 +4,7 @@
 
 namespace lgen
 {
-    bool FilterRerange::apply(const Lgen * src, Lgen * dst)
+    bool FilterRerange::apply(const Generator * src, Generator * dst)
     {
     	src->copy(dst);
         dst->rerange(min, max);

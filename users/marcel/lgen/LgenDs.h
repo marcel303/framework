@@ -4,7 +4,7 @@
 
 namespace lgen
 {
-	struct LgenDs : Lgen
+	struct Generator_DiamondSquare : Generator
 	{
 		virtual bool generate() override;
 	};

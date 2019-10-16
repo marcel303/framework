@@ -4,7 +4,7 @@
 
 namespace lgen
 {
-	struct LgenOs : Lgen
+	struct Generator_OffsetSquare : Generator
 	{
 		virtual bool generate() override; ///< Generate offset-square heightfield.
 	};

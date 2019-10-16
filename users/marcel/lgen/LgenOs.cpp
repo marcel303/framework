@@ -3,7 +3,7 @@
 
 namespace lgen
 {
-	bool LgenOs::generate()
+	bool Generator_OffsetSquare::generate()
 	{
 		// Current implementation expects w and h to be the same.
 	        
