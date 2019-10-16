@@ -1,0 +1,3 @@
+library lgen shared
+	scan_files cpp
+	scan_files h
