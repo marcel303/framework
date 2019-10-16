@@ -9,7 +9,7 @@ namespace lgen
 		matrixH = h;
 	}
 	
-    bool FilterMinimum::apply(const Heighfield & src, Heighfield & dst)
+    bool FilterMinimum::apply(const Heightfield & src, Heightfield & dst)
     {
     	int p;
     	

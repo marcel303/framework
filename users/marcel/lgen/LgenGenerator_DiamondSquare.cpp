@@ -4,7 +4,7 @@
 
 namespace lgen
 {
-	bool Generator_DiamondSquare::generate(Heighfield & heightfield)
+	bool Generator_DiamondSquare::generate(Heightfield & heightfield)
 	{
 		// Check if w and h are powers of 2.
 		

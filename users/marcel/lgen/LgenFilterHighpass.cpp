@@ -2,7 +2,7 @@
 
 namespace lgen
 {
-	bool FilterHighpass::apply(const Heighfield & src, Heighfield & dst)
+	bool FilterHighpass::apply(const Heightfield & src, Heightfield & dst)
 	{
 		int p;
 		

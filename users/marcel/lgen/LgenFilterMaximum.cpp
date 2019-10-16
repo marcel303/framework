@@ -9,7 +9,7 @@ namespace lgen
 		matrixH = h;
 	}
 	
-    bool FilterMaximum::apply(const Heighfield & src, Heighfield & dst)
+    bool FilterMaximum::apply(const Heightfield & src, Heightfield & dst)
     {
     	int p;
     	

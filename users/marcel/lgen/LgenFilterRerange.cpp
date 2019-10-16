@@ -3,7 +3,7 @@
 
 namespace lgen
 {
-    bool FilterRerange::apply(const Heighfield & src, Heighfield & dst)
+    bool FilterRerange::apply(const Heightfield & src, Heightfield & dst)
     {
     	src.copyTo(dst);
         dst.rerange(min, max);

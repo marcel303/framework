@@ -3,12 +3,12 @@
 
 namespace lgen
 {
-	Heighfield::~Heighfield()
+	Heightfield::~Heightfield()
 	{
 		setSize(0, 0);
 	}
 
-	bool Heighfield::setSize(int a_w, int a_h)
+	bool Heightfield::setSize(int a_w, int a_h)
 	{
 		// Don't bother if already this size.
 		
@@ -54,7 +54,7 @@ namespace lgen
 		return true;
 	}
 
-	void Heighfield::clear()
+	void Heightfield::clear()
 	{
 		for (int i = 0; i < w; ++i)
 		{
@@ -65,7 +65,7 @@ namespace lgen
 		}
 	}
 
-	void Heighfield::clamp(int min, int max)
+	void Heightfield::clamp(int min, int max)
 	{
 		// Swap if min > max.
 		
@@ -96,7 +96,7 @@ namespace lgen
 		}
 	}
 
-	void Heighfield::rerange(int a_min, int a_max)
+	void Heightfield::rerange(int a_min, int a_max)
 	{
 		if (height == nullptr)
 		{
@@ -162,7 +162,7 @@ namespace lgen
 		}
 	}
 
-	void Heighfield::copyTo(Heighfield & dst) const
+	void Heightfield::copyTo(Heightfield & dst) const
 	{
 	    dst.setSize(w, h);
 	    
@@ -178,7 +178,7 @@ namespace lgen
 	    }
 	}
 
-	bool Heighfield::getSizePowers(int & pw, int & ph) const
+	bool Heightfield::getSizePowers(int & pw, int & ph) const
 	{
 		int t_w = w;
 		int t_h = h;
@@ -236,7 +236,7 @@ namespace lgen
 		return heightfield[currentIndex].rerange(min, max);
 	}
 	
-	void DoubleBufferedHeightfield::copyTo(Heighfield & dst) const
+	void DoubleBufferedHeightfield::copyTo(Heightfield & dst) const
 	{
 		return heightfield[currentIndex].copyTo(dst);
 	}

@@ -9,7 +9,7 @@ namespace lgen
 		matrixH = h;
 	}
 	
-    bool FilterMean::apply(const Heighfield & src, Heighfield & dst)
+    bool FilterMean::apply(const Heightfield & src, Heightfield & dst)
     {
     	int p;
     	

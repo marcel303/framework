@@ -6,6 +6,6 @@ namespace lgen
 {
 	struct Generator_DiamondSquare : Generator
 	{
-		virtual bool generate(Heighfield & heightfield) override;
+		virtual bool generate(Heightfield & heightfield) override;
 	};
 }

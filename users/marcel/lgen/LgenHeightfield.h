@@ -4,13 +4,13 @@ namespace lgen
 {
 	struct Filter;
 	
-	struct Heighfield
+	struct Heightfield
 	{
 		int ** height = nullptr;
 		int w = 0;
 		int h = 0;
 
-		virtual ~Heighfield();
+		virtual ~Heightfield();
 
 		bool setSize(int w, int h);
 		void clear();
@@ -22,19 +22,19 @@ namespace lgen
 
 		void clamp(int min, int max);
 		void rerange(int min, int max);
-		void copyTo(Heighfield & dst) const;
+		void copyTo(Heightfield & dst) const;
 		bool getSizePowers(int & pw, int & ph) const;
 	};
 	
 	struct DoubleBufferedHeightfield
 	{
-		Heighfield heightfield[2];
+		Heightfield heightfield[2];
 		int currentIndex = 0;
 		
 		bool setSize(int w, int h);
 		void clear();
 		
-		Heighfield & get()
+		Heightfield & get()
 		{
 			return heightfield[currentIndex];
 		}
@@ -46,7 +46,7 @@ namespace lgen
 
 		void clamp(int min, int max);
 		void rerange(int min, int max);
-		void copyTo(Heighfield & dst) const;
+		void copyTo(Heightfield & dst) const;
 		bool getSizePowers(int & pw, int & ph) const;
 		
 		void swapBuffers();

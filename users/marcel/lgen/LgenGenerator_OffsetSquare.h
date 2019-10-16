@@ -6,6 +6,6 @@ namespace lgen
 {
 	struct Generator_OffsetSquare : Generator
 	{
-		virtual bool generate(Heighfield & heightfield) override; ///< Generate offset-square heightfield.
+		virtual bool generate(Heightfield & heightfield) override; ///< Generate offset-square heightfield.
 	};
 }

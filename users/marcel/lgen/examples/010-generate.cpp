@@ -1,7 +1,7 @@
 #include "framework.h"
 #include "Lgen.h"
 
-static GxTextureId createTexture(const lgen::Heighfield & heightfield)
+static GxTextureId createTexture(const lgen::Heightfield & heightfield)
 {
 	uint8_t * values = new uint8_t[heightfield.w * heightfield.h];
 	
@@ -21,7 +21,7 @@ int main(int argc, char * argv[])
 	if (!framework.init(512, 512))
 		return -1;
 	
-	lgen::Heighfield heightfield;
+	lgen::Heightfield heightfield;
 	heightfield.setSize(512, 512);
 	
 	lgen::Generator_OffsetSquare generator;

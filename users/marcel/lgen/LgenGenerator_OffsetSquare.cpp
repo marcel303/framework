@@ -3,7 +3,7 @@
 
 namespace lgen
 {
-	bool Generator_OffsetSquare::generate(Heighfield & heightfield)
+	bool Generator_OffsetSquare::generate(Heightfield & heightfield)
 	{
 		// Current implementation expects w and h to be the same.
 	        

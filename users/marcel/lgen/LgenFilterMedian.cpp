@@ -17,7 +17,7 @@ namespace lgen
         return v1 - v2;
     }
 
-    bool FilterMedian::apply(const Heighfield & src, Heighfield & dst)
+    bool FilterMedian::apply(const Heightfield & src, Heightfield & dst)
     {
     	int p;
     	

@@ -1,7 +1,7 @@
 #include "framework.h"
 #include "Lgen.h"
 
-static GxTextureId createTexture(const lgen::Heighfield & heightfield)
+static GxTextureId createTexture(const lgen::Heightfield & heightfield)
 {
 	uint8_t * values = new uint8_t[heightfield.w * heightfield.h];
 	

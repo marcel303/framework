@@ -7,7 +7,7 @@ namespace lgen
 		setExtents(-1, -1);
 	}
 	
-	bool FilterConvolution::apply(const Heighfield & src, Heighfield & dst)
+	bool FilterConvolution::apply(const Heightfield & src, Heightfield & dst)
 	{
 		int x1, y1, x2, y2;
 		
