@@ -31,6 +31,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <inttypes.h>
 #include <limits>
 #include <map>
 #include <stdarg.h>
