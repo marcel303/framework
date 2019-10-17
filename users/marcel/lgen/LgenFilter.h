@@ -32,11 +32,3 @@ namespace lgen
 	    virtual bool setOption(const std::string & name, const char * value); ///< Set filter specific option.
 	};
 }
-
-#include "LgenFilterMean.h"
-#include "LgenFilterMedian.h"
-#include "LgenFilterMaximum.h"
-#include "LgenFilterMinimum.h"
-#include "LgenFilterRerange.h"
-#include "LgenFilterHighpass.h"
-#include "LgenFilterConvolution.h"

@@ -164,6 +164,9 @@ namespace lgen
 
 	void Heightfield::copyTo(Heightfield & dst) const
 	{
+		if (&dst == this)
+			return;
+			
 	    dst.setSize(w, h);
 	    
 	    for (int i = 0; i < w; ++i)

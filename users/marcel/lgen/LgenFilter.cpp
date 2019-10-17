@@ -18,25 +18,27 @@ namespace lgen
 		if (name == "clip.x1")
 		{
 	    	clipX1 = atoi(value);
+	    	return true;
 		}
 		else if (name == "clip.y1")
 		{
 	    	clipY1 = atoi(value);
+	    	return true;
 		}
 		else if (name == "clip.x2")
 		{
 	    	clipX2 = atoi(value);
+	    	return true;
 		}
 		else if (name == "clip.y2")
 		{
 	    	clipY2 = atoi(value);
+	    	return true;
 		}
 		else
 		{
 	    	return false;
 		}
-
-	    return true;
 	}
 
 	int Filter::getHeight(const Heightfield & lgen, int x, int y) const

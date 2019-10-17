@@ -36,16 +36,7 @@ namespace lgen
 
 	bool FilterConvolution::setOption(const std::string & name, const char * value)
 	{
-	    if (name == "file.load")
-	    {
-	    	// Read convolution matrix from file.
-	    }
-		else if (name == "file.save")
-		{
-			// Write convolution matrix to file.
-		}
-	    
-	    return true;
+	    return Filter::setOption(name, value);
 	}
 
 	void FilterConvolution::setExtents(int ex, int ey)

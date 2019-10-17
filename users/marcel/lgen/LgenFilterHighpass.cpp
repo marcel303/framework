@@ -42,4 +42,12 @@ namespace lgen
 	{
 	    return Filter::setOption(name, value);
 	}
+	
+	//
+	
+	bool filterHighpass(const Heightfield & src, Heightfield & dst)
+	{
+		FilterHighpass filter;
+		return filter.apply(src, dst);
+	}
 }

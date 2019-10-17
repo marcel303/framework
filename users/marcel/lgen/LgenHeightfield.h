@@ -26,6 +26,8 @@ namespace lgen
 		bool getSizePowers(int & pw, int & ph) const;
 	};
 	
+	//
+	
 	struct DoubleBufferedHeightfield
 	{
 		Heightfield heightfield[2];

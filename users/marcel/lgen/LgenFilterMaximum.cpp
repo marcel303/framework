@@ -3,10 +3,20 @@
 
 namespace lgen
 {
-	void FilterMaximum::setMatrixSize(const int w, const int h)
+	bool FilterMaximum::setMatrixSize(const int w, const int h)
 	{
-		matrixW = w;
-		matrixH = h;
+		if (w & 0x1 && w >= 3 &&
+			h & 0x1 && h >= 3)
+		{
+			matrixW = w;
+			matrixH = h;
+			
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 	
     bool FilterMaximum::apply(const Heightfield & src, Heightfield & dst)
@@ -64,6 +74,8 @@ namespace lgen
             {
                 matrixW = s;
                 matrixH = s;
+				
+                return true;
             }
     		else
             {
@@ -77,6 +89,8 @@ namespace lgen
             if (w & 0x1 && w >= 3)
             {
                 matrixW = w;
+				
+                return true;
     		}
             else
             {
@@ -90,17 +104,27 @@ namespace lgen
             if (h & 0x1 && h >= 3)
             {
                 matrixH = h;
+				
+                return true;
     		}
             else
             {
                 return false;
     		}
-    	}	
-        else
-        {
-            return Filter::setOption(name, value);
     	}
-
-       return true;
+		else
+		{
+			return Filter::setOption(name, value);
+		}
     }
+	
+	//
+	
+	bool filterMaximum(const Heightfield & src, Heightfield & dst, const int matrixSx, const int matrixSy)
+	{
+		FilterMaximum filter;
+		return
+			filter.setMatrixSize(matrixSx, matrixSy) &&
+			filter.apply(src, dst);
+	}
 }

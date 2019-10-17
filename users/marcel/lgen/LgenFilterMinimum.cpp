@@ -3,10 +3,20 @@
 
 namespace lgen
 {
-	void FilterMinimum::setMatrixSize(const int w, const int h)
+	bool FilterMinimum::setMatrixSize(const int w, const int h)
 	{
-		matrixW = w;
-		matrixH = h;
+		if (w & 0x1 && w >= 3 &&
+			h & 0x1 && h >= 3)
+		{
+			matrixW = w;
+			matrixH = h;
+			
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 	
     bool FilterMinimum::apply(const Heightfield & src, Heightfield & dst)
@@ -64,6 +74,8 @@ namespace lgen
             {
                 matrixW = s;
                 matrixH = s;
+				
+                return true;
             }
     		else
     		{
@@ -77,6 +89,8 @@ namespace lgen
             if (w & 0x1 && w >= 3)
             {
                 matrixW = w;
+				
+                return true;
     		}
             else
             {
@@ -90,6 +104,8 @@ namespace lgen
             if (h & 0x1 && h >= 3)
             {
                 matrixH = h;
+				
+                return true;
     		}
             else
             {
@@ -100,7 +116,15 @@ namespace lgen
         {
             return Filter::setOption(name, value);
     	}
-
-        return true;
     }
+	
+    //
+	
+    bool filterMinimum(const Heightfield & src, Heightfield & dst, const int matrixSx, const int matrixSy)
+	{
+		FilterMinimum filter;
+		return
+			filter.setMatrixSize(matrixSx, matrixSy) &&
+			filter.apply(src, dst);
+	}
 }

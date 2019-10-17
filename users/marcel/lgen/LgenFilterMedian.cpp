@@ -1,12 +1,22 @@
-#include "LgenFilterMinimum.h"
+#include "LgenFilterMedian.h"
 #include <stdlib.h>
 
 namespace lgen
 {
-	void FilterMedian::setMatrixSize(const int w, const int h)
+	bool FilterMedian::setMatrixSize(const int w, const int h)
 	{
-		matrixW = w;
-		matrixH = h;
+		if (w & 0x1 && w >= 3 &&
+			h & 0x1 && h >= 3)
+		{
+			matrixW = w;
+			matrixH = h;
+			
+			return true;
+		}
+		else
+		{
+			return false;
+		}
 	}
 	
     static int cb_sort(const void * e1, const void * e2)
@@ -79,6 +89,8 @@ namespace lgen
             {
                 matrixW = s;
                 matrixH = s;
+				
+                return true;
             }
     		else
             {
@@ -92,6 +104,8 @@ namespace lgen
             if (w & 0x1 && w >= 3)
             {
                 matrixW = w;
+				
+                return true;
     		}
             else
             {
@@ -105,6 +119,8 @@ namespace lgen
             if (h & 0x1 && h >= 3)
             {
                 matrixH = h;
+				
+                return true;
     		}
             else
             {
@@ -115,7 +131,15 @@ namespace lgen
     	{
             return Filter::setOption(name, value);
     	}
-
-        return true;
     }
+	
+	//
+	
+    bool filterMedian(const Heightfield & src, Heightfield & dst, const int matrixSx, const int matrixSy)
+	{
+		FilterMedian filter;
+		return
+			filter.setMatrixSize(matrixSx, matrixSy) &&
+			filter.apply(src, dst);
+	}
 };
