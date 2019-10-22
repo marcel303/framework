@@ -133,7 +133,22 @@ void Camera::Orbit::calculateWorldMatrix(Mat4x4 & out_matrix) const
 
 void Camera::Orbit::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
 {
-	out_matrix.MakePerspectiveLH(60.f * float(M_PI) / 180.f, viewportSy / float(viewportSx), .01f, 1000.f);
+// todo : make fov, and near and far plane distances configurable
+
+#if ENABLE_OPENGL
+	out_matrix.MakePerspectiveGL(
+		60.f * float(M_PI) / 180.f,
+		viewportSy / float(viewportSx),
+		.01f,
+		1000.f);
+#else
+	out_matrix.MakePerspectiveLH(
+		60.f * float(M_PI) / 180.f,
+		viewportSy / float(viewportSx),
+		.01f,
+		1000.f);
+#endif
+		
 }
 
 //
@@ -254,8 +269,24 @@ void Camera::Ortho::calculateWorldMatrix(Mat4x4 & out_matrix) const
 void Camera::Ortho::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
 {
 	const float sx = viewportSx / float(viewportSy);
-	
-	out_matrix.MakeOrthoLH(-sx * scale, +sx * scale, +1.f * scale, -1.f * scale, -1000.f, 1000.f);
+
+#if ENABLE_OPENGL
+	out_matrix.MakeOrthoGL(
+		-sx * scale,
+		+sx * scale,
+		+1.f * scale,
+		-1.f * scale,
+		-1000.f,
+		+1000.f);
+#else
+	out_matrix.MakeOrthoLH(
+		-sx * scale,
+		+sx * scale,
+		+1.f * scale,
+		-1.f * scale,
+		-1000.f,
+		+1000.f);
+#endif
 }
 
 //
@@ -387,7 +418,19 @@ void Camera::FirstPerson::calculateWorldMatrix(Mat4x4 & out_matrix) const
 
 void Camera::FirstPerson::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
 {
-	out_matrix.MakePerspectiveLH(60.f * float(M_PI) / 180.f, viewportSy / float(viewportSx), .01f, 1000.f);
+// todo : make fov, and near and far plane distances configurable
+
+#if ENABLE_OPENGL
+	out_matrix.MakePerspectiveGL(
+		60.f * float(M_PI) / 180.f,
+		viewportSy / float(viewportSx),
+		.01f, 1000.f);
+#else
+	out_matrix.MakePerspectiveLH(
+		60.f * float(M_PI) / 180.f,
+		viewportSy / float(viewportSx),
+		.01f, 1000.f);
+#endif
 }
 
 //
