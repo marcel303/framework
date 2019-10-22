@@ -22,6 +22,7 @@ namespace lgen
 
 		void clamp(int min, int max);
 		void rerange(int min, int max);
+		void mapMaximum(int max);
 		void copyTo(Heightfield & dst) const;
 		bool getSizePowers(int & pw, int & ph) const;
 	};
@@ -48,6 +49,7 @@ namespace lgen
 
 		void clamp(int min, int max);
 		void rerange(int min, int max);
+		void mapMaximum(int max);
 		void copyTo(Heightfield & dst) const;
 		bool getSizePowers(int & pw, int & ph) const;
 		

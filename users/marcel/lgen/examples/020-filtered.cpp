@@ -27,10 +27,12 @@ int main(int argc, char * argv[])
 	lgen::Generator_OffsetSquare generator;
 	generator.generate(heightfield);
 	
-	lgen::FilterMean filter;
-	filter.setMatrixSize(32, 32);
+	lgen::FilterMedian filter;
+	filter.setMatrixSize(17, 17);
+	filter.setClippingRect(100, 100, 300, 500);
 	filter.apply(heightfield, heightfield);
 	
+	lgen::filterQuantize(heightfield, heightfield, 7);
 	heightfield.rerange(0, 255);
 	
 	GxTextureId texture = createTexture(heightfield);
@@ -52,6 +54,7 @@ int main(int argc, char * argv[])
 		{
 			generator.generate(heightfield);
 			filter.apply(heightfield, heightfield);
+			lgen::filterQuantize(heightfield, heightfield, 7);
 			heightfield.rerange(0, 255);
 			
 			freeTexture(texture);
@@ -60,6 +63,7 @@ int main(int argc, char * argv[])
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			setColor(colorWhite);
 			gxSetTexture(texture);
 			gxBegin(GX_QUADS);
 			{
@@ -75,6 +79,9 @@ int main(int argc, char * argv[])
 			}
 			gxEnd();
 			gxSetTexture(0);
+			
+			setColor(colorBlue);
+			drawRectLine(filter.clipX1, filter.clipY1, filter.clipX2, filter.clipY2);
 		}
 		framework.endDraw();
 	}

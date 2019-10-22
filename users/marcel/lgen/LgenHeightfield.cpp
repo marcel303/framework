@@ -1,4 +1,5 @@
 #include "LgenFilter.h"
+#include "LgenFilterMapMaximum.h"
 #include "LgenHeightfield.h"
 
 namespace lgen
@@ -161,6 +162,13 @@ namespace lgen
 			}
 		}
 	}
+	
+	void Heightfield::mapMaximum(int max)
+	{
+		FilterMapMaximum filter;
+		filter.setMax(max);
+		filter.apply(*this, *this);
+	}
 
 	void Heightfield::copyTo(Heightfield & dst) const
 	{
@@ -237,6 +245,11 @@ namespace lgen
 	void DoubleBufferedHeightfield::rerange(int min, int max)
 	{
 		return heightfield[currentIndex].rerange(min, max);
+	}
+	
+	void DoubleBufferedHeightfield::mapMaximum(int max)
+	{
+		return heightfield[currentIndex].mapMaximum(max);
 	}
 	
 	void DoubleBufferedHeightfield::copyTo(Heightfield & dst) const
