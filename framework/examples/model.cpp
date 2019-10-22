@@ -211,7 +211,11 @@ int main(int argc, char * argv[])
 		const float aspect = VIEW_SY / float(VIEW_SX);
 		
 		Mat4x4 transform3d;
+	#if ENABLE_OPENGL
 		transform3d.MakePerspectiveGL(fov, aspect, .1f, +2000.f);
+	#else
+		transform3d.MakePerspectiveLH(fov, aspect, .1f, +2000.f);
+	#endif
 		setTransform3d(transform3d);
 		
 		framework.beginDraw(31, 31, 31, 0, 1.f);
