@@ -387,16 +387,29 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 				{
-					if (e.doubleClickTimer > 0.f)
+					if (button.isToggle)
 					{
-						if (button.hasDefaultValue && button.isToggle)
-							e.value = e.defaultValue;
+						if (e.doubleClickTimer > 0.f)
+						{
+							if (button.hasDefaultValue)
+								e.value = e.defaultValue;
+						}
+						else
+						{
+							activeElem = &e;
+							SDL_CaptureMouse(SDL_TRUE);
+						
+							e.doubleClickTimer = .2f;
+						}
 					}
 					else
 					{
 						activeElem = &e;
 						SDL_CaptureMouse(SDL_TRUE);
-					
+						
+						e.value = 1.f;
+						e.valueHasChanged = true;
+						
 						e.doubleClickTimer = .2f;
 					}
 				}
@@ -406,9 +419,17 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					activeElem = nullptr;
 					SDL_CaptureMouse(SDL_FALSE);
 					
-					if (isInside)
+					if (button.isToggle)
 					{
-						e.value = (e.value == 0.f) ? 1.f : 0.f;
+						if (isInside)
+						{
+							e.value = (e.value == 0.f) ? 1.f : 0.f;
+							e.valueHasChanged = true;
+						}
+					}
+					else
+					{
+						e.value = 0.f;
 						e.valueHasChanged = true;
 					}
 				}
