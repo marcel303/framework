@@ -196,10 +196,10 @@ namespace ControlSurfaceDefinition
 	
 	struct Button
 	{
-	// todo : add button mode: click, toggle
 		std::string displayName;
 		bool defaultValue = false;
 		bool hasDefaultValue = false;
+		bool isToggle = false;
 		std::string oscAddress;
 	};
 	

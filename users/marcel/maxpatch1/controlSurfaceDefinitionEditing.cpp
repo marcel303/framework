@@ -279,6 +279,12 @@ namespace ControlSurfaceDefinition
 		button->hasDefaultValue = true;
 		return *this;
 	}
+	
+	ButtonEditor & ButtonEditor::isToggle(const bool isToggle)
+	{
+		button->isToggle = isToggle;
+		return *this;
+	}
 
 	ButtonEditor & ButtonEditor::osc(const char * address)
 	{

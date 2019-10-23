@@ -383,6 +383,9 @@ namespace ControlSurfaceDefinition
 		
 		typeDB.addStructured<Button>("ControlSurfaceDefinition::Button")
 			.add("displayName", &Button::displayName)
+			.add("defaultValue", &Button::defaultValue)
+			.add("hasDefaultValue", &Button::hasDefaultValue)
+			.add("isToggle", &Button::isToggle)
 			.add("oscAddress", &Button::oscAddress);
 		
 		typeDB.addStructured<Slider2>("ControlSurfaceDefinition::Slider2")
