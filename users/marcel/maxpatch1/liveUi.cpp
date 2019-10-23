@@ -5,6 +5,50 @@
 #include "oscSender.h"
 #include <math.h>
 
+// todo : move to its own header file
+
+struct LiveUiColors
+{
+	static Color makeColor(const int in_r, const int in_g, const int in_b)
+	{
+		return Color(in_r / 255.f, in_g / 255.f, in_b / 255.f);
+	}
+	
+#if 1
+	Color text = makeColor(40, 40, 40);
+	
+	Color gaugeFilled = makeColor(200, 100, 100);
+	Color gaugeEmpty = makeColor(100, 100, 200);
+	
+	Color elemBackgroundActive = makeColor(190, 190, 190);
+	Color elemBackgroundHover = makeColor(210, 210, 210);
+	Color elemBackground = makeColor(200, 200, 200);
+	
+	Color separator = makeColor(200, 200, 200);
+	
+	Color tooltipBackground = makeColor(200, 200, 100);
+	Color tooltipText = makeColor(20, 20, 20);
+#else
+	Color text = makeColor(200, 200, 200);
+	
+	Color gaugeFilled = makeColor(200, 0, 0);
+	Color gaugeEmpty = makeColor(100, 100, 100);
+	
+	Color elemBackgroundActive = makeColor(40, 40, 40);
+	Color elemBackgroundHover = makeColor(50, 50, 50);
+	Color elemBackground = makeColor(60, 60, 60);
+	
+	Color separator = makeColor(20, 20, 20);
+	
+	Color tooltipBackground = makeColor(0, 0, 40);
+	Color tooltipText = makeColor(200, 200, 200);
+#endif
+};
+
+static LiveUiColors colors;
+
+//
+
 static void convertToHsl(const float r, const float g, const float b, float & hue, float & saturation, float & luminance)
 {
 	if (r == 0.f && g == 0.f && b == 0.f)
@@ -218,6 +262,16 @@ void LiveUi::applyLayouts(const ControlSurfaceDefinition::Surface & surface, con
 			}
 		}
 	}
+}
+
+void LiveUi::applyLayout(const ControlSurfaceDefinition::Surface & surface, const ControlSurfaceDefinition::SurfaceLayout & layout)
+{
+	const ControlSurfaceDefinition::SurfaceLayout * layouts[] =
+		{
+			&layout
+		};
+		
+	applyLayouts(surface, layouts, 1);
 }
 
 void LiveUi::tick(const float dt, bool & inputIsCaptured)
@@ -850,23 +904,23 @@ void LiveUi::draw() const
 	{
 		auto * elem = e.elem;
 		
+		const Color & elemBackgroundColor =
+			&e == activeElem ? colors.elemBackgroundActive :
+			&e == hoverElem ? colors.elemBackgroundHover :
+			colors.elemBackground;
+		
 		if (elem->type == ControlSurfaceDefinition::kElementType_Label)
 		{
 			auto & label = elem->label;
 			
-			setColor(40, 40, 40);
+			setColor(colors.text);
 			drawText(e.x, e.y + e.sy / 2.f, 12, +1, 0, "%s", label.text.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 		{
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
-				if (&e == activeElem)
-					setLumi(190);
-				else if (&e == hoverElem)
-					setLumi(210);
-				else
-					setLumi(200);
+				setColor(elemBackgroundColor);
 				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, 4);
 			}
 			hqEnd();
@@ -897,12 +951,12 @@ void LiveUi::draw() const
 					
 					if (t < e.value)
 					{
-						setColor(200, 100, 100);
+						setColor(colors.gaugeFilled);
 						strokeSize = 1.6f;
 					}
 					else
 					{
-						setColor(100, 100, 200);
+						setColor(colors.gaugeEmpty);
 						strokeSize = 1.f;
 					}
 					
@@ -918,19 +972,14 @@ void LiveUi::draw() const
 			}
 			hqEnd();
 			
-			setColor(40, 40, 40);
+			setColor(colors.text);
 			drawText(e.x + e.sx / 2.f, e.y + e.sy - 2, 10, 0, -1, "%s", knob.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider2)
 		{
-			const int lumi =
-				&e == activeElem ? 190
-				: &e == hoverElem ? 210
-				: 200;
-
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
-				setLumi(lumi);
+				setColor(elemBackgroundColor);
 				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, 4);
 			}
 			hqEnd();
@@ -944,7 +993,11 @@ void LiveUi::draw() const
 					const int padding = 2;
 					const int thickness = 2;
 					
-					setLumi(lumi * 4/5);
+					setColor(
+						&e == activeElem && e.liveState[0] == i
+						? colors.gaugeFilled
+						: colors.gaugeEmpty);
+					
 					const float t = e.value4[i];
 					hqFillRoundedRect(
 						e.x + e.sx * (i + 0) / 2 + padding,
@@ -955,7 +1008,7 @@ void LiveUi::draw() const
 				}
 				hqEnd();
 			
-				setColor(40, 40, 40);
+				setColor(colors.text);
 				const float t = powf(e.value4[i], slider.exponential[i]);
 				const float value = slider.min[i] * (1.f - t) + slider.max[i] * t;
 				drawText(
@@ -963,19 +1016,14 @@ void LiveUi::draw() const
 					e.y + e.sy/2 + 4, 10, 0, +1, "%.2f", value);
 			}
 			
-			setColor(40, 40, 40);
+			setColor(colors.text);
 			drawText(e.x + e.sx / 2.f, e.y + e.sy/2 - 4, 10, 0, -1, "%s", slider.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
 		{
-			const int lumi =
-				&e == activeElem ? 190
-				: &e == hoverElem ? 210
-				: 200;
-
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
-				setLumi(lumi);
+				setColor(elemBackgroundColor);
 				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, 4);
 			}
 			hqEnd();
@@ -989,7 +1037,11 @@ void LiveUi::draw() const
 					const int padding = 2;
 					const int thickness = 2;
 					
-					setLumi(lumi * 4/5);
+					setColor(
+						&e == activeElem && e.liveState[0] == i
+						? colors.gaugeFilled
+						: colors.gaugeEmpty);
+					
 					const float t = e.value4[i];
 					hqFillRoundedRect(
 						e.x + e.sx * (i + 0) / 3 + padding,
@@ -1000,7 +1052,7 @@ void LiveUi::draw() const
 				}
 				hqEnd();
 			
-				setColor(40, 40, 40);
+				setColor(colors.text);
 				const float t = powf(e.value4[i], slider.exponential[i]);
 				const float value = slider.min[i] * (1.f - t) + slider.max[i] * t;
 				drawText(
@@ -1008,27 +1060,21 @@ void LiveUi::draw() const
 					e.y + e.sy/2 + 4, 10, 0, +1, "%.2f", value);
 			}
 			
-			setColor(40, 40, 40);
+			setColor(colors.text);
 			drawText(e.x + e.sx / 2.f, e.y + e.sy/2 - 4, 10, 0, -1, "%s", slider.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Listbox)
 		{
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
-				if (&e == activeElem)
-					setLumi(190);
-				else if (&e == hoverElem)
-					setLumi(210);
-				else
-					setLumi(200);
+				setColor(elemBackgroundColor);
 				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, 4);
 			}
 			hqEnd();
 			
 			auto & listbox = elem->listbox;
 			
-			setColor(40, 40, 40);
-			setFont("calibri.ttf");
+			setColor(colors.text);
 			
 			if (listbox.items.empty() == false)
 			{
@@ -1040,10 +1086,12 @@ void LiveUi::draw() const
 			
 			hqBegin(HQ_FILLED_TRIANGLES);
 			{
-				setLumi(100);
-				hqFillTriangle(e.x + 8, midY - 4, e.x + 4, midY, e.x + 8, midY + 4);
+				setColor(
+					&e == activeElem
+					? colors.gaugeFilled
+					: colors.gaugeEmpty);
 				
-				setLumi(100);
+				hqFillTriangle(e.x + 8, midY - 4, e.x + 4, midY, e.x + 8, midY + 4);
 				hqFillTriangle(e.x + e.sx - 8, midY - 4, e.x + e.sx - 4, midY, e.x + e.sx - 8, midY + 4);
 			}
 			hqEnd();
@@ -1067,7 +1115,7 @@ void LiveUi::draw() const
 			
 			const float saturation = e.value4.y;
 			
-			uint8_t colors[128][128][4];
+			uint8_t textureData[128][128][4];
 			for (int y = 0; y < 128; ++y)
 			{
 				for (int x = 0; x < 128; ++x)
@@ -1075,20 +1123,21 @@ void LiveUi::draw() const
 					const float hue = (x + .5f) / 128.f;
 					const float luminance = 1.f - (y + .5f) / 128.f;
 					const Color color = Color::fromHSL(hue, saturation, luminance);
-					colors[y][x][0] = color.r * 255.f;
-					colors[y][x][1] = color.g * 255.f;
-					colors[y][x][2] = color.b * 255.f;
-					colors[y][x][3] = 255;
+					textureData[y][x][0] = color.r * 255.f;
+					textureData[y][x][1] = color.g * 255.f;
+					textureData[y][x][2] = color.b * 255.f;
+					textureData[y][x][3] = 255;
 				}
 			}
 			
-			GxTextureId texture = createTextureFromRGBA8(colors, 128, 128, true, true);
+		// todo : optimize drawing color pickers
+			GxTextureId texture = createTextureFromRGBA8(textureData, 128, 128, true, true);
 			
 			hqSetTextureScreen(texture, e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy);
 			{
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
-					setLumi(255);
+					setColor(colorWhite);
 					hqFillRoundedRect(e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy, 4);
 				}
 				hqEnd();
@@ -1099,37 +1148,45 @@ void LiveUi::draw() const
 			
 			hqBegin(HQ_STROKED_ROUNDED_RECTS);
 			{
-				if (&e == activeElem)
-					setLumi(190);
-				else if (&e == hoverElem)
-					setLumi(210);
-				else
-					setLumi(200);
+				setColor(elemBackgroundColor);
 				hqStrokeRoundedRect(e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy, 4, 2);
 			}
 			hqEnd();
 			
 			const int slider_margin_sx = 2;
 			
+			const float radius = 2.f;
+			const float innerGaugeMargin = 2.f;
+			
 			if (colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Hsl ||
 				colorPicker.colorSpace == ControlSurfaceDefinition::kColorSpace_Rgb)
 			{
 				// draw saturation slider
 				
+				setColor(e.liveState[0] == '1' ? colors.elemBackgroundActive : colors.elemBackground);
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
-					setLumi(100);
-					hqFillRoundedRect(e.x + slider_x, e.y, e.x + slider_x + slider_sx, e.y + e.sy, 4);
-					
-					setLumi(200);
-					hqFillRoundedRect(e.x + slider_x + slider_margin_sx, e.y + e.sy * (1.f - e.value4.y), e.x + slider_x + slider_sx - slider_margin_sx, e.y + e.sy, 4);
+					hqFillRoundedRect(e.x + slider_x, e.y, e.x + slider_x + slider_sx, e.y + e.sy, radius);
 				}
 				hqEnd();
 				
-				setLumi(40);
-				hqBegin(HQ_STROKED_ROUNDED_RECTS);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
-					hqStrokeRoundedRect(e.x + slider_x, e.y, e.x + slider_x + slider_sx, e.y + e.sy, 4, 2);
+					setColor(colors.gaugeEmpty);
+					hqFillRoundedRect(
+						e.x + slider_x + slider_margin_sx + innerGaugeMargin,
+						e.y + radius,
+						e.x + slider_x + slider_sx - slider_margin_sx - innerGaugeMargin,
+						e.y + e.sy - radius,
+						radius);
+					
+					setColor(colors.gaugeFilled);
+					hqFillRoundedRect(
+						e.x + slider_x + slider_margin_sx,
+						e.y + radius + (e.sy - radius * 2) * (1.f - e.value4.y),
+						e.x + slider_x + slider_sx - slider_margin_sx,
+						e.y + e.sy - radius,
+						radius);
 				}
 				hqEnd();
 			}
@@ -1137,39 +1194,57 @@ void LiveUi::draw() const
 			{
 				// draw saturation slider
 				
+				setColor(e.liveState[0] == '1' ? colors.elemBackgroundActive : colors.elemBackground);
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
-					setLumi(100);
-					hqFillRoundedRect(e.x + slider1_x, e.y, e.x + slider1_x + slider1_sx, e.y + e.sy, 4);
-					
-					setLumi(200);
-					hqFillRoundedRect(e.x + slider1_x + slider_margin_sx, e.y + e.sy * (1.f - e.value4.y), e.x + slider1_x + slider1_sx - slider_margin_sx, e.y + e.sy, 4);
+					hqFillRoundedRect(e.x + slider1_x, e.y, e.x + slider1_x + slider1_sx, e.y + e.sy, radius);
 				}
 				hqEnd();
 				
-				setLumi(40);
-				hqBegin(HQ_STROKED_ROUNDED_RECTS);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
-					hqStrokeRoundedRect(e.x + slider1_x, e.y, e.x + slider1_x + slider1_sx, e.y + e.sy, 4, 2);
+					setColor(colors.gaugeEmpty);
+					hqFillRoundedRect(
+						e.x + slider1_x + slider_margin_sx + innerGaugeMargin,
+						e.y + radius,
+						e.x + slider1_x + slider1_sx - slider_margin_sx - innerGaugeMargin,
+						e.y + e.sy - radius, radius);
+					
+					setColor(colors.gaugeFilled);
+					hqFillRoundedRect(
+						e.x + slider1_x + slider_margin_sx,
+						e.y + radius + (e.sy - radius * 2) * (1.f - e.value4.y),
+						e.x + slider1_x + slider1_sx - slider_margin_sx,
+						e.y + e.sy - radius, radius);
 				}
 				hqEnd();
 				
 				// draw white value slider
 				
+				setColor(e.liveState[0] == '2' ? colors.elemBackgroundActive : colors.elemBackground);
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
-					setLumi(100);
-					hqFillRoundedRect(e.x + slider2_x, e.y, e.x + slider2_x + slider2_sx, e.y + e.sy, 4);
-					
-					setLumi(200);
-					hqFillRoundedRect(e.x + slider2_x + slider_margin_sx, e.y + e.sy * (1.f - e.value4.w), e.x + slider2_x + slider2_sx - slider_margin_sx, e.y + e.sy, 4);
+					hqFillRoundedRect(e.x + slider2_x, e.y, e.x + slider2_x + slider2_sx, e.y + e.sy, radius);
 				}
 				hqEnd();
 				
-				setLumi(40);
-				hqBegin(HQ_STROKED_ROUNDED_RECTS);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
-					hqStrokeRoundedRect(e.x + slider2_x, e.y, e.x + slider2_x + slider2_sx, e.y + e.sy, 4, 2);
+					setColor(colors.gaugeEmpty);
+					hqFillRoundedRect(
+						e.x + slider2_x + slider_margin_sx + innerGaugeMargin,
+						e.y + radius,
+						e.x + slider2_x + slider2_sx - slider_margin_sx - innerGaugeMargin,
+						e.y + e.sy - radius,
+						radius);
+					
+					setColor(colors.gaugeFilled);
+					hqFillRoundedRect(
+						e.x + slider2_x + slider_margin_sx,
+						e.y + radius + (e.sy - radius * 2) * (1.f - e.value4.w),
+						e.x + slider2_x + slider2_sx - slider_margin_sx,
+						e.y + e.sy - radius,
+						radius);
 				}
 				hqEnd();
 			}
@@ -1183,6 +1258,7 @@ void LiveUi::draw() const
 				hqBegin(HQ_FILLED_CIRCLES);
 				hqFillCircle(e.x + picker_x + picker_sx * x, e.y + e.sy * y, 3);
 				hqEnd();
+				
 				setLumi(100);
 				drawLine(
 					e.x + picker_x,
@@ -1198,16 +1274,14 @@ void LiveUi::draw() const
 			
 			// draw name
 			
-			setColor(40, 40, 40);
-			setFont("calibri.ttf");
-			
+			setColor(colors.text);
 			drawText(e.x + picker_x + picker_sx / 2.f, e.y + 8, 10, 0, 0, "%s", colorPicker.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Separator)
 		{
 			hqBegin(HQ_FILLED_ROUNDED_RECTS);
 			{
-				setLumi(200);
+				setColor(colors.separator);
 				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, 4);
 			}
 			hqEnd();
@@ -1231,7 +1305,7 @@ void LiveUi::drawTooltip() const
 				
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
-					setColor(200, 200, 100);
+					setColor(colors.tooltipBackground);
 					hqFillRoundedRect(0, 0, 100, 30, 4);
 				}
 				hqEnd();
@@ -1239,7 +1313,7 @@ void LiveUi::drawTooltip() const
 				const float t = powf(activeElem->value, knob.exponential);
 				const float value = knob.min * (1.f - t) + knob.max * t;
 				
-				setLumi(20);
+				setColor(colors.tooltipText);
 				drawText(10, 10, 20, +1, +1, "%.2f", value);
 			}
 		}
