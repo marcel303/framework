@@ -272,6 +272,13 @@ namespace ControlSurfaceDefinition
 		button->displayName = displayName;
 		return *this;
 	}
+	
+	ButtonEditor & ButtonEditor::defaultValue(const bool defaultValue)
+	{
+		button->defaultValue = defaultValue;
+		button->hasDefaultValue = true;
+		return *this;
+	}
 
 	ButtonEditor & ButtonEditor::osc(const char * address)
 	{

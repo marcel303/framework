@@ -198,6 +198,8 @@ namespace ControlSurfaceDefinition
 	{
 	// todo : add button mode: click, toggle
 		std::string displayName;
+		bool defaultValue = false;
+		bool hasDefaultValue = false;
 		std::string oscAddress;
 	};
 	

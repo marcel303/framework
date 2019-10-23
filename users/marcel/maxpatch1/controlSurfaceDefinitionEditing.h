@@ -155,6 +155,7 @@ namespace ControlSurfaceDefinition
 		}
 		
 		ButtonEditor & displayName(const char * displayName);
+		ButtonEditor & defaultValue(const bool defaultValue);
 		ButtonEditor & osc(const char * address);
 		
 		GroupEditor & end();
