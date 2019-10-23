@@ -2348,7 +2348,7 @@ void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
 			if (glyph.textureAtlasElem != nullptr)
 				break;
 			
-			logDebug("glyph allocation failed. growing texture atlas to twice the old height");
+			logDebug("MSDF glyph allocation failed. growing texture atlas to twice the old height");
 				
 			// note : texture atlas re-allocation shouldn't happen in draw code; make sure to cache each glyph elem first before calling gxBegin!
 			
