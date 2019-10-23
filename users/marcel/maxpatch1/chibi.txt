@@ -17,13 +17,17 @@ library maxpatch
 	add_files maxPatchFromControlSurfaceDefinition.h
 	header_path . expose
 
-app marcel-maxpatch1
+library controlSurface-liveUi
+	depend_library controlSurfaceDefinition
 	depend_library framework
-	depend_library libgg
 	depend_library libosc
-	depend_library libreflection-bindtofile
-	depend_library maxpatch
 	add_files layoutEditor.cpp layoutEditor.h
 	add_files liveUi.cpp liveUi.h
+	header_path . expose
+
+app marcel-maxpatch1
+	depend_library framework
+	depend_library libreflection-bindtofile
+	depend_library maxpatch
 	add_files main.cpp
 	resource_path data
