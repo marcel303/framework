@@ -105,6 +105,8 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 		
 		if (button.hasDefaultValue)
 		{
+			Assert(button.isToggle);
+			
 			e.value = button.defaultValue ? 1.f : 0.f;
 			e.defaultValue = e.value;
 		}
@@ -345,16 +347,18 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 				{
-					activeElem = &e;
-					SDL_CaptureMouse(SDL_TRUE);
-					
 					if (e.doubleClickTimer > 0.f)
 					{
 						if (knob.hasDefaultValue)
 							e.value = e.defaultValue;
 					}
 					else
+					{
+						activeElem = &e;
+						SDL_CaptureMouse(SDL_TRUE);
+						
 						e.doubleClickTimer = .2f;
+					}
 				}
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
@@ -383,17 +387,18 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 				{
-					activeElem = &e;
-					SDL_CaptureMouse(SDL_TRUE);
-					
 					if (e.doubleClickTimer > 0.f)
 					{
-						//if (button.hasDefaultValue)
-						if (false) // todo : register if the button has a default value
+						if (button.hasDefaultValue && button.isToggle)
 							e.value = e.defaultValue;
 					}
 					else
+					{
+						activeElem = &e;
+						SDL_CaptureMouse(SDL_TRUE);
+					
 						e.doubleClickTimer = .2f;
+					}
 				}
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
@@ -414,18 +419,20 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 				{
-					activeElem = &e;
-					SDL_CaptureMouse(SDL_TRUE);
-					
-					e.liveState[0] = clamp<int>((mouse.x - e.x) * 2 / e.sx, 0, 1);
-					
 					if (e.doubleClickTimer > 0.f)
 					{
 						if (slider.hasDefaultValue)
 							e.value4 = e.defaultValue4;
 					}
 					else
+					{
+						activeElem = &e;
+						SDL_CaptureMouse(SDL_TRUE);
+						
+						e.liveState[0] = clamp<int>((mouse.x - e.x) * 2 / e.sx, 0, 1);
+						
 						e.doubleClickTimer = .2f;
+					}
 				}
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
@@ -456,18 +463,20 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 				{
-					activeElem = &e;
-					SDL_CaptureMouse(SDL_TRUE);
-					
-					e.liveState[0] = clamp<int>((mouse.x - e.x) * 3 / e.sx, 0, 2);
-					
 					if (e.doubleClickTimer > 0.f)
 					{
 						if (slider.hasDefaultValue)
 							e.value4 = e.defaultValue4;
 					}
 					else
+					{
+						activeElem = &e;
+						SDL_CaptureMouse(SDL_TRUE);
+						
+						e.liveState[0] = clamp<int>((mouse.x - e.x) * 3 / e.sx, 0, 2);
+						
 						e.doubleClickTimer = .2f;
+					}
 				}
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
@@ -498,16 +507,18 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
 				{
-					activeElem = &e;
-					SDL_CaptureMouse(SDL_TRUE);
-					
 					if (e.doubleClickTimer > 0.f)
 					{
 						if (listbox.hasDefaultValue)
 							e.value = e.defaultValue;
 					}
 					else
+					{
+						activeElem = &e;
+						SDL_CaptureMouse(SDL_TRUE);
+						
 						e.doubleClickTimer = .2f;
+					}
 				}
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
@@ -555,11 +566,6 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 						
 						if (isInsidePicker)
 						{
-							activeElem = &e;
-							SDL_CaptureMouse(SDL_TRUE);
-							
-							e.liveState[0] = 'p';
-							
 							if (e.doubleClickTimer > 0.f)
 							{
 								if (colorPicker.hasDefaultValue)
@@ -569,22 +575,31 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 								}
 							}
 							else
+							{
+								activeElem = &e;
+								SDL_CaptureMouse(SDL_TRUE);
+							
+								e.liveState[0] = 'p';
+								
 								e.doubleClickTimer = .2f;
+							}
 						}
 						else if (isInsideSlider)
 						{
-							activeElem = &e;
-							SDL_CaptureMouse(SDL_TRUE);
-							
-							e.liveState[0] = '1';
-							
 							if (e.doubleClickTimer > 0.f)
 							{
 								if (colorPicker.hasDefaultValue)
 									e.value4.y = e.defaultValue4.y;
 							}
 							else
+							{
+								activeElem = &e;
+								SDL_CaptureMouse(SDL_TRUE);
+								
+								e.liveState[0] = '1';
+								
 								e.doubleClickTimer = .2f;
+							}
 						}
 					}
 					
