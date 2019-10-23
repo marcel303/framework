@@ -317,7 +317,11 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 			
 			const bool isInside = (&e == hoverElem);
 			
-			if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
+			if (elem->type == ControlSurfaceDefinition::kElementType_Label)
+			{
+				// nothing to be done
+			}
+			else if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 			{
 				auto & knob = elem->knob;
 				
@@ -352,6 +356,36 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					if (e.value != oldValue)
 					{
 						e.valueHasChanged = true;
+					}
+				}
+			}
+			else if (elem->type == ControlSurfaceDefinition::kElementType_Button)
+			{
+				auto & button = elem->button;
+				
+				if (activeElem == nullptr && isInside && mouse.wentDown(BUTTON_LEFT))
+				{
+					activeElem = &e;
+					SDL_CaptureMouse(SDL_TRUE);
+					
+					if (e.doubleClickTimer > 0.f)
+					{
+						//if (button.hasDefaultValue)
+						if (false) // todo : register if the button has a default value
+							e.value = e.defaultValue;
+					}
+					else
+						e.doubleClickTimer = .2f;
+				}
+				
+				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
+				{
+					activeElem = nullptr;
+					SDL_CaptureMouse(SDL_FALSE);
+					
+					if (isInside)
+					{
+						e.value = (e.value == 0.f) ? 1.f : 0.f;
 					}
 				}
 			}
@@ -695,9 +729,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					}
 				}
 			}
-			else if (
-				elem->type == ControlSurfaceDefinition::kElementType_Label ||
-				elem->type == ControlSurfaceDefinition::kElementType_Separator)
+			else if (elem->type == ControlSurfaceDefinition::kElementType_Separator)
 			{
 				// nothing to be done
 			}
@@ -974,6 +1006,34 @@ void LiveUi::draw() const
 			
 			setColor(colors.text);
 			drawText(e.x + e.sx / 2.f, e.y + e.sy - 2, 10, 0, -1, "%s", knob.displayName.c_str());
+		}
+		else if (elem->type == ControlSurfaceDefinition::kElementType_Button)
+		{
+			auto & button = elem->button;
+			
+			const float radius = 4.f;
+			
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			{
+				setColor(elemBackgroundColor);
+				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, radius);
+			}
+			hqEnd();
+			
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			{
+				setColor(e.value == 0.f ? colors.gaugeEmpty : colors.gaugeFilled);
+				hqFillRoundedRect(
+					e.x + radius,
+					e.y + radius,
+					e.x + e.sx - radius,
+					e.y + e.sy - radius,
+					radius);
+			}
+			hqEnd();
+			
+			setColor(colors.text);
+			drawText(e.x + e.sx / 2.f, e.y + e.sy / 2.f, 12, 0, 0, "%s", button.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Slider2)
 		{
@@ -1285,6 +1345,10 @@ void LiveUi::draw() const
 				hqFillRoundedRect(e.x, e.y, e.x + e.sx, e.y + e.sy, 4);
 			}
 			hqEnd();
+		}
+		else
+		{
+			AssertMsg(false, "unknown element type: %d", elem->type);
 		}
 	}
 }
