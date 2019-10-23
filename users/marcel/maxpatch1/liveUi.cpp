@@ -99,7 +99,17 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 			e.defaultValue = e.value;
 		}
 	}
-	if (elem->type == ControlSurfaceDefinition::kElementType_Slider2)
+	else if (elem->type == ControlSurfaceDefinition::kElementType_Button)
+	{
+		auto & button = elem->button;
+		
+		if (button.hasDefaultValue)
+		{
+			e.value = button.defaultValue ? 1.f : 0.f;
+			e.defaultValue = e.value;
+		}
+	}
+	else if (elem->type == ControlSurfaceDefinition::kElementType_Slider2)
 	{
 		auto & slider = elem->slider2;
 		Assert(slider.hasDefaultValue);
@@ -121,7 +131,7 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 			e.defaultValue4 = e.value4;
 		}
 	}
-	if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
+	else if (elem->type == ControlSurfaceDefinition::kElementType_Slider3)
 	{
 		auto & slider = elem->slider3;
 		Assert(slider.hasDefaultValue);
@@ -213,6 +223,14 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 		}
 		
 		e.defaultValue4 = e.value4;
+	}
+	else if (elem->type == ControlSurfaceDefinition::kElementType_Separator)
+	{
+		// nothing to be done
+	}
+	else
+	{
+		AssertMsg(false, "unknown element type: %d", elem->type);
 	}
 }
 
@@ -386,6 +404,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					if (isInside)
 					{
 						e.value = (e.value == 0.f) ? 1.f : 0.f;
+						e.valueHasChanged = true;
 					}
 				}
 			}
@@ -809,7 +828,24 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 			}
 			else if (e.elem->type == ControlSurfaceDefinition::kElementType_Button)
 			{
-				// todo
+				auto & button = e.elem->button;
+				
+				if (!button.oscAddress.empty())
+				{
+					const bool value = (e.value != 0.f);
+					
+					if (s.Size() + button.oscAddress.size() + 100 > 1200)
+					{
+						sendBundle();
+						beginBundle();
+					}
+					
+					s << osc::BeginMessage(button.oscAddress.c_str());
+					{
+						s << value;
+					}
+					s << osc::EndMessage;
+				}
 			}
 			else if (e.elem->type == ControlSurfaceDefinition::kElementType_Slider2)
 			{
