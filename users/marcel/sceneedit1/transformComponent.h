@@ -35,8 +35,8 @@ struct TransformComponentType : ComponentType<TransformComponent>
 		add("position", &TransformComponent::position);
 		add("angleAxis", &TransformComponent::angleAxis);
 		in("scale", &TransformComponent::scale)
-			.setLimits(0.f, 10.f)
-			.setEditingCurveExponential(2.f);
+			.limits(0.f, 10.f)
+			.editingCurveExponential(2.f);
 	}
 };
 

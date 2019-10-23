@@ -69,7 +69,7 @@ struct ComponentMemberAdder_Int
 	{
 	}
 	
-	ComponentMemberAdder_Int & setLimits(const int min, const int max)
+	ComponentMemberAdder_Int & limits(const int min, const int max)
 	{
 		ComponentMemberFlag_IntLimits * limits = new ComponentMemberFlag_IntLimits();
 		limits->min = min;
@@ -90,7 +90,7 @@ struct ComponentMemberAdder_Float
 	{
 	}
 	
-	ComponentMemberAdder_Float & setLimits(const float min, const float max)
+	ComponentMemberAdder_Float & limits(const float min, const float max)
 	{
 		ComponentMemberFlag_FloatLimits * limits = new ComponentMemberFlag_FloatLimits();
 		limits->min = min;
@@ -101,7 +101,7 @@ struct ComponentMemberAdder_Float
 		return *this;
 	}
 	
-	ComponentMemberAdder_Float & setEditingCurveExponential(const float value)
+	ComponentMemberAdder_Float & editingCurveExponential(const float value)
 	{
 		ComponentMemberFlag_FloatEditorCurveExponential * curveExponential = new ComponentMemberFlag_FloatEditorCurveExponential();
 		curveExponential->exponential = value;

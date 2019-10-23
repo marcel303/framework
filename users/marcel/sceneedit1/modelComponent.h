@@ -50,8 +50,8 @@ struct ModelComponentType : ComponentType<ModelComponent>
 			.addFlag(new ComponentMemberFlag_EditorType_FilePath);
 		add("rotation", &ModelComponent::rotation);
 		in("scale", &ModelComponent::scale)
-			.setLimits(0.f, 100.f)
-			.setEditingCurveExponential(2.f);
+			.limits(0.f, 100.f)
+			.editingCurveExponential(2.f);
 		add("colorTexcoords", &ModelComponent::colorTexcoords);
 		add("colorNormals", &ModelComponent::colorNormals);
 		add("centimetersToMeters", &ModelComponent::centimetersToMeters);

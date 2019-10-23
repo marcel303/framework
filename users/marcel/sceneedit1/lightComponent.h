@@ -50,10 +50,12 @@ struct LightComponentType : ComponentType<LightComponent>
 		
 		add("type", &LightComponent::type);
 		in("intensity", &LightComponent::intensity)
-			.setLimits(0.f, 100.f)
-			.setEditingCurveExponential(4.f);
-		add("color", &LightComponent::color);
-		add("bottomColor", &LightComponent::bottomColor);
+			.limits(0.f, 100.f)
+			.editingCurveExponential(4.f);
+		add("color", &LightComponent::color)
+			.addFlag(new ComponentMemberFlag_EditorType_Color());
+		add("bottomColor", &LightComponent::bottomColor)
+			.addFlag(new ComponentMemberFlag_EditorType_Color());
 		add("innerRadius", &LightComponent::innerRadius);
 		add("outerRadius", &LightComponent::outerRadius);
 	}
