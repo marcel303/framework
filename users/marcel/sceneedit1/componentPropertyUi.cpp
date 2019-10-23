@@ -249,9 +249,17 @@ bool doReflection_PlainType(
 				}
 			}
 			
+			const bool isColor = member.findFlag<ComponentMemberFlag_EditorType_Color>() != nullptr;
 			const bool isAxis = member.findFlag<ComponentMemberFlag_EditorType_Axis>() != nullptr;
 
-			if (isAxis)
+			if (isColor)
+			{
+				if (ImGui::ColorEdit3(member.name, &value[0]))
+				{
+					result = true;
+				}
+			}
+			else if (isAxis)
 			{
 				if (ImGui::SliderFloat3(member.name, &value[0], -1.f, +1.f))
 				{
@@ -279,9 +287,21 @@ bool doReflection_PlainType(
 				}
 			}
 			
-			if (ImGui::InputFloat4(member.name, &value[0]))
+			const bool isColor = member.findFlag<ComponentMemberFlag_EditorType_Color>() != nullptr;
+			
+			if (isColor)
 			{
-				result = true;
+				if (ImGui::ColorEdit4(member.name, &value[0]))
+				{
+					result = true;
+				}
+			}
+			else
+			{
+				if (ImGui::InputFloat4(member.name, &value[0]))
+				{
+					result = true;
+				}
 			}
 		}
 		break;

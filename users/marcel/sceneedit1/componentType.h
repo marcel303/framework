@@ -44,6 +44,10 @@ struct ComponentMemberFlag_FloatEditorCurveExponential : MemberFlag<ComponentMem
 	float exponential;
 };
 
+struct ComponentMemberFlag_EditorType_Color : MemberFlag<ComponentMemberFlag_EditorType_Color>
+{
+};
+
 struct ComponentMemberFlag_EditorType_Angle : MemberFlag<ComponentMemberFlag_EditorType_Angle>
 {
 };
