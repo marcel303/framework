@@ -354,7 +354,12 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					if (e.doubleClickTimer > 0.f)
 					{
 						if (knob.hasDefaultValue)
+						{
 							e.value = e.defaultValue;
+							e.valueHasChanged = true;
+						}
+						
+						e.doubleClickTimer = 0.f;
 					}
 					else
 					{
@@ -396,7 +401,12 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 						if (e.doubleClickTimer > 0.f)
 						{
 							if (button.hasDefaultValue)
+							{
 								e.value = e.defaultValue;
+								e.valueHasChanged = true;
+							}
+							
+							e.doubleClickTimer = 0.f;
 						}
 						else
 						{
@@ -447,7 +457,12 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					if (e.doubleClickTimer > 0.f)
 					{
 						if (slider.hasDefaultValue)
+						{
 							e.value4 = e.defaultValue4;
+							e.valueHasChanged = true;
+						}
+						
+						e.doubleClickTimer = 0.f;
 					}
 					else
 					{
@@ -491,7 +506,12 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					if (e.doubleClickTimer > 0.f)
 					{
 						if (slider.hasDefaultValue)
+						{
 							e.value4 = e.defaultValue4;
+							e.valueHasChanged = true;
+						}
+						
+						e.doubleClickTimer = 0.f;
 					}
 					else
 					{
@@ -535,7 +555,12 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					if (e.doubleClickTimer > 0.f)
 					{
 						if (listbox.hasDefaultValue)
+						{
 							e.value = e.defaultValue;
+							e.valueHasChanged = true;
+						}
+						
+						e.doubleClickTimer = 0.f;
 					}
 					else
 					{
@@ -596,7 +621,10 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 								{
 									e.value4.x = e.defaultValue4.x;
 									e.value4.z = e.defaultValue4.z;
+									e.valueHasChanged = true;
 								}
+								
+								e.doubleClickTimer = 0.f;
 							}
 							else
 							{
@@ -613,7 +641,12 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 							if (e.doubleClickTimer > 0.f)
 							{
 								if (colorPicker.hasDefaultValue)
+								{
 									e.value4.y = e.defaultValue4.y;
+									e.valueHasChanged = true;
+								}
+								
+								e.doubleClickTimer = 0.f;
 							}
 							else
 							{
@@ -695,7 +728,10 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 								{
 									e.value4.x = e.defaultValue4.x;
 									e.value4.z = e.defaultValue4.z;
+									e.valueHasChanged = true;
 								}
+								
+								e.doubleClickTimer = 0.f;
 							}
 							else
 							{
@@ -712,7 +748,12 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 							if (e.doubleClickTimer > 0.f)
 							{
 								if (colorPicker.hasDefaultValue)
+								{
 									e.value4.y = e.defaultValue4.y;
+									e.valueHasChanged = true;
+								}
+								
+								e.doubleClickTimer = 0.f;
 							}
 							else
 							{
@@ -729,7 +770,12 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 							if (e.doubleClickTimer > 0.f)
 							{
 								if (colorPicker.hasDefaultValue)
+								{
 									e.value4.w = e.defaultValue4.w;
+									e.valueHasChanged = true;
+								}
+								
+								e.doubleClickTimer = 0.f;
 							}
 							else
 							{
@@ -849,7 +895,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (!knob.oscAddress.empty())
 				{
-					const float t = powf(activeElem->value, knob.exponential);
+					const float t = powf(e.value, knob.exponential);
 					const float value = knob.min * (1.f - t) + knob.max * t;
 					
 					if (s.Size() + knob.oscAddress.size() + 100 > 1200)
@@ -902,7 +948,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					{
 						for (int i = 0; i < 2; ++i)
 						{
-							const float t = powf(activeElem->value4[i], slider.exponential[i]);
+							const float t = powf(e.value4[i], slider.exponential[i]);
 							const float value = slider.min[i] * (1.f - t) + slider.max[i] * t;
 							
 							s << value;
@@ -927,7 +973,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					{
 						for (int i = 0; i < 3; ++i)
 						{
-							const float t = powf(activeElem->value4[i], slider.exponential[i]);
+							const float t = powf(e.value4[i], slider.exponential[i]);
 							const float value = slider.min[i] * (1.f - t) + slider.max[i] * t;
 							
 							s << value;
