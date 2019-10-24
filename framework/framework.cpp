@@ -3185,6 +3185,7 @@ static void getCurrentBackingSize(int & sx, int & sy)
 
 static void getCurrentViewportSize(int & sx, int & sy)
 {
+// todo : should check render pass, not surface
 	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
 	
 	if (surface != nullptr)

@@ -41,6 +41,8 @@
 
 extern MetalWindowData * activeWindowData;
 
+extern std::string s_shaderOutputs; // todo : cleanup
+
 //
 
 id <MTLDevice> metal_get_device();
@@ -303,8 +305,6 @@ Shader::~Shader()
 	if (globals.shader == this)
 		clearShader();
 }
-
-extern std::string s_shaderOutputs; // todo : cleanup
 
 void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {

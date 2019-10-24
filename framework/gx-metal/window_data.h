@@ -29,7 +29,6 @@
 
 #import "metalView.h"
 #import <Metal/Metal.h>
-#import <QuartzCore/CAMetalLayer.h>
 
 struct MetalWindowData
 {
