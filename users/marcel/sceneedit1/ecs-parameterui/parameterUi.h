@@ -14,7 +14,7 @@ enum ParameterUiFlags
 	kParameterUiFlag_ShowDeveloperTooltip = 1 << 1 // Shows a tooltip when hovering over parameters with some detailed information about the parameter.
 };
 
-typedef void (*ParameterMgrContextMenu)(ParameterMgr & rootMgr, ParameterMgr & parameterMgr);
+typedef void (*ParameterMgrContextMenu)(ParameterMgr ** stack, const int stackSize, ParameterMgr & parameterMgr);
 
 // functions to customize how the UI is presented
 

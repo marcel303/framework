@@ -432,8 +432,10 @@ static bool checkFilterPassesAtLeastOnce_recursive(const ParameterMgr & paramete
 	return false;
 }
 
-static void doParameterUi_recursive(ParameterMgr & rootParameterMgr, ParameterMgr & parameterMgr, const char * filter)
+static void doParameterUi_recursive(ParameterMgr ** parameterMgrStack, int parameterMgrStackSize, ParameterMgr & parameterMgr, const char * filter)
 {
+	parameterMgrStack[parameterMgrStackSize++] = &parameterMgr;
+	
 	const bool do_filter = filter != nullptr && filter[0] != 0;
 	
 	for (auto * child : parameterMgr.access_children())
@@ -459,13 +461,16 @@ static void doParameterUi_recursive(ParameterMgr & rootParameterMgr, ParameterMg
 			
 			if (s_contextMenu != nullptr && ImGui::BeginPopupContextItem())
 			{
-				s_contextMenu(rootParameterMgr, *child);
+				parameterMgrStack[parameterMgrStackSize++] = child;
+				s_contextMenu(parameterMgrStack, parameterMgrStackSize, *child);
+				parameterMgrStackSize--;
+				
 				ImGui::EndPopup();
 			}
 			
 			if (isOpen)
 			{
-				doParameterUi_recursive(*child, child_filter);
+				doParameterUi_recursive(parameterMgrStack, parameterMgrStackSize, *child, child_filter);
 				
 				ImGui::TreePop();
 			}
@@ -476,18 +481,23 @@ static void doParameterUi_recursive(ParameterMgr & rootParameterMgr, ParameterMg
 			
 			if (s_contextMenu != nullptr && ImGui::BeginPopupContextItem())
 			{
-				s_contextMenu(rootParameterMgr, *child);
+				parameterMgrStack[parameterMgrStackSize++] = child;
+				s_contextMenu(parameterMgrStack, parameterMgrStackSize, *child);
+				parameterMgrStackSize--;
+				
 				ImGui::EndPopup();
 			}
 			
 			if (isOpen)
 			{
-				doParameterUi_recursive(*child, child_filter);
+				doParameterUi_recursive(parameterMgrStack, parameterMgrStackSize, *child, child_filter);
 				
 				ImGui::TreePop();
 			}
 		}
 	}
+	
+	parameterMgrStackSize--;
 	
 	ParameterBase ** parameters = (ParameterBase**)alloca(parameterMgr.access_parameters().size() * sizeof(ParameterBase*));
 	
@@ -516,7 +526,10 @@ static void doParameterUi_recursive(ParameterMgr & rootParameterMgr, ParameterMg
 
 void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
 {
-	doParameterUi_recursive(parameterMgr, parameterMgr, filter);
+	ParameterMgr * parameterMgrStack[128];
+	int parameterMgrStackSize = 0;
+	
+	doParameterUi_recursive(parameterMgrStack, parameterMgrStackSize, parameterMgr, filter);
 }
 
 //
@@ -600,7 +613,7 @@ static void collectParamMgrsAndPrefixes(
 	std::vector<ParameterMgr*> stack;
 	std::vector<std::string> prefixStack;
 	stack.push_back(rootParamMgr);
-	prefixStack.push_back(stack.back()->access_prefix() + "/");
+	prefixStack.push_back("");
 
 	while (!stack.empty())
 	{
