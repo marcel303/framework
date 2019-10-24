@@ -176,66 +176,10 @@ void metal_make_active(SDL_Window * window)
 
 void metal_draw_begin(const float r, const float g, const float b, const float a, const float depth)
 {
-#if 1
 	activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
-		[activeWindowData->current_drawable retain];
-		
+	[activeWindowData->current_drawable retain];
+	
 	pushBackbufferRenderPass(true, Color(r, g, b, a), true, depth, "Framebuffer pass");
-	return;
-#endif
-
-	@autoreleasepool
-	{
-		RenderPassData pd;
-		
-		pd.cmdbuf = [[queue commandBuffer] retain];
-
-		activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
-		[activeWindowData->current_drawable retain];
-		
-		pd.renderdesc = [[MTLRenderPassDescriptor renderPassDescriptor] retain];
-		
-		// specify the color and depth attachment(s)
-		
-		MTLRenderPassColorAttachmentDescriptor * colorattachment = pd.renderdesc.colorAttachments[0];
-		colorattachment.texture = activeWindowData->current_drawable.texture;
-		
-		colorattachment.clearColor  = MTLClearColorMake(r, g, b, a);
-		colorattachment.loadAction  = MTLLoadActionClear;
-		colorattachment.storeAction = MTLStoreActionStore;
-		
-		pd.renderPass.colorFormat[0] = colorattachment.texture.pixelFormat;
-
-		if (activeWindowData->metalview.depthTexture != nullptr)
-		{
-			MTLRenderPassDepthAttachmentDescriptor * depthattachment = pd.renderdesc.depthAttachment;
-			depthattachment.texture = activeWindowData->metalview.depthTexture;
-			depthattachment.clearDepth = depth;
-			depthattachment.loadAction = MTLLoadActionClear;
-			depthattachment.storeAction = MTLStoreActionDontCare;
-			
-			pd.renderPass.depthFormat = depthattachment.texture.pixelFormat;
-		}
-		
-		// begin encoding
-		
-		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
-		pd.encoder.label = @"Framebuffer Pass";
-		
-		s_renderPassData = pd;
-		s_activeRenderPass = &s_renderPassData;
-		
-		RenderPassDataForPushPop pd2;
-		pd2.isBackbufferPass = true;
-		s_renderPasses.push(pd2);
-		
-		renderState.renderPass = s_activeRenderPass->renderPass;
-
-		// set viewport
-
-		const CGSize size = activeWindowData->metalview.frame.size;
-		metal_set_viewport(size.width, size.height);
-	}
 }
 
 void metal_draw_end()
@@ -248,6 +192,8 @@ void metal_draw_end()
 	
 	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
 	
+// todo : endRenderPass ?
+
 	[pd.encoder endEncoding];
 	
 #if 0
