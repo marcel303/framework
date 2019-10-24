@@ -307,12 +307,6 @@ DepthTarget * Surface::getDepthTarget()
 	return m_depthTarget[m_bufferId];
 }
 
-uint32_t Surface::getFramebuffer() const // todo : remove Surface::getFramebuffer
-{
-	Assert(false);
-	return 0;
-}
-
 GxTextureId Surface::getTexture() const
 {
 	if (m_colorTarget[m_bufferId] == nullptr)
@@ -534,9 +528,23 @@ void Surface::blitTo(Surface * surface) const
 	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &oldReadBuffer);
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDrawBuffer);
 	checkErrorGL();
-
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, getFramebuffer());
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, surface->getFramebuffer());
+	
+	// create framebuffer object for the source of the blit operaration
+	GLuint srcFramebuffer = 0;
+	glGenFramebuffers(1, &srcFramebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, srcFramebuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTarget[m_bufferId]->getTextureId(), 0);
+	checkErrorGL();
+	
+	// create framebuffer object for the destination of the blit operaration
+	GLuint dstFramebuffer = 0;
+	glGenFramebuffers(1, &dstFramebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, dstFramebuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, surface->m_colorTarget[m_bufferId]->getTextureId(), 0);
+	checkErrorGL();
+	
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, srcFramebuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dstFramebuffer);
 	checkErrorGL();
 
 	glBlitFramebuffer(
@@ -548,6 +556,10 @@ void Surface::blitTo(Surface * surface) const
 
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, oldReadBuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
+	checkErrorGL();
+	
+	glDeleteFramebuffers(1, &srcFramebuffer);
+	glDeleteFramebuffers(1, &dstFramebuffer);
 	checkErrorGL();
 #endif
 }
@@ -578,8 +590,15 @@ void blitBackBufferToSurface(Surface * surface)
 
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDrawBuffer);
 	checkErrorGL();
+	
+	// create framebuffer object for the destination of the blit operaration
+	GLuint dstFramebuffer = 0;
+	glGenFramebuffers(1, &dstFramebuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, dstFramebuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, surface->getColorTarget()->getTextureId(), 0);
+	checkErrorGL();
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, surface->getFramebuffer());
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dstFramebuffer);
 	checkErrorGL();
 
 	glBlitFramebuffer(
@@ -590,6 +609,9 @@ void blitBackBufferToSurface(Surface * surface)
 	checkErrorGL();
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
+	checkErrorGL();
+	
+	glDeleteFramebuffers(1, &dstFramebuffer);
 	checkErrorGL();
 #endif
 }

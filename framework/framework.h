@@ -638,7 +638,6 @@ public:
 	
 	ColorTarget * getColorTarget();
 	DepthTarget * getDepthTarget();
-	uint32_t getFramebuffer() const; // todo : make internally accessible only or remove it
 	GxTextureId getTexture() const;
 	bool hasDepthTexture() const;
 	GxTextureId getDepthTexture() const;
