@@ -549,12 +549,12 @@ void VfxNodeFsfxV2::draw() const
 			
 			const VfxColor defaultColor(1.f, 1.f, 1.f, 1.f);
 			
-			const GLuint surfaceTexture = g_currentVfxSurface->getTexture();
+			const GxTextureId surfaceTexture = g_currentVfxSurface->getTexture();
 
 			const VfxImageBase * image1 = getInputImage(kInput_Image1, nullptr);
 			const VfxImageBase * image2 = getInputImage(kInput_Image2, nullptr);
-			const GLuint texture1 = image1 ? image1->getTexture() : 0;
-			const GLuint texture2 = image2 ? image2->getTexture() : 0;
+			const GxTextureId texture1 = image1 ? image1->getTexture() : 0;
+			const GxTextureId texture2 = image2 ? image2->getTexture() : 0;
 			
 			const VfxColor * color = getInputColor(kInput_Color1, &defaultColor);
 			const float param1 = getInputFloat(kInput_Param1, 0.f);
