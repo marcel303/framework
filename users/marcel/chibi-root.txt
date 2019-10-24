@@ -27,6 +27,7 @@ add homography
 add interpolation1
 add jsusfx1
 add jsusfx2
+add lgen
 add libgg-psd
 add magiclines
 with_platform macos add metal1
