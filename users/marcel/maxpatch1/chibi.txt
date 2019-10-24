@@ -6,6 +6,14 @@ library controlSurfaceDefinition
 	add_files controlSurfaceDefinitionEditing.h
 	header_path . expose
 
+library controlSurface-liveUi
+	depend_library controlSurfaceDefinition
+	depend_library framework
+	depend_library libosc
+	add_files layoutEditor.cpp layoutEditor.h
+	add_files liveUi.cpp liveUi.h
+	header_path . expose
+
 library maxpatch
 	depend_library controlSurfaceDefinition
 	depend_library libreflection-jsonio
@@ -16,16 +24,9 @@ library maxpatch
 	add_files maxPatchFromControlSurfaceDefinition.cpp
 	add_files maxPatchFromControlSurfaceDefinition.h
 	header_path . expose
-
-library controlSurface-liveUi
-	depend_library controlSurfaceDefinition
-	depend_library framework
-	depend_library libosc
-	add_files layoutEditor.cpp layoutEditor.h
-	add_files liveUi.cpp liveUi.h
-	header_path . expose
-
+	
 app marcel-maxpatch1
+	depend_library controlSurface-liveUi
 	depend_library framework
 	depend_library libreflection-bindtofile
 	depend_library maxpatch
