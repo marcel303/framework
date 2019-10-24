@@ -5,7 +5,7 @@
 #include "oscSender.h"
 #include <math.h>
 
-// todo : move to its own header file
+// todo : move LiveUiColors to its own header file
 
 struct LiveUiColors
 {
@@ -86,7 +86,11 @@ void LiveUi::addElem(ControlSurfaceDefinition::Element * elem)
 	auto & e = elems.back();
 	e.elem = elem;
 	
-	if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
+	if (elem->type == ControlSurfaceDefinition::kElementType_Label)
+	{
+		// nothing to be done
+	}
+	else if (elem->type == ControlSurfaceDefinition::kElementType_Knob)
 	{
 		auto & knob = elem->knob;
 		Assert(knob.hasDefaultValue);
@@ -558,7 +562,6 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					
 					if (e.value != oldValue)
 					{
-					// todo: only changed when item index changes
 						e.valueHasChanged = true;
 					}
 				}
