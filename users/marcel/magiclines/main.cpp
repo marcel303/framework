@@ -9,8 +9,8 @@
 #define GFX_SX (1600/2)
 #define GFX_SY (1200/2)
 
-#define DO_FUNKYCAT 0
-#define DO_RGBSPACE 1
+#define DO_FUNKYCAT 1
+#define DO_RGBSPACE 0
 #define DO_INTEGRALIMAGE 0
 #define DO_GUASSIAN_PDF 0
 
@@ -73,15 +73,15 @@ static void drawGrid(const int numQuadsX, const int numQuadsY)
 
 #if DO_FUNKYCAT
 
-static void drawPicture(const Mat4x4 & pictureTransform, const Mat4x4 & lineTransform, const GLuint texture)
+static void drawPicture(const Mat4x4 & pictureTransform, const Mat4x4 & lineTransform, const GxTextureId texture)
 {
 	gxPushMatrix();
 	{
 		gxMultMatrixf(pictureTransform.m_v);
 
 		Shader shader("picture");
-		shader.setTexture("texture0", 0, texture, true, true);
 		setShader(shader);
+		shader.setTexture("texture1", 0, texture, true, true);
 		{
 			drawRect(0.f, 0.f, 1.f, 1.f);
 		}
@@ -126,6 +126,7 @@ int main(int argc, char * argv[])
 		Camera3d camera;
 		camera.maxForwardSpeed = 200.f;
 		camera.maxStrafeSpeed = 200.f;
+		camera.maxUpSpeed = 200.f;
 		camera.position[1] = 100.f;
 		camera.position[2] = -150.f;
 
@@ -246,7 +247,7 @@ int main(int argc, char * argv[])
 
 		printf("integral image calculation took %gms\n", (t2 - t1) / 1000.f);
 
-		GLuint integralTexture = createTextureFromRGBA8(integralImage->imageData, integralImage->sx, integralImage->sy, true, true);
+		GxTextureId integralTexture = createTextureFromRGBA8(integralImage->imageData, integralImage->sx, integralImage->sy, true, true);
 	#endif
 
 		while (!framework.quitRequested)
@@ -391,10 +392,6 @@ int main(int argc, char * argv[])
 						camera.pushViewMatrix();
 						
 						{
-							gxLoadIdentity();
-
-							//
-
 							gxPushMatrix();
 							{
 								gxRotatef(90.f, -1.f, 0.f, 0.f);
@@ -437,9 +434,11 @@ int main(int argc, char * argv[])
 
 							pushSurface(&surface1);
 							{
+								projectScreen2d();
+								
 								surface1.clear(255, 255, 255);
 
-								setBlend(BLEND_ALPHA);
+								pushBlend(BLEND_ALPHA);
 
 								gxPushMatrix();
 								{
@@ -462,13 +461,13 @@ int main(int argc, char * argv[])
 									}
 								}
 								gxPopMatrix();
+								
+								popBlend();
 							}
 							popSurface();
 
-							const GLuint texture1 = getTexture("cat.jpg");
-							//const GLuint texture1 = surface1.getTexture();
-							//const GLuint texture2 = getTexture("cat.jpg");
-							const GLuint texture2 = surface1.getTexture();
+							const GxTextureId texture1 = getTexture("cat.jpg");
+							const GxTextureId texture2 = surface1.getTexture();
 
 							drawPicture(matT1, matM1, texture1);
 							drawPicture(matT2, matM2, texture2);
@@ -494,7 +493,7 @@ int main(int argc, char * argv[])
 										const Vec3 p1 = matM1.Mul4(c1);
 										const Vec3 p2 = matM2.Mul4(c2);
 
-										gxColor4f(t1[0], 1.f - t1[1], t2[0], 1.f - t2[1]);
+										gxColor4f(t1[0], t1[1], t2[0], t2[1]);
 
 										gxVertex3f(p1[0], p1[1], p1[2]);
 										gxVertex3f(p2[0], p2[1], p2[2]);
@@ -508,7 +507,7 @@ int main(int argc, char * argv[])
 							const float scale = 100.f;
 							gxScalef(scale, scale, scale);
 
-					#if DO_RGBSPACE
+						#if DO_RGBSPACE
 							{
 								Shader shader("colordots");
 								setShader(shader);
@@ -570,7 +569,7 @@ int main(int argc, char * argv[])
 
 								Shader shader("integralimage");
 								setShader(shader);
-								shader.setTexture("texture", 0, integralTexture, false, true);
+								shader.setTexture("texture1", 0, integralTexture, false, true);
 								shader.setImmediate("maxValue", totalValue);
 								shader.setImmediate("windowSize", (1.f - std::cos(time * .5f)) / 2.f * 40.f);
 								{
@@ -631,7 +630,7 @@ int main(int argc, char * argv[])
 				{
 					setBlend(BLEND_OPAQUE);
 					setColor(colorWhite);
-					drawRect(0, GFX_SY, GFX_SX, 0);
+					drawRect(0, 0, GFX_SX, GFX_SY);
 				}
 				gxSetTexture(0);
 			}
