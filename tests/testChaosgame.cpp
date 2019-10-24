@@ -28,6 +28,7 @@
 #include "framework.h"
 #include "testBase.h"
 #include "Timer.h"
+#include <inttypes.h>
 
 extern const int GFX_SX;
 extern const int GFX_SY;

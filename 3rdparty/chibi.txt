@@ -26,6 +26,7 @@ add utf8rewind
 
 with_platform macos    add FreeImage-support
 with_platform iphoneos add FreeImage-support
+with_platform windows  add FreeImage-support
 
 library imgui
 	header_path imgui expose

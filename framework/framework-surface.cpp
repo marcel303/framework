@@ -31,10 +31,11 @@
 
 #include "framework.h"
 
+#if ENABLE_OPENGL
+
 #include "gx_render.h"
 #include "internal.h"
-
-#if ENABLE_OPENGL
+#include <algorithm>
 
 static void setColorWriteMask(int r, int g, int b, int a)
 {

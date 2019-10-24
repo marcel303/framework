@@ -26,6 +26,7 @@
 */
 
 #include <algorithm>
+#include <inttypes.h>
 #include <list>
 #include <time.h>
 #include "fbx.h"
