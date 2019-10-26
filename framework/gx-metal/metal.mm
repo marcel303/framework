@@ -1399,6 +1399,7 @@ static void gxValidatePipelineState()
 				
 				// blend state
 				
+			// todo : review MTLBlendFactorSourceAlpha usage on source alpha blend factor (for both Metal and OpenGL)
 				switch (renderState.blendMode)
 				{
 				case BLEND_OPAQUE:
@@ -1409,7 +1410,7 @@ static void gxValidatePipelineState()
 					att.rgbBlendOperation = MTLBlendOperationAdd;
 					att.alphaBlendOperation = MTLBlendOperationAdd;
 					att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-					att.sourceAlphaBlendFactor = MTLBlendFactorSourceAlpha;
+					att.sourceAlphaBlendFactor = MTLBlendFactorOne;
 					att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					break;
