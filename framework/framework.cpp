@@ -3510,6 +3510,9 @@ void pushSurface(Surface * newSurface)
 		updateViewport(newSurface, globals.currentWindow->getWindow());
 		
 		applyTransform();
+		
+	// todo : set on beginRenderPass ?
+		setBlend(globals.blendMode);
 
 		//
 
@@ -3574,6 +3577,9 @@ void popSurface()
 		updateViewport(newSurface, globals.currentWindow->getWindow());
 		
 		applyTransform();
+		
+	// todo : remove when set on beginRenderPass ?
+		setBlend(globals.blendMode);
 		
 		// restore state
 		
