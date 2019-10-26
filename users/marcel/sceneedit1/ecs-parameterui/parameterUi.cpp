@@ -20,8 +20,15 @@
 static std::vector<int> s_flagsStack;
 static int s_flags = kParameterUiFlag_ShowDefaultButton;
 
-static std::vector<ParameterMgrContextMenu> s_contextMenuStack;
+struct ContextMenuElem
+{
+	ParameterMgrContextMenu contextMenu;
+	ParameterContextMenu parameterContextMenu;
+};
+
+static std::vector<ContextMenuElem> s_contextMenuStack;
 static ParameterMgrContextMenu s_contextMenu = nullptr;
+static ParameterContextMenu s_parameterContextMenu = nullptr;
 
 void pushParameterUiFlags(const int flags)
 {
@@ -35,15 +42,23 @@ void popParameterUiFlags()
 	s_flagsStack.pop_back();
 }
 
-void pushParameterUiContextMenu(ParameterMgrContextMenu contextMenu)
+void pushParameterUiContextMenu(ParameterMgrContextMenu contextMenu, ParameterContextMenu parameterContextMenu)
 {
-	s_contextMenuStack.push_back(s_contextMenu);
+	ContextMenuElem elem;
+	elem.contextMenu = s_contextMenu;
+	elem.parameterContextMenu = s_parameterContextMenu;
+	
+	s_contextMenuStack.push_back(elem);
+	
 	s_contextMenu = contextMenu;
+	s_parameterContextMenu = parameterContextMenu;
 }
 
 void popParameterUiContextMenu()
 {
-	s_contextMenu = s_contextMenuStack.back();
+	s_contextMenu = s_contextMenuStack.back().contextMenu;
+	s_parameterContextMenu = s_contextMenuStack.back().parameterContextMenu;
+	
 	s_contextMenuStack.pop_back();
 }
 
@@ -497,8 +512,6 @@ static void doParameterUi_recursive(ParameterMgr ** parameterMgrStack, int param
 		}
 	}
 	
-	parameterMgrStackSize--;
-	
 	ParameterBase ** parameters = (ParameterBase**)alloca(parameterMgr.access_parameters().size() * sizeof(ParameterBase*));
 	
 	int numParameters = 0;
@@ -519,9 +532,24 @@ static void doParameterUi_recursive(ParameterMgr ** parameterMgrStack, int param
 	{
 		ImGui::PushItemWidth(200.f);
 		for (int i = 0; i < numParameters; ++i)
-			doParameterUi(*parameters[i]);
+		{
+			ImGui::PushID(parameters[i]->name.c_str());
+			{
+				doParameterUi(*parameters[i]);
+			}
+			ImGui::PopID();
+			
+			if (s_parameterContextMenu != nullptr && ImGui::BeginPopupContextItem(parameters[i]->name.c_str()))
+			{
+				s_parameterContextMenu(parameterMgrStack, parameterMgrStackSize, parameterMgr, *parameters[i]);
+				
+				ImGui::EndPopup();
+			}
+		}
 		ImGui::PopItemWidth();
 	}
+	
+	parameterMgrStackSize--;
 }
 
 void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)

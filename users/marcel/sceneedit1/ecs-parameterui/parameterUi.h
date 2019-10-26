@@ -15,13 +15,14 @@ enum ParameterUiFlags
 };
 
 typedef void (*ParameterMgrContextMenu)(ParameterMgr ** stack, const int stackSize, ParameterMgr & parameterMgr);
+typedef void (*ParameterContextMenu)(ParameterMgr ** stack, const int stackSize, ParameterMgr & parameterMgr, ParameterBase & parameterBase);
 
 // functions to customize how the UI is presented
 
 void pushParameterUiFlags(const int flags);
 void popParameterUiFlags();
 
-void pushParameterUiContextMenu(ParameterMgrContextMenu contextMenu);
+void pushParameterUiContextMenu(ParameterMgrContextMenu contextMenu, ParameterContextMenu parameterContextMenu);
 void popParameterUiContextMenu();
 
 // functions for drawing the UI
