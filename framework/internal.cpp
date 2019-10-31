@@ -1835,6 +1835,11 @@ void FontCacheElem::load(const char * filename)
 		textureAtlas = new TextureAtlas();
 		textureAtlas->init(256, 16, GX_R8_UNORM, false, false, nullptr);
 	}
+	else
+	{
+		textureAtlas = new TextureAtlas();
+		textureAtlas->init(1, 1, GX_R8_UNORM, false, false, nullptr);
+	}
 #endif
 }
 
