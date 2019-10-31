@@ -14,6 +14,7 @@ add codevember
 add codingChallenges
 add colorpart
 add cuber
+add esp32-discovery
 with_platform macos   add etherdream1
 with_platform windows add etherdream1
 add fourier

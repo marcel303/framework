@@ -1,0 +1,6 @@
+app marcel-esp32-discovery
+	add_files main.cpp
+	depend_library artnet
+	depend_library framework
+	depend_library liboscpack
+	resource_path data
