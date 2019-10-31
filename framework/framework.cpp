@@ -1636,7 +1636,7 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 		scale255(b),
 		scale255(a));
 	
-	pushBackbufferRenderPass(true, color, true, depth, "Surface");
+	pushBackbufferRenderPass(true, color, enableDepthBuffer, depth, "Surface");
 	
 	// initialize viewport and OpenGL matrices
 	
