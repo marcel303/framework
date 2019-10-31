@@ -2,7 +2,9 @@
 
 #if ENABLE_OPENGL
 
-#if !defined(IPHONEOS)
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#else
 	#include <GL/glew.h>
 #endif
 
@@ -179,6 +181,7 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 	if (clearColor)
 	{
 		glClearColor(color.r, color.g, color.b, color.a);
+		checkErrorGL();
 		clearFlags |= GL_COLOR_BUFFER_BIT;
 	}
 
@@ -186,8 +189,10 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 	{
 	#if ENABLE_DESKTOP_OPENGL
 		glClearDepth(depth);
+		checkErrorGL();
 	#else
 		glClearDepthf(depth);
+		checkErrorGL();
 	#endif
 		clearFlags |= GL_DEPTH_BUFFER_BIT;
 	}

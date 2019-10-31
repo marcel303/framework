@@ -30,10 +30,10 @@
 #endif
 
 #include "framework.h"
+#include "gx_render.h"
 
 #if ENABLE_OPENGL
 
-#include "gx_render.h"
 #include "internal.h"
 #include <algorithm>
 

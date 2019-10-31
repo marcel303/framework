@@ -1,9 +1,14 @@
 #include "framework.h"
-#include <GL/glew.h>
 
 // todo : metal implementation shader buffer
 
 #if ENABLE_OPENGL
+
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#else
+	#include <GL/glew.h>
+#endif
 
 static std::vector<GLuint> s_bufferPool;
 static bool s_useBufferPool = false;
