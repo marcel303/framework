@@ -9,6 +9,9 @@
 #include "paobject.h"
 #include "Random.h" // PinkNumber, for speaker test
 #include "soundmix.h"
+#include "spatialSound.h"
+#include "spatialSoundMixer.h"
+#include "spatialSoundMixer_grid.h"
 #include "ui.h"
 #include <algorithm>
 #include <cmath>
@@ -19,13 +22,50 @@
 	#include <portaudio/portaudio.h>
 #endif
 
-struct SoundObject
+struct SoundObject : AudioSource
 {
 	Color color = colorWhite;
 	
 	AudioGraphInstance * graphInstance = nullptr;
 	
-	SpeakerPanning::Source panningSource;
+	SpatialSound spatialSound;
+	
+	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override final
+	{
+		bool isFirstVoice = true;
+		
+		for (auto * voice : graphInstance->audioGraph->audioVoices)
+		{
+			if (isFirstVoice)
+			{
+				isFirstVoice = false;
+				
+				voice->source->generate(samples, numSamples);
+				
+				if (voice->gain != 1.f)
+				{
+					audioBufferMul(samples, numSamples, voice->gain);
+				}
+			}
+			else
+			{
+				float * voiceSamples = (float*)alloca(numSamples * sizeof(float));
+				
+				voice->source->generate(voiceSamples, numSamples);
+				
+				audioBufferAdd(
+					samples,
+					voiceSamples,
+					numSamples,
+					voice->gain);
+			}
+		}
+		
+		if (isFirstVoice)
+		{
+			memset(samples, 0, numSamples * sizeof(float));
+		}
+	}
 };
 
 struct AudioDeviceSettings
@@ -237,166 +277,6 @@ struct AudioDevice
 	}
 };
 
-enum AudioMixerType
-{
-	kAudioMixer_Grid
-};
-
-struct AudioMixer
-{
-	AudioMixerType type;
-	
-	AudioMixer(const AudioMixerType in_type)
-		: type(in_type)
-	{
-	}
-	
-	virtual ~AudioMixer()
-	{
-	}
-	
-	virtual void addSoundObject(SoundObject * soundObject) = 0;
-	virtual void removeSoundObject(SoundObject * soundObject) = 0;
-	
-	virtual void mix(float ** in_channelData, const int in_numChannels, const int in_numSamples) = 0;
-};
-
-struct AudioMixer_Grid : AudioMixer
-{
-	SpeakerPanning::Panner_Grid panner;
-	
-	std::vector<SoundObject*> soundObjects;
-	
-	std::vector<int> speakerIndexToChannelIndex;
-	
-	float ** channelData = nullptr;
-	int numChannels = 0;
-	int numSamples = 0;
-	
-	AudioMixer_Grid()
-		: AudioMixer(kAudioMixer_Grid)
-	{
-	}
-	
-	virtual ~AudioMixer_Grid() override
-	{
-		Assert(soundObjects.empty());
-	}
-	
-	void init(const SpeakerPanning::GridDescription & gridDescription, const std::vector<int> & speakerToChannelMap)
-	{
-		panner.init(gridDescription);
-		
-		if (speakerToChannelMap.empty())
-		{
-			const int numSpeakers = gridDescription.size[0] * gridDescription.size[1] * gridDescription.size[2];
-		
-			speakerIndexToChannelIndex.resize(numSpeakers);
-			
-			for (int i = 0; i < numSpeakers; ++i)
-				speakerIndexToChannelIndex[i] = i;
-		}
-		else
-		{
-			speakerIndexToChannelIndex = speakerToChannelMap;
-		}
-	}
-	
-	virtual void addSoundObject(SoundObject * soundObject) override
-	{
-		soundObjects.push_back(soundObject);
-		
-		auto & source = soundObject->panningSource;
-		panner.addSource(&source);
-	}
-	
-	virtual void removeSoundObject(SoundObject * soundObject) override
-	{
-		auto & source = soundObject->panningSource;
-		panner.removeSource(&source);
-		
-		auto i = std::find(soundObjects.begin(), soundObjects.end(), soundObject);
-		Assert(i != soundObjects.end());
-		soundObjects.erase(i);
-	}
-	
-	virtual void mix(float ** in_channelData, const int in_numChannels, const int in_numSamples) override
-	{
-		panner.updatePanning();
-		
-		mixBegin(in_channelData, in_numChannels, in_numSamples);
-		{
-			for (auto * soundObject : soundObjects)
-			{
-				mixSoundObject(soundObject);
-			}
-		}
-		mixEnd();
-	}
-	
-	void mixBegin(float ** in_channelData, const int in_numChannels, const int in_numSamples)
-	{
-		channelData = in_channelData;
-		numChannels = in_numChannels;
-		numSamples = in_numSamples;
-	}
-	
-	void mixEnd()
-	{
-		channelData = nullptr;
-		numChannels = 0;
-		numSamples = 0;
-	}
-	
-	void mixSoundObject(const SoundObject * soundObject)
-	{
-		auto & sourceElem = panner.getSourceElemForSource(&soundObject->panningSource);
-		
-		for (auto * voice : soundObject->graphInstance->audioGraph->audioVoices)
-		{
-			float * voiceSamples = (float*)alloca(numSamples * sizeof(float));
-			voice->source->generate(voiceSamples, numSamples);
-		
-			// speaker protection. check if the voice contains weird invalid sample values,
-			// and mute the voice when it does
-			bool voiceContainsWeirdSamples = false;
-			for (int i = 0; i < numSamples; ++i)
-				if (std::isinf(voiceSamples[i]) || std::isnan(voiceSamples[i]))
-					voiceContainsWeirdSamples = true;
-			
-			assert(voiceContainsWeirdSamples == false);
-			if (voiceContainsWeirdSamples)
-				continue;
-			
-			// todo : apply DC offset removal
-			
-			for (int i = 0; i < 8; ++i)
-			{
-				if (sourceElem.panning[i].amount != 0.f)
-				{
-					const int speakerIndex = sourceElem.panning[i].speakerIndex;
-					
-					if (speakerIndex >= 0 && speakerIndex < speakerIndexToChannelIndex.size())
-					{
-						const int channelIndex = speakerIndexToChannelIndex[speakerIndex];
-						
-						if (channelIndex >= 0 && channelIndex < numChannels)
-						{
-							const float amount = sourceElem.panning[i].amount * voice->gain;
-							
-							audioBufferAdd(
-								channelData[channelIndex],
-								voiceSamples,
-								numSamples,
-								amount);
-						}
-					}
-				}
-			}
-		}
-	}
-};
-
 struct SoundSystem : AudioDeviceCallback
 {
 	struct SpeakerTest
@@ -414,7 +294,7 @@ struct SoundSystem : AudioDeviceCallback
 	
 	AudioDevice audioDevice;
 	
-	std::vector<AudioMixer*> mixers;
+	std::vector<SpatialSoundMixer*> mixers;
 	
 	std::vector<SoundObject*> soundObjects;
 	
@@ -455,7 +335,7 @@ struct SoundSystem : AudioDeviceCallback
 		audioMutex = nullptr;
 	}
 	
-	void addMixer(AudioMixer * mixer)
+	void addMixer(SpatialSoundMixer * mixer)
 	{
 		audioMutex->lock();
 		{
@@ -464,7 +344,7 @@ struct SoundSystem : AudioDeviceCallback
 		audioMutex->unlock();
 	}
 	
-	void removeMixer(AudioMixer * mixer)
+	void removeMixer(SpatialSoundMixer * mixer)
 	{
 		audioMutex->lock();
 		{
@@ -485,7 +365,7 @@ struct SoundSystem : AudioDeviceCallback
 			
 			for (auto * mixer : mixers)
 			{
-				mixer->addSoundObject(soundObject);
+				mixer->addSpatialSound(&soundObject->spatialSound);
 			}
 		}
 		audioMutex->unlock();
@@ -499,7 +379,7 @@ struct SoundSystem : AudioDeviceCallback
 			
 			for (auto * mixer : mixers)
 			{
-				mixer->removeSoundObject(soundObject);
+				mixer->removeSpatialSound(&soundObject->spatialSound);
 			}
 			
 			// remove the sound object
@@ -657,9 +537,9 @@ struct MonitorVisualizer
 	{
 		for (auto * mixer : soundSystem.mixers)
 		{
-			if (mixer->type == kAudioMixer_Grid)
+			if (mixer->type == kSpatialSoundMixer_Grid)
 			{
-				auto * mixer_grid = static_cast<const AudioMixer_Grid*>(mixer);
+				auto * mixer_grid = static_cast<const SpatialSoundMixer_Grid*>(mixer);
 				
 				auto * panner_grid = &mixer_grid->panner;
 				
@@ -676,9 +556,9 @@ struct MonitorVisualizer
 	{
 		for (auto * mixer : soundSystem.mixers)
 		{
-			if (mixer->type == kAudioMixer_Grid)
+			if (mixer->type == kSpatialSoundMixer_Grid)
 			{
-				auto * mixer_grid = static_cast<const AudioMixer_Grid*>(mixer);
+				auto * mixer_grid = static_cast<const SpatialSoundMixer_Grid*>(mixer);
 				
 				auto * panner_grid = &mixer_grid->panner;
 				
@@ -694,7 +574,7 @@ struct MonitorVisualizer
 			for (auto & soundObject : soundSystem.soundObjects)
 			{
 				setColor(colorGreen);
-				fillCube(soundObject->panningSource.position, Vec3(.02f, .02f, .02f));
+				fillCube(soundObject->spatialSound.panningSource.position, Vec3(.02f, .02f, .02f));
 			}
 		}
 		endCubeBatch();
@@ -764,7 +644,7 @@ struct MonitorVisualizer
 		{
 			for (auto * soundObject : soundSystem.soundObjects)
 			{
-				auto & source = soundObject->panningSource;
+				auto & source = soundObject->spatialSound.panningSource;
 				auto & source_elem = panner->getSourceElemForSource(&source);
 				
 				for (int i = 0; i < 8; ++i)
@@ -786,9 +666,9 @@ struct MonitorVisualizer
 	{
 		for (auto * mixer : soundSystem.mixers)
 		{
-			if (mixer->type == kAudioMixer_Grid)
+			if (mixer->type == kSpatialSoundMixer_Grid)
 			{
-				auto * mixer_grid = static_cast<const AudioMixer_Grid*>(mixer);
+				auto * mixer_grid = static_cast<const SpatialSoundMixer_Grid*>(mixer);
 				
 				auto * panner_grid = &mixer_grid->panner;
 				
@@ -804,7 +684,7 @@ struct MonitorVisualizer
 		}
 	}
 	
-	void drawPannerGrid_textOverlay(const Mat4x4 & modelViewProjection, const AudioMixer_Grid * mixer, const SpeakerPanning::Panner_Grid * panner) const
+	void drawPannerGrid_textOverlay(const Mat4x4 & modelViewProjection, const SpatialSoundMixer_Grid * mixer, const SpeakerPanning::Panner_Grid * panner) const
 	{
 		if (gridPannerOptions.showTextOverlay == false)
 			return;
@@ -1114,9 +994,9 @@ struct MonitorGui
 		{
 			ImGui::PushID(mixer);
 			{
-				if (mixer->type == kAudioMixer_Grid)
+				if (mixer->type == kSpatialSoundMixer_Grid)
 				{
-					auto * mixer_grid = static_cast<AudioMixer_Grid*>(mixer);
+					auto * mixer_grid = static_cast<SpatialSoundMixer_Grid*>(mixer);
 					auto * panner_grid = &mixer_grid->panner;
 					
 					doPannerGui_grid(panner_grid);
@@ -1171,7 +1051,7 @@ int main(int argc, char * argv[])
 	soundSystem.init(&audioMutex, &audioGraphMgr, &audioVoiceMgr);
 	
 	{
-		AudioMixer_Grid * mixer = new AudioMixer_Grid();
+		SpatialSoundMixer_Grid * mixer = new SpatialSoundMixer_Grid();
 		SpeakerPanning::GridDescription gridDescription;
 		gridDescription.size[0] = 2;
 		gridDescription.size[1] = 1;
@@ -1199,6 +1079,8 @@ int main(int argc, char * argv[])
 		audioGraphMgr.selectInstance(instance);
 		
 		soundObject->graphInstance = instance;
+
+		soundObject->spatialSound.audioSource = soundObject;
 		
 		soundSystem.addSoundObject(soundObject);
 	}
@@ -1249,7 +1131,7 @@ int main(int argc, char * argv[])
 		
 		for (size_t i = 0; i < soundSystem.soundObjects.size(); ++i)
 		{
-			auto & source = soundSystem.soundObjects[i]->panningSource;
+			auto & source = soundSystem.soundObjects[i]->spatialSound.panningSource;
 			
 			const float speed = .2f + (i + .5f) / float(soundSystem.soundObjects.size()) * 1.f;
 			
