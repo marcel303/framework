@@ -16,7 +16,18 @@ namespace SpeakerPanning
 
 	bool Panner_Grid::init(const GridDescription & in_gridDescription)
 	{
+		// copy grid description
+		
 		gridDescription = in_gridDescription;
+		
+		// allocate storage for speaker infos
+		
+		const int numSpeakers =
+			gridDescription.size[0] *
+			gridDescription.size[1] *
+			gridDescription.size[2];
+		
+		speakerInfos.resize(numSpeakers);
 		
 		return true;
 	}
@@ -46,6 +57,28 @@ namespace SpeakerPanning
 		for (auto & elem : sources)
 		{
 			updatePanning(elem);
+		}
+		
+		// update speaker panning amplitudes
+		
+		for (auto & speakerInfo : speakerInfos)
+		{
+			speakerInfo.panningAmplitude = 0.f;
+		}
+		
+		for (auto & elem : sources)
+		{
+			for (int i = 0; i < 8; ++i)
+			{
+				auto & panning = elem.panning[i];
+				
+				if (panning.speakerIndex == -1)
+					continue;
+				
+				auto & speakerInfo = speakerInfos[panning.speakerIndex];
+				
+				speakerInfo.panningAmplitude += panning.amount;
+			}
 		}
 	}
 	

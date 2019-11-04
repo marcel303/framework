@@ -65,12 +65,20 @@ namespace SpeakerPanning
 			SpatialSound::Source * source = nullptr;
 			PanningElem panning[8];
 		};
+		
+		struct SpeakerInfo
+		{
+			float panningAmplitude = 0.f;
+			float vu = 0.f;
+		};
 
 		GridDescription gridDescription;
 
 		std::vector<SourceElem> sources;
 		
 		bool applyConstantPowerCurve = true;
+		
+		std::vector<SpeakerInfo> speakerInfos;
 
 		Panner_Grid();
 		virtual ~Panner_Grid() override;
