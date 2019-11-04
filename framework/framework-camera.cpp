@@ -86,6 +86,12 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 			}
 		}
 		
+		if (gamepadIndex >= 0 && gamepadIndex < GAMEPAD_MAX)
+		{
+			elevation += gamepad[gamepadIndex].getAnalog(1, ANALOG_Y) * rotationSpeed * dt;
+			azimuth += gamepad[gamepadIndex].getAnalog(1, ANALOG_X) * rotationSpeed * dt;
+		}
+		
 		// distance
 		
 		if (keyboard.isDown(SDLK_EQUALS))
@@ -97,6 +103,14 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 		{
 			distance *= powf(1.5f, dt);
 			inputIsCaptured = true;
+		}
+		
+		if (gamepadIndex >= 0 && gamepadIndex < GAMEPAD_MAX)
+		{
+			if (gamepad[gamepadIndex].isDown(GAMEPAD_L2))
+				distance /= powf(1.5f, dt);
+			if (gamepad[gamepadIndex].isDown(GAMEPAD_R2))
+				distance *= powf(1.5f, dt);
 		}
 		
 		// origin
@@ -118,6 +132,14 @@ void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 		{
 			*this = Orbit();
 			inputIsCaptured = true;
+		}
+		
+		if (gamepadIndex >= 0 && gamepadIndex < GAMEPAD_MAX)
+		{
+			if (gamepad[gamepadIndex].wentDown(GAMEPAD_START))
+			{
+				*this = Orbit();
+			}
 		}
 	}
 }
@@ -321,9 +343,7 @@ void Camera::FirstPerson::tick(const float dt, bool & inputIsCaptured)
 		if (keyboard.isDown(SDLK_RIGHTBRACKET))
 			desiredLeanAngle = +15.f;
 		
-		// gamepad
-		
-		if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD && gamepad[gamepadIndex].isConnected)
+		if (gamepadIndex >= 0 && gamepadIndex < MAX_GAMEPAD)
 		{
 			strafeSpeed += gamepad[gamepadIndex].getAnalog(0, ANALOG_X);
 			forwardSpeed -= gamepad[gamepadIndex].getAnalog(0, ANALOG_Y);
@@ -455,6 +475,10 @@ void Camera::tick(const float dt, bool & inputIsCaptured, const bool movementIsL
 			inputIsCaptured = true;
 		}
 	}
+	
+	orbit.gamepadIndex = gamepadIndex;
+	ortho.gamepadIndex = gamepadIndex;
+	firstPerson.gamepadIndex = gamepadIndex;
 	
 	if (movementIsLocked == false)
 	{

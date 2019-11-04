@@ -56,6 +56,8 @@ public:
 		float azimuth = -25.f;
 		float distance = -10.f;
 		
+		int gamepadIndex = -1;
+		
 		void tick(const float dt, bool & inputIsCaptured);
 
 		void calculateWorldMatrix(Mat4x4 & out_matrix) const;
@@ -67,6 +69,8 @@ public:
 		OrthoSide side = kOrthoSide_Front;
 		float scale = 1.f;
 		Vec3 position;
+		
+		int gamepadIndex = -1;
 		
 		void tick(const float dt, bool & inputIsCaptured);
 		
@@ -117,6 +121,8 @@ public:
 	Orbit orbit;
 	Ortho ortho;
 	FirstPerson firstPerson;
+	
+	int gamepadIndex = -1;
 	
 public:
 	void tick(const float dt, bool & inputIsCaptured, const bool movementIsLocked);
