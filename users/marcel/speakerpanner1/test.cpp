@@ -396,7 +396,7 @@ struct SoundSystem : AudioDeviceCallback
 		const int bufferSize,
 		const int numChannels) override
 	{
-		const float dt = 1.f / audioDevice.settings.sampleRate;
+		const float dt = bufferSize / float(audioDevice.settings.sampleRate);
 		
 		if (audioGraphMgr != nullptr)
 		{
@@ -672,7 +672,7 @@ struct MonitorVisualizer
 				
 				auto * panner_grid = &mixer_grid->panner;
 				
-				drawPannerGrid_textOverlay(modelViewProjection, mixer_grid, panner_grid);
+				drawPannerGrid_textOverlay(modelViewProjection, mixer_grid, panner_grid, soundSystem);
 			}
 		}
 		
@@ -684,7 +684,7 @@ struct MonitorVisualizer
 		}
 	}
 	
-	void drawPannerGrid_textOverlay(const Mat4x4 & modelViewProjection, const SpatialSoundMixer_Grid * mixer, const SpeakerPanning::Panner_Grid * panner) const
+	void drawPannerGrid_textOverlay(const Mat4x4 & modelViewProjection, const SpatialSoundMixer_Grid * mixer, const SpeakerPanning::Panner_Grid * panner, const SoundSystem & soundSystem) const
 	{
 		if (gridPannerOptions.showTextOverlay == false)
 			return;
@@ -722,6 +722,16 @@ struct MonitorVisualizer
 									setColor(200, 200, 200);
 									drawText(x, y, 18.f, 0, 0, "output channel: %d", channelIndex);
 									y += 20;
+									
+									if (soundSystem.speakerTest.enabled)
+									{
+										if (channelIndex == soundSystem.speakerTest.channelIndex)
+										{
+											setColor(200, 200, 200);
+											drawText(x, y, 18.f, 0, 0, "SPEAKER TEST");
+											y += 20;
+										}
+									}
 								}
 							}
 						}
@@ -1065,6 +1075,7 @@ int main(int argc, char * argv[])
 	
 	Camera camera;
 	camera.mode = Camera::kMode_Orbit;
+	camera.gamepadIndex = 0;
 	camera.firstPerson.position.Set(0.f, 1.f, -2.f);
 	camera.firstPerson.pitch = 15.f;
 	
@@ -1079,6 +1090,7 @@ int main(int argc, char * argv[])
 		audioGraphMgr.selectInstance(instance);
 		
 		soundObject->graphInstance = instance;
+		soundObject->graphInstance->audioGraph->setMemf("index", i);
 
 		soundObject->spatialSound.audioSource = soundObject;
 		
