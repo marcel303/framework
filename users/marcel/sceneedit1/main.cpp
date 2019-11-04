@@ -76,6 +76,7 @@ extern TransformComponentMgr s_transformComponentMgr;
 extern LightComponentMgr s_lightComponentMgr;
 extern ModelComponentMgr s_modelComponentMgr;
 extern ParameterComponentMgr s_parameterComponentMgr;
+extern SceneNodeComponentMgr s_sceneNodeComponentMgr;
 
 // todo : move to helpers
 static bool node_to_clipboard_text(const SceneNode & node, std::string & text);
@@ -378,6 +379,7 @@ struct SceneEditor
 	bool cameraIsActive = false;
 	
 	std::set<int> selectedNodes;
+	int hoverNodeId = -1;
 	
 	int nodeToGiveFocus = -1;
 	bool enablePadGizmo = false;
@@ -390,7 +392,8 @@ struct SceneEditor
 	
 	struct
 	{
-		bool drawGroundPlane = true;
+		bool drawGrid = true;
+		bool drawGroundPlane = false;
 		bool drawNodes = true;
 		bool drawNodeBoundingBoxes = true;
 	} visibility;
@@ -469,7 +472,7 @@ struct SceneEditor
 		guiContext.shut();
 	}
 	
-	SceneNode * raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection)
+	SceneNode * raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const std::set<int> & nodesToIgnore)
 	{
 		SceneNode * result = nullptr;
 		float bestDistance = std::numeric_limits<float>::max();
@@ -477,6 +480,9 @@ struct SceneEditor
 		for (auto & nodeItr : scene.nodes)
 		{
 			auto & node = *nodeItr.second;
+			
+			if (nodesToIgnore.count(node.id) != 0)
+				continue;
 			
 			auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
 			auto * modelComponent = node.components.find<ModelComponent>();
@@ -1250,6 +1256,7 @@ struct SceneEditor
 					{
 						ImGui::Indent();
 						{
+							ImGui::Checkbox("Draw grid", &visibility.drawGrid);
 							ImGui::Checkbox("Draw ground plane", &visibility.drawGroundPlane);
 							ImGui::Checkbox("Draw nodes", &visibility.drawNodes);
 							ImGui::Checkbox("Draw node bounding boxes", &visibility.drawNodeBoundingBoxes);
@@ -1610,7 +1617,12 @@ struct SceneEditor
 	
 		// determine which node is underneath the mouse cursor
 		
-		const SceneNode * hoverNode = raycast(cameraPosition, mouseDirection_world);
+		const SceneNode * hoverNode =
+			inputIsCaptured == false
+			? raycast(cameraPosition, mouseDirection_world, selectedNodes)
+			: nullptr;
+		
+		hoverNodeId = hoverNode ? hoverNode->id : -1;
 		
 		if (inputIsCaptured == false)
 		{
@@ -1721,7 +1733,14 @@ struct SceneEditor
 	
 	void drawNode(const SceneNode & node) const
 	{
+		const bool isHovered = node.id == hoverNodeId;
 		const bool isSelected = selectedNodes.count(node.id) != 0;
+		
+		if (isHovered)
+		{
+			setColor(colorWhite);
+			lineCube(Vec3(), Vec3(.1f, .1f, .1f));
+		}
 		
 		setColor(isSelected ? Color(100, 100, 0) : Color(100, 100, 100));
 		fillCube(Vec3(), Vec3(.1f, .1f, .1f));
@@ -1738,63 +1757,69 @@ struct SceneEditor
 				const Vec3 position = (min + max) / 2.f;
 				const Vec3 size = (max - min) / 2.f;
 				
-				setColor(isSelected ? 255 : 60, 0, 0, 40);
-				fillCube(position, size);
+				if (isSelected)
+				{
+					setColor(255, 255, 0, 255);
+					lineCube(position, size);
+				}
+				else if (isHovered)
+				{
+					setColor(255, 255, 255, 127);
+					lineCube(position, size);
+				}
+				else
+				{
+					setColor(127, 127, 255, 127);
+					lineCube(position, size);
+				}
+				
+				if (isSelected || isHovered)
+				{
+					setColor(isSelected ? 255 : isHovered ? 127 : 60, 0, 0, 40);
+					fillCube(position, size);
+				}
 			}
 		}
 	}
 	
-	void drawNodesTraverse(const SceneNode & node) const
+	void drawNodes() const
 	{
-		gxPushMatrix();
+	// todo : optimize node drawing by drawing batches
+	
+		for (auto & node_itr : scene.nodes)
 		{
-			auto transformComp = node.components.find<TransformComponent>();
-			
-			if (transformComp != nullptr)
+			auto & node = *node_itr.second;
+		
+			gxPushMatrix();
 			{
-				gxTranslatef(
-					transformComp->position[0],
-					transformComp->position[1],
-					transformComp->position[2]);
+				auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
 				
-				gxRotatef(
-					transformComp->angleAxis.angle,
-					transformComp->angleAxis.axis[0],
-					transformComp->angleAxis.axis[1],
-					transformComp->angleAxis.axis[2]);
-				
-				gxScalef(
-					transformComp->scale,
-					transformComp->scale,
-					transformComp->scale);
-			}
-			
-			for (auto & childNodeId : node.childNodeIds)
-			{
-				auto childNodeItr = scene.nodes.find(childNodeId);
-				
-				Assert(childNodeItr != scene.nodes.end());
-				if (childNodeItr != scene.nodes.end())
+				if (sceneNodeComp != nullptr)
 				{
-					const SceneNode & childNode = *childNodeItr->second;
-					
-					drawNodesTraverse(childNode);
+					gxMultMatrixf(sceneNodeComp->objectToWorld.m_v);
 				}
+				
+				drawNode(node);
 			}
-			
-			drawNode(node);
+			gxPopMatrix();
 		}
-		gxPopMatrix();
 	}
 	
 	void drawSceneOpaque() const
 	{
 		s_modelComponentMgr.draw();
+		
+		if (visibility.drawGroundPlane)
+		{
+			setLumi(200);
+			fillCube(Vec3(), Vec3(100, 1, 100));
+		}
 	}
 	
 	void drawEditorOpaque() const
 	{
 	#if ENABLE_TRANSFORM_GIZMOS
+	// todo : draw transform gizmo on top of everything
 		transformGizmo.draw();
 	#endif
 	}
@@ -1808,8 +1833,6 @@ struct SceneEditor
 			{
 				drawSceneOpaque();
 			}
-			
-			drawEditorOpaque();
 		}
 		popBlend();
 		popDepthTest();
@@ -1821,7 +1844,7 @@ struct SceneEditor
 	
 	void drawEditorTranslucent() const
 	{
-		if (visibility.drawGroundPlane)
+		if (visibility.drawGrid)
 		{
 			pushLineSmooth(true);
 			gxPushMatrix();
@@ -1841,7 +1864,9 @@ struct SceneEditor
 		if (visibility.drawNodes)
 		{
 			pushBlend(BLEND_ADD);
-			drawNodesTraverse(scene.getRootNode());
+			{
+				drawNodes();
+			}
 			popBlend();
 		}
 	}
@@ -1872,6 +1897,41 @@ struct SceneEditor
 		camera.calculateViewMatrix(viewMatrix);
 		
 		renderer.draw(projectionMatrix, viewMatrix);
+		
+		// draw gizmos
+		
+	// todo : start a new render pass for this ?
+		{
+			gxMatrixMode(GX_PROJECTION);
+			gxPushMatrix();
+			gxLoadMatrixf(projectionMatrix.m_v);
+			
+		#if ENABLE_OPENGL
+		// fixme : horrible hack to make texture coordinates work
+			// flip Y axis so the vertical axis runs bottom to top
+			gxScalef(1.f, -1.f, 1.f);
+		#endif
+			
+			gxMatrixMode(GX_MODELVIEW);
+			gxPushMatrix();
+			gxLoadMatrixf(viewMatrix.m_v);
+			{
+				//gxClearDepth(1.f);
+				
+				pushDepthTest(false, DEPTH_LEQUAL);
+				pushBlend(BLEND_OPAQUE);
+				{
+					drawEditorOpaque();
+				}
+				popBlend();
+				popDepthTest();
+			}
+			gxMatrixMode(GX_PROJECTION);
+			gxPopMatrix();
+			
+			gxMatrixMode(GX_MODELVIEW);
+			gxPopMatrix();
+		}
 		
 		const_cast<SceneEditor*>(this)->guiContext.draw();
 	}
