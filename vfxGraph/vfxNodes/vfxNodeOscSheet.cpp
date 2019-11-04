@@ -33,6 +33,8 @@
 #include "StringEx.h"
 #include "vfxNodeOscSheet.h"
 
+// todo : reset all inputs to their default values when the OSC sheet prefix changes
+
 //
 
 extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
@@ -127,6 +129,13 @@ void VfxNodeOscSheet::updateOscSheet()
 			const int enumValues_index = csvDocument.getColumnIndex("Enumeration Values");
 			
 			const size_t currentOscPrefixSize = currentOscPrefix.size();
+			
+			if (oscAddress_index < 0)
+				logWarning("missing 'OSC Address' column");
+			if (type_index < 0)
+				logWarning("missing 'Type' column");
+			if (defaultValue_index < 0)
+				logWarning("missing 'Default Value' column");
 			
 			if (oscAddress_index >= 0 && type_index >= 0 && defaultValue_index >= 0)
 			{
