@@ -32,7 +32,7 @@ namespace SpeakerPanning
 		return true;
 	}
 
-	void Panner_Grid::addSource(SpatialSound::Source * source)
+	void Panner_Grid::addSource(Source * source)
 	{
 		SourceElem elem;
 		elem.source = source;
@@ -40,7 +40,7 @@ namespace SpeakerPanning
 		sources.push_back(elem);
 	}
 
-	void Panner_Grid::removeSource(SpatialSound::Source * source)
+	void Panner_Grid::removeSource(Source * source)
 	{
 		for (auto i = sources.begin(); i != sources.end(); ++i)
 		{
@@ -166,5 +166,70 @@ namespace SpeakerPanning
 				}
 			}
 		}
+	}
+	
+	int Panner_Grid::calculateSpeakerIndex(const int x, const int y, const int z) const
+	{
+		return
+			x +
+			y * gridDescription.size[0] +
+			z * gridDescription.size[0] * gridDescription.size[1];
+	}
+
+	Vec3 Panner_Grid::calculateSpeakerPosition(const int x, const int y, const int z) const
+	{
+		Vec3 result;
+		
+		const int position[3] = { x, y, z };
+		
+		for (int i = 0; i < 3; ++i)
+		{
+			if (gridDescription.size[i] == 1)
+			{
+				result[i] = (gridDescription.min[i] + gridDescription.max[i]) / 2.f;
+			}
+			else
+			{
+				result[i] = gridDescription.min[i] + (gridDescription.max[i] - gridDescription.min[i]) / (gridDescription.size[i] - 1) * position[i];
+			}
+		}
+		
+		return result;
+	}
+
+	Vec3 Panner_Grid::calculateSpeakerPosition(const int in_speakerIndex) const
+	{
+		int remainder = in_speakerIndex;
+		
+		const int x = remainder % gridDescription.size[0];
+		remainder /= gridDescription.size[0];
+		
+		const int y = remainder % gridDescription.size[1];
+		remainder /= gridDescription.size[1];
+		
+		const int z = remainder % gridDescription.size[2];
+		remainder /= gridDescription.size[2];
+		
+		Assert(remainder == 0);
+		
+		return calculateSpeakerPosition(x, y, z);
+	}
+
+	const Panner_Grid::SourceElem & Panner_Grid::getSourceElemForSource(const Source * source) const
+	{
+		const SourceElem * result = nullptr;
+		
+		for (auto & sourceElem : sources)
+		{
+			if (sourceElem.source == source)
+			{
+				result = &sourceElem;
+				break;
+			}
+		}
+		
+		Assert(result != nullptr);
+		
+		return *result;
 	}
 }

@@ -19,11 +19,13 @@
 	#include <portaudio/portaudio.h>
 #endif
 
-struct SoundObject : SpatialSound::Source
+struct SoundObject
 {
 	Color color = colorWhite;
 	
 	AudioGraphInstance * graphInstance = nullptr;
+	
+	SpeakerPanning::Source panningSource;
 };
 
 struct AudioDeviceSettings
@@ -242,9 +244,6 @@ enum AudioMixerType
 
 struct AudioMixer
 {
-	// todo : define mixer interface
-	// for efficiency: hide internal details. use methods to register sources
-	
 	AudioMixerType type;
 	
 	AudioMixer(const AudioMixerType in_type)
@@ -307,14 +306,14 @@ struct AudioMixer_Grid : AudioMixer
 	{
 		soundObjects.push_back(soundObject);
 		
-		auto * source = soundObject;
-		panner.addSource(source);
+		auto & source = soundObject->panningSource;
+		panner.addSource(&source);
 	}
 	
 	virtual void removeSoundObject(SoundObject * soundObject) override
 	{
-		auto * source = soundObject;
-		panner.removeSource(source);
+		auto & source = soundObject->panningSource;
+		panner.removeSource(&source);
 		
 		auto i = std::find(soundObjects.begin(), soundObjects.end(), soundObject);
 		Assert(i != soundObjects.end());
@@ -351,7 +350,7 @@ struct AudioMixer_Grid : AudioMixer
 	
 	void mixSoundObject(const SoundObject * soundObject)
 	{
-		auto & sourceElem = panner.getSourceElemForSource(soundObject);
+		auto & sourceElem = panner.getSourceElemForSource(&soundObject->panningSource);
 		
 		for (auto * voice : soundObject->graphInstance->audioGraph->audioVoices)
 		{
@@ -695,7 +694,7 @@ struct MonitorVisualizer
 			for (auto & soundObject : soundSystem.soundObjects)
 			{
 				setColor(colorGreen);
-				fillCube(soundObject->position, Vec3(.02f, .02f, .02f));
+				fillCube(soundObject->panningSource.position, Vec3(.02f, .02f, .02f));
 			}
 		}
 		endCubeBatch();
@@ -765,15 +764,15 @@ struct MonitorVisualizer
 		{
 			for (auto * soundObject : soundSystem.soundObjects)
 			{
-				auto * source = soundObject;
-				auto & source_elem = panner->getSourceElemForSource(source);
+				auto & source = soundObject->panningSource;
+				auto & source_elem = panner->getSourceElemForSource(&source);
 				
 				for (int i = 0; i < 8; ++i)
 				{
 					const int speakerIndex = source_elem.panning[i].speakerIndex;
 					const Vec3 speakerPosition = panner->calculateSpeakerPosition(speakerIndex);
 					
-					setColor(source->color);
+					setColor(soundObject->color);
 					setAlphaf(source_elem.panning[i].amount);
 					fillCube(speakerPosition, Vec3(.1f, .1f, .1f));
 				}
@@ -1250,13 +1249,13 @@ int main(int argc, char * argv[])
 		
 		for (size_t i = 0; i < soundSystem.soundObjects.size(); ++i)
 		{
-			auto * source = soundSystem.soundObjects[i];
+			auto & source = soundSystem.soundObjects[i]->panningSource;
 			
 			const float speed = .2f + (i + .5f) / float(soundSystem.soundObjects.size()) * 1.f;
 			
-			source->position[0] = cosf(framework.time / 1.23f * speed) * 2.1f;
-			source->position[1] = sinf(framework.time / 1.34f * speed) * 2.1f;
-			source->position[2] = sinf(framework.time / 1.45f * speed) * 4.2f;
+			source.position[0] = cosf(framework.time / 1.23f * speed) * 2.1f;
+			source.position[1] = sinf(framework.time / 1.34f * speed) * 2.1f;
+			source.position[2] = sinf(framework.time / 1.45f * speed) * 4.2f;
 		}
 		
 		framework.beginDraw(0, 0, 0, 0);
