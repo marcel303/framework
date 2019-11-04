@@ -102,6 +102,8 @@ struct Renderer
 	ParameterMgr parameterMgr;
 	
 	ParameterEnum * mode = nullptr;
+	ParameterBool * anaglyphic = nullptr;
+	ParameterFloat * eyeSeparation = nullptr;
 	
 	RenderSceneCallback drawOpaque = nullptr;
 	RenderSceneCallback drawTranslucent = nullptr;
@@ -111,6 +113,10 @@ struct Renderer
 	mutable ColorTarget colorMap;
 	mutable ColorTarget lightMap;
 	mutable ColorTarget compositeMap;
+	
+	mutable ColorTarget eyeLeft;
+	mutable ColorTarget eyeRight;
+	mutable DepthTarget eyeDepth;
 	
 	struct
 	{
@@ -124,7 +130,7 @@ struct Renderer
 
 		parameterMgr.init("renderer");
 		
-		mode = parameterMgr.addEnum("mode", kMode_Colors,
+		mode = parameterMgr.addEnum("mode", kMode_Lit,
 			{
 				{ "Wireframe", kMode_Wireframe },
 				{ "Colors", kMode_Colors },
@@ -133,11 +139,31 @@ struct Renderer
 				{ "Lit + Shadows", kMode_LitWithShadows }
 			});
 		
+		anaglyphic = parameterMgr.addBool("anaglyphic", false);
+		
+		/*
+		From Wikipedia, https://en.wikipedia.org/wiki/Pupillary_distance#Measuring_pupillary_distance
+		
+		Interpupillary distance (IPD)
+		(distance in mm)
+		
+		Gender  Sample size Mean  Standard deviation  Minimum  Maximum
+		Female  1986        61.7  3.6                 51.0     74.5
+		Male    4082        64.0  3.4                 53.0     77.0
+		*/
+		
+		eyeSeparation = parameterMgr.addFloat("eyeSepration", .062f);
+		eyeSeparation->setLimits(0.f, .1f);
+		
 		result &= depthMap.init(VIEW_SX, VIEW_SY, DEPTH_FLOAT32, true, 1.f);
 		result &= normalMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, colorBlackTranslucent);
 		result &= colorMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
 		result &= lightMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, colorBlackTranslucent);
 		result &= compositeMap.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
+		
+		result &= eyeLeft.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
+		result &= eyeRight.init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, colorBlackTranslucent);
+		result &= eyeDepth.init(VIEW_SX, VIEW_SY, DEPTH_FLOAT32, true, 1.f);
 		
 		return result;
 	}
@@ -181,15 +207,6 @@ struct Renderer
 		gxPushMatrix();
 		gxLoadMatrixf(drawState.projectionMatrix.m_v);
 		
-	#if ENABLE_OPENGL
-		if (drawToSurface)
-		{
-		// fixme : horrible hack to make texture coordinates work
-			// flip Y axis so the vertical axis runs bottom to top
-			//gxScalef(1.f, -1.f, 1.f);
-		}
-	#endif
-		
 		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 		gxLoadMatrixf(drawState.viewMatrix.m_v);
@@ -203,38 +220,99 @@ struct Renderer
 		gxPopMatrix();
 	}
 	
-	void draw(const Mat4x4 & in_projectionMatrix, const Mat4x4 & viewMatrix) const
+	void draw(const Mat4x4 & projectionMatrix, const Mat4x4 & viewMatrix) const
 	{
-	#if ENABLE_OPENGL
-	// fixme : this is a hack to make lighting calculations work correctly for deferred lights ..
-		const Mat4x4 projectionMatrix = in_projectionMatrix.Scale(1, -1, 1);
-	#else
-		const Mat4x4 & projectionMatrix = in_projectionMatrix;
-	#endif
+		if (anaglyphic->get())
+		{
+			drawFromEye(projectionMatrix, viewMatrix, Vec3(-eyeSeparation->get()/2.f, 0.f, 0.f), &eyeLeft, &eyeDepth);
+			drawFromEye(projectionMatrix, viewMatrix, Vec3(+eyeSeparation->get()/2.f, 0.f, 0.f), &eyeRight, &eyeDepth);
+			
+			// todo : composite eye buffers using anaglyphic shader
+			
+			projectScreen2d();
+			
+			pushBlend(BLEND_OPAQUE);
+			{
+				Shader shader("shaders/anaglyphic-compose");
+				setShader(shader);
+				{
+					shader.setImmediate("mode", 0);
+					shader.setTexture("colormapL", 0, eyeLeft.getTextureId(), false);
+					shader.setTexture("colormapR", 1, eyeRight.getTextureId(), false);
+					
+					drawRect(0, 0, eyeLeft.getWidth(), eyeLeft.getHeight());
+				}
+				clearShader();
+			}
+			popBlend();
+		}
+		else
+		{
+			drawFromEye(projectionMatrix, viewMatrix, Vec3(), nullptr, nullptr);
+		}
+	}
 	
-		drawState.projectionMatrix = projectionMatrix;
+	void drawFromEye(
+		const Mat4x4 & projectionMatrix,
+		const Mat4x4 & viewMatrix,
+		Vec3Arg eyeOffset,
+		ColorTarget * colorTarget,
+		DepthTarget * depthTarget) const
+	{
+		drawState.projectionMatrix = projectionMatrix.Translate(eyeOffset);
 		drawState.viewMatrix = viewMatrix;
 		
-		if (mode->get() == kMode_Colors)
+		if (mode->get() == kMode_Wireframe)
 		{
+			if (colorTarget != nullptr)
+				pushRenderPass(colorTarget, true, depthTarget, true, "Wireframe");
+			
+			pushMatrices(false);
+			pushWireframe(true);
+			{
+				drawColorPass();
+				drawTranslucentPass();
+			}
+			popWireframe();
+			popMatrices();
+			
+			if (colorTarget != nullptr)
+				popRenderPass();
+		}
+		else if (mode->get() == kMode_Colors)
+		{
+			if (colorTarget != nullptr)
+				pushRenderPass(colorTarget, true, depthTarget, true, "Colors");
+			
 			pushMatrices(false);
 			{
 				drawColorPass();
 				drawTranslucentPass();
 			}
 			popMatrices();
+			
+			if (colorTarget != nullptr)
+				popRenderPass();
 		}
 		else if (mode->get() == kMode_Normals)
 		{
+			if (colorTarget != nullptr)
+				pushRenderPass(colorTarget, true, depthTarget, true, "Normals");
+			
 			pushMatrices(false);
 			{
 				drawNormalPass();
 				drawTranslucentPass();
 			}
 			popMatrices();
+			
+			if (colorTarget != nullptr)
+				popRenderPass();
 		}
-		else if (mode->get() == kMode_Lit)
+		else if (mode->get() == kMode_Lit || mode->get() == kMode_LitWithShadows)
 		{
+			// todo : if shadows are enabled, render the shadow maps here
+			
 			// draw to the normal and depth maps
 			
 			ColorTarget * targets[2] = { &normalMap, &colorMap };
@@ -359,12 +437,24 @@ struct Renderer
 			}
 			popRenderPass();
 			
+			projectScreen2d();
+			
+			if (colorTarget != nullptr)
+				pushRenderPass(colorTarget, true, depthTarget, true, mode->get() == kMode_Lit ? "Lit" : "LitWithShadows");
+			
 			pushBlend(BLEND_OPAQUE);
 			gxSetTexture(compositeMap.getTextureId());
 			setColor(colorWhite);
-			drawRect(0, 0, VIEW_SX, VIEW_SY); // todo : getWidht, height
+		#if ENABLE_OPENGL
+			drawRect(0, compositeMap.getHeight(), compositeMap.getWidth(), 0);
+		#else
+			drawRect(0, 0, compositeMap.getWidth(), compositeMap.getHeight());
+		#endif
 			gxSetTexture(0);
 			popBlend();
+			
+			if (colorTarget != nullptr)
+				popRenderPass();
 		}
 	}
 };
@@ -1898,6 +1988,7 @@ struct SceneEditor
 		
 		renderer.draw(projectionMatrix, viewMatrix);
 		
+	#if 1
 		// draw gizmos
 		
 	// todo : start a new render pass for this ?
@@ -1905,12 +1996,6 @@ struct SceneEditor
 			gxMatrixMode(GX_PROJECTION);
 			gxPushMatrix();
 			gxLoadMatrixf(projectionMatrix.m_v);
-			
-		#if ENABLE_OPENGL
-		// fixme : horrible hack to make texture coordinates work
-			// flip Y axis so the vertical axis runs bottom to top
-			gxScalef(1.f, -1.f, 1.f);
-		#endif
 			
 			gxMatrixMode(GX_MODELVIEW);
 			gxPushMatrix();
@@ -1932,6 +2017,7 @@ struct SceneEditor
 			gxMatrixMode(GX_MODELVIEW);
 			gxPopMatrix();
 		}
+	#endif
 		
 		const_cast<SceneEditor*>(this)->guiContext.draw();
 	}
