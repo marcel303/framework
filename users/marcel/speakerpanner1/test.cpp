@@ -3,6 +3,7 @@
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #include "framework.h"
+#include "framework-camera.h"
 #include "imgui-framework.h"
 #include "panner.h"
 #include "paobject.h"
@@ -267,6 +268,8 @@ struct AudioMixer_Grid : AudioMixer
 	
 	std::vector<SoundObject*> soundObjects;
 	
+	std::vector<int> speakerIndexToChannelIndex;
+	
 	float ** channelData = nullptr;
 	int numChannels = 0;
 	int numSamples = 0;
@@ -281,9 +284,23 @@ struct AudioMixer_Grid : AudioMixer
 		Assert(soundObjects.empty());
 	}
 	
-	void init(const SpeakerPanning::GridDescription & gridDescription)
+	void init(const SpeakerPanning::GridDescription & gridDescription, const std::vector<int> & speakerToChannelMap)
 	{
 		panner.init(gridDescription);
+		
+		if (speakerToChannelMap.empty())
+		{
+			const int numSpeakers = gridDescription.size[0] * gridDescription.size[1] * gridDescription.size[2];
+		
+			speakerIndexToChannelIndex.resize(numSpeakers);
+			
+			for (int i = 0; i < numSpeakers; ++i)
+				speakerIndexToChannelIndex[i] = i;
+		}
+		else
+		{
+			speakerIndexToChannelIndex = speakerToChannelMap;
+		}
 	}
 	
 	virtual void addSoundObject(SoundObject * soundObject) override
@@ -360,15 +377,20 @@ struct AudioMixer_Grid : AudioMixer
 				{
 					const int speakerIndex = sourceElem.panning[i].speakerIndex;
 					
-					if (speakerIndex >= 0 && speakerIndex < numChannels)
+					if (speakerIndex >= 0 && speakerIndex < speakerIndexToChannelIndex.size())
 					{
-						const float amount = sourceElem.panning[i].amount * voice->gain;
+						const int channelIndex = speakerIndexToChannelIndex[speakerIndex];
 						
-						audioBufferAdd(
-							channelData[speakerIndex],
-							voiceSamples,
-							numSamples,
-							amount);
+						if (channelIndex >= 0 && channelIndex < numChannels)
+						{
+							const float amount = sourceElem.panning[i].amount * voice->gain;
+							
+							audioBufferAdd(
+								channelData[channelIndex],
+								voiceSamples,
+								numSamples,
+								amount);
+						}
 					}
 				}
 			}
@@ -565,6 +587,7 @@ struct SoundSystem : AudioDeviceCallback
 			delete [] channelData[i];
 		delete [] channelData;
 	#else
+	// todo : remove this code path (??)
 		for (auto * soundObject : soundObjects)
 		{
 			if (soundObject->graphInstance != nullptr &&
@@ -609,6 +632,12 @@ struct SoundSystem : AudioDeviceCallback
 
 struct MonitorVisualizer
 {
+	struct Visibility
+	{
+		bool showAxesHelper = true;
+		float axesHelperThickness = .01f;
+	};
+	
 	struct GridPannerOptions
 	{
 		bool visible = true;
@@ -618,54 +647,48 @@ struct MonitorVisualizer
 		bool modulateSpeakerSizeWithPanningAmplitude = false;
 		bool modulateSpeakerSizeWithSpeakerVu = false;
 		bool showSources = true;
+		bool showTextOverlay = true;
 	};
+	
+	Visibility visibility;
 	
 	GridPannerOptions gridPannerOptions;
 	
-	void draw(const SoundSystem & soundSystem)
+	void drawOpaque(const SoundSystem & soundSystem) const
 	{
-		pushBlend(BLEND_OPAQUE);
-		pushDepthTest(true, DEPTH_LESS);
+		for (auto * mixer : soundSystem.mixers)
 		{
-			for (auto * mixer : soundSystem.mixers)
+			if (mixer->type == kAudioMixer_Grid)
 			{
-				if (mixer->type == kAudioMixer_Grid)
-				{
-					auto * mixer_grid = static_cast<const AudioMixer_Grid*>(mixer);
-					
-					auto * panner_grid = &mixer_grid->panner;
-					
-					drawPannerGrid_grid(panner_grid);
-					
-					drawPannerGrid_speakers(panner_grid);
-				}
+				auto * mixer_grid = static_cast<const AudioMixer_Grid*>(mixer);
+				
+				auto * panner_grid = &mixer_grid->panner;
+				
+				drawPannerGrid_grid(panner_grid);
+				
+				drawPannerGrid_speakers(panner_grid);
 			}
-			
-			drawSoundObjects(soundSystem);
 		}
-		popDepthTest();
-		popBlend();
 		
-		pushBlend(BLEND_ALPHA);
-		pushDepthTest(true, DEPTH_LESS, false);
-		{
-			for (auto * mixer : soundSystem.mixers)
-			{
-				if (mixer->type == kAudioMixer_Grid)
-				{
-					auto * mixer_grid = static_cast<const AudioMixer_Grid*>(mixer);
-					
-					auto * panner_grid = &mixer_grid->panner;
-					
-					drawPannerGrid_soundObjectPanningAmplitudes(soundSystem, panner_grid);
-				}
-			}
-		}
-		popDepthTest();
-		popBlend();
+		drawSoundObjects(soundSystem);
 	}
 	
-	void drawSoundObjects(const SoundSystem & soundSystem)
+	void drawTranslucent(const SoundSystem & soundSystem) const
+	{
+		for (auto * mixer : soundSystem.mixers)
+		{
+			if (mixer->type == kAudioMixer_Grid)
+			{
+				auto * mixer_grid = static_cast<const AudioMixer_Grid*>(mixer);
+				
+				auto * panner_grid = &mixer_grid->panner;
+				
+				drawPannerGrid_soundObjectPanningAmplitudes(soundSystem, panner_grid);
+			}
+		}
+	}
+	
+	void drawSoundObjects(const SoundSystem & soundSystem) const
 	{
 		beginCubeBatch();
 		{
@@ -678,7 +701,7 @@ struct MonitorVisualizer
 		endCubeBatch();
 	}
 	
-	void drawPannerGrid_speakers(const SpeakerPanning::Panner_Grid * panner)
+	void drawPannerGrid_speakers(const SpeakerPanning::Panner_Grid * panner) const
 	{
 		if (gridPannerOptions.visible == false)
 			return;
@@ -693,13 +716,25 @@ struct MonitorVisualizer
 				{
 					for (int z = 0; z < panner->gridDescription.size[2]; ++z)
 					{
+						float speakerSize = gridPannerOptions.speakerSize;
+						
+						if (gridPannerOptions.modulateSpeakerSizeWithPanningAmplitude)
+						{
+						// todo : this isn't thread safe. create a safe reader/writer object for communication between a producer and a consumer
+							const int speakerIndex = panner->calculateSpeakerIndex(x, y, z);
+							
+							auto & speakerInfo = panner->speakerInfos[speakerIndex];
+							
+							speakerSize *= speakerInfo.panningAmplitude;
+						}
+						
 						setColor(gridPannerOptions.speakerColor);
 						fillCube(
 							panner->calculateSpeakerPosition(x, y, z),
 							Vec3(
-								gridPannerOptions.speakerSize,
-								gridPannerOptions.speakerSize,
-								gridPannerOptions.speakerSize));
+								speakerSize,
+								speakerSize,
+								speakerSize));
 					}
 				}
 			}
@@ -707,7 +742,7 @@ struct MonitorVisualizer
 		endCubeBatch();
 	}
 	
-	void drawPannerGrid_grid(const SpeakerPanning::Panner_Grid * panner)
+	void drawPannerGrid_grid(const SpeakerPanning::Panner_Grid * panner) const
 	{
 		if (gridPannerOptions.visible == false)
 			return;
@@ -718,7 +753,7 @@ struct MonitorVisualizer
 			(panner->gridDescription.max - panner->gridDescription.min) / 2.f);
 	}
 	
-	void drawPannerGrid_soundObjectPanningAmplitudes(const SoundSystem & soundSystem, const SpeakerPanning::Panner_Grid * panner)
+	void drawPannerGrid_soundObjectPanningAmplitudes(const SoundSystem & soundSystem, const SpeakerPanning::Panner_Grid * panner) const
 	{
 		if (gridPannerOptions.visible == false)
 			return;
@@ -745,6 +780,77 @@ struct MonitorVisualizer
 			}
 		}
 		endCubeBatch();
+		popBlend();
+	}
+	
+	void drawTextOverlay(const Mat4x4 & modelViewProjection, const SoundSystem & soundSystem) const
+	{
+		for (auto * mixer : soundSystem.mixers)
+		{
+			if (mixer->type == kAudioMixer_Grid)
+			{
+				auto * mixer_grid = static_cast<const AudioMixer_Grid*>(mixer);
+				
+				auto * panner_grid = &mixer_grid->panner;
+				
+				drawPannerGrid_textOverlay(modelViewProjection, mixer_grid, panner_grid);
+			}
+		}
+		
+		if (soundSystem.audioDevice.stream == nullptr)
+		{
+			// show a warning message when the audio output failed to initialize
+			setColor(colorRed);
+			drawText(4, 4, 12, +1, +1, "Audio output failed to initialize");
+		}
+	}
+	
+	void drawPannerGrid_textOverlay(const Mat4x4 & modelViewProjection, const AudioMixer_Grid * mixer, const SpeakerPanning::Panner_Grid * panner) const
+	{
+		if (gridPannerOptions.showTextOverlay == false)
+			return;
+		
+		pushBlend(BLEND_ADD);
+		{
+			beginTextBatch();
+			{
+				for (int x = 0; x < panner->gridDescription.size[0]; ++x)
+				{
+					for (int y = 0; y < panner->gridDescription.size[1]; ++y)
+					{
+						for (int z = 0; z < panner->gridDescription.size[2]; ++z)
+						{
+							const Vec3 speakerPosition_grid = panner->calculateSpeakerPosition(x, y, z);
+							
+							float w;
+							const Vec2 speakerPosition_screen = transformToScreen(modelViewProjection, speakerPosition_grid, w);
+							
+							if (w > 0.f)
+							{
+								const int speakerIndex = panner->calculateSpeakerIndex(x, y, z);
+								
+								if (speakerIndex >= 0 && speakerIndex < mixer->speakerIndexToChannelIndex.size())
+								{
+									const int channelIndex = mixer->speakerIndexToChannelIndex[speakerIndex];
+									
+									int x = speakerPosition_screen[0];
+									int y = speakerPosition_screen[1];
+									
+									setColor(colorWhite);
+									drawText(x, y, 18.f, 0, 0, "speaker id: %d", speakerIndex);
+									y += 20;
+									
+									setColor(200, 200, 200);
+									drawText(x, y, 18.f, 0, 0, "output channel: %d", channelIndex);
+									y += 20;
+								}
+							}
+						}
+					}
+				}
+			}
+			endTextBatch();
+		}
 		popBlend();
 	}
 };
@@ -983,12 +1089,17 @@ struct MonitorGui
 	
 	void doVisibilityGui(MonitorVisualizer & visualizer)
 	{
+		ImGui::Checkbox("Show axes helper", &visualizer.visibility.showAxesHelper);
+		ImGui::SliderFloat("Axes helper thickness", &visualizer.visibility.axesHelperThickness, .01f, .1f);
+		ImGui::Separator();
+		
 		ImGui::Text("Grid panner");
 		ImGui::Checkbox("Visible", &visualizer.gridPannerOptions.visible);
 		ImGui::Checkbox("Show speakers", &visualizer.gridPannerOptions.showSpeakers);
 		ImGui::SliderFloat("Speaker size", &visualizer.gridPannerOptions.speakerSize, 0.f, 1.f);
 		ImGui::ColorPicker3("Speaker color", &visualizer.gridPannerOptions.speakerColor.r);
 		ImGui::Checkbox("Speaker x panning amplitude", &visualizer.gridPannerOptions.modulateSpeakerSizeWithPanningAmplitude);
+	// todo : x vu
 		ImGui::Checkbox("Speaker x speaker vu", &visualizer.gridPannerOptions.modulateSpeakerSizeWithSpeakerVu);
 		ImGui::Checkbox("Show sources", &visualizer.gridPannerOptions.showSources);
 	}
@@ -1068,14 +1179,15 @@ int main(int argc, char * argv[])
 		gridDescription.size[2] = 2;
 		gridDescription.min.Set(-2.f, -2.f, -2.f);
 		gridDescription.max.Set(+2.f, +2.f, +2.f);
-		mixer->init(gridDescription);
+		mixer->init(gridDescription, { 3, 2, 0, 1 });
 		
 		soundSystem.addMixer(mixer);
 	}
 	
-	Camera3d camera;
-	camera.position.Set(0.f, 1.f, -2.f);
-	camera.pitch = 15.f;
+	Camera camera;
+	camera.mode = Camera::kMode_Orbit;
+	camera.firstPerson.position.Set(0.f, 1.f, -2.f);
+	camera.firstPerson.pitch = 15.f;
 	
 	for (int i = 0; i < 1; ++i)
 	{
@@ -1134,7 +1246,7 @@ int main(int argc, char * argv[])
 		
 		inputIsCaptured |= audioGraphMgr.tickEditor(800, 600, framework.timeStep, inputIsCaptured);
 		
-		camera.tick(framework.timeStep, showGui == false);
+		camera.tick(framework.timeStep, inputIsCaptured, showGui);
 		
 		for (size_t i = 0; i < soundSystem.soundObjects.size(); ++i)
 		{
@@ -1149,14 +1261,67 @@ int main(int argc, char * argv[])
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			Mat4x4 modelViewProjectionMatrix;
+			
 			projectPerspective3d(60.f, .01f, 100.f);
+			camera.pushProjectionMatrix();
 			camera.pushViewMatrix();
 			{
-				visualizer.draw(soundSystem);
+				// capture matrices so we can project from world to screen space when drawing the text overlay
+				
+				Mat4x4 matP;
+				Mat4x4 matV;
+				gxGetMatrixf(GX_PROJECTION, matP.m_v);
+				gxGetMatrixf(GX_MODELVIEW, matV.m_v);
+				modelViewProjectionMatrix = matP * matV;
+				
+				// draw the opaque render pass
+				
+				pushBlend(BLEND_OPAQUE);
+				pushDepthTest(true, DEPTH_LESS);
+				{
+					// draw the speaker visualizer
+				
+					visualizer.drawOpaque(soundSystem);
+				
+					if (visualizer.visibility.showAxesHelper)
+					{
+						beginCubeBatch();
+						{
+							const float l = 1.f;
+							const float t = visualizer.visibility.axesHelperThickness;
+							
+							setColor(colorRed);
+							fillCube(Vec3(l/2, 0, 0), Vec3(l/2, t, t));
+							
+							setColor(colorGreen);
+							fillCube(Vec3(0, l/2, 0), Vec3(t, l/2, t));
+							
+							setColor(colorBlue);
+							fillCube(Vec3(0, 0, l/2), Vec3(t, t, l/2));
+						}
+						endCubeBatch();
+					}
+				}
+				popDepthTest();
+				popBlend();
+				
+				pushBlend(BLEND_ALPHA);
+				pushDepthTest(true, DEPTH_LESS, false);
+				{
+					// draw the translucent render pass
+					
+					visualizer.drawTranslucent(soundSystem);
+				}
+				popDepthTest();
+				popBlend();
 			}
 			camera.popViewMatrix();
+			camera.popProjectionMatrix();
 			
 			projectScreen2d();
+			
+			visualizer.drawTextOverlay(modelViewProjectionMatrix, soundSystem);
 			
 			audioGraphMgr.drawEditor(800, 600);
 			
