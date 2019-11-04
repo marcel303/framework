@@ -3445,17 +3445,11 @@ Vec4 transformToWorld(const Vec4 & v)
 	return t;
 }
 
-Vec2 transformToScreen(const Vec3 & v, float & w)
+Vec2 transformToScreen(const Mat4x4 & modelViewProjection, const Vec3 & v, float & w)
 {
-	Mat4x4 matP;
-	Mat4x4 matM;
-	
-	gxGetMatrixf(GX_PROJECTION, matP.m_v);
-	gxGetMatrixf(GX_MODELVIEW, matM.m_v);
-	
 	// from current transfor to view
 	
-	Vec4 t = matP * matM * Vec4(v[0], v[1], v[2], 1.f);
+	Vec4 t = modelViewProjection * Vec4(v[0], v[1], v[2], 1.f);
 	
 	// perspective divide
 	
@@ -3471,6 +3465,19 @@ Vec2 transformToScreen(const Vec3 & v, float & w)
 	Vec3 s = viewToScreen * Vec3(t[0], t[1], t[2]);
 	
 	return Vec2(s[0], s[1]);
+}
+
+Vec2 transformToScreen(const Vec3 & v, float & w)
+{
+	Mat4x4 matP;
+	Mat4x4 matM;
+	
+	gxGetMatrixf(GX_PROJECTION, matP.m_v);
+	gxGetMatrixf(GX_MODELVIEW, matM.m_v);
+	
+	const Mat4x4 modelViewProjection = matP * matM;
+	
+	return transformToScreen(modelViewProjection, v, w);
 }
 
 void pushSurface(Surface * newSurface)
