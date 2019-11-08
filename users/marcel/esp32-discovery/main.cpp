@@ -17,6 +17,10 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 
 #define ARTNET_PORT 6454
 
+#define I2S_FRAME_COUNT   256
+#define I2S_CHANNEL_COUNT 2
+#define I2S_BUFFER_COUNT  2
+
 enum Capabilities
 {
 	kCapability_ArtnetToDmx       = 1 << 0,
@@ -278,22 +282,26 @@ struct Test_TcpToI2S
 				goto error;
 			}
 			
-			// disables nagle's algorithm and send out packets immediately on write
+			// disable nagle's algorithm and send out packets immediately on write
 			
+		#if 1
 			sock_value = 1;
 			setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &sock_value, sizeof(sock_value));
-			
+		#endif
+		
+		#if 1
 			// tell the TCP stack to use a specific buffer size. usually the TCP stack is
 			// configured to use a rather large buffer size to increase bandwidth. we want
 			// to keep latency down however, so we reduce the buffer size here
 			
 			sock_value =
-				3   * /* triple buffered */
-				256 * /* frame count */
-				2   * /* stereo */
+				I2S_BUFFER_COUNT  * /* N times buffered */
+				I2S_FRAME_COUNT   * /* frame count */
+				I2S_CHANNEL_COUNT * /* stereo */
 				sizeof(int16_t) /* sample size */;
  			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sock_value, sizeof(sock_value));
-			
+		#endif
+		
 			// todo : TCP_NODELAY (osx). disables nagle's algorithm and sends out packets immediately on write
 			// todo : TCP_NOPUSH (osx)
 			// todo : TCP_CORK (linux). will manually batch messages and send them when the cork is removed
@@ -329,7 +337,7 @@ struct Test_TcpToI2S
 				
 				// todo : generate some audio data
 				
-				short data[256][2];
+				short data[I2S_FRAME_COUNT][2];
 				
 				// we're kind of strict with regard to the sound format we're going to allow .. to simplify the streaming a bit
 				if (soundData->sampleCount == 0 ||
@@ -344,7 +352,7 @@ struct Test_TcpToI2S
 					
 					const int volume = mouse.x * 256 / 800;
 					
-					for (int i = 0; i < 256; ++i)
+					for (int i = 0; i < I2S_FRAME_COUNT; ++i)
 					{
 						data[i][0] = (samples[samplePosition * 2 + 0] * volume) >> 8;
 						data[i][1] = (samples[samplePosition * 2 + 1] * volume) >> 8;
@@ -448,17 +456,20 @@ int main(int argc, char * argv[])
 			
 			auto & nodeState = findOrCreateNodeState(record.id);
 			
-			if (keyboard.wentDown(SDLK_s))
+			if (record.capabilities & kCapability_TcpToI2S)
 			{
-				if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+				if (keyboard.wentDown(SDLK_s))
 				{
-					nodeState.test_tcpToI2S.shut();
-				}
-				else
-				{
-					const int tcpPort = 6458;
-					
-					nodeState.test_tcpToI2S.init(record.endpointName.address, tcpPort);
+					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+					{
+						nodeState.test_tcpToI2S.shut();
+					}
+					else
+					{
+						const int tcpPort = 6458;
+						
+						nodeState.test_tcpToI2S.init(/*record.endpointName.address*/IpEndpointName("192.168.1.117").address, tcpPort);
+					}
 				}
 			}
 		
