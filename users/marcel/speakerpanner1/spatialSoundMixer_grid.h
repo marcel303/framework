@@ -1,6 +1,7 @@
 #pragma once
 
 #include "spatialSoundMixer.h"
+#include <algorithm> // std::find. todo : move to cpp
 #include <cmath> // todo : move to cpp
 
 struct SpatialSoundMixer_Grid : SpatialSoundMixer
