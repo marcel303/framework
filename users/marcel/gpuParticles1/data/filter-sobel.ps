@@ -1,0 +1,47 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+uniform sampler2D source;
+
+shader_in vec2 texcoord;
+
+#define FetchLuminance(source, texcoord, offset) textureOffset(source, texcoord, offset).x
+
+void main()
+{
+	float c00 = FetchLuminance(source, texcoord, ivec2(-1, -1));
+	float c10 = FetchLuminance(source, texcoord, ivec2(+0, -1));
+	float c20 = FetchLuminance(source, texcoord, ivec2(+1, -1));
+
+	float c01 = FetchLuminance(source, texcoord, ivec2(-1, +0));
+	float c11 = FetchLuminance(source, texcoord, ivec2(+0, +0));
+	float c21 = FetchLuminance(source, texcoord, ivec2(+1, +0));
+
+	float c02 = FetchLuminance(source, texcoord, ivec2(-1, +1));
+	float c12 = FetchLuminance(source, texcoord, ivec2(+0, +1));
+	float c22 = FetchLuminance(source, texcoord, ivec2(+1, +1));
+
+	// apply the sobel filter to get the gradients
+
+	float sobel_x =
+		c00 * +1 + c20 * -1 +
+		c01 * +2 + c21 * -2 +
+		c02 * +1 + c22 * -1;
+
+	float sobel_y =
+		c00 * +1 + c02 * -1 +
+		c10 * +2 + c12 * -2 +
+		c20 * +1 + c22 * -1;
+
+	// pack the resulting sobel values into unorm range
+	// note : we don't divide by two here to preserve
+	//        small values once they get stored. this
+	//        does mean large values will be clipped
+
+	sobel_x = sobel_x + 0.5;
+	sobel_y = sobel_y + 0.5;
+
+	shader_fragColor = vec4(sobel_x, sobel_y, 0.0, 0.0);
+}
+
+#undef FetchLuminance

@@ -1,0 +1,14 @@
+include engine/ShaderPS.txt
+
+uniform sampler2D p;
+uniform sampler2D v;
+
+shader_in float texcoord;
+
+void main()
+{
+	vec2 position = texture(p, vec2(texcoord, 0.0)).xy;
+	vec2 velocity = texture(v, vec2(texcoord, 0.0)).xy;
+
+	shader_fragColor = vec4(position + velocity, 0.0, 0.0);
+}

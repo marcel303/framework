@@ -1,0 +1,31 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+uniform sampler2D flowfield;
+uniform sampler2D colormap;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	vec2 flowfieldSizeRcp = vec2(1.0) / textureSize(flowfield, 0);
+
+	vec2 pos = texcoord;
+	vec2 vel = vec2(0.0);
+
+	vec4 result = texture(colormap, pos);
+
+	for (int i = 0; i < 100; ++i)
+	{
+		vec2 acc = texture(flowfield, pos).xy * flowfieldSizeRcp;
+
+		vel += acc * 1.5; // todo : make the acc amount a uniform
+		pos += vel;
+
+		result += texture(colormap, pos);
+	}
+
+	result /= 100.0;
+
+	shader_fragColor = result;
+}

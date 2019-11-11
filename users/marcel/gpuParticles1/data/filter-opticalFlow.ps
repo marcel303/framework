@@ -1,0 +1,37 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+uniform sampler2D luminance_curr;
+uniform sampler2D luminance_prev;
+uniform sampler2D sobel_curr;
+uniform sampler2D sobel_prev;
+
+uniform float scale;
+
+shader_in vec2 texcoord;
+
+vec2 fetchSobel(sampler2D sobel, vec2 texcoord)
+{
+	vec2 result = texture(sobel, texcoord).xy;
+
+	result -= vec2(0.5);
+
+	return result;
+}
+
+void main()
+{
+	float l_curr = texture(luminance_curr, texcoord).x;
+	float l_prev = texture(luminance_prev, texcoord).x;
+	float l_delta = l_curr - l_prev;
+
+	vec2 s_curr = fetchSobel(sobel_curr, texcoord);
+	vec2 s_prev = fetchSobel(sobel_prev, texcoord);
+	vec2 s_delta = s_curr + s_prev;
+
+	float s_length = sqrt(dot(s_delta, s_delta) + 0.01);
+
+	vec2 flow = scale * l_delta * s_delta / s_length;
+	
+	shader_fragColor = vec4(flow, 0.0, 0.0);
+}

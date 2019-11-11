@@ -1,0 +1,16 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+uniform sampler2D flowfield;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	vec2 flow = texture(flowfield, texcoord).xy;
+
+	//flow = flow * 0.5 + vec2(0.5);
+	flow = abs(flow);
+
+	shader_fragColor = vec4(flow, 0.0, 0.0);
+}
