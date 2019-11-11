@@ -643,7 +643,10 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 {
 	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES || primitiveType == GX_TRIANGLE_STRIP);
 	
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : s_gxShader;
+// todo : add to shaders struct, to avoid constant resource lookups here and at gxFlush
+	Shader genericShader("engine/Generic");
+	
+	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
 
 	setShader(shader);
 
@@ -666,7 +669,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 			s_gxTextureEnabled ? 1 : 0,
 			globals.colorMode,
 			globals.colorPost,
-			0);
+			globals.colorClamp);
 	}
 
 	if (globals.gxShaderIsDirty)
@@ -677,8 +680,11 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	//
 
-	glDrawArrays(toOpenGLPrimitiveType(primitiveType), 0, numVertices);
-	checkErrorGL();
+	if (shader.isValid())
+	{
+		glDrawArrays(toOpenGLPrimitiveType(primitiveType), 0, numVertices);
+		checkErrorGL();
+	}
 
 	globals.gxShaderIsDirty = false;
 }

@@ -1927,7 +1927,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 			s_gxTextureEnabled ? 1 : 0,
 			globals.colorMode,
 			globals.colorPost,
-			0);
+			globals.colorClamp);
 	}
 
 	if (globals.gxShaderIsDirty)
