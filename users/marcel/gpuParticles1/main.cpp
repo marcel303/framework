@@ -1,4 +1,5 @@
 #include "framework.h"
+#include "imgui-framework.h"
 #include "video.h"
 
 /*
@@ -11,7 +12,10 @@ https://diwi.github.io/PixelFlow/
 
 */
 
-static const int kNumParticles = 1024*8;
+#define VIEW_SX 1024
+#define VIEW_SY 1024
+
+static const int kNumParticles = 1024*16;
 
 struct OpticalFlow
 {
@@ -23,19 +27,38 @@ struct OpticalFlow
 	
 	Surface opticalFlow;
 	
+	struct
+	{
+		float blurRadius = 22.f;
+	} sourceFilter;
+	
 	void init()
 	{
 		for (int i = 0; i < 2; ++i)
 		{
-			luminance[i].init(512, 512, SURFACE_R8, false, true);
+			luminance[i].init(VIEW_SX, VIEW_SY, SURFACE_R8, false, true);
 			luminance[i].clear();
 			
-			sobel[i].init(512, 512, SURFACE_RGBA8, false, false);
+			sobel[i].init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, false, false);
 			sobel[i].clear(127, 127, 0, 0);
 		}
 		
-		opticalFlow.init(512, 512, SURFACE_RG16F, false, false);
+		opticalFlow.init(VIEW_SX, VIEW_SY, SURFACE_RG16F, false, false);
 		opticalFlow.clear();
+	}
+	
+	void shut()
+	{
+	/*
+		for (int i = 0; i < 2; ++i)
+		{
+			luminance[i].shut();
+			
+			sobel[i].shut();
+		}
+		
+		opticalFlow.free();
+	*/
 	}
 	
 	void update(const GxTextureId source)
@@ -62,13 +85,11 @@ struct OpticalFlow
 		
 	#if 1
 		{
-			const float gaussianRadius = 22.f;
-			
-			setShader_GaussianBlurH(luminance[current_luminance].getTexture(), 11, gaussianRadius);
+			setShader_GaussianBlurH(luminance[current_luminance].getTexture(), 11, sourceFilter.blurRadius);
 			luminance[current_luminance].postprocess();
 			clearShader();
 			
-			setShader_GaussianBlurV(luminance[current_luminance].getTexture(), 11, gaussianRadius);
+			setShader_GaussianBlurV(luminance[current_luminance].getTexture(), 11, sourceFilter.blurRadius);
 			luminance[current_luminance].postprocess();
 			clearShader();
 		}
@@ -127,9 +148,19 @@ struct ParticleSystem
 	Surface p;
 	Surface v;
 	
+	struct
+	{
+		float strength = 1.f;
+	} gravity;
+	
+	struct
+	{
+		float strength = 1.f;
+	} flow;
+	
 	void init()
 	{
-		flow_field.init(512, 512, SURFACE_RGBA32F, false, false);
+		flow_field.init(VIEW_SX, VIEW_SY, SURFACE_RGBA32F, false, false);
 		
 		p.init(kNumParticles, 1, SURFACE_RGBA32F, false, true);
 		v.init(kNumParticles, 1, SURFACE_RGBA32F, false, true);
@@ -150,13 +181,23 @@ struct ParticleSystem
 			gxBegin(GX_POINTS);
 			for (int i = 0; i < p.getWidth(); ++i)
 			{
-				setColorf(rand() % 512, rand() % 512, 0, 0);
+				setColorf(rand() % VIEW_SX, rand() % VIEW_SY, 0, 0);
 				gxVertex2f(i, 0.5f);
 			}
 			gxEnd();
 			popBlend();
 		}
 		popSurface();
+	}
+	
+	void shut()
+	{
+	/*
+		flow_field.free();
+	
+		p.free();
+		v.free();
+	*/
 	}
 	
 	void draw_flow_field()
@@ -201,7 +242,8 @@ struct ParticleSystem
 				const float mouse_x = 256 + sinf(framework.time / 1.234f) * 100.f;
 				const float mouse_y = 256 + sinf(framework.time / 2.345f) * 100.f;
 				shader.setImmediate("grav_pos", mouse_x, mouse_y);
-				shader.setImmediate("grav_force", 1.f);
+				shader.setImmediate("grav_force", gravity.strength);
+				shader.setImmediate("flow_strength", flow.strength);
 				drawRect(0, 0, v.getWidth(), v.getHeight());
 			}
 			clearShader();
@@ -233,8 +275,11 @@ int main(int argc, char * argv[])
 	framework.allowHighDpi = false;
 	framework.enableRealTimeEditing = true;
 	
-	if (!framework.init(512, 512))
+	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
+	
+	FrameworkImGuiContext guiContext;
+	guiContext.init();
 	
 	OpticalFlow opticalFlow;
 	opticalFlow.init();
@@ -251,6 +296,28 @@ int main(int argc, char * argv[])
 		
 		if (framework.quitRequested)
 			break;
+		
+		bool inputIsCaptured = false;
+		guiContext.processBegin(framework.timeStep, VIEW_SX, VIEW_SY, inputIsCaptured);
+		{
+			ImGui::SetNextWindowSize(ImVec2(370, 0));
+			if (ImGui::Begin("Flowfield"))
+			{
+				ImGui::PushItemWidth(200.f);
+				{
+					ImGui::Text("Particle System");
+					ImGui::SliderFloat("Gravity strength", &ps.gravity.strength, 0.f, 10.f);
+					ImGui::SliderFloat("Flow strength", &ps.flow.strength, 0.f, 10.f);
+					ImGui::Separator();
+					
+					ImGui::Text("Optical Flow");
+					ImGui::SliderFloat("Blur radius", &opticalFlow.sourceFilter.blurRadius, 0.f, 100.f);
+				}
+				ImGui::PopItemWidth();
+			}
+			ImGui::End();
+		}
+		guiContext.processEnd();
 		
 		if (mediaPlayer.presentedLastFrame(mediaPlayer.context))
 		{
@@ -290,7 +357,7 @@ int main(int argc, char * argv[])
 			{
 				setColor(255, 255, 255, 63);
 				gxSetTexture(mediaPlayer.getTexture());
-				drawRect(0, 0, 512, 512);
+				drawRect(0, 0, VIEW_SX, VIEW_SY);
 				gxSetTexture(0);
 			}
 			popBlend();
@@ -322,7 +389,7 @@ int main(int argc, char * argv[])
 				shader.setTexture("flowfield", 0, opticalFlow.opticalFlow.getTexture(), true, true);
 				shader.setTexture("colormap", 1, mediaPlayer.getTexture(), true, true);
 				pushBlend(BLEND_OPAQUE);
-				drawRect(0, 0, 512, 512);
+				drawRect(0, 0, VIEW_SX, VIEW_SY);
 				popBlend();
 			}
 			clearShader();
@@ -332,16 +399,24 @@ int main(int argc, char * argv[])
 			{
 				shader.setTexture("flowfield", 0, opticalFlow.opticalFlow.getTexture(), true, true);
 				pushBlend(BLEND_OPAQUE);
-				drawRect(0, 0, 512, 512);
+				drawRect(0, 0, VIEW_SX, VIEW_SY);
 				popBlend();
 			}
 			clearShader();
 		#endif
+		
+			guiContext.draw();
 		}
 		framework.endDraw();
 	}
 	
-	//ps.shut(); // todo
+	mediaPlayer.close(true);
+	
+	ps.shut();
+	
+	opticalFlow.shut();
+	
+	guiContext.shut();
 	
 	framework.shutdown();
 	

@@ -9,10 +9,10 @@ uniform float drag;
 uniform vec2 grav_pos;
 
 uniform float grav_force;
+uniform float flow_strength;
 
 shader_in float texcoord;
 
-float flow_strength = 1.0;
 void main()
 {
 	vec2 position = texture(p, vec2(texcoord, 0.0)).xy;
