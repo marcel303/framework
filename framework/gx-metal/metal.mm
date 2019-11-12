@@ -1899,7 +1899,7 @@ static void gxEndDraw()
 
 void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 {
-	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLE_STRIP);
+	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES || primitiveType == GX_TRIANGLE_STRIP);
 	
 	bindVsInputs(nullptr, 0, 0);
 	
