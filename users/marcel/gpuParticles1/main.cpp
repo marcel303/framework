@@ -36,14 +36,19 @@ struct OpticalFlow
 	{
 		for (int i = 0; i < 2; ++i)
 		{
+			// note : the luminance map is double buffered so it can be post processed/blurred
+			
 			luminance[i].init(VIEW_SX, VIEW_SY, SURFACE_R8, false, true);
+			luminance[i].setName("OpticalFlow.Luminance");
 			luminance[i].clear();
 			
-			sobel[i].init(VIEW_SX, VIEW_SY, SURFACE_RGBA8, false, false);
+			sobel[i].init(VIEW_SX, VIEW_SY, SURFACE_RG8, false, false);
+			sobel[i].setName("OpticalFlow.Sobel");
 			sobel[i].clear(127, 127, 0, 0);
 		}
 		
 		opticalFlow.init(VIEW_SX, VIEW_SY, SURFACE_RG16F, false, false);
+		opticalFlow.setName("OpticalFlow.flow");
 		opticalFlow.clear();
 	}
 	
@@ -83,7 +88,10 @@ struct OpticalFlow
 		}
 		popSurface();
 		
-	#if 1
+	#if 1 // todo : fix issue with Metal where shader buffer params are not set
+		// blur the luminance map
+		
+		pushBlend(BLEND_OPAQUE);
 		{
 			setShader_GaussianBlurH(luminance[current_luminance].getTexture(), 11, sourceFilter.blurRadius);
 			luminance[current_luminance].postprocess();
@@ -93,6 +101,7 @@ struct OpticalFlow
 			luminance[current_luminance].postprocess();
 			clearShader();
 		}
+		popBlend();
 	#endif
 		
 		// apply horizontal + vertical sobel filter
@@ -158,12 +167,22 @@ struct ParticleSystem
 		float strength = 1.f;
 	} flow;
 	
+	struct
+	{
+		bool applyBounds = true;
+	} simulation;
+	
 	void init()
 	{
-		flow_field.init(VIEW_SX, VIEW_SY, SURFACE_RGBA32F, false, false);
+		flow_field.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, false, false);
+		flow_field.setName("Flowfield");
+		
+		// note : position and velocity need to be double buffered as they are feedbacking onto themselves
 		
 		p.init(kNumParticles, 1, SURFACE_RGBA32F, false, true);
+		p.setName("ParticleSystem.positions");
 		v.init(kNumParticles, 1, SURFACE_RGBA32F, false, true);
+		v.setName("ParticleSystem.velocities");
 		
 		for (int i = 0; i < 2; ++i)
 		{
@@ -202,13 +221,11 @@ struct ParticleSystem
 	
 	void draw_flow_field()
 	{
-		pushSurface(&flow_field);
+		pushSurface(&flow_field, true);
 		{
-			flow_field.clear();
-			
 			pushBlend(BLEND_ADD_OPAQUE);
 			{
-				Shader shader("particle-field");
+				Shader shader("particle-draw-field");
 				setShader(shader);
 				{
 					shader.setTexture("p", 0, p.getTexture(), false, true);
@@ -244,6 +261,8 @@ struct ParticleSystem
 				shader.setImmediate("grav_pos", mouse_x, mouse_y);
 				shader.setImmediate("grav_force", gravity.strength);
 				shader.setImmediate("flow_strength", flow.strength);
+				shader.setImmediate("bounds", 0.f, 0.f, VIEW_SX, VIEW_SY);
+				shader.setImmediate("applyBounds", simulation.applyBounds ? 1.f : 0.f);
 				drawRect(0, 0, v.getWidth(), v.getHeight());
 			}
 			clearShader();
@@ -308,6 +327,7 @@ int main(int argc, char * argv[])
 					ImGui::Text("Particle System");
 					ImGui::SliderFloat("Gravity strength", &ps.gravity.strength, 0.f, 10.f);
 					ImGui::SliderFloat("Flow strength", &ps.flow.strength, 0.f, 10.f);
+					ImGui::Checkbox("Apply bounds", &ps.simulation.applyBounds);
 					ImGui::Separator();
 					
 					ImGui::Text("Optical Flow");
