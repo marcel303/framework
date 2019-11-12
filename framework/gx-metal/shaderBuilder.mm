@@ -304,6 +304,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 		sb.Append("\n");
 		sb.Append("using namespace metal;\n");
 		sb.Append("\n");
+		sb.Append("// standard types\n");
 		sb.Append("typedef float2 vec2;\n");
 		sb.Append("typedef float3 vec3;\n");
 		sb.Append("typedef float4 vec4;\n");
@@ -317,6 +318,8 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 		sb.Append("typedef float4x4 mat4;\n");
 		sb.Append("typedef float4x4 mat4x4;\n");
 		sb.Append("\n");
+		
+		sb.Append("// texture sampling\n");
 	// todo : use per-texture samplers
 		//sb.Append("#define texture(s, c) s.sample(s ## _sampler, c)\n");
 		sb.Append("constexpr sampler sampler_linear_wrap(mag_filter::linear, min_filter::linear, address::clamp_to_edge);\n");
@@ -324,6 +327,9 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 		sb.Append("#define textureOffset(s, c, o) s.sample(sampler_linear_wrap, c, o)\n");
 		sb.Append("#define sampler2D texture2d<float>\n");
 		sb.Append("#define textureSize(t, level) float2(t.get_width(level), t.get_height(level))\n");
+		sb.Append("\n");
+		
+		sb.Append("// standard library\n");
 		sb.Append("#define dFdx dfdx\n");
 		sb.Append("#define dFdy dfdy\n");
 		sb.Append("#define discard discard_fragment()\n");
@@ -357,9 +363,20 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 						auto name = u.name.substr(0, array_start - u.name.c_str());
 						sb.AppendFormat("\tconstant %s * %s;\n", u.type.c_str(), name.c_str());
 					}
-					else
+					else if (u.type != "sampler2D")
 					{
 						sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+					}
+				}
+				sb.Append("\t\n");
+				
+				sb.Append("\t// textures\n");
+				for (auto & u : uniforms)
+				{
+					if (u.type == "sampler2D")
+					{
+						sb.AppendFormat("\ttexture2d<float> %s;\n", u.name.c_str());
+						sb.AppendFormat("\tsampler %s_sampler;\n", u.name.c_str());
 					}
 				}
 				sb.Append("\t\n");
@@ -419,6 +436,9 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			
 			for (auto & u : uniforms)
 			{
+				if (u.type == "sampler2D")
+					continue;
+				
 				if (strcmp(currentUniformBufferName, u.buffer_name.c_str()) != 0)
 				{
 					if (currentUniformBufferName[0] != 0)
@@ -442,10 +462,28 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 				endUniformBuffer();
 			
 			//
+			
+			sb.Append("struct ShaderTextures\n");
+			sb.Append("{\n");
+			{
+				for (auto & u : uniforms)
+				{
+					if (u.type == "sampler2D")
+					{
+						sb.AppendFormat("\ttexture2d<float> %s [[texture(%d)]];\n", u.name.c_str(), u.index);
+						sb.AppendFormat("\tsampler %s_sampler [[sampler(%d)]];\n", u.name.c_str(), u.index);
+					}
+				}
+			}
+			sb.Append("};\n");
+			sb.Append("\n");
+			
+			//
 		
 			sb.Append("vertex ShaderVaryings shader_main(\n");
 			sb.Append("\tShaderInputs inputs [[stage_in]],\n");
 			sb.Append(bufferArguments.c_str());
+			sb.Append("\tShaderTextures textures,\n");
 			sb.Append("\tuint vertexId [[vertex_id]])\n");
 			sb.Append("{\n");
 			sb.Append("\tShaderMain m;\n");
@@ -455,6 +493,9 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 					sb.AppendFormat("\tm.%s = inputs.%s;\n", a.name.c_str(), a.name.c_str());
 				for (auto & u : uniforms)
 				{
+					if (u.type == "sampler2D")
+						continue;
+					
 					const char * array_start = strchr(u.name.c_str(), '[');
 					if (array_start != nullptr)
 					{
@@ -466,6 +507,9 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 						sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", u.name.c_str(), u.buffer_name.c_str(), u.name.c_str());
 					}
 				}
+				for (auto & u : uniforms)
+					if (u.type == "sampler2D")
+						sb.AppendFormat("\tm.%s = textures.%s;\n", u.name.c_str(), u.name.c_str());
 			}
 			sb.Append("\t\n");
 			sb.Append("\tm.main();\n");
@@ -559,26 +603,26 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 
 			for (auto & u : uniforms)
 			{
-				if (u.type != "sampler2D")
+				if (u.type == "sampler2D")
+					continue;
+				
+				if (strcmp(currentUniformBufferName, u.buffer_name.c_str()) != 0)
 				{
-					if (strcmp(currentUniformBufferName, u.buffer_name.c_str()) != 0)
-					{
-						if (currentUniformBufferName[0] != 0)
-							endUniformBuffer();
-						
-						currentUniformBufferName = u.buffer_name.c_str();
-						beginUniformBuffer(currentUniformBufferName);
-						
-						bufferArguments += String::FormatC("\tconstant %s & uniforms_%s [[buffer(%d)]],\n",
-							currentUniformBufferName,
-							currentUniformBufferName,
-							nextBufferIndex);
-						
-						nextBufferIndex++;
-					}
-
-					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+					if (currentUniformBufferName[0] != 0)
+						endUniformBuffer();
+					
+					currentUniformBufferName = u.buffer_name.c_str();
+					beginUniformBuffer(currentUniformBufferName);
+					
+					bufferArguments += String::FormatC("\tconstant %s & uniforms_%s [[buffer(%d)]],\n",
+						currentUniformBufferName,
+						currentUniformBufferName,
+						nextBufferIndex);
+					
+					nextBufferIndex++;
 				}
+
+				sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
 			}
 			
 			if (currentUniformBufferName[0] != 0)
@@ -624,24 +668,25 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			{
 				for (auto & u : uniforms)
 				{
-					if (u.type != "sampler2D")
+					if (u.type == "sampler2D")
+						continue;
+					
+					const char * array_start = strchr(u.name.c_str(), '[');
+					if (array_start != nullptr)
 					{
-						const char * array_start = strchr(u.name.c_str(), '[');
-						if (array_start != nullptr)
-						{
-							auto name = u.name.substr(0, array_start - u.name.c_str());
-							sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", name.c_str(), u.buffer_name.c_str(), name.c_str());
-						}
-						else
-						{
-							sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", u.name.c_str(), u.buffer_name.c_str(), u.name.c_str());
-						}
+						auto name = u.name.substr(0, array_start - u.name.c_str());
+						sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", name.c_str(), u.buffer_name.c_str(), name.c_str());
+					}
+					else
+					{
+						sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", u.name.c_str(), u.buffer_name.c_str(), u.name.c_str());
 					}
 				}
 				
 				for (auto & u : uniforms)
 					if (u.type == "sampler2D")
 						sb.AppendFormat("\tm.%s = textures.%s;\n", u.name.c_str(), u.name.c_str());
+				
 				for (auto & io : inputOutputs)
 					sb.AppendFormat("\tm.%s = varyings.%s;\n", io.name.c_str(), io.name.c_str());
 			}
