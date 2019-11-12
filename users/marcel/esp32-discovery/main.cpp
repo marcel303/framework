@@ -578,6 +578,16 @@ struct NodeState
 	
 	Test_TcpToI2S test_tcpToI2S;
 	Test_TcpToI2SQuad test_tcpToI2SQuad;
+	
+	struct
+	{
+		uint8_t sequenceNumber = 0;
+	} artnetToDmx;
+	
+	struct
+	{
+		uint8_t sequenceNumber = 0;
+	} artnetToLedstrip;
 };
 
 static std::list<NodeState> s_nodeStates;
@@ -664,7 +674,11 @@ int main(int argc, char * argv[])
 			{
 				ArtnetPacket packet;
 				
-				auto * values = packet.makeDMX512(4);
+				nodeState.artnetToDmx.sequenceNumber = (sequenceNumber + 30) % 256;
+				if (nodeState.artnetToDmx.sequenceNumber == 0)
+					nodeState.artnetToDmx.sequenceNumber++;
+				
+				auto * values = packet.makeDMX512(4, sequenceNumber);
 				
 				for (int i = 0; i < 4; ++i)
 				{
@@ -689,7 +703,11 @@ int main(int argc, char * argv[])
 					lo = uint8_t(value16);
 				};
 			
-				auto * values = packet.makeDMX512(6);
+				nodeState.artnetToLedstrip.sequenceNumber = (sequenceNumber + 30) % 256;
+				if (nodeState.artnetToLedstrip.sequenceNumber == 0)
+					nodeState.artnetToLedstrip.sequenceNumber++;
+				
+				auto * values = packet.makeDMX512(6, nodeState.artnetToLedstrip.sequenceNumber);
 			
 				for (int i = 0; i < 3; ++i)
 				{
