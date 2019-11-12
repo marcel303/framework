@@ -56,6 +56,8 @@ void Surface::construct()
 	m_colorTarget[1] = nullptr;
 	m_depthTarget[0] = nullptr;
 	m_depthTarget[1] = nullptr;
+	
+	m_name = "Surface";
 }
 
 void Surface::destruct()
@@ -295,6 +297,16 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 	glBindTexture(GL_TEXTURE_2D, oldTexture);
 	checkErrorGL();
 #endif
+}
+
+void Surface::setName(const char * name)
+{
+	m_name = name;
+}
+
+const char * Surface::getName() const
+{
+	return m_name.c_str();
 }
 
 ColorTarget * Surface::getColorTarget()

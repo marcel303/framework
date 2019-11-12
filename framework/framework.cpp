@@ -1636,7 +1636,7 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 		scale255(b),
 		scale255(a));
 	
-	pushBackbufferRenderPass(true, color, enableDepthBuffer, depth, "Surface");
+	pushBackbufferRenderPass(true, color, enableDepthBuffer, depth, "Backbuffer");
 	
 	// initialize viewport and OpenGL matrices
 	
@@ -3480,8 +3480,10 @@ Vec2 transformToScreen(const Vec3 & v, float & w)
 	return transformToScreen(modelViewProjection, v, w);
 }
 
-void pushSurface(Surface * newSurface)
+void pushSurface(Surface * newSurface, const bool clearSurface)
 {
+	Assert(clearSurface == false); // todo : fix issue with popSurface when clear is enabled
+	
 #if ENABLE_SCREENSHOTS
 	const bool screenshotMode = surface == nullptr && s_screenshotSurfaceStack.stackSize > 0;
 	
@@ -3496,7 +3498,7 @@ void pushSurface(Surface * newSurface)
 	fassert(surfaceStackSize < kMaxSurfaceStackSize);
 	surfaceStack[surfaceStackSize++] = newSurface;
 	
-	if (newSurface != oldSurface)
+	if (newSurface != oldSurface || clearSurface)
 	{
 		// save state
 		
@@ -3508,9 +3510,23 @@ void pushSurface(Surface * newSurface)
 		// start a render pass for the new surface
 		
 		if (newSurface == nullptr)
-			pushBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, "Surface");
+		{
+			pushBackbufferRenderPass(
+				clearSurface,
+				colorBlackTranslucent,
+				clearSurface,
+				0.f,
+				"Backbuffer");
+		}
 		else
-			pushRenderPass(newSurface->getColorTarget(), false, newSurface->getDepthTarget(), false, "Surface");
+		{
+			pushRenderPass(
+				newSurface->getColorTarget(),
+				clearSurface,
+				newSurface->getDepthTarget(),
+				clearSurface,
+				newSurface->getName());
+		}
 		
 		//
 		
@@ -3545,7 +3561,7 @@ void popSurface()
 	fassert(surfaceStackSize > 0);
 	surfaceStack[--surfaceStackSize] = 0;
 	
-	if (newSurface != oldSurface)
+	if (newSurface != oldSurface) // fixme : fix case where clearSurface enabled would push, but pop is skipped here. we need a better way to know whether we started a new render pass or not
 	{
 		popRenderPass();
 

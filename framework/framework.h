@@ -621,6 +621,8 @@ class Surface
 	
 	ColorTarget * m_colorTarget[2];
 	DepthTarget * m_depthTarget[2];
+	
+	std::string m_name;
 
 	void construct();
 	void destruct();
@@ -636,6 +638,9 @@ public:
 	bool init(const SurfaceProperties & properties);
 	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
 	void setSwizzle(int r, int g, int b, int a);
+	
+	void setName(const char * name);
+	const char * getName() const;
 	
 	ColorTarget * getColorTarget();
 	DepthTarget * getDepthTarget();
@@ -1436,7 +1441,7 @@ Vec4 transformToWorld(const Vec4 & v);
 Vec2 transformToScreen(const Mat4x4 & modelViewProjection, const Vec3 & v, float & w);
 Vec2 transformToScreen(const Vec3 & v, float & w);
 
-void pushSurface(Surface * surface);
+void pushSurface(Surface * surface, const bool clearSurface = false);
 void popSurface();
 void setDrawRect(int x, int y, int sx, int sy);
 void clearDrawRect();
