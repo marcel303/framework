@@ -28,6 +28,8 @@ static GLenum translateColorFormat(const SURFACE_FORMAT format)
 		glFormat = GL_R16F;
 	if (format == SURFACE_R32F)
 		glFormat = GL_R32F;
+	if (format == SURFACE_RG8)
+		glFormat = GL_RG8;
 	if (format == SURFACE_RG16F)
 		glFormat = GL_RG16F;
 	if (format == SURFACE_RG32F)

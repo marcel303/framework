@@ -19,6 +19,7 @@ static MTLPixelFormat toMetalFormat(const SURFACE_FORMAT format)
 	C(SURFACE_R8,      MTLPixelFormatR8Unorm);
 	C(SURFACE_R16F,    MTLPixelFormatR16Float);
 	C(SURFACE_R32F,    MTLPixelFormatR32Float);
+	C(SURFACE_RG8,     MTLPixelFormatRG8Unorm);
 	C(SURFACE_RG16F,   MTLPixelFormatRG16Float);
 	C(SURFACE_RG32F,   MTLPixelFormatRG32Float);
 #undef C
