@@ -154,8 +154,7 @@ struct ParticleSystem
 {
 	Surface flow_field;
 	
-	Surface p;
-	Surface v;
+	Surface p; // xy = particle position, zw = particle velocity
 	
 	GxTextureId particleTexture = 0;
 	
@@ -187,17 +186,12 @@ struct ParticleSystem
 		// note : position and velocity need to be double buffered as they are feedbacking onto themselves
 		
 		p.init(kNumParticles, 1, SURFACE_RGBA32F, false, true);
-		p.setName("ParticleSystem.positions");
-		v.init(kNumParticles, 1, SURFACE_RGBA32F, false, true);
-		v.setName("ParticleSystem.velocities");
+		p.setName("ParticleSystem.positionsAndVelocities");
 		
 		for (int i = 0; i < 2; ++i)
 		{
 			p.clear();
-			v.clear();
-			
 			p.swapBuffers();
-			v.swapBuffers();
 		}
 		
 		setColorClamp(false);
@@ -270,7 +264,6 @@ struct ParticleSystem
 		setShader(shader);
 		{
 			shader.setTexture("p", 0, p.getTexture(), false, true);
-			shader.setTexture("v", 1, v.getTexture(), false, true);
 			gxEmitVertices(GX_TRIANGLES, p.getWidth() * 6);
 		}
 		clearShader();
@@ -279,20 +272,18 @@ struct ParticleSystem
 	void update_particles(const GxTextureId flowfield)
 	{
 		const GxTextureId pTex = p.getTexture();
-		const GxTextureId vTex = v.getTexture();
 		
 		p.swapBuffers();
-		v.swapBuffers();
 		
-		pushSurface(&v);
+		pushSurface(&p);
 		{
+		// todo : rename shader to particle-update
 			pushBlend(BLEND_OPAQUE);
 			Shader shader("particle-update-velocity");
 			setShader(shader);
 			{
 				shader.setTexture("p", 0, pTex, false, true);
-				shader.setTexture("v", 1, vTex, false, true);
-				shader.setTexture("flowfield", 2, flowfield, true, true);
+				shader.setTexture("flowfield", 1, flowfield, true, true);
 				shader.setImmediate("drag", .99f);
 				const float mouse_x = 256 + sinf(framework.time / 1.234f) * 100.f;
 				const float mouse_y = 256 + sinf(framework.time / 2.345f) * 100.f;
@@ -301,21 +292,6 @@ struct ParticleSystem
 				shader.setImmediate("flow_strength", flow.strength);
 				shader.setImmediate("bounds", 0.f, 0.f, VIEW_SX, VIEW_SY);
 				shader.setImmediate("applyBounds", simulation.applyBounds ? 1.f : 0.f);
-				drawRect(0, 0, v.getWidth(), v.getHeight());
-			}
-			clearShader();
-			popBlend();
-		}
-		popSurface();
-		
-		pushSurface(&p);
-		{
-			pushBlend(BLEND_OPAQUE);
-			Shader shader("particle-update-position");
-			setShader(shader);
-			{
-				shader.setTexture("p", 0, pTex, false, true);
-				shader.setTexture("v", 1, vTex, false, true);
 				drawRect(0, 0, p.getWidth(), p.getHeight());
 			}
 			clearShader();

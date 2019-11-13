@@ -2,7 +2,6 @@ include engine/ShaderPS.txt
 
 // todo : merge position and velocity textures
 uniform sampler2D p;
-uniform sampler2D v;
 
 uniform sampler2D flowfield;
 
@@ -19,8 +18,9 @@ shader_in float texcoord;
 
 void main()
 {
-	vec2 position = texture(p, vec2(texcoord, 0.0)).xy;
-	vec2 velocity = texture(v, vec2(texcoord, 0.0)).xy;
+	vec4 positionAndVelocity = texture(p, vec2(texcoord, 0.0));
+	vec2 position = positionAndVelocity.xy;
+	vec2 velocity = positionAndVelocity.zw;
 
 	// apply gravitational force
 
@@ -51,6 +51,8 @@ void main()
 		if (position.y > max.y)
 			velocity.y = -abs(velocity.y);
 	}
+
+	position += velocity;
 	
-	shader_fragColor = vec4(velocity, 0.0, 0.0);
+	shader_fragColor = vec4(position, velocity);
 }
