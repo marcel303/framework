@@ -15,7 +15,8 @@ https://diwi.github.io/PixelFlow/
 #define VIEW_SX 1024
 #define VIEW_SY 1024
 
-static const int kNumParticles = 1024*16;
+static const int kMaxParticleBufferSx = 1024;
+static const int kNumParticles = 1024*256;
 
 struct OpticalFlow
 {
@@ -185,7 +186,9 @@ struct ParticleSystem
 		
 		// note : position and velocity need to be double buffered as they are feedbacking onto themselves
 		
-		p.init(kNumParticles, 1, SURFACE_RGBA32F, false, true);
+		const int sx = kMaxParticleBufferSx;
+		const int sy = (kNumParticles + kMaxParticleBufferSx - 1) / kMaxParticleBufferSx;
+		p.init(sx, sy, SURFACE_RGBA32F, false, true);
 		p.setName("ParticleSystem.positionsAndVelocities");
 		
 		for (int i = 0; i < 2; ++i)
@@ -199,10 +202,13 @@ struct ParticleSystem
 		{
 			pushBlend(BLEND_OPAQUE);
 			gxBegin(GX_POINTS);
-			for (int i = 0; i < p.getWidth(); ++i)
+			for (int x = 0; x < p.getWidth(); ++x)
 			{
-				setColorf(rand() % VIEW_SX, rand() % VIEW_SY, 0, 0);
-				gxVertex2f(i, 0.5f);
+				for (int y = 0; y < p.getHeight(); ++y)
+				{
+					setColorf(rand() % VIEW_SX, rand() % VIEW_SY, 0, 0);
+					gxVertex2f(x + .5f, y + 0.5f);
+				}
 			}
 			gxEnd();
 			popBlend();
@@ -253,7 +259,7 @@ struct ParticleSystem
 			shader.setTexture("p", 0, p.getTexture(), false, true);
 			shader.setTexture("particleTexture", 1, particleTexture, true, true);
 			shader.setImmediate("strength", repulsion.strength);
-			gxEmitVertices(GX_TRIANGLES, p.getWidth() * 6);
+			gxEmitVertices(GX_TRIANGLES, kNumParticles * 6);
 		}
 		clearShader();
 	}
@@ -264,7 +270,7 @@ struct ParticleSystem
 		setShader(shader);
 		{
 			shader.setTexture("p", 0, p.getTexture(), false, true);
-			gxEmitVertices(GX_TRIANGLES, p.getWidth() * 6);
+			gxEmitVertices(GX_TRIANGLES, kNumParticles * 6);
 		}
 		clearShader();
 	}

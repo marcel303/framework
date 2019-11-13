@@ -1,6 +1,6 @@
 include engine/ShaderVS.txt
 
-shader_out float texcoord;
+shader_out vec2 texcoord;
 
 void main()
 {
@@ -8,5 +8,5 @@ void main()
 
 	gl_Position = ModelViewProjectionMatrix * position;
 
-	texcoord = unpackTexcoord(0).x;
+	texcoord = unpackTexcoord(0);
 }

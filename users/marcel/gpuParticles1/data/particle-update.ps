@@ -14,11 +14,11 @@ uniform float flow_strength;
 uniform vec4 bounds;
 uniform float applyBounds;
 
-shader_in float texcoord;
+shader_in vec2 texcoord;
 
 void main()
 {
-	vec4 positionAndVelocity = texture(p, vec2(texcoord, 0.0));
+	vec4 positionAndVelocity = texture(p, texcoord);
 	vec2 position = positionAndVelocity.xy;
 	vec2 velocity = positionAndVelocity.zw;
 

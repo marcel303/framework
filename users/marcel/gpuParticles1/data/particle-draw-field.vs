@@ -17,8 +17,8 @@ void main()
 	//
 
 	int particle_index = gl_VertexID / 6;
-	vec2 sizeRcp = vec2(1.0) / textureSize(p, 0);
-	position += texture(p, vec2(sizeRcp.x * (particle_index + 0.5), 0.5)).xy;
+	vec2 particle_position = lookupParticlePositionAndVelocity(p, particle_index).xy;
+	position += particle_position;
 
 	gl_Position = ModelViewProjectionMatrix * vec4(position, 0.0, 1.0);
 
