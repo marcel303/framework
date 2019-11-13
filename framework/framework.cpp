@@ -4049,9 +4049,14 @@ GxTextureId createTextureFromR8(const void * source, int sx, int sy, bool filter
 	return createTexture(source, sx, sy, filter, clamp, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
 }
 
-GxTextureId createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp)
+GxTextureId createTextureFromRGB32F(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_RGB32F, GL_RGB, GL_FLOAT);
+}
+
+GxTextureId createTextureFromRG32F(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, filter, clamp, GL_RG32F, GL_RG, GL_FLOAT);
 }
 
 #if ENABLE_DESKTOP_OPENGL

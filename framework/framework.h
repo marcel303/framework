@@ -1528,7 +1528,8 @@ void endCubeBatch();
 GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp);
 GxTextureId createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp);
 GxTextureId createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp);
-GxTextureId createTextureFromRGBF32(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromRGB32F(const void * source, int sx, int sy, bool filter, bool clamp);
+GxTextureId createTextureFromRG32F(const void * source, int sx, int sy, bool filter, bool clamp);
 GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp);
 GxTextureId createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp);
 
