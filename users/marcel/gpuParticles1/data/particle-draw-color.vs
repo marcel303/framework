@@ -2,8 +2,9 @@ include engine/ShaderVS.txt
 include particle-utils.txt
 
 uniform sampler2D p;
+uniform sampler2D v;
 
-shader_out vec2 v_texcoord;
+shader_out vec2 v_velocity;
 
 void main()
 {
@@ -22,5 +23,5 @@ void main()
 
 	gl_Position = ModelViewProjectionMatrix * vec4(position, 0.0, 1.0);
 
-	v_texcoord = uv;
+	v_velocity = texture(v, vec2(sizeRcp.x * (particle_index + 0.5), 0.5)).xy;
 }

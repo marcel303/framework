@@ -1,6 +1,15 @@
 include engine/ShaderPS.txt
 
+uniform sampler2D particleTexture;
+uniform float strength;
+
+shader_in vec2 v_texcoord;
+
 void main()
 {
-	shader_fragColor = vec4(1.0);
+	vec2 velocity = texture(particleTexture, v_texcoord).xy;
+
+	velocity *= strength;
+
+	shader_fragColor = vec4(velocity, 0.0, 0.0);
 }

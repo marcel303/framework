@@ -1,0 +1,16 @@
+include engine/ShaderPS.txt
+
+shader_in vec2 v_velocity;
+
+void main()
+{
+	float velocity_mag = length(v_velocity);
+
+	float opacity = pow(velocity_mag / 7.0, 1.0);
+
+	float r = 0.1 * velocity_mag;
+	float g = 0.2 * velocity_mag;
+	float b = 1.0 * velocity_mag;
+
+	shader_fragColor = vec4(r, g, b, opacity);
+}

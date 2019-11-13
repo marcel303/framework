@@ -31,7 +31,16 @@ void main()
 
 	float s_length = sqrt(dot(s_delta, s_delta) + 0.01);
 
+// todo : multiply with timestep
 	vec2 flow = scale * l_delta * s_delta / s_length;
+
+	/*
+	// threshold
+	float len_old = sqrt(flow.x*flow.x + flow.y*flow.y + 0.00001);
+	float len_new = max(len_old - threshold, 0.0);
+	// len_new = len_new * len_old/(len_new + 0.00001);
+	flow *= len_new / len_old;
+	*/
 	
 	shader_fragColor = vec4(flow, 0.0, 0.0);
 }

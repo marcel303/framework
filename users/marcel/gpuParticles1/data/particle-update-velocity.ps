@@ -1,5 +1,6 @@
 include engine/ShaderPS.txt
 
+// todo : merge position and velocity textures
 uniform sampler2D p;
 uniform sampler2D v;
 
@@ -28,6 +29,7 @@ void main()
 
 	// apply flowfield acceleration
 
+// todo : include time step
 	vec2 flow = texture(flowfield, position / textureSize(flowfield, 0)).xy;
 	velocity += flow * flow_strength;
 

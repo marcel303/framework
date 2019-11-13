@@ -157,10 +157,17 @@ struct ParticleSystem
 	Surface p;
 	Surface v;
 	
+	GxTextureId particleTexture = 0;
+	
 	struct
 	{
 		float strength = 1.f;
 	} gravity;
+	
+	struct
+	{
+		float strength = .1f;
+	} repulsion;
 	
 	struct
 	{
@@ -207,6 +214,8 @@ struct ParticleSystem
 			popBlend();
 		}
 		popSurface();
+		
+		particleTexture = generateParticleTexture();
 	}
 	
 	void shut()
@@ -219,23 +228,52 @@ struct ParticleSystem
 	*/
 	}
 	
-	void draw_flow_field()
+	GxTextureId generateParticleTexture()
 	{
-		pushSurface(&flow_field, true);
+		float data[32][32][2];
+		
+		for (int y = 0; y < 32; ++y)
 		{
-			pushBlend(BLEND_ADD_OPAQUE);
+			for (int x = 0; x < 32; ++x)
 			{
-				Shader shader("particle-draw-field");
-				setShader(shader);
-				{
-					shader.setTexture("p", 0, p.getTexture(), false, true);
-					gxEmitVertices(GX_TRIANGLES, p.getWidth() * 6);
-				}
-				clearShader();
+				const float dx = x / 31.f * 2.f - 1.f;
+				const float dy = y / 31.f * 2.f - 1.f;
+				const float d = hypotf(dx, dy);
+				
+				const float vx = d <= 1.f ? dx : 0.f;
+				const float vy = d <= 1.f ? dy : 0.f;
+				
+				data[y][x][0] = vx;
+				data[y][x][1] = vy;
 			}
-			popBlend();
 		}
-		popSurface();
+		
+		return createTextureFromRG32F(data, 32, 32, true, true);
+	}
+	
+	void drawParticleVelocity()
+	{
+		Shader shader("particle-draw-field");
+		setShader(shader);
+		{
+			shader.setTexture("p", 0, p.getTexture(), false, true);
+			shader.setTexture("particleTexture", 1, particleTexture, true, true);
+			shader.setImmediate("strength", repulsion.strength);
+			gxEmitVertices(GX_TRIANGLES, p.getWidth() * 6);
+		}
+		clearShader();
+	}
+	
+	void drawParticleColor() const
+	{
+		Shader shader("particle-draw-color");
+		setShader(shader);
+		{
+			shader.setTexture("p", 0, p.getTexture(), false, true);
+			shader.setTexture("v", 1, v.getTexture(), false, true);
+			gxEmitVertices(GX_TRIANGLES, p.getWidth() * 6);
+		}
+		clearShader();
 	}
 	
 	void update_particles(const GxTextureId flowfield)
@@ -326,6 +364,7 @@ int main(int argc, char * argv[])
 				{
 					ImGui::Text("Particle System");
 					ImGui::SliderFloat("Gravity strength", &ps.gravity.strength, 0.f, 10.f);
+					ImGui::SliderFloat("Repulsion strength", &ps.repulsion.strength, 0.f, 1.f);
 					ImGui::SliderFloat("Flow strength", &ps.flow.strength, 0.f, 10.f);
 					ImGui::Checkbox("Apply bounds", &ps.simulation.applyBounds);
 					ImGui::Separator();
@@ -357,7 +396,17 @@ int main(int argc, char * argv[])
 			opticalFlow.update(mediaPlayer.getTexture());
 		}
 		
-		ps.draw_flow_field();
+		// todo : create a separate surface for the combined flow
+		
+		pushSurface(&opticalFlow.opticalFlow);
+		{
+			pushBlend(BLEND_ADD_OPAQUE);
+			{
+				ps.drawParticleVelocity();
+			}
+			popBlend();
+		}
+		popSurface();
 		
 		ps.update_particles(opticalFlow.opticalFlow.getTexture());
 		
@@ -381,12 +430,11 @@ int main(int argc, char * argv[])
 				gxSetTexture(0);
 			}
 			popBlend();
+			
 			pushBlend(BLEND_ALPHA);
 			{
 				setColor(255, 255, 255, 63);
-				gxSetTexture(ps.flow_field.getTexture());
-				drawRect(0, 0, ps.flow_field.getWidth(), ps.flow_field.getHeight());
-				gxSetTexture(0);
+				ps.drawParticleColor();
 			}
 			popBlend();
 		#elif 0
