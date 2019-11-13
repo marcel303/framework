@@ -277,9 +277,8 @@ struct ParticleSystem
 		
 		pushSurface(&p);
 		{
-		// todo : rename shader to particle-update
 			pushBlend(BLEND_OPAQUE);
-			Shader shader("particle-update-velocity");
+			Shader shader("particle-update");
 			setShader(shader);
 			{
 				shader.setTexture("p", 0, pTex, false, true);
