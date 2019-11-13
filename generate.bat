@@ -42,6 +42,21 @@ rem generate Visual Studio project file
 set success="false"
 
 IF %success% == "false" (
+	mkdir "chibi-build\vs2019"
+	cd chibi-build/vs2019 && cmake -G "Visual Studio 16 2019" -A Win32 ../cmake-files
+	IF ERRORLEVEL 1 (
+		echo Failed to generate Visual Studio 2019 solution.
+	) ELSE (
+		set success="true"
+	)
+	cd %~dp0 || exit /b
+
+	IF %success% == "false" (
+		%SystemRoot%\explorer.exe /select,.\chibi-build\vs2019\Project.sln
+	)
+)
+
+IF %success% == "false" (
 	mkdir "chibi-build\vs2017"
 	cd chibi-build/vs2017 && cmake -G "Visual Studio 15 2017" ../cmake-files
 	IF ERRORLEVEL 1 (
