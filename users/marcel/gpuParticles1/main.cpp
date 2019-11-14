@@ -188,7 +188,7 @@ struct ParticleSystem
 		
 		const int sx = kMaxParticleBufferSx;
 		const int sy = (kNumParticles + kMaxParticleBufferSx - 1) / kMaxParticleBufferSx;
-		p.init(sx, sy, SURFACE_RGBA32F, false, true);
+		p.init(sx, sy, SURFACE_RGBA16F, false, true);
 		p.setName("ParticleSystem.positionsAndVelocities");
 		
 		for (int i = 0; i < 2; ++i)
@@ -230,14 +230,14 @@ struct ParticleSystem
 	
 	GxTextureId generateParticleTexture()
 	{
-		float data[32][32][2];
+		float data[16][16][2];
 		
-		for (int y = 0; y < 32; ++y)
+		for (int y = 0; y < 16; ++y)
 		{
-			for (int x = 0; x < 32; ++x)
+			for (int x = 0; x < 16; ++x)
 			{
-				const float dx = x / 31.f * 2.f - 1.f;
-				const float dy = y / 31.f * 2.f - 1.f;
+				const float dx = x / 15.f * 2.f - 1.f;
+				const float dy = y / 15.f * 2.f - 1.f;
 				const float d = hypotf(dx, dy);
 				
 				const float vx = d <= 1.f ? dx : 0.f;
@@ -248,7 +248,7 @@ struct ParticleSystem
 			}
 		}
 		
-		return createTextureFromRG32F(data, 32, 32, true, true);
+		return createTextureFromRG32F(data, 16, 16, true, true);
 	}
 	
 	void drawParticleVelocity()
