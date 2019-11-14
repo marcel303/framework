@@ -674,11 +674,11 @@ int main(int argc, char * argv[])
 			{
 				ArtnetPacket packet;
 				
-				nodeState.artnetToDmx.sequenceNumber = (sequenceNumber + 30) % 256;
+				nodeState.artnetToDmx.sequenceNumber = (nodeState.artnetToDmx.sequenceNumber + 30) % 256;
 				if (nodeState.artnetToDmx.sequenceNumber == 0)
 					nodeState.artnetToDmx.sequenceNumber++;
 				
-				auto * values = packet.makeDMX512(4, sequenceNumber);
+				auto * values = packet.makeDMX512(4, nodeState.artnetToDmx.sequenceNumber);
 				
 				for (int i = 0; i < 4; ++i)
 				{
@@ -703,7 +703,7 @@ int main(int argc, char * argv[])
 					lo = uint8_t(value16);
 				};
 			
-				nodeState.artnetToLedstrip.sequenceNumber = (sequenceNumber + 30) % 256;
+				nodeState.artnetToLedstrip.sequenceNumber = (nodeState.artnetToLedstrip.sequenceNumber + 30) % 256;
 				if (nodeState.artnetToLedstrip.sequenceNumber == 0)
 					nodeState.artnetToLedstrip.sequenceNumber++;
 				
