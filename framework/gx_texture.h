@@ -39,6 +39,9 @@ enum GX_TEXTURE_FORMAT
 	GX_RGB8_UNORM,
 	GX_RGBA8_UNORM,
 	
+	// integer unsigned normalized, 16 bit
+	GX_R16_UNORM,
+	
 	// floating point
 	GX_R16_FLOAT,
 	GX_R32_FLOAT,

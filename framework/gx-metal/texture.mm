@@ -52,6 +52,7 @@ static MTLPixelFormat toMetalFormat(const GX_TEXTURE_FORMAT format)
 	C(GX_RG8_UNORM, MTLPixelFormatRG8Unorm);
 	C(GX_RGB8_UNORM, MTLPixelFormatInvalid);
 	C(GX_RGBA8_UNORM, MTLPixelFormatRGBA8Unorm);
+	C(GX_R16_UNORM, MTLPixelFormatR16Unorm);
 	C(GX_R16_FLOAT, MTLPixelFormatR16Float);
 	C(GX_R32_FLOAT, MTLPixelFormatR32Float);
 	C(GX_RGB32_FLOAT, MTLPixelFormatRGBA32Float);
