@@ -19,6 +19,16 @@ https://diwi.github.io/PixelFlow/
 
 static const int kNumParticles = 1024*128;
 
+enum DebugDraw
+{
+	kDebugDraw_Off,
+	kDebugDraw_OpticalFlow_Luminance,
+	kDebugDraw_OpticalFlow_Sobel,
+	kDebugDraw_OpticalFlow_Flow,
+	kDebugDraw_FlowField,
+	kDebugDraw_COUNT
+};
+
 int main(int argc, char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
@@ -38,8 +48,15 @@ int main(int argc, char * argv[])
 	GpuParticleSystem ps;
 	ps.init(kNumParticles, VIEW_SX, VIEW_SY);
 	
+	Surface flowField;
+	flowField.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, false, false);
+	flowField.setName("Flowfield");
+	flowField.clear();
+	
 	MediaPlayer mediaPlayer;
 	mediaPlayer.openAsync("video.mp4", MP::kOutputMode_RGBA);
+	
+	DebugDraw debugDraw = kDebugDraw_Off;
 	
 	for (;;)
 	{
@@ -83,6 +100,23 @@ int main(int argc, char * argv[])
 					
 					ImGui::Text("Optical Flow");
 					ImGui::SliderFloat("Blur radius", &opticalFlow.sourceFilter.blurRadius, 0.f, 100.f);
+					ImGui::Separator();
+					
+					ImGui::Text("Draw");
+					{
+						const char * modes[kDebugDraw_COUNT] =
+						{
+							"Off",
+							"Optical Flow: Luminance",
+							"Optical Flow: Sobel",
+							"Optical Flow: Flow",
+							"Flow Field"
+						};
+						int mode = debugDraw;
+						if (ImGui::Combo("Debug Draw", &mode, modes, kDebugDraw_COUNT))
+							debugDraw = (DebugDraw)mode;
+					}
+					
 				}
 				ImGui::PopItemWidth();
 			}
@@ -108,10 +142,17 @@ int main(int argc, char * argv[])
 			opticalFlow.update(mediaPlayer.getTexture());
 		}
 		
-		// todo : create a separate surface for the combined flow
-		
-		pushSurface(&opticalFlow.opticalFlow);
+		pushSurface(&flowField);
 		{
+			pushBlend(BLEND_OPAQUE);
+			{
+				setColor(colorWhite);
+				gxSetTexture(opticalFlow.opticalFlow.getTexture());
+				drawRect(0, 0, VIEW_SX, VIEW_SY);
+				gxSetTexture(0);
+			}
+			popBlend();
+			
 			pushBlend(BLEND_ADD_OPAQUE);
 			{
 				ps.drawParticleVelocity();
@@ -120,49 +161,82 @@ int main(int argc, char * argv[])
 		}
 		popSurface();
 		
-		ps.updateParticles(opticalFlow.opticalFlow.getTexture());
+		ps.updateParticles(flowField.getTexture());
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			if (debugDraw == kDebugDraw_Off)
+			{
+				pushBlend(BLEND_OPAQUE);
+				{
+					setColor(255, 255, 255, 63);
+					gxSetTexture(mediaPlayer.getTexture());
+					drawRect(0, 0, VIEW_SX, VIEW_SY);
+					gxSetTexture(0);
+				}
+				popBlend();
+				
+				pushBlend(BLEND_ALPHA);
+				{
+					setColor(255, 255, 255, 255);
+					ps.drawParticleColor();
+				}
+				popBlend();
+			}
+			else if (debugDraw == kDebugDraw_OpticalFlow_Luminance)
+			{
+				pushBlend(BLEND_OPAQUE);
+				{
+					auto & texture = opticalFlow.luminance[opticalFlow.current_luminance];
+					setColor(colorWhite);
+					gxSetTexture(texture.getTexture());
+					drawRect(0, 0, texture.getWidth(), texture.getHeight());
+					gxSetTexture(0);
+				}
+				popBlend();
+			}
+			else if (debugDraw == kDebugDraw_OpticalFlow_Sobel)
+			{
+				pushBlend(BLEND_OPAQUE);
+				{
+					auto & texture = opticalFlow.sobel[opticalFlow.current_sobel];
+					setColor(colorWhite);
+					gxSetTexture(texture.getTexture());
+					drawRect(0, 0, texture.getWidth(), texture.getHeight());
+					gxSetTexture(0);
+				}
+				popBlend();
+			}
+			else if (debugDraw == kDebugDraw_OpticalFlow_Flow)
+			{
+				pushBlend(BLEND_OPAQUE);
+				{
+					Shader shader("flowfield-draw-colors");
+					setShader(shader);
+					{
+						shader.setTexture("flowfield", 0, opticalFlow.opticalFlow.getTexture(), true, true);
+						pushBlend(BLEND_OPAQUE);
+						drawRect(0, 0, VIEW_SX, VIEW_SY);
+						popBlend();
+					}
+					clearShader();
+				}
+				popBlend();
+			}
+			else if (debugDraw == kDebugDraw_FlowField)
+			{
+				Shader shader("flowfield-draw-colors");
+				setShader(shader);
+				{
+					shader.setTexture("flowfield", 0, flowField.getTexture(), true, true);
+					pushBlend(BLEND_OPAQUE);
+					drawRect(0, 0, VIEW_SX, VIEW_SY);
+					popBlend();
+				}
+				clearShader();
+			}
+
 		#if 0
-			pushBlend(BLEND_OPAQUE);
-			{
-				setColor(colorWhite);
-				gxSetTexture(ps.flow_field.getTexture());
-				drawRect(0, 0, ps.flow_field.getWidth(), ps.flow_field.getHeight());
-				gxSetTexture(0);
-			}
-			popBlend();
-		#elif 1
-			pushBlend(BLEND_OPAQUE);
-			{
-				setColor(255, 255, 255, 63);
-				gxSetTexture(mediaPlayer.getTexture());
-				drawRect(0, 0, VIEW_SX, VIEW_SY);
-				gxSetTexture(0);
-			}
-			popBlend();
-			
-			pushBlend(BLEND_ALPHA);
-			{
-				setColor(255, 255, 255, 63);
-				ps.drawParticleColor();
-			}
-			popBlend();
-		#elif 0
-			pushBlend(BLEND_OPAQUE);
-			{
-				setColor(colorWhite);
-				//gxSetTexture(ps.flow_field.getTexture());
-				//gxSetTexture(opticalFlow.luminance[opticalFlow.current_luminance].getTexture());
-				//gxSetTexture(opticalFlow.sobel[opticalFlow.current_sobel].getTexture());
-				gxSetTexture(opticalFlow.opticalFlow.getTexture());
-				//gxSetTexture(mediaPlayer.getTexture());
-				drawRect(0, 0, ps.flow_field.getWidth(), ps.flow_field.getHeight());
-				gxSetTexture(0);
-			}
-			popBlend();
-		#elif 0
 			Shader shader("flowfield-draw-tracers");
 			setShader(shader);
 			{
@@ -173,18 +247,8 @@ int main(int argc, char * argv[])
 				popBlend();
 			}
 			clearShader();
-		#else
-			Shader shader("flowfield-draw-colors");
-			setShader(shader);
-			{
-				shader.setTexture("flowfield", 0, opticalFlow.opticalFlow.getTexture(), true, true);
-				pushBlend(BLEND_OPAQUE);
-				drawRect(0, 0, VIEW_SX, VIEW_SY);
-				popBlend();
-			}
-			clearShader();
 		#endif
-		
+
 			guiContext.draw();
 		}
 		framework.endDraw();

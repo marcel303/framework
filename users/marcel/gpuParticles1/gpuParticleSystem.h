@@ -4,8 +4,6 @@
 
 struct GpuParticleSystem
 {
-	Surface flow_field;
-	
 	Surface p; // xy = particle position, zw = particle velocity
 	
 	GxTextureId particleTexture = 0;

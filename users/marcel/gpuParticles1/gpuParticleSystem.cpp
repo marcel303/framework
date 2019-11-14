@@ -9,10 +9,6 @@ void GpuParticleSystem::init(const int in_numParticles, const int in_sx, const i
 	bounds.min.Set(0.f, 0.f);
 	bounds.max.Set(in_sx, in_sy);
 	
-// todo : move flow field surface somewhere else
-	flow_field.init(in_sx, in_sy, SURFACE_RGBA16F, false, false);
-	flow_field.setName("Flowfield");
-	
 	// note : position and velocity need to be double buffered as they are feedbacking onto themselves
 	
 	const int sx = kMaxParticleBufferSx;

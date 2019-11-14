@@ -9,8 +9,7 @@ void main()
 {
 	vec2 flow = texture(flowfield, texcoord).xy;
 
-	//flow = flow * 0.5 + vec2(0.5);
-	flow = abs(flow);
+	flow = flow * 0.5 + vec2(0.5);
 
 	shader_fragColor = vec4(flow, 0.0, 0.0);
 }
