@@ -127,7 +127,7 @@ void GpuParticleSystem::updateParticles(const GxTextureId flowfield)
 			shader.setImmediate("grav_force", gravity.strength);
 			shader.setImmediate("flow_strength", flow.strength);
 			shader.setImmediate("bounds", bounds.min[0], bounds.min[1], bounds.max[0], bounds.max[1]);
-			shader.setImmediate("applyBounds", simulation.applyBounds ? 1.f : 0.f);
+			shader.setImmediate("boundsParams", bounds.xMode, bounds.yMode, simulation.applyBounds, 0.f);
 			drawRect(0, 0, p.getWidth(), p.getHeight());
 		}
 		clearShader();

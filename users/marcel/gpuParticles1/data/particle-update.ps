@@ -12,7 +12,11 @@ uniform float grav_force;
 uniform float flow_strength;
 
 uniform vec4 bounds;
-uniform float applyBounds;
+uniform vec4 boundsParams;
+
+int boundsModeX = int(boundsParams.x);
+int boundsModeY = int(boundsParams.y);
+bool boundsEnabled = boundsParams.z != 0.0;
 
 shader_in vec2 texcoord;
 
@@ -35,21 +39,42 @@ void main()
 
 	velocity *= drag;
 
-	if (applyBounds != 0.0)
+	if (boundsEnabled)
 	{
 		// apply bounds constaint
 
 		vec2 min = bounds.xy;
 		vec2 max = bounds.zw;
 
-		if (position.x < min.x)
-			velocity.x = +abs(velocity.x);
-		if (position.y < min.y)
-			velocity.y = +abs(velocity.y);
-		if (position.x > max.x)
-			velocity.x = -abs(velocity.x);
-		if (position.y > max.y)
-			velocity.y = -abs(velocity.y);
+		if (boundsModeX == 1)
+		{
+			if (position.x < min.x)
+				velocity.x = +abs(velocity.x);
+			if (position.x > max.x)
+				velocity.x = -abs(velocity.x);
+		}
+		else if (boundsModeX == 2)
+		{
+			if (position.x < min.x)
+				position.x += max.x - min.x;
+			if (position.x > max.x)
+				position.x -= max.x - min.x;
+		}
+
+		if (boundsModeY == 1)
+		{
+			if (position.y < min.y)
+				velocity.y = +abs(velocity.y);
+			if (position.y > max.y)
+				velocity.y = -abs(velocity.y);
+		}
+		else if (boundsModeY == 2)
+		{
+			if (position.y < min.y)
+				position.y += max.x - min.y;
+			if (position.y > max.y)
+				position.y -= max.y - min.y;
+		}
 	}
 
 	position += velocity;

@@ -60,7 +60,25 @@ int main(int argc, char * argv[])
 					ImGui::SliderFloat("Gravity strength", &ps.gravity.strength, 0.f, 10.f);
 					ImGui::SliderFloat("Repulsion strength", &ps.repulsion.strength, 0.f, 1.f);
 					ImGui::SliderFloat("Flow strength", &ps.flow.strength, 0.f, 10.f);
-					ImGui::Checkbox("Apply bounds", &ps.simulation.applyBounds);
+					ImGui::Checkbox("Bounds enabled", &ps.simulation.applyBounds);
+					ImGui::InputFloat2("Bounds min", &ps.bounds.min[0]);
+					ImGui::InputFloat2("Bounds max", &ps.bounds.max[1]);
+					const char * modes[] =
+					{
+						"Off",
+						"Bounce",
+						"Wrap"
+					};
+					{
+						int mode = ps.bounds.xMode;
+						if (ImGui::Combo("Bounds X Mode", &mode, modes, 3))
+							ps.bounds.xMode = (GpuParticleSystem::Bounds::Mode)mode;
+					}
+					{
+						int mode = ps.bounds.yMode;
+						if (ImGui::Combo("Bounds Y Mode", &mode, modes, 3))
+							ps.bounds.yMode = (GpuParticleSystem::Bounds::Mode)mode;
+					}
 					ImGui::Separator();
 					
 					ImGui::Text("Optical Flow");

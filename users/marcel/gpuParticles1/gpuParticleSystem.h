@@ -32,7 +32,7 @@ struct GpuParticleSystem
 		bool applyBounds = true;
 	} simulation;
 	
-	struct
+	struct Bounds
 	{
 		enum Mode
 		{
@@ -41,8 +41,8 @@ struct GpuParticleSystem
 			kMode_Wrap
 		};
 		
-		Mode xMode;
-		Mode yMode;
+		Mode xMode = kMode_Bounce;
+		Mode yMode = kMode_Bounce;
 		
 		Vec2 min;
 		Vec2 max;
