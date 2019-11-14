@@ -1,5 +1,7 @@
 #include "framework.h"
+#include "gpuParticleSystem.h"
 #include "imgui-framework.h"
+#include "opticalFlow.h"
 #include "video.h"
 
 /*
@@ -15,296 +17,7 @@ https://diwi.github.io/PixelFlow/
 #define VIEW_SX 1024
 #define VIEW_SY 1024
 
-static const int kMaxParticleBufferSx = 1024;
 static const int kNumParticles = 1024*256;
-
-struct OpticalFlow
-{
-	Surface luminance[2];
-	int current_luminance = 0;
-	
-	Surface sobel[2];
-	int current_sobel = 0;
-	
-	Surface opticalFlow;
-	
-	struct
-	{
-		float blurRadius = 22.f;
-	} sourceFilter;
-	
-	void init()
-	{
-		for (int i = 0; i < 2; ++i)
-		{
-			// note : the luminance map is double buffered so it can be post processed/blurred
-			
-			luminance[i].init(VIEW_SX, VIEW_SY, SURFACE_R8, false, true);
-			luminance[i].setName("OpticalFlow.Luminance");
-			luminance[i].clear();
-			
-			sobel[i].init(VIEW_SX, VIEW_SY, SURFACE_RG8, false, false);
-			sobel[i].setName("OpticalFlow.Sobel");
-			sobel[i].clear(127, 127, 0, 0);
-		}
-		
-		opticalFlow.init(VIEW_SX, VIEW_SY, SURFACE_RG16F, false, false);
-		opticalFlow.setName("OpticalFlow.flow");
-		opticalFlow.clear();
-	}
-	
-	void shut()
-	{
-	/*
-		for (int i = 0; i < 2; ++i)
-		{
-			luminance[i].shut();
-			
-			sobel[i].shut();
-		}
-		
-		opticalFlow.free();
-	*/
-	}
-	
-	void update(const GxTextureId source)
-	{
-		// convert source image into luminance map
-		
-		current_luminance = (current_luminance + 1) % 2;
-		
-		pushSurface(&luminance[current_luminance]);
-		{
-			pushBlend(BLEND_OPAQUE);
-			Shader shader("filter-rgbToLuminance");
-			setShader(shader);
-			{
-				shader.setTexture("source", 0, source, false, true);
-				drawRect(0, 0,
-					luminance[current_luminance].getWidth(),
-					luminance[current_luminance].getHeight());
-			}
-			clearShader();
-			popBlend();
-		}
-		popSurface();
-		
-	#if 1 // todo : fix issue with Metal where shader buffer params are not set
-		// blur the luminance map
-		
-		pushBlend(BLEND_OPAQUE);
-		{
-			setShader_GaussianBlurH(luminance[current_luminance].getTexture(), 11, sourceFilter.blurRadius);
-			luminance[current_luminance].postprocess();
-			clearShader();
-			
-			setShader_GaussianBlurV(luminance[current_luminance].getTexture(), 11, sourceFilter.blurRadius);
-			luminance[current_luminance].postprocess();
-			clearShader();
-		}
-		popBlend();
-	#endif
-		
-		// apply horizontal + vertical sobel filter
-		
-		current_sobel = (current_sobel + 1) % 2;
-		
-		pushSurface(&sobel[current_sobel]);
-		{
-			pushBlend(BLEND_OPAQUE);
-			Shader shader("filter-sobel");
-			setShader(shader);
-			{
-				shader.setTexture("source", 0, luminance[current_luminance].getTexture(), false, true);
-				drawRect(0, 0,
-					sobel[current_sobel].getWidth(),
-					sobel[current_sobel].getHeight());
-			}
-			clearShader();
-			popBlend();
-		}
-		popSurface();
-		
-		// apply the optical flow filter
-		
-		const int previous_luminance = 1 - current_luminance;
-		const int previous_sobel = 1 - current_sobel;
-		
-		pushSurface(&opticalFlow);
-		{
-			pushBlend(BLEND_OPAQUE);
-			Shader shader("filter-opticalFlow");
-			setShader(shader);
-			{
-				shader.setTexture("luminance_prev", 0, luminance[previous_luminance].getTexture(), false, true);
-				shader.setTexture("luminance_curr", 1, luminance[current_luminance].getTexture(), false, true);
-				shader.setTexture("sobel_prev", 2, sobel[previous_sobel].getTexture(), false, true);
-				shader.setTexture("sobel_curr", 3, sobel[current_sobel].getTexture(), false, true);
-				shader.setImmediate("scale", 10.f);
-				
-				drawRect(0, 0, sobel[current_sobel].getWidth(), sobel[current_sobel].getHeight());
-			}
-			clearShader();
-			popBlend();
-		}
-		popSurface();
-	}
-};
-
-struct ParticleSystem
-{
-	Surface flow_field;
-	
-	Surface p; // xy = particle position, zw = particle velocity
-	
-	GxTextureId particleTexture = 0;
-	
-	struct
-	{
-		float strength = 1.f;
-	} gravity;
-	
-	struct
-	{
-		float strength = .1f;
-	} repulsion;
-	
-	struct
-	{
-		float strength = 1.f;
-	} flow;
-	
-	struct
-	{
-		bool applyBounds = true;
-	} simulation;
-	
-	void init()
-	{
-		flow_field.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, false, false);
-		flow_field.setName("Flowfield");
-		
-		// note : position and velocity need to be double buffered as they are feedbacking onto themselves
-		
-		const int sx = kMaxParticleBufferSx;
-		const int sy = (kNumParticles + kMaxParticleBufferSx - 1) / kMaxParticleBufferSx;
-		p.init(sx, sy, SURFACE_RGBA16F, false, true);
-		p.setName("ParticleSystem.positionsAndVelocities");
-		
-		for (int i = 0; i < 2; ++i)
-		{
-			p.clear();
-			p.swapBuffers();
-		}
-		
-		setColorClamp(false);
-		pushSurface(&p);
-		{
-			pushBlend(BLEND_OPAQUE);
-			gxBegin(GX_POINTS);
-			for (int x = 0; x < p.getWidth(); ++x)
-			{
-				for (int y = 0; y < p.getHeight(); ++y)
-				{
-					setColorf(rand() % VIEW_SX, rand() % VIEW_SY, 0, 0);
-					gxVertex2f(x + .5f, y + 0.5f);
-				}
-			}
-			gxEnd();
-			popBlend();
-		}
-		popSurface();
-		
-		particleTexture = generateParticleTexture();
-	}
-	
-	void shut()
-	{
-	/*
-		flow_field.free();
-	
-		p.free();
-		v.free();
-	*/
-	}
-	
-	GxTextureId generateParticleTexture()
-	{
-		float data[16][16][2];
-		
-		for (int y = 0; y < 16; ++y)
-		{
-			for (int x = 0; x < 16; ++x)
-			{
-				const float dx = x / 15.f * 2.f - 1.f;
-				const float dy = y / 15.f * 2.f - 1.f;
-				const float d = hypotf(dx, dy);
-				
-				const float vx = d <= 1.f ? dx : 0.f;
-				const float vy = d <= 1.f ? dy : 0.f;
-				
-				data[y][x][0] = vx;
-				data[y][x][1] = vy;
-			}
-		}
-		
-		return createTextureFromRG32F(data, 16, 16, true, true);
-	}
-	
-	void drawParticleVelocity()
-	{
-		Shader shader("particle-draw-field");
-		setShader(shader);
-		{
-			shader.setTexture("p", 0, p.getTexture(), false, true);
-			shader.setTexture("particleTexture", 1, particleTexture, true, true);
-			shader.setImmediate("strength", repulsion.strength);
-			gxEmitVertices(GX_TRIANGLES, kNumParticles * 6);
-		}
-		clearShader();
-	}
-	
-	void drawParticleColor() const
-	{
-		Shader shader("particle-draw-color");
-		setShader(shader);
-		{
-			shader.setTexture("p", 0, p.getTexture(), false, true);
-			gxEmitVertices(GX_TRIANGLES, kNumParticles * 6);
-		}
-		clearShader();
-	}
-	
-	void update_particles(const GxTextureId flowfield)
-	{
-		const GxTextureId pTex = p.getTexture();
-		
-		p.swapBuffers();
-		
-		pushSurface(&p);
-		{
-			pushBlend(BLEND_OPAQUE);
-			Shader shader("particle-update");
-			setShader(shader);
-			{
-				shader.setTexture("p", 0, pTex, false, true);
-				shader.setTexture("flowfield", 1, flowfield, true, true);
-				shader.setImmediate("drag", .99f);
-				const float mouse_x = 256 + sinf(framework.time / 1.234f) * 100.f;
-				const float mouse_y = 256 + sinf(framework.time / 2.345f) * 100.f;
-				shader.setImmediate("grav_pos", mouse_x, mouse_y);
-				shader.setImmediate("grav_force", gravity.strength);
-				shader.setImmediate("flow_strength", flow.strength);
-				shader.setImmediate("bounds", 0.f, 0.f, VIEW_SX, VIEW_SY);
-				shader.setImmediate("applyBounds", simulation.applyBounds ? 1.f : 0.f);
-				drawRect(0, 0, p.getWidth(), p.getHeight());
-			}
-			clearShader();
-			popBlend();
-		}
-		popSurface();
-	}
-};
 
 int main(int argc, char * argv[])
 {
@@ -320,10 +33,10 @@ int main(int argc, char * argv[])
 	guiContext.init();
 	
 	OpticalFlow opticalFlow;
-	opticalFlow.init();
+	opticalFlow.init(VIEW_SX, VIEW_SY);
 	
 	ParticleSystem ps;
-	ps.init();
+	ps.init(kNumParticles, VIEW_SX, VIEW_SY);
 	
 	MediaPlayer mediaPlayer;
 	mediaPlayer.openAsync("video.mp4", MP::kOutputMode_RGBA);
@@ -389,7 +102,7 @@ int main(int argc, char * argv[])
 		}
 		popSurface();
 		
-		ps.update_particles(opticalFlow.opticalFlow.getTexture());
+		ps.updateParticles(opticalFlow.opticalFlow.getTexture());
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{

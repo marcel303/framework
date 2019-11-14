@@ -2,5 +2,7 @@ app marcel-gpuParticles1
 	depend_library framework
 	depend_library imgui-framework
 	depend_library libvideo
+	add_files gpuParticleSystem.cpp gpuParticleSystem.h
 	add_files main.cpp
+	add_files opticalFlow.cpp opticalFlow.h
 	resource_path data
