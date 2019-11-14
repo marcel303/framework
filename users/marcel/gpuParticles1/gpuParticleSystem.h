@@ -2,7 +2,7 @@
 
 #include "framework.h"
 
-struct ParticleSystem
+struct GpuParticleSystem
 {
 	Surface flow_field;
 	

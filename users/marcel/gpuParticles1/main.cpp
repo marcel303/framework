@@ -17,7 +17,7 @@ https://diwi.github.io/PixelFlow/
 #define VIEW_SX 1024
 #define VIEW_SY 1024
 
-static const int kNumParticles = 1024*256;
+static const int kNumParticles = 1024*128;
 
 int main(int argc, char * argv[])
 {
@@ -35,7 +35,7 @@ int main(int argc, char * argv[])
 	OpticalFlow opticalFlow;
 	opticalFlow.init(VIEW_SX, VIEW_SY);
 	
-	ParticleSystem ps;
+	GpuParticleSystem ps;
 	ps.init(kNumParticles, VIEW_SX, VIEW_SY);
 	
 	MediaPlayer mediaPlayer;

@@ -2,7 +2,7 @@
 
 static const int kMaxParticleBufferSx = 1024;
 
-void ParticleSystem::init(const int in_numParticles, const int in_sx, const int in_sy)
+void GpuParticleSystem::init(const int in_numParticles, const int in_sx, const int in_sy)
 {
 	numParticles = in_numParticles;
 	
@@ -47,7 +47,7 @@ void ParticleSystem::init(const int in_numParticles, const int in_sx, const int 
 	particleTexture = generateParticleTexture();
 }
 
-void ParticleSystem::shut()
+void GpuParticleSystem::shut()
 {
 	// todo : free textures
 
@@ -59,7 +59,7 @@ void ParticleSystem::shut()
 */
 }
 
-GxTextureId ParticleSystem::generateParticleTexture() const
+GxTextureId GpuParticleSystem::generateParticleTexture() const
 {
 	float data[16][16][2];
 	
@@ -82,7 +82,7 @@ GxTextureId ParticleSystem::generateParticleTexture() const
 	return createTextureFromRG32F(data, 16, 16, true, true);
 }
 
-void ParticleSystem::drawParticleVelocity() const
+void GpuParticleSystem::drawParticleVelocity() const
 {
 	Shader shader("particle-draw-field");
 	setShader(shader);
@@ -95,7 +95,7 @@ void ParticleSystem::drawParticleVelocity() const
 	clearShader();
 }
 
-void ParticleSystem::drawParticleColor() const
+void GpuParticleSystem::drawParticleColor() const
 {
 	Shader shader("particle-draw-color");
 	setShader(shader);
@@ -106,7 +106,7 @@ void ParticleSystem::drawParticleColor() const
 	clearShader();
 }
 
-void ParticleSystem::updateParticles(const GxTextureId flowfield)
+void GpuParticleSystem::updateParticles(const GxTextureId flowfield)
 {
 	const GxTextureId pTex = p.getTexture();
 	
