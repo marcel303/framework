@@ -6,7 +6,7 @@ void OpticalFlow::init(const int sx, const int sy)
 	{
 		// note : the luminance map is double buffered so it can be post processed/blurred
 		
-		luminance[i].init(sx, sy, SURFACE_R8, false, true);
+		luminance[i].init(sx, sy, SURFACE_R16F /* 16F so we get extra precision out of doing the gaussian blur */, false, true);
 		luminance[i].setName("OpticalFlow.Luminance");
 		luminance[i].clear();
 		
@@ -22,18 +22,14 @@ void OpticalFlow::init(const int sx, const int sy)
 
 void OpticalFlow::shut()
 {
-	// todo : free textures
-	
-/*
 	for (int i = 0; i < 2; ++i)
 	{
-		luminance[i].shut();
+		luminance[i].free();
 		
-		sobel[i].shut();
+		sobel[i].free();
 	}
-	
+
 	opticalFlow.free();
-*/
 }
 
 void OpticalFlow::update(const GxTextureId source)

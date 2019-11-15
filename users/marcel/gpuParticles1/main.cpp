@@ -17,7 +17,7 @@ https://diwi.github.io/PixelFlow/
 #define VIEW_SX 1024
 #define VIEW_SY 1024
 
-static const int kNumParticles = 1024*32;
+static const int kNumParticles = 1024*16;
 
 enum DebugDraw
 {

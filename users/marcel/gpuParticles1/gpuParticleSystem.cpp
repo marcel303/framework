@@ -45,14 +45,11 @@ void GpuParticleSystem::init(const int in_numParticles, const int in_sx, const i
 
 void GpuParticleSystem::shut()
 {
-	// todo : free textures
-
-/*
-	flow_field.free();
-
+	freeTexture(particleTexture);
+	
 	p.free();
-	v.free();
-*/
+	
+	numParticles = 0;
 }
 
 GxTextureId GpuParticleSystem::generateParticleTexture() const
