@@ -31,11 +31,6 @@ struct GpuParticleSystem
 		float strength = 1.f;
 	} flow;
 	
-	struct
-	{
-		bool applyBounds = true;
-	} simulation;
-	
 	struct Bounds
 	{
 		enum Mode
@@ -45,6 +40,7 @@ struct GpuParticleSystem
 			kMode_Wrap
 		};
 		
+		bool enabled = true;
 		Mode xMode = kMode_Bounce;
 		Mode yMode = kMode_Bounce;
 		
@@ -56,6 +52,8 @@ struct GpuParticleSystem
 	void shut();
 	
 	GxTextureId generateParticleTexture() const;
+	
+	void setBounds(const float minX, const float minY, const float maxX, const float maxY);
 	
 	void drawParticleVelocity() const;
 	void drawParticleColor() const;

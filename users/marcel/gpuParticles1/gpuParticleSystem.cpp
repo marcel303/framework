@@ -78,6 +78,13 @@ GxTextureId GpuParticleSystem::generateParticleTexture() const
 	return createTextureFromRG32F(data, 16, 16, true, true);
 }
 
+void GpuParticleSystem::setBounds(const float minX, const float minY, const float maxX, const float maxY)
+{
+	bounds.enabled = true;
+	bounds.min.Set(minX, minY);
+	bounds.max.Set(maxX, maxY);
+}
+
 void GpuParticleSystem::drawParticleVelocity() const
 {
 	Shader shader("particle-draw-field");
@@ -125,7 +132,7 @@ void GpuParticleSystem::updateParticles(const GxTextureId flowfield)
 			shader.setImmediate("grav_force", gravity.strength);
 			shader.setImmediate("flow_strength", flow.strength);
 			shader.setImmediate("bounds", bounds.min[0], bounds.min[1], bounds.max[0], bounds.max[1]);
-			shader.setImmediate("boundsParams", bounds.xMode, bounds.yMode, simulation.applyBounds, 0.f);
+			shader.setImmediate("boundsParams", bounds.xMode, bounds.yMode, bounds.enabled, 0.f);
 			drawRect(0, 0, p.getWidth(), p.getHeight());
 		}
 		clearShader();

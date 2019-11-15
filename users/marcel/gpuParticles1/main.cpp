@@ -50,6 +50,7 @@ int main(int argc, char * argv[])
 	ps.repulsion.strength = .1f;
 	ps.dimensions.velocitySize = 2.f;
 	ps.dimensions.colorSize = 4.f;
+	ps.setBounds(-10., -10., VIEW_SX + 10.f, VIEW_SY + 10.f);
 	
 	Surface flowField;
 	flowField.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, false, false);
@@ -82,9 +83,9 @@ int main(int argc, char * argv[])
 					ImGui::SliderFloat("Flow strength", &ps.flow.strength, 0.f, 10.f);
 					ImGui::SliderFloat("Draw velocity size", &ps.dimensions.velocitySize, 0.f, 40.f);
 					ImGui::SliderFloat("Draw color size", &ps.dimensions.colorSize, 0.f, 40.f);
-					ImGui::Checkbox("Bounds enabled", &ps.simulation.applyBounds);
+					ImGui::Checkbox("Bounds enabled", &ps.bounds.enabled);
 					ImGui::InputFloat2("Bounds min", &ps.bounds.min[0]);
-					ImGui::InputFloat2("Bounds max", &ps.bounds.max[1]);
+					ImGui::InputFloat2("Bounds max", &ps.bounds.max[0]);
 					const char * modes[] =
 					{
 						"Off",
