@@ -228,6 +228,11 @@ bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, 
 	return init(properties);
 }
 
+void Surface::free()
+{
+	destruct();
+}
+
 #if ENABLE_OPENGL
 
 // todo : perhaps use GxTextures internally

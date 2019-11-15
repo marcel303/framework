@@ -637,6 +637,7 @@ public:
 
 	bool init(const SurfaceProperties & properties);
 	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
+	void free();
 	void setSwizzle(int r, int g, int b, int a);
 	
 	void setName(const char * name);
