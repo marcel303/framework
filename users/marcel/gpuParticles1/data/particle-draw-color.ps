@@ -1,16 +1,42 @@
 include engine/ShaderPS.txt
 
 shader_in vec2 v_velocity;
+shader_in vec2 v_texcoord;
+shader_in float v_index;
 
 void main()
 {
+	// opacity dependent upon velocity
 	float velocity_mag = length(v_velocity);
+	float opacity = pow(min(1.0, velocity_mag / 2.0), 1.0);
 
-	float opacity = pow(velocity_mag / 7.0, 1.0);
+	// create a circular silhouette
+	vec2 d = v_texcoord * 2.0 - vec2(1.0);
+	float d_mag = length(d);
+	opacity *= smoothstep(1.0, 0.8, d_mag);
 
-	float r = 0.1 * velocity_mag;
-	float g = 0.2 * velocity_mag;
-	float b = 1.0 * velocity_mag;
+	vec3 color = vec3(0.0);
 
-	shader_fragColor = vec4(r, g, b, opacity);
+	// calculate lighting
+	{
+		float light = max(0.5, dot(vec2(-1, -1), d));
+
+	#if 1
+		vec3 light_color;
+		light_color.r = 0.1 * velocity_mag;
+		light_color.g = 0.2 * velocity_mag;
+		light_color.b = 1.0 * velocity_mag;
+	#else
+		vec3 light_color =
+			v_index < 5000
+			? vec3(1.0, 1.0, 0.2)
+			: v_index < 10000
+			? vec3(0.6, 0.6, 1.0)
+			: vec3(1.0, 0.2, 1.0);
+	#endif
+
+		color += light * light_color;
+	}
+
+	shader_fragColor = vec4(color, opacity);
 }

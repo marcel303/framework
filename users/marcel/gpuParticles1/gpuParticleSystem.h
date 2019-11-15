@@ -12,12 +12,18 @@ struct GpuParticleSystem
 	
 	struct
 	{
+		float velocitySize = 1.f;
+		float colorSize = 1.f;
+	} dimensions;
+	
+	struct
+	{
 		float strength = 1.f;
 	} gravity;
 	
 	struct
 	{
-		float strength = .1f;
+		float strength = 1.f;
 	} repulsion;
 	
 	struct

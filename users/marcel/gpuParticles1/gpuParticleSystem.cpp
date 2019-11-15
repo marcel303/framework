@@ -85,6 +85,7 @@ void GpuParticleSystem::drawParticleVelocity() const
 	{
 		shader.setTexture("p", 0, p.getTexture(), false, true);
 		shader.setTexture("particleTexture", 1, particleTexture, true, true);
+		shader.setImmediate("particleSize", dimensions.velocitySize);
 		shader.setImmediate("strength", repulsion.strength);
 		gxEmitVertices(GX_TRIANGLES, numParticles * 6);
 	}
@@ -97,6 +98,7 @@ void GpuParticleSystem::drawParticleColor() const
 	setShader(shader);
 	{
 		shader.setTexture("p", 0, p.getTexture(), false, true);
+		shader.setImmediate("particleSize", dimensions.colorSize);
 		gxEmitVertices(GX_TRIANGLES, numParticles * 6);
 	}
 	clearShader();

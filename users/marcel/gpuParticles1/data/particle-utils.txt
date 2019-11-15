@@ -1,4 +1,4 @@
-vec4 vertexIndexToParticleLocalPosAndUv(int local_index)
+vec4 vertexIndexToParticleLocalPosAndUv(int local_index, float particle_size)
 {
 	vec2 position;
 	vec2 uv;
@@ -34,7 +34,7 @@ vec4 vertexIndexToParticleLocalPosAndUv(int local_index)
 		uv = vec2(0, 1);
 	}	
 
-	position *= 2.0; // todo : make the size a uniform
+	position *= particle_size;
 
 	return vec4(position, uv);
 }

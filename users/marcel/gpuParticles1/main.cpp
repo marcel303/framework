@@ -17,7 +17,7 @@ https://diwi.github.io/PixelFlow/
 #define VIEW_SX 1024
 #define VIEW_SY 1024
 
-static const int kNumParticles = 1024*128;
+static const int kNumParticles = 1024*32;
 
 enum DebugDraw
 {
@@ -47,6 +47,9 @@ int main(int argc, char * argv[])
 	
 	GpuParticleSystem ps;
 	ps.init(kNumParticles, VIEW_SX, VIEW_SY);
+	ps.repulsion.strength = .1f;
+	ps.dimensions.velocitySize = 2.f;
+	ps.dimensions.colorSize = 4.f;
 	
 	Surface flowField;
 	flowField.init(VIEW_SX, VIEW_SY, SURFACE_RGBA16F, false, false);
@@ -77,6 +80,8 @@ int main(int argc, char * argv[])
 					ImGui::SliderFloat("Gravity strength", &ps.gravity.strength, 0.f, 10.f);
 					ImGui::SliderFloat("Repulsion strength", &ps.repulsion.strength, 0.f, 1.f);
 					ImGui::SliderFloat("Flow strength", &ps.flow.strength, 0.f, 10.f);
+					ImGui::SliderFloat("Draw velocity size", &ps.dimensions.velocitySize, 0.f, 40.f);
+					ImGui::SliderFloat("Draw color size", &ps.dimensions.colorSize, 0.f, 40.f);
 					ImGui::Checkbox("Bounds enabled", &ps.simulation.applyBounds);
 					ImGui::InputFloat2("Bounds min", &ps.bounds.min[0]);
 					ImGui::InputFloat2("Bounds max", &ps.bounds.max[1]);
