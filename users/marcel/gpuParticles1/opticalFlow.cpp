@@ -105,7 +105,7 @@ void OpticalFlow::update(const GxTextureId source)
 			shader.setTexture("luminance_curr", 1, luminance[current_luminance].getTexture(), false, true);
 			shader.setTexture("sobel_prev", 2, sobel[previous_sobel].getTexture(), false, true);
 			shader.setTexture("sobel_curr", 3, sobel[current_sobel].getTexture(), false, true);
-			shader.setImmediate("scale", 10.f);
+			shader.setImmediate("scale", flowFilter.strength);
 			
 			drawRect(0, 0, sobel[current_sobel].getWidth(), sobel[current_sobel].getHeight());
 		}

@@ -31,8 +31,8 @@ void main()
 
 	float s_length = sqrt(dot(s_delta, s_delta) + 0.01);
 
-// todo : multiply with timestep
-	vec2 flow = scale * l_delta * s_delta / s_length;
+	vec2 flow = l_delta * s_delta / s_length;
+	flow *= scale;
 
 	/*
 	// threshold

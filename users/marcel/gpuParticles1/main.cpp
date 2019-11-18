@@ -77,36 +77,44 @@ int main(int argc, char * argv[])
 			{
 				ImGui::PushItemWidth(200.f);
 				{
-					ImGui::Text("Particle System");
-					ImGui::SliderFloat("Gravity strength", &ps.gravity.strength, 0.f, 10.f);
-					ImGui::SliderFloat("Repulsion strength", &ps.repulsion.strength, 0.f, 1.f);
-					ImGui::SliderFloat("Flow strength", &ps.flow.strength, 0.f, 10.f);
-					ImGui::SliderFloat("Draw velocity size", &ps.dimensions.velocitySize, 0.f, 40.f);
-					ImGui::SliderFloat("Draw color size", &ps.dimensions.colorSize, 0.f, 40.f);
-					ImGui::Checkbox("Bounds enabled", &ps.bounds.enabled);
-					ImGui::InputFloat2("Bounds min", &ps.bounds.min[0]);
-					ImGui::InputFloat2("Bounds max", &ps.bounds.max[0]);
-					const char * modes[] =
+					if (ImGui::TreeNodeEx("Particle System", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen))
 					{
-						"Off",
-						"Bounce",
-						"Wrap"
-					};
-					{
-						int mode = ps.bounds.xMode;
-						if (ImGui::Combo("Bounds X Mode", &mode, modes, 3))
-							ps.bounds.xMode = (GpuParticleSystem::Bounds::Mode)mode;
+						ImGui::SliderFloat("Gravity strength", &ps.gravity.strength, 0.f, 10.f);
+						ImGui::SliderFloat("Repulsion strength", &ps.repulsion.strength, 0.f, 1.f);
+						ImGui::SliderFloat("Flow strength", &ps.flow.strength, 0.f, 10.f);
+						ImGui::SliderFloat("Draw velocity size", &ps.dimensions.velocitySize, 0.f, 40.f);
+						ImGui::SliderFloat("Draw color size", &ps.dimensions.colorSize, 0.f, 40.f);
+						
+						ImGui::Checkbox("Bounds enabled", &ps.bounds.enabled);
+						ImGui::InputFloat2("Bounds min", &ps.bounds.min[0]);
+						ImGui::InputFloat2("Bounds max", &ps.bounds.max[0]);
+						const char * modes[] =
+						{
+							"Off",
+							"Bounce",
+							"Wrap"
+						};
+						{
+							int mode = ps.bounds.xMode;
+							if (ImGui::Combo("Bounds X Mode", &mode, modes, 3))
+								ps.bounds.xMode = (GpuParticleSystem::Bounds::Mode)mode;
+						}
+						{
+							int mode = ps.bounds.yMode;
+							if (ImGui::Combo("Bounds Y Mode", &mode, modes, 3))
+								ps.bounds.yMode = (GpuParticleSystem::Bounds::Mode)mode;
+						}
+						
+						ImGui::TreePop();
 					}
-					{
-						int mode = ps.bounds.yMode;
-						if (ImGui::Combo("Bounds Y Mode", &mode, modes, 3))
-							ps.bounds.yMode = (GpuParticleSystem::Bounds::Mode)mode;
-					}
-					ImGui::Separator();
 					
-					ImGui::Text("Optical Flow");
-					ImGui::SliderFloat("Blur radius", &opticalFlow.sourceFilter.blurRadius, 0.f, 100.f);
-					ImGui::Separator();
+					if (ImGui::TreeNodeEx("Optical Flow", ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						ImGui::SliderFloat("Blur radius", &opticalFlow.sourceFilter.blurRadius, 0.f, 100.f);
+						ImGui::SliderFloat("Flow strength", &opticalFlow.flowFilter.strength, 0.f, 1000.f);
+						
+						ImGui::TreePop();
+					}
 					
 					ImGui::Text("Draw");
 					{

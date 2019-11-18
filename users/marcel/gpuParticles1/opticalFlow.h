@@ -17,6 +17,11 @@ struct OpticalFlow
 		float blurRadius = 22.f;
 	} sourceFilter;
 	
+	struct
+	{
+		float strength = 1.f;
+	} flowFilter;
+	
 	void init(const int sx, const int sy);
 	void shut();
 	
