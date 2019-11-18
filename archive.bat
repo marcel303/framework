@@ -36,7 +36,7 @@ rem use command line argument for selecting build target
 
 	rem build the selected target
 	mkdir "chibi-build\archive"
-	cd chibi-build/archive && cmake -DCMAKE_BUILD_TYPE=Distribution ../cmake-files-for-archive && cmake --build . --config Distribution || cd %~dp0 && exit /b
+	cd chibi-build/archive && cmake -DCMAKE_BUILD_TYPE=Distribution -A Win32 ../cmake-files-for-archive && cmake --build . --config Distribution || cd %~dp0 && exit /b
 	cd %~dp0 || exit /b
 
 	rem zip the target folder
