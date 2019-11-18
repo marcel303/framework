@@ -40,13 +40,12 @@
 #include <vector>
 
 #ifdef WIN32
+	#include <Windows.h>
 	#include <direct.h>
 	#include <GL/glew.h>
 	#include <SDL2/SDL_opengl.h>
 	#include <SDL2/SDL_syswm.h>
-	#include <Windows.h>
 	#include <Xinput.h>
-	DWORD timeGetTime(void);
 #else
 	#include <dirent.h>
 	#include <unistd.h>

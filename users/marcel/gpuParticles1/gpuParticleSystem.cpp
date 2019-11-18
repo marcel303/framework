@@ -13,7 +13,7 @@ void GpuParticleSystem::init(const int in_numParticles, const int in_sx, const i
 	
 	const int sx = kMaxParticleBufferSx;
 	const int sy = (numParticles + kMaxParticleBufferSx - 1) / kMaxParticleBufferSx;
-	p.init(sx, sy, SURFACE_RGBA16F, false, true);
+	p.init(sx, sy, SURFACE_RGBA32F, false, true);
 	p.setName("ParticleSystem.positionsAndVelocities");
 	
 	for (int i = 0; i < 2; ++i)

@@ -14,8 +14,8 @@ https://diwi.github.io/PixelFlow/
 
 */
 
-#define VIEW_SX 1024
-#define VIEW_SY 1024
+#define VIEW_SX 1080
+#define VIEW_SY 1920
 
 static const int kNumParticles = 1024*16;
 
@@ -35,6 +35,7 @@ int main(int argc, char * argv[])
 	
 	framework.allowHighDpi = false;
 	framework.enableRealTimeEditing = true;
+	framework.enableVsync = false;
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
@@ -62,6 +63,10 @@ int main(int argc, char * argv[])
 	
 	DebugDraw debugDraw = kDebugDraw_Off;
 	
+	float fpsTimer = 0.f;
+	int fpsFrame = 0;
+	int fps = 0;
+
 	for (;;)
 	{
 		framework.process();
@@ -69,6 +74,16 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 		
+		fpsTimer += framework.timeStep;
+		if (fpsTimer >= 1.f)
+		{
+			fpsTimer = 0.f;
+			fps = fpsFrame;
+			fpsFrame = 0;
+		}
+
+		fpsFrame++;
+
 		bool inputIsCaptured = false;
 		guiContext.processBegin(framework.timeStep, VIEW_SX, VIEW_SY, inputIsCaptured);
 		{
@@ -77,6 +92,8 @@ int main(int argc, char * argv[])
 			{
 				ImGui::PushItemWidth(200.f);
 				{
+					ImGui::Text("%d fps", fps);
+
 					ImGui::Text("Particle System");
 					ImGui::SliderFloat("Gravity strength", &ps.gravity.strength, 0.f, 10.f);
 					ImGui::SliderFloat("Repulsion strength", &ps.repulsion.strength, 0.f, 1.f);
