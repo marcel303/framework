@@ -39,7 +39,7 @@ vec4 vertexIndexToParticleLocalPosAndUv(int local_index, float particle_size)
 	return vec4(position, uv);
 }
 
-vec4 lookupParticlePositionAndVelocity(sampler2D p, int particle_index)
+vec4 lookupParticleData(sampler2D p, int particle_index)
 {
 	int x = particle_index & 1023;
 	int y = particle_index / 1024;
@@ -50,3 +50,9 @@ vec4 lookupParticlePositionAndVelocity(sampler2D p, int particle_index)
 	
 	return result;
 }
+
+vec4 lookupParticlePositionAndVelocity(sampler2D p, int particle_index)
+{
+	return lookupParticleData(p, particle_index);
+}
+

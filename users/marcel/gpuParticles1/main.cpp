@@ -35,7 +35,6 @@ int main(int argc, char * argv[])
 	
 	framework.allowHighDpi = false;
 	framework.enableRealTimeEditing = true;
-	framework.enableVsync = false;
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
@@ -147,7 +146,6 @@ int main(int argc, char * argv[])
 						if (ImGui::Combo("Debug Draw", &mode, modes, kDebugDraw_COUNT))
 							debugDraw = (DebugDraw)mode;
 					}
-					
 				}
 				ImGui::PopItemWidth();
 			}
