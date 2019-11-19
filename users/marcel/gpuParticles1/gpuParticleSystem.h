@@ -18,6 +18,7 @@ struct GpuParticleSystem
 	
 	struct
 	{
+		Vec2 origin;
 		float strength = 1.f;
 	} gravity;
 	
@@ -47,6 +48,8 @@ struct GpuParticleSystem
 		Vec2 min;
 		Vec2 max;
 	} bounds;
+	
+	Color baseColor = colorWhite;
 	
 	void init(const int numParticles, const int sx, const int sy);
 	void shut();
