@@ -125,7 +125,7 @@ void metal_attach(SDL_Window * window)
 		NSView * sdl_view = info.info.cocoa.window.contentView;
 
 		MetalWindowData * windowData = new MetalWindowData();
-		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:YES wantsVsync:framework.enableVsync];
+		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:framework.enableDepthBuffer wantsVsync:framework.enableVsync];
 		[sdl_view addSubview:windowData->metalview];
 
 		windowDatas[window] = windowData;

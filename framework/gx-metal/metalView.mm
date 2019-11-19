@@ -131,16 +131,19 @@
 
     self.metalLayer.drawableSize = size;
 	
-	@autoreleasepool
+	if (self.wantsDepthBuffer)
 	{
-		[self.depthTexture release];
-		self.depthTexture = nullptr;
-		
-		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float width:size.width height:size.height mipmapped:NO];
-		descriptor.resourceOptions = MTLResourceStorageModePrivate;
-		descriptor.usage = MTLTextureUsageRenderTarget;
-		
-		self.depthTexture = [_metalLayer.device newTextureWithDescriptor:descriptor];
+		@autoreleasepool
+		{
+			[self.depthTexture release];
+			self.depthTexture = nullptr;
+			
+			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float width:size.width height:size.height mipmapped:NO];
+			descriptor.resourceOptions = MTLResourceStorageModePrivate;
+			descriptor.usage = MTLTextureUsageRenderTarget;
+			
+			self.depthTexture = [_metalLayer.device newTextureWithDescriptor:descriptor];
+		}
 	}
 	
     //NSLog(@"updateDrawableSize");
