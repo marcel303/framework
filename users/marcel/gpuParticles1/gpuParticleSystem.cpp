@@ -103,6 +103,7 @@ void GpuParticleSystem::drawParticleColor() const
 	{
 		shader.setTexture("p", 0, p.getTexture(), false, true);
 		shader.setImmediate("particleSize", dimensions.colorSize);
+		shader.setImmediate("baseColor", baseColor.r, baseColor.g, baseColor.b, baseColor.a);
 		gxEmitVertices(GX_TRIANGLES, numParticles * 6);
 	}
 	clearShader();
@@ -123,9 +124,7 @@ void GpuParticleSystem::updateParticles(const GxTextureId flowfield)
 			shader.setTexture("p", 0, pTex, false, true);
 			shader.setTexture("flowfield", 1, flowfield, true, true);
 			shader.setImmediate("drag", .99f);
-			const float mouse_x = 256 + sinf(framework.time / 1.234f) * 100.f;
-			const float mouse_y = 256 + sinf(framework.time / 2.345f) * 100.f;
-			shader.setImmediate("grav_pos", mouse_x, mouse_y);
+			shader.setImmediate("grav_pos", gravity.origin[0], gravity.origin[1]);
 			shader.setImmediate("grav_force", gravity.strength);
 			shader.setImmediate("flow_strength", flow.strength);
 			shader.setImmediate("bounds", bounds.min[0], bounds.min[1], bounds.max[0], bounds.max[1]);
