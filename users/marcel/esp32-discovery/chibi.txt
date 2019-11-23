@@ -4,6 +4,7 @@ library nodeDiscovery
 	# todo : remove sdl2 dependency. use c++ threads
 	depend_library libsdl2
 	add_files nodeDiscovery.cpp nodeDiscovery.h
+	header_path . expose
 
 app marcel-esp32-discovery
 	add_files main.cpp
