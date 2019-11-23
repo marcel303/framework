@@ -14,19 +14,6 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 
 */
 
-#define ARTNET_TO_DMX_PORT 6454
-#define ARTNET_TO_LED_PORT 6456
-
-#define I2S_FRAME_COUNT   128
-#define I2S_CHANNEL_COUNT 2
-#define I2S_BUFFER_COUNT  2
-#define I2S_PORT 6458
-
-#define I2S_QUAD_FRAME_COUNT   128
-#define I2S_QUAD_CHANNEL_COUNT 2
-#define I2S_QUAD_BUFFER_COUNT  2
-#define I2S_QUAD_PORT 6459
-
 #include "nodeDiscovery.h"
 
 //
@@ -94,9 +81,9 @@ struct Test_TcpToI2S
 			// to keep latency down however, so we reduce the buffer size here
 			
 			sock_value =
-				I2S_BUFFER_COUNT  * /* N times buffered */
-				I2S_FRAME_COUNT   * /* frame count */
-				I2S_CHANNEL_COUNT * /* stereo */
+				I2S_2CH_BUFFER_COUNT  * /* N times buffered */
+				I2S_2CH_FRAME_COUNT   * /* frame count */
+				I2S_2CH_CHANNEL_COUNT * /* stereo */
 				sizeof(int16_t) /* sample size */;
  			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sock_value, sizeof(sock_value));
 		#endif
@@ -136,7 +123,7 @@ struct Test_TcpToI2S
 				
 				// todo : generate some audio data
 				
-				int16_t data[I2S_FRAME_COUNT][2];
+				int16_t data[I2S_2CH_FRAME_COUNT][2];
 				
 				// we're kind of strict with regard to the sound format we're going to allow .. to simplify the streaming a bit
 				if (soundData->sampleCount == 0 ||
@@ -151,7 +138,7 @@ struct Test_TcpToI2S
 					
 					const int volume = mouse.x * 256 / 800;
 					
-					for (int i = 0; i < I2S_FRAME_COUNT; ++i)
+					for (int i = 0; i < I2S_2CH_FRAME_COUNT; ++i)
 					{
 						data[i][0] = (samples[samplePosition * 2 + 0] * volume) >> 8;
 						data[i][1] = (samples[samplePosition * 2 + 1] * volume) >> 8;
@@ -252,9 +239,9 @@ struct Test_TcpToI2SQuad
 			// to keep latency down however, so we reduce the buffer size here
 			
 			sock_value =
-				I2S_QUAD_BUFFER_COUNT  * /* N times buffered */
-				I2S_QUAD_FRAME_COUNT   * /* frame count */
-				I2S_QUAD_CHANNEL_COUNT * /* stereo */
+				I2S_4CH_BUFFER_COUNT  * /* N times buffered */
+				I2S_4CH_FRAME_COUNT   * /* frame count */
+				I2S_4CH_CHANNEL_COUNT * /* stereo */
 				sizeof(int16_t) /* sample size */;
  			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sock_value, sizeof(sock_value));
 		#endif
@@ -281,7 +268,7 @@ struct Test_TcpToI2SQuad
 			
 			soundData = loadSound("loop01.ogg");
 			
-			logDebug("frame size: %d", I2S_QUAD_FRAME_COUNT * 4 * sizeof(int16_t));
+			logDebug("frame size: %d", I2S_4CH_FRAME_COUNT * 4 * sizeof(int16_t));
 			
 			while (wantsToStop.load() == false)
 			{
@@ -296,7 +283,7 @@ struct Test_TcpToI2SQuad
 				
 				// todo : generate some audio data
 				
-				int16_t data[I2S_QUAD_FRAME_COUNT][4];
+				int16_t data[I2S_4CH_FRAME_COUNT][4];
 				
 				// we're kind of strict with regard to the sound format we're going to allow .. to simplify the streaming a bit
 				if (soundData->sampleCount == 0 ||
@@ -311,7 +298,7 @@ struct Test_TcpToI2SQuad
 					
 					const int volume = mouse.x * 256 / 800;
 					
-					for (int i = 0; i < I2S_QUAD_FRAME_COUNT; ++i)
+					for (int i = 0; i < I2S_4CH_FRAME_COUNT; ++i)
 					{
 						data[i][0] = (samples[samplePosition * 2 + 0] * volume) >> 8;
 						data[i][1] = (samples[samplePosition * 2 + 1] * volume) >> 8;
@@ -445,7 +432,7 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						nodeState.test_tcpToI2SQuad.init(record.endpointName.address, I2S_QUAD_PORT);
+						nodeState.test_tcpToI2SQuad.init(record.endpointName.address, I2S_4CH_PORT);
 					}
 				}
 			}
@@ -459,7 +446,7 @@ int main(int argc, char * argv[])
 					}
 					else
 					{
-						nodeState.test_tcpToI2S.init(record.endpointName.address, I2S_PORT);
+						nodeState.test_tcpToI2S.init(record.endpointName.address, I2S_2CH_PORT);
 					}
 				}
 			}

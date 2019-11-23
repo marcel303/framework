@@ -5,6 +5,19 @@
 #include <stdint.h>
 #include <vector>
 
+#define ARTNET_TO_DMX_PORT 6454
+#define ARTNET_TO_LED_PORT 6456
+
+#define I2S_2CH_FRAME_COUNT   128
+#define I2S_2CH_CHANNEL_COUNT 2
+#define I2S_2CH_BUFFER_COUNT  2
+#define I2S_2CH_PORT 6458
+
+#define I2S_4CH_FRAME_COUNT   128
+#define I2S_4CH_CHANNEL_COUNT 2
+#define I2S_4CH_BUFFER_COUNT  2
+#define I2S_4CH_PORT 6459
+
 struct SDL_mutex;
 struct SDL_Thread;
 
