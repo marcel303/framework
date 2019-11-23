@@ -91,6 +91,7 @@ namespace max
 		bool presentation = false;
 		std::vector<int> presentation_rect = { 0, 0, 10, 10 };
 		std::string text; // this contains the arguments passed to the node
+		int mode = 0;
 		std::vector<float> linecolor = { 0, 0, 0, 1 };
 		int border = 1;
 		

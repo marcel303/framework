@@ -90,6 +90,7 @@ namespace max
 			.add("presentation", &Box::presentation)
 			.add("presentation_rect", &Box::presentation_rect)
 			.add("text", &Box::text)
+			.add("mode", &Box::mode)
 			.add("linecolor", &Box::linecolor)
 			.add("border", &Box::border)
 			.add("saved_attribute_attributes", &Box::saved_attribute_attributes)

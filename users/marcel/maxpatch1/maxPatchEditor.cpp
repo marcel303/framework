@@ -55,6 +55,12 @@ namespace max
 		return *this;
 	}
 	
+	BoxEditor & BoxEditor::mode(const int mode)
+	{
+		box.mode = mode;
+		return *this;
+	}
+	
 	BoxEditor & BoxEditor::linecolor(const float r, const float g, const float b, const float a)
 	{
 		box.linecolor = { r, g, b, a };
