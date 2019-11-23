@@ -1,5 +1,6 @@
 #include "artnet.h"
 #include "framework.h"
+#include "imgui-framework.h"
 #include "ip/PacketListener.h"
 #include "ip/UdpSocket.h"
 #include "StringEx.h"
@@ -12,9 +13,6 @@ esp32 discovery process relies on the Arduino sketch 'esp32-wifi-configure'.
 This is a sketch which lets the user select a Wifi access point and connect to it. The sketch will then proceed sending discovery messages at a regular interval. The discovery message containts the id of the device, and the IP address can be inferred from the received UDP packet.
 
 */
-
-#define DISCOVERY_RECEIVE_PORT 2400
-#define DISCOVERY_ID_STRING_SIZE 16
 
 #define ARTNET_TO_DMX_PORT 6454
 #define ARTNET_TO_LED_PORT 6456
@@ -29,216 +27,7 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 #define I2S_QUAD_BUFFER_COUNT  2
 #define I2S_QUAD_PORT 6459
 
-enum Capabilities
-{
-	kCapability_ArtnetToDmx       = 1 << 0,
-	kCapability_ArtnetToLedstrip  = 1 << 1,
-	kCapability_ArtnetToAnalogPin = 1 << 2,
-	kCapability_TcpToI2S          = 1 << 3,
-	kCapability_Webpage           = 1 << 4,
-	kCapability_TcpToI2SQuad      = 1 << 5
-};
-
-struct DiscoveryPacket
-{
-	uint64_t id;
-	char version[4];
-	uint32_t capabilities;
-	char description[32];
-};
-
-struct DiscoveryRecord
-{
-	uint64_t id;
-	uint32_t capabilities;
-	char description[32];
-	IpEndpointName endpointName;
-};
-
-std::vector<DiscoveryRecord> s_discoveryRecords;
-
-class DiscoveryProcess : public PacketListener
-{
-	UdpListeningReceiveSocket * receiveSocket = nullptr;
-	
-	SDL_mutex * mutex = nullptr;
-	
-	SDL_Thread * thread = nullptr;
-	
-public:
-	~DiscoveryProcess()
-	{
-		shut();
-	}
-	
-	void init()
-	{
-		Assert(receiveSocket == nullptr);
-		
-		std::string ipAddress;
-		const int udpPort = DISCOVERY_RECEIVE_PORT;
-	
-		IpEndpointName endpointName;
-	
-		if (ipAddress.empty())
-			endpointName = IpEndpointName(IpEndpointName::ANY_ADDRESS, udpPort);
-		else
-			endpointName = IpEndpointName(ipAddress.c_str(), udpPort);
-		
-		receiveSocket = new UdpListeningReceiveSocket(endpointName, this);
-		
-		beginThread();
-	}
-	
-	void shut()
-	{
-		endThread();
-		
-		delete receiveSocket;
-		receiveSocket = nullptr;
-	}
-	
-	const int getRecordCount() const
-	{
-		int result;
-		
-		lock();
-		{
-			result = s_discoveryRecords.size();
-		}
-		unlock();
-		
-		return result;
-	}
-	
-	DiscoveryRecord getDiscoveryRecord(const int index) const
-	{
-		DiscoveryRecord result;
-		
-		lock();
-		{
-			result = s_discoveryRecords[index];
-		}
-		unlock();
-		
-		return result;
-	}
-
-private:
-	void beginThread()
-	{
-		Assert(mutex == nullptr);
-		Assert(thread == nullptr);
-		
-		mutex = SDL_CreateMutex();
-		
-		thread = SDL_CreateThread(threadMain, "ESP32 Discovery Process", this);
-	}
-	
-	void endThread()
-	{
-		if (receiveSocket != nullptr)
-		{
-			receiveSocket->Break();
-			
-			delete receiveSocket;
-			receiveSocket = nullptr;
-		}
-		
-		if (thread != nullptr)
-		{
-			SDL_WaitThread(thread, nullptr);
-			thread = nullptr;
-		}
-		
-		if (mutex != nullptr)
-		{
-			SDL_DestroyMutex(mutex);
-			mutex = nullptr;
-		}
-	}
-	
-	void lock() const
-	{
-		Verify(SDL_LockMutex(mutex) == 0);
-	}
-	
-	void unlock() const
-	{
-		Verify(SDL_UnlockMutex(mutex) == 0);
-	}
-	
-	static int threadMain(void * obj)
-	{
-		DiscoveryProcess * self = (DiscoveryProcess*)obj;
-		
-		self->receiveSocket->Run();
-		
-		return 0;
-	}
-	
-	// PacketListener implementation
-	
-	virtual void ProcessPacket(const char * data, int size, const IpEndpointName & remoteEndpoint) override
-	{
-		logDebug("received UDP packet!");
-		
-		// decode the discovery message
-		
-		if (size < sizeof(DiscoveryPacket))
-		{
-			logWarning("received invalid discovery message");
-			return;
-		}
-		
-		DiscoveryPacket * discoveryPacket = (DiscoveryPacket*)data;
-		
-		if (memcmp(discoveryPacket->version, "v100", 4) != 0)
-		{
-			logWarning("received discovery message with unknown version string");
-			return;
-		}
-		
-		DiscoveryRecord * existingRecord = nullptr;
-		
-		for (auto & record : s_discoveryRecords)
-		{
-			if (record.id == discoveryPacket->id)
-				existingRecord = &record;
-		}
-		
-		DiscoveryRecord record;
-		memset(&record, 0, sizeof(record));
-		record.id = discoveryPacket->id;
-		record.capabilities = discoveryPacket->capabilities;
-		strcpy_s(record.description, sizeof(record.description), discoveryPacket->description);
-		record.endpointName = remoteEndpoint;
-		
-		if (existingRecord == nullptr)
-		{
-			logDebug("found a new node! id=%llx", discoveryPacket->id);
-			
-			lock();
-			{
-				s_discoveryRecords.push_back(record);
-			}
-			unlock();
-		}
-		else
-		{
-			if (memcmp(existingRecord, &record, sizeof(record)) != 0)
-			{
-				logDebug("updating existing node! id=%llx", discoveryPacket->id);
-				
-				lock();
-				{
-					*existingRecord = record;
-				}
-				unlock();
-			}
-		}
-	}
-};
+#include "nodeDiscovery.h"
 
 //
 
@@ -576,16 +365,20 @@ struct NodeState
 {
 	uint64_t nodeId = -1;
 	
+	bool showTests = false;
+	
 	Test_TcpToI2S test_tcpToI2S;
 	Test_TcpToI2SQuad test_tcpToI2SQuad;
 	
 	struct
 	{
+		bool enabled = true;
 		uint8_t sequenceNumber = 0;
 	} artnetToDmx;
 	
 	struct
 	{
+		bool enabled = true;
 		uint8_t sequenceNumber = 0;
 	} artnetToLedstrip;
 };
@@ -615,7 +408,10 @@ int main(int argc, char * argv[])
 	if (!framework.init(800, 600))
 		return -1;
 	
-	DiscoveryProcess discoveryProcess;
+	FrameworkImGuiContext guiContext;
+	guiContext.init();
+	
+	NodeDiscoveryProcess discoveryProcess;
 	
 	discoveryProcess.init();
 	
@@ -639,7 +435,7 @@ int main(int argc, char * argv[])
 			
 			auto & nodeState = findOrCreateNodeState(record.id);
 			
-			if (record.capabilities & kCapability_TcpToI2SQuad)
+			if (record.capabilities & kNodeCapability_TcpToI2SQuad)
 			{
 				if (keyboard.wentDown(SDLK_s))
 				{
@@ -653,7 +449,7 @@ int main(int argc, char * argv[])
 					}
 				}
 			}
-			else if (record.capabilities & kCapability_TcpToI2S)
+			else if (record.capabilities & kNodeCapability_TcpToI2S)
 			{
 				if (keyboard.wentDown(SDLK_s))
 				{
@@ -670,11 +466,11 @@ int main(int argc, char * argv[])
 		
 			// send some artnet data to discovered nodes
 			
-			if (record.capabilities & kCapability_ArtnetToDmx)
+			if ((record.capabilities & kNodeCapability_ArtnetToDmx) && nodeState.artnetToDmx.enabled)
 			{
 				ArtnetPacket packet;
 				
-				nodeState.artnetToDmx.sequenceNumber = (nodeState.artnetToDmx.sequenceNumber + 30) % 256;
+				nodeState.artnetToDmx.sequenceNumber = (nodeState.artnetToDmx.sequenceNumber + 10) % 256;
 				if (nodeState.artnetToDmx.sequenceNumber == 0)
 					nodeState.artnetToDmx.sequenceNumber++;
 				
@@ -692,7 +488,7 @@ int main(int argc, char * argv[])
 				artnetSocket.SendTo(remoteEndpoint, (const char*)packet.data, packet.dataSize);
 			}
 			
-			if (record.capabilities & kCapability_ArtnetToLedstrip)
+			if ((record.capabilities & kNodeCapability_ArtnetToLedstrip) && nodeState.artnetToLedstrip.enabled)
 			{
 				ArtnetPacket packet;
 			
@@ -703,7 +499,7 @@ int main(int argc, char * argv[])
 					lo = uint8_t(value16);
 				};
 			
-				nodeState.artnetToLedstrip.sequenceNumber = (nodeState.artnetToLedstrip.sequenceNumber + 30) % 256;
+				nodeState.artnetToLedstrip.sequenceNumber = (nodeState.artnetToLedstrip.sequenceNumber + 10) % 256;
 				if (nodeState.artnetToLedstrip.sequenceNumber == 0)
 					nodeState.artnetToLedstrip.sequenceNumber++;
 				
@@ -721,6 +517,119 @@ int main(int argc, char * argv[])
 				artnetSocket.SendTo(remoteEndpoint, (const char*)packet.data, packet.dataSize);
 			}
 		}
+		
+		bool inputIsCaptured = false;
+		
+		guiContext.processBegin(framework.timeStep, 800, 600, inputIsCaptured);
+		{
+			ImGui::SetNextWindowPos(ImVec2(40, 100), ImGuiCond_Once);
+			if (ImGui::Begin("Nodes", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				const int numRecords = discoveryProcess.getRecordCount();
+			
+				for (int i = 0; i < numRecords; ++i)
+				{
+					auto record = discoveryProcess.getDiscoveryRecord(i);
+					
+					auto & nodeState = findOrCreateNodeState(record.id);
+					
+					char endpointName[IpEndpointName::ADDRESS_STRING_LENGTH];
+					record.endpointName.AddressAsString(endpointName);
+					
+					ImGui::PushID(endpointName);
+					
+					ImGui::TextColored(ImVec4(0, 255, 0, 255), "%s", endpointName);
+					ImGui::SameLine();
+					ImGui::TextColored(ImVec4(255, 255, 255, 255), "%llx", record.id);
+					ImGui::SameLine();
+					ImGui::TextColored(ImVec4(255, 255, 255, 255), "%s", record.description);
+					ImGui::SameLine();
+					
+					if (ImGui::Button("Open webpage"))
+					{
+						char command[128];
+						sprintf_s(command, sizeof(command), "open http://%s", endpointName);
+						system(command);
+					}
+					ImGui::SameLine();
+					
+					ImGui::PushStyleColor(ImGuiCol_Text, (uint32_t)ImColor(255, 255, 0));
+					{
+						if (record.capabilities & kNodeCapability_ArtnetToDmx)
+						{
+							ImGui::Text("Art2DMX");
+							ImGui::SameLine();
+						}
+						
+						if (record.capabilities & kNodeCapability_ArtnetToLedstrip)
+						{
+							ImGui::Text("Art2Led");
+							ImGui::SameLine();
+						}
+						
+						if (record.capabilities & kNodeCapability_ArtnetToAnalogPin)
+						{
+							ImGui::Text("Art2Pin");
+							ImGui::SameLine();
+						}
+						
+						if (record.capabilities & kNodeCapability_TcpToI2S)
+						{
+							ImGui::Text("Tcp2I2S(2ch)");
+							ImGui::SameLine();
+						}
+						
+						if (record.capabilities & kNodeCapability_TcpToI2SQuad)
+						{
+							ImGui::Text("Tcp2I2S(4ch)");
+							ImGui::SameLine();
+						}
+					}
+					ImGui::PopStyleColor();
+					
+					ImGui::Checkbox("Show tests", &nodeState.showTests);
+					
+					if (nodeState.showTests)
+					{
+						if (record.capabilities & kNodeCapability_ArtnetToDmx)
+						{
+							ImGui::Checkbox("Artnet to DMX", &nodeState.artnetToDmx.enabled);
+							ImGui::SameLine();
+						}
+						
+						if (record.capabilities & kNodeCapability_ArtnetToLedstrip)
+						{
+							ImGui::Checkbox("Artnet to ledstrip", &nodeState.artnetToLedstrip.enabled);
+							ImGui::SameLine();
+						}
+						
+						if (record.capabilities & kNodeCapability_ArtnetToAnalogPin)
+						{
+							ImGui::Text("Art2Pin");
+							ImGui::SameLine();
+						}
+						
+						if (record.capabilities & kNodeCapability_TcpToI2S)
+						{
+							ImGui::Text("Tcp2I2S(2ch)");
+							ImGui::SameLine();
+						}
+						
+						if (record.capabilities & kNodeCapability_TcpToI2SQuad)
+						{
+							ImGui::Text("Tcp2I2S(4ch)");
+							ImGui::SameLine();
+						}
+					}
+					
+					ImGui::NewLine();
+					
+					ImGui::PopID();
+				}
+			}
+			ImGui::End();
+		}
+		guiContext.processEnd();
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -753,7 +662,7 @@ int main(int argc, char * argv[])
 					drawRect(x1, y1, x2, y2);
 				}
 				
-				if (isClicked && (record.capabilities & kCapability_Webpage) != 0)
+				if (isClicked && (record.capabilities & kNodeCapability_Webpage) != 0)
 				{
 					char command[128];
 					sprintf_s(command, sizeof(command), "open http://%s", endpointName);
@@ -774,35 +683,35 @@ int main(int argc, char * argv[])
 				drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "%s", record.description);
 				x += 140;
 				
-				if (record.capabilities & kCapability_ArtnetToDmx)
+				if (record.capabilities & kNodeCapability_ArtnetToDmx)
 				{
 					setColor(colorYellow);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "Art2DMX");
 					x += 100;
 				}
 				
-				if (record.capabilities & kCapability_ArtnetToLedstrip)
+				if (record.capabilities & kNodeCapability_ArtnetToLedstrip)
 				{
 					setColor(colorYellow);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "Art2LED");
 					x += 100;
 				}
 				
-				if (record.capabilities & kCapability_ArtnetToAnalogPin)
+				if (record.capabilities & kNodeCapability_ArtnetToAnalogPin)
 				{
 					setColor(colorYellow);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "Art2Pin");
 					x += 100;
 				}
 				
-				if (record.capabilities & kCapability_TcpToI2S)
+				if (record.capabilities & kNodeCapability_TcpToI2S)
 				{
 					setColor(colorYellow);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "Tcp2I2S(2ch)");
 					x += 100;
 				}
 				
-				if (record.capabilities & kCapability_TcpToI2SQuad)
+				if (record.capabilities & kNodeCapability_TcpToI2SQuad)
 				{
 					setColor(colorYellow);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "Tcp2I2S(4ch)");
@@ -816,6 +725,8 @@ int main(int argc, char * argv[])
 					x += 100;
 				}
 			}
+			
+			guiContext.draw();
 		}
 		framework.endDraw();
 	}
