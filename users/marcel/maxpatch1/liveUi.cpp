@@ -71,6 +71,23 @@ static void convertToHsl(const float r, const float g, const float b, float & hu
 	}
 }
 
+LiveUi::~LiveUi()
+{
+	Assert(oscSenders.empty());
+	shut();
+}
+
+void LiveUi::shut()
+{
+	for (auto *& sender : oscSenders)
+	{
+		delete sender;
+		sender = nullptr;
+	}
+	
+	oscSenders.clear();
+}
+
 LiveUi & LiveUi::osc(const char * ipAddress, const int udpPort)
 {
 	OscSender * sender = new OscSender();
@@ -1455,7 +1472,7 @@ void LiveUi::draw() const
 			
 			// draw name
 			
-			setColor(colors.text);
+			setColor(colorBlack); // note : fixed color since it always draws on top of a light background
 			drawText(e.x + picker_x + picker_sx / 2.f, e.y + 8, 10, 0, 0, "%s", colorPicker.displayName.c_str());
 		}
 		else if (elem->type == ControlSurfaceDefinition::kElementType_Separator)
@@ -1476,9 +1493,22 @@ void LiveUi::draw() const
 
 void LiveUi::drawTooltip() const
 {
+	int viewSx;
+	int viewSy;
+	framework.getCurrentViewportSize(viewSx, viewSy);
+	
+	const int tooltipSx = 100;
+	const int tooltipSy = 30;
+	
+	int x = mouse.x;
+	int y = mouse.y;
+	
+	x = clamp<int>(x, 0, viewSx - tooltipSx);
+	y = clamp<int>(y, 0, viewSy - tooltipSy);
+	
 	gxPushMatrix();
 	{
-		gxTranslatef(mouse.x, mouse.y, 0);
+		gxTranslatef(x, y, 0);
 		
 		if (activeElem != nullptr)
 		{
@@ -1491,7 +1521,7 @@ void LiveUi::drawTooltip() const
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
 					setColor(colors.tooltipBackground);
-					hqFillRoundedRect(0, 0, 100, 30, 4);
+					hqFillRoundedRect(0, 0, tooltipSx, tooltipSy, 4);
 				}
 				hqEnd();
 				

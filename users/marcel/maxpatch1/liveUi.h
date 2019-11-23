@@ -34,7 +34,11 @@ struct LiveUi
 	std::vector<OscSender*> oscSenders;
 	
 	//
+
+	~LiveUi();
 	
+	void shut();
+
 	LiveUi & osc(const char * ipAddress, const int udpPort);
 	
 	void addElem(ControlSurfaceDefinition::Element * elem);
