@@ -345,6 +345,177 @@ struct Test_TcpToI2SQuad
 
 //
 
+struct Test_TcpToI2SMono8
+{
+	bool isActive = false;
+	
+	std::atomic<bool> wantsToStop;
+	
+	std::thread thread;
+	
+	Test_TcpToI2SMono8()
+		: wantsToStop(false)
+	{
+	}
+	
+	bool init(const uint32_t ipAddress, const uint16_t tcpPort)
+	{
+		Assert(isActive == false);
+		
+		if (isActive)
+		{
+			shut();
+		}
+		
+		isActive = true;
+		
+		thread = std::thread([=]()
+		{
+			struct sockaddr_in addr;
+			int sock = 0;
+			int sock_value = 0;
+			SoundData * soundData = nullptr;
+			int samplePosition = 0;
+			
+			//
+			
+			sock = socket(AF_INET, SOCK_STREAM, 0);
+			
+			if (sock == -1)
+			{
+				logError("failed opening socket");
+				goto error;
+			}
+			
+			// disable nagle's algorithm and send out packets immediately on write
+			
+		#if 1
+			sock_value = 1;
+			setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &sock_value, sizeof(sock_value));
+		#endif
+		
+		#if 1
+			// tell the TCP stack to use a specific buffer size. usually the TCP stack is
+			// configured to use a rather large buffer size to increase bandwidth. we want
+			// to keep latency down however, so we reduce the buffer size here
+			
+			sock_value =
+				I2S_1CH_8_BUFFER_COUNT  * /* N times buffered */
+				I2S_1CH_8_FRAME_COUNT   * /* frame count */
+				I2S_1CH_8_CHANNEL_COUNT * /* stereo */
+				sizeof(int8_t) /* sample size */;
+ 			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sock_value, sizeof(sock_value));
+		#endif
+		
+			// todo : TCP_NODELAY (osx). disables nagle's algorithm and sends out packets immediately on write
+			// todo : TCP_NOPUSH (osx)
+			// todo : TCP_CORK (linux). will manually batch messages and send them when the cork is removed
+
+		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
+		
+			addr.sin_family = AF_INET;
+			addr.sin_addr.s_addr = htonl(ipAddress);
+			addr.sin_port = htons(tcpPort);
+
+			logDebug("connecting socket to remote endpoint");
+			
+			if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+			{
+				logError("failed to connect socket");
+				goto error;
+			}
+			
+			logError("connected to remote endpoint!");
+			
+			soundData = loadSound("loop01.ogg");
+			
+			logDebug("frame size: %d", I2S_1CH_8_FRAME_COUNT * sizeof(int8_t));
+			
+			while (wantsToStop.load() == false)
+			{
+				// todo : detect is disconnected, and attempt to reconnect
+				// todo : avoid high CPU on disconnect
+				// todo : perform disconnection test
+				
+				while (keyboard.isDown(SDLK_SPACE))
+				{
+					SDL_Delay(10);
+				}
+				
+				// todo : generate some audio data
+				
+				int8_t data[I2S_1CH_8_FRAME_COUNT];
+				
+				// we're kind of strict with regard to the sound format we're going to allow .. to simplify the streaming a bit
+				if (soundData->sampleCount == 0 ||
+					soundData->channelCount != 2 ||
+					soundData->channelSize != 2)
+				{
+					memset(data, 0, sizeof(data));
+				}
+				else
+				{
+					const int16_t * samples = (const int16_t*)soundData->sampleData;
+					
+					const int volume = mouse.x * 256 / 800;
+					
+					for (int i = 0; i < I2S_1CH_8_FRAME_COUNT; ++i)
+					{
+						const int value =
+							(
+								(
+									samples[samplePosition * 2 + 0] +
+									samples[samplePosition * 2 + 1]
+								) * volume
+							) >> (16 + 1);
+						
+						//Assert(value >= -128 && value <= +127);
+						
+						data[i] = value;
+						
+						//Assert(data[i] == value);
+						
+						samplePosition++;
+						
+						if (samplePosition == soundData->sampleCount)
+							samplePosition = 0;
+					}
+				}
+				
+				send(sock, data, sizeof(data), 0);
+			}
+			
+		error:
+			delete soundData;
+			soundData = nullptr;
+			
+			if (sock != -1)
+			{
+				close(sock);
+				sock = -1;
+			}
+		});
+		
+		return true;
+	}
+	
+	void shut()
+	{
+		if (isActive)
+		{
+			wantsToStop = true;
+			{
+				thread.join();
+			}
+			wantsToStop = false;
+			
+			isActive = false;
+		}
+	}
+};
+
+//
+
 #include <list>
 
 struct NodeState
@@ -355,6 +526,7 @@ struct NodeState
 	
 	Test_TcpToI2S test_tcpToI2S;
 	Test_TcpToI2SQuad test_tcpToI2SQuad;
+	Test_TcpToI2SMono8 test_tcpToI2SMono8;
 	
 	struct
 	{
@@ -446,6 +618,20 @@ int main(int argc, char * argv[])
 					else
 					{
 						nodeState.test_tcpToI2S.init(record.endpointName.address, I2S_2CH_PORT);
+					}
+				}
+			}
+			else if (record.capabilities & kNodeCapability_TcpToI2SMono8)
+			{
+				if (keyboard.wentDown(SDLK_s))
+				{
+					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
+					{
+						nodeState.test_tcpToI2SMono8.shut();
+					}
+					else
+					{
+						nodeState.test_tcpToI2SMono8.init(record.endpointName.address, I2S_1CH_8_PORT);
 					}
 				}
 			}
@@ -559,6 +745,12 @@ int main(int argc, char * argv[])
 							ImGui::SameLine();
 						}
 						
+						if (record.capabilities & kNodeCapability_TcpToI2SMono8)
+						{
+							ImGui::Text("Tcp2I2S(1ch-8)");
+							ImGui::SameLine();
+						}
+						
 						if (record.capabilities & kNodeCapability_TcpToI2S)
 						{
 							ImGui::Text("Tcp2I2S(2ch)");
@@ -592,6 +784,12 @@ int main(int argc, char * argv[])
 						if (record.capabilities & kNodeCapability_ArtnetToAnalogPin)
 						{
 							ImGui::Text("Art2Pin");
+							ImGui::SameLine();
+						}
+						
+						if (record.capabilities & kNodeCapability_TcpToI2SMono8)
+						{
+							ImGui::Text("Tcp2I2S(1ch-8)");
 							ImGui::SameLine();
 						}
 						
@@ -690,6 +888,13 @@ int main(int argc, char * argv[])
 					x += 100;
 				}
 				
+				if (record.capabilities & kNodeCapability_TcpToI2SMono8)
+				{
+					setColor(colorYellow);
+					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "Tcp2I2S(1ch-8)");
+					x += 100;
+				}
+				
 				if (record.capabilities & kNodeCapability_TcpToI2S)
 				{
 					setColor(colorYellow);
@@ -704,7 +909,9 @@ int main(int argc, char * argv[])
 					x += 100;
 				}
 				
-				if (nodeState.test_tcpToI2SQuad.isActive)
+				if (nodeState.test_tcpToI2SMono8.isActive ||
+					nodeState.test_tcpToI2S.isActive ||
+					nodeState.test_tcpToI2SQuad.isActive)
 				{
 					setColor(colorGreen);
 					drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "(Playing)");
@@ -721,6 +928,7 @@ int main(int argc, char * argv[])
 	{
 		nodeState.test_tcpToI2S.shut();
 		nodeState.test_tcpToI2SQuad.shut();
+		nodeState.test_tcpToI2SMono8.shut();
 	}
 	
 	discoveryProcess.shut();

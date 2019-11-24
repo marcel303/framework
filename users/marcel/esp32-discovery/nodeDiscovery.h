@@ -11,12 +11,17 @@
 #define I2S_2CH_FRAME_COUNT   128
 #define I2S_2CH_CHANNEL_COUNT 2
 #define I2S_2CH_BUFFER_COUNT  2
-#define I2S_2CH_PORT 6458
+#define I2S_2CH_PORT          6458
 
 #define I2S_4CH_FRAME_COUNT   128
 #define I2S_4CH_CHANNEL_COUNT 2
 #define I2S_4CH_BUFFER_COUNT  2
-#define I2S_4CH_PORT 6459
+#define I2S_4CH_PORT          6459
+
+#define I2S_1CH_8_FRAME_COUNT   1024
+#define I2S_1CH_8_CHANNEL_COUNT 1
+#define I2S_1CH_8_BUFFER_COUNT  2
+#define I2S_1CH_8_PORT          6460
 
 struct SDL_mutex;
 struct SDL_Thread;
@@ -28,7 +33,8 @@ enum NodeCapabilities
 	kNodeCapability_ArtnetToAnalogPin = 1 << 2,
 	kNodeCapability_TcpToI2S          = 1 << 3,
 	kNodeCapability_Webpage           = 1 << 4,
-	kNodeCapability_TcpToI2SQuad      = 1 << 5
+	kNodeCapability_TcpToI2SQuad      = 1 << 5,
+	kNodeCapability_TcpToI2SMono8     = 1 << 6
 };
 
 struct NodeDiscoveryPacket
