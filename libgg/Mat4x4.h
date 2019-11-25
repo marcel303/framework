@@ -124,6 +124,13 @@ public:
 			m_v[INDEX(index, 2)]);
 	}
 	
+	void SetAxis(int index, Vec3Arg axis)
+	{
+		m_v[INDEX(index, 0)] = axis[0];
+		m_v[INDEX(index, 1)] = axis[1];
+		m_v[INDEX(index, 2)] = axis[2];
+	}
+	
 	inline Mat4x4 CalcTranspose() const
 	{
 		Mat4x4 r;
