@@ -23,6 +23,8 @@ struct LiveUi
 		ControlSurfaceDefinition::Vector4 value4;
 		
 		int liveState[4] = { };
+		
+		void setToDefault();
 	};
 	
 	std::vector<Elem> elems;
@@ -44,6 +46,11 @@ struct LiveUi
 	void addElem(ControlSurfaceDefinition::Element * elem);
 	
 	Elem * findElem(const ControlSurfaceDefinition::Element * surfaceElement);
+	
+	void setToDefault();
+	
+	void forceSendOsc();
+	void sendChangedValuesOverOsc();
 	
 	/**
 	 * Apply layouts. The first layout is considered the 'base' layout, while subsequent layouts (if any)

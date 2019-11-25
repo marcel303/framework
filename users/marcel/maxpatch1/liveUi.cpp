@@ -71,6 +71,46 @@ static void convertToHsl(const float r, const float g, const float b, float & hu
 	}
 }
 
+//
+
+void LiveUi::Elem::setToDefault()
+{
+	switch (elem->type)
+	{
+		case ControlSurfaceDefinition::kElementType_None:
+			break;
+		case ControlSurfaceDefinition::kElementType_Label:
+			break;
+			
+		case ControlSurfaceDefinition::kElementType_Knob:
+			value = defaultValue;
+			break;
+			
+		case ControlSurfaceDefinition::kElementType_Button:
+			break;
+		
+		case ControlSurfaceDefinition::kElementType_Slider2:
+			value4 = defaultValue4;
+			break;
+		case ControlSurfaceDefinition::kElementType_Slider3:
+			value4 = defaultValue4;
+			break;
+		
+		case ControlSurfaceDefinition::kElementType_Listbox:
+			value = defaultValue;
+			break;
+			
+		case ControlSurfaceDefinition::kElementType_ColorPicker:
+			value4 = defaultValue4;
+			break;
+			
+		case ControlSurfaceDefinition::kElementType_Separator:
+			break;
+	}
+}
+
+//
+
 LiveUi::~LiveUi()
 {
 	Assert(oscSenders.empty());
@@ -264,6 +304,20 @@ LiveUi::Elem * LiveUi::findElem(const ControlSurfaceDefinition::Element * surfac
 			return &elem;
 	
 	return nullptr;
+}
+
+void LiveUi::setToDefault()
+{
+	for (auto & elem : elems)
+		elem.setToDefault();
+}
+
+void LiveUi::forceSendOsc()
+{
+	for (auto & elem : elems)
+		elem.valueHasChanged = true;
+	
+	sendChangedValuesOverOsc();
 }
 
 void LiveUi::applyLayouts(const ControlSurfaceDefinition::Surface & surface, const ControlSurfaceDefinition::SurfaceLayout * layouts[], const int numLayouts)
@@ -866,6 +920,11 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 		}
 	}
 	
+	sendChangedValuesOverOsc();
+}
+
+void LiveUi::sendChangedValuesOverOsc()
+{
 	// send changed values over OSC
 	
 	char buffer[1200];
