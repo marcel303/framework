@@ -2,8 +2,13 @@
 #include "framework.h"
 #include "imgui-framework.h"
 #include "ip/UdpSocket.h"
+#include "parameter.h"
+#include "parameterUi.h"
 #include "StringEx.h"
+#include "webrequest.h"
 #include <atomic>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
 #include <vector>
 
 /*
@@ -539,6 +544,303 @@ struct NodeState
 		bool enabled = true;
 		uint8_t sequenceNumber = 0;
 	} artnetToLedstrip;
+	
+	struct
+	{
+		std::string text;
+		WebRequest * fetchRequest = nullptr;
+	} parameterJson;
+	
+	struct ParameterUi
+	{
+		ParameterMgr paramMgr;
+		std::list<ParameterMgr> paramMgrs;
+	} parameterUi;
+	
+	void beginFetchParameterJson(const char * endpointName)
+	{
+		if (parameterJson.fetchRequest != nullptr)
+		{
+			delete parameterJson.fetchRequest;
+			parameterJson.fetchRequest = nullptr;
+		}
+		
+		parameterJson.text.clear();
+		
+		parameterUi = ParameterUi();
+		
+		char url[128];
+		sprintf_s(url, sizeof(url), "http://%s/getParameters", endpointName);
+		
+		parameterJson.fetchRequest = createWebRequest(url);
+	}
+	
+	void buildParameterUiFromJson_recursive(rapidjson::Document::ValueType & document, ParameterMgr & parent)
+	{
+		auto paramMgr_json = document.GetObject();
+		
+		auto & name_json = paramMgr_json["name"];
+		const char * name = name_json.GetString();
+		
+		parameterUi.paramMgrs.push_back(ParameterMgr());
+		ParameterMgr & paramMgr = parameterUi.paramMgrs.back();
+		paramMgr.init(name);
+		parent.addChild(&paramMgr);
+		
+		auto decodeFloatArray = [](const rapidjson::Document::Array & array, float * dst, const int numFloats) -> bool
+		{
+			if (array.Size() != numFloats)
+				return false;
+			
+			for (int i = 0; i < numFloats; ++i)
+			{
+				if (array[i].IsInt())
+					dst[i] = array[i].GetInt();
+				else if (array[i].IsFloat())
+					dst[i] = array[i].GetFloat();
+				else
+					return false;
+			}
+			
+			return true;
+		};
+		
+		for (auto member_json = paramMgr_json.begin(); member_json != paramMgr_json.end(); ++member_json)
+		{
+			if (member_json->name == "parameters")
+			{
+				auto parameters_json = member_json->value.GetArray();
+				
+				for (auto parameter_json_element = parameters_json.begin(); parameter_json_element != parameters_json.end(); ++parameter_json_element)
+				{
+					auto & parameter_json = *parameter_json_element;
+					
+					auto & name_json = parameter_json["name"];
+					auto & type_json = parameter_json["type"];
+					
+					if (name_json.IsString() == false || type_json.IsString() == false)
+					{
+						logWarning("parameter name or type is not a string");
+						continue;
+					}
+					
+					const char * name = name_json.GetString();
+					const char * type = type_json.GetString();
+					
+					if (!strcmp(type, "bool"))
+					{
+						auto & defaultValue_json = parameter_json["defaultValue"];
+						auto & value_json = parameter_json["value"];
+						
+						if (defaultValue_json.IsBool() == false)
+							logDebug("parameter default value not set");
+						if (value_json.IsBool() == false)
+							logDebug("parameter value not set");
+						
+						const bool defaultValue =
+							defaultValue_json.IsBool()
+							? defaultValue_json.GetBool()
+							: false;
+						
+						const bool value =
+							value_json.IsBool()
+							? value_json.GetBool()
+							: defaultValue;
+						
+						auto * param = paramMgr.addBool(name, defaultValue);
+						param->set(value);
+					}
+					else if (!strcmp(type, "int"))
+					{
+						auto & defaultValue_json = parameter_json["defaultValue"];
+						auto & value_json = parameter_json["value"];
+						
+						if (defaultValue_json.IsInt() == false)
+							logDebug("parameter default value not set");
+						if (value_json.IsInt() == false)
+							logDebug("parameter value not set");
+						
+						const int defaultValue =
+							defaultValue_json.IsInt()
+							? defaultValue_json.GetInt()
+							: false;
+						
+						const int value =
+							value_json.IsInt()
+							? value_json.GetInt()
+							: defaultValue;
+						
+						auto * param = paramMgr.addInt(name, defaultValue);
+						param->set(value);
+						
+						//
+						
+						auto & hasRange_json = parameter_json["hasRange"];
+						
+						if (hasRange_json.IsBool() && hasRange_json.GetBool())
+						{
+							auto & min_json = parameter_json["min"];
+							auto & max_json = parameter_json["max"];
+						
+							if (min_json.IsInt() == false || max_json.IsInt() == false)
+								logDebug("parameter range not set");
+							else
+								param->setLimits(min_json.GetInt(), max_json.GetInt());
+						}
+					}
+					else if (!strcmp(type, "float"))
+					{
+						auto & defaultValue_json = parameter_json["defaultValue"];
+						auto & value_json = parameter_json["value"];
+						
+						if (defaultValue_json.IsFloat() == false)
+							logDebug("parameter default value not set");
+						if (value_json.IsFloat() == false)
+							logDebug("parameter value not set");
+						
+						const float defaultValue =
+							defaultValue_json.IsFloat()
+							? defaultValue_json.GetFloat()
+							: false;
+						
+						const float value =
+							value_json.IsFloat()
+							? value_json.GetFloat()
+							: defaultValue;
+						
+						auto * param = paramMgr.addFloat(name, defaultValue);
+						param->set(value);
+						
+						//
+						
+						auto & hasRange_json = parameter_json["hasRange"];
+						
+						if (hasRange_json.IsBool() && hasRange_json.GetBool())
+						{
+							auto & min_json = parameter_json["min"];
+							auto & max_json = parameter_json["max"];
+						
+							if (min_json.IsFloat() == false || max_json.IsFloat() == false)
+								logDebug("parameter range not set");
+							else
+								param->setLimits(min_json.GetFloat(), max_json.GetFloat());
+						}
+					}
+					else if (!strcmp(type, "vec2"))
+					{
+						paramMgr.addVec2(name, Vec2());
+					}
+					else if (!strcmp(type, "vec3"))
+					{
+						auto & defaultValue_json = parameter_json["defaultValue"];
+						auto & value_json = parameter_json["value"];
+						
+						Vec3 defaultValue;
+						const bool hasDefaultValue =
+							defaultValue_json.IsArray() &&
+							decodeFloatArray(defaultValue_json.GetArray(), &defaultValue[0], 3);
+						
+						Vec3 value;
+						const bool hasValue =
+							value_json.IsArray() &&
+							decodeFloatArray(value_json.GetArray(), &value[0], 3);
+						
+						if (hasDefaultValue == false)
+							logDebug("parameter default value not set");
+						if (hasValue == false)
+							logDebug("parameter value not set");
+						
+						auto * param = paramMgr.addVec3(name, hasDefaultValue ? defaultValue : Vec3());
+						
+						if (hasValue)
+							param->set(value);
+					}
+					else if (!strcmp(type, "vec4"))
+					{
+						auto & defaultValue_json = parameter_json["defaultValue"];
+						auto & value_json = parameter_json["value"];
+						
+						Vec4 defaultValue;
+						const bool hasDefaultValue =
+							defaultValue_json.IsArray() &&
+							decodeFloatArray(defaultValue_json.GetArray(), &defaultValue[0], 4);
+						
+						Vec4 value;
+						const bool hasValue =
+							value_json.IsArray() &&
+							decodeFloatArray(value_json.GetArray(), &value[0], 4);
+						
+						if (hasDefaultValue == false)
+							logDebug("parameter default value not set");
+						if (hasValue == false)
+							logDebug("parameter value not set");
+						
+						auto * param = paramMgr.addVec4(name, hasDefaultValue ? defaultValue : Vec4());
+						
+						if (hasValue)
+							param->set(value);
+					}
+					else if (!strcmp(type, "enum"))
+					{
+						paramMgr.addEnum(name, 0, { });
+					}
+					else
+					{
+						Assert(false);
+					}
+				}
+			}
+			else if (member_json->name == "children")
+			{
+				auto children_json = member_json->value.GetArray();
+				
+				for (auto child_json_element = children_json.begin(); child_json_element != children_json.end(); ++child_json_element)
+				{
+					auto & child_json = *child_json_element;
+					
+					buildParameterUiFromJson_recursive(child_json, paramMgr);
+				}
+			}
+		}
+	}
+	
+	void buildParameterUiFromJson(const char * json)
+	{
+		rapidjson::Document document;
+		document.Parse(json);
+		
+		buildParameterUiFromJson_recursive(document, parameterUi.paramMgr);
+	}
+	
+	void tick()
+	{
+		if (parameterJson.fetchRequest != nullptr)
+		{
+			Assert(parameterJson.text.empty());
+			
+			if (parameterJson.fetchRequest->isDone())
+			{
+				char * text = nullptr;
+				if (parameterJson.fetchRequest->getResultAsCString(text))
+				{
+					parameterJson.text = text;
+					
+					delete [] text;
+					text = nullptr;
+				}
+				
+				delete parameterJson.fetchRequest;
+				parameterJson.fetchRequest = nullptr;
+				
+				//
+				
+				if (!parameterJson.text.empty())
+				{
+					buildParameterUiFromJson(parameterJson.text.c_str());
+				}
+			}
+		}
+	}
 };
 
 static std::list<NodeState> s_nodeStates;
@@ -585,6 +887,8 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 
+		discoveryProcess.purgeStaleRecords(30);
+		
 		const int numRecords = discoveryProcess.getRecordCount();
 		
 		for (int i = 0; i < numRecords; ++i)
@@ -593,9 +897,17 @@ int main(int argc, char * argv[])
 			
 			auto & nodeState = findOrCreateNodeState(record.id);
 			
+			nodeState.tick();
+			
+			const bool enableTests = nodeState.showTests;
+			
 			if (record.capabilities & kNodeCapability_TcpToI2SQuad)
 			{
-				if (keyboard.wentDown(SDLK_s))
+				if (enableTests == false)
+				{
+					nodeState.test_tcpToI2SQuad.shut();
+				}
+				else if (keyboard.wentDown(SDLK_s))
 				{
 					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 					{
@@ -609,7 +921,11 @@ int main(int argc, char * argv[])
 			}
 			else if (record.capabilities & kNodeCapability_TcpToI2S)
 			{
-				if (keyboard.wentDown(SDLK_s))
+				if (enableTests == false)
+				{
+					nodeState.test_tcpToI2S.shut();
+				}
+				else if (keyboard.wentDown(SDLK_s))
 				{
 					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 					{
@@ -623,7 +939,11 @@ int main(int argc, char * argv[])
 			}
 			else if (record.capabilities & kNodeCapability_TcpToI2SMono8)
 			{
-				if (keyboard.wentDown(SDLK_s))
+				if (enableTests == false)
+				{
+					nodeState.test_tcpToI2SMono8.shut();
+				}
+				else if (keyboard.wentDown(SDLK_s))
 				{
 					if (keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT))
 					{
@@ -638,7 +958,7 @@ int main(int argc, char * argv[])
 		
 			// send some artnet data to discovered nodes
 			
-			if ((record.capabilities & kNodeCapability_ArtnetToDmx) && nodeState.artnetToDmx.enabled)
+			if (enableTests && (record.capabilities & kNodeCapability_ArtnetToDmx) && nodeState.artnetToDmx.enabled)
 			{
 				ArtnetPacket packet;
 				
@@ -660,7 +980,7 @@ int main(int argc, char * argv[])
 				artnetSocket.SendTo(remoteEndpoint, (const char*)packet.data, packet.dataSize);
 			}
 			
-			if ((record.capabilities & kNodeCapability_ArtnetToLedstrip) && nodeState.artnetToLedstrip.enabled)
+			if (enableTests && (record.capabilities & kNodeCapability_ArtnetToLedstrip) && nodeState.artnetToLedstrip.enabled)
 			{
 				ArtnetPacket packet;
 			
@@ -725,6 +1045,12 @@ int main(int argc, char * argv[])
 					}
 					ImGui::SameLine();
 					
+					if (ImGui::Button("Fetch json"))
+					{
+						nodeState.beginFetchParameterJson(endpointName);
+					}
+					ImGui::SameLine();
+					
 					ImGui::PushStyleColor(ImGuiCol_Text, (uint32_t)ImColor(255, 255, 0));
 					{
 						if (record.capabilities & kNodeCapability_ArtnetToDmx)
@@ -765,7 +1091,7 @@ int main(int argc, char * argv[])
 					}
 					ImGui::PopStyleColor();
 					
-					ImGui::Checkbox("Show tests", &nodeState.showTests);
+					ImGui::Checkbox("Tests", &nodeState.showTests);
 					
 					if (nodeState.showTests)
 					{
@@ -808,6 +1134,21 @@ int main(int argc, char * argv[])
 					
 					ImGui::NewLine();
 					
+					if (nodeState.parameterJson.fetchRequest != nullptr)
+					{
+						ImGui::Text("Fetching JSON..");
+					}
+					
+					if (nodeState.parameterJson.text.empty() == false)
+					{
+						//ImGui::Text("%s", nodeState.parameterJson.text.c_str());
+					}
+					
+					if (nodeState.parameterUi.paramMgrs.empty() == false)
+					{
+						doParameterUi_recursive(nodeState.parameterUi.paramMgr, nullptr);
+					}
+					
 					ImGui::PopID();
 				}
 			}
@@ -833,7 +1174,7 @@ int main(int argc, char * argv[])
 				
 				const int x1 = 0;
 				const int y1 = (i + 0) * sy;
-				const int x2 = 300;
+				const int x2 = 800;
 				const int y2 = (i + 1) * sy;
 				
 				const bool isInside = mouse.x >= x1 && mouse.x < x2 && mouse.y >= y1 && mouse.y < y2;
@@ -854,6 +1195,10 @@ int main(int argc, char * argv[])
 				}
 				
 				int x = x1 + 10;
+				
+				setColor(colorBlue);
+				drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "%d", (SDL_GetTicks() - record.receiveTime) / 1000);
+				x += 60;
 				
 				setColor(colorGreen);
 				drawText(x, (y1 + y2) / 2.f, 14, +1, 0, "%s", endpointName);

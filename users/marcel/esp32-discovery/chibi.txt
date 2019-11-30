@@ -10,6 +10,10 @@ app marcel-esp32-discovery
 	add_files main.cpp
 	depend_library artnet
 	depend_library framework
+	depend_library ecs-parameter
+	depend_library ecs-parameterui
+	depend_library libwebrequest
 	depend_library imgui-framework
 	depend_library nodeDiscovery
+	depend_library rapidjson
 	resource_path data
