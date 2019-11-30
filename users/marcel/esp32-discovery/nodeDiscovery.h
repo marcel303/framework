@@ -20,7 +20,7 @@
 
 #define I2S_1CH_8_FRAME_COUNT   1024
 #define I2S_1CH_8_CHANNEL_COUNT 1
-#define I2S_1CH_8_BUFFER_COUNT  2
+#define I2S_1CH_8_BUFFER_COUNT  8
 #define I2S_1CH_8_PORT          6460
 
 struct SDL_mutex;
@@ -51,6 +51,7 @@ struct NodeDiscoveryRecord
 	uint32_t capabilities;
 	char description[32];
 	IpEndpointName endpointName;
+	int receiveTime = 0; // SDL_GetTicks() a discovery message for this node was last received
 };
 
 class NodeDiscoveryProcess : public PacketListener
@@ -66,6 +67,8 @@ public:
 	
 	void init();
 	void shut();
+	
+	void purgeStaleRecords(const int timeoutInSeconds);
 	
 	const int getRecordCount() const;
 	

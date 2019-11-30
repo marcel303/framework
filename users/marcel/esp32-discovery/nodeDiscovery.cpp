@@ -40,6 +40,31 @@ void NodeDiscoveryProcess::shut()
 	receiveSocket = nullptr;
 }
 
+void NodeDiscoveryProcess::purgeStaleRecords(const int timeoutInSeconds)
+{
+	const int ticks = SDL_GetTicks();
+	
+	lock();
+	{
+		for (auto i = discoveryRecords.begin(); i != discoveryRecords.end(); )
+		{
+			auto & record = *i;
+			
+			const int ageInSeconds = (ticks - record.receiveTime) / 1000;
+			
+			if (ageInSeconds >= timeoutInSeconds)
+			{
+				i = discoveryRecords.erase(i);
+			}
+			else
+			{
+				++i;
+			}
+		}
+	}
+	unlock();
+}
+
 const int NodeDiscoveryProcess::getRecordCount() const
 {
 	int result;
@@ -154,6 +179,7 @@ void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEn
 	record.capabilities = discoveryPacket->capabilities;
 	strcpy_s(record.description, sizeof(record.description), discoveryPacket->description);
 	record.endpointName = remoteEndpoint;
+	record.receiveTime = SDL_GetTicks();
 	
 	if (existingRecord == nullptr)
 	{
