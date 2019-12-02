@@ -103,6 +103,17 @@ const char * ParameterEnum::translateValueToKey(const int value) const
 
 //
 
+ParameterMgr::~ParameterMgr()
+{
+	for (auto *& parameter : parameters)
+	{
+		delete parameter;
+		parameter = nullptr;
+	}
+	
+	parameters.clear();
+}
+
 void ParameterMgr::init(const char * in_prefix)
 {
 	prefix = in_prefix;

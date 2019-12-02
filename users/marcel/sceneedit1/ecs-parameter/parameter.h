@@ -558,6 +558,8 @@ private:
 	bool isHiddenFromUi = false;
 	
 public:
+	~ParameterMgr();
+	
 	void init(const char * prefix);
 	void tick();
 	
