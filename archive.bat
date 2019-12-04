@@ -40,11 +40,10 @@ rem use command line argument for selecting build target
 	cd %~dp0 || exit /b
 
 	rem zip the target folder
-	cd chibi-build/archive && cmake -E tar "cfz" %1-%DATETIME_STRING%.tgz %1
-	cd %~dp0 || exit /b
+	call zip-folder.bat chibi-build\archive\%1 chibi-build\archive\%1-%DATETIME_STRING%.zip
 
 	rem  open explorer with the generated archive selected
-	%SystemRoot%\explorer.exe /select,.\chibi-build\archive\%1-%DATETIME_STRING%.tgz
+	%SystemRoot%\explorer.exe /select,.\chibi-build\archive\%1-%DATETIME_STRING%.zip
 
 	shift /1
 	goto build_loop
