@@ -81,6 +81,22 @@ public:
 	{
 		*this = CalcNormalized();
 	}
+	
+	inline Vec3 Min(const Vec3 & other)
+	{
+		return Vec3(
+			m_v[0] < other.m_v[0] ? m_v[0] : other.m_v[0],
+			m_v[1] < other.m_v[1] ? m_v[1] : other.m_v[1],
+			m_v[2] < other.m_v[2] ? m_v[2] : other.m_v[2]);
+	}
+	
+	inline Vec3 Max(const Vec3 & other)
+	{
+		return Vec3(
+			m_v[0] > other.m_v[0] ? m_v[0] : other.m_v[0],
+			m_v[1] > other.m_v[1] ? m_v[1] : other.m_v[1],
+			m_v[2] > other.m_v[2] ? m_v[2] : other.m_v[2]);
+	}
 
 	inline Vec3 operator+(const Vec3 & v) const
 	{
