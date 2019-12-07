@@ -416,6 +416,9 @@ public:
 	void unregisterShaderSource(const char * name);
 	bool tryGetShaderSource(const char * name, const char *& text) const;
 	
+	void registerShaderOutput(const char name, const char * outputType, const char * outputName);
+	void unregisterShaderOutput(const char name);
+	
 	bool fileHasChanged(const char * filename) const;
 
 	void blinkTaskbarIcon(int count);

@@ -1075,6 +1075,17 @@ public:
 
 //
 
+struct ShaderOutput
+{
+	char name;
+	std::string outputType;
+	std::string outputName;
+};
+
+const ShaderOutput * findShaderOutput(const char name);
+
+//
+
 extern Globals globals;
 
 extern TextureCache g_textureCache;
@@ -1090,3 +1101,5 @@ extern SoundCache g_soundCache;
 extern FontCache g_fontCache;
 extern MsdfFontCache g_fontCacheMSDF;
 extern GlyphCache g_glyphCache;
+
+extern std::vector<ShaderOutput> g_shaderOutputs;

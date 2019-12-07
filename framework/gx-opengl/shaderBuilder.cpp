@@ -29,10 +29,13 @@
 
 #if ENABLE_OPENGL
 
+#include "internal.h"
 #include "shaderBuilder.h"
 #include "StringBuilder.h"
 #include "StringEx.h"
 #include "TextIO.h"
+
+#define USE_REGISTERED_SHADER_OUTPUTS true
 
 static bool is_whitespace(const char c)
 {
@@ -138,11 +141,35 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 	#if !USE_LEGACY_OPENGL
 		if (shaderType == 'p')
 		{
+		#if !USE_REGISTERED_SHADER_OUTPUTS
 			bool hasColor = false;
 			bool hasNormal = false;
+		#endif
+			
+			bool usedOutputs[32] = { false }; // todo : should match size of g_shaderOutputs
 			
 			for (int i = 0; outputs[i] != 0; ++i)
 			{
+			#if USE_REGISTERED_SHADER_OUTPUTS
+				const ShaderOutput * output = findShaderOutput(outputs[i]);
+				
+				if (output == nullptr)
+				{
+					logError("unknown shader pass: %c", outputs[i]);
+					return false;
+				}
+				
+				// todo : detect if a pass is added more than once
+				
+				sb.AppendFormat("layout(location = %d) out %s %s = %s(0.0);\n",
+					i,
+					output->outputType.c_str(),
+					output->outputName.c_str(),
+					output->outputType.c_str());
+				
+				const int passIndex = output - g_shaderOutputs.data();
+				usedOutputs[passIndex] = true;
+			#else
 				if (outputs[i] == 'c')
 				{
 					if (hasColor)
@@ -174,14 +201,27 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 					logError("unknown output binding: %c", outputs[i]);
 					return false;
 				}
+			#endif
 			}
 			
 			// use regular variables for unused outputs
 			
+		#if USE_REGISTERED_SHADER_OUTPUTS
+			for (size_t i = 0; i < g_shaderOutputs.size(); ++i)
+			{
+				if (usedOutputs[i])
+					continue;
+				
+				auto & output = g_shaderOutputs[i];
+				
+				sb.AppendFormat("%s %s;\n", output.outputType.c_str(), output.outputName.c_str());
+			}
+		#else
 			if (hasColor == false)
 				sb.Append("vec4 shader_fragColor;\n");
 			if (hasNormal == false)
 				sb.Append("vec4 shader_fragNormal;\n");
+		#endif
 		}
 	#endif
 	

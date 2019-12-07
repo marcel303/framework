@@ -496,6 +496,9 @@ bool Framework::init(int sx, int sy)
 	globals.displaySize[0] = sx;
 	globals.displaySize[1] = sy;
 
+	registerShaderOutput('c', "vec4", "shader_fragColor");
+	registerShaderOutput('n', "vec4", "shader_fragNormal");
+	
 	gxInitialize();
 	
 #ifndef __WIN32__
@@ -1899,6 +1902,36 @@ bool Framework::tryGetShaderSource(const char * name, const char *& text) const
 	else
 	{
 		return false;
+	}
+}
+
+void Framework::registerShaderOutput(const char name, const char * outputType, const char * outputName)
+{
+	for (auto & output : g_shaderOutputs)
+	{
+		Assert(output.name != name);
+		if (output.name == name)
+			return;
+	}
+	
+	ShaderOutput output;
+	output.name = name;
+	output.outputType = outputType;
+	output.outputName = outputName;
+	g_shaderOutputs.push_back(output);
+}
+
+void Framework::unregisterShaderOutput(const char name)
+{
+	for (auto i = g_shaderOutputs.begin(); i != g_shaderOutputs.end(); ++i)
+	{
+		auto & output = *i;
+		
+		if (output.name == name)
+		{
+			g_shaderOutputs.erase(i);
+			break;
+		}
 	}
 }
 
