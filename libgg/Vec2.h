@@ -91,6 +91,26 @@ public:
 			m_v[1] > v[1] ? m_v[1] : v[1]);
 	}
 
+	inline Vec2 Mul(const Vec2 & v) const
+	{
+		Vec2 r;
+
+		r[0] = m_v[0] * v[0];
+		r[1] = m_v[1] * v[1];
+		
+		return r;
+	}
+	
+	inline Vec2 Div(const Vec2 & v) const
+	{
+		Vec2 r;
+
+		r[0] = m_v[0] / v[0];
+		r[1] = m_v[1] / v[1];
+		
+		return r;
+	}
+	
 	inline Vec2 operator+(const Vec2 & v) const
 	{
 		Vec2 r;

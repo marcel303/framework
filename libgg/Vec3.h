@@ -97,6 +97,28 @@ public:
 			m_v[1] > other.m_v[1] ? m_v[1] : other.m_v[1],
 			m_v[2] > other.m_v[2] ? m_v[2] : other.m_v[2]);
 	}
+	
+	inline Vec3 Mul(const Vec3 & v) const
+	{
+		Vec3 r;
+
+		r[0] = m_v[0] * v[0];
+		r[1] = m_v[1] * v[1];
+		r[2] = m_v[2] * v[2];
+		
+		return r;
+	}
+	
+	inline Vec3 Div(const Vec3 & v) const
+	{
+		Vec3 r;
+
+		r[0] = m_v[0] / v[0];
+		r[1] = m_v[1] / v[1];
+		r[2] = m_v[2] / v[2];
+		
+		return r;
+	}
 
 	inline Vec3 operator+(const Vec3 & v) const
 	{
