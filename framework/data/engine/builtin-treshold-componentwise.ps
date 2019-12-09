@@ -11,8 +11,8 @@ uniform vec4 failValue;
 uniform vec4 passValue;
 uniform vec4 opacities;
 
-bool doFailReplacement = settings.y != 0.0;
-bool doPassReplacement = settings.z != 0.0;
+bool doFailReplacement;
+bool doPassReplacement;
 
 float applyTreshold(float value, float treshold, float failValue, float passValue)
 {
@@ -32,6 +32,9 @@ float applyTreshold(float value, float treshold, float failValue, float passValu
 
 void main()
 {
+	doFailReplacement = (settings.y != 0.0);
+	doPassReplacement = (settings.z != 0.0);
+
 	vec4 sourceColor = texture(source, texcoord);
 
 	vec4 color = sourceColor;
