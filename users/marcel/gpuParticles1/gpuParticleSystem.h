@@ -10,24 +10,24 @@ struct GpuParticleSystem
 	
 	int numParticles = 0;
 	
-	struct
+	struct Dimensions
 	{
 		float velocitySize = 1.f;
 		float colorSize = 1.f;
 	} dimensions;
 	
-	struct
+	struct Gravity
 	{
 		Vec2 origin;
 		float strength = 1.f;
 	} gravity;
 	
-	struct
+	struct Repulsion
 	{
 		float strength = 1.f;
 	} repulsion;
 	
-	struct
+	struct Flow
 	{
 		float strength = 1.f;
 	} flow;
