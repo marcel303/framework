@@ -155,7 +155,7 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 				
 				if (output == nullptr)
 				{
-					logError("unknown shader pass: %c", outputs[i]);
+					logError("unknown shader output: %c", outputs[i]);
 					return false;
 				}
 				
