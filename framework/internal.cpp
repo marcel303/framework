@@ -85,6 +85,8 @@ MsdfFontCache g_fontCacheMSDF;
 #endif
 GlyphCache g_glyphCache;
 
+std::vector<ShaderOutput> g_shaderOutputs;
+
 // -----
 
 void checkErrorGL_internal(const char * function, int line)
@@ -2761,4 +2763,15 @@ BuiltinShaders::BuiltinShaders()
 	, msdfText("engine/builtin-msdf-text")
 	, bitmappedText("engine/builtin-bitmapped-text")
 {
+}
+
+//
+
+const ShaderOutput * findShaderOutput(const char name)
+{
+	for (auto & output : g_shaderOutputs)
+		if (output.name == name)
+			return &output;
+	
+	return nullptr;
 }

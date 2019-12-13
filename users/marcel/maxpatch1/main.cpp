@@ -654,5 +654,9 @@ int main(int arg, char * argv[])
 		}
 	}
 	
+	liveUi.shut();
+	
+	framework.shutdown();
+	
 	return 0;
 }

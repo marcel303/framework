@@ -97,6 +97,49 @@ public:
 	{
 		*this = CalcNormalized();
 	}
+	
+	inline Vec4 Min(const Vec4 & other)
+	{
+		return Vec4(
+			m_v[0] < other.m_v[0] ? m_v[0] : other.m_v[0],
+			m_v[1] < other.m_v[1] ? m_v[1] : other.m_v[1],
+			m_v[2] < other.m_v[2] ? m_v[2] : other.m_v[2],
+			m_v[3] < other.m_v[3] ? m_v[3] : other.m_v[3]);
+	}
+	
+	inline Vec4 Max(const Vec4 & other)
+	{
+		return Vec4(
+			m_v[0] > other.m_v[0] ? m_v[0] : other.m_v[0],
+			m_v[1] > other.m_v[1] ? m_v[1] : other.m_v[1],
+			m_v[2] > other.m_v[2] ? m_v[2] : other.m_v[2],
+			m_v[3] > other.m_v[3] ? m_v[3] : other.m_v[3]);
+	}
+	
+	inline Vec4 Mul(const Vec4 & v) const
+	{
+		Vec4 r;
+
+		r[0] = m_v[0] * v[0];
+		r[1] = m_v[1] * v[1];
+		r[2] = m_v[2] * v[2];
+		r[3] = m_v[3] * v[3];
+		
+		return r;
+	}
+	
+	inline Vec4 Div(const Vec4 & v) const
+	{
+		Vec4 r;
+
+		r[0] = m_v[0] / v[0];
+		r[1] = m_v[1] / v[1];
+		r[2] = m_v[2] / v[2];
+		r[3] = m_v[3] / v[3];
+		
+		return r;
+	}
+
 
 	inline const Vec3 XYZ() const
 	{

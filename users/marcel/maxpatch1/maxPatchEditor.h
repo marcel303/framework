@@ -44,6 +44,7 @@ namespace max
 		BoxEditor & presentation(const bool presentation);
 		BoxEditor & presentation_rect(const int x, const int y, const int width, const int height);
 		BoxEditor & text(const char * text);
+		BoxEditor & mode(const int mode); // for live.text
 		BoxEditor & linecolor(const float r, const float g, const float b, const float a);
 		BoxEditor & border(const int border);
 		

@@ -108,7 +108,7 @@ static bool readChunk(FileReader & r, Chunk & chunk, int32_t & size)
 	}
 }
 
-SoundData * loadSound_WAV(const char * filename)
+static SoundData * loadSound_WAV(const char * filename)
 {
 	FileReader r;
 	
@@ -346,7 +346,7 @@ SoundData * loadSound_WAV(const char * filename)
 	return soundData;
 }
 
-SoundData * loadSound_OGG(const char * filename)
+static SoundData * loadSound_OGG(const char * filename)
 {
 	static const int kMaxSamples = (1 << 14) * sizeof(short);
 	AudioSample samples[kMaxSamples];

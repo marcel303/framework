@@ -10,13 +10,15 @@ uniform vec4 weights;
 uniform vec4 failValue;
 uniform vec4 passValue;
 
-float treshold = settings.x;
-bool doFailReplacement = settings.y != 0.0;
-bool doPassReplacement = settings.z != 0.0;
-float opacity = settings.w;
-
 void main()
 {
+	float treshold = settings.x;
+	bool doFailReplacement = settings.y != 0.0;
+	bool doPassReplacement = settings.z != 0.0;
+	float opacity = settings.w;
+
+	//
+	
 	vec4 sourceColor = texture(source, texcoord);
 
 	vec4 color = sourceColor;

@@ -1,6 +1,19 @@
+library nodeDiscovery
+	depend_library libgg
+	depend_library liboscpack
+	# todo : remove sdl2 dependency. use c++ threads
+	depend_library libsdl2
+	add_files nodeDiscovery.cpp nodeDiscovery.h
+	header_path . expose
+
 app marcel-esp32-discovery
 	add_files main.cpp
 	depend_library artnet
 	depend_library framework
-	depend_library liboscpack
+	depend_library ecs-parameter
+	depend_library ecs-parameterui
+	depend_library libwebrequest
+	depend_library imgui-framework
+	depend_library nodeDiscovery
+	depend_library rapidjson
 	resource_path data

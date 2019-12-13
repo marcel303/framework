@@ -444,7 +444,7 @@ public:
 	virtual ~Shader();
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
-	virtual bool isValid() const override { return true; } // todo
+	virtual bool isValid() const override;
 	virtual GxShaderId getProgram() const override { return 0; }; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	virtual int getVersion() const override;

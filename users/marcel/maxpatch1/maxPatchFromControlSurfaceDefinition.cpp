@@ -199,7 +199,6 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Button)
 			{
-			#if 0
 				// todo : implement button output
 				// todo : add support for trigger type buttons and toggle buttons
 				std::string osc_id;
@@ -219,9 +218,15 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 				patchEditor
 					.beginBox(button_id.c_str(), 1, 2)
 						.maxclass("live.text")
+						.text(elem.name.c_str())
+						.mode(0)
 						.patching_rect(patching_x, patching_y, 40, 48) // live.dial has a fixed height of 48
 						.presentation(true)
 						.presentation_rect(elemLayout->x, elemLayout->y, elemLayout->sx, elemLayout->sy)
+						.parameter_enable(true)
+						.saved_attribute("parameter_enum", std::vector<int>({ 1, 1 }))
+						.saved_attribute("parameter_type", 2)
+						.saved_attribute("parameter_mmax", 1)
 						.saved_attribute("parameter_longname", elem.name)
 						.saved_attribute("parameter_shortname",  elem.button.displayName)
 						.saved_attribute("parameter_linknames", 1)
@@ -234,7 +239,6 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 					connect(osc_id, 0, button_id, 0);
 					connect(button_id, 0, osc_id, 0);
 				}
-			#endif
 			}
 			else if (elem.type == ControlSurfaceDefinition::kElementType_Slider2)
 			{

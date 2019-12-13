@@ -1,0 +1,3 @@
+app marcel-holeFilling
+	depend_library framework
+	add_files main.cpp

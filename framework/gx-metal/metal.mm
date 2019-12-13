@@ -125,7 +125,7 @@ void metal_attach(SDL_Window * window)
 		NSView * sdl_view = info.info.cocoa.window.contentView;
 
 		MetalWindowData * windowData = new MetalWindowData();
-		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:YES wantsVsync:framework.enableVsync];
+		windowData->metalview = [[MetalView alloc] initWithFrame:sdl_view.frame device:device wantsDepthBuffer:framework.enableDepthBuffer wantsVsync:framework.enableVsync];
 		[sdl_view addSubview:windowData->metalview];
 
 		windowDatas[window] = windowData;
@@ -1566,11 +1566,21 @@ static void ensureIndexBufferCapacity(const int numIndices)
 static void gxFlush(bool endOfBatch)
 {
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
-
-	if (s_gxVertexCount)
+	
+	Shader genericShader("engine/Generic");
+	
+	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	
+	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
+	
+	const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
+	
+	if (shader.isValid() == false)
 	{
-		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
-		
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+	else if (s_gxVertexCount)
+	{
 		// Metal doesn't support line loops. so we emulate support for it here by duplicating
 		// the first point at the end of the vertex buffer if this is a line loop
 		if (primitiveType == GX_LINE_LOOP)
@@ -1625,26 +1635,22 @@ static void gxFlush(bool endOfBatch)
 			
 			s_gxVertexBufferElemOffset += vertexDataSize;
 		}
-		
+	
 		bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
-		
-		Shader genericShader("engine/Generic");
-		
-		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
 	
 		setShader(shader);
 	
 		gxValidatePipelineState();
-		
+	
 		gxValidateMatrices();
-		
+	
 		gxValidateShaderResources();
-		
+	
 		bool indexed = false;
 		int numElements = s_gxVertexCount;
 
 		bool needToRegenerateIndexBuffer = false;
-		
+	
 		if (s_gxPrimitiveType != s_gxLastPrimitiveType || s_gxVertexCount != s_gxLastVertexCount)
 		{
 			s_gxLastPrimitiveType = s_gxPrimitiveType;
@@ -1654,7 +1660,7 @@ static void gxFlush(bool endOfBatch)
 		}
 	
 		// convert quads to triangles
-		
+	
 		if (s_gxPrimitiveType == GX_QUADS)
 		{
 			fassert(s_gxVertexCount <= 65536);
@@ -1694,9 +1700,9 @@ static void gxFlush(bool endOfBatch)
 			
 			indexed = true;
 		}
-		
+	
 		// convert triangle fan to triangles
-		
+	
 		if (s_gxPrimitiveType == GX_TRIANGLE_FAN)
 		{
 			fassert(s_gxVertexCount <= 65536);
@@ -1732,9 +1738,7 @@ static void gxFlush(bool endOfBatch)
 			
 			indexed = true;
 		}
-		
-		const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
-		
+	
 		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
 		{
 			shader.setImmediate(
@@ -1744,9 +1748,9 @@ static void gxFlush(bool endOfBatch)
 				globals.colorPost,
 				globals.colorClamp);
 		}
-		
+	
 		// set fragment stage uniform buffers
-		
+	
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
 		{
 			if (shaderElem.psInfo.uniformBufferSize[i] == 0)
@@ -1757,60 +1761,53 @@ static void gxFlush(bool endOfBatch)
 				length:shaderElem.psInfo.uniformBufferSize[i]
 				atIndex:i];
 		}
-		
-		if (shader.isValid())
-		{
-			const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(s_gxPrimitiveType);
-
-			if (indexed)
-			{
-				[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:s_gxIndexBufferElem->m_buffer indexBufferOffset:s_gxLastIndexOffset];
-			}
-			else
-			{
-				[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numElements];
-			}
-		}
-		else
-		{
-			logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
-		}
 	
-		if (endOfBatch)
+		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(s_gxPrimitiveType);
+
+		if (indexed)
 		{
-			s_gxVertexCount = 0;
+			[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:s_gxIndexBufferElem->m_buffer indexBufferOffset:s_gxLastIndexOffset];
 		}
 		else
 		{
-			switch (s_gxPrimitiveType)
-			{
-				case GX_LINE_LOOP:
-					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
-					s_gxVertexCount = 1;
-					break;
-				case GX_LINE_STRIP:
-					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
-					s_gxVertexCount = 1;
-					break;
-				case GX_TRIANGLE_FAN:
-					s_gxVertices[0] = s_gxVertices[0];
-					s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
-					s_gxVertexCount = 2;
-					break;
-				case GX_TRIANGLE_STRIP:
-					s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
-					s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
-					s_gxVertexCount = 2;
-					break;
-				default:
-					s_gxVertexCount = 0;
-			}
+			[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numElements];
 		}
-		
-		globals.gxShaderIsDirty = false;
-
-		s_gxPrimitiveType = primitiveType;
 	}
+	
+	if (endOfBatch)
+	{
+		s_gxVertexCount = 0;
+	}
+	else
+	{
+		switch (s_gxPrimitiveType)
+		{
+			case GX_LINE_LOOP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 1;
+				break;
+			case GX_LINE_STRIP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 1;
+				break;
+			case GX_TRIANGLE_FAN:
+				s_gxVertices[0] = s_gxVertices[0];
+				s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 2;
+				break;
+			case GX_TRIANGLE_STRIP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
+				s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 2;
+				break;
+			default:
+				s_gxVertexCount = 0;
+		}
+	}
+	
+	globals.gxShaderIsDirty = false;
+
+	s_gxPrimitiveType = primitiveType;
 	
 	if (endOfBatch)
 		s_gxVertices = 0;

@@ -55,16 +55,16 @@ struct WebRequestCocoa : WebRequest
 
 	virtual ~WebRequestCocoa() override
 	{
-		if (resultData != nullptr)
-		{
-			[resultData release];
-			resultData = nullptr;
-		}
-		
 		if (task != nullptr)
 		{
 			[task release];
 			task = nullptr;
+		}
+		
+		if (resultData != nullptr)
+		{
+			[resultData release];
+			resultData = nullptr;
 		}
 	}
 
@@ -111,18 +111,19 @@ struct WebRequestCocoa : WebRequest
 
 			const char * str = [resultString cStringUsingEncoding:NSUTF8StringEncoding];
 			
-			if (str == nullptr)
-				return false;
-			else
+			if (str != nullptr)
 			{
 				const size_t length = strlen(str);
 				
 				result = new char[length + 1];
 				
 				memcpy(result, str, length + 1);
-				
-				return true;
 			}
+			
+			[resultString release];
+			resultString = nullptr;
+			
+			return result != nullptr;
 		}
     }
 	
