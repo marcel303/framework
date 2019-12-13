@@ -82,8 +82,16 @@ void GpuParticleSystem::setBounds(const float minX, const float minY, const floa
 	bounds.max.Set(maxX, maxY);
 }
 
-void GpuParticleSystem::drawParticleVelocity() const
+void GpuParticleSystem::drawParticleVelocity(const int in_numParticles) const
 {
+	if (in_numParticles <= 0)
+		return;
+	
+	const int numParticles =
+		in_numParticles < this->numParticles
+		? in_numParticles
+		: this->numParticles;
+	
 	Shader shader("particle-draw-field");
 	setShader(shader);
 	{
@@ -96,14 +104,24 @@ void GpuParticleSystem::drawParticleVelocity() const
 	clearShader();
 }
 
-void GpuParticleSystem::drawParticleColor() const
+void GpuParticleSystem::drawParticleColor(const int in_numParticles) const
 {
+	if (in_numParticles <= 0)
+		return;
+	
+	const int numParticles =
+		in_numParticles < this->numParticles
+		? in_numParticles
+		: this->numParticles;
+	
 	Shader shader("particle-draw-color");
 	setShader(shader);
 	{
 		shader.setTexture("p", 0, p.getTexture(), false, true);
 		shader.setImmediate("particleSize", dimensions.colorSize);
 		shader.setImmediate("baseColor", baseColor.r, baseColor.g, baseColor.b, baseColor.a);
+		shader.setImmediate("lightAmount", drawColor.lightAmount);
+		shader.setImmediate("particleSizeThreshold", drawColor.sizeThreshold);
 		gxEmitVertices(GX_TRIANGLES, numParticles * 6);
 	}
 	clearShader();

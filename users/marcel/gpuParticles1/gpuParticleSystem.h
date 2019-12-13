@@ -49,6 +49,12 @@ struct GpuParticleSystem
 		Vec2 max;
 	} bounds;
 	
+	struct DrawColor
+	{
+		float lightAmount = 1.f;
+		float sizeThreshold = 0.f;
+	} drawColor;
+	
 	Color baseColor = colorWhite;
 	
 	void init(const int numParticles, const int sx, const int sy);
@@ -58,8 +64,8 @@ struct GpuParticleSystem
 	
 	void setBounds(const float minX, const float minY, const float maxX, const float maxY);
 	
-	void drawParticleVelocity() const;
-	void drawParticleColor() const;
+	void drawParticleVelocity(const int numParticles = 0) const;
+	void drawParticleColor(const int numParticles = 0) const;
 	
 	void updateParticles(const GxTextureId flowfield);
 };
