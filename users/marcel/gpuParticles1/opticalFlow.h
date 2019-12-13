@@ -12,12 +12,12 @@ struct OpticalFlow
 	
 	Surface opticalFlow;
 	
-	struct
+	struct SourceFilter
 	{
 		float blurRadius = 22.f;
 	} sourceFilter;
 	
-	struct
+	struct FlowFilter
 	{
 		float strength = 1.f;
 	} flowFilter;
