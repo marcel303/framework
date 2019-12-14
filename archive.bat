@@ -40,10 +40,10 @@ rem use command line argument for selecting build target
 	cd %~dp0 || exit /b
 
 	rem zip the target folder
-	call zip-folder.bat chibi-build\archive\%1 chibi-build\archive\%1-%DATETIME_STRING%.zip
+	call zip-folder.bat chibi-build\archive\%1 chibi-build\archive\%1-%DATETIME_STRING%-windows.zip
 
 	rem  open explorer with the generated archive selected
-	%SystemRoot%\explorer.exe /select,.\chibi-build\archive\%1-%DATETIME_STRING%.zip
+	%SystemRoot%\explorer.exe /select,.\chibi-build\archive\%1-%DATETIME_STRING%-windows.zip
 
 	shift /1
 	goto build_loop
