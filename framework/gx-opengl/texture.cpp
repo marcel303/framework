@@ -155,6 +155,8 @@ void GxTexture::allocate(const GxTextureProperties & properties)
 	const GLenum uploadType = GL_UNSIGNED_BYTE;
 	glTexImage2D(GL_TEXTURE_2D, 0, glFormat, sx, sy, 0, uploadFormat, uploadType, nullptr);
 	checkErrorGL();
+	
+	const int numLevels = 1;
 #else
 	int numLevels = 1;
 	
