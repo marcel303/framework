@@ -1641,7 +1641,7 @@ static inline void gxValidateMatrices() { }
 
 void gxInitialize();
 static inline void gxShutdown() { }
-#define gxBegin glBegin
+void gxBegin(GLenum type);
 void gxEnd();
 static inline void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices) { } // todo
 #define gxColor4f glColor4f

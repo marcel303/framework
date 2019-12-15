@@ -4217,6 +4217,12 @@ GX_MATRIX gxGetMatrixMode()
 	return (GX_MATRIX)mode;
 }
 
+void gxBegin(GLenum type)
+{
+	glBegin(type);
+	checkErrorGL();
+}
+
 void gxEnd()
 {
 	glEnd();
