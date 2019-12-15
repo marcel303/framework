@@ -121,6 +121,7 @@ void GxTexture::allocate(const int sx, const int sy, const GX_TEXTURE_FORMAT for
 	properties.format = format;
 	properties.sampling.filter = filter;
 	properties.sampling.clamp = clamp;
+	properties.mipmapped = false;
 	
 	allocate(properties);
 }
@@ -155,12 +156,29 @@ void GxTexture::allocate(const GxTextureProperties & properties)
 	glTexImage2D(GL_TEXTURE_2D, 0, glFormat, sx, sy, 0, uploadFormat, uploadType, nullptr);
 	checkErrorGL();
 #else
-	glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, sx, sy);
+	int numLevels = 1;
+	
+	if (mipmapped)
+	{
+		// see how many extra levels we need to build all mipmaps down to 1x1
+		
+		int level_sx = sx;
+		int level_sy = sy;
+		
+		while (level_sx > 1 || level_sy > 1)
+		{
+			numLevels++;
+			level_sx /= 2;
+			level_sy /= 2;
+		}
+	}
+	
+	glTexStorage2D(GL_TEXTURE_2D, numLevels, internalFormat, sx, sy);
 	checkErrorGL();
 #endif
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, numLevels - 1);
 	checkErrorGL();
 	
 	setSampling(properties.sampling.filter, properties.sampling.clamp);
@@ -251,7 +269,15 @@ void GxTexture::setSampling(const bool _filter, const bool _clamp)
 	glBindTexture(GL_TEXTURE_2D, id);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+		filter
+		?
+			(
+				mipmapped
+				? GL_LINEAR_MIPMAP_LINEAR
+				: GL_LINEAR
+			)
+		: GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
 	checkErrorGL();
 	
@@ -495,7 +521,17 @@ void GxTexture::generateMipmaps()
 {
 	if (glGenerateMipmap != nullptr)
 	{
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, id);
+		checkErrorGL();
+	
 		glGenerateMipmap(GL_TEXTURE_2D);
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
 		checkErrorGL();
 	}
 }

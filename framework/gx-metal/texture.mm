@@ -105,6 +105,7 @@ void GxTexture::allocate(const int sx, const int sy, const GX_TEXTURE_FORMAT for
 	properties.format = format;
 	properties.sampling.filter = filter;
 	properties.sampling.clamp = clamp;
+	properties.mipmapped = false;
 	
 	allocate(properties);
 }
