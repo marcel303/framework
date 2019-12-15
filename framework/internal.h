@@ -506,10 +506,11 @@ public:
 	int sy;
 	int gridSx;
 	int gridSy;
+	bool mipmapped;
 	
 	TextureCacheElem();
 	void free();
-	void load(const char * filename, int gridSx, int gridSy);
+	void load(const char * filename, int gridSx, int gridSy, bool mipmapped);
 	void reload();
 };
 
@@ -522,6 +523,7 @@ public:
 		std::string name;
 		int gridSx;
 		int gridSy;
+		bool mipmapped;
 		
 		inline bool operator<(const Key & other) const
 		{
@@ -531,6 +533,8 @@ public:
 				return gridSx < other.gridSx;
 			if (gridSy != other.gridSy)
 				return gridSy < other.gridSy;
+			if (mipmapped != other.mipmapped)
+				return mipmapped < other.mipmapped;
 			return false;
 		}
 	};
@@ -540,7 +544,7 @@ public:
 	
 	void clear();
 	void reload();
-	TextureCacheElem & findOrCreate(const char * name, int gridSx, int gridSy);
+	TextureCacheElem & findOrCreate(const char * name, int gridSx, int gridSy, bool mipmapped);
 };
 
 //

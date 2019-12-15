@@ -2307,7 +2307,7 @@ Dictionary & Dictionary::operator=(const Dictionary & other)
 
 GxTextureId getTexture(const char * filename)
 {
-	const TextureCacheElem & elem = g_textureCache.findOrCreate(filename, 1, 1);
+	const TextureCacheElem & elem = g_textureCache.findOrCreate(filename, 1, 1, true);
 
 	if (elem.textures)
 		return elem.textures[0].id;
