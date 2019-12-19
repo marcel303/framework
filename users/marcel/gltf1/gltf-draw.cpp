@@ -64,20 +64,20 @@ namespace gltf
 			
 		#if SHADER_METALLIC_ROUGHNESS
 			// PBR metallic roughness material
-			const GxTextureId textureId = keyboard.isDown(SDLK_1) ? 0 : tryGetTextureId(scene, material.pbrMetallicRoughness.baseColorTexture.index);
-			const GxTextureId metallicRoughnessTextureId = keyboard.isDown(SDLK_2) ? 0 : tryGetTextureId(scene, material.pbrMetallicRoughness.metallicRoughnessTexture.index);
-			const GxTextureId normalTextureId = keyboard.isDown(SDLK_3) ? 0 : tryGetTextureId(scene, material.normalTexture.index);
-			const GxTextureId occlusionTextureId = keyboard.isDown(SDLK_4) ? 0 : tryGetTextureId(scene, material.occlusionTexture.index);
-			const GxTextureId emissiveTextureId = keyboard.isDown(SDLK_5) ? 0 : tryGetTextureId(scene, material.emissiveTexture.index);
+			const GxTextureId textureId = tryGetTextureId(scene, material.pbrMetallicRoughness.baseColorTexture.index);
+			const GxTextureId metallicRoughnessTextureId = tryGetTextureId(scene, material.pbrMetallicRoughness.metallicRoughnessTexture.index);
+			const GxTextureId normalTextureId = tryGetTextureId(scene, material.normalTexture.index);
+			const GxTextureId occlusionTextureId = tryGetTextureId(scene, material.occlusionTexture.index);
+			const GxTextureId emissiveTextureId = tryGetTextureId(scene, material.emissiveTexture.index);
 		#endif
 		
 		#if SHADER_SPECULAR_GLOSSINESS
 			// PBR specular glossiness material
-			const GxTextureId diffuseTextureId = keyboard.isDown(SDLK_1) ? 0 : tryGetTextureId(scene, material.pbrSpecularGlossiness.diffuseTexture.index);
-			const GxTextureId specularGlossinessTextureId = keyboard.isDown(SDLK_2) ? 0 : tryGetTextureId(scene, material.pbrSpecularGlossiness.specularGlossinessTexture.index);
-			const GxTextureId normalTextureId = keyboard.isDown(SDLK_3) ? 0 : tryGetTextureId(scene, material.normalTexture.index);
-			const GxTextureId occlusionTextureId = keyboard.isDown(SDLK_4) ? 0 : tryGetTextureId(scene, material.occlusionTexture.index);
-			const GxTextureId emissiveTextureId = keyboard.isDown(SDLK_5) ? 0 : tryGetTextureId(scene, material.emissiveTexture.index);
+			const GxTextureId diffuseTextureId = tryGetTextureId(scene, material.pbrSpecularGlossiness.diffuseTexture.index);
+			const GxTextureId specularGlossinessTextureId = tryGetTextureId(scene, material.pbrSpecularGlossiness.specularGlossinessTexture.index);
+			const GxTextureId normalTextureId = tryGetTextureId(scene, material.normalTexture.index);
+			const GxTextureId occlusionTextureId = tryGetTextureId(scene, material.occlusionTexture.index);
+			const GxTextureId emissiveTextureId = tryGetTextureId(scene, material.emissiveTexture.index);
 		#endif
 		
 			Color color = colorWhite;
@@ -93,323 +93,318 @@ namespace gltf
 		// todo : this is the responsibility of the caller
 			setBlend(blendMode);
 			
-			if (bufferCache != nullptr && !keyboard.isDown(SDLK_m))
+		#if 0
+			Shader shader("shader");
+			setShader(shader);
+	
+			shader.setTexture("source", 0, textureId);
+			shader.setImmediate("color", color.r, color.g, color.b, color.a);
+			shader.setImmediate("params", textureId != 0, 0.f, 0.f, 0.f);
+			shader.setImmediate("time", framework.time);
+		#else
+	
+		#if SHADER_SPECULAR_GLOSSINESS
+			Shader shader("shader-pbr-specularGlossiness");
+			setShader(shader);
+	
+		#if TODO_SCENE_CAMERA
+			shader.setImmediate("scene_camPos",
+				camera.position[0],
+				camera.position[1],
+				camera.position[2]);
+		#endif
+	
+			const float dx = cosf(framework.time);
+			const float dz = sinf(framework.time);
+	
+			shader.setImmediate("scene_lightDir",
+				dx,
+				-1.f,
+				dz);
+	
+			shader.setTexture("diffuseTexture", 0, diffuseTextureId);
+			shader.setTexture("normalTexture", 1, normalTextureId);
+			shader.setTexture("occlusionTexture", 2, occlusionTextureId);
+			shader.setTexture("specularGlossinessTexture", 3, specularGlossinessTextureId);
+			shader.setTexture("emissiveTexture", 4, emissiveTextureId);
+
+			shader.setImmediate("material_diffuseFactor",
+				material.pbrSpecularGlossiness.diffuseFactor.r,
+				material.pbrSpecularGlossiness.diffuseFactor.g,
+				material.pbrSpecularGlossiness.diffuseFactor.b,
+				material.pbrSpecularGlossiness.diffuseFactor.a);
+			shader.setImmediate("material_hasDiffuseTexture", diffuseTextureId != 0);
+			shader.setImmediate("material_hasSpecularGlossinessTexture", specularGlossinessTextureId != 0);
+			shader.setImmediate("material_glossinessFactor",
+				material.pbrSpecularGlossiness.glossinessFactor);
+			shader.setImmediate("material_specularFactor",
+				material.pbrSpecularGlossiness.specularFactor[0],
+				material.pbrSpecularGlossiness.specularFactor[1],
+				material.pbrSpecularGlossiness.specularFactor[2]);
+	
+			shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
+			shader.setImmediate("material_occlusionStrength", material.occlusionTexture.strength);
+			shader.setImmediate("material_hasOcclusionTexture", occlusionTextureId != 0);
+			shader.setImmediate("material_hasEmissiveTexture", emissiveTextureId != 0);
+			shader.setImmediate("material_emissiveFactor",
+				material.emissiveFactor[0],
+				material.emissiveFactor[1],
+				material.emissiveFactor[2]);
+			shader.setImmediate("material_alphaMask", false);
+			shader.setImmediate("material_alphaMaskCutoff", 0.f);
+		#endif
+	
+		#if SHADER_METALLIC_ROUGHNESS
+			Shader shader("shader-pbr");
+			setShader(shader);
+	
+		#if TODO_SCENE_CAMERA
+			shader.setImmediate("scene_camPos",
+				camera.position[0],
+				camera.position[1],
+				camera.position[2]);
+		#endif
+	
+			shader.setImmediate("scene_lightDir",
+				.5f,
+				1.f,
+				.5f);
+	
+			shader.setTexture("baseColorTexture", 0, textureId);
+			shader.setTexture("normalTexture", 1, normalTextureId);
+			shader.setTexture("occlusionTexture", 2, occlusionTextureId);
+			shader.setTexture("metallicRoughnessTexture", 3, metallicRoughnessTextureId);
+			shader.setTexture("emissiveTexture", 4, emissiveTextureId);
+
+			shader.setImmediate("material_baseColorFactor",
+				material.pbrMetallicRoughness.baseColorFactor.r,
+				material.pbrMetallicRoughness.baseColorFactor.g,
+				material.pbrMetallicRoughness.baseColorFactor.b,
+				material.pbrMetallicRoughness.baseColorFactor.a);
+			shader.setImmediate("material_hasBaseColorTexture", textureId != 0);
+			shader.setImmediate("material_hasMetallicRoughnessTexture", metallicRoughnessTextureId != 0);
+			shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
+			shader.setImmediate("material_occlusionStrength", material.occlusionTexture.strength);
+			shader.setImmediate("material_hasOcclusionTexture", occlusionTextureId != 0);
+			shader.setImmediate("material_hasEmissiveTexture", emissiveTextureId != 0);
+			shader.setImmediate("material_metallicFactor",
+				material.pbrMetallicRoughness.metallicFactor);
+			shader.setImmediate("material_roughnessFactor",
+				material.pbrMetallicRoughness.roughnessFactor);
+			shader.setImmediate("material_emissiveFactor",
+				material.emissiveFactor[0],
+				material.emissiveFactor[1],
+				material.emissiveFactor[2]);
+			shader.setImmediate("material_alphaMask", material.alphaMode == "MASK");
+			shader.setImmediate("material_alphaMaskCutoff", material.alphaCutoff);
+		#endif
+	
+		#endif
+	
+			setShader(shader);
+			pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
 			{
-				auto gxMesh_itr = bufferCache->meshes.find(&mesh);
-				
-				if (gxMesh_itr != bufferCache->meshes.end())
+				if (bufferCache != nullptr)
 				{
-					GxMesh * gxMesh = gxMesh_itr->second;
+					auto gxMesh_itr = bufferCache->meshes.find(&mesh);
 					
-				#if 0
-					Shader shader("shader");
-					setShader(shader);
-					
-					shader.setTexture("source", 0, textureId);
-					shader.setImmediate("color", color.r, color.g, color.b, color.a);
-					shader.setImmediate("params", textureId != 0, 0.f, 0.f, 0.f);
-					shader.setImmediate("time", framework.time);
-				#endif
-				
-				#if SHADER_SPECULAR_GLOSSINESS
-					Shader shader("shader-pbr-specularGlossiness");
-					setShader(shader);
-					
-				#if TODO_SCENE_CAMERA
-					shader.setImmediate("scene_camPos",
-						camera.position[0],
-						camera.position[1],
-						camera.position[2]);
-				#endif
-				
-					const float dx = cosf(framework.time);
-					const float dz = sinf(framework.time);
-					
-					shader.setImmediate("scene_lightDir",
-						dx,
-						-1.f,
-						dz);
-					
-					shader.setTexture("diffuseTexture", 0, diffuseTextureId);
-					shader.setTexture("normalTexture", 1, normalTextureId);
-					shader.setTexture("occlusionTexture", 2, occlusionTextureId);
-					shader.setTexture("specularGlossinessTexture", 3, specularGlossinessTextureId);
-					shader.setTexture("emissiveTexture", 4, emissiveTextureId);
-
-					shader.setImmediate("material_diffuseFactor",
-						material.pbrSpecularGlossiness.diffuseFactor.r,
-						material.pbrSpecularGlossiness.diffuseFactor.g,
-						material.pbrSpecularGlossiness.diffuseFactor.b,
-						material.pbrSpecularGlossiness.diffuseFactor.a);
-					shader.setImmediate("material_hasDiffuseTexture", diffuseTextureId != 0);
-					shader.setImmediate("material_hasSpecularGlossinessTexture", specularGlossinessTextureId != 0);
-					shader.setImmediate("material_glossinessFactor",
-						material.pbrSpecularGlossiness.glossinessFactor);
-					shader.setImmediate("material_specularFactor",
-						material.pbrSpecularGlossiness.specularFactor[0],
-						material.pbrSpecularGlossiness.specularFactor[1],
-						material.pbrSpecularGlossiness.specularFactor[2]);
-					
-					shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
-					shader.setImmediate("material_occlusionStrength", material.occlusionTexture.strength);
-					shader.setImmediate("material_hasOcclusionTexture", occlusionTextureId != 0);
-					shader.setImmediate("material_hasEmissiveTexture", emissiveTextureId != 0);
-					shader.setImmediate("material_emissiveFactor",
-						material.emissiveFactor[0],
-						material.emissiveFactor[1],
-						material.emissiveFactor[2]);
-					shader.setImmediate("material_alphaMask", false);
-					shader.setImmediate("material_alphaMaskCutoff", 0.f);
-				#endif
-				
-				#if SHADER_METALLIC_ROUGHNESS
-					Shader shader("shader-pbr");
-					setShader(shader);
-					
-				#if TODO_SCENE_CAMERA
-					shader.setImmediate("scene_camPos",
-						camera.position[0],
-						camera.position[1],
-						camera.position[2]);
-				#endif
-				
-					shader.setImmediate("scene_lightDir",
-						.5f,
-						1.f,
-						.5f);
-					
-					shader.setTexture("baseColorTexture", 0, textureId);
-					shader.setTexture("normalTexture", 1, normalTextureId);
-					shader.setTexture("occlusionTexture", 2, occlusionTextureId);
-					shader.setTexture("metallicRoughnessTexture", 3, metallicRoughnessTextureId);
-					shader.setTexture("emissiveTexture", 4, emissiveTextureId);
-
-					shader.setImmediate("material_baseColorFactor",
-						material.pbrMetallicRoughness.baseColorFactor.r,
-						material.pbrMetallicRoughness.baseColorFactor.g,
-						material.pbrMetallicRoughness.baseColorFactor.b,
-						material.pbrMetallicRoughness.baseColorFactor.a);
-					shader.setImmediate("material_hasBaseColorTexture", textureId != 0);
-					shader.setImmediate("material_hasMetallicRoughnessTexture", metallicRoughnessTextureId != 0);
-					shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
-					shader.setImmediate("material_occlusionStrength", material.occlusionTexture.strength);
-					shader.setImmediate("material_hasOcclusionTexture", occlusionTextureId != 0);
-					shader.setImmediate("material_hasEmissiveTexture", emissiveTextureId != 0);
-					shader.setImmediate("material_metallicFactor",
-						material.pbrMetallicRoughness.metallicFactor);
-					shader.setImmediate("material_roughnessFactor",
-						material.pbrMetallicRoughness.roughnessFactor);
-					shader.setImmediate("material_emissiveFactor",
-						material.emissiveFactor[0],
-						material.emissiveFactor[1],
-						material.emissiveFactor[2]);
-					shader.setImmediate("material_alphaMask", material.alphaMode == "MASK");
-					shader.setImmediate("material_alphaMaskCutoff", material.alphaCutoff);
-				#endif
-			
-					setShader(shader);
+					if (gxMesh_itr != bufferCache->meshes.end())
 					{
-						pushWireframe(keyboard.isDown(SDLK_w));
-						pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
+						GxMesh * gxMesh = gxMesh_itr->second;
 						gxMesh->draw(GX_TRIANGLES);
-						popCullMode();
-						popWireframe();
 					}
-					clearShader();
+				}
+				else
+				{
+				#if SHADER_METALLIC_ROUGHNESS
+					gxSetTexture(textureId);
+				#endif
+				#if SHADER_SPECULAR_GLOSSINESS
+					gxSetTexture(diffuseTextureId);
+				#endif
+					
+					setColor(colorWhite);
+					
+					// draw mesh, without the use of vertex and index buffers
+					
+					const Accessor * indexAccessor;
+					const BufferView * indexBufferView;
+					const Buffer * indexBuffer;
+					
+					if (!resolveBufferView(scene, primitive.indices, indexAccessor, indexBufferView, indexBuffer))
+					{
+						logWarning("failed to resolve buffer view");
+						continue;
+					}
+					
+					if (indexAccessor->componentType != kElementType_U32)
+					{
+						logWarning("component type not supported");
+						continue;
+					}
+					
+					//
+					
+					const Accessor * positionAccessor;
+					const BufferView * positionBufferView;
+					const Buffer * positionBuffer;
+					
+					auto position_itr = primitive.attributes.find("POSITION");
+					
+					if (position_itr == primitive.attributes.end())
+					{
+						logWarning("position attribute not found");
+						continue;
+					}
+					
+					const int positionAccessorIndex = position_itr->second;
+					
+					if (!resolveBufferView(scene, positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
+					{
+						logWarning("failed to resolve buffer view");
+						continue;
+					}
+					
+					if (positionAccessor->type != "VEC3")
+					{
+						logWarning("position element type not supported");
+						continue;
+					}
+					
+					//
+					
+					const Accessor * color0Accessor = nullptr;
+					const BufferView * color0BufferView;
+					const Buffer * color0Buffer;
+					
+					auto color0_itr = primitive.attributes.find("COLOR_0");
+					
+					if (color0_itr != primitive.attributes.end())
+					{
+						const int color0AccessorIndex = color0_itr->second;
+						
+						if (!resolveBufferView(scene, color0AccessorIndex, color0Accessor, color0BufferView, color0Buffer))
+						{
+							logWarning("failed to resolve buffer view");
+						}
+						else if (color0Accessor->type != "VEC3")
+						{
+							logWarning("color element type not supported");
+							color0Accessor = nullptr;
+						}
+					}
+					
+					//
+					
+					const Accessor * texcoord0Accessor = nullptr;
+					const BufferView * texcoord0BufferView;
+					const Buffer * texcoord0Buffer;
+					
+					auto texcoord0_itr = primitive.attributes.find("TEXCOORD_0");
+					
+					if (texcoord0_itr != primitive.attributes.end())
+					{
+						const int texcoord0AccessorIndex = texcoord0_itr->second;
+						
+						if (!resolveBufferView(scene, texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
+						{
+							logWarning("failed to resolve buffer view");
+						}
+						else if (texcoord0Accessor->type != "VEC2")
+						{
+							logWarning("texcoord element type not supported");
+							texcoord0Accessor = nullptr;
+						}
+					}
+					
+					//
+					
+					const Accessor * normalAccessor = nullptr;
+					const BufferView * normalBufferView;
+					const Buffer * normalBuffer;
+					
+					auto normal_itr = primitive.attributes.find("NORMAL");
+					
+					if (normal_itr != primitive.attributes.end())
+					{
+						const int normalAccessorIndex = normal_itr->second;
+						
+						if (!resolveBufferView(scene, normalAccessorIndex, normalAccessor, normalBufferView, normalBuffer))
+						{
+							logWarning("failed to resolve buffer view");
+						}
+						else if (normalAccessor->type != "VEC3")
+						{
+							logWarning("normal element type not supported");
+							normalAccessor = nullptr;
+						}
+					}
+					
+					gxBegin(GX_TRIANGLES);
+					{
+						for (int i = 0; i < indexAccessor->count; ++i)
+						{
+							const uint8_t * __restrict index_mem = &indexBuffer->data.front() + indexBufferView->byteOffset + indexAccessor->byteOffset;
+							Assert(index_mem < &indexBuffer->data.front() + indexBuffer->byteLength);
+							const uint32_t * __restrict index_ptr = (uint32_t*)index_mem;
+							const uint32_t index = index_ptr[i];
+							
+							//
+							
+							if (color0Accessor != nullptr)
+							{
+								const uint8_t * __restrict color0_mem = &color0Buffer->data.front() + color0BufferView->byteOffset + color0Accessor->byteOffset;
+								color0_mem += index * 3 * sizeof(float);
+								Assert(color0_mem < &color0Buffer->data.front() + color0Buffer->byteLength);
+								const float * __restrict color0_ptr = (float*)color0_mem;
+								
+								gxColor4f(color0_ptr[0], color0_ptr[1], color0_ptr[2], 1.f);
+							}
+							
+							//
+							
+							if (texcoord0Accessor != nullptr)
+							{
+								const uint8_t * __restrict texcoord0_mem = &texcoord0Buffer->data.front() + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
+								texcoord0_mem += index * 2 * sizeof(float);
+								Assert(texcoord0_mem < &texcoord0Buffer->data.front() + texcoord0Buffer->byteLength);
+								const float * __restrict texcoord0_ptr = (float*)texcoord0_mem;
+								
+								const float texcoord0_x = texcoord0_ptr[0];
+								const float texcoord0_y = texcoord0_ptr[1];
+								
+								gxTexCoord2f(texcoord0_x, texcoord0_y);
+							}
+							
+							//
+							
+							if (normalAccessor != nullptr)
+							{
+								const uint8_t * __restrict normal_mem = &normalBuffer->data.front() + normalBufferView->byteOffset + normalAccessor->byteOffset;
+								normal_mem += index * 3 * sizeof(float);
+								Assert(normal_mem < &normalBuffer->data.front() + normalBuffer->byteLength);
+								const float * __restrict normal_ptr = (float*)normal_mem;
+								
+								gxNormal3fv(normal_ptr);
+							}
+							
+							//
+							
+							const uint8_t * __restrict position_mem = &positionBuffer->data.front() + positionBufferView->byteOffset + positionAccessor->byteOffset;
+							position_mem += index * 3 * sizeof(float);
+							Assert(position_mem < &positionBuffer->data.front() + positionBuffer->byteLength);
+							const float * __restrict position_ptr = (float*)position_mem;
+							
+							gxVertex3fv(position_ptr);
+						}
+					}
+					gxEnd();
+					
+					gxSetTexture(0);
 				}
 			}
-			else
-			{
-			#if SHADER_METALLIC_ROUGHNESS
-				gxSetTexture(textureId);
-			#endif
-			#if SHADER_SPECULAR_GLOSSINESS
-				gxSetTexture(diffuseTextureId);
-			#endif
-				
-				setColor(color);
-				
-				// draw mesh, without the use of vertex and index buffers
-				
-				const Accessor * indexAccessor;
-				const BufferView * indexBufferView;
-				const Buffer * indexBuffer;
-				
-				if (!resolveBufferView(scene, primitive.indices, indexAccessor, indexBufferView, indexBuffer))
-				{
-					logWarning("failed to resolve buffer view");
-					continue;
-				}
-				
-				if (indexAccessor->componentType != kElementType_U32)
-				{
-					logWarning("component type not supported");
-					continue;
-				}
-				
-				//
-				
-				const Accessor * positionAccessor;
-				const BufferView * positionBufferView;
-				const Buffer * positionBuffer;
-				
-				auto position_itr = primitive.attributes.find("POSITION");
-				
-				if (position_itr == primitive.attributes.end())
-				{
-					logWarning("position attribute not found");
-					continue;
-				}
-				
-				const int positionAccessorIndex = position_itr->second;
-				
-				if (!resolveBufferView(scene, positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
-				{
-					logWarning("failed to resolve buffer view");
-					continue;
-				}
-				
-				if (positionAccessor->type != "VEC3")
-				{
-					logWarning("position element type not supported");
-					continue;
-				}
-				
-				//
-				
-				const Accessor * color0Accessor = nullptr;
-				const BufferView * color0BufferView;
-				const Buffer * color0Buffer;
-				
-				auto color0_itr = primitive.attributes.find("COLOR_0");
-				
-				if (color0_itr != primitive.attributes.end())
-				{
-					const int color0AccessorIndex = color0_itr->second;
-					
-					if (!resolveBufferView(scene, color0AccessorIndex, color0Accessor, color0BufferView, color0Buffer))
-					{
-						logWarning("failed to resolve buffer view");
-					}
-					else if (color0Accessor->type != "VEC3")
-					{
-						logWarning("color element type not supported");
-						color0Accessor = nullptr;
-					}
-				}
-				
-				//
-				
-				const Accessor * texcoord0Accessor = nullptr;
-				const BufferView * texcoord0BufferView;
-				const Buffer * texcoord0Buffer;
-				
-				auto texcoord0_itr = primitive.attributes.find("TEXCOORD_0");
-				
-				if (texcoord0_itr != primitive.attributes.end())
-				{
-					const int texcoord0AccessorIndex = texcoord0_itr->second;
-					
-					if (!resolveBufferView(scene, texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
-					{
-						logWarning("failed to resolve buffer view");
-					}
-					else if (texcoord0Accessor->type != "VEC2")
-					{
-						logWarning("texcoord element type not supported");
-						texcoord0Accessor = nullptr;
-					}
-				}
-				
-				//
-				
-				const Accessor * normalAccessor;
-				const BufferView * normalBufferView;
-				const Buffer * normalBuffer;
-				
-				auto normal_itr = primitive.attributes.find("NORMAL");
-				
-				if (normal_itr != primitive.attributes.end())
-				{
-					const int normalAccessorIndex = normal_itr->second;
-					
-					if (!resolveBufferView(scene, normalAccessorIndex, normalAccessor, normalBufferView, normalBuffer))
-					{
-						logWarning("failed to resolve buffer view");
-					}
-					else if (normalAccessor->type != "VEC3")
-					{
-						logWarning("normal element type not supported");
-						normalAccessor = nullptr;
-					}
-				}
-				
-				pushWireframe(keyboard.isDown(SDLK_w));
-				pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
-				gxBegin(GX_TRIANGLES);
-				{
-					for (int i = 0; i < indexAccessor->count; ++i)
-					{
-						const uint8_t * index_mem = &indexBuffer->data.front() + indexBufferView->byteOffset + indexAccessor->byteOffset;
-						Assert(index_mem < &indexBuffer->data.front() + indexBuffer->byteLength);
-						const uint32_t * index_ptr = (uint32_t*)index_mem;
-						const uint32_t index = index_ptr[i];
-						
-						//
-						
-						if (color0Accessor != nullptr)
-						{
-							const uint8_t * color0_mem = &color0Buffer->data.front() + color0BufferView->byteOffset + color0Accessor->byteOffset;
-							color0_mem += index * 3 * sizeof(float);
-							Assert(color0_mem < &color0Buffer->data.front() + color0Buffer->byteLength);
-							const float * color0_ptr = (float*)color0_mem;
-							
-							gxColor4f(color0_ptr[0], color0_ptr[1], color0_ptr[2], 1.f);
-						}
-						
-						//
-						
-						if (texcoord0Accessor != nullptr)
-						{
-							const uint8_t * texcoord0_mem = &texcoord0Buffer->data.front() + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
-							texcoord0_mem += index * 2 * sizeof(float);
-							Assert(texcoord0_mem < &texcoord0Buffer->data.front() + texcoord0Buffer->byteLength);
-							const float * texcoord0_ptr = (float*)texcoord0_mem;
-							
-							const float texcoord0_x = texcoord0_ptr[0];
-							const float texcoord0_y = texcoord0_ptr[1];
-							
-							gxTexCoord2f(texcoord0_x, texcoord0_y);
-						}
-						
-						//
-						
-						if (normalAccessor != nullptr)
-						{
-							const uint8_t * normal_mem = &normalBuffer->data.front() + normalBufferView->byteOffset + normalAccessor->byteOffset;
-							normal_mem += index * 3 * sizeof(float);
-							Assert(normal_mem < &normalBuffer->data.front() + normalBuffer->byteLength);
-							const float * normal_ptr = (float*)normal_mem;
-							
-							gxNormal3fv(normal_ptr);
-						}
-						
-						//
-						
-						const uint8_t * position_mem = &positionBuffer->data.front() + positionBufferView->byteOffset + positionAccessor->byteOffset;
-						position_mem += index * 3 * sizeof(float);
-						Assert(position_mem < &positionBuffer->data.front() + positionBuffer->byteLength);
-						const float * position_ptr = (float*)position_mem;
-						
-						gxVertex3fv(position_ptr);
-					}
-				}
-				gxEnd();
-				popCullMode();
-				popWireframe();
-				
-				gxSetTexture(0);
-			}
+			popCullMode();
+			clearShader();
 		}
 	}
 
@@ -711,7 +706,6 @@ namespace gltf
 				std::vector<GxVertexInput> vertexInputs;
 				
 				int vertexBufferIndex = -1;
-				int vertexBufferOffset = -1;
 				
 				for (auto & attribute : primitive.attributes)
 				{
@@ -793,11 +787,8 @@ namespace gltf
 					v.numComponents = numComponents;
 					v.type = type;
 					v.normalize = accessor->normalized;
-					v.offset = accessor->byteOffset;
+					v.offset = bufferView->byteOffset + accessor->byteOffset;
 					v.stride = bufferView->byteStride;
-					
-					Assert(bufferView->byteOffset == -1 || bufferView->byteOffset == vertexBufferOffset);
-					vertexBufferOffset = bufferView->byteOffset;
 					
 					vertexInputs.push_back(v);
 				}
@@ -808,8 +799,6 @@ namespace gltf
 					continue;
 				}
 				
-				Assert(vertexBufferOffset != -1);
-				
 				// create mesh
 				
 				Assert(vertexBuffers[vertexBufferIndex] != nullptr);
@@ -817,7 +806,7 @@ namespace gltf
 				GxVertexBuffer * vertexBuffer = vertexBuffers[vertexBufferIndex];
 				
 				GxMesh * gxMesh = new GxMesh();
-				gxMesh->setVertexBuffer(vertexBuffer, vertexBufferOffset, &vertexInputs.front(), vertexInputs.size(), 0);
+				gxMesh->setVertexBuffer(vertexBuffer, &vertexInputs.front(), vertexInputs.size(), 0);
 				gxMesh->setIndexBuffer(indexBuffer);
 				
 				Assert(meshes[&mesh] == nullptr);
