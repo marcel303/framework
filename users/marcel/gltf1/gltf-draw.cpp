@@ -90,6 +90,7 @@ namespace gltf
 			if (isOpaquePass != isOpaqueMaterial)
 				continue;
 			
+		// todo : this is the responsibility of the caller
 			setBlend(blendMode);
 			
 			if (bufferCache != nullptr && !keyboard.isDown(SDLK_m))
@@ -114,11 +115,13 @@ namespace gltf
 					Shader shader("shader-pbr-specularGlossiness");
 					setShader(shader);
 					
+				#if TODO_SCENE_CAMERA
 					shader.setImmediate("scene_camPos",
 						camera.position[0],
 						camera.position[1],
 						camera.position[2]);
-					
+				#endif
+				
 					const float dx = cosf(framework.time);
 					const float dz = sinf(framework.time);
 					
@@ -274,6 +277,29 @@ namespace gltf
 				
 				//
 				
+				const Accessor * color0Accessor = nullptr;
+				const BufferView * color0BufferView;
+				const Buffer * color0Buffer;
+				
+				auto color0_itr = primitive.attributes.find("COLOR_0");
+				
+				if (color0_itr != primitive.attributes.end())
+				{
+					const int color0AccessorIndex = color0_itr->second;
+					
+					if (!resolveBufferView(scene, color0AccessorIndex, color0Accessor, color0BufferView, color0Buffer))
+					{
+						logWarning("failed to resolve buffer view");
+					}
+					else if (color0Accessor->type != "VEC3")
+					{
+						logWarning("color element type not supported");
+						color0Accessor = nullptr;
+					}
+				}
+				
+				//
+				
 				const Accessor * texcoord0Accessor = nullptr;
 				const BufferView * texcoord0BufferView;
 				const Buffer * texcoord0Buffer;
@@ -287,13 +313,34 @@ namespace gltf
 					if (!resolveBufferView(scene, texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
 					{
 						logWarning("failed to resolve buffer view");
-						continue;
 					}
-					
-					if (texcoord0Accessor->type != "VEC2")
+					else if (texcoord0Accessor->type != "VEC2")
 					{
 						logWarning("texcoord element type not supported");
-						continue;
+						texcoord0Accessor = nullptr;
+					}
+				}
+				
+				//
+				
+				const Accessor * normalAccessor;
+				const BufferView * normalBufferView;
+				const Buffer * normalBuffer;
+				
+				auto normal_itr = primitive.attributes.find("NORMAL");
+				
+				if (normal_itr != primitive.attributes.end())
+				{
+					const int normalAccessorIndex = normal_itr->second;
+					
+					if (!resolveBufferView(scene, normalAccessorIndex, normalAccessor, normalBufferView, normalBuffer))
+					{
+						logWarning("failed to resolve buffer view");
+					}
+					else if (normalAccessor->type != "VEC3")
+					{
+						logWarning("normal element type not supported");
+						normalAccessor = nullptr;
 					}
 				}
 				
@@ -310,14 +357,15 @@ namespace gltf
 						
 						//
 						
-						const uint8_t * position_mem = &positionBuffer->data.front() + positionBufferView->byteOffset + positionAccessor->byteOffset;
-						position_mem += index * 3 * sizeof(float);
-						Assert(position_mem < &positionBuffer->data.front() + positionBuffer->byteLength);
-						const float * position_ptr = (float*)position_mem;
-						
-						const float position_x = position_ptr[0];
-						const float position_y = position_ptr[1];
-						const float position_z = position_ptr[2];
+						if (color0Accessor != nullptr)
+						{
+							const uint8_t * color0_mem = &color0Buffer->data.front() + color0BufferView->byteOffset + color0Accessor->byteOffset;
+							color0_mem += index * 3 * sizeof(float);
+							Assert(color0_mem < &color0Buffer->data.front() + color0Buffer->byteLength);
+							const float * color0_ptr = (float*)color0_mem;
+							
+							gxColor4f(color0_ptr[0], color0_ptr[1], color0_ptr[2], 1.f);
+						}
 						
 						//
 						
@@ -336,7 +384,24 @@ namespace gltf
 						
 						//
 						
-						gxVertex3f(position_x, position_y, position_z);
+						if (normalAccessor != nullptr)
+						{
+							const uint8_t * normal_mem = &normalBuffer->data.front() + normalBufferView->byteOffset + normalAccessor->byteOffset;
+							normal_mem += index * 3 * sizeof(float);
+							Assert(normal_mem < &normalBuffer->data.front() + normalBuffer->byteLength);
+							const float * normal_ptr = (float*)normal_mem;
+							
+							gxNormal3fv(normal_ptr);
+						}
+						
+						//
+						
+						const uint8_t * position_mem = &positionBuffer->data.front() + positionBufferView->byteOffset + positionAccessor->byteOffset;
+						position_mem += index * 3 * sizeof(float);
+						Assert(position_mem < &positionBuffer->data.front() + positionBuffer->byteLength);
+						const float * position_ptr = (float*)position_mem;
+						
+						gxVertex3fv(position_ptr);
 					}
 				}
 				gxEnd();
@@ -759,5 +824,7 @@ namespace gltf
 				meshes[&mesh] = gxMesh;
 			}
 		}
+		
+		return true;
 	}
 }
