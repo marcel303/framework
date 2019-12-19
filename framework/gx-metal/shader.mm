@@ -342,7 +342,9 @@ void Shader::load(const char * name, const char * filenameVs, const char * filen
 
 bool Shader::isValid() const
 {
-	return m_cacheElem->vsFunction != nullptr;
+	return
+		m_cacheElem->vsFunction != nullptr &&
+		m_cacheElem->psFunction != nullptr;
 }
 
 int Shader::getVersion() const
