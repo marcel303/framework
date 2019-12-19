@@ -98,8 +98,8 @@ int main(int argc, char * argv[])
 		return -1;
 
 	//const char * path = "van_gogh_room/scene.gltf";
-	//const char * path = "littlest_tokyo/scene.gltf";
-	const char * path = "ftm/scene.gltf";
+	const char * path = "littlest_tokyo/scene.gltf";
+	//const char * path = "ftm/scene.gltf";
 	//const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
 	//const char * path = "halloween_little_witch/scene.gltf";
 
@@ -332,11 +332,20 @@ int main(int argc, char * argv[])
 				}
 			}
 			
+			if (centimeters)
+			{
+				boundingBox.min[0] = -boundingBox.min[0];
+				boundingBox.max[0] = -boundingBox.max[0];
+				
+				boundingBox.min *= .01f;
+				boundingBox.max *= .01f;
+			}
+			
 			const float distance = (boundingBox.max - boundingBox.min).CalcSize() / 2.f * .9f;
 			const Vec3 target = (boundingBox.min + boundingBox.max) / 2.f;
 			
 			const float angle = random<float>(-M_PI, +M_PI);
-			camera.desiredPosition = target + Mat4x4(true).RotateY(angle).GetAxis(2) * 10.f;
+			camera.desiredPosition = target + Mat4x4(true).RotateY(angle).GetAxis(2) * distance;
 			camera.desiredLookatTarget = target;
 			camera.animate = true;
 			camera.animationSpeed = .9f;
