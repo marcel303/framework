@@ -10,6 +10,8 @@
 #define VIEW_SX 1000
 #define VIEW_SY 600
 
+#define USE_BUFFER_CACHE 1 // create static vertex and index buffers from gltf resources
+
 #define ANIMATED_CAMERA 1 // todo : remove option and use hybrid
 
 #define LOW_LATENCY_HACK_TEST 0 // todo : remove
@@ -103,11 +105,12 @@ int main(int argc, char * argv[])
 
 	gltf::Scene scene;
 	
-	if (!loadGltf(path, scene))
+	if (!gltf::loadScene(path, scene))
 	{
 		logError("failed to load GLTF file");
 	}
 
+#if USE_BUFFER_CACHE
 	std::map<int, GxVertexBuffer*> vertexBuffers;
 	std::map<int, GxIndexBuffer*> indexBuffers;
 	std::map<const gltf::Mesh*, GxMesh*> meshes;
@@ -287,6 +290,7 @@ int main(int argc, char * argv[])
 			meshes[&mesh] = gxMesh;
 		}
 	}
+#endif
 	
 #if ANIMATED_CAMERA
 	AnimatedCamera3d camera;
@@ -308,20 +312,9 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_t))
 			centimeters = !centimeters;
 		
-		camera.tick(framework.timeStep, true);
-		
-		framework.beginDraw(0, 0, 0, 0);
+	#if ANIMATED_CAMERA
+		if (keyboard.wentDown(SDLK_p))
 		{
-			projectPerspective3d(60.f, .1f, 100.f);
-			pushDepthTest(true, DEPTH_LESS);
-			pushBlend(BLEND_OPAQUE);
-			camera.pushViewMatrix();
-			
-			if (centimeters)
-				gxScalef(-.01f, .01f, .01f);
-			else
-				gxScalef(-1, 1, 1);
-			
 			gltf::BoundingBox boundingBox;
 			
 			if (scene.activeScene >= 0 && scene.activeScene < scene.sceneRoots.size())
@@ -339,58 +332,42 @@ int main(int argc, char * argv[])
 				}
 			}
 			
-			if (keyboard.wentDown(SDLK_p))
-			{
-				const float distance = (boundingBox.max - boundingBox.min).CalcSize() / 2.f * .9f;
-				const Vec3 target = (boundingBox.min + boundingBox.max) / 2.f;
-				
-			#if ANIMATED_CAMERA
-				const float angle = random<float>(-M_PI, +M_PI);
-				camera.desiredPosition = target + Mat4x4(true).RotateY(angle).GetAxis(2) * 10.f;
-				camera.desiredLookatTarget = target;
-				camera.animate = true;
-				camera.animationSpeed = .9f;
-			#else
-				camera.pitch = 8.f;
-				camera.yaw = random(0.f, 360.f);
-				
-				camera.position = target - camera.getWorldMatrix().GetAxis(2) * distance;
-			#endif
-			}
+			const float distance = (boundingBox.max - boundingBox.min).CalcSize() / 2.f * .9f;
+			const Vec3 target = (boundingBox.min + boundingBox.max) / 2.f;
 			
-			for (int i = 0; i < 2; ++i)
+			const float angle = random<float>(-M_PI, +M_PI);
+			camera.desiredPosition = target + Mat4x4(true).RotateY(angle).GetAxis(2) * 10.f;
+			camera.desiredLookatTarget = target;
+			camera.animate = true;
+			camera.animationSpeed = .9f;
+		}
+	#endif
+		
+		camera.tick(framework.timeStep, true);
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			projectPerspective3d(60.f, .1f, 100.f);
+			pushDepthTest(true, DEPTH_LESS);
+			pushBlend(BLEND_OPAQUE);
+			camera.pushViewMatrix();
 			{
-				const bool isOpaquePass = (i == 0);
+				if (centimeters)
+					gxScalef(-.01f, .01f, .01f);
+				else
+					gxScalef(-1, 1, 1);
 				
-				if (scene.activeScene < 0 || scene.activeScene >= scene.sceneRoots.size())
+				for (int i = 0; i < 2; ++i)
 				{
-					logWarning("invalid scene index");
-					continue;
-				}
-				
-				pushDepthWrite(keyboard.isDown(SDLK_z) ? true : isOpaquePass ? true : false);
-				{
-					auto & sceneRoot = scene.sceneRoots[scene.activeScene];
+					const bool isOpaquePass = (i == 0);
 					
-					for (auto & node_index : sceneRoot.nodes)
+					if (scene.activeScene < 0 || scene.activeScene >= scene.sceneRoots.size())
 					{
-						if (node_index >= 0 && node_index < scene.nodes.size())
-						{
-							auto & node = scene.nodes[node_index];
-							
-							drawNodeTraverse(scene, node, isOpaquePass);
-						}
+						logWarning("invalid scene index");
+						continue;
 					}
-				}
-				popDepthWrite();
-			}
-			
-			if (keyboard.isDown(SDLK_b))
-			{
-				pushBlend(BLEND_ADD);
-				pushDepthWrite(false);
-				{
-					if (scene.activeScene >= 0 && scene.activeScene < scene.sceneRoots.size())
+					
+					pushDepthWrite(keyboard.isDown(SDLK_z) ? true : isOpaquePass ? true : false);
 					{
 						auto & sceneRoot = scene.sceneRoots[scene.activeScene];
 						
@@ -400,15 +377,37 @@ int main(int argc, char * argv[])
 							{
 								auto & node = scene.nodes[node_index];
 								
-								drawNodeMinMaxTraverse(scene, node);
+								drawNodeTraverse(scene, node, isOpaquePass);
 							}
 						}
 					}
+					popDepthWrite();
 				}
-				popDepthWrite();
-				popBlend();
+				
+				if (keyboard.isDown(SDLK_b))
+				{
+					pushBlend(BLEND_ADD);
+					pushDepthWrite(false);
+					{
+						if (scene.activeScene >= 0 && scene.activeScene < scene.sceneRoots.size())
+						{
+							auto & sceneRoot = scene.sceneRoots[scene.activeScene];
+							
+							for (auto & node_index : sceneRoot.nodes)
+							{
+								if (node_index >= 0 && node_index < scene.nodes.size())
+								{
+									auto & node = scene.nodes[node_index];
+									
+									drawNodeMinMaxTraverse(scene, node);
+								}
+							}
+						}
+					}
+					popDepthWrite();
+					popBlend();
+				}
 			}
-			
 			camera.popViewMatrix();
 			popBlend();
 			popDepthTest();
