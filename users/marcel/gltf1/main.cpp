@@ -10,7 +10,7 @@
 #define VIEW_SX 1000
 #define VIEW_SY 600
 
-#define ANIMATED_CAMERA 0 // todo : remove option and use hybrid
+#define ANIMATED_CAMERA 1 // todo : remove option and use hybrid
 
 #define LOW_LATENCY_HACK_TEST 0 // todo : remove
 
@@ -23,10 +23,10 @@
 struct AnimatedCamera3d
 {
 	Vec3 position;
-	Quat orientation;
+	Vec3 lookatTarget;
 	
 	Vec3 desiredPosition;
-	Quat desiredOrientation;
+	Vec3 desiredLookatTarget;
 	bool animate = false;
 	float animationSpeed = 1.f;
 	
@@ -43,21 +43,20 @@ struct AnimatedCamera3d
 			const float attain = 1.f - retain;
 			
 			position = lerp(position, desiredPosition, attain);
-			orientation = orientation.slerp(desiredOrientation, attain);
-			
-			//position = desiredPosition;
-			//orientation = desiredOrientation;
+			lookatTarget = lerp(lookatTarget, desiredLookatTarget, attain);
 		}
 	}
 	
 	Mat4x4 getWorldMatrix() const
 	{
-		return Mat4x4(true).Translate(position).Rotate(orientation);
+		return getViewMatrix().CalcInv();
 	}
 
 	Mat4x4 getViewMatrix() const
 	{
-		return getWorldMatrix().CalcInv();
+		Mat4x4 m;
+		m.MakeLookat(position, lookatTarget, Vec3(0, 1, 0));
+		return m;
 	}
 
 	void pushViewMatrix() const
@@ -346,10 +345,9 @@ int main(int argc, char * argv[])
 				const Vec3 target = (boundingBox.min + boundingBox.max) / 2.f;
 				
 			#if ANIMATED_CAMERA
-				camera.desiredOrientation.fromAxisAngle(Vec3(0, 1, 0), random(0.f, float(M_PI) * 2.f));
-				const Mat4x4 orientationMatrix = camera.desiredOrientation.toMatrix();
-				const Vec3 orientationVector = orientationMatrix.GetAxis(2);
-				camera.desiredPosition = target - orientationVector * distance;
+				const float angle = random<float>(-M_PI, +M_PI);
+				camera.desiredPosition = target + Mat4x4(true).RotateY(angle).GetAxis(2) * 10.f;
+				camera.desiredLookatTarget = target;
 				camera.animate = true;
 				camera.animationSpeed = .9f;
 			#else
