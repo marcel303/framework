@@ -1,8 +1,15 @@
 #include "gltf.h"
 #include "gltf-draw.h"
 
+#include "gx_mesh.h"
+
+// todo : remove keyboard controls
+// todo : add options struct for controlling how to draw
+
 #define SHADER_METALLIC_ROUGHNESS 1
 #define SHADER_SPECULAR_GLOSSINESS 0
+
+#define TODO_SCENE_CAMERA 0
 
 namespace gltf
 {
@@ -26,6 +33,11 @@ namespace gltf
 	}
 	
 	void drawMesh(const Scene & scene, const Mesh & mesh, const bool isOpaquePass)
+	{
+		drawMesh(scene, nullptr, mesh, isOpaquePass);
+	}
+	
+	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const bool isOpaquePass)
 	{
 		for (auto & primitive : mesh.primitives)
 		{
@@ -80,12 +92,11 @@ namespace gltf
 			
 			setBlend(blendMode);
 			
-		#if 0 // todo : enable accelerated code path for all GX implementations
-			if (!keyboard.isDown(SDLK_m))
+			if (bufferCache != nullptr && !keyboard.isDown(SDLK_m))
 			{
-				auto gxMesh_itr = meshes.find(&mesh);
+				auto gxMesh_itr = bufferCache->meshes.find(&mesh);
 				
-				if (gxMesh_itr != meshes.end())
+				if (gxMesh_itr != bufferCache->meshes.end())
 				{
 					GxMesh * gxMesh = gxMesh_itr->second;
 					
@@ -152,11 +163,13 @@ namespace gltf
 					Shader shader("shader-pbr");
 					setShader(shader);
 					
+				#if TODO_SCENE_CAMERA
 					shader.setImmediate("scene_camPos",
 						camera.position[0],
 						camera.position[1],
 						camera.position[2]);
-					
+				#endif
+				
 					shader.setImmediate("scene_lightDir",
 						.5f,
 						1.f,
@@ -201,142 +214,146 @@ namespace gltf
 					}
 					clearShader();
 				}
+			}
+			else
+			{
+			#if SHADER_METALLIC_ROUGHNESS
+				gxSetTexture(textureId);
+			#endif
+			#if SHADER_SPECULAR_GLOSSINESS
+				gxSetTexture(diffuseTextureId);
+			#endif
 				
-				continue;
-			}
-		#endif
-		
-		#if SHADER_METALLIC_ROUGHNESS
-			gxSetTexture(textureId);
-		#endif
-		#if SHADER_SPECULAR_GLOSSINESS
-			gxSetTexture(diffuseTextureId);
-		#endif
-			
-			setColor(color);
-			
-			// draw mesh, without the use of vertex and index buffers
-			
-			const Accessor * indexAccessor;
-			const BufferView * indexBufferView;
-			const Buffer * indexBuffer;
-			
-			if (!resolveBufferView(scene, primitive.indices, indexAccessor, indexBufferView, indexBuffer))
-			{
-				logWarning("failed to resolve buffer view");
-				continue;
-			}
-			
-			if (indexAccessor->componentType != kElementType_U32)
-			{
-				logWarning("component type not supported");
-				continue;
-			}
-			
-			//
-			
-			const Accessor * positionAccessor;
-			const BufferView * positionBufferView;
-			const Buffer * positionBuffer;
-			
-			auto position_itr = primitive.attributes.find("POSITION");
-			
-			if (position_itr == primitive.attributes.end())
-			{
-				logWarning("position attribute not found");
-				continue;
-			}
-			
-			const int positionAccessorIndex = position_itr->second;
-			
-			if (!resolveBufferView(scene, positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
-			{
-				logWarning("failed to resolve buffer view");
-				continue;
-			}
-			
-			if (positionAccessor->type != "VEC3")
-			{
-				logWarning("position element type not supported");
-				continue;
-			}
-			
-			//
-			
-			const Accessor * texcoord0Accessor = nullptr;
-			const BufferView * texcoord0BufferView;
-			const Buffer * texcoord0Buffer;
-			
-			auto texcoord0_itr = primitive.attributes.find("TEXCOORD_0");
-			
-			if (texcoord0_itr != primitive.attributes.end())
-			{
-				const int texcoord0AccessorIndex = texcoord0_itr->second;
+				setColor(color);
 				
-				if (!resolveBufferView(scene, texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
+				// draw mesh, without the use of vertex and index buffers
+				
+				const Accessor * indexAccessor;
+				const BufferView * indexBufferView;
+				const Buffer * indexBuffer;
+				
+				if (!resolveBufferView(scene, primitive.indices, indexAccessor, indexBufferView, indexBuffer))
 				{
 					logWarning("failed to resolve buffer view");
 					continue;
 				}
 				
-				if (texcoord0Accessor->type != "VEC2")
+				if (indexAccessor->componentType != kElementType_U32)
 				{
-					logWarning("texcoord element type not supported");
+					logWarning("component type not supported");
 					continue;
 				}
-			}
-			
-			pushWireframe(keyboard.isDown(SDLK_w));
-			pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
-			gxBegin(GX_TRIANGLES);
-			{
-				for (int i = 0; i < indexAccessor->count; ++i)
+				
+				//
+				
+				const Accessor * positionAccessor;
+				const BufferView * positionBufferView;
+				const Buffer * positionBuffer;
+				
+				auto position_itr = primitive.attributes.find("POSITION");
+				
+				if (position_itr == primitive.attributes.end())
 				{
-					const uint8_t * index_mem = &indexBuffer->data.front() + indexBufferView->byteOffset + indexAccessor->byteOffset;
-					Assert(index_mem < &indexBuffer->data.front() + indexBuffer->byteLength);
-					const uint32_t * index_ptr = (uint32_t*)index_mem;
-					const uint32_t index = index_ptr[i];
+					logWarning("position attribute not found");
+					continue;
+				}
+				
+				const int positionAccessorIndex = position_itr->second;
+				
+				if (!resolveBufferView(scene, positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
+				{
+					logWarning("failed to resolve buffer view");
+					continue;
+				}
+				
+				if (positionAccessor->type != "VEC3")
+				{
+					logWarning("position element type not supported");
+					continue;
+				}
+				
+				//
+				
+				const Accessor * texcoord0Accessor = nullptr;
+				const BufferView * texcoord0BufferView;
+				const Buffer * texcoord0Buffer;
+				
+				auto texcoord0_itr = primitive.attributes.find("TEXCOORD_0");
+				
+				if (texcoord0_itr != primitive.attributes.end())
+				{
+					const int texcoord0AccessorIndex = texcoord0_itr->second;
 					
-					//
-					
-					const uint8_t * position_mem = &positionBuffer->data.front() + positionBufferView->byteOffset + positionAccessor->byteOffset;
-					position_mem += index * 3 * sizeof(float);
-					Assert(position_mem < &positionBuffer->data.front() + positionBuffer->byteLength);
-					const float * position_ptr = (float*)position_mem;
-					
-					const float position_x = position_ptr[0];
-					const float position_y = position_ptr[1];
-					const float position_z = position_ptr[2];
-					
-					//
-					
-					if (texcoord0Accessor != nullptr)
+					if (!resolveBufferView(scene, texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
 					{
-						const uint8_t * texcoord0_mem = &texcoord0Buffer->data.front() + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
-						texcoord0_mem += index * 2 * sizeof(float);
-						Assert(texcoord0_mem < &texcoord0Buffer->data.front() + texcoord0Buffer->byteLength);
-						const float * texcoord0_ptr = (float*)texcoord0_mem;
-						
-						const float texcoord0_x = texcoord0_ptr[0];
-						const float texcoord0_y = texcoord0_ptr[1];
-						
-						gxTexCoord2f(texcoord0_x, texcoord0_y);
+						logWarning("failed to resolve buffer view");
+						continue;
 					}
 					
-					//
-					
-					gxVertex3f(position_x, position_y, position_z);
+					if (texcoord0Accessor->type != "VEC2")
+					{
+						logWarning("texcoord element type not supported");
+						continue;
+					}
 				}
+				
+				pushWireframe(keyboard.isDown(SDLK_w));
+				pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
+				gxBegin(GX_TRIANGLES);
+				{
+					for (int i = 0; i < indexAccessor->count; ++i)
+					{
+						const uint8_t * index_mem = &indexBuffer->data.front() + indexBufferView->byteOffset + indexAccessor->byteOffset;
+						Assert(index_mem < &indexBuffer->data.front() + indexBuffer->byteLength);
+						const uint32_t * index_ptr = (uint32_t*)index_mem;
+						const uint32_t index = index_ptr[i];
+						
+						//
+						
+						const uint8_t * position_mem = &positionBuffer->data.front() + positionBufferView->byteOffset + positionAccessor->byteOffset;
+						position_mem += index * 3 * sizeof(float);
+						Assert(position_mem < &positionBuffer->data.front() + positionBuffer->byteLength);
+						const float * position_ptr = (float*)position_mem;
+						
+						const float position_x = position_ptr[0];
+						const float position_y = position_ptr[1];
+						const float position_z = position_ptr[2];
+						
+						//
+						
+						if (texcoord0Accessor != nullptr)
+						{
+							const uint8_t * texcoord0_mem = &texcoord0Buffer->data.front() + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
+							texcoord0_mem += index * 2 * sizeof(float);
+							Assert(texcoord0_mem < &texcoord0Buffer->data.front() + texcoord0Buffer->byteLength);
+							const float * texcoord0_ptr = (float*)texcoord0_mem;
+							
+							const float texcoord0_x = texcoord0_ptr[0];
+							const float texcoord0_y = texcoord0_ptr[1];
+							
+							gxTexCoord2f(texcoord0_x, texcoord0_y);
+						}
+						
+						//
+						
+						gxVertex3f(position_x, position_y, position_z);
+					}
+				}
+				gxEnd();
+				popCullMode();
+				popWireframe();
+				
+				gxSetTexture(0);
 			}
-			gxEnd();
-			popCullMode();
-			popWireframe();
-			
-			gxSetTexture(0);
 		}
 	}
 
 	void drawNodeTraverse(const Scene & scene, const Node & node, const bool isOpaquePass)
+	{
+		drawNodeTraverse(scene, nullptr, node, isOpaquePass);
+	}
+	
+	void drawNodeTraverse(const Scene & scene, const BufferCache * bufferCache, const Node & node, const bool isOpaquePass)
 	{
 		gxPushMatrix();
 		gxTranslatef(node.translation[0], node.translation[1], node.translation[2]);
@@ -355,14 +372,14 @@ namespace gltf
 			
 			auto & child = scene.nodes[child_index];
 			
-			drawNodeTraverse(scene, child, isOpaquePass);
+			drawNodeTraverse(scene, bufferCache, child, isOpaquePass);
 		}
 		
 		if (node.mesh >= 0 && node.mesh < scene.meshes.size())
 		{
 			auto & mesh = scene.meshes[node.mesh];
 			
-			drawMesh(scene, mesh, isOpaquePass);
+			drawMesh(scene, bufferCache, mesh, isOpaquePass);
 		}
 		
 		gxPopMatrix();
@@ -549,5 +566,198 @@ namespace gltf
 		}
 		
 		gxPopMatrix();
+	}
+}
+
+//
+
+#include "data/engine/ShaderCommon.txt"
+#include "gx_mesh.h"
+
+namespace gltf
+{
+	bool BufferCache::init(const Scene & scene)
+	{
+		// create vertex buffers from buffer objects
+		
+		int bufferIndex = 0;
+		
+		for (auto & buffer : scene.buffers)
+		{
+			GxVertexBuffer * vertexBuffer = new GxVertexBuffer();
+			vertexBuffer->alloc(&buffer.data.front(), buffer.byteLength);
+			
+			Assert(vertexBuffers[bufferIndex] == nullptr);
+			vertexBuffers[bufferIndex++] = vertexBuffer;
+		}
+		
+		// create index buffers and meshes for mesh primitives
+		
+		for (auto & mesh : scene.meshes)
+		{
+			for (auto & primitive : mesh.primitives)
+			{
+				GxIndexBuffer * indexBuffer = nullptr;
+				
+				// create index buffers
+				
+				auto indexBuffer_itr = indexBuffers.find(primitive.indices);
+				
+				if (indexBuffer_itr != indexBuffers.end())
+				{
+					indexBuffer = indexBuffer_itr->second;
+				}
+				else
+				{
+					const gltf::Accessor * accessor;
+					const gltf::BufferView * bufferView;
+					const gltf::Buffer * buffer;
+					
+					if (!gltf::resolveBufferView(scene, primitive.indices, accessor, bufferView, buffer))
+					{
+						logWarning("failed to resolve buffer view");
+					}
+					else
+					{
+						if (accessor->componentType != gltf::kElementType_U16 &&
+							accessor->componentType != gltf::kElementType_U32)
+						{
+							logWarning("index element type not supported");
+							continue;
+						}
+						
+						indexBuffer = new GxIndexBuffer();
+						const uint8_t * index_mem = &buffer->data.front() + bufferView->byteOffset + accessor->byteOffset;
+						
+						const GX_INDEX_FORMAT format =
+							accessor->componentType == gltf::kElementType_U16
+							? GX_INDEX_16
+							: GX_INDEX_32;
+						
+						indexBuffer->alloc(index_mem, accessor->count, format);
+						
+						Assert(indexBuffers[primitive.indices] == nullptr);
+						indexBuffers[primitive.indices] = indexBuffer;
+					}
+				}
+				
+				// create mappings between vertex buffers and vertex shaders
+				
+				std::vector<GxVertexInput> vertexInputs;
+				
+				int vertexBufferIndex = -1;
+				int vertexBufferOffset = -1;
+				
+				for (auto & attribute : primitive.attributes)
+				{
+					const gltf::Accessor * accessor;
+					const gltf::BufferView * bufferView;
+					const gltf::Buffer * buffer;
+		
+					const std::string & attributeName = attribute.first;
+					const int accessorIndex = attribute.second;
+		
+					if (!gltf::resolveBufferView(scene, accessorIndex, accessor, bufferView, buffer))
+					{
+						logWarning("failed to resolve buffer view");
+						continue;
+					}
+					
+					if (vertexBufferIndex == -1)
+						vertexBufferIndex = bufferView->buffer;
+					else if (bufferView->buffer != vertexBufferIndex)
+						vertexBufferIndex = -2;
+		
+					/*
+					POSITION,
+					NORMAL,
+					TANGENT,
+					TEXCOORD_0,
+					TEXCOORD_1,
+					COLOR_0,
+					JOINS_0, (bone indices)
+					WEIGHTS_0
+					
+					note : bitangent = cross(normal, tangent.xyz) * tangent.w
+					*/
+					
+					const int id =
+						attributeName == "POSITION" ? VS_POSITION :
+						attributeName == "NORMAL" ? VS_NORMAL :
+						attributeName == "COLOR_0" ? VS_COLOR :
+						attributeName == "TEXCOORD_0" ? VS_TEXCOORD0 :
+						attributeName == "TEXCOORD_1" ? VS_TEXCOORD1 :
+						attributeName == "JOINTS_0" ? VS_BLEND_INDICES :
+						attributeName == "WEIGHTS_0" ? VS_BLEND_WEIGHTS :
+						-1;
+					
+					if (id == -1)
+					{
+						//logDebug("unknown attribute: %s", attributeName.c_str());
+						continue;
+					}
+					
+					const int numComponents =
+						accessor->type == "SCALAR" ? 1 :
+						accessor->type == "VEC2" ? 2 :
+						accessor->type == "VEC3" ? 3 :
+						accessor->type == "VEC4" ? 4 :
+						-1;
+					
+					if (numComponents == -1)
+					{
+						logWarning("number of components not supported");
+						continue;
+					}
+					
+					const GX_ELEMENT_TYPE type =
+						accessor->type == "SCALAR" ? GX_ELEMENT_FLOAT32 :
+						accessor->type == "VEC2" ? GX_ELEMENT_FLOAT32 :
+						accessor->type == "VEC3" ? GX_ELEMENT_FLOAT32 :
+						accessor->type == "VEC4" ? GX_ELEMENT_FLOAT32 :
+						(GX_ELEMENT_TYPE)-1;
+					
+					if (type == (GX_ELEMENT_TYPE)-1)
+					{
+						logWarning("element type not supported");
+						continue;
+					}
+					
+					GxVertexInput v;
+					v.id = id;
+					v.numComponents = numComponents;
+					v.type = type;
+					v.normalize = accessor->normalized;
+					v.offset = accessor->byteOffset;
+					v.stride = bufferView->byteStride;
+					
+					Assert(bufferView->byteOffset == -1 || bufferView->byteOffset == vertexBufferOffset);
+					vertexBufferOffset = bufferView->byteOffset;
+					
+					vertexInputs.push_back(v);
+				}
+				
+				if (vertexBufferIndex < 0)
+				{
+					logWarning("invalid vertex buffer index");
+					continue;
+				}
+				
+				Assert(vertexBufferOffset != -1);
+				
+				// create mesh
+				
+				Assert(vertexBuffers[vertexBufferIndex] != nullptr);
+				
+				GxVertexBuffer * vertexBuffer = vertexBuffers[vertexBufferIndex];
+				
+				GxMesh * gxMesh = new GxMesh();
+				gxMesh->setVertexBuffer(vertexBuffer, vertexBufferOffset, &vertexInputs.front(), vertexInputs.size(), 0);
+				gxMesh->setIndexBuffer(indexBuffer);
+				
+				Assert(meshes[&mesh] == nullptr);
+				meshes[&mesh] = gxMesh;
+			}
+		}
 	}
 }
