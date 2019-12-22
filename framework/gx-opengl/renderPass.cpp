@@ -12,7 +12,7 @@
 
 // -- render passes --
 
-static const int kMaxColorTargets = 4;
+static const int kMaxColorTargets = 8;
 
 static GLuint s_frameBufferId = 0;
 
@@ -48,7 +48,7 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	
 	// specify the color and depth attachment(s)
 	
-	GLenum drawBuffers[4];
+	GLenum drawBuffers[kMaxColorTargets];
 	int numDrawBuffers = 0;
 	
 	for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
@@ -235,7 +235,7 @@ void endRenderPass()
 
 struct RenderPassData
 {
-	ColorTarget * target[4];
+	ColorTarget * target[kMaxColorTargets];
 	int numTargets = 0;
 	DepthTarget * depthTarget = nullptr;
 	bool isBackbufferPass = false;
