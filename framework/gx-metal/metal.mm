@@ -66,6 +66,8 @@ static std::vector<id <MTLResource>> s_resourcesToFree;
 
 #include <stack>
 
+static const int kMaxColorTargets = 8;
+
 struct RenderPassData
 {
 	id <MTLCommandBuffer> cmdbuf;
@@ -79,7 +81,7 @@ struct RenderPassData
 
 struct RenderPassDataForPushPop
 {
-	ColorTarget * target[4]; // todo : kMaxColorTargets
+	ColorTarget * target[kMaxColorTargets];
 	int numTargets = 0;
 	DepthTarget * depthTarget = nullptr;
 	bool isBackbufferPass = false;
@@ -384,8 +386,6 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 }
 
 // -- render passes --
-
-static const int kMaxColorTargets = 4;
 
 void beginRenderPass(
 	ColorTarget * target,
