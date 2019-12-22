@@ -32,12 +32,12 @@ namespace gltf
 		return result;
 	}
 	
-	void drawMesh(const Scene & scene, const Mesh & mesh, const bool isOpaquePass)
+	void drawMesh(const Scene & scene, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass)
 	{
-		drawMesh(scene, nullptr, mesh, isOpaquePass);
+		drawMesh(scene, nullptr, mesh, materialShaders, isOpaquePass);
 	}
 	
-	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const bool isOpaquePass)
+	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass)
 	{
 		for (auto & primitive : mesh.primitives)
 		{
@@ -56,11 +56,6 @@ namespace gltf
 			auto & material = scene.materials[primitive.material];
 			
 			//Assert(material.alphaMode != "MASK"); // todo : implement !
-			
-			const BLEND_MODE blendMode =
-				material.alphaMode == "OPAQUE" || material.alphaMode == "MASK"
-				? BLEND_OPAQUE
-				: BLEND_ALPHA;
 			
 		#if SHADER_METALLIC_ROUGHNESS
 			// PBR metallic roughness material
@@ -85,26 +80,25 @@ namespace gltf
 			if (!keyboard.isDown(SDLK_u))
 				color = material.pbrMetallicRoughness.baseColorFactor;
 			
-			const bool isOpaqueMaterial = (blendMode == BLEND_OPAQUE);
+			const bool isOpaqueMaterial =
+				material.alphaMode == "OPAQUE" ||
+				material.alphaMode == "MASK";
 			
 			if (isOpaquePass != isOpaqueMaterial)
 				continue;
 			
-		// todo : this is the responsibility of the caller
-			setBlend(blendMode);
-			
 		#if 0
-			Shader shader("shader");
+			Shader shader(materialShaders.fallbackShader.c_str());
 			setShader(shader);
-	
-			shader.setTexture("source", 0, textureId);
-			shader.setImmediate("color", color.r, color.g, color.b, color.a);
-			shader.setImmediate("params", textureId != 0, 0.f, 0.f, 0.f);
-			shader.setImmediate("time", framework.time);
+			shader.setTexture("diffuseTexture", 0, textureId, true, false);
 		#else
 	
 		#if SHADER_SPECULAR_GLOSSINESS
-			Shader shader("shader-pbr-specularGlossiness");
+			const char * shaderName =
+				materialShaders.pbr_specularGlossiness.empty()
+				? materialShaders.fallbackShader.c_str()
+				: materialShaders.pbr_specularGlossiness.c_str();
+			Shader shader(shaderName);
 			setShader(shader);
 	
 		#if TODO_SCENE_CAMERA
@@ -122,11 +116,11 @@ namespace gltf
 				-1.f,
 				dz);
 	
-			shader.setTexture("diffuseTexture", 0, diffuseTextureId);
-			shader.setTexture("normalTexture", 1, normalTextureId);
-			shader.setTexture("occlusionTexture", 2, occlusionTextureId);
-			shader.setTexture("specularGlossinessTexture", 3, specularGlossinessTextureId);
-			shader.setTexture("emissiveTexture", 4, emissiveTextureId);
+			shader.setTexture("diffuseTexture", 0, diffuseTextureId, true, false);
+			shader.setTexture("normalTexture", 1, normalTextureId, true, false);
+			shader.setTexture("occlusionTexture", 2, occlusionTextureId, true, false);
+			shader.setTexture("specularGlossinessTexture", 3, specularGlossinessTextureId, true, false);
+			shader.setTexture("emissiveTexture", 4, emissiveTextureId, true, false);
 
 			shader.setImmediate("material_diffuseFactor",
 				material.pbrSpecularGlossiness.diffuseFactor.r,
@@ -155,7 +149,11 @@ namespace gltf
 		#endif
 	
 		#if SHADER_METALLIC_ROUGHNESS
-			Shader shader("shader-pbr");
+			const char * shaderName =
+				materialShaders.pbr_metallicRoughness.empty()
+				? materialShaders.fallbackShader.c_str()
+				: materialShaders.pbr_metallicRoughness.c_str();
+			Shader shader(shaderName);
 			setShader(shader);
 	
 		#if TODO_SCENE_CAMERA
@@ -170,11 +168,11 @@ namespace gltf
 				1.f,
 				.5f);
 	
-			shader.setTexture("baseColorTexture", 0, textureId);
-			shader.setTexture("normalTexture", 1, normalTextureId);
-			shader.setTexture("occlusionTexture", 2, occlusionTextureId);
-			shader.setTexture("metallicRoughnessTexture", 3, metallicRoughnessTextureId);
-			shader.setTexture("emissiveTexture", 4, emissiveTextureId);
+			shader.setTexture("baseColorTexture", 0, textureId, true, false);
+			shader.setTexture("normalTexture", 1, normalTextureId, true, false);
+			shader.setTexture("occlusionTexture", 2, occlusionTextureId, true, false);
+			shader.setTexture("metallicRoughnessTexture", 3, metallicRoughnessTextureId, true, false);
+			shader.setTexture("emissiveTexture", 4, emissiveTextureId, true, false);
 
 			shader.setImmediate("material_baseColorFactor",
 				material.pbrMetallicRoughness.baseColorFactor.r,
@@ -408,12 +406,12 @@ namespace gltf
 		}
 	}
 
-	void drawNodeTraverse(const Scene & scene, const Node & node, const bool isOpaquePass)
+	void drawNodeTraverse(const Scene & scene, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass)
 	{
-		drawNodeTraverse(scene, nullptr, node, isOpaquePass);
+		drawNodeTraverse(scene, nullptr, node, materialShaders, isOpaquePass);
 	}
 	
-	void drawNodeTraverse(const Scene & scene, const BufferCache * bufferCache, const Node & node, const bool isOpaquePass)
+	void drawNodeTraverse(const Scene & scene, const BufferCache * bufferCache, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass)
 	{
 		gxPushMatrix();
 		gxTranslatef(node.translation[0], node.translation[1], node.translation[2]);
@@ -432,14 +430,14 @@ namespace gltf
 			
 			auto & child = scene.nodes[child_index];
 			
-			drawNodeTraverse(scene, bufferCache, child, isOpaquePass);
+			drawNodeTraverse(scene, bufferCache, child, materialShaders, isOpaquePass);
 		}
 		
 		if (node.mesh >= 0 && node.mesh < scene.meshes.size())
 		{
 			auto & mesh = scene.meshes[node.mesh];
 			
-			drawMesh(scene, bufferCache, mesh, isOpaquePass);
+			drawMesh(scene, bufferCache, mesh, materialShaders, isOpaquePass);
 		}
 		
 		gxPopMatrix();
@@ -626,6 +624,29 @@ namespace gltf
 		}
 		
 		gxPopMatrix();
+	}
+	
+	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const int in_activeScene)
+	{
+		const int activeScene =
+			in_activeScene < 0
+			? scene.activeScene
+			: in_activeScene;
+		
+		if (activeScene >= 0 && activeScene < scene.sceneRoots.size())
+		{
+			auto & sceneRoot = scene.sceneRoots[scene.activeScene];
+			
+			for (auto & node_index : sceneRoot.nodes)
+			{
+				if (node_index >= 0 && node_index < scene.nodes.size())
+				{
+					auto & node = scene.nodes[node_index];
+					
+					drawNodeTraverse(scene, node, materialShaders, true);
+				}
+			}
+		}
 	}
 }
 

@@ -202,13 +202,24 @@ int main(int argc, char * argv[])
 					{
 						auto & sceneRoot = scene.sceneRoots[scene.activeScene];
 						
+						gltf::MaterialShaders materialShaders;
+						materialShaders.pbr_specularGlossiness = "shader-pbr-specularGlossiness";
+						materialShaders.pbr_metallicRoughness = "shader-pbr";
+						
 						for (auto & node_index : sceneRoot.nodes)
 						{
 							if (node_index >= 0 && node_index < scene.nodes.size())
 							{
 								auto & node = scene.nodes[node_index];
 								
-								drawNodeTraverse(scene, bufferCache, node, isOpaquePass);
+								drawNodeTraverse(
+									scene,
+									keyboard.isDown(SDLK_m)
+										? nullptr
+										: bufferCache,
+									node,
+									materialShaders,
+									isOpaquePass);
 							}
 						}
 					}

@@ -20,13 +20,23 @@ namespace gltf
 		bool hasMinMax = false;
 	};
 	
+	struct MaterialShaders
+	{
+		std::string pbr_specularGlossiness;
+		std::string pbr_metallicRoughness;
+		
+		std::string fallbackShader;
+	};
+	
 	// -- draw using GX api --
 
-	void drawMesh(const Scene & scene, const Mesh & mesh, const bool isOpaquePass);
+	void drawMesh(const Scene & scene, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass);
 
-	void drawNodeTraverse(const Scene & scene, const Node & node, const bool isOpaquePass);
+	void drawNodeTraverse(const Scene & scene, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass);
 	void drawNodeMinMaxTraverse(const Scene & scene, const Node & node);
 	void calculateNodeMinMaxTraverse(const Scene & scene, const Node & node, BoundingBox & boundingBox);
+	
+	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene = -1);
 }
 
 // -- draw using buffer cache --
@@ -48,7 +58,7 @@ namespace gltf
 		bool init(const gltf::Scene & scene);
 	};
 	
-	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const bool isOpaquePass);
+	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass);
 
-	void drawNodeTraverse(const Scene & scene, const BufferCache * bufferCache, const Node & node, const bool isOpaquePass);
+	void drawNodeTraverse(const Scene & scene, const BufferCache * bufferCache, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass);
 }
