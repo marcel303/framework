@@ -642,6 +642,9 @@ public:
 	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
 	void free();
 	void setSwizzle(int r, int g, int b, int a);
+	void setClearColor(int r, int g, int b, int a);
+	void setClearColorf(float r, float g, float b, float a);
+	void setClearDepth(float d);
 	
 	void setName(const char * name);
 	const char * getName() const;

@@ -304,6 +304,29 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 #endif
 }
 
+void Surface::setClearColor(int r, int g, int b, int a)
+{
+	setClearColorf(
+		r / 255.f,
+		g / 255.f,
+		b / 255.f,
+		a / 255.f);
+}
+
+void Surface::setClearColorf(float r, float g, float b, float a)
+{
+	for (int i = 0; i < 2; ++i)
+		if (m_colorTarget[i] != nullptr)
+			m_colorTarget[i]->setClearColor(r, g, b, a);
+}
+
+void Surface::setClearDepth(float d)
+{
+	for (int i = 0; i < 2; ++i)
+		if (m_depthTarget[i] != nullptr)
+			m_depthTarget[i]->setClearDepth(d);
+}
+
 void Surface::setName(const char * name)
 {
 	m_name = name;
