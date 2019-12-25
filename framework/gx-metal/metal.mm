@@ -66,8 +66,6 @@ static std::vector<id <MTLResource>> s_resourcesToFree;
 
 #include <stack>
 
-static const int kMaxColorTargets = 8;
-
 struct RenderPassData
 {
 	id <MTLCommandBuffer> cmdbuf;
@@ -525,7 +523,7 @@ void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * d
 
 void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName)
 {
-	Assert(numTargets >= 0 && numTargets <= 4);
+	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
 	// save state
 	
@@ -1396,7 +1394,7 @@ static void gxValidatePipelineState()
 			pipelineDescriptor.fragmentFunction = psFunction;
 			pipelineDescriptor.vertexDescriptor = vertexDescriptor;
 			
-			for (int i = 0; i < 4; ++i)
+			for (int i = 0; i < kMaxColorTargets; ++i)
 			{
 				if (renderState.renderPass.colorFormat[i] == 0)
 					continue;

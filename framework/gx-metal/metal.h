@@ -57,6 +57,8 @@ void setColorWriteMask(int r, int g, int b, int a);
 #import <Metal/Metal.h>
 #include "gx_mesh.h"
 
+static const int kMaxColorTargets = 8;
+
 struct RenderPipelineState
 {
 	BLEND_MODE blendMode = BLEND_ALPHA;
@@ -68,7 +70,7 @@ struct RenderPipelineState
 	
 	struct RenderPass
 	{
-		uint16_t colorFormat[4] = { };
+		uint16_t colorFormat[kMaxColorTargets] = { };
 		uint16_t depthFormat = 0;
 	} renderPass;
 };
