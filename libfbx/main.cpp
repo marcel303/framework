@@ -174,7 +174,7 @@ int main(int argc, char * argv[])
 	bool dumpAll = true;
 	bool dumpAllButDoItSilently = false;
 	bool dumpHierarchy = true;
-	const char * filename = "test.fbx";
+	const char * filename = CHIBI_RESOURCE_PATH "/test.fbx";
 	
 	for (int i = 1; i < argc; ++i)
 	{
@@ -213,12 +213,20 @@ int main(int argc, char * argv[])
 	
 	if (dumpAll)
 	{
-		logger.dumpFileContents(dumpAllButDoItSilently);
+		fbxLog(logIndent, "-- file contents --\n");
+		{
+			logger.dumpFileContents(dumpAllButDoItSilently);
+		}
+		fbxLog(logIndent, "\n");
 	}
 	
 	if (dumpHierarchy)
 	{
-		logger.dumpHierarchy();
+		fbxLog(logIndent, "-- hierarchy --\n");
+		{
+			logger.dumpHierarchy();
+		}
+		fbxLog(logIndent, "\n");
 	}
 	
 	return 0;
