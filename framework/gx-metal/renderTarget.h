@@ -6,7 +6,9 @@
 
 class ColorTarget : ColorTargetBase
 {
-	void * m_colorTexture = nullptr;
+	void * m_colorTexture = nullptr; // texture for use as a render target. ignores sRGB pixel format, to make it possible to write to it directly using sRGB data, and read it back linearly (using the texture view below)
+	
+	void * m_colorTextureView = nullptr; // view for use with texture sampling. uses sRGB pixel format when requested
 	int m_colorTextureId = 0;
 	bool m_ownsTexture = true;
 	
@@ -20,6 +22,7 @@ public:
 	ColorTarget(void * colorTexture)
 	{
 		m_colorTexture = colorTexture;
+		m_colorTextureView = colorTexture;
 		m_ownsTexture = false;
 	}
 	
@@ -64,6 +67,7 @@ public:
 	}
 	
 	void * getMetalTexture() const { return m_colorTexture; }
+	void * getMetalTextureView() const { return m_colorTextureView; }
 };
 
 //

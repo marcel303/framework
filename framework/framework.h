@@ -539,6 +539,7 @@ void popWindow();
 enum SURFACE_FORMAT
 {
 	SURFACE_RGBA8,
+	SURFACE_RGBA8_SRGB, // perform srgb to linear conversion when sampling the texture
 	SURFACE_RGBA16F,
 	SURFACE_RGBA32F,
 	SURFACE_R8,
