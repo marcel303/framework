@@ -18,6 +18,8 @@ static GLenum translateColorFormat(const SURFACE_FORMAT format)
 
 	if (format == SURFACE_RGBA8)
 		glFormat = GL_RGBA8;
+	if (format == SURFACE_RGBA8_SRGB)
+		glFormat = GL_SRGB8_ALPHA8;
 	if (format == SURFACE_RGBA16F)
 		glFormat = GL_RGBA16F;
 	if (format == SURFACE_RGBA32F)
@@ -160,7 +162,7 @@ static GLenum translateDepthFormat(const DEPTH_FORMAT format)
 #if ENABLE_DESKTOP_OPENGL
 	// todo : gles : float32 depth format ?
 	if (format == DEPTH_FLOAT32)
-		glFormat = GL_DEPTH_COMPONENT32;
+		glFormat = GL_DEPTH32F_STENCIL8;
 #endif
 
 	return glFormat;
@@ -174,6 +176,12 @@ DepthTarget::~DepthTarget()
 bool DepthTarget::init(const DepthTargetProperties & in_properties)
 {
 	bool result = true;
+	
+	//
+	
+	free();
+	
+	//
 	
 	properties = in_properties;
 	
