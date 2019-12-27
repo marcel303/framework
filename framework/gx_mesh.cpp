@@ -68,9 +68,6 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 	{
 		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
 		
-		glEnableVertexAttribArray(vsInputs[i].id);
-		checkErrorGL();
-		
 		const GLenum type =
 			vsInputs[i].type == GX_ELEMENT_FLOAT32 ? GL_FLOAT :
 			vsInputs[i].type == GX_ELEMENT_UINT8 ? GL_UNSIGNED_BYTE :
@@ -84,6 +81,9 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 		Assert(stride != 0);
 		if (stride == 0)
 			continue;
+		
+		glEnableVertexAttribArray(vsInputs[i].id);
+		checkErrorGL();
 		
 		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].numComponents, type, vsInputs[i].normalize, stride, (void*)(intptr_t)vsInputs[i].offset);
 		checkErrorGL();
@@ -146,8 +146,6 @@ void GxMesh::draw(const GX_PRIMITIVE_TYPE type) const
 	
 	gxValidateMatrices();
 	
-	const int numIndices = m_indexBuffer->getNumIndices();
-	
 	// bind vertex arrays
 
 	fassert(m_vertexBuffer && m_vertexBuffer->m_vertexArray);
@@ -159,6 +157,8 @@ void GxMesh::draw(const GX_PRIMITIVE_TYPE type) const
 		m_indexBuffer->getFormat() == GX_INDEX_16
 		? GL_UNSIGNED_SHORT
 		: GL_UNSIGNED_INT;
+	
+	const int numIndices = m_indexBuffer->getNumIndices();
 	
 	glDrawElements(GL_TRIANGLES, numIndices, indexType, 0);
 	checkErrorGL();
@@ -181,5 +181,7 @@ void GxMesh::draw(const GX_PRIMITIVE_TYPE type) const
 	{
 		Assert(false); // not implemented yet
 	}
+	
+	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
 #endif
 }

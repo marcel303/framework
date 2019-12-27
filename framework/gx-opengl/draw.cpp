@@ -292,14 +292,14 @@ static bool s_gxTextureEnabled = false;
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
 
-static const VsInput vsInputs[] =
+static const VsInput s_gxVsInputs[] =
 {
 	{ VS_POSITION, 4, GL_FLOAT, 0, offsetof(GxVertex, px) },
 	{ VS_NORMAL,   3, GL_FLOAT, 0, offsetof(GxVertex, nx) },
 	{ VS_COLOR,    4, GL_FLOAT, 0, offsetof(GxVertex, cx) },
 	{ VS_TEXCOORD, 2, GL_FLOAT, 0, offsetof(GxVertex, tx) }
 };
-const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
+const int numGxVsInputs = sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]);
 
 void gxEmitVertex();
 
@@ -339,7 +339,7 @@ void gxInitialize()
 			#endif
 			glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[i]);
 			checkErrorGL();
-			bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
+			bindVsInputs(s_gxVsInputs, numGxVsInputs, sizeof(GxVertex));
 		}
 	}
 
@@ -685,6 +685,10 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 		glDrawArrays(toOpenGLPrimitiveType(primitiveType), 0, numVertices);
 		checkErrorGL();
 	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
 
 	globals.gxShaderIsDirty = false;
 }
@@ -919,6 +923,131 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	if (internalFormat == GL_RGBA8) return GX_RGBA8_UNORM;
 
 	return GX_UNKNOWN_FORMAT;
+}
+
+//
+
+#include "gx_mesh.h"
+
+// todo : perhaps these functions should be in mesh.cpp
+
+// fixme : this is duplicated in mesh.cpp, and also it's a duplicate of the OpenGL-specific bindVsInputs function. todo : unify bindVsInputs, update where we used OpenGL-specific VsInputs to use this version
+/*
+static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
+{
+	for (int i = 0; i < numVsInputs; ++i)
+	{
+		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
+		
+		glEnableVertexAttribArray(vsInputs[i].id);
+		checkErrorGL();
+		
+		const GLenum type =
+			vsInputs[i].type == GX_ELEMENT_FLOAT32 ? GL_FLOAT :
+			vsInputs[i].type == GX_ELEMENT_UINT8 ? GL_UNSIGNED_BYTE :
+			GL_INVALID_ENUM;
+
+		Assert(type != GL_INVALID_ENUM);
+		if (type == GL_INVALID_ENUM)
+			continue;
+		
+		const int stride = vsStride ? vsStride : vsInputs[i].stride;
+		Assert(stride != 0);
+		if (stride == 0)
+			continue;
+		
+		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].numComponents, type, vsInputs[i].normalize, stride, (void*)(intptr_t)vsInputs[i].offset);
+		checkErrorGL();
+	}
+}
+*/
+
+void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
+{
+	if (buffer == nullptr)
+	{
+		// restore buffer bindings to the default GX buffer bindings
+		
+		bindVsInputs(s_gxVsInputs, numGxVsInputs, sizeof(GxVertex));
+		
+		glBindVertexArray(0);
+		checkErrorGL();
+	}
+	else
+	{
+		// bind the specified vertex buffer and vertex buffer bindings
+		
+		//bindVsInputs(vsInputs, numVsInputs, vsStride);
+		
+		glBindVertexArray(buffer->getOpenglVertexArray());
+		checkErrorGL();
+	}
+}
+
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer)
+{
+	Assert(type == GX_TRIANGLES); // todo : translate primitive type
+	if (type != GX_TRIANGLES)
+		return;
+	
+	Shader genericShader("engine/Generic");
+
+	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+
+	setShader(shader);
+
+	gxValidateMatrices();
+
+	const GLenum indexType =
+		indexBuffer->getFormat() == GX_INDEX_16
+		? GL_UNSIGNED_SHORT
+		: GL_UNSIGNED_INT;
+
+	const int numIndices = indexBuffer->getNumIndices();
+
+	const ShaderCacheElem & shaderElem = shader.getCacheElem();
+	
+	if (shader.isValid())
+	{
+		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+		{
+			shader.setImmediate(
+				shaderElem.params[ShaderCacheElem::kSp_Params].index,
+				s_gxTextureEnabled ? 1 : 0,
+				globals.colorMode,
+				globals.colorPost,
+				globals.colorClamp);
+		}
+
+		if (globals.gxShaderIsDirty)
+		{
+			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+		}
+		
+		//
+		
+		Assert(indexBuffer->getOpenglIndexArray() != 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->getOpenglIndexArray());
+		checkErrorGL();
+		
+		glDrawElements(GL_TRIANGLES, numIndices, indexType, 0);
+		checkErrorGL();
+		
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		checkErrorGL();
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+
+	if (&shader == &genericShader)
+	{
+		clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
+	}
+
+	globals.gxShaderIsDirty = false;
 }
 
 #endif
