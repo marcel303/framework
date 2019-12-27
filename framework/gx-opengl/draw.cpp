@@ -273,12 +273,11 @@ struct GxVertex
 #else
     #define GX_USE_ELEMENT_ARRAY_BUFFER 0
 #endif
-#define GX_VAO_COUNT 1
 
 static Shader s_gxShader;
-static GLuint s_gxVertexArrayObject[GX_VAO_COUNT] = { };
-static GLuint s_gxVertexBufferObject[GX_VAO_COUNT] = { };
-static GLuint s_gxIndexBufferObject[GX_VAO_COUNT] = { };
+static GLuint s_gxVertexArrayObject = 0;
+static GLuint s_gxVertexBufferObject = 0;
+static GLuint s_gxIndexBufferObject = 0;
 static GxVertex s_gxVertexBuffer[1024*16];
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
@@ -317,32 +316,28 @@ void gxInitialize()
 	s_gxVertex.cz = 1.f;
 	s_gxVertex.cw = 1.f;
 
-	fassert(s_gxVertexBufferObject[0] == 0);
-	glGenBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
+	fassert(s_gxVertexBufferObject == 0);
+	glGenBuffers(1, &s_gxVertexBufferObject);
 	
-	fassert(s_gxIndexBufferObject[0] == 0);
-	glGenBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
+	fassert(s_gxIndexBufferObject == 0);
+	glGenBuffers(1, &s_gxIndexBufferObject);
 	
 	// create vertex array
-	fassert(s_gxVertexArrayObject[0] == 0);
-	glGenVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
+	fassert(s_gxVertexArrayObject == 0);
+	glGenVertexArrays(1, &s_gxVertexArrayObject);
 	checkErrorGL();
 
-	for (int i = 0; i < GX_VAO_COUNT; ++i)
+	glBindVertexArray(s_gxVertexArrayObject);
+	checkErrorGL();
 	{
-		glBindVertexArray(s_gxVertexArrayObject[i]);
+	#if GX_USE_ELEMENT_ARRAY_BUFFER
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
 		checkErrorGL();
-		{
-			#if GX_USE_ELEMENT_ARRAY_BUFFER
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[i]);
-			checkErrorGL();
-			#endif
-			glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[i]);
-			checkErrorGL();
-			bindVsInputs(s_gxVsInputs, numGxVsInputs, sizeof(GxVertex));
-		}
+	#endif
+		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
+		checkErrorGL();
+		bindVsInputs(s_gxVsInputs, numGxVsInputs, sizeof(GxVertex));
 	}
-
 	glBindVertexArray(0);
 	checkErrorGL();
 	
@@ -359,22 +354,22 @@ void gxShutdown()
 	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 #endif
 	
-	if (s_gxVertexArrayObject[0] != 0)
+	if (s_gxVertexArrayObject != 0)
 	{
-		glDeleteVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
-		memset(s_gxVertexArrayObject, 0, sizeof(s_gxVertexArrayObject));
+		glDeleteVertexArrays(1, &s_gxVertexArrayObject);
+		s_gxVertexArrayObject = 0;
 	}
 	
-	if (s_gxVertexBufferObject[0] != 0)
+	if (s_gxVertexBufferObject != 0)
 	{
-		glDeleteBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
-		memset(s_gxVertexBufferObject, 0, sizeof(s_gxVertexBufferObject));
+		glDeleteBuffers(1, &s_gxVertexBufferObject);
+		s_gxVertexBufferObject = 0;
 	}
 
-	if (s_gxIndexBufferObject[0] != 0)
+	if (s_gxIndexBufferObject != 0)
 	{
-		glDeleteBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
-		memset(s_gxIndexBufferObject, 0, sizeof(s_gxIndexBufferObject));
+		glDeleteBuffers(1, &s_gxIndexBufferObject);
+		s_gxIndexBufferObject = 0;
 	}
 	
 	s_gxPrimitiveType = GX_INVALID_PRIM;
@@ -433,17 +428,14 @@ static void gxFlush(bool endOfBatch)
 		setShader(shader);
 		
 		gxValidateMatrices();
-		
-		static int vaoIndex = 0;
-		vaoIndex = (vaoIndex + 1) % GX_VAO_COUNT;
 
-		glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
+		glBindVertexArray(s_gxVertexArrayObject);
 		checkErrorGL();
-
-		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[vaoIndex]);
-		#if GX_USE_BUFFER_RENAMING
+		
+		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
+	#if GX_USE_BUFFER_RENAMING
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, 0, GX_BUFFER_DRAW_MODE);
-		#endif
+	#endif
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GX_BUFFER_DRAW_MODE);
 		checkErrorGL();
 		
@@ -452,7 +444,7 @@ static void gxFlush(bool endOfBatch)
 		int numElements = s_gxVertexCount;
 		int numIndices = 0;
 
-	#if !GX_USE_ELEMENT_ARRAY_BUFFER || GX_VAO_COUNT > 1
+	#if !GX_USE_ELEMENT_ARRAY_BUFFER
 		bool needToRegenerateIndexBuffer = true;
 	#else
 		bool needToRegenerateIndexBuffer = false;
@@ -471,6 +463,10 @@ static void gxFlush(bool endOfBatch)
 		if (s_gxPrimitiveType == GX_QUADS)
 		{
 			fassert(s_gxVertexCount <= 65536);
+		
+		#if GX_USE_ELEMENT_ARRAY_BUFFER
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
+		#endif
 			
 			// todo: use triangle strip + compute index buffer once at init time
 			
@@ -498,7 +494,6 @@ static void gxFlush(bool endOfBatch)
 				}
 			
 			#if GX_USE_ELEMENT_ARRAY_BUFFER
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[vaoIndex]);
 				#if GX_USE_BUFFER_RENAMING
 				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, 0, GX_BUFFER_DRAW_MODE);
 				#endif
@@ -537,11 +532,11 @@ static void gxFlush(bool endOfBatch)
 
 			if (indexed)
 			{
-				#if GX_USE_ELEMENT_ARRAY_BUFFER
+			#if GX_USE_ELEMENT_ARRAY_BUFFER
 				glDrawElements(glPrimitiveType, numElements, INDEX_TYPE, 0);
-				#else
+			#else
 				glDrawElements(glPrimitiveType, numElements, INDEX_TYPE, indices);
-				#endif
+			#endif
 				checkErrorGL();
 			}
 			else
@@ -654,8 +649,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	//
 
-	const int vaoIndex = 0;
-	glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
+	glBindVertexArray(s_gxVertexArrayObject);
 	checkErrorGL();
 
 	//
@@ -932,15 +926,20 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 // todo : perhaps these functions should be in mesh.cpp
 
 // fixme : this is duplicated in mesh.cpp, and also it's a duplicate of the OpenGL-specific bindVsInputs function. todo : unify bindVsInputs, update where we used OpenGL-specific VsInputs to use this version
-/*
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
+	// make sure to disable old attributes, to avoid reading from stale memory
+// todo : add a constant for the maximum number of vertex inputs
+
+	for (int i = 0; i < 16; ++i)
+	{
+		glDisableVertexAttribArray(i);
+		checkErrorGL();
+	}
+	
 	for (int i = 0; i < numVsInputs; ++i)
 	{
 		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
-		
-		glEnableVertexAttribArray(vsInputs[i].id);
-		checkErrorGL();
 		
 		const GLenum type =
 			vsInputs[i].type == GX_ELEMENT_FLOAT32 ? GL_FLOAT :
@@ -956,16 +955,26 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 		if (stride == 0)
 			continue;
 		
+		glEnableVertexAttribArray(vsInputs[i].id);
+		checkErrorGL();
+		
 		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].numComponents, type, vsInputs[i].normalize, stride, (void*)(intptr_t)vsInputs[i].offset);
 		checkErrorGL();
 	}
 }
-*/
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
+// todo : use a separate VAO for custom draw ?
+
 	if (buffer == nullptr)
 	{
+		glBindVertexArray(s_gxVertexArrayObject);
+		checkErrorGL();
+		
+		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
+		checkErrorGL();
+		
 		// restore buffer bindings to the default GX buffer bindings
 		
 		bindVsInputs(s_gxVsInputs, numGxVsInputs, sizeof(GxVertex));
@@ -977,9 +986,15 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 	{
 		// bind the specified vertex buffer and vertex buffer bindings
 		
-		//bindVsInputs(vsInputs, numVsInputs, vsStride);
+		glBindVertexArray(s_gxVertexArrayObject);
+		checkErrorGL();
 		
-		glBindVertexArray(buffer->getOpenglVertexArray());
+		glBindBuffer(GL_ARRAY_BUFFER, buffer->getOpenglVertexArray());
+		checkErrorGL();
+		
+		bindVsInputs(vsInputs, numVsInputs, vsStride);
+		
+		glBindVertexArray(0);
 		checkErrorGL();
 	}
 }
@@ -1027,6 +1042,9 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 		
 		//
 		
+		glBindVertexArray(s_gxVertexArrayObject);
+		checkErrorGL();
+		
 		Assert(indexBuffer->getOpenglIndexArray() != 0);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->getOpenglIndexArray());
 		checkErrorGL();
@@ -1035,6 +1053,9 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 		checkErrorGL();
 		
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+		checkErrorGL();
+		
+		glBindVertexArray(0);
 		checkErrorGL();
 	}
 	else
