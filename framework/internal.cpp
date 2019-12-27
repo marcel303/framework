@@ -195,28 +195,6 @@ public:
 #endif
 };
 
-//
-
-#if ENABLE_OPENGL // todo : remove bindVsInputs
-
-void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
-{
-	checkErrorGL();
-	
-	for (int i = 0; i < numVsInputs; ++i)
-	{
-		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
-		
-		glEnableVertexAttribArray(vsInputs[i].id);
-		checkErrorGL();
-		
-		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)(intptr_t)vsInputs[i].offset);
-		checkErrorGL();
-	}
-}
-
-#endif
-
 // -----
 
 #if USE_STBFONT || ENABLE_MSDF_FONTS

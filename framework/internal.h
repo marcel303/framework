@@ -459,23 +459,6 @@ public:
 
 //
 
-#if ENABLE_OPENGL
-
-struct VsInput
-{
-	int id;
-	int components;
-	int type;
-	bool normalize;
-	int offset;
-};
-
-void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride);
-
-#endif
-
-//
-
 #if USE_STBFONT || ENABLE_MSDF_FONTS
 
 class StbFont

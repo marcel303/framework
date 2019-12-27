@@ -30,6 +30,7 @@
 #if ENABLE_OPENGL && !USE_LEGACY_OPENGL
 
 #include "data/engine/ShaderCommon.txt" // VS_ constants
+#include "gx_mesh.h"
 #include "internal.h"
 #include "Quat.h"
 #include "shaders.h" // registerBuiltinShaders
@@ -46,6 +47,8 @@
 #else
 	typedef unsigned short glindex_t;
 #endif
+
+static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 
 extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
 
@@ -291,12 +294,12 @@ static bool s_gxTextureEnabled = false;
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
 
-static const VsInput s_gxVsInputs[] =
+static const GxVertexInput s_gxVsInputs[] =
 {
-	{ VS_POSITION, 4, GL_FLOAT, 0, offsetof(GxVertex, px) },
-	{ VS_NORMAL,   3, GL_FLOAT, 0, offsetof(GxVertex, nx) },
-	{ VS_COLOR,    4, GL_FLOAT, 0, offsetof(GxVertex, cx) },
-	{ VS_TEXCOORD, 2, GL_FLOAT, 0, offsetof(GxVertex, tx) }
+	{ VS_POSITION, 4, GX_ELEMENT_FLOAT32, 0, offsetof(GxVertex, px), 0 },
+	{ VS_NORMAL,   3, GX_ELEMENT_FLOAT32, 0, offsetof(GxVertex, nx), 0 },
+	{ VS_COLOR,    4, GX_ELEMENT_FLOAT32, 0, offsetof(GxVertex, cx), 0 },
+	{ VS_TEXCOORD, 2, GX_ELEMENT_FLOAT32, 0, offsetof(GxVertex, tx), 0 }
 };
 const int numGxVsInputs = sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]);
 

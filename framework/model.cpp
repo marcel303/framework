@@ -58,13 +58,13 @@ namespace AnimModel
 {
 	static const GxVertexInput vsInputs[] =
 	{
-		{ VS_POSITION,      3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, px)          },
-		{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, nx)          },
-		{ VS_COLOR,         4, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, cx)          },
-		{ VS_TEXCOORD0,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx)          },
-		{ VS_TEXCOORD1,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx)          }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
-		{ VS_BLEND_INDICES, 4, GX_ELEMENT_UINT8,   0, offsetof(Vertex, boneIndices) },
-		{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_UINT8,   1, offsetof(Vertex, boneWeights) }
+		{ VS_POSITION,      3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, px),          0 },
+		{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, nx),          0 },
+		{ VS_COLOR,         4, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, cx),          0 },
+		{ VS_TEXCOORD0,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx),          0 },
+		{ VS_TEXCOORD1,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx),          0 }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
+		{ VS_BLEND_INDICES, 4, GX_ELEMENT_UINT8,   0, offsetof(Vertex, boneIndices), 0 },
+		{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_UINT8,   1, offsetof(Vertex, boneWeights), 0 }
 	};
 	const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
 
