@@ -217,7 +217,7 @@ namespace gltf
 								
 								primitive.indices = primitive_json.value("indices", -1);
 								primitive.material = primitive_json.value("material", -1);
-								primitive.mode = primitive_json.value("mode", -1);
+								primitive.mode = primitive_json.value("mode", 4);
 								
 								for (auto primitive_member_itr = primitive_json.begin(); primitive_member_itr != primitive_json.end(); ++primitive_member_itr)
 								{
@@ -328,7 +328,10 @@ namespace gltf
 					*/
 					
 					if (!sampler.isValid())
+					{
+						logDebug("sampler is invalid");
 						return false;
+					}
 					
 					scene.samplers.push_back(sampler);
 				}
@@ -391,6 +394,8 @@ namespace gltf
 						if (pbrSpecularGlossiness_itr != extensions.end())
 						{
 							auto & pbrSpecularGlossiness = pbrSpecularGlossiness_itr.value();
+							
+							material.pbrSpecularGlossiness.isSet = true;
 							
 							material.pbrSpecularGlossiness.diffuseFactor = pbrSpecularGlossiness.value("diffuseFactor", colorWhite);
 							

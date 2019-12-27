@@ -225,6 +225,8 @@ namespace gltf
 				int texCoord = 0;
 			};
 			
+			bool isSet = false; // are these material properties set in the GLTF file?
+			
 			Color diffuseFactor = colorWhite;
 			DiffuseTexture diffuseTexture;
 			Vec3 specularFactor = Vec3(1, 1, 1);
@@ -268,7 +270,6 @@ namespace gltf
 		{
 			return
 				indices >= 0 &&
-				material >= 0 &&
 				mode >= 0;
 		}
 	};
