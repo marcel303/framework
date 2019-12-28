@@ -72,7 +72,7 @@ struct ShaderCacheElem
 
 struct ShaderCacheElem_Metal : ShaderCacheElem
 {
-	static const int kMaxBuffers = 4;
+	static const int kMaxBuffers = 16;
 	
 	static const int kMaxVsTextures = 2;
 	static const int kMaxPsTextures = 8;

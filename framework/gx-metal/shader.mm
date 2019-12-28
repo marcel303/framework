@@ -571,17 +571,27 @@ void Shader::setTextureUniform(GxImmediateIndex index, int unit, GxTextureId tex
 	Assert(index >= 0 && index < m_cacheElem->textureInfos.size());
 	auto & info = m_cacheElem->textureInfos[index];
 	
-	auto i = s_textures.find(texture);
-	Assert(i != s_textures.end());
-
-	if (i != s_textures.end())
+	if (texture == 0)
 	{
-		auto metal_texture = i->second;
-		
 		if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
-			m_cacheElem->vsTextures[info.vsOffset] = metal_texture;
+			m_cacheElem->vsTextures[info.vsOffset] = nullptr;
 		if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
-			m_cacheElem->psTextures[info.psOffset] = metal_texture;
+			m_cacheElem->psTextures[info.psOffset] = nullptr;
+	}
+	else
+	{
+		auto i = s_textures.find(texture);
+		Assert(i != s_textures.end());
+
+		if (i != s_textures.end())
+		{
+			auto metal_texture = i->second;
+			
+			if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
+				m_cacheElem->vsTextures[info.vsOffset] = metal_texture;
+			if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
+				m_cacheElem->psTextures[info.psOffset] = metal_texture;
+		}
 	}
 }
 

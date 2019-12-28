@@ -1339,6 +1339,8 @@ static void gxValidatePipelineState()
 		
 			MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 		
+			const bool useMultipleVertexBuffers = (renderState.vertexStride == 0);
+			
 			for (int i = 0; i < renderState.vertexInputCount; ++i)
 			{
 				auto & e = renderState.vertexInputs[i];
@@ -1373,19 +1375,40 @@ static void gxValidatePipelineState()
 				if (metalFormat != MTLVertexFormatInvalid)
 				{
 					a.format = metalFormat;
-					a.offset = e.offset;
-					a.bufferIndex = 0;
+					a.offset = useMultipleVertexBuffers ? 0 : e.offset;
+					a.bufferIndex = useMultipleVertexBuffers ? i : 0;
+					
+					if (useMultipleVertexBuffers)
+					{
+						// todo : assign vertex buffers
+					
+						// todo : add shader version which has multiple vertex buffers, one for each attribute, so we can
+						//        choose between 'one vertex buffer with packed vertices' or
+						//        'many vertex buffers with a per-attribute vertex stream'
+						//        use gxSetVertexBuffers(vsInputs, numVsInputs, vsInputBuffers)
+		
+						if (e.stride == 0)
+						{
+							vertexDescriptor.layouts[i].stride = 16;
+							vertexDescriptor.layouts[i].stepRate = 1;
+							vertexDescriptor.layouts[i].stepFunction = MTLVertexStepFunctionPerVertex;
+						}
+						else
+						{
+							vertexDescriptor.layouts[i].stride = e.stride;
+							vertexDescriptor.layouts[i].stepRate = 1;
+							vertexDescriptor.layouts[i].stepFunction = MTLVertexStepFunctionPerVertex;
+						}
+					}
 				}
 			}
 			
-		// todo : add shader version which has multiple vertex buffers, one for each attribute, so we can
-		//        choose between 'one vertex buffer with packed vertices' or
-		//        'many vertex buffers with a per-attribute vertex stream'
-		//        use gxSetVertexBuffers(vsInputs, numVsInputs, vsInputBuffers)
-		
-			vertexDescriptor.layouts[0].stride = renderState.vertexStride;
-			vertexDescriptor.layouts[0].stepRate = 1;
-			vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+			if (useMultipleVertexBuffers == false)
+			{
+				vertexDescriptor.layouts[0].stride = renderState.vertexStride;
+				vertexDescriptor.layouts[0].stepRate = 1;
+				vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+			}
 		
 			MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
 			pipelineDescriptor.label = [NSString stringWithCString:shaderElem.name.c_str() encoding:NSASCIIStringEncoding];
@@ -2103,10 +2126,30 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
-	bindVsInputs(vsInputs, numVsInputs, vsStride);
+	if (buffer == nullptr)
+	{
+		// restore buffer bindings to the default GX buffer bindings
+		
+		bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
+	}
+	else
+	{
+		// bind the specified vertex buffer and vertex buffer bindings
+		
+		bindVsInputs(vsInputs, numVsInputs, vsStride);
 	
-	id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
-	[s_activeRenderPass->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
+		if (vsStride == 0)
+		{
+			id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
+			for (int i = 0; i < numVsInputs; ++i)
+				[s_activeRenderPass->encoder setVertexBuffer:metalBuffer offset:vsInputs[i].offset atIndex:i];
+		}
+		else
+		{
+			id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
+			[s_activeRenderPass->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
+		}
+	}
 }
 
 void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer)

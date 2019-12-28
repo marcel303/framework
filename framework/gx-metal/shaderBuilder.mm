@@ -434,7 +434,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 			};
 			
 			const char * currentUniformBufferName = "";
-			int nextBufferIndex = 1;
+			int nextBufferIndex = 8;
 			std::string bufferArguments;
 			
 			for (auto & u : uniforms)
