@@ -678,6 +678,8 @@ namespace gltf
 			vertexBuffers[bufferIndex++] = vertexBuffer;
 		}
 		
+		Assert(bufferIndex == scene.buffers.size());
+		
 		// create index buffers and meshes for mesh primitives
 		
 		for (auto & mesh : scene.meshes)
@@ -730,9 +732,19 @@ namespace gltf
 				
 				// create mappings between vertex buffers and vertex shaders
 				
-				std::vector<GxVertexInput> vertexInputs;
-				
 				int vertexBufferIndex = -1;
+				
+				GxVertexInput vsInputs[] =
+				{
+					{ VS_POSITION,      3, GX_ELEMENT_FLOAT32, 0, 0, 12 },
+					{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, 0, 12 },
+					{ VS_COLOR,         4, GX_ELEMENT_FLOAT32, 0, 0, 16 },
+					{ VS_TEXCOORD0,     2, GX_ELEMENT_FLOAT32, 0, 0,  8 },
+					{ VS_TEXCOORD1,     2, GX_ELEMENT_FLOAT32, 0, 0,  8 },
+					{ VS_BLEND_INDICES, 4, GX_ELEMENT_UINT8,   0, 0,  4 },
+					{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_UINT8,   1, 0,  4 }
+				};
+				const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
 				
 				for (auto & attribute : primitive.attributes)
 				{
@@ -809,15 +821,19 @@ namespace gltf
 						continue;
 					}
 					
-					GxVertexInput v;
+					GxVertexInput * v_ptr = nullptr;
+					
+					for (int i = 0; i < numVsInputs; ++i)
+						if (vsInputs[i].id == id)
+							v_ptr = &vsInputs[i];
+					
+					GxVertexInput & v = *v_ptr;
 					v.id = id;
 					v.numComponents = numComponents;
 					v.type = type;
 					v.normalize = accessor->normalized;
 					v.offset = bufferView->byteOffset + accessor->byteOffset;
 					v.stride = bufferView->byteStride;
-					
-					vertexInputs.push_back(v);
 				}
 				
 				if (vertexBufferIndex < 0)
@@ -833,7 +849,7 @@ namespace gltf
 				GxVertexBuffer * vertexBuffer = vertexBuffers[vertexBufferIndex];
 				
 				GxMesh * gxMesh = new GxMesh();
-				gxMesh->setVertexBuffer(vertexBuffer, &vertexInputs.front(), vertexInputs.size(), 0);
+				gxMesh->setVertexBuffer(vertexBuffer, vsInputs, numVsInputs, 0);
 				gxMesh->setIndexBuffer(indexBuffer);
 				
 				Assert(meshes[&mesh] == nullptr);

@@ -7,7 +7,7 @@
 #define VIEW_SX 1000
 #define VIEW_SY 600
 
-#define USE_BUFFER_CACHE 0 // create static vertex and index buffers from gltf resources
+#define USE_BUFFER_CACHE 1 // create static vertex and index buffers from gltf resources
 
 #define ANIMATED_CAMERA 0 // todo : remove option and use hybrid
 
