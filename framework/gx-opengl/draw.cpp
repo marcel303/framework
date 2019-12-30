@@ -933,6 +933,11 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 
 #else // USE_LEGACY_OPENGL
 
+#include "shaders.h" // registerBuiltinShaders
+
+// for gxSetVertexBuffer, gxDrawIndexedPrimitives
+static GLuint s_gxVertexArrayObjectForCustomDraw = 0;
+
 void gxInitialize()
 {
 	// create vertex array for custom draw
@@ -1124,6 +1129,8 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 }
 
 #endif
+
+#include "gx_mesh.h" // GxVertexInput
 
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
