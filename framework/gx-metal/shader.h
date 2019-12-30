@@ -128,6 +128,9 @@ struct ShaderCacheElem_Metal : ShaderCacheElem
 	id <MTLTexture> vsTextures[kMaxVsTextures] = { };
 	id <MTLTexture> psTextures[kMaxPsTextures] = { };
 	
+	uint8_t vsTextureSamplers[kMaxPsTextures] = { };
+	uint8_t psTextureSamplers[kMaxPsTextures] = { };
+	
 	mutable std::map<uint32_t, id <MTLRenderPipelineState>> m_pipelines;
 	
 	~ShaderCacheElem_Metal()

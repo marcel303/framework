@@ -537,11 +537,13 @@ inline int getTextureIndex(const ShaderCacheElem_Metal & elem, const char * name
 	return -1;
 }
 
+// todo : remove setTextureUnit
 void Shader::setTextureUnit(const char * name, int unit)
 {
 	not_implemented;
 }
 
+// todo : remove setTextureUnit
 void Shader::setTextureUnit(GxImmediateIndex index, int unit)
 {
 	not_implemented;
@@ -557,17 +559,33 @@ void Shader::setTexture(const char * name, int unit, GxTextureId texture)
 	}
 }
 
+// todo : make this a shader method ?
+static void setTextureSamplerUniform(ShaderCacheElem_Metal * cacheElem, GxImmediateIndex index, const bool filter, const bool clamp)
+{
+	Assert(index >= 0 && index < cacheElem->textureInfos.size());
+	auto & info = cacheElem->textureInfos[index];
+	
+	const int sampler_index = ((filter ? 2 : 0) << 1) | clamp;
+	
+	if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
+		cacheElem->vsTextureSamplers[info.vsOffset] = sampler_index;
+	if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
+		cacheElem->psTextureSamplers[info.psOffset] = sampler_index;
+}
+
 void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
 {
-	not_implemented;
+	const int index = getTextureIndex(*m_cacheElem, name);
 	
-	setTexture(name, unit, texture);
+	if (index >= 0)
+	{
+		setTextureUniform(index, unit, texture);
+		setTextureSamplerUniform(m_cacheElem, index, filtered, clamp);
+	}
 }
 
 void Shader::setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture)
 {
-	not_implemented;
-	
 	Assert(index >= 0 && index < m_cacheElem->textureInfos.size());
 	auto & info = m_cacheElem->textureInfos[index];
 	

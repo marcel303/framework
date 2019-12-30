@@ -62,6 +62,8 @@ MetalWindowData * activeWindowData = nullptr;
 
 static std::vector<id <MTLResource>> s_resourcesToFree;
 
+static id<MTLSamplerState> samplerStates[3 * 2]; // [filter(nearest, linear, mipmapped)][clamp(false, true)]
+
 //
 
 #include <stack>
@@ -112,6 +114,41 @@ void metal_init()
 	device = MTLCreateSystemDefaultDevice();
 	
 	queue = [device newCommandQueue];
+	
+	@autoreleasepool
+	{
+		for (int filter = 0; filter < 3; ++filter)
+		{
+			for (int clamp = 0; clamp < 2; ++clamp)
+			{
+				auto * descriptor = [[MTLSamplerDescriptor new] autorelease];
+				
+				descriptor.minFilter =
+					(filter == 0)
+					? MTLSamplerMinMagFilterNearest
+					: MTLSamplerMinMagFilterLinear;
+				descriptor.magFilter =
+					(filter == 0)
+					? MTLSamplerMinMagFilterNearest
+					: MTLSamplerMinMagFilterLinear;
+				
+				descriptor.mipFilter =
+					(filter == 0 || filter == 1)
+					? MTLSamplerMipFilterNotMipmapped
+					: MTLSamplerMipFilterLinear;
+				
+				descriptor.sAddressMode =
+					(clamp == 0)
+					? MTLSamplerAddressModeRepeat
+					: MTLSamplerAddressModeClampToEdge;
+				descriptor.tAddressMode = descriptor.sAddressMode;
+				
+				const int index = (filter << 1) | clamp;
+				
+				samplerStates[index] = [device newSamplerStateWithDescriptor:descriptor];
+			}
+		}
+	}
 }
 
 void metal_attach(SDL_Window * window)
@@ -1155,6 +1192,7 @@ static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 static GxTextureId s_gxTexture = 0;
 static bool s_gxTextureEnabled = false;
+static int s_gxTextureSampler = 0;
 
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
@@ -2107,7 +2145,12 @@ void gxSetTexture(GxTextureId texture)
 
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 {
-	fassert(false); // todo
+	const int filter_index =
+		filter == GX_SAMPLE_NEAREST ? 0 :
+		filter == GX_SAMPLE_LINEAR ? 1 :
+		2;
+		
+	s_gxTextureSampler = (filter_index << 1) | clamp;
 }
 
 //
@@ -2235,25 +2278,8 @@ void gxValidateShaderResources()
 			auto & texture = i->second;
 			[s_activeRenderPass->encoder setFragmentTexture:texture atIndex:0];
 			
-		#if 0 // todo : add sampler state cache and implement gxSetTextureSampler
-			@autoreleasepool
-			{
-				auto * descriptor = [[MTLSamplerDescriptor new] autorelease];
-			#if 1
-				descriptor.minFilter = MTLSamplerMinMagFilterNearest;
-				descriptor.magFilter = MTLSamplerMinMagFilterNearest;
-				descriptor.mipFilter = MTLSamplerMipFilterNotMipmapped;
-			#else
-				descriptor.minFilter = MTLSamplerMinMagFilterLinear;
-				descriptor.magFilter = MTLSamplerMinMagFilterLinear;
-				descriptor.mipFilter = MTLSamplerMipFilterLinear;
-			#endif
-				descriptor.sAddressMode = MTLSamplerAddressModeClampToEdge;
-				descriptor.tAddressMode = MTLSamplerAddressModeClampToEdge;
-				auto samplerState = [[device newSamplerStateWithDescriptor:descriptor] autorelease];
-				[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
-			}
-		#endif
+			id<MTLSamplerState> samplerState = samplerStates[s_gxTextureSampler];
+			[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
 		}
 	}
 	else
@@ -2261,13 +2287,29 @@ void gxValidateShaderResources()
 		auto * shader = static_cast<Shader*>(globals.shader);
 		auto & cacheElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
 		
+	// todo : look at shader to see how many textures are used
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
+		{
 			if (cacheElem.vsTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
+			
+		// todo : set sampler states at the start of a render pass. or set an invalidation bit
+		//        right now we just set it _always_ to pass validation..
+			id<MTLSamplerState> samplerState = samplerStates[cacheElem.vsTextureSamplers[i]];
+			[s_activeRenderPass->encoder setVertexSamplerState:samplerState atIndex:i];
+		}
 		
+	// todo : look at shader to see how many textures are used
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
+		{
 			if (cacheElem.psTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setFragmentTexture:cacheElem.psTextures[i] atIndex:i];
+			
+		// todo : set sampler states at the start of a render pass. or set an invalidation bit
+		//        right now we just set it _always_ to pass validation..
+			id<MTLSamplerState> samplerState = samplerStates[cacheElem.psTextureSamplers[i]];
+			[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:i];
+		}
 	}
 }
 
