@@ -80,6 +80,4 @@ void GxMesh::draw(const GX_PRIMITIVE_TYPE type) const
 	{
 		Assert(false); // not implemented yet
 	}
-	
-	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
 }

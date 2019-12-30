@@ -1644,7 +1644,7 @@ void gxSetMatrixf(GX_MATRIX mode, const float * m);
 static inline void gxValidateMatrices() { }
 
 void gxInitialize();
-static inline void gxShutdown() { }
+void gxShutdown();
 void gxBegin(GLenum type);
 void gxEnd();
 static inline void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices) { } // todo

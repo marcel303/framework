@@ -27,7 +27,9 @@
 
 #include "framework.h"
 
-#if ENABLE_OPENGL && !USE_LEGACY_OPENGL
+#if ENABLE_OPENGL
+
+#if !USE_LEGACY_OPENGL
 
 #include "data/engine/ShaderCommon.txt" // VS_ constants
 #include "gx_mesh.h"
@@ -268,7 +270,6 @@ struct GxVertex
 	float tx, ty;
 };
 
-#define GX_USE_BUFFER_RENAMING 0
 #define GX_BUFFER_DRAW_MODE GL_DYNAMIC_DRAW
 //#define GX_BUFFER_DRAW_MODE GL_STREAM_DRAW
 #if defined(MACOS)
@@ -293,6 +294,9 @@ static bool s_gxTextureEnabled = false;
 
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
+
+// for gxSetVertexBuffer, gxDrawIndexedPrimitives
+static GLuint s_gxVertexArrayObjectForCustomDraw = 0;
 
 static const GxVertexInput s_gxVsInputs[] =
 {
@@ -344,6 +348,11 @@ void gxInitialize()
 	glBindVertexArray(0);
 	checkErrorGL();
 	
+	// create vertex array for custom draw
+	fassert(s_gxVertexArrayObjectForCustomDraw == 0);
+	glGenVertexArrays(1, &s_gxVertexArrayObjectForCustomDraw);
+	checkErrorGL();
+	
 #if ENABLE_DESKTOP_OPENGL
 	// enable seamless cube map sampling along the edges
 	
@@ -356,6 +365,12 @@ void gxShutdown()
 #if ENABLE_DESKTOP_OPENGL
 	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 #endif
+	
+	if (s_gxVertexArrayObjectForCustomDraw != 0)
+	{
+		glDeleteVertexArrays(1, &s_gxVertexArrayObjectForCustomDraw);
+		s_gxVertexArrayObjectForCustomDraw = 0;
+	}
 	
 	if (s_gxVertexArrayObject != 0)
 	{
@@ -436,9 +451,6 @@ static void gxFlush(bool endOfBatch)
 		checkErrorGL();
 		
 		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
-	#if GX_USE_BUFFER_RENAMING
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, 0, GX_BUFFER_DRAW_MODE);
-	#endif
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GX_BUFFER_DRAW_MODE);
 		checkErrorGL();
 		
@@ -497,9 +509,6 @@ static void gxFlush(bool endOfBatch)
 				}
 			
 			#if GX_USE_ELEMENT_ARRAY_BUFFER
-				#if GX_USE_BUFFER_RENAMING
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, 0, GX_BUFFER_DRAW_MODE);
-				#endif
 				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, indices, GX_BUFFER_DRAW_MODE);
 				checkErrorGL();
 			#endif
@@ -922,16 +931,204 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	return GX_UNKNOWN_FORMAT;
 }
 
-//
+#else // USE_LEGACY_OPENGL
 
-#include "gx_mesh.h"
+void gxInitialize()
+{
+	// create vertex array for custom draw
+	fassert(s_gxVertexArrayObjectForCustomDraw == 0);
+	glGenVertexArrays(1, &s_gxVertexArrayObjectForCustomDraw);
+	checkErrorGL();
+	
+	registerBuiltinShaders();
+}
 
-// todo : perhaps these functions should be in mesh.cpp
+void gxShutdown()
+{
+	if (s_gxVertexArrayObjectForCustomDraw != 0)
+	{
+		glDeleteVertexArrays(1, &s_gxVertexArrayObjectForCustomDraw);
+		s_gxVertexArrayObjectForCustomDraw = 0;
+	}
+}
 
-// fixme : this is duplicated in mesh.cpp, and also it's a duplicate of the OpenGL-specific bindVsInputs function. todo : unify bindVsInputs, update where we used OpenGL-specific VsInputs to use this version
+void gxGetMatrixf(GX_MATRIX mode, float * m)
+{
+	switch (mode)
+	{
+	case GX_PROJECTION:
+		glGetFloatv(GL_PROJECTION_MATRIX, m);
+		checkErrorGL();
+		break;
+
+	case GX_MODELVIEW:
+		glGetFloatv(GL_MODELVIEW_MATRIX, m);
+		checkErrorGL();
+		break;
+
+	default:
+		fassert(false);
+		break;
+	}
+}
+
+void gxSetMatrixf(GX_MATRIX mode, const float * m)
+{
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+	{
+		switch (mode)
+		{
+		case GX_PROJECTION:
+			glMatrixMode(GL_PROJECTION);
+			glLoadMatrixf(m);
+			checkErrorGL();
+			break;
+
+		case GX_MODELVIEW:
+			glMatrixMode(GL_MODELVIEW);
+			glLoadMatrixf(m);
+			checkErrorGL();
+			break;
+
+		default:
+			fassert(false);
+			break;
+		}
+	}
+	gxMatrixMode(restoreMatrixMode);
+}
+
+GX_MATRIX gxGetMatrixMode()
+{
+	GLint mode = 0;
+	
+	glGetIntegerv(GL_MATRIX_MODE, &mode);
+	checkErrorGL();
+	
+	return (GX_MATRIX)mode;
+}
+
+void gxBegin(GLenum type)
+{
+	glBegin(type);
+	checkErrorGL();
+}
+
+void gxEnd()
+{
+	glEnd();
+	checkErrorGL();
+}
+
+void gxSetTexture(GxTextureId texture)
+{
+	if (texture)
+	{
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		checkErrorGL();
+	}
+	else
+	{
+	#if USE_LEGACY_OPENGL
+		glDisable(GL_TEXTURE_2D);
+		checkErrorGL();
+	#endif
+	}
+}
+
+static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter)
+{
+	if (filter == GX_SAMPLE_NEAREST)
+		return GL_NEAREST;
+	else if (filter == GX_SAMPLE_LINEAR)
+		return GL_LINEAR;
+	else
+	{
+		fassert(false);
+		return GL_NEAREST;
+	}
+}
+
+void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
+{
+	if (glIsEnabled(GL_TEXTURE_2D))
+	{
+		const GLenum openglFilter = toOpenGLSampleFilter(filter);
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglFilter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, openglFilter);
+		checkErrorGL();
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		checkErrorGL();
+	}
+}
+
+void gxGetTextureSize(GxTextureId texture, int & width, int & height)
+{
+	// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
+
+/*
+	if (glGetTextureLevelParameteriv != nullptr)
+	{
+		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &height);
+		checkErrorGL();
+	}
+	else
+*/
+	{
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	}
+}
+
+GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
+{
+	int internalFormat = 0;
+	
+	// capture current OpenGL states before we change them
+
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	checkErrorGL();
+
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &internalFormat);
+	checkErrorGL();
+
+	// restore previous OpenGL states
+
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	checkErrorGL();
+	
+	// translate OpenGL format to GX format
+
+	if (internalFormat == GL_R8) return GX_R8_UNORM;
+	if (internalFormat == GL_RG8) return GX_RG8_UNORM;
+	if (internalFormat == GL_R16F) return GX_R16_FLOAT;
+	if (internalFormat == GL_R32F) return GX_R32_FLOAT;
+	if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
+	if (internalFormat == GL_RGBA8) return GX_RGBA8_UNORM;
+
+	return GX_UNKNOWN_FORMAT;
+}
+
+#endif
+
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
 	// make sure to disable old attributes, to avoid reading from stale memory
+
 // todo : add a constant for the maximum number of vertex inputs
 
 	for (int i = 0; i < 16; ++i)
@@ -968,38 +1165,15 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
-// todo : use a separate VAO for custom draw ?
-
-	if (buffer == nullptr)
-	{
-		glBindVertexArray(s_gxVertexArrayObject);
-		checkErrorGL();
-		
-		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
-		checkErrorGL();
-		
-		// restore buffer bindings to the default GX buffer bindings
-		
-		bindVsInputs(s_gxVsInputs, numGxVsInputs, sizeof(GxVertex));
-		
-		glBindVertexArray(0);
-		checkErrorGL();
-	}
-	else
-	{
-		// bind the specified vertex buffer and vertex buffer bindings
-		
-		glBindVertexArray(s_gxVertexArrayObject);
-		checkErrorGL();
-		
-		glBindBuffer(GL_ARRAY_BUFFER, buffer->getOpenglVertexArray());
-		checkErrorGL();
-		
-		bindVsInputs(vsInputs, numVsInputs, vsStride);
-		
-		glBindVertexArray(0);
-		checkErrorGL();
-	}
+	// bind the specified vertex buffer and vertex buffer bindings
+	
+	glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
+	checkErrorGL();
+	
+	glBindBuffer(GL_ARRAY_BUFFER, buffer->getOpenglVertexArray());
+	checkErrorGL();
+	
+	bindVsInputs(vsInputs, numVsInputs, vsStride);
 }
 
 void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer)
@@ -1045,7 +1219,7 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 		
 		//
 		
-		glBindVertexArray(s_gxVertexArrayObject);
+		glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
 		checkErrorGL();
 		
 		Assert(indexBuffer->getOpenglIndexArray() != 0);
@@ -1053,12 +1227,6 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 		checkErrorGL();
 		
 		glDrawElements(GL_TRIANGLES, numIndices, indexType, 0);
-		checkErrorGL();
-		
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		checkErrorGL();
-		
-		glBindVertexArray(0);
 		checkErrorGL();
 	}
 	else
