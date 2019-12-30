@@ -936,26 +936,13 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 #include "internal.h"
 #include "shaders.h" // registerBuiltinShaders
 
-// for gxSetVertexBuffer, gxDrawIndexedPrimitives
-static GLuint s_gxVertexArrayObjectForCustomDraw = 0;
-
 void gxInitialize()
 {
-	// create vertex array for custom draw
-	fassert(s_gxVertexArrayObjectForCustomDraw == 0);
-	glGenVertexArrays(1, &s_gxVertexArrayObjectForCustomDraw);
-	checkErrorGL();
-	
 	registerBuiltinShaders();
 }
 
 void gxShutdown()
 {
-	if (s_gxVertexArrayObjectForCustomDraw != 0)
-	{
-		glDeleteVertexArrays(1, &s_gxVertexArrayObjectForCustomDraw);
-		s_gxVertexArrayObjectForCustomDraw = 0;
-	}
 }
 
 void gxGetMatrixf(GX_MATRIX mode, float * m)
@@ -1129,6 +1116,22 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 
 #endif
 
+#if USE_LEGACY_OPENGL
+
+#include "gx_mesh.h" // GxVertexInput
+
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer)
+{
+	Assert(false); // todo : implement gxDrawIndexedPrimitives using vertex attrib arrays
+}
+
+void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
+{
+	Assert(false); // todo : implement gxDrawIndexedPrimitives using vertex attrib arrays
+}
+
+#else
+
 #include "gx_mesh.h" // GxVertexInput
 
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
@@ -1188,24 +1191,6 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 	if (type != GX_TRIANGLES)
 		return;
 	
-#if USE_LEGACY_OPENGL
-	const GLenum indexType =
-		indexBuffer->getFormat() == GX_INDEX_16
-		? GL_UNSIGNED_SHORT
-		: GL_UNSIGNED_INT;
-
-	const int numIndices = indexBuffer->getNumIndices();
-	
-	glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
-	checkErrorGL();
-
-	Assert(indexBuffer->getOpenglIndexArray() != 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->getOpenglIndexArray());
-	checkErrorGL();
-
-	glDrawElements(GL_TRIANGLES, numIndices, indexType, 0);
-	checkErrorGL();
-#else
 	Shader genericShader("engine/Generic");
 
 	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
@@ -1264,7 +1249,8 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 	}
 
 	globals.gxShaderIsDirty = false;
-#endif
 }
+
+#endif
 
 #endif
