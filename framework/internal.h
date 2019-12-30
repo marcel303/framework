@@ -54,7 +54,7 @@
 #endif
 
 #if !defined(USE_GLYPH_ATLAS)
-	#if !USE_LEGACY_OPENGL
+	#if (ENABLE_OPENGL && !USE_LEGACY_OPENGL) || ENABLE_METAL
 		#define USE_GLYPH_ATLAS 1
 	#else
 		#define USE_GLYPH_ATLAS 0 // cannot use glyph cache, as it uses R8 texture storage
@@ -62,7 +62,7 @@
 #endif
 
 #if !defined(ENABLE_MSDF_FONTS)
-	#if !USE_LEGACY_OPENGL
+	#if (ENABLE_OPENGL && !USE_LEGACY_OPENGL) || ENABLE_METAL
 		#define ENABLE_MSDF_FONTS 1
 	#else
 		#define ENABLE_MSDF_FONTS 0 // cannot use MSDF fonts as the shader is too complex for the legacy OpenGL mode

@@ -1974,6 +1974,10 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		#else
 			// capture current OpenGL states before we change them
 			
+		#if !ENABLE_OPENGL
+			#error "Non-glyph atlas font implementation is written against OpenGL 2.1."
+		#endif
+		
 			GLuint restoreTexture;
 			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
 			GLint restoreUnpack;

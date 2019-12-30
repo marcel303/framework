@@ -3718,8 +3718,8 @@ void clearDrawRect()
 void setColorMode(COLOR_MODE colorMode)
 {
 	globals.colorMode = colorMode;
-	
-#if USE_LEGACY_OPENGL
+
+#if ENABLE_OPENGL && USE_LEGACY_OPENGL
 	switch (colorMode)
 	{
 	case COLOR_MUL:
@@ -3802,7 +3802,7 @@ void setColorClamp(bool clamp)
 {
 	globals.colorClamp = clamp;
 	
-#if USE_LEGACY_OPENGL
+#if ENABLE_OPENGL && USE_LEGACY_OPENGL
 	if (glClampColor != nullptr)
 	{
 		glClampColor(GL_CLAMP_VERTEX_COLOR, clamp ? GL_TRUE : GL_FALSE);
