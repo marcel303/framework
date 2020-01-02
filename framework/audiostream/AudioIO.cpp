@@ -115,7 +115,7 @@ static SoundData * loadSound_WAV(const char * filename)
 	if (!r.open(filename, false))
 	{
 		LOG_ERR("failed to open %s", filename);
-		return 0;
+		return nullptr;
 	}
 	
 	bool hasFmt = false;
@@ -139,7 +139,7 @@ static SoundData * loadSound_WAV(const char * filename)
 		int32_t byteCount;
 		
 		if (!readChunk(r, chunk, byteCount))
-			return 0;
+			return nullptr;
 		
 		if (chunk == kChunk_RIFF || chunk == kChunk_WAVE)
 		{
@@ -156,6 +156,7 @@ static SoundData * loadSound_WAV(const char * filename)
 			ok &= r.read(fmtByteRate);
 			ok &= r.read(fmtBlockAlign);
 			ok &= r.read(fmtBitDepth);
+			
 			if (fmtCompressionType != 1)
 				ok &= r.read(fmtExtraLength);
 			else
@@ -197,10 +198,11 @@ static SoundData * loadSound_WAV(const char * filename)
 			if (!ok)
 			{
 				LOG_ERR("failed to read FMT chunk", 0);
-				return 0;
+				return nullptr;
 			}
 			
-			if (fmtCompressionType != WAVE_FORMAT_PCM && fmtCompressionType != WAVE_FORMAT_IEEE_FLOAT)
+			if (fmtCompressionType != WAVE_FORMAT_PCM &&
+				fmtCompressionType != WAVE_FORMAT_IEEE_FLOAT)
 			{
 				LOG_ERR("only PCM and IEEE float are supported. type: %d", fmtCompressionType);
 				ok = false;
@@ -217,14 +219,17 @@ static SoundData * loadSound_WAV(const char * filename)
 			}
 			
 			if (!ok)
-				return 0;
+				return nullptr;
 			
 			hasFmt = true;
 		}
 		else if (chunk == kChunk_DATA)
 		{
 			if (hasFmt == false)
-				return 0;
+			{
+				LOG_ERR("DATA chunk precedes FMT chunk. cannot load WAVE data when we don't know the format yet", 0);
+				return nullptr;
+			}
 			
 			bytes = new uint8_t[byteCount];
 			
@@ -232,7 +237,7 @@ static SoundData * loadSound_WAV(const char * filename)
 			{
 				LOG_ERR("failed to load WAVE data", 0);
 				delete [] bytes;
-				return 0;
+				return nullptr;
 			}
 			
 			// convert data if necessary
@@ -265,14 +270,18 @@ static SoundData * loadSound_WAV(const char * filename)
 					
 					for (int i = 0; i < sampleCount; ++i)
 					{
-						int32_t value = (bytes[i * 3 + 0] << 8) | (bytes[i * 3 + 1] << 16) | (bytes[i * 3 + 2] << 24);
+						int32_t value =
+							(bytes[i * 3 + 0] << 8) |
+							(bytes[i * 3 + 1] << 16) |
+							(bytes[i * 3 + 2] << 24);
 						
+						// perform a shift right to sign-extend the 24 bit number (which we packed into the top-most 24 bits of a 32 bits number)
 						value >>= 8;
 						
 						samplesData[i] = value / float(1 << 23);
 					}
 					
-					delete[] bytes;
+					delete [] bytes;
 					bytes = nullptr;
 					
 					bytes = (uint8_t*)samplesData;
@@ -302,7 +311,7 @@ static SoundData * loadSound_WAV(const char * filename)
 				{
 					LOG_ERR("only 32 bit IEEE float is supported", 0);
 					delete [] bytes;
-					return 0;
+					return nullptr;
 				}
 			}
 			else
@@ -311,7 +320,7 @@ static SoundData * loadSound_WAV(const char * filename)
 				
 				LOG_ERR("unknown WAVE data format", 0);
 				delete [] bytes;
-				return 0;
+				return nullptr;
 			}
 			
 			numBytes = byteCount;
@@ -336,7 +345,7 @@ static SoundData * loadSound_WAV(const char * filename)
 		fmtExtraLength = 0;
 	}
 	
-	SoundData * soundData = new SoundData;
+	SoundData * soundData = new SoundData();
 	soundData->channelSize = fmtBitDepth / 8;
 	soundData->channelCount = fmtChannelCount;
 	soundData->sampleCount = numBytes / (fmtBitDepth / 8 * fmtChannelCount);
@@ -355,10 +364,18 @@ static SoundData * loadSound_OGG(const char * filename)
 	
 	AudioStream_Vorbis stream;
 	stream.Open(filename, false);
+	
+	if (!stream.IsOpen_get())
+		return nullptr;
+	
 	const int sampleRate = stream.SampleRate_get();
+	
+	// read kMaxSamples samples at a time until we finished reading the entire stream
+	
 	for (;;)
 	{
 		const int numSamples = stream.Provide(kMaxSamples, samples);
+		
 		if (numSamples == 0)
 			break;
 		else
@@ -367,6 +384,7 @@ static SoundData * loadSound_OGG(const char * filename)
 			memcpy(&readBuffer[0] + readBuffer.size() - numSamples, samples, numSamples * sizeof(AudioSample));
 		}
 	}
+	
 	stream.Close();
 	
 	const int numSamples = readBuffer.size();
@@ -379,7 +397,7 @@ static SoundData * loadSound_OGG(const char * filename)
 		memcpy(bytes, &readBuffer[0], numBytes);
 	}
 	
-	SoundData * soundData = new SoundData;
+	SoundData * soundData = new SoundData();
 	soundData->channelSize = 2;
 	soundData->channelCount = 2;
 	soundData->sampleCount = numSamples;
