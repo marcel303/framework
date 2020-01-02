@@ -1174,6 +1174,9 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
+	if (buffer == nullptr)
+		return;
+		
 	// bind the specified vertex buffer and vertex buffer bindings
 	
 	glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
