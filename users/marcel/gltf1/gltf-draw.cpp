@@ -717,6 +717,7 @@ namespace gltf
 						
 						indexBuffer = new GxIndexBuffer();
 						const uint8_t * index_mem = &buffer->data.front() + bufferView->byteOffset + accessor->byteOffset;
+						Assert(index_mem < &buffer->data.front() + buffer->byteLength);
 						
 						const GX_INDEX_FORMAT format =
 							accessor->componentType == gltf::kElementType_U16
@@ -833,7 +834,24 @@ namespace gltf
 					v.type = type;
 					v.normalize = accessor->normalized;
 					v.offset = bufferView->byteOffset + accessor->byteOffset;
-					v.stride = bufferView->byteStride;
+					
+					if (bufferView->byteStride != 0)
+						v.stride = bufferView->byteStride;
+					else
+					{
+						const int bytesPerComponent =
+							type == GX_ELEMENT_FLOAT32 ? 4 :
+							-1;
+						
+						Assert(bytesPerComponent != -1);
+						if (bytesPerComponent == -1)
+						{
+							logWarning("unknown component type size");
+							continue;
+						}
+						
+						v.stride = numComponents * bytesPerComponent;
+					}
 				}
 				
 				if (vertexBufferIndex < 0)
