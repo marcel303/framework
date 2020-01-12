@@ -2,6 +2,14 @@
 
 namespace gltf
 {
+	Buffer::~Buffer()
+	{
+		free(data);
+		data = nullptr;
+	}
+	
+	//
+	
 	bool resolveBufferView(const Scene & scene, const int index, const gltf::Accessor *& accessor, const gltf::BufferView *& bufferView, const gltf::Buffer *& buffer)
 	{
 		if (index < 0 || index >= scene.accessors.size())

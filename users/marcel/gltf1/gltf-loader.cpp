@@ -80,9 +80,13 @@ namespace gltf
 			{
 				auto & accessors = member;
 				
+				scene.accessors.resize(accessors.size());
+				
+				int idx = 0;
+				
 				for (auto & json_accessor : accessors)
 				{
-					gltf::Accessor accessor;
+					gltf::Accessor & accessor = scene.accessors[idx++];
 					
 					accessor.bufferView = json_accessor.value("bufferView", -1);
 					accessor.byteOffset = json_accessor.value("byteOffset", 0);
@@ -98,8 +102,6 @@ namespace gltf
 						logDebug("accessor is invalid");
 						return false;
 					}
-			
-					scene.accessors.push_back(accessor);
 				}
 			}
 			else if (member_name == "asset")
@@ -129,9 +131,13 @@ namespace gltf
 			{
 				auto & buffers = member;
 				
+				scene.buffers.resize(buffers.size());
+				
+				int idx = 0;
+				
 				for (auto & buffer_json : buffers)
 				{
-					gltf::Buffer buffer;
+					gltf::Buffer & buffer = scene.buffers[idx++];
 					
 					buffer.uri = buffer_json.value("uri", "");
 					buffer.byteLength = buffer_json.value("byteLength", 0);
@@ -153,11 +159,11 @@ namespace gltf
 						return false;
 					}
 					
-					buffer.data.resize(buffer.byteLength);
+					buffer.data = (uint8_t*)malloc(buffer.byteLength);
 					
 					if (buffer.byteLength > 0)
 					{
-						if (fread(&buffer.data.front(), buffer.byteLength, 1, file) != 1)
+						if (fread(buffer.data, buffer.byteLength, 1, file) != 1)
 						{
 							fclose(file);
 							file = nullptr;
@@ -169,17 +175,19 @@ namespace gltf
 					
 					fclose(file);
 					file = nullptr;
-					
-					scene.buffers.push_back(buffer);
 				}
 			}
 			else if (member_name == "bufferViews")
 			{
 				auto & bufferViews = member;
 				
+				scene.bufferViews.resize(bufferViews.size());
+				
+				int idx = 0;
+				
 				for (auto & json_bufferView : bufferViews)
 				{
-					gltf::BufferView bufferView;
+					gltf::BufferView & bufferView = scene.bufferViews[idx++];
 					
 					bufferView.buffer = json_bufferView.value("buffer", -1);
 					bufferView.byteOffset = json_bufferView.value("byteOffset", -1);
@@ -193,17 +201,19 @@ namespace gltf
 						logDebug("bufferView is invalid");
 						return false;
 					}
-					
-					scene.bufferViews.push_back(bufferView);
 				}
 			}
 			else if (member_name == "meshes")
 			{
 				auto & meshes = member;
 				
+				scene.meshes.resize(meshes.size());
+				
+				int idx = 0;
+				
 				for (auto & mesh_json : meshes)
 				{
-					gltf::Mesh mesh;
+					gltf::Mesh & mesh = scene.meshes[idx++];
 					
 					for (auto mesh_member_itr = mesh_json.begin(); mesh_member_itr != mesh_json.end(); ++mesh_member_itr)
 					{
@@ -211,9 +221,13 @@ namespace gltf
 						{
 							auto & mesh_member = mesh_member_itr.value();
 							
+							mesh.primitives.resize(mesh_member.size());
+							
+							int prim_idx = 0;
+							
 							for (auto & primitive_json : mesh_member)
 							{
-								gltf::MeshPrimitive primitive;
+								gltf::MeshPrimitive & primitive = mesh.primitives[prim_idx++];
 								
 								primitive.indices = primitive_json.value("indices", -1);
 								primitive.material = primitive_json.value("material", -1);
@@ -237,22 +251,22 @@ namespace gltf
 									logDebug("primitive is invalid");
 									return false;
 								}
-								
-								mesh.primitives.push_back(primitive);
 							}
 						}
 					}
-					
-					scene.meshes.push_back(mesh);
 				}
 			}
 			else if (member_name == "images")
 			{
 				auto & images = member;
 				
+				scene.images.resize(images.size());
+				
+				int idx = 0;
+				
 				for (auto & image_json : images)
 				{
-					gltf::Image image;
+					gltf::Image & image = scene.images[idx++];
 					
 					image.uri = image_json.value("uri", "");
 					image.name = image_json.value("name", "");
@@ -266,17 +280,19 @@ namespace gltf
 						logDebug("image is invalid");
 						return false;
 					}
-					
-					scene.images.push_back(image);
 				}
 			}
 			else if (member_name == "textures")
 			{
 				auto & textures = member;
 				
+				scene.textures.resize(textures.size());
+				
+				int idx = 0;
+				
 				for (auto & texture_json : textures)
 				{
-					gltf::Texture texture;
+					gltf::Texture & texture = scene.textures[idx++];
 					
 					texture.sampler = texture_json.value("sampler", -1);
 					texture.source = texture_json.value("source", -1);
@@ -286,17 +302,19 @@ namespace gltf
 						logDebug("texture is invalid");
 						return false;
 					}
-					
-					scene.textures.push_back(texture);
 				}
 			}
 			else if (member_name == "samplers")
 			{
 				auto & samplers = member;
 				
+				scene.samplers.resize(samplers.size());
+				
+				int idx = 0;
+				
 				for (auto & sampler_json : samplers)
 				{
-					gltf::Sampler sampler;
+					gltf::Sampler & sampler = scene.samplers[idx++];
 					
 					sampler.minFilter = sampler_json.value("minFilter", -1);
 					sampler.magFilter = sampler_json.value("magFilter", -1);
@@ -332,17 +350,19 @@ namespace gltf
 						logDebug("sampler is invalid");
 						return false;
 					}
-					
-					scene.samplers.push_back(sampler);
 				}
 			}
 			else if (member_name == "materials")
 			{
 				auto & materials = member;
 				
+				scene.materials.resize(materials.size());
+				
+				int idx = 0;
+				
 				for (auto & material_json : materials)
 				{
-					gltf::Material material;
+					gltf::Material & material = scene.materials[idx++];
 					
 					material.name = material_json.value("name", "");
 					material.alphaMode = material_json.value("alphaMode", "OPAQUE");
@@ -468,17 +488,20 @@ namespace gltf
 						logDebug("material is invalid");
 						return false;
 					}
-					
-					scene.materials.push_back(material);
 				}
 			}
 			else if (member_name == "nodes")
 			{
 				auto & nodes_json = member;
 				
+				scene.nodes.resize(nodes_json.size());
+				
+				int idx = 0;
+				
 				for (auto & node_json : nodes_json)
 				{
-					gltf::Node node;
+					gltf::Node & node = scene.nodes[idx++];
+					
 					node.name = node_json.value("name", "");
 					node.mesh = node_json.value("mesh", -1);
 					node.children = node_json.value("children", std::vector<int>());
@@ -488,8 +511,6 @@ namespace gltf
 					node.matrix = node_json.value("matrix", Mat4x4(true));
 					
 					// todo : matrix
-					
-					scene.nodes.push_back(node);
 				}
 			}
 			else if (member_name == "scene")
@@ -500,13 +521,16 @@ namespace gltf
 			{
 				auto & scenes_json = member;
 				
+				scene.sceneRoots.resize(scenes_json.size());
+				
+				int idx = 0;
+				
 				for (auto & scene_json : scenes_json)
 				{
-					gltf::SceneRoot sceneRoot;
+					gltf::SceneRoot & sceneRoot = scene.sceneRoots[idx++];
+					
 					sceneRoot.name = scene_json.value("name", "");
 					sceneRoot.nodes = scene_json.value("nodes", std::vector<int>());
-					
-					scene.sceneRoots.push_back(sceneRoot);
 				}
 			}
 			else

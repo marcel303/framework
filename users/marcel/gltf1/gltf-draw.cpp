@@ -327,8 +327,8 @@ namespace gltf
 					{
 						for (int i = 0; i < indexAccessor->count; ++i)
 						{
-							const uint8_t * __restrict index_mem = &indexBuffer->data.front() + indexBufferView->byteOffset + indexAccessor->byteOffset;
-							Assert(index_mem < &indexBuffer->data.front() + indexBuffer->byteLength);
+							const uint8_t * __restrict index_mem = indexBuffer->data + indexBufferView->byteOffset + indexAccessor->byteOffset;
+							Assert(index_mem < indexBuffer->data + indexBuffer->byteLength);
 							
 							uint32_t index;
 							
@@ -352,9 +352,9 @@ namespace gltf
 							
 							if (color0Accessor != nullptr)
 							{
-								const uint8_t * __restrict color0_mem = &color0Buffer->data.front() + color0BufferView->byteOffset + color0Accessor->byteOffset;
+								const uint8_t * __restrict color0_mem = color0Buffer->data + color0BufferView->byteOffset + color0Accessor->byteOffset;
 								color0_mem += index * 3 * sizeof(float);
-								Assert(color0_mem < &color0Buffer->data.front() + color0Buffer->byteLength);
+								Assert(color0_mem < color0Buffer->data + color0Buffer->byteLength);
 								const float * __restrict color0_ptr = (float*)color0_mem;
 								
 								gxColor4f(color0_ptr[0], color0_ptr[1], color0_ptr[2], 1.f);
@@ -364,9 +364,9 @@ namespace gltf
 							
 							if (texcoord0Accessor != nullptr)
 							{
-								const uint8_t * __restrict texcoord0_mem = &texcoord0Buffer->data.front() + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
+								const uint8_t * __restrict texcoord0_mem = texcoord0Buffer->data + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
 								texcoord0_mem += index * 2 * sizeof(float);
-								Assert(texcoord0_mem < &texcoord0Buffer->data.front() + texcoord0Buffer->byteLength);
+								Assert(texcoord0_mem < texcoord0Buffer->data + texcoord0Buffer->byteLength);
 								const float * __restrict texcoord0_ptr = (float*)texcoord0_mem;
 								
 								const float texcoord0_x = texcoord0_ptr[0];
@@ -379,9 +379,9 @@ namespace gltf
 							
 							if (normalAccessor != nullptr)
 							{
-								const uint8_t * __restrict normal_mem = &normalBuffer->data.front() + normalBufferView->byteOffset + normalAccessor->byteOffset;
+								const uint8_t * __restrict normal_mem = normalBuffer->data + normalBufferView->byteOffset + normalAccessor->byteOffset;
 								normal_mem += index * 3 * sizeof(float);
-								Assert(normal_mem < &normalBuffer->data.front() + normalBuffer->byteLength);
+								Assert(normal_mem < normalBuffer->data + normalBuffer->byteLength);
 								const float * __restrict normal_ptr = (float*)normal_mem;
 								
 								gxNormal3fv(normal_ptr);
@@ -389,9 +389,9 @@ namespace gltf
 							
 							//
 							
-							const uint8_t * __restrict position_mem = &positionBuffer->data.front() + positionBufferView->byteOffset + positionAccessor->byteOffset;
+							const uint8_t * __restrict position_mem = positionBuffer->data + positionBufferView->byteOffset + positionAccessor->byteOffset;
 							position_mem += index * 3 * sizeof(float);
-							Assert(position_mem < &positionBuffer->data.front() + positionBuffer->byteLength);
+							Assert(position_mem < positionBuffer->data + positionBuffer->byteLength);
 							const float * __restrict position_ptr = (float*)position_mem;
 							
 							gxVertex3fv(position_ptr);
@@ -672,7 +672,7 @@ namespace gltf
 		for (auto & buffer : scene.buffers)
 		{
 			GxVertexBuffer * vertexBuffer = new GxVertexBuffer();
-			vertexBuffer->alloc(&buffer.data.front(), buffer.byteLength);
+			vertexBuffer->alloc(buffer.data, buffer.byteLength);
 			
 			Assert(vertexBuffers[bufferIndex] == nullptr);
 			vertexBuffers[bufferIndex++] = vertexBuffer;
@@ -716,8 +716,8 @@ namespace gltf
 						}
 						
 						indexBuffer = new GxIndexBuffer();
-						const uint8_t * index_mem = &buffer->data.front() + bufferView->byteOffset + accessor->byteOffset;
-						Assert(index_mem < &buffer->data.front() + buffer->byteLength);
+						const uint8_t * index_mem = buffer->data + bufferView->byteOffset + accessor->byteOffset;
+						Assert(index_mem < buffer->data + buffer->byteLength);
 						
 						const GX_INDEX_FORMAT format =
 							accessor->componentType == gltf::kElementType_U16

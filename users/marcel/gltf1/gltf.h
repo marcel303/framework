@@ -52,7 +52,9 @@ namespace gltf
 		std::string uri;
 		int byteLength = -1;
 		std::string name;
-		std::vector<uint8_t> data;
+		uint8_t * data = nullptr;
+		
+		~Buffer();
 		
 		bool isValid() const
 		{
