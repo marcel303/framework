@@ -13,14 +13,6 @@ static void from_json(const json & j, Vec3 & v)
 	v[2] = j.at(2).get<float>();
 }
 
-static void from_json(const json & j, Vec4 & v)
-{
-	v[0] = j.at(0).get<float>();
-	v[1] = j.at(1).get<float>();
-	v[2] = j.at(2).get<float>();
-	v[3] = j.at(3).get<float>();
-}
-
 static void from_json(const json & j, Color & c)
 {
 	c.r = j.at(0).get<float>();

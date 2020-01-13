@@ -85,7 +85,6 @@ namespace AnimModel
 	{
 		m_vertexBuffer.free();
 		m_indexBuffer.free();
-		m_drawableMesh.free();
 		
 		allocateVB(0);
 		allocateIB(0);
