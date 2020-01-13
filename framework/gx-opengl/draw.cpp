@@ -298,6 +298,8 @@ static int s_gxLastVertexCount = -1;
 // for gxSetVertexBuffer, gxDrawIndexedPrimitives
 static GLuint s_gxVertexArrayObjectForCustomDraw = 0;
 
+static GxCaptureCallback s_gxCaptureCallback = nullptr;
+
 static const GxVertexInput s_gxVsInputs[] =
 {
 	{ VS_POSITION, 4, GX_ELEMENT_FLOAT32, 0, offsetof(GxVertex, px), 0 },
@@ -431,8 +433,59 @@ static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
 	}
 }
 
+static void doCapture(const bool endOfBatch)
+{
+	s_gxCaptureCallback(
+		s_gxVertices,
+		s_gxVertexCount * sizeof(GxVertex),
+		s_gxVsInputs,
+		sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]),
+		sizeof(GxVertex),
+		s_gxPrimitiveType,
+		s_gxVertexCount,
+		endOfBatch);
+
+	if (endOfBatch)
+	{
+		s_gxVertices = 0;
+		s_gxVertexCount = 0;
+	}
+	else
+	{
+		switch (s_gxPrimitiveType)
+		{
+			case GX_LINE_LOOP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 1;
+				break;
+			case GX_LINE_STRIP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 1;
+				break;
+			case GX_TRIANGLE_FAN:
+				s_gxVertices[0] = s_gxVertices[0];
+				s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 2;
+				break;
+			case GX_TRIANGLE_STRIP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
+				s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 2;
+				break;
+			default:
+				s_gxVertexCount = 0;
+		}
+	}
+}
+
 static void gxFlush(bool endOfBatch)
 {
+	if (s_gxCaptureCallback != nullptr)
+	{
+		doCapture(endOfBatch);
+		return;
+	}
+	
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
 
 	if (s_gxVertexCount)
@@ -1188,7 +1241,7 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 	bindVsInputs(vsInputs, numVsInputs, vsStride);
 }
 
-void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer)
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
 {
 	Assert(type == GX_TRIANGLES); // todo : translate primitive type
 	if (type != GX_TRIANGLES)
@@ -1207,7 +1260,10 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 		? GL_UNSIGNED_SHORT
 		: GL_UNSIGNED_INT;
 
-	const int numIndices = indexBuffer->getNumIndices();
+	const int numIndices =
+		in_numIndices == 0
+		? indexBuffer->getNumIndices()
+		: in_numIndices;
 
 	const ShaderCacheElem & shaderElem = shader.getCacheElem();
 	
@@ -1238,7 +1294,14 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->getOpenglIndexArray());
 		checkErrorGL();
 		
-		glDrawElements(GL_TRIANGLES, numIndices, indexType, 0);
+		const int indexSize =
+			indexBuffer->getFormat() == GX_INDEX_16
+			? 2
+			: 4;
+		
+		const int indexOffset = firstIndex * indexSize;
+		
+		glDrawElements(GL_TRIANGLES, numIndices, indexType, (void*)(uintptr_t)indexOffset);
 		checkErrorGL();
 	}
 	else
@@ -1252,6 +1315,72 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 	}
 
 	globals.gxShaderIsDirty = false;
+}
+
+void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
+{
+	Assert(type == GX_TRIANGLES); // todo : translate primitive type
+	if (type != GX_TRIANGLES)
+		return;
+	
+	Shader genericShader("engine/Generic");
+
+	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+
+	setShader(shader);
+
+	gxValidateMatrices();
+
+	const ShaderCacheElem & shaderElem = shader.getCacheElem();
+	
+	if (shader.isValid())
+	{
+		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+		{
+			shader.setImmediate(
+				shaderElem.params[ShaderCacheElem::kSp_Params].index,
+				s_gxTextureEnabled ? 1 : 0,
+				globals.colorMode,
+				globals.colorPost,
+				globals.colorClamp);
+		}
+
+		if (globals.gxShaderIsDirty)
+		{
+			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+		}
+		
+		//
+		
+		glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
+		checkErrorGL();
+		
+		glDrawArrays(GL_TRIANGLES, firstVertex, numVertices);
+		checkErrorGL();
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+
+	if (&shader == &genericShader)
+	{
+		clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
+	}
+
+	globals.gxShaderIsDirty = false;
+}
+
+void gxSetCaptureCallback(GxCaptureCallback callback)
+{
+	Assert(s_gxCaptureCallback == nullptr);
+	s_gxCaptureCallback = callback;
+}
+
+void gxClearCaptureCallback()
+{
+	s_gxCaptureCallback = nullptr;
 }
 
 #endif

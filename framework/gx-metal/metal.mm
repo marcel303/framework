@@ -1180,8 +1180,6 @@ struct GxVertex
 	float tx, ty;
 };
 
-static Shader s_gxShader;
-
 static GxVertex s_gxVertexBuffer[1024*64];
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
@@ -1208,6 +1206,8 @@ static int s_gxVertexBufferElemOffset = 0;
 static DynamicBufferPool s_gxIndexBufferPool;
 static DynamicBufferPool::PoolElem * s_gxIndexBufferElem = nullptr;
 static int s_gxIndexBufferElemOffset = 0;
+
+static GxCaptureCallback s_gxCaptureCallback = nullptr;
 
 static const GxVertexInput s_gxVsInputs[] =
 {
@@ -1240,8 +1240,6 @@ void gxInitialize()
 	
 	registerBuiltinShaders();
 
-	s_gxShader.load("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
-
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
 	s_gxVertex.cy = 1.f;
@@ -1255,12 +1253,6 @@ void gxInitialize()
 	const int maxIndicesForQuads = maxQuads * 6;
 	
 	s_gxIndexBufferPool.init(maxIndicesForQuads * sizeof(INDEX_TYPE));
-	
-#if TODO
-	// enable seamless cube map sampling along the edges
-	
-	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-#endif
 }
 
 void gxShutdown()
@@ -1268,10 +1260,6 @@ void gxShutdown()
 	s_gxVertexBufferPool.free();
 	
 	s_gxIndexBufferPool.free();
-
-#if TODO
-	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-#endif
 
 	s_gxPrimitiveType = GX_INVALID_PRIM;
 	s_gxVertices = nullptr;
@@ -1622,13 +1610,72 @@ static void ensureIndexBufferCapacity(const int numIndices)
 	}
 }
 
+static void doCapture(const bool endOfBatch)
+{
+	s_gxCaptureCallback(
+		s_gxVertices,
+		s_gxVertexCount * sizeof(GxVertex),
+		s_gxVsInputs,
+		sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]),
+		sizeof(GxVertex),
+		s_gxPrimitiveType,
+		s_gxVertexCount,
+		endOfBatch);
+
+	if (endOfBatch)
+	{
+		s_gxVertices = 0;
+		s_gxVertexCount = 0;
+	}
+	else
+	{
+		switch (s_gxPrimitiveType)
+		{
+			case GX_LINE_LOOP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 1;
+				break;
+			case GX_LINE_STRIP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 1;
+				break;
+			case GX_TRIANGLE_FAN:
+				s_gxVertices[0] = s_gxVertices[0];
+				s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 2;
+				break;
+			case GX_TRIANGLE_STRIP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
+				s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 2;
+				break;
+			default:
+				s_gxVertexCount = 0;
+		}
+	}
+}
+
 static void gxFlush(bool endOfBatch)
 {
+	if (s_gxCaptureCallback != nullptr)
+	{
+		doCapture(endOfBatch);
+		return;
+	}
+	
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
 	
-	Shader genericShader("engine/Generic");
+	Shader genericShader;
 	
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		:  *static_cast<Shader*>(globals.shader);
 	
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 	
@@ -1798,6 +1845,8 @@ static void gxFlush(bool endOfBatch)
 			indexed = true;
 		}
 	
+		// set shader parameters for the generic shader
+		
 		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
 		{
 			shader.setImmediate(
@@ -1835,6 +1884,7 @@ static void gxFlush(bool endOfBatch)
 	
 	if (endOfBatch)
 	{
+		s_gxVertices = 0;
 		s_gxVertexCount = 0;
 	}
 	else
@@ -1867,9 +1917,6 @@ static void gxFlush(bool endOfBatch)
 	globals.gxShaderIsDirty = false;
 
 	s_gxPrimitiveType = primitiveType;
-	
-	if (endOfBatch)
-		s_gxVertices = 0;
 }
 
 void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
@@ -1974,10 +2021,17 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 	
 	bindVsInputs(nullptr, 0, 0);
 	
-// todo : add to shaders struct, to avoid constant resource lookups here and at gxFlush
-	Shader genericShader("engine/Generic");
+	Shader genericShader;
 	
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		: *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
 
@@ -1991,6 +2045,8 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 	
+	// set shader parameters for the generic shader
+	
 	if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
 	{
 		shader.setImmediate(
@@ -1999,12 +2055,6 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 			globals.colorMode,
 			globals.colorPost,
 			globals.colorClamp);
-	}
-
-	if (globals.gxShaderIsDirty)
-	{
-		if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-			shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
 	}
 
 	// set fragment stage uniform buffers
@@ -2195,11 +2245,21 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 	}
 }
 
-void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer)
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int numIndices, const GxIndexBuffer * indexBuffer)
 {
-	Shader genericShader("engine/Generic");
-
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	Assert(indexBuffer != nullptr);
+	
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		: *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
 
@@ -2210,6 +2270,97 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 	gxValidateShaderResources();
 
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
+
+	// set shader parameters for the generic shader
+	
+	if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+	{
+		shader.setImmediate(
+			shaderElem.params[ShaderCacheElem::kSp_Params].index,
+			s_gxTextureEnabled ? 1.f : 0.f,
+			globals.colorMode,
+			globals.colorPost,
+			globals.colorClamp);
+	}
+	
+	// set fragment stage uniform buffers
+	
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	{
+		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
+			continue;
+		
+		[s_activeRenderPass->encoder
+			setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+			length:shaderElem.psInfo.uniformBufferSize[i]
+			atIndex:i];
+	}
+	
+	if (shader.isValid())
+	{
+		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
+
+		id <MTLBuffer> buffer = (id <MTLBuffer>)indexBuffer->getMetalBuffer();
+		
+		const int indexSize =
+			indexBuffer->getFormat() == GX_INDEX_16
+				? 2
+				: 4;
+		const int indexOffset = firstIndex * indexSize;
+		
+		[s_activeRenderPass->encoder
+			drawIndexedPrimitives:metalPrimitiveType
+			indexCount:numIndices
+			indexType:
+				indexBuffer->getFormat() == GX_INDEX_16
+				? MTLIndexTypeUInt16
+				: MTLIndexTypeUInt32
+			indexBuffer:buffer
+			indexBufferOffset:indexOffset];
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+
+	globals.gxShaderIsDirty = false;
+}
+
+void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
+{
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		: *static_cast<Shader*>(globals.shader);
+
+	setShader(shader);
+
+	gxValidatePipelineState();
+
+	gxValidateMatrices();
+
+	gxValidateShaderResources();
+
+	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
+
+	// set shader parameters for the generic shader
+	
+	if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+	{
+		shader.setImmediate(
+			shaderElem.params[ShaderCacheElem::kSp_Params].index,
+			s_gxTextureEnabled ? 1.f : 0.f,
+			globals.colorMode,
+			globals.colorPost,
+			globals.colorClamp);
+	}
 
 	// set fragment stage uniform buffers
 	
@@ -2228,24 +2379,7 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
 
-		if (indexBuffer != nullptr)
-		{
-			id <MTLBuffer> buffer = (id <MTLBuffer>)indexBuffer->getMetalBuffer();
-			
-			[s_activeRenderPass->encoder
-				drawIndexedPrimitives:metalPrimitiveType
-				indexCount:numElements
-				indexType:
-					indexBuffer->getFormat() == GX_INDEX_16
-					? MTLIndexTypeUInt16
-					: MTLIndexTypeUInt32
-				indexBuffer:buffer
-				indexBufferOffset:0];
-		}
-		else
-		{
-			[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numElements];
-		}
+		[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:firstVertex vertexCount:numVertices];
 	}
 	else
 	{
@@ -2258,6 +2392,17 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 	}
 
 	globals.gxShaderIsDirty = false;
+}
+
+void gxSetCaptureCallback(GxCaptureCallback callback)
+{
+	Assert(s_gxCaptureCallback == nullptr);
+	s_gxCaptureCallback = callback;
+}
+
+void gxClearCaptureCallback()
+{
+	s_gxCaptureCallback = nullptr;
 }
 
 //
