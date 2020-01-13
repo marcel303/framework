@@ -334,9 +334,11 @@ void lineCube(Vec3Arg position, Vec3Arg size)
 	{
 		for (int edge_idx = 0; edge_idx < 12; ++edge_idx)
 		{
+			const int * __restrict line = edges[edge_idx];
+			
 			for (int vertex_idx = 0; vertex_idx < 2; ++vertex_idx)
 			{
-				const float * __restrict vertex = vertices[edges[edge_idx][vertex_idx]];
+				const float * __restrict vertex = vertices[line[vertex_idx]];
 				
 				gxVertex3f(
 					position[0] + size[0] * vertex[0],
@@ -392,9 +394,11 @@ void fillCube(Vec3Arg position, Vec3Arg size)
 			
 			gxNormal3fv(normal);
 			
+			const int * __restrict face = faces[face_idx];
+			
 			for (int vertex_idx = 0; vertex_idx < 4; ++vertex_idx)
 			{
-				const float * __restrict vertex = vertices[faces[face_idx][vertex_idx]];
+				const float * __restrict vertex = vertices[face[vertex_idx]];
 				
 				gxVertex3f(
 					position[0] + size[0] * vertex[0],
