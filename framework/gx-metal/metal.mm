@@ -1180,8 +1180,6 @@ struct GxVertex
 	float tx, ty;
 };
 
-static Shader s_gxShader;
-
 static GxVertex s_gxVertexBuffer[1024*64];
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
@@ -1242,8 +1240,6 @@ void gxInitialize()
 	
 	registerBuiltinShaders();
 
-	s_gxShader.load("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
-
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
 	s_gxVertex.cy = 1.f;
@@ -1257,12 +1253,6 @@ void gxInitialize()
 	const int maxIndicesForQuads = maxQuads * 6;
 	
 	s_gxIndexBufferPool.init(maxIndicesForQuads * sizeof(INDEX_TYPE));
-	
-#if TODO
-	// enable seamless cube map sampling along the edges
-	
-	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-#endif
 }
 
 void gxShutdown()
@@ -1270,10 +1260,6 @@ void gxShutdown()
 	s_gxVertexBufferPool.free();
 	
 	s_gxIndexBufferPool.free();
-
-#if TODO
-	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-#endif
 
 	s_gxPrimitiveType = GX_INVALID_PRIM;
 	s_gxVertices = nullptr;
@@ -1679,9 +1665,17 @@ static void gxFlush(bool endOfBatch)
 	
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
 	
-	Shader genericShader("engine/Generic");
+	Shader genericShader;
 	
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		:  *static_cast<Shader*>(globals.shader);
 	
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 	
@@ -2027,10 +2021,17 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 	
 	bindVsInputs(nullptr, 0, 0);
 	
-// todo : add to shaders struct, to avoid constant resource lookups here and at gxFlush
-	Shader genericShader("engine/Generic");
+	Shader genericShader;
 	
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		: *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
 
@@ -2248,9 +2249,17 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 {
 	Assert(indexBuffer != nullptr);
 	
-	Shader genericShader("engine/Generic");
-
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		: *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
 
@@ -2314,19 +2323,22 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 	}
 
-	if (&shader == &genericShader)
-	{
-		clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
-	}
-
 	globals.gxShaderIsDirty = false;
 }
 
 void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
 {
-	Shader genericShader("engine/Generic");
-
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		: *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
 
