@@ -73,7 +73,7 @@ void GxMesh::draw(const GX_PRIMITIVE_TYPE type) const
 	{
 		const int numIndices = m_indexBuffer->getNumIndices();
 
-		gxDrawIndexedPrimitives(type, numIndices, m_indexBuffer);
+		gxDrawIndexedPrimitives(type, 0, numIndices, m_indexBuffer);
 	}
 	
 	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
@@ -85,27 +85,24 @@ void GxMesh::draw(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int
 	
 	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
 	if (m_indexBuffer)
-	{
-		Assert(firstVertex == 0); // todo : implement case where firstVertex > 0
-		
-		gxDrawIndexedPrimitives(type, numVertices, m_indexBuffer);
-	}
+		gxDrawIndexedPrimitives(type, firstVertex, numVertices, m_indexBuffer);
 	else
 		gxDrawPrimitives(type, firstVertex, numVertices);
 	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
 }
 
-void GxMesh::addPrim(const GX_PRIMITIVE_TYPE type, const int numVertices)
+void GxMesh::addPrim(const GX_PRIMITIVE_TYPE type, const int numVertices, const bool indexed)
 {
-	addPrim(type, 0, numVertices);
+	addPrim(type, 0, numVertices, indexed);
 }
 
-void GxMesh::addPrim(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
+void GxMesh::addPrim(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices, const bool indexed)
 {
 	Primitive prim;
 	prim.type = type;
 	prim.firstVertex = firstVertex;
 	prim.numVertices = numVertices;
+	prim.indexed = indexed;
 	
 	m_primitives.push_back(prim);
 }
@@ -114,20 +111,133 @@ void GxMesh::draw() const
 {
 	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
 	{
-		if (m_indexBuffer != nullptr)
+		for (auto & prim : m_primitives)
 		{
-			for (auto & prim : m_primitives)
-			{
-				Assert(prim.firstVertex == 0); // todo : implement prim case where firstVertex > 0
-				
-				gxDrawIndexedPrimitives(prim.type, prim.numVertices, m_indexBuffer);
-			}
-		}
-		else
-		{
-			for (auto & prim : m_primitives)
+			if (prim.indexed)
+				gxDrawIndexedPrimitives(prim.type, prim.firstVertex, prim.numVertices, m_indexBuffer);
+			else
 				gxDrawPrimitives(prim.type, prim.firstVertex, prim.numVertices);
 		}
 	}
 	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
+}
+
+//
+
+struct MeshCaptureState
+{
+	GxMesh * mesh = nullptr;
+	GxVertexBuffer * vertexBuffer = nullptr;
+	GxIndexBuffer * indexBuffer = nullptr;
+	
+	std::vector<uint8_t> vertices;
+	std::vector<int32_t> indices;
+	int numVertices = 0;
+};
+
+static MeshCaptureState s_meshCaptureState;
+
+void gxCaptureMeshBegin(
+	GxMesh & mesh,
+	GxVertexBuffer & vertexBuffer,
+	GxIndexBuffer & indexBuffer)
+{
+	auto captureCallback = [](
+		const void * vertexData,
+		const int vertexDataSize,
+		const GxVertexInput * vsInputs,
+		const int numVsInputs,
+		const int vertexStride,
+		const GX_PRIMITIVE_TYPE primType,
+		const int numVertices,
+		const bool endOfBatch)
+	{
+		s_meshCaptureState.mesh->setVertexBuffer(
+			s_meshCaptureState.vertexBuffer,
+			vsInputs,
+			numVsInputs,
+			vertexStride);
+		
+		const uint8_t * vertexBytes = (uint8_t*)vertexData;
+		
+		s_meshCaptureState.vertices.insert(
+			s_meshCaptureState.vertices.end(),
+			vertexBytes,
+			vertexBytes + vertexDataSize);
+		
+		if (primType == GX_QUADS)
+		{
+			// convert quads to triangles, as modern graphics api's may not support quads natively
+			
+			const int numQuads = numVertices/4;
+			
+			const int numIndices = numQuads * 6;
+			int * indices = new int[numIndices];
+			
+			const int baseVertex = s_meshCaptureState.numVertices;
+			
+			for (int i = 0; i < numQuads; ++i)
+			{
+				indices[i * 6 + 0] = baseVertex + i * 4 + 0;
+				indices[i * 6 + 1] = baseVertex + i * 4 + 1;
+				indices[i * 6 + 2] = baseVertex + i * 4 + 2;
+				
+				indices[i * 6 + 3] = baseVertex + i * 4 + 0;
+				indices[i * 6 + 4] = baseVertex + i * 4 + 2;
+				indices[i * 6 + 5] = baseVertex + i * 4 + 3;
+			}
+			
+			const int firstIndex = s_meshCaptureState.indices.size();
+			
+			s_meshCaptureState.indices.insert(
+				s_meshCaptureState.indices.end(),
+				indices,
+				indices + numIndices);
+			
+			delete [] indices;
+			indices = nullptr;
+			
+			s_meshCaptureState.mesh->addPrim(GX_TRIANGLES, firstIndex, numIndices, true);
+		}
+		else
+		{
+			const int firstVertex = s_meshCaptureState.numVertices;
+			
+			s_meshCaptureState.mesh->addPrim(primType, firstVertex, numVertices, false);
+		}
+		
+		s_meshCaptureState.numVertices += numVertices;
+	};
+	
+	gxSetCaptureCallback(captureCallback);
+	
+	mesh.clear();
+	vertexBuffer.free();
+	indexBuffer.free();
+	
+	Assert(s_meshCaptureState.mesh == nullptr);
+	s_meshCaptureState.mesh = &mesh;
+	s_meshCaptureState.vertexBuffer = &vertexBuffer;
+	s_meshCaptureState.indexBuffer = &indexBuffer;
+}
+
+void gxCaptureMeshEnd()
+{
+	s_meshCaptureState.vertexBuffer->alloc(
+		s_meshCaptureState.vertices.data(),
+		s_meshCaptureState.vertices.size());
+	
+	if (s_meshCaptureState.indices.empty() == false)
+	{
+		s_meshCaptureState.indexBuffer->alloc(
+			s_meshCaptureState.indices.data(),
+			s_meshCaptureState.indices.size(),
+			GX_INDEX_32);
+		
+		s_meshCaptureState.mesh->setIndexBuffer(s_meshCaptureState.indexBuffer);
+	}
+	
+	s_meshCaptureState = MeshCaptureState();
+	
+	gxClearCaptureCallback();
 }

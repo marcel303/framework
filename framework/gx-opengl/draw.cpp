@@ -1241,7 +1241,7 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 	bindVsInputs(vsInputs, numVsInputs, vsStride);
 }
 
-void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer)
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
 {
 	Assert(type == GX_TRIANGLES); // todo : translate primitive type
 	if (type != GX_TRIANGLES)
@@ -1260,7 +1260,10 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 		? GL_UNSIGNED_SHORT
 		: GL_UNSIGNED_INT;
 
-	const int numIndices = indexBuffer->getNumIndices();
+	const int numIndices =
+		in_numIndices == 0
+		? indexBuffer->getNumIndices()
+		: in_numIndices;
 
 	const ShaderCacheElem & shaderElem = shader.getCacheElem();
 	
@@ -1291,7 +1294,14 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->getOpenglIndexArray());
 		checkErrorGL();
 		
-		glDrawElements(GL_TRIANGLES, numIndices, indexType, 0);
+		const int indexSize =
+			indexBuffer->getFormat() == GX_INDEX_16
+			? 2
+			: 4;
+		
+		const int indexOffset = firstIndex * indexSize;
+		
+		glDrawElements(GL_TRIANGLES, numIndices, indexType, (void*)(uintptr_t)indexOffset);
 		checkErrorGL();
 	}
 	else
@@ -1307,7 +1317,7 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 	globals.gxShaderIsDirty = false;
 }
 
-void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstElement, const int numElements)
+void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
 {
 	Assert(type == GX_TRIANGLES); // todo : translate primitive type
 	if (type != GX_TRIANGLES)
@@ -1346,10 +1356,7 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstElement, cons
 		glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
 		checkErrorGL();
 		
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		checkErrorGL();
-		
-		glDrawElementsBaseVertex(GL_TRIANGLES, numElements, GL_UNSIGNED_SHORT, 0, firstElement);
+		glDrawArrays(GL_TRIANGLES, firstVertex, numVertices);
 		checkErrorGL();
 	}
 	else

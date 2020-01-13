@@ -2244,7 +2244,7 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 	}
 }
 
-void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer)
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int numIndices, const GxIndexBuffer * indexBuffer)
 {
 	Assert(indexBuffer != nullptr);
 	
@@ -2293,15 +2293,21 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 
 		id <MTLBuffer> buffer = (id <MTLBuffer>)indexBuffer->getMetalBuffer();
 		
+		const int indexSize =
+			indexBuffer->getFormat() == GX_INDEX_16
+				? 2
+				: 4;
+		const int indexOffset = firstIndex * indexSize;
+		
 		[s_activeRenderPass->encoder
 			drawIndexedPrimitives:metalPrimitiveType
-			indexCount:numElements
+			indexCount:numIndices
 			indexType:
 				indexBuffer->getFormat() == GX_INDEX_16
 				? MTLIndexTypeUInt16
 				: MTLIndexTypeUInt32
 			indexBuffer:buffer
-			indexBufferOffset:0];
+			indexBufferOffset:indexOffset];
 	}
 	else
 	{

@@ -91,6 +91,7 @@ class GxMesh
 		GX_PRIMITIVE_TYPE type;
 		int firstVertex;
 		int numVertices;
+		bool indexed;
 	};
 	
 	const GxVertexBuffer * m_vertexBuffer = nullptr;
@@ -111,8 +112,8 @@ public:
 	void draw(const GX_PRIMITIVE_TYPE type) const;
 	void draw(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices) const;
 	
-	void addPrim(const GX_PRIMITIVE_TYPE type, const int numVertices);
-	void addPrim(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices);
+	void addPrim(const GX_PRIMITIVE_TYPE type, const int numVertices, const bool indexed);
+	void addPrim(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices, const bool indexed);
 	void draw() const;
 };
 
@@ -136,7 +137,7 @@ void gxSetVertexBuffer(
 	const int numVsInputs,
 	const int vsStride = 0);
 
-void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer);
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int numIndices, const GxIndexBuffer * indexBuffer);
 void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices);
 
 //
@@ -155,3 +156,6 @@ typedef std::function<void(
 
 void gxSetCaptureCallback(GxCaptureCallback callback);
 void gxClearCaptureCallback();
+
+void gxCaptureMeshBegin(GxMesh & mesh, GxVertexBuffer & vertexBuffer, GxIndexBuffer & indexBuffer);
+void gxCaptureMeshEnd();
