@@ -27,6 +27,18 @@
 
 #include "framework.h"
 
+static void emitNormal(const int axis1, const int axis2)
+{
+	const int axis3 = 3 - axis1 - axis2;
+	
+	float normal[3];
+	normal[axis1] = 0.f;
+	normal[axis2] = 0.f;
+	normal[axis3] = 1.f;
+	
+	gxNormal3fv(normal);
+}
+
 void drawPoint(float x, float y)
 {
 	gxBegin(GX_POINTS);
@@ -50,6 +62,8 @@ void drawRect(float x1, float y1, float x2, float y2)
 {
 	gxBegin(GX_QUADS);
 	{
+		emitNormal(0, 2);
+		
 		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
 		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
@@ -62,6 +76,8 @@ void drawRectLine(float x1, float y1, float x2, float y2)
 {
 	gxBegin(GX_LINE_LOOP);
 	{
+		emitNormal(0, 2);
+		
 		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
 		gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
@@ -74,6 +90,8 @@ void drawCircle(float x, float y, float radius, int numSegments)
 {
 	gxBegin(GX_LINE_LOOP);
 	{
+		emitNormal(0, 2);
+		
 		for (int i = 0; i < numSegments; ++i)
 		{
 			const float angle = i * (M_PI * 2.f / numSegments);
@@ -90,6 +108,8 @@ void fillCircle(float x, float y, float radius, int numSegments)
 {
 	gxBegin(GX_TRIANGLES);
 	{
+		emitNormal(0, 2);
+		
 		for (int i = 0; i < numSegments; ++i)
 		{
 			const float angle1 = (i + 0) * (M_PI * 2.f / numSegments);
@@ -124,14 +144,9 @@ void drawRect3d(int axis1, int axis2)
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
-	float normal[3];
-	normal[axis1] = 0.f;
-	normal[axis2] = 0.f;
-	normal[axis3] = 1.f;
-	
 	gxBegin(GX_QUADS);
 	{
-		gxNormal3fv(normal);
+		emitNormal(axis1, axis2);
 		
 		float xyz[3];
 		
@@ -156,14 +171,9 @@ void drawGrid3d(int resolution1, int resolution2, int axis1, int axis2)
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
-	float normal[3];
-	normal[axis1] = 0.f;
-	normal[axis2] = 0.f;
-	normal[axis3] = 1.f;
-	
 	gxBegin(GX_QUADS);
 	{
-		gxNormal3fv(normal);
+		emitNormal(axis1, axis2);
 		
 		for (int i = 0; i < resolution1; ++i)
 		{
@@ -203,16 +213,11 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 {
 	const int axis3 = 3 - axis1 - axis2;
 	
-	float normal[3];
-	normal[axis1] = 0.f;
-	normal[axis2] = 0.f;
-	normal[axis3] = 1.f;
-	
 	if (optimized)
 	{
 		gxBegin(GX_LINES);
 		{
-			gxNormal3fv(normal);
+			emitNormal(axis1, axis2);
 			
 			for (int i = 0; i <= resolution1; ++i)
 			{
@@ -250,7 +255,7 @@ void drawGrid3dLine(int resolution1, int resolution2, int axis1, int axis2, bool
 	{
 		gxBegin(GX_LINES);
 		{
-			gxNormal3fv(normal);
+			emitNormal(axis1, axis2);
 			
 			for (int i = 0; i < resolution1; ++i)
 			{
