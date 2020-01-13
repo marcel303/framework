@@ -326,11 +326,19 @@ Shader::Shader()
 
 Shader::Shader(const char * name, const char * outputs)
 {
-// todo : avoid string allocations here
-	const std::string vs = std::string(name) + ".vs";
-	const std::string ps = std::string(name) + ".ps";
+	const int name_length = strlen(name);
+	const int file_length = name_length + 3 + 1;
 	
-	load(name, vs.c_str(), ps.c_str(), outputs);
+	char * vs = (char*)alloca(file_length * sizeof(char));
+	char * ps = (char*)alloca(file_length * sizeof(char));
+	
+	memcpy(vs, name, name_length);
+	strcpy(vs + name_length, ".vs");
+	
+	memcpy(ps, name, name_length);
+	strcpy(ps + name_length, ".ps");
+	
+	load(name, vs, ps, outputs);
 }
 
 Shader::Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
