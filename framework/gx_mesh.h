@@ -86,6 +86,13 @@ class GxMesh
 {
 	static const int kMaxVertexInputs = 16;
 	
+	struct Primitive
+	{
+		GX_PRIMITIVE_TYPE type;
+		int firstVertex;
+		int numVertices;
+	};
+	
 	const GxVertexBuffer * m_vertexBuffer = nullptr;
 	const GxIndexBuffer * m_indexBuffer = nullptr;
 	
@@ -93,16 +100,20 @@ class GxMesh
 	int m_numVertexInputs = 0;
 	int m_vertexStride = 0;
 	
-public:
-	GxMesh();
-	~GxMesh();
+	std::vector<Primitive> m_primitives;
 	
-	void free();
+public:
+	void clear();
 	
 	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vertexStride);
 	void setIndexBuffer(const GxIndexBuffer * buffer);
 	
 	void draw(const GX_PRIMITIVE_TYPE type) const;
+	void draw(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices) const;
+	
+	void addPrim(const GX_PRIMITIVE_TYPE type, const int numVertices);
+	void addPrim(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices);
+	void draw() const;
 };
 
 /**
@@ -126,3 +137,21 @@ void gxSetVertexBuffer(
 	const int vsStride = 0);
 
 void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer);
+void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices);
+
+//
+
+#include <functional>
+
+typedef std::function<void(
+	const void * vertexData,
+	const int vertexDataSize,
+	const GxVertexInput * vsInputs,
+	const int numVsInputs,
+	const int vertexStride,
+	const GX_PRIMITIVE_TYPE primType,
+	const int numVertices,
+	const bool endOfBatch)> GxCaptureCallback;
+
+void gxSetCaptureCallback(GxCaptureCallback callback);
+void gxClearCaptureCallback();
