@@ -137,78 +137,78 @@ struct MeshCaptureState
 
 static MeshCaptureState s_meshCaptureState;
 
+static void captureCallback(
+	const void * vertexData,
+	const int vertexDataSize,
+	const GxVertexInput * vsInputs,
+	const int numVsInputs,
+	const int vertexStride,
+	const GX_PRIMITIVE_TYPE primType,
+	const int numVertices,
+	const bool endOfBatch)
+{
+	s_meshCaptureState.mesh->setVertexBuffer(
+		s_meshCaptureState.vertexBuffer,
+		vsInputs,
+		numVsInputs,
+		vertexStride);
+	
+	const uint8_t * vertexBytes = (uint8_t*)vertexData;
+	
+	s_meshCaptureState.vertices.insert(
+		s_meshCaptureState.vertices.end(),
+		vertexBytes,
+		vertexBytes + vertexDataSize);
+	
+	if (primType == GX_QUADS)
+	{
+		// convert quads to triangles, as modern graphics api's may not support quads natively
+		
+		const int numQuads = numVertices/4;
+		
+		const int numIndices = numQuads * 6;
+		int * indices = new int[numIndices];
+		
+		const int baseVertex = s_meshCaptureState.numVertices;
+		
+		for (int i = 0; i < numQuads; ++i)
+		{
+			indices[i * 6 + 0] = baseVertex + i * 4 + 0;
+			indices[i * 6 + 1] = baseVertex + i * 4 + 1;
+			indices[i * 6 + 2] = baseVertex + i * 4 + 2;
+			
+			indices[i * 6 + 3] = baseVertex + i * 4 + 0;
+			indices[i * 6 + 4] = baseVertex + i * 4 + 2;
+			indices[i * 6 + 5] = baseVertex + i * 4 + 3;
+		}
+		
+		const int firstIndex = s_meshCaptureState.indices.size();
+		
+		s_meshCaptureState.indices.insert(
+			s_meshCaptureState.indices.end(),
+			indices,
+			indices + numIndices);
+		
+		delete [] indices;
+		indices = nullptr;
+		
+		s_meshCaptureState.mesh->addPrim(GX_TRIANGLES, firstIndex, numIndices, true);
+	}
+	else
+	{
+		const int firstVertex = s_meshCaptureState.numVertices;
+		
+		s_meshCaptureState.mesh->addPrim(primType, firstVertex, numVertices, false);
+	}
+	
+	s_meshCaptureState.numVertices += numVertices;
+}
+
 void gxCaptureMeshBegin(
 	GxMesh & mesh,
 	GxVertexBuffer & vertexBuffer,
 	GxIndexBuffer & indexBuffer)
 {
-	auto captureCallback = [](
-		const void * vertexData,
-		const int vertexDataSize,
-		const GxVertexInput * vsInputs,
-		const int numVsInputs,
-		const int vertexStride,
-		const GX_PRIMITIVE_TYPE primType,
-		const int numVertices,
-		const bool endOfBatch)
-	{
-		s_meshCaptureState.mesh->setVertexBuffer(
-			s_meshCaptureState.vertexBuffer,
-			vsInputs,
-			numVsInputs,
-			vertexStride);
-		
-		const uint8_t * vertexBytes = (uint8_t*)vertexData;
-		
-		s_meshCaptureState.vertices.insert(
-			s_meshCaptureState.vertices.end(),
-			vertexBytes,
-			vertexBytes + vertexDataSize);
-		
-		if (primType == GX_QUADS)
-		{
-			// convert quads to triangles, as modern graphics api's may not support quads natively
-			
-			const int numQuads = numVertices/4;
-			
-			const int numIndices = numQuads * 6;
-			int * indices = new int[numIndices];
-			
-			const int baseVertex = s_meshCaptureState.numVertices;
-			
-			for (int i = 0; i < numQuads; ++i)
-			{
-				indices[i * 6 + 0] = baseVertex + i * 4 + 0;
-				indices[i * 6 + 1] = baseVertex + i * 4 + 1;
-				indices[i * 6 + 2] = baseVertex + i * 4 + 2;
-				
-				indices[i * 6 + 3] = baseVertex + i * 4 + 0;
-				indices[i * 6 + 4] = baseVertex + i * 4 + 2;
-				indices[i * 6 + 5] = baseVertex + i * 4 + 3;
-			}
-			
-			const int firstIndex = s_meshCaptureState.indices.size();
-			
-			s_meshCaptureState.indices.insert(
-				s_meshCaptureState.indices.end(),
-				indices,
-				indices + numIndices);
-			
-			delete [] indices;
-			indices = nullptr;
-			
-			s_meshCaptureState.mesh->addPrim(GX_TRIANGLES, firstIndex, numIndices, true);
-		}
-		else
-		{
-			const int firstVertex = s_meshCaptureState.numVertices;
-			
-			s_meshCaptureState.mesh->addPrim(primType, firstVertex, numVertices, false);
-		}
-		
-		s_meshCaptureState.numVertices += numVertices;
-	};
-	
 	gxSetCaptureCallback(captureCallback);
 	
 	mesh.clear();
