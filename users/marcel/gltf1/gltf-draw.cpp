@@ -810,10 +810,9 @@ namespace gltf
 					}
 					
 					const GX_ELEMENT_TYPE type =
-						accessor->type == "SCALAR" ? GX_ELEMENT_FLOAT32 :
-						accessor->type == "VEC2" ? GX_ELEMENT_FLOAT32 :
-						accessor->type == "VEC3" ? GX_ELEMENT_FLOAT32 :
-						accessor->type == "VEC4" ? GX_ELEMENT_FLOAT32 :
+						accessor->componentType == kElementType_U8 ? GX_ELEMENT_UINT8 :
+						accessor->componentType == kElementType_U16 ? GX_ELEMENT_UINT16 :
+						accessor->componentType == kElementType_Float32 ? GX_ELEMENT_FLOAT32 :
 						(GX_ELEMENT_TYPE)-1;
 					
 					if (type == (GX_ELEMENT_TYPE)-1)
@@ -828,7 +827,9 @@ namespace gltf
 						if (vsInputs[i].id == id)
 							v_ptr = &vsInputs[i];
 					
-					GxVertexInput & v = *v_ptr;
+					Assert(v_ptr != nullptr);
+					
+					GxVertexInput v;
 					v.id = id;
 					v.numComponents = numComponents;
 					v.type = type;
@@ -852,6 +853,8 @@ namespace gltf
 						
 						v.stride = numComponents * bytesPerComponent;
 					}
+					
+					*v_ptr = v;
 				}
 				
 				if (vertexBufferIndex < 0)
