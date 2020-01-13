@@ -1173,7 +1173,7 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 
 #include "gx_mesh.h" // GxVertexInput
 
-void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer)
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
 {
 	Assert(false); // todo : implement gxDrawIndexedPrimitives using vertex attrib arrays
 }
