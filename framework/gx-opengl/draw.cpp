@@ -1178,9 +1178,24 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 	Assert(false); // todo : implement gxDrawIndexedPrimitives using vertex attrib arrays
 }
 
+void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
+{
+	Assert(false); // todo : implement gxDrawPrimitives using vertex attrib arrays
+}
+
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
-	Assert(false); // todo : implement gxDrawIndexedPrimitives using vertex attrib arrays
+	Assert(false); // todo : implement gxSetVertexBuffer using vertex attrib arrays
+}
+
+void gxSetCaptureCallback(GxCaptureCallback callback)
+{
+	AssertMsg(false, "gxSetCaptureCallback is not supported when using legacy OpenGL");
+}
+
+void gxClearCaptureCallback()
+{
+	AssertMsg(false, "gxClearCaptureCallback is not supported when using legacy OpenGL");
 }
 
 #else
