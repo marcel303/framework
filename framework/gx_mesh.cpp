@@ -196,17 +196,20 @@ static void captureCallback(
 		
 		// 3. write indices to convert quads to triangles
 		
-		const int baseVertex = s_meshCaptureState.numVertices;
+		int baseVertex = s_meshCaptureState.numVertices;
 		
 		for (int i = 0; i < numQuads; ++i)
 		{
-			indices[i * 6 + 0] = baseVertex + i * 4 + 0;
-			indices[i * 6 + 1] = baseVertex + i * 4 + 1;
-			indices[i * 6 + 2] = baseVertex + i * 4 + 2;
+			indices[0] = baseVertex + 0;
+			indices[1] = baseVertex + 1;
+			indices[2] = baseVertex + 2;
 			
-			indices[i * 6 + 3] = baseVertex + i * 4 + 0;
-			indices[i * 6 + 4] = baseVertex + i * 4 + 2;
-			indices[i * 6 + 5] = baseVertex + i * 4 + 3;
+			indices[3] = baseVertex + 0;
+			indices[4] = baseVertex + 2;
+			indices[5] = baseVertex + 3;
+			
+			indices += 6;
+			baseVertex += 4;
 		}
 		
 		const int firstIndex = s_meshCaptureState.numIndices;
