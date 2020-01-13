@@ -166,6 +166,17 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 						else if (e.numComponents == 4)
 							metalFormat = e.normalize ? MTLVertexFormatUChar4Normalized : MTLVertexFormatUChar4;
 					}
+					else if (e.type == GX_ELEMENT_UINT16)
+					{
+						if (e.numComponents == 1)
+							metalFormat = e.normalize ? MTLVertexFormatUShortNormalized : MTLVertexFormatUShort;
+						else if (e.numComponents == 2)
+							metalFormat = e.normalize ? MTLVertexFormatUShort2Normalized : MTLVertexFormatUShort2;
+						else if (e.numComponents == 3)
+							metalFormat = e.normalize ? MTLVertexFormatUShort3Normalized : MTLVertexFormatUShort3;
+						else if (e.numComponents == 4)
+							metalFormat = e.normalize ? MTLVertexFormatUShort4Normalized : MTLVertexFormatUChar4;
+					}
 					
 					Assert(metalFormat != MTLVertexFormatInvalid);
 					if (metalFormat != MTLVertexFormatInvalid)
@@ -315,6 +326,7 @@ Shader::Shader()
 
 Shader::Shader(const char * name, const char * outputs)
 {
+// todo : avoid string allocations here
 	const std::string vs = std::string(name) + ".vs";
 	const std::string ps = std::string(name) + ".ps";
 	

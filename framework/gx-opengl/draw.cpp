@@ -1221,6 +1221,7 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 		const GLenum type =
 			vsInputs[i].type == GX_ELEMENT_FLOAT32 ? GL_FLOAT :
 			vsInputs[i].type == GX_ELEMENT_UINT8 ? GL_UNSIGNED_BYTE :
+			vsInputs[i].type == GX_ELEMENT_UINT16 ? GL_UNSIGNED_SHORT :
 			GL_INVALID_ENUM;
 
 		Assert(type != GL_INVALID_ENUM);

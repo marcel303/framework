@@ -1396,6 +1396,17 @@ static void gxValidatePipelineState()
 					else if (e.numComponents == 4)
 						metalFormat = e.normalize ? MTLVertexFormatUChar4Normalized : MTLVertexFormatUChar4;
 				}
+				else if (e.type == GX_ELEMENT_UINT16)
+				{
+					if (e.numComponents == 1)
+						metalFormat = e.normalize ? MTLVertexFormatUShortNormalized : MTLVertexFormatUShort;
+					else if (e.numComponents == 2)
+						metalFormat = e.normalize ? MTLVertexFormatUShort2Normalized : MTLVertexFormatUShort2;
+					else if (e.numComponents == 3)
+						metalFormat = e.normalize ? MTLVertexFormatUShort3Normalized : MTLVertexFormatUShort3;
+					else if (e.numComponents == 4)
+						metalFormat = e.normalize ? MTLVertexFormatUShort4Normalized : MTLVertexFormatUShort4;
+				}
 				
 				Assert(metalFormat != MTLVertexFormatInvalid);
 				if (metalFormat != MTLVertexFormatInvalid)
@@ -1415,7 +1426,10 @@ static void gxValidatePipelineState()
 		
 						if (e.stride == 0)
 						{
-							vertexDescriptor.layouts[i].stride = 16;
+							const int componentSize = e.type == GX_ELEMENT_UINT8 ? 1 : 2;
+							const int stride = componentSize * e.numComponents;
+							
+							vertexDescriptor.layouts[i].stride = stride;
 							vertexDescriptor.layouts[i].stepRate = 1;
 							vertexDescriptor.layouts[i].stepFunction = MTLVertexStepFunctionPerVertex;
 						}
