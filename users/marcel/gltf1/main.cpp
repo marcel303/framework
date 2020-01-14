@@ -90,15 +90,17 @@ int main(int argc, char * argv[])
 	
 	framework.enableDepthBuffer = true;
 	framework.enableRealTimeEditing = true;
+	framework.msaaLevel = 4;
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
 	//const char * path = "van_gogh_room/scene.gltf";
-	//const char * path = "littlest_tokyo/scene.gltf";
+	const char * path = "littlest_tokyo/scene.gltf";
 	//const char * path = "ftm/scene.gltf";
 	//const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
-	const char * path = "halloween_little_witch/scene.gltf";
+	//const char * path = "halloween_little_witch/scene.gltf";
+	//const char * path = "kalestra_the_sorceress/scene.gltf";
 
 	gltf::Scene scene;
 	
@@ -198,31 +200,22 @@ int main(int argc, char * argv[])
 						continue;
 					}
 					
-					pushDepthWrite(keyboard.isDown(SDLK_z) ? true : isOpaquePass ? true : false);
+					pushDepthWrite(!keyboard.isDown(SDLK_z) ? true : (isOpaquePass ? true : false));
+					pushBlend(isOpaquePass ? BLEND_OPAQUE : BLEND_ALPHA);
 					{
-						auto & sceneRoot = scene.sceneRoots[scene.activeScene];
-						
 						gltf::MaterialShaders materialShaders;
 						materialShaders.pbr_specularGlossiness = "shader-pbr-specularGlossiness";
 						materialShaders.pbr_metallicRoughness = "shader-pbr";
 						
-						for (auto & node_index : sceneRoot.nodes)
-						{
-							if (node_index >= 0 && node_index < scene.nodes.size())
-							{
-								auto & node = scene.nodes[node_index];
-								
-								drawNodeTraverse(
-									scene,
-									keyboard.isDown(SDLK_m)
-										? nullptr
-										: bufferCache,
-									node,
-									materialShaders,
-									isOpaquePass);
-							}
-						}
+						gltf::drawScene(
+							scene,
+							keyboard.isDown(SDLK_m)
+								? nullptr
+								: bufferCache,
+							materialShaders,
+							isOpaquePass);
 					}
+					popBlend();
 					popDepthWrite();
 				}
 				
