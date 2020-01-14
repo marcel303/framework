@@ -53,9 +53,9 @@ namespace gltf
 	{
 		std::map<int, GxVertexBuffer*> vertexBuffers;
 		std::map<int, GxIndexBuffer*> indexBuffers;
-		std::map<const gltf::Mesh*, GxMesh*> meshes;
+		std::map<const MeshPrimitive*, GxMesh*> primitives;
 		
-		bool init(const gltf::Scene & scene);
+		bool init(const Scene & scene);
 	};
 	
 	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass);
