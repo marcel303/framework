@@ -692,34 +692,12 @@ namespace gltf
 #if SORT_PRIMITIVES_BY_VIEW_DISTANCE
 	static Vec3 calculateMeshPrimitiveCenter(const Scene & scene, const MeshPrimitive & primitive)
 	{
-	// todo : use min/max from accessor
 		Vec3 result;
 		
-		// draw mesh, without the use of vertex and index buffers
-
-		const Accessor * indexAccessor;
-		const BufferView * indexBufferView;
-		const Buffer * indexBuffer;
-
-		if (!resolveBufferView(scene, primitive.indices, indexAccessor, indexBufferView, indexBuffer))
-		{
-			logWarning("failed to resolve buffer view");
-			return result;
-		}
-
-		if (indexAccessor->componentType != kElementType_U16 &&
-			indexAccessor->componentType != kElementType_U32)
-		{
-			logWarning("component type not supported");
-			return result;
-		}
-
-		//
-
 		const Accessor * positionAccessor;
 		const BufferView * positionBufferView;
 		const Buffer * positionBuffer;
-
+		
 		auto position_itr = primitive.attributes.find("POSITION");
 
 		if (position_itr == primitive.attributes.end())
@@ -727,7 +705,7 @@ namespace gltf
 			logWarning("position attribute not found");
 			return result;
 		}
-
+		
 		const int positionAccessorIndex = position_itr->second;
 
 		if (!resolveBufferView(scene, positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
@@ -742,40 +720,10 @@ namespace gltf
 			return result;
 		}
 		
-		for (int i = 0; i < indexAccessor->count; ++i)
+		for (int i = 0; i < 3; ++i)
 		{
-			const uint8_t * __restrict index_mem = indexBuffer->data + indexBufferView->byteOffset + indexAccessor->byteOffset;
-			Assert(index_mem < indexBuffer->data + indexBuffer->byteLength);
-			
-			uint32_t index;
-
-			if (indexAccessor->componentType == kElementType_U32)
-			{
-				const uint32_t * __restrict index_ptr = (uint32_t*)index_mem;
-				index = index_ptr[i];
-			}
-			else if (indexAccessor->componentType == kElementType_U16)
-			{
-				const uint16_t * __restrict index_ptr = (uint16_t*)index_mem;
-				index = index_ptr[i];
-			}
-			else
-			{
-				Assert(false);
-				continue;
-			}
-			
-			const uint8_t * __restrict position_mem = positionBuffer->data + positionBufferView->byteOffset + positionAccessor->byteOffset;
-			position_mem += index * 3 * sizeof(float);
-			Assert(position_mem < positionBuffer->data + positionBuffer->byteLength);
-			const float * __restrict position_ptr = (float*)position_mem;
-			
-			result[0] += position_ptr[0];
-			result[1] += position_ptr[1];
-			result[2] += position_ptr[2];
+			result[i] = (positionAccessor->min[i] + positionAccessor->max[i]) / 2.f;
 		}
-		
-		result /= indexAccessor->count;
 		
 		return result;
 	}
@@ -785,6 +733,44 @@ namespace gltf
 	{
 		drawScene(scene, nullptr, materialShaders, isOpaquePass, activeScene);
 	}
+	
+	
+#if SORT_PRIMITIVES_BY_VIEW_DISTANCE
+	static void computeNodeToViewTransformsTraverse(const Scene & scene, const int node_index, Mat4x4 * __restrict nodeToViewTransforms)
+	{
+		auto & node = scene.nodes[node_index];
+		
+		gxPushMatrix();
+		{
+			// apply local node transform
+			
+			gxTranslatef(node.translation[0], node.translation[1], node.translation[2]);
+			Mat4x4 rotationMatrix = node.rotation.toMatrix();
+			gxMultMatrixf(rotationMatrix.m_v);
+			gxScalef(node.scale[0], node.scale[1], node.scale[2]);
+			gxMultMatrixf(node.matrix.m_v);
+			
+			// fetch the global node to view transform
+			
+			auto & nodeToViewTransform = nodeToViewTransforms[node_index];
+			gxGetMatrixf(GX_MODELVIEW, nodeToViewTransform.m_v);
+			
+			// traverse children
+			
+			for (auto child_index : node.children)
+			{
+				if (child_index < 0 || child_index >= scene.nodes.size())
+				{
+					logWarning("invalid child index");
+					continue;
+				}
+				
+				computeNodeToViewTransformsTraverse(scene, child_index, nodeToViewTransforms);
+			}
+		}
+		gxPopMatrix();
+	}
+#endif
 	
 	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const int in_activeScene)
 	{
@@ -812,47 +798,9 @@ namespace gltf
 			
 			// 0. compute node to view transforms
 			
-		// todo : remove map usage and replace with linear array
-			std::map<int, Mat4x4> nodeToViewTransforms;
+			Mat4x4 * nodeToViewTransforms = (Mat4x4*)alloca(scene.nodes.size() * sizeof(Mat4x4));
 			
-			std::function<void(const int node_index)> computeNodeToViewTransformsTraverse;
-			
-			computeNodeToViewTransformsTraverse = [&](const int node_index)
-			{
-				auto & node = scene.nodes[node_index];
-				
-				gxPushMatrix();
-				{
-					// apply local node transform
-					
-					gxTranslatef(node.translation[0], node.translation[1], node.translation[2]);
-					Mat4x4 rotationMatrix = node.rotation.toMatrix();
-					gxMultMatrixf(rotationMatrix.m_v);
-					gxScalef(node.scale[0], node.scale[1], node.scale[2]);
-					gxMultMatrixf(node.matrix.m_v);
-					
-					// fetch the global node to view transform
-					
-					auto & nodeToViewTransform = nodeToViewTransforms[node_index];
-					gxGetMatrixf(GX_MODELVIEW, nodeToViewTransform.m_v);
-					
-					// traverse children
-					
-					for (auto child_index : node.children)
-					{
-						if (child_index < 0 || child_index >= scene.nodes.size())
-						{
-							logWarning("invalid child index");
-							continue;
-						}
-						
-						computeNodeToViewTransformsTraverse(child_index);
-					}
-				}
-				gxPopMatrix();
-			};
-			
-			computeNodeToViewTransformsTraverse(scene.activeScene);
+			computeNodeToViewTransformsTraverse(scene, scene.activeScene, nodeToViewTransforms);
 			
 			// 1. gather a full list of primitives
 			
@@ -883,24 +831,19 @@ namespace gltf
 			for (int node_index = 0; node_index < scene.nodes.size(); ++node_index)
 			{
 				auto & node = scene.nodes[node_index];
+				auto & nodeToViewTransform = nodeToViewTransforms[node_index];
 				
 				if (node.mesh >= 0 && node.mesh < scene.meshes.size())
 				{
 					auto & mesh = scene.meshes[node.mesh];
 					
-					auto nodeToViewTransform_itr = nodeToViewTransforms.find(node_index);
-					Assert(nodeToViewTransform_itr != nodeToViewTransforms.end());
-					auto & nodeToViewTransform = nodeToViewTransform_itr->second;
-					
 					for (auto & prim : mesh.primitives)
 					{
 						Assert(primIndex < totalNumPrimitives);
 						
-					// todo : precompute prim center
-					
 						prims[primIndex] = &prim;
 						primCenters[primIndex] = calculateMeshPrimitiveCenter(scene, prim);
-						primDistances[primIndex] = fabsf(nodeToViewTransform.Mul4(primCenters[primIndex])[2]);
+						primDistances[primIndex] = nodeToViewTransform.Mul4(primCenters[primIndex])[2];
 						primNodeIndices[primIndex] = node_index;
 						
 						primIndex++;
@@ -931,16 +874,21 @@ namespace gltf
 				const int primIndex = sortedPrimIndices[i];
 				const MeshPrimitive * prim = prims[primIndex];
 				const int nodeIndex = primNodeIndices[primIndex];
-				
-				auto nodeToViewTransform_itr = nodeToViewTransforms.find(nodeIndex);
-				Assert(nodeToViewTransform_itr != nodeToViewTransforms.end());
-				auto & nodeToViewTransform = nodeToViewTransform_itr->second;
+				const Mat4x4 & nodeToViewTransform = nodeToViewTransforms[nodeIndex];
 				
 				gxPushMatrix();
 				{
 					gxSetMatrixf(GX_MODELVIEW, nodeToViewTransform.m_v);
 					
 					drawMeshPrimitive(scene, bufferCache, *prim, materialShaders, isOpaquePass);
+					
+				#if false // for debugging: draw a cube at the prim center
+					if (isOpaquePass)
+					{
+						setColor(colorWhite);
+						fillCube(primCenters[primIndex], Vec3(.1f, .1f, .1f));
+					}
+				#endif
 				}
 				gxPopMatrix();
 			}
