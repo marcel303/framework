@@ -91,14 +91,15 @@ int main(int argc, char * argv[])
 	framework.enableDepthBuffer = true;
 	framework.enableRealTimeEditing = true;
 	framework.msaaLevel = 4;
+	framework.filedrop = true;
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
 	//const char * path = "van_gogh_room/scene.gltf";
-	const char * path = "littlest_tokyo/scene.gltf";
+	//const char * path = "littlest_tokyo/scene.gltf";
 	//const char * path = "ftm/scene.gltf";
-	//const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
+	const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
 	//const char * path = "halloween_little_witch/scene.gltf";
 	//const char * path = "kalestra_the_sorceress/scene.gltf";
 
@@ -132,6 +133,20 @@ int main(int argc, char * argv[])
 
 		if (framework.quitRequested)
 			break;
+		
+		for (auto & file : framework.droppedFiles)
+		{
+			delete bufferCache;
+			bufferCache = nullptr;
+			
+			scene = gltf::Scene();
+			
+			if (gltf::loadScene(file.c_str(), scene))
+			{
+				bufferCache = new gltf::BufferCache();
+				bufferCache->init(scene);
+			}
+		}
 		
 		if (keyboard.wentDown(SDLK_t))
 			centimeters = !centimeters;
@@ -203,9 +218,31 @@ int main(int argc, char * argv[])
 					pushDepthWrite(!keyboard.isDown(SDLK_z) ? true : (isOpaquePass ? true : false));
 					pushBlend(isOpaquePass ? BLEND_OPAQUE : BLEND_ALPHA);
 					{
+						Shader metallicRoughnessShader("shader-pbr");
+						Shader specularGlossinessShader("shader-pbr-specularGlossiness");
+						
+						Shader * shaders[2] = { &metallicRoughnessShader, &specularGlossinessShader };
+						for (auto * shader : shaders)
+						{
+							shader->setImmediate("scene_camPos",
+								0.f,
+								0.f,
+								0.f);
+							
+							const float dx = cosf(framework.time);
+							const float dz = sinf(framework.time);
+							const Vec3 lightDir_world(dx, 0.f, dz);
+							const Vec3 lightDir_view = camera.getViewMatrix().Mul3(lightDir_world);
+					
+							shader->setImmediate("scene_lightDir",
+								lightDir_view[0],
+								lightDir_view[1],
+								lightDir_view[2]);
+						}
+						
 						gltf::MaterialShaders materialShaders;
-						materialShaders.pbr_specularGlossiness = "shader-pbr-specularGlossiness";
-						materialShaders.pbr_metallicRoughness = "shader-pbr";
+						materialShaders.pbr_specularGlossiness = &specularGlossinessShader;
+						materialShaders.pbr_metallicRoughness = &metallicRoughnessShader;
 						
 						gltf::drawScene(
 							scene,
