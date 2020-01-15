@@ -39,7 +39,7 @@ uniform vec3 scene_lightDir;
 
 // from vertex shader
 shader_in vec3 v_position_view;
-shader_in vec3 v_color;
+shader_in vec4 v_color;
 shader_in vec2 v_texcoord0;
 shader_in vec2 v_texcoord1;
 shader_in vec3 v_normal_view;
@@ -109,7 +109,7 @@ vec3 specularContribution(vec3 L, vec3 V, vec3 N, vec3 F0, float metallic, float
 vec3 perturbNormal()
 {
     if (material_hasNormalTexture == 0.0)
-        return v_normal_view;
+        return normalize(v_normal_view);
         
     vec3 tangentNormal = texture(normalTexture, v_texcoord0).xyz * 2.0 - 1.0;
 
@@ -134,17 +134,30 @@ void main()
 
     if (material_hasBaseColorTexture != 0.0)
     {
-        baseColor *= texture(baseColorTexture, v_texcoord0);
+        vec4 baseColorFromTexture = texture(baseColorTexture, v_texcoord0);
+
+        /*
+        The baseColorTexture uses the sRGB transfer function and must be converted to
+        linear space before it is used for any computations.
+        */
+
+        baseColorFromTexture.rgb = pow(baseColorFromTexture.rgb, vec3(2.2));
+
+        baseColor *= baseColorFromTexture;
     }
     else
     {
     // todo : need a way to set default values for vertex inputs
     //        otherwise meshes without vertex colors get random data
 
-        //baseColor.rgb *= v_color;
-    }
+        /*
+        if a primitive specifies a vertex color using the attribute semantic
+        property COLOR_0, then this value acts as an additional linear multiplier
+        to baseColor.
+        */
 
-    baseColor.rgb = pow(baseColor.rgb, vec3(2.2));
+        //baseColor *= v_color;
+    }
 
     // -- perform alpha test
 
@@ -191,6 +204,7 @@ void main()
     vec3 F = F_SchlickR(max(dot(N, V), 0.0), F0, roughness);
 
     vec3 kD = vec3(1.0) - F;
+    
     kD *= 1.0 - metallic;
     
     vec3 ambient = kD * diffuse;
@@ -211,11 +225,9 @@ void main()
 
     // -- specular reflectance
 
-    vec3 reflection = vec3(metallic);
+    vec3 specularReflection = metallic * F;
 
-    vec3 specular = reflection * F;
-
-    ambient += specular;
+    ambient += specularReflection;
 
     // -- add all terms
 
@@ -239,9 +251,12 @@ void main()
     // -- store
 
 //    color.rgb = R;
-//    color.rgb = vec3(metallic0;
+//    color.rgb = vec3(metallic);
 //    color.rgb = vec3(roughness);
-//    color.rgb = N;
+    //color.rgb = N;
+//    color.rgb = material_baseColorFactor.rgb;
+    //color.rgb = vec3(material_metallicFactor);
+    //color.rgb = vec3(material_roughnessFactor);
 
     shader_fragColor = vec4(color, baseColor.a);
 }

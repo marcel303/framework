@@ -168,13 +168,13 @@ namespace gltf
 		else
 		{
 			// PBR metallic roughness material
-			const GxTextureId textureId = tryGetTextureId(scene, material.pbrMetallicRoughness.baseColorTexture.index);
+			const GxTextureId baseColorTextureId = tryGetTextureId(scene, material.pbrMetallicRoughness.baseColorTexture.index);
 			const GxTextureId metallicRoughnessTextureId = tryGetTextureId(scene, material.pbrMetallicRoughness.metallicRoughnessTexture.index);
 			const GxTextureId normalTextureId = tryGetTextureId(scene, material.normalTexture.index);
 			const GxTextureId occlusionTextureId = tryGetTextureId(scene, material.occlusionTexture.index);
 			const GxTextureId emissiveTextureId = tryGetTextureId(scene, material.emissiveTexture.index);
 		
-			shader.setTexture("baseColorTexture", 0, textureId, true, false);
+			shader.setTexture("baseColorTexture", 0, baseColorTextureId, true, false);
 			shader.setTexture("normalTexture", 1, normalTextureId, true, false);
 			shader.setTexture("occlusionTexture", 2, occlusionTextureId, true, false);
 			shader.setTexture("metallicRoughnessTexture", 3, metallicRoughnessTextureId, true, false);
@@ -185,7 +185,7 @@ namespace gltf
 				material.pbrMetallicRoughness.baseColorFactor.g,
 				material.pbrMetallicRoughness.baseColorFactor.b,
 				material.pbrMetallicRoughness.baseColorFactor.a);
-			shader.setImmediate("material_hasBaseColorTexture", textureId != 0);
+			shader.setImmediate("material_hasBaseColorTexture", baseColorTextureId != 0);
 			shader.setImmediate("material_hasMetallicRoughnessTexture", metallicRoughnessTextureId != 0);
 			shader.setImmediate("material_hasNormalTexture", normalTextureId != 0);
 			shader.setImmediate("material_occlusionStrength", material.occlusionTexture.strength);
