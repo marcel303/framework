@@ -34,6 +34,9 @@ uniform mat4 skinningMatrices[32] buffer SkinningData;
 
 // functions
 
+// todo : remove objectToWorld, or add a WorldMatrix uniform
+//        which isn't really possible ..
+
 vec4 objectToWorld(vec4 v)
 {
 	return ModelViewMatrix * v;

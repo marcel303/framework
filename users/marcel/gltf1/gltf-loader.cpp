@@ -182,7 +182,7 @@ namespace gltf
 					gltf::BufferView & bufferView = scene.bufferViews[idx++];
 					
 					bufferView.buffer = json_bufferView.value("buffer", -1);
-					bufferView.byteOffset = json_bufferView.value("byteOffset", -1);
+					bufferView.byteOffset = json_bufferView.value("byteOffset", 0);
 					bufferView.byteLength = json_bufferView.value("byteLength", -1);
 					bufferView.byteStride = json_bufferView.value("byteStride", 0);
 					bufferView.target = json_bufferView.value("target", -1);

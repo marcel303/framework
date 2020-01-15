@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Vec3.h"
+#include "framework.h"
 
 // forward declarations
 
@@ -22,10 +22,10 @@ namespace gltf
 	
 	struct MaterialShaders
 	{
-		std::string pbr_specularGlossiness;
-		std::string pbr_metallicRoughness;
+		Shader * pbr_specularGlossiness = nullptr;
+		Shader * pbr_metallicRoughness = nullptr;
 		
-		std::string fallbackShader;
+		Shader * fallbackShader = nullptr;
 	};
 	
 	// -- draw using GX api --

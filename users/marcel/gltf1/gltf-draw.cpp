@@ -3,10 +3,7 @@
 
 #include "gx_mesh.h"
 
-// todo : remove keyboard controls
 // todo : add options struct for controlling how to draw
-
-#define TODO_SCENE_CAMERA 0
 
 #define SORT_PRIMITIVES_BY_VIEW_DISTANCE 0
 
@@ -103,23 +100,21 @@ namespace gltf
 		if (isOpaquePass != isOpaqueMaterial)
 			return;
 		
-		//Assert(material.alphaMode != "MASK"); // todo : implement !
-		
-		const char * shaderName;
+		Shader * shader_ptr = nullptr;
 		
 		if (material.pbrSpecularGlossiness.isSet)
 		{
-			if (materialShaders.pbr_specularGlossiness.empty())
-				shaderName = materialShaders.fallbackShader.c_str();
+			if (materialShaders.pbr_specularGlossiness == nullptr)
+				shader_ptr = materialShaders.fallbackShader;
 			else
-				shaderName = materialShaders.pbr_specularGlossiness.c_str();
+				shader_ptr = materialShaders.pbr_specularGlossiness;
 		}
 		else
 		{
-			if (materialShaders.pbr_metallicRoughness.empty())
-				shaderName = materialShaders.fallbackShader.c_str();
+			if (materialShaders.pbr_metallicRoughness == nullptr)
+				shader_ptr = materialShaders.fallbackShader;
 			else
-				shaderName = materialShaders.pbr_metallicRoughness.c_str();
+				shader_ptr = materialShaders.pbr_metallicRoughness;
 		}
 		
 	#if 0
@@ -127,7 +122,7 @@ namespace gltf
 		setShader(shader);
 		shader.setTexture("diffuseTexture", 0, textureId, true, false);
 	#else
-		Shader shader(shaderName);
+		Shader & shader = *shader_ptr;
 		setShader(shader);
 		
 		if (material.pbrSpecularGlossiness.isSet)
@@ -138,21 +133,6 @@ namespace gltf
 			const GxTextureId normalTextureId = tryGetTextureId(scene, material.normalTexture.index);
 			const GxTextureId occlusionTextureId = tryGetTextureId(scene, material.occlusionTexture.index);
 			const GxTextureId emissiveTextureId = tryGetTextureId(scene, material.emissiveTexture.index);
-			
-		#if TODO_SCENE_CAMERA
-			shader.setImmediate("scene_camPos",
-				camera.position[0],
-				camera.position[1],
-				camera.position[2]);
-		#endif
-	
-			const float dx = cosf(framework.time);
-			const float dz = sinf(framework.time);
-	
-			shader.setImmediate("scene_lightDir",
-				dx,
-				-1.f,
-				dz);
 	
 			shader.setTexture("diffuseTexture", 0, diffuseTextureId, true, false);
 			shader.setTexture("normalTexture", 1, normalTextureId, true, false);
@@ -182,8 +162,8 @@ namespace gltf
 				material.emissiveFactor[0],
 				material.emissiveFactor[1],
 				material.emissiveFactor[2]);
-			shader.setImmediate("material_alphaMask", false);
-			shader.setImmediate("material_alphaMaskCutoff", 0.f);
+			shader.setImmediate("material_alphaMask", material.alphaMode == "MASK");
+			shader.setImmediate("material_alphaMaskCutoff", material.alphaCutoff);
 		}
 		else
 		{
@@ -193,20 +173,6 @@ namespace gltf
 			const GxTextureId normalTextureId = tryGetTextureId(scene, material.normalTexture.index);
 			const GxTextureId occlusionTextureId = tryGetTextureId(scene, material.occlusionTexture.index);
 			const GxTextureId emissiveTextureId = tryGetTextureId(scene, material.emissiveTexture.index);
-			
-		#if TODO_SCENE_CAMERA
-			shader.setImmediate("scene_camPos",
-				camera.position[0],
-				camera.position[1],
-				camera.position[2]);
-		#endif
-	
-		/*
-			shader.setImmediate("scene_lightDir",
-				.5f,
-				1.f,
-				.5f);
-		*/
 		
 			shader.setTexture("baseColorTexture", 0, textureId, true, false);
 			shader.setTexture("normalTexture", 1, normalTextureId, true, false);
@@ -240,211 +206,264 @@ namespace gltf
 	
 		pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
 		{
-			if (bufferCache != nullptr)
+			do
 			{
-				auto gxMesh_itr = bufferCache->primitives.find(&primitive);
-				
-				if (gxMesh_itr != bufferCache->primitives.end())
+				if (bufferCache != nullptr)
 				{
-					GxMesh * gxMesh = gxMesh_itr->second;
-					gxMesh->draw();
-				}
-			}
-			else
-			{
-				// draw mesh, without the use of vertex and index buffers
-				
-				const Accessor * indexAccessor;
-				const BufferView * indexBufferView;
-				const Buffer * indexBuffer;
-				
-				if (!resolveBufferView(scene, primitive.indices, indexAccessor, indexBufferView, indexBuffer))
-				{
-					logWarning("failed to resolve buffer view");
-					return;
-				}
-				
-				if (indexAccessor->componentType != kElementType_U16 &&
-					indexAccessor->componentType != kElementType_U32)
-				{
-					logWarning("component type not supported");
-					return;
-				}
-				
-				//
-				
-				const Accessor * positionAccessor;
-				const BufferView * positionBufferView;
-				const Buffer * positionBuffer;
-				
-				auto position_itr = primitive.attributes.find("POSITION");
-				
-				if (position_itr == primitive.attributes.end())
-				{
-					logWarning("position attribute not found");
-					return;
-				}
-				
-				const int positionAccessorIndex = position_itr->second;
-				
-				if (!resolveBufferView(scene, positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
-				{
-					logWarning("failed to resolve buffer view");
-					return;
-				}
-				
-				if (positionAccessor->type != "VEC3")
-				{
-					logWarning("position element type not supported");
-					return;
-				}
-				
-				//
-				
-				const Accessor * color0Accessor = nullptr;
-				const BufferView * color0BufferView;
-				const Buffer * color0Buffer;
-				
-				auto color0_itr = primitive.attributes.find("COLOR_0");
-				
-				if (color0_itr != primitive.attributes.end())
-				{
-					const int color0AccessorIndex = color0_itr->second;
+					auto gxMesh_itr = bufferCache->primitives.find(&primitive);
 					
-					if (!resolveBufferView(scene, color0AccessorIndex, color0Accessor, color0BufferView, color0Buffer))
+					if (gxMesh_itr != bufferCache->primitives.end())
 					{
-						logWarning("failed to resolve buffer view");
-					}
-					else if (color0Accessor->type != "VEC3")
-					{
-						logWarning("color element type not supported");
-						color0Accessor = nullptr;
+						GxMesh * gxMesh = gxMesh_itr->second;
+						gxMesh->draw();
 					}
 				}
-				
-				//
-				
-				const Accessor * texcoord0Accessor = nullptr;
-				const BufferView * texcoord0BufferView;
-				const Buffer * texcoord0Buffer;
-				
-				auto texcoord0_itr = primitive.attributes.find("TEXCOORD_0");
-				
-				if (texcoord0_itr != primitive.attributes.end())
+				else
 				{
-					const int texcoord0AccessorIndex = texcoord0_itr->second;
+					// draw mesh, without the use of vertex and index buffers
 					
-					if (!resolveBufferView(scene, texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
-					{
-						logWarning("failed to resolve buffer view");
-					}
-					else if (texcoord0Accessor->type != "VEC2")
-					{
-						logWarning("texcoord element type not supported");
-						texcoord0Accessor = nullptr;
-					}
-				}
-				
-				const Accessor * normalAccessor = nullptr;
-				const BufferView * normalBufferView;
-				const Buffer * normalBuffer;
-				
-				auto normal_itr = primitive.attributes.find("NORMAL");
-				
-				if (normal_itr != primitive.attributes.end())
-				{
-					const int normalAccessorIndex = normal_itr->second;
+					const Accessor * indexAccessor;
+					const BufferView * indexBufferView;
+					const Buffer * indexBuffer;
 					
-					if (!resolveBufferView(scene, normalAccessorIndex, normalAccessor, normalBufferView, normalBuffer))
+					if (primitive.indices == -1)
 					{
-						logWarning("failed to resolve buffer view");
+						indexAccessor = nullptr;
 					}
-					else if (normalAccessor->type != "VEC3")
+					else
 					{
-						logWarning("normal element type not supported");
-						normalAccessor = nullptr;
-					}
-				}
-				
-				// note : we turn off the occlusion texture here, as it depends on texcoord1, rather than texcoord0. we cannot set texcoord1 using the basic GX api, so to avoid artifacts we just disable the occlusion texture altogether
-				shader.setImmediate("material_hasOcclusionTexture", 0.f);
-				
-				gxBegin(gxPrimitiveType);
-				{
-					for (int i = 0; i < indexAccessor->count; ++i)
-					{
-						const uint8_t * __restrict index_mem = indexBuffer->data + indexBufferView->byteOffset + indexAccessor->byteOffset;
-						Assert(index_mem < indexBuffer->data + indexBuffer->byteLength);
-						
-						uint32_t index;
-						
-						if (indexAccessor->componentType == kElementType_U32)
+						if (!resolveBufferView(scene, primitive.indices, indexAccessor, indexBufferView, indexBuffer))
 						{
-							const uint32_t * __restrict index_ptr = (uint32_t*)index_mem;
-							index = index_ptr[i];
+							logWarning("failed to resolve buffer view");
+							break;
 						}
-						else if (indexAccessor->componentType == kElementType_U16)
+						
+						if (indexAccessor->componentType != kElementType_U8 &&
+							indexAccessor->componentType != kElementType_U16 &&
+							indexAccessor->componentType != kElementType_U32)
 						{
-							const uint16_t * __restrict index_ptr = (uint16_t*)index_mem;
-							index = index_ptr[i];
+							logWarning("component type not supported");
+							break;
 						}
+					}
+					
+					//
+					
+					const Accessor * positionAccessor;
+					const BufferView * positionBufferView;
+					const Buffer * positionBuffer;
+					
+					auto position_itr = primitive.attributes.find("POSITION");
+					
+					if (position_itr == primitive.attributes.end())
+					{
+						logWarning("position attribute not found");
+						break;
+					}
+					
+					const int positionAccessorIndex = position_itr->second;
+					
+					if (!resolveBufferView(scene, positionAccessorIndex, positionAccessor, positionBufferView, positionBuffer))
+					{
+						logWarning("failed to resolve buffer view");
+						break;
+					}
+					
+					if (positionAccessor->type != "VEC3")
+					{
+						logWarning("position element type not supported");
+						break;
+					}
+					
+					//
+					
+					const Accessor * color0Accessor = nullptr;
+					const BufferView * color0BufferView;
+					const Buffer * color0Buffer;
+					
+					auto color0_itr = primitive.attributes.find("COLOR_0");
+					int color0_numComponents = 0;
+					
+					if (color0_itr != primitive.attributes.end())
+					{
+						const int color0AccessorIndex = color0_itr->second;
+						
+						if (!resolveBufferView(scene, color0AccessorIndex, color0Accessor, color0BufferView, color0Buffer))
+						{
+							logWarning("failed to resolve buffer view");
+						}
+						else if (color0Accessor->type == "VEC3")
+							color0_numComponents = 3;
+						else if (color0Accessor->type == "VEC4")
+							color0_numComponents = 4;
 						else
 						{
-							Assert(false);
-							continue;
+							logWarning("color element type not supported");
+							color0Accessor = nullptr;
 						}
-						
-						//
-						
-						if (color0Accessor != nullptr)
-						{
-							const uint8_t * __restrict color0_mem = color0Buffer->data + color0BufferView->byteOffset + color0Accessor->byteOffset;
-							color0_mem += index * 3 * sizeof(float);
-							Assert(color0_mem < color0Buffer->data + color0Buffer->byteLength);
-							const float * __restrict color0_ptr = (float*)color0_mem;
-							
-							gxColor4f(color0_ptr[0], color0_ptr[1], color0_ptr[2], 1.f);
-						}
-						
-						//
-						
-						if (texcoord0Accessor != nullptr)
-						{
-							const uint8_t * __restrict texcoord0_mem = texcoord0Buffer->data + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
-							texcoord0_mem += index * 2 * sizeof(float);
-							Assert(texcoord0_mem < texcoord0Buffer->data + texcoord0Buffer->byteLength);
-							const float * __restrict texcoord0_ptr = (float*)texcoord0_mem;
-							
-							const float texcoord0_x = texcoord0_ptr[0];
-							const float texcoord0_y = texcoord0_ptr[1];
-							
-							gxTexCoord2f(texcoord0_x, texcoord0_y);
-						}
-						
-						//
-						
-						if (normalAccessor != nullptr)
-						{
-							const uint8_t * __restrict normal_mem = normalBuffer->data + normalBufferView->byteOffset + normalAccessor->byteOffset;
-							normal_mem += index * 3 * sizeof(float);
-							Assert(normal_mem < normalBuffer->data + normalBuffer->byteLength);
-							const float * __restrict normal_ptr = (float*)normal_mem;
-							
-							gxNormal3fv(normal_ptr);
-						}
-						
-						//
-						
-						const uint8_t * __restrict position_mem = positionBuffer->data + positionBufferView->byteOffset + positionAccessor->byteOffset;
-						position_mem += index * 3 * sizeof(float);
-						Assert(position_mem < positionBuffer->data + positionBuffer->byteLength);
-						const float * __restrict position_ptr = (float*)position_mem;
-						
-						gxVertex3fv(position_ptr);
 					}
+					
+					//
+					
+					const Accessor * texcoord0Accessor = nullptr;
+					const BufferView * texcoord0BufferView;
+					const Buffer * texcoord0Buffer;
+					
+					auto texcoord0_itr = primitive.attributes.find("TEXCOORD_0");
+					
+					if (texcoord0_itr != primitive.attributes.end())
+					{
+						const int texcoord0AccessorIndex = texcoord0_itr->second;
+						
+						if (!resolveBufferView(scene, texcoord0AccessorIndex, texcoord0Accessor, texcoord0BufferView, texcoord0Buffer))
+						{
+							logWarning("failed to resolve buffer view");
+						}
+						else if (texcoord0Accessor->type != "VEC2")
+						{
+							logWarning("texcoord element type not supported");
+							texcoord0Accessor = nullptr;
+						}
+					}
+					
+					const Accessor * normalAccessor = nullptr;
+					const BufferView * normalBufferView;
+					const Buffer * normalBuffer;
+					
+					auto normal_itr = primitive.attributes.find("NORMAL");
+					
+					if (normal_itr != primitive.attributes.end())
+					{
+						const int normalAccessorIndex = normal_itr->second;
+						
+						if (!resolveBufferView(scene, normalAccessorIndex, normalAccessor, normalBufferView, normalBuffer))
+						{
+							logWarning("failed to resolve buffer view");
+						}
+						else if (normalAccessor->type != "VEC3")
+						{
+							logWarning("normal element type not supported");
+							normalAccessor = nullptr;
+						}
+					}
+					
+					// note : we turn off the occlusion texture here, as it depends on texcoord1, rather than texcoord0. we cannot set texcoord1 using the basic GX api, so to avoid artifacts we just disable the occlusion texture altogether
+					shader.setImmediate("material_hasOcclusionTexture", 0.f);
+					
+					gxBegin(gxPrimitiveType);
+					{
+						const int numElements =
+							indexAccessor == nullptr
+							? positionAccessor->count
+							: indexAccessor->count;
+						
+						for (int i = 0; i < numElements; ++i)
+						{
+							uint32_t index;
+							
+							if (indexAccessor == nullptr)
+							{
+								index = i;
+							}
+							else
+							{
+								const uint8_t * __restrict index_mem = indexBuffer->data + indexBufferView->byteOffset + indexAccessor->byteOffset;
+								Assert(index_mem < indexBuffer->data + indexBuffer->byteLength);
+								
+								if (indexAccessor->componentType == kElementType_U32)
+								{
+									const uint32_t * __restrict index_ptr = (uint32_t*)index_mem;
+									index = index_ptr[i];
+								}
+								else if (indexAccessor->componentType == kElementType_U16)
+								{
+									const uint16_t * __restrict index_ptr = (uint16_t*)index_mem;
+									index = index_ptr[i];
+								}
+								else if (indexAccessor->componentType == kElementType_U8)
+								{
+									const uint8_t * __restrict index_ptr = (uint8_t*)index_mem;
+									index = index_ptr[i];
+								}
+								else
+								{
+									Assert(false);
+									continue;
+								}
+							}
+							
+							//
+							
+							if (color0Accessor == nullptr)
+							{
+								gxColor4f(1.f, 1.f, 1.f, 1.f);
+							}
+							else
+							{
+								const uint8_t * __restrict color0_mem = color0Buffer->data + color0BufferView->byteOffset + color0Accessor->byteOffset;
+								if (color0BufferView->byteStride == 0)
+									color0_mem += index * color0_numComponents * sizeof(float);
+								else
+									color0_mem += index * color0BufferView->byteStride;
+								Assert(color0_mem < color0Buffer->data + color0Buffer->byteLength);
+								const float * __restrict color0_ptr = (float*)color0_mem;
+								
+								if (color0_numComponents == 3)
+									gxColor4f(color0_ptr[0], color0_ptr[1], color0_ptr[2], 1.f);
+								else if (color0_numComponents == 4)
+									gxColor4f(color0_ptr[0], color0_ptr[1], color0_ptr[2], color0_ptr[3]);
+							}
+							
+							//
+							
+							if (texcoord0Accessor != nullptr)
+							{
+								const uint8_t * __restrict texcoord0_mem = texcoord0Buffer->data + texcoord0BufferView->byteOffset + texcoord0Accessor->byteOffset;
+								if (texcoord0BufferView->byteStride == 0)
+									texcoord0_mem += index * 2 * sizeof(float);
+								else
+									texcoord0_mem += index * texcoord0BufferView->byteStride;
+								Assert(texcoord0_mem < texcoord0Buffer->data + texcoord0Buffer->byteLength);
+								const float * __restrict texcoord0_ptr = (float*)texcoord0_mem;
+								
+								const float texcoord0_x = texcoord0_ptr[0];
+								const float texcoord0_y = texcoord0_ptr[1];
+								
+								gxTexCoord2f(texcoord0_x, texcoord0_y);
+							}
+							
+							//
+							
+							if (normalAccessor != nullptr)
+							{
+								const uint8_t * __restrict normal_mem = normalBuffer->data + normalBufferView->byteOffset + normalAccessor->byteOffset;
+								if (normalBufferView->byteStride == 0)
+									normal_mem += index * 3 * sizeof(float);
+								else
+									normal_mem += index * normalBufferView->byteStride;
+								Assert(normal_mem < normalBuffer->data + normalBuffer->byteLength);
+								const float * __restrict normal_ptr = (float*)normal_mem;
+								
+								gxNormal3fv(normal_ptr);
+							}
+							
+							//
+							
+							const uint8_t * __restrict position_mem = positionBuffer->data + positionBufferView->byteOffset + positionAccessor->byteOffset;
+							if (positionBufferView->byteStride == 0)
+								position_mem += index * 3 * sizeof(float);
+							else
+								position_mem += index * positionBufferView->byteStride;
+							Assert(position_mem < positionBuffer->data + positionBuffer->byteLength);
+							const float * __restrict position_ptr = (float*)position_mem;
+							
+							gxVertex3fv(position_ptr);
+						}
+					}
+					gxEnd();
 				}
-				gxEnd();
 			}
+			while (false);
 		}
 		popCullMode();
 		clearShader();
@@ -673,6 +692,7 @@ namespace gltf
 #if SORT_PRIMITIVES_BY_VIEW_DISTANCE
 	static Vec3 calculateMeshPrimitiveCenter(const Scene & scene, const MeshPrimitive & primitive)
 	{
+	// todo : use min/max from accessor
 		Vec3 result;
 		
 		// draw mesh, without the use of vertex and index buffers
@@ -1145,7 +1165,8 @@ namespace gltf
 						}
 						else
 						{
-							if (accessor->componentType != gltf::kElementType_U16 &&
+							if (accessor->componentType != gltf::kElementType_U8 &&
+							 	accessor->componentType != gltf::kElementType_U16 &&
 								accessor->componentType != gltf::kElementType_U32)
 							{
 								logWarning("index element type not supported");
@@ -1156,12 +1177,31 @@ namespace gltf
 							const uint8_t * index_mem = buffer->data + bufferView->byteOffset + accessor->byteOffset;
 							Assert(index_mem < buffer->data + buffer->byteLength);
 							
-							const GX_INDEX_FORMAT format =
-								accessor->componentType == gltf::kElementType_U16
-								? GX_INDEX_16
-								: GX_INDEX_32;
-							
-							indexBuffer->alloc(index_mem, accessor->count, format);
+							if (accessor->componentType == gltf::kElementType_U8)
+							{
+								// U8 index format is not natively supported
+								// create a copy of the indices using U16 format
+								
+								uint16_t * indices = new uint16_t[accessor->count];
+								for (int i = 0; i < accessor->count; ++i)
+									indices[i] = index_mem[i];
+								
+								const GX_INDEX_FORMAT format = GX_INDEX_16;
+								
+								indexBuffer->alloc(indices, accessor->count, format);
+								
+								delete [] indices;
+								indices = nullptr;
+							}
+							else
+							{
+								const GX_INDEX_FORMAT format =
+									accessor->componentType == gltf::kElementType_U16
+									? GX_INDEX_16
+									: GX_INDEX_32;
+								
+								indexBuffer->alloc(index_mem, accessor->count, format);
+							}
 							
 							Assert(indexBuffers[primitive.indices] == nullptr);
 							indexBuffers[primitive.indices] = indexBuffer;

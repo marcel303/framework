@@ -136,13 +136,12 @@ namespace gltf
 	
 	struct Texture
 	{
-		int sampler = -1;
+		int sampler = -1; // optional
 		int source = -1;
 		
 		bool isValid() const
 		{
 			return
-				sampler >= 0 &&
 				source >= 0;
 		}
 	};
@@ -271,7 +270,6 @@ namespace gltf
 		bool isValid() const
 		{
 			return
-				indices >= 0 &&
 				mode >= 0;
 		}
 	};
@@ -322,7 +320,7 @@ namespace gltf
 		std::vector<Node> nodes;
 		std::vector<SceneRoot> sceneRoots;
 		
-		int activeScene = -1;
+		int activeScene = 0;
 	};
 
 	//
