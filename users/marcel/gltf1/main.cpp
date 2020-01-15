@@ -229,8 +229,8 @@ int main(int argc, char * argv[])
 								0.f,
 								0.f);
 							
-							const float dx = cosf(framework.time);
-							const float dz = sinf(framework.time);
+							const float dx = cosf(framework.time / 4.56f);
+							const float dz = sinf(framework.time / 5.67f);
 							const Vec3 lightDir_world(dx, 0.f, dz);
 							const Vec3 lightDir_view = camera.getViewMatrix().Mul3(lightDir_world);
 					
