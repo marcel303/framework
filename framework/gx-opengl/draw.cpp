@@ -127,7 +127,7 @@ GX_MATRIX gxGetMatrixMode()
 {
 	if (s_gxMatrixStack == &s_gxModelView)
 		return GX_MODELVIEW;
-	if (s_gxMatrixStack == &s_gxProjection)
+	else if (s_gxMatrixStack == &s_gxProjection)
 		return GX_PROJECTION;
 	else
 	{
@@ -198,10 +198,7 @@ void gxMultMatrixf(const float * _m)
 
 void gxTranslatef(float x, float y, float z)
 {
-	Mat4x4 m;
-	m.MakeTranslation(x, y, z);
-	
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get().Translate(x, y, z);
 }
 
 void gxRotatef(float angle, float x, float y, float z)
@@ -214,10 +211,7 @@ void gxRotatef(float angle, float x, float y, float z)
 
 void gxScalef(float x, float y, float z)
 {
-	Mat4x4 m;
-	m.MakeScaling(x, y, z);
-	
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get().Scale(x, y, z);
 }
 
 void gxValidateMatrices()
@@ -278,14 +272,13 @@ struct GxVertex
     #define GX_USE_ELEMENT_ARRAY_BUFFER 0
 #endif
 
-static Shader s_gxShader;
 static GLuint s_gxVertexArrayObject = 0;
 static GLuint s_gxVertexBufferObject = 0;
 static GLuint s_gxIndexBufferObject = 0;
 static GxVertex s_gxVertexBuffer[1024*16];
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
-static GxVertex * s_gxVertices = 0;
+static GxVertex * s_gxVertices = nullptr;
 static int s_gxVertexCount = 0;
 static int s_gxMaxVertexCount = 0;
 static int s_gxPrimitiveSize = 0;
@@ -317,7 +310,7 @@ void gxInitialize()
 	
 	registerBuiltinShaders();
 
-	s_gxShader.load("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
+	Shader("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
 	
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
@@ -325,13 +318,16 @@ void gxInitialize()
 	s_gxVertex.cz = 1.f;
 	s_gxVertex.cw = 1.f;
 
+	// create vertex array
+	
 	fassert(s_gxVertexBufferObject == 0);
 	glGenBuffers(1, &s_gxVertexBufferObject);
+	checkErrorGL();
 	
 	fassert(s_gxIndexBufferObject == 0);
 	glGenBuffers(1, &s_gxIndexBufferObject);
+	checkErrorGL();
 	
-	// create vertex array
 	fassert(s_gxVertexArrayObject == 0);
 	glGenVertexArrays(1, &s_gxVertexArrayObject);
 	checkErrorGL();
@@ -343,8 +339,10 @@ void gxInitialize()
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
 		checkErrorGL();
 	#endif
+	
 		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
 		checkErrorGL();
+		
 		bindVsInputs(s_gxVsInputs, numGxVsInputs, sizeof(GxVertex));
 	}
 	glBindVertexArray(0);
@@ -447,7 +445,7 @@ static void doCapture(const bool endOfBatch)
 
 	if (endOfBatch)
 	{
-		s_gxVertices = 0;
+		s_gxVertices = nullptr;
 		s_gxVertexCount = 0;
 	}
 	else
@@ -488,13 +486,21 @@ static void gxFlush(bool endOfBatch)
 	
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
 
-	if (s_gxVertexCount)
+	if (s_gxVertexCount != 0)
 	{
 		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
 
-		Shader genericShader("engine/Generic");
+		Shader genericShader;
+	
+		const bool useGenericShader = (globals.shader == nullptr);
 		
-		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+		if (useGenericShader)
+			genericShader = Shader("engine/Generic");
+		
+		Shader & shader =
+			useGenericShader
+			? genericShader
+			:  *static_cast<Shader*>(globals.shader);
 
 		setShader(shader);
 		
@@ -508,7 +514,7 @@ static void gxFlush(bool endOfBatch)
 		checkErrorGL();
 		
 		bool indexed = false;
-		glindex_t * indices = 0;
+		glindex_t * indices = nullptr;
 		int numElements = s_gxVertexCount;
 		int numIndices = 0;
 
@@ -652,7 +658,7 @@ static void gxFlush(bool endOfBatch)
 	}
 	
 	if (endOfBatch)
-		s_gxVertices = 0;
+		s_gxVertices = nullptr;
 }
 
 void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
@@ -703,10 +709,17 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 {
 	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES || primitiveType == GX_TRIANGLE_STRIP);
 	
-// todo : add to shaders struct, to avoid constant resource lookups here and at gxFlush
-	Shader genericShader("engine/Generic");
+	Shader genericShader;
 	
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	const bool useGenericShader = (globals.shader == nullptr);
+
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		:  *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
 
@@ -867,6 +880,7 @@ void gxVertex4fv(const float * v)
 void gxSetTexture(GxTextureId texture)
 {
 	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
 	
 	if (texture)
 	{
@@ -920,15 +934,20 @@ void gxGetTextureSize(GxTextureId texture, int & width, int & height)
 {
 	// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
 
+	if (texture == 0)
+	{
+		width = 0;
+		height = 0;
+	}
 /*
-	if (glGetTextureLevelParameteriv != nullptr)
+	else if (glGetTextureLevelParameteriv != nullptr)
 	{
 		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &width);
 		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &height);
 		checkErrorGL();
 	}
-	else
 */
+	else
 	{
 		GLuint restoreTexture;
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
@@ -973,15 +992,21 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	checkErrorGL();
 	
 	// translate OpenGL format to GX format
-
+	
 	if (internalFormat == GL_R8) return GX_R8_UNORM;
-	if (internalFormat == GL_RG8) return GX_RG8_UNORM;
-	if (internalFormat == GL_R16F) return GX_R16_FLOAT;
-	if (internalFormat == GL_R32F) return GX_R32_FLOAT;
-	if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
-	if (internalFormat == GL_RGBA8) return GX_RGBA8_UNORM;
-
-	return GX_UNKNOWN_FORMAT;
+	else if (internalFormat == GL_R16) return GX_R16_UNORM;
+	else if (internalFormat == GL_RG8) return GX_RG8_UNORM;
+	else if (internalFormat == GL_R16F) return GX_R16_FLOAT;
+	else if (internalFormat == GL_R32F) return GX_R32_FLOAT;
+	else if (internalFormat == GL_RGB32F) return GX_RGB32_FLOAT;
+	else if (internalFormat == GL_RGBA32F) return GX_RGBA32_FLOAT;
+	else if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
+	else if (internalFormat == GL_RGBA8) return GX_RGBA8_UNORM;
+	else
+	{
+		Assert(false);
+		return GX_UNKNOWN_FORMAT;
+	}
 }
 
 #else // USE_LEGACY_OPENGL
@@ -1114,15 +1139,20 @@ void gxGetTextureSize(GxTextureId texture, int & width, int & height)
 {
 	// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
 
+	if (texture == 0)
+	{
+		width = 0;
+		height = 0;
+	}
 /*
-	if (glGetTextureLevelParameteriv != nullptr)
+	else if (glGetTextureLevelParameteriv != nullptr)
 	{
 		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &width);
 		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &height);
 		checkErrorGL();
 	}
-	else
 */
+	else
 	{
 		GLuint restoreTexture;
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
@@ -1158,11 +1188,19 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	// translate OpenGL format to GX format
 
 	if (internalFormat == GL_R8) return GX_R8_UNORM;
-	if (internalFormat == GL_RG8) return GX_RG8_UNORM;
-	if (internalFormat == GL_R16F) return GX_R16_FLOAT;
-	if (internalFormat == GL_R32F) return GX_R32_FLOAT;
-	if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
-	if (internalFormat == GL_RGBA8) return GX_RGBA8_UNORM;
+	else if (internalFormat == GL_R16) return GX_R16_UNORM;
+	else if (internalFormat == GL_RG8) return GX_RG8_UNORM;
+	else if (internalFormat == GL_R16F) return GX_R16_FLOAT;
+	else if (internalFormat == GL_R32F) return GX_R32_FLOAT;
+	else if (internalFormat == GL_RGB32F) return GX_RGB32_FLOAT;
+	else if (internalFormat == GL_RGBA32F) return GX_RGBA32_FLOAT;
+	else if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
+	else if (internalFormat == GL_RGBA8) return GX_RGBA8_UNORM;
+	else
+	{
+		Assert(false);
+		return GX_UNKNOWN_FORMAT;
+	}
 
 	return GX_UNKNOWN_FORMAT;
 }
@@ -1263,9 +1301,17 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 	if (type != GX_TRIANGLES)
 		return;
 	
-	Shader genericShader("engine/Generic");
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
 
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		:  *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
 
@@ -1325,6 +1371,7 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 	}
 
+// todo : remove
 	if (&shader == &genericShader)
 	{
 		clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
@@ -1335,9 +1382,17 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 
 void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
 {
-	Shader genericShader("engine/Generic");
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
 
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		:  *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
 
@@ -1376,6 +1431,7 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 	}
 
+// todo : remove ?
 	if (&shader == &genericShader)
 	{
 		clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader

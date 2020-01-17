@@ -69,7 +69,7 @@
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0 // do not alter
 #endif
 
-#if defined(MACOS) && !defined(ENABLE_METAL) && 0
+#if defined(MACOS) && !defined(ENABLE_METAL) && 1
 	#define ENABLE_METAL 1
 	#define ENABLE_HQ_PRIMITIVES 1
 #elif !defined(ENABLE_OPENGL)
@@ -1474,6 +1474,9 @@ void setWireframe(bool enabled);
 void pushWireframe(bool enabled);
 void popWireframe();
 
+void setColorWriteMask(int r, int g, int b, int a);
+void setColorWriteMaskAll();
+
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void popDepthTest();
@@ -1588,7 +1591,7 @@ static inline void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp) { }
 static inline void gxGetTextureSize(GxTextureId texture, int & width, int & height) { width = 0; height = 0; }
 static inline GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture) { return GX_UNKNOWN_FORMAT; }
 
-#elif !USE_LEGACY_OPENGL || ENABLE_METAL
+#elif (ENABLE_OPENGL && !USE_LEGACY_OPENGL) || ENABLE_METAL
 
 void gxMatrixMode(GX_MATRIX mode);
 GX_MATRIX gxGetMatrixMode();

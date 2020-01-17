@@ -18,23 +18,23 @@ static GLenum translateColorFormat(const SURFACE_FORMAT format)
 
 	if (format == SURFACE_RGBA8)
 		glFormat = GL_RGBA8;
-	if (format == SURFACE_RGBA8_SRGB)
+	else if (format == SURFACE_RGBA8_SRGB)
 		glFormat = GL_SRGB8_ALPHA8;
-	if (format == SURFACE_RGBA16F)
+	else if (format == SURFACE_RGBA16F)
 		glFormat = GL_RGBA16F;
-	if (format == SURFACE_RGBA32F)
+	else if (format == SURFACE_RGBA32F)
 		glFormat = GL_RGBA32F;
-	if (format == SURFACE_R8)
+	else if (format == SURFACE_R8)
 		glFormat = GL_R8;
-	if (format == SURFACE_R16F)
+	else if (format == SURFACE_R16F)
 		glFormat = GL_R16F;
-	if (format == SURFACE_R32F)
+	else if (format == SURFACE_R32F)
 		glFormat = GL_R32F;
-	if (format == SURFACE_RG8)
+	else if (format == SURFACE_RG8)
 		glFormat = GL_RG8;
-	if (format == SURFACE_RG16F)
+	else if (format == SURFACE_RG16F)
 		glFormat = GL_RG16F;
-	if (format == SURFACE_RG32F)
+	else if (format == SURFACE_RG32F)
 		glFormat = GL_RG32F;
 	
 	return glFormat;
@@ -161,7 +161,7 @@ static GLenum translateDepthFormat(const DEPTH_FORMAT format)
 	
 #if ENABLE_DESKTOP_OPENGL
 	// todo : gles : float32 depth format ?
-	if (format == DEPTH_FLOAT32)
+	else if (format == DEPTH_FLOAT32)
 		glFormat = GL_DEPTH32F_STENCIL8;
 #endif
 

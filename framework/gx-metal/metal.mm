@@ -77,6 +77,9 @@ struct RenderPassData
 	id <MTLRenderCommandEncoder> encoder;
 	
 	RenderPipelineState::RenderPass renderPass;
+	
+	int viewportSx = 0;
+	int viewportSy = 0;
 };
 
 struct RenderPassDataForPushPop
@@ -114,6 +117,8 @@ void metal_init()
 	device = MTLCreateSystemDefaultDevice();
 	
 	queue = [device newCommandQueue];
+	
+	// pre-create all possible sampler states
 	
 	@autoreleasepool
 	{
@@ -311,7 +316,13 @@ id <MTLDevice> metal_get_device()
 	return device;
 }
 
-void metal_upload_texture_area(const void * src, const int srcPitch, const int srcSx, const int srcSy, id <MTLTexture> dst, const int dstX, const int dstY, const MTLPixelFormat pixelFormat)
+void metal_upload_texture_area(
+	const void * src,
+	const int srcPitch,
+	const int srcSx, const int srcSy,
+	id <MTLTexture> dst,
+	const int dstX, const int dstY,
+	const MTLPixelFormat pixelFormat)
 {
 	@autoreleasepool
 	{
@@ -348,7 +359,14 @@ void metal_upload_texture_area(const void * src, const int srcPitch, const int s
 	}
 }
 
-void metal_copy_texture_to_texture(id <MTLTexture> src, const int srcPitch, const int srcX, const int srcY, const int srcSx, const int srcSy, id <MTLTexture> dst, const int dstX, const int dstY, const MTLPixelFormat pixelFormat)
+void metal_copy_texture_to_texture(
+	id <MTLTexture> src,
+	const int srcPitch,
+	const int srcX, const int srcY,
+	const int srcSx, const int srcSy,
+	id <MTLTexture> dst,
+	const int dstX, const int dstY,
+	const MTLPixelFormat pixelFormat)
 {
 	@autoreleasepool
 	{
@@ -493,6 +511,9 @@ void beginRenderPass(
 			if (depthattachment.texture.height > viewportSy)
 				viewportSy = depthattachment.texture.height;
 		}
+		
+		pd.viewportSx = viewportSx;
+		pd.viewportSy = viewportSy;
 		
 		// begin encoding
 		
@@ -650,6 +671,18 @@ void popRenderPass()
 	gxPopMatrix();
 }
 
+bool getCurrentRenderTargetSize(int & sx, int & sy)
+{
+	if (s_activeRenderPass == nullptr)
+		return false;
+	else
+	{
+		sx = s_activeRenderPass->viewportSx;
+		sy = s_activeRenderPass->viewportSy;
+		return true;
+	}
+}
+
 void setColorWriteMask(int r, int g, int b, int a)
 {
 	int mask = 0;
@@ -660,6 +693,11 @@ void setColorWriteMask(int r, int g, int b, int a)
 	if (a) mask |= 8;
 	
 	renderState.colorWriteMask = mask;
+}
+
+void setColorWriteMaskAll()
+{
+	setColorWriteMask(1, 1, 1, 1);
 }
 
 // -- render states --
@@ -856,8 +894,12 @@ void popCullMode()
 // -- gpu resources --
 
 static GxTextureId createTexture(
-	const void * source, const int sx, const int sy, const int bytesPerPixel, const int sourcePitch,
-	const bool filter, const bool clamp,
+	const void * source,
+	const int sx, const int sy,
+	const int bytesPerPixel,
+	const int sourcePitch,
+	const bool filter,
+	const bool clamp,
 	const MTLPixelFormat pixelFormat)
 {
 	@autoreleasepool
@@ -915,6 +957,7 @@ GxTextureId createTextureFromRG32F(const void * source, int sx, int sy, bool fil
 }
 
 // --- internal texture creation functions ---
+
 GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, int sourcePitch, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, 4, sourcePitch, filter, clamp, MTLPixelFormatRGBA8Unorm);
@@ -944,8 +987,6 @@ void freeTexture(GxTextureId & textureId)
 
 #include "Mat4x4.h"
 #include "Quat.h"
-
-#define TODO 0
 
 class GxMatrixStack
 {
@@ -1020,7 +1061,7 @@ GX_MATRIX gxGetMatrixMode()
 {
 	if (s_gxMatrixStack == &s_gxModelView)
 		return GX_MODELVIEW;
-	if (s_gxMatrixStack == &s_gxProjection)
+	else if (s_gxMatrixStack == &s_gxProjection)
 		return GX_PROJECTION;
 	else
 	{
@@ -1091,10 +1132,7 @@ void gxMultMatrixf(const float * _m)
 
 void gxTranslatef(float x, float y, float z)
 {
-	Mat4x4 m;
-	m.MakeTranslation(x, y, z);
-	
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get().Translate(x, y, z);
 }
 
 void gxRotatef(float angle, float x, float y, float z)
@@ -1107,10 +1145,7 @@ void gxRotatef(float angle, float x, float y, float z)
 
 void gxScalef(float x, float y, float z)
 {
-	Mat4x4 m;
-	m.MakeScaling(x, y, z);
-	
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get().Scale(x, y, z);
 }
 
 void gxValidateMatrices()
@@ -1239,6 +1274,8 @@ void gxInitialize()
 	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 	
 	registerBuiltinShaders();
+	
+	Shader("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
 
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
@@ -1426,7 +1463,12 @@ static void gxValidatePipelineState()
 		
 						if (e.stride == 0)
 						{
-							const int componentSize = e.type == GX_ELEMENT_UINT8 ? 1 : 2;
+							const int componentSize =
+								e.type == GX_ELEMENT_UINT8 ? 1 :
+								e.type == GX_ELEMENT_UINT16 ? 2 :
+								e.type == GX_ELEMENT_FLOAT32 ? 4 :
+								-1;
+							
 							const int stride = componentSize * e.numComponents;
 							
 							vertexDescriptor.layouts[i].stride = stride;
@@ -1638,7 +1680,7 @@ static void doCapture(const bool endOfBatch)
 
 	if (endOfBatch)
 	{
-		s_gxVertices = 0;
+		s_gxVertices = nullptr;
 		s_gxVertexCount = 0;
 	}
 	else
@@ -1699,7 +1741,7 @@ static void gxFlush(bool endOfBatch)
 	{
 		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 	}
-	else if (s_gxVertexCount)
+	else if (s_gxVertexCount != 0)
 	{
 		// Metal doesn't support line loops. so we emulate support for it here by duplicating
 		// the first point at the end of the vertex buffer if this is a line loop
@@ -1898,7 +1940,7 @@ static void gxFlush(bool endOfBatch)
 	
 	if (endOfBatch)
 	{
-		s_gxVertices = 0;
+		s_gxVertices = nullptr;
 		s_gxVertexCount = 0;
 	}
 	else

@@ -1,4 +1,5 @@
 #include "framework.h"
+#include "internal.h"
 
 #if ENABLE_OPENGL
 
@@ -15,6 +16,8 @@
 static const int kMaxColorTargets = 8;
 
 static GLuint s_frameBufferId = 0;
+static int s_viewportSx = 0;
+static int s_viewportSy = 0;
 
 extern bool s_renderPassIsBackbufferPass;
 
@@ -77,7 +80,7 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	
 	if (depthTarget != nullptr)
 	{
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTarget->getTextureId(), 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthTarget->getTextureId(), 0);
 		checkErrorGL();
 		
 		if (depthTarget->getWidth() > viewportSx)
@@ -151,12 +154,13 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 		}
 	}
 	
-	// set viewport and apply transform
+	// update viewport
 	
-// todo : applyTransformWithViewportSize should be called here
-// todo : getCurrentViewportSize should be updated to know about the active render targets, otherwise applyTransformWithViewportSize will be passed the incorrect size
-
 	glViewport(0, 0, viewportSx, viewportSy);
+	s_viewportSx = viewportSx;
+	s_viewportSy = viewportSy;
+	
+	// apply transform
 	
 	applyTransform();
 }
@@ -203,12 +207,19 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 		checkErrorGL();
 	}
 
-	// todo : set viewport and apply transform
-
-	applyTransform();
+	int viewportSx = 0;
+	int viewportSy = 0;
+	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &viewportSx, &viewportSy);
 	
-// todo : applyTransformWithViewportSize should be called here
-// todo : getCurrentViewportSize should be updated to know about the active render targets, otherwise applyTransformWithViewportSize will be passed the incorrect size
+	// update viewport
+	
+	glViewport(0, 0, viewportSx, viewportSy);
+	s_viewportSx = viewportSx;
+	s_viewportSy = viewportSy;
+	
+	// apply transform
+	
+	applyTransform();
 }
 
 void endRenderPass()
@@ -224,9 +235,19 @@ void endRenderPass()
 		s_frameBufferId = 0;
 	}
 	
-	//
+	// update viewport
 	
-	applyTransform(); // for viewport
+	int viewportSx = 0;
+	int viewportSy = 0;
+	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &viewportSx, &viewportSy);
+	
+	glViewport(0, 0, viewportSx, viewportSy);
+	s_viewportSx = viewportSx;
+	s_viewportSy = viewportSy;
+	
+	// apply transform
+	
+	applyTransform();
 }
 
 // --- render passes stack ---
@@ -345,10 +366,6 @@ void popRenderPass()
 			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, "(cont)"); // todo : pass name
 		}
 	}
-
-	// setup viewport
-	
-	applyTransform(); // for viewport
 	
 	// restore state
 	
@@ -356,6 +373,16 @@ void popRenderPass()
 	gxPopMatrix();
 	gxMatrixMode(GX_MODELVIEW);
 	gxPopMatrix();
+}
+
+bool getCurrentRenderTargetSize(int & sx, int & sy)
+{
+	if (s_frameBufferId == 0)
+		return false;
+	
+	sx = s_viewportSx;
+	sy = s_viewportSy;
+	return true;
 }
 
 #endif

@@ -53,6 +53,112 @@ ShaderCache g_shaderCache;
 
 //
 
+void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
+{
+	// cache uniform offsets
+	
+	if (reflection != nullptr)
+	{
+		for (MTLArgument * arg in reflection.vertexArguments)
+		{
+			if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"inputs"])
+			{
+				//logDebug("found inputs");
+			}
+			else if (arg.type == MTLArgumentTypeTexture)
+			{
+				//logDebug("found texture");
+				addTexture(arg, 'v');
+			}
+			else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name hasPrefix:@"uniforms"])
+			{
+				Assert(arg.index >= 0 && arg.index < kMaxBuffers);
+				if (arg.index >= 0 && arg.index < kMaxBuffers)
+				{
+					vsInfo.initUniforms(arg);
+					addUniforms(arg, 'v');
+					
+					Assert(vsUniformData[arg.index] == nullptr);
+					vsUniformData[arg.index] = malloc(arg.bufferDataSize);
+					memset(vsUniformData[arg.index], 0, arg.bufferDataSize);
+				}
+			}
+		}
+		
+		for (MTLArgument * arg in reflection.fragmentArguments)
+		{
+			if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name isEqualToString:@"inputs"])
+			{
+				//logDebug("found inputs");
+			}
+			else if (arg.type == MTLArgumentTypeTexture)
+			{
+				//logDebug("found texture");
+				addTexture(arg, 'p');
+			}
+			else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name hasPrefix:@"uniforms"])
+			{
+				Assert(arg.index >= 0 && arg.index < kMaxBuffers);
+				if (arg.index >= 0 && arg.index < kMaxBuffers)
+				{
+					psInfo.initUniforms(arg);
+					addUniforms(arg, 'p');
+					
+					Assert(psUniformData[arg.index] == nullptr);
+					psUniformData[arg.index] = malloc(arg.bufferDataSize);
+					memset(psUniformData[arg.index], 0, arg.bufferDataSize);
+				}
+			}
+		}
+		
+		initParamIndicesFromUniforms();
+	}
+}
+
+void ShaderCacheElem_Metal::shut()
+{
+	for (auto & pipeline : m_pipelines)
+	{
+		[pipeline.second release];
+		pipeline.second = nullptr;
+	}
+	
+	m_pipelines.clear();
+	
+	//
+	
+	for (auto & vsTexture : vsTextures)
+		vsTexture = nullptr;
+	for (auto & psTexture : psTextures)
+		psTexture = nullptr;
+	
+	//
+	
+	memset(params, -1, sizeof(params));
+	
+	textureInfos.clear();
+	
+	for (int i = 0; i < kMaxBuffers; ++i)
+	{
+		free(vsUniformData[i]);
+		free(psUniformData[i]);
+		vsUniformData[i] = nullptr;
+		psUniformData[i] = nullptr;
+	}
+	
+	uniformInfos.clear();
+	
+	vsInfo = StageInfo();
+	psInfo = StageInfo();
+	
+	[vsFunction release];
+	[psFunction release];
+	vsFunction = nullptr;
+	psFunction = nullptr;
+	
+	name.clear();
+}
+
 void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameVs, const char * in_filenamePs, const char * in_outputs)
 {
 	//ScopedLoadTimer loadTimer(_name);
@@ -228,6 +334,138 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 	outputs = in_outputs;
 
 	version++;
+}
+
+void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
+{
+	for (MTLStructMember * uniform in arg.bufferStructType.members)
+	{
+		const char * name = [uniform.name cStringUsingEncoding:NSASCIIStringEncoding];
+		
+		bool found = false;
+		
+		for (UniformInfo & uniformInfo : uniformInfos)
+		{
+			if (uniformInfo.name == name)
+			{
+				found = true;
+				
+				if (type == 'v')
+				{
+					uniformInfo.vsBuffer = arg.index;
+					uniformInfo.vsOffset = uniform.offset;
+				}
+				else
+				{
+					uniformInfo.psBuffer = arg.index;
+					uniformInfo.psOffset = uniform.offset;
+				}
+			}
+		}
+		
+		if (found == false)
+		{
+			uniformInfos.resize(uniformInfos.size() + 1);
+			
+			UniformInfo & uniformInfo = uniformInfos.back();
+			uniformInfo.name = name;
+			
+			if (type == 'v')
+			{
+				uniformInfo.vsBuffer = arg.index;
+				uniformInfo.vsOffset = uniform.offset;
+			}
+			else
+			{
+				uniformInfo.psBuffer = arg.index;
+				uniformInfo.psOffset = uniform.offset;
+			}
+			
+			switch (uniform.dataType)
+			{
+			case MTLDataTypeFloat:
+				uniformInfo.elemType = 'f';
+				uniformInfo.numElems = 1;
+				break;
+			case MTLDataTypeFloat2:
+				uniformInfo.elemType = 'f';
+				uniformInfo.numElems = 2;
+				break;
+			case MTLDataTypeFloat3:
+				uniformInfo.elemType = 'f';
+				uniformInfo.numElems = 3;
+				break;
+			case MTLDataTypeFloat4:
+				uniformInfo.elemType = 'f';
+				uniformInfo.numElems = 4;
+				break;
+			case MTLDataTypeFloat4x4:
+				uniformInfo.elemType = 'm';
+				uniformInfo.numElems = 16;
+				break;
+			default:
+				Assert(false); // todo : enable assert
+				break;
+			}
+		}
+	}
+}
+
+void ShaderCacheElem_Metal::initParamIndicesFromUniforms()
+{
+	for (int i = 0; i < uniformInfos.size(); ++i)
+	{
+		auto & uniform = uniformInfos[i];
+		
+	#define CASE(param, string) if (uniform.name == string) { params[param].set(i); continue; }
+		{
+			CASE(kSp_ModelViewMatrix, "ModelViewMatrix");
+			CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
+			CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
+			CASE(kSp_SkinningMatrices, "skinningMatrices");
+			CASE(kSp_Texture, "source");
+			CASE(kSp_Params, "params");
+			CASE(kSp_ShadingParams, "shadingParams");
+			CASE(kSp_GradientInfo, "gradientInfo");
+			CASE(kSp_GradientMatrix, "gmat");
+			CASE(kSp_TextureMatrix, "tmat");
+		}
+	#undef CASE
+	}
+}
+
+void ShaderCacheElem_Metal::addTexture(MTLArgument * arg, const char type)
+{
+	Assert(arg.type == MTLArgumentTypeTexture);
+	
+	textureInfos.resize(textureInfos.size() + 1);
+	
+	TextureInfo & info = textureInfos.back();
+	info.name = [arg.name cStringUsingEncoding:NSASCIIStringEncoding];
+	
+	if (type == 'v')
+		info.vsOffset = arg.index;
+	else
+		info.psOffset = arg.index;
+}
+
+void ShaderCacheElem_Metal::addTextures(MTLArgument * arg, const char type)
+{
+	for (MTLStructMember * member in arg.bufferStructType.members)
+	{
+		if (member.dataType == MTLDataTypeTexture)
+		{
+			textureInfos.resize(textureInfos.size() + 1);
+			
+			TextureInfo & info = textureInfos.back();
+			info.name = [member.name cStringUsingEncoding:NSASCIIStringEncoding];
+			
+			if (type == 'v')
+				info.vsOffset = member.offset;
+			else
+				info.psOffset = member.offset;
+		}
+	}
 }
 
 //

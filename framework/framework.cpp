@@ -3218,16 +3218,12 @@ static void getCurrentBackingSize(int & sx, int & sy)
 
 static void getCurrentViewportSize(int & sx, int & sy)
 {
-// todo : should check render pass, not surface
-	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	// return the size of the current render target
 	
-	if (surface != nullptr)
+	if (getCurrentRenderTargetSize(sx, sy) == false)
 	{
-		sx = surface->getWidth();
-		sy = surface->getHeight();
-	}
-	else
-	{
+		// or when no render target is active, the size of the current window
+	
 		// todo : fix for case with fullscreen desktop mode
 		// fixme : add specific code for setting screen matrix
 		if (globals.currentWindow == globals.mainWindow && false)
@@ -4538,6 +4534,7 @@ static void applyHqShaderConstants()
 			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index, tmat.m_v);
 		}
 		
+	// fixme : this is broken when using Metal. set texture to gxGetTexture()
 		shader.setTextureUnit("source", 0);
 	}
 

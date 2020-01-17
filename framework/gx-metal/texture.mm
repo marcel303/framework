@@ -175,6 +175,8 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 	if (id == 0)
 		return;
 
+// todo : implement swizzle mask using newer Metal version
+
 #if TODO
 	// capture current OpenGL states before we change them
 
@@ -540,15 +542,22 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 		
 		const MTLPixelFormat format = texture.pixelFormat;
 		
-		// integer unsigned normalized
+		// 8-bit integer unsigned normalized
 		if (format == MTLPixelFormatR8Uint) return GX_R8_UNORM;
 		if (format == MTLPixelFormatRG8Uint) return GX_RG8_UNORM;
 		if (format == MTLPixelFormatRGBA8Uint) return GX_RGBA8_UNORM;
 		
-		// floating point
+		// 16-bit integer unsigned normalized
+		if (format == MTLPixelFormatR16Uint) return GX_R16_UNORM;
+		
+		// 16-bit floating point
 		if (format == MTLPixelFormatR16Float) return GX_R16_FLOAT;
+		
+		// 32-bit floating point
 		if (format == MTLPixelFormatR32Float) return GX_R32_FLOAT;
 		if (format == MTLPixelFormatRGBA32Float) return GX_RGBA32_FLOAT;
+		
+		Assert(false);
 		
 		return GX_UNKNOWN_FORMAT;
 	}

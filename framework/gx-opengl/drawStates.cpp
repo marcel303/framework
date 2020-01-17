@@ -190,6 +190,16 @@ void popWireframe()
 	setWireframe(value);
 }
 
+void setColorWriteMask(int r, int g, int b, int a)
+{
+	glColorMask(r, g, b, a);
+}
+
+void setColorWriteMaskAll()
+{
+	setColorWriteMask(1, 1, 1, 1);
+}
+
 static GLenum toOpenGLDepthFunc(DEPTH_TEST test)
 {
 	switch (test)

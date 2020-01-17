@@ -93,6 +93,8 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName);
 void popRenderPass();
 
+bool getCurrentRenderTargetSize(int & sx, int & sy);
+
 #if ENABLE_METAL
 	#include "gx-metal/renderTarget.h"
 #endif

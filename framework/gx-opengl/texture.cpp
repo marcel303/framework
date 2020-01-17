@@ -63,7 +63,7 @@ static void toOpenGLUploadType(const GX_TEXTURE_FORMAT format, GLenum & uploadFo
 	uploadFormat = GL_INVALID_ENUM;
 	uploadElementType = GL_INVALID_ENUM;
 	
-#define C(src, dstFormat, dstElementType) if (format == src) { uploadFormat = dstFormat; uploadElementType = dstElementType; }
+#define C(src, dstFormat, dstElementType) if (format == src) { uploadFormat = dstFormat; uploadElementType = dstElementType; return; }
 	C(GX_UNKNOWN_FORMAT, GL_INVALID_ENUM, GL_INVALID_ENUM);
 	C(GX_R8_UNORM, GL_RED, GL_UNSIGNED_BYTE);
 	C(GX_RG8_UNORM, GL_RG, GL_UNSIGNED_BYTE);
