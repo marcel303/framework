@@ -207,6 +207,21 @@ public:
 
 //
 
+enum GX_IMMEDIATE_TYPE
+{
+	GX_IMMEDIATE_FLOAT,
+	GX_IMMEDIATE_VEC2,
+	GX_IMMEDIATE_VEC3,
+	GX_IMMEDIATE_VEC4
+};
+
+struct GxImmediateInfo
+{
+	GX_IMMEDIATE_TYPE type;
+	std::string name;
+	GxImmediateIndex index = -1;
+};
+
 class Shader : public ShaderBase
 {
 public:
@@ -225,6 +240,8 @@ public:
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override { return false; } // todo
 
 	GxImmediateIndex getImmediate(const char * name);
+	
+	std::vector<GxImmediateInfo> getImmediateInfos() const;
 	
 	void setImmediate(const char * name, float x);	
 	void setImmediate(const char * name, float x, float y);

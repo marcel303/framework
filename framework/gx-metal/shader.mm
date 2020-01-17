@@ -338,6 +338,9 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 
 void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 {
+	if (!arg.active)
+		return;
+	
 	for (MTLStructMember * uniform in arg.bufferStructType.members)
 	{
 		const char * name = [uniform.name cStringUsingEncoding:NSASCIIStringEncoding];
@@ -616,6 +619,43 @@ GxImmediateIndex Shader::getImmediate(const char * name)
 		if (m_cacheElem->uniformInfos[i].name == name)
 			return i;
 	return -1;
+}
+
+std::vector<GxImmediateInfo> Shader::getImmediateInfos() const
+{
+	std::vector<GxImmediateInfo> result;
+	result.resize(m_cacheElem->uniformInfos.size());
+	
+	int count = 0;
+	
+	for (size_t i = 0; i < m_cacheElem->uniformInfos.size(); ++i)
+	{
+		auto & u = m_cacheElem->uniformInfos[i];
+		auto & su = result[count];
+		
+		su.name = u.name;
+		su.index = i;
+		su.type = (GX_IMMEDIATE_TYPE)-1;
+		
+		if (u.elemType == 'f')
+		{
+			su.type =
+				u.numElems == 1 ? GX_IMMEDIATE_FLOAT :
+				u.numElems == 2 ? GX_IMMEDIATE_VEC2 :
+				u.numElems == 3 ? GX_IMMEDIATE_VEC3 :
+				u.numElems == 4 ? GX_IMMEDIATE_VEC4 :
+				(GX_IMMEDIATE_TYPE)-1;
+		}
+		
+		if (su.type == (GX_IMMEDIATE_TYPE)-1)
+			continue;
+		
+		count++;
+	}
+	
+	result.resize(count);
+	
+	return result;
 }
 
 void Shader::setImmediate(const char * name, float x)
