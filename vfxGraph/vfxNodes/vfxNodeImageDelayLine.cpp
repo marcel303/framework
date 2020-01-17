@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // glTexStorage2D
 //#include "imageDelayLine.h" // todo
 #include "vfxNodeImageDelayLine.h"
 #include <algorithm>
@@ -53,114 +52,6 @@ VFX_NODE_TYPE(VfxNodeImageDelayLine)
 
 #include <deque>
 #include "framework.h"
-
-static GLuint allocateTexture(const int sx, const int sy, GLenum internalFormat, const bool filter, const bool clamp, const GLint * swizzleMask)
-{
-	GLuint newTexture;
-	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-	
-	glGenTextures(1, &newTexture);
-	glBindTexture(GL_TEXTURE_2D, newTexture);
-	glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, sx, sy);
-	checkErrorGL();
-	
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-	checkErrorGL();
-	
-	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-	checkErrorGL();
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-	
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-	
-	return newTexture;
-}
-
-static GxTextureId copyTexture(const GxTextureId texture)
-{
-	// update texture
-	
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
-	checkErrorGL();
-	
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-
-	//
-	
-// todo : use GX functions to retrieve texture size and format
-	glBindTexture(GL_TEXTURE_2D, texture);
-	checkErrorGL();
-	
-	int sx;
-	int sy;
-	int internalFormat;
-	
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
-	checkErrorGL();
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &internalFormat);
-	checkErrorGL();
-	
-	int magFilter;
-	int wrapS;
-	
-	glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, &magFilter);
-	checkErrorGL();
-	glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, &wrapS);
-	checkErrorGL();
-	
-	GLint swizzleMask[4];
-	glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-	checkErrorGL();
-	
-	const bool filter = magFilter != GL_POINT;
-	const bool clamp = wrapS == GL_CLAMP_TO_EDGE;
-	
-	GLuint newTexture = allocateTexture(sx, sy, internalFormat, filter, clamp, swizzleMask);
-	
-	glBindTexture(GL_TEXTURE_2D, newTexture);
-	checkErrorGL();
-	
-	GLuint frameBuffer = 0;
-	
-	glGenFramebuffers(1, &frameBuffer);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-	checkErrorGL();
-	
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, sx, sy);
-	checkErrorGL();
-	
-	//
-	
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-	checkErrorGL();
-	
-	//
-	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
-	
-	return newTexture;
-}
 
 struct ImageDelayLine
 {
