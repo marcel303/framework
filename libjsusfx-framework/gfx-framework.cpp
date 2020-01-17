@@ -182,16 +182,10 @@ void JsusFxGfx_Framework::setup(const int w, const int h)
 		}
 		else
 		{
-		#if ENABLE_OPENGL
-			glClearColor(r / 255.f, g / 255.f, b / 255.f, 0.f);
-			glClear(GL_COLOR_BUFFER_BIT);
-			checkErrorGL();
-		#else
 			setColorf(r, g, b, 0.f);
 			pushBlend(BLEND_OPAQUE);
 			drawRect(0, 0, w, h);
 			popBlend();
-		#endif
 		}
 	}
 	
