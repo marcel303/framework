@@ -1335,10 +1335,6 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 
 void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
 {
-	Assert(type == GX_TRIANGLES); // todo : translate primitive type
-	if (type != GX_TRIANGLES)
-		return;
-	
 	Shader genericShader("engine/Generic");
 
 	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
@@ -1372,7 +1368,7 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 		glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
 		checkErrorGL();
 		
-		glDrawArrays(GL_TRIANGLES, firstVertex, numVertices);
+		glDrawArrays(toOpenGLPrimitiveType(type), firstVertex, numVertices);
 		checkErrorGL();
 	}
 	else
