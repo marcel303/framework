@@ -38,7 +38,7 @@ struct VfxNodeFsfx : VfxNodeBase
 		int type;
 		VfxPlugType socketType;
 		int socketIndex;
-		int uniformLocation;
+		int immediateIndex;
 	};
 	
 	enum Input
