@@ -16,8 +16,8 @@
 static const int kMaxColorTargets = 8;
 
 static GLuint s_frameBufferId = 0;
-static int s_viewportSx = 0;
-static int s_viewportSy = 0;
+static int s_renderTargetSx = 0;
+static int s_renderTargetSy = 0;
 
 extern bool s_renderPassIsBackbufferPass;
 
@@ -46,8 +46,8 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	
 	s_renderPassIsBackbufferPass = false;
 	
-	int viewportSx = 0;
-	int viewportSy = 0;
+	int renderTargetSx = 0;
+	int renderTargetSy = 0;
 	
 	// specify the color and depth attachment(s)
 	
@@ -61,10 +61,10 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, targets[i]->getTextureId(), 0);
 			checkErrorGL();
 			
-			if (targets[i]->getWidth() > viewportSx)
-				viewportSx = targets[i]->getWidth();
-			if (targets[i]->getHeight() > viewportSy)
-				viewportSy = targets[i]->getHeight();
+			if (targets[i]->getWidth() > renderTargetSx)
+				renderTargetSx = targets[i]->getWidth();
+			if (targets[i]->getHeight() > renderTargetSy)
+				renderTargetSy = targets[i]->getHeight();
 			
 			drawBuffers[numDrawBuffers++] = GL_COLOR_ATTACHMENT0 + i;
 		}
@@ -83,10 +83,10 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthTarget->getTextureId(), 0);
 		checkErrorGL();
 		
-		if (depthTarget->getWidth() > viewportSx)
-			viewportSx = depthTarget->getWidth();
-		if (depthTarget->getHeight() > viewportSy)
-			viewportSy = depthTarget->getHeight();
+		if (depthTarget->getWidth() > renderTargetSx)
+			renderTargetSx = depthTarget->getWidth();
+		if (depthTarget->getHeight() > renderTargetSy)
+			renderTargetSy = depthTarget->getHeight();
 	}
 	
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
@@ -156,9 +156,9 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	
 	// update viewport
 	
-	glViewport(0, 0, viewportSx, viewportSy);
-	s_viewportSx = viewportSx;
-	s_viewportSy = viewportSy;
+	glViewport(0, 0, renderTargetSx, renderTargetSy);
+	s_renderTargetSx = renderTargetSx;
+	s_renderTargetSy = renderTargetSy;
 	
 	// apply transform
 	
@@ -207,15 +207,15 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 		checkErrorGL();
 	}
 
-	int viewportSx = 0;
-	int viewportSy = 0;
-	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &viewportSx, &viewportSy);
+	int renderTargetSx = 0;
+	int renderTargetSy = 0;
+	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
 	
 	// update viewport
 	
-	glViewport(0, 0, viewportSx, viewportSy);
-	s_viewportSx = viewportSx;
-	s_viewportSy = viewportSy;
+	glViewport(0, 0, renderTargetSx, renderTargetSy);
+	s_renderTargetSx = renderTargetSx;
+	s_renderTargetSy = renderTargetSy;
 	
 	// apply transform
 	
@@ -237,13 +237,13 @@ void endRenderPass()
 	
 	// update viewport
 	
-	int viewportSx = 0;
-	int viewportSy = 0;
-	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &viewportSx, &viewportSy);
+	int renderTargetSx = 0;
+	int renderTargetSy = 0;
+	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
 	
-	glViewport(0, 0, viewportSx, viewportSy);
-	s_viewportSx = viewportSx;
-	s_viewportSy = viewportSy;
+	glViewport(0, 0, renderTargetSx, renderTargetSy);
+	s_renderTargetSx = renderTargetSx;
+	s_renderTargetSy = renderTargetSy;
 	
 	// apply transform
 	
@@ -380,8 +380,8 @@ bool getCurrentRenderTargetSize(int & sx, int & sy)
 	if (s_frameBufferId == 0)
 		return false;
 	
-	sx = s_viewportSx;
-	sy = s_viewportSy;
+	sx = s_renderTargetSx;
+	sy = s_renderTargetSy;
 	return true;
 }
 
