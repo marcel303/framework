@@ -4395,6 +4395,9 @@ void GraphEdit::showNotification(const char * format, ...)
 	
 	notifications.push_back(n);
 	
+	while (notifications.size() > 6)
+		notifications.pop_front();
+	
 	logDebug("notification: %s", text);
 }
 
@@ -4969,6 +4972,7 @@ void GraphEdit::draw() const
 		
 		const int kWidth = 200;
 		const int kHeight = 40;
+		const int kSpacing = 50;
 		
 		auto & firstNotification = notifications.front();
 		
@@ -4983,7 +4987,7 @@ void GraphEdit::draw() const
 		if (t < tMoveDown)
 			y = t / tMoveDown;
 		
-		y *= 50;
+		y *= kSpacing;
 		
 		gxTranslatef(0, GRAPHEDIT_SY - y, 0);
 		
@@ -5000,7 +5004,7 @@ void GraphEdit::draw() const
 			setFont("calibri.ttf");
 			drawText(GRAPHEDIT_SX/2, kHeight/2, 18, 0.f, 0.f, "%s", n.text.c_str());
 			
-			gxTranslatef(0, -50, 0);
+			gxTranslatef(0, -kSpacing, 0);
 		}
 		
 		gxPopMatrix();
