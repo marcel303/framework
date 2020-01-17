@@ -78,6 +78,7 @@ struct RenderPassData
 	
 	int viewportSx = 0;
 	int viewportSy = 0;
+	int backingScale = 0;
 };
 
 struct RenderPassDataForPushPop
@@ -86,12 +87,17 @@ struct RenderPassDataForPushPop
 	int numTargets = 0;
 	DepthTarget * depthTarget = nullptr;
 	bool isBackbufferPass = false;
+	int backingScale = 0;
 };
 
 static std::stack<RenderPassDataForPushPop> s_renderPasses;
 
 static RenderPassData s_renderPassData;
 static RenderPassData * s_activeRenderPass = nullptr;
+
+//
+
+static id <MTLFence> waitForBlit = nullptr;
 
 //
 
@@ -341,13 +347,13 @@ void metal_upload_texture_area(
 		}
 		else
 		{
-			metal_make_blit_engine_wait_for_draw(blit_encoder);
-			
 			[blit_encoder
 				copyFromTexture:src_texture
 				sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size
 				toTexture:dst
 				destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+			
+			metal_make_render_wait_for_blit(blit_encoder);
 		}
 		
 		[blit_encoder endEncoding];
@@ -395,9 +401,9 @@ void metal_copy_texture_to_texture(
 		}
 		else
 		{
-			metal_make_blit_engine_wait_for_draw(blit_encoder);
-			
 			[blit_encoder copyFromTexture:src sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+				
+			metal_make_render_wait_for_blit(blit_encoder);
 		}
 		
 		[blit_encoder endEncoding];
@@ -405,19 +411,14 @@ void metal_copy_texture_to_texture(
 	}
 }
 
-void metal_make_blit_engine_wait_for_draw(id<MTLBlitCommandEncoder> blit_encoder)
+static id<MTLCommandBuffer> s_sync_blit_to_render_cmdbuf = nullptr;
+static id<MTLRenderCommandEncoder> s_sync_blit_to_render_encoder = nullptr;
+
+void metal_make_render_wait_for_blit(id<MTLBlitCommandEncoder> blit_encoder)
 {
-	id <MTLFence> waitForDraw = [device newFence];
+	[waitForBlit release];
 	
-	id<MTLCommandBuffer> cmdbuf = [queue commandBuffer];
-	MTLRenderPassDescriptor * renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
-	id<MTLCommandEncoder> encoder = [cmdbuf renderCommandEncoderWithDescriptor:renderdesc];
-
-	[encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
-	[cmdbuf commit];
-
-	[blit_encoder waitForFence:waitForDraw];
-	[waitForDraw release];
+	waitForBlit = [device newFence];
 }
 
 void metal_generate_mipmaps(id <MTLTexture> texture)
@@ -446,10 +447,9 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 		}
 		else
 		{
-		// todo : for completeness sake, we should also let the render engine wait for blit
-			metal_make_blit_engine_wait_for_draw(blit_encoder);
-			
 			[blit_encoder generateMipmapsForTexture:texture];
+			
+			metal_make_render_wait_for_blit(blit_encoder);
 		}
 		
 		[blit_encoder endEncoding];
@@ -464,9 +464,10 @@ void beginRenderPass(
 	const bool clearColor,
 	DepthTarget * depthTarget,
 	const bool clearDepth,
-	const char * passName)
+	const char * passName,
+	const int backingScale)
 {
-	beginRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
+	beginRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName, backingScale);
 }
 
 void beginRenderPass(
@@ -475,7 +476,8 @@ void beginRenderPass(
 	const bool in_clearColor,
 	DepthTarget * depthTarget,
 	const bool in_clearDepth,
-	const char * passName)
+	const char * passName,
+	const int backingScale)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
@@ -533,11 +535,22 @@ void beginRenderPass(
 		
 		pd.viewportSx = viewportSx;
 		pd.viewportSy = viewportSy;
+		pd.backingScale = backingScale;
 		
 		// begin encoding
 		
 		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
 		pd.encoder.label = [NSString stringWithCString:passName encoding:NSASCIIStringEncoding];
+		
+		// wait for blit operations (if any)
+		
+		if (waitForBlit != nullptr)
+		{
+			[pd.encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
+			
+			[waitForBlit release];
+			waitForBlit = nullptr;
+		}
 		
 		renderState.renderPass = pd.renderPass;
 		
@@ -552,7 +565,7 @@ void beginRenderPass(
 	}
 }
 
-void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
+void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
 {
 	ColorTarget colorTarget(activeWindowData->current_drawable.texture);
 	colorTarget.setClearColor(color.r, color.g, color.b, color.a);
@@ -565,7 +578,8 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 		clearColor,
 		activeWindowData->metalview.depthTexture ? &depthTarget : nullptr,
 		clearDepth,
-		passName);
+		passName,
+		backingScale);
 }
 
 void endRenderPass()
@@ -593,12 +607,12 @@ void endRenderPass()
 
 // --- render passes stack ---
 
-void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
+void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName, const int backingScale)
 {
-	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
+	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName, backingScale);
 }
 
-void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName)
+void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName, const int backingScale)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
@@ -616,7 +630,7 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		endRenderPass();
 	}
 	
-	beginRenderPass(targets, numTargets, in_clearColor, depthTarget, in_clearDepth, passName);
+	beginRenderPass(targets, numTargets, in_clearColor, depthTarget, in_clearDepth, passName, backingScale);
 	
 	// record the current render pass information in the render passes stack
 	
@@ -624,11 +638,12 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 	for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
 		pd.target[pd.numTargets++] = targets[i];
 	pd.depthTarget = depthTarget;
+	pd.backingScale = backingScale;
 
 	s_renderPasses.push(pd);
 }
 
-void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
+void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
 {
 	// save state
 	
@@ -644,12 +659,13 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 		endRenderPass();
 	}
 	
-	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName);
+	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName, backingScale);
 	
 	// record the current render pass information in the render passes stack
 	
 	RenderPassDataForPushPop pd;
 	pd.isBackbufferPass = true;
+	pd.backingScale = backingScale;
 	
 	s_renderPasses.push(pd);
 }
@@ -674,11 +690,11 @@ void popRenderPass()
 		
 		if (new_pd.isBackbufferPass)
 		{
-			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, "(cont)"); // todo : pass name
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, "(cont)", new_pd.backingScale); // todo : pass name
 		}
 		else
 		{
-			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, "(cont)"); // todo : pass name
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, "(cont)", new_pd.backingScale); // todo : pass name
 		}
 	}
 	
@@ -690,14 +706,19 @@ void popRenderPass()
 	gxPopMatrix();
 }
 
-bool getCurrentRenderTargetSize(int & sx, int & sy)
+bool getCurrentRenderTargetSize(int & sx, int & sy, int & backingScale)
 {
 	if (s_activeRenderPass == nullptr)
 		return false;
 	else
 	{
+		Assert(s_activeRenderPass->viewportSx != 0);
+		Assert(s_activeRenderPass->viewportSy != 0);
+		Assert(s_activeRenderPass->backingScale != 0);
+		
 		sx = s_activeRenderPass->viewportSx;
 		sy = s_activeRenderPass->viewportSy;
+		backingScale = s_activeRenderPass->backingScale;
 		return true;
 	}
 }
@@ -980,6 +1001,33 @@ GxTextureId createTextureFromRG32F(const void * source, int sx, int sy, bool fil
 GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, int sourcePitch, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, 4, sourcePitch, filter, clamp, MTLPixelFormatRGBA8Unorm);
+}
+
+GxTextureId copyTexture(const GxTextureId source)
+{
+	if (source != 0)
+	{
+		@autoreleasepool
+		{
+			auto & src = s_textures[source];
+			
+			const GxTextureId textureId = s_nextTextureId++;
+			
+			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:src.pixelFormat width:src.width height:src.height mipmapped:NO];
+			
+			id <MTLTexture> dst = [device newTextureWithDescriptor:descriptor];
+			
+			metal_copy_texture_to_texture(src, 0, 0, 0, src.width, src.height, dst, 0, 0, dst.pixelFormat);
+			
+			s_textures[s_nextTextureId] = dst;
+			
+			return textureId;
+		}
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 void freeTexture(GxTextureId & textureId)

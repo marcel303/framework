@@ -3179,40 +3179,28 @@ bool s_renderPassIsBackbufferPass = false; // todo : unify surfaces and render p
 
 static int getCurrentBackingScale()
 {
-	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	int sx, sy;
+	int backingScale;
 	
-	if (surface != nullptr)
-		return surface->getBackingScale();
+	if (getCurrentRenderTargetSize(sx, sy, backingScale))
+		return backingScale;
 	else
 		return s_backingScale;
 }
 
 static void getCurrentBackingSize(int & sx, int & sy)
 {
-	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	int backingScale;
 	
-	if (surface != nullptr)
-	{
-		// surfaces may explicitly set a backing scale > 1, in which case the backing size will be larger than the reported size of the surface
-		
-		sx = surface->getWidth() / framework.minification * surface->getBackingScale();
-		sy = surface->getHeight() / framework.minification * surface->getBackingScale();
-	}
+	if (getCurrentRenderTargetSize(sx, sy, backingScale))
+		return;
 	else
 	{
-	#if ENABLE_METAL
 		sx = globals.currentWindow->getWidth();
 		sy = globals.currentWindow->getHeight();
-	#else
-		// the windowing system may apply a backing scale, in which case the backing size will be larger than the reported size of the window
 		
-		int drawableSx;
-		int drawableSy;
-		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
-		
-		sx = drawableSx;
-		sy = drawableSy;
-	#endif
+		sx *= s_backingScale;
+		sy *= s_backingScale;
 	}
 }
 
@@ -3220,7 +3208,14 @@ static void getCurrentViewportSize(int & sx, int & sy)
 {
 	// return the size of the current render target
 	
-	if (getCurrentRenderTargetSize(sx, sy) == false)
+	int backingScale;
+	
+	if (getCurrentRenderTargetSize(sx, sy, backingScale))
+	{
+		sx /= backingScale;
+		sy /= backingScale;
+	}
+	else
 	{
 		// or when no render target is active, the size of the current window
 	
@@ -3321,7 +3316,7 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 			gxLoadMatrixf(globals.transform3d.m_v);
 		
 		#if ENABLE_OPENGL
-			if (surfaceStackSize != 0 && surfaceStack[surfaceStackSize - 1] != nullptr)
+			if (s_renderPassIsBackbufferPass == false)
 			{
 				// flip Y axis so the vertical axis runs bottom to top
 				gxScalef(1.f, -1.f, 1.f);
@@ -3510,8 +3505,6 @@ Vec2 transformToScreen(const Vec3 & v, float & w)
 
 void pushSurface(Surface * newSurface, const bool clearSurface)
 {
-	Assert(clearSurface == false); // todo : fix issue with popSurface when clear is enabled
-	
 #if ENABLE_SCREENSHOTS
 	const bool screenshotMode = surface == nullptr && s_screenshotSurfaceStack.stackSize > 0;
 	
@@ -3519,127 +3512,78 @@ void pushSurface(Surface * newSurface, const bool clearSurface)
 		surface = s_screenshotSurfaceStack.stack[s_screenshotSurfaceStack.stackSize - 1];
 #endif
 
-	// check if the surface is changed, before changing any states
-	
-	Surface * oldSurface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
-	
+	// record the new surface inside the surface stack
+
 	fassert(surfaceStackSize < kMaxSurfaceStackSize);
 	surfaceStack[surfaceStackSize++] = newSurface;
 	
-	if (newSurface != oldSurface || clearSurface)
+	// start a render pass for the new surface
+	
+	if (newSurface == nullptr)
 	{
-		// save state
-		
-		gxMatrixMode(GX_PROJECTION);
-		gxPushMatrix();
-		gxMatrixMode(GX_MODELVIEW);
-		gxPushMatrix();
-		
-		// start a render pass for the new surface
-		
-		if (newSurface == nullptr)
-		{
-			pushBackbufferRenderPass(
-				clearSurface,
-				colorBlackTranslucent,
-				clearSurface,
-				0.f,
-				"Backbuffer");
-		}
-		else
-		{
-			pushRenderPass(
-				newSurface->getColorTarget(),
-				clearSurface,
-				newSurface->getDepthTarget(),
-				clearSurface,
-				newSurface->getName());
-		}
-		
-		//
-		
-		updateViewport(newSurface, globals.currentWindow->getWindow());
-		
-		applyTransform();
-		
-	// todo : set on beginRenderPass ?
-		setBlend(globals.blendMode);
-
-		//
-
-	#if ENABLE_SCREENSHOTS
-		if (screenshotMode)
-		{
-			int sx;
-			int sy;
-			SDL_GetWindowSize(globals.currentWindow->getWindow(), &sx, &sy);
-			const float scaleX = surface->getWidth() / float(sx);
-			const float scaleY = surface->getHeight() / float(sy);
-			gxScalef(scaleX, scaleY, 1);
-		}
-	#endif
+		pushBackbufferRenderPass(
+			clearSurface,
+			colorBlackTranslucent,
+			clearSurface,
+			0.f,
+			"Backbuffer",
+			s_backingScale);
 	}
+	else
+	{
+		pushRenderPass(
+			newSurface->getColorTarget(),
+			clearSurface,
+			newSurface->getDepthTarget(),
+			clearSurface,
+			newSurface->getName(),
+			newSurface->getBackingScale());
+	}
+
+	//
+
+#if ENABLE_SCREENSHOTS
+	if (screenshotMode)
+	{
+		int sx;
+		int sy;
+		SDL_GetWindowSize(globals.currentWindow->getWindow(), &sx, &sy);
+		const float scaleX = surface->getWidth() / float(sx);
+		const float scaleY = surface->getHeight() / float(sy);
+		gxScalef(scaleX, scaleY, 1);
+	}
+#endif
 }
 
 void popSurface()
 {
-	Surface * oldSurface = surfaceStackSize >= 1 ? surfaceStack[surfaceStackSize - 1] : nullptr;
-	Surface * newSurface = surfaceStackSize >= 2 ? surfaceStack[surfaceStackSize - 2] : nullptr;
-	
 	fassert(surfaceStackSize > 0);
 	surfaceStack[--surfaceStackSize] = 0;
 	
-	if (newSurface != oldSurface) // fixme : fix case where clearSurface enabled would push, but pop is skipped here. we need a better way to know whether we started a new render pass or not
+	popRenderPass();
+
+#if ENABLE_OPENGL
+// todo : do this inside popRenderPass
+
+	// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
+	// as this would cause issues where the driver may perform an optimization where it detects no texture
+	// state change happened in a future gxSetTexture or Shader::setTexture call (because the texture ids
+	// are the same), making it fail to flush GPU render target caches, fail to perform texture decompression,
+	// fail to perform whatever is needed to transition a render target texture from being 'renderable' resource
+	// to being a shader accessible resource
+
+	for (int i = 0; i < 8; ++i)
 	{
-		popRenderPass();
-
-	#if ENABLE_OPENGL
-		// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
-		// as this would cause issues where the driver may perform an optimization where it detects no texture
-		// state change happened in a future gxSetTexture or Shader::setTexture call (because the texture ids
-		// are the same), making it fail to flush GPU render target caches, fail to perform texture decompression,
-		// fail to perform whatever is needed to transition a render target texture from being 'renderable' resource
-		// to being a shader accessible resource
-
-		for (int i = 0; i < 8; ++i)
-		{
-			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
-		}
-
-		glActiveTexture(GL_TEXTURE0);
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, 0);
 		checkErrorGL();
-		
-		globals.gxShaderIsDirty = true;
-	#endif
-
-	#if ENABLE_OPENGL && defined(MACOS) && 0
-	// todo : remove this hack
-		// fix for driver issue where the results of drawing are possibly not yet flushed when accessing a surface texture,
-		// causing artefacts due to texel fetches returning inconsistent results
-		if (glTextureBarrierNV != nullptr)
-		{
-			glTextureBarrierNV();
-			checkErrorGL();
-		}
-	#endif
-		
-	// todo : this should be done by popRenderPass ?
-		updateViewport(newSurface, globals.currentWindow->getWindow());
-		
-		applyTransform();
-		
-	// todo : remove when set on beginRenderPass ?
-		setBlend(globals.blendMode);
-		
-		// restore state
-		
-		gxMatrixMode(GX_PROJECTION);
-		gxPopMatrix();
-		gxMatrixMode(GX_MODELVIEW);
-		gxPopMatrix();
 	}
+
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+	
+	globals.gxShaderIsDirty = true;
+#endif
 }
 
 void setDrawRect(int x, int y, int sx, int sy)
@@ -3655,50 +3599,27 @@ void setDrawRect(int x, int y, int sx, int sy)
 	#define ScaleX(x) x = ((x) * backingSx / (surfaceSx / framework.minification))
 	#define ScaleY(y) y = ((y) * backingSy / (surfaceSy / framework.minification))
 	
-	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
-
-	if (surface != nullptr)
-	{
-		ScaleX(x);
-		ScaleY(y);
-		ScaleX(sx);
-		ScaleY(sy);
-	
-	#if ENABLE_METAL
-		metal_set_scissor(x, y, sx, sy);
-	#endif
-	
-	#if ENABLE_OPENGL // todo : metal impl setDrawRect
-		glScissor(x, y, sx, sy);
-		checkErrorGL();
-
-		glEnable(GL_SCISSOR_TEST);
-		checkErrorGL();
-	#endif
-	}
-	else
-	{
-	#if ENABLE_OPENGL
+#if ENABLE_OPENGL
+	if (s_renderPassIsBackbufferPass)
 		y = surfaceSy - y - sy;
-	#endif
+#endif
 
-		ScaleX(x);
-		ScaleY(y);
-		ScaleX(sx);
-		ScaleY(sy);
+	ScaleX(x);
+	ScaleY(y);
+	ScaleX(sx);
+	ScaleY(sy);
 
-	#if ENABLE_METAL
-		metal_set_scissor(x, y, sx, sy);
-	#endif
-	
-	#if ENABLE_OPENGL // todo : metal impl setDrawRect
-		glScissor(x, y, sx, sy);
-		checkErrorGL();
+#if ENABLE_METAL
+	metal_set_scissor(x, y, sx, sy);
+#endif
 
-		glEnable(GL_SCISSOR_TEST);
-		checkErrorGL();
-	#endif
-	}
+#if ENABLE_OPENGL // todo : metal impl setDrawRect
+	glScissor(x, y, sx, sy);
+	checkErrorGL();
+
+	glEnable(GL_SCISSOR_TEST);
+	checkErrorGL();
+#endif
 }
 
 void clearDrawRect()
