@@ -60,8 +60,6 @@ static std::map<SDL_Window*, MetalWindowData*> windowDatas;
 
 MetalWindowData * activeWindowData = nullptr;
 
-static std::vector<id <MTLResource>> s_resourcesToFree;
-
 static id<MTLSamplerState> samplerStates[3 * 2]; // [filter(nearest, linear, mipmapped)][clamp(false, true)]
 
 //
@@ -98,19 +96,6 @@ static RenderPassData * s_activeRenderPass = nullptr;
 //
 
 extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
-
-static void freeResourcesToFree()
-{
-	for (id <MTLResource> & resource : s_resourcesToFree)
-	{
-		//NSLog(@"resource release, retain count: %lu", [resource retainCount]);
-		
-		[resource release];
-		resource = nullptr;
-	}
-	
-	s_resourcesToFree.clear();
-}
 
 void metal_init()
 {
@@ -248,10 +233,6 @@ void metal_draw_end()
 
 	[pd.cmdbuf commit];
 	
-// todo : remove and use addCompletedHandler instead
-	//[activeWindowData->cmdbuf waitUntilCompleted];
-	freeResourcesToFree(); // todo : call in response to completion handler
-	
 	//
 	
 	[pd.encoder release];
@@ -336,6 +317,8 @@ void metal_upload_texture_area(
 		
 		auto blit_cmdbuf = [queue commandBuffer];
 		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
+		
+		if (s_activeRenderPass != nullptr)
 		{
 		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
@@ -344,7 +327,11 @@ void metal_upload_texture_area(
 			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
 			{
 				[blit_encoder waitForFence:waitForDraw];
-				[blit_encoder copyFromTexture:src_texture sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+				[blit_encoder
+					copyFromTexture:src_texture
+					sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size
+					toTexture:dst
+					destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
 				[blit_encoder updateFence:waitForBlit];
 			}
 			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
@@ -352,10 +339,22 @@ void metal_upload_texture_area(
 			[waitForDraw release];
 			[waitForBlit release];
 		}
+		else
+		{
+			metal_make_blit_engine_wait_for_draw(blit_encoder);
+			
+			[blit_encoder
+				copyFromTexture:src_texture
+				sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size
+				toTexture:dst
+				destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+		}
+		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
 		
-		s_resourcesToFree.push_back(src_texture);
+		[src_texture release];
+		src_texture = nullptr;
 	}
 }
 
@@ -396,12 +395,29 @@ void metal_copy_texture_to_texture(
 		}
 		else
 		{
+			metal_make_blit_engine_wait_for_draw(blit_encoder);
+			
 			[blit_encoder copyFromTexture:src sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
 		}
 		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
 	}
+}
+
+void metal_make_blit_engine_wait_for_draw(id<MTLBlitCommandEncoder> blit_encoder)
+{
+	id <MTLFence> waitForDraw = [device newFence];
+	
+	id<MTLCommandBuffer> cmdbuf = [queue commandBuffer];
+	MTLRenderPassDescriptor * renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
+	id<MTLCommandEncoder> encoder = [cmdbuf renderCommandEncoderWithDescriptor:renderdesc];
+
+	[encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
+	[cmdbuf commit];
+
+	[blit_encoder waitForFence:waitForDraw];
+	[waitForDraw release];
 }
 
 void metal_generate_mipmaps(id <MTLTexture> texture)
@@ -430,6 +446,9 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 		}
 		else
 		{
+		// todo : for completeness sake, we should also let the render engine wait for blit
+			metal_make_blit_engine_wait_for_draw(blit_encoder);
+			
 			[blit_encoder generateMipmapsForTexture:texture];
 		}
 		
@@ -974,7 +993,8 @@ void freeTexture(GxTextureId & textureId)
 		{
 			auto & texture = i->second;
 			
-			s_resourcesToFree.push_back(texture);
+			[texture release];
+			texture = nullptr;
 			
 			s_textures.erase(i);
 		}

@@ -37,8 +37,6 @@
 
 #define ENABLE_TEXTURE_CONVERSIONS 0
 
-#define ENABLE_ASYNC_TEXTURE_UPLOADS 1
-
 id <MTLDevice> metal_get_device();
 
 std::map<int, id <MTLTexture>> s_textures;
@@ -255,6 +253,8 @@ void GxTexture::clearf(const float r, const float g, const float b, const float 
 	}
 	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
 	checkErrorGL();
+#else
+	Assert(false);
 #endif
 }
 
@@ -317,6 +317,8 @@ void GxTexture::clearAreaToZero(const int x, const int y, const int sx, const in
 	
 	if (!allocateFromStack)
 		::free(zeroes);
+#else
+	Assert(false);
 #endif
 }
 
@@ -370,35 +372,9 @@ static void * make_compatible(const void * src, const int srcSx, const int srcSy
 	return nullptr;
 }
 
-void GxTexture::upload(const void * src, const int _srcAlignment, const int _srcPitch, const bool updateMipmaps)
+void GxTexture::upload(const void * src, const int srcAlignment, const int srcPitch, const bool updateMipmaps)
 {
-	Assert(id != 0);
-	if (id == 0)
-		return;
-	
-	const MTLRegion region =
-	{
-		{ 0, 0, 0 },
-		{ (NSUInteger)sx, (NSUInteger)sy, 1 }
-	};
-	
-	auto texture = s_textures[id];
-	
-	const int srcPitch = _srcPitch == 0 ? sx : _srcPitch;
-	const int bytesPerPixel = getMetalFormatBytesPerPixel(format);
-	
-	void * copy = make_compatible(src, srcPitch, sx, sy, format);
-	
-	if (copy != nullptr)
-	{
-		[texture replaceRegion:region mipmapLevel:0 withBytes:copy bytesPerRow:sx * bytesPerPixel];
-		
-		::free(copy);
-	}
-	else
-	{
-		[texture replaceRegion:region mipmapLevel:0 withBytes:src bytesPerRow:srcPitch * bytesPerPixel];
-	}
+	uploadArea(src, srcAlignment, srcPitch, sx, sy, 0, 0);
 	
 	// generate mipmaps if needed
 	
@@ -416,7 +392,6 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _
 	
 	@autoreleasepool
 	{
-	#if ENABLE_ASYNC_TEXTURE_UPLOADS
 		// we update the texture asynchronously here. which means we first have to
 		// create a staging texture containing the source data, and perform a blit
 		// later on, when the GPU has processed its pending draw commands
@@ -461,34 +436,8 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _
 		
 		metal_copy_texture_to_texture(src_texture, srcSx * bytesPerPixel, 0, 0, srcSx, srcSy, dst_texture, dstX, dstY, metalFormat);
 		
-		[src_texture release]; // todo : defer release ?
+		[src_texture release];
 		src_texture = nullptr;
-	#else
-	// todo : remove this dead code
-		const MTLRegion region =
-		{
-			{ (NSUInteger)dstX, (NSUInteger)dstY, 0 },
-			{ (NSUInteger)srcSx, (NSUInteger)srcSy, 1 }
-		};
-		
-		auto texture = s_textures[id];
-		
-		const int srcPitch = _srcPitch == 0 ? srcSx : _srcPitch;
-		const int bytesPerPixel = getMetalFormatBytesPerPixel(format);
-		
-		void * copy = make_compatible(src, srcSx, srcSy, srcPitch, format);
-		
-		if (copy != nullptr)
-		{
-			[texture replaceRegion:region mipmapLevel:0 withBytes:copy bytesPerRow:srcSx * bytesPerPixel];
-			
-			::free(copy);
-		}
-		else
-		{
-			[texture replaceRegion:region mipmapLevel:0 withBytes:src bytesPerRow:srcPitch * bytesPerPixel];
-		}
-	#endif
 	}
 }
 

@@ -73,6 +73,8 @@ struct RenderPipelineState
 
 extern RenderPipelineState renderState;
 
+void metal_make_blit_engine_wait_for_draw(id<MTLBlitCommandEncoder> blit_encoder);
+
 void metal_upload_texture_area(
 	const void * src,
 	const int srcPitch,
