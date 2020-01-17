@@ -25,13 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <algorithm>
-#if defined(IPHONEOS)
-	#include <OpenGLES/ES3/gl.h>
-#else
-	#include <GL/glew.h>
-#endif
-#include <SDL2/SDL.h>
 #include "data/engine/ShaderCommon.txt"
 #include "framework.h"
 #include "internal.h"
@@ -41,6 +34,8 @@
 #include "model_ogre.h"
 #include "Path.h"
 #include "StringEx.h"
+#include <algorithm>
+#include <SDL2/SDL.h>
 
 #define DEBUG_TRS 0
 

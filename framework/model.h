@@ -27,12 +27,6 @@
 
 #pragma once
 
-#if defined(IPHONEOS)
-	#include <OpenGLES/ES3/gl.h>
-#else
-	#include <GL/glew.h>
-#endif
-
 #include <map>
 #include <string>
 #include <vector>

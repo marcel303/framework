@@ -27,14 +27,6 @@
 
 #include "gx_mesh.h"
 
-#if ENABLE_OPENGL
-	#if defined(IPHONEOS)
-		#include <OpenGLES/ES3/gl.h>
-	#else
-		#include <GL/glew.h>
-	#endif
-#endif
-
 void GxMesh::clear()
 {
 	m_vertexBuffer = nullptr;
