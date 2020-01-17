@@ -698,6 +698,21 @@ public:
 
 //
 
+enum GX_IMMEDIATE_TYPE
+{
+	GX_IMMEDIATE_FLOAT,
+	GX_IMMEDIATE_VEC2,
+	GX_IMMEDIATE_VEC3,
+	GX_IMMEDIATE_VEC4
+};
+
+struct GxImmediateInfo
+{
+	GX_IMMEDIATE_TYPE type;
+	std::string name;
+	GxImmediateIndex index = -1;
+};
+
 #if ENABLE_METAL
 
 #include "gx-metal/shader.h"
@@ -722,6 +737,8 @@ public:
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
 	
 	GxImmediateIndex getImmediate(const char * name);
+	
+	std::vector<GxImmediateInfo> getImmediateInfos() const;
 	
 	void setImmediate(const char * name, float x);	
 	void setImmediate(const char * name, float x, float y);
@@ -1543,6 +1560,8 @@ GxTextureId createTextureFromRGB32F(const void * source, int sx, int sy, bool fi
 GxTextureId createTextureFromRG32F(const void * source, int sx, int sy, bool filter, bool clamp);
 GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp);
 GxTextureId createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp);
+
+GxTextureId copyTexture(const GxTextureId source);
 
 void freeTexture(GxTextureId & textureId);
 

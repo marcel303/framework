@@ -84,6 +84,61 @@ GxImmediateIndex Shader::getImmediate(const char * name)
 	return glGetUniformLocation(getProgram(), name);
 }
 
+std::vector<GxImmediateInfo> Shader::getImmediateInfos() const
+{
+	std::vector<GxImmediateInfo> result;
+	
+	if (isValid() == false)
+		return;
+	
+	GLsizei uniformCount = 0;
+	glGetProgramiv(getProgram(), GL_ACTIVE_UNIFORMS, &uniformCount);
+	checkErrorGL();
+
+	result.resize(uniformCount);
+
+	int count = 0;
+	
+	for (int i = 0; i < uniformCount; ++i)
+	{
+		auto & info = result[count];
+		
+		const GLsizei bufferSize = 256;
+		char name[bufferSize];
+		
+		GLsizei length;
+		GLint size;
+		GLenum type;
+		
+		glGetActiveUniform(getProgram(), i, bufferSize, &length, &size, &type, name);
+		checkErrorGL();
+		
+		const GLint location = glGetUniformLocation(getProgram(), name);
+		checkErrorGL();
+		
+		if (type == GL_FLOAT)
+			info.type = GX_IMMEDIATE_FLOAT;
+		else if (type == GL_FLOAT_VEC2)
+			info.type = GX_IMMEDIATE_VEC2;
+		else if (type == GL_FLOAT_VEC3)
+			info.type = GX_IMMEDIATE_VEC3;
+		else if (type == GL_FLOAT_VEC4)
+			info.type = GX_IMMEDIATE_VEC4;
+		else
+			continue;
+		
+		info.name = name;
+		info.index = location;
+		
+		count++;
+	}
+	
+	result.resize(count);
+	
+	return result;
+}
+
+
 #define SET_UNIFORM(name, op) \
 	if (getProgram()) \
 	{ \
