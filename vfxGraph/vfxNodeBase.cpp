@@ -861,8 +861,6 @@ void VfxNodeDescription::addGxTexture(const char * name, const GxTexture & textu
 
 void VfxNodeDescription::addGxTexture(const char * name, const uint32_t id)
 {
-// todo : rename this method to addGxTexture, use GX functions below
-
 	if (id == 0)
 	{
 		add("%s. id: %d", name, id);
