@@ -89,7 +89,7 @@ std::vector<GxImmediateInfo> Shader::getImmediateInfos() const
 	std::vector<GxImmediateInfo> result;
 	
 	if (isValid() == false)
-		return;
+		return result;
 	
 	GLsizei uniformCount = 0;
 	glGetProgramiv(getProgram(), GL_ACTIVE_UNIFORMS, &uniformCount);
