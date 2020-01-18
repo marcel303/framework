@@ -1,0 +1,36 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+uniform sampler2D source;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	vec4 color00 = textureOffset(source, texcoord, ivec2(0, 0));
+    vec4 color10 = textureOffset(source, texcoord, ivec2(1, 0));
+    vec4 color11 = textureOffset(source, texcoord, ivec2(3, 2));
+    vec4 color01 = textureOffset(source, texcoord, ivec2(0, 1));
+
+#if 0
+    vec4 color1 = max(color00, color10);
+    vec4 color2 = max(color01, color11);
+    vec4 color = max(color1, color2);
+
+    shader_fragColor = color;
+#elif 1
+    color00.rgb = srgbToLinear(color00.rgb);
+    color10.rgb = srgbToLinear(color10.rgb);
+    color11.rgb = srgbToLinear(color11.rgb);
+    color01.rgb = srgbToLinear(color01.rgb);
+
+    vec4 color = (color00 + color10 + color11 + color01) * 0.25;
+
+    shader_fragColor.rgb = linearToSrgb(color.rgb);
+    shader_fragColor.a = color.a;
+#elif 1
+    shader_fragColor = (color00 + color10 + color11 + color01) * 0.25;
+#else
+    shader_fragColor = color00;
+#endif
+}

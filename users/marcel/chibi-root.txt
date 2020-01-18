@@ -25,6 +25,7 @@ add gpuParticles1
 add gpupath1
 add grooop-cocompose
 add hackerPoet/010-particleLife
+add holeFilling
 add homography
 add interpolation1
 add jsusfx1
@@ -47,7 +48,9 @@ add refine
 add reaper1
 with_platform macos add resonate1
 with_platform macos add resonate2
+add ribbon3d
 add sceneedit1
+add screenDoorTranslucency
 add serial-to-osc
 add shadowmap1
 add signedDistance1
