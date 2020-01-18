@@ -127,7 +127,7 @@ void GpuParticleSystem::drawParticleColor(const int in_numParticles) const
 	clearShader();
 }
 
-void GpuParticleSystem::updateParticles(const GxTextureId flowfield)
+void GpuParticleSystem::updateParticles(const GxTextureId flowfield, const float dt)
 {
 	const GxTextureId pTex = p.getTexture();
 	
@@ -141,7 +141,7 @@ void GpuParticleSystem::updateParticles(const GxTextureId flowfield)
 		{
 			shader.setTexture("p", 0, pTex, false, true);
 			shader.setTexture("flowfield", 1, flowfield, true, true);
-			shader.setImmediate("drag", .99f);
+			shader.setImmediate("drag", powf(1.f - drag, dt));
 			shader.setImmediate("grav_pos", gravity.origin[0], gravity.origin[1]);
 			shader.setImmediate("grav_force", gravity.strength);
 			shader.setImmediate("flow_strength", flow.strength);

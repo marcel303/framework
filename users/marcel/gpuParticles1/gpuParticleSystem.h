@@ -32,6 +32,8 @@ struct GpuParticleSystem
 		float strength = 1.f;
 	} flow;
 	
+	float drag = 0.f;
+	
 	struct Bounds
 	{
 		enum Mode
@@ -67,5 +69,5 @@ struct GpuParticleSystem
 	void drawParticleVelocity(const int numParticles = 0) const;
 	void drawParticleColor(const int numParticles = 0) const;
 	
-	void updateParticles(const GxTextureId flowfield);
+	void updateParticles(const GxTextureId flowfield, const float dt);
 };
