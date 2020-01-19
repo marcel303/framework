@@ -65,21 +65,6 @@ namespace gltf
 	
 	//
 	
-	void drawMesh(const Scene & scene, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass)
-	{
-		drawMesh(scene, nullptr, mesh, materialShaders, isOpaquePass);
-	}
-	
-	static void drawMeshPrimitive(const Scene & scene, const BufferCache * bufferCache, const MeshPrimitive & primitive, const MaterialShaders & materialShaders, const bool isOpaquePass);
-	
-	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass)
-	{
-		for (auto & primitive : mesh.primitives)
-		{
-			drawMeshPrimitive(scene, bufferCache, primitive, materialShaders, isOpaquePass);
-		}
-	}
-	
 	static void drawMeshPrimitive(const Scene & scene, const BufferCache * bufferCache, const MeshPrimitive & primitive, const MaterialShaders & materialShaders, const bool isOpaquePass)
 	{
 		GX_PRIMITIVE_TYPE gxPrimitiveType;
@@ -477,6 +462,19 @@ namespace gltf
 		popCullMode();
 	}
 
+	void drawMesh(const Scene & scene, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass)
+	{
+		drawMesh(scene, nullptr, mesh, materialShaders, isOpaquePass);
+	}
+	
+	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass)
+	{
+		for (auto & primitive : mesh.primitives)
+		{
+			drawMeshPrimitive(scene, bufferCache, primitive, materialShaders, isOpaquePass);
+		}
+	}
+	
 	void drawNodeTraverse(const Scene & scene, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass)
 	{
 		drawNodeTraverse(scene, nullptr, node, materialShaders, isOpaquePass);
