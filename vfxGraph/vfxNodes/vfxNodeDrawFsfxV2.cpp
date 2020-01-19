@@ -358,7 +358,7 @@ void VfxNodeFsfxV2::updateImageOutput(Surface * source) const
 			imageSurface = new Surface(
 				source->getWidth(),
 				source->getHeight(),
-				source->getFormat() == SURFACE_RGBA16F, false, false);
+				source->getFormat() == SURFACE_RGBA16F, false, false, 1);
 		}
 		
 		source->blitTo(imageSurface);

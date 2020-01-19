@@ -93,7 +93,7 @@ void VfxNodeFsfx::allocateSurface(const int sx, const int sy)
 	
 	if (sx > 0 && sy > 0)
 	{
-		surface = new Surface(sx, sy, true);
+		surface = new Surface(sx, sy, true, false, true, 1);
 		
 		surface->clear();
 		surface->swapBuffers();

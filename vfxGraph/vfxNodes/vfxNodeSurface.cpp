@@ -108,11 +108,17 @@ void VfxNodeSurface::allocSurface(const int sx, const int sy, const SURFACE_FORM
 	
 	//
 	
-	surface = new Surface(sx, sy, withDepthBuffer, true, format);
-	surface->clear();
+	surface = new Surface(sx, sy, withDepthBuffer, true, format, 1);
 	
-	if (withDepthBuffer)
-		surface->clearDepth(1.f);
+	for (int i = 0; i < 2; ++i)
+	{
+		surface->swapBuffers();
+		
+		surface->clear();
+		
+		if (withDepthBuffer)
+			surface->clearDepth(1.f);
+	}
 }
 
 void VfxNodeSurface::freeSurface()
@@ -258,5 +264,5 @@ void VfxNodeSurface::afterDraw() const
 	
 	//
 	
-	imageOutput.texture = surface->getTexture();
+		imageOutput.texture = surface->getTexture();
 }
