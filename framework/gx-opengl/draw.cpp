@@ -1297,10 +1297,6 @@ void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsIn
 
 void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
 {
-	Assert(type == GX_TRIANGLES); // todo : translate primitive type
-	if (type != GX_TRIANGLES)
-		return;
-	
 	Shader genericShader;
 	
 	const bool useGenericShader = (globals.shader == nullptr);
@@ -1348,7 +1344,7 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 		}
 		
 		//
-		
+
 		glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
 		checkErrorGL();
 		
@@ -1363,18 +1359,14 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 		
 		const int indexOffset = firstIndex * indexSize;
 		
-		glDrawElements(GL_TRIANGLES, numIndices, indexType, (void*)(uintptr_t)indexOffset);
+		const GLenum glPrimitiveType = toOpenGLPrimitiveType(type);
+		
+		glDrawElements(glPrimitiveType, numIndices, indexType, (void*)(uintptr_t)indexOffset);
 		checkErrorGL();
 	}
 	else
 	{
 		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
-	}
-
-// todo : remove
-	if (&shader == &genericShader)
-	{
-		clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
 	}
 
 	globals.gxShaderIsDirty = false;
@@ -1429,12 +1421,6 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 	else
 	{
 		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
-	}
-
-// todo : remove ?
-	if (&shader == &genericShader)
-	{
-		clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
 	}
 
 	globals.gxShaderIsDirty = false;
