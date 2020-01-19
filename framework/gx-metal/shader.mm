@@ -36,8 +36,6 @@
 #import "texture.h"
 #import "window_data.h"
 
-// todo : assert the shader is the active shader when setting immediates
-
 extern MetalWindowData * activeWindowData;
 
 extern std::string s_shaderOutputs; // todo : cleanup
@@ -722,6 +720,11 @@ void Shader::setImmediate(const char * name, float x, float y, float z, float w)
 
 void Shader::setImmediate(GxImmediateIndex index, float x)
 {
+	// note : for Metal we don't really care if the current shader is this shader,
+	//        but the OpenGL backend does care. so we assert here, to catch
+	//        issues that would aride when using the OpenGL backend
+	Assert(globals.shader == this);
+	
 	if (index >= 0)
 	{
 		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 1);
