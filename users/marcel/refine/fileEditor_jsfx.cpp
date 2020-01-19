@@ -1,6 +1,7 @@
 #include "gfx-framework.h"
 #include "jsusfx_file.h"
 #include "jsusfx-framework.h"
+#include "reflection.h"
 #include "ui.h" // drawUiRectCheckered
 
 #include "fileEditor_jsfx.h"
@@ -293,11 +294,6 @@ FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 	: jsusFx(pathLibary)
 	, gfx(jsusFx)
 	, pathLibary(".")
-	, audioSource(kAudioSource_PinkNoise)
-	, volume(25)
-	, frequency(440)
-	, sharpness(0)
-	, pinkNumber(1 << 16)
 {
 // todo : add option to path library to search all sub folders
 	pathLibary.addSearchPath("lib"); // for Kawa scripts
@@ -321,7 +317,7 @@ FileEditor_JsusFx::FileEditor_JsusFx(const char * path)
 		jsusFx.gfx_w = std::max(jsusFx.gfx_w, 440);
 		jsusFx.gfx_h = std::max(jsusFx.gfx_h, 240);
 		
-		paObject.init(44100, 2, 0, 256, this);
+		paObject.init(44100, 2, 1, 256, this);
 		
 		jsusFxWindow.init(10, 100, jsusFx.gfx_w, jsusFx.gfx_h, jsusFx.desc);
 	}
@@ -381,10 +377,10 @@ void FileEditor_JsusFx::portAudioCallback(
 	
 	float inputSamples[2][256];
 	
-	const AudioSource audioSource = this->audioSource.load();
-	const float volume = this->volume.load() / 100.f;
-	const float frequency = this->frequency.load();
-	const float sharpness = this->sharpness.load() / 100.f;
+	const AudioSource audioSource = synthesis.audioSource.load();
+	const float volume = synthesis.volume.load() / 100.f;
+	const float frequency = synthesis.frequency.load();
+	const float sharpness = synthesis.sharpness.load() / 100.f;
 	
 	if (audioSource == kAudioSource_Silence)
 	{
@@ -397,7 +393,7 @@ void FileEditor_JsusFx::portAudioCallback(
 		
 		for (int i = 0; i < framesPerBuffer; ++i)
 		{
-			const float value = (pinkNumber.next() * scale1 - .5f) * scale2;
+			const float value = (synthesis.pinkNumber.next() * scale1 - .5f) * scale2;
 			
 			inputSamples[0][i] = value;
 			inputSamples[1][i] = value;
@@ -418,16 +414,16 @@ void FileEditor_JsusFx::portAudioCallback(
 		const float twoPi = 2.f * float(M_PI);
 		const float phaseStep = frequency * twoPi / 44100.f;
 		
-		sinePhase = fmodf(sinePhase, twoPi);
+		synthesis.sinePhase = fmodf(synthesis.sinePhase, twoPi);
 		
 		for (int i = 0; i < framesPerBuffer; ++i)
 		{
-			const float value = sinf(sinePhase) * volume;
+			const float value = sinf(synthesis.sinePhase) * volume;
 			
 			inputSamples[0][i] = value;
 			inputSamples[1][i] = value;
 			
-			sinePhase += phaseStep;
+			synthesis.sinePhase += phaseStep;
 		}
 	}
 	else if (audioSource == kAudioSource_Tent)
@@ -441,7 +437,7 @@ void FileEditor_JsusFx::portAudioCallback(
 		for (int i = 0; i < framesPerBuffer; ++i)
 		{
 			// 0.0 --> 0.5 --> 0.0
-			float value = tentPhase < .5f ? tentPhase : 1.f - tentPhase;
+			float value = synthesis.tentPhase < .5f ? synthesis.tentPhase : 1.f - synthesis.tentPhase;
 			
 			// -1.0 --> +1.0 --> -1.0
 			value = value * 4.f - 1.f;
@@ -457,9 +453,19 @@ void FileEditor_JsusFx::portAudioCallback(
 			inputSamples[0][i] = value;
 			inputSamples[1][i] = value;
 			
-			tentPhase += phaseStep;
+			synthesis.tentPhase += phaseStep;
 			
-			tentPhase = fmodf(tentPhase, 1.f);
+			synthesis.tentPhase = fmodf(synthesis.tentPhase, 1.f);
+		}
+	}
+	else if (audioSource == kAudioSource_AudioInterface)
+	{
+		float * input = (float*)inputBuffer;
+		
+		for (int i = 0; i < framesPerBuffer; ++i)
+		{
+			inputSamples[0][i] = numInputChannels >= 1 ? input[i * numInputChannels + 0] : 0.f;
+			inputSamples[1][i] = numInputChannels >= 2 ? input[i * numInputChannels + 1] : inputSamples[0][i];
 		}
 	}
 	
@@ -504,26 +510,27 @@ void FileEditor_JsusFx::doButtonBar()
 		"Pink noise",
 		"White noise",
 		"Sine wave",
-		"Tent wave"
+		"Tent wave",
+		"Audio Interface"
 	};
 	
 	if (ImGui::BeginMenu("Audio source"))
 	{
-		int audioSource = this->audioSource.load();
+		int audioSource = this->audioSource;
 		if (ImGui::Combo("Type", &audioSource, items, sizeof(items) / sizeof(items[0])))
-			this->audioSource.store((AudioSource)audioSource);
+		{
+			this->audioSource = (AudioSource)audioSource;
+			updateSynthesisParams();
+		}
 		
-		int volume = this->volume.load();
 		if (ImGui::SliderInt("Volume", &volume, 0, 100))
-			this->volume.store(volume);
+			updateSynthesisParams();
 		
-		int frequency = this->frequency.load();
 		if (ImGui::SliderInt("Hz", &frequency, 0, 4000))
-			this->frequency.store(frequency);
+			updateSynthesisParams();
 		
-		int sharpness = this->sharpness.load();
 		if (ImGui::SliderInt("Sharpness", &sharpness, 0, 100))
-			this->sharpness.store(sharpness);
+			updateSynthesisParams();
 		
 		ImGui::EndMenu();
 	}
@@ -576,8 +583,39 @@ void FileEditor_JsusFx::updateMidi()
 #endif
 }
 
+void FileEditor_JsusFx::updateSynthesisParams()
+{
+	synthesis.audioSource.store(audioSource);
+	synthesis.volume.store(volume);
+	synthesis.frequency.store(frequency);
+	synthesis.sharpness.store(sharpness);
+}
+
+bool FileEditor_JsusFx::reflect(TypeDB & typeDB, StructuredType & type)
+{
+	typeDB.addEnum<FileEditor_JsusFx::AudioSource>("FileEditor_JsusFx::AudioSource")
+		.add("silence", kAudioSource_Silence)
+		.add("pinkNoise", kAudioSource_PinkNoise)
+		.add("whiteNoise", kAudioSource_WhiteNoise)
+		.add("sine", kAudioSource_Sine)
+		.add("tent", kAudioSource_Tent)
+		.add("audioInterface", kAudioSource_AudioInterface)
+		.add("sample", kAudioSource_Sample);
+	
+	type.add("audioSource", &FileEditor_JsusFx::audioSource);
+	type.add("volume", &FileEditor_JsusFx::volume);
+	type.add("frequency", &FileEditor_JsusFx::frequency);
+	type.add("sharpness", &FileEditor_JsusFx::sharpness);
+	
+	return true;
+}
+
 void FileEditor_JsusFx::tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured)
 {
+	updateSynthesisParams();
+	
+	//
+	
 	clearSurface(0, 0, 0, 0);
 
 	setColor(colorWhite);
