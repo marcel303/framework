@@ -1,0 +1,107 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+#pragma once
+
+#if defined(IPHONEOS)
+	#include <OpenGLES/ES3/gl.h>
+#else
+	#include <GL/glew.h>
+#endif
+
+class ShaderCacheElem
+{
+public:
+	enum ShaderParam
+	{
+		kSp_ModelViewMatrix,
+		kSp_ModelViewProjectionMatrix,
+		kSp_ProjectionMatrix,
+		kSp_SkinningMatrices,
+		kSp_Texture,
+		kSp_Params,
+		kSp_ShadingParams,
+		kSp_GradientInfo,
+		kSp_GradientMatrix,
+		kSp_TextureMatrix,
+		kSp_MAX
+	};
+
+	std::string name;
+	std::string vs;
+	std::string ps;
+	std::string outputs;
+	
+	GLuint program;
+	
+	int version;
+	std::vector<std::string> errorMessages;
+
+	struct
+	{
+		GLint index;
+
+		void set(GLint index)
+		{
+			this->index = index;
+		}
+	} params[kSp_MAX];
+
+	ShaderCacheElem();
+	void free();
+	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
+	void reload();
+};
+
+class ShaderCache
+{
+public:
+	class Key
+	{
+	public:
+		std::string name;
+		std::string outputs;
+		
+		inline bool operator<(const Key & other) const
+		{
+			if (name != other.name)
+				return name < other.name;
+			if (outputs != other.outputs)
+				return outputs < other.outputs;
+			return false;
+		}
+	};
+	
+	typedef std::map<Key, ShaderCacheElem> Map;
+	
+	Map m_map;
+	
+	void clear();
+	void reload();
+	void handleSourceChanged(const char * name);
+	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
+};

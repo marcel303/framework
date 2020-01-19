@@ -1265,7 +1265,7 @@ void gxValidateMatrices()
 				continue;
 			
 			[s_activeRenderPass->encoder
-				setVertexBytes:shader->m_cacheElem->vsUniformData[i]
+				setVertexBytes:shaderElem.vsUniformData[i]
 				length:shaderElem.vsInfo.uniformBufferSize[i]
 				atIndex:i];
 		}
@@ -1989,7 +1989,7 @@ static void gxFlush(bool endOfBatch)
 				continue;
 			
 			[s_activeRenderPass->encoder
-				setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+				setFragmentBytes:shaderElem.psUniformData[i]
 				length:shaderElem.psInfo.uniformBufferSize[i]
 				atIndex:i];
 		}
@@ -2189,7 +2189,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 			continue;
 		
 		[s_activeRenderPass->encoder
-			setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+			setFragmentBytes:shaderElem.psUniformData[i]
 			length:shaderElem.psInfo.uniformBufferSize[i]
 			atIndex:i];
 	}
@@ -2415,7 +2415,7 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 			continue;
 		
 		[s_activeRenderPass->encoder
-			setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+			setFragmentBytes:shaderElem.psUniformData[i]
 			length:shaderElem.psInfo.uniformBufferSize[i]
 			atIndex:i];
 	}
@@ -2494,7 +2494,7 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 			continue;
 		
 		[s_activeRenderPass->encoder
-			setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+			setFragmentBytes:shaderElem.psUniformData[i]
 			length:shaderElem.psInfo.uniformBufferSize[i]
 			atIndex:i];
 	}

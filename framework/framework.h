@@ -715,18 +715,10 @@ struct GxImmediateInfo
 	GxImmediateIndex index = -1;
 };
 
-#if ENABLE_METAL
-
-#include "gx-metal/shader.h"
-
-#else
+class ShaderCacheElem;
 
 class Shader : public ShaderBase
 {
-	class ShaderCacheElem * m_shader;
-
-	uint32_t getProgram() const;
-	
 public:
 	Shader();
 	Shader(const char * name, const char * outputs = nullptr);
@@ -734,17 +726,19 @@ public:
 	virtual ~Shader();
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
+	void reload();
+	
 	virtual bool isValid() const override;
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
-	
+
 	GxImmediateIndex getImmediateIndex(const char * name);
 	void getImmediateValuef(const GxImmediateIndex index, float * value);
 	
 	std::vector<GxImmediateInfo> getImmediateInfos() const;
 	
-	void setImmediate(const char * name, float x);	
+	void setImmediate(const char * name, float x);
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
@@ -755,6 +749,8 @@ public:
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
 	void setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices);
+	
+// todo : texture units do not make much sense ..
 	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTextureUnit(GxImmediateIndex index, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTexture(const char * name, int unit, GxTextureId texture);
@@ -768,13 +764,27 @@ public:
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
 	void setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer);
 
-	const ShaderCacheElem & getCacheElem() const { return *m_shader; }
-	void reload();
-	
+#if ENABLE_OPENGL
 	virtual uint32_t getOpenglProgram() const override final { return getProgram(); }
-};
-
 #endif
+
+#if ENABLE_METAL
+	const ShaderCacheElem & getCacheElem() const;
+#else
+	const ShaderCacheElem & getCacheElem() const { return *m_cacheElem; }
+#endif
+
+private:
+#if ENABLE_METAL
+	class ShaderCacheElem_Metal * m_cacheElem = nullptr;
+#else
+	ShaderCacheElem * m_cacheElem = nullptr;
+#endif
+
+#if ENABLE_OPENGL
+	uint32_t getProgram() const;
+#endif
+};
 
 //
 

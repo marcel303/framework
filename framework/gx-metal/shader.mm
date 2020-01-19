@@ -31,7 +31,6 @@
 
 #import "internal.h"
 #import "metal.h"
-#import "shader.h"
 #import "shaderBuilder.h"
 #import "shaderPreprocess.h"
 #import "texture.h"
@@ -601,6 +600,11 @@ void Shader::load(const char * name, const char * filenameVs, const char * filen
 	m_cacheElem = static_cast<ShaderCacheElem_Metal*>(&g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs));
 }
 
+void Shader::reload()
+{
+	m_cacheElem->reload();
+}
+
 bool Shader::isValid() const
 {
 	return
@@ -611,6 +615,12 @@ bool Shader::isValid() const
 int Shader::getVersion() const
 {
 	return m_cacheElem->version;
+}
+
+bool Shader::getErrorMessages(std::vector<std::string> & errorMessages) const
+{
+// todo : add error reporting
+	return false;
 }
 
 GxImmediateIndex Shader::getImmediateIndex(const char * name)

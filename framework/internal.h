@@ -88,6 +88,13 @@
 	#include "stb_truetype.h"
 #endif
 
+#if ENABLE_OPENGL
+	#include "gx-opengl/shaderCache.h"
+#endif
+#if ENABLE_METAL
+	#include "gx-metal/shaderCache.h"
+#endif
+
 #ifndef WIN32
 #include <errno.h> // EINVAL
 #include <stdio.h>
@@ -529,85 +536,6 @@ public:
 	void reload();
 	TextureCacheElem & findOrCreate(const char * name, int gridSx, int gridSy, bool mipmapped);
 };
-
-//
-
-#if ENABLE_OPENGL
-
-class ShaderCacheElem
-{
-public:
-	enum ShaderParam
-	{
-		kSp_ModelViewMatrix,
-		kSp_ModelViewProjectionMatrix,
-		kSp_ProjectionMatrix,
-		kSp_SkinningMatrices,
-		kSp_Texture,
-		kSp_Params,
-		kSp_ShadingParams,
-		kSp_GradientInfo,
-		kSp_GradientMatrix,
-		kSp_TextureMatrix,
-		kSp_MAX
-	};
-
-	std::string name;
-	std::string vs;
-	std::string ps;
-	std::string outputs;
-	
-	GLuint program;
-	
-	int version;
-	std::vector<std::string> errorMessages;
-
-	struct
-	{
-		GLint index;
-
-		void set(GLint index)
-		{
-			this->index = index;
-		}
-	} params[kSp_MAX];
-
-	ShaderCacheElem();
-	void free();
-	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
-	void reload();
-};
-
-class ShaderCache
-{
-public:
-	class Key
-	{
-	public:
-		std::string name;
-		std::string outputs;
-		
-		inline bool operator<(const Key & other) const
-		{
-			if (name != other.name)
-				return name < other.name;
-			if (outputs != other.outputs)
-				return outputs < other.outputs;
-			return false;
-		}
-	};
-	
-	typedef std::map<Key, ShaderCacheElem> Map;
-	
-	Map m_map;
-	
-	void clear();
-	void reload();
-	void handleSourceChanged(const char * name);
-	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
-};
-
-#endif
 
 //
 

@@ -34,11 +34,12 @@
 #import <string>
 #import <vector>
 
-struct ShaderCacheElem;
-struct ShaderCacheElem_Metal;
+class ShaderCacheElem;
+class ShaderCacheElem_Metal;
 
-struct ShaderCacheElem
+class ShaderCacheElem
 {
+public:
 	enum ShaderParam
 	{
 		kSp_ModelViewMatrix,
@@ -70,8 +71,9 @@ struct ShaderCacheElem
 #import <map>
 #import <Metal/Metal.h>
 
-struct ShaderCacheElem_Metal : ShaderCacheElem
+class ShaderCacheElem_Metal : public ShaderCacheElem
 {
+public:
 	static const int kMaxBuffers = 16;
 	
 	static const int kMaxVsTextures = 2;
@@ -203,58 +205,6 @@ public:
 	void reload();
 	void handleSourceChanged(const char * name);
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
-};
-
-//
-
-class Shader : public ShaderBase
-{
-public:
-	ShaderCacheElem_Metal * m_cacheElem = nullptr; // todo : make private
-	
-	Shader();
-	Shader(const char * name, const char * outputs = nullptr);
-	Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
-	virtual ~Shader();
-	
-	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
-	virtual bool isValid() const override;
-	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
-	virtual int getVersion() const override;
-	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override { return false; } // todo
-
-	GxImmediateIndex getImmediateIndex(const char * name);
-	void getImmediateValuef(const GxImmediateIndex index, float * value);
-	
-	std::vector<GxImmediateInfo> getImmediateInfos() const;
-	
-	void setImmediate(const char * name, float x);	
-	void setImmediate(const char * name, float x, float y);
-	void setImmediate(const char * name, float x, float y, float z);
-	void setImmediate(const char * name, float x, float y, float z, float w);
-	void setImmediate(GxImmediateIndex index, float x);
-	void setImmediate(GxImmediateIndex index, float x, float y);
-	void setImmediate(GxImmediateIndex index, float x, float y, float z);
-	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
-	void setImmediateMatrix4x4(const char * name, const float * matrix);
-	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
-	void setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices);
-	
-// todo : texture units do not make much sense ..
-	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
-	void setTextureUnit(GxImmediateIndex index, int unit); // bind <name> to GL_TEXTURE0 + unit
-	void setTexture(const char * name, int unit, GxTextureId texture);
-	void setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
-	void setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture);
-	void setTextureArray(const char * name, int unit, GxTextureId texture);
-	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
-	void setTextureCube(const char * name, int unit, GxTextureId texture);
-	void setBuffer(const char * name, const ShaderBuffer & buffer);
-	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
-	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
-	void setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer);
-
-	const ShaderCacheElem & getCacheElem() const;
 };
 
 extern ShaderCache g_shaderCache;

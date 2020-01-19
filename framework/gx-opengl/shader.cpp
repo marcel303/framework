@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include "framework.h"
 
 #if ENABLE_OPENGL
@@ -8,17 +35,17 @@ extern std::string s_shaderOutputs; // todo : cleanup
 
 uint32_t Shader::getProgram() const
 {
-	return m_shader ? m_shader->program : 0;
+	return m_cacheElem ? m_cacheElem->program : 0;
 }
 
 Shader::Shader()
 {
-	m_shader = 0;
+	m_cacheElem = nullptr;
 }
 
 Shader::Shader(const char * name, const char * outputs)
 {
-	m_shader = 0;
+	m_cacheElem = nullptr;
 
 	const int name_length = strlen(name);
 	const int file_length = name_length + 3 + 1;
@@ -37,7 +64,7 @@ Shader::Shader(const char * name, const char * outputs)
 
 Shader::Shader(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
-	m_shader = 0;
+	m_cacheElem = nullptr;
 
 	load(name, filenameVs, filenamePs, outputs);
 }
@@ -53,24 +80,29 @@ void Shader::load(const char * name, const char * filenameVs, const char * filen
 	if (outputs == nullptr)
 		outputs = s_shaderOutputs.empty() ? "c" : s_shaderOutputs.c_str();
 	
-	m_shader = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs);
+	m_cacheElem = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs);
+}
+
+void Shader::reload()
+{
+	m_cacheElem->reload();
 }
 
 bool Shader::isValid() const
 {
-	return m_shader != 0 && m_shader->program != 0;
+	return m_cacheElem && m_cacheElem->program != 0;
 }
 
 int Shader::getVersion() const
 {
-	return m_shader ? m_shader->version : 0;
+	return m_cacheElem ? m_cacheElem->version : 0;
 }
 
 bool Shader::getErrorMessages(std::vector<std::string> & errorMessages) const
 {
-	if (m_shader && !m_shader->errorMessages.empty())
+	if (m_cacheElem && !m_cacheElem->errorMessages.empty())
 	{
-		errorMessages = m_shader->errorMessages;
+		errorMessages = m_cacheElem->errorMessages;
 		return true;
 	}
 	else
@@ -382,11 +414,6 @@ void Shader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer)
 
 	checkErrorGL();
 #endif
-}
-
-void Shader::reload()
-{
-	m_shader->reload();
 }
 
 #endif
