@@ -632,14 +632,14 @@ class Surface
 	
 public:
 	Surface();
-	explicit Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer = false, bool doubleBuffered = true);
-	explicit Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format);
+	explicit Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer = false, bool doubleBuffered = true, const int backingScale = 0);
+	explicit Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format, const int backingScale = 0);
 	~Surface();
 	
 	void swapBuffers();
 
 	bool init(const SurfaceProperties & properties);
-	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
+	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered, const int backingScale = 0);
 	void free();
 	void setSwizzle(int r, int g, int b, int a);
 	void setClearColor(int r, int g, int b, int a);

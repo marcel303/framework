@@ -98,18 +98,18 @@ Surface::Surface()
 	construct();
 }
 
-Surface::Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer, bool doubleBuffered)
+Surface::Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer, bool doubleBuffered, const int backingScale)
 {
 	construct();
 	
-	init(sx, sy, highPrecision ? SURFACE_RGBA16F : SURFACE_RGBA8, withDepthBuffer, doubleBuffered);
+	init(sx, sy, highPrecision ? SURFACE_RGBA16F : SURFACE_RGBA8, withDepthBuffer, doubleBuffered, backingScale);
 }
 
-Surface::Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format)
+Surface::Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format, const int backingScale)
 {
 	construct();
 
-	init(sx, sy, format, withDepthBuffer, doubleBuffered);
+	init(sx, sy, format, withDepthBuffer, doubleBuffered, backingScale);
 }
 
 Surface::~Surface()
@@ -137,7 +137,10 @@ bool Surface::init(const SurfaceProperties & properties)
 	
 	bool result = true;
 	
-	m_backingScale = s_backingScale;
+	if (properties.dimensions.backingScale != 0)
+		m_backingScale = properties.dimensions.backingScale;
+	else
+		m_backingScale = s_backingScale;
 	
 	const int backingSx = sx * m_backingScale;
 	const int backingSy = sy * m_backingScale;
@@ -203,12 +206,13 @@ bool Surface::init(const SurfaceProperties & properties)
 	return result;
 }
 
-bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
+bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered, const int backingScale)
 {
 	SurfaceProperties properties;
 	
 	properties.dimensions.width = sx;
 	properties.dimensions.height = sy;
+	properties.dimensions.backingScale = backingScale;
 	properties.colorTarget.enabled = true;
 	properties.colorTarget.format = format;
 	properties.colorTarget.doubleBuffered = doubleBuffered;
@@ -556,6 +560,7 @@ void Surface::blitTo(Surface * surface) const
 {
 #if ENABLE_METAL
 	Assert(false);
+	// todo : metal_copy_texture_to_texture(..);
 #elif ENABLE_OPENGL
 	int oldReadBuffer = 0;
 	int oldDrawBuffer = 0;
