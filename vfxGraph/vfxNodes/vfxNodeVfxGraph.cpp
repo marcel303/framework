@@ -157,6 +157,17 @@ void VfxNodeVfxGraph::tick(const float dt)
 		return;
 	}
 	
+	// close the current file when its file contents have changed. this will cause a reopen later on
+	
+	if (framework.fileHasChanged(currentFilename.c_str()))
+	{
+		currentFilename.clear();
+		
+		close();
+	}
+	
+	// check if we should open or close the file
+	
 	const char * filename = getInputString(kInput_Filename, nullptr);
 	
 	if (filename == nullptr)
@@ -171,6 +182,8 @@ void VfxNodeVfxGraph::tick(const float dt)
 		
 		open(filename);
 	}
+	
+	// process the graph (if opened)
 	
 	if (vfxGraph != nullptr)
 	{
