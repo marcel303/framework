@@ -269,6 +269,27 @@ void endRenderPass()
 		s_frameBufferId = 0;
 	}
 	
+#if false
+	// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
+	// as this would cause issues where the driver may perform an optimization where it detects no texture
+	// state change happened in a future gxSetTexture or Shader::setTexture call (because the texture ids
+	// are the same), making it fail to flush GPU render target caches, fail to perform texture decompression,
+	// fail to perform whatever is needed to transition a render target texture from being 'renderable' resource
+	// to being a shader accessible resource
+
+	for (int i = 0; i < 8; ++i)
+	{
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		checkErrorGL();
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+	
+	globals.gxShaderIsDirty = true;
+#endif
+	
 	// update viewport
 	
 	int renderTargetSx = 0;
