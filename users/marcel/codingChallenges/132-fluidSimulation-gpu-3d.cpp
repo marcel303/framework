@@ -53,7 +53,7 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 
 static void setTexture3d(Shader & shader, const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
 {
-	const GxImmediateIndex index = shader.getImmediate(name);
+	const GxImmediateIndex index = shader.getImmediateIndex(name);
 	Assert(index != -1);
 	if (index == -1)
 		return;
@@ -74,7 +74,7 @@ static void setTexture3d(Shader & shader, const char * name, int unit, GxTexture
 
 static void setTexture3d(ComputeShader & shader, const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
 {
-	const GxImmediateIndex index = shader.getImmediate(name);
+	const GxImmediateIndex index = shader.getImmediateIndex(name);
 	Assert(index != -1);
 	if (index == -1)
 		return;

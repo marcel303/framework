@@ -25,9 +25,9 @@ int main(int argc, char * argv[])
 			shader.setImmediate("halfThickness", 5.f / 2.f);
 			shader.setImmediate("hardness", 1.f);
 			
-			const GxImmediateIndex position1_idx = shader.getImmediate("position1");
-			const GxImmediateIndex position2_idx = shader.getImmediate("position2");
-			const GxImmediateIndex numVertices_idx = shader.getImmediate("numVertices");
+			const GxImmediateIndex position1_idx = shader.getImmediateIndex("position1");
+			const GxImmediateIndex position2_idx = shader.getImmediateIndex("position2");
+			const GxImmediateIndex numVertices_idx = shader.getImmediateIndex("numVertices");
 			
 			for (int i = 0; i < 100; ++i)
 			{
