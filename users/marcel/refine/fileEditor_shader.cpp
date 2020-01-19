@@ -1,4 +1,3 @@
-#include <GL/glew.h> // glGetUniformfv etc. todo : remove and add inspection functionality to Shader object ?
 #include "fileEditor_shader.h"
 #include "framework.h"
 #include "imgui/TextEditor.h"
@@ -14,21 +13,21 @@
 // to avoid this loss, uniforms are saved and restored before and after the program is recompiled
 struct SavedUniform
 {
-	static const GLsizei kMaxNameSize = 64;
-	
-	GLenum type = GL_INVALID_ENUM;
-	GLchar name[kMaxNameSize];
-	GLfloat floatValue[4] = { };
-	GLint intValue = 0;
+	GX_IMMEDIATE_TYPE type = (GX_IMMEDIATE_TYPE)-1;
+	std::string name;
+	float floatValue[4] = { };
 };
 
 #if ENABLE_FILEBROWSER
 static bool showFileBrowser(std::string & shaderNamePs, const std::vector<std::string> & files, std::string & filename);
 #endif
 static bool loadIntoTextEditor(const char * filename, TextIO::LineEndings & lineEndings, TextEditor & textEditor);
+
 static void showUniforms(Shader & shader);
+
 static void saveUniforms(Shader & shader, std::vector<SavedUniform> & result);
 static void loadUniforms(Shader & shader, const std::vector<SavedUniform> & uniforms, const bool allowMissingUniforms);
+
 static void showStatistics(Shader & shader);
 static void showErrors(Shader & shader);
 
@@ -60,7 +59,7 @@ struct RealtimeShaderEditor
 	
 	float idleTime = 0.f;
 	float alphaAnim = 0.f;
-	
+
 	std::vector<SavedUniform> savedUniforms;
 	
 	std::string path;
@@ -107,7 +106,9 @@ struct RealtimeShaderEditor
 		
 		shaderSource(sourceName.c_str(), this->text.c_str());
 		
-		shader = Shader("shaderEditor-shader", vsFilename.c_str(), psFilename.c_str());
+		std::string shaderNameCopy = sourceName + "-copy";
+		
+		shader = Shader(shaderNameCopy.c_str(), vsFilename.c_str(), psFilename.c_str());
 	
 		tab = kTab_Uniforms;
 	
@@ -371,11 +372,10 @@ struct RealtimeShaderEditor
 		{
 			text = newText;
 			
-			if (shader.isValid())
-				saveUniforms(shader, savedUniforms);
-			
-			shaderSource(sourceName.c_str(), text.c_str());
-			
+			saveUniforms(shader, savedUniforms);
+			{
+				shaderSource(sourceName.c_str(), text.c_str());
+			}
 			loadUniforms(shader, savedUniforms, true);
 		}
 	}
@@ -444,48 +444,23 @@ void FileEditor_Shader::tick(const int sx, const int sy, const float dt, const b
 
 static void showUniforms(Shader & shader)
 {
-	const GLuint program = shader.getProgram();
+	if (shader.isValid() == false)
+		return;
 	
-	GLint numUniforms = 0;
+	auto uniformInfos = shader.getImmediateInfos();
 
-	if (shader.isValid())
+	for (auto & uniformInfo : uniformInfos)
 	{
-		glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &numUniforms);
-		checkErrorGL();
-	}
-
-	for (auto i = 0; i < numUniforms; ++i)
-	{
-		GLint size = 0;
-		GLenum type = GL_INVALID_ENUM;
-		const GLsizei kMaxNameSize = 64;
-		GLchar name[kMaxNameSize];
-		GLsizei nameSize = 0;
+		const GX_IMMEDIATE_TYPE type = uniformInfo.type;
+		const char * name = uniformInfo.name.c_str();
+		const GxImmediateIndex index = uniformInfo.index;
 		
-		glGetActiveUniform(program, (GLuint)i, kMaxNameSize, &nameSize, &size, &type, name);
-		checkErrorGL();
+		ImGui::PushID(index);
 		
-		if (nameSize <= 0)
-		{
-			logDebug("unable to fetch name (possibly too long). skipping uniform %d", (int)i);
-			continue;
-		}
-		
-		const GLint location = glGetUniformLocation(program, name);
-		
-		if (location == -1)
-		{
-			logDebug("failed to fetch location for uniform %d", (int)i);
-			continue;
-		}
-		
-		ImGui::PushID(i);
-		
-		if (type == GL_FLOAT)
+		if (type == GX_IMMEDIATE_FLOAT)
 		{
 			float value[1] = { 0.f };
-			glGetUniformfv(program, location, value);
-			checkErrorGL();
+			shader.getImmediateValuef(index, value);
 			
 			if (ImGui::InputFloat(name, value))
 			{
@@ -494,11 +469,10 @@ static void showUniforms(Shader & shader)
 				clearShader();
 			}
 		}
-		else if (type == GL_FLOAT_VEC2)
+		else if (type == GX_IMMEDIATE_VEC2)
 		{
 			float value[2] = { 0.f };
-			glGetUniformfv(program, location, value);
-			checkErrorGL();
+			shader.getImmediateValuef(index, value);
 			
 			if (ImGui::InputFloat2(name, value))
 			{
@@ -507,11 +481,10 @@ static void showUniforms(Shader & shader)
 				clearShader();
 			}
 		}
-		else if (type == GL_FLOAT_VEC3)
+		else if (type == GX_IMMEDIATE_VEC3)
 		{
 			float value[3] = { 0.f };
-			glGetUniformfv(program, location, value);
-			checkErrorGL();
+			shader.getImmediateValuef(index, value);
 			
 			if (ImGui::InputFloat3(name, value))
 			{
@@ -520,11 +493,10 @@ static void showUniforms(Shader & shader)
 				clearShader();
 			}
 		}
-		else if (type == GL_FLOAT_VEC4)
+		else if (uniformInfo.type == GX_IMMEDIATE_VEC4)
 		{
 			float value[4] = { 0.f };
-			glGetUniformfv(program, location, value);
-			checkErrorGL();
+			shader.getImmediateValuef(index, value);
 			
 			if (ImGui::InputFloat4(name, value))
 			{
@@ -557,111 +529,69 @@ static void showUniforms(Shader & shader)
 		}
 		*/
 		
-		//clearShader();
-		
 		ImGui::PopID();
 	}
 }
 
 static void saveUniforms(Shader & shader, std::vector<SavedUniform> & result)
 {
-	result.clear();
-	
 	Assert(shader.isValid());
 	if (!shader.isValid())
 		return;
 	
+	result.clear();
+	
 	//
 	
-	const GLuint program = shader.getProgram();
+	auto uniformInfos = shader.getImmediateInfos();
 	
-	GLint numUniforms = 0;
-
-	glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &numUniforms);
-	checkErrorGL();
-
-	for (auto i = 0; i < numUniforms; ++i)
+	for (auto & uniformInfo : uniformInfos)
 	{
 		SavedUniform savedUniform;
+		savedUniform.type = uniformInfo.type;
+		savedUniform.name = uniformInfo.name;
 		
-		GLint size = 0;
-		GLsizei nameSize = 0;
-		
-		glGetActiveUniform(
-			program, (GLuint)i,
-			savedUniform.kMaxNameSize, &nameSize,
-			&size, &savedUniform.type,
-			savedUniform.name);
-		checkErrorGL();
-		
-		if (nameSize <= 0)
+		if (uniformInfo.type == GX_IMMEDIATE_FLOAT ||
+			uniformInfo.type == GX_IMMEDIATE_VEC2 ||
+			uniformInfo.type == GX_IMMEDIATE_VEC3 ||
+			uniformInfo.type == GX_IMMEDIATE_VEC4)
 		{
-			logDebug("unable to fetch name (possibly too long). skipping uniform %d", (int)i);
-			continue;
-		}
-		
-		const GLint location = glGetUniformLocation(program, savedUniform.name);
-		
-		if (location == -1)
-			continue;
-		
-		if (savedUniform.type == GL_FLOAT || savedUniform.type == GL_FLOAT_VEC2 || savedUniform.type == GL_FLOAT_VEC3 || savedUniform.type == GL_FLOAT_VEC4)
-		{
-			glGetUniformfv(program, location, savedUniform.floatValue);
-			checkErrorGL();
+			shader.getImmediateValuef(uniformInfo.index, savedUniform.floatValue);
 			result.push_back(savedUniform);
 		}
+	// todo : add texture support
+		/*
 		else if (savedUniform.type == GL_SAMPLER_2D)
 		{
 			glGetUniformiv(program, location, &savedUniform.intValue);
 			checkErrorGL();
 			result.push_back(savedUniform);
 		}
+		*/
 		else
 		{
-			logDebug("unknown uniform type for %s", savedUniform.name);
+			logDebug("unknown uniform type for %s", savedUniform.name.c_str());
 		}
 	}
 }
 
 static void loadUniforms(Shader & shader, const std::vector<SavedUniform> & uniforms, const bool allowMissingUniforms)
 {
-	const GLuint program = shader.getProgram();
-	
 	for (auto & uniform : uniforms)
 	{
 		setShader(shader);
-		if (uniform.type == GL_FLOAT)
-			shader.setImmediate(uniform.name, uniform.floatValue[0]);
-		else if (uniform.type == GL_FLOAT_VEC2)
-			shader.setImmediate(uniform.name, uniform.floatValue[0], uniform.floatValue[1]);
-		else if (uniform.type == GL_FLOAT_VEC3)
-			shader.setImmediate(uniform.name, uniform.floatValue[0], uniform.floatValue[1], uniform.floatValue[2]);
-		else if (uniform.type == GL_FLOAT_VEC4)
-			shader.setImmediate(uniform.name, uniform.floatValue[0], uniform.floatValue[1], uniform.floatValue[2], uniform.floatValue[3]);
+		
+		if (uniform.type == GX_IMMEDIATE_FLOAT)
+			shader.setImmediate(uniform.name.c_str(), uniform.floatValue[0]);
+		else if (uniform.type == GX_IMMEDIATE_VEC2)
+			shader.setImmediate(uniform.name.c_str(), uniform.floatValue[0], uniform.floatValue[1]);
+		else if (uniform.type == GX_IMMEDIATE_VEC3)
+			shader.setImmediate(uniform.name.c_str(), uniform.floatValue[0], uniform.floatValue[1], uniform.floatValue[2]);
+		else if (uniform.type == GX_IMMEDIATE_VEC4)
+			shader.setImmediate(uniform.name.c_str(), uniform.floatValue[0], uniform.floatValue[1], uniform.floatValue[2], uniform.floatValue[3]);
 		//else if (uniform.type == GL_SAMPLER_2D)
 		//	shader.setTexture(uniform.name, textureUnit, uniform.intValue);
 		clearShader();
-		
-		const GLint location = glGetUniformLocation(program, uniform.name);
-		
-		if (location == -1)
-			continue;
-		
-	#if 0
-		// todo : check if new uniform shares same or similar type, and set directly instead of using above method ?
-		
-		if (uniform.type == GL_FLOAT || uniform.type == GL_FLOAT_VEC2 || uniform.type == GL_FLOAT_VEC3 || uniform.type == GL_FLOAT_VEC4)
-		{
-			glGetUniformfv(program, location, uniform.floatValue);
-			checkErrorGL();
-		}
-		else if (uniform.type == GL_SAMPLER_2D)
-		{
-			glGetUniformiv(program, location, &uniform.intValue);
-			checkErrorGL();
-		}
-	#endif
 	}
 }
 
