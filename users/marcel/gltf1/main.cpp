@@ -125,7 +125,7 @@ int main(int argc, char * argv[])
 	
 	camera.position = Vec3(0, 0, -2);
 	
-	bool centimeters = true;
+	bool centimeters = false;
 	
 	for (;;)
 	{
@@ -195,15 +195,16 @@ int main(int argc, char * argv[])
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			projectPerspective3d(60.f, .1f, 100.f);
+			const float scaleMultiplier = centimeters ? .01f : 1.f;
+			
+			projectPerspective3d(60.f, .01f, 100.f);
 			pushDepthTest(true, DEPTH_LESS);
 			pushBlend(BLEND_OPAQUE);
 			camera.pushViewMatrix();
 			{
 				if (centimeters)
-					gxScalef(-.01f, .01f, .01f);
-				else
-					gxScalef(-1, 1, 1);
+					gxScalef(scaleMultiplier, scaleMultiplier, scaleMultiplier);
+				gxScalef(-1, 1, 1);
 				
 				for (int i = 0; i < 2; ++i)
 				{
@@ -224,13 +225,14 @@ int main(int argc, char * argv[])
 						Shader * shaders[2] = { &metallicRoughnessShader, &specularGlossinessShader };
 						for (auto * shader : shaders)
 						{
+							setShader(*shader);
 							shader->setImmediate("scene_camPos",
 								0.f,
 								0.f,
 								0.f);
 							
-							const float dx = cosf(framework.time / 4.56f);
-							const float dz = sinf(framework.time / 5.67f);
+							const float dx = cosf(framework.time / 1.56f);
+							const float dz = sinf(framework.time / 1.67f);
 							const Vec3 lightDir_world(dx, 0.f, dz);
 							const Vec3 lightDir_view = camera.getViewMatrix().Mul3(lightDir_world);
 					
@@ -238,6 +240,8 @@ int main(int argc, char * argv[])
 								lightDir_view[0],
 								lightDir_view[1],
 								lightDir_view[2]);
+							
+							clearShader();
 						}
 						
 						gltf::MaterialShaders materialShaders;
