@@ -79,9 +79,15 @@ bool Shader::getErrorMessages(std::vector<std::string> & errorMessages) const
 	}
 }
 
-GxImmediateIndex Shader::getImmediate(const char * name)
+GxImmediateIndex Shader::getImmediateIndex(const char * name)
 {
 	return glGetUniformLocation(getProgram(), name);
+}
+
+void Shader::getImmediateValuef(const GxImmediateIndex index, float * value)
+{
+	glGetUniformfv(getProgram(), index, value);
+	checkErrorGL();
 }
 
 std::vector<GxImmediateInfo> Shader::getImmediateInfos() const

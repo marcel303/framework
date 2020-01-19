@@ -872,7 +872,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 				
 			// todo : use constant locations for drawColor and drawSkin
 			
-				const GxImmediateIndex drawColor = shader.getImmediate("drawColor");
+				const GxImmediateIndex drawColor = shader.getImmediateIndex("drawColor");
 				
 				if (drawColor != -1)
 				{
@@ -883,7 +883,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 						(drawFlags & DrawColorBlendWeights) ? 1.f : 0.f);
 				}
 				
-				const GxImmediateIndex drawSkin = shader.getImmediate("drawSkin");
+				const GxImmediateIndex drawSkin = shader.getImmediateIndex("drawSkin");
 				
 				if (drawSkin != -1)
 				{

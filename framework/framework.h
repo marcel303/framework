@@ -736,7 +736,8 @@ public:
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
 	
-	GxImmediateIndex getImmediate(const char * name);
+	GxImmediateIndex getImmediateIndex(const char * name);
+	void getImmediateValuef(const GxImmediateIndex index, float * value);
 	
 	std::vector<GxImmediateInfo> getImmediateInfos() const;
 	
@@ -803,7 +804,7 @@ public:
 	int toThreadSy(const int sy) const;
 	int toThreadSz(const int sz) const;
 
-	GxImmediateIndex getImmediate(const char * name);
+	GxImmediateIndex getImmediateIndex(const char * name);
 
 	void setImmediate(const char * name, float x);	
 	void setImmediate(const char * name, float x, float y);

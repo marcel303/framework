@@ -613,12 +613,36 @@ int Shader::getVersion() const
 	return m_cacheElem->version;
 }
 
-GxImmediateIndex Shader::getImmediate(const char * name)
+GxImmediateIndex Shader::getImmediateIndex(const char * name)
 {
 	for (size_t i = 0; i < m_cacheElem->uniformInfos.size(); ++i)
 		if (m_cacheElem->uniformInfos[i].name == name)
 			return i;
 	return -1;
+}
+
+void Shader::getImmediateValuef(const GxImmediateIndex index, float * value)
+{
+	if (index >= 0 && index < m_cacheElem->uniformInfos.size())
+	{
+		auto & info = m_cacheElem->uniformInfos[index];
+		
+		Assert(info.elemType == 'f');
+		if (info.elemType == 'f')
+		{
+			if (info.vsOffset != -1)
+			{
+				float * dst = getVsUniformPtr<float>(*m_cacheElem, info.vsBuffer, info.vsOffset);
+				memcpy(value, dst, info.numElems * sizeof(float));
+			}
+			
+			if (info.psOffset != -1)
+			{
+				float * dst = getPsUniformPtr<float>(*m_cacheElem, info.psBuffer, info.psOffset);
+				memcpy(value, dst, info.numElems * sizeof(float));
+			}
+		}
+	}
 }
 
 std::vector<GxImmediateInfo> Shader::getImmediateInfos() const
@@ -660,28 +684,28 @@ std::vector<GxImmediateInfo> Shader::getImmediateInfos() const
 
 void Shader::setImmediate(const char * name, float x)
 {
-	const GxImmediateIndex index = getImmediate(name);
+	const GxImmediateIndex index = getImmediateIndex(name);
 	
 	setImmediate(index, x);
 }
 
 void Shader::setImmediate(const char * name, float x, float y)
 {
-	const GxImmediateIndex index = getImmediate(name);
+	const GxImmediateIndex index = getImmediateIndex(name);
 	
 	setImmediate(index, x, y);
 }
 
 void Shader::setImmediate(const char * name, float x, float y, float z)
 {
-	const GxImmediateIndex index = getImmediate(name);
+	const GxImmediateIndex index = getImmediateIndex(name);
 	
 	setImmediate(index, x, y, z);
 }
 
 void Shader::setImmediate(const char * name, float x, float y, float z, float w)
 {
-	const GxImmediateIndex index = getImmediate(name);
+	const GxImmediateIndex index = getImmediateIndex(name);
 	
 	setImmediate(index, x, y, z, w);
 }
@@ -780,7 +804,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, flo
 
 void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
 {
-	const GxImmediateIndex index = getImmediate(name);
+	const GxImmediateIndex index = getImmediateIndex(name);
 	
 	setImmediateMatrix4x4(index, matrix);
 }

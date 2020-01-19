@@ -224,7 +224,8 @@ public:
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override { return false; } // todo
 
-	GxImmediateIndex getImmediate(const char * name);
+	GxImmediateIndex getImmediateIndex(const char * name);
+	void getImmediateValuef(const GxImmediateIndex index, float * value);
 	
 	std::vector<GxImmediateInfo> getImmediateInfos() const;
 	

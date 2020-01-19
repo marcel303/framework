@@ -88,7 +88,7 @@ int ComputeShader::toThreadSz(const int sz) const
 	return calcThreadSize(sz, getGroupSz());
 }
 
-GxImmediateIndex ComputeShader::getImmediate(const char * name)
+GxImmediateIndex ComputeShader::getImmediateIndex(const char * name)
 {
 	return glGetUniformLocation(getProgram(), name);
 }
