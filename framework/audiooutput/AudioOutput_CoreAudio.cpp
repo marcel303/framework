@@ -231,7 +231,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 	{
 		// todo : set maximum frame count
 		
-		UInt32 maxFramesPerSlice = 256;
+		UInt32 maxFramesPerSlice = bufferSize;
 		
 		auto status = AudioUnitSetProperty(
 			m_audioUnit,
