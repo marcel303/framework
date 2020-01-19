@@ -1512,6 +1512,8 @@ void popWireframe();
 
 void setColorWriteMask(int r, int g, int b, int a);
 void setColorWriteMaskAll();
+void pushColorWriteMask(int r, int g, int b, int a);
+void popColorWriteMask();
 
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);

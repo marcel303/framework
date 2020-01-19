@@ -447,12 +447,12 @@ void Surface::setAlphaf(float a)
 	pushSurface(this);
 	{
 		pushBlend(BLEND_OPAQUE);
-		setColorf(1.f, 1.f, 1.f, a);
-		setColorWriteMask(0, 0, 0, 1); // todo : use push/pop
+		pushColorWriteMask(0, 0, 0, 1);
 		{
+			setColorf(1.f, 1.f, 1.f, a);
 			drawRect(0.f, 0.f, m_properties.dimensions.width, m_properties.dimensions.height);
 		}
-		setColorWriteMask(1, 1, 1, 1);
+		popColorWriteMask();
 		popBlend();
 	}
 	popSurface();
@@ -514,20 +514,20 @@ void Surface::invert()
 
 void Surface::invertColor()
 {
-	setColorWriteMask(1, 1, 1, 0); // todo : use push/pop
+	pushColorWriteMask(1, 1, 1, 0);
 	{
 		invert();
 	}
-	setColorWriteMask(1, 1, 1, 1);
+	popColorWriteMask();
 }
 
 void Surface::invertAlpha()
 {
-	setColorWriteMask(0, 0, 0, 1); // todo : use push/pop
+	pushColorWriteMask(0, 0, 0, 1);
 	{
 		invert();
 	}
-	setColorWriteMask(1, 1, 1, 1);
+	popColorWriteMask();
 }
 
 void Surface::gaussianBlur(const float strengthH, const float strengthV, const int _kernelSize)

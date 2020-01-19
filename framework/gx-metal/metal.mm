@@ -34,7 +34,6 @@
 #import "internal.h"
 #import "metal.h"
 #import "metalView.h"
-#import "shader.h"
 #import "shaders.h" // registerBuiltinShaders
 #import "texture.h"
 #import "window_data.h"
@@ -723,6 +722,19 @@ bool getCurrentRenderTargetSize(int & sx, int & sy, int & backingScale)
 	}
 }
 
+// -- render states --
+
+static Stack<int, 32> colorWriteStack(0xf);
+static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
+static Stack<bool, 32> lineSmoothStack(false);
+static Stack<bool, 32> wireframeStack(false);
+static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
+static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
+
+RenderPipelineState renderState;
+
+// render states affecting render pipeline state
+
 void setColorWriteMask(int r, int g, int b, int a)
 {
 	int mask = 0;
@@ -740,17 +752,19 @@ void setColorWriteMaskAll()
 	setColorWriteMask(1, 1, 1, 1);
 }
 
-// -- render states --
+void pushColorWriteMask(int r, int g, int b, int a)
+{
+	colorWriteStack.push(renderState.colorWriteMask);
+	
+	setColorWriteMask(r, g, b, a);
+}
 
-static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
-static Stack<bool, 32> lineSmoothStack(false);
-static Stack<bool, 32> wireframeStack(false);
-static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
-static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
-
-RenderPipelineState renderState;
-
-// render states independent from render pipeline state
+void popColorWriteMask()
+{
+	const int colorWriteMask = colorWriteStack.popValue();
+	
+	renderState.colorWriteMask = colorWriteMask;
+}
 
 void setBlend(BLEND_MODE blendMode)
 {
@@ -772,6 +786,8 @@ void popBlend()
 	
 	setBlend(blendMode);
 }
+
+// render states independent from render pipeline state
 
 void setLineSmooth(bool enabled)
 {
