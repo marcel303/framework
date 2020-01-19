@@ -6,6 +6,11 @@
 
 extern std::string s_shaderOutputs; // todo : cleanup
 
+uint32_t Shader::getProgram() const
+{
+	return m_shader ? m_shader->program : 0;
+}
+
 Shader::Shader()
 {
 	m_shader = 0;
@@ -54,11 +59,6 @@ void Shader::load(const char * name, const char * filenameVs, const char * filen
 bool Shader::isValid() const
 {
 	return m_shader != 0 && m_shader->program != 0;
-}
-
-GxShaderId Shader::getProgram() const
-{
-	return m_shader ? m_shader->program : 0;
 }
 
 int Shader::getVersion() const

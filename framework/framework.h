@@ -317,7 +317,6 @@ typedef void (*InitErrorHandler)(INIT_ERROR error);
 //
 
 typedef int32_t GxImmediateIndex;
-typedef uint32_t GxShaderId;
 typedef uint32_t GxShaderBufferId;
 
 #if USE_LEGACY_OPENGL
@@ -690,10 +689,13 @@ public:
 	virtual ~ShaderBase() { }
 	
 	virtual bool isValid() const = 0;
-	virtual GxShaderId getProgram() const = 0; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const = 0;
 	virtual int getVersion() const = 0;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const = 0;
+	
+#if ENABLE_OPENGL
+	virtual uint32_t getOpenglProgram() const = 0;
+#endif
 };
 
 //
@@ -723,6 +725,8 @@ class Shader : public ShaderBase
 {
 	class ShaderCacheElem * m_shader;
 
+	uint32_t getProgram() const;
+	
 public:
 	Shader();
 	Shader(const char * name, const char * outputs = nullptr);
@@ -731,7 +735,6 @@ public:
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
 	virtual bool isValid() const override;
-	virtual GxShaderId getProgram() const override; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
@@ -767,6 +770,8 @@ public:
 
 	const ShaderCacheElem & getCacheElem() const { return *m_shader; }
 	void reload();
+	
+	virtual uint32_t getOpenglProgram() const override final { return getProgram(); }
 };
 
 #endif
@@ -780,6 +785,8 @@ class ComputeShader : public ShaderBase
 public:
 	class ComputeShaderCacheElem * m_shader;
 
+	uint32_t getProgram() const;
+	
 public:
 	// assuming a 64-lane wavefront, 8x8x1 is good thread distribution for common shaders
 	static const int kDefaultGroupSx = 8;
@@ -792,7 +799,6 @@ public:
 
 	void load(const char * filename, const int groupSx = kDefaultGroupSx, const int groupSy = kDefaultGroupSy, const int groupSz = kDefaultGroupSz);
 	virtual bool isValid() const override { return m_shader != 0; }
-	virtual GxShaderId getProgram() const override; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_CS; }
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
@@ -826,6 +832,8 @@ public:
 
 	const ComputeShaderCacheElem & getCacheElem() const { return *m_shader; }
 	void reload();
+	
+	virtual uint32_t getOpenglProgram() const override final { return getProgram(); }
 };
 
 #endif

@@ -949,7 +949,7 @@ void ShaderCache::handleSourceChanged(const char * name)
 		{
 			cacheElem.reload();
 			
-			if (globals.shader != nullptr && globals.shader->getProgram() == cacheElem.program)
+			if (globals.shader != nullptr && globals.shader->getOpenglProgram() == cacheElem.program)
 			{
 				clearShader();
 			}
@@ -2448,7 +2448,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 bool MsdfGlyphCache::saveCache(const char * filename) const
 {
 #if ENABLE_METAL
-	// todo : add Metal support for reading back of texture data, and saving the MSDF glyph cache
+	AssertMsg(false, "todo : add Metal support for reading back of texture data, and saving the MSDF glyph cache", 0);
 	return false;
 #else
 	bool result = true;

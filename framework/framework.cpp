@@ -3613,7 +3613,7 @@ void setDrawRect(int x, int y, int sx, int sy)
 	metal_set_scissor(x, y, sx, sy);
 #endif
 
-#if ENABLE_OPENGL // todo : metal impl setDrawRect
+#if ENABLE_OPENGL
 	glScissor(x, y, sx, sy);
 	checkErrorGL();
 
@@ -3628,7 +3628,7 @@ void clearDrawRect()
 	metal_clear_scissor();
 #endif
 
-#if ENABLE_OPENGL // todo : metal impl clearDrawRect
+#if ENABLE_OPENGL
 	glDisable(GL_SCISSOR_TEST);
 #endif
 }
@@ -3818,7 +3818,7 @@ void setShader(const ShaderBase & shader)
 		globals.shader = const_cast<ShaderBase*>(&shader);
 	
 	#if ENABLE_OPENGL
-		glUseProgram(shader.getProgram());
+		glUseProgram(shader.getOpenglProgram());
 	#endif
 		
 		globals.gxShaderIsDirty = true;

@@ -4,6 +4,11 @@
 
 #include "internal.h"
 
+uint32_t ComputeShader::getProgram() const
+{
+	return m_shader ? m_shader->program : 0;
+}
+
 ComputeShader::ComputeShader()
 {
 	m_shader = 0;
@@ -25,11 +30,6 @@ ComputeShader::~ComputeShader()
 void ComputeShader::load(const char * filename, const int groupSx, const int groupSy, const int groupSz)
 {
 	m_shader = &g_computeShaderCache.findOrCreate(filename, groupSx, groupSy, groupSz);
-}
-
-GxShaderId ComputeShader::getProgram() const
-{
-	return m_shader ? m_shader->program : 0;
 }
 
 int ComputeShader::getVersion() const
