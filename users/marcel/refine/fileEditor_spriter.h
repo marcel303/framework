@@ -1,6 +1,7 @@
 #pragma once
 
 #include "fileEditor.h"
+#include "reflection.h" // reflect
 #include "ui.h" // drawUiRectCheckered
 
 struct FileEditor_Spriter : FileEditor
@@ -25,6 +26,13 @@ struct FileEditor_Spriter : FileEditor
 	virtual ~FileEditor_Spriter() override
 	{
 		guiContext.shut();
+	}
+	
+	virtual bool reflect(TypeDB & typeDB, StructuredType & type) override
+	{
+		type.add("showAxis", &FileEditor_Spriter::showAxis);
+		
+		return true;
 	}
 	
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override

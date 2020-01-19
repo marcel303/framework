@@ -2,6 +2,7 @@
 
 #include "fileEditor.h"
 #include "imgui.h"
+#include "reflection.h" // reflect
 #include "ui.h" // drawUiRectCheckered
 
 struct FileEditor_Sprite : FileEditor
@@ -37,6 +38,18 @@ struct FileEditor_Sprite : FileEditor
 	virtual ~FileEditor_Sprite() override
 	{
 		guiContext.shut();
+	}
+	
+	virtual bool reflect(TypeDB & typeDB, StructuredType & type) override
+	{
+		typeDB.addEnum<FileEditor_Sprite::SizeMode>("FileEditor_Sprite::SizeMode")
+			.add("spriteScale", kSizeMode_SpriteScale)
+			.add("contain", kSizeMode_Contain)
+			.add("fill", kSizeMode_Fill);
+		
+		type.add("sizeMode", &FileEditor_Sprite::sizeMode);
+		
+		return true;
 	}
 	
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override
@@ -87,6 +100,7 @@ struct FileEditor_Sprite : FileEditor
 		guiContext.processBegin(dt, sx, sy, inputIsCaptured);
 		{
 			ImGui::SetNextWindowPos(ImVec2(8, 8));
+			ImGui::SetNextWindowBgAlpha(.6f);
 			if (ImGui::Begin("Sprite", nullptr,
 				ImGuiWindowFlags_NoTitleBar |
 				ImGuiWindowFlags_NoMove |
