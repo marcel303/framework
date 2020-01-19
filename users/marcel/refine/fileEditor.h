@@ -3,6 +3,9 @@
 #include "framework.h"
 #include <string>
 
+struct StructuredType;
+struct TypeDB;
+
 struct FileEditor
 {
 	std::string path;
@@ -28,6 +31,11 @@ struct FileEditor
 	void tickEnd()
 	{
 		editorSurface = nullptr;
+	}
+	
+	virtual bool reflect(TypeDB & typeDB, StructuredType & type)
+	{
+		return false;
 	}
 	
 	virtual bool wantsTick(const bool hasFocus, const bool inputIsCaptured)

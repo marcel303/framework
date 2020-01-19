@@ -27,6 +27,8 @@ struct FileEditor_Video : FileEditor
 	FileEditor_Video(const char * path);
 	virtual ~FileEditor_Video() override;
 	
+	virtual bool reflect(TypeDB & typeDB, StructuredType & type) override;
+	
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override;
 	
 	virtual void doButtonBar() override;
