@@ -325,7 +325,6 @@ void metal_upload_texture_area(
 		
 		if (s_activeRenderPass != nullptr)
 		{
-		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
 			id <MTLFence> waitForBlit = [device newFence];
 			
@@ -383,7 +382,6 @@ void metal_copy_texture_to_texture(
 		
 		if (s_activeRenderPass != nullptr)
 		{
-		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
 			id <MTLFence> waitForBlit = [device newFence];
 			
@@ -429,7 +427,6 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 		
 		if (s_activeRenderPass != nullptr)
 		{
-		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
 			id <MTLFence> waitForBlit = [device newFence];
 			
@@ -1538,13 +1535,8 @@ static void gxValidatePipelineState()
 					
 					if (useMultipleVertexBuffers)
 					{
-						// todo : assign vertex buffers
-					
-						// todo : add shader version which has multiple vertex buffers, one for each attribute, so we can
-						//        choose between 'one vertex buffer with packed vertices' or
-						//        'many vertex buffers with a per-attribute vertex stream'
-						//        use gxSetVertexBuffers(vsInputs, numVsInputs, vsInputBuffers)
-		
+						// assign vertex buffers
+						
 						if (e.stride == 0)
 						{
 							const int componentSize =
@@ -1843,8 +1835,6 @@ static void gxFlush(bool endOfBatch)
 			}
 		}
 
-	// todo : refactor s_gxVertices to use a GxVertexBuffer object
-	
 		const int vertexDataSize = s_gxVertexCount * sizeof(GxVertex);
 		
 		if (vertexDataSize <= 4096)
@@ -2525,12 +2515,7 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 	{
 		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 	}
-
-	if (&shader == &genericShader)
-	{
-		clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
-	}
-
+	
 	globals.gxShaderIsDirty = false;
 }
 
