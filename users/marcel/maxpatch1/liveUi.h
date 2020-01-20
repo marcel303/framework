@@ -35,9 +35,14 @@ struct LiveUi
 	
 	std::vector<OscSender*> oscSenders;
 	
+	mutable GxTextureId colorPickerTextureSat0 = 0;
+	mutable GxTextureId colorPickerTextureSat1 = 0;
+	
 	//
 
 	~LiveUi();
+	
+	static GxTextureId generateColorPickerTexture(const float saturation);
 	
 	void shut();
 

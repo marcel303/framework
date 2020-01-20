@@ -117,8 +117,32 @@ LiveUi::~LiveUi()
 	shut();
 }
 
+GxTextureId LiveUi::generateColorPickerTexture(const float saturation)
+{
+	uint8_t textureData[128][128][4];
+	
+	for (int y = 0; y < 128; ++y)
+	{
+		for (int x = 0; x < 128; ++x)
+		{
+			const float hue = (x + .5f) / 128.f;
+			const float luminance = 1.f - (y + .5f) / 128.f;
+			const Color color = Color::fromHSL(hue, saturation, luminance);
+			textureData[y][x][0] = color.r * 255.f;
+			textureData[y][x][1] = color.g * 255.f;
+			textureData[y][x][2] = color.b * 255.f;
+			textureData[y][x][3] = 255;
+		}
+	}
+
+	return createTextureFromRGBA8(textureData, 128, 128, true, true);
+}
+
 void LiveUi::shut()
 {
+	freeTexture(colorPickerTextureSat0);
+	freeTexture(colorPickerTextureSat1);
+	
 	for (auto *& sender : oscSenders)
 	{
 		delete sender;
@@ -1372,25 +1396,13 @@ void LiveUi::draw() const
 			
 			const float saturation = e.value4.y;
 			
-			uint8_t textureData[128][128][4];
-			for (int y = 0; y < 128; ++y)
+			if (colorPickerTextureSat0 == 0)
 			{
-				for (int x = 0; x < 128; ++x)
-				{
-					const float hue = (x + .5f) / 128.f;
-					const float luminance = 1.f - (y + .5f) / 128.f;
-					const Color color = Color::fromHSL(hue, saturation, luminance);
-					textureData[y][x][0] = color.r * 255.f;
-					textureData[y][x][1] = color.g * 255.f;
-					textureData[y][x][2] = color.b * 255.f;
-					textureData[y][x][3] = 255;
-				}
+				colorPickerTextureSat0 = generateColorPickerTexture(0.f);
+				colorPickerTextureSat1 = generateColorPickerTexture(1.f);
 			}
 			
-		// todo : optimize drawing color pickers
-			GxTextureId texture = createTextureFromRGBA8(textureData, 128, 128, true, true);
-			
-			hqSetTextureScreen(texture, e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy);
+			hqSetTextureScreen(colorPickerTextureSat0, e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy);
 			{
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
@@ -1401,7 +1413,16 @@ void LiveUi::draw() const
 			}
 			hqClearTexture();
 			
-			freeTexture(texture);
+			hqSetTextureScreen(colorPickerTextureSat1, e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy);
+			{
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				{
+					setColorf(1, 1, 1, saturation);
+					hqFillRoundedRect(e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy, 4);
+				}
+				hqEnd();
+			}
+			hqClearTexture();
 			
 			hqBegin(HQ_STROKED_ROUNDED_RECTS);
 			{
