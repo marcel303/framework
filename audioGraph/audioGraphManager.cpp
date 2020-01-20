@@ -802,7 +802,12 @@ void AudioGraphManager_RTE::selectFile(const char * filename)
 			
 			selectedFile = newSelectedFile;
 			
-			selectedFile->graphEdit->beginEditing();
+			//
+			
+			if (selectedFile != nullptr)
+			{
+				selectedFile->graphEdit->beginEditing();
+			}
 		}
 	}
 	SDL_UnlockMutex(audioMutex);
