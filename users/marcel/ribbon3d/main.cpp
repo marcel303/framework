@@ -47,6 +47,7 @@ void drawRibbon3d(const RibbonPoint3d * points, const int numPoints)
 				const Vec3 n = (v1 % v2).CalcNormalized();
 				
 				gxColor4f(n[0], n[1], n[2], 1.f);
+				gxNormal3fv(&n[0]);
 				
 				gxVertex3fv(&vertices_ab[p1][0]);
 				gxVertex3fv(&vertices_bc[p1][0]);
@@ -74,6 +75,9 @@ static void addRibbonPoint_lookat(const Vec3 & position, const Vec3 & target, co
 
 int main(int argc, char * argv[])
 {
+	changeDirectory(CHIBI_RESOURCE_PATH);
+	
+	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;
 	framework.msaaLevel = 4;
 	
@@ -148,13 +152,18 @@ int main(int argc, char * argv[])
 			{
 				pushDepthTest(true, DEPTH_LESS);
 				{
-					if (hasCachedMesh)
-						mesh.draw();
-					else
+					Shader shader("ribbon");
+					setShader(shader);
 					{
-						setColor(colorWhite);
-						drawRibbon3d(points.data(), points.size());
+						if (hasCachedMesh)
+							mesh.draw();
+						else
+						{
+							setColor(colorWhite);
+							drawRibbon3d(points.data(), points.size());
+						}
 					}
+					clearShader();
 				}
 				popDepthTest();
 			}
