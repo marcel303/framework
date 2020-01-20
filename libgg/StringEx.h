@@ -38,10 +38,9 @@ public:
 };
 
 #if defined(PSP) || defined(__GNUC__)
-	// todo : use the safe versions here !
     #define sprintf_s(s, ss, f, ...) snprintf(s, ss, f, __VA_ARGS__)
     #define vsprintf_s(s, ss, f, a) vsnprintf(s, ss, f, a)
-    #define strcpy_s(d, ds, s) strcpy(d, s)
+    #define strcpy_s(d, ds, s) strlcpy(d, s, ds)
     #define sscanf_s sscanf
 #endif
 
