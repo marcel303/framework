@@ -99,7 +99,6 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 			result = false;
 		else
 		{
-		// todo : free texture ID when done with the texture
 			m_colorTexture = colorTexture;
 			
 			// create texture view, for when used as a render target
@@ -115,7 +114,7 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 
 void ColorTarget::free()
 {
-	if (m_ownsTexture)
+	if (m_ownsTexture && m_colorTexture != nullptr)
 	{
 		id <MTLTexture> colorTextureView = (id <MTLTexture>)m_colorTextureView;
 		[colorTextureView release];
@@ -125,6 +124,12 @@ void ColorTarget::free()
 		[colorTexture release];
 		colorTexture = nullptr;
 		m_colorTexture = nullptr;
+		
+		auto i = s_textures.find(m_colorTextureId);
+		Assert(i != s_textures.end());
+		if (i != s_textures.end())
+			s_textures.erase(i);
+		m_colorTextureId = 0;
 	}
 }
 
@@ -171,7 +176,6 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 			result = false;
 		else
 		{
-		// todo : free texture ID when done with the texture
 			m_depthTexture = depthTexture;
 			m_depthTextureId = s_nextTextureId++;
 			s_textures[m_depthTextureId] = depthTexture;
@@ -183,12 +187,18 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 
 void DepthTarget::free()
 {
-	if (m_ownsTexture)
+	if (m_ownsTexture && m_depthTexture != nullptr)
 	{
 		id <MTLTexture> depthTexture = (id <MTLTexture>)m_depthTexture;
 		[depthTexture release];
 		depthTexture = nullptr;
 		m_depthTexture = nullptr;
+		
+		auto i = s_textures.find(m_depthTextureId);
+		Assert(i != s_textures.end());
+		if (i != s_textures.end())
+			s_textures.erase(i);
+		m_depthTextureId = 0;
 	}
 }
 
