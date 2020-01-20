@@ -12,6 +12,7 @@
 #include "spatialSound.h"
 #include "spatialSoundMixer.h"
 #include "spatialSoundMixer_grid.h"
+#include "StringEx.h"
 #include "ui.h"
 #include <algorithm>
 #include <cmath>
@@ -526,7 +527,7 @@ struct MonitorVisualizer
 		bool modulateSpeakerSizeWithPanningAmplitude = false;
 		bool modulateSpeakerSizeWithSpeakerVu = false;
 		bool showSources = true;
-		bool showTextOverlay = true;
+		bool showTextOverlay = false;
 	};
 	
 	Visibility visibility;
@@ -752,35 +753,55 @@ struct MonitorGui
 		kTab_AudioOutput,
 		kTab_Visibility,
 		kTab_Panner,
+		kTab_AudioGraphs,
 		kTab_Messages,
 		kTab_COUNT
 	};
 	
 	Tab activeTab = kTab_Panner;
 	
-	void doGui(SoundSystem & soundSystem, MonitorVisualizer & visualizer)
+	void doGui(SoundSystem & soundSystem, MonitorVisualizer & visualizer, AudioGraphManager_RTE & audioGraphMgr)
 	{
-		const ImVec2 buttonSize(142, 36);
+		const ImVec2 buttonSize(130, 36);
+	
+		bool firstTabButton = true;
 		
-		if (ImGui::Button("Audio device", buttonSize))
+		auto tabButton = [&](const char * label) -> bool
+		{
+			if (firstTabButton == false)
+			{
+				ImGui::SameLine();
+				
+				const float avail = ImGui::GetContentRegionAvailWidth();
+				const bool fits = buttonSize.x <= avail;
+				
+				if (fits == false)
+					ImGui::NewLine();
+			}
+			
+			firstTabButton = false;
+			
+			return ImGui::Button(label, buttonSize);
+		};
+		
+		if (tabButton("Audio device"))
 			activeTab = kTab_AudioDevice;
 		
-		ImGui::SameLine();
-		if (ImGui::Button("Audio output", buttonSize))
+		if (tabButton("Audio output"))
 			activeTab = kTab_AudioOutput;
 		
-		ImGui::SameLine();
-		if (ImGui::Button("Visibility", buttonSize))
+		if (tabButton("Visibility"))
 			activeTab = kTab_Visibility;
 		
-		ImGui::SameLine();
-		if (ImGui::Button("Panner", buttonSize))
+		if (tabButton("Panner"))
 			activeTab = kTab_Panner;
 		
-		ImGui::SameLine();
-		if (ImGui::Button("Messages", buttonSize))
-			activeTab = kTab_Messages;
+		if (tabButton("Audio graphs"))
+			activeTab = kTab_AudioGraphs;
 		
+		if (tabButton("Messages"))
+			activeTab = kTab_Messages;
+			
 		ImGui::PushItemWidth(300.f);
 		{
 			switch (activeTab)
@@ -797,6 +818,9 @@ struct MonitorGui
 			case kTab_Panner:
 				doPannerGui(soundSystem);
 				break;
+			case kTab_AudioGraphs:
+				doAudioGraphsGui(audioGraphMgr);
+				break;
 			case kTab_Messages:
 				doMessagesGui();
 				break;
@@ -807,6 +831,9 @@ struct MonitorGui
 			}
 		}
 		ImGui::PopItemWidth();
+		
+		if (activeTab != kTab_AudioGraphs)
+			audioGraphMgr.selectInstance(nullptr);
 	}
 	
 	void doAudioDeviceGui(AudioDevice & audioDevice)
@@ -990,6 +1017,7 @@ struct MonitorGui
 		ImGui::Checkbox("Speaker x panning amplitude", &visualizer.gridPannerOptions.modulateSpeakerSizeWithPanningAmplitude);
 	// todo : x vu
 		ImGui::Checkbox("Speaker x speaker vu", &visualizer.gridPannerOptions.modulateSpeakerSizeWithSpeakerVu);
+		ImGui::Checkbox("Show text overlay", &visualizer.gridPannerOptions.showTextOverlay);
 		ImGui::Checkbox("Show sources", &visualizer.gridPannerOptions.showSources);
 	}
 	
@@ -1013,6 +1041,28 @@ struct MonitorGui
 				}
 			}
 			ImGui::PopID();
+		}
+	}
+	
+	void doAudioGraphsGui(AudioGraphManager_RTE & audioGraphMgr)
+	{
+		for (auto & fileItr : audioGraphMgr.files)
+		{
+			auto & filename = fileItr.first;
+			auto file = fileItr.second;
+			
+			ImGui::Text("%s", filename.c_str());
+			ImGui::Indent();
+			for (auto instance : file->instanceList)
+			{
+				std::string name = String::FormatC("%p", instance->audioGraph);
+				
+				if (ImGui::Button(name.c_str()))
+				{
+					audioGraphMgr.selectInstance(instance);
+				}
+			}
+			ImGui::Unindent();
 		}
 	}
 	
@@ -1079,7 +1129,7 @@ int main(int argc, char * argv[])
 	camera.firstPerson.position.Set(0.f, 1.f, -2.f);
 	camera.firstPerson.pitch = 15.f;
 	
-	for (int i = 0; i < 1; ++i)
+	for (int i = 0; i < 3; ++i)
 	{
 		SoundObject * soundObject = new SoundObject();
 		
@@ -1118,7 +1168,7 @@ int main(int argc, char * argv[])
 				
 				ImGui::Begin("Monitor");
 				{
-					monitorGui.doGui(soundSystem, visualizer);
+					monitorGui.doGui(soundSystem, visualizer, audioGraphMgr);
 				}
 				ImGui::End();
 			}
@@ -1213,6 +1263,7 @@ int main(int argc, char * argv[])
 			camera.popProjectionMatrix();
 			
 			projectScreen2d();
+			setFont("calibri.ttf");
 			
 			visualizer.drawTextOverlay(modelViewProjectionMatrix, soundSystem);
 			
