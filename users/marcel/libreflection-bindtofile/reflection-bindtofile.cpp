@@ -173,7 +173,7 @@ bool bindObjectToFile(const TypeDB * typeDB, const Type * type, void * object, c
 
 	bool result = true;
 	
-	// todo : check if the file exists. if so, deserialize it
+	// check if the file exists. if so, deserialize it
 	// if not, create a new file and serialize the object to it
 
 	if (FileStream::Exists(filename))
