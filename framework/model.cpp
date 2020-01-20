@@ -870,8 +870,6 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 					shader.setImmediateMatrix4x4Array(shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index, (float*)globalMatrices, numBones);
 				}
 				
-			// todo : use constant locations for drawColor and drawSkin
-			
 				const GxImmediateIndex drawColor = shader.getImmediateIndex("drawColor");
 				
 				if (drawColor != -1)
@@ -1241,8 +1239,6 @@ int Model::softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * wor
 	}
 	
 	calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, m_model->boneSet->m_numBones);
-	
-	// todo : write a fast SIMD version of this. write out streams of px, py, pz, nx, ny, nz
 	
 	const float boneWeightScale = 1.f / 255.f;
 	

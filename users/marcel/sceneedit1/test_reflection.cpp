@@ -58,7 +58,6 @@ static void dumpReflectionInfo_traverse(const TypeDB & typeDB, const Type * type
 		
 		switch (plain_type->dataType)
 		{
-			// todo : show values
 		case kDataType_Bool:
 			printf("(bool) %s\n", plain_type->access<bool>(object) ? "true" : "false");
 			break;

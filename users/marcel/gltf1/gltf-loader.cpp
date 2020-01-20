@@ -501,8 +501,6 @@ namespace gltf
 					node.rotation = node_json.value("rotation", Quat(0, 0, 0, 1));
 					node.scale = node_json.value("scale", Vec3(1, 1, 1));
 					node.matrix = node_json.value("matrix", Mat4x4(true));
-					
-					// todo : matrix
 				}
 			}
 			else if (member_name == "scene")

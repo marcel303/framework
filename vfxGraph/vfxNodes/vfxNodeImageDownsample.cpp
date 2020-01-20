@@ -29,7 +29,6 @@
 #include "vfxNodeImageDownsample.h"
 
 // todo : implement single channel downsample
-// todo : add setSwizzle method to Surface class
 // todo : swizzle Surface class to RED, RED, RED, ONE for single channel formats ?
 
 VFX_NODE_TYPE(VfxNodeImageDownsample)
