@@ -35,6 +35,7 @@
 #import "metal.h"
 #import "metalView.h"
 #import "shaders.h" // registerBuiltinShaders
+#import "StringEx.h" // strcpy_s
 #import "texture.h"
 #import "window_data.h"
 #import <Cocoa/Cocoa.h>
@@ -87,6 +88,7 @@ struct RenderPassDataForPushPop
 	DepthTarget * depthTarget = nullptr;
 	bool isBackbufferPass = false;
 	int backingScale = 0;
+	char passName[32] = { };
 };
 
 static std::stack<RenderPassDataForPushPop> s_renderPasses;
@@ -635,6 +637,7 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		pd.target[pd.numTargets++] = targets[i];
 	pd.depthTarget = depthTarget;
 	pd.backingScale = backingScale;
+	strcpy_s(pd.passName, sizeof(pd.passName), passName);
 
 	s_renderPasses.push(pd);
 }
@@ -662,6 +665,7 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 	RenderPassDataForPushPop pd;
 	pd.isBackbufferPass = true;
 	pd.backingScale = backingScale;
+	strcpy_s(pd.passName, sizeof(pd.passName), passName);
 	
 	s_renderPasses.push(pd);
 }
@@ -686,11 +690,11 @@ void popRenderPass()
 		
 		if (new_pd.isBackbufferPass)
 		{
-			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, "(cont)", new_pd.backingScale); // todo : pass name
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, new_pd.passName, new_pd.backingScale);
 		}
 		else
 		{
-			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, "(cont)", new_pd.backingScale); // todo : pass name
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, new_pd.passName, new_pd.backingScale);
 		}
 	}
 	
@@ -1729,12 +1733,14 @@ static void ensureIndexBufferCapacity(const int numIndices)
 		if (s_gxIndexBufferElem != nullptr)
 		{
 			auto * elem = s_gxIndexBufferElem;
-			// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxFlush)"];
+			
+			[s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxFlush)"];
 			[s_activeRenderPass->cmdbuf addCompletedHandler:
 				^(id<MTLCommandBuffer> _Nonnull)
 				{
 					s_gxIndexBufferPool.freeBuffer(elem);
 				}];
+			[s_activeRenderPass->cmdbuf popDebugGroup];
 		}
 		
 		s_gxIndexBufferElem = s_gxIndexBufferPool.allocBuffer();
@@ -1854,12 +1860,14 @@ static void gxFlush(bool endOfBatch)
 				if (s_gxVertexBufferElem != nullptr)
 				{
 					auto * elem = s_gxVertexBufferElem;
-					// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxFlush)"];
+					
+					[s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxFlush)"];
 					[s_activeRenderPass->cmdbuf addCompletedHandler:
 						^(id<MTLCommandBuffer> _Nonnull)
 						{
 							s_gxVertexBufferPool.freeBuffer(elem);
 						}];
+					[s_activeRenderPass->cmdbuf popDebugGroup];
 				}
 				
 				s_gxVertexBufferElem = s_gxVertexBufferPool.allocBuffer();
@@ -2099,31 +2107,24 @@ static void gxEndDraw()
 {
 	// add completion handler if there's still a buffer pool element in use
 	
-	if (s_gxVertexBufferElem != nullptr)
+	if (s_gxVertexBufferElem != nullptr || s_gxIndexBufferElem != nullptr)
 	{
-		auto * elem = s_gxVertexBufferElem;
-		// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxEndDraw)"];
+		auto * vb_elem = s_gxVertexBufferElem;
+		auto * ib_elem = s_gxIndexBufferElem;
+		
+		[s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxEndDraw)"];
 		[s_activeRenderPass->cmdbuf addCompletedHandler:
 			^(id<MTLCommandBuffer> _Nonnull)
 			{
-				s_gxVertexBufferPool.freeBuffer(elem);
+				if (vb_elem != nullptr)
+					s_gxVertexBufferPool.freeBuffer(vb_elem);
+				if (ib_elem != nullptr)
+					s_gxIndexBufferPool.freeBuffer(ib_elem);
 			}];
+		[s_activeRenderPass->cmdbuf popDebugGroup];
 		
 		s_gxVertexBufferElem = nullptr;
 		s_gxVertexBufferElemOffset = 0;
-	}
-	
-	// add completion handler if there's still a buffer pool element in use
-	
-	if (s_gxIndexBufferElem != nullptr)
-	{
-		auto * elem = s_gxIndexBufferElem;
-		// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxEndDraw)"];
-		[s_activeRenderPass->cmdbuf addCompletedHandler:
-			^(id<MTLCommandBuffer> _Nonnull)
-			{
-				s_gxIndexBufferPool.freeBuffer(elem);
-			}];
 		
 		s_gxIndexBufferElem = nullptr;
 		s_gxIndexBufferElemOffset = 0;
@@ -2134,7 +2135,7 @@ static void gxEndDraw()
 	
 	// clear textures to avoid freed textures from being reused (prefer to crash instead)
 	
-	// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"Clear textures (gxEndDraw)"];
+	[s_activeRenderPass->encoder insertDebugSignpost:@"Clear textures (gxEndDraw)"];
 	for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
 		[s_activeRenderPass->encoder setVertexTexture:nullptr atIndex:i];
 	for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
