@@ -148,6 +148,8 @@ struct FileEditor_Sprite : FileEditor
 			
 			inputIsCaptured = true;
 			
+			if (keyboard.wentDown(SDLK_0))
+				desiredScale *= 1.f;
 			if (keyboard.wentDown(SDLK_EQUALS, true))
 				desiredScale *= 1.5f;
 			if (keyboard.wentDown(SDLK_MINUS, true))
