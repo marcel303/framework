@@ -1,6 +1,6 @@
 static const char * s_basicHardSkinnedVs = R"SHADER(
 
-include engine/ShaderVS.txt
+include engine/ShaderSkinnedVS.txt
 
 shader_out vec4 v_color;
 shader_out vec3 v_normal;

@@ -1,0 +1,71 @@
+static const char * s_shaderSkinnedVs = R"SHADER(
+
+include engine/ShaderVS.txt
+
+// additional vertex streams
+
+shader_attrib vec4 in_skinningBlendIndices VS_BLEND_INDICES
+shader_attrib vec4 in_skinningBlendWeights VS_BLEND_WEIGHTS
+
+// vertex shader constants
+
+uniform vec4 drawColor;
+uniform vec4 drawSkin;
+uniform mat4 skinningMatrices[32] buffer SkinningData;
+
+vec4 boneToObject_Skinned(ivec4 indices, vec4 weights, vec4 v)
+{
+	return
+		skinningMatrices[indices.x] * v * weights.x +
+		skinningMatrices[indices.y] * v * weights.y +
+		skinningMatrices[indices.z] * v * weights.z +
+		skinningMatrices[indices.w] * v * weights.w;
+}
+
+vec4 boneToObject_HardSkinned(ivec4 indices, vec4 weights, vec4 v)
+{
+	return
+		skinningMatrices[indices.x] * v;
+}
+
+ivec4 unpackSkinningBlendIndices()
+{
+	return ivec4(in_skinningBlendIndices);
+}
+
+vec4 unpackSkinningBlendWeights()
+{
+	return in_skinningBlendWeights;
+}
+
+bool drawColorTexcoords()
+{
+	return drawColor.x != 0.0;
+}
+
+bool drawColorNormals()
+{
+	return drawColor.y != 0.0;
+}
+
+bool drawColorBlendIndices()
+{
+	return drawColor.z != 0.0f;
+}
+
+bool drawColorBlendWeights()
+{
+	return drawColor.w != 0.0;
+}
+
+bool drawUnSkinned()
+{
+	return drawSkin.x != 0.0;
+}
+
+bool drawHardSkinned()
+{
+	return drawSkin.y != 0.0;
+}
+
+)SHADER";

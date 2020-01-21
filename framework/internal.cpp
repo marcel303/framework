@@ -380,7 +380,7 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool 
 	{
 		imageData = loadImage(filename);
 
-	#ifdef WIN32 // todo : enable cacheResourceData on other platforms than windows too
+	#ifdef WIN32 // todo : enable cacheResourceData on other platforms than windows too. requires platform independent function to get temp path (GetTempPathA on windows)
 		if (framework.cacheResourceData && imageData)
 		{
 			std::string cacheFilename = getCacheFilename(filename, false);
@@ -837,8 +837,6 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 		glBindAttribLocation(program, VS_COLOR,         "in_color");
 		glBindAttribLocation(program, VS_TEXCOORD0,     "in_texcoord0");
 		glBindAttribLocation(program, VS_TEXCOORD1,     "in_texcoord1");
-		glBindAttribLocation(program, VS_BLEND_INDICES, "in_skinningBlendIndices");
-		glBindAttribLocation(program, VS_BLEND_WEIGHTS, "in_skinningBlendWeights");
 		checkErrorGL();
 		
 		glLinkProgram(program);

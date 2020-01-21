@@ -1335,9 +1335,7 @@ static const GxVertexInput s_gxVsInputs[] =
 	{ VS_NORMAL,    3, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, nx) },
 	{ VS_COLOR,     4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, cx) },
 	{ VS_TEXCOORD0, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx) },
-	{ VS_TEXCOORD1, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx) }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
-	{ VS_BLEND_INDICES, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px) }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
-	{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, px) } // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
+	{ VS_TEXCOORD1, 2, GX_ELEMENT_FLOAT32, false, offsetof(GxVertex, tx) }
 };
 
 static float scale255(const float v)

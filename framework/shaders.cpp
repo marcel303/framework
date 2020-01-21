@@ -41,6 +41,7 @@
 #include "data/engine/ShaderPS.txt"
 #include "data/engine/ShaderCS.txt"
 #include "data/engine/ShaderUtil.txt"
+#include "data/engine/ShaderSkinnedVS.txt"
 
 #include "data/engine/builtin-colormultiply.vs"
 #include "data/engine/builtin-colormultiply.ps"
@@ -145,6 +146,8 @@ void registerBuiltinShaders()
 	shaderSource("engine/ShaderCS.txt", s_shaderCs);
 
 	shaderSource("engine/ShaderUtil.txt", s_shaderUtil);
+	
+	shaderSource("engine/ShaderSkinnedVS.txt", s_shaderSkinnedVs);
 	
 	shaderSource("engine/builtin-colormultiply.ps", s_colorMultiplyPs);
 	shaderSource("engine/builtin-colormultiply.vs", s_colorMultiplyVs);
