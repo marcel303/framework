@@ -233,9 +233,16 @@ void TgaLoader::LoadData_Raw16_Hack(Stream* stream, int sx, int sy, uint8_t* out
 		const int g = c >> 5;
 		const int b = c >> 0;
 
-	// todo : make this endianness aware
-	
 		*ptr = ((r << 3) << 0) | ((g << 3) << 8) | ((b << 3) << 16) | (255 << 24);
+
+	#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+		// TGA uses a little endian byte order. when on a big endian system, we
+		// need to swap bytes here to ensure the order is correct
+		uint8_t * ptr8 = (uint8_t*)ptr;
+		const uint8_t tmp0 = ptr8[0];
+		ptr8[0] = ptr8[1];
+		ptr8[1] = tmp0;
+	#endif
 
 		++ptr;
 	}
