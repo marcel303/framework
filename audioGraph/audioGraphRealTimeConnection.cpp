@@ -28,6 +28,7 @@
 #include "audioGraph.h"
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
+#include "graphEdit.h"
 
 #include "Log.h"
 #include "Parse.h"
@@ -117,6 +118,9 @@ void AudioRealTimeConnection::updateAudioValues()
 	Assert(audioGraph != nullptr);
 	if (audioGraph == nullptr)
 		return;
+
+// todo : make a copy of the history data when we're done here
+//        this to avoid data races, where the audio thread is calling this method and providing more data
 
 	AUDIO_SCOPE;
 	

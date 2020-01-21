@@ -30,6 +30,7 @@
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
 #include "graph.h"
+#include "graphEdit.h"
 #include "Log.h"
 #include <algorithm>
 #include <SDL2/SDL.h>

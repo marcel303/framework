@@ -411,25 +411,25 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit, const float dt)
 		for (auto & channel : channelData.channels)
 		{
 			if (channel.numValues > 0)
+		{
+			if (isFirst)
 			{
-				if (isFirst)
-				{
-					isFirst = false;
-					
-					min = channel.values[0];
-					max = channel.values[0];
-				}
+				isFirst = false;
 				
-				for (int i = 0; i < channel.numValues; ++i)
-				{
-					const float value = channel.values[i];
-					
-					if (value < min)
-						min = value;
-					else if (value > max)
-						max = value;
-				}
+				min = channel.values[0];
+				max = channel.values[0];
 			}
+			
+			for (int i = 0; i < channel.numValues; ++i)
+			{
+				const float value = channel.values[i];
+				
+				if (value < min)
+					min = value;
+					else if (value > max)
+					max = value;
+			}
+		}
 		}
 		
 		if (isFirst == false)
@@ -1724,7 +1724,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	GRAPHEDIT_SX = displaySx;
 	GRAPHEDIT_SY = displaySy;
 	
-#if defined(DEBUG) // todo : remove
+#if defined(DEBUG)
 #if !defined(WINDOWS) // fixme : compile error ?
 	for (auto & nodeItr : graph->nodes)
 		Assert(nodeDatas.count(nodeItr.first) != 0);
