@@ -227,7 +227,7 @@ struct Renderer
 			drawFromEye(projectionMatrix, viewMatrix, Vec3(-eyeSeparation->get()/2.f, 0.f, 0.f), &eyeLeft, &eyeDepth);
 			drawFromEye(projectionMatrix, viewMatrix, Vec3(+eyeSeparation->get()/2.f, 0.f, 0.f), &eyeRight, &eyeDepth);
 			
-			// todo : composite eye buffers using anaglyphic shader
+			// composite eye buffers using anaglyphic shader
 			
 			projectScreen2d();
 			
