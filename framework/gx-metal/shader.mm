@@ -38,8 +38,6 @@
 
 extern MetalWindowData * activeWindowData;
 
-extern std::string s_shaderOutputs; // todo : cleanup
-
 //
 
 id <MTLDevice> metal_get_device();
@@ -236,6 +234,25 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 				
 				MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 				
+			// todo : use only the hack code-path below if this turns out to work well
+			#if 1
+				// we don't know the vertex attributes that will be expected to be set by the shader
+				// yet, so we just take a guess and write some large number of them here
+				// note : before we used the current vs input bindings, but this is problemetic
+				//        if the currently set vs inputs don't match up with the ones being used
+				//        during draw. since usually the GX inputs will be bound at this point,
+				//        only the GX inputs (position, color, normal, texcoords) will be set,
+				//        but the shader may expect some (wildly) different set of attributes
+				for ( int i = 0; i < 16; ++i )
+				{
+					vertexDescriptor.attributes[i].format = MTLVertexFormatFloat;
+					vertexDescriptor.attributes[i].bufferIndex = 0;
+					vertexDescriptor.attributes[i].offset = i * 4;
+				}
+				
+				vertexDescriptor.layouts[0].stride = 16 * 4;
+				vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+			#else
 			// fixme : this is duplicated code. perhaps we should enforce everything is set
 			//         before the shader is set. when a shader is set, construct the pipeline state
 			//         only thing allowed after a shader is set is set to immediates, and to
@@ -293,6 +310,7 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 				vertexDescriptor.layouts[0].stride = renderState.vertexStride;
 				vertexDescriptor.layouts[0].stepRate = 1;
 				vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+			#endif
 				pipelineDescriptor.vertexDescriptor = vertexDescriptor;
 				
 				const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
@@ -593,7 +611,7 @@ Shader::~Shader()
 void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	if (outputs == nullptr)
-		outputs = s_shaderOutputs.empty() ? "c" : s_shaderOutputs.c_str();
+		outputs = globals.shaderOutputs[0] == 0 ? "c" : globals.shaderOutputs;
 	
 	m_cacheElem = static_cast<ShaderCacheElem_Metal*>(&g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs));
 }

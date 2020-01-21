@@ -442,6 +442,7 @@ public:
 	bool cacheResourceData;
 	bool enableRealTimeEditing;
 	bool filedrop;
+	bool enableSound;
 	int numSoundSources;
 	int windowX;
 	int windowY;

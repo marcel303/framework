@@ -443,6 +443,7 @@ public:
 	Mat4x4 transform3d;
 	bool gxShaderIsDirty;
 	BuiltinShaders * builtinShaders;
+	char shaderOutputs[32];
 	
 	struct DebugDraw
 	{

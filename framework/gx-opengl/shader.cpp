@@ -31,8 +31,6 @@
 
 #include "internal.h"
 
-extern std::string s_shaderOutputs; // todo : cleanup
-
 uint32_t Shader::getProgram() const
 {
 	return m_cacheElem ? m_cacheElem->program : 0;
@@ -78,7 +76,7 @@ Shader::~Shader()
 void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	if (outputs == nullptr)
-		outputs = s_shaderOutputs.empty() ? "c" : s_shaderOutputs.c_str();
+		outputs = globals.shaderOutputs[0] == 0 ? "c" : globals.shaderOutputs;
 	
 	m_cacheElem = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs);
 }

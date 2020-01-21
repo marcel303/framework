@@ -153,6 +153,7 @@ Framework::Framework()
 	windowSx = 0;
 	windowSy = 0;
 	windowIsActive = false;
+	enableSound = true;
 	numSoundSources = 32;
 	actionHandler = 0;
 	fillCachesCallback = 0;
@@ -542,14 +543,16 @@ bool Framework::init(int sx, int sy)
 	// initialize sound player
 	
 #if !defined(LINUX) // todo : make sure PortAudio sound player works correctly on the Raspberry Pi
-	if (!g_soundPlayer.init(numSoundSources))
+	if (enableSound)
 	{
-	// todo : check if this now works on Linux
-	// todo : add option to enable/disable sound player at init time
-		logError("failed to initialize sound player");
-		//if (initErrorHandler)
-		//	initErrorHandler(INIT_ERROR_SOUND);
-		//return false;
+		if (!g_soundPlayer.init(numSoundSources))
+		{
+		// todo : check if this now works on Linux
+			logError("failed to initialize sound player");
+			if (initErrorHandler)
+				initErrorHandler(INIT_ERROR_SOUND);
+			return false;
+		}
 	}
 #endif
 
@@ -701,6 +704,7 @@ bool Framework::shutdown()
 	cacheResourceData = false;
 	enableRealTimeEditing = false;
 	filedrop = false;
+	enableSound = true;
 	numSoundSources = 32;
 	windowX = -1;
 	windowY = -1;
@@ -2060,7 +2064,6 @@ WindowData * Framework::findWindowDataById(const int id)
 // -----
 
 static Stack<std::string, 32> s_shaderOutputsStack;
-std::string s_shaderOutputs; // todo : move to internal / globals
 
 // -----
 
@@ -3821,13 +3824,14 @@ void shaderSource(const char * filename, const char * text)
 
 void pushShaderOutputs(const char * outputs)
 {
-	s_shaderOutputsStack.push(s_shaderOutputs);
-	s_shaderOutputs = outputs;
+	s_shaderOutputsStack.push(globals.shaderOutputs);
+	strcpy_s(globals.shaderOutputs, sizeof(globals.shaderOutputs), outputs);
 }
 
 void popShaderOutputs()
 {
-	s_shaderOutputs = s_shaderOutputsStack.popValue();
+	auto value = s_shaderOutputsStack.popValue();
+	strcpy_s(globals.shaderOutputs, sizeof(globals.shaderOutputs), value.c_str());
 }
 
 //
