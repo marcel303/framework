@@ -77,7 +77,12 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 	if (hasFocus == false)
 		return;
 	
-	// tick
+	// update smoothed changes
+	
+	const float retainAnimTick = .8f;
+	const float retainThisTick = powf(retainAnimTick, dt * 100.f);
+
+	model.scale = lerp<float>(model.scale, scale, 1.f - retainThisTick);
 	
 	guiContext.processBegin(dt, sx, sy, inputIsCaptured);
 	{
@@ -147,6 +152,34 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 		ImGui::End();
 	}
 	guiContext.processEnd();
+
+	// process input
+	
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_0))
+	{
+		inputIsCaptured = true;
+		scale = 1.f;
+		rotationX = 0.f;
+		rotationY = 0.f;
+	}
+	
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_EQUALS, true))
+	{
+		inputIsCaptured = true;
+		scale *= 1.5f;
+	}
+	
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_MINUS, true))
+	{
+		inputIsCaptured = true;
+		scale /= 1.5f;
+	}
+	
+	if (inputIsCaptured == false && mouse.scrollY != 0)
+	{
+		inputIsCaptured = true;
+		scale *= powf(1.2f, mouse.scrollY);
+	}
 	
 	if (inputIsCaptured == false && mouse.isDown(BUTTON_LEFT))
 	{
@@ -194,8 +227,6 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 				| DrawBoundingBox * showBoundingBox;
 			
 			model.drawNormalsScale = normalsScale;
-			
-			model.scale = scale;
 			
 			Shader shader("BasicSkinnedWithLighting", "engine/BasicSkinned.vs", "BasicSkinnedWithLighting.ps");
 			
