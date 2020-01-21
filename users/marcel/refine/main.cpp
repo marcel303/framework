@@ -13,6 +13,7 @@
 #include "fileEditor_audioGraph.h"
 #include "fileEditor_audioStream_vorbis.h"
 #include "fileEditor_font.h"
+#include "fileEditor_gltf.h"
 #include "fileEditor_jgmod.h"
 #include "fileEditor_jsfx.h"
 #include "fileEditor_model.h"
@@ -247,6 +248,10 @@ int main(int argc, char * argv[])
 		else if (extension == "fbx")
 		{
 			editor = new FileEditor_Model(filename.c_str());
+		}
+		else if (extension == "gltf")
+		{
+			editor = new FileEditor_Gltf(filename.c_str());
 		}
 		else if (extension == "scml")
 		{

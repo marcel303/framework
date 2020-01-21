@@ -74,6 +74,8 @@ bool FileEditor_Model::reflect(TypeDB & typeDB, StructuredType & type)
 
 void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured)
 {
+// todo : always tick. return true if redraw is desired. create separate FileEditor method for updating the visual
+
 	if (hasFocus == false)
 		return;
 	
