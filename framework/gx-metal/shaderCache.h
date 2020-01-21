@@ -163,7 +163,11 @@ public:
 	
 	id <MTLRenderPipelineState> findPipelineState(const uint32_t hash) const
 	{
-		return m_pipelines[hash]; // todo : nice iterator lookup etc
+		auto i = m_pipelines.find(hash);
+		if (i != m_pipelines.end())
+			return i->second;
+		else
+			return nullptr;
 	}
 	
 	void addPipelineState(const uint32_t hash, id <MTLRenderPipelineState> state) const
