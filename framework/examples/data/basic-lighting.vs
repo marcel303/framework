@@ -1,4 +1,4 @@
-include engine/ShaderVS.txt
+include engine/ShaderSkinnedVS.txt
 
 uniform float time;
 uniform vec3 cameraPosition;
