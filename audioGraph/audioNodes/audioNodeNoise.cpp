@@ -199,8 +199,6 @@ void AudioNodeNoise::drawPink()
 			values[i] = pinkNumber.next() * pinkScale;
 		}
 		
-		// todo : write (SSE) optimized routine to convert, scale and map values from integer to floating point
-		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
 			const float t = values[i];
