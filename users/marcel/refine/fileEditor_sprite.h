@@ -89,11 +89,11 @@ struct FileEditor_Sprite : FileEditor
 		drawUiRectCheckered(0, 0, sx, sy, 8);
 		
 		setColor(colorWhite);
+		const float oldScale = sprite.scale;
+		sprite.scale = calculateSpriteScale(sx, sy);
 		sprite.pixelpos = false;
 		sprite.x = (sx - sprite.getWidth() * sprite.scale) / 2;
 		sprite.y = (sy - sprite.getHeight() * sprite.scale) / 2;
-		const float oldScale = sprite.scale;
-		sprite.scale = calculateSpriteScale(sx, sy);
 		sprite.draw();
 		sprite.scale = oldScale;
 		

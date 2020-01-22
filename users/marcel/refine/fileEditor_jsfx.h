@@ -108,7 +108,7 @@ struct JsusFxWindow
 
 struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 {
-	enum AudioSource // todo : reflect
+	enum AudioSource
 	{
 		// note : must update doButtonBar and reflect when this is changed !
 		kAudioSource_Silence,
@@ -117,7 +117,7 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 		kAudioSource_Sine,
 		kAudioSource_Tent,
 		kAudioSource_AudioInterface,
-		kAudioSource_Sample // todo
+		kAudioSource_Sample // todo : add sample-based audio source
 	};
 	
 	JsusFx_Framework jsusFx;
