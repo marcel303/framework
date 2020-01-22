@@ -46,16 +46,14 @@ void metal_set_viewport(const int sx, const int sy);
 void metal_set_scissor(const int x, const int y, const int sx, const int sy);
 void metal_clear_scissor();
 
-// --- experimental functions for merge into framework at some point ---
-
-void setColorWriteMask(int r, int g, int b, int a);
-
 #ifdef __OBJC__
 
 // --- private data and helper functions ---
 
 #import <Metal/Metal.h>
 #include "gx_mesh.h"
+
+static const int kMaxColorTargets = 8;
 
 struct RenderPipelineState
 {
@@ -68,15 +66,32 @@ struct RenderPipelineState
 	
 	struct RenderPass
 	{
-		uint16_t colorFormat[4] = { };
+		uint16_t colorFormat[kMaxColorTargets] = { };
 		uint16_t depthFormat = 0;
 	} renderPass;
 };
 
 extern RenderPipelineState renderState;
 
-void metal_upload_texture_area(const void * src, const int srcPitch, const int srcSx, const int srcSy, id <MTLTexture> dst, const int dstX, const int dstY, const MTLPixelFormat pixelFormat);
-void metal_copy_texture_to_texture(id <MTLTexture> src, const int srcPitch, const int srcX, const int srcY, const int srcSx, const int srcSy, id <MTLTexture> dst, const int dstX, const int dstY, const MTLPixelFormat pixelFormat);
+void metal_make_render_wait_for_blit(id<MTLBlitCommandEncoder> blit_encoder);
+
+void metal_upload_texture_area(
+	const void * src,
+	const int srcPitch,
+	const int srcSx, const int srcSy,
+	id <MTLTexture> dst,
+	const int dstX, const int dstY,
+	const MTLPixelFormat pixelFormat);
+
+void metal_copy_texture_to_texture(
+	id <MTLTexture> src,
+	const int srcPitch,
+	const int srcX, const int srcY, const int srcSx,
+	const int srcSy,
+	id <MTLTexture> dst,
+	const int dstX, const int dstY,
+	const MTLPixelFormat pixelFormat);
+
 void metal_generate_mipmaps(id <MTLTexture> texture);
 
 #endif

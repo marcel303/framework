@@ -366,9 +366,9 @@ static int Convert8to5_Backward(int v)
 
 void TgaLoader::SaveData_Raw16(Stream* stream, int sx, int sy, const uint8_t* bytes)
 {
-	// todo : convert to 565 range w/ error diffusion
-	
 	StreamWriter writer(stream, false);
+
+	// convert to 555 range w/ error diffusion
 
 	int count = sx * sy;
 
@@ -398,7 +398,8 @@ void TgaLoader::SaveData_Raw16(Stream* stream, int sx, int sy, const uint8_t* by
 		const int g = ptr[1];
 		const int b = ptr[2];
 		
-		uint16_t c = (b << 0) | (g << 5) | (r << 10); // todo : shouldn't r be shifted 11 bits ?
+		// note : 15/16-bit tga uses 5 bits per component. the top-most bit in 16-bit mode is reserved for transparency
+		uint16_t c = (b << 0) | (g << 5) | (r << 10);
 		
 		writer.WriteUInt16(c);
 

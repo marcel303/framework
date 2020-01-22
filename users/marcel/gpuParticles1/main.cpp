@@ -190,7 +190,7 @@ int main(int argc, char * argv[])
 		}
 		popSurface();
 		
-		ps.updateParticles(flowField.getTexture());
+		ps.updateParticles(flowField.getTexture(), framework.timeStep);
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{

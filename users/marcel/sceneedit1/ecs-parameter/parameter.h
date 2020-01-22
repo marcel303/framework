@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Debugging.h"
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Vec4.h"
@@ -469,7 +470,14 @@ public:
 		, defaultValue(in_defaultValue)
 		, elems(in_elems)
 	{
-		// todo : assert the default value exists within the given enumeration elements
+	#if defined(DEBUG)
+		// assert the default value exists within the given enumeration elements
+		bool defaultValueExists = false;
+		for (auto & elem : elems)
+			if (elem.value == defaultValue)
+				defaultValueExists = true;
+		Assert(defaultValueExists);
+	#endif
 	}
 	
 	virtual std::type_index typeIndex() const override final

@@ -27,159 +27,238 @@
 
 #include "gx_mesh.h"
 
-#if ENABLE_OPENGL
-	#if defined(IPHONEOS)
-		#include <OpenGLES/ES3/gl.h>
-	#else
-		#include <GL/glew.h>
-	#endif
-#endif
-
-GxMesh::GxMesh()
+void GxMesh::clear()
 {
-#if ENABLE_OPENGL
-	glGenVertexArrays(1, &m_vertexArrayObject);
-	checkErrorGL();
-#endif
+	m_vertexBuffer = nullptr;
+	m_indexBuffer = nullptr;
+	
+	m_numVertexInputs = 0;
+	m_vertexStride = 0;
+	
+	m_primitives.clear();
 }
-
-GxMesh::~GxMesh()
-{
-	free();
-}
-
-void GxMesh::free()
-{
-#if ENABLE_OPENGL
-	if (m_vertexArrayObject != 0)
-	{
-		glDeleteVertexArrays(1, &m_vertexArrayObject);
-		m_vertexArrayObject = 0;
-		checkErrorGL();
-	}
-#endif
-}
-
-#if ENABLE_OPENGL
-
-static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
-{
-	for (int i = 0; i < numVsInputs; ++i)
-	{
-		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
-		
-		glEnableVertexAttribArray(vsInputs[i].id);
-		checkErrorGL();
-		
-		const GLenum type =
-			vsInputs[i].type == GX_ELEMENT_FLOAT32 ? GL_FLOAT :
-			vsInputs[i].type == GX_ELEMENT_UINT8 ? GL_UNSIGNED_BYTE :
-			GL_INVALID_ENUM;
-
-		Assert(type != GL_INVALID_ENUM);
-		if (type == GL_INVALID_ENUM)
-			continue;
-		
-		const int stride = vsStride ? vsStride : vsInputs[i].stride;
-		Assert(stride != 0);
-		if (stride == 0)
-			continue;
-		
-		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].numComponents, type, vsInputs[i].normalize, stride, (void*)(intptr_t)vsInputs[i].offset);
-		checkErrorGL();
-	}
-}
-
-#endif
 
 void GxMesh::setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vertexStride)
 {
 	m_vertexBuffer = buffer;
 
-#if ENABLE_OPENGL
-// todo : use the shared implementation for OpenGL too
-	Assert(m_vertexArrayObject != 0);
-	glBindVertexArray(m_vertexArrayObject);
-	checkErrorGL();
-	{
-		Assert(m_vertexBuffer->m_vertexArray != 0);
-		glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer->m_vertexArray);
-		checkErrorGL();
-		
-		bindVsInputs(vertexInputs, numVertexInputs, vertexStride);
-	}
-	glBindVertexArray(0);
-	checkErrorGL();
-#else
 	Assert(numVertexInputs <= kMaxVertexInputs);
 	m_numVertexInputs = numVertexInputs <= kMaxVertexInputs ? numVertexInputs : kMaxVertexInputs;
 	memcpy(m_vertexInputs, vertexInputs, m_numVertexInputs * sizeof(GxVertexInput));
 	m_vertexStride = vertexStride;
-#endif
 }
 
 void GxMesh::setIndexBuffer(const GxIndexBuffer * buffer)
 {
 	m_indexBuffer = buffer;
-	
-#if ENABLE_OPENGL
-	Assert(m_vertexArrayObject != 0);
-	glBindVertexArray(m_vertexArrayObject);
-	checkErrorGL();
-	{
-		Assert(m_indexBuffer->m_indexArray != 0);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer->m_indexArray);
-		checkErrorGL();
-	}
-	glBindVertexArray(0);
-	checkErrorGL();
-#endif
 }
 
 void GxMesh::draw(const GX_PRIMITIVE_TYPE type) const
 {
-#if ENABLE_OPENGL
-// todo : use the shared implementation for OpenGL too
-	Assert(type == GX_TRIANGLES); // todo : translate primitive type
-	if (type != GX_TRIANGLES)
-		return;
-	
-	gxValidateMatrices();
-	
-	const int numIndices = m_indexBuffer->getNumIndices();
-	
-	// bind vertex arrays
-
-	fassert(m_vertexBuffer && m_vertexBuffer->m_vertexArray);
-	fassert(m_indexBuffer && m_indexBuffer->m_indexArray);
-	glBindVertexArray(m_vertexArrayObject);
-	checkErrorGL();
-
-	const GLenum indexType =
-		m_indexBuffer->getFormat() == GX_INDEX_16
-		? GL_UNSIGNED_SHORT
-		: GL_UNSIGNED_INT;
-	
-	glDrawElements(GL_TRIANGLES, numIndices, indexType, 0);
-	checkErrorGL();
-
-	glBindVertexArray(0);
-	checkErrorGL();
-#else
 	fassert(m_vertexBuffer);
-	fassert(m_indexBuffer);
+	
+	AssertMsg(m_indexBuffer != nullptr, "GxMesh::draw with prim type assumes an index buffer is set. if you wish to draw non-indexed primitives, use the draw method which takes as explicit arguments the 'firstVertex' and 'numVertices'", 0);
 	
 	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
-
-	if (m_indexBuffer)
+	
+	if (m_indexBuffer != nullptr)
 	{
 		const int numIndices = m_indexBuffer->getNumIndices();
 
-		gxDrawIndexedPrimitives(GX_TRIANGLES, numIndices, m_indexBuffer);
+		gxDrawIndexedPrimitives(type, 0, numIndices, m_indexBuffer);
+	}
+	
+	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
+}
+
+void GxMesh::draw(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices) const
+{
+	fassert(m_vertexBuffer);
+	
+	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
+	if (m_indexBuffer)
+		gxDrawIndexedPrimitives(type, firstVertex, numVertices, m_indexBuffer);
+	else
+		gxDrawPrimitives(type, firstVertex, numVertices);
+	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
+}
+
+void GxMesh::addPrim(const GX_PRIMITIVE_TYPE type, const int numVertices, const bool indexed)
+{
+	addPrim(type, 0, numVertices, indexed);
+}
+
+void GxMesh::addPrim(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices, const bool indexed)
+{
+	Primitive prim;
+	prim.type = type;
+	prim.firstVertex = firstVertex;
+	prim.numVertices = numVertices;
+	prim.indexed = indexed;
+	
+	m_primitives.push_back(prim);
+}
+
+void GxMesh::draw() const
+{
+	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
+	{
+		for (auto & prim : m_primitives)
+		{
+			if (prim.indexed)
+				gxDrawIndexedPrimitives(prim.type, prim.firstVertex, prim.numVertices, m_indexBuffer);
+			else
+				gxDrawPrimitives(prim.type, prim.firstVertex, prim.numVertices);
+		}
+	}
+	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
+}
+
+//
+
+struct MeshCaptureState
+{
+	GxMesh * mesh = nullptr;
+	GxVertexBuffer * vertexBuffer = nullptr;
+	GxIndexBuffer * indexBuffer = nullptr;
+	
+	uint8_t * vertexData = nullptr;
+	int vertexDataSize = 0;
+	uint32_t * indexData = nullptr;
+	int numIndices = 0;
+	
+	int numVertices = 0;
+	
+	void free()
+	{
+		if (vertexData != nullptr)
+		{
+			::free(vertexData);
+			vertexData = nullptr;
+			vertexDataSize = 0;
+		}
+		
+		if (indexData != nullptr)
+		{
+			::free(indexData);
+			indexData = nullptr;
+			numVertices = 0;
+		}
+	}
+};
+
+static MeshCaptureState s_meshCaptureState;
+
+static void captureCallback(
+	const void * vertexData,
+	const int vertexDataSize,
+	const GxVertexInput * vsInputs,
+	const int numVsInputs,
+	const int vertexStride,
+	const GX_PRIMITIVE_TYPE primType,
+	const int numVertices,
+	const bool endOfBatch)
+{
+	s_meshCaptureState.mesh->setVertexBuffer(
+		s_meshCaptureState.vertexBuffer,
+		vsInputs,
+		numVsInputs,
+		vertexStride);
+	
+	// increase the captured vertex array size and copy the new vertex data into the capture buffer
+	
+	s_meshCaptureState.vertexData = (uint8_t*)realloc(s_meshCaptureState.vertexData, s_meshCaptureState.vertexDataSize + vertexDataSize);
+	memcpy(s_meshCaptureState.vertexData + s_meshCaptureState.vertexDataSize, vertexData, vertexDataSize);
+	s_meshCaptureState.vertexDataSize += vertexDataSize;
+	
+	if (primType == GX_QUADS)
+	{
+		// convert quads to triangles, as modern graphics api's may not support quads natively
+		
+		const int numQuads = numVertices/4;
+		const int numIndices = numQuads * 6;
+		
+		// 1. increase the captured index array size
+		
+		s_meshCaptureState.indexData = (uint32_t*)realloc(s_meshCaptureState.indexData, (s_meshCaptureState.numIndices + numIndices) * sizeof(uint32_t));
+		
+		// 2. set the index write pointer to the previous end of the buffer
+		
+		uint32_t * __restrict indices = s_meshCaptureState.indexData + s_meshCaptureState.numIndices;
+		
+		// 3. write indices to convert quads to triangles
+		
+		int baseVertex = s_meshCaptureState.numVertices;
+		
+		for (int i = 0; i < numQuads; ++i)
+		{
+			indices[0] = baseVertex + 0;
+			indices[1] = baseVertex + 1;
+			indices[2] = baseVertex + 2;
+			
+			indices[3] = baseVertex + 0;
+			indices[4] = baseVertex + 2;
+			indices[5] = baseVertex + 3;
+			
+			indices += 6;
+			baseVertex += 4;
+		}
+		
+		const int firstIndex = s_meshCaptureState.numIndices;
+		
+		// 4. add the indexed triangle prim to the mesh
+		
+		s_meshCaptureState.mesh->addPrim(GX_TRIANGLES, firstIndex, numIndices, true);
+		
+		// 5. increase the index array size
+		
+		s_meshCaptureState.numIndices += numIndices;
 	}
 	else
 	{
-		Assert(false); // not implemented yet
+		const int firstVertex = s_meshCaptureState.numVertices;
+		
+		s_meshCaptureState.mesh->addPrim(primType, firstVertex, numVertices, false);
 	}
-#endif
+	
+	s_meshCaptureState.numVertices += numVertices;
+}
+
+void gxCaptureMeshBegin(
+	GxMesh & mesh,
+	GxVertexBuffer & vertexBuffer,
+	GxIndexBuffer & indexBuffer)
+{
+	gxSetCaptureCallback(captureCallback);
+	
+	mesh.clear();
+	vertexBuffer.free();
+	indexBuffer.free();
+	
+	Assert(s_meshCaptureState.mesh == nullptr);
+	s_meshCaptureState.mesh = &mesh;
+	s_meshCaptureState.vertexBuffer = &vertexBuffer;
+	s_meshCaptureState.indexBuffer = &indexBuffer;
+}
+
+void gxCaptureMeshEnd()
+{
+	s_meshCaptureState.vertexBuffer->alloc(
+		s_meshCaptureState.vertexData,
+		s_meshCaptureState.vertexDataSize);
+	
+	if (s_meshCaptureState.numIndices > 0)
+	{
+		s_meshCaptureState.indexBuffer->alloc(
+			s_meshCaptureState.indexData,
+			s_meshCaptureState.numIndices,
+			GX_INDEX_32);
+		
+		s_meshCaptureState.mesh->setIndexBuffer(s_meshCaptureState.indexBuffer);
+	}
+	
+	s_meshCaptureState.free();
+	s_meshCaptureState = MeshCaptureState();
+	
+	gxClearCaptureCallback();
 }

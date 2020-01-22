@@ -45,6 +45,8 @@ public:
 	
 	virtual void alloc(const void * bytes, const int numBytes) override final;
 	virtual void free() override final;
+	
+	uint32_t getOpenglVertexArray() const { return m_vertexArray; }
 };
 
 class GxIndexBuffer : public GxIndexBufferBase
@@ -65,6 +67,8 @@ public:
 	
 	virtual int getNumIndices() const override final;
 	virtual GX_INDEX_FORMAT getFormat() const override final;
+	
+	uint32_t getOpenglIndexArray() const { return m_indexArray; }
 };
 
 #endif

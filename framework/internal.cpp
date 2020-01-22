@@ -65,8 +65,6 @@
 	#include "gx-opengl/shaderPreprocess.h"
 #endif
 
-#define ENABLE_MIPMAPS 0 // todo : add per-texture control over the creation of mipmaps
-
 Globals globals;
 
 TextureCache g_textureCache;
@@ -197,28 +195,6 @@ public:
 #endif
 };
 
-//
-
-#if ENABLE_OPENGL // todo : remove bindVsInputs
-
-void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride)
-{
-	checkErrorGL();
-	
-	for (int i = 0; i < numVsInputs; ++i)
-	{
-		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
-		
-		glEnableVertexAttribArray(vsInputs[i].id);
-		checkErrorGL();
-		
-		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)(intptr_t)vsInputs[i].offset);
-		checkErrorGL();
-	}
-}
-
-#endif
-
 // -----
 
 #if USE_STBFONT || ENABLE_MSDF_FONTS
@@ -287,6 +263,7 @@ TextureCacheElem::TextureCacheElem()
 	textures = 0;
 	sx = sy = 0;
 	gridSx = gridSy = 0;
+	mipmapped = false;
 }
 
 void TextureCacheElem::free()
@@ -302,6 +279,7 @@ void TextureCacheElem::free()
 		textures = 0;
 		sx = sy = 0;
 		gridSx = gridSy = 0;
+		mipmapped = false;
 	}
 }
 
@@ -352,7 +330,7 @@ static std::string getCacheFilename(const char * filename, bool forRead)
 }
 #endif
 
-void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
+void TextureCacheElem::load(const char * filename, int gridSx, int gridSy, bool mipmapped)
 {
 	ScopedLoadTimer loadTimer(filename);
 
@@ -461,7 +439,13 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 			textureProperties.format = GX_RGBA8_UNORM;
 			textureProperties.sampling.filter = false;
 			textureProperties.sampling.clamp = true;
-			textureProperties.mipmapped = true;
+			textureProperties.mipmapped = mipmapped;
+			
+			// todo : try to see if there's a meta data file for this texture,
+			//        if so, load texture settings from this file (similar to Sprite)
+			//     _OR_ when getTexture is called on a .txt file, load the .txt
+			//        file and reference the texture from the .txt file or by replacing extension
+			//    -> use meta data to see if mipmaps should be enabled, and for filter settings
 			
 			for (int i = 0; i < numTextures; ++i)
 			{
@@ -476,69 +460,12 @@ void TextureCacheElem::load(const char * filename, int gridSx, int gridSy)
 				textures[i].allocate(textureProperties);
 				textures[i].upload(source, 0, imageData->sx, true);
 			}
-		
-		#if ENABLE_OPENGL
-			for (int i = 0; i < numTextures; ++i)
-			{
-				fassert(textures[i].id != 0);
-				
-				if (textures[i].id != 0)
-				{
-					// capture current OpenGL states before we change them
-					
-					GLuint restoreTexture;
-					glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-					
-					glBindTexture(GL_TEXTURE_2D, textures[i].id);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-				#if !ENABLE_MIPMAPS
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-				#endif
-					checkErrorGL();
-
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-					checkErrorGL();
-					
-				#if !ENABLE_MIPMAPS
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-					checkErrorGL();
-				#else
-				// todo : try to see if there's a meta data file for this texture,
-				//        if so, load texture settings from this file (similar to Sprite)
-				//     _OR_ when getTexture is called on a .txt file, load the .txt
-				//        file and reference the texture from the .txt file or by replacing extension
-				
-					if (glGenerateMipmap != nullptr)
-					{
-						glGenerateMipmap(GL_TEXTURE_2D);
-						checkErrorGL();
-						
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-						checkErrorGL();
-					}
-					else
-					{
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-						glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-						checkErrorGL();
-					}
-				#endif
-					
-					// restore previous OpenGL states
-					
-					glBindTexture(GL_TEXTURE_2D, restoreTexture);
-					checkErrorGL();
-				}
-			}
-		#endif
 			
 			this->sx = imageData->sx;
 			this->sy = imageData->sy;
 			this->gridSx = gridSx;
 			this->gridSy = gridSy;
+			this->mipmapped = mipmapped;
 			
 			logInfo("loaded %s (%dx%d)", filename, gridSx, gridSy);
 		}
@@ -552,10 +479,11 @@ void TextureCacheElem::reload()
 	const std::string oldName = name;
 	const int oldGridSx = gridSx;
 	const int oldGridSy = gridSy;
+	const bool oldMipmapped = mipmapped;
 
 	free();
 
-	load(oldName.c_str(), oldGridSx, oldGridSy);
+	load(oldName.c_str(), oldGridSx, oldGridSy, oldMipmapped);
 }
 
 void TextureCache::clear()
@@ -576,12 +504,13 @@ void TextureCache::reload()
 	}
 }
 
-TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int gridSy)
+TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int gridSy, bool mipmapped)
 {
 	Key key;
 	key.name = name;
 	key.gridSx = gridSx;
 	key.gridSy = gridSy;
+	key.mipmapped = mipmapped;
 	
 	Map::iterator i = m_map.find(key);
 	
@@ -593,7 +522,7 @@ TextureCacheElem & TextureCache::findOrCreate(const char * name, int gridSx, int
 	{
 		TextureCacheElem elem;
 		
-		elem.load(name, gridSx, gridSy);
+		elem.load(name, gridSx, gridSy, mipmapped);
 		
 		i = m_map.insert(Map::value_type(key, elem)).first;
 		
@@ -1020,7 +949,7 @@ void ShaderCache::handleSourceChanged(const char * name)
 		{
 			cacheElem.reload();
 			
-			if (globals.shader != nullptr && globals.shader->getProgram() == cacheElem.program)
+			if (globals.shader != nullptr && globals.shader->getOpenglProgram() == cacheElem.program)
 			{
 				clearShader();
 			}
@@ -2045,6 +1974,10 @@ GlyphCacheElem & GlyphCache::findOrCreate(FT_Face face, int size, int c)
 		#else
 			// capture current OpenGL states before we change them
 			
+		#if !ENABLE_OPENGL
+			#error "Non-glyph atlas font implementation is written against OpenGL 2.1."
+		#endif
+		
 			GLuint restoreTexture;
 			glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
 			GLint restoreUnpack;
@@ -2515,7 +2448,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 bool MsdfGlyphCache::saveCache(const char * filename) const
 {
 #if ENABLE_METAL
-	// todo : add Metal support for reading back of texture data, and saving the MSDF glyph cache
+	AssertMsg(false, "todo : add Metal support for reading back of texture data, and saving the MSDF glyph cache", 0);
 	return false;
 #else
 	bool result = true;

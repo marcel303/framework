@@ -1,5 +1,6 @@
 #include "fileEditor_video.h"
 #include "imgui.h" // doButtonBar
+#include "reflection.h"
 #include "ui.h" // drawUiRectCheckered
 #include "video.h"
 
@@ -22,6 +23,18 @@ FileEditor_Video::~FileEditor_Video()
 	audioOutput.Shutdown();
 	
 	mp.close(true);
+}
+
+bool FileEditor_Video::reflect(TypeDB & typeDB, StructuredType & type)
+{
+	typeDB.addEnum<FileEditor_Video::SizeMode>("FileEditor_Video::SizeMode")
+		.add("contain", kSizeMode_Contain)
+		.add("fill", kSizeMode_Fill)
+		.add("dontScale", kSizeMode_DontScale);
+	
+	type.add("sizeMode", &FileEditor_Video::sizeMode);
+	
+	return true;
 }
 
 void FileEditor_Video::tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured)

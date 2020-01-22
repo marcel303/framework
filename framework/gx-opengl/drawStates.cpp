@@ -34,8 +34,11 @@
 static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
 static Stack<bool, 32> lineSmoothStack(false);
 static Stack<bool, 32> wireframeStack(false);
+static Stack<int, 32> colorWriteStack(0xf);
 static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
 static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
+
+static int s_colorWriteMask = 0xf;
 
 void setBlend(BLEND_MODE blendMode)
 {
@@ -188,6 +191,41 @@ void popWireframe()
 	const bool value = wireframeStack.popValue();
 	
 	setWireframe(value);
+}
+
+void setColorWriteMask(int r, int g, int b, int a)
+{
+	s_colorWriteMask =
+		((r ? 1 : 0) << 0) |
+		((g ? 1 : 0) << 1) |
+		((b ? 1 : 0) << 2) |
+		((a ? 1 : 0) << 3);
+	
+	glColorMask(r, g, b, a);
+}
+
+void setColorWriteMaskAll()
+{
+	setColorWriteMask(1, 1, 1, 1);
+}
+
+void pushColorWriteMask(int r, int g, int b, int a)
+{
+	colorWriteStack.push(s_colorWriteMask);
+	
+	setColorWriteMask(r, g, b, a);
+}
+
+void popColorWriteMask()
+{
+	const int colorWriteMask = colorWriteStack.popValue();
+	
+	const int r = (colorWriteMask >> 0) & 1;
+	const int g = (colorWriteMask >> 1) & 1;
+	const int b = (colorWriteMask >> 2) & 1;
+	const int a = (colorWriteMask >> 3) & 1;
+	
+	setColorWriteMask(r, g, b, a);
 }
 
 static GLenum toOpenGLDepthFunc(DEPTH_TEST test)

@@ -174,9 +174,9 @@ struct TypeDB_impl
 			return i->second;
 	}
 
-	void add(std::type_index typeIndex, const Type * type)
+	void add(const std::type_index & typeIndex, const Type * type)
 	{
-	// todo : assert type does not exist yet
+		assert(types.find(typeIndex) == types.end());
 	
 		types[typeIndex] = type;
 	}

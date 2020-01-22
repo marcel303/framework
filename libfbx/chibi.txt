@@ -6,3 +6,4 @@ library libfbx
 app libfbx-test
 	add_files main.cpp
 	depend_library libfbx
+	resource_path .

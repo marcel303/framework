@@ -1,4 +1,5 @@
 #include "fileEditor_model.h"
+#include "reflection.h"
 #include "ui.h" // drawUiRectCheckered
 
 static const char * s_basicSkinnedWithLightingPs = R"SHADER(
@@ -47,6 +48,30 @@ FileEditor_Model::~FileEditor_Model()
 	guiContext.shut();
 }
 
+bool FileEditor_Model::reflect(TypeDB & typeDB, StructuredType & type)
+{
+	type.add("showColorNormals", &FileEditor_Model::showColorNormals);
+	type.add("showColorTexCoords", &FileEditor_Model::showColorTexCoords);
+	type.add("showNormals", &FileEditor_Model::showNormals);
+	type.add("normalsScale", &FileEditor_Model::normalsScale);
+	type.add("showBones", &FileEditor_Model::showBones);
+	type.add("showBindPose", &FileEditor_Model::showBindPose);
+	type.add("showUnskinned", &FileEditor_Model::showUnskinned);
+	type.add("showHardskinned", &FileEditor_Model::showHardskinned);
+	type.add("showColorBlendIndices", &FileEditor_Model::showColorBlendIndices);
+	type.add("showColorBlendWeights", &FileEditor_Model::showColorBlendWeights);
+	type.add("showBoundingBox", &FileEditor_Model::showBoundingBox);
+	type.add("showAxis", &FileEditor_Model::showAxis);
+	type.add("enableLighting", &FileEditor_Model::enableLighting);
+	type.add("scale", &FileEditor_Model::scale);
+	type.add("ambientLight_color", &FileEditor_Model::ambientLight_color);
+	type.add("directionalLight_intensity", &FileEditor_Model::directionalLight_intensity);
+	type.add("directionalLight_color", &FileEditor_Model::directionalLight_color);
+	type.add("directionalLight_direction", &FileEditor_Model::directionalLight_direction);
+	
+	return true;
+}
+
 void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured)
 {
 	if (hasFocus == false)
@@ -57,7 +82,7 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 	guiContext.processBegin(dt, sx, sy, inputIsCaptured);
 	{
 		ImGui::SetNextWindowPos(ImVec2(8, 8), ImGuiCond_Always);
-		ImGui::SetNextWindowBgAlpha(.2f);
+		ImGui::SetNextWindowBgAlpha(.6f);
 		if (ImGui::Begin("Model", nullptr,
 			ImGuiWindowFlags_NoTitleBar |
 			ImGuiWindowFlags_NoMove |
@@ -86,18 +111,21 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 			
 			ImGui::SliderFloat("Animation speed", &model.animSpeed, 0.f, 10.f, "%.2f", 2.f);
 			
-			ImGui::Checkbox("Show colored normals", &showColorNormals);
-			ImGui::Checkbox("Show colored texture UVs", &showColorTexCoords);
-			ImGui::Checkbox("Show normals", &showNormals);
-			ImGui::SliderFloat("Normals scale", &normalsScale, 0.f, 100.f, "%.2f", 2.f);
-			ImGui::Checkbox("Show bones", &showBones);
-			ImGui::Checkbox("Show bind pose", &showBindPose);
-			ImGui::Checkbox("Unskinned", &showUnskinned);
-			ImGui::Checkbox("Hard skinned", &showHardskinned);
-			ImGui::Checkbox("Show colored blend indices", &showColorBlendIndices);
-			ImGui::Checkbox("Show colored blend weights", &showColorBlendWeights);
-			ImGui::Checkbox("Show bounding box", &showBoundingBox);
-			ImGui::Checkbox("Show axis", &showAxis);
+			if (ImGui::CollapsingHeader("Visibility"))
+			{
+				ImGui::Checkbox("Show colored normals", &showColorNormals);
+				ImGui::Checkbox("Show colored texture UVs", &showColorTexCoords);
+				ImGui::Checkbox("Show normals", &showNormals);
+				ImGui::SliderFloat("Normals scale", &normalsScale, 0.f, 100.f, "%.2f", 2.f);
+				ImGui::Checkbox("Show bones", &showBones);
+				ImGui::Checkbox("Show bind pose", &showBindPose);
+				ImGui::Checkbox("Unskinned", &showUnskinned);
+				ImGui::Checkbox("Hard skinned", &showHardskinned);
+				ImGui::Checkbox("Show colored blend indices", &showColorBlendIndices);
+				ImGui::Checkbox("Show colored blend weights", &showColorBlendWeights);
+				ImGui::Checkbox("Show bounding box", &showBoundingBox);
+				ImGui::Checkbox("Show axis", &showAxis);
+			}
 			ImGui::SliderFloat("Scale", &scale, 0.f, 4.f, "%.2f", 2.f);
 			ImGui::Checkbox("Enable lighting", &enableLighting);
 			if (ImGui::CollapsingHeader("Lighting"))

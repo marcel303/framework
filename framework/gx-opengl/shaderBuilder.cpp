@@ -35,8 +35,6 @@
 #include "StringEx.h"
 #include "TextIO.h"
 
-#define USE_REGISTERED_SHADER_OUTPUTS true
-
 static bool is_whitespace(const char c)
 {
 	return isspace(c);
@@ -141,16 +139,10 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 	#if !USE_LEGACY_OPENGL
 		if (shaderType == 'p')
 		{
-		#if !USE_REGISTERED_SHADER_OUTPUTS
-			bool hasColor = false;
-			bool hasNormal = false;
-		#endif
-			
 			bool usedOutputs[32] = { false }; // todo : should match size of g_shaderOutputs
 			
 			for (int i = 0; outputs[i] != 0; ++i)
 			{
-			#if USE_REGISTERED_SHADER_OUTPUTS
 				const ShaderOutput * output = findShaderOutput(outputs[i]);
 				
 				if (output == nullptr)
@@ -169,44 +161,10 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 				
 				const int passIndex = output - g_shaderOutputs.data();
 				usedOutputs[passIndex] = true;
-			#else
-				if (outputs[i] == 'c')
-				{
-					if (hasColor)
-					{
-						logError("color output binding appears more than once");
-						return false;
-					}
-					else
-					{
-						hasColor = true;
-						sb.AppendFormat("layout(location = %d) out vec4 shader_fragColor;\n", i);
-					}
-				}
-				else if (outputs[i] == 'n')
-				{
-					if (hasNormal)
-					{
-						logError("normal output binding appears more than once");
-						return false;
-					}
-					else
-					{
-						hasNormal = true;
-						sb.AppendFormat("layout(location = %d) out vec4 shader_fragNormal;\n", i);
-					}
-				}
-				else
-				{
-					logError("unknown output binding: %c", outputs[i]);
-					return false;
-				}
-			#endif
 			}
 			
 			// use regular variables for unused outputs
 			
-		#if USE_REGISTERED_SHADER_OUTPUTS
 			for (size_t i = 0; i < g_shaderOutputs.size(); ++i)
 			{
 				if (usedOutputs[i])
@@ -216,12 +174,6 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 				
 				sb.AppendFormat("%s %s;\n", output.outputType.c_str(), output.outputName.c_str());
 			}
-		#else
-			if (hasColor == false)
-				sb.Append("vec4 shader_fragColor;\n");
-			if (hasNormal == false)
-				sb.Append("vec4 shader_fragNormal;\n");
-		#endif
 		}
 	#endif
 	

@@ -32,8 +32,6 @@
 #import "gx_mesh.h"
 #import <Metal/Metal.h>
 
-// todo : create separate vertex and index buffer types for static data?
-
 id <MTLDevice> metal_get_device();
 
 //

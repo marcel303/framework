@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_R8, RG8, R16F, .. todo : remove and replace with Framework-provided texture object
 #include "framework.h"
 #include "graph_typeDefinitionLibrary.h"
 #include "MemAlloc.h"
@@ -862,8 +861,6 @@ void VfxNodeDescription::addGxTexture(const char * name, const GxTexture & textu
 
 void VfxNodeDescription::addGxTexture(const char * name, const uint32_t id)
 {
-// todo : rename this method to addGxTexture, use GX functions below
-
 	if (id == 0)
 	{
 		add("%s. id: %d", name, id);

@@ -1,7 +1,8 @@
 library speakerpanner
 	add_files panner.cpp panner.h
 	add_files spatialSound.h spatialSoundMixer.h
-	add_files spatialSoundMixer_grid.h
+	add_files spatialSoundMixer_grid.cpp spatialSoundMixer_grid.h
+	depend_library audiograph-core
 	depend_library libgg
 	header_path . expose
 

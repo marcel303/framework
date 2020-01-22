@@ -1,0 +1,48 @@
+include engine/ShaderPS.txt
+
+uniform sampler2D source;
+
+uniform float alphaRef;
+uniform vec2 alphaPatternSeed;
+uniform float frameIndex;
+
+shader_in vec4 color;
+
+void main()
+{
+#if 1
+	// todo : add a separate shader for dither17
+
+	vec2 coord = gl_FragCoord.xy + alphaPatternSeed;
+
+#if 1
+	//float offset_1d = dot(vec2(27, 13), vec2(frameIndex, frameIndex));
+	//vec2 offset = vec2(offset_1d);
+	vec2 offset = vec2(27, 13) * vec2(frameIndex, frameIndex);
+
+	coord += offset;
+#endif
+
+	float k0 = 47/64.0;
+	float k1 = 53/64.0;
+	vec2 k = vec2(k0, k1);
+
+	float alpha = dot(coord, k);
+
+	alpha = fract(alpha);
+
+	if (alpha < alphaRef)
+		discard;
+#else
+	vec2 sourceSize = textureSize(source, 0);
+	vec2 coord = gl_FragCoord.xy + alphaPatternSeed;
+	vec2 texcoord = coord / sourceSize;
+
+	float alpha = texture(source, texcoord).x;
+
+	if (alpha < alphaRef)
+		discard;
+#endif
+
+	shader_fragColor = color;
+}

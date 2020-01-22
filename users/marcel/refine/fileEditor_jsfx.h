@@ -108,14 +108,15 @@ struct JsusFxWindow
 
 struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 {
-	enum AudioSource
+	enum AudioSource // todo : reflect
 	{
-		// note : must update doButtonBar when this is changed !
+		// note : must update doButtonBar and reflect when this is changed !
 		kAudioSource_Silence,
 		kAudioSource_PinkNoise,
 		kAudioSource_WhiteNoise,
 		kAudioSource_Sine,
 		kAudioSource_Tent,
+		kAudioSource_AudioInterface,
 		kAudioSource_Sample // todo
 	};
 	
@@ -146,16 +147,33 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 
 	PortAudioObject paObject;
 	SDL_mutex * mutex = nullptr;
-	std::atomic<AudioSource> audioSource;
 
 	// source audio synthesis
 
-	std::atomic<int> volume;
-	std::atomic<int> frequency;
-	std::atomic<int> sharpness;
-	RNG::PinkNumber pinkNumber;
-	float sinePhase = 0.f;
-	float tentPhase = 0.f;
+	AudioSource audioSource = kAudioSource_PinkNoise;
+	int volume = 25;
+	int frequency = 440;
+	int sharpness = 0;
+	
+	struct Synthesis
+	{
+		Synthesis()
+			: audioSource(kAudioSource_Silence)
+			, volume(25)
+			, frequency(440)
+			, sharpness(0)
+			, pinkNumber(1 << 16)
+		{
+		}
+		
+		std::atomic<AudioSource> audioSource;
+		std::atomic<int> volume;
+		std::atomic<int> frequency;
+		std::atomic<int> sharpness;
+		RNG::PinkNumber pinkNumber;
+		float sinePhase = 0.f;
+		float tentPhase = 0.f;
+	} synthesis;
 
 	MidiBuffer midiBuffer;
 	MidiKeyboard midiKeyboard;
@@ -177,6 +195,10 @@ struct FileEditor_JsusFx : FileEditor, PortAudioHandler
 	virtual void doButtonBar() override;
 
 	void updateMidi();
+	
+	void updateSynthesisParams();
 
+	virtual bool reflect(TypeDB & typeDB, StructuredType & type) override;
+	
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override;
 };

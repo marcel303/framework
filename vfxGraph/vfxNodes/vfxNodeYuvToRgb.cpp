@@ -208,7 +208,7 @@ void VfxNodeYuvToRgb::tick(const float dt)
 			delete surface;
 			surface = nullptr;
 
-			surface = new Surface(sx, sy, false, false, SURFACE_RGBA8);
+			surface = new Surface(sx, sy, false, false, SURFACE_RGBA8, 1);
 		}
 		
 		pushSurface(surface);

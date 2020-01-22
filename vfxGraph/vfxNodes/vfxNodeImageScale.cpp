@@ -126,7 +126,7 @@ void VfxNodeImageScale::allocateImage(const int sx, const int sy) const
 
 	// todo : use the correct surface format
 	
-	surface = new Surface(sx, sy, false, false, SURFACE_RGBA8);
+	surface = new Surface(sx, sy, false, false, SURFACE_RGBA8, 1);
 	
 	imageOutput.texture = surface->getTexture();
 }

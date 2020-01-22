@@ -16,10 +16,12 @@
 
 #define tex2D texture
 
+#if !LEGACY_GL
 vec2 textureSizef(sampler2D sampler, int lod)
 {
 	return vec2(textureSize(sampler, lod));
 }
+#endif
 
 #else
 

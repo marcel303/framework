@@ -38,7 +38,8 @@ enum GX_INDEX_FORMAT
 enum GX_ELEMENT_TYPE
 {
 	GX_ELEMENT_FLOAT32,
-	GX_ELEMENT_UINT8
+	GX_ELEMENT_UINT8,
+	GX_ELEMENT_UINT16
 };
 
 struct GxVertexInput
@@ -48,7 +49,7 @@ struct GxVertexInput
 	GX_ELEMENT_TYPE type : 4;  // the type of element inside the vertex stream
 	bool normalize : 4;        // (if integer) should the element be normalized into the range 0..1?
 	uint32_t offset : 24;      // byte offset within vertex buffer for the start of this input
-	uint32_t stride : 8;       // byte offset within vertex buffer for the start of this input
+	uint32_t stride : 8;       // byte stride between elements for this vertex stream
 };
 
 class GxVertexBufferBase
@@ -86,34 +87,76 @@ class GxMesh
 {
 	static const int kMaxVertexInputs = 16;
 	
+	struct Primitive
+	{
+		GX_PRIMITIVE_TYPE type;
+		int firstVertex;
+		int numVertices;
+		bool indexed;
+	};
+	
 	const GxVertexBuffer * m_vertexBuffer = nullptr;
 	const GxIndexBuffer * m_indexBuffer = nullptr;
 	
-#if ENABLE_OPENGL
-	uint32_t m_vertexArrayObject = 0;
-#else
 	GxVertexInput m_vertexInputs[kMaxVertexInputs];
 	int m_numVertexInputs = 0;
 	int m_vertexStride = 0;
-#endif
+	
+	std::vector<Primitive> m_primitives;
 	
 public:
-	GxMesh();
-	~GxMesh();
-	
-	void free();
+	void clear();
 	
 	void setVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vertexInputs, const int numVertexInputs, const int vertexStride);
 	void setIndexBuffer(const GxIndexBuffer * buffer);
 	
 	void draw(const GX_PRIMITIVE_TYPE type) const;
+	void draw(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices) const;
+	
+	void addPrim(const GX_PRIMITIVE_TYPE type, const int numVertices, const bool indexed);
+	void addPrim(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices, const bool indexed);
+	void draw() const;
 };
 
-#if !ENABLE_OPENGL
+/**
+ * Sets a vertex buffer, and sets a buffer binding for vertex inputs.
+ * The vertex buffer may contain either vertices in interleaved format,
+ * or scattered across the buffer. The Metal back-end implements a
+ * optimized code path for interleaved vertices.
+ * In the case of a interleaved vertex format, 'vsStride' should be set
+ * to the size of the vertex structure. In the non-interleaved case,
+ * it should be set to zero.
+ *
+ * @param buffer The vertex buffer to bind. If set to nullptr, the default GX buffer bindings (for use with the generic built-in shader) are restored.
+ * @param vsInputs The vertex input bindings.
+ * @param numVsInputs The number of bindings in the 'vsInputs' array.
+ * @param vsStride Optional parameters, used to specify the size of the vertex structure, for interleaved vertex formats.
+ */
+void gxSetVertexBuffer(
+	const GxVertexBuffer * buffer,
+	const GxVertexInput * vsInputs,
+	const int numVsInputs,
+	const int vsStride = 0);
 
-// todo : add gxSetVertexBuffer, gxDrawIndexedPrimitives impl OpenGL and remove OpenGL specific code in GxMesh implementation
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int numIndices, const GxIndexBuffer * indexBuffer);
+void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices);
 
-void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
-void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer);
+//
 
-#endif
+#include <functional>
+
+typedef std::function<void(
+	const void * vertexData,
+	const int vertexDataSize,
+	const GxVertexInput * vsInputs,
+	const int numVsInputs,
+	const int vertexStride,
+	const GX_PRIMITIVE_TYPE primType,
+	const int numVertices,
+	const bool endOfBatch)> GxCaptureCallback;
+
+void gxSetCaptureCallback(GxCaptureCallback callback);
+void gxClearCaptureCallback();
+
+void gxCaptureMeshBegin(GxMesh & mesh, GxVertexBuffer & vertexBuffer, GxIndexBuffer & indexBuffer);
+void gxCaptureMeshEnd();

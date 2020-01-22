@@ -317,7 +317,6 @@ typedef void (*InitErrorHandler)(INIT_ERROR error);
 //
 
 typedef int32_t GxImmediateIndex;
-typedef uint32_t GxShaderId;
 typedef uint32_t GxShaderBufferId;
 
 #if USE_LEGACY_OPENGL
@@ -539,6 +538,7 @@ void popWindow();
 enum SURFACE_FORMAT
 {
 	SURFACE_RGBA8,
+	SURFACE_RGBA8_SRGB, // perform srgb to linear conversion when sampling the texture
 	SURFACE_RGBA16F,
 	SURFACE_RGBA32F,
 	SURFACE_R8,
@@ -632,16 +632,19 @@ class Surface
 	
 public:
 	Surface();
-	explicit Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer = false, bool doubleBuffered = true);
-	explicit Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format);
+	explicit Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer = false, bool doubleBuffered = true, const int backingScale = 0);
+	explicit Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format, const int backingScale = 0);
 	~Surface();
 	
 	void swapBuffers();
 
 	bool init(const SurfaceProperties & properties);
-	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered);
+	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered, const int backingScale = 0);
 	void free();
 	void setSwizzle(int r, int g, int b, int a);
+	void setClearColor(int r, int g, int b, int a);
+	void setClearColorf(float r, float g, float b, float a);
+	void setClearDepth(float d);
 	
 	void setName(const char * name);
 	const char * getName() const;
@@ -686,24 +689,36 @@ public:
 	virtual ~ShaderBase() { }
 	
 	virtual bool isValid() const = 0;
-	virtual GxShaderId getProgram() const = 0; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const = 0;
 	virtual int getVersion() const = 0;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const = 0;
+	
+#if ENABLE_OPENGL
+	virtual uint32_t getOpenglProgram() const = 0;
+#endif
 };
 
 //
 
-#if ENABLE_METAL
+enum GX_IMMEDIATE_TYPE
+{
+	GX_IMMEDIATE_FLOAT,
+	GX_IMMEDIATE_VEC2,
+	GX_IMMEDIATE_VEC3,
+	GX_IMMEDIATE_VEC4
+};
 
-#include "gx-metal/shader.h"
+struct GxImmediateInfo
+{
+	GX_IMMEDIATE_TYPE type;
+	std::string name;
+	GxImmediateIndex index = -1;
+};
 
-#else
+class ShaderCacheElem;
 
 class Shader : public ShaderBase
 {
-	class ShaderCacheElem * m_shader;
-
 public:
 	Shader();
 	Shader(const char * name, const char * outputs = nullptr);
@@ -711,15 +726,19 @@ public:
 	virtual ~Shader();
 	
 	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs = nullptr);
+	void reload();
+	
 	virtual bool isValid() const override;
-	virtual GxShaderId getProgram() const override; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_VSPS; }
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
+
+	GxImmediateIndex getImmediateIndex(const char * name);
+	void getImmediateValuef(const GxImmediateIndex index, float * value);
 	
-	GxImmediateIndex getImmediate(const char * name);
+	std::vector<GxImmediateInfo> getImmediateInfos() const;
 	
-	void setImmediate(const char * name, float x);	
+	void setImmediate(const char * name, float x);
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
@@ -730,6 +749,8 @@ public:
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
 	void setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices);
+	
+// todo : texture units do not make much sense ..
 	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTextureUnit(GxImmediateIndex index, int unit); // bind <name> to GL_TEXTURE0 + unit
 	void setTexture(const char * name, int unit, GxTextureId texture);
@@ -743,11 +764,27 @@ public:
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
 	void setBufferRw(GxImmediateIndex index, const ShaderBufferRw & buffer);
 
-	const ShaderCacheElem & getCacheElem() const { return *m_shader; }
-	void reload();
-};
-
+#if ENABLE_OPENGL
+	virtual uint32_t getOpenglProgram() const override final { return getProgram(); }
 #endif
+
+#if ENABLE_METAL
+	const ShaderCacheElem & getCacheElem() const;
+#else
+	const ShaderCacheElem & getCacheElem() const { return *m_cacheElem; }
+#endif
+
+private:
+#if ENABLE_METAL
+	class ShaderCacheElem_Metal * m_cacheElem = nullptr;
+#else
+	ShaderCacheElem * m_cacheElem = nullptr;
+#endif
+
+#if ENABLE_OPENGL
+	uint32_t getProgram() const;
+#endif
+};
 
 //
 
@@ -758,6 +795,8 @@ class ComputeShader : public ShaderBase
 public:
 	class ComputeShaderCacheElem * m_shader;
 
+	uint32_t getProgram() const;
+	
 public:
 	// assuming a 64-lane wavefront, 8x8x1 is good thread distribution for common shaders
 	static const int kDefaultGroupSx = 8;
@@ -770,7 +809,6 @@ public:
 
 	void load(const char * filename, const int groupSx = kDefaultGroupSx, const int groupSy = kDefaultGroupSy, const int groupSz = kDefaultGroupSz);
 	virtual bool isValid() const override { return m_shader != 0; }
-	virtual GxShaderId getProgram() const override; // todo : make internally accessible only and add functionality on a per use-case basis
 	virtual SHADER_TYPE getType() const override { return SHADER_CS; }
 	virtual int getVersion() const override;
 	virtual bool getErrorMessages(std::vector<std::string> & errorMessages) const override;
@@ -782,7 +820,7 @@ public:
 	int toThreadSy(const int sy) const;
 	int toThreadSz(const int sz) const;
 
-	GxImmediateIndex getImmediate(const char * name);
+	GxImmediateIndex getImmediateIndex(const char * name);
 
 	void setImmediate(const char * name, float x);	
 	void setImmediate(const char * name, float x, float y);
@@ -804,6 +842,8 @@ public:
 
 	const ComputeShaderCacheElem & getCacheElem() const { return *m_shader; }
 	void reload();
+	
+	virtual uint32_t getOpenglProgram() const override final { return getProgram(); }
 };
 
 #endif
@@ -1470,6 +1510,11 @@ void setWireframe(bool enabled);
 void pushWireframe(bool enabled);
 void popWireframe();
 
+void setColorWriteMask(int r, int g, int b, int a);
+void setColorWriteMaskAll();
+void pushColorWriteMask(int r, int g, int b, int a);
+void popColorWriteMask();
+
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled = true);
 void popDepthTest();
@@ -1537,6 +1582,8 @@ GxTextureId createTextureFromRG32F(const void * source, int sx, int sy, bool fil
 GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp);
 GxTextureId createTextureFromR32F(const void * source, int sx, int sy, bool filter, bool clamp);
 
+GxTextureId copyTexture(const GxTextureId source);
+
 void freeTexture(GxTextureId & textureId);
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
@@ -1584,7 +1631,7 @@ static inline void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp) { }
 static inline void gxGetTextureSize(GxTextureId texture, int & width, int & height) { width = 0; height = 0; }
 static inline GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture) { return GX_UNKNOWN_FORMAT; }
 
-#elif !USE_LEGACY_OPENGL || ENABLE_METAL
+#elif (ENABLE_OPENGL && !USE_LEGACY_OPENGL) || ENABLE_METAL
 
 void gxMatrixMode(GX_MATRIX mode);
 GX_MATRIX gxGetMatrixMode();
@@ -1640,8 +1687,8 @@ void gxSetMatrixf(GX_MATRIX mode, const float * m);
 static inline void gxValidateMatrices() { }
 
 void gxInitialize();
-static inline void gxShutdown() { }
-#define gxBegin glBegin
+void gxShutdown();
+void gxBegin(GLenum type);
 void gxEnd();
 static inline void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices) { } // todo
 #define gxColor4f glColor4f

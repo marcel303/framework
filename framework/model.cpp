@@ -25,13 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <algorithm>
-#if defined(IPHONEOS)
-	#include <OpenGLES/ES3/gl.h>
-#else
-	#include <GL/glew.h>
-#endif
-#include <SDL2/SDL.h>
 #include "data/engine/ShaderCommon.txt"
 #include "framework.h"
 #include "internal.h"
@@ -41,6 +34,8 @@
 #include "model_ogre.h"
 #include "Path.h"
 #include "StringEx.h"
+#include <algorithm>
+#include <SDL2/SDL.h>
 
 #define DEBUG_TRS 0
 
@@ -58,13 +53,13 @@ namespace AnimModel
 {
 	static const GxVertexInput vsInputs[] =
 	{
-		{ VS_POSITION,      3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, px)          },
-		{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, nx)          },
-		{ VS_COLOR,         4, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, cx)          },
-		{ VS_TEXCOORD0,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx)          },
-		{ VS_TEXCOORD1,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx)          }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
-		{ VS_BLEND_INDICES, 4, GX_ELEMENT_UINT8,   0, offsetof(Vertex, boneIndices) },
-		{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_UINT8,   1, offsetof(Vertex, boneWeights) }
+		{ VS_POSITION,      3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, px),          0 },
+		{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, nx),          0 },
+		{ VS_COLOR,         4, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, cx),          0 },
+		{ VS_TEXCOORD0,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx),          0 },
+		{ VS_TEXCOORD1,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx),          0 }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared
+		{ VS_BLEND_INDICES, 4, GX_ELEMENT_UINT8,   0, offsetof(Vertex, boneIndices), 0 },
+		{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_UINT8,   1, offsetof(Vertex, boneWeights), 0 }
 	};
 	const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
 
@@ -85,7 +80,6 @@ namespace AnimModel
 	{
 		m_vertexBuffer.free();
 		m_indexBuffer.free();
-		m_drawableMesh.free();
 		
 		allocateVB(0);
 		allocateIB(0);
@@ -876,9 +870,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 					shader.setImmediateMatrix4x4Array(shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index, (float*)globalMatrices, numBones);
 				}
 				
-			// todo : use constant locations for drawColor and drawSkin
-			
-				const GxImmediateIndex drawColor = shader.getImmediate("drawColor");
+				const GxImmediateIndex drawColor = shader.getImmediateIndex("drawColor");
 				
 				if (drawColor != -1)
 				{
@@ -889,7 +881,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 						(drawFlags & DrawColorBlendWeights) ? 1.f : 0.f);
 				}
 				
-				const GxImmediateIndex drawSkin = shader.getImmediate("drawSkin");
+				const GxImmediateIndex drawSkin = shader.getImmediateIndex("drawSkin");
 				
 				if (drawSkin != -1)
 				{
@@ -1247,8 +1239,6 @@ int Model::softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * wor
 	}
 	
 	calculateBoneMatrices(matrix, localMatrices, worldMatrices, globalMatrices, m_model->boneSet->m_numBones);
-	
-	// todo : write a fast SIMD version of this. write out streams of px, py, pz, nx, ny, nz
 	
 	const float boneWeightScale = 1.f / 255.f;
 	

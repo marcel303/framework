@@ -1,4 +1,32 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #include "framework.h"
+#include "internal.h"
 
 #if ENABLE_OPENGL
 
@@ -12,18 +40,25 @@
 
 // -- render passes --
 
-static const int kMaxColorTargets = 4;
+static const int kMaxColorTargets = 8;
 
 static GLuint s_frameBufferId = 0;
+static int s_renderTargetSx = 0;
+static int s_renderTargetSy = 0;
+static int s_renderTargetBackingScale = 0;
 
 extern bool s_renderPassIsBackbufferPass;
 
-void beginRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
+extern int s_backingScale; // todo : can this be exposed/determined more nicely?
+
+//
+
+void beginRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName, const int backingScale)
 {
-	beginRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
+	beginRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName, backingScale);
 }
 
-void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
+void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName, const int backingScale)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	Assert(s_frameBufferId == 0);
@@ -43,12 +78,12 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	
 	s_renderPassIsBackbufferPass = false;
 	
-	int viewportSx = 0;
-	int viewportSy = 0;
+	int renderTargetSx = 0;
+	int renderTargetSy = 0;
 	
 	// specify the color and depth attachment(s)
 	
-	GLenum drawBuffers[4];
+	GLenum drawBuffers[kMaxColorTargets];
 	int numDrawBuffers = 0;
 	
 	for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
@@ -58,10 +93,10 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + i, GL_TEXTURE_2D, targets[i]->getTextureId(), 0);
 			checkErrorGL();
 			
-			if (targets[i]->getWidth() > viewportSx)
-				viewportSx = targets[i]->getWidth();
-			if (targets[i]->getHeight() > viewportSy)
-				viewportSy = targets[i]->getHeight();
+			if (targets[i]->getWidth() > renderTargetSx)
+				renderTargetSx = targets[i]->getWidth();
+			if (targets[i]->getHeight() > renderTargetSy)
+				renderTargetSy = targets[i]->getHeight();
 			
 			drawBuffers[numDrawBuffers++] = GL_COLOR_ATTACHMENT0 + i;
 		}
@@ -77,13 +112,13 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	
 	if (depthTarget != nullptr)
 	{
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTarget->getTextureId(), 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depthTarget->getTextureId(), 0);
 		checkErrorGL();
 		
-		if (depthTarget->getWidth() > viewportSx)
-			viewportSx = depthTarget->getWidth();
-		if (depthTarget->getHeight() > viewportSy)
-			viewportSy = depthTarget->getHeight();
+		if (depthTarget->getWidth() > renderTargetSx)
+			renderTargetSx = depthTarget->getWidth();
+		if (depthTarget->getHeight() > renderTargetSy)
+			renderTargetSy = depthTarget->getHeight();
 	}
 	
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
@@ -151,17 +186,19 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 		}
 	}
 	
-	// set viewport and apply transform
+	// update viewport
 	
-// todo : applyTransformWithViewportSize should be called here
-// todo : getCurrentViewportSize should be updated to know about the active render targets, otherwise applyTransformWithViewportSize will be passed the incorrect size
-
-	glViewport(0, 0, viewportSx, viewportSy);
+	glViewport(0, 0, renderTargetSx, renderTargetSy);
+	s_renderTargetSx = renderTargetSx;
+	s_renderTargetSy = renderTargetSy;
+	s_renderTargetBackingScale = backingScale;
+	
+	// apply transform
 	
 	applyTransform();
 }
 
-void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
+void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
 {
 	Assert(s_frameBufferId == 0);
 	
@@ -203,12 +240,20 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 		checkErrorGL();
 	}
 
-	// todo : set viewport and apply transform
-
-	applyTransform();
+	int renderTargetSx = 0;
+	int renderTargetSy = 0;
+	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
 	
-// todo : applyTransformWithViewportSize should be called here
-// todo : getCurrentViewportSize should be updated to know about the active render targets, otherwise applyTransformWithViewportSize will be passed the incorrect size
+	// update viewport
+	
+	glViewport(0, 0, renderTargetSx, renderTargetSy);
+	s_renderTargetSx = renderTargetSx;
+	s_renderTargetSy = renderTargetSy;
+	s_renderTargetBackingScale = backingScale;
+	
+	// apply transform
+	
+	applyTransform();
 }
 
 void endRenderPass()
@@ -224,9 +269,41 @@ void endRenderPass()
 		s_frameBufferId = 0;
 	}
 	
-	//
+#if false
+	// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
+	// as this would cause issues where the driver may perform an optimization where it detects no texture
+	// state change happened in a future gxSetTexture or Shader::setTexture call (because the texture ids
+	// are the same), making it fail to flush GPU render target caches, fail to perform texture decompression,
+	// fail to perform whatever is needed to transition a render target texture from being 'renderable' resource
+	// to being a shader accessible resource
+
+	for (int i = 0; i < 8; ++i)
+	{
+		glActiveTexture(GL_TEXTURE0 + i);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		checkErrorGL();
+	}
+
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
 	
-	applyTransform(); // for viewport
+	globals.gxShaderIsDirty = true;
+#endif
+	
+	// update viewport
+	
+	int renderTargetSx = 0;
+	int renderTargetSy = 0;
+	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
+	
+	glViewport(0, 0, renderTargetSx, renderTargetSy);
+	s_renderTargetSx = renderTargetSx;
+	s_renderTargetSy = renderTargetSy;
+	s_renderTargetBackingScale = s_backingScale;
+	
+	// apply transform
+	
+	applyTransform();
 }
 
 // --- render passes stack ---
@@ -235,10 +312,11 @@ void endRenderPass()
 
 struct RenderPassData
 {
-	ColorTarget * target[4];
+	ColorTarget * target[kMaxColorTargets];
 	int numTargets = 0;
 	DepthTarget * depthTarget = nullptr;
 	bool isBackbufferPass = false;
+	int backingScale = 0;
 };
 
 static std::stack<RenderPassData> s_renderPasses;
@@ -248,9 +326,10 @@ void pushRenderPass(
 	const bool clearColor,
 	DepthTarget * depthTarget,
 	const bool clearDepth,
-	const char * passName)
+	const char * passName,
+	const int backingScale)
 {
-	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
+	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName, backingScale);
 }
 
 void pushRenderPass(
@@ -259,7 +338,8 @@ void pushRenderPass(
 	const bool clearColor,
 	DepthTarget * depthTarget,
 	const bool clearDepth,
-	const char * passName)
+	const char * passName,
+	const int backingScale)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
@@ -277,7 +357,7 @@ void pushRenderPass(
 		endRenderPass();
 	}
 	
-	beginRenderPass(targets, numTargets, clearColor, depthTarget, clearDepth, passName);
+	beginRenderPass(targets, numTargets, clearColor, depthTarget, clearDepth, passName, backingScale);
 	
 	// record the current render pass information in the render passes stack
 	
@@ -288,10 +368,12 @@ void pushRenderPass(
 	
 	pd.depthTarget = depthTarget;
 	
+	pd.backingScale = backingScale;
+	
 	s_renderPasses.push(pd);
 }
 
-void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
+void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
 {
 	// save state
 	
@@ -307,13 +389,15 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 		endRenderPass();
 	}
 	
-	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName);
+	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName, backingScale);
 	
 	// record the current render pass information in the render passes stack
 	
 	RenderPassData pd;
 	
 	pd.isBackbufferPass = true;
+	
+	pd.backingScale = backingScale;
 	
 	s_renderPasses.push(pd);
 }
@@ -338,17 +422,13 @@ void popRenderPass()
 		
 		if (new_pd.isBackbufferPass)
 		{
-			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, "(cont)"); // todo : pass name
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, "(cont)", new_pd.backingScale); // todo : pass name
 		}
 		else
 		{
-			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, "(cont)"); // todo : pass name
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, "(cont)", new_pd.backingScale); // todo : pass name
 		}
 	}
-
-	// setup viewport
-	
-	applyTransform(); // for viewport
 	
 	// restore state
 	
@@ -356,6 +436,23 @@ void popRenderPass()
 	gxPopMatrix();
 	gxMatrixMode(GX_MODELVIEW);
 	gxPopMatrix();
+}
+
+bool getCurrentRenderTargetSize(int & sx, int & sy, int & backingScale)
+{
+	if (s_frameBufferId == 0)
+		return false;
+	else
+	{
+		Assert(s_renderTargetSx != 0);
+		Assert(s_renderTargetSy != 0);
+		Assert(s_renderTargetBackingScale != 0);
+		
+		sx = s_renderTargetSx;
+		sy = s_renderTargetSy;
+		backingScale = s_renderTargetBackingScale;
+		return true;
+	}
 }
 
 #endif

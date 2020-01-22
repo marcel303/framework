@@ -37,11 +37,13 @@ struct Style
 	ofColor color;
 	float opacity;
 	float lineWidth;
+	bool filled;
 	
 	Style()
 		: color()
 		, opacity(1.f)
 		, lineWidth(1.f)
+		, filled(true)
 	{
 	}
 };
@@ -220,7 +222,12 @@ void ofFbo::end()
 
 void ofFbo::draw(const float x, const float y)
 {
-	// todo : draw surface contents onto screen ?
+	if (surface != nullptr)
+	{
+		gxSetTexture(surface->getTexture());
+		drawRect(x, y, x + surface->getWidth(), y + surface->getHeight());
+		gxSetTexture(0);
+	}
 }
 
 //
@@ -316,7 +323,10 @@ void ofClear(const uint8_t r, const uint8_t g, const uint8_t b, const uint8_t a)
 
 void ofDrawRectangle(const float x, const float y, const float sx, const float sy)
 {
-	drawRect(x, y, x + sx, y + sy);
+	if (sStyleStack[sStyleStackDepth].filled)
+		drawRect(x, y, x + sx, y + sy);
+	else
+		drawRectLine(x, y, x + sx, y + sy);
 }
 
 void ofDrawRectangle(const ofRectangle & rect)
@@ -336,14 +346,20 @@ void ofDrawLine(const ofPoint & p1, const ofPoint & p2)
 
 void ofDrawCircle(const ofPoint & p, const float radius)
 {
-	// todo : filled ?
-	
-	drawCircle(p.x, p.y, radius, 100);
+	if (sStyleStack[sStyleStackDepth].filled)
+		fillCircle(p.x, p.y, radius, 100);
+	else
+		drawCircle(p.x, p.y, radius, 100);
 }
 
 void ofFill()
 {
-	// todo : ??
+	sStyleStack[sStyleStackDepth].filled = true;
+}
+
+void ofNoFill()
+{
+	sStyleStack[sStyleStackDepth].filled = false;
 }
 
 int ofToLower(const int c)
@@ -358,16 +374,12 @@ int ofToUpper(const int c)
 
 std::string ofToLower(const std::string & s)
 {
-	// todo
-	
-	return s;
+	return String::ToLower(s);
 }
 
 std::string ofToUpper(const std::string & s)
 {
-	// todo
-	
-	return s;
+	return String::ToUpper(s);
 }
 
 std::string ofToString(const double v)

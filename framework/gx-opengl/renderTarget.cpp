@@ -1,3 +1,30 @@
+/*
+	Copyright (C) 2017 Marcel Smit
+	marcel303@gmail.com
+	https://www.facebook.com/marcel.smit981
+
+	Permission is hereby granted, free of charge, to any person
+	obtaining a copy of this software and associated documentation
+	files (the "Software"), to deal in the Software without
+	restriction, including without limitation the rights to use,
+	copy, modify, merge, publish, distribute, sublicense, and/or
+	sell copies of the Software, and to permit persons to whom the
+	Software is furnished to do so, subject to the following
+	conditions:
+
+	The above copyright notice and this permission notice shall be
+	included in all copies or substantial portions of the Software.
+
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+	EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+	OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+	NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+	HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+	WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+	FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+	OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #if !defined(IPHONEOS)
 	#include <GL/glew.h>
 #endif
@@ -18,21 +45,23 @@ static GLenum translateColorFormat(const SURFACE_FORMAT format)
 
 	if (format == SURFACE_RGBA8)
 		glFormat = GL_RGBA8;
-	if (format == SURFACE_RGBA16F)
+	else if (format == SURFACE_RGBA8_SRGB)
+		glFormat = GL_SRGB8_ALPHA8;
+	else if (format == SURFACE_RGBA16F)
 		glFormat = GL_RGBA16F;
-	if (format == SURFACE_RGBA32F)
+	else if (format == SURFACE_RGBA32F)
 		glFormat = GL_RGBA32F;
-	if (format == SURFACE_R8)
+	else if (format == SURFACE_R8)
 		glFormat = GL_R8;
-	if (format == SURFACE_R16F)
+	else if (format == SURFACE_R16F)
 		glFormat = GL_R16F;
-	if (format == SURFACE_R32F)
+	else if (format == SURFACE_R32F)
 		glFormat = GL_R32F;
-	if (format == SURFACE_RG8)
+	else if (format == SURFACE_RG8)
 		glFormat = GL_RG8;
-	if (format == SURFACE_RG16F)
+	else if (format == SURFACE_RG16F)
 		glFormat = GL_RG16F;
-	if (format == SURFACE_RG32F)
+	else if (format == SURFACE_RG32F)
 		glFormat = GL_RG32F;
 	
 	return glFormat;
@@ -159,8 +188,8 @@ static GLenum translateDepthFormat(const DEPTH_FORMAT format)
 	
 #if ENABLE_DESKTOP_OPENGL
 	// todo : gles : float32 depth format ?
-	if (format == DEPTH_FLOAT32)
-		glFormat = GL_DEPTH_COMPONENT32;
+	else if (format == DEPTH_FLOAT32)
+		glFormat = GL_DEPTH32F_STENCIL8;
 #endif
 
 	return glFormat;
@@ -174,6 +203,12 @@ DepthTarget::~DepthTarget()
 bool DepthTarget::init(const DepthTargetProperties & in_properties)
 {
 	bool result = true;
+	
+	//
+	
+	free();
+	
+	//
 	
 	properties = in_properties;
 	

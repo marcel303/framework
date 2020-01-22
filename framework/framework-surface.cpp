@@ -37,11 +37,6 @@
 #include "internal.h"
 #include <algorithm>
 
-static void setColorWriteMask(int r, int g, int b, int a)
-{
-	glColorMask(r, g, b, a);
-}
-
 #endif
 
 extern int s_backingScale; // todo : can this be exposed/determined more nicely?
@@ -103,18 +98,18 @@ Surface::Surface()
 	construct();
 }
 
-Surface::Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer, bool doubleBuffered)
+Surface::Surface(int sx, int sy, bool highPrecision, bool withDepthBuffer, bool doubleBuffered, const int backingScale)
 {
 	construct();
 	
-	init(sx, sy, highPrecision ? SURFACE_RGBA16F : SURFACE_RGBA8, withDepthBuffer, doubleBuffered);
+	init(sx, sy, highPrecision ? SURFACE_RGBA16F : SURFACE_RGBA8, withDepthBuffer, doubleBuffered, backingScale);
 }
 
-Surface::Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format)
+Surface::Surface(int sx, int sy, bool withDepthBuffer, bool doubleBuffered, SURFACE_FORMAT format, const int backingScale)
 {
 	construct();
 
-	init(sx, sy, format, withDepthBuffer, doubleBuffered);
+	init(sx, sy, format, withDepthBuffer, doubleBuffered, backingScale);
 }
 
 Surface::~Surface()
@@ -142,7 +137,10 @@ bool Surface::init(const SurfaceProperties & properties)
 	
 	bool result = true;
 	
-	m_backingScale = s_backingScale;
+	if (properties.dimensions.backingScale != 0)
+		m_backingScale = properties.dimensions.backingScale;
+	else
+		m_backingScale = s_backingScale;
 	
 	const int backingSx = sx * m_backingScale;
 	const int backingSy = sy * m_backingScale;
@@ -208,12 +206,13 @@ bool Surface::init(const SurfaceProperties & properties)
 	return result;
 }
 
-bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered)
+bool Surface::init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered, const int backingScale)
 {
 	SurfaceProperties properties;
 	
 	properties.dimensions.width = sx;
 	properties.dimensions.height = sy;
+	properties.dimensions.backingScale = backingScale;
 	properties.colorTarget.enabled = true;
 	properties.colorTarget.format = format;
 	properties.colorTarget.doubleBuffered = doubleBuffered;
@@ -302,6 +301,29 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 	glBindTexture(GL_TEXTURE_2D, oldTexture);
 	checkErrorGL();
 #endif
+}
+
+void Surface::setClearColor(int r, int g, int b, int a)
+{
+	setClearColorf(
+		r / 255.f,
+		g / 255.f,
+		b / 255.f,
+		a / 255.f);
+}
+
+void Surface::setClearColorf(float r, float g, float b, float a)
+{
+	for (int i = 0; i < 2; ++i)
+		if (m_colorTarget[i] != nullptr)
+			m_colorTarget[i]->setClearColor(r, g, b, a);
+}
+
+void Surface::setClearDepth(float d)
+{
+	for (int i = 0; i < 2; ++i)
+		if (m_depthTarget[i] != nullptr)
+			m_depthTarget[i]->setClearDepth(d);
 }
 
 void Surface::setName(const char * name)
@@ -425,12 +447,12 @@ void Surface::setAlphaf(float a)
 	pushSurface(this);
 	{
 		pushBlend(BLEND_OPAQUE);
-		setColorf(1.f, 1.f, 1.f, a);
-		setColorWriteMask(0, 0, 0, 1); // todo : use push/pop
+		pushColorWriteMask(0, 0, 0, 1);
 		{
+			setColorf(1.f, 1.f, 1.f, a);
 			drawRect(0.f, 0.f, m_properties.dimensions.width, m_properties.dimensions.height);
 		}
-		setColorWriteMask(1, 1, 1, 1);
+		popColorWriteMask();
 		popBlend();
 	}
 	popSurface();
@@ -492,20 +514,20 @@ void Surface::invert()
 
 void Surface::invertColor()
 {
-	setColorWriteMask(1, 1, 1, 0); // todo : use push/pop
+	pushColorWriteMask(1, 1, 1, 0);
 	{
 		invert();
 	}
-	setColorWriteMask(1, 1, 1, 1);
+	popColorWriteMask();
 }
 
 void Surface::invertAlpha()
 {
-	setColorWriteMask(0, 0, 0, 1); // todo : use push/pop
+	pushColorWriteMask(0, 0, 0, 1);
 	{
 		invert();
 	}
-	setColorWriteMask(1, 1, 1, 1);
+	popColorWriteMask();
 }
 
 void Surface::gaussianBlur(const float strengthH, const float strengthV, const int _kernelSize)
@@ -538,6 +560,7 @@ void Surface::blitTo(Surface * surface) const
 {
 #if ENABLE_METAL
 	Assert(false);
+	// todo : metal_copy_texture_to_texture(..);
 #elif ENABLE_OPENGL
 	int oldReadBuffer = 0;
 	int oldDrawBuffer = 0;

@@ -46,7 +46,7 @@ AUDIO_NODE_TYPE(AudioNodeNoise)
 	in("fine", "bool", "1");
 	in("octaves", "int", "6");
 	in("sample.rate", "int", "100");
-	in("scale", "audioValue", "1");
+	in("scale", "audioValue", "1", "gain");
 	in("persistence", "audioValue", "0.5");
 	in("min", "audioValue", "0");
 	in("max", "audioValue", "1");
@@ -122,6 +122,7 @@ void AudioNodeNoise::drawOctave()
 void AudioNodeNoise::drawWhite()
 {
 	const bool fine = getInputBool(kInput_Fine, true);
+	const AudioFloat * scale = getInputAudioFloat(kInput_Scale, &AudioFloat::One);
 	const AudioFloat * min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero);
 	const AudioFloat * max = getInputAudioFloat(kInput_Max, &AudioFloat::One);
 	
@@ -129,17 +130,17 @@ void AudioNodeNoise::drawWhite()
 	
 	if (fine == false)
 	{
-		const float minValue = min->getMean();
-		const float maxValue = max->getMean();
+		const float minValue = min->getMean() * scale->getMean();
+		const float maxValue = max->getMean() * scale->getMean();
 		
 		resultOutput.setScalar(rng.nextf(minValue, maxValue));
 	}
-	else if (min->isScalar && max->isScalar)
+	else if (min->isScalar && max->isScalar && scale->isScalar)
 	{
 		resultOutput.setVector();
 		
-		const float minValue = min->getScalar();
-		const float maxValue = max->getScalar();
+		const float minValue = min->getScalar() * scale->getScalar();
+		const float maxValue = max->getScalar() * scale->getScalar();
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
@@ -148,6 +149,7 @@ void AudioNodeNoise::drawWhite()
 	}
 	else
 	{
+		scale->expand();
 		min->expand();
 		max->expand();
 		
@@ -155,8 +157,8 @@ void AudioNodeNoise::drawWhite()
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			const float minValue = min->samples[i];
-			const float maxValue = max->samples[i];
+			const float minValue = min->samples[i] * scale->samples[i];
+			const float maxValue = max->samples[i] * scale->samples[i];
 			
 			resultOutput.samples[i] = rng.nextf(minValue, maxValue);
 		}
@@ -168,45 +170,47 @@ void AudioNodeNoise::drawPink()
 	// pink noise (-3dB/octave) using Voss' method of a sample-and-hold random number generator
 	
 	const bool fine = getInputBool(kInput_Fine, true);
+	const AudioFloat * scale = getInputAudioFloat(kInput_Scale, &AudioFloat::One);
 	const AudioFloat * min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero);
 	const AudioFloat * max = getInputAudioFloat(kInput_Max, &AudioFloat::One);
 	
-	const float scale = 1.f / float(1 << 16);
+	const float pinkScale = 1.f / float(1 << 16);
 	
 	if (fine == false)
 	{
-		const float minValue = min->getMean();
-		const float maxValue = max->getMean();
+		const float minValue = min->getMean() * scale->getMean();
+		const float maxValue = max->getMean() * scale->getMean();
 		
-		const float t = pinkNumber.next() * scale;
+		const float t = pinkNumber.next() * pinkScale;
 		
 		resultOutput.setScalar(minValue + (maxValue - minValue) * t);
 	}
-	else if (min->isScalar && max->isScalar)
+	else if (min->isScalar && max->isScalar && scale->isScalar)
 	{
 		resultOutput.setVector();
 		
-		const float minValue = min->getScalar();
-		const float maxValue = max->getScalar();
+		const float minValue = min->getScalar() * scale->getScalar();
+		const float maxValue = max->getScalar() * scale->getScalar();
 		
-		ALIGN16 int values[AUDIO_UPDATE_SIZE];
+		ALIGN16 float values[AUDIO_UPDATE_SIZE];
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			values[i] = pinkNumber.next();
+			values[i] = pinkNumber.next() * pinkScale;
 		}
 		
 		// todo : write (SSE) optimized routine to convert, scale and map values from integer to floating point
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			const float t = values[i] * scale;
+			const float t = values[i];
 			
 			resultOutput.samples[i] = minValue + (maxValue - minValue) * t;
 		}
 	}
 	else
 	{
+		scale->expand();
 		min->expand();
 		max->expand();
 		
@@ -214,10 +218,10 @@ void AudioNodeNoise::drawPink()
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			const float minValue = min->samples[i];
-			const float maxValue = max->samples[i];
+			const float minValue = min->samples[i] * scale->samples[i];
+			const float maxValue = max->samples[i] * scale->samples[i];
 			
-			const float t = pinkNumber.next() / float(1 << 16);
+			const float t = pinkNumber.next() * pinkScale;
 			
 			resultOutput.samples[i] = minValue + (maxValue - minValue) * t;
 		}
@@ -229,6 +233,7 @@ void AudioNodeNoise::drawBrown()
 	// brown noise (-6dB/octave) by integrating brownian motion, using a leaky integrator to ensure the signal doesn't drift off too much from zero
 	
 	const bool fine = getInputBool(kInput_Fine, true);
+	const AudioFloat * scale = getInputAudioFloat(kInput_Scale, &AudioFloat::One);
 	const AudioFloat * min = getInputAudioFloat(kInput_Min, &AudioFloat::Zero);
 	const AudioFloat * max = getInputAudioFloat(kInput_Max, &AudioFloat::One);
 	
@@ -239,20 +244,20 @@ void AudioNodeNoise::drawBrown()
 	
 	if (fine == false)
 	{
-		const float minValue = min->getMean();
-		const float maxValue = max->getMean();
+		const float minValue = min->getMean() * scale->getMean();
+		const float maxValue = max->getMean() * scale->getMean();
 		
 		resultOutput.setScalar(((minValue + maxValue) + brownValue * (maxValue - minValue)) * .5f);
 		
 		brownValue *= falloffPerSample;
 		brownValue += rng.nextf(-wanderPerSample, +wanderPerSample);
 	}
-	else if (min->isScalar && max->isScalar)
+	else if (min->isScalar && max->isScalar && scale->isScalar)
 	{
 		resultOutput.setVector();
 		
-		const float minValue = min->getScalar();
-		const float maxValue = max->getScalar();
+		const float minValue = min->getScalar() * scale->getScalar();
+		const float maxValue = max->getScalar() * scale->getScalar();
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
@@ -264,6 +269,7 @@ void AudioNodeNoise::drawBrown()
 	}
 	else
 	{
+		scale->expand();
 		min->expand();
 		max->expand();
 		
@@ -271,8 +277,8 @@ void AudioNodeNoise::drawBrown()
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			const float minValue = min->samples[i];
-			const float maxValue = max->samples[i];
+			const float minValue = min->samples[i] * scale->samples[i];
+			const float maxValue = max->samples[i] * scale->samples[i];
 			
 			resultOutput.samples[i] = ((minValue + maxValue) + (float)brownValue * (maxValue - minValue)) * .5f;
 

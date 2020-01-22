@@ -11,7 +11,15 @@ const float PI2_RCP = 1.0 / PI2;
 #define ANIMTIME (time / 100.0)
 //#define ANIMTIME 0.0
 
-void computeDistance(vec2 p, out float sdf, out int socketIndex, out int socketType, out bool selected)
+struct DistanceInfo
+{
+	float sdf;
+	int socketIndex;
+	int socketType;
+	bool selected;
+};
+
+DistanceInfo computeDistance(vec2 p)
 {
 	float size = mix(0.5, 1.0, (cos(time / 11.0) + 1.0) * 0.5);
 
@@ -24,10 +32,12 @@ void computeDistance(vec2 p, out float sdf, out int socketIndex, out int socketT
 
 	float petalRadius = mix(1.0 - 1.0 / numPetals, 1.0, petalValue);
 
-	sdf = petalRadius - distance;
-	socketIndex = petalIndex;
-	socketType = petalIndex < numInputs ? 0 : 1;
-	selected = petalIndex == hoverIndex;
+	DistanceInfo di;
+	di.sdf = petalRadius - distance;
+	di.socketIndex = petalIndex;
+	di.socketType = petalIndex < numInputs ? 0 : 1;
+	di.selected = petalIndex == hoverIndex;
+	return di;
 }
 
 vec4 fsfx()
@@ -40,22 +50,17 @@ vec4 fsfx()
 	coord *= 2.0;
 	coord.x *= colormapSize.x / colormapSize.y;
 
-	float sdf;
-	int socketIndex;
-	int socketType;
-	bool selected;
+	DistanceInfo di = computeDistance(coord);
 
-	computeDistance(coord, sdf, socketIndex, socketType, selected);
+	float r = smoothstep(-1.0, +1.0, di.sdf * colormapSize.y * 0.5);
 
-	float r = smoothstep(-1.0, +1.0, sdf * colormapSize.y * 0.5);
+	vec3 color = vec3(r, di.socketIndex / float(numPetals), -di.sdf);
+	//color = vec3(r, 0.0, 0.0);
+	//color = vec3(di.sdf);
 
-	vec3 color = vec3(r, socketIndex / float(numPetals), -sdf);
-	//vec3 color = vec3(r, 0.0, 0.0);
-	//vec3 color = vec3(sdf);
-
-	if (socketType == 0)
+	if (di.socketType == 0)
 		color *= 0.5;
-	if (selected)
+	if (di.selected)
 		color += vec3(0.5);
 
 	return vec4(color, 1.0);

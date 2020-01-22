@@ -35,5 +35,7 @@ struct FileEditor_Model : FileEditor
 	FileEditor_Model(const char * path);
 	virtual ~FileEditor_Model() override;
 	
+	virtual bool reflect(TypeDB & typeDB, StructuredType & type) override;
+	
 	virtual void tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured) override;
 };

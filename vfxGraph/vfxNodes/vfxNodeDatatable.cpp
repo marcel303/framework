@@ -26,6 +26,7 @@
 */
 
 #include "Csv.h"
+#include "framework.h" // fileHasChanged
 #include "Log.h"
 #include "Path.h"
 #include "vfxNodeDatatable.h"
@@ -69,10 +70,10 @@ void VfxNodeDatatable::tick(const float dt)
 	const char * newFilename = getInputString(kInput_Filename, "");
 	const bool newHasHeader = getInputBool(kInput_HasHeader, false);
 	const bool newTranspose = getInputBool(kInput_Transpose, false);
-
+	
 	// reload data when filename changes or when we're asked to interpret the data differently
 	
-	if (newFilename != filename || newHasHeader != hasHeader || newTranspose != transpose)
+	if (newFilename != filename || newHasHeader != hasHeader || newTranspose != transpose || framework.fileHasChanged(filename.c_str()))
 	{
 		LOG_DBG("reloading data table!", 0);
 		

@@ -2307,7 +2307,7 @@ Dictionary & Dictionary::operator=(const Dictionary & other)
 
 GxTextureId getTexture(const char * filename)
 {
-	const TextureCacheElem & elem = g_textureCache.findOrCreate(filename, 1, 1);
+	const TextureCacheElem & elem = g_textureCache.findOrCreate(filename, 1, 1, true);
 
 	if (elem.textures)
 		return elem.textures[0].id;
@@ -3179,55 +3179,46 @@ bool s_renderPassIsBackbufferPass = false; // todo : unify surfaces and render p
 
 static int getCurrentBackingScale()
 {
-	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	int sx, sy;
+	int backingScale;
 	
-	if (surface != nullptr)
-		return surface->getBackingScale();
+	if (getCurrentRenderTargetSize(sx, sy, backingScale))
+		return backingScale;
 	else
 		return s_backingScale;
 }
 
 static void getCurrentBackingSize(int & sx, int & sy)
 {
-	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	int backingScale;
 	
-	if (surface != nullptr)
-	{
-		// surfaces may explicitly set a backing scale > 1, in which case the backing size will be larger than the reported size of the surface
-		
-		sx = surface->getWidth() / framework.minification * surface->getBackingScale();
-		sy = surface->getHeight() / framework.minification * surface->getBackingScale();
-	}
+	if (getCurrentRenderTargetSize(sx, sy, backingScale))
+		return;
 	else
 	{
-	#if ENABLE_METAL
 		sx = globals.currentWindow->getWidth();
 		sy = globals.currentWindow->getHeight();
-	#else
-		// the windowing system may apply a backing scale, in which case the backing size will be larger than the reported size of the window
 		
-		int drawableSx;
-		int drawableSy;
-		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
-		
-		sx = drawableSx;
-		sy = drawableSy;
-	#endif
+		sx *= s_backingScale;
+		sy *= s_backingScale;
 	}
 }
 
 static void getCurrentViewportSize(int & sx, int & sy)
 {
-// todo : should check render pass, not surface
-	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
+	// return the size of the current render target
 	
-	if (surface != nullptr)
+	int backingScale;
+	
+	if (getCurrentRenderTargetSize(sx, sy, backingScale))
 	{
-		sx = surface->getWidth();
-		sy = surface->getHeight();
+		sx /= backingScale;
+		sy /= backingScale;
 	}
 	else
 	{
+		// or when no render target is active, the size of the current window
+	
 		// todo : fix for case with fullscreen desktop mode
 		// fixme : add specific code for setting screen matrix
 		if (globals.currentWindow == globals.mainWindow && false)
@@ -3325,7 +3316,7 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 			gxLoadMatrixf(globals.transform3d.m_v);
 		
 		#if ENABLE_OPENGL
-			if (surfaceStackSize != 0 && surfaceStack[surfaceStackSize - 1] != nullptr)
+			if (s_renderPassIsBackbufferPass == false)
 			{
 				// flip Y axis so the vertical axis runs bottom to top
 				gxScalef(1.f, -1.f, 1.f);
@@ -3514,8 +3505,6 @@ Vec2 transformToScreen(const Vec3 & v, float & w)
 
 void pushSurface(Surface * newSurface, const bool clearSurface)
 {
-	Assert(clearSurface == false); // todo : fix issue with popSurface when clear is enabled
-	
 #if ENABLE_SCREENSHOTS
 	const bool screenshotMode = surface == nullptr && s_screenshotSurfaceStack.stackSize > 0;
 	
@@ -3523,126 +3512,55 @@ void pushSurface(Surface * newSurface, const bool clearSurface)
 		surface = s_screenshotSurfaceStack.stack[s_screenshotSurfaceStack.stackSize - 1];
 #endif
 
-	// check if the surface is changed, before changing any states
-	
-	Surface * oldSurface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
-	
+	// record the new surface inside the surface stack
+
 	fassert(surfaceStackSize < kMaxSurfaceStackSize);
 	surfaceStack[surfaceStackSize++] = newSurface;
 	
-	if (newSurface != oldSurface || clearSurface)
+	// start a render pass for the new surface
+	
+	if (newSurface == nullptr)
 	{
-		// save state
-		
-		gxMatrixMode(GX_PROJECTION);
-		gxPushMatrix();
-		gxMatrixMode(GX_MODELVIEW);
-		gxPushMatrix();
-		
-		// start a render pass for the new surface
-		
-		if (newSurface == nullptr)
-		{
-			pushBackbufferRenderPass(
-				clearSurface,
-				colorBlackTranslucent,
-				clearSurface,
-				0.f,
-				"Backbuffer");
-		}
-		else
-		{
-			pushRenderPass(
-				newSurface->getColorTarget(),
-				clearSurface,
-				newSurface->getDepthTarget(),
-				clearSurface,
-				newSurface->getName());
-		}
-		
-		//
-		
-		updateViewport(newSurface, globals.currentWindow->getWindow());
-		
-		applyTransform();
-		
-	// todo : set on beginRenderPass ?
-		setBlend(globals.blendMode);
-
-		//
-
-	#if ENABLE_SCREENSHOTS
-		if (screenshotMode)
-		{
-			int sx;
-			int sy;
-			SDL_GetWindowSize(globals.currentWindow->getWindow(), &sx, &sy);
-			const float scaleX = surface->getWidth() / float(sx);
-			const float scaleY = surface->getHeight() / float(sy);
-			gxScalef(scaleX, scaleY, 1);
-		}
-	#endif
+		pushBackbufferRenderPass(
+			clearSurface,
+			colorBlackTranslucent,
+			clearSurface,
+			0.f,
+			"Backbuffer",
+			s_backingScale);
 	}
+	else
+	{
+		pushRenderPass(
+			newSurface->getColorTarget(),
+			clearSurface,
+			newSurface->getDepthTarget(),
+			clearSurface,
+			newSurface->getName(),
+			newSurface->getBackingScale());
+	}
+
+	//
+
+#if ENABLE_SCREENSHOTS
+	if (screenshotMode)
+	{
+		int sx;
+		int sy;
+		SDL_GetWindowSize(globals.currentWindow->getWindow(), &sx, &sy);
+		const float scaleX = surface->getWidth() / float(sx);
+		const float scaleY = surface->getHeight() / float(sy);
+		gxScalef(scaleX, scaleY, 1);
+	}
+#endif
 }
 
 void popSurface()
 {
-	Surface * oldSurface = surfaceStackSize >= 1 ? surfaceStack[surfaceStackSize - 1] : nullptr;
-	Surface * newSurface = surfaceStackSize >= 2 ? surfaceStack[surfaceStackSize - 2] : nullptr;
-	
 	fassert(surfaceStackSize > 0);
 	surfaceStack[--surfaceStackSize] = 0;
 	
-	if (newSurface != oldSurface) // fixme : fix case where clearSurface enabled would push, but pop is skipped here. we need a better way to know whether we started a new render pass or not
-	{
-		popRenderPass();
-
-	#if ENABLE_OPENGL
-		// unbind textures. we must do this to ensure no render target texture is currently bound as a texture
-		// as this would cause issues where the driver may perform an optimization where it detects no texture
-		// state change happened in a future gxSetTexture or Shader::setTexture call (because the texture ids
-		// are the same), making it fail to flush GPU render target caches, fail to perform texture decompression,
-		// fail to perform whatever is needed to transition a render target texture from being 'renderable' resource
-		// to being a shader accessible resource
-
-		for (int i = 0; i < 8; ++i)
-		{
-			glActiveTexture(GL_TEXTURE0 + i);
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
-		}
-
-		glActiveTexture(GL_TEXTURE0);
-		checkErrorGL();
-		
-		globals.gxShaderIsDirty = true;
-	#endif
-
-	#if ENABLE_OPENGL && defined(MACOS) && 0
-	// todo : remove this hack
-		// fix for driver issue where the results of drawing are possibly not yet flushed when accessing a surface texture,
-		// causing artefacts due to texel fetches returning inconsistent results
-		if (glTextureBarrierNV != nullptr)
-		{
-			glTextureBarrierNV();
-			checkErrorGL();
-		}
-	#endif
-		
-		updateViewport(newSurface, globals.currentWindow->getWindow());
-		
-		applyTransform();
-		
-	// todo : remove when set on beginRenderPass ?
-		setBlend(globals.blendMode);
-		
-		// restore state
-		
-		gxMatrixMode(GX_PROJECTION);
-		gxPopMatrix();
-		gxMatrixMode(GX_MODELVIEW);
-		gxPopMatrix();
-	}
+	popRenderPass();
 }
 
 void setDrawRect(int x, int y, int sx, int sy)
@@ -3658,50 +3576,27 @@ void setDrawRect(int x, int y, int sx, int sy)
 	#define ScaleX(x) x = ((x) * backingSx / (surfaceSx / framework.minification))
 	#define ScaleY(y) y = ((y) * backingSy / (surfaceSy / framework.minification))
 	
-	Surface * surface = surfaceStackSize ? surfaceStack[surfaceStackSize - 1] : nullptr;
-
-	if (surface != nullptr)
-	{
-		ScaleX(x);
-		ScaleY(y);
-		ScaleX(sx);
-		ScaleY(sy);
-	
-	#if ENABLE_METAL
-		metal_set_scissor(x, y, sx, sy);
-	#endif
-	
-	#if ENABLE_OPENGL // todo : metal impl setDrawRect
-		glScissor(x, y, sx, sy);
-		checkErrorGL();
-
-		glEnable(GL_SCISSOR_TEST);
-		checkErrorGL();
-	#endif
-	}
-	else
-	{
-	#if ENABLE_OPENGL
+#if ENABLE_OPENGL
+	if (s_renderPassIsBackbufferPass)
 		y = surfaceSy - y - sy;
-	#endif
+#endif
 
-		ScaleX(x);
-		ScaleY(y);
-		ScaleX(sx);
-		ScaleY(sy);
+	ScaleX(x);
+	ScaleY(y);
+	ScaleX(sx);
+	ScaleY(sy);
 
-	#if ENABLE_METAL
-		metal_set_scissor(x, y, sx, sy);
-	#endif
-	
-	#if ENABLE_OPENGL // todo : metal impl setDrawRect
-		glScissor(x, y, sx, sy);
-		checkErrorGL();
+#if ENABLE_METAL
+	metal_set_scissor(x, y, sx, sy);
+#endif
 
-		glEnable(GL_SCISSOR_TEST);
-		checkErrorGL();
-	#endif
-	}
+#if ENABLE_OPENGL
+	glScissor(x, y, sx, sy);
+	checkErrorGL();
+
+	glEnable(GL_SCISSOR_TEST);
+	checkErrorGL();
+#endif
 }
 
 void clearDrawRect()
@@ -3710,7 +3605,7 @@ void clearDrawRect()
 	metal_clear_scissor();
 #endif
 
-#if ENABLE_OPENGL // todo : metal impl clearDrawRect
+#if ENABLE_OPENGL
 	glDisable(GL_SCISSOR_TEST);
 #endif
 }
@@ -3718,8 +3613,8 @@ void clearDrawRect()
 void setColorMode(COLOR_MODE colorMode)
 {
 	globals.colorMode = colorMode;
-	
-#if USE_LEGACY_OPENGL
+
+#if ENABLE_OPENGL && USE_LEGACY_OPENGL
 	switch (colorMode)
 	{
 	case COLOR_MUL:
@@ -3802,7 +3697,7 @@ void setColorClamp(bool clamp)
 {
 	globals.colorClamp = clamp;
 	
-#if USE_LEGACY_OPENGL
+#if ENABLE_OPENGL && USE_LEGACY_OPENGL
 	if (glClampColor != nullptr)
 	{
 		glClampColor(GL_CLAMP_VERTEX_COLOR, clamp ? GL_TRUE : GL_FALSE);
@@ -3900,7 +3795,7 @@ void setShader(const ShaderBase & shader)
 		globals.shader = const_cast<ShaderBase*>(&shader);
 	
 	#if ENABLE_OPENGL
-		glUseProgram(shader.getProgram());
+		glUseProgram(shader.getOpenglProgram());
 	#endif
 		
 		globals.gxShaderIsDirty = true;
@@ -4107,6 +4002,113 @@ GxTextureId createTextureFromR32F(const void * source, int sx, int sy, bool filt
 	return createTexture(source, sx, sy, filter, clamp, GL_R32F, GL_RED, GL_FLOAT);
 }
 
+static GLuint allocateTexture(const int sx, const int sy, GLenum internalFormat, const bool filter, const bool clamp, const GLint * swizzleMask)
+{
+	GLuint newTexture;
+	
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	checkErrorGL();
+	
+	glGenTextures(1, &newTexture);
+	glBindTexture(GL_TEXTURE_2D, newTexture);
+	glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, sx, sy);
+	checkErrorGL();
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	checkErrorGL();
+	
+	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+	checkErrorGL();
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
+	
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	checkErrorGL();
+	
+	return newTexture;
+}
+
+GxTextureId copyTexture(const GxTextureId texture)
+{
+	// update texture
+	
+	GLuint oldBuffer = 0;
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+	checkErrorGL();
+	
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	checkErrorGL();
+
+	//
+	
+	glBindTexture(GL_TEXTURE_2D, texture);
+	checkErrorGL();
+	
+	int sx;
+	int sy;
+	int internalFormat;
+	
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
+	checkErrorGL();
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &internalFormat);
+	checkErrorGL();
+	
+	int magFilter;
+	int wrapS;
+	
+	glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, &magFilter);
+	checkErrorGL();
+	glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, &wrapS);
+	checkErrorGL();
+	
+	GLint swizzleMask[4];
+	glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+	checkErrorGL();
+	
+	const bool filter = magFilter != GL_POINT;
+	const bool clamp = wrapS == GL_CLAMP_TO_EDGE;
+	
+	GLuint newTexture = allocateTexture(sx, sy, internalFormat, filter, clamp, swizzleMask);
+	
+	glBindTexture(GL_TEXTURE_2D, newTexture);
+	checkErrorGL();
+	
+	GLuint frameBuffer = 0;
+	
+	glGenFramebuffers(1, &frameBuffer);
+	checkErrorGL();
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+	checkErrorGL();
+	
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, sx, sy);
+	checkErrorGL();
+	
+	//
+	
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	checkErrorGL();
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+	checkErrorGL();
+	
+	//
+	
+	glDeleteFramebuffers(1, &frameBuffer);
+	frameBuffer = 0;
+	
+	return newTexture;
+}
+
 void freeTexture(GxTextureId & textureId)
 {
 	glDeleteTextures(1, &textureId);
@@ -4142,188 +4144,14 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 
 #if !ENABLE_OPENGL
 
-	SDL_Window * getWindow()
-	{
-		return globals.currentWindow->getWindow();
-	}
-
-	SDL_Surface * getWindowSurface()
-	{
-		return SDL_GetWindowSurface(globals.currentWindow->getWindow());
-	}
-
-#elif !USE_LEGACY_OPENGL
-
-#else
-
-void gxInitialize()
+SDL_Window * getWindow()
 {
-	registerBuiltinShaders();
+	return globals.currentWindow->getWindow();
 }
 
-void gxGetMatrixf(GX_MATRIX mode, float * m)
+SDL_Surface * getWindowSurface()
 {
-	switch (mode)
-	{
-	case GX_PROJECTION:
-		glGetFloatv(GL_PROJECTION_MATRIX, m);
-		checkErrorGL();
-		break;
-
-	case GX_MODELVIEW:
-		glGetFloatv(GL_MODELVIEW_MATRIX, m);
-		checkErrorGL();
-		break;
-
-	default:
-		fassert(false);
-		break;
-	}
-}
-
-void gxSetMatrixf(GX_MATRIX mode, const float * m)
-{
-	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
-	{
-		switch (mode)
-		{
-		case GX_PROJECTION:
-			glMatrixMode(GL_PROJECTION);
-			glLoadMatrixf(m);
-			checkErrorGL();
-			break;
-
-		case GX_MODELVIEW:
-			glMatrixMode(GL_MODELVIEW);
-			glLoadMatrixf(m);
-			checkErrorGL();
-			break;
-
-		default:
-			fassert(false);
-			break;
-		}
-	}
-	gxMatrixMode(restoreMatrixMode);
-}
-
-GX_MATRIX gxGetMatrixMode()
-{
-	GLint mode = 0;
-	
-	glGetIntegerv(GL_MATRIX_MODE, &mode);
-	checkErrorGL();
-	
-	return (GX_MATRIX)mode;
-}
-
-void gxEnd()
-{
-	glEnd();
-	checkErrorGL();
-}
-
-void gxSetTexture(GxTextureId texture)
-{
-	if (texture)
-	{
-		glEnable(GL_TEXTURE_2D);
-		glBindTexture(GL_TEXTURE_2D, texture);
-		checkErrorGL();
-	}
-	else
-	{
-	#if USE_LEGACY_OPENGL
-		glDisable(GL_TEXTURE_2D);
-		checkErrorGL();
-	#endif
-	}
-}
-
-static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter)
-{
-	if (filter == GX_SAMPLE_NEAREST)
-		return GL_NEAREST;
-	else if (filter == GX_SAMPLE_LINEAR)
-		return GL_LINEAR;
-	else
-	{
-		fassert(false);
-		return GL_NEAREST;
-	}
-}
-
-void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
-{
-	if (glIsEnabled(GL_TEXTURE_2D))
-	{
-		const GLenum openglFilter = toOpenGLSampleFilter(filter);
-		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglFilter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, openglFilter);
-		checkErrorGL();
-		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-		checkErrorGL();
-	}
-}
-
-void gxGetTextureSize(GxTextureId texture, int & width, int & height)
-{
-	// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
-
-/*
-	if (glGetTextureLevelParameteriv != nullptr)
-	{
-		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &width);
-		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &height);
-		checkErrorGL();
-	}
-	else
-*/
-	{
-		GLuint restoreTexture;
-		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-		checkErrorGL();
-		
-		glBindTexture(GL_TEXTURE_2D, texture);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
-		checkErrorGL();
-		
-		glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	}
-}
-
-GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
-{
-	int internalFormat = 0;
-	
-	// capture current OpenGL states before we change them
-
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &internalFormat);
-	checkErrorGL();
-
-	// restore previous OpenGL states
-
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-	
-	// translate OpenGL format to GX format
-
-	if (internalFormat == GL_R8) return GX_R8_UNORM;
-	if (internalFormat == GL_RG8) return GX_RG8_UNORM;
-	if (internalFormat == GL_R16F) return GX_R16_FLOAT;
-	if (internalFormat == GL_R32F) return GX_R32_FLOAT;
-	if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
-	if (internalFormat == GL_RGBA8) return GX_RGBA8_UNORM;
-
-	return GX_UNKNOWN_FORMAT;
+	return SDL_GetWindowSurface(globals.currentWindow->getWindow());
 }
 
 #endif
@@ -4712,6 +4540,7 @@ static void applyHqShaderConstants()
 			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index, tmat.m_v);
 		}
 		
+	// fixme : this is broken when using Metal. set texture to gxGetTexture()
 		shader.setTextureUnit("source", 0);
 	}
 

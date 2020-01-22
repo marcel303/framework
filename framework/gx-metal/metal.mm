@@ -34,8 +34,8 @@
 #import "internal.h"
 #import "metal.h"
 #import "metalView.h"
-#import "shader.h"
 #import "shaders.h" // registerBuiltinShaders
+#import "StringEx.h" // strcpy_s
 #import "texture.h"
 #import "window_data.h"
 #import <Cocoa/Cocoa.h>
@@ -60,7 +60,7 @@ static std::map<SDL_Window*, MetalWindowData*> windowDatas;
 
 MetalWindowData * activeWindowData = nullptr;
 
-static std::vector<id <MTLResource>> s_resourcesToFree;
+static id<MTLSamplerState> samplerStates[3 * 2]; // [filter(nearest, linear, mipmapped)][clamp(false, true)]
 
 //
 
@@ -75,14 +75,20 @@ struct RenderPassData
 	id <MTLRenderCommandEncoder> encoder;
 	
 	RenderPipelineState::RenderPass renderPass;
+	
+	int viewportSx = 0;
+	int viewportSy = 0;
+	int backingScale = 0;
 };
 
 struct RenderPassDataForPushPop
 {
-	ColorTarget * target[4]; // todo : kMaxColorTargets
+	ColorTarget * target[kMaxColorTargets];
 	int numTargets = 0;
 	DepthTarget * depthTarget = nullptr;
 	bool isBackbufferPass = false;
+	int backingScale = 0;
+	char passName[32] = { };
 };
 
 static std::stack<RenderPassDataForPushPop> s_renderPasses;
@@ -92,26 +98,54 @@ static RenderPassData * s_activeRenderPass = nullptr;
 
 //
 
-extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
+static id <MTLFence> waitForBlit = nullptr;
 
-static void freeResourcesToFree()
-{
-	for (id <MTLResource> & resource : s_resourcesToFree)
-	{
-		//NSLog(@"resource release, retain count: %lu", [resource retainCount]);
-		
-		[resource release];
-		resource = nullptr;
-	}
-	
-	s_resourcesToFree.clear();
-}
+//
+
+extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
 
 void metal_init()
 {
 	device = MTLCreateSystemDefaultDevice();
 	
 	queue = [device newCommandQueue];
+	
+	// pre-create all possible sampler states
+	
+	@autoreleasepool
+	{
+		for (int filter = 0; filter < 3; ++filter)
+		{
+			for (int clamp = 0; clamp < 2; ++clamp)
+			{
+				auto * descriptor = [[MTLSamplerDescriptor new] autorelease];
+				
+				descriptor.minFilter =
+					(filter == 0)
+					? MTLSamplerMinMagFilterNearest
+					: MTLSamplerMinMagFilterLinear;
+				descriptor.magFilter =
+					(filter == 0)
+					? MTLSamplerMinMagFilterNearest
+					: MTLSamplerMinMagFilterLinear;
+				
+				descriptor.mipFilter =
+					(filter == 0 || filter == 1)
+					? MTLSamplerMipFilterNotMipmapped
+					: MTLSamplerMipFilterLinear;
+				
+				descriptor.sAddressMode =
+					(clamp == 0)
+					? MTLSamplerAddressModeRepeat
+					: MTLSamplerAddressModeClampToEdge;
+				descriptor.tAddressMode = descriptor.sAddressMode;
+				
+				const int index = (filter << 1) | clamp;
+				
+				samplerStates[index] = [device newSamplerStateWithDescriptor:descriptor];
+			}
+		}
+	}
 }
 
 void metal_attach(SDL_Window * window)
@@ -206,10 +240,6 @@ void metal_draw_end()
 
 	[pd.cmdbuf commit];
 	
-// todo : remove and use addCompletedHandler instead
-	//[activeWindowData->cmdbuf waitUntilCompleted];
-	freeResourcesToFree(); // todo : call in response to completion handler
-	
 	//
 	
 	[pd.encoder release];
@@ -274,7 +304,13 @@ id <MTLDevice> metal_get_device()
 	return device;
 }
 
-void metal_upload_texture_area(const void * src, const int srcPitch, const int srcSx, const int srcSy, id <MTLTexture> dst, const int dstX, const int dstY, const MTLPixelFormat pixelFormat)
+void metal_upload_texture_area(
+	const void * src,
+	const int srcPitch,
+	const int srcSx, const int srcSy,
+	id <MTLTexture> dst,
+	const int dstX, const int dstY,
+	const MTLPixelFormat pixelFormat)
 {
 	@autoreleasepool
 	{
@@ -288,15 +324,20 @@ void metal_upload_texture_area(const void * src, const int srcPitch, const int s
 		
 		auto blit_cmdbuf = [queue commandBuffer];
 		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
+		
+		if (s_activeRenderPass != nullptr)
 		{
-		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
 			id <MTLFence> waitForBlit = [device newFence];
 			
 			[s_activeRenderPass->encoder updateFence:waitForDraw afterStages:MTLRenderStageFragment];
 			{
 				[blit_encoder waitForFence:waitForDraw];
-				[blit_encoder copyFromTexture:src_texture sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+				[blit_encoder
+					copyFromTexture:src_texture
+					sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size
+					toTexture:dst
+					destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
 				[blit_encoder updateFence:waitForBlit];
 			}
 			[s_activeRenderPass->encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
@@ -304,14 +345,33 @@ void metal_upload_texture_area(const void * src, const int srcPitch, const int s
 			[waitForDraw release];
 			[waitForBlit release];
 		}
+		else
+		{
+			[blit_encoder
+				copyFromTexture:src_texture
+				sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size
+				toTexture:dst
+				destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+			
+			metal_make_render_wait_for_blit(blit_encoder);
+		}
+		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
 		
-		s_resourcesToFree.push_back(src_texture);
+		[src_texture release];
+		src_texture = nullptr;
 	}
 }
 
-void metal_copy_texture_to_texture(id <MTLTexture> src, const int srcPitch, const int srcX, const int srcY, const int srcSx, const int srcSy, id <MTLTexture> dst, const int dstX, const int dstY, const MTLPixelFormat pixelFormat)
+void metal_copy_texture_to_texture(
+	id <MTLTexture> src,
+	const int srcPitch,
+	const int srcX, const int srcY,
+	const int srcSx, const int srcSy,
+	id <MTLTexture> dst,
+	const int dstX, const int dstY,
+	const MTLPixelFormat pixelFormat)
 {
 	@autoreleasepool
 	{
@@ -324,7 +384,6 @@ void metal_copy_texture_to_texture(id <MTLTexture> src, const int srcPitch, cons
 		
 		if (s_activeRenderPass != nullptr)
 		{
-		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
 			id <MTLFence> waitForBlit = [device newFence];
 			
@@ -342,11 +401,23 @@ void metal_copy_texture_to_texture(id <MTLTexture> src, const int srcPitch, cons
 		else
 		{
 			[blit_encoder copyFromTexture:src sourceSlice:0 sourceLevel:0 sourceOrigin:src_origin sourceSize:src_size toTexture:dst destinationSlice:0 destinationLevel:0 destinationOrigin:dst_origin];
+				
+			metal_make_render_wait_for_blit(blit_encoder);
 		}
 		
 		[blit_encoder endEncoding];
 		[blit_cmdbuf commit];
 	}
+}
+
+static id<MTLCommandBuffer> s_sync_blit_to_render_cmdbuf = nullptr;
+static id<MTLRenderCommandEncoder> s_sync_blit_to_render_encoder = nullptr;
+
+void metal_make_render_wait_for_blit(id<MTLBlitCommandEncoder> blit_encoder)
+{
+	[waitForBlit release];
+	
+	waitForBlit = [device newFence];
 }
 
 void metal_generate_mipmaps(id <MTLTexture> texture)
@@ -358,7 +429,6 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 		
 		if (s_activeRenderPass != nullptr)
 		{
-		// todo : reuse fences
 			id <MTLFence> waitForDraw = [device newFence];
 			id <MTLFence> waitForBlit = [device newFence];
 			
@@ -376,6 +446,8 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 		else
 		{
 			[blit_encoder generateMipmapsForTexture:texture];
+			
+			metal_make_render_wait_for_blit(blit_encoder);
 		}
 		
 		[blit_encoder endEncoding];
@@ -385,16 +457,15 @@ void metal_generate_mipmaps(id <MTLTexture> texture)
 
 // -- render passes --
 
-static const int kMaxColorTargets = 4;
-
 void beginRenderPass(
 	ColorTarget * target,
 	const bool clearColor,
 	DepthTarget * depthTarget,
 	const bool clearDepth,
-	const char * passName)
+	const char * passName,
+	const int backingScale)
 {
-	beginRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
+	beginRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName, backingScale);
 }
 
 void beginRenderPass(
@@ -403,7 +474,8 @@ void beginRenderPass(
 	const bool in_clearColor,
 	DepthTarget * depthTarget,
 	const bool in_clearDepth,
-	const char * passName)
+	const char * passName,
+	const int backingScale)
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
@@ -459,10 +531,24 @@ void beginRenderPass(
 				viewportSy = depthattachment.texture.height;
 		}
 		
+		pd.viewportSx = viewportSx;
+		pd.viewportSy = viewportSy;
+		pd.backingScale = backingScale;
+		
 		// begin encoding
 		
 		pd.encoder = [[pd.cmdbuf renderCommandEncoderWithDescriptor:pd.renderdesc] retain];
 		pd.encoder.label = [NSString stringWithCString:passName encoding:NSASCIIStringEncoding];
+		
+		// wait for blit operations (if any)
+		
+		if (waitForBlit != nullptr)
+		{
+			[pd.encoder waitForFence:waitForBlit beforeStages:MTLRenderStageVertex];
+			
+			[waitForBlit release];
+			waitForBlit = nullptr;
+		}
 		
 		renderState.renderPass = pd.renderPass;
 		
@@ -477,7 +563,7 @@ void beginRenderPass(
 	}
 }
 
-void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
+void beginBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
 {
 	ColorTarget colorTarget(activeWindowData->current_drawable.texture);
 	colorTarget.setClearColor(color.r, color.g, color.b, color.a);
@@ -490,7 +576,8 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 		clearColor,
 		activeWindowData->metalview.depthTexture ? &depthTarget : nullptr,
 		clearDepth,
-		passName);
+		passName,
+		backingScale);
 }
 
 void endRenderPass()
@@ -518,14 +605,14 @@ void endRenderPass()
 
 // --- render passes stack ---
 
-void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName)
+void pushRenderPass(ColorTarget * target, const bool clearColor, DepthTarget * depthTarget, const bool clearDepth, const char * passName, const int backingScale)
 {
-	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName);
+	pushRenderPass(&target, target == nullptr ? 0 : 1, clearColor, depthTarget, clearDepth, passName, backingScale);
 }
 
-void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName)
+void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_clearColor, DepthTarget * depthTarget, const bool in_clearDepth, const char * passName, const int backingScale)
 {
-	Assert(numTargets >= 0 && numTargets <= 4);
+	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	
 	// save state
 	
@@ -541,7 +628,7 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 		endRenderPass();
 	}
 	
-	beginRenderPass(targets, numTargets, in_clearColor, depthTarget, in_clearDepth, passName);
+	beginRenderPass(targets, numTargets, in_clearColor, depthTarget, in_clearDepth, passName, backingScale);
 	
 	// record the current render pass information in the render passes stack
 	
@@ -549,11 +636,13 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, const bool in_
 	for (int i = 0; i < numTargets && i < kMaxColorTargets; ++i)
 		pd.target[pd.numTargets++] = targets[i];
 	pd.depthTarget = depthTarget;
+	pd.backingScale = backingScale;
+	strcpy_s(pd.passName, sizeof(pd.passName), passName);
 
 	s_renderPasses.push(pd);
 }
 
-void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName)
+void pushBackbufferRenderPass(const bool clearColor, const Color & color, const bool clearDepth, const float depth, const char * passName, const int backingScale)
 {
 	// save state
 	
@@ -569,12 +658,14 @@ void pushBackbufferRenderPass(const bool clearColor, const Color & color, const 
 		endRenderPass();
 	}
 	
-	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName);
+	beginBackbufferRenderPass(clearColor, color, clearDepth, depth, passName, backingScale);
 	
 	// record the current render pass information in the render passes stack
 	
 	RenderPassDataForPushPop pd;
 	pd.isBackbufferPass = true;
+	pd.backingScale = backingScale;
+	strcpy_s(pd.passName, sizeof(pd.passName), passName);
 	
 	s_renderPasses.push(pd);
 }
@@ -599,11 +690,11 @@ void popRenderPass()
 		
 		if (new_pd.isBackbufferPass)
 		{
-			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, "(cont)"); // todo : pass name
+			beginBackbufferRenderPass(false, colorBlackTranslucent, false, 0.f, new_pd.passName, new_pd.backingScale);
 		}
 		else
 		{
-			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, "(cont)"); // todo : pass name
+			beginRenderPass(new_pd.target, new_pd.numTargets, false, new_pd.depthTarget, false, new_pd.passName, new_pd.backingScale);
 		}
 	}
 	
@@ -614,6 +705,36 @@ void popRenderPass()
 	gxMatrixMode(GX_MODELVIEW);
 	gxPopMatrix();
 }
+
+bool getCurrentRenderTargetSize(int & sx, int & sy, int & backingScale)
+{
+	if (s_activeRenderPass == nullptr)
+		return false;
+	else
+	{
+		Assert(s_activeRenderPass->viewportSx != 0);
+		Assert(s_activeRenderPass->viewportSy != 0);
+		Assert(s_activeRenderPass->backingScale != 0);
+		
+		sx = s_activeRenderPass->viewportSx;
+		sy = s_activeRenderPass->viewportSy;
+		backingScale = s_activeRenderPass->backingScale;
+		return true;
+	}
+}
+
+// -- render states --
+
+static Stack<int, 32> colorWriteStack(0xf);
+static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
+static Stack<bool, 32> lineSmoothStack(false);
+static Stack<bool, 32> wireframeStack(false);
+static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
+static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
+
+RenderPipelineState renderState;
+
+// render states affecting render pipeline state
 
 void setColorWriteMask(int r, int g, int b, int a)
 {
@@ -627,17 +748,24 @@ void setColorWriteMask(int r, int g, int b, int a)
 	renderState.colorWriteMask = mask;
 }
 
-// -- render states --
+void setColorWriteMaskAll()
+{
+	setColorWriteMask(1, 1, 1, 1);
+}
 
-static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
-static Stack<bool, 32> lineSmoothStack(false);
-static Stack<bool, 32> wireframeStack(false);
-static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
-static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
+void pushColorWriteMask(int r, int g, int b, int a)
+{
+	colorWriteStack.push(renderState.colorWriteMask);
+	
+	setColorWriteMask(r, g, b, a);
+}
 
-RenderPipelineState renderState;
-
-// render states independent from render pipeline state
+void popColorWriteMask()
+{
+	const int colorWriteMask = colorWriteStack.popValue();
+	
+	renderState.colorWriteMask = colorWriteMask;
+}
 
 void setBlend(BLEND_MODE blendMode)
 {
@@ -659,6 +787,8 @@ void popBlend()
 	
 	setBlend(blendMode);
 }
+
+// render states independent from render pipeline state
 
 void setLineSmooth(bool enabled)
 {
@@ -821,8 +951,12 @@ void popCullMode()
 // -- gpu resources --
 
 static GxTextureId createTexture(
-	const void * source, const int sx, const int sy, const int bytesPerPixel, const int sourcePitch,
-	const bool filter, const bool clamp,
+	const void * source,
+	const int sx, const int sy,
+	const int bytesPerPixel,
+	const int sourcePitch,
+	const bool filter,
+	const bool clamp,
 	const MTLPixelFormat pixelFormat)
 {
 	@autoreleasepool
@@ -880,9 +1014,37 @@ GxTextureId createTextureFromRG32F(const void * source, int sx, int sy, bool fil
 }
 
 // --- internal texture creation functions ---
+
 GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, int sourcePitch, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, 4, sourcePitch, filter, clamp, MTLPixelFormatRGBA8Unorm);
+}
+
+GxTextureId copyTexture(const GxTextureId source)
+{
+	if (source != 0)
+	{
+		@autoreleasepool
+		{
+			auto & src = s_textures[source];
+			
+			const GxTextureId textureId = s_nextTextureId++;
+			
+			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:src.pixelFormat width:src.width height:src.height mipmapped:NO];
+			
+			id <MTLTexture> dst = [device newTextureWithDescriptor:descriptor];
+			
+			metal_copy_texture_to_texture(src, 0, 0, 0, src.width, src.height, dst, 0, 0, dst.pixelFormat);
+			
+			s_textures[s_nextTextureId] = dst;
+			
+			return textureId;
+		}
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 void freeTexture(GxTextureId & textureId)
@@ -896,7 +1058,8 @@ void freeTexture(GxTextureId & textureId)
 		{
 			auto & texture = i->second;
 			
-			s_resourcesToFree.push_back(texture);
+			[texture release];
+			texture = nullptr;
 			
 			s_textures.erase(i);
 		}
@@ -909,8 +1072,6 @@ void freeTexture(GxTextureId & textureId)
 
 #include "Mat4x4.h"
 #include "Quat.h"
-
-#define TODO 0
 
 class GxMatrixStack
 {
@@ -985,7 +1146,7 @@ GX_MATRIX gxGetMatrixMode()
 {
 	if (s_gxMatrixStack == &s_gxModelView)
 		return GX_MODELVIEW;
-	if (s_gxMatrixStack == &s_gxProjection)
+	else if (s_gxMatrixStack == &s_gxProjection)
 		return GX_PROJECTION;
 	else
 	{
@@ -1056,10 +1217,7 @@ void gxMultMatrixf(const float * _m)
 
 void gxTranslatef(float x, float y, float z)
 {
-	Mat4x4 m;
-	m.MakeTranslation(x, y, z);
-	
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get().Translate(x, y, z);
 }
 
 void gxRotatef(float angle, float x, float y, float z)
@@ -1072,10 +1230,7 @@ void gxRotatef(float angle, float x, float y, float z)
 
 void gxScalef(float x, float y, float z)
 {
-	Mat4x4 m;
-	m.MakeScaling(x, y, z);
-	
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get().Scale(x, y, z);
 }
 
 void gxValidateMatrices()
@@ -1127,7 +1282,7 @@ void gxValidateMatrices()
 				continue;
 			
 			[s_activeRenderPass->encoder
-				setVertexBytes:shader->m_cacheElem->vsUniformData[i]
+				setVertexBytes:shaderElem.vsUniformData[i]
 				length:shaderElem.vsInfo.uniformBufferSize[i]
 				atIndex:i];
 		}
@@ -1145,8 +1300,6 @@ struct GxVertex
 	float tx, ty;
 };
 
-static Shader s_gxShader;
-
 static GxVertex s_gxVertexBuffer[1024*64];
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
@@ -1157,6 +1310,7 @@ static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 static GxTextureId s_gxTexture = 0;
 static bool s_gxTextureEnabled = false;
+static int s_gxTextureSampler = 0;
 
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
@@ -1172,6 +1326,8 @@ static int s_gxVertexBufferElemOffset = 0;
 static DynamicBufferPool s_gxIndexBufferPool;
 static DynamicBufferPool::PoolElem * s_gxIndexBufferElem = nullptr;
 static int s_gxIndexBufferElemOffset = 0;
+
+static GxCaptureCallback s_gxCaptureCallback = nullptr;
 
 static const GxVertexInput s_gxVsInputs[] =
 {
@@ -1203,8 +1359,8 @@ void gxInitialize()
 	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 	
 	registerBuiltinShaders();
-
-	s_gxShader.load("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
+	
+	Shader("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
 
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
@@ -1219,12 +1375,6 @@ void gxInitialize()
 	const int maxIndicesForQuads = maxQuads * 6;
 	
 	s_gxIndexBufferPool.init(maxIndicesForQuads * sizeof(INDEX_TYPE));
-	
-#if TODO
-	// enable seamless cube map sampling along the edges
-	
-	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-#endif
 }
 
 void gxShutdown()
@@ -1232,10 +1382,6 @@ void gxShutdown()
 	s_gxVertexBufferPool.free();
 	
 	s_gxIndexBufferPool.free();
-
-#if TODO
-	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-#endif
 
 	s_gxPrimitiveType = GX_INVALID_PRIM;
 	s_gxVertices = nullptr;
@@ -1341,6 +1487,8 @@ static void gxValidatePipelineState()
 		
 			MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 		
+			const bool useMultipleVertexBuffers = (renderState.vertexStride == 0);
+			
 			for (int i = 0; i < renderState.vertexInputCount; ++i)
 			{
 				auto & e = renderState.vertexInputs[i];
@@ -1370,24 +1518,59 @@ static void gxValidatePipelineState()
 					else if (e.numComponents == 4)
 						metalFormat = e.normalize ? MTLVertexFormatUChar4Normalized : MTLVertexFormatUChar4;
 				}
+				else if (e.type == GX_ELEMENT_UINT16)
+				{
+					if (e.numComponents == 1)
+						metalFormat = e.normalize ? MTLVertexFormatUShortNormalized : MTLVertexFormatUShort;
+					else if (e.numComponents == 2)
+						metalFormat = e.normalize ? MTLVertexFormatUShort2Normalized : MTLVertexFormatUShort2;
+					else if (e.numComponents == 3)
+						metalFormat = e.normalize ? MTLVertexFormatUShort3Normalized : MTLVertexFormatUShort3;
+					else if (e.numComponents == 4)
+						metalFormat = e.normalize ? MTLVertexFormatUShort4Normalized : MTLVertexFormatUShort4;
+				}
 				
 				Assert(metalFormat != MTLVertexFormatInvalid);
 				if (metalFormat != MTLVertexFormatInvalid)
 				{
 					a.format = metalFormat;
-					a.offset = e.offset;
-					a.bufferIndex = 0;
+					a.offset = useMultipleVertexBuffers ? 0 : e.offset;
+					a.bufferIndex = useMultipleVertexBuffers ? i : 0;
+					
+					if (useMultipleVertexBuffers)
+					{
+						// assign vertex buffers
+						
+						if (e.stride == 0)
+						{
+							const int componentSize =
+								e.type == GX_ELEMENT_UINT8 ? 1 :
+								e.type == GX_ELEMENT_UINT16 ? 2 :
+								e.type == GX_ELEMENT_FLOAT32 ? 4 :
+								-1;
+							
+							const int stride = componentSize * e.numComponents;
+							
+							vertexDescriptor.layouts[i].stride = stride;
+							vertexDescriptor.layouts[i].stepRate = 1;
+							vertexDescriptor.layouts[i].stepFunction = MTLVertexStepFunctionPerVertex;
+						}
+						else
+						{
+							vertexDescriptor.layouts[i].stride = e.stride;
+							vertexDescriptor.layouts[i].stepRate = 1;
+							vertexDescriptor.layouts[i].stepFunction = MTLVertexStepFunctionPerVertex;
+						}
+					}
 				}
 			}
 			
-		// todo : add shader version which has multiple vertex buffers, one for each attribute, so we can
-		//        choose between 'one vertex buffer with packed vertices' or
-		//        'many vertex buffers with a per-attribute vertex stream'
-		//        use gxSetVertexBuffers(vsInputs, numVsInputs, vsInputBuffers)
-		
-			vertexDescriptor.layouts[0].stride = renderState.vertexStride;
-			vertexDescriptor.layouts[0].stepRate = 1;
-			vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+			if (useMultipleVertexBuffers == false)
+			{
+				vertexDescriptor.layouts[0].stride = renderState.vertexStride;
+				vertexDescriptor.layouts[0].stepRate = 1;
+				vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
+			}
 		
 			MTLRenderPipelineDescriptor * pipelineDescriptor = [[MTLRenderPipelineDescriptor new] autorelease];
 			pipelineDescriptor.label = [NSString stringWithCString:shaderElem.name.c_str() encoding:NSASCIIStringEncoding];
@@ -1396,7 +1579,7 @@ static void gxValidatePipelineState()
 			pipelineDescriptor.fragmentFunction = psFunction;
 			pipelineDescriptor.vertexDescriptor = vertexDescriptor;
 			
-			for (int i = 0; i < 4; ++i)
+			for (int i = 0; i < kMaxColorTargets; ++i)
 			{
 				if (renderState.renderPass.colorFormat[i] == 0)
 					continue;
@@ -1550,12 +1733,14 @@ static void ensureIndexBufferCapacity(const int numIndices)
 		if (s_gxIndexBufferElem != nullptr)
 		{
 			auto * elem = s_gxIndexBufferElem;
-			// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxFlush)"];
+			
+			[s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxFlush)"];
 			[s_activeRenderPass->cmdbuf addCompletedHandler:
 				^(id<MTLCommandBuffer> _Nonnull)
 				{
 					s_gxIndexBufferPool.freeBuffer(elem);
 				}];
+			[s_activeRenderPass->cmdbuf popDebugGroup];
 		}
 		
 		s_gxIndexBufferElem = s_gxIndexBufferPool.allocBuffer();
@@ -1563,13 +1748,72 @@ static void ensureIndexBufferCapacity(const int numIndices)
 	}
 }
 
+static void doCapture(const bool endOfBatch)
+{
+	s_gxCaptureCallback(
+		s_gxVertices,
+		s_gxVertexCount * sizeof(GxVertex),
+		s_gxVsInputs,
+		sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]),
+		sizeof(GxVertex),
+		s_gxPrimitiveType,
+		s_gxVertexCount,
+		endOfBatch);
+
+	if (endOfBatch)
+	{
+		s_gxVertices = nullptr;
+		s_gxVertexCount = 0;
+	}
+	else
+	{
+		switch (s_gxPrimitiveType)
+		{
+			case GX_LINE_LOOP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 1;
+				break;
+			case GX_LINE_STRIP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 1;
+				break;
+			case GX_TRIANGLE_FAN:
+				s_gxVertices[0] = s_gxVertices[0];
+				s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 2;
+				break;
+			case GX_TRIANGLE_STRIP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
+				s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 2;
+				break;
+			default:
+				s_gxVertexCount = 0;
+		}
+	}
+}
+
 static void gxFlush(bool endOfBatch)
 {
+	if (s_gxCaptureCallback != nullptr)
+	{
+		doCapture(endOfBatch);
+		return;
+	}
+	
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
 	
-	Shader genericShader("engine/Generic");
+	Shader genericShader;
 	
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		:  *static_cast<Shader*>(globals.shader);
 	
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 	
@@ -1579,7 +1823,7 @@ static void gxFlush(bool endOfBatch)
 	{
 		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 	}
-	else if (s_gxVertexCount)
+	else if (s_gxVertexCount != 0)
 	{
 		// Metal doesn't support line loops. so we emulate support for it here by duplicating
 		// the first point at the end of the vertex buffer if this is a line loop
@@ -1597,8 +1841,6 @@ static void gxFlush(bool endOfBatch)
 			}
 		}
 
-	// todo : refactor s_gxVertices to use a GxVertexBuffer object
-	
 		const int vertexDataSize = s_gxVertexCount * sizeof(GxVertex);
 		
 		if (vertexDataSize <= 4096)
@@ -1618,12 +1860,14 @@ static void gxFlush(bool endOfBatch)
 				if (s_gxVertexBufferElem != nullptr)
 				{
 					auto * elem = s_gxVertexBufferElem;
-					// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxFlush)"];
+					
+					[s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxFlush)"];
 					[s_activeRenderPass->cmdbuf addCompletedHandler:
 						^(id<MTLCommandBuffer> _Nonnull)
 						{
 							s_gxVertexBufferPool.freeBuffer(elem);
 						}];
+					[s_activeRenderPass->cmdbuf popDebugGroup];
 				}
 				
 				s_gxVertexBufferElem = s_gxVertexBufferPool.allocBuffer();
@@ -1739,6 +1983,8 @@ static void gxFlush(bool endOfBatch)
 			indexed = true;
 		}
 	
+		// set shader parameters for the generic shader
+		
 		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
 		{
 			shader.setImmediate(
@@ -1757,7 +2003,7 @@ static void gxFlush(bool endOfBatch)
 				continue;
 			
 			[s_activeRenderPass->encoder
-				setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+				setFragmentBytes:shaderElem.psUniformData[i]
 				length:shaderElem.psInfo.uniformBufferSize[i]
 				atIndex:i];
 		}
@@ -1776,6 +2022,7 @@ static void gxFlush(bool endOfBatch)
 	
 	if (endOfBatch)
 	{
+		s_gxVertices = nullptr;
 		s_gxVertexCount = 0;
 	}
 	else
@@ -1808,9 +2055,6 @@ static void gxFlush(bool endOfBatch)
 	globals.gxShaderIsDirty = false;
 
 	s_gxPrimitiveType = primitiveType;
-	
-	if (endOfBatch)
-		s_gxVertices = 0;
 }
 
 void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
@@ -1863,31 +2107,24 @@ static void gxEndDraw()
 {
 	// add completion handler if there's still a buffer pool element in use
 	
-	if (s_gxVertexBufferElem != nullptr)
+	if (s_gxVertexBufferElem != nullptr || s_gxIndexBufferElem != nullptr)
 	{
-		auto * elem = s_gxVertexBufferElem;
-		// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxEndDraw)"];
+		auto * vb_elem = s_gxVertexBufferElem;
+		auto * ib_elem = s_gxIndexBufferElem;
+		
+		[s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxEndDraw)"];
 		[s_activeRenderPass->cmdbuf addCompletedHandler:
 			^(id<MTLCommandBuffer> _Nonnull)
 			{
-				s_gxVertexBufferPool.freeBuffer(elem);
+				if (vb_elem != nullptr)
+					s_gxVertexBufferPool.freeBuffer(vb_elem);
+				if (ib_elem != nullptr)
+					s_gxIndexBufferPool.freeBuffer(ib_elem);
 			}];
+		[s_activeRenderPass->cmdbuf popDebugGroup];
 		
 		s_gxVertexBufferElem = nullptr;
 		s_gxVertexBufferElemOffset = 0;
-	}
-	
-	// add completion handler if there's still a buffer pool element in use
-	
-	if (s_gxIndexBufferElem != nullptr)
-	{
-		auto * elem = s_gxIndexBufferElem;
-		// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"GxBufferPool Release (gxEndDraw)"];
-		[s_activeRenderPass->cmdbuf addCompletedHandler:
-			^(id<MTLCommandBuffer> _Nonnull)
-			{
-				s_gxIndexBufferPool.freeBuffer(elem);
-			}];
 		
 		s_gxIndexBufferElem = nullptr;
 		s_gxIndexBufferElemOffset = 0;
@@ -1898,7 +2135,7 @@ static void gxEndDraw()
 	
 	// clear textures to avoid freed textures from being reused (prefer to crash instead)
 	
-	// todo : need marker support [s_activeRenderPass->cmdbuf setLabel:@"Clear textures (gxEndDraw)"];
+	[s_activeRenderPass->encoder insertDebugSignpost:@"Clear textures (gxEndDraw)"];
 	for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
 		[s_activeRenderPass->encoder setVertexTexture:nullptr atIndex:i];
 	for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
@@ -1915,10 +2152,17 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 	
 	bindVsInputs(nullptr, 0, 0);
 	
-// todo : add to shaders struct, to avoid constant resource lookups here and at gxFlush
-	Shader genericShader("engine/Generic");
+	Shader genericShader;
 	
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		: *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
 
@@ -1932,6 +2176,8 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 	
+	// set shader parameters for the generic shader
+	
 	if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
 	{
 		shader.setImmediate(
@@ -1942,12 +2188,6 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 			globals.colorClamp);
 	}
 
-	if (globals.gxShaderIsDirty)
-	{
-		if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-			shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
-	}
-
 	// set fragment stage uniform buffers
 
 	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
@@ -1956,7 +2196,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 			continue;
 		
 		[s_activeRenderPass->encoder
-			setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+			setFragmentBytes:shaderElem.psUniformData[i]
 			length:shaderElem.psInfo.uniformBufferSize[i]
 			atIndex:i];
 	}
@@ -2086,7 +2326,12 @@ void gxSetTexture(GxTextureId texture)
 
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 {
-	fassert(false); // todo
+	const int filter_index =
+		filter == GX_SAMPLE_NEAREST ? 0 :
+		filter == GX_SAMPLE_LINEAR ? 1 :
+		2;
+		
+	s_gxTextureSampler = (filter_index << 1) | clamp;
 }
 
 //
@@ -2105,17 +2350,47 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
-	bindVsInputs(vsInputs, numVsInputs, vsStride);
+	if (buffer == nullptr)
+	{
+		// restore buffer bindings to the default GX buffer bindings
+		
+		bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
+	}
+	else
+	{
+		// bind the specified vertex buffer and vertex buffer bindings
+		
+		bindVsInputs(vsInputs, numVsInputs, vsStride);
 	
-	id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
-	[s_activeRenderPass->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
+		if (vsStride == 0)
+		{
+			id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
+			for (int i = 0; i < numVsInputs; ++i)
+				[s_activeRenderPass->encoder setVertexBuffer:metalBuffer offset:vsInputs[i].offset atIndex:i];
+		}
+		else
+		{
+			id <MTLBuffer> metalBuffer = (id <MTLBuffer>)buffer->getMetalBuffer();
+			[s_activeRenderPass->encoder setVertexBuffer:metalBuffer offset:0 atIndex:0];
+		}
+	}
 }
 
-void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements, const GxIndexBuffer * indexBuffer)
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int numIndices, const GxIndexBuffer * indexBuffer)
 {
-	Shader genericShader("engine/Generic");
-
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	Assert(indexBuffer != nullptr);
+	
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		: *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
 
@@ -2127,6 +2402,18 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 
+	// set shader parameters for the generic shader
+	
+	if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+	{
+		shader.setImmediate(
+			shaderElem.params[ShaderCacheElem::kSp_Params].index,
+			s_gxTextureEnabled ? 1.f : 0.f,
+			globals.colorMode,
+			globals.colorPost,
+			globals.colorClamp);
+	}
+	
 	// set fragment stage uniform buffers
 	
 	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
@@ -2135,7 +2422,7 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 			continue;
 		
 		[s_activeRenderPass->encoder
-			setFragmentBytes:shader.m_cacheElem->psUniformData[i]
+			setFragmentBytes:shaderElem.psUniformData[i]
 			length:shaderElem.psInfo.uniformBufferSize[i]
 			atIndex:i];
 	}
@@ -2144,36 +2431,104 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int numElements
 	{
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
 
-		if (indexBuffer != nullptr)
-		{
-			id <MTLBuffer> buffer = (id <MTLBuffer>)indexBuffer->getMetalBuffer();
-			
-			[s_activeRenderPass->encoder
-				drawIndexedPrimitives:metalPrimitiveType
-				indexCount:numElements
-				indexType:
-					indexBuffer->getFormat() == GX_INDEX_16
-					? MTLIndexTypeUInt16
-					: MTLIndexTypeUInt32
-				indexBuffer:buffer
-				indexBufferOffset:0];
-		}
-		else
-		{
-			[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:0 vertexCount:numElements];
-		}
+		id <MTLBuffer> buffer = (id <MTLBuffer>)indexBuffer->getMetalBuffer();
+		
+		const int indexSize =
+			indexBuffer->getFormat() == GX_INDEX_16
+				? 2
+				: 4;
+		const int indexOffset = firstIndex * indexSize;
+		
+		[s_activeRenderPass->encoder
+			drawIndexedPrimitives:metalPrimitiveType
+			indexCount:numIndices
+			indexType:
+				indexBuffer->getFormat() == GX_INDEX_16
+				? MTLIndexTypeUInt16
+				: MTLIndexTypeUInt32
+			indexBuffer:buffer
+			indexBufferOffset:indexOffset];
 	}
 	else
 	{
 		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 	}
 
-	if (&shader == &genericShader)
+	globals.gxShaderIsDirty = false;
+}
+
+void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
+{
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		: *static_cast<Shader*>(globals.shader);
+
+	setShader(shader);
+
+	gxValidatePipelineState();
+
+	gxValidateMatrices();
+
+	gxValidateShaderResources();
+
+	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
+
+	// set shader parameters for the generic shader
+	
+	if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
 	{
-		clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
+		shader.setImmediate(
+			shaderElem.params[ShaderCacheElem::kSp_Params].index,
+			s_gxTextureEnabled ? 1.f : 0.f,
+			globals.colorMode,
+			globals.colorPost,
+			globals.colorClamp);
 	}
 
+	// set fragment stage uniform buffers
+	
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	{
+		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
+			continue;
+		
+		[s_activeRenderPass->encoder
+			setFragmentBytes:shaderElem.psUniformData[i]
+			length:shaderElem.psInfo.uniformBufferSize[i]
+			atIndex:i];
+	}
+	
+	if (shader.isValid())
+	{
+		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
+
+		[s_activeRenderPass->encoder drawPrimitives:metalPrimitiveType vertexStart:firstVertex vertexCount:numVertices];
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+	
 	globals.gxShaderIsDirty = false;
+}
+
+void gxSetCaptureCallback(GxCaptureCallback callback)
+{
+	Assert(s_gxCaptureCallback == nullptr);
+	s_gxCaptureCallback = callback;
+}
+
+void gxClearCaptureCallback()
+{
+	s_gxCaptureCallback = nullptr;
 }
 
 //
@@ -2194,25 +2549,8 @@ void gxValidateShaderResources()
 			auto & texture = i->second;
 			[s_activeRenderPass->encoder setFragmentTexture:texture atIndex:0];
 			
-		#if 0 // todo : add sampler state cache and implement gxSetTextureSampler
-			@autoreleasepool
-			{
-				auto * descriptor = [[MTLSamplerDescriptor new] autorelease];
-			#if 1
-				descriptor.minFilter = MTLSamplerMinMagFilterNearest;
-				descriptor.magFilter = MTLSamplerMinMagFilterNearest;
-				descriptor.mipFilter = MTLSamplerMipFilterNotMipmapped;
-			#else
-				descriptor.minFilter = MTLSamplerMinMagFilterLinear;
-				descriptor.magFilter = MTLSamplerMinMagFilterLinear;
-				descriptor.mipFilter = MTLSamplerMipFilterLinear;
-			#endif
-				descriptor.sAddressMode = MTLSamplerAddressModeClampToEdge;
-				descriptor.tAddressMode = MTLSamplerAddressModeClampToEdge;
-				auto samplerState = [[device newSamplerStateWithDescriptor:descriptor] autorelease];
-				[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
-			}
-		#endif
+			id<MTLSamplerState> samplerState = samplerStates[s_gxTextureSampler];
+			[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:0];
 		}
 	}
 	else
@@ -2220,13 +2558,29 @@ void gxValidateShaderResources()
 		auto * shader = static_cast<Shader*>(globals.shader);
 		auto & cacheElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
 		
+	// todo : look at shader to see how many textures are used
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
+		{
 			if (cacheElem.vsTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
+			
+		// todo : set sampler states at the start of a render pass. or set an invalidation bit
+		//        right now we just set it _always_ to pass validation..
+			id<MTLSamplerState> samplerState = samplerStates[cacheElem.vsTextureSamplers[i]];
+			[s_activeRenderPass->encoder setVertexSamplerState:samplerState atIndex:i];
+		}
 		
+	// todo : look at shader to see how many textures are used
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
+		{
 			if (cacheElem.psTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setFragmentTexture:cacheElem.psTextures[i] atIndex:i];
+			
+		// todo : set sampler states at the start of a render pass. or set an invalidation bit
+		//        right now we just set it _always_ to pass validation..
+			id<MTLSamplerState> samplerState = samplerStates[cacheElem.psTextureSamplers[i]];
+			[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:i];
+		}
 	}
 }
 

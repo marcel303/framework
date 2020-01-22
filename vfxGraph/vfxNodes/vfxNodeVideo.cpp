@@ -180,8 +180,6 @@ void VfxNodeVideo::tick(const float dt)
 			{
 				// check if the output is connected. otherwise the conversion to planar can be avoided
 				
-				// todo : investigate adding a planar RGB output mode media player
-				
 				const VfxPlug * output = tryGetOutput(kOutput_ImageCpuRGBA);
 				
 				if (output->isReferenced())

@@ -1,3 +1,4 @@
+#include "editorSettings.h"
 #include "framework.h"
 #include "imgui-framework.h"
 #include "Path.h"
@@ -69,6 +70,8 @@ struct EditorWindow
 
 	~EditorWindow()
 	{
+		saveEditorSettings(editor);
+		
 		delete editor;
 		editor = nullptr;
 	}
@@ -181,6 +184,8 @@ int main(int argc, char * argv[])
 	
 	auto openEditor = [&](const std::string & path)
 	{
+		saveEditorSettings(editor);
+		
 		delete editor;
 		editor = nullptr;
 		
@@ -312,6 +317,8 @@ int main(int argc, char * argv[])
 		if (editor != nullptr)
 		{
 			editor->path = path;
+			
+			loadEditorSettings(editor);
 		}
 		
 		mitigateHitch = true;
@@ -350,6 +357,8 @@ int main(int argc, char * argv[])
 			editorSurface->getWidth() != desiredEditorSurfaceSx ||
 			editorSurface->getHeight() != desiredEditorSurfaceSy)
 		{
+			saveEditorSettings(editor);
+			
 			delete editorSurface;
 			editorSurface = nullptr;
 			
@@ -633,6 +642,8 @@ int main(int argc, char * argv[])
 						
 						if (ImGui::MenuItem("Close"))
 						{
+							saveEditorSettings(editor);
+							
 							delete editor;
 							editor = nullptr;
 						}

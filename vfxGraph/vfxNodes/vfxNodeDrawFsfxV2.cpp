@@ -25,19 +25,11 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_ACTIVE_UNIFORMS. todo : remove with Framework-provided shader inspection funcitonality
 #include "framework.h"
 #include "Path.h"
 #include "StringEx.h"
 #include "vfxGraph.h"
 #include "vfxNodeDrawFsfxV2.h"
-
-struct Fsfx2_UniformInfo
-{
-	GLenum type;
-	std::string name;
-	GLint location;
-};
 
 static bool initialized = false;
 
@@ -209,50 +201,21 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 		{
 			std::vector<DynamicInput> inputs;
 			
-		// todo : add functions to query shader uniforms
+			auto immediateInfos = shader->getImmediateInfos();
 		
-			GLsizei uniformCount = 0;
-			glGetProgramiv(shader->getProgram(), GL_ACTIVE_UNIFORMS, &uniformCount);
-			checkErrorGL();
-			
-			std::vector<Fsfx2_UniformInfo> uniformInfos;
-			uniformInfos.resize(uniformCount);
-			
-			for (int i = 0; i < uniformCount; ++i)
-			{
-				auto & info = uniformInfos[i];
-				
-				const GLsizei bufferSize = 256;
-				char name[bufferSize];
-				
-				GLsizei length;
-				GLint size;
-				GLenum type;
-				
-				glGetActiveUniform(shader->getProgram(), i, bufferSize, &length, &size, &type, name);
-				checkErrorGL();
-				
-				const GLint location = glGetUniformLocation(shader->getProgram(), name);
-				checkErrorGL();
-				
-				info.type = type;
-				info.name = name;
-				info.location = location;
-			}
-			
-			std::sort(uniformInfos.begin(), uniformInfos.end(),
-				[](Fsfx2_UniformInfo & u1, Fsfx2_UniformInfo & u2)
+			std::sort(immediateInfos.begin(), immediateInfos.end(),
+				[](GxImmediateInfo & u1, GxImmediateInfo & u2)
 				{
 					return u1.name < u2.name; 
 				});
 			
 			int socketIndex = VfxNodeBase::inputs.size();
 
-			for (auto & info : uniformInfos)
+			for (auto & info : immediateInfos)
 			{
-				const GLenum type = info.type;
+				const GX_IMMEDIATE_TYPE type = info.type;
 				const std::string & name = info.name;
-				const GLint location = info.location;
+				const GxImmediateIndex index = info.index;
 				
 				// special?
 				if (String::StartsWith(name, "gaussianKernel"))
@@ -269,7 +232,9 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 				// built-in?
 				if (name == "screenSize" ||
 					name == "colormap" ||
-					name == "params")
+					name == "params" ||
+					name == "drawColor" ||
+					name == "drawSkin")
 					continue;
 				
 				// standardized input?
@@ -282,15 +247,15 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 					name == "opacity")
 					continue;
 				
-				//logDebug("uniform %d. name=%s, type=%d, size=%d", i, name, type, size);
+				//logDebug("immediate %d. name=%s, type=%d, size=%d", i, name, type, size);
 				
-				if (type == GL_FLOAT)
+				if (type == GX_IMMEDIATE_FLOAT)
 				{
 					ShaderInput shaderInput;
 					shaderInput.type = type;
 					shaderInput.socketType = kVfxPlugType_Float;
 					shaderInput.socketIndex = socketIndex++;
-					shaderInput.uniformLocation = location;
+					shaderInput.immediateIndex = index;
 					shaderInputs.push_back(shaderInput);
 					
 					DynamicInput input;
@@ -298,7 +263,7 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 					input.type = kVfxPlugType_Float;
 					inputs.push_back(input);
 				}
-				else if (type == GL_FLOAT_VEC2 || type == GL_FLOAT_VEC3 || type == GL_FLOAT_VEC4)
+				else if (type == GX_IMMEDIATE_VEC2 || type == GX_IMMEDIATE_VEC3 || type == GX_IMMEDIATE_VEC4)
 				{
 					if (String::StartsWith(name, "color"))
 					{
@@ -306,7 +271,7 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 						shaderInput.type = type;
 						shaderInput.socketType = kVfxPlugType_Color;
 						shaderInput.socketIndex = socketIndex++;
-						shaderInput.uniformLocation = location;
+						shaderInput.immediateIndex = index;
 						shaderInputs.push_back(shaderInput);
 					
 						DynamicInput input;
@@ -320,10 +285,10 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 						shaderInput.type = type;
 						shaderInput.socketType = kVfxPlugType_Float;
 						shaderInput.socketIndex = socketIndex;
-						shaderInput.uniformLocation = location;
+						shaderInput.immediateIndex = index;
 						shaderInputs.push_back(shaderInput);
 					
-						const int numElems = type == GL_FLOAT_VEC2 ? 2 : type == GL_FLOAT_VEC3 ? 3 : 4;
+						const int numElems = type == GX_IMMEDIATE_VEC2 ? 2 : type == GX_IMMEDIATE_VEC3 ? 3 : 4;
 						
 						char elementNames[4] = { 'x', 'y', 'z', 'w' };
 						
@@ -338,6 +303,8 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 						socketIndex += numElems;
 					}
 				}
+				/*
+			// todo : add getTextureInfos() to shader
 				else if (type == GL_SAMPLER_2D)
 				{
 					ShaderInput shaderInput;
@@ -352,6 +319,7 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 					input.type = kVfxPlugType_Image;
 					inputs.push_back(input);
 				}
+				*/
 				else
 				{
 				}
@@ -390,7 +358,7 @@ void VfxNodeFsfxV2::updateImageOutput(Surface * source) const
 			imageSurface = new Surface(
 				source->getWidth(),
 				source->getHeight(),
-				source->getFormat() == SURFACE_RGBA16F, false, false);
+				source->getFormat() == SURFACE_RGBA16F, false, false, 1);
 		}
 		
 		source->blitTo(imageSurface);
@@ -462,11 +430,11 @@ void VfxNodeFsfxV2::draw() const
 			
 			for (auto & shaderInput : shaderInputs)
 			{
-				if (shaderInput.type == GL_FLOAT)
+				if (shaderInput.type == GX_IMMEDIATE_FLOAT)
 				{
-					shader->setImmediate(shaderInput.uniformLocation, getInputFloat(shaderInput.socketIndex, 0.f));
+					shader->setImmediate(shaderInput.immediateIndex, getInputFloat(shaderInput.socketIndex, 0.f));
 				}
-				else if (shaderInput.type == GL_FLOAT_VEC2)
+				else if (shaderInput.type == GX_IMMEDIATE_VEC2)
 				{
 					if (shaderInput.socketType == kVfxPlugType_Color)
 					{
@@ -474,19 +442,19 @@ void VfxNodeFsfxV2::draw() const
 						const VfxColor * color = getInputColor(shaderInput.socketIndex, &defaultColor);
 						
 						shader->setImmediate(
-							shaderInput.uniformLocation,
+							shaderInput.immediateIndex,
 							color->r,
 							color->g);
 					}
 					else
 					{
 						shader->setImmediate(
-							shaderInput.uniformLocation,
+							shaderInput.immediateIndex,
 							getInputFloat(shaderInput.socketIndex + 0, 0.f),
 							getInputFloat(shaderInput.socketIndex + 1, 0.f));
 					}
 				}
-				else if (shaderInput.type == GL_FLOAT_VEC3)
+				else if (shaderInput.type == GX_IMMEDIATE_VEC3)
 				{
 					if (shaderInput.socketType == kVfxPlugType_Color)
 					{
@@ -494,7 +462,7 @@ void VfxNodeFsfxV2::draw() const
 						const VfxColor * color = getInputColor(shaderInput.socketIndex, &defaultColor);
 						
 						shader->setImmediate(
-							shaderInput.uniformLocation,
+							shaderInput.immediateIndex,
 							color->r,
 							color->g,
 							color->b);
@@ -502,13 +470,13 @@ void VfxNodeFsfxV2::draw() const
 					else
 					{
 						shader->setImmediate(
-							shaderInput.uniformLocation,
+							shaderInput.immediateIndex,
 							getInputFloat(shaderInput.socketIndex + 0, 0.f),
 							getInputFloat(shaderInput.socketIndex + 1, 0.f),
 							getInputFloat(shaderInput.socketIndex + 2, 0.f));
 					}
 				}
-				else if (shaderInput.type == GL_FLOAT_VEC4)
+				else if (shaderInput.type == GX_IMMEDIATE_VEC4)
 				{
 					if (shaderInput.socketType == kVfxPlugType_Color)
 					{
@@ -516,7 +484,7 @@ void VfxNodeFsfxV2::draw() const
 						const VfxColor * color = getInputColor(shaderInput.socketIndex, &defaultColor);
 						
 						shader->setImmediate(
-							shaderInput.uniformLocation,
+							shaderInput.immediateIndex,
 							color->r,
 							color->g,
 							color->b,
@@ -525,13 +493,15 @@ void VfxNodeFsfxV2::draw() const
 					else
 					{
 						shader->setImmediate(
-							shaderInput.uniformLocation,
+							shaderInput.immediateIndex,
 							getInputFloat(shaderInput.socketIndex + 0, 0.f),
 							getInputFloat(shaderInput.socketIndex + 1, 0.f),
 							getInputFloat(shaderInput.socketIndex + 2, 0.f),
 							getInputFloat(shaderInput.socketIndex + 3, 0.f));
 					}
 				}
+			// todo : add getTextureInfos() to shader
+				/*
 				else if (shaderInput.type == GL_SAMPLER_2D)
 				{
 					const VfxImageBase * image = getInputImage(shaderInput.socketIndex, nullptr);
@@ -541,6 +511,7 @@ void VfxNodeFsfxV2::draw() const
 						textureSlot++,
 						image ? image->getTexture() : 0);
 				}
+				*/
 				else
 				{
 					Assert(false);

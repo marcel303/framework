@@ -54,7 +54,7 @@
 #endif
 
 #if !defined(USE_GLYPH_ATLAS)
-	#if !USE_LEGACY_OPENGL
+	#if (ENABLE_OPENGL && !USE_LEGACY_OPENGL) || ENABLE_METAL
 		#define USE_GLYPH_ATLAS 1
 	#else
 		#define USE_GLYPH_ATLAS 0 // cannot use glyph cache, as it uses R8 texture storage
@@ -62,7 +62,7 @@
 #endif
 
 #if !defined(ENABLE_MSDF_FONTS)
-	#if !USE_LEGACY_OPENGL
+	#if (ENABLE_OPENGL && !USE_LEGACY_OPENGL) || ENABLE_METAL
 		#define ENABLE_MSDF_FONTS 1
 	#else
 		#define ENABLE_MSDF_FONTS 0 // cannot use MSDF fonts as the shader is too complex for the legacy OpenGL mode
@@ -92,6 +92,13 @@
 	#define ENABLE_EVENTS_WORKAROUND 1
 #else
 	#define ENABLE_EVENTS_WORKAROUND 0
+#endif
+
+#if ENABLE_OPENGL
+	#include "gx-opengl/shaderCache.h"
+#endif
+#if ENABLE_METAL
+	#include "gx-metal/shaderCache.h"
 #endif
 
 #ifndef WIN32
@@ -481,23 +488,6 @@ public:
 
 //
 
-#if ENABLE_OPENGL
-
-struct VsInput
-{
-	int id;
-	int components;
-	int type;
-	bool normalize;
-	int offset;
-};
-
-void bindVsInputs(const VsInput * vsInputs, int numVsInputs, int stride);
-
-#endif
-
-//
-
 #if USE_STBFONT || ENABLE_MSDF_FONTS
 
 class StbFont
@@ -528,10 +518,11 @@ public:
 	int sy;
 	int gridSx;
 	int gridSy;
+	bool mipmapped;
 	
 	TextureCacheElem();
 	void free();
-	void load(const char * filename, int gridSx, int gridSy);
+	void load(const char * filename, int gridSx, int gridSy, bool mipmapped);
 	void reload();
 };
 
@@ -544,6 +535,7 @@ public:
 		std::string name;
 		int gridSx;
 		int gridSy;
+		bool mipmapped;
 		
 		inline bool operator<(const Key & other) const
 		{
@@ -553,6 +545,8 @@ public:
 				return gridSx < other.gridSx;
 			if (gridSy != other.gridSy)
 				return gridSy < other.gridSy;
+			if (mipmapped != other.mipmapped)
+				return mipmapped < other.mipmapped;
 			return false;
 		}
 	};
@@ -562,87 +556,8 @@ public:
 	
 	void clear();
 	void reload();
-	TextureCacheElem & findOrCreate(const char * name, int gridSx, int gridSy);
+	TextureCacheElem & findOrCreate(const char * name, int gridSx, int gridSy, bool mipmapped);
 };
-
-//
-
-#if ENABLE_OPENGL
-
-class ShaderCacheElem
-{
-public:
-	enum ShaderParam
-	{
-		kSp_ModelViewMatrix,
-		kSp_ModelViewProjectionMatrix,
-		kSp_ProjectionMatrix,
-		kSp_SkinningMatrices,
-		kSp_Texture,
-		kSp_Params,
-		kSp_ShadingParams,
-		kSp_GradientInfo,
-		kSp_GradientMatrix,
-		kSp_TextureMatrix,
-		kSp_MAX
-	};
-
-	std::string name;
-	std::string vs;
-	std::string ps;
-	std::string outputs;
-	
-	GLuint program;
-	
-	int version;
-	std::vector<std::string> errorMessages;
-
-	struct
-	{
-		GLint index;
-
-		void set(GLint index)
-		{
-			this->index = index;
-		}
-	} params[kSp_MAX];
-
-	ShaderCacheElem();
-	void free();
-	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
-	void reload();
-};
-
-class ShaderCache
-{
-public:
-	class Key
-	{
-	public:
-		std::string name;
-		std::string outputs;
-		
-		inline bool operator<(const Key & other) const
-		{
-			if (name != other.name)
-				return name < other.name;
-			if (outputs != other.outputs)
-				return outputs < other.outputs;
-			return false;
-		}
-	};
-	
-	typedef std::map<Key, ShaderCacheElem> Map;
-	
-	Map m_map;
-	
-	void clear();
-	void reload();
-	void handleSourceChanged(const char * name);
-	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
-};
-
-#endif
 
 //
 

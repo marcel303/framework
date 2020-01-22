@@ -27,9 +27,12 @@
 
 #include "framework.h"
 
-#if ENABLE_OPENGL && !USE_LEGACY_OPENGL
+#if ENABLE_OPENGL
+
+#if !USE_LEGACY_OPENGL
 
 #include "data/engine/ShaderCommon.txt" // VS_ constants
+#include "gx_mesh.h"
 #include "internal.h"
 #include "Quat.h"
 #include "shaders.h" // registerBuiltinShaders
@@ -46,6 +49,8 @@
 #else
 	typedef unsigned short glindex_t;
 #endif
+
+static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 
 extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
 
@@ -122,7 +127,7 @@ GX_MATRIX gxGetMatrixMode()
 {
 	if (s_gxMatrixStack == &s_gxModelView)
 		return GX_MODELVIEW;
-	if (s_gxMatrixStack == &s_gxProjection)
+	else if (s_gxMatrixStack == &s_gxProjection)
 		return GX_PROJECTION;
 	else
 	{
@@ -193,10 +198,7 @@ void gxMultMatrixf(const float * _m)
 
 void gxTranslatef(float x, float y, float z)
 {
-	Mat4x4 m;
-	m.MakeTranslation(x, y, z);
-	
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get().Translate(x, y, z);
 }
 
 void gxRotatef(float angle, float x, float y, float z)
@@ -209,10 +211,7 @@ void gxRotatef(float angle, float x, float y, float z)
 
 void gxScalef(float x, float y, float z)
 {
-	Mat4x4 m;
-	m.MakeScaling(x, y, z);
-	
-	s_gxMatrixStack->getRw() = s_gxMatrixStack->get() * m;
+	s_gxMatrixStack->getRw() = s_gxMatrixStack->get().Scale(x, y, z);
 }
 
 void gxValidateMatrices()
@@ -265,7 +264,6 @@ struct GxVertex
 	float tx, ty;
 };
 
-#define GX_USE_BUFFER_RENAMING 0
 #define GX_BUFFER_DRAW_MODE GL_DYNAMIC_DRAW
 //#define GX_BUFFER_DRAW_MODE GL_STREAM_DRAW
 #if defined(MACOS)
@@ -273,16 +271,14 @@ struct GxVertex
 #else
     #define GX_USE_ELEMENT_ARRAY_BUFFER 0
 #endif
-#define GX_VAO_COUNT 1
 
-static Shader s_gxShader;
-static GLuint s_gxVertexArrayObject[GX_VAO_COUNT] = { };
-static GLuint s_gxVertexBufferObject[GX_VAO_COUNT] = { };
-static GLuint s_gxIndexBufferObject[GX_VAO_COUNT] = { };
+static GLuint s_gxVertexArrayObject = 0;
+static GLuint s_gxVertexBufferObject = 0;
+static GLuint s_gxIndexBufferObject = 0;
 static GxVertex s_gxVertexBuffer[1024*16];
 
 static GX_PRIMITIVE_TYPE s_gxPrimitiveType = GX_INVALID_PRIM;
-static GxVertex * s_gxVertices = 0;
+static GxVertex * s_gxVertices = nullptr;
 static int s_gxVertexCount = 0;
 static int s_gxMaxVertexCount = 0;
 static int s_gxPrimitiveSize = 0;
@@ -292,14 +288,19 @@ static bool s_gxTextureEnabled = false;
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
 
-static const VsInput vsInputs[] =
+// for gxSetVertexBuffer, gxDrawIndexedPrimitives
+static GLuint s_gxVertexArrayObjectForCustomDraw = 0;
+
+static GxCaptureCallback s_gxCaptureCallback = nullptr;
+
+static const GxVertexInput s_gxVsInputs[] =
 {
-	{ VS_POSITION, 4, GL_FLOAT, 0, offsetof(GxVertex, px) },
-	{ VS_NORMAL,   3, GL_FLOAT, 0, offsetof(GxVertex, nx) },
-	{ VS_COLOR,    4, GL_FLOAT, 0, offsetof(GxVertex, cx) },
-	{ VS_TEXCOORD, 2, GL_FLOAT, 0, offsetof(GxVertex, tx) }
+	{ VS_POSITION, 4, GX_ELEMENT_FLOAT32, 0, offsetof(GxVertex, px), 0 },
+	{ VS_NORMAL,   3, GX_ELEMENT_FLOAT32, 0, offsetof(GxVertex, nx), 0 },
+	{ VS_COLOR,    4, GX_ELEMENT_FLOAT32, 0, offsetof(GxVertex, cx), 0 },
+	{ VS_TEXCOORD, 2, GX_ELEMENT_FLOAT32, 0, offsetof(GxVertex, tx), 0 }
 };
-const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
+const int numGxVsInputs = sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]);
 
 void gxEmitVertex();
 
@@ -309,7 +310,7 @@ void gxInitialize()
 	
 	registerBuiltinShaders();
 
-	s_gxShader.load("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
+	Shader("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
 	
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
@@ -317,33 +318,39 @@ void gxInitialize()
 	s_gxVertex.cz = 1.f;
 	s_gxVertex.cw = 1.f;
 
-	fassert(s_gxVertexBufferObject[0] == 0);
-	glGenBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
-	
-	fassert(s_gxIndexBufferObject[0] == 0);
-	glGenBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
-	
 	// create vertex array
-	fassert(s_gxVertexArrayObject[0] == 0);
-	glGenVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
+	
+	fassert(s_gxVertexBufferObject == 0);
+	glGenBuffers(1, &s_gxVertexBufferObject);
+	checkErrorGL();
+	
+	fassert(s_gxIndexBufferObject == 0);
+	glGenBuffers(1, &s_gxIndexBufferObject);
+	checkErrorGL();
+	
+	fassert(s_gxVertexArrayObject == 0);
+	glGenVertexArrays(1, &s_gxVertexArrayObject);
 	checkErrorGL();
 
-	for (int i = 0; i < GX_VAO_COUNT; ++i)
+	glBindVertexArray(s_gxVertexArrayObject);
+	checkErrorGL();
 	{
-		glBindVertexArray(s_gxVertexArrayObject[i]);
+	#if GX_USE_ELEMENT_ARRAY_BUFFER
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
 		checkErrorGL();
-		{
-			#if GX_USE_ELEMENT_ARRAY_BUFFER
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[i]);
-			checkErrorGL();
-			#endif
-			glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[i]);
-			checkErrorGL();
-			bindVsInputs(vsInputs, numVsInputs, sizeof(GxVertex));
-		}
+	#endif
+	
+		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
+		checkErrorGL();
+		
+		bindVsInputs(s_gxVsInputs, numGxVsInputs, sizeof(GxVertex));
 	}
-
 	glBindVertexArray(0);
+	checkErrorGL();
+	
+	// create vertex array for custom draw
+	fassert(s_gxVertexArrayObjectForCustomDraw == 0);
+	glGenVertexArrays(1, &s_gxVertexArrayObjectForCustomDraw);
 	checkErrorGL();
 	
 #if ENABLE_DESKTOP_OPENGL
@@ -359,22 +366,28 @@ void gxShutdown()
 	glDisable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 #endif
 	
-	if (s_gxVertexArrayObject[0] != 0)
+	if (s_gxVertexArrayObjectForCustomDraw != 0)
 	{
-		glDeleteVertexArrays(GX_VAO_COUNT, s_gxVertexArrayObject);
-		memset(s_gxVertexArrayObject, 0, sizeof(s_gxVertexArrayObject));
+		glDeleteVertexArrays(1, &s_gxVertexArrayObjectForCustomDraw);
+		s_gxVertexArrayObjectForCustomDraw = 0;
 	}
 	
-	if (s_gxVertexBufferObject[0] != 0)
+	if (s_gxVertexArrayObject != 0)
 	{
-		glDeleteBuffers(GX_VAO_COUNT, s_gxVertexBufferObject);
-		memset(s_gxVertexBufferObject, 0, sizeof(s_gxVertexBufferObject));
+		glDeleteVertexArrays(1, &s_gxVertexArrayObject);
+		s_gxVertexArrayObject = 0;
+	}
+	
+	if (s_gxVertexBufferObject != 0)
+	{
+		glDeleteBuffers(1, &s_gxVertexBufferObject);
+		s_gxVertexBufferObject = 0;
 	}
 
-	if (s_gxIndexBufferObject[0] != 0)
+	if (s_gxIndexBufferObject != 0)
 	{
-		glDeleteBuffers(GX_VAO_COUNT, s_gxIndexBufferObject);
-		memset(s_gxIndexBufferObject, 0, sizeof(s_gxIndexBufferObject));
+		glDeleteBuffers(1, &s_gxIndexBufferObject);
+		s_gxIndexBufferObject = 0;
 	}
 	
 	s_gxPrimitiveType = GX_INVALID_PRIM;
@@ -418,41 +431,94 @@ static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
 	}
 }
 
+static void doCapture(const bool endOfBatch)
+{
+	s_gxCaptureCallback(
+		s_gxVertices,
+		s_gxVertexCount * sizeof(GxVertex),
+		s_gxVsInputs,
+		sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]),
+		sizeof(GxVertex),
+		s_gxPrimitiveType,
+		s_gxVertexCount,
+		endOfBatch);
+
+	if (endOfBatch)
+	{
+		s_gxVertices = nullptr;
+		s_gxVertexCount = 0;
+	}
+	else
+	{
+		switch (s_gxPrimitiveType)
+		{
+			case GX_LINE_LOOP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 1;
+				break;
+			case GX_LINE_STRIP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 1;
+				break;
+			case GX_TRIANGLE_FAN:
+				s_gxVertices[0] = s_gxVertices[0];
+				s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 2;
+				break;
+			case GX_TRIANGLE_STRIP:
+				s_gxVertices[0] = s_gxVertices[s_gxVertexCount - 2];
+				s_gxVertices[1] = s_gxVertices[s_gxVertexCount - 1];
+				s_gxVertexCount = 2;
+				break;
+			default:
+				s_gxVertexCount = 0;
+		}
+	}
+}
+
 static void gxFlush(bool endOfBatch)
 {
+	if (s_gxCaptureCallback != nullptr)
+	{
+		doCapture(endOfBatch);
+		return;
+	}
+	
 	fassert(!globals.shader || globals.shader->getType() == SHADER_VSPS);
 
-	if (s_gxVertexCount)
+	if (s_gxVertexCount != 0)
 	{
 		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
 
-		Shader genericShader("engine/Generic");
+		Shader genericShader;
+	
+		const bool useGenericShader = (globals.shader == nullptr);
 		
-		Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+		if (useGenericShader)
+			genericShader = Shader("engine/Generic");
+		
+		Shader & shader =
+			useGenericShader
+			? genericShader
+			:  *static_cast<Shader*>(globals.shader);
 
 		setShader(shader);
 		
 		gxValidateMatrices();
-		
-		static int vaoIndex = 0;
-		vaoIndex = (vaoIndex + 1) % GX_VAO_COUNT;
 
-		glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
+		glBindVertexArray(s_gxVertexArrayObject);
 		checkErrorGL();
-
-		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject[vaoIndex]);
-		#if GX_USE_BUFFER_RENAMING
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, 0, GX_BUFFER_DRAW_MODE);
-		#endif
+		
+		glBindBuffer(GL_ARRAY_BUFFER, s_gxVertexBufferObject);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GxVertex) * s_gxVertexCount, s_gxVertices, GX_BUFFER_DRAW_MODE);
 		checkErrorGL();
 		
 		bool indexed = false;
-		glindex_t * indices = 0;
+		glindex_t * indices = nullptr;
 		int numElements = s_gxVertexCount;
 		int numIndices = 0;
 
-	#if !GX_USE_ELEMENT_ARRAY_BUFFER || GX_VAO_COUNT > 1
+	#if !GX_USE_ELEMENT_ARRAY_BUFFER
 		bool needToRegenerateIndexBuffer = true;
 	#else
 		bool needToRegenerateIndexBuffer = false;
@@ -471,6 +537,10 @@ static void gxFlush(bool endOfBatch)
 		if (s_gxPrimitiveType == GX_QUADS)
 		{
 			fassert(s_gxVertexCount <= 65536);
+		
+		#if GX_USE_ELEMENT_ARRAY_BUFFER
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject);
+		#endif
 			
 			// todo: use triangle strip + compute index buffer once at init time
 			
@@ -498,10 +568,6 @@ static void gxFlush(bool endOfBatch)
 				}
 			
 			#if GX_USE_ELEMENT_ARRAY_BUFFER
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_gxIndexBufferObject[vaoIndex]);
-				#if GX_USE_BUFFER_RENAMING
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, 0, GX_BUFFER_DRAW_MODE);
-				#endif
 				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(glindex_t) * numIndices, indices, GX_BUFFER_DRAW_MODE);
 				checkErrorGL();
 			#endif
@@ -537,11 +603,11 @@ static void gxFlush(bool endOfBatch)
 
 			if (indexed)
 			{
-				#if GX_USE_ELEMENT_ARRAY_BUFFER
+			#if GX_USE_ELEMENT_ARRAY_BUFFER
 				glDrawElements(glPrimitiveType, numElements, INDEX_TYPE, 0);
-				#else
+			#else
 				glDrawElements(glPrimitiveType, numElements, INDEX_TYPE, indices);
-				#endif
+			#endif
 				checkErrorGL();
 			}
 			else
@@ -592,7 +658,7 @@ static void gxFlush(bool endOfBatch)
 	}
 	
 	if (endOfBatch)
-		s_gxVertices = 0;
+		s_gxVertices = nullptr;
 }
 
 void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
@@ -643,10 +709,17 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 {
 	fassert(primitiveType == GX_POINTS || primitiveType == GX_LINES || primitiveType == GX_TRIANGLES || primitiveType == GX_TRIANGLE_STRIP);
 	
-// todo : add to shaders struct, to avoid constant resource lookups here and at gxFlush
-	Shader genericShader("engine/Generic");
+	Shader genericShader;
 	
-	Shader & shader = globals.shader ? *static_cast<Shader*>(globals.shader) : genericShader;
+	const bool useGenericShader = (globals.shader == nullptr);
+
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		:  *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
 
@@ -654,8 +727,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	//
 
-	const int vaoIndex = 0;
-	glBindVertexArray(s_gxVertexArrayObject[vaoIndex]);
+	glBindVertexArray(s_gxVertexArrayObject);
 	checkErrorGL();
 
 	//
@@ -684,6 +756,10 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 	{
 		glDrawArrays(toOpenGLPrimitiveType(primitiveType), 0, numVertices);
 		checkErrorGL();
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
 	}
 
 	globals.gxShaderIsDirty = false;
@@ -804,6 +880,7 @@ void gxVertex4fv(const float * v)
 void gxSetTexture(GxTextureId texture)
 {
 	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
 	
 	if (texture)
 	{
@@ -857,15 +934,20 @@ void gxGetTextureSize(GxTextureId texture, int & width, int & height)
 {
 	// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
 
+	if (texture == 0)
+	{
+		width = 0;
+		height = 0;
+	}
 /*
-	if (glGetTextureLevelParameteriv != nullptr)
+	else if (glGetTextureLevelParameteriv != nullptr)
 	{
 		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &width);
 		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &height);
 		checkErrorGL();
 	}
-	else
 */
+	else
 	{
 		GLuint restoreTexture;
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
@@ -910,15 +992,451 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	checkErrorGL();
 	
 	// translate OpenGL format to GX format
+	
+	if (internalFormat == GL_R8) return GX_R8_UNORM;
+	else if (internalFormat == GL_R16) return GX_R16_UNORM;
+	else if (internalFormat == GL_RG8) return GX_RG8_UNORM;
+	else if (internalFormat == GL_R16F) return GX_R16_FLOAT;
+	else if (internalFormat == GL_R32F) return GX_R32_FLOAT;
+	else if (internalFormat == GL_RGB32F) return GX_RGB32_FLOAT;
+	else if (internalFormat == GL_RGBA32F) return GX_RGBA32_FLOAT;
+	else if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
+	else if (internalFormat == GL_RGBA8) return GX_RGBA8_UNORM;
+	else
+	{
+		Assert(false);
+		return GX_UNKNOWN_FORMAT;
+	}
+}
+
+#else // USE_LEGACY_OPENGL
+
+#include "internal.h"
+#include "shaders.h" // registerBuiltinShaders
+
+void gxInitialize()
+{
+	registerBuiltinShaders();
+}
+
+void gxShutdown()
+{
+}
+
+void gxGetMatrixf(GX_MATRIX mode, float * m)
+{
+	switch (mode)
+	{
+	case GX_PROJECTION:
+		glGetFloatv(GL_PROJECTION_MATRIX, m);
+		checkErrorGL();
+		break;
+
+	case GX_MODELVIEW:
+		glGetFloatv(GL_MODELVIEW_MATRIX, m);
+		checkErrorGL();
+		break;
+
+	default:
+		fassert(false);
+		break;
+	}
+}
+
+void gxSetMatrixf(GX_MATRIX mode, const float * m)
+{
+	const GX_MATRIX restoreMatrixMode = gxGetMatrixMode();
+	{
+		switch (mode)
+		{
+		case GX_PROJECTION:
+			glMatrixMode(GL_PROJECTION);
+			glLoadMatrixf(m);
+			checkErrorGL();
+			break;
+
+		case GX_MODELVIEW:
+			glMatrixMode(GL_MODELVIEW);
+			glLoadMatrixf(m);
+			checkErrorGL();
+			break;
+
+		default:
+			fassert(false);
+			break;
+		}
+	}
+	gxMatrixMode(restoreMatrixMode);
+}
+
+GX_MATRIX gxGetMatrixMode()
+{
+	GLint mode = 0;
+	
+	glGetIntegerv(GL_MATRIX_MODE, &mode);
+	checkErrorGL();
+	
+	return (GX_MATRIX)mode;
+}
+
+void gxBegin(GLenum type)
+{
+	glBegin(type);
+	checkErrorGL();
+}
+
+void gxEnd()
+{
+	glEnd();
+	checkErrorGL();
+}
+
+void gxSetTexture(GxTextureId texture)
+{
+	if (texture)
+	{
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture);
+		checkErrorGL();
+	}
+	else
+	{
+		glDisable(GL_TEXTURE_2D);
+		checkErrorGL();
+	}
+}
+
+static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter)
+{
+	if (filter == GX_SAMPLE_NEAREST)
+		return GL_NEAREST;
+	else if (filter == GX_SAMPLE_LINEAR)
+		return GL_LINEAR;
+	else
+	{
+		fassert(false);
+		return GL_NEAREST;
+	}
+}
+
+void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
+{
+	if (glIsEnabled(GL_TEXTURE_2D))
+	{
+		const GLenum openglFilter = toOpenGLSampleFilter(filter);
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglFilter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, openglFilter);
+		checkErrorGL();
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+		checkErrorGL();
+	}
+}
+
+void gxGetTextureSize(GxTextureId texture, int & width, int & height)
+{
+	// todo : use glGetTextureLevelParameteriv. upgrade GLEW ?
+
+	if (texture == 0)
+	{
+		width = 0;
+		height = 0;
+	}
+/*
+	else if (glGetTextureLevelParameteriv != nullptr)
+	{
+		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTextureLevelParameteriv(texture, 0, GL_TEXTURE_HEIGHT, &height);
+		checkErrorGL();
+	}
+*/
+	else
+	{
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, texture);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &width);
+		glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &height);
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	}
+}
+
+GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
+{
+	int internalFormat = 0;
+	
+	// capture current OpenGL states before we change them
+
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	checkErrorGL();
+
+	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &internalFormat);
+	checkErrorGL();
+
+	// restore previous OpenGL states
+
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	checkErrorGL();
+	
+	// translate OpenGL format to GX format
 
 	if (internalFormat == GL_R8) return GX_R8_UNORM;
-	if (internalFormat == GL_RG8) return GX_RG8_UNORM;
-	if (internalFormat == GL_R16F) return GX_R16_FLOAT;
-	if (internalFormat == GL_R32F) return GX_R32_FLOAT;
-	if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
-	if (internalFormat == GL_RGBA8) return GX_RGBA8_UNORM;
+	else if (internalFormat == GL_R16) return GX_R16_UNORM;
+	else if (internalFormat == GL_RG8) return GX_RG8_UNORM;
+	else if (internalFormat == GL_R16F) return GX_R16_FLOAT;
+	else if (internalFormat == GL_R32F) return GX_R32_FLOAT;
+	else if (internalFormat == GL_RGB32F) return GX_RGB32_FLOAT;
+	else if (internalFormat == GL_RGBA32F) return GX_RGBA32_FLOAT;
+	else if (internalFormat == GL_RGB8) return GX_RGB8_UNORM;
+	else if (internalFormat == GL_RGBA8) return GX_RGBA8_UNORM;
+	else
+	{
+		Assert(false);
+		return GX_UNKNOWN_FORMAT;
+	}
 
 	return GX_UNKNOWN_FORMAT;
 }
+
+#endif
+
+#if USE_LEGACY_OPENGL
+
+#include "gx_mesh.h" // GxVertexInput
+
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
+{
+	Assert(false); // todo : implement gxDrawIndexedPrimitives using vertex attrib arrays
+}
+
+void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
+{
+	Assert(false); // todo : implement gxDrawPrimitives using vertex attrib arrays
+}
+
+void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
+{
+	Assert(false); // todo : implement gxSetVertexBuffer using vertex attrib arrays
+}
+
+void gxSetCaptureCallback(GxCaptureCallback callback)
+{
+	AssertMsg(false, "gxSetCaptureCallback is not supported when using legacy OpenGL");
+}
+
+void gxClearCaptureCallback()
+{
+	AssertMsg(false, "gxClearCaptureCallback is not supported when using legacy OpenGL");
+}
+
+#else
+
+#include "gx_mesh.h" // GxVertexInput
+
+static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
+{
+	// make sure to disable old attributes, to avoid reading from stale memory
+
+// todo : add a constant for the maximum number of vertex inputs
+
+	for (int i = 0; i < 16; ++i)
+	{
+		glDisableVertexAttribArray(i);
+		checkErrorGL();
+	}
+	
+	for (int i = 0; i < numVsInputs; ++i)
+	{
+		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
+		
+		const GLenum type =
+			vsInputs[i].type == GX_ELEMENT_FLOAT32 ? GL_FLOAT :
+			vsInputs[i].type == GX_ELEMENT_UINT8 ? GL_UNSIGNED_BYTE :
+			vsInputs[i].type == GX_ELEMENT_UINT16 ? GL_UNSIGNED_SHORT :
+			GL_INVALID_ENUM;
+
+		Assert(type != GL_INVALID_ENUM);
+		if (type == GL_INVALID_ENUM)
+			continue;
+		
+		const int stride = vsStride ? vsStride : vsInputs[i].stride;
+		Assert(stride != 0);
+		if (stride == 0)
+			continue;
+		
+		glEnableVertexAttribArray(vsInputs[i].id);
+		checkErrorGL();
+		
+		glVertexAttribPointer(vsInputs[i].id, vsInputs[i].numComponents, type, vsInputs[i].normalize, stride, (void*)(intptr_t)vsInputs[i].offset);
+		checkErrorGL();
+	}
+}
+
+void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
+{
+	if (buffer == nullptr)
+		return;
+		
+	// bind the specified vertex buffer and vertex buffer bindings
+	
+	glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
+	checkErrorGL();
+	
+	glBindBuffer(GL_ARRAY_BUFFER, buffer->getOpenglVertexArray());
+	checkErrorGL();
+	
+	bindVsInputs(vsInputs, numVsInputs, vsStride);
+}
+
+void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
+{
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		:  *static_cast<Shader*>(globals.shader);
+
+	setShader(shader);
+
+	gxValidateMatrices();
+
+	const GLenum indexType =
+		indexBuffer->getFormat() == GX_INDEX_16
+		? GL_UNSIGNED_SHORT
+		: GL_UNSIGNED_INT;
+
+	const int numIndices =
+		in_numIndices == 0
+		? indexBuffer->getNumIndices()
+		: in_numIndices;
+
+	const ShaderCacheElem & shaderElem = shader.getCacheElem();
+	
+	if (shader.isValid())
+	{
+		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+		{
+			shader.setImmediate(
+				shaderElem.params[ShaderCacheElem::kSp_Params].index,
+				s_gxTextureEnabled ? 1 : 0,
+				globals.colorMode,
+				globals.colorPost,
+				globals.colorClamp);
+		}
+
+		if (globals.gxShaderIsDirty)
+		{
+			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+		}
+		
+		//
+
+		glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
+		checkErrorGL();
+		
+		Assert(indexBuffer->getOpenglIndexArray() != 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->getOpenglIndexArray());
+		checkErrorGL();
+		
+		const int indexSize =
+			indexBuffer->getFormat() == GX_INDEX_16
+			? 2
+			: 4;
+		
+		const int indexOffset = firstIndex * indexSize;
+		
+		const GLenum glPrimitiveType = toOpenGLPrimitiveType(type);
+		
+		glDrawElements(glPrimitiveType, numIndices, indexType, (void*)(uintptr_t)indexOffset);
+		checkErrorGL();
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+
+	globals.gxShaderIsDirty = false;
+}
+
+void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
+{
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		:  *static_cast<Shader*>(globals.shader);
+
+	setShader(shader);
+
+	gxValidateMatrices();
+
+	const ShaderCacheElem & shaderElem = shader.getCacheElem();
+	
+	if (shader.isValid())
+	{
+		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+		{
+			shader.setImmediate(
+				shaderElem.params[ShaderCacheElem::kSp_Params].index,
+				s_gxTextureEnabled ? 1 : 0,
+				globals.colorMode,
+				globals.colorPost,
+				globals.colorClamp);
+		}
+
+		if (globals.gxShaderIsDirty)
+		{
+			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+		}
+		
+		//
+		
+		glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
+		checkErrorGL();
+		
+		glDrawArrays(toOpenGLPrimitiveType(type), firstVertex, numVertices);
+		checkErrorGL();
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+
+	globals.gxShaderIsDirty = false;
+}
+
+void gxSetCaptureCallback(GxCaptureCallback callback)
+{
+	Assert(s_gxCaptureCallback == nullptr);
+	s_gxCaptureCallback = callback;
+}
+
+void gxClearCaptureCallback()
+{
+	s_gxCaptureCallback = nullptr;
+}
+
+#endif
 
 #endif

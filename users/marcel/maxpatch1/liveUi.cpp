@@ -1,49 +1,12 @@
 #include "Debugging.h"
 #include "framework.h"
 #include "liveUi.h"
+#include "liveUiColors.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "oscSender.h"
 #include <math.h>
 
-// todo : move LiveUiColors to its own header file
-
-struct LiveUiColors
-{
-	static Color makeColor(const int in_r, const int in_g, const int in_b)
-	{
-		return Color(in_r / 255.f, in_g / 255.f, in_b / 255.f);
-	}
-	
-#if 1
-	Color text = makeColor(40, 40, 40);
-	
-	Color gaugeFilled = makeColor(200, 100, 100);
-	Color gaugeEmpty = makeColor(100, 100, 200);
-	
-	Color elemBackgroundActive = makeColor(190, 190, 190);
-	Color elemBackgroundHover = makeColor(210, 210, 210);
-	Color elemBackground = makeColor(200, 200, 200);
-	
-	Color separator = makeColor(200, 200, 200);
-	
-	Color tooltipBackground = makeColor(200, 200, 100);
-	Color tooltipText = makeColor(20, 20, 20);
-#else
-	Color text = makeColor(200, 200, 200);
-	
-	Color gaugeFilled = makeColor(200, 0, 0);
-	Color gaugeEmpty = makeColor(100, 100, 100);
-	
-	Color elemBackgroundActive = makeColor(40, 40, 40);
-	Color elemBackgroundHover = makeColor(50, 50, 50);
-	Color elemBackground = makeColor(60, 60, 60);
-	
-	Color separator = makeColor(20, 20, 20);
-	
-	Color tooltipBackground = makeColor(0, 0, 40);
-	Color tooltipText = makeColor(200, 200, 200);
-#endif
-};
+//
 
 static LiveUiColors colors;
 
@@ -117,8 +80,32 @@ LiveUi::~LiveUi()
 	shut();
 }
 
+GxTextureId LiveUi::generateColorPickerTexture(const float saturation)
+{
+	uint8_t textureData[128][128][4];
+	
+	for (int y = 0; y < 128; ++y)
+	{
+		for (int x = 0; x < 128; ++x)
+		{
+			const float hue = (x + .5f) / 128.f;
+			const float luminance = 1.f - (y + .5f) / 128.f;
+			const Color color = Color::fromHSL(hue, saturation, luminance);
+			textureData[y][x][0] = color.r * 255.f;
+			textureData[y][x][1] = color.g * 255.f;
+			textureData[y][x][2] = color.b * 255.f;
+			textureData[y][x][3] = 255;
+		}
+	}
+
+	return createTextureFromRGBA8(textureData, 128, 128, true, true);
+}
+
 void LiveUi::shut()
 {
+	freeTexture(colorPickerTextureSat0);
+	freeTexture(colorPickerTextureSat1);
+	
 	for (auto *& sender : oscSenders)
 	{
 		delete sender;
@@ -1372,25 +1359,13 @@ void LiveUi::draw() const
 			
 			const float saturation = e.value4.y;
 			
-			uint8_t textureData[128][128][4];
-			for (int y = 0; y < 128; ++y)
+			if (colorPickerTextureSat0 == 0)
 			{
-				for (int x = 0; x < 128; ++x)
-				{
-					const float hue = (x + .5f) / 128.f;
-					const float luminance = 1.f - (y + .5f) / 128.f;
-					const Color color = Color::fromHSL(hue, saturation, luminance);
-					textureData[y][x][0] = color.r * 255.f;
-					textureData[y][x][1] = color.g * 255.f;
-					textureData[y][x][2] = color.b * 255.f;
-					textureData[y][x][3] = 255;
-				}
+				colorPickerTextureSat0 = generateColorPickerTexture(0.f);
+				colorPickerTextureSat1 = generateColorPickerTexture(1.f);
 			}
 			
-		// todo : optimize drawing color pickers
-			GxTextureId texture = createTextureFromRGBA8(textureData, 128, 128, true, true);
-			
-			hqSetTextureScreen(texture, e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy);
+			hqSetTextureScreen(colorPickerTextureSat0, e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy);
 			{
 				hqBegin(HQ_FILLED_ROUNDED_RECTS);
 				{
@@ -1401,7 +1376,16 @@ void LiveUi::draw() const
 			}
 			hqClearTexture();
 			
-			freeTexture(texture);
+			hqSetTextureScreen(colorPickerTextureSat1, e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy);
+			{
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				{
+					setColorf(1, 1, 1, saturation);
+					hqFillRoundedRect(e.x + picker_x, e.y, e.x + picker_x + picker_sx, e.y + e.sy, 4);
+				}
+				hqEnd();
+			}
+			hqClearTexture();
 			
 			hqBegin(HQ_STROKED_ROUNDED_RECTS);
 			{
