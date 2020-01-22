@@ -99,7 +99,7 @@ int main(int argc, char * argv[])
 	//const char * path = "van_gogh_room/scene.gltf";
 	//const char * path = "littlest_tokyo/scene.gltf";
 	//const char * path = "ftm/scene.gltf";
-	const char * path = "nara_the_desert_dancer_free_download/scene.gltf";
+	const char * path = "nara_the_desert_dancer/scene.gltf";
 	//const char * path = "halloween_little_witch/scene.gltf";
 	//const char * path = "kalestra_the_sorceress/scene.gltf";
 
