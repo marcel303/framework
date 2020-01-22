@@ -433,13 +433,11 @@ int main(int argc, char * argv[])
 						if (ImGui::MenuItem("Select root"))
 						{
 							nfdchar_t * path = 0;
-							nfdresult_t result = NFD_OpenDialog("", "", &path);
+							nfdresult_t result = NFD_PickFolder("", &path);
 
 							if (result == NFD_OKAY)
 							{
-								const std::string dir = Path::GetDirectory(path);
-								
-								fileBrowser.init(dir.c_str());
+								fileBrowser.init(path);
 							}
 							
 							if (path != nullptr)
