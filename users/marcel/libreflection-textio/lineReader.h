@@ -16,6 +16,7 @@ class LineReader
 	const std::vector<std::string> & lines;
 	int line_index;
 	int indentation_level;
+	int initial_indentation_level;
 	
 public:
 	LineReader(

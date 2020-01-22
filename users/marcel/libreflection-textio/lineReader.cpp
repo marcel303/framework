@@ -1,3 +1,4 @@
+#include "Debugging.h"
 #include "lineReader.h"
 #include <string.h>
 
@@ -15,7 +16,7 @@ static int isEmptyLineOrComment(const char * line)
 	return true;
 }
 
-static int calculateIndentationLevel(const char * line) // todo : add helper functions for dealing with lines
+static int calculateIndentationLevel(const char * line)
 {
 	int result = 0;
 	
@@ -25,6 +26,8 @@ static int calculateIndentationLevel(const char * line) // todo : add helper fun
 	return result;
 }
 
+//
+
 LineReader::LineReader(
 	const std::vector<std::string> & in_lines,
 	const int in_line_index,
@@ -32,13 +35,13 @@ LineReader::LineReader(
 	: lines(in_lines)
 	, line_index(in_line_index)
 	, indentation_level(in_indentation_level)
+	, initial_indentation_level(in_indentation_level)
 {
 }
 
 LineReader::~LineReader()
 {
-// todo : add a better way to detect push/pop mismatches and assert 
-	//LOG_DBG("indentation level when line reader disposed: %d", indentation_level);
+	AssertMsg(indentation_level == initial_indentation_level, "indentation level when line reader disposed: %d", indentation_level);
 }
 
 const char * LineReader::get_next_line(const bool skipEmptyLinesAndComments)
