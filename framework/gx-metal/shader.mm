@@ -112,6 +112,10 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 
 void ShaderCacheElem_Metal::shut()
 {
+	errorMessages.clear();
+	
+	//
+	
 	for (auto & pipeline : m_pipelines)
 	{
 		[pipeline.second release];
@@ -170,7 +174,6 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 			
 			NSError * error = nullptr;
 			
-			std::vector<std::string> errorMessages;
 			std::string shaderVs_opengl;
 			std::string shaderPs_opengl;
 			
@@ -206,15 +209,21 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 			id <MTLLibrary> library_vs = [device newLibraryWithSource:[NSString stringWithCString:shaderVs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_vs == nullptr && error != nullptr)
 			{
-				printf("vs text:\n%s", shaderVs.c_str());
+				errorMessages.push_back([[error localizedDescription] cStringUsingEncoding:NSASCIIStringEncoding]);
+				logDebug("vs text:\n%s", shaderVs.c_str());
+				logError("failed to compile vertex function:");
 				NSLog(@"%@", error);
+				success = false;
 			}
 			
 			id <MTLLibrary> library_ps = [device newLibraryWithSource:[NSString stringWithCString:shaderPs.c_str() encoding:NSASCIIStringEncoding] options:nullptr error:&error];
 			if (library_ps == nullptr && error != nullptr)
 			{
-				printf("ps text:\n%s", shaderPs.c_str());
+				errorMessages.push_back([[error localizedDescription] cStringUsingEncoding:NSASCIIStringEncoding]);
+				logDebug("ps text:\n%s", shaderPs.c_str());
+				logError("failed to compile pixel function:");
 				NSLog(@"%@", error);
+				success = false;
 			}
 			
 			vsFunction = [library_vs newFunctionWithName:@"shader_main"];
@@ -234,8 +243,6 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 				
 				MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 				
-			// todo : use only the hack code-path below if this turns out to work well
-			#if 1
 				// we don't know the vertex attributes that will be expected to be set by the shader
 				// yet, so we just take a guess and write some large number of them here
 				// note : before we used the current vs input bindings, but this is problemetic
@@ -252,65 +259,7 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 				
 				vertexDescriptor.layouts[0].stride = 16 * 4;
 				vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
-			#else
-			// fixme : this is duplicated code. perhaps we should enforce everything is set
-			//         before the shader is set. when a shader is set, construct the pipeline state
-			//         only thing allowed after a shader is set is set to immediates, and to
-			//         do draw calls
-				for (int i = 0; i < renderState.vertexInputCount; ++i)
-				{
-					auto & e = renderState.vertexInputs[i];
-					auto * a = vertexDescriptor.attributes[e.id];
-					
-					MTLVertexFormat metalFormat = MTLVertexFormatInvalid;
-					
-					if (e.type == GX_ELEMENT_FLOAT32)
-					{
-						if (e.numComponents == 1)
-							metalFormat = MTLVertexFormatFloat;
-						else if (e.numComponents == 2)
-							metalFormat = MTLVertexFormatFloat2;
-						else if (e.numComponents == 3)
-							metalFormat = MTLVertexFormatFloat3;
-						else if (e.numComponents == 4)
-							metalFormat = MTLVertexFormatFloat4;
-					}
-					else if (e.type == GX_ELEMENT_UINT8)
-					{
-						if (e.numComponents == 1)
-							metalFormat = e.normalize ? MTLVertexFormatUCharNormalized : MTLVertexFormatUChar;
-						else if (e.numComponents == 2)
-							metalFormat = e.normalize ? MTLVertexFormatUChar2Normalized : MTLVertexFormatUChar2;
-						else if (e.numComponents == 3)
-							metalFormat = e.normalize ? MTLVertexFormatUChar3Normalized : MTLVertexFormatUChar3;
-						else if (e.numComponents == 4)
-							metalFormat = e.normalize ? MTLVertexFormatUChar4Normalized : MTLVertexFormatUChar4;
-					}
-					else if (e.type == GX_ELEMENT_UINT16)
-					{
-						if (e.numComponents == 1)
-							metalFormat = e.normalize ? MTLVertexFormatUShortNormalized : MTLVertexFormatUShort;
-						else if (e.numComponents == 2)
-							metalFormat = e.normalize ? MTLVertexFormatUShort2Normalized : MTLVertexFormatUShort2;
-						else if (e.numComponents == 3)
-							metalFormat = e.normalize ? MTLVertexFormatUShort3Normalized : MTLVertexFormatUShort3;
-						else if (e.numComponents == 4)
-							metalFormat = e.normalize ? MTLVertexFormatUShort4Normalized : MTLVertexFormatUChar4;
-					}
-					
-					Assert(metalFormat != MTLVertexFormatInvalid);
-					if (metalFormat != MTLVertexFormatInvalid)
-					{
-						a.format = metalFormat;
-						a.offset = e.offset;
-						a.bufferIndex = 0;
-					}
-				}
-			
-				vertexDescriptor.layouts[0].stride = renderState.vertexStride;
-				vertexDescriptor.layouts[0].stepRate = 1;
-				vertexDescriptor.layouts[0].stepFunction = MTLVertexStepFunctionPerVertex;
-			#endif
+				
 				pipelineDescriptor.vertexDescriptor = vertexDescriptor;
 				
 				const MTLPipelineOption pipelineOptions = MTLPipelineOptionBufferTypeInfo | MTLPipelineOptionArgumentInfo;
@@ -319,6 +268,8 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 				
 				if (pipelineState == nullptr && error != nullptr)
 				{
+					errorMessages.push_back([[error localizedDescription] cStringUsingEncoding:NSASCIIStringEncoding]);
+					logError("failed to create pipeline state:");
 					NSLog(@"%@", error);
 				}
 				
@@ -336,7 +287,10 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 			
 			//
 			
-			init(reflection);
+			if (success)
+			{
+				init(reflection);
+			}
 			
 			//NSLog(@"reflection retain count: %d\n", (int)reflection.retainCount);
 		}
@@ -419,10 +373,27 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 				break;
 			case MTLDataTypeFloat4x4:
 				uniformInfo.elemType = 'm';
-				uniformInfo.numElems = 16;
+				uniformInfo.numElems = 1;
+				break;
+			case MTLDataTypeArray:
+				logDebug("%d", uniform.arrayType.elementType);
+				switch (uniform.arrayType.elementType)
+				{
+				case MTLDataTypeFloat:
+					uniformInfo.elemType = 'F';
+					uniformInfo.numElems = uniform.arrayType.arrayLength;
+					break;
+				case MTLDataTypeFloat4x4:
+					uniformInfo.elemType = 'M';
+					uniformInfo.numElems = uniform.arrayType.arrayLength;
+					break;
+				default:
+					Assert(false);
+					break;
+				}
 				break;
 			default:
-				Assert(false); // todo : enable assert
+				Assert(false);
 				break;
 			}
 		}
@@ -558,7 +529,7 @@ static ShaderCacheElem_Metal::UniformInfo & getUniformInfo(ShaderCacheElem_Metal
 {
 	Assert(index >= 0 && index < cacheElem.uniformInfos.size());
 	auto & info = cacheElem.uniformInfos[index];
-	Assert(info.elemType == type && info.numElems == numElems);
+	Assert(info.elemType == type && (islower(type) ? info.numElems == numElems : info.numElems >= numElems));
 	return info;
 }
 
@@ -635,8 +606,15 @@ int Shader::getVersion() const
 
 bool Shader::getErrorMessages(std::vector<std::string> & errorMessages) const
 {
-// todo : add error reporting
-	return false;
+	if (m_cacheElem && !m_cacheElem->errorMessages.empty())
+	{
+		errorMessages = m_cacheElem->errorMessages;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
 
 GxImmediateIndex Shader::getImmediateIndex(const char * name)
@@ -844,7 +822,7 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 {
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'm', 16);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'm', 1);
 		
 		if (info.vsOffset != -1)
 		{
@@ -864,7 +842,7 @@ void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * ma
 {
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'm', 16 * numMatrices);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'M', numMatrices);
 		
 		if (info.vsOffset != -1)
 		{

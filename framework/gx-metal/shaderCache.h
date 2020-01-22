@@ -70,6 +70,8 @@ public:
 
 #import <map>
 #import <Metal/Metal.h>
+#import <string>
+#import <vector>
 
 class ShaderCacheElem_Metal : public ShaderCacheElem
 {
@@ -135,6 +137,8 @@ public:
 	
 	mutable std::map<uint32_t, id <MTLRenderPipelineState>> m_pipelines;
 	
+	std::vector<std::string> errorMessages;
+	
 	~ShaderCacheElem_Metal()
 	{
 		shut();
@@ -179,8 +183,6 @@ public:
 #endif
 
 #include <map>
-
-// todo : make shader cache stuff internal
 
 class ShaderCache
 {
