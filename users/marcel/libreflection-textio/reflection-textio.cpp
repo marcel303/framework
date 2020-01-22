@@ -4,8 +4,8 @@
 #include "lineReader.h"
 #include "lineWriter.h"
 
-#include "Debugging.h" // todo : remove this dependency
-#include "Log.h" // todo : remove this dependency
+#include "Debugging.h"
+#include "Log.h"
 #include "Parse.h" // todo : remove this dependency
 #include "StringEx.h" // strcpy_s
 #include "Vec2.h"
@@ -542,6 +542,7 @@ bool member_tolines_recursive(
 	
 	if (member->isVector)
 	{
+	// todo : add vector support
 		LOG_ERR("vector types aren't supported yet", 0);
 		Assert(false);
 		//result &= false;
