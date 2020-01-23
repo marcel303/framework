@@ -70,6 +70,8 @@
 
 #define ENABLE_DISPLAY_SIZE_SCALING 0 // todo : make this work with resizable windows
 
+#include "Base64.h" // for decoding chibi resource paths
+#include "Csv.h" // for decoding chibi resource paths
 #include "StringEx.h"
 #include "Timer.h"
 
@@ -120,12 +122,16 @@ Gamepad gamepad[MAX_GAMEPAD];
 
 // -----
 
+static std::vector<std::string> s_resourcePaths;
+
 std::map<std::string, std::string> s_shaderSources;
 
 int s_backingScale = 1; // global backing scale multiplier. a bit of a hack as it assumed the scale never changes, but works well for most apps in most situations for now..
 
 static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
 static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
+
+//
 
 Framework::Framework()
 {
@@ -1946,6 +1952,70 @@ bool Framework::fileHasChanged(const char * filename) const
 			return true;
 	
 	return false;
+}
+
+void Framework::registerResourcePath(const char * path)
+{
+	s_resourcePaths.push_back(path);
+}
+
+bool Framework::registerChibiResourcePaths(const char * encoded_text)
+{
+	bool result = false;
+	
+	const ByteString bytes = Base64::Decode(encoded_text);
+	const std::string text = bytes.ToString();
+	
+	ReadOnlyCsvDocument doc;
+	if (doc.loadFromText(text.c_str(), true, ',') == false)
+		logError("failed to parse chibi resource paths");
+	else
+	{
+		const int path_index = doc.getColumnIndex("path");
+		
+		if (path_index < 0)
+			logError("unexpected chibi resource paths format");
+		else
+		{
+			for (auto i = doc.firstRow(); i != doc.lastRow(); i = doc.nextRow(i))
+			{
+				const char * path = i[path_index];
+				
+				logDebug("resource path: %s", path);
+				
+				registerResourcePath(path);
+			}
+			
+			result = true;
+		}
+	}
+	
+	return result;
+}
+
+// todo : optimize to avoid memory copies
+
+static std::string s_resourcePath;
+
+const char * Framework::resolveResourcePath(const char * path)
+{
+	for (auto & resourcePath : s_resourcePaths)
+	{
+		s_resourcePath = resourcePath + "/" + path;
+		
+		FILE * file = nullptr;
+		fopen_s(&file, s_resourcePath.c_str(), "rb");
+		
+		if (file != nullptr)
+		{
+			fclose(file);
+			file = nullptr;
+			
+			return s_resourcePath.c_str();
+		}
+	}
+	
+	return path;
 }
 
 void Framework::blinkTaskbarIcon(int count)

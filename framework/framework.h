@@ -419,6 +419,10 @@ public:
 	void unregisterShaderOutput(const char name);
 	
 	bool fileHasChanged(const char * filename) const;
+	
+	void registerResourcePath(const char * path);
+	bool registerChibiResourcePaths(const char * text);
+	const char * resolveResourcePath(const char * path);
 
 	void blinkTaskbarIcon(int count);
 
