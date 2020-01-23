@@ -648,11 +648,7 @@ static void showErrors(Shader & shader)
 	TextEditor::ErrorMarkers errorMarkers;
 	if (shader.getErrorMessages(errorMessages))
 	{
-		const int numItems = int(errorMessages.size());
-		const char ** items = (const char**)alloca(sizeof(char*) * numItems);
-		for (size_t i = 0; i < numItems; ++i)
-			items[i] = errorMessages[i].c_str();
-		int currentItem = -1;
-		ImGui::ListBox("Errors", &currentItem, items, numItems);
+		for (auto & errorMessage : errorMessages)
+			ImGui::TextWrapped("%s", errorMessage.c_str());
 	}
 }
