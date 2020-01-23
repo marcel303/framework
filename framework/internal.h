@@ -561,45 +561,6 @@ public:
 
 //
 
-#if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER
-
-// todo : move to gx-opengl folder
-
-class ComputeShaderCacheElem
-{
-public:
-	std::string name;
-	int groupSx;
-	int groupSy;
-	int groupSz;
-
-	GLuint program;
-	
-	int version;
-	std::vector<std::string> errorMessages;
-
-	ComputeShaderCacheElem();
-	void free();
-	void load(const char * filename, const int groupSx, const int groupSy, const int groupSz);
-	void reload();
-};
-
-class ComputeShaderCache
-{
-public:
-	typedef std::map<std::string, ComputeShaderCacheElem> Map;
-
-	Map m_map;
-
-	void clear();
-	void reload();
-	ComputeShaderCacheElem & findOrCreate(const char * filename, const int groupSx, const int groupSy, const int groupSz);
-};
-
-#endif
-
-//
-
 class AnimCacheElem
 {
 public:

@@ -27,6 +27,8 @@
 
 #import "framework.h"
 
+// todo : expose ScopedLoadTimer in internal.h
+
 #if ENABLE_METAL
 
 #import "internal.h"
