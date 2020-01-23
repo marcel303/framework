@@ -170,6 +170,15 @@ void AudioFloat::setMul(const AudioFloat & other, const AudioFloat & gain)
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			samples[i] = other.samples[i] * gain.getScalar();
 	}
+	else if (other.isScalar)
+	{
+		Assert(gain.isScalar == false);
+		
+		setVector();
+		
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
+			samples[i] = other.getScalar() * gain.samples[i];
+	}
 	else
 	{
 		Assert(other.isScalar == false && gain.isScalar == false);
