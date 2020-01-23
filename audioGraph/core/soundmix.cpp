@@ -386,8 +386,31 @@ void audioBufferDryWet(
 	}
 	
 	begin = numSamples4 * 4;
-#elif ENABLE_GCC_VECTOR && 0 // todo
-
+#elif ENABLE_GCC_VECTOR
+	Assert((uintptr_t(dstBuffer) & 15) == 0);
+	Assert((uintptr_t(dryBuffer) & 15) == 0);
+	Assert((uintptr_t(wetBuffer) & 15) == 0);
+	Assert((uintptr_t(wetnessBuffer) & 15) == 0);
+	
+	vec4f * __restrict dstBuffer4 = (vec4f*)dstBuffer;
+	const vec4f * __restrict dryBuffer4 = (vec4f*)dryBuffer;
+	const vec4f * __restrict wetBuffer4 = (vec4f*)wetBuffer;
+	const vec4f * __restrict wetnessBuffer4 = (vec4f*)wetnessBuffer;
+	const int numSamples4 = numSamples / 4;
+	
+	const vec4f one4 = { 1.f, 1.f, 1.f, 1.f };
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		const vec4f dry = dryBuffer4[i];
+		const vec4f wet = wetBuffer4[i];
+		const vec4f wetness = wetnessBuffer4[i];
+		const vec4f dryness = one4 - wetness;
+		
+		dstBuffer4[i] = dry * dryness + wet * wetness;
+	}
+	
+	begin = numSamples4 * 4;
 #endif
 
 	for (int i = begin; i < numSamples; ++i)
@@ -405,6 +428,8 @@ void audioBufferDryWet(
 	const int numSamples,
 	const float wetness)
 {
+	const float dryness = 1.f - wetness;
+	
 	int begin = 0;
 	
 #if ENABLE_SSE
@@ -416,7 +441,7 @@ void audioBufferDryWet(
 	const __m128 * __restrict dryBuffer4 = (__m128*)dryBuffer;
 	const __m128 * __restrict wetBuffer4 = (__m128*)wetBuffer;
 	const __m128 wetness4 = _mm_set1_ps(wetness);
-	const __m128 dryness4 = _mm_set1_ps(1.f - wetness);
+	const __m128 dryness4 = _mm_set1_ps(dryness);
 	const int numSamples4 = numSamples / 4;
 	
 	for (int i = 0; i < numSamples4; ++i)
@@ -428,12 +453,29 @@ void audioBufferDryWet(
 	}
 	
 	begin = numSamples4 * 4;
-#elif ENABLE_GCC_VECTOR && 0 // todo
-
+#elif ENABLE_GCC_VECTOR
+	Assert((uintptr_t(dstBuffer) & 15) == 0);
+	Assert((uintptr_t(dryBuffer) & 15) == 0);
+	Assert((uintptr_t(wetBuffer) & 15) == 0);
+	
+	vec4f * __restrict dstBuffer4 = (vec4f*)dstBuffer;
+	const vec4f * __restrict dryBuffer4 = (vec4f*)dryBuffer;
+	const vec4f * __restrict wetBuffer4 = (vec4f*)wetBuffer;
+	const vec4f wetness4 = { wetness, wetness, wetness, wetness };
+	const vec4f dryness4 = { dryness, dryness, dryness, dryness };
+	const int numSamples4 = numSamples / 4;
+	
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		const vec4f dry = dryBuffer4[i];
+		const vec4f wet = wetBuffer4[i];
+		
+		dstBuffer4[i] = dry * dryness4 + wet * wetness4;
+	}
+	
+	begin = numSamples4 * 4;
 #endif
 
-	const float dryness = (1.f - wetness);
-	
 	for (int i = begin; i < numSamples; ++i)
 	{
 		dstBuffer[i] =
@@ -470,8 +512,27 @@ float audioBufferSum(
 	sum = _mm_cvtss_f32(sum1);
 	
 	begin = numSamples4 * 4;
-#elif ENABLE_GCC_VECTOR && 0 // todo
+#elif ENABLE_GCC_VECTOR
+	const vec4f * __restrict audioBuffer_4 = (vec4f*)audioBuffer;
+	const int numSamples4 = numSamples / 4;
+	
+	vec4f sum4 = { 0.f, 0.f, 0.f, 0.f };
 
+	for (int i = 0; i < numSamples4; ++i)
+	{
+		sum4 = sum4 + audioBuffer_4[i];
+	}
+	
+	float * sum_elems = (float*)&sum4;
+	
+	const float x = sum_elems[0];
+	const float y = sum_elems[1];
+	const float z = sum_elems[2];
+	const float w = sum_elems[3];
+
+	sum = (x + y) + (z + w);
+	
+	begin = numSamples4 * 4;
 #endif
 
 	for (int i = begin; i < numSamples; ++i)
@@ -597,16 +658,17 @@ bool PcmData::load(const char * filename, const int channel, const bool createCa
 				
 				LOG_ERR("channel index is out of range. channel=%d, numChannels=%d", channel, sound->channelCount);
 			}
-			else if (sound->channelSize != 2)
+			else if (sound->channelSize == 1)
 			{
-				result = false;
+				const int8_t * __restrict sampleData = (const int8_t*)sound->sampleData;
 				
-				LOG_ERR("channel size must be 16-bits. channelSize=%d-bits", channel, sound->channelSize * 8);
+				for (int i = 0; i < sound->sampleCount; ++i)
+				{
+					samples[i] = sampleData[i * sound->channelCount + channel] / float(1 << 7);
+				}
 			}
-			else
+			else if (sound->channelSize == 2)
 			{
-			// todo : add support for non-16 bit channel sizes
-			
 				const int16_t * __restrict sampleData = (const int16_t*)sound->sampleData;
 				
 				for (int i = 0; i < sound->sampleCount; ++i)
@@ -614,12 +676,25 @@ bool PcmData::load(const char * filename, const int channel, const bool createCa
 					samples[i] = sampleData[i * sound->channelCount + channel] / float(1 << 15);
 				}
 			}
+			else if (sound->channelSize == 4)
+			{
+				const float * __restrict sampleData = (const float*)sound->sampleData;
+				
+				for (int i = 0; i < sound->sampleCount; ++i)
+				{
+					samples[i] = sampleData[i * sound->channelCount + channel];
+				}
+			}
+			else
+			{
+				result = false;
+				
+				LOG_ERR("channel size must be 8, 16 or 32-bits. channelSize=%d-bits", channel, sound->channelSize * 8);
+			}
 			
 			delete sound;
 			sound = nullptr;
 		}
-		
-		// note : writing .cache files is disabled here. remove '&& false' to enable
 		
 		if (result == true && Path::GetExtension(filename, true) != "wav" && createCache)
 		{
