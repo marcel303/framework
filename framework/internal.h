@@ -220,13 +220,12 @@ public:
 	
 	void processEvents()
 	{
-	#if ENABLE_EVENTS_WORKAROUND
+	#if !ENABLE_EVENTS_WORKAROUND
+		const int numEvents = events.size();
+	#endif
+	
 		if (numEvents == 0)
 			return;
-	#else
-		if (events.clear())
-			return;
-	#endif
 
 		size_t eventIndex = 0;
 		
