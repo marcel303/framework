@@ -542,6 +542,8 @@ public:
 
 #if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER
 
+// todo : move to gx-opengl folder
+
 class ComputeShaderCacheElem
 {
 public:

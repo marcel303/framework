@@ -756,6 +756,8 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 
 // -----
 
+// todo : move opengl shader cache etc
+
 #if ENABLE_OPENGL
 
 ShaderCacheElem::ShaderCacheElem()
