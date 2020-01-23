@@ -25,7 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // GL_TEXTURE_WIDTH, GL_TEXTURE_HEIGHT
 #include "framework.h"
 #include "gfx-framework.h"
 #include "jsusfx.h"
