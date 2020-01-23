@@ -88,6 +88,12 @@
 	#include "stb_truetype.h"
 #endif
 
+#ifdef WIN32
+	#define ENABLE_EVENTS_WORKAROUND 1
+#else
+	#define ENABLE_EVENTS_WORKAROUND 0
+#endif
+
 #if ENABLE_OPENGL
 	#include "gx-opengl/shaderCache.h"
 #endif
@@ -181,8 +187,13 @@ public:
 	int oldMouseX;
 	int oldMouseY;
 	
+#if ENABLE_EVENTS_WORKAROUND
+	SDL_Event events[32];
+	int numEvents = 0;
+#else
 	std::vector<SDL_Event> events;
-	
+#endif
+
 	MouseData()
 	{
 		memset(mouseDown, 0, sizeof(mouseDown));
@@ -200,16 +211,23 @@ public:
 	
 	void addEvent(const SDL_Event & e)
 	{
+	#if ENABLE_EVENTS_WORKAROUND
+		events[numEvents++] = e;
+	#else
 		events.push_back(e);
+	#endif
 	}
 	
 	void processEvents()
 	{
-		if (events.empty())
+	#if ENABLE_EVENTS_WORKAROUND
+		if (numEvents == 0)
 			return;
-		
-		const size_t numEvents = events.size();
-		
+	#else
+		if (events.clear())
+			return;
+	#endif
+
 		size_t eventIndex = 0;
 		
 		bool stop = false;
@@ -257,14 +275,18 @@ public:
 		}
 		
 		if (eventIndex == numEvents)
+		#if ENABLE_EVENTS_WORKAROUND
+			numEvents = 0;
+		#else
 			events.clear();
+		#endif
 		else
 		{
 		#ifdef WIN32
-			std::reverse(events.begin(), events.end());
+			std::reverse(events, events + numEvents);
 			for (int i = 0; i < eventIndex; ++i)
-				events.pop_back();
-			std::reverse(events.begin(), events.end());
+				numEvents--;
+			std::reverse(events, events + numEvents);
 #if 0
 			printf("size: %d\n", (int)events.size());
 			for (int i = 0; i < eventIndex; ++i)
