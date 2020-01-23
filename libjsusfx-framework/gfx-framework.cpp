@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include <GL/glew.h> // glReadPixels
 #include "framework.h"
 #include "gfx-framework.h"
 #include "jsusfx.h"
@@ -1056,15 +1057,7 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 				const int dstX = (int)*m_gfx_x;
 				const int dstY = (int)*m_gfx_y;
 				
-			#if ENABLE_OPENGL
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-				checkErrorGL();
-			#else
-				AssertMsg(false, "gfx_blit: sampler state not implemented for current graphics api", 0);
-			#endif
+				gxSetTextureSampler(filter ? GX_SAMPLE_LINEAR : GX_SAMPLE_NEAREST, true);
 				
 				if (scale != 1.f || rotate != 0.f)
 				{
@@ -1080,6 +1073,8 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 				{
 					drawRect(dstX, dstY, dstX + sx, dstY + sy);
 				}
+				
+				gxSetTextureSampler(GX_SAMPLE_LINEAR, false);
 			}
 			gxSetTexture(0);
 			popColorPost();
