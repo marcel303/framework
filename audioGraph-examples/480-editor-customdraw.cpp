@@ -32,6 +32,7 @@
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #include "framework.h"
+#include "graphEdit.h"
 #include <cmath>
 
 const int GFX_SX = 1024;
