@@ -26,7 +26,8 @@ std::string Base64::Encode(const ByteString& data)
 	unsigned char inbuf[3];
 	unsigned char outbuf[4];
 	
-	const int expectedResultSize = (byteCount * 8 + 5) / 6;
+	const int expectedCharacterCount = (byteCount * 8 + 5) / 6;
+	const int expectedResultSize = (expectedCharacterCount + 3) / 4 * 4;
 	result.reserve(expectedResultSize);
 	
 	for (;;)
@@ -150,7 +151,7 @@ ByteString Base64::Decode(const char* text)
 		}
 	}
 	
-	Assert(result.m_Bytes.size() == expectedResultSize); // if unequal, we either reserved too much memory, or had to grow/realloc the resulting array
+	Assert(result.m_Bytes.size() <= expectedResultSize); // if unequal, we either reserved too much memory, or had to grow/realloc the resulting array
 	
 	return result;
 }
