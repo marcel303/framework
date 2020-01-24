@@ -132,6 +132,12 @@ int main(int argc, char * argv[])
 {
 #if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
+
+#if defined(CHIBI_RESOURCE_PATHS)
+	framework.registerChibiResourcePaths(CHIBI_RESOURCE_PATHS);
 #endif
 	
 	framework.windowIsResizable = true;
@@ -157,8 +163,13 @@ int main(int argc, char * argv[])
 	guiContext.updateFontTexture();
 
 	// file browser
+	
 	FileBrowser fileBrowser;
+#if defined(CHIBI_RESOURCE_PATH)
 	fileBrowser.init(CHIBI_RESOURCE_PATH "/../../../..");
+#else
+	fileBrowser.init(".");
+#endif
 
 	// file editor
 	FileEditor * editor = nullptr;
