@@ -1455,7 +1455,7 @@ static id <MTLRenderPipelineState> s_currentRenderPipelineState = nullptr;
 
 static void gxValidatePipelineState()
 {
-	if (globals.shader == nullptr || globals.shader->getType() != SHADER_VSPS)
+	if (globals.shader == nullptr || globals.shader->getType() != SHADER_VSPS || !globals.shader->isValid())
 	{
 		return;
 	}
