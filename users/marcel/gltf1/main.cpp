@@ -191,7 +191,7 @@ int main(int argc, char * argv[])
 			{
 				if (centimeters)
 					gxScalef(scaleMultiplier, scaleMultiplier, scaleMultiplier);
-				gxScalef(-1, 1, 1);
+				gxScalef(1, 1, -1);
 				
 				for (int i = 0; i < 2; ++i)
 				{
