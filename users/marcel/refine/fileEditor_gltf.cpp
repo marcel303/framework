@@ -122,8 +122,8 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 		
 		if (maxAxis > 0.f)
 		{
-			Shader metallicRoughnessShader("shader-pbr");
-			Shader specularGlossinessShader("shader-pbr-specularGlossiness");
+			Shader metallicRoughnessShader("gltf/shaders/shader-pbr-metallicRoughness");
+			Shader specularGlossinessShader("gltf/shaders/shader-pbr-specularGlossiness");
 			
 		// todo : add a nicer way to set lighting for the GLTF library's built-in shaders
 			Shader * shaders[2] = { &metallicRoughnessShader, &specularGlossinessShader };

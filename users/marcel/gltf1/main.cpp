@@ -200,8 +200,8 @@ int main(int argc, char * argv[])
 					pushDepthWrite(!keyboard.isDown(SDLK_z) ? true : (isOpaquePass ? true : false));
 					pushBlend(isOpaquePass ? BLEND_OPAQUE : BLEND_ALPHA);
 					{
-						Shader metallicRoughnessShader("shader-pbr");
-						Shader specularGlossinessShader("shader-pbr-specularGlossiness");
+						Shader metallicRoughnessShader("gltf/shaders/shader-pbr-metallicRoughness");
+						Shader specularGlossinessShader("gltf/shaders/shader-pbr-specularGlossiness");
 						
 						Shader * shaders[2] = { &metallicRoughnessShader, &specularGlossinessShader };
 						for (auto * shader : shaders)
