@@ -77,16 +77,13 @@ library vfxgraph-deepbelief
 
 library vfxgraph-kinect
 
+	depend_library libfreenect2
 	depend_library vfxgraph
-	
-	with_platform macos header_path ../libfreenect2/macos/include
 
 	header_path vfxNodes-kinect expose
 
 	scan_files cpp path vfxNodes-kinect
 	scan_files h   path vfxNodes-kinect
-
-	with_platform macos depend_library ../libfreenect2/macos/lib/libfreenect2.0.2.0.dylib local embed_framework
 
 	compile_definition ENABLE_KINECT1   0 expose
 

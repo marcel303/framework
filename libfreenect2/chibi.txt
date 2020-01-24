@@ -1,0 +1,3 @@
+library libfreenect2
+	with_platform macos header_path macos/include expose
+	with_platform macos depend_library macos/lib/libfreenect2.0.2.0.dylib local embed_framework

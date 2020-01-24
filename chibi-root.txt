@@ -19,6 +19,7 @@ push_group libraries
 	with_platform linux add 3rdparty/xmm-support
 	with_platform macos add 3rdparty/xmm-support
 	add libfbx
+	add libfreenect2
 	add libgg
 	add libjsusfx-framework
 	add libnet
