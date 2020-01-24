@@ -64,6 +64,8 @@ void VfxNodeDatatable::tick(const float dt)
 		filename.clear();
 		channelData.free();
 		outputChannel.reset();
+		setDynamicOutputs(nullptr, 0);
+		outputChannels.clear();
 		return;
 	}
 	
@@ -83,6 +85,8 @@ void VfxNodeDatatable::tick(const float dt)
 		
 		channelData.free();
 		outputChannel.reset();
+		setDynamicOutputs(nullptr, 0);
+		outputChannels.clear();
 		
 		if (Path::GetExtension(filename, true) == "csv")
 		{
@@ -122,6 +126,28 @@ void VfxNodeDatatable::tick(const float dt)
 					}
 					
 					outputChannel.setData2D(channelData.data, false, numRows, numColumns);
+				}
+				
+			// todo : add transpose support to CSV document reader. let it handle headers correctly so we can use those here to give channels a name, when the data is transposed
+				if (hasHeader && transpose == false)
+				{
+					const int channelCount = transpose == false ? numColumns : numRows;
+					const int channelSize = transpose == false ? numRows : numColumns;
+					
+					std::vector<DynamicOutput> dynamicOutputs;
+					dynamicOutputs.resize(channelCount);
+					outputChannels.resize(channelCount);
+					
+					for (size_t i = 0; i < document.m_header.size(); ++i)
+					{
+						dynamicOutputs[i].name = document.m_header[i];
+						dynamicOutputs[i].type = kVfxPlugType_Channel;
+						dynamicOutputs[i].mem = &outputChannels[i];
+						
+						outputChannels[i].setData(channelData.data + channelSize * i, false, channelSize);
+					}
+					
+					setDynamicOutputs(dynamicOutputs.data(), dynamicOutputs.size());
 				}
 			}
 		}

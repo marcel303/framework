@@ -29,8 +29,6 @@
 
 #include "vfxNodeBase.h"
 
-// todo : use dynamic outputs ?
-
 struct VfxNodeDatatable : VfxNodeBase
 {
 	enum Input
@@ -53,7 +51,8 @@ struct VfxNodeDatatable : VfxNodeBase
 	
 	VfxChannelData channelData;
 	
-	VfxChannel outputChannel;
+	VfxChannel outputChannel; // multiple channels for the entire table
+	std::vector<VfxChannel> outputChannels; // single channels for dynamic outputs. one channel per named column or row
 	
 	VfxNodeDatatable();
 	
