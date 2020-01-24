@@ -31,6 +31,7 @@ struct FileEditor_Text : FileEditor
 	TextEditor textEditor;
 	TextIO::LineEndings lineEndings;
 	bool isValid = false;
+	bool textIsDirty = false;
 	
 	FrameworkImGuiContext guiContext;
 	
@@ -45,18 +46,23 @@ struct FileEditor_Text : FileEditor
 		guiContext.init();
 		
 		// set a custom background color on the text editor
-		const float lightness = .08f;
+		const float lightness = .02f;
 		TextEditor::Palette palette = textEditor.GetPalette();
 		palette[(int)TextEditor::PaletteIndex::Background] = ImGui::ColorConvertFloat4ToU32(ImVec4(lightness, lightness, lightness, 1.f));
+		palette[(int)TextEditor::PaletteIndex::Selection] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.f, .5f, 1.f, .5f));
+		palette[(int)TextEditor::PaletteIndex::Identifier] = ImGui::ColorConvertFloat4ToU32(ImVec4(1.f, 0.5f, 0.5f, 1.f));
+		palette[(int)TextEditor::PaletteIndex::Comment] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.f, 1.f, 0.f, 1.f));
+		palette[(int)TextEditor::PaletteIndex::MultiLineComment] = ImGui::ColorConvertFloat4ToU32(ImVec4(0.f, 1.f, 0.f, 1.f));
 		textEditor.SetPalette(palette);
+		textEditor.SetTabSize(8);
 		
-	#if 0
+	#if 1
 		// set a custom font on the text editor
 		// todo : find a good mono spaced font for the editor
 		// todo : update to latest version of the text editor, and evaluate support for non mono spaces fonts
 		guiContext.pushImGuiContext();
 		ImGuiIO& io = ImGui::GetIO();
-		io.FontDefault = io.Fonts->AddFontFromFileTTF((s_dataFolder + "/SFMono-Medium.otf").c_str(), 16);
+		//io.FontDefault = io.Fonts->AddFontFromFileTTF(CHIBI_RESOURCE_PATH "/calibri.ttf", 18);
 		guiContext.popImGuiContext();
 		guiContext.updateFontTexture();
 	#endif
@@ -85,6 +91,10 @@ struct FileEditor_Text : FileEditor
 			if (TextIO::save(path.c_str(), lines, lineEndings) == false)
 			{
 				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+			}
+			else
+			{
+				textIsDirty = false;
 			}
 		}
 		
@@ -124,6 +134,8 @@ struct FileEditor_Text : FileEditor
 								{
 									path.clear();
 								}
+								
+								textIsDirty = false;
 							}
 							
 							if (filename != nullptr)
@@ -140,6 +152,10 @@ struct FileEditor_Text : FileEditor
 							if (TextIO::save(path.c_str(), lines, lineEndings) == false)
 							{
 								SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Save error", "Failed to save to file", nullptr);
+							}
+							else
+							{
+								textIsDirty = false;
 							}
 						}
 						
@@ -167,6 +183,8 @@ struct FileEditor_Text : FileEditor
 								else
 								{
 									path = filename;
+									
+									textIsDirty = false;
 								}
 							}
 							
@@ -212,10 +230,12 @@ struct FileEditor_Text : FileEditor
 					lineEndings == TextIO::kLineEndings_Windows ? "Win " :
 					"",
 					textEditor.IsOverwrite() ? "Ovr" : "Ins",
-					textEditor.CanUndo() ? "*" : " ",
+					textIsDirty ? "dirty" : "-----",
 					textEditor.GetLanguageDefinition().mName.c_str(), path.c_str());
 				
 				textEditor.Render(filename.c_str(), ImVec2(sx - 20, sy - 70), false);
+				
+				textIsDirty |= textEditor.IsTextChanged();
 			}
 			ImGui::End();
 			
