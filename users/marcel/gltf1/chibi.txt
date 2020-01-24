@@ -5,6 +5,7 @@ library marcel-gltf
 	add_files gltf-draw.cpp gltf-draw.h
 	add_files gltf-loader.cpp gltf-loader.h
 	header_path . expose
+	resource_path data
 
 app gltf1
 	depend_library framework
