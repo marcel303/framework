@@ -3,9 +3,7 @@
 
 #include "gx_mesh.h"
 
-// todo : add options struct for controlling how to draw
-
-#define SORT_PRIMITIVES_BY_VIEW_DISTANCE 0
+#define ENABLE_SORT_PRIMITIVES_BY_VIEW_DISTANCE 1
 
 namespace gltf
 {
@@ -724,7 +722,7 @@ namespace gltf
 		gxPopMatrix();
 	}
 	
-#if SORT_PRIMITIVES_BY_VIEW_DISTANCE
+#if ENABLE_SORT_PRIMITIVES_BY_VIEW_DISTANCE
 	static Vec3 calculateMeshPrimitiveCenter(const Scene & scene, const MeshPrimitive & primitive)
 	{
 		Vec3 result;
@@ -764,13 +762,13 @@ namespace gltf
 	}
 #endif
 	
-	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene)
+	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene, const DrawOptions * drawOptions)
 	{
-		drawScene(scene, nullptr, materialShaders, isOpaquePass, activeScene);
+		drawScene(scene, nullptr, materialShaders, isOpaquePass, activeScene, drawOptions);
 	}
 	
 	
-#if SORT_PRIMITIVES_BY_VIEW_DISTANCE
+#if ENABLE_SORT_PRIMITIVES_BY_VIEW_DISTANCE
 	static void computeNodeToViewTransformsTraverse(const Scene & scene, const int node_index, Mat4x4 * __restrict nodeToViewTransforms)
 	{
 		auto & node = scene.nodes[node_index];
@@ -807,12 +805,17 @@ namespace gltf
 	}
 #endif
 	
-	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const int in_activeScene)
+	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const int in_activeScene, const DrawOptions * in_drawOptions)
 	{
 		const int activeScene =
 			in_activeScene == -2
 			? scene.activeScene
 			: in_activeScene;
+		
+		const DrawOptions drawOptions =
+			in_drawOptions
+			? *in_drawOptions
+			: DrawOptions();
 		
 		for (size_t sceneRootIndex = 0; sceneRootIndex < scene.sceneRoots.size(); ++sceneRootIndex)
 		{
@@ -821,119 +824,126 @@ namespace gltf
 			
 			auto & sceneRoot = scene.sceneRoots[sceneRootIndex];
 			
-		#if !SORT_PRIMITIVES_BY_VIEW_DISTANCE
-			for (auto & node_index : sceneRoot.nodes)
+		#if ENABLE_SORT_PRIMITIVES_BY_VIEW_DISTANCE
+			if (drawOptions.sortPrimitivesByViewDistance == false)
+		#endif
 			{
-				if (node_index >= 0 && node_index < scene.nodes.size())
+				for (auto & node_index : sceneRoot.nodes)
+				{
+					if (node_index >= 0 && node_index < scene.nodes.size())
+					{
+						auto & node = scene.nodes[node_index];
+						
+						drawNodeTraverse(scene, bufferCache, node, materialShaders, isOpaquePass);
+					}
+				}
+				
+				clearShader();
+			}
+		#if ENABLE_SORT_PRIMITIVES_BY_VIEW_DISTANCE
+			else
+			{
+				// sort primitives by view distance
+				
+				// 0. compute node to view transforms
+				
+				Mat4x4 * nodeToViewTransforms = (Mat4x4*)alloca(scene.nodes.size() * sizeof(Mat4x4));
+				
+				computeNodeToViewTransformsTraverse(scene, activeScene, nodeToViewTransforms);
+				
+				// 1. gather a full list of primitives
+				
+				// 1.1. compute the total number of primitives
+				
+				int totalNumPrimitives = 0;
+				
+				for (auto & node : scene.nodes)
+				{
+					if (node.mesh >= 0 && node.mesh < scene.meshes.size())
+					{
+						auto & mesh = scene.meshes[node.mesh];
+						totalNumPrimitives += mesh.primitives.size();
+					}
+				}
+				
+				// 1.2. allocate temporary storage for the primitives
+				
+				const MeshPrimitive ** prims = (const MeshPrimitive**)alloca(totalNumPrimitives * sizeof(MeshPrimitive*));
+				Vec3 * primCenters = (Vec3*)alloca(totalNumPrimitives * sizeof(Vec3));
+				float * primDistances = (float*)alloca(totalNumPrimitives * sizeof(float));
+				int * primNodeIndices = (int*)alloca(totalNumPrimitives * sizeof(int));
+				
+				// 1.3. fetch primitives into a linear array
+				
+				int primIndex = 0;
+				
+				for (int node_index = 0; node_index < scene.nodes.size(); ++node_index)
 				{
 					auto & node = scene.nodes[node_index];
+					auto & nodeToViewTransform = nodeToViewTransforms[node_index];
 					
-					drawNodeTraverse(scene, bufferCache, node, materialShaders, isOpaquePass);
-				}
-			}
-			
-			clearShader();
-		#else // SORT_PRIMITIVES_BY_VIEW_DISTANCE
-			// sort primitives by view distance
-			
-			// 0. compute node to view transforms
-			
-			Mat4x4 * nodeToViewTransforms = (Mat4x4*)alloca(scene.nodes.size() * sizeof(Mat4x4));
-			
-			computeNodeToViewTransformsTraverse(scene, activeScene, nodeToViewTransforms);
-			
-			// 1. gather a full list of primitives
-			
-			// 1.1. compute the total number of primitives
-			
-			int totalNumPrimitives = 0;
-			
-			for (auto & node : scene.nodes)
-			{
-				if (node.mesh >= 0 && node.mesh < scene.meshes.size())
-				{
-					auto & mesh = scene.meshes[node.mesh];
-					totalNumPrimitives += mesh.primitives.size();
-				}
-			}
-			
-			// 1.2. allocate temporary storage for the primitives
-			
-			const MeshPrimitive ** prims = (const MeshPrimitive**)alloca(totalNumPrimitives * sizeof(MeshPrimitive*));
-			Vec3 * primCenters = (Vec3*)alloca(totalNumPrimitives * sizeof(Vec3));
-			float * primDistances = (float*)alloca(totalNumPrimitives * sizeof(float));
-			int * primNodeIndices = (int*)alloca(totalNumPrimitives * sizeof(int));
-			
-			// 1.3. fetch primitives into a linear array
-			
-			int primIndex = 0;
-			
-			for (int node_index = 0; node_index < scene.nodes.size(); ++node_index)
-			{
-				auto & node = scene.nodes[node_index];
-				auto & nodeToViewTransform = nodeToViewTransforms[node_index];
-				
-				if (node.mesh >= 0 && node.mesh < scene.meshes.size())
-				{
-					auto & mesh = scene.meshes[node.mesh];
-					
-					for (auto & prim : mesh.primitives)
+					if (node.mesh >= 0 && node.mesh < scene.meshes.size())
 					{
-						Assert(primIndex < totalNumPrimitives);
+						auto & mesh = scene.meshes[node.mesh];
 						
-						prims[primIndex] = &prim;
-						primCenters[primIndex] = calculateMeshPrimitiveCenter(scene, prim);
-						primDistances[primIndex] = nodeToViewTransform.Mul4(primCenters[primIndex])[2];
-						primNodeIndices[primIndex] = node_index;
-						
-						primIndex++;
+						for (auto & prim : mesh.primitives)
+						{
+							Assert(primIndex < totalNumPrimitives);
+							
+							prims[primIndex] = &prim;
+							primCenters[primIndex] = calculateMeshPrimitiveCenter(scene, prim);
+							primDistances[primIndex] = nodeToViewTransform.Mul4(primCenters[primIndex])[2];
+							primNodeIndices[primIndex] = node_index;
+							
+							primIndex++;
+						}
 					}
 				}
-			}
-	
-			// 2. sort primitives by view distance
-			
-			// 2.1. create a list of indices for prims, so we can sort prim indices rather than by value
-			
-			int * sortedPrimIndices = (int*)alloca(totalNumPrimitives * sizeof(int));
-			for (int i = 0; i < totalNumPrimitives; ++i)
-				sortedPrimIndices[i] = i;
-			
-			// 2.2 sort prims by view distance
-			
-			std::sort(sortedPrimIndices, sortedPrimIndices + totalNumPrimitives,
-				[&](const int index1, const int index2) -> bool
-				{
-					const float z1 = primDistances[index1];
-					const float z2 = primDistances[index2];
-					return z1 > z2;
-				});
-			
-			for (int i = 0; i < totalNumPrimitives; ++i)
-			{
-				const int primIndex = sortedPrimIndices[i];
-				const MeshPrimitive * prim = prims[primIndex];
-				const int nodeIndex = primNodeIndices[primIndex];
-				const Mat4x4 & nodeToViewTransform = nodeToViewTransforms[nodeIndex];
+		
+				// 2. sort primitives by view distance
 				
-				gxPushMatrix();
-				{
-					gxSetMatrixf(GX_MODELVIEW, nodeToViewTransform.m_v);
-					
-					drawMeshPrimitive(scene, bufferCache, *prim, materialShaders, isOpaquePass);
-					
-				#if false // for debugging: draw a cube at the prim center
-					if (isOpaquePass)
+				// 2.1. create a list of indices for prims, so we can sort prim indices rather than by value
+				
+				int * sortedPrimIndices = (int*)alloca(totalNumPrimitives * sizeof(int));
+				for (int i = 0; i < totalNumPrimitives; ++i)
+					sortedPrimIndices[i] = i;
+				
+				// 2.2 sort prims by view distance
+				
+				std::sort(sortedPrimIndices, sortedPrimIndices + totalNumPrimitives,
+					[&](const int index1, const int index2) -> bool
 					{
-						setColor(colorWhite);
-						fillCube(primCenters[primIndex], Vec3(.1f, .1f, .1f));
+						const float z1 = primDistances[index1];
+						const float z2 = primDistances[index2];
+						return z1 > z2;
+					});
+				
+				for (int i = 0; i < totalNumPrimitives; ++i)
+				{
+					const int primIndex = sortedPrimIndices[i];
+					const MeshPrimitive * prim = prims[primIndex];
+					const int nodeIndex = primNodeIndices[primIndex];
+					const Mat4x4 & nodeToViewTransform = nodeToViewTransforms[nodeIndex];
+					
+					gxPushMatrix();
+					{
+						gxSetMatrixf(GX_MODELVIEW, nodeToViewTransform.m_v);
+						
+						drawMeshPrimitive(scene, bufferCache, *prim, materialShaders, isOpaquePass);
+						
+					#if false // for debugging: draw a cube at the prim center
+						if (isOpaquePass)
+						{
+							setColor(colorWhite);
+							fillCube(primCenters[primIndex], Vec3(.1f, .1f, .1f));
+						}
+					#endif
 					}
-				#endif
+					gxPopMatrix();
 				}
-				gxPopMatrix();
+				
+				clearShader();
 			}
-			
-			clearShader();
 		#endif
 		}
 	}

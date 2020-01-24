@@ -13,6 +13,12 @@ namespace gltf
 
 namespace gltf
 {
+	enum AlphaMode
+	{
+		kAlphaMode_AlphaBlend,
+		kAlphaMode_AlphaToCoverage
+	};
+	
 	struct BoundingBox
 	{
 		Vec3 min;
@@ -28,6 +34,12 @@ namespace gltf
 		Shader * fallbackShader = nullptr;
 	};
 	
+	struct DrawOptions
+	{
+		AlphaMode alphaMode = kAlphaMode_AlphaBlend;
+		bool sortPrimitivesByViewDistance = false;
+	};
+	
 	// -- draw using GX api --
 
 	void drawMesh(const Scene & scene, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass);
@@ -38,7 +50,7 @@ namespace gltf
 	
 	void calculateSceneMinMaxTraverse(const Scene & scene, const int activeScene, BoundingBox & boundingBox);
 	
-	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene = -2);
+	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene = -2, const DrawOptions * drawOptions = nullptr);
 }
 
 // -- draw using buffer cache --
@@ -64,5 +76,5 @@ namespace gltf
 
 	void drawNodeTraverse(const Scene & scene, const BufferCache * bufferCache, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass);
 	
-	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene = -2);
+	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene = -2, const DrawOptions * drawOptions = nullptr);
 }
