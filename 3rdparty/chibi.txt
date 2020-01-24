@@ -69,3 +69,5 @@ library rtmidi
 	
 	with_platform macos depend_library CoreMIDI find
 	with_platform linux depend_library asound find
+
+	license_file rtmidi/README.md

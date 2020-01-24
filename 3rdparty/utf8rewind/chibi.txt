@@ -1,3 +1,4 @@
 library utf8rewind shared
 	add_files utf8rewind.cpp utf8rewind.h
 	header_path . expose
+	license_file LICENSE

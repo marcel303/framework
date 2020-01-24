@@ -5,6 +5,10 @@ library FreeImage shared
 	with_platform windows compile_definition FREEIMAGE_EXPORTS *
 
 	header_path ../FreeImage/Source/zlib
+
+	license_file ../FreeImage/license-fi.txt
+	license_file ../FreeImage/license-gplv2.txt
+	license_file ../FreeImage/license-gplv3.txt
 	
 	# -- zlib --
 

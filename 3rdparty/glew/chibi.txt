@@ -11,3 +11,5 @@ library glew
 	with_platform windows add_dist_files win32/dll/glew32.dll
 
 	with_platform linux depend_package GLEW
+
+	license_file ../../license/glew/COPYING.txt
