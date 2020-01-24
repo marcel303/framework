@@ -320,7 +320,7 @@ namespace gltf
 		std::vector<Node> nodes;
 		std::vector<SceneRoot> sceneRoots;
 		
-		int activeScene = 0;
+		int activeScene = -1;
 	};
 
 	//

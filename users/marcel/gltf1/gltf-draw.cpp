@@ -206,6 +206,7 @@ namespace gltf
 				{
 					auto gxMesh_itr = bufferCache->primitives.find(&primitive);
 					
+					Assert(gxMesh_itr != bufferCache->primitives.end());
 					if (gxMesh_itr != bufferCache->primitives.end())
 					{
 						GxMesh * gxMesh = gxMesh_itr->second;
@@ -588,6 +589,7 @@ namespace gltf
 
 	void calculateNodeMinMaxTraverse(const Scene & scene, const Node & node, BoundingBox & boundingBox)
 	{
+		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 		gxTranslatef(node.translation[0], node.translation[1], node.translation[2]);
 		Mat4x4 rotationMatrix = node.rotation.toMatrix();
@@ -695,6 +697,33 @@ namespace gltf
 		gxPopMatrix();
 	}
 	
+	void calculateSceneMinMaxTraverse(const Scene & scene, const int activeScene, BoundingBox & boundingBox)
+	{
+		gxMatrixMode(GX_MODELVIEW);
+		gxPushMatrix();
+		gxLoadIdentity();
+		
+		for (size_t sceneRootIndex = 0; sceneRootIndex < scene.sceneRoots.size(); ++sceneRootIndex)
+		{
+			if (activeScene != -1 && activeScene != sceneRootIndex)
+				continue;
+			
+			auto & sceneRoot = scene.sceneRoots[sceneRootIndex];
+			
+			for (auto & node_index : sceneRoot.nodes)
+			{
+				if (node_index >= 0 && node_index < scene.nodes.size())
+				{
+					auto & node = scene.nodes[node_index];
+					
+					calculateNodeMinMaxTraverse(scene, node, boundingBox);
+				}
+			}
+		}
+		
+		gxPopMatrix();
+	}
+	
 #if SORT_PRIMITIVES_BY_VIEW_DISTANCE
 	static Vec3 calculateMeshPrimitiveCenter(const Scene & scene, const MeshPrimitive & primitive)
 	{
@@ -781,13 +810,16 @@ namespace gltf
 	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const int in_activeScene)
 	{
 		const int activeScene =
-			in_activeScene < 0
+			in_activeScene == -2
 			? scene.activeScene
 			: in_activeScene;
 		
-		if (activeScene >= 0 && activeScene < scene.sceneRoots.size())
+		for (size_t sceneRootIndex = 0; sceneRootIndex < scene.sceneRoots.size(); ++sceneRootIndex)
 		{
-			auto & sceneRoot = scene.sceneRoots[scene.activeScene];
+			if (activeScene != -1 && activeScene != sceneRootIndex)
+				continue;
+			
+			auto & sceneRoot = scene.sceneRoots[sceneRootIndex];
 			
 		#if !SORT_PRIMITIVES_BY_VIEW_DISTANCE
 			for (auto & node_index : sceneRoot.nodes)
@@ -808,7 +840,7 @@ namespace gltf
 			
 			Mat4x4 * nodeToViewTransforms = (Mat4x4*)alloca(scene.nodes.size() * sizeof(Mat4x4));
 			
-			computeNodeToViewTransformsTraverse(scene, scene.activeScene, nodeToViewTransforms);
+			computeNodeToViewTransformsTraverse(scene, activeScene, nodeToViewTransforms);
 			
 			// 1. gather a full list of primitives
 			
@@ -985,8 +1017,13 @@ namespace gltf
 					
 					if (numVertices == -1)
 						numVertices = accessor->count;
-					else
-						Assert(numVertices == accessor->count);
+					else if (numVertices != accessor->count)
+						numVertices = -2;
+					
+					Assert(vertexBufferIndex >= 0);
+					Assert(numVertices >= 0);
+					if (vertexBufferIndex < 0 || numVertices < 0)
+						continue;
 		
 					/*
 					POSITION,

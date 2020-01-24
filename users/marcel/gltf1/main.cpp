@@ -156,20 +156,7 @@ int main(int argc, char * argv[])
 		{
 			gltf::BoundingBox boundingBox;
 			
-			if (scene.activeScene >= 0 && scene.activeScene < scene.sceneRoots.size())
-			{
-				auto & sceneRoot = scene.sceneRoots[scene.activeScene];
-			
-				for (auto & node_index : sceneRoot.nodes)
-				{
-					if (node_index >= 0 && node_index < scene.nodes.size())
-					{
-						auto & node = scene.nodes[node_index];
-						
-						calculateNodeMinMaxTraverse(scene, node, boundingBox);
-					}
-				}
-			}
+			calculateSceneMinMaxTraverse(scene, scene.activeScene, boundingBox);
 			
 			if (centimeters)
 			{
@@ -210,12 +197,6 @@ int main(int argc, char * argv[])
 				{
 					const bool isOpaquePass = (i == 0);
 					
-					if (scene.activeScene < 0 || scene.activeScene >= scene.sceneRoots.size())
-					{
-						logWarning("invalid scene index");
-						continue;
-					}
-					
 					pushDepthWrite(!keyboard.isDown(SDLK_z) ? true : (isOpaquePass ? true : false));
 					pushBlend(isOpaquePass ? BLEND_OPAQUE : BLEND_ALPHA);
 					{
@@ -247,6 +228,7 @@ int main(int argc, char * argv[])
 						gltf::MaterialShaders materialShaders;
 						materialShaders.pbr_specularGlossiness = &specularGlossinessShader;
 						materialShaders.pbr_metallicRoughness = &metallicRoughnessShader;
+						materialShaders.fallbackShader = &metallicRoughnessShader;
 						
 						gltf::drawScene(
 							scene,
@@ -265,9 +247,12 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_ADD);
 					pushDepthWrite(false);
 					{
-						if (scene.activeScene >= 0 && scene.activeScene < scene.sceneRoots.size())
+						for (size_t sceneRootIndex = 0; sceneRootIndex < scene.sceneRoots.size(); ++sceneRootIndex)
 						{
-							auto & sceneRoot = scene.sceneRoots[scene.activeScene];
+							if (scene.activeScene != -1 && scene.activeScene != sceneRootIndex)
+								continue;
+							
+							auto & sceneRoot = scene.sceneRoots[sceneRootIndex];
 							
 							for (auto & node_index : sceneRoot.nodes)
 							{

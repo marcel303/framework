@@ -36,7 +36,9 @@ namespace gltf
 	void drawNodeMinMaxTraverse(const Scene & scene, const Node & node);
 	void calculateNodeMinMaxTraverse(const Scene & scene, const Node & node, BoundingBox & boundingBox);
 	
-	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene = -1);
+	void calculateSceneMinMaxTraverse(const Scene & scene, const int activeScene, BoundingBox & boundingBox);
+	
+	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene = -2);
 }
 
 // -- draw using buffer cache --
@@ -62,5 +64,5 @@ namespace gltf
 
 	void drawNodeTraverse(const Scene & scene, const BufferCache * bufferCache, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass);
 	
-	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene = -1);
+	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene = -2);
 }
