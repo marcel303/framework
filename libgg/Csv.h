@@ -54,6 +54,7 @@ public:
 	void clear();
 	
 	bool load(const char * filename, const bool hasHeader, const char separator);
+	bool loadText(const char * text, const bool hasHeader, const char separator);
 	bool parseLine(const char * begin, const char * end, const char separator);
 	bool finalize(const bool hasHeader);
 	

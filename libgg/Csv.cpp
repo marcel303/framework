@@ -210,6 +210,71 @@ bool ReadOnlyCsvDocument::load(const char * filename, const bool hasHeader, cons
 	return result;
 }
 
+bool ReadOnlyCsvDocument::loadText(const char * text, const bool hasHeader, const char separator)
+{
+	clear();
+	
+	//
+	
+	Assert(m_text == nullptr);
+	Assert(m_cells.empty());
+	
+	bool result = true;
+	
+	TextIO::LineEndings lineEndings;
+	
+	struct UserData
+	{
+		ReadOnlyCsvDocument * self;
+		char separator;
+		bool result;
+	};
+	
+	auto lineCallback = [](void * in_userData, const char * begin, const char * end)
+	{
+		UserData * userData = (UserData*)in_userData;
+		
+		userData->self->parseLine(begin, end, userData->separator);
+	};
+	
+	UserData userData;
+	userData.self = this;
+	userData.separator = separator;
+	userData.result = true;
+	
+	if (result == true)
+	{
+		m_cells.reserve(100);
+		
+		const size_t text_length = strlen(text) + 1;
+		m_text = new char[text_length];
+		memcpy(m_text, text, text_length);
+		
+		if (TextIO::loadTextWithCallback(m_text, lineEndings, lineCallback, &userData) == false)
+			result = false;
+		else if (userData.result == false)
+			result = false;
+	}
+	
+	if (result)
+	{
+		if (finalize(hasHeader) == false)
+			result = false;
+	}
+	
+	if (result == false)
+	{
+		clear();
+	}
+	else
+	{
+		Assert(m_numColumns > 0);
+		Assert(m_cells.empty() == false);
+	}
+	
+	return result;
+}
+
 bool ReadOnlyCsvDocument::parseLine(const char * begin, const char * end, const char separator)
 {
 	bool result = true;
