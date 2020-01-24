@@ -46,10 +46,10 @@ struct GxVertexInput
 {
 	uint8_t id : 5;            // vertex stream id or index. given by VS_POSITION, VS_TEXCOORD, .. for built-in shaders
 	uint8_t numComponents : 3; // the number of components per element
-	GX_ELEMENT_TYPE type : 4;  // the type of element inside the vertex stream
-	bool normalize : 4;        // (if integer) should the element be normalized into the range 0..1?
-	uint32_t offset : 24;      // byte offset within vertex buffer for the start of this input
-	uint32_t stride : 8;       // byte stride between elements for this vertex stream
+	GX_ELEMENT_TYPE type : 3;  // the type of element inside the vertex stream
+	bool normalize : 1;        // (if integer) should the element be normalized into the range 0..1?
+	uint32_t offset : 32;      // byte offset within vertex buffer for the start of this input
+	uint32_t stride : 12;      // byte stride between elements for this vertex stream
 };
 
 class GxVertexBufferBase
