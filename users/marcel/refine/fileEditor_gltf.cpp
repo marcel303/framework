@@ -4,6 +4,10 @@
 #include "reflection.h"
 #include "ui.h" // drawUiRectCheckered
 
+// todo : add option : draw mode (lit, colors, normals, specular, roughness, metallic, glossiness, ..)
+// todo : add option : wireframe on or off
+// todo : add option : blend mode : alpha blend or alpha to coverage
+
 FileEditor_Gltf::FileEditor_Gltf(const char * path)
 {
 	gltf::loadScene(path, scene);
@@ -21,8 +25,14 @@ bool FileEditor_Gltf::reflect(TypeDB & typeDB, StructuredType & type)
 {
 	type.add("showBoundingBox", &FileEditor_Gltf::showBoundingBox);
 	type.add("showAxis", &FileEditor_Gltf::showAxis);
-	type.add("enableLighting", &FileEditor_Gltf::enableLighting);
 	type.add("scale", &FileEditor_Gltf::desiredScale);
+	
+	typeDB.addEnum<gltf::AlphaMode>("gltf::AlphaMode")
+		.add("alphaBlend", gltf::kAlphaMode_AlphaBlend)
+		.add("alphaToCoverage", gltf::kAlphaMode_AlphaToCoverage);
+	type.add("alphaMode", &FileEditor_Gltf::alphaMode);
+	type.add("sortDrawablesByViewDistance", &FileEditor_Gltf::sortDrawablesByViewDistance);
+	type.add("enableBufferCache", &FileEditor_Gltf::enableBufferCache);
 	
 	return true;
 }
@@ -57,6 +67,13 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				ImGui::Checkbox("Show bounding box", &showBoundingBox);
 				ImGui::Checkbox("Show axis", &showAxis);
 			}
+			
+			if (ImGui::CollapsingHeader("Draw"))
+			{
+				ImGui::Checkbox("Sort drawables by view distance", &sortDrawablesByViewDistance);
+				ImGui::Checkbox("Use buffer cache", &enableBufferCache);
+			}
+			
 			ImGui::SliderFloat("Scale", &desiredScale, 0.f, 4.f, "%.2f", 2.f);
 			
 			ImGui::PopItemWidth();
@@ -166,35 +183,59 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				
 				if (showAxis)
 				{
-					setColor(colorRed);
-					drawLine3d(0);
-					
-					setColor(colorGreen);
-					drawLine3d(1);
-					
-					setColor(colorBlue);
-					drawLine3d(2);
+					pushDepthTest(true, DEPTH_LESS);
+					pushBlend(BLEND_OPAQUE);
+					{
+						setColor(colorRed);
+						drawLine3d(0);
+						
+						setColor(colorGreen);
+						drawLine3d(1);
+						
+						setColor(colorBlue);
+						drawLine3d(2);
+					}
+					popBlend();
+					popDepthTest();
 				}
 		
 				// automatically fit to bounding box
 				
 				gxScalef(1.f / maxAxis, 1.f / maxAxis, 1.f / maxAxis);
 				gxScalef(currentScale, currentScale, currentScale);
-				gxScalef(-1, 1, 1); // apply scale (-1, 1, 1) at the scene draw & minmax level
+				gxScalef(1, 1, -1); // apply scale (1, 1, -1) at the scene draw & minmax level
 				gxTranslatef(-mid[0], -mid[1], -mid[2]);
 				
 				if (showBoundingBox)
 				{
-					setColor(colorWhite);
-					lineCube(mid, extents);
+					pushDepthTest(true, DEPTH_LESS);
+					pushBlend(BLEND_OPAQUE);
+					{
+						setColor(colorWhite);
+						lineCube(mid, extents);
+					}
+					popBlend();
+					popDepthTest();
 				}
 				
 				// draw model
 				
+				gltf::DrawOptions drawOptions;
+				drawOptions.alphaMode = alphaMode;
+				drawOptions.sortPrimitivesByViewDistance = sortDrawablesByViewDistance;
+				
 				pushDepthTest(true, DEPTH_LESS);
 				pushBlend(BLEND_OPAQUE);
 				{
-					gltf::drawScene(scene, &bufferCache, materialShaders, true);
+					gltf::drawScene(
+						scene,
+						enableBufferCache
+						? &bufferCache
+						: nullptr,
+						materialShaders,
+						true,
+						scene.activeScene,
+						&drawOptions);
 				}
 				popBlend();
 				popDepthTest();
@@ -202,7 +243,15 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				pushDepthTest(true, DEPTH_LESS);
 				pushBlend(BLEND_ALPHA);
 				{
-					gltf::drawScene(scene, &bufferCache, materialShaders, false);
+					gltf::drawScene(
+						scene,
+						enableBufferCache
+						? &bufferCache
+						: nullptr,
+						materialShaders,
+						false,
+						scene.activeScene,
+						&drawOptions);
 				}
 				popBlend();
 				popDepthTest();

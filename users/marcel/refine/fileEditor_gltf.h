@@ -14,9 +14,12 @@ struct FileEditor_Gltf : FileEditor
 	
 	bool showBoundingBox = false;
 	bool showAxis = false;
-	bool enableLighting = true;
 	float desiredScale = 1.f;
 	float currentScale = 1.f;
+	
+	gltf::AlphaMode alphaMode = gltf::kAlphaMode_AlphaBlend;
+	bool sortDrawablesByViewDistance = false;
+	bool enableBufferCache = true;
 	
 	FrameworkImGuiContext guiContext;
 	
