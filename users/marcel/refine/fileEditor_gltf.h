@@ -17,10 +17,6 @@ struct FileEditor_Gltf : FileEditor
 	bool enableLighting = true;
 	float desiredScale = 1.f;
 	float currentScale = 1.f;
-	Vec3 ambientLight_color = Vec3(.5f, .5f, .5f);
-	float directionalLight_intensity = 1.f;
-	Vec3 directionalLight_color = Vec3(.5f, .5f, .5f);
-	Vec3 directionalLight_direction = Vec3(1.f, 1.f, -1.f);
 	
 	FrameworkImGuiContext guiContext;
 	

@@ -4,45 +4,10 @@
 #include "reflection.h"
 #include "ui.h" // drawUiRectCheckered
 
-static const char * s_gltfBasicSkinnedWithLightingPs = R"SHADER(
-
-	include engine/ShaderPS.txt
-
-	uniform vec3 ambientLight_color;
-	uniform vec3 directionalLight_color;
-	uniform vec3 directionalLight_direction;
-
-	shader_in vec4 v_color;
-	shader_in vec3 v_normal;
-
-	void main()
-	{
-		vec3 total_light_color = ambientLight_color;
-		
-		{
-			float intensity = max(0.0, dot(directionalLight_direction, v_normal));
-			total_light_color += directionalLight_color * intensity;
-		}
-		
-		// todo : use PBR shaders
-		
-		vec3 color = total_light_color;
-		float opacity = .5f;
-		
-		shader_fragColor = vec4(color, opacity);
-		shader_fragNormal = vec4(v_normal, 0.0);
-	}
-
-)SHADER";
-
-//
-
 FileEditor_Gltf::FileEditor_Gltf(const char * path)
 {
 	gltf::loadScene(path, scene);
 	bufferCache.init(scene);
-	
-	shaderSource("gltf/BasicSkinnedWithLighting.ps", s_gltfBasicSkinnedWithLightingPs);
 	
 	guiContext.init();
 }
@@ -58,10 +23,6 @@ bool FileEditor_Gltf::reflect(TypeDB & typeDB, StructuredType & type)
 	type.add("showAxis", &FileEditor_Gltf::showAxis);
 	type.add("enableLighting", &FileEditor_Gltf::enableLighting);
 	type.add("scale", &FileEditor_Gltf::desiredScale);
-	type.add("ambientLight_color", &FileEditor_Gltf::ambientLight_color);
-	type.add("directionalLight_intensity", &FileEditor_Gltf::directionalLight_intensity);
-	type.add("directionalLight_color", &FileEditor_Gltf::directionalLight_color);
-	type.add("directionalLight_direction", &FileEditor_Gltf::directionalLight_direction);
 	
 	return true;
 }
@@ -97,20 +58,6 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				ImGui::Checkbox("Show axis", &showAxis);
 			}
 			ImGui::SliderFloat("Scale", &desiredScale, 0.f, 4.f, "%.2f", 2.f);
-			ImGui::Checkbox("Enable lighting", &enableLighting);
-			if (ImGui::CollapsingHeader("Lighting"))
-			{
-				ImGui::PushID("Ambient light");
-				ImGui::Text("Ambient light");
-				ImGui::ColorEdit3("Color", &ambientLight_color[0]);
-				ImGui::PopID();
-				
-				ImGui::PushID("Directional light");
-				ImGui::Text("Directional light");
-				ImGui::SliderFloat("Intensity", &directionalLight_intensity, 0.f, 10.f);
-				ImGui::ColorEdit3("Color", &directionalLight_color[0]);
-				ImGui::PopID();
-			}
 			
 			ImGui::PopItemWidth();
 		}
@@ -164,7 +111,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 	projectPerspective3d(60.f, .01f, 100.f);
 	{
 		gltf::BoundingBox bb;
-		gltf::calculateNodeMinMaxTraverse(scene, scene.nodes[scene.activeScene], bb);
+		gltf::calculateSceneMinMaxTraverse(scene, scene.activeScene, bb);
 		
 		const Vec3 mid = (bb.min + bb.max) / 2.f;
 		const Vec3 extents = (bb.max - bb.min) / 2.f;
@@ -175,34 +122,39 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 		
 		if (maxAxis > 0.f)
 		{
-			Shader shader(
-				"gltf/BasicSkinnedWithLighting",
-				"engine/Generic.vs",
-				"gltf/BasicSkinnedWithLighting.ps");
+			Shader metallicRoughnessShader("shader-pbr");
+			Shader specularGlossinessShader("shader-pbr-specularGlossiness");
 			
-			setShader(shader);
+		// todo : add a nicer way to set lighting for the GLTF library's built-in shaders
+			Shader * shaders[2] = { &metallicRoughnessShader, &specularGlossinessShader };
+			for (auto * shader : shaders)
 			{
-				shader.setImmediate("ambientLight_color",
-					ambientLight_color[0],
-					ambientLight_color[1],
-					ambientLight_color[2]);
+				setShader(*shader);
+				shader->setImmediate("scene_camPos",
+					0.f,
+					0.f,
+					0.f);
 				
-				const Vec3 lightColor = directionalLight_color * directionalLight_intensity;
-				shader.setImmediate("directionalLight_color",
-					lightColor[0],
-					lightColor[1],
-					lightColor[2]);
+				Mat4x4 objectToView;
+				gxGetMatrixf(GX_MODELVIEW, objectToView.m_v);
 				
-				const Vec3 lightDirection = directionalLight_direction.CalcNormalized();
-				shader.setImmediate("directionalLight_direction",
-					lightDirection[0],
-					lightDirection[1],
-					lightDirection[2]);
+				const float dx = cosf(framework.time / 1.56f);
+				const float dz = sinf(framework.time / 1.67f);
+				const Vec3 lightDir_world(dx, 0.f, dz);
+				const Vec3 lightDir_view = objectToView.Mul3(lightDir_world);
+		
+				shader->setImmediate("scene_lightDir",
+					lightDir_view[0],
+					lightDir_view[1],
+					lightDir_view[2]);
+				
+				clearShader();
 			}
-			clearShader();
 			
 			gltf::MaterialShaders materialShaders;
-			materialShaders.fallbackShader = &shader;
+			materialShaders.pbr_specularGlossiness = &specularGlossinessShader;
+			materialShaders.pbr_metallicRoughness = &metallicRoughnessShader;
+			materialShaders.fallbackShader = &metallicRoughnessShader;
 			
 			gxPushMatrix();
 			{
@@ -228,6 +180,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				
 				gxScalef(1.f / maxAxis, 1.f / maxAxis, 1.f / maxAxis);
 				gxScalef(currentScale, currentScale, currentScale);
+				gxScalef(-1, 1, 1); // apply scale (-1, 1, 1) at the scene draw & minmax level
 				gxTranslatef(-mid[0], -mid[1], -mid[2]);
 				
 				if (showBoundingBox)
