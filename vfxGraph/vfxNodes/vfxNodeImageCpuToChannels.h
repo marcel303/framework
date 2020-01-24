@@ -27,7 +27,6 @@
 
 #pragma once
 
-#include "openglTexture.h"
 #include "vfxNodeBase.h"
 
 struct VfxNodeImageCpuToChannels : VfxNodeBase
