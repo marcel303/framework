@@ -26,6 +26,9 @@ std::string Base64::Encode(const ByteString& data)
 	unsigned char inbuf[3];
 	unsigned char outbuf[4];
 	
+	const int expectedResultSize = (byteCount * 8 + 5) / 6;
+	result.reserve(expectedResultSize);
+	
 	for (;;)
 	{
 		const int todo = byteCount - baseIndex;
@@ -69,15 +72,20 @@ std::string Base64::Encode(const ByteString& data)
 		baseIndex += 3;
 	}
 	
+	Assert(result.size() == expectedResultSize); // if unequal, we either reserved too much memory, or had to grow/realloc the resulting array
+	
 	return result;
 }
 
-ByteString Base64::Decode(const std::string& text)
+ByteString Base64::Decode(const char* text)
 {
 	ByteString result;
 	
 	const char *characters = &text[0];
-	const int characterCount = (int)text.length();
+	const int characterCount = (int)strlen(text);
+	
+	const int expectedResultSize = (characterCount * 6 + 7) / 8;
+	result.m_Bytes.reserve(expectedResultSize);
 	
 	int characterIndex = 0;
 	
@@ -142,10 +150,12 @@ ByteString Base64::Decode(const std::string& text)
 		}
 	}
 	
+	Assert(result.m_Bytes.size() == expectedResultSize); // if unequal, we either reserved too much memory, or had to grow/realloc the resulting array
+	
 	return result;
 }
 
-std::string Base64::HttpFix(const std::string& text)
+std::string Base64::HttpFix(const char* text)
 {
 	std::string temp;
 	
@@ -155,7 +165,7 @@ std::string Base64::HttpFix(const std::string& text)
 	return temp;
 }
 
-std::string Base64::HttpUnFix(const std::string& text)
+std::string Base64::HttpUnFix(const char* text)
 {
 	std::string temp;
 	
@@ -165,15 +175,15 @@ std::string Base64::HttpUnFix(const std::string& text)
 	return temp;
 }
 
-static void TestBase64(const std::string& text)
+static void TestBase64(const char* text)
 {
 	std::string text1 = text;
 	ByteString bytes1 = ByteString::FromString(text1);
 	std::string text2 = Base64::Encode(bytes1);
-	ByteString bytes2 = Base64::Decode(text2);
+	ByteString bytes2 = Base64::Decode(text2.c_str());
 	std::string text3 = bytes2.ToString();
-	std::string text4 = Base64::HttpFix(text3);
-	std::string text5 = Base64::HttpUnFix(text4);
+	std::string text4 = Base64::HttpFix(text3.c_str());
+	std::string text5 = Base64::HttpUnFix(text4.c_str());
 	
 	Assert(text1 == text3);
 	Assert(text3 == text5);
@@ -196,6 +206,6 @@ void Base64::DBG_SelfTest()
 			text.push_back(c);
 		}
 		
-		TestBase64(text);
+		TestBase64(text.c_str());
 	}
 }
