@@ -26,7 +26,6 @@
 */
 
 #include "framework.h"
-#include "graphEdit.h"
 #include "Parse.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
@@ -424,7 +423,7 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 // todo : create dummy surface explicitly during init ?
 	if (s_dummySurface == nullptr)
 	{
-		s_dummySurface = new Surface(1, 1, false);
+		s_dummySurface = new Surface(1, 1, false, false, false, 1);
 	}
 	
 	pushSurface(s_dummySurface);
