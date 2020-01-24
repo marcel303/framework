@@ -170,7 +170,7 @@ void VfxNodeOscReceiveChannels::tick(const float dt)
 				elemIndex++;
 			}
 			
-			setDynamicOutputs(&outputs[0], numNamedElems);
+			setDynamicOutputs(outputs.data(), numNamedElems);
 		}
 	}
 	

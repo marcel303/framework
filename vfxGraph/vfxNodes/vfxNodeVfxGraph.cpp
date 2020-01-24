@@ -211,7 +211,7 @@ void VfxNodeVfxGraph::tick(const float dt)
 		
 		std::sort(outputs.begin(), outputs.end(), [](DynamicOutput & o1, DynamicOutput & o2) { return o1.name < o2.name; });
 	
-		setDynamicOutputs(&outputs[0], outputs.size());
+		setDynamicOutputs(outputs.data(), outputs.size());
 	}
 }
 

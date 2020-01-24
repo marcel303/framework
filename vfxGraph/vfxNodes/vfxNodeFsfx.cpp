@@ -242,7 +242,7 @@ void VfxNodeFsfx::loadShader(const char * filename)
 			if (inputs.empty())
 				setDynamicInputs(nullptr, 0);
 			else
-				setDynamicInputs(&inputs[0], inputs.size());
+				setDynamicInputs(inputs.data(), inputs.size());
 		}
 	}
 }

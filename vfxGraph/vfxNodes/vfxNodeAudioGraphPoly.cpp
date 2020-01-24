@@ -188,7 +188,7 @@ void VfxNodeAudioGraphPoly::updateDynamicInputs()
 			if (dynamicInputs.empty())
 				setDynamicInputs(nullptr, 0);
 			else
-				setDynamicInputs(&dynamicInputs[0], dynamicInputs.size());
+				setDynamicInputs(dynamicInputs.data(), dynamicInputs.size());
 		}
 	}
 }

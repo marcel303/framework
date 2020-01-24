@@ -284,7 +284,7 @@ void VfxNodeOscSheet::updateOscSheet()
 		}
 		else
 		{
-			setDynamicInputs(&inputs[0], inputs.size());
+			setDynamicInputs(inputs.data(), inputs.size());
 		}
 		
 		Assert(inputInfos.size() == dynamicInputs.size());
