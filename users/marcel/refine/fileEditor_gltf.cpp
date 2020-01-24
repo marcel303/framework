@@ -5,14 +5,28 @@
 #include "ui.h" // drawUiRectCheckered
 
 // todo : add option : draw mode (lit, colors, normals, specular, roughness, metallic, glossiness, ..)
-// todo : add option : wireframe on or off
-// todo : add option : blend mode : alpha blend or alpha to coverage
+// todo : implement blend mode : alpha blend or alpha to coverage
+
+static const char * s_gltfWireframePs = R"SHADER(
+
+	include engine/ShaderPS.txt
+
+	uniform vec4 color;
+
+	void main()
+	{
+		shader_fragColor = color;
+	}
+
+)SHADER";
 
 FileEditor_Gltf::FileEditor_Gltf(const char * path)
 {
 	gltf::loadScene(path, scene);
 	bufferCache.init(scene);
 	
+	shaderSource("refine/gltfWireframe.ps", s_gltfWireframePs);
+
 	guiContext.init();
 }
 
@@ -33,6 +47,8 @@ bool FileEditor_Gltf::reflect(TypeDB & typeDB, StructuredType & type)
 	type.add("alphaMode", &FileEditor_Gltf::alphaMode);
 	type.add("sortDrawablesByViewDistance", &FileEditor_Gltf::sortDrawablesByViewDistance);
 	type.add("enableBufferCache", &FileEditor_Gltf::enableBufferCache);
+	type.add("wireframe", &FileEditor_Gltf::wireframe);
+	type.add("wireframeColor", &FileEditor_Gltf::wireframeColor);
 	
 	return true;
 }
@@ -70,8 +86,15 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 			
 			if (ImGui::CollapsingHeader("Draw"))
 			{
+				int alpha_item = alphaMode == gltf::kAlphaMode_AlphaBlend ? 0 : 1;
+				const char * alpha_items[2] = { "Alphe blend", "Alpha to coverage" };
+				ImGui::Combo("Alpha mode", &alpha_item, alpha_items, 2);
+				alphaMode = alpha_item == 0 ? gltf::kAlphaMode_AlphaBlend : gltf::kAlphaMode_AlphaToCoverage;
+				
 				ImGui::Checkbox("Sort drawables by view distance", &sortDrawablesByViewDistance);
 				ImGui::Checkbox("Use buffer cache", &enableBufferCache);
+				ImGui::Checkbox("Wireframe", &wireframe);
+				ImGui::ColorEdit4("Wireframe color", &wireframeColor[0]);
 			}
 			
 			ImGui::SliderFloat("Scale", &desiredScale, 0.f, 4.f, "%.2f", 2.f);
@@ -255,6 +278,52 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				}
 				popBlend();
 				popDepthTest();
+				
+				if (wireframe)
+				{
+					gxMatrixMode(GX_PROJECTION);
+					gxPushMatrix();
+					gxTranslatef(0, 0, -.01f);
+					gxMatrixMode(GX_MODELVIEW);
+					
+					pushDepthTest(true, DEPTH_LEQUAL, false);
+					pushBlend(BLEND_ALPHA);
+					pushWireframe(true);
+					{
+						Shader shader("refine/gltfWireframe", "engine/Generic.vs", "refine/gltfWireframe.ps");
+						setShader(shader);
+						shader.setImmediate("color", wireframeColor[0], wireframeColor[1], wireframeColor[2], wireframeColor[3]);
+						clearShader();
+						
+						gltf::MaterialShaders materialShaders;
+						materialShaders.fallbackShader = &shader;
+						
+						gltf::drawScene(
+							scene,
+							enableBufferCache
+							? &bufferCache
+							: nullptr,
+							materialShaders,
+							true,
+							scene.activeScene);
+						
+						gltf::drawScene(
+							scene,
+							enableBufferCache
+							? &bufferCache
+							: nullptr,
+							materialShaders,
+							false,
+							scene.activeScene);
+					}
+					popWireframe();
+					popBlend();
+					popDepthTest();
+					
+					gxMatrixMode(GX_PROJECTION);
+					gxPopMatrix();
+					gxMatrixMode(GX_MODELVIEW);
+				}
 			}
 			gxPopMatrix();
 		}

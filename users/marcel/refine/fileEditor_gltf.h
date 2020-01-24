@@ -20,6 +20,8 @@ struct FileEditor_Gltf : FileEditor
 	gltf::AlphaMode alphaMode = gltf::kAlphaMode_AlphaBlend;
 	bool sortDrawablesByViewDistance = false;
 	bool enableBufferCache = true;
+	bool wireframe = false;
+	Vec4 wireframeColor = Vec4(1, 1, 1, .2f);
 	
 	FrameworkImGuiContext guiContext;
 	
