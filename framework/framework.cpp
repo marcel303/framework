@@ -1967,7 +1967,7 @@ bool Framework::registerChibiResourcePaths(const char * encoded_text)
 	const std::string text = bytes.ToString();
 	
 	ReadOnlyCsvDocument doc;
-	if (doc.loadFromText(text.c_str(), true, ',') == false)
+	if (doc.loadText(text.c_str(), true, ',') == false)
 		logError("failed to parse chibi resource paths");
 	else
 	{
