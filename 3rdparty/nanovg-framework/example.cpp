@@ -9,10 +9,16 @@ int main(int argc, char * argv[])
 {
 	changeDirectory(CHIBI_RESOURCE_PATH);
 	
+	framework.enableDepthBuffer = true; // required for stencil operations performed by NanoVG
+	framework.allowHighDpi = true;
+	
 	if (!framework.init(1200, 600))
 		return -1;
 
-	auto * vg = nvgCreateFramework(0);
+	auto * vg = nvgCreateFramework(
+		NVG_ANTIALIAS |
+		NVG_STENCIL_STROKES |
+		NVG_DEBUG);
 	
 	DemoData data;
 	
@@ -35,7 +41,11 @@ int main(int argc, char * argv[])
 		
 		updateGraph(&fps, framework.timeStep);
 		
-		framework.beginDraw(0, 0, 0, 0);
+		framework.beginDraw(
+			0.3f  * 255,
+			0.3f  * 255,
+			0.32f * 255,
+			1.0f  * 255);
 		{
 			int sx;
 			int sy;
