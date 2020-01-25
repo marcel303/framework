@@ -187,17 +187,26 @@ struct nvgFrameworkCtx
 		nextImageId = 1;
 	}
 	
-	GxTexture * imageToTexture(const int image) const
+	const Image * getImage(const int imageId) const
 	{
-		if (image == 0)
+		if (imageId == 0)
 			return nullptr;
 		
-		auto i = images.find(image);
+		auto i = images.find(imageId);
 		Assert(i != images.end());
 		if (i != images.end())
-			return i->second.texture;
+			return &i->second;
 		else
 			return nullptr;
+	}
+	
+	GxTexture * imageToTexture(const int imageId) const
+	{
+		auto * image = getImage(imageId);
+		if (image == nullptr)
+			return nullptr;
+		else
+			return image->texture;
 	}
 };
 
@@ -282,13 +291,10 @@ static int renderDeleteTexture(void* uptr, int imageId)
 static int renderUpdateTexture(void* uptr, int imageId, int x, int y, int w, int h, const unsigned char* data)
 {
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
-	auto i = frameworkCtx->images.find(imageId);
-	Assert(i != frameworkCtx->images.end());
-	if (i != frameworkCtx->images.end())
+	auto * texture = frameworkCtx->imageToTexture(imageId);
+	Assert(texture != nullptr);
+	if (texture != nullptr)
 	{
-		auto & image = i->second;
-		auto * texture = image.texture;
-		
 		if (texture->format == GX_R8_UNORM)
 		{
 			uint8_t * bytes = (uint8_t*)data;
@@ -313,16 +319,12 @@ static int renderUpdateTexture(void* uptr, int imageId, int x, int y, int w, int
 static int renderGetTextureSize(void* uptr, int imageId, int* w, int* h)
 {
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
-	auto i = frameworkCtx->images.find(imageId);
-	Assert(i != frameworkCtx->images.end());
-	if (i != frameworkCtx->images.end())
+	auto * texture = frameworkCtx->imageToTexture(imageId);
+	Assert(texture != nullptr);
+	if (texture != nullptr)
 	{
-		auto & image = i->second;
-		auto * texture = image.texture;
-	
 		*w = texture->sx;
 		*h = texture->sy;
-		
 		return 1;
 	}
 	else
@@ -446,7 +448,7 @@ static void setShaderUniforms(
 		scissorScale,
 		strokeMult);
 	
-	const float strokeThr = -1;
+	const float strokeThr = -1.f;
 	
 	shader.setImmediateMatrix4x4("scissorMat", scissorMat.m_v);
 	shader.setImmediateMatrix4x4("paintMat", paintMat.m_v);
@@ -460,24 +462,23 @@ static void setShaderUniforms(
 	shader.setImmediate("strokeMult", strokeMult);
 	shader.setImmediate("strokeThr", strokeThr);
 	
-	auto * texture = frameworkCtx->imageToTexture(paint.image);
+	auto * image = frameworkCtx->getImage(paint.image);
 	
-	if (texture == nullptr)
+	if (image == nullptr)
 	{
 		shader.setImmediate("type", 0); // gradient
 		
 		shader.setTexture("tex", 0, 0);
-		shader.setImmediate("texType", -1.f);
+		shader.setImmediate("texType", -1);
 	}
 	else
 	{
 		shader.setImmediate("type", 1); // image
-		
-		shader.setTexture("tex", 0, texture->id);
-		if (texture->format == GX_RGBA8_UNORM)
-			shader.setImmediate("texType", 1.f); // todo : (tex->flags & NVG_IMAGE_PREMULTIPLIED) ? 0 : 1;
-		else if (texture->format == GX_R8_UNORM)
-			shader.setImmediate("texType", 2.f);
+		shader.setTexture("tex", 0, image->texture->id);
+		if (image->texture->format == GX_RGBA8_UNORM)
+			shader.setImmediate("texType", (image->flags & NVG_IMAGE_PREMULTIPLIED) ? 0 : 1);
+		else if (image->texture->format == GX_R8_UNORM)
+			shader.setImmediate("texType", 2);
 		else
 			Assert(false);
 	}
