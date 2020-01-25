@@ -1615,8 +1615,8 @@ static void gxValidatePipelineState()
 					att.rgbBlendOperation = MTLBlendOperationAdd;
 					att.alphaBlendOperation = MTLBlendOperationAdd;
 					att.sourceRGBBlendFactor = MTLBlendFactorOne;
-					att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-					att.destinationRGBBlendFactor = MTLBlendFactorOne;
+					att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+					att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					break;
 				case BLEND_PREMULTIPLIED_ALPHA_DRAW:
@@ -1625,8 +1625,8 @@ static void gxValidatePipelineState()
 					att.rgbBlendOperation = MTLBlendOperationAdd;
 					att.alphaBlendOperation = MTLBlendOperationAdd;
 					att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-					att.sourceAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
-					att.destinationRGBBlendFactor = MTLBlendFactorOne;
+					att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+					att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					break;
 				case BLEND_ADD:
