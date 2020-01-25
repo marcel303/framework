@@ -1,0 +1,20 @@
+library nanovg shared
+	scan_files c path ../nanovg/src
+	scan_files h path ../nanovg/src
+	header_path ../nanovg/src expose
+
+library nanovg-framework
+	depend_library framework
+	depend_library nanovg
+	add_files nanovg-framework.cpp
+	header_path . expose
+
+app nanovg-framework-example
+	depend_library nanovg-framework
+	add_files example.cpp
+	add_files ../nanovg/example/demo.c
+	add_files ../nanovg/example/demo.h
+	add_files ../nanovg/example/perf.c
+	add_files ../nanovg/example/perf.h
+	header_path ../nanovg/example
+	resource_path ../nanovg/example

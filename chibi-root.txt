@@ -16,6 +16,7 @@ push_group libraries
 	add 3rdparty/jsoncpp
 	add 3rdparty/libwebrequest
 	add 3rdparty/miniz
+	add 3rdparty/nanovg-framework
 	with_platform linux add 3rdparty/xmm-support
 	with_platform macos add 3rdparty/xmm-support
 	add libfbx
