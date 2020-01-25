@@ -68,6 +68,7 @@ struct RenderPipelineState
 	{
 		uint16_t colorFormat[kMaxColorTargets] = { };
 		uint16_t depthFormat = 0;
+		uint16_t stencilFormat = 0;
 	} renderPass;
 };
 

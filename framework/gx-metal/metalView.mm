@@ -70,7 +70,7 @@
 		
     	if (wantsDepthBuffer)
     	{
-			self.depthStencilPixelFormat = MTLPixelFormatDepth32Float;
+			self.depthStencilPixelFormat = MTLPixelFormatDepth32Float_Stencil8;
 		}
     }
 
@@ -140,7 +140,7 @@
 			[self.depthTexture release];
 			self.depthTexture = nullptr;
 			
-			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float width:size.width height:size.height mipmapped:NO];
+			MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float_Stencil8 width:size.width height:size.height mipmapped:NO];
 			descriptor.resourceOptions = MTLResourceStorageModePrivate;
 			descriptor.usage = MTLTextureUsageRenderTarget;
 			

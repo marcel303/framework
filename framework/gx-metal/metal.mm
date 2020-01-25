@@ -529,6 +529,22 @@ void beginRenderPass(
 				viewportSx = depthattachment.texture.width;
 			if (depthattachment.texture.height > viewportSy)
 				viewportSy = depthattachment.texture.height;
+			
+			if (true)
+			{
+				MTLRenderPassStencilAttachmentDescriptor * stencilattachment = pd.renderdesc.stencilAttachment;
+				stencilattachment.texture = (id <MTLTexture>)depthTarget->getMetalTexture();
+				stencilattachment.clearStencil = 0x00;
+				stencilattachment.loadAction = in_clearDepth ? MTLLoadActionClear : MTLLoadActionLoad;
+				stencilattachment.storeAction = depthTarget->isTextureEnabled() ? MTLStoreActionStore : MTLStoreActionDontCare;
+				
+				pd.renderPass.stencilFormat = stencilattachment.texture.pixelFormat;
+				
+				if (depthattachment.texture.width > viewportSx)
+					viewportSx = depthattachment.texture.width;
+				if (depthattachment.texture.height > viewportSy)
+					viewportSy = depthattachment.texture.height;
+			}
 		}
 		
 		pd.viewportSx = viewportSx;
@@ -870,6 +886,8 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 		descriptor.depthWriteEnabled = false;
 	}
 	
+// todo : fill in stencil test stuff
+	
 	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
 	
 	[s_activeRenderPass->encoder setDepthStencilState:state];
@@ -946,6 +964,114 @@ void popCullMode()
 	const CullModeInfo cullMode = cullModeStack.popValue();
 	
 	setCullMode(cullMode.mode, cullMode.winding);
+}
+
+// todo : move
+StencilState StencilSetter::front;
+StencilState StencilSetter::back;
+
+static MTLStencilOperation translateStencilOp(const GX_STENCIL_OP op)
+{
+/*
+	MTLStencilOperationKeep = 0,
+    MTLStencilOperationZero = 1,
+    MTLStencilOperationReplace = 2,
+    MTLStencilOperationIncrementClamp = 3,
+    MTLStencilOperationDecrementClamp = 4,
+    MTLStencilOperationInvert = 5,
+    MTLStencilOperationIncrementWrap = 6,
+    MTLStencilOperationDecrementWrap = 7,
+*/
+
+	switch (op)
+	{
+	case GX_STENCIL_OP_KEEP:
+		return MTLStencilOperationKeep;
+	case GX_STENCIL_OP_ZERO:
+		return MTLStencilOperationZero;
+	case GX_STENCIL_OP_INC:
+		return MTLStencilOperationIncrementClamp;
+	case GX_STENCIL_OP_DEC:
+		return MTLStencilOperationDecrementClamp;
+	case GX_STENCIL_OP_INC_WRAP:
+		return MTLStencilOperationIncrementWrap;
+	case GX_STENCIL_OP_DEC_WRAP:
+		return MTLStencilOperationDecrementWrap;
+	}
+	
+	Assert(false);
+	return MTLStencilOperationKeep;
+}
+
+static MTLCompareFunction translateCompareFunction(const GX_STENCIL_FUNC func)
+{
+	switch (func)
+	{
+	case GX_STENCIL_FUNC_NEVER:
+		return MTLCompareFunctionNever;
+	case GX_STENCIL_FUNC_LESS:
+		return MTLCompareFunctionLess;
+	case GX_STENCIL_FUNC_LEQUAL:
+		return MTLCompareFunctionLessEqual;
+	case GX_STENCIL_FUNC_GREATER:
+		return MTLCompareFunctionGreater;
+	case GX_STENCIL_FUNC_GEQUAL:
+		return MTLCompareFunctionGreaterEqual;
+	case GX_STENCIL_FUNC_EQUAL:
+		return MTLCompareFunctionEqual;
+	case GX_STENCIL_FUNC_NOTEQUAL:
+		return MTLCompareFunctionNotEqual;
+	case GX_STENCIL_FUNC_ALWAYS:
+		return MTLCompareFunctionAlways;
+	}
+	
+	Assert(false);
+	return MTLCompareFunctionAlways;
+}
+
+static void fillStencilDescriptor(
+	MTLStencilDescriptor * descriptor,
+	const StencilState & stencilState)
+{
+	descriptor.readMask = stencilState.compareMask;
+	descriptor.stencilCompareFunction = translateCompareFunction(stencilState.compareFunc);
+	
+	descriptor.stencilFailureOperation = translateStencilOp(stencilState.onStencilFail);
+	descriptor.depthFailureOperation = translateStencilOp(stencilState.onDepthFail);
+	descriptor.depthStencilPassOperation = translateStencilOp(stencilState.onDepthStencilPass);
+	
+	descriptor.writeMask = stencilState.writeMask;
+}
+
+void setStencilTest(StencilState & front, StencilState & back)
+{
+	// depth state
+	
+	MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
+	
+	//
+	
+	fillStencilDescriptor(descriptor.frontFaceStencil, front);
+	fillStencilDescriptor(descriptor.backFaceStencil, back);
+	
+	//
+	
+	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+	
+	[s_activeRenderPass->encoder setDepthStencilState:state];
+	
+	[state release];
+	state = nullptr;
+	
+	[descriptor release];
+	descriptor = nullptr;
+}
+
+static StencilState defaultStencilState;
+
+void clearStencilTest()
+{
+	setStencilTest(defaultStencilState, defaultStencilState);
 }
 
 // -- gpu resources --
@@ -1701,6 +1827,11 @@ static void gxValidatePipelineState()
 			if (renderState.renderPass.depthFormat != 0)
 			{
 				pipelineDescriptor.depthAttachmentPixelFormat = (MTLPixelFormat)renderState.renderPass.depthFormat;
+			}
+			
+			if (renderState.renderPass.stencilFormat != 0)
+			{
+				pipelineDescriptor.stencilAttachmentPixelFormat = (MTLPixelFormat)renderState.renderPass.stencilFormat;
 			}
 
 			NSError * error;
