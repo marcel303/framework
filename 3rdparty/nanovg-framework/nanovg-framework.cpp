@@ -245,11 +245,6 @@ static int renderCreate(void* uptr)
 
 static int renderCreateTexture(void* uptr, int type, int w, int h, int imageFlags, const unsigned char* data)
 {
-/*
-todo :
-	NVG_IMAGE_FLIPY				= 1<<3,		// Flips (inverses) image in Y direction when rendered.
-*/
-
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
 	const int imageId = frameworkCtx->nextImageId++;
 	auto & image = frameworkCtx->images[imageId];
@@ -385,30 +380,42 @@ static Mat4x4 xformToInverseMat(const float * xform)
 	return mat.CalcInv();
 }
 
-static void premultiplyColorWithAlpha(const NVGcolor & c, NVGcolor & r)
+static NVGcolor premultiplyColorWithAlpha(NVGcolor c)
 {
-	r.r = c.r * c.a;
-	r.g = c.g * c.a;
-	r.b = c.b * c.a;
-	r.a = c.a;
+	c.r *= c.a;
+	c.g *= c.a;
+	c.b *= c.a;
+	return c;
 }
 
 static void computeShaderUniforms(
 	const NVGpaint & paint,
+	const nvgFrameworkCtx::Image * image,
 	const NVGscissor & scissor,
 	const float width,
 	const float fringe,
 	Mat4x4 & out_paintMat,
-	NVGcolor & out_innerColor,
-	NVGcolor & out_outerColor,
 	Mat4x4 & out_scissorMat,
 	float * out_scissorExt,
 	float * out_scissorScale,
 	float & out_strokeMult)
 {
-	out_paintMat = xformToInverseMat(paint.xform);
-	premultiplyColorWithAlpha(paint.innerColor, out_innerColor);
-	premultiplyColorWithAlpha(paint.outerColor, out_outerColor);
+	if (paint.image != 0 && image != nullptr && (image->flags & NVG_IMAGE_FLIPY) != 0)
+	{
+		float m1[6], m2[6];
+		nvgTransformTranslate(m1, 0.f, paint.extent[1] * .5f);
+		nvgTransformMultiply(m1, paint.xform);
+		nvgTransformScale(m2, 1.f, -1.f);
+		nvgTransformMultiply(m2, m1);
+		nvgTransformTranslate(m1, 0.f, -paint.extent[1] * .5f);
+		nvgTransformMultiply(m1, m2);
+		
+		out_paintMat = xformToInverseMat(m1);
+	}
+	else
+	{
+		out_paintMat = xformToInverseMat(paint.xform);
+	}
 
 	if (scissor.extent[0] < -.5f || scissor.extent[1] < -.5f)
 	{
@@ -436,11 +443,14 @@ static bool setShaderUniforms(
 	const NVGscissor & scissor,
 	const float width,
 	const float fringe,
+	const float strokeThreshold,
 	nvgFrameworkCtx * frameworkCtx)
 {
+	auto * image = frameworkCtx->getImage(paint.image);
+	
 	Mat4x4 paintMat;
-	NVGcolor innerColor;
-	NVGcolor outerColor;
+	NVGcolor innerColor = premultiplyColorWithAlpha(paint.innerColor);
+	NVGcolor outerColor = premultiplyColorWithAlpha(paint.outerColor);
 	
 	float scissorExt[2];
 	float scissorScale[2];
@@ -450,18 +460,15 @@ static bool setShaderUniforms(
 	
 	computeShaderUniforms(
 		paint,
+		image,
 		scissor,
 		width,
 		fringe,
 		paintMat,
-		innerColor,
-		outerColor,
 		scissorMat,
 		scissorExt,
 		scissorScale,
 		strokeMult);
-	
-	const float strokeThr = -1.f;
 	
 	shader.setImmediateMatrix4x4("scissorMat", scissorMat.m_v);
 	shader.setImmediateMatrix4x4("paintMat", paintMat.m_v);
@@ -473,19 +480,16 @@ static bool setShaderUniforms(
 	shader.setImmediate("radius", paint.radius);
 	shader.setImmediate("feather", paint.feather);
 	shader.setImmediate("strokeMult", strokeMult);
-	shader.setImmediate("strokeThr", strokeThr);
+	shader.setImmediate("strokeThr", strokeThreshold);
 	
 	if (paint.image == 0)
 	{
 		shader.setImmediate("type", 0); // gradient
-		
 		shader.setTexture("tex", 0, 0);
 		shader.setImmediate("texType", -1);
 	}
 	else
 	{
-		auto * image = frameworkCtx->getImage(paint.image);
-		
 		Assert(image != nullptr);
 		if (image == nullptr)
 			return false;
@@ -570,7 +574,8 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 	Shader shader("nanovg-framework/fill");
 	setShader(shader);
 	{
-		setShaderUniforms(shader, *paint, *scissor, fringe, fringe, frameworkCtx);
+		if (!setShaderUniforms(shader, *paint, *scissor, fringe, fringe, -1.f, frameworkCtx))
+			return;
 		
 	#if ENABLE_OPENGL_BLEND_HACK
 		pushBlendOp(compositeOperation);
@@ -655,7 +660,8 @@ static void renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperationState
 	Shader shader("nanovg-framework/fill");
 	setShader(shader);
 	{
-		setShaderUniforms(shader, *paint, *scissor, strokeWidth, fringe, frameworkCtx);
+		if (!setShaderUniforms(shader, *paint, *scissor, strokeWidth, fringe, -1.f, frameworkCtx))
+			return;
 		
 		pushBlend(BLEND_PREMULTIPLIED_ALPHA);
 		
@@ -696,7 +702,8 @@ static void renderTriangles(void* uptr, NVGpaint* paint, NVGcompositeOperationSt
 	Shader shader("nanovg-framework/fill");
 	setShader(shader);
 	{
-		setShaderUniforms(shader, *paint, *scissor, 1.f, 1.f, frameworkCtx);
+		if (!setShaderUniforms(shader, *paint, *scissor, 1.f, 1.f, -1.f, frameworkCtx))
+			return;
 		shader.setImmediate("type", 3); // textured triangles
 		
 	#if ENABLE_OPENGL_BLEND_HACK
@@ -717,7 +724,7 @@ static void renderTriangles(void* uptr, NVGpaint* paint, NVGcompositeOperationSt
 		}
 		gxEnd();
 		
-	#if pushBlendOp(compositeOperation);
+	#if ENABLE_OPENGL_BLEND_HACK
 		popBlendOp();
 	#else
 		popBlend();
