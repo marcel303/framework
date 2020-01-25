@@ -7,6 +7,7 @@ library nanovg-framework
 	depend_library framework
 	depend_library nanovg
 	add_files nanovg-framework.cpp
+	add_files nanovg-framework.h
 	header_path . expose
 
 app nanovg-framework-example
