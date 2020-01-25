@@ -143,42 +143,46 @@ void main(void)
 
 struct nvgFrameworkCtx
 {
-	std::map<int, GxTexture*> textures;
+	struct Image
+	{
+		GxTexture * texture = nullptr;
+		int flags = 0;
+	};
+	
+	std::map<int, Image> images;
 	
 	int nextImageId = 1;
 	
 	~nvgFrameworkCtx()
 	{
-		Assert(textures.empty());
+		Assert(images.empty());
 		Assert(nextImageId == 1);
 	}
 	
 	void create()
 	{
-		Assert(textures.empty());
+		Assert(images.empty());
 		Assert(nextImageId == 1);
 		
 		shaderSource("nanovg-framework/fill.vs", s_fillVs);
 		shaderSource("nanovg-framework/fill.ps", s_fillPs);
-		
-		Shader shader("nanovg-framework/fill");
 	}
 	
 	void destroy()
 	{
 		// free textures
 		
-		for (auto & i : textures)
+		for (auto & i : images)
 		{
-			auto *& texture = i.second;
+			auto & image = i.second;
 			
-			texture->free();
+			image.texture->free();
 			
-			delete texture;
-			texture = nullptr;
+			delete image.texture;
+			image.texture = nullptr;
 		}
 		
-		textures.clear();
+		images.clear();
 		
 		nextImageId = 1;
 	}
@@ -188,25 +192,12 @@ struct nvgFrameworkCtx
 		if (image == 0)
 			return nullptr;
 		
-		auto i = textures.find(image);
-		Assert(i != textures.end());
-		if (i != textures.end())
-			return i->second;
+		auto i = images.find(image);
+		Assert(i != images.end());
+		if (i != images.end())
+			return i->second.texture;
 		else
 			return nullptr;
-	}
-	
-	void setTexture(const int image) const
-	{
-		if (image == 0)
-			return;
-		
-		auto * texture = imageToTexture(image);
-		
-		if (texture == nullptr)
-			gxSetTexture(0);
-		else
-			gxSetTexture(texture->id);
 	}
 };
 
@@ -250,37 +241,37 @@ enum NVGimageFlags {
 */
 
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
-	const int image = frameworkCtx->nextImageId++;
-	auto *& texture = frameworkCtx->textures[image];
-	Assert(texture == nullptr);
+	const int imageId = frameworkCtx->nextImageId++;
+	auto & image = frameworkCtx->images[imageId];
+	Assert(image.texture == nullptr);
 	
-	texture = new GxTexture();
-	
-	texture->allocate(w, h, type == NVG_TEXTURE_ALPHA ? GX_R8_UNORM : GX_RGBA8_UNORM, true, true);
+	image.texture = new GxTexture();
+	image.texture->allocate(w, h, type == NVG_TEXTURE_ALPHA ? GX_R8_UNORM : GX_RGBA8_UNORM, true, true);
+	image.flags = imageFlags;
 	
 	if (data != nullptr)
 	{
-		texture->upload(data, 0, 0);
+		image.texture->upload(data, 0, 0);
 	}
 	
-	return image;
+	return imageId;
 }
 
-static int renderDeleteTexture(void* uptr, int image)
+static int renderDeleteTexture(void* uptr, int imageId)
 {
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
-	auto i = frameworkCtx->textures.find(image);
-	Assert(i != frameworkCtx->textures.end());
-	if (i != frameworkCtx->textures.end())
+	auto i = frameworkCtx->images.find(imageId);
+	Assert(i != frameworkCtx->images.end());
+	if (i != frameworkCtx->images.end())
 	{
-		auto *& texture = frameworkCtx->textures[image];
+		auto & image = i->second;
 		
-		texture->free();
+		image.texture->free();
 	
-		delete texture;
-		texture = nullptr;
+		delete image.texture;
+		image.texture = nullptr;
 		
-		frameworkCtx->textures.erase(i);
+		frameworkCtx->images.erase(i);
 		
 		return 1;
 	}
@@ -288,14 +279,15 @@ static int renderDeleteTexture(void* uptr, int image)
 		return 0;
 }
 
-static int renderUpdateTexture(void* uptr, int image, int x, int y, int w, int h, const unsigned char* data)
+static int renderUpdateTexture(void* uptr, int imageId, int x, int y, int w, int h, const unsigned char* data)
 {
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
-	auto i = frameworkCtx->textures.find(image);
-	Assert(i != frameworkCtx->textures.end());
-	if (i != frameworkCtx->textures.end())
+	auto i = frameworkCtx->images.find(imageId);
+	Assert(i != frameworkCtx->images.end());
+	if (i != frameworkCtx->images.end())
 	{
-		auto * texture = frameworkCtx->textures[image];
+		auto & image = i->second;
+		auto * texture = image.texture;
 		
 		if (texture->format == GX_R8_UNORM)
 		{
@@ -318,14 +310,15 @@ static int renderUpdateTexture(void* uptr, int image, int x, int y, int w, int h
 		return 0;
 }
 
-static int renderGetTextureSize(void* uptr, int image, int* w, int* h)
+static int renderGetTextureSize(void* uptr, int imageId, int* w, int* h)
 {
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
-	auto i = frameworkCtx->textures.find(image);
-	Assert(i != frameworkCtx->textures.end());
-	if (i != frameworkCtx->textures.end())
+	auto i = frameworkCtx->images.find(imageId);
+	Assert(i != frameworkCtx->images.end());
+	if (i != frameworkCtx->images.end())
 	{
-		auto * texture = frameworkCtx->textures[image];
+		auto & image = i->second;
+		auto * texture = image.texture;
 	
 		*w = texture->sx;
 		*h = texture->sy;
@@ -635,7 +628,7 @@ NVGcontext * nvgCreateFramework(int flags)
 	params.renderDelete = renderDelete;
 	
 	params.userPtr = new nvgFrameworkCtx();
-	params.edgeAntiAlias = flags & NVG_ANTIALIAS ? 1 : 0;
+	params.edgeAntiAlias = false;//flags & NVG_ANTIALIAS ? 1 : 0; // todo
 
 	ctx = nvgCreateInternal(&params);
 
