@@ -455,6 +455,7 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _
 
 	glBindTexture(GL_TEXTURE_2D, id);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, std::min(8, srcAlignment));
+	checkErrorGL();
 	glPixelStorei(GL_UNPACK_ROW_LENGTH, srcPitch);
 	checkErrorGL();
 
