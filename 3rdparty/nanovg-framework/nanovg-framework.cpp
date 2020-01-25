@@ -12,6 +12,8 @@
 	#define ENABLE_OPENGL_STENCIL_HACK 0
 #endif
 
+#define OPTIMIZE_STENCIL_QUAD_USING_BOUNDS 1
+
 #if ENABLE_OPENGL_BLEND_HACK || ENABLE_OPENGL_STENCIL_HACK
 	#include <GL/glew.h>
 #endif
@@ -40,7 +42,7 @@ static const char * s_fillPs = R"SHADER(
 
 include engine/ShaderPS.txt
 
-#define EDGE_AA 0
+#define EDGE_AA 1
 
 uniform mat4 scissorMat;
 uniform mat4 paintMat;
@@ -597,47 +599,102 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 		{
 			auto & path = paths[i];
 			
-			if (path.nfill < 3)
-				continue;
-		
-			gxBegin(GX_TRIANGLE_FAN);
+			if (path.nfill >= 3)
 			{
-				for (int i = 0; i < path.nfill; ++i)
+				gxBegin(GX_TRIANGLE_FAN);
 				{
-					auto & v = path.fill[i];
-					
-					gxTexCoord2f(v.u, v.v);
-					gxVertex2f(v.x, v.y);
+					for (int i = 0; i < path.nfill; ++i)
+					{
+						auto & v = path.fill[i];
+						
+						gxTexCoord2f(v.u, v.v);
+						gxVertex2f(v.x, v.y);
+					}
 				}
+				gxEnd();
 			}
-			gxEnd();
 		}
 		
 		popColorWriteMask();
 		
 		glStencilFunc(GL_NOTEQUAL, 0x0, 0xff);
 		glStencilOp(GL_ZERO, GL_ZERO, GL_ZERO);
-		drawRect(0, 0, frameworkCtx->viewportSx, frameworkCtx->viewportSy);
+	#if OPTIMIZE_STENCIL_QUAD_USING_BOUNDS
+		const float x1 = bounds[0];
+		const float y1 = bounds[1];
+		const float x2 = bounds[2];
+		const float y2 = bounds[3];
+	#else
+		const float x1 = 0.f;
+		const float y1 = 0.f;
+		const float x2 = frameworkCtx->viewportSx;
+		const float y2 = frameworkCtx->viewportSy;
+	#endif
+		gxBegin(GX_QUADS);
+		{
+			gxTexCoord2f(.5f, 1.f);
+			gxVertex2f(x1, y1);
+			gxVertex2f(x2, y1);
+			gxVertex2f(x2, y2);
+			gxVertex2f(x1, y2);
+		}
+		gxEnd();
+		
 		glDisable(GL_STENCIL_TEST);
+		
+		for (int i = 0; i < npaths; ++i)
+		{
+			auto & path = paths[i];
+			
+			if (path.nstroke >= 3)
+			{
+				gxBegin(GX_TRIANGLE_STRIP);
+				{
+					for (int i = 0; i < path.nstroke; ++i)
+					{
+						auto & v = path.stroke[i];
+						
+						gxTexCoord2f(v.u, v.v);
+						gxVertex2f(v.x, v.y);
+					}
+				}
+				gxEnd();
+			}
+		}
 	#else
 		for (int i = 0; i < npaths; ++i)
 		{
 			auto & path = paths[i];
 			
-			if (path.nfill < 3)
-				continue;
-		
-			gxBegin(GX_TRIANGLE_FAN);
+			if (path.nfill >= 3)
 			{
-				for (int i = 0; i < path.nfill; ++i)
+				gxBegin(GX_TRIANGLE_FAN);
 				{
-					auto & v = path.fill[i];
-					
-					gxTexCoord2f(v.u, v.v);
-					gxVertex2f(v.x, v.y);
+					for (int i = 0; i < path.nfill; ++i)
+					{
+						auto & v = path.fill[i];
+						
+						gxTexCoord2f(v.u, v.v);
+						gxVertex2f(v.x, v.y);
+					}
 				}
+				gxEnd();
 			}
-			gxEnd();
+			
+			if (path.nstroke >= 3)
+			{
+				gxBegin(GX_TRIANGLE_STRIP);
+				{
+					for (int i = 0; i < path.nstroke; ++i)
+					{
+						auto & v = path.stroke[i];
+						
+						gxTexCoord2f(v.u, v.v);
+						gxVertex2f(v.x, v.y);
+					}
+				}
+				gxEnd();
+			}
 		}
 	#endif
 		
@@ -669,19 +726,20 @@ static void renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperationState
 		{
 			auto & path = paths[i];
 			
-			if (path.nstroke < 3)
-				continue;
-			
-			gxBegin(GX_TRIANGLE_STRIP);
+			if (path.nstroke >= 3)
 			{
-				for (int i = 0; i < path.nstroke; ++i)
+				gxBegin(GX_TRIANGLE_STRIP);
 				{
-					auto & v = path.stroke[i];
-					gxTexCoord2f(v.u, v.v);
-					gxVertex2f(v.x, v.y);
+					for (int i = 0; i < path.nstroke; ++i)
+					{
+						auto & v = path.stroke[i];
+						
+						gxTexCoord2f(v.u, v.v);
+						gxVertex2f(v.x, v.y);
+					}
 				}
+				gxEnd();
 			}
-			gxEnd();
 		}
 		
 		popBlend();
@@ -763,7 +821,7 @@ NVGcontext * nvgCreateFramework(int flags)
 	params.renderDelete = renderDelete;
 	
 	params.userPtr = new nvgFrameworkCtx();
-	params.edgeAntiAlias = false;//flags & NVG_ANTIALIAS ? 1 : 0; // todo
+	params.edgeAntiAlias = (flags & NVG_ANTIALIAS) ? 1 : 0;
 
 	ctx = nvgCreateInternal(&params);
 
