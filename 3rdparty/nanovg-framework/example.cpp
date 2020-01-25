@@ -7,10 +7,15 @@
 
 int main(int argc, char * argv[])
 {
+#if defined(CHIBI_RESOURCE_PATH)
 	changeDirectory(CHIBI_RESOURCE_PATH);
+#else
+	changeDirectory(SDL_GetBasePath());
+#endif
 	
 	framework.enableDepthBuffer = true; // required for stencil operations performed by NanoVG
 	framework.allowHighDpi = true;
+	framework.windowIsResizable = true;
 	
 	if (!framework.init(1200, 600))
 		return -1;
@@ -37,6 +42,8 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 
+		if (keyboard.wentDown(SDLK_ESCAPE))
+			framework.quitRequested = true;
 		if (keyboard.wentDown(SDLK_SPACE))
 			blowup = !blowup;
 		
