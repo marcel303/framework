@@ -4,6 +4,18 @@
 #include "nanovg-framework.h"
 #include <map>
 
+#if ENABLE_OPENGL
+	#define ENABLE_OPENGL_BLEND_HACK 1
+	#define ENABLE_OPENGL_STENCIL_HACK 1
+#else
+	#define ENABLE_OPENGL_BLEND_HACK 0
+	#define ENABLE_OPENGL_STENCIL_HACK 0
+#endif
+
+#if ENABLE_OPENGL_BLEND_HACK || ENABLE_OPENGL_STENCIL_HACK
+	#include <GL/glew.h>
+#endif
+
 static const char * s_fillVs = R"SHADER(
 
 include engine/ShaderVS.txt
@@ -49,14 +61,11 @@ uniform sampler2D tex;
 shader_in vec2 v_position;
 shader_in vec2 v_texcoord;
 
-#define fpos v_position
-#define ftcoord v_texcoord
-
 float sdroundrect(vec2 pt, vec2 ext, float rad)
 {
-	vec2 ext2 = ext - vec2(rad,rad);
+	vec2 ext2 = ext - vec2(rad);
 	vec2 d = abs(pt) - ext2;
-	return min(max(d.x,d.y),0.0) + length(max(d,0.0)) - rad;
+	return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - rad;
 }
 
 // Scissoring
@@ -71,7 +80,7 @@ float scissorMask(vec2 p)
 // Stroke - from [0..1] to clipped pyramid, where the slope is 1px.
 float strokeMask()
 {
-	return min(1.0, (1.0 - abs(ftcoord.x * 2.0 - 1.0)) * strokeMult) * min(1.0, ftcoord.y);
+	return min(1.0, (1.0 - abs(v_texcoord.x * 2.0 - 1.0)) * strokeMult) * min(1.0, v_texcoord.y);
 }
 #endif
 
@@ -79,7 +88,7 @@ void main(void)
 {
 	vec4 result;
 	
-	float scissor = scissorMask(fpos);
+	float scissor = scissorMask(v_position);
 
 #if EDGE_AA
 	float strokeAlpha = strokeMask();
@@ -93,7 +102,7 @@ void main(void)
 	if (type == 0.0) // Gradient
 	{
 		// Calculate gradient color using box gradient
-		vec2 pt = (paintMat * vec4(fpos, 0.0, 1.0)).xy;
+		vec2 pt = (paintMat * vec4(v_position, 0.0, 1.0)).xy;
 		float d = clamp((sdroundrect(pt, extent, radius) + feather * 0.5) / feather, 0.0, 1.0);
 		vec4 color = mix(innerCol, outerCol, d);
 		
@@ -104,7 +113,7 @@ void main(void)
 	else if (type == 1.0) // Image
 	{
 		// Calculate color fron texture
-		vec2 pt = (paintMat * vec4(fpos, 0.0, 1.0)).xy / extent;
+		vec2 pt = (paintMat * vec4(v_position, 0.0, 1.0)).xy / extent;
 		
 		vec4 color = texture(tex, pt);
 		if (texType == 1) color = vec4(color.xyz * color.w, color.w);
@@ -123,7 +132,7 @@ void main(void)
 	}
 	else if (type == 3.0) // Textured tris
 	{
-		vec4 color = texture(tex, ftcoord);
+		vec4 color = texture(tex, v_texcoord);
 		
 		if (texType == 1.0) color = vec4(color.xyz * color.w, color.w);
 		if (texType == 2.0) color = vec4(color.x);
@@ -145,6 +154,9 @@ struct nvgFrameworkCtx
 		GxTexture * texture = nullptr;
 		int flags = 0;
 	};
+	
+	int viewportSx = 0;
+	int viewportSy = 0;
 	
 	std::map<int, Image> images;
 	
@@ -330,6 +342,10 @@ static int renderGetTextureSize(void* uptr, int imageId, int* w, int* h)
 
 static void renderViewport(void* uptr, float width, float height, float devicePixelRatio)
 {
+	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
+	
+	frameworkCtx->viewportSx = width;
+	frameworkCtx->viewportSy = height;
 }
 
 static void renderCancel(void* uptr)
@@ -394,7 +410,7 @@ static void computeShaderUniforms(
 	premultiplyColorWithAlpha(paint.innerColor, out_innerColor);
 	premultiplyColorWithAlpha(paint.outerColor, out_outerColor);
 
-	if (scissor.extent[0] < -0.5f || scissor.extent[1] < -0.5f)
+	if (scissor.extent[0] < -.5f || scissor.extent[1] < -.5f)
 	{
 		memset(&out_scissorMat, 0, sizeof(out_scissorMat));
 		out_scissorExt[0] = 1.f;
@@ -414,7 +430,7 @@ static void computeShaderUniforms(
 	out_strokeMult = (width * .5f + fringe * .5f) / fringe;
 }
 
-static void setShaderUniforms(
+static bool setShaderUniforms(
 	Shader & shader,
 	const NVGpaint & paint,
 	const NVGscissor & scissor,
@@ -459,9 +475,7 @@ static void setShaderUniforms(
 	shader.setImmediate("strokeMult", strokeMult);
 	shader.setImmediate("strokeThr", strokeThr);
 	
-	auto * image = frameworkCtx->getImage(paint.image);
-	
-	if (image == nullptr)
+	if (paint.image == 0)
 	{
 		shader.setImmediate("type", 0); // gradient
 		
@@ -470,6 +484,12 @@ static void setShaderUniforms(
 	}
 	else
 	{
+		auto * image = frameworkCtx->getImage(paint.image);
+		
+		Assert(image != nullptr);
+		if (image == nullptr)
+			return false;
+		
 		const bool clamp = (image->flags & (NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY)) == 0;
 		const bool filter = (image->flags & NVG_IMAGE_NEAREST) == 0;
 		
@@ -482,7 +502,60 @@ static void setShaderUniforms(
 		else
 			Assert(false);
 	}
+	
+	return true;
 }
+
+#if ENABLE_OPENGL_BLEND_HACK
+
+static GLenum toOpenglBlendFactor(const int factor)
+{
+// todo : why is this enum defined as a bitmask?
+	int idx = 0;
+	
+	for (int i = 0; i < 16; ++i)
+		if (factor & (1 << i))
+			idx = i;
+	
+	static const GLenum result[] =
+	{
+		GL_ZERO,
+		GL_ONE,
+		GL_SRC_COLOR,
+		GL_ONE_MINUS_SRC_COLOR,
+		GL_DST_COLOR,
+		GL_ONE_MINUS_DST_COLOR,
+		GL_SRC_ALPHA,
+		GL_ONE_MINUS_SRC_ALPHA,
+		GL_DST_ALPHA,
+		GL_ONE_MINUS_DST_ALPHA,
+		GL_SRC_ALPHA_SATURATE
+	};
+	
+	if (idx < sizeof(result) / sizeof(result[0]))
+		return result[idx];
+	else
+		return GL_INVALID_ENUM;
+}
+
+static void pushBlendOp(const NVGcompositeOperationState & op)
+{
+	pushBlend(BLEND_OPAQUE);
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFuncSeparate(
+		toOpenglBlendFactor(op.srcRGB),
+		toOpenglBlendFactor(op.dstRGB),
+		toOpenglBlendFactor(op.srcAlpha),
+		toOpenglBlendFactor(op.dstAlpha));
+	glEnable(GL_BLEND);
+}
+
+static void popBlendOp()
+{
+	popBlend();
+}
+
+#endif
 
 static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths)
 {
@@ -499,7 +572,21 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 	{
 		setShaderUniforms(shader, *paint, *scissor, fringe, fringe, frameworkCtx);
 		
+	#if ENABLE_OPENGL_BLEND_HACK
+		pushBlendOp(compositeOperation);
+	#else
 		pushBlend(BLEND_PREMULTIPLIED_ALPHA);
+	#endif
+		
+	#if ENABLE_OPENGL_STENCIL_HACK
+		//glClearStencil(0); // todo : should be done by framework on beginDraw, beginRenderPass
+		glEnable(GL_STENCIL_TEST);
+		glStencilMask(0xff);
+		glStencilFunc(GL_ALWAYS, 0, 0xff);
+		glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR_WRAP);
+		glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_DECR_WRAP);
+		
+		pushColorWriteMask(0, 0, 0, 0);
 		
 		for (int i = 0; i < npaths; ++i)
 		{
@@ -521,7 +608,39 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 			gxEnd();
 		}
 		
+		popColorWriteMask();
+		
+		glStencilFunc(GL_NOTEQUAL, 0x0, 0xff);
+		glStencilOp(GL_ZERO, GL_ZERO, GL_ZERO);
+		drawRect(0, 0, frameworkCtx->viewportSx, frameworkCtx->viewportSy);
+		glDisable(GL_STENCIL_TEST);
+	#else
+		for (int i = 0; i < npaths; ++i)
+		{
+			auto & path = paths[i];
+			
+			if (path.nfill < 3)
+				continue;
+		
+			gxBegin(GX_TRIANGLE_FAN);
+			{
+				for (int i = 0; i < path.nfill; ++i)
+				{
+					auto & v = path.fill[i];
+					
+					gxTexCoord2f(v.u, v.v);
+					gxVertex2f(v.x, v.y);
+				}
+			}
+			gxEnd();
+		}
+	#endif
+		
+	#if ENABLE_OPENGL_BLEND_HACK
+		popBlendOp();
+	#else
 		popBlend();
+	#endif
 	}
 	clearShader();
 }
@@ -580,7 +699,11 @@ static void renderTriangles(void* uptr, NVGpaint* paint, NVGcompositeOperationSt
 		setShaderUniforms(shader, *paint, *scissor, 1.f, 1.f, frameworkCtx);
 		shader.setImmediate("type", 3); // textured triangles
 		
+	#if ENABLE_OPENGL_BLEND_HACK
+		pushBlendOp(compositeOperation);
+	#else
 		pushBlend(BLEND_PREMULTIPLIED_ALPHA);
+	#endif
 	
 		gxBegin(GX_TRIANGLES);
 		{
@@ -594,7 +717,11 @@ static void renderTriangles(void* uptr, NVGpaint* paint, NVGcompositeOperationSt
 		}
 		gxEnd();
 		
+	#if pushBlendOp(compositeOperation);
+		popBlendOp();
+	#else
 		popBlend();
+	#endif
 	}
 	clearShader();
 }
