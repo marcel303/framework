@@ -18,7 +18,8 @@ int main(int argc, char * argv[])
 	auto * vg = nvgCreateFramework(
 		NVG_ANTIALIAS |
 		NVG_STENCIL_STROKES |
-		NVG_DEBUG);
+		NVG_DEBUG |
+		NVG_DITHER_GRADIENTS);
 	
 	DemoData data;
 	

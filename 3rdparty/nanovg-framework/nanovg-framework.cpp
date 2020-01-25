@@ -41,6 +41,7 @@ void main()
 static const char * s_fillPs = R"SHADER(
 
 include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
 
 #define EDGE_AA 1
 
@@ -53,6 +54,7 @@ uniform vec2 scissorScale;
 uniform vec2 extent;
 uniform float radius;
 uniform float feather;
+uniform float dither;
 uniform float strokeMult;
 uniform float strokeThr;
 uniform float texType;
@@ -110,6 +112,13 @@ void main(void)
 		
 		// Combine alpha
 		color *= strokeAlpha * scissor;
+		
+		if (dither != 0.0)
+		{
+			// Dithering
+			color.rgb += colorDither8ScreenSpace(v_position);
+		}
+		
 		result = color;
 	}
 	else if (type == 1.0) // Image
@@ -156,6 +165,8 @@ struct nvgFrameworkCtx
 		GxTexture * texture = nullptr;
 		int flags = 0;
 	};
+	
+	int flags = 0;
 	
 	int viewportSx = 0;
 	int viewportSy = 0;
@@ -481,6 +492,7 @@ static bool setShaderUniforms(
 	shader.setImmediate("extent", paint.extent[0], paint.extent[1]);
 	shader.setImmediate("radius", paint.radius);
 	shader.setImmediate("feather", paint.feather);
+	shader.setImmediate("dither", (frameworkCtx->flags & NVG_DITHER_GRADIENTS) ? 1 : 0);
 	shader.setImmediate("strokeMult", strokeMult);
 	shader.setImmediate("strokeThr", strokeThreshold);
 	
@@ -803,9 +815,10 @@ static void renderDelete(void* uptr)
 
 NVGcontext * nvgCreateFramework(int flags)
 {
+	auto * frameworkCtx = new nvgFrameworkCtx();
+	frameworkCtx->flags = flags;
+	
 	NVGparams params;
-	NVGcontext * ctx = nullptr;
-
 	memset(&params, 0, sizeof(params));
 	params.renderCreate = renderCreate;
 	params.renderCreateTexture = renderCreateTexture;
@@ -820,12 +833,10 @@ NVGcontext * nvgCreateFramework(int flags)
 	params.renderTriangles = renderTriangles;
 	params.renderDelete = renderDelete;
 	
-	params.userPtr = new nvgFrameworkCtx();
+	params.userPtr = frameworkCtx;
 	params.edgeAntiAlias = (flags & NVG_ANTIALIAS) ? 1 : 0;
 
-	ctx = nvgCreateInternal(&params);
-
-	return ctx;
+	return nvgCreateInternal(&params);
 }
 
 void nvgDeleteFramework(NVGcontext * ctx)
