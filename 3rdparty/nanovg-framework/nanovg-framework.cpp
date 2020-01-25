@@ -4,9 +4,6 @@
 #include "nanovg-framework.h"
 #include <map>
 
-// todo : paint xform and type for drawing gradients
-// todo : figure out why text isn't visible
-
 static const char * s_fillVs = R"SHADER(
 
 include engine/ShaderVS.txt
@@ -238,15 +235,7 @@ static int renderCreateTexture(void* uptr, int type, int w, int h, int imageFlag
 {
 /*
 todo :
-
-enum NVGimageFlags {
-    NVG_IMAGE_GENERATE_MIPMAPS	= 1<<0,     // Generate mipmaps during creation of the image.
-	NVG_IMAGE_REPEATX			= 1<<1,		// Repeat image in X direction.
-	NVG_IMAGE_REPEATY			= 1<<2,		// Repeat image in Y direction.
 	NVG_IMAGE_FLIPY				= 1<<3,		// Flips (inverses) image in Y direction when rendered.
-	NVG_IMAGE_PREMULTIPLIED		= 1<<4,		// Image data has premultiplied alpha.
-	NVG_IMAGE_NEAREST			= 1<<5,		// Image interpolation is Nearest instead Linear
-};
 */
 
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
@@ -261,6 +250,9 @@ enum NVGimageFlags {
 	if (data != nullptr)
 	{
 		image.texture->upload(data, 0, 0);
+		
+		if (image.flags & NVG_IMAGE_GENERATE_MIPMAPS)
+			image.texture->generateMipmaps();
 	}
 	
 	return imageId;
@@ -291,10 +283,12 @@ static int renderDeleteTexture(void* uptr, int imageId)
 static int renderUpdateTexture(void* uptr, int imageId, int x, int y, int w, int h, const unsigned char* data)
 {
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
-	auto * texture = frameworkCtx->imageToTexture(imageId);
-	Assert(texture != nullptr);
-	if (texture != nullptr)
+	auto * image = frameworkCtx->getImage(imageId);
+	Assert(image != nullptr);
+	if (image != nullptr)
 	{
+		auto * texture = image->texture;
+		
 		if (texture->format == GX_R8_UNORM)
 		{
 			uint8_t * bytes = (uint8_t*)data;
@@ -309,6 +303,9 @@ static int renderUpdateTexture(void* uptr, int imageId, int x, int y, int w, int
 		}
 		
 		texture->uploadArea(data, 1, texture->sx, w, h, x, y);
+		
+		if (image->flags & NVG_IMAGE_GENERATE_MIPMAPS)
+			image->texture->generateMipmaps();
 		
 		return 1;
 	}
@@ -473,8 +470,11 @@ static void setShaderUniforms(
 	}
 	else
 	{
+		const bool clamp = (image->flags & (NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY)) == 0;
+		const bool filter = (image->flags & NVG_IMAGE_NEAREST) == 0;
+		
 		shader.setImmediate("type", 1); // image
-		shader.setTexture("tex", 0, image->texture->id);
+		shader.setTexture("tex", 0, image->texture->id, filter, clamp);
 		if (image->texture->format == GX_RGBA8_UNORM)
 			shader.setImmediate("texType", (image->flags & NVG_IMAGE_PREMULTIPLIED) ? 0 : 1);
 		else if (image->texture->format == GX_R8_UNORM)
