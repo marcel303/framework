@@ -4,16 +4,6 @@
 #include "nanovg-framework.h"
 #include <map>
 
-#if ENABLE_OPENGL
-	#define ENABLE_OPENGL_BLEND_HACK 0
-#else
-	#define ENABLE_OPENGL_BLEND_HACK 0
-#endif
-
-#if ENABLE_OPENGL_BLEND_HACK
-	#include <GL/glew.h>
-#endif
-
 static const char * s_fillVs = R"SHADER(
 
 include engine/ShaderVS.txt
@@ -476,83 +466,16 @@ static bool setShaderUniforms(
 	return true;
 }
 
-#if ENABLE_OPENGL_BLEND_HACK
-
-static GLenum toOpenglBlendFactor(const int factor)
-{
-// todo : why is this enum defined as a bitmask?
-	int idx = 0;
-	
-	for (int i = 0; i < 16; ++i)
-		if (factor & (1 << i))
-			idx = i;
-	
-	static const GLenum result[] =
-	{
-		GL_ZERO,
-		GL_ONE,
-		GL_SRC_COLOR,
-		GL_ONE_MINUS_SRC_COLOR,
-		GL_DST_COLOR,
-		GL_ONE_MINUS_DST_COLOR,
-		GL_SRC_ALPHA,
-		GL_ONE_MINUS_SRC_ALPHA,
-		GL_DST_ALPHA,
-		GL_ONE_MINUS_DST_ALPHA,
-		GL_SRC_ALPHA_SATURATE
-	};
-	
-	if (idx < sizeof(result) / sizeof(result[0]))
-		return result[idx];
-	else
-		return GL_INVALID_ENUM;
-}
-
-static void pushBlendOp(const NVGcompositeOperationState & op)
-{
-	pushBlend(BLEND_OPAQUE);
-	glBlendEquation(GL_FUNC_ADD);
-	glBlendFuncSeparate(
-		toOpenglBlendFactor(op.srcRGB),
-		toOpenglBlendFactor(op.dstRGB),
-		toOpenglBlendFactor(op.srcAlpha),
-		toOpenglBlendFactor(op.dstAlpha));
-	glEnable(GL_BLEND);
-}
-
-static void popBlendOp()
-{
-	popBlend();
-}
-
-#endif
-
 static BLEND_MODE compositeOperationToBlendMode(const NVGcompositeOperationState & op)
 {
-	/*
-	NVG_ZERO = 1<<0,
-	NVG_ONE = 1<<1,
-	NVG_SRC_COLOR = 1<<2,
-	NVG_ONE_MINUS_SRC_COLOR = 1<<3,
-	NVG_DST_COLOR = 1<<4,
-	NVG_ONE_MINUS_DST_COLOR = 1<<5,
-	NVG_SRC_ALPHA = 1<<6,
-	NVG_ONE_MINUS_SRC_ALPHA = 1<<7,
-	NVG_DST_ALPHA = 1<<8,
-	NVG_ONE_MINUS_DST_ALPHA = 1<<9,
-	NVG_SRC_ALPHA_SATURATE = 1<<10,
-	*/
-	
 #define C(_srcRgb, _srcAlpha, _dstRgb, _dstAlpha, blendMode) if (op.srcRGB == _srcRgb && op.srcAlpha == _srcAlpha && op.dstRGB == _dstRgb && op.dstAlpha == _dstAlpha) { /*logDebug("mode: " # blendMode);*/ return blendMode; }
-
-	C(NVG_ONE, NVG_ONE, NVG_ZERO, NVG_ZERO, BLEND_OPAQUE);
-	C(NVG_SRC_ALPHA, NVG_ONE, NVG_ONE_MINUS_SRC_ALPHA, NVG_ONE_MINUS_SRC_ALPHA, BLEND_ALPHA);
-	C(NVG_ONE, NVG_ONE, NVG_ONE_MINUS_SRC_ALPHA, NVG_ONE_MINUS_SRC_ALPHA, BLEND_PREMULTIPLIED_ALPHA);
-	C(NVG_SRC_ALPHA, NVG_ONE, NVG_ONE, NVG_ONE, BLEND_ADD);
-	C(NVG_ONE, NVG_ONE, NVG_ONE, NVG_ONE, BLEND_ADD_OPAQUE);
-	
+	C(NVG_ONE,       NVG_ONE, NVG_ZERO,                NVG_ZERO,                BLEND_OPAQUE             );
+	C(NVG_SRC_ALPHA, NVG_ONE, NVG_ONE_MINUS_SRC_ALPHA, NVG_ONE_MINUS_SRC_ALPHA, BLEND_ALPHA              );
+	C(NVG_ONE,       NVG_ONE, NVG_ONE_MINUS_SRC_ALPHA, NVG_ONE_MINUS_SRC_ALPHA, BLEND_PREMULTIPLIED_ALPHA);
+	C(NVG_SRC_ALPHA, NVG_ONE, NVG_ONE,                 NVG_ONE,                 BLEND_ADD                );
+	C(NVG_ONE,       NVG_ONE, NVG_ONE,                 NVG_ONE,                 BLEND_ADD_OPAQUE         );
+#undef C
 	logDebug("unknown blend mode");
-	
 	return BLEND_ALPHA;
 }
 
@@ -585,11 +508,7 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 		if (!setShaderUniforms(shader, *paint, *scissor, fringe, fringe, -1.f, frameworkCtx))
 			return;
 		
-	#if ENABLE_OPENGL_BLEND_HACK
-		pushBlendOp(compositeOperation);
-	#else
 		pushBlend(compositeOperationToBlendMode(compositeOperation));
-	#endif
 		
 		// draw the paths into the stencil buffer
 		
@@ -646,11 +565,7 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 			}
 		}
 		
-	#if ENABLE_OPENGL_BLEND_HACK
-		popBlendOp();
-	#else
 		popBlend();
-	#endif
 	}
 	clearShader();
 }
@@ -666,11 +581,7 @@ static void renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperationState
 		if (!setShaderUniforms(shader, *paint, *scissor, strokeWidth, fringe, -1.f, frameworkCtx))
 			return;
 		
-	#if ENABLE_OPENGL_BLEND_HACK
-		pushBlendOp(compositeOperation);
-	#else
 		pushBlend(compositeOperationToBlendMode(compositeOperation));
-	#endif
 		
 		for (int i = 0; i < npaths; ++i)
 		{
@@ -679,11 +590,7 @@ static void renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperationState
 			drawPrim(GX_TRIANGLE_STRIP, path.stroke, path.nstroke);
 		}
 		
-	#if ENABLE_OPENGL_BLEND_HACK
-		popBlendOp();
-	#else
 		popBlend();
-	#endif
 	}
 	clearShader();
 }
@@ -705,19 +612,11 @@ static void renderTriangles(void* uptr, NVGpaint* paint, NVGcompositeOperationSt
 			return;
 		shader.setImmediate("type", 3); // textured triangles
 		
-	#if ENABLE_OPENGL_BLEND_HACK
-		pushBlendOp(compositeOperation);
-	#else
 		pushBlend(compositeOperationToBlendMode(compositeOperation));
-	#endif
-	
+		
 		drawPrim(GX_TRIANGLES, verts, nverts);
 		
-	#if ENABLE_OPENGL_BLEND_HACK
-		popBlendOp();
-	#else
 		popBlend();
-	#endif
 	}
 	clearShader();
 }
