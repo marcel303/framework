@@ -6,15 +6,11 @@
 
 #if ENABLE_OPENGL
 	#define ENABLE_OPENGL_BLEND_HACK 1
-	#define ENABLE_OPENGL_STENCIL_HACK 1
 #else
 	#define ENABLE_OPENGL_BLEND_HACK 0
-	#define ENABLE_OPENGL_STENCIL_HACK 0
 #endif
 
-#define OPTIMIZE_STENCIL_QUAD_USING_BOUNDS 1
-
-#if ENABLE_OPENGL_BLEND_HACK || ENABLE_OPENGL_STENCIL_HACK
+#if ENABLE_OPENGL_BLEND_HACK
 	#include <GL/glew.h>
 #endif
 
@@ -221,33 +217,7 @@ struct nvgFrameworkCtx
 		else
 			return nullptr;
 	}
-	
-	GxTexture * imageToTexture(const int imageId) const
-	{
-		auto * image = getImage(imageId);
-		if (image == nullptr)
-			return nullptr;
-		else
-			return image->texture;
-	}
 };
-
-// --- declarations ---
-
-static int renderCreate(void* uptr);
-static int renderCreateTexture(void* uptr, int type, int w, int h, int imageFlags, const unsigned char* data);
-static int renderDeleteTexture(void* uptr, int image);
-static int renderUpdateTexture(void* uptr, int image, int x, int y, int w, int h, const unsigned char* data);
-static int renderGetTextureSize(void* uptr, int image, int* w, int* h);
-static void renderViewport(void* uptr, float width, float height, float devicePixelRatio);
-static void renderCancel(void* uptr);
-static void renderFlush(void* uptr);
-static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths);
-static void renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, float strokeWidth, const NVGpath* paths, int npaths);
-static void renderTriangles(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, const NVGvertex* verts, int nverts);
-static void renderDelete(void* uptr);
-
-// --- implementation ---
 
 static int renderCreate(void* uptr)
 {
@@ -310,17 +280,9 @@ static int renderUpdateTexture(void* uptr, int imageId, int x, int y, int w, int
 		auto * texture = image->texture;
 		
 		if (texture->format == GX_R8_UNORM)
-		{
-			uint8_t * bytes = (uint8_t*)data;
-			bytes = bytes + y * texture->sx * 1 + x * 1;
-			data = bytes;
-		}
+			data += y * texture->sx * 1 + x * 1;
 		else if (texture->format == GX_RGBA8_UNORM)
-		{
-			uint8_t * bytes = (uint8_t*)data;
-			bytes = bytes + y * texture->sx * 4 + x * 4;
-			data = bytes;
-		}
+			data += y * texture->sx * 4 + x * 4;
 		
 		texture->uploadArea(data, 1, texture->sx, w, h, x, y);
 		
@@ -336,12 +298,12 @@ static int renderUpdateTexture(void* uptr, int imageId, int x, int y, int w, int
 static int renderGetTextureSize(void* uptr, int imageId, int* w, int* h)
 {
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
-	auto * texture = frameworkCtx->imageToTexture(imageId);
-	Assert(texture != nullptr);
-	if (texture != nullptr)
+	auto * image = frameworkCtx->getImage(imageId);
+	Assert(image != nullptr);
+	if (image != nullptr)
 	{
-		*w = texture->sx;
-		*h = texture->sy;
+		*w = image->texture->sx;
+		*h = image->texture->sy;
 		return 1;
 	}
 	else
@@ -351,7 +313,6 @@ static int renderGetTextureSize(void* uptr, int imageId, int* w, int* h)
 static void renderViewport(void* uptr, float width, float height, float devicePixelRatio)
 {
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
-	
 	frameworkCtx->viewportSx = width;
 	frameworkCtx->viewportSy = height;
 }
@@ -362,16 +323,6 @@ static void renderCancel(void* uptr)
 
 static void renderFlush(void* uptr)
 {
-/*
-	setColor(colorWhite);
-	for (int i = 1; i < 10; ++i)
-	{
-		const int s = 200;
-		gxSetTexture((GxTextureId)i);
-		drawRect(i * s, 0, (i + 1) * s, s);
-		gxSetTexture(0);
-	}
-*/
 }
 
 static Mat4x4 xformToInverseMat(const float * xform)
@@ -461,9 +412,10 @@ static bool setShaderUniforms(
 {
 	auto * image = frameworkCtx->getImage(paint.image);
 	
+	const NVGcolor innerColor = premultiplyColorWithAlpha(paint.innerColor);
+	const NVGcolor outerColor = premultiplyColorWithAlpha(paint.outerColor);
+	
 	Mat4x4 paintMat;
-	NVGcolor innerColor = premultiplyColorWithAlpha(paint.innerColor);
-	NVGcolor outerColor = premultiplyColorWithAlpha(paint.outerColor);
 	
 	float scissorExt[2];
 	float scissorScale[2];
@@ -575,15 +527,28 @@ static void popBlendOp()
 
 #endif
 
-static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths)
+static void drawPrim(const GX_PRIMITIVE_TYPE primType, const NVGvertex * verts, const int numVerts)
 {
-	if (npaths <= 0)
+	if (numVerts < 3)
 		return;
 	
+	gxBegin(primType);
+	{
+		for (int i = 0; i < numVerts; ++i)
+		{
+			auto & v = verts[i];
+			
+			gxTexCoord2f(v.u, v.v);
+			gxVertex2f(v.x, v.y);
+		}
+	}
+	gxEnd();
+}
+
+static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths)
+{
+	Assert(npaths > 0);
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
-	
-	// todo : if all of the paths are convex, just draw normally
-	// todo : for non-convex paths: use stencil and fill
 	
 	Shader shader("nanovg-framework/fill");
 	setShader(shader);
@@ -597,51 +562,37 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 		pushBlend(BLEND_PREMULTIPLIED_ALPHA);
 	#endif
 		
-	#if ENABLE_OPENGL_STENCIL_HACK
-		//glClearStencil(0); // todo : should be done by framework on beginDraw, beginRenderPass
-		glEnable(GL_STENCIL_TEST);
-		glStencilMask(0xff);
-		glStencilFunc(GL_ALWAYS, 0, 0xff);
-		glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR_WRAP);
-		glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_DECR_WRAP);
+		// draw the paths into the stencil buffer
+		
+		setStencilTest()
+			.compare(GX_STENCIL_FUNC_ALWAYS, 0, 0xff)
+			.op(GX_STENCIL_FACE_FRONT, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_INC_WRAP)
+			.op(GX_STENCIL_FACE_BACK,  GX_STENCIL_OP_KEEP, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_DEC_WRAP)
+			.writeMask(0xff);
 		
 		pushColorWriteMask(0, 0, 0, 0);
-		
-		for (int i = 0; i < npaths; ++i)
 		{
-			auto & path = paths[i];
-			
-			if (path.nfill >= 3)
+			for (int i = 0; i < npaths; ++i)
 			{
-				gxBegin(GX_TRIANGLE_FAN);
-				{
-					for (int i = 0; i < path.nfill; ++i)
-					{
-						auto & v = path.fill[i];
-						
-						gxTexCoord2f(v.u, v.v);
-						gxVertex2f(v.x, v.y);
-					}
-				}
-				gxEnd();
+				auto & path = paths[i];
+				
+				drawPrim(GX_TRIANGLE_FAN, path.fill, path.nfill);
 			}
 		}
-		
 		popColorWriteMask();
 		
-		glStencilFunc(GL_NOTEQUAL, 0x0, 0xff);
-		glStencilOp(GL_ZERO, GL_ZERO, GL_ZERO);
-	#if OPTIMIZE_STENCIL_QUAD_USING_BOUNDS
+		// fill a gradient over the stenciled pixels
+		
+		setStencilTest()
+			.compare(GX_STENCIL_FUNC_NOTEQUAL, 0x00, 0xff)
+			.op(GX_STENCIL_OP_ZERO, GX_STENCIL_OP_ZERO, GX_STENCIL_OP_ZERO)
+			.writeMask(0xff);
+		
 		const float x1 = bounds[0];
 		const float y1 = bounds[1];
 		const float x2 = bounds[2];
 		const float y2 = bounds[3];
-	#else
-		const float x1 = 0.f;
-		const float y1 = 0.f;
-		const float x2 = frameworkCtx->viewportSx;
-		const float y2 = frameworkCtx->viewportSy;
-	#endif
+	
 		gxBegin(GX_QUADS);
 		{
 			gxTexCoord2f(.5f, 1.f);
@@ -652,63 +603,19 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 		}
 		gxEnd();
 		
-		glDisable(GL_STENCIL_TEST);
+		clearStencilTest();
 		
-		for (int i = 0; i < npaths; ++i)
+		// draw anti-aliased edges
+		
+		if (frameworkCtx->flags & NVG_ANTIALIAS)
 		{
-			auto & path = paths[i];
-			
-			if (path.nstroke >= 3)
+			for (int i = 0; i < npaths; ++i)
 			{
-				gxBegin(GX_TRIANGLE_STRIP);
-				{
-					for (int i = 0; i < path.nstroke; ++i)
-					{
-						auto & v = path.stroke[i];
-						
-						gxTexCoord2f(v.u, v.v);
-						gxVertex2f(v.x, v.y);
-					}
-				}
-				gxEnd();
+				auto & path = paths[i];
+				
+				drawPrim(GX_TRIANGLE_STRIP, path.stroke, path.nstroke);
 			}
 		}
-	#else
-		for (int i = 0; i < npaths; ++i)
-		{
-			auto & path = paths[i];
-			
-			if (path.nfill >= 3)
-			{
-				gxBegin(GX_TRIANGLE_FAN);
-				{
-					for (int i = 0; i < path.nfill; ++i)
-					{
-						auto & v = path.fill[i];
-						
-						gxTexCoord2f(v.u, v.v);
-						gxVertex2f(v.x, v.y);
-					}
-				}
-				gxEnd();
-			}
-			
-			if (path.nstroke >= 3)
-			{
-				gxBegin(GX_TRIANGLE_STRIP);
-				{
-					for (int i = 0; i < path.nstroke; ++i)
-					{
-						auto & v = path.stroke[i];
-						
-						gxTexCoord2f(v.u, v.v);
-						gxVertex2f(v.x, v.y);
-					}
-				}
-				gxEnd();
-			}
-		}
-	#endif
 		
 	#if ENABLE_OPENGL_BLEND_HACK
 		popBlendOp();
@@ -721,9 +628,7 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 
 static void renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, float strokeWidth, const NVGpath* paths, int npaths)
 {
-	if (npaths <= 0)
-		return;
-	
+	Assert(npaths > 0);
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
 	
 	Shader shader("nanovg-framework/fill");
@@ -732,36 +637,31 @@ static void renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperationState
 		if (!setShaderUniforms(shader, *paint, *scissor, strokeWidth, fringe, -1.f, frameworkCtx))
 			return;
 		
+	#if ENABLE_OPENGL_BLEND_HACK
+		pushBlendOp(compositeOperation);
+	#else
 		pushBlend(BLEND_PREMULTIPLIED_ALPHA);
+	#endif
 		
 		for (int i = 0; i < npaths; ++i)
 		{
 			auto & path = paths[i];
 			
-			if (path.nstroke >= 3)
-			{
-				gxBegin(GX_TRIANGLE_STRIP);
-				{
-					for (int i = 0; i < path.nstroke; ++i)
-					{
-						auto & v = path.stroke[i];
-						
-						gxTexCoord2f(v.u, v.v);
-						gxVertex2f(v.x, v.y);
-					}
-				}
-				gxEnd();
-			}
+			drawPrim(GX_TRIANGLE_STRIP, path.stroke, path.nstroke);
 		}
 		
+	#if ENABLE_OPENGL_BLEND_HACK
+		popBlendOp();
+	#else
 		popBlend();
+	#endif
 	}
 	clearShader();
 }
 
 static void renderTriangles(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, const NVGvertex* verts, int nverts)
 {
-	if (nverts <= 0)
+	if (nverts == 0)
 		return;
 	
 	Assert((nverts % 3) == 0);
@@ -782,17 +682,7 @@ static void renderTriangles(void* uptr, NVGpaint* paint, NVGcompositeOperationSt
 		pushBlend(BLEND_PREMULTIPLIED_ALPHA);
 	#endif
 	
-		gxBegin(GX_TRIANGLES);
-		{
-			for (int i = 0; i < nverts; ++i)
-			{
-				auto & v = verts[i];
-				
-				gxTexCoord2f(v.u, v.v);
-				gxVertex2f(v.x, v.y);
-			}
-		}
-		gxEnd();
+		drawPrim(GX_TRIANGLES, verts, nverts);
 		
 	#if ENABLE_OPENGL_BLEND_HACK
 		popBlendOp();
