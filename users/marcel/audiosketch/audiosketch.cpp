@@ -1,6 +1,9 @@
 #include "audiooutput/AudioOutput_PortAudio.h"
 #include "audiosketch.h"
 #include "framework.h"
+#include <thread>
+
+static std::mutex s_mutex;
 
 struct MyStream : AudioStream
 {
@@ -14,6 +17,8 @@ struct MyStream : AudioStream
 
 	virtual int Provide(int numSamples, AudioSample* __restrict buffer)
 	{
+		s_mutex.lock();
+		
 		sketch.sampleRate = 44100; // todo
 		
 		sketch.block();
@@ -33,6 +38,8 @@ struct MyStream : AudioStream
 			buffer[i].channel[1] = value_int;
 		}
 
+		s_mutex.unlock();
+		
 		return numSamples;
 	}
 };
@@ -56,12 +63,23 @@ void runAudiosketch(AudiosketchBase & sketch)
 		if (framework.quitRequested)
 			break;
 		
-	// todo : make this thread safe
-	// todo : use the same piano key mapping as Ableton
-		if (keyboard.wentDown(SDLK_SPACE))
-			sketch.noteOn(random<float>(440, 880), 1);
-		if (keyboard.wentUp(SDLK_SPACE))
-			sketch.noteOff(0);
+		s_mutex.lock();
+		{
+		// todo : use the same piano key mapping as Ableton
+			if (keyboard.wentDown(SDLK_SPACE))
+				sketch.noteOn(random<float>(440, 880), 1);
+			if (keyboard.wentUp(SDLK_SPACE))
+				sketch.noteOff(0);
+			
+			for (int i = 1; i <= 9; ++i)
+			{
+				if (keyboard.wentDown(SDLK_0 + i))
+					sketch.noteOn(440.f * powf(2.f, 1.f + i / 8.f), 1);
+				if (keyboard.wentUp(SDLK_0 + i))
+					sketch.noteOff(0);
+			}
+		}
+		s_mutex.unlock();
 	}
 
 	output.Stop();
