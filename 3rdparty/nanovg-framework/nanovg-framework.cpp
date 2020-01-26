@@ -5,7 +5,7 @@
 #include <map>
 
 #if ENABLE_OPENGL
-	#define ENABLE_OPENGL_BLEND_HACK 1
+	#define ENABLE_OPENGL_BLEND_HACK 0
 #else
 	#define ENABLE_OPENGL_BLEND_HACK 0
 #endif
@@ -527,6 +527,35 @@ static void popBlendOp()
 
 #endif
 
+static BLEND_MODE compositeOperationToBlendMode(const NVGcompositeOperationState & op)
+{
+	/*
+	NVG_ZERO = 1<<0,
+	NVG_ONE = 1<<1,
+	NVG_SRC_COLOR = 1<<2,
+	NVG_ONE_MINUS_SRC_COLOR = 1<<3,
+	NVG_DST_COLOR = 1<<4,
+	NVG_ONE_MINUS_DST_COLOR = 1<<5,
+	NVG_SRC_ALPHA = 1<<6,
+	NVG_ONE_MINUS_SRC_ALPHA = 1<<7,
+	NVG_DST_ALPHA = 1<<8,
+	NVG_ONE_MINUS_DST_ALPHA = 1<<9,
+	NVG_SRC_ALPHA_SATURATE = 1<<10,
+	*/
+	
+#define C(_srcRgb, _srcAlpha, _dstRgb, _dstAlpha, blendMode) if (op.srcRGB == _srcRgb && op.srcAlpha == _srcAlpha && op.dstRGB == _dstRgb && op.dstAlpha == _dstAlpha) { /*logDebug("mode: " # blendMode);*/ return blendMode; }
+
+	C(NVG_ONE, NVG_ONE, NVG_ZERO, NVG_ZERO, BLEND_OPAQUE);
+	C(NVG_SRC_ALPHA, NVG_ONE, NVG_ONE_MINUS_SRC_ALPHA, NVG_ONE_MINUS_SRC_ALPHA, BLEND_ALPHA);
+	C(NVG_ONE, NVG_ONE, NVG_ONE_MINUS_SRC_ALPHA, NVG_ONE_MINUS_SRC_ALPHA, BLEND_PREMULTIPLIED_ALPHA);
+	C(NVG_SRC_ALPHA, NVG_ONE, NVG_ONE, NVG_ONE, BLEND_ADD);
+	C(NVG_ONE, NVG_ONE, NVG_ONE, NVG_ONE, BLEND_ADD_OPAQUE);
+	
+	logDebug("unknown blend mode");
+	
+	return BLEND_ALPHA;
+}
+
 static void drawPrim(const GX_PRIMITIVE_TYPE primType, const NVGvertex * verts, const int numVerts)
 {
 	if (numVerts < 3)
@@ -559,7 +588,7 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 	#if ENABLE_OPENGL_BLEND_HACK
 		pushBlendOp(compositeOperation);
 	#else
-		pushBlend(BLEND_PREMULTIPLIED_ALPHA);
+		pushBlend(compositeOperationToBlendMode(compositeOperation));
 	#endif
 		
 		// draw the paths into the stencil buffer
@@ -640,7 +669,7 @@ static void renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperationState
 	#if ENABLE_OPENGL_BLEND_HACK
 		pushBlendOp(compositeOperation);
 	#else
-		pushBlend(BLEND_PREMULTIPLIED_ALPHA);
+		pushBlend(compositeOperationToBlendMode(compositeOperation));
 	#endif
 		
 		for (int i = 0; i < npaths; ++i)
@@ -679,7 +708,7 @@ static void renderTriangles(void* uptr, NVGpaint* paint, NVGcompositeOperationSt
 	#if ENABLE_OPENGL_BLEND_HACK
 		pushBlendOp(compositeOperation);
 	#else
-		pushBlend(BLEND_PREMULTIPLIED_ALPHA);
+		pushBlend(compositeOperationToBlendMode(compositeOperation));
 	#endif
 	
 		drawPrim(GX_TRIANGLES, verts, nverts);
