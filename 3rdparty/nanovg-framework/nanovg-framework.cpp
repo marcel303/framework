@@ -96,14 +96,14 @@ void main(void)
 		float d = clamp((sdroundrect(pt, extent, radius) + feather * 0.5) / feather, 0.0, 1.0);
 		vec4 color = mix(innerCol, outerCol, d);
 		
-		// Combine alpha
-		color *= strokeAlpha * scissor;
-		
 		if (dither != 0.0)
 		{
 			// Dithering
 			color.rgb += colorDither8ScreenSpace(v_position);
 		}
+		
+		// Combine alpha
+		color *= strokeAlpha * scissor;
 		
 		result = color;
 	}
