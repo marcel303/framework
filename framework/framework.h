@@ -69,7 +69,7 @@
 	#define FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT 0 // do not alter
 #endif
 
-#if defined(MACOS) && !defined(ENABLE_METAL) && 0
+#if defined(MACOS) && !defined(ENABLE_METAL) && 1
 	#define ENABLE_METAL 1
 	#define ENABLE_HQ_PRIMITIVES 1
 #elif !defined(ENABLE_OPENGL)
@@ -376,6 +376,35 @@ enum GX_SAMPLE_FILTER
 };
 
 #endif
+
+enum GX_STENCIL_FACE
+{
+	GX_STENCIL_FACE_FRONT = 0x1,
+	GX_STENCIL_FACE_BACK = 0x2,
+	GX_STENCIL_FACE_BOTH = 0x3
+};
+
+enum GX_STENCIL_FUNC
+{
+	GX_STENCIL_FUNC_NEVER,
+	GX_STENCIL_FUNC_LESS,
+	GX_STENCIL_FUNC_LEQUAL,
+	GX_STENCIL_FUNC_GREATER,
+	GX_STENCIL_FUNC_GEQUAL,
+	GX_STENCIL_FUNC_EQUAL,
+	GX_STENCIL_FUNC_NOTEQUAL,
+	GX_STENCIL_FUNC_ALWAYS
+};
+
+enum GX_STENCIL_OP
+{
+	GX_STENCIL_OP_KEEP,
+	GX_STENCIL_OP_ZERO,
+	GX_STENCIL_OP_INC,
+	GX_STENCIL_OP_DEC,
+	GX_STENCIL_OP_INC_WRAP,
+	GX_STENCIL_OP_DEC_WRAP
+};
 
 //
 
@@ -1526,6 +1555,45 @@ void popDepthTest();
 
 void pushDepthWrite(bool enabled);
 void popDepthWrite();
+
+struct StencilState
+{
+	GX_STENCIL_FUNC compareFunc = GX_STENCIL_FUNC_ALWAYS;
+	uint8_t compareRef = 0x00;
+	uint8_t compareMask = 0xff;
+	
+	GX_STENCIL_OP onStencilFail = GX_STENCIL_OP_KEEP;
+	GX_STENCIL_OP onDepthFail = GX_STENCIL_OP_KEEP;
+	GX_STENCIL_OP onDepthStencilPass = GX_STENCIL_OP_KEEP;
+	
+	uint8_t writeMask = 0xff;
+};
+
+void setStencilTest(const StencilState & front, const StencilState & back);
+void clearStencilTest();
+
+class StencilSetter
+{
+public:
+	~StencilSetter();
+	
+	StencilSetter & op(
+		GX_STENCIL_FACE face,
+		GX_STENCIL_OP onStencilFail,
+		GX_STENCIL_OP onDepthFail,
+		GX_STENCIL_OP onDepthStencilPass);
+	StencilSetter & writeMask(GX_STENCIL_FACE face, uint8_t mask);
+	StencilSetter & compare(GX_STENCIL_FACE face, GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask);
+	
+	StencilSetter & op(
+		GX_STENCIL_OP onStencilFail,
+		GX_STENCIL_OP onDepthFail,
+		GX_STENCIL_OP onDepthStencilPass);
+	StencilSetter & writeMask(uint8_t mask);
+	StencilSetter & compare(GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask);
+};
+
+inline StencilSetter setStencilTest() { return StencilSetter(); }
 
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
 void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);

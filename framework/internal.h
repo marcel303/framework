@@ -414,6 +414,8 @@ public:
 		gxShaderIsDirty = true;
 		depthTest = DEPTH_LESS;
 		depthTestWriteEnabled = true;
+		frontStencilState = StencilState();
+		backStencilState = StencilState();
 	}
 	
 	Window * mainWindow;
@@ -439,6 +441,8 @@ public:
 	bool depthTestEnabled;
 	DEPTH_TEST depthTest;
 	bool depthTestWriteEnabled;
+	StencilState frontStencilState;
+	StencilState backStencilState;
 	CULL_MODE cullMode;
 	CULL_WINDING cullWinding;
 	GRADIENT_TYPE hqGradientType;

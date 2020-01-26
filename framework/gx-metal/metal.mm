@@ -844,145 +844,8 @@ void popWireframe()
 	setWireframe(value);
 }
 
-void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
-{
-	globals.depthTestEnabled = enabled;
-	globals.depthTest = test;
-	globals.depthTestWriteEnabled = writeEnabled;
-	
-	// depth state
-	
-	MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
-	
-	if (enabled)
-	{
-		switch (test)
-		{
-		case DEPTH_EQUAL:
-			descriptor.depthCompareFunction = MTLCompareFunctionEqual;
-			break;
-		case DEPTH_LESS:
-			descriptor.depthCompareFunction = MTLCompareFunctionLess;
-			break;
-		case DEPTH_LEQUAL:
-			descriptor.depthCompareFunction = MTLCompareFunctionLessEqual;
-			break;
-		case DEPTH_GREATER:
-			descriptor.depthCompareFunction = MTLCompareFunctionGreater;
-			break;
-		case DEPTH_GEQUAL:
-			descriptor.depthCompareFunction = MTLCompareFunctionGreaterEqual;
-			break;
-		case DEPTH_ALWAYS:
-			descriptor.depthCompareFunction = MTLCompareFunctionAlways;
-			break;
-		}
-		
-		descriptor.depthWriteEnabled = writeEnabled;
-	}
-	else
-	{
-		descriptor.depthCompareFunction = MTLCompareFunctionAlways;
-		descriptor.depthWriteEnabled = false;
-	}
-	
-// todo : fill in stencil test stuff
-	
-	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
-	
-	[s_activeRenderPass->encoder setDepthStencilState:state];
-	
-	[state release];
-	state = nullptr;
-	
-	[descriptor release];
-	descriptor = nullptr;
-}
-
-void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
-{
-	const DepthTestInfo info =
-	{
-		globals.depthTestEnabled,
-		globals.depthTest,
-		globals.depthTestWriteEnabled
-	};
-	
-	depthTestStack.push(info);
-	
-	setDepthTest(enabled, test, writeEnabled);
-}
-
-void popDepthTest()
-{
-	const DepthTestInfo depthTestInfo = depthTestStack.popValue();
-	
-	setDepthTest(depthTestInfo.testEnabled, depthTestInfo.test, depthTestInfo.writeEnabled);
-}
-
-void pushDepthWrite(bool enabled)
-{
-	pushDepthTest(globals.depthTestEnabled, globals.depthTest, enabled);
-}
-
-void popDepthWrite()
-{
-	popDepthTest();
-}
-
-void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
-{
-	const MTLCullMode metalCullMode =
-		mode == CULL_NONE ? MTLCullModeNone :
-		mode == CULL_FRONT ? MTLCullModeFront :
-		MTLCullModeBack;
-	
-	[s_activeRenderPass->encoder setCullMode:metalCullMode];
-	
-	const MTLWinding metalFrontFaceWinding =
-		frontFaceWinding == CULL_CCW ? MTLWindingCounterClockwise :
-		MTLWindingClockwise;
-	
-	[s_activeRenderPass->encoder setFrontFacingWinding:metalFrontFaceWinding];
-}
-
-void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
-{
-	const CullModeInfo info =
-	{
-		globals.cullMode,
-		globals.cullWinding
-	};
-	
-	cullModeStack.push(info);
-	
-	setCullMode(mode, frontFaceWinding);
-}
-
-void popCullMode()
-{
-	const CullModeInfo cullMode = cullModeStack.popValue();
-	
-	setCullMode(cullMode.mode, cullMode.winding);
-}
-
-// todo : move
-StencilState StencilSetter::front;
-StencilState StencilSetter::back;
-
 static MTLStencilOperation translateStencilOp(const GX_STENCIL_OP op)
 {
-/*
-	MTLStencilOperationKeep = 0,
-    MTLStencilOperationZero = 1,
-    MTLStencilOperationReplace = 2,
-    MTLStencilOperationIncrementClamp = 3,
-    MTLStencilOperationDecrementClamp = 4,
-    MTLStencilOperationInvert = 5,
-    MTLStencilOperationIncrementWrap = 6,
-    MTLStencilOperationDecrementWrap = 7,
-*/
-
 	switch (op)
 	{
 	case GX_STENCIL_OP_KEEP:
@@ -1043,21 +906,60 @@ static void fillStencilDescriptor(
 	descriptor.writeMask = stencilState.writeMask;
 }
 
-void setStencilTest(StencilState & front, StencilState & back)
+static void fillDepthStencilDescriptor(MTLDepthStencilDescriptor * descriptor)
 {
-	// depth state
+	// fill depth state
+	
+	if (globals.depthTestEnabled)
+	{
+		switch (globals.depthTest)
+		{
+		case DEPTH_EQUAL:
+			descriptor.depthCompareFunction = MTLCompareFunctionEqual;
+			break;
+		case DEPTH_LESS:
+			descriptor.depthCompareFunction = MTLCompareFunctionLess;
+			break;
+		case DEPTH_LEQUAL:
+			descriptor.depthCompareFunction = MTLCompareFunctionLessEqual;
+			break;
+		case DEPTH_GREATER:
+			descriptor.depthCompareFunction = MTLCompareFunctionGreater;
+			break;
+		case DEPTH_GEQUAL:
+			descriptor.depthCompareFunction = MTLCompareFunctionGreaterEqual;
+			break;
+		case DEPTH_ALWAYS:
+			descriptor.depthCompareFunction = MTLCompareFunctionAlways;
+			break;
+		}
+		
+		descriptor.depthWriteEnabled = globals.depthTestWriteEnabled;
+	}
+	else
+	{
+		descriptor.depthCompareFunction = MTLCompareFunctionAlways;
+		descriptor.depthWriteEnabled = false;
+	}
+	
+	// fill stencil state
+	
+	fillStencilDescriptor(descriptor.frontFaceStencil, globals.frontStencilState);
+	fillStencilDescriptor(descriptor.backFaceStencil, globals.backStencilState);
+}
+
+void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
+{
+	globals.depthTestEnabled = enabled;
+	globals.depthTest = test;
+	globals.depthTestWriteEnabled = writeEnabled;
+	
+	// update depth-stencil state
 	
 	MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
-	
-	//
-	
-	fillStencilDescriptor(descriptor.frontFaceStencil, front);
-	fillStencilDescriptor(descriptor.backFaceStencil, back);
-	
-	//
+	fillDepthStencilDescriptor(descriptor);
 	
 	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
-	
 	[s_activeRenderPass->encoder setDepthStencilState:state];
 	
 	[state release];
@@ -1067,11 +969,97 @@ void setStencilTest(StencilState & front, StencilState & back)
 	descriptor = nullptr;
 }
 
-static StencilState defaultStencilState;
+void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
+{
+	const DepthTestInfo info =
+	{
+		globals.depthTestEnabled,
+		globals.depthTest,
+		globals.depthTestWriteEnabled
+	};
+	
+	depthTestStack.push(info);
+	
+	setDepthTest(enabled, test, writeEnabled);
+}
+
+void popDepthTest()
+{
+	const DepthTestInfo depthTestInfo = depthTestStack.popValue();
+	
+	setDepthTest(depthTestInfo.testEnabled, depthTestInfo.test, depthTestInfo.writeEnabled);
+}
+
+void pushDepthWrite(bool enabled)
+{
+	pushDepthTest(globals.depthTestEnabled, globals.depthTest, enabled);
+}
+
+void popDepthWrite()
+{
+	popDepthTest();
+}
+
+void setStencilTest(const StencilState & front, const StencilState & back)
+{
+	globals.frontStencilState = front;
+	globals.backStencilState = back;
+	
+	// update depth-stencil state
+	
+	MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
+	fillDepthStencilDescriptor(descriptor);
+	
+	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+	[s_activeRenderPass->encoder setDepthStencilState:state];
+	
+	[state release];
+	state = nullptr;
+	
+	[descriptor release];
+	descriptor = nullptr;
+}
 
 void clearStencilTest()
 {
-	setStencilTest(defaultStencilState, defaultStencilState);
+	StencilState defaultState;
+	setStencilTest(defaultState, defaultState);
+}
+
+void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
+{
+	const MTLCullMode metalCullMode =
+		mode == CULL_NONE ? MTLCullModeNone :
+		mode == CULL_FRONT ? MTLCullModeFront :
+		MTLCullModeBack;
+	
+	[s_activeRenderPass->encoder setCullMode:metalCullMode];
+	
+	const MTLWinding metalFrontFaceWinding =
+		frontFaceWinding == CULL_CCW ? MTLWindingCounterClockwise :
+		MTLWindingClockwise;
+	
+	[s_activeRenderPass->encoder setFrontFacingWinding:metalFrontFaceWinding];
+}
+
+void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
+{
+	const CullModeInfo info =
+	{
+		globals.cullMode,
+		globals.cullWinding
+	};
+	
+	cullModeStack.push(info);
+	
+	setCullMode(mode, frontFaceWinding);
+}
+
+void popCullMode()
+{
+	const CullModeInfo cullMode = cullModeStack.popValue();
+	
+	setCullMode(cullMode.mode, cullMode.winding);
 }
 
 // -- gpu resources --

@@ -3742,6 +3742,69 @@ void popColorPost()
 	setColorPost(value);
 }
 
+//
+
+static StencilState & getStencilStateForFace(GX_STENCIL_FACE face)
+{
+	return
+		face == GX_STENCIL_FACE_FRONT
+		? globals.frontStencilState
+		: globals.backStencilState;
+}
+
+StencilSetter::~StencilSetter()
+{
+	setStencilTest(globals.frontStencilState, globals.backStencilState);
+}
+
+StencilSetter & StencilSetter::compare(GX_STENCIL_FACE face, GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask)
+{
+	auto & state = getStencilStateForFace(face);
+	state.compareFunc = func;
+	state.compareRef = ref;
+	state.compareMask = mask;
+	return *this;
+}
+
+StencilSetter & StencilSetter::op(GX_STENCIL_FACE face, GX_STENCIL_OP onStencilFail, GX_STENCIL_OP onDepthFail, GX_STENCIL_OP onDepthStencilPass)
+{
+	auto & state = getStencilStateForFace(face);
+	state.onStencilFail = onStencilFail;
+	state.onDepthFail = onDepthFail;
+	state.onDepthStencilPass = onDepthStencilPass;
+	return *this;
+}
+
+StencilSetter & StencilSetter::writeMask(GX_STENCIL_FACE face, uint8_t mask)
+{
+	auto & state = getStencilStateForFace(face);
+	state.writeMask = mask;
+	return *this;
+}
+
+StencilSetter & StencilSetter::compare(GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask)
+{
+	compare(GX_STENCIL_FACE_FRONT, func, ref, mask);
+	compare(GX_STENCIL_FACE_BACK,  func, ref, mask);
+	return *this;
+}
+
+StencilSetter & StencilSetter::op(GX_STENCIL_OP onStencilFail, GX_STENCIL_OP onDepthFail, GX_STENCIL_OP onDepthStencilPass)
+{
+	op(GX_STENCIL_FACE_FRONT, onStencilFail, onDepthFail, onDepthStencilPass);
+	op(GX_STENCIL_FACE_BACK,  onStencilFail, onDepthFail, onDepthStencilPass);
+	return *this;
+}
+
+StencilSetter & StencilSetter::writeMask(uint8_t mask)
+{
+	writeMask(GX_STENCIL_FACE_FRONT, mask);
+	writeMask(GX_STENCIL_FACE_BACK,  mask);
+	return *this;
+}
+
+//
+
 void setColor(const Color & color)
 {
 	setColorf(color.r, color.g, color.b, color.a);

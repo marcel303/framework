@@ -303,6 +303,76 @@ void popDepthWrite()
 	popDepthTest();
 }
 
+static GLenum translateStencilOp(const GX_STENCIL_OP op)
+{
+	switch (op)
+	{
+	case GX_STENCIL_OP_KEEP:
+		return GL_KEEP;
+	case GX_STENCIL_OP_ZERO:
+		return GL_ZERO;
+	case GX_STENCIL_OP_INC:
+		return GL_INCR;
+	case GX_STENCIL_OP_DEC:
+		return GL_DECR;
+	case GX_STENCIL_OP_INC_WRAP:
+		return GL_INCR_WRAP;
+	case GX_STENCIL_OP_DEC_WRAP:
+		return GL_DECR_WRAP;
+	}
+	
+	Assert(false);
+	return GL_KEEP;
+}
+
+static GLenum translateStencilFunc(const GX_STENCIL_FUNC func)
+{
+	switch (func)
+	{
+	case GX_STENCIL_FUNC_NEVER:
+		return GL_NEVER;
+	case GX_STENCIL_FUNC_LESS:
+		return GL_LESS;
+	case GX_STENCIL_FUNC_LEQUAL:
+		return GL_LEQUAL;
+	case GX_STENCIL_FUNC_GREATER:
+		return GL_GREATER;
+	case GX_STENCIL_FUNC_GEQUAL:
+		return GL_GEQUAL;
+	case GX_STENCIL_FUNC_EQUAL:
+		return GL_EQUAL;
+	case GX_STENCIL_FUNC_NOTEQUAL:
+		return GL_NOTEQUAL;
+	case GX_STENCIL_FUNC_ALWAYS:
+		return GL_ALWAYS;
+	}
+	
+	return GL_ALWAYS;
+}
+
+void setStencilTest(const StencilState & front, const StencilState & back)
+{
+	const GLenum sides[2] = { GL_FRONT, GL_BACK };
+	const StencilState * states[2] = { &front, &back };
+
+	for (int i = 0; i < 2; ++i)
+	{
+		const GLenum side = sides[i];
+		const StencilState & state = *states[i];
+
+		glStencilOpSeparate(side, translateStencilOp(state.onStencilFail), translateStencilOp(state.onDepthFail), translateStencilOp(state.onDepthStencilPass));
+		glStencilFuncSeparate(side, translateStencilFunc(state.compareFunc), state.compareRef, state.compareMask);
+		glStencilMaskSeparate(side, state.writeMask);
+	}
+	
+	glEnable(GL_STENCIL_TEST);
+}
+
+void clearStencilTest()
+{
+	glDisable(GL_STENCIL_TEST);
+}
+
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 {
 	globals.cullMode = mode;
