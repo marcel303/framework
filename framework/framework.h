@@ -1583,14 +1583,14 @@ public:
 		GX_STENCIL_OP onDepthFail,
 		GX_STENCIL_OP onDepthStencilPass);
 	StencilSetter & writeMask(GX_STENCIL_FACE face, uint8_t mask);
-	StencilSetter & compare(GX_STENCIL_FACE face, GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask);
+	StencilSetter & comparison(GX_STENCIL_FACE face, GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask);
 	
 	StencilSetter & op(
 		GX_STENCIL_OP onStencilFail,
 		GX_STENCIL_OP onDepthFail,
 		GX_STENCIL_OP onDepthStencilPass);
 	StencilSetter & writeMask(uint8_t mask);
-	StencilSetter & compare(GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask);
+	StencilSetter & comparison(GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask);
 };
 
 inline StencilSetter setStencilTest() { return StencilSetter(); }

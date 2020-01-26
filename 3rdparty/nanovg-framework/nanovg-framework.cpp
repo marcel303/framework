@@ -509,7 +509,7 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 		// draw the paths into the stencil buffer
 		
 		setStencilTest()
-			.compare(GX_STENCIL_FUNC_ALWAYS, 0, 0xff)
+			.comparison(GX_STENCIL_FUNC_ALWAYS, 0, 0xff)
 			.op(GX_STENCIL_FACE_FRONT, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_INC_WRAP)
 			.op(GX_STENCIL_FACE_BACK,  GX_STENCIL_OP_KEEP, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_DEC_WRAP)
 			.writeMask(0xff);
@@ -530,7 +530,7 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 		pushBlend(compositeOperationToBlendMode(compositeOperation));
 		
 		setStencilTest()
-			.compare(GX_STENCIL_FUNC_NOTEQUAL, 0x00, 0xff)
+			.comparison(GX_STENCIL_FUNC_NOTEQUAL, 0x00, 0xff)
 			.op(GX_STENCIL_OP_ZERO, GX_STENCIL_OP_ZERO, GX_STENCIL_OP_ZERO)
 			.writeMask(0xff);
 		

@@ -3757,7 +3757,7 @@ StencilSetter::~StencilSetter()
 	setStencilTest(globals.frontStencilState, globals.backStencilState);
 }
 
-StencilSetter & StencilSetter::compare(GX_STENCIL_FACE face, GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask)
+StencilSetter & StencilSetter::comparison(GX_STENCIL_FACE face, GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask)
 {
 	auto & state = getStencilStateForFace(face);
 	state.compareFunc = func;
@@ -3782,10 +3782,10 @@ StencilSetter & StencilSetter::writeMask(GX_STENCIL_FACE face, uint8_t mask)
 	return *this;
 }
 
-StencilSetter & StencilSetter::compare(GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask)
+StencilSetter & StencilSetter::comparison(GX_STENCIL_FUNC func, uint8_t ref, uint8_t mask)
 {
-	compare(GX_STENCIL_FACE_FRONT, func, ref, mask);
-	compare(GX_STENCIL_FACE_BACK,  func, ref, mask);
+	comparison(GX_STENCIL_FACE_FRONT, func, ref, mask);
+	comparison(GX_STENCIL_FACE_BACK,  func, ref, mask);
 	return *this;
 }
 
