@@ -269,10 +269,8 @@ static int renderUpdateTexture(void* uptr, int imageId, int x, int y, int w, int
 	{
 		auto * texture = image->texture;
 		
-		if (texture->format == GX_R8_UNORM)
-			data += y * texture->sx * 1 + x * 1;
-		else if (texture->format == GX_RGBA8_UNORM)
-			data += y * texture->sx * 4 + x * 4;
+		const int pixelStride = texture->format == GX_R8_UNORM ? 1 : 4;
+		data += (y * texture->sx + x) * pixelStride;
 		
 		texture->uploadArea(data, 1, texture->sx, w, h, x, y);
 		
@@ -508,8 +506,6 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 		if (!setShaderUniforms(shader, *paint, *scissor, fringe, fringe, -1.f, frameworkCtx))
 			return;
 		
-		pushBlend(compositeOperationToBlendMode(compositeOperation));
-		
 		// draw the paths into the stencil buffer
 		
 		setStencilTest()
@@ -530,6 +526,8 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 		popColorWriteMask();
 		
 		// fill a gradient over the stenciled pixels
+		
+		pushBlend(compositeOperationToBlendMode(compositeOperation));
 		
 		setStencilTest()
 			.compare(GX_STENCIL_FUNC_NOTEQUAL, 0x00, 0xff)
@@ -553,7 +551,7 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 		
 		clearStencilTest();
 		
-		// draw anti-aliased edges
+		// and draw anti-aliased edges (without stencil)
 		
 		if (frameworkCtx->flags & NVG_ANTIALIAS)
 		{
