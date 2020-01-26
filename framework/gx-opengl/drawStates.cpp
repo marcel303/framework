@@ -309,6 +309,8 @@ static GLenum translateStencilOp(const GX_STENCIL_OP op)
 	{
 	case GX_STENCIL_OP_KEEP:
 		return GL_KEEP;
+	case GX_STENCIL_OP_REPLACE:
+		return GL_REPLACE;
 	case GX_STENCIL_OP_ZERO:
 		return GL_ZERO;
 	case GX_STENCIL_OP_INC:
@@ -350,6 +352,12 @@ static GLenum translateStencilFunc(const GX_STENCIL_FUNC func)
 	return GL_ALWAYS;
 }
 
+void clearStencil(uint8_t value)
+{
+	glClearStencil(value);
+	glClear(GL_STENCIL_BUFFER_BIT);
+}
+
 void setStencilTest(const StencilState & front, const StencilState & back)
 {
 	const GLenum sides[2] = { GL_FRONT, GL_BACK };
@@ -360,8 +368,8 @@ void setStencilTest(const StencilState & front, const StencilState & back)
 		const GLenum side = sides[i];
 		const StencilState & state = *states[i];
 
-		glStencilOpSeparate(side, translateStencilOp(state.onStencilFail), translateStencilOp(state.onDepthFail), translateStencilOp(state.onDepthStencilPass));
 		glStencilFuncSeparate(side, translateStencilFunc(state.compareFunc), state.compareRef, state.compareMask);
+		glStencilOpSeparate(side, translateStencilOp(state.onStencilFail), translateStencilOp(state.onDepthFail), translateStencilOp(state.onDepthStencilPass));
 		glStencilMaskSeparate(side, state.writeMask);
 	}
 	

@@ -850,6 +850,8 @@ static MTLStencilOperation translateStencilOp(const GX_STENCIL_OP op)
 	{
 	case GX_STENCIL_OP_KEEP:
 		return MTLStencilOperationKeep;
+	case GX_STENCIL_OP_REPLACE:
+		return MTLStencilOperationReplace;
 	case GX_STENCIL_OP_ZERO:
 		return MTLStencilOperationZero;
 	case GX_STENCIL_OP_INC:
@@ -1000,6 +1002,56 @@ void popDepthWrite()
 	popDepthTest();
 }
 
+void clearStencil(uint8_t value)
+{
+	// capture state we need to restore later
+	
+	const auto restore_frontStencilState = globals.frontStencilState;
+	const auto restore_backStencilState = globals.backStencilState;
+	const auto restore_matrixMode = gxGetMatrixMode();
+	
+	// set up the stencil state so as to overwrite the stencil buffer with the desired value
+	
+	StencilState clearStencilState;
+	clearStencilState.compareFunc = GX_STENCIL_FUNC_ALWAYS;
+	clearStencilState.compareRef = value;
+	clearStencilState.compareMask = 0xff;
+	clearStencilState.onStencilFail = GX_STENCIL_OP_REPLACE;
+	clearStencilState.onDepthFail = GX_STENCIL_OP_REPLACE;
+	clearStencilState.onDepthStencilPass = GX_STENCIL_OP_REPLACE;
+	clearStencilState.writeMask = 0xff;
+	
+	setStencilTest(clearStencilState, clearStencilState);
+	
+	// prepare to draw a rect covering the entire buffer
+	
+	gxMatrixMode(GX_PROJECTION);
+	gxPushMatrix();
+	{
+		projectScreen2d();
+		
+		// we only want to touch the stencil buffer,
+		// so make sure to disable depth and color writes
+		
+		pushDepthWrite(false);
+		pushColorWriteMask(0, 0, 0, 0);
+		{
+			int sx;
+			int sy;
+			framework.getCurrentViewportSize(sx, sy);
+			
+			drawRect(0, 0, sx, sy);
+		}
+		popColorWriteMask();
+		popDepthWrite();
+	}
+	gxMatrixMode(GX_PROJECTION);
+	gxPopMatrix();
+	
+	setStencilTest(restore_frontStencilState, restore_backStencilState);
+	gxMatrixMode(restore_matrixMode);
+}
+
 void setStencilTest(const StencilState & front, const StencilState & back)
 {
 	globals.frontStencilState = front;
@@ -1022,6 +1074,7 @@ void setStencilTest(const StencilState & front, const StencilState & back)
 
 void clearStencilTest()
 {
+// todo : use frontFaceStencil = nil, backFaceStencil = nil to disable stencil testing
 	StencilState defaultState;
 	setStencilTest(defaultState, defaultState);
 }

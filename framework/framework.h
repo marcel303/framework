@@ -399,6 +399,7 @@ enum GX_STENCIL_FUNC
 enum GX_STENCIL_OP
 {
 	GX_STENCIL_OP_KEEP,
+	GX_STENCIL_OP_REPLACE,
 	GX_STENCIL_OP_ZERO,
 	GX_STENCIL_OP_INC,
 	GX_STENCIL_OP_DEC,
@@ -1568,6 +1569,8 @@ struct StencilState
 	
 	uint8_t writeMask = 0xff;
 };
+
+void clearStencil(uint8_t value);
 
 void setStencilTest(const StencilState & front, const StencilState & back);
 void clearStencilTest();
