@@ -28,6 +28,9 @@ struct Cell
 	std::vector<Cell> mitosis();
 	void move();
 	void show() const;
+	
+	static void beginShow();
+	static void endShow();
 };
 
 Cell::Cell(Vec2 pos, Vec2 vel, float r, Color c)
@@ -41,7 +44,7 @@ Cell::Cell(Vec2 pos, Vec2 vel, float r, Color c)
 
 std::vector<Cell> Cell::mitosis()
 {
-	if (r < 5)
+	if (r < 10)
 		return { };
 	
 	//pos[0] += random<float>(-r, r);
@@ -79,7 +82,17 @@ void Cell::move()
 void Cell::show() const
 {
 	setColor(c);
-	fillCircle(pos[0], pos[1], r, 100);
+	hqFillCircle(pos[0], pos[1], r);
+}
+
+void Cell::beginShow()
+{
+	hqBegin(HQ_FILLED_CIRCLES);
+}
+
+void Cell::endShow()
+{
+	hqEnd();
 }
 
 int main(int argc, char * argv[])
@@ -98,30 +111,39 @@ int main(int argc, char * argv[])
 
 		if (framework.quitRequested)
 			break;
+		
+		if (mouse.wentDown(BUTTON_LEFT) || cells.empty())
+		{
+			cells.clear();
+			
+			cells.push_back(Cell());
+			cells.push_back(Cell());
+		}
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			if (cells.size() < 500)
+			for (int i = cells.size() - 1; i >= 0; i--)
 			{
-				for (int i = cells.size() - 1; i >= 0; i--)
+				if (random<float>(0.f, 1.f) > .95f)
 				{
-					if (random<float>(0.f, 1.f) > .95f)
-					{
-						auto c = cells[i].mitosis();
-						
-						for (auto & j : c)
-							cells.push_back(j);
+					auto c = cells[i].mitosis();
+					
+					for (auto & j : c)
+						cells.push_back(j);
 
-						cells.erase(cells.begin() + i);
-					}
+					cells.erase(cells.begin() + i);
 				}
 			}
 
 			for (auto & cell : cells)
-			{
 				cell.move();
-				cell.show();
+		
+			Cell::beginShow();
+			{
+				for (auto & cell : cells)
+					cell.show();
 			}
+			Cell::endShow();
 		}
 		framework.endDraw();
 	}
