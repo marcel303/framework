@@ -38,11 +38,7 @@ Acknowledgement for the use of the Stanford Lucy model:
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	framework.enableDepthBuffer = true;
 	framework.enableRealTimeEditing = true;
