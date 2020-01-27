@@ -94,6 +94,14 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 		result = false;
 	else
 	{
+		// capture current OpenGL states before we change them
+
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
+		// allocate texture storage
+		
 		glBindTexture(GL_TEXTURE_2D, m_colorTextureId);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
@@ -151,8 +159,9 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		checkErrorGL();
 		
-	// todo : properly restore previous texture
-		glBindTexture(GL_TEXTURE_2D, 0);
+		// restore previous OpenGL states
+
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
 		checkErrorGL();
 	}
 	
@@ -220,6 +229,12 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 		result = false;
 	else
 	{
+		// capture current OpenGL states before we change them
+
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
 		glBindTexture(GL_TEXTURE_2D, m_depthTextureId);
 		checkErrorGL();
 
@@ -248,8 +263,9 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		checkErrorGL();
 		
-	// todo : properly restore previous texture
-		glBindTexture(GL_TEXTURE_2D, 0);
+		// restore previous OpenGL states
+
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
 		checkErrorGL();
 	}
 	
