@@ -2960,9 +2960,8 @@ static int getButtonIndex(BUTTON button)
 		return 0;
 	case BUTTON_RIGHT:
 		return 1;
-	default:
-		fassert(false);
 	}
+	fassert(false);
 	return -1;
 }
 

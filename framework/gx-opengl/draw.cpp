@@ -422,10 +422,10 @@ static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
 	case GX_QUADS:
 		return GL_QUADS;
 #endif
-	default:
-		Assert(false);
-		return GL_INVALID_ENUM;
 	}
+	
+	AssertMsg(false, "unknown GX_PRIMITIVE_TYPE", 0);
+	return GL_INVALID_ENUM;
 }
 
 static void doCapture(const bool endOfBatch)

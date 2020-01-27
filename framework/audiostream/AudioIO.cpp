@@ -316,8 +316,6 @@ static SoundData * loadSound_WAV(const char * filename)
 			}
 			else
 			{
-				Assert(false);
-				
 				LOG_ERR("unknown WAVE data format", 0);
 				delete [] bytes;
 				return nullptr;

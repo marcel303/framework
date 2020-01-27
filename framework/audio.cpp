@@ -648,7 +648,7 @@ void SoundPlayer_PortAudio::generateAudio(float * __restrict samples, const int 
 						}
 						else
 						{
-							Assert(false);
+							AssertMsg(false, "expected buffer.channelCount to be 1 or 2. actual channelCount=%d", buffer.channelCount);
 						}
 					}
 					

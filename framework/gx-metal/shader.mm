@@ -376,7 +376,7 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 				uniformInfo.numElems = 1;
 				break;
 			case MTLDataTypeArray:
-				logDebug("%d", uniform.arrayType.elementType);
+				//logDebug("found MTLDataTypeArray. elementType=%d", uniform.arrayType.elementType);
 				switch (uniform.arrayType.elementType)
 				{
 				case MTLDataTypeFloat:
@@ -388,12 +388,12 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 					uniformInfo.numElems = uniform.arrayType.arrayLength;
 					break;
 				default:
-					Assert(false);
+					AssertMsg(false, "unknown MTLDataType", 0);
 					break;
 				}
 				break;
 			default:
-				Assert(false);
+				AssertMsg(false, "unknown MTLDataType", 0);
 				break;
 			}
 		}

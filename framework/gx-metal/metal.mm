@@ -865,7 +865,7 @@ static MTLStencilOperation translateStencilOp(const GX_STENCIL_OP op)
 		return MTLStencilOperationDecrementWrap;
 	}
 	
-	Assert(false);
+	AssertMsg(false, "unknown GX_STENCIL_OP", 0);
 	return MTLStencilOperationKeep;
 }
 
@@ -891,7 +891,7 @@ static MTLCompareFunction translateCompareFunction(const GX_STENCIL_FUNC func)
 		return MTLCompareFunctionAlways;
 	}
 	
-	Assert(false);
+	AssertMsg(false, "unknown GX_STENCIL_FUNC", 0);
 	return MTLCompareFunctionAlways;
 }
 
@@ -1611,10 +1611,10 @@ static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveTy
 		return MTLPrimitiveTypeTriangleStrip;
 	case GX_QUADS:
 		return MTLPrimitiveTypeTriangle;
-	default:
-		fassert(false);
-		return (MTLPrimitiveType)-1;
 	}
+	
+	logError("unknown GX_PRIMITIVE_TYPE");
+	return (MTLPrimitiveType)-1;
 }
 
 #define FNV_Offset32 2166136261
@@ -1890,9 +1890,11 @@ static void gxValidatePipelineState()
 					att.destinationRGBBlendFactor = MTLBlendFactorOne;
 					att.destinationAlphaBlendFactor = MTLBlendFactorOne;
 					break;
+				#if defined(DEBUG) // DEBUG only, so we get a warning about a missing case statement when compiling in release
 				default:
 					fassert(false);
 					break;
+				#endif
 				}
 			}
 			
@@ -2290,8 +2292,10 @@ void gxBegin(GX_PRIMITIVE_TYPE primitiveType)
 		case GX_TRIANGLE_STRIP:
 			s_gxPrimitiveSize = 1;
 			break;
+		#if defined(DEBUG) // DEBUG only, so we get a warning about a missing case statement when compiling in release
 		default:
 			fassert(false);
+		#endif
 	}
 	
 	fassert(s_gxVertexCount == 0);

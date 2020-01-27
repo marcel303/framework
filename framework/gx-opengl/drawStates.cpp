@@ -243,7 +243,7 @@ static GLenum toOpenGLDepthFunc(DEPTH_TEST test)
 		return GL_ALWAYS;
 	}
 	
-	Assert(false);
+	AssertMsg(false, "unknown DEPTH_TEST", 0);
 	return GL_ALWAYS;
 }
 
@@ -320,7 +320,7 @@ static GLenum translateStencilOp(const GX_STENCIL_OP op)
 		return GL_DECR_WRAP;
 	}
 	
-	Assert(false);
+	AssertMsg(false, "unknown GX_STENCIL_OP", 0);
 	return GL_KEEP;
 }
 

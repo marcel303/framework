@@ -163,7 +163,7 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 		
 		if (clearColor)
 		{
-		// todo : use extended clear color function
+		// todo : for MRT support : use extended clear color function
 			Assert(false);
 			glClearColor(0, 0, 0, 0);
 			clearFlags |= GL_COLOR_BUFFER_BIT;

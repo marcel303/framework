@@ -284,23 +284,19 @@ namespace spriter
 			const float t = v < 0.f ? 0.f : v > 1.f ? 1.f : v;
 		#endif
 
-			if (curveType == kCurveType_Linear)
+			switch (curveType)
 			{
+			case kCurveType_Instant:
+				return 0.f;
+			case kCurveType_Linear:
 				return t;
-			}
-			else if (curveType == kCurveType_Quadratic)
-			{
+			case kCurveType_Quadratic:
 				return quadratic(0.f, c1, 1.f, t);
-			}
-			else if (curveType == kCurveType_Cubic)
-			{
+			case kCurveType_Cubic:
 				return cubic(0.f, c1, c2, 1.f, t);
 			}
-			else
-			{
-				Assert(false);
-				return 0.f;
-			}
+			
+			return 0.f;
 		}
 
 		virtual TimelineKey * linear(const TimelineKey * keyB, float t) const = 0;
@@ -439,17 +435,14 @@ namespace spriter
 		
 		const MainlineKey & getAnimationDataAtTime_step1(float & newTime) const
 		{
-			if (loopType == kLoopType_NoLooping)
+			switch (loopType)
 			{
+			case kLoopType_NoLooping:
 				newTime = std::min<float>(newTime, length);
-			}
-			else if (loopType == kLoopType_Looping)
-			{
+				break;
+			case kLoopType_Looping:
 				newTime = std::fmod<float>(newTime, length);
-			}
-			else
-			{
-				Assert(false);
+				break;
 			}
 
 			const MainlineKey & mainKey = mainlineKeyFromTime(newTime);
