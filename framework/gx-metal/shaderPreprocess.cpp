@@ -46,7 +46,9 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 
 	FILE * file = 0;
 
-	if (fopen_s(&file, filename, "rb") == 0)
+	const char * resolved_filename = framework.resolveResourcePath(filename);
+	
+	if (fopen_s(&file, resolved_filename, "rb") == 0)
 	{
 		// load source from file
 

@@ -66,7 +66,6 @@
 #include "internal.h"
 #include "model.h" // updateAnimation
 #include "rte.h"
-#include "shaders.h" // registerBuiltinShaders
 
 #define ENABLE_DISPLAY_SIZE_SCALING 0 // todo : make this work with resizable windows
 

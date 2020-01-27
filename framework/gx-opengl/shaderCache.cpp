@@ -27,8 +27,6 @@
 
 #include "framework.h"
 
-// todo : expose ScopedLoadTimer in internal.h
-
 #if ENABLE_OPENGL
 
 #include "data/engine/ShaderCommon.txt"
@@ -123,9 +121,11 @@ static bool fileExists(const char * filename)
 {
 	const char * text = nullptr;
 
+	const char * resolved_filename = framework.resolveResourcePath(filename);
+	
 	FILE * file;
 
-	if (fopen_s(&file, filename, "rb") == 0)
+	if (fopen_s(&file, resolved_filename, "rb") == 0)
 	{
 		fclose(file);
 		return true;
@@ -282,7 +282,7 @@ void ShaderCacheElem::free()
 
 void ShaderCacheElem::load(const char * _name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
-	//ScopedLoadTimer loadTimer(_name);
+	ScopedLoadTimer loadTimer(_name);
 
 	free();
 	
@@ -508,7 +508,7 @@ void ComputeShaderCacheElem::free()
 
 void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const int _groupSy, const int _groupSz)
 {
-	//ScopedLoadTimer loadTimer(_name);
+	ScopedLoadTimer loadTimer(_name);
 
 	free();
 

@@ -34,7 +34,6 @@
 #import "internal.h"
 #import "metal.h"
 #import "metalView.h"
-#import "shaders.h" // registerBuiltinShaders
 #import "StringEx.h" // strcpy_s
 #import "texture.h"
 #import "window_data.h"
@@ -210,6 +209,8 @@ void metal_make_active(SDL_Window * window)
 
 void metal_draw_begin(const float r, const float g, const float b, const float a, const float depth)
 {
+	[queue insertDebugCaptureBoundary]; // todo : should be done @ framework::process()
+	
 	activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
 	[activeWindowData->current_drawable retain];
 	
@@ -224,8 +225,6 @@ void metal_draw_end()
 	
 	auto & pd = *s_activeRenderPass;
 	
-	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
-	
 // todo : endRenderPass ?
 
 	[pd.encoder endEncoding];
@@ -238,7 +237,9 @@ void metal_draw_end()
 		}];
 #endif
 
+	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
 	[pd.cmdbuf commit];
+	//[activeWindowData->current_drawable present]; // todo : research the appropriate drawable presentation method
 	
 	//
 	
@@ -946,8 +947,16 @@ static void fillDepthStencilDescriptor(MTLDepthStencilDescriptor * descriptor)
 	
 	// fill stencil state
 	
-	fillStencilDescriptor(descriptor.frontFaceStencil, globals.frontStencilState);
-	fillStencilDescriptor(descriptor.backFaceStencil, globals.backStencilState);
+	if (globals.stencilEnabled)
+	{
+		fillStencilDescriptor(descriptor.frontFaceStencil, globals.frontStencilState);
+		fillStencilDescriptor(descriptor.backFaceStencil, globals.backStencilState);
+	}
+	else
+	{
+		descriptor.frontFaceStencil = nil;
+		descriptor.backFaceStencil = nil;
+	}
 }
 
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
@@ -1006,6 +1015,7 @@ void clearStencil(uint8_t value)
 {
 	// capture state we need to restore later
 	
+	const auto restore_stencilTestEnabled = globals.stencilEnabled;
 	const auto restore_frontStencilState = globals.frontStencilState;
 	const auto restore_backStencilState = globals.backStencilState;
 	const auto restore_matrixMode = gxGetMatrixMode();
@@ -1048,12 +1058,23 @@ void clearStencil(uint8_t value)
 	gxMatrixMode(GX_PROJECTION);
 	gxPopMatrix();
 	
-	setStencilTest(restore_frontStencilState, restore_backStencilState);
+	// restore previous states
+	
+	if (restore_stencilTestEnabled)
+		setStencilTest(restore_frontStencilState, restore_backStencilState);
+	else
+	{
+		globals.frontStencilState = restore_frontStencilState;
+		globals.backStencilState = restore_backStencilState;
+		clearStencilTest();
+	}
+	
 	gxMatrixMode(restore_matrixMode);
 }
 
 void setStencilTest(const StencilState & front, const StencilState & back)
 {
+	globals.stencilEnabled = true;
 	globals.frontStencilState = front;
 	globals.backStencilState = back;
 	
@@ -1074,9 +1095,21 @@ void setStencilTest(const StencilState & front, const StencilState & back)
 
 void clearStencilTest()
 {
-// todo : use frontFaceStencil = nil, backFaceStencil = nil to disable stencil testing
-	StencilState defaultState;
-	setStencilTest(defaultState, defaultState);
+	globals.stencilEnabled = false;
+	
+	// update depth-stencil state
+	
+	MTLDepthStencilDescriptor * descriptor = [[MTLDepthStencilDescriptor alloc] init];
+	fillDepthStencilDescriptor(descriptor);
+	
+	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
+	[s_activeRenderPass->encoder setDepthStencilState:state];
+	
+	[state release];
+	state = nullptr;
+	
+	[descriptor release];
+	descriptor = nullptr;
 }
 
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
@@ -1522,8 +1555,6 @@ void gxInitialize()
 	renderState.colorWriteMask = 0xf;
 	
 	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
-	
-	registerBuiltinShaders();
 	
 	Shader("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
 

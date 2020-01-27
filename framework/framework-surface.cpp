@@ -259,7 +259,7 @@ static GLint toOpenGLTextureSwizzle(const int value)
 void Surface::setSwizzle(int r, int g, int b, int a)
 {
 #if ENABLE_METAL
-	Assert(false);
+	AssertMsg(false, "Surface::setSwizzle not yet implemented", 0);
 #elif ENABLE_OPENGL
 	fassert(m_properties.colorTarget.enabled);
 	if (m_properties.colorTarget.enabled == false)
@@ -559,7 +559,7 @@ void Surface::gaussianBlur(const float strengthH, const float strengthV, const i
 void Surface::blitTo(Surface * surface) const
 {
 #if ENABLE_METAL
-	Assert(false);
+	AssertMsg(false, "Surface::blitTo not yet implemented", 0);
 	// todo : metal_copy_texture_to_texture(..);
 #elif ENABLE_OPENGL
 	int oldReadBuffer = 0;
@@ -620,7 +620,7 @@ void Surface::blit(BLEND_MODE blendMode) const
 void blitBackBufferToSurface(Surface * surface)
 {
 #if ENABLE_METAL
-	Assert(false);
+	AssertMsg(false, "blitBackBufferToSurface not yet implemented", 0);
 #elif ENABLE_OPENGL
 	int drawableSx;
 	int drawableSy;

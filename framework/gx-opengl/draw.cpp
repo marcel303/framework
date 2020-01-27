@@ -35,7 +35,6 @@
 #include "gx_mesh.h"
 #include "internal.h"
 #include "Quat.h"
-#include "shaders.h" // registerBuiltinShaders
 #include <map>
 
 #if defined(MACOS)
@@ -308,8 +307,6 @@ void gxInitialize()
 {
 	fassert(s_shaderSources.empty());
 	
-	registerBuiltinShaders();
-
 	Shader("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
 	
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
@@ -1012,11 +1009,9 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 #else // USE_LEGACY_OPENGL
 
 #include "internal.h"
-#include "shaders.h" // registerBuiltinShaders
 
 void gxInitialize()
 {
-	registerBuiltinShaders();
 }
 
 void gxShutdown()
@@ -1213,22 +1208,22 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 
 void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
 {
-	Assert(false); // todo : implement gxDrawIndexedPrimitives using vertex attrib arrays
+	AssertMsg(false, "todo : implement gxDrawIndexedPrimitives using vertex attrib arrays", 0);
 }
 
 void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
 {
-	Assert(false); // todo : implement gxDrawPrimitives using vertex attrib arrays
+	AssertMsg(false, "todo : implement gxDrawPrimitives using vertex attrib arrays", 0);
 }
 
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
-	Assert(false); // todo : implement gxSetVertexBuffer using vertex attrib arrays
+	AssertMsg(false, "todo : implement gxSetVertexBuffer using vertex attrib arrays", 0);
 }
 
 void gxSetCaptureCallback(GxCaptureCallback callback)
 {
-	AssertMsg(false, "gxSetCaptureCallback is not supported when using legacy OpenGL");
+	AssertMsg(false, "gxSetCaptureCallback is not supported when using legacy OpenGL", 0);
 }
 
 void gxClearCaptureCallback()
