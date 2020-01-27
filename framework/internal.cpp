@@ -155,33 +155,20 @@ void debugOutputGL(
 
 //
 
-class ScopedLoadTimer
+ScopedLoadTimer::ScopedLoadTimer(const char * filename)
+	: m_filename(filename)
 {
-public:
-#if defined(DEBUG)
-	const char * m_filename;
-	uint64_t m_startTime;
+	logDebug("load %s [begin]", m_filename);
 
-	ScopedLoadTimer(const char * filename)
-		: m_filename(filename)
-	{
-		logDebug("load %s [begin]", m_filename);
+	m_startTime = g_TimerRT.TimeUS_get();
+}
 
-		m_startTime = g_TimerRT.TimeUS_get();
-	}
+ScopedLoadTimer::~ScopedLoadTimer()
+{
+	const uint64_t endTime = g_TimerRT.TimeUS_get();
 
-	~ScopedLoadTimer()
-	{
-		const uint64_t endTime = g_TimerRT.TimeUS_get();
-
-		logDebug("load %s [end] took %02.2fms", m_filename, (endTime - m_startTime) / 1000.f);
-	}
-#else
-	ScopedLoadTimer(const char * filename)
-	{
-	}
-#endif
-};
+	logDebug("load %s [end] took %02.2fms", m_filename, (endTime - m_startTime) / 1000.f);
+}
 
 // -----
 

@@ -114,9 +114,6 @@ void setBlend(BLEND_MODE blendMode)
 			glBlendEquation(GL_MAX);
 		glBlendFunc(GL_ONE, GL_ONE);
 		break;
-	default:
-		fassert(false);
-		break;
 	}
 }
 
@@ -244,10 +241,10 @@ static GLenum toOpenGLDepthFunc(DEPTH_TEST test)
 		return GL_GEQUAL;
 	case DEPTH_ALWAYS:
 		return GL_ALWAYS;
-	default:
-		Assert(false);
-		return GL_LESS;
 	}
+	
+	Assert(false);
+	return GL_ALWAYS;
 }
 
 void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
@@ -360,6 +357,14 @@ void clearStencil(uint8_t value)
 
 void setStencilTest(const StencilState & front, const StencilState & back)
 {
+	// capture current stencil state
+	
+	globals.stencilEnabled = true;
+	globals.frontStencilState = front;
+	globals.backStencilState = back;
+	
+	// update OpenGL state
+	
 	const GLenum sides[2] = { GL_FRONT, GL_BACK };
 	const StencilState * states[2] = { &front, &back };
 
@@ -378,6 +383,12 @@ void setStencilTest(const StencilState & front, const StencilState & back)
 
 void clearStencilTest()
 {
+	// capture current stencil state
+	
+	globals.stencilEnabled = false;
+	
+	// update OpenGL state
+	
 	glDisable(GL_STENCIL_TEST);
 }
 

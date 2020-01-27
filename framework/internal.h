@@ -440,6 +440,7 @@ public:
 	bool depthTestEnabled;
 	DEPTH_TEST depthTest;
 	bool depthTestWriteEnabled;
+	bool stencilEnabled;
 	StencilState frontStencilState;
 	StencilState backStencilState;
 	CULL_MODE cullMode;
@@ -986,6 +987,24 @@ struct ShaderOutput
 };
 
 const ShaderOutput * findShaderOutput(const char name);
+
+//
+
+class ScopedLoadTimer
+{
+public:
+#if defined(DEBUG)
+	const char * m_filename;
+	uint64_t m_startTime;
+
+	ScopedLoadTimer(const char * filename);
+	~ScopedLoadTimer();
+#else
+	ScopedLoadTimer(const char * filename)
+	{
+	}
+#endif
+};
 
 //
 

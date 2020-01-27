@@ -27,8 +27,6 @@
 
 #import "framework.h"
 
-// todo : expose ScopedLoadTimer in internal.h
-
 #if ENABLE_METAL
 
 #import "internal.h"
@@ -162,7 +160,7 @@ void ShaderCacheElem_Metal::shut()
 
 void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameVs, const char * in_filenamePs, const char * in_outputs)
 {
-	//ScopedLoadTimer loadTimer(_name);
+	ScopedLoadTimer loadTimer(in_name);
 
 	shut();
 	
