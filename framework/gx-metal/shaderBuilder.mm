@@ -307,6 +307,8 @@ static const char * header =
 R"SHADER(
 #include <metal_stdlib>
 
+#define _SHADER_ 1
+
 using namespace metal;
 
 // standard types
