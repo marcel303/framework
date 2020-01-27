@@ -54,7 +54,7 @@ void setBlend(BLEND_MODE blendMode)
 		if (glBlendEquation)
 			glBlendEquation(GL_FUNC_ADD);
 		if (glBlendFuncSeparate)
-			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
 		break;
 	case BLEND_PREMULTIPLIED_ALPHA:
 		glEnable(GL_BLEND);
@@ -298,6 +298,21 @@ void pushDepthWrite(bool enabled)
 void popDepthWrite()
 {
 	popDepthTest();
+}
+
+void setDepthBias(float depthBias, float slopeScale)
+{
+	if (depthBias == 0.f && slopeScale == 0.f)
+	{
+		glDisable(GL_POLYGON_OFFSET_FILL);
+		glDisable(GL_POLYGON_OFFSET_LINE);
+	}
+	else
+	{
+		glEnable(GL_POLYGON_OFFSET_FILL);
+		glEnable(GL_POLYGON_OFFSET_LINE);
+		glPolyhonOffset(slopeScale, depthBias);
+	}
 }
 
 static GLenum translateStencilOp(const GX_STENCIL_OP op)

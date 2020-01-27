@@ -1557,6 +1557,8 @@ void popDepthTest();
 void pushDepthWrite(bool enabled);
 void popDepthWrite();
 
+void setDepthBias(float depthBias, float slopeScale);
+
 struct StencilState
 {
 	GX_STENCIL_FUNC compareFunc = GX_STENCIL_FUNC_ALWAYS;

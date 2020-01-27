@@ -1011,6 +1011,11 @@ void popDepthWrite()
 	popDepthTest();
 }
 
+void setDepthBias(float depthBias, float slopeScale)
+{
+	[s_activeRenderPass->encoder setDepthBias:depthBias slopeScale:slopeScale clamp:0.f];
+}
+
 void clearStencil(uint8_t value)
 {
 	// capture state we need to restore later
@@ -1804,7 +1809,7 @@ static void gxValidatePipelineState()
 					att.rgbBlendOperation = MTLBlendOperationAdd;
 					att.alphaBlendOperation = MTLBlendOperationAdd;
 					att.sourceRGBBlendFactor = MTLBlendFactorSourceAlpha;
-					att.sourceAlphaBlendFactor = MTLBlendFactorOne;
+					att.sourceAlphaBlendFactor = MTLBlendFactorZero;
 					att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					break;
