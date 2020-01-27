@@ -1588,6 +1588,7 @@ int Framework::getCurrentBackingScale() const
 	return ::getCurrentBackingScale();
 }
 
+// todo : remove this entire function ..
 static void updateViewport(Surface * surface, SDL_Window * window)
 {
 #if ENABLE_METAL
@@ -1648,6 +1649,7 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 	
 	// initialize viewport and OpenGL matrices
 	
+// todo : remove updateViewport
 	updateViewport(nullptr, globals.currentWindow->getWindow());
 #endif
 
@@ -1967,6 +1969,7 @@ bool Framework::registerChibiResourcePaths(const char * encoded_text)
 		logError("failed to parse chibi resource paths");
 	else
 	{
+		const int type_index = doc.getColumnIndex("type");
 		const int path_index = doc.getColumnIndex("path");
 		
 		if (path_index < 0)
@@ -1980,6 +1983,16 @@ bool Framework::registerChibiResourcePaths(const char * encoded_text)
 				logDebug("resource path: %s", path);
 				
 				registerResourcePath(path);
+				
+				if (type_index != -1)
+				{
+					const char * type = i[type_index];
+					
+					if (strcmp(type, "app") == 0)
+					{
+						changeDirectory(path);
+					}
+				}
 			}
 			
 			result = true;
@@ -5032,6 +5045,14 @@ void hqDrawPath(const Path2d & path, float stroke)
 }
 
 //
+
+void setupPaths(const char * chibiResourcePaths)
+{
+	changeDirectory(SDL_GetBasePath());
+	
+	if (chibiResourcePaths != nullptr)
+		framework.registerChibiResourcePaths(chibiResourcePaths);
+}
 
 void changeDirectory(const char * path)
 {

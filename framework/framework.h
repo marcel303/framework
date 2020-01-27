@@ -1797,6 +1797,7 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture);
 
 // utility
 
+void setupPaths(const char * chibiResourcePaths);
 void changeDirectory(const char * path);
 std::string getDirectory();
 std::vector<std::string> listFiles(const char * path, bool recurse);
