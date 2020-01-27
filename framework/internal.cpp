@@ -155,6 +155,8 @@ void debugOutputGL(
 
 //
 
+#if defined(DEBUG)
+
 ScopedLoadTimer::ScopedLoadTimer(const char * filename)
 	: m_filename(filename)
 {
@@ -169,6 +171,8 @@ ScopedLoadTimer::~ScopedLoadTimer()
 
 	logDebug("load %s [end] took %02.2fms", m_filename, (endTime - m_startTime) / 1000.f);
 }
+
+#endif
 
 // -----
 
