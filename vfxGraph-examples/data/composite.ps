@@ -8,7 +8,7 @@ uniform float opacity;
 void main()
 {	
 	vec4 color = texture(source, texcoord);
-	color = vec4(color.rgb, (1.0 - color.a) * opacity);
+	color = vec4(color.rgb, (1.0 - color.a)) * opacity;
 
     shader_fragColor = color;
 }

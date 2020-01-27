@@ -69,10 +69,10 @@ using namespace tinyxml2;
 //#define FILENAME "nodeDataTest.xml"
 //#define FILENAME "fsfxv2Test.xml"
 //#define FILENAME "kinectTest2.xml"
-//#define FILENAME "testOscilloscope.xml"
+#define FILENAME "testOscilloscope.xml"
 //#define FILENAME "testVisualizers.xml"
 //#define FILENAME "testRibbon3.xml"
-#define FILENAME "testPetals.xml"
+//#define FILENAME "testPetals.xml"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
@@ -226,7 +226,7 @@ struct VfxNodeTestDynamicSockets : VfxNodeBase
 					inputs[i].type = kVfxPlugType_Float;
 				}
 			
-				setDynamicInputs(&inputs.front(), kNumInputs);
+				setDynamicInputs(inputs.data(), kNumInputs);
 			}
 		}
 
@@ -257,7 +257,7 @@ struct VfxNodeTestDynamicSockets : VfxNodeBase
 					outputs[i].mem = &value;
 				}
 			
-				setDynamicOutputs(&outputs.front(), kNumOutputs);
+				setDynamicOutputs(outputs.data(), kNumOutputs);
 			}
 		}
 	}
@@ -294,17 +294,14 @@ static void handleAction(const std::string & action, const Dictionary & args)
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	framework.enableRealTimeEditing = true;
 	
 	framework.enableDepthBuffer = false;
 	//framework.enableDrawTiming = true;
 	//framework.enableProfiling = true;
+	framework.allowHighDpi = false;
 	
 	framework.filedrop = true;
 	framework.actionHandler = handleAction;
@@ -436,7 +433,7 @@ int main(int argc, char * argv[])
 			
 			virtual void process(const float dt) override
 			{
-				if (window->hasFocus())
+				//if (window->hasFocus())
 				{
 					pushWindow(*window);
 					{
@@ -794,13 +791,10 @@ int main(int argc, char * argv[])
 				
 				graphEdit->tickVisualizers(dt);
 				
-				pushSurface(graphEditSurface);
+				graphEditSurface->setClearColor(0, 0, 0, 255);
+				pushSurface(graphEditSurface, true);
 				{
-					graphEditSurface->clear(0, 0, 0, 255);
-					pushBlend(BLEND_ADD);
-					
-					glBlendEquation(GL_FUNC_ADD);
-					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+					pushBlend(BLEND_ALPHA);
 					
 					graphEdit->draw();
 					
@@ -827,11 +821,8 @@ int main(int argc, char * argv[])
 					
 					Shader composite("composite");
 					setShader(composite);
-					pushBlend(BLEND_ADD);
+					pushBlend(BLEND_PREMULTIPLIED_ALPHA);
 					{
-						glBlendEquation(GL_FUNC_ADD);
-						glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
-					
 						composite.setTexture("source", 0, graphEditSurface->getTexture(), false, true);
 						composite.setImmediate("opacity", hideTime);
 						

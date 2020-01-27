@@ -3,9 +3,8 @@
     <node id="2" typeName="draw.surface">
         <input socket="clear" value="0"/>
         <input socket="clearColor" value="00000039"/>
-        <input socket="darken" value="1"/>
-        <input socket="darkenColor" value="431d0a05"/>
-        <input socket="format" value="0"/>
+        <input socket="darkenColor" value="46352ce1"/>
+        <input socket="format" value="1"/>
         <input socket="multiply" value="1"/>
         <input socket="multiplyColor" value="fbfbfb0a"/>
         <input socket="viewMode" value="0"/>

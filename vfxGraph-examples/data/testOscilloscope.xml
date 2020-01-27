@@ -115,10 +115,11 @@
             <nodeData nodeId="91" x="32" y="-48" zKey="744"/>
             <nodeData nodeId="92" x="-96" y="-48" zKey="743"/>
         </nodeDatas>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="002d9e90" gridColor="2b2b2b21">
+        <visualizers/>
+        <editorOptions comment="" menuIsVisible="1" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="0" showSocketNames="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="002d9e90" gridColor="2b2b2b21">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="0" g="0" b="0" a="0"/>
-                <key t="1" r="1" g="1" b="1" a="1"/>
+                <key t="1" r="0.38908827304840088" g="0.12916657328605652" b="0.87083327770233154" a="1"/>
             </cpuHeatColors>
         </editorOptions>
     </editor>

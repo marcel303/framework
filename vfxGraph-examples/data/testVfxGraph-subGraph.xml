@@ -1,4 +1,4 @@
-<graph nextNodeId="75" nextLinkId="81">
+<graph nextNodeId="76" nextLinkId="81">
     <node id="27" typeName="osc.endpoint">
         <input socket="ipAddress" value="127.0.0.1"/>
         <input socket="port" value="2000"/>
@@ -53,12 +53,16 @@
     <node id="54" typeName="channel.toGpu"/>
     <node id="55" typeName="channel.fromFile">
         <input socket="filename" value="datatable.csv"/>
+        <input socket="hasHeader" value="1"/>
     </node>
     <node id="56" typeName="draw.image">
         <input socket="opacity" value="0.500000"/>
         <input socket="sizeMode" value="1"/>
     </node>
-    <node id="57" typeName="draw.surface"/>
+    <node id="57" typeName="draw.surface">
+        <input socket="format" value="0"/>
+        <input socket="viewMode" value="0"/>
+    </node>
     <node id="60" typeName="draw.sequence"/>
     <node id="64" typeName="output">
         <input socket="name" value="output3"/>
@@ -92,12 +96,12 @@
     <link id="76" srcNodeId="64" srcNodeSocketName="value" dstNodeId="66" dstNodeSocketName="value"/>
     <link id="77" srcNodeId="70" srcNodeSocketName="value" dstNodeId="67" dstNodeSocketName="value"/>
     <link id="80" srcNodeId="71" srcNodeSocketName="value" dstNodeId="68" dstNodeSocketName="value"/>
-    <editor nextZKey="618">
-        <dragAndZoom x="177.7388916015625" y="-72.842025756835938" zoom="1"/>
+    <editor nextZKey="638">
+        <dragAndZoom x="377.45602416992188" y="66.733573913574219" zoom="1.5183597803115845"/>
         <nodeDatas>
             <nodeData nodeId="27" x="-320" y="-192" zKey="0"/>
             <nodeData nodeId="33" x="-48" y="-192" zKey="0" folded="1"/>
-            <nodeData nodeId="39" x="-320" y="-16" zKey="0"/>
+            <nodeData nodeId="39" x="-320" y="-16" zKey="632"/>
             <nodeData nodeId="41" x="-48" y="-160" zKey="0" folded="1"/>
             <nodeData nodeId="42" x="-48" y="-128" zKey="0" folded="1"/>
             <nodeData nodeId="43" x="-48" y="-96" zKey="0" folded="1"/>
@@ -106,13 +110,13 @@
             <nodeData nodeId="46" x="-208" y="-128" zKey="0" folded="1"/>
             <nodeData nodeId="47" x="-208" y="-96" zKey="0" folded="1"/>
             <nodeData nodeId="50" x="576" y="-64" zKey="0"/>
-            <nodeData nodeId="51" x="-48" y="-16" zKey="616"/>
+            <nodeData nodeId="51" x="-48" y="-16" zKey="633"/>
             <nodeData nodeId="53" x="-176" y="-16" zKey="617"/>
-            <nodeData nodeId="54" x="320" y="0" zKey="0" folded="1"/>
+            <nodeData nodeId="54" x="320" y="0" zKey="634" folded="1"/>
             <nodeData nodeId="55" x="-320" y="96" zKey="0"/>
-            <nodeData nodeId="56" x="320" y="32" zKey="0" folded="1"/>
-            <nodeData nodeId="57" x="448" y="-64" zKey="0"/>
-            <nodeData nodeId="60" x="320" y="64" zKey="0" folded="1"/>
+            <nodeData nodeId="56" x="320" y="32" zKey="637" folded="1"/>
+            <nodeData nodeId="57" x="448" y="-64" zKey="624"/>
+            <nodeData nodeId="60" x="320" y="64" zKey="636" folded="1"/>
             <nodeData nodeId="64" x="272" y="-192" zKey="611" folded="1"/>
             <nodeData nodeId="66" x="112" y="-192" zKey="608" folded="1"/>
             <nodeData nodeId="67" x="112" y="-160" zKey="609" folded="1"/>
@@ -122,9 +126,10 @@
         </nodeDatas>
         <visualizers>
             <visualizer id="73" x="80" y="32" zKey="0" nodeId="51" dstSocketName="1" sx="216" sy="148"/>
-            <visualizer id="74" x="208" y="-96" zKey="0" nodeId="56" srcSocketName="image" sx="216" sy="88"/>
+            <visualizer id="74" x="208" y="-96" zKey="620" nodeId="56" srcSocketName="image" sx="216" sy="88"/>
+            <visualizer id="75" x="-128" y="128" zKey="625" nodeId="55" dstSocketName="channel" sx="216" sy="148"/>
         </visualizers>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="002d9e90" gridColor="2b2b2b21">
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="0" showSocketNames="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="002d9e90" gridColor="2b2b2b21">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="0" g="0" b="0" a="0"/>
                 <key t="1" r="1" g="1" b="1" a="1"/>
