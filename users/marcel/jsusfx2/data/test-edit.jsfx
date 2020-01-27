@@ -50,6 +50,12 @@ gfx_roundrect(220, 50, 300, 100, 40 * c);
 gfx_roundrect(220, 50, 300, 100, 30 * c);
 gfx_roundrect(220, 50, 300, 100, 20);
 
+gfx_r = 0;
+gfx_roundrect(100, 100, 200, 400, 20);
+gfx_x = 200;
+gfx_y = 300;
+gfx_drawstr("this is me!");
+
 gfx_roundrect(220, 50, 300, 100, 10);
 gfx_x = 230;
 gfx_y = 60;

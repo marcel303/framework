@@ -27,7 +27,7 @@
             <var value="0.0099999997764825821"/>
             <var value="101"/>
             <var value="1"/>
-            <var value="0.30000001192092896"/>
+            <var value="4.0370779037475586"/>
             <var value="102"/>
             <var value="1"/>
             <var value="0.75"/>
@@ -1140,11 +1140,16 @@
             <var value="0"/>
         </vars>
     </effect>
-    <effect id="6" passthrough="0" filename="/Users/thecat/repos/geraintluff -jsfx//Hammer And String.jsfx"/>
+    <effect id="6" passthrough="0" filename="/Users/thecat/repos/geraintluff -jsfx//Hammer And String.jsfx">
+        <sliders>
+            <slider index="2" value="11.096673965454102"/>
+            <slider index="7" value="1"/>
+        </sliders>
+    </effect>
     <effect id="3" passthrough="0" filename="/Users/thecat/repos/geraintluff -jsfx//Spring-Box.jsfx">
         <sliders>
-            <slider index="1" value="52.579448699951172"/>
-            <slider index="2" value="38.316074371337891"/>
+            <slider index="1" value="359.6083984375"/>
+            <slider index="2" value="83.692390441894531"/>
             <slider index="3" value="62.580558776855469"/>
             <slider index="4" value="70.095046997070312"/>
             <slider index="5" value="42.209457397460938"/>
@@ -1159,8 +1164,10 @@
     <effect id="2" passthrough="0" filename="/Users/thecat/repos/geraintluff -jsfx//Echo-Cycles.jsfx">
         <sliders>
             <slider index="3" value="5.185335636138916"/>
+            <slider index="4" value="0.25"/>
             <slider index="5" value="0.71761000156402588"/>
-            <slider index="6" value="4.1420793533325195"/>
+            <slider index="6" value="5.6077861785888672"/>
+            <slider index="7" value="6.0815811157226562"/>
             <slider index="8" value="0.7942691445350647"/>
             <slider index="9" value="0.69763034582138062"/>
         </sliders>
@@ -1175,18 +1182,39 @@
             <var value="2"/>
         </vars>
     </effect>
+    <effect id="23" passthrough="0" filename="/Users/thecat/atk-reaper/plugins//FOA/Encode/Stereo">
+        <sliders>
+            <slider index="1" value="139.5"/>
+        </sliders>
+    </effect>
+    <effect id="27" passthrough="0" filename="/Users/thecat/atk-reaper/plugins//FOA/Transform/RotateTiltTumble">
+        <sliders>
+            <slider index="1" value="-175.03025817871094"/>
+            <slider index="2" value="45"/>
+            <slider index="3" value="51.75"/>
+        </sliders>
+    </effect>
+    <effect id="25" passthrough="0" filename="/Users/thecat/atk-reaper/plugins//FOA/Decode/Binaural">
+        <sliders>
+            <slider index="1" value="34"/>
+            <slider index="3" value="1"/>
+        </sliders>
+    </effect>
 </effectChain>
 
 <editor>
-    <midiKeyboard octave="6"/>
+    <midiKeyboard octave="8"/>
     <audioInput enabled="0"/>
     <effectChain>
         <effect id="15" window_visible="0" window_x="430" window_y="220" window_sx="580" window_sy="460"/>
         <effect id="6" window_visible="0" window_x="99" window_y="414" window_sx="410" window_sy="410"/>
-        <effect id="3" window_visible="1" window_x="946" window_y="475" window_sx="439" window_sy="345"/>
-        <effect id="2" window_visible="1" window_x="66" window_y="355" window_sx="586" window_sy="494"/>
+        <effect id="3" window_visible="0" window_x="946" window_y="475" window_sx="439" window_sy="345"/>
+        <effect id="2" window_visible="0" window_x="34" window_y="280" window_sx="586" window_sy="494"/>
         <effect id="7" window_visible="0" window_x="445" window_y="235" window_sx="550" window_sy="430"/>
         <effect id="13" window_visible="0" window_x="536" window_y="357" window_sx="400" window_sy="400"/>
         <effect id="5" window_visible="0" window_x="96" window_y="361" window_sx="350" window_sy="320"/>
+        <effect id="23" window_visible="1" window_x="855" window_y="446" window_sx="500" window_sy="500"/>
+        <effect id="27" window_visible="1" window_x="26" window_y="198" window_sx="500" window_sy="500"/>
+        <effect id="25" window_visible="0" window_x="86" window_y="79" window_sx="500" window_sy="500"/>
     </effectChain>
 </editor>
