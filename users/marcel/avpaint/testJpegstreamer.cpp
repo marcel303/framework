@@ -1,9 +1,16 @@
-#define STREAM_ID "b"
+#define STREAM_ID "a"
+#define STREAM_NUM_FRAMES 4846
 #define NUM_JPEG_LOOPS 4
+#define VIDEOSPLITTER_PATH "/Users/thecat/oldprojects/videosplitter/"
 
-#include <GL/glew.h> // texture stuff
+#define ENABLE_GENERATE_SPEEDUP_IMAGES 0
+#define ENABLE_JPEG_STREAMER_STRESSTEST 0
+#define ENABLE_TURBOJPEG_STRESSTEST 0
+#define ENABLE_PLAYBACK 1
+
 #include "Calc.h"
 #include "framework.h"
+#include "gx_texture.h"
 #include "StringEx.h"
 #include <cmath>
 #include <list>
@@ -13,6 +20,10 @@
 	#include <turbojpeg.h>
 #else
 	#include <turbojpeg/turbojpeg.h>
+#endif
+
+#if defined(MACOS) || defined(LINUX)
+	#include <sys/stat.h>
 #endif
 
 const int GFX_SX = 1024;
@@ -713,8 +724,8 @@ struct JpegLoop
 	
 	unsigned char ** dstBuffer;
 	int * dstBufferSize;
-	
-	GLuint texture; // todo : replace with GxTexture
+
+	GxTexture texture;
 	
 	JpegLoop(const char * _baseFilename, const double _fps, unsigned char * _fileBuffer, int _fileBufferSize, unsigned char ** _dstBuffer, int * _dstBufferSize)
 		: baseFilename(_baseFilename)
@@ -723,32 +734,13 @@ struct JpegLoop
 		, fileBufferSize(_fileBufferSize)
 		, dstBuffer(_dstBuffer)
 		, dstBufferSize(_dstBufferSize)
-		, texture(0)
+		, texture()
 	{
-		glGenTextures(1, &texture);
-		
-		if (texture != 0)
-		{
-			glBindTexture(GL_TEXTURE_2D, texture);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-			checkErrorGL();
-			
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
-		}
 	}
 	
 	~JpegLoop()
 	{
-		glDeleteTextures(1, &texture);
-		texture = 0;
+		texture.free();
 	}
 	
 	void seek(const double time)
@@ -770,14 +762,10 @@ struct JpegLoop
 		
 		if (hasImage)
 		{
-			glBindTexture(GL_TEXTURE_2D, texture);
-			checkErrorGL();
+			if (texture.isChanged(data.sx, data.sy, GX_RGBA8_UNORM))
+				texture.allocate(data.sx, data.sy, GX_RGBA8_UNORM, true, true);
 			
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, data.sx, data.sy, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.buffer);
-			checkErrorGL();
-			
-			glBindTexture(GL_TEXTURE_2D, 0);
-			checkErrorGL();
+			texture.upload(data.buffer, 1, data.sx);
 		}
 		
 		data.disown();
@@ -818,6 +806,11 @@ static void speedup(const char * srcBasename, const char * dstBasename, const in
 			
 			saveImage_turbojpeg(dstFilename, loadData[0].buffer, loadData[0].bufferSize, loadData[0].sx, loadData[0].sy, saveBuffer, saveBufferSize);
 		}
+		else
+		{
+			printf("encountered early done condition at frame %d\n", i);
+			break;
+		}
 		
 		if ((i % 100) == 0)
 		{
@@ -839,11 +832,14 @@ static void speedup(const char * srcBasename, const char * dstBasename, const in
 
 int main(int argc, char * argv[])
 {
-#if 0
-	int numFrames = 43200;
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
+#if ENABLE_GENERATE_SPEEDUP_IMAGES
+	int numFrames = STREAM_NUM_FRAMES;
 	int streamIndex = 0;
 	
 #if 0
+	// enable this if you want to start generating speedups beginning at a certain level
 	while (numFrames >= 2 && streamIndex < 12)
 	{
 		numFrames /= 2;
@@ -856,8 +852,8 @@ int main(int argc, char * argv[])
 		char srcPath[256];
 		char dstPath[256];
 		
-		sprintf_s(srcPath, sizeof(srcPath), "/Users/thecat/videosplitter/slides-" STREAM_ID "-%02d", streamIndex + 0);
-		sprintf_s(dstPath, sizeof(dstPath), "/Users/thecat/videosplitter/slides-" STREAM_ID "-%02d", streamIndex + 1);
+		sprintf_s(srcPath, sizeof(srcPath), VIDEOSPLITTER_PATH "slides-" STREAM_ID "-%02d", streamIndex + 0);
+		sprintf_s(dstPath, sizeof(dstPath), VIDEOSPLITTER_PATH "slides-" STREAM_ID "-%02d", streamIndex + 1);
 		
 		mkdir(dstPath, S_IRWXU | S_IRGRP | S_IROTH);
 		
@@ -874,9 +870,9 @@ int main(int argc, char * argv[])
 	}
 #endif
 
-#if 0
+#if ENABLE_JPEG_STREAMER_STRESSTEST
 	{
-		JpegStreamer * jpegStreamer = new JpegStreamer("/Users/thecat/videosplitter/slides-" STREAM_ID "-00/%06d.jpg");
+		JpegStreamer * jpegStreamer = new JpegStreamer(VIDEOSPLITTER_PATH "slides-" STREAM_ID "-00/%06d.jpg");
 		
 		logDebug("testJpegStreamer: start");
 		
@@ -896,7 +892,7 @@ int main(int argc, char * argv[])
 	}
 #endif
 
-#if 0
+#if ENABLE_TURBOJPEG_STRESSTEST
 	unsigned char * dstBuffer = nullptr;
 	int dstBufferSize = 0;
 	
@@ -908,7 +904,7 @@ int main(int argc, char * argv[])
 	for (int i = 0; i < 1000; ++i)
 	{
 		char filename[256];
-		sprintf_s(filename, sizeof(filename), "/Users/thecat/videosplitter/slides-" STREAM_ID "-00/%06d.jpg", i + 1);
+		sprintf_s(filename, sizeof(filename), VIDEOSPLITTER_PATH "slides-" STREAM_ID "-00/%06d.jpg", i + 1);
 		
 		int dstSx;
 		int dstSy;
@@ -931,11 +927,11 @@ int main(int argc, char * argv[])
 	
 	//
 
-#if 1
+#if ENABLE_PLAYBACK
 	framework.init(GFX_SX, GFX_SY);
 	{
 		const int fps = 24;
-		const double duration = 1800.0;
+		const double duration = STREAM_NUM_FRAMES / double(fps);
 		
 		unsigned char * dstBuffer = nullptr;
 		int dstBufferSize = 0;
@@ -949,7 +945,7 @@ int main(int argc, char * argv[])
 		
 		for (int i = 0; i < kNumJpegLoops; ++i)
 		{
-			jpegLoop[i] = new JpegLoop("/Users/thecat/videosplitter/slides-" STREAM_ID "-00/%06d.jpg", fps, fileBuffer, fileBufferSize, &dstBuffer, &dstBufferSize);
+			jpegLoop[i] = new JpegLoop(VIDEOSPLITTER_PATH "slides-" STREAM_ID "-00/%06d.jpg", fps, fileBuffer, fileBufferSize, &dstBuffer, &dstBufferSize);
 		}
 		
 		Surface * surface = new Surface(GFX_SX, GFX_SY, true);
@@ -1011,7 +1007,15 @@ int main(int argc, char * argv[])
 			
 			if (doMotionBlur)
 			{
-				for (float i = 1.f; i * 2.f < std::abs(speedFactor) && streamIndex < 14; i *= 2.f)
+				int maxStreamIndex = 0;
+				int numFrames = STREAM_NUM_FRAMES;
+				while (numFrames >= 2)
+				{
+					numFrames /= 2;
+					++maxStreamIndex;
+				}
+				
+				for (float i = 1.f; i * 2.f < std::abs(speedFactor) && streamIndex < maxStreamIndex; i *= 2.f)
 					streamIndex++;
 			}
 			
@@ -1031,12 +1035,12 @@ int main(int argc, char * argv[])
 				if (i == 0)
 					seek = time;
 				else
-					seek = (duration / i) - time;
+					seek = fmod((duration / i) - time + duration, duration);
 				
 				jpegLoop[i]->fps = fps * fpsMultiplier;
 				
 				char baseFilename[256];
-				sprintf_s(baseFilename, sizeof(baseFilename), "/Users/thecat/videosplitter/slides-" STREAM_ID "-%02d/%%06d.jpg", streamIndex);
+				sprintf_s(baseFilename, sizeof(baseFilename), VIDEOSPLITTER_PATH "slides-" STREAM_ID "-%02d/%%06d.jpg", streamIndex);
 				
 				jpegLoop[i]->baseFilename = baseFilename;
 				
@@ -1066,14 +1070,14 @@ int main(int argc, char * argv[])
 					pushBlend(BLEND_OPAQUE);
 				#endif
 					setColor(255, 255, 255, 15);
-					gxSetTexture(jpegLoop[0]->texture);
+					gxSetTexture(jpegLoop[0]->texture.id);
 					drawRect(0, 0, GFX_SX, GFX_SY);
 					gxSetTexture(0);
 					popBlend();
 				}
 				popSurface();
 				
-			#if 1
+			#if 0
 				const float kernelSize = 127.f * std::pow(std::abs(mouse.y / float(GFX_SY) - .5f) * 2.f, 4.f);
 				pushBlend(BLEND_OPAQUE);
 				setShader_GaussianBlurH(surface->getTexture(), kernelSize + 1, kernelSize);
@@ -1091,8 +1095,8 @@ int main(int argc, char * argv[])
 						for (int i = 0; i < kNumJpegLoops; ++i)
 						{
 							const int nx = 3;
-							const int sx = 128 * 2;
-							const int sy = 72 * 2;
+							const int sx = 128 * 1;
+							const int sy = 72 * 1;
 							const int px = 10;
 							const int py = 10;
 							
@@ -1107,9 +1111,11 @@ int main(int argc, char * argv[])
 								gxTranslatef(x, y, 0);
 								pushBlend(BLEND_ALPHA);
 								setColor(255, 255, 255, 227);
-								gxSetTexture(jpegLoop[i]->texture);
+								gxSetTexture(jpegLoop[i]->texture.id);
 								drawRect(0, 0, sx, sy);
 								gxSetTexture(0);
+								setColor(100, 100, 100);
+								drawRectLine(0, 0, sx, sy);
 								popBlend();
 							}
 							gxPopMatrix();
