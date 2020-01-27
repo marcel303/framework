@@ -311,7 +311,7 @@ void setDepthBias(float depthBias, float slopeScale)
 	{
 		glEnable(GL_POLYGON_OFFSET_FILL);
 		glEnable(GL_POLYGON_OFFSET_LINE);
-		glPolyhonOffset(slopeScale, depthBias);
+		glPolygonOffset(slopeScale, depthBias);
 	}
 }
 
