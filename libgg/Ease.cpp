@@ -95,9 +95,11 @@ float EvalEase(float t, EaseType type, float param1)
 			result = EvalEase(t * 2.f - 1.f, kEaseType_BounceOut, 0.f) * .5f + .5f;
 		break;
 		
+	#if defined(DEBUG) // DEBUG only, so we get a warning about a missing case statement when compiling in release
 	default:
-		Assert(false);
+		AssertMsg(false, "unknown ease type: %d", (int)type);
 		break;
+	#endif
 	}
 
 	return result;

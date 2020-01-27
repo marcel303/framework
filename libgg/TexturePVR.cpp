@@ -8,6 +8,7 @@
 #include "Debugging.h"
 #include "Exception.h"
 #include "FileStream.h"
+#include "Log.h"
 #include "StreamReader.h"
 #include "TexturePVR.h"
 
@@ -133,8 +134,7 @@ bool TexturePVR::Load(uint8_t* bytes)
 		g_PVR_Identifier[2] != ((header.pvrTag >> 16) & 0xff) ||
 		g_PVR_Identifier[3] != ((header.pvrTag >> 24) & 0xff))
 	{
-		Assert(false);
-		
+		LOG_ERR("invalid PVR texture identifier", 0);
 		return false;
 	}
 	
@@ -144,8 +144,7 @@ bool TexturePVR::Load(uint8_t* bytes)
 	
 	if (format != PVR_TextureType_2BPP && format != PVR_TextureType_4BPP)
 	{
-		Assert(false);
-		
+		LOG_ERR("unknown PVR texture format", 0);
 		return false;
 	}
 	
@@ -229,8 +228,7 @@ bool TexturePVR::Load(uint8_t* bytes)
 	
 	if (header.numMipmaps + 1 != m_Levels.size())
 	{
-		Assert(false);
-		
+		LOG_ERR("invalid number of mipmaps", 0);
 		return false;
 	}
 	
