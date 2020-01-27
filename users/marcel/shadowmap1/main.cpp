@@ -53,7 +53,8 @@ struct Scene
 			for (int i = 0; i < kNumCubes; ++i)
 			{
 				const float t = (cosf(framework.time * (1.f + i / 100.f)) + 1.f) / 2.f;
-				const Vec3 cube_size = cube_size_base * lerp<float>(.2f, 1.f, t);
+				//const Vec3 cube_size = cube_size_base * lerp<float>(.2f, 1.f, t);
+				const Vec3 cube_size = cube_size_base;
 				
 				setColor(cube_colors[i]);
 				fillCube(cube_positions[i], cube_size);
@@ -172,7 +173,7 @@ public:
 		int lightMapWidth = 0;
 		int lightMapHeight = 0;
 		
-		int shadowMapSize = 1024;
+		int shadowMapSize = 2048;
 		
 		void setLightMapSize(const int in_lightMapWidth, const int in_lightMapHeight)
 		{
@@ -199,7 +200,7 @@ public:
 		{
 			SurfaceProperties surface_properties;
 			surface_properties.dimensions.init(properties.shadowMapSize, properties.shadowMapSize);
-			surface_properties.depthTarget.init(DEPTH_FLOAT16, false);
+			surface_properties.depthTarget.init(DEPTH_FLOAT32, false);
 			shadowMap = new Surface();
 			result &= shadowMap->init(surface_properties);
 		}
@@ -261,7 +262,9 @@ public:
 		//popSurface();
 	}
 	
-	void drawShadowLightBegin(const Light & light)
+	//
+	
+	void drawShadowMapBegin(const Light & light)
 	{
 		pushSurface(shadowMap);
 		shadowMap->clearDepth(1.f);
@@ -273,17 +276,40 @@ public:
 		gxScalef(1, -1, 1); // Metal NDC/clip-space bottom-y is -1
 	#endif
 		gxMultMatrixf(light.worldToClip_transform.m_v);
+		gxMatrixMode(GX_MODELVIEW);
 		
 		pushDepthTest(true, DEPTH_LESS, true);
+		pushColorWriteMask(0, 0, 0, 0);
 		pushBlend(BLEND_OPAQUE);
+		
+		setDepthBias(2, 2);
+	}
+	
+	void drawShadowMapEnd(const Light & light)
+	{
+		setDepthBias(0, 0);
+		
+		popBlend();
+		popColorWriteMask();
+		popDepthTest();
+		
+		gxMatrixMode(GX_PROJECTION);
+		gxPopMatrix();
+		gxMatrixMode(GX_MODELVIEW);
+		
+		popSurface();
+	}
+	
+	//
+	
+	void drawShadowLightBegin(const Light & light)
+	{
+		drawShadowMapBegin(light);
 	}
 	
 	void drawShadowLightEnd(const Light & light)
 	{
-		popBlend();
-		popDepthTest();
-		gxPopMatrix();
-		popSurface();
+		drawShadowMapEnd(light);
 
 		//
 		
@@ -330,6 +356,7 @@ public:
 				light.color.r * light.color.a,
 				light.color.g * light.color.a,
 				light.color.b * light.color.a);
+			
 			drawRect(0, 0, GFX_SX, GFX_SY);
 		}
 		popBlend();
@@ -339,6 +366,11 @@ public:
 	Surface * getLightMapSurface()
 	{
 		return lightMap;
+	}
+	
+	Surface * getShadowMapSurface()
+	{
+		return shadowMap;
 	}
 	
 private:
@@ -357,13 +389,34 @@ private:
 	} drawState;
 };
 
+class LightManager
+{
+	std::vector<Light*> lights;
+	
+public:
+	void registerLight(Light * light)
+	{
+		lights.push_back(light);
+	}
+	
+	void unregisterLight(Light * light)
+	{
+		auto i = std::find(lights.begin(), lights.end(), light);
+		
+		Assert(i != lights.end());
+		if (i != lights.end())
+			lights.erase(i);
+	}
+	
+	const std::vector<Light*> access_lights() const
+	{
+		return lights;
+	}
+};
+
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	framework.allowHighDpi = false;
 	//framework.fullscreen = true;
@@ -387,28 +440,34 @@ int main(int argc, char * argv[])
 		lightDrawer.init(properties);
 	}
 	
+	LightManager lightManager;
+	
 	Light light1;
 	light1.isPerspective = PERSPECTIVE_LIGHT;
 	light1.isShadowCasting = true;
 	light1.depthRange.min = .5f;
-	light1.depthRange.max = 10.f;
+	light1.depthRange.max = 20.f;
 	light1.fov = 60.f;
 	light1.orthoSize = LIGHT_ORTHO_SIZE;
+	lightManager.registerLight(&light1);
 	
 	Light light2;
 	light2.isPerspective = true;
 	light2.isShadowCasting = true;
 	light2.depthRange.min = .5f;
 	light2.depthRange.max = 10.f;
-	light2.fov = 130.f;
+	light2.fov = 30.f;
 	light2.orthoSize = LIGHT_ORTHO_SIZE;
+	lightManager.registerLight(&light2);
 	
 	Light light3;
-	light3.isPerspective = false;
+	light3.isPerspective = true;
 	light3.isShadowCasting = true;
-	light3.depthRange.min = .1f;
-	light3.depthRange.max = 1000.f;
-	light3.orthoSize = 200.f;
+	light3.depthRange.min = .5f;
+	light3.depthRange.max = 20.f;
+	light3.fov = 60.f;
+	light3.orthoSize = 20.f;
+	lightManager.registerLight(&light3);
 	
 	enum DrawMode
 	{
@@ -432,7 +491,7 @@ int main(int argc, char * argv[])
 		SurfaceProperties properties;
 		properties.dimensions.init(GFX_SX, GFX_SY);
 		properties.colorTarget.init(SURFACE_RGBA8, false);
-		properties.depthTarget.init(DEPTH_FLOAT16, false);
+		properties.depthTarget.init(DEPTH_FLOAT32, false);
 		view_camera.init(properties);
 	}
 	
@@ -441,7 +500,7 @@ int main(int argc, char * argv[])
 		SurfaceProperties properties;
 		properties.dimensions.init(GFX_SX, GFX_SY);
 		properties.colorTarget.init(SURFACE_RGBA16F, false);
-		properties.depthTarget.init(DEPTH_FLOAT16, false); // fixme : re-use depth buffer or support MRT
+		properties.depthTarget.init(DEPTH_FLOAT32, false); // fixme : re-use depth buffer or support MRT
 		view_camera_normal.init(properties);
 	}
 	
@@ -523,6 +582,7 @@ int main(int argc, char * argv[])
 		}
 		light1.color.a = lerp<float>(2.f, 23.f, (cosf(framework.time * 10.f) + 1.f) / 2.f);
 		//light1.color.a *= powf(.4f, framework.timeStep);
+		//light1.depthRange.max = (cosf(framework.time) + 2.f) / 3.f * 10.f;
 		light1.calculateTransforms();
 		
 		light2.lightToWorld_transform.MakeLookat(
@@ -540,7 +600,7 @@ int main(int argc, char * argv[])
 				Vec3(0, 1, 0));
 		light3.lightToWorld_transform = light3.lightToWorld_transform.CalcInv();
 		light3.color = Color(255, 127, 63, 31);
-		light3.color.a = .8f;
+		light3.color.a = 1.f;
 		light3.calculateTransforms();
 		
 		auto drawLightVolume = [](const Light & light)
@@ -624,9 +684,10 @@ int main(int argc, char * argv[])
 			{
 				// draw light volume and direction
 				
-				drawLightVolume(light1);
-				drawLightVolume(light2);
-				drawLightVolume(light3);
+				for (auto * light : lightManager.access_lights())
+				{
+					drawLightVolume(*light);
+				}
 			}
 		};
 	
@@ -807,16 +868,35 @@ int main(int argc, char * argv[])
 			}
 			else if (drawMode == kDrawMode_LightDepth)
 			{
-			/*
-			// todo : cache shadow maps for light somewhere ?
-			
-				pushBlend(BLEND_OPAQUE);
-				gxSetTexture(view_light.getDepthTexture());
-				setColor(colorWhite);
-				drawRect(0, 0, GFX_SX, GFX_SY);
-				gxSetTexture(0);
-				popBlend();
-			*/
+				auto & lights = lightManager.access_lights();
+				
+				if (!lights.empty())
+				{
+					const int size = SHADOWMAP_SIZE / lights.size();
+					
+					int x = 0;
+					
+					for (auto * light : lightManager.access_lights())
+					{
+						if (light->isShadowCasting == false)
+							continue;
+						
+						lightDrawer.drawShadowMapBegin(*light);
+						{
+							drawScene(false);
+						}
+						lightDrawer.drawShadowMapEnd(*light);
+						
+						pushBlend(BLEND_OPAQUE);
+						gxSetTexture(lightDrawer.getShadowMapSurface()->getTexture());
+						setColor(colorWhite);
+						drawRect(x, 0, x + size, size);
+						gxSetTexture(0);
+						popBlend();
+						
+						x += size;
+					}
+				}
 			}
 			else if (drawMode == kDrawMode_CameraWorldPosition)
 			{
@@ -851,9 +931,10 @@ int main(int argc, char * argv[])
 						}
 					};
 					
-					drawLight(light1);
-					drawLight(light2);
-					drawLight(light3);
+					for (auto * light : lightManager.access_lights())
+					{
+						drawLight(*light);
+					}
 				}
 				lightDrawer.drawEnd();
 				
@@ -899,9 +980,10 @@ int main(int argc, char * argv[])
 						}
 					};
 					
-					drawLight(light1);
-					drawLight(light2);
-					drawLight(light3);
+					for (auto * light : lightManager.access_lights())
+					{
+						drawLight(*light);
+					}
 				}
 				lightDrawer.drawEnd();
 				
@@ -929,6 +1011,40 @@ int main(int argc, char * argv[])
 			if (keyboard.isDown(SDLK_RSHIFT))
 			{
 				scene.drawScreenOverlay(camera.position);
+			}
+			
+			setColor(255, 200, 200);
+			
+			switch (drawMode)
+			{
+			case kDrawMode_CameraColor:
+				drawText(10, 10, 12, +1, +1, "Draw mode: Camera Color");
+				break;
+			case kDrawMode_CameraDepth:
+				drawText(10, 10, 12, +1, +1, "Draw mode: Camera Depth");
+				break;
+			case kDrawMode_CameraDepthLinear:
+				drawText(10, 10, 12, +1, +1, "Draw mode: Camera Depth Linear");
+				if (LINEAR_DEPTH_FOR_CAMERA == false)
+					drawText(10, 30, 12, +1, +1, "(DISABLED at compile-time!)");
+				break;
+			case kDrawMode_LightDepth:
+				drawText(10, 10, 12, +1, +1, "Draw mode: Light Depth");
+				break;
+			case kDrawMode_CameraWorldPosition:
+				drawText(10, 10, 12, +1, +1, "Draw mode: Camera World Position");
+				if (DEPTH_TO_WORLD == false)
+					drawText(10, 30, 12, +1, +1, "(DISABLED at compile-time!)");
+				break;
+			case kDrawMode_DeferredShadow:
+				drawText(10, 10, 12, +1, +1, "Draw mode: Deferred Shadow");
+				break;
+			case kDrawMode_CameraNormal:
+				drawText(10, 10, 12, +1, +1, "Draw mode: Camera Normal");
+				break;
+			case kDrawMode_LightBuffer:
+				drawText(10, 10, 12, +1, +1, "Draw mode: Light Buffer");
+				break;
 			}
 		}
 		framework.endDraw();
