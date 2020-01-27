@@ -391,9 +391,7 @@ bool Framework::init(int sx, int sy)
 	globals.mainWindow = new Window(mainWindow);
 	
 	fassert(globals.currentWindow == nullptr);
-	fassert(globals.currentWindowData == nullptr);
 	globals.currentWindow = globals.mainWindow;
-	globals.currentWindowData = globals.mainWindow->m_windowData;
 	
 	windowSx = sx;
 	windowSy = sy;
@@ -672,13 +670,11 @@ bool Framework::shutdown()
 	if (globals.mainWindow)
 	{
 		fassert(globals.currentWindow == globals.mainWindow);
-		fassert(globals.currentWindowData == globals.mainWindow->m_windowData);
 		
 		delete globals.mainWindow;
 		globals.mainWindow = nullptr;
 		
 		globals.currentWindow = nullptr;
-		globals.currentWindowData = nullptr;
 	}
 	
 	// shut down SDL
@@ -1047,7 +1043,7 @@ void Framework::process()
 				else if (e.window.event == SDL_WINDOWEVENT_CLOSE)
 					windowData->quitRequested = true;
 				
-				if (windowData == globals.currentWindowData)
+				if (windowData == globals.currentWindow->getWindowData())
 					windowIsActive = windowData->isActive;
 				
 				if (reloadCachesOnActivate && e.window.event == SDL_WINDOWEVENT_FOCUS_GAINED && windowData == globals.mainWindow->m_windowData)
@@ -1073,7 +1069,7 @@ void Framework::process()
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		window->m_windowData->endProcess();
 	
-	globals.currentWindowData->makeActive();
+	globals.currentWindow->getWindowData()->makeActive();
 
 #ifdef __WIN32__
 	// use XInput to poll gamepad state
@@ -2963,7 +2959,8 @@ bool Mouse::isDown(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return globals.currentWindowData->mouseData.mouseDown[index];
+	auto * currentWindowData = globals.currentWindow->getWindowData();
+	return currentWindowData->mouseData.mouseDown[index];
 }
 
 bool Mouse::wentDown(BUTTON button) const
@@ -2971,7 +2968,8 @@ bool Mouse::wentDown(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return isDown(button) && globals.currentWindowData->mouseData.mouseChange[index];
+	auto * currentWindowData = globals.currentWindow->getWindowData();
+	return isDown(button) && currentWindowData->mouseData.mouseChange[index];
 }
 
 bool Mouse::wentUp(BUTTON button) const
@@ -2979,7 +2977,8 @@ bool Mouse::wentUp(BUTTON button) const
 	const int index = getButtonIndex(button);
 	if (index < 0)
 		return false;
-	return !isDown(button) && globals.currentWindowData->mouseData.mouseChange[index];
+	auto * currentWindowData = globals.currentWindow->getWindowData();
+	return !isDown(button) && currentWindowData->mouseData.mouseChange[index];
 }
 
 void Mouse::showCursor(bool enabled)
@@ -2995,23 +2994,30 @@ void Mouse::setRelative(bool isRelative)
 
 bool Mouse::isIdle() const
 {
-	return dx == 0 && dy == 0 && !globals.currentWindowData->mouseData.mouseChange[0] && !globals.currentWindowData->mouseData.mouseChange[1];
+	auto * currentWindowData = globals.currentWindow->getWindowData();
+	return
+		dx == 0 &&
+		dy == 0 &&
+		!currentWindowData->mouseData.mouseChange[0] &&
+		!currentWindowData->mouseData.mouseChange[1];
 }
 
 // -----
 
 bool Keyboard::isDown(int key) const
 {
-	for (int i = 0; i < globals.currentWindowData->keyDownCount; ++i)
-		if (globals.currentWindowData->keyDown[i] == key)
+	auto * currentWindowData = globals.currentWindow->getWindowData();
+	for (int i = 0; i < currentWindowData->keyDownCount; ++i)
+		if (currentWindowData->keyDown[i] == key)
 			return true;
 	return false;
 }
 
 static bool keyChange(int key)
 {
-	for (int i = 0; i < globals.currentWindowData->keyChangeCount; ++i)
-		if (globals.currentWindowData->keyChange[i] == key)
+	auto * currentWindowData = globals.currentWindow->getWindowData();
+	for (int i = 0; i < currentWindowData->keyChangeCount; ++i)
+		if (currentWindowData->keyChange[i] == key)
 			return true;
 	return false;
 }
@@ -3028,17 +3034,19 @@ bool Keyboard::wentUp(int key) const
 
 bool Keyboard::keyRepeat(int key) const
 {
-	for (int i = 0; i < globals.currentWindowData->keyRepeatCount; ++i)
-		if (globals.currentWindowData->keyRepeat[i] == key)
+	auto * currentWindowData = globals.currentWindow->getWindowData();
+	for (int i = 0; i < currentWindowData->keyRepeatCount; ++i)
+		if (currentWindowData->keyRepeat[i] == key)
 			return true;
 	return false;
 }
 
 bool Keyboard::isIdle() const
 {
+	auto * currentWindowData = globals.currentWindow->getWindowData();
 	return
-		globals.currentWindowData->keyDownCount == 0 &&
-		globals.currentWindowData->keyChangeCount == 0;
+		currentWindowData->keyDownCount == 0 &&
+		currentWindowData->keyChangeCount == 0;
 }
 
 // -----
