@@ -812,7 +812,7 @@ FluidCube3d * createFluidCube3d(const int size, const float diffusion, const flo
 
 int main(int argc, char * argv[])
 {
-	changeDirectory(CHIBI_RESOURCE_PATH);
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	framework.allowHighDpi = false;
 

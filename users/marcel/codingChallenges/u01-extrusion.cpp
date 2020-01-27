@@ -59,6 +59,8 @@ static void drawExtrusion(Vec2Arg p1, Vec2Arg p2, const Vec2 * points, const int
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(800, 800))
 		return -1;
 	

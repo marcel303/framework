@@ -104,6 +104,8 @@ struct Map
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	framework.allowHighDpi = false;
 	
 	if (!framework.init(640, 480))

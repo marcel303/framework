@@ -62,6 +62,8 @@ static void drawLissajous(const float freqX, const float freqY, const int numSeg
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(1200, 800))
 		return -1;
 

@@ -585,6 +585,8 @@ FluidCube2d * createFluidCube2d(const int size, const float diffusion, const flo
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	framework.allowHighDpi = false;
 	
 	if (!framework.init(900, 900))

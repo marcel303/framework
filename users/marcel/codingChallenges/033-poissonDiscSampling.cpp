@@ -16,6 +16,8 @@ const int k = 20;
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
 	

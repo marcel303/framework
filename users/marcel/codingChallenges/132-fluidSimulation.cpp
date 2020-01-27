@@ -903,6 +903,8 @@ FluidCube3d * createFluidCube3d(const int size, const float diffusion, const flo
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(600, 600))
 		return -1;
 

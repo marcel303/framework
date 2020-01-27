@@ -189,6 +189,8 @@ static void edges(Boid & boid)
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(800, 800))
 		return -1;
 

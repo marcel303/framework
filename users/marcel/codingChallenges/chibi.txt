@@ -75,4 +75,4 @@ app codingChallenges-u02-portals
 
 app codingChallenges-u03-reactionDiffusion
 	depend_library framework
-	add_files u03-reactionDiffusion
+	add_files u03-reactionDiffusion.cpp

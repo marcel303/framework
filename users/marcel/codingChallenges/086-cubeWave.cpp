@@ -23,9 +23,7 @@ Vec3 computeSize(const float x, const float y, const float time)
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	framework.enableDepthBuffer = true;
 	
