@@ -33,6 +33,8 @@ Cohesive forces can be approximated by using a tracer image to track different f
 
 */
 
+#if ENABLE_OPENGL_COMPUTE_SHADER
+
 #include <GL/glew.h>
 
 #if defined(DEBUG)
@@ -1003,3 +1005,13 @@ int main(int argc, char * argv[])
 	
 	return 0;
 }
+
+#else
+
+int main(int argc, char * argv[])
+{
+	printf("this app needs compute shader support, which was disabled at compile-time\n");
+	return 0;
+}
+
+#endif
