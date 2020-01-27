@@ -76,6 +76,8 @@ int main(int arg, char * argv[])
 		if (stop)
 			break;
 		
+		metal_insert_capture_boundary();
+		
 		pushRenderPass(nullptr, &depthTarget, true, "Depth Pass");
 		{
 		}
@@ -192,9 +194,9 @@ int main(int arg, char * argv[])
 		}
 		metal_draw_end();
 		
-	#if 0
+	#if 1
 		metal_make_active(window2);
-		metal_draw_begin(0.0f, 0.3f, 1.0f, 1.0f);
+		metal_draw_begin(0.0f, 0.3f, 1.0f, 1.0f, 1.f);
 		{
 			Mat4x4 projectionMatrix;
 			projectionMatrix.MakePerspectiveLH(90.f * float(M_PI) / 180.f, 600.f / 300.f, .01f, 100.f);

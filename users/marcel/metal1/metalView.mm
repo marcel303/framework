@@ -33,6 +33,7 @@
         _metalLayer.opaque = YES;
         _metalLayer.device = device;
         _metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+        _metalLayer.maximumDrawableCount = 2;
 
         [self updateDrawableSize];
     }

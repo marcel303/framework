@@ -7,6 +7,7 @@
 #import <map>
 #import <Metal/Metal.h>
 #import <SDL2/SDL_syswm.h>
+#import <SDL2/SDL.h>
 #import <vector>
 
 #include <assert.h> // todo : remove once integrated w/ framework
@@ -103,6 +104,11 @@ void metal_attach(SDL_Window * window)
 	}
 }
 
+void metal_insert_capture_boundary()
+{
+	[queue insertDebugCaptureBoundary];
+}
+
 void metal_make_active(SDL_Window * window)
 {
 	auto i = windowDatas.find(window);
@@ -122,8 +128,11 @@ void metal_draw_begin(const float r, const float g, const float b, const float a
 		
 		pd.cmdbuf = [[queue commandBuffer] retain];
 
+int t1 = SDL_GetTicks();
 		activeWindowData->current_drawable = [activeWindowData->metalview.metalLayer nextDrawable];
 		[activeWindowData->current_drawable retain];
+int t2 = SDL_GetTicks();
+	printf("wait: %dms\n", t2 - t1);
 		
 		pd.renderdesc = [MTLRenderPassDescriptor renderPassDescriptor];
 		[pd.renderdesc retain];
@@ -186,8 +195,10 @@ void metal_draw_end()
 			//NSLog(@"hello done! %@", activeWindowData);
 		}];
 
-	[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
+	//[pd.cmdbuf presentDrawable:activeWindowData->current_drawable];
 	[pd.cmdbuf commit];
+	[activeWindowData->current_drawable present];
+	
 	
 // todo : remove and use addCompletedHandler instead
 	//[activeWindowData->cmdbuf waitUntilCompleted];
