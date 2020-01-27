@@ -242,7 +242,7 @@ static const char * s_deferredLightPs = R"SHADER(
 		// attenuation
 		
 		float distanceXY = length(projected.xy);
-		float distanceZ = max(0.0, coords.z);
+		float distanceZ = max(0.0, coords.z); // todo : is this correct ?
 	// todo : make curve value a uniform
 		float curveValue = 0.5;
 		shader_fragColor.rgb *= pow(max(0.0, 1.0 - distanceXY), curveValue) * max(0.0, 1.0 - distanceZ);
@@ -350,8 +350,43 @@ static const char * s_deferredLightWithShadowPs = R"SHADER(
 				shadowColor = vec3(coords.z > depth ? 0.5 : 1.0); // correct shadow mapping with serious acne
 			else
 				shadowColor = vec3(coords.z > depth + 0.001 ? 0.3 : 1.0); // less acne with depth bias
+		#elif 0
+			float depths[9];
+			depths[0] = textureOffset(lightDepthTexture, coords.xy, ivec2(-1, -1)).x;
+			depths[1] = textureOffset(lightDepthTexture, coords.xy, ivec2(+0, -1)).x;
+			depths[2] = textureOffset(lightDepthTexture, coords.xy, ivec2(+1, -1)).x;
+			depths[3] = textureOffset(lightDepthTexture, coords.xy, ivec2(-1, +0)).x;
+			depths[4] = textureOffset(lightDepthTexture, coords.xy, ivec2(+0, +0)).x;
+			depths[5] = textureOffset(lightDepthTexture, coords.xy, ivec2(+1, +0)).x;
+			depths[6] = textureOffset(lightDepthTexture, coords.xy, ivec2(-1, +1)).x;
+			depths[7] = textureOffset(lightDepthTexture, coords.xy, ivec2(+0, +1)).x;
+			depths[8] = textureOffset(lightDepthTexture, coords.xy, ivec2(+1, +1)).x;
+			
+			float shadowValue = 0.0;
+			
+			for (int i = 0; i < 9; ++i)
+			{
+				float depth = depths[i];
+				
+				shadowValue += coords.z > depth ? 0.0 : 1.0/9.0;
+			}
+			
+			shadowColor = vec3(shadowValue);
+		#elif 1
+			float depth00 = textureOffset(lightDepthTexture, coords.xy, ivec2( 0, -1)).x;
+			float depth10 = textureOffset(lightDepthTexture, coords.xy, ivec2(-1,  0)).x;
+			float depth11 = textureOffset(lightDepthTexture, coords.xy, ivec2(+1,  0)).x;
+			float depth01 = textureOffset(lightDepthTexture, coords.xy, ivec2( 0, +1)).x;
+			
+			float shadowValue =
+				(coords.z > depth00 ? 0.0 : 0.25) +
+				(coords.z > depth10 ? 0.0 : 0.25) +
+				(coords.z > depth11 ? 0.0 : 0.25) +
+				(coords.z > depth01 ? 0.0 : 0.25);
+			
+			shadowColor = vec3(shadowValue);
 		#else
-			shadowColor = vec3(coords.z > depth + 0.001 ? 0.0 : 1.0); // less acne with depth bias
+			shadowColor = vec3(coords.z > depth ? 0.0 : 1.0);
 		#endif
 		}
 	
