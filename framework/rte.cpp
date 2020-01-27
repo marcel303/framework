@@ -236,7 +236,16 @@ static void callback(
 	const FSEventStreamEventFlags evFlags[],
 	const FSEventStreamEventId evIds[])
 {
-	anyChanges = true;
+	for (int i = 0; i < numEvents; ++i)
+	{
+		if ((evFlags[i] & kFSEventStreamEventFlagItemIsFile) == 0)
+			continue;
+		
+		if ((evFlags[i] & kFSEventStreamEventFlagItemModified) != 0)
+		{
+			anyChanges = true;
+		}
+	}
 	
 	//
 
@@ -272,7 +281,7 @@ void initRealTimeEditing()
 		paths,
 		kFSEventStreamEventIdSinceNow,
 		latency,
-		kFSEventStreamCreateFlagNone);
+		kFSEventStreamCreateFlagFileEvents);
 	
 	FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
 	FSEventStreamStart(stream);
