@@ -25,8 +25,6 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include <GL/glew.h> // glBlendFuncSeparate. todo : extend Framework's blending
-
 #include "audioGraph.h"
 #include "audioGraphManager.h"
 #include "audioTypes.h"
@@ -1242,6 +1240,7 @@ struct World : WorldInterface
 	Parameters currentParams;
 	
 	bool showBirdDebugs;
+	bool showTextOverlays;
 	
 	World()
 		: globalsInstance(nullptr)
@@ -1256,6 +1255,7 @@ struct World : WorldInterface
 		, desiredParams()
 		, currentParams()
 		, showBirdDebugs(false)
+		, showTextOverlays(true)
 	{
 	}
 	
@@ -1525,24 +1525,27 @@ struct World : WorldInterface
 			}
 			hqEnd();
 			
-			beginTextBatch();
-			for (int ox = 0; ox < 2; ++ox)
+			if (showTextOverlays)
 			{
-				for (int oy = 0; oy < 2; ++oy)
+				beginTextBatch();
+				for (int ox = 0; ox < 2; ++ox)
 				{
-					const Vec2 world = wavefieldToWorld.Mul4(Vec2(wavefield.numElems * ox, wavefield.numElems * oy));
-					
-					setColor(colorWhite);
-					drawText(
-						ox * wavefield.numElems,
-						oy * wavefield.numElems,
-						1.5f,
-						0, 0,
-						"(%.2f, %.2f)",
-						world[0], world[1]);
+					for (int oy = 0; oy < 2; ++oy)
+					{
+						const Vec2 world = wavefieldToWorld.Mul4(Vec2(wavefield.numElems * ox, wavefield.numElems * oy));
+						
+						setColor(colorWhite);
+						drawText(
+							ox * wavefield.numElems,
+							oy * wavefield.numElems,
+							1.5f,
+							0, 0,
+							"(%.2f, %.2f)",
+							world[0], world[1]);
+					}
 				}
+				endTextBatch();
 			}
-			endTextBatch();
 		}
 		gxPopMatrix();
 		
@@ -1550,43 +1553,46 @@ struct World : WorldInterface
 		{
 			gxMultMatrixf(worldToScreen.m_v);
 			
-			const float rect[4][2] =
+			if (showTextOverlays)
 			{
-				{ -6, -6 },
-				{ +6, -6 },
-				{ +6, +6 },
-				{ -6, +6 }
-			};
-			
-			hqBegin(HQ_LINES, true);
-			{
+				const float rect[4][2] =
+				{
+					{ -6, -6 },
+					{ +6, -6 },
+					{ +6, +6 },
+					{ -6, +6 }
+				};
+				
+				hqBegin(HQ_LINES, true);
+				{
+					for (int i = 0; i < 4; ++i)
+					{
+						const auto v1 = rect[(i + 0) % 4];
+						const auto v2 = rect[(i + 1) % 4];
+						
+						setColor(255, 255, 255, 127);
+						hqLine(v1[0], v1[1], 1.f, v2[0], v2[1], 1.f);
+					}
+				}
+				hqEnd();
+				
+				beginTextBatch();
 				for (int i = 0; i < 4; ++i)
 				{
-					const auto v1 = rect[(i + 0) % 4];
-					const auto v2 = rect[(i + 1) % 4];
+					const auto v = rect[(i + 0) % 4];
 					
-					setColor(255, 255, 255, 127);
-					hqLine(v1[0], v1[1], 1.f, v2[0], v2[1], 1.f);
+					setColor(colorWhite);
+					drawText(
+						v[0],
+						v[1],
+						.8f,
+						0, 0,
+						"(%.2f, %.2f)",
+						v[0], v[1]);
 				}
+				endTextBatch();
 			}
-			hqEnd();
-			
-			beginTextBatch();
-			for (int i = 0; i < 4; ++i)
-			{
-				const auto v = rect[(i + 0) % 4];
-				
-				setColor(colorWhite);
-				drawText(
-					v[0],
-					v[1],
-					.8f,
-					0, 0,
-					"(%.2f, %.2f)",
-					v[0], v[1]);
-			}
-			endTextBatch();
-			
+		
 			for (auto entity : entities)
 			{
 				if (entity->type == kEntity_Machine)
@@ -1836,11 +1842,7 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 #if FULLSCREEN
 	framework.fullscreen = true;
@@ -2197,6 +2199,7 @@ int main(int argc, char * argv[])
 			if (world != nullptr && doDrawer(developer, "developer"))
 			{
 				doCheckBox(world->showBirdDebugs, "show bird debugs", false);
+				doCheckBox(world->showTextOverlays, "show text overlays", false);
 				
 				doTextBox(world->desiredParams.wavefieldC, "wavefield.c", dt);
 				doTextBox(world->desiredParams.wavefieldD, "wavefield.d", dt);
@@ -2359,16 +2362,13 @@ int main(int argc, char * argv[])
 					world->draw();
 				}
 				
-				pushSurface(&surface);
+				surface.setClearColor(0, 0, 0, 255);
+				pushSurface(&surface, true);
 				{
-					surface.clear(0, 0, 0, 255);
-					pushBlend(BLEND_ADD);
-					
-					glBlendEquation(GL_FUNC_ADD);
-					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
-					
-					audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
-					
+					pushBlend(BLEND_ALPHA);
+					{
+						audioGraphMgr.drawEditor(GFX_SX, GFX_SY);
+					}
 					popBlend();
 				}
 				popSurface();
@@ -2377,7 +2377,6 @@ int main(int argc, char * argv[])
 				
 				if (hideTime > 0.f)
 				{
-					//else if (graphEdit->state == GraphEdit::kState_HiddenIdle)
 					if (hideTime < 1.f)
 					{
 						pushBlend(BLEND_OPAQUE);
@@ -2393,11 +2392,8 @@ int main(int argc, char * argv[])
 					
 					Shader composite("background/composite");
 					setShader(composite);
-					pushBlend(BLEND_ADD);
+					pushBlend(BLEND_PREMULTIPLIED_ALPHA);
 					{
-						glBlendEquation(GL_FUNC_ADD);
-						glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
-						
 						composite.setTexture("source", 0, surface.getTexture(), false, true);
 						composite.setTexture("overlay1", 1, getTexture("background/sabana.jpg"), true, true);
 						composite.setImmediate("opacity", hideTime);
