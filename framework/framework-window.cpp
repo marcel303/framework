@@ -193,9 +193,7 @@ void pushWindow(Window & window)
 	s_windowStack.push(globals.currentWindow);
 	
 	globals.currentWindow = &window;
-	globals.currentWindowData = window.getWindowData();
-	
-	globals.currentWindowData->makeActive();
+	globals.currentWindow->getWindowData()->makeActive();
 	
 #if ENABLE_OPENGL
 	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
@@ -211,9 +209,7 @@ void popWindow()
 	Window * window = s_windowStack.popValue();
 	
 	globals.currentWindow = window;
-	globals.currentWindowData = window->getWindowData();
-	
-	globals.currentWindowData->makeActive();
+	globals.currentWindow->getWindowData()->makeActive();
 	
 #if ENABLE_OPENGL
 	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
