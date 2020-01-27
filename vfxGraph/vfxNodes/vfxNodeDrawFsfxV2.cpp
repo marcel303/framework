@@ -62,7 +62,7 @@ VFX_ENUM_TYPE(fsfxShader)
 	
 	getElems = []() -> std::vector<Elem>
 	{
-		// todo : create a vfxgraph-fsfx system, which requires explicit initialization
+		// todo : create a vfxgraph-fsfx system, which requires explicit initialization. add registered systems to globals. when system is not present, let behavior be passthrough mode
 		
 		std::vector<std::string> shaderList;
 		getFsfxShaderList(shaderList);
@@ -328,7 +328,7 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 			if (inputs.empty())
 				setDynamicInputs(nullptr, 0);
 			else
-				setDynamicInputs(&inputs[0], inputs.size());
+				setDynamicInputs(inputs.data(), inputs.size());
 		}
 	}
 }

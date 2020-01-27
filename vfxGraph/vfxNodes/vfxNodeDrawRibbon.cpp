@@ -30,6 +30,10 @@
 
 // todo : evolve it into having the ability to draw ribbons from channel data
 // todo : evolve it into emitting more complex (3d) geometry with normals etc
+// todo : limit length based on time
+// todo : add reset trigger to restart drawing
+// todo : detect draw mode. if 2d, ignore z-component
+// todo : add a lookat target, so we can figure out the tangent vector
 
 VFX_NODE_TYPE(VfxNodeDrawRibbon)
 {
