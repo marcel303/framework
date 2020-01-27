@@ -185,9 +185,7 @@ struct ResponseProbe
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	if (!framework.init(640, 480))
 		return -1;

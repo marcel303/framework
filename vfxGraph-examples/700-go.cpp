@@ -87,11 +87,7 @@ static void handleAction(const std::string & action, const Dictionary & args)
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	signal(SIGINT, handleSignal);
 	

@@ -24,6 +24,8 @@ static void doSpring(const float mouseX, const bool mouseDown, float & value, fl
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(640, 480))
 		return -1;
 

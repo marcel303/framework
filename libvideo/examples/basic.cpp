@@ -32,11 +32,7 @@ static void drawProgressBar(const int x, const int y, const int sx, const int sy
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	if (framework.init(800, 400))
 	{

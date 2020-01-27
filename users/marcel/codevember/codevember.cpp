@@ -97,6 +97,8 @@ void codevember1()
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	framework.init(GFX_SX, GFX_SY);
 
 	codevember1();

@@ -129,12 +129,7 @@ struct MyAudioHandler : PortAudioHandler
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	const char * basePath = SDL_GetBasePath();
-	changeDirectory(basePath);
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 #ifdef DEBUG
 	framework.enableRealTimeEditing = true;

@@ -708,6 +708,8 @@ struct GrooopLogo : TweenFloatCollection
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 #if defined(DEBUG)
 	framework.enableRealTimeEditing = true;
 #endif

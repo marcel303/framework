@@ -75,6 +75,8 @@ struct MyOscReceiveHandler : OscReceiveHandler
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(600, 200))
 		return -1;
 	

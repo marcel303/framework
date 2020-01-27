@@ -663,12 +663,7 @@ static bool doPaMenu(const bool tick, const bool draw, const float dt, int & inp
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#elif DEPLOYMENT_BUILD
-	const char * basePath = SDL_GetBasePath();
-	changeDirectory(basePath);
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	framework.windowX = 10 + 140 + 10;
 	

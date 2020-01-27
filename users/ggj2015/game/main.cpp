@@ -1579,11 +1579,7 @@ void App::draw()
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory("data");
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	g_optionManager.LoadFromCommandLine(argc, argv);
 

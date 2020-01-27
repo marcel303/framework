@@ -39,6 +39,8 @@ static void doPincusion(const float x, const float y, const float alpha_x, const
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(640, 480))
 		return -1;
 	

@@ -103,9 +103,7 @@ static void drawPicture(const Mat4x4 & pictureTransform, const Mat4x4 & lineTran
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 #if defined(DEBUG)
 	framework.enableRealTimeEditing = true;

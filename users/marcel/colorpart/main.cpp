@@ -488,6 +488,7 @@ static void randomizeImage()
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	changeDirectory("/Users/thecat/Google Drive/Projects/colorpart");
 	
 	Srt srt;

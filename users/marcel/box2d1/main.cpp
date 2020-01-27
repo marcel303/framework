@@ -189,7 +189,7 @@ struct ContactListener : b2ContactListener
 
 int main(int argc, char * argv[])
 {
-	changeDirectory(CHIBI_RESOURCE_PATH);
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	if (!framework.init(800, 600))
 		return -1;

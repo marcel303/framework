@@ -31,7 +31,7 @@ enum DebugDraw
 
 int main(int argc, char * argv[])
 {
-	changeDirectory(CHIBI_RESOURCE_PATH);
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	framework.allowHighDpi = false;
 	framework.enableRealTimeEditing = true;

@@ -18,6 +18,8 @@ static GxTextureId createTexture(const lgen::Heightfield & heightfield)
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(512, 512))
 		return -1;
 	

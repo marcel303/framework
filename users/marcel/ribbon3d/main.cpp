@@ -75,7 +75,7 @@ static void addRibbonPoint_lookat(const Vec3 & position, const Vec3 & target, co
 
 int main(int argc, char * argv[])
 {
-	changeDirectory(CHIBI_RESOURCE_PATH);
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;

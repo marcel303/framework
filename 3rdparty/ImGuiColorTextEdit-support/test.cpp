@@ -11,7 +11,7 @@ static bool ShowTextEditor();
 
 int main(int argc, char * argv[])
 {
-	changeDirectory(CHIBI_RESOURCE_PATH);
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	if (framework.init(GFX_SX, GFX_SY))
 	{

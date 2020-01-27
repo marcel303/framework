@@ -1056,9 +1056,7 @@ private:
 
 static void Execute()
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	const int gfxSx = 640; const int gfxSy = 480;
 	//const int gfxSx = 1280; const int gfxSy = 720;

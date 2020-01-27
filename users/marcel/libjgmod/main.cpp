@@ -180,11 +180,7 @@ static void drawTest(JGMOD_PLAYER & player)
 
 int main(int argc, char **argv)
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 #if MACOS
 	if (argc >= 2 && strstr(argv[1], "-psn") == argv[1])

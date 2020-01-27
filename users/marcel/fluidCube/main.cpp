@@ -280,6 +280,8 @@ struct FluidCube2dGpuDemo
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	framework.allowHighDpi = false;
 	
 	if (!framework.init(GFX_SX, GFX_SY))

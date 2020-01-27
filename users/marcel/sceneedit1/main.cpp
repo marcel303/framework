@@ -2190,11 +2190,7 @@ static bool node_from_clipboard_text(const char * text, SceneNode & node)
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;

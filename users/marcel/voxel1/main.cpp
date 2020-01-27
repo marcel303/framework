@@ -402,6 +402,8 @@ static void HandleFps()
 
 int main(int arg, char* argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	allegro_init();
 	install_timer();
 	install_int(HandleFps, 1000);

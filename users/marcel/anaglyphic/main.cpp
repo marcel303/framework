@@ -1,4 +1,5 @@
 #include <GL/glew.h> // GL_PROGRAM_POINT_SIZE. todo : remove ?
+// todo : add a custom shader for drawing points with a size
 #include "Calc.h"
 #include "framework.h"
 #include "Timer.h"
@@ -732,9 +733,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 #if !defined(DEBUG) && 1
 	framework.fullscreen = true;

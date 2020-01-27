@@ -58,6 +58,8 @@ int main(int argc, char *argv[]) {
 	int track_index = -1;
 	int steps_per_frame = steps_per_frame_normal;
 
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(window_w, window_h))
 		return -1;
 	

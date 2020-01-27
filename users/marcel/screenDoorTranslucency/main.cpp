@@ -1,4 +1,4 @@
-#include <GL/glew.h>
+#include <GL/glew.h> // for alpha to coverage. todo : add alpha to coverage to framework
 #include "framework.h"
 #include "gx_render.h"
 
@@ -25,9 +25,7 @@ unsigned char transparencytable[256] =
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	framework.enableRealTimeEditing = true;
 	framework.allowHighDpi = true;

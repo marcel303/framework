@@ -111,11 +111,7 @@ struct MasterTimer : OscReceiveHandler
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	TypeDB typeDB;
 	typeDB.addPlain<bool>("bool", kDataType_Bool);

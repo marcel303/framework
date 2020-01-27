@@ -212,7 +212,7 @@ struct LayoutEditorView
 
 int main(int arg, char * argv[])
 {
-	changeDirectory(CHIBI_RESOURCE_PATH);
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	TypeDB typeDB;
 	

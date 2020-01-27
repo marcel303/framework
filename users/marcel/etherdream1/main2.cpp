@@ -791,6 +791,8 @@ static void testDistanceBasedSampling()
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	

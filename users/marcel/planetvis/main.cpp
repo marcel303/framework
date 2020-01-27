@@ -1346,7 +1346,7 @@ void QuadNode::makeResident(const int level, const int x, const int y, const int
 
 int main(int argc, char * argv[])
 {
-	changeDirectory(CHIBI_RESOURCE_PATH);
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	framework.enableDepthBuffer = true;
 

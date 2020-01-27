@@ -864,16 +864,7 @@ static void playMenuSound()
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#elif DEVMODE == 0
-#if MACOS
-	const char * basePath = SDL_GetBasePath();
-	changeDirectory(basePath);
-#else
-	changeDirectory("data");
-#endif
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	if (framework.init(GFX_SX, GFX_SY))
 	{

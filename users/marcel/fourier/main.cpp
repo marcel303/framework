@@ -674,6 +674,8 @@ struct TraceEffect
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	framework.exclusiveFullscreen = false;
 	framework.fullscreen = false;
 	framework.useClosestDisplayMode = true;

@@ -130,15 +130,7 @@ struct EditorWindow
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
-
-#if defined(CHIBI_RESOURCE_PATHS)
-	framework.registerChibiResourcePaths(CHIBI_RESOURCE_PATHS);
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	framework.windowIsResizable = true;
 	

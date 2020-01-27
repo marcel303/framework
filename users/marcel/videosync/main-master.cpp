@@ -125,11 +125,7 @@ int main(int argc, char * argv[])
 	slaveStates.back().slave.init(1802);
 	SDL_Delay(500);
 	
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	TypeDB typeDB;
 	typeDB.addPlain<bool>("bool", kDataType_Bool);

@@ -695,12 +695,7 @@ static int drawValueGrid(const std::vector<float> & values, const int gridSx, co
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	const char * basePath = SDL_GetBasePath();
-	changeDirectory(basePath);
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	const int kFontSize = 14;
 	

@@ -10,14 +10,7 @@ extern void testImu9250();
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#elif MACOS
-    const char * basePath = SDL_GetBasePath();
-    changeDirectory(basePath);
-#else
-	changeDirectory("data");
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	framework.enableDepthBuffer = true;
 	

@@ -345,11 +345,7 @@ static const Vec3 s_cubeVertices[8] =
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#else
-	changeDirectory(SDL_GetBasePath());
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;

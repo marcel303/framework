@@ -25,9 +25,7 @@ TIMER_DEFINE(s_drawTime, StatTimer::PerFrame, "Draw");
 
 int main(int argc, char * argv[])
 {
-#if defined(CHIBI_RESOURCE_PATH)
-	changeDirectory(CHIBI_RESOURCE_PATH);
-#endif
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	if (!framework.init(800, 600))
 		return -1;

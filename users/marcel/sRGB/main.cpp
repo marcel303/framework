@@ -248,6 +248,8 @@ int RayPlane(
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	if (!framework.init(800, 600))
 		return -1;
 	

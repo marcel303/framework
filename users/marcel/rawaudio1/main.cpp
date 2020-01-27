@@ -84,6 +84,8 @@ struct RawAudioStream : AudioStream
 
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	const char * filename = "/Users/thecat/Desktop/H4N_SD.dmg";
 	
 	FILE * file = fopen(filename, "rb");

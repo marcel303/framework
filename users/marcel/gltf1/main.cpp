@@ -86,7 +86,7 @@ struct AnimatedCamera3d
 
 int main(int argc, char * argv[])
 {
-	changeDirectory(CHIBI_RESOURCE_PATH);
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	framework.enableDepthBuffer = true;
 	framework.enableRealTimeEditing = true;
