@@ -1,5 +1,3 @@
-static const char * s_basicHardSkinnedVs = R"SHADER(
-
 include engine/ShaderSkinnedVS.txt
 
 shader_out vec4 v_color;
@@ -36,5 +34,3 @@ void main()
 	v_normal = normal;
 	v_texcoord0 = texcoord;
 }
-
-)SHADER";

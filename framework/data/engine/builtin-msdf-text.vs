@@ -1,5 +1,3 @@
-static const char * s_msdfTextVs = R"SHADER(
-
 include engine/ShaderVS.txt
 
 shader_out vec4 v_color;
@@ -20,5 +18,3 @@ void main()
 	v_color = color;
 	v_texcoord = texcoord;
 }
-
-)SHADER";

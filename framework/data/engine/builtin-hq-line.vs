@@ -1,5 +1,3 @@
-static const char * s_hqLineVs = R"SHADER(
-
 include engine/ShaderVS.txt
 include engine/builtin-hq-common-vs.txt
 
@@ -120,5 +118,3 @@ void main()
 	v_perpPlane = vec3(pnPerp, -pdPerp);
 	v_color = unpackColor();
 }
-
-)SHADER";

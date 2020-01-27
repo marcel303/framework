@@ -1,5 +1,3 @@
-static const char * s_textureSwizzleVs = R"SHADER(
-
 include engine/ShaderVS.txt
 
 shader_out vec4 v_color;
@@ -12,5 +10,3 @@ void main()
 	v_color = unpackColor();
 	v_texcoord = unpackTexcoord(0);
 }
-
-)SHADER";

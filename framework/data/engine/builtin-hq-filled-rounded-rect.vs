@@ -1,5 +1,3 @@
-static const char * s_hqFilledRoundedRectVs = R"SHADER(
-
 include engine/ShaderVS.txt
 include engine/builtin-hq-common-vs.txt
 
@@ -138,5 +136,3 @@ void main()
 	v_radius = radius * scale;
 	v_color = unpackColor();
 }
-
-)SHADER";

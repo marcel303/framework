@@ -1,5 +1,3 @@
-static const char * s_shaderVs = R"SHADER(
-
 include engine/ShaderCommon.txt
 
 // vertex streams
@@ -84,5 +82,3 @@ vec2 unpackTexcoord(int index)
 #endif
 	return vec2(0.0, 0.0);
 }
-
-)SHADER";

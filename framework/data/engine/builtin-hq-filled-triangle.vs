@@ -1,5 +1,3 @@
-static const char * s_hqFilledTriangleVs = R"SHADER(
-
 include engine/ShaderVS.txt
 include engine/builtin-hq-common-vs.txt
 
@@ -122,5 +120,3 @@ void main()
 	v_baryDistances = baryDistances;
 	v_color = unpackColor();
 }
-
-)SHADER";

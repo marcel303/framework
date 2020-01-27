@@ -1,5 +1,3 @@
-static const char * s_hqFilledRectVs = R"SHADER(
-
 include engine/ShaderVS.txt
 include engine/builtin-hq-common-vs.txt
 
@@ -118,5 +116,3 @@ void main()
 	v_edgePlane4 = edgePlane4;
 	v_color = unpackColor();
 }
-
-)SHADER";

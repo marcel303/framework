@@ -1,5 +1,3 @@
-static const char * s_tresholdVs = R"SHADER(
-
 include engine/ShaderVS.txt
 
 shader_out vec2 texcoord;
@@ -10,5 +8,3 @@ void main()
 	
 	texcoord = unpackTexcoord(0);
 }
-
-)SHADER";
