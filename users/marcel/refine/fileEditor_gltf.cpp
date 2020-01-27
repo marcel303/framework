@@ -281,10 +281,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				
 				if (wireframe)
 				{
-					gxMatrixMode(GX_PROJECTION);
-					gxPushMatrix();
-					gxTranslatef(0, 0, -.01f);
-					gxMatrixMode(GX_MODELVIEW);
+					setDepthBias(-1, -1);
 					
 					pushDepthTest(true, DEPTH_LEQUAL, false);
 					pushBlend(BLEND_ALPHA);
@@ -320,9 +317,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 					popBlend();
 					popDepthTest();
 					
-					gxMatrixMode(GX_PROJECTION);
-					gxPopMatrix();
-					gxMatrixMode(GX_MODELVIEW);
+					setDepthBias(0, 0);
 				}
 			}
 			gxPopMatrix();
