@@ -54,7 +54,6 @@ void OpticalFlow::update(const GxTextureId source)
 	}
 	popSurface();
 	
-#if 1 // todo : fix issue with Metal where shader buffer params are not set
 	// blur the luminance map
 	
 	pushBlend(BLEND_OPAQUE);
@@ -68,7 +67,6 @@ void OpticalFlow::update(const GxTextureId source)
 		clearShader();
 	}
 	popBlend();
-#endif
 	
 	// apply horizontal + vertical sobel filter
 	
