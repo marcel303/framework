@@ -10,6 +10,7 @@ app tests
 	with_platform macos depend_library libps3eye
 	depend_library libvideo
 	depend_library libwebrequest-downloadcache
+	depend_library nanovg-framework
 	depend_library vfxgraph
 	depend_library vfxgraph-nodes
 	depend_library vfxgraph-deepbelief
@@ -28,7 +29,5 @@ app tests
 	scan_files mm
 
 	scan_files *.* path ofxDatGui group ofxDatGui traverse
-	scan_files *.* path nanovg group nanovg traverse
 
 	resource_path data
-

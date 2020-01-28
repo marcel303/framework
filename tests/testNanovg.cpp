@@ -26,13 +26,10 @@
 */
 
 #include "framework.h"
+#include "nanovg.h"
+#include "nanovg-framework.h"
 #include "testBase.h"
 #include <algorithm>
-
-#define NANOVG_GL3_IMPLEMENTATION
-#include <GL/glew.h> // NanoVG
-#include "nanovg/nanovg.h"
-#include "nanovg/nanovg_gl.h"
 
 #ifdef WIN32
 	#define snprintf sprintf_s
@@ -281,7 +278,7 @@ static void drawParagraph(NVGcontext* vg, float x, float y, float width, float h
 
 void testNanovg()
 {
-	struct NVGcontext * vg = nvgCreateGL3(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
+	struct NVGcontext * vg = nvgCreateFramework(NVG_ANTIALIAS | NVG_STENCIL_STROKES | NVG_DITHER_GRADIENTS);
 	
 	nvgCreateFont(vg, "calibri", "calibri.ttf");
 	
@@ -322,13 +319,11 @@ void testNanovg()
 			}
 			nvgEndFrame(vg);
 			
-			setBlend(BLEND_ALPHA);
-			
 			drawTestUi();
 		}
 		framework.endDraw();
 	} while (tickTestUi());
 	
-	nvgDeleteGL3(vg);
+	nvgDeleteFramework(vg);
 	vg = nullptr;
 }
