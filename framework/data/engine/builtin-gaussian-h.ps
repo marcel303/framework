@@ -5,10 +5,7 @@ uniform sampler2D source;
 uniform float kernelSize;
 uniform float radius;
 
-layout (std140) uniform kernel
-{
-	vec4 weights[16];
-};
+uniform vec4 weights[16] buffer filterKernel;
 
 // todo : optimize getWeight function
 

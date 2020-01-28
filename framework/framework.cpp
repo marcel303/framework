@@ -4151,7 +4151,7 @@ void setShader_GaussianBlurH(const GxTextureId source, const int kernelSize, con
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("kernelSize", kernelSize);
 	shader.setImmediate("radius", radius);
-	shader.setBuffer("kernel", kernel);
+	shader.setBuffer("filterKernel", kernel);
 }
 
 void setShader_GaussianBlurV(const GxTextureId source, const int kernelSize, const float radius)
@@ -4165,7 +4165,7 @@ void setShader_GaussianBlurV(const GxTextureId source, const int kernelSize, con
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("kernelSize", kernelSize);
 	shader.setImmediate("radius", radius);
-	shader.setBuffer("kernel", kernel);
+	shader.setBuffer("filterKernel", kernel);
 }
 
 static void setShader_ThresholdLumiEx(

@@ -1,11 +1,7 @@
 include fsfx/common.inc
 
 uniform float gaussianKernelSize;
-
-layout (std140) uniform gaussianKernel
-{
-	vec4 gaussianKernelWeights[16];
-};
+uniform vec4 gaussianKernelWeights[16] buffer gaussianKernel;
 
 // todo : optimize getWeight function
 
