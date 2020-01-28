@@ -135,7 +135,32 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 	else
 	{
 		StringBuilder<32 * 1024> sb; // todo : replace with a more efficient and growing string builder
-		
+		StringBuilder<32 * 1024> text; // todo : replace with a more efficient and growing string builder
+
+	#if USE_LEGACY_OPENGL
+		const char * header =
+R"HEADER(
+#define shader_attrib attribute
+#define shader_in varying
+#define shader_out varying
+
+#define texture texture2D
+
+#define tex2D texture
+)HEADER";
+		sb.Append(header);
+	#else
+		const char * header =
+R"HEADER(
+#define shader_attrib in
+#define shader_in in
+#define shader_out out
+
+#define tex2D texture
+)HEADER";
+		sb.Append(header);
+	#endif
+	
 	#if !USE_LEGACY_OPENGL
 		if (shaderType == 'p')
 		{
@@ -176,6 +201,20 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 			}
 		}
 	#endif
+	
+		struct Uniform
+		{
+			std::string type;
+			std::string name;
+			std::string buffer_name;
+			
+			bool operator<(const Uniform & other) const
+			{
+				return buffer_name < other.buffer_name;
+			}
+		};
+		
+		std::vector<Uniform> uniforms;
 	
 		for (auto & line : lines)
 		{
@@ -253,13 +292,70 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 					}
 				}
 				
-				sb.AppendFormat("uniform %s %s;\n", type, name);
+				Uniform u;
+				u.type = type;
+				u.name = name;
+				
+				if (buffer_name != nullptr)
+					u.buffer_name = buffer_name;
+				
+				uniforms.push_back(u);
 			}
 			else
 			{
-				sb.AppendFormat("%s\n", line.c_str());
+				text.AppendFormat("%s\n", line.c_str());
 			}
 		}
+		
+		// sort uniforms by buffer name
+		
+		std::sort(uniforms.begin(), uniforms.end());
+		
+		// write uniforms
+		
+		auto beginUniformBuffer = [&](const char * name)
+		{
+			sb.AppendFormat("layout (std140) uniform %s\n", name);
+			sb.Append("{\n");
+		};
+	
+		auto endUniformBuffer = [&]()
+		{
+			sb.Append("};\n");
+			sb.Append("\n");
+		};
+
+		const char * currentUniformBufferName = "";
+		int nextBufferIndex = 1;
+		std::string bufferArguments;
+		
+		for (auto & u : uniforms)
+		{
+			if (u.buffer_name.empty())
+			{
+				sb.AppendFormat("uniform %s %s;\n", u.type.c_str(), u.name.c_str());
+			}
+			else
+			{
+				if (strcmp(currentUniformBufferName, u.buffer_name.c_str()) != 0)
+				{
+					if (currentUniformBufferName[0] != 0)
+						endUniformBuffer();
+					
+					currentUniformBufferName = u.buffer_name.c_str();
+					beginUniformBuffer(currentUniformBufferName);
+					
+					nextBufferIndex++;
+				}
+				
+				sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+			}
+		}
+		
+		if (currentUniformBufferName[0] != 0)
+			endUniformBuffer();
+		
+		sb.Append(text.ToString());
 		
 		result = sb.ToString();
 		

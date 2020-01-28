@@ -367,7 +367,7 @@ void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 	checkErrorGL();
 	
 	if (index == GL_INVALID_INDEX)
-		logWarning("unable to find block index for %s", name);
+		logWarning("unable to find uniform block index for %s", name);
 	else
 		setBuffer(index, buffer);
 }
