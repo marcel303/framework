@@ -280,7 +280,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 				u.name = name;
 				
 				if (buffer_name != nullptr)
-					u.buffer_name = std::string("ShaderUniforms_") + buffer_name;
+					u.buffer_name = buffer_name;
 				else
 					u.buffer_name = std::string("ShaderUniforms");
 				
@@ -534,7 +534,18 @@ float atan(float x, float y) { return atan2(x, y); }
 			{
 				sb.Append("\t// uniforms\n");
 				for (auto & u : uniforms)
-					sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+				{
+					const char * array_start = strchr(u.name.c_str(), '[');
+					if (array_start != nullptr)
+					{
+						auto name = u.name.substr(0, array_start - u.name.c_str());
+						sb.AppendFormat("\tconstant %s * %s;\n", u.type.c_str(), name.c_str());
+					}
+					else
+					{
+						sb.AppendFormat("\t%s %s;\n", u.type.c_str(), u.name.c_str());
+					}
+				}
 				sb.Append("\t\n");
 				
 				sb.Append("\t// varyings\n");

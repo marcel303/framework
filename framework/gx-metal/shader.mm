@@ -65,11 +65,15 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 				//logDebug("found texture");
 				addTexture(arg, 'v');
 			}
-			else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name hasPrefix:@"uniforms"])
+			else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name hasPrefix:@"uniforms_"])
 			{
 				Assert(arg.index >= 0 && arg.index < kMaxBuffers);
 				if (arg.index >= 0 && arg.index < kMaxBuffers)
 				{
+					const char * bufferName = [arg.name cStringUsingEncoding:NSASCIIStringEncoding] + 9 /* strlen("uniforms_") */;
+					logDebug("found vs uniform buffer: %s", bufferName);
+					vsInfo.bufferName[arg.index] = bufferName;
+					
 					vsInfo.initUniforms(arg);
 					addUniforms(arg, 'v');
 					
@@ -91,11 +95,15 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 				//logDebug("found texture");
 				addTexture(arg, 'p');
 			}
-			else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name hasPrefix:@"uniforms"])
+			else if (arg.type == MTLArgumentTypeBuffer && arg.bufferDataType == MTLDataTypeStruct && [arg.name hasPrefix:@"uniforms_"])
 			{
 				Assert(arg.index >= 0 && arg.index < kMaxBuffers);
 				if (arg.index >= 0 && arg.index < kMaxBuffers)
 				{
+					const char * bufferName = [arg.name cStringUsingEncoding:NSASCIIStringEncoding] + 9 /* strlen("uniforms_") */;
+					logDebug("found ps uniform buffer: %s", bufferName);
+					psInfo.bufferName[arg.index] = bufferName;
+					
 					psInfo.initUniforms(arg);
 					addUniforms(arg, 'p');
 					
@@ -334,6 +342,8 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 				}
 			}
 		}
+		
+	// todo : assert types in vs and ps match. right now, we just skip creation of a new uniform info, when we've already seen it before. we should still make it, and check it against the stored one to compare
 		
 		if (found == false)
 		{
@@ -741,6 +751,8 @@ void Shader::setImmediate(GxImmediateIndex index, float x)
 
 void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 {
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	
 	if (index >= 0)
 	{
 		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 2);
@@ -763,6 +775,8 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 
 void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 {
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	
 	if (index >= 0)
 	{
 		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 3);
@@ -787,6 +801,8 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 
 void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
 {
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	
 	if (index >= 0)
 	{
 		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 4);
@@ -813,6 +829,8 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, flo
 
 void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
 {
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	
 	const GxImmediateIndex index = getImmediateIndex(name);
 	
 	setImmediateMatrix4x4(index, matrix);
@@ -820,6 +838,8 @@ void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
 
 void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 {
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	
 	if (index >= 0)
 	{
 		auto & info = getUniformInfo(*m_cacheElem, index, 'm', 1);
@@ -840,6 +860,8 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 
 void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices)
 {
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	
 	if (index >= 0)
 	{
 		auto & info = getUniformInfo(*m_cacheElem, index, 'M', numMatrices);
@@ -959,9 +981,34 @@ void Shader::setTextureCube(const char * name, int unit, GxTextureId texture)
 	not_implemented;
 }
 
+id<MTLBuffer> metal_get_buffer(const GxShaderBufferId bufferId);
+
 void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 {
-	not_implemented;
+// todo : optimize buffers. for now (to keep things simple so we can get up and running quickly), we just do a memcpy, when we should be setting the MTLBuffer directly
+
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	
+	id<MTLBuffer> metal_buffer = metal_get_buffer(buffer.getBuffer());
+	
+	const int vsIndex = m_cacheElem->vsInfo.getBufferIndex(name);
+	const int psIndex = m_cacheElem->psInfo.getBufferIndex(name);
+	
+	if (vsIndex >= 0)
+	{
+		const int shaderBufferLength = m_cacheElem->vsInfo.uniformBufferSize[vsIndex];
+		AssertMsg(metal_buffer.length <= shaderBufferLength, "the buffer is larger than what the vs expects. length=%d, expected=%d", metal_buffer.length, shaderBufferLength);
+		const int copySize = metal_buffer.length < shaderBufferLength ? metal_buffer.length : shaderBufferLength;
+		memcpy(m_cacheElem->vsUniformData[vsIndex], metal_buffer.contents, copySize);
+	}
+	
+	if (psIndex >= 0)
+	{
+		const int shaderBufferLength = m_cacheElem->psInfo.uniformBufferSize[psIndex];
+		AssertMsg(metal_buffer.length <= shaderBufferLength, "the buffer is larger than what the ps expects. length=%d, expected=%d", metal_buffer.length, shaderBufferLength);
+		const int copySize = metal_buffer.length < shaderBufferLength ? metal_buffer.length : shaderBufferLength;
+		memcpy(m_cacheElem->psUniformData[psIndex], metal_buffer.contents, copySize);
+	}
 }
 
 void Shader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer)

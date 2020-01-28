@@ -83,11 +83,21 @@ public:
 	
 	struct StageInfo
 	{
+		std::string bufferName[kMaxBuffers] = { };
+		
 		int uniformBufferSize[kMaxBuffers] = { };
 		
 		void initUniforms(MTLArgument * arg)
 		{
 			uniformBufferSize[arg.index] = arg.bufferDataSize;
+		}
+		
+		int getBufferIndex(const char * name) const
+		{
+			for (int i = 0; i < kMaxBuffers; ++i)
+				if (bufferName[i] == name)
+					return i;
+			return -1;
 		}
 	};
 

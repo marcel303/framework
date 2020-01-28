@@ -27,17 +27,53 @@
 
 #include "framework.h"
 
-// todo : metal implementation shader buffer
-
 #if ENABLE_METAL
+
+#include "metal.h"
+#include <map>
+
+id <MTLDevice> metal_get_device();
+
+static std::map<int, id<MTLBuffer>> s_buffers;
+static int s_nextBufferId = 1;
+
+id<MTLBuffer> metal_get_buffer(const GxShaderBufferId bufferId)
+{
+	auto i = s_buffers.find(bufferId);
+	
+	fassert(i != s_buffers.end());
+	if (i != s_buffers.end())
+		return i->second;
+	else
+		return nil;
+}
 
 ShaderBuffer::ShaderBuffer()
 	: m_buffer(0)
 {
+	m_buffer = s_nextBufferId++;
+	
+	fassert(s_buffers[m_buffer] == nil);
+	s_buffers[m_buffer] = nil;
 }
 
 ShaderBuffer::~ShaderBuffer()
 {
+	auto i = s_buffers.find(bufferId);
+	
+	fassert(i != s_buffers.end());
+	if (i != s_buffers.end())
+	{
+		id<MTLBuffer> buffer = i->second;
+		
+		if (buffer != nil)
+		{
+			[buffer release];
+			buffer = nil;
+		}
+		
+		s_buffers.erase(i);
+	}
 }
 
 GxShaderBufferId ShaderBuffer::getBuffer() const
@@ -48,6 +84,30 @@ GxShaderBufferId ShaderBuffer::getBuffer() const
 void ShaderBuffer::setData(const void * bytes, int numBytes)
 {
 	fassert(m_buffer);
+	
+	id<MTLDevice> device = metal_get_device();
+	
+	id<MTLBuffer> & buffer = s_buffers[m_buffer];
+	
+	if (buffer == nil)
+	{
+		buffer = [device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeManaged];
+	}
+	else
+	{
+		if (buffer.length == numBytes)
+		{
+			memcpy(buffer.contents, bytes, numBytes);
+			[buffer didModifyRange:NSMakeRange(0, numBytes)];
+		}
+		else
+		{
+			[buffer release];
+			buffer= nil;
+			
+			buffer = [device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeManaged];
+		}
+	}
 }
 
 //
