@@ -59,7 +59,7 @@ ShaderBuffer::ShaderBuffer()
 
 ShaderBuffer::~ShaderBuffer()
 {
-	auto i = s_buffers.find(bufferId);
+	auto i = s_buffers.find(m_buffer);
 	
 	fassert(i != s_buffers.end());
 	if (i != s_buffers.end())
