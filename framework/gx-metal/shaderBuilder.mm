@@ -332,9 +332,11 @@ struct sampler2D
 };
 		
 // texture sampling
-#define texture(_s, c) _s.t.sample(_s.s, c)
-#define textureOffset(_s, c, o) _s.t.sample(_s.s, c, o)
-#define textureSize(_s, level) float2(_s.t.get_width(level), _s.t.get_height(level))
+#define texture(sampler, coord) sampler.t.sample(sampler.s, coord)
+#define textureOffset(sampler, coord, offset) sampler.t.sample(sampler.s, coord, offset)
+#define textureSize(sampler, level) vec2(sampler.t.get_width(level), sampler.t.get_height(level))
+#define texelFetch(sampler, coord, level) sampler.t.read(uint2(coord), level)
+#define texelFetchOffset(sampler, coord, level, offset) sampler.t.read(uint2(coord + offset), level)
 
 // standard library
 #define dFdx dfdx
