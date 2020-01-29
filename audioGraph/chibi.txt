@@ -26,10 +26,8 @@ library audiograph-core shared
 
 	header_path core expose
 
-	add_files core/audioNodeBase.cpp core/audioNodeBase.h
-	add_files core/audioProfiling.h
-	add_files core/audioTypes.cpp core/audioTypes.h
-	add_files core/soundmix.cpp core/soundmix.h
+	scan_files cpp path core
+	scan_files h   path core
 
 library audiograph-nodes
 

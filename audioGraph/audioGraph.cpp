@@ -805,6 +805,8 @@ void AudioGraph::triggerEvent(const char * event)
 
 //
 
+#include "audioTypeDB.h"
+
 void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
 	createAudioTypeDefinitionLibrary(typeDefinitionLibrary, g_audioEnumTypeRegistrationList, g_audioNodeTypeRegistrationList);

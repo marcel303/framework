@@ -224,10 +224,7 @@ struct AudioNodeBase
 			plug->isTriggered = true;
 	}
 	
-#if AUDIO_USE_SSE || AUDIO_USE_GCC_VECTOR
-	void * operator new(size_t size);
-	void operator delete(void * mem);
-#endif
+	ALIGNED_AUDIO_NEW_AND_DELETE();
 	
 	virtual void initSelf(const GraphNode & node) { }
 	virtual void init(const GraphNode & node) { }
@@ -343,11 +340,3 @@ struct AudioNodeTypeRegistration
 
 extern AUDIOGRAPH_EXPORTED AudioEnumTypeRegistration * g_audioEnumTypeRegistrationList;
 extern AUDIOGRAPH_EXPORTED AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList;
-
-// todo : move to audioTypeDB.h
-
-void createAudioValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
-void createAudioEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * registrationList);
-void createAudioNodeTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioNodeTypeRegistration * registrationList);
-
-void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * enumRegistrationList, const AudioNodeTypeRegistration * nodeRegistrationList);

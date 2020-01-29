@@ -29,6 +29,7 @@
 #include "audioGraphManager.h"
 #include "audioGraphRealTimeConnection.h"
 #include "audioNodeBase.h"
+#include "audioTypeDB.h"
 #include "graph.h"
 #include "graphEdit.h"
 #include "Log.h"
