@@ -24,6 +24,8 @@ void main()
 
 )SHADER";
 
+// todo : create an optimized shader for stenciling
+
 static const char * s_fillPs = R"SHADER(
 
 include engine/ShaderPS.txt
@@ -549,12 +551,15 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 		}
 		gxEnd();
 		
-		clearStencilTest();
-		
-		// and draw anti-aliased edges (without stencil)
+		// and draw anti-aliased edges (with inverted stencil mask to avoid overlap with the filled area)
 		
 		if (frameworkCtx->flags & NVG_ANTIALIAS)
 		{
+			setStencilTest()
+				.comparison(GX_STENCIL_FUNC_EQUAL, 0x00, 0xff)
+				.op(GX_STENCIL_OP_ZERO, GX_STENCIL_OP_ZERO, GX_STENCIL_OP_ZERO)
+				.writeMask(0xff);
+			
 			for (int i = 0; i < npaths; ++i)
 			{
 				auto & path = paths[i];
@@ -562,6 +567,8 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 				drawPrim(GX_TRIANGLE_STRIP, path.stroke, path.nstroke);
 			}
 		}
+		
+		clearStencilTest();
 		
 		popBlend();
 	}
