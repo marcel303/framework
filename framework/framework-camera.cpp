@@ -28,8 +28,6 @@
 #include "framework.h"
 #include "framework-camera.h"
 
-// todo : make fov a parameter or pass it when calculating projection matrix
-
 void Camera::Orbit::tick(const float dt, bool & inputIsCaptured)
 {
 	if (inputIsCaptured == false)
@@ -155,20 +153,18 @@ void Camera::Orbit::calculateWorldMatrix(Mat4x4 & out_matrix) const
 
 void Camera::Orbit::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
 {
-// todo : make fov, and near and far plane distances configurable
-
 #if ENABLE_OPENGL
 	out_matrix.MakePerspectiveGL(
-		60.f * float(M_PI) / 180.f,
+		fov * float(M_PI) / 180.f,
 		viewportSy / float(viewportSx),
-		.01f,
-		1000.f);
+		nearZ,
+		farZ);
 #else
 	out_matrix.MakePerspectiveLH(
-		60.f * float(M_PI) / 180.f,
+		fov * float(M_PI) / 180.f,
 		viewportSy / float(viewportSx),
-		.01f,
-		1000.f);
+		nearZ,
+		farZ);
 #endif
 		
 }
@@ -298,16 +294,16 @@ void Camera::Ortho::calculateProjectionMatrix(const int viewportSx, const int vi
 		+sx * scale,
 		+1.f * scale,
 		-1.f * scale,
-		-1000.f,
-		+1000.f);
+		-zRange,
+		+zRange);
 #else
 	out_matrix.MakeOrthoLH(
 		-sx * scale,
 		+sx * scale,
 		+1.f * scale,
 		-1.f * scale,
-		-1000.f,
-		+1000.f);
+		-zRange,
+		+zRange);
 #endif
 }
 
@@ -438,18 +434,16 @@ void Camera::FirstPerson::calculateWorldMatrix(Mat4x4 & out_matrix) const
 
 void Camera::FirstPerson::calculateProjectionMatrix(const int viewportSx, const int viewportSy, Mat4x4 & out_matrix) const
 {
-// todo : make fov, and near and far plane distances configurable
-
 #if ENABLE_OPENGL
 	out_matrix.MakePerspectiveGL(
-		60.f * float(M_PI) / 180.f,
+		fov * float(M_PI) / 180.f,
 		viewportSy / float(viewportSx),
-		.01f, 1000.f);
+		nearZ, farZ);
 #else
 	out_matrix.MakePerspectiveLH(
-		60.f * float(M_PI) / 180.f,
+		fov * float(M_PI) / 180.f,
 		viewportSy / float(viewportSx),
-		.01f, 1000.f);
+		nearZ, farZ);
 #endif
 }
 

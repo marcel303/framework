@@ -56,6 +56,10 @@ public:
 		float azimuth = -25.f;
 		float distance = -10.f;
 		
+		float fov = 60.f;
+		float nearZ = .01f;
+		float farZ = 1000.f;
+		
 		int gamepadIndex = -1;
 		
 		void tick(const float dt, bool & inputIsCaptured);
@@ -69,6 +73,8 @@ public:
 		OrthoSide side = kOrthoSide_Front;
 		float scale = 1.f;
 		Vec3 position;
+		
+		float zRange = 1000.f;
 		
 		int gamepadIndex = -1;
 		
@@ -106,6 +112,10 @@ public:
 		float strafeSpeedMultiplier = 1.f;
 		float upSpeedMultiplier = 1.f;
 		float leanAngle = 0.f;
+		
+		float fov = 60.f;
+		float nearZ = .01f;
+		float farZ = 1000.f;
 	
 		int gamepadIndex = -1;
 		
