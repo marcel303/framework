@@ -52,6 +52,7 @@ static MTLPixelFormat toMetalFormat(const GX_TEXTURE_FORMAT format)
 	C(GX_RGBA8_UNORM, MTLPixelFormatRGBA8Unorm);
 	C(GX_R16_UNORM, MTLPixelFormatR16Unorm);
 	C(GX_R16_FLOAT, MTLPixelFormatR16Float);
+	C(GX_RGBA16_FLOAT, MTLPixelFormatRGBA16Float);
 	C(GX_R32_FLOAT, MTLPixelFormatR32Float);
 	C(GX_RGB32_FLOAT, MTLPixelFormatRGBA32Float);
 	C(GX_RGBA32_FLOAT, MTLPixelFormatRGBA32Float);
@@ -69,6 +70,7 @@ static int getMetalFormatBytesPerPixel(const GX_TEXTURE_FORMAT format)
 	C(GX_RGB8_UNORM, 3);
 	C(GX_RGBA8_UNORM, 4);
 	C(GX_R16_FLOAT, 2);
+	C(GX_RGBA16_FLOAT, 8);
 	C(GX_R32_FLOAT, 4);
 	C(GX_RGB32_FLOAT, 16);
 	C(GX_RGBA32_FLOAT, 16);
@@ -501,6 +503,7 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 		
 		// 16-bit floating point
 		if (format == MTLPixelFormatR16Float) return GX_R16_FLOAT;
+		if (format == MTLPixelFormatRGBA16Float) return GX_RGBA16_FLOAT;
 		
 		// 32-bit floating point
 		if (format == MTLPixelFormatR32Float) return GX_R32_FLOAT;
