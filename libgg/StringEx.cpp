@@ -382,7 +382,7 @@ std::string String::Join(const std::vector<std::string>& strings, const std::str
 
 #if defined(PSP) || defined(__GNUC__)
 
-errno_t __libgg_strcpy_s(char * dst, size_t dst_size, const char * src)
+int __libgg_strcpy_s(char * dst, size_t dst_size, const char * src)
 {
 	if (dst_size == 0)
 		return -1;

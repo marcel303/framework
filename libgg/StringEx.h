@@ -43,7 +43,7 @@ public:
     #define strcpy_s __libgg_strcpy_s
     #define sscanf_s sscanf
 
-    errno_t __libgg_strcpy_s(char * dst, size_t dst_size, const char * src);
+    int __libgg_strcpy_s(char * dst, size_t dst_size, const char * src);
 #endif
 
 #if defined(WINDOWS)
