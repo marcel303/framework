@@ -7,4 +7,4 @@ library remotery
 	
 	header_path . expose
 
-	license_file LICENSE.TXT
+	license_file LICENSE.txt
