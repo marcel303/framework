@@ -94,7 +94,7 @@ void SpatialSoundMixer_Grid::mixSpatialSound(const SpatialSound * spatialSound)
 		if (std::isinf(samples[i]) || std::isnan(samples[i]))
 			containsWeirdSamples = true;
 	
-	assert(containsWeirdSamples == false);
+	Assert(containsWeirdSamples == false);
 	if (containsWeirdSamples)
 		return;
 		
