@@ -840,6 +840,7 @@ void VfxNodeDescription::addGxTexture(const char * name, const GxTexture & textu
 			texture.format == GX_R8_UNORM ? "R8, 8 bpp (unorm)" :
 			texture.format == GX_RG8_UNORM  ? "R8G8, 16 bpp (unorm)" :
 			texture.format == GX_R16_FLOAT ? "R16F, 16 bpp (float)" :
+			texture.format == GX_RGBA16_FLOAT ? "RGBA16F, 16 bpp (float)" :
 			texture.format == GX_R32_FLOAT ? "R32F, 32 bpp (float)" :
 			texture.format == GX_RGB8_UNORM  ? "RGB888, 24 bpp (unorm)" :
 			texture.format == GX_RGBA8_UNORM  ? "RGBA8888, 32 bpp (unorm)" :
@@ -849,7 +850,9 @@ void VfxNodeDescription::addGxTexture(const char * name, const GxTexture & textu
 			texture.format == GX_R8_UNORM ? 8 :
 			texture.format == GX_RG8_UNORM ? 16 :
 			texture.format == GX_R16_FLOAT ? 16 :
+			texture.format == GX_RGBA16_FLOAT ? 64 :
 			texture.format == GX_R32_FLOAT ? 32 :
+			texture.format == GX_RGBA32_FLOAT ? 128 :
 			texture.format == GX_RGB8_UNORM ? 24 :
 			texture.format == GX_RGBA8_UNORM ? 32 :
 			0;
@@ -879,6 +882,7 @@ void VfxNodeDescription::addGxTexture(const char * name, const uint32_t id)
 			format == GX_R8_UNORM ? "R8, 8 bpp (unorm)" :
 			format == GX_RG8_UNORM ? "R8G8, 16 bpp (unorm)" :
 			format == GX_R16_FLOAT ? "R16F, 16 bpp (half float)" :
+			format == GX_RGBA16_FLOAT ? "RGBA16F, 16 bpp (half float)" :
 			format == GX_R32_FLOAT ? "R32F, 32 bpp (float)" :
 			format == GX_RGB8_UNORM ? "RGB888, 24 bpp (unorm)" :
 			format == GX_RGBA8_UNORM ? "RGBA8888, 32 bpp (unorm)" :
@@ -888,6 +892,7 @@ void VfxNodeDescription::addGxTexture(const char * name, const uint32_t id)
 			format == GX_R8_UNORM ? 8 :
 			format == GX_RG8_UNORM ? 16 :
 			format == GX_R16_FLOAT ? 16 :
+			format == GX_RGBA16_FLOAT ? 64 :
 			format == GX_R32_FLOAT ? 32 :
 			format == GX_RGB8_UNORM ? 24 :
 			format == GX_RGBA8_UNORM ? 32 :
