@@ -37,6 +37,7 @@
 #include "StringBuilder.h"
 #include "StringEx.h"
 #include "TextIO.h"
+#include <algorithm>
 
 #define USE_REGISTERED_SHADER_OUTPUTS true
 

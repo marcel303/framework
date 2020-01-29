@@ -34,6 +34,7 @@
 #include "StringBuilder.h"
 #include "StringEx.h"
 #include "TextIO.h"
+#include <algorithm>
 
 static bool is_whitespace(const char c)
 {
