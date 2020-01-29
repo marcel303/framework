@@ -608,11 +608,15 @@ void Surface::blit(BLEND_MODE blendMode) const
 {
 	pushBlend(blendMode);
 	pushColorMode(COLOR_IGNORE);
+	pushColorWriteMask(1, 1, 1, 1);
+	pushDepthWrite(false);
 	{
 		gxSetTexture(getTexture());
 		drawRect(0, 0, getWidth(), getHeight());
 		gxSetTexture(0);
 	}
+	popDepthWrite();
+	popColorWriteMask();
 	popColorMode();
 	popBlend();
 }
