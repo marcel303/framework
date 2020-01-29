@@ -149,6 +149,7 @@ void AudioNodeSourceSine::drawTriangle()
 	
 	if (fine)
 	{
+	// todo : float <-> double conversions
 		const double dt = 1.0 / SAMPLE_RATE;
 		
 		audioOutput.setVector();

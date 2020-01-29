@@ -28,6 +28,7 @@
 #pragma once
 
 #include "graph.h"
+#include "graph_typeDefinitionLibrary.h" // for Graph_EnumDefinition::Elem used by dynamic inputs
 
 struct GraphEdit;
 

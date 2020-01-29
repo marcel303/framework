@@ -483,6 +483,8 @@ void AudioNodeWavefield1D::tick(const float _dt)
 		
 		wavefield->tick(dt, c, 1.0 - velocityDampening->samples[i], 1.0 - positionDampening->samples[i], wrap == false);
 		
+	// todo : soft clip wavefield position. unsafe tension changes could boost it too much
+		
 		audioOutput.samples[i] = wavefield->sample(sampleLocation->samples[i] * wavefield->numElems);
 	}
 	

@@ -1135,7 +1135,14 @@ void AudioGraphManager_RTE::drawEditor(const int sx, const int sy)
 
 		selectedFile->graphEdit->draw();
 		
-	#if 0 // todo : add a nice UI for drawing the filter response
+	#if 1 // todo : add a nice UI for drawing the filter response
+		/*
+		todo : let audio node define:
+		- a custom editor interface
+		- drop file behavior
+		- custom draw
+		- todo : remove getFilterResponse from audio nodes. it's too general. do add shared functions for analysing and drawing the response curve though!
+		*/
 		if (selectedFile->activeInstance != nullptr && selectedFile->graphEdit->selectedNodes.size() == 1)
 		{
 			auto audioGraph = selectedFile->activeInstance->audioGraph;
