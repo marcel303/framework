@@ -24,4 +24,4 @@ url=https://github.com/marcel303/SDL-mirror.git
 	url = https://github.com/Tencent/rapidjson.git
 [submodule "3rdparty/nanovg"]
 	path = 3rdparty/nanovg
-	url = https://github.com/memononen/nanovg.git
+	url = https://github.com/marcel303/nanovg.git
