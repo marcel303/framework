@@ -1736,8 +1736,7 @@ void Framework::beginScreenshot(int r, int g, int b, int a, int scale)
 	sx *= scale;
 	sy *= scale;
 	
-// todo : depth buffer
-	Surface * surface = new Surface(sx, sy, false);
+	Surface * surface = new Surface(sx, sy, true, false, SURFACE_RGBA8);
 	
 	pushSurface(surface);
 	surface->clear(r, g, b, a);
