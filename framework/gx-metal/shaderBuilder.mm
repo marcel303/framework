@@ -351,6 +351,7 @@ float atan(float x, float y) { return atan2(x, y); }
 )SHADER";
 
 		sb.Append(header);
+		sb.Append('\n');
 	
 		if (shaderType == 'v')
 		{
@@ -388,6 +389,7 @@ float atan(float x, float y) { return atan2(x, y); }
 					sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
 				sb.Append("\t\n");
 				
+				sb.Append("\t// code\n");
 				for (auto & line : contents)
 					sb.AppendFormat("\t%s\n", line.c_str());
 			}
@@ -571,6 +573,7 @@ float atan(float x, float y) { return atan2(x, y); }
 			#endif
 				sb.Append("\t\n");
 				
+				sb.Append("\t// code\n");
 				for (auto & line : contents)
 					sb.AppendFormat("\t%s\n", line.c_str());
 			}
