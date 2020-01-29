@@ -989,7 +989,7 @@ void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 
 	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
 	
-	id<MTLBuffer> metal_buffer = metal_get_buffer(buffer.getBuffer());
+	id<MTLBuffer> metal_buffer = metal_get_buffer(buffer.getMetalBuffer());
 	
 	const int vsIndex = m_cacheElem->vsInfo.getBufferIndex(name);
 	const int psIndex = m_cacheElem->psInfo.getBufferIndex(name);

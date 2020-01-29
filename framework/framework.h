@@ -898,6 +898,9 @@ public:
 #if ENABLE_OPENGL
 	int getOpenglBuffer() const { return m_buffer; }
 #endif
+#if ENABLE_METAL
+	int getMetalBuffer() const { return m_buffer; }
+#endif
 };
 
 //
@@ -920,6 +923,9 @@ public:
 	
 #if ENABLE_OPENGL
 	int getOpenglBuffer() const { return m_buffer; }
+#endif
+#if ENABLE_METAL
+	int getMetalBuffer() const { return m_buffer; }
 #endif
 };
 

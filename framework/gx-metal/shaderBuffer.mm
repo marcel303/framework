@@ -116,11 +116,6 @@ ShaderBufferRw::~ShaderBufferRw()
 {
 }
 
-GxShaderBufferId ShaderBufferRw::getBuffer() const
-{
-	return m_buffer;
-}
-
 void ShaderBufferRw::setDataRaw(const void * bytes, int numBytes)
 {
 	fassert(m_buffer);
