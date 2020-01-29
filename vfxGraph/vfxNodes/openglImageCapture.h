@@ -27,18 +27,20 @@
 
 #pragma once
 
+#include "gx_texture.h"
 #include <stdint.h>
 #include <vector>
 
 struct OpenglImageCapture
 {
-	std::vector<uint32_t> textures;
+	std::vector<GxTexture*> textures;
 	int saveIndex;
 	
 	OpenglImageCapture();
 	~OpenglImageCapture();
 	
 	void recordFramebuffer(const int sx, const int sy);
+	void flushRecordedTextures();
 	
 	void saveImageSequence(const char * filenameFormat, const bool flush);
 };

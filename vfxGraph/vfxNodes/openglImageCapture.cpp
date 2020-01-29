@@ -43,75 +43,99 @@ OpenglImageCapture::OpenglImageCapture()
 
 OpenglImageCapture::~OpenglImageCapture()
 {
-	if (!textures.empty())
-	{
-		glDeleteTextures(textures.size(), &textures[0]);
-		checkErrorGL();
-	}
+	flushRecordedTextures();
 }
 
 void OpenglImageCapture::recordFramebuffer(const int sx, const int sy)
 {
-	GLuint texture = 0;
-	glGenTextures(1, &texture);
-	checkErrorGL();
+// todo : add method to gx-metal to read-back the frame buffer
+//        preferably async ..
+
+	GxTexture * texture = new GxTexture();
+	texture->allocate(sx, sy, GX_RGBA8_UNORM, false, true);
 	
-	if (texture != 0)
+	if (texture->id != 0)
 	{
-		glBindTexture(GL_TEXTURE_2D, texture);
-		{
-			glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 0, 0, sx, sy, 0);
-			checkErrorGL();
-		}
-		glBindTexture(GL_TEXTURE_2D, 0);
+		// capture current OpenGL states before we change them
+
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
+		// capture framebuffer contents
+		
+		glBindTexture(GL_TEXTURE_2D, texture->id);
+		glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, sx, sy);
+		checkErrorGL();
+		
+		// restore previous OpenGL states
+
+		glBindTexture(GL_TEXTURE_2D, restoreTexture);
+		checkErrorGL();
 		
 		textures.push_back(texture);
 	}
 }
 
-void OpenglImageCapture::saveImageSequence(const char * filenameFormat, const bool flush)
+void OpenglImageCapture::flushRecordedTextures()
 {
-	for (auto texture : textures)
+	for (auto *& texture : textures)
 	{
-		GLint sx = 0;
-		GLint sy = 0;
+		texture->free();
 		
-		glBindTexture(GL_TEXTURE_2D, texture);
-		checkErrorGL();
-		{
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
-			glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
-			checkErrorGL();
-			
-			if (sx > 0 && sy > 0)
-			{
-				void * pixels = MemAlloc(sx * sy * 4, 256);
-				
-				glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-				checkErrorGL();
-				
-			#ifdef WIN32
-				char filename[_MAX_PATH];
-			#else
-				char filename[PATH_MAX];
-			#endif
-				sprintf_s(filename, sizeof(filename), filenameFormat, saveIndex);
-				
-				if (saveImage_turbojpeg(filename, pixels, sx * sy * 4, sx, sy, true, 100, true))
-				{
-					saveIndex++;
-				}
-				
-				MemFree(pixels);
-			}
-		}
-		glBindTexture(GL_TEXTURE_2D, 0);
-		checkErrorGL();
+		delete texture;
+		texture = nullptr;
 	}
 	
-	if (flush && !textures.empty())
+	textures.clear();
+}
+
+void OpenglImageCapture::saveImageSequence(const char * filenameFormat, const bool flush)
+{
+	// capture current OpenGL states before we change them
+
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
+	checkErrorGL();
+	
+	for (auto * texture : textures)
 	{
-		glDeleteTextures(textures.size(), &textures[0]);
-		textures.clear();
+		const int sx = texture->sx;
+		const int sy = texture->sy;
+		
+		if (texture->sx > 0 && texture->sy > 0)
+		{
+			void * pixels = MemAlloc(sx * sy * 4, 256);
+			
+			glBindTexture(GL_TEXTURE_2D, texture->id);
+			checkErrorGL();
+			
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+			checkErrorGL();
+			
+		#ifdef WIN32
+			char filename[_MAX_PATH];
+		#else
+			char filename[PATH_MAX];
+		#endif
+			sprintf_s(filename, sizeof(filename), filenameFormat, saveIndex);
+			
+			if (saveImage_turbojpeg(filename, pixels, sx * sy * 4, sx, sy, true, 100, true))
+			{
+				saveIndex++;
+			}
+			
+			MemFree(pixels);
+		}
 	}
+	
+	if (flush)
+	{
+		flushRecordedTextures();
+	}
+	
+	// restore previous OpenGL states
+
+	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	checkErrorGL();
 }
