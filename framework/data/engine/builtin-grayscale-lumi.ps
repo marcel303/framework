@@ -1,0 +1,18 @@
+include engine/ShaderPS.txt
+
+shader_in vec2 texcoord;
+
+uniform sampler2D source;
+
+void main()
+{
+	vec4 color = texture(source, texcoord);
+	
+	// todo : accurate luminance calculation using dot3
+	
+	float lumi = (color.r + color.g + color.b) / 3.0;
+	
+	color.rgb = vec3(lumi);
+	
+	shader_fragColor = color;
+}

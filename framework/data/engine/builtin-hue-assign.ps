@@ -1,0 +1,18 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+shader_in vec2 texcoord;
+
+uniform sampler2D source;
+uniform float hue;
+
+void main()
+{
+	vec4 color = texture(source, texcoord);
+	
+	vec3 hsl = colorToHSL(color.rgb);
+	hsl.x = hue;
+	color.rgb = colorFromHSL(hsl);
+	
+	shader_fragColor = color;
+}
