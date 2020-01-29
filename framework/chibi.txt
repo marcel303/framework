@@ -63,9 +63,7 @@ library framework
 	depend_library utf8rewind
 
 	license_file COPYING.txt
-	# todo : license_file ../license/freetype
 	# todo : license_file ../license/openal
-	# todo : license_file ../license/remotery/
 	# todo : license_file ../license/xinput
 
 	scan_files cpp
@@ -93,7 +91,8 @@ library framework
 	#with_platform iphoneos scan_files mm  path gx-metal group gx-metal
 
 	header_path . expose
-	
+
+# todo : remove OpenAL altogether
 	compile_definition NO_SDL_GLEXT            * expose
 	compile_definition FRAMEWORK_USE_OPENAL    0 expose
 
@@ -102,8 +101,7 @@ library framework
 	with_platform windows  compile_definition FRAMEWORK_USE_PORTAUDIO 1 expose
 	with_platform iphoneos compile_definition FRAMEWORK_USE_PORTAUDIO 0 expose
 
-# todo : use CoreAudio on macos
-	with_platform macos    compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
+	with_platform macos    compile_definition FRAMEWORK_USE_COREAUDIO 1 expose
 	with_platform linux    compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
 	with_platform windows  compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
 	with_platform iphoneos compile_definition FRAMEWORK_USE_COREAUDIO 1 expose

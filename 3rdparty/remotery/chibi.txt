@@ -6,3 +6,5 @@ library remotery
 	add_files remotery.cpp remotery.h
 	
 	header_path . expose
+
+	license_file LICENSE.TXT

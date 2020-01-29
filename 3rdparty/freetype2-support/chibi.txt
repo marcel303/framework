@@ -59,5 +59,7 @@ library freetype2 shared
 	scan_files h path ../freetype2/src/winfonts group winfonts
 	
 	license_file ../freetype2/docs/FTL.TXT
+	license_file ../freetype2/docs/GPLv2.TXT
+	license_file ../freetype2/docs/LICENSE.TXT
 	
 	header_path ../freetype2/include expose
