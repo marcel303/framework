@@ -553,7 +553,11 @@ void VfxNodeFsfxV2::draw() const
 			{
 				pushTransform();
 				setTransform(TRANSFORM_SCREEN);
+				
+				popSurface();
 				g_currentVfxSurface->postprocess();
+				pushSurface(g_currentVfxSurface);
+				
 				popTransform();
 			}
 			popBlend();
