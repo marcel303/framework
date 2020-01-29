@@ -40,8 +40,10 @@ public:
 #if defined(PSP) || defined(__GNUC__)
     #define sprintf_s(s, ss, f, ...) snprintf(s, ss, f, __VA_ARGS__)
     #define vsprintf_s(s, ss, f, a) vsnprintf(s, ss, f, a)
-    #define strcpy_s(d, ds, s) strlcpy(d, s, ds)
+    #define strcpy_s __libgg_strcpy_s
     #define sscanf_s sscanf
+
+    errno_t __libgg_strcpy_s(char * dst, size_t dst_size, const char * src);
 #endif
 
 #if defined(WINDOWS)
