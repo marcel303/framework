@@ -27,8 +27,6 @@
 
 #include "framework.h"
 
-// fixme : fix the filename. it's currently 'computerShader', lol
-
 #if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER // todo : metal compute shader implementation
 
 #include "internal.h"
