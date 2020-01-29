@@ -149,6 +149,7 @@ R"HEADER(
 #define tex2D texture
 )HEADER";
 		sb.Append(header);
+		sb.Append('\n');
 	#else
 		const char * header =
 R"HEADER(
@@ -159,6 +160,7 @@ R"HEADER(
 #define tex2D texture
 )HEADER";
 		sb.Append(header);
+		sb.Append('\n');
 	#endif
 	
 	#if !USE_LEGACY_OPENGL
@@ -177,8 +179,9 @@ R"HEADER(
 				}
 				
 				// todo : detect if a pass is added more than once
+				// todo : default value assignment failed on Intel nuc. is this allowed within the OpenGL spec? how common is this?
 				
-				sb.AppendFormat("layout(location = %d) out %s %s = %s(0.0);\n",
+				sb.AppendFormat("layout(location = %d) out %s %s;\n",
 					i,
 					output->outputType.c_str(),
 					output->outputName.c_str(),
@@ -355,7 +358,43 @@ R"HEADER(
 		if (currentUniformBufferName[0] != 0)
 			endUniformBuffer();
 		
-		sb.Append(text.ToString());
+		sb.Append("#define main() shaderMain()\n");
+		sb.Append('\n');
+		{
+			sb.Append(text.ToString());
+		}
+		sb.Append('\n');
+		sb.Append("#undef main\n");
+		sb.Append("\n");
+		
+		sb.Append("void main()\n");
+		sb.Append("{\n");
+		{
+		#if !USE_LEGACY_OPENGL
+			if (shaderType == 'p')
+			{
+				for (int i = 0; outputs[i] != 0; ++i)
+				{
+					const ShaderOutput * output = findShaderOutput(outputs[i]);
+					
+					if (output == nullptr)
+					{
+						logError("unknown shader output: %c", outputs[i]);
+						return false;
+					}
+					
+					sb.AppendFormat("\t%s = %s(0.0);\n",
+						output->outputName.c_str(),
+						output->outputType.c_str());
+				}
+				
+				sb.Append("\n");
+			}
+		#endif
+		
+			sb.Append("\tshaderMain();\n");
+		}
+		sb.Append("}\n");
 		
 		result = sb.ToString();
 		
