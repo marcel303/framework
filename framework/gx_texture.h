@@ -89,7 +89,6 @@ struct GxTexture
 	};
 	
 	GxTextureId id;
-	bool owned;
 	
 	int sx;
 	int sy;

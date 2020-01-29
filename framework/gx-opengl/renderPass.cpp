@@ -258,6 +258,7 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 
 void endRenderPass()
 {
+// todo : for MSAA, SDL uses a separate framebuffer. we should ask/store the framebuffer used by the current windows, and set that instead of the framebuffer with id zero
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	checkErrorGL();
 	

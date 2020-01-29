@@ -2960,6 +2960,8 @@ static int getButtonIndex(BUTTON button)
 		return 0;
 	case BUTTON_RIGHT:
 		return 1;
+	case BUTTON_MAX:
+		break;
 	}
 	fassert(false);
 	return -1;
