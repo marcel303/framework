@@ -73,11 +73,6 @@ ShaderBuffer::~ShaderBuffer()
 	}
 }
 
-GxShaderBufferId ShaderBuffer::getBuffer() const
-{
-	return m_buffer;
-}
-
 void ShaderBuffer::setData(const void * bytes, int numBytes)
 {
 	fassert(m_buffer);
@@ -109,11 +104,6 @@ ShaderBufferRw::~ShaderBufferRw()
 		m_buffer = 0;
 		checkErrorGL();
 	}
-}
-
-GxShaderBufferId ShaderBufferRw::getBuffer() const
-{
-	return m_buffer;
 }
 
 void ShaderBufferRw::setDataRaw(const void * bytes, int numBytes)

@@ -893,9 +893,11 @@ public:
 	ShaderBuffer();
 	~ShaderBuffer();
 
-	GxShaderBufferId getBuffer() const; // todo : make internally accessible only
-
 	void setData(const void * bytes, int numBytes);
+	
+#if ENABLE_OPENGL
+	int getOpenglBuffer() const { return m_buffer; }
+#endif
 };
 
 //
@@ -908,8 +910,6 @@ public:
 	ShaderBufferRw();
 	~ShaderBufferRw();
 
-	GxShaderBufferId getBuffer() const; // todo : make internally accessible only
-
 	void setDataRaw(const void * bytes, int numBytes);
 
 	template <typename T>
@@ -917,6 +917,10 @@ public:
 	{
 		setDataRaw(elements, sizeof(T) * numElements);
 	}
+	
+#if ENABLE_OPENGL
+	int getOpenglBuffer() const { return m_buffer; }
+#endif
 };
 
 class Color
@@ -1820,9 +1824,6 @@ void setShader_GrayscaleLumi(const GxTextureId source, const float opacity);
 void setShader_GrayscaleWeights(const GxTextureId source, const Vec3 & weights, const float opacity);
 void setShader_Colorize(const GxTextureId source, const float hue, const float opacity);
 void setShader_HueShift(const GxTextureId source, const float hue, const float opacity);
-void setShader_Composite(const GxTextureId source1, const GxTextureId source2);
-void setShader_CompositePremultiplied(const GxTextureId source1, const GxTextureId source2);
-void setShader_Premultiply(const GxTextureId source);
 void setShader_ColorMultiply(const GxTextureId source, const Color & color, const float opacity);
 void setShader_ColorTemperature(const GxTextureId source, const float temperature, const float opacity);
 void setShader_TextureSwizzle(const GxTextureId source, const int r, const int g, const int b, const int a);

@@ -27,6 +27,8 @@
 
 #include "framework.h"
 
+// fixme : fix the filename. it's currently 'computerShader', lol
+
 #if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER // todo : metal compute shader implementation
 
 #include "internal.h"
@@ -249,7 +251,7 @@ void ComputeShader::setBuffer(GxImmediateIndex index, const ShaderBuffer & buffe
 	fassert(globals.shader == this);
 
 	glUniformBlockBinding(getProgram(), index, index);
-	glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer.getBuffer());
+	glBindBufferBase(GL_UNIFORM_BUFFER, index, buffer.getOpenglBuffer());
 
 	checkErrorGL();
 }
@@ -273,7 +275,7 @@ void ComputeShader::setBufferRw(GxImmediateIndex index, const ShaderBufferRw & b
 	fassert(globals.shader == this);
 
 	glShaderStorageBlockBinding(getProgram(), index, index);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, buffer.getBuffer());
+	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, index, buffer.getOpenglBuffer());
 
 	checkErrorGL();
 }

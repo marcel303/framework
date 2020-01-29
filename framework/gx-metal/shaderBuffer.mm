@@ -76,11 +76,6 @@ ShaderBuffer::~ShaderBuffer()
 	}
 }
 
-GxShaderBufferId ShaderBuffer::getBuffer() const
-{
-	return m_buffer;
-}
-
 void ShaderBuffer::setData(const void * bytes, int numBytes)
 {
 	fassert(m_buffer);

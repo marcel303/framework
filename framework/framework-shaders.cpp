@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "internal.h"
 
 // todo : do we still need builtinShaders ? loading and caching now (with the chibi resource paths registration) work as expected, just as any other shader or resource
 
@@ -227,36 +228,6 @@ void setShader_HueShift(const GxTextureId source, const float hue, const float o
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("hueShift", hue);
 	shader.setImmediate("opacity", opacity);
-}
-
-void setShader_Composite(const GxTextureId source1, const GxTextureId source2)
-{
-// todo : add this shader
-	Shader shader("engine/builtin-composite-alpha");
-	setShader(shader);
-
-	shader.setTexture("source1", 0, source1, true, true);
-	shader.setTexture("source2", 1, source2, true, true);
-}
-
-void setShader_CompositePremultiplied(const GxTextureId source1, const GxTextureId source2)
-{
-// todo : add this shader
-	// todo : remove ? we have a blend mode for this
-	Shader shader("engine/builtin-composite-alpha-premultiplied");
-	setShader(shader);
-
-	shader.setTexture("source1", 0, source1, true, true);
-	shader.setTexture("source2", 1, source2, true, true);
-}
-
-void setShader_Premultiply(const GxTextureId source)
-{
-// todo : add this shader
-	Shader shader("engine/builtin-premultiply-alpha");
-	setShader(shader);
-
-	shader.setTexture("source", 0, source, true, true);
 }
 
 void setShader_ColorMultiply(const GxTextureId source, const Color & color, const float opacity)
