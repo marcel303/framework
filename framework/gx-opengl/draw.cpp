@@ -1087,6 +1087,13 @@ void gxEnd()
 	checkErrorGL();
 }
 
+void gxEmitVertices(GLenum type, int numVertices)
+{
+	glBegin(type);
+	for (int i = 0; i < numVertices; ++i)
+		glVertex2f(0.f, 0.f);
+}
+
 void gxSetTexture(GxTextureId texture)
 {
 	if (texture)
