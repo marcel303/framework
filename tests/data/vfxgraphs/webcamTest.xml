@@ -1,17 +1,28 @@
-<graph nextNodeId="179" nextLinkId="111">
+<graph nextNodeId="181" nextLinkId="114">
     <node id="163" typeName="draw.display"/>
     <node id="176" typeName="webcam"/>
-    <link id="110" srcNodeId="163" srcNodeSocketName="image" dstNodeId="176" dstNodeSocketName="image"/>
-    <editor nextZKey="845">
-        <dragAndZoom x="0" y="17.057132720947266" zoom="2.25"/>
+    <node id="179" typeName="draw.image">
+        <input socket="sizeMode" value="1"/>
+    </node>
+    <node id="180" typeName="draw.surface">
+        <input socket="format" value="0"/>
+        <input socket="viewMode" value="0"/>
+    </node>
+    <link id="111" srcNodeId="163" srcNodeSocketName="image" dstNodeId="180" dstNodeSocketName="image"/>
+    <link id="112" srcNodeId="180" srcNodeSocketName="source" dstNodeId="179" dstNodeSocketName="any"/>
+    <link id="113" srcNodeId="179" srcNodeSocketName="image" dstNodeId="176" dstNodeSocketName="image"/>
+    <editor nextZKey="854">
+        <dragAndZoom x="35.004989624023438" y="120.81061553955078" zoom="1.6355634927749634"/>
         <nodeDatas>
-            <nodeData nodeId="163" x="16" y="64" zKey="843"/>
-            <nodeData nodeId="176" x="-128" y="64" zKey="842"/>
+            <nodeData nodeId="163" x="192" y="64" zKey="850"/>
+            <nodeData nodeId="176" x="-192" y="64" zKey="852"/>
+            <nodeData nodeId="179" x="-64" y="64" zKey="853"/>
+            <nodeData nodeId="180" x="64" y="64" zKey="851"/>
         </nodeDatas>
         <visualizers>
             <visualizer id="178" x="-96" y="-112" zKey="844" nodeId="176" dstSocketName="image" sx="216" sy="160"/>
         </visualizers>
-        <editorOptions menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="d6bf5bff" gridColor="ffffff5f">
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="0" showGrid="1" showSocketNames="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="d6bf5bff" gridColor="ffffff5f">
             <cpuHeatColors useLinearColorSpace="1">
                 <key t="0" r="0" g="0" b="0" a="0"/>
                 <key t="1" r="1" g="1" b="1" a="1"/>

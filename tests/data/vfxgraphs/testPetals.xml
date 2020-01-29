@@ -1,4 +1,4 @@
-<graph nextNodeId="63" nextLinkId="101">
+<graph nextNodeId="67" nextLinkId="105">
     <node id="1" typeName="draw.display"/>
     <node id="50" typeName="draw.surface">
         <input socket="format" value="0"/>
@@ -9,6 +9,7 @@
         <input socket="opacity" value="0.950000"/>
         <input socket="param1" value="200.000000"/>
         <input socket="shader" value="fsfx/petals.ps"/>
+        <input socket="time" value="2.000000"/>
     </node>
     <node id="61" typeName="draw.sequence"/>
     <node id="62" typeName="draw.text">
@@ -16,20 +17,35 @@
         <input socket="sizeMode" value="1"/>
         <input socket="text" value="Hello Petals"/>
     </node>
+    <node id="63" typeName="time"/>
+    <node id="66" typeName="gen.sine">
+        <input socket="frequency" value="0.300000"/>
+    </node>
     <link id="76" srcNodeId="1" srcNodeSocketName="image" dstNodeId="50" dstNodeSocketName="image"/>
     <link id="96" srcNodeId="50" srcNodeSocketName="source" dstNodeId="61" dstNodeSocketName="any"/>
     <link id="98" srcNodeId="61" srcNodeSocketName="08" dstNodeId="62" dstNodeSocketName="any"/>
     <link id="100" srcNodeId="61" srcNodeSocketName="01" dstNodeId="53" dstNodeSocketName="any"/>
-    <editor nextZKey="448">
-        <dragAndZoom x="2.375999927520752" y="0" zoom="1"/>
+    <link id="101" srcNodeId="53" srcNodeSocketName="time" dstNodeId="63" dstNodeSocketName="time"/>
+    <link id="104" srcNodeId="53" srcNodeSocketName="opacity" dstNodeId="66" dstNodeSocketName="value">
+        <param name="out.min" value="0.400000"/>
+    </link>
+    <editor nextZKey="468">
+        <dragAndZoom x="-118.08509826660156" y="65.756927490234375" zoom="1"/>
         <nodeDatas>
             <nodeData nodeId="1" x="256" y="-96" zKey="337"/>
             <nodeData nodeId="50" x="128" y="-96" zKey="354"/>
-            <nodeData nodeId="53" x="-128" y="-96" zKey="442"/>
+            <nodeData nodeId="53" x="-128" y="-96" zKey="448"/>
             <nodeData nodeId="61" x="0" y="-96" zKey="445"/>
             <nodeData nodeId="62" x="-128" y="144" zKey="447"/>
+            <nodeData nodeId="63" x="-288" y="-48" zKey="465"/>
+            <nodeData nodeId="66" x="-336" y="128" zKey="467"/>
         </nodeDatas>
         <visualizers/>
-        <editorOptions comment="" menuIsVisible="1" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" snapToGrid="1" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+        <editorOptions comment="" menuIsVisible="1" realTimePreview="1" autoHideUi="0" showBackground="0" showGrid="0" showSocketNames="1" snapToGrid="1" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="1" g="0" b="0" a="0"/>
+                <key t="1" r="1" g="0" b="0" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
     </editor>
 </graph>
