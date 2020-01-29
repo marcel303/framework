@@ -20,7 +20,7 @@ uniform sampler2D tex;
 
 shader_in vec2 v_texcoord0;
 
-vec2 laplacian2D(in ivec2 texelCoord)
+vec2 laplacian2D(ivec2 texelCoord)
 {
 	vec2 AB =
 		+0.05 * texelFetchOffset(tex, texelCoord, 0, ivec2(-1, -1)).xy
@@ -38,7 +38,7 @@ vec2 laplacian2D(in ivec2 texelCoord)
 
 void main()
 {
-	ivec2 texelSize = textureSize(tex, 0);
+	vec2 texelSize = textureSize(tex, 0);
 	ivec2 texelCoord = ivec2(v_texcoord0 * texelSize);
 	
 	vec2 AB = texelFetch(tex, texelCoord, 0).xy;
@@ -148,7 +148,7 @@ int main(int argc, char * argv[])
 			// apply reaction-diffusion shader
 
 			setShader(shader);
-			shader.setTexture("tex", 0, surface.getTexture());
+			shader.setTexture("tex", 0, surface.getTexture(), false, true);
 			surface.postprocess();
 			clearShader();
 		}
