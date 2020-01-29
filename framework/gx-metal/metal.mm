@@ -2069,13 +2069,15 @@ static void gxFlush(bool endOfBatch)
 				{
 					auto * elem = s_gxVertexBufferElem;
 					
-					[s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxFlush)"];
-					[s_activeRenderPass->cmdbuf addCompletedHandler:
-						^(id<MTLCommandBuffer> _Nonnull)
-						{
-							s_gxVertexBufferPool.freeBuffer(elem);
-						}];
-					[s_activeRenderPass->cmdbuf popDebugGroup];
+					if (@available(macOS 10.13, *)) [s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxFlush)"];
+					{
+						[s_activeRenderPass->cmdbuf addCompletedHandler:
+							^(id<MTLCommandBuffer> _Nonnull)
+							{
+								s_gxVertexBufferPool.freeBuffer(elem);
+							}];
+					}
+					if (@available(macOS 10.13, *)) [s_activeRenderPass->cmdbuf popDebugGroup];
 				}
 				
 				s_gxVertexBufferElem = s_gxVertexBufferPool.allocBuffer();
@@ -2322,16 +2324,18 @@ static void gxEndDraw()
 		auto * vb_elem = s_gxVertexBufferElem;
 		auto * ib_elem = s_gxIndexBufferElem;
 		
-		[s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxEndDraw)"];
-		[s_activeRenderPass->cmdbuf addCompletedHandler:
-			^(id<MTLCommandBuffer> _Nonnull)
-			{
-				if (vb_elem != nullptr)
-					s_gxVertexBufferPool.freeBuffer(vb_elem);
-				if (ib_elem != nullptr)
-					s_gxIndexBufferPool.freeBuffer(ib_elem);
-			}];
-		[s_activeRenderPass->cmdbuf popDebugGroup];
+		if (@available(macOS 10.13, *)) [s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxEndDraw)"];
+		{
+			[s_activeRenderPass->cmdbuf addCompletedHandler:
+				^(id<MTLCommandBuffer> _Nonnull)
+				{
+					if (vb_elem != nullptr)
+						s_gxVertexBufferPool.freeBuffer(vb_elem);
+					if (ib_elem != nullptr)
+						s_gxIndexBufferPool.freeBuffer(ib_elem);
+				}];
+		}
+		if (@available(macOS 10.13, *)) [s_activeRenderPass->cmdbuf popDebugGroup];
 		
 		s_gxVertexBufferElem = nullptr;
 		s_gxVertexBufferElemOffset = 0;
