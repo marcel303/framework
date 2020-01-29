@@ -27,8 +27,6 @@
 
 #include "framework.h"
 
-// todo : metal implementation shader buffer
-
 #if ENABLE_OPENGL
 
 #if defined(IPHONEOS)

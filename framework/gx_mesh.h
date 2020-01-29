@@ -85,8 +85,10 @@ public:
 
 class GxMesh
 {
+public:
 	static const int kMaxVertexInputs = 16;
 	
+private:
 	struct Primitive
 	{
 		GX_PRIMITIVE_TYPE type;

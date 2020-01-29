@@ -1241,9 +1241,7 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 {
 	// make sure to disable old attributes, to avoid reading from stale memory
 
-// todo : add a constant for the maximum number of vertex inputs
-
-	for (int i = 0; i < 16; ++i)
+	for (int i = 0; i < GxMesh::kMaxVertexInputs; ++i)
 	{
 		glDisableVertexAttribArray(i);
 		checkErrorGL();

@@ -134,8 +134,6 @@ void popBlend()
 void setLineSmooth(bool enabled)
 {
 #if ENABLE_DESKTOP_OPENGL
-	// todo : gles : implement setLineSmooth
-	
 	if (enabled)
 	{
 		glEnable(GL_LINE_SMOOTH);
@@ -147,6 +145,8 @@ void setLineSmooth(bool enabled)
 		glDisable(GL_LINE_SMOOTH);
 		checkErrorGL();
 	}
+#else
+	// todo : gles : implement setLineSmooth
 #endif
 }
 
@@ -167,12 +167,10 @@ void popLineSmooth()
 void setWireframe(bool enabled)
 {
 #if ENABLE_DESKTOP_OPENGL
-	// todo : gles : implement setWireframe
-	
 	glPolygonMode(GL_FRONT_AND_BACK, enabled ? GL_LINE : GL_FILL);
 	checkErrorGL();
 #else
-	// todo : what to do here for OpenGLES ?
+	// todo : gles : implement setWireframe
 #endif
 }
 
