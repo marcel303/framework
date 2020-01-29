@@ -83,9 +83,16 @@ static bool loadFileContents(const char * filename, bool normalizeLineEndings, c
 	{
 		if (normalizeLineEndings)
 		{
+			const char * src = bytes;
+			      char * dst = bytes;
+			
+			int dst_index = 0;
+			
 			for (int i = 0; i < numBytes; ++i)
-				if (bytes[i] == '\r')
-					bytes[i] = '\n';
+				if (src[i] != '\r')
+					dst[dst_index++] = src[i];
+			
+			numBytes = dst_index;
 		}
 	}
 	else
