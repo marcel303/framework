@@ -742,7 +742,7 @@ int main(int argc, char * argv[])
 	s_audioMutex = audioMutex;
 	
 	AudioVoiceManager4D voiceMgr;
-	voiceMgr.init(audioMutex, CHANNEL_COUNT);
+	voiceMgr.init(audioMutex, CHANNEL_COUNT, "127.0.0.1", 2000);
 	voiceMgr.outputStereo = outputStereo;
 	s_voiceMgr = &voiceMgr;
 	
@@ -751,9 +751,7 @@ int main(int argc, char * argv[])
 	s_audioGraphMgr = &audioGraphMgr;
 	
 	AudioUpdateHandler audioUpdateHandler;
-	audioUpdateHandler.init(audioMutex, "127.0.0.1", 2000);
-	audioUpdateHandler.voiceMgr = &voiceMgr;
-	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
+	audioUpdateHandler.init(audioMutex, &voiceMgr, &audioGraphMgr);
 	
 	PortAudioObject paObject;
 	paObject.init(SAMPLE_RATE, outputStereo ? 2 : CHANNEL_COUNT, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);

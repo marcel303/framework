@@ -266,9 +266,7 @@ struct SatellitesApp
 		g_vfxAudioGraphMgr = audioGraphMgr;
 		
 		audioUpdateHandler = new AudioUpdateHandler();
-		audioUpdateHandler->init(audioMutex, "127.0.0.1", 2000);
-		audioUpdateHandler->voiceMgr = voiceMgr;
-		audioUpdateHandler->audioGraphMgr = audioGraphMgr;
+		audioUpdateHandler->init(audioMutex, voiceMgr, audioGraphMgr);
 		
 		paObject = new PortAudioObject();
 		paObject->init(SAMPLE_RATE, outputStereo ? 2 : CHANNEL_COUNT, 0, AUDIO_UPDATE_SIZE, audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
