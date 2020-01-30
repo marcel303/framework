@@ -26,6 +26,7 @@
 */
 
 #include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "audioGraphManager.h"
 #include "StringEx.h"
 #include "vfxNodeAudioGraph.h"
@@ -90,7 +91,7 @@ int VfxNodeAudioGraph::VoiceMgr::calculateNumVoices() const
 VfxNodeAudioGraph::VfxNodeAudioGraph()
 	: VfxNodeBase()
 	, voiceMgr()
-	, globals(nullptr)
+	, context(nullptr)
 	, audioGraphInstance(nullptr)
 	, currentFilename()
 	, currentControlValues()
@@ -106,7 +107,7 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 	addInput(kInput_LimitPeak, kVfxPlugType_Float);
 	addInput(kInput_NumChannels, kVfxPlugType_Int);
 	
-	globals = g_vfxAudioGraphMgr->createGlobals(g_vfxAudioMutex, &voiceMgr);
+	context = g_vfxAudioGraphMgr->createContext(g_vfxAudioMutex, &voiceMgr);
 }
 
 VfxNodeAudioGraph::~VfxNodeAudioGraph()
@@ -116,8 +117,8 @@ VfxNodeAudioGraph::~VfxNodeAudioGraph()
 	delete [] channelOutputs;
 	channelOutputs = nullptr;
 	
-	// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeGlobals will prune any instances still left fading out that reference our globals
-	g_vfxAudioGraphMgr->freeGlobals(globals);
+	// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeContext will prune any instances still left fading out that reference our context
+	g_vfxAudioGraphMgr->freeContext(context);
 }
 
 void VfxNodeAudioGraph::updateDynamicInputs()
@@ -136,9 +137,9 @@ void VfxNodeAudioGraph::updateDynamicInputs()
 	else
 	{
 		auto audioGraph = audioGraphInstance->audioGraph;
-		SDL_LockMutex(audioGraph->globals->audioMutex);
-		auto controlValues = audioGraph->globals->controlValues;
-		SDL_UnlockMutex(audioGraph->globals->audioMutex);
+		audioGraph->context->audioMutex.lock();
+		auto controlValues = audioGraph->context->controlValues;
+		audioGraph->context->audioMutex.unlock();
 		
 		bool equal = true;
 		
@@ -283,7 +284,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 		
 		//
 		
-		audioGraphInstance = g_vfxAudioGraphMgr->createInstance(filename, globals);
+		audioGraphInstance = g_vfxAudioGraphMgr->createInstance(filename, context);
 		
 		currentFilename = filename;
 	}
@@ -348,20 +349,20 @@ void VfxNodeAudioGraph::tick(const float dt)
 		{
 			auto audioGraph = audioGraphInstance->audioGraph;
 			
-			SDL_LockMutex(audioGraph->globals->audioMutex);
+			audioGraph->context->audioMutex.lock();
 			{
-			for (auto & controlValue : audioGraph->globals->controlValues)
-			{
-				if (controlValue.name == dynamicInput.name)
+				for (auto & controlValue : audioGraph->context->controlValues)
 				{
-					if (input->isConnected())
-						controlValue.desiredX = input->getFloat();
-					else
-						controlValue.desiredX = controlValue.defaultX;
+					if (controlValue.name == dynamicInput.name)
+					{
+						if (input->isConnected())
+							controlValue.desiredX = input->getFloat();
+						else
+							controlValue.desiredX = controlValue.defaultX;
+					}
 				}
 			}
-		}
-			SDL_UnlockMutex(audioGraph->globals->audioMutex);
+			audioGraph->context->audioMutex.unlock();
 		}
 		
 		index++;

@@ -72,7 +72,7 @@ VFX_NODE_TYPE(VfxNodeAudioGraphPoly)
 VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	: VfxNodeBase()
 	, voiceMgr()
-	, globals(nullptr)
+	, context(nullptr)
 	, instances()
 	, currentFilename()
 	, voicesData()
@@ -89,7 +89,7 @@ VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	
 	memset(instances, 0, sizeof(instances));
 	
-	globals = g_vfxAudioGraphMgr->createGlobals(g_vfxAudioMutex, &voiceMgr);
+	context = g_vfxAudioGraphMgr->createContext(g_vfxAudioMutex, &voiceMgr);
 }
 
 VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
@@ -100,8 +100,8 @@ VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
 			g_vfxAudioGraphMgr->free(instances[i], false);
 	}
 	
-	// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeGlobals will prune any instances still left fading out that reference our globals
-	g_vfxAudioGraphMgr->freeGlobals(globals);
+	// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeContext will prune any instances still left fading out that reference our context
+	g_vfxAudioGraphMgr->freeContext(context);
 }
 
 void VfxNodeAudioGraphPoly::updateDynamicInputs()
@@ -290,7 +290,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			if (instances[index] == nullptr)
 			{
 				auto t1 = g_TimerRT.TimeUS_get();
-				instances[index] = g_vfxAudioGraphMgr->createInstance(filename, globals, true);
+				instances[index] = g_vfxAudioGraphMgr->createInstance(filename, context, true);
 				auto t2 = g_TimerRT.TimeUS_get();
 				
 				addHistoryElem(kHistoryType_InstanceCreate, (t2 - t1) / 1000.0);

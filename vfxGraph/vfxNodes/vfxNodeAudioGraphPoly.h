@@ -117,7 +117,7 @@ struct VfxNodeAudioGraphPoly : VfxNodeBase
 	
 	VoiceMgr_VoiceGroup voiceMgr;
 	
-	AudioGraphGlobals * globals;
+	AudioGraphContext * context;
 	
 	AudioGraphInstance * instances[kMaxInstances];
 	
