@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "shaders.h"
+#include <algorithm>
 
 #define GFX_SX 1200
 #define GFX_SY 800
