@@ -128,3 +128,7 @@ void VfxNodeWiimote::handleTrigger(const int index)
 }
 
 #endif
+
+void linkVfxNodes_Wiimote()
+{
+}

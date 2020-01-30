@@ -148,3 +148,7 @@ void VfxNodeDeepbelief::getDescription(VfxNodeDescription & d)
 }
 
 #endif
+
+void linkVfxNodes_DeepBelief()
+{
+}

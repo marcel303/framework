@@ -143,3 +143,7 @@ void VfxNodeDrawSyphon::draw() const
 }
 
 #endif
+
+void linkVfxNodes_Syphon()
+{
+}

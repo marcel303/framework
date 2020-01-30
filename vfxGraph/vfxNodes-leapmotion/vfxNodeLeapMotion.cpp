@@ -195,3 +195,7 @@ void VfxNodeLeapMotion::getDescription(VfxNodeDescription & d)
 }
 
 #endif
+
+void linkVfxNodes_LeapMotion()
+{
+}

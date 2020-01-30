@@ -370,3 +370,7 @@ void VfxNodePs3eye::stopCapture()
 }
 
 #endif
+
+void linkVfxNodes_Ps3eye()
+{
+}

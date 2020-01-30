@@ -300,3 +300,7 @@ void VfxNodeJgmod::free()
 	
 	currentFilename.clear();
 }
+
+void linkVfxNodes_Jgmod()
+{
+}
