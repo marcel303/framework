@@ -1778,7 +1778,7 @@ void gxInitialize();
 void gxShutdown();
 void gxBegin(GLenum type);
 void gxEnd();
-static inline void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices) { } // todo
+void gxEmitVertices(GLenum type, int numVertices);
 #define gxColor4f glColor4f
 #define gxColor4fv glColor4fv
 #define gxColor3ub glColor3ub
@@ -1825,7 +1825,6 @@ void setShader_ThresholdLumi(const GxTextureId source, const float lumi, const C
 void setShader_ThresholdLumiFail(const GxTextureId source, const float lumi, const Color & failColor, const float opacity);
 void setShader_ThresholdLumiPass(const GxTextureId source, const float lumi, const Color & passColor, const float opacity);
 void setShader_ThresholdValue(const GxTextureId source, const Color & value, const Color & failColor, const Color & passColor, const float opacity);
-// todo : implement these shaders .. ! and make source code shared/includable
 void setShader_GrayscaleLumi(const GxTextureId source, const float opacity);
 void setShader_GrayscaleWeights(const GxTextureId source, const Vec3 & weights, const float opacity);
 void setShader_Colorize(const GxTextureId source, const float hue, const float opacity);
