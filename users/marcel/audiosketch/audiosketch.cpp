@@ -1,6 +1,7 @@
 #include "audiooutput/AudioOutput_PortAudio.h"
 #include "audiosketch.h"
 #include "framework.h"
+#include <mutex>
 #include <thread>
 
 static std::mutex s_mutex;

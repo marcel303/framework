@@ -5,6 +5,10 @@
 
 #define ENABLE_SORT_PRIMITIVES_BY_VIEW_DISTANCE 1
 
+#if ENABLE_SORT_PRIMITIVES_BY_VIEW_DISTANCE
+	#include <algorithm>
+#endif
+
 namespace gltf
 {
 	static Material defaultMaterial;
