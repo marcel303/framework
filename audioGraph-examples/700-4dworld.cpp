@@ -2100,9 +2100,9 @@ int main(int argc, char * argv[])
 					doBreak();
 					
 					doLabel("shared memory", 0.f);
-					SDL_LockMutex(audioGraphMgr.context->audioMutex);
+					audioGraphMgr.context->audioMutex.lock();
 					auto controlValues = audioGraphMgr.context->controlValues;
-					SDL_UnlockMutex(audioGraphMgr.context->audioMutex);
+					audioGraphMgr.context->audioMutex.unlock();
 					int padIndex = 0;
 					for (int i = 0; i < controlValues.size(); ++i)
 					{
@@ -2132,7 +2132,7 @@ int main(int argc, char * argv[])
 								padIndex = 0;
 						}
 					}
-					SDL_LockMutex(audioGraphMgr.context->audioMutex);
+					audioGraphMgr.context->audioMutex.lock();
 					for (auto & srcControlValue : controlValues)
 					{
 						for (auto & dstControlValue : audioGraphMgr.context->controlValues)
@@ -2145,7 +2145,7 @@ int main(int argc, char * argv[])
 							}
 						}
 					}
-					SDL_UnlockMutex(audioGraphMgr.context->audioMutex);
+					audioGraphMgr.context->audioMutex.unlock();
 					
 					// per instance control values
 					if (audioGraphMgr.selectedFile != nullptr && audioGraphMgr.selectedFile->activeInstance != nullptr)

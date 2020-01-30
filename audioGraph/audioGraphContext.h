@@ -47,7 +47,7 @@ struct AudioGraphContext
 		float value4 = 0.f;
 	};
 	
-	SDL_mutex * audioMutex;
+	AudioMutex_Shared audioMutex;
 	
 	AudioVoiceManager * voiceMgr;
 	
