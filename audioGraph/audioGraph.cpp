@@ -842,18 +842,12 @@ AudioNodeBase * createAudioNode(
 
 //
 
-extern void linkAudioNodes();
-
 AudioGraph * constructAudioGraph(
 	const Graph & graph,
 	const Graph_TypeDefinitionLibrary * typeDefinitionLibrary,
 	AudioGraphContext * context,
 	const bool createdPaused)
 {
-	linkAudioNodes();
-	
-	//
-	
 	AudioGraph * audioGraph = new AudioGraph(context, createdPaused);
 	
 #if AUDIO_GRAPH_ENABLE_TIMING
