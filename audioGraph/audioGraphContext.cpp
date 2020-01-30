@@ -28,6 +28,7 @@
 #include "audioGraphContext.h"
 #include "Debugging.h"
 #include "Log.h"
+#include <algorithm>
 #include <math.h>
 #include <SDL2/SDL_mutex.h>
 
