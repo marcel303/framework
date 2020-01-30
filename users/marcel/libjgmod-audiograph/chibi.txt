@@ -5,6 +5,8 @@ library jgmod-audiograph
 
 	add_files audioNodeJgmod.cpp audioNodeJgmod.h
 
+	link_translation_unit_using_function_call linkAudioNodes_Jgmod
+
 app jgmod-audiograph-test
 
 	depend_library audiograph

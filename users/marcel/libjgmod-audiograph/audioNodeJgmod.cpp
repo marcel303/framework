@@ -152,3 +152,7 @@ void AudioNodeJgmod::init(const GraphNode & node)
 {
 	updateJgmod();
 }
+
+void linkAudioNodes_Jgmod()
+{
+}
