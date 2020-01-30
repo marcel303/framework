@@ -15,7 +15,7 @@ library binaural
 
 	header_path binaural expose
 
-library audiograph-core shared
+library audiograph-core
 
 	depend_library audioio
 	depend_library libavgraph-core
