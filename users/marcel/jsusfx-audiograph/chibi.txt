@@ -1,4 +1,4 @@
-library audiograph-jsusfx shared
+library jsusfx-audiograph
 
 	depend_library audiograph
 	depend_library jsusfx-framework

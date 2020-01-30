@@ -30,7 +30,7 @@ push_group libraries
 	add libvideo
 	add users/marcel/allegro2-support
 	add users/marcel/artnet1
-	add users/marcel/audiograph-jsusfx
+	add users/marcel/jsusfx-audiograph
 	add users/marcel/libjgmod
 	add users/marcel/libjgmod-audiograph
 	add users/marcel/libreflection
