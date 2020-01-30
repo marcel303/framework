@@ -50,19 +50,19 @@ void AudioGraphContext::init(SDL_mutex * mutex, AudioVoiceManager * _voiceMgr, A
 	
 	audioGraphMgr = _audioGraphMgr;
 	
-	mainThreadId.initThreadId();
+	mainThreadId.setThreadId();
 }
 
 void AudioGraphContext::shut()
 {
+	mainThreadId.clearThreadId();
+
 	audioGraphMgr = nullptr;
 	
 	audioMutex = nullptr;
 }
 
-// todo : is this ticked on the main thread or the audio thread ?
-//        audioGraphMgr ticks this on the audio thread
-void AudioGraphContext::tick(const float dt)
+void AudioGraphContext::tickAudio(const float dt)
 {
 	// update control values
 
@@ -76,6 +76,8 @@ void AudioGraphContext::tick(const float dt)
 
 	exportControlValues();
 
+	// update time
+	
 	time += dt;
 }
 

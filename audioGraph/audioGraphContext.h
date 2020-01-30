@@ -68,7 +68,7 @@ struct AudioGraphContext
 	void shut();
 	
 	// called from the audio thread
-	void tick(const float dt);
+	void tickAudio(const float dt);
 	
 	// called from any thread
 	void registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);

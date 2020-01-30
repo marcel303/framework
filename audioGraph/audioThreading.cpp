@@ -107,9 +107,14 @@ AudioThreadId::AudioThreadId()
 {
 }
 
-void AudioThreadId::initThreadId()
+void AudioThreadId::setThreadId()
 {
 	id = SDL_GetThreadID(nullptr);
+}
+
+void AudioThreadId::clearThreadId()
+{
+	id = -1;
 }
 
 bool AudioThreadId::checkThreadId() const

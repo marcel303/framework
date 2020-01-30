@@ -255,8 +255,7 @@ void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::strin
 	
 	AUDIO_SCOPE;
 	
-	Assert(g_currentAudioGraph == nullptr);
-	g_currentAudioGraph = audioGraph;
+	pushAudioGraph(audioGraph);
 	{
 		AudioNodeBase * audioNode = createAudioNode(nodeId, typeName, audioGraph);
 	
@@ -271,7 +270,7 @@ void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::strin
 			audioNode->init(node);
 		}
 	}
-	g_currentAudioGraph = nullptr;
+	popAudioGraph();
 }
 
 void AudioRealTimeConnection::nodeRemove(const GraphNodeId nodeId)

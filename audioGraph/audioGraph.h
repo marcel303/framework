@@ -254,6 +254,11 @@ struct AudioGraph
 
 //
 
+void pushAudioGraph(AudioGraph * audioGraph);
+void popAudioGraph();
+
+//
+
 AudioNodeBase * createAudioNode(
 	const GraphNodeId nodeId,
 	const std::string & typeName,

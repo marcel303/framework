@@ -516,7 +516,7 @@ void AudioGraphManager_Basic::tickAudio(const float dt)
 	audioMutex.lock();
 	{
 		for (auto & context : allocatedContexts)
-			context->tick(dt);
+			context->tickAudio(dt);
 		
 		// synchronize state from main to audio thread
 		
@@ -906,7 +906,7 @@ void AudioGraphManager_RTE::tickAudio(const float dt)
 	SDL_LockMutex(audioMutex);
 	{
 		for (auto & context : allocatedContexts)
-			context->tick(dt);
+			context->tickAudio(dt);
 		
 		// synchronize state from main to audio thread
 		
@@ -1339,7 +1339,7 @@ void AudioGraphManager_MultiRTE::tickAudio(const float dt)
 	SDL_LockMutex(audioMutex);
 	{
 		for (auto & context : allocatedContexts)
-			context->tick(dt);
+			context->tickAudio(dt);
 		
 		// synchronize state from main to audio thread
 		

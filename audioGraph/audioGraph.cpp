@@ -29,7 +29,6 @@
 #include "audioGraphContext.h"
 #include "audioNodeBase.h"
 #include "audioVoiceManager.h"
-#include "framework.h" // listFiles
 #include "graph_typeDefinitionLibrary.h"
 #include "Log.h"
 #include "Parse.h"
@@ -82,8 +81,7 @@ AudioGraph::~AudioGraph()
 
 void AudioGraph::destroy()
 {
-	Assert(g_currentAudioGraph == nullptr);
-	g_currentAudioGraph = this;
+	pushAudioGraph(this);
 	{
 		for (auto & nodeItr : nodes)
 		{
@@ -92,10 +90,9 @@ void AudioGraph::destroy()
 			node->shut();
 		}
 	}
-	Assert(g_currentAudioGraph == this);
-	g_currentAudioGraph = nullptr;
+	popAudioGraph();
 	
-// todo : perhaps more convenient and less error prone would be to free all of the voices ourselves and remove the task from audio nodes. it would safe calling shut on each instance
+// todo : perhaps more convenient and less error prone would be to free all of the voices ourselves and remove the task from audio nodes. it would save the expense of calling shut on each node instance
 
 	// all of the voice nodes should have freed their voices when shut was called
 	Assert(audioVoices.empty());
@@ -127,32 +124,30 @@ void AudioGraph::destroy()
 	
 	valuesToFree.clear();
 	
-	Assert(g_currentAudioGraph == nullptr);
-	g_currentAudioGraph = this;
-	
-	for (auto & i : nodes)
+	pushAudioGraph(this);
 	{
-		AudioNodeBase * node = i.second;
+		for (auto & i : nodes)
+		{
+			AudioNodeBase * node = i.second;
+			
+		#if AUDIO_GRAPH_ENABLE_TIMING
+			const uint64_t t1 = g_TimerRT.TimeUS_get();
+		#endif
+			
+			delete node;
+			node = nullptr;
+			
+		#if AUDIO_GRAPH_ENABLE_TIMING
+			const uint64_t t2 = g_TimerRT.TimeUS_get();
+			auto graphNode = graph->tryGetNode(i.first);
+			const std::string typeName = graphNode ? graphNode->typeName : "n/a";
+			LOG_DBG("delete %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
+		#endif
+		}
 		
-	#if AUDIO_GRAPH_ENABLE_TIMING
-		const uint64_t t1 = g_TimerRT.TimeUS_get();
-	#endif
-		
-		delete node;
-		node = nullptr;
-		
-	#if AUDIO_GRAPH_ENABLE_TIMING
-		const uint64_t t2 = g_TimerRT.TimeUS_get();
-		auto graphNode = graph->tryGetNode(i.first);
-		const std::string typeName = graphNode ? graphNode->typeName : "n/a";
-		LOG_DBG("delete %s took %.2fms", typeName.c_str(), (t2 - t1) / 1000.0);
-	#endif
+		nodes.clear();
 	}
-	
-	nodes.clear();
-	
-	Assert(g_currentAudioGraph == this);
-	g_currentAudioGraph = nullptr;
+	popAudioGraph();
 	
 #if AUDIO_GRAPH_ENABLE_TIMING
 	graph = nullptr;
@@ -325,89 +320,86 @@ void AudioGraph::tickAudio(const float dt, const bool in_syncMainToAudio)
 	if (isPaused)
 		return;
 	
-	Assert(g_currentAudioGraph == nullptr);
-	g_currentAudioGraph = this;
-	
-	if (rampDownRequested)
-		rampDown = true;
-	
-	rteMutex_audio.lock();
-	
-	if (in_syncMainToAudio)
+	pushAudioGraph(this);
 	{
-		mutex.lock();
+		if (rampDownRequested)
+			rampDown = true;
+		
+		rteMutex_audio.lock();
 		{
-			syncMainToAudio();
-		}
-		mutex.unlock();
-	}
-	
-	// update control values
-	
-	for (auto & controlValue : stateDescriptor.controlValues)
-	{
-		const float retain = powf(controlValue.smoothness, dt);
-		
-		controlValue.active_currentX = controlValue.active_currentX * retain + controlValue.active_desiredX * (1.f - retain);
-		controlValue.active_currentY = controlValue.active_currentY * retain + controlValue.active_desiredY * (1.f - retain);
-		
-		// update associated memory inside the state descriptor
-		
-		auto mem_itr = stateDescriptor.memf.find(controlValue.name.c_str());
-		Assert(mem_itr != stateDescriptor.memf.end());
-		if (mem_itr != stateDescriptor.memf.end())
-		{
-			auto & mem = mem_itr->second;
+			if (in_syncMainToAudio)
+			{
+				mutex.lock();
+				{
+					syncMainToAudio();
+				}
+				mutex.unlock();
+			}
 			
-			mem.active_value1 = controlValue.active_currentX;
-			mem.active_value2 = controlValue.active_currentY;
-		}
-	}
-		
-	// process nodes
-	
-	++currentTickTraversalId;
-	
-	setCurrentAudioGraphTraversalId(currentTickTraversalId);
-	
-	for (auto & i : nodes)
-	{
-		AudioNodeBase * node = i.second;
-		
-		if (node->lastTickTraversalId != currentTickTraversalId)
-		{
-			node->traverseTick(currentTickTraversalId, dt);
-		}
-	}
-	
-	clearCurrentAudioGraphTraversalId();
-	
-	rteMutex_audio.unlock();
-	
-	//
-	
-	time += dt;
-	
-	//
-	
-	if (rampDown)
-	{
-		bool isRampedDown = true;
-		
-		for (AudioVoice * voice : audioVoices)
-		{
-			Assert(voice->rampInfo.ramp == false);
+			// update control values
 			
-			isRampedDown &= voice->rampInfo.rampValue == 0.f;
+			for (auto & controlValue : stateDescriptor.controlValues)
+			{
+				const float retain = powf(controlValue.smoothness, dt);
+				
+				controlValue.active_currentX = controlValue.active_currentX * retain + controlValue.active_desiredX * (1.f - retain);
+				controlValue.active_currentY = controlValue.active_currentY * retain + controlValue.active_desiredY * (1.f - retain);
+				
+				// update associated memory inside the state descriptor
+				
+				auto mem_itr = stateDescriptor.memf.find(controlValue.name.c_str());
+				Assert(mem_itr != stateDescriptor.memf.end());
+				if (mem_itr != stateDescriptor.memf.end())
+				{
+					auto & mem = mem_itr->second;
+					
+					mem.active_value1 = controlValue.active_currentX;
+					mem.active_value2 = controlValue.active_currentY;
+				}
+			}
+				
+			// process nodes
+			
+			++currentTickTraversalId;
+			
+			setCurrentAudioGraphTraversalId(currentTickTraversalId);
+			
+			for (auto & i : nodes)
+			{
+				AudioNodeBase * node = i.second;
+				
+				if (node->lastTickTraversalId != currentTickTraversalId)
+				{
+					node->traverseTick(currentTickTraversalId, dt);
+				}
+			}
+			
+			clearCurrentAudioGraphTraversalId();
 		}
+		rteMutex_audio.unlock();
 		
-		if (isRampedDown)
-			rampedDown = true;
+		//
+		
+		time += dt;
+		
+		//
+		
+		if (rampDown)
+		{
+			bool isRampedDown = true;
+			
+			for (AudioVoice * voice : audioVoices)
+			{
+				Assert(voice->rampInfo.ramp == false);
+				
+				isRampedDown &= voice->rampInfo.rampValue == 0.f;
+			}
+			
+			if (isRampedDown)
+				rampedDown = true;
+		}
 	}
-	
-	//
-	
-	g_currentAudioGraph = nullptr;
+	popAudioGraph();
 }
 
 void AudioGraph::setFlag(const char * name, const bool value)
@@ -804,6 +796,19 @@ void AudioGraph::triggerEvent(const char * event)
 
 //
 
+void pushAudioGraph(AudioGraph * audioGraph)
+{
+	Assert(g_currentAudioGraph == nullptr);
+	g_currentAudioGraph = audioGraph;
+}
+
+void popAudioGraph()
+{
+	g_currentAudioGraph = nullptr;
+}
+
+//
+
 #include "audioTypeDB.h"
 
 AudioNodeBase * createAudioNode(
@@ -855,148 +860,148 @@ AudioGraph * constructAudioGraph(
 	audioGraph->graph = const_cast<Graph*>(&graph);
 #endif
 	
-	Assert(g_currentAudioGraph == nullptr);
-	g_currentAudioGraph = audioGraph;
-	
-	for (auto & nodeItr : graph.nodes)
+	pushAudioGraph(audioGraph);
 	{
-		auto & node = nodeItr.second;
-		
-		AudioNodeBase * audioNode = createAudioNode(node.id, node.typeName, audioGraph);
-		
-		Assert(audioNode != nullptr);
-		if (audioNode == nullptr)
+		for (auto & nodeItr : graph.nodes)
 		{
-			LOG_ERR("unable to create node. id=%d, typeName=%s", node.id, node.typeName.c_str());
-		}
-		else
-		{
-			audioNode->isPassthrough = node.isPassthrough;
+			auto & node = nodeItr.second;
 			
-			audioNode->initSelf(node);
+			AudioNodeBase * audioNode = createAudioNode(node.id, node.typeName, audioGraph);
 			
-			audioGraph->nodes[node.id] = audioNode;
-		}
-	}
-	
-	for (auto & linkItr : graph.links)
-	{
-		auto & link = linkItr.second;
-		
-		if (link.isEnabled == false)
-		{
-			continue;
-		}
-		
-		auto srcNodeItr = audioGraph->nodes.find(link.srcNodeId);
-		auto dstNodeItr = audioGraph->nodes.find(link.dstNodeId);
-		
-		Assert(srcNodeItr != audioGraph->nodes.end() && dstNodeItr != audioGraph->nodes.end());
-		if (srcNodeItr == audioGraph->nodes.end() || dstNodeItr == audioGraph->nodes.end())
-		{
-			if (srcNodeItr == audioGraph->nodes.end())
-				LOG_ERR("unable to setup link. source node doesn't exist", 0);
-			if (dstNodeItr == audioGraph->nodes.end())
-				LOG_ERR("unable to setup link. destination node doesn't exist", 0);
-		}
-		else
-		{
-			auto srcNode = srcNodeItr->second;
-			auto dstNode = dstNodeItr->second;
-			
-			auto input = srcNode->tryGetInput(link.srcNodeSocketIndex);
-			auto output = dstNode->tryGetOutput(link.dstNodeSocketIndex);
-			
-			Assert(input != nullptr && output != nullptr);
-			if (input == nullptr || output == nullptr)
+			Assert(audioNode != nullptr);
+			if (audioNode == nullptr)
 			{
-				if (input == nullptr)
-					LOG_ERR("unable to setup link. input node socket doesn't exist. name=%s, index=%d", link.srcNodeSocketName.c_str(), link.srcNodeSocketIndex);
-				if (output == nullptr)
-					LOG_ERR("unable to setup link. output node socket doesn't exist. name=%s, index=%d", link.dstNodeSocketName.c_str(), link.dstNodeSocketIndex);
+				LOG_ERR("unable to create node. id=%d, typeName=%s", node.id, node.typeName.c_str());
 			}
 			else
 			{
-				input->connectTo(*output);
+				audioNode->isPassthrough = node.isPassthrough;
 				
-				// note : this may add the same node multiple times to the list of predeps. note that this
-				//        is ok as nodes will be traversed once through the travel id + it works nicely
-				//        with the live connection as we can just remove the predep and still have one or
-				//        references to the predep if the predep was referenced more than once
-				srcNode->predeps.push_back(dstNode);
+				audioNode->initSelf(node);
 				
-				// if this is a trigger, add a trigger target to dstNode
-				if (output->type == kAudioPlugType_Trigger)
+				audioGraph->nodes[node.id] = audioNode;
+			}
+		}
+		
+		for (auto & linkItr : graph.links)
+		{
+			auto & link = linkItr.second;
+			
+			if (link.isEnabled == false)
+			{
+				continue;
+			}
+			
+			auto srcNodeItr = audioGraph->nodes.find(link.srcNodeId);
+			auto dstNodeItr = audioGraph->nodes.find(link.dstNodeId);
+			
+			Assert(srcNodeItr != audioGraph->nodes.end() && dstNodeItr != audioGraph->nodes.end());
+			if (srcNodeItr == audioGraph->nodes.end() || dstNodeItr == audioGraph->nodes.end())
+			{
+				if (srcNodeItr == audioGraph->nodes.end())
+					LOG_ERR("unable to setup link. source node doesn't exist", 0);
+				if (dstNodeItr == audioGraph->nodes.end())
+					LOG_ERR("unable to setup link. destination node doesn't exist", 0);
+			}
+			else
+			{
+				auto srcNode = srcNodeItr->second;
+				auto dstNode = dstNodeItr->second;
+				
+				auto input = srcNode->tryGetInput(link.srcNodeSocketIndex);
+				auto output = dstNode->tryGetOutput(link.dstNodeSocketIndex);
+				
+				Assert(input != nullptr && output != nullptr);
+				if (input == nullptr || output == nullptr)
 				{
-					AudioNodeBase::TriggerTarget triggerTarget;
-					triggerTarget.srcNode = srcNode;
-					triggerTarget.srcSocketIndex = link.srcNodeSocketIndex;
-					triggerTarget.dstSocketIndex = link.dstNodeSocketIndex;
+					if (input == nullptr)
+						LOG_ERR("unable to setup link. input node socket doesn't exist. name=%s, index=%d", link.srcNodeSocketName.c_str(), link.srcNodeSocketIndex);
+					if (output == nullptr)
+						LOG_ERR("unable to setup link. output node socket doesn't exist. name=%s, index=%d", link.dstNodeSocketName.c_str(), link.dstNodeSocketIndex);
+				}
+				else
+				{
+					input->connectTo(*output);
 					
-					dstNode->triggerTargets.push_back(triggerTarget);
+					// note : this may add the same node multiple times to the list of predeps. note that this
+					//        is ok as nodes will be traversed once through the travel id + it works nicely
+					//        with the real-time editing connection as we can just remove the predep and still
+					//        have one or more references to the predep if the predep was referenced more than once
+					srcNode->predeps.push_back(dstNode);
+					
+					// if this is a trigger, add a trigger target to dstNode
+					if (output->type == kAudioPlugType_Trigger)
+					{
+						AudioNodeBase::TriggerTarget triggerTarget;
+						triggerTarget.srcNode = srcNode;
+						triggerTarget.srcSocketIndex = link.srcNodeSocketIndex;
+						triggerTarget.dstSocketIndex = link.dstNodeSocketIndex;
+						
+						dstNode->triggerTargets.push_back(triggerTarget);
+					}
 				}
 			}
 		}
-	}
-	
-	for (auto & nodeItr : graph.nodes)
-	{
-		auto & node = nodeItr.second;
 		
-		auto typeDefintion = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
-		
-		if (typeDefintion == nullptr)
-			continue;
-		
-		auto audioNodeItr = audioGraph->nodes.find(node.id);
-		
-		if (audioNodeItr == audioGraph->nodes.end())
-			continue;
-		
-		AudioNodeBase * audioNode = audioNodeItr->second;
-		
-		auto & audioNodeInputs = audioNode->inputs;
-		
-		for (auto & inputValueItr : node.inputValues)
+		for (auto & nodeItr : graph.nodes)
 		{
-			const std::string & inputName = inputValueItr.first;
-			const std::string & inputValue = inputValueItr.second;
+			auto & node = nodeItr.second;
 			
-			for (size_t i = 0; i < typeDefintion->inputSockets.size(); ++i)
+			auto typeDefintion = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+			
+			if (typeDefintion == nullptr)
+				continue;
+			
+			auto audioNodeItr = audioGraph->nodes.find(node.id);
+			
+			if (audioNodeItr == audioGraph->nodes.end())
+				continue;
+			
+			AudioNodeBase * audioNode = audioNodeItr->second;
+			
+			auto & audioNodeInputs = audioNode->inputs;
+			
+			for (auto & inputValueItr : node.inputValues)
 			{
-				if (typeDefintion->inputSockets[i].name == inputName)
+				const std::string & inputName = inputValueItr.first;
+				const std::string & inputValue = inputValueItr.second;
+				
+				for (size_t i = 0; i < typeDefintion->inputSockets.size(); ++i)
 				{
-					if (i < audioNodeInputs.size())
+					if (typeDefintion->inputSockets[i].name == inputName)
 					{
-						if (audioNodeInputs[i].isConnected() == false)
+						if (i < audioNodeInputs.size())
 						{
-							audioGraph->connectToInputLiteral(audioNodeInputs[i], inputValue);
+							if (audioNodeInputs[i].isConnected() == false)
+							{
+								audioGraph->connectToInputLiteral(audioNodeInputs[i], inputValue);
+							}
 						}
 					}
 				}
 			}
 		}
-	}
-	
-	for (auto & audioNodeItr : audioGraph->nodes)
-	{
-		auto nodeId = audioNodeItr.first;
-		auto nodeItr = graph.nodes.find(nodeId);
-		auto & node = nodeItr->second;
-		auto audioNode = audioNodeItr.second;
 		
-		audioNode->init(node);
+		for (auto & audioNodeItr : audioGraph->nodes)
+		{
+			auto nodeId = audioNodeItr.first;
+			auto nodeItr = graph.nodes.find(nodeId);
+			auto & node = nodeItr->second;
+			auto audioNode = audioNodeItr.second;
+			
+			audioNode->init(node);
+		}
+		
+		audioGraph->pushStateDescriptorUpdate();
 	}
-	
-	audioGraph->pushStateDescriptorUpdate();
-	
-	Assert(g_currentAudioGraph == audioGraph);
-	g_currentAudioGraph = nullptr;
+	popAudioGraph();
 	
 	return audioGraph;
 }
 
 //
+
+#include "framework.h"
 
 void drawFilterResponse(const AudioNodeBase * node, const float sx, const float sy)
 {

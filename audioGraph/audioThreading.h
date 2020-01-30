@@ -33,7 +33,7 @@ struct SDL_mutex;
 
 /**
  * AudioMutex_Shared contains a shared reference to a SDL mutex.
- * It provides lock and unlock methods which will lock and unlock the mutex, as well as perform some additional checks in debug mode.
+ * It provides lock and unlock methods which will lock and unlock the mutex.
  */
 struct AudioMutex_Shared
 {
@@ -68,7 +68,7 @@ struct AudioMutex
 };
 
 /**
- * Helper object which can be locked to the current thread (using initThreadId), and which can be used to check if the current thread is equal to the thread previously locked to, using checkThreadId.
+ * Helper object which can be locked to the current thread (using setThreadId), and which can be used to check if the current thread is equal to the thread previously locked to, using checkThreadId.
  */
 struct AudioThreadId
 {
@@ -76,7 +76,8 @@ struct AudioThreadId
 	
 	AudioThreadId();
 	
-	void initThreadId(); ///< Assigns the id of the current thread to 'id'.
+	void setThreadId();   ///< Assigns the id of the current thread to 'id'.
+	void clearThreadId(); ///< Clears the thread id assignment.
 	
 	bool checkThreadId() const; ///< Asserts the current thread is equal to the thread the object was previously assigned to.
 };
