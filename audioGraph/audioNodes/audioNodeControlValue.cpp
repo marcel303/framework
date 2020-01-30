@@ -26,6 +26,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "audioGraphManager.h"
 #include "audioNodeControlValue.h"
 

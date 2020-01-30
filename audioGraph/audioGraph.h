@@ -253,51 +253,6 @@ struct AudioGraph
 
 //
 
-struct AudioGraphGlobals
-{
-	struct Memf
-	{
-		float value1 = 0.f;
-		float value2 = 0.f;
-		float value3 = 0.f;
-		float value4 = 0.f;
-	};
-	
-	SDL_mutex * audioMutex;
-	
-	AudioVoiceManager * voiceMgr;
-	
-	AudioGraphManager * audioGraphMgr;
-	
-	AudioThreadId mainThreadId;
-	
-	std::vector<AudioControlValue> controlValues;
-	
-	std::map<std::string, Memf> memf;
-
-	double time;
-	
-	AudioGraphGlobals();
-	
-	// called from the app thread
-	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr, AudioGraphManager * audioGraphMgr);
-	void shut();
-	
-	// called from the audio thread
-	void tick(const float dt);
-	
-	// called from any thread
-	void registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY);
-	void unregisterControlValue(const char * name);
-	void exportControlValues();
-	
-	// called from any thread
-	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
-	Memf getMemf(const char * name);
-};
-
-//
-
 void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
 
 AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & typeName, AudioGraph * audioGraph);

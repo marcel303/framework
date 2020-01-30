@@ -26,6 +26,7 @@
 */
 
 #include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "audioNodeBase.h"
 #include "audioVoiceManager.h"
 #include "framework.h" // listFiles
