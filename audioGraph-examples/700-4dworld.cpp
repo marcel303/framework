@@ -1917,8 +1917,11 @@ int main(int argc, char * argv[])
 	
 	//
 	
+	std::string oscIpAddress = "127.0.0.1";
+	int oscUdpPort = 2000;
+	
 	AudioVoiceManager4D voiceMgr;
-	voiceMgr.init(mutex, DYNAMIC_CHANNEL_COUNT);
+	voiceMgr.init(mutex, DYNAMIC_CHANNEL_COUNT, oscIpAddress.c_str(), oscUdpPort);
 	voiceMgr.outputStereo = STEREO_OUTPUT;
 	s_voiceMgr = &voiceMgr;
 	
@@ -1943,12 +1946,9 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	std::string oscIpAddress = "127.0.0.1";
-	int oscUdpPort = 2000;
-	
 	AudioUpdateHandler audioUpdateHandler;
 	
-	audioUpdateHandler.init(mutex, oscIpAddress.c_str(), oscUdpPort);
+	audioUpdateHandler.init(mutex);
 	audioUpdateHandler.voiceMgr = &voiceMgr;
 	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 	
@@ -2099,6 +2099,10 @@ int main(int argc, char * argv[])
 					doSlider(world->desiredParams.craziness, "craziness", .6f, dt);
 					doBreak();
 					
+				// todo : maybe a better strategy is to have a block-process step/mutex,
+				//        and a audio-process step/mutex
+				//        block-process: interpolate control values. export to graph
+				//        audio-process: process audio graphs. generate audio
 					doLabel("shared memory", 0.f);
 					audioGraphMgr.context->audioMutex.lock();
 					auto controlValues = audioGraphMgr.context->controlValues;

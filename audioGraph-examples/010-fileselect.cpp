@@ -56,7 +56,7 @@ int main(int argc, char * argv[])
 		audioGraphMgr.init(mutex, &voiceMgr);
 
 		AudioUpdateHandler audioUpdateHandler;
-		audioUpdateHandler.init(mutex, nullptr, 0);
+		audioUpdateHandler.init(mutex);
 		audioUpdateHandler.voiceMgr = &voiceMgr;
 		audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 

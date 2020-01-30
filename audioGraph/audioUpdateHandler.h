@@ -27,7 +27,6 @@
 
 #pragma once
 
-#include "osc4d.h"
 #include "paobject.h"
 #include <atomic>
 #include <stdint.h>
@@ -37,13 +36,8 @@
 
 struct AudioGraphManager;
 struct AudioVoiceManager;
-struct Osc4DStream;
 
 struct SDL_mutex;
-
-//
-
-extern Osc4DStream * g_oscStream;
 
 //
 
@@ -88,8 +82,6 @@ struct AudioUpdateHandler : PortAudioHandler
 	
 	AudioGraphManager * audioGraphMgr;
 	
-	Osc4DStream * oscStream;
-	
 	double time;
 	
 	SDL_mutex * mutex;
@@ -102,10 +94,8 @@ struct AudioUpdateHandler : PortAudioHandler
 	AudioUpdateHandler();
 	virtual ~AudioUpdateHandler();
 	
-	void init(SDL_mutex * mutex, const char * ipAddress, const int udpPort);
+	void init(SDL_mutex * mutex);
 	void shut();
-	
-	void setOscEndpoint(const char * ipAddress, const int udpPort);
 	
 	virtual void portAudioCallback(
 		const void * inputBuffer,

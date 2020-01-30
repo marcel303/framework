@@ -30,19 +30,22 @@
 #include "Log.h"
 #include "soundmix.h" // AudioSource, audio buffer routines
 
+Osc4DStream * g_oscStream = nullptr;
+
 AudioVoiceManager4D::AudioVoiceManager4D()
 	: AudioVoiceManager(kType_4DSOUND)
 	, audioMutex()
 	, firstVoice(nullptr)
 	, colorIndex(0)
 	, numDynamicChannels(0)
+	, oscStream(nullptr)
 	, outputStereo(false)
 	, spat()
 	, lastSentSpat()
 {
 }
 	
-void AudioVoiceManager4D::init(SDL_mutex * _audioMutex, const int _numDynamicChannels)
+void AudioVoiceManager4D::init(SDL_mutex * _audioMutex, const int _numDynamicChannels, const char * ipAddress, const int udpPort)
 {
 	Assert(firstVoice == nullptr);
 	
@@ -50,10 +53,32 @@ void AudioVoiceManager4D::init(SDL_mutex * _audioMutex, const int _numDynamicCha
 	numDynamicChannels = _numDynamicChannels;
 	
 	audioMutex.mutex = _audioMutex;
+
+	//
+
+	Assert(oscStream == nullptr);
+	oscStream = new Osc4DStream();
+	if (ipAddress != nullptr)
+		oscStream->init(ipAddress, udpPort);
+	
+	Assert(g_oscStream == nullptr);
+	g_oscStream = oscStream;
 }
 
 void AudioVoiceManager4D::shut()
 {
+	Assert(g_oscStream == oscStream);
+	g_oscStream = nullptr;
+	
+	if (oscStream != nullptr)
+	{
+		oscStream->shut();
+		delete oscStream;
+		oscStream = nullptr;
+	}
+
+	//
+
 	Assert(firstVoice == nullptr);
 	
 	audioMutex.mutex = nullptr;
@@ -213,6 +238,13 @@ void AudioVoiceManager4D::generateAudio(float * __restrict samples, const int nu
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
 	
 	generateAudio(samples, numSamples, numChannels, true, 1.f, true, outputMode, true);
+
+	//
+
+	if (oscStream->isReady())
+	{
+		generateOsc(*oscStream, false);
+	}
 }
 
 void AudioVoiceManager4D::generateAudio(
@@ -609,6 +641,15 @@ void AudioVoiceManager4D::generateOsc(Osc4DStream & stream, const bool _forceSyn
 		{
 			LOG_ERR("%s", e.what());
 		}
+	}
+	audioMutex.unlock();
+}
+
+void AudioVoiceManager4D::setOscEndpoint(const char * ipAddress, const int udpPort)
+{
+	audioMutex.lock(); // setOscEndpoint
+	{
+		oscStream->setEndpoint(ipAddress, udpPort);
 	}
 	audioMutex.unlock();
 }

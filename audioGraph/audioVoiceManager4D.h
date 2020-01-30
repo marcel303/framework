@@ -31,7 +31,13 @@
 #include "osc4d.h"
 #include "Vec3.h"
 
+//
+
 struct Osc4DStream;
+
+//
+
+extern Osc4DStream * g_oscStream;
 
 /**
  * 4DSOUND engine version 1.6 audio voice.
@@ -278,6 +284,8 @@ private:
 	
 	int numDynamicChannels;
 	
+	Osc4DStream * oscStream;
+
 public:
 	bool outputStereo;
 	
@@ -309,7 +317,7 @@ public:
 	
 	AudioVoiceManager4D();
 	
-	void init(SDL_mutex * audioMutex, const int numDynamicChannels);
+	void init(SDL_mutex * audioMutex, const int numDynamicChannels, const char * ipAddress, const int udpPort);
 	void shut();
 	
 	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex = -1) override;
@@ -335,6 +343,8 @@ public:
 	 * @param forceSync When true, OSC messages will be sent for all spatialization parameters, not just the ones that changed. This can be helpful when the spatialization engine is started after the app, or for debugging purposes. Note it's generally not recommended to always set this to true, as it creates a lot of OSC traffic.
 	 */
 	void generateOsc(Osc4DStream & stream, const bool forceSync);
+
+	void setOscEndpoint(const char * ipAddress, const int udpPort);
 	
 private:
 	void updateDynamicChannelIndices();

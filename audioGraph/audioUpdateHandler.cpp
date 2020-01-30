@@ -30,13 +30,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioProfiling.h"
 #include "audioUpdateHandler.h"
 #include "Debugging.h"
-#include "osc4d.h"
 #include "Timer.h"
 #include <SDL2/SDL.h>
 
 #include "audioVoiceManager4D.h"
-
-Osc4DStream * g_oscStream = nullptr;
 
 float * g_audioInputChannels = nullptr;
 int g_numAudioInputChannels = 0;
@@ -45,7 +42,6 @@ AudioUpdateHandler::AudioUpdateHandler()
 	: updateTasks()
 	, voiceMgr(nullptr)
 	, audioGraphMgr(nullptr)
-	, oscStream(nullptr)
 	, time(0.0)
 	, mutex(nullptr)
 	, msecsPerTick(0)
@@ -60,7 +56,7 @@ AudioUpdateHandler::~AudioUpdateHandler()
 	shut();
 }
 
-void AudioUpdateHandler::init(SDL_mutex * _mutex, const char * ipAddress, const int udpPort)
+void AudioUpdateHandler::init(SDL_mutex * _mutex)
 {
 	Assert(_mutex != nullptr);
 	
@@ -72,36 +68,10 @@ void AudioUpdateHandler::init(SDL_mutex * _mutex, const char * ipAddress, const 
 	
 	Assert(mutex == nullptr);
 	mutex = _mutex;
-	
-	Assert(oscStream == nullptr);
-	oscStream = new Osc4DStream();
-	if (ipAddress != nullptr)
-		oscStream->init(ipAddress, udpPort);
-	
-	Assert(g_oscStream == nullptr);
-	g_oscStream = oscStream;
 }
 
 void AudioUpdateHandler::shut()
 {
-	Assert(g_oscStream == oscStream);
-	g_oscStream = nullptr;
-	
-	if (oscStream != nullptr)
-	{
-		oscStream->shut();
-		delete oscStream;
-		oscStream = nullptr;
-	}
-}
-
-void AudioUpdateHandler::setOscEndpoint(const char * ipAddress, const int udpPort)
-{
-	SDL_LockMutex(mutex); // setOscEndpoint
-	{
-		oscStream->setEndpoint(ipAddress, udpPort);
-	}
-	SDL_UnlockMutex(mutex);
 }
 
 void AudioUpdateHandler::portAudioCallback(
@@ -141,18 +111,6 @@ void AudioUpdateHandler::portAudioCallback(
 	if (voiceMgr != nullptr)
 	{
 		voiceMgr->generateAudio((float*)outputBuffer, framesPerBuffer, numOutputChannels);
-		
-		//
-		
-		if (oscStream->isReady())
-		{
-			if (voiceMgr->type == AudioVoiceManager::kType_4DSOUND)
-			{
-				AudioVoiceManager4D * voiceMgr4D = static_cast<AudioVoiceManager4D*>(voiceMgr);
-				
-				voiceMgr4D->generateOsc(*oscStream, false);
-			}
-		}
 	}
 	
 	//

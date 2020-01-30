@@ -585,7 +585,7 @@ int main(int argc, char * argv[])
 	//
 	
 	AudioUpdateHandler audioUpdateHandler;
-	audioUpdateHandler.init(mutex, nullptr, 0);
+	audioUpdateHandler.init(mutex);
 	audioUpdateHandler.updateTasks.push_back(world);
 	audioUpdateHandler.voiceMgr = &voiceMgr;
 	
