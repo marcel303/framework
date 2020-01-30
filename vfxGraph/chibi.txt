@@ -56,7 +56,8 @@ library vfxgraph-nodes
 
 	with_platform windows compile_definition __WINDOWS_MM__    *
 
-	link_translation_unit_using_function_call linkVfxNodes
+	                    link_translation_unit_using_function_call linkVfxNodes
+	with_platform macos link_translation_unit_using_function_call linkVfxNodes_Mac
 
 push_group vfxgraph-addons
 

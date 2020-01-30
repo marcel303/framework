@@ -502,19 +502,8 @@ float VfxDynamicLink::floatParam(const char * name, const float defaultValue) co
 
 //
 
-extern void linkVfxNodes();
-
-#if MACOS
-extern void linkVfxNodes_Mac();
-#endif
-
 void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
-	linkVfxNodes();
-#if MACOS
-	linkVfxNodes_Mac();
-#endif
-
 	createVfxTypeDefinitionLibrary(typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 }
 
