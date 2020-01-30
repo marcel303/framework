@@ -60,29 +60,11 @@ struct AudioUpdateTask
 
 struct AudioUpdateHandler : PortAudioHandler
 {
-	struct Command
-	{
-		enum Type
-		{
-			kType_None,
-			kType_ForceOscSync
-		};
-		
-		Type type;
-		
-		Command()
-			: type(kType_None)
-		{
-		}
-	};
-	
 	std::vector<AudioUpdateTask*> updateTasks;
 	
 	AudioVoiceManager * voiceMgr;
 	
 	AudioGraphManager * audioGraphMgr;
-	
-	double time;
 	
 	SDL_mutex * mutex;
 	

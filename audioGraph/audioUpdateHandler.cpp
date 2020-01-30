@@ -29,11 +29,9 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraphManager.h"
 #include "audioProfiling.h"
 #include "audioUpdateHandler.h"
+#include "audioVoiceManager.h"
 #include "Debugging.h"
 #include "Timer.h"
-#include <SDL2/SDL.h>
-
-#include "audioVoiceManager4D.h"
 
 float * g_audioInputChannels = nullptr;
 int g_numAudioInputChannels = 0;
@@ -42,7 +40,6 @@ AudioUpdateHandler::AudioUpdateHandler()
 	: updateTasks()
 	, voiceMgr(nullptr)
 	, audioGraphMgr(nullptr)
-	, time(0.0)
 	, mutex(nullptr)
 	, msecsPerTick(0)
 	, msecsPerSecond(0)
@@ -131,10 +128,6 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	g_audioInputChannels = nullptr;
 	g_numAudioInputChannels = 0;
-	
-	//
-	
-	time += dt;
 	
 	//
 	
