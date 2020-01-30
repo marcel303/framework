@@ -421,7 +421,7 @@ struct Ball : EntityBase
 		
 		// alive state
 		
-		if (graphInstance->audioGraph->isFLagSet("dead"))
+		if (graphInstance->audioGraph->isFlagSet("dead"))
 		{
 			dead = true;
 		}
@@ -493,7 +493,7 @@ struct Oneshot : EntityBase
 			}
 		}
 		
-		if (graphInstance->audioGraph->isFLagSet("voice.4d.rampedDown"))
+		if (graphInstance->audioGraph->isFlagSet("voice.4d.rampedDown"))
 		{
 			kill();
 		}
@@ -850,7 +850,7 @@ struct Bird : EntityBase
 		
 		// alive state
 		
-		if (graphInstance->audioGraph->isFLagSet("dead"))
+		if (graphInstance->audioGraph->isFlagSet("dead"))
 		{
 			dead = true;
 		}
@@ -911,7 +911,7 @@ struct Voices : EntityBase
 		
 		// alive state
 		
-		if (graphInstance->audioGraph->isFLagSet("dead"))
+		if (graphInstance->audioGraph->isFlagSet("dead"))
 		{
 			dead = true;
 		}
@@ -1135,7 +1135,7 @@ struct Machine : EntityBase
 		
 		// alive state
 		
-		if (graphInstance->audioGraph->isFLagSet("dead"))
+		if (graphInstance->audioGraph->isFlagSet("dead"))
 		{
 			dead = true;
 		}

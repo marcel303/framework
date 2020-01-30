@@ -321,11 +321,11 @@ void AudioNodeVoice4D::tick(const float dt)
 	
 	// update ramping
 	
-	if (g_currentAudioGraph->isFLagSet("voice.4d.rampUp"))
+	if (g_currentAudioGraph->isFlagSet("voice.4d.rampUp"))
 	{
 		voice->rampInfo.ramp = true;
 	}
-	else if (g_currentAudioGraph->isFLagSet("voice.4d.rampDown"))
+	else if (g_currentAudioGraph->isFlagSet("voice.4d.rampDown"))
 	{
 		voice->rampInfo.ramp = false;
 	}

@@ -223,7 +223,7 @@ struct AudioGraph
 	void setFlag(const char * name, const bool value = true);
 	void resetFlag(const char * name);
 	// called from the audio thread
-	bool isFLagSet(const char * name) const;
+	bool isFlagSet(const char * name) const;
 	
 	// called from any thread
 	void registerMemf(const char * name, const float value1, const float value2, const float value3, const float value4);

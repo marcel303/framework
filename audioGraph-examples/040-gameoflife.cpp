@@ -223,7 +223,7 @@ int main(int argc, char * argv[])
 					if (instance == nullptr)
 						continue;
 					
-					if (instance->audioGraph->isFLagSet("dead"))
+					if (instance->audioGraph->isFlagSet("dead"))
 						audioGraphMgr.free(instance, false);
 				}
 			}

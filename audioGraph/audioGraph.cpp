@@ -423,7 +423,7 @@ void AudioGraph::resetFlag(const char * name)
 	mutex.unlock();
 }
 
-bool AudioGraph::isFLagSet(const char * name) const
+bool AudioGraph::isFlagSet(const char * name) const
 {
 	bool result;
 	

@@ -65,7 +65,7 @@ void AudioNodeFlags::tick(const float dt)
 	
 	if (flag != nullptr)
 	{
-		isSet = g_currentAudioGraph->isFLagSet(flag);
+		isSet = g_currentAudioGraph->isFlagSet(flag);
 	}
 	
 	if (isSet != isSetOutput)
