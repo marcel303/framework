@@ -42,8 +42,6 @@ library audiograph-nodes
 	depend_library libavgraph-core
 	depend_library libosc
 
-# fixme : conglomerate affects other libraries ?
-
 	header_path objects expose
 
 	add_files audioNodes_all.cpp audioNodes_all.h
@@ -53,11 +51,12 @@ library audiograph-nodes
 	scan_files cpp path audioNodes conglomerate audioNodes_all.h
 	scan_files h   path audioNodes conglomerate audioNodes_all.h
 
+	link_translation_unit_using_function_call linkAudioNodes
+
 library audiograph
 
 	depend_library audiograph-core
-	# todo : depend on audiograph-nodes to provides the basic nodes
-	#depend_library audiograph-nodes
+	depend_library audiograph-nodes
 	depend_library binaural
 	depend_library framework
 	depend_library libavgraph
@@ -67,9 +66,7 @@ library audiograph
 	header_path .       expose
 	header_path objects expose
 
-	scan_files cpp
+	scan_files cpp exclude_path audioNodes_all.cpp
 	scan_files h
 	scan_files cpp path objects    group objects
 	scan_files h   path objects    group objects
-	scan_files cpp path audioNodes group audioNodes conglomerate audioNodes_all.h
-	scan_files h   path audioNodes group audioNodes conglomerate audioNodes_all.h
