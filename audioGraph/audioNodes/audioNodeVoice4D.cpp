@@ -587,7 +587,7 @@ void AudioNodeVoice4DGlobals::tick(const float dt)
 		return;
 	}
 	
-	AudioVoiceManager * voiceMgr = g_currentAudioGraph->globals->voiceMgr;
+	AudioVoiceManager * voiceMgr = g_currentAudioGraph->context->voiceMgr;
 	
 	if (voiceMgr->type != AudioVoiceManager::kType_4DSOUND)
 	{

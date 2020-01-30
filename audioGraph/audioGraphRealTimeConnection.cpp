@@ -95,18 +95,18 @@ struct AudioScope
 
 //
 
-AudioRealTimeConnection::AudioRealTimeConnection(AudioValueHistorySet * _audioValueHistorySet, AudioGraphGlobals * _globals)
+AudioRealTimeConnection::AudioRealTimeConnection(AudioValueHistorySet * _audioValueHistorySet, AudioGraphContext * in_context)
 	: GraphEdit_RealTimeConnection()
 	, audioGraph(nullptr)
 	, audioGraphPtr(nullptr)
 	, audioMutex(nullptr)
 	, isLoading(false)
 	, audioValueHistorySet(nullptr)
-	, globals(nullptr)
+	, context(nullptr)
 {
 	audioValueHistorySet = _audioValueHistorySet;
 	
-	globals = _globals;
+	context = in_context;
 }
 
 AudioRealTimeConnection::~AudioRealTimeConnection()
@@ -219,7 +219,7 @@ void AudioRealTimeConnection::loadBegin()
 
 void AudioRealTimeConnection::loadEnd(GraphEdit & graphEdit)
 {
-	audioGraph = constructAudioGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary, globals, false);
+	audioGraph = constructAudioGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary, context, false);
 	*audioGraphPtr = audioGraph;
 	
 	isLoading = false;

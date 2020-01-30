@@ -26,6 +26,7 @@
 */
 
 #include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "audioGraphManager.h"
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
@@ -162,7 +163,7 @@ int main(int argc, char * argv[])
 					SDL_LockMutex(mutex);
 					{
 						const int count =
-							audioGraphMgr.globals->controlValues.size() +
+							audioGraphMgr.context->controlValues.size() +
 							instance->audioGraph->stateDescriptor.controlValues.size() +
 							instance->audioGraph->stateDescriptor.events.size();
 						
@@ -178,7 +179,7 @@ int main(int argc, char * argv[])
 						
 						int index = 0;
 						
-						for (auto & controlValue : audioGraphMgr.globals->controlValues)
+						for (auto & controlValue : audioGraphMgr.context->controlValues)
 						{
 							doControlValue(controlValue, index, selectedIndex, 'G', c);
 							

@@ -31,7 +31,7 @@
 #include <math.h>
 #include <SDL2/SDL_mutex.h>
 
-AudioGraphGlobals::AudioGraphGlobals()
+AudioGraphContext::AudioGraphContext()
 	: audioMutex(nullptr)
 	, voiceMgr(nullptr)
 	, audioGraphMgr(nullptr)
@@ -42,7 +42,7 @@ AudioGraphGlobals::AudioGraphGlobals()
 {
 }
 
-void AudioGraphGlobals::init(SDL_mutex * mutex, AudioVoiceManager * _voiceMgr, AudioGraphManager * _audioGraphMgr)
+void AudioGraphContext::init(SDL_mutex * mutex, AudioVoiceManager * _voiceMgr, AudioGraphManager * _audioGraphMgr)
 {
 	audioMutex = mutex;
 	
@@ -53,7 +53,7 @@ void AudioGraphGlobals::init(SDL_mutex * mutex, AudioVoiceManager * _voiceMgr, A
 	mainThreadId.initThreadId();
 }
 
-void AudioGraphGlobals::shut()
+void AudioGraphContext::shut()
 {
 	audioGraphMgr = nullptr;
 	
@@ -62,7 +62,7 @@ void AudioGraphGlobals::shut()
 
 // todo : is this ticked on the main thread or the audio thread ?
 //        audioGraphMgr ticks this on the audio thread
-void AudioGraphGlobals::tick(const float dt)
+void AudioGraphContext::tick(const float dt)
 {
 	// update control values
 
@@ -79,7 +79,7 @@ void AudioGraphGlobals::tick(const float dt)
 	time += dt;
 }
 
-void AudioGraphGlobals::registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY)
+void AudioGraphContext::registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY)
 {
 	//rteMutex.lock(); // todo
 	
@@ -130,7 +130,7 @@ void AudioGraphGlobals::registerControlValue(AudioControlValue::Type type, const
 	//rteMutex.unlock();
 }
 
-void AudioGraphGlobals::unregisterControlValue(const char * name)
+void AudioGraphContext::unregisterControlValue(const char * name)
 {
 	SDL_LockMutex(audioMutex);
 	{
@@ -165,7 +165,7 @@ void AudioGraphGlobals::unregisterControlValue(const char * name)
 	SDL_UnlockMutex(audioMutex);
 }
 
-void AudioGraphGlobals::exportControlValues()
+void AudioGraphContext::exportControlValues()
 {
 	SDL_LockMutex(audioMutex);
 	{
@@ -177,7 +177,7 @@ void AudioGraphGlobals::exportControlValues()
 	SDL_UnlockMutex(audioMutex);
 }
 
-void AudioGraphGlobals::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
+void AudioGraphContext::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
 	SDL_LockMutex(audioMutex);
 	{
@@ -191,7 +191,7 @@ void AudioGraphGlobals::setMemf(const char * name, const float value1, const flo
 	SDL_UnlockMutex(audioMutex);
 }
 
-AudioGraphGlobals::Memf AudioGraphGlobals::getMemf(const char * name)
+AudioGraphContext::Memf AudioGraphContext::getMemf(const char * name)
 {
 	Memf result;
 	

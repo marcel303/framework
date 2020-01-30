@@ -37,7 +37,7 @@ struct AudioVoiceManager;
 
 struct SDL_mutex;
 
-struct AudioGraphGlobals
+struct AudioGraphContext
 {
 	struct Memf
 	{
@@ -61,7 +61,7 @@ struct AudioGraphGlobals
 
 	double time;
 	
-	AudioGraphGlobals();
+	AudioGraphContext();
 	
 	// called from the app thread
 	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr, AudioGraphManager * audioGraphMgr);

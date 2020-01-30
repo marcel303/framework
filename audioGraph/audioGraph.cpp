@@ -46,8 +46,8 @@ AUDIO_THREAD_LOCAL AudioGraph * g_currentAudioGraph = nullptr;
 
 //
 
-AudioGraph::AudioGraph(AudioGraphGlobals * _globals, const bool _isPaused)
-	: isPaused(_isPaused)
+AudioGraph::AudioGraph(AudioGraphContext * in_context, const bool in_isPaused)
+	: isPaused(in_isPaused)
 	, rampDownRequested(false)
 	, rampDown(false)
 	, rampedDown(false)
@@ -60,19 +60,19 @@ AudioGraph::AudioGraph(AudioGraphGlobals * _globals, const bool _isPaused)
 	, time(0.0)
 	, stateDescriptor()
 	, pushedStateDescriptorUpdate(nullptr)
-	, globals(nullptr)
+	, context(nullptr)
 	, mutex()
 	, rteMutex_main()
 	, rteMutex_audio()
 {
-// todo : use the mutex from globals, so the audio graph can share it with all other graphs, ensuring state descriptor updates are sync'ed across all audio graph instances
+// todo : use the mutex from the context, so the audio graph can share it with all other graphs, ensuring state descriptor updates are sync'ed across all audio graph instances
 
 	mutex.init();
 	
 	rteMutex_main.init();
 	rteMutex_audio.init();
 	
-	globals = _globals;
+	context = in_context;
 }
 
 AudioGraph::~AudioGraph()
@@ -224,7 +224,7 @@ void AudioGraph::connectToInputLiteral(AudioPlug & input, const std::string & in
 
 bool AudioGraph::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
 {
-	if (globals->voiceMgr->allocVoice(voice, source, name, doRamping, rampDelay, rampTime, channelIndex))
+	if (context->voiceMgr->allocVoice(voice, source, name, doRamping, rampDelay, rampTime, channelIndex))
 	{
 		Assert(audioVoices.count(voice) == 0);
 		audioVoices.insert(voice);
@@ -243,7 +243,7 @@ void AudioGraph::freeVoice(AudioVoice *& voice)
 		Assert(audioVoices.count(voice) != 0);
 		audioVoices.erase(voice);
 		
-		globals->voiceMgr->freeVoice(voice);
+		context->voiceMgr->freeVoice(voice);
 	}
 }
 
@@ -264,7 +264,7 @@ void AudioGraph::unlockControlValues()
 
 void AudioGraph::syncMainToAudio()
 {
-	Assert(globals->mainThreadId.checkThreadId() == false);
+	Assert(context->mainThreadId.checkThreadId() == false);
 	
 	mutex.lock();
 	{
@@ -575,7 +575,7 @@ void AudioGraph::unregisterControlValue(const char * name)
 
 void AudioGraph::pushStateDescriptorUpdate()
 {
-	Assert(globals->mainThreadId.checkThreadId() == true);
+	Assert(context->mainThreadId.checkThreadId() == true);
 	
 	// build and push a state descriptor update message
 
@@ -709,7 +709,7 @@ void AudioGraph::unregisterEvent(const char * name)
 
 void AudioGraph::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
-	Assert(globals->mainThreadId.checkThreadId() == true);
+	Assert(context->mainThreadId.checkThreadId() == true);
 
 	rteMutex_main.lock();
 	{
@@ -730,7 +730,7 @@ void AudioGraph::setMemf(const char * name, const float value1, const float valu
 
 AudioGraph::Memf AudioGraph::getMemf(const char * name) const
 {
-	Assert(globals->mainThreadId.checkThreadId() == false);
+	Assert(context->mainThreadId.checkThreadId() == false);
 
 	Memf result;
 	
@@ -755,7 +755,7 @@ AudioGraph::Memf AudioGraph::getMemf(const char * name) const
 
 void AudioGraph::setMems(const char * name, const char * value)
 {
-	Assert(globals->mainThreadId.checkThreadId() == true);
+	Assert(context->mainThreadId.checkThreadId() == true);
 
 	rteMutex_main.lock();
 	{
@@ -774,7 +774,7 @@ void AudioGraph::setMems(const char * name, const char * value)
 
 void AudioGraph::getMems(const char * name, std::string & result) const
 {
-	Assert(globals->mainThreadId.checkThreadId() == false);
+	Assert(context->mainThreadId.checkThreadId() == false);
 
 	rteMutex_audio.lock();
 	{
@@ -797,7 +797,7 @@ void AudioGraph::getMems(const char * name, std::string & result) const
 
 void AudioGraph::triggerEvent(const char * event)
 {
-	Assert(globals->mainThreadId.checkThreadId() == true);
+	Assert(context->mainThreadId.checkThreadId() == true);
 	
 	triggeredEvents.insert(event);
 }
@@ -843,13 +843,13 @@ AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & ty
 
 extern void linkAudioNodes();
 
-AudioGraph * constructAudioGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals, const bool createdPaused)
+AudioGraph * constructAudioGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphContext * context, const bool createdPaused)
 {
 	linkAudioNodes();
 	
 	//
 	
-	AudioGraph * audioGraph = new AudioGraph(globals, createdPaused);
+	AudioGraph * audioGraph = new AudioGraph(context, createdPaused);
 	
 #if AUDIO_GRAPH_ENABLE_TIMING
 	audioGraph->graph = const_cast<Graph*>(&graph);

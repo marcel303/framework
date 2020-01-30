@@ -44,8 +44,8 @@
 
 struct AudioBuffer;
 struct AudioGraph;
+struct AudioGraphContext;
 struct AudioGraphManager;
-struct AudioGraphGlobals;
 struct AudioNodeBase;
 struct AudioOutputChannel;
 struct AudioPlug;
@@ -193,14 +193,14 @@ struct AudioGraph
 	
 	std::set<std::string> activeFlags;
 	
-	AudioGraphGlobals * globals;
+	AudioGraphContext * context;
 	
 	AudioMutex mutex;
 	
 	AudioMutex rteMutex_main;
 	AudioMutex rteMutex_audio;
 	
-	AudioGraph(AudioGraphGlobals * globals, const bool isPaused);
+	AudioGraph(AudioGraphContext * context, const bool isPaused);
 	~AudioGraph();
 	
 	void destroy();
@@ -257,7 +257,7 @@ void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefiniti
 
 AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & typeName, AudioGraph * audioGraph);
 
-AudioGraph * constructAudioGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphGlobals * globals, const bool createdPaused);
+AudioGraph * constructAudioGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphContext * context, const bool createdPaused);
 
 //
 

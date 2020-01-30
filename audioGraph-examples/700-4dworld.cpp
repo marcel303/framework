@@ -26,6 +26,7 @@
 */
 
 #include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "audioGraphManager.h"
 #include "audioTypes.h"
 #include "audioUpdateHandler.h"
@@ -2099,9 +2100,9 @@ int main(int argc, char * argv[])
 					doBreak();
 					
 					doLabel("shared memory", 0.f);
-					SDL_LockMutex(audioGraphMgr.globals->audioMutex);
-					auto controlValues = audioGraphMgr.globals->controlValues;
-					SDL_UnlockMutex(audioGraphMgr.globals->audioMutex);
+					SDL_LockMutex(audioGraphMgr.context->audioMutex);
+					auto controlValues = audioGraphMgr.context->controlValues;
+					SDL_UnlockMutex(audioGraphMgr.context->audioMutex);
 					int padIndex = 0;
 					for (int i = 0; i < controlValues.size(); ++i)
 					{
@@ -2131,10 +2132,10 @@ int main(int argc, char * argv[])
 								padIndex = 0;
 						}
 					}
-					SDL_LockMutex(audioGraphMgr.globals->audioMutex);
+					SDL_LockMutex(audioGraphMgr.context->audioMutex);
 					for (auto & srcControlValue : controlValues)
 					{
-						for (auto & dstControlValue : audioGraphMgr.globals->controlValues)
+						for (auto & dstControlValue : audioGraphMgr.context->controlValues)
 						{
 							if (srcControlValue.name == dstControlValue.name)
 							{
@@ -2144,7 +2145,7 @@ int main(int argc, char * argv[])
 							}
 						}
 					}
-					SDL_UnlockMutex(audioGraphMgr.globals->audioMutex);
+					SDL_UnlockMutex(audioGraphMgr.context->audioMutex);
 					
 					// per instance control values
 					if (audioGraphMgr.selectedFile != nullptr && audioGraphMgr.selectedFile->activeInstance != nullptr)
