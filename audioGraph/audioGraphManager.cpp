@@ -255,6 +255,8 @@ AudioGraphFile::~AudioGraphFile()
 
 //
 
+// todo : move this to audioGraphGlobals.cpp
+
 AudioGraphGlobals::AudioGraphGlobals()
 	: audioMutex(nullptr)
 	, voiceMgr(nullptr)
@@ -262,6 +264,7 @@ AudioGraphGlobals::AudioGraphGlobals()
 	, mainThreadId()
 	, controlValues()
 	, memf()
+	, time(0.0)
 {
 }
 
@@ -283,6 +286,8 @@ void AudioGraphGlobals::shut()
 	audioMutex = nullptr;
 }
 
+// todo : is this ticked on the main thread or the audio thread ?
+//        audioGraphMgr ticks this on the audio thread
 void AudioGraphGlobals::tick(const float dt)
 {
 	// update control values
@@ -296,6 +301,8 @@ void AudioGraphGlobals::tick(const float dt)
 	}
 
 	exportControlValues();
+
+	time += dt;
 }
 
 void AudioGraphGlobals::registerControlValue(AudioControlValue::Type type, const char * name, const float min, const float max, const float smoothness, const float defaultX, const float defaultY)
@@ -700,7 +707,7 @@ void AudioGraphManager_Basic::tickAudio(const float dt)
 		// tick graph instances
 		
 		for (auto & instance : instances)
-			instance->audioGraph->tick(dt, false);
+			instance->audioGraph->tickAudio(dt, false);
 	}
 	audioMutex.unlock();
 }
@@ -1092,7 +1099,7 @@ void AudioGraphManager_RTE::tickAudio(const float dt)
 		
 		for (auto & file : files)
 			for (auto & instance : file.second->instanceList)
-				instance->audioGraph->tick(dt, false);
+				instance->audioGraph->tickAudio(dt, false);
 	}
 	SDL_UnlockMutex(audioMutex);
 }
@@ -1525,7 +1532,7 @@ void AudioGraphManager_MultiRTE::tickAudio(const float dt)
 		
 		for (auto & file : files)
 			for (auto & instance : file.second->instanceList)
-				instance->audioGraph->tick(dt, false);
+				instance->audioGraph->tickAudio(dt, false);
 	}
 	SDL_UnlockMutex(audioMutex);
 }

@@ -43,8 +43,6 @@
 
 AUDIO_THREAD_LOCAL AudioGraph * g_currentAudioGraph = nullptr;
 
-double g_currentAudioTime = 0.0;
-
 //
 
 AudioGraph::AudioGraph(AudioGraphGlobals * _globals, const bool _isPaused)
@@ -319,7 +317,7 @@ void AudioGraph::syncMainToAudio()
 	mutex.unlock();
 }
 
-void AudioGraph::tick(const float dt, const bool in_syncMainToAudio)
+void AudioGraph::tickAudio(const float dt, const bool in_syncMainToAudio)
 {
 	audioCpuTimingBlock(AudioGraph_Tick);
 	

@@ -119,8 +119,6 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	const float dt = framesPerBuffer / float(SAMPLE_RATE);
 	
-	g_currentAudioTime = time;
-	
 	g_audioInputChannels = (float*)inputBuffer;
 	g_numAudioInputChannels = numInputChannels;
 	
@@ -175,8 +173,6 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	g_audioInputChannels = nullptr;
 	g_numAudioInputChannels = 0;
-	
-	g_currentAudioTime = 0.0;
 	
 	//
 	

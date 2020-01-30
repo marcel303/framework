@@ -48,9 +48,9 @@ AUDIO_NODE_TYPE(AudioNodeTime)
 static double getAudioTime(const AudioNodeTime::Mode mode)
 {
 	if (mode == AudioNodeTime::kMode_AudioLocal)
-		return g_currentAudioTime;
-	else
 		return g_currentAudioGraph->time;
+	else
+		return g_currentAudioGraph->globals->time;
 }
 
 AudioNodeTime::AudioNodeTime()

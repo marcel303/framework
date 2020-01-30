@@ -57,8 +57,6 @@ struct SDL_mutex;
 
 extern AUDIO_THREAD_LOCAL AudioGraph * g_currentAudioGraph;
 
-extern double g_currentAudioTime;
-
 struct AudioGraph
 {
 	struct ValueToFree
@@ -218,7 +216,7 @@ struct AudioGraph
 	
 	// called from the audio thread
 	void syncMainToAudio(); // synchronize control values and other state from the main thread to the audio thread
-	void tick(const float dt, const bool fetchStateUpdates);
+	void tickAudio(const float dt, const bool fetchStateUpdates);
 	
 	// called from the main thread
 	void setFlag(const char * name, const bool value = true);
@@ -276,6 +274,8 @@ struct AudioGraphGlobals
 	std::vector<AudioControlValue> controlValues;
 	
 	std::map<std::string, Memf> memf;
+
+	double time;
 	
 	AudioGraphGlobals();
 	
