@@ -76,7 +76,7 @@ float strokeMask()
 }
 #endif
 
-void main(void)
+void main()
 {
 	vec4 result;
 	
