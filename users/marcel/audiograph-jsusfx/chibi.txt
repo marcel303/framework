@@ -7,3 +7,5 @@ library audiograph-jsusfx shared
 	add_files audioNodeJsusFx.h
 
 	header_path . expose
+
+	link_translation_unit_using_function_call linkAudioNodes_JsusFx

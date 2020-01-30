@@ -711,3 +711,7 @@ void AudioNodeJsusFx::getDescription(AudioNodeDescription & d)
 
 #undef SLIDER_INDEX
 #undef AUDIOINPUT_INDEX
+
+void linkAudioNodes_JsusFx()
+{
+}
