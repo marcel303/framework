@@ -169,9 +169,9 @@ library vfxgraph-wiimote
 
 	header_path vfxNodes-wiimote expose
 
-	scan_files cpp path vfxNodes-syphon
-	scan_files h   path vfxNodes-syphon
-	scan_files mm  path vfxNodes-syphon
+	scan_files cpp path vfxNodes-wiimote
+	scan_files h   path vfxNodes-wiimote
+	scan_files mm  path vfxNodes-wiimote
 
 	with_platform macos   compile_definition ENABLE_WIIMOTE 0 expose
 	with_platform linux   compile_definition ENABLE_WIIMOTE 0 expose
