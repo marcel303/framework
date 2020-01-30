@@ -1,1 +1,1 @@
-
+static void dummy() { }
