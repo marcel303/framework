@@ -788,9 +788,7 @@ int main(int argc, char * argv[])
 		audioGraphMgr.init(mutex, &voiceMgr);
 
 		AudioUpdateHandler audioUpdateHandler;
-		audioUpdateHandler.init(mutex);
-		audioUpdateHandler.voiceMgr = &voiceMgr;
-		audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
+		audioUpdateHandler.init(mutex, &voiceMgr, &audioGraphMgr);
 		
 		MyAudioSource source;
 		

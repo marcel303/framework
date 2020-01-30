@@ -62,11 +62,11 @@ struct AudioUpdateHandler : PortAudioHandler
 {
 	std::vector<AudioUpdateTask*> updateTasks;
 	
+	SDL_mutex * mutex;
+
 	AudioVoiceManager * voiceMgr;
 	
 	AudioGraphManager * audioGraphMgr;
-	
-	SDL_mutex * mutex;
 	
 	std::atomic<int64_t> msecsPerTick;
 	std::atomic<int64_t> msecsPerSecond;
@@ -76,7 +76,7 @@ struct AudioUpdateHandler : PortAudioHandler
 	AudioUpdateHandler();
 	virtual ~AudioUpdateHandler();
 	
-	void init(SDL_mutex * mutex);
+	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr, AudioGraphManager * audioGraphMgr);
 	void shut();
 	
 	virtual void portAudioCallback(

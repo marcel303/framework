@@ -1948,9 +1948,7 @@ int main(int argc, char * argv[])
 	
 	AudioUpdateHandler audioUpdateHandler;
 	
-	audioUpdateHandler.init(mutex);
-	audioUpdateHandler.voiceMgr = &voiceMgr;
-	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
+	audioUpdateHandler.init(mutex, &voiceMgr, &audioGraphMgr);
 	
 	//
 	

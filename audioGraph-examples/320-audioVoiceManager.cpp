@@ -585,9 +585,8 @@ int main(int argc, char * argv[])
 	//
 	
 	AudioUpdateHandler audioUpdateHandler;
-	audioUpdateHandler.init(mutex);
+	audioUpdateHandler.init(mutex, &voiceMgr, nullptr);
 	audioUpdateHandler.updateTasks.push_back(world);
-	audioUpdateHandler.voiceMgr = &voiceMgr;
 	
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);

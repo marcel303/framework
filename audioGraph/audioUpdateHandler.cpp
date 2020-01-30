@@ -38,9 +38,9 @@ int g_numAudioInputChannels = 0;
 
 AudioUpdateHandler::AudioUpdateHandler()
 	: updateTasks()
+	, mutex(nullptr)
 	, voiceMgr(nullptr)
 	, audioGraphMgr(nullptr)
-	, mutex(nullptr)
 	, msecsPerTick(0)
 	, msecsPerSecond(0)
 	, msecsTotal(0)
@@ -53,9 +53,9 @@ AudioUpdateHandler::~AudioUpdateHandler()
 	shut();
 }
 
-void AudioUpdateHandler::init(SDL_mutex * _mutex)
+void AudioUpdateHandler::init(SDL_mutex * in_mutex, AudioVoiceManager * in_voiceMgr, AudioGraphManager * in_audioGraphMgr)
 {
-	Assert(_mutex != nullptr);
+	Assert(in_mutex != nullptr);
 	
 	//
 	
@@ -64,7 +64,12 @@ void AudioUpdateHandler::init(SDL_mutex * _mutex)
 	//
 	
 	Assert(mutex == nullptr);
-	mutex = _mutex;
+	Assert(voiceMgr != nullptr);
+	Assert(audioGraphMgr != nullptr);
+	
+	mutex = in_mutex;
+	voiceMgr = in_voiceMgr;
+	audioGraphMgr = in_audioGraphMgr;
 }
 
 void AudioUpdateHandler::shut()
