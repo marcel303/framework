@@ -28,6 +28,7 @@
 #pragma once
 
 #include "audioThreading.h"
+#include "audioTypeDB.h"
 #include "audioTypes.h"
 #include "graph.h"
 #include <atomic>
@@ -253,11 +254,16 @@ struct AudioGraph
 
 //
 
-void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
+AudioNodeBase * createAudioNode(
+	const GraphNodeId nodeId,
+	const std::string & typeName,
+	AudioGraph * audioGraph);
 
-AudioNodeBase * createAudioNode(const GraphNodeId nodeId, const std::string & typeName, AudioGraph * audioGraph);
-
-AudioGraph * constructAudioGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, AudioGraphContext * context, const bool createdPaused);
+AudioGraph * constructAudioGraph(
+	const Graph & graph,
+	const Graph_TypeDefinitionLibrary * typeDefinitionLibrary,
+	AudioGraphContext * context,
+	const bool createdPaused);
 
 //
 

@@ -171,3 +171,10 @@ void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefiniti
 	createAudioEnumTypeDefinitions(typeDefinitionLibrary, enumRegistrationList);
 	createAudioNodeTypeDefinitions(typeDefinitionLibrary, nodeRegistrationList);
 }
+
+//
+
+void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
+{
+	createAudioTypeDefinitionLibrary(typeDefinitionLibrary, g_audioEnumTypeRegistrationList, g_audioNodeTypeRegistrationList);
+}

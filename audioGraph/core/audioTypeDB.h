@@ -27,8 +27,26 @@
 
 #pragma once
 
-void createAudioValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
-void createAudioEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * registrationList);
-void createAudioNodeTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioNodeTypeRegistration * registrationList);
+struct Graph_TypeDefinitionLibrary;
 
-void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const AudioEnumTypeRegistration * enumRegistrationList, const AudioNodeTypeRegistration * nodeRegistrationList);
+struct AudioEnumTypeRegistration;
+struct AudioNodeTypeRegistration;
+
+void createAudioValueTypeDefinitions(
+	Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
+
+void createAudioEnumTypeDefinitions(
+	Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
+	const AudioEnumTypeRegistration * registrationList);
+
+void createAudioNodeTypeDefinitions(
+	Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
+	const AudioNodeTypeRegistration * registrationList);
+
+void createAudioTypeDefinitionLibrary(
+	Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
+	const AudioEnumTypeRegistration * enumRegistrationList,
+	const AudioNodeTypeRegistration * nodeRegistrationList);
+
+void createAudioTypeDefinitionLibrary(
+	Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
