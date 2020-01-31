@@ -60,14 +60,16 @@ const char * LineReader::get_next_line(const bool skipEmptyLinesAndComments)
 	}
 	else
 	{
-		// calculate indentation level. less than ours? return nullptr
+		// calculate indentation level. less than ours? we reached the end of a block: return nullptr
 		
 		const size_t next_level = calculateIndentationLevel(line);
 		
 		if (next_level < indentation_level)
 			return nullptr;
 		
-	// todo : check for indentation level increment greater than one in various place
+		// check we aren't skipping more than one indentation level
+		
+		Assert(next_level <= indentation_level + 1);
 		
 		// return line with appropriate offset to compensate for indentation
 		

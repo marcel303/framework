@@ -8,9 +8,9 @@
 #include "Log.h"
 #include "Parse.h" // todo : remove this dependency
 #include "StringEx.h" // strcpy_s
-#include "Vec2.h"
-#include "Vec3.h"
-#include "Vec4.h"
+#include "Vec2.h" // plain type supported for serialization
+#include "Vec3.h" // plain type supported for serialization
+#include "Vec4.h" // plain type supported for serialization
 
 inline bool is_whitespace(const char c)
 {
@@ -339,11 +339,17 @@ bool object_fromlines_recursive(
 		
 		while ((line = line_reader.get_next_line(true)) != nullptr)
 		{
+			if (line[0] == '\t')
+			{
+				// only one level of identation may be added per line
+				
+				LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+				return false;
+			}
+			
 			// determine the structured member name
 			
 			const char * name = line;
-			
-			Assert(name[0] != '\t');
 			
 			// find the member inside the structured type
 			
@@ -394,6 +400,13 @@ bool object_fromlines_recursive(
 		{
 			return false;
 		}
+		else if (line[0] == '\t')
+		{
+			// only one level of identation may be added per line
+			
+			LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+			return false;
+		}
 		else
 		{
 			auto * plain_type = static_cast<const PlainType*>(type);
@@ -440,6 +453,13 @@ bool member_fromlines_recursive(
 					LOG_ERR("syntax error. expected '-' for next array element", 0);
 					result &= false;
 				}
+				else if (element[0] == '\t')
+				{
+					// only one level of identation may be added per line
+					
+					LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+					return false;
+				}
 				else
 				{
 					member_interface->vector_resize(object, member_interface->vector_size(object) + 1);
@@ -464,6 +484,14 @@ bool member_fromlines_recursive(
 			
 			while ((element = line_reader.get_next_line(true)))
 			{
+				if (element[0] == '\t')
+				{
+					// only one level of identation may be added per line
+					
+					LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+					return false;
+				}
+				
 				member_interface->vector_resize(object, member_interface->vector_size(object) + 1);
 				
 				auto * vector_object = member_interface->vector_access(object, member_interface->vector_size(object) - 1);

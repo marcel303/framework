@@ -121,5 +121,6 @@ public:
 	
 	void append_format(const char * format, ...);
 	
+	std::string to_string();
 	std::vector<std::string> to_lines(); // todo : remove
 };

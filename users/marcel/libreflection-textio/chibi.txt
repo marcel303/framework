@@ -1,5 +1,5 @@
 library libreflection-textio
-	# note : depending on libgg for logging. todo : remove dependency
+	# note : depending on libgg for serialization of basic types such as Vec2, Vec, and for logging functionality
 	depend_library libgg
 	depend_library libreflection
 	add_files lineReader.cpp lineReader.h
