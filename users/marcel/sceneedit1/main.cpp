@@ -37,9 +37,26 @@
 
 #define ENABLE_QUAT_FIXUP 1
 
+#if defined(DEBUG)
+	#define ENABLE_LOAD_AFTER_SAVE_TEST 1
+#else
+	#define ENABLE_LOAD_AFTER_SAVE_TEST 0 // do not alter
+#endif
+
 /*
 
 todo :
+
+- add lookat/focus option to scene structure view
+	- as a context menu
+- add 'Paste tree' to scene structure context menu
+- add support for copying node tree 'Copy tree'
+
+- add template file list / browser
+- add support for template editing
+- add option to add nodes from template
+
+done :
 
 + add libreflection-jsonio
 + remove json references from scene edit
@@ -48,16 +65,7 @@ todo :
 	+ add independent scrolling area for scene structure
 	+ add independent scrolling area for selected node
 + use scene structure tree to select nodes. remove inline editing
-- add lookat/focus option to scene structure view
-	- as a context menu
 + separate node traversal/scene structure view from node editor
-- add 'Paste tree' to scene structure context menu
-- add support for copying node tree 'Copy tree'
-
-- add template file list / browser
-- add support for template editing
-- add option to add nodes from template
-
 + add 'path' editor type hint. show a browser button and prompt a file dialog when pressed
 
 */
@@ -2125,14 +2133,7 @@ static bool node_to_clipboard_text(const SceneNode & node, std::string & text)
 			continue;
 	}
 	
-// todo : add more efficient to_string()
-	auto lines = line_writer.to_lines();
-	
-	for (auto & line : lines)
-	{
-		text += line;
-		text += '\n';
-	}
+	text = line_writer.to_string();
 	
 	return true;
 }
@@ -2149,6 +2150,8 @@ static bool node_from_clipboard_text(const char * text, SceneNode & node)
 	
 	const char * id = line_reader.get_next_line(true);
 	
+// todo : check for nullptr ?
+
 	if (strcmp(id, ":node") != 0)
 	{
 		return false;
@@ -2157,6 +2160,14 @@ static bool node_from_clipboard_text(const char * text, SceneNode & node)
 	for (;;)
 	{
 		const char * component_type_name = line_reader.get_next_line(true);
+		
+		if (component_type_name[0] == '\t')
+		{
+			// only one level of identation may be added per line
+			
+			logError("more than one level of identation added on line %d", line_reader.get_current_line_index());
+			return false;
+		}
 		
 		if (component_type_name == nullptr)
 			break;
@@ -2186,6 +2197,45 @@ static bool node_from_clipboard_text(const char * text, SceneNode & node)
 	}
 	
 	return true;
+}
+
+static bool load_scene_from_lines_nondestructive(std::vector<std::string> & lines, SceneEditor & sceneEditor)
+{
+	Scene tempScene;
+	tempScene.createRootNode();
+
+	if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
+	{
+		logError("failed to load scene from lines");
+		return false;
+	}
+	else
+	{
+		bool init_ok = true;
+		
+		for (auto node_itr : tempScene.nodes)
+			init_ok &= node_itr.second->initComponents();
+		
+		if (init_ok == false)
+		{
+			tempScene.freeAllNodesAndComponents();
+			return false;
+		}
+		else
+		{
+			sceneEditor.deferredBegin();
+			{
+				for (auto & node_itr : sceneEditor.scene.nodes)
+					sceneEditor.deferred.nodesToRemove.insert(node_itr.second->id);
+			}
+			sceneEditor.deferredEnd();
+			
+			sceneEditor.scene = tempScene;
+			tempScene.nodes.clear();
+			
+			return true;
+		}
+	}
 }
 
 int main(int argc, char * argv[])
@@ -2255,7 +2305,7 @@ int main(int argc, char * argv[])
 		
 		editor.tickEditor(dt, inputIsCaptured);
 		
-		// save load test. todo : remove test code
+		// save load test
 		
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_s))
 		{
@@ -2277,36 +2327,8 @@ int main(int argc, char * argv[])
 					logError("failed to save lines to file");
 				else
 				{
-				#if 1
-					Scene tempScene;
-					tempScene.createRootNode();
-					
-					if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
-						logError("failed to load scene from lines");
-					else
-					{
-						bool init_ok = true;
-						
-						for (auto node_itr : tempScene.nodes)
-							init_ok &= node_itr.second->initComponents();
-						
-						if (init_ok == false)
-						{
-							tempScene.freeAllNodesAndComponents();
-						}
-						else
-						{
-							editor.deferredBegin();
-							{
-								for (auto & node_itr : editor.scene.nodes)
-									editor.deferred.nodesToRemove.insert(node_itr.second->id);
-							}
-							editor.deferredEnd();
-							
-							editor.scene = tempScene;
-							tempScene.nodes.clear();
-						}
-					}
+				#if ENABLE_LOAD_AFTER_SAVE_TEST
+					load_scene_from_lines_nondestructive(lines, editor);
 				#endif
 				}
 			}
@@ -2330,37 +2352,7 @@ int main(int argc, char * argv[])
 			}
 			else
 			{
-				Scene tempScene;
-				tempScene.createRootNode();
-		
-				if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
-					logError("failed to load scene from lines");
-				else
-				{
-					// todo : create helper function to initialize scene after loading it
-					
-					bool init_ok = true;
-					
-					for (auto node_itr : tempScene.nodes)
-						init_ok &= node_itr.second->initComponents();
-					
-					if (init_ok == false)
-					{
-						tempScene.freeAllNodesAndComponents();
-					}
-					else
-					{
-						editor.deferredBegin();
-						{
-							for (auto & node_itr : editor.scene.nodes)
-								editor.deferred.nodesToRemove.insert(node_itr.second->id);
-						}
-						editor.deferredEnd();
-						
-						editor.scene = tempScene;
-						tempScene.nodes.clear();
-					}
-				}
+				load_scene_from_lines_nondestructive(lines, editor);
 			}
 			
 			auto t2 = SDL_GetTicks();
@@ -2373,7 +2365,9 @@ int main(int argc, char * argv[])
 			
 			// load scene description text file
 	
+		AssertMsg(false, "todo : use a nicer solution to handling relative paths", 0);
 			changeDirectory("textfiles"); // todo : use a nicer solution to handling relative paths
+			assert(false); // changeDirectory stuff will need to be fixed! this won't work after the load_scene_from_lines_nondestructive refactor
 			
 			std::vector<std::string> lines;
 			TextIO::LineEndings lineEndings;
@@ -2389,45 +2383,10 @@ int main(int argc, char * argv[])
 			}
 			else
 			{
-				tempScene.createRootNode();
-				
-				if (!parseSceneFromLines(g_typeDB, lines, tempScene))
-				{
-					logError("failed to parse scene from lines");
-					load_ok = false;
-				}
+				load_scene_from_lines_nondestructive(lines, editor);
 			}
 			
 			changeDirectory(".."); // fixme : remove
-			
-			if (load_ok == false)
-			{
-				tempScene.freeAllNodesAndComponents();
-			}
-			else
-			{
-				bool init_ok = true;
-				
-				for (auto node_itr : tempScene.nodes)
-					init_ok &= node_itr.second->initComponents();
-			
-				if (init_ok == false)
-				{
-					tempScene.freeAllNodesAndComponents();
-				}
-				else
-				{
-					editor.deferredBegin();
-					{
-						for (auto & node_itr : editor.scene.nodes)
-							editor.deferred.nodesToRemove.insert(node_itr.second->id);
-					}
-					editor.deferredEnd();
-					
-					editor.scene = tempScene;
-					tempScene.nodes.clear();
-				}
-			}
 		}
 		
 	// performance test. todo : remove this code

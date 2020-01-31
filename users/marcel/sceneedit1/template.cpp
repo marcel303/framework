@@ -29,7 +29,7 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 		{
 			// only one level of identation may be added per line
 			
-			LOG_ERR("more than one level of identation added one line %d", line_reader.get_current_line_index());
+			LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
 			return false;
 		}
 		
@@ -148,6 +148,14 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 			
 			while ((propertyName = line_reader.get_next_line(true)))
 			{
+				if (propertyName[0] == '\t')
+				{
+					// only one level of identation may be added per line
+					
+					LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+					return false;
+				}
+				
 				// add a new property
 				
 				current_component_element.properties.emplace_back(TemplateComponentProperty());
@@ -165,7 +173,17 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 					const char * value_line;
 					
 					while ((value_line = line_reader.get_next_line(false)))
+					{
+						if (value_line[0] == '\t')
+						{
+							// only one level of identation may be added per line
+							
+							LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+							return false;
+						}
+						
 						current_property_element.value_lines.push_back(value_line);
+					}
 				}
 				line_reader.pop_indent();
 			}
