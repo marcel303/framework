@@ -82,7 +82,7 @@ namespace gltf
 					
 					accessor.bufferView = json_accessor.value("bufferView", -1);
 					accessor.byteOffset = json_accessor.value("byteOffset", 0);
-					accessor.componentType = json_accessor.value("componentType", -1);
+					accessor.componentType = json_accessor.value("componentType", (ComponentType)-1);
 					accessor.normalized = json_accessor.value("normalized", false);
 					accessor.count = json_accessor.value("count", -1);
 					accessor.min = json_accessor.value("min", std::vector<float>());
@@ -223,7 +223,7 @@ namespace gltf
 								
 								primitive.indices = primitive_json.value("indices", -1);
 								primitive.material = primitive_json.value("material", -1);
-								primitive.mode = primitive_json.value("mode", 4);
+								primitive.mode = primitive_json.value("mode", kPrimitiveType_Triangles);
 								
 								for (auto primitive_member_itr = primitive_json.begin(); primitive_member_itr != primitive_json.end(); ++primitive_member_itr)
 								{
@@ -308,34 +308,10 @@ namespace gltf
 				{
 					gltf::Sampler & sampler = scene.samplers[idx++];
 					
-					sampler.minFilter = sampler_json.value("minFilter", -1);
-					sampler.magFilter = sampler_json.value("magFilter", -1);
-					sampler.wrapS = sampler_json.value("wrapS", -1);
-					sampler.wrapT = sampler_json.value("wrapT", -1);
-					
-					/*
-					minFilter:
-					9728 = NEAREST,
-					9729 = LINEAR,
-					9984 = NEAREST_MIPMAP_NEAREST,
-					9985 = LINEAR_MIPMAP_NEAREST,
-					9986 = NEAREST_MIPMAP_LINEAR,
-					9987 = LINEAR_MIPMAP_LINEAR
-					*/
-					
-					/*
-					magFilter:
-					9728 = NEAREST,
-					9729 = LINEAR
-					*/
-					
-					/*
-					wrap:
-					10497 = REPEAT,
-					33071 = CLAMP_TO_EDGE,
-					33648 = MIRRORED_REPEAT
-					
-					*/
+					sampler.minFilter = sampler_json.value("minFilter", sampler.minFilter);
+					sampler.magFilter = sampler_json.value("magFilter", sampler.magFilter);
+					sampler.wrapS = sampler_json.value("wrapS", sampler.wrapS);
+					sampler.wrapT = sampler_json.value("wrapT", sampler.wrapT);
 					
 					if (!sampler.isValid())
 					{

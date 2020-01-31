@@ -235,9 +235,9 @@ namespace gltf
 							break;
 						}
 						
-						if (indexAccessor->componentType != kElementType_U8 &&
-							indexAccessor->componentType != kElementType_U16 &&
-							indexAccessor->componentType != kElementType_U32)
+						if (indexAccessor->componentType != kComponentType_U8 &&
+							indexAccessor->componentType != kComponentType_U16 &&
+							indexAccessor->componentType != kComponentType_U32)
 						{
 							logWarning("component type not supported");
 							break;
@@ -367,17 +367,17 @@ namespace gltf
 								const uint8_t * __restrict index_mem = indexBuffer->data + indexBufferView->byteOffset + indexAccessor->byteOffset;
 								Assert(index_mem < indexBuffer->data + indexBuffer->byteLength);
 								
-								if (indexAccessor->componentType == kElementType_U32)
+								if (indexAccessor->componentType == kComponentType_U32)
 								{
 									const uint32_t * __restrict index_ptr = (uint32_t*)index_mem;
 									index = index_ptr[i];
 								}
-								else if (indexAccessor->componentType == kElementType_U16)
+								else if (indexAccessor->componentType == kComponentType_U16)
 								{
 									const uint16_t * __restrict index_ptr = (uint16_t*)index_mem;
 									index = index_ptr[i];
 								}
-								else if (indexAccessor->componentType == kElementType_U8)
+								else if (indexAccessor->componentType == kComponentType_U8)
 								{
 									const uint8_t * __restrict index_ptr = (uint8_t*)index_mem;
 									index = index_ptr[i];
@@ -985,7 +985,7 @@ namespace gltf
 			{
 				GX_PRIMITIVE_TYPE gxPrimitiveType;
 				
-				if (!translatePrimitiveType((PrimitiveType)primitive.mode, gxPrimitiveType))
+				if (!translatePrimitiveType(primitive.mode, gxPrimitiveType))
 				{
 					logWarning("primitive type not supported");
 					continue;
@@ -1083,14 +1083,14 @@ namespace gltf
 					}
 					
 					const GX_ELEMENT_TYPE type =
-						accessor->componentType == kElementType_U8 ? GX_ELEMENT_UINT8 :
-						accessor->componentType == kElementType_U16 ? GX_ELEMENT_UINT16 :
-						accessor->componentType == kElementType_Float32 ? GX_ELEMENT_FLOAT32 :
+						accessor->componentType == kComponentType_U8 ? GX_ELEMENT_UINT8 :
+						accessor->componentType == kComponentType_U16 ? GX_ELEMENT_UINT16 :
+						accessor->componentType == kComponentType_Float32 ? GX_ELEMENT_FLOAT32 :
 						(GX_ELEMENT_TYPE)-1;
 					
 					if (type == (GX_ELEMENT_TYPE)-1)
 					{
-						logWarning("element type not supported");
+						logWarning("component type not supported");
 						continue;
 					}
 					
@@ -1178,11 +1178,11 @@ namespace gltf
 						}
 						else
 						{
-							if (accessor->componentType != gltf::kElementType_U8 &&
-							 	accessor->componentType != gltf::kElementType_U16 &&
-								accessor->componentType != gltf::kElementType_U32)
+							if (accessor->componentType != gltf::kComponentType_U8 &&
+							 	accessor->componentType != gltf::kComponentType_U16 &&
+								accessor->componentType != gltf::kComponentType_U32)
 							{
-								logWarning("index element type not supported");
+								logWarning("index component type not supported");
 								continue;
 							}
 							
@@ -1190,7 +1190,7 @@ namespace gltf
 							const uint8_t * index_mem = buffer->data + bufferView->byteOffset + accessor->byteOffset;
 							Assert(index_mem < buffer->data + buffer->byteLength);
 							
-							if (accessor->componentType == gltf::kElementType_U8)
+							if (accessor->componentType == gltf::kComponentType_U8)
 							{
 								// U8 index format is not natively supported
 								// create a copy of the indices using U16 format
@@ -1209,7 +1209,7 @@ namespace gltf
 							else
 							{
 								const GX_INDEX_FORMAT format =
-									accessor->componentType == gltf::kElementType_U16
+									accessor->componentType == gltf::kComponentType_U16
 									? GX_INDEX_16
 									: GX_INDEX_32;
 								

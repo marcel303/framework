@@ -19,14 +19,32 @@ namespace gltf
 		kPrimitiveType_TriangleFan = 6
 	};
 
-	enum ElementType
+	enum ComponentType
 	{
-		kElementType_S8 = 5120,
-		kElementType_U8 = 5121,
-		kElementType_S16 = 5122,
-		kElementType_U16 = 5123,
-		kElementType_U32 = 0x1405,
-		kElementType_Float32 = 5126
+		kComponentType_S8 = 5120,
+		kComponentType_U8 = 5121,
+		kComponentType_S16 = 5122,
+		kComponentType_U16 = 5123,
+		kComponentType_U32 = 5125,
+		kComponentType_Float32 = 5126
+	};
+	
+	enum SamplerWrapType
+	{
+		kSamplerWrapType_ClampToEdge = 33071,
+		kSamplerWrapType_Repeat = 10497,
+		kSamplerWrapType_MirroredRepeat = 33648
+	};
+	
+	enum SamplerFilterType
+	{
+		kSamplerFilterType_Undefined = 0,
+		kSamplerFilterType_Nearest = 9728,
+		kSamplerFilterType_Linear = 9729,
+		kSamplerFilterType_NearestMipmapNearest = 9984,
+		kSamplerFilterType_LinearMipmapNearest = 9985,
+		kSamplerFilterType_NearestMipmapLinear = 9986,
+		kSamplerFilterType_LinearMipmapLinear = 9987
 	};
 	
 	struct Asset
@@ -88,7 +106,7 @@ namespace gltf
 	{
 		int bufferView = -1;
 		int byteOffset = -1;
-		int componentType = -1;
+		ComponentType componentType = (ComponentType)-1;
 		bool normalized = false;
 		int count = -1;
 		std::vector<float> min;
@@ -122,14 +140,13 @@ namespace gltf
 	
 	struct Sampler
 	{
-		int minFilter = -1; // todo : add enums
-		int magFilter = -1;
-		int wrapS = -1;
-		int wrapT = -1;
+		SamplerFilterType minFilter = kSamplerFilterType_Undefined;
+		SamplerFilterType magFilter = kSamplerFilterType_Undefined;
+		SamplerWrapType wrapS = kSamplerWrapType_Repeat;
+		SamplerWrapType wrapT = kSamplerWrapType_Repeat;
 		
 		bool isValid() const
 		{
-			// todo
 			return true;
 		}
 	};
@@ -265,7 +282,7 @@ namespace gltf
 		
 		int indices = -1;
 		int material = -1;
-		int mode = -1;
+		PrimitiveType mode = (PrimitiveType)-1;
 		
 		bool isValid() const
 		{
