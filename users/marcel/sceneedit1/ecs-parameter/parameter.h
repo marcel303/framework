@@ -44,7 +44,6 @@ struct ParameterBase
 	ParameterType type;
 	std::string name;
 	bool isDirty = false;
-	bool hasChanged = false;
 	
 	explicit ParameterBase(const ParameterType in_type, const std::string & in_name)
 		: type(in_type)

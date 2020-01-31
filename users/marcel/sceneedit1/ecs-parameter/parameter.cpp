@@ -121,20 +121,6 @@ void ParameterMgr::init(const char * in_prefix)
 
 void ParameterMgr::tick()
 {
-	// todo : make a separate list for parameters that can trigger
-	
-	for (auto * parameter : parameters)
-	{
-		if (parameter->isDirty)
-		{
-			parameter->isDirty = false;
-			parameter->hasChanged = true;
-		}
-		else if (parameter->hasChanged)
-		{
-			parameter->hasChanged = false;
-		}
-	}
 }
 
 void ParameterMgr::setPrefix(const char * in_prefix)
