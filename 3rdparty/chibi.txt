@@ -11,6 +11,7 @@ add framework-ofx
 add freetype2-support
 add glew
 add leapmotion
+add libfreenect2
 add liboscpack
 add midifile
 add msdfgen
