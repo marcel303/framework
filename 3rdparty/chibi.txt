@@ -60,6 +60,12 @@ app ImGuiColorTextEdit-200-realtime-shader-editing
 	depend_library libnfd
 	add_files ImGuiColorTextEdit-support/realtime-shader-editing.cpp
 
+library libdelaunay
+
+	add_files delaunay/delaunay.cpp delaunay/delaunay.h delaunay/edge.h delaunay/triangle.h delaunay/vector2.h - conglomerate delaunay_all.cpp
+
+	header_path . expose
+	
 library rtmidi
 	add_files rtmidi/RtMidi.cpp rtmidi/RtMidi.h
 	header_path rtmidi alias_through_copy rtmidi expose

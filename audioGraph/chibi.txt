@@ -1,8 +1,4 @@
-library libdelaunay
-
-	add_files delaunay/delaunay.cpp delaunay/delaunay.h delaunay/edge.h delaunay/triangle.h delaunay/vector2.h - conglomerate delaunay_all.cpp
-
-	header_path . expose
+push_group audiograph
 
 library binaural
 
@@ -52,6 +48,8 @@ library audiograph-nodes
 	scan_files h   path audioNodes conglomerate audioNodes_all.h
 
 	link_translation_unit_using_function_call linkAudioNodes
+
+pop_group
 
 library audiograph
 
