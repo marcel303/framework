@@ -1,3 +1,5 @@
+push_group framework
+
 library audiostream
 
 	depend_library libgg
@@ -32,6 +34,8 @@ library audioio
 	add_files audiostream/AudioIO.h
 
 	header_path . expose
+
+pop_group
 
 library framework
 
