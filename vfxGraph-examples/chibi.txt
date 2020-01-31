@@ -65,7 +65,14 @@ app vfxgraph-900-devgrounds
 	depend_library imgui-framework
 	depend_library ImGuiColorTextEdit
 	depend_library vfxgraph
+	depend_library vfxgraph-deepbelief
+	depend_library vfxgraph-jgmod
+	depend_library vfxgraph-kinect
+	depend_library vfxgraph-leapmotion
 	depend_library vfxgraph-nodes
+	depend_library vfxgraph-ps3eye
+	depend_library vfxgraph-syphon
+	depend_library vfxgraph-wiimote
 	add_files 900-devgrounds.cpp devgrounds/dynamicinputs.cpp devgrounds/routingeditor.cpp devgrounds/vfxnodecreation.cpp
 	resource_path data
 	group vfxgraph-examples
