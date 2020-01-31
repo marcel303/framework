@@ -112,6 +112,8 @@ namespace gltf
 		Shader & shader = *shader_ptr;
 		setShader(shader);
 		
+	// todo : set texture samplers
+	
 		if (material.pbrSpecularGlossiness.isSet)
 		{
 			// PBR specular glossiness material

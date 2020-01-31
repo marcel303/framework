@@ -265,8 +265,6 @@ namespace gltf
 					
 					image.path = dir + "/" + image.uri;
 					
-					// todo : add support for bufferView property ?
-					
 					if (!image.isValid())
 					{
 						logDebug("image is invalid");

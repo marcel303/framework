@@ -163,8 +163,6 @@ namespace gltf
 		}
 	};
 	
-	// todo : samplers
-	
 	struct Material
 	{
 		struct NormalTexture
