@@ -25,3 +25,13 @@ newpath.mp4
 3rdparty/libsdl2-support/video_cocoa_all.m
 3rdparty/msdfgen/msdfgen_all.cxx
 users/marcel/gltf1/data/ftm
+3rdparty/FreeImage-support/FreeImage_LibJPEG_all.c
+3rdparty/FreeImage-support/FreeImage_LibOpenJPEG_all.c
+3rdparty/FreeImage-support/FreeImage_LibPNG_all.c
+3rdparty/FreeImage-support/FreeImage_MetaData_all.cpp
+3rdparty/FreeImage-support/FreeImage_Toolkit_all.cpp
+3rdparty/FreeImage-support/FreeImage_all.cpp
+delaunay_all.cpp
+audioGraph/conglomerates/audioNodes4D-1.6_all.h
+audioGraph/conglomerates/audioNodes_all.h
+audioGraph/conglomerates/binaural_all.cpp
