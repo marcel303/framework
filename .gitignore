@@ -35,3 +35,5 @@ delaunay_all.cpp
 audioGraph/conglomerates/audioNodes4D-1.6_all.h
 audioGraph/conglomerates/audioNodes_all.h
 audioGraph/conglomerates/binaural_all.cpp
+video_uikit_all.m
+kinect_all.h

@@ -98,7 +98,7 @@ library vfxgraph-kinect
 
 	header_path vfxNodes-kinect expose
 
-	scan_files cpp path vfxNodes-kinect
+	scan_files cpp path vfxNodes-kinect conglomerate vfxNodes-kinect/kinect_all.h
 	scan_files h   path vfxNodes-kinect
 
 	compile_definition ENABLE_KINECT1   0 expose

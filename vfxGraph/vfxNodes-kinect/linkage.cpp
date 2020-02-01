@@ -1,3 +1,0 @@
-void linkVfxNodes_Kinect()
-{
-}
