@@ -35,7 +35,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #include "Timer.h"
 
-extern SDL_mutex * g_vfxAudioMutex;
+extern AudioMutexBase * g_vfxAudioMutex;
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;
 
@@ -393,9 +393,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		}
 	}
 	
-	AudioMutex_Shared mutex(g_vfxAudioMutex);
-	
-	mutex.lock();
+	g_vfxAudioMutex->lock();
 	{
 		const int numVoices = voiceMgr.voices.size();
 		
@@ -411,7 +409,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			voiceData += AUDIO_UPDATE_SIZE;
 		}
 	}
-	mutex.unlock();
+	g_vfxAudioMutex->unlock();
 }
 
 void VfxNodeAudioGraphPoly::getDescription(VfxNodeDescription & d)

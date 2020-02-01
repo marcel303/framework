@@ -33,7 +33,7 @@
 
 #include "framework.h"
 
-SDL_mutex * g_vfxAudioMutex = nullptr;
+AudioMutexBase * g_vfxAudioMutex = nullptr;
 AudioVoiceManager * g_vfxAudioVoiceMgr = nullptr;
 AudioGraphManager * g_vfxAudioGraphMgr = nullptr;
 
@@ -137,9 +137,9 @@ void VfxNodeAudioGraph::updateDynamicInputs()
 	else
 	{
 		auto audioGraph = audioGraphInstance->audioGraph;
-		audioGraph->context->audioMutex.lock();
+		audioGraph->context->audioMutex->lock();
 		auto controlValues = audioGraph->context->controlValues;
-		audioGraph->context->audioMutex.unlock();
+		audioGraph->context->audioMutex->unlock();
 		
 		bool equal = true;
 		
@@ -312,9 +312,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 	
 	// generate channel data
 	
-	AudioMutex_Shared mutex(g_vfxAudioMutex);
-	
-	mutex.lock();
+	g_vfxAudioMutex->lock();
 	{
 		const AudioVoiceManager::OutputMode outputMode =
 			_outputMode == kOutputMode_Mono ? AudioVoiceManager::kOutputMode_Mono :
@@ -335,7 +333,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 			1.f,
 			outputMode, false);
 	}
-	mutex.unlock();
+	g_vfxAudioMutex->unlock();
 	
 	//
 	
@@ -349,7 +347,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 		{
 			auto audioGraph = audioGraphInstance->audioGraph;
 			
-			audioGraph->context->audioMutex.lock();
+			audioGraph->context->audioMutex->lock();
 			{
 				for (auto & controlValue : audioGraph->context->controlValues)
 				{
@@ -362,7 +360,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 					}
 				}
 			}
-			audioGraph->context->audioMutex.unlock();
+			audioGraph->context->audioMutex->unlock();
 		}
 		
 		index++;
