@@ -889,6 +889,7 @@ void VfxNodeDescription::addGxTexture(const char * name, const uint32_t id)
 			format == GX_R16_FLOAT ? "R16F, 16 bpp (half float)" :
 			format == GX_RGBA16_FLOAT ? "RGBA16F, 16 bpp (half float)" :
 			format == GX_R32_FLOAT ? "R32F, 32 bpp (float)" :
+			format == GX_RGBA32_FLOAT ? "RGBA32F, 128 bpp (float)" :
 			format == GX_RGB8_UNORM ? "RGB888, 24 bpp (unorm)" :
 			format == GX_RGBA8_UNORM ? "RGBA8888, 32 bpp (unorm)" :
 			"n/a";
@@ -899,6 +900,7 @@ void VfxNodeDescription::addGxTexture(const char * name, const uint32_t id)
 			format == GX_R16_FLOAT ? 16 :
 			format == GX_RGBA16_FLOAT ? 64 :
 			format == GX_R32_FLOAT ? 32 :
+			format == GX_RGBA32_FLOAT ? 128 :
 			format == GX_RGB8_UNORM ? 24 :
 			format == GX_RGBA8_UNORM ? 32 :
 			0;
