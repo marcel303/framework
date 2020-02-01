@@ -27,6 +27,7 @@
 
 #include "framework.h"
 #include "graph.h"
+#include "graph_typeDefinitionLibrary.h"
 #include "vfxGraph.h"
 #include <algorithm>
 

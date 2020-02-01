@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "graph_typeDefinitionLibrary.h"
 #include "Parse.h"
 #include "Path.h"
 #include "vfxGraph.h"
