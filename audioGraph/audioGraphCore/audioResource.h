@@ -28,12 +28,20 @@
 #pragma once
 
 #include <atomic>
+#include <string>
 
 //
 
-struct GraphNode;
+namespace tinyxml2
+{
+	class XMLElement;
+	class XMLPrinter;
+}
 
-struct SDL_mutex;
+//
+
+struct AudioMutex;
+struct GraphNode;
 
 //
 
@@ -41,8 +49,9 @@ struct AudioResourceBase
 {
 	std::atomic<int> version;
 	std::atomic<int> mutexCreationLock;
-	SDL_mutex * mutex;
 
+	AudioMutex * mutex;
+	
 	AudioResourceBase()
 		: version(0)
 		, mutexCreationLock(0)

@@ -25,14 +25,15 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioResource.h"
+#include "audioThreading.h"
+#include "audioTypes.h"
+
 #include "Debugging.h"
 #include "graph.h"
 #include "Log.h"
 #include "StringEx.h"
 #include "tinyxml2.h"
-#include "audioResource.h"
-#include "audioTypes.h"
-#include <SDL2/SDL_mutex.h>
 
 using namespace tinyxml2;
 
@@ -87,7 +88,7 @@ AudioResourceBase::~AudioResourceBase()
 {
 	if (mutex != nullptr)
 	{
-		SDL_DestroyMutex(mutex);
+		delete mutex;
 		mutex = nullptr;
 	}
 }
@@ -104,18 +105,18 @@ void AudioResourceBase::lock()
 				break;
 		}
 		
-		mutex = SDL_CreateMutex();
-		Assert(mutex != nullptr);
+		mutex = new AudioMutex();
+		mutex->init();
 		
 		mutexCreationLock.exchange(0);
 	}
 	
-	Verify(SDL_LockMutex(mutex) == 0);
+	mutex->lock();
 }
 
 void AudioResourceBase::unlock()
 {
-	Verify(SDL_UnlockMutex(mutex) == 0);
+	mutex->unlock();
 }
 
 //
