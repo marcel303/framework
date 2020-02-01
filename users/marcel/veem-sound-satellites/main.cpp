@@ -2,7 +2,7 @@
 #include "audioGraphManager.h"
 #include "audioNodeBase.h"
 #include "audioUpdateHandler.h"
-#include "audioVoiceManager4D.h"
+#include "audioVoiceManager.h"
 #include "framework.h"
 #include "graphEdit.h"
 #include "Noise.h"
