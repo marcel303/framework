@@ -174,6 +174,53 @@ std::vector<GxImmediateInfo> Shader::getImmediateInfos() const
 	return result;
 }
 
+std::vector<GxTextureInfo> Shader::getTextureInfos() const
+{
+	std::vector<GxTextureInfo> result;
+	
+	if (isValid() == false)
+		return result;
+	
+	GLsizei uniformCount = 0;
+	glGetProgramiv(getProgram(), GL_ACTIVE_UNIFORMS, &uniformCount);
+	checkErrorGL();
+
+	result.resize(uniformCount);
+
+	int count = 0;
+	
+	for (int i = 0; i < uniformCount; ++i)
+	{
+		auto & info = result[count];
+		
+		const GLsizei bufferSize = 256;
+		char name[bufferSize];
+		
+		GLsizei length;
+		GLint size;
+		GLenum type;
+		
+		glGetActiveUniform(getProgram(), i, bufferSize, &length, &size, &type, name);
+		checkErrorGL();
+		
+		const GLint location = glGetUniformLocation(getProgram(), name);
+		checkErrorGL();
+		
+		if (type == GL_SAMPLER_2D)
+			info.type = GX_IMMEDIATE_TEXTURE_2D;
+		else
+			continue;
+			
+		info.name = name;
+		info.index = location;
+		
+		count++;
+	}
+	
+	result.resize(count);
+	
+	return result;
+}
 
 #define SET_UNIFORM(name, op) \
 	if (getProgram()) \
