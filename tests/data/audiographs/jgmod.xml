@@ -1,0 +1,120 @@
+<graph nextNodeId="139" nextLinkId="152">
+    <node id="118" typeName="voice" passthrough="1">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="119" typeName="jgmod">
+        <input socket="filename" value="point_of_departure.s3m"/>
+        <input socket="pitch" value="1.200000"/>
+        <input socket="speed" value="1.200000"/>
+    </node>
+    <node id="120" typeName="voice" passthrough="1">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="121" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="122" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="123" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="124" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="125" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="126" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="127" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="128" typeName="voice">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="129" typeName="voice" passthrough="1">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="130" typeName="voice" passthrough="1">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="131" typeName="voice" passthrough="1">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="132" typeName="voice" passthrough="1">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="133" typeName="voice" passthrough="1">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="134" typeName="voice" passthrough="1">
+        <input socket="speaker" value="0"/>
+    </node>
+    <node id="135" typeName="filter.biquad">
+        <input socket="Q" value="10.000000"/>
+        <input socket="frequency" value="1000.000000"/>
+        <input socket="peakGain" value="32.000000"/>
+        <input socket="type" value="1"/>
+    </node>
+    <node id="136" typeName="filter.comb">
+        <input socket="delay" value="0.000600"/>
+        <input socket="feedback" value="0.970000"/>
+        <input socket="feedforward" value="0.600000"/>
+        <input socket="maxDelay" value="0.200000"/>
+    </node>
+    <link id="131" srcNodeId="118" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch1"/>
+    <link id="132" srcNodeId="120" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch2"/>
+    <link id="134" srcNodeId="122" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch4"/>
+    <link id="135" srcNodeId="123" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch5"/>
+    <link id="136" srcNodeId="124" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch6"/>
+    <link id="137" srcNodeId="125" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch7"/>
+    <link id="139" srcNodeId="127" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch9"/>
+    <link id="140" srcNodeId="128" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch10"/>
+    <link id="141" srcNodeId="129" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch11"/>
+    <link id="142" srcNodeId="130" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch12"/>
+    <link id="143" srcNodeId="131" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch13"/>
+    <link id="145" srcNodeId="132" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch14"/>
+    <link id="146" srcNodeId="133" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch15"/>
+    <link id="147" srcNodeId="134" srcNodeSocketName="audio" dstNodeId="119" dstNodeSocketName="ch16"/>
+    <link id="148" srcNodeId="121" srcNodeSocketName="audio" dstNodeId="135" dstNodeSocketName="out"/>
+    <link id="149" srcNodeId="135" srcNodeSocketName="in" dstNodeId="119" dstNodeSocketName="ch3"/>
+    <link id="150" srcNodeId="126" srcNodeSocketName="audio" dstNodeId="136" dstNodeSocketName="value"/>
+    <link id="151" srcNodeId="136" srcNodeSocketName="value" dstNodeId="119" dstNodeSocketName="ch8"/>
+    <editor nextZKey="1348">
+        <dragAndZoom x="255.4058837890625" y="-519.09320068359375" zoom="1"/>
+        <nodeDatas>
+            <nodeData nodeId="118" x="192" y="-832" zKey="1300" folded="1"/>
+            <nodeData nodeId="119" x="-128" y="-736" zKey="1338"/>
+            <nodeData nodeId="120" x="192" y="-800" zKey="1301" folded="1"/>
+            <nodeData nodeId="121" x="208" y="-720" zKey="1324" folded="1"/>
+            <nodeData nodeId="122" x="224" y="-672" zKey="1341" folded="1"/>
+            <nodeData nodeId="123" x="224" y="-640" zKey="1340" folded="1"/>
+            <nodeData nodeId="124" x="224" y="-608" zKey="1342" folded="1"/>
+            <nodeData nodeId="125" x="176" y="-544" zKey="1329" folded="1"/>
+            <nodeData nodeId="126" x="208" y="-496" zKey="1331" folded="1"/>
+            <nodeData nodeId="127" x="144" y="-400" zKey="1345" folded="1"/>
+            <nodeData nodeId="128" x="144" y="-368" zKey="1344" folded="1"/>
+            <nodeData nodeId="129" x="144" y="-336" zKey="1343" folded="1"/>
+            <nodeData nodeId="130" x="144" y="-304" zKey="1311" folded="1"/>
+            <nodeData nodeId="131" x="144" y="-272" zKey="1312" folded="1"/>
+            <nodeData nodeId="132" x="144" y="-240" zKey="1313" folded="1"/>
+            <nodeData nodeId="133" x="144" y="-208" zKey="1314" folded="1"/>
+            <nodeData nodeId="134" x="144" y="-176" zKey="1315" folded="1"/>
+            <nodeData nodeId="135" x="80" y="-720" zKey="1346" folded="1"/>
+            <nodeData nodeId="136" x="80" y="-496" zKey="1347" folded="1"/>
+        </nodeDatas>
+        <visualizers>
+            <visualizer id="137" x="544" y="-528" zKey="1335" nodeId="136" dstSocketName="value" sx="216" sy="148"/>
+            <visualizer id="138" x="320" y="-528" zKey="1336" nodeId="136" srcSocketName="value" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="1" showBackground="1" showGrid="0" showSocketNames="1" snapToGrid="1" showOneShotActivity="1" showContinuousActivity="0" showCpuHeat="1" backgroundColor="0a3265cc" gridColor="b600ff96">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="0.87023502588272095" g="0.24523502588272095" b="0.41560804843902588" a="0"/>
+                <key t="0.80500000715255737" r="0.77173078060150146" g="0.61361479759216309" b="0.055064089596271515" a="0.57499998807907104"/>
+                <key t="1" r="1" g="0" b="0.27259683609008789" a="0.83499997854232788"/>
+            </cpuHeatColors>
+        </editorOptions>
+    </editor>
+</graph>

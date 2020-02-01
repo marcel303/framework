@@ -66,12 +66,16 @@ app audiograph-400-editor
 
 app audiograph-420-realtime-editing
 	depend_library audiograph
+	depend_library audiograph-nodes-4dsound-1.6
+	depend_library jgmod-audiograph
 	add_files 420-realtime-editing.cpp
 	resource_path data
 	group audiograph-examples
 
 app audiograph-440-realtime-multiwindow
 	depend_library audiograph
+	depend_library audiograph-nodes-4dsound-1.6
+	depend_library jgmod-audiograph
 	add_files 440-realtime-multiwindow.cpp
 	resource_path data
 	group audiograph-examples
