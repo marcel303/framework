@@ -206,17 +206,6 @@ inline __m256d operator*(__m256d a, __m256d b)
 
 #endif
 
-
-#endif
-
-#if defined(WIN32)
-	#if defined(TARGET_IS_AUDIOGRAPH_CORE)
-		#define AUDIOGRAPH_EXPORTED
-	#else
-		#define AUDIOGRAPH_EXPORTED __declspec(dllimport)
-	#endif
-#else
-	#define AUDIOGRAPH_EXPORTED
 #endif
 
 struct AudioControlValue

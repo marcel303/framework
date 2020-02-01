@@ -32,9 +32,9 @@
 
 struct AudioFloat
 {
-	static AUDIOGRAPH_EXPORTED AudioFloat Zero;
-	static AUDIOGRAPH_EXPORTED AudioFloat One;
-	static AUDIOGRAPH_EXPORTED AudioFloat Half;
+	static AudioFloat Zero;
+	static AudioFloat One;
+	static AudioFloat Half;
 	
 	bool isScalar;
 	bool isExpanded;

@@ -338,5 +338,5 @@ struct AudioNodeTypeRegistration
 	type ## __registration type ## __registrationInstance; \
 	void type ## __registration :: init()
 
-extern AUDIOGRAPH_EXPORTED AudioEnumTypeRegistration * g_audioEnumTypeRegistrationList;
-extern AUDIOGRAPH_EXPORTED AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList;
+extern AudioEnumTypeRegistration * g_audioEnumTypeRegistrationList;
+extern AudioNodeTypeRegistration * g_audioNodeTypeRegistrationList;

@@ -31,6 +31,8 @@
 #include "osc4d.h"
 #include "Vec3.h"
 
+// todo : move this code to a separate 4DSOUND library
+
 //
 
 struct Osc4DStream;

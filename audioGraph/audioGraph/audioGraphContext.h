@@ -47,6 +47,23 @@ struct AudioGraphContext
 		float value4 = 0.f;
 	};
 	
+// todo : add a method for adding 'objects'. query objects by typeid
+// todo : do the same for vfxgraph! useful for registering FsfxLibrary, ...
+/*
+
+	context.addObject(new AudioGraphMemfMgr());
+	context.addObject(new AudioGraphMemsMgr());
+	context.addObject(new AudioGraphControlValueMgr());
+	context.addObject(new JsusFxAudioGraphLibrary());strp
+ 
+	auto * memfMgr = context.findObject<AudioGraphMemfMgr>();
+ 
+	if (memfMgr != nullptr)
+	{
+		memfMgr->set("variable", 1.f);
+	}
+*/
+	
 	AudioMutex_Shared audioMutex;
 	
 	AudioVoiceManager * voiceMgr;

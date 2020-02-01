@@ -26,7 +26,7 @@
 */
 
 #include "audioNodeInput.h"
-#include "audioUpdateHandler.h"
+//#include "audioUpdateHandler.h" // todo : expose input channels some other way
 
 AUDIO_NODE_TYPE(AudioNodeInput)
 {
@@ -42,6 +42,9 @@ void AudioNodeInput::tick(const float dt)
 	const int channel = getInputInt(kInput_Channel, 0);
 	const AudioFloat * gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One);
 	
+#if true
+	audioOutput.setZero();
+#else
 	if (isPassthrough || channel < 0 || channel >= g_numAudioInputChannels)
 	{
 		audioOutput.setZero();
@@ -59,4 +62,5 @@ void AudioNodeInput::tick(const float dt)
 		
 		audioOutput.mul(*gain);
 	}
+#endif
 }

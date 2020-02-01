@@ -28,7 +28,7 @@
 #pragma once
 
 #include "audioNodeBase.h"
-#include "objects/basicDspFilters.h"
+#include "basicDspFilters.h"
 
 struct AudioNodeBiquad : AudioNodeBase
 {

@@ -63,6 +63,7 @@ struct AudioResourceBase
 
 AudioResourceBase * createAudioNodeResourceImpl(const GraphNode & node, const char * type, const char * name);
 
+// todo : add typeid check or create by typeid
 template <typename T> bool createAudioNodeResource(const GraphNode & node, const char * type, const char * name, T *& resource)
 {
 	AudioResourceBase * resourceBase = createAudioNodeResourceImpl(node, type, name);
