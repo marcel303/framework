@@ -4,10 +4,10 @@
 #include "Log.h" // VA_SPRINTF
 
 template <int SIZE>
-class StringBuilder
+class FixedSizeStringBuilder
 {
 public:
-	StringBuilder()
+	FixedSizeStringBuilder()
 	{
 		mLength = 0;
 		mIsValid = true;
@@ -111,4 +111,39 @@ private:
 	char mBuffer[SIZE];
 	int mLength;
 	bool mIsValid;
+};
+
+//
+
+#include <string>
+
+class StringBuilder
+{
+public:
+	StringBuilder()
+	{
+		mText.reserve(1 << 16);
+	}
+	
+	void Append(const char c)
+	{
+		mText.push_back(c);
+	}
+	
+	void Append(const char * text)
+	{
+		mText.append(text);
+	}
+	
+	void AppendFormat(const char * format, ...);
+	
+	const char* ToString()
+	{
+		return mText.c_str();
+	}
+
+private:
+
+	std::string mText;
+
 };
