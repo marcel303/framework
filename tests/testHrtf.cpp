@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2017 Marcel Smit
+	Copyright (C) 2020 Marcel Smit
 	marcel303@gmail.com
 	https://www.facebook.com/marcel.smit981
 
@@ -40,7 +40,6 @@
 #include <atomic>
 #include <complex>
 
-// todo : use a longer test sound
 // todo : make 3D view optional
 
 #define HRTF_BUFFER_SIZE 512
@@ -1136,6 +1135,4 @@ void testHrtf()
 	} while (tickTestUi());
 	
 	pa.shut();
-	
-	//exit(0);
 }
