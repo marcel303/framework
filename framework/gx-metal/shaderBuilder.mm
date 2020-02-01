@@ -302,7 +302,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 		
 		// generate text
 		
-		StringBuilder<32 * 1024> sb; // todo : replace with a more efficient and growing string builder
+		StringBuilder sb; // todo : replace with a more efficient and growing string builder
 		
 static const char * header =
 R"SHADER(
