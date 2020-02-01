@@ -221,7 +221,7 @@ bool buildMetalText(const char * text, const char shaderType, std::string & resu
 			}
 		}
 		
-		StringBuilder<16000> sb;
+		StringBuilder sb;
 		
 		sb.Append("#include <metal_stdlib>\n");
 		sb.Append("\n");
