@@ -26,6 +26,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "audioNodeVoice4D.h"
 #include "audioVoiceManager4D.h"
 #include "Calc.h"
@@ -127,7 +128,6 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	: AudioNodeBase()
 	, source()
 	, voice(nullptr)
-	, audioGraph(nullptr)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Audio, kAudioPlugType_FloatVec);
@@ -175,9 +175,6 @@ AudioNodeVoice4D::AudioNodeVoice4D()
 	addOutput(kOutput_RampedDown, kAudioPlugType_Trigger, this);
 	
 	source.voiceNode = this;
-	
-	Assert(g_currentAudioGraph != nullptr);
-	audioGraph = g_currentAudioGraph;
 }
 
 void AudioNodeVoice4D::shut()
@@ -436,7 +433,6 @@ AudioNodeVoice4DReturn::AudioNodeVoice4DReturn()
 	: AudioNodeBase()
 	, source()
 	, voice(nullptr)
-	, audioGraph(nullptr)
 	, audioOutput()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
@@ -468,9 +464,6 @@ AudioNodeVoice4DReturn::AudioNodeVoice4DReturn()
 	addInput(kInput_BackEnabled, kAudioPlugType_Bool);
 	addInput(kInput_BackDistance, kAudioPlugType_FloatVec);
 	addInput(kInput_BackScatter, kAudioPlugType_FloatVec);
-	
-	Assert(g_currentAudioGraph != nullptr);
-	audioGraph = g_currentAudioGraph;
 }
 
 AudioNodeVoice4DReturn::~AudioNodeVoice4DReturn()

@@ -31,8 +31,6 @@
 #include "audioVoiceManager.h"
 #include "soundmix.h" // AudioSource
 
-struct AudioGraph;
-
 struct AudioNodeVoice4D : AudioNodeBase
 {
 	struct AudioSourceVoiceNode : AudioSource
@@ -98,8 +96,6 @@ struct AudioNodeVoice4D : AudioNodeBase
 	AudioSourceVoiceNode source;
 	AudioVoice * voice;
 	
-	AudioGraph * audioGraph;
-	
 	AudioNodeVoice4D();
 	virtual void shut() override;
 	
@@ -161,8 +157,6 @@ struct AudioNodeVoice4DReturn : AudioNodeBase
 
 	AudioSourceReturnNode source;
 	AudioVoice * voice;
-	
-	AudioGraph * audioGraph;
 
 	AudioFloat audioOutput;
 	

@@ -7,7 +7,7 @@ library binaural
 	depend_library libgg
 
 	scan_files cpp path binaural conglomerate conglomerates/binaural_all.cpp
-	scan_files h   path binaural conglomerate conglomerates/binaural_all.cpp
+	scan_files h   path binaural
 
 	header_path binaural expose
 
@@ -43,6 +43,9 @@ library audiograph-graph
 
 	header_path audioGraph expose
 
+# todo : remove. only a dependency because of drawFilterResponse(..)
+	depend_library framework
+
 library audiograph-graphMgr
 
 	depend_library audiograph-graph
@@ -73,9 +76,24 @@ library audiograph-nodes
 	scan_files cpp path objects    group objects
 	scan_files h   path objects    group objects
 	scan_files cpp path audioNodes conglomerate conglomerates/audioNodes_all.h
-	scan_files h   path audioNodes conglomerate conglomerates/audioNodes_all.h
+	scan_files h   path audioNodes
 
 	link_translation_unit_using_function_call linkAudioNodes
+
+library audiograph-nodes-4dsound-1.6
+
+	depend_library audiograph-core
+	depend_library audiograph-graph
+	depend_library libosc
+
+	scan_files cpp path audioNodes4D-1.6 conglomerate conglomerates/audioNodes4D-1.6_all.h
+	scan_files h   path audioNodes4D-1.6
+
+	add_files conglomerates/audioNodes4D-1.6_all.cpp conglomerates/audioNodes4D-1.6_all.h
+
+	header_path audioNodes4D-1.6 expose
+
+	link_translation_unit_using_function_call linkAudioNodes4D_1_6
 
 pop_group
 
@@ -89,7 +107,6 @@ library audiograph
 	depend_library binaural
 	depend_library framework
 	depend_library libavgraph
-	depend_library libosc
 	depend_library libparticle-ui
 
 	header_path . expose
