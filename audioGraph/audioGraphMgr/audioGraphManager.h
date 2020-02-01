@@ -45,8 +45,6 @@ struct Graph;
 struct Graph_TypeDefinitionLibrary;
 struct GraphEdit;
 
-struct SDL_mutex;
-
 struct AudioGraphInstance
 {
 	AudioGraph * audioGraph;
@@ -79,7 +77,7 @@ struct AudioGraphManager
 	virtual ~AudioGraphManager() { }
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) = 0;
+	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) = 0;
 	virtual void freeContext(AudioGraphContext *& context) = 0;
 	
 	// called from the app thread
@@ -118,7 +116,7 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	
 	std::list<AudioGraphInstance*> instances;
 	
-	AudioMutex_Shared audioMutex;
+	AudioMutexBase * audioMutex;
 	
 	std::set<AudioGraphContext*> allocatedContexts;
 	AudioGraphContext * context;
@@ -127,12 +125,12 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	virtual ~AudioGraphManager_Basic() override;
 	
 	// called from the app thread
-	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr);
+	void init(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr);
 	void shut();
 	void addGraphToCache(const char * filename);
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
 	
 	// called from the app thread
@@ -160,7 +158,7 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	
 	AudioGraphFile * selectedFile;
 	
-	SDL_mutex * audioMutex;
+	AudioMutexBase * audioMutex;
 	
 	std::set<AudioGraphContext*> allocatedContexts;
 	AudioGraphContext * context;
@@ -172,7 +170,7 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	virtual ~AudioGraphManager_RTE() override;
 	
 	// called from the app thread
-	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr);
+	void init(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr);
 	void shut();
 	
 	// called from the app thread
@@ -180,7 +178,7 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
 	
 	// called from the app thread
@@ -207,7 +205,7 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	
 	AudioGraphFile * selectedFile;
 	
-	SDL_mutex * audioMutex;
+	AudioMutexBase * audioMutex;
 	
 	std::set<AudioGraphContext*> allocatedContexts;
 	AudioGraphContext * context;
@@ -219,7 +217,7 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	virtual ~AudioGraphManager_MultiRTE() override;
 	
 	// called from the app thread
-	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr);
+	void init(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr);
 	void shut();
 	
 	// called from the app thread
@@ -227,7 +225,7 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	void selectInstance(const AudioGraphInstance * instance);
 	
 	// called from the app thread
-	virtual AudioGraphContext * createContext(SDL_mutex * mutex, AudioVoiceManager * voiceMgr) override;
+	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
 	
 	// called from the app thread

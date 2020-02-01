@@ -45,18 +45,18 @@ int main(int argc, char * argv[])
 	{
 		// initialize audio related systems
 		
-		SDL_mutex * mutex = SDL_CreateMutex();
-		Assert(mutex != nullptr);
+		AudioMutex mutex;
+		mutex.init();
 
 		AudioVoiceManagerBasic voiceMgr;
-		voiceMgr.init(mutex, CHANNEL_COUNT);
+		voiceMgr.init(&mutex, CHANNEL_COUNT);
 		voiceMgr.outputStereo = true;
 
 		AudioGraphManager_Basic audioGraphMgr(true);
-		audioGraphMgr.init(mutex, &voiceMgr);
+		audioGraphMgr.init(&mutex, &voiceMgr);
 
 		AudioUpdateHandler audioUpdateHandler;
-		audioUpdateHandler.init(mutex, &voiceMgr, &audioGraphMgr);
+		audioUpdateHandler.init(&mutex, &voiceMgr, &audioGraphMgr);
 
 		PortAudioObject pa;
 		pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
@@ -147,15 +147,14 @@ int main(int argc, char * argv[])
 		// shut down audio related systems
 
 		pa.shut();
-		
+
 		audioUpdateHandler.shut();
 
 		audioGraphMgr.shut();
-		
-		voiceMgr.shut();
 
-		SDL_DestroyMutex(mutex);
-		mutex = nullptr;
+		voiceMgr.shut();
+		
+		mutex.shut();
 
 		Font("calibri.ttf").saveCache();
 	}

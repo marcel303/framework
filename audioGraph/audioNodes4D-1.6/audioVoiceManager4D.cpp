@@ -34,7 +34,7 @@ Osc4DStream * g_oscStream = nullptr;
 
 AudioVoiceManager4D::AudioVoiceManager4D()
 	: AudioVoiceManager(kType_4DSOUND)
-	, audioMutex()
+	, audioMutex(nullptr)
 	, firstVoice(nullptr)
 	, colorIndex(0)
 	, numDynamicChannels(0)
@@ -45,14 +45,14 @@ AudioVoiceManager4D::AudioVoiceManager4D()
 {
 }
 	
-void AudioVoiceManager4D::init(SDL_mutex * _audioMutex, const int _numDynamicChannels, const char * ipAddress, const int udpPort)
+void AudioVoiceManager4D::init(AudioMutexBase * in_audioMutex, const int in_numDynamicChannels, const char * ipAddress, const int udpPort)
 {
 	Assert(firstVoice == nullptr);
 	
 	Assert(numDynamicChannels == 0);
-	numDynamicChannels = _numDynamicChannels;
+	numDynamicChannels = in_numDynamicChannels;
 	
-	audioMutex.mutex = _audioMutex;
+	audioMutex = in_audioMutex;
 
 	//
 
@@ -81,7 +81,7 @@ void AudioVoiceManager4D::shut()
 
 	Assert(firstVoice == nullptr);
 	
-	audioMutex.mutex = nullptr;
+	audioMutex = nullptr;
 	
 	while (firstVoice != nullptr)
 		freeVoice(firstVoice);
@@ -94,7 +94,7 @@ bool AudioVoiceManager4D::allocVoice(AudioVoice *& out_voice, AudioSource * sour
 	Assert(out_voice == nullptr);
 	Assert(source != nullptr);
 
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		AudioVoice4D * voice = new AudioVoice4D();
 		voice->next = firstVoice;
@@ -147,7 +147,7 @@ bool AudioVoiceManager4D::allocVoice(AudioVoice *& out_voice, AudioSource * sour
 		
 		out_voice = voice;
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 	
 	return true;
 }
@@ -156,7 +156,7 @@ void AudioVoiceManager4D::freeVoice(AudioVoice *& voice)
 {
 	Assert(voice != nullptr);
 	
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		if (voice->channelIndex != -1 && g_oscStream != nullptr)
 		{
@@ -196,19 +196,19 @@ void AudioVoiceManager4D::freeVoice(AudioVoice *& voice)
 
 		updateDynamicChannelIndices();
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 }
 
 int AudioVoiceManager4D::calculateNumVoices() const
 {
 	int numVoices = 0;
 	
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		for (AudioVoice * voice = firstVoice; voice != nullptr; voice = voice->next)
 			numVoices++;
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 	
 	return numVoices;
 }
@@ -217,13 +217,13 @@ int AudioVoiceManager4D::calculateNumDynamicChannelsUsed() const
 {
 	int result = 0;
 	
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
 			if (voice->channelIndex != -1 && voice->channelIndex < numDynamicChannels)
 				result++;
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 	
 	return result;
 }
@@ -272,7 +272,7 @@ void AudioVoiceManager4D::generateAudio(
 		memset(samples, 0, numSamples * numChannels * sizeof(float));
 	}
 	
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		for (auto * voice_itr = firstVoice; voice_itr != nullptr; voice_itr = voice_itr->next)
 		{
@@ -426,7 +426,7 @@ void AudioVoiceManager4D::generateAudio(
 			}
 		}
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 }
 
 static void generateOscForVoice(AudioVoice4D & voice, Osc4DStream & stream, const bool forceSync)
@@ -562,7 +562,7 @@ static void generateOscForVoice(AudioVoice4D & voice, Osc4DStream & stream, cons
 
 void AudioVoiceManager4D::generateOsc(Osc4DStream & stream, const bool _forceSync)
 {
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		try
 		{
@@ -642,16 +642,16 @@ void AudioVoiceManager4D::generateOsc(Osc4DStream & stream, const bool _forceSyn
 			LOG_ERR("%s", e.what());
 		}
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 }
 
 void AudioVoiceManager4D::setOscEndpoint(const char * ipAddress, const int udpPort)
 {
-	audioMutex.lock(); // setOscEndpoint
+	audioMutex->lock(); // setOscEndpoint
 	{
 		oscStream->setEndpoint(ipAddress, udpPort);
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 }
 
 void AudioVoiceManager4D::updateDynamicChannelIndices()

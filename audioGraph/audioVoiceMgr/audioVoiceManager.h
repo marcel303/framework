@@ -291,7 +291,7 @@ struct AudioVoiceManager
 struct AudioVoiceManagerBasic : AudioVoiceManager
 {
 private:
-	AudioMutex_Shared audioMutex;
+	AudioMutexBase * audioMutex;
 	
 	int numDynamicChannels; ///< The number of dynamic channels, for voices wishing to be allocated to a dynamic channel index.
 	AudioVoice * firstVoice; ///< First voice in the list of registered voices.
@@ -302,7 +302,7 @@ public:
 public:
 	AudioVoiceManagerBasic();
 	
-	void init(SDL_mutex * audioMutex, const int numDynamicChannels);
+	void init(AudioMutexBase * audioMutex, const int numDynamicChannels);
 	void shut();
 	
 	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex = -1) override;

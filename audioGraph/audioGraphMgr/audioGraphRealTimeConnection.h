@@ -33,14 +33,12 @@ struct AudioGraph;
 struct AudioGraphContext;
 struct AudioValueHistorySet;
 
-struct SDL_mutex;
-
 struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 {
 	AudioGraph * audioGraph;
 	AudioGraph ** audioGraphPtr;
 	
-	SDL_mutex * audioMutex;
+	AudioMutexBase * audioMutex;
 	
 	bool isLoading;
 	

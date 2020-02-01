@@ -1856,7 +1856,8 @@ int main(int argc, char * argv[])
 
 	const auto t1 = g_TimerRT.TimeUS_get();
 	
-	SDL_mutex * mutex = SDL_CreateMutex();
+	AudioMutex mutex;
+	mutex.init();
 	
 	//
 	
@@ -1921,14 +1922,14 @@ int main(int argc, char * argv[])
 	int oscUdpPort = 2000;
 	
 	AudioVoiceManager4D voiceMgr;
-	voiceMgr.init(mutex, DYNAMIC_CHANNEL_COUNT, oscIpAddress.c_str(), oscUdpPort);
+	voiceMgr.init(&mutex, DYNAMIC_CHANNEL_COUNT, oscIpAddress.c_str(), oscUdpPort);
 	voiceMgr.outputStereo = STEREO_OUTPUT;
 	s_voiceMgr = &voiceMgr;
 	
 	//
 	
 	AudioGraphManager_RTE audioGraphMgr(GFX_SX, GFX_SY);
-	audioGraphMgr.init(mutex, &voiceMgr);
+	audioGraphMgr.init(&mutex, &voiceMgr);
 	
 	Assert(s_audioGraphMgr == nullptr);
 	s_audioGraphMgr = &audioGraphMgr;
@@ -1948,7 +1949,7 @@ int main(int argc, char * argv[])
 	
 	AudioUpdateHandler audioUpdateHandler;
 	
-	audioUpdateHandler.init(mutex, &voiceMgr, &audioGraphMgr);
+	audioUpdateHandler.init(&mutex, &voiceMgr, &audioGraphMgr);
 	
 	//
 	
@@ -2102,9 +2103,9 @@ int main(int argc, char * argv[])
 				//        block-process: interpolate control values. export to graph
 				//        audio-process: process audio graphs. generate audio
 					doLabel("shared memory", 0.f);
-					audioGraphMgr.context->audioMutex.lock();
+					audioGraphMgr.context->audioMutex->lock();
 					auto controlValues = audioGraphMgr.context->controlValues;
-					audioGraphMgr.context->audioMutex.unlock();
+					audioGraphMgr.context->audioMutex->unlock();
 					int padIndex = 0;
 					for (int i = 0; i < controlValues.size(); ++i)
 					{
@@ -2134,7 +2135,7 @@ int main(int argc, char * argv[])
 								padIndex = 0;
 						}
 					}
-					audioGraphMgr.context->audioMutex.lock();
+					audioGraphMgr.context->audioMutex->lock();
 					for (auto & srcControlValue : controlValues)
 					{
 						for (auto & dstControlValue : audioGraphMgr.context->controlValues)
@@ -2147,7 +2148,7 @@ int main(int argc, char * argv[])
 							}
 						}
 					}
-					audioGraphMgr.context->audioMutex.unlock();
+					audioGraphMgr.context->audioMutex->unlock();
 					
 					// per instance control values
 					if (audioGraphMgr.selectedFile != nullptr && audioGraphMgr.selectedFile->activeInstance != nullptr)
@@ -2461,8 +2462,7 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	SDL_DestroyMutex(mutex);
-	mutex = nullptr;
+	mutex.shut();
 	
 	//
 	

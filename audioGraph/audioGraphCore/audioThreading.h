@@ -29,21 +29,27 @@
 
 #include <stdint.h>
 
-struct SDL_mutex;
+struct AudioMutexBase
+{
+	virtual ~AudioMutexBase() { }
+
+	virtual void lock() const = 0;
+	virtual void unlock() const = 0;
+};
 
 /**
  * AudioMutex_Shared contains a shared reference to a SDL mutex.
  * It provides lock and unlock methods which will lock and unlock the mutex.
  */
-struct AudioMutex_Shared
+struct AudioMutex_Shared : AudioMutexBase
 {
-	SDL_mutex * mutex;
+	struct SDL_mutex * mutex;
 	
 	AudioMutex_Shared();
-	AudioMutex_Shared(SDL_mutex * mutex);
+	AudioMutex_Shared(struct SDL_mutex * mutex);
 	
-	void lock() const; ///< Locks the mutex. Asserts the lock operation succeeds in debug mode.
-	void unlock() const; ///< Unlocks the mutex. Assers the unlock operation succeeds in debug mode.
+	virtual void lock() const override; ///< Locks the mutex. Asserts the lock operation succeeds in debug mode.
+	virtual void unlock() const override; ///< Unlocks the mutex. Assers the unlock operation succeeds in debug mode.
 };
 
 /**
@@ -51,18 +57,18 @@ struct AudioMutex_Shared
  * The AudioMutex must first be initialized using init(), which will create the mutex.
  * shut() must explicitly be called to free the mutex again.
  */
-struct AudioMutex
+struct AudioMutex : AudioMutexBase
 {
-	SDL_mutex * mutex; ///< Reference to the SDL mutex owned by this AudioMutex. Exposed here for convience when direct usage of the SDL mutex is needed.
+	struct SDL_mutex * mutex; ///< Reference to the SDL mutex owned by this AudioMutex. Exposed here for convience when direct usage of the SDL mutex is needed.
 	
 	AudioMutex();
-	~AudioMutex(); ///< Asserts shut() has been called before the AudioMutex leaves scope.
+	virtual ~AudioMutex() override; ///< Asserts shut() has been called before the AudioMutex leaves scope.
 	
 	void init(); ///< Creates the SDL mutex.
 	void shut(); ///< Destroys the SDL mutex.
 	
-	void lock() const; ///< Locks the mutex. Asserts the lock operation succeeds in debug mode.
-	void unlock() const; ///< Unlocks the mutex. Assers the unlock operation succeeds in debug mode.
+	virtual void lock() const override; ///< Locks the mutex. Asserts the lock operation succeeds in debug mode.
+	virtual void unlock() const override; ///< Unlocks the mutex. Assers the unlock operation succeeds in debug mode.
 
 	void debugCheckIsLocked(); ///< Asserts the mutex has been locked in debug mode.
 };

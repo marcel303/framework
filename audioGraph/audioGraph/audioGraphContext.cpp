@@ -30,7 +30,6 @@
 #include "Log.h"
 #include <algorithm>
 #include <math.h>
-#include <SDL2/SDL_mutex.h>
 
 AudioGraphContext::AudioGraphContext()
 	: audioMutex(nullptr)
@@ -43,7 +42,7 @@ AudioGraphContext::AudioGraphContext()
 {
 }
 
-void AudioGraphContext::init(SDL_mutex * mutex, AudioVoiceManager * _voiceMgr, AudioGraphManager * _audioGraphMgr)
+void AudioGraphContext::init(AudioMutexBase * mutex, AudioVoiceManager * _voiceMgr, AudioGraphManager * _audioGraphMgr)
 {
 	audioMutex = mutex;
 	
@@ -86,7 +85,7 @@ void AudioGraphContext::registerControlValue(AudioControlValue::Type type, const
 {
 	//rteMutex.lock(); // todo
 	
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		bool exists = false;
 		
@@ -128,14 +127,14 @@ void AudioGraphContext::registerControlValue(AudioControlValue::Type type, const
 			setMemf(controlValue.name.c_str(), controlValue.currentX, controlValue.currentY);
 		}
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 	
 	//rteMutex.unlock();
 }
 
 void AudioGraphContext::unregisterControlValue(const char * name)
 {
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		bool exists = false;
 		
@@ -165,24 +164,24 @@ void AudioGraphContext::unregisterControlValue(const char * name)
 			LOG_WRN("failed to unregister control value %s", name);
 		}
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 }
 
 void AudioGraphContext::exportControlValues()
 {
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		for (auto & controlValue : controlValues)
 		{
 			setMemf(controlValue.name.c_str(), controlValue.currentX, controlValue.currentY);
 		}
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 }
 
 void AudioGraphContext::setMemf(const char * name, const float value1, const float value2, const float value3, const float value4)
 {
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		auto & mem = memf[name];
 		
@@ -191,14 +190,14 @@ void AudioGraphContext::setMemf(const char * name, const float value1, const flo
 		mem.value3 = value3;
 		mem.value4 = value4;
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 }
 
 AudioGraphContext::Memf AudioGraphContext::getMemf(const char * name)
 {
 	Memf result;
 	
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		auto memfItr = memf.find(name);
 		
@@ -207,7 +206,7 @@ AudioGraphContext::Memf AudioGraphContext::getMemf(const char * name)
 			result = memfItr->second;
 		}
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 	
 	return result;
 }

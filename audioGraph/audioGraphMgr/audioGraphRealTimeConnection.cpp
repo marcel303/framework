@@ -73,23 +73,17 @@ bool AudioValueHistory::isActive() const
 
 struct AudioScope
 {
-	SDL_mutex * mutex;
+	AudioMutexBase * mutex;
 	
-	AudioScope(SDL_mutex * _mutex)
-		: mutex(_mutex)
+	AudioScope(AudioMutexBase * in_mutex)
+		: mutex(in_mutex)
 	{
-		Assert(mutex != nullptr);
-		const int result = SDL_LockMutex(mutex);
-		Assert(result == 0);
-		(void)result;
+		mutex->lock();
 	}
 	
 	~AudioScope()
 	{
-		Assert(mutex != nullptr);
-		const int result = SDL_UnlockMutex(mutex);
-		Assert(result == 0);
-		(void)result;
+		mutex->unlock();
 	}
 };
 
@@ -207,8 +201,7 @@ void AudioRealTimeConnection::updateAudioValues()
 
 void AudioRealTimeConnection::loadBegin()
 {
-	Assert(audioMutex != nullptr);
-	SDL_LockMutex(audioMutex);
+	audioMutex->lock();
 	
 	isLoading = true;
 	
@@ -224,8 +217,7 @@ void AudioRealTimeConnection::loadEnd(GraphEdit & graphEdit)
 	
 	isLoading = false;
 	
-	Assert(audioMutex != nullptr);
-	SDL_UnlockMutex(audioMutex);
+	audioMutex->unlock();
 }
 
 void AudioRealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::string & typeName)

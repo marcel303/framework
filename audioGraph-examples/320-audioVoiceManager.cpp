@@ -567,13 +567,15 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	SDL_mutex * mutex = SDL_CreateMutex();
-	s_audioMutex.mutex = mutex;
+	AudioMutex mutex;
+	mutex.init();
+
+	s_audioMutex.mutex = mutex.mutex;
 	
 	//
 	
 	AudioVoiceManagerBasic voiceMgr;
-	voiceMgr.init(mutex, kNumChannels);
+	voiceMgr.init(&mutex, kNumChannels);
 	voiceMgr.outputStereo = true;
 	s_voiceMgr = &voiceMgr;
 	
@@ -585,7 +587,7 @@ int main(int argc, char * argv[])
 	//
 	
 	AudioUpdateHandler audioUpdateHandler;
-	audioUpdateHandler.init(mutex, &voiceMgr, nullptr);
+	audioUpdateHandler.init(&mutex, &voiceMgr, nullptr);
 	audioUpdateHandler.updateTasks.push_back(world);
 	
 	PortAudioObject pa;
@@ -809,8 +811,7 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	SDL_DestroyMutex(mutex);
-	mutex = nullptr;
+	mutex.shut();
 
 	//
 	

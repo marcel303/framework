@@ -279,7 +279,7 @@ struct AudioVoice4D : AudioVoice
 struct AudioVoiceManager4D : AudioVoiceManager
 {
 private:
-	AudioMutex_Shared audioMutex;
+	AudioMutexBase * audioMutex;
 	
 	AudioVoice * firstVoice;
 	int colorIndex;
@@ -319,7 +319,7 @@ public:
 	
 	AudioVoiceManager4D();
 	
-	void init(SDL_mutex * audioMutex, const int numDynamicChannels, const char * ipAddress, const int udpPort);
+	void init(AudioMutexBase * audioMutex, const int numDynamicChannels, const char * ipAddress, const int udpPort);
 	void shut();
 	
 	virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex = -1) override;

@@ -53,7 +53,7 @@ AudioUpdateHandler::~AudioUpdateHandler()
 	shut();
 }
 
-void AudioUpdateHandler::init(SDL_mutex * in_mutex, AudioVoiceManager * in_voiceMgr, AudioGraphManager * in_audioGraphMgr)
+void AudioUpdateHandler::init(AudioMutexBase * in_mutex, AudioVoiceManager * in_voiceMgr, AudioGraphManager * in_audioGraphMgr)
 {
 	Assert(in_mutex != nullptr);
 	

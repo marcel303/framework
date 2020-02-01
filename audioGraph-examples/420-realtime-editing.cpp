@@ -45,18 +45,18 @@ int main(int argc, char * argv[])
 	{
 		// initialize audio related systems
 		
-		SDL_mutex * mutex = SDL_CreateMutex();
-		Assert(mutex != nullptr);
+		AudioMutex mutex;
+		mutex.init();
 
 		AudioVoiceManagerBasic voiceMgr;
-		voiceMgr.init(mutex, CHANNEL_COUNT);
+		voiceMgr.init(&mutex, CHANNEL_COUNT);
 		voiceMgr.outputStereo = true;
 
 		AudioGraphManager_RTE audioGraphMgr(GFX_SX, GFX_SY);
-		audioGraphMgr.init(mutex, &voiceMgr);
+		audioGraphMgr.init(&mutex, &voiceMgr);
 
 		AudioUpdateHandler audioUpdateHandler;
-		audioUpdateHandler.init(mutex, &voiceMgr, &audioGraphMgr);
+		audioUpdateHandler.init(&mutex, &voiceMgr, &audioGraphMgr);
 
 		PortAudioObject pa;
 		if (!pa.init(SAMPLE_RATE, 2, 1, AUDIO_UPDATE_SIZE, &audioUpdateHandler))
@@ -114,8 +114,7 @@ int main(int argc, char * argv[])
 		
 		voiceMgr.shut();
 
-		SDL_DestroyMutex(mutex);
-		mutex = nullptr;
+		mutex.shut();
 	}
 	framework.shutdown();
 

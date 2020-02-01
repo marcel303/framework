@@ -325,28 +325,28 @@ void AudioVoiceManager::generateAudio(
 
 AudioVoiceManagerBasic::AudioVoiceManagerBasic()
 	: AudioVoiceManager(kType_Basic)
-	, audioMutex()
+	, audioMutex(nullptr)
 	, numDynamicChannels(0)
 	, firstVoice(nullptr)
 	, outputStereo(false)
 {
 }
 
-void AudioVoiceManagerBasic::init(SDL_mutex * _audioMutex, const int _numDynamicChannels)
+void AudioVoiceManagerBasic::init(AudioMutexBase * in_audioMutex, const int _numDynamicChannels)
 {
 	Assert(firstVoice == nullptr);
 	
 	Assert(numDynamicChannels == 0);
 	numDynamicChannels = _numDynamicChannels;
 	
-	audioMutex.mutex = _audioMutex;
+	audioMutex = in_audioMutex;
 }
 
 void AudioVoiceManagerBasic::shut()
 {
 	Assert(firstVoice == nullptr);
 	
-	audioMutex.mutex = nullptr;
+	audioMutex = nullptr;
 	
 	while (firstVoice != nullptr)
 		freeVoice(firstVoice);
@@ -359,7 +359,7 @@ bool AudioVoiceManagerBasic::allocVoice(AudioVoice *& out_voice, AudioSource * s
 	Assert(out_voice == nullptr);
 	Assert(source != nullptr);
 	
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		AudioVoice * voice = new AudioVoice();
 		voice->next = firstVoice;
@@ -397,7 +397,7 @@ bool AudioVoiceManagerBasic::allocVoice(AudioVoice *& out_voice, AudioSource * s
 			voice->rampInfo.isRamped = true;
 		}
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 	
 	return true;
 }
@@ -406,7 +406,7 @@ void AudioVoiceManagerBasic::freeVoice(AudioVoice *& voice)
 {
 	Assert(voice != nullptr);
 	
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		AudioVoice ** voice_itr = &firstVoice;
 		
@@ -432,19 +432,19 @@ void AudioVoiceManagerBasic::freeVoice(AudioVoice *& voice)
 		
 		updateDynamicChannelIndices();
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 }
 
 int AudioVoiceManagerBasic::calculateNumVoices() const
 {
 	int numVoices = 0;
 	
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		for (AudioVoice * voice = firstVoice; voice != nullptr; voice = voice->next)
 			numVoices++;
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 	
 	return numVoices;
 }
@@ -454,7 +454,7 @@ void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int
 	const OutputMode outputMode = outputStereo ? kOutputMode_Stereo : kOutputMode_MultiChannel;
 	const float limiterPeak = 1.f;
 	
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		int numVoices = 0;
 		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
@@ -509,20 +509,20 @@ void AudioVoiceManagerBasic::generateAudio(float * __restrict samples, const int
 				outputMode, true);
 		}
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 }
 
 int AudioVoiceManagerBasic::calculateNumDynamicChannelsUsed() const
 {
 	int result = 0;
 	
-	audioMutex.lock();
+	audioMutex->lock();
 	{
 		for (auto * voice = firstVoice; voice != nullptr; voice = voice->next)
 			if (voice->channelIndex != -1 && voice->channelIndex < numDynamicChannels)
 				result++;
 	}
-	audioMutex.unlock();
+	audioMutex->unlock();
 	
 	return result;
 }

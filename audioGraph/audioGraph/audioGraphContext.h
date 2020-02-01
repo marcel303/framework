@@ -64,7 +64,7 @@ struct AudioGraphContext
 	}
 */
 	
-	AudioMutex_Shared audioMutex;
+	AudioMutexBase * audioMutex;
 	
 	AudioVoiceManager * voiceMgr;
 	
@@ -81,7 +81,7 @@ struct AudioGraphContext
 	AudioGraphContext();
 	
 	// called from the app thread
-	void init(SDL_mutex * mutex, AudioVoiceManager * voiceMgr, AudioGraphManager * audioGraphMgr);
+	void init(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr, AudioGraphManager * audioGraphMgr);
 	void shut();
 	
 	// called from the audio thread
