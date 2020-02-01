@@ -286,7 +286,7 @@ void AudioVoiceManager4D::generateAudio(
 				// generate samples
 				
 			#ifdef WIN32
-				// fixme : use a general fix for variable sized arrays
+				 // cleanup : cleanup when (if ever) VS supports GCC variable array size extension
 				float * voiceSamples = (float*)alloca(numSamples * sizeof(float));
 			#else
 				ALIGN32 float voiceSamples[numSamples];

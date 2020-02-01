@@ -227,7 +227,7 @@ void AudioNodeVoice4D::tick(const float dt)
 		Mat4x4 originMatrix;
 		originMatrix.MakeRotationY(Calc::DegToRad(originRotY));
 		
-		StringBuilder<64> name;
+		FixedSizeStringBuilder<64> name;
 		name.Append("channel(");
 		name.Append(voice4D->channelIndex + 1);
 		name.Append(")");

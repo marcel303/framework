@@ -62,7 +62,6 @@
 		self.depthTexture = nil;
 		
     	// todo : create iphoneos specific Metal view
-    	// todo : configure
     	self.opaque = YES;
     	self.device = device;
     	self.colorPixelFormat = MTLPixelFormatBGRA8Unorm;
