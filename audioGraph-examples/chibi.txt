@@ -90,6 +90,7 @@ app audiograph-500-consoleapp
 
 app audiograph-700-4dworld
 	depend_library audiograph
+	depend_library audiograph-nodes-4dsound-1.6
 	add_files 700-4dworld.cpp
 	resource_path data
 	group audiograph-examples
