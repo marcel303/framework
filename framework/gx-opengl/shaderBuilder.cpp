@@ -167,7 +167,8 @@ R"HEADER(
 	#if !USE_LEGACY_OPENGL
 		if (shaderType == 'p')
 		{
-			bool usedOutputs[32] = { false }; // todo : should match size of g_shaderOutputs
+			bool * usedOutputs = (bool*)alloca(g_shaderOutputs.size() * sizeof(bool));
+			memset(usedOutputs, 0, g_shaderOutputs.size() * sizeof(bool));
 			
 			for (int i = 0; outputs[i] != 0; ++i)
 			{
@@ -180,7 +181,6 @@ R"HEADER(
 				}
 				
 				// todo : detect if a pass is added more than once
-				// todo : default value assignment failed on Intel nuc. is this allowed within the OpenGL spec? how common is this?
 				
 				sb.AppendFormat("layout(location = %d) out %s %s;\n",
 					i,
