@@ -26,6 +26,7 @@
 */
 
 #include "audio.h"
+#include "audioThreading.h"
 #include "audioTypes.h"
 #include "binaural.h"
 #include "binaural_cipic.h"
@@ -62,24 +63,32 @@ static void drawHrirSampleGrid(const HRIRSampleSet & dataSet, const Vec2 & hover
 
 namespace BinauralTestNamespace
 {
-	static SDL_mutex * s_audioMutexSDL = nullptr;
-	
-	struct AudioMutex : binaural::Mutex
+	struct MyBinauralMutex : binaural::Mutex
 	{
+		AudioMutex audioMutex;
+		
+		void init()
+		{
+			audioMutex.init();
+		}
+		
+		void shut()
+		{
+			audioMutex.shut();
+		}
+		
 		virtual void lock() override
 		{
-			const int r = SDL_LockMutex(s_audioMutexSDL);
-			Assert(r == 0);
+			audioMutex.lock();
 		}
 		
 		virtual void unlock() override
 		{
-			const int r = SDL_UnlockMutex(s_audioMutexSDL);
-			Assert(r == 0);
+			audioMutex.unlock();
 		}
 	};
 	
-	static AudioMutex s_audioMutex;
+	static MyBinauralMutex s_audioMutex;
 	
 	//
 
@@ -262,8 +271,7 @@ int main(int argc, char * argv[])
 	
 	initUi();
 	
-	fassert(s_audioMutexSDL == nullptr);
-	s_audioMutexSDL = SDL_CreateMutex();
+	s_audioMutex.init();
 	
 	enableDebugLog = true;
 	
@@ -833,9 +841,7 @@ int main(int argc, char * argv[])
 		pa.shut();
 	}
 	
-	fassert(s_audioMutexSDL != nullptr);
-	SDL_DestroyMutex(s_audioMutexSDL);
-	s_audioMutexSDL = nullptr;
+	s_audioMutex.shut();
 	
 	framework.shutdown();
 
