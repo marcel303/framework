@@ -98,16 +98,16 @@ library vfxgraph-kinect
 
 	header_path vfxNodes-kinect expose
 
-	scan_files cpp path vfxNodes-kinect conglomerate vfxNodes-kinect/kinect_all.h
+	scan_files cpp path vfxNodes-kinect exclude_path vfxNodes-kinect/kinect_all.cpp conglomerate vfxNodes-kinect/kinect_all.h
 	scan_files h   path vfxNodes-kinect
 
-	compile_definition ENABLE_KINECT1   0 expose
+	add_files vfxNodes-kinect/kinect_all.cpp
+
+	compile_definition ENABLE_KINECT1 0 expose
 
 	with_platform macos   compile_definition ENABLE_KINECT2 1 expose
 	with_platform linux   compile_definition ENABLE_KINECT2 0 expose
 	with_platform windows compile_definition ENABLE_KINECT2 0 expose
-
-# todo : add conglomerate
 
 	link_translation_unit_using_function_call linkVfxNodes_Kinect
 
