@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2017 Marcel Smit
+	Copyright (C) 2020 Marcel Smit
 	marcel303@gmail.com
 	https://www.facebook.com/marcel.smit981
 
@@ -468,7 +468,7 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 			int gsx = glyph.sx;
 			int gsy = glyph.sy;
 			
-		// todo : why not float ?
+		//  todo : why not float ?
 			int dx1 = x - MSDF_GLYPH_PADDING_INNER + glyph.lsb;
 			int dy1 = y + MSDF_GLYPH_PADDING_INNER;
 			int dx2 = dx1 + gsx;

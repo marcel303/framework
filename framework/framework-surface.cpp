@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2017 Marcel Smit
+	Copyright (C) 2020 Marcel Smit
 	marcel303@gmail.com
 	https://www.facebook.com/marcel.smit981
 
@@ -120,6 +120,8 @@ Surface::~Surface()
 void Surface::swapBuffers()
 {
 	fassert(m_properties.colorTarget.doubleBuffered || m_properties.depthTarget.doubleBuffered);
+	
+	// todo : assert here we're not the current surface. this won't work correctly with how push/popRenderPass works
 
 	m_bufferId = (m_bufferId + 1) % 2;
 }

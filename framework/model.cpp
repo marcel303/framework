@@ -35,7 +35,6 @@
 #include "Path.h"
 #include "StringEx.h"
 #include <algorithm>
-#include <SDL2/SDL.h>
 
 #define DEBUG_TRS 0
 
