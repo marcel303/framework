@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2017 Marcel Smit
+	Copyright (C) 2020 Marcel Smit
 	marcel303@gmail.com
 	https://www.facebook.com/marcel.smit981
 
@@ -43,7 +43,8 @@ EnsureLinkage(jgmod_audiograph);
 // todo : ask a few plugin developers if it's ok to bundle their app on framework's repo as a test/demo of jsfx support
 // todo : add and remove the ability to add JSFX script paths
 
-#define JSFX_SEARCH_PATH "/Users/thecat/atk-reaper/plugins/" // fixme : remove hard coded ATK scripts path
+#define JSFX_SEARCH_PATH_1 "/Users/thecat/atk-reaper/plugins/" // fixme : remove hard coded ATK scripts path
+#define JSFX_SEARCH_PATH_2 "/Users/thecat/framework/jsfx-geraintluff/" // fixme : remove hard coded ATK scripts path
 
 #define JSFX_DATA_ROOT "/Users/thecat/Library/Application Support/REAPER/Data/" // fixme : remove hard coded Reaper data path
 
@@ -157,7 +158,8 @@ void testAudioGraph_JsusFx()
 {
 	setAbout("This example shows Audio Graph + JsusFx in action!");
 	
-	createJsusFxAudioNodes(JSFX_DATA_ROOT, JSFX_SEARCH_PATH, true);
+	createJsusFxAudioNodes(JSFX_DATA_ROOT, JSFX_SEARCH_PATH_1, true);
+	createJsusFxAudioNodes(JSFX_DATA_ROOT, JSFX_SEARCH_PATH_2, true);
 	
 	initAudioGraph();
 	
