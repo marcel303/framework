@@ -28,9 +28,6 @@
 #include "framework.h"
 #include "vfxNodeSurface.h"
 
-extern int VFXGRAPH_SX;
-extern int VFXGRAPH_SY;
-
 extern Surface * g_currentVfxSurface;
 
 VFX_ENUM_TYPE(surfaceFormat)
@@ -138,8 +135,8 @@ void VfxNodeSurface::tick(const float dt)
 	}
 	
 	const Format format = (Format)getInputInt(kInput_Format, 0);
-	const int sx = getInputInt(kInput_Width, VFXGRAPH_SX);
-	const int sy = getInputInt(kInput_Height, VFXGRAPH_SY);
+	const int sx = getInputInt(kInput_Width, g_currentVfxGraph->sx);
+	const int sy = getInputInt(kInput_Height, g_currentVfxGraph->sy);
 	const ViewMode viewMode = (ViewMode)getInputInt(kInput_ViewMode, 0);
 	
 	const SURFACE_FORMAT surfaceFormat = (format == kFormat_RGBA8) ? SURFACE_RGBA8 :  SURFACE_RGBA16F;
@@ -264,5 +261,5 @@ void VfxNodeSurface::afterDraw() const
 	
 	//
 	
-		imageOutput.texture = surface->getTexture();
+	imageOutput.texture = surface->getTexture();
 }

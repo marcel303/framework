@@ -28,7 +28,6 @@
 #pragma once
 
 #include "graph.h"
-#include "graph_typeDefinitionLibrary.h" // todo : remove
 #include <map>
 #include <set>
 #include <string>
@@ -137,6 +136,9 @@ struct VfxGraph
 	std::vector<ValueToFree> valuesToFree;
 	
 	MemoryComponent memory;
+	
+	mutable int sx; // fixme : these shouldn't be mutable. remove sx, sy from draw method. make it a requirement tick is always called before draw at least once
+	mutable int sy;
 	
 	double time;
 	

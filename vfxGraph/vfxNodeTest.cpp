@@ -31,9 +31,6 @@
 #include "framework.h"
 #include "vfxNodeTest.h"
 
-extern int VFXGRAPH_SX;
-extern int VFXGRAPH_SY;
-
 VFX_NODE_TYPE(VfxNodeTest)
 {
 	typeName = "test";

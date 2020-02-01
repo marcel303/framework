@@ -33,8 +33,7 @@
 
 using namespace tinyxml2;
 
-extern int VFXGRAPH_SX;
-extern int VFXGRAPH_SY;
+extern VfxGraph * g_currentVfxGraph;
 
 VFX_NODE_TYPE(VfxNodeVfxGraph)
 {
@@ -187,10 +186,13 @@ void VfxNodeVfxGraph::tick(const float dt)
 	
 	if (vfxGraph != nullptr)
 	{
+		const int sx = g_currentVfxGraph->sx;
+		const int sy = g_currentVfxGraph->sy;
+		
 		auto restore = g_currentVfxGraph;
 		g_currentVfxGraph = nullptr;
 		{
-			vfxGraph->tick(VFXGRAPH_SX, VFXGRAPH_SY, dt);
+			vfxGraph->tick(sx, sy, dt);
 		}
 		g_currentVfxGraph = restore;
 		
@@ -224,12 +226,15 @@ void VfxNodeVfxGraph::draw() const
 		return;
 	}
 	
+	const int sx = g_currentVfxGraph->sx;
+	const int sy = g_currentVfxGraph->sy;
+	
 	auto restoreGraph = g_currentVfxGraph;
 	auto restoreSurface = g_currentVfxSurface;
 	g_currentVfxGraph = nullptr;
 	g_currentVfxSurface = nullptr;
 	{
-		imageOutput->texture = vfxGraph->traverseDraw(VFXGRAPH_SX, VFXGRAPH_SY);
+		imageOutput->texture = vfxGraph->traverseDraw(sx, sy);
 	}
 	g_currentVfxGraph = restoreGraph;
 	g_currentVfxSurface = restoreSurface;

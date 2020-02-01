@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "graph_typeDefinitionLibrary.h"
 #include "Parse.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
@@ -35,12 +36,6 @@
 #if VFX_GRAPH_ENABLE_TIMING
 	#include "Timer.h"
 #endif
-
-extern int VFXGRAPH_SX;
-extern int VFXGRAPH_SY;
-
-int VFXGRAPH_SX = 0; // todo : remove. make these members
-int VFXGRAPH_SY = 0;
 
 //
 
@@ -157,6 +152,8 @@ VfxGraph::VfxGraph()
 	, nextDrawTraversalId(0)
 	, valuesToFree()
 	, memory()
+	, sx(0)
+	, sy(0)
 	, time(0.0)
 {
 	dynamicData = new VfxDynamicData();
@@ -308,16 +305,13 @@ void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputV
 	}
 }
 
-void VfxGraph::tick(const int sx, const int sy, const float dt)
+void VfxGraph::tick(const int in_sx, const int in_sy, const float dt)
 {
 	vfxCpuTimingBlock(VfxGraph_Tick);
 	vfxGpuTimingBlock(VfxGraph_Tick);
 	
-	int oldSx = VFXGRAPH_SX;
-	int oldSy = VFXGRAPH_SY;
-
-	VFXGRAPH_SX = sx;
-	VFXGRAPH_SY = sy;
+	sx = in_sx;
+	sy = in_sy;
 
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = this;
@@ -361,9 +355,6 @@ void VfxGraph::tick(const int sx, const int sy, const float dt)
 	//
 	
 	g_currentVfxGraph = nullptr;
-
-	VFXGRAPH_SX = oldSx;
-	VFXGRAPH_SY = oldSy;
 }
 
 void VfxGraph::draw(const int sx, const int sy) const
@@ -381,18 +372,15 @@ void VfxGraph::draw(const int sx, const int sy) const
 	}
 }
 
-int VfxGraph::traverseDraw(const int sx, const int sy) const
+int VfxGraph::traverseDraw(const int in_sx, const int in_sy) const
 {
 	vfxCpuTimingBlock(VfxGraph_Draw);
 	vfxGpuTimingBlock(VfxGraph_Draw);
 	
 	int result = 0;
 	
-	int oldSx = VFXGRAPH_SX;
-	int oldSy = VFXGRAPH_SY;
-
-	VFXGRAPH_SX = sx;
-	VFXGRAPH_SY = sy;
+	sx = in_sx;
+	sy = in_sy;
 
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = const_cast<VfxGraph*>(this);
@@ -423,7 +411,7 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 // todo : create dummy surface explicitly during init ?
 	if (s_dummySurface == nullptr)
 	{
-		s_dummySurface = new Surface(1, 1, false, false, false, 1);
+		s_dummySurface = new Surface(1, 1, false, false, true, 1);
 	}
 	
 	pushSurface(s_dummySurface);
@@ -462,9 +450,6 @@ int VfxGraph::traverseDraw(const int sx, const int sy) const
 	//
 	
 	g_currentVfxGraph = nullptr;
-
-	VFXGRAPH_SX = oldSx;
-	VFXGRAPH_SY = oldSy;
 	
 	return result;
 }
