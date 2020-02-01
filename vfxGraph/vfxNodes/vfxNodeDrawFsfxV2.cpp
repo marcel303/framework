@@ -231,16 +231,13 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 				
 				// built-in?
 				if (name == "screenSize" ||
-					name == "colormap" ||
 					name == "params" ||
 					name == "drawColor" ||
 					name == "drawSkin")
 					continue;
 				
 				// standardized input?
-				if (name == "image1" ||
-					name == "image2" ||
-					name == "color1" ||
+				if (name == "color1" ||
 					name == "param1" ||
 					name == "param2" ||
 					name == "time" ||
@@ -303,25 +300,42 @@ void VfxNodeFsfxV2::loadShader(const char * filename)
 						socketIndex += numElems;
 					}
 				}
-				/*
-			// todo : add getTextureInfos() to shader
-				else if (type == GL_SAMPLER_2D)
+				else
+				{
+					logWarning("unknown GX immediate type: %d", type);
+				}
+			}
+			
+			auto textureInfos = shader->getTextureInfos();
+			
+			for (auto & info : textureInfos)
+			{
+				const GX_IMMEDIATE_TYPE type = info.type;
+				const std::string & name = info.name;
+				const GxImmediateIndex index = info.index;
+				
+				// built-in?
+				if (name == "colormap")
+					continue;
+				
+				// standardized input?
+				if (name == "image1" ||
+					name == "image2")
+					continue;
+				
+				if (type == GX_IMMEDIATE_TEXTURE_2D)
 				{
 					ShaderInput shaderInput;
 					shaderInput.type = type;
 					shaderInput.socketType = kVfxPlugType_Image;
 					shaderInput.socketIndex = socketIndex++;
-					shaderInput.uniformLocation = location;
+					shaderInput.immediateIndex = index;
 					shaderInputs.push_back(shaderInput);
 					
 					DynamicInput input;
 					input.name = name;
 					input.type = kVfxPlugType_Image;
 					inputs.push_back(input);
-				}
-				*/
-				else
-				{
 				}
 			}
 			
@@ -500,18 +514,15 @@ void VfxNodeFsfxV2::draw() const
 							getInputFloat(shaderInput.socketIndex + 3, 0.f));
 					}
 				}
-			// todo : add getTextureInfos() to shader
-				/*
-				else if (shaderInput.type == GL_SAMPLER_2D)
+				else if (shaderInput.type == GX_IMMEDIATE_TEXTURE_2D)
 				{
 					const VfxImageBase * image = getInputImage(shaderInput.socketIndex, nullptr);
 					
 					shader->setTextureUniform(
-						shaderInput.uniformLocation,
+						shaderInput.immediateIndex,
 						textureSlot++,
 						image ? image->getTexture() : 0);
 				}
-				*/
 				else
 				{
 					Assert(false);
@@ -549,18 +560,21 @@ void VfxNodeFsfxV2::draw() const
 				shader->setImmediate("gaussianKernelSize", 60.f);
 			}
 			
-			pushBlend(BLEND_OPAQUE);
+			popSurface();
 			{
-				pushTransform();
-				setTransform(TRANSFORM_SCREEN);
-				
-				popSurface();
-				g_currentVfxSurface->postprocess();
-				pushSurface(g_currentVfxSurface);
-				
-				popTransform();
+				pushBlend(BLEND_OPAQUE);
+				{
+					pushTransform();
+					{
+						setTransform(TRANSFORM_SCREEN);
+						
+						g_currentVfxSurface->postprocess();
+					}
+					popTransform();
+				}
+				popBlend();
 			}
-			popBlend();
+			pushSurface(g_currentVfxSurface);
 		}
 		clearShader();
 	}
@@ -590,6 +604,12 @@ void VfxNodeFsfxV2::getDescription(VfxNodeDescription & d)
 			const VfxColor defaultColor(1.f, 1.f, 1.f, 1.f);
 			const VfxColor * color = getInputColor(kInput_COUNT + i, &defaultColor);
 			d.add("%s: rgb=(%.2f, %.2f, %.2f), alpha=%.2f", input.name.c_str(), color->r, color->g, color->b, color->a);
+		}
+		else if (input.type == kVfxPlugType_Image)
+		{
+			const VfxImageBase * image = getInputImage(kInput_COUNT + i, nullptr);
+			if (image != nullptr)
+				d.add(input.name.c_str(), *image);
 		}
 		else
 		{
