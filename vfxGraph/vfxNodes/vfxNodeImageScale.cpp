@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2017 Marcel Smit
+	Copyright (C) 2020 Marcel Smit
 	marcel303@gmail.com
 	https://www.facebook.com/marcel.smit981
 
@@ -38,6 +38,35 @@ VFX_NODE_TYPE(VfxNodeImageScale)
 	in("maxWidth", "float", "-1");
 	in("maxHeight", "float", "-1");
 	out("image", "image");
+}
+
+// todo : move this to its own source file, to make sure conglomerate build keeps working once we convert other nodes to use this function too
+static SURFACE_FORMAT textureFormatToSurfaceFormat(const GX_TEXTURE_FORMAT textureFormat)
+{
+	switch (textureFormat)
+	{
+	case GX_R8_UNORM:
+		return SURFACE_R8;
+	case GX_RG8_UNORM:
+		return SURFACE_RG8;
+	case GX_RGBA8_UNORM:
+		return SURFACE_RGBA8;
+	case GX_R16_UNORM:
+		logWarning("translating R16 texture format to R8 surface format!");
+		return SURFACE_R8;
+	case GX_R16_FLOAT:
+		return SURFACE_R16F;
+	case GX_RGBA16_FLOAT:
+		return SURFACE_RGBA16F;
+	case GX_R32_FLOAT:
+		return SURFACE_R32F;
+	case GX_RGBA32_FLOAT:
+		return SURFACE_RGBA32F;
+	
+	default:
+		Assert(false);
+		return SURFACE_RGBA8;
+	}
 }
 
 VfxNodeImageScale::VfxNodeImageScale()
@@ -98,10 +127,12 @@ void VfxNodeImageScale::draw() const
 		{
 			const int sx = int(ceilf(image->getSx() * scale));
 			const int sy = int(ceilf(image->getSy() * scale));
+			const GX_TEXTURE_FORMAT format = (GX_TEXTURE_FORMAT)image->getTextureFormat();
+			const SURFACE_FORMAT surfaceFormat = textureFormatToSurfaceFormat(format);
 			
-			if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight())
+			if (surface == nullptr || sx != surface->getWidth() || sy != surface->getHeight() || surfaceFormat != surface->getFormat())
 			{
-				allocateImage(sx, sy);
+				allocateImage(sx, sy, surfaceFormat);
 			}
 
 			pushSurface(surface);
@@ -120,13 +151,11 @@ void VfxNodeImageScale::draw() const
 	}
 }
 
-void VfxNodeImageScale::allocateImage(const int sx, const int sy) const
+void VfxNodeImageScale::allocateImage(const int sx, const int sy, const SURFACE_FORMAT format) const
 {
 	freeImage();
-
-	// todo : use the correct surface format
 	
-	surface = new Surface(sx, sy, false, false, SURFACE_RGBA8, 1);
+	surface = new Surface(sx, sy, false, false, format, 1);
 	
 	imageOutput.texture = surface->getTexture();
 }

@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2017 Marcel Smit
+	Copyright (C) 2020 Marcel Smit
 	marcel303@gmail.com
 	https://www.facebook.com/marcel.smit981
 
@@ -83,6 +83,11 @@ int VfxImage_Texture::getSy() const
 uint32_t VfxImage_Texture::getTexture() const
 {
 	return texture;
+}
+
+uint32_t VfxImage_Texture::getTextureFormat() const
+{
+	return gxGetTextureFormat(texture);
 }
 
 //

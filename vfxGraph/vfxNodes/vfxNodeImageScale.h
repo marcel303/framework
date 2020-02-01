@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2017 Marcel Smit
+	Copyright (C) 2020 Marcel Smit
 	marcel303@gmail.com
 	https://www.facebook.com/marcel.smit981
 
@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "framework.h" // SURFACE_FORMAT
 #include "vfxNodeBase.h"
 
 class Surface;
@@ -57,6 +58,6 @@ struct VfxNodeImageScale : VfxNodeBase
 	
 	virtual void draw() const override;
 
-	void allocateImage(const int sx, const int sy) const;
+	void allocateImage(const int sx, const int sy, const SURFACE_FORMAT format) const;
 	void freeImage() const;
 };

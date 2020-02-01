@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2017 Marcel Smit
+	Copyright (C) 2020 Marcel Smit
 	marcel303@gmail.com
 	https://www.facebook.com/marcel.smit981
 
@@ -97,6 +97,7 @@ struct VfxImageBase
 	virtual int getSx() const = 0;
 	virtual int getSy() const = 0;
 	virtual uint32_t getTexture() const = 0;
+	virtual uint32_t getTextureFormat() const = 0;
 };
 
 struct VfxImage_Texture : VfxImageBase
@@ -108,6 +109,7 @@ struct VfxImage_Texture : VfxImageBase
 	virtual int getSx() const override;
 	virtual int getSy() const override;
 	virtual uint32_t getTexture() const override;
+	virtual uint32_t getTextureFormat() const override; // GX_TEXTURE_FORMAT
 };
 
 //
@@ -636,7 +638,7 @@ struct VfxNodeBase
 #endif
 #if ENABLE_VFXGRAPH_GPU_TIMING
 	int gpuTimeAvg;
-	OpenglGpuTimer gpuTimer;
+	OpenglGpuTimer gpuTimer; // todo : OpenGL guard
 #endif
 	
 	VfxNodeBase();
@@ -937,6 +939,8 @@ struct VfxNodeTypeRegistration
 
 extern VfxEnumTypeRegistration * g_vfxEnumTypeRegistrationList;
 extern VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList;
+
+// todo : move creation function somewhere else
 
 void createVfxValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
 void createVfxEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList);
