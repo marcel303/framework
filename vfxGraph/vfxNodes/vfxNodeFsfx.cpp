@@ -214,25 +214,46 @@ void VfxNodeFsfx::loadShader(const char * filename)
 						socketIndex += numElems;
 					}
 				}
-			// todo : add getTextureInfos() to shader
-				/*
-				else if (type == GL_SAMPLER_2D)
+				else
+				{
+					logWarning("unknown immediate type: %d", type);
+				}
+			}
+			
+			auto textureInfos = shader->getTextureInfos();
+			
+			for (auto & info : textureInfos)
+			{
+				const GX_IMMEDIATE_TYPE type = info.type;
+				const std::string & name = info.name;
+				const GxImmediateIndex index = info.index;
+				
+				// built-in?
+				if (name == "colormap")
+					continue;
+				
+				// standardized input?
+				if (name == "image1" ||
+					name == "image2")
+					continue;
+				
+				if (type == GX_IMMEDIATE_TEXTURE_2D)
 				{
 					ShaderInput shaderInput;
 					shaderInput.type = type;
 					shaderInput.socketType = kVfxPlugType_Image;
 					shaderInput.socketIndex = socketIndex++;
-					shaderInput.uniformLocation = location;
+					shaderInput.immediateIndex = index;
 					shaderInputs.push_back(shaderInput);
-					
+				
 					DynamicInput input;
 					input.name = name;
 					input.type = kVfxPlugType_Image;
 					inputs.push_back(input);
 				}
-				*/
 				else
 				{
+					logWarning("unknown texture type: %d", type);
 				}
 			}
 			
@@ -387,18 +408,15 @@ void VfxNodeFsfx::draw() const
 							getInputFloat(shaderInput.socketIndex + 3, 0.f));
 					}
 				}
-			// todo : add getTextureInfos() to shader
-				/*
-				else if (shaderInput.type == GL_SAMPLER_2D)
+				else if (shaderInput.type == GX_IMMEDIATE_TEXTURE_2D)
 				{
 					const VfxImageBase * image = getInputImage(shaderInput.socketIndex, nullptr);
 					
 					shader->setTextureUniform(
-						shaderInput.uniformLocation,
+						shaderInput.immediateIndex,
 						textureSlot++,
 						image ? image->getTexture() : 0);
 				}
-				*/
 				else
 				{
 					Assert(false);
