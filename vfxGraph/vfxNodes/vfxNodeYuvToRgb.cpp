@@ -185,21 +185,22 @@ void VfxNodeYuvToRgb::tick(const float dt)
 {
 	vfxCpuTimingBlock(VfxNodeYuvToRgb);
 	
-	// todo : do drawing.. in draw() ?
 	const VfxImageBase * y = getInputImage(kInput_Y, nullptr);
 	const VfxImageBase * u = getInputImage(kInput_U, nullptr);
 	const VfxImageBase * v = getInputImage(kInput_V, nullptr);
-	const ColorSpace colorSpace = (ColorSpace)getInputInt(kInput_ColorSpace, 0);
 
-	if (y == nullptr || u == nullptr || v == nullptr || y->getSx() == 0 || y->getSy() == 0)
+	if (isPassthrough ||
+		y == nullptr ||
+		u == nullptr ||
+		v == nullptr ||
+		y->getSx() == 0 ||
+		y->getSy() == 0)
 	{
 		delete surface;
 		surface = nullptr;
 	}
 	else
 	{
-		vfxGpuTimingBlock(VfxNodeYuvToRgb);
-		
 		const int sx = y->getSx();
 		const int sy = y->getSy();
 
@@ -210,6 +211,24 @@ void VfxNodeYuvToRgb::tick(const float dt)
 
 			surface = new Surface(sx, sy, false, false, SURFACE_RGBA8, 1);
 		}
+	}
+	
+	if (surface != nullptr)
+		imageOutput.texture = surface->getTexture();
+	else
+		imageOutput.texture = 0;
+}
+
+void VfxNodeYuvToRgb::draw() const
+{
+	if (surface != nullptr)
+	{
+		vfxGpuTimingBlock(VfxNodeYuvToRgb);
+		
+		const VfxImageBase * y = getInputImage(kInput_Y, nullptr);
+		const VfxImageBase * u = getInputImage(kInput_U, nullptr);
+		const VfxImageBase * v = getInputImage(kInput_V, nullptr);
+		const ColorSpace colorSpace = (ColorSpace)getInputInt(kInput_ColorSpace, 0);
 		
 		pushSurface(surface);
 		{
@@ -237,9 +256,4 @@ void VfxNodeYuvToRgb::tick(const float dt)
 		}
 		popSurface();
 	}
-
-	if (surface != nullptr)
-		imageOutput.texture = surface->getTexture();
-	else
-		imageOutput.texture = 0;
 }

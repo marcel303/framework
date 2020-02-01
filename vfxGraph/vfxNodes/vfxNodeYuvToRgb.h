@@ -63,4 +63,5 @@ struct VfxNodeYuvToRgb : VfxNodeBase
 	virtual ~VfxNodeYuvToRgb() override;
 	
 	virtual void tick(const float dt) override;
+	virtual void draw() const override;
 };
