@@ -49,7 +49,7 @@
 extern const int GFX_SX;
 extern const int GFX_SY;
 
-static SDL_mutex * s_audioMutex = nullptr;
+static AudioMutex * s_audioMutex = nullptr;
 static AudioUpdateHandler * s_audioUpdateHandler = nullptr;
 static PortAudioObject * s_paObject = nullptr;
 static AudioVoiceManagerBasic * s_voiceMgr = nullptr;
@@ -59,7 +59,7 @@ static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 static AudioGraphManager_Basic * s_audioGraphMgr = nullptr;
 #endif
 
-extern SDL_mutex * g_vfxAudioMutex;
+extern AudioMutexBase * g_vfxAudioMutex;
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;
 
@@ -590,7 +590,8 @@ void testVfxGraph()
 static void initAudioGraph()
 {
 	Assert(s_audioMutex == nullptr);
-	s_audioMutex = SDL_CreateMutex();
+	s_audioMutex = new AudioMutex();
+	s_audioMutex->init();
 	g_vfxAudioMutex = s_audioMutex;
 	
 	Assert(s_voiceMgr == nullptr);
@@ -653,7 +654,8 @@ static void shutAudioGraph()
 	
 	if (s_audioMutex != nullptr)
 	{
-		SDL_DestroyMutex(s_audioMutex);
+		s_audioMutex->shut();
+		delete s_audioMutex;
 		s_audioMutex = nullptr;
 	}
 }
