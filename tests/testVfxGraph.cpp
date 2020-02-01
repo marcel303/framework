@@ -542,7 +542,7 @@ void testVfxGraph()
 		{
 			// draw the vfx graph. this may update image outputs, so tick it before the visualizers
 			if (rtc.vfxGraph != nullptr)
-				rtc.vfxGraph->draw(GFX_SX, GFX_SY);
+				rtc.vfxGraph->draw();
 
 			// update the visualizers before we draw the editor
 			graphEdit.tickVisualizers(framework.timeStep);

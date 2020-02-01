@@ -857,7 +857,7 @@ int main(int argc, char * argv[])
 			frameIndex++;
 			if (controlWindow.saveCpu == false || (frameIndex % 10) == 0)
 			{
-				vfxGraph->draw(GFX_SX, GFX_SY);
+				vfxGraph->draw();
 			}
 			else
 			{
