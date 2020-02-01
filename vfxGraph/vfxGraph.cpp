@@ -357,9 +357,9 @@ void VfxGraph::tick(const int in_sx, const int in_sy, const float dt)
 	g_currentVfxGraph = nullptr;
 }
 
-void VfxGraph::draw(const int sx, const int sy) const
+void VfxGraph::draw() const
 {
-	const GxTextureId texture = traverseDraw(sx, sy);
+	const GxTextureId texture = traverseDraw();
 	
 	if (texture != 0)
 	{
@@ -372,16 +372,13 @@ void VfxGraph::draw(const int sx, const int sy) const
 	}
 }
 
-int VfxGraph::traverseDraw(const int in_sx, const int in_sy) const
+int VfxGraph::traverseDraw() const
 {
 	vfxCpuTimingBlock(VfxGraph_Draw);
 	vfxGpuTimingBlock(VfxGraph_Draw);
 	
 	int result = 0;
 	
-	sx = in_sx;
-	sy = in_sy;
-
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = const_cast<VfxGraph*>(this);
 	

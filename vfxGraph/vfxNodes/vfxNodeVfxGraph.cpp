@@ -226,15 +226,12 @@ void VfxNodeVfxGraph::draw() const
 		return;
 	}
 	
-	const int sx = g_currentVfxGraph->sx;
-	const int sy = g_currentVfxGraph->sy;
-	
 	auto restoreGraph = g_currentVfxGraph;
 	auto restoreSurface = g_currentVfxSurface;
 	g_currentVfxGraph = nullptr;
 	g_currentVfxSurface = nullptr;
 	{
-		imageOutput->texture = vfxGraph->traverseDraw(sx, sy);
+		imageOutput->texture = vfxGraph->traverseDraw();
 	}
 	g_currentVfxGraph = restoreGraph;
 	g_currentVfxSurface = restoreSurface;

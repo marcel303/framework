@@ -137,8 +137,8 @@ struct VfxGraph
 	
 	MemoryComponent memory;
 	
-	mutable int sx; // fixme : these shouldn't be mutable. remove sx, sy from draw method. make it a requirement tick is always called before draw at least once
-	mutable int sy;
+	int sx;
+	int sy;
 	
 	double time;
 	
@@ -149,8 +149,8 @@ struct VfxGraph
 	void connectToInputLiteral(VfxPlug & input, const std::string & inputValue);
 	
 	void tick(const int sx, const int sy, const float dt);
-	void draw(const int sx, const int sy) const;
-	int traverseDraw(const int sx, const int sy) const;
+	void draw() const;
+	int traverseDraw() const;
 	
 	VfxNodeDisplay * getMainDisplayNode() const;
 };

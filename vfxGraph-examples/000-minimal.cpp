@@ -69,7 +69,7 @@ int main(int argc, char * argv[])
 
 			framework.beginDraw(0, 0, 0, 0);
 			{
-				vfxGraph->draw(GFX_SX, GFX_SY);
+				vfxGraph->draw();
 			}
 			framework.endDraw();
 		}

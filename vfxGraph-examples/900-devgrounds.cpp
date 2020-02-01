@@ -447,7 +447,7 @@ int main(int argc, char * argv[])
 						
 						framework.beginDraw(0, 0, 0, 0);
 						{
-							vfxGraph->draw(sx, sy);
+							vfxGraph->draw();
 							
 							graphEdit->tickVisualizers(dt);
 							
@@ -782,7 +782,7 @@ int main(int argc, char * argv[])
 						gxScalef(1.f, vflip, 1.f);
 						gxTranslatef(-GFX_SX/2, -GFX_SY/2, 0);
 						
-						vfxGraph->draw(GFX_SX, GFX_SY);
+						vfxGraph->draw();
 					}
 					gxPopMatrix();
 				}

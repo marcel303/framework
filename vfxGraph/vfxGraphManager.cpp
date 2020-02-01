@@ -199,7 +199,7 @@ void VfxGraphManager_Basic::tickVisualizers(const float dt)
 void VfxGraphManager_Basic::traverseDraw() const
 {
 	for (auto instance : instances)
-		instance->texture = instance->vfxGraph->traverseDraw(instance->sx, instance->sy);
+		instance->texture = instance->vfxGraph->traverseDraw();
 }
 
 bool VfxGraphManager_Basic::tickEditor(const int sx, const int sy, const float dt, const bool isInputCaptured)
@@ -631,7 +631,7 @@ void VfxGraphManager_RTE::traverseDraw() const
 	{
 		for (auto instance : file_itr.second->instances)
 		{
-			instance->texture = instance->vfxGraph->traverseDraw(instance->sx, instance->sy);
+			instance->texture = instance->vfxGraph->traverseDraw();
 		}
 	}
 }

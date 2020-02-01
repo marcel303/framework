@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
 			
 			vfxGraph->tick(VISUALS_SX, VISUALS_SY, timeStep);
 			
-			const GxTextureId texture = vfxGraph->traverseDraw(VISUALS_SX, VISUALS_SY);
+			const GxTextureId texture = vfxGraph->traverseDraw();
 			
 			pushWindow(visualsWindow);
 			{

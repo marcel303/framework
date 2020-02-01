@@ -160,7 +160,7 @@ int main(int argc, char * argv[])
 						{
 							gxTranslatef(x * ELEM_SX, y * ELEM_SY, 0);
 
-							grid->elem[x][y].vfxGraph->draw(ELEM_SX, ELEM_SY);
+							grid->elem[x][y].vfxGraph->draw();
 							
 							if (text[y][x] != ' ')
 							{
