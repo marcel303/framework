@@ -131,7 +131,7 @@ void VfxNodePs3eye::tick(const float dt)
 	const int desiredFramerate = getInputInt(kInput_Framerate, 100);
 	const bool enableColor = getInputBool(kInput_ColorEnabled, true);
 	
-	SDL_LockMutex(mutex);
+	Verify(SDL_LockMutex(mutex) == 0);
 	{
 		eyeParams.autoGain = getInputBool(kInput_AutoGain, true);
 		eyeParams.gain = std::max(0, std::min(255, (int)roundf(getInputFloat(kInput_Gain, .32f) * 63.f)));
@@ -140,7 +140,7 @@ void VfxNodePs3eye::tick(const float dt)
 		eyeParams.balanceG = std::max(0, std::min(255, (int)roundf(getInputFloat(kInput_WhiteBalanceG, .5f) * 255.f)));
 		eyeParams.balanceB = std::max(0, std::min(255, (int)roundf(getInputFloat(kInput_WhiteBalanceB, .5f) * 255.f)));
 	}
-	SDL_UnlockMutex(mutex);
+	Verify(SDL_UnlockMutex(mutex) == 0);
 	
 	if (deviceIndex != currentDeviceIndex ||
 		currentResolution != resolution ||
@@ -299,11 +299,11 @@ int VfxNodePs3eye::captureThreadProc(void * obj)
 	{
 		EyeParams eyeParams;
 		
-		SDL_LockMutex(self->mutex);
+		Verify(SDL_LockMutex(self->mutex) == 0);
 		{
 			eyeParams = self->eyeParams;
 		}
-		SDL_UnlockMutex(self->mutex);
+		Verify(SDL_UnlockMutex(self->mutex) == 0);
 		
 		if (eyeParams.autoGain != currentEyeParams.autoGain || !currentEyeParams.isValid)
 			ps3eye->setAutogain(eyeParams.autoGain);
