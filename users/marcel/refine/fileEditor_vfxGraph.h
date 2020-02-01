@@ -6,10 +6,6 @@
 #include "ui.h"
 #include "vfxGraphManager.h"
 
-extern SDL_mutex * g_vfxAudioMutex;
-extern AudioVoiceManager * g_vfxAudioVoiceMgr;
-extern AudioGraphManager * g_vfxAudioGraphMgr;
-
 struct FileEditor_VfxGraph : FileEditor
 {
 	static const int defaultSx = 600;

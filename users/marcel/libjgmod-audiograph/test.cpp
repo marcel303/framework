@@ -15,17 +15,18 @@ int main(int argc, char * argv[])
 	if (!framework.init(800, 600))
 		return -1;
 
-	SDL_mutex * audioMutex = SDL_CreateMutex();
+	AudioMutex audioMutex;
+	audioMutex.init();
 	
 	AudioVoiceManagerBasic voiceMgr;
-	voiceMgr.init(audioMutex, 256);
+	voiceMgr.init(&audioMutex, 256);
 	voiceMgr.outputStereo = true;
 	
 	AudioGraphManager_RTE audioGraphMgr(800, 600);
-	audioGraphMgr.init(audioMutex, &voiceMgr);
+	audioGraphMgr.init(&audioMutex, &voiceMgr);
 	
 	AudioUpdateHandler audioUpdateHandler;
-	audioUpdateHandler.init(audioMutex, nullptr, 0);
+	audioUpdateHandler.init(&audioMutex, nullptr, 0);
 	audioUpdateHandler.voiceMgr = &voiceMgr;
 	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
 	
@@ -68,8 +69,7 @@ int main(int argc, char * argv[])
 	audioGraphMgr.shut();
 	voiceMgr.shut();
 	
-	SDL_DestroyMutex(audioMutex);
-	audioMutex = nullptr;
+	audioMutex.shut();
 	
 	framework.shutdown();
 

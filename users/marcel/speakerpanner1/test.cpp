@@ -1100,10 +1100,10 @@ int main(int argc, char * argv[])
 	audioMutex.init();
 	
 	AudioVoiceManagerBasic audioVoiceMgr;
-	audioVoiceMgr.init(audioMutex.mutex, 256);
+	audioVoiceMgr.init(&audioMutex, 256);
 	
 	AudioGraphManager_RTE audioGraphMgr(800, 600);
-	audioGraphMgr.init(audioMutex.mutex, &audioVoiceMgr);
+	audioGraphMgr.init(&audioMutex, &audioVoiceMgr);
 	
 	SoundSystem soundSystem;
 	soundSystem.init(&audioMutex, &audioGraphMgr, &audioVoiceMgr);

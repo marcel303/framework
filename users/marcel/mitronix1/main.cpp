@@ -885,7 +885,8 @@ int main(int argc, char * argv[])
 		
 		Surface * surface = new Surface(GFX_SX, GFX_SY, true);
 		
-		SDL_mutex * audioMutex = SDL_CreateMutex();
+		AudioMutex * audioMutex = new AudioMutex();
+		audioMutex->init();
 		
 		AudioVoiceManagerBasic * audioVoiceMgr = new AudioVoiceManagerBasic();
 		audioVoiceMgr->init(audioMutex, 16);
@@ -970,11 +971,11 @@ int main(int argc, char * argv[])
 			values.mouseX = mouse.x / float(GFX_SX);
 			values.mouseY = mouse.y / float(GFX_SY);;
 			
-			SDL_LockMutex(audioMutex);
+			audioMutex->lock();
 			{
 				g_mitronixValues = values;
 			}
-			SDL_UnlockMutex(audioMutex);
+			audioMutex->unlock();
 			
 			//
 			
@@ -1162,7 +1163,8 @@ int main(int argc, char * argv[])
 		delete audioVoiceMgr;
 		audioVoiceMgr = nullptr;
 		
-		SDL_DestroyMutex(audioMutex);
+		audioMutex->shut();
+		delete audioMutex;
 		audioMutex = nullptr;
 		
 		delete surface;

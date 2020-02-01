@@ -34,11 +34,11 @@
 const int GFX_SX = 1100;
 const int GFX_SY = 740;
 
-static SDL_mutex * s_audioMutex = nullptr;
+static AudioMutex * s_audioMutex = nullptr;
 static AudioVoiceManager * s_voiceMgr = nullptr;
 static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 
-extern SDL_mutex * g_vfxAudioMutex;
+extern AudioMutexBase * g_vfxAudioMutex;
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;
 
@@ -337,7 +337,7 @@ struct ControlWindow
 	{
 		files.clear();
 		
-		SDL_LockMutex(s_audioMutex);
+		s_audioMutex->lock();
 		{
 			for (auto & file : s_audioGraphMgr->files)
 			{
@@ -351,7 +351,7 @@ struct ControlWindow
 					files.push_back(file.first);
 			}
 		}
-		SDL_UnlockMutex(s_audioMutex);
+		s_audioMutex->unlock();
 		
 		int hoverIndex = getHoverIndex();
 		
@@ -738,25 +738,26 @@ int main(int argc, char * argv[])
 
 	ControlWindow controlWindow;
 
-	SDL_mutex * audioMutex = SDL_CreateMutex();
-	s_audioMutex = audioMutex;
+	AudioMutex audioMutex;
+	audioMutex.init();
+	s_audioMutex = &audioMutex;
 	
 	AudioVoiceManager4D voiceMgr;
-	voiceMgr.init(audioMutex, CHANNEL_COUNT, "127.0.0.1", 2000);
+	voiceMgr.init(&audioMutex, CHANNEL_COUNT, "127.0.0.1", 2000);
 	voiceMgr.outputStereo = outputStereo;
 	s_voiceMgr = &voiceMgr;
 	
 	AudioGraphManager_RTE audioGraphMgr(GFX_SX, GFX_SY);
-	audioGraphMgr.init(audioMutex, &voiceMgr);
+	audioGraphMgr.init(&audioMutex, &voiceMgr);
 	s_audioGraphMgr = &audioGraphMgr;
 	
 	AudioUpdateHandler audioUpdateHandler;
-	audioUpdateHandler.init(audioMutex, &voiceMgr, &audioGraphMgr);
+	audioUpdateHandler.init(&audioMutex, &voiceMgr, &audioGraphMgr);
 	
 	PortAudioObject paObject;
 	paObject.init(SAMPLE_RATE, outputStereo ? 2 : CHANNEL_COUNT, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
 
-	g_vfxAudioMutex = audioMutex;
+	g_vfxAudioMutex = &audioMutex;
 	g_vfxAudioVoiceMgr = &voiceMgr;
 	g_vfxAudioGraphMgr = &audioGraphMgr;
 	
@@ -932,8 +933,7 @@ int main(int argc, char * argv[])
 	voiceMgr.shut();
 	s_voiceMgr = nullptr;
 	
-	SDL_DestroyMutex(audioMutex);
-	audioMutex = nullptr;
+	audioMutex.shut();
 	s_audioMutex = nullptr;
 	
 	Font("calibri.ttf").saveCache();

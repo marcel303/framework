@@ -24,7 +24,7 @@
 const int GFX_SX = 480;
 const int GFX_SY = 320;
 
-extern SDL_mutex * g_vfxAudioMutex;
+extern AudioMutexBase * g_vfxAudioMutex;
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;
 
@@ -189,7 +189,7 @@ struct SatellitesApp
 	int inputDeviceIndex = -1;
 	int outputDeviceIndex = -1;
 	
-	SDL_mutex * audioMutex = nullptr;
+	AudioMutex * audioMutex = nullptr;
 	AudioVoiceManagerBasic * voiceMgr = nullptr;
 	AudioGraphManager_RTE * audioGraphMgr = nullptr;
 	AudioUpdateHandler * audioUpdateHandler = nullptr;
@@ -255,7 +255,8 @@ struct SatellitesApp
 	
 	bool init()
 	{
-		audioMutex = SDL_CreateMutex();
+		audioMutex = new AudioMutex();
+		audioMutex->init();
 		
 		voiceMgr = new AudioVoiceManagerBasic();
 		voiceMgr->init(audioMutex, CHANNEL_COUNT);
@@ -309,13 +310,13 @@ struct SatellitesApp
 		delete voiceMgr;
 		voiceMgr = nullptr;
 		
-		SDL_DestroyMutex(audioMutex);
+		audioMutex->shut();
+		delete audioMutex;
 		audioMutex = nullptr;
 	}
 	
 	void tick()
 	{
-	
 	}
 };
 

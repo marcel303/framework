@@ -7,7 +7,7 @@
 #include "vfxGraphManager.h"
 #include "vfxUi.h"
 
-extern SDL_mutex * g_vfxAudioMutex;
+extern AudioMutexBase * g_vfxAudioMutex;
 extern AudioVoiceManager * g_vfxAudioVoiceMgr;
 extern AudioGraphManager * g_vfxAudioGraphMgr;
 
@@ -20,10 +20,10 @@ FileEditor_VfxGraph::FileEditor_VfxGraph(const char * path)
 	
 	// init audio graph
 	audioMutex.init();
-	audioVoiceMgr.init(audioMutex.mutex, 64);
-	audioGraphMgr.init(audioMutex.mutex, &audioVoiceMgr);
+	audioVoiceMgr.init(&audioMutex, 64);
+	audioGraphMgr.init(&audioMutex, &audioVoiceMgr);
 	
-	g_vfxAudioMutex = audioMutex.mutex;
+	g_vfxAudioMutex = &audioMutex;
 	g_vfxAudioVoiceMgr = &audioVoiceMgr;
 	g_vfxAudioGraphMgr = &audioGraphMgr;
 	
