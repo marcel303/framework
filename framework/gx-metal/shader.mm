@@ -696,6 +696,38 @@ std::vector<GxImmediateInfo> Shader::getImmediateInfos() const
 	return result;
 }
 
+std::vector<GxTextureInfo> Shader::getTextureInfos() const
+{
+	std::vector<GxTextureInfo> result;
+	result.resize(m_cacheElem->textureInfos.size());
+	
+	int count = 0;
+	
+	for (size_t i = 0; i < m_cacheElem->textureInfos.size(); ++i)
+	{
+		auto & t = m_cacheElem->textureInfos[i];
+		auto & st = result[count];
+		
+		st.name = t.name;
+		st.index = i;
+		st.type = (GX_IMMEDIATE_TYPE)-1;
+		
+		if (true)
+		{
+			st.type = GX_IMMEDIATE_TEXTURE_2D;
+		}
+		
+		if (st.type == (GX_IMMEDIATE_TYPE)-1)
+			continue;
+		
+		count++;
+	}
+	
+	result.resize(count);
+	
+	return result;
+}
+
 void Shader::setImmediate(const char * name, float x)
 {
 	const GxImmediateIndex index = getImmediateIndex(name);
