@@ -1,8 +1,7 @@
-#if !defined(IPHONEOS)
-	#include <GL/glew.h>
-#endif
-
 #include "framework.h"
+
+#if ENABLE_METAL
+
 #include "renderTarget.h"
 #include "metal.h"
 
@@ -43,3 +42,5 @@ void blitBackBufferToSurface(Surface * surface)
 {
 	AssertMsg(false, "blitBackBufferToSurface not yet implemented", 0);
 }
+
+#endif
