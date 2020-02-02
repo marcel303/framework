@@ -2,13 +2,19 @@
 #include "Log.h"
 #include "nodeDiscovery.h"
 #include "StringEx.h"
+#include <chrono>
 #include <mutex>
-#include <SDL2/SDL_timer.h>
 #include <string>
 #include <string.h>
 #include <thread>
 
 #define DISCOVERY_RECEIVE_PORT 2400
+
+static int64_t getTicks()
+{
+	auto now = std::chrono::system_clock::now();
+	return std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+}
 
 NodeDiscoveryProcess::~NodeDiscoveryProcess()
 {
@@ -44,7 +50,7 @@ void NodeDiscoveryProcess::shut()
 
 void NodeDiscoveryProcess::purgeStaleRecords(const int timeoutInSeconds)
 {
-	const int ticks = SDL_GetTicks();
+	const int64_t ticks = getTicks();
 	
 	lock();
 	{
@@ -182,7 +188,7 @@ void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEn
 	record.capabilities = discoveryPacket->capabilities;
 	strcpy_s(record.description, sizeof(record.description), discoveryPacket->description);
 	record.endpointName = remoteEndpoint;
-	record.receiveTime = SDL_GetTicks();
+	record.receiveTime = getTicks();
 	
 	if (existingRecord == nullptr)
 	{

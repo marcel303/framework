@@ -50,7 +50,7 @@ struct NodeDiscoveryRecord
 	uint32_t capabilities;
 	char description[32];
 	IpEndpointName endpointName;
-	int receiveTime = 0; // SDL_GetTicks() a discovery message for this node was last received
+	int64_t receiveTime = 0; // the time (in miliseconds) at which a discovery message for this node was last received
 };
 
 class NodeDiscoveryProcess : public PacketListener
