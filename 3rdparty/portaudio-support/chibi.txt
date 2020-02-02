@@ -12,4 +12,4 @@ library portaudio
 	with_platform windows depend_library win32/lib/portaudio_x86.lib local
 	with_platform windows add_dist_files win32/dll/portaudio_x86.dll
 
-	license_file ../../license/portaudio/LICENSE.txt
+	license_file LICENSE.txt

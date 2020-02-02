@@ -28,6 +28,8 @@ library jsusfx
 
 	header_path ../libjsusfx/src expose
 
+	license_file ../libjsusfx/LICENSE
+
 library jsusfx-framework
 
 	depend_library framework

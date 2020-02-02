@@ -12,4 +12,4 @@ library glew
 
 	with_platform linux depend_package GLEW
 
-	license_file ../../license/glew/COPYING.txt
+	license_file COPYING.txt
