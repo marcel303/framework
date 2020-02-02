@@ -31,13 +31,7 @@
 
 #include "framework.h"
 #include "gx_render.h"
-
-#if ENABLE_OPENGL
-
-#include "internal.h"
 #include <algorithm>
-
-#endif
 
 extern int s_backingScale; // todo : can this be exposed/determined more nicely?
 
@@ -258,6 +252,7 @@ static GLint toOpenGLTextureSwizzle(const int value)
 
 #endif
 
+// todo : move to surface.cpp in gx-opengl and gl-metal folders
 void Surface::setSwizzle(int r, int g, int b, int a)
 {
 #if ENABLE_METAL
@@ -477,7 +472,7 @@ void Surface::postprocess()
 	swapBuffers();
 
 	pushSurface(this);
-	pushDepthTest(false, DEPTH_EQUAL, false); // todo : surface push should set depth state, blend mode (anything affecting how to draw to the surface)
+	pushDepthTest(false, DEPTH_EQUAL, false);
 	{
 		drawRect(0.f, 0.f, m_properties.dimensions.width, m_properties.dimensions.height);
 	}
@@ -558,12 +553,12 @@ void Surface::gaussianBlur(const float strengthH, const float strengthV, const i
 	}
 }
 
+#if ENABLE_OPENGL
+
+// todo : move to surface.cpp in gx-opengl
+
 void Surface::blitTo(Surface * surface) const
 {
-#if ENABLE_METAL
-	AssertMsg(false, "Surface::blitTo not yet implemented", 0);
-	// todo : metal_copy_texture_to_texture(..);
-#elif ENABLE_OPENGL
 	int oldReadBuffer = 0;
 	int oldDrawBuffer = 0;
 
@@ -603,8 +598,9 @@ void Surface::blitTo(Surface * surface) const
 	glDeleteFramebuffers(1, &srcFramebuffer);
 	glDeleteFramebuffers(1, &dstFramebuffer);
 	checkErrorGL();
-#endif
 }
+
+#endif
 
 void Surface::blit(BLEND_MODE blendMode) const
 {
@@ -623,6 +619,7 @@ void Surface::blit(BLEND_MODE blendMode) const
 	popBlend();
 }
 
+// todo : move to surface.cpp in gx-opengl and gl-metal folders
 void blitBackBufferToSurface(Surface * surface)
 {
 #if ENABLE_METAL
