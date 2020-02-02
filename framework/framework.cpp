@@ -123,12 +123,12 @@ Gamepad gamepad[MAX_GAMEPAD];
 
 static std::vector<std::string> s_resourcePaths;
 
-std::map<std::string, std::string> s_shaderSources;
-
 int s_backingScale = 1; // global backing scale multiplier. a bit of a hack as it assumed the scale never changes, but works well for most apps in most situations for now..
 
 static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
 static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
+
+static std::map<std::string, std::string> s_shaderSources;
 
 //
 

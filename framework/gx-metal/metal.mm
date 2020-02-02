@@ -101,8 +101,6 @@ static id <MTLFence> waitForBlit = nullptr;
 
 //
 
-extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
-
 void metal_init()
 {
 	device = MTLCreateSystemDefaultDevice();
@@ -1553,8 +1551,6 @@ void gxValidateShaderResources();
 
 void gxInitialize()
 {
-	fassert(s_shaderSources.empty());
-	
 	memset(&renderState, 0, sizeof(renderState));
 	renderState.blendMode = BLEND_ALPHA;
 	renderState.colorWriteMask = 0xf;

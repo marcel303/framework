@@ -51,8 +51,6 @@
 
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
 
-extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
-
 class GxMatrixStack
 {
 public:
@@ -305,8 +303,6 @@ void gxEmitVertex();
 
 void gxInitialize()
 {
-	fassert(s_shaderSources.empty());
-	
 	Shader("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
 	
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
