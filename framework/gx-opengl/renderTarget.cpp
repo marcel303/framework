@@ -194,12 +194,13 @@ static GLenum translateDepthFormat(const DEPTH_FORMAT format)
 
 	if (format == DEPTH_FLOAT16)
 		glFormat = GL_DEPTH_COMPONENT16;
-	
 #if ENABLE_DESKTOP_OPENGL
 	// todo : gles : float32 depth format ?
 	else if (format == DEPTH_FLOAT32)
 		glFormat = GL_DEPTH32F_STENCIL8;
 #endif
+
+	Assert(glFormat != GL_INVALID_ENUM);
 
 	return glFormat;
 }

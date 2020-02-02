@@ -1794,13 +1794,14 @@ static void gxValidatePipelineState()
 				
 				// blend state
 				
-			// todo : review MTLBlendFactorSourceAlpha usage on source alpha blend factor (for both Metal and OpenGL)
 				switch (renderState.blendMode)
 				{
 				case BLEND_OPAQUE:
 					att.blendingEnabled = false;
 					break;
 				case BLEND_ALPHA:
+					// note : source alpha is set to ZERO!
+					// assuming the destination surface starts at 100% alpha, sussively multiplication by 1-srcA will yield an inverse opacity value stored inside the destination alpha. the destination may then be blended using an inverted premultiplied-alpha blend mode for correctly composing the surface on top of something else
 					att.blendingEnabled = true;
 					att.rgbBlendOperation = MTLBlendOperationAdd;
 					att.alphaBlendOperation = MTLBlendOperationAdd;
@@ -1819,7 +1820,6 @@ static void gxValidatePipelineState()
 					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					break;
 				case BLEND_PREMULTIPLIED_ALPHA_DRAW:
-				// todo : remove ?
 					att.blendingEnabled = true;
 					att.rgbBlendOperation = MTLBlendOperationAdd;
 					att.alphaBlendOperation = MTLBlendOperationAdd;

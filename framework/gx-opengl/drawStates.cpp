@@ -50,6 +50,8 @@ void setBlend(BLEND_MODE blendMode)
 		glDisable(GL_BLEND);
 		break;
 	case BLEND_ALPHA:
+		// note : source alpha is set to ZERO!
+		// assuming the destination surface starts at 100% alpha, sussively multiplication by 1-srcA will yield an inverse opacity value stored inside the destination alpha. the destination may then be blended using an inverted premultiplied-alpha blend mode for correctly composing the surface on top of something else
 		glEnable(GL_BLEND);
 		if (glBlendEquation)
 			glBlendEquation(GL_FUNC_ADD);
@@ -64,7 +66,6 @@ void setBlend(BLEND_MODE blendMode)
 			glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		break;
 	case BLEND_PREMULTIPLIED_ALPHA_DRAW:
-	// todo : remove ?
 		glEnable(GL_BLEND);
 		if (glBlendEquation)
 			glBlendEquation(GL_FUNC_ADD);
@@ -146,7 +147,7 @@ void setLineSmooth(bool enabled)
 		checkErrorGL();
 	}
 #else
-	// todo : gles : implement setLineSmooth
+	// note : gles doesn't support line smooth
 #endif
 }
 
@@ -170,7 +171,7 @@ void setWireframe(bool enabled)
 	glPolygonMode(GL_FRONT_AND_BACK, enabled ? GL_LINE : GL_FILL);
 	checkErrorGL();
 #else
-	// todo : gles : implement setWireframe
+	// note : gles doesn't support wireframe
 #endif
 }
 

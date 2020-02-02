@@ -27,10 +27,6 @@
 
 #pragma once
 
-// todo : remove SDL2 header file include ? add a new include for including low-level framework functions
-//        which should hopefully rarely be needed
-// for now we seem to depend mostly on: SDL_event, SDL_mutex, SDL_thread and SDL_timer
-
 #if USE_LEGACY_OPENGL
 	#include <GL/glew.h>
 	#include <SDL2/SDL_opengl.h>

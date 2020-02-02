@@ -1,6 +1,15 @@
+#if !defined(IPHONEOS)
+	#include <GL/glew.h>
+#endif
+
 #include "framework.h"
 #include "renderTarget.h"
 #include "metal.h"
+
+void Surface::setSwizzle(int r, int g, int b, int a)
+{
+	AssertMsg(false, "Surface::setSwizzle not yet implemented", 0);
+}
 
 void Surface::blitTo(Surface * surface) const
 {
@@ -28,4 +37,9 @@ void Surface::blitTo(Surface * surface) const
 	
 	metal_copy_texture_to_texture(src_texture, 0, 0, 0, src_texture.width, src_texture.height, dst_texture, 0, 0, dst_texture.pixelFormat);
 #endif
+}
+
+void blitBackBufferToSurface(Surface * surface)
+{
+	AssertMsg(false, "blitBackBufferToSurface not yet implemented", 0);
 }

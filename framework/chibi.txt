@@ -67,8 +67,6 @@ library framework
 	depend_library utf8rewind
 
 	license_file COPYING.txt
-	# todo : license_file ../license/openal
-	# todo : license_file ../license/xinput
 
 	scan_files cpp
 	scan_files h

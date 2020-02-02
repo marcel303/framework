@@ -28,6 +28,9 @@
 #pragma once
 
 #include "framework.h"
+
+#if ENABLE_OPENGL
+
 #include "gx_render.h"
 
 class ColorTarget : ColorTargetBase
@@ -134,3 +137,5 @@ public:
 		return properties.dimensions.height;
 	}
 };
+
+#endif
