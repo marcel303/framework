@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "StringEx.h"
 #include "textfield.h"
+#include <SDL2/SDL_clipboard.h>
 #include <string.h>
 
 #define CARET_PADDING_X 0

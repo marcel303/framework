@@ -31,6 +31,7 @@
 #include "Path.h"
 #include "vfxGraph.h"
 #include "vfxNodeBase.h"
+#include <SDL2/SDL_timer.h>
 
 #if defined(MACOS) || defined(LINUX)
 	#include <unistd.h>

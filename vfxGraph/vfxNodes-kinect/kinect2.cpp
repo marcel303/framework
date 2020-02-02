@@ -30,6 +30,8 @@
 #include "framework.h"
 #include "kinect2.h"
 #include "kinect2FrameListener.h"
+#include <SDL2/SDL_thread.h>
+#include <SDL2/SDL_timer.h>
 
 #include <libfreenect2/libfreenect2.hpp>
 #include <libfreenect2/packet_pipeline.h>
