@@ -23,7 +23,6 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 //
 
 #include "audiostream/AudioIO.h"
-#include <SDL2/SDL_timer.h>
 
 #include <stdio.h>
 #include <netinet/in.h>

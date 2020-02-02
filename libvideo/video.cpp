@@ -28,8 +28,6 @@
 #include "framework.h"
 #include "video.h"
 #include <atomic>
-#include <SDL2/SDL_thread.h>
-#include <SDL2/SDL_timer.h>
 
 #include "mediaplayer/MPVideoBuffer.h"
 #include "StringEx.h"

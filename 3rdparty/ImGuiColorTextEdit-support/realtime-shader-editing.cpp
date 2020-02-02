@@ -6,6 +6,7 @@
 #include "Path.h"
 #include "TextIO.h"
 #include <fstream>
+#include <SDL2/SDL.h>
 #include <string>
 
 #include "data/Shader.vs"

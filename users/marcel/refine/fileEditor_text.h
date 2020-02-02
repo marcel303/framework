@@ -4,6 +4,7 @@
 #include "imgui/TextEditor.h"
 #include "nfd.h"
 #include "TextIO.h"
+#include <SDL2/SDL.h> // SDL_ShowSimpleMessageBox
 
 // todo : add option to select font
 

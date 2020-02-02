@@ -6,6 +6,7 @@
 #include "Path.h"
 #include "StringEx.h"
 #include "TextIO.h"
+#include <SDL2/SDL.h> // SDL_ShowSimpleMessageBox, SDL_StartTextInput
 
 #define ENABLE_FILEBROWSER 0
 
