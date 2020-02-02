@@ -2,9 +2,11 @@
 #include "Log.h"
 #include "nodeDiscovery.h"
 #include "StringEx.h"
-#include <SDL2/SDL.h>
+#include <mutex>
+#include <SDL2/SDL_timer.h>
 #include <string>
 #include <string.h>
+#include <thread>
 
 #define DISCOVERY_RECEIVE_PORT 2400
 
@@ -96,9 +98,9 @@ void NodeDiscoveryProcess::beginThread()
 	Assert(mutex == nullptr);
 	Assert(thread == nullptr);
 	
-	mutex = SDL_CreateMutex();
+	mutex = new std::mutex();
 	
-	thread = SDL_CreateThread(threadMain, "ESP32 Discovery Process", this);
+	thread = new std::thread(threadMain, this); // todo : set thread name to "ESP32 Discovery Process"
 }
 
 void NodeDiscoveryProcess::endThread()
@@ -113,25 +115,26 @@ void NodeDiscoveryProcess::endThread()
 	
 	if (thread != nullptr)
 	{
-		SDL_WaitThread(thread, nullptr);
+		thread->join();
+		delete thread;
 		thread = nullptr;
 	}
 	
 	if (mutex != nullptr)
 	{
-		SDL_DestroyMutex(mutex);
+		delete mutex;
 		mutex = nullptr;
 	}
 }
 
 void NodeDiscoveryProcess::lock() const
 {
-	Verify(SDL_LockMutex(mutex) == 0);
+	mutex->lock();
 }
 
 void NodeDiscoveryProcess::unlock() const
 {
-	Verify(SDL_UnlockMutex(mutex) == 0);
+	mutex->unlock();
 }
 
 int NodeDiscoveryProcess::threadMain(void * obj)

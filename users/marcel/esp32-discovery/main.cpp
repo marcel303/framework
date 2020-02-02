@@ -1277,6 +1277,8 @@ int main(int argc, char * argv[])
 	
 	discoveryProcess.shut();
 	
+	guiContext.shut();
+	
 	framework.shutdown();
 	
 	return 0;
