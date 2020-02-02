@@ -92,10 +92,6 @@ struct Test_TcpToI2S
 				sizeof(int16_t) /* sample size */;
  			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sock_value, sizeof(sock_value));
 		#endif
-		
-			// todo : TCP_NODELAY (osx). disables nagle's algorithm and sends out packets immediately on write
-			// todo : TCP_NOPUSH (osx)
-			// todo : TCP_CORK (linux). will manually batch messages and send them when the cork is removed
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
 		
@@ -250,10 +246,6 @@ struct Test_TcpToI2SQuad
 				sizeof(int16_t) /* sample size */;
  			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sock_value, sizeof(sock_value));
 		#endif
-		
-			// todo : TCP_NODELAY (osx). disables nagle's algorithm and sends out packets immediately on write
-			// todo : TCP_NOPUSH (osx)
-			// todo : TCP_CORK (linux). will manually batch messages and send them when the cork is removed
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
 		
@@ -412,10 +404,6 @@ struct Test_TcpToI2SMono8
 				sizeof(int8_t) /* sample size */;
  			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sock_value, sizeof(sock_value));
 		#endif
-		
-			// todo : TCP_NODELAY (osx). disables nagle's algorithm and sends out packets immediately on write
-			// todo : TCP_NOPUSH (osx)
-			// todo : TCP_CORK (linux). will manually batch messages and send them when the cork is removed
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
 		
