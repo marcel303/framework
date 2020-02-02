@@ -25,21 +25,17 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#import "framework.h"
+#include "framework.h"
 
 #if ENABLE_METAL
 
-#import "shaderBuilder.h"
-
-// todo : should be .cpp file
+#include "shaderBuilder.h"
 
 #include "internal.h"
 #include "StringBuilder.h"
 #include "StringEx.h"
 #include "TextIO.h"
 #include <algorithm>
-
-#define USE_REGISTERED_SHADER_OUTPUTS true
 
 static bool is_whitespace(const char c)
 {
@@ -302,7 +298,7 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 		
 		// generate text
 		
-		StringBuilder sb; // todo : replace with a more efficient and growing string builder
+		StringBuilder sb;
 		
 static const char * header =
 R"SHADER(
@@ -563,15 +559,10 @@ float atan(float x, float y) { return atan2(x, y); }
 				sb.Append("\t\n");
 				
 				sb.Append("\t// outputs\n");
-			#if USE_REGISTERED_SHADER_OUTPUTS
 				for (auto & output : g_shaderOutputs)
 					sb.AppendFormat("\t%s %s;\n",
 						output.outputType.c_str(),
 						output.outputName.c_str());
-			#else
-				sb.Append("\tfloat4 shader_fragColor;\n");
-				sb.Append("\tfloat4 shader_fragNormal;\n");
-			#endif
 				sb.Append("\t\n");
 				
 				sb.Append("\t// code\n");
@@ -661,7 +652,6 @@ float atan(float x, float y) { return atan2(x, y); }
 			{
 				for (int i = 0; outputs[i] != 0; ++i)
 				{
-				#if USE_REGISTERED_SHADER_OUTPUTS
 					const ShaderOutput * output = findShaderOutput(outputs[i]);
 					
 					if (output == nullptr)
@@ -676,12 +666,6 @@ float atan(float x, float y) { return atan2(x, y); }
 						output->outputType.c_str(),
 						output->outputName.c_str(),
 						i);
-				#else
-					if (outputs[i] == 'c')
-						sb.AppendFormat("\tfloat4 fragColor [[color(%d)]];\n", i);
-					if (outputs[i] == 'n')
-						sb.AppendFormat("\tfloat4 fragNormal [[color(%d)]];\n", i);
-				#endif
 				}
 			}
 			sb.Append("};\n");
@@ -731,7 +715,6 @@ float atan(float x, float y) { return atan2(x, y); }
 			sb.Append("\tShaderOutputs outputs;\n");
 			for (int i = 0; outputs[i] != 0; ++i)
 			{
-			#if USE_REGISTERED_SHADER_OUTPUTS
 				const ShaderOutput * output = findShaderOutput(outputs[i]);
 			
 				if (output == nullptr)
@@ -743,12 +726,6 @@ float atan(float x, float y) { return atan2(x, y); }
 				sb.AppendFormat("\toutputs.%s = m.%s;\n",
 					output->outputName.c_str(),
 					output->outputName.c_str());
-			#else
-				if (outputs[i] == 'c')
-					sb.Append("\toutputs.fragColor = m.shader_fragColor;\n");
-				if (outputs[i] == 'n')
-					sb.Append("\toutputs.fragNormal = m.shader_fragNormal;\n");
-			#endif
 			}
 			sb.Append("\treturn outputs;\n");
 			sb.Append("}\n");
