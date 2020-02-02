@@ -36,8 +36,6 @@ Cohesive forces can be approximated by using a tracer image to track different f
 	#include <SDL2/SDL_opengl.h> // so we can call glFinish to measure GPU time
 #endif
 
-#define ENABLE_SETBND 0
-
 #define SCALE 1
 
 // -----
@@ -139,70 +137,8 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 
 // -----
 
-#if ENABLE_OPENGL && ENABLE_SETBND
-
-// the xfer stuff below is helper code to allow working with cpu fallback code
-// todo : remove this fallback code
-
-#include <GL/glew.h>
-#include <SDL2/SDL_opengl.h>
-
-#define IX_2D(x, y) ((x) + (y) * N)
-
-static float s_values[4][300 * 300];
-
-static float * xfer_begin(const Surface * surface, const int index)
-{
-	Assert(surface->getWidth() == 300);
-	Assert(surface->getHeight() == 300);
-	Assert(index >= 0 && index < 4);
-	
-	pushSurface((Surface*)surface);
-	glReadPixels(0, 0, 300, 300, GL_RED, GL_FLOAT, s_values[index]);
-	checkErrorGL();
-	popSurface();
-	
-	return s_values[index];
-}
-
-static void xfer_end(Surface * surface, const int index)
-{
-	Assert(surface->getWidth() == 300);
-	Assert(surface->getHeight() == 300);
-	Assert(index >= 0 && index < 4);
-	
-	gxSetTexture(surface->getTexture());
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 300, 300, GL_RED, GL_FLOAT, s_values[index]);
-	checkErrorGL();
-	gxSetTexture(0);
-}
-
-#endif
-
 static void set_bnd2d(const int b, Surface * in_x, const int N)
 {
-#if ENABLE_SETBND
-	float * x = xfer_begin(in_x, 0);
-	
-	for (int i = 1; i < N - 1; ++i)
-	{
-		x[IX_2D(i, 0  )] = b == 2 ? -x[IX_2D(i, 1  )] : x[IX_2D(i, 1  )];
-		x[IX_2D(i, N-1)] = b == 2 ? -x[IX_2D(i, N-2)] : x[IX_2D(i, N-2)];
-	}
-	
-	for (int j = 1; j < N - 1; ++j)
-	{
-		x[IX_2D(0  , j)] = b == 1 ? -x[IX_2D(1  , j)] : x[IX_2D(1  , j)];
-		x[IX_2D(N-1, j)] = b == 1 ? -x[IX_2D(N-2, j)] : x[IX_2D(N-2, j)];
-	}
-
-	x[IX_2D(0,     0)]   = 0.5f * (x[IX_2D(1,     0)] + x[IX_2D(0,     1)]);
-	x[IX_2D(0,   N-1)]   = 0.5f * (x[IX_2D(1,   N-1)] + x[IX_2D(0,   N-2)]);
-	x[IX_2D(N-1,   0)]   = 0.5f * (x[IX_2D(N-2,   0)] + x[IX_2D(N-1,   1)]);
-	x[IX_2D(N-1, N-1)]   = 0.5f * (x[IX_2D(N-2, N-1)] + x[IX_2D(N-1, N-2)]);
-	
-	xfer_end(in_x, 0);
-#endif
 }
 
 static void lin_solve2d(const int b, Surface * x, const Surface * x0, const float a, const float c, const int iter, const int N)
@@ -437,8 +373,6 @@ struct FluidCube2d
 	Surface s;
 	Surface density;
 	
-// todo : some considerable speedup could probably be had when combining Vx and Vy and Vx0 and Vy0
-//        this will require changes to most shaders and functions though
 	Surface Vx;
 	Surface Vy;
 	
