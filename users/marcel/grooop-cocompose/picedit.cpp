@@ -78,18 +78,10 @@ void PicEdit::drawMove(const float x, const float y, const float moveX, const fl
 	case kDrawType_Brush:
 		pushSurface(&surfaceEditing);
 		{
-#if 1
 			Sprite sprite("brush.png");
 			sprite.pivotX = sprite.getWidth() / 2.f;
 			sprite.pivotY = sprite.getHeight() / 2.f;
 			sprite.drawEx(drawState.endX, drawState.endY, Calc::RadToDeg(-atan2f(moveX, moveY)), .4f, .4f, false, FILTER_LINEAR);
-#else
-			fillCircle(
-				drawState.endX,
-				drawState.endY,
-				10,
-				100);
-#endif
 		}
 		popSurface();
 		break;
@@ -280,6 +272,7 @@ void PicEdit::tick(const float dt)
 
 void PicEdit::drawEditingSurface(const float alpha) const
 {
+#if 1
 	Shader shader("picedit-compose", "effect.vs", "picedit-compose.ps");
 	setShader(shader);
 	{
@@ -287,36 +280,36 @@ void PicEdit::drawEditingSurface(const float alpha) const
 		shader.setTexture("layer2", 1, surfaceEditing.getTexture(), false, true);
 		shader.setImmediate("mode", keyboard.isDown(SDLK_e) ? 1 : 0);
 		
-		setBlend(BLEND_OPAQUE);
+		pushBlend(BLEND_OPAQUE);
 		{
 			setColor(colorWhite);
 			drawRect(0, 0, surfaceComposed.getWidth(), surfaceComposed.getHeight());
 		}
-		setBlend(BLEND_ALPHA);
+		popBlend();
 	}
 	clearShader();
+#endif
 
 #if 0
 	gxSetTexture(surfaceComposed.getTexture());
 	{
-		setBlend(BLEND_OPAQUE);
+		pushBlend(BLEND_OPAQUE);
 		{
 			setColor(colorWhite);
 			drawRect(0, 0, surfaceComposed.getWidth(), surfaceComposed.getHeight());
 		}
-		setBlend(BLEND_ALPHA);
+		popBlend();
 	}
 	gxSetTexture(0);
 
 	gxSetTexture(surfaceEditing.getTexture());
 	{
-		//setBlend(BLEND_OPAQUE);
-		setBlend(BLEND_PREMULTIPLIED_ALPHA);
+		pushBlend(BLEND_PREMULTIPLIED_ALPHA);
 		{
 			setColor(colorWhite);
 			drawRect(0, 0, surfaceEditing.getWidth(), surfaceEditing.getHeight());
 		}
-		setBlend(BLEND_ALPHA);
+		popBlend();
 	}
 	gxSetTexture(0);
 #endif
