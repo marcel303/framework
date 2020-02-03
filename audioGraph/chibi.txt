@@ -43,9 +43,6 @@ library audiograph-graph
 
 	header_path audioGraph expose
 
-# todo : remove. only a dependency because of drawFilterResponse(..)
-	depend_library framework
-
 library audiograph-graphMgr
 
 	depend_library audiograph-graph
