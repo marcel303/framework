@@ -24,7 +24,7 @@ void VfxgraphComponent::tick(const float dt)
 		
 		instance->vfxGraph->tick(640, 480, dt);
 		
-		textureResource.texture = instance->vfxGraph->traverseDraw(640, 480);
+		textureResource.texture = instance->vfxGraph->traverseDraw();
 	}
 }
 

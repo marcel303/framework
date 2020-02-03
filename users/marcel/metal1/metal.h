@@ -109,7 +109,7 @@ enum GX_SAMPLE_FILTER
 	GX_SAMPLE_LINEAR
 };
 
-#include "mesh.h" // todo : remove
+#include "mesh.h"
 
 void gxMatrixMode(GX_MATRIX mode);
 GX_MATRIX gxGetMatrixMode();

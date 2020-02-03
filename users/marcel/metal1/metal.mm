@@ -10,7 +10,7 @@
 #import <SDL2/SDL.h>
 #import <vector>
 
-#include <assert.h> // todo : remove once integrated w/ framework
+#include <assert.h>
 #define fassert assert
 #define Assert fassert
 
@@ -18,7 +18,7 @@
 
 #define FETCH_PIPELINESTATE_REFLECTION 0
 
-#if 1 // todo : remove
+#if 1
 	#define VS_POSITION      0
 	#define VS_NORMAL        1
 	#define VS_COLOR         2
@@ -39,7 +39,7 @@ struct
 {
 	bool gxShaderIsDirty = true;
 	Shader * shader = nullptr;
-} globals; // todo : remove
+} globals;
 
 static std::map<SDL_Window*, WindowData*> windowDatas;
 
@@ -200,7 +200,6 @@ void metal_draw_end()
 	[activeWindowData->current_drawable present];
 	
 	
-// todo : remove and use addCompletedHandler instead
 	//[activeWindowData->cmdbuf waitUntilCompleted];
 	freeResourcesToFree(); // todo : call in response to completion handler
 	
@@ -330,8 +329,6 @@ void pushRenderPass(ColorTarget ** targets, const int numTargets, DepthTarget * 
 		// set viewport
 		
 		metal_set_viewport(viewportSx, viewportSy);
-		
-		// todo : set blend mode
 	}
 }
 
@@ -1002,7 +999,6 @@ static void gxValidatePipelineState()
 					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					break;
 				case BLEND_PREMULTIPLIED_ALPHA_DRAW:
-				// todo : remove ?
 					att.blendingEnabled = true;
 					att.rgbBlendOperation = MTLBlendOperationAdd;
 					att.alphaBlendOperation = MTLBlendOperationAdd;
@@ -1123,8 +1119,6 @@ static void gxFlush(bool endOfBatch)
 	{
 		const GX_PRIMITIVE_TYPE primitiveType = s_gxPrimitiveType;
 
-	// todo : refactor s_gxVertices to use a GxVertexBuffer object
-	
 		const int vertexDataSize = s_gxVertexCount * sizeof(GxVertex);
 		
 		if (vertexDataSize <= 4096)
@@ -1220,9 +1214,6 @@ static void gxFlush(bool endOfBatch)
 			float * values = (float*)(data + shaderElem.psInfo.params[ShaderCacheElem::kSp_Params].offset);
 			
 			values[0] = s_gxTextureEnabled ? 1.f : 0.f,
-			//globals.colorMode, // todo : re-add globals.colorMode etc
-			//globals.colorPost,
-			//globals.colorClamp);
 			values[1] = 0;
 			values[2] = 0;
 			values[3] = 0;
@@ -1293,7 +1284,7 @@ static void gxFlush(bool endOfBatch)
 		
 		if (&shader == &genericShader)
 		{
-			clearShader(); // todo : remove. here since Shader dtor doesn't clear globals.shader yet when it's the current shader
+			clearShader();
 		}
 		
 	#if TODO

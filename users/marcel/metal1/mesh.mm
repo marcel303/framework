@@ -1,10 +1,8 @@
-#import "mesh.h" // todo : use framework's gx_mesh.h
+#import "mesh.h"
 #import <Metal/Metal.h>
 
-#import <assert.h> // todo : remove
+#import <assert.h>
 #define Assert assert
-
-// todo : create separate vertex and index buffer types for static data?
 
 id <MTLDevice> metal_get_device();
 

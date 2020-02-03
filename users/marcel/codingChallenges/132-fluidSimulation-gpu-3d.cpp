@@ -267,14 +267,13 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 		s_createdShaders.insert(name);
 		
 		// define the compute shader, using a template and the code and globals passed into this function
-		
-	// todo : define output texture
-	// todo : apply blend mode
 	
 		const char * cs_template =
 			R"SHADER(
 				include engine/ShaderCS.txt
 
+				// define output texture
+		
 				layout(R16F) uniform image3D destination;
 
 				%s
@@ -307,6 +306,8 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 					imageStore(destination, ivec3(gl_GlobalInvocationID.xyz), vec4(result, 0.0, 0.0, 0.0));
 				}
 			)SHADER";
+		
+		// apply blend mode
 		
 		Assert(blendMode == BLEND_OPAQUE || blendMode == BLEND_ADD);
 
@@ -683,7 +684,7 @@ struct FluidCube3d
 	Texture3d s;
 	Texture3d density;
 	
-// todo : some considerable speedup could probably be had when combining Vx and Vy and Vx0 and Vy0
+// todo : some considerable speedup could probably be had when combining Vx and Vy and Vx0 and Vy0 into one buffer. this would reduce the number of passes in half when updating these buffers
 //        this will require changes to most shaders and functions though
 	Texture3d Vx;
 	Texture3d Vy;

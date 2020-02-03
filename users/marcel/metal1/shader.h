@@ -206,7 +206,7 @@ struct ShaderCacheElem
 	
 	id <MTLRenderPipelineState> findPipelineState(const uint32_t hash) const
 	{
-		return m_pipelines[hash]; // todo : nice iterator lookup etc
+		return m_pipelines[hash];
 	}
 	
 	void addPipelineState(const uint32_t hash, id <MTLRenderPipelineState> state) const
@@ -239,7 +239,7 @@ public:
 class Shader : public ShaderBase
 {
 public:
-	ShaderCacheElem * m_cacheElem = nullptr; // todo : make private
+	ShaderCacheElem * m_cacheElem = nullptr;
 	
 	Shader() { }
 	Shader(const char * name);
