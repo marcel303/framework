@@ -80,10 +80,6 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			
 			MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 			
-		// fixme : this is duplicated code. perhaps we should enforce everything is set
-		//         before the shader is set. when a shader is set, construct the pipeline state
-		//         only thing allowed after a shader is set is set to immediates, and to
-		//         do draw calls
 			for (int i = 0; i < renderState.vertexInputCount; ++i)
 			{
 				auto & e = renderState.vertexInputs[i];

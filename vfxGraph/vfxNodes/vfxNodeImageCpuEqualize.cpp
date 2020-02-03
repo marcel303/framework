@@ -141,7 +141,7 @@ void VfxNodeImageCpuEqualize::tick(const float dt)
 			
 			const VfxImageCpu::Channel * __restrict srcChannel = nullptr;
 			
-			// todo : if the source only has one channel there's no point of doing equalization x4
+			// todo : optimize : if the source only has one channel there's no point of doing equalization x4
 			if (channel == kChannel_R)
 				srcChannel = &image->channel[0];
 			else if (channel == kChannel_G)
