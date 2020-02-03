@@ -386,6 +386,17 @@ struct DepthTestInfo
 	bool writeEnabled;
 };
 
+struct DepthBiasInfo
+{
+	float depthBias;
+	float slopeScale;
+};
+
+struct AlphaToCoverageInfo
+{
+	bool enabled;
+};
+
 //
 
 struct CullModeInfo
@@ -440,6 +451,8 @@ public:
 	bool depthTestEnabled;
 	DEPTH_TEST depthTest;
 	bool depthTestWriteEnabled;
+	float depthBias;
+	float depthBiasSlopeScale;
 	bool alphaToCoverageEnabled;
 	bool stencilEnabled;
 	StencilState frontStencilState;
