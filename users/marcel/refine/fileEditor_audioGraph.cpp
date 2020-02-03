@@ -14,9 +14,7 @@ FileEditor_AudioGraph::FileEditor_AudioGraph(const char * path)
 	audioGraphMgr.init(&audioMutex, &audioVoiceMgr);
 	
 	// init audio output
-	audioUpdateHandler.init(&audioMutex, nullptr, 0);
-	audioUpdateHandler.voiceMgr = &audioVoiceMgr;
-	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
+	audioUpdateHandler.init(&audioMutex, &audioVoiceMgr, &audioGraphMgr);
 	
 	paObject.init(44100, 2, 0, 256, &audioUpdateHandler);
 	
