@@ -41,7 +41,7 @@ float floatAttrib(const tinyxml2::XMLElement * elem, const char * name, const fl
 
 // higher level functions for dealing with arrays
 
-void pushAttrib_bytes(tinyxml2::XMLPrinter * printer, const char * name, const void * bytes, const int numBytes);
+// todo : remove ?
 void pushAttrib_array(tinyxml2::XMLPrinter * printer, const char * name, const void * elems, const int elemSize, const int numElems);
 
 void bytesAttrib(tinyxml2::XMLElement * elem, const char * name, void * bytes, const int numBytes);
