@@ -56,7 +56,7 @@ namespace AnimModel
 		{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, nx),          0 },
 		{ VS_COLOR,         4, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, cx),          0 },
 		{ VS_TEXCOORD0,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx),          0 },
-		{ VS_TEXCOORD1,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx),          0 }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared. maybe just remove the seconds texcoord from the shader. and use custom vs bindings when more than one texcoord is needed
+		{ VS_TEXCOORD1,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx),          0 },
 		{ VS_BLEND_INDICES, 4, GX_ELEMENT_UINT8,   0, offsetof(Vertex, boneIndices), 0 },
 		{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_UINT8,   1, offsetof(Vertex, boneWeights), 0 }
 	};

@@ -28,7 +28,7 @@
 #include "audioGraphContext.h"
 #include "Debugging.h"
 #include "Log.h"
-#include <algorithm>
+#include <algorithm> // std::sort
 #include <math.h>
 
 AudioGraphContext::AudioGraphContext()

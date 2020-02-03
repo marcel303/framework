@@ -34,7 +34,6 @@
 #include "graph.h"
 #include "graphEdit.h"
 #include "Log.h"
-#include <algorithm>
 
 //
 
