@@ -27,47 +27,42 @@
 
 #pragma once
 
-#include "audioNodeBase.h"
-#include "audioSourcePcm.h"
+#include "soundmix.h"
 
-struct AudioNodeSourcePcm : AudioNodeBase
+struct AudioSourcePcm : AudioSource
 {
-	enum Input
-	{
-		kInput_PcmData,
-		kInput_Filename,
-		kInput_Gain,
-		kInput_AutoPlay,
-		kInput_Loop,
-		kInput_LoopCount,
-		kInput_Play,
-		kInput_Pause,
-		kInput_Resume,
-		kInput_RangeBegin,
-		kInput_RangeLength,
-		kInput_COUNT
-	};
+	const PcmData * pcmData;
 	
-	enum Output
-	{
-		kOutput_Audio,
-		kOutput_Length,
-		kOutput_Done,
-		kOutput_Loop,
-		kOutput_COUNT
-	};
+	int samplePosition;
 	
-	bool wasDone;
+	bool isPlaying;
+	bool loop;
+	bool hasLooped;
+	bool isDone;
 	
-	AudioSourcePcm audioSource;
-	AudioFloat audioOutput;
-	float lengthOutput;
+	bool hasRange;
+	int rangeBegin;
+	int rangeEnd;
 	
-	AudioNodeSourcePcm();
+	int maxLoopCount;
+	int loopCount;
+	
+	AudioSourcePcm();
+	
+	void init(const PcmData * pcmData, const int samplePosition);
+	
+	void setRange(const int begin, const int length);
+	void setRangeNorm(const float begin, const float length);
+	void clearRange();
+	
+	void play();
+	void stop();
+	void pause();
+	void resume();
+	void resetSamplePosition();
+	void setSamplePosition(const int position);
+	void setSamplePositionNorm(const float position);
+	void resetLoopCount();
 
-	virtual void init(const GraphNode & node) override;
-	
-	virtual void tick(const float dt) override;
-	
-	virtual void handleTrigger(const int inputSocketIndex) override;
+	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override;
 };

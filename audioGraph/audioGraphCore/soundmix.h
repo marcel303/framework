@@ -27,7 +27,6 @@
 
 #pragma once
 
-#include <list> // for AudioSourceMix inputs
 #include "audioTypes.h"
 
 #if LINUX || WINDOWS
@@ -65,28 +64,6 @@ struct AudioSource
 	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) = 0;
 };
 
-struct AudioSourceMix : AudioSource
-{
-	struct Input
-	{
-		AudioSource * source;
-		float gain;
-	};
-
-	std::list<Input> inputs;
-	
-	bool normalizeGain;
-
-	AudioSourceMix();
-
-	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override;
-
-	Input * add(AudioSource * source, const float gain);
-	void remove(Input * input);
-
-	Input * tryGetInput(AudioSource * source);
-};
-
 struct AudioSourceSine : AudioSource
 {
 	float phase;
@@ -96,44 +73,6 @@ struct AudioSourceSine : AudioSource
 	
 	void init(const float phase, const float frequency);
 	
-	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override;
-};
-
-struct AudioSourcePcm : AudioSource
-{
-	const PcmData * pcmData;
-	
-	int samplePosition;
-	
-	bool isPlaying;
-	bool loop;
-	bool hasLooped;
-	bool isDone;
-	
-	bool hasRange;
-	int rangeBegin;
-	int rangeEnd;
-	
-	int maxLoopCount;
-	int loopCount;
-	
-	AudioSourcePcm();
-	
-	void init(const PcmData * pcmData, const int samplePosition);
-	
-	void setRange(const int begin, const int length);
-	void setRangeNorm(const float begin, const float length);
-	void clearRange();
-	
-	void play();
-	void stop();
-	void pause();
-	void resume();
-	void resetSamplePosition();
-	void setSamplePosition(const int position);
-	void setSamplePositionNorm(const float position);
-	void resetLoopCount();
-
 	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override;
 };
 

@@ -27,47 +27,9 @@
 
 #pragma once
 
-#include "audioNodeBase.h"
-#include "audioSourcePcm.h"
-
-struct AudioNodeSourcePcm : AudioNodeBase
+namespace binaural
 {
-	enum Input
-	{
-		kInput_PcmData,
-		kInput_Filename,
-		kInput_Gain,
-		kInput_AutoPlay,
-		kInput_Loop,
-		kInput_LoopCount,
-		kInput_Play,
-		kInput_Pause,
-		kInput_Resume,
-		kInput_RangeBegin,
-		kInput_RangeLength,
-		kInput_COUNT
-	};
-	
-	enum Output
-	{
-		kOutput_Audio,
-		kOutput_Length,
-		kOutput_Done,
-		kOutput_Loop,
-		kOutput_COUNT
-	};
-	
-	bool wasDone;
-	
-	AudioSourcePcm audioSource;
-	AudioFloat audioOutput;
-	float lengthOutput;
-	
-	AudioNodeSourcePcm();
+	struct HRIRSampleSet;
 
-	virtual void init(const GraphNode & node) override;
-	
-	virtual void tick(const float dt) override;
-	
-	virtual void handleTrigger(const int inputSocketIndex) override;
+	extern bool loadHRIRSampleSet_Cipic(const char * path, HRIRSampleSet & sampleSet);
 };

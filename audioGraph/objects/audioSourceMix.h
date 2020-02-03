@@ -27,47 +27,27 @@
 
 #pragma once
 
-#include "audioNodeBase.h"
-#include "audioSourcePcm.h"
+#include "soundmix.h"
+#include <list> // for inputs
 
-struct AudioNodeSourcePcm : AudioNodeBase
+struct AudioSourceMix : AudioSource
 {
-	enum Input
+	struct Input
 	{
-		kInput_PcmData,
-		kInput_Filename,
-		kInput_Gain,
-		kInput_AutoPlay,
-		kInput_Loop,
-		kInput_LoopCount,
-		kInput_Play,
-		kInput_Pause,
-		kInput_Resume,
-		kInput_RangeBegin,
-		kInput_RangeLength,
-		kInput_COUNT
+		AudioSource * source;
+		float gain;
 	};
-	
-	enum Output
-	{
-		kOutput_Audio,
-		kOutput_Length,
-		kOutput_Done,
-		kOutput_Loop,
-		kOutput_COUNT
-	};
-	
-	bool wasDone;
-	
-	AudioSourcePcm audioSource;
-	AudioFloat audioOutput;
-	float lengthOutput;
-	
-	AudioNodeSourcePcm();
 
-	virtual void init(const GraphNode & node) override;
+	std::list<Input> inputs;
 	
-	virtual void tick(const float dt) override;
-	
-	virtual void handleTrigger(const int inputSocketIndex) override;
+	bool normalizeGain;
+
+	AudioSourceMix();
+
+	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override;
+
+	Input * add(AudioSource * source, const float gain);
+	void remove(Input * input);
+
+	Input * tryGetInput(AudioSource * source);
 };
