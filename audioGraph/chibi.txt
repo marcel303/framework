@@ -1,16 +1,5 @@
 push_group audiograph
 
-library binaural
-
-	depend_library audioio
-	depend_library libdelaunay
-	depend_library libgg
-
-	scan_files cpp path binaural conglomerate conglomerates/binaural_all.cpp
-	scan_files h   path binaural
-
-	header_path binaural expose
-
 library audiograph-core
 
 	depend_library audioio
