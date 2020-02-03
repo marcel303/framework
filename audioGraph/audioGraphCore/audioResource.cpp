@@ -88,6 +88,8 @@ AudioResourceBase::~AudioResourceBase()
 {
 	if (mutex != nullptr)
 	{
+		mutex->shut();
+		
 		delete mutex;
 		mutex = nullptr;
 	}

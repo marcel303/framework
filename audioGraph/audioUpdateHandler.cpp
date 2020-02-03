@@ -62,8 +62,8 @@ void AudioUpdateHandler::init(AudioMutexBase * in_mutex, AudioVoiceManager * in_
 	//
 	
 	Assert(mutex == nullptr);
-	Assert(voiceMgr != nullptr);
-	Assert(audioGraphMgr != nullptr);
+	Assert(voiceMgr == nullptr);
+	Assert(audioGraphMgr == nullptr);
 	
 	mutex = in_mutex;
 	voiceMgr = in_voiceMgr;
