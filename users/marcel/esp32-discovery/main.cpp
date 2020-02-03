@@ -38,6 +38,10 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 
 #undef GetObject // define in Windows.h..
 
+#if !defined(WINDOWS)
+	#define closesocket close
+#endif
+
 struct Test_TcpToI2S
 {
 	bool isActive = false;
