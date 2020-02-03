@@ -61,7 +61,7 @@ struct AudioGraphContext
 	context.addObject(new AudioGraphMemfMgr());
 	context.addObject(new AudioGraphMemsMgr());
 	context.addObject(new AudioGraphControlValueMgr());
-	context.addObject(new JsusFxAudioGraphLibrary());strp
+	context.addObject(new JsusFxAudioGraphLibrary());
  
 	auto * memfMgr = context.findObject<AudioGraphMemfMgr>();
  

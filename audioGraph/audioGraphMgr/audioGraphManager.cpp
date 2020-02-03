@@ -969,7 +969,7 @@ void AudioGraphManager_RTE::drawEditor(const int sx, const int sy)
 
 		selectedFile->graphEdit->draw();
 		
-	#if 1 // todo : add a nice UI for drawing the filter response
+	#if 0 // todo : add a nice UI for drawing the filter response
 		/*
 		todo : let audio node define:
 		- a custom editor interface
