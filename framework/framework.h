@@ -1577,9 +1577,12 @@ void pushDepthWrite(bool enabled);
 void popDepthWrite();
 
 void setDepthBias(float depthBias, float slopeScale);
-// todo : push/popDepthBias
+void pushDepthBias(float depthBias, float slopeScale);
+void popDepthBias();
 
 void setAlphaToCoverage(bool enabled);
+void pushAlphaToCoverage(bool enabled);
+void popAlphaToCoverage();
 
 struct StencilState
 {

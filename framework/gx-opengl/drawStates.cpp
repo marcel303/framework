@@ -31,12 +31,7 @@
 
 #include "internal.h"
 
-static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
-static Stack<bool, 32> lineSmoothStack(false);
-static Stack<bool, 32> wireframeStack(false);
 static Stack<int, 32> colorWriteStack(0xf);
-static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
-static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
 
 static int s_colorWriteMask = 0xf;
 
@@ -118,20 +113,6 @@ void setBlend(BLEND_MODE blendMode)
 	}
 }
 
-void pushBlend(BLEND_MODE blendMode)
-{
-	blendModeStack.push(globals.blendMode);
-	
-	setBlend(blendMode);
-}
-
-void popBlend()
-{
-	const BLEND_MODE blendMode = blendModeStack.popValue();
-	
-	setBlend(blendMode);
-}
-
 void setLineSmooth(bool enabled)
 {
 #if ENABLE_DESKTOP_OPENGL
@@ -151,20 +132,6 @@ void setLineSmooth(bool enabled)
 #endif
 }
 
-void pushLineSmooth(bool enabled)
-{
-	lineSmoothStack.push(globals.lineSmoothEnabled);
-	
-	setLineSmooth(enabled);
-}
-
-void popLineSmooth()
-{
-	const bool value = lineSmoothStack.popValue();
-	
-	setLineSmooth(value);
-}
-
 void setWireframe(bool enabled)
 {
 #if ENABLE_DESKTOP_OPENGL
@@ -173,20 +140,6 @@ void setWireframe(bool enabled)
 #else
 	// note : gles doesn't support wireframe
 #endif
-}
-
-void pushWireframe(bool enabled)
-{
-	wireframeStack.push(globals.wireframeEnabled);
-	
-	setWireframe(enabled);
-}
-
-void popWireframe()
-{
-	const bool value = wireframeStack.popValue();
-	
-	setWireframe(value);
 }
 
 void setColorWriteMask(int r, int g, int b, int a)
@@ -266,37 +219,6 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	
 	glDepthMask(writeEnabled ? GL_TRUE : GL_FALSE);
 	checkErrorGL();
-}
-
-void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
-{
-	const DepthTestInfo info =
-	{
-		globals.depthTestEnabled,
-		globals.depthTest,
-		globals.depthTestWriteEnabled
-	};
-	
-	depthTestStack.push(info);
-	
-	setDepthTest(enabled, test, writeEnabled);
-}
-
-void popDepthTest()
-{
-	const DepthTestInfo depthTestInfo = depthTestStack.popValue();
-	
-	setDepthTest(depthTestInfo.testEnabled, depthTestInfo.test, depthTestInfo.writeEnabled);
-}
-
-void pushDepthWrite(bool enabled)
-{
-	pushDepthTest(globals.depthTestEnabled, globals.depthTest, enabled);
-}
-
-void popDepthWrite()
-{
-	popDepthTest();
 }
 
 void setDepthBias(float depthBias, float slopeScale)
@@ -449,26 +371,6 @@ void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 		glFrontFace(winding);
 		checkErrorGL();
 	}
-}
-
-void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
-{
-	const CullModeInfo info =
-	{
-		globals.cullMode,
-		globals.cullWinding
-	};
-	
-	cullModeStack.push(info);
-	
-	setCullMode(mode, frontFaceWinding);
-}
-
-void popCullMode()
-{
-	const CullModeInfo cullMode = cullModeStack.popValue();
-	
-	setCullMode(cullMode.mode, cullMode.winding);
 }
 
 #endif

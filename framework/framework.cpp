@@ -3703,6 +3703,30 @@ void clearDrawRect()
 #endif
 }
 
+//
+
+static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
+static Stack<bool, 32> lineSmoothStack(false);
+static Stack<bool, 32> wireframeStack(false);
+static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
+static Stack<DepthBiasInfo, 32> depthBiasStack(DepthBiasInfo { 0.f, 0.f });
+static Stack<AlphaToCoverageInfo, 32> alphaToCoverageStack(AlphaToCoverageInfo { false });
+static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
+
+void pushBlend(BLEND_MODE blendMode)
+{
+	blendModeStack.push(globals.blendMode);
+	
+	setBlend(blendMode);
+}
+
+void popBlend()
+{
+	const BLEND_MODE blendMode = blendModeStack.popValue();
+	
+	setBlend(blendMode);
+}
+
 void setColorMode(COLOR_MODE colorMode)
 {
 	globals.colorMode = colorMode;
@@ -3760,6 +3784,104 @@ void popColorPost()
 	const COLOR_POST value = colorPostStack.popValue();
 	
 	setColorPost(value);
+}
+
+void pushLineSmooth(bool enabled)
+{
+	lineSmoothStack.push(globals.lineSmoothEnabled);
+	
+	setLineSmooth(enabled);
+}
+
+void popLineSmooth()
+{
+	const bool value = lineSmoothStack.popValue();
+	
+	setLineSmooth(value);
+}
+
+void pushWireframe(bool enabled)
+{
+	wireframeStack.push(globals.wireframeEnabled);
+	
+	setWireframe(enabled);
+}
+
+void popWireframe()
+{
+	const bool value = wireframeStack.popValue();
+	
+	setWireframe(value);
+}
+
+void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
+{
+	const DepthTestInfo info =
+	{
+		globals.depthTestEnabled,
+		globals.depthTest,
+		globals.depthTestWriteEnabled
+	};
+	
+	depthTestStack.push(info);
+	
+	setDepthTest(enabled, test, writeEnabled);
+}
+
+void popDepthTest()
+{
+	const DepthTestInfo depthTestInfo = depthTestStack.popValue();
+	
+	setDepthTest(depthTestInfo.testEnabled, depthTestInfo.test, depthTestInfo.writeEnabled);
+}
+
+void pushDepthWrite(bool enabled)
+{
+	pushDepthTest(globals.depthTestEnabled, globals.depthTest, enabled);
+}
+
+void popDepthWrite()
+{
+	popDepthTest();
+}
+
+void pushDepthBias(float depthBias, float slopeScale)
+{
+	const DepthBiasInfo info =
+	{
+		globals.depthBias,
+		globals.depthBiasSlopeScale
+	};
+	
+	depthBiasStack.push(info);
+	
+	setDepthBias(depthBias, slopeScale);
+}
+
+void popDepthBias()
+{
+	const DepthBiasInfo info = depthBiasStack.popValue();
+	
+	setDepthBias(info.depthBias, info.slopeScale);
+}
+
+void pushAlphaToCoverage(bool enabled)
+{
+	const AlphaToCoverageInfo info =
+	{
+		globals.alphaToCoverageEnabled
+	};
+	
+	alphaToCoverageStack.push(info);
+	
+	setAlphaToCoverage(enabled);
+}
+
+void popAlphaToCoverage()
+{
+	const AlphaToCoverageInfo info = alphaToCoverageStack.popValue();
+	
+	setAlphaToCoverage(info.enabled);
 }
 
 //
@@ -3821,6 +3943,28 @@ StencilSetter & StencilSetter::writeMask(uint8_t mask)
 	writeMask(GX_STENCIL_FACE_FRONT, mask);
 	writeMask(GX_STENCIL_FACE_BACK,  mask);
 	return *this;
+}
+
+//
+
+void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
+{
+	const CullModeInfo info =
+	{
+		globals.cullMode,
+		globals.cullWinding
+	};
+	
+	cullModeStack.push(info);
+	
+	setCullMode(mode, frontFaceWinding);
+}
+
+void popCullMode()
+{
+	const CullModeInfo cullMode = cullModeStack.popValue();
+	
+	setCullMode(cullMode.mode, cullMode.winding);
 }
 
 //
