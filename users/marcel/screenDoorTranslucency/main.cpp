@@ -1,4 +1,3 @@
-#include <GL/glew.h> // for alpha to coverage. todo : add alpha to coverage to framework
 #include "framework.h"
 #include "gx_render.h"
 
@@ -71,6 +70,7 @@ int main(int argc, char * argv[])
 		{
 			pushRenderPass(colorTarget[colorTargetIndex], true, nullptr, false, "Color");
 			pushBlend(BLEND_OPAQUE);
+			gxScalef(bbScale, bbScale, 1);
 			
 			// -- method 1: use a dither texture and perform alpha test --
 			
@@ -184,10 +184,14 @@ int main(int argc, char * argv[])
 			
 			//
 			
-			glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
-			setColorf(1, 1, 1, .75f);
+			setAlphaToCoverage(true);
+			setColorf(1, 1, 1, .25f);
 			drawRect(320, 240, 420, 340);
-			glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+			setColorf(1, 1, 1, .5f);
+			drawRect(320, 240, 360, 340);
+			setColorf(1, 1, 1, .75f);
+			drawRect(320, 240, 420, 280);
+			setAlphaToCoverage(false);
 		}
 		framework.endDraw();
 		
