@@ -1557,6 +1557,14 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 		fillCachesCallback(1.f);
 }
 
+void Framework::fillCaches(bool recurse)
+{
+	for (auto & resourcePath : s_resourcePaths)
+		fillCachesWithPath(resourcePath.c_str(), recurse);
+	
+	fillCachesWithPath(".", recurse);
+}
+
 Window & Framework::getMainWindow()
 {
 	return *globals.mainWindow;

@@ -426,6 +426,7 @@ public:
 	void processActions(const std::string & actions, const Dictionary & args);
 	void reloadCaches();
 	void fillCachesWithPath(const char * path, bool recurse);
+	void fillCaches(bool recurse);
 	
 	Window & getMainWindow();
 	Window & getCurrentWindow();
