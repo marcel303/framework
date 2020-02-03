@@ -1014,6 +1014,13 @@ void setDepthBias(float depthBias, float slopeScale)
 	[s_activeRenderPass->encoder setDepthBias:depthBias slopeScale:slopeScale clamp:0.f];
 }
 
+void setAlphaToCoverage(bool enabled)
+{
+	globals.alphaToCoverageEnabled = enabled;
+	
+	renderState.alphaToCoverageEnabled = enabled;
+}
+
 void clearStencil(uint8_t value)
 {
 	// capture state we need to restore later
@@ -1775,6 +1782,7 @@ static void gxValidatePipelineState()
 			pipelineDescriptor.vertexFunction = vsFunction;
 			pipelineDescriptor.fragmentFunction = psFunction;
 			pipelineDescriptor.vertexDescriptor = vertexDescriptor;
+			pipelineDescriptor.alphaToCoverageEnabled = renderState.alphaToCoverageEnabled;
 			
 			for (int i = 0; i < kMaxColorTargets; ++i)
 			{

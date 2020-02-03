@@ -440,6 +440,7 @@ public:
 	bool depthTestEnabled;
 	DEPTH_TEST depthTest;
 	bool depthTestWriteEnabled;
+	bool alphaToCoverageEnabled;
 	bool stencilEnabled;
 	StencilState frontStencilState;
 	StencilState backStencilState;

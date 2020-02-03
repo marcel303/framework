@@ -314,6 +314,20 @@ void setDepthBias(float depthBias, float slopeScale)
 	}
 }
 
+void setAlphaToCoverage(bool enabled)
+{
+	if (enabled)
+	{
+		glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+		checkErrorGL();
+	}
+	else
+	{
+		glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+		checkErrorGL();
+	}
+}
+
 static GLenum translateStencilOp(const GX_STENCIL_OP op)
 {
 	switch (op)
