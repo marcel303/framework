@@ -184,14 +184,14 @@ int main(int argc, char * argv[])
 			
 			//
 			
-			setAlphaToCoverage(true);
+			pushAlphaToCoverage(true);
 			setColorf(1, 1, 1, .25f);
 			drawRect(320, 240, 420, 340);
 			setColorf(1, 1, 1, .5f);
 			drawRect(320, 240, 360, 340);
 			setColorf(1, 1, 1, .75f);
 			drawRect(320, 240, 420, 280);
-			setAlphaToCoverage(false);
+			popAlphaToCoverage();
 		}
 		framework.endDraw();
 		
