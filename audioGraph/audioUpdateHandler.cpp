@@ -71,7 +71,10 @@ void AudioUpdateHandler::init(AudioMutexBase * in_mutex, AudioVoiceManager * in_
 	
 	//
 	
-	audioGraphMgr->getContext()->addObject(&audioIO);
+	if (audioGraphMgr != nullptr)
+	{
+		audioGraphMgr->getContext()->addObject(&audioIO);
+	}
 }
 
 void AudioUpdateHandler::shut()
