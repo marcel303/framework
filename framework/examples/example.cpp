@@ -90,7 +90,7 @@ int main(int argc, char * argv[])
 
 	if (!framework.init(sx, sy))
 		return -1;
-	framework.fillCachesWithPath(".", true);
+	framework.fillCaches(true);
 	
 	mouse.showCursor(false);
 	

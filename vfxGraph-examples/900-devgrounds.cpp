@@ -321,7 +321,7 @@ int main(int argc, char * argv[])
 		//
 		
 	#ifndef DEBUG
-		framework.fillCachesWithPath(".", true);
+		framework.fillCaches(true);
 	#endif
 		
 		//

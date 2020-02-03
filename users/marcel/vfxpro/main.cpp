@@ -1232,7 +1232,7 @@ int main(int argc, char * argv[])
 	{
 	#if ENABLE_RESOURCE_PRECACHE
 		framework.fillCachesCallback = fillCachesCallback;
-		framework.fillCachesWithPath(".", true);
+		framework.fillCaches(true);
 		preloadResourceFiles();
 		//preloadSceneFiles();
 	#endif

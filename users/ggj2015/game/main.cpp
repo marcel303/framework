@@ -1399,7 +1399,7 @@ bool App::init()
 	{
 		if (!g_devMode)
 		{
-			framework.fillCachesWithPath(".", true);
+			framework.fillCaches(true);
 		}
 
 		m_optionMenu = new OptionMenu();

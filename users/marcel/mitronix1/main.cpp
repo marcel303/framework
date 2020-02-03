@@ -876,7 +876,7 @@ int main(int argc, char * argv[])
 		}
 		
 	#if DEVMODE == 0
-		framework.fillCachesWithPath(".", true);
+		framework.fillCaches(true);
 	#endif
 		
 		fillHrirSampleSetCache("cipic.147", "cipic.147", kHRIRSampleSetType_Cipic);

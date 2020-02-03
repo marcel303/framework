@@ -1919,7 +1919,7 @@ int main(int argc, char * argv[])
 
 	if (framework.init(GFX_SX, GFX_SY))
 	{
-		framework.fillCachesWithPath(".", true);
+		framework.fillCaches(true);
 		
 		if (true)
 		{

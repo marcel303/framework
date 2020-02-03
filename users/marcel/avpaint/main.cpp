@@ -726,7 +726,7 @@ int main(int argc, char * argv[])
 		changeDirectory("/Users/thecat/Google Drive/The Grooop - Welcome/app");
 	#endif
 	
-		framework.fillCachesWithPath(".", false);
+		framework.fillCaches(true);
 
 	#if ENABLE_LEAPMOTION
 		// initialise LeapMotion controller
