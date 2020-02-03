@@ -380,6 +380,11 @@ void AudioGraphManager_Basic::freeContext(AudioGraphContext *& context)
 	context = nullptr;
 }
 
+AudioGraphContext * AudioGraphManager_Basic::getContext()
+{
+	return context;
+}
+
 AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filename, AudioGraphContext * context, const bool createdPaused)
 {
 	if (context == nullptr)
@@ -715,6 +720,11 @@ void AudioGraphManager_RTE::freeContext(AudioGraphContext *& context)
 	
 	delete context;
 	context = nullptr;
+}
+
+AudioGraphContext * AudioGraphManager_RTE::getContext()
+{
+	return context;
 }
 
 AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename, AudioGraphContext * context, const bool createdPaused)
@@ -1148,6 +1158,11 @@ void AudioGraphManager_MultiRTE::freeContext(AudioGraphContext *& context)
 	
 	delete context;
 	context = nullptr;
+}
+
+AudioGraphContext * AudioGraphManager_MultiRTE::getContext()
+{
+	return context;
 }
 
 AudioGraphInstance * AudioGraphManager_MultiRTE::createInstance(const char * filename, AudioGraphContext * context, const bool createdPaused)

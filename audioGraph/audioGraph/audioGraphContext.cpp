@@ -210,3 +210,22 @@ AudioGraphContext::Memf AudioGraphContext::getMemf(const char * name)
 	
 	return result;
 }
+
+void AudioGraphContext::addObject(const std::type_index & type, void * object)
+{
+	ObjectRegistration r;
+	r.type = type;
+	r.object = object;
+
+	objects.push_back(r);
+}
+
+void * AudioGraphContext::findObject(const std::type_index & type)
+{
+	for (auto & r : objects)
+		if (r.type == type)
+			return r.object;
+
+	return nullptr;
+}
+
