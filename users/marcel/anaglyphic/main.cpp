@@ -1,5 +1,3 @@
-#include <GL/glew.h> // GL_PROGRAM_POINT_SIZE. todo : remove ?
-// todo : add a custom shader for drawing points with a size
 #include "Calc.h"
 #include "framework.h"
 #include "Timer.h"
@@ -100,10 +98,7 @@ struct ParticleSystem
 	{
 		const float kMaxSize = 4.f;
 
-		glEnable(GL_PROGRAM_POINT_SIZE);
-		checkErrorGL();
-
-		gxBegin(GX_POINTS);
+		gxBegin(GX_QUADS);
 		{
 			for (int i = 0; i < kMaxParticles; ++i)
 			{
@@ -115,13 +110,13 @@ struct ParticleSystem
 
 					gxTexCoord2f(size, 0.f);
 					gxVertex3f(x[i], y[i], z[i]);
+					gxVertex3f(x[i], y[i], z[i]);
+					gxVertex3f(x[i], y[i], z[i]);
+					gxVertex3f(x[i], y[i], z[i]);
 				}
 			}
 		}
 		gxEnd();
-
-		glDisable(GL_PROGRAM_POINT_SIZE);
-		checkErrorGL();
 	}
 };
 
@@ -266,7 +261,6 @@ static void drawExtrusion(const int numX, const int numY, const GxTextureId text
 	shader.setImmediate("lightPosition", lightPosition[0], lightPosition[1], lightPosition[2]);
 	shader.setImmediate("lightDirection", lightDirection[0], lightDirection[1], lightDirection[2]);
 	shader.setTexture("source", 0, texture, true, true);
-	setShader(shader);
 	{
 		gxBegin(GX_QUADS);
 		{
@@ -554,8 +548,13 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 
 		pushDepthTest(true, DEPTH_LESS);
 
+	#if ENABLE_OPENGL
+		Mat4x4 matP;
+		matP.MakePerspectiveGL(Calc::DegToRad(60.f), surface->getHeight() / float(surface->getWidth()), .1f, 10000.f);
+	#else
 		Mat4x4 matP;
 		matP.MakePerspectiveLH(Calc::DegToRad(60.f), surface->getHeight() / float(surface->getWidth()), .1f, 10000.f);
+	#endif
 
 		Mat4x4 matC(true);
 		camera.calculateTransform(68.f/10.f/2.f * eyeOffset, eyeX, eyeY, matC);
@@ -565,12 +564,11 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 		gxPushMatrix();
 		{
 			gxLoadMatrixf(matP.m_v);
-			gxMultMatrixf(matC.m_v);
 
 			gxMatrixMode(GX_MODELVIEW);
 			gxPushMatrix();
 			{
-				gxLoadIdentity();
+				gxLoadMatrixf(matC.m_v);
 
 				pushWireframe(keyboard.isDown(SDLK_l));
 
@@ -634,10 +632,10 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 
 							pushBlend(BLEND_OPAQUE);
 							Shader shader("waves");
+							setShader(shader);
 							shader.setImmediate("time", framework.time);
 							shader.setImmediate("mode", wireMode ? 1 : 0);
 							shader.setTexture("source", 0, getTexture("tile2.jpg"), true, true);
-							setShader(shader);
 							{
 								setColor(colorWhite);
 								drawGrid(40, 40);
@@ -685,8 +683,8 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 						
 						setColor(127, 127, 127);
 						Shader shader("particles");
-						shader.setTexture("source", 0, getTexture("particle.jpg"), true, true);
 						setShader(shader);
+						shader.setTexture("source", 0, getTexture("particle.jpg"), true, true);
 						{
 							pushBlend(BLEND_ADD);
 							ps.draw();
@@ -747,7 +745,7 @@ int main(int argc, char * argv[])
 #endif
 
 	framework.enableDepthBuffer = true;
-
+	
 	if (framework.init(GFX_SX, GFX_SY))
 	{
 	#if ENABLE_VIDEOIN
@@ -800,8 +798,8 @@ int main(int argc, char * argv[])
 
 				if (true)
 				{
-					const GLuint colormapL = surfaceL->getTexture();
-					const GLuint colormapR = surfaceR->getTexture();
+					const GxTextureId colormapL = surfaceL->getTexture();
+					const GxTextureId colormapR = surfaceR->getTexture();
 
 					pushSurface(surface);
 					{
