@@ -52,6 +52,11 @@ vec4 worldToProjection(vec4 v)
 	return ProjectionMatrix * v;
 }
 
+vec4 viewToProjection(vec4 v)
+{
+	return ProjectionMatrix * v;
+}
+
 vec4 unpackPosition()
 {
 	return vec4(in_position, 1.0);
