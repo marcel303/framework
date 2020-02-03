@@ -26,6 +26,7 @@
 */
 
 #include "audioSourcePcm.h"
+#include <string.h>
 
 AudioSourcePcm::AudioSourcePcm()
 	: AudioSource()
