@@ -3,10 +3,8 @@
 #import "shaderBuilder.h"
 #import "shaderPreprocess.h"
 
-#include <assert.h> // todo : use framework assert
+#include <assert.h>
 #define Assert assert
-
-// todo : assert the shader is the active shader when setting immediates
 
 //
 
@@ -16,7 +14,7 @@ id <MTLDevice> metal_get_device();
 
 class ShaderCache
 {
-	ShaderCacheElem m_cacheElem; // todo : make private
+	ShaderCacheElem m_cacheElem;
 	
 public:
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
