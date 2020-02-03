@@ -406,7 +406,7 @@ struct SoundSystem : AudioDeviceCallback
 		
 		memset(outputBuffer, 0, numChannels * bufferSize * sizeof(float));
 
-	#if 1
+	// todo : avoid memory allocations here
 		float ** channelData = new float*[numChannels];
 		for (int i = 0; i < numChannels; ++i)
 		{
@@ -466,42 +466,6 @@ struct SoundSystem : AudioDeviceCallback
 		for (int i = 0; i < numChannels; ++i)
 			delete [] channelData[i];
 		delete [] channelData;
-	#else
-	// todo : remove this code path (??)
-		for (auto * soundObject : soundObjects)
-		{
-			if (soundObject->graphInstance != nullptr &&
-				soundObject->graphInstance->audioGraph != nullptr)
-			{
-				auto * audioGraph = soundObject->graphInstance->audioGraph;
-				
-				for (auto * voice : audioGraph->audioVoices)
-				{
-					float voiceSamples[bufferSize];
-					voice->source->generate(voiceSamples, bufferSize);
-					
-					//soundObject
-					
-				// todo : apply panning and mix
-				//        for now as a workaroumd, add the sound to all channels
-				
-					for (int channelIndex = 0; channelIndex < numChannels; ++channelIndex)
-					{
-						// interleave voice samples into destination buffer
-						
-						float * __restrict dstPtr = outputBuffer + channelIndex;
-				
-						for (int i = 0; i < bufferSize; ++i)
-						{
-							*dstPtr = voiceSamples[i];
-							
-							dstPtr += numChannels;
-						}
-					}
-				}
-			}
-		}
-	#endif
 		
 		if (audioGraphMgr != nullptr)
 		{
@@ -1015,7 +979,7 @@ struct MonitorGui
 		ImGui::SliderFloat("Speaker size", &visualizer.gridPannerOptions.speakerSize, 0.f, 1.f);
 		ImGui::ColorPicker3("Speaker color", &visualizer.gridPannerOptions.speakerColor.r);
 		ImGui::Checkbox("Speaker x panning amplitude", &visualizer.gridPannerOptions.modulateSpeakerSizeWithPanningAmplitude);
-	// todo : x vu
+	// todo : implement 'x vu' visualization
 		ImGui::Checkbox("Speaker x speaker vu", &visualizer.gridPannerOptions.modulateSpeakerSizeWithSpeakerVu);
 		ImGui::Checkbox("Show text overlay", &visualizer.gridPannerOptions.showTextOverlay);
 		ImGui::Checkbox("Show sources", &visualizer.gridPannerOptions.showSources);
