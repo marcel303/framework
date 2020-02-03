@@ -48,12 +48,9 @@ IF %success% == "false" (
 		echo Failed to generate Visual Studio 2019 solution.
 	) ELSE (
 		set success="true"
+		%SystemRoot%\explorer.exe /select,.\Project.sln
 	)
 	cd %~dp0 || exit /b
-
-	IF %success% == "false" (
-		%SystemRoot%\explorer.exe /select,.\chibi-build\vs2019\Project.sln
-	)
 )
 
 IF %success% == "false" (
@@ -63,12 +60,9 @@ IF %success% == "false" (
 		echo Failed to generate Visual Studio 2017 solution.
 	) ELSE (
 		set success="true"
+		%SystemRoot%\explorer.exe /select,.\Project.sln
 	)
 	cd %~dp0 || exit /b
-
-	IF %success% == "false" (
-		%SystemRoot%\explorer.exe /select,.\chibi-build\vs2017\Project.sln
-	)
 )
 
 IF %success% == "false" (
@@ -78,10 +72,7 @@ IF %success% == "false" (
 		echo Failed to generate Visual Studio 2015 solution.
 	) ELSE (
 		set success="true"
+		%SystemRoot%\explorer.exe /select,.\Project.sln
 	)
 	cd %~dp0 || exit /b
-
-	IF %success% == "false" (
-		%SystemRoot%\explorer.exe /select,.\chibi-build\vs2015\Project.sln
-	)
 )

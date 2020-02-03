@@ -25,11 +25,18 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 #include "audiostream/AudioIO.h"
 
 #include <stdio.h>
+#include <thread>
+
+#if defined(WINDOWS)
+#include <winsock2.h>
+#else
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
-#include <thread>
 #include <unistd.h>
+#endif
+
+#undef GetObject // define in Windows.h..
 
 struct Test_TcpToI2S
 {
@@ -77,7 +84,7 @@ struct Test_TcpToI2S
 			
 		#if 1
 			sock_value = 1;
-			setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &sock_value, sizeof(sock_value));
+			setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&sock_value, sizeof(sock_value));
 		#endif
 		
 		#if 1
@@ -90,7 +97,7 @@ struct Test_TcpToI2S
 				I2S_2CH_FRAME_COUNT   * /* frame count */
 				I2S_2CH_CHANNEL_COUNT * /* stereo */
 				sizeof(int16_t) /* sample size */;
- 			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sock_value, sizeof(sock_value));
+ 			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
 		#endif
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
@@ -151,7 +158,7 @@ struct Test_TcpToI2S
 					}
 				}
 				
-				send(sock, data, sizeof(data), 0);
+				send(sock, (const char*)data, sizeof(data), 0);
 			}
 			
 		error:
@@ -160,7 +167,7 @@ struct Test_TcpToI2S
 			
 			if (sock != -1)
 			{
-				close(sock);
+				closesocket(sock);
 				sock = -1;
 			}
 		});
@@ -231,7 +238,7 @@ struct Test_TcpToI2SQuad
 			
 		#if 1
 			sock_value = 1;
-			setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &sock_value, sizeof(sock_value));
+			setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&sock_value, sizeof(sock_value));
 		#endif
 		
 		#if 1
@@ -244,7 +251,7 @@ struct Test_TcpToI2SQuad
 				I2S_4CH_FRAME_COUNT   * /* frame count */
 				I2S_4CH_CHANNEL_COUNT * /* stereo */
 				sizeof(int16_t) /* sample size */;
- 			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sock_value, sizeof(sock_value));
+ 			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
 		#endif
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
@@ -309,7 +316,7 @@ struct Test_TcpToI2SQuad
 					}
 				}
 				
-				send(sock, data, sizeof(data), 0);
+				send(sock, (const char*)data, sizeof(data), 0);
 			}
 			
 		error:
@@ -318,7 +325,7 @@ struct Test_TcpToI2SQuad
 			
 			if (sock != -1)
 			{
-				close(sock);
+				closesocket(sock);
 				sock = -1;
 			}
 		});
@@ -389,7 +396,7 @@ struct Test_TcpToI2SMono8
 			
 		#if 1
 			sock_value = 1;
-			setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &sock_value, sizeof(sock_value));
+			setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (const char*)&sock_value, sizeof(sock_value));
 		#endif
 		
 		#if 1
@@ -402,7 +409,7 @@ struct Test_TcpToI2SMono8
 				I2S_1CH_8_FRAME_COUNT   * /* frame count */
 				I2S_1CH_8_CHANNEL_COUNT * /* stereo */
 				sizeof(int8_t) /* sample size */;
- 			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, &sock_value, sizeof(sock_value));
+ 			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
 		#endif
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
@@ -476,7 +483,7 @@ struct Test_TcpToI2SMono8
 					}
 				}
 				
-				send(sock, data, sizeof(data), 0);
+				send(sock, (const char*)data, sizeof(data), 0);
 			}
 			
 		error:
@@ -485,7 +492,7 @@ struct Test_TcpToI2SMono8
 			
 			if (sock != -1)
 			{
-				close(sock);
+				closesocket(sock);
 				sock = -1;
 			}
 		});
