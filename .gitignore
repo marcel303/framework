@@ -37,3 +37,10 @@ audioGraph/conglomerates/audioNodes_all.h
 audioGraph/conglomerates/binaural_all.cpp
 video_uikit_all.m
 kinect_all.h
+users/marcel/refine/data/editor-settings/FileEditor_Gltf.txt
+users/marcel/refine/data/editor-settings/FileEditor_JsusFx.txt
+users/marcel/refine/data/editor-settings/FileEditor_Model.txt
+users/marcel/refine/data/editor-settings/FileEditor_Sprite.txt
+users/marcel/refine/data/editor-settings/FileEditor_Spriter.txt
+users/marcel/refine/data/editor-settings/FileEditor_Video.txt
+vfxNodes_all-mac.h
