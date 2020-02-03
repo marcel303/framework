@@ -53,7 +53,6 @@
         <input socket="sustain" value="0.800000"/>
     </node>
     <node id="48" typeName="voice"/>
-    <node id="49" typeName="display"/>
     <node id="50" typeName="voice.4d"/>
     <link id="39" srcNodeId="24" srcNodeSocketName="pcm" dstNodeId="23" dstNodeSocketName="pcm"/>
     <link id="42" srcNodeId="26" srcNodeSocketName="sourceA" dstNodeId="24" dstNodeSocketName="audio"/>
@@ -73,8 +72,6 @@
     <link id="76" srcNodeId="26" srcNodeSocketName="gainA" dstNodeId="25" dstNodeSocketName="value2"/>
     <link id="77" srcNodeId="48" srcNodeSocketName="audio" dstNodeId="26" dstNodeSocketName="audio"/>
     <link id="80" srcNodeId="50" srcNodeSocketName="audio" dstNodeId="26" dstNodeSocketName="audio"/>
-    <link id="81" srcNodeId="49" srcNodeSocketName="audioL" dstNodeId="26" dstNodeSocketName="audio"/>
-    <link id="82" srcNodeId="49" srcNodeSocketName="audioR" dstNodeId="26" dstNodeSocketName="audio"/>
     <editor nextZKey="1">
         <dragAndZoom x="269.64895629882812" y="121.09842681884766" zoom="1"/>
         <nodeDatas>
@@ -94,7 +91,6 @@
             <nodeData nodeId="42" x="-240" y="528" zKey="0"/>
             <nodeData nodeId="47" x="181.5576171875" y="103.61360168457031" zKey="0"/>
             <nodeData nodeId="48" x="474" y="-27" zKey="0"/>
-            <nodeData nodeId="49" x="463.00003051757812" y="-128.7476806640625" zKey="0"/>
             <nodeData nodeId="50" x="643.9998779296875" y="17.000045776367188" zKey="0"/>
         </nodeDatas>
         <visualizers/>
