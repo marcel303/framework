@@ -34,6 +34,8 @@ int main(int argc, char * argv[])
 	
 	if (framework.init(GFX_SX, GFX_SY))
 	{
+		framework.fillCaches(true);
+		
 		initUi();
 		
 		MP::Util::InitializeLibAvcodec();
