@@ -85,7 +85,7 @@ public:
 	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 	void reload();
 	
-	bool hasIncludedFile(const char * filename);
+	bool hasIncludedFile(const char * filename) const;
 };
 
 class ShaderCache
@@ -138,7 +138,7 @@ public:
 	void load(const char * filename, const int groupSx, const int groupSy, const int groupSz);
 	void reload();
 	
-	bool hasIncludedFile(const char * filename);
+	bool hasIncludedFile(const char * filename) const;
 };
 
 class ComputeShaderCache
@@ -152,8 +152,6 @@ public:
 	void reload();
 	void handleSourceChanged(const char * name);
 	ComputeShaderCacheElem & findOrCreate(const char * filename, const int groupSx, const int groupSy, const int groupSz);
-	
-	bool hasIncludedFile(const char * filename);
 };
 
 #endif

@@ -423,7 +423,7 @@ void ShaderCacheElem::reload()
 	load(oldName.c_str(), oldVs.c_str(), oldPs.c_str(), oldOutputs.c_str());
 }
 
-bool ShaderCacheElem::hasIncludedFile(const char * filename)
+bool ShaderCacheElem::hasIncludedFile(const char * filename) const
 {
 	for (auto & includedFile : includedFiles)
 		if (filename == includedFile)
@@ -598,6 +598,15 @@ void ComputeShaderCacheElem::reload()
 	load(oldName.c_str(), groupSx, groupSy, groupSz);
 }
 
+bool ComputeShaderCacheElem::hasIncludedFile(const char * filename) const
+{
+	for (auto & includedFile : includedFiles)
+		if (filename == includedFile)
+			return true;
+	
+	return false;
+}
+
 void ComputeShaderCache::clear()
 {
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
@@ -652,15 +661,6 @@ ComputeShaderCacheElem & ComputeShaderCache::findOrCreate(const char * name, con
 
 		return i->second;
 	}
-}
-
-bool ComputeShaderCache::hasIncludedFile(const char * filename)
-{
-	for (auto & includedFile : includedFiles)
-		if (filename == includedFile)
-			return true;
-	
-	return false;
 }
 
 #endif

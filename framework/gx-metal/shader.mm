@@ -324,7 +324,7 @@ void ShaderCacheElem_Metal::reload()
 	load(oldName.c_str(), oldVs.c_str(), oldPs.c_str(), oldOutputs.c_str());
 }
 
-bool ShaderCacheElem_Metal::hasIncludedFile(const char * filename)
+bool ShaderCacheElem_Metal::hasIncludedFile(const char * filename) const
 {
 	for (auto & includedFile : includedFiles)
 		if (filename == includedFile)

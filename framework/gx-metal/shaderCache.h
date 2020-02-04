@@ -160,7 +160,7 @@ public:
 	
 	void load(const char * in_name, const char * in_filenameVs, const char * in_filenamePs, const char * in_outputs);
 	void reload();
-	bool hasIncludedFile(const char * filename);
+	bool hasIncludedFile(const char * filename) const;
 	
 	void addUniforms(MTLArgument * arg, const char type);
 	void initParamIndicesFromUniforms();
