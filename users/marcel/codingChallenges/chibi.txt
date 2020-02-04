@@ -65,6 +65,11 @@ app codingChallenges-132-fluidSimulation-gpu-3d
 	add_files 132-fluidSimulation-gpu-3d.cpp
 	resource_path data
 
+app codingChallenges-145-raycast-2d
+	depend_library framework
+	add_files 145-raycast-2d.cpp
+	resource_path data
+
 app codingChallenges-c01-maurerRose
 	depend_library framework
 	depend_library nanovg-framework
