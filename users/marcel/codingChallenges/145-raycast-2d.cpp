@@ -129,7 +129,7 @@ int main(int argc, char * argv[])
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			setColor(100, 100, 100);
-			gxBegin(GX_LINES);
+			hqBegin(HQ_LINES);
 			{
 				for (auto & ray_direction : ray_directions)
 				{
@@ -144,11 +144,16 @@ int main(int argc, char * argv[])
 						dy,
 						t);
 
-					gxVertex2f(mouse.x, mouse.y);
-					gxVertex2f(mouse.x + dx * t, mouse.y + dy * t);
+					hqLine(
+						mouse.x,
+						mouse.y,
+						.5f,
+						mouse.x + dx * t,
+						mouse.y + dy * t,
+						2.f);
 				}
 			}
-			gxEnd();
+			hqEnd();
 
 			for (auto & lineSegment : lineSegments)
 			{
