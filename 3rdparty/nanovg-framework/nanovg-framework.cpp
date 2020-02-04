@@ -526,7 +526,9 @@ static void drawPrim(const GX_PRIMITIVE_TYPE primType, const NVGvertex * verts, 
 
 static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths)
 {
-	Assert(npaths > 0);
+	if (npaths <= 0)
+		return;
+		
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
 	
 	Shader shader("nanovg-framework/fill");
@@ -604,7 +606,9 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 
 static void renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, float strokeWidth, const NVGpath* paths, int npaths)
 {
-	Assert(npaths > 0);
+	if (npaths <= 0)
+		return;
+	
 	auto * frameworkCtx = (nvgFrameworkCtx*)uptr;
 	
 	Shader shader("nanovg-framework/fill");
