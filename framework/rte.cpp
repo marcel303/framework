@@ -35,20 +35,22 @@
     #include <Windows.h>
 #endif
 
-static void handleFileChange(const std::string & filename)
+// todo : windows,linux : add file watchers for multiple resource paths
+
+static void handleFileChange(const char * filename)
 {
 	const std::string extension = Path::GetExtension(filename, true);
 
-	if (extension == "vs")
+	if (extension == "vs" || extension == "txt")
 	{
-		g_shaderCache.handleSourceChanged(filename.c_str());
+		g_shaderCache.handleSourceChanged(filename);
 	}
-	else if (extension == "ps")
+	else if (extension == "ps" || extension == "txt")
 	{
-		g_shaderCache.handleSourceChanged(filename.c_str());
+		g_shaderCache.handleSourceChanged(filename);
 	}
 #if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER // todo : enable for vs and ps for metal
-	else if (extension == "cs")
+	else if (extension == "cs" || extension == "txt")
 	{
 		for (auto & i : g_computeShaderCache.m_map)
 		{
@@ -65,7 +67,7 @@ static void handleFileChange(const std::string & filename)
 	}
 	else if (extension == "png" || extension == "jpg")
 	{
-		Sprite(filename.c_str()).reload();
+		Sprite(filename).reload();
 	}
 	
 	// call real time editing callback
@@ -77,6 +79,46 @@ static void handleFileChange(const std::string & filename)
 	
 	framework.changedFiles.push_back(filename);
 }
+
+#if defined(MACOS)
+
+#include "rte-macos.h"
+#include <list>
+
+std::list<rteFileWatcher_OSX*> s_fileWatchers;
+
+void initRealTimeEditing()
+{
+	for (auto & resourcePath : framework.resourcePaths)
+	{
+		rteFileWatcher_OSX * fileWatcher = new rteFileWatcher_OSX();
+		
+		fileWatcher->init(resourcePath.c_str());
+		fileWatcher->fileChanged = handleFileChange;
+		
+		s_fileWatchers.push_back(fileWatcher);
+	}
+}
+
+void shutRealTimeEditing()
+{
+	for (auto *& fileWatcher : s_fileWatchers)
+	{
+		fileWatcher->shut();
+		
+		delete fileWatcher;
+		fileWatcher = nullptr;
+	}
+	
+	s_fileWatchers.clear();
+}
+
+void tickRealTimeEditing()
+{
+	// tod
+}
+
+#else
 
 #if 1
 
@@ -339,5 +381,7 @@ void tickRealTimeEditing()
 	
 	checkFileInfos();
 }
+
+#endif
 
 #endif

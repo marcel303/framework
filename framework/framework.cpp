@@ -121,8 +121,6 @@ Gamepad gamepad[MAX_GAMEPAD];
 
 // -----
 
-static std::vector<std::string> s_resourcePaths;
-
 int s_backingScale = 1; // global backing scale multiplier. a bit of a hack as it assumed the scale never changes, but works well for most apps in most situations for now..
 
 static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
@@ -1559,7 +1557,7 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 
 void Framework::fillCaches(bool recurse)
 {
-	for (auto & resourcePath : s_resourcePaths)
+	for (auto & resourcePath : resourcePaths)
 		fillCachesWithPath(resourcePath.c_str(), recurse);
 	
 	fillCachesWithPath(".", recurse);
@@ -1960,7 +1958,7 @@ bool Framework::fileHasChanged(const char * filename) const
 
 void Framework::registerResourcePath(const char * path)
 {
-	s_resourcePaths.push_back(path);
+	resourcePaths.push_back(path);
 }
 
 bool Framework::registerChibiResourcePaths(const char * encoded_text)
@@ -2014,7 +2012,7 @@ static std::string s_resourcePath;
 
 const char * Framework::resolveResourcePath(const char * path)
 {
-	for (auto & resourcePath : s_resourcePaths)
+	for (auto & resourcePath : resourcePaths)
 	{
 		s_resourcePath = resourcePath + "/" + path;
 		

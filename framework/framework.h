@@ -494,6 +494,8 @@ public:
 	RealTimeEditCallback realTimeEditCallback;
 	InitErrorHandler initErrorHandler;
 	
+	std::vector<std::string> resourcePaths;
+	
 	std::vector<SDL_Event> events;
 	std::vector<std::string> changedFiles;
 	std::vector<std::string> droppedFiles;
