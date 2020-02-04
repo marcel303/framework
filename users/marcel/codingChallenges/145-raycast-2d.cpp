@@ -87,6 +87,8 @@ int main(int argc, char * argv[])
 		ray_directions[i].Set(cosf(a), sinf(a));
 	}
 	
+	// add some initial line segments ('walls') so the user isn't presented with an empty screen at startup
+	
 	for (int i = 0; i < 2; ++i)
 	{
 		LineSegment lineSegment;
@@ -97,6 +99,8 @@ int main(int argc, char * argv[])
 		lineSegments.push_back(lineSegment);
 	}
 	
+	// enter the interactive main loop!
+	
 	for (;;)
 	{
 		framework.process();
@@ -104,11 +108,15 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 		
+		// begin drawing a new line segment ?
+		
 		if (mouse.wentDown(BUTTON_LEFT))
 		{
 			lineSegmentBeingRecorded.x1 = mouse.x;
 			lineSegmentBeingRecorded.y1 = mouse.y;
 		}
+		
+		// we're drawing a line segment. we aleady know the starting point. update the endpoint here
 		
 		if (mouse.isDown(BUTTON_LEFT))
 		{
@@ -116,10 +124,14 @@ int main(int argc, char * argv[])
 			lineSegmentBeingRecorded.y2 = mouse.y;
 		}
 		
+		// are we done drawing ? if so, record the new line segment into the line segments array
+		
 		if (mouse.wentUp(BUTTON_LEFT))
 		{
 			lineSegments.push_back(lineSegmentBeingRecorded);
 		}
+		
+		// clear all of the recorded line segments when the right mouse button is pressed
 		
 		if (mouse.wentDown(BUTTON_RIGHT))
 		{
@@ -128,33 +140,36 @@ int main(int argc, char * argv[])
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			// ray cast lots of rays against the line segments and visualize the results by drawing lines
+			// from the ray origin (the mouse cursor) and where we ended up intersecting
+			
 			setColor(100, 100, 100);
 			hqBegin(HQ_LINES);
 			{
 				for (auto & ray_direction : ray_directions)
 				{
-					const float dx = ray_direction[0];
-					const float dy = ray_direction[1];
-
 					float t = 1000.f;
+					
 					rayCast(
 						mouse.x,
 						mouse.y,
-						dx,
-						dy,
+						ray_direction[0],
+						ray_direction[1],
 						t);
 
 					hqLine(
 						mouse.x,
 						mouse.y,
 						.5f,
-						mouse.x + dx * t,
-						mouse.y + dy * t,
-						2.f);
+						mouse.x + ray_direction[0] * t,
+						mouse.y + ray_direction[1] * t,
+						2.f); // the larger stroke size for the enpoint gives us a nice thick looking line when we do intersect something
 				}
 			}
 			hqEnd();
 
+			// draw the recorded line segments
+			
 			for (auto & lineSegment : lineSegments)
 			{
 				setColor(colorWhite);
@@ -166,6 +181,8 @@ int main(int argc, char * argv[])
 					lineSegment.y2);
 			}
 
+			// draw the currently being recorded line segment
+			
 			setColor(colorYellow);
 			drawLine(
 				lineSegmentBeingRecorded.x1,
