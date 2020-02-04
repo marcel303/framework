@@ -140,13 +140,13 @@ static bool fileExists(const char * filename)
 	}
 }
 
-static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages, const char * outputs)
+static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages, std::vector<std::string> & includedFiles, const char * outputs)
 {
 	bool result = true;
 
 	std::string source;
 	
-	if (!preprocessShaderFromFile(filename, source, kPreprocessShader_AddOpenglLineAndFileMarkers, errorMessages))
+	if (!preprocessShaderFromFile(filename, source, kPreprocessShader_AddOpenglLineAndFileMarkers, errorMessages, includedFiles))
 	{
 		result = false;
 	}
@@ -296,6 +296,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	version++;
 	
 	errorMessages.clear();
+	includedFiles.clear();
 	
 	bool hasVs = fileExists(vs.c_str());
 	bool hasPs = fileExists(ps.c_str());
@@ -304,7 +305,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	GLuint shaderPs = 0;
 	
 	if (hasVs)
-		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER, "", errorMessages, "");
+		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER, "", errorMessages, includedFiles, "");
 	else
 	{
 		errorMessages.push_back(String::Format("shader %s doesn't have a vertex shader. cannot load", _name));
@@ -316,7 +317,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	{
 		if (result)
 		{
-			result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "", errorMessages, outputs);
+			result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "", errorMessages, includedFiles, outputs);
 		}
 	}
 	
@@ -422,6 +423,15 @@ void ShaderCacheElem::reload()
 	load(oldName.c_str(), oldVs.c_str(), oldPs.c_str(), oldOutputs.c_str());
 }
 
+bool ShaderCacheElem::hasIncludedFile(const char * filename)
+{
+	for (auto & includedFile : includedFiles)
+		if (filename == includedFile)
+			return true;
+	
+	return false;
+}
+
 void ShaderCache::clear()
 {
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
@@ -446,7 +456,7 @@ void ShaderCache::handleSourceChanged(const char * name)
 	{
 		ShaderCacheElem & cacheElem = shaderCacheItr.second;
 		
-		if (name == cacheElem.vs || name == cacheElem.ps)
+		if (name == cacheElem.vs || name == cacheElem.ps || cacheElem.hasIncludedFile(name))
 		{
 			cacheElem.reload();
 			
@@ -522,6 +532,7 @@ void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const 
 	version++;
 	
 	errorMessages.clear();
+	includedFiles.clear();
 
 	GLuint shaderCs = 0;
 
@@ -531,7 +542,7 @@ void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const 
 		groupSy,
 		groupSz);
 
-	result &= loadShader(name.c_str(), shaderCs, GL_COMPUTE_SHADER, defines, errorMessages, "");
+	result &= loadShader(name.c_str(), shaderCs, GL_COMPUTE_SHADER, defines, errorMessages, includedFiles, "");
 
 	if (result)
 	{
@@ -605,6 +616,24 @@ void ComputeShaderCache::reload()
 	}
 }
 
+void ComputeShaderCache::handleSourceChanged(const char * name)
+{
+	for (auto & shaderCacheItr : m_map)
+	{
+		ComputeShaderCacheElem & cacheElem = shaderCacheItr.second;
+		
+		if (name == cacheElem.name || cacheElem.hasIncludedFile(name))
+		{
+			cacheElem.reload();
+			
+			if (globals.shader != nullptr && globals.shader->getOpenglProgram() == cacheElem.program)
+			{
+				clearShader();
+			}
+		}
+	}
+}
+
 ComputeShaderCacheElem & ComputeShaderCache::findOrCreate(const char * name, const int groupSx, const int groupSy, const int groupSz)
 {
 	Map::iterator i = m_map.find(name);
@@ -623,6 +652,15 @@ ComputeShaderCacheElem & ComputeShaderCache::findOrCreate(const char * name, con
 
 		return i->second;
 	}
+}
+
+bool ComputeShaderCache::hasIncludedFile(const char * filename)
+{
+	for (auto & includedFile : includedFiles)
+		if (filename == includedFile)
+			return true;
+	
+	return false;
 }
 
 #endif

@@ -68,6 +68,7 @@ public:
 	
 	int version;
 	std::vector<std::string> errorMessages;
+	std::vector<std::string> includedFiles;
 
 	struct
 	{
@@ -83,6 +84,8 @@ public:
 	void free();
 	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 	void reload();
+	
+	bool hasIncludedFile(const char * filename);
 };
 
 class ShaderCache
@@ -128,11 +131,14 @@ public:
 	
 	int version;
 	std::vector<std::string> errorMessages;
-
+	std::vector<std::string> includedFiles;
+	
 	ComputeShaderCacheElem();
 	void free();
 	void load(const char * filename, const int groupSx, const int groupSy, const int groupSz);
 	void reload();
+	
+	bool hasIncludedFile(const char * filename);
 };
 
 class ComputeShaderCache
@@ -144,7 +150,10 @@ public:
 
 	void clear();
 	void reload();
+	void handleSourceChanged(const char * name);
 	ComputeShaderCacheElem & findOrCreate(const char * filename, const int groupSx, const int groupSy, const int groupSz);
+	
+	bool hasIncludedFile(const char * filename);
 };
 
 #endif

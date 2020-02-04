@@ -40,10 +40,12 @@ bool preprocessShader(
 	std::string & destination,
 	const int flags,
 	std::vector<std::string> & errorMessages,
+	std::vector<std::string> & includedFiles,
 	int & fileId);
 
 bool preprocessShaderFromFile(
 	const char * filename,
 	std::string & destination,
 	const int flags,
-	std::vector<std::string> & errorMessages);
+	std::vector<std::string> & errorMessages,
+	std::vector<std::string> & includedFiles);

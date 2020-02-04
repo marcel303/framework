@@ -121,6 +121,7 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 void ShaderCacheElem_Metal::shut()
 {
 	errorMessages.clear();
+	includedFiles.clear();
 	
 	//
 	
@@ -185,8 +186,8 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 			std::string shaderVs_opengl;
 			std::string shaderPs_opengl;
 			
-			success &= preprocessShaderFromFile(in_filenameVs, shaderVs_opengl, 0, errorMessages);
-			success &= preprocessShaderFromFile(in_filenamePs, shaderPs_opengl, 0, errorMessages);
+			success &= preprocessShaderFromFile(in_filenameVs, shaderVs_opengl, 0, errorMessages, includedFiles);
+			success &= preprocessShaderFromFile(in_filenamePs, shaderPs_opengl, 0, errorMessages, includedFiles);
 			
 			if (success == false)
 				break;
@@ -311,6 +312,25 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 	outputs = in_outputs;
 
 	version++;
+}
+
+void ShaderCacheElem_Metal::reload()
+{
+	const std::string oldName = name;
+	const std::string oldVs = vs;
+	const std::string oldPs = ps;
+	const std::string oldOutputs = outputs;
+
+	load(oldName.c_str(), oldVs.c_str(), oldPs.c_str(), oldOutputs.c_str());
+}
+
+bool ShaderCacheElem_Metal::hasIncludedFile(const char * filename)
+{
+	for (auto & includedFile : includedFiles)
+		if (filename == includedFile)
+			return true;
+	
+	return false;
 }
 
 void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
@@ -494,7 +514,7 @@ void ShaderCache::handleSourceChanged(const char * name)
 	{
 		ShaderCacheElem_Metal * cacheElem = shaderCacheItr.second;
 		
-		if (name == cacheElem->vs || name == cacheElem->ps)
+		if (name == cacheElem->vs || name == cacheElem->ps || cacheElem->hasIncludedFile(name))
 		{
 			cacheElem->reload();
 			
