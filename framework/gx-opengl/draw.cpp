@@ -418,6 +418,8 @@ static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
 	case GX_QUADS:
 		return GL_QUADS;
 #endif
+	case GX_INVALID_PRIM:
+		break;
 	}
 	
 	AssertMsg(false, "unknown GX_PRIMITIVE_TYPE", 0);
