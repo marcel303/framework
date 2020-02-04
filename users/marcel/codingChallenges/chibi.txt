@@ -65,6 +65,11 @@ app codingChallenges-132-fluidSimulation-gpu-3d
 	add_files 132-fluidSimulation-gpu-3d.cpp
 	resource_path data
 
+app codingChallenges-c01-maurerRose
+	depend_library framework
+	depend_library nanovg-framework
+	add_files c01-maurerRose.cpp
+
 app codingChallenges-u01-extrusion
 	depend_library framework
 	add_files u01-extrusion.cpp
