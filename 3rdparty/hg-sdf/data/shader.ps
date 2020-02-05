@@ -1,0 +1,182 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+include hg_sdf.glsl
+
+uniform mat4x4 viewToWorld;
+
+shader_in vec2 v_texcoord;
+
+float showcase_opIndex = 14;
+
+// the following images were made using this piece of code
+
+float fBoolOps(vec3 p) {
+	float box = fBox(p,vec3(1));
+	float sphere = length(p-vec3(1))-1;
+	float d;
+	float r = 0.3;
+	float n = 4;
+	
+	switch (int(showcase_opIndex)) {
+		case 0: d = min(box,sphere); break;
+		case 1: d = max(box,sphere); break;
+		case 2: d = max(box,-sphere); break;
+		
+		case 3: d = fOpUnionRound(box,sphere,r); break;
+		case 4: d = fOpIntersectionRound(box,sphere,r); break;
+		case 5: d = fOpDifferenceRound(box,sphere,r); break;
+		
+		case 6: d = fOpUnionChamfer(box,sphere,r); break;
+		case 7: d = fOpIntersectionChamfer(box,sphere,r); break;
+		case 8: d = fOpDifferenceChamfer(box,sphere,r); break;
+		
+		case 9 : d = fOpUnionColumns(box,sphere,r,n); break;
+		case 10: d = fOpIntersectionColumns(box,sphere,r,n); break;
+		case 11: d = fOpDifferenceColumns(box,sphere,r,n); break;
+		
+		case 12: d = fOpUnionStairs(box,sphere,r,n); break;
+		case 13: d = fOpIntersectionStairs(box,sphere,r,n); break;
+		case 14: d = fOpDifferenceStairs(box,sphere,r,n); break;
+		
+		case 15: d = fOpPipe(box,sphere,r*0.3); break;
+		case 16: d = fOpEngrave(box,sphere,r*0.3); break;
+		case 17: d = fOpGroove(box,sphere,r*0.3, r*0.3); break;
+		case 18: d = fOpTongue(box,sphere,r*0.3, r*0.3); break;
+	}
+	
+	return d;
+}
+
+// the following images were made using this piece of code
+
+float fDomainOps(vec3 p) {
+	float size = 5;
+	float c = 0;
+	switch (int(showcase_opIndex)) {
+		case 0: break; // scene without any domain manipulation
+		case 1: c = pMod1(p.x,size); break;
+		case 2: c = pModSingle1(p.x,size); break;
+		case 3: c = pModInterval1(p.x,size,1,3); break;
+		case 4: c = pModPolar(p.xz,7); p -= vec3(10,0,0); break;
+		case 5: pMod2(p.xz,vec2(size)); break;
+		case 6: pModMirror2(p.xz,vec2(size)); break;
+		case 7: pMod3(p,vec3(size)); break;
+	}
+	
+	// you could use the cell index for something:
+	// p.y -= c*0.3;
+	
+	// the repeated geometry:
+	float box = fBox(p, vec3(1));
+	float sphere = length(p - vec3(1)) - 1;
+	float d = min(box,sphere);
+	
+	// guard object to prevent discontinuities between cells
+	// (which could lead to stepping into neighbouring cells).
+	// doing this specific to the domain operator normally makes
+	// more sense than this all-purpose guard.
+	//negative box: 
+	float guard = -fBoxCheap(p, vec3(size*0.5));
+	// only positive values, but gets small near the box surface:
+	guard = abs(guard) + size*0.1;
+
+	return min(d,guard);
+}
+
+float f(vec3 p)
+{
+	float f;
+
+	//pMod2(p.xz,vec2(8.0));
+	pMod3(p,vec3(4.0));
+	f = fBoolOps(p);
+
+	//f = fDomainOps(p);
+
+	return f;
+}
+
+vec3 normal(vec3 pos, float d)
+{
+	float e = 0.01;
+
+	float nx = f(pos + vec3(e, 0.0, 0.0)) - d;
+	float ny = f(pos + vec3(0.0, e, 0.0)) - d;
+	float nz = f(pos + vec3(0.0, 0.0, e)) - d;
+
+	return normalize(vec3(nx, ny, nz));
+}
+
+void main()
+{
+	vec2 uv = v_texcoord;
+	uv.y = 1.0 - uv.y;
+	uv -= vec2(0.5);
+	uv *= 2.0;
+
+	vec3 origin = (viewToWorld * vec4(vec3(0.0), 1.0)).xyz;
+	vec3 pos = origin;
+	vec3 dir = normalize((viewToWorld * vec4(uv, 1.0, 0.0)).xyz);
+
+	{
+		float d = f(pos);
+		vec3 n = normal(pos, d);
+		float m = max(0.0, 0.5 - d);
+		pos += m * n;
+		origin = pos;
+	}
+
+	float d;
+
+	for (int i = 0; i < 40; ++i)
+	{
+		d = f(pos);
+
+		pos += dir * d;
+	}
+
+	float len = length(pos);
+
+	if (d < 0.01 && pos.y > 0.0)
+	{
+		float d = f(pos);
+		
+		vec3 n = normal(pos, d);
+
+		vec3 color = abs(n);
+
+		float r = 50.0;
+
+		color *= 1.0 - pow((sin(pos.x * r) + 1.0) * 0.5, 128.0);
+		color *= 1.0 - pow((sin(pos.y * r) + 1.0) * 0.5, 128.0);
+		color *= 1.0 - pow((sin(pos.z * r) + 1.0) * 0.5, 128.0);
+
+		color /= length(pos - origin);
+
+		shader_fragColor = vec4(vec3(color), 1.0);
+	}
+	else
+	{
+		float t = - origin.y / dir.y;
+
+		if (t > 0.0)
+		{
+			vec3 plane_pos = origin + dir * t;
+			float d = f(plane_pos);
+
+			shader_fragColor.rgb = vec3(1.0, 0.5, 0.25);
+			shader_fragColor.rgb *= 1.0 - pow((sin(d * 10.0) + 1.0) * 0.5, 128.0);
+			shader_fragColor.rgb /= d;
+
+			shader_fragColor.rgb /= length(plane_pos - origin);
+		}
+		else
+		{
+			shader_fragColor = dir.xyxy * 0.2;
+
+			shader_fragColor.rgb += colorDither8ScreenSpace(uv * 400.0) * 4.0;
+		}
+	}
+
+	shader_fragColor.a = 1.0;
+}

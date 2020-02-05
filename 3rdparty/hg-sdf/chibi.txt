@@ -1,0 +1,9 @@
+library hg-sdf
+	add_files dummy.cpp
+	resource_path data-lib
+
+app hg-sdf-example
+	depend_library framework
+	depend_library hg-sdf
+	add_files example.cpp
+	resource_path data
