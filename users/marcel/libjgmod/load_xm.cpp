@@ -255,7 +255,7 @@ namespace jgmod
 
 		loc += jgmod_igetl (f);      // header size
 		j->global_volume = 64;
-		j->mixing_volume = 64;
+		j->mixing_volume = 128;
 		j->no_trk = jgmod_igetw(f);
 		j->restart_pos = jgmod_igetw(f);
 		j->no_chn = jgmod_igetw(f);

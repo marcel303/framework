@@ -266,12 +266,11 @@ int JGMOD_PLAYER::calc_volume(const int chn) const
 	const SAMPLE_INFO & si = of->si[ci_chn.sample];
     temp *= si.global_volume; // 33 + 6 = 39 bits
 	
-	// todo : makes more sense to apply during mixing I guess. same for global volume
-    temp *= of->mixing_volume; // 39 + 8 = 47 bits
+    temp *= of->mixing_volume; // 39 + 7 = 46 bits
 	
-    temp *= mod_volume; // 47 + 8 = 55 bits
-    temp *= ci_chn.volenv.v; // 55 + 6 = 61 bits
-    temp >>= 53L; // 61 - 53 = 8 bits
+    temp *= mod_volume; // 46 + 8 = 54 bits
+    temp *= ci_chn.volenv.v; // 54 + 6 = 60 bits
+    temp >>= 52L; // 60 - 52 = 8 bits
 
     return temp;
 }

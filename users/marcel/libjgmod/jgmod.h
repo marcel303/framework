@@ -343,7 +343,7 @@ struct JGMOD
     int no_instrument;
     int no_sample;
     int global_volume;
-    int mixing_volume; // 0..256 (usually 64 to create headroom) (8 bits)
+    int mixing_volume; // 0..128
 };
 
 struct JGMOD_INFO

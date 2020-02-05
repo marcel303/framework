@@ -288,7 +288,7 @@ namespace jgmod
 		sf = jgmod_igetw(f);
 		jgmod_skip(f, 4); // skip SCRM
 		j->global_volume = jgmod_getc(f);
-		j->mixing_volume = 64;
+		j->mixing_volume = 128;
 		j->tempo = jgmod_getc(f);
 		j->bpm = jgmod_getc(f);
 		jgmod_getc(f);
