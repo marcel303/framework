@@ -148,47 +148,57 @@ int main(int argc, char * argv[])
 			{
 				for (auto & ray_direction : ray_directions)
 				{
-					float t = 1000.f;
-					
-					rayCast(
-						mouse.x,
-						mouse.y,
-						ray_direction[0],
-						ray_direction[1],
-						t);
+					for (int i = 0; i < 1; ++i)
+					{
+						const float x = (i/2) == 0 ? mouse.x : 800 - mouse.x;
+						const float y = (i&1) == 0 ? mouse.y : 800 - mouse.y;
+						
+						float t = 1000.f;
+						
+						rayCast(
+							x,
+							y,
+							ray_direction[0],
+							ray_direction[1],
+							t);
+
+						hqLine(
+							x,
+							y,
+							.5f,
+							x + ray_direction[0] * t,
+							y + ray_direction[1] * t,
+							1.5f); // the larger stroke size for the enpoint gives us a nice thick looking line when we do intersect something
+					}
+				}
+			
+				// draw the recorded line segments
+				
+				for (auto & lineSegment : lineSegments)
+				{
+					setColor(colorWhite);
 
 					hqLine(
-						mouse.x,
-						mouse.y,
-						.5f,
-						mouse.x + ray_direction[0] * t,
-						mouse.y + ray_direction[1] * t,
-						2.f); // the larger stroke size for the enpoint gives us a nice thick looking line when we do intersect something
+						lineSegment.x1,
+						lineSegment.y1,
+						1.f,
+						lineSegment.x2,
+						lineSegment.y2,
+						1.f);
 				}
+
+				// draw the currently being recorded line segment
+				
+				setColor(colorYellow);
+				hqLine(
+					lineSegmentBeingRecorded.x1,
+					lineSegmentBeingRecorded.y1,
+					1.f,
+					lineSegmentBeingRecorded.x2,
+					lineSegmentBeingRecorded.y2,
+					1.f);
 			}
 			hqEnd();
-
-			// draw the recorded line segments
-			
-			for (auto & lineSegment : lineSegments)
-			{
-				setColor(colorWhite);
-
-				drawLine(
-					lineSegment.x1,
-					lineSegment.y1,
-					lineSegment.x2,
-					lineSegment.y2);
-			}
-
-			// draw the currently being recorded line segment
-			
-			setColor(colorYellow);
-			drawLine(
-				lineSegmentBeingRecorded.x1,
-				lineSegmentBeingRecorded.y1,
-				lineSegmentBeingRecorded.x2,
-				lineSegmentBeingRecorded.y2);
 		}
 		framework.endDraw();
 	}
