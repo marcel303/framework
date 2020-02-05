@@ -296,6 +296,7 @@ static GLenum translateStencilFunc(const GX_STENCIL_FUNC func)
 		return GL_ALWAYS;
 	}
 	
+	AssertMsg(false, "unknown GX_STENCIL_FUNC", 0);
 	return GL_ALWAYS;
 }
 
