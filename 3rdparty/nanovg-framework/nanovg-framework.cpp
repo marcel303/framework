@@ -51,8 +51,6 @@ void main()
 
 )SHADER";
 
-// todo : create an optimized shader for stenciling
-
 static const char * s_fillPs = R"SHADER(
 
 include engine/ShaderPS.txt
@@ -154,6 +152,9 @@ void main()
 	}
 	else if (type == 2.0) // Stencil fill
 	{
+		if (scissor == 0.0)
+			discard;
+		
 		result = vec4(1, 1, 1, 1);
 	}
 	else if (type == 3.0) // Textured tris
@@ -467,7 +468,6 @@ static bool setShaderUniforms(
 	
 	if (paint.image == 0)
 	{
-		shader.setImmediate("type", 0); // gradient
 		shader.setTexture("tex", 0, 0);
 		shader.setImmediate("texType", -1);
 	}
@@ -480,7 +480,6 @@ static bool setShaderUniforms(
 		const bool clamp = (image->flags & (NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY)) == 0;
 		const bool filter = (image->flags & NVG_IMAGE_NEAREST) == 0;
 		
-		shader.setImmediate("type", 1); // image
 		shader.setTexture("tex", 0, image->texture->id, filter, clamp);
 		if (image->texture->format == GX_RGBA8_UNORM)
 			shader.setImmediate("texType", (image->flags & NVG_IMAGE_PREMULTIPLIED) ? 0 : 1);
@@ -491,6 +490,16 @@ static bool setShaderUniforms(
 	}
 	
 	return true;
+}
+
+static void setShaderTypeUniform(
+	Shader & shader,
+	const NVGpaint & paint)
+{
+	if (paint.image == 0)
+		shader.setImmediate("type", 0); // gradient
+	else
+		shader.setImmediate("type", 1); // image
 }
 
 static BLEND_MODE compositeOperationToBlendMode(const NVGcompositeOperationState & op)
@@ -545,6 +554,8 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 			.op(GX_STENCIL_FACE_BACK,  GX_STENCIL_OP_KEEP, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_DEC_WRAP)
 			.writeMask(0xff);
 		
+		shader.setImmediate("type", 2); // stencil fill
+		
 		pushColorWriteMask(0, 0, 0, 0);
 		{
 			for (int i = 0; i < npaths; ++i)
@@ -564,6 +575,8 @@ static void renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState c
 			.comparison(GX_STENCIL_FUNC_NOTEQUAL, 0x00, 0xff)
 			.op(GX_STENCIL_OP_ZERO, GX_STENCIL_OP_ZERO, GX_STENCIL_OP_ZERO)
 			.writeMask(0xff);
+		
+		setShaderTypeUniform(shader, *paint);
 		
 		const float x1 = bounds[0];
 		const float y1 = bounds[1];
@@ -614,19 +627,89 @@ static void renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperationState
 	Shader shader("nanovg-framework/fill");
 	setShader(shader);
 	{
-		if (!setShaderUniforms(shader, *paint, *scissor, strokeWidth, fringe, -1.f, frameworkCtx))
-			return;
-		
-		pushBlend(compositeOperationToBlendMode(compositeOperation));
-		
-		for (int i = 0; i < npaths; ++i)
+		if (frameworkCtx->flags & NVG_STENCIL_STROKES)
 		{
-			auto & path = paths[i];
+			// fill the stroke base without overlap
 			
-			drawPrim(GX_TRIANGLE_STRIP, path.stroke, path.nstroke);
+			if (!setShaderUniforms(shader, *paint, *scissor, strokeWidth, fringe, 1.f - .5f / 255.f, frameworkCtx))
+				return;
+			setShaderTypeUniform(shader, *paint);
+			
+			setStencilTest()
+				.comparison(GX_STENCIL_FUNC_EQUAL, 0x00, 0xff)
+				.op(GX_STENCIL_OP_KEEP, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_INC)
+				.writeMask(0xff);
+			
+			pushBlend(compositeOperationToBlendMode(compositeOperation));
+			{
+				for (int i = 0; i < npaths; ++i)
+				{
+					auto & path = paths[i];
+					
+					drawPrim(GX_TRIANGLE_STRIP, path.stroke, path.nstroke);
+				}
+			}
+			popBlend();
+			
+			// draw anti-aliased pixels
+			
+			if (!setShaderUniforms(shader, *paint, *scissor, strokeWidth, fringe, -1.f, frameworkCtx))
+				return;
+			setShaderTypeUniform(shader, *paint);
+			
+			setStencilTest()
+				.comparison(GX_STENCIL_FUNC_EQUAL, 0x00, 0xff)
+				.op(GX_STENCIL_OP_KEEP, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_KEEP)
+				.writeMask(0xff);
+			
+			pushBlend(compositeOperationToBlendMode(compositeOperation));
+			{
+				for (int i = 0; i < npaths; ++i)
+				{
+					auto & path = paths[i];
+					
+					drawPrim(GX_TRIANGLE_STRIP, path.stroke, path.nstroke);
+				}
+			}
+			popBlend();
+			
+			// clear the stencil buffer
+			
+			setStencilTest()
+				.comparison(GX_STENCIL_FUNC_ALWAYS, 0x00, 0xff)
+				.op(GX_STENCIL_OP_ZERO, GX_STENCIL_OP_ZERO, GX_STENCIL_OP_ZERO)
+				.writeMask(0xff);
+			
+			pushColorWriteMask(0, 0, 0, 0);
+			{
+				for (int i = 0; i < npaths; ++i)
+				{
+					auto & path = paths[i];
+					
+					drawPrim(GX_TRIANGLE_STRIP, path.stroke, path.nstroke);
+				}
+			}
+			popColorWriteMask();
+			
+			clearStencilTest();
 		}
+		else
+		{
+			if (!setShaderUniforms(shader, *paint, *scissor, strokeWidth, fringe, -1.f, frameworkCtx))
+				return;
+			setShaderTypeUniform(shader, *paint);
 		
-		popBlend();
+			pushBlend(compositeOperationToBlendMode(compositeOperation));
+			{
+				for (int i = 0; i < npaths; ++i)
+				{
+					auto & path = paths[i];
+					
+					drawPrim(GX_TRIANGLE_STRIP, path.stroke, path.nstroke);
+				}
+			}
+			popBlend();
+		}
 	}
 	clearShader();
 }
