@@ -303,8 +303,6 @@ void gxEmitVertex();
 
 void gxInitialize()
 {
-	Shader("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
-	
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
 	s_gxVertex.cy = 1.f;
@@ -1254,7 +1252,7 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 	
 	for (int i = 0; i < numVsInputs; ++i)
 	{
-		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
+		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%d", i, vsInputs[i].id, vsInputs[i].numComponents, vsInputs[i].type, vsInputs[i].normalize, vsInputs[i].stride ? vsInputs[i].stride : vsStride, vsInputs[i].offset);
 		
 		const GLenum type =
 			vsInputs[i].type == GX_ELEMENT_FLOAT32 ? GL_FLOAT :

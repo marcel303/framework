@@ -1466,8 +1466,6 @@ void gxInitialize()
 	
 	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 	
-	Shader("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
-
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
 	s_gxVertex.cy = 1.f;
