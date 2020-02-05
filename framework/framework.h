@@ -793,8 +793,11 @@ public:
 	void setImmediate(GxImmediateIndex index, float x, float y);
 	void setImmediate(GxImmediateIndex index, float x, float y, float z);
 	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
+	void setImmediateFloatArray(const char * name, const float * values, const int numValues);
+	void setImmediateFloatArray(GxImmediateIndex index, const float * values, const int numValues);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
+	void setImmediateMatrix4x4Array(const char * name, const float * matrices, const int numMatrices);
 	void setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices);
 	
 // todo : texture units do not make much sense ..
@@ -900,7 +903,7 @@ public:
 class ShaderBuffer
 {
 	GxShaderBufferId m_buffer;
-
+	
 public:
 	ShaderBuffer();
 	~ShaderBuffer();
@@ -1126,6 +1129,8 @@ public:
 	bool animRootMotionEnabled;
 	
 	float drawNormalsScale = 1.f;
+	
+	mutable ShaderBuffer skinningMatrices;
 	
 	Model(const char * filename, bool autoUpdate = false);
 	Model(class ModelCacheElem & cacheElem, bool autoUpdate);

@@ -293,6 +293,20 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, flo
 	checkErrorGL();
 }
 
+void Shader::setImmediateFloatArray(const char * name, const float * values, const int numValues)
+{
+	SET_UNIFORM(name, glUniform1fv(index, numValues, values));
+	checkErrorGL();
+}
+
+void Shader::setImmediateFloatArray(GxImmediateIndex index, const float * values, const int numValues)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniform1fv(index, numValues, values);
+	checkErrorGL();
+}
+	
 void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
 {
 	SET_UNIFORM(name, glUniformMatrix4fv(index, 1, GL_FALSE, matrix));
@@ -304,6 +318,12 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 	fassert(index != -1);
 	fassert(globals.shader == this);
 	glUniformMatrix4fv(index, 1, GL_FALSE, matrix);
+	checkErrorGL();
+}
+
+void Shader::setImmediateMatrix4x4Array(const char * name, const float * matrices, const int numMatrices)
+{
+	SET_UNIFORM(name, glUniformMatrix4fv(index, numMatrices, GL_FALSE, matrices));
 	checkErrorGL();
 }
 
