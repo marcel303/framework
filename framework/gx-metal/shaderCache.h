@@ -45,7 +45,6 @@ public:
 		kSp_ModelViewMatrix,
 		kSp_ModelViewProjectionMatrix,
 		kSp_ProjectionMatrix,
-		kSp_SkinningMatrices,
 		kSp_Texture,
 		kSp_Params,
 		kSp_ShadingParams,

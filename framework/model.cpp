@@ -836,6 +836,8 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	
 	if (drawFlags & DrawMesh)
 	{
+		skinningMatrices.setData(globalMatrices, sizeof(Mat4x4) * numBones);
+		
 		const Shader * previousShader = nullptr;
 		
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
@@ -862,12 +864,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 				
 				// set uniform constants for skinning matrices
 				
-				const ShaderCacheElem & shaderElem = shader.getCacheElem();
-				
-				if (shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index >= 0)
-				{
-					shader.setImmediateMatrix4x4Array(shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index, (float*)globalMatrices, numBones);
-				}
+				shader.setBuffer("SkinningData", skinningMatrices);
 				
 				const GxImmediateIndex drawColor = shader.getImmediateIndex("drawColor");
 				

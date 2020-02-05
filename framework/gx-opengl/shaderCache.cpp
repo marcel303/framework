@@ -341,6 +341,8 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 		glBindAttribLocation(program, VS_COLOR,         "in_color");
 		glBindAttribLocation(program, VS_TEXCOORD0,     "in_texcoord0");
 		glBindAttribLocation(program, VS_TEXCOORD1,     "in_texcoord1");
+		glBindAttribLocation(program, VS_BLEND_INDICES, "in_skinningBlendIndices");
+		glBindAttribLocation(program, VS_BLEND_WEIGHTS, "in_skinningBlendWeights");
 		checkErrorGL();
 		
 		glLinkProgram(program);
@@ -377,7 +379,6 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 			params[kSp_ModelViewMatrix].set(glGetUniformLocation(program, "ModelViewMatrix"));
 			params[kSp_ModelViewProjectionMatrix].set(glGetUniformLocation(program, "ModelViewProjectionMatrix"));
 			params[kSp_ProjectionMatrix].set(glGetUniformLocation(program, "ProjectionMatrix"));
-			params[kSp_SkinningMatrices].set(glGetUniformLocation(program, "skinningMatrices"));
 			params[kSp_Texture].set(glGetUniformLocation(program, "source"));
 			params[kSp_Params].set(glGetUniformLocation(program, "params"));
 			params[kSp_ShadingParams].set(glGetUniformLocation(program, "shadingParams"));

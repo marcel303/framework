@@ -441,7 +441,6 @@ void ShaderCacheElem_Metal::initParamIndicesFromUniforms()
 			CASE(kSp_ModelViewMatrix, "ModelViewMatrix");
 			CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
 			CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
-			CASE(kSp_SkinningMatrices, "skinningMatrices");
 			CASE(kSp_Texture, "source");
 			CASE(kSp_Params, "params");
 			CASE(kSp_ShadingParams, "shadingParams");
