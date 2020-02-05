@@ -301,7 +301,7 @@ NOTE_INFO *JGMOD_PLAYER::get_note(JGMOD *j, const int pat, const int pos, const 
 
 int JGMOD_PLAYER::note2period(const int in_note, const int in_c2spd) const
 {
-    if (mi.flag & JGMOD_MODE_LINEAR)
+    if ((of->flag & JGMOD_MODE_XM) && (mi.flag & JGMOD_MODE_LINEAR))
 	{
 		const int c2spd = in_c2spd;
 		
