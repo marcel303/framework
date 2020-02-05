@@ -1958,6 +1958,8 @@ bool Framework::fileHasChanged(const char * filename) const
 
 void Framework::registerResourcePath(const char * path)
 {
+	logInfo("registerResourcePath: %s", path);
+	
 	resourcePaths.push_back(path);
 }
 
@@ -1994,6 +1996,8 @@ bool Framework::registerChibiResourcePaths(const char * encoded_text)
 					
 					if (strcmp(type, "app") == 0)
 					{
+						logInfo("changeDirectory to app path: %s", path);
+						
 						changeDirectory(path);
 					}
 				}
