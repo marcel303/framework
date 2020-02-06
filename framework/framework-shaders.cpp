@@ -30,7 +30,7 @@
 
 // todo : do we still need builtinShaders ? loading and caching now (with the chibi resource paths registration) work as expected, just as any other shader or resource
 
-static const int kMaxGaussianKernelSize = 64;
+static const int kMaxGaussianKernelSize = 128;
 
 static const Vec4 lumiVec(.30f, .59f, .11f, 0.f); // luminance = dot(lumiVec, srgb_color)
 
