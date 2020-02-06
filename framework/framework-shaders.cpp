@@ -30,6 +30,8 @@
 
 // todo : do we still need builtinShaders ? loading and caching now (with the chibi resource paths registration) work as expected, just as any other shader or resource
 
+static const int kMaxGaussianKernelSize = 64;
+
 static const Vec4 lumiVec(.30f, .59f, .11f, 0.f); // luminance = dot(lumiVec, srgb_color)
 
 void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma)
@@ -72,8 +74,17 @@ void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma)
 	kernel.setData(values, sizeof(float) * kernelSize);
 }
 
-void setShader_GaussianBlurH(const GxTextureId source, const int kernelSize, const float radius)
+void setShader_GaussianBlurH(const GxTextureId source, const int in_kernelSize, const float radius)
 {
+	if (in_kernelSize > kMaxGaussianKernelSize)
+	{
+		logWarning("the maximum gaussian kernel size is %d elements. the requested kernel size is %d",
+			kMaxGaussianKernelSize,
+			in_kernelSize);
+	}
+	
+	const int kernelSize = in_kernelSize > kMaxGaussianKernelSize ? kMaxGaussianKernelSize : in_kernelSize;
+	
 	Shader & shader = globals.builtinShaders->gaussianBlurH.get();
 	setShader(shader);
 	
@@ -86,8 +97,17 @@ void setShader_GaussianBlurH(const GxTextureId source, const int kernelSize, con
 	shader.setBuffer("filterKernel", kernel);
 }
 
-void setShader_GaussianBlurV(const GxTextureId source, const int kernelSize, const float radius)
+void setShader_GaussianBlurV(const GxTextureId source, const int in_kernelSize, const float radius)
 {
+	if (in_kernelSize > kMaxGaussianKernelSize)
+	{
+		logWarning("the maximum gaussian kernel size is %d elements. the requested kernel size is %d",
+			kMaxGaussianKernelSize,
+			in_kernelSize);
+	}
+	
+	const int kernelSize = in_kernelSize > kMaxGaussianKernelSize ? kMaxGaussianKernelSize : in_kernelSize;
+	
 	Shader & shader = globals.builtinShaders->gaussianBlurV.get();
 	setShader(shader);
 	
