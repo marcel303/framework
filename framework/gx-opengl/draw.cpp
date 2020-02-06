@@ -281,6 +281,7 @@ static int s_gxMaxVertexCount = 0;
 static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 static bool s_gxTextureEnabled = false;
+static GxTextureId s_gxTexture = 0;
 
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
@@ -388,6 +389,7 @@ void gxShutdown()
 	s_gxPrimitiveSize = 0;
 	s_gxVertex = GxVertex();
 	s_gxTextureEnabled = false;
+	s_gxTexture = 0;
 	
 	s_gxLastPrimitiveType = GX_INVALID_PRIM;
 	s_gxLastVertexCount = -1;
@@ -585,8 +587,9 @@ static void gxFlush(bool endOfBatch)
 
 		if (globals.gxShaderIsDirty)
 		{
+		// todo : we miss the meta data for the texture : does it want filtering or not ?
 			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 		}
 		
 		if (shader.isValid())
@@ -738,8 +741,9 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	if (globals.gxShaderIsDirty)
 	{
+		// todo : we miss the meta data for the texture : does it want filtering or not ?
 		if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-			shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+			shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 	}
 
 	//
@@ -871,22 +875,15 @@ void gxVertex4fv(const float * v)
 
 void gxSetTexture(GxTextureId texture)
 {
-	glActiveTexture(GL_TEXTURE0);
-	checkErrorGL();
-	
 	if (texture)
 	{
-		glBindTexture(GL_TEXTURE_2D, texture);
-		checkErrorGL();
-		
 		s_gxTextureEnabled = true;
+		s_gxTexture = texture;
 	}
 	else
 	{
-		glBindTexture(GL_TEXTURE_2D, 0);
-		checkErrorGL();
-		
 		s_gxTextureEnabled = false;
+		s_gxTexture = 0;
 	}
 }
 
@@ -912,6 +909,9 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 		glActiveTexture(GL_TEXTURE0);
 		checkErrorGL();
 		
+		glBindTexture(GL_TEXTURE_2D, s_gxTexture);
+		checkErrorGL();
+		
 		const GLenum openglMinFilter = toOpenGLSampleFilter(filter, true);
 		const GLenum openglMagFilter = toOpenGLSampleFilter(filter, false);
 		
@@ -922,6 +922,8 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 }
 
@@ -1339,8 +1341,9 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 
 		if (globals.gxShaderIsDirty)
 		{
+			// todo : we miss the meta data for the texture : does it want filtering or not ?
 			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 		}
 		
 		//
@@ -1406,8 +1409,9 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 
 		if (globals.gxShaderIsDirty)
 		{
+			// todo : we miss the meta data for the texture : does it want filtering or not ?
 			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 		}
 		
 		//

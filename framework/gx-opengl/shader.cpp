@@ -335,31 +335,6 @@ void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * ma
 	checkErrorGL();
 }
 
-void Shader::setTextureUnit(const char * name, int unit)
-{
-	SET_UNIFORM(name, glUniform1i(index, unit));
-	checkErrorGL();
-}
-
-void Shader::setTextureUnit(GxImmediateIndex index, int unit)
-{
-	fassert(index != -1);
-	fassert(globals.shader == this);
-	glUniform1i(index, unit);
-	checkErrorGL();
-}
-
-void Shader::setTexture(const char * name, int unit, GxTextureId texture)
-{
-	SET_UNIFORM(name, glUniform1i(index, unit));
-	checkErrorGL();
-
-	glActiveTexture(GL_TEXTURE0 + unit);
-	glBindTexture(GL_TEXTURE_2D, texture);
-	glActiveTexture(GL_TEXTURE0);
-	checkErrorGL();
-}
-
 void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
@@ -375,24 +350,19 @@ void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool f
 	checkErrorGL();
 }
 
-void Shader::setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture)
+void Shader::setTexture(GxImmediateIndex index, int unit, GxTextureId texture, bool filtered, bool clamped)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
 	glUniform1i(index, unit);
 	checkErrorGL();
-	
+
 	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(GL_TEXTURE_2D, texture);
-}
-
-void Shader::setTextureArray(const char * name, int unit, GxTextureId texture)
-{
-	SET_UNIFORM(name, glUniform1i(index, unit));
-	checkErrorGL();
-
-	glActiveTexture(GL_TEXTURE0 + unit);
-	glBindTexture(GL_TEXTURE_2D_ARRAY, texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 	glActiveTexture(GL_TEXTURE0);
 	checkErrorGL();
 }
@@ -412,13 +382,15 @@ void Shader::setTextureArray(const char * name, int unit, GxTextureId texture, b
 	checkErrorGL();
 }
 
-void Shader::setTextureCube(const char * name, int unit, GxTextureId texture)
+void Shader::setTextureCube(const char * name, int unit, GxTextureId texture, bool filtered)
 {
 	SET_UNIFORM(name, glUniform1i(index, unit));
 	checkErrorGL();
 
 	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
 	glActiveTexture(GL_TEXTURE0);
 	checkErrorGL();
 }

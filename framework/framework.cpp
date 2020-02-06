@@ -4373,15 +4373,14 @@ static void applyHqShaderConstants()
 	
 	if (globals.hqTextureEnabled)
 	{
+		shader.setTexture("source", 0, globals.hqTexture, true, false);
+		
 		if (shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index != -1)
 		{
 			const Mat4x4 & tmat = globals.hqTextureMatrix;
 			
 			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index, tmat.m_v);
 		}
-		
-	// fixme : this is broken when using Metal. set texture to gxGetTexture()
-		shader.setTextureUnit("source", 0);
 	}
 
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
@@ -4655,9 +4654,8 @@ void hqClearGradient()
 void hqSetTexture(const GxTextureId texture, const Mat4x4 & matrix)
 {
 	globals.hqTextureEnabled = true;
+	globals.hqTexture = texture;
 	globals.hqTextureMatrix = matrix;
-	
-	gxSetTexture(texture);
 }
 
 void hqSetTextureScreen(const GxTextureId texture, float x1, float y1, float x2, float y2)
@@ -4673,8 +4671,7 @@ void hqSetTextureScreen(const GxTextureId texture, float x1, float y1, float x2,
 void hqClearTexture()
 {
 	globals.hqTextureEnabled = false;
-	
-	gxSetTexture(0);
+	globals.hqTexture = 0;
 }
 
 #if ENABLE_HQ_PRIMITIVES

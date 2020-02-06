@@ -802,15 +802,10 @@ public:
 	void setImmediateMatrix4x4Array(const char * name, const float * matrices, const int numMatrices);
 	void setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices);
 	
-// todo : texture units do not make much sense ..
-	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
-	void setTextureUnit(GxImmediateIndex index, int unit); // bind <name> to GL_TEXTURE0 + unit
-	void setTexture(const char * name, int unit, GxTextureId texture);
 	void setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
-	void setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture);
-	void setTextureArray(const char * name, int unit, GxTextureId texture);
+	void setTexture(GxImmediateIndex index, int unit, GxTextureId texture, bool filtered, bool clamp = true);
 	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
-	void setTextureCube(const char * name, int unit, GxTextureId texture);
+	void setTextureCube(const char * name, int unit, GxTextureId texture, bool filtered = true);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
 	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);

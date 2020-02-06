@@ -467,6 +467,7 @@ public:
 	float hqGradientBias;
 	float hqGradientScale;
 	bool hqTextureEnabled;
+	GxTextureId hqTexture;
 	Mat4x4 hqTextureMatrix;
 	bool hqUseScreenSize;
 	FontCacheElem * font;

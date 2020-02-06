@@ -958,28 +958,6 @@ inline int getTextureIndex(const ShaderCacheElem_Metal & elem, const char * name
 	return -1;
 }
 
-// todo : remove setTextureUnit
-void Shader::setTextureUnit(const char * name, int unit)
-{
-	not_implemented;
-}
-
-// todo : remove setTextureUnit
-void Shader::setTextureUnit(GxImmediateIndex index, int unit)
-{
-	not_implemented;
-}
-
-void Shader::setTexture(const char * name, int unit, GxTextureId texture)
-{
-	const int index = getTextureIndex(*m_cacheElem, name);
-	
-	if (index >= 0)
-	{
-		setTextureUniform(index, unit, texture);
-	}
-}
-
 static void setTextureSamplerUniform(ShaderCacheElem_Metal * cacheElem, GxImmediateIndex index, const bool filter, const bool clamp)
 {
 	Assert(index >= 0 && index < cacheElem->textureInfos.size());
@@ -993,28 +971,18 @@ static void setTextureSamplerUniform(ShaderCacheElem_Metal * cacheElem, GxImmedi
 		cacheElem->psTextureSamplers[info.psOffset] = sampler_index;
 }
 
-void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
-{
-	const int index = getTextureIndex(*m_cacheElem, name);
-	
-	if (index >= 0)
-	{
-		setTextureUniform(index, unit, texture);
-		setTextureSamplerUniform(m_cacheElem, index, filtered, clamp);
-	}
-}
 
-void Shader::setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture)
+static void setTextureUniform(ShaderCacheElem_Metal * cacheElem, GxImmediateIndex index, int unit, GxTextureId texture)
 {
-	Assert(index >= 0 && index < m_cacheElem->textureInfos.size());
-	auto & info = m_cacheElem->textureInfos[index];
+	Assert(index >= 0 && index < cacheElem->textureInfos.size());
+	auto & info = cacheElem->textureInfos[index];
 	
 	if (texture == 0)
 	{
 		if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
-			m_cacheElem->vsTextures[info.vsOffset] = nullptr;
+			cacheElem->vsTextures[info.vsOffset] = nullptr;
 		if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
-			m_cacheElem->psTextures[info.psOffset] = nullptr;
+			cacheElem->psTextures[info.psOffset] = nullptr;
 	}
 	else
 	{
@@ -1026,16 +994,28 @@ void Shader::setTextureUniform(GxImmediateIndex index, int unit, GxTextureId tex
 			auto metal_texture = i->second;
 			
 			if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
-				m_cacheElem->vsTextures[info.vsOffset] = metal_texture;
+				cacheElem->vsTextures[info.vsOffset] = metal_texture;
 			if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
-				m_cacheElem->psTextures[info.psOffset] = metal_texture;
+				cacheElem->psTextures[info.psOffset] = metal_texture;
 		}
 	}
 }
 
-void Shader::setTextureArray(const char * name, int unit, GxTextureId texture)
+void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
 {
-	not_implemented;
+	const int index = getTextureIndex(*m_cacheElem, name);
+	
+	if (index >= 0)
+	{
+		setTextureUniform(m_cacheElem, index, unit, texture);
+		setTextureSamplerUniform(m_cacheElem, index, filtered, clamp);
+	}
+}
+
+void Shader::setTexture(GxImmediateIndex index, int unit, GxTextureId texture, bool filtered, bool clamp)
+{
+	setTextureUniform(m_cacheElem, index, unit, texture);
+	setTextureSamplerUniform(m_cacheElem, index, filtered, clamp);
 }
 
 void Shader::setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
@@ -1043,7 +1023,7 @@ void Shader::setTextureArray(const char * name, int unit, GxTextureId texture, b
 	not_implemented;
 }
 
-void Shader::setTextureCube(const char * name, int unit, GxTextureId texture)
+void Shader::setTextureCube(const char * name, int unit, GxTextureId texture, bool filter)
 {
 	not_implemented;
 }
