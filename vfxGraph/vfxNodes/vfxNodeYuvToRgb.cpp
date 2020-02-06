@@ -244,9 +244,9 @@ void VfxNodeYuvToRgb::draw() const
 			Shader shader(filenamePs, filenameVs, filenamePs);
 			setShader(shader);
 			{
-				shader.setTexture("yTex", 0, y->getTexture());
-				shader.setTexture("uTex", 1, u->getTexture());
-				shader.setTexture("vTex", 2, v->getTexture());
+				shader.setTexture("yTex", 0, y->getTexture(), true, true);
+				shader.setTexture("uTex", 1, u->getTexture(), true, true);
+				shader.setTexture("vTex", 2, v->getTexture(), true, true);
 				
 				drawRect(0, 0, surface->getWidth(), surface->getHeight());
 			}

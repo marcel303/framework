@@ -468,7 +468,7 @@ static bool setShaderUniforms(
 	
 	if (paint.image == 0)
 	{
-		shader.setTexture("tex", 0, 0);
+		shader.setTexture("tex", 0, 0, false, false);
 		shader.setImmediate("texType", -1);
 	}
 	else
