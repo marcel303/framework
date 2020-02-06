@@ -419,7 +419,7 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		Shader & shader = globals.builtinShaders->msdfText.get();
 		setShader(shader);
 		
-		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id);
+		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id, true, true);
 		
 		gxBegin(GX_QUADS);
 	}
@@ -429,7 +429,7 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		// when the text finally does get rendered, it uses the latest contents of the texture
 		// atlas
 		Shader * shader = static_cast<Shader*>(globals.shader);
-		shader->setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id);
+		shader->setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id, true, true);
 	}
 	
 	const float scale = stbtt_ScaleForPixelHeight(&glyphCache.m_font.fontInfo, size);
