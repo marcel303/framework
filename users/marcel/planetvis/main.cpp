@@ -1727,7 +1727,7 @@ int main(int argc, char * argv[])
 						gxMultMatrixf(mat.m_v);
 
 						Shader shader("VirtualTexture");
-						shader.setTexture("u_texture", 0, sparseTextureObject.texture);
+						shader.setTexture("u_texture", 0, sparseTextureObject.texture, true, false);
 						setShader(shader);
 						{
 							gxBegin(GX_QUADS);

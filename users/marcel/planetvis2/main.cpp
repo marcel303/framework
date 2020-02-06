@@ -1206,7 +1206,7 @@ static void setPlanarTexShader(const Cube * cube, const int debugCubeSideIndex)
 
 	static Shader shader("PlanarTex");
 	setShader(shader);
-	shader.setTextureArray("u_texture", 0, cube->m_texture);
+	shader.setTextureArray("u_texture", 0, cube->m_texture, true, false);
 	shader.setImmediate("textureBaseSize", cube->m_initSize);
 	shader.setImmediate("lod", -1.f);
 	shader.setImmediate("numLods", cube->m_numAllocatedLevels);
@@ -1789,7 +1789,7 @@ static void generateTextureArray(const char * name, const int baseSize, const in
 					Shader shader("RenderCubeSide");
 					setShader(shader);
 					{
-						shader.setTexture("u_texture", 0, texture);
+						shader.setTexture("u_texture", 0, texture, true, false);
 						shader.setImmediate("cubeSide", cubeSide);
 
 						drawRect(0, 0, cubeSideSurface->getWidth(), cubeSideSurface->getHeight());

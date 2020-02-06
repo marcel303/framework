@@ -388,7 +388,7 @@ struct RealtimeShaderEditor
 			shader.setImmediate("time", framework.time);
 			shader.setImmediate("mouse", mouse.x / float(viewSx), mouse.y / float(viewSy));
 			shader.setImmediate("mouse_down", mouse.isDown(BUTTON_LEFT));
-			shader.setTexture("s", 0, framework_context.font_texture.id);
+			shader.setTexture("s", 0, framework_context.font_texture.id, true, true);
 		};
 		
 		if (shader.isValid())

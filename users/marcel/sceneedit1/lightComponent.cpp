@@ -57,7 +57,7 @@ void LightComponentMgr::drawDeferredLightApplication(const int colorTextureId) c
 	Shader shader("lightMgr/lightApplication");
 	setShader(shader);
 	{
-		shader.setTexture("colorTexture", 0, colorTextureId);
+		shader.setTexture("colorTexture", 0, colorTextureId, false, true);
 		
 		pushDepthTest(false, DEPTH_ALWAYS);
 		pushBlend(BLEND_OPAQUE);

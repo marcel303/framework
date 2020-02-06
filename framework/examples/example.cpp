@@ -299,11 +299,11 @@ int main(int argc, char * argv[])
 				popSurface();
 				
 				setShader(postprocess);
-				postprocess.setTexture("texture0", 0, surface.getTexture());
+				postprocess.setTexture("texture0", 0, surface.getTexture(), false, true);
 				surface.postprocess(postprocess);
 				
 				setShader(shader);
-				shader.setTexture("texture0", 0, surface.getTexture(), false);
+				shader.setTexture("texture0", 0, surface.getTexture(), false, true);
 				shader.setImmediate("modifier", sine<float>(-.5f, +.5f, framework.time));
 				
 				setBlend(BLEND_ALPHA);

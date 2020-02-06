@@ -84,7 +84,7 @@ int main(int argc, char * argv[])
 			Shader shader("alpha-test");
 			setShader(shader);
 			{
-				shader.setTexture("source", 0, textureId);
+				shader.setTexture("source", 0, textureId, false, false);
 				
 				for (int i = 0; i < 10; ++i)
 				{

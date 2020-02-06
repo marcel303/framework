@@ -164,8 +164,8 @@ void applyFsfx(Surface & surface, const char * name, const float strength = 1.f,
 	{
 		shader.setImmediate("params1", strength, 0.f, 0.f, 0.f);
 		shader.setImmediate("params2", param1, param2, param3, param4);
-		shader.setTexture("colormap", 0, surface.getTexture());
-		shader.setTexture("texture1", 1, texture1);
+		shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+		shader.setTexture("texture1", 1, texture1, true, false);
 		surface.postprocess();
 	}
 	clearShader();
@@ -249,9 +249,9 @@ struct VideoEffect
 					//const float opacity = 1.f - powf(.1f, dt);
 					const float opacity = 1.f;
 					shader.setImmediate("opacity", opacity);
-					shader.setTexture("source", 0, currVideoLoop->getTexture());
-					shader.setTexture("firstFrame", 1, currVideoLoop->getFirstFrameTexture());
-					shader.setTexture("colormap", 2, surface->getTexture());
+					shader.setTexture("source", 0, currVideoLoop->getTexture(), true, true);
+					shader.setTexture("firstFrame", 1, currVideoLoop->getFirstFrameTexture(), true, true);
+					shader.setTexture("colormap", 2, surface->getTexture(), true, true);
 					pushBlend(BLEND_OPAQUE);
 					surface->postprocess();
 					popBlend();
@@ -430,10 +430,10 @@ struct VideoGame
 			Shader composeShader("game-compose-videos");
 			setShader(composeShader);
 			{
-				composeShader.setTexture("videoLCurrentFrame", 0, videoEffectL->getTexture());
-				composeShader.setTexture("videoRCurrentFrame", 1, videoEffectR->getTexture());
-				composeShader.setTexture("videoLFirstFrame", 2, videoEffectL->getFirstFrameTexture());
-				composeShader.setTexture("videoRFirstFrame", 3, videoEffectR->getFirstFrameTexture());
+				composeShader.setTexture("videoLCurrentFrame", 0, videoEffectL->getTexture(), true, true);
+				composeShader.setTexture("videoRCurrentFrame", 1, videoEffectR->getTexture(), true, true);
+				composeShader.setTexture("videoLFirstFrame", 2, videoEffectL->getFirstFrameTexture(), true, true);
+				composeShader.setTexture("videoRFirstFrame", 3, videoEffectR->getFirstFrameTexture(), true, true);
 				
 				const int lx1 = 0;
 				const int ly1 = 0;

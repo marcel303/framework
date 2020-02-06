@@ -322,10 +322,10 @@ public:
 			
 			Shader shader("deferredLightWithShadow");
 			setShader(shader);
-			shader.setTexture("depthTexture", 0, drawState.sceneDepthTexture);
-			shader.setTexture("normalTexture", 1, drawState.sceneNormalTexture);
+			shader.setTexture("depthTexture", 0, drawState.sceneDepthTexture, false, true);
+			shader.setTexture("normalTexture", 1, drawState.sceneNormalTexture, false, true);
 			shader.setImmediateMatrix4x4("projectionToWorld", drawState.projectionToWorld.m_v);
-			shader.setTexture("lightDepthTexture", 2, shadowMap->getDepthTexture());
+			shader.setTexture("lightDepthTexture", 2, shadowMap->getDepthTexture(), false, true);
 			shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
 			shader.setImmediate("lightColor",
 				light.color.r * light.color.a,
@@ -349,8 +349,8 @@ public:
 		{
 			Shader shader("deferredLight");
 			setShader(shader);
-			shader.setTexture("depthTexture", 0, drawState.sceneDepthTexture);
-			shader.setTexture("normalTexture", 1, drawState.sceneNormalTexture);
+			shader.setTexture("depthTexture", 0, drawState.sceneDepthTexture, false, true);
+			shader.setTexture("normalTexture", 1, drawState.sceneNormalTexture, false, true);
 			shader.setImmediateMatrix4x4("projectionToWorld", drawState.projectionToWorld.m_v);
 			shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
 			shader.setImmediate("lightColor",
@@ -944,8 +944,8 @@ int main(int argc, char * argv[])
 				pushBlend(BLEND_OPAQUE);
 				Shader shader("lightApplication");
 				setShader(shader);
-				shader.setTexture("colorTexture", 0, view_camera.getTexture());
-				shader.setTexture("lightTexture", 1, lightDrawer.getLightMapSurface()->getTexture());
+				shader.setTexture("colorTexture", 0, view_camera.getTexture(), false, true);
+				shader.setTexture("lightTexture", 1, lightDrawer.getLightMapSurface()->getTexture(), false, true);
 				shader.setImmediate("ambient", .1f, .08f, .06f);
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				popBlend();
