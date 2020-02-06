@@ -974,6 +974,12 @@ public:
 	BuiltinShader threshold;
 	BuiltinShader thresholdValue;
 	
+	BuiltinShader grayscaleLumi;
+	BuiltinShader grayscaleWeights;
+	
+	BuiltinShader hueAssign;
+	BuiltinShader hueShift;
+	
 	BuiltinShader hqLine;
 	BuiltinShader hqFilledTriangle;
 	BuiltinShader hqFilledCircle;

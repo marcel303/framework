@@ -28,7 +28,7 @@
 #include "framework.h"
 #include "internal.h"
 
-// todo : do we still need builtinShaders ? loading and caching now (with the chibi resource paths registration) work as expected, just as any other shader or resource
+// note : we need BuiltinShaders, to avoid shaders from clearing themselves when the Shader() object leaves function scope. so if we want the shader to be kept set when e.g. setShader_GaussianBlurH leaves scope, we need the shader to live elsewhere
 
 static const int kMaxGaussianKernelSize = 128;
 
@@ -213,7 +213,7 @@ void setShader_ThresholdValue(const GxTextureId source, const Color & value, con
 
 void setShader_GrayscaleLumi(const GxTextureId source, const float opacity)
 {
-	Shader shader("engine/builtin-grayscale-lumi");
+	Shader & shader = globals.builtinShaders->grayscaleLumi.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
@@ -222,7 +222,7 @@ void setShader_GrayscaleLumi(const GxTextureId source, const float opacity)
 
 void setShader_GrayscaleWeights(const GxTextureId source, const Vec3 & weights, const float opacity)
 {
-	Shader shader("engine/builtin-grayscale-weights");
+	Shader & shader = globals.builtinShaders->grayscaleWeights.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
@@ -232,7 +232,7 @@ void setShader_GrayscaleWeights(const GxTextureId source, const Vec3 & weights, 
 
 void setShader_Colorize(const GxTextureId source, const float hue, const float opacity)
 {
-	Shader shader("engine/builtin-hue-assign");
+	Shader & shader = globals.builtinShaders->hueAssign.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
@@ -242,7 +242,7 @@ void setShader_Colorize(const GxTextureId source, const float hue, const float o
 
 void setShader_HueShift(const GxTextureId source, const float hue, const float opacity)
 {
-	Shader shader("engine/builtin-hue-shift");
+	Shader & shader = globals.builtinShaders->hueShift.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
