@@ -403,7 +403,7 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 				break;
 			case MTLDataTypeFloat4x4:
 				uniformInfo.elemType = 'm';
-				uniformInfo.numElems = 1;
+				uniformInfo.numElems = 16;
 				break;
 			case MTLDataTypeArray:
 				//logDebug("found MTLDataTypeArray. elementType=%d", uniform.arrayType.elementType);
@@ -411,14 +411,31 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 				{
 				case MTLDataTypeFloat:
 					uniformInfo.elemType = 'F';
-					uniformInfo.numElems = uniform.arrayType.arrayLength;
+					uniformInfo.numElems = 1;
+					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
+					break;
+				case MTLDataTypeFloat2:
+					uniformInfo.elemType = 'F';
+					uniformInfo.numElems = 2;
+					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
+					break;
+				case MTLDataTypeFloat3:
+					uniformInfo.elemType = 'F';
+					uniformInfo.numElems = 3;
+					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
+					break;
+				case MTLDataTypeFloat4:
+					uniformInfo.elemType = 'F';
+					uniformInfo.numElems = 4;
+					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
 					break;
 				case MTLDataTypeFloat4x4:
 					uniformInfo.elemType = 'M';
-					uniformInfo.numElems = uniform.arrayType.arrayLength;
+					uniformInfo.numElems = 16;
+					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
 					break;
 				default:
-					AssertMsg(false, "unknown MTLDataType", 0);
+					AssertMsg(false, "unknown MTLDataType: %d", uniform.arrayType.elementType);
 					break;
 				}
 				break;
@@ -554,11 +571,11 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 
 //
 
-static ShaderCacheElem_Metal::UniformInfo & getUniformInfo(ShaderCacheElem_Metal & cacheElem, const int index, const int type, const int numElems)
+static ShaderCacheElem_Metal::UniformInfo & getUniformInfo(ShaderCacheElem_Metal & cacheElem, const int index, const int type, const int numElems, const int arrayLen)
 {
 	Assert(index >= 0 && index < cacheElem.uniformInfos.size());
 	auto & info = cacheElem.uniformInfos[index];
-	Assert(info.elemType == type && (islower(type) ? info.numElems == numElems : info.numElems >= numElems));
+	Assert(info.elemType == type && info.numElems == numElems && (islower(type) || info.arrayLen >= arrayLen));
 	return info;
 }
 
@@ -784,7 +801,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x)
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 1);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 1, 1);
 		
 		if (info.vsOffset != -1)
 		{
@@ -806,7 +823,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 2);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 2, 1);
 		
 		if (info.vsOffset != -1)
 		{
@@ -830,7 +847,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 3);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 3, 1);
 		
 		if (info.vsOffset != -1)
 		{
@@ -856,7 +873,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, flo
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 4);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 4, 1);
 		
 		if (info.vsOffset != -1)
 		{
@@ -893,7 +910,7 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'm', 1);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'm', 16, 1);
 		
 		if (info.vsOffset != -1)
 		{
@@ -915,7 +932,7 @@ void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * ma
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'M', numMatrices);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'M', 16, numMatrices);
 		
 		if (info.vsOffset != -1)
 		{

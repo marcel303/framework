@@ -109,6 +109,7 @@ public:
 		int psOffset = -1;
 		int elemType = -1;
 		int numElems = 0;
+		int arrayLen = 1;
 	};
 	
 	struct TextureInfo
