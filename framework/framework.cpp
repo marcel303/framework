@@ -46,6 +46,7 @@
 	#include <SDL2/SDL_opengl.h>
 	#include <SDL2/SDL_syswm.h>
 	#include <Xinput.h>
+	#define PATH_MAX MAX_PATH
 #else
 	#include <dirent.h>
 	#include <unistd.h>
@@ -2010,25 +2011,34 @@ bool Framework::registerChibiResourcePaths(const char * encoded_text)
 	return result;
 }
 
-// todo : optimize to avoid memory copies
-
-static std::string s_resourcePath;
+char s_resourcePath[PATH_MAX];
 
 const char * Framework::resolveResourcePath(const char * path)
 {
 	for (auto & resourcePath : resourcePaths)
 	{
-		s_resourcePath = resourcePath + "/" + path;
+		auto * end = s_resourcePath + PATH_MAX - 1;
+		auto * dst = s_resourcePath;
+		for (auto * src = resourcePath.c_str(); *src != 0 && dst < end; )
+			*dst++ = *src++;
+		if (dst < end)
+			*dst++ = '/';
+		for (auto * src = path; *src != 0 && dst < end; )
+			*dst++ = *src++;
+		*dst = 0;
+		
+		if (dst == end)
+			continue;
 		
 		FILE * file = nullptr;
-		fopen_s(&file, s_resourcePath.c_str(), "rb");
+		fopen_s(&file, s_resourcePath, "rb");
 		
 		if (file != nullptr)
 		{
 			fclose(file);
 			file = nullptr;
 			
-			return s_resourcePath.c_str();
+			return s_resourcePath;
 		}
 	}
 	
