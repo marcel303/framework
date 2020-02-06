@@ -963,7 +963,6 @@ void Shader::setTexture(const char * name, int unit, GxTextureId texture)
 	}
 }
 
-// todo : make this a shader method ?
 static void setTextureSamplerUniform(ShaderCacheElem_Metal * cacheElem, GxImmediateIndex index, const bool filter, const bool clamp)
 {
 	Assert(index >= 0 && index < cacheElem->textureInfos.size());

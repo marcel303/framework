@@ -411,8 +411,7 @@ static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
 		return GL_TRIANGLE_FAN;
 	case GX_TRIANGLE_STRIP:
 		return GL_TRIANGLE_STRIP;
-#if ENABLE_DESKTOP_OPENGL
-// todo : add check for legacy OpenGL here. since we cannot draw quads in modern OpenGL either
+#if USE_LEGACY_OPENGL
 	case GX_QUADS:
 		return GL_QUADS;
 #endif
@@ -891,12 +890,14 @@ void gxSetTexture(GxTextureId texture)
 	}
 }
 
-static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter)
+static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter, const bool isMinify)
 {
 	if (filter == GX_SAMPLE_NEAREST)
 		return GL_NEAREST;
 	else if (filter == GX_SAMPLE_LINEAR)
 		return GL_LINEAR;
+	else if (filter == GX_SAMPLE_MIPMAP)
+		return isMinify ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR;
 	else
 	{
 		fassert(false);
@@ -911,10 +912,11 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 		glActiveTexture(GL_TEXTURE0);
 		checkErrorGL();
 		
-		const GLenum openglFilter = toOpenGLSampleFilter(filter);
+		const GLenum openglMinFilter = toOpenGLSampleFilter(filter, true);
+		const GLenum openglMagFilter = toOpenGLSampleFilter(filter, false);
 		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglFilter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, openglFilter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglMinFilter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, openglMagFilter);
 		checkErrorGL();
 		
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);

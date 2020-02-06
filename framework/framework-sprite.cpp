@@ -183,49 +183,12 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 			fassert(cellIndex >= 0 && cellIndex < (m_anim->m_gridSize[0] * m_anim->m_gridSize[1]));
 			
 			gxSetTexture(m_texture->textures[cellIndex].id);
-			
-		#if 0
 			gxSetTextureSampler(
 				filter == FILTER_POINT ? GX_SAMPLE_NEAREST :
 				filter == FILTER_LINEAR ? GX_SAMPLE_LINEAR :
 				filter == FILTER_MIPMAP ? GX_SAMPLE_MIPMAP : GX_SAMPLE_NEAREST,
 				true);
-		#endif
 			
-		#if ENABLE_OPENGL // todo : add a common way to set filtering for textures
-			if (filter == FILTER_POINT)
-			{
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			}
-		#if 1
-			else if (filter == FILTER_LINEAR || filter == FILTER_MIPMAP)
-			{
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			}
-		#else
-			else if (filter == FILTER_LINEAR)
-			{
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			}
-			else if (filter == FILTER_MIPMAP)
-			{
-				glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
-
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			}
-		#endif
-			else
-			{
-				fassert(false);
-			}
-			
-			checkErrorGL();
-		#endif
-
 			const float rsx = float(m_texture->sx / m_anim->m_gridSize[0]);
 			const float rsy = float(m_texture->sy / m_anim->m_gridSize[1]);
 			

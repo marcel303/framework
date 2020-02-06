@@ -78,6 +78,7 @@
 
 #if defined(IPHONEOS)
 	#define ENABLE_DESKTOP_OPENGL 0
+	#define ENABLE_OPENGL_ES3 1
 #elif ENABLE_OPENGL
 	#define ENABLE_DESKTOP_OPENGL 1 // do not alter
 #else
@@ -372,7 +373,8 @@ enum GX_MATRIX
 enum GX_SAMPLE_FILTER
 {
 	GX_SAMPLE_NEAREST,
-	GX_SAMPLE_LINEAR
+	GX_SAMPLE_LINEAR,
+	GX_SAMPLE_MIPMAP
 };
 
 #endif

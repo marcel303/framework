@@ -1656,7 +1656,7 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 	// initialize viewport and OpenGL matrices
 	
 // todo : remove updateViewport
-	updateViewport(nullptr, globals.currentWindow->getWindow());
+	//updateViewport(nullptr, globals.currentWindow->getWindow());
 #endif
 
 #if ENABLE_METAL

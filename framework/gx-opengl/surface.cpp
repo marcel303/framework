@@ -88,7 +88,7 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 		checkErrorGL();
 	}
 #else
-	// todo : gles : swizzle mask ?
+	AssertMsg(false, "not implemented. GL_TEXTURE_SWIZZLE_RGBA is not available in non-desktop OpenGL", 0);
 #endif
 
 	// restore the previous OpenGL state

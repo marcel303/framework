@@ -246,8 +246,6 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 	checkErrorGL();
 #else
-	// todo : gles : texture swizzle ?
-	
 	AssertMsg(false, "not implemented. GL_TEXTURE_SWIZZLE_RGBA is not available in non-desktop OpenGL", 0);
 #endif
 
@@ -625,8 +623,6 @@ GxTextureId createTextureFromRG32F(const void * source, int sx, int sy, bool fil
 }
 
 #if ENABLE_DESKTOP_OPENGL
-
-// todo : gles : R16 texture format ?
 
 GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp)
 {
