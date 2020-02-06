@@ -539,6 +539,57 @@ void GxTexture::generateMipmaps()
 	}
 }
 
+bool GxTexture::downloadContents(const int x, const int y, const int sx, const int sy, void * bytes, const int numBytes)
+{
+	bool result = true;
+	
+	// create a temporary framebuffer, which we'll need for glReadBuffer
+	
+	GLuint frameBuffer = 0;
+
+	glGenFramebuffers(1, &frameBuffer);
+	checkErrorGL();
+
+	result &= frameBuffer != 0;
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, id, 0);
+	checkErrorGL();
+	
+	result &= glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+	checkErrorGL();
+	
+	// capture OpenGL states so we can restore them later
+	
+	GLuint oldBuffer = 0;
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+	checkErrorGL();
+
+	// bind the temporary framebuffer and read pixels from it
+	
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	checkErrorGL();
+	
+	GLenum uploadFormat;
+	GLenum uploadElementType;
+	toOpenGLUploadType(format, uploadFormat, uploadElementType);
+	
+	glReadPixels(x, y, sx, sy, uploadFormat, uploadElementType, bytes);
+	checkErrorGL();
+	
+	// restore previous OpenGL states
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+	checkErrorGL();
+
+	// free the temporary framebuffer
+	
+	glDeleteFramebuffers(1, &frameBuffer);
+	frameBuffer = 0;
+	
+	return result;
+}
+
 //
 
 static GxTextureId createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
