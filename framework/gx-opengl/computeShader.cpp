@@ -27,7 +27,7 @@
 
 #include "framework.h"
 
-#if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER // todo : metal compute shader implementation
+#if ENABLE_OPENGL && ENABLE_COMPUTE_SHADER // todo : metal compute shader implementation
 
 #include "internal.h"
 

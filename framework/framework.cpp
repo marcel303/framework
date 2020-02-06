@@ -1526,7 +1526,7 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			name = name.substr(0, name.rfind('.'));
 			Shader(name.c_str());
 		}
-	 #if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER// todo : metal compute shader implementation
+	 #if ENABLE_COMPUTE_SHADER
 		else if (strstr(f, ".cs") == f + fl - 3)
 		{
 			std::string name = f;

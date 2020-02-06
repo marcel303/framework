@@ -116,7 +116,7 @@ public:
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 };
 
-#if ENABLE_OPENGL_COMPUTE_SHADER
+#if ENABLE_COMPUTE_SHADER
 
 class ComputeShaderCacheElem
 {

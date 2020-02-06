@@ -1027,7 +1027,7 @@ extern Globals globals;
 extern TextureCache g_textureCache;
 #if ENABLE_OPENGL
 extern ShaderCache g_shaderCache;
-#if ENABLE_OPENGL_COMPUTE_SHADER
+#if ENABLE_COMPUTE_SHADER
 extern ComputeShaderCache g_computeShaderCache;
 #endif
 #endif

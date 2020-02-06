@@ -37,7 +37,8 @@
 #include "StringEx.h"
 
 ShaderCache g_shaderCache;
-#if ENABLE_OPENGL_COMPUTE_SHADER
+
+#if ENABLE_COMPUTE_SHADER
 ComputeShaderCache g_computeShaderCache;
 #endif
 
@@ -156,7 +157,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			!buildOpenglText(source.c_str(),
 				type == GL_VERTEX_SHADER   ? 'v' :
 				type == GL_FRAGMENT_SHADER ? 'p' :
-			#if ENABLE_OPENGL_COMPUTE_SHADER
+			#if ENABLE_COMPUTE_SHADER
 				type == GL_COMPUTE_SHADER  ? 'c' :
 			#endif
 			 	'u',
@@ -175,7 +176,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			{
 				result = false;
 				
-			#if ENABLE_OPENGL_COMPUTE_SHADER
+			#if ENABLE_COMPUTE_SHADER
 				if (type == GL_COMPUTE_SHADER)
 					logError("compute shader creation failed. compute is possibly not supported?");
 				else
@@ -495,7 +496,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 
 //
 
-#if ENABLE_OPENGL_COMPUTE_SHADER
+#if ENABLE_COMPUTE_SHADER
 
 ComputeShaderCacheElem::ComputeShaderCacheElem()
 {

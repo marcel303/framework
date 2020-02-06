@@ -49,7 +49,7 @@ static void handleFileChange(const char * filename)
 	{
 		g_shaderCache.handleSourceChanged(filename);
 	}
-#if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER // todo : enable for vs and ps for metal
+#if ENABLE_COMPUTE_SHADER
 	else if (extension == "cs" || extension == "txt")
 	{
 		for (auto & i : g_computeShaderCache.m_map)
