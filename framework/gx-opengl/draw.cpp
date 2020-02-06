@@ -588,7 +588,7 @@ static void gxFlush(bool endOfBatch)
 		if (globals.gxShaderIsDirty)
 		{
 		// todo : we miss the meta data for the texture : does it want filtering or not ?
-			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 		}
 		
@@ -742,7 +742,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 	if (globals.gxShaderIsDirty)
 	{
 		// todo : we miss the meta data for the texture : does it want filtering or not ?
-		if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+		if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 			shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 	}
 
@@ -1342,7 +1342,7 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 		if (globals.gxShaderIsDirty)
 		{
 			// todo : we miss the meta data for the texture : does it want filtering or not ?
-			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 		}
 		
@@ -1410,7 +1410,7 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 		if (globals.gxShaderIsDirty)
 		{
 			// todo : we miss the meta data for the texture : does it want filtering or not ?
-			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
 				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 		}
 		
