@@ -30,6 +30,7 @@
 #if ENABLE_METAL
 
 #import "metal.h"
+#import "renderTarget.h"
 #import "texture.h"
 #import <Metal/Metal.h>
 
@@ -134,6 +135,7 @@ void GxTexture::allocate(const GxTextureProperties & properties)
 		auto device = metal_get_device();
 		
 		MTLTextureDescriptor * descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalFormat width:sx height:sy mipmapped:mipmapped];
+		descriptor.usage = MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget;
 		
 		texture = [device newTextureWithDescriptor:descriptor];
 	}
@@ -175,153 +177,59 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 	if (id == 0)
 		return;
 
-// todo : implement swizzle mask using newer Metal version
-
-#if TODO
-	// capture current OpenGL states before we change them
-
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-
-	//
-	
-	const int r = toOpenGLTextureSwizzle(in_r);
-	const int g = toOpenGLTextureSwizzle(in_g);
-	const int b = toOpenGLTextureSwizzle(in_b);
-	const int a = toOpenGLTextureSwizzle(in_a);
-
-	glBindTexture(GL_TEXTURE_2D, id);
-	GLint swizzleMask[4] = { r, g, b, a };
-	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-	checkErrorGL();
-
-	// restore previous OpenGL states
-
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-#endif
+	// todo : implement GxTexture::setSwizzle using newer Metal version
 }
 
 void GxTexture::setSampling(const bool _filter, const bool _clamp)
 {
-#if TODO
-	// capture current OpenGL states before we change them
-
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	checkErrorGL();
-	
-	//
-	
-	filter = _filter;
-	clamp = _clamp;
-	
-	glBindTexture(GL_TEXTURE_2D, id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-	checkErrorGL();
-	
-	// restore previous OpenGL states
-
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	checkErrorGL();
-#endif
+	// todo : implement GxTexture::setSampling
 }
 
 void GxTexture::clearf(const float r, const float g, const float b, const float a)
 {
-#if TODO
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+	if (id == 0)
 	{
-		GLuint frameBuffer = 0;
-		
-		glGenFramebuffers(1, &frameBuffer);
-		checkErrorGL();
-		
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, id, 0);
-		checkErrorGL();
-		{
-			glClearColor(r, g, b, a);
-			glClear(GL_COLOR_BUFFER_BIT);
-		}
-		glDeleteFramebuffers(1, &frameBuffer);
-		frameBuffer = 0;
-		checkErrorGL();
+		return;
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-	checkErrorGL();
-#else
-	Assert(false);
-#endif
+	else
+	{
+		auto & texture = s_textures[id];
+		
+		ColorTarget target(texture);
+		target.setClearColor(r, g, b, a);
+		
+		pushRenderPass(&target, true, nullptr, false, "GxTexture::clearf");
+		{
+			// the texture will be cleared during render pass begin
+		}
+		popRenderPass();
+	}
 }
 
 void GxTexture::clearAreaToZero(const int x, const int y, const int sx, const int sy)
 {
-#if TODO
-	GLenum uploadFormat;
-	GLenum uploadElementType;
-	toOpenGLUploadType(format, uploadFormat, uploadElementType);
-	
-	const int maxElementCount =
-		uploadFormat == GL_RED ? 1 :
-		uploadFormat == GL_RG ? 2 :
-		uploadFormat == GL_RGB ? 3 :
-		uploadFormat == GL_RGBA ? 4 :
-		4;
-	
-	const int maxPixelSize =
-		uploadElementType == GL_UNSIGNED_BYTE ? maxElementCount :
-		uploadElementType == GL_FLOAT ? maxElementCount * 4 :
-		maxElementCount * 4;
-	
-	const int maxMemorySize =
-		maxPixelSize * sx * sy;
-	
-	const bool allocateFromStack = (maxMemorySize < 16 * 1024);
-	
-	uint8_t * zeroes =
-		allocateFromStack ? (uint8_t*)alloca(maxMemorySize) :
-		(uint8_t*)malloc(maxMemorySize);
-	
-	memset(zeroes, 0, maxMemorySize);
-	
-	// capture current OpenGL states before we change them
-
-	GLuint restoreTexture;
-	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
-	GLint restoreUnpack;
-	glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
-	GLint restorePitch;
-	glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restorePitch);
-	checkErrorGL();
-	
-	//
-	
-	glBindTexture(GL_TEXTURE_2D, id);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-	checkErrorGL();
-	
-	glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, sx ,sy, uploadFormat, uploadElementType, zeroes);
-	checkErrorGL();
-
-	// restore previous OpenGL states
-
-	glBindTexture(GL_TEXTURE_2D, restoreTexture);
-	glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, restorePitch);
-	checkErrorGL();
-	
-	if (!allocateFromStack)
-		::free(zeroes);
-#else
-	Assert(false);
-#endif
+	if (id == 0)
+	{
+		return;
+	}
+	else
+	{
+		auto & texture = s_textures[id];
+		
+		ColorTarget target(texture);
+		
+		// todo : use blit encoder to write zeroes ?
+		
+		pushRenderPass(&target, false, nullptr, false, "GxTexture::clearf");
+		{
+			pushBlend(BLEND_OPAQUE);
+			{
+				drawRect(x, y, x + sx, y + sy);
+			}
+			popBlend();
+		}
+		popRenderPass();
+	}
 }
 
 static void * make_compatible(const void * src, const int srcSx, const int srcSy, const int srcPitch, const GX_TEXTURE_FORMAT format)
@@ -445,22 +353,86 @@ void GxTexture::uploadArea(const void * src, const int srcAlignment, const int _
 
 void GxTexture::copyRegionsFromTexture(const GxTexture & src, const CopyRegion * regions, const int numRegions)
 {
-	auto src_texture = s_textures[src.id];
-	auto dst_texture = s_textures[id];
+	Assert(src.id != 0);
+	Assert(id != 0);
 	
-	for (int i = 0; i < numRegions; ++i)
+	if (src.id == 0 || id == 0)
 	{
-		auto & region = regions[i];
+		return;
+	}
+	else
+	{
+		auto src_texture = s_textures[src.id];
+		auto dst_texture = s_textures[id];
 		
-		metal_copy_texture_to_texture(src_texture, src.sx, region.srcX, region.srcY, region.sx, region.sy, dst_texture, region.dstX, region.dstY, toMetalFormat(format));
+		for (int i = 0; i < numRegions; ++i)
+		{
+			auto & region = regions[i];
+			
+			metal_copy_texture_to_texture(src_texture, src.sx, region.srcX, region.srcY, region.sx, region.sy, dst_texture, region.dstX, region.dstY, toMetalFormat(format));
+		}
 	}
 }
 
 void GxTexture::generateMipmaps()
 {
-	auto texture = s_textures[id];
+	if (id == 0)
+	{
+		return;
+	}
+	else
+	{
+		auto texture = s_textures[id];
 
-	metal_generate_mipmaps(texture);
+		metal_generate_mipmaps(texture);
+	}
+}
+
+bool GxTexture::downloadContents(const int x, const int y, const int sx, const int sy, void * bytes, const int numBytes)
+{
+	Assert(!metal_is_encoding_draw_commands());
+	
+	if (metal_is_encoding_draw_commands())
+	{
+		return false;
+	}
+	else if (id == 0)
+	{
+		return false;
+	}
+	else
+	{
+		auto texture = s_textures[id];
+		
+		const int bytesPerPixel =
+			texture.pixelFormat == MTLPixelFormatRGBA8Unorm ? 4 :
+			texture.pixelFormat == MTLPixelFormatRGBA32Float ? 16 :
+			0;
+		
+		if (bytesPerPixel == 0)
+		{
+			return false;
+		}
+		
+		const int numBytesNeeded = sx * sy * bytesPerPixel;
+		
+		if (numBytes != numBytesNeeded)
+		{
+			return false;
+		}
+		
+		@autoreleasepool
+		{
+			auto queue = metal_get_command_queue();
+			auto cmd_buf = [queue commandBuffer];
+			[cmd_buf commit];
+			[cmd_buf waitUntilCompleted];
+		}
+		
+		[texture getBytes:bytes bytesPerRow:sx*bytesPerPixel fromRegion:MTLRegionMake2D(x, y, sx, sy) mipmapLevel:0];
+		
+		return true;
+	}
 }
 
 //
@@ -475,7 +447,7 @@ void gxGetTextureSize(GxTextureId id, int & width, int & height)
 	else
 	{
 		auto texture = s_textures[id];
-	
+
 		width = texture.width;
 		height = texture.height;
 	}

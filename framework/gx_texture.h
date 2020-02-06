@@ -124,4 +124,6 @@ struct GxTexture
 	void copyRegionsFromTexture(const GxTexture & src, const CopyRegion * regions, const int numRegions);
 	
 	void generateMipmaps();
+	
+	bool downloadContents(const int x, const int y, const int sx, const int sy, void * bytes, const int numBytes);
 };

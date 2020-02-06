@@ -303,6 +303,16 @@ id <MTLDevice> metal_get_device()
 	return device;
 }
 
+id <MTLCommandQueue> metal_get_command_queue()
+{
+	return queue;
+}
+
+bool metal_is_encoding_draw_commands()
+{
+	return s_activeRenderPass != nullptr;
+}
+
 void metal_upload_texture_area(
 	const void * src,
 	const int srcPitch,
