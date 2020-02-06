@@ -234,6 +234,9 @@ void initRealTimeEditing()
 void shutRealTimeEditing()
 {
 	clearFileInfos();
+	
+	BOOL result = FindCloseChangeNotification(fileWatcher);
+	Assert(result);
 }
 
 void tickRealTimeEditing()

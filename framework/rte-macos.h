@@ -48,3 +48,24 @@ struct rteFileWatcher_OSX
 };
 
 #endif
+
+#if defined(WINDOWS)
+
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
+struct rteFileWatcher_Windows
+{
+	std::string path;
+	
+	HANDLE fileWatcher = INVALID_HANDLE_VALUE;
+	
+	std::function<void(const char*)> fileChanged;
+
+	~rteFileWatcher_OSX();
+	
+	void init(const char * path);
+	void shut();
+};
+
+#endif

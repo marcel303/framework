@@ -132,3 +132,29 @@ void rteFileWatcher_OSX::shut()
 }
 
 #endif
+
+#if defined(WINDOWS)
+
+rteFileWatcher_Windows::~rteFileWatcher_Windows()
+{
+	Assert(fileWatcher == INVALID_HANDLE_VALUE);
+}
+
+void rteFileWatcher_Windows::init(const char * path)
+{
+	Assert(fileWatcher == INVALID_HANDLE_VALUE);
+	fileWatcher = FindFirstChangeNotificationA(path, TRUE, FILE_NOTIFY_CHANGE_LAST_WRITE);
+	Assert(fileWatcher != INVALID_HANDLE_VALUE);
+	if (fileWatcher == INVALID_HANDLE_VALUE)
+		LOG_ERR("failed to find first change notification. path=%s", path);
+}
+
+void rteFileWatcher_Windows::shut()
+{
+	BOOL result = FindCloseChangeNotification(fileWatcher);
+	Assert(result);
+
+	fileWatcher = INVALID_HANDLE_VALUE;
+}
+
+#endif
