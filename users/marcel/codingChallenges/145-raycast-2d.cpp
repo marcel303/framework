@@ -146,9 +146,11 @@ int main(int argc, char * argv[])
 			setColor(100, 100, 100);
 			hqBegin(HQ_LINES);
 			{
+				const int mirror_count = keyboard.isDown(SDLK_m) ? 4 : 1;
+				
 				for (auto & ray_direction : ray_directions)
 				{
-					for (int i = 0; i < 1; ++i)
+					for (int i = 0; i < mirror_count; ++i)
 					{
 						const float x = (i/2) == 0 ? mouse.x : 800 - mouse.x;
 						const float y = (i&1) == 0 ? mouse.y : 800 - mouse.y;
