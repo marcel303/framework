@@ -28,6 +28,7 @@
 #include "Path.h"
 #include "internal.h"
 #include "rte.h"
+#include "rte-filewatcher.h"
 #include "StringEx.h"
 #include <sys/stat.h>
 
@@ -80,12 +81,82 @@ static void handleFileChange(const char * filename)
 	framework.changedFiles.push_back(filename);
 }
 
+//
+
+void rteFileWatcher_Basic::init(const char * path)
+{
+	fileInfos.clear();
+
+	std::vector<std::string> files = listFiles(path, true);
+
+	for (auto & file : files)
+	{
+		FILE * f = fopen(file.c_str(), "rb");
+		
+		if (f != nullptr)
+		{
+			struct stat s;
+			if (fstat(fileno(f), &s) == 0)
+			{
+				rteFileInfo fi;
+				fi.filename = file;
+				fi.time = s.st_mtime;
+
+				fileInfos.push_back(fi);
+			}
+
+			fclose(f);
+			f = nullptr;
+		}
+	}
+}
+
+void rteFileWatcher_Basic::shut()
+{
+	fileInfos.clear();
+}
+
+void rteFileWatcher_Basic::tick()
+{
+	for (auto & fi: fileInfos)
+	{
+		FILE * f = fopen(fi.filename.c_str(), "rb");
+
+		if (f != nullptr)
+		{
+			bool changed = false;
+
+			struct stat s;
+			if (fstat(fileno(f), &s) == 0)
+			{
+				if (fi.time < s.st_mtime)
+				{
+					// file has changed!
+
+					logDebug("%s has changed!", fi.filename.c_str());
+
+					fi.time = s.st_mtime;
+
+					changed = true;
+				}
+			}
+
+			fclose(f);
+			f = nullptr;
+
+			if (changed)
+			{
+				handleFileChange(fi.filename.c_str());
+			}
+		}
+	}
+}
+
 #if defined(MACOS)
 
-#include "rte-macos.h"
 #include <list>
 
-std::list<rteFileWatcher_OSX*> s_fileWatchers;
+std::list<rteFileWatcherBase*> s_fileWatchers;
 
 void initRealTimeEditing()
 {
@@ -115,98 +186,13 @@ void shutRealTimeEditing()
 
 void tickRealTimeEditing()
 {
-	// tod
+	for (auto * fileWatcher : s_fileWatchers)
+	{
+		fileWatcher->tick();
+	}
 }
 
 #else
-
-#if 1
-
-struct RTEFileInfo
-{
-	std::string filename;
-	time_t time;
-};
-
-static std::vector<RTEFileInfo> s_fileInfos;
-
-static void fillFileInfos()
-{
-	s_fileInfos.clear();
-
-	std::vector<std::string> files = listFiles(".", true);
-
-	for (auto & file : files)
-	{
-		FILE * f = fopen(file.c_str(), "rb");
-		if (f)
-		{
-			struct stat s;
-			if (fstat(fileno(f), &s) == 0)
-			{
-				RTEFileInfo fi;
-				fi.filename = file;
-				fi.time = s.st_mtime;
-
-			#if 0 // note : we want to track all files now, to ensure Framework::fileHasChanged works as expected and not just for a subset of files
-				if (String::EndsWith(file, ".vs") || String::EndsWith(file, ".ps") || String::EndsWith(file, ".cs") || String::EndsWith(file, ".xml") || String::EndsWith(file, ".txt") ||
-					String::EndsWith(file, ".png") || String::EndsWith(file, ".jpg"))
-				{
-					s_fileInfos.push_back(fi);
-				}
-			#else
-				s_fileInfos.push_back(fi);
-			#endif
-			}
-
-			fclose(f);
-			f = 0;
-		}
-	}
-}
-
-static void clearFileInfos()
-{
-	s_fileInfos.clear();
-}
-
-static void checkFileInfos()
-{
-	for (auto & fi: s_fileInfos)
-	{
-		FILE * f = fopen(fi.filename.c_str(), "rb");
-
-		if (f)
-		{
-			bool changed = false;
-
-			struct stat s;
-			if (fstat(fileno(f), &s) == 0)
-			{
-				if (fi.time < s.st_mtime)
-				{
-					// file has changed!
-
-					logDebug("%s has changed!", fi.filename.c_str());
-
-					fi.time = s.st_mtime;
-
-					changed = true;
-				}
-			}
-
-			fclose(f);
-			f = 0;
-
-			if (changed)
-			{
-				handleFileChange(fi.filename.c_str());
-			}
-		}
-	}
-}
-
-#endif
 
 #if defined(WIN32)
 

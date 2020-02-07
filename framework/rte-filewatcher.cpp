@@ -25,11 +25,12 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "rte-filewatcher.h"
+
 #if defined(MACOS)
 
 #include "Debugging.h"
 #include "Log.h"
-#include "rte-macos.h"
 
 rteFileWatcher_OSX::~rteFileWatcher_OSX()
 {
@@ -131,9 +132,16 @@ void rteFileWatcher_OSX::shut()
 	}
 }
 
+void rteFileWatcher_OSX::tick()
+{
+}
+
 #endif
 
 #if defined(WINDOWS)
+
+#include "Debugging.h"
+#include "Log.h"
 
 rteFileWatcher_Windows::~rteFileWatcher_Windows()
 {

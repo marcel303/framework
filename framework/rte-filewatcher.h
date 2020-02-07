@@ -27,30 +27,61 @@
 
 #pragma once
 
+#include <functional>
+#include <string>
+#include <vector>
+
+struct rteFileWatcherBase
+{
+	std::function<void(const char*)> fileChanged;
+	
+	virtual ~rteFileWatcherBase() { }
+	
+	virtual void init(const char * path) = 0;
+	virtual void shut() = 0;
+	virtual void tick() = 0;
+};
+
+struct rteFileInfo
+{
+	std::string filename;
+	time_t time;
+};
+
+struct rteFileWatcher_Basic : rteFileWatcherBase
+{
+	std::vector<rteFileInfo> fileInfos;
+	
+	std::function<void(const char*)> fileChanged;
+
+	virtual void init(const char * path) override;
+	virtual void shut() override;
+	virtual void tick() override;
+};
+
 #if defined(MACOS)
 
 #include <CoreServices/CoreServices.h>
-#include <functional>
 #include <string>
 
-struct rteFileWatcher_OSX
+struct rteFileWatcher_OSX : rteFileWatcherBase
 {
 	std::string path;
 	
 	FSEventStreamRef stream = nullptr;
-	
-	std::function<void(const char*)> fileChanged;
 
-	~rteFileWatcher_OSX();
+	virtual ~rteFileWatcher_OSX() override;
 	
-	void init(const char * path);
-	void shut();
+	virtual void init(const char * path) override;
+	virtual void shut() override;
+	virtual void tick() override;
 };
 
 #endif
 
 #if defined(WINDOWS)
 
+// todo : remove Windows.h header file include
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
