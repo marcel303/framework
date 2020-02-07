@@ -52,7 +52,7 @@ void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 	
 	id <MTLDevice> device = metal_get_device();
 	
-	id <MTLBuffer> buffer = [device newBufferWithLength:numBytes options:MTLResourceStorageModeManaged];
+	id <MTLBuffer> buffer = [device newBufferWithLength:(numBytes > 0 ? numBytes : 1) options:MTLResourceStorageModeManaged];
 	
 	memcpy(buffer.contents, bytes, numBytes);
 	
@@ -138,7 +138,7 @@ void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_IND
 	
 	id <MTLDevice> device = metal_get_device();
 	
-	id <MTLBuffer> buffer = [device newBufferWithLength:numBytes options:MTLResourceStorageModeManaged];
+	id <MTLBuffer> buffer = [device newBufferWithLength:(numBytes > 0 ? numBytes: 4) options:MTLResourceStorageModeManaged];
 	
 	void * bufferContents = buffer.contents;
 	memcpy(bufferContents, bytes, numBytes);
