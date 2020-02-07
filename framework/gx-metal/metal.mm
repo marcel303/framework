@@ -1585,6 +1585,8 @@ static void gxValidatePipelineState()
 	- render target format(s)
 	- vs bindings
 	- blend mode
+	- color write mask
+	- alpha to coverage
 	- vs/ps function (shader)
 	*/
 	
@@ -2688,26 +2690,32 @@ void gxValidateShaderResources()
 		
 	// todo : look at shader to see how many textures are used
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
-		{
 			if (cacheElem.vsTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
-			
-		// todo : set sampler states at the start of a render pass. or set an invalidation bit
-		//        right now we just set it _always_ to pass validation..
-			id<MTLSamplerState> samplerState = samplerStates[cacheElem.vsTextureSamplers[i]];
-			[s_activeRenderPass->encoder setVertexSamplerState:samplerState atIndex:i];
-		}
 		
 	// todo : look at shader to see how many textures are used
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
-		{
 			if (cacheElem.psTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setFragmentTexture:cacheElem.psTextures[i] atIndex:i];
+		
+		for (auto & textureInfo : cacheElem.textureInfos)
+		{
+			// todo : set sampler states at the start of a render pass. or set an invalidation bit
+			//        right now we just set it _always_ to pass validation..
 			
-		// todo : set sampler states at the start of a render pass. or set an invalidation bit
-		//        right now we just set it _always_ to pass validation..
-			id<MTLSamplerState> samplerState = samplerStates[cacheElem.psTextureSamplers[i]];
-			[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:i];
+			if (textureInfo.vsOffset != -1)
+			{
+				const int i = textureInfo.vsOffset;
+				id<MTLSamplerState> samplerState = samplerStates[cacheElem.vsTextureSamplers[i]];
+				[s_activeRenderPass->encoder setVertexSamplerState:samplerState atIndex:i];
+			}
+			
+			if (textureInfo.psOffset != -1)
+			{
+				const int i = textureInfo.psOffset;
+				id<MTLSamplerState> samplerState = samplerStates[cacheElem.psTextureSamplers[i]];
+				[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:i];
+			}
 		}
 	}
 }
