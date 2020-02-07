@@ -1,5 +1,4 @@
 #include "framework.h"
-#include "shaders.h"
 #include <algorithm>
 
 #define GFX_SX 1200
@@ -320,7 +319,7 @@ public:
 		{
 			projectScreen2d();
 			
-			Shader shader("deferredLightWithShadow");
+			Shader shader("shadowmap1/deferredLightWithShadow");
 			setShader(shader);
 			shader.setTexture("depthTexture", 0, drawState.sceneDepthTexture, false, true);
 			shader.setTexture("normalTexture", 1, drawState.sceneNormalTexture, false, true);
@@ -347,7 +346,7 @@ public:
 		setColorClamp(false);
 		pushBlend(BLEND_ADD);
 		{
-			Shader shader("deferredLight");
+			Shader shader("shadowmap1/deferredLight");
 			setShader(shader);
 			shader.setTexture("depthTexture", 0, drawState.sceneDepthTexture, false, true);
 			shader.setTexture("normalTexture", 1, drawState.sceneNormalTexture, false, true);
@@ -421,6 +420,7 @@ int main(int argc, char * argv[])
 	
 	framework.allowHighDpi = false;
 	//framework.fullscreen = true;
+	framework.enableRealTimeEditing = true;
 	
 	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
@@ -526,20 +526,6 @@ int main(int argc, char * argv[])
 	}
 #endif
 
-	shaderSource("depthToLinear.vs", s_depthToLinearVs);
-	shaderSource("depthToLinear.ps", s_depthToLinearPs);
-	shaderSource("shadedObject.vs", s_shadedObjectVs);
-	shaderSource("shadedObject.ps", s_shadedObjectPs);
-	shaderSource("shadowUtils.txt", s_shadowUtilsTxt);
-	shaderSource("depthToWorld.vs", s_depthToWorldVs);
-	shaderSource("depthToWorld.ps", s_depthToWorldPs);
-	shaderSource("deferredLight.vs", s_deferredLightVs);
-	shaderSource("deferredLight.ps", s_deferredLightPs);
-	shaderSource("deferredLightWithShadow.vs", s_deferredLightWithShadowVs);
-	shaderSource("deferredLightWithShadow.ps", s_deferredLightWithShadowPs);
-	shaderSource("lightApplication.vs", s_lightApplicationVs);
-	shaderSource("lightApplication.ps", s_lightApplicationPs);
-	
 	setFont("calibri.ttf");
 	
 	float depthLinearDrawScale = 1.f;
@@ -581,7 +567,7 @@ int main(int argc, char * argv[])
 			light1.lightToWorld_transform = camera.getWorldMatrix();
 			light1.color.a = 8.f;
 		}
-		light1.color.a = lerp<float>(2.f, 23.f, (cosf(framework.time * 10.f) + 1.f) / 2.f);
+		light1.color.a = lerp<float>(10.f, 23.f, (cosf(framework.time * 10.f) + 1.f) / 2.f);
 		//light1.color.a *= powf(.4f, framework.timeStep);
 		//light1.depthRange.max = (cosf(framework.time) + 2.f) / 3.f * 10.f;
 		light1.calculateTransforms();
@@ -820,7 +806,7 @@ int main(int argc, char * argv[])
 			// this is some old coded for drawing forward lit shaded objects
 			// currently not in use, but will want to get this back working again
 			// requires the light drawer to cache shadow maps first
-				Shader shader("shadedObject");
+				Shader shader("shadowmap1/shadedObject");
 				setShader(shader);
 				shader.setImmediateMatrix4x4("lightMVP", light.worldToClip_transform.m_v);
 				shader.setTexture("depthTexture", 0, view_camera.getTexture());
@@ -942,11 +928,11 @@ int main(int argc, char * argv[])
 				// apply light to color image
 				
 				pushBlend(BLEND_OPAQUE);
-				Shader shader("lightApplication");
+				Shader shader("shadowmap1/lightApplication");
 				setShader(shader);
 				shader.setTexture("colorTexture", 0, view_camera.getTexture(), false, true);
 				shader.setTexture("lightTexture", 1, lightDrawer.getLightMapSurface()->getTexture(), false, true);
-				shader.setImmediate("ambient", .1f, .08f, .06f);
+				shader.setImmediate("ambient", .02f, .02f, .02f);
 				drawRect(0, 0, GFX_SX, GFX_SY);
 				popBlend();
 			}

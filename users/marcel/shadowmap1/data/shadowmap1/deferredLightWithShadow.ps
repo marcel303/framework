@@ -1,0 +1,145 @@
+include engine/ShaderPS.txt
+include shadowmap1/shadowUtils.txt
+
+#define DEBUG 0
+
+uniform sampler2D depthTexture;
+uniform mat4x4 projectionToWorld;
+
+uniform sampler2D normalTexture;
+
+uniform sampler2D lightDepthTexture;
+uniform mat4x4 lightMVP;
+uniform vec3 lightColor;
+uniform vec3 lightPosition_view;
+
+uniform mat4x4 viewMatrix;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+    float camera_view_depth = texture(depthTexture, texcoord).x;
+    
+    if (camera_view_depth == 1.0)
+    {
+        // scene background
+        shader_fragColor = vec4(0.0);
+        return;
+    }
+    
+    vec3 position_world = depthToWorldPosition(camera_view_depth, texcoord, projectionToWorld);
+    vec4 position_lightSpace = lightMVP * vec4(position_world, 1.0);
+
+    if (position_lightSpace.w <= 0.0)
+    {
+        // facing in the other direction
+        shader_fragColor = vec4(0.0);
+        return;
+    }
+    
+    vec3 projected = position_lightSpace.xyz / position_lightSpace.w;
+    vec3 coords = projected * 0.5 + vec3(0.5);
+#if !defined(GL_core_profile)
+    coords.z = projected.z;
+#endif
+    
+    // perform shadow map lookup
+    
+    float depth = texture(lightDepthTexture, coords.xy).x;
+    
+    vec3 shadowColor; // todo : make this a single float, and refactor debug code below
+    
+    if (depth == 1.0)
+    {
+        // maximum
+        shadowColor = vec3(1.0);
+    }
+    else
+    {
+    #if DEBUG
+        if (projected.x < -1.0 || projected.x > +1.0)
+            shadowColor = vec3(0.5, 0.0, 0.0);
+        else if (projected.y < -1.0 || projected.y > +1.0)
+            shadowColor = vec3(0.0, 0.5, 0.0);
+    #if defined(GL_core_profile)
+        else if (projected.z < -1.0 || projected.z > +1.0) // GLSL clip space has z go from -1, +1
+            shader_fragColor.rgb = vec3(0.0, 0.0, 0.5);
+    #else
+        else if (projected.z < 0.0 || projected.z > +1.0) // non-GLSL clip space has z go from 0, +1
+            shader_fragColor.rgb = vec3(0.0, 0.0, 0.5);
+    #endif
+        else if (false)
+            shadowColor = vec3(projected.z);
+        else if (false)
+            shadowColor = vec3(coords); // RGB color cube
+        else if (false)
+            shadowColor = vec3(depth);
+        else if (false)
+            shadowColor = vec3(coords.z > depth ? 0.5 : 1.0); // correct shadow mapping with serious acne
+        else
+            shadowColor = vec3(coords.z > depth + 0.001 ? 0.3 : 1.0); // less acne with depth bias
+    #elif 0
+        float depths[9];
+        depths[0] = textureOffset(lightDepthTexture, coords.xy, ivec2(-1, -1)).x;
+        depths[1] = textureOffset(lightDepthTexture, coords.xy, ivec2(+0, -1)).x;
+        depths[2] = textureOffset(lightDepthTexture, coords.xy, ivec2(+1, -1)).x;
+        depths[3] = textureOffset(lightDepthTexture, coords.xy, ivec2(-1, +0)).x;
+        depths[4] = textureOffset(lightDepthTexture, coords.xy, ivec2(+0, +0)).x;
+        depths[5] = textureOffset(lightDepthTexture, coords.xy, ivec2(+1, +0)).x;
+        depths[6] = textureOffset(lightDepthTexture, coords.xy, ivec2(-1, +1)).x;
+        depths[7] = textureOffset(lightDepthTexture, coords.xy, ivec2(+0, +1)).x;
+        depths[8] = textureOffset(lightDepthTexture, coords.xy, ivec2(+1, +1)).x;
+        
+        float shadowValue = 0.0;
+        
+        for (int i = 0; i < 9; ++i)
+        {
+            float depth = depths[i];
+            
+            shadowValue += coords.z > depth ? 0.0 : 1.0/9.0;
+        }
+        
+        shadowColor = vec3(shadowValue);
+    #elif 1
+        float depth00 = textureOffset(lightDepthTexture, coords.xy, ivec2( 0, -1)).x;
+        float depth10 = textureOffset(lightDepthTexture, coords.xy, ivec2(-1,  0)).x;
+        float depth11 = textureOffset(lightDepthTexture, coords.xy, ivec2(+1,  0)).x;
+        float depth01 = textureOffset(lightDepthTexture, coords.xy, ivec2( 0, +1)).x;
+        
+        float shadowValue =
+            (coords.z > depth00 ? 0.0 : 0.25) +
+            (coords.z > depth10 ? 0.0 : 0.25) +
+            (coords.z > depth11 ? 0.0 : 0.25) +
+            (coords.z > depth01 ? 0.0 : 0.25);
+        
+        shadowColor = vec3(shadowValue);
+    #else
+        shadowColor = vec3(coords.z > depth ? 0.0 : 1.0);
+    #endif
+    }
+
+    // apply a bit of lighting here
+    
+    shader_fragColor.rgb = shadowColor * lightColor;
+    
+    // attenuation
+    
+    float distanceXY = length(projected.xy);
+    float distanceZ = max(0.0, coords.z);
+// todo : make curve value a uniform
+    float curveValue = 0.5;
+    shader_fragColor.rgb *= pow(max(0.0, 1.0 - distanceXY), curveValue) * max(0.0, 1.0 - distanceZ);
+    
+    // diffuse
+    
+    vec3 position_view = (viewMatrix * vec4(position_world, 1.0)).xyz;
+    vec3 delta = position_view - lightPosition_view;
+    vec3 normal_view = texture(normalTexture, texcoord).xyz;
+    float amount = dot(normal_view, -normalize(position_view.xyz)); // fixme ! normal should be in light space, or light in view space. now they aren't in the same spaces !
+    shader_fragColor.rgb *= amount;
+    
+    //
+    
+    shader_fragColor.a = 1.0; // has to be 1.0 because BLEND_ADD multiplies the rgb with this value before addition
+}
