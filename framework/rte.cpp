@@ -36,6 +36,16 @@
     #include <Windows.h>
 #endif
 
+/*
+
+RTE strategies:
+
+	OSX: create a file watcher for each resource path. get notified of each individual file changed. invoke change handler
+	Windows: create a file watcher for each resource path. get notified when a file inside a path is changed. check file infos to see which files have changed. invoke change handler
+	Linux: create a basic file wachter for each resource path. check the time stamps of each file for each file watcher to check for modification time stamps. invoke change handler
+
+*/
+
 // todo : windows,linux : add file watchers for multiple resource paths
 
 static void handleFileChange(const char * filename)
