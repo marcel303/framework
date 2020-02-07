@@ -1,4 +1,5 @@
 #include "framework.h"
+#include <algorithm>
 #include <list>
 
 struct Arrangement
