@@ -200,7 +200,7 @@ static void checkFileInfos()
 
 			if (changed)
 			{
-				handleFileChange(fi.filename);
+				handleFileChange(fi.filename.c_str());
 			}
 		}
 	}
