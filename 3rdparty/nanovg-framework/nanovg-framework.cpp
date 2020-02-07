@@ -85,7 +85,6 @@ float sdroundrect(vec2 pt, vec2 ext, float rad)
 	return min(max(d.x, d.y), 0.0) + length(max(d, 0.0)) - rad;
 }
 
-// Scissoring
 float scissorMask(vec2 p)
 {
 	vec2 sc = (abs((scissorMat * vec4(p, 0.0, 1.0)).xy) - scissorExt);
@@ -116,48 +115,48 @@ void main()
 	float strokeAlpha = 1.0;
 #endif
 
-	if (type == 0.0) // Gradient
+	if (type == 0.0) // gradient
 	{
-		// Calculate gradient color using box gradient
+		// calculate gradient color using a box gradient
 		vec2 pt = (paintMat * vec4(v_position, 0.0, 1.0)).xy;
 		float d = clamp((sdroundrect(pt, extent, radius) + feather * 0.5) / feather, 0.0, 1.0);
 		vec4 color = mix(innerCol, outerCol, d);
 		
 		if (dither != 0.0)
 		{
-			// Dithering
+			// dithering
 			color.rgb += colorDither8ScreenSpace(v_position);
 		}
 		
-		// Combine alpha
+		// combine alpha
 		color *= strokeAlpha * scissor;
 		
 		result = color;
 	}
-	else if (type == 1.0) // Image
+	else if (type == 1.0) // image
 	{
-		// Calculate color fron texture
+		// calculate color from texture
 		vec2 pt = (paintMat * vec4(v_position, 0.0, 1.0)).xy / extent;
 		
 		vec4 color = texture(tex, pt);
 		if (texType == 1) color = vec4(color.xyz * color.w, color.w);
 		if (texType == 2) color = vec4(color.x);
 		
-		// Apply color tint and alpha.
+		// apply color tint and alpha
 		color *= innerCol;
 		
-		// Combine alpha
+		// combine alpha
 		color *= strokeAlpha * scissor;
 		result = color;
 	}
-	else if (type == 2.0) // Stencil fill
+	else if (type == 2.0) // stencil fill
 	{
 		if (scissor == 0.0)
 			discard;
 		
 		result = vec4(1, 1, 1, 1);
 	}
-	else if (type == 3.0) // Textured tris
+	else if (type == 3.0) // textured triangles
 	{
 		vec4 color = texture(tex, v_texcoord);
 		
@@ -504,7 +503,9 @@ static void setShaderTypeUniform(
 
 static BLEND_MODE compositeOperationToBlendMode(const NVGcompositeOperationState & op)
 {
-#define C(_srcRgb, _srcAlpha, _dstRgb, _dstAlpha, blendMode) if (op.srcRGB == _srcRgb && op.srcAlpha == _srcAlpha && op.dstRGB == _dstRgb && op.dstAlpha == _dstAlpha) { /*logDebug("mode: " # blendMode);*/ return blendMode; }
+#define C(_srcRgb, _srcAlpha, _dstRgb, _dstAlpha, blendMode) \
+	if (op.srcRGB == _srcRgb && op.srcAlpha == _srcAlpha && op.dstRGB == _dstRgb && op.dstAlpha == _dstAlpha) \
+		{ /*logDebug("mode: " # blendMode);*/ return blendMode; }
 	C(NVG_ONE,       NVG_ONE, NVG_ZERO,                NVG_ZERO,                BLEND_OPAQUE             );
 	C(NVG_SRC_ALPHA, NVG_ONE, NVG_ONE_MINUS_SRC_ALPHA, NVG_ONE_MINUS_SRC_ALPHA, BLEND_ALPHA              );
 	C(NVG_ONE,       NVG_ONE, NVG_ONE_MINUS_SRC_ALPHA, NVG_ONE_MINUS_SRC_ALPHA, BLEND_PREMULTIPLIED_ALPHA);
