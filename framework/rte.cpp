@@ -162,7 +162,7 @@ void rteFileWatcher_Basic::tick()
 	}
 }
 
-#if defined(MACOS)
+#if defined(MACOS) && false
 
 #include <list>
 
@@ -202,9 +202,7 @@ void tickRealTimeEditing()
 	}
 }
 
-#else
-
-#if defined(WIN32)
+#elif defined(WIN32)
 
 static HANDLE s_fileWatcher = INVALID_HANDLE_VALUE;
 
@@ -263,14 +261,16 @@ void tickRealTimeEditing()
 
 #else
 
+static rteFileWatcher_Basic s_fileWatcher;
+
 void initRealTimeEditing()
 {
-	fillFileInfos();
+	s_fileWatcher.init(".");
 }
 
 void shutRealTimeEditing()
 {
-	clearFileInfos();
+	s_fileWatcher.shut();
 }
 
 void tickRealTimeEditing()
@@ -287,9 +287,7 @@ void tickRealTimeEditing()
 	if ((x % 60) != 0)
 		return;
 	
-	checkFileInfos();
+	s_fileWatcher.tick();
 }
-
-#endif
 
 #endif
