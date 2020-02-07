@@ -315,7 +315,7 @@ public:
 		
 		pushSurface(lightMap); // todo : remove. we want to push it only once
 		setColorClamp(false);
-		pushBlend(BLEND_ADD);
+		pushBlend(BLEND_ADD_OPAQUE);
 		{
 			projectScreen2d();
 			
@@ -344,7 +344,7 @@ public:
 	void drawLight(const Light & light)
 	{
 		setColorClamp(false);
-		pushBlend(BLEND_ADD);
+		pushBlend(BLEND_ADD_OPAQUE);
 		{
 			Shader shader("shadowmap1/deferredLight");
 			setShader(shader);
