@@ -1600,51 +1600,6 @@ int Framework::getCurrentBackingScale() const
 	return ::getCurrentBackingScale();
 }
 
-// todo : remove this entire function ..
-static void updateViewport(Surface * surface, SDL_Window * window)
-{
-#if ENABLE_METAL
-// todo : let Metal implementation handle viewport setting internally
-	if (surface != nullptr)
-	{
-		metal_set_viewport(
-			surface->getWidth() / framework.minification * surface->getBackingScale(),
-			surface->getHeight() / framework.minification * surface->getBackingScale());
-	}
-	else
-	{
-		metal_set_viewport(
-			globals.currentWindow->getWidth(),
-			globals.currentWindow->getHeight());
-	}
-#endif
-
-#if ENABLE_OPENGL
-	if (surface != nullptr)
-	{
-		glViewport(
-			0,
-			0,
-			surface->getWidth() / framework.minification * surface->getBackingScale(),
-			surface->getHeight() / framework.minification * surface->getBackingScale());
-		checkErrorGL();
-	}
-	else
-	{
-		int drawableSx;
-		int drawableSy;
-		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
-		
-		glViewport(
-			0,
-			0,
-			drawableSx,
-			drawableSy);
-		checkErrorGL();
-	}
-#endif
-}
-
 void Framework::beginDraw(int r, int g, int b, int a, float depth)
 {
 #if ENABLE_OPENGL
@@ -1658,11 +1613,6 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 		scale255(a));
 	
 	pushBackbufferRenderPass(true, color, enableDepthBuffer, depth, "Backbuffer");
-	
-	// initialize viewport and OpenGL matrices
-	
-// todo : remove updateViewport
-	//updateViewport(nullptr, globals.currentWindow->getWindow());
 #endif
 
 #if ENABLE_METAL
