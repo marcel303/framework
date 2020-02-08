@@ -11,8 +11,6 @@ Coding Challenge #51: A* Path Finding
 	Part 3: https://youtu.be/jwRT4PCT6RU
 */
 
-// todo : trigger sounds at the location of the new top position
-
 static const int kGridSx = 80;
 static const int kGridSy = 60;
 

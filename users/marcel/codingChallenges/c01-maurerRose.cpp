@@ -30,13 +30,10 @@ int main(int argc, char * argv[])
 		{
 			beginDraw();
 			
-			noFill();
-			
 			strokeJoin(StrokeJoin::Round);
 			
-			beginShape();
+			beginStroke(0, 0, 0);
 			{
-				stroke(0, 0, 0);
 				strokeWeight(.5f);
 				
 				for (int theta = 0; theta <= 360; ++theta)
@@ -49,12 +46,11 @@ int main(int argc, char * argv[])
 					vertex(x, y);
 				}
 			}
-			endShape();
+			endStroke();
 
-			fill(63, 127, 255, 30);
-			
 			beginShape();
 			{
+				fill(63, 127, 255, 30);
 				stroke(63, 127, 255, 63);
 				strokeWeight(4.f);
 				strokeJoin(StrokeJoin::Round);
