@@ -457,7 +457,7 @@ public:
 	void registerResourcePath(const char * path);
 	bool registerChibiResourcePaths(const char * text);
 	const char * resolveResourcePath(const char * path);
-
+	
 	void blinkTaskbarIcon(int count);
 
 	bool quitRequested;
@@ -874,7 +874,9 @@ public:
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
+	void setImmediate(GxImmediateIndex index, float x);
 	void setImmediate(GxImmediateIndex index, float x, float y);
+	void setImmediate(GxImmediateIndex index, float x, float y, float z);
 	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);

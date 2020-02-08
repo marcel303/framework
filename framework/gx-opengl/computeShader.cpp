@@ -159,11 +159,27 @@ void ComputeShader::setImmediate(const char * name, float x, float y, float z, f
 	checkErrorGL();
 }
 
+void ComputeShader::setImmediate(GxImmediateIndex index, float x)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniform1f(index, x);
+	checkErrorGL();
+}
+
 void ComputeShader::setImmediate(GxImmediateIndex index, float x, float y)
 {
 	fassert(index != -1);
 	fassert(globals.shader == this);
 	glUniform2f(index, x, y);
+	checkErrorGL();
+}
+
+void ComputeShader::setImmediate(GxImmediateIndex index, float x, float y, float z)
+{
+	fassert(index != -1);
+	fassert(globals.shader == this);
+	glUniform3f(index, x, y, z);
 	checkErrorGL();
 }
 
