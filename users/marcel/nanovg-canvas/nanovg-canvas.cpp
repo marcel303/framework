@@ -30,7 +30,7 @@ void NvgCanvas::shut()
 	}
 }
 
-void NvgCanvas::begin()
+void NvgCanvas::beginDraw()
 {
 	if (ctx == nullptr)
 		init();
@@ -42,7 +42,7 @@ void NvgCanvas::begin()
 	nvgBeginFrame(ctx, sx, sy, framework.getCurrentBackingScale());
 }
 
-void NvgCanvas::end()
+void NvgCanvas::endDraw()
 {
 	nvgEndFrame(ctx);
 }
@@ -149,6 +149,48 @@ void NvgCanvas::endShape()
 	if (isStroked)
 		nvgStroke(ctx);
 	isDrawingShape = false;
+}
+
+void NvgCanvas::beginStroke()
+{
+	stroke(strokeColor[0], strokeColor[1], strokeColor[2], strokeColor[3]);
+	noFill();
+	
+	beginShape();
+}
+
+void NvgCanvas::beginStroke(int r, int g, int b, int a)
+{
+	stroke(r, g, b, a);
+	noFill();
+	
+	beginShape();
+}
+
+void NvgCanvas::endStroke()
+{
+	endShape();
+}
+
+void NvgCanvas::beginFill()
+{
+	noStroke();
+	fill(fillColor[0], fillColor[1], fillColor[2], fillColor[3]);
+	
+	beginShape();
+}
+
+void NvgCanvas::beginFill(int r, int g, int b, int a)
+{
+	noStroke();
+	fill(r, g, b, a);
+	
+	beginShape();
+}
+
+void NvgCanvas::endFill()
+{
+	endShape();
 }
 
 void NvgCanvas::moveTo(float x, float y)

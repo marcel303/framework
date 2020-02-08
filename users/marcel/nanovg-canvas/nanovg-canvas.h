@@ -59,8 +59,8 @@ public:
 	void init();
 	void shut();
 	
-	void begin();
-	void end();
+	void beginDraw();
+	void endDraw();
 	
 	void fill(int c);
 	void fill(int r, int g, int b, int a = 255);
@@ -79,6 +79,14 @@ public:
 	
 	void beginShape();
 	void endShape();
+	
+	void beginStroke();
+	void beginStroke(int r, int g, int b, int a = 255);
+	void endStroke();
+	
+	void beginFill();
+	void beginFill(int r, int g, int b, int a = 255);
+	void endFill();
 	
 	void moveTo(float x, float y);
 	void vertex(float x, float y);
@@ -112,8 +120,8 @@ namespace NvgCanvasFunctions
 	
 	extern Canvas canvas;
 	
-	inline void begin() { canvas.begin(); }
-	inline void end() { canvas.end(); }
+	inline void beginDraw() { canvas.beginDraw(); }
+	inline void endDraw() { canvas.endDraw(); }
 	
 	inline void fill(int c) { canvas.fill(c); }
 	inline void fill(int r, int g, int b, int a = 255) { canvas.fill(r, g, b, a); }
@@ -132,6 +140,14 @@ namespace NvgCanvasFunctions
 	
 	inline void beginShape() { canvas.beginShape(); }
 	inline void endShape() { canvas.endShape(); }
+	
+	inline void beginStroke() { canvas.beginStroke(); }
+	inline void beginStroke(int r, int g, int b, int a = 255) { canvas.beginStroke(r, g, b, a); }
+	inline void endStroke() { canvas.endStroke(); }
+	
+	inline void beginFill() { canvas.beginFill(); }
+	inline void beginFill(int r, int g, int b, int a = 255) { canvas.beginFill(r, g, b, a); }
+	inline void endFill() { canvas.endFill(); }
 	
 	inline void vertex(float x, float y) { canvas.vertex(x, y); }
 	inline void moveTo(float x, float y) { canvas.moveTo(x, y); }

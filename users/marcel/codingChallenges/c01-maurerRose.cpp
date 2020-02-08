@@ -28,7 +28,7 @@ int main(int argc, char * argv[])
 		
 		framework.beginDraw(255, 255, 255, 255);
 		{
-			begin();
+			beginDraw();
 			
 			noFill();
 			
@@ -71,7 +71,7 @@ int main(int argc, char * argv[])
 			}
 			endShape();
 			
-			end();
+			endDraw();
 		}
 		framework.endDraw();
 	}
