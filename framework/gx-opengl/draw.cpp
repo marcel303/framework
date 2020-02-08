@@ -32,6 +32,7 @@
 #if !USE_LEGACY_OPENGL
 
 #include "data/engine/ShaderCommon.txt" // VS_ constants
+#include "enumTranslation.h"
 #include "gx_mesh.h"
 #include "internal.h"
 #include "Quat.h"
@@ -393,36 +394,6 @@ void gxShutdown()
 	
 	s_gxLastPrimitiveType = GX_INVALID_PRIM;
 	s_gxLastVertexCount = -1;
-}
-
-static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
-{
-	switch (primitiveType)
-	{
-	case GX_POINTS:
-		return GL_POINTS;
-	case GX_LINES:
-		return GL_LINES;
-	case GX_LINE_LOOP:
-		return GL_LINE_LOOP;
-	case GX_LINE_STRIP:
-		return GL_LINE_STRIP;
-	case GX_TRIANGLES:
-		return GL_TRIANGLES;
-	case GX_TRIANGLE_FAN:
-		return GL_TRIANGLE_FAN;
-	case GX_TRIANGLE_STRIP:
-		return GL_TRIANGLE_STRIP;
-#if USE_LEGACY_OPENGL
-	case GX_QUADS:
-		return GL_QUADS;
-#endif
-	case GX_INVALID_PRIM:
-		break;
-	}
-	
-	AssertMsg(false, "unknown GX_PRIMITIVE_TYPE", 0);
-	return GL_INVALID_ENUM;
 }
 
 static void doCapture(const bool endOfBatch)

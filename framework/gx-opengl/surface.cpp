@@ -33,26 +33,9 @@
 
 #if ENABLE_OPENGL
 
+#include "enumTranslation.h"
 #include "gx_render.h"
 #include "internal.h"
-
-static GLint toOpenGLTextureSwizzle(const int value)
-{
-	if (value == GX_SWIZZLE_ZERO)
-		return GL_ZERO;
-	else if (value == GX_SWIZZLE_ONE)
-		return GL_ONE;
-	else if (value == 0)
-		return GL_RED;
-	else if (value == 1)
-		return GL_GREEN;
-	else if (value == 2)
-		return GL_BLUE;
-	else if (value == 3)
-		return GL_ALPHA;
-	else
-		return GL_INVALID_ENUM;
-}
 
 void Surface::setSwizzle(int r, int g, int b, int a)
 {
