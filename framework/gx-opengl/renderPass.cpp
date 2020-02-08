@@ -231,7 +231,9 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 		glClearDepthf(depth);
 		checkErrorGL();
 	#endif
-		clearFlags |= GL_DEPTH_BUFFER_BIT;
+		glClearStencil(0);
+
+		clearFlags |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
 	}
 
 	if (clearFlags)

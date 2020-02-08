@@ -365,7 +365,10 @@ static GLenum translateStencilFunc(const GX_STENCIL_FUNC func)
 void clearStencil(uint8_t value)
 {
 	glClearStencil(value);
+	checkErrorGL();
+
 	glClear(GL_STENCIL_BUFFER_BIT);
+	checkErrorGL();
 }
 
 void setStencilTest(const StencilState & front, const StencilState & back)
