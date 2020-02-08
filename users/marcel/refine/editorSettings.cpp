@@ -5,8 +5,21 @@
 #include "reflection.h"
 #include "reflection-textio.h"
 #include "TextIO.h"
-#include <cxxabi.h>
 #include <typeinfo>
+
+#if defined(__GNUC__)
+#include <cxxabi.h>
+static std::string demangle(const char * name)
+{
+	int status;
+	return abi::__cxa_demangle(name, 0, 0, &status);
+}
+#else
+static std::string demangle(const char * name)
+{
+	return name;
+}
+#endif
 
 static void addTypes(TypeDB & typeDB)
 {
@@ -23,8 +36,7 @@ void saveEditorSettings(FileEditor * editor)
 	if (editor == nullptr)
 		return;
 	
-	int status;
-	const std::string typeName = abi::__cxa_demangle(typeid(*editor).name(), 0, 0, &status);
+	const std::string typeName = demangle(typeid(*editor).name());
 	
 	TypeDB typeDB;
 	auto & type = typeDB.add(typeid(*editor), typeName.c_str());
@@ -50,8 +62,7 @@ void saveEditorSettings(FileEditor * editor)
 
 void loadEditorSettings(FileEditor * editor)
 {
-	int status;
-	const std::string typeName = abi::__cxa_demangle(typeid(*editor).name(), 0, 0, &status);
+	const std::string typeName = demangle(typeid(*editor).name());
 	
 	TypeDB typeDB;
 	auto & type = typeDB.add(typeid(*editor), typeName.c_str());
