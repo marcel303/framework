@@ -93,11 +93,17 @@
 #endif
 #endif
 
-static float scale255(const float v)
+#ifndef HAS_SCALE255
+#define HAS_SCALE255
+
+static const float rcp255 = 1.f / 255.f;
+
+static inline float scale255(const float v)
 {
-	static const float m = 1.f / 255.f;
-	return v * m;
+	return v * rcp255;
 }
+
+#endif
 
 static int getCurrentBackingScale();
 static void getCurrentBackingSize(int & sx, int & sy);

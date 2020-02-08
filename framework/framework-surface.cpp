@@ -309,12 +309,17 @@ SURFACE_FORMAT Surface::getFormat() const
 	return m_properties.colorTarget.format;
 }
 
-static const float s255 = 1.f / 255.f;
+#ifndef HAS_SCALE255
+#define HAS_SCALE255
 
-inline float scale255(const float v)
+static const float rcp255 = 1.f / 255.f;
+
+static inline float scale255(const float v)
 {
-	return v * s255;
+	return v * rcp255;
 }
+
+#endif
 
 void Surface::clear(int r, int g, int b, int a)
 {

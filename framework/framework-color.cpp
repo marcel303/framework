@@ -29,12 +29,17 @@
 #include "StringEx.h"
 #include <algorithm>
 
+#ifndef HAS_SCALE255
+#define HAS_SCALE255
+
 static const float rcp255 = 1.f / 255.f;
 
-static float scale255(const float v)
+static inline float scale255(const float v)
 {
 	return v * rcp255;
 }
+
+#endif
 
 Color::Color()
 {

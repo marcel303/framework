@@ -790,11 +790,11 @@ void gxColor4fv(const float * rgba)
 	s_gxVertex.cw = rgba[3];
 }
 
-static const float s255 = 1.f / 255.f;
+static const float rcp255 = 1.f / 255.f;
 
-inline float scale255(const float v)
+static inline float scale255(const float v)
 {
-	return v * s255;
+	return v * rcp255;
 }
 
 void gxColor3ub(int r, int g, int b)
