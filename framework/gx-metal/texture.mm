@@ -219,6 +219,7 @@ void GxTexture::clearAreaToZero(const int x, const int y, const int sx, const in
 		ColorTarget target(texture);
 		
 		// todo : use blit encoder to write zeroes ?
+		// todo : use a separate shader for this. perhaps a Metal compute shader ?
 		
 		pushRenderPass(&target, false, nullptr, false, "GxTexture::clearf");
 		{

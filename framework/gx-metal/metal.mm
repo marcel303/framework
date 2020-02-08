@@ -2688,12 +2688,10 @@ void gxValidateShaderResources()
 		auto * shader = static_cast<Shader*>(globals.shader);
 		auto & cacheElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
 		
-	// todo : look at shader to see how many textures are used
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
 			if (cacheElem.vsTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
 		
-	// todo : look at shader to see how many textures are used
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
 			if (cacheElem.psTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setFragmentTexture:cacheElem.psTextures[i] atIndex:i];

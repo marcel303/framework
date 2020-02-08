@@ -7,35 +7,28 @@
 
 void Surface::setSwizzle(int r, int g, int b, int a)
 {
-	AssertMsg(false, "Surface::setSwizzle not yet implemented", 0);
+	logWarning("Surface::setSwizzle not yet implemented");
 }
 
 void Surface::blitTo(Surface * surface) const
 {
-#if 1
 	pushSurface(surface);
 	{
 		pushDepthTest(false, DEPTH_LESS, false);
 		pushColorWriteMask(1, 1, 1, 1);
+		pushBlend(BLEND_OPAQUE);
 		{
-		// todo : use a dedicated shader for this
-			setColor(colorWhite);
-			gxSetTexture(getTexture());
+			Shader shader("engine/gx-metal/surface-blit");
+			setShader(shader);
+			shader.setTexture("source", 0, getTexture());
 			drawRect(0, 0, getWidth(), getHeight());
-			gxSetTexture(0);
+			clearShader();
 		}
+		popBlend();
 		popColorWriteMask();
 		popDepthTest();
 	}
 	popSurface();
-#else
-	id<MTLTexture> src_texture = (id<MTLTexture>)m_colorTarget[m_bufferId]->getMetalTexture();
-	id<MTLTexture> dst_texture = (id<MTLTexture>)surface->m_colorTarget[surface->m_bufferId]->getMetalTexture();
-	
-	// note : src pixel format must equal dst pixel format
-	
-	metal_copy_texture_to_texture(src_texture, 0, 0, 0, src_texture.width, src_texture.height, dst_texture, 0, 0, dst_texture.pixelFormat);
-#endif
 }
 
 void blitBackBufferToSurface(Surface * surface)
