@@ -150,6 +150,8 @@ rteFileWatcher_Windows::~rteFileWatcher_Windows()
 
 void rteFileWatcher_Windows::init(const char * path)
 {
+	this->path = path;
+
 	Assert(fileWatcher == INVALID_HANDLE_VALUE);
 	fileWatcher = FindFirstChangeNotificationA(path, TRUE, FILE_NOTIFY_CHANGE_LAST_WRITE);
 	Assert(fileWatcher != INVALID_HANDLE_VALUE);
@@ -163,6 +165,26 @@ void rteFileWatcher_Windows::shut()
 	Assert(result);
 
 	fileWatcher = INVALID_HANDLE_VALUE;
+}
+
+void rteFileWatcher_Windows::tick()
+{
+	if (fileWatcher != INVALID_HANDLE_VALUE)
+	{
+		if (WaitForSingleObject(fileWatcher, 0) == WAIT_OBJECT_0)
+		{
+			if (pathChanged != nullptr)
+				pathChanged(path.c_str());
+
+			BOOL result = FindNextChangeNotification(fileWatcher);
+			Assert(result);
+
+			if (!result)
+			{
+				LOG_ERR("failed to watch for next file change notification", 0);
+			}
+		}
+	}
 }
 
 #endif

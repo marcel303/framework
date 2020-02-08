@@ -34,6 +34,7 @@
 struct rteFileWatcherBase
 {
 	std::function<void(const char*)> fileChanged;
+	std::function<void(const char*)> pathChanged;
 	
 	virtual ~rteFileWatcherBase() { }
 	
@@ -51,8 +52,6 @@ struct rteFileInfo
 struct rteFileWatcher_Basic : rteFileWatcherBase
 {
 	std::vector<rteFileInfo> fileInfos;
-	
-	std::function<void(const char*)> fileChanged;
 
 	virtual void init(const char * path) override;
 	virtual void shut() override;
@@ -85,18 +84,17 @@ struct rteFileWatcher_OSX : rteFileWatcherBase
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-struct rteFileWatcher_Windows
+struct rteFileWatcher_Windows : rteFileWatcherBase
 {
 	std::string path;
 	
 	HANDLE fileWatcher = INVALID_HANDLE_VALUE;
-	
-	std::function<void(const char*)> fileChanged;
 
-	~rteFileWatcher_OSX();
+	virtual ~rteFileWatcher_Windows() override;
 	
-	void init(const char * path);
-	void shut();
+	virtual void init(const char * path) override;
+	virtual void shut() override;
+	virtual void tick() override;
 };
 
 #endif

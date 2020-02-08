@@ -156,13 +156,80 @@ void rteFileWatcher_Basic::tick()
 
 			if (changed)
 			{
-				handleFileChange(fi.filename.c_str());
+				if (fileChanged != nullptr)
+				{
+					fileChanged(fi.filename.c_str());
+				}
 			}
 		}
 	}
 }
 
-#if defined(MACOS) && false
+//
+
+struct rteFileWatcher_BasicWithPathOptimize : rteFileWatcherBase
+{
+	rteFileWatcherBase * pathWatcher = nullptr;
+	rteFileWatcher_Basic fileWatcher_Basic;
+	bool anyChange = false;
+
+	virtual void init(const char * path) override
+	{
+		fileWatcher_Basic.init(path);
+		fileWatcher_Basic.fileChanged = [](const char * filename)
+		{
+			handleFileChange(filename);
+		};
+
+	#if defined(WINDOWS)
+		pathWatcher = new rteFileWatcher_Windows();
+	#endif
+		
+		if (pathWatcher != nullptr)
+		{
+			pathWatcher->init(path);
+
+			pathWatcher->pathChanged = [&](const char * path)
+			{
+				anyChange = true;
+			};
+		}
+	}
+
+	virtual void shut() override
+	{
+		if (pathWatcher != nullptr)
+		{
+			pathWatcher->shut();
+
+			delete pathWatcher;
+			pathWatcher = nullptr;
+		}
+
+		fileWatcher_Basic.shut();
+	}
+
+	virtual void tick() override
+	{
+		pathWatcher->tick();
+
+		if (anyChange)
+		{
+			anyChange = false;
+
+		#if defined(WINDOWS)
+			Sleep(100);
+		#endif
+		
+			fileWatcher_Basic.tick();
+		}
+	}
+
+};
+
+//
+
+#if defined(MACOS)
 
 #include <list>
 
@@ -204,59 +271,21 @@ void tickRealTimeEditing()
 
 #elif defined(WIN32)
 
-static HANDLE s_fileWatcher = INVALID_HANDLE_VALUE;
+static rteFileWatcher_BasicWithPathOptimize s_fileWatcher;
 
 void initRealTimeEditing()
 {
-	if (s_fileWatcher != INVALID_HANDLE_VALUE)
-	{
-		BOOL result = FindCloseChangeNotification(s_fileWatcher);
-		Assert(result);
-
-		s_fileWatcher = INVALID_HANDLE_VALUE;
-	}
-	
-	fillFileInfos();
-	
-	Assert(s_fileWatcher == INVALID_HANDLE_VALUE);
-	s_fileWatcher = FindFirstChangeNotificationA(".", TRUE, FILE_NOTIFY_CHANGE_LAST_WRITE);
-	Assert(s_fileWatcher != INVALID_HANDLE_VALUE);
-	if (s_fileWatcher == INVALID_HANDLE_VALUE)
-		logError("failed to find first change notification");
+	s_fileWatcher.init(".");
 }
 
 void shutRealTimeEditing()
 {
-	clearFileInfos();
-	
-	BOOL result = FindCloseChangeNotification(fileWatcher);
-	Assert(result);
+	s_fileWatcher.shut();
 }
 
 void tickRealTimeEditing()
 {
-	if (s_fileWatcher != INVALID_HANDLE_VALUE)
-	{
-		if (WaitForSingleObject(s_fileWatcher, 0) != WAIT_OBJECT_0)
-		{
-			return;
-		}
-
-		Sleep(100);
-	}
-	
-	checkFileInfos();
-	
-	if (s_fileWatcher != INVALID_HANDLE_VALUE)
-	{
-		BOOL result = FindNextChangeNotification(s_fileWatcher);
-		Assert(result);
-
-		if (!result)
-		{
-			logError("failed to watch for next file change notification");
-		}
-	}
+	s_fileWatcher.tick();
 }
 
 #else
