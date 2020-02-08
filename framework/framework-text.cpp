@@ -247,7 +247,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 		Shader & shader = globals.builtinShaders->bitmappedText.get();
 		setShader(shader);
 		
-		shader.setTexture("source", 0, globals.font->textureAtlas->texture->id);
+		shader.setTexture("source", 0, globals.font->textureAtlas->texture->id, false, true);
 		
 		gxBegin(GX_QUADS);
 	}
@@ -257,7 +257,7 @@ static void drawText_FreeType(FT_Face face, int size, const GlyphCacheElem ** gl
 		// when the text finally does get rendered, it uses the latest contents of the texture
 		// atlas
 		Shader * shader = static_cast<Shader*>(globals.shader);
-		shader->setTexture("source", 0, globals.font->textureAtlas->texture->id);
+		shader->setTexture("source", 0, globals.font->textureAtlas->texture->id, false, true);
 	}
 	
 	for (size_t i = 0; i < numGlyphs; ++i)
@@ -419,7 +419,7 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		Shader & shader = globals.builtinShaders->msdfText.get();
 		setShader(shader);
 		
-		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id);
+		shader.setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id, true, true);
 		
 		gxBegin(GX_QUADS);
 	}
@@ -429,7 +429,7 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		// when the text finally does get rendered, it uses the latest contents of the texture
 		// atlas
 		Shader * shader = static_cast<Shader*>(globals.shader);
-		shader->setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id);
+		shader->setTexture("msdf", 0, glyphCache.m_textureAtlas->texture->id, true, true);
 	}
 	
 	const float scale = stbtt_ScaleForPixelHeight(&glyphCache.m_font.fontInfo, size);
@@ -613,7 +613,7 @@ void beginTextBatch(Shader * overrideShader)
 			: globals.builtinShaders->msdfText.get();
 		
 		setShader(shader);
-		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture->id);
+		shader.setTexture("msdf", 0, globals.fontMSDF->m_glyphCache->m_textureAtlas->texture->id, true, true);
 		
 		gxBegin(GX_QUADS);
 	}

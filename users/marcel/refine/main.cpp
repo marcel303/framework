@@ -142,7 +142,7 @@ int main(int argc, char * argv[])
 	// remember the initial path and load all of the resources in there now, as we'll be changing the current working directory later
 	
 	s_dataFolder = getDirectory();
-	framework.fillCachesWithPath(".", true);
+	framework.fillCaches(true);
 	
 	// create ImGui context and set a custom font
 

@@ -386,6 +386,17 @@ struct DepthTestInfo
 	bool writeEnabled;
 };
 
+struct DepthBiasInfo
+{
+	float depthBias;
+	float slopeScale;
+};
+
+struct AlphaToCoverageInfo
+{
+	bool enabled;
+};
+
 //
 
 struct CullModeInfo
@@ -440,6 +451,9 @@ public:
 	bool depthTestEnabled;
 	DEPTH_TEST depthTest;
 	bool depthTestWriteEnabled;
+	float depthBias;
+	float depthBiasSlopeScale;
+	bool alphaToCoverageEnabled;
 	bool stencilEnabled;
 	StencilState frontStencilState;
 	StencilState backStencilState;
@@ -453,6 +467,7 @@ public:
 	float hqGradientBias;
 	float hqGradientScale;
 	bool hqTextureEnabled;
+	GxTextureId hqTexture;
 	Mat4x4 hqTextureMatrix;
 	bool hqUseScreenSize;
 	FontCacheElem * font;
@@ -960,6 +975,12 @@ public:
 	BuiltinShader threshold;
 	BuiltinShader thresholdValue;
 	
+	BuiltinShader grayscaleLumi;
+	BuiltinShader grayscaleWeights;
+	
+	BuiltinShader hueAssign;
+	BuiltinShader hueShift;
+	
 	BuiltinShader hqLine;
 	BuiltinShader hqFilledTriangle;
 	BuiltinShader hqFilledCircle;
@@ -1013,7 +1034,7 @@ extern Globals globals;
 extern TextureCache g_textureCache;
 #if ENABLE_OPENGL
 extern ShaderCache g_shaderCache;
-#if ENABLE_OPENGL_COMPUTE_SHADER
+#if ENABLE_COMPUTE_SHADER
 extern ComputeShaderCache g_computeShaderCache;
 #endif
 #endif

@@ -34,7 +34,6 @@
 #include "graph.h"
 #include "graphEdit.h"
 #include "Log.h"
-#include <algorithm>
 
 //
 
@@ -381,6 +380,11 @@ void AudioGraphManager_Basic::freeContext(AudioGraphContext *& context)
 	context = nullptr;
 }
 
+AudioGraphContext * AudioGraphManager_Basic::getContext()
+{
+	return context;
+}
+
 AudioGraphInstance * AudioGraphManager_Basic::createInstance(const char * filename, AudioGraphContext * context, const bool createdPaused)
 {
 	if (context == nullptr)
@@ -718,6 +722,11 @@ void AudioGraphManager_RTE::freeContext(AudioGraphContext *& context)
 	context = nullptr;
 }
 
+AudioGraphContext * AudioGraphManager_RTE::getContext()
+{
+	return context;
+}
+
 AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename, AudioGraphContext * context, const bool createdPaused)
 {
 	if (context == nullptr)
@@ -960,7 +969,7 @@ void AudioGraphManager_RTE::drawEditor(const int sx, const int sy)
 
 		selectedFile->graphEdit->draw();
 		
-	#if 1 // todo : add a nice UI for drawing the filter response
+	#if 0 // todo : add a nice UI for drawing the filter response
 		/*
 		todo : let audio node define:
 		- a custom editor interface
@@ -1149,6 +1158,11 @@ void AudioGraphManager_MultiRTE::freeContext(AudioGraphContext *& context)
 	
 	delete context;
 	context = nullptr;
+}
+
+AudioGraphContext * AudioGraphManager_MultiRTE::getContext()
+{
+	return context;
 }
 
 AudioGraphInstance * AudioGraphManager_MultiRTE::createInstance(const char * filename, AudioGraphContext * context, const bool createdPaused)

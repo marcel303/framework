@@ -28,6 +28,7 @@
 #include "framework.h"
 #include "imgui.h"
 #include "imgui-framework.h"
+#include <SDL2/SDL_clipboard.h>
 
 FrameworkImGuiContext::~FrameworkImGuiContext()
 {

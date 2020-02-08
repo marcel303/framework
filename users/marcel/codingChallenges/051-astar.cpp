@@ -11,8 +11,6 @@ Coding Challenge #51: A* Path Finding
 	Part 3: https://youtu.be/jwRT4PCT6RU
 */
 
-// todo : trigger sounds at the location of the new top position
-
 static const int kGridSx = 80;
 static const int kGridSy = 60;
 
@@ -149,9 +147,14 @@ int main(int argc, char * argv[])
 	
 	// perform path finding, iteratively
 	
+	int speed = 8;
+	
     for (;;)
     {
-    	//SDL_Delay(500);
+    	if (keyboard.wentDown(SDLK_a) && speed < 10)
+    		speed++;
+    	if (keyboard.wentDown(SDLK_z) && speed > 1)
+    		speed--;
 		
     	framework.process();
     	
@@ -161,65 +164,67 @@ int main(int argc, char * argv[])
 		if (mouse.wentDown(BUTTON_LEFT))
 			restart();
 		
-	for (int i = 0; i < 8; ++i) // todo : add controls
-        if (reached == false && active_queue.empty() == false)
-        {
-            auto elem = active_queue.top();
-            active_queue.pop();
+		for (int i = 0; i < speed; ++i)
+		{
+			if (reached == false && active_queue.empty() == false)
+			{
+				auto elem = active_queue.top();
+				active_queue.pop();
 
-            current_coord = elem.coord;
-			
-            processed_set.insert(current_coord);
-			
-            if (current_coord.x == destination_coord.x &&
-            	current_coord.y == destination_coord.y)
-			{
-				reached = true;
-			}
-			else
-			{
-				for (int dx = -1; dx <= +1; ++dx)
+				current_coord = elem.coord;
+				
+				processed_set.insert(current_coord);
+				
+				if (current_coord.x == destination_coord.x &&
+					current_coord.y == destination_coord.y)
 				{
-					for (int dy = -1; dy <= +1; ++dy)
+					reached = true;
+				}
+				else
+				{
+					for (int dx = -1; dx <= +1; ++dx)
 					{
-						if (dx == 0 && dy == 0)
-							continue;
-
-						const int new_x = elem.coord.x + dx;
-						const int new_y = elem.coord.y + dy;
-						
-						if (new_x < 0 || new_x >= kGridSx || new_y < 0 || new_y >= kGridSy)
-							continue;
-						if (grid.cells[new_x][new_y].blocked)
-							continue;
-						
-						AstarVisitedNode visited_node;
-						visited_node.coord.x = new_x;
-						visited_node.coord.y = new_y;
-						visited_node.parent_coord = elem.coord;
-
-						if (visited_set.count(visited_node.coord) == 0)
+						for (int dy = -1; dy <= +1; ++dy)
 						{
-							visited_set[visited_node.coord] = visited_node;
+							if (dx == 0 && dy == 0)
+								continue;
 
-							const int left_x = destination_coord.x - new_x;
-							const int left_y = destination_coord.y - new_y;
+							const int new_x = elem.coord.x + dx;
+							const int new_y = elem.coord.y + dy;
 							
-							AstarElem new_elem;
-							new_elem.coord = visited_node.coord;
-							new_elem.cost = elem.cost + hypot(dx, dy);
-							new_elem.cost_to_destination = new_elem.cost + hypot(left_x, left_y);
-							active_queue.push(new_elem);
+							if (new_x < 0 || new_x >= kGridSx || new_y < 0 || new_y >= kGridSy)
+								continue;
+							if (grid.cells[new_x][new_y].blocked)
+								continue;
+							
+							AstarVisitedNode visited_node;
+							visited_node.coord.x = new_x;
+							visited_node.coord.y = new_y;
+							visited_node.parent_coord = elem.coord;
+
+							if (visited_set.count(visited_node.coord) == 0)
+							{
+								visited_set[visited_node.coord] = visited_node;
+
+								const int left_x = destination_coord.x - new_x;
+								const int left_y = destination_coord.y - new_y;
+								
+								AstarElem new_elem;
+								new_elem.coord = visited_node.coord;
+								new_elem.cost = elem.cost + hypot(dx, dy);
+								new_elem.cost_to_destination = new_elem.cost + hypot(left_x, left_y);
+								active_queue.push(new_elem);
+							}
 						}
 					}
 				}
 			}
-        }
-        else
-        {
-        	restart();
+			else
+			{
+				restart();
+			}
 		}
-
+		
         framework.beginDraw(0, 0, 0, 0);
         {
         	gxScalef(800 / float(kGridSx), 600 / float(kGridSy), 1);

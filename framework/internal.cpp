@@ -1828,10 +1828,6 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 
 bool MsdfGlyphCache::saveCache(const char * filename) const
 {
-#if ENABLE_METAL
-	AssertMsg(false, "todo : add Metal support for reading back of texture data, and saving the MSDF glyph cache", 0);
-	return false;
-#else
 	bool result = true;
 	
 	if (m_isLoaded == false)
@@ -1869,27 +1865,6 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 	if (result == true)
 	{
 		// save glyphs
-		
-		GLuint oldBuffer = 0;
-		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
-		checkErrorGL();
-		
-		//
-
-		GLuint frameBuffer = 0;
-		
-		glGenFramebuffers(1, &frameBuffer);
-		checkErrorGL();
-		
-		result &= frameBuffer != 0;
-		
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_textureAtlas->texture->id, 0);
-		checkErrorGL();
-		
-		glReadBuffer(GL_COLOR_ATTACHMENT0);
-		
-		//
 		
 		const int32_t numGlyphs = m_map.size();
 		
@@ -1941,8 +1916,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 				const int numBytes = atlasElemSx * atlasElemSy * sizeof(float) * 4;
 				uint8_t * bytes = new uint8_t[numBytes];
 				
-				glReadPixels(ae->x, ae->y, ae->sx, ae->sy, GL_RGBA, GL_FLOAT, bytes);
-				checkErrorGL();
+				result &= m_textureAtlas->texture->downloadContents(ae->x, ae->y, ae->sx, ae->sy, bytes, numBytes);
 				
 				result &= fwrite(bytes, numBytes, 1, file) == 1;
 				
@@ -1954,16 +1928,6 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 				}
 			}
 		}
-		
-		//
-		
-		glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
-		checkErrorGL();
-		
-		//
-		
-		glDeleteFramebuffers(1, &frameBuffer);
-		frameBuffer = 0;
 	}
 	
 	if (file != nullptr)
@@ -1978,7 +1942,6 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 	}
 	
 	return result;
-#endif
 }
 
 // -----
@@ -2064,6 +2027,10 @@ BuiltinShaders::BuiltinShaders()
 	, textureSwizzle("engine/builtin-textureswizzle")
 	, threshold("engine/builtin-threshold")
 	, thresholdValue("engine/builtin-threshold-componentwise")
+	, grayscaleLumi("engine/builtin-grayscale-lumi")
+	, grayscaleWeights("engine/builtin-grayscale-weights")
+	, hueAssign("engine/builtin-hue-assign")
+	, hueShift("engine/builtin-hue-shift")
 	, hqLine("engine/builtin-hq-line")
 	, hqFilledTriangle("engine/builtin-hq-filled-triangle")
 	, hqFilledCircle("engine/builtin-hq-filled-circle")

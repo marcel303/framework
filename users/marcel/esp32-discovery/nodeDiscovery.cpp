@@ -2,11 +2,19 @@
 #include "Log.h"
 #include "nodeDiscovery.h"
 #include "StringEx.h"
-#include <SDL2/SDL.h>
+#include <chrono>
+#include <mutex>
 #include <string>
 #include <string.h>
+#include <thread>
 
 #define DISCOVERY_RECEIVE_PORT 2400
+
+static int64_t getTicks()
+{
+	auto now = std::chrono::system_clock::now();
+	return std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
+}
 
 NodeDiscoveryProcess::~NodeDiscoveryProcess()
 {
@@ -42,7 +50,7 @@ void NodeDiscoveryProcess::shut()
 
 void NodeDiscoveryProcess::purgeStaleRecords(const int timeoutInSeconds)
 {
-	const int ticks = SDL_GetTicks();
+	const int64_t ticks = getTicks();
 	
 	lock();
 	{
@@ -96,9 +104,9 @@ void NodeDiscoveryProcess::beginThread()
 	Assert(mutex == nullptr);
 	Assert(thread == nullptr);
 	
-	mutex = SDL_CreateMutex();
+	mutex = new std::mutex();
 	
-	thread = SDL_CreateThread(threadMain, "ESP32 Discovery Process", this);
+	thread = new std::thread(threadMain, this); // todo : set thread name to "ESP32 Discovery Process"
 }
 
 void NodeDiscoveryProcess::endThread()
@@ -113,25 +121,26 @@ void NodeDiscoveryProcess::endThread()
 	
 	if (thread != nullptr)
 	{
-		SDL_WaitThread(thread, nullptr);
+		thread->join();
+		delete thread;
 		thread = nullptr;
 	}
 	
 	if (mutex != nullptr)
 	{
-		SDL_DestroyMutex(mutex);
+		delete mutex;
 		mutex = nullptr;
 	}
 }
 
 void NodeDiscoveryProcess::lock() const
 {
-	Verify(SDL_LockMutex(mutex) == 0);
+	mutex->lock();
 }
 
 void NodeDiscoveryProcess::unlock() const
 {
-	Verify(SDL_UnlockMutex(mutex) == 0);
+	mutex->unlock();
 }
 
 int NodeDiscoveryProcess::threadMain(void * obj)
@@ -179,7 +188,7 @@ void NodeDiscoveryProcess::ProcessPacket(const char * data, int size, const IpEn
 	record.capabilities = discoveryPacket->capabilities;
 	strcpy_s(record.description, sizeof(record.description), discoveryPacket->description);
 	record.endpointName = remoteEndpoint;
-	record.receiveTime = SDL_GetTicks();
+	record.receiveTime = getTicks();
 	
 	if (existingRecord == nullptr)
 	{

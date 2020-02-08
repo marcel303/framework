@@ -25,8 +25,8 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "audioInputOutputObject.h"
 #include "audioNodeInput.h"
-//#include "audioUpdateHandler.h" // todo : expose input channels some other way
 
 AUDIO_NODE_TYPE(AudioNodeInput)
 {
@@ -42,25 +42,23 @@ void AudioNodeInput::tick(const float dt)
 	const int channel = getInputInt(kInput_Channel, 0);
 	const AudioFloat * gain = getInputAudioFloat(kInput_Gain, &AudioFloat::One);
 	
-#if true
-	audioOutput.setZero();
-#else
-	if (isPassthrough || channel < 0 || channel >= g_numAudioInputChannels)
+	AudioInputOutputObject * audioIO = g_currentAudioGraph->context->findObject<AudioInputOutputObject>();
+	
+	if (isPassthrough || audioIO == nullptr || channel < 0 || channel >= audioIO->numInputChannels)
 	{
 		audioOutput.setZero();
 	}
 	else
 	{
-		const float * __restrict channelPtr = g_audioInputChannels + channel;
+		const float * __restrict channelPtr = audioIO->inputBuffer + channel;
 
 		audioOutput.setVector();
 
-		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += g_numAudioInputChannels)
+		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i, channelPtr += audioIO->numInputChannels)
 		{
 			audioOutput.samples[i] = *channelPtr;
 		}
 		
 		audioOutput.mul(*gain);
 	}
-#endif
 }

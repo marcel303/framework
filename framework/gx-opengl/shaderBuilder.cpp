@@ -248,6 +248,7 @@ R"HEADER(
 					return false;
 				}
 				
+				// note : would like to set 'layout(location = VS_POSITION)' etc for the attribute, but OpenGL doesn't allow identifiers inside the layout specification. so 'VS_POSITION' would not be allowed, only numbers!
 				sb.AppendFormat("shader_attrib %s %s;\n", type, name);
 			}
 			else if (eat_word(linePtr, "uniform"))
@@ -337,6 +338,9 @@ R"HEADER(
 		{
 			if (u.buffer_name.empty())
 			{
+				if (currentUniformBufferName[0] != 0)
+					endUniformBuffer();
+				
 				sb.AppendFormat("uniform %s %s;\n", u.type.c_str(), u.name.c_str());
 			}
 			else

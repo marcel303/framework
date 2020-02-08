@@ -1,11 +1,13 @@
 app audiograph-000-minimal
 	depend_library audiograph
+	depend_library audiograph-nodes-4dsound-1.6
 	add_files 000-minimal.cpp
 	resource_path data
 	group audiograph-examples
 
 app audiograph-010-fileselect
 	depend_library audiograph
+	depend_library audiograph-nodes-4dsound-1.6
 	add_files 010-fileselect.cpp
 	resource_path data
 	group audiograph-examples
@@ -82,12 +84,14 @@ app audiograph-440-realtime-multiwindow
 
 app audiograph-480-editor-customdraw
 	depend_library audiograph
+	depend_library audiograph-nodes-4dsound-1.6
 	add_files 480-editor-customdraw.cpp
 	resource_path data
 	group audiograph-examples
 
 app audiograph-500-consoleapp
 	depend_library audiograph
+	depend_library audiograph-nodes-4dsound-1.6
 	add_files 500-consoleapp.cpp
 	resource_path data
 	group audiograph-examples
@@ -101,6 +105,7 @@ app audiograph-700-4dworld
 
 app audiograph-710-go
 	depend_library audiograph
+	depend_library audiograph-nodes-4dsound-1.6
 	add_files 710-go.cpp
 	resource_path data
 	group audiograph-examples

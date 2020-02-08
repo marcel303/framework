@@ -28,6 +28,9 @@
 #pragma once
 
 #include "framework.h"
+
+#if ENABLE_METAL
+
 #include "gx_render.h"
 #include "metal.h"
 
@@ -161,3 +164,5 @@ public:
 	
 	void * getMetalTexture() const { return m_depthTexture; }
 };
+
+#endif

@@ -37,7 +37,8 @@
 #include "StringEx.h"
 
 ShaderCache g_shaderCache;
-#if ENABLE_OPENGL_COMPUTE_SHADER
+
+#if ENABLE_COMPUTE_SHADER
 ComputeShaderCache g_computeShaderCache;
 #endif
 
@@ -140,13 +141,13 @@ static bool fileExists(const char * filename)
 	}
 }
 
-static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages, const char * outputs)
+static bool loadShader(const char * filename, GLuint & shader, GLuint type, const char * defines, std::vector<std::string> & errorMessages, std::vector<std::string> & includedFiles, const char * outputs)
 {
 	bool result = true;
 
 	std::string source;
 	
-	if (!preprocessShaderFromFile(filename, source, kPreprocessShader_AddOpenglLineAndFileMarkers, errorMessages))
+	if (!preprocessShaderFromFile(filename, source, kPreprocessShader_AddOpenglLineAndFileMarkers, errorMessages, includedFiles))
 	{
 		result = false;
 	}
@@ -156,7 +157,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			!buildOpenglText(source.c_str(),
 				type == GL_VERTEX_SHADER   ? 'v' :
 				type == GL_FRAGMENT_SHADER ? 'p' :
-			#if ENABLE_OPENGL_COMPUTE_SHADER
+			#if ENABLE_COMPUTE_SHADER
 				type == GL_COMPUTE_SHADER  ? 'c' :
 			#endif
 			 	'u',
@@ -175,7 +176,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			{
 				result = false;
 				
-			#if ENABLE_OPENGL_COMPUTE_SHADER
+			#if ENABLE_COMPUTE_SHADER
 				if (type == GL_COMPUTE_SHADER)
 					logError("compute shader creation failed. compute is possibly not supported?");
 				else
@@ -200,8 +201,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 					4.50              4.5
 				*/
 				
-			#if defined(IPHONEOS)
-			// todo : add FRAMEWORK_USE_OPENGL_ES3 compile definition
+			#if ENABLE_OPENGL_ES3
 				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 300\nprecision highp float;\n";
 			#elif USE_LEGACY_OPENGL
 				const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
@@ -296,6 +296,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	version++;
 	
 	errorMessages.clear();
+	includedFiles.clear();
 	
 	bool hasVs = fileExists(vs.c_str());
 	bool hasPs = fileExists(ps.c_str());
@@ -304,7 +305,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	GLuint shaderPs = 0;
 	
 	if (hasVs)
-		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER, "", errorMessages, "");
+		result &= loadShader(vs.c_str(), shaderVs, GL_VERTEX_SHADER, "", errorMessages, includedFiles, "");
 	else
 	{
 		errorMessages.push_back(String::Format("shader %s doesn't have a vertex shader. cannot load", _name));
@@ -316,7 +317,7 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 	{
 		if (result)
 		{
-			result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "", errorMessages, outputs);
+			result &= loadShader(ps.c_str(), shaderPs, GL_FRAGMENT_SHADER, "", errorMessages, includedFiles, outputs);
 		}
 	}
 	
@@ -340,6 +341,8 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 		glBindAttribLocation(program, VS_COLOR,         "in_color");
 		glBindAttribLocation(program, VS_TEXCOORD0,     "in_texcoord0");
 		glBindAttribLocation(program, VS_TEXCOORD1,     "in_texcoord1");
+		glBindAttribLocation(program, VS_BLEND_INDICES, "in_skinningBlendIndices");
+		glBindAttribLocation(program, VS_BLEND_WEIGHTS, "in_skinningBlendWeights");
 		checkErrorGL();
 		
 		glLinkProgram(program);
@@ -376,7 +379,6 @@ void ShaderCacheElem::load(const char * _name, const char * filenameVs, const ch
 			params[kSp_ModelViewMatrix].set(glGetUniformLocation(program, "ModelViewMatrix"));
 			params[kSp_ModelViewProjectionMatrix].set(glGetUniformLocation(program, "ModelViewProjectionMatrix"));
 			params[kSp_ProjectionMatrix].set(glGetUniformLocation(program, "ProjectionMatrix"));
-			params[kSp_SkinningMatrices].set(glGetUniformLocation(program, "skinningMatrices"));
 			params[kSp_Texture].set(glGetUniformLocation(program, "source"));
 			params[kSp_Params].set(glGetUniformLocation(program, "params"));
 			params[kSp_ShadingParams].set(glGetUniformLocation(program, "shadingParams"));
@@ -422,6 +424,15 @@ void ShaderCacheElem::reload()
 	load(oldName.c_str(), oldVs.c_str(), oldPs.c_str(), oldOutputs.c_str());
 }
 
+bool ShaderCacheElem::hasIncludedFile(const char * filename) const
+{
+	for (auto & includedFile : includedFiles)
+		if (filename == includedFile)
+			return true;
+	
+	return false;
+}
+
 void ShaderCache::clear()
 {
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
@@ -446,7 +457,7 @@ void ShaderCache::handleSourceChanged(const char * name)
 	{
 		ShaderCacheElem & cacheElem = shaderCacheItr.second;
 		
-		if (name == cacheElem.vs || name == cacheElem.ps)
+		if (name == cacheElem.vs || name == cacheElem.ps || cacheElem.hasIncludedFile(name))
 		{
 			cacheElem.reload();
 			
@@ -484,7 +495,7 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 
 //
 
-#if ENABLE_OPENGL_COMPUTE_SHADER
+#if ENABLE_COMPUTE_SHADER
 
 ComputeShaderCacheElem::ComputeShaderCacheElem()
 {
@@ -522,6 +533,7 @@ void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const 
 	version++;
 	
 	errorMessages.clear();
+	includedFiles.clear();
 
 	GLuint shaderCs = 0;
 
@@ -531,7 +543,7 @@ void ComputeShaderCacheElem::load(const char * _name, const int _groupSx, const 
 		groupSy,
 		groupSz);
 
-	result &= loadShader(name.c_str(), shaderCs, GL_COMPUTE_SHADER, defines, errorMessages, "");
+	result &= loadShader(name.c_str(), shaderCs, GL_COMPUTE_SHADER, defines, errorMessages, includedFiles, "");
 
 	if (result)
 	{
@@ -587,6 +599,15 @@ void ComputeShaderCacheElem::reload()
 	load(oldName.c_str(), groupSx, groupSy, groupSz);
 }
 
+bool ComputeShaderCacheElem::hasIncludedFile(const char * filename) const
+{
+	for (auto & includedFile : includedFiles)
+		if (filename == includedFile)
+			return true;
+	
+	return false;
+}
+
 void ComputeShaderCache::clear()
 {
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
@@ -602,6 +623,24 @@ void ComputeShaderCache::reload()
 	for (Map::iterator i = m_map.begin(); i != m_map.end(); ++i)
 	{
 		i->second.reload();
+	}
+}
+
+void ComputeShaderCache::handleSourceChanged(const char * name)
+{
+	for (auto & shaderCacheItr : m_map)
+	{
+		ComputeShaderCacheElem & cacheElem = shaderCacheItr.second;
+		
+		if (name == cacheElem.name || cacheElem.hasIncludedFile(name))
+		{
+			cacheElem.reload();
+			
+			if (globals.shader != nullptr && globals.shader->getOpenglProgram() == cacheElem.program)
+			{
+				clearShader();
+			}
+		}
 	}
 }
 

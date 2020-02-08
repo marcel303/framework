@@ -46,6 +46,7 @@
 	#include <SDL2/SDL_opengl.h>
 	#include <SDL2/SDL_syswm.h>
 	#include <Xinput.h>
+	#define PATH_MAX MAX_PATH
 #else
 	#include <dirent.h>
 	#include <unistd.h>
@@ -92,11 +93,17 @@
 #endif
 #endif
 
-static float scale255(const float v)
+#ifndef HAS_SCALE255
+#define HAS_SCALE255
+
+static const float rcp255 = 1.f / 255.f;
+
+static inline float scale255(const float v)
 {
-	static const float m = 1.f / 255.f;
-	return v * m;
+	return v * rcp255;
 }
+
+#endif
 
 static int getCurrentBackingScale();
 static void getCurrentBackingSize(int & sx, int & sy);
@@ -121,14 +128,12 @@ Gamepad gamepad[MAX_GAMEPAD];
 
 // -----
 
-static std::vector<std::string> s_resourcePaths;
-
-std::map<std::string, std::string> s_shaderSources;
-
 int s_backingScale = 1; // global backing scale multiplier. a bit of a hack as it assumed the scale never changes, but works well for most apps in most situations for now..
 
 static Stack<COLOR_MODE, 32> colorModeStack(COLOR_MUL);
 static Stack<COLOR_POST, 32> colorPostStack(POST_NONE);
+
+static std::map<std::string, std::string> s_shaderSources;
 
 //
 
@@ -1528,7 +1533,7 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 			name = name.substr(0, name.rfind('.'));
 			Shader(name.c_str());
 		}
-	 #if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER// todo : metal compute shader implementation
+	 #if ENABLE_COMPUTE_SHADER
 		else if (strstr(f, ".cs") == f + fl - 3)
 		{
 			std::string name = f;
@@ -1555,6 +1560,14 @@ void Framework::fillCachesWithPath(const char * path, bool recurse)
 
 	if (fillCachesCallback)
 		fillCachesCallback(1.f);
+}
+
+void Framework::fillCaches(bool recurse)
+{
+	for (auto & resourcePath : resourcePaths)
+		fillCachesWithPath(resourcePath.c_str(), recurse);
+	
+	fillCachesWithPath(".", recurse);
 }
 
 Window & Framework::getMainWindow()
@@ -1587,51 +1600,6 @@ int Framework::getCurrentBackingScale() const
 	return ::getCurrentBackingScale();
 }
 
-// todo : remove this entire function ..
-static void updateViewport(Surface * surface, SDL_Window * window)
-{
-#if ENABLE_METAL
-// todo : let Metal implementation handle viewport setting internally
-	if (surface != nullptr)
-	{
-		metal_set_viewport(
-			surface->getWidth() / framework.minification * surface->getBackingScale(),
-			surface->getHeight() / framework.minification * surface->getBackingScale());
-	}
-	else
-	{
-		metal_set_viewport(
-			globals.currentWindow->getWidth(),
-			globals.currentWindow->getHeight());
-	}
-#endif
-
-#if ENABLE_OPENGL
-	if (surface != nullptr)
-	{
-		glViewport(
-			0,
-			0,
-			surface->getWidth() / framework.minification * surface->getBackingScale(),
-			surface->getHeight() / framework.minification * surface->getBackingScale());
-		checkErrorGL();
-	}
-	else
-	{
-		int drawableSx;
-		int drawableSy;
-		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
-		
-		glViewport(
-			0,
-			0,
-			drawableSx,
-			drawableSy);
-		checkErrorGL();
-	}
-#endif
-}
-
 void Framework::beginDraw(int r, int g, int b, int a, float depth)
 {
 #if ENABLE_OPENGL
@@ -1645,11 +1613,6 @@ void Framework::beginDraw(int r, int g, int b, int a, float depth)
 		scale255(a));
 	
 	pushBackbufferRenderPass(true, color, enableDepthBuffer, depth, "Backbuffer");
-	
-	// initialize viewport and OpenGL matrices
-	
-// todo : remove updateViewport
-	updateViewport(nullptr, globals.currentWindow->getWindow());
 #endif
 
 #if ENABLE_METAL
@@ -1952,7 +1915,9 @@ bool Framework::fileHasChanged(const char * filename) const
 
 void Framework::registerResourcePath(const char * path)
 {
-	s_resourcePaths.push_back(path);
+	logInfo("registerResourcePath: %s", path);
+	
+	resourcePaths.push_back(path);
 }
 
 bool Framework::registerChibiResourcePaths(const char * encoded_text)
@@ -1988,6 +1953,8 @@ bool Framework::registerChibiResourcePaths(const char * encoded_text)
 					
 					if (strcmp(type, "app") == 0)
 					{
+						logInfo("changeDirectory to app path: %s", path);
+						
 						changeDirectory(path);
 					}
 				}
@@ -2000,25 +1967,34 @@ bool Framework::registerChibiResourcePaths(const char * encoded_text)
 	return result;
 }
 
-// todo : optimize to avoid memory copies
-
-static std::string s_resourcePath;
+char s_resourcePath[PATH_MAX];
 
 const char * Framework::resolveResourcePath(const char * path)
 {
-	for (auto & resourcePath : s_resourcePaths)
+	for (auto & resourcePath : resourcePaths)
 	{
-		s_resourcePath = resourcePath + "/" + path;
+		auto * end = s_resourcePath + PATH_MAX - 1;
+		auto * dst = s_resourcePath;
+		for (auto * src = resourcePath.c_str(); *src != 0 && dst < end; )
+			*dst++ = *src++;
+		if (dst < end)
+			*dst++ = '/';
+		for (auto * src = path; *src != 0 && dst < end; )
+			*dst++ = *src++;
+		*dst = 0;
+		
+		if (dst == end)
+			continue;
 		
 		FILE * file = nullptr;
-		fopen_s(&file, s_resourcePath.c_str(), "rb");
+		fopen_s(&file, s_resourcePath, "rb");
 		
 		if (file != nullptr)
 		{
 			fclose(file);
 			file = nullptr;
 			
-			return s_resourcePath.c_str();
+			return s_resourcePath;
 		}
 	}
 	
@@ -3703,6 +3679,30 @@ void clearDrawRect()
 #endif
 }
 
+//
+
+static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
+static Stack<bool, 32> lineSmoothStack(false);
+static Stack<bool, 32> wireframeStack(false);
+static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
+static Stack<DepthBiasInfo, 32> depthBiasStack(DepthBiasInfo { 0.f, 0.f });
+static Stack<AlphaToCoverageInfo, 32> alphaToCoverageStack(AlphaToCoverageInfo { false });
+static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
+
+void pushBlend(BLEND_MODE blendMode)
+{
+	blendModeStack.push(globals.blendMode);
+	
+	setBlend(blendMode);
+}
+
+void popBlend()
+{
+	const BLEND_MODE blendMode = blendModeStack.popValue();
+	
+	setBlend(blendMode);
+}
+
 void setColorMode(COLOR_MODE colorMode)
 {
 	globals.colorMode = colorMode;
@@ -3760,6 +3760,104 @@ void popColorPost()
 	const COLOR_POST value = colorPostStack.popValue();
 	
 	setColorPost(value);
+}
+
+void pushLineSmooth(bool enabled)
+{
+	lineSmoothStack.push(globals.lineSmoothEnabled);
+	
+	setLineSmooth(enabled);
+}
+
+void popLineSmooth()
+{
+	const bool value = lineSmoothStack.popValue();
+	
+	setLineSmooth(value);
+}
+
+void pushWireframe(bool enabled)
+{
+	wireframeStack.push(globals.wireframeEnabled);
+	
+	setWireframe(enabled);
+}
+
+void popWireframe()
+{
+	const bool value = wireframeStack.popValue();
+	
+	setWireframe(value);
+}
+
+void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
+{
+	const DepthTestInfo info =
+	{
+		globals.depthTestEnabled,
+		globals.depthTest,
+		globals.depthTestWriteEnabled
+	};
+	
+	depthTestStack.push(info);
+	
+	setDepthTest(enabled, test, writeEnabled);
+}
+
+void popDepthTest()
+{
+	const DepthTestInfo depthTestInfo = depthTestStack.popValue();
+	
+	setDepthTest(depthTestInfo.testEnabled, depthTestInfo.test, depthTestInfo.writeEnabled);
+}
+
+void pushDepthWrite(bool enabled)
+{
+	pushDepthTest(globals.depthTestEnabled, globals.depthTest, enabled);
+}
+
+void popDepthWrite()
+{
+	popDepthTest();
+}
+
+void pushDepthBias(float depthBias, float slopeScale)
+{
+	const DepthBiasInfo info =
+	{
+		globals.depthBias,
+		globals.depthBiasSlopeScale
+	};
+	
+	depthBiasStack.push(info);
+	
+	setDepthBias(depthBias, slopeScale);
+}
+
+void popDepthBias()
+{
+	const DepthBiasInfo info = depthBiasStack.popValue();
+	
+	setDepthBias(info.depthBias, info.slopeScale);
+}
+
+void pushAlphaToCoverage(bool enabled)
+{
+	const AlphaToCoverageInfo info =
+	{
+		globals.alphaToCoverageEnabled
+	};
+	
+	alphaToCoverageStack.push(info);
+	
+	setAlphaToCoverage(enabled);
+}
+
+void popAlphaToCoverage()
+{
+	const AlphaToCoverageInfo info = alphaToCoverageStack.popValue();
+	
+	setAlphaToCoverage(info.enabled);
 }
 
 //
@@ -3821,6 +3919,28 @@ StencilSetter & StencilSetter::writeMask(uint8_t mask)
 	writeMask(GX_STENCIL_FACE_FRONT, mask);
 	writeMask(GX_STENCIL_FACE_BACK,  mask);
 	return *this;
+}
+
+//
+
+void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
+{
+	const CullModeInfo info =
+	{
+		globals.cullMode,
+		globals.cullWinding
+	};
+	
+	cullModeStack.push(info);
+	
+	setCullMode(mode, frontFaceWinding);
+}
+
+void popCullMode()
+{
+	const CullModeInfo cullMode = cullModeStack.popValue();
+	
+	setCullMode(cullMode.mode, cullMode.winding);
 }
 
 //
@@ -4209,15 +4329,14 @@ static void applyHqShaderConstants()
 	
 	if (globals.hqTextureEnabled)
 	{
+		shader.setTexture("source", 0, globals.hqTexture, true, false);
+		
 		if (shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index != -1)
 		{
 			const Mat4x4 & tmat = globals.hqTextureMatrix;
 			
 			shader.setImmediateMatrix4x4(shaderElem.params[ShaderCacheElem::kSp_TextureMatrix].index, tmat.m_v);
 		}
-		
-	// fixme : this is broken when using Metal. set texture to gxGetTexture()
-		shader.setTextureUnit("source", 0);
 	}
 
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
@@ -4491,9 +4610,8 @@ void hqClearGradient()
 void hqSetTexture(const GxTextureId texture, const Mat4x4 & matrix)
 {
 	globals.hqTextureEnabled = true;
+	globals.hqTexture = texture;
 	globals.hqTextureMatrix = matrix;
-	
-	gxSetTexture(texture);
 }
 
 void hqSetTextureScreen(const GxTextureId texture, float x1, float y1, float x2, float y2)
@@ -4509,8 +4627,7 @@ void hqSetTextureScreen(const GxTextureId texture, float x1, float y1, float x2,
 void hqClearTexture()
 {
 	globals.hqTextureEnabled = false;
-	
-	gxSetTexture(0);
+	globals.hqTexture = 0;
 }
 
 #if ENABLE_HQ_PRIMITIVES

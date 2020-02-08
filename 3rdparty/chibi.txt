@@ -10,6 +10,7 @@ add DeepBelief
 add framework-ofx
 add freetype2-support
 add glew
+add hg-sdf
 add leapmotion
 add libfreenect2
 add liboscpack

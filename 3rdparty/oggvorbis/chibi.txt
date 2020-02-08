@@ -7,3 +7,5 @@ library oggvorbis
 
 	header_path . expose
 	header_path oggvorbis expose
+
+	license_file COPYING.txt

@@ -324,6 +324,13 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 			sliderInput.sliderIndex = i;
 			sliderInput.socketIndex = inputs.size();
 			
+			const char * sliderDesc =
+				slider.desc[0] == 0
+				? slider.name
+				: slider.desc[0] == '-'
+				? slider.desc + 1
+				: slider.desc;
+			
 			char defaultString[64];
 			sprintf_s(defaultString, sizeof(defaultString), "%g", slider.def);
 			
@@ -340,11 +347,11 @@ struct AudioNodeTypeRegistration_JsusFx : AudioNodeTypeRegistration
 				
 				// .. and add the enum input itself
 				
-				inEnum(sliderInput.name.c_str(), enumName.c_str(), defaultString, slider.desc);
+				inEnum(sliderInput.name.c_str(), enumName.c_str(), defaultString, sliderDesc);
 			}
 			else
 			{
-				in(sliderInput.name.c_str(), "audioValue", defaultString, slider.desc);
+				in(sliderInput.name.c_str(), "audioValue", defaultString, sliderDesc);
 			}
 			
 			sliderInputs.push_back(sliderInput);
@@ -637,22 +644,46 @@ void AudioNodeJsusFx::tick(const float dt)
 		
 		for (auto & sliderInput : sliderInputs)
 		{
-		#if 0
-		// todo : slider input default value should come from resource ..
-			defaultValue.setScalar(sliderInput.defaultValue);
+			Assert(jsusFx->sliders[sliderInput.sliderIndex].exists);
+			
+			// note : slider input default comes from either the serialized
+			// resource data (when set), or from the original default value
+			// set for the JSFX slider, if the aforementioned resource data
+			// isn't set. this ensures that when for instance a knob inside
+			// the resource editor is turned, the knob value will be used
+			// (when no connection exists to the input, which would override
+			// the value)
+			
+			// find the value inside the serialize resource data (if it exists)
+			
+			float valueFromResource = 0.f;
+			bool hasValueFromResource = false;
+			
+			for (auto & resourceSlider : resource->serializationData.sliders)
+			{
+				if (resourceSlider.index == sliderInput.sliderIndex)
+				{
+					Assert(hasValueFromResource == false);
+					valueFromResource = resourceSlider.value;
+					hasValueFromResource = true;
+				}
+			}
+			
+			// if we found a value inside the resource, use it as the
+			// default value for fetching the input value
+			// otherwise, just the default value for the socket as
+			// authored inside the JSFX file
+			
+			if (hasValueFromResource)
+				defaultValue.setScalar(valueFromResource);
+			else
+				defaultValue.setScalar(sliderInput.defaultValue);
+			
+			// fetch the value, and move the slider to the new value
+			// note : moveSlider will clamp the value to the value
+			// range for the slider
 			
 			const float value = getInputAudioFloat(sliderInput.socketIndex, &defaultValue)->getMean();
-		#else
-			auto input = tryGetInput(sliderInput.socketIndex);
-			
-			Assert(input != nullptr);
-			if (input == nullptr || !input->isConnected())
-				continue; // todo : move slider to its default value when input is not connected. or to whatever is set inside the serialiation data..
-			
-			const float value = input->getAudioFloat().getMean();
-		#endif
-		
-			Assert(jsusFx->sliders[sliderInput.sliderIndex].exists);
 			
 			jsusFx->moveSlider(sliderInput.sliderIndex, value);
 		}

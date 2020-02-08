@@ -185,8 +185,7 @@ bool doReflection_PlainType(
 				}
 			}
 			
-		// todo : add hasFlag method ?
-			const bool isAngle = member.findFlag<ComponentMemberFlag_EditorType_Angle>() != nullptr;
+			const bool isAngle = member.hasFlag<ComponentMemberFlag_EditorType_Angle>();
 			
 			if (isAngle)
 			{

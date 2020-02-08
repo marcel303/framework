@@ -9,6 +9,8 @@ add vfxGraph-examples
 
 push_group libraries
 
+	add 1stparty/binaural
+	
 	with_platform linux add 3rdparty/PS3EYEDriver/framework
 	with_platform macos add 3rdparty/PS3EYEDriver/framework
 	add 3rdparty

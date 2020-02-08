@@ -2,7 +2,7 @@
 
 #include "metal.h"
 
-class Color // todo : remove
+class Color
 {
 public:
 	float r, g, b, a;

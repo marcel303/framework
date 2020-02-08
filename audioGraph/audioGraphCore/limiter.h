@@ -29,7 +29,7 @@
 
 #include <math.h>
 
-// weird idea: use a limited with N measurement points.. say 1024 .. and see how limiting each sample i % N limited separately affects the waveform
+// weird idea: use a limiter with N measurement points.. say 1024 .. and see how limiting each sample i % N limited separately affects the waveform
 
 struct Limiter
 {

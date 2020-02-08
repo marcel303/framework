@@ -121,6 +121,7 @@ void ShaderCacheElem_Metal::init(MTLRenderPipelineReflection * reflection)
 void ShaderCacheElem_Metal::shut()
 {
 	errorMessages.clear();
+	includedFiles.clear();
 	
 	//
 	
@@ -185,8 +186,8 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 			std::string shaderVs_opengl;
 			std::string shaderPs_opengl;
 			
-			success &= preprocessShaderFromFile(in_filenameVs, shaderVs_opengl, 0, errorMessages);
-			success &= preprocessShaderFromFile(in_filenamePs, shaderPs_opengl, 0, errorMessages);
+			success &= preprocessShaderFromFile(in_filenameVs, shaderVs_opengl, 0, errorMessages, includedFiles);
+			success &= preprocessShaderFromFile(in_filenamePs, shaderPs_opengl, 0, errorMessages, includedFiles);
 			
 			if (success == false)
 				break;
@@ -313,6 +314,25 @@ void ShaderCacheElem_Metal::load(const char * in_name, const char * in_filenameV
 	version++;
 }
 
+void ShaderCacheElem_Metal::reload()
+{
+	const std::string oldName = name;
+	const std::string oldVs = vs;
+	const std::string oldPs = ps;
+	const std::string oldOutputs = outputs;
+
+	load(oldName.c_str(), oldVs.c_str(), oldPs.c_str(), oldOutputs.c_str());
+}
+
+bool ShaderCacheElem_Metal::hasIncludedFile(const char * filename) const
+{
+	for (auto & includedFile : includedFiles)
+		if (filename == includedFile)
+			return true;
+	
+	return false;
+}
+
 void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 {
 	if (!arg.active)
@@ -383,7 +403,7 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 				break;
 			case MTLDataTypeFloat4x4:
 				uniformInfo.elemType = 'm';
-				uniformInfo.numElems = 1;
+				uniformInfo.numElems = 16;
 				break;
 			case MTLDataTypeArray:
 				//logDebug("found MTLDataTypeArray. elementType=%d", uniform.arrayType.elementType);
@@ -391,14 +411,31 @@ void ShaderCacheElem_Metal::addUniforms(MTLArgument * arg, const char type)
 				{
 				case MTLDataTypeFloat:
 					uniformInfo.elemType = 'F';
-					uniformInfo.numElems = uniform.arrayType.arrayLength;
+					uniformInfo.numElems = 1;
+					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
+					break;
+				case MTLDataTypeFloat2:
+					uniformInfo.elemType = 'F';
+					uniformInfo.numElems = 2;
+					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
+					break;
+				case MTLDataTypeFloat3:
+					uniformInfo.elemType = 'F';
+					uniformInfo.numElems = 3;
+					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
+					break;
+				case MTLDataTypeFloat4:
+					uniformInfo.elemType = 'F';
+					uniformInfo.numElems = 4;
+					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
 					break;
 				case MTLDataTypeFloat4x4:
 					uniformInfo.elemType = 'M';
-					uniformInfo.numElems = uniform.arrayType.arrayLength;
+					uniformInfo.numElems = 16;
+					uniformInfo.arrayLen = uniform.arrayType.arrayLength;
 					break;
 				default:
-					AssertMsg(false, "unknown MTLDataType", 0);
+					AssertMsg(false, "unknown MTLDataType: %d", uniform.arrayType.elementType);
 					break;
 				}
 				break;
@@ -421,7 +458,6 @@ void ShaderCacheElem_Metal::initParamIndicesFromUniforms()
 			CASE(kSp_ModelViewMatrix, "ModelViewMatrix");
 			CASE(kSp_ModelViewProjectionMatrix, "ModelViewProjectionMatrix");
 			CASE(kSp_ProjectionMatrix, "ProjectionMatrix");
-			CASE(kSp_SkinningMatrices, "skinningMatrices");
 			CASE(kSp_Texture, "source");
 			CASE(kSp_Params, "params");
 			CASE(kSp_ShadingParams, "shadingParams");
@@ -494,7 +530,7 @@ void ShaderCache::handleSourceChanged(const char * name)
 	{
 		ShaderCacheElem_Metal * cacheElem = shaderCacheItr.second;
 		
-		if (name == cacheElem->vs || name == cacheElem->ps)
+		if (name == cacheElem->vs || name == cacheElem->ps || cacheElem->hasIncludedFile(name))
 		{
 			cacheElem->reload();
 			
@@ -535,11 +571,11 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 
 //
 
-static ShaderCacheElem_Metal::UniformInfo & getUniformInfo(ShaderCacheElem_Metal & cacheElem, const int index, const int type, const int numElems)
+static ShaderCacheElem_Metal::UniformInfo & getUniformInfo(ShaderCacheElem_Metal & cacheElem, const int index, const int type, const int numElems, const int arrayLen)
 {
 	Assert(index >= 0 && index < cacheElem.uniformInfos.size());
 	auto & info = cacheElem.uniformInfos[index];
-	Assert(info.elemType == type && (islower(type) ? info.numElems == numElems : info.numElems >= numElems));
+	Assert(info.elemType == type && info.numElems == numElems && (islower(type) || info.arrayLen >= arrayLen));
 	return info;
 }
 
@@ -765,7 +801,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x)
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 1);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 1, 1);
 		
 		if (info.vsOffset != -1)
 		{
@@ -787,7 +823,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 2);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 2, 1);
 		
 		if (info.vsOffset != -1)
 		{
@@ -811,7 +847,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 3);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 3, 1);
 		
 		if (info.vsOffset != -1)
 		{
@@ -837,7 +873,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, flo
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 4);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'f', 4, 1);
 		
 		if (info.vsOffset != -1)
 		{
@@ -874,7 +910,7 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'm', 1);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'm', 16, 1);
 		
 		if (info.vsOffset != -1)
 		{
@@ -896,7 +932,7 @@ void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * ma
 	
 	if (index >= 0)
 	{
-		auto & info = getUniformInfo(*m_cacheElem, index, 'M', numMatrices);
+		auto & info = getUniformInfo(*m_cacheElem, index, 'M', 16, numMatrices);
 		
 		if (info.vsOffset != -1)
 		{
@@ -922,29 +958,6 @@ inline int getTextureIndex(const ShaderCacheElem_Metal & elem, const char * name
 	return -1;
 }
 
-// todo : remove setTextureUnit
-void Shader::setTextureUnit(const char * name, int unit)
-{
-	not_implemented;
-}
-
-// todo : remove setTextureUnit
-void Shader::setTextureUnit(GxImmediateIndex index, int unit)
-{
-	not_implemented;
-}
-
-void Shader::setTexture(const char * name, int unit, GxTextureId texture)
-{
-	const int index = getTextureIndex(*m_cacheElem, name);
-	
-	if (index >= 0)
-	{
-		setTextureUniform(index, unit, texture);
-	}
-}
-
-// todo : make this a shader method ?
 static void setTextureSamplerUniform(ShaderCacheElem_Metal * cacheElem, GxImmediateIndex index, const bool filter, const bool clamp)
 {
 	Assert(index >= 0 && index < cacheElem->textureInfos.size());
@@ -958,28 +971,18 @@ static void setTextureSamplerUniform(ShaderCacheElem_Metal * cacheElem, GxImmedi
 		cacheElem->psTextureSamplers[info.psOffset] = sampler_index;
 }
 
-void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
-{
-	const int index = getTextureIndex(*m_cacheElem, name);
-	
-	if (index >= 0)
-	{
-		setTextureUniform(index, unit, texture);
-		setTextureSamplerUniform(m_cacheElem, index, filtered, clamp);
-	}
-}
 
-void Shader::setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture)
+static void setTextureUniform(ShaderCacheElem_Metal * cacheElem, GxImmediateIndex index, int unit, GxTextureId texture)
 {
-	Assert(index >= 0 && index < m_cacheElem->textureInfos.size());
-	auto & info = m_cacheElem->textureInfos[index];
+	Assert(index >= 0 && index < cacheElem->textureInfos.size());
+	auto & info = cacheElem->textureInfos[index];
 	
 	if (texture == 0)
 	{
 		if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
-			m_cacheElem->vsTextures[info.vsOffset] = nullptr;
+			cacheElem->vsTextures[info.vsOffset] = nullptr;
 		if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
-			m_cacheElem->psTextures[info.psOffset] = nullptr;
+			cacheElem->psTextures[info.psOffset] = nullptr;
 	}
 	else
 	{
@@ -991,16 +994,28 @@ void Shader::setTextureUniform(GxImmediateIndex index, int unit, GxTextureId tex
 			auto metal_texture = i->second;
 			
 			if (info.vsOffset >= 0 && info.vsOffset < ShaderCacheElem_Metal::kMaxVsTextures)
-				m_cacheElem->vsTextures[info.vsOffset] = metal_texture;
+				cacheElem->vsTextures[info.vsOffset] = metal_texture;
 			if (info.psOffset >= 0 && info.psOffset < ShaderCacheElem_Metal::kMaxPsTextures)
-				m_cacheElem->psTextures[info.psOffset] = metal_texture;
+				cacheElem->psTextures[info.psOffset] = metal_texture;
 		}
 	}
 }
 
-void Shader::setTextureArray(const char * name, int unit, GxTextureId texture)
+void Shader::setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
 {
-	not_implemented;
+	const int index = getTextureIndex(*m_cacheElem, name);
+	
+	if (index >= 0)
+	{
+		setTextureUniform(m_cacheElem, index, unit, texture);
+		setTextureSamplerUniform(m_cacheElem, index, filtered, clamp);
+	}
+}
+
+void Shader::setTexture(GxImmediateIndex index, int unit, GxTextureId texture, bool filtered, bool clamp)
+{
+	setTextureUniform(m_cacheElem, index, unit, texture);
+	setTextureSamplerUniform(m_cacheElem, index, filtered, clamp);
 }
 
 void Shader::setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
@@ -1008,7 +1023,7 @@ void Shader::setTextureArray(const char * name, int unit, GxTextureId texture, b
 	not_implemented;
 }
 
-void Shader::setTextureCube(const char * name, int unit, GxTextureId texture)
+void Shader::setTextureCube(const char * name, int unit, GxTextureId texture, bool filter)
 {
 	not_implemented;
 }

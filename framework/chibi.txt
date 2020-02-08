@@ -67,8 +67,6 @@ library framework
 	depend_library utf8rewind
 
 	license_file COPYING.txt
-	# todo : license_file ../license/openal
-	# todo : license_file ../license/xinput
 
 	scan_files cpp
 	scan_files h
@@ -77,18 +75,21 @@ library framework
 	scan_files h   path audiooutput group audiooutput
 
 # todo : simplify ?
-	with_platform macos   scan_files cpp path gx-opengl group gx-opengl
+# with_platform macos|linux|windows scan_files cpp path gx-opengl group gx-opengl
+# with_platform macos|linux|windows scan_files h   path gx-opengl group gx-opengl
+
+	with_platform macos   scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
 	with_platform macos   scan_files h   path gx-opengl group gx-opengl
-	with_platform linux   scan_files cpp path gx-opengl group gx-opengl
+	with_platform linux   scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
 	with_platform linux   scan_files h   path gx-opengl group gx-opengl
-	with_platform windows scan_files cpp path gx-opengl group gx-opengl
+	with_platform windows scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
 	with_platform windows scan_files h   path gx-opengl group gx-opengl
 
 	with_platform macos scan_files cpp path gx-metal group gx-metal
 	with_platform macos scan_files h   path gx-metal group gx-metal
 	with_platform macos scan_files mm  path gx-metal group gx-metal
 
-	with_platform iphoneos scan_files cpp path gx-opengl group gx-opengl
+	with_platform iphoneos scan_files cpp path gx-opengl group gx-opengl conglomerate conglomerates/gx-opengl-all.cpp
 	with_platform iphoneos scan_files h   path gx-opengl group gx-opengl
 	#with_platform iphoneos scan_files cpp path gx-metal group gx-metal
 	#with_platform iphoneos scan_files h   path gx-metal group gx-metal

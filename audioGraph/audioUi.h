@@ -33,3 +33,9 @@ struct AudioGraphManager_RTE;
 
 bool doAudioGraphSelect(AudioGraphManager_RTE & audioGraphMgr);
 bool doAudioGraphInstanceSelect(AudioGraphManager_RTE & audioGraphMgr, std::string & activeInstanceName);
+
+//
+
+struct AudioNodeBase;
+
+void drawFilterResponse(const AudioNodeBase * node, const float sx, const float sy);

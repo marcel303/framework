@@ -28,7 +28,7 @@
 #pragma once
 
 #include "audioNodeBase.h"
-#include "soundmix.h" // AudioSourcePcm
+#include "audioSourcePcm.h"
 
 struct AudioNodeSourcePcm : AudioNodeBase
 {

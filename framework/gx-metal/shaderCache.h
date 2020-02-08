@@ -45,7 +45,6 @@ public:
 		kSp_ModelViewMatrix,
 		kSp_ModelViewProjectionMatrix,
 		kSp_ProjectionMatrix,
-		kSp_SkinningMatrices,
 		kSp_Texture,
 		kSp_Params,
 		kSp_ShadingParams,
@@ -110,6 +109,7 @@ public:
 		int psOffset = -1;
 		int elemType = -1;
 		int numElems = 0;
+		int arrayLen = 1;
 	};
 	
 	struct TextureInfo
@@ -148,6 +148,7 @@ public:
 	mutable std::map<uint32_t, id <MTLRenderPipelineState>> m_pipelines;
 	
 	std::vector<std::string> errorMessages;
+	std::vector<std::string> includedFiles;
 	
 	~ShaderCacheElem_Metal()
 	{
@@ -158,16 +159,8 @@ public:
 	void shut();
 	
 	void load(const char * in_name, const char * in_filenameVs, const char * in_filenamePs, const char * in_outputs);
-	
-	void reload()
-	{
-		const std::string oldName = name;
-		const std::string oldVs = vs;
-		const std::string oldPs = ps;
-		const std::string oldOutputs = outputs;
-
-		load(oldName.c_str(), oldVs.c_str(), oldPs.c_str(), oldOutputs.c_str());
-	}
+	void reload();
+	bool hasIncludedFile(const char * filename) const;
 	
 	void addUniforms(MTLArgument * arg, const char type);
 	void initParamIndicesFromUniforms();

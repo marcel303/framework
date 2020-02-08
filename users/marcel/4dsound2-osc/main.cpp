@@ -13,10 +13,6 @@
 // - node gets highlighted when dragging a link endpoint over it
 // - a list pops up asking to connect to one of the inputs when released
 
-// todo : changed files in framework
-// todo : + use corrrect osc sheet file
-// todo : + detect osc sheet changes
-
 const int VIEW_SX = 700;
 const int VIEW_SY = 800;
 

@@ -11,6 +11,7 @@
 #include "raycast.h"
 #include "scene.h"
 #include "scene_fromText.h"
+#include "scene_clipboardHelpers.h"
 #include "StringEx.h"
 #include "TextIO.h"
 #include "transformGizmos.h"
@@ -32,6 +33,8 @@
 #include <limits>
 #include <set>
 #include <typeindex>
+
+#include <SDL2/SDL.h>
 
 #define ENABLE_TRANSFORM_GIZMOS 1
 
@@ -85,10 +88,6 @@ extern LightComponentMgr s_lightComponentMgr;
 extern ModelComponentMgr s_modelComponentMgr;
 extern ParameterComponentMgr s_parameterComponentMgr;
 extern SceneNodeComponentMgr s_sceneNodeComponentMgr;
-
-// todo : move to helpers
-static bool node_to_clipboard_text(const SceneNode & node, std::string & text);
-static bool node_from_clipboard_text(const char * text, SceneNode & node);
 
 //
 
@@ -367,8 +366,8 @@ struct Renderer
 						
 						Shader shader("shaders/point-light");
 						setShader(shader);
-						shader.setTexture("depthTexture", 0, depthMap.getTextureId());
-						shader.setTexture("normalTexture", 1, normalMap.getTextureId());
+						shader.setTexture("depthTexture", 0, depthMap.getTextureId(), false, true);
+						shader.setTexture("normalTexture", 1, normalMap.getTextureId(), false, true);
 						shader.setImmediateMatrix4x4("projectionToView", projectionMatrix.CalcInv().m_v);
 						shader.setImmediate("lightPosition_view",
 							lightPosition_view[0],
@@ -403,8 +402,8 @@ struct Renderer
 						
 						Shader shader("shaders/directional-light");
 						setShader(shader);
-						shader.setTexture("depthTexture", 0, depthMap.getTextureId());
-						shader.setTexture("normalTexture", 1, normalMap.getTextureId());
+						shader.setTexture("depthTexture", 0, depthMap.getTextureId(), false, true);
+						shader.setTexture("normalTexture", 1, normalMap.getTextureId(), false, true);
 						shader.setImmediateMatrix4x4("projectionToView", projectionMatrix.CalcInv().m_v);
 						shader.setImmediate("lightDir_view", lightDir_view[0], lightDir_view[1], lightDir_view[2]);
 						shader.setImmediate("lightColor1", lightColor1[0], lightColor1[1], lightColor1[2]);
@@ -426,8 +425,8 @@ struct Renderer
 				
 				Shader shader("shaders/light-application");
 				setShader(shader);
-				shader.setTexture("colorTexture", 0, colorMap.getTextureId());
-				shader.setTexture("lightTexture", 1, lightMap.getTextureId());
+				shader.setTexture("colorTexture", 0, colorMap.getTextureId(), false, true);
+				shader.setTexture("lightTexture", 1, lightMap.getTextureId(), false, true);
 				drawRect(0, 0, compositeMap.getWidth(), compositeMap.getHeight());
 				clearShader();
 			}
@@ -2113,92 +2112,6 @@ static bool testResourcePointers()
 
 #endif
 
-static bool node_to_clipboard_text(const SceneNode & node, std::string & text)
-{
-	LineWriter line_writer;
-	
-	line_writer.append(":node\n");
-	
-	for (ComponentBase * component = node.components.head; component != nullptr; component = component->next_in_set)
-	{
-		auto * component_type = findComponentType(component->typeIndex());
-		
-		Assert(component_type != nullptr);
-		if (component_type == nullptr)
-			return false;
-		
-		line_writer.append_format("%s\n", component_type->typeName);
-		
-		if (object_tolines_recursive(g_typeDB, component_type, component, line_writer, 1) == false)
-			continue;
-	}
-	
-	text = line_writer.to_string();
-	
-	return true;
-}
-
-static bool node_from_clipboard_text(const char * text, SceneNode & node)
-{
-	std::vector<std::string> lines;
-	TextIO::LineEndings lineEndings;
-	
-	if (TextIO::loadText(text, lines, lineEndings) == false)
-		return false;
-	
-	LineReader line_reader(lines, 0, 0);
-	
-	const char * id = line_reader.get_next_line(true);
-	
-// todo : check for nullptr ?
-
-	if (strcmp(id, ":node") != 0)
-	{
-		return false;
-	}
-	
-	for (;;)
-	{
-		const char * component_type_name = line_reader.get_next_line(true);
-		
-		if (component_type_name[0] == '\t')
-		{
-			// only one level of identation may be added per line
-			
-			logError("more than one level of identation added on line %d", line_reader.get_current_line_index());
-			return false;
-		}
-		
-		if (component_type_name == nullptr)
-			break;
-		
-		auto * component_type = findComponentType(component_type_name);
-		
-		Assert(component_type != nullptr);
-		if (component_type == nullptr)
-		{
-			node.freeComponents();
-			return false;
-		}
-		
-		auto * component = component_type->componentMgr->createComponent(nullptr);
-		
-		line_reader.push_indent();
-		{
-			if (object_fromlines_recursive(g_typeDB, component_type, component, line_reader) == false)
-			{
-				node.freeComponents();
-				return false;
-			}
-		}
-		line_reader.pop_indent();
-		
-		node.components.add(component);
-	}
-	
-	return true;
-}
-
 static bool load_scene_from_lines_nondestructive(std::vector<std::string> & lines, SceneEditor & sceneEditor)
 {
 	Scene tempScene;
@@ -2315,7 +2228,7 @@ int main(int argc, char * argv[])
 			
 			LineWriter line_writer;
 			
-			if (editor.scene.saveToLines(g_typeDB, line_writer) == false)
+			if (editor.scene.saveToLines(g_typeDB, line_writer, 0) == false)
 			{
 				logError("failed to save scene to lines");
 			}

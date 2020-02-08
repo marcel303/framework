@@ -269,7 +269,3 @@ AudioGraph * constructAudioGraph(
 	const Graph_TypeDefinitionLibrary * typeDefinitionLibrary,
 	AudioGraphContext * context,
 	const bool createdPaused);
-
-//
-
-void drawFilterResponse(const AudioNodeBase * node, const float sx, const float sy);

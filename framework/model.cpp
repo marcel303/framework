@@ -56,7 +56,7 @@ namespace AnimModel
 		{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, nx),          0 },
 		{ VS_COLOR,         4, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, cx),          0 },
 		{ VS_TEXCOORD0,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx),          0 },
-		{ VS_TEXCOORD1,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx),          0 }, // fixme : remove ? needed to make shader compiler happy, even though not referenced, only declared. maybe just remove the seconds texcoord from the shader. and use custom vs bindings when more than one texcoord is needed
+		{ VS_TEXCOORD1,     2, GX_ELEMENT_FLOAT32, 0, offsetof(Vertex, tx),          0 },
 		{ VS_BLEND_INDICES, 4, GX_ELEMENT_UINT8,   0, offsetof(Vertex, boneIndices), 0 },
 		{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_UINT8,   1, offsetof(Vertex, boneWeights), 0 }
 	};
@@ -836,6 +836,8 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	
 	if (drawFlags & DrawMesh)
 	{
+		skinningMatrices.setData(globalMatrices, sizeof(Mat4x4) * numBones);
+		
 		const Shader * previousShader = nullptr;
 		
 		for (int i = 0; i < m_model->meshSet->m_numMeshes; ++i)
@@ -862,12 +864,7 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 				
 				// set uniform constants for skinning matrices
 				
-				const ShaderCacheElem & shaderElem = shader.getCacheElem();
-				
-				if (shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index >= 0)
-				{
-					shader.setImmediateMatrix4x4Array(shaderElem.params[ShaderCacheElem::kSp_SkinningMatrices].index, (float*)globalMatrices, numBones);
-				}
+				shader.setBuffer("SkinningData", skinningMatrices);
 				
 				const GxImmediateIndex drawColor = shader.getImmediateIndex("drawColor");
 				

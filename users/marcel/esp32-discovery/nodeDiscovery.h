@@ -2,7 +2,9 @@
 
 #include "ip/PacketListener.h"
 #include "ip/UdpSocket.h"
+#include <mutex>
 #include <stdint.h>
+#include <thread>
 #include <vector>
 
 #define ARTNET_TO_DMX_PORT 6454
@@ -22,9 +24,6 @@
 #define I2S_1CH_8_CHANNEL_COUNT 1
 #define I2S_1CH_8_BUFFER_COUNT  8
 #define I2S_1CH_8_PORT          6460
-
-struct SDL_mutex;
-struct SDL_Thread;
 
 enum NodeCapabilities
 {
@@ -51,16 +50,16 @@ struct NodeDiscoveryRecord
 	uint32_t capabilities;
 	char description[32];
 	IpEndpointName endpointName;
-	int receiveTime = 0; // SDL_GetTicks() a discovery message for this node was last received
+	int64_t receiveTime = 0; // the time (in miliseconds) at which a discovery message for this node was last received
 };
 
 class NodeDiscoveryProcess : public PacketListener
 {
 	UdpListeningReceiveSocket * receiveSocket = nullptr;
 	
-	SDL_mutex * mutex = nullptr;
+	std::mutex * mutex = nullptr;
 	
-	SDL_Thread * thread = nullptr;
+	std::thread * thread = nullptr;
 	
 public:
 	~NodeDiscoveryProcess();

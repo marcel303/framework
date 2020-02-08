@@ -13,4 +13,4 @@ library libnfd
 
 	header_path . expose
 
-	license_file "../license/Native File Dialog/LICENSE.txt"
+	license_file LICENSE.txt

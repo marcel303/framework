@@ -27,10 +27,6 @@
 
 #pragma once
 
-// todo : remove SDL2 header file include ? add a new include for including low-level framework functions
-//        which should hopefully rarely be needed
-// for now we seem to depend mostly on: SDL_event, SDL_mutex, SDL_thread and SDL_timer
-
 #if USE_LEGACY_OPENGL
 	#include <GL/glew.h>
 	#include <SDL2/SDL_opengl.h>
@@ -43,7 +39,11 @@
 #include "Vec3.h"
 #include "Vec4.h"
 #include <float.h> // FLT_MAX (sprite draw)
-#include <SDL2/SDL.h> // SDL_Event
+#include <SDL2/SDL_events.h>
+#include <SDL2/SDL_keycode.h>
+#include <SDL2/SDL_mutex.h>
+#include <SDL2/SDL_thread.h>
+#include <SDL2/SDL_timer.h>
 #include <string>
 #include <vector>
 
@@ -78,6 +78,7 @@
 
 #if defined(IPHONEOS)
 	#define ENABLE_DESKTOP_OPENGL 0
+	#define ENABLE_OPENGL_ES3 1
 #elif ENABLE_OPENGL
 	#define ENABLE_DESKTOP_OPENGL 1 // do not alter
 #else
@@ -85,9 +86,9 @@
 #endif
 
 #if ENABLE_DESKTOP_OPENGL
-	#define ENABLE_OPENGL_COMPUTE_SHADER 1
+	#define ENABLE_COMPUTE_SHADER 1
 #else
-	#define ENABLE_OPENGL_COMPUTE_SHADER 0 // do not alter
+	#define ENABLE_COMPUTE_SHADER 0 // do not alter
 #endif
 
 #if ENABLE_OPENGL && !defined(LINUX) && !defined(IPHONEOS)
@@ -345,7 +346,8 @@ enum GX_MATRIX
 enum GX_SAMPLE_FILTER
 {
 	GX_SAMPLE_NEAREST = GL_NEAREST,
-	GX_SAMPLE_LINEAR = GL_LINEAR
+	GX_SAMPLE_LINEAR = GL_LINEAR,
+	GX_SAMPLE_MIPMAP = GL_LINEAR_MIPMAP_LINEAR
 };
 
 #else
@@ -372,7 +374,8 @@ enum GX_MATRIX
 enum GX_SAMPLE_FILTER
 {
 	GX_SAMPLE_NEAREST,
-	GX_SAMPLE_LINEAR
+	GX_SAMPLE_LINEAR,
+	GX_SAMPLE_MIPMAP
 };
 
 #endif
@@ -426,6 +429,7 @@ public:
 	void processActions(const std::string & actions, const Dictionary & args);
 	void reloadCaches();
 	void fillCachesWithPath(const char * path, bool recurse);
+	void fillCaches(bool recurse);
 	
 	Window & getMainWindow();
 	Window & getCurrentWindow();
@@ -453,7 +457,7 @@ public:
 	void registerResourcePath(const char * path);
 	bool registerChibiResourcePaths(const char * text);
 	const char * resolveResourcePath(const char * path);
-
+	
 	void blinkTaskbarIcon(int count);
 
 	bool quitRequested;
@@ -492,6 +496,8 @@ public:
 	FillCachesUnknownResourceCallback fillCachesUnknownResourceCallback;
 	RealTimeEditCallback realTimeEditCallback;
 	InitErrorHandler initErrorHandler;
+	
+	std::vector<std::string> resourcePaths;
 	
 	std::vector<SDL_Event> events;
 	std::vector<std::string> changedFiles;
@@ -790,19 +796,17 @@ public:
 	void setImmediate(GxImmediateIndex index, float x, float y);
 	void setImmediate(GxImmediateIndex index, float x, float y, float z);
 	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
+	void setImmediateFloatArray(const char * name, const float * values, const int numValues);
+	void setImmediateFloatArray(GxImmediateIndex index, const float * values, const int numValues);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
+	void setImmediateMatrix4x4Array(const char * name, const float * matrices, const int numMatrices);
 	void setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices);
 	
-// todo : texture units do not make much sense ..
-	void setTextureUnit(const char * name, int unit); // bind <name> to GL_TEXTURE0 + unit
-	void setTextureUnit(GxImmediateIndex index, int unit); // bind <name> to GL_TEXTURE0 + unit
-	void setTexture(const char * name, int unit, GxTextureId texture);
 	void setTexture(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
-	void setTextureUniform(GxImmediateIndex index, int unit, GxTextureId texture);
-	void setTextureArray(const char * name, int unit, GxTextureId texture);
+	void setTexture(GxImmediateIndex index, int unit, GxTextureId texture, bool filtered, bool clamp = true);
 	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
-	void setTextureCube(const char * name, int unit, GxTextureId texture);
+	void setTextureCube(const char * name, int unit, GxTextureId texture, bool filtered = true);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
 	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);
@@ -832,7 +836,7 @@ private:
 
 //
 
-#if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER
+#if ENABLE_OPENGL && ENABLE_COMPUTE_SHADER
 
 class ComputeShader : public ShaderBase
 {
@@ -870,7 +874,9 @@ public:
 	void setImmediate(const char * name, float x, float y);
 	void setImmediate(const char * name, float x, float y, float z);
 	void setImmediate(const char * name, float x, float y, float z, float w);
+	void setImmediate(GxImmediateIndex index, float x);
 	void setImmediate(GxImmediateIndex index, float x, float y);
+	void setImmediate(GxImmediateIndex index, float x, float y, float z);
 	void setImmediate(GxImmediateIndex index, float x, float y, float z, float w);
 	void setImmediateMatrix4x4(const char * name, const float * matrix);
 	void setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix);
@@ -897,7 +903,7 @@ public:
 class ShaderBuffer
 {
 	GxShaderBufferId m_buffer;
-
+	
 public:
 	ShaderBuffer();
 	~ShaderBuffer();
@@ -1123,6 +1129,8 @@ public:
 	bool animRootMotionEnabled;
 	
 	float drawNormalsScale = 1.f;
+	
+	mutable ShaderBuffer skinningMatrices;
 	
 	Model(const char * filename, bool autoUpdate = false);
 	Model(class ModelCacheElem & cacheElem, bool autoUpdate);
@@ -1577,6 +1585,12 @@ void pushDepthWrite(bool enabled);
 void popDepthWrite();
 
 void setDepthBias(float depthBias, float slopeScale);
+void pushDepthBias(float depthBias, float slopeScale);
+void popDepthBias();
+
+void setAlphaToCoverage(bool enabled);
+void pushAlphaToCoverage(bool enabled);
+void popAlphaToCoverage();
 
 struct StencilState
 {

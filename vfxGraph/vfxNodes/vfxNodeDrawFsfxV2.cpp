@@ -518,10 +518,12 @@ void VfxNodeFsfxV2::draw() const
 				{
 					const VfxImageBase * image = getInputImage(shaderInput.socketIndex, nullptr);
 					
-					shader->setTextureUniform(
+					shader->setTexture(
 						shaderInput.immediateIndex,
 						textureSlot++,
-						image ? image->getTexture() : 0);
+						image ? image->getTexture() : 0,
+						true,
+						false);
 				}
 				else
 				{

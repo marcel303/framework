@@ -32,6 +32,7 @@
 #if !USE_LEGACY_OPENGL
 
 #include "data/engine/ShaderCommon.txt" // VS_ constants
+#include "enumTranslation.h"
 #include "gx_mesh.h"
 #include "internal.h"
 #include "Quat.h"
@@ -50,8 +51,6 @@
 #endif
 
 static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride);
-
-extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
 
 class GxMatrixStack
 {
@@ -283,6 +282,7 @@ static int s_gxMaxVertexCount = 0;
 static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 static bool s_gxTextureEnabled = false;
+static GxTextureId s_gxTexture = 0;
 
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
 static int s_gxLastVertexCount = -1;
@@ -305,10 +305,6 @@ void gxEmitVertex();
 
 void gxInitialize()
 {
-	fassert(s_shaderSources.empty());
-	
-	Shader("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
-	
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
 	s_gxVertex.cy = 1.f;
@@ -394,38 +390,10 @@ void gxShutdown()
 	s_gxPrimitiveSize = 0;
 	s_gxVertex = GxVertex();
 	s_gxTextureEnabled = false;
+	s_gxTexture = 0;
 	
 	s_gxLastPrimitiveType = GX_INVALID_PRIM;
 	s_gxLastVertexCount = -1;
-}
-
-static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
-{
-	switch (primitiveType)
-	{
-	case GX_POINTS:
-		return GL_POINTS;
-	case GX_LINES:
-		return GL_LINES;
-	case GX_LINE_LOOP:
-		return GL_LINE_LOOP;
-	case GX_LINE_STRIP:
-		return GL_LINE_STRIP;
-	case GX_TRIANGLES:
-		return GL_TRIANGLES;
-	case GX_TRIANGLE_FAN:
-		return GL_TRIANGLE_FAN;
-	case GX_TRIANGLE_STRIP:
-		return GL_TRIANGLE_STRIP;
-#if ENABLE_DESKTOP_OPENGL
-// todo : add check for legacy OpenGL here. since we cannot draw quads in modern OpenGL either
-	case GX_QUADS:
-		return GL_QUADS;
-#endif
-	}
-	
-	AssertMsg(false, "unknown GX_PRIMITIVE_TYPE", 0);
-	return GL_INVALID_ENUM;
 }
 
 static void doCapture(const bool endOfBatch)
@@ -590,8 +558,9 @@ static void gxFlush(bool endOfBatch)
 
 		if (globals.gxShaderIsDirty)
 		{
-			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+		// todo : we miss the meta data for the texture : does it want filtering or not ?
+			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 		}
 		
 		if (shader.isValid())
@@ -743,8 +712,9 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	if (globals.gxShaderIsDirty)
 	{
-		if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-			shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+		// todo : we miss the meta data for the texture : does it want filtering or not ?
+		if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+			shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 	}
 
 	//
@@ -791,11 +761,11 @@ void gxColor4fv(const float * rgba)
 	s_gxVertex.cw = rgba[3];
 }
 
-static const float s255 = 1.f / 255.f;
+static const float rcp255 = 1.f / 255.f;
 
-inline float scale255(const float v)
+static inline float scale255(const float v)
 {
-	return v * s255;
+	return v * rcp255;
 }
 
 void gxColor3ub(int r, int g, int b)
@@ -876,31 +846,26 @@ void gxVertex4fv(const float * v)
 
 void gxSetTexture(GxTextureId texture)
 {
-	glActiveTexture(GL_TEXTURE0);
-	checkErrorGL();
-	
 	if (texture)
 	{
-		glBindTexture(GL_TEXTURE_2D, texture);
-		checkErrorGL();
-		
 		s_gxTextureEnabled = true;
+		s_gxTexture = texture;
 	}
 	else
 	{
-		glBindTexture(GL_TEXTURE_2D, 0);
-		checkErrorGL();
-		
 		s_gxTextureEnabled = false;
+		s_gxTexture = 0;
 	}
 }
 
-static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter)
+static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter, const bool isMinify)
 {
 	if (filter == GX_SAMPLE_NEAREST)
 		return GL_NEAREST;
 	else if (filter == GX_SAMPLE_LINEAR)
 		return GL_LINEAR;
+	else if (filter == GX_SAMPLE_MIPMAP)
+		return isMinify ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR;
 	else
 	{
 		fassert(false);
@@ -915,15 +880,21 @@ void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 		glActiveTexture(GL_TEXTURE0);
 		checkErrorGL();
 		
-		const GLenum openglFilter = toOpenGLSampleFilter(filter);
+		glBindTexture(GL_TEXTURE_2D, s_gxTexture);
+		checkErrorGL();
 		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglFilter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, openglFilter);
+		const GLenum openglMinFilter = toOpenGLSampleFilter(filter, true);
+		const GLenum openglMagFilter = toOpenGLSampleFilter(filter, false);
+		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglMinFilter);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, openglMagFilter);
 		checkErrorGL();
 		
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 }
 
@@ -1256,7 +1227,7 @@ static void bindVsInputs(const GxVertexInput * vsInputs, const int numVsInputs, 
 	
 	for (int i = 0; i < numVsInputs; ++i)
 	{
-		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%p\n", i, vsInputs[i].id, vsInputs[i].components, vsInputs[i].type, vsInputs[i].normalize, stride, (void*)vsInputs[i].offset);
+		//logDebug("i=%d, id=%d, num=%d, type=%d, norm=%d, stride=%d, offset=%d", i, vsInputs[i].id, vsInputs[i].numComponents, vsInputs[i].type, vsInputs[i].normalize, vsInputs[i].stride ? vsInputs[i].stride : vsStride, vsInputs[i].offset);
 		
 		const GLenum type =
 			vsInputs[i].type == GX_ELEMENT_FLOAT32 ? GL_FLOAT :
@@ -1341,8 +1312,9 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 
 		if (globals.gxShaderIsDirty)
 		{
-			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+			// todo : we miss the meta data for the texture : does it want filtering or not ?
+			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 		}
 		
 		//
@@ -1408,8 +1380,9 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 
 		if (globals.gxShaderIsDirty)
 		{
-			if (shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-				shader.setTextureUnit(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0);
+			// todo : we miss the meta data for the texture : does it want filtering or not ?
+			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
 		}
 		
 		//

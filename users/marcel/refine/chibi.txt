@@ -1,4 +1,6 @@
 app refine
+	depend_library audiograph
+	depend_library audiograph-nodes-4dsound-1.6
 	depend_library framework
 	depend_library gltf
 	depend_library imgui-framework

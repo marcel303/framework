@@ -3713,7 +3713,7 @@ void Effect_Wobbly::draw()
 	setShader(shader);
 	{
 		//shader.setTexture("colormap", 0, g_currentSurface->getTexture());
-		shader.setTexture("elements", 1, elementsTexture);
+		shader.setTexture("elements", 1, elementsTexture, true, true);
 		shader.setTexture("video1", 2, video1Texture, true, true);
 		shader.setTexture("video2", 3, video2Texture, true, true);
 		shader.setImmediate("colormapSize", GFX_SX, GFX_SY);

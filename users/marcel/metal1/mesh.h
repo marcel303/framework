@@ -2,8 +2,6 @@
 
 #include <stdint.h>
 
-// todo : remove this entire file. use framework's gx_mesh.h instead
-
 enum GX_INDEX_FORMAT
 {
 	GX_INDEX_16, // indices are 16-bits (uint16_t)
@@ -15,7 +13,7 @@ enum GX_ELEMENT_TYPE
 	GX_ELEMENT_FLOAT32
 };
 
-struct GxVertexInput // todo : optimize struct size in framework version too
+struct GxVertexInput
 {
 	uint8_t id;               // vertex stream id or index. given by VS_POSITION, VS_TEXCOORD, .. for built-in shaders
 	uint8_t numComponents;    // the number of components per element

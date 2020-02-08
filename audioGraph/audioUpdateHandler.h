@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "audioInputOutputObject.h"
 #include "paobject.h"
 #include <atomic>
 #include <stdint.h>
@@ -72,6 +73,8 @@ struct AudioUpdateHandler : PortAudioHandler
 	int64_t msecsTotal;
 	int64_t nextCpuTimeUpdate;
 	
+	AudioInputOutputObject audioIO;
+	
 	AudioUpdateHandler();
 	virtual ~AudioUpdateHandler();
 	
@@ -85,6 +88,3 @@ struct AudioUpdateHandler : PortAudioHandler
 		const int numOutputChannels,
 		const int framesPerBuffer) override;
 };
-
-extern float * g_audioInputChannels;
-extern int g_numAudioInputChannels;

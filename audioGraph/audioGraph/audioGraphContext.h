@@ -30,6 +30,7 @@
 #include "audioThreading.h"
 #include "audioTypes.h"
 #include <map>
+#include <typeindex>
 #include <vector>
 
 struct AudioGraphManager;
@@ -39,6 +40,12 @@ struct SDL_mutex;
 
 struct AudioGraphContext
 {
+	struct ObjectRegistration
+	{
+		std::type_index type = std::type_index(typeid(void));
+		void * object;
+	};
+
 	struct Memf
 	{
 		float value1 = 0.f;
@@ -54,7 +61,7 @@ struct AudioGraphContext
 	context.addObject(new AudioGraphMemfMgr());
 	context.addObject(new AudioGraphMemsMgr());
 	context.addObject(new AudioGraphControlValueMgr());
-	context.addObject(new JsusFxAudioGraphLibrary());strp
+	context.addObject(new JsusFxAudioGraphLibrary());
  
 	auto * memfMgr = context.findObject<AudioGraphMemfMgr>();
  
@@ -71,6 +78,8 @@ struct AudioGraphContext
 	AudioGraphManager * audioGraphMgr;
 	
 	AudioThreadId mainThreadId;
+
+	std::vector<ObjectRegistration> objects;
 	
 	std::vector<AudioControlValue> controlValues;
 	
@@ -95,4 +104,20 @@ struct AudioGraphContext
 	// called from any thread
 	void setMemf(const char * name, const float value1, const float value2 = 0.f, const float value3 = 0.f, const float value4 = 0.f);
 	Memf getMemf(const char * name);
+
+	// called from the app thread
+	template <typename T> void addObject(T * object)
+	{
+		return addObject(std::type_index(typeid(T)), object);
+	}
+
+	void addObject(const std::type_index & type, void * object);
+	
+	// called from the audio thread
+	template <typename T> T * findObject()
+	{
+		return (T*)findObject(std::type_index(typeid(T)));
+	}
+
+	void * findObject(const std::type_index & type);
 };

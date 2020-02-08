@@ -104,13 +104,15 @@ public:
 
 #if FRAMEWORK_USE_PORTAUDIO
 
-#include <SDL2/SDL.h>
+#include <stdint.h>
 
 #if LINUX
 	#include <portaudio.h>
 #else
 	#include <portaudio/portaudio.h>
 #endif
+
+struct SDL_mutex;
 
 class SoundPlayer_PortAudio
 {
@@ -163,8 +165,8 @@ class SoundPlayer_PortAudio
 	{
 		SDL_mutex * m_mutex;
 	public:
-		MutexScope(SDL_mutex * mutex) { m_mutex = mutex; SDL_LockMutex(m_mutex); }
-		~MutexScope() { SDL_UnlockMutex(m_mutex); }
+		MutexScope(SDL_mutex * mutex);
+		~MutexScope();
 	};
 	
 	void * createBuffer(const void * sampleData, const int sampleCount, const int sampleRate, const int channelSize, const int channelCount);

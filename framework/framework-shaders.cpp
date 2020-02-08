@@ -28,7 +28,9 @@
 #include "framework.h"
 #include "internal.h"
 
-// todo : do we still need builtinShaders ? loading and caching now (with the chibi resource paths registration) work as expected, just as any other shader or resource
+// note : we need BuiltinShaders, to avoid shaders from clearing themselves when the Shader() object leaves function scope. so if we want the shader to be kept set when e.g. setShader_GaussianBlurH leaves scope, we need the shader to live elsewhere
+
+static const int kMaxGaussianKernelSize = 128;
 
 static const Vec4 lumiVec(.30f, .59f, .11f, 0.f); // luminance = dot(lumiVec, srgb_color)
 
@@ -72,8 +74,17 @@ void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma)
 	kernel.setData(values, sizeof(float) * kernelSize);
 }
 
-void setShader_GaussianBlurH(const GxTextureId source, const int kernelSize, const float radius)
+void setShader_GaussianBlurH(const GxTextureId source, const int in_kernelSize, const float radius)
 {
+	if (in_kernelSize > kMaxGaussianKernelSize)
+	{
+		logWarning("the maximum gaussian kernel size is %d elements. the requested kernel size is %d",
+			kMaxGaussianKernelSize,
+			in_kernelSize);
+	}
+	
+	const int kernelSize = in_kernelSize > kMaxGaussianKernelSize ? kMaxGaussianKernelSize : in_kernelSize;
+	
 	Shader & shader = globals.builtinShaders->gaussianBlurH.get();
 	setShader(shader);
 	
@@ -86,8 +97,17 @@ void setShader_GaussianBlurH(const GxTextureId source, const int kernelSize, con
 	shader.setBuffer("filterKernel", kernel);
 }
 
-void setShader_GaussianBlurV(const GxTextureId source, const int kernelSize, const float radius)
+void setShader_GaussianBlurV(const GxTextureId source, const int in_kernelSize, const float radius)
 {
+	if (in_kernelSize > kMaxGaussianKernelSize)
+	{
+		logWarning("the maximum gaussian kernel size is %d elements. the requested kernel size is %d",
+			kMaxGaussianKernelSize,
+			in_kernelSize);
+	}
+	
+	const int kernelSize = in_kernelSize > kMaxGaussianKernelSize ? kMaxGaussianKernelSize : in_kernelSize;
+	
 	Shader & shader = globals.builtinShaders->gaussianBlurV.get();
 	setShader(shader);
 	
@@ -193,7 +213,7 @@ void setShader_ThresholdValue(const GxTextureId source, const Color & value, con
 
 void setShader_GrayscaleLumi(const GxTextureId source, const float opacity)
 {
-	Shader shader("engine/builtin-grayscale-lumi");
+	Shader & shader = globals.builtinShaders->grayscaleLumi.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
@@ -202,7 +222,7 @@ void setShader_GrayscaleLumi(const GxTextureId source, const float opacity)
 
 void setShader_GrayscaleWeights(const GxTextureId source, const Vec3 & weights, const float opacity)
 {
-	Shader shader("engine/builtin-grayscale-weights");
+	Shader & shader = globals.builtinShaders->grayscaleWeights.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
@@ -212,7 +232,7 @@ void setShader_GrayscaleWeights(const GxTextureId source, const Vec3 & weights, 
 
 void setShader_Colorize(const GxTextureId source, const float hue, const float opacity)
 {
-	Shader shader("engine/builtin-hue-assign");
+	Shader & shader = globals.builtinShaders->hueAssign.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
@@ -222,7 +242,7 @@ void setShader_Colorize(const GxTextureId source, const float hue, const float o
 
 void setShader_HueShift(const GxTextureId source, const float hue, const float opacity)
 {
-	Shader shader("engine/builtin-hue-shift");
+	Shader & shader = globals.builtinShaders->hueShift.get();
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
@@ -235,7 +255,7 @@ void setShader_ColorMultiply(const GxTextureId source, const Color & color, cons
 	Shader & shader = globals.builtinShaders->colorMultiply.get();
 	setShader(shader);
 	
-	shader.setTexture("source", 0, source);
+	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("color", color.r, color.g, color.b, color.a);
 	shader.setImmediate("opacity", opacity);
 
@@ -246,7 +266,7 @@ void setShader_ColorTemperature(const GxTextureId source, const float temperatur
 	Shader & shader = globals.builtinShaders->colorTemperature.get();
 	setShader(shader);
 	
-	shader.setTexture("source", 0, source);
+	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("temperature", temperature);
 	shader.setImmediate("opacity", opacity);
 }
@@ -256,6 +276,6 @@ void setShader_TextureSwizzle(const GxTextureId source, const int r, const int g
 	Shader & shader = globals.builtinShaders->textureSwizzle.get();
 	setShader(shader);
 	
-	shader.setTexture("source", 0, source);
+	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("swizzleMask", r, g, b, a);
 }

@@ -72,7 +72,7 @@ float floatAttrib(const XMLElement * elem, const char * name, const float defaul
 
 //
 
-void pushAttrib_bytes(tinyxml2::XMLPrinter * printer, const char * name, const void * _bytes, const int numBytes)
+static void pushAttrib_bytes(tinyxml2::XMLPrinter * printer, const char * name, const void * _bytes, const int numBytes)
 {
 	if (numBytes == 0)
 		printer->PushAttribute(name, "");
@@ -130,7 +130,7 @@ static int decodeAndConsume(const char *& text)
 	return v;
 }
 
-void bytesAttrib(tinyxml2::XMLElement * elem, const char * name, void * _bytes, const int numBytes)
+static void bytesAttrib(tinyxml2::XMLElement * elem, const char * name, void * _bytes, const int numBytes)
 {
 	if (numBytes == 0)
 		return;

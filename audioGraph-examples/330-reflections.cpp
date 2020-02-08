@@ -27,13 +27,13 @@
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
+#include "audioSourcePcm.h"
 #include "audioTypes.h"
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #include "delayLine.h"
 #include "framework.h"
 #include "pcmDataCache.h"
-#include "soundmix.h" // AudioSource
 #include <algorithm>
 #include <cmath>
 #include <map>

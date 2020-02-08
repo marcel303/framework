@@ -42,7 +42,7 @@ void openAudio(AudioStreamEx * audioStream)
 
 	Assert(g_audioOutput == nullptr);
 	g_audioOutput = new AudioOutput_PortAudio();
-	g_audioOutput->Initialize(2, g_audioStream->GetSampleRate(), 256); // todo : sample rate;
+	g_audioOutput->Initialize(2, g_audioStream->GetSampleRate(), 256);
 
 	Assert(g_audioThread == nullptr);
 	Assert(!g_stopAudioThread);

@@ -26,9 +26,10 @@
 */
 
 #include "framework.h"
-#include "internal.h"
 
 #if ENABLE_OPENGL
+
+#include "internal.h"
 
 #if defined(IPHONEOS)
 	#include <OpenGLES/ES3/gl.h>

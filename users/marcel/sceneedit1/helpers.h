@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string> // member_totext
-#include <typeindex> // todo : remove and replace with opaque type wrapping type index or type hash
+#include <typeindex>
 #include <vector>
 
 // forward declarations

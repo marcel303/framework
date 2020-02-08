@@ -121,6 +121,7 @@ bool preprocessShader(
 	std::string & destination,
 	const int flags,
 	std::vector<std::string> & errorMessages,
+	std::vector<std::string> & includedFiles,
 	int & fileId)
 {
 	bool result = true;
@@ -145,6 +146,8 @@ bool preprocessShader(
 		{
 			const char * filename = trimmedLine.c_str() + strlen(includeStr);
 
+			includedFiles.push_back(filename);
+			
 			char * bytes;
 			int numBytes;
 
@@ -162,7 +165,7 @@ bool preprocessShader(
 				
 				int nextFileId = fileId + 1;
 
-				if (!preprocessShader(temp, destination, flags, errorMessages, nextFileId))
+				if (!preprocessShader(temp, destination, flags, errorMessages, includedFiles, nextFileId))
 				{
 					result = false;
 				}
@@ -191,7 +194,8 @@ bool preprocessShaderFromFile(
 	const char * filename,
 	std::string & destination,
 	const int flags,
-	std::vector<std::string> & errorMessages)
+	std::vector<std::string> & errorMessages,
+	std::vector<std::string> & includedFiles)
 {
 	bool result = true;
 	
@@ -218,7 +222,7 @@ bool preprocessShaderFromFile(
 		
 		int fileId = 0;
 		
-		if (!preprocessShader(temp, destination, flags, errorMessages, fileId))
+		if (!preprocessShader(temp, destination, flags, errorMessages, includedFiles, fileId))
 		{
 			result = false;
 		}

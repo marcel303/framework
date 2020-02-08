@@ -49,7 +49,6 @@ public:
 		kSp_ModelViewMatrix,
 		kSp_ModelViewProjectionMatrix,
 		kSp_ProjectionMatrix,
-		kSp_SkinningMatrices,
 		kSp_Texture,
 		kSp_Params,
 		kSp_ShadingParams,
@@ -68,6 +67,7 @@ public:
 	
 	int version;
 	std::vector<std::string> errorMessages;
+	std::vector<std::string> includedFiles;
 
 	struct
 	{
@@ -83,6 +83,8 @@ public:
 	void free();
 	void load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 	void reload();
+	
+	bool hasIncludedFile(const char * filename) const;
 };
 
 class ShaderCache
@@ -114,7 +116,7 @@ public:
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
 };
 
-#if ENABLE_OPENGL_COMPUTE_SHADER
+#if ENABLE_COMPUTE_SHADER
 
 class ComputeShaderCacheElem
 {
@@ -128,11 +130,14 @@ public:
 	
 	int version;
 	std::vector<std::string> errorMessages;
-
+	std::vector<std::string> includedFiles;
+	
 	ComputeShaderCacheElem();
 	void free();
 	void load(const char * filename, const int groupSx, const int groupSy, const int groupSz);
 	void reload();
+	
+	bool hasIncludedFile(const char * filename) const;
 };
 
 class ComputeShaderCache
@@ -144,6 +149,7 @@ public:
 
 	void clear();
 	void reload();
+	void handleSourceChanged(const char * name);
 	ComputeShaderCacheElem & findOrCreate(const char * filename, const int groupSx, const int groupSy, const int groupSz);
 };
 

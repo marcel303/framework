@@ -1,0 +1,16 @@
+include engine/ShaderPS.txt
+include shadowmap1/shadowUtils.txt
+
+uniform sampler2D depthTexture;
+uniform mat4x4 projectionToWorld;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+    float depth = texture(depthTexture, texcoord).x;
+    
+    vec3 position_world = depthToWorldPosition(depth, texcoord, projectionToWorld);
+    
+    shader_fragColor = vec4(position_world, 1.0);
+}

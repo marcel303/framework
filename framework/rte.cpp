@@ -28,6 +28,7 @@
 #include "Path.h"
 #include "internal.h"
 #include "rte.h"
+#include "rte-filewatcher.h"
 #include "StringEx.h"
 #include <sys/stat.h>
 
@@ -35,20 +36,32 @@
     #include <Windows.h>
 #endif
 
-static void handleFileChange(const std::string & filename)
+/*
+
+RTE strategies:
+
+	OSX: create a file watcher for each resource path. get notified of each individual file changed. invoke change handler
+	Windows: create a file watcher for each resource path. get notified when a file inside a path is changed. check file infos to see which files have changed. invoke change handler
+	Linux: create a basic file wachter for each resource path. check the time stamps of each file for each file watcher to check for modification time stamps. invoke change handler
+
+*/
+
+// todo : windows,linux : add file watchers for multiple resource paths
+
+static void handleFileChange(const char * filename)
 {
 	const std::string extension = Path::GetExtension(filename, true);
 
-	if (extension == "vs")
+	if (extension == "vs" || extension == "txt")
 	{
-		g_shaderCache.handleSourceChanged(filename.c_str());
+		g_shaderCache.handleSourceChanged(filename);
 	}
-	else if (extension == "ps")
+	else if (extension == "ps" || extension == "txt")
 	{
-		g_shaderCache.handleSourceChanged(filename.c_str());
+		g_shaderCache.handleSourceChanged(filename);
 	}
-#if ENABLE_OPENGL && ENABLE_OPENGL_COMPUTE_SHADER // todo : enable for vs and ps for metal
-	else if (extension == "cs")
+#if ENABLE_COMPUTE_SHADER
+	else if (extension == "cs" || extension == "txt")
 	{
 		for (auto & i : g_computeShaderCache.m_map)
 		{
@@ -65,7 +78,7 @@ static void handleFileChange(const std::string & filename)
 	}
 	else if (extension == "png" || extension == "jpg")
 	{
-		Sprite(filename.c_str()).reload();
+		Sprite(filename).reload();
 	}
 	
 	// call real time editing callback
@@ -78,63 +91,48 @@ static void handleFileChange(const std::string & filename)
 	framework.changedFiles.push_back(filename);
 }
 
-#if 1
+//
 
-struct RTEFileInfo
+void rteFileWatcher_Basic::init(const char * path)
 {
-	std::string filename;
-	time_t time;
-};
+	fileInfos.clear();
 
-static std::vector<RTEFileInfo> s_fileInfos;
-
-static void fillFileInfos()
-{
-	s_fileInfos.clear();
-
-	std::vector<std::string> files = listFiles(".", true);
+	std::vector<std::string> files = listFiles(path, true);
 
 	for (auto & file : files)
 	{
 		FILE * f = fopen(file.c_str(), "rb");
-		if (f)
+		
+		if (f != nullptr)
 		{
 			struct stat s;
 			if (fstat(fileno(f), &s) == 0)
 			{
-				RTEFileInfo fi;
+				rteFileInfo fi;
 				fi.filename = file;
 				fi.time = s.st_mtime;
 
-			#if 0 // note : we want to track all files now, to ensure Framework::fileHasChanged works as expected and not just for a subset of files
-				if (String::EndsWith(file, ".vs") || String::EndsWith(file, ".ps") || String::EndsWith(file, ".cs") || String::EndsWith(file, ".xml") || String::EndsWith(file, ".txt") ||
-					String::EndsWith(file, ".png") || String::EndsWith(file, ".jpg"))
-				{
-					s_fileInfos.push_back(fi);
-				}
-			#else
-				s_fileInfos.push_back(fi);
-			#endif
+				fileInfos.push_back(fi);
 			}
 
 			fclose(f);
-			f = 0;
+			f = nullptr;
 		}
 	}
 }
 
-static void clearFileInfos()
+void rteFileWatcher_Basic::shut()
 {
-	s_fileInfos.clear();
+	fileInfos.clear();
 }
 
-static void checkFileInfos()
+void rteFileWatcher_Basic::tick()
 {
-	for (auto & fi: s_fileInfos)
+	for (auto & fi: fileInfos)
 	{
 		FILE * f = fopen(fi.filename.c_str(), "rb");
 
-		if (f)
+		if (f != nullptr)
 		{
 			bool changed = false;
 
@@ -154,19 +152,57 @@ static void checkFileInfos()
 			}
 
 			fclose(f);
-			f = 0;
+			f = nullptr;
 
 			if (changed)
 			{
-				handleFileChange(fi.filename);
+				handleFileChange(fi.filename.c_str());
 			}
 		}
 	}
 }
 
-#endif
+#if defined(MACOS) && false
 
-#if defined(WIN32)
+#include <list>
+
+std::list<rteFileWatcherBase*> s_fileWatchers;
+
+void initRealTimeEditing()
+{
+	for (auto & resourcePath : framework.resourcePaths)
+	{
+		rteFileWatcher_OSX * fileWatcher = new rteFileWatcher_OSX();
+		
+		fileWatcher->init(resourcePath.c_str());
+		fileWatcher->fileChanged = handleFileChange;
+		
+		s_fileWatchers.push_back(fileWatcher);
+	}
+}
+
+void shutRealTimeEditing()
+{
+	for (auto *& fileWatcher : s_fileWatchers)
+	{
+		fileWatcher->shut();
+		
+		delete fileWatcher;
+		fileWatcher = nullptr;
+	}
+	
+	s_fileWatchers.clear();
+}
+
+void tickRealTimeEditing()
+{
+	for (auto * fileWatcher : s_fileWatchers)
+	{
+		fileWatcher->tick();
+	}
+}
+
+#elif defined(WIN32)
 
 static HANDLE s_fileWatcher = INVALID_HANDLE_VALUE;
 
@@ -192,6 +228,9 @@ void initRealTimeEditing()
 void shutRealTimeEditing()
 {
 	clearFileInfos();
+	
+	BOOL result = FindCloseChangeNotification(fileWatcher);
+	Assert(result);
 }
 
 void tickRealTimeEditing()
@@ -220,107 +259,18 @@ void tickRealTimeEditing()
 	}
 }
 
-#elif defined(MACOS)
-
-#include <CoreServices/CoreServices.h>
-
-static FSEventStreamRef stream = nullptr;
-
-static bool anyChanges = false;
-
-static void callback(
-	ConstFSEventStreamRef stream,
-	void * callbackInfo,
-	size_t numEvents,
-	void * evPaths,
-	const FSEventStreamEventFlags evFlags[],
-	const FSEventStreamEventId evIds[])
-{
-	for (int i = 0; i < numEvents; ++i)
-	{
-		if ((evFlags[i] & kFSEventStreamEventFlagItemIsFile) == 0)
-			continue;
-		
-		if ((evFlags[i] & kFSEventStreamEventFlagItemModified) != 0)
-		{
-			anyChanges = true;
-		}
-	}
-	
-	//
-
-#if 0
-	const char ** paths = (const char **)evPaths;
-	
-	for (int i = 0; i < numEvents; ++i)
-	{
-		printf("%d: %x, %s\n", (int)evIds[i], (int)evFlags[i], paths[i]);
-	}
-#endif
-}
-
-void initRealTimeEditing()
-{
-	Assert(stream == nullptr);
-	
-	fillFileInfos();
-	
-	const CFStringRef arg = CFStringCreateWithCString(
-    	kCFAllocatorDefault,
-    	".",
-    	kCFStringEncodingUTF8);
-	
-	const CFArrayRef paths = CFArrayCreate(nullptr, (const void**)&arg, 1, nullptr);
-	
-	const CFAbsoluteTime latency = 0.1;
-
-	stream = FSEventStreamCreate(
-		NULL,
-		&callback,
-		NULL,
-		paths,
-		kFSEventStreamEventIdSinceNow,
-		latency,
-		kFSEventStreamCreateFlagFileEvents);
-	
-	FSEventStreamScheduleWithRunLoop(stream, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-	FSEventStreamStart(stream);
-}
-
-void shutRealTimeEditing()
-{
-	if (stream != nullptr)
-	{
-		FSEventStreamStop(stream);
-		FSEventStreamInvalidate(stream);
-		FSEventStreamRelease(stream);
-		
-		stream = nullptr;
-	}
-	
-	clearFileInfos();
-}
-
-void tickRealTimeEditing()
-{
-	if (anyChanges)
-	{
-		anyChanges = false;
-		
-		checkFileInfos();
-	}
-}
-
 #else
 
+static rteFileWatcher_Basic s_fileWatcher;
+
 void initRealTimeEditing()
 {
-	fillFileInfos();
+	s_fileWatcher.init(".");
 }
 
 void shutRealTimeEditing()
 {
-	clearFileInfos();
+	s_fileWatcher.shut();
 }
 
 void tickRealTimeEditing()
@@ -337,7 +287,7 @@ void tickRealTimeEditing()
 	if ((x % 60) != 0)
 		return;
 	
-	checkFileInfos();
+	s_fileWatcher.tick();
 }
 
 #endif

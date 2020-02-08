@@ -468,7 +468,20 @@ void SoundPlayer_OpenAL::setMusicVolume(float volume)
 
 #if FRAMEWORK_USE_PORTAUDIO
 
+#include <SDL2/SDL.h>
+
 #define RESAMPLE_FIXEDBITS 32
+
+SoundPlayer_PortAudio::MutexScope::MutexScope(SDL_mutex * mutex)
+{
+	m_mutex = mutex;
+	Verify(SDL_LockMutex(m_mutex) == 0);
+}
+
+SoundPlayer_PortAudio::MutexScope::~MutexScope()
+{
+	Verify(SDL_UnlockMutex(m_mutex) == 0);
+}
 
 void * SoundPlayer_PortAudio::createBuffer(const void * sampleData, const int sampleCount, const int sampleRate, const int channelSize, const int channelCount)
 {

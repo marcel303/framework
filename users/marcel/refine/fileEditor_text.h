@@ -1,9 +1,11 @@
 #pragma once
 
 #include "fileEditor.h"
+#include "framework.h"
 #include "imgui/TextEditor.h"
 #include "nfd.h"
 #include "TextIO.h"
+#include <SDL2/SDL.h> // SDL_ShowSimpleMessageBox
 
 // todo : add option to select font
 
@@ -62,7 +64,7 @@ struct FileEditor_Text : FileEditor
 		// todo : update to latest version of the text editor, and evaluate support for non mono spaces fonts
 		guiContext.pushImGuiContext();
 		ImGuiIO& io = ImGui::GetIO();
-		//io.FontDefault = io.Fonts->AddFontFromFileTTF(CHIBI_RESOURCE_PATH "/calibri.ttf", 18);
+		io.FontDefault = io.Fonts->AddFontFromFileTTF(framework.resolveResourcePath("calibri.ttf"), 18);
 		guiContext.popImGuiContext();
 		guiContext.updateFontTexture();
 	#endif

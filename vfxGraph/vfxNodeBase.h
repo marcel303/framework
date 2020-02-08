@@ -638,7 +638,7 @@ struct VfxNodeBase
 #endif
 #if ENABLE_VFXGRAPH_GPU_TIMING
 	int gpuTimeAvg;
-	OpenglGpuTimer gpuTimer; // todo : OpenGL guard
+	OpenglGpuTimer gpuTimer;
 #endif
 	
 	VfxNodeBase();

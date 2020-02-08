@@ -27,6 +27,10 @@
 
 #pragma once
 
+#if ENABLE_OPENGL
+
 #include <string>
 
 bool buildOpenglText(const char * text, const char shaderType, const char * outputs, std::string & result);
+
+#endif

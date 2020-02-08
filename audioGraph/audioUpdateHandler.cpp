@@ -26,15 +26,13 @@
 */
 
 #include "audioGraph.h"
+#include "audioGraphContext.h"
 #include "audioGraphManager.h"
 #include "audioProfiling.h"
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #include "Debugging.h"
 #include "Timer.h"
-
-float * g_audioInputChannels = nullptr;
-int g_numAudioInputChannels = 0;
 
 AudioUpdateHandler::AudioUpdateHandler()
 	: updateTasks()
@@ -64,12 +62,19 @@ void AudioUpdateHandler::init(AudioMutexBase * in_mutex, AudioVoiceManager * in_
 	//
 	
 	Assert(mutex == nullptr);
-	Assert(voiceMgr != nullptr);
-	Assert(audioGraphMgr != nullptr);
+	Assert(voiceMgr == nullptr);
+	Assert(audioGraphMgr == nullptr);
 	
 	mutex = in_mutex;
 	voiceMgr = in_voiceMgr;
 	audioGraphMgr = in_audioGraphMgr;
+	
+	//
+	
+	if (audioGraphMgr != nullptr)
+	{
+		audioGraphMgr->getContext()->addObject(&audioIO);
+	}
 }
 
 void AudioUpdateHandler::shut()
@@ -91,8 +96,9 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	const float dt = framesPerBuffer / float(SAMPLE_RATE);
 	
-	g_audioInputChannels = (float*)inputBuffer;
-	g_numAudioInputChannels = numInputChannels;
+	audioIO.numInputChannels = numInputChannels;
+	audioIO.numOutputChannels = numOutputChannels;
+	audioIO.inputBuffer = (float*)inputBuffer;
 	
 	//
 	
@@ -131,8 +137,9 @@ void AudioUpdateHandler::portAudioCallback(
 	
 	//
 	
-	g_audioInputChannels = nullptr;
-	g_numAudioInputChannels = 0;
+	audioIO.numInputChannels = 0;
+	audioIO.numOutputChannels = 0;
+	audioIO.inputBuffer = nullptr;
 	
 	//
 	

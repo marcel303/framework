@@ -23,6 +23,7 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 //
 
 #include "audiostream/AudioIO.h"
+
 #include <stdio.h>
 #include <thread>
 
@@ -36,6 +37,10 @@ This is a sketch which lets the user select a Wifi access point and connect to i
 #endif
 
 #undef GetObject // define in Windows.h..
+
+#if !defined(WINDOWS)
+	#define closesocket close
+#endif
 
 struct Test_TcpToI2S
 {
@@ -98,10 +103,6 @@ struct Test_TcpToI2S
 				sizeof(int16_t) /* sample size */;
  			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
 		#endif
-		
-			// todo : TCP_NODELAY (osx). disables nagle's algorithm and sends out packets immediately on write
-			// todo : TCP_NOPUSH (osx)
-			// todo : TCP_CORK (linux). will manually batch messages and send them when the cork is removed
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
 		
@@ -256,10 +257,6 @@ struct Test_TcpToI2SQuad
 				sizeof(int16_t) /* sample size */;
  			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
 		#endif
-		
-			// todo : TCP_NODELAY (osx). disables nagle's algorithm and sends out packets immediately on write
-			// todo : TCP_NOPUSH (osx)
-			// todo : TCP_CORK (linux). will manually batch messages and send them when the cork is removed
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
 		
@@ -418,10 +415,6 @@ struct Test_TcpToI2SMono8
 				sizeof(int8_t) /* sample size */;
  			setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (const char*)&sock_value, sizeof(sock_value));
 		#endif
-		
-			// todo : TCP_NODELAY (osx). disables nagle's algorithm and sends out packets immediately on write
-			// todo : TCP_NOPUSH (osx)
-			// todo : TCP_CORK (linux). will manually batch messages and send them when the cork is removed
 
 		// todo : strp-laserapp : use writev or similar to send multiple packets to the same Artnet controller
 		
@@ -1282,6 +1275,8 @@ int main(int argc, char * argv[])
 	}
 	
 	discoveryProcess.shut();
+	
+	guiContext.shut();
 	
 	framework.shutdown();
 	

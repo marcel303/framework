@@ -1,4 +1,4 @@
 library miniz
 	add_files miniz.cpp miniz.h
 	header_path . expose
-	license_file ../../license/miniz/LICENSE.txt
+	license_file LICENSE.txt

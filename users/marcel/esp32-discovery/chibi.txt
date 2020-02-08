@@ -1,8 +1,6 @@
 library nodeDiscovery
 	depend_library libgg
 	depend_library liboscpack
-	# todo : remove sdl2 dependency. use c++ threads
-	depend_library libsdl2
 	add_files nodeDiscovery.cpp nodeDiscovery.h
 	header_path . expose
 

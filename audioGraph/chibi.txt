@@ -1,16 +1,5 @@
 push_group audiograph
 
-library binaural
-
-	depend_library audioio
-	depend_library libdelaunay
-	depend_library libgg
-
-	scan_files cpp path binaural conglomerate conglomerates/binaural_all.cpp
-	scan_files h   path binaural
-
-	header_path binaural expose
-
 library audiograph-core
 
 	depend_library audioio
@@ -42,9 +31,6 @@ library audiograph-graph
 	scan_files h   path audioGraph
 
 	header_path audioGraph expose
-
-# todo : remove. only a dependency because of drawFilterResponse(..)
-	depend_library framework
 
 library audiograph-graphMgr
 

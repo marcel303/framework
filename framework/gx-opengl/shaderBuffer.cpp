@@ -82,6 +82,9 @@ void ShaderBuffer::setData(const void * bytes, int numBytes)
 
 		glBufferData(GL_UNIFORM_BUFFER, numBytes, bytes, GL_DYNAMIC_DRAW);
 		checkErrorGL();
+		
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+		checkErrorGL();
 	}
 }
 

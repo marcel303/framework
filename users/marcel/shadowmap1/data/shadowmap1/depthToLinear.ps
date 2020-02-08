@@ -1,0 +1,22 @@
+include engine/ShaderPS.txt
+
+uniform float projection_zNear;
+uniform float projection_zFar;
+uniform sampler2D depthTexture;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+    // depends on our implementation of MakePerspectiveGL actually,
+    // so I should really have derived this myself. but taking a
+    // shortcut and copy pasting the code from here,
+    // http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/#setting-up-the-rendertarget-and-the-mvp-matrix
+    // works just as it should
+    
+    float z_b = texture(depthTexture, texcoord).x;
+    float z_n = 2.0 * z_b - 1.0;
+    float z_e = 2.0 * projection_zNear * projection_zFar / (projection_zFar + projection_zNear - z_n * (projection_zFar - projection_zNear));
+    
+    shader_fragColor = vec4(z_e);
+}

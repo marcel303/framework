@@ -34,6 +34,7 @@
 #include "wavefield.h"
 #include <algorithm>
 #include <cmath>
+#include <list>
 
 /*
 

@@ -297,8 +297,9 @@ void ofSetLineWidth(const float width)
 {
 	sStyleStack[sStyleStackDepth].lineWidth = width;
 	
-	glLineWidth(width);
-	checkErrorGL();
+	// note : line width is not supported by modern graphics api's, so we don't attempt to support it here
+	//glLineWidth(width);
+	//checkErrorGL();
 }
 
 void ofPushStyle()
@@ -317,8 +318,12 @@ void ofPopStyle()
 
 void ofClear(const uint8_t r, const uint8_t g, const uint8_t b, const uint8_t a)
 {
-	glClearColor(r, g, b, a);
-	glClear(GL_COLOR_BUFFER_BIT);
+	int sx;
+	int sy;
+	framework.getCurrentViewportSize(sx, sy);
+	
+	setColor(r, g, b, a);
+	drawRect(0, 0, sx, sy);
 }
 
 void ofDrawRectangle(const float x, const float y, const float sx, const float sy)

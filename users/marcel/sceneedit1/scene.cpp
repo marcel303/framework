@@ -108,6 +108,14 @@ const SceneNode & Scene::getRootNode() const
 	return *i->second;
 }
 
+const SceneNode & Scene::getNode(const int nodeId) const
+{
+	auto i = nodes.find(nodeId);
+	Assert(i != nodes.end());
+	
+	return *i->second;
+}
+
 static bool write_node_children_traverse(const Scene & scene, const int nodeId, LineWriter & line_writer, const int indent)
 {
 	auto node_itr = scene.nodes.find(nodeId);
@@ -132,11 +140,11 @@ static bool write_node_children_traverse(const Scene & scene, const int nodeId, 
 	return result;
 }
 
-bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
+bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer, const int in_indent)
 {
 	bool result = true;
 	
-	int indent = 0;
+	int indent = in_indent;
 	
 	for (auto & node_itr : nodes)
 	{
@@ -230,8 +238,8 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 		indent++;
 		{
 			// write node hierarchy
-			
-			result &= write_node_children_traverse(*this, rootNodeId, line_writer, indent);
+		
+			result &= saveNodeHierarchyToLines(rootNodeId, line_writer, indent);
 		}
 		indent--;
 	}
@@ -240,4 +248,9 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer)
 	Assert(indent == 0);
 
 	return result;
+}
+
+bool Scene::saveNodeHierarchyToLines(const int rootNodeId, LineWriter & line_writer, const int indent) const
+{
+	return write_node_children_traverse(*this, rootNodeId, line_writer, indent);
 }

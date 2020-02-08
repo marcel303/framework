@@ -490,7 +490,7 @@ namespace jgmod
 			printf("linear sliders not yet supported properly\n");
 		#endif
 		
-			//j->flag |= JGMOD_MODE_LINEAR;
+			j->flag |= JGMOD_MODE_LINEAR;
 		}
 		
 		if (flags & kFlag_OldEffects)

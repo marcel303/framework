@@ -1,6 +1,6 @@
-<graph nextNodeId="40" nextLinkId="109">
+<graph nextNodeId="45" nextLinkId="115">
     <node id="24" typeName="jgmod">
-        <input socket="filename" value="/Users/thecat/framework/users/marcel/libjgmod/data/pocket.it"/>
+        <input socket="filename" value="point_of_departure.s3m"/>
         <input socket="pitch" value="1.300000"/>
         <input socket="speed" value="1.100000"/>
     </node>
@@ -43,16 +43,16 @@
         <input socket="feedback" value="0.500000"/>
         <input socket="maxDelay" value="1.000000"/>
     </node>
-    <node id="34" typeName="jsusfx.Spring-Box.jsfx" passthrough="1">
+    <node id="34" typeName="jsusfx.Spring-Box.jsfx">
         <resource type="jsusfx" name="editorData"><![CDATA[<value>
     <sliders>
-        <slider index="1" value="82.363754272460938"/>
-        <slider index="2" value="92.61102294921875"/>
-        <slider index="3" value="75.120307922363281"/>
+        <slider index="1" value="78.24639892578125"/>
+        <slider index="2" value="68.724617004394531"/>
+        <slider index="3" value="95"/>
         <slider index="4" value="77.422889709472656"/>
-        <slider index="5" value="24.964656829833984"/>
+        <slider index="5" value="25.964656829833984"/>
         <slider index="7" value="5658.28125"/>
-        <slider index="8" value="7.3279619216918945"/>
+        <slider index="8" value="5.7449402809143066"/>
     </sliders>
     <vars>
         <var value="1"/>
@@ -103,6 +103,15 @@
 </value>
 ]]></resource>
     </node>
+    <node id="42" typeName="audio.sine">
+        <input socket="b" value="40.000000"/>
+        <input socket="frequency" value="0.400000"/>
+        <input socket="type" value="0"/>
+    </node>
+    <node id="44" typeName="audio.sine">
+        <input socket="frequency" value="0.340000"/>
+        <input socket="type" value="0"/>
+    </node>
     <link id="47" srcNodeId="25" srcNodeSocketName="audio" dstNodeId="24" dstNodeSocketName="ch8"/>
     <link id="48" srcNodeId="25" srcNodeSocketName="audio" dstNodeId="24" dstNodeSocketName="ch10"/>
     <link id="49" srcNodeId="25" srcNodeSocketName="audio" dstNodeId="24" dstNodeSocketName="ch12"/>
@@ -139,24 +148,35 @@
     <link id="106" srcNodeId="39" srcNodeSocketName="in1" dstNodeId="35" dstNodeSocketName="result"/>
     <link id="107" srcNodeId="38" srcNodeSocketName="audio" dstNodeId="39" dstNodeSocketName="out1"/>
     <link id="108" srcNodeId="38" srcNodeSocketName="audio" dstNodeId="39" dstNodeSocketName="out2"/>
-    <editor nextZKey="492">
-        <dragAndZoom x="0" y="0" zoom="1"/>
+    <link id="112" srcNodeId="34" srcNodeSocketName="slider1" dstNodeId="42" dstNodeSocketName="audio"/>
+    <link id="114" srcNodeId="26" srcNodeSocketName="output_wet" dstNodeId="44" dstNodeSocketName="audio"/>
+    <editor nextZKey="551">
+        <dragAndZoom x="128.03855895996094" y="0" zoom="0.66666668653488159"/>
         <nodeDatas>
-            <nodeData nodeId="24" x="-352.02618408203125" y="-193.344970703125" zKey="460"/>
-            <nodeData nodeId="25" x="247.70556640625" y="-93.098297119140625" zKey="477"/>
-            <nodeData nodeId="26" x="-126.51300048828125" y="-428.54034423828125" zKey="486"/>
-            <nodeData nodeId="27" x="194.107177734375" y="-399.16033935546875" zKey="440"/>
-            <nodeData nodeId="28" x="40.29486083984375" y="-308.55044555664062" zKey="441"/>
+            <nodeData nodeId="24" x="-352.02618408203125" y="-193.344970703125" zKey="492"/>
+            <nodeData nodeId="25" x="247.70556640625" y="-93.098297119140625" zKey="536"/>
+            <nodeData nodeId="26" x="-125.011962890625" y="-428.57644653320312" zKey="550"/>
+            <nodeData nodeId="27" x="194.107177734375" y="-399.16033935546875" zKey="537"/>
+            <nodeData nodeId="28" x="40.29486083984375" y="-308.55044555664062" zKey="538"/>
             <nodeData nodeId="32" x="-291.257080078125" y="-533.50103759765625" zKey="485"/>
             <nodeData nodeId="33" x="50.9305419921875" y="-447.06149291992188" zKey="484"/>
-            <nodeData nodeId="34" x="146.96142578125" y="0.44134521484375" zKey="491"/>
+            <nodeData nodeId="34" x="125.32272338867188" y="-3.8296966552734375" zKey="507"/>
             <nodeData nodeId="35" x="-46.75567626953125" y="169.362548828125" zKey="398"/>
-            <nodeData nodeId="36" x="310.0872802734375" y="87.975677490234375" zKey="476"/>
-            <nodeData nodeId="37" x="277.98681640625" y="244.586181640625" zKey="488"/>
-            <nodeData nodeId="38" x="647.019775390625" y="245.552490234375" zKey="482"/>
-            <nodeData nodeId="39" x="423.56396484375" y="359.1380615234375" zKey="489"/>
+            <nodeData nodeId="36" x="310.8533935546875" y="87.975677490234375" zKey="535"/>
+            <nodeData nodeId="37" x="277.38909912109375" y="244.586181640625" zKey="534"/>
+            <nodeData nodeId="38" x="647.019775390625" y="245.552490234375" zKey="524"/>
+            <nodeData nodeId="39" x="423.56396484375" y="359.735595703125" zKey="533"/>
+            <nodeData nodeId="42" x="-36.361640930175781" y="56.839996337890625" zKey="522" folded="1"/>
+            <nodeData nodeId="44" x="-264.74066162109375" y="-264.3941650390625" zKey="549" folded="1"/>
         </nodeDatas>
-        <visualizers/>
-        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c"/>
+        <visualizers>
+            <visualizer id="40" x="366.2041015625" y="-81.963043212890625" zKey="495" nodeId="36" srcSocketName="audio" sx="216" sy="148"/>
+        </visualizers>
+        <editorOptions comment="" menuIsVisible="0" realTimePreview="1" autoHideUi="0" showBackground="1" showGrid="1" showSocketNames="1" snapToGrid="0" showOneShotActivity="0" showContinuousActivity="0" showCpuHeat="0" backgroundColor="000000cc" gridColor="ffffff4c">
+            <cpuHeatColors useLinearColorSpace="1">
+                <key t="0" r="1" g="0" b="0" a="0"/>
+                <key t="1" r="1" g="0" b="0" a="1"/>
+            </cpuHeatColors>
+        </editorOptions>
     </editor>
 </graph>

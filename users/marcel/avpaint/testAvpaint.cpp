@@ -83,9 +83,9 @@ static void applyMask(GxTextureId a, GxTextureId b, GxTextureId mask)
 	Shader shader("mask");
 	setShader(shader);
 	{
-		shader.setTexture("colormapA", 0, a);
-		shader.setTexture("colormapB", 1, b);
-		shader.setTexture("mask", 2, mask);
+		shader.setTexture("colormapA", 0, a, false, true);
+		shader.setTexture("colormapB", 1, b, false, true);
+		shader.setTexture("mask", 2, mask, true, true);
 		gxBegin(GX_QUADS);
 		{
 			gxTexCoord2f(0.f, 0.f); gxVertex2f(0.f * GFX_SX, 0.f * GFX_SY);
@@ -105,8 +105,8 @@ void applyFsfx(Surface & surface, const char * name, const float strength = 1.f,
 	{
 		shader.setImmediate("params1", strength, 0.f, 0.f, 0.f);
 		shader.setImmediate("params2", param1, param2, param3, param4);
-		shader.setTexture("colormap", 0, surface.getTexture());
-		shader.setTexture("texture1", 1, texture1);
+		shader.setTexture("colormap", 0, surface.getTexture(), true, false);
+		shader.setTexture("texture1", 1, texture1, true, false);
 		surface.postprocess();
 	}
 	clearShader();
@@ -330,8 +330,8 @@ int main(int argc, char * argv[])
 									setShader(shader);
 									{
 										const GxTextureId brush = getTexture("brushes/brush1006.png");
-										shader.setTexture("brush", 0, brush);
-										shader.setTexture("colormap", 1, surface->getTexture());
+										shader.setTexture("brush", 0, brush, true, true);
+										shader.setTexture("colormap", 1, surface->getTexture(), true, true);
 										
 										surface->swapBuffers();
 										
@@ -508,20 +508,20 @@ int main(int argc, char * argv[])
 						Shader shader("compose-layers");
 						setShader(shader);
 						{
-							shader.setTexture("layerAlpha0", 0, layerAlphas[0]->getTexture());
-							shader.setTexture("layerColor0", 1, layerColors[0]->getTexture());
+							shader.setTexture("layerAlpha0", 0, layerAlphas[0]->getTexture(), false, true);
+							shader.setTexture("layerColor0", 1, layerColors[0]->getTexture(), false, true);
 							
 						#if NUM_LAYERS >= 2
-							shader.setTexture("layerAlpha1", 2, layerAlphas[1]->getTexture());
-							shader.setTexture("layerColor1", 3, layerColors[1]->getTexture());
+							shader.setTexture("layerAlpha1", 2, layerAlphas[1]->getTexture(), false, true);
+							shader.setTexture("layerColor1", 3, layerColors[1]->getTexture(), false, true);
 						#else
 							shader.setTexture("layerAlpha1", 2, 0);
 							shader.setTexture("layerColor1", 3, 0);
 						#endif
 						
 						#if NUM_LAYERS >= 3
-							shader.setTexture("layerAlpha2", 4, layerAlphas[2]->getTexture());
-							shader.setTexture("layerColor2", 5, layerColors[2]->getTexture());
+							shader.setTexture("layerAlpha2", 4, layerAlphas[2]->getTexture(), false, true);
+							shader.setTexture("layerColor2", 5, layerColors[2]->getTexture(), false, true);
 						#else
 							shader.setTexture("layerAlpha2", 4, 0);
 							shader.setTexture("layerColor2", 5, 0);

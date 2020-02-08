@@ -1,0 +1,10 @@
+library binaural
+
+	depend_library audioio
+	depend_library libdelaunay
+	depend_library libgg
+
+	scan_files cpp conglomerate conglomerates/binaural_all.cpp
+	scan_files h
+
+	header_path . expose

@@ -31,12 +31,7 @@
 
 #include "internal.h"
 
-static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
-static Stack<bool, 32> lineSmoothStack(false);
-static Stack<bool, 32> wireframeStack(false);
 static Stack<int, 32> colorWriteStack(0xf);
-static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
-static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
 
 static int s_colorWriteMask = 0xf;
 
@@ -50,6 +45,8 @@ void setBlend(BLEND_MODE blendMode)
 		glDisable(GL_BLEND);
 		break;
 	case BLEND_ALPHA:
+		// note : source alpha is set to ZERO!
+		// assuming the destination surface starts at 100% alpha, sussively multiplication by 1-srcA will yield an inverse opacity value stored inside the destination alpha. the destination may then be blended using an inverted premultiplied-alpha blend mode for correctly composing the surface on top of something else
 		glEnable(GL_BLEND);
 		if (glBlendEquation)
 			glBlendEquation(GL_FUNC_ADD);
@@ -64,7 +61,6 @@ void setBlend(BLEND_MODE blendMode)
 			glBlendFuncSeparate(GL_ONE, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		break;
 	case BLEND_PREMULTIPLIED_ALPHA_DRAW:
-	// todo : remove ?
 		glEnable(GL_BLEND);
 		if (glBlendEquation)
 			glBlendEquation(GL_FUNC_ADD);
@@ -117,20 +113,6 @@ void setBlend(BLEND_MODE blendMode)
 	}
 }
 
-void pushBlend(BLEND_MODE blendMode)
-{
-	blendModeStack.push(globals.blendMode);
-	
-	setBlend(blendMode);
-}
-
-void popBlend()
-{
-	const BLEND_MODE blendMode = blendModeStack.popValue();
-	
-	setBlend(blendMode);
-}
-
 void setLineSmooth(bool enabled)
 {
 #if ENABLE_DESKTOP_OPENGL
@@ -146,22 +128,8 @@ void setLineSmooth(bool enabled)
 		checkErrorGL();
 	}
 #else
-	// todo : gles : implement setLineSmooth
+	// note : gles doesn't support line smooth
 #endif
-}
-
-void pushLineSmooth(bool enabled)
-{
-	lineSmoothStack.push(globals.lineSmoothEnabled);
-	
-	setLineSmooth(enabled);
-}
-
-void popLineSmooth()
-{
-	const bool value = lineSmoothStack.popValue();
-	
-	setLineSmooth(value);
 }
 
 void setWireframe(bool enabled)
@@ -170,22 +138,8 @@ void setWireframe(bool enabled)
 	glPolygonMode(GL_FRONT_AND_BACK, enabled ? GL_LINE : GL_FILL);
 	checkErrorGL();
 #else
-	// todo : gles : implement setWireframe
+	// note : gles doesn't support wireframe
 #endif
-}
-
-void pushWireframe(bool enabled)
-{
-	wireframeStack.push(globals.wireframeEnabled);
-	
-	setWireframe(enabled);
-}
-
-void popWireframe()
-{
-	const bool value = wireframeStack.popValue();
-	
-	setWireframe(value);
 }
 
 void setColorWriteMask(int r, int g, int b, int a)
@@ -267,37 +221,6 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	checkErrorGL();
 }
 
-void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
-{
-	const DepthTestInfo info =
-	{
-		globals.depthTestEnabled,
-		globals.depthTest,
-		globals.depthTestWriteEnabled
-	};
-	
-	depthTestStack.push(info);
-	
-	setDepthTest(enabled, test, writeEnabled);
-}
-
-void popDepthTest()
-{
-	const DepthTestInfo depthTestInfo = depthTestStack.popValue();
-	
-	setDepthTest(depthTestInfo.testEnabled, depthTestInfo.test, depthTestInfo.writeEnabled);
-}
-
-void pushDepthWrite(bool enabled)
-{
-	pushDepthTest(globals.depthTestEnabled, globals.depthTest, enabled);
-}
-
-void popDepthWrite()
-{
-	popDepthTest();
-}
-
 void setDepthBias(float depthBias, float slopeScale)
 {
 	if (depthBias == 0.f && slopeScale == 0.f)
@@ -310,6 +233,20 @@ void setDepthBias(float depthBias, float slopeScale)
 		glEnable(GL_POLYGON_OFFSET_FILL);
 		glEnable(GL_POLYGON_OFFSET_LINE);
 		glPolygonOffset(slopeScale, depthBias);
+	}
+}
+
+void setAlphaToCoverage(bool enabled)
+{
+	if (enabled)
+	{
+		glEnable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+		checkErrorGL();
+	}
+	else
+	{
+		glDisable(GL_SAMPLE_ALPHA_TO_COVERAGE);
+		checkErrorGL();
 	}
 }
 
@@ -359,6 +296,7 @@ static GLenum translateStencilFunc(const GX_STENCIL_FUNC func)
 		return GL_ALWAYS;
 	}
 	
+	AssertMsg(false, "unknown GX_STENCIL_FUNC", 0);
 	return GL_ALWAYS;
 }
 
@@ -437,26 +375,6 @@ void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 		glFrontFace(winding);
 		checkErrorGL();
 	}
-}
-
-void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
-{
-	const CullModeInfo info =
-	{
-		globals.cullMode,
-		globals.cullWinding
-	};
-	
-	cullModeStack.push(info);
-	
-	setCullMode(mode, frontFaceWinding);
-}
-
-void popCullMode()
-{
-	const CullModeInfo cullMode = cullModeStack.popValue();
-	
-	setCullMode(cullMode.mode, cullMode.winding);
 }
 
 #endif

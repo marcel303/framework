@@ -740,6 +740,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		
 		sx = std::max(sx, textureAreaSx);
 		sy += textureAreaSy;
+		
+		caption += String::FormatC(" (%d x %d)", baseTextureSx, baseTextureSy);
 	}
 	
 	//

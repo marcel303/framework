@@ -26,9 +26,7 @@ int main(int argc, char * argv[])
 	audioGraphMgr.init(&audioMutex, &voiceMgr);
 	
 	AudioUpdateHandler audioUpdateHandler;
-	audioUpdateHandler.init(&audioMutex, nullptr, 0);
-	audioUpdateHandler.voiceMgr = &voiceMgr;
-	audioUpdateHandler.audioGraphMgr = &audioGraphMgr;
+	audioUpdateHandler.init(&audioMutex, &voiceMgr, &audioGraphMgr);
 	
 	PortAudioObject paObject;
 	paObject.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);

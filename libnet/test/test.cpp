@@ -17,6 +17,7 @@
 #include "Timer.h"
 #include <exception>
 #include <map>
+#include <SDL2/SDL.h>
 
 #include "framework.h"
 

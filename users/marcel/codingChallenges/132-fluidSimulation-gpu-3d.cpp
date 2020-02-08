@@ -10,7 +10,7 @@ https://www.youtube.com/watch?v=alhpH6ECFvQ
 
 /*
 
-todo : expperiment with the following boundary modes, and external forces,
+todo : experiment with the following boundary modes, and external forces,
 from: http://karlsims.com/fluid-flow.html,
 
 Zero: using a value of zero beyond the grid will avoid flow toward or away from the boundary, as if the fluid is contained in a box, because any edge cell's component of flow normal to the boundary would typically create a non-zero divergence and be removed. The divergence-removal examples above used this mode.
@@ -33,7 +33,7 @@ Cohesive forces can be approximated by using a tracer image to track different f
 
 */
 
-#if ENABLE_OPENGL_COMPUTE_SHADER
+#if ENABLE_COMPUTE_SHADER
 
 #include <GL/glew.h>
 
@@ -267,14 +267,13 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 		s_createdShaders.insert(name);
 		
 		// define the compute shader, using a template and the code and globals passed into this function
-		
-	// todo : define output texture
-	// todo : apply blend mode
 	
 		const char * cs_template =
 			R"SHADER(
 				include engine/ShaderCS.txt
 
+				// define output texture
+		
 				layout(R16F) uniform image3D destination;
 
 				%s
@@ -307,6 +306,8 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 					imageStore(destination, ivec3(gl_GlobalInvocationID.xyz), vec4(result, 0.0, 0.0, 0.0));
 				}
 			)SHADER";
+		
+		// apply blend mode
 		
 		Assert(blendMode == BLEND_OPAQUE || blendMode == BLEND_ADD);
 
@@ -683,8 +684,6 @@ struct FluidCube3d
 	Texture3d s;
 	Texture3d density;
 	
-// todo : some considerable speedup could probably be had when combining Vx and Vy and Vx0 and Vy0
-//        this will require changes to most shaders and functions though
 	Texture3d Vx;
 	Texture3d Vy;
 	Texture3d Vz;

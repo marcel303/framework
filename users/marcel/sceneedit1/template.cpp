@@ -174,13 +174,7 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 					
 					while ((value_line = line_reader.get_next_line(false)))
 					{
-						if (value_line[0] == '\t')
-						{
-							// only one level of identation may be added per line
-							
-							LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
-							return false;
-						}
+						// note : we don't check if value_line[0] == '\t' here, as we are simply extracting line, not parsing them (yet)
 						
 						current_property_element.value_lines.push_back(value_line);
 					}

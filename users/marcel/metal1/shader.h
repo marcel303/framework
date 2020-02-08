@@ -7,8 +7,10 @@ struct ShaderCacheElem;
 
 #ifdef __OBJC__
 
+#import <assert.h>
 #import <map>
 #import <Metal/Metal.h>
+#define Assert assert
 
 struct ShaderCacheElem
 {
@@ -94,18 +96,6 @@ struct ShaderCacheElem
 	
 	void init(MTLRenderPipelineReflection * reflection)
 	{
-	/*
-		// todo : VS_POSITION etc
-		glBindAttribLocation(program, VS_POSITION,      "in_position4");
-		glBindAttribLocation(program, VS_NORMAL,        "in_normal");
-		glBindAttribLocation(program, VS_COLOR,         "in_color");
-		glBindAttribLocation(program, VS_TEXCOORD0,     "in_texcoord0");
-		glBindAttribLocation(program, VS_TEXCOORD1,     "in_texcoord1");
-		glBindAttribLocation(program, VS_BLEND_INDICES, "in_skinningBlendIndices");
-		glBindAttribLocation(program, VS_BLEND_WEIGHTS, "in_skinningBlendWeights");
-		checkErrorGL();
-	*/
-
 		// cache uniform offsets
 		
 		if (reflection != nullptr)
@@ -120,7 +110,7 @@ struct ShaderCacheElem
 				{
 					vsInfo.init(arg);
 					addUniforms(arg, 'v');
-					//Assert(vsUniformData == nullptr); // todo : enable assert
+					Assert(vsUniformData == nullptr);
 					vsUniformData = malloc(arg.bufferDataSize);
 					break;
 				}
@@ -132,7 +122,7 @@ struct ShaderCacheElem
 				{
 					psInfo.init(arg);
 					addUniforms(arg, 'p');
-					//Assert(psUniformData == nullptr); // todo : enable assert
+					Assert(psUniformData == nullptr);
 					psUniformData = malloc(arg.bufferDataSize);
 					break;
 				}
@@ -205,7 +195,7 @@ struct ShaderCacheElem
 					uniformInfo.numElems = 16;
 					break;
 				default:
-					//Assert(false); // todo : enable assert
+					Assert(false);
 					break;
 				}
 			}
@@ -216,7 +206,7 @@ struct ShaderCacheElem
 	
 	id <MTLRenderPipelineState> findPipelineState(const uint32_t hash) const
 	{
-		return m_pipelines[hash]; // todo : nice iterator lookup etc
+		return m_pipelines[hash];
 	}
 	
 	void addPipelineState(const uint32_t hash, id <MTLRenderPipelineState> state) const
@@ -249,7 +239,7 @@ public:
 class Shader : public ShaderBase
 {
 public:
-	ShaderCacheElem * m_cacheElem = nullptr; // todo : make private
+	ShaderCacheElem * m_cacheElem = nullptr;
 	
 	Shader() { }
 	Shader(const char * name);

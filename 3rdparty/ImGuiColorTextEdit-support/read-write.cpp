@@ -5,6 +5,7 @@
 #include "nfd.h"
 #include "TextIO.h"
 #include <fstream>
+#include <SDL2/SDL.h>
 
 #include "Benchmark.h"
 

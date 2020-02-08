@@ -59,6 +59,7 @@ struct RenderPipelineState
 {
 	BLEND_MODE blendMode = BLEND_ALPHA;
 	uint8_t colorWriteMask = 0xf;
+	bool alphaToCoverageEnabled = false;
 	
 	GxVertexInput vertexInputs[8] = { };
 	uint8_t vertexInputCount = 0;
@@ -73,6 +74,10 @@ struct RenderPipelineState
 };
 
 extern RenderPipelineState renderState;
+
+id <MTLDevice> metal_get_device();
+id <MTLCommandQueue> metal_get_command_queue();
+bool metal_is_encoding_draw_commands();
 
 void metal_make_render_wait_for_blit(id<MTLBlitCommandEncoder> blit_encoder);
 

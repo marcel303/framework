@@ -6,6 +6,7 @@
 #include "Path.h"
 #include <algorithm>
 #include <ctime>
+#include <SDL2/SDL.h> // SDL_ShowSimpleMessageBox
 
 #define MAX_CHANNEL_COUNT 64
 #define MAX_PLAYER_COUNT MAX_CHANNEL_COUNT

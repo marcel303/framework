@@ -83,25 +83,6 @@ static OSStatus outputCallback(
 
 int main(int argc, char * argv[])
 {
-	{
-		//AVAudioSession * sessionInstance = [AVAudioSession sharedInstance];
-		
-		//NSError *error = nil;
-		//[sessionInstance setCategory:AVAudioSessionCategoryPlayAndRecord error:&error];
-		
-		// todo : ios : AudioSessionSetProperty(kAudioSessionProperty_PreferredHardwareIOBufferDuration, .005f); // 5ms
-		
-		// todo : ios : call AudioSessionSetActive
-	}
-	
-	{
-		// todo : handle AVAudioSessionInterruptionTypeBegan, AVAudioSessionInterruptionTypeEnded
-		// add interruption handler
-        //[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(handleInterruption:)
-        //	name:AVAudioSessionInterruptionNotification
-		//	object:sessionInstance];
-	}
-	
 	AudioComponent inputComponent = nullptr;
 	
 	{
@@ -225,7 +206,7 @@ int main(int argc, char * argv[])
 #endif
 
 	{
-		// todo : set maximum frame count
+		// set maximum frame count
 		
 		UInt32 maxFramesPerSlice = 256;
 		

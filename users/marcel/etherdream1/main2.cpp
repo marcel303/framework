@@ -283,7 +283,6 @@ struct GraviticSource
 		const float distanceSq = fmaxf(minimumDistanceSq, dx * dx + dy * dy + dz * dz);
 		const float distance = sqrtf(distanceSq);
 		
-	// todo : add option to toggle between distance squared, distance
 		const float falloff = 1.f / distanceSq;
 		//const float falloff = 1.f / distance;
 		
@@ -494,7 +493,7 @@ struct CalibrationUi
 		
 		setColor(255, 255, 255, 127);
 		gxBegin(GX_LINE_STRIP);
-		pushLineSmooth(true); // todo : remove, replace with hq lines
+		pushLineSmooth(true);
 		for (int i = 0; i < 1000; ++i)
 		{
 			const float angle = i / 1000.f * 2.f * float(M_PI);
@@ -672,8 +671,6 @@ static void addPaddingForLaserFrame(LaserFrame & frame)
 		p_dst[i] = first_pt;
 	
 #if 1
-	// todo : add delay lines for r, g, b
-
 	for (int i = 0; i < 6; ++i)
 		p_dst[i].r = 0;
 #endif
@@ -684,8 +681,6 @@ static void addPaddingForLaserFrame(LaserFrame & frame)
 		p_dst[i] = last_pt;
 
 #if 1
-	// todo : add delay lines for r, g, b
-
 	for (int i = 0; i < 6; ++i)
 		p_dst[i].r = frame.points[kFrameSize - 1 - kFramePadding].r;
 #endif
@@ -1201,7 +1196,7 @@ int main(int argc, char * argv[])
 					
 						const float force = noiseModulator.calculateForce(x, y);
 						
-						// distance falloff. todo : calculate these once for object
+						// distance falloff
 						const float dx = x - gravitic.x;
 						const float dy = y - gravitic.y;
 						const float dz = 0.f - gravitic.z;
@@ -1210,7 +1205,6 @@ int main(int argc, char * argv[])
 						const float minimumDistanceSq = minimumDistance * minimumDistance;
 						const float distanceSq = fmaxf(minimumDistanceSq, dx * dx + dy * dy + dz * dz);
 
-						// todo : add option to toggle between distance squared, distance
 						const float falloff = 1.f / distanceSq;
 						
 						string.forces[i] += force * falloff / numSteps;
@@ -1302,7 +1296,7 @@ int main(int argc, char * argv[])
 			{
 				auto points = frame.points + kFramePadding;
 				
-				// todo : determine begin and end for line segment
+				// determine begin and end for line segment
 				
 				int point_index = 0;
 				

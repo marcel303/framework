@@ -1,0 +1,5 @@
+library nanovg-canvas
+	depend_library nanovg-framework
+	add_files nanovg-canvas.cpp
+	add_files nanovg-canvas.h
+	header_path . expose

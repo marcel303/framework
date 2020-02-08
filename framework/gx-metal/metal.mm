@@ -101,8 +101,6 @@ static id <MTLFence> waitForBlit = nullptr;
 
 //
 
-extern std::map<std::string, std::string> s_shaderSources; // todo : can this be exposed/determined more nicely?
-
 void metal_init()
 {
 	device = MTLCreateSystemDefaultDevice();
@@ -303,6 +301,16 @@ void metal_clear_scissor()
 id <MTLDevice> metal_get_device()
 {
 	return device;
+}
+
+id <MTLCommandQueue> metal_get_command_queue()
+{
+	return queue;
+}
+
+bool metal_is_encoding_draw_commands()
+{
+	return s_activeRenderPass != nullptr;
 }
 
 void metal_upload_texture_area(
@@ -743,11 +751,6 @@ bool getCurrentRenderTargetSize(int & sx, int & sy, int & backingScale)
 // -- render states --
 
 static Stack<int, 32> colorWriteStack(0xf);
-static Stack<BLEND_MODE, 32> blendModeStack(BLEND_ALPHA);
-static Stack<bool, 32> lineSmoothStack(false);
-static Stack<bool, 32> wireframeStack(false);
-static Stack<DepthTestInfo, 32> depthTestStack(DepthTestInfo { false, DEPTH_LESS, true });
-static Stack<CullModeInfo, 32> cullModeStack(CullModeInfo { CULL_NONE, CULL_CCW });
 
 RenderPipelineState renderState;
 
@@ -791,20 +794,6 @@ void setBlend(BLEND_MODE blendMode)
 	renderState.blendMode = blendMode;
 }
 
-void pushBlend(BLEND_MODE blendMode)
-{
-	blendModeStack.push(globals.blendMode);
-	
-	setBlend(blendMode);
-}
-
-void popBlend()
-{
-	const BLEND_MODE blendMode = blendModeStack.popValue();
-	
-	setBlend(blendMode);
-}
-
 // render states independent from render pipeline state
 
 void setLineSmooth(bool enabled)
@@ -812,37 +801,9 @@ void setLineSmooth(bool enabled)
 	//fassert(false);
 }
 
-void pushLineSmooth(bool enabled)
-{
-	lineSmoothStack.push(globals.lineSmoothEnabled);
-	
-	setLineSmooth(enabled);
-}
-
-void popLineSmooth()
-{
-	const bool value = lineSmoothStack.popValue();
-	
-	setLineSmooth(value);
-}
-
 void setWireframe(bool enabled)
 {
 	[s_activeRenderPass->encoder setTriangleFillMode:enabled ? MTLTriangleFillModeLines : MTLTriangleFillModeFill];
-}
-
-void pushWireframe(bool enabled)
-{
-	wireframeStack.push(globals.wireframeEnabled);
-	
-	setWireframe(enabled);
-}
-
-void popWireframe()
-{
-	const bool value = wireframeStack.popValue();
-	
-	setWireframe(value);
 }
 
 static MTLStencilOperation translateStencilOp(const GX_STENCIL_OP op)
@@ -980,40 +941,16 @@ void setDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
 	descriptor = nullptr;
 }
 
-void pushDepthTest(bool enabled, DEPTH_TEST test, bool writeEnabled)
-{
-	const DepthTestInfo info =
-	{
-		globals.depthTestEnabled,
-		globals.depthTest,
-		globals.depthTestWriteEnabled
-	};
-	
-	depthTestStack.push(info);
-	
-	setDepthTest(enabled, test, writeEnabled);
-}
-
-void popDepthTest()
-{
-	const DepthTestInfo depthTestInfo = depthTestStack.popValue();
-	
-	setDepthTest(depthTestInfo.testEnabled, depthTestInfo.test, depthTestInfo.writeEnabled);
-}
-
-void pushDepthWrite(bool enabled)
-{
-	pushDepthTest(globals.depthTestEnabled, globals.depthTest, enabled);
-}
-
-void popDepthWrite()
-{
-	popDepthTest();
-}
-
 void setDepthBias(float depthBias, float slopeScale)
 {
 	[s_activeRenderPass->encoder setDepthBias:depthBias slopeScale:slopeScale clamp:0.f];
+}
+
+void setAlphaToCoverage(bool enabled)
+{
+	globals.alphaToCoverageEnabled = enabled;
+	
+	renderState.alphaToCoverageEnabled = enabled;
 }
 
 void clearStencil(uint8_t value)
@@ -1131,26 +1068,6 @@ void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 		MTLWindingClockwise;
 	
 	[s_activeRenderPass->encoder setFrontFacingWinding:metalFrontFaceWinding];
-}
-
-void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
-{
-	const CullModeInfo info =
-	{
-		globals.cullMode,
-		globals.cullWinding
-	};
-	
-	cullModeStack.push(info);
-	
-	setCullMode(mode, frontFaceWinding);
-}
-
-void popCullMode()
-{
-	const CullModeInfo cullMode = cullModeStack.popValue();
-	
-	setCullMode(cullMode.mode, cullMode.winding);
 }
 
 // -- gpu resources --
@@ -1553,16 +1470,12 @@ void gxValidateShaderResources();
 
 void gxInitialize()
 {
-	fassert(s_shaderSources.empty());
-	
 	memset(&renderState, 0, sizeof(renderState));
 	renderState.blendMode = BLEND_ALPHA;
 	renderState.colorWriteMask = 0xf;
 	
 	bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 	
-	Shader("engine/Generic", "engine/Generic.vs", "engine/Generic.ps");
-
 	memset(&s_gxVertex, 0, sizeof(s_gxVertex));
 	s_gxVertex.cx = 1.f;
 	s_gxVertex.cy = 1.f;
@@ -1672,6 +1585,8 @@ static void gxValidatePipelineState()
 	- render target format(s)
 	- vs bindings
 	- blend mode
+	- color write mask
+	- alpha to coverage
 	- vs/ps function (shader)
 	*/
 	
@@ -1779,6 +1694,7 @@ static void gxValidatePipelineState()
 			pipelineDescriptor.vertexFunction = vsFunction;
 			pipelineDescriptor.fragmentFunction = psFunction;
 			pipelineDescriptor.vertexDescriptor = vertexDescriptor;
+			pipelineDescriptor.alphaToCoverageEnabled = renderState.alphaToCoverageEnabled;
 			
 			for (int i = 0; i < kMaxColorTargets; ++i)
 			{
@@ -1798,13 +1714,14 @@ static void gxValidatePipelineState()
 				
 				// blend state
 				
-			// todo : review MTLBlendFactorSourceAlpha usage on source alpha blend factor (for both Metal and OpenGL)
 				switch (renderState.blendMode)
 				{
 				case BLEND_OPAQUE:
 					att.blendingEnabled = false;
 					break;
 				case BLEND_ALPHA:
+					// note : source alpha is set to ZERO!
+					// assuming the destination surface starts at 100% alpha, sussively multiplication by 1-srcA will yield an inverse opacity value stored inside the destination alpha. the destination may then be blended using an inverted premultiplied-alpha blend mode for correctly composing the surface on top of something else
 					att.blendingEnabled = true;
 					att.rgbBlendOperation = MTLBlendOperationAdd;
 					att.alphaBlendOperation = MTLBlendOperationAdd;
@@ -1823,7 +1740,6 @@ static void gxValidatePipelineState()
 					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					break;
 				case BLEND_PREMULTIPLIED_ALPHA_DRAW:
-				// todo : remove ?
 					att.blendingEnabled = true;
 					att.rgbBlendOperation = MTLBlendOperationAdd;
 					att.alphaBlendOperation = MTLBlendOperationAdd;
@@ -2772,28 +2688,32 @@ void gxValidateShaderResources()
 		auto * shader = static_cast<Shader*>(globals.shader);
 		auto & cacheElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
 		
-	// todo : look at shader to see how many textures are used
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
-		{
 			if (cacheElem.vsTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
-			
-		// todo : set sampler states at the start of a render pass. or set an invalidation bit
-		//        right now we just set it _always_ to pass validation..
-			id<MTLSamplerState> samplerState = samplerStates[cacheElem.vsTextureSamplers[i]];
-			[s_activeRenderPass->encoder setVertexSamplerState:samplerState atIndex:i];
-		}
 		
-	// todo : look at shader to see how many textures are used
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
-		{
 			if (cacheElem.psTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setFragmentTexture:cacheElem.psTextures[i] atIndex:i];
+		
+		for (auto & textureInfo : cacheElem.textureInfos)
+		{
+			// todo : set sampler states at the start of a render pass. or set an invalidation bit
+			//        right now we just set it _always_ to pass validation..
 			
-		// todo : set sampler states at the start of a render pass. or set an invalidation bit
-		//        right now we just set it _always_ to pass validation..
-			id<MTLSamplerState> samplerState = samplerStates[cacheElem.psTextureSamplers[i]];
-			[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:i];
+			if (textureInfo.vsOffset != -1)
+			{
+				const int i = textureInfo.vsOffset;
+				id<MTLSamplerState> samplerState = samplerStates[cacheElem.vsTextureSamplers[i]];
+				[s_activeRenderPass->encoder setVertexSamplerState:samplerState atIndex:i];
+			}
+			
+			if (textureInfo.psOffset != -1)
+			{
+				const int i = textureInfo.psOffset;
+				id<MTLSamplerState> samplerState = samplerStates[cacheElem.psTextureSamplers[i]];
+				[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:i];
+			}
 		}
 	}
 }

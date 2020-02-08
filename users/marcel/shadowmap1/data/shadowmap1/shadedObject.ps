@@ -1,0 +1,58 @@
+include engine/ShaderPS.txt
+
+#define DEBUG 0
+
+uniform sampler2D depthTexture;
+uniform sampler2D normalTexture;
+
+shader_in vec4 color;
+shader_in vec3 normal;
+shader_in vec4 position_lightSpace;
+
+void main()
+{
+    shader_fragColor = color;
+    
+    vec3 projected = position_lightSpace.xyz / position_lightSpace.w;
+    
+    vec3 coords = projected * 0.5 + vec3(0.5);
+    float depth = texture(depthTexture, coords.xy).x;
+    
+#if DEBUG
+    if (projected.x < -1.0 || projected.x > +1.0)
+        shader_fragColor.rgb = vec3(0.5, 0.0, 0.0);
+    else if (projected.y < -1.0 || projected.y > +1.0)
+        shader_fragColor.rgb = vec3(0.0, 0.5, 0.0);
+#if defined(GL_core_profile)
+    else if (projected.z < -1.0 || projected.z > +1.0) // GLSL clip space has z go from -1, +1
+        shader_fragColor.rgb = vec3(0.0, 0.0, 0.5);
+#else
+    else if (projected.z < 0.0 || projected.z > +1.0) // non-GLSL clip space has z go from 0, +1
+        shader_fragColor.rgb = vec3(0.0, 0.0, 0.5);
+#endif
+    else if (false)
+        shader_fragColor.rgb = vec3(projected.z);
+    else if (false)
+        shader_fragColor.rgb = vec3(coords); // RGB color cube
+    else if (false)
+        shader_fragColor.rgb = vec3(depth);
+    else if (false)
+        shader_fragColor.rgb = vec3(coords.z > depth ? 0.5 : 1.0); // correct shadow mapping with serious acne
+    else
+        shader_fragColor.rgb = vec3(coords.z > depth + 0.001 ? 0.3 : 1.0); // less acne with depth bias
+#else
+    shader_fragColor.rgb = vec3(coords.z > depth + 0.001 ? 0.3 : 1.0); // less acne with depth bias
+#endif
+
+    // apply some color
+    
+    shader_fragColor.rgb += color.rgb * 0.3;
+    
+    // apply a bit of lighting here
+    
+    float distance = length(projected.xy);
+    shader_fragColor.rgb *= max(0.0, 1.0 - distance);
+    shader_fragColor.rgb += vec3(0.1);
+
+    shader_fragNormal = vec4(normal, 0.0);
+}

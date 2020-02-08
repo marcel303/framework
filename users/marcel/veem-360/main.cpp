@@ -301,7 +301,7 @@ int main(int argc, char * argv[])
 			
 			Shader shader("360-points");
 			setShader(shader);
-			shader.setTexture("source", 0, mp->getTexture());
+			shader.setTexture("source", 0, mp->getTexture(), true, true);
 			drawGrid3d(100, 100);
 			clearShader();
 			

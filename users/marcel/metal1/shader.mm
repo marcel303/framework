@@ -3,10 +3,8 @@
 #import "shaderBuilder.h"
 #import "shaderPreprocess.h"
 
-#include <assert.h> // todo : use framework assert
+#include <assert.h>
 #define Assert assert
-
-// todo : assert the shader is the active shader when setting immediates
 
 //
 
@@ -16,7 +14,7 @@ id <MTLDevice> metal_get_device();
 
 class ShaderCache
 {
-	ShaderCacheElem m_cacheElem; // todo : make private
+	ShaderCacheElem m_cacheElem;
 	
 public:
 	ShaderCacheElem & findOrCreate(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs);
@@ -82,10 +80,6 @@ ShaderCacheElem & ShaderCache::findOrCreate(const char * name, const char * file
 			
 			MTLVertexDescriptor * vertexDescriptor = [MTLVertexDescriptor vertexDescriptor];
 			
-		// fixme : this is duplicated code. perhaps we should enforce everything is set
-		//         before the shader is set. when a shader is set, construct the pipeline state
-		//         only thing allowed after a shader is set is set to immediates, and to
-		//         do draw calls
 			for (int i = 0; i < renderState.vertexInputCount; ++i)
 			{
 				auto & e = renderState.vertexInputs[i];

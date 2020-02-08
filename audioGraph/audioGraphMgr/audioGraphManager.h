@@ -79,6 +79,7 @@ struct AudioGraphManager
 	// called from the app thread
 	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) = 0;
 	virtual void freeContext(AudioGraphContext *& context) = 0;
+	virtual AudioGraphContext * getContext() = 0;
 	
 	// called from the app thread
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphContext * context = nullptr, const bool createdPaused = false) = 0;
@@ -132,6 +133,7 @@ struct AudioGraphManager_Basic : AudioGraphManager
 	// called from the app thread
 	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
+	virtual AudioGraphContext * getContext() override;
 	
 	// called from the app thread
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphContext * context = nullptr, const bool createdPaused = false) override;
@@ -180,6 +182,7 @@ struct AudioGraphManager_RTE : AudioGraphManager
 	// called from the app thread
 	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
+	virtual AudioGraphContext * getContext() override;
 	
 	// called from the app thread
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphContext * context = nullptr, const bool createdPaused = false) override;
@@ -227,6 +230,7 @@ struct AudioGraphManager_MultiRTE : AudioGraphManager
 	// called from the app thread
 	virtual AudioGraphContext * createContext(AudioMutexBase * mutex, AudioVoiceManager * voiceMgr) override;
 	virtual void freeContext(AudioGraphContext *& context) override;
+	virtual AudioGraphContext * getContext() override;
 	
 	// called from the app thread
 	virtual AudioGraphInstance * createInstance(const char * filename, AudioGraphContext * context = nullptr, const bool createdPaused = false) override;

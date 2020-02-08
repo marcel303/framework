@@ -159,19 +159,48 @@ void JGMOD_PLAYER::parse_s3m_portamento_down(const int chn, const int extcommand
      ci[chn].s3m_pitch_slide_on = true;
 }
 
+static int linear_slide(int period, int slide)
+{
+	const double M = 512.0;
+	
+	double frequency = 1.0 / period;
+	double slide_in_hz = frequency * slide / M;
+	frequency -= slide_in_hz;
+	if (frequency <= 0.0)
+		return 0;
+	else
+		return 1.0 / frequency;
+}
+
 void JGMOD_PLAYER::do_s3m_portamento(const int chn)
 {
     if (mi.tick == 0)
 	{
 		// fine tunings
-        ci[chn].period += ci[chn].s3m_fine_pitch_slide;
-        ci[chn].temp_period += ci[chn].s3m_fine_pitch_slide;            
+		if ((mi.flag & JGMOD_MODE_IT) && (mi.flag & JGMOD_MODE_LINEAR))
+		{
+			ci[chn].period = linear_slide(ci[chn].period, ci[chn].s3m_fine_pitch_slide);
+			ci[chn].temp_period = linear_slide(ci[chn].temp_period, ci[chn].s3m_fine_pitch_slide);
+		}
+		else
+		{
+        	ci[chn].period += ci[chn].s3m_fine_pitch_slide;
+        	ci[chn].temp_period += ci[chn].s3m_fine_pitch_slide;
+		}
 	}
     else
 	{
 		// pitch slide
-        ci[chn].period += ci[chn].s3m_pitch_slide;
-        ci[chn].temp_period += ci[chn].s3m_pitch_slide;
+		if ((mi.flag & JGMOD_MODE_IT) && (mi.flag & JGMOD_MODE_LINEAR))
+		{
+			ci[chn].period = linear_slide(ci[chn].period, ci[chn].s3m_pitch_slide);
+			ci[chn].temp_period = linear_slide(ci[chn].temp_period, ci[chn].s3m_pitch_slide);
+		}
+		else
+		{
+        	ci[chn].period += ci[chn].s3m_pitch_slide;
+        	ci[chn].temp_period += ci[chn].s3m_pitch_slide;
+		}
 	}
 }
 

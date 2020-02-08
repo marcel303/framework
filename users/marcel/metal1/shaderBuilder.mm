@@ -1,7 +1,5 @@
 #import "shaderBuilder.h"
 
-// todo : should be .cpp file
-
 #include "StringBuilder.h"
 #include "StringEx.h"
 #include "TextIO.h"

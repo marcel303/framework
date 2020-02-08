@@ -33,6 +33,7 @@
 
 #if ENABLE_OPENGL
 
+#include "enumTranslation.h"
 #include "gx_texture.h"
 #include <algorithm>
 
@@ -77,24 +78,6 @@ static void toOpenGLUploadType(const GX_TEXTURE_FORMAT format, GLenum & uploadFo
 	C(GX_RGB32_FLOAT, GL_RGB, GL_FLOAT);
 	C(GX_RGBA32_FLOAT, GL_RGBA, GL_FLOAT);
 #undef C
-}
-
-static GLint toOpenGLTextureSwizzle(const int value)
-{
-	if (value == GX_SWIZZLE_ZERO)
-		return GL_ZERO;
-	else if (value == GX_SWIZZLE_ONE)
-		return GL_ONE;
-	else if (value == 0)
-		return GL_RED;
-	else if (value == 1)
-		return GL_GREEN;
-	else if (value == 2)
-		return GL_BLUE;
-	else if (value == 3)
-		return GL_ALPHA;
-	else
-		return GL_INVALID_ENUM;
 }
 
 //
@@ -246,8 +229,6 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 	checkErrorGL();
 #else
-	// todo : gles : texture swizzle ?
-	
 	AssertMsg(false, "not implemented. GL_TEXTURE_SWIZZLE_RGBA is not available in non-desktop OpenGL", 0);
 #endif
 
@@ -541,6 +522,57 @@ void GxTexture::generateMipmaps()
 	}
 }
 
+bool GxTexture::downloadContents(const int x, const int y, const int sx, const int sy, void * bytes, const int numBytes)
+{
+	bool result = true;
+	
+	// create a temporary framebuffer, which we'll need for glReadBuffer
+	
+	GLuint frameBuffer = 0;
+
+	glGenFramebuffers(1, &frameBuffer);
+	checkErrorGL();
+
+	result &= frameBuffer != 0;
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, id, 0);
+	checkErrorGL();
+	
+	result &= glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+	checkErrorGL();
+	
+	// capture OpenGL states so we can restore them later
+	
+	GLuint oldBuffer = 0;
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+	checkErrorGL();
+
+	// bind the temporary framebuffer and read pixels from it
+	
+	glReadBuffer(GL_COLOR_ATTACHMENT0);
+	checkErrorGL();
+	
+	GLenum uploadFormat;
+	GLenum uploadElementType;
+	toOpenGLUploadType(format, uploadFormat, uploadElementType);
+	
+	glReadPixels(x, y, sx, sy, uploadFormat, uploadElementType, bytes);
+	checkErrorGL();
+	
+	// restore previous OpenGL states
+	
+	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+	checkErrorGL();
+
+	// free the temporary framebuffer
+	
+	glDeleteFramebuffers(1, &frameBuffer);
+	frameBuffer = 0;
+	
+	return result;
+}
+
 //
 
 static GxTextureId createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
@@ -625,8 +657,6 @@ GxTextureId createTextureFromRG32F(const void * source, int sx, int sy, bool fil
 }
 
 #if ENABLE_DESKTOP_OPENGL
-
-// todo : gles : R16 texture format ?
 
 GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp)
 {

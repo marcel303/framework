@@ -225,7 +225,7 @@ bool maxPatchFromControlSurfaceDefinition(const ControlSurfaceDefinition::Surfac
 						.presentation_rect(elemLayout->x, elemLayout->y, elemLayout->sx, elemLayout->sy)
 						.parameter_enable(true)
 						.saved_attribute("parameter_enum", std::vector<int>({ 1, 1 }))
-						.saved_attribute("parameter_type", 2)
+						.saved_attribute("parameter_type", max::kParameterType_Enum)
 						.saved_attribute("parameter_mmax", 1)
 						.saved_attribute("parameter_longname", elem.name)
 						.saved_attribute("parameter_shortname",  elem.button.displayName)
