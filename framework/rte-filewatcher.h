@@ -51,6 +51,8 @@ struct rteFileInfo
 
 struct rteFileWatcher_Basic : rteFileWatcherBase
 {
+	std::string path;
+
 	std::vector<rteFileInfo> fileInfos;
 
 	virtual void init(const char * path) override;

@@ -95,7 +95,11 @@ static void handleFileChange(const char * filename)
 
 void rteFileWatcher_Basic::init(const char * path)
 {
-	fileInfos.clear();
+	shut();
+
+	//
+
+	this->path = path;
 
 	std::vector<std::string> files = listFiles(path, true);
 
@@ -156,9 +160,18 @@ void rteFileWatcher_Basic::tick()
 
 			if (changed)
 			{
-				if (fileChanged != nullptr)
+				const char * path = fi.filename.c_str();
+
+				if (strcasestr(path, this->path.c_str()) == path)
 				{
-					fileChanged(fi.filename.c_str());
+					path += this->path.size();
+					if (path[0] == '/')
+						path++;
+
+					if (fileChanged != nullptr)
+					{
+						fileChanged(path);
+					}
 				}
 			}
 		}
@@ -224,12 +237,11 @@ struct rteFileWatcher_BasicWithPathOptimize : rteFileWatcherBase
 			fileWatcher_Basic.tick();
 		}
 	}
-
 };
 
 //
 
-#if defined(MACOS)
+#if defined(MACOS) || defined(WINDOWS)
 
 #include <list>
 
@@ -239,7 +251,13 @@ void initRealTimeEditing()
 {
 	for (auto & resourcePath : framework.resourcePaths)
 	{
+	#if defined(MACOS)
 		rteFileWatcher_OSX * fileWatcher = new rteFileWatcher_OSX();
+	#elif defined(WINDOWS)
+		rteFileWatcher_BasicWithPathOptimize * fileWatcher = new rteFileWatcher_BasicWithPathOptimize();
+	#else
+		#error
+	#endif
 		
 		fileWatcher->init(resourcePath.c_str());
 		fileWatcher->fileChanged = handleFileChange;
