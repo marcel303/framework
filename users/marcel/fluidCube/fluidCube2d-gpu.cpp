@@ -124,14 +124,14 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 
 // -----
 
-static void set_bnd2d(const int b, Surface * x, const int N)
+static void set_bnd2d(const int b, Surface * x, const int sizeX, const int sizeY)
 {
 	// just here for future reference. this is where the cpu version would apply its
 	// boundary condition. for the gpu version this would be relatively expensive to
 	// implement (naively). we don't seem to actually need it, so we leave it empty for now
 }
 
-static void lin_solve2d(const int b, Surface * x, const Surface * x0, const float a, const float c, const int iter, const int N)
+static void lin_solve2d(const int b, Surface * x, const Surface * x0, const float a, const float c, const int iter, const int sizeX, const int sizeY)
 {
     float cRecip = 1.f / c;
 
@@ -166,14 +166,14 @@ static void lin_solve2d(const int b, Surface * x, const Surface * x0, const floa
 		shader.setImmediate("cRecip", cRecip);
     	x->postprocess(shader);
 		
-        set_bnd2d(b, x, N);
+        set_bnd2d(b, x, sizeX, sizeY);
     }
 }
 
 static void lin_solve2d_xy(
 	Surface * x, const Surface * x0,
 	Surface * y, const Surface * y0,
-	const float a, const float c, const int iter, const int N)
+	const float a, const float c, const int iter, const int sizeX, const int sizeY)
 {
     float cRecip = 1.f / c;
 
@@ -208,7 +208,7 @@ static void lin_solve2d_xy(
 		shader.setImmediate("cRecip", cRecip);
     	x->postprocess(shader);
 		
-        set_bnd2d(1, x, N);
+        set_bnd2d(1, x, sizeX, sizeY);
 	}
 	
 	for (int k = 0; k < iter; ++k)
@@ -221,27 +221,27 @@ static void lin_solve2d_xy(
 		shader.setImmediate("cRecip", cRecip);
     	y->postprocess(shader);
 		
-        set_bnd2d(2, y, N);
+        set_bnd2d(2, y, sizeX, sizeY);
     }
 }
 
-static void diffuse2d(const int b, Surface * x, const Surface * x0, const float diff, const float dt, const int iter, const int N)
+static void diffuse2d(const int b, Surface * x, const Surface * x0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY)
 {
-	const float a = dt * diff * (N - 2);
-	lin_solve2d(b, x, x0, a, 1 + 4 * a, iter, N);
+	const float a = dt * diff * (sizeX - 2); // fixme : only use sizeX here and not sizeY ?
+	lin_solve2d(b, x, x0, a, 1 + 4 * a, iter, sizeX, sizeY);
 }
 
-static void diffuse2d_xy(Surface * x, const Surface * x0, Surface * y, const Surface * y0, const float diff, const float dt, const int iter, const int N)
+static void diffuse2d_xy(Surface * x, const Surface * x0, Surface * y, const Surface * y0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY)
 {
-	const float a = dt * diff * (N - 2);
-	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, N);
+	const float a = dt * diff * (sizeX - 2); // fixme : only use sizeX here and not sizeY ?
+	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, sizeX, sizeY);
 }
 
 static void project2d(
 	Surface * velocX,
 	Surface * velocY,
 	Surface * p,
-	Surface * div, const int iter, const int N)
+	Surface * div, const int iter, const int sizeX, const int sizeY)
 {
 	getOrCreateShader("project2d_div",
 		R"SHADER(
@@ -268,10 +268,10 @@ static void project2d(
 	}
 	popSurface();
 	
-    set_bnd2d(0, div, N);
+    set_bnd2d(0, div, sizeX, sizeY);
 	
 	p->clear();
-	lin_solve2d(0, p, div, 1, 4, iter, N);
+	lin_solve2d(0, p, div, 1, 4, iter, sizeX, sizeY);
 	
 	getOrCreateShader("project2d_veloc_x",
 		R"SHADER(
@@ -309,14 +309,14 @@ static void project2d(
 	popBlend();
 	popSurface();
 
-    set_bnd2d(1, velocX, N);
-    set_bnd2d(2, velocY, N);
+    set_bnd2d(1, velocX, sizeX, sizeY);
+    set_bnd2d(2, velocY, sizeY, sizeY);
 }
 
-static void advect2d(const int b, Surface * d, const Surface * d0, const Surface * velocX, const Surface * velocY, const float dt, const int N)
+static void advect2d(const int b, Surface * d, const Surface * d0, const Surface * velocX, const Surface * velocY, const float dt, const int sizeX, const int sizeY)
 {
-    const float dtx = dt * (N - 2);
-    const float dty = dt * (N - 2);
+    const float dtx = dt * (sizeX - 2);
+    const float dty = dt * (sizeX - 2);
 	
     getOrCreateShader("advect2d",
 		R"SHADER(
@@ -349,15 +349,15 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
 	popBlend();
     popSurface();
 	
-    set_bnd2d(b, d, N);
+    set_bnd2d(b, d, sizeX, sizeY);
 }
 
 //
 
 void FluidCube2dGpu::addDensity(const int x, const int y, const float amount)
 {
-	if (x < 0 || x >= size ||
-		y < 0 || y >= size)
+	if (x < 0 || x >= sizeX ||
+		y < 0 || y >= sizeY)
 	{
 		return;
 	}
@@ -380,8 +380,8 @@ void FluidCube2dGpu::addDensity(const int x, const int y, const float amount)
 
 void FluidCube2dGpu::addVelocity(const int x, const int y, const float amountX, const float amountY)
 {
-	if (x < 0 || x >= size ||
-		y < 0 || y >= size)
+	if (x < 0 || x >= sizeX ||
+		y < 0 || y >= sizeY)
 	{
 		return;
 	}
@@ -421,33 +421,32 @@ void FluidCube2dGpu::step()
 {
 	pushBlend(BLEND_OPAQUE);
 	{
-		const int N = size;
-	
 		const int iter = 4;
 		
-		diffuse2d_xy(&Vx0, &Vx, &Vy0, &Vy, visc, dt, iter, N);
+		diffuse2d_xy(&Vx0, &Vx, &Vy0, &Vy, visc, dt, iter, sizeX, sizeY);
 		
-		project2d(&Vx0, &Vy0, &Vx, &Vy, iter, N);
+		project2d(&Vx0, &Vy0, &Vx, &Vy, iter, sizeX, sizeY);
 	
-		advect2d(1, &Vx, &Vx0, &Vx0, &Vy0, dt, N);
-		advect2d(2, &Vy, &Vy0, &Vx0, &Vy0, dt, N);
+		advect2d(1, &Vx, &Vx0, &Vx0, &Vy0, dt, sizeX, sizeY);
+		advect2d(2, &Vy, &Vy0, &Vx0, &Vy0, dt, sizeX, sizeY);
 		
-		project2d(&Vx, &Vy, &Vx0, &Vy0, iter, N);
+		project2d(&Vx, &Vy, &Vx0, &Vy0, iter, sizeX, sizeY);
 	
-		diffuse2d(0, &s, &density, diff, dt, iter, N);
+		diffuse2d(0, &s, &density, diff, dt, iter, sizeX, sizeY);
 		
-		advect2d(0, &density, &s, &Vx, &Vy, dt, N);
+		advect2d(0, &density, &s, &Vx, &Vy, dt, sizeX, sizeY);
 	}
 	popBlend();
 }
 
 //
 
-FluidCube2dGpu * createFluidCube2dGpu(const int size, const float diffusion, const float viscosity, const float dt)
+FluidCube2dGpu * createFluidCube2dGpu(const int sizeX, const int sizeY, const float diffusion, const float viscosity, const float dt)
 {
 	FluidCube2dGpu * cube = new FluidCube2dGpu();
 
-	cube->size = size;
+	cube->sizeX = sizeX;
+	cube->sizeY = sizeY;
 	cube->dt = dt;
 	cube->diff = diffusion;
 	cube->visc = viscosity;
@@ -455,7 +454,7 @@ FluidCube2dGpu * createFluidCube2dGpu(const int size, const float diffusion, con
 	// initialize surfaces
 	
 	SurfaceProperties surfaceProperties;
-	surfaceProperties.dimensions.init(size, size);
+	surfaceProperties.dimensions.init(sizeX, sizeY);
 	surfaceProperties.colorTarget.init(SURFACE_R16F, true);
 	
 	cube->s.init(surfaceProperties);

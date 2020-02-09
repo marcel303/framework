@@ -4,7 +4,9 @@
 
 struct FluidCube3d
 {
-	int size;
+	int sizeX;
+	int sizeY;
+	int sizeZ;
 
 	float dt;
 	float diff; // diffusion amount
@@ -23,7 +25,7 @@ struct FluidCube3d
 	
 	int index(const int x, const int y, const int z) const
 	{
-		return x + y * size + z * size * size;
+		return x + y * sizeX + z * sizeX * sizeY;
 	}
 
 	void addDensity(const int x, const int y, const int z, const float amount);
@@ -32,4 +34,4 @@ struct FluidCube3d
 	void step();
 };
 
-FluidCube3d * createFluidCube3d(const int size, const float diffusion, const float viscosity, const float dt);
+FluidCube3d * createFluidCube3d(const int sizeX, const int sizeY, const int sizeZ, const float diffusion, const float viscosity, const float dt);

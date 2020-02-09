@@ -4,7 +4,8 @@
 
 struct FluidCube2dGpu
 {
-	int size;
+	int sizeX;
+	int sizeY;
 
 	float dt;
 	float diff; // diffusion amount
@@ -27,4 +28,4 @@ struct FluidCube2dGpu
 	void step();
 };
 
-FluidCube2dGpu * createFluidCube2dGpu(const int size, const float diffusion, const float viscosity, const float dt);
+FluidCube2dGpu * createFluidCube2dGpu(const int sizeX, const int sizeY, const float diffusion, const float viscosity, const float dt);

@@ -33,63 +33,70 @@ Cohesive forces can be approximated by using a tracer image to track different f
 
 */
 
-#define IX_3D(x, y, z) ((x) + (y) * N + (z) * N * N)
+#define IX_3D(x, y, z) ((x) + (y) * sizeX + (z) * sizeX * sizeY)
 
-static void set_bnd3d(const int b, float * x, const int N)
+static void set_bnd3d(const int b, float * x, const int sizeX, const int sizeY, const int sizeZ)
 {
-    for(int j = 1; j < N - 1; j++) {
-        for(int i = 1; i < N - 1; i++) {
+    for(int j = 1; j < sizeY - 1; j++) {
+        for(int i = 1; i < sizeX - 1; i++) {
+        	const int N = sizeZ;
             x[IX_3D(i, j, 0  )] = b == 3 ? -x[IX_3D(i, j, 1  )] : x[IX_3D(i, j, 1  )];
             x[IX_3D(i, j, N-1)] = b == 3 ? -x[IX_3D(i, j, N-2)] : x[IX_3D(i, j, N-2)];
         }
     }
 
-    for(int k = 1; k < N - 1; k++) {
-        for(int i = 1; i < N - 1; i++) {
+    for(int k = 1; k < sizeZ - 1; k++) {
+        for(int i = 1; i < sizeX - 1; i++) {
+        	const int N = sizeY;
             x[IX_3D(i, 0  , k)] = b == 2 ? -x[IX_3D(i, 1  , k)] : x[IX_3D(i, 1  , k)];
             x[IX_3D(i, N-1, k)] = b == 2 ? -x[IX_3D(i, N-2, k)] : x[IX_3D(i, N-2, k)];
         }
     }
 
-    for(int k = 1; k < N - 1; k++) {
-        for(int j = 1; j < N - 1; j++) {
+    for(int k = 1; k < sizeZ - 1; k++) {
+        for(int j = 1; j < sizeY - 1; j++) {
+        	const int N = sizeX;
             x[IX_3D(0  , j, k)] = b == 1 ? -x[IX_3D(1  , j, k)] : x[IX_3D(1  , j, k)];
             x[IX_3D(N-1, j, k)] = b == 1 ? -x[IX_3D(N-2, j, k)] : x[IX_3D(N-2, j, k)];
         }
     }
 
-    x[IX_3D(  0,   0,   0)] = 0.333f * (x[IX_3D(  1,   0,   0)] + x[IX_3D(  0,   1,   0)] + x[IX_3D(  0,   0,   1)]);
-    x[IX_3D(  0, N-1,   0)] = 0.333f * (x[IX_3D(  1, N-1,   0)] + x[IX_3D(  0, N-2,   0)] + x[IX_3D(  0, N-1,   1)]);
-    x[IX_3D(  0,   0, N-1)] = 0.333f * (x[IX_3D(  1,   0, N-1)] + x[IX_3D(  0,   1, N-1)] + x[IX_3D(  0,   0, N-1)]);
-    x[IX_3D(  0, N-1, N-1)] = 0.333f * (x[IX_3D(  1, N-1, N-1)] + x[IX_3D(  0, N-2, N-1)] + x[IX_3D(  0, N-1, N-2)]);
-    x[IX_3D(N-1,   0,   0)] = 0.333f * (x[IX_3D(N-2,   0,   0)] + x[IX_3D(N-1,   1,   0)] + x[IX_3D(N-1,   0,   1)]);
-    x[IX_3D(N-1, N-1,   0)] = 0.333f * (x[IX_3D(N-2, N-1,   0)] + x[IX_3D(N-1, N-2,   0)] + x[IX_3D(N-1, N-1,   1)]);
-    x[IX_3D(N-1,   0, N-1)] = 0.333f * (x[IX_3D(N-2,   0, N-1)] + x[IX_3D(N-1,   1, N-1)] + x[IX_3D(N-1,   0, N-2)]);
-    x[IX_3D(N-1, N-1, N-1)] = 0.333f * (x[IX_3D(N-2, N-1, N-1)] + x[IX_3D(N-1, N-2, N-1)] + x[IX_3D(N-1, N-1, N-2)]);
+	const int NX = sizeX;
+	const int NY = sizeY;
+	const int NZ = sizeZ;
+	
+    x[IX_3D(   0,    0,    0)] = 0.333f * (x[IX_3D(   1,    0,    0)] + x[IX_3D(   0,    1,    0)] + x[IX_3D(   0,    0,    1)]);
+    x[IX_3D(   0, NY-1,    0)] = 0.333f * (x[IX_3D(   1, NY-1,    0)] + x[IX_3D(   0, NY-2,    0)] + x[IX_3D(   0, NY-1,    1)]);
+    x[IX_3D(   0,    0, NZ-1)] = 0.333f * (x[IX_3D(   1,    0, NZ-1)] + x[IX_3D(   0,    1, NZ-1)] + x[IX_3D(   0,    0, NZ-1)]);
+    x[IX_3D(   0, NY-1, NZ-1)] = 0.333f * (x[IX_3D(   1, NY-1, NZ-1)] + x[IX_3D(   0, NY-2, NZ-1)] + x[IX_3D(   0, NY-1, NZ-2)]);
+    x[IX_3D(NX-1,    0,    0)] = 0.333f * (x[IX_3D(NX-2,    0,    0)] + x[IX_3D(NX-1,    1,    0)] + x[IX_3D(NX-1,    0,    1)]);
+    x[IX_3D(NX-1, NY-1,    0)] = 0.333f * (x[IX_3D(NX-2, NY-1,    0)] + x[IX_3D(NX-1, NY-2,    0)] + x[IX_3D(NX-1, NY-1,    1)]);
+    x[IX_3D(NX-1,    0, NZ-1)] = 0.333f * (x[IX_3D(NX-2,    0, NZ-1)] + x[IX_3D(NX-1,    1, NZ-1)] + x[IX_3D(NX-1,    0, NZ-2)]);
+    x[IX_3D(NX-1, NY-1, NZ-1)] = 0.333f * (x[IX_3D(NX-2, NY-1, NZ-1)] + x[IX_3D(NX-1, NY-2, NZ-1)] + x[IX_3D(NX-1, NY-1, NZ-2)]);
 }
 
-static void lin_solve3d(const int b, float * __restrict x, const float * __restrict x0, const float a, const float c, const int iter, const int N)
+static void lin_solve3d(const int b, float * __restrict x, const float * __restrict x0, const float a, const float c, const int iter, const int sizeX, const int sizeY, const int sizeZ)
 {
     float cRecip = 1.f / c;
 
     for (int k = 0; k < iter; k++)
     {
-        for (int m = 1; m < N - 1; m++)
+        for (int m = 1; m < sizeZ - 1; m++)
         {
-            for (int j = 1; j < N - 1; j++)
+            for (int j = 1; j < sizeY - 1; j++)
             {
 				int index = IX_3D(0, j, m);
 				
             	const int step_x = 1;
-            	const int step_y = N;
-            	const int step_z = N * N;
+            	const int step_y = sizeX;
+            	const int step_z = sizeX * sizeY;
 				
 				const float * __restrict x0_line = x0 + index;
 					  float * __restrict x_line  = x  + index;
 			
 				float prev_x = x_line[0];
 			
-                for (int i = 1; i < N - 1; i++, index++)
+                for (int i = 1; i < sizeX - 1; i++, index++)
                 {
 				#if 1
 					const float curr_x = x_line[i];
@@ -125,7 +132,7 @@ static void lin_solve3d(const int b, float * __restrict x, const float * __restr
             }
         }
 
-        set_bnd3d(b, x, N);
+        set_bnd3d(b, x, sizeX, sizeY, sizeZ);
     }
 }
 
@@ -133,21 +140,26 @@ static void lin_solve3d_xyz(
 	float * __restrict x, const float * __restrict x0,
 	float * __restrict y, const float * __restrict y0,
 	float * __restrict z, const float * __restrict z0,
-	const float a, const float c, const int iter, const int N)
+	const float a,
+	const float c,
+	const int iter,
+	const int sizeX,
+	const int sizeY,
+	const int sizeZ)
 {
     float cRecip = 1.f / c;
 
     for (int k = 0; k < iter; k++)
     {
-        for (int m = 1; m < N - 1; m++)
+        for (int m = 1; m < sizeZ - 1; m++)
         {
-            for (int j = 1; j < N - 1; j++)
+            for (int j = 1; j < sizeY - 1; j++)
             {
 				int index = IX_3D(0, j, m);
 				
             	const int step_x = 1;
-            	const int step_y = N;
-            	const int step_z = N * N;
+            	const int step_y = sizeX;
+            	const int step_z = sizeX * sizeY;
 				
 				const float * __restrict x0_line = x0 + index;
 					  float * __restrict x_line  = x  + index;
@@ -162,7 +174,7 @@ static void lin_solve3d_xyz(
 				float prev_y = y_line[0];
 				float prev_z = z_line[0];
 				
-                for (int i = 1; i < N - 1; i++)
+                for (int i = 1; i < sizeX - 1; i++)
                 {
 					const float curr_x = x_line[i];
 					const float curr_y = y_line[i];
@@ -208,26 +220,26 @@ static void lin_solve3d_xyz(
             }
         }
 
-        set_bnd3d(1, x, N);
-        set_bnd3d(2, y, N);
-        set_bnd3d(3, z, N);
+        set_bnd3d(1, x, sizeX, sizeY, sizeZ);
+        set_bnd3d(2, y, sizeX, sizeY, sizeZ);
+        set_bnd3d(3, z, sizeX, sizeY, sizeZ);
     }
 }
 
-static void diffuse3d(const int b, float * x, const float * x0, const float diff, const float dt, const int iter, const int N)
+static void diffuse3d(const int b, float * x, const float * x0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const int sizeZ)
 {
-	const float a = dt * diff * (N - 2) * (N - 2);
-	lin_solve3d(b, x, x0, a, 1 + 6 * a, iter, N);
+	const float a = dt * diff * (sizeX - 2) * (sizeX - 2);
+	lin_solve3d(b, x, x0, a, 1 + 6 * a, iter, sizeX, sizeY, sizeZ);
 }
 
 static void diffuse3d_xyz(
 	float * x, const float * x0,
 	float * y, const float * y0,
 	float * z, const float * z0,
-	const float diff, const float dt, const int iter, const int N)
+	const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const int sizeZ)
 {
-	const float a = dt * diff * (N - 2) * (N - 2);
-	lin_solve3d_xyz(x, x0, y, y0, z, z0, a, 1 + 6 * a, iter, N);
+	const float a = dt * diff * (sizeX - 2) * (sizeX - 2);
+	lin_solve3d_xyz(x, x0, y, y0, z, z0, a, 1 + 6 * a, iter, sizeX, sizeY, sizeZ);
 }
 
 static void project3d(
@@ -236,19 +248,22 @@ static void project3d(
 	float * __restrict velocZ,
 	float * __restrict p,
 	float * __restrict div,
-	const int iter, const int N)
+	const int iter,
+	const int sizeX,
+	const int sizeY,
+	const int sizeZ)
 {
-    for (int k = 1; k < N - 1; k++)
+    for (int k = 1; k < sizeZ - 1; k++)
     {
-        for (int j = 1; j < N - 1; j++)
+        for (int j = 1; j < sizeY - 1; j++)
         {
         	int index = IX_3D(1, j, k);
 			
         	const int step_x = 1;
-        	const int step_y = N;
-        	const int step_z = N * N;
+        	const int step_y = sizeX;
+        	const int step_z = sizeX * sizeY;
 			
-            for (int i = 1; i < N - 1; i++, index++)
+            for (int i = 1; i < sizeX - 1; i++, index++)
             {
                 div[index] =
                 	-0.25f *
@@ -261,22 +276,22 @@ static void project3d(
         }
     }
 	
-    set_bnd3d(0, div, N);
+    set_bnd3d(0, div, sizeX, sizeY, sizeZ);
 	
-    memset(p, 0, N * N * N * sizeof(float));
-    lin_solve3d(0, p, div, 1, 6, iter, N);
+    memset(p, 0, sizeX * sizeY * sizeZ * sizeof(float));
+    lin_solve3d(0, p, div, 1, 6, iter, sizeX, sizeY, sizeZ);
 	
-    for (int k = 1; k < N - 1; k++)
+    for (int k = 1; k < sizeZ - 1; k++)
     {
-        for (int j = 1; j < N - 1; j++)
+        for (int j = 1; j < sizeY - 1; j++)
         {
         	int index = IX_3D(1, j, k);
 			
         	const int step_x = 1;
-        	const int step_y = N;
-        	const int step_z = N * N;
+        	const int step_y = sizeX;
+        	const int step_z = sizeX * sizeY;
 			
-            for (int i = 1; i < N - 1; i++, index++)
+            for (int i = 1; i < sizeX - 1; i++, index++)
             {
                 velocX[index] -= ( p[index + step_x] - p[index - step_x] );
                 velocY[index] -= ( p[index + step_y] - p[index - step_y] );
@@ -285,30 +300,33 @@ static void project3d(
         }
     }
 	
-    set_bnd3d(1, velocX, N);
-    set_bnd3d(2, velocY, N);
-    set_bnd3d(3, velocZ, N);
+    set_bnd3d(1, velocX, sizeX, sizeY, sizeZ);
+    set_bnd3d(2, velocY, sizeX, sizeY, sizeZ);
+    set_bnd3d(3, velocZ, sizeX, sizeY, sizeZ);
 }
 
-static void advect3d(const int b, float * __restrict d, const float * __restrict d0, const float * velocX, const float * velocY, const float * velocZ, const float dt, const int N)
+static void advect3d(const int b, float * __restrict d, const float * __restrict d0, const float * velocX, const float * velocY, const float * velocZ, const float dt, const int sizeX, const int sizeY, const int sizeZ)
 {
     float i0, i1, j0, j1, k0, k1;
     
-    float dtx = dt * (N - 2);
-    float dty = dt * (N - 2);
-    float dtz = dt * (N - 2);
+    float dtx = dt * (sizeX - 2);
+    float dty = dt * (sizeX - 2);
+    float dtz = dt * (sizeX - 2);
     
     float s0, s1, t0, t1, u0, u1;
-    
-    float Nfloat = N;
+	
+    float x_max = sizeX - 1.5f;
+    float y_max = sizeY - 1.5f;
+    float z_max = sizeZ - 1.5f;
+	
     float ifloat, jfloat, kfloat;
     int i, j, k;
 	
-    for (k = 1, kfloat = 1; k < N - 1; k++, kfloat++)
+    for (k = 1, kfloat = 1; k < sizeZ - 1; k++, kfloat++)
     {
-        for (j = 1, jfloat = 1; j < N - 1; j++, jfloat++)
+        for (j = 1, jfloat = 1; j < sizeY - 1; j++, jfloat++)
         {
-            for (i = 1, ifloat = 1; i < N - 1; i++, ifloat++)
+            for (i = 1, ifloat = 1; i < sizeX - 1; i++, ifloat++)
             {
                 const float tmp1 = dtx * velocX[IX_3D(i, j, k)];
                 const float tmp2 = dty * velocY[IX_3D(i, j, k)];
@@ -319,17 +337,17 @@ static void advect3d(const int b, float * __restrict d, const float * __restrict
                 float z = kfloat - tmp3;
 				
                 if(x < 0.5f) x = 0.5f; 
-                if(x > Nfloat - 1.5f) x = Nfloat - 1.5f;
+                if(x > x_max) x = x_max;
                 i0 = floorf(x); 
                 i1 = i0 + 1.0f;
 				
                 if(y < 0.5f) y = 0.5f; 
-                if(y > Nfloat - 1.5f) y = Nfloat - 1.5f;
+                if(y > y_max) y = y_max;
                 j0 = floorf(y);
                 j1 = j0 + 1.0f;
 				
                 if(z < 0.5f) z = 0.5f;
-                if(z > Nfloat - 1.5f) z = Nfloat - 1.5f;
+                if(z > z_max) z = z_max;
                 k0 = floorf(z);
                 k1 = k0 + 1.0f;
 				
@@ -367,32 +385,39 @@ static void advect3d(const int b, float * __restrict d, const float * __restrict
         }
     }
 	
-    set_bnd3d(b, d, N);
+    set_bnd3d(b, d, sizeX, sizeY, sizeZ);
 }
 
 static void advect3d_xyz(
 	float * __restrict _x, const float * __restrict x0,
 	float * __restrict _y, const float * __restrict y0,
 	float * __restrict _z, const float * __restrict z0,
-	const float * velocX, const float * velocY, const float * velocZ, const float dt, const int N)
+	const float * velocX, const float * velocY, const float * velocZ,
+	const float dt,
+	const int sizeX,
+	const int sizeY,
+	const int sizeZ)
 {
     float i0, i1, j0, j1, k0, k1;
 	
-    float dtx = dt * (N - 2);
-    float dty = dt * (N - 2);
-    float dtz = dt * (N - 2);
+    float dtx = dt * (sizeX - 2);
+    float dty = dt * (sizeX - 2);
+    float dtz = dt * (sizeX - 2);
 	
     float s0, s1, t0, t1, u0, u1;
 	
-    float Nfloat = N;
+	float x_max = sizeX - 1.5f;
+	float y_max = sizeY - 1.5f;
+	float z_max = sizeZ - 1.5f;
+	
     float ifloat, jfloat, kfloat;
     int i, j, k;
 	
-    for (k = 1, kfloat = 1; k < N - 1; k++, kfloat++)
+    for (k = 1, kfloat = 1; k < sizeZ - 1; k++, kfloat++)
     {
-        for (j = 1, jfloat = 1; j < N - 1; j++, jfloat++)
+        for (j = 1, jfloat = 1; j < sizeY - 1; j++, jfloat++)
         {
-            for (i = 1, ifloat = 1; i < N - 1; i++, ifloat++)
+            for (i = 1, ifloat = 1; i < sizeX - 1; i++, ifloat++)
             {
             	const int index = IX_3D(i, j, k);
 				
@@ -405,17 +430,17 @@ static void advect3d_xyz(
                 float z = kfloat - tmp3;
 				
                 if(x < 0.5f) x = 0.5f;
-                if(x > Nfloat - 1.5f) x = Nfloat - 1.5f;
+                if(x > x_max) x = x_max;
                 i0 = floorf(x);
                 i1 = i0 + 1.0f;
 				
                 if(y < 0.5f) y = 0.5f;
-                if(y > Nfloat - 1.5f) y = Nfloat - 1.5f;
+                if(y > y_max) y = y_max;
                 j0 = floorf(y);
                 j1 = j0 + 1.0f;
 				
                 if(z < 0.5f) z = 0.5f;
-                if(z > Nfloat - 1.5f) z = Nfloat - 1.5f;
+                if(z > z_max) z = z_max;
                 k0 = floorf(z);
                 k1 = k0 + 1.0f;
 				
@@ -479,23 +504,22 @@ static void advect3d_xyz(
         }
     }
 	
-    set_bnd3d(1, _x, N);
-    set_bnd3d(2, _y, N);
-    set_bnd3d(3, _z, N);
+    set_bnd3d(1, _x, sizeX, sizeY, sizeZ);
+    set_bnd3d(2, _y, sizeX, sizeY, sizeZ);
+    set_bnd3d(3, _z, sizeX, sizeY, sizeZ);
 }
 
 //
 
 void FluidCube3d::addDensity(const int x, const int y, const int z, const float amount)
 {
-	if (x < 0 || x >= size ||
-		y < 0 || y >= size ||
-		z < 0 || z >= size)
+	if (x < 0 || x >= sizeX ||
+		y < 0 || y >= sizeY ||
+		z < 0 || z >= sizeZ)
 	{
 		return;
 	}
 	
-	const int N = size;
 	const int index = IX_3D(x, y, z);
 	
 	density[index] += amount;
@@ -503,14 +527,13 @@ void FluidCube3d::addDensity(const int x, const int y, const int z, const float 
 
 void FluidCube3d::addVelocity(const int x, const int y, const int z, const float amountX, const float amountY, const float amountZ)
 {
-	if (x < 0 || x >= size ||
-		y < 0 || y >= size ||
-		z < 0 || z >= size)
+	if (x < 0 || x >= sizeX ||
+		y < 0 || y >= sizeY ||
+		z < 0 || z >= sizeZ)
 	{
 		return;
 	}
 	
-	const int N = size;
 	const int index = IX_3D(x, y, z);
 
 	Vx[index] += amountX;
@@ -520,39 +543,41 @@ void FluidCube3d::addVelocity(const int x, const int y, const int z, const float
 
 void FluidCube3d::step()
 {
-    const int N = size;
-	
     const int iter = 4;
 
-	diffuse3d_xyz(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), Vz0.data(), Vz.data(), visc, dt, iter, N);
+	diffuse3d_xyz(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), Vz0.data(), Vz.data(), visc, dt, iter, sizeX, sizeY, sizeZ);
 	
-	project3d(Vx0.data(), Vy0.data(), Vz0.data(), Vx.data(), Vy.data(), iter, N);
+	project3d(Vx0.data(), Vy0.data(), Vz0.data(), Vx.data(), Vy.data(), iter, sizeX, sizeY, sizeZ);
 	
 	advect3d_xyz(
 		Vx.data(), Vx0.data(),
 		Vy.data(), Vy0.data(),
 		Vz.data(), Vz0.data(),
-		Vx0.data(), Vy0.data(), Vz0.data(), dt, N);
+		Vx0.data(), Vy0.data(), Vz0.data(),
+		dt,
+		sizeX, sizeY, sizeZ);
 
-	project3d(Vx.data(), Vy.data(), Vz.data(), Vx0.data(), Vy0.data(), iter, N);
+	project3d(Vx.data(), Vy.data(), Vz.data(), Vx0.data(), Vy0.data(), iter, sizeX, sizeY, sizeZ);
 	
-	diffuse3d(0, s.data(), density.data(), diff, dt, iter, N);
+	diffuse3d(0, s.data(), density.data(), diff, dt, iter, sizeX, sizeY, sizeZ);
 	
-    advect3d(0, density.data(), s.data(), Vx.data(), Vy.data(), Vz.data(), dt, N);
+    advect3d(0, density.data(), s.data(), Vx.data(), Vy.data(), Vz.data(), dt, sizeX, sizeY, sizeZ);
 }
 
 //
 
-FluidCube3d * createFluidCube3d(const int size, const float diffusion, const float viscosity, const float dt)
+FluidCube3d * createFluidCube3d(const int sizeX, const int sizeY, const int sizeZ, const float diffusion, const float viscosity, const float dt)
 {
 	FluidCube3d * cube = new FluidCube3d();
 
-	cube->size = size;
+	cube->sizeX = sizeX;
+	cube->sizeY = sizeY;
+	cube->sizeZ = sizeZ;
 	cube->dt = dt;
 	cube->diff = diffusion;
 	cube->visc = viscosity;
 
-	const int N = size * size * size;
+	const int N = sizeX * sizeY * sizeZ;
 
 	cube->s.resize(N, 0.f);
 	cube->density.resize(N, 0.f);

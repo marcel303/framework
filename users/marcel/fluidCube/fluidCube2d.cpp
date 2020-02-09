@@ -33,29 +33,29 @@ Cohesive forces can be approximated by using a tracer image to track different f
 
 */
 
-#define IX_2D(x, y) ((x) + (y) * N)
+#define IX_2D(x, y) ((x) + (y) * sizeX)
 
-static void set_bnd2d(const int b, float * x, const int N)
+static void set_bnd2d(const int b, float * x, const int sizeX, const int sizeY)
 {
-	for (int i = 1; i < N - 1; ++i)
+	for (int i = 1; i < sizeX - 1; ++i)
 	{
-		x[IX_2D(i, 0  )] = b == 2 ? -x[IX_2D(i, 1  )] : x[IX_2D(i, 1  )];
-		x[IX_2D(i, N-1)] = b == 2 ? -x[IX_2D(i, N-2)] : x[IX_2D(i, N-2)];
+		x[IX_2D(i, 0      )] = b == 2 ? -x[IX_2D(i, 1      )] : x[IX_2D(i, 1      )];
+		x[IX_2D(i, sizeY-1)] = b == 2 ? -x[IX_2D(i, sizeY-2)] : x[IX_2D(i, sizeY-2)];
 	}
 	
-	for (int j = 1; j < N - 1; ++j)
+	for (int j = 1; j < sizeY - 1; ++j)
 	{
-		x[IX_2D(0  , j)] = b == 1 ? -x[IX_2D(1  , j)] : x[IX_2D(1  , j)];
-		x[IX_2D(N-1, j)] = b == 1 ? -x[IX_2D(N-2, j)] : x[IX_2D(N-2, j)];
+		x[IX_2D(0      , j)] = b == 1 ? -x[IX_2D(1      , j)] : x[IX_2D(1      , j)];
+		x[IX_2D(sizeX-1, j)] = b == 1 ? -x[IX_2D(sizeX-2, j)] : x[IX_2D(sizeX-2, j)];
 	}
 
-    x[IX_2D(0,     0)]   = 0.5f * (x[IX_2D(1,     0)] + x[IX_2D(0,     1)]);
-    x[IX_2D(0,   N-1)]   = 0.5f * (x[IX_2D(1,   N-1)] + x[IX_2D(0,   N-2)]);
-    x[IX_2D(N-1,   0)]   = 0.5f * (x[IX_2D(N-2,   0)] + x[IX_2D(N-1,   1)]);
-    x[IX_2D(N-1, N-1)]   = 0.5f * (x[IX_2D(N-2, N-1)] + x[IX_2D(N-1, N-2)]);
+    x[IX_2D(0,             0)]   = 0.5f * (x[IX_2D(1,             0)] + x[IX_2D(0,             1)]);
+    x[IX_2D(0,       sizeY-1)]   = 0.5f * (x[IX_2D(1,       sizeY-1)] + x[IX_2D(0,       sizeY-2)]);
+    x[IX_2D(sizeX-1,       0)]   = 0.5f * (x[IX_2D(sizeX-2,       0)] + x[IX_2D(sizeX-1,       1)]);
+    x[IX_2D(sizeX-1, sizeY-1)]   = 0.5f * (x[IX_2D(sizeX-2, sizeY-1)] + x[IX_2D(sizeX-1, sizeY-2)]);
 }
 
-static void lin_solve2d(const int b, float * __restrict x, const float * __restrict x0, const float a, const float c, const int iter, const int N)
+static void lin_solve2d(const int b, float * __restrict x, const float * __restrict x0, const float a, const float c, const int iter, const int sizeX, const int sizeY)
 {
     float cRecip = 1.f / c;
 
@@ -63,7 +63,7 @@ static void lin_solve2d(const int b, float * __restrict x, const float * __restr
 
     for (int k = 0; k < iter; ++k)
     {
-		for (int j = 1; j < N - 1; ++j)
+		for (int j = 1; j < sizeY - 1; ++j)
 		{
 			const int index = IX_2D(0, j);
 			
@@ -72,14 +72,14 @@ static void lin_solve2d(const int b, float * __restrict x, const float * __restr
 			
 			float prev_x = x_line[0];
 			
-			for (int i = 1; i < N - 1; ++i)
+			for (int i = 1; i < sizeX - 1; ++i)
 			{
 			#if 0
-				x_line[i] = (x0_line[i] + a * (x_line[i - 1] + x_line[i + 1] + x_line[i - N] + x_line[i + N])) * cRecip;
+				x_line[i] = (x0_line[i] + a * (x_line[i - 1] + x_line[i + 1] + x_line[i - sizeX] + x_line[i + sizeX])) * cRecip;
 			#elif 1
 				const float curr_x = x_line[i];
 				
-				x_line[i] = (x0_line[i] + a * ((prev_x + x_line[i + 1]) + (x_line[i - N] + x_line[i + N]))) * cRecip;
+				x_line[i] = (x0_line[i] + a * ((prev_x + x_line[i + 1]) + (x_line[i - sizeX] + x_line[i + sizeX]))) * cRecip;
 				
 				prev_x = curr_x;
 			#else
@@ -99,14 +99,14 @@ static void lin_solve2d(const int b, float * __restrict x, const float * __restr
 			}
 		}
 
-        set_bnd2d(b, x, N);
+        set_bnd2d(b, x, sizeX, sizeY);
     }
 }
 
 static void lin_solve2d_xy(
 	float * __restrict x, const float * __restrict x0,
 	float * __restrict y, const float * __restrict y0,
-	const float a, const float c, const int iter, const int N)
+	const float a, const float c, const int iter, const int sizeX, const int sizeY)
 {
     float cRecip = 1.f / c;
 
@@ -114,7 +114,7 @@ static void lin_solve2d_xy(
 
     for (int k = 0; k < iter; ++k)
     {
-		for (int j = 1; j < N - 1; ++j)
+		for (int j = 1; j < sizeY - 1; ++j)
 		{
 			const int index = IX_2D(0, j);
 			
@@ -127,17 +127,17 @@ static void lin_solve2d_xy(
 			float prev_x = x_line[0];
 			float prev_y = y_line[0];
 			
-			for (int i = 1; i < N - 1; ++i)
+			for (int i = 1; i < sizeX - 1; ++i)
 			{
 			#if 0
-				x_line[i] = (x0_line[i] + a * (x_line[i - 1] + x_line[i + 1] + x_line[i - N] + x_line[i + N])) * cRecip;
-				y_line[i] = (y0_line[i] + a * (y_line[i - 1] + y_line[i + 1] + y_line[i - N] + y_line[i + N])) * cRecip;
+				x_line[i] = (x0_line[i] + a * (x_line[i - 1] + x_line[i + 1] + x_line[i - sizeX] + x_line[i + sizeX])) * cRecip;
+				y_line[i] = (y0_line[i] + a * (y_line[i - 1] + y_line[i + 1] + y_line[i - sizeX] + y_line[i + sizeX])) * cRecip;
 			#else
 				const float curr_x = x_line[i];
 				const float curr_y = x_line[i];
 				
-				x_line[i] = (x0_line[i] + a * ((prev_x + x_line[i + 1]) + (x_line[i - N] + x_line[i + N]))) * cRecip;
-				y_line[i] = (y0_line[i] + a * ((prev_y + y_line[i + 1]) + (y_line[i - N] + y_line[i + N]))) * cRecip;
+				x_line[i] = (x0_line[i] + a * ((prev_x + x_line[i + 1]) + (x_line[i - sizeX] + x_line[i + sizeX]))) * cRecip;
+				y_line[i] = (y0_line[i] + a * ((prev_y + y_line[i + 1]) + (y_line[i - sizeX] + y_line[i + sizeX]))) * cRecip;
 				
 				prev_x = curr_x;
 				prev_y = curr_y;
@@ -145,32 +145,32 @@ static void lin_solve2d_xy(
 			}
 		}
 
-        set_bnd2d(1, x, N);
-        set_bnd2d(2, y, N);
+        set_bnd2d(1, x, sizeX, sizeY);
+        set_bnd2d(2, y, sizeX, sizeY);
     }
 }
 
-static void diffuse2d(const int b, float * x, const float * x0, const float diff, const float dt, const int iter, const int N)
+static void diffuse2d(const int b, float * x, const float * x0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY)
 {
-	const float a = dt * diff * (N - 2);
-	lin_solve2d(b, x, x0, a, 1 + 4 * a, iter, N);
+	const float a = dt * diff * (sizeX - 2); // fixme : is using only sizeX and not sizeY correct here ?
+	lin_solve2d(b, x, x0, a, 1 + 4 * a, iter, sizeX, sizeY);
 }
 
-static void diffuse2d_xy(float * x, const float * x0, float * y, const float * y0, const float diff, const float dt, const int iter, const int N)
+static void diffuse2d_xy(float * x, const float * x0, float * y, const float * y0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY)
 {
-	const float a = dt * diff * (N - 2);
-	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, N);
+	const float a = dt * diff * (sizeX - 2); // fixme : is using only sizeX and not sizeY correct here ?
+	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, sizeX, sizeY);
 }
 
 static void project2d(
 	float * __restrict velocX,
 	float * __restrict velocY,
 	float * __restrict p,
-	float * __restrict div, const int iter, const int N)
+	float * __restrict div, const int iter, const int sizeX, const int sizeY)
 {
-	for (int j = 1; j < N - 1; ++j)
+	for (int j = 1; j < sizeY - 1; ++j)
 	{
-		for (int i = 1; i < N - 1; ++i)
+		for (int i = 1; i < sizeX - 1; ++i)
 		{
 			div[IX_2D(i, j)] =
 				-0.25f *
@@ -181,37 +181,38 @@ static void project2d(
 		}
 	}
 	
-    set_bnd2d(0, div, N);
+    set_bnd2d(0, div, sizeX, sizeY);
 	
-    memset(p, 0, N * N * sizeof(float));
-	lin_solve2d(0, p, div, 1, 4, iter, N);
+    memset(p, 0, sizeX * sizeY * sizeof(float));
+	lin_solve2d(0, p, div, 1, 4, iter, sizeX, sizeY);
 	
-	for (int j = 1; j < N - 1; ++j)
+	for (int j = 1; j < sizeY - 1; ++j)
 	{
-		for (int i = 1; i < N - 1; ++i)
+		for (int i = 1; i < sizeX - 1; ++i)
 		{
 			velocX[IX_2D(i, j)] -= ( p[IX_2D(i+1, j)] - p[IX_2D(i-1, j)] );
 			velocY[IX_2D(i, j)] -= ( p[IX_2D(i, j+1)] - p[IX_2D(i, j-1)] );
 		}
 	}
 
-    set_bnd2d(1, velocX, N);
-    set_bnd2d(2, velocY, N);
+    set_bnd2d(1, velocX, sizeX, sizeY);
+    set_bnd2d(2, velocY, sizeX, sizeY);
 }
 
-static void advect2d(const int b, float * d, const float * d0, const float * velocX, const float * velocY, const float dt, const int N)
+static void advect2d(const int b, float * d, const float * d0, const float * velocX, const float * velocY, const float dt, const int sizeX, const int sizeY)
 {
-    const float dtx = dt * (N - 2);
-    const float dty = dt * (N - 2);
+    const float dtx = dt * (sizeX - 2);
+    const float dty = dt * (sizeX - 2);
 	
-	const float XY_max = N - 1.5f;
+	const float X_max = sizeX - 1.5f;
+	const float Y_max = sizeY - 1.5f;
 	
     float ifloat, jfloat;
     int i, j;
 	
-	for (j = 1, jfloat = 1; j < N - 1; ++j, ++jfloat)
+	for (j = 1, jfloat = 1; j < sizeY - 1; ++j, ++jfloat)
 	{
-		for (i = 1, ifloat = 1; i < N - 1; ++i, ++ifloat)
+		for (i = 1, ifloat = 1; i < sizeX - 1; ++i, ++ifloat)
 		{
 			const float tmp1 = dtx * velocX[IX_2D(i, j)];
 			const float tmp2 = dty * velocY[IX_2D(i, j)];
@@ -220,13 +221,13 @@ static void advect2d(const int b, float * d, const float * d0, const float * vel
 			float y = jfloat - tmp2;
 			
 			if(x < 0.5f) x = 0.5f;
-			if(x > XY_max) x = XY_max;
+			if(x > X_max) x = X_max;
 			float i0, i1;
 			i0 = floorf(x);
 			i1 = i0 + 1.0f;
 			
 			if(y < 0.5f) y = 0.5f;
-			if(y > XY_max) y = XY_max;
+			if(y > Y_max) y = Y_max;
 			float j0, j1;
 			j0 = floorf(y);
 			j1 = j0 + 1.0f;
@@ -253,20 +254,19 @@ static void advect2d(const int b, float * d, const float * d0, const float * vel
 		}
 	}
 	
-    set_bnd2d(b, d, N);
+    set_bnd2d(b, d, sizeX, sizeY);
 }
 
 //
 
 void FluidCube2d::addDensity(const int x, const int y, const float amount)
 {
-	if (x < 0 || x >= size ||
-		y < 0 || y >= size)
+	if (x < 0 || x >= sizeX ||
+		y < 0 || y >= sizeY)
 	{
 		return;
 	}
 	
-	const int N = size;
 	const int index = IX_2D(x, y);
 	
 	density[index] += amount;
@@ -274,13 +274,12 @@ void FluidCube2d::addDensity(const int x, const int y, const float amount)
 
 void FluidCube2d::addVelocity(const int x, const int y, const float amountX, const float amountY)
 {
-	if (x < 0 || x >= size ||
-		y < 0 || y >= size)
+	if (x < 0 || x >= sizeX ||
+		y < 0 || y >= sizeY)
 	{
 		return;
 	}
 	
-	const int N = size;
 	const int index = IX_2D(x, y);
 
 	Vx[index] += amountX;
@@ -289,37 +288,35 @@ void FluidCube2d::addVelocity(const int x, const int y, const float amountX, con
 
 void FluidCube2d::step()
 {
-    const int N = size;
-	
     const int iter = 4;
 
-	diffuse2d_xy(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), visc, dt, iter, N);
+	diffuse2d_xy(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), visc, dt, iter, sizeX, sizeY);
 	
-	project2d(Vx0.data(), Vy0.data(), Vx.data(), Vy.data(), iter, N);
+	project2d(Vx0.data(), Vy0.data(), Vx.data(), Vy.data(), iter, sizeX, sizeY);
 	
-	advect2d(1, Vx.data(), Vx0.data(), Vx0.data(), Vy0.data(), dt, N);
-    advect2d(2, Vy.data(), Vy0.data(), Vx0.data(), Vy0.data(), dt, N);
+	advect2d(1, Vx.data(), Vx0.data(), Vx0.data(), Vy0.data(), dt, sizeX, sizeY);
+    advect2d(2, Vy.data(), Vy0.data(), Vx0.data(), Vy0.data(), dt, sizeX, sizeY);
 	
-	project2d(Vx.data(), Vy.data(), Vx0.data(), Vy0.data(), iter, N);
+	project2d(Vx.data(), Vy.data(), Vx0.data(), Vy0.data(), iter, sizeX, sizeY);
 	
-	diffuse2d(0, s.data(), density.data(), diff, dt, iter, N);
+	diffuse2d(0, s.data(), density.data(), diff, dt, iter, sizeX, sizeY);
 	
-	advect2d(0, density.data(), s.data(), Vx.data(), Vy.data(), dt, N);
+	advect2d(0, density.data(), s.data(), Vx.data(), Vy.data(), dt, sizeX, sizeY);
 }
 
 //
 
-FluidCube2d * createFluidCube2d(const int size, const float diffusion, const float viscosity, const float dt)
+FluidCube2d * createFluidCube2d(const int sizeX, const int sizeY, const float diffusion, const float viscosity, const float dt)
 {
 	FluidCube2d * cube = new FluidCube2d();
 
-	cube->size = size;
+	cube->sizeX = sizeX;
+	cube->sizeY = sizeY;
 	cube->dt = dt;
 	cube->diff = diffusion;
 	cube->visc = viscosity;
 
-	//const int N = size * size * size;
-	const int N = size * size;
+	const int N = sizeX * sizeY;
 
 	cube->s.resize(N, 0.f);
 	cube->density.resize(N, 0.f);
