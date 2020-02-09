@@ -351,15 +351,18 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
 
 //
 
-void FluidCube2dGpu::addDensity(const int x, const int y, const float amount)
+void FluidCube2dGpu::addDensity(const int pigment, const int x, const int y, const float amount)
 {
+	Assert(pigment >= 0 && pigment < numPigments);
+	
 	if (x < 0 || x >= sizeX ||
-		y < 0 || y >= sizeY)
+		y < 0 || y >= sizeY ||
+		pigment < 0 || pigment >= numPigments)
 	{
 		return;
 	}
 	
-	pushSurface(&density);
+	pushSurface(&density[pigment]);
 	pushBlend(BLEND_ADD);
 	{
 		setColorClamp(false);
@@ -427,21 +430,25 @@ void FluidCube2dGpu::step()
 		
 		project2d(&Vx, &Vy, &Vx0, &Vy0, iter, sizeX, sizeY);
 	
-		diffuse2d(0, &s, &density, diff, dt, iter, sizeX, sizeY, voxelSize);
-		
-		advect2d(0, &density, &s, &Vx, &Vy, dt, sizeX, sizeY, voxelSize);
+		for (size_t i = 0; i < density.size(); ++i)
+		{
+			diffuse2d(0, &s[i], &density[i], diff, dt, iter, sizeX, sizeY, voxelSize);
+			
+			advect2d(0, &density[i], &s[i], &Vx, &Vy, dt, sizeX, sizeY, voxelSize);
+		}
 	}
 	popBlend();
 }
 
 //
 
-FluidCube2dGpu * createFluidCube2dGpu(const int sizeX, const int sizeY, const float diffusion, const float viscosity, const float dt)
+FluidCube2dGpu * createFluidCube2dGpu(const int sizeX, const int sizeY, const int numPigments, const float diffusion, const float viscosity, const float dt)
 {
 	FluidCube2dGpu * cube = new FluidCube2dGpu();
 
 	cube->sizeX = sizeX;
 	cube->sizeY = sizeY;
+	cube->numPigments = numPigments;
 	cube->dt = dt;
 	cube->diff = diffusion;
 	cube->visc = viscosity;
@@ -452,8 +459,14 @@ FluidCube2dGpu * createFluidCube2dGpu(const int sizeX, const int sizeY, const fl
 	surfaceProperties.dimensions.init(sizeX, sizeY);
 	surfaceProperties.colorTarget.init(SURFACE_R16F, true);
 	
-	cube->s.init(surfaceProperties);
-	cube->density.init(surfaceProperties);
+	cube->s.resize(numPigments);
+	cube->density.resize(numPigments);
+	
+	for (int i = 0; i < numPigments; ++i)
+	{
+		cube->s[i].init(surfaceProperties);
+		cube->density[i].init(surfaceProperties);
+	}
 
 	cube->Vx.init(surfaceProperties);
 	cube->Vy.init(surfaceProperties);
@@ -465,8 +478,11 @@ FluidCube2dGpu * createFluidCube2dGpu(const int sizeX, const int sizeY, const fl
 	
 	for (int i = 0; i < 2; ++i)
 	{
-		cube->s.clear();
-		cube->density.clear();
+		for (int i = 0; i < numPigments; ++i)
+		{
+			cube->s[i].clear();
+			cube->density[i].clear();
+		}
 		
 		cube->Vx.clear();
 		cube->Vy.clear();
@@ -475,8 +491,11 @@ FluidCube2dGpu * createFluidCube2dGpu(const int sizeX, const int sizeY, const fl
 		
 		//
 		
-		cube->s.swapBuffers();
-		cube->density.swapBuffers();
+		for (int i = 0; i < numPigments; ++i)
+		{
+			cube->s[i].swapBuffers();
+			cube->density[i].swapBuffers();
+		}
 		
 		cube->Vx.swapBuffers();
 		cube->Vy.swapBuffers();

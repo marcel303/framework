@@ -55,10 +55,34 @@ struct FluidCube2dDemo
 			gxPushMatrix();
 			gxScalef(SCALE, SCALE, 1);
 			
-			texture.upload(cube->density.data(), 4, 0);
+			const float * data = nullptr;
+			
+			if (keyboard.isDown(SDLK_s))
+				data = cube->s.data();
+			else if (keyboard.isDown(SDLK_v))
+			{
+				static int n = -1;
+				if (keyboard.wentDown(SDLK_v))
+					n = (n + 1) % 4;
+				if (n == 0)
+					data = cube->Vx.data();
+				if (n == 1)
+					data = cube->Vy.data();
+				if (n == 2)
+					data = cube->Vx0.data();
+				if (n == 3)
+					data = cube->Vy0.data();
+			}
+			else
+				data = cube->density.data();
+			
+			texture.upload(data, 4, 0);
 			gxSetTexture(texture.id);
 			setColorClamp(false);
-			setColor(2000, 2000, 2000);
+			if (keyboard.isDown(SDLK_v))
+				setColor(10, 10, 10);
+			else
+				setColor(2000, 2000, 2000);
 			drawRect(0, 0, cube->sizeX, cube->sizeY);
 			setColorClamp(true);
 			gxSetTexture(0);
@@ -187,7 +211,8 @@ struct FluidCube2dGpuDemo
 	
 	void init()
 	{
-		cube = createFluidCube2dGpu(800, 400, .01f, .01f, 1.f / 30.f);
+		cube = createFluidCube2dGpu(800, 400, 3, .01f, .001f, 1.f / 30.f);
+		cube->iter = 10;
 	}
 	
 	void shut()
@@ -200,22 +225,29 @@ struct FluidCube2dGpuDemo
 	{
 		const int SCALE = GFX_SX / cube->sizeX;
 		
-		cube->density.mulf(.99f, .99f, .99f);
+		for (int i = 0; i < cube->numPigments; ++i)
+			cube->density[i].mulf(.99f, .99f, .99f);
 		
 		pushBlend(BLEND_ADD);
-		pushSurface(&cube->density);
+		for (int i = 0; i < cube->numPigments; ++i)
 		{
-			hqBegin(HQ_FILLED_CIRCLES);
-			setColorf(.008f, 0.f, 0.f, 1.f / 100);
-			for (int i = 0; i < 100; ++i)
-				hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, i * 60.f / 100);
-			hqEnd();
+			pushSurface(&cube->density[i]);
+			{
+				const int x = i/2 ? GFX_SX - mouse.x : mouse.x;
+				const int y = i%2 ? GFX_SY - mouse.y : mouse.y;
+				
+				hqBegin(HQ_FILLED_CIRCLES);
+				setColorf(.008f, 0.f, 0.f, 1.f / 100);
+				for (int i = 0; i < 100; ++i)
+					hqFillCircle(x / SCALE, y / SCALE, i * 60.f / 100);
+				hqEnd();
+			}
+			popSurface();
 		}
-		popSurface();
 		pushSurface(&cube->Vx);
 		{
 			hqBegin(HQ_FILLED_CIRCLES);
-			setColorf(mouse.dx * 100.f, 0.f, 0.f, 1.f / 10);
+			setColorf(mouse.dx * 200.f, 0.f, 0.f, 1.f / 10);
 			for (int i = 0; i < 10; ++i)
 				hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, i * 8.f / 10);
 			hqEnd();
@@ -224,7 +256,7 @@ struct FluidCube2dGpuDemo
 		pushSurface(&cube->Vy);
 		{
 			hqBegin(HQ_FILLED_CIRCLES);
-			setColorf(mouse.dy * 100.f, 0.f, 0.f, 1.f / 10);
+			setColorf(mouse.dy * 200.f, 0.f, 0.f, 1.f / 10);
 			for (int i = 0; i < 10; ++i)
 				hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, i * 8.f / 10);
 			hqEnd();
@@ -243,35 +275,57 @@ struct FluidCube2dGpuDemo
 			gxPushMatrix();
 			gxScalef(SCALE, SCALE, 1);
 			
-			pushBlend(BLEND_OPAQUE);
+			if (!keyboard.isDown(SDLK_s) && !keyboard.isDown(SDLK_v))
 			{
-				GxTextureId texture;
-				
-				if (keyboard.isDown(SDLK_s))
-					texture = cube->s.getTexture();
-				else if (keyboard.isDown(SDLK_v))
+				pushBlend(BLEND_ADD);
 				{
-					static int n = -1;
-					if (keyboard.wentDown(SDLK_v))
-						n = (n + 1) % 4;
-					if (n == 0)
-						texture = cube->Vx.getTexture();
-					if (n == 1)
-						texture = cube->Vy.getTexture();
-					if (n == 2)
-						texture = cube->Vx0.getTexture();
-					if (n == 3)
-						texture = cube->Vy0.getTexture();
+					for (int i = 0; i < cube->numPigments; ++i)
+					{
+						const GxTextureId texture = cube->density[i].getTexture();
+						setShader_TextureSwizzle(texture, 0, 0, 0, GX_SWIZZLE_ONE);
+						
+						setColor(Color::fromHSL((i + 1.5f) / cube->numPigments, 1.f, .7f).mulRGB(10.f));
+						drawRect(0, 0, cube->sizeX, cube->sizeY);
+						clearShader();
+					}
 				}
-				else
-					texture = cube->density.getTexture();
-				
-				setShader_TextureSwizzle(texture, 0, 0, 0, GX_SWIZZLE_ONE);
-				setColor(4000, 3000, 2000);
-				drawRect(0, 0, cube->sizeX, cube->sizeY);
-				clearShader();
+				popBlend();
 			}
-			popBlend();
+			else
+			{
+				pushBlend(BLEND_OPAQUE);
+				{
+					GxTextureId texture;
+					
+					if (keyboard.isDown(SDLK_s))
+						texture = cube->s[0].getTexture();
+					else if (keyboard.isDown(SDLK_v))
+					{
+						static int n = -1;
+						if (keyboard.wentDown(SDLK_v))
+							n = (n + 1) % 4;
+						if (n == 0)
+							texture = cube->Vx.getTexture();
+						if (n == 1)
+							texture = cube->Vy.getTexture();
+						if (n == 2)
+							texture = cube->Vx0.getTexture();
+						if (n == 3)
+							texture = cube->Vy0.getTexture();
+					}
+					else
+						texture = cube->density[0].getTexture();
+					
+					setShader_TextureSwizzle(texture, 0, 0, 0, GX_SWIZZLE_ONE);
+					if (keyboard.isDown(SDLK_v))
+						setColor(40, 30, 20);
+					else
+						setColor(4000, 3000, 2000);
+					drawRect(0, 0, cube->sizeX, cube->sizeY);
+					clearShader();
+				}
+				popBlend();
+			}
 			
 			gxPopMatrix();
 		}
