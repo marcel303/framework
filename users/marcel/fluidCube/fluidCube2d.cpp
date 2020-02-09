@@ -134,7 +134,7 @@ static void lin_solve2d_xy(
 				y_line[i] = (y0_line[i] + a * (y_line[i - 1] + y_line[i + 1] + y_line[i - sizeX] + y_line[i + sizeX])) * cRecip;
 			#else
 				const float curr_x = x_line[i];
-				const float curr_y = x_line[i];
+				const float curr_y = y_line[i];
 				
 				x_line[i] = (x0_line[i] + a * ((prev_x + x_line[i + 1]) + (x_line[i - sizeX] + x_line[i + sizeX]))) * cRecip;
 				y_line[i] = (y0_line[i] + a * ((prev_y + y_line[i + 1]) + (y_line[i - sizeX] + y_line[i + sizeX]))) * cRecip;
