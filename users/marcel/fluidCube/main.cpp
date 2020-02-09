@@ -226,7 +226,7 @@ struct FluidCube2dGpuDemo
 		const int SCALE = GFX_SX / cube->sizeX;
 		
 		for (int i = 0; i < cube->numPigments; ++i)
-			cube->density[i].mulf(.99f, .99f, .99f);
+			cube->density[i].mulf(.997f, .997f, .997f);
 		
 		pushBlend(BLEND_ADD);
 		for (int i = 0; i < cube->numPigments; ++i)
@@ -237,7 +237,8 @@ struct FluidCube2dGpuDemo
 				const int y = i%2 ? GFX_SY - mouse.y : mouse.y;
 				
 				hqBegin(HQ_FILLED_CIRCLES);
-				setColorf(.008f, 0.f, 0.f, 1.f / 100);
+				// note : we use cosine, and yes, this will add NAGATIVE density half of the time.. and it works, and it looks great!
+				setColorf(cosf(framework.time * 4.f) * .02f, 0.f, 0.f, 1.f / 100);
 				for (int i = 0; i < 100; ++i)
 					hqFillCircle(x / SCALE, y / SCALE, i * 60.f / 100);
 				hqEnd();
