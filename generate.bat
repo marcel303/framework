@@ -22,8 +22,10 @@ IF DEFINED target_arg (
 	echo using filter: %target_arg%
 )
 
-rem todo : verify all submodules are synced somehow
-rem git submodule update --init --recursive
+rem verify all submodules are up to date
+echo Updating Git submodules..
+git submodule update
+echo ..Done!
 
 set chibi_bin="chibi-build/chibi/Debug/chibi.exe"
 
