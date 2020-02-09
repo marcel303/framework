@@ -421,8 +421,6 @@ void FluidCube2dGpu::step()
 {
 	pushBlend(BLEND_OPAQUE);
 	{
-		const int iter = 4;
-		
 		diffuse2d_xy(&Vx0, &Vx, &Vy0, &Vy, visc, dt, iter, sizeX, sizeY);
 		
 		project2d(&Vx0, &Vy0, &Vx, &Vy, iter, sizeX, sizeY);

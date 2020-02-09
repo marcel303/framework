@@ -57,7 +57,7 @@ static void set_bnd2d(const int b, float * x, const int sizeX, const int sizeY)
 
 static void lin_solve2d(const int b, float * __restrict x, const float * __restrict x0, const float a, const float c, const int iter, const int sizeX, const int sizeY)
 {
-    float cRecip = 1.f / c;
+    const float cRecip = 1.f / c;
 
 // todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
 
@@ -108,7 +108,7 @@ static void lin_solve2d_xy(
 	float * __restrict y, const float * __restrict y0,
 	const float a, const float c, const int iter, const int sizeX, const int sizeY)
 {
-    float cRecip = 1.f / c;
+    const float cRecip = 1.f / c;
 
 // todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
 
@@ -222,26 +222,21 @@ static void advect2d(const int b, float * d, const float * d0, const float * vel
 			
 			if(x < 0.5f) x = 0.5f;
 			if(x > X_max) x = X_max;
-			float i0, i1;
-			i0 = floorf(x);
-			i1 = i0 + 1.0f;
+			const float i0 = floorf(x);
 			
 			if(y < 0.5f) y = 0.5f;
 			if(y > Y_max) y = Y_max;
-			float j0, j1;
-			j0 = floorf(y);
-			j1 = j0 + 1.0f;
+			const float j0 = floorf(y);
 			
-			float s0, s1, t0, t1;
-			s1 = x - i0;
-			s0 = 1.0f - s1;
-			t1 = y - j0;
-			t0 = 1.0f - t1;
+			const float s1 = x    - i0;
+			const float s0 = 1.0f - s1;
+			const float t1 = y    - j0;
+			const float t0 = 1.0f - t1;
 			
 			const int i0i = i0;
-			const int i1i = i1;
+			const int i1i = i0 + 1;
 			const int j0i = j0;
-			const int j1i = j1;
+			const int j1i = j0 + 1;
 			
 			//Assert(i0i >= 0 && i0i < N);
 			//Assert(i1i >= 0 && i1i < N);
@@ -288,8 +283,6 @@ void FluidCube2d::addVelocity(const int x, const int y, const float amountX, con
 
 void FluidCube2d::step()
 {
-    const int iter = 4;
-
 	diffuse2d_xy(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), visc, dt, iter, sizeX, sizeY);
 	
 	project2d(Vx0.data(), Vy0.data(), Vx.data(), Vy.data(), iter, sizeX, sizeY);

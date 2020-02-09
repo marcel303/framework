@@ -12,6 +12,8 @@ struct FluidCube3d
 	float diff; // diffusion amount
 	float visc; // viscosity
 
+	int iter = 4;
+	
 	std::vector<float> s;
 	std::vector<float> density;
 

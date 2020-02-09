@@ -307,17 +307,13 @@ static void project3d(
 
 static void advect3d(const int b, float * __restrict d, const float * __restrict d0, const float * velocX, const float * velocY, const float * velocZ, const float dt, const int sizeX, const int sizeY, const int sizeZ)
 {
-    float i0, i1, j0, j1, k0, k1;
-    
-    float dtx = dt * (sizeX - 2);
-    float dty = dt * (sizeX - 2);
-    float dtz = dt * (sizeX - 2);
-    
-    float s0, s1, t0, t1, u0, u1;
+    const float dtx = dt * (sizeX - 2);
+    const float dty = dt * (sizeX - 2);
+    const float dtz = dt * (sizeX - 2);
 	
-    float x_max = sizeX - 1.5f;
-    float y_max = sizeY - 1.5f;
-    float z_max = sizeZ - 1.5f;
+    const float x_max = sizeX - 1.5f;
+    const float y_max = sizeY - 1.5f;
+    const float z_max = sizeZ - 1.5f;
 	
     float ifloat, jfloat, kfloat;
     int i, j, k;
@@ -338,32 +334,29 @@ static void advect3d(const int b, float * __restrict d, const float * __restrict
 				
                 if(x < 0.5f) x = 0.5f; 
                 if(x > x_max) x = x_max;
-                i0 = floorf(x); 
-                i1 = i0 + 1.0f;
+                const float i0 = floorf(x);
 				
                 if(y < 0.5f) y = 0.5f; 
                 if(y > y_max) y = y_max;
-                j0 = floorf(y);
-                j1 = j0 + 1.0f;
+                const float j0 = floorf(y);
 				
                 if(z < 0.5f) z = 0.5f;
                 if(z > z_max) z = z_max;
-                k0 = floorf(z);
-                k1 = k0 + 1.0f;
+                const float k0 = floorf(z);
 				
-                s1 = x - i0; 
-                s0 = 1.0f - s1; 
-                t1 = y - j0; 
-                t0 = 1.0f - t1;
-                u1 = z - k0;
-                u0 = 1.0f - u1;
+                const float s1 = x    - i0;
+                const float s0 = 1.0f - s1;
+                const float t1 = y    - j0;
+                const float t0 = 1.0f - t1;
+                const float u1 = z    - k0;
+                const float u0 = 1.0f - u1;
 				
-                int i0i = i0;
-                int i1i = i1;
-                int j0i = j0;
-                int j1i = j1;
-                int k0i = k0;
-                int k1i = k1;
+                const int i0i = (int)i0;
+                const int i1i = i0 + 1;
+                const int j0i = (int)j0;
+                const int j1i = j0 + 1;
+                const int k0i = (int)k0;
+                const int k1i = k0 + 1;
 				
 				/*
                 Assert(i0i >= 0 && i0i < N);
@@ -398,17 +391,13 @@ static void advect3d_xyz(
 	const int sizeY,
 	const int sizeZ)
 {
-    float i0, i1, j0, j1, k0, k1;
+    const float dtx = dt * (sizeX - 2);
+    const float dty = dt * (sizeX - 2);
+    const float dtz = dt * (sizeX - 2);
 	
-    float dtx = dt * (sizeX - 2);
-    float dty = dt * (sizeX - 2);
-    float dtz = dt * (sizeX - 2);
-	
-    float s0, s1, t0, t1, u0, u1;
-	
-	float x_max = sizeX - 1.5f;
-	float y_max = sizeY - 1.5f;
-	float z_max = sizeZ - 1.5f;
+	const float x_max = sizeX - 1.5f;
+	const float y_max = sizeY - 1.5f;
+	const float z_max = sizeZ - 1.5f;
 	
     float ifloat, jfloat, kfloat;
     int i, j, k;
@@ -431,32 +420,29 @@ static void advect3d_xyz(
 				
                 if(x < 0.5f) x = 0.5f;
                 if(x > x_max) x = x_max;
-                i0 = floorf(x);
-                i1 = i0 + 1.0f;
+                const float i0 = floorf(x);
 				
                 if(y < 0.5f) y = 0.5f;
                 if(y > y_max) y = y_max;
-                j0 = floorf(y);
-                j1 = j0 + 1.0f;
+                const float j0 = floorf(y);
 				
                 if(z < 0.5f) z = 0.5f;
                 if(z > z_max) z = z_max;
-                k0 = floorf(z);
-                k1 = k0 + 1.0f;
+                const float k0 = floorf(z);
 				
-                s1 = x - i0;
-                s0 = 1.0f - s1;
-                t1 = y - j0;
-                t0 = 1.0f - t1;
-                u1 = z - k0;
-                u0 = 1.0f - u1;
+                const float s1 = x    - i0;
+                const float s0 = 1.0f - s1;
+                const float t1 = y    - j0;
+                const float t0 = 1.0f - t1;
+                const float u1 = z    - k0;
+                const float u0 = 1.0f - u1;
 				
-                int i0i = i0;
-                int i1i = i1;
-                int j0i = j0;
-                int j1i = j1;
-                int k0i = k0;
-                int k1i = k1;
+                const int i0i = (int)i0;
+                const int i1i = i0 + 1;
+                const int j0i = (int)j0;
+                const int j1i = j0 + 1;
+                const int k0i = (int)k0;
+                const int k1i = k0 + 1;
 				
 				/*
                 Assert(i0i >= 0 && i0i < N);
@@ -543,9 +529,7 @@ void FluidCube3d::addVelocity(const int x, const int y, const int z, const float
 
 void FluidCube3d::step()
 {
-    const int iter = 4;
-
-	diffuse3d_xyz(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), Vz0.data(), Vz.data(), visc, dt, iter, sizeX, sizeY, sizeZ);
+    diffuse3d_xyz(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), Vz0.data(), Vz.data(), visc, dt, iter, sizeX, sizeY, sizeZ);
 	
 	project3d(Vx0.data(), Vy0.data(), Vz0.data(), Vx.data(), Vy.data(), iter, sizeX, sizeY, sizeZ);
 	

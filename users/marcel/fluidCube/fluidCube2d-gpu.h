@@ -11,6 +11,8 @@ struct FluidCube2dGpu
 	float diff; // diffusion amount
 	float visc; // viscosity
 
+	int iter = 4;
+	
 	Surface s;
 	Surface density;
 	
