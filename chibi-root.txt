@@ -9,6 +9,7 @@ add vfxGraph-examples
 
 push_group libraries
 
+	add 1stparty/artnet
 	add 1stparty/binaural
 	
 	with_platform linux add 3rdparty/PS3EYEDriver/framework
@@ -30,7 +31,6 @@ push_group libraries
 	add libparticle
 	add libvideo
 	add users/marcel/allegro2-support
-	add users/marcel/artnet1
 	add users/marcel/jsusfx-audiograph
 	add users/marcel/libjgmod
 	add users/marcel/libjgmod-audiograph
