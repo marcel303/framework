@@ -11,12 +11,6 @@
 
 #define ANIMATED_CAMERA 0 // todo : remove option and use hybrid
 
-#define LOW_LATENCY_HACK_TEST 0 // todo : remove
-
-#if LOW_LATENCY_HACK_TEST
-	#include <unistd.h>
-#endif
-
 #if ANIMATED_CAMERA
 
 struct AnimatedCamera3d
@@ -299,28 +293,6 @@ int main(int argc, char * argv[])
 			drawText(10, 70, 16, +1, -1, "(Extra) Title: %s", scene.asset.extras.title.c_str());
 		}
 		framework.endDraw();
-		
-	#if LOW_LATENCY_HACK_TEST
-		static uint64_t t1 = 0;
-		static uint64_t t2 = 0;
-		
-		static int x = 0;
-		x++;
-		printf("frame: %d\n", x);
-		
-		t2 = SDL_GetTicks();
-		
-		const uint64_t time_ms = t2 - t1 + 1;
-		
-		if (time_ms < 16 && !keyboard.isDown(SDLK_RSHIFT))
-		{
-			const uint64_t delay_ms = 16 - time_ms;
-			
-			usleep(delay_ms * 1000);
-		}
-		
-		t1 = SDL_GetTicks();
-	#endif
 	}
 	
 	Font("calibri.ttf").saveCache();
