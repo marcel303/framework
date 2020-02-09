@@ -8,9 +8,9 @@ library nanovg-framework
 app nanovg-framework-example
 	depend_library nanovg-framework
 	add_files example.cpp
-	add_files ../nanovg/example/demo.c
-	add_files ../nanovg/example/demo.h
-	add_files ../nanovg/example/perf.c
-	add_files ../nanovg/example/perf.h
-	header_path ../nanovg/example
-	resource_path ../nanovg/example
+	add_files ../../3rdparty/nanovg/example/demo.c
+	add_files ../../3rdparty/nanovg/example/demo.h
+	add_files ../../3rdparty/nanovg/example/perf.c
+	add_files ../../3rdparty/nanovg/example/perf.h
+	header_path ../../3rdparty/nanovg/example
+	resource_path ../../3rdparty/nanovg/example
