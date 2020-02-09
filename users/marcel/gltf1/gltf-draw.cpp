@@ -823,6 +823,8 @@ namespace gltf
 			? *in_drawOptions
 			: DrawOptions();
 		
+		pushAlphaToCoverage(drawOptions.alphaMode == kAlphaMode_AlphaToCoverage);
+		
 		for (size_t sceneRootIndex = 0; sceneRootIndex < scene.sceneRoots.size(); ++sceneRootIndex)
 		{
 			if (activeScene != -1 && activeScene != sceneRootIndex)
@@ -952,6 +954,8 @@ namespace gltf
 			}
 		#endif
 		}
+		
+		popAlphaToCoverage();
 	}
 }
 

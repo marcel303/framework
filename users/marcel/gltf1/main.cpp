@@ -100,6 +100,8 @@ int main(int argc, char * argv[])
 	//const char * path = "littlest_tokyo/scene.gltf";
 	//const char * path = "ftm/scene.gltf";
 	const char * path = "nara_the_desert_dancer/scene.gltf";
+	//const char * path = "drone/scene.gltf";
+	//const char * path = "buster_drone/scene.gltf";
 	//const char * path = "halloween_little_witch/scene.gltf";
 	//const char * path = "kalestra_the_sorceress/scene.gltf";
 
@@ -126,6 +128,7 @@ int main(int argc, char * argv[])
 	camera.position = Vec3(0, 0, -2);
 	
 	bool centimeters = false;
+	bool useAlphaToCoverage = false;
 	
 	for (;;)
 	{
@@ -148,8 +151,10 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		if (keyboard.wentDown(SDLK_t))
+		if (keyboard.wentDown(SDLK_c))
 			centimeters = !centimeters;
+		if (keyboard.wentDown(SDLK_a))
+			useAlphaToCoverage = !useAlphaToCoverage;
 		
 	#if ANIMATED_CAMERA
 		if (keyboard.wentDown(SDLK_p))
@@ -198,7 +203,7 @@ int main(int argc, char * argv[])
 					const bool isOpaquePass = (i == 0);
 					
 					pushDepthWrite(!keyboard.isDown(SDLK_z) ? true : (isOpaquePass ? true : false));
-					pushBlend(isOpaquePass ? BLEND_OPAQUE : BLEND_ALPHA);
+					pushBlend(useAlphaToCoverage ? BLEND_OPAQUE : (isOpaquePass ? BLEND_OPAQUE : BLEND_ALPHA));
 					{
 						Shader metallicRoughnessShader("gltf/shaders/shader-pbr-metallicRoughness");
 						Shader specularGlossinessShader("gltf/shaders/shader-pbr-specularGlossiness");
@@ -230,13 +235,18 @@ int main(int argc, char * argv[])
 						materialShaders.pbr_metallicRoughness = &metallicRoughnessShader;
 						materialShaders.fallbackShader = &metallicRoughnessShader;
 						
+						gltf::DrawOptions drawOptions;
+						drawOptions.alphaMode = gltf::kAlphaMode_AlphaToCoverage;
+						
 						gltf::drawScene(
 							scene,
 							keyboard.isDown(SDLK_m)
 								? nullptr
 								: bufferCache,
 							materialShaders,
-							isOpaquePass);
+							isOpaquePass,
+							scene.activeScene,
+							&drawOptions);
 					}
 					popBlend();
 					popDepthWrite();
