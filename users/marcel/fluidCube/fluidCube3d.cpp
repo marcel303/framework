@@ -226,9 +226,9 @@ static void lin_solve3d_xyz(
     }
 }
 
-static void diffuse3d(const int b, float * x, const float * x0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const int sizeZ)
+static void diffuse3d(const int b, float * x, const float * x0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const int sizeZ, const float voxelSize)
 {
-	const float a = dt * diff * (sizeX - 2) * (sizeX - 2);
+	const float a = dt * diff / (voxelSize * voxelSize);
 	lin_solve3d(b, x, x0, a, 1 + 6 * a, iter, sizeX, sizeY, sizeZ);
 }
 
@@ -236,9 +236,9 @@ static void diffuse3d_xyz(
 	float * x, const float * x0,
 	float * y, const float * y0,
 	float * z, const float * z0,
-	const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const int sizeZ)
+	const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const int sizeZ, const float voxelSize)
 {
-	const float a = dt * diff * (sizeX - 2) * (sizeX - 2);
+	const float a = dt * diff / (voxelSize * voxelSize);
 	lin_solve3d_xyz(x, x0, y, y0, z, z0, a, 1 + 6 * a, iter, sizeX, sizeY, sizeZ);
 }
 
@@ -305,11 +305,9 @@ static void project3d(
     set_bnd3d(3, velocZ, sizeX, sizeY, sizeZ);
 }
 
-static void advect3d(const int b, float * __restrict d, const float * __restrict d0, const float * velocX, const float * velocY, const float * velocZ, const float dt, const int sizeX, const int sizeY, const int sizeZ)
+static void advect3d(const int b, float * __restrict d, const float * __restrict d0, const float * velocX, const float * velocY, const float * velocZ, const float in_dt, const int sizeX, const int sizeY, const int sizeZ, const float voxelSize)
 {
-    const float dtx = dt * (sizeX - 2);
-    const float dty = dt * (sizeX - 2);
-    const float dtz = dt * (sizeX - 2);
+	const float dt = in_dt / voxelSize;
 	
     const float x_max = sizeX - 1.5f;
     const float y_max = sizeY - 1.5f;
@@ -324,9 +322,9 @@ static void advect3d(const int b, float * __restrict d, const float * __restrict
         {
             for (i = 1, ifloat = 1; i < sizeX - 1; i++, ifloat++)
             {
-                const float tmp1 = dtx * velocX[IX_3D(i, j, k)];
-                const float tmp2 = dty * velocY[IX_3D(i, j, k)];
-                const float tmp3 = dtz * velocZ[IX_3D(i, j, k)];
+                const float tmp1 = dt * velocX[IX_3D(i, j, k)];
+                const float tmp2 = dt * velocY[IX_3D(i, j, k)];
+                const float tmp3 = dt * velocZ[IX_3D(i, j, k)];
 				
                 float x = ifloat - tmp1;
                 float y = jfloat - tmp2;
@@ -386,14 +384,13 @@ static void advect3d_xyz(
 	float * __restrict _y, const float * __restrict y0,
 	float * __restrict _z, const float * __restrict z0,
 	const float * velocX, const float * velocY, const float * velocZ,
-	const float dt,
+	const float in_dt,
 	const int sizeX,
 	const int sizeY,
-	const int sizeZ)
+	const int sizeZ,
+	const float voxelSize)
 {
-    const float dtx = dt * (sizeX - 2);
-    const float dty = dt * (sizeX - 2);
-    const float dtz = dt * (sizeX - 2);
+	const float dt = in_dt / voxelSize;
 	
 	const float x_max = sizeX - 1.5f;
 	const float y_max = sizeY - 1.5f;
@@ -410,9 +407,9 @@ static void advect3d_xyz(
             {
             	const int index = IX_3D(i, j, k);
 				
-                const float tmp1 = dtx * velocX[index];
-                const float tmp2 = dty * velocY[index];
-                const float tmp3 = dtz * velocZ[index];
+                const float tmp1 = dt * velocX[index];
+                const float tmp2 = dt * velocY[index];
+                const float tmp3 = dt * velocZ[index];
 				
                 float x = ifloat - tmp1;
                 float y = jfloat - tmp2;
@@ -529,7 +526,7 @@ void FluidCube3d::addVelocity(const int x, const int y, const int z, const float
 
 void FluidCube3d::step()
 {
-    diffuse3d_xyz(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), Vz0.data(), Vz.data(), visc, dt, iter, sizeX, sizeY, sizeZ);
+    diffuse3d_xyz(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), Vz0.data(), Vz.data(), visc, dt, iter, sizeX, sizeY, sizeZ, voxelSize);
 	
 	project3d(Vx0.data(), Vy0.data(), Vz0.data(), Vx.data(), Vy.data(), iter, sizeX, sizeY, sizeZ);
 	
@@ -539,13 +536,14 @@ void FluidCube3d::step()
 		Vz.data(), Vz0.data(),
 		Vx0.data(), Vy0.data(), Vz0.data(),
 		dt,
-		sizeX, sizeY, sizeZ);
+		sizeX, sizeY, sizeZ,
+		voxelSize);
 
 	project3d(Vx.data(), Vy.data(), Vz.data(), Vx0.data(), Vy0.data(), iter, sizeX, sizeY, sizeZ);
 	
-	diffuse3d(0, s.data(), density.data(), diff, dt, iter, sizeX, sizeY, sizeZ);
+	diffuse3d(0, s.data(), density.data(), diff, dt, iter, sizeX, sizeY, sizeZ, voxelSize);
 	
-    advect3d(0, density.data(), s.data(), Vx.data(), Vy.data(), Vz.data(), dt, sizeX, sizeY, sizeZ);
+    advect3d(0, density.data(), s.data(), Vx.data(), Vy.data(), Vz.data(), dt, sizeX, sizeY, sizeZ, voxelSize);
 }
 
 //

@@ -11,6 +11,8 @@ struct FluidCube2d
 	float diff; // diffusion amount
 	float visc; // viscosity
 	
+	float voxelSize = 1.f;
+	
 	int iter = 4;
 
 	std::vector<float> s;

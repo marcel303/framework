@@ -11,6 +11,8 @@ struct FluidCube3d
 	float dt;
 	float diff; // diffusion amount
 	float visc; // viscosity
+	
+	float voxelSize = 1.f;
 
 	int iter = 4;
 	

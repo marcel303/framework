@@ -225,15 +225,15 @@ static void lin_solve2d_xy(
     }
 }
 
-static void diffuse2d(const int b, Surface * x, const Surface * x0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY)
+static void diffuse2d(const int b, Surface * x, const Surface * x0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const float voxelSize)
 {
-	const float a = dt * diff * (sizeX - 2); // fixme : only use sizeX here and not sizeY ?
+	const float a = dt * diff / voxelSize;
 	lin_solve2d(b, x, x0, a, 1 + 4 * a, iter, sizeX, sizeY);
 }
 
-static void diffuse2d_xy(Surface * x, const Surface * x0, Surface * y, const Surface * y0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY)
+static void diffuse2d_xy(Surface * x, const Surface * x0, Surface * y, const Surface * y0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const float voxelSize)
 {
-	const float a = dt * diff * (sizeX - 2); // fixme : only use sizeX here and not sizeY ?
+	const float a = dt * diff / voxelSize;
 	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, sizeX, sizeY);
 }
 
@@ -313,15 +313,14 @@ static void project2d(
     set_bnd2d(2, velocY, sizeY, sizeY);
 }
 
-static void advect2d(const int b, Surface * d, const Surface * d0, const Surface * velocX, const Surface * velocY, const float dt, const int sizeX, const int sizeY)
+static void advect2d(const int b, Surface * d, const Surface * d0, const Surface * velocX, const Surface * velocY, const float in_dt, const int sizeX, const int sizeY, const float voxelSize)
 {
-    const float dtx = dt * (sizeX - 2);
-    const float dty = dt * (sizeX - 2);
+	const float dt = in_dt / voxelSize;
 	
     getOrCreateShader("advect2d",
 		R"SHADER(
-			float tmp1 = dtx * samp(velocX, 0, 0);
-			float tmp2 = dty * samp(velocY, 0, 0);
+			float tmp1 = dt * samp(velocX, 0, 0);
+			float tmp2 = dt * samp(velocY, 0, 0);
 			
 			return samp_filter(d0, - tmp1, - tmp2);
 		)SHADER",
@@ -329,8 +328,7 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
 			uniform sampler2D velocX;
 			uniform sampler2D velocY;
 			uniform sampler2D d0;
-			uniform float dtx;
-			uniform float dty;
+			uniform float dt;
 		)SHADER");
 	
     pushSurface(d);
@@ -341,8 +339,7 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
 		shader.setTexture("velocX", 0, velocX->getTexture(), false, true);
 		shader.setTexture("velocY", 1, velocY->getTexture(), false, true);
 		shader.setTexture("d0", 2, d0->getTexture(), true, true);
-		shader.setImmediate("dtx", dtx);
-		shader.setImmediate("dty", dty);
+		shader.setImmediate("dt", dt);
 		drawRect(0, 0, d->getWidth(), d->getHeight());
 		clearShader();
 	}
@@ -421,18 +418,18 @@ void FluidCube2dGpu::step()
 {
 	pushBlend(BLEND_OPAQUE);
 	{
-		diffuse2d_xy(&Vx0, &Vx, &Vy0, &Vy, visc, dt, iter, sizeX, sizeY);
+		diffuse2d_xy(&Vx0, &Vx, &Vy0, &Vy, visc, dt, iter, sizeX, sizeY, voxelSize);
 		
 		project2d(&Vx0, &Vy0, &Vx, &Vy, iter, sizeX, sizeY);
 	
-		advect2d(1, &Vx, &Vx0, &Vx0, &Vy0, dt, sizeX, sizeY);
-		advect2d(2, &Vy, &Vy0, &Vx0, &Vy0, dt, sizeX, sizeY);
+		advect2d(1, &Vx, &Vx0, &Vx0, &Vy0, dt, sizeX, sizeY, voxelSize);
+		advect2d(2, &Vy, &Vy0, &Vx0, &Vy0, dt, sizeX, sizeY, voxelSize);
 		
 		project2d(&Vx, &Vy, &Vx0, &Vy0, iter, sizeX, sizeY);
 	
-		diffuse2d(0, &s, &density, diff, dt, iter, sizeX, sizeY);
+		diffuse2d(0, &s, &density, diff, dt, iter, sizeX, sizeY, voxelSize);
 		
-		advect2d(0, &density, &s, &Vx, &Vy, dt, sizeX, sizeY);
+		advect2d(0, &density, &s, &Vx, &Vy, dt, sizeX, sizeY, voxelSize);
 	}
 	popBlend();
 }

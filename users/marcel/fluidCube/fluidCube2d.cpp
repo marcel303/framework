@@ -150,15 +150,15 @@ static void lin_solve2d_xy(
     }
 }
 
-static void diffuse2d(const int b, float * x, const float * x0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY)
+static void diffuse2d(const int b, float * x, const float * x0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const float voxelSize)
 {
-	const float a = dt * diff * (sizeX - 2); // fixme : is using only sizeX and not sizeY correct here ?
+	const float a = dt * diff / voxelSize;
 	lin_solve2d(b, x, x0, a, 1 + 4 * a, iter, sizeX, sizeY);
 }
 
-static void diffuse2d_xy(float * x, const float * x0, float * y, const float * y0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY)
+static void diffuse2d_xy(float * x, const float * x0, float * y, const float * y0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const float voxelSize)
 {
-	const float a = dt * diff * (sizeX - 2); // fixme : is using only sizeX and not sizeY correct here ?
+	const float a = dt * diff / voxelSize;
 	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, sizeX, sizeY);
 }
 
@@ -199,10 +199,9 @@ static void project2d(
     set_bnd2d(2, velocY, sizeX, sizeY);
 }
 
-static void advect2d(const int b, float * d, const float * d0, const float * velocX, const float * velocY, const float dt, const int sizeX, const int sizeY)
+static void advect2d(const int b, float * d, const float * d0, const float * velocX, const float * velocY, const float in_dt, const int sizeX, const int sizeY, const float voxelSize)
 {
-    const float dtx = dt * (sizeX - 2);
-    const float dty = dt * (sizeX - 2);
+	const float dt = in_dt / voxelSize;
 	
 	const float X_max = sizeX - 1.5f;
 	const float Y_max = sizeY - 1.5f;
@@ -214,8 +213,8 @@ static void advect2d(const int b, float * d, const float * d0, const float * vel
 	{
 		for (i = 1, ifloat = 1; i < sizeX - 1; ++i, ++ifloat)
 		{
-			const float tmp1 = dtx * velocX[IX_2D(i, j)];
-			const float tmp2 = dty * velocY[IX_2D(i, j)];
+			const float tmp1 = dt * velocX[IX_2D(i, j)];
+			const float tmp2 = dt * velocY[IX_2D(i, j)];
 			
 			float x = ifloat - tmp1;
 			float y = jfloat - tmp2;
@@ -283,18 +282,18 @@ void FluidCube2d::addVelocity(const int x, const int y, const float amountX, con
 
 void FluidCube2d::step()
 {
-	diffuse2d_xy(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), visc, dt, iter, sizeX, sizeY);
+	diffuse2d_xy(Vx0.data(), Vx.data(), Vy0.data(), Vy.data(), visc, dt, iter, sizeX, sizeY, voxelSize);
 	
 	project2d(Vx0.data(), Vy0.data(), Vx.data(), Vy.data(), iter, sizeX, sizeY);
 	
-	advect2d(1, Vx.data(), Vx0.data(), Vx0.data(), Vy0.data(), dt, sizeX, sizeY);
-    advect2d(2, Vy.data(), Vy0.data(), Vx0.data(), Vy0.data(), dt, sizeX, sizeY);
+	advect2d(1, Vx.data(), Vx0.data(), Vx0.data(), Vy0.data(), dt, sizeX, sizeY, voxelSize);
+    advect2d(2, Vy.data(), Vy0.data(), Vx0.data(), Vy0.data(), dt, sizeX, sizeY, voxelSize);
 	
 	project2d(Vx.data(), Vy.data(), Vx0.data(), Vy0.data(), iter, sizeX, sizeY);
 	
-	diffuse2d(0, s.data(), density.data(), diff, dt, iter, sizeX, sizeY);
+	diffuse2d(0, s.data(), density.data(), diff, dt, iter, sizeX, sizeY, voxelSize);
 	
-	advect2d(0, density.data(), s.data(), Vx.data(), Vy.data(), dt, sizeX, sizeY);
+	advect2d(0, density.data(), s.data(), Vx.data(), Vy.data(), dt, sizeX, sizeY, voxelSize);
 }
 
 //
