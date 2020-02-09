@@ -11,25 +11,25 @@ push_group libraries
 
 	add 1stparty/artnet
 	add 1stparty/binaural
+	add 1stparty/libfbx
+	add 1stparty/libnet
+	add 1stparty/libvideo
 	
 	with_platform linux add 3rdparty/PS3EYEDriver/framework
 	with_platform macos add 3rdparty/PS3EYEDriver/framework
 	add 3rdparty
 	add 3rdparty/imgui-framework
 	add 3rdparty/jsoncpp
+	add 3rdparty/libnfd
 	add 3rdparty/libwebrequest
 	add 3rdparty/miniz
 	add 3rdparty/nanovg-framework
 	with_platform linux add 3rdparty/xmm-support
 	with_platform macos add 3rdparty/xmm-support
-	add libfbx
 	add libgg
 	add libjsusfx-framework
-	add libnet
-	add libnfd
 	add libosc
 	add libparticle
-	add libvideo
 	add users/marcel/allegro2-support
 	add users/marcel/jsusfx-audiograph
 	add users/marcel/libjgmod
