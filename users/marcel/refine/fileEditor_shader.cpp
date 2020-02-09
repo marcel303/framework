@@ -38,6 +38,7 @@ struct RealtimeShaderEditor
 	{
 		kTab_Uniforms,
 		kTab_Errors,
+		kTab_VertexInputs,
 		kTab_Statistics,
 		kTab_FileBrowser
 	};
@@ -51,6 +52,12 @@ struct RealtimeShaderEditor
 	std::string text;
 	
 	Shader shader;
+	
+	struct
+	{
+		Vec4 color = Vec4(1, 1, 1, 1);
+		Vec3 normal = Vec3(0, 0, 1);
+	} vertexInputs;
 	
 	Tab tab;
 	
@@ -305,6 +312,9 @@ struct RealtimeShaderEditor
 				ImGui::SameLine();
 				if (ImGui::RadioButton("Errors", tab == kTab_Errors))
 					tab = kTab_Errors;
+				ImGui::SameLine();
+				if (ImGui::RadioButton("Vertex inputs", tab == kTab_VertexInputs))
+					tab = kTab_VertexInputs;
 				
 				ImGui::BeginChild("Tabs", ImVec2(0, 170));
 				{
@@ -354,6 +364,11 @@ struct RealtimeShaderEditor
 						showStatistics(shader);
 					else if (tab == kTab_Errors)
 						showErrors(shader);
+					else if (tab == kTab_VertexInputs)
+					{
+						ImGui::ColorEdit4("Color", &vertexInputs.color[0]);
+						ImGui::InputFloat3("Normal", &vertexInputs.normal[0]);
+					}
 					else
 						Assert(false);
 				}
@@ -395,8 +410,8 @@ struct RealtimeShaderEditor
 		{
 			setShader(shader);
 			setShaderConstants(sx, sy);
-			setColor(colorWhite);
-			gxNormal3f(0, 0, 1);
+			gxColor4fv(&vertexInputs.color[0]);
+			gxNormal3fv(&vertexInputs.normal[0]);
 			drawRect(0, 0, sx, sy);
 			clearShader();
 		}
