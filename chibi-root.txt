@@ -11,19 +11,21 @@ push_group libraries
 
 	add 1stparty/artnet
 	add 1stparty/binaural
+	add 1stparty/framework-ofx
+	add 1stparty/imgui-framework
 	add 1stparty/libfbx
 	add 1stparty/libnet
 	add 1stparty/libvideo
+	add 1stparty/libwebrequest
+	add 1stparty/nanovg-framework
+	add 1stparty/tinyxml2-helpers
 	
 	with_platform linux add 3rdparty/PS3EYEDriver/framework
 	with_platform macos add 3rdparty/PS3EYEDriver/framework
 	add 3rdparty
-	add 3rdparty/imgui-framework
 	add 3rdparty/jsoncpp
 	add 3rdparty/libnfd
-	add 3rdparty/libwebrequest
 	add 3rdparty/miniz
-	add 3rdparty/nanovg-framework
 	with_platform linux add 3rdparty/xmm-support
 	with_platform macos add 3rdparty/xmm-support
 	add libgg

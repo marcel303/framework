@@ -1,0 +1,6 @@
+library nanovg shared
+        scan_files c path ../nanovg/src
+        scan_files h path ../nanovg/src
+        header_path ../nanovg/src expose
+        license_file ../nanovg/LICENSE.txt
+
