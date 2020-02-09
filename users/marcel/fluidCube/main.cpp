@@ -4,8 +4,8 @@
 #include "framework.h"
 #include "Timer.h"
 
-static const int GFX_SX = 900;
-static const int GFX_SY = 900;
+static const int GFX_SX = 800;
+static const int GFX_SY = 400;
 
 //
 
@@ -17,9 +17,9 @@ struct FluidCube2dDemo
 	
 	void init()
 	{
-		cube = createFluidCube2d(300, 0.001f, 0.0001f, 1.f / 30.f);
+		cube = createFluidCube2d(400, 200, .1f, .1f, 1.f / 30.f);
 		
-		texture.allocate(cube->size, cube->size, GX_R32_FLOAT, true, true);
+		texture.allocate(cube->sizeX, cube->sizeY, GX_R32_FLOAT, true, true);
 		texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	}
 	
@@ -33,7 +33,7 @@ struct FluidCube2dDemo
 	
 	void simulateAndDrawFrame()
 	{
-		const int SCALE = GFX_SX / cube->size;
+		const int SCALE = GFX_SX / cube->sizeX;
 		
 		for (auto & d : cube->density)
 			d *= .99f;
@@ -43,7 +43,7 @@ struct FluidCube2dDemo
 			for (int y = -4; y <= +4; ++y)
 			{
 				cube->addDensity(mouse.x / SCALE + x, mouse.y / SCALE + y, .1f);
-				cube->addVelocity(mouse.x / SCALE, mouse.y / SCALE, mouse.dx / 100.f, mouse.dy / 100.f);
+				cube->addVelocity(mouse.x / SCALE, mouse.y / SCALE, mouse.dx * 10.f, mouse.dy * 10.f);
 			}
 		}
 		
@@ -59,7 +59,7 @@ struct FluidCube2dDemo
 			gxSetTexture(texture.id);
 			setColorClamp(false);
 			setColor(2000, 2000, 2000);
-			drawRect(0, 0, cube->size, cube->size);
+			drawRect(0, 0, cube->sizeX, cube->sizeY);
 			setColorClamp(true);
 			gxSetTexture(0);
 			
@@ -68,9 +68,9 @@ struct FluidCube2dDemo
 			{
 				setColor(5, 10, 20);
 				
-				for (int y = 0; y < cube->size; y += 4)
+				for (int y = 0; y < cube->sizeY; y += 4)
 				{
-					for (int x = 0; x < cube->size; x += 4)
+					for (int x = 0; x < cube->sizeX; x += 4)
 					{
 						const int index = cube->index(x, y);
 						
@@ -119,9 +119,9 @@ struct FluidCube3dDemo
 	
 	void init()
 	{
-		cube = createFluidCube3d(50, 0.0001f, 0.0001f, 1.f / 30.f);
+		cube = createFluidCube3d(40, 40, 100, .01f, .01f, 1.f / 30.f);
 		
-		texture.allocate(cube->size, cube->size, GX_R32_FLOAT, true, true);
+		texture.allocate(cube->sizeX, cube->sizeY, GX_R32_FLOAT, true, true);
 		texture.setSwizzle(0, 0, 0, GX_SWIZZLE_ONE);
 	}
 
@@ -135,14 +135,15 @@ struct FluidCube3dDemo
 
 	void simulateAndDrawFrame()
 	{
-		const int SCALE = GFX_SX / cube->size;
+		const int SCALE_X = GFX_SX / cube->sizeX;
+		const int SCALE_Y = GFX_SY / cube->sizeY;
 		
 		for (auto & d : cube->density)
 			d *= .99f;
 		
-		const int z = cube->size/2 + cos(framework.time / 1.23f) * cube->size/3.f;
-		cube->addDensity(mouse.x / SCALE, mouse.y / SCALE, z, 100.f);
-		cube->addVelocity(mouse.x / SCALE, mouse.y / SCALE, z, mouse.dx, mouse.dy, cosf(framework.time) * 20.f);
+		const int z = cube->sizeZ/2 + cos(framework.time / 1.23f) * cube->sizeZ/3.f;
+		cube->addDensity(mouse.x / SCALE_X, mouse.y / SCALE_Y, z, 100.f);
+		cube->addVelocity(mouse.x / SCALE_X, mouse.y / SCALE_Y, z, mouse.dx * 100.f, mouse.dy * 100.f, cosf(framework.time) * 400.f);
 		
 		cube->step();
 		
@@ -150,27 +151,28 @@ struct FluidCube3dDemo
 		
 		{
 			projectPerspective3d(60.f, .01f, 100.f);
-			gxTranslatef(0, 0, 2);
+			gxTranslatef(0, 0, 1.7f);
 			gxRotatef(framework.time * 10.f, 0, 1, 0);
 			gxScalef(1, -1, 1);
+			gxScalef(1.f /cube->sizeZ, 1.f / cube->sizeZ, 1.f /cube->sizeZ);
 			
 			setBlend(BLEND_ADD);
 			setColor(250, 100, 30);
 			setAlphaf(.4f);
 			
-			for (int z = 0; z < cube->size; ++z)
+			for (int z = 0; z < cube->sizeZ; ++z)
 			{
 				gxPushMatrix();
-				gxTranslatef(0, 0, lerp<float>(-.5f, +.5f, z / float(cube->size - 1)));
+				gxTranslatef(0, 0, lerp<float>(-cube->sizeZ, +cube->sizeZ, z / float(cube->sizeZ - 1)));
 				texture.upload(cube->density.data() + cube->index(0, 0, z), 4, 0);
 				
 				gxSetTexture(texture.id);
-				drawRect(-.5f, -.5f, .5f, .5f);
+				drawRect(-cube->sizeX, -cube->sizeY, +cube->sizeX, +cube->sizeY);
 				gxSetTexture(0);
 				gxPopMatrix();
 			}
 			
-			lineCube(Vec3(), Vec3(.5f, .5f, .5f));
+			lineCube(Vec3(), Vec3(cube->sizeX, cube->sizeY, cube->sizeZ));
 			
 			projectScreen2d();
 		}
@@ -185,7 +187,7 @@ struct FluidCube2dGpuDemo
 	
 	void init()
 	{
-		cube = createFluidCube2dGpu(900, 0.0001f, 0.0001f, 1.f / 30.f);
+		cube = createFluidCube2dGpu(800, 400, .01f, .01f, 1.f / 30.f);
 	}
 	
 	void shut()
@@ -196,7 +198,7 @@ struct FluidCube2dGpuDemo
 	
 	void simulateAndDrawFrame()
 	{
-		const int SCALE = GFX_SX / cube->size;
+		const int SCALE = GFX_SX / cube->sizeX;
 		
 		cube->density.mulf(.99f, .99f, .99f);
 		
@@ -213,7 +215,7 @@ struct FluidCube2dGpuDemo
 		pushSurface(&cube->Vx);
 		{
 			hqBegin(HQ_FILLED_CIRCLES);
-			setColorf(mouse.dx / 10.f, 0.f, 0.f, 1.f / 10);
+			setColorf(mouse.dx * 100.f, 0.f, 0.f, 1.f / 10);
 			for (int i = 0; i < 10; ++i)
 				hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, i * 8.f / 10);
 			hqEnd();
@@ -222,7 +224,7 @@ struct FluidCube2dGpuDemo
 		pushSurface(&cube->Vy);
 		{
 			hqBegin(HQ_FILLED_CIRCLES);
-			setColorf(mouse.dy / 10.f, 0.f, 0.f, 1.f / 10);
+			setColorf(mouse.dy * 100.f, 0.f, 0.f, 1.f / 10);
 			for (int i = 0; i < 10; ++i)
 				hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, i * 8.f / 10);
 			hqEnd();
@@ -266,7 +268,7 @@ struct FluidCube2dGpuDemo
 				
 				setShader_TextureSwizzle(texture, 0, 0, 0, GX_SWIZZLE_ONE);
 				setColor(4000, 3000, 2000);
-				drawRect(0, 0, cube->size, cube->size);
+				drawRect(0, 0, cube->sizeX, cube->sizeY);
 				clearShader();
 			}
 			popBlend();
