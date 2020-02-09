@@ -1,0 +1,14 @@
+add artnet
+add binaural
+add framework-ofx
+add imgui-framework
+add libfbx
+add libnet
+add libvideo
+add libwebrequest
+add libreflection
+add libreflection-bindtofile
+add libreflection-jsonio
+add libreflection-textio
+add nanovg-framework
+add tinyxml2-helpers

@@ -11,14 +11,19 @@ add freetype2-support
 add glew
 add hg-sdf
 add imgui-support
+add jsoncpp
 add leapmotion
 add libfreenect2
+add libnfd
 add liboscpack
 add midifile
+add miniz
 add msdfgen
 add nanovg-support
 add oggvorbis
 add portaudio-support
+with_platform linux add PS3EYEDriver/framework
+with_platform macos add PS3EYEDriver/framework
 add rapidjson-support
 add remotery
 add rtmidi-support
@@ -26,6 +31,8 @@ add syphon
 add tinyxml2
 add turbojpeg
 add utf8rewind
+with_platform linux add xmm-support
+with_platform macos add xmm-support
 
 with_platform macos    add FreeImage-support
 with_platform iphoneos add FreeImage-support
