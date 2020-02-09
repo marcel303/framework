@@ -14,6 +14,8 @@ struct FluidCube2dGpu
 	float visc; // viscosity
 
 	float voxelSize = 1.f;
+	
+	bool wrapped = false; // when true, the fluid will wrap around the edges
 
 	int iter = 4;
 	

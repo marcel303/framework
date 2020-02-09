@@ -131,7 +131,7 @@ static void set_bnd2d(const int b, Surface * x, const int sizeX, const int sizeY
 	// implement (naively). we don't seem to actually need it, so we leave it empty for now
 }
 
-static void lin_solve2d(const int b, Surface * x, const Surface * x0, const float a, const float c, const int iter, const int sizeX, const int sizeY)
+static void lin_solve2d(const int b, Surface * x, const Surface * x0, const float a, const float c, const int iter, const int sizeX, const int sizeY, const bool wrapped)
 {
     float cRecip = 1.f / c;
 
@@ -160,8 +160,8 @@ static void lin_solve2d(const int b, Surface * x, const Surface * x0, const floa
     {
 		Shader shader("lin_solve2d");
 		setShader(shader);
-		shader.setTexture("x", 0, x->getTexture(), false, true);
-		shader.setTexture("x0", 1, x0->getTexture(), false, true);
+		shader.setTexture("x", 0, x->getTexture(), false, !wrapped);
+		shader.setTexture("x0", 1, x0->getTexture(), false, !wrapped);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
     	x->postprocess(shader);
@@ -173,7 +173,7 @@ static void lin_solve2d(const int b, Surface * x, const Surface * x0, const floa
 static void lin_solve2d_xy(
 	Surface * x, const Surface * x0,
 	Surface * y, const Surface * y0,
-	const float a, const float c, const int iter, const int sizeX, const int sizeY)
+	const float a, const float c, const int iter, const int sizeX, const int sizeY, const bool wrapped)
 {
     float cRecip = 1.f / c;
 
@@ -202,8 +202,8 @@ static void lin_solve2d_xy(
     {
 		Shader shader("lin_solve2d_xy");
 		setShader(shader);
-		shader.setTexture("x", 0, x->getTexture(), false, true);
-		shader.setTexture("x0", 1, x0->getTexture(), false, true);
+		shader.setTexture("x", 0, x->getTexture(), false, !wrapped);
+		shader.setTexture("x0", 1, x0->getTexture(), false, !wrapped);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
     	x->postprocess(shader);
@@ -215,8 +215,8 @@ static void lin_solve2d_xy(
     {
 		Shader shader("lin_solve2d_xy");
 		setShader(shader);
-    	shader.setTexture("x", 0, y->getTexture(), false, true);
-		shader.setTexture("x0", 1, y0->getTexture(), false, true);
+    	shader.setTexture("x", 0, y->getTexture(), false, !wrapped);
+		shader.setTexture("x0", 1, y0->getTexture(), false, !wrapped);
 		shader.setImmediate("a", a);
 		shader.setImmediate("cRecip", cRecip);
     	y->postprocess(shader);
@@ -225,23 +225,23 @@ static void lin_solve2d_xy(
     }
 }
 
-static void diffuse2d(const int b, Surface * x, const Surface * x0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const float voxelSize)
+static void diffuse2d(const int b, Surface * x, const Surface * x0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const float voxelSize, const bool wrapped)
 {
 	const float a = dt * diff / voxelSize;
-	lin_solve2d(b, x, x0, a, 1 + 4 * a, iter, sizeX, sizeY);
+	lin_solve2d(b, x, x0, a, 1 + 4 * a, iter, sizeX, sizeY, wrapped);
 }
 
-static void diffuse2d_xy(Surface * x, const Surface * x0, Surface * y, const Surface * y0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const float voxelSize)
+static void diffuse2d_xy(Surface * x, const Surface * x0, Surface * y, const Surface * y0, const float diff, const float dt, const int iter, const int sizeX, const int sizeY, const float voxelSize, const bool wrapped)
 {
 	const float a = dt * diff / voxelSize;
-	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, sizeX, sizeY);
+	lin_solve2d_xy(x, x0, y, y0, a, 1 + 4 * a, iter, sizeX, sizeY, wrapped);
 }
 
 static void project2d(
 	Surface * velocX,
 	Surface * velocY,
 	Surface * p,
-	Surface * div, const int iter, const int sizeX, const int sizeY)
+	Surface * div, const int iter, const int sizeX, const int sizeY, const bool wrapped)
 {
 	getOrCreateShader("project2d_div",
 		R"SHADER(
@@ -261,8 +261,8 @@ static void project2d(
 	{
 		Shader shader("project2d_div");
 		setShader(shader);
-		shader.setTexture("velocX", 0, velocX->getTexture(), false, true);
-		shader.setTexture("velocY", 1, velocY->getTexture(), false, true);
+		shader.setTexture("velocX", 0, velocX->getTexture(), false, !wrapped);
+		shader.setTexture("velocY", 1, velocY->getTexture(), false, !wrapped);
 		drawRect(0, 0, div->getWidth(), div->getHeight());
 		clearShader();
 	}
@@ -271,7 +271,7 @@ static void project2d(
     set_bnd2d(0, div, sizeX, sizeY);
 	
 	p->clear();
-	lin_solve2d(0, p, div, 1, 4, iter, sizeX, sizeY);
+	lin_solve2d(0, p, div, 1, 4, iter, sizeX, sizeY, wrapped);
 	
 	getOrCreateShader("project2d_veloc_x",
 		R"SHADER(
@@ -290,7 +290,7 @@ static void project2d(
 	{
 		Shader shader("project2d_veloc_x");
 		setShader(shader);
-		shader.setTexture("p", 0, p->getTexture(), false, true);
+		shader.setTexture("p", 0, p->getTexture(), false, !wrapped);
 		drawRect(0, 0, velocX->getWidth(), velocX->getHeight());
 		clearShader();
 	}
@@ -302,7 +302,7 @@ static void project2d(
 	{
 		Shader shader("project2d_veloc_y");
 		setShader(shader);
-		shader.setTexture("p", 0, p->getTexture(), false, true);
+		shader.setTexture("p", 0, p->getTexture(), false, !wrapped);
 		drawRect(0, 0, velocY->getWidth(), velocY->getHeight());
 		clearShader();
 	}
@@ -313,7 +313,7 @@ static void project2d(
     set_bnd2d(2, velocY, sizeY, sizeY);
 }
 
-static void advect2d(const int b, Surface * d, const Surface * d0, const Surface * velocX, const Surface * velocY, const float in_dt, const int sizeX, const int sizeY, const float voxelSize)
+static void advect2d(const int b, Surface * d, const Surface * d0, const Surface * velocX, const Surface * velocY, const float in_dt, const int sizeX, const int sizeY, const float voxelSize, const bool wrapped)
 {
 	const float dt = in_dt / voxelSize;
 	
@@ -336,9 +336,9 @@ static void advect2d(const int b, Surface * d, const Surface * d0, const Surface
     {
 		Shader shader("advect2d");
 		setShader(shader);
-		shader.setTexture("velocX", 0, velocX->getTexture(), false, true);
-		shader.setTexture("velocY", 1, velocY->getTexture(), false, true);
-		shader.setTexture("d0", 2, d0->getTexture(), true, true);
+		shader.setTexture("velocX", 0, velocX->getTexture(), false, !wrapped);
+		shader.setTexture("velocY", 1, velocY->getTexture(), false, !wrapped);
+		shader.setTexture("d0", 2, d0->getTexture(), true, !wrapped);
 		shader.setImmediate("dt", dt);
 		drawRect(0, 0, d->getWidth(), d->getHeight());
 		clearShader();
@@ -421,20 +421,20 @@ void FluidCube2dGpu::step()
 {
 	pushBlend(BLEND_OPAQUE);
 	{
-		diffuse2d_xy(&Vx0, &Vx, &Vy0, &Vy, visc, dt, iter, sizeX, sizeY, voxelSize);
+		diffuse2d_xy(&Vx0, &Vx, &Vy0, &Vy, visc, dt, iter, sizeX, sizeY, voxelSize, wrapped);
 		
-		project2d(&Vx0, &Vy0, &Vx, &Vy, iter, sizeX, sizeY);
+		project2d(&Vx0, &Vy0, &Vx, &Vy, iter, sizeX, sizeY, wrapped);
 	
-		advect2d(1, &Vx, &Vx0, &Vx0, &Vy0, dt, sizeX, sizeY, voxelSize);
-		advect2d(2, &Vy, &Vy0, &Vx0, &Vy0, dt, sizeX, sizeY, voxelSize);
+		advect2d(1, &Vx, &Vx0, &Vx0, &Vy0, dt, sizeX, sizeY, voxelSize, wrapped);
+		advect2d(2, &Vy, &Vy0, &Vx0, &Vy0, dt, sizeX, sizeY, voxelSize, wrapped);
 		
-		project2d(&Vx, &Vy, &Vx0, &Vy0, iter, sizeX, sizeY);
+		project2d(&Vx, &Vy, &Vx0, &Vy0, iter, sizeX, sizeY, wrapped);
 	
 		for (size_t i = 0; i < density.size(); ++i)
 		{
-			diffuse2d(0, &s[i], &density[i], diff, dt, iter, sizeX, sizeY, voxelSize);
+			diffuse2d(0, &s[i], &density[i], diff, dt, iter, sizeX, sizeY, voxelSize, wrapped);
 			
-			advect2d(0, &density[i], &s[i], &Vx, &Vy, dt, sizeX, sizeY, voxelSize);
+			advect2d(0, &density[i], &s[i], &Vx, &Vy, dt, sizeX, sizeY, voxelSize, wrapped);
 		}
 	}
 	popBlend();

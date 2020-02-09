@@ -212,6 +212,7 @@ struct FluidCube2dGpuDemo
 	void init()
 	{
 		cube = createFluidCube2dGpu(800, 400, 3, .01f, .001f, 1.f / 30.f);
+		cube->wrapped = true;
 		cube->iter = 10;
 	}
 	
