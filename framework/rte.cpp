@@ -46,8 +46,6 @@ RTE strategies:
 
 */
 
-// todo : windows,linux : add file watchers for multiple resource paths
-
 static void handleFileChange(const char * filename)
 {
 	const std::string extension = Path::GetExtension(filename, true);
@@ -132,6 +130,13 @@ void rteFileWatcher_Basic::shut()
 
 void rteFileWatcher_Basic::tick()
 {
+	intervalTimer++;
+	
+	if (intervalTimer < interval)
+		return;
+	
+	intervalTimer = 0;
+	
 	for (auto & fi: fileInfos)
 	{
 		FILE * f = fopen(fi.filename.c_str(), "rb");
@@ -241,8 +246,6 @@ struct rteFileWatcher_BasicWithPathOptimize : rteFileWatcherBase
 
 //
 
-#if defined(MACOS) || defined(WINDOWS)
-
 #include <list>
 
 std::list<rteFileWatcherBase*> s_fileWatchers;
@@ -256,7 +259,9 @@ void initRealTimeEditing()
 	#elif defined(WINDOWS)
 		rteFileWatcher_BasicWithPathOptimize * fileWatcher = new rteFileWatcher_BasicWithPathOptimize();
 	#else
-		#error
+		logWarning("using non-optimized code path for checking for file changes. this could be hefty and cause periodic stutters when there's lots of files!");
+		rteFileWatcher_Basic * fileWatcher = new rteFileWatcher_Basic();
+		fileWatcher->interval = 60;
 	#endif
 		
 		fileWatcher->init(resourcePath.c_str());
@@ -286,55 +291,3 @@ void tickRealTimeEditing()
 		fileWatcher->tick();
 	}
 }
-
-#elif defined(WIN32)
-
-static rteFileWatcher_BasicWithPathOptimize s_fileWatcher;
-
-void initRealTimeEditing()
-{
-	s_fileWatcher.init(".");
-}
-
-void shutRealTimeEditing()
-{
-	s_fileWatcher.shut();
-}
-
-void tickRealTimeEditing()
-{
-	s_fileWatcher.tick();
-}
-
-#else
-
-static rteFileWatcher_Basic s_fileWatcher;
-
-void initRealTimeEditing()
-{
-	s_fileWatcher.init(".");
-}
-
-void shutRealTimeEditing()
-{
-	s_fileWatcher.shut();
-}
-
-void tickRealTimeEditing()
-{
-	static int x = 0;
-	
-	if (x == 0)
-	{
-		logWarning("using non-optimized code path for checking for file changes. this could be hefty and cause periodic stutters when there's lots of files!");
-	}
-	
-	x++;
-	
-	if ((x % 60) != 0)
-		return;
-	
-	s_fileWatcher.tick();
-}
-
-#endif

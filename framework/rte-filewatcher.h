@@ -27,9 +27,9 @@
 
 #pragma once
 
-#include <functional>
-#include <string>
-#include <vector>
+#include <functional> // fileChanged, pathChanged
+#include <string> // rteFileInfo
+#include <vector> // fileInfos
 
 struct rteFileWatcherBase
 {
@@ -54,6 +54,9 @@ struct rteFileWatcher_Basic : rteFileWatcherBase
 	std::string path;
 
 	std::vector<rteFileInfo> fileInfos;
+	
+	int interval = 1;
+	int intervalTimer = 0;
 
 	virtual void init(const char * path) override;
 	virtual void shut() override;
@@ -82,7 +85,8 @@ struct rteFileWatcher_OSX : rteFileWatcherBase
 
 #if defined(WINDOWS)
 
-// todo : remove Windows.h header file include
+#include <string>
+
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
