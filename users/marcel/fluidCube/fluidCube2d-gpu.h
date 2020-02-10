@@ -22,7 +22,7 @@ struct FluidCube2dGpu
 	std::vector<Surface> s;
 	std::vector<Surface> density;
 	
-// todo : some considerable speedup could probably be had when combining Vx and Vy and Vx0 and Vy0
+// note : some considerable speedup could probably be had when combining Vx and Vy and Vx0 and Vy0
 //        this will require changes to most shaders and functions though
 	Surface Vx;
 	Surface Vy;

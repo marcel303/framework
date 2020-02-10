@@ -96,7 +96,7 @@ static void lin_solve3d(const int b, float * __restrict x, const float * __restr
 			
 				float prev_x = x_line[0];
 			
-			// todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
+			// note : we're updating x[] inside the loop while also reading from it. this isn't quite right and adds some directional bias. although it is, usually, a good trade-off speed and memory-wise
 			
                 for (int i = 1; i < sizeX - 1; i++, index++)
                 {
@@ -176,7 +176,7 @@ static void lin_solve3d_xyz(
 				float prev_y = y_line[0];
 				float prev_z = z_line[0];
 				
-			// todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
+			// note : we're updating x[], y[] and z[] inside the loop while also reading from it. this isn't quite right and adds some directional bias. although it is, usually, a good trade-off speed and memory-wise
 			
                 for (int i = 1; i < sizeX - 1; i++)
                 {

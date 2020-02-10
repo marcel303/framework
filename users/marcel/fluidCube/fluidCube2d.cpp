@@ -59,7 +59,7 @@ static void lin_solve2d(const int b, float * __restrict x, const float * __restr
 {
     const float cRecip = 1.f / c;
 
-// todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
+// note : we're updating x[] inside the loop while also reading from it. this isn't quite right and adds some directional bias. although it is, usually, a good trade-off speed and memory-wise
 
     for (int k = 0; k < iter; ++k)
     {
@@ -110,7 +110,7 @@ static void lin_solve2d_xy(
 {
     const float cRecip = 1.f / c;
 
-// todo : we're updating x[] inside the loop while also reading from it. this doesn't seem right
+// note : we're updating x[] and y[] inside the loop while also reading from them. this isn't quite right and adds some directional bias. although it is, usually, a good trade-off speed and memory-wise
 
     for (int k = 0; k < iter; ++k)
     {
