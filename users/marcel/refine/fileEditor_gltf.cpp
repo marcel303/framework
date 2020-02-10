@@ -5,7 +5,6 @@
 #include "ui.h" // drawUiRectCheckered
 
 // todo : add option : draw mode (lit, colors, normals, specular, roughness, metallic, glossiness, ..)
-// todo : implement blend mode : alpha blend or alpha to coverage
 
 static const char * s_gltfWireframePs = R"SHADER(
 
