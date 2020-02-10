@@ -86,6 +86,7 @@ int main(int argc, char * argv[])
 	framework.enableRealTimeEditing = true;
 	framework.msaaLevel = 4;
 	framework.filedrop = true;
+	framework.allowHighDpi = false;
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
@@ -140,8 +141,10 @@ int main(int argc, char * argv[])
 			
 			if (gltf::loadScene(file.c_str(), scene))
 			{
+			#if USE_BUFFER_CACHE
 				bufferCache = new gltf::BufferCache();
 				bufferCache->init(scene);
+			#endif
 			}
 		}
 		
@@ -291,6 +294,9 @@ int main(int argc, char * argv[])
 			drawText(10, 30, 16, +1, -1, "(Extra) Author: %s", scene.asset.extras.author.c_str());
 			drawText(10, 50, 16, +1, -1, "(Extra) License: %s", scene.asset.extras.license.c_str());
 			drawText(10, 70, 16, +1, -1, "(Extra) Title: %s", scene.asset.extras.title.c_str());
+			
+			drawText(10, VIEW_SY - 40, 16, +1, -1, "Meters to centimeter conversion ('C' to toggle): %s", centimeters ? "On" : "Off");
+			drawText(10, VIEW_SY - 20, 16, +1, -1, "Alpha to coverage ('A' to toggle): %s", useAlphaToCoverage ? "On" : "Off");
 		}
 		framework.endDraw();
 	}
