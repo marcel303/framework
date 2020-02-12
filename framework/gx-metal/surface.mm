@@ -20,7 +20,7 @@ void Surface::blitTo(Surface * surface) const
 		{
 			Shader shader("engine/gx-metal/surface-blit");
 			setShader(shader);
-			shader.setTexture("source", 0, getTexture());
+			shader.setTexture("source", 0, getTexture(), false, true);
 			drawRect(0, 0, getWidth(), getHeight());
 			clearShader();
 		}
