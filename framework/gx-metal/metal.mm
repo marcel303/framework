@@ -1110,14 +1110,40 @@ static GxTextureId createTexture(
 	}
 }
 
-GxTextureId createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp)
-{
-	return createTexture(source, sx, sy, 1, 0, filter, clamp, MTLPixelFormatR8Unorm);
-}
-
 GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, 4, 0, filter, clamp, MTLPixelFormatRGBA8Unorm);
+}
+
+GxTextureId createTextureFromRGB8(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	uint8_t * data = new uint8_t[sx * sy * 4];
+	
+	const uint8_t * src = (const uint8_t*)source;
+	      uint8_t * dst = data;
+	
+	for (int i = sx * sy; i > 0; --i)
+	{
+		dst[0] = src[0];
+		dst[1] = src[1];
+		dst[2] = src[2];
+		dst[3] = 0xff;
+		
+		src += 3;
+		dst += 4;
+	}
+	
+	const GxTextureId result = createTextureFromRGBA8(data, sx, sy, filter, clamp);
+	
+	delete [] data;
+	data = nullptr;
+	
+	return result;
+}
+
+GxTextureId createTextureFromR8(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, 1, 0, filter, clamp, MTLPixelFormatR8Unorm);
 }
 
 GxTextureId createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp)
@@ -1529,6 +1555,9 @@ static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveTy
 		return MTLPrimitiveTypeTriangleStrip;
 	case GX_QUADS:
 		return MTLPrimitiveTypeTriangle;
+		
+	case GX_INVALID_PRIM:
+		break;
 	}
 	
 	logError("unknown GX_PRIMITIVE_TYPE");
@@ -1858,13 +1887,13 @@ static void ensureIndexBufferCapacity(const int numIndices)
 		{
 			auto * elem = s_gxIndexBufferElem;
 			
-			[s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxFlush)"];
+			if (@available(macOS 10.13, *)) [s_activeRenderPass->cmdbuf pushDebugGroup:@"GxBufferPool Release (gxFlush)"];
 			[s_activeRenderPass->cmdbuf addCompletedHandler:
 				^(id<MTLCommandBuffer> _Nonnull)
 				{
 					s_gxIndexBufferPool.freeBuffer(elem);
 				}];
-			[s_activeRenderPass->cmdbuf popDebugGroup];
+			if (@available(macOS 10.13, *)) [s_activeRenderPass->cmdbuf popDebugGroup];
 		}
 		
 		s_gxIndexBufferElem = s_gxIndexBufferPool.allocBuffer();
