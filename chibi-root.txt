@@ -3,6 +3,7 @@ add audioGraph-examples
 add avGraph
 add chibi
 add framework
+add refine
 add tests
 add vfxGraph
 add vfxGraph-examples
