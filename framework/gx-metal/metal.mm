@@ -1564,36 +1564,93 @@ static MTLPrimitiveType toMetalPrimitiveType(const GX_PRIMITIVE_TYPE primitiveTy
 	return (MTLPrimitiveType)-1;
 }
 
-#define FNV_Offset32 2166136261
-#define FNV_Prime32 16777619
+//
 
-static uint32_t computeHash(const void* bytes, int byteCount)
+namespace xxHash
 {
-	uint32_t hash = FNV_Offset32;
+	static const uint32_t PRIME32_1 = 2654435761U;
+	static const uint32_t PRIME32_2 = 2246822519U;
+	static const uint32_t PRIME32_3 = 3266489917U;
+	static const uint32_t PRIME32_4 = 668265263U;
+	static const uint32_t PRIME32_5 = 374761393U;
 	
-#if 0 // todo : profile and use optimized hash function
-	const int wordCount = byteCount / 4;
-	
-	for (int i = 0; i < wordCount; ++i)
+	template <int count>
+	static uint32_t rotateLeft(const uint32_t value)
 	{
-		hash = hash ^ ((uint32_t*)bytes)[i];
-		hash = hash * FNV_Prime32;
+		return (value << count) | (value >> (32 - count));
 	}
 	
-	for (int i = wordCount * 4; i < byteCount; ++i)
+	static uint32_t readU32(const void * buf)
 	{
-		hash = hash ^ ((uint8_t*)bytes)[i];
-		hash = hash * FNV_Prime32;
+		return *(uint32_t*)buf;
 	}
-#else
-	for (int i = 0; i < byteCount; ++i)
-	{
-		hash = hash ^ ((uint8_t*)bytes)[i];
-		hash = hash * FNV_Prime32;
-	}
-#endif
 	
-	return hash;
+	static uint32_t subHash(uint32_t value, const uint8_t * buf, const int index)
+	{
+		const uint32_t read_value = readU32(buf + index);
+		value += read_value * PRIME32_2;
+		value = rotateLeft<13>(value);
+		value *= PRIME32_1;
+		return value;
+	}
+	
+	static uint32_t hash32(const void * in_buf, const int numBytes, const int seed = 0)
+	{
+		const uint8_t * buf = (uint8_t*)in_buf;
+		
+		uint32_t h32;
+		
+		int index = 0;
+		
+		if (numBytes >= 16)
+		{
+			const int limit = numBytes - 16;
+			
+			uint32_t v1 = seed + PRIME32_1 + PRIME32_2;
+			uint32_t v2 = seed + PRIME32_2;
+			uint32_t v3 = seed + 0;
+			uint32_t v4 = seed - PRIME32_1;
+
+			do
+			{
+				v1 = subHash(v1, buf, index);
+				v2 = subHash(v2, buf, index + 4);
+				v3 = subHash(v3, buf, index + 8);
+				v4 = subHash(v4, buf, index + 12);
+				index += 16;
+			} while (index <= limit);
+
+			h32 = rotateLeft<1>(v1) + rotateLeft<7>(v2) + rotateLeft<12>(v3) + rotateLeft<18>(v4);
+		}
+		else
+		{
+			h32 = seed + PRIME32_5;
+		}
+
+		h32 += (uint32_t)numBytes;
+
+		while (index + 4 <= numBytes)
+		{
+			h32 += readU32(buf + index) * PRIME32_3;
+			h32 = rotateLeft<17>(h32) * PRIME32_4;
+			index += 4;
+		}
+
+		while (index < numBytes)
+		{
+			h32 += buf[index] * PRIME32_5;
+			h32 = rotateLeft<11>(h32) * PRIME32_1;
+			index++;
+		}
+
+		h32 ^= h32 >> 15;
+		h32 *= PRIME32_2;
+		h32 ^= h32 >> 13;
+		h32 *= PRIME32_3;
+		h32 ^= h32 >> 16;
+
+		return h32;
+	}
 }
 
 static id <MTLRenderPipelineState> s_currentRenderPipelineState = nullptr;
@@ -1619,7 +1676,7 @@ static void gxValidatePipelineState()
 	- vs/ps function (shader)
 	*/
 	
-	const uint32_t hash = computeHash(&renderState, sizeof(renderState));
+	const uint32_t hash = xxHash::hash32(&renderState, sizeof(renderState));
 	
 	id <MTLRenderPipelineState> pipelineState = shaderElem.findPipelineState(hash);
 
