@@ -11,7 +11,9 @@ add vfxGraph-examples
 push_group libraries
 
 	add_root 1stparty
-	
+
+	add users/marcel/gltf1
+
 	add 3rdparty
 	
 	add libgg
