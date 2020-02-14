@@ -41,6 +41,7 @@
 
 GxVertexBuffer::GxVertexBuffer()
 	: m_vertexArray(0)
+	, m_numBytes(0)
 {
 }
 
@@ -51,14 +52,20 @@ GxVertexBuffer::~GxVertexBuffer()
 
 void GxVertexBuffer::alloc(const void * bytes, const int numBytes)
 {
+	Assert(m_vertexArray == 0);
+	
 	glGenBuffers(1, &m_vertexArray);
 	checkErrorGL();
+	
+	Assert(m_vertexArray != 0);
 	
 	// fill the buffer with data
 	glBindBuffer(GL_ARRAY_BUFFER, m_vertexArray);
 	glBufferData(GL_ARRAY_BUFFER, numBytes, bytes, GL_STATIC_DRAW);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	checkErrorGL();
+	
+	m_numBytes = numBytes;
 }
 
 void GxVertexBuffer::free()
@@ -68,6 +75,8 @@ void GxVertexBuffer::free()
 		glDeleteBuffers(1, &m_vertexArray);
 		m_vertexArray = 0;
 		checkErrorGL();
+		
+		m_numBytes = 0;
 	}
 }
 
@@ -87,11 +96,15 @@ GxIndexBuffer::~GxIndexBuffer()
 
 void GxIndexBuffer::alloc(const void * bytes, const int numIndices, const GX_INDEX_FORMAT format)
 {
+	Assert(m_indexArray == 0);
+	
 	m_numIndices = numIndices;
 	m_format = format;
 	
 	glGenBuffers(1, &m_indexArray);
 	checkErrorGL();
+	
+	Assert(m_indexArray != 0);
 	
 	// fill the buffer with data
 	

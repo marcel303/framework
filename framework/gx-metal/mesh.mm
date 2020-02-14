@@ -78,6 +78,16 @@ void GxVertexBuffer::free()
 	}
 }
 
+int GxVertexBuffer::getNumBytes() const
+{
+	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;
+	
+	if (buffer == nullptr)
+		return 0;
+	else
+		return buffer.length;
+}
+
 void * GxVertexBuffer::updateBegin()
 {
 	id <MTLBuffer> buffer = (id <MTLBuffer>)m_buffer;

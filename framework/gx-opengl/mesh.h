@@ -38,6 +38,7 @@ class GxVertexBuffer : public GxVertexBufferBase
 	friend class GxMesh;
 	
 	uint32_t m_vertexArray;
+	uint32_t m_numBytes;
 	
 public:
 	GxVertexBuffer();
@@ -45,6 +46,8 @@ public:
 	
 	virtual void alloc(const void * bytes, const int numBytes) override final;
 	virtual void free() override final;
+	
+	virtual int getNumBytes() const override final { return m_numBytes; }
 	
 	uint32_t getOpenglVertexArray() const { return m_vertexArray; }
 };

@@ -44,6 +44,8 @@ public:
 	virtual void alloc(const void * bytes, const int numBytes) override final;
 	virtual void free() override final;
 	
+	virtual int getNumBytes() const override final;
+	
 	void * updateBegin();
 	void updateEnd(const int firstByte, const int numBytes);
 	
