@@ -21,7 +21,6 @@ with_platform windows add etherdream1
 add fourier
 add fluidCube
 add geopart1
-add gltf1
 add gpuParticles1
 add gpupath1
 add grooop-cocompose
@@ -46,7 +45,6 @@ with_platform macos add ps3eye-to-osc
 with_platform linux add ps3eye-to-osc
 with_platform macos add rast
 add rawaudio1
-add refine
 add reaper1
 with_platform macos add resonate1
 with_platform macos add resonate2
