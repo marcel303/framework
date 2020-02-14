@@ -59,6 +59,8 @@ public:
 	
 	virtual void alloc(const void * bytes, const int numBytes) = 0;
 	virtual void free() = 0;
+	
+	virtual int getNumBytes() const = 0;
 };
 
 class GxIndexBufferBase
