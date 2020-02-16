@@ -383,6 +383,8 @@ void GxTexture::generateMipmaps()
 	}
 	else
 	{
+		Assert(mipmapped);
+		
 		auto texture = s_textures[id];
 
 		metal_generate_mipmaps(texture);

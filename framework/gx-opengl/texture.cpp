@@ -505,6 +505,11 @@ void GxTexture::copyRegionsFromTexture(const GxTexture & src, const CopyRegion *
 
 void GxTexture::generateMipmaps()
 {
+	if (id == 0)
+		return;
+		
+	Assert(mipmapped);
+	
 	if (glGenerateMipmap != nullptr)
 	{
 		GLuint restoreTexture;

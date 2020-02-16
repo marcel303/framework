@@ -66,12 +66,12 @@ struct GxTextureProperties
 		int sy = 0;
 	} dimensions;
 	
-	GX_TEXTURE_FORMAT format;
+	GX_TEXTURE_FORMAT format = GX_UNKNOWN_FORMAT;
 	
 	struct
 	{
-		bool filter;
-		bool clamp;
+		bool filter = false;
+		bool clamp = true;
 	} sampling;
 	
 	bool mipmapped = false;
