@@ -3,12 +3,9 @@
 #include "BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h"
 
 #include "FrameworkDebugDrawer.h"
+#include "FrameworkGuiHelper.h"
+#include "FrameworkRenderInterface.h"
 #include "framework.h"
-
-static btBoxShape * createBoxShape(const btVector3 & halfExtents)
-{
-	return new btBoxShape(halfExtents);
-}
 
 static btRigidBody * createRigidBody(
 	btDynamicsWorld * dynamicsWorld,
@@ -76,14 +73,22 @@ int main(int argc, char * argv[])
 	
 	debugDrawer->setDebugMode(
 		1*btIDebugDraw::DBG_DrawWireframe |
-		0*btIDebugDraw::DBG_DrawAabb);
+		0*btIDebugDraw::DBG_DrawAabb |
+		0*btIDebugDraw::DBG_DrawContactPoints |
+		1*btIDebugDraw::DBG_DrawNormals);
 	
 	dynamicsWorld->setDebugDrawer(debugDrawer);
+	
+	//
+	
+	std::vector<btCollisionShape*> shapes;
+	
 	
 	// add static ground plane
 	
 	{
-		auto * shape = createBoxShape(btVector3(40, 1, 40));
+		auto * shape = new btBoxShape(btVector3(40, 1, 40));
+		shapes.push_back(shape);
 		
 		btTransform transform;
 		transform.setIdentity();
@@ -95,7 +100,11 @@ int main(int argc, char * argv[])
 	// add dynamic bodies
 	
 	{
-		auto * shape = createBoxShape(btVector3(1, 1, 1));
+		auto * boxShape = new btBoxShape(btVector3(1, 1, 1));
+		shapes.push_back(boxShape);
+		
+		auto * sphereShape = new btSphereShape(1);
+		shapes.push_back(sphereShape);
 		
 		for (int i = -10; i <= +10; i += 2)
 		{
@@ -107,11 +116,11 @@ int main(int argc, char * argv[])
 					btVector3(1, 1, 1),
 					random<float>(0.f, float(2.0*M_PI))));
 			
-			auto * body = createRigidBody(dynamicsWorld, 0.f, transform, shape);
+			auto * body = createRigidBody(dynamicsWorld, 0.f, transform, boxShape);
 			body->setRestitution(.9f);
 			
 			transform.setOrigin(btVector3(i, 6, 0));
-			createRigidBody(dynamicsWorld, 0.f, transform, shape);
+			createRigidBody(dynamicsWorld, 0.f, transform, boxShape);
 		}
 		
 		for (int i = 0; i < 2000; ++i)
@@ -127,7 +136,14 @@ int main(int argc, char * argv[])
 					btVector3(1, 1, 1),
 					random<float>(0.f, float(2.0*M_PI))));
 			
-			const bool isRigid = (rand()%3) == 0;
+			const bool isRigid = (rand() % 3) == 0;
+			
+			btCollisionShape * shape = nullptr;
+			if ((rand() % 3) == 0)
+				shape = sphereShape;
+			else
+				shape = boxShape;
+			
 			auto * body = createRigidBody(dynamicsWorld, isRigid ? 0.f : 1.f, transform, shape);
 			body->setRestitution(random<float>(.1f, .9f));
 		}
@@ -138,7 +154,8 @@ int main(int argc, char * argv[])
 	btRigidBody * cameraBody = nullptr;
 	
 	{
-		auto * shape = createBoxShape(btVector3(2, 2, 2));
+		auto * shape = new btBoxShape(btVector3(2, 2, 2));
+		shapes.push_back(shape);
 		
 		btTransform transform;
 		transform.setIdentity();
@@ -151,6 +168,14 @@ int main(int argc, char * argv[])
 		cameraBody = createRigidBody(dynamicsWorld, 1.f, transform, shape);
 		cameraBody->setCollisionFlags(btRigidBody::CF_DISABLE_VISUALIZE_OBJECT);
 	}
+	
+	//
+	
+	FrameworkRenderInterface * renderInterface = new FrameworkRenderInterface();
+	
+	renderInterface->init();
+	
+	autogenerateGraphicsObjects(renderInterface, dynamicsWorld);
 	
 	//
 	
@@ -170,7 +195,7 @@ int main(int argc, char * argv[])
 		btTransform transform;
 		transform.setIdentity();
 		transform.setOrigin(btVector3(camera.position[0], camera.position[1], camera.position[2]));
-		cameraBody->setWorldTransform(transform);
+		//cameraBody->setWorldTransform(transform);
 		cameraBody->setLinearVelocity(btVector3(0, 0, 0));
 		cameraBody->activate();
 		
@@ -192,6 +217,14 @@ int main(int argc, char * argv[])
 		
 		dynamicsWorld->stepSimulation(dt);
 		
+		int viewSx;
+		int viewSy;
+		framework.getCurrentViewportSize(viewSx, viewSy);
+		
+		renderInterface->resize(viewSx, viewSy);
+		
+		syncPhysicsToGraphics(dynamicsWorld, renderInterface);
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			projectPerspective3d(60.f, .01f, 100.f);
@@ -199,6 +232,9 @@ int main(int argc, char * argv[])
 			
 			camera.pushViewMatrix();
 			{
+			#if 1
+				renderInterface->renderScene();
+			#else
 				for (int i = dynamicsWorld->getNumCollisionObjects() - 1; i >= 0; i--)
 				{
 					btCollisionObject * obj = dynamicsWorld->getCollisionObjectArray()[i];
@@ -226,8 +262,9 @@ int main(int argc, char * argv[])
 					gxPopMatrix();
 					popShaderOutputs();
 				}
+			#endif
 				
-				dynamicsWorld->debugDrawWorld();
+				//dynamicsWorld->debugDrawWorld();
 			}
 			camera.popViewMatrix();
 			
@@ -236,8 +273,11 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	}
 	
-	dynamicsWorld->setDebugDrawer(nullptr);
+	renderInterface->removeAllInstances();
+	delete renderInterface;
+	renderInterface = nullptr;
 	
+	dynamicsWorld->setDebugDrawer(nullptr);
 	delete debugDrawer;
 	debugDrawer = nullptr;
 	
@@ -282,15 +322,9 @@ int main(int argc, char * argv[])
 		}
 	}
 	
-	/*
-	// todo : free shapes
-	for (int j = 0; j < collisionShapes.size(); j++)
-	{
-		btCollisionShape * shape = collisionShapes[j];
+	for (auto * shape : shapes)
 		delete shape;
-	}
-	collisionShapes.clear();
-	*/
+	shapes.clear();
 	
 	delete dynamicsWorld;
 	dynamicsWorld = nullptr;
