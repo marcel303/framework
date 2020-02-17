@@ -31,7 +31,7 @@ set chibi_bin="chibi-build/chibi/Debug/chibi.exe"
 
 rem build chibi binary
 mkdir "chibi-build\chibi"
-cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Release ../../chibi && cmake --build . || cd %~dp0 && exit /b
+cd chibi-build/chibi && cmake -DCMAKE_BUILD_TYPE=Debug ../../chibi && cmake --build . || cd %~dp0 && exit /b
 cd %~dp0 || exit /b
 
 rem generate cmake files using chibi
