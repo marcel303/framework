@@ -34,7 +34,7 @@ void CollisionScene::MoveEnd(CollisionSphere * sphere)
 		sphere->m_position[2] + sphere->m_radius,
 		sphere->m_hashes);
 
-	//printf("HashCount: %d.\n", sphere->m_hashes.size());
+	//LOG_DBG("hashCount: %d", sphere->m_hashes.size());
 
 	m_hashSpace.Add(
 		sphere->m_hashes,

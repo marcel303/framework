@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <vector>
 
+#define HASH_SPACE_ENTRY_DEDUPLICATION false
+
 typedef uint32_t HashValue;
 typedef std::vector<HashValue> HashList;
 

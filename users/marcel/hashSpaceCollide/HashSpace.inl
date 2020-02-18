@@ -33,8 +33,6 @@ inline void HashEntry<T>::Add(T item)
 		if (listItem->m_item == item)
 		{
 			//printf("DUPLICATE ENTRY.\n");
-
-			return;
 		}
 	}
 #endif
@@ -237,39 +235,49 @@ inline void HashSpace<T>::Remove(
 template <class T>
 inline void HashSpace<T>::GetItems(const HashList & hashes, T * out_items, int maxItems, int & out_itemCount)
 {
-	static EntryList entries;
-
-	entries.resize(hashes.size());
-
+#if HASH_SPACE_ENTRY_DEDUPLICATION
+	std::vector<HashEntry<T>*> entries;
+	entries.reserve(hashes.size());
+	
 	for (size_t i = 0; i < hashes.size(); ++i)
 	{
-		HashEntry<T>* entry = GetHashEntry(hashes[i]);
-
-		/*/
-		int duplicate = 0;
+		HashEntry<T> * entry = GetHashEntry(hashes[i]);
+		
+		bool duplicate = false;
 
 		for (size_t j = 0; j < entries.size(); ++j)
+		{
 			if (entries[j] == entry)
-				duplicate = 1;
+			{
+				duplicate = true;
+				break;
+			}
+		}
 
-		if (duplicate == 0)
-		*/
-			entries[i] = entry;
+		if (duplicate == false)
+			entries.push_back(entry);
 		//else
 			//printf("DEPLICATE ENTRY IN FIND.\n");
 	}
+#endif
 
 	out_itemCount = 0;
 
+#if HASH_SPACE_ENTRY_DEDUPLICATION
 	for (size_t i = 0; i < entries.size(); ++i)
 	{
-		HashEntry<T>* entry = entries[i];
+		HashEntry<T> * entry = entries[i];
+#else
+	for (size_t i = 0; i < hashes.size(); ++i)
+	{
+		HashEntry<T> * entry = GetHashEntry(hashes[i]);
+#endif
 
 		for (HashEntryItem * listItem = entry->m_itemListHead; listItem != nullptr && out_itemCount < maxItems; listItem = listItem->m_next)
 		{
 			T item = static_cast<T>(listItem->m_item);
 
-			int duplicate = 0;
+			bool duplicate = 0;
 
 			for (size_t k = 0; k < out_itemCount; ++k)
 				duplicate |= out_items[k] == item;

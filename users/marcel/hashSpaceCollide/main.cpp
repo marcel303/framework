@@ -75,9 +75,7 @@ int main()
 			enableDeactivations = !enableDeactivations;
 		
 		if (mouse.wentDown(BUTTON_LEFT))
-		{
 			cameraPosition.Set(random(-size, +size), -25.0f, random(-size, +size));
-		}
 
 		float speedX = 0.0f;
 		float speedZ = 0.0f;
@@ -96,10 +94,12 @@ int main()
 
 		// Update movement.
 		
-		float whirlpoolPosition[3];
-		whirlpoolPosition[0] = sinf(time * 0.1f) * size * 2.0f / 3.0f;
-		whirlpoolPosition[1] = 0.0f;
-		whirlpoolPosition[2] = cosf(time * 0.1f) * size * 2.0f / 3.0f;
+		const float whirlpoolPosition[3] =
+		{
+			sinf(time * 0.1f) * size * 2.0f / 3.0f,
+			0.0f,
+			cosf(time * 0.1f) * size * 2.0f / 3.0f
+		};
 		
 		const float falloff = (float)pow(0.28, deltaTime);
 		
@@ -122,7 +122,7 @@ int main()
 					MAX_SPHERES,
 					sphereCount);
 
-				//printf("Query returned %d spheres.\n", spheres.size());
+				//logDebug("query returned %d spheres", spheres.size());
 
 				for (size_t i = 0; i < sphereCount; ++i)
 				{
@@ -140,11 +140,10 @@ int main()
 					#if 1
 						// use forces to slowly resolve collisions
 						
-						//printf("Intersect.\n");
+						//logDebug("intersect");
 
 						float force = sphere->m_mass * intersection.m_distance;
 
-						//force *= 0.25f;
 						force *= 0.5f;
 
 						sphere->AddForce(
@@ -174,7 +173,7 @@ int main()
 					}
 				}
 
-				//printf("Old sphere position: %f %f %f.\n", sphere->m_position[0], sphere->m_position[1], sphere->m_position[2]);
+				//logDebug("old sphere position: %f %f %f", sphere->m_position[0], sphere->m_position[1], sphere->m_position[2]);
 
 				sphere->m_position[0] += sphere->m_speed[0] * deltaTime;
 				sphere->m_position[1] += sphere->m_speed[1] * deltaTime;
@@ -192,7 +191,7 @@ int main()
 						sphere->m_position[2] = +30.0f;
 				}
 
-				//printf("New sphere position: %f %f %f.\n", sphere->m_position[0], sphere->m_position[1], sphere->m_position[2]);
+				//logDebug("new sphere position: %f %f %f", sphere->m_position[0], sphere->m_position[1], sphere->m_position[2]);
 
 				scene.MoveEnd(sphere);
 			}
@@ -224,15 +223,17 @@ int main()
 				sphere->m_force[2] += +dx * strength - dz * scale;
 			}
 
-			// Add a tiny bit of jitter for stability of the physical system.
 			{
+				// Tiny bit of jitter for stability of the physical system.
+				
 				const float jitter = ((rand() % 3) - 1) * 0.001f;
 				sphere->AddForce(jitter, jitter, jitter);
 			}
 
-			// Counter force.
 			if (true)
 			{
+				// Counter force.
+				
 				const float counterForce = 0.2f;
 
 				if (fabsf(sphere->m_force[0]) < counterForce)
@@ -245,9 +246,10 @@ int main()
 			sphere->m_speed[1] += sphere->m_force[1] * sphere->m_invMass;
 			sphere->m_speed[2] += sphere->m_force[2] * sphere->m_invMass;
 			
-			// Apply dampening.
 			if (true)
 			{
+				// Dampening.
+				
 				sphere->m_speed[0] *= falloff;
 				sphere->m_speed[1] *= falloff;
 				sphere->m_speed[2] *= falloff;
@@ -264,21 +266,19 @@ int main()
 					sphere->m_speed[1] * sphere->m_speed[1] +
 					sphere->m_speed[2] * sphere->m_speed[2];
 
-				//const float speed = sqrt(speedSquared);
-
 				const float treshold = 1.0f;
 				const float tresholdSquared = treshold * treshold;
 
 				if (speedSquared > tresholdSquared)
 				{
 					//if (sphere->m_inactive == true)
-						//printf("Inactive -> Active.\n");
+						//logDebug("inactive -> active");
 					sphere->m_inactive = false;
 				}
 				else
 				{
 					//if (sphere->m_inactive == false)
-						//printf("Active -> Inactive.\n");
+						//logDebug("active -> inactive");
 					sphere->m_inactive = true;
 				}
 			}
@@ -291,13 +291,15 @@ int main()
 		if (true)
 		{
 			scene.MoveBegin(&spheres[0]);
-			spheres[0].m_position[0] = sinf(time * 1.0000f) * size * 2.0f / 3.0f;
-			spheres[0].m_position[1] = -100.0f + 2.0f;
-			spheres[0].m_position[2] = cosf(time * 1.1234f) * size * 2.0f / 3.0f;
+			{
+				spheres[0].m_position[0] = sinf(time * 1.0000f) * size * 2.0f / 3.0f;
+				spheres[0].m_position[1] = -100.0f + 2.0f;
+				spheres[0].m_position[2] = cosf(time * 1.1234f) * size * 2.0f / 3.0f;
+			}
 			scene.MoveEnd(&spheres[0]);
 		}
 
-		//printf("Update complete.\n");
+		//logDebug("update complete");
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -329,37 +331,34 @@ int main()
 		}
 		framework.endDraw();
 
-		//if ((rand() & 31) == 0)
-			printf("AllocCount: %d.\n", g_allocCount);
+		logDebug("allocCount: %d", g_allocCount);
 	}
-
-	printf("Done.\n");
 
 	framework.shutdown();
 
 	return 0;
 }
 
-void* operator new(size_t size)
+void * operator new(size_t size)
 {
 	++g_allocCount;
 
 	return malloc(size);
 }
 
-void* operator new[](size_t size)
+void * operator new[](size_t size)
 {
 	++g_allocCount;
 
 	return malloc(size);
 }
 
-void operator delete(void* p) noexcept
+void operator delete(void * p) noexcept
 {
 	free(p);
 }
 
-void operator delete[](void* p) noexcept
+void operator delete[](void * p) noexcept
 {
 	free(p);
 }
