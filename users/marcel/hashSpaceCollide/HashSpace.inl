@@ -156,7 +156,7 @@ inline void HashSpace<T>::CalculateHashVolume(
 }
 
 template <class T>
-inline void HashSpace<T>::UpdateHashVolume(
+inline bool HashSpace<T>::UpdateHashVolume(
 	float minX, float minY, float minZ,
 	float maxX, float maxY, float maxZ,
 	HashList & out_hashes)
@@ -167,19 +167,23 @@ inline void HashSpace<T>::UpdateHashVolume(
 			minX, minY, minZ,
 			maxX, maxY, maxZ,
 			out_hashes);
+		
+		return true;
 	}
 	else
 	{
 		HashValue hash = CalculateHash(minX, minY, minZ);
 
 		if (hash == out_hashes[0])
-			return;
+			return false;
 		else
 		{
 			CalculateHashVolume(
 				minX, minY, minZ,
 				maxX, maxY, maxZ,
 				out_hashes);
+			
+			return true;
 		}
 	}
 }
@@ -199,6 +203,13 @@ template <class T>
 inline void HashSpace<T>::Remove(const HashList & hashes, T item)
 {
 	for (size_t i = 0; i < hashes.size(); ++i)
+		GetHashEntry(hashes[i])->Remove(item);
+}
+
+template <class T>
+inline void HashSpace<T>::Remove(const HashValue * hashes, size_t numHashes, T item)
+{
+	for (size_t i = 0; i < numHashes; ++i)
 		GetHashEntry(hashes[i])->Remove(item);
 }
 

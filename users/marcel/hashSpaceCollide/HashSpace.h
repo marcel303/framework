@@ -63,13 +63,14 @@ public:
 		float minX, float minY, float minZ,
 		float maxX, float maxY, float maxZ,
 		HashList & out_hashes);
-	inline void UpdateHashVolume(
+	inline bool UpdateHashVolume(
 		float minX, float minY, float minZ,
 		float maxX, float maxY, float maxZ,
 		HashList & out_hashes);
 
 	inline void Add(const HashList & hashes, T item);
 	inline void Remove(const HashList & hashes, T item);
+	inline void Remove(const HashValue * hashes, size_t numHashes, T item);
 
 	inline void Add(
 		float minX, float minY, float minZ,

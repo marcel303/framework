@@ -14,6 +14,8 @@ public:
 
 	void MoveBegin(CollisionSphere * sphere);
 	void MoveEnd(CollisionSphere * sphere);
+	
+	void MoveUpdate(CollisionSphere * sphere);
 
 	std::vector<CollisionSphere*> m_spheres;
 

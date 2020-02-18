@@ -40,3 +40,26 @@ void CollisionScene::MoveEnd(CollisionSphere * sphere)
 		sphere->m_hashes,
 		sphere);
 }
+
+void CollisionScene::MoveUpdate(CollisionSphere * sphere)
+{
+	HashValue * oldHashes = (HashValue*)alloca(sphere->m_hashes.size() * sizeof(HashValue));
+	memcpy(oldHashes, sphere->m_hashes.data(), sphere->m_hashes.size() * sizeof(HashValue));
+	const size_t numOldHashes = sphere->m_hashes.size();
+	
+	if (m_hashSpace.UpdateHashVolume(
+		sphere->m_position[0] - sphere->m_radius,
+		sphere->m_position[1] - sphere->m_radius,
+		sphere->m_position[2] - sphere->m_radius,
+		sphere->m_position[0] + sphere->m_radius,
+		sphere->m_position[1] + sphere->m_radius,
+		sphere->m_position[2] + sphere->m_radius,
+		sphere->m_hashes))
+	{
+		m_hashSpace.Remove(oldHashes, numOldHashes, sphere);
+		
+		m_hashSpace.Add(
+			sphere->m_hashes,
+			sphere);
+	}
+}

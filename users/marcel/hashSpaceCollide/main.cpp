@@ -8,6 +8,8 @@ int main()
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
+	logInfo("initializing scene");
+	
 	CollisionScene scene;
 
 	scene.Initialize();
@@ -109,7 +111,7 @@ int main()
 
 			if (sphere->m_inactive == false)
 			{
-				scene.MoveBegin(sphere);
+				//scene.MoveBegin(sphere);
 
 				const int MAX_SPHERES = 100;
 
@@ -129,7 +131,7 @@ int main()
 					CollisionSphere * other = spheres[i];
 
 					if (other == sphere)
-						Assert(false); // always false, because we remove the sphere from the scene using MoveBegin
+						continue;
 					
 					IntersectionInfo intersection;
 
@@ -193,7 +195,8 @@ int main()
 
 				//logDebug("new sphere position: %f %f %f", sphere->m_position[0], sphere->m_position[1], sphere->m_position[2]);
 
-				scene.MoveEnd(sphere);
+				//scene.MoveEnd(sphere);
+				scene.MoveUpdate(sphere);
 			}
 
 			// Intersect with ground.
