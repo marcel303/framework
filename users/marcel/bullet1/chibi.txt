@@ -3,3 +3,7 @@ app marcel-bullet1
 	depend_library bullet3
 	depend_library bullet3-framework
 	add_files main.cpp
+
+app marcel-bullet2
+	depend_library bullet3-framework
+	add_files main2.cpp
