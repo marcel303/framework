@@ -33,6 +33,9 @@ static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
 #if USE_LEGACY_OPENGL
 	case GX_QUADS:
 		return GL_QUADS;
+#else
+	case GX_QUADS:
+		break;
 #endif
 	case GX_INVALID_PRIM:
 		break;
