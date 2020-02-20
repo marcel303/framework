@@ -25,6 +25,7 @@ add gpuParticles1
 add gpupath1
 add grooop-cocompose
 add hackerPoet/010-particleLife
+add hashSpaceCollide
 add holeFilling
 add homography
 add interpolation1
