@@ -209,10 +209,6 @@ int main(int argc, char * argv[])
 						for (auto * shader : shaders)
 						{
 							setShader(*shader);
-							shader->setImmediate("scene_camPos",
-								0.f,
-								0.f,
-								0.f);
 							
 							const float dx = cosf(framework.time / 1.56f);
 							const float dz = sinf(framework.time / 1.67f);

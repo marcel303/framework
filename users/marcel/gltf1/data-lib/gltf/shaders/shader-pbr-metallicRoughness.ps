@@ -37,7 +37,6 @@ uniform float u_alphaMaskCutoff;
 
 // scene common
 
-uniform vec3 scene_camPos;
 uniform vec3 scene_lightDir;
 #define scene_gamma 2.2
 
@@ -114,7 +113,7 @@ void main()
     // -- calculate light vectors
 
     vec3 N = perturbNormal();
-    vec3 V = normalize(scene_camPos - v_position_view);
+    vec3 V = normalize(-v_position_view); // note : this equals 'cameraPosition_view - v_position_view', since the camera position in view-space is always at (0, 0, 0) we can simplify
     vec3 R = -normalize(reflect(V, N));
 
     // -- unpack metallic and roughness
