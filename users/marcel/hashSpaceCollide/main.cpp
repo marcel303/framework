@@ -111,8 +111,6 @@ int main()
 
 			if (sphere->m_inactive == false)
 			{
-				//scene.MoveBegin(sphere);
-
 				const int MAX_SPHERES = 100;
 
 				CollisionSphere * spheres[MAX_SPHERES];
@@ -195,7 +193,6 @@ int main()
 
 				//logDebug("new sphere position: %f %f %f", sphere->m_position[0], sphere->m_position[1], sphere->m_position[2]);
 
-				//scene.MoveEnd(sphere);
 				scene.MoveUpdate(sphere);
 			}
 
@@ -293,13 +290,10 @@ int main()
 
 		if (true)
 		{
-			scene.MoveBegin(&spheres[0]);
-			{
-				spheres[0].m_position[0] = sinf(time * 1.0000f) * size * 2.0f / 3.0f;
-				spheres[0].m_position[1] = -100.0f + 2.0f;
-				spheres[0].m_position[2] = cosf(time * 1.1234f) * size * 2.0f / 3.0f;
-			}
-			scene.MoveEnd(&spheres[0]);
+			spheres[0].m_position[0] = sinf(time * 1.0000f) * size * 2.0f / 3.0f;
+			spheres[0].m_position[1] = -100.0f + 2.0f;
+			spheres[0].m_position[2] = cosf(time * 1.1234f) * size * 2.0f / 3.0f;
+			scene.MoveUpdate(&spheres[0]);
 		}
 
 		//logDebug("update complete");

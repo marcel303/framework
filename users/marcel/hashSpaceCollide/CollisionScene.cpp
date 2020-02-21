@@ -1,5 +1,6 @@
 #include "CollisionScene.h"
 #include "CollisionSphere.h"
+#include <string.h>
 
 #define HASH_SPACE_SIZE (100 * 100 * 100)
 //#define HASH_SPACE_SIZE (128 * 128 * 128)
