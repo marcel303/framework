@@ -159,6 +159,14 @@ void NvgCanvas::beginStroke()
 	beginShape();
 }
 
+void NvgCanvas::beginStroke(int c)
+{
+	stroke(c, c, c, 255);
+	noFill();
+	
+	beginShape();
+}
+
 void NvgCanvas::beginStroke(int r, int g, int b, int a)
 {
 	stroke(r, g, b, a);
@@ -176,6 +184,14 @@ void NvgCanvas::beginFill()
 {
 	noStroke();
 	fill(fillColor[0], fillColor[1], fillColor[2], fillColor[3]);
+	
+	beginShape();
+}
+
+void NvgCanvas::beginFill(int c)
+{
+	noStroke();
+	fill(c, c, c, 255);
 	
 	beginShape();
 }

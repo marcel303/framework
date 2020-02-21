@@ -81,10 +81,12 @@ public:
 	void endShape();
 	
 	void beginStroke();
+	void beginStroke(int c);
 	void beginStroke(int r, int g, int b, int a = 255);
 	void endStroke();
 	
 	void beginFill();
+	void beginFill(int c);
 	void beginFill(int r, int g, int b, int a = 255);
 	void endFill();
 	
@@ -142,10 +144,12 @@ namespace NvgCanvasFunctions
 	inline void endShape() { canvas.endShape(); }
 	
 	inline void beginStroke() { canvas.beginStroke(); }
+	inline void beginStroke(int c) { canvas.beginStroke(c); }
 	inline void beginStroke(int r, int g, int b, int a = 255) { canvas.beginStroke(r, g, b, a); }
 	inline void endStroke() { canvas.endStroke(); }
 	
 	inline void beginFill() { canvas.beginFill(); }
+	inline void beginFill(int c) { canvas.beginFill(c); }
 	inline void beginFill(int r, int g, int b, int a = 255) { canvas.beginFill(r, g, b, a); }
 	inline void endFill() { canvas.endFill(); }
 	
