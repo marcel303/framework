@@ -140,8 +140,15 @@ Lighting_LightingResult computeLighting(Lighting_SurfaceProperties surfaceProper
     vec3 F = F_SchlickR(max(0.0, dot(surfaceProperties.N, surfaceProperties.V)), F0, surfaceProperties.roughness);
 
     vec3 kD = vec3(1.0) - F;
-    
-    kD *= vec3(1.0) - surfaceProperties.metallic;
+
+    {
+        // for energy conservation: reduce diffuse by how reflective the material is
+
+        vec3 specular = surfaceProperties.metallic;
+        float specularStrength = max(specular.r, max(specular.g, specular.b));
+
+        kD *= 1.0 - specularStrength;
+    }
     
     vec3 diffuse = kD * surfaceProperties.baseColor;
 
