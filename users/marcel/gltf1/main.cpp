@@ -92,9 +92,9 @@ int main(int argc, char * argv[])
 		return -1;
 
 	//const char * path = "van_gogh_room/scene.gltf";
-	//const char * path = "littlest_tokyo/scene.gltf";
+	const char * path = "littlest_tokyo/scene.gltf";
 	//const char * path = "ftm/scene.gltf";
-	const char * path = "nara_the_desert_dancer/scene.gltf";
+	//const char * path = "nara_the_desert_dancer/scene.gltf";
 	//const char * path = "drone/scene.gltf";
 	//const char * path = "buster_drone/scene.gltf";
 	//const char * path = "halloween_little_witch/scene.gltf";
@@ -191,9 +191,11 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			camera.pushViewMatrix();
 			{
-				if (centimeters)
-					gxScalef(scaleMultiplier, scaleMultiplier, scaleMultiplier);
+				gxScalef(scaleMultiplier, scaleMultiplier, scaleMultiplier);
 				gxScalef(1, 1, -1);
+				
+				Mat4x4 viewMatrix;
+				gxGetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
 				
 				for (int i = 0; i < 2; ++i)
 				{
@@ -210,17 +212,48 @@ int main(int argc, char * argv[])
 						{
 							setShader(*shader);
 							
+						#if 0
+							// directional light
+							
 							const float dx = cosf(framework.time / 1.56f);
 							const float dz = sinf(framework.time / 1.67f);
-							const Vec3 lightDir_world(dx, 0.f, dz);
-							const Vec3 lightDir_view = camera.getViewMatrix().Mul3(lightDir_world);
+							const Vec3 lightDir_world(dx, -1.f, dz);
+							const Vec3 lightDir_view = camera.getViewMatrix().Mul3(lightDir_world).CalcNormalized();
 					
-							shader->setImmediate("scene_lightDir",
+							shader->setImmediate("scene_lightParams",
 								lightDir_view[0],
 								lightDir_view[1],
-								lightDir_view[2]);
+								lightDir_view[2],
+								0.f);
+						#else
+							// point light
+							
+							const float x = cosf(framework.time / 2.56f) * 300.f;
+							const float y = 2.f + cosf(framework.time / 4.89f);
+							const float z = sinf(framework.time / 3.67f) * 300.f;
+							const Vec3 lightPos_world(x, y, z);
+							const Vec3 lightPos_view = viewMatrix.Mul4(lightPos_world);
+					
+							shader->setImmediate("scene_lightParams",
+								lightPos_view[0],
+								lightPos_view[1],
+								lightPos_view[2],
+								1.f);
+						#endif
+						
+							shader->setImmediate("scene_ambientLightColor", .03f, .02f, .01f);
 							
 							clearShader();
+							
+						#if 1
+							setColor(colorYellow);
+							fillCube(lightPos_world, Vec3(.1f, .1f, .1f) * (centimeters ? 100.f : 1.f));
+							
+							logDebug("camera position: %.2f, %.2f, %.2f",
+								camera.position[0],
+								camera.position[1],
+								camera.position[2]);
+						#endif
 						}
 						
 						gltf::MaterialShaders materialShaders;
