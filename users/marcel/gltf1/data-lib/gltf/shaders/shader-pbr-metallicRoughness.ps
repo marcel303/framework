@@ -138,8 +138,8 @@ void main()
     surfaceProperties.N = N;
     surfaceProperties.V = V;
     surfaceProperties.R = R;
-    surfaceProperties.baseColor = baseColor.rgb;
-    surfaceProperties.metallic = vec3(metallic);
+    surfaceProperties.baseColor = baseColor.rgb * (1.0 - metallic);
+    surfaceProperties.metallic = metallic * baseColor.rgb;
     surfaceProperties.roughness = roughness;
 
     vec3 Lo = vec3(0.0);
@@ -173,6 +173,7 @@ void main()
 
     // -- add ambient light
 
+// todo : use lighting model to compute ambient contribution
     color += baseColor.rgb * scene_ambientLightColor;
 
     // -- convert linear to gamma space
@@ -188,15 +189,15 @@ void main()
         emissive *= gltfTexture(emissiveTexture, emissiveTextureCoord).rgb;
     }
 
-    //color += emissive;
+    color += emissive;
 
     // -- store
 
-//    color.rgb = R;
-//    color.rgb = vec3(metallic);
-//    color.rgb = vec3(roughness);
+    //color.rgb = R;
+    //color.rgb = vec3(metallic);
+    //color.rgb = vec3(roughness);
     //color.rgb = N;
-//    color.rgb = u_baseColorFactor.rgb;
+    //color.rgb = u_baseColorFactor.rgb;
     //color.rgb = vec3(u_metallicFactor);
     //color.rgb = vec3(u_roughnessFactor);
 

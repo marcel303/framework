@@ -182,6 +182,7 @@ void main()
 
     // -- add ambient light
 
+// todo : use lighting model to compute ambient contribution
     color += baseColor.rgb * scene_ambientLightColor;
 
     // -- convert linear to gamma space
@@ -201,12 +202,13 @@ void main()
 
     // -- store
 
-//    color.rgb = srgbToLinear(baseColor.rgb);
-//    color.rgb = vec3(0.0);
-//    color.rgb = R;
-//    color.rgb = vec3(glossiness);
-//    color.rgb = N;
-//    color.rgb = specular;
+    //color.rgb = gltfTexture(diffuseTexture, diffuseTextureCoord).rgb;
+    //color.rgb = u_diffuseFactor.rgb;
+    //color.rgb = linearToSrgb(baseColor.rgb);
+    //color.rgb = R;
+    //color.rgb = vec3(glossiness);
+    //color.rgb = N;
+    //color.rgb = specular;
 
     shader_fragColor = vec4(color, baseColor.a);
 

@@ -116,7 +116,7 @@ Lighting_LightingResult computeLighting(Lighting_SurfaceProperties surfaceProper
 
     // -- specular
 
-    vec3 F0 = mix(vec3(0.04), surfaceProperties.baseColor, surfaceProperties.metallic);
+    vec3 F0 = surfaceProperties.metallic;
 
     vec3 L = -lightDir;
 
@@ -142,6 +142,7 @@ Lighting_LightingResult computeLighting(Lighting_SurfaceProperties surfaceProper
         float specularStrength = max(specular.r, max(specular.g, specular.b));
 
         kD *= 1.0 - specularStrength;
+        //kD *= vec3(1.0) - surfaceProperties.metallic;
     }
     
     vec3 diffuse = kD * surfaceProperties.baseColor;
