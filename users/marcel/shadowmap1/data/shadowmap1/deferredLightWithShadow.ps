@@ -130,15 +130,28 @@ void main()
 // todo : make curve value a uniform
     float curveValue = 0.5;
     shader_fragColor.rgb *= pow(max(0.0, 1.0 - distanceXY), curveValue) * max(0.0, 1.0 - distanceZ);
-    
-    // diffuse
+
+    // light incidence
     
     vec3 position_view = (viewMatrix * vec4(position_world, 1.0)).xyz;
-    vec3 delta = position_view - lightPosition_view;
+    vec3 surfaceToLightVector_view = lightPosition_view - position_view;
     vec3 normal_view = texture(normalTexture, texcoord).xyz;
-    float amount = dot(normal_view, -normalize(position_view.xyz)); // fixme ! normal should be in light space, or light in view space. now they aren't in the same spaces !
-    shader_fragColor.rgb *= amount;
-    
+    float lightIncidence = max(0.0, dot(normal_view, normalize(surfaceToLightVector_view)));
+    shader_fragColor.rgb *= lightIncidence;
+
+    //
+
+// todo : remove this directional light hack
+    if (false)
+    {
+        // add some directional light
+
+        vec3 lightDir_world = normalize(vec3(1, -1, 1));
+        vec3 lightDir_view = (viewMatrix * vec4(lightDir_world, 0.0)).xyz;
+        float amount = 0.2 * max(0.0, dot(normal_view, lightDir_view));
+        shader_fragColor.rgb += vec3(amount);
+    }
+
     //
     
     shader_fragColor.a = 0.0;

@@ -11,6 +11,8 @@ uniform sampler2D normalTexture;
 uniform mat4x4 lightMVP;
 uniform vec3 lightColor;
 
+uniform mat4x4 viewMatrix;
+
 shader_in vec2 texcoord;
 
 void main()
@@ -24,6 +26,7 @@ void main()
         return;
     }
     
+// todo : replace with depthToViewPosition(..) to optimize the light incidence factor below
     vec3 position_world = depthToWorldPosition(camera_view_depth, texcoord, projectionToWorld);
     vec4 position_lightSpace = lightMVP * vec4(position_world, 1.0);
     
@@ -48,6 +51,14 @@ void main()
 // todo : make curve value a uniform
     float curveValue = 0.5;
     shader_fragColor.rgb *= pow(max(0.0, 1.0 - distanceXY), curveValue) * max(0.0, 1.0 - distanceZ);
+    
+    // light incidence
+    
+    vec3 position_view = (viewMatrix * vec4(position_world, 1.0)).xyz;
+    vec3 surfaceToLightVector_view = lightPosition_view - position_view;
+    vec3 normal_view = texture(normalTexture, texcoord).xyz;
+    float lightIncidence = max(0.0, dot(normal_view, normalize(surfaceToLightVector_view)));
+    shader_fragColor.rgb *= lightIncidence;
     
     //
     
