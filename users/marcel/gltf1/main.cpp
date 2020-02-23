@@ -228,10 +228,10 @@ int main(int argc, char * argv[])
 						#else
 							// point light
 							
-							const float x = cosf(framework.time / 2.56f) * 300.f;
+							const float x = cosf(framework.time / 2.56f) * 3.f;
 							const float y = 2.f + cosf(framework.time / 4.89f);
-							const float z = sinf(framework.time / 3.67f) * 300.f;
-							const Vec3 lightPos_world(x, y, z);
+							const float z = sinf(framework.time / 3.67f) * 3.f;
+							const Vec3 lightPos_world = Vec3(x, y, z) / scaleMultiplier;
 							const Vec3 lightPos_view = viewMatrix.Mul4(lightPos_world);
 					
 							shader->setImmediate("scene_lightParams",
@@ -249,10 +249,12 @@ int main(int argc, char * argv[])
 							setColor(colorYellow);
 							fillCube(lightPos_world, Vec3(.1f, .1f, .1f) * (centimeters ? 100.f : 1.f));
 							
+							/*
 							logDebug("camera position: %.2f, %.2f, %.2f",
 								camera.position[0],
 								camera.position[1],
 								camera.position[2]);
+							*/
 						#endif
 						}
 						
