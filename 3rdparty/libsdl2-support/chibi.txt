@@ -18,23 +18,23 @@ with_platform iphoneos library libsdl2
 	scan_files c path ../libsdl2/src/audio/dummy group audio/dummy
 	scan_files c path ../libsdl2/src/cpuinfo group cpuinfo
 	scan_files c path ../libsdl2/src/dynapi group dynapi
-	scan_files c path ../libsdl2/src/events group events conglomerate events_all.c
+	scan_files c path ../libsdl2/src/events group events conglomerate conglomerates/events_all.c
 	scan_files c path ../libsdl2/src/file group file
 	scan_files c path ../libsdl2/src/haptic group haptic
 	scan_files c path ../libsdl2/src/joystick group joystick
 	scan_files c path ../libsdl2/src/libm group libm
 	scan_files c path ../libsdl2/src/power group power
-	with_platform macos    scan_files c path ../libsdl2/src/render traverse group render conglomerate render_all.c
+	with_platform macos    scan_files c path ../libsdl2/src/render traverse group render conglomerate conglomerates/render_all.c
 	with_platform iphoneos scan_files c path ../libsdl2/src/render traverse group render
-	with_platform linux    scan_files c path ../libsdl2/src/render traverse group render conglomerate render_all.c
+	with_platform linux    scan_files c path ../libsdl2/src/render traverse group render conglomerate conglomerates/render_all.c
 	scan_files c path ../libsdl2/src/render traverse group render
 	scan_files c path ../libsdl2/src/sensor group sensor
 	scan_files c path ../libsdl2/src/sensor/dummy group sensor/dummy
-	scan_files c path ../libsdl2/src/stdlib group stdlib conglomerate stdlib_all.c
+	scan_files c path ../libsdl2/src/stdlib group stdlib conglomerate conglomerates/stdlib_all.c
 	scan_files c path ../libsdl2/src/thread group thread
 	scan_files c path ../libsdl2/src/thread/pthread group thread/pthread
 	scan_files c path ../libsdl2/src/timer group timer
-	scan_files c path ../libsdl2/src/video group video conglomerate video_all.c
+	scan_files c path ../libsdl2/src/video group video conglomerate conglomerates/video_all.c
 	scan_files c path ../libsdl2/src/video/dummy group video/dummy
 	scan_files c path ../libsdl2/src/video/yuv2rgb group video/yuv2rgb
 
@@ -49,7 +49,7 @@ with_platform iphoneos library libsdl2
 	with_platform macos scan_files c path ../libsdl2/src/power/macosx group power/macosx
 	with_platform macos scan_files m path ../libsdl2/src/sensor/coremotion group sensor/coremotion
 	with_platform macos scan_files c path ../libsdl2/src/timer/unix group timer/unix
-	with_platform macos scan_files m path ../libsdl2/src/video/cocoa group video/cocoa conglomerate video_cocoa_all.m
+	with_platform macos scan_files m path ../libsdl2/src/video/cocoa group video/cocoa conglomerate conglomerates/video_cocoa_all.m
 	with_platform macos depend_library AudioToolbox find
 	with_platform macos depend_library Carbon find
 	with_platform macos depend_library Cocoa find
@@ -73,7 +73,7 @@ with_platform iphoneos library libsdl2
 	with_platform iphoneos scan_files m path ../libsdl2/src/power/uikit group power/uikit
 	with_platform iphoneos scan_files m path ../libsdl2/src/sensor/coremotion group sensor/coremotion
 	with_platform iphoneos scan_files c path ../libsdl2/src/timer/unix group timer/unix
-	with_platform iphoneos scan_files m path ../libsdl2/src/video/uikit group video/uikit conglomerate video_uikit_all.m
+	with_platform iphoneos scan_files m path ../libsdl2/src/video/uikit group video/uikit conglomerate conglomerates/video_uikit_all.m
 	with_platform iphoneos depend_library AudioToolbox find
 	with_platform iphoneos depend_library AVFoundation find
 	with_platform iphoneos depend_library CoreAudio find
