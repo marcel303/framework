@@ -39,6 +39,7 @@ int main(int argc, char * argv[])
 	
 	framework.enableDepthBuffer = true;
 	framework.msaaLevel = 4;
+	framework.enableRealTimeEditing = true;
 	
 	if (!framework.init(800, 600))
 		return -1;
@@ -191,6 +192,9 @@ int main(int argc, char * argv[])
 		
 		if (framework.quitRequested)
 			break;
+		
+		mouse.showCursor(false);
+		mouse.setRelative(true);
 		
 		btTransform transform;
 		transform.setIdentity();

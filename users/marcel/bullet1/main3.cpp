@@ -29,10 +29,36 @@ int main(int argc, char * argv[])
 	world.createRigidBody(btTransform(btQuaternion::getIdentity()), 0.f, &boxShape)
 		->setRestitution(.8f);
 	
+	btSphereShape sphereShape1(btScalar(.2f));
+	btRigidBody* previousBody = nullptr;
+	for (int i = 0; i < 20; ++i)
+	{
+		auto * body = world.createRigidBody(
+			btTransform(
+				btQuaternion::getIdentity(),
+				btVector3(
+					lerp<float>(-20.f, +20.f, i / float(20 - 1)),
+					4,
+					0)),
+				(i % 3) ? .5f : 0.f,
+				&sphereShape1);
+		
+		body->setRestitution(.8f);
+		
+		if (previousBody != nullptr)
+		{
+			auto * rope = world.connectWithRope(previousBody, body, 20, 1.f);
+			
+			rope->generateBendingConstraints(10);
+		}
+		
+		previousBody = body;
+	}
+	
 	btVector3 positions[] = { btVector3(0, 0, -.1f), btVector3(-.1f, 0, +.1f), btVector3(+.1f, 0, +.1f) };
 	btScalar radii[] = { .1f, .1f, .1f };
 	btMultiSphereShape sphereShape(positions, radii, 3);
-	for (int i = 0; i < 140; ++i)
+	for (int i = 0; i < 100; ++i)
 	{
 		world.createRigidBody(
 			btTransform(
@@ -83,7 +109,7 @@ int main(int argc, char * argv[])
 				auto strength =
 					mouse.isDown(BUTTON_LEFT)
 					? 10.f
-					: 2.f;
+					: 0.f;
 				
 				strength *= lerp<float>(1.f, 2.f, sinf(framework.time / 3.456f) + 1.f);
 				
@@ -106,7 +132,7 @@ int main(int argc, char * argv[])
 					setColor(colorRed);
 					fillCube(whirl_pos, Vec3(.1f, .1f, .1f));
 					
-					//world.debugDraw();
+					world.debugDraw();
 					
 					renderInterface.renderScene();
 				}
