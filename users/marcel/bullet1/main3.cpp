@@ -150,6 +150,15 @@ int main(int argc, char * argv[])
 				popDepthTest();
 			}
 			camera.popViewMatrix();
+			
+			projectScreen2d();
+			setFont("engine/fonts/Roboto-Regular.ttf");
+			setColor(0, 0, 0, 60);
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			hqFillRoundedRect(4, 4, 240, 40, 4.f);
+			hqEnd();
+			setColor(255, 255, 255, 200);
+			drawText(10, 10, 14, +1, +1, "Bullet physics - rope example");
 		}
 		framework.endDraw();
 	}
