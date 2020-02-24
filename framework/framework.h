@@ -116,7 +116,11 @@
 #endif
 
 #if !defined(ENABLE_HQ_PRIMITIVES)
-	#define ENABLE_HQ_PRIMITIVES 1
+    #if (ENABLE_OPENGL && !USE_LEGACY_OPENGL) || ENABLE_METAL
+        #define ENABLE_HQ_PRIMITIVES 1
+    #else
+        #define ENABLE_HQ_PRIMITIVES 0
+    #endif
 #endif
 
 #if !defined(ENABLE_UTF8_SUPPORT)
