@@ -187,13 +187,16 @@ bool Surface::init(const SurfaceProperties & properties)
 		destruct();
 	}
 	
-	// set color swizzle
-	
-	setSwizzle(
-		properties.colorTarget.swizzle[0],
-		properties.colorTarget.swizzle[1],
-		properties.colorTarget.swizzle[2],
-		properties.colorTarget.swizzle[3]);
+	if (m_properties.colorTarget.enabled)
+	{
+		// set color swizzle
+		
+		setSwizzle(
+			properties.colorTarget.swizzle[0],
+			properties.colorTarget.swizzle[1],
+			properties.colorTarget.swizzle[2],
+			properties.colorTarget.swizzle[3]);
+	}
 	
 	return result;
 }

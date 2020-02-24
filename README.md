@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.com/marcel303/framework.svg?branch=master)](https://travis-ci.com/marcel303/framework)
+[![Build status](https://ci.appveyor.com/api/projects/status/c82webixs5kbw6xt?svg=true)](https://ci.appveyor.com/project/MarcelSmit/framework)
 
 (Building a creative coding environment from scratch is a ton of work, so please consider becoming a patron!)
 <br />[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](https://www.patreon.com/marcelsmit)
@@ -104,7 +105,7 @@ This is a list of libraries made readily available through this repository.
 * The environment allows one to inspect and preview any input or output socket. Persistent socket value visualizers can be added by right clicking on a socket.
 * Graph changes are applied in real-time and previewed behind the editor, providing immediate visual feedback of the work you are doing.
 
-![avGraph](/vfxGraph/docs/avGraph2.png)
+![avGraph](vfxGraph/docs/avGraph2.png)
 
 ## `audiograph` Sound synthesis and performance demo ##
 

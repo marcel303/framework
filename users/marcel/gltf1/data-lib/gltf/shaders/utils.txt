@@ -1,0 +1,15 @@
+// See http://www.thetenthplanet.de/archives/1180
+vec3 perturbNormal(vec3 position, vec3 normal, vec2 texcoord, vec3 tangentNormal)
+{
+    vec3 q1 = dFdx(position);
+    vec3 q2 = dFdy(position);
+    vec2 st1 = dFdx(texcoord);
+    vec2 st2 = dFdy(texcoord);
+
+    vec3 N = normal;
+    vec3 T = normalize(q1 * st2.y - q2 * st1.y);
+    vec3 B = -normalize(cross(N, T));
+    mat3 TBN = mat3(T, B, N);
+
+    return normalize(TBN * tangentNormal);
+}
