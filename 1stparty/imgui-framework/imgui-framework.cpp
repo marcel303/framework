@@ -28,6 +28,7 @@
 #include "framework.h"
 #include "imgui.h"
 #include "imgui-framework.h"
+#include <math.h>
 #include <SDL2/SDL_clipboard.h>
 
 FrameworkImGuiContext::~FrameworkImGuiContext()
@@ -136,7 +137,7 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 	
 	auto & io = ImGui::GetIO();
 	
-	io.DeltaTime = dt;
+	io.DeltaTime = fmaxf(1e-6f, dt);
 	io.DisplaySize.x = displaySx;
 	io.DisplaySize.y = displaySy;
 
