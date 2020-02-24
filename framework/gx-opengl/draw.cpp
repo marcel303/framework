@@ -1208,7 +1208,7 @@ void gxSetCaptureCallback(GxCaptureCallback callback)
 
 void gxClearCaptureCallback()
 {
-	AssertMsg(false, "gxClearCaptureCallback is not supported when using legacy OpenGL");
+	AssertMsg(false, "gxClearCaptureCallback is not supported when using legacy OpenGL", 0);
 }
 
 #else
