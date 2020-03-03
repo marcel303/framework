@@ -3,58 +3,58 @@
 namespace Geo
 {
 
-BoneInfluence::BoneInfluence()
-{
+	BoneInfluence::BoneInfluence()
+	{
 
-	type = bitNone;
-	
-	m_position = Vector(0.0f, 0.0f, 0.0f);
-	m_rotation.MakeIdentity();
-	
-}
+		type = bitNone;
+		
+		position = Vector(0.0f, 0.0f, 0.0f);
+		rotation.MakeIdentity();
+		
+	}
 
-BoneInfluence::~BoneInfluence()
-{
+	BoneInfluence::~BoneInfluence()
+	{
 
-}
+	}
 
-float BoneInfluence::CalculateInfluenceGlobal(const Vector& position) const
-{
+	float BoneInfluence::CalculateInfluenceGlobal(const Vector& in_position) const
+	{
 
-	Vector temp = m_transformGlobalInverse * position;
-	
-	return CalculateInfluence(temp);
-	
-}
+		const Vector temp = transformGlobalInverse * in_position;
+		
+		return CalculateInfluence(temp);
+		
+	}
 
-float BoneInfluence::CalculateInfluenceLocal(const Vector& position) const
-{
+	float BoneInfluence::CalculateInfluenceLocal(const Vector& in_position) const
+	{
 
-	Vector temp = m_transformInverse * position;
-	
-	return CalculateInfluence(temp);
-	
-}
+		const Vector temp = transformInverse * in_position;
+		
+		return CalculateInfluence(temp);
+		
+	}
 
-float BoneInfluence::CalculateInfluence(const Vector& position) const
-{
+	float BoneInfluence::CalculateInfluence(const Vector& position) const
+	{
 
-	return 0.0f;
-	
-}
+		return 0.0f;
+		
+	}
 
-bool BoneInfluence::Finalize()
-{
+	bool BoneInfluence::Finalize()
+	{
 
-	Matrix translation;
-	translation.MakeTranslation(m_position);
-	
-	m_transform = translation * m_rotation;
-	
-	m_transformInverse = m_transform.Inverse();
-	
-	return true;
-	
-}
+		Matrix translation;
+		translation.MakeTranslation(position);
+		
+		transform = translation * rotation;
+		
+		transformInverse = transform.Inverse();
+		
+		return true;
+		
+	}
 
 };

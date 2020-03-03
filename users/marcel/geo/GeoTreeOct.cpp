@@ -30,12 +30,12 @@ void TreeOct::Generate(int depthLeft, GenerateStatistics* generateStatistics)
 		return;
 	}
 	
-	if (mesh->cPoly.size() < splitTreshold)
+	if (mesh.polys.size() < splitTreshold)
 	{
 		return;
 	}
 	
-	splitPosition = mesh->GetPolyCenter();
+	splitPosition = mesh.GetPolyCenter();
 	
 	Plane plane[3];
 	
@@ -78,8 +78,8 @@ void TreeOct::Generate(int depthLeft, GenerateStatistics* generateStatistics)
 	
 	Split(plane[0], temp1[0], temp1[1], generateStatistics);
 	
-	mesh->Unfinalize();
-	mesh->Clear();
+	mesh.Unfinalize();
+	mesh.Clear();
 	
 	Tree* temp2[4] =
 	{
@@ -120,24 +120,24 @@ void TreeOct::Generate(int depthLeft, GenerateStatistics* generateStatistics)
 	#if 0
 	
 	printf("%d -> %d %d %d %d %d %d %d %d.\n",
-		mesh->cPoly.size(),
-		child[0]->mesh->cPoly.size(),
-		child[1]->mesh->cPoly.size(),
-		child[2]->mesh->cPoly.size(),
-		child[3]->mesh->cPoly.size(),
-		child[4]->mesh->cPoly.size(),
-		child[5]->mesh->cPoly.size(),
-		child[6]->mesh->cPoly.size(),
-		child[7]->mesh->cPoly.size());
+		mesh->polys.size(),
+		child[0]->mesh->polys.size(),
+		child[1]->mesh->polys.size(),
+		child[2]->mesh->polys.size(),
+		child[3]->mesh->polys.size(),
+		child[4]->mesh->polys.size(),
+		child[5]->mesh->polys.size(),
+		child[6]->mesh->polys.size(),
+		child[7]->mesh->polys.size());
 	
 	#endif
 	
 	for (int i = 0; i < 8; ++i)
 	{
-		if (child[i]->mesh->cPoly.size() == 0)
+		if (child[i]->mesh.polys.empty())
 		{
 			delete child[i];
-			child[i] = 0;
+			child[i] = nullptr;
 		}
 	}
 	

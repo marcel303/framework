@@ -7,17 +7,12 @@ namespace Geo
 Edge::Edge()
 {
 
-	vertex[0] = 0;
-	vertex[1] = 0;
+	vertex[0] = nullptr;
+	vertex[1] = nullptr;
 	
-	prev = 0;
-	next = 0;
+	prev = nullptr;
+	next = nullptr;
 	
-}
-
-Edge::~Edge()
-{
-
 }
 
 void Edge::RevertWinding()
@@ -32,7 +27,7 @@ void Edge::Finalize()
 
 	planeEdge.Setup(vertex[0]->position, vertex[1]->position);
 	
-	float size2 = planeEdge.normal.GetSize2();
+	const float size2 = planeEdge.normal.GetSize2();
 	planeEdge.normal /= size2;
 	planeEdge.distance /= size2;
 	

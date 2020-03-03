@@ -6,15 +6,15 @@ namespace Geo
 	Bone::Bone()
 	{
 
-		m_parent = 0;
+		parent = nullptr;
 		
 		// Initialize bind and current position / rotation.
 		
-		m_bindRotationLocal.MakeIdentity();
-		m_bindPositionLocal = Vector(0.0f, 0.0f, 0.0f);
+		bindRotationLocal.MakeIdentity();
+		bindPositionLocal = Vector(0.0f, 0.0f, 0.0f);
 
-		m_currentRotationLocal.MakeIdentity();
-		m_currentPositionLocal = Vector(0.0f, 0.0f, 0.0f);
+		currentRotationLocal.MakeIdentity();
+		currentPositionLocal = Vector(0.0f, 0.0f, 0.0f);
 
 		// Finalize (calculate bind transforms). This will also update current transforms.
 		
@@ -27,7 +27,7 @@ namespace Geo
 
 		// Remove influences.
 		
-		for (std::list<BoneInfluence*>::iterator i = cInfluence.begin(); i != cInfluence.end(); ++i)
+		for (std::list<BoneInfluence*>::iterator i = influences.begin(); i != influences.end(); ++i)
 		{
 		
 			delete (*i);
@@ -36,7 +36,7 @@ namespace Geo
 		
 		// Remove child bones.
 		
-		for (std::list<Bone*>::iterator i = cChild.begin(); i != cChild.end(); ++i)
+		for (std::list<Bone*>::iterator i = children.begin(); i != children.end(); ++i)
 		{
 		
 			delete (*i);
@@ -52,7 +52,7 @@ namespace Geo
 		
 		float influence = 0.0f;
 		
-		for (std::list<BoneInfluence*>::const_iterator i = cInfluence.begin(); i != cInfluence.end(); ++i)
+		for (std::list<BoneInfluence*>::const_iterator i = influences.begin(); i != influences.end(); ++i)
 		{
 
 			influence += (*i)->CalculateInfluenceGlobal(position);
@@ -69,23 +69,23 @@ namespace Geo
 		// Calculate bind transform and it's inverse.
 		
 		Matrix bindTranslation;
-		bindTranslation.MakeTranslation(m_bindPositionLocal);
+		bindTranslation.MakeTranslation(bindPositionLocal);
 		
-		m_bindTransformGlobal = bindTranslation * m_bindRotationLocal;
+		bindTransformGlobal = bindTranslation * bindRotationLocal;
 
-		if (m_parent)
+		if (parent != nullptr)
 		{
-			m_bindTransformGlobal = m_parent->m_bindTransformGlobal * m_bindTransformGlobal;
+			bindTransformGlobal = parent->bindTransformGlobal * bindTransformGlobal;
 		}
 
-		m_bindTransformGlobalInverse = m_bindTransformGlobal.Inverse();
+		bindTransformGlobalInverse = bindTransformGlobal.Inverse();
 		
 		// Finalize children.
 		
-		for (std::list<Bone*>::iterator i = cChild.begin(); i != cChild.end(); ++i)
+		for (std::list<Bone*>::iterator i = children.begin(); i != children.end(); ++i)
 		{
 		
-			(*i)->m_parent = this;
+			(*i)->parent = this;
 			
 			if (!(*i)->Finalize())
 			{
@@ -95,15 +95,15 @@ namespace Geo
 		
 		// Finalize influences.
 		
-		for (std::list<BoneInfluence*>::iterator i = cInfluence.begin(); i != cInfluence.end(); ++i)
+		for (std::list<BoneInfluence*>::iterator i = influences.begin(); i != influences.end(); ++i)
 		{
 			if (!(*i)->Finalize())
 			{
 				return false;
 			}
 			
-			(*i)->m_transformGlobal = m_bindTransformGlobal * (*i)->m_transform;
-			(*i)->m_transformGlobalInverse = (*i)->m_transformGlobal.Inverse();
+			(*i)->transformGlobal = bindTransformGlobal * (*i)->transform;
+			(*i)->transformGlobalInverse = (*i)->transformGlobal.Inverse();
 			
 		}
 		
@@ -120,10 +120,10 @@ namespace Geo
 
 		// Copy bind position & transform to current position and transform.
 		
-		m_currentPositionLocal = m_bindPositionLocal;
-		m_currentRotationLocal = m_bindRotationLocal;
+		currentPositionLocal = bindPositionLocal;
+		currentRotationLocal = bindRotationLocal;
 		
-		for (std::list<Bone*>::iterator i = cChild.begin(); i != cChild.end(); ++i)
+		for (std::list<Bone*>::iterator i = children.begin(); i != children.end(); ++i)
 		{
 			(*i)->SetCurrentToBind();
 		}
@@ -136,20 +136,20 @@ namespace Geo
 		// Calculate current transform and it's inverse.
 		
 		Matrix currentTranslation;
-		currentTranslation.MakeTranslation(m_currentPositionLocal);
+		currentTranslation.MakeTranslation(currentPositionLocal);
 		
-		m_currentTransformGlobal = currentTranslation * m_currentRotationLocal;
+		currentTransformGlobal = currentTranslation * currentRotationLocal;
 
-		if (m_parent)
+		if (parent != nullptr)
 		{
-			m_currentTransformGlobal = m_parent->m_currentTransformGlobal * m_currentTransformGlobal;
+			currentTransformGlobal = parent->currentTransformGlobal * currentTransformGlobal;
 		}
 		
-		m_transform = m_currentTransformGlobal * m_bindTransformGlobalInverse;
+		transform = currentTransformGlobal * bindTransformGlobalInverse;
 		
 		// Update children.
 		
-		for (std::list<Bone*>::iterator i = cChild.begin(); i != cChild.end(); ++i)
+		for (std::list<Bone*>::iterator i = children.begin(); i != children.end(); ++i)
 		{
 			if (!(*i)->Update())
 			{

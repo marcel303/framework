@@ -22,7 +22,7 @@ namespace Geo
 		
 	public:
 		
-		std::list<BoneInfluence*> cInfluence; ///< List of influences. Used to calculate influence this bone has on vertices.
+		std::list<BoneInfluence*> influences; ///< List of influences. Used to calculate influence this bone has on vertices.
 		
 	public:
 		
@@ -30,27 +30,29 @@ namespace Geo
 		
 	public:
 		
-		Vector m_bindPositionLocal; ///< Position at bind time.
-		Matrix m_bindRotationLocal; ///< Rotation at bind time.
-		Matrix m_bindTransformGlobal; ///< Combined matrix that transforms vertices in local bone coordinate system to position in global coordinate system.
-		Matrix m_bindTransformGlobalInverse; ///< Combined matrix that transforms vertices at bind time to local bone coordinate system.
+		Vector bindPositionLocal; ///< Position at bind time.
+		Matrix bindRotationLocal; ///< Rotation at bind time.
+		Matrix bindTransformGlobal; ///< Combined matrix that transforms vertices in local bone coordinate system to position in global coordinate system.
+		Matrix bindTransformGlobalInverse; ///< Combined matrix that transforms vertices at bind time to local bone coordinate system.
 		
-		Vector m_currentPositionLocal; ///< Current position in local coordinate system.
-		Matrix m_currentRotationLocal; ///< Current rotation in local coordinate system.
-		Matrix m_currentTransformGlobal; ///< Combined transform from root uptil this bone.
+		Vector currentPositionLocal; ///< Current position in local coordinate system.
+		Matrix currentRotationLocal; ///< Current rotation in local coordinate system.
+		Matrix currentTransformGlobal; ///< Combined transform from root uptil this bone.
 		
-		Matrix m_transform; ///< Final transform matrix that modifies vertices under bone rotation and position.
+		Matrix transform; ///< Final transform matrix that modifies vertices under bone rotation and position.
 		
 	public:
 		
-		Bone* m_parent; ///< Parent bone, or 0 if root.
+		Bone* parent; ///< Parent bone, or null if root.
 		
-		std::list<Bone*> cChild; ///< List of child bones.
+		std::list<Bone*> children; ///< List of child bones.
 		
 	public:
 		
 		bool Finalize(); ///< Finalize bone hierarchy at bind time. Setup bind matrices. Calculate inverse transforms.
+		
 		void SetCurrentToBind(); ///< Set current position & rotation to match position & rotation at bind time.
+		
 		bool Update(); ///< Update bone hierarchy after modifying current state. Update final transform given new current position & rotation.
 
 	};

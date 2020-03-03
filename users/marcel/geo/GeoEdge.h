@@ -16,8 +16,7 @@ namespace Geo
 	public:
 		
 		Edge();
-		~Edge();
-		
+
 	public:
 		
 		Vertex* vertex[2]; ///< Pointers to the 2 vertices the edge is comprised of.

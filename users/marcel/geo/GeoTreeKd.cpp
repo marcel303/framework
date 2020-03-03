@@ -25,7 +25,7 @@ void TreeKd::Generate(int depthLeft, GenerateStatistics* generateStatistics)
 		return;
 	}
 	
-	aabb = mesh->CalculateExtents();
+	aabb = mesh.CalculateExtents();
 	
 	splitAxis = CalculateSplitAxis();
 	
@@ -44,7 +44,7 @@ void TreeKd::Generate(int depthLeft, GenerateStatistics* generateStatistics)
 		
 		Tree::Split(plane, childFront, childBack, generateStatistics);
 		
-		mesh->Clear();
+		mesh.Clear();
 		
 		splitPlane = plane;
 		
@@ -63,9 +63,9 @@ void TreeKd::Generate(int depthLeft, GenerateStatistics* generateStatistics)
 		
 			++generateStatistics->nLeafs;
 		
-			generateStatistics->nPoly += (int)mesh->cPoly.size();
+			generateStatistics->nPoly += (int)mesh.polys.size();
 			
-			for (std::list<Poly*>::iterator i = mesh->cPoly.begin(); i != mesh->cPoly.end(); ++i)
+			for (std::list<Poly*>::const_iterator i = mesh.polys.begin(); i != mesh.polys.end(); ++i)
 			{
 				generateStatistics->nVertex += (int)(*i)->cVertex.size();
 			}
@@ -92,7 +92,7 @@ int TreeKd::CalculateSplitAxis() const
 void TreeKd::CalculateSplitVector(std::vector<KdSplitInfo>& vSplitInfo) const
 {
 
-	for (std::list<Poly*>::iterator i = mesh->cPoly.begin(); i != mesh->cPoly.end(); ++i)
+	for (std::list<Poly*>::const_iterator i = mesh.polys.begin(); i != mesh.polys.end(); ++i)
 	{
 	
 		Vector aabbMin;
@@ -139,7 +139,7 @@ void TreeKd::CalculateSplitCosts(std::vector<KdSplitInfo>& vSplitInfo) const
 		std::vector<Poly*> vPolyFront;
 		std::vector<Poly*> vPolyBack;
 			
-		for (std::list<Poly*>::iterator j = mesh->cPoly.begin(); j != mesh->cPoly.end(); ++j)
+		for (std::list<Poly*>::const_iterator j = mesh.polys.begin(); j != mesh.polys.end(); ++j)
 		{
 		
 			Aabb aabb;

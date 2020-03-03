@@ -9,9 +9,9 @@ namespace Geo
 	/// Bone influence class.
 	enum BoneInfluenceType
 	{
-		bitNone, ///< Unknown class.
-		bitCilinderCapped, ///< Capped cilinder class.
-		bitSphere ///< Sphere class.
+		bitNone,           ///< Unknown class.
+		bitCylinderCapped, ///< Capped cylinder class.
+		bitSphere          ///< Sphere class.
 	};
 
 	/// Geometry: Bone influence type.
@@ -32,18 +32,18 @@ namespace Geo
 		
 	public:
 		
-		Vector m_position; ///< Local position.
-		Matrix m_rotation; ///< Local rotation.
+		Vector position; ///< Local position.
+		Matrix rotation; ///< Local rotation.
 		
 	public:
 		
-		Matrix m_transform; ///< Local transform. Calculated at finalization phase.
-		Matrix m_transformInverse; ///< Inverse of local transform. Calculated at finalization phase.
+		Matrix transform; ///< Local transform. Calculated at finalization phase.
+		Matrix transformInverse; ///< Inverse of local transform. Calculated at finalization phase.
 		
 	public:
 		
-		Matrix m_transformGlobal; ///< Global transform. Calculated at bone finalization phase.
-		Matrix m_transformGlobalInverse; /// Inverse of global transform. Calculated at bone finalization phase.
+		Matrix transformGlobal; ///< Global transform. Calculated at bone finalization phase.
+		Matrix transformGlobalInverse; /// Inverse of global transform. Calculated at bone finalization phase.
 
 	public:
 		

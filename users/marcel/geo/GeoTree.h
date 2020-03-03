@@ -22,9 +22,9 @@ namespace Geo
 		
 		Tree* parent; ///< Parent node, or 0 if root.
 
-		Mesh* mesh; ///< Mesh containing geometric data.
+		Mesh mesh; ///< Mesh containing geometric data.
 		
-		std::list<Tree*> cChild; ///< List of child nodes, or empty if leaf.
+		std::list<Tree*> children; ///< List of child nodes, or empty if leaf.
 
 	public:
 		

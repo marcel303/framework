@@ -21,7 +21,7 @@ namespace Geo
 		
 	public:
 		
-		std::list<Poly*> cPoly; ///< List of polygons.
+		std::list<Poly*> polys; ///< List of polygons.
 		
 	public:
 		
@@ -37,7 +37,7 @@ namespace Geo
 		Poly* Link(Poly* poly); ///< Add existing polygon.
 		Poly* Unlink(Poly* poly); ///< Remove polygon from list, without freeing it's memory.
 		void Clear(); ///< Remove all polygons.
-		void Move(Mesh* mesh); ///< Move polygons to another mesh.
+		void Move(Mesh& mesh); ///< Move polygons to another mesh.
 		
 	public:
 		

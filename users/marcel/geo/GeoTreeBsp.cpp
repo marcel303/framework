@@ -44,11 +44,11 @@ void TreeBsp::Generate(int depthLeft, GenerateStatistics* generateStatistics)
 		
 		Tree::Split(plane, childFront, childBack, generateStatistics);
 		
-		Assert(childFront->mesh->cPoly.size() > 0);
-		Assert(childBack->mesh->cPoly.size() > 0);
+		Assert(childFront->mesh.polys.size() > 0);
+		Assert(childBack->mesh.polys.size() > 0);
 		
-		mesh->Unfinalize();
-		mesh->Clear();
+		mesh.Unfinalize();
+		mesh.Clear();
 		
 		splitPlane = plane;
 		
@@ -62,14 +62,14 @@ void TreeBsp::Generate(int depthLeft, GenerateStatistics* generateStatistics)
 	else
 	{
 		
-		Assert(mesh->cPoly.size() > 0);
+		Assert(mesh.polys.empty() == false);
 		
 		#if 0
 		
-		if (mesh->cPoly.size() > 1)
+		if (mesh->polys.size() > 1)
 		{
 			printf("---\n");
-			for (std::list<Poly*>::iterator i = mesh->cPoly.begin(); i != mesh->cPoly.end(); ++i)
+			for (std::list<Poly*>::iterator i = mesh->polys.begin(); i != mesh->polys.end(); ++i)
 			{
 				printf("%f %f %f - %f.\n",
 					(*i)->plane.normal[0],
@@ -82,9 +82,9 @@ void TreeBsp::Generate(int depthLeft, GenerateStatistics* generateStatistics)
 		
 		#endif
 		
-		if (mesh->cPoly.size() > 0)
+		if (mesh.polys.empty() == false)
 		{
-			splitPlane = mesh->cPoly.front()->plane;
+			splitPlane = mesh.polys.front()->plane;
 		}
 	
 		if (generateStatistics)
@@ -92,9 +92,9 @@ void TreeBsp::Generate(int depthLeft, GenerateStatistics* generateStatistics)
 		
 			++generateStatistics->nLeafs;
 		
-			generateStatistics->nPoly += (int)mesh->cPoly.size();
+			generateStatistics->nPoly += (int)mesh.polys.size();
 			
-			for (std::list<Poly*>::iterator i = mesh->cPoly.begin(); i != mesh->cPoly.end(); ++i)
+			for (std::list<Poly*>::const_iterator i = mesh.polys.begin(); i != mesh.polys.end(); ++i)
 			{
 				generateStatistics->nVertex += (int)(*i)->cVertex.size();
 			}
@@ -124,7 +124,7 @@ bool TreeBsp::FindSplitPlane(Plane* plane) const
 	
 	SplitInfo splitInfoBest;
 	
-	for (std::list<Poly*>::iterator i = mesh->cPoly.begin(); i != mesh->cPoly.end(); ++i)
+	for (std::list<Poly*>::const_iterator i = mesh.polys.begin(); i != mesh.polys.end(); ++i)
 	{
 	
 		Plane temp[2];

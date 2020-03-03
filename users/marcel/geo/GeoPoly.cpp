@@ -131,7 +131,7 @@ void Poly::RevertWinding()
 
 }
 
-PlaneClassification Poly::Classify(const Plane& plane)
+PlaneClassification Poly::Classify(const Plane& plane) const
 {
 
 	Assert(bFinalized);
@@ -144,7 +144,7 @@ PlaneClassification Poly::Classify(const Plane& plane)
 
 	classification = pcOn;
 	
-	for (std::list<Vertex*>::iterator i = cVertex.begin(); i != cVertex.end(); ++i)
+	for (std::list<Vertex*>::const_iterator i = cVertex.begin(); i != cVertex.end(); ++i)
 	{
 		PlaneClassification temp = (*i)->Classify(plane);
 		if (temp != pcOn)
@@ -162,7 +162,7 @@ PlaneClassification Poly::Classify(const Plane& plane)
 	
 	classification = pcFront;
 	
-	for (std::list<Vertex*>::iterator i = cVertex.begin(); i != cVertex.end(); ++i)
+	for (std::list<Vertex*>::const_iterator i = cVertex.begin(); i != cVertex.end(); ++i)
 	{
 		PlaneClassification temp = (*i)->Classify(plane);
 		if (temp != pcFront && temp != pcOn)
@@ -180,7 +180,7 @@ PlaneClassification Poly::Classify(const Plane& plane)
 	
 	classification = pcBack;
 	
-	for (std::list<Vertex*>::iterator i = cVertex.begin(); i != cVertex.end(); ++i)
+	for (std::list<Vertex*>::const_iterator i = cVertex.begin(); i != cVertex.end(); ++i)
 	{
 		PlaneClassification temp = (*i)->Classify(plane);
 		if (temp != pcBack && temp != pcOn)
@@ -200,7 +200,7 @@ PlaneClassification Poly::Classify(const Plane& plane)
 	
 }
 
-PlaneClassification Poly::Classify(const Poly& poly)
+PlaneClassification Poly::Classify(const Poly& poly) const
 {
 
 	Assert(bFinalized);
@@ -209,7 +209,7 @@ PlaneClassification Poly::Classify(const Poly& poly)
 	int nFront = 0;
 	int nBack = 0;
 	
-	for (std::list<Vertex*>::iterator i = const_cast<Poly&>(poly).cVertex.begin(); i != const_cast<Poly&>(poly).cVertex.end(); ++i)
+	for (std::list<Vertex*>::const_iterator i = poly.cVertex.begin(); i != poly.cVertex.end(); ++i)
 	{
 		PlaneClassification temp = plane.Classify((*i)->position);
 		if (temp == pcOn)

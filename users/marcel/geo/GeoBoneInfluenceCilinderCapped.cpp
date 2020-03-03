@@ -8,7 +8,7 @@ namespace Geo
 BoneInfluenceCilinderCapped::BoneInfluenceCilinderCapped() : BoneInfluence()
 {
 
-	type = bitCilinderCapped;
+	type = bitCylinderCapped;
 	
 	m_radius = 1.0f;
 	

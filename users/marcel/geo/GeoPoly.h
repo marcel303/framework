@@ -49,8 +49,8 @@ namespace Geo
 		
 		void RevertWinding(); ///< Revert order of vertices. This will flip the face normal.
 		
-		PlaneClassification Classify(const Plane& plane); ///< Classify polygon / plane relation.
-		PlaneClassification Classify(const Poly& poly); ///< Classify polygon / polygon relationship.
+		PlaneClassification Classify(const Plane& plane) const; ///< Classify polygon / plane relation.
+		PlaneClassification Classify(const Poly& poly) const;   ///< Classify polygon / polygon relationship.
 		
 		void Split(const Plane& plane, Poly* polyFront, Poly* polyBack); ///< Split poly in 2 parts, 1 in front of plane, the other behind. Note: Only clip if asserted Classify(plane) == pcSpan, else nasty things shall happen.
 		
