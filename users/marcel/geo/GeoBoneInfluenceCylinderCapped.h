@@ -6,19 +6,19 @@
 namespace Geo
 {
 
-	class BoneInfluenceCilinderCapped : public BoneInfluence
+	class BoneInfluenceCylinderCapped : public BoneInfluence
 	{
 
 	public:
 		
-		BoneInfluenceCilinderCapped();
-		virtual ~BoneInfluenceCilinderCapped() override;
+		BoneInfluenceCylinderCapped();
+		virtual ~BoneInfluenceCylinderCapped() override;
 		
 	public:
 		
-		float m_radius; // Radius of cilinder.
-		float m_min; // Cilinder extent along the X axis, minimum value.
-		float m_max; // Cilinder extent along the X axis, maximum value.
+		float m_radius; // Radius of cylinder.
+		float m_min; // Cylinder extent along the X axis, minimum value.
+		float m_max; // Cylinder extent along the X axis, maximum value.
 		
 	public:
 		

@@ -1,11 +1,11 @@
-#include "GeoBoneInfluenceCilinderCapped.h"
+#include "GeoBoneInfluenceCylinderCapped.h"
 
 #include <stdio.h>
 
 namespace Geo
 {
 
-BoneInfluenceCilinderCapped::BoneInfluenceCilinderCapped() : BoneInfluence()
+BoneInfluenceCylinderCapped::BoneInfluenceCylinderCapped() : BoneInfluence()
 {
 
 	type = bitCylinderCapped;
@@ -17,12 +17,12 @@ BoneInfluenceCilinderCapped::BoneInfluenceCilinderCapped() : BoneInfluence()
 	
 }
 
-BoneInfluenceCilinderCapped::~BoneInfluenceCilinderCapped()
+BoneInfluenceCylinderCapped::~BoneInfluenceCylinderCapped()
 {
 
 }
 
-float BoneInfluenceCilinderCapped::CalculateInfluence(const Vector& position) const
+float BoneInfluenceCylinderCapped::CalculateInfluence(const Vector& position) const
 {
 
 	Vector point = GetNearestPointOnLine(position);
@@ -42,7 +42,7 @@ float BoneInfluenceCilinderCapped::CalculateInfluence(const Vector& position) co
 	
 }
 
-bool BoneInfluenceCilinderCapped::Finalize()
+bool BoneInfluenceCylinderCapped::Finalize()
 {
 
 	BoneInfluence::Finalize();
@@ -64,7 +64,7 @@ bool BoneInfluenceCilinderCapped::Finalize()
 	
 }
 
-Vector BoneInfluenceCilinderCapped::GetNearestPointOnLine(const Vector& position) const
+Vector BoneInfluenceCylinderCapped::GetNearestPointOnLine(const Vector& position) const
 {
 
 	float distance = planeLine * position;

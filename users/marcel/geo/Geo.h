@@ -4,7 +4,7 @@
 #include "GeoBezier.h"
 #include "GeoBone.h"
 #include "GeoBoneInfluence.h"
-#include "GeoBoneInfluenceCilinderCapped.h"
+#include "GeoBoneInfluenceCylinderCapped.h"
 #include "GeoBoneInfluenceSphere.h"
 #include "GeoBuilder.h"
 #include "GeoCsg2D.h"

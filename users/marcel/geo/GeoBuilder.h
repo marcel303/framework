@@ -5,7 +5,7 @@
 #include "MathMatrixStack.h"
 
 /**
- * The geometry builder provides methods to dynamically generate geometry like cubes, spheres and cilinders.
+ * The geometry builder provides methods to dynamically generate geometry like cubes, spheres and cylinders.
  * All generated geometry is transformed by the geometry builder transformation matrix.
 \code
 // Example:
@@ -39,10 +39,10 @@ void Transform(Poly* poly);
 void MakeCube(Mesh& mesh);
 /**
  * Circlar top & bottom are located at z = -1.0 and z = +1.0.
- * Cilinder is oriented along the z axis.
- * @param sides The number of sides the cilinder has. Higher means better silhouette.
+ * Cylinder is oriented along the z axis.
+ * @param sides The number of sides the cylinder has. Higher means better silhouette.
  */
-void MakeCilinder(Mesh& mesh, int sides);
+void MakeCylinder(Mesh& mesh, int sides);
 /**
  * Generate a circle with radius 1.0, in the XY plane.
  * @param sides The number of edges.

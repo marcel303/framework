@@ -7,15 +7,15 @@ namespace Geo
 namespace Builder
 {
 
-/// Geometry: Primitives: Cilinder generator.
+/// Geometry: Primitives: Cylinder generator.
 /**
  * Creates a mesh around the z axis with radius 1.0 and height from -1.0 to +1.0.
- * The higher the number of slices, the better the approximation of a true cilinder will be.
+ * The higher the number of slices, the better the approximation of a true cylinder will be.
  * The generated polygons will be stored in the specified mesh.
  * @param mesh Mesh to put generated polygon in.
  * @param slices Number of divisions. More divisions make the shape look smoother.
  */
-void Geo::Builder::MakeCilinder(Mesh& mesh, int slices)
+void Geo::Builder::MakeCylinder(Mesh& mesh, int slices)
 {
 
 	float s = 2.0f * M_PI / slices;
