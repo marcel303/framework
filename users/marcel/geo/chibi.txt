@@ -1,0 +1,6 @@
+library marcel-geo
+	depend_library libgg
+	scan_files cpp
+	scan_files h
+	scan_files inl
+	header_path . expose
