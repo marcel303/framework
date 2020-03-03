@@ -1,5 +1,4 @@
-#ifndef __GeoBuilder_h__
-#define __GeoBuilder_h__
+#pragma once
 
 #include "GeoMesh.h"
 #include "MathMatrixStack.h"
@@ -26,44 +25,42 @@ Geom::Builder::matrixStack.Pop();
 namespace Geo
 {
 
-namespace Builder
-{
- 
-extern MatrixStack matrixStack; ///< Generated geometric primitives are transformed by this matrix before being outputted.
- 
-void Transform(Poly* poly);
+	namespace Builder
+	{
+		
+		extern MatrixStack matrixStack; ///< Generated geometric primitives are transformed by this matrix before being outputted.
+		
+		void Transform(Poly* poly);
 
-/**
- * Generate a cube from (-1, -1, -1) to (1, 1, 1).
- */
-void MakeCube(Mesh& mesh);
-/**
- * Circlar top & bottom are located at z = -1.0 and z = +1.0.
- * Cylinder is oriented along the z axis.
- * @param sides The number of sides the cylinder has. Higher means better silhouette.
- */
-void MakeCylinder(Mesh& mesh, int sides);
-/**
- * Generate a circle with radius 1.0, in the XY plane.
- * @param sides The number of edges.
- */
-void MakeCircle(Mesh& mesh, int sides);
-/**
- * Generate a cone shape. Cone converges in (0.0, 0.0, 1.0).
- * @param sides Subdivision factor.
- */
-void MakeCone(Mesh& mesh, int sides);
-/**
- * Generate a sphere with radius 1.0.
- * @param div1 Subdivisions along the z axis.
- * @param div2 Subdivisions in the XY plane.
- */
-void MakeSphere(Mesh& mesh, int div1, int div2);
+		/**
+		 * Generate a cube from (-1, -1, -1) to (1, 1, 1).
+		 */
+		void MakeCube(Mesh& mesh);
+		/**
+		 * Circlar top & bottom are located at z = -1.0 and z = +1.0.
+		 * Cylinder is oriented along the z axis.
+		 * @param sides The number of sides the cylinder has. Higher means better silhouette.
+		 */
+		void MakeCylinder(Mesh& mesh, int sides);
+		/**
+		 * Generate a circle with radius 1.0, in the XY plane.
+		 * @param sides The number of edges.
+		 */
+		void MakeCircle(Mesh& mesh, int sides);
+		/**
+		 * Generate a cone shape. Cone converges in (0.0, 0.0, 1.0).
+		 * @param sides Subdivision factor.
+		 */
+		void MakeCone(Mesh& mesh, int sides);
+		/**
+		 * Generate a sphere with radius 1.0.
+		 * @param div1 Subdivisions along the z axis.
+		 * @param div2 Subdivisions in the XY plane.
+		 */
+		void MakeSphere(Mesh& mesh, int div1, int div2);
 
-void MakeDonut(Mesh& mesh, int sides, int slices, float r1, float r2);
-    
-}; // Builder.
+		void MakeDonut(Mesh& mesh, int sides, int slices, float r1, float r2);
+		
+	} // Builder.
 
-}; // Geo.
-
-#endif // !__GeoBuilder_h__
+} // Geo.

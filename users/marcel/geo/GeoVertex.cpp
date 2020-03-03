@@ -3,132 +3,132 @@
 namespace Geo
 {
 
-Vertex::Vertex()
-{
-
-}
-
-Vertex::Vertex(const Vertex& vertex)
-{
-
-	*this = vertex;
-	
-}
-
-Vertex::~Vertex()
-{
-
-}
-
-PlaneClassification Vertex::Classify(const Plane& plane) const
-{
-
-	return plane.Classify(position);
-	
-}
-
-Vertex& Vertex::operator=(const Vertex& vertex)
-{
-
-	this->position = vertex.position;
-	
-	for (int i = 0; i < nVarying; ++i)
+	Vertex::Vertex()
 	{
-		varying[i] = vertex.varying[i];
-	}
-	
-	return (*this);
-	
-}
 
-Vertex Vertex::operator+(const Vertex& vertex) const
-{
-
-	Vertex temp;
-	
-	temp.position = position + vertex.position;
-	
-	for (int i = 0; i < nVarying; ++i)
-	{
-		temp.varying[i] = varying[i] + vertex.varying[i];
-	}
-	
-	return temp;
-	
-}
-
-Vertex Vertex::operator-(const Vertex& vertex) const
-{
-
-	Vertex temp;
-	
-	temp.position = position - vertex.position;
-	
-	for (int i = 0; i < nVarying; ++i)
-	{
-		temp.varying[i] = varying[i] - vertex.varying[i];
-	}
-	
-	return temp;
-	
-}
-
-Vertex Vertex::operator*(float v) const
-{
-
-	Vertex temp;
-	
-	temp.position = position * v;
-	
-	for (int i = 0; i < nVarying; ++i)
-	{
-		temp.varying[i] = varying[i] * v;
-	}
-	
-	return temp;
-	
-}
-
-Vertex& Vertex::operator+=(const Vertex& vertex)
-{
-
-	position += vertex.position;
-	
-	for (int i = 0; i < nVarying; ++i)
-	{
-		varying[i] += vertex.varying[i];
 	}
 
-	return (*this);
-	
-}
-
-Vertex& Vertex::operator-=(const Vertex& vertex)
-{
-
-	position -= vertex.position;
-	
-	for (int i = 0; i < nVarying; ++i)
+	Vertex::Vertex(const Vertex& vertex)
 	{
-		varying[i] -= vertex.varying[i];
+
+		*this = vertex;
+		
 	}
-	
-	return (*this);
-	
-}
 
-Vertex& Vertex::operator*=(float v)
-{
-
-	position *= v;
-	
-	for (int i = 0; i < nVarying; ++i)
+	Vertex::~Vertex()
 	{
-		varying[i] *= v;
+
 	}
-	
-	return (*this);
+
+	PlaneClassification Vertex::Classify(const Plane& plane) const
+	{
+
+		return plane.Classify(position);
+		
+	}
+
+	Vertex& Vertex::operator=(const Vertex& vertex)
+	{
+
+		this->position = vertex.position;
+		
+		for (int i = 0; i < nVarying; ++i)
+		{
+			varying[i] = vertex.varying[i];
+		}
+		
+		return (*this);
+		
+	}
+
+	Vertex Vertex::operator+(const Vertex& vertex) const
+	{
+
+		Vertex temp;
+		
+		temp.position = position + vertex.position;
+		
+		for (int i = 0; i < nVarying; ++i)
+		{
+			temp.varying[i] = varying[i] + vertex.varying[i];
+		}
+		
+		return temp;
+		
+	}
+
+	Vertex Vertex::operator-(const Vertex& vertex) const
+	{
+
+		Vertex temp;
+		
+		temp.position = position - vertex.position;
+		
+		for (int i = 0; i < nVarying; ++i)
+		{
+			temp.varying[i] = varying[i] - vertex.varying[i];
+		}
+		
+		return temp;
+		
+	}
+
+	Vertex Vertex::operator*(float v) const
+	{
+
+		Vertex temp;
+		
+		temp.position = position * v;
+		
+		for (int i = 0; i < nVarying; ++i)
+		{
+			temp.varying[i] = varying[i] * v;
+		}
+		
+		return temp;
+		
+	}
+
+	Vertex& Vertex::operator+=(const Vertex& vertex)
+	{
+
+		position += vertex.position;
+		
+		for (int i = 0; i < nVarying; ++i)
+		{
+			varying[i] += vertex.varying[i];
+		}
+
+		return (*this);
+		
+	}
+
+	Vertex& Vertex::operator-=(const Vertex& vertex)
+	{
+
+		position -= vertex.position;
+		
+		for (int i = 0; i < nVarying; ++i)
+		{
+			varying[i] -= vertex.varying[i];
+		}
+		
+		return (*this);
+		
+	}
+
+	Vertex& Vertex::operator*=(float v)
+	{
+
+		position *= v;
+		
+		for (int i = 0; i < nVarying; ++i)
+		{
+			varying[i] *= v;
+		}
+		
+		return (*this);
+
+	}
 
 }
-
-};

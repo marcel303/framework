@@ -22,7 +22,7 @@ namespace Geo
 		
 	public:
 		
-		const static int nVarying = 8; ///< Maximum number of 'varying' (interpolated) components.
+		static const int nVarying = 8; ///< Maximum number of 'varying' (interpolated) components.
 		
 	public:
 		
