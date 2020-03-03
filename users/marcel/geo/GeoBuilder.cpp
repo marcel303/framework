@@ -3,23 +3,23 @@
 namespace Geo
 {
 
-namespace Builder
-{
-
-MatrixStack matrixStack;
-
-void Geo::Builder::Transform(Poly* poly)
-{
-
-	for (std::list<Vertex*>::iterator i = poly->cVertex.begin(); i != poly->cVertex.end(); ++i)
+	namespace Builder
 	{
 
-		(*i)->position = matrixStack.GetMatrix() * (*i)->position;
+		MatrixStack matrixStack;
 
-	}
+		void Transform(Poly* poly)
+		{
 
-}
+			for (std::list<Vertex*>::iterator i = poly->cVertex.begin(); i != poly->cVertex.end(); ++i)
+			{
 
-}; // Builder.
+				(*i)->position = matrixStack.GetMatrix() * (*i)->position;
 
-}; // Geo.
+			}
+
+		}
+
+	} // Builder.
+
+} // Geo.

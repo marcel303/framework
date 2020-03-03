@@ -170,7 +170,7 @@ namespace Geo
 		
 	}
 
-	Vector Mesh::CalculateCenter() const
+	Vec3 Mesh::CalculateCenter() const
 	{
 
 		const Aabb aabb = CalculateExtents();
@@ -179,10 +179,10 @@ namespace Geo
 		
 	}
 
-	Vector Mesh::CalculateVertexCenter() const
+	Vec3 Mesh::CalculateVertexCenter() const
 	{
 
-		Vector center;
+		Vec3 center;
 		int nVertices = 0;
 		
 		for (std::list<Poly*>::const_iterator i = polys.begin(); i != polys.end(); ++i)
@@ -211,10 +211,10 @@ namespace Geo
 
 	}
 
-	Vector Mesh::CalculatePolyCenter() const
+	Vec3 Mesh::CalculatePolyCenter() const
 	{
 
-		Vector center;
+		Vec3 center;
 		
 		for (std::list<Poly*>::const_iterator i = polys.begin(); i != polys.end(); ++i)
 		{
@@ -246,7 +246,7 @@ namespace Geo
 
 	}
 
-	const Vector& Mesh::GetCenter() const
+	const Vec3& Mesh::GetCenter() const
 	{
 
 		Assert(bFinalized);
@@ -255,7 +255,7 @@ namespace Geo
 		
 	}
 
-	const Vector& Mesh::GetPolyCenter() const
+	const Vec3& Mesh::GetPolyCenter() const
 	{
 
 		Assert(bFinalized);
@@ -264,7 +264,7 @@ namespace Geo
 		
 	}
 
-	const Vector& Mesh::GetVertexCenter() const
+	const Vec3& Mesh::GetVertexCenter() const
 	{
 
 		Assert(bFinalized);

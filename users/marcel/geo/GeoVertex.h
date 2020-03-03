@@ -1,7 +1,8 @@
 #pragma once
 
 #include "GeoPlane.h"
-#include "MathVector.h"
+#include "Vec3.h"
+#include "Vec4.h"
 
 namespace Geo
 {
@@ -25,10 +26,10 @@ namespace Geo
 		
 	public:
 		
-		Vector position; ///< Position of vertex.
+		Vec3 position; ///< Position of vertex.
 		Plane planeFaceAverage; ///< Average face normal (and plane distance).
 
-		Vector varying[nVarying]; ///< Varying components. These are user-defined values that get interpolated when splitting edges. These can be anything, like for instance texture coordinates, a normal vector or a color.
+		Vec4 varying[nVarying]; ///< Varying components. These are user-defined values that get interpolated when splitting edges. These can be anything, like for instance texture coordinates, a normal vector or a color.
 		
 	public:
 		

@@ -1,40 +1,38 @@
-#ifndef __MathMatrixStack_h__
-#define __MathMatrixStack_h__
+#pragma once
 
+#include "Mat4x4.h"
+#include "Vec3.h"
 #include <vector>
-#include "MathMatrix.h"
 
 class MatrixStack
 {
 
-	public:
+public:
 	
 	MatrixStack();
 	~MatrixStack();
 	
-	private:
+private:
 	
-	std::vector<Matrix> vMatrix;
+	std::vector<Mat4x4> vMatrix;
 	
-	public:
+public:
 	
 	void Push();
 	void Pop();
 	
-	public:
+public:
 	
-	Matrix& GetMatrix();
-	const Matrix& GetMatrix() const;
+	Mat4x4& GetMatrix();
+	const Mat4x4& GetMatrix() const;
 	
-	public:
+public:
 	
-	void ApplyTranslation(Vector translation);
-	void ApplyRotationEuler(Vector rotation);
+	void ApplyTranslation(Vec3Arg translation);
+	void ApplyRotationEuler(Vec3Arg rotation);
 	void ApplyRotationX(float angle);
 	void ApplyRotationY(float angle);
 	void ApplyRotationZ(float angle);
-	void ApplyScaling(Vector scale);
+	void ApplyScaling(Vec3Arg scale);
 	
 };
-
-#endif // !__MathMatrixStack_h__

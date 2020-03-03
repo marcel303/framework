@@ -20,10 +20,10 @@ namespace Geo
 
 	}
 
-	Vector Aabb::CalculateSize() const
+	Vec3 Aabb::CalculateSize() const
 	{
 
-		Vector size;
+		Vec3 size;
 		
 		size[0] = max[0] - min[0];
 		size[1] = max[1] - min[1];

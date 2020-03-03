@@ -3,7 +3,7 @@
 MatrixStack::MatrixStack()
 {
 
-	Matrix matrix;
+	Mat4x4 matrix;
 	
 	matrix.MakeIdentity();
 	
@@ -30,34 +30,38 @@ void MatrixStack::Pop()
 
 }
 	
-Matrix& MatrixStack::GetMatrix()
+Mat4x4& MatrixStack::GetMatrix()
 {
 
 	return vMatrix.back();
 	
 }
 
-const Matrix& MatrixStack::GetMatrix() const
+const Mat4x4& MatrixStack::GetMatrix() const
 {
 
 	return vMatrix.back();
 	
 }
 
-void MatrixStack::ApplyTranslation(Vector translation)
+void MatrixStack::ApplyTranslation(Vec3Arg translation)
 {
 
-	Matrix matrix;
+	Mat4x4 matrix;
 	matrix.MakeTranslation(translation);
 	GetMatrix() = GetMatrix() * matrix;
 	
 }
 
-void MatrixStack::ApplyRotationEuler(Vector rotation)
+void MatrixStack::ApplyRotationEuler(Vec3Arg rotation)
 {
 
-	Matrix matrix;
-	matrix.MakeRotationEuler(rotation);
+	Mat4x4 rotationX; rotationX.MakeRotationX(rotation[0]);
+	Mat4x4 rotationY; rotationY.MakeRotationY(rotation[1]);
+	Mat4x4 rotationZ; rotationZ.MakeRotationZ(rotation[2]);
+	
+	Mat4x4 matrix = rotationZ * rotationY * rotationX;
+	
 	GetMatrix() = GetMatrix() * matrix;
 	
 }
@@ -65,7 +69,7 @@ void MatrixStack::ApplyRotationEuler(Vector rotation)
 void MatrixStack::ApplyRotationX(float angle)
 {
 
-	Matrix matrix;
+	Mat4x4 matrix;
 	matrix.MakeRotationX(angle);
 	GetMatrix() = GetMatrix() * matrix;
 	
@@ -74,7 +78,7 @@ void MatrixStack::ApplyRotationX(float angle)
 void MatrixStack::ApplyRotationY(float angle)
 {
 
-	Matrix matrix;
+	Mat4x4 matrix;
 	matrix.MakeRotationY(angle);
 	GetMatrix() = GetMatrix() * matrix;
 	
@@ -83,16 +87,16 @@ void MatrixStack::ApplyRotationY(float angle)
 void MatrixStack::ApplyRotationZ(float angle)
 {
 
-	Matrix matrix;
+	Mat4x4 matrix;
 	matrix.MakeRotationZ(angle);
 	GetMatrix() = GetMatrix() * matrix;
 	
 }
 
-void MatrixStack::ApplyScaling(Vector scale)
+void MatrixStack::ApplyScaling(Vec3Arg scale)
 {
 
-	Matrix matrix;
+	Mat4x4 matrix;
 	matrix.MakeScaling(scale);
 	GetMatrix() = GetMatrix() * matrix;
 	

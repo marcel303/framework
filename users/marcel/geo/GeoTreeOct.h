@@ -20,7 +20,7 @@ namespace Geo
 		
 	protected:
 		
-		Vector splitPosition; ///< Center position of split.
+		Vec3 splitPosition; ///< Center position of split.
 		int splitTreshold; ///< Minimum number of polygons before split. Default 2.
 		
 	public:

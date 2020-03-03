@@ -1,7 +1,7 @@
 #pragma once
 
-#include "MathMatrix.h"
-#include "MathVector.h"
+#include "Mat4x4.h"
+#include "Vec3.h"
 
 namespace Geo
 {
@@ -32,25 +32,25 @@ namespace Geo
 		
 	public:
 		
-		Vector position; ///< Local position.
-		Matrix rotation; ///< Local rotation.
+		Vec3 position; ///< Local position.
+		Mat4x4 rotation; ///< Local rotation.
 		
 	public:
 		
-		Matrix transform; ///< Local transform. Calculated at finalization phase.
-		Matrix transformInverse; ///< Inverse of local transform. Calculated at finalization phase.
+		Mat4x4 transform; ///< Local transform. Calculated at finalization phase.
+		Mat4x4 transformInverse; ///< Inverse of local transform. Calculated at finalization phase.
 		
 	public:
 		
-		Matrix transformGlobal; ///< Global transform. Calculated at bone finalization phase.
-		Matrix transformGlobalInverse; /// Inverse of global transform. Calculated at bone finalization phase.
+		Mat4x4 transformGlobal; ///< Global transform. Calculated at bone finalization phase.
+		Mat4x4 transformGlobalInverse; /// Inverse of global transform. Calculated at bone finalization phase.
 
 	public:
 		
-		float CalculateInfluenceGlobal(const Vector& position) const; ///< Calculate influence at given position in global coordinates.
-		float CalculateInfluenceLocal(const Vector& position) const; ///< Calculate influence at given position in global bone coordinates.
+		float CalculateInfluenceGlobal(Vec3Arg position) const; ///< Calculate influence at given position in global coordinates.
+		float CalculateInfluenceLocal(Vec3Arg position) const; ///< Calculate influence at given position in global bone coordinates.
 		
-		virtual float CalculateInfluence(const Vector& position) const; ///< Calculate influence at given position in global influence coordinates.
+		virtual float CalculateInfluence(Vec3Arg position) const; ///< Calculate influence at given position in global influence coordinates.
 		
 		virtual bool Finalize(); ///< Finalize. Must be called after either modifying position or rotation.
 		

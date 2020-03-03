@@ -11,10 +11,10 @@ namespace Geo
 		// Initialize bind and current position / rotation.
 		
 		bindRotationLocal.MakeIdentity();
-		bindPositionLocal = Vector(0.0f, 0.0f, 0.0f);
+		bindPositionLocal.SetZero();
 
 		currentRotationLocal.MakeIdentity();
-		currentPositionLocal = Vector(0.0f, 0.0f, 0.0f);
+		currentPositionLocal.SetZero();
 
 		// Finalize (calculate bind transforms). This will also update current transforms.
 		
@@ -45,7 +45,7 @@ namespace Geo
 		
 	}
 	
-	float Bone::CalculateInfluence(const Vector& position) const
+	float Bone::CalculateInfluence(Vec3Arg position) const
 	{
 
 		// Calculate cumulative influence.
@@ -68,7 +68,7 @@ namespace Geo
 
 		// Calculate bind transform and it's inverse.
 		
-		Matrix bindTranslation;
+		Mat4x4 bindTranslation;
 		bindTranslation.MakeTranslation(bindPositionLocal);
 		
 		bindTransformGlobal = bindTranslation * bindRotationLocal;
@@ -78,7 +78,7 @@ namespace Geo
 			bindTransformGlobal = parent->bindTransformGlobal * bindTransformGlobal;
 		}
 
-		bindTransformGlobalInverse = bindTransformGlobal.Inverse();
+		bindTransformGlobalInverse = bindTransformGlobal.CalcInv();
 		
 		// Finalize children.
 		
@@ -103,7 +103,7 @@ namespace Geo
 			}
 			
 			(*i)->transformGlobal = bindTransformGlobal * (*i)->transform;
-			(*i)->transformGlobalInverse = (*i)->transformGlobal.Inverse();
+			(*i)->transformGlobalInverse = (*i)->transformGlobal.CalcInv();
 			
 		}
 		
@@ -135,7 +135,7 @@ namespace Geo
 
 		// Calculate current transform and it's inverse.
 		
-		Matrix currentTranslation;
+		Mat4x4 currentTranslation;
 		currentTranslation.MakeTranslation(currentPositionLocal);
 		
 		currentTransformGlobal = currentTranslation * currentRotationLocal;

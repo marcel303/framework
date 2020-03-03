@@ -1,6 +1,6 @@
 #pragma once
 
-#include "MathVector.h"
+#include "Vec3.h"
 
 namespace Geo
 {
@@ -28,21 +28,21 @@ namespace Geo
 		
 		Plane();
 		Plane(const Plane& plane); ///< Copy constructor.
-		Plane(const Vector& vector1, const Vector& vector2); ///< Create plane from 2 vectors. normal = vector2 - vector1. distance = normal * vector1.
-		Plane(const Vector& vector1, const Vector& vector2, const Vector& vector3); ///< Create plane from 3 vectors. Vector 1, 2 and 3 specify a triagle. normal = (vector2 - vector1) % (vector3 - vector2). distance = normal * vector1.
+		Plane(Vec3Arg vector1, Vec3Arg vector2); ///< Create plane from 2 vectors. normal = vector2 - vector1. distance = normal * vector1.
+		Plane(Vec3Arg vector1, Vec3Arg vector2, Vec3Arg vector3); ///< Create plane from 3 vectors. Vector 1, 2 and 3 specify a triagle. normal = (vector2 - vector1) % (vector3 - vector2). distance = normal * vector1.
 		~Plane();
 		
 	public:
 		
-		Vector normal; ///< Plane normal.
+		Vec3 normal; ///< Plane normal.
 		float distance; ///< Plane distance.
 		
 	public:
 		
 		void Normalize(); ///< Normalize plane normal / distance.
-		void Setup(const Vector& vector1, const Vector& vector2); ///< Create plane from 2 vectors. normal = vector2 - vector1. distance = normal * vector1.
-		void Setup(const Vector& vector1, const Vector& vector2, const Vector& vector3); ///< Create plane from 3 vectors. Vector 1, 2 and 3 specify a triagle. normal = (vector2 - vector1) % (vector3 - vector2). distance = normal * vector1.
-		PlaneClassification Classify(const Vector& vector) const; ///< Classify point.
+		void Setup(Vec3Arg vector1, Vec3Arg vector2); ///< Create plane from 2 vectors. normal = vector2 - vector1. distance = normal * vector1.
+		void Setup(Vec3Arg vector1, Vec3Arg vector2, Vec3Arg vector3); ///< Create plane from 3 vectors. Vector 1, 2 and 3 specify a triagle. normal = (vector2 - vector1) % (vector3 - vector2). distance = normal * vector1.
+		PlaneClassification Classify(Vec3Arg vector) const; ///< Classify point.
 		
 	public:
 		
@@ -51,7 +51,7 @@ namespace Geo
 		
 	public:
 		
-		float operator*(const Vector& vector) const; ///< Return normal * vector - distance, a.k.a. the distance of a point to a plane.
+		float operator*(Vec3Arg vector) const; ///< Return normal * vector - distance, a.k.a. the distance of a point to a plane.
 
 	};
 

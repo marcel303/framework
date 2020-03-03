@@ -1,8 +1,8 @@
 #pragma once
 
 #include "GeoBoneInfluence.h"
-#include "MathMatrix.h"
-#include "MathVector.h"
+#include "Mat4x4.h"
+#include "Vec3.h"
 #include <list>
 
 namespace Geo
@@ -26,20 +26,20 @@ namespace Geo
 		
 	public:
 		
-		float CalculateInfluence(const Vector& position) const; ///< Calculate weight at given position in global coordinate system.
+		float CalculateInfluence(Vec3Arg position) const; ///< Calculate weight at given position in global coordinate system.
 		
 	public:
 		
-		Vector bindPositionLocal; ///< Position at bind time.
-		Matrix bindRotationLocal; ///< Rotation at bind time.
-		Matrix bindTransformGlobal; ///< Combined matrix that transforms vertices in local bone coordinate system to position in global coordinate system.
-		Matrix bindTransformGlobalInverse; ///< Combined matrix that transforms vertices at bind time to local bone coordinate system.
+		Vec3 bindPositionLocal; ///< Position at bind time.
+		Mat4x4 bindRotationLocal; ///< Rotation at bind time.
+		Mat4x4 bindTransformGlobal; ///< Combined matrix that transforms vertices in local bone coordinate system to position in global coordinate system.
+		Mat4x4 bindTransformGlobalInverse; ///< Combined matrix that transforms vertices at bind time to local bone coordinate system.
 		
-		Vector currentPositionLocal; ///< Current position in local coordinate system.
-		Matrix currentRotationLocal; ///< Current rotation in local coordinate system.
-		Matrix currentTransformGlobal; ///< Combined transform from root uptil this bone.
+		Vec3 currentPositionLocal; ///< Current position in local coordinate system.
+		Mat4x4 currentRotationLocal; ///< Current rotation in local coordinate system.
+		Mat4x4 currentTransformGlobal; ///< Combined transform from root uptil this bone.
 		
-		Matrix transform; ///< Final transform matrix that modifies vertices under bone rotation and position.
+		Mat4x4 transform; ///< Final transform matrix that modifies vertices under bone rotation and position.
 		
 	public:
 		

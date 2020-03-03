@@ -40,7 +40,7 @@ void Geo::Builder::MakeDonut(Mesh& mesh, int sides, int slices, float r1, float 
             matrixStack.Push();
             matrixStack.GetMatrix().MakeIdentity();
               
-            Vector r, t;
+            Vec3 r, t;
                               
             matrixStack.Push();
             
@@ -55,8 +55,8 @@ void Geo::Builder::MakeDonut(Mesh& mesh, int sides, int slices, float r1, float 
             matrixStack.ApplyRotationEuler(r);
             matrixStack.ApplyTranslation(t);
             
-            Vertex* vertex1 = poly->Add(); vertex1->position = Vector(sin(a2 + s2) * r2, 0.0f, cos(a2 + s2) * r2);
-            Vertex* vertex2 = poly->Add(); vertex2->position = Vector(sin(a2     ) * r2, 0.0f, cos(a2     ) * r2);
+            Vertex* vertex1 = poly->Add(); vertex1->position.Set(sinf(a2 + s2) * r2, 0.0f, cosf(a2 + s2) * r2);
+            Vertex* vertex2 = poly->Add(); vertex2->position.Set(sinf(a2     ) * r2, 0.0f, cosf(a2     ) * r2);
             
             vertex1->position = matrixStack.GetMatrix() * vertex1->position;
             vertex2->position = matrixStack.GetMatrix() * vertex2->position;
@@ -76,8 +76,8 @@ void Geo::Builder::MakeDonut(Mesh& mesh, int sides, int slices, float r1, float 
             matrixStack.ApplyRotationEuler(r);
             matrixStack.ApplyTranslation(t);
             
-            Vertex* vertex3 = poly->Add(); vertex3->position = Vector(sin(a2     ) * r2, 0.0f, cos(a2     ) * r2);
-            Vertex* vertex4 = poly->Add(); vertex4->position = Vector(sin(a2 + s2) * r2, 0.0f, cos(a2 + s2) * r2);
+            Vertex* vertex3 = poly->Add(); vertex3->position.Set(sinf(a2     ) * r2, 0.0f, cosf(a2     ) * r2);
+            Vertex* vertex4 = poly->Add(); vertex4->position.Set(sinf(a2 + s2) * r2, 0.0f, cosf(a2 + s2) * r2);
             
             vertex3->position = matrixStack.GetMatrix() * vertex3->position;
             vertex4->position = matrixStack.GetMatrix() * vertex4->position;

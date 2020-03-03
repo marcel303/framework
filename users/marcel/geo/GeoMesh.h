@@ -26,9 +26,9 @@ namespace Geo
 	public:
 		
 		Aabb aabb; ///< Axis aligned bounding box.
-		Vector center;
-		Vector polyCenter;
-		Vector vertexCenter;
+		Vec3 center;
+		Vec3 polyCenter;
+		Vec3 vertexCenter;
 		
 	public:
 		
@@ -43,13 +43,13 @@ namespace Geo
 		
 		void RevertPolyWinding(); ///< Revert winding for every polygon. See Poly::RevertWinding.
 		Aabb CalculateExtents() const; ///< Calculate axis aligned bounding box (AABB).
-		Vector CalculateCenter() const; ///< Calculate center, using extents AABB.
-		Vector CalculateVertexCenter() const; ///< Calculate center, using average vertex position.
-		Vector CalculatePolyCenter() const; ///< Calculate center, using average of polygon centers.
+		Vec3 CalculateCenter() const; ///< Calculate center, using extents AABB.
+		Vec3 CalculateVertexCenter() const; ///< Calculate center, using average vertex position.
+		Vec3 CalculatePolyCenter() const; ///< Calculate center, using average of polygon centers.
 		const Aabb& GetExtents() const; ///< Return precomputed extends. Requires finalization.
-		const Vector& GetCenter() const; ///< Return precomputed center. Requires finalization.
-		const Vector& GetPolyCenter() const; ///< Return precomputed average polygon center. Requires finalization.
-		const Vector& GetVertexCenter() const; ///< Return precomputed average vertex center. Requires finalization.
+		const Vec3& GetCenter() const; ///< Return precomputed center. Requires finalization.
+		const Vec3& GetPolyCenter() const; ///< Return precomputed average polygon center. Requires finalization.
+		const Vec3& GetVertexCenter() const; ///< Return precomputed average vertex center. Requires finalization.
 		bool IsConvex() const; ///< Returns true if the mesh is convex. Mesh is convex when all poly's are in front off each other.
 		PlaneClassification Classify(const Plane& plane) const; ///< Classify mesh against plane. See Plane::Classify.
 
