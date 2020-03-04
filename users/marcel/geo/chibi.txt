@@ -4,3 +4,13 @@ library marcel-geo
 	scan_files h
 	scan_files inl
 	header_path . expose
+
+app marcel-geo-example-000
+	depend_library framework
+	depend_library marcel-geo
+	add_files example/main.cpp
+
+app marcel-geo-example-100
+	depend_library framework
+	depend_library marcel-geo
+	add_files example/main2.cpp

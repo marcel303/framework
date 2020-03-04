@@ -1,13 +1,11 @@
 #pragma once
 
 #include "GeoAabb.h"
-#include "GeoBezier.h"
 #include "GeoBone.h"
 #include "GeoBoneInfluence.h"
 #include "GeoBoneInfluenceCylinderCapped.h"
 #include "GeoBoneInfluenceSphere.h"
 #include "GeoBuilder.h"
-#include "GeoCsg2D.h"
 #include "GeoCsg3D.h"
 #include "GeoEdge.h"
 #include "GeoMesh.h"

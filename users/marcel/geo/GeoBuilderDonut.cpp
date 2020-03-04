@@ -18,8 +18,6 @@ namespace Geo
 	Builder& Builder::donut(Mesh& mesh, int sides, int slices, float r1, float r2)
 	{
 
-		r1 += r2;
-		
 		float s1 = 2.0f * M_PI / sides;
 		float a1 = 0.0f;
 

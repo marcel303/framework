@@ -72,6 +72,8 @@ namespace Geo
 
 		Builder& donut(Mesh& mesh, int sides, int slices, float r1, float r2);
 		
+		Builder& grid(Mesh& mesh, int axis, int resolution1, int resolution2, Vec3Arg origin);
+
 	};
 
 }
