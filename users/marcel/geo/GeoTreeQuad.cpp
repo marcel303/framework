@@ -4,6 +4,7 @@ namespace Geo
 {
 
 	TreeQuad::TreeQuad()
+		: Tree()
 	{
 
 		splitAxis = 0;
@@ -59,7 +60,7 @@ namespace Geo
 		plane[1].normal[(splitAxis + 2) % 3] = 1.0f;
 		plane[1].distance = splitPosition * plane[1].normal;
 		
-		#if 0
+	#if 0
 		
 		printf("Split: %f %f %f - %f.\n",
 			plane[0].normal[0],
@@ -73,7 +74,7 @@ namespace Geo
 			plane[1].normal[2],
 			plane[1].distance);
 		
-		#endif
+	#endif
 		
 		Tree* temp[2] = 
 		{
@@ -100,7 +101,7 @@ namespace Geo
 		delete temp[0];
 		delete temp[1];
 		
-		#if 0
+	#if 0
 		
 		printf("%d -> %d %d %d %d.\n",
 			mesh->polys.size(),
@@ -109,7 +110,7 @@ namespace Geo
 			child[2]->mesh->polys.size(),
 			child[3]->mesh->polys.size());
 		
-		#endif
+	#endif
 		
 		for (int i = 0; i < 4; ++i)
 		{

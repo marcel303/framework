@@ -31,18 +31,20 @@ namespace Geo
 		
 	public:
 		
-		Plane plane; ///< Face plane. Calculated when finalized.
-		Aabb aabb; ///< Axis aligned bounding box.
+		Plane plane;       ///< Face plane. Calculated when finalized.
+		Aabb aabb;         ///< Axis aligned bounding box.
 		Vec3 vertexCenter; ///< Center based on average vertex position.
 		
 	public:
 		
-		Vertex* Add(); ///< Add vertex to tail.
+		Vertex* Add();     ///< Add vertex to tail.
 		Vertex* AddHead(); ///< Add vertex to head.
 		Vertex* AddTail(); ///< Add vertex to tail.
-		Vertex* Link(Vertex* vertex); ///< Add already existing vertex to tail.
+		
+		Vertex* Link(Vertex* vertex);     ///< Add already existing vertex to tail.
 		Vertex* LinkHead(Vertex* vertex); ///< Add already existing vertex to head.
 		Vertex* LinkTail(Vertex* vertex); ///< Add already existing vertex to tail.
+		
 		void Clear(); ///< Remove all vertices.
 		
 	public:
@@ -67,10 +69,13 @@ namespace Geo
 		\endcode
 		*/
 		void Clip(const Poly* poly, Poly** inside, class Mesh** outside);
+		
 		void Triangulate(class Mesh* mesh); ///< Triangulate poly, resulting in 1 or more triangular polygons (mesh).
+		
 		void CalculateExtents(Vec3& out_min, Vec3& out_max) const; ///< Calculate axis aligned bounding box (AABB).
 		Vec3 CalculateCenter() const; ///< Calculate center, using extents AABB.
 		Vec3 CalculateVertexCenter() const; ///< Calculate center, using average vertex position.
+		
 		const Aabb& GetExtents() const; ///< Return precomputed extends. Requires finalization.
 		Vec3 GetCenter() const; ///< Return precomputed center. Requires finalization.
 		Vec3 GetVertexCenter() const; ///< Return precomputed average vertex center. Requires finalization.

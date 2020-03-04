@@ -32,18 +32,18 @@ namespace Geo
 		
 	public:
 		
-		Vec3 position; ///< Local position.
+		Vec3 position;   ///< Local position.
 		Mat4x4 rotation; ///< Local rotation.
 		
 	public:
 		
-		Mat4x4 transform; ///< Local transform. Calculated at finalization phase.
-		Mat4x4 transformInverse; ///< Inverse of local transform. Calculated at finalization phase.
+		Mat4x4 transform;        ///< Local transform. Calculated at the finalization phase.
+		Mat4x4 transformInverse; ///< Inverse of the local transform. Calculated at the finalization phase.
 		
 	public:
 		
-		Mat4x4 transformGlobal; ///< Global transform. Calculated at bone finalization phase.
-		Mat4x4 transformGlobalInverse; /// Inverse of global transform. Calculated at bone finalization phase.
+		Mat4x4 transformGlobal;        ///< Global transform. Calculated at bone finalization phase.
+		Mat4x4 transformGlobalInverse; ///< Inverse of the global transform. Calculated at the bone finalization phase.
 
 	public:
 		

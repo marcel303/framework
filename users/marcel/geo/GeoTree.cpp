@@ -65,11 +65,11 @@ namespace Geo
 		
 	}
 	
-	void Tree::Split(const Plane& plane, Tree* outTreeFront, Tree* outTreeBack, GenerateStatistics* generateStatistics)
+	void Tree::Split(const Plane& plane, Tree* out_treeFront, Tree* out_treeBack, GenerateStatistics* generateStatistics)
 	{
 
-		Assert(outTreeFront);
-		Assert(outTreeBack);
+		Assert(out_treeFront != nullptr);
+		Assert(out_treeBack != nullptr);
 
 		for (std::list<Poly*>::iterator i = mesh.polys.begin(); i != mesh.polys.end(); ++i)
 		{
@@ -79,7 +79,7 @@ namespace Geo
 			if (classification == pcOn)
 			{
 			
-				Poly* poly = outTreeFront->mesh.Add();
+				Poly* poly = out_treeFront->mesh.Add();
 				
 				*poly = *(*i);
 				
@@ -87,7 +87,7 @@ namespace Geo
 			if (classification == pcFront)
 			{
 			
-				Poly* poly = outTreeFront->mesh.Add();
+				Poly* poly = out_treeFront->mesh.Add();
 				
 				*poly = *(*i);
 				
@@ -95,7 +95,7 @@ namespace Geo
 			if (classification == pcBack)
 			{
 			
-				Poly* poly = outTreeBack->mesh.Add();
+				Poly* poly = out_treeBack->mesh.Add();
 				
 				*poly = *(*i);
 			
@@ -113,15 +113,15 @@ namespace Geo
 				
 				(*i)->Split(plane, polyFront, polyBack);
 				
-				outTreeFront->mesh.Link(polyFront);
-				outTreeBack->mesh.Link(polyBack);
+				out_treeFront->mesh.Link(polyFront);
+				out_treeBack->mesh.Link(polyBack);
 				
 			}
 		
 		}
 		
-		outTreeFront->Finalize();
-		outTreeBack->Finalize();
+		out_treeFront->Finalize();
+		out_treeBack->Finalize();
 
 	}
 
@@ -139,6 +139,8 @@ namespace Geo
 	void Tree::Generate(int depthLeft, GenerateStatistics* generateStatistics)
 	{
 
+		Assert(false);
+		
 	}
 
 	Tree::SplitInfo Tree::GetSplitInfo(const Plane& plane) const
@@ -155,15 +157,15 @@ namespace Geo
 			{
 				++splitInfo.nOn;
 			}
-			if (classification == pcFront)
+			else if (classification == pcFront)
 			{
 				++splitInfo.nFront;
 			}
-			if (classification == pcBack)
+			else if (classification == pcBack)
 			{
 				++splitInfo.nBack;
 			}
-			if (classification == pcSpan)
+			else if (classification == pcSpan)
 			{
 				++splitInfo.nSpan;
 			}

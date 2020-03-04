@@ -22,8 +22,8 @@ namespace Geo
 		
 	protected:
 		
-		Plane splitPlane; ///< Splitting plane, or undefined when leaf node.
-		int splitAxis; ///< Splitting axis.
+		Plane splitPlane;  ///< Splitting plane, or undefined when leaf node.
+		int splitAxis;     ///< Splitting axis.
 		int splitTreshold; ///< Splitting treshold. Default 2.
 		
 	protected:

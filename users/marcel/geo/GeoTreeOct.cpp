@@ -4,6 +4,7 @@ namespace Geo
 {
 
 	TreeOct::TreeOct()
+		: Tree()
 	{
 
 		splitTreshold = 2;
@@ -54,7 +55,7 @@ namespace Geo
 		plane[2].normal[2] = 1.0f;
 		plane[2].distance = splitPosition * plane[2].normal;
 		
-		#if 0
+	#if 0
 		
 		printf("Split: %f %f %f - %f.\n",
 			plane[0].normal[0],
@@ -68,7 +69,7 @@ namespace Geo
 			plane[1].normal[2],
 			plane[1].distance);
 		
-		#endif
+	#endif
 		
 		Tree* temp1[2] =
 		{
@@ -117,7 +118,7 @@ namespace Geo
 		delete temp2[2];
 		delete temp2[3];
 		
-		#if 0
+	#if 0
 		
 		printf("%d -> %d %d %d %d %d %d %d %d.\n",
 			mesh->polys.size(),
@@ -130,7 +131,7 @@ namespace Geo
 			child[6]->mesh->polys.size(),
 			child[7]->mesh->polys.size());
 		
-		#endif
+	#endif
 		
 		for (int i = 0; i < 8; ++i)
 		{

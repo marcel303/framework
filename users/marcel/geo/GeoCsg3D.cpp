@@ -24,7 +24,7 @@ namespace Geo
 	//void CCsg3D::clip(CMesh* mesh, CBsp* bsp, CMesh* out, CMesh* in, int polyClipPriority)
 	{
 
-		if (tree.children.size() == 0)
+		if (tree.children.empty())
 		{
 
 			// Child leaf.
@@ -32,14 +32,14 @@ namespace Geo
 			for (std::list<Poly*>::const_iterator i = mesh.polys.begin(); i != mesh.polys.end(); ++i)
 			{
 			
-				PlaneClassification classification = (*i)->Classify(tree.GetSplitPlane());
+				const PlaneClassification classification = (*i)->Classify(tree.GetSplitPlane());
 				
 				if (classification == pcOn)
 				{
 
 					// Coplanar, do a 2D CSG with the polygon in the BSP leaf.
 
-					#if 0
+				#if 0
 					
 					if (tree->cChild.size() > 0)
 					{
@@ -49,7 +49,6 @@ namespace Geo
 							(*i)->Clip(tree->cChild.front(), inTemp, outOutside);
 							if (inTemp->vertices.size() >= 3)
 							{
-								inTemp->Finalize();
 								outInside->Link(inTemp);
 							{
 							else
@@ -61,31 +60,27 @@ namespace Geo
 						{
 							Poly* poly = outOutside->Add()
 							*poly = *(*i);
-							poly->Finalize();
 						}
 					}
 					
-					#else
+				#else
 				
 					// Just add polygon. This will cause overlapping polygons & possibly z-fighting.
 					
-					#if 1
+				#if 1
 					
 					Poly* poly = out_outsideMesh.Add();
 					
 					*poly = *(*i);
-
-					poly->Finalize();
 					
-					#endif
+				#endif
 				
 					printf("On. Warning: 2D clipping not yet implemented.\n");
 					
-					#endif
+				#endif
 				
 				}
-				
-				if (classification == pcSpan)
+				else if (classification == pcSpan)
 				{
 
 					// Spanning.. clip polygon into inside and outside.
@@ -94,15 +89,11 @@ namespace Geo
 					Poly* back = out_insideMesh.Add();
 					
 					(*i)->Split(tree.GetSplitPlane(), front, back);
-
-					front->Finalize();
-					back->Finalize();
 					
 					//printf("Span.\n");
 					
 				}
-				
-				if (classification == pcFront)
+				else if (classification == pcFront)
 				{
 				
 					// Outside.
@@ -110,14 +101,11 @@ namespace Geo
 					Poly* poly = out_outsideMesh.Add();
 					
 					*poly = *(*i);
-
-					poly->Finalize();
 					
 					//printf("Front.\n");
 					
 				}
-				
-				if (classification == pcBack)
+				else if (classification == pcBack)
 				{
 				
 					// Inside.
@@ -125,8 +113,6 @@ namespace Geo
 					Poly* poly = out_insideMesh.Add();
 					
 					*poly = *(*i);
-
-					poly->Finalize();
 					
 					//printf("Back.\n");
 					
@@ -140,32 +126,29 @@ namespace Geo
 
 			// Clip all polygons and send them to front or back intermediate meshes..
 
-			Mesh* tempMesh[2];
-
-			tempMesh[0] = new Mesh;
-			tempMesh[1] = new Mesh;
+			Mesh tempMesh[2];
 
 			for (std::list<Poly*>::const_iterator i = mesh.polys.begin(); i != mesh.polys.end(); ++i)
 			{
 
-				PlaneClassification classification = (*i)->Classify(tree.GetSplitPlane());
+				const PlaneClassification classification = (*i)->Classify(tree.GetSplitPlane());
 				
 				if (classification == pcOn || classification == pcFront)
 				{
-					Poly* poly = tempMesh[0]->Add();
+					Poly* poly = tempMesh[0].Add();
 					*poly = *(*i);
 					poly->Finalize();
 				}
-				if (classification == pcBack)
+				else if (classification == pcBack)
 				{
-					Poly* poly = tempMesh[1]->Add();
+					Poly* poly = tempMesh[1].Add();
 					*poly = *(*i);
 					poly->Finalize();
 				}
-				if (classification == pcSpan)
+				else if (classification == pcSpan)
 				{
-					Poly* front = tempMesh[0]->Add();
-					Poly* back = tempMesh[1]->Add();
+					Poly* front = tempMesh[0].Add();
+					Poly* back = tempMesh[1].Add();
 					(*i)->Split(tree.GetSplitPlane(), front, back);
 					front->Finalize();
 					back->Finalize();
@@ -175,7 +158,7 @@ namespace Geo
 
 			// Pass the intermediate meshes down to the children.
 
-			TreeBsp* child[2] =
+			TreeBsp* children[2] =
 			{
 				(TreeBsp*)tree.children.front(),
 				(TreeBsp*)tree.children.back()
@@ -184,12 +167,10 @@ namespace Geo
 			for (int i = 0; i < 2; ++i)
 			{
 			
-				if (tempMesh[i]->polys.empty() == false)
+				if (tempMesh[i].polys.empty() == false)
 				{
-					Filter(*child[i], *tempMesh[i], out_insideMesh, out_outsideMesh/*, polyClipPriority*/);
+					Filter(*children[i], tempMesh[i], out_insideMesh, out_outsideMesh/*, polyClipPriority*/);
 				}
-				
-				delete tempMesh[i];
 				
 			}
 
@@ -210,6 +191,8 @@ namespace Geo
 		
 		delete tree1;
 		delete tree2;
+		
+		out_mesh.Finalize();
 
 	}
 
@@ -225,27 +208,13 @@ namespace Geo
 		Filter(*tree1, mesh2, temp1, temp2); // Inside.
 		Filter(*tree2, mesh1, temp2, out_mesh); // Outside.
 
-		for (std::list<Poly*>::iterator i = temp1.polys.begin(); i != temp1.polys.end(); ++i)
-		{
-			if ((*i)->bFinalized)
-			{
-				(*i)->Unfinalize();
-			}
-		}
-		
 		temp1.RevertPolyWinding();
 		temp1.Move(out_mesh);
-		
-		for (std::list<Poly*>::iterator i = out_mesh.polys.begin(); i != out_mesh.polys.end(); ++i)
-		{
-			if ((*i)->bFinalized)
-			{
-				(*i)->Unfinalize();
-			}
-		}
-		
+
 		delete tree1;
 		delete tree2;
+		
+		out_mesh.Finalize();
 
 	}
 
@@ -259,13 +228,25 @@ namespace Geo
 		Filter(*tree1, mesh1, out_mesh, temp);
 		
 		delete tree1;
+		
+		out_mesh.Finalize();
 
 	}
 
 	void Csg3D::AddInplace(Mesh& mesh1, const Mesh& mesh2)
 	{
 	
-		Assert(false);
+		Mesh out_mesh;
+		
+		Add(mesh1, mesh2, out_mesh);
+		
+		mesh1.Unfinalize();
+		mesh1.Clear();
+		
+		out_mesh.Unfinalize();
+		out_mesh.Move(mesh1);
+		
+		mesh1.Finalize();
 		
 	}
 
@@ -278,7 +259,10 @@ namespace Geo
 		
 		mesh1.Unfinalize();
 		mesh1.Clear();
+		
+		out_mesh.Unfinalize();
 		out_mesh.Move(mesh1);
+		
 		mesh1.Finalize();
 
 	}
@@ -286,7 +270,17 @@ namespace Geo
 	void Csg3D::IntersectInplace(Mesh& mesh1, const Mesh& mesh2)
 	{
 	
-		Assert(false);
+		Mesh out_mesh;
+		
+		Intersect(mesh1, mesh2, out_mesh);
+		
+		mesh1.Unfinalize();
+		mesh1.Clear();
+		
+		out_mesh.Unfinalize();
+		out_mesh.Move(mesh1);
+		
+		mesh1.Finalize();
 		
 	}
 

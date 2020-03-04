@@ -4,7 +4,8 @@
 namespace Geo
 {
 
-	TreeBsp::TreeBsp() : Tree()
+	TreeBsp::TreeBsp()
+		: Tree()
 	{
 
 	}
@@ -64,7 +65,7 @@ namespace Geo
 			
 			Assert(mesh.polys.empty() == false);
 			
-			#if 0
+		#if 0
 			
 			if (mesh->polys.size() > 1)
 			{
@@ -80,7 +81,7 @@ namespace Geo
 				printf("---\n");
 			}
 			
-			#endif
+		#endif
 			
 			if (mesh.polys.empty() == false)
 			{
@@ -113,7 +114,7 @@ namespace Geo
 		nBack = 0;
 		nSpan = 0;
 
-	};
+	}
 
 	bool TreeBsp::FindSplitPlane(Plane* plane) const
 	{

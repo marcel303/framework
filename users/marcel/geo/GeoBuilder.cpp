@@ -7,6 +7,13 @@
 namespace Geo
 {
 
+	Builder::Builder()
+	{
+	
+		mesh = nullptr;
+		
+	}
+	
 	Builder& Builder::push()
 	{
 	
@@ -60,7 +67,51 @@ namespace Geo
 		return *this;
 	
 	}
-
+	
+	Builder& Builder::pushScale(float s)
+	{
+	
+		push();
+		
+		scale(s);
+		
+		return *this;
+		
+	}
+	
+	Builder& Builder::pushScale(float sx, float sy, float sz)
+	{
+	
+		push();
+		
+		scale(sx, sy, sz);
+		
+		return *this;
+		
+	}
+	
+	Builder& Builder::pushRotate(float angle, float axisX, float axisY, float axisZ)
+	{
+	
+		push();
+		
+		rotate(angle, axisX, axisY, axisZ);
+		
+		return *this;
+		
+	}
+	
+	Builder& Builder::pushTranslate(float x, float y, float z)
+	{
+	
+		push();
+		
+		translate(x, y, z);
+		
+		return *this;
+		
+	}
+	
 	Builder& Builder::transform(Poly* poly)
 	{
 
@@ -73,6 +124,30 @@ namespace Geo
 		
 		return *this;
 
+	}
+	
+	Builder& Builder::begin(Mesh& mesh)
+	{
+	
+		push();
+		
+		this->mesh = &mesh;
+		
+		return *this;
+	
+	}
+	
+	Builder& Builder::end()
+	{
+	
+		pop();
+		
+		mesh->Finalize();
+		
+		mesh = nullptr;
+		
+		return *this;
+		
 	}
 	
 	//

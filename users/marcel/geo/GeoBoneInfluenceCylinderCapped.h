@@ -16,9 +16,9 @@ namespace Geo
 		
 	public:
 		
-		float m_radius; // Radius of cylinder.
-		float m_min; // Cylinder extent along the X axis, minimum value.
-		float m_max; // Cylinder extent along the X axis, maximum value.
+		float m_radius; ///< Radius of the cylinder.
+		float m_min;    ///< Cylinder extent along the X axis, minimum value.
+		float m_max;    ///< Cylinder extent along the X axis, maximum value.
 		
 	public:
 		
@@ -28,8 +28,8 @@ namespace Geo
 		
 	protected:
 		
-		Vec3 point1; ///< First point on line segment.
-		Vec3 point2; ///< Second point on line segment.
+		Vec3 point1;     ///< First point on line segment.
+		Vec3 point2;     ///< Second point on line segment.
 		Plane planeLine; ///< Edge plane composed of point1 and point2. Required by nearest point on line algoritm.
 		float m_radius2; ///< Radius, squared.
 		

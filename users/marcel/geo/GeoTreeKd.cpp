@@ -4,7 +4,8 @@
 namespace Geo
 {
 
-	TreeKd::TreeKd() : Tree()
+	TreeKd::TreeKd()
+		: Tree()
 	{
 
 		splitAxis = 0;

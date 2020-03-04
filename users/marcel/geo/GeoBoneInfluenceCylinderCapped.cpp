@@ -5,7 +5,8 @@
 namespace Geo
 {
 
-	BoneInfluenceCylinderCapped::BoneInfluenceCylinderCapped() : BoneInfluence()
+	BoneInfluenceCylinderCapped::BoneInfluenceCylinderCapped()
+		: BoneInfluence()
 	{
 
 		type = bitCylinderCapped;

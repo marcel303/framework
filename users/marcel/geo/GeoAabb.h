@@ -21,8 +21,8 @@ namespace Geo
 		
 	public:
 		
-		Aabb& operator=(const Aabb& aabb); ///< Copy.
-		Aabb operator+(const Aabb& aabb); ///< Expand bounding box such that it covers the added region.
+		Aabb& operator=(const Aabb& aabb);
+		Aabb operator+(const Aabb& aabb);  ///< Expand bounding box such that it covers the added region.
 		void operator+=(const Aabb& aabb); ///< Expand bounding box such that it covers the added region.
 		
 	};

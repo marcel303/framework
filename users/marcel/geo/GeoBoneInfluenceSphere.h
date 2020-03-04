@@ -10,7 +10,8 @@ namespace Geo
 	
 	public:
 	
-		BoneInfluenceSphere() : BoneInfluence()
+		BoneInfluenceSphere()
+			: BoneInfluence()
 		{
 		
 			m_radius = 1.0f;

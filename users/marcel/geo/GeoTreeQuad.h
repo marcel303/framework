@@ -21,8 +21,8 @@ namespace Geo
 	protected:
 		
 		Vec3 splitPosition; ///< Center position of split.
-		int splitAxis; ///< Axis that does not get split. Default X axis. Usually Y axis for terrain.
-		int splitTreshold; ///< Minimum number of polygons before split. Default 2.
+		int splitAxis;      ///< Axis that does not get split. Default X axis. Usually Y axis for terrain.
+		int splitTreshold;  ///< Minimum number of polygons before split. Default 2.
 		
 	public:
 

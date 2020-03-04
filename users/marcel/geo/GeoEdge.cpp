@@ -27,9 +27,9 @@ namespace Geo
 
 		planeEdge.Setup(vertex[0]->position, vertex[1]->position);
 		
-		const float size2 = planeEdge.normal.CalcSizeSq();
-		planeEdge.normal /= size2;
-		planeEdge.distance /= size2;
+		const float sizeSq = planeEdge.normal.CalcSizeSq();
+		planeEdge.normal /= sizeSq;
+		planeEdge.distance /= sizeSq;
 		
 	}
 

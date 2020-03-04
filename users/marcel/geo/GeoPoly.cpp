@@ -147,9 +147,11 @@ namespace Geo
 		for (std::list<Vertex*>::const_iterator i = vertices.begin(); i != vertices.end(); ++i)
 		{
 			PlaneClassification temp = (*i)->Classify(plane);
+			
 			if (temp != pcOn)
 			{
 				classification = pcUnknown;
+				break;
 			}
 		}
 		
@@ -168,6 +170,7 @@ namespace Geo
 			if (temp != pcFront && temp != pcOn)
 			{
 				classification = pcUnknown;
+				break;
 			}
 		}
 		
@@ -186,6 +189,7 @@ namespace Geo
 			if (temp != pcBack && temp != pcOn)
 			{
 				classification = pcUnknown;
+				break;
 			}
 		}
 		
@@ -211,16 +215,17 @@ namespace Geo
 		
 		for (std::list<Vertex*>::const_iterator i = poly.vertices.begin(); i != poly.vertices.end(); ++i)
 		{
-			PlaneClassification temp = plane.Classify((*i)->position);
+			const PlaneClassification temp = plane.Classify((*i)->position);
+			
 			if (temp == pcOn)
 			{
 				++nOn;
 			}
-			if (temp == pcFront)
+			else if (temp == pcFront)
 			{
 				++nFront;
 			}
-			if (temp == pcBack)
+			else if (temp == pcBack)
 			{
 				++nBack;
 			}

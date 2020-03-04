@@ -32,7 +32,7 @@ namespace Geo
 
 		this->position = vertex.position;
 		
-		for (int i = 0; i < nVarying; ++i)
+		for (int i = 0; i < kMaxVaryings; ++i)
 		{
 			varying[i] = vertex.varying[i];
 		}
@@ -48,7 +48,7 @@ namespace Geo
 		
 		temp.position = position + vertex.position;
 		
-		for (int i = 0; i < nVarying; ++i)
+		for (int i = 0; i < kMaxVaryings; ++i)
 		{
 			temp.varying[i] = varying[i] + vertex.varying[i];
 		}
@@ -64,7 +64,7 @@ namespace Geo
 		
 		temp.position = position - vertex.position;
 		
-		for (int i = 0; i < nVarying; ++i)
+		for (int i = 0; i < kMaxVaryings; ++i)
 		{
 			temp.varying[i] = varying[i] - vertex.varying[i];
 		}
@@ -73,14 +73,14 @@ namespace Geo
 		
 	}
 
-	Vertex Vertex::operator*(float v) const
+	Vertex Vertex::operator*(const float v) const
 	{
 
 		Vertex temp;
 		
 		temp.position = position * v;
 		
-		for (int i = 0; i < nVarying; ++i)
+		for (int i = 0; i < kMaxVaryings; ++i)
 		{
 			temp.varying[i] = varying[i] * v;
 		}
@@ -94,7 +94,7 @@ namespace Geo
 
 		position += vertex.position;
 		
-		for (int i = 0; i < nVarying; ++i)
+		for (int i = 0; i < kMaxVaryings; ++i)
 		{
 			varying[i] += vertex.varying[i];
 		}
@@ -108,7 +108,7 @@ namespace Geo
 
 		position -= vertex.position;
 		
-		for (int i = 0; i < nVarying; ++i)
+		for (int i = 0; i < kMaxVaryings; ++i)
 		{
 			varying[i] -= vertex.varying[i];
 		}
@@ -117,12 +117,12 @@ namespace Geo
 		
 	}
 
-	Vertex& Vertex::operator*=(float v)
+	Vertex& Vertex::operator*=(const float v)
 	{
 
 		position *= v;
 		
-		for (int i = 0; i < nVarying; ++i)
+		for (int i = 0; i < kMaxVaryings; ++i)
 		{
 			varying[i] *= v;
 		}

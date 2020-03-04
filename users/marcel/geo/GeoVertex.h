@@ -17,39 +17,39 @@ namespace Geo
 	public:
 		
 		Vertex();
-		Vertex(const Vertex& vertex); ///< Copy constructor.
+		Vertex(const Vertex& vertex);
 		~Vertex();
 		
 	public:
 		
-		static const int nVarying = 8; ///< Maximum number of 'varying' (interpolated) components.
+		static const int kMaxVaryings = 8; ///< Maximum number of 'varying' (interpolated) components.
 		
 	public:
 		
 		Vec3 position; ///< Position of vertex.
 		Plane planeFaceAverage; ///< Average face normal (and plane distance).
 
-		Vec4 varying[nVarying]; ///< Varying components. These are user-defined values that get interpolated when splitting edges. These can be anything, like for instance texture coordinates, a normal vector or a color.
+		Vec4 varying[kMaxVaryings]; ///< Varying components. These are user-defined values that get interpolated when splitting edges. These can be anything, like for instance texture coordinates, a normal vector or a color.
 		
 	public:
 		
-		PlaneClassification Classify(const Plane& plane) const; ///< Classify vertex position against plane.
+		PlaneClassification Classify(const Plane& plane) const;
 		
 	public:
 		
-		Vertex& operator=(const Vertex& vertex); ///< Assign vertex.
+		Vertex& operator=(const Vertex& vertex);
 		
 	public:
 		
-		Vertex operator+(const Vertex& vertex) const; ///< Add vertices. Return result. Add position and varying values.
-		Vertex operator-(const Vertex& vertex) const; ///< Subtract vertices. Return result. Subtract position and varying values.
-		Vertex operator*(float v) const; ///< Scale vertex. Return result. Scale position and varying values.
+		Vertex operator+(const Vertex& vertex) const;
+		Vertex operator-(const Vertex& vertex) const;
+		Vertex operator*(const float v) const;
 		
 	public:
 		
-		Vertex& operator+=(const Vertex& vertex); ///< Add vertex.
-		Vertex& operator-=(const Vertex& vertex); ///< Subtract vertex.
-		Vertex& operator*=(float v); ///< Scale vertex.
+		Vertex& operator+=(const Vertex& vertex);
+		Vertex& operator-=(const Vertex& vertex);
+		Vertex& operator*=(const float v);
 
 	};
 

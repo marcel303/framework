@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GeoMesh.h"
+#include <list>
 
 namespace Geo
 {
@@ -20,7 +21,7 @@ namespace Geo
 		
 	public:
 		
-		Tree* parent; ///< Parent node, or 0 if root.
+		Tree* parent; ///< Parent node, or nul if root.
 
 		Mesh mesh; ///< Mesh containing geometric data.
 		
@@ -52,15 +53,15 @@ namespace Geo
 			
 		public:
 			
-			int nLeafs; ///< Number of leafs.
-			int nNodes; ///< Number of nodes.
+			int nLeafs;  ///< Number of leafs.
+			int nNodes;  ///< Number of nodes.
 			int nSplits; ///< Number of split polygons.
-			int nPoly; ///< Number of polygons.
+			int nPoly;   ///< Number of polygons.
 			int nVertex; ///< Number of vertices.
 			
 		};
 		
-		void Split(const Plane& plane, Tree* outTreeFront, Tree* outTreeBack, GenerateStatistics* generateStatistics = 0); ///< Split the node by the given plane into two child nodes, that each contain part of the geometric data. When geometry spans the plane, the geometry is split into parts and filtered to the appropriate nodes.
+		void Split(const Plane& plane, Tree* out_treeFront, Tree* out_treeBack, GenerateStatistics* generateStatistics = 0); ///< Split the node by the given plane into two child nodes, that each contain part of the geometric data. When geometry spans the plane, the geometry is split into parts and filtered to the appropriate nodes.
 		
 		virtual void Generate(int depthMax, GenerateStatistics* statistics = 0); ///< Generate tree structure. Use this function to create a tree from the geometric data using a specific algortim. Derived classes implement their own generation method.
 
@@ -74,10 +75,10 @@ namespace Geo
 			
 		public:
 		
-			int nOn; ///< Number of polygons on splitting plane.
+			int nOn;    ///< Number of polygons on splitting plane.
 			int nFront; ///< Number of polygons in front of splitting plane.
-			int nBack; ///< Number of polygons behind splitting plane.
-			int nSpan; ///< Number of polygons spanning splitting plane.
+			int nBack;  ///< Number of polygons behind splitting plane.
+			int nSpan;  ///< Number of polygons spanning splitting plane.
 		
 		};
 		

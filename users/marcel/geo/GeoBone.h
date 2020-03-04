@@ -30,13 +30,13 @@ namespace Geo
 		
 	public:
 		
-		Vec3 bindPositionLocal; ///< Position at bind time.
-		Mat4x4 bindRotationLocal; ///< Rotation at bind time.
+		Vec3 bindPositionLocal;     ///< Position at bind time.
+		Mat4x4 bindRotationLocal;   ///< Rotation at bind time.
 		Mat4x4 bindTransformGlobal; ///< Combined matrix that transforms vertices in local bone coordinate system to position in global coordinate system.
 		Mat4x4 bindTransformGlobalInverse; ///< Combined matrix that transforms vertices at bind time to local bone coordinate system.
 		
-		Vec3 currentPositionLocal; ///< Current position in local coordinate system.
-		Mat4x4 currentRotationLocal; ///< Current rotation in local coordinate system.
+		Vec3 currentPositionLocal;     ///< Current position in local coordinate system.
+		Mat4x4 currentRotationLocal;   ///< Current rotation in local coordinate system.
 		Mat4x4 currentTransformGlobal; ///< Combined transform from root uptil this bone.
 		
 		Mat4x4 transform; ///< Final transform matrix that modifies vertices under bone rotation and position.
