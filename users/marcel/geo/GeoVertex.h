@@ -45,7 +45,7 @@ namespace Geo
 		Vertex operator-(const Vertex& vertex) const; ///< Subtract vertices. Return result. Subtract position and varying values.
 		Vertex operator*(float v) const; ///< Scale vertex. Return result. Scale position and varying values.
 		
-		public:
+	public:
 		
 		Vertex& operator+=(const Vertex& vertex); ///< Add vertex.
 		Vertex& operator-=(const Vertex& vertex); ///< Subtract vertex.

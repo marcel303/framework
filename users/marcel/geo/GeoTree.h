@@ -46,11 +46,11 @@ namespace Geo
 		class GenerateStatistics
 		{
 		
-			public:
+		public:
 			
 			GenerateStatistics();
 			
-			public:
+		public:
 			
 			int nLeafs; ///< Number of leafs.
 			int nNodes; ///< Number of nodes.
@@ -68,11 +68,11 @@ namespace Geo
 		class SplitInfo
 		{
 		
-			public:
+		public:
 			
 			SplitInfo();
 			
-			public:
+		public:
 		
 			int nOn; ///< Number of polygons on splitting plane.
 			int nFront; ///< Number of polygons in front of splitting plane.

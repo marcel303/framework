@@ -47,7 +47,7 @@ namespace Geo
 						{
 							Poly* inTemp = new Poly;
 							(*i)->Clip(tree->cChild.front(), inTemp, outOutside);
-							if (inTemp->cVertex.size() >= 3)
+							if (inTemp->vertices.size() >= 3)
 							{
 								inTemp->Finalize();
 								outInside->Link(inTemp);
@@ -203,12 +203,10 @@ namespace Geo
 		TreeBsp* tree1 = CreateBspTree(mesh1);
 		TreeBsp* tree2 = CreateBspTree(mesh2);
 
-		Mesh* temp = new Mesh;
+		Mesh temp;
 		
-		Filter(*tree1, mesh2, *temp, out_mesh);
-		Filter(*tree2, mesh1, *temp, out_mesh);
-		
-		delete temp;
+		Filter(*tree1, mesh2, temp, out_mesh);
+		Filter(*tree2, mesh1, temp, out_mesh);
 		
 		delete tree1;
 		delete tree2;
@@ -292,4 +290,4 @@ namespace Geo
 		
 	}
 
-} // Geo.
+}

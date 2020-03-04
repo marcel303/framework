@@ -41,7 +41,7 @@ namespace Geo
 		class KdSplitInfo
 		{
 		
-			public:
+		public:
 			
 			float d;
 			float cost;

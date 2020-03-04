@@ -38,7 +38,7 @@ namespace Geo
 
 		Assert(!bFinalized);
 
-		Poly* poly = new Poly;
+		Poly* poly = new Poly();
 		
 		polys.push_back(poly);
 		
@@ -189,12 +189,12 @@ namespace Geo
 		{
 			if ((*i)->bFinalized)
 			{
-				center += (*i)->GetVertexCenter() * (float)(*i)->cVertex.size();
-				nVertices += (int)(*i)->cVertex.size();
+				center += (*i)->GetVertexCenter() * (float)(*i)->vertices.size();
+				nVertices += (int)(*i)->vertices.size();
 			}
 			else
 			{
-				for (std::list<Vertex*>::iterator j = (*i)->cVertex.begin(); j != (*i)->cVertex.end(); ++j)
+				for (std::list<Vertex*>::iterator j = (*i)->vertices.begin(); j != (*i)->vertices.end(); ++j)
 				{
 					center += (*j)->position;
 					++nVertices;

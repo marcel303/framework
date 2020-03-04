@@ -27,21 +27,25 @@ namespace Geo
 
 		// Remove influences.
 		
-		for (std::list<BoneInfluence*>::iterator i = influences.begin(); i != influences.end(); ++i)
+		for (auto * influence : influences)
 		{
 		
-			delete (*i);
+			delete influence;
 			
 		}
+		
+		influences.clear();
 		
 		// Remove child bones.
 		
-		for (std::list<Bone*>::iterator i = children.begin(); i != children.end(); ++i)
+		for (auto * child : children)
 		{
 		
-			delete (*i);
+			delete child;
 			
 		}
+		
+		children.clear();
 		
 	}
 	

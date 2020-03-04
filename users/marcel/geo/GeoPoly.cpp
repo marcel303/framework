@@ -39,7 +39,7 @@ namespace Geo
 		
 		Vertex* vertex = new Vertex;
 		
-		cVertex.push_front(vertex);
+		vertices.push_front(vertex);
 		
 		return vertex;
 		
@@ -52,7 +52,7 @@ namespace Geo
 		
 		Vertex* vertex = new Vertex;
 		
-		cVertex.push_back(vertex);
+		vertices.push_back(vertex);
 		
 		return vertex;
 		
@@ -71,7 +71,7 @@ namespace Geo
 		Assert(vertex);
 		Assert(!bFinalized);
 		
-		cVertex.push_front(vertex);
+		vertices.push_front(vertex);
 		
 		return vertex;
 		
@@ -83,7 +83,7 @@ namespace Geo
 		Assert(vertex);
 		Assert(!bFinalized);
 		
-		cVertex.push_back(vertex);
+		vertices.push_back(vertex);
 		
 		return vertex;
 		
@@ -94,19 +94,19 @@ namespace Geo
 
 		Assert(!bFinalized);
 
-		for (std::list<Vertex*>::iterator i = cVertex.begin(); i != cVertex.end(); ++i)
+		for (std::list<Vertex*>::iterator i = vertices.begin(); i != vertices.end(); ++i)
 		{
 			delete (*i);
 		}
 		
-		cVertex.clear();
+		vertices.clear();
 		
-		for (std::list<Edge*>::iterator i = cEdge.begin(); i != cEdge.end(); ++i)
+		for (std::list<Edge*>::iterator i = edges.begin(); i != edges.end(); ++i)
 		{
 			delete (*i);
 		}
 		
-		cEdge.clear();
+		edges.clear();
 		
 	}
 
@@ -117,16 +117,16 @@ namespace Geo
 
 		std::list<Vertex*> temp;
 		
-		for (std::list<Vertex*>::iterator i = cVertex.begin(); i != cVertex.end(); ++i)
+		for (std::list<Vertex*>::iterator i = vertices.begin(); i != vertices.end(); ++i)
 		{
 			temp.push_front((*i));
 		}
 		
-		cVertex.clear();
+		vertices.clear();
 		
 		for (std::list<Vertex*>::iterator i = temp.begin(); i != temp.end(); ++i)
 		{
-			cVertex.push_back((*i));
+			vertices.push_back((*i));
 		}
 
 	}
@@ -144,7 +144,7 @@ namespace Geo
 
 		classification = pcOn;
 		
-		for (std::list<Vertex*>::const_iterator i = cVertex.begin(); i != cVertex.end(); ++i)
+		for (std::list<Vertex*>::const_iterator i = vertices.begin(); i != vertices.end(); ++i)
 		{
 			PlaneClassification temp = (*i)->Classify(plane);
 			if (temp != pcOn)
@@ -162,7 +162,7 @@ namespace Geo
 		
 		classification = pcFront;
 		
-		for (std::list<Vertex*>::const_iterator i = cVertex.begin(); i != cVertex.end(); ++i)
+		for (std::list<Vertex*>::const_iterator i = vertices.begin(); i != vertices.end(); ++i)
 		{
 			PlaneClassification temp = (*i)->Classify(plane);
 			if (temp != pcFront && temp != pcOn)
@@ -180,7 +180,7 @@ namespace Geo
 		
 		classification = pcBack;
 		
-		for (std::list<Vertex*>::const_iterator i = cVertex.begin(); i != cVertex.end(); ++i)
+		for (std::list<Vertex*>::const_iterator i = vertices.begin(); i != vertices.end(); ++i)
 		{
 			PlaneClassification temp = (*i)->Classify(plane);
 			if (temp != pcBack && temp != pcOn)
@@ -209,7 +209,7 @@ namespace Geo
 		int nFront = 0;
 		int nBack = 0;
 		
-		for (std::list<Vertex*>::const_iterator i = poly.cVertex.begin(); i != poly.cVertex.end(); ++i)
+		for (std::list<Vertex*>::const_iterator i = poly.vertices.begin(); i != poly.vertices.end(); ++i)
 		{
 			PlaneClassification temp = plane.Classify((*i)->position);
 			if (temp == pcOn)
@@ -253,7 +253,7 @@ namespace Geo
 		// FIXME: Check classification.
 		// If front or back, copy.
 		
-		for (std::list<Edge*>::iterator i = cEdge.begin(); i != cEdge.end(); ++i)
+		for (std::list<Edge*>::iterator i = edges.begin(); i != edges.end(); ++i)
 		{
 		
 			PlaneClassification classification1 = plane.Classify((*i)->vertex[0]->position);
@@ -328,8 +328,8 @@ namespace Geo
 		
 		}
 		
-		Assert(polyFront->cVertex.size() >= 3);
-		Assert(polyBack->cVertex.size() >= 3);
+		Assert(polyFront->vertices.size() >= 3);
+		Assert(polyBack->vertices.size() >= 3);
 		
 	}
 
@@ -374,7 +374,7 @@ namespace Geo
 		
 		*temp = *this;
 		
-		for (std::list<Edge*>::iterator i = cEdge.begin(); i != cEdge.end(); ++i)
+		for (std::list<Edge*>::iterator i = edges.begin(); i != edges.end(); ++i)
 		{
 		
 			temp->Finalize();
@@ -387,7 +387,7 @@ namespace Geo
 			
 			temp->Split((*i)->planeOutward, clip[0], clip[1]);
 
-			if (clip[0]->cVertex.size() >= 3)
+			if (clip[0]->vertices.size() >= 3)
 			{
 				(*outside)->Link(clip[0]);
 			}
@@ -402,7 +402,7 @@ namespace Geo
 
 		}
 
-		if (temp->cVertex.size() >= 3)
+		if (temp->vertices.size() >= 3)
 		{
 			*(*inside) = *temp;
 		}
@@ -417,9 +417,9 @@ namespace Geo
 		Assert(mesh);
 		Assert(bFinalized);
 
-		int nTriangle = (int)cEdge.size() - 2;
+		int nTriangle = (int)edges.size() - 2;
 		
-		Edge* edge1 = cEdge.front();
+		Edge* edge1 = edges.front();
 		Edge* edge2 = edge1->next;
 		Edge* edge3 = edge2->next;
 		
@@ -448,7 +448,7 @@ namespace Geo
 
 		bool bFirstVertex = true;
 		
-		for (std::list<Vertex*>::const_iterator i = cVertex.begin(); i != cVertex.end(); ++i)
+		for (std::list<Vertex*>::const_iterator i = vertices.begin(); i != vertices.end(); ++i)
 		{
 			if (bFirstVertex)
 			{
@@ -493,14 +493,14 @@ namespace Geo
 
 		Vec3 center;
 		
-		for (std::list<Vertex*>::const_iterator i = cVertex.begin(); i != cVertex.end(); ++i)
+		for (std::list<Vertex*>::const_iterator i = vertices.begin(); i != vertices.end(); ++i)
 		{
 			center += (*i)->position;
 		}
 		
-		if (cVertex.size() > 0)
+		if (vertices.size() > 0)
 		{
-			center /= (float)cVertex.size();
+			center /= (float)vertices.size();
 		}
 		
 		return center;
@@ -535,12 +535,12 @@ namespace Geo
 	void Poly::Finalize()
 	{
 
-		Assert(cVertex.size() >= 3);
+		Assert(vertices.size() >= 3);
 		Assert(!bFinalized);
 		
 		// Calculate plane.
 		
-		std::list<Vertex*>::iterator i = cVertex.begin();
+		std::list<Vertex*>::iterator i = vertices.begin();
 		
 		Vertex* vertex1 = (*i); ++i;
 		Vertex* vertex2 = (*i); ++i;
@@ -551,21 +551,21 @@ namespace Geo
 		
 		// Create edges.
 		
-		for (std::list<Edge*>::iterator i = cEdge.begin(); i != cEdge.end(); ++i)
+		for (std::list<Edge*>::iterator i = edges.begin(); i != edges.end(); ++i)
 		{
 			delete (*i);
 		}
 		
-		cEdge.clear();
+		edges.clear();
 		
-		for (std::list<Vertex*>::iterator i1 = cVertex.begin(); i1 != cVertex.end(); ++i1)
+		for (std::list<Vertex*>::iterator i1 = vertices.begin(); i1 != vertices.end(); ++i1)
 		{
 		
 			std::list<Vertex*>::iterator i2 = i1; ++i2;
 			
-			if (i2 == cVertex.end())
+			if (i2 == vertices.end())
 			{
-				i2 = cVertex.begin();
+				i2 = vertices.begin();
 			}
 			
 			Edge* edge = new Edge;
@@ -578,18 +578,18 @@ namespace Geo
 			edge->planeOutward.normal = edge->planeEdge.normal % plane.normal;
 			edge->planeOutward.distance = edge->planeOutward.normal * edge->vertex[0]->position;
 			
-			cEdge.push_back(edge);
+			edges.push_back(edge);
 			
 		}
 		
-		for (std::list<Edge*>::iterator i1 = cEdge.begin(); i1 != cEdge.end(); ++i1)
+		for (std::list<Edge*>::iterator i1 = edges.begin(); i1 != edges.end(); ++i1)
 		{
 		
 			std::list<Edge*>::iterator i2 = i1; ++i2;
 			
-			if (i2 == cEdge.end())
+			if (i2 == edges.end())
 			{
-				i2 = cEdge.begin();
+				i2 = edges.begin();
 			}
 			
 			(*i1)->next = (*i2);
@@ -605,16 +605,16 @@ namespace Geo
 		
 		vertexCenter.SetZero();
 		
-		for (std::list<Vertex*>::iterator i = cVertex.begin(); i != cVertex.end(); ++i)
+		for (std::list<Vertex*>::iterator i = vertices.begin(); i != vertices.end(); ++i)
 		{
 			vertexCenter += (*i)->position;
 		}
 		
-		vertexCenter /= (float)cVertex.size();
+		vertexCenter /= (float)vertices.size();
 		
 		bFinalized = true;
 		
-		Assert(cEdge.size() == cVertex.size());
+		Assert(edges.size() == vertices.size());
 		
 	}
 
@@ -634,7 +634,7 @@ namespace Geo
 		
 		Poly* poly = (Poly*)&inPoly;
 		
-		for (std::list<Vertex*>::iterator i = poly->cVertex.begin(); i != poly->cVertex.end(); ++i)
+		for (std::list<Vertex*>::iterator i = poly->vertices.begin(); i != poly->vertices.end(); ++i)
 		{
 		
 			Vertex* vertex = AddTail();

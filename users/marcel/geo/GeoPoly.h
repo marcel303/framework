@@ -26,8 +26,8 @@ namespace Geo
 		
 	public:
 		
-		std::list<Vertex*> cVertex; ///< List of vertices.
-		std::list<Edge*> cEdge; ///< List of edges. Reconstructed from list of vertices when finalizing.
+		std::list<Vertex*> vertices; ///< List of vertices.
+		std::list<Edge*> edges; ///< List of edges. Reconstructed from list of vertices when finalizing.
 		
 	public:
 		

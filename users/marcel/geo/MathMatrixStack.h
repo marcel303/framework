@@ -29,6 +29,7 @@ public:
 public:
 	
 	void ApplyTranslation(Vec3Arg translation);
+	void ApplyRotationAngleAxis(float angle, Vec3Arg axis);
 	void ApplyRotationEuler(Vec3Arg rotation);
 	void ApplyRotationX(float angle);
 	void ApplyRotationY(float angle);

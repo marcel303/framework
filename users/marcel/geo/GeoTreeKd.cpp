@@ -67,7 +67,7 @@ namespace Geo
 				
 				for (std::list<Poly*>::const_iterator i = mesh.polys.begin(); i != mesh.polys.end(); ++i)
 				{
-					generateStatistics->nVertex += (int)(*i)->cVertex.size();
+					generateStatistics->nVertex += (int)(*i)->vertices.size();
 				}
 				
 			}

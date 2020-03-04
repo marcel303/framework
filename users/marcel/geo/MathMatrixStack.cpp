@@ -1,4 +1,5 @@
 #include "MathMatrixStack.h"
+#include "Quat.h"
 
 MatrixStack::MatrixStack()
 {
@@ -51,6 +52,18 @@ void MatrixStack::ApplyTranslation(Vec3Arg translation)
 	matrix.MakeTranslation(translation);
 	GetMatrix() = GetMatrix() * matrix;
 	
+}
+
+void MatrixStack::ApplyRotationAngleAxis(float angle, Vec3Arg axis)
+{
+
+	Quat q;
+	q.fromAxisAngle(axis, angle);
+	
+	Mat4x4 matrix = q.toMatrix();
+	
+	GetMatrix() = GetMatrix() * matrix;
+
 }
 
 void MatrixStack::ApplyRotationEuler(Vec3Arg rotation)
