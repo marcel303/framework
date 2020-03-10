@@ -83,6 +83,36 @@ void GxMesh::draw(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int
 	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
 }
 
+void GxMesh::drawInstanced(const int numInstances, const GX_PRIMITIVE_TYPE type) const
+{
+	fassert(m_vertexBuffer);
+	
+	AssertMsg(m_indexBuffer != nullptr, "GxMesh::drawInstanced with prim type assumes an index buffer is set. if you wish to draw non-indexed primitives, use the draw method which takes as explicit arguments the 'firstVertex' and 'numVertices'", 0);
+	
+	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
+	
+	if (m_indexBuffer != nullptr)
+	{
+		const int numIndices = m_indexBuffer->getNumIndices();
+
+		gxDrawInstancedIndexedPrimitives(numInstances, type, 0, numIndices, m_indexBuffer);
+	}
+	
+	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
+}
+
+void GxMesh::drawInstanced(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices) const
+{
+	fassert(m_vertexBuffer);
+	
+	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
+	if (m_indexBuffer)
+		gxDrawInstancedIndexedPrimitives(numInstances, type, firstVertex, numVertices, m_indexBuffer);
+	else
+		gxDrawInstancedPrimitives(numInstances, type, firstVertex, numVertices);
+	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
+}
+
 void GxMesh::addPrim(const GX_PRIMITIVE_TYPE type, const int numVertices, const bool indexed)
 {
 	addPrim(type, 0, numVertices, indexed);
@@ -109,6 +139,21 @@ void GxMesh::draw() const
 				gxDrawIndexedPrimitives(prim.type, prim.firstVertex, prim.numVertices, m_indexBuffer);
 			else
 				gxDrawPrimitives(prim.type, prim.firstVertex, prim.numVertices);
+		}
+	}
+	gxSetVertexBuffer(nullptr, nullptr, 0, 0);
+}
+
+void GxMesh::drawInstanced(const int numInstances) const
+{
+	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
+	{
+		for (auto & prim : m_primitives)
+		{
+			if (prim.indexed)
+				gxDrawInstancedIndexedPrimitives(numInstances, prim.type, prim.firstVertex, prim.numVertices, m_indexBuffer);
+			else
+				gxDrawInstancedPrimitives(numInstances, prim.type, prim.firstVertex, prim.numVertices);
 		}
 	}
 	gxSetVertexBuffer(nullptr, nullptr, 0, 0);

@@ -116,10 +116,13 @@ public:
 	
 	void draw(const GX_PRIMITIVE_TYPE type) const;
 	void draw(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices) const;
+	void drawInstanced(const int numInstances, const GX_PRIMITIVE_TYPE type) const;
+	void drawInstanced(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices) const;
 	
 	void addPrim(const GX_PRIMITIVE_TYPE type, const int numVertices, const bool indexed);
 	void addPrim(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices, const bool indexed);
 	void draw() const;
+	void drawInstanced(const int numInstances) const;
 };
 
 /**
@@ -144,6 +147,9 @@ void gxSetVertexBuffer(
 
 void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex, const int numIndices, const GxIndexBuffer * indexBuffer);
 void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices);
+
+void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstIndex, const int numIndices, const GxIndexBuffer * indexBuffer);
+void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices);
 
 //
 
