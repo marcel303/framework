@@ -199,6 +199,26 @@ namespace AnimModel
 		result.scale += transform.scale;
 	}
 	
+	Mat4x4 BoneTransform::toMatrix() const
+	{
+		// todo : scale?
+		
+		Mat4x4 result;
+		
+		rotation.toMatrix3x3(result);
+		
+		result(0, 3) = 0.f;
+		result(1, 3) = 0.f;
+		result(2, 3) = 0.f;
+		
+		result(3, 0) = translation[0];
+		result(3, 1) = translation[1];
+		result(3, 2) = translation[2];
+		result(3, 3) = 1.f;
+		
+		return result;
+	}
+	
 	//
 	
 	BoneSet::BoneSet()
@@ -336,6 +356,32 @@ namespace AnimModel
 	#endif
 	}
 	
+	void BoneSet::calculateParentIndices()
+	{
+		std::map<std::string, int> boneNameToIndex;
+		
+		for (int i = 0; i < m_numBones; ++i)
+		{
+			Assert(boneNameToIndex.find(m_bones[i].name) == boneNameToIndex.end());
+			
+			boneNameToIndex[m_bones[i].name] = i;
+		}
+		
+		for (int i = 0; i < m_numBones; ++i)
+		{
+			if (m_bones[i].parentName.empty())
+				continue;
+			
+			auto itr = boneNameToIndex.find(m_bones[i].parentName);
+			
+			Assert(itr != boneNameToIndex.end());
+			if (itr != boneNameToIndex.end())
+			{
+				m_bones[i].parent = itr->second;
+			}
+		}
+	}
+	
 	static bool sortByDistance(const std::pair<int, int> & v1, const std::pair<int, int> & v2)
 	{
 		if (v1.second != v2.second)
@@ -455,6 +501,43 @@ namespace AnimModel
 		result.translation = (key1.translation * t1) + (key2.translation * t2);
 		result.rotation = quat;
 		result.scale = (key1.scale * t1) + (key2.scale * t2);
+	}
+	
+	BoneTransform AnimKey::toBoneTransform(RotationType rotationType) const
+	{
+		Quat quat;
+		
+		if (rotationType == RotationType_Quat)
+		{
+			quat = Quat(rotation[0], rotation[1], rotation[2], rotation[3]);
+		}
+		else
+		{
+			Quat quatX;
+			Quat quatY;
+			Quat quatZ;
+			
+			quatX.fromAxisAngle(Vec3(1.f, 0.f, 0.f), rotation[0]);
+			quatY.fromAxisAngle(Vec3(0.f, 1.f, 0.f), rotation[1]);
+			quatZ.fromAxisAngle(Vec3(0.f, 0.f, 1.f), rotation[2]);
+			
+			if (rotationType == RotationType_EulerXYZ)
+			{
+				quat = quatZ * quatY * quatX;
+			}
+			else
+			{
+				fassert(false);
+				quat.makeIdentity();
+			}
+		}
+		
+		BoneTransform result;
+		result.translation = translation;
+		result.rotation = quat;
+		result.scale = scale;
+		
+		return result;
 	}
 	
 	//

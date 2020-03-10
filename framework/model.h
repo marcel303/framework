@@ -35,6 +35,7 @@
 #include "Mat4x4.h"
 #include "Quat.h"
 #include "Vec3.h"
+#include "Vec4.h"
 
 namespace AnimModel
 {
@@ -126,6 +127,8 @@ namespace AnimModel
 		
 		void clear();
 		static void add(BoneTransform & result, const BoneTransform & transform);
+		
+		Mat4x4 toMatrix() const;
 	};
 
 	class Bone
@@ -137,6 +140,7 @@ namespace AnimModel
 		}
 		
 		std::string name;
+		std::string parentName;
 		BoneTransform transform;
 		Mat4x4 poseMatrix;
 		int parent;
@@ -156,6 +160,7 @@ namespace AnimModel
 		void allocate(int numBones);
 		void calculatePoseMatrices(); // calculate pose matrices given the current set of bone transforms
 		void calculateBoneMatrices(); // calculate bone transforms given the current set of pose matrices
+		void calculateParentIndices();
 		void sortBoneIndices();
 		
 		int findBone(const std::string & name);
@@ -166,10 +171,12 @@ namespace AnimModel
 		float time;
 		
 		Vec3 translation;
-		float rotation[4];
+		Vec4 rotation;
 		Vec3 scale;
 		
 		static void interpolate(BoneTransform & result, const AnimKey & key1, const AnimKey & key2, float t, RotationType rotationType);
+		
+		BoneTransform toBoneTransform(RotationType rotationType) const;
 	};
 	
 	struct AnimTrigger
