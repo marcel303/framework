@@ -1492,7 +1492,7 @@ static float scale255(const float v)
 	return v * m;
 }
 
-void gxValidateShaderResources();
+void gxValidateShaderResources(const bool useGenericShader);
 
 void gxInitialize()
 {
@@ -1960,6 +1960,18 @@ static void ensureIndexBufferCapacity(const int numIndices)
 
 static void doCapture(const bool endOfBatch)
 {
+	Mat4x4 modelView;
+	gxGetMatrixf(GX_MODELVIEW, modelView.m_v);
+	
+	for (int i = 0; i < s_gxVertexCount; ++i)
+	{
+		const Vec3 p = modelView.Mul4(Vec3(s_gxVertices[i].px, s_gxVertices[i].py, s_gxVertices[i].pz));
+		
+		s_gxVertices[i].px = p[0];
+		s_gxVertices[i].py = p[1];
+		s_gxVertices[i].pz = p[2];
+	}
+	
 	s_gxCaptureCallback(
 		s_gxVertices,
 		s_gxVertexCount * sizeof(GxVertex),
@@ -2100,7 +2112,7 @@ static void gxFlush(bool endOfBatch)
 	
 		gxValidateMatrices();
 	
-		gxValidateShaderResources();
+		gxValidateShaderResources(useGenericShader);
 	
 		bool indexed = false;
 		int numElements = s_gxVertexCount;
@@ -2386,7 +2398,7 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 	
 	gxValidateMatrices();
 	
-	gxValidateShaderResources();
+	gxValidateShaderResources(useGenericShader);
 
 	//
 
@@ -2614,7 +2626,7 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 
 	gxValidateMatrices();
 
-	gxValidateShaderResources();
+	gxValidateShaderResources(useGenericShader);
 
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 
@@ -2693,7 +2705,7 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 
 	gxValidateMatrices();
 
-	gxValidateShaderResources();
+	gxValidateShaderResources(useGenericShader);
 
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 
@@ -2736,6 +2748,155 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 	globals.gxShaderIsDirty = false;
 }
 
+void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstIndex, const int numIndices, const GxIndexBuffer * indexBuffer)
+{
+	Assert(indexBuffer != nullptr);
+	
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		: *static_cast<Shader*>(globals.shader);
+
+	setShader(shader);
+
+	gxValidatePipelineState();
+
+	gxValidateMatrices();
+
+	gxValidateShaderResources(useGenericShader);
+
+	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
+
+	// set shader parameters for the generic shader
+	
+	if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+	{
+		shader.setImmediate(
+			shaderElem.params[ShaderCacheElem::kSp_Params].index,
+			s_gxTextureEnabled ? 1.f : 0.f,
+			globals.colorMode,
+			globals.colorPost,
+			globals.colorClamp);
+	}
+	
+	// set fragment stage uniform buffers
+	
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	{
+		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
+			continue;
+		
+		[s_activeRenderPass->encoder
+			setFragmentBytes:shaderElem.psUniformData[i]
+			length:shaderElem.psInfo.uniformBufferSize[i]
+			atIndex:i];
+	}
+	
+	if (shader.isValid())
+	{
+		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
+
+		id <MTLBuffer> buffer = (id <MTLBuffer>)indexBuffer->getMetalBuffer();
+		
+		const int indexSize =
+			indexBuffer->getFormat() == GX_INDEX_16
+				? 2
+				: 4;
+		const int indexOffset = firstIndex * indexSize;
+		
+		[s_activeRenderPass->encoder
+			drawIndexedPrimitives:metalPrimitiveType
+			indexCount:numIndices
+			indexType:
+				indexBuffer->getFormat() == GX_INDEX_16
+				? MTLIndexTypeUInt16
+				: MTLIndexTypeUInt32
+			indexBuffer:buffer
+			indexBufferOffset:indexOffset
+			instanceCount:numInstances];
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+
+	globals.gxShaderIsDirty = false;
+}
+
+void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
+{
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+	
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+	
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		: *static_cast<Shader*>(globals.shader);
+
+	setShader(shader);
+
+	gxValidatePipelineState();
+
+	gxValidateMatrices();
+
+	gxValidateShaderResources(useGenericShader);
+
+	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
+
+	// set shader parameters for the generic shader
+	
+	if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+	{
+		shader.setImmediate(
+			shaderElem.params[ShaderCacheElem::kSp_Params].index,
+			s_gxTextureEnabled ? 1.f : 0.f,
+			globals.colorMode,
+			globals.colorPost,
+			globals.colorClamp);
+	}
+
+	// set fragment stage uniform buffers
+	
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	{
+		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
+			continue;
+		
+		[s_activeRenderPass->encoder
+			setFragmentBytes:shaderElem.psUniformData[i]
+			length:shaderElem.psInfo.uniformBufferSize[i]
+			atIndex:i];
+	}
+	
+	if (shader.isValid())
+	{
+		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(type);
+
+		[s_activeRenderPass->encoder
+			drawPrimitives:metalPrimitiveType
+			vertexStart:firstVertex
+			vertexCount:numVertices
+			instanceCount:numInstances];
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+	
+	globals.gxShaderIsDirty = false;
+}
+
 void gxSetCaptureCallback(GxCaptureCallback callback)
 {
 	Assert(s_gxCaptureCallback == nullptr);
@@ -2749,9 +2910,9 @@ void gxClearCaptureCallback()
 
 //
 
-void gxValidateShaderResources()
+void gxValidateShaderResources(const bool useGenericShader)
 {
-	if (s_gxTextureEnabled)
+	if (useGenericShader && s_gxTextureEnabled)
 	{
 	// todo : avoid setting textures when not needed
 	//        needed when: texture changed
