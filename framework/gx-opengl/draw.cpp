@@ -282,6 +282,8 @@ static int s_gxMaxVertexCount = 0;
 static int s_gxPrimitiveSize = 0;
 static GxVertex s_gxVertex = { };
 static bool s_gxTextureEnabled = false;
+static GX_SAMPLE_FILTER s_gxTextureFilter = GX_SAMPLE_NEAREST;
+static bool s_gxTextureClamp = false;
 static GxTextureId s_gxTexture = 0;
 
 static GX_PRIMITIVE_TYPE s_gxLastPrimitiveType = GX_INVALID_PRIM;
@@ -398,6 +400,18 @@ void gxShutdown()
 
 static void doCapture(const bool endOfBatch)
 {
+	Mat4x4 modelView;
+	gxGetMatrixf(GX_MODELVIEW, modelView.m_v);
+	
+	for (int i = 0; i < s_gxVertexCount; ++i)
+	{
+		const Vec3 p = modelView.Mul4(Vec3(s_gxVertices[i].px, s_gxVertices[i].py, s_gxVertices[i].pz));
+		
+		s_gxVertices[i].px = p[0];
+		s_gxVertices[i].py = p[1];
+		s_gxVertices[i].pz = p[2];
+	}
+	
 	s_gxCaptureCallback(
 		s_gxVertices,
 		s_gxVertexCount * sizeof(GxVertex),
@@ -558,9 +572,13 @@ static void gxFlush(bool endOfBatch)
 
 		if (globals.gxShaderIsDirty)
 		{
-		// todo : we miss the meta data for the texture : does it want filtering or not ?
 			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
+			{
+				shader.setTexture(
+					shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+					s_gxTextureFilter != GX_SAMPLE_NEAREST,
+					s_gxTextureClamp);
+			}
 		}
 		
 		if (shader.isValid())
@@ -712,9 +730,13 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	if (globals.gxShaderIsDirty)
 	{
-		// todo : we miss the meta data for the texture : does it want filtering or not ?
 		if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-			shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
+		{
+			shader.setTexture(
+				shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+				s_gxTextureFilter != GX_SAMPLE_NEAREST,
+				s_gxTextureClamp);
+		}
 	}
 
 	//
@@ -858,44 +880,10 @@ void gxSetTexture(GxTextureId texture)
 	}
 }
 
-static GLenum toOpenGLSampleFilter(const GX_SAMPLE_FILTER filter, const bool isMinify)
-{
-	if (filter == GX_SAMPLE_NEAREST)
-		return GL_NEAREST;
-	else if (filter == GX_SAMPLE_LINEAR)
-		return GL_LINEAR;
-	else if (filter == GX_SAMPLE_MIPMAP)
-		return isMinify ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR;
-	else
-	{
-		fassert(false);
-		return GL_NEAREST;
-	}
-}
-
 void gxSetTextureSampler(GX_SAMPLE_FILTER filter, bool clamp)
 {
-	if (s_gxTextureEnabled)
-	{
-		glActiveTexture(GL_TEXTURE0);
-		checkErrorGL();
-		
-		glBindTexture(GL_TEXTURE_2D, s_gxTexture);
-		checkErrorGL();
-		
-		const GLenum openglMinFilter = toOpenGLSampleFilter(filter, true);
-		const GLenum openglMagFilter = toOpenGLSampleFilter(filter, false);
-		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, openglMinFilter);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, openglMagFilter);
-		checkErrorGL();
-		
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-		checkErrorGL();
-		
-		glBindTexture(GL_TEXTURE_2D, 0);
-	}
+	s_gxTextureFilter = filter;
+	s_gxTextureClamp = clamp;
 }
 
 void gxGetTextureSize(GxTextureId texture, int & width, int & height)
@@ -1196,6 +1184,11 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 	AssertMsg(false, "todo : implement gxDrawPrimitives using vertex attrib arrays", 0);
 }
 
+void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
+{
+	AssertMsg(false, "todo : implement gxDrawInstancedIndexedPrimitives using vertex attrib arrays", 0);
+}
+
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
 	AssertMsg(false, "todo : implement gxSetVertexBuffer using vertex attrib arrays", 0);
@@ -1312,9 +1305,13 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 
 		if (globals.gxShaderIsDirty)
 		{
-			// todo : we miss the meta data for the texture : does it want filtering or not ?
 			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
+			{
+				shader.setTexture(
+					shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+					s_gxTextureFilter != GX_SAMPLE_NEAREST,
+					s_gxTextureClamp);
+			}
 		}
 		
 		//
@@ -1380,9 +1377,13 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 
 		if (globals.gxShaderIsDirty)
 		{
-			// todo : we miss the meta data for the texture : does it want filtering or not ?
 			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
-				shader.setTexture(shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture, true, true);
+			{
+				shader.setTexture(
+					shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+					s_gxTextureFilter != GX_SAMPLE_NEAREST,
+					s_gxTextureClamp);
+			}
 		}
 		
 		//
@@ -1391,6 +1392,147 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 		checkErrorGL();
 		
 		glDrawArrays(toOpenGLPrimitiveType(type), firstVertex, numVertices);
+		checkErrorGL();
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+
+	globals.gxShaderIsDirty = false;
+}
+
+void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstIndex, const int in_numIndices, const GxIndexBuffer * indexBuffer)
+{
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		:  *static_cast<Shader*>(globals.shader);
+
+	setShader(shader);
+
+	gxValidateMatrices();
+
+	const GLenum indexType =
+		indexBuffer->getFormat() == GX_INDEX_16
+		? GL_UNSIGNED_SHORT
+		: GL_UNSIGNED_INT;
+
+	const int numIndices =
+		in_numIndices == 0
+		? indexBuffer->getNumIndices()
+		: in_numIndices;
+
+	const ShaderCacheElem & shaderElem = shader.getCacheElem();
+	
+	if (shader.isValid())
+	{
+		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+		{
+			shader.setImmediate(
+				shaderElem.params[ShaderCacheElem::kSp_Params].index,
+				s_gxTextureEnabled ? 1 : 0,
+				globals.colorMode,
+				globals.colorPost,
+				globals.colorClamp);
+		}
+
+		if (globals.gxShaderIsDirty)
+		{
+			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+			{
+				shader.setTexture(
+					shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+					s_gxTextureFilter != GX_SAMPLE_NEAREST,
+					s_gxTextureClamp);
+			}
+		}
+		
+		//
+
+		glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
+		checkErrorGL();
+		
+		Assert(indexBuffer->getOpenglIndexArray() != 0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBuffer->getOpenglIndexArray());
+		checkErrorGL();
+		
+		const int indexSize =
+			indexBuffer->getFormat() == GX_INDEX_16
+			? 2
+			: 4;
+		
+		const int indexOffset = firstIndex * indexSize;
+		
+		const GLenum glPrimitiveType = toOpenGLPrimitiveType(type);
+		
+		glDrawElementsInstanced(glPrimitiveType, numIndices, indexType, (void*)(uintptr_t)indexOffset, numInstances);
+		checkErrorGL();
+	}
+	else
+	{
+		logDebug("shader %s is invalid. omitting draw call", shaderElem.name.c_str());
+	}
+
+	globals.gxShaderIsDirty = false;
+}
+
+void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
+{
+	Shader genericShader;
+	
+	const bool useGenericShader = (globals.shader == nullptr);
+
+	if (useGenericShader)
+		genericShader = Shader("engine/Generic");
+
+	Shader & shader =
+		useGenericShader
+		? genericShader
+		:  *static_cast<Shader*>(globals.shader);
+
+	setShader(shader);
+
+	gxValidateMatrices();
+
+	const ShaderCacheElem & shaderElem = shader.getCacheElem();
+	
+	if (shader.isValid())
+	{
+		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+		{
+			shader.setImmediate(
+				shaderElem.params[ShaderCacheElem::kSp_Params].index,
+				s_gxTextureEnabled ? 1 : 0,
+				globals.colorMode,
+				globals.colorPost,
+				globals.colorClamp);
+		}
+
+		if (globals.gxShaderIsDirty)
+		{
+			if (useGenericShader && shaderElem.params[ShaderCacheElem::kSp_Texture].index != -1)
+			{
+				shader.setTexture(
+					shaderElem.params[ShaderCacheElem::kSp_Texture].index, 0, s_gxTexture,
+					s_gxTextureFilter != GX_SAMPLE_NEAREST,
+					s_gxTextureClamp);
+			}
+		}
+		
+		//
+		
+		glBindVertexArray(s_gxVertexArrayObjectForCustomDraw);
+		checkErrorGL();
+		
+		glDrawArraysInstanced(toOpenGLPrimitiveType(type), firstVertex, numVertices, numInstances);
 		checkErrorGL();
 	}
 	else

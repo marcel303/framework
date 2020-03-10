@@ -4340,8 +4340,8 @@ static void applyHqShaderConstants()
 	}
 
 #if FRAMEWORK_ENABLE_GL_DEBUG_CONTEXT
-	//shader.setImmediate("disableOptimizations", cos(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
-	//shader.setImmediate("disableAA", cos(framework.time) < 0.f ? 0.f : 1.f);
+	//shader.setImmediate("disableOptimizations", cosf(framework.time * 6.28f) < 0.f ? 0.f : 1.f);
+	//shader.setImmediate("disableAA", cosf(framework.time) < 0.f ? 0.f : 1.f);
 
 	shader.setImmediate("disableOptimizations", 0.f);
 	shader.setImmediate("disableAA", 0.f);
