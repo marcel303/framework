@@ -1,22 +1,21 @@
-#include <vld.h>
 #include "Geo.h"
-#include "Math.h"
+#include <math.h>
 
-static void CreateGrid(int axis, Vector origin, Geo::Mesh* mesh);
+static void CreateGrid(int axis, Vec3Arg origin, Geo::Mesh* mesh);
 
 int main(int argc, char* argv[])
 {
 
 	// Create bsp tree.
 	
-	Geo::TreeBsp* treeBsp = new Geo::TreeBsp;
+	Geo::TreeBsp* treeBsp = new Geo::TreeBsp();
 	
 	for (int i = 0; i < 100; ++i)
 	{
 	
-		Geo::Poly* poly = treeBsp->mesh->Add();
+		Geo::Poly* poly = treeBsp->mesh.Add();
 		
-		Vector position;
+		Vec3 position;
 		
 		for (int j = 0; j < 3; ++j)
 		{
@@ -39,13 +38,13 @@ int main(int argc, char* argv[])
 	
 	// Finalize.
 	
-	treeBsp->mesh->Finalize();
+	treeBsp->mesh.Finalize();
 	
 	// Split bsp tree.
 	
 	Geo::Tree::GenerateStatistics generateStatistics;
 	
-	//treeBsp->Generate(100, &generateStatistics);
+	treeBsp->Generate(100, &generateStatistics);
 	
 	printf("Tree: nNodes: %d.\n", generateStatistics.nNodes);
 	printf("Tree: nLeafs: %d.\n", generateStatistics.nLeafs);
@@ -54,6 +53,7 @@ int main(int argc, char* argv[])
 	printf("Tree: nVertex: %d.\n", generateStatistics.nVertex);
 	
 	delete treeBsp;
+	treeBsp = nullptr;
 	
 	// Test bone structure.
 	
@@ -62,74 +62,88 @@ int main(int argc, char* argv[])
 	Geo::Bone* bone1_1 = new Geo::Bone;
 	
 	{
-		Geo::BoneInfluenceCilinderCapped* boneInfluence = new Geo::BoneInfluenceCilinderCapped;
+		Geo::BoneInfluenceCylinderCapped* boneInfluence = new Geo::BoneInfluenceCylinderCapped;
 		boneInfluence->m_radius = 0.1f;
-		bone1_1->cInfluence.push_back(boneInfluence);
+		bone1_1->influences.push_back(boneInfluence);
 	}
 	
-	bone1->cChild.push_back(bone1_1);
+	bone1->children.push_back(bone1_1);
+	
+	bone1->Finalize();
 	
 	//bone1_1->m_position = Vector(-1.0f, 0.0f, 0.0f);
-	bone1_1->m_rotation.MakeRotationEuler(Vector(0.0f, 0.0f, M_PI / 2.0f));
+	bone1_1->currentRotationLocal.MakeRotationZ(M_PI / 2.0f);
 	
-	for (std::list<Geo::Bone*>::iterator i = bone1->cChild.begin(); i != bone1->cChild.end(); ++i)
+	for (std::list<Geo::Bone*>::iterator i = bone1->children.begin(); i != bone1->children.end(); ++i)
 	{
 	
 		for (float x = -2.0f; x <= +2.0f; x += 0.1f)
 		{
-			Vector position(x, 0.0f, 0.0f);
+		
+			Vec3 position(x, 0.0f, 0.0f);
+			
 			float influence = (*i)->CalculateInfluence(position);
-			printf("Influence @ %+04.2f): %+04.2ff.\n", x, influence);
+			
+			printf("Influence @ %+04.2f): %+04.2f.\n", x, influence);
+			
 		}
 	
 	}
 	
 	Geo::Mesh* mesh = new Geo::Mesh;
 	
-	CreateGrid(0, Vector(-1.0f, 0.0f, 0.0f), mesh);
-	CreateGrid(0, Vector(+1.0f, 0.0f, 0.0f), mesh);
-	CreateGrid(1, Vector(0.0f, -1.0f, 0.0f), mesh);
-	CreateGrid(1, Vector(0.0f, +1.0f, 0.0f), mesh);
-	CreateGrid(2, Vector(0.0f, 0.0f, -1.0f), mesh);
-	CreateGrid(2, Vector(0.0f, 0.0f, +1.0f), mesh);
+	CreateGrid(0, Vec3(-1.0f, 0.0f, 0.0f), mesh);
+	CreateGrid(0, Vec3(+1.0f, 0.0f, 0.0f), mesh);
+	CreateGrid(1, Vec3(0.0f, -1.0f, 0.0f), mesh);
+	CreateGrid(1, Vec3(0.0f, +1.0f, 0.0f), mesh);
+	CreateGrid(2, Vec3(0.0f, 0.0f, -1.0f), mesh);
+	CreateGrid(2, Vec3(0.0f, 0.0f, +1.0f), mesh);
 	
-	printf("Mesh: nPoly: %d.\n", mesh->cPoly.size());
+	mesh->Finalize();
 	
-	for (std::list<Geo::Poly*>::iterator i = mesh->cPoly.begin(); i != mesh->cPoly.end(); ++i)
+	printf("Mesh: nPoly: %d.\n", (int)mesh->polys.size());
+	
+	for (std::list<Geo::Poly*>::iterator i = mesh->polys.begin(); i != mesh->polys.end(); ++i)
 	{
-		for (std::list<Geo::Vertex*>::iterator j = (*i)->cVertex.begin(); j != (*i)->cVertex.end(); ++j)
+	
+		for (std::list<Geo::Vertex*>::iterator j = (*i)->vertices.begin(); j != (*i)->vertices.end(); ++j)
 		{
-			Vector delta = (*j)->position;
+		
+			Vec3 delta = (*j)->position;
 			delta.Normalize();
-			Vector size;
+			
+			Vec3 size;
+			
 			for (int k = 0; k < 3; ++k)
 			{
 				size[k] = abs(delta[k]);
 			}
+			
 			//(*j)->position = delta ^ size;
 			
-			for (std::list<Geo::Bone*>::iterator k = bone1->cChild.begin(); k != bone1->cChild.end(); ++k)
+			for (std::list<Geo::Bone*>::iterator k = bone1->children.begin(); k != bone1->children.end(); ++k)
 			{
 	
 				float influence = (*k)->CalculateInfluence((*j)->position);
+				
 				printf("Influence: %+04.2ff.\n", influence);
 				
 			}
 			
 		}
 	}
-	
-	mesh->Finalize();
 
 	delete mesh;
+	mesh = nullptr;
 	
 	delete bone1;
+	bone1 = nullptr;
 	
 	return 0;
 	
 }
 
-static void CreateGrid(int axis, Vector origin, Geo::Mesh* mesh)
+static void CreateGrid(int axis, Vec3Arg origin, Geo::Mesh* mesh)
 {
 
 	int subDiv1 = 5;
@@ -137,6 +151,7 @@ static void CreateGrid(int axis, Vector origin, Geo::Mesh* mesh)
 	
 	for (int i1 = 0; i1 < subDiv1; ++i1)
 	{
+	
 		for (int i2 = 0; i2 < subDiv2; ++i2)
 		{
 		
@@ -177,8 +192,7 @@ static void CreateGrid(int axis, Vector origin, Geo::Mesh* mesh)
 			vertex4->position += origin;
 		
 		}
+		
 	}
-	
-	mesh->Finalize();
 
 }
