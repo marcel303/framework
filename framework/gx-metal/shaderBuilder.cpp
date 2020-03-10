@@ -382,6 +382,7 @@ float atan(float x, float y) { return atan2(x, y); }
 				sb.Append("\t// outputs\n");
 				sb.Append("\tfloat4 gl_Position;\n");
 				sb.Append("\tuint gl_VertexID;\n");
+				sb.Append("\tuint gl_InstanceID;\n");
 				for (auto & io : inputOutputs)
 					sb.AppendFormat("\t%s %s;\n", io.type.c_str(), io.name.c_str());
 				sb.Append("\t\n");
@@ -483,11 +484,13 @@ float atan(float x, float y) { return atan2(x, y); }
 			sb.Append("\tShaderInputs inputs [[stage_in]],\n");
 			sb.Append(bufferArguments.c_str());
 			sb.Append("\tShaderTextures textures,\n");
-			sb.Append("\tuint vertexId [[vertex_id]])\n");
+			sb.Append("\tuint vertexId [[vertex_id]],\n");
+			sb.Append("\tuint instanceId [[instance_id]])\n");
 			sb.Append("{\n");
 			sb.Append("\tShaderMain m;\n");
 			{
 				sb.Append("\tm.gl_VertexID = vertexId;\n");
+				sb.Append("\tm.gl_InstanceID = instanceId;\n");
 				for (auto & a : attributes)
 					sb.AppendFormat("\tm.%s = inputs.%s;\n", a.name.c_str(), a.name.c_str());
 				for (auto & u : uniforms)
