@@ -271,6 +271,7 @@ bool Framework::init(int sx, int sy)
 	{
 	#if USE_LEGACY_OPENGL
 		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+        SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 	#elif FRAMEWORK_USE_OPENGL_ES
 		SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 		SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);

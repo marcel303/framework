@@ -116,7 +116,11 @@
 #endif
 
 #if !defined(ENABLE_HQ_PRIMITIVES)
-	#define ENABLE_HQ_PRIMITIVES 1
+    #if (ENABLE_OPENGL && !USE_LEGACY_OPENGL) || ENABLE_METAL
+        #define ENABLE_HQ_PRIMITIVES 1
+    #else
+        #define ENABLE_HQ_PRIMITIVES 0
+    #endif
 #endif
 
 #if !defined(ENABLE_UTF8_SUPPORT)
@@ -150,7 +154,7 @@ enum COLOR_MODE // setColorMode
 	COLOR_IGNORE
 };
 
-enum COLOR_POST
+enum COLOR_POST // setColorPost
 {
 	POST_NONE,
 	POST_RGB_MIX_ALPHA_TO_ZERO,
@@ -161,7 +165,7 @@ enum COLOR_POST
 	POST_RGB_TO_LUMI
 };
 
-enum DEPTH_TEST
+enum DEPTH_TEST // setDepthTest
 {
 	DEPTH_EQUAL,
 	DEPTH_LESS,
@@ -171,14 +175,14 @@ enum DEPTH_TEST
 	DEPTH_ALWAYS
 };
 
-enum CULL_MODE
+enum CULL_MODE // setCullMode
 {
 	CULL_NONE,
 	CULL_FRONT,
 	CULL_BACK
 };
 
-enum CULL_WINDING
+enum CULL_WINDING // setCullMode
 {
 	CULL_CCW,
 	CULL_CW
