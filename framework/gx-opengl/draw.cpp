@@ -1189,6 +1189,11 @@ void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE
 	AssertMsg(false, "todo : implement gxDrawInstancedIndexedPrimitives using vertex attrib arrays", 0);
 }
 
+void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE type, const int firstVertex, const int numVertices)
+{
+	AssertMsg(false, "todo : implement gxDrawInstancedPrimitives using vertex attrib arrays", 0);
+}
+
 void gxSetVertexBuffer(const GxVertexBuffer * buffer, const GxVertexInput * vsInputs, const int numVsInputs, const int vsStride)
 {
 	AssertMsg(false, "todo : implement gxSetVertexBuffer using vertex attrib arrays", 0);
