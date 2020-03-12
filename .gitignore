@@ -47,3 +47,4 @@ vfxNodes_all-mac.h
 binaural_all.cpp
 gx-opengl-all.cpp
 users/marcel/gltf1/data/scenes
+refine/data/editor-settings
