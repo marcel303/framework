@@ -1151,6 +1151,9 @@ GraphEdit::GraphEdit(
 	, selectedLinks()
 	, selectedLinkRoutePoints()
 	, selectedVisualizers()
+	, selectedComments()
+	, highlightedSockets()
+	, selectedSockets()
 	, state(kState_Idle)
 	, flags(kFlag_All)
 	, nodeSelect()
@@ -1454,6 +1457,16 @@ GraphEdit::EditorVisualizer * GraphEdit::tryGetVisualizer(const GraphNodeId id) 
 		return nullptr;
 }
 
+GraphEdit::EditorComment * GraphEdit::tryGetComment(const GraphNodeId id) const
+{
+	auto i = comments.find(id);
+	
+	if (i != comments.end())
+		return const_cast<EditorComment*>(&i->second);
+	else
+		return nullptr;
+}
+
 bool GraphEdit::enabled(const int flag) const
 {
 	return (flags & flag) == flag;
@@ -1468,23 +1481,18 @@ struct SortedGraphElem
 	int zKey;
 };
 
-bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) const
+static void sortVisualElements(const GraphEdit & graphEdit, SortedGraphElem * sortedElems, const int numElems, const bool sortForDraw)
 {
-	result = HitTestResult();
+	// sort nodes, visualizers and comments according to Z key
 	
-	// sort nodes and visualizers according to Z key
-	
-	const int numElems = graph->nodes.size() + visualizers.size();
-	
-	SortedGraphElem * sortedElems = (SortedGraphElem*)alloca(numElems * sizeof(SortedGraphElem));
 	memset(sortedElems, 0, numElems * sizeof(SortedGraphElem));
 	
 	int elemIndex = 0;
 	
-	for (auto & nodeItr : graph->nodes)
+	for (auto & nodeItr : graphEdit.graph->nodes)
 	{
 		auto & node = nodeItr.second;
-		auto nodeData = tryGetNodeData(node.id);
+		auto nodeData = graphEdit.tryGetNodeData(node.id);
 		
 		sortedElems[elemIndex].node = &node;
 		sortedElems[elemIndex].nodeData = nodeData;
@@ -1493,11 +1501,11 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 		elemIndex++;
 	}
 	
-	for (auto & visualizerItr : visualizers)
+	for (auto & visualizerItr : graphEdit.visualizers)
 	{
 		auto & visualizer = visualizerItr.second;
 		
-		sortedElems[elemIndex].visualizer = const_cast<EditorVisualizer*>(&visualizer);
+		sortedElems[elemIndex].visualizer = const_cast<GraphEdit::EditorVisualizer*>(&visualizer);
 		sortedElems[elemIndex].zKey = visualizer.zKey;
 		
 		elemIndex++;
@@ -1505,8 +1513,25 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 	
 	Assert(elemIndex == numElems);
 	
-	std::sort(sortedElems, sortedElems + numElems, [](const SortedGraphElem & e1, const SortedGraphElem & e2) { return e2.zKey < e1.zKey; });
+	std::sort(sortedElems, sortedElems + numElems,
+		[sortForDraw](const SortedGraphElem & in_e1, const SortedGraphElem & in_e2)
+			{
+				const SortedGraphElem & e1 = sortForDraw ? in_e1 : in_e2;
+				const SortedGraphElem & e2 = sortForDraw ? in_e2 : in_e1;
+				return e1.zKey < e2.zKey;
+			});
+}
+
+bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) const
+{
+	result = HitTestResult();
 	
+	// sort nodes, visualizers and comments according to Z key
+	
+	const int numElems = graph->nodes.size() + visualizers.size();
+	SortedGraphElem * sortedElems = (SortedGraphElem*)alloca(numElems * sizeof(SortedGraphElem));
+	sortVisualElements(*this, sortedElems, numElems, false);
+
 	// traverse elements hit testing against the ones on top first
 	
 	for (int i = 0; i < numElems; ++i)
@@ -1620,6 +1645,8 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 		}
 	}
 	
+	// hit test links
+	
 	for (auto linkItr = graph->links.rbegin(); linkItr != graph->links.rend(); ++linkItr)
 	{
 		auto linkId = linkItr->first;
@@ -1661,6 +1688,85 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 		}
 	}
 	
+	// hit test comments
+	
+	for (auto & commentItr : comments)
+	{
+		auto & comment = commentItr.second;
+
+		if (testRectOverlap(
+			x, y,
+			x, y,
+			comment.x,
+			comment.y,
+			comment.x + comment.sx,
+			comment.y + comment.sy))
+		{
+			CommentHitTestResult hitTestResult;
+			
+			const int borderSize = 6;
+			
+			if (testRectOverlap(
+				x, y,
+				x, y,
+				comment.x + borderSize * +0 + comment.sx * 0,
+				comment.y + borderSize * +0 + comment.sy * 0,
+				comment.x + borderSize * +1 + comment.sx * 0,
+				comment.y + borderSize * +0 + comment.sy * 1))
+			{
+				hitTestResult.borderL = true;
+			}
+			
+			if (testRectOverlap(
+				x, y,
+				x, y,
+				comment.x + borderSize * -1 + comment.sx * 1,
+				comment.y + borderSize * +0 + comment.sy * 0,
+				comment.x + borderSize * +0 + comment.sx * 1,
+				comment.y + borderSize * +0 + comment.sy * 1))
+			{
+				hitTestResult.borderR = true;
+			}
+			
+			if (testRectOverlap(
+				x, y,
+				x, y,
+				comment.x + borderSize * +0 + comment.sx * 0,
+				comment.y + borderSize * +0 + comment.sy * 0,
+				comment.x + borderSize * +0 + comment.sx * 1,
+				comment.y + borderSize * +1 + comment.sy * 0))
+			{
+				hitTestResult.borderT = true;
+			}
+			
+			if (testRectOverlap(
+				x, y,
+				x, y,
+				comment.x + borderSize * +0 + comment.sx * 0,
+				comment.y + borderSize * -1 + comment.sy * 1,
+				comment.x + borderSize * +0 + comment.sx * 1,
+				comment.y + borderSize * +0 + comment.sy * 1))
+			{
+				hitTestResult.borderB = true;
+			}
+			
+			if (hitTestResult.borderL || hitTestResult.borderR || hitTestResult.borderT || hitTestResult.borderB)
+			{
+				// border, not background
+			}
+			else
+			{
+				hitTestResult.background = true;
+			}
+			
+			result.hasComment = true;
+			result.comment = const_cast<EditorComment*>(&comment);
+			result.commentHitTestResult = hitTestResult;
+			
+			return true;
+		}
+	}
+
 	return false;
 }
 
@@ -1900,6 +2006,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		
 		nodeTypeNameSelect->doMenus(uiState, dt);
 		
+		doCommentProperties(dt);
+		
 		propertyEditor->doMenus(uiState, dt);
 		
 		inputIsCaptured |= uiState->activeElem != nullptr;
@@ -1970,6 +2078,17 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						hitTestResult.visualizerHitTestResult.borderR ||
 						hitTestResult.visualizerHitTestResult.borderT ||
 						hitTestResult.visualizerHitTestResult.borderB)
+					{
+						mousePosition.hover = true;
+					}
+				}
+				
+				if (hitTestResult.hasComment)
+				{
+					if (hitTestResult.commentHitTestResult.borderL ||
+						hitTestResult.commentHitTestResult.borderR ||
+						hitTestResult.commentHitTestResult.borderT ||
+						hitTestResult.commentHitTestResult.borderB)
 					{
 						mousePosition.hover = true;
 					}
@@ -2177,6 +2296,45 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 							break;
 						}
 					}
+					
+					if (enabled(kFlag_Select) && hitTestResult.hasComment)
+					{
+						if (appendSelection == false)
+						{
+							if (selectedComments.count(hitTestResult.comment) == 0)
+							{
+								selectComment(hitTestResult.comment, true);
+							}
+						}
+						else
+						{
+							if (selectedComments.count(hitTestResult.comment) == 0)
+								selectComment(hitTestResult.comment, false);
+							else
+								selectedComments.erase(hitTestResult.comment);
+						}
+						
+						if (hitTestResult.commentHitTestResult.borderL ||
+							hitTestResult.commentHitTestResult.borderR ||
+							hitTestResult.commentHitTestResult.borderT ||
+							hitTestResult.commentHitTestResult.borderB)
+						{
+							nodeResize.nodeId = hitTestResult.comment->id;
+							nodeResize.dragL = hitTestResult.commentHitTestResult.borderL;
+							nodeResize.dragR = hitTestResult.commentHitTestResult.borderR;
+							nodeResize.dragT = hitTestResult.commentHitTestResult.borderT;
+							nodeResize.dragB = hitTestResult.commentHitTestResult.borderB;
+							
+							state = kState_NodeResize;
+							break;
+						}
+						
+						if (enabled(kFlag_NodeDrag))
+						{
+							state = kState_NodeDrag;
+							break;
+						}
+					}
 				}
 				else if (enabled(kFlag_Select))
 				{
@@ -2245,6 +2403,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 			}
 			
+			// insert a new node of the current type when the 'i' key is pressed
+			
 			if (enabled(kFlag_NodeAdd) && keyboard.wentDown(SDLK_i))
 			{
 				if (commandMod())
@@ -2263,6 +2423,20 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 			}
 			
+			// insert a new comment when the 'c' key is pressed
+			
+			if (enabled(kFlag_NodeAdd) && keyboard.wentDown(SDLK_c))
+			{
+				EditorComment * comment;
+				
+				if (tryAddComment(mousePosition.x, mousePosition.y, true, &comment))
+				{
+					comment->caption = "(Caption)";
+				}
+			}
+			
+			// 'select all' or manual 'snap-to-grid' when the 'a' key is pressed
+			
 			if (keyboard.wentDown(SDLK_a))
 			{
 				if (commandMod())
@@ -2276,7 +2450,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				{
 					for (auto nodeId : selectedNodes)
 					{
-						auto nodeData = tryGetNodeData(nodeId);
+						auto * nodeData = tryGetNodeData(nodeId);
 						
 						if (nodeData != nullptr)
 						{
@@ -2284,12 +2458,19 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 					}
 					
-					for (auto visualizer : selectedVisualizers)
+					for (auto * visualizer : selectedVisualizers)
 					{
 						snapToGrid(visualizer->x, visualizer->y);
 					}
+					
+					for (auto * comment : selectedComments)
+					{
+						snapToGrid(comment->x, comment->y);
+					}
 				}
 			}
+			
+			// reset camera drag and zoom back to the origin when the 'o' or '0' key is pressed
 			
 			if (keyboard.wentDown(SDLK_o) || keyboard.wentDown(SDLK_0))
 			{
@@ -2308,6 +2489,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 			}
 			
+			// drag and zoom
+			
 		#if !defined(MACOS) // fixme : mouse wheel event seems to trigger when interacting with the touch pad on MacOS
 			{
 				const float magnitude = std::pow<float>(1.1f, mouse.scrollY);
@@ -2325,6 +2508,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			{
 				dragAndZoom.desiredZoom *= 1.5f;
 			}
+			
+			// duplicate nodes when the 'd' key is pressed
 			
 			if (enabled(kFlag_NodeAdd) && keyboard.wentDown(SDLK_d))
 			{
@@ -2450,7 +2635,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				std::set<EditorVisualizer*> newSelectedVisualizers;
 				
-				for (auto visualizer : selectedVisualizers)
+				for (auto * visualizer : selectedVisualizers)
 				{
 					EditorVisualizer * newVisualizer = nullptr;
 					
@@ -2472,12 +2657,37 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					}
 				}
 				
-				if (!newSelectedNodes.empty() || !newSelectedVisualizers.empty())
+				// copy comments
+				
+				std::set<EditorComment*> newSelectedComments;
+				
+				for (auto * comment : selectedComments)
 				{
+					EditorComment * newComment = nullptr;
+					
+					if (tryAddComment(
+						comment->x + kGridSize,
+						comment->y + kGridSize,
+						false,
+						&newComment))
+					{
+						newComment->sx = comment->sx;
+						newComment->sy = comment->sy;
+						newComment->caption = comment->caption;
+						
+						newSelectedComments.insert(newComment);
+					}
+				}
+				
+				if (!newSelectedNodes.empty() ||
+					!newSelectedVisualizers.empty() ||
+					!newSelectedComments.empty())
+				{
+					deselectAll();
+					
 					selectedNodes = newSelectedNodes;
-					selectedLinks.clear();
-					selectedLinkRoutePoints.clear();
 					selectedVisualizers = newSelectedVisualizers;
+					selectedComments = newSelectedComments;
 				}
 			}
 			
@@ -2510,7 +2720,14 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 			}
 			
-			if (selectedNodes.empty() && selectedLinkRoutePoints.empty() && selectedVisualizers.empty())
+			// the behavior of the arrow keys is different, depending on whether we have a selection
+			// or not. when we have a selection, we move the selected elements around. otherwise,
+			// the arrow keys control the camera
+			
+			if (selectedNodes.empty() &&
+				selectedLinkRoutePoints.empty() &&
+				selectedVisualizers.empty() &&
+				selectedComments.empty())
 			{
 				tickKeyboardScroll();
 			}
@@ -2549,16 +2766,22 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						}
 					}
 					
-					for (auto routePoint : selectedLinkRoutePoints)
+					for (auto * routePoint : selectedLinkRoutePoints)
 					{
 						routePoint->x += moveX;
 						routePoint->y += moveY;
 					}
 					
-					for (auto visualizer : selectedVisualizers)
+					for (auto * visualizer : selectedVisualizers)
 					{
 						visualizer->x += moveX;
 						visualizer->y += moveY;
+					}
+					
+					for (auto * comment : selectedComments)
+					{
+						comment->x += moveX;
+						comment->y += moveY;
 					}
 				}
 			}
@@ -2595,6 +2818,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				if (enabled(kFlag_NodeRemove))
 				{
 					auto nodesToRemove = selectedNodes;
+					
 					for (auto nodeId : nodesToRemove)
 					{
 						graph->removeNode(nodeId);
@@ -2607,6 +2831,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				if (enabled(kFlag_LinkRemove))
 				{
 					auto linksToRemove = selectedLinks;
+					
 					for (auto linkId : linksToRemove)
 					{
 						if (graph->tryGetLink(linkId) != nullptr)
@@ -2620,7 +2845,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				if (enabled(kFlag_LinkRemove))
 				{
 					auto routePointsToRemove = selectedLinkRoutePoints;
-					for (auto routePoint : routePointsToRemove)
+					
+					for (auto * routePoint : routePointsToRemove)
 					{
 						auto link = graph->tryGetLink(routePoint->linkId);
 						
@@ -2639,7 +2865,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				if (enabled(kFlag_NodeRemove))
 				{
-					for (auto visualizer : selectedVisualizers)
+					for (auto * visualizer : selectedVisualizers)
 					{
 						auto i = visualizers.find(visualizer->id);
 						
@@ -2650,6 +2876,20 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					
 					selectedVisualizers.clear();
 				}
+				
+				if (enabled(kFlag_NodeRemove))
+				{
+					for (auto * comment : selectedComments)
+					{
+						auto i = comments.find(comment->id);
+						
+						Assert(i != comments.end());
+						if (i != comments.end())
+							comments.erase(i);
+					}
+					
+					selectedComments.clear();
+				}
 			}
 			
 			//
@@ -2659,6 +2899,10 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				const GraphNodeId nodeId = *selectedNodes.begin();
 					
 				propertyEditor->setNode(nodeId);
+			}
+			else
+			{
+				propertyEditor->setNode(kGraphNodeIdInvalid);
 			}
 			
 			//
@@ -2765,6 +3009,28 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				}
 			}
 			
+			// hit test comments
+			
+			nodeSelect.comments.clear();
+			
+			for (auto & commentItr : comments)
+			{
+				auto & comment = commentItr.second;
+				
+				if (testRectOverlap(
+					nodeSelect.beginX,
+					nodeSelect.beginY,
+					nodeSelect.endX,
+					nodeSelect.endY,
+					comment.x,
+					comment.y,
+					comment.x + comment.sx,
+					comment.y + comment.sy))
+				{
+					nodeSelect.comments.insert(&comment);
+				}
+			}
+			
 			//
 			
 			if (mouse.wentUp(BUTTON_LEFT))
@@ -2813,6 +3079,12 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			{
 				visualizer->x += mousePosition.dx;
 				visualizer->y += mousePosition.dy;
+			}
+			
+			for (auto & comment : selectedComments)
+			{
+				comment->x += mousePosition.dx;
+				comment->y += mousePosition.dy;
 			}
 		}
 		break;
@@ -2903,7 +3175,6 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		{
 			EditorVisualizer * visualizer = tryGetVisualizer(nodeResize.nodeId);
 			
-			Assert(visualizer != nullptr);
 			if (visualizer != nullptr)
 			{
 				const float dragX = mousePosition.dx;
@@ -2929,6 +3200,38 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				if (nodeResize.dragB)
 				{
 					visualizer->sy += dragY;
+				}
+				
+				mousePosition.hover = true;
+			}
+			
+			EditorComment * comment = tryGetComment(nodeResize.nodeId);
+			
+			if (comment != nullptr)
+			{
+				const float dragX = mousePosition.dx;
+				const float dragY = mousePosition.dy;
+				
+				if (nodeResize.dragL)
+				{
+					comment->x += dragX;
+					comment->sx -= dragX;
+				}
+				
+				if (nodeResize.dragR)
+				{
+					comment->sx += dragX;
+				}
+				
+				if (nodeResize.dragT)
+				{
+					comment->y += dragY;
+					comment->sy -= dragY;
+				}
+				
+				if (nodeResize.dragB)
+				{
+					comment->sy += dragY;
 				}
 				
 				mousePosition.hover = true;
@@ -3354,6 +3657,8 @@ bool GraphEdit::tickTouches()
 				continue;
 			}
 			
+		// todo : to be perfectly glitch-free, the new finger locations should be recorded first, and the gesture be handled later. otherwise, things like checking old vs new distances won't work correctly, as both fingers may move very quickly, 'temporarily' yielding a large distance between the two as the touch locations are partly updated
+		
 			auto & finger = event.tfinger.fingerId == touches.finger1.id ? touches.finger1 : touches.finger2;
 			
 			const float dragSpeed = 1.f / 2.f / std::max(.02f, std::abs(dragAndZoom.zoom)) * Calc::Sign(dragAndZoom.zoom);
@@ -3449,6 +3754,7 @@ bool GraphEdit::tickTouches()
 						}
 					}
 				
+				#if false
 					// update movement
 					
 					if (enabled(kFlag_Drag))
@@ -3459,6 +3765,25 @@ bool GraphEdit::tickTouches()
 						dragAndZoom.desiredFocusX = dragAndZoom.focusX;
 						dragAndZoom.desiredFocusY = dragAndZoom.focusY;
 					}
+				#else
+					// focus onto the mouse cursor location
+					// this makes it easier to zoom into part of the graph, by
+					// hovering over the area of interest, and use pinch to zoom in on it
+					// note : this naive implementation isn't compatible with the drag gesture
+					//        being active at the same time
+					
+					dragAndZoom.updateTransform();
+				
+					const Vec2 oldMousePosition(mousePosition.x, mousePosition.y);
+					const Vec2 srcMousePosition(mouse.x, mouse.y);
+					const Vec2 newMousePosition = dragAndZoom.invTransform * srcMousePosition;
+				
+					dragAndZoom.focusX += oldMousePosition[0] - newMousePosition[0];
+					dragAndZoom.focusY += oldMousePosition[1] - newMousePosition[1];
+				
+					dragAndZoom.desiredFocusX = dragAndZoom.focusX;
+					dragAndZoom.desiredFocusY = dragAndZoom.focusY;
+				#endif
 				}
 			}
 		}
@@ -3583,15 +3908,16 @@ void GraphEdit::nodeSelectEnd()
 	{
 		selectedNodes.insert(nodeSelect.nodeIds.begin(), nodeSelect.nodeIds.end());
 		selectedVisualizers.insert(nodeSelect.visualizers.begin(), nodeSelect.visualizers.end());
+		selectedComments.insert(nodeSelect.comments.begin(), nodeSelect.comments.end());
 	}
 	else
 	{
+		deselectAll();
+		
 		selectedNodes = nodeSelect.nodeIds;
 		selectedVisualizers = nodeSelect.visualizers;
+		selectedComments = nodeSelect.comments;
 	}
-	
-	selectedLinks.clear();
-	selectedLinkRoutePoints.clear();
 	
 	nodeSelect = NodeSelect();
 }
@@ -3611,14 +3937,19 @@ void GraphEdit::nodeDragEnd()
 			}
 		}
 		
-		for (auto & routePoint : selectedLinkRoutePoints)
+		for (auto * routePoint : selectedLinkRoutePoints)
 		{
 			snapToGrid(routePoint->x, routePoint->y);
 		}
 		
-		for (auto & visualizer : selectedVisualizers)
+		for (auto * visualizer : selectedVisualizers)
 		{
 			snapToGrid(visualizer->x, visualizer->y);
+		}
+		
+		for (auto * comment : selectedComments)
+		{
+			snapToGrid(comment->x, comment->y);
 		}
 	}
 }
@@ -3983,6 +4314,33 @@ void GraphEdit::doLinkParams(const float dt)
 	popMenu();
 }
 
+void GraphEdit::doCommentProperties(const float dt)
+{
+	if (!enabled(kFlag_NodeProperties))
+		return;
+	
+	if (selectedComments.size() == 1)
+	{
+		auto & comment = **selectedComments.begin();
+		
+		pushMenu("commentProperties");
+		{
+			doLabel("comment", 0.f);
+			
+			doTextBox(comment.caption, "caption", dt);
+			doParticleColor(comment.color, "color");
+			
+			if (uiState->activeColor == &comment.color)
+			{
+				doColorWheel(*uiState->activeColor, "colorwheel", dt);
+			}
+			
+			doBreak();
+		}
+		popMenu();
+	}
+}
+
 bool GraphEdit::isInputIdle() const
 {
 	bool result = true;
@@ -4084,6 +4442,26 @@ bool GraphEdit::tryAddVisualizer(const GraphNodeId nodeId, const std::string & s
 	}
 }
 
+bool GraphEdit::tryAddComment(const float x, const float y, const bool select, EditorComment ** out_comment)
+{
+	auto commentId = graph->allocNodeId();
+	EditorComment & comment = comments[commentId];
+	
+	comment.id = commentId;
+	comment.x = x;
+	comment.y = y;
+	
+	if (select)
+	{
+		selectComment(&comment, true);
+	}
+	
+	if (out_comment != nullptr)
+		*out_comment = &comment;
+	
+	return true;
+}
+
 void GraphEdit::updateDynamicSockets()
 {
 	for (auto & nodeDataItr : nodeDatas)
@@ -4177,10 +4555,7 @@ void GraphEdit::selectNode(const GraphNodeId nodeId, const bool clearSelection)
 	
 	if (clearSelection)
 	{
-		selectedNodes.clear();
-		selectedLinks.clear();
-		selectedLinkRoutePoints.clear();
-		selectedVisualizers.clear();
+		deselectAll();
 	}
 	
 	selectedNodes.insert(nodeId);
@@ -4192,10 +4567,7 @@ void GraphEdit::selectLink(const GraphLinkId linkId, const bool clearSelection)
 	
 	if (clearSelection)
 	{
-		selectedNodes.clear();
-		selectedLinks.clear();
-		selectedLinkRoutePoints.clear();
-		selectedVisualizers.clear();
+		deselectAll();
 	}
 	
 	selectedLinks.insert(linkId);
@@ -4207,10 +4579,7 @@ void GraphEdit::selectLinkRoutePoint(GraphLinkRoutePoint * routePoint, const boo
 	
 	if (clearSelection)
 	{
-		selectedNodes.clear();
-		selectedLinks.clear();
-		selectedLinkRoutePoints.clear();
-		selectedVisualizers.clear();
+		deselectAll();
 	}
 	
 	selectedLinkRoutePoints.insert(routePoint);
@@ -4222,13 +4591,22 @@ void GraphEdit::selectVisualizer(EditorVisualizer * visualizer, const bool clear
 	
 	if (clearSelection)
 	{
-		selectedNodes.clear();
-		selectedLinks.clear();
-		selectedLinkRoutePoints.clear();
-		selectedVisualizers.clear();
+		deselectAll();
 	}
 	
 	selectedVisualizers.insert(visualizer);
+}
+
+void GraphEdit::selectComment(EditorComment * comment, const bool clearSelection)
+{
+	Assert(selectedComments.count(comment) == 0 || clearSelection);
+	
+	if (clearSelection)
+	{
+		deselectAll();
+	}
+	
+	selectedComments.insert(comment);
 }
 
 void GraphEdit::selectNodeAll()
@@ -4270,12 +4648,30 @@ void GraphEdit::selectVisualizerAll()
 		selectedVisualizers.insert(&visualizerItr.second);
 }
 
+void GraphEdit::selectCommentAll()
+{
+	selectedComments.clear();
+	
+	for (auto & commentItr : comments)
+		selectedComments.insert(&commentItr.second);
+}
+
 void GraphEdit::selectAll()
 {
 	selectNodeAll();
 	selectLinkAll();
 	selectLinkRoutePointAll();
 	selectVisualizerAll();
+	selectCommentAll();
+}
+
+void GraphEdit::deselectAll()
+{
+	selectedNodes.clear();
+	selectedLinks.clear();
+	selectedLinkRoutePoints.clear();
+	selectedVisualizers.clear();
+	selectedComments.clear();
 }
 
 void GraphEdit::snapToGrid(float & x, float & y) const
@@ -4469,6 +4865,21 @@ void GraphEdit::draw() const
 		}
 	}
 
+	// draw comments
+	
+	for (auto & commentItr : comments)
+	{
+		auto & comment = commentItr.second;
+
+		gxPushMatrix();
+		{
+			gxTranslatef(comment.x, comment.y, 0.f);
+			
+			drawComment(comment);
+		}
+		gxPopMatrix();
+	}
+	
 #if 0 // todo : remove. test bezier control points, drawing only circles
 	{
 		for (auto & linkItr : graph->links)
@@ -4676,37 +5087,8 @@ void GraphEdit::draw() const
 	// traverse and draw nodes
 	
 	const int numElems = graph->nodes.size() + visualizers.size();
-	
 	SortedGraphElem * sortedElems = (SortedGraphElem*)alloca(numElems * sizeof(SortedGraphElem));
-	memset(sortedElems, 0, numElems * sizeof(SortedGraphElem));
-	
-	int elemIndex = 0;
-	
-	for (auto & nodeItr : graph->nodes)
-	{
-		auto & node = nodeItr.second;
-		auto nodeData = tryGetNodeData(node.id);
-		
-		sortedElems[elemIndex].node = &node;
-		sortedElems[elemIndex].nodeData = nodeData;
-		sortedElems[elemIndex].zKey = nodeData->zKey;
-		
-		elemIndex++;
-	}
-	
-	for (auto & visualizerItr : visualizers)
-	{
-		auto & visualizer = visualizerItr.second;
-		
-		sortedElems[elemIndex].visualizer = const_cast<EditorVisualizer*>(&visualizer);
-		sortedElems[elemIndex].zKey = visualizer.zKey;
-		
-		elemIndex++;
-	}
-	
-	Assert(elemIndex == numElems);
-	
-	std::sort(sortedElems, sortedElems + numElems, [](const SortedGraphElem & e1, const SortedGraphElem & e2) { return e1.zKey < e2.zKey; });
+	sortVisualElements(*this, sortedElems, numElems, true);
 	
 	// determine the maximum CPU time for mapping CPU time to the CPU heat color gradient
 	
@@ -4942,6 +5324,8 @@ void GraphEdit::draw() const
 	self->doEditorOptions(0.f);
 	
 	nodeTypeNameSelect->doMenus(uiState, 0.f);
+	
+	self->doCommentProperties(0.f);
 	
 	propertyEditor->doMenus(uiState, 0.f);
 	
@@ -5317,6 +5701,53 @@ void GraphEdit::drawVisualizer(const EditorVisualizer & visualizer) const
 	visualizer.draw(*this, nodeName, isSelected, &visualizerSx, &visualizerSy);
 }
 
+void GraphEdit::drawComment(const EditorComment & comment) const
+{
+	cpuTimingBlock(drawComment);
+	
+	setFont("calibri.ttf");
+	
+	const bool isSelected = selectedComments.count(const_cast<EditorComment*>(&comment)) != 0;
+	
+	const float kTextSize = 14.f;
+	
+	float textSx;
+	float textSy;
+	measureTextArea(kTextSize, comment.sx - 8, textSx, textSy, "%s", comment.caption.c_str());
+	
+	hqBegin(HQ_FILLED_ROUNDED_RECTS);
+	{
+		setColorf(
+			comment.color.rgba[0],
+			comment.color.rgba[1],
+			comment.color.rgba[2],
+			comment.color.rgba[3]);
+		hqFillRoundedRect(0, 0, comment.sx, comment.sy, 4.f);
+		
+		setColorf(
+			comment.color.rgba[0],
+			comment.color.rgba[1],
+			comment.color.rgba[2],
+			comment.color.rgba[3],
+			240/255.f);
+		hqFillRoundedRect(0, 0, comment.sx, textSy + 4, 4.f);
+	}
+	hqEnd();
+	
+	if (isSelected)
+		setColor(0, 0, 255, 200);
+	else
+		setColor(0, 0, 0, 200);
+	drawTextArea(4, 4, comment.sx - 8, kTextSize, "%s", comment.caption.c_str());
+	
+	hqBegin(HQ_LINES);
+	{
+		setColor(0, 0, 0, 63);
+		hqLine(4, textSy + 4 + 2, 1.f, comment.sx - 4, textSy + 4 + 2, 1.f);
+	}
+	hqEnd();
+}
+
 bool GraphEdit::load(const char * filename)
 {
 	bool result = true;
@@ -5339,6 +5770,7 @@ bool GraphEdit::load(const char * filename)
 	nodeDatas.clear();
 	
 	visualizers.clear();
+	comments.clear();
 	
 	nextZKey = 1;
 	
@@ -5583,6 +6015,9 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 		dragAndZoom.desiredZoom = floatAttrib(dragAndZoomElem, "zoom", 1.f);
 		
 		/*
+		note : let the drag and zoom animation zoom into the new location
+		       this makes for a nice transition effect when changing graphs
+		 
 		dragAndZoom.focusX = dragAndZoom.desiredFocusX;
 		dragAndZoom.focusY = dragAndZoom.desiredFocusY;
 		dragAndZoom.zoom = dragAndZoom.desiredZoom;
@@ -5642,6 +6077,33 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 			visualizer.dstSocketName = stringAttrib(xmlVisualizer, "dstSocketName", visualizer.dstSocketName.c_str());
 			visualizer.sx = floatAttrib(xmlVisualizer, "sx", visualizer.sx);
 			visualizer.sy = floatAttrib(xmlVisualizer, "sy", visualizer.sy);
+		}
+	}
+	
+	auto commentsElem = editorElem->FirstChildElement("comments");
+	
+	if (commentsElem != nullptr)
+	{
+		for (auto xmlComment = commentsElem->FirstChildElement("comment"); xmlComment != nullptr; xmlComment = xmlComment->NextSiblingElement("comment"))
+		{
+			auto commentId = intAttrib(xmlComment, "id", -1);
+			
+			if (commentId == -1)
+				continue;
+			
+			auto & comment = comments[commentId];
+			
+			comment.id = commentId;
+			comment.x = floatAttrib(xmlComment, "x", comment.x);
+			comment.y = floatAttrib(xmlComment, "y", comment.y);
+			
+			comment.caption = stringAttrib(xmlComment, "caption", "");
+			comment.sx = floatAttrib(xmlComment, "sx", comment.sx);
+			comment.sy = floatAttrib(xmlComment, "sy", comment.sy);
+			comment.color.rgba[0] = floatAttrib(xmlComment, "color.r", 1.f);
+			comment.color.rgba[1] = floatAttrib(xmlComment, "color.g", 1.f);
+			comment.color.rgba[2] = floatAttrib(xmlComment, "color.b", 1.f);
+			comment.color.rgba[3] = floatAttrib(xmlComment, "color.a", 1.f);
 		}
 	}
 	
@@ -5741,6 +6203,31 @@ bool GraphEdit::saveXml(tinyxml2::XMLPrinter & editorElem) const
 					editorElem.PushAttribute("dstSocketName", visualizer.dstSocketName.c_str());
 				editorElem.PushAttribute("sx", visualizer.sx);
 				editorElem.PushAttribute("sy", visualizer.sy);
+			}
+			editorElem.CloseElement();
+		}
+	}
+	editorElem.CloseElement();
+	
+	editorElem.OpenElement("comments");
+	{
+		for (auto & commentItr : comments)
+		{
+			auto & comment = commentItr.second;
+			
+			editorElem.OpenElement("comment");
+			{
+				editorElem.PushAttribute("id", comment.id);
+				editorElem.PushAttribute("x", comment.x);
+				editorElem.PushAttribute("y", comment.y);
+				
+				editorElem.PushAttribute("caption", comment.caption.c_str());
+				editorElem.PushAttribute("sx", comment.sx);
+				editorElem.PushAttribute("sy", comment.sy);
+				editorElem.PushAttribute("color.r", comment.color.rgba[0]);
+				editorElem.PushAttribute("color.g", comment.color.rgba[1]);
+				editorElem.PushAttribute("color.b", comment.color.rgba[2]);
+				editorElem.PushAttribute("color.a", comment.color.rgba[3]);
 			}
 			editorElem.CloseElement();
 		}

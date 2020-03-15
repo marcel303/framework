@@ -129,6 +129,14 @@ struct GraphEdit_UndoHistory
 
 //
 
+/*
+GraphEdit_Visualizer
+- points to a node and src or dst socket
+- copies the socket value on tick
+- keeps a history of values on tick
+- computes some channel related info for visualizing channels
+- has a draw method to draw the visualizer
+*/
 struct GraphEdit_Visualizer
 {
 	struct History
@@ -471,6 +479,33 @@ struct GraphEdit : GraphEditConnection
 		void updateSize(const GraphEdit & graphEdit);
 	};
 	
+	struct EditorComment
+	{
+		GraphNodeId id;
+		
+		float x;
+		float y;
+		
+		float sx;
+		float sy;
+		
+		std::string caption;
+		ParticleColor color;
+		
+		EditorComment()
+			: id(kGraphNodeIdInvalid)
+			, x(0)
+			, y(0)
+			, sx(200)
+			, sy(100)
+			, caption()
+			, color(1.f, 1.f, .9f, .9f)
+		{
+		}
+		
+		void draw() const;
+	};
+	
 	struct NodeHitTestResult
 	{
 		const Graph_TypeDefinition::InputSocket * inputSocket;
@@ -503,6 +538,24 @@ struct GraphEdit : GraphEditConnection
 		}
 	};
 	
+	struct CommentHitTestResult
+	{
+		bool background;
+		bool borderL;
+		bool borderR;
+		bool borderT;
+		bool borderB;
+		
+		CommentHitTestResult()
+			: background(false)
+			, borderL(false)
+			, borderR(false)
+			, borderT(false)
+			, borderB(false)
+		{
+		}
+	};
+	
 	struct HitTestResult
 	{
 		bool hasNode;
@@ -520,6 +573,10 @@ struct GraphEdit : GraphEditConnection
 		EditorVisualizer * visualizer;
 		VisualizerHitTestResult visualizerHitTestResult;
 		
+		bool hasComment;
+		EditorComment * comment;
+		CommentHitTestResult commentHitTestResult;
+		
 		HitTestResult()
 			: hasNode(false)
 			, node(nullptr)
@@ -532,6 +589,9 @@ struct GraphEdit : GraphEditConnection
 			, hasVisualizer(false)
 			, visualizer(nullptr)
 			, visualizerHitTestResult()
+			, hasComment(false)
+			, comment(nullptr)
+			, commentHitTestResult()
 		{
 		}
 	};
@@ -731,6 +791,8 @@ struct GraphEdit : GraphEditConnection
 		
 		std::set<EditorVisualizer*> visualizers;
 		
+		std::set<EditorComment*> comments;
+		
 		NodeSelect()
 			: beginX(0)
 			, beginY(0)
@@ -738,6 +800,7 @@ struct GraphEdit : GraphEditConnection
 			, endY(0)
 			, nodeIds()
 			, visualizers()
+			, comments()
 		{
 		}
 	};
@@ -844,6 +907,7 @@ struct GraphEdit : GraphEditConnection
 	std::map<GraphNodeId, NodeData> nodeDatas;
 	
 	std::map<GraphNodeId, EditorVisualizer> visualizers;
+	std::map<GraphNodeId, EditorComment> comments;
 	
 	Graph_TypeDefinitionLibrary * typeDefinitionLibrary;
 	
@@ -857,6 +921,7 @@ struct GraphEdit : GraphEditConnection
 	std::set<GraphLinkRoutePoint*> highlightedLinkRoutePoints;
 	std::set<GraphLinkRoutePoint*> selectedLinkRoutePoints;
 	std::set<EditorVisualizer*> selectedVisualizers;
+	std::set<EditorComment*> selectedComments;
 	
 	SocketSelection highlightedSockets;
 	SocketSelection selectedSockets;
@@ -929,6 +994,7 @@ struct GraphEdit : GraphEditConnection
 	bool getLinkPath(const GraphLinkId linkId, LinkPath & path) const;
 	const Graph_LinkTypeDefinition * tryGetLinkTypeDefinition(const GraphLinkId linkId) const;
 	EditorVisualizer * tryGetVisualizer(const GraphNodeId id) const;
+	EditorComment * tryGetComment(const GraphNodeId id) const;
 	
 	bool enabled(const int flag) const;
 	bool hitTest(const float x, const float y, HitTestResult & result) const;
@@ -953,11 +1019,13 @@ struct GraphEdit : GraphEditConnection
 	void doEditorOptions(const float dt);
 	
 	void doLinkParams(const float dt);
+	void doCommentProperties(const float dt);
 	
 	bool isInputIdle() const;
 	
 	bool tryAddNode(const std::string & typeName, const float x, const float y, const bool select, GraphNodeId * nodeId);
 	bool tryAddVisualizer(const GraphNodeId nodeId, const std::string & srcSocketName, const int srcSocketIndex, const std::string & dstSocketName, const int dstSocketIndex, const float x, const float y, const bool select, EditorVisualizer ** visualizer);
+	bool tryAddComment(const float x, const float y, const bool select, EditorComment ** comment);
 	
 	void updateDynamicSockets();
 	void resolveSocketIndices(
@@ -968,11 +1036,14 @@ struct GraphEdit : GraphEditConnection
 	void selectLink(const GraphLinkId linkId, const bool clearSelection);
 	void selectLinkRoutePoint(GraphLinkRoutePoint * routePoint, const bool clearSelection);
 	void selectVisualizer(EditorVisualizer * visualizer, const bool clearSelection);
+	void selectComment(EditorComment * comment, const bool clearSelection);
 	void selectNodeAll();
 	void selectLinkAll();
 	void selectLinkRoutePointAll();
 	void selectVisualizerAll();
+	void selectCommentAll();
 	void selectAll();
+	void deselectAll();
 	
 	void snapToGrid(float & x, float & y) const;
 	
@@ -987,6 +1058,7 @@ struct GraphEdit : GraphEditConnection
 	void draw() const;
 	void drawNode(const GraphNode & node, const NodeData & nodeData, const Graph_TypeDefinition & typeDefinition, const char * displayName) const;
 	void drawVisualizer(const EditorVisualizer & visualizer) const;
+	void drawComment(const EditorComment & comment) const;
 	
 	bool load(const char * filename);
 	bool save(const char * filename);
