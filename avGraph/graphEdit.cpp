@@ -2275,19 +2275,22 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								selectedVisualizers.erase(hitTestResult.visualizer);
 						}
 						
-						if (hitTestResult.visualizerHitTestResult.borderL ||
-							hitTestResult.visualizerHitTestResult.borderR ||
-							hitTestResult.visualizerHitTestResult.borderT ||
-							hitTestResult.visualizerHitTestResult.borderB)
+						if (enabled(kFlag_NodeDrag))
 						{
-							nodeResize.nodeId = hitTestResult.visualizer->id;
-							nodeResize.dragL = hitTestResult.visualizerHitTestResult.borderL;
-							nodeResize.dragR = hitTestResult.visualizerHitTestResult.borderR;
-							nodeResize.dragT = hitTestResult.visualizerHitTestResult.borderT;
-							nodeResize.dragB = hitTestResult.visualizerHitTestResult.borderB;
-						 
-							state = kState_NodeResize;
-							break;
+							if (hitTestResult.visualizerHitTestResult.borderL ||
+								hitTestResult.visualizerHitTestResult.borderR ||
+								hitTestResult.visualizerHitTestResult.borderT ||
+								hitTestResult.visualizerHitTestResult.borderB)
+							{
+								nodeResize.nodeId = hitTestResult.visualizer->id;
+								nodeResize.dragL = hitTestResult.visualizerHitTestResult.borderL;
+								nodeResize.dragR = hitTestResult.visualizerHitTestResult.borderR;
+								nodeResize.dragT = hitTestResult.visualizerHitTestResult.borderT;
+								nodeResize.dragB = hitTestResult.visualizerHitTestResult.borderB;
+								
+								state = kState_NodeResize;
+								break;
+							}
 						}
 						
 						if (enabled(kFlag_NodeDrag))
@@ -2314,19 +2317,22 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								selectedComments.erase(hitTestResult.comment);
 						}
 						
-						if (hitTestResult.commentHitTestResult.borderL ||
-							hitTestResult.commentHitTestResult.borderR ||
-							hitTestResult.commentHitTestResult.borderT ||
-							hitTestResult.commentHitTestResult.borderB)
+						if (enabled(kFlag_NodeDrag))
 						{
-							nodeResize.nodeId = hitTestResult.comment->id;
-							nodeResize.dragL = hitTestResult.commentHitTestResult.borderL;
-							nodeResize.dragR = hitTestResult.commentHitTestResult.borderR;
-							nodeResize.dragT = hitTestResult.commentHitTestResult.borderT;
-							nodeResize.dragB = hitTestResult.commentHitTestResult.borderB;
-							
-							state = kState_NodeResize;
-							break;
+							if (hitTestResult.commentHitTestResult.borderL ||
+								hitTestResult.commentHitTestResult.borderR ||
+								hitTestResult.commentHitTestResult.borderT ||
+								hitTestResult.commentHitTestResult.borderB)
+							{
+								nodeResize.nodeId = hitTestResult.comment->id;
+								nodeResize.dragL = hitTestResult.commentHitTestResult.borderL;
+								nodeResize.dragR = hitTestResult.commentHitTestResult.borderR;
+								nodeResize.dragT = hitTestResult.commentHitTestResult.borderT;
+								nodeResize.dragB = hitTestResult.commentHitTestResult.borderB;
+								
+								state = kState_NodeResize;
+								break;
+							}
 						}
 						
 						if (enabled(kFlag_NodeDrag))
@@ -5665,8 +5671,8 @@ void GraphEdit::drawComment(const EditorComment & comment) const
 			comment.color.rgba[1],
 			comment.color.rgba[2],
 			comment.color.rgba[3],
-			240/255.f);
-		hqFillRoundedRect(0, 0, comment.sx, textSy + 4, 4.f);
+			isSelected ? 1.f : (240/255.f));
+		hqFillRoundedRect(2, 2, comment.sx - 2, 2 + textSy + 2, 4.f);
 	}
 	hqEnd();
 	
