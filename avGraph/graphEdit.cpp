@@ -2674,6 +2674,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						newComment->sx = comment->sx;
 						newComment->sy = comment->sy;
 						newComment->caption = comment->caption;
+						newComment->color = comment->color;
 						
 						newSelectedComments.insert(newComment);
 					}
