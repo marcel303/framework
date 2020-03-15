@@ -4881,128 +4881,63 @@ void GraphEdit::draw() const
 		gxPopMatrix();
 	}
 	
-#if 0 // todo : remove. test bezier control points, drawing only circles
+#if 1
+	Shader shader("graphEdit/gpupath");
+	setShader(shader);
+	shader.setImmediate("color1", 0.02, 0.02, 0.02, 1.0);
+	shader.setImmediate("color2", 0.8, 1.0, 0.1, 1.0);
+	shader.setImmediate("halfThickness", 5.f / 2.f);
+	shader.setImmediate("halfThicknessColor", 5.f * 1.f/2.f / 2.f);
+	shader.setImmediate("hardness", 2.f);
+	const GxImmediateIndex position1_idx = shader.getImmediateIndex("position1");
+	const GxImmediateIndex position2_idx = shader.getImmediateIndex("position2");
+	const GxImmediateIndex color2_idx = shader.getImmediateIndex("color2");
+	const GxImmediateIndex numVertices_idx = shader.getImmediateIndex("numVertices");
 	{
 		for (auto & linkItr : graph->links)
 		{
 			auto linkId = linkItr.first;
 			auto & link = linkItr.second;
 			
-			LinkPath path;
+			const bool isEnabled = link.isEnabled;
+			const bool isSelected = selectedLinks.count(linkId) != 0;
+			const bool isHighlighted = highlightedLinks.count(linkId) != 0;
+		
+			Color color;
+		
+			if (!isEnabled)
+				color = Color(191, 191, 191);
+			else if (isSelected)
+				color = Color(127, 127, 255);
+			else if (isHighlighted)
+				color = Color(255, 255, 255);
+			else
+				color = Color(255, 255, 0);
 			
-			if (getLinkPath(linkId, path))
-			{
-				const bool isEnabled = link.isEnabled;
-				const bool isSelected = selectedLinks.count(linkId) != 0;
-				const bool isHighlighted = highlightedLinks.count(linkId) != 0;
-				
-				Color color;
-				
-				if (!isEnabled)
-					color = Color(191, 191, 191);
-				else if (isSelected)
-					color = Color(127, 127, 255);
-				else if (isHighlighted)
-					color = Color(255, 255, 255);
-				else
-					color = Color(255, 255, 0);
-				
-				if (editorOptions.showOneShotActivity)
-				{
-					const float activeAnim = link.editorIsActiveAnimTime * link.editorIsActiveAnimTimeRcp;
-					color = color.interp(Color(255, 63, 63), activeAnim);
-				}
-				
-				setColor(color);
-				
-				float x1 = path.points[0].x;
-				float y1 = path.points[0].y;
-				
-				Path2d path2d;
-				
-				path2d.moveTo(x1, y1);
-				
-				for (int i = 1; i < path.points.size(); ++i)
-				{
-					const float x2 = path.points[i].x;
-					const float y2 = path.points[i].y;
-					
-					path2d.curveTo(x2, y2, -30.f, 0.f, +30.f, 0.f);
-					
-					x1 = x2;
-					y1 = y2;
-				}
-				
-				const int kMaxPoints = 100;
-
-				float pxyStorage[kMaxPoints * 2];
-				float hxyStorage[kMaxPoints * 2];
-
-				float * pxy = pxyStorage;
-				float * hxy = hxyStorage;
-
-				int numPoints = 0;
-				path2d.generatePoints(pxy, hxy, kMaxPoints, 1.f, numPoints);
-				
-			#if 1
-				hqBegin(HQ_LINES);
-				{
-					for (int i = 0; i < numPoints - 1; ++i)
-					{
-						const int index1 = i + 0;
-						const int index2 = i + 1;
-						
-						hqLine(pxy[index1 * 2 + 0], pxy[index1 * 2 + 1], 1.f, pxy[index2 * 2 + 0], pxy[index2 * 2 + 1], 1.f);
-					}
-				}
-				hqEnd();
-			#else
-				hqBegin(HQ_FILLED_CIRCLES);
-				{
-					for (int i = 0; i < numPoints; ++i)
-					{
-						hqFillCircle(pxy[i * 2 + 0], pxy[i * 2 + 1], 1.f);
-					}
-				}
-				hqEnd();
-			#endif
-			}
-		}
-	}
-#elif 0 // todo : remove. test bezier control points
-	{
-		for (auto & linkItr : graph->links)
-		{
-			auto linkId = linkItr.first;
+			shader.setImmediate(color2_idx, color.r, color.g, color.b, 1.f);
 			
 			LinkPath path;
 			
 			if (getLinkPath(linkId, path))
 			{
-				setColor(colorWhite);
-				
-				float x1 = path.points[0].x;
-				float y1 = path.points[0].y;
-				
-				Path2d path2d;
-				
-				path2d.moveTo(x1, y1);
-				
-				for (int i = 1; i < path.points.size(); ++i)
+				for (int i = 0; i + 1 < path.points.size(); ++i)
 				{
-					const float x2 = path.points[i].x;
-					const float y2 = path.points[i].y;
+					const auto & point1 = path.points[i + 0];
+					const auto & point2 = path.points[i + 1];
 					
-					path2d.curveTo(x2, y2, -30.f, 0.f, +30.f, 0.f);
+					const int numVertices = 20*6;
 					
-					x1 = x2;
-					y1 = y2;
+					shader.setImmediate(position1_idx, point1.x, point1.y);
+					shader.setImmediate(position2_idx, point2.x, point2.y);
+					shader.setImmediate(numVertices_idx, numVertices);
+					{
+						gxEmitVertices(GX_TRIANGLE_STRIP, numVertices);
+					}
 				}
-				
-				hqDrawPath(path2d, 4.f);
 			}
 		}
 	}
+	clearShader();
 #else
 	// traverse and draw links
 	
