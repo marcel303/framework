@@ -99,11 +99,21 @@ public:
 	void ellipseMode(EllipseMode mode);
 	void line(float x1, float y1, float x2, float y2);
 	void lineTo(float x, float y);
+	void quadTo(float cx, float cy, float x, float y);
+	void bezierTo(float c1x, float c1y, float c2x, float c2y, float x, float y);
 	void rect(float x, float y, float w, float h);
 	void rect(float x, float y, float w, float h, float r);
 	void rectMode(RectMode mode);
 	void square(float x, float y, float extent);
 	void triangle(float x1, float y1, float x2, float y2, float x3, float y3);
+	
+	void saveState();
+	void restoreState();
+	
+	void translate(float x, float y);
+	void scale(float s);
+	void scale(float x, float y);
+	void rotate(float angle);
 	
 	NVGcontext * getNanoVgContext() const { return ctx; }
 };
@@ -162,9 +172,19 @@ namespace NvgCanvasFunctions
 	inline void ellipseMode(EllipseMode mode) { canvas.ellipseMode(mode); }
 	inline void line(float x1, float y1, float x2, float y2) { canvas.line(x1, y1, x2, y2); }
 	inline void lineTo(float x, float y) { canvas.lineTo(x, y); }
+	inline void quadTo(float cx, float cy, float x, float y) { canvas.quadTo(cx, cy, x, y); }
+	inline void bezierTo(float c1x, float c1y, float c2x, float c2y, float x, float y) { canvas.bezierTo(c1x, c1y, c2x, c2y, x, y); }
 	inline void rect(float x, float y, float w, float h) { canvas.rect(x, y, w, h); }
 	inline void rect(float x, float y, float w, float h, float r) { canvas.rect(x, y, w, h, r); }
 	inline void rectMode(RectMode mode) { canvas.rectMode(mode); }
 	inline void square(float x, float y, float extent) { canvas.square(x, y, extent); }
 	inline void triangle(float x1, float y1, float x2, float y2, float x3, float y3) { canvas.triangle(x1, y1, x2, y2, x3, y3); }
+	
+	inline void saveState() { canvas.saveState(); }
+	inline void restoreState() { canvas.restoreState(); }
+	
+	inline void translate(float x, float y) { canvas.translate(x, y); }
+	inline void scale(float s) { canvas.scale(s); }
+	inline void scale(float x, float y) { canvas.scale(x, y); }
+	inline void rotate(float angle) { canvas.rotate(angle); }
 }

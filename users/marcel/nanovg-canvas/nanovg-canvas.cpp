@@ -101,7 +101,7 @@ void NvgCanvas::strokeCap(StrokeCap cap)
 		cap == StrokeCap::Round ? NVG_ROUND :
 		cap == StrokeCap::Square ? NVG_SQUARE :
 		-1;
-	
+		
 	if (cap_ != -1)
 	{
 		nvgLineCap(ctx, cap_);
@@ -282,6 +282,16 @@ void NvgCanvas::lineTo(float x, float y)
 	nvgLineTo(ctx, x, y);
 }
 
+void NvgCanvas::quadTo(float cx, float cy, float x, float y)
+{
+	nvgQuadTo(ctx, cx, cy, x, y);
+}
+
+void NvgCanvas::bezierTo(float c1x, float c1y, float c2x, float c2y, float x, float y)
+{
+	nvgBezierTo(ctx, c1x, c1y, c2x, c2y, x, y);
+}
+
 void NvgCanvas::rect(float x, float y, float w, float h)
 {
 	if (_rectMode == RectMode::Corner)
@@ -330,4 +340,34 @@ void NvgCanvas::triangle(float x1, float y1, float x2, float y2, float x3, float
 	nvgLineTo(ctx, x2, y2);
 	nvgLineTo(ctx, x3, y3);
 	nvgLineTo(ctx, x1, y1);
+}
+
+void NvgCanvas::saveState()
+{
+	nvgSave(ctx);
+}
+
+void NvgCanvas::restoreState()
+{
+	nvgRestore(ctx);
+}
+
+void NvgCanvas::translate(float x, float y)
+{
+	nvgTranslate(ctx, x, y);
+}
+
+void NvgCanvas::scale(float s)
+{
+	nvgScale(ctx, s, s);
+}
+
+void NvgCanvas::scale(float x, float y)
+{
+	nvgScale(ctx, x, y);
+}
+
+void NvgCanvas::rotate(float angle)
+{
+	nvgRotate(ctx, angle);
 }
