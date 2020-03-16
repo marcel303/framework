@@ -322,17 +322,21 @@ void VfxGraph::tick(const int in_sx, const int in_sy, const float dt)
 	
 	if (displayNodeIds.empty() == false)
 	{
-		auto displayNodeId = *displayNodeIds.begin();
-		
-		auto nodeItr = nodes.find(displayNodeId);
-		Assert(nodeItr != nodes.end());
-		if (nodeItr != nodes.end())
+		for (auto displayNodeId : displayNodeIds)
 		{
-			auto node = nodeItr->second;
-			
-			VfxNodeDisplay * displayNode = static_cast<VfxNodeDisplay*>(node);
-			
-			displayNode->traverseTick(currentTickTraversalId, dt);
+			auto nodeItr = nodes.find(displayNodeId);
+			Assert(nodeItr != nodes.end());
+			if (nodeItr != nodes.end())
+			{
+				auto * node = nodeItr->second;
+				
+				if (node->isPassthrough)
+					continue;
+				
+				VfxNodeDisplay * displayNode = static_cast<VfxNodeDisplay*>(node);
+				
+				displayNode->traverseTick(currentTickTraversalId, dt);
+			}
 		}
 	}
 	
@@ -453,15 +457,16 @@ int VfxGraph::traverseDraw() const
 
 VfxNodeDisplay * VfxGraph::getMainDisplayNode() const
 {
-	if (displayNodeIds.empty() == false)
+	for (auto displayNodeId : displayNodeIds)
 	{
-		auto displayNodeId = *displayNodeIds.begin();
-		
 		auto nodeItr = nodes.find(displayNodeId);
 		Assert(nodeItr != nodes.end());
 		if (nodeItr != nodes.end())
 		{
-			auto node = nodeItr->second;
+			auto * node = nodeItr->second;
+			
+			if (node->isPassthrough)
+				continue;
 			
 			return static_cast<VfxNodeDisplay*>(node);
 		}
