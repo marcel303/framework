@@ -30,10 +30,12 @@ static VfxPlugType stringToVfxPlugType(const std::string & typeName)
 		type = kVfxPlugType_Image;
 	else if (typeName == "image_cpu")
 		type = kVfxPlugType_ImageCpu;
-	else if (typeName == "draw")
-		type = kVfxPlugType_Draw;
 	else if (typeName == "trigger")
 		type = kVfxPlugType_Trigger;
+	else if (typeName == "draw")
+		type = kVfxPlugType_Draw;
+	else if (typeName == "mesh")
+		type = kVfxPlugType_Mesh;
 	
 	return type;
 }
