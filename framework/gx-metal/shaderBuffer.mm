@@ -98,11 +98,17 @@ void ShaderBuffer::setData(const void * bytes, int numBytes)
 		else
 		{
 			[buffer release];
-			buffer= nil;
+			buffer = nil;
 			
 			buffer = [device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeManaged];
 		}
 	}
+}
+
+void ShaderBuffer::setData(const void * bytes, int numBytes)
+{
+	[buffer release];
+	buffer = nil;
 }
 
 //

@@ -88,6 +88,11 @@ void ShaderBuffer::setData(const void * bytes, int numBytes)
 	}
 }
 
+void ShaderBuffer::free()
+{
+	setData(nullptr, 0);
+}
+
 //
 
 ShaderBufferRw::ShaderBufferRw()

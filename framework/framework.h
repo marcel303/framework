@@ -913,6 +913,7 @@ public:
 	~ShaderBuffer();
 
 	void setData(const void * bytes, int numBytes);
+	void free();
 	
 #if ENABLE_OPENGL
 	int getOpenglBuffer() const { return m_buffer; }
