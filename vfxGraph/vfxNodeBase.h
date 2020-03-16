@@ -43,6 +43,7 @@
 struct Graph_TypeDefinitionLibrary;
 struct GraphEdit_ResourceEditorBase;
 struct GraphNode;
+class GxMesh;
 struct GxTexture;
 class Surface;
 
@@ -235,6 +236,10 @@ struct VfxChannel
 
 struct VfxChannelZipper
 {
+// todo : add mode to produce the carthesian product (all combinations of all channels)
+//        this will quickly explode the number of combinations, but is very powerful.
+//        mode = join, carthesianProduct
+
 	const static int kMaxChannels = 16;
 	
 	VfxChannelZipper(std::initializer_list<const VfxChannel*> _channels)
@@ -379,7 +384,8 @@ enum VfxPlugType
 	kVfxPlugType_ImageCpu,
 	kVfxPlugType_Channel,
 	kVfxPlugType_Trigger,
-	kVfxPlugType_Draw
+	kVfxPlugType_Draw,
+	kVfxPlugType_Mesh
 };
 
 #if EXTENDED_INPUTS
@@ -521,6 +527,12 @@ struct VfxPlug
 		return (VfxChannel*)mem;
 	}
 	
+	GxMesh * getMesh() const
+	{
+		Assert(type == kVfxPlugType_Mesh);
+		return (GxMesh*)mem;
+	}
+	
 	//
 	
 	bool & getRwBool()
@@ -557,6 +569,12 @@ struct VfxPlug
 	{
 		Assert(type == kVfxPlugType_Channel);
 		return *((VfxChannel*)mem);
+	}
+	
+	GxMesh & getRwMesh()
+	{
+		Assert(type == kVfxPlugType_Mesh);
+		return *((GxMesh*)mem);
 	}
 };
 
@@ -799,6 +817,16 @@ struct VfxNodeBase
 			return plug->getChannel();
 	}
 	
+	const GxMesh * getInputMesh(const int index, const GxMesh * defaultValue) const
+	{
+		const VfxPlug * plug = tryGetInput(index);
+		
+		if (plug == nullptr || !plug->isConnected())
+			return defaultValue;
+		else
+			return plug->getMesh();
+	}
+	
 	void queueTrigger(const int index)
 	{
 		VfxPlug * plug = tryGetInput(index);
@@ -828,7 +856,7 @@ struct VfxNodeBase
 	virtual void customTraverseDraw(const int traversalId) const { }
 	virtual void beforeSave(GraphNode & node) const { }
 	
-	virtual void getDescription(VfxNodeDescription & d) { } 
+	virtual void getDescription(VfxNodeDescription & d) { }
 };
 
 //
