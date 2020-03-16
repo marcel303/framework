@@ -30,7 +30,10 @@
 
 VFX_ENUM_TYPE(meshPrefabType)
 {
-	elem("cylinder");
+	elem("cube", VfxNodeMeshFromPrefab::kType_Cube);
+	elem("cylinder", VfxNodeMeshFromPrefab::kType_Cylinder);
+	elem("circle", VfxNodeMeshFromPrefab::kType_Circle);
+	elem("rect", VfxNodeMeshFromPrefab::kType_Rect);
 }
 
 VFX_NODE_TYPE(VfxNodeMeshFromPrefab)
@@ -97,14 +100,30 @@ void VfxNodeMeshFromPrefab::tick(const float dt)
 		
 		gxCaptureMeshBegin(mesh, vb, ib);
 		
+		setColor(colorWhite);
+		
 		switch (type)
 		{
 		case kType_None:
 			break;
+		
+		case kType_Cube:
+			fillCube(Vec3(), Vec3(scale, scale, scale));
+			break;
 			
 		case kType_Cylinder:
-			setColor(colorWhite);
 			fillCylinder(Vec3(), scale, scale, resolution);
+			break;
+			
+		case kType_Circle:
+			gxPushMatrix();
+			gxRotatef(90.f, 1, 0, 0);
+			fillCircle(0, 0, scale, resolution);
+			gxPopMatrix();
+			break;
+			
+		case kType_Rect:
+			drawGrid3d(1, 1, 0, 2);
 			break;
 		}
 		
@@ -115,7 +134,6 @@ void VfxNodeMeshFromPrefab::tick(const float dt)
 //
 
 #include "gx_mesh.h"
-#include "data/engine/ShaderCommon.txt"
 
 VFX_NODE_TYPE(VfxNodeDrawMesh)
 {
@@ -153,12 +171,16 @@ void VfxNodeDrawMesh::tick(const float dt)
 	
 	if (isPassthrough)
 	{
+		shaderBuffer.free();
 		return;
 	}
 }
 
 void VfxNodeDrawMesh::draw() const
 {
+	if (isPassthrough)
+		return;
+	
 	vfxGpuTimingBlock(VfxNodeDrawMesh);
 	
 	const GxMesh * mesh = getInputMesh(kInput_Mesh, nullptr);
@@ -178,7 +200,7 @@ void VfxNodeDrawMesh::draw() const
 			
 			// compute transforms
 			
-			const int numTransforms = zipper.size() == 0 ? 1 : zipper.size();
+			const int numTransforms = (zipper.size() == 0) ? 1 : zipper.size();
 			Mat4x4 * transforms = new Mat4x4[numTransforms];
 			
 			if (zipper.done())
@@ -200,32 +222,32 @@ void VfxNodeDrawMesh::draw() const
 					
 					zipper.next();
 				}
+				
+				Assert(index == numTransforms);
 			}
 			
 			if (shaderName != nullptr)
 			{
 				Shader shader(shaderName);
 				setShader(shader);
-				
-				ShaderBuffer shaderBuffer;
-				
-				if (instanced)
 				{
-					shaderBuffer.setData(transforms, numTransforms * sizeof(transforms[0]));
-					shader.setBuffer("transforms", shaderBuffer);
-					
-					mesh->drawInstanced(numTransforms);
-				}
-				else
-				{
-					for (int i = 0; i < numTransforms; ++i)
+					if (instanced)
 					{
-						gxLoadMatrixf(transforms[i].m_v);
+						shaderBuffer.setData(transforms, numTransforms * sizeof(transforms[0]));
+						shader.setBuffer("transforms", shaderBuffer);
 						
-						mesh->draw();
+						mesh->drawInstanced(numTransforms);
+					}
+					else
+					{
+						for (int i = 0; i < numTransforms; ++i)
+						{
+							gxLoadMatrixf(transforms[i].m_v);
+							
+							mesh->draw();
+						}
 					}
 				}
-				
 				clearShader();
 			}
 			else

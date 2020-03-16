@@ -39,7 +39,10 @@ struct VfxNodeMeshFromPrefab : VfxNodeBase
 {
 	enum Type
 	{
+		kType_Cube,
 		kType_Cylinder,
+		kType_Circle,
+		kType_Rect,
 		kType_None
 	};
 
@@ -71,6 +74,8 @@ struct VfxNodeMeshFromPrefab : VfxNodeBase
 	virtual void tick(const float dt) override;
 };
 
+#include "framework.h"
+
 struct VfxNodeDrawMesh : VfxNodeBase
 {
 	enum Input
@@ -89,6 +94,8 @@ struct VfxNodeDrawMesh : VfxNodeBase
 		kOutput_Draw,
 		kOutput_COUNT
 	};
+	
+	mutable ShaderBuffer shaderBuffer;
 	
 	VfxNodeDrawMesh();
 	virtual ~VfxNodeDrawMesh() override;
