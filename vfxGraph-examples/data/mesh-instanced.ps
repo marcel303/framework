@@ -1,0 +1,92 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+shader_in vec3 v_position_view;
+shader_in vec3 v_normal_view;
+shader_in vec2 v_texcoord;
+shader_in vec4 v_color;
+
+void main()
+{
+#if 1
+	vec3 baseColor = v_color.rgb;
+	float opacity = v_color.a;
+
+	vec3 color = baseColor;
+
+	color.rgb *= (v_position_view.xyz + vec3(1.0)) * 0.5;
+#else
+	vec3 baseColor = srgbToLinear(v_color.rgb);
+	float opacity = v_color.a;
+
+	//color.rgb *= v_normal_view;
+
+	// -- lighting --
+
+	vec3 light = vec3(0.0);
+
+	{
+		vec3 lightColor = vec3(4200.0);
+
+		// -- light & surface vectors --
+		vec3 surfaceToLightVector_unscaled = u_lightPosition_view - v_position_view;
+		vec3 surfaceToLightVector = normalize(surfaceToLightVector_unscaled);
+		vec3 normalVector = normalize(v_normal_view);
+
+		// -- distance attenuation --
+		float distanceSquared = dot(surfaceToLightVector_unscaled, surfaceToLightVector_unscaled);
+		float attenuation = 1.0 / distanceSquared;
+
+		// - diffuse --
+		float diffuseFactor = max(0.0, dot(surfaceToLightVector, normalVector));
+
+		// -- specular --
+		vec3 viewVector = normalize(-v_position_view);
+
+		// Blinn-Phong
+		vec3 halfVector = normalize(viewVector + surfaceToLightVector);
+		float specularFactor = max(0.0, dot(normalVector, halfVector));
+		specularFactor = pow(specularFactor, 64.0);
+
+		// energy preservation
+		float specularAmount = max(u_specularColor.r, max(u_specularColor.g, u_specularColor.b));
+		diffuseFactor *= 1.0 - specularFactor * specularAmount;
+
+		// -- !material hack! --
+		//diffuseFactor *= 0.5;
+		specularFactor *= 2.0;
+
+		// -- debugging --
+		//diffuseFactor += 0.2;
+		//specularFactor *= 2.0;
+		//lightColor *= 2.0;
+
+		// -- light accumulation --
+		light += vec3(diffuseFactor);
+		light += specularFactor * u_specularColor;
+		light *= lightColor;
+		light *= attenuation;
+
+		if (true)
+		{
+			light *= 0.9;
+			light += 0.1 * abs(srgbToLinear(surfaceToLightVector));
+		}
+
+		//light = viewVector;
+		//light = normalVector;
+		//light = reflectionVector;
+		//light = vec3(diffuseFactor);
+		//light = vec3(attenuation);
+		//light = surfaceToLightVector_unscaled;
+		//light = surfaceToLightVector;
+		//light *= length(surfaceToLightVector_unscaled) / 100.0;
+	}
+
+	light += vec3(0.06);
+
+	vec3 color = linearToSrgb(baseColor * light);
+#endif
+
+	shader_fragColor = vec4(color, opacity);
+}
