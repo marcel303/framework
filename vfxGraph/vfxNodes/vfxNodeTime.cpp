@@ -49,6 +49,12 @@ VfxNodeTime::VfxNodeTime()
 
 void VfxNodeTime::tick(const float dt)
 {
+	if (isPassthrough)
+	{
+		time = 0.f;
+		return;
+	}
+	
 	const float scale = getInputFloat(kInput_Scale, 1.f);
 	const float offset = getInputFloat(kInput_Offset, 0.f);
 
