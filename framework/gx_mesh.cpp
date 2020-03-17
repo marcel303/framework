@@ -57,7 +57,7 @@ void GxMesh::draw(const GX_PRIMITIVE_TYPE type) const
 {
 	fassert(m_vertexBuffer);
 	
-	AssertMsg(m_indexBuffer != nullptr, "GxMesh::draw with prim type assumes an index buffer is set. if you wish to draw non-indexed primitives, use the draw method which takes as explicit arguments the 'firstVertex' and 'numVertices'", 0);
+	AssertMsg(m_indexBuffer != nullptr, "GxMesh::draw with prim type assumes an index buffer is set. if you wish to draw non-indexed primitives, use the draw method which takes as explicit arguments 'firstVertex' and 'numVertices'", 0);
 	
 	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
 	
@@ -87,7 +87,7 @@ void GxMesh::drawInstanced(const int numInstances, const GX_PRIMITIVE_TYPE type)
 {
 	fassert(m_vertexBuffer);
 	
-	AssertMsg(m_indexBuffer != nullptr, "GxMesh::drawInstanced with prim type assumes an index buffer is set. if you wish to draw non-indexed primitives, use the draw method which takes as explicit arguments the 'firstVertex' and 'numVertices'", 0);
+	AssertMsg(m_indexBuffer != nullptr, "GxMesh::drawInstanced with prim type assumes an index buffer is set. if you wish to draw non-indexed primitives, use the draw method which takes as explicit arguments 'firstVertex' and 'numVertices'", 0);
 	
 	gxSetVertexBuffer(m_vertexBuffer, m_vertexInputs, m_numVertexInputs, m_vertexStride);
 	
