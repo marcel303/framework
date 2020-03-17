@@ -26,6 +26,8 @@ library vfxgraph-nodes
 	
 	header_path objects expose
 
+	resource_path vfxNodes/data
+
 	with_platform macos   header_path macos/include expose
 	with_platform windows header_path win32/include expose
 

@@ -1,0 +1,32 @@
+include engine/ShaderVS.txt
+
+uniform mat4 u_worldMatrices[64] buffer transforms; // todo : 256 again. 64 now due to 4k limit Metal
+
+vec4 meshToView(vec4 position)
+{
+	int id = gl_InstanceID;
+
+	return objectToView(u_worldMatrices[id] * position);
+}
+
+vec3 meshToView(vec3 position)
+{
+	return meshToView(vec4(position, 1.0)).xyz;
+}
+
+vec3 meshToView3(vec3 normal)
+{
+	return meshToView(vec4(normal, 0.0)).xyz;
+}
+
+vec4 meshToProjection(vec4 position)
+{
+	int id = gl_InstanceID;
+	
+	return objectToProjection(u_worldMatrices[id] * position);
+}
+
+vec3 meshToProjection(vec3 position)
+{
+	return meshToProjection(vec4(position, 1.0)).xyz;
+}

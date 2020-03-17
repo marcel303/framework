@@ -15,6 +15,7 @@ void main()
 	vec3 color = baseColor;
 
 	color.rgb *= (v_position_view.xyz + vec3(1.0)) * 0.5;
+	//color.rgb *= (v_normal_view.xyz + vec3(1.0)) * 0.5;
 #else
 	vec3 baseColor = srgbToLinear(v_color.rgb);
 	float opacity = v_color.a;
