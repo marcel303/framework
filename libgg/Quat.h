@@ -17,6 +17,7 @@ public:
 	void normalize();
 	Quat calcConjugate() const;
 	void fromAxisAngle(const Vec3 & axis, float angle);
+	void fromAngleAxis(float angle, const Vec3 & axis) { fromAxisAngle(axis, angle); }
 	void fromMatrix(const Mat4x4 & matrix);
 	Mat4x4 toMatrix() const;
 	void toMatrix3x3(Mat4x4 & matrix) const; // fill only the 3x3 rotation part
