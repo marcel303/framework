@@ -30,10 +30,8 @@
 #include "gx_mesh.h"
 #include "vfxNodeBase.h"
 
-// todo : add DrawMesh node
-// todo : let DrawMesh node support instancing. channels for position, orientation
-// todo : add Mesh.fromPrefab node. add cylinder, cube, sphere, etc
-// todo : add Mesh.toChannel node. export vertex position, normal, color as channel data
+// todo : let DrawMesh node support instancing. channels for position, orientation, scale
+// todo : mesh.fromPrefab: add sphere type
 
 struct VfxNodeMeshFromPrefab : VfxNodeBase
 {
@@ -51,6 +49,9 @@ struct VfxNodeMeshFromPrefab : VfxNodeBase
 		kInput_Type,
 		kInput_Resolution,
 		kInput_Scale,
+		kInput_ScaleX,
+		kInput_ScaleY,
+		kInput_ScaleZ,
 		kInput_COUNT
 	};
 	
@@ -62,7 +63,7 @@ struct VfxNodeMeshFromPrefab : VfxNodeBase
 
 	Type currentType;
 	int currentResolution;
-	float currentScale;
+	Vec3 currentScale;
 
 	GxVertexBuffer vb;
 	GxIndexBuffer ib;
@@ -78,12 +79,27 @@ struct VfxNodeMeshFromPrefab : VfxNodeBase
 
 struct VfxNodeDrawMesh : VfxNodeBase
 {
+	enum PositionMode
+	{
+		kPositionMode_Regular,
+		kPositionMode_CartesianProduct
+	};
+	
 	enum Input
 	{
 		kInput_Mesh,
+		kInput_PositionMode,
 		kInput_PositionX,
 		kInput_PositionY,
 		kInput_PositionZ,
+		kInput_RotationAngle,
+		kInput_RotationAxisX,
+		kInput_RotationAxisY,
+		kInput_RotationAxisZ,
+		kInput_Scale,
+		kInput_ScaleX,
+		kInput_ScaleY,
+		kInput_ScaleZ,
 		kInput_Shader,
 		kInput_Instanced,
 		kInput_COUNT

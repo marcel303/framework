@@ -43,6 +43,9 @@ VFX_NODE_TYPE(VfxNodeMeshFromPrefab)
 	inEnum("type", "meshPrefabType");
 	in("resolution", "int", "10");
 	in("scale", "float", "1");
+	in("scale.x", "float", "1");
+	in("scale.y", "float", "1");
+	in("scale.z", "float", "1");
 	out("mesh", "mesh");
 }
 
@@ -50,12 +53,15 @@ VfxNodeMeshFromPrefab::VfxNodeMeshFromPrefab()
 	: VfxNodeBase()
 	, currentType(kType_None)
 	, currentResolution(0)
-	, currentScale(1.f)
+	, currentScale(1, 1, 1)
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Type, kVfxPlugType_Int);
 	addInput(kInput_Resolution, kVfxPlugType_Int);
 	addInput(kInput_Scale, kVfxPlugType_Float);
+	addInput(kInput_ScaleX, kVfxPlugType_Float);
+	addInput(kInput_ScaleY, kVfxPlugType_Float);
+	addInput(kInput_ScaleZ, kVfxPlugType_Float);
 	addOutput(kOutput_Mesh, kVfxPlugType_Mesh, &mesh);
 }
 
@@ -69,13 +75,16 @@ void VfxNodeMeshFromPrefab::tick(const float dt)
 	
 	const Type type = (Type)getInputInt(kInput_Type, kType_Cylinder);
 	const int resolution = getInputInt(kInput_Resolution, 10);
-	const float scale = getInputFloat(kInput_Scale, 1.f);
+	const float scaleX = getInputFloat(kInput_ScaleX, 1.f);
+	const float scaleY = getInputFloat(kInput_ScaleY, 1.f);
+	const float scaleZ = getInputFloat(kInput_ScaleZ, 1.f);
+	const Vec3 scale = Vec3(scaleX, scaleY, scaleZ) * getInputFloat(kInput_Scale, 1.f);
 
 	if (isPassthrough || resolution <= 0)
 	{
 		currentType = kType_None,
 		currentResolution = 0;
-		currentScale = 1.f;
+		currentScale.Set(1, 1, 1);
 		
 		//
 		
@@ -98,6 +107,9 @@ void VfxNodeMeshFromPrefab::tick(const float dt)
 		ib.free();
 		mesh.clear();
 		
+		gxPushMatrix();
+		gxScalef(scale[0], scale[1], scale[2]);
+		
 		gxCaptureMeshBegin(mesh, vb, ib);
 		
 		setColor(colorWhite);
@@ -108,18 +120,16 @@ void VfxNodeMeshFromPrefab::tick(const float dt)
 			break;
 		
 		case kType_Cube:
-			fillCube(Vec3(), Vec3(scale, scale, scale));
+			fillCube(Vec3(), Vec3(1, 1, 1));
 			break;
 			
 		case kType_Cylinder:
-			fillCylinder(Vec3(), scale, scale, resolution);
+			fillCylinder(Vec3(), 1, 1, resolution);
 			break;
 			
 		case kType_Circle:
-			gxPushMatrix();
 			gxRotatef(90.f, 1, 0, 0);
-			fillCircle(0, 0, scale, resolution);
-			gxPopMatrix();
+			fillCircle(0, 0, 1, resolution);
 			break;
 			
 		case kType_Rect:
@@ -128,21 +138,159 @@ void VfxNodeMeshFromPrefab::tick(const float dt)
 		}
 		
 		gxCaptureMeshEnd();
+		gxPopMatrix();
 	}
 }
 
 //
 
+#include <initializer_list>
+
+struct VfxChannelZipper_Cartesian
+{
+	const static int kMaxChannels = 16;
+	
+	const VfxChannel * channels[kMaxChannels];
+	int numChannels;
+	
+	int cartesianSize;
+	
+	int progress[kMaxChannels] = { };
+	
+	bool _done = false;
+	
+	VfxChannelZipper_Cartesian(std::initializer_list<const VfxChannel*> _channels)
+		: numChannels()
+		, cartesianSize(0)
+	{
+		ctor(_channels.begin(), _channels.size());
+	}
+	
+	VfxChannelZipper_Cartesian(const VfxChannel * const * _channels, const int _numChannels)
+		: numChannels()
+		, cartesianSize(0)
+	{
+		ctor(_channels, _numChannels);
+	}
+	
+	void ctor(const VfxChannel * const * _channels, const int _numChannels)
+	{
+		cartesianSize = 1;
+		
+		for (int i = 0; i < _numChannels; ++i)
+		{
+			const VfxChannel * channel = _channels[i];
+			
+			if (numChannels < kMaxChannels)
+			{
+				if (channel != nullptr && channel->size > 0)
+				{
+					channels[numChannels] = channel;
+					
+					cartesianSize *= channel->size;
+				}
+				else
+				{
+					channels[numChannels] = nullptr;
+				}
+				
+				numChannels++;
+			}
+		}
+	}
+	
+	int nextChannel(const int channel) const
+	{
+		int result = channel;
+		
+		while (result < numChannels && channels[result] == nullptr)
+			result++;
+		
+		return result;
+	}
+	
+	int size() const
+	{
+		return cartesianSize;
+	}
+	
+	bool done() const
+	{
+		if (size() == 0)
+			return true;
+		
+		return _done;
+	}
+	
+	void next()
+	{
+		Assert(!done());
+		
+		for (int channel = nextChannel(0); channel != numChannels; channel = nextChannel(channel + 1))
+		{
+			progress[channel]++;
+			
+			if (progress[channel] == channels[channel]->size)
+				progress[channel] = 0;
+			else
+				return;
+		}
+		
+		_done = true;
+	}
+	
+	void restart()
+	{
+		memset(progress, 0, sizeof(progress));
+	}
+	
+	float read(const int channelIndex, const float defaultValue) const
+	{
+		const VfxChannel * channel = channels[channelIndex];
+		
+		if (channel == nullptr || channel->size == 0)
+		{
+			return defaultValue;
+		}
+		else
+		{
+			const int index = progress[channelIndex];
+			
+			const float result = channel->data[index];
+			
+			return result;
+		}
+	}
+};
+
+//
+
+#include "Calc.h"
 #include "gx_mesh.h"
+
+VFX_ENUM_TYPE(drawMeshPositionMode)
+{
+	elem("regular", VfxNodeDrawMesh::kPositionMode_Regular);
+	elem("cartesian", VfxNodeDrawMesh::kPositionMode_CartesianProduct);
+}
 
 VFX_NODE_TYPE(VfxNodeDrawMesh)
 {
 	typeName = "draw.mesh";
 	
 	in("mesh", "mesh");
+	inEnum("pos.mode", "drawMeshPositionMode", "regular");
 	in("pos.x", "channel");
 	in("pos.y", "channel");
 	in("pos.z", "channel");
+	in("rot.angle", "channel", "0");
+	in("rot.axis.x", "channel", "1");
+	in("rot.axis.y", "channel", "0");
+	in("rot.axis.z", "channel", "0");
+	in("scale", "channel");
+	in("scale.x", "channel");
+	in("scale.y", "channel");
+	in("scale.z", "channel");
 	in("shader", "string");
 	in("instanced", "bool", "0");
 	out("draw", "draw");
@@ -153,9 +301,18 @@ VfxNodeDrawMesh::VfxNodeDrawMesh()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_Mesh, kVfxPlugType_Mesh);
+	addInput(kInput_PositionMode, kVfxPlugType_Int);
 	addInput(kInput_PositionX, kVfxPlugType_Channel);
 	addInput(kInput_PositionY, kVfxPlugType_Channel);
 	addInput(kInput_PositionZ, kVfxPlugType_Channel);
+	addInput(kInput_RotationAngle, kVfxPlugType_Channel);
+	addInput(kInput_RotationAxisX, kVfxPlugType_Channel);
+	addInput(kInput_RotationAxisY, kVfxPlugType_Channel);
+	addInput(kInput_RotationAxisZ, kVfxPlugType_Channel);
+	addInput(kInput_Scale, kVfxPlugType_Channel);
+	addInput(kInput_ScaleX, kVfxPlugType_Channel);
+	addInput(kInput_ScaleY, kVfxPlugType_Channel);
+	addInput(kInput_ScaleZ, kVfxPlugType_Channel);
 	addInput(kInput_Shader, kVfxPlugType_String);
 	addInput(kInput_Instanced, kVfxPlugType_Bool);
 	addOutput(kOutput_Draw, kVfxPlugType_Draw, this);
@@ -187,16 +344,86 @@ void VfxNodeDrawMesh::draw() const
 	
 	if (mesh != nullptr)
 	{
+		const PositionMode positionMode = (PositionMode)getInputInt(kInput_PositionMode, kPositionMode_Regular);
+		
 		const VfxChannel * positionX = getInputChannel(kInput_PositionX, nullptr);
 		const VfxChannel * positionY = getInputChannel(kInput_PositionY, nullptr);
 		const VfxChannel * positionZ = getInputChannel(kInput_PositionZ, nullptr);
+		
+		const VfxChannel * rotationAngle = getInputChannel(kInput_RotationAngle, nullptr);
+		const VfxChannel * rotationAxisX = getInputChannel(kInput_RotationAxisX, nullptr);
+		const VfxChannel * rotationAxisY = getInputChannel(kInput_RotationAxisY, nullptr);
+		const VfxChannel * rotationAxisZ = getInputChannel(kInput_RotationAxisZ, nullptr);
+		
+		const VfxChannel * scale = getInputChannel(kInput_Scale, nullptr);
+		const VfxChannel * scaleX = getInputChannel(kInput_ScaleX, nullptr);
+		const VfxChannel * scaleY = getInputChannel(kInput_ScaleY, nullptr);
+		const VfxChannel * scaleZ = getInputChannel(kInput_ScaleZ, nullptr);
 		
 		const char * shaderName = getInputString(kInput_Shader, nullptr);
 		const bool instanced = getInputBool(kInput_Instanced, false) && shaderName != nullptr;
 	
 		gxPushMatrix();
 		{
-			VfxChannelZipper zipper({ positionX, positionY, positionZ });
+			VfxChannelData positionData;
+			VfxChannel positionX_zipped;
+			VfxChannel positionY_zipped;
+			VfxChannel positionZ_zipped;
+			
+			if (positionMode == kPositionMode_CartesianProduct)
+			{
+				// zip the position channels into its cartesian product
+				
+				VfxChannelZipper_Cartesian zipper_position(
+					{
+						positionX,
+						positionY,
+						positionZ
+					});
+				
+				const int numPositions = zipper_position.size();
+				positionData.alloc(numPositions * 3);
+				
+				positionX_zipped.setData(positionData.data + 0 * numPositions, false, numPositions);
+				positionY_zipped.setData(positionData.data + 1 * numPositions, false, numPositions);
+				positionZ_zipped.setData(positionData.data + 2 * numPositions, false, numPositions);
+
+				int positionIndex = 0;
+
+				while (!zipper_position.done())
+				{
+					positionX_zipped.dataRw()[positionIndex] = zipper_position.read(0, 0.f);
+					positionY_zipped.dataRw()[positionIndex] = zipper_position.read(1, 0.f);
+					positionZ_zipped.dataRw()[positionIndex] = zipper_position.read(2, 0.f);
+					
+					positionIndex++;
+					
+					zipper_position.next();
+				}
+				
+				Assert(positionIndex == numPositions);
+				
+				// zip the cartesian product with the rest of the channels
+				
+				positionX = &positionX_zipped;
+				positionY = &positionY_zipped;
+				positionZ = &positionZ_zipped;
+			}
+			
+			VfxChannelZipper zipper(
+				{
+					positionX,
+					positionY,
+					positionZ,
+					rotationAngle,
+					rotationAxisX,
+					rotationAxisY,
+					rotationAxisZ,
+					scale,
+					scaleX,
+					scaleY,
+					scaleZ
+				});
 			
 			// compute transforms
 			
@@ -217,8 +444,27 @@ void VfxNodeDrawMesh::draw() const
 					const float y = zipper.read(1, 0.f);
 					const float z = zipper.read(2, 0.f);
 					
+					const float rotation_angle = zipper.read(3, 0.f);
+					const float rorationAxis_x = zipper.read(4, 1.f);
+					const float rorationAxis_y = zipper.read(5, 0.f);
+					const float rorationAxis_z = zipper.read(6, 0.f);
+					
+					const float scale = zipper.read(7, 1.f);
+					const float scale_x = zipper.read(8, 1.f) * scale;
+					const float scale_y = zipper.read(9, 1.f) * scale;
+					const float scale_z = zipper.read(10, 1.f) * scale;
+					
 					Assert(index < numTransforms);
-					transforms[index++].MakeTranslation(x, y, z);
+					transforms[index++] =
+						Mat4x4(true)
+						.Translate(x, y, z)
+						.Rotate(
+							Calc::DegToRad(rotation_angle),
+							Vec3(
+								rorationAxis_x,
+								rorationAxis_y,
+								rorationAxis_z))
+						.Scale(scale_x, scale_y, scale_z);
 					
 					zipper.next();
 				}
@@ -242,9 +488,13 @@ void VfxNodeDrawMesh::draw() const
 					{
 						for (int i = 0; i < numTransforms; ++i)
 						{
-							gxLoadMatrixf(transforms[i].m_v);
-							
-							mesh->draw();
+							gxPushMatrix();
+							{
+								gxMultMatrixf(transforms[i].m_v);
+								
+								mesh->draw();
+							}
+							gxPopMatrix();
 						}
 					}
 				}
@@ -254,9 +504,13 @@ void VfxNodeDrawMesh::draw() const
 			{
 				for (int i = 0; i < numTransforms; ++i)
 				{
-					gxLoadMatrixf(transforms[i].m_v);
+					gxPushMatrix();
+					{
+						gxMultMatrixf(transforms[i].m_v);
 					
-					mesh->draw();
+						mesh->draw();
+					}
+					gxPopMatrix();
 				}
 			}
 			
