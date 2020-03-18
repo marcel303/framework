@@ -223,6 +223,14 @@ Mat4x4 Mat4x4::Rotate(const Quat & q) const
 	return (*this) * t;
 }
 
+Mat4x4 Mat4x4::Rotate(const float angle, Vec3Arg axis) const
+{
+	Quat q;
+	q.fromAngleAxis(angle, axis);
+	
+	return Rotate(q);
+}
+
 #undef INDEX
 
 #undef m00

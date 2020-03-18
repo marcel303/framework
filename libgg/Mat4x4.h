@@ -362,6 +362,7 @@ public:
 	}
 	
 	Mat4x4 Rotate(const Quat & q) const;
+	Mat4x4 Rotate(const float angle, Vec3Arg axis) const;
 
 	inline Mat4x4 Invert() const
 	{
