@@ -49,7 +49,7 @@ struct VfxNodeDisplay : VfxNodeBase
 	
 	virtual ~VfxNodeDisplay() override;
 	
-	const VfxImageBase * getImage() const
+	virtual const VfxImageBase * getImage() const override
 	{
 		return getInputImage(kInput_Image, nullptr);
 	}

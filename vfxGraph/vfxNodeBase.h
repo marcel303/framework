@@ -236,10 +236,6 @@ struct VfxChannel
 
 struct VfxChannelZipper
 {
-// todo : add mode to produce the carthesian product (all combinations of all channels)
-//        this will quickly explode the number of combinations, but is very powerful.
-//        mode = join, carthesianProduct
-
 	const static int kMaxChannels = 16;
 	
 	VfxChannelZipper(std::initializer_list<const VfxChannel*> _channels)
@@ -343,7 +339,7 @@ struct VfxChannelZipper
 	
 	float read(const int channelIndex, const float defaultValue) const
 	{
-		auto channel = channels[channelIndex];
+		const VfxChannel * channel = channels[channelIndex];
 		
 		if (channel == nullptr || channel->size == 0)
 		{
@@ -857,6 +853,8 @@ struct VfxNodeBase
 	virtual void beforeSave(GraphNode & node) const { }
 	
 	virtual void getDescription(VfxNodeDescription & d) { }
+	
+	virtual const VfxImageBase * getImage() const { return nullptr; }
 };
 
 //

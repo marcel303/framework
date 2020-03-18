@@ -89,4 +89,6 @@ struct VfxNodeSurface : VfxNodeBase
 	virtual void customTraverseDraw(const int traversalId) const override;
 	virtual void beforeDraw() const override;
 	virtual void afterDraw() const override;
+	
+	virtual const VfxImageBase * getImage() const override { return &imageOutput; }
 };

@@ -56,14 +56,14 @@ void getFsfxShaderList(std::vector<std::string> & shaderList)
 	shaderList = s_shaderList;
 }
 
+// todo : create a vfxgraph-fsfx system, which requires explicit initialization. add registered systems to globals. when system is not present, let behavior be passthrough mode
+
 VFX_ENUM_TYPE(fsfxShader)
 {
 	enumName = "fsfxShader";
 	
 	getElems = []() -> std::vector<Elem>
 	{
-		// todo : create a vfxgraph-fsfx system, which requires explicit initialization. add registered systems to globals. when system is not present, let behavior be passthrough mode
-		
 		std::vector<std::string> shaderList;
 		getFsfxShaderList(shaderList);
 		

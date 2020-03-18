@@ -84,4 +84,5 @@ struct VfxNodeFsfxV2 : VfxNodeBase
 	virtual void draw() const override;
 	
 	virtual void getDescription(VfxNodeDescription & d) override;
+	virtual const VfxImageBase * getImage() const override { return &imageOutput; }
 };
