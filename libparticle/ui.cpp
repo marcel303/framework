@@ -1738,14 +1738,21 @@ void doParticleColorCurve(ParticleColorCurve & curve, const char * name)
 
 		setColor(colorWhite);
 		drawUiRectCheckered(cx1, cy1, cx2, cy2, 4.f);
-		for (int x = cx1; x < cx2; ++x)
+		gxBegin(GX_QUADS);
 		{
-			const float t = (x - cx1 + .5f) / float(cx2 - cx1 - .5f);
-			ParticleColor c;
-			curve.sample(t, curve.useLinearColorSpace, c);
-			setColorf(c.rgba[0], c.rgba[1], c.rgba[2], c.rgba[3]);
-			drawRect(x, cy1, x + 1.f, cy2);
+			for (int x = cx1; x < cx2; ++x)
+			{
+				const float t = (x - cx1 + .5f) / float(cx2 - cx1 - .5f);
+				ParticleColor c;
+				curve.sample(t, curve.useLinearColorSpace, c);
+				gxColor4fv(c.rgba);
+				gxVertex2f(x      , cy1);
+				gxVertex2f(x + 1.f, cy1);
+				gxVertex2f(x + 1.f, cy2);
+				gxVertex2f(x      , cy2);
+			}
 		}
+		gxEnd();
 		
 		{
 			const float t = screenToCurve(x1, x2, mouse.x, 0.f);
