@@ -111,7 +111,14 @@ struct VfxNodeDrawMesh : VfxNodeBase
 		kOutput_COUNT
 	};
 	
+	struct Stats
+	{
+		int numInstancesDrawn = 0;
+	};
+	
 	mutable ShaderBuffer shaderBuffer;
+	
+	mutable Stats stats;
 	
 	VfxNodeDrawMesh();
 	virtual ~VfxNodeDrawMesh() override;
@@ -119,4 +126,6 @@ struct VfxNodeDrawMesh : VfxNodeBase
 	virtual void tick(const float dt) override;
 	
 	virtual void draw() const override;
+	
+	virtual void getDescription(VfxNodeDescription & d) override;
 };

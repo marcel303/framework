@@ -329,6 +329,7 @@ void VfxNodeDrawMesh::tick(const float dt)
 	if (isPassthrough)
 	{
 		shaderBuffer.free();
+		stats = Stats();
 		return;
 	}
 }
@@ -516,7 +517,14 @@ void VfxNodeDrawMesh::draw() const
 			
 			delete [] transforms;
 			transforms = nullptr;
+			
+			stats.numInstancesDrawn = numTransforms;
 		}
 		gxPopMatrix();
 	}
+}
+
+void VfxNodeDrawMesh::getDescription(VfxNodeDescription & d)
+{
+	d.add("numInstancesDrawn: %d", stats.numInstancesDrawn);
 }
