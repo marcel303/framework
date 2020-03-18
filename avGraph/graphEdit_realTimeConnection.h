@@ -228,4 +228,9 @@ struct GraphEdit_RealTimeConnection
 	{
 		return 0;
 	}
+	
+	virtual int getNodeImage(const GraphNodeId nodeId) const
+	{
+		return 0;
+	}
 };

@@ -1011,7 +1011,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	//
 	
 	y += kPadding;
-	//fassert(y == sy); // fixme
+	fassert(y == sy); // fixme
 }
 
 //
@@ -3434,15 +3434,45 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			if (state == kState_InputSocketConnect || state == kState_OutputSocketConnect)
 			{
-				// todo : calculate distance from node center. take node dimensions into account for maximum radius. keep node open when the mouse is over the node
+				auto * nodeType = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 				
-				const float dx = nodeData.x - mousePosition.x;
-				const float dy = nodeData.y - mousePosition.y;
-				const float distance = std::hypot(dx, dy);
-				
-				if (distance <= 300.f)
+				if (nodeType != nullptr)
 				{
-					nodeData.isCloseToConnectionSite = true;
+					// compute the nearest distance to the bounding box of the node (when it would be in its unfolded state)
+					
+					// 1. fetch the box for the node in its unfolded state
+					
+					float sx;
+					float sy;
+					getNodeRect(
+						nodeType->inputSockets.size(),
+						nodeType->outputSockets.size(),
+						false,
+						sx, sy);
+					
+					// 2. compute the distance from the mouse position to the edges of the box
+					
+					const float x1 = nodeData.x;
+					const float x2 = nodeData.x + sx;
+					const float y1 = nodeData.y;
+					const float y2 = nodeData.y + sy;
+					
+					const float dx1 = x1 - mousePosition.x;
+					const float dx2 = mousePosition.x - x2;
+					const float dy1 = y1 - mousePosition.y;
+					const float dy2 = mousePosition.y - y2;
+					
+					// 3. compute the nearest distances
+					
+					const float dx = fmaxf(0.f, fmaxf(dx1, dx2));
+					const float dy = fmaxf(0.f, fmaxf(dy1, dy2));
+					
+					// 4. check if the mouse position is near to the edge of the box
+					
+					if (dx <= 40.f && dy <= 40.f)
+					{
+						nodeData.isCloseToConnectionSite = true;
+					}
 				}
 			}
 		}
@@ -3852,7 +3882,6 @@ void GraphEdit::tickNodeDatas(const float dt)
 		
 		if (nodeData.isFolded && nodeData.isCloseToConnectionSite == false)
 		{
-			// todo : receive automatic unfold flag from graph edit, store it, and integrate with hit testing code so it works when automatic unfold is in effect
 			nodeData.foldAnimProgress = Calc::Max(0.f, nodeData.foldAnimProgress - dt * nodeData.foldAnimTimeRcp);
 		}
 		else
@@ -4118,7 +4147,7 @@ void GraphEdit::doMenu(const float dt)
 			showNotification("Saved '%s'", documentInfo.filename.c_str());
 		}
 		
-	// todo
+	// todo : present a file dialog
 		if (doButton("save as", size * 2, size, true))
 		{
 			save(documentInfo.filename.c_str());
@@ -5557,6 +5586,24 @@ void GraphEdit::drawNode(const GraphNode & node, const NodeData & nodeData, cons
 			endTextBatch();
 		}
 		
+		if (editorOptions.showNodeImages)
+		{
+			if (realTimeConnection != nullptr)
+			{
+				const GxTextureId textureId = realTimeConnection->getNodeImage(node.id);
+				
+				if (textureId != 0)
+				{
+					pushBlend(BLEND_OPAQUE);
+					setColor(colorWhite);
+					gxSetTexture(textureId);
+					drawRect(0, 0, sx, sy);
+					gxSetTexture(0);
+					popBlend();
+				}
+			}
+		}
+		
 		hqBegin(HQ_FILLED_CIRCLES);
 		{
 			for (auto & inputSocket : inputSockets)
@@ -5764,6 +5811,7 @@ bool GraphEdit::load(const char * filename)
 				nodeData.zKey = intAttrib(xmlNode, "zKey", nodeData.zKey);
 				nodeData.isFolded = boolAttrib(xmlNode, "folded", nodeData.isFolded);
 				nodeData.foldAnimProgress = nodeData.isFolded ? 0.f : 1.f;
+				nodeData.foldAnimTimeRcp = 1.f / (nodeData.isFolded ? .1f : .07f) / 2.f;
 				
 				nodeData.displayName = stringAttrib(xmlNode, "editorName", nodeData.displayName.c_str());
 			}
