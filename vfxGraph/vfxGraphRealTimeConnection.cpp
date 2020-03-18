@@ -644,6 +644,9 @@ bool RealTimeConnection::setPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, const
 		
 	case kVfxPlugType_Draw:
 		return false;
+		
+	case kVfxPlugType_Mesh:
+		return false;
 	}
 	
 	Assert(false); // all cases should be handled explicitly
@@ -720,6 +723,8 @@ bool RealTimeConnection::getPlugValue(VfxGraph * vfxGraph, VfxPlug * plug, std::
 	case kVfxPlugType_Trigger:
 		return false;
 	case kVfxPlugType_Draw:
+		return false;
+	case kVfxPlugType_Mesh:
 		return false;
 	}
 	
@@ -1237,6 +1242,8 @@ static std::string vfxPlugTypeToValueTypeName(const VfxPlugType plugType)
 			return "trigger";
 		case kVfxPlugType_Draw:
 			return "draw";
+		case kVfxPlugType_Mesh:
+			return "mesh";
 	}
 	
 	Assert(false);
@@ -1357,4 +1364,29 @@ int RealTimeConnection::getNodeGpuTimeUs(const GraphNodeId nodeId) const
 #else
 	return 0;
 #endif
+}
+
+int RealTimeConnection::getNodeImage(const GraphNodeId nodeId) const
+{
+	if (isLoading)
+		return 0;
+	
+	Assert(vfxGraph != nullptr);
+	if (vfxGraph == nullptr)
+		return 0;
+	
+	auto nodeItr = vfxGraph->nodes.find(nodeId);
+	
+	Assert(vfxGraph->nodesFailedToCreate.count(nodeId) != 0 || nodeItr != vfxGraph->nodes.end());
+	if (nodeItr == vfxGraph->nodes.end())
+		return 0;
+	
+	auto node = nodeItr->second;
+	
+	const VfxImageBase * image = node->getImage();
+	
+	if (image == nullptr)
+		return 0;
+	else
+		return image->getTexture();
 }
