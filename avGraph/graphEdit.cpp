@@ -204,6 +204,81 @@ static bool testCircleOverlap(
 	return dsSq <= r * r;
 }
 
+static void interpolateCurve(
+	Vec2Arg v1,
+	Vec2Arg v2,
+	Vec2Arg v3,
+	Vec2Arg v4,
+	const float t,
+	float & out_x,
+	float & out_y)
+{
+	const float t1 = 1.f - t;
+	const float t2 =       t;
+
+	const float a = t1 * t1 * t1;
+	const float b = t1 * t1 * t2 * 3.f;
+	const float c = t1 * t2 * t2 * 3.f;
+	const float d = t2 * t2 * t2;
+
+	out_x = (v1[0] * a + v2[0] * b) + (v3[0] * c + v4[0] * d);
+	out_y = (v1[1] * a + v2[1] * b) + (v3[1] * c + v4[1] * d);
+}
+
+static bool testCurveOverlap(
+	const float x1,
+	const float y1,
+	const float x2,
+	const float y2,
+	const float x,
+	const float y,
+	const int thickness)
+{
+	const float delta = x2 - x1;
+    const float s = fminf(fabsf(delta) / 2.f, 100.f);
+
+	//
+	
+	const float cminX = fminf(x1 - s, x2) - thickness;
+	const float cminY = fminf(y1 - s, y2) - thickness;
+	const float cmaxX = fmaxf(x1, x2 + s) + thickness;
+	const float cmaxY = fmaxf(y1, y2 + s) + thickness;
+
+	if (x < cminX ||
+		y < cminY ||
+		x > cmaxX ||
+		y > cmaxY)
+	{
+		return false;
+	}
+	
+	const Vec2 v1(x1,     y1);
+	const Vec2 v2(x1 - s, y1);
+	const Vec2 v3(x2 + s, y2);
+	const Vec2 v4(x2,     y2);
+	
+	//
+	
+	float p1[2];
+	p1[0] = v1[0];
+	p1[1] = v1[1];
+	
+	for (int i = 1; i <= 40; ++i)
+	{
+		const float t = i / 40.f;
+		float p2[2];
+		interpolateCurve(v1, v2, v3, v4, t, p2[0], p2[1]);
+		
+		if (testLineOverlap(p1[0], p1[1], p2[0], p2[1], x, y, thickness))
+			return true;
+		
+		p1[0] = p2[0];
+		p1[1] = p2[1];
+	}
+
+	return false;
+}
+
 static bool selectionMod()
 {
 	return keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
@@ -1675,7 +1750,11 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 			const float x2 = path.points[i].x;
 			const float y2 = path.points[i].y;
 			
-			if (testLineOverlap(x1, y1, x2, y2, x, y, 5.f))
+		#if 1
+			if (testCurveOverlap(x1, y1, x2, y2, x, y, 5))
+		#else
+			if (testLineOverlap(x1, y1, x2, y2, x, y, 5))
+		#endif
 			{
 				result.hasLink = true;
 				result.link = &link;
