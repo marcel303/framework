@@ -1750,11 +1750,12 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 			const float x2 = path.points[i].x;
 			const float y2 = path.points[i].y;
 			
-		#if 1
-			if (testCurveOverlap(x1, y1, x2, y2, x, y, 5))
-		#else
-			if (testLineOverlap(x1, y1, x2, y2, x, y, 5))
-		#endif
+			const bool overlaps =
+				editorOptions.drawLinksAsCurves
+				? testCurveOverlap(x1, y1, x2, y2, x, y, 5)
+				: testLineOverlap(x1, y1, x2, y2, x, y, 5);
+
+			if (overlaps)
 			{
 				result.hasLink = true;
 				result.link = &link;
@@ -4995,83 +4996,33 @@ void GraphEdit::draw() const
 		gxPopMatrix();
 	}
 	
-#if 1
-	Shader shader("graphEdit/gpupath");
-	setShader(shader);
-	shader.setImmediate("color1", 0.02, 0.02, 0.02, 1.0);
-	shader.setImmediate("color2", 0.8, 1.0, 0.1, 1.0);
-	shader.setImmediate("halfThickness", 5.f / 2.f);
-	shader.setImmediate("halfThicknessColor", 5.f * 1.f/2.f / 2.f);
-	shader.setImmediate("hardness", 2.f);
-	const GxImmediateIndex position1_idx = shader.getImmediateIndex("position1");
-	const GxImmediateIndex position2_idx = shader.getImmediateIndex("position2");
-	const GxImmediateIndex color2_idx = shader.getImmediateIndex("color2");
-	const GxImmediateIndex numVertices_idx = shader.getImmediateIndex("numVertices");
-	{
-		for (auto & linkItr : graph->links)
-		{
-			auto linkId = linkItr.first;
-			auto & link = linkItr.second;
-			
-			const bool isEnabled = link.isEnabled;
-			const bool isSelected = selectedLinks.count(linkId) != 0;
-			const bool isHighlighted = highlightedLinks.count(linkId) != 0;
-		
-			Color color;
-		
-			if (!isEnabled)
-				color = Color(191, 191, 191);
-			else if (isSelected)
-				color = Color(127, 127, 255);
-			else if (isHighlighted)
-				color = Color(255, 255, 255);
-			else
-				color = Color(255, 255, 0);
-			
-			shader.setImmediate(color2_idx, color.r, color.g, color.b, 1.f);
-			
-			LinkPath path;
-			
-			if (getLinkPath(linkId, path))
-			{
-				for (int i = 0; i + 1 < path.points.size(); ++i)
-				{
-					const auto & point1 = path.points[i + 0];
-					const auto & point2 = path.points[i + 1];
-					
-					const int numVertices = 20*6;
-					
-					shader.setImmediate(position1_idx, point1.x, point1.y);
-					shader.setImmediate(position2_idx, point2.x, point2.y);
-					shader.setImmediate(numVertices_idx, numVertices);
-					{
-						gxEmitVertices(GX_TRIANGLE_STRIP, numVertices);
-					}
-				}
-			}
-		}
-	}
-	clearShader();
-#else
 	// traverse and draw links
 	
-	hqBegin(HQ_LINES);
+	if (editorOptions.drawLinksAsCurves)
 	{
-		for (auto & linkItr : graph->links)
+		Shader shader("graphEdit/gpupath");
+		setShader(shader);
+		shader.setImmediate("color1", 0.02, 0.02, 0.02, 1.0);
+		shader.setImmediate("color2", 0.8, 1.0, 0.1, 1.0);
+		shader.setImmediate("halfThickness", 5.f / 2.f);
+		shader.setImmediate("halfThicknessColor", 5.f * 1.f/2.f / 2.f);
+		shader.setImmediate("hardness", 2.f);
+		const GxImmediateIndex position1_idx = shader.getImmediateIndex("position1");
+		const GxImmediateIndex position2_idx = shader.getImmediateIndex("position2");
+		const GxImmediateIndex color2_idx = shader.getImmediateIndex("color2");
+		const GxImmediateIndex numVertices_idx = shader.getImmediateIndex("numVertices");
 		{
-			auto linkId = linkItr.first;
-			auto & link = linkItr.second;
-			
-			LinkPath path;
-			
-			if (getLinkPath(linkId, path))
+			for (auto & linkItr : graph->links)
 			{
+				auto linkId = linkItr.first;
+				auto & link = linkItr.second;
+				
 				const bool isEnabled = link.isEnabled;
 				const bool isSelected = selectedLinks.count(linkId) != 0;
 				const bool isHighlighted = highlightedLinks.count(linkId) != 0;
-				
+			
 				Color color;
-				
+			
 				if (!isEnabled)
 					color = Color(191, 191, 191);
 				else if (isSelected)
@@ -5081,34 +5032,87 @@ void GraphEdit::draw() const
 				else
 					color = Color(255, 255, 0);
 				
-				if (editorOptions.showOneShotActivity)
+				shader.setImmediate(color2_idx, color.r, color.g, color.b, 1.f);
+				
+				LinkPath path;
+				
+				if (getLinkPath(linkId, path))
 				{
-					const float activeAnim = link.editorIsActiveAnimTime * link.editorIsActiveAnimTimeRcp;
-					color = color.interp(Color(255, 63, 63), activeAnim);
-				}
-				
-				setColor(color);
-				
-				float x1 = path.points[0].x;
-				float y1 = path.points[0].y;
-				
-				for (int i = 1; i < path.points.size(); ++i)
-				{
-					const float x2 = path.points[i].x;
-					const float y2 = path.points[i].y;
-					
-					hqLine(
-						x1, y1, 2.f,
-						x2, y2, 2.f);
-					
-					x1 = x2;
-					y1 = y2;
+					for (int i = 0; i + 1 < path.points.size(); ++i)
+					{
+						const auto & point1 = path.points[i + 0];
+						const auto & point2 = path.points[i + 1];
+						
+						const int numVertices = 20*6;
+						
+						shader.setImmediate(position1_idx, point1.x, point1.y);
+						shader.setImmediate(position2_idx, point2.x, point2.y);
+						shader.setImmediate(numVertices_idx, numVertices);
+						{
+							gxEmitVertices(GX_TRIANGLE_STRIP, numVertices);
+						}
+					}
 				}
 			}
 		}
+		clearShader();
 	}
-	hqEnd();
-#endif
+	else
+	{
+		hqBegin(HQ_LINES);
+		{
+			for (auto & linkItr : graph->links)
+			{
+				auto linkId = linkItr.first;
+				auto & link = linkItr.second;
+				
+				LinkPath path;
+				
+				if (getLinkPath(linkId, path))
+				{
+					const bool isEnabled = link.isEnabled;
+					const bool isSelected = selectedLinks.count(linkId) != 0;
+					const bool isHighlighted = highlightedLinks.count(linkId) != 0;
+					
+					Color color;
+					
+					if (!isEnabled)
+						color = Color(191, 191, 191);
+					else if (isSelected)
+						color = Color(127, 127, 255);
+					else if (isHighlighted)
+						color = Color(255, 255, 255);
+					else
+						color = Color(255, 255, 0);
+					
+					if (editorOptions.showOneShotActivity)
+					{
+						const float activeAnim = link.editorIsActiveAnimTime * link.editorIsActiveAnimTimeRcp;
+						color = color.interp(Color(255, 63, 63), activeAnim);
+					}
+					
+					setColor(color);
+					
+					float x1 = path.points[0].x;
+					float y1 = path.points[0].y;
+					
+					for (int i = 1; i < path.points.size(); ++i)
+					{
+						const float x2 = path.points[i].x;
+						const float y2 = path.points[i].y;
+						
+						hqLine(
+							x1, y1, 2.f,
+							x2, y2, 2.f);
+						
+						x1 = x2;
+						y1 = y2;
+					}
+				}
+			}
+		}
+		hqEnd();
+	}
 
 	hqBegin(HQ_FILLED_CIRCLES);
 	{

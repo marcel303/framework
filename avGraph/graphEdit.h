@@ -737,11 +737,12 @@ struct GraphEdit : GraphEditConnection
 		bool showBackground;
 		bool showGrid;
 		bool showSocketNames;
-		bool showNodeImages;
+		bool showNodeImages; // todo : load/save to XML
 		bool snapToGrid;
 		bool showOneShotActivity;
 		bool showContinuousActivity;
 		bool showCpuHeat;
+		bool drawLinksAsCurves;
 		ParticleColor backgroundColor;
 		ParticleColor gridColor;
 		ParticleColorCurve cpuHeatColors;
@@ -759,6 +760,7 @@ struct GraphEdit : GraphEditConnection
 			, showOneShotActivity(false)
 			, showContinuousActivity(false)
 			, showCpuHeat(false)
+			, drawLinksAsCurves(true)
 			, backgroundColor(0.f, 0.f, 0.f, .8f)
 			, gridColor(1.f, 1.f, 1.f, .3f)
 			, cpuHeatColors()
