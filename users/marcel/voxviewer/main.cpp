@@ -63,14 +63,14 @@ struct VoxModel
 		sz = 0;
 	}
 	
-	Voxel * getVoxel(int x, int y, int z)
+	Voxel * getVoxel(int x, int y, int z) const
 	{
 		int index = x + y * sx + z * sy * sx;
 		
 		return voxels + index;
 	}
 	
-	Voxel * getVoxelWithBorder(int x, int y, int z, Voxel * border)
+	Voxel * getVoxelWithBorder(int x, int y, int z, Voxel * border) const
 	{
 		bool inside =
 			x >= 0 & x < sx &
@@ -90,15 +90,7 @@ struct VoxModel
 	}
 };
 
-enum struct VoxMaterialType
-{
-	Diffuse = 0,
-	Metal = 1,
-	Glass = 2,
-	Emissive = 3
-};
-
-struct VoxMaterialV2
+struct VoxMaterial_V2
 {
 	int id;
 	VoxDict dict;
@@ -182,7 +174,7 @@ struct VoxWorld
 	
 	std::vector<VoxModel> models;
 	
-	std::vector<VoxMaterialV2*> materials;
+	std::vector<VoxMaterial_V2*> materials;
 	
 	std::vector<VoxSceneNodeBase*> nodes;
 	
@@ -237,7 +229,7 @@ struct VoxWorld
 		nodes.clear();
 	}
 	
-	VoxSceneNodeBase * tryGetNode(int id)
+	const VoxSceneNodeBase * tryGetNode(int id) const
 	{
 		for (auto * node : nodes)
 			if (node->id == id)
@@ -246,7 +238,7 @@ struct VoxWorld
 		return nullptr;
 	}
 	
-	VoxModel * tryGetModel(int id)
+	const VoxModel * tryGetModel(int id) const
 	{
 		for (auto & model : models)
 			if (model.id == id)
@@ -302,7 +294,8 @@ static bool read_dict(StreamReader & r, VoxDict & dict)
 		std::string key;
 		std::string value;
 		
-		if (!read_string(r, key) || !read_string(r, value))
+		if (!read_string(r, key) ||
+			!read_string(r, value))
 			return false;
 		
 		dict.items[key] = value;
@@ -334,8 +327,6 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 		if (!is_chunk(c, "MAIN"))
 			return false;
 		
-		int numModels = 1; // note : seems to be unreliable!
-		
 		for (;;)
 		{
 			if (r.Stream_get()->EOF_get())
@@ -345,7 +336,8 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 			
 			if (is_chunk(c, "PACK"))
 			{
-				numModels = r.ReadInt32();
+				int numModels = r.ReadInt32();
+				(void)numModels;
 			}
 			else if (is_chunk(c, "SIZE"))
 			{
@@ -363,6 +355,8 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 				model.alloc(sx, sy, sz);
 				
 				int numVoxels = r.ReadInt32();
+				
+				logDebug("model %d: numVoxels=%d", model.id, numVoxels);
 				
 				for (int i = 0; i < numVoxels; ++i)
 				{
@@ -398,7 +392,7 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 				if (!read_dict(r, attributes))
 					return false;
 				
-				VoxMaterialV2 * m = new VoxMaterialV2();
+				VoxMaterial_V2 * m = new VoxMaterial_V2();
 				m->id = id;
 				m->dict = attributes;
 				
@@ -541,14 +535,23 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 	}
 }
 
-static void drawVoxModel(VoxWorld & world, VoxModel & model)
+static void drawVoxModel(const VoxWorld & world, const VoxModel & model)
 {
+/*
+	todo : determine parity sign, and use it to invert cubes. I tried multiplying the size of the cubes by the parity sign, but this leaves the normals untouched. we need both the winding and normals to be flipped
+ 
+	Mat4x4 modelView;
+	gxGetMatrixf(GX_MODELVIEW, modelView.m_v);
+	const Vec3 xAxis = modelView.GetAxis(0);
+	const Vec3 yAxis = modelView.GetAxis(1);
+	const Vec3 zAxis = modelView.GetAxis(2);
+	const float paritySign = ((xAxis % yAxis) * zAxis) < 0 ? -1.f : +1.f;
+*/
+
 	beginCubeBatch();
 	{
 		VoxModel::Voxel emptyVoxel;
 		emptyVoxel.colorIndex = 0xff;
-		
-		int n = 0;
 		
 		for (int x = 0; x < model.sx; ++x)
 		{
@@ -556,13 +559,17 @@ static void drawVoxModel(VoxWorld & world, VoxModel & model)
 			{
 				for (int z = 0; z < model.sz; ++z)
 				{
-					VoxModel::Voxel * voxel = model.getVoxel(x, y, z);
+					const VoxModel::Voxel * voxel = model.getVoxel(x, y, z);
 					
 					if (voxel->colorIndex == 0xff)
 						continue;
 					
 				#if 1
-					VoxModel::Voxel * neighbors[6] =
+					// optimize : determine whether one of the neighboring cells is empty
+					//            if so: draw the voxel
+					//            otherwise: skip it, since it won't be visible
+					
+					const VoxModel::Voxel * neighbors[6] =
 					{
 						model.getVoxelWithBorder(x - 1, y, z, &emptyVoxel),
 						model.getVoxelWithBorder(x + 1, y, z, &emptyVoxel),
@@ -593,36 +600,32 @@ static void drawVoxModel(VoxWorld & world, VoxModel & model)
 							x - (model.sx - 1) / 2.f,
 							y - (model.sy - 1) / 2.f,
 							z - (model.sz - 1) / 2.f), Vec3(.5f, .5f, .5f));
-					
-					n++;
 				}
 			}
 		}
-		
-		logDebug("n: %d", n);
 	}
 	endCubeBatch();
 }
 
-static void drawVoxSceneNode(VoxWorld & world, VoxSceneNodeBase * node)
+static void drawVoxSceneNode(const VoxWorld & world, const VoxSceneNodeBase & node)
 {
-	switch (node->type)
+	switch (node.type)
 	{
 	case VoxSceneNodeType::Transform:
 		{
-			auto * transform = static_cast<VoxSceneNodeTransform*>(node);
+			auto & transform = static_cast<const VoxSceneNodeTransform&>(node);
 			
 			gxPushMatrix();
 			{
-				if (transform->frames.empty() == false)
+				if (transform.frames.empty() == false)
 				{
-					auto & frame = transform->frames[0];
+					auto & frame = transform.frames[0];
 					gxMultMatrixf(frame.m_v);
 					
 				}
-				auto * childNode = world.tryGetNode(transform->childNodeId);
+				auto * childNode = world.tryGetNode(transform.childNodeId);
 				if (childNode != nullptr)
-					drawVoxSceneNode(world, childNode);
+					drawVoxSceneNode(world, *childNode);
 			}
 			gxPopMatrix();
 		}
@@ -630,22 +633,22 @@ static void drawVoxSceneNode(VoxWorld & world, VoxSceneNodeBase * node)
 	
 	case VoxSceneNodeType::Group:
 		{
-			auto * group = static_cast<VoxSceneNodeGroup*>(node);
+			auto & group = static_cast<const VoxSceneNodeGroup&>(node);
 			
-			for (auto & childNodeId : group->childNodeIds)
+			for (auto & childNodeId : group.childNodeIds)
 			{
 				auto * childNode = world.tryGetNode(childNodeId);
 				if (childNode != nullptr)
-					drawVoxSceneNode(world, childNode);
+					drawVoxSceneNode(world, *childNode);
 			}
 		}
 		break;
 		
 	case VoxSceneNodeType::Shape:
 		{
-			auto * shape = static_cast<VoxSceneNodeShape*>(node);
+			auto & shape = static_cast<const VoxSceneNodeShape&>(node);
 			
-			for (auto & modelId : shape->modelIds)
+			for (auto & modelId : shape.modelIds)
 			{
 				auto * model = world.tryGetModel(modelId);
 				if (model != nullptr)
@@ -656,13 +659,20 @@ static void drawVoxSceneNode(VoxWorld & world, VoxSceneNodeBase * node)
 	}
 }
 
-static void drawVoxWorld(VoxWorld & world)
+static void drawVoxWorld(const VoxWorld & world)
 {
 	if (world.nodes.empty())
-		return;
-	
-	auto * rootNode = world.nodes[0];
-	drawVoxSceneNode(world, rootNode);
+	{
+		for (auto & model : world.models)
+		{
+			drawVoxModel(world, model);
+		}
+	}
+	else
+	{
+		auto * rootNode = world.nodes[0];
+		drawVoxSceneNode(world, *rootNode);
+	}
 }
 
 int main(int argc, char * argv[])
@@ -680,8 +690,9 @@ int main(int argc, char * argv[])
 	
 	try
 	{
-		FileStream stream("marcel-02.vox", OpenMode_Read);
+		//FileStream stream("marcel-01.vox", OpenMode_Read);
 		//FileStream stream("monu7.vox", OpenMode_Read);
+		FileStream stream("room.vox", OpenMode_Read);
 		StreamReader reader(&stream, false);
 		
 		read_vox_world(reader, world);
