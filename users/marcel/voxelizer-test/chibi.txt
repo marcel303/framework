@@ -1,0 +1,4 @@
+app marcel-voxelizer-test
+	depend_library framework
+	add_files main.cpp
+	add_files voxelizer/voxelizer.h

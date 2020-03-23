@@ -1,0 +1,5 @@
+app marcel-earcut-test
+	depend_library framework
+	add_files main.cpp
+	add_files mapbox/earcut.hpp
+	header_path mapbox

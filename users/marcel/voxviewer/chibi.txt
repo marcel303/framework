@@ -1,0 +1,6 @@
+app marcel-voxviewer
+	depend_library framework
+	add_files main.cpp
+	#add_files vox.cpp
+	#add_files vox.h
+	resource_path data

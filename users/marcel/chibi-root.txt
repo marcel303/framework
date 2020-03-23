@@ -1,5 +1,6 @@
 add 4d-imu9250
 add 4dsound2-osc
+#add abletonlink1
 add ambisonics1
 add anaglyphic
 add arrange1
@@ -11,15 +12,18 @@ with_platform macos   add avpaint
 with_platform windows add avpaint
 with_platform macos add biquad-simd
 add box2d1
+#add bullet1
 add codevember
 add codingChallenges
 add colorpart
 add cuber
+add earcut-test
 add esp32-discovery
 with_platform macos   add etherdream1
 with_platform windows add etherdream1
 add fourier
 add fluidCube
+add geo
 add geopart1
 add gpuParticles1
 add gpupath1
@@ -68,6 +72,8 @@ add veem-sound-satellites
 add vfxedit
 add vfxpro
 add videosync
+add voxelizer-test
+add voxviewer
 add voxworld1
 
 add ../ggj2015/game
