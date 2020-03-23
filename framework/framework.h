@@ -1729,6 +1729,8 @@ static inline void gxShutdown() { }
 static inline void gxBegin(GX_PRIMITIVE_TYPE primitiveType) { }
 static inline void gxEnd() { }
 static inline void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices) { }
+static inline void gxColor3f(float r, float g, float b) { }
+static inline void gxColor3fv(const float * v) { }
 static inline void gxColor4f(float r, float g, float b, float a) { }
 static inline void gxColor4fv(const float * rgba) { }
 static inline void gxColor3ub(int r, int g, int b) { }
@@ -1768,6 +1770,8 @@ void gxShutdown();
 void gxBegin(GX_PRIMITIVE_TYPE primitiveType);
 void gxEnd();
 void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices);
+void gxColor3f(float r, float g, float b);
+void gxColor3fv(const float * v);
 void gxColor4f(float r, float g, float b, float a);
 void gxColor4fv(const float * rgba);
 void gxColor3ub(int r, int g, int b);
@@ -1807,6 +1811,10 @@ void gxShutdown();
 void gxBegin(GLenum type);
 void gxEnd();
 void gxEmitVertices(GLenum type, int numVertices);
+void gxColor3f(float r, float g, float b);
+void gxColor3fv(const float * v);
+#define gxColor3f glColor3f
+#define gxColor3fv glColor3fv
 #define gxColor4f glColor4f
 #define gxColor4fv glColor4fv
 #define gxColor3ub glColor3ub

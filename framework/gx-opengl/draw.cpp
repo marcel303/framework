@@ -767,6 +767,22 @@ void gxEmitVertex()
 	}
 }
 
+void gxColor3f(float r, float g, float b)
+{
+	s_gxVertex.cx = r;
+	s_gxVertex.cy = g;
+	s_gxVertex.cz = b;
+	s_gxVertex.cw = 1.f;
+}
+
+void gxColor3fv(const float * v)
+{
+	s_gxVertex.cx = v[0];
+	s_gxVertex.cy = v[1];
+	s_gxVertex.cz = v[2];
+	s_gxVertex.cw = 1.f;
+}
+
 void gxColor4f(float r, float g, float b, float a)
 {
 	s_gxVertex.cx = r;
