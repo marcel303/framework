@@ -130,7 +130,7 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 	
 	if (status != GL_FRAMEBUFFER_COMPLETE)
 	{
-		logError("failed to init surface. status: %d", status);
+		logError("failed to init frame buffer. status: %d", status);
 	}
 #endif
 
