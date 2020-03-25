@@ -105,8 +105,10 @@ void ShaderBuffer::setData(const void * bytes, int numBytes)
 	}
 }
 
-void ShaderBuffer::setData(const void * bytes, int numBytes)
+void ShaderBuffer::free()
 {
+	id<MTLBuffer> & buffer = s_buffers[m_buffer];
+	
 	[buffer release];
 	buffer = nil;
 }
