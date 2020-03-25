@@ -1,0 +1,69 @@
+vec3 depthToViewPosition(
+	float depth,
+	vec2 projectionCoord,
+	mat4x4 projectionToView)
+{
+#if defined(GL_core_profile)
+	projectionCoord = vec2(projectionCoord.x, 1.0 - projectionCoord.y);
+	vec3 coord = vec3(projectionCoord, depth) * 2.0 - vec3(1.0);
+#else
+	vec3 coord = vec3(vec2(projectionCoord.x, 1.0 - projectionCoord.y) * 2.0 - vec2(1.0), depth);
+#endif
+
+	vec4 position_projection = vec4(coord, 1.0);
+	vec4 position_view = projectionToView * position_projection;
+
+	position_view /= position_view.w;
+
+	return position_view.xyz;
+}
+
+float depthToViewZ(
+	float depth,
+	vec2 projectionCoord,
+	mat4x4 projectionToView)
+{
+	return depthToViewPosition(depth, projectionCoord, projectionToView).z;
+}
+
+// todo : move elsewhere
+
+vec2 viewPositionToClipspace(
+	vec4 viewPosition,
+	mat4x4 viewToProjection)
+{
+	vec4 position_projection = viewToProjection * viewPosition;
+
+	vec2 position_homogenous = position_projection.xy /= position_projection.w;
+
+#if defined(GL_core_profile)
+	vec2 position_clipspace = (position_homogenous.xy + vec2(1.0)) / 2.0;
+	position_clipspace.y = 1.0 - position_clipspace.y;
+#else
+	vec2 position_clipspace = (position_homogenous.xy + vec2(1.0)) / 2.0;
+	position_clipspace.y = 1.0 - position_clipspace.y;
+#endif
+
+	return position_clipspace;
+}
+
+vec3 viewPositionToClipspace3(
+	vec4 viewPosition,
+	mat4x4 viewToProjection)
+{
+	vec4 position_projection = viewToProjection * viewPosition;
+
+	vec3 position_homogenous = position_projection.xyz /= position_projection.w;
+
+#if defined(GL_core_profile)
+	vec3 position_clipspace = (position_homogenous.xyz + vec3(1.0)) / 2.0;
+	position_clipspace.y = 1.0 - position_clipspace.y;
+#else
+	vec3 position_clipspace = vec3(
+		(position_homogenous.xy + vec2(1.0)) / 2.0,
+		position_homogenous.z);
+	position_clipspace.y = 1.0 - position_clipspace.y;
+#endif
+
+	return position_clipspace;
+}

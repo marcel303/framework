@@ -1,0 +1,55 @@
+include engine/ShaderPS.txt
+include renderOne/depth-functions.txt
+include renderOne/fog-functions.txt
+
+uniform sampler2D depthTexture;
+
+uniform mat4x4 projectionToWorld_prev;
+uniform mat4x4 projectionToWorld_curr;
+uniform mat4x4 worldToView;
+uniform mat4x4 worldToProjection;
+
+uniform float timeStepRcp;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+#if 1
+	float camera_view_depth = texture(depthTexture, texcoord).x;
+
+	vec3 position_world_prev = depthToViewPosition(camera_view_depth, texcoord, projectionToWorld_prev).xyz;
+	vec3 position_world_curr = depthToViewPosition(camera_view_depth, texcoord, projectionToWorld_curr).xyz;
+
+	vec4 position_proj_prev = worldToProjection * vec4(position_world_prev, 1.0);
+	vec4 position_proj_curr = worldToProjection * vec4(position_world_curr, 1.0);
+
+	vec3 position_clip_prev = position_proj_prev.xyz / position_proj_prev.w;
+	vec3 position_clip_curr = position_proj_curr.xyz / position_proj_curr.w;
+	
+	vec3 delta_clip = position_clip_curr - position_clip_prev;
+
+	vec3 velocity_clip = delta_clip * timeStepRcp;
+
+	shader_fragColor = vec4(velocity_clip.xy, 0.0, 0.0);
+#else
+	float camera_view_depth = texture(depthTexture, texcoord).x;
+
+	if (camera_view_depth > 0.997)
+	{
+		camera_view_depth = 0.997;
+	}
+
+	vec3 position_world_prev = depthToViewPosition(camera_view_depth, texcoord, projectionToWorld_prev).xyz;
+	vec3 position_world_curr = depthToViewPosition(camera_view_depth, texcoord, projectionToWorld_curr).xyz;
+
+	vec3 position_view_prev = (worldToView * vec4(position_world_prev, 1.0)).xyz;
+	vec3 position_view_curr = (worldToView * vec4(position_world_curr, 1.0)).xyz;
+
+	vec3 delta_view = position_view_curr - position_view_prev;
+
+	vec3 velocity_view = delta_view * timeStepRcp;
+
+	shader_fragColor = vec4(velocity_view, 0.0);
+#endif
+}

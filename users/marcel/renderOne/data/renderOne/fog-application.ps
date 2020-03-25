@@ -1,0 +1,30 @@
+include engine/ShaderPS.txt
+include renderOne/depth-functions.txt
+include renderOne/fog-functions.txt
+
+uniform sampler2D depthTexture;
+
+uniform mat4x4 projectionToView;
+
+uniform vec3 fogColor;
+uniform float fogTranslucency;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	float camera_view_depth = texture(depthTexture, texcoord).x;
+
+	if (camera_view_depth == 1.0)
+	{
+		// scene background
+		shader_fragColor = vec4(fogColor, 1.0);
+		return;
+	}
+
+	float z_view = depthToViewPosition(camera_view_depth, texcoord, projectionToView).z;
+
+	float translucency = pow(fogTranslucency, z_view);
+
+	shader_fragColor = vec4(fogColor, 1.0 - translucency);
+}

@@ -1,0 +1,81 @@
+include engine/ShaderPS.txt
+include renderOne/depth-functions.txt
+include renderOne/light-functions.txt
+
+uniform sampler2D depthTexture;
+uniform sampler2D normalTexture;
+uniform sampler2D colorTexture;
+uniform sampler2D specularColorTexture;
+uniform sampler2D specularExponentTexture;
+
+uniform mat4x4 projectionToView;
+
+uniform vec3 lightDir_view;
+uniform vec3 lightColor1;
+uniform vec3 lightColor2;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	float camera_view_depth = texture(depthTexture, texcoord).x;
+
+	if (camera_view_depth == 1.0)
+	{
+		// scene background
+		shader_fragColor = vec4(0.0);
+		return;
+	}
+
+	vec3 normal_view = texture(normalTexture, texcoord).xyz;
+	normal_view = normalize(normal_view);
+
+	// diffuse factor
+
+	float diffuseFactor = dot(lightDir_view, normal_view);
+
+	vec3 lightColor;
+
+	if (diffuseFactor >= 0.0)
+		lightColor = lightColor1;
+	else
+	{
+		lightColor = lightColor2;
+		diffuseFactor = -diffuseFactor;
+	}
+
+	// specular factor
+
+	vec3 specularFactor = vec3(0.0);
+
+	float specularExponent = texture(specularExponentTexture, texcoord).x;
+
+	if (specularExponent != 0.0)
+	{
+	// todo : should be able to reconstruct the ray direction using just texcoord and some constants ?
+
+		vec3 position_view = depthToViewPosition(camera_view_depth, texcoord, projectionToView);
+
+		vec3 rayDirection_view = normalize(position_view);
+
+		vec3 specularColor = texture(specularColorTexture, texcoord).rgb;
+
+		specularFactor = computeSpecularLightingFactor(
+			specularColor,
+			specularExponent,
+			lightDir_view,
+			normal_view,
+			rayDirection_view);
+	}
+
+	// output color with diffuse/specular factors applied
+
+	vec3 color = texture(colorTexture, texcoord).rgb;
+	color *= lightColor * diffuseFactor;
+	color += lightColor * specularFactor;
+
+	//color = lightColor * diffuseFactor;
+	//color = lightColor * specularFactor;
+
+	shader_fragColor = vec4(color, 1.0);
+}

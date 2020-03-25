@@ -1,0 +1,28 @@
+include engine/ShaderPS.txt
+include renderOne/depth-functions.txt
+include renderOne/fog-functions.txt
+
+uniform sampler2D normalTexture;
+uniform sampler2D colorTexture;
+
+uniform float strength;
+uniform float time;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	vec2 normal_coord = texcoord;
+	normal_coord.y = mod(normal_coord.y - time, 1.0);
+	vec3 normal_view = texture(normalTexture, normal_coord).xyz * 2.0 - vec3(1.0);
+	normal_view.y = -normal_view.y;
+	normal_view = normalize(normal_view);
+	normal_view = -normal_view;
+
+	vec2 texcoord_refracted = texcoord + normal_view.xy / textureSize(normalTexture, 0) * strength;
+
+	shader_fragColor = texture(colorTexture, texcoord_refracted);
+
+	float light = max(0.0, dot(normalize(vec3(1.0, 1.0, 1.0)), normal_view.xyz));
+	shader_fragColor.rgb *= 1.0 + light * strength/100.0;
+}

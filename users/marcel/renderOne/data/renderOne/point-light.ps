@@ -1,0 +1,85 @@
+include engine/ShaderPS.txt
+include renderOne/depth-functions.txt
+include renderOne/light-functions.txt
+
+// todo : local shader includes
+
+uniform sampler2D depthTexture;
+uniform sampler2D normalTexture;
+uniform sampler2D colorTexture;
+uniform sampler2D specularColorTexture;
+uniform sampler2D specularExponentTexture;
+
+uniform mat4x4 projectionToView;
+
+uniform vec3 lightPosition_view;
+uniform vec3 lightColor;
+uniform vec2 lightAttenuationParams;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	float attenuationBegin = lightAttenuationParams.x;
+	float attenuationEnd = lightAttenuationParams.y;
+
+	float camera_view_depth = texture(depthTexture, texcoord).x;
+
+	if (camera_view_depth == 1.0)
+	{
+		// scene background
+		shader_fragColor = vec4(0.0);
+		return;
+	}
+
+	// light position and direction vector to surface
+
+	vec3 position_view = depthToViewPosition(camera_view_depth, texcoord, projectionToView);
+
+	vec3 positionToLight = lightPosition_view - position_view;
+	float distanceToLight = length(positionToLight);
+	vec3 lightDir_view = positionToLight / (distanceToLight + 0.000001);
+
+	// diffuse factor
+
+	vec3 normal_view = texture(normalTexture, texcoord).xyz;
+	normal_view = normalize(normal_view);
+
+	float diffuseFactor = dot(lightDir_view, normal_view);
+	diffuseFactor = max(0.0, diffuseFactor);
+
+	// specular factor
+
+	vec3 specularFactor = vec3(0.0);
+
+	float specularExponent = texture(specularExponentTexture, texcoord).x;
+
+	if (specularExponent != 0.0)
+	{
+		vec3 specularColor = texture(specularColorTexture, texcoord).rgb;
+
+		vec3 rayDirection_view = normalize(position_view);
+
+		specularFactor = computeSpecularLightingFactor(
+			specularColor,
+			specularExponent,
+			lightDir_view,
+			normal_view,
+			rayDirection_view);
+	}
+
+	// distance attenuation
+
+	float attenuation = clamp(1.0 - (distanceToLight - attenuationBegin) / (attenuationEnd - attenuationBegin), 0.0, 1.0);
+	attenuation *= attenuation;
+
+	// output color with attenuation and diffuse/specular factors applied
+
+	vec3 color = texture(colorTexture, texcoord).rgb;
+
+	color *= lightColor * diffuseFactor;
+	color += lightColor * specularFactor;
+	color *= attenuation;
+
+	shader_fragColor = vec4(color, 1.0);
+}

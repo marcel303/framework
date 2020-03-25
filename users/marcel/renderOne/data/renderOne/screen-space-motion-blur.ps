@@ -1,0 +1,53 @@
+include engine/ShaderPS.txt
+include renderOne/depth-functions.txt
+include renderOne/fog-functions.txt
+
+/*
+
+improvement ideas:
+- compute dominant velocity in neighbourhood at a lower resolution
+	- sample along the dominant direction
+	- see: https://casual-effects.com/research/McGuire2012Blur/McGuire12Blur.pdf
+- jitter along the sample direction
+	- to create a stochastically averaged result and avoid 'ghosting'
+- render certain objects separately into the velocity buffer
+- foreground, background classification based on depth relative to mid point
+	- or the implementation from: https://casual-effects.com/research/McGuire2012Blur/McGuire12Blur.pdf
+
+*/
+
+uniform sampler2D velocityTexture;
+uniform sampler2D colorTexture;
+
+uniform float strength;
+uniform vec2 viewportSizeRcp;
+
+shader_in vec2 texcoord;
+
+int numSteps = 11;
+
+void main()
+{
+	vec2 velocity = texture(velocityTexture, texcoord).xy;
+
+	vec2 delta = velocity * strength * viewportSizeRcp;
+#if defined(GL_core_profile)
+	delta.y = -delta.y;
+#endif
+
+	vec2 coord = texcoord - delta * 0.5;
+	vec2 coord_step = delta / (numSteps - 1);
+
+	vec4 sum = vec4(0.0);
+
+	for (int i = 0; i < numSteps; ++i)
+	{
+		sum += texture(colorTexture, coord);
+
+		coord += coord_step;
+	}
+
+	vec4 result = sum * (1.0 / numSteps);
+
+	shader_fragColor = result;
+}

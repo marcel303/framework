@@ -1,0 +1,76 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+// tone mapper from Uncharted 2,
+// code from: https://www.shadertoy.com/view/lslGzl
+
+uniform sampler2D colorTexture;
+
+uniform float exposure;
+uniform float gamma;
+
+shader_in vec2 texcoord;
+
+// Uncharted 2 tone map
+// by: John Hable
+// aka 'Hable Tone Mapping', 'Hable Filmic'
+vec3 Uncharted2ToneMapping(vec3 color)
+{
+	float A = 0.15;
+	float B = 0.50;
+	float C = 0.10;
+	float D = 0.20;
+	float E = 0.02;
+	float F = 0.30;
+	
+	color = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
+	
+	float W = 11.2;
+	float white = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
+	float whiteScale = 1.0 / white;
+	color *= whiteScale;
+
+	return color;
+}
+
+// ACES (Academy Color Encoding System) tone map
+// source: https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+vec3 toneMapACES(vec3 color)
+{
+	float A = 2.51;
+    float B = 0.03;
+    float C = 2.43;
+    float D = 0.59;
+    float E = 0.14;
+
+    color = clamp((color * (A * color + B)) / (color * (C * color + D) + E), 0.0, 1.0);
+    return color;
+}
+
+/*
+Curve was manually fitted (max fit error: 0.0138) to be more precise in
+the blacks – after all we will be applying some kind gamma afterwards.
+Additionally, data was pre-exposed, so 1 on input maps to ~0.8 on output
+and resulting image’s brightness is more consistent with the one without
+any tone mapping curve at all. For the original ACES curve just multiply
+input (x) by 0.6.
+*/
+vec3 toneMapACES_pure(vec3 color)
+{
+	return toneMapACES(color * 0.6);
+}
+
+void main()
+{
+	vec3 color = texture(colorTexture, texcoord).rgb;
+
+	color *= exposure;
+
+	color = Uncharted2ToneMapping(color);
+	//color = toneMapACES(color);
+	//color = toneMapACES_pure(color);
+	
+	color = pow(color, vec3(1.0 / gamma));
+
+	shader_fragColor = vec4(color, 1.0);
+}

@@ -1,0 +1,8 @@
+library renderOne
+	depend_library framework
+	depend_library libreflection
+	scan_files cpp
+	scan_files h
+	header_path . expose
+	resource_path data
+

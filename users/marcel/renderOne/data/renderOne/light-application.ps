@@ -1,0 +1,28 @@
+include engine/ShaderPS.txt
+
+uniform sampler2D colorTexture;
+uniform sampler2D lightTexture;
+uniform sampler2D emissiveTexture;
+uniform sampler2D depthTexture;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	vec3 colorValue = texture(colorTexture, texcoord).xyz;
+	vec3 lightValue = texture(lightTexture, texcoord).xyz;
+	float emissive = texture(emissiveTexture, texcoord).x;
+	float depthValue = texture(depthTexture, texcoord).x;
+
+	if (depthValue == 1.0)
+		shader_fragColor = vec4(colorValue, 1.0);
+	else
+	{
+		vec3 color = mix(lightValue, colorValue, emissive);
+
+		shader_fragColor = vec4(color, 1.0);
+	}
+
+	//shader_fragColor.rgb = lightValue;
+	//shader_fragColor.rgb = colorValue;
+}

@@ -1,0 +1,34 @@
+include engine/ShaderPS.txt
+include renderOne/depth-functions.txt
+
+uniform sampler2D depthTexture;
+
+uniform mat4x4 projectionToView;
+uniform float strength;
+uniform vec4 color;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	float depthTL = textureOffset(depthTexture, texcoord, ivec2(-0, -1)).x;
+	float depthTR = textureOffset(depthTexture, texcoord, ivec2(+1, -1)).x;
+	float depthBL = textureOffset(depthTexture, texcoord, ivec2(-1, +1)).x;
+	float depthBR = textureOffset(depthTexture, texcoord, ivec2(+1, +1)).x;
+
+	depthTL = depthToViewZ(depthTL, texcoord, projectionToView);
+	depthTR = depthToViewZ(depthTR, texcoord, projectionToView);
+	depthBL = depthToViewZ(depthBL, texcoord, projectionToView);
+	depthBR = depthToViewZ(depthBR, texcoord, projectionToView);
+
+	float d1 = depthTR - depthBL;
+	float d2 = depthBR - depthTL;
+
+	float d = length(vec2(d1, d2));
+	
+	float v = d * strength * 0.5;
+	v = (v - 0.5) / 0.5;
+	v = clamp(v, 0.0, 1.0);
+
+	shader_fragColor = vec4(color.rgb, color.a * v);
+}

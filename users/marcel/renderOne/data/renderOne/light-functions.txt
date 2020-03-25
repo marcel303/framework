@@ -1,0 +1,38 @@
+float computeSpecularLightingFactor(
+	float specularExponent,
+	vec3 lightDirection_view,
+	vec3 normal_view,
+	vec3 rayDirection_view)
+{
+	float incidenceFactor = dot(lightDirection_view, normal_view);
+
+	if (incidenceFactor <= 0.0)
+	{
+		return 0.0;
+	}
+	else
+	{
+		vec3 reflectedLightDirection_view = lightDirection_view - 2.0 * normal_view * incidenceFactor;
+		reflectedLightDirection_view = normalize(reflectedLightDirection_view);
+
+		float specularFactor = dot(rayDirection_view, reflectedLightDirection_view);
+
+		return pow(specularFactor, specularExponent);
+	}
+}
+
+vec3 computeSpecularLightingFactor(
+	vec3 specularColor,
+	float specularExponent,
+	vec3 lightDirection_view,
+	vec3 normal_view,
+	vec3 rayDirection_view)
+{
+	float specularFactor = computeSpecularLightingFactor(
+		specularExponent,
+		lightDirection_view,
+		normal_view,
+		rayDirection_view);
+
+	return specularFactor * specularColor;
+}

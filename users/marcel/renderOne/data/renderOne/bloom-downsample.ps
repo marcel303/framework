@@ -1,0 +1,14 @@
+include engine/ShaderPS.txt
+
+uniform sampler2D source;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	// todo : OpenGL version needs an offset (?)
+
+	vec3 average = texture(source, texcoord).rgb;
+
+	shader_fragColor = vec4(average, 1.0);
+}
