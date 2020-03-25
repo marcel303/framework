@@ -1,19 +1,13 @@
 include engine/ShaderPS.txt
 
-uniform vec3 lightDirection;
-
 shader_in vec3 v_normal;
 shader_in vec4 v_color;
 
 void main()
 {
-	vec3 normal = normalize(v_normal);
-
-	float light = max(0.0, -dot(lightDirection, normal));
-
-	light = mix(light, 1.0, 0.2);
-
-	vec4 color = vec4(v_color.rgb * light, v_color.a);
-
-	shader_fragColor = color;
+	shader_fragColor = v_color;
+	shader_fragNormal = vec4(normalize(v_normal), 1.0);
+	shader_fragSpecularExponent = 0.0;
+	shader_fragSpecularColor = vec4(0.0);
+	shader_fragEmissive = 0.0;
 }

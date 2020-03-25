@@ -1,5 +1,6 @@
 app marcel-voxviewer
 	depend_library framework
+	depend_library renderOne
 	add_files main.cpp
 	#add_files vox.cpp
 	#add_files vox.h

@@ -11,6 +11,9 @@
 
 #include "Parse.h" // for VoxDict to transform
 
+#include "renderer.h"
+#include "renderOptions.h"
+
 #include <map> // for VoxDict
 #include <stdint.h>
 #include <string.h> // memcmp
@@ -686,6 +689,11 @@ int main(int argc, char * argv[])
 	if (!framework.init(800, 600))
 		return 0;
 
+// todo : let renderer register shader outputs
+	framework.registerShaderOutput('e', "float", "shader_fragEmissive");
+	framework.registerShaderOutput('s', "float", "shader_fragSpecularExponent");
+	framework.registerShaderOutput('S', "vec4", "shader_fragSpecularColor");
+	
 	VoxWorld world;
 	
 	try
@@ -713,6 +721,27 @@ int main(int argc, char * argv[])
 		drawVoxWorld(world);
 	}
 	gxCaptureMeshEnd();
+	
+	RenderOptions renderOptions;
+	renderOptions.renderMode = kRenderMode_DeferredShaded;
+	renderOptions.linearColorSpace = true;
+	renderOptions.backgroundColor.Set(0, 0, 0);
+	
+	renderOptions.fog.enabled = false;
+	renderOptions.fog.thickness = .1f;
+	
+	renderOptions.bloom.enabled = false;
+	renderOptions.bloom.blurSize = 20.f;
+	renderOptions.bloom.strength = .3f;
+	
+	renderOptions.lightScatter.enabled = true;
+	
+	renderOptions.depthSilhouette.enabled = false;
+	renderOptions.depthSilhouette.color.Set(0, 0, 0, 1);
+	
+	renderOptions.fxaa.enabled = false;
+	
+	Renderer renderer;
 	
 	for (;;)
 	{
@@ -749,32 +778,37 @@ int main(int argc, char * argv[])
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			projectPerspective3d(90.f, .01f, 100.f);
-			pushDepthTest(true, DEPTH_LESS);
 			
 			camera.pushViewMatrix();
 			{
-				Shader shader("shader");
-				setShader(shader);
+				auto drawOpaque = [&]()
+				{
+					Shader shader("shader");
+					setShader(shader);
+					
+					const Vec4 lightDirection_world(1.f, -2.f, .5f, 0);
+					const Vec4 lightDirection_view = transformToWorld(lightDirection_world).CalcNormalized();
+					shader.setImmediate("lightDirection", lightDirection_view[0], lightDirection_view[1], lightDirection_view[2]);
 				
-				const Vec4 lightDirection_world(1.f, -2.f, .5f, 0);
-				const Vec4 lightDirection_view = transformToWorld(lightDirection_world).CalcNormalized();
-				shader.setImmediate("lightDirection", lightDirection_view[0], lightDirection_view[1], lightDirection_view[2]);
-			
-				gxScalef(-1, 1, 1);
-				gxRotatef(-90, 1, 0, 0);
-				gxScalef(.1f, .1f, .1f);
+					gxScalef(-1, 1, 1);
+					gxRotatef(-90, 1, 0, 0);
+					gxScalef(.1f, .1f, .1f);
+					
+				#if 1
+					drawMesh.draw();
+				#else
+					drawVoxWorld(world);
+				#endif
+					
+					clearShader();
+				};
 				
-			#if 1
-				drawMesh.draw();
-			#else
-				drawVoxWorld(world);
-			#endif
+				RenderFunctions renderFunctions;
+				renderFunctions.drawOpaque = drawOpaque;
 				
-				clearShader();
+				renderer.render(renderFunctions, renderOptions, framework.timeStep);
 			}
 			camera.popViewMatrix();
-			
-			popDepthTest();
 		}
 		framework.endDraw();
 	}
