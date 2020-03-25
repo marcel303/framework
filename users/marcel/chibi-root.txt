@@ -51,6 +51,7 @@ with_platform linux add ps3eye-to-osc
 with_platform macos add rast
 add rawaudio1
 add reaper1
+add renderOne
 with_platform macos add resonate1
 with_platform macos add resonate2
 add ribbon3d
