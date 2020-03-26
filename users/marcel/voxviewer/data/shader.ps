@@ -7,7 +7,7 @@ void main()
 {
 	shader_fragColor = v_color;
 	shader_fragNormal = vec4(normalize(v_normal), 1.0);
-	shader_fragSpecularExponent = 0.0;
-	shader_fragSpecularColor = vec4(0.0);
+	shader_fragSpecularExponent = 20.0;
+	shader_fragSpecularColor = vec4(vec3(1.0, 1.0, 1.0) * 0.8, 0.0);
 	shader_fragEmissive = 0.0;
 }

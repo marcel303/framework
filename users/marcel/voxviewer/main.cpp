@@ -551,7 +551,7 @@ static void drawVoxModel(const VoxWorld & world, const VoxModel & model)
 	const float paritySign = ((xAxis % yAxis) * zAxis) < 0 ? -1.f : +1.f;
 */
 
-	beginCubeBatch();
+	gxBegin(GX_QUADS);
 	{
 		VoxModel::Voxel emptyVoxel;
 		emptyVoxel.colorIndex = 0xff;
@@ -567,9 +567,49 @@ static void drawVoxModel(const VoxWorld & world, const VoxModel & model)
 					if (voxel->colorIndex == 0xff)
 						continue;
 					
+					const uint8_t * color = world.palette[voxel->colorIndex];
+					
+					setColor(color[0], color[1], color[2], color[3]);
+					
+					const float vertices[8][3] =
+					{
+						{ -1, -1, -1 },
+						{ +1, -1, -1 },
+						{ +1, +1, -1 },
+						{ -1, +1, -1 },
+						{ -1, -1, +1 },
+						{ +1, -1, +1 },
+						{ +1, +1, +1 },
+						{ -1, +1, +1 }
+					};
+
+					const int faces[6][4] =
+					{
+						{ 0, 4, 7, 3 },
+						{ 2, 6, 5, 1 },
+						{ 0, 1, 5, 4 },
+						{ 7, 6, 2, 3 },
+						{ 3, 2, 1, 0 },
+						{ 4, 5, 6, 7 }
+					};
+
+					const float normals[6][3] =
+					{
+						{ -1,  0,  0 },
+						{ +1,  0,  0 },
+						{  0, -1,  0 },
+						{  0, +1,  0 },
+						{  0,  0, -1 },
+						{  0,  0, +1 }
+					};
+					
+					const float position_x = x - (model.sx - 1) / 2.f;
+					const float position_y = y - (model.sy - 1) / 2.f;
+					const float position_z = z - (model.sz - 1) / 2.f;
+					
 				#if 1
 					// optimize : determine whether one of the neighboring cells is empty
-					//            if so: draw the voxel
+					//            if so: draw the face
 					//            otherwise: skip it, since it won't be visible
 					
 					const VoxModel::Voxel * neighbors[6] =
@@ -581,33 +621,36 @@ static void drawVoxModel(const VoxWorld & world, const VoxModel & model)
 						model.getVoxelWithBorder(x, y, z - 1, &emptyVoxel),
 						model.getVoxelWithBorder(x, y, z + 1, &emptyVoxel)
 					};
-					
-					bool visible =
-						neighbors[0]->colorIndex == 0xff |
-						neighbors[1]->colorIndex == 0xff |
-						neighbors[2]->colorIndex == 0xff |
-						neighbors[3]->colorIndex == 0xff |
-						neighbors[4]->colorIndex == 0xff |
-						neighbors[5]->colorIndex == 0xff;
-					
-					if (visible == false)
-						continue;
 				#endif
 				
-					const uint8_t * color = world.palette[voxel->colorIndex];
-					
-					setColor(color[0], color[1], color[2], color[3]);
-					
-					fillCube(
-						Vec3(
-							x - (model.sx - 1) / 2.f,
-							y - (model.sy - 1) / 2.f,
-							z - (model.sz - 1) / 2.f), Vec3(.5f, .5f, .5f));
+					for (int face_idx = 0; face_idx < 6; ++face_idx)
+					{
+					#if 1
+						if (neighbors[face_idx]->colorIndex != 0xff)
+							continue;
+					#endif
+						
+						const float * __restrict normal = normals[face_idx];
+						
+						gxNormal3fv(normal);
+						
+						const int * __restrict face = faces[face_idx];
+						
+						for (int vertex_idx = 0; vertex_idx < 4; ++vertex_idx)
+						{
+							const float * __restrict vertex = vertices[face[vertex_idx]];
+							
+							gxVertex3f(
+								position_x + .5f * vertex[0],
+								position_y + .5f * vertex[1],
+								position_z + .5f * vertex[2]);
+						}
+					}
 				}
 			}
 		}
 	}
-	endCubeBatch();
+	gxEnd();
 }
 
 static void drawVoxSceneNode(const VoxWorld & world, const VoxSceneNodeBase & node)
@@ -699,8 +742,8 @@ int main(int argc, char * argv[])
 	try
 	{
 		//FileStream stream("marcel-01.vox", OpenMode_Read);
-		//FileStream stream("monu7.vox", OpenMode_Read);
-		FileStream stream("room.vox", OpenMode_Read);
+		FileStream stream("monu7.vox", OpenMode_Read);
+		//FileStream stream("room.vox", OpenMode_Read);
 		StreamReader reader(&stream, false);
 		
 		read_vox_world(reader, world);
@@ -736,10 +779,10 @@ int main(int argc, char * argv[])
 	
 	renderOptions.lightScatter.enabled = true;
 	
-	renderOptions.depthSilhouette.enabled = false;
-	renderOptions.depthSilhouette.color.Set(0, 0, 0, 1);
+	renderOptions.depthSilhouette.enabled = true;
+	renderOptions.depthSilhouette.color.Set(0, 0, 0, .5f);
 	
-	renderOptions.fxaa.enabled = false;
+	renderOptions.fxaa.enabled = true;
 	
 	Renderer renderer;
 	
