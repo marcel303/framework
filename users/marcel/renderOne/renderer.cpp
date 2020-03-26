@@ -108,7 +108,7 @@ static void renderLightBuffer(
 	const Mat4x4 & viewMatrix)
 {
 	pushBlend(BLEND_ADD_OPAQUE);
-	g_lightMgr.drawDeferredBegin(
+	g_lightDrawer.drawDeferredBegin(
 		viewMatrix, projectionMatrix,
 		depth, normals, colors, specularColor, specularExponent,
 		renderOptions.deferredLighting.enableStencilVolumes);
@@ -131,7 +131,7 @@ static void renderLightBuffer(
 				const Vec3 lightColor1 = Vec3(1.f, .8f, .6f); // light color when the light is coming from 'above'
 				const Vec3 lightColor2 = Vec3(.1f, .2f, .3f); // light color when the light is coming from 'below'
 				
-				g_lightMgr.drawDeferredDirectionalLight(lightDirection, lightColor1, lightColor2);
+				g_lightDrawer.drawDeferredDirectionalLight(lightDirection, lightColor1, lightColor2);
 			}
 		#endif
 		
@@ -142,7 +142,7 @@ static void renderLightBuffer(
 				const float lightAttenuationEnd = 10.f;
 				const Vec3 lightColor = Vec3(.8f, .9f, 1.f) * 2.f;
 				
-				g_lightMgr.drawDeferredPointLight(
+				g_lightDrawer.drawDeferredPointLight(
 					lightPosition,
 					lightAttenuationBegin,
 					lightAttenuationEnd,
@@ -151,7 +151,7 @@ static void renderLightBuffer(
 		#endif
 		}
 	}
-	g_lightMgr.drawDeferredEnd();
+	g_lightDrawer.drawDeferredEnd();
 	popBlend();
 }
 

@@ -4,33 +4,8 @@
 #include "Vec3.h"
 #include <vector>
 
-enum LightType
+struct LightDrawer
 {
-	kLightType_Point,
-	kLightType_Spot,
-	kLightType_Directional
-};
-
-struct Light
-{
-	LightType type = kLightType_Point;
-	Vec3 position;
-	Vec3 direction;
-	Vec3 color;
-	Vec3 bottomColor; // for directional lights, this is the light when objects are lit from the 'bottom'
-	float intensity = 1.f;
-	float radius = 1.f;
-	float falloffBegin = 1.f;
-	float falloffCurve = 1.f;
-};
-
-struct LightMgr
-{
-	std::vector<const Light*> lights;
-
-	void addLight(const Light * light);
-	void removeLight(const Light * light);
-
 	// deferred light functions
 	
 	struct DrawDeferredInfo
@@ -61,8 +36,6 @@ struct LightMgr
 		const bool enableStencilVolumes);
 	void drawDeferredEnd();
 	
-	void drawDeferredLights() const;
-	
 	void drawDeferredDirectionalLight(
 		const Vec3 & lightDirection,
 		const Vec3 & lightColorTop,
@@ -74,4 +47,4 @@ struct LightMgr
 		const Vec3 & lightColor) const;
 };
 
-extern LightMgr g_lightMgr;
+extern LightDrawer g_lightDrawer;

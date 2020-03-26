@@ -3,9 +3,11 @@
 
 #define ENABLE_LIGHT_VOLUME_STENCIL true
 
-LightMgr g_lightMgr;
+LightDrawer g_lightDrawer;
 
-void LightMgr::drawDeferredBegin(
+//
+
+void LightDrawer::drawDeferredBegin(
 	const Mat4x4 & worldToView,
 	const Mat4x4 & viewToProjection,
 	const int depthTextureId,
@@ -30,40 +32,12 @@ void LightMgr::drawDeferredBegin(
 		drawDeferredInfo.viewSy);
 }
 
-void LightMgr::drawDeferredEnd()
+void LightDrawer::drawDeferredEnd()
 {
 	drawDeferredInfo = DrawDeferredInfo();
 }
 
-void LightMgr::drawDeferredLights() const
-{
-	for (auto * light : lights)
-	{
-		switch (light->type)
-		{
-		case kLightType_Point:
-			drawDeferredPointLight(
-				light->position,
-				light->radius * light->falloffBegin,
-				light->radius,
-				light->color);
-			break;
-			
-		case kLightType_Spot:
-			Assert(false); // todo : implement deferred spot light draw
-			break;
-			
-		case kLightType_Directional:
-			drawDeferredDirectionalLight(
-				light->direction,
-				light->color,
-				light->bottomColor);
-			break;
-		}
-	}
-}
-
-void LightMgr::drawDeferredDirectionalLight(
+void LightDrawer::drawDeferredDirectionalLight(
 	const Vec3 & lightDirection,
 	const Vec3 & lightColor1,
 	const Vec3 & lightColor2) const
@@ -86,7 +60,7 @@ void LightMgr::drawDeferredDirectionalLight(
 }
 
 #if ENABLE_LIGHT_VOLUME_STENCIL
-static void stencilVolumeDrawBegin(const LightMgr::DrawDeferredInfo & drawDeferredInfo)
+static void stencilVolumeDrawBegin(const LightDrawer::DrawDeferredInfo & drawDeferredInfo)
 {
 	const Mat4x4 & viewToProjection = drawDeferredInfo.viewToProjection;
 	const Mat4x4 & worldToView = drawDeferredInfo.worldToView;
@@ -138,7 +112,7 @@ static void stencilVolumeTestEnd()
 }
 #endif
 
-void LightMgr::drawDeferredPointLight(
+void LightDrawer::drawDeferredPointLight(
 	const Vec3 & lightPosition,
 	const float lightAttenuationBegin,
 	const float lightAttenuationEnd,
