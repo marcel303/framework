@@ -57,7 +57,7 @@ IF %success% == "false" (
 
 IF %success% == "false" (
 	mkdir "chibi-build\vs2017"
-	cd chibi-build/vs2017 && cmake -G "Visual Studio 15 2017" ../cmake-files
+	cd chibi-build/vs2017 && cmake -G "Visual Studio 15 2017" -A Win32 ../cmake-files
 	IF ERRORLEVEL 1 (
 		echo Failed to generate Visual Studio 2017 solution.
 	) ELSE (
@@ -69,7 +69,7 @@ IF %success% == "false" (
 
 IF %success% == "false" (
 	mkdir "chibi-build\vs2015"
-	cd chibi-build/vs2015 && cmake -G "Visual Studio 14 2015" ../cmake-files
+	cd chibi-build/vs2015 && cmake -G "Visual Studio 14 2015" -A Win32 ../cmake-files
 	IF ERRORLEVEL 1 (
 		echo Failed to generate Visual Studio 2015 solution.
 	) ELSE (
