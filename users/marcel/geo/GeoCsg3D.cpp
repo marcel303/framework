@@ -1,6 +1,10 @@
 #include "Debugging.h"
 #include "GeoCsg3D.h"
 
+#if defined(DEBUG)
+	#include <stdio.h>
+#endif
+
 // FIXME: Create function to safely unfinalize mesh.
 
 namespace Geo
@@ -75,7 +79,9 @@ namespace Geo
 					
 				#endif
 				
+				#if defined(DEBUG)
 					printf("On. Warning: 2D clipping not yet implemented.\n");
+				#endif
 					
 				#endif
 				
