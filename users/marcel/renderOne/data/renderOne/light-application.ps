@@ -1,9 +1,12 @@
 include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
 
 uniform sampler2D colorTexture;
 uniform sampler2D lightTexture;
 uniform sampler2D emissiveTexture;
 uniform sampler2D depthTexture;
+
+uniform float linearColorSpace;
 
 shader_in vec2 texcoord;
 
@@ -18,6 +21,9 @@ void main()
 		shader_fragColor = vec4(colorValue, 1.0);
 	else
 	{
+		if (linearColorSpace == 0.0)
+			lightValue = linearToSrgb(lightValue);
+
 		vec3 color = mix(lightValue, colorValue, emissive);
 
 		shader_fragColor = vec4(color, 1.0);

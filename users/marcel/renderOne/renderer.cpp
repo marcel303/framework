@@ -160,7 +160,8 @@ static void renderLightCompositeBuffer(
 	const GxTextureId colors,
 	const GxTextureId emissive,
 	const GxTextureId depth,
-	const int sx, const int sy)
+	const int sx, const int sy,
+	const bool linearColorSpace)
 {
 	pushBlend(BLEND_OPAQUE);
 	{
@@ -171,6 +172,7 @@ static void renderLightCompositeBuffer(
 			shader.setTexture("lightTexture", 1, light, false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 			shader.setTexture("emissiveTexture", 3, emissive, false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 			shader.setTexture("depthTexture", 4, depth, false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
+			shader.setImmediate("linearColorSpace", linearColorSpace ? 1.f : 0.f);
 		
 			drawRect(0, 0, sx, sy);
 		}
@@ -376,7 +378,8 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			buffers.light->getTextureId(),
 			buffers.colors->getTextureId(),
 			buffers.emissive->getTextureId(),
-			buffers.depth->getTextureId(), viewportSx, viewportSy);
+			buffers.depth->getTextureId(), viewportSx, viewportSy,
+			renderOptions.linearColorSpace);
 	}
 	popRenderPass();
 	

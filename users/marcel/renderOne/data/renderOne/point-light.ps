@@ -71,6 +71,7 @@ void main()
 	// distance attenuation
 
 	float attenuation = clamp(1.0 - (distanceToLight - attenuationBegin) / (attenuationEnd - attenuationBegin), 0.0, 1.0);
+	
 	attenuation *= attenuation;
 
 	// output color with attenuation and diffuse/specular factors applied
