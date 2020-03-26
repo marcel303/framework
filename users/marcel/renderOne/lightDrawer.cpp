@@ -1,9 +1,21 @@
 #include "framework.h"
-#include "lightMgr.h"
+#include "lightDrawer.h"
 
 #define ENABLE_LIGHT_VOLUME_STENCIL true
 
 LightDrawer g_lightDrawer;
+
+//
+
+static const float kSrgbToLinear = 2.2f;
+
+static Vec3 srgbToLinear(const Vec3 & rgb)
+{
+	return Vec3(
+		powf(rgb[0], kSrgbToLinear),
+		powf(rgb[1], kSrgbToLinear),
+		powf(rgb[2], kSrgbToLinear));
+}
 
 //
 
@@ -38,8 +50,10 @@ void LightDrawer::drawDeferredEnd()
 }
 
 void LightDrawer::drawDeferredAmbientLight(
-	const Vec3 & lightColor) const
+	const Vec3 & in_lightColor) const
 {
+	const Vec3 lightColor = srgbToLinear(in_lightColor);
+	
 	Shader shader("renderOne/ambient-light");
 	setShader(shader);
 	shader.setTexture("depthTexture", 0, drawDeferredInfo.depthTextureId, false, true);
@@ -55,10 +69,12 @@ void LightDrawer::drawDeferredAmbientLight(
 
 void LightDrawer::drawDeferredDirectionalLight(
 	const Vec3 & lightDirection,
-	const Vec3 & lightColor1,
-	const Vec3 & lightColor2) const
+	const Vec3 & in_lightColor1,
+	const Vec3 & in_lightColor2) const
 {
 	const Vec3 lightDir_view = -drawDeferredInfo.worldToView.Mul3(lightDirection).CalcNormalized();
+	const Vec3 lightColor1 = srgbToLinear(in_lightColor1);
+	const Vec3 lightColor2 = srgbToLinear(in_lightColor2);
 
 	Shader shader("renderOne/directional-light");
 	setShader(shader);
@@ -132,7 +148,7 @@ void LightDrawer::drawDeferredPointLight(
 	const Vec3 & lightPosition,
 	const float lightAttenuationBegin,
 	const float lightAttenuationEnd,
-	const Vec3 & lightColor) const
+	const Vec3 & in_lightColor) const
 {
 #if ENABLE_LIGHT_VOLUME_STENCIL
 	if (drawDeferredInfo.enableStencilVolumes)
@@ -152,6 +168,7 @@ void LightDrawer::drawDeferredPointLight(
 #endif
 	
 	const Vec3 lightPos_view = drawDeferredInfo.worldToView.Mul4(lightPosition);
+	const Vec3 lightColor = srgbToLinear(in_lightColor);
 
 	Shader shader("renderOne/point-light");
 	setShader(shader);

@@ -1,6 +1,6 @@
 #include "framework.h"
 #include "gx_render.h"
-#include "lightMgr.h"
+#include "lightDrawer.h"
 #include "renderer.h"
 
 #if 0
@@ -1090,6 +1090,13 @@ static bool isDirectToFramebufferMode(const RenderMode renderMode)
 
 	Assert(false);
 	return false;
+}
+
+void Renderer::registerShaderOutputs()
+{
+	framework.registerShaderOutput('e', "float", "shader_fragEmissive");
+	framework.registerShaderOutput('s', "float", "shader_fragSpecularExponent");
+	framework.registerShaderOutput('S', "vec4", "shader_fragSpecularColor");
 }
 
 void Renderer::render(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions, const int viewportSx, const int viewportSy, const float timeStep)

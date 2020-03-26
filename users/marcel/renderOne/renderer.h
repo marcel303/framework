@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lightDrawer.h"
 #include "renderOptions.h"
 #include <functional>
 
@@ -67,6 +68,8 @@ struct Renderer
 {
 	RenderBuffers buffers;
 	RenderBuffers buffers2;
+	
+	static void registerShaderOutputs();
 	
 	void render(
 		const RenderFunctions & renderFunctions,
