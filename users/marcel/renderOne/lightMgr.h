@@ -25,6 +25,8 @@ struct LightDrawer
 	
 	DrawDeferredInfo drawDeferredInfo;
 	
+	// methods to begin and end drawing deferred lights
+	
 	void drawDeferredBegin(
 		const Mat4x4 & worldToView,
 		const Mat4x4 & viewToProjection,
@@ -34,12 +36,19 @@ struct LightDrawer
 		const int specularColorTextureId,
 		const int specularExponentTextureId,
 		const bool enableStencilVolumes);
+	
 	void drawDeferredEnd();
+	
+	// methods for drawing deferred lights
+	
+	void drawDeferredAmbientLight(
+		const Vec3 & lightColor) const;
 	
 	void drawDeferredDirectionalLight(
 		const Vec3 & lightDirection,
 		const Vec3 & lightColorTop,
 		const Vec3 & lightColorBottom) const;
+	
 	void drawDeferredPointLight(
 		const Vec3 & lightPosition,
 		const float lightAttenuationBegin,

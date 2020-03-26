@@ -20,6 +20,11 @@ struct RenderOptions
 	
 	bool enableTranslucentPass = true;
 	
+	Vec3 defaultLightDirection = Vec3(1, -4, 1).CalcNormalized();
+	Vec3 defaultLightColorTop = Vec3(1.f, 1.f, 1.f);
+	Vec3 defaultLightColorBottom = Vec3(.1f, .1f, .1f);
+	bool useDefaultLight = true; // when true and no light drawing function is set, the renderer will use a default directional light
+	
 	struct Fog
 	{
 		bool enabled = false;

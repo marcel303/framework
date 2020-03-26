@@ -119,12 +119,23 @@ static void renderLightBuffer(
 		}
 		else
 		{
-		#if 0
-			setColor(colorWhite);
-			drawRect(0, 0, viewportSx, viewportSy);
+			if (renderOptions.useDefaultLight)
+			{
+				g_lightDrawer.drawDeferredDirectionalLight(
+					renderOptions.defaultLightDirection,
+					renderOptions.defaultLightColorTop,
+					renderOptions.defaultLightColorBottom);
+			}
+			
+		#if 0 // todo : leave this set to '0' when checking in!
+			{
+				const Vec3 lightColor = Vec3(1, 1, 1);
+			
+				g_lightDrawer.drawDeferredAmbientLight(lightColor);
+			}
 		#endif
 		
-		#if 1
+		#if 0 // todo : leave this set to '0' when checking in!
 			{
 				const Mat4x4 rotationMatrix = Mat4x4(true).RotateY(framework.time / 2.f).RotateX(sinf(framework.time)/2.f);
 				const Vec3 lightDirection = rotationMatrix.Mul3(Vec3(.3f, -3.f, .6f)).CalcNormalized();
@@ -135,7 +146,7 @@ static void renderLightBuffer(
 			}
 		#endif
 		
-		#if 1
+		#if 0 // todo : leave this set to '0' when checking in!
 			{
 				const Vec3 lightPosition = Vec3(cosf(framework.time) * 3.f, 3, sinf(framework.time) * 3.f);
 				const float lightAttenuationBegin = 0.f;

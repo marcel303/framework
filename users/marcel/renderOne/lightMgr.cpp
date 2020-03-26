@@ -37,6 +37,22 @@ void LightDrawer::drawDeferredEnd()
 	drawDeferredInfo = DrawDeferredInfo();
 }
 
+void LightDrawer::drawDeferredAmbientLight(
+	const Vec3 & lightColor) const
+{
+	Shader shader("renderOne/ambient-light");
+	setShader(shader);
+	shader.setTexture("depthTexture", 0, drawDeferredInfo.depthTextureId, false, true);
+	shader.setTexture("normalTexture", 1, drawDeferredInfo.normalTextureId, false, true);
+	shader.setTexture("colorTexture", 2, drawDeferredInfo.colorTextureId, false, true);
+	shader.setTexture("specularColorTexture", 3, drawDeferredInfo.specularColorTextureId, false, true);
+	shader.setTexture("specularExponentTexture", 4, drawDeferredInfo.specularExponentTextureId, false, true);
+	shader.setImmediateMatrix4x4("projectionToView", drawDeferredInfo.projectionToView.m_v);
+	shader.setImmediate("lightColor", lightColor[0], lightColor[1], lightColor[2]);
+	drawRect(0, 0, drawDeferredInfo.viewSx, drawDeferredInfo.viewSy);
+	clearShader();
+}
+
 void LightDrawer::drawDeferredDirectionalLight(
 	const Vec3 & lightDirection,
 	const Vec3 & lightColor1,
