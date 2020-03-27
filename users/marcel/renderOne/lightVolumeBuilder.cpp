@@ -1,5 +1,7 @@
 #include "lightVolumeBuilder.h"
+#include <assert.h>
 #include <math.h>
+#include <string.h>
 
 #include <map> // todo : remove. here just for prototyping
 

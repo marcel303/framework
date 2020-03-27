@@ -3,34 +3,49 @@
 // todo : fix same uniform block name as variable name
 //        GLSL doesn't allow this. make a change to shader builder ?
 
-uniform vec4 lightParams[128*2] buffer lightParamsBuffer;
+uniform vec4 lightParams[64*4] buffer lightParamsBuffer;
 uniform float numLights;
 
 struct LightParams
 {
-	float type;
 	vec3 position;
+	float type;
 
-	float att_begin;
-	float att_end;
+	vec3 direction;
+	float reserved;
+
+	vec3 color;
+	float reserved2;
+
+	float attenuationBegin;
+	float attenuationEnd;
 };
 
-LightParams decodeLightParams(vec4 params1, vec4 params2)
+LightParams decodeLightParams(vec4 params1, vec4 params2, vec4 params3, vec4 params4)
 {
 	LightParams result;
 
-	result.type = params1.x;
-	result.position = params1.yzw;
-	result.att_begin = params2.x;
-	result.att_end = params2.y;
+	result.position = params1.xyz;
+	result.type = params1.w;
+	
+	result.direction = params2.xyz;
+	result.reserved = params2.w;
+
+	result.color = params3.xyz;
+	result.reserved2 = params3.w;
+
+	result.attenuationBegin = params4.x;
+	result.attenuationEnd = params4.y;
 
 	return result;
 }
 
 LightParams lookupLightParams(int id)
 {
-	vec4 params1 = lightParams[id * 2 + 0];
-	vec4 params2 = lightParams[id * 2 + 1];
+	vec4 params1 = lightParams[id * 4 + 0];
+	vec4 params2 = lightParams[id * 4 + 1];
+	vec4 params3 = lightParams[id * 4 + 2];
+	vec4 params4 = lightParams[id * 4 + 3];
 
-	return decodeLightParams(params1, params2);
+	return decodeLightParams(params1, params2, params3, params4);
 }

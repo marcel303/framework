@@ -15,6 +15,7 @@ struct Light
 {
 	LightType type;
 	Vec3 position;
+	Vec3 direction;
 	float attenuationBegin;
 	float attenuationEnd;
 	Vec3 color;

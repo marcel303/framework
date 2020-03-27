@@ -15,11 +15,12 @@ vec3 computeLighting(LightParams lightParams, vec3 position)
 {
 	float distance = length(position - lightParams.position);
 
-	float att_distance = (distance - lightParams.att_begin) / (lightParams.att_end - lightParams.att_begin);
-	att_distance = clamp(att_distance, 0.0, 1.0);
-	float att = 1.0 - att_distance;
+	distance = (distance - lightParams.attenuationBegin) / (lightParams.attenuationEnd - lightParams.attenuationBegin);
+	distance = clamp(distance, 0.0, 1.0);
+	
+	float attenuation = 1.0 - distance;
 
-	return vec3(att);
+	return lightParams.color * attenuation;
 }
 
 //

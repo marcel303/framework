@@ -10,6 +10,8 @@ struct LightParams
 
 	float att_begin;
 	float att_end;
+	
+	Vec3 color;
 };
 
 int main(int argc, char * argv[])
@@ -43,10 +45,10 @@ int main(int argc, char * argv[])
 	
 	std::vector<LightParams> lights =
 	{
-		{ Vec3(-1, 0, +4), 0.f, 3.f },
-		{ Vec3(+4, 0, +4), 0.f, 4.f },
-		{ Vec3(+4, 0, -4), 0.f, 2.f },
-		{ Vec3(-4, 0, -4), 0.f, 1.f }
+		{ Vec3(-1, 0, +4), 0.f, 3.f, Vec3(1, 1, 1) },
+		{ Vec3(+4, 0, +4), 0.f, 4.f, Vec3(0, 1, 1) },
+		{ Vec3(+4, 0, -4), 0.f, 2.f, Vec3(1, 0, 1) },
+		{ Vec3(-4, 0, -4), 0.f, 1.f, Vec3(1, 1, 0) }
 	};
 	
 	ForwardLightingHelper helper;
@@ -67,7 +69,7 @@ int main(int argc, char * argv[])
 					lights[i].position,
 					lights[i].att_begin,
 					lights[i].att_end,
-					Vec3(1, 1, 1),
+					lights[i].color,
 					1.f);
 			}
 			
@@ -150,7 +152,7 @@ int main(int argc, char * argv[])
 						gxPushMatrix();
 						{
 							gxTranslatef(0, 0, -4);
-							gxRotatef(framework.time * 100.f, 0, 0, 1);
+							gxRotatef(framework.time * 30.f, 0, 0, 1);
 					
 							setColor(colorWhite);
 							fillCube(Vec3(0, 0, 0), Vec3(6.f, .5f, 1.f));

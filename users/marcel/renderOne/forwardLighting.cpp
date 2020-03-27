@@ -49,25 +49,38 @@ void ForwardLightingHelper::prepareShaderData(const Mat4x4 & worldToView)
 	// fill light params buffer with information for all of the lights
 	
 	{
-		Vec4 * params = new Vec4[lights.size() * 2];
+		Vec4 * params = new Vec4[lights.size() * 4];
 
 		for (size_t i = 0; i < lights.size(); ++i)
 		{
 			const Vec3 & position_world = lights[i].position;
+			const Vec3 & direction_world = lights[i].direction;
+			
 			const Vec3 position_view = worldToView.Mul4(position_world);
+			const Vec3 direction_view = worldToView.Mul3(direction_world);
 			
-			params[i * 2 + 0][0] = lights[i].type;
-			params[i * 2 + 0][1] = position_view[0];
-			params[i * 2 + 0][2] = position_view[1];
-			params[i * 2 + 0][3] = position_view[2];
+			params[i * 4 + 0][0] = position_view[0];
+			params[i * 4 + 0][1] = position_view[1];
+			params[i * 4 + 0][2] = position_view[2];
+			params[i * 4 + 0][3] = lights[i].type;
 			
-			params[i * 2 + 1][0] = lights[i].attenuationBegin;
-			params[i * 2 + 1][1] = lights[i].attenuationEnd;
-			params[i * 2 + 1][2] = 0.f;
-			params[i * 2 + 1][3] = 0.f;
+			params[i * 4 + 1][0] = direction_view[0];
+			params[i * 4 + 1][1] = direction_view[1];
+			params[i * 4 + 1][2] = direction_view[2];
+			params[i * 4 + 1][3] = 0.f;
+			
+			params[i * 4 + 2][0] = lights[i].color[0];
+			params[i * 4 + 2][1] = lights[i].color[1];
+			params[i * 4 + 2][2] = lights[i].color[2];
+			params[i * 4 + 2][3] = 0.f;
+			
+			params[i * 4 + 3][0] = lights[i].attenuationBegin;
+			params[i * 4 + 3][1] = lights[i].attenuationEnd;
+			params[i * 4 + 3][2] = 0.f;
+			params[i * 4 + 3][3] = 0.f;
 		}
 
-		lightsParamsBuffer.setData(params, lights.size() * 2 * sizeof(Vec4));
+		lightsParamsBuffer.setData(params, lights.size() * 4 * sizeof(Vec4));
 
 		delete [] params;
 		params = nullptr;
