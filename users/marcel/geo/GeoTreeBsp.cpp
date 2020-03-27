@@ -1,5 +1,6 @@
 #include "Debugging.h"
 #include "GeoTreeBsp.h"
+#include <math.h>
 
 namespace Geo
 {
