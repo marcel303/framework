@@ -47,5 +47,9 @@ LightParams lookupLightParams(int id)
 	vec4 params3 = lightParams[id * 4 + 2];
 	vec4 params4 = lightParams[id * 4 + 3];
 
-	return decodeLightParams(params1, params2, params3, params4);
+	return decodeLightParams(
+		params1,
+		params2,
+		params3,
+		params4);
 }

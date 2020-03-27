@@ -51,7 +51,23 @@ int main(int argc, char * argv[])
 		{ Vec3(-4, 0, -4), 0.f, 1.f, Vec3(1, 1, 0) }
 	};
 	
+	for (int i = 0; i < 1000; ++i)
+	{
+		lights.push_back(
+			{
+				Vec3(
+					random<float>(-8.f, +8.f),
+					random<float>(-.5f, +.5f),
+					random<float>(-8.f, +8.f)),
+				0.f,
+				random<float>(.1f, .5f),
+				Vec3(1, 1, 1) * random<float>(.1f, 1.f)
+			});
+	}
+	
 	ForwardLightingHelper helper;
+	
+	bool showLightVolumeOverlay = true;
 	
 	for (;;)
 	{
@@ -61,6 +77,9 @@ int main(int argc, char * argv[])
 			break;
 		
 		camera.tick(framework.timeStep, true);
+		
+		if (keyboard.wentDown(SDLK_v))
+			showLightVolumeOverlay = !showLightVolumeOverlay;
 		
 		{
 			for (size_t i = 0; i < lights.size(); ++i)
@@ -80,32 +99,35 @@ int main(int argc, char * argv[])
 	
 		framework.beginDraw(0, 0, 0, 0);
 		{
-			// show light volume data
-			
-			int indexTextureSx;
-			int indexTextureSy;
-			gxGetTextureSize(helper.indexTextureId, indexTextureSx, indexTextureSy);
-			
-			setColorf(1.f / indexTextureSx, 1.f / 4, 1);
-			gxSetTexture(helper.indexTextureId);
-			drawRect(0, 0, 800, 800);
-			gxSetTexture(0);
-			
-			setColorf(1, 1, 1, 1, 1.f / 4);
-			gxSetTexture(helper.lightIdsTextureId);
-			drawRect(0, 0, 800, 40);
-			gxSetTexture(0);
-		
-			// show the light volume interpretation by the shader (2d)
-			
-			Shader shader("light-volume-2d");
-			setShader(shader);
+			if (showLightVolumeOverlay)
 			{
-				int nextTextureUnit = 0;
-				helper.setShaderData(shader, nextTextureUnit);
-				drawRect(100, 100, 200, 200);
+				// show light volume data
+				
+				int indexTextureSx;
+				int indexTextureSy;
+				gxGetTextureSize(helper.indexTextureId, indexTextureSx, indexTextureSy);
+				
+				setColorf(1.f / indexTextureSx, 1.f / 4, 1);
+				gxSetTexture(helper.indexTextureId);
+				drawRect(0, 0, 800, 800);
+				gxSetTexture(0);
+				
+				setColorf(1, 1, 1, 1, 1.f / 4);
+				gxSetTexture(helper.lightIdsTextureId);
+				drawRect(0, 0, 800, 40);
+				gxSetTexture(0);
+		
+				// show the light volume interpretation by the shader (2d)
+				
+				Shader shader("light-volume-2d");
+				setShader(shader);
+				{
+					int nextTextureUnit = 0;
+					helper.setShaderData(shader, nextTextureUnit);
+					drawRect(100, 100, 200, 200);
+				}
+				clearShader();
 			}
-			clearShader();
 			
 			// show the light volume interpretation by the shader (3d)
 			
@@ -120,16 +142,20 @@ int main(int argc, char * argv[])
 				{
 					// draw bounding boxes for the lights, to give an indication where the lights are positioned
 					
-					for (auto & light : lights)
+					beginCubeBatch();
 					{
-						setColor(colorBlue);
-						lineCube(
-							light.position,
-							Vec3(
-								light.att_end,
-								light.att_end,
-								light.att_end));
+						for (auto & light : lights)
+						{
+							setColor(100, 100, 100);
+							lineCube(
+								light.position,
+								Vec3(
+									light.att_end,
+									light.att_end,
+									light.att_end));
+						}
 					}
+					endCubeBatch();
 					
 					// draw some geometry, lit using information from the light volume
 					
@@ -145,7 +171,7 @@ int main(int argc, char * argv[])
 							gxRotatef(framework.time * 20.f, 1, 2, 3);
 					
 							setColor(colorWhite);
-							fillCube(Vec3(0, 0, 0), Vec3(6.f, .5f, 1.f));
+							fillCube(Vec3(0, 0, 0), Vec3(6.f, .5f, 2.f));
 						}
 						gxPopMatrix();
 						
@@ -177,15 +203,15 @@ int main(int argc, char * argv[])
 						int nextTextureUnit = 0;
 						helper.setShaderData(shader, nextTextureUnit);
 						
-						for (int i = 0; i < 10; ++i)
+						for (int i = 0; i < 1; ++i)
 						{
 							gxPushMatrix();
 							{
 								gxTranslatef(0, 0, 0);
-								gxRotatef(framework.time * 90.f + 90.f * i / 10.f, 1, 0, 0);
+								gxRotatef(90.f + sinf(framework.time / 1.23f) * 10.f + 90.f * i / 10.f, 1, 0, 0);
 						
-								setColor(255, 255, 255, 63);
-								drawRect(-6, -6, +6, +6);
+								setColor(255, 255, 255);
+								drawRect(-10, -10, +10, +10);
 							}
 							gxPopMatrix();
 						}
@@ -198,6 +224,9 @@ int main(int argc, char * argv[])
 				camera.popViewMatrix();
 			}
 			projectScreen2d();
+			
+			setColor(colorWhite);
+			drawText(4, 4, 12, +1, +1, "Press 'V' to toggle light volume overlay");
 		}
 		framework.endDraw();
 		

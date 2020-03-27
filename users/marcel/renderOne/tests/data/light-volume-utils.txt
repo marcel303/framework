@@ -30,10 +30,7 @@ void forEachLightIdAt(vec3 position)
 		return;
 	}
 
-	float u = (x + 0.5) / lightVolumeDims.x;
-	float v = (z + 0.5) / lightVolumeDims.y;
-
-	ivec2 startOffsetAndCount = rOne_toIvec2(texture(lightVolume, vec2(u, v)).xy);
+	ivec2 startOffsetAndCount = rOne_toIvec2(texelFetch(lightVolume, ivec2(x, z), 0).xy);
 
 	int startOffset = startOffsetAndCount.x;
 	int count = startOffsetAndCount.y;
@@ -44,12 +41,7 @@ void forEachLightIdAt(vec3 position)
 	{
 		int index = startOffset + i;
 
-		float u = (index + 0.5) / lightIdsDim.x;
-
-		//if (u < 0.0 || u > 1.0)
-		//	return -1;
-
-		int id = int(texture(lightIds, vec2(u, 0.5)).x);
+		int id = int(texelFetch(lightIds, ivec2(index, 0), 0));
 
 		forEachLightId(id);
 	}

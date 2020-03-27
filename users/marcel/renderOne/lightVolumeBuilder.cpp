@@ -35,8 +35,8 @@ void LightVolumeBuilder::reset()
 
 LightVolumeData LightVolumeBuilder::generateLightVolumeData() const
 {
-	const int extX = 16;
-	const int extZ = 16;
+	const int extX = 32;
+	const int extZ = 32;
 
 	const int sx = extX * 2 + 1;
 	const int sz = extZ * 2 + 1;
