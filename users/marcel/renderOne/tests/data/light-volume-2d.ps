@@ -1,0 +1,64 @@
+include engine/ShaderPS.txt
+include light-volume-utils.txt
+
+shader_in vec3 v_position;
+
+//
+
+// todo : fix same uniform block name as variable name
+//        GLSL doesn't allow this. make a change to shader builder ?
+
+uniform vec4 lightParams[128*2] buffer lightParamsBuffer;
+
+struct LightParams
+{
+	float type;
+	vec3 position;
+
+	float att_begin;
+	float att_end;
+};
+
+LightParams lookup_light_params(int id)
+{
+	LightParams result;
+
+	vec4 params1 = lightParams[id * 2 + 0];
+	vec4 params2 = lightParams[id * 2 + 1];
+
+	result.type = params1.x;
+	result.position = params1.yzw;
+	result.att_begin = params2.x;
+	result.att_end = params2.y;
+
+	return result;
+}
+
+vec3 compute_lighting(LightParams lightParams, vec3 position)
+{
+	float distance = length(position - lightParams.position);
+
+	float att_distance = (distance - lightParams.att_begin) / (lightParams.att_end - lightParams.att_begin);
+	att_distance = clamp(att_distance, 0.0, 1.0);
+	float att = 1.0 - att_distance;
+
+	return vec3(att);
+	//return vec3(1.0 / (att_distance + 0.001));
+	//return vec3(1.0 / (distance + 0.001));
+	//return vec3(1.0 / lightParams.att_end);
+}
+
+void main()
+{
+	int id = lookup_light_id(v_position);
+
+	if (id == -1)
+		shader_fragColor = vec4(1.0);
+	else
+	{
+		LightParams lightParams = lookup_light_params(id);
+
+		shader_fragColor.rgb = compute_lighting(lightParams, v_position);
+		shader_fragColor.a = 1.0;
+	}
+}

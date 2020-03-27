@@ -1,0 +1,55 @@
+uniform sampler2D lightVolume;
+uniform sampler2D lightIds;
+
+ivec2 toIvec2(vec2 v)
+{
+	return ivec2(
+		v.x,
+		v.y);
+}
+
+int lookup_light_id(vec3 position)
+{
+	ivec2 lightVolumeDims = toIvec2(textureSize(lightVolume, 0));
+
+	// position to cell coord
+
+	int x = int(floor(position.x));
+	int z = int(floor(position.z));
+
+	x += (lightVolumeDims.x - 1) / 2;
+	z += (lightVolumeDims.y - 1) / 2;
+
+	if (x < 0 || x >= lightVolumeDims.x ||
+		z < 0 || z >= lightVolumeDims.y)
+	{
+		return -1;
+	}
+
+	float u = (x + 0.5) / lightVolumeDims.x;
+	float v = (z + 0.5) / lightVolumeDims.y;
+
+	ivec2 startOffsetAndCount = toIvec2(texture(lightVolume, vec2(u, v)).xy);
+
+	int startOffset = startOffsetAndCount.x;
+	int count = startOffsetAndCount.y;
+
+	ivec2 lightIdsDim = toIvec2(textureSize(lightIds, 0));
+
+	for (int i = 0; i < count; ++i)
+	{
+		int index = startOffset + i;
+
+		float u = (index + 0.5) / lightIdsDim.x;
+
+		//if (u < 0.0 || u > 1.0)
+		//	return -1;
+
+		int id = int(texture(lightIds, vec2(u, 0.5)).x);
+
+		return id;
+	}
+
+	return -1;
+}
+
