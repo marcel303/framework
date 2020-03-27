@@ -10,6 +10,9 @@ shader_in vec3 v_position;
 
 uniform vec4 lightParams[128*2] buffer lightParamsBuffer;
 
+uniform float numLights;
+uniform float useLightVolume;
+
 struct LightParams
 {
 	float type;
@@ -50,15 +53,32 @@ vec3 compute_lighting(LightParams lightParams, vec3 position)
 
 void main()
 {
-	int id = lookup_light_id(v_position);
+	if (useLightVolume == 0.0)
+	{
+		vec3 color = vec3(0.0);
 
-	if (id == -1)
-		shader_fragColor = vec4(1.0);
+		for (int i = 0; i < int(numLights); ++i)
+		{
+			LightParams lightParams = lookup_light_params(i);
+
+			color += compute_lighting(lightParams, v_position);
+		}
+
+		shader_fragColor.rgb = color;
+		shader_fragColor.a = 1.0;
+	}
 	else
 	{
-		LightParams lightParams = lookup_light_params(id);
+		int id = lookup_light_id(v_position);
 
-		shader_fragColor.rgb = compute_lighting(lightParams, v_position);
-		shader_fragColor.a = 1.0;
+		if (id == -1)
+			shader_fragColor = vec4(1.0);
+		else
+		{
+			LightParams lightParams = lookup_light_params(id);
+
+			shader_fragColor.rgb = compute_lighting(lightParams, v_position);
+			shader_fragColor.a = 1.0;
+		}
 	}
 }

@@ -1,3 +1,4 @@
+#include "forwardLighting.h"
 #include "lightVolumeBuilder.h"
 #include "renderer.h"
 
@@ -47,6 +48,8 @@ int main(int argc, char * argv[])
 		{ Vec3(-4, 0, -4), 0.f, 1.f }
 	};
 	
+	ForwardLightingHelper helper;
+	
 	for (;;)
 	{
 		framework.process();
@@ -55,6 +58,22 @@ int main(int argc, char * argv[])
 			break;
 		
 		camera.tick(framework.timeStep, true);
+		
+		{
+			for (size_t i = 0; i < lights.size(); ++i)
+			{
+				helper.addPointLight(
+					lights[i].position,
+					lights[i].att_begin,
+					lights[i].att_end,
+					Vec3(1, 1, 1),
+					1.f);
+			}
+			
+			const Mat4x4 worldToView = camera.getViewMatrix();
+			
+			helper.prepareShaderData(worldToView);
+		}
 		
 		// generate light volume data using the (current) set of lights
 		
@@ -96,37 +115,6 @@ int main(int argc, char * argv[])
 		// dispose of the data
 		
 		data.free();
-		
-		// create a buffer to make accessible the lights to the shader
-		
-		ShaderBuffer lightsBuffer;
-		
-		{
-			const Mat4x4 worldToView = camera.getViewMatrix();
-			
-			Vec4 * params = new Vec4[lights.size() * 2];
-			
-			for (size_t i = 0; i < lights.size(); ++i)
-			{
-				const Vec3 & position_world = lights[i].position;
-				const Vec3 position_view = worldToView.Mul4(position_world);
-				
-				params[i * 2 + 0][0] = 0.f;
-				params[i * 2 + 0][1] = position_view[0];
-				params[i * 2 + 0][2] = position_view[1];
-				params[i * 2 + 0][3] = position_view[2];
-				
-				params[i * 2 + 1][0] = lights[i].att_begin;
-				params[i * 2 + 1][1] = lights[i].att_end;
-				params[i * 2 + 1][2] = 0.f;
-				params[i * 2 + 1][3] = 0.f;
-			}
-			
-			lightsBuffer.setData(params, lights.size() * 2 * sizeof(Vec4));
-			
-			delete [] params;
-			params = nullptr;
-		}
 	
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -149,7 +137,7 @@ int main(int argc, char * argv[])
 			{
 				shader.setTexture("lightVolume", 0, index_texture, false, false);
 				shader.setTexture("lightIds", 1, light_ids_texture, false, false);
-				shader.setBuffer("lightParamsBuffer", lightsBuffer);
+				helper.setShaderData(shader);
 				drawRect(100, 100, 200, 200);
 			}
 			clearShader();
@@ -181,7 +169,7 @@ int main(int argc, char * argv[])
 				{
 					shader.setTexture("lightVolume", 0, index_texture, false, false);
 					shader.setTexture("lightIds", 1, light_ids_texture, false, false);
-					shader.setBuffer("lightParamsBuffer", lightsBuffer);
+					helper.setShaderData(shader);
 					
 					gxPushMatrix();
 					{
@@ -214,6 +202,8 @@ int main(int argc, char * argv[])
 		
 		freeTexture(index_texture);
 		freeTexture(light_ids_texture);
+		
+		helper.reset();
 	}
 	
 	framework.shutdown();
