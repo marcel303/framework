@@ -54,7 +54,7 @@ void LightDrawer::drawDeferredAmbientLight(
 {
 	const Vec3 lightColor = srgbToLinear(in_lightColor);
 	
-	Shader shader("renderOne/ambient-light");
+	Shader shader("renderOne/deferred-lights/ambient");
 	setShader(shader);
 	shader.setTexture("depthTexture", 0, drawDeferredInfo.depthTextureId, false, true);
 	shader.setTexture("normalTexture", 1, drawDeferredInfo.normalTextureId, false, true);
@@ -76,7 +76,7 @@ void LightDrawer::drawDeferredDirectionalLight(
 	const Vec3 lightColor1 = srgbToLinear(in_lightColor1);
 	const Vec3 lightColor2 = srgbToLinear(in_lightColor2);
 
-	Shader shader("renderOne/directional-light");
+	Shader shader("renderOne/deferred-lights/directional");
 	setShader(shader);
 	shader.setTexture("depthTexture", 0, drawDeferredInfo.depthTextureId, false, true);
 	shader.setTexture("normalTexture", 1, drawDeferredInfo.normalTextureId, false, true);
@@ -170,7 +170,7 @@ void LightDrawer::drawDeferredPointLight(
 	const Vec3 lightPos_view = drawDeferredInfo.worldToView.Mul4(lightPosition);
 	const Vec3 lightColor = srgbToLinear(in_lightColor);
 
-	Shader shader("renderOne/point-light");
+	Shader shader("renderOne/deferred-lights/point");
 	setShader(shader);
 	shader.setTexture("depthTexture", 0, drawDeferredInfo.depthTextureId, false, true);
 	shader.setTexture("normalTexture", 1, drawDeferredInfo.normalTextureId, false, true);

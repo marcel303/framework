@@ -292,7 +292,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 						shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 						shader.setImmediateMatrix4x4("projectionToWorld_curr", projectionToWorld_curr.m_v);
 						shader.setImmediateMatrix4x4("projectionToWorld_prev", projectionToWorld_prev.m_v);
-						shader.setImmediateMatrix4x4("worldToView", modelViewMatrix.m_v);
+						//shader.setImmediateMatrix4x4("worldToView", modelViewMatrix.m_v);
 						shader.setImmediateMatrix4x4("worldToProjection", worldToProjection.m_v);
 						shader.setImmediate("timeStepRcp", 1.f / timeStep);
 						drawRect(0, 0, viewportSx, viewportSy);
@@ -410,7 +410,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 					? srgbToLinear(renderOptions.backgroundColor)
 					: renderOptions.backgroundColor;
 				
-				Shader shader("renderOne/fog-application");
+				Shader shader("renderOne/postprocess/fog-application");
 				setShader(shader);
 				{
 					shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
@@ -443,7 +443,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 				const Mat4x4 viewToProjection = projectionMatrix;
 				const Mat4x4 projectionToView = projectionMatrix.CalcInv();
 				
-				Shader shader("renderOne/screen-space-reflection");
+				Shader shader("renderOne/postprocess/screen-space-reflection");
 				setShader(shader);
 				{
 					shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
@@ -490,7 +490,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			projectScreen2d();
 			pushBlend(BLEND_OPAQUE);
 			{
-				Shader shader("renderOne/screen-space-motion-blur");
+				Shader shader("renderOne/postprocess/screen-space-motion-blur");
 				setShader(shader);
 				{
 					shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), true, true);
@@ -523,7 +523,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			{
 				const Mat4x4 projectionToView = projectionMatrix.CalcInv();
 
-				Shader shader("renderOne/scatter-dof");
+				Shader shader("renderOne/postprocess/scatter-dof");
 				setShader(shader);
 				{
 					shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), true, true);
@@ -551,7 +551,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			{
 				const Mat4x4 projectionToView = projectionMatrix.CalcInv();
 				
-				Shader shader("renderOne/simple-depth-of-field");
+				Shader shader("renderOne/postprocess/simple-depth-of-field");
 				setShader(shader);
 				{
 					shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), true, true);
@@ -667,7 +667,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			projectScreen2d();
 			pushBlend(BLEND_OPAQUE);
 			{
-				Shader shader("renderOne/lightScatter");
+				Shader shader("renderOne/postprocess/light-scatter");
 				setShader(shader);
 				{
 					const float decayPerSample = powf(renderOptions.lightScatter.decay, 1.f / renderOptions.lightScatter.numSamples);
@@ -700,7 +700,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			projectScreen2d();
 			pushBlend(BLEND_OPAQUE);
 			{
-				Shader shader("renderOne/tonemap");
+				Shader shader("renderOne/postprocess/tonemap");
 				setShader(shader);
 				{
 					shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
@@ -729,7 +729,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			
 			pushBlend(BLEND_OPAQUE);
 			{
-				Shader shader("renderOne/simple-screen-space-refraction");
+				Shader shader("renderOne/postprocess/simple-screen-space-refraction");
 				setShader(shader);
 				{
 					shader.setTexture("normalTexture", 0, getTexture("textures/refraction/droplets.png"), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
@@ -760,7 +760,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			{
 				const Mat4x4 projectionToView = projectionMatrix.CalcInv();
 				
-				Shader shader("renderOne/outline");
+				Shader shader("renderOne/postprocess/outline");
 				setShader(shader);
 				{
 					shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, true);
@@ -795,7 +795,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			
 			pushBlend(BLEND_OPAQUE);
 			{
-				Shader shader("renderOne/color-grade");
+				Shader shader("renderOne/postprocess/color-grade");
 				setShader(shader);
 				{
 				#if 0
@@ -853,7 +853,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			
 			pushBlend(BLEND_OPAQUE);
 			{
-				Shader shader("renderOne/fxaa");
+				Shader shader("renderOne/postprocess/fxaa");
 				setShader(shader);
 				{
 					shader.setTexture("source", 0, composite[composite_idx]->getTextureId(), false, true);
