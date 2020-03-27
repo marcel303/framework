@@ -1,5 +1,6 @@
 #include "Geo.h"
 #include <math.h>
+#include <stdlib.h> // abs, rand
 
 static void CreateGrid(int axis, Vec3Arg origin, Geo::Mesh* mesh);
 
