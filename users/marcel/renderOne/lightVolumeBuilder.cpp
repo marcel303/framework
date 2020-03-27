@@ -36,13 +36,15 @@ void LightVolumeBuilder::reset()
 LightVolumeData LightVolumeBuilder::generateLightVolumeData() const
 {
 	const int extX = 32;
+	const int extY = 32;
 	const int extZ = 32;
 
 	const int sx = extX * 2 + 1;
+	const int sy = extY * 2 + 1;
 	const int sz = extZ * 2 + 1;
 
-	const Vec3 min(-extX, -1000.f, -extZ);
-	const Vec3 max(+extX, +1000.f, +extZ);
+	const Vec3 min(-extX, -extY, -extZ);
+	const Vec3 max(+extX, +extY, +extZ);
 
 	std::map<int, std::vector<int>> records;
 
@@ -52,27 +54,34 @@ LightVolumeData LightVolumeBuilder::generateLightVolumeData() const
 		const Vec3 lightMax = light.position + Vec3(light.radius, light.radius, light.radius);
 
 		const int lightMinX = (int)floorf(lightMin[0]);
+		const int lightMinY = (int)floorf(lightMin[1]);
 		const int lightMinZ = (int)floorf(lightMin[2]);
 
 		const int lightMaxX = (int)ceilf(lightMax[0]);
+		const int lightMaxY = (int)ceilf(lightMax[1]);
 		const int lightMaxZ = (int)ceilf(lightMax[2]);
 
-		for (int x = lightMinX; x <= lightMaxX; ++x)
+		for (int x = lightMinX; x < lightMaxX; ++x)
 		{
-			for (int z = lightMinZ; z <= lightMaxZ; ++z)
+			for (int y = lightMinY; y < lightMaxY; ++y)
 			{
-				const int indexX = x + extX;
-				const int indexZ = z + extZ;
-
-				if (indexX < 0 || indexX >= sx ||
-					indexZ < 0 || indexZ >= sz)
+				for (int z = lightMinZ; z < lightMaxZ; ++z)
 				{
-					continue;
+					const int indexX = x + extX;
+					const int indexY = y + extY;
+					const int indexZ = z + extZ;
+
+					if (indexX < 0 || indexX >= sx ||
+						indexY < 0 || indexY >= sy ||
+						indexZ < 0 || indexZ >= sz)
+					{
+						continue;
+					}
+
+					const int index = indexX + indexY * sx + indexZ * sx * sy;
+
+					records[index].push_back(light.id);
 				}
-
-				const int index = indexX + indexZ * sx;
-
-				records[index].push_back(light.id);
 			}
 		}
 	}
@@ -81,7 +90,7 @@ LightVolumeData LightVolumeBuilder::generateLightVolumeData() const
 	
 	// 1. create a 2d texture encoding start offsets and length for each cell within the frustum
 	
-	const int num_cells = sx * sz;
+	const int num_cells = sx * sy * sz;
 	float * index_table = new float[num_cells * 2];
 	memset(index_table, 0, num_cells * 2 * sizeof(index_table[0]));
 	
@@ -154,7 +163,8 @@ LightVolumeData LightVolumeBuilder::generateLightVolumeData() const
 	
 	result.index_table = index_table;
 	result.index_table_sx = sx;
-	result.index_table_sy = sz;
+	result.index_table_sy = sy;
+	result.index_table_sz = sz;
 	
 	result.light_ids = light_ids;
 	result.light_ids_sx = num_light_ids;

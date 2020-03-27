@@ -109,7 +109,7 @@ void ForwardLightingHelper::prepareShaderData(const Mat4x4 & worldToView)
 		indexTextureId = createTextureFromRG32F(
 			data.index_table,
 			data.index_table_sx,
-			data.index_table_sy,
+			data.index_table_sy * data.index_table_sz, // todo : would be nice to use 3d textures here
 			false,
 			false);
 

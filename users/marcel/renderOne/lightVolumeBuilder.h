@@ -8,6 +8,7 @@ struct LightVolumeData
 	float * index_table = nullptr;
 	int index_table_sx = 0;
 	int index_table_sy = 0;
+	int index_table_sz = 0;
 	
 	float * light_ids = nullptr;
 	int light_ids_sx = 0;

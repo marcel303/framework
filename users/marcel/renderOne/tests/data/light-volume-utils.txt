@@ -19,18 +19,21 @@ void forEachLightIdAt(vec3 position)
 	// position to cell coord
 
 	int x = int(floor(position.x));
+	int y = int(floor(position.y));
 	int z = int(floor(position.z));
 
 	x += (lightVolumeDims.x - 1) / 2;
-	z += (lightVolumeDims.y - 1) / 2;
+	y += (lightVolumeDims.x - 1) / 2;
+	z += (lightVolumeDims.x - 1) / 2;
 
 	if (x < 0 || x >= lightVolumeDims.x ||
-		z < 0 || z >= lightVolumeDims.y)
+		y < 0 || y >= lightVolumeDims.x ||
+		z < 0 || z >= lightVolumeDims.x) // note : this assumes the volume has NxNxN cells. perhaps make dimensions a uniform so we can have different dimensions for each axis
 	{
 		return;
 	}
 
-	ivec2 startOffsetAndCount = rOne_toIvec2(texelFetch(lightVolume, ivec2(x, z), 0).xy);
+	ivec2 startOffsetAndCount = rOne_toIvec2(texelFetch(lightVolume, ivec2(x, y + z * lightVolumeDims.x), 0).xy);
 
 	int startOffset = startOffsetAndCount.x;
 	int count = startOffsetAndCount.y;

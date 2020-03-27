@@ -51,13 +51,13 @@ int main(int argc, char * argv[])
 		{ Vec3(-4, 0, -4), 0.f, 1.f, Vec3(1, 1, 0) }
 	};
 	
-	for (int i = 0; i < 1000; ++i)
+	for (int i = 0; i < 4000; ++i)
 	{
 		lights.push_back(
 			{
 				Vec3(
 					random<float>(-8.f, +8.f),
-					random<float>(-.5f, +.5f),
+					random<float>(-2.f, +2.f),
 					random<float>(-8.f, +8.f)),
 				0.f,
 				random<float>(.1f, .5f),
@@ -68,6 +68,7 @@ int main(int argc, char * argv[])
 	ForwardLightingHelper helper;
 	
 	bool showLightVolumeOverlay = true;
+	bool showLightsOutlines = true;
 	
 	for (;;)
 	{
@@ -81,13 +82,18 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_v))
 			showLightVolumeOverlay = !showLightVolumeOverlay;
 		
+		if (keyboard.wentDown(SDLK_o))
+			showLightsOutlines = !showLightsOutlines;
+		
 		{
 			for (size_t i = 0; i < lights.size(); ++i)
 			{
+				const float scale = (cosf(framework.time * 2.f + i) + 1.f) / 2.f;
+				
 				helper.addPointLight(
 					lights[i].position,
-					lights[i].att_begin,
-					lights[i].att_end,
+					lights[i].att_begin * scale,
+					lights[i].att_end * scale,
 					lights[i].color,
 					1.f);
 			}
@@ -97,7 +103,7 @@ int main(int argc, char * argv[])
 			helper.prepareShaderData(worldToView);
 		}
 	
-		framework.beginDraw(0, 0, 0, 0);
+		framework.beginDraw(20, 20, 20, 0);
 		{
 			if (showLightVolumeOverlay)
 			{
@@ -140,22 +146,25 @@ int main(int argc, char * argv[])
 				pushDepthTest(true, DEPTH_LESS);
 				pushBlend(BLEND_OPAQUE);
 				{
-					// draw bounding boxes for the lights, to give an indication where the lights are positioned
-					
-					beginCubeBatch();
+					if (showLightsOutlines)
 					{
-						for (auto & light : lights)
+						// draw bounding boxes for the lights, to give an indication where the lights are positioned
+						
+						beginCubeBatch();
 						{
-							setColor(100, 100, 100);
-							lineCube(
-								light.position,
-								Vec3(
-									light.att_end,
-									light.att_end,
-									light.att_end));
+							for (auto & light : lights)
+							{
+								setColor(100, 100, 100);
+								lineCube(
+									light.position,
+									Vec3(
+										light.att_end,
+										light.att_end,
+										light.att_end));
+							}
 						}
+						endCubeBatch();
 					}
-					endCubeBatch();
 					
 					// draw some geometry, lit using information from the light volume
 					
@@ -184,6 +193,16 @@ int main(int argc, char * argv[])
 							fillCube(Vec3(0, 0, 0), Vec3(6.f, .5f, 1.f));
 						}
 						gxPopMatrix();
+						
+						gxPushMatrix();
+						{
+							gxTranslatef(0, 0, 0);
+							gxRotatef(framework.time * 10.f, 0, 1, 0);
+					
+							setColor(colorWhite);
+							fillCube(Vec3(0, 0, 0), Vec3(2.f, 2.f, .1f));
+						}
+						gxPopMatrix();
 					}
 					clearShader();
 				}
@@ -203,7 +222,7 @@ int main(int argc, char * argv[])
 						int nextTextureUnit = 0;
 						helper.setShaderData(shader, nextTextureUnit);
 						
-						for (int i = 0; i < 1; ++i)
+						for (int i = 0; i < 0; ++i)
 						{
 							gxPushMatrix();
 							{
@@ -227,6 +246,7 @@ int main(int argc, char * argv[])
 			
 			setColor(colorWhite);
 			drawText(4, 4, 12, +1, +1, "Press 'V' to toggle light volume overlay");
+			drawText(4, 20, 12, +1, +1, "Press 'O' to toggle light outlines");
 		}
 		framework.endDraw();
 		
