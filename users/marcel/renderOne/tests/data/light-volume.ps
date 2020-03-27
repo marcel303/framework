@@ -1,4 +1,5 @@
 include engine/ShaderPS.txt
+include light-params.txt
 include light-volume-utils.txt
 
 shader_in vec3 v_position;
@@ -6,39 +7,11 @@ shader_in vec4 v_color;
 
 //
 
-// todo : fix same uniform block name as variable name
-//        GLSL doesn't allow this. make a change to shader builder ?
-
-uniform vec4 lightParams[128*2] buffer lightParamsBuffer;
-
-uniform float numLights;
 uniform float useLightVolume;
 
-struct LightParams
-{
-	float type;
-	vec3 position;
+//
 
-	float att_begin;
-	float att_end;
-};
-
-LightParams lookup_light_params(int id)
-{
-	LightParams result;
-
-	vec4 params1 = lightParams[id * 2 + 0];
-	vec4 params2 = lightParams[id * 2 + 1];
-
-	result.type = params1.x;
-	result.position = params1.yzw;
-	result.att_begin = params2.x;
-	result.att_end = params2.y;
-
-	return result;
-}
-
-vec3 compute_lighting(LightParams lightParams, vec3 position)
+vec3 computeLighting(LightParams lightParams, vec3 position)
 {
 	float distance = length(position - lightParams.position);
 
@@ -49,13 +22,15 @@ vec3 compute_lighting(LightParams lightParams, vec3 position)
 	return vec3(att);
 }
 
+//
+
 vec3 lightColor;
 
 void forEachLightId(int id)
 {
-	LightParams lightParams = lookup_light_params(id);
+	LightParams lightParams = lookupLightParams(id);
 
-	lightColor += compute_lighting(lightParams, v_position);
+	lightColor += computeLighting(lightParams, v_position);
 }
 
 void main()
