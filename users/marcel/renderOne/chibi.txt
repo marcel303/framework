@@ -6,3 +6,7 @@ library renderOne
 	header_path . expose
 	resource_path data
 
+app renderOne-test-lightVolumeBuilder
+	depend_library renderOne
+	add_files tests/200-lightVolumeBuilder
+	resource_path tests/data

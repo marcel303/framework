@@ -13,38 +13,21 @@ struct LightParams
 
 int main(int argc, char * argv[])
 {
-	std::vector<LightParams> lights =
-	{
-		{ Vec3(-1, 0, +4), 0.f, 3.f },
-		{ Vec3(+4, 0, +4), 0.f, 4.f },
-		{ Vec3(+4, 0, -4), 0.f, 2.f },
-		{ Vec3(-4, 0, -4), 0.f, 1.f }
-	};
+	// light volume builder test. for stepping into with the debugger
 	
 	{
 		LightVolumeBuilder builder;
 		
-		for (size_t i = 0; i < lights.size(); ++i)
-		{
-			builder.addPointLight(
-				i,
-				lights[i].position,
-				lights[i].att_end);
-		}
-		
-		/*
 		builder.addPointLight(1, Vec3(-1, 0, -4), 3.f);
 		builder.addPointLight(2, Vec3(+4, 0, -4), 4.f);
 		builder.addPointLight(3, Vec3(+4, 0, +4), 2.f);
 		builder.addPointLight(4, Vec3(-4, 0, +4), 1.f);
-		*/
-		
-		//kleding drogen ~
 		
 		auto data = builder.generateLightVolumeData();
+		(void)data;
 	}
 	
-	//
+	// visual test
 	
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
@@ -54,9 +37,15 @@ int main(int argc, char * argv[])
 	if (!framework.init(800, 800))
 		return -1;
 	
-	ShaderBuffer lightsBuffer;
-	
 	Camera3d camera;
+	
+	std::vector<LightParams> lights =
+	{
+		{ Vec3(-1, 0, +4), 0.f, 3.f },
+		{ Vec3(+4, 0, +4), 0.f, 4.f },
+		{ Vec3(+4, 0, -4), 0.f, 2.f },
+		{ Vec3(-4, 0, -4), 0.f, 1.f }
+	};
 	
 	for (;;)
 	{
@@ -66,6 +55,8 @@ int main(int argc, char * argv[])
 			break;
 		
 		camera.tick(framework.timeStep, true);
+		
+		// generate light volume data using the (current) set of lights
 		
 		LightVolumeBuilder builder;
 		
@@ -84,15 +75,10 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		/*
-		builder.addPointLight(1, Vec3(-1, 0, -4), 3.f);
-		builder.addPointLight(2, Vec3(+4, 0, -4), 4.f);
-		builder.addPointLight(3, Vec3(+4, 0, +4), 2.f);
-		builder.addPointLight(4, Vec3(-4, 0, +4), 1.f);
-		*/
-		
 		auto data = builder.generateLightVolumeData();
 	
+		// create textures from data
+		
 		GxTextureId index_texture = createTextureFromRG32F(
 			data.index_table,
 			data.index_table_sx,
@@ -107,7 +93,13 @@ int main(int argc, char * argv[])
 			false,
 			false);
 		
+		// dispose of the data
+		
 		data.free();
+		
+		// create a buffer to make accessible the lights to the shader
+		
+		ShaderBuffer lightsBuffer;
 		
 		{
 			const Mat4x4 worldToView = camera.getViewMatrix();
@@ -138,6 +130,8 @@ int main(int argc, char * argv[])
 	
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			// show light volume data
+			
 			setColorf(1.f / data.light_ids_sx, 1.f / 4, 1);
 			gxSetTexture(index_texture);
 			drawRect(0, 0, 800, 800);
@@ -147,6 +141,8 @@ int main(int argc, char * argv[])
 			gxSetTexture(light_ids_texture);
 			drawRect(0, 0, 800, 40);
 			gxSetTexture(0);
+			
+			// show the light volume interpretation by the shader (2d)
 			
 			Shader shader("light-volume-2d");
 			setShader(shader);
@@ -158,10 +154,14 @@ int main(int argc, char * argv[])
 			}
 			clearShader();
 			
+			// show the light volume interpretation by the shader (3d)
+			
 			projectPerspective3d(90.f, .01f, 100.f);
 			pushDepthTest(true, DEPTH_LESS);
 			{
 				camera.pushViewMatrix();
+				
+				// draw bounding boxes for the lights, to give an indication where the lights are positioned
 				
 				for (auto & light : lights)
 				{
@@ -173,6 +173,8 @@ int main(int argc, char * argv[])
 							light.att_end,
 							light.att_end));
 				}
+				
+				// draw some geometry, lit using information from the light volume
 				
 				Shader shader("light-volume");
 				setShader(shader);
@@ -193,8 +195,8 @@ int main(int argc, char * argv[])
 					
 					gxPushMatrix();
 					{
-						gxTranslatef(4, 0, -4);
-						gxRotatef(framework.time * 20.f, 1, 2, 3);
+						gxTranslatef(0, 0, -4);
+						gxRotatef(framework.time * 100.f, 0, 0, 1);
 				
 						setColor(colorWhite);
 						fillCube(Vec3(0, 0, 0), Vec3(6.f, .5f, 1.f));
