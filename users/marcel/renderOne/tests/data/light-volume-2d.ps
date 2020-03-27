@@ -51,34 +51,29 @@ vec3 compute_lighting(LightParams lightParams, vec3 position)
 	//return vec3(1.0 / lightParams.att_end);
 }
 
+vec3 lightColor;
+
+void forEachLightId(int id)
+{
+	LightParams lightParams = lookup_light_params(id);
+
+	lightColor += compute_lighting(lightParams, v_position);
+}
+
 void main()
 {
+	lightColor = vec3(0.0);
+	
 	if (useLightVolume == 0.0)
 	{
-		vec3 color = vec3(0.0);
-
 		for (int i = 0; i < int(numLights); ++i)
-		{
-			LightParams lightParams = lookup_light_params(i);
-
-			color += compute_lighting(lightParams, v_position);
-		}
-
-		shader_fragColor.rgb = color;
-		shader_fragColor.a = 1.0;
+			forEachLightId(i);
 	}
 	else
 	{
-		int id = lookup_light_id(v_position);
-
-		if (id == -1)
-			shader_fragColor = vec4(1.0);
-		else
-		{
-			LightParams lightParams = lookup_light_params(id);
-
-			shader_fragColor.rgb = compute_lighting(lightParams, v_position);
-			shader_fragColor.a = 1.0;
-		}
+		forEachLightIdAt(v_position);
 	}
+
+	shader_fragColor.rgb = lightColor;
+	shader_fragColor.a = 1.0;
 }

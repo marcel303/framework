@@ -1,11 +1,10 @@
 #pragma once
 
+#include "framework.h"
 #include "Vec3.h"
 #include <vector>
 
 class Mat4x4;
-class Shader;
-class ShaderBuffer;
 
 enum LightType
 {
@@ -24,14 +23,20 @@ struct Light
 class ForwardLightingHelper
 {
 
-private:
+public:
 
-	ShaderBuffer * lightsParamsBuffer = nullptr;
+	ShaderBuffer lightsParamsBuffer;
+	bool isPrepared = false;
 	
 	std::vector<Light> lights;
+	
+	GxTextureId indexTextureId = 0;
+	GxTextureId lightIdsTextureId = 0;
 
 public:
 
+	~ForwardLightingHelper();
+	
 	void addLight(const Light & light);
 	void addPointLight(
 			Vec3Arg position,
@@ -42,6 +47,6 @@ public:
 	void reset();
 
 	void prepareShaderData(const Mat4x4 & worldToView);
-	void setShaderData(Shader & shader) const;
+	void setShaderData(Shader & shader, int & nextTextureUnit) const;
 	
 };

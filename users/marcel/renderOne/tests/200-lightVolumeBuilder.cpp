@@ -14,9 +14,9 @@ struct LightParams
 
 int main(int argc, char * argv[])
 {
-	// light volume builder test. for stepping into with the debugger
-	
 	{
+		// light volume builder test. for stepping into with the debugger
+		
 		LightVolumeBuilder builder;
 		
 		builder.addPointLight(1, Vec3(-1, 0, -4), 3.f);
@@ -25,9 +25,10 @@ int main(int argc, char * argv[])
 		builder.addPointLight(4, Vec3(-4, 0, +4), 1.f);
 		
 		auto data = builder.generateLightVolumeData();
-		(void)data;
+		
+		data.free();
 	}
-	
+
 	// visual test
 	
 	setupPaths(CHIBI_RESOURCE_PATHS);
@@ -74,70 +75,32 @@ int main(int argc, char * argv[])
 			
 			helper.prepareShaderData(worldToView);
 		}
-		
-		// generate light volume data using the (current) set of lights
-		
-		LightVolumeBuilder builder;
-		
-		{
-			const Mat4x4 worldToView = camera.getViewMatrix();
-			
-			for (size_t i = 0; i < lights.size(); ++i)
-			{
-				const Vec3 & position_world = lights[i].position;
-				const Vec3 position_view = worldToView.Mul4(position_world);
-				
-				builder.addPointLight(
-					i,
-					position_view,
-					lights[i].att_end);
-			}
-		}
-		
-		auto data = builder.generateLightVolumeData();
-	
-		// create textures from data
-		
-		GxTextureId index_texture = createTextureFromRG32F(
-			data.index_table,
-			data.index_table_sx,
-			data.index_table_sy,
-			false,
-			false);
-
-		GxTextureId light_ids_texture = createTextureFromR32F(
-			data.light_ids,
-			data.light_ids_sx,
-			1,
-			false,
-			false);
-		
-		// dispose of the data
-		
-		data.free();
 	
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			// show light volume data
 			
-			setColorf(1.f / data.light_ids_sx, 1.f / 4, 1);
-			gxSetTexture(index_texture);
+			int indexTextureSx;
+			int indexTextureSy;
+			gxGetTextureSize(helper.indexTextureId, indexTextureSx, indexTextureSy);
+			
+			setColorf(1.f / indexTextureSx, 1.f / 4, 1);
+			gxSetTexture(helper.indexTextureId);
 			drawRect(0, 0, 800, 800);
 			gxSetTexture(0);
 			
 			setColorf(1, 1, 1, 1, 1.f / 4);
-			gxSetTexture(light_ids_texture);
+			gxSetTexture(helper.lightIdsTextureId);
 			drawRect(0, 0, 800, 40);
 			gxSetTexture(0);
-			
+		
 			// show the light volume interpretation by the shader (2d)
 			
 			Shader shader("light-volume-2d");
 			setShader(shader);
 			{
-				shader.setTexture("lightVolume", 0, index_texture, false, false);
-				shader.setTexture("lightIds", 1, light_ids_texture, false, false);
-				helper.setShaderData(shader);
+				int nextTextureUnit = 0;
+				helper.setShaderData(shader, nextTextureUnit);
 				drawRect(100, 100, 200, 200);
 			}
 			clearShader();
@@ -145,63 +108,96 @@ int main(int argc, char * argv[])
 			// show the light volume interpretation by the shader (3d)
 			
 			projectPerspective3d(90.f, .01f, 100.f);
-			pushDepthTest(true, DEPTH_LESS);
 			{
 				camera.pushViewMatrix();
 				
-				// draw bounding boxes for the lights, to give an indication where the lights are positioned
+				// opaque pass
 				
-				for (auto & light : lights)
+				pushDepthTest(true, DEPTH_LESS);
+				pushBlend(BLEND_OPAQUE);
 				{
-					setColor(colorBlue);
-					lineCube(
-						light.position,
-						Vec3(
-							light.att_end,
-							light.att_end,
-							light.att_end));
+					// draw bounding boxes for the lights, to give an indication where the lights are positioned
+					
+					for (auto & light : lights)
+					{
+						setColor(colorBlue);
+						lineCube(
+							light.position,
+							Vec3(
+								light.att_end,
+								light.att_end,
+								light.att_end));
+					}
+					
+					// draw some geometry, lit using information from the light volume
+					
+					Shader shader("light-volume");
+					setShader(shader);
+					{
+						int nextTextureUnit = 0;
+						helper.setShaderData(shader, nextTextureUnit);
+						
+						gxPushMatrix();
+						{
+							gxTranslatef(0, 0, 4);
+							gxRotatef(framework.time * 20.f, 1, 2, 3);
+					
+							setColor(colorWhite);
+							fillCube(Vec3(0, 0, 0), Vec3(6.f, .5f, 1.f));
+						}
+						gxPopMatrix();
+						
+						gxPushMatrix();
+						{
+							gxTranslatef(0, 0, -4);
+							gxRotatef(framework.time * 100.f, 0, 0, 1);
+					
+							setColor(colorWhite);
+							fillCube(Vec3(0, 0, 0), Vec3(6.f, .5f, 1.f));
+						}
+						gxPopMatrix();
+					}
+					clearShader();
 				}
+				popBlend();
+				popDepthTest();
 				
-				// draw some geometry, lit using information from the light volume
+				// translucent pass
 				
-				Shader shader("light-volume");
-				setShader(shader);
+				pushDepthTest(true, DEPTH_LESS, false);
+				pushBlend(BLEND_ADD);
 				{
-					shader.setTexture("lightVolume", 0, index_texture, false, false);
-					shader.setTexture("lightIds", 1, light_ids_texture, false, false);
-					helper.setShaderData(shader);
+					// draw some geometry, lit using information from the light volume
 					
-					gxPushMatrix();
+					Shader shader("light-volume");
+					setShader(shader);
 					{
-						gxTranslatef(0, 0, 4);
-						gxRotatef(framework.time * 20.f, 1, 2, 3);
-				
-						setColor(colorWhite);
-						fillCube(Vec3(0, 0, 0), Vec3(6.f, .5f, 1.f));
+						int nextTextureUnit = 0;
+						helper.setShaderData(shader, nextTextureUnit);
+						
+						for (int i = 0; i < 10; ++i)
+						{
+							gxPushMatrix();
+							{
+								gxTranslatef(0, 0, 0);
+								gxRotatef(framework.time * 90.f + 90.f * i / 10.f, 1, 0, 0);
+						
+								setColor(255, 255, 255, 63);
+								drawRect(-6, -6, +6, +6);
+							}
+							gxPopMatrix();
+						}
 					}
-					gxPopMatrix();
-					
-					gxPushMatrix();
-					{
-						gxTranslatef(0, 0, -4);
-						gxRotatef(framework.time * 100.f, 0, 0, 1);
-				
-						setColor(colorWhite);
-						fillCube(Vec3(0, 0, 0), Vec3(6.f, .5f, 1.f));
-					}
-					gxPopMatrix();
+					clearShader();
 				}
-				clearShader();
+				popBlend();
+				popDepthTest();
 				
 				camera.popViewMatrix();
 			}
-			popDepthTest();
 			projectScreen2d();
 		}
 		framework.endDraw();
-		
-		freeTexture(index_texture);
-		freeTexture(light_ids_texture);
 		
 		helper.reset();
 	}

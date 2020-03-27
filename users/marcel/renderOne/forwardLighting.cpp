@@ -1,6 +1,12 @@
 #include "forwardLighting.h"
+#include "lightVolumeBuilder.h"
 
 #include "framework.h"
+
+ForwardLightingHelper::~ForwardLightingHelper()
+{
+	reset();
+}
 
 void ForwardLightingHelper::addLight(const Light & light)
 {
@@ -28,19 +34,19 @@ void ForwardLightingHelper::reset()
 {
 	lights.clear();
 	
-	delete lightsParamsBuffer;
-	lightsParamsBuffer = nullptr;
+	lightsParamsBuffer.free();
+	
+	freeTexture(indexTextureId);
+	freeTexture(lightIdsTextureId);
+	
+	isPrepared = false;
 }
 
 void ForwardLightingHelper::prepareShaderData(const Mat4x4 & worldToView)
 {
-	AssertMsg(lightsParamsBuffer == nullptr, "please call reset() when done rendering a frame", 0);
-	
-	// todo : generate light volume data using the (current) set of lights
+	AssertMsg(isPrepared == false, "please call reset() when done rendering a frame", 0);
 	
 	// fill light params buffer with information for all of the lights
-	
-	lightsParamsBuffer = new ShaderBuffer();
 	
 	{
 		Vec4 * params = new Vec4[lights.size() * 2];
@@ -61,18 +67,61 @@ void ForwardLightingHelper::prepareShaderData(const Mat4x4 & worldToView)
 			params[i * 2 + 1][3] = 0.f;
 		}
 
-		lightsParamsBuffer->setData(params, lights.size() * 2 * sizeof(Vec4));
+		lightsParamsBuffer.setData(params, lights.size() * 2 * sizeof(Vec4));
 
 		delete [] params;
 		params = nullptr;
 	}
+
+	// generate light volume data using the (current) set of lights
+
+	{
+		LightVolumeBuilder builder;
+
+		for (size_t i = 0; i < lights.size(); ++i)
+		{
+			const Vec3 & position_world = lights[i].position;
+			const Vec3 position_view = worldToView.Mul4(position_world);
+			
+			builder.addPointLight(
+				i,
+				position_view,
+				lights[i].attenuationEnd);
+		}
+
+		auto data = builder.generateLightVolumeData();
+
+		// create textures from data
+
+		indexTextureId = createTextureFromRG32F(
+			data.index_table,
+			data.index_table_sx,
+			data.index_table_sy,
+			false,
+			false);
+
+		lightIdsTextureId = createTextureFromR32F(
+			data.light_ids,
+			data.light_ids_sx,
+			1,
+			false,
+			false);
+
+		// dispose of the data
+
+		data.free();
+	}
+	
+	isPrepared = true;
 }
 
-void ForwardLightingHelper::setShaderData(Shader & shader) const
+void ForwardLightingHelper::setShaderData(Shader & shader, int & nextTextureUnit) const
 {
 	// todo : set shader uniforms, textures and buffers
 
-	shader.setImmediate("useLightVolume", 0.f);
-	shader.setBuffer("lightParamsBuffer", *lightsParamsBuffer);
+	shader.setImmediate("useLightVolume", 1.f);
+	shader.setBuffer("lightParamsBuffer", lightsParamsBuffer);
 	shader.setImmediate("numLights", lights.size());
+	shader.setTexture("lightVolume", nextTextureUnit++, indexTextureId, false, false);
+	shader.setTexture("lightIds", nextTextureUnit++, lightIdsTextureId, false, false);
 }
