@@ -12,12 +12,16 @@ struct LightVolumeData
 	
 	float * light_ids = nullptr;
 	int light_ids_sx = 0;
+	int light_ids_sy = 0;
+	
+	float world_to_volume_scale = 0.f;
 	
 	void free();
 };
 
 class LightVolumeBuilder
 {
+
 	struct Light
 	{
 		int id;
@@ -25,7 +29,7 @@ class LightVolumeBuilder
 		Vec3 position;
 		float radius;
 	};
-
+	
 	std::vector<Light> lights;
 
 public:
@@ -33,5 +37,6 @@ public:
 	void addPointLight(const int id, Vec3Arg position, const float radius);
 	void reset();
 
-	LightVolumeData generateLightVolumeData() const;
+	LightVolumeData generateLightVolumeData(const int halfResolution, const float extents) const;
+	
 };

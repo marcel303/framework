@@ -26,7 +26,7 @@ int main(int argc, char * argv[])
 		builder.addPointLight(3, Vec3(+4, 0, +4), 2.f);
 		builder.addPointLight(4, Vec3(-4, 0, +4), 1.f);
 		
-		auto data = builder.generateLightVolumeData();
+		auto data = builder.generateLightVolumeData(32, 16.f);
 		
 		data.free();
 	}
@@ -51,6 +51,7 @@ int main(int argc, char * argv[])
 		{ Vec3(-4, 0, -4), 0.f, 1.f, Vec3(1, 1, 0) }
 	};
 	
+#if true
 	for (int i = 0; i < 4000; ++i)
 	{
 		lights.push_back(
@@ -64,11 +65,13 @@ int main(int argc, char * argv[])
 				Vec3(1, 1, 1) * random<float>(.1f, 1.f)
 			});
 	}
+#endif
 	
 	ForwardLightingHelper helper;
 	
 	bool showLightVolumeOverlay = true;
 	bool showLightsOutlines = true;
+	bool animateLights = true;
 	
 	for (;;)
 	{
@@ -85,10 +88,16 @@ int main(int argc, char * argv[])
 		if (keyboard.wentDown(SDLK_o))
 			showLightsOutlines = !showLightsOutlines;
 		
+		if (keyboard.wentDown(SDLK_a))
+			animateLights = !animateLights;
+		
 		{
 			for (size_t i = 0; i < lights.size(); ++i)
 			{
-				const float scale = (cosf(framework.time * 2.f + i) + 1.f) / 2.f;
+				const float scale =
+					animateLights
+					? (cosf(framework.time * 2.f + i) + 1.f) / 2.f
+					: 1.f;
 				
 				helper.addPointLight(
 					lights[i].position,
@@ -100,7 +109,7 @@ int main(int argc, char * argv[])
 			
 			const Mat4x4 worldToView = camera.getViewMatrix();
 			
-			helper.prepareShaderData(worldToView);
+			helper.prepareShaderData(32, 32.f, worldToView);
 		}
 	
 		framework.beginDraw(20, 20, 20, 0);
@@ -120,7 +129,7 @@ int main(int argc, char * argv[])
 				
 				setColorf(1, 1, 1, 1, 1.f / 4);
 				gxSetTexture(helper.lightIdsTextureId);
-				drawRect(0, 0, 800, 40);
+				drawRect(0, 0, 200, 200);
 				gxSetTexture(0);
 		
 				// show the light volume interpretation by the shader (2d)
@@ -130,7 +139,7 @@ int main(int argc, char * argv[])
 				{
 					int nextTextureUnit = 0;
 					helper.setShaderData(shader, nextTextureUnit);
-					drawRect(100, 100, 200, 200);
+					drawRect(300, 100, 500, 300);
 				}
 				clearShader();
 			}
@@ -245,8 +254,10 @@ int main(int argc, char * argv[])
 			projectScreen2d();
 			
 			setColor(colorWhite);
-			drawText(4, 4, 12, +1, +1, "Press 'V' to toggle light volume overlay");
-			drawText(4, 20, 12, +1, +1, "Press 'O' to toggle light outlines");
+			int y = 4;
+			drawText(4, y += 16, 12, +1, +1, "Press 'V' to toggle light volume overlay");
+			drawText(4, y += 16, 12, +1, +1, "Press 'O' to toggle light outlines");
+			drawText(4, y += 16, 12, +1, +1, "Press 'A' to toggle light animation");
 		}
 		framework.endDraw();
 		

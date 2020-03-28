@@ -42,7 +42,10 @@ void ForwardLightingHelper::reset()
 	isPrepared = false;
 }
 
-void ForwardLightingHelper::prepareShaderData(const Mat4x4 & worldToView)
+void ForwardLightingHelper::prepareShaderData(
+	const int resolution,
+	const float extents,
+	const Mat4x4 & worldToView)
 {
 	AssertMsg(isPrepared == false, "please call reset() when done rendering a frame", 0);
 	
@@ -102,7 +105,7 @@ void ForwardLightingHelper::prepareShaderData(const Mat4x4 & worldToView)
 				lights[i].attenuationEnd);
 		}
 
-		auto data = builder.generateLightVolumeData();
+		auto data = builder.generateLightVolumeData(resolution, extents);
 
 		// create textures from data
 
@@ -116,10 +119,12 @@ void ForwardLightingHelper::prepareShaderData(const Mat4x4 & worldToView)
 		lightIdsTextureId = createTextureFromR32F(
 			data.light_ids,
 			data.light_ids_sx,
-			1,
+			data.light_ids_sy,
 			false,
 			false);
 
+		worldToVolumeScale = data.world_to_volume_scale;
+		
 		// dispose of the data
 
 		data.free();
@@ -137,4 +142,5 @@ void ForwardLightingHelper::setShaderData(Shader & shader, int & nextTextureUnit
 	shader.setImmediate("numLights", lights.size());
 	shader.setTexture("lightVolume", nextTextureUnit++, indexTextureId, false, false);
 	shader.setTexture("lightIds", nextTextureUnit++, lightIdsTextureId, false, false);
+	shader.setImmediate("worldToVolumeScale", worldToVolumeScale);
 }

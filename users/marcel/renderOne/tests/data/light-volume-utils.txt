@@ -1,5 +1,6 @@
 uniform sampler2D lightVolume;
 uniform sampler2D lightIds;
+uniform float worldToVolumeScale;
 
 #if !defined(__METAL_VERSION__)
 	void forEachLightId(int id);
@@ -12,8 +13,10 @@ ivec2 rOne_toIvec2(vec2 v)
 		v.y);
 }
 
-void forEachLightIdAt(vec3 position)
+void forEachLightIdAt(vec3 in_position)
 {
+	vec3 position = in_position * worldToVolumeScale;
+	
 	ivec2 lightVolumeDims = rOne_toIvec2(textureSize(lightVolume, 0));
 
 	// position to cell coord
@@ -44,7 +47,10 @@ void forEachLightIdAt(vec3 position)
 	{
 		int index = startOffset + i;
 
-		int id = int(texelFetch(lightIds, ivec2(index, 0), 0));
+		int u = index & 4095;
+		int v = index >> 12;
+
+		int id = int(texelFetch(lightIds, ivec2(u, v), 0));
 
 		forEachLightId(id);
 	}

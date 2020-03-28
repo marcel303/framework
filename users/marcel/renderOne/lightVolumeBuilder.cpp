@@ -33,25 +33,37 @@ void LightVolumeBuilder::reset()
 	lights.clear();
 }
 
-LightVolumeData LightVolumeBuilder::generateLightVolumeData() const
+static int roundUp(int value, int multipleOf)
 {
-	const int extX = 32;
-	const int extY = 32;
-	const int extZ = 32;
+	const int n = (value + multipleOf - 1) / multipleOf;
+	
+	return multipleOf * n;
+}
+
+LightVolumeData LightVolumeBuilder::generateLightVolumeData(const int halfResolution, const float extents) const
+{
+	const int extX = halfResolution;
+	const int extY = halfResolution;
+	const int extZ = halfResolution;
 
 	const int sx = extX * 2 + 1;
 	const int sy = extY * 2 + 1;
 	const int sz = extZ * 2 + 1;
 
-	const Vec3 min(-extX, -extY, -extZ);
-	const Vec3 max(+extX, +extY, +extZ);
+	const Vec3 min(-extents, -extents, -extents);
+	const Vec3 max(+extents, +extents, +extents);
+	
+	const float worldToVolumeScale = halfResolution / extents;
 
 	std::map<int, std::vector<int>> records;
 
 	for (auto & light : lights)
 	{
-		const Vec3 lightMin = light.position - Vec3(light.radius, light.radius, light.radius);
-		const Vec3 lightMax = light.position + Vec3(light.radius, light.radius, light.radius);
+		const Vec3 lightMin_world = light.position - Vec3(light.radius, light.radius, light.radius);
+		const Vec3 lightMax_world = light.position + Vec3(light.radius, light.radius, light.radius);
+		
+		const Vec3 lightMin = lightMin_world * worldToVolumeScale;
+		const Vec3 lightMax = lightMax_world * worldToVolumeScale;
 
 		const int lightMinX = (int)floorf(lightMin[0]);
 		const int lightMinY = (int)floorf(lightMin[1]);
@@ -131,7 +143,7 @@ LightVolumeData LightVolumeBuilder::generateLightVolumeData() const
 	
 	// 2. create a 1d texture encoding light ids
 	
-	const int num_light_ids = next_start_offset;
+	const int num_light_ids = roundUp(next_start_offset, 4096);
 	
 	float * light_ids = new float[num_light_ids];
 	memset(light_ids, 0, num_light_ids * sizeof(light_ids[0]));
@@ -166,8 +178,12 @@ LightVolumeData LightVolumeBuilder::generateLightVolumeData() const
 	result.index_table_sy = sy;
 	result.index_table_sz = sz;
 	
+	assert((num_light_ids % 4096) == 0);
 	result.light_ids = light_ids;
-	result.light_ids_sx = num_light_ids;
+	result.light_ids_sx = 4096;
+	result.light_ids_sy = num_light_ids / 4096;
+	
+	result.world_to_volume_scale = worldToVolumeScale;
 	
 	return result;
 }

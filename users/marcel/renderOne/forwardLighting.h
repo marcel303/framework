@@ -33,6 +33,8 @@ public:
 	
 	GxTextureId indexTextureId = 0;
 	GxTextureId lightIdsTextureId = 0;
+	
+	float worldToVolumeScale = 0.f;
 
 public:
 
@@ -47,7 +49,7 @@ public:
 			const float intensity);
 	void reset();
 
-	void prepareShaderData(const Mat4x4 & worldToView);
+	void prepareShaderData(const int resolution, const float extents, const Mat4x4 & worldToView);
 	void setShaderData(Shader & shader, int & nextTextureUnit) const;
 	
 };
