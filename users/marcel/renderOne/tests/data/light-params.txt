@@ -1,10 +1,11 @@
-#define kLightType_Point 0
-
 // todo : fix same uniform block name as variable name
 //        GLSL doesn't allow this. make a change to shader builder ?
 
 uniform vec4 lightParams[64*4] buffer lightParamsBuffer;
 uniform float numLights;
+
+#define kLightType_Point 0
+#define kLightType_Spot 1
 
 struct LightParams
 {
@@ -19,6 +20,8 @@ struct LightParams
 
 	float attenuationBegin;
 	float attenuationEnd;
+
+	float spotAngleAlpha;
 };
 
 LightParams decodeLightParams(vec4 params1, vec4 params2, vec4 params3, vec4 params4)
@@ -36,6 +39,7 @@ LightParams decodeLightParams(vec4 params1, vec4 params2, vec4 params3, vec4 par
 
 	result.attenuationBegin = params4.x;
 	result.attenuationEnd = params4.y;
+	result.spotAngleAlpha = params4.z;
 
 	return result;
 }

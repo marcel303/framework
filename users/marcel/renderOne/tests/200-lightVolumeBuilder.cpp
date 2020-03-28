@@ -6,6 +6,8 @@
 
 struct LightParams
 {
+	char type;
+	
 	Vec3 position;
 
 	float att_begin;
@@ -26,6 +28,8 @@ int main(int argc, char * argv[])
 		builder.addPointLight(3, Vec3(+4, 0, +4), 2.f);
 		builder.addPointLight(4, Vec3(-4, 0, +4), 1.f);
 		
+		builder.addSpotLight(5, Vec3(0, 0, 0), Vec3(1, 1, 1).CalcNormalized(), M_PI/2.f, 1.f);
+		
 		auto data = builder.generateLightVolumeData(32, 16.f);
 		
 		data.free();
@@ -45,10 +49,11 @@ int main(int argc, char * argv[])
 	
 	std::vector<LightParams> lights =
 	{
-		{ Vec3(-1, 0, +4), 0.f, 3.f, Vec3(1, 1, 1) },
-		{ Vec3(+4, 0, +4), 0.f, 4.f, Vec3(0, 1, 1) },
-		{ Vec3(+4, 0, -4), 0.f, 2.f, Vec3(1, 0, 1) },
-		{ Vec3(-4, 0, -4), 0.f, 1.f, Vec3(1, 1, 0) }
+		{ 'p', Vec3(-1, 0, +4), 0.f, 3.f, Vec3(1, 1, 1) },
+		{ 'p', Vec3(+4, 0, +4), 0.f, 4.f, Vec3(0, 1, 1) },
+		{ 'p', Vec3(+4, 0, -4), 0.f, 2.f, Vec3(1, 0, 1) },
+		{ 'p', Vec3(-4, 0, -4), 0.f, 1.f, Vec3(1, 1, 0) },
+		{ 's', Vec3( 0, 1,  0), 0.f, 1.f, Vec3(1, 1, 1) },
 	};
 	
 #if true
@@ -56,11 +61,12 @@ int main(int argc, char * argv[])
 	{
 		lights.push_back(
 			{
+				's',
 				Vec3(
 					random<float>(-8.f, +8.f),
-					random<float>(-2.f, +2.f),
+					random<float>(-1.f, +1.f),
 					random<float>(-8.f, +8.f)),
-				0.f,
+				.1f,
 				random<float>(.1f, .5f),
 				Vec3(1, 1, 1) * random<float>(.1f, 1.f)
 			});
@@ -71,7 +77,7 @@ int main(int argc, char * argv[])
 	
 	bool showLightVolumeOverlay = true;
 	bool showLightsOutlines = true;
-	bool animateLights = true;
+	bool animateLights = false;
 	
 	for (;;)
 	{
@@ -94,17 +100,35 @@ int main(int argc, char * argv[])
 		{
 			for (size_t i = 0; i < lights.size(); ++i)
 			{
-				const float scale =
-					animateLights
-					? (cosf(framework.time * 2.f + i) + 1.f) / 2.f
-					: 1.f;
-				
-				helper.addPointLight(
-					lights[i].position,
-					lights[i].att_begin * scale,
-					lights[i].att_end * scale,
-					lights[i].color,
-					1.f);
+				if (lights[i].type == 'p')
+				{
+					const float scale =
+						animateLights
+						? (cosf(framework.time * 2.f + i) + 1.f) / 2.f
+						: 1.f;
+					
+					helper.addPointLight(
+						lights[i].position,
+						lights[i].att_begin * scale,
+						lights[i].att_end * scale,
+						lights[i].color,
+						1.f);
+				}
+				else if (lights[i].type == 's')
+				{
+					const float scale =
+						animateLights
+						? (cosf(framework.time * 2.f + i) + 1.f) / 2.f
+						: 1.f;
+					
+					helper.addSpotLight(
+						lights[i].position,
+						Vec3(0, -1, 0),
+						M_PI/2.f * scale,
+						lights[i].att_end,
+						Vec3(1, 1, 1),
+						1.f);
+				}
 			}
 			
 			const Mat4x4 worldToView = camera.getViewMatrix();
@@ -163,6 +187,9 @@ int main(int argc, char * argv[])
 						{
 							for (auto & light : lights)
 							{
+								if (light.type != 'p')
+									continue;
+								
 								setColor(100, 100, 100);
 								lineCube(
 									light.position,
@@ -173,6 +200,23 @@ int main(int argc, char * argv[])
 							}
 						}
 						endCubeBatch();
+						
+						for (auto & light : lights)
+						{
+							if (light.type != 's')
+								continue;
+							
+							Vec3 min;
+							Vec3 max;
+							LightVolumeBuilder builder;
+							builder.computeSpotLightAabb(light.position, Vec3(0, -1, 0), M_PI/2.f, 2.f, min, max);
+							
+							Vec3 position = (min + max) / 2.f;
+							Vec3 extents = (max - min) / 2.f;
+							
+							setColor(200, 200, 200);
+							lineCube(position, extents);
+						}
 					}
 					
 					// draw some geometry, lit using information from the light volume
@@ -238,7 +282,7 @@ int main(int argc, char * argv[])
 								gxTranslatef(0, 0, 0);
 								gxRotatef(90.f + sinf(framework.time / 1.23f) * 10.f + 90.f * i / 10.f, 1, 0, 0);
 						
-								setColor(255, 255, 255);
+								setColor(colorRed);
 								drawRect(-10, -10, +10, +10);
 							}
 							gxPopMatrix();

@@ -13,14 +13,48 @@ uniform float useLightVolume;
 
 vec3 computeLighting(LightParams lightParams, vec3 position)
 {
-	float distance = length(position - lightParams.position);
+	if (lightParams.type == kLightType_Point)
+	{
+		float distance = length(position - lightParams.position);
 
-	distance = (distance - lightParams.attenuationBegin) / (lightParams.attenuationEnd - lightParams.attenuationBegin);
-	distance = clamp(distance, 0.0, 1.0);
-	
-	float attenuation = 1.0 - distance;
+		distance = (distance - lightParams.attenuationBegin) / (lightParams.attenuationEnd - lightParams.attenuationBegin);
+		distance = clamp(distance, 0.0, 1.0);
+		
+		float attenuation = 1.0 - distance;
 
-	return lightParams.color * attenuation;
+		return lightParams.color * attenuation;
+	}
+	else if (lightParams.type == kLightType_Spot)
+	{
+		float attenuation;
+
+		float distance = dot(position, lightParams.direction) - dot(lightParams.position, lightParams.direction);
+
+		float farDistance = lightParams.attenuationEnd;
+
+		if (distance <= 0.0 || distance >= farDistance)
+			attenuation = 0.0;
+		else
+		{
+			vec3 delta = position - lightParams.position;
+			float cosAngle = dot(lightParams.direction, normalize(delta));
+
+			float alpha = lightParams.spotAngleAlpha;
+
+			if (cosAngle < alpha)
+				attenuation = 0.0;
+			else
+				attenuation = (cosAngle - alpha) / (1.0 - alpha);
+
+			attenuation *= 1.0 - distance / farDistance;
+		}
+		
+		return lightParams.color * attenuation;
+	}
+	else
+	{
+		return vec3(0.0);
+	}
 }
 
 //
