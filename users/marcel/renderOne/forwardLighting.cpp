@@ -2,6 +2,7 @@
 #include "lightVolumeBuilder.h"
 
 #include "framework.h"
+#include <math.h>
 
 ForwardLightingHelper::~ForwardLightingHelper()
 {
@@ -25,6 +26,26 @@ void ForwardLightingHelper::addPointLight(
 	light.position = position;
 	light.attenuationBegin = attenuationBegin;
 	light.attenuationEnd = attenuationEnd;
+	light.color = color * intensity;
+
+	addLight(light);
+}
+
+void ForwardLightingHelper::addSpotLight(
+	Vec3Arg position,
+	Vec3Arg direction,
+	const float angle,
+	const float farDistance,
+	Vec3Arg color,
+	const float intensity)
+{
+	Light light;
+	light.type = kLightType_Spot;
+	light.position = position;
+	light.direction = direction;
+	light.attenuationBegin = 0.f;
+	light.attenuationEnd = farDistance;
+	light.spotAngle = angle;
 	light.color = color * intensity;
 
 	addLight(light);
@@ -79,7 +100,7 @@ void ForwardLightingHelper::prepareShaderData(
 			
 			params[i * 4 + 3][0] = lights[i].attenuationBegin;
 			params[i * 4 + 3][1] = lights[i].attenuationEnd;
-			params[i * 4 + 3][2] = 0.f;
+			params[i * 4 + 3][2] = cosf(lights[i].spotAngle / 2.f);
 			params[i * 4 + 3][3] = 0.f;
 		}
 
@@ -96,13 +117,30 @@ void ForwardLightingHelper::prepareShaderData(
 
 		for (size_t i = 0; i < lights.size(); ++i)
 		{
-			const Vec3 & position_world = lights[i].position;
-			const Vec3 position_view = worldToView.Mul4(position_world);
-			
-			builder.addPointLight(
-				i,
-				position_view,
-				lights[i].attenuationEnd);
+			if (lights[i].type == kLightType_Point)
+			{
+				const Vec3 & position_world = lights[i].position;
+				const Vec3 position_view = worldToView.Mul4(position_world);
+				
+				builder.addPointLight(
+					i,
+					position_view,
+					lights[i].attenuationEnd);
+			}
+			else if (lights[i].type == kLightType_Spot)
+			{
+				const Vec3 & position_world = lights[i].position;
+				const Vec3 & direction_world = lights[i].direction;
+				const Vec3 position_view = worldToView.Mul4(position_world);
+				const Vec3 direction_view = worldToView.Mul3(direction_world);
+				
+				builder.addSpotLight(
+					i,
+					position_view,
+					direction_view,
+					lights[i].spotAngle,
+					lights[i].attenuationEnd);
+			}
 		}
 
 		auto data = builder.generateLightVolumeData(resolution, extents);

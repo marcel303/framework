@@ -8,7 +8,8 @@ class Mat4x4;
 
 enum LightType
 {
-	kLightType_Point
+	kLightType_Point,
+	kLightType_Spot
 };
 
 struct Light
@@ -18,6 +19,7 @@ struct Light
 	Vec3 direction;
 	float attenuationBegin;
 	float attenuationEnd;
+	float spotAngle;
 	Vec3 color;
 };
 
@@ -42,11 +44,18 @@ public:
 	
 	void addLight(const Light & light);
 	void addPointLight(
-			Vec3Arg position,
-			const float attenuationBegin,
-			const float attenuationEnd,
-			Vec3Arg color,
-			const float intensity);
+		Vec3Arg position,
+		const float attenuationBegin,
+		const float attenuationEnd,
+		Vec3Arg color,
+		const float intensity);
+	void addSpotLight(
+		Vec3Arg position,
+		Vec3Arg direction,
+		const float angle,
+		const float farDistance,
+		Vec3Arg color,
+		const float intensity);
 	void reset();
 
 	void prepareShaderData(const int resolution, const float extents, const Mat4x4 & worldToView);

@@ -22,8 +22,22 @@ void LightVolumeBuilder::addPointLight(const int id, Vec3Arg position, const flo
 {
 	Light light;
 	light.id = id;
+	light.type = kLightType_Point;
 	light.position = position;
 	light.radius = radius;
+
+	lights.push_back(light);
+}
+
+void LightVolumeBuilder::addSpotLight(const int id, Vec3Arg position, Vec3Arg direction, const float angle, const float farDistance)
+{
+	Light light;
+	light.id = id;
+	light.type = kLightType_Spot;
+	light.position = position;
+	light.direction = direction;
+	light.spotAngle = angle;
+	light.spotFarDistance = farDistance;
 
 	lights.push_back(light);
 }
@@ -59,8 +73,28 @@ LightVolumeData LightVolumeBuilder::generateLightVolumeData(const int halfResolu
 
 	for (auto & light : lights)
 	{
-		const Vec3 lightMin_world = light.position - Vec3(light.radius, light.radius, light.radius);
-		const Vec3 lightMax_world = light.position + Vec3(light.radius, light.radius, light.radius);
+		Vec3 lightMin_world;
+		Vec3 lightMax_world;
+		
+		if (light.type == kLightType_Point)
+		{
+			lightMin_world = light.position - Vec3(light.radius, light.radius, light.radius);
+			lightMax_world = light.position + Vec3(light.radius, light.radius, light.radius);
+		}
+		else if (light.type == kLightType_Spot)
+		{
+			computeSpotLightAabb(
+				light.position,
+				light.direction,
+				light.spotAngle,
+				light.spotFarDistance,
+				lightMin_world,
+				lightMax_world);
+		}
+		else
+		{
+			continue;
+		}
 		
 		const Vec3 lightMin = lightMin_world * worldToVolumeScale;
 		const Vec3 lightMax = lightMax_world * worldToVolumeScale;
@@ -186,4 +220,70 @@ LightVolumeData LightVolumeBuilder::generateLightVolumeData(const int halfResolu
 	result.world_to_volume_scale = worldToVolumeScale;
 	
 	return result;
+}
+
+void LightVolumeBuilder::computeSpotLightAabb(
+	Vec3Arg position,
+	Vec3Arg direction,
+	float angle,
+	float farDistance,
+	Vec3 & out_min,
+	Vec3 & out_max)
+{
+	/*
+	steps to compute aabb:
+	- compute the four points enclosing the circle at the base of the cone
+	- compute the min and max for the four points above, plus the position of the cone
+	
+	steps to compute the four points enclosing the circle at the base of the cone
+	- determine a random vector, that is not parallel to the direction vector
+	- use the cross product (twice) to find two vectors extending out of the base of the cone,
+	  and at 90 degrees to the direction vector
+	- calculate the radius of the circle at the base of the cone, using the angle and far distance
+	- calculate the four points using the two vectors above as basis vectors and the radius of the circle
+	*/
+
+	// determine the most index of the most prominent axis for the light direction
+
+	int maxAxis = 0;
+	if (fabsf(direction[1]) > fabsf(direction[maxAxis]))
+		maxAxis = 1;
+	if (fabsf(direction[2]) > fabsf(direction[maxAxis]))
+		maxAxis = 2;
+
+	const int minorAxis = (maxAxis + 1) % 3;
+
+	Vec3 anotherVec;
+	anotherVec[minorAxis] = 1;
+	Vec3 tan1 = (direction % anotherVec).CalcNormalized();
+	Vec3 tan2 = (direction % tan1).CalcNormalized();
+
+	const float alpha = tanf(angle/2.f);
+	const float radius = alpha * farDistance;
+
+	const Vec3 base = position + direction * farDistance;
+
+	const Vec3 p11 = base - tan1 * radius - tan2 * radius;
+	const Vec3 p21 = base + tan1 * radius - tan2 * radius;
+	const Vec3 p22 = base + tan1 * radius + tan2 * radius;
+	const Vec3 p12 = base - tan1 * radius + tan2 * radius;
+
+#if defined(DEBUG)
+	const float d0 = direction * base;
+	const float d11 = direction * p11;
+	const float d21 = direction * p21;
+	const float d22 = direction * p22;
+	const float d12 = direction * p12;
+
+	assert(d11 >= d0 - 1e-3f && d11 <= d0 + 1e-3f);
+	assert(d21 >= d0 - 1e-3f && d21 <= d0 + 1e-3f);
+	assert(d22 >= d0 - 1e-3f && d22 <= d0 + 1e-3f);
+	assert(d12 >= d0 - 1e-3f && d12 <= d0 + 1e-3f);
+#endif
+
+	for (int i = 0; i < 3; ++i)
+	{
+		out_min[i] = fminf(position[i], fminf(fminf(p11[i], p21[i]), fminf(p22[i], p12[i])));
+		out_max[i] = fmaxf(position[i], fmaxf(fmaxf(p11[i], p21[i]), fmaxf(p22[i], p12[i])));
+	}
 }
