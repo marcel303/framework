@@ -66,9 +66,12 @@ void ForwardLightingHelper::reset()
 void ForwardLightingHelper::prepareShaderData(
 	const int resolution,
 	const float extents,
+	const bool in_infiniteSpaceMode,
 	const Mat4x4 & worldToView)
 {
 	AssertMsg(isPrepared == false, "please call reset() when done rendering a frame", 0);
+	
+	infiniteSpaceMode = in_infiniteSpaceMode;
 	
 	// fill light params buffer with information for all of the lights
 	
@@ -143,7 +146,7 @@ void ForwardLightingHelper::prepareShaderData(
 			}
 		}
 
-		auto data = builder.generateLightVolumeData(resolution, extents);
+		auto data = builder.generateLightVolumeData(resolution, extents, infiniteSpaceMode);
 
 		// create textures from data
 
@@ -181,4 +184,5 @@ void ForwardLightingHelper::setShaderData(Shader & shader, int & nextTextureUnit
 	shader.setTexture("lightVolume", nextTextureUnit++, indexTextureId, false, false);
 	shader.setTexture("lightIds", nextTextureUnit++, lightIdsTextureId, false, false);
 	shader.setImmediate("worldToVolumeScale", worldToVolumeScale);
+	shader.setImmediate("infiniteSpaceMode", infiniteSpaceMode ? 1.f : 0.f);
 }

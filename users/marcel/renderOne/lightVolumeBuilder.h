@@ -48,7 +48,7 @@ public:
 	void addSpotLight(const int id, Vec3Arg position, Vec3Arg direction, const float angle, const float farDistance);
 	void reset();
 
-	LightVolumeData generateLightVolumeData(const int halfResolution, const float extents) const;
+	LightVolumeData generateLightVolumeData(const int halfResolution, const float extents, const bool infiniteSpaceMode) const;
 	
 	static void computeSpotLightAabb(
 		Vec3Arg position,

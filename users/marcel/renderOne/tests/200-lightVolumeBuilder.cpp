@@ -30,7 +30,7 @@ int main(int argc, char * argv[])
 		
 		builder.addSpotLight(5, Vec3(0, 0, 0), Vec3(1, 1, 1).CalcNormalized(), M_PI/2.f, 1.f);
 		
-		auto data = builder.generateLightVolumeData(32, 16.f);
+		auto data = builder.generateLightVolumeData(32, 16.f, false);
 		
 		data.free();
 	}
@@ -57,11 +57,11 @@ int main(int argc, char * argv[])
 	};
 	
 #if true
-	for (int i = 0; i < 4000; ++i)
+	for (int i = 0; i < 1000; ++i)
 	{
 		lights.push_back(
 			{
-				's',
+				'p',
 				Vec3(
 					random<float>(-8.f, +8.f),
 					random<float>(-1.f, +1.f),
@@ -78,6 +78,7 @@ int main(int argc, char * argv[])
 	bool showLightVolumeOverlay = true;
 	bool showLightsOutlines = true;
 	bool animateLights = false;
+	bool infiniteSpaceMode = false;
 	
 	for (;;)
 	{
@@ -96,6 +97,9 @@ int main(int argc, char * argv[])
 		
 		if (keyboard.wentDown(SDLK_a))
 			animateLights = !animateLights;
+		
+		if (keyboard.wentDown(SDLK_i))
+			infiniteSpaceMode = !infiniteSpaceMode;
 		
 		{
 			for (size_t i = 0; i < lights.size(); ++i)
@@ -302,6 +306,7 @@ int main(int argc, char * argv[])
 			drawText(4, y += 16, 12, +1, +1, "Press 'V' to toggle light volume overlay");
 			drawText(4, y += 16, 12, +1, +1, "Press 'O' to toggle light outlines");
 			drawText(4, y += 16, 12, +1, +1, "Press 'A' to toggle light animation");
+			drawText(4, y += 16, 12, +1, +1, "Press 'I' to toggle infinite space mode");
 		}
 		framework.endDraw();
 		

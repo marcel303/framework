@@ -54,7 +54,7 @@ static int roundUp(int value, int multipleOf)
 	return multipleOf * n;
 }
 
-LightVolumeData LightVolumeBuilder::generateLightVolumeData(const int halfResolution, const float extents) const
+LightVolumeData LightVolumeBuilder::generateLightVolumeData(const int halfResolution, const float extents, const bool infiniteSpaceMode) const
 {
 	const int extX = halfResolution;
 	const int extY = halfResolution;
@@ -113,9 +113,16 @@ LightVolumeData LightVolumeBuilder::generateLightVolumeData(const int halfResolu
 			{
 				for (int z = lightMinZ; z < lightMaxZ; ++z)
 				{
-					const int indexX = x + extX;
-					const int indexY = y + extY;
-					const int indexZ = z + extZ;
+					int indexX = x + extX;
+					int indexY = y + extY;
+					int indexZ = z + extZ;
+					
+					if (infiniteSpaceMode)
+					{
+						indexX = indexX % sx; if (indexX < 0) indexX += sx;
+						indexY = indexY % sy; if (indexY < 0) indexY += sy;
+						indexZ = indexZ % sz; if (indexZ < 0) indexZ += sz;
+					}
 
 					if (indexX < 0 || indexX >= sx ||
 						indexY < 0 || indexY >= sy ||

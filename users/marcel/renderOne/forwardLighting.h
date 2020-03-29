@@ -17,9 +17,9 @@ struct Light
 	LightType type;
 	Vec3 position;
 	Vec3 direction;
-	float attenuationBegin;
-	float attenuationEnd;
-	float spotAngle;
+	float attenuationBegin = 0.f;
+	float attenuationEnd = 1.f;
+	float spotAngle = 0.f;
 	Vec3 color;
 };
 
@@ -37,6 +37,7 @@ public:
 	GxTextureId lightIdsTextureId = 0;
 	
 	float worldToVolumeScale = 0.f;
+	bool infiniteSpaceMode = false;
 
 public:
 
@@ -58,7 +59,7 @@ public:
 		const float intensity);
 	void reset();
 
-	void prepareShaderData(const int resolution, const float extents, const Mat4x4 & worldToView);
+	void prepareShaderData(const int resolution, const float extents, const bool infiniteSpaceMode, const Mat4x4 & worldToView);
 	void setShaderData(Shader & shader, int & nextTextureUnit) const;
 	
 };
