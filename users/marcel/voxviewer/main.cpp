@@ -9,31 +9,34 @@
 #include "FileStream.h"
 #include "StreamReader.h"
 
-#include "Parse.h" // for VoxDict to transform
+#include "Parse.h" // for MagicaDict to transform
 
+#include "lightDrawer.h"
 #include "renderer.h"
 #include "renderOptions.h"
 
-#include <map> // for VoxDict
+#include <map> // for MagicaDict
 #include <stdint.h>
 #include <string.h> // memcmp
 #include <vector>
 
-struct VoxDict
+using namespace rOne;
+
+struct MagicaDict
 {
 	std::map<std::string, std::string> items;
 };
 
-struct VoxModel
+struct MagicaVoxel
 {
-	struct Voxel
-	{
-		uint8_t colorIndex;
-	};
-	
+	uint8_t colorIndex;
+};
+
+struct MagicaModel
+{
 	int id;
 	
-	Voxel * voxels = nullptr;
+	MagicaVoxel * voxels = nullptr;
 	int sx;
 	int sy;
 	int sz;
@@ -50,7 +53,7 @@ struct VoxModel
 		
 		int numVoxels = sx * sy * sz;
 		
-		voxels = new Voxel[numVoxels];
+		voxels = new MagicaVoxel[numVoxels];
 		
 		for (int i = 0; i < numVoxels; ++i)
 			voxels[i].colorIndex = 0xff;
@@ -66,14 +69,14 @@ struct VoxModel
 		sz = 0;
 	}
 	
-	Voxel * getVoxel(int x, int y, int z) const
+	MagicaVoxel * getVoxel(int x, int y, int z) const
 	{
 		int index = x + y * sx + z * sy * sx;
 		
 		return voxels + index;
 	}
 	
-	Voxel * getVoxelWithBorder(int x, int y, int z, Voxel * border) const
+	MagicaVoxel * getVoxelWithBorder(int x, int y, int z, MagicaVoxel * border) const
 	{
 		bool inside =
 			x >= 0 & x < sx &
@@ -93,13 +96,13 @@ struct VoxModel
 	}
 };
 
-struct VoxMaterial_V2
+struct MagicaMaterial_V2
 {
 	int id;
-	VoxDict dict;
+	MagicaDict dict;
 };
 
-struct VoxRotation
+struct MagicaRotation
 {
 	int matrix[3][3];
 	
@@ -120,38 +123,38 @@ struct VoxRotation
 	}
 };
 
-enum struct VoxSceneNodeType
+enum struct MagicaSceneNodeType
 {
 	Transform,
 	Group,
 	Shape
 };
 
-struct VoxSceneNodeBase
+struct MagicaSceneNodeBase
 {
-	VoxSceneNodeType type;
+	MagicaSceneNodeType type;
 	int id;
-	VoxDict attributes;
+	MagicaDict attributes;
 };
 
-struct VoxSceneNodeTransform : VoxSceneNodeBase
+struct MagicaSceneNodeTransform : MagicaSceneNodeBase
 {
 	int childNodeId;
 	int layerId;
 	std::vector<Mat4x4> frames;
 };
 
-struct VoxSceneNodeGroup : VoxSceneNodeBase
+struct MagicaSceneNodeGroup : MagicaSceneNodeBase
 {
 	std::vector<int> childNodeIds;
 };
 
-struct VoxSceneNodeShape : VoxSceneNodeBase
+struct MagicaSceneNodeShape : MagicaSceneNodeBase
 {
 	std::vector<int> modelIds;
 };
 
-static const uint32_t default_palette[256] =
+static const uint32_t s_defaultPalette[256] =
 {
 	0x00000000, 0xffffffff, 0xffccffff, 0xff99ffff, 0xff66ffff, 0xff33ffff, 0xff00ffff, 0xffffccff, 0xffccccff, 0xff99ccff, 0xff66ccff, 0xff33ccff, 0xff00ccff, 0xffff99ff, 0xffcc99ff, 0xff9999ff,
 	0xff6699ff, 0xff3399ff, 0xff0099ff, 0xffff66ff, 0xffcc66ff, 0xff9966ff, 0xff6666ff, 0xff3366ff, 0xff0066ff, 0xffff33ff, 0xffcc33ff, 0xff9933ff, 0xff6633ff, 0xff3333ff, 0xff0033ff, 0xffff00ff,
@@ -171,21 +174,21 @@ static const uint32_t default_palette[256] =
 	0xff880000, 0xff770000, 0xff550000, 0xff440000, 0xff220000, 0xff110000, 0xffeeeeee, 0xffdddddd, 0xffbbbbbb, 0xffaaaaaa, 0xff888888, 0xff777777, 0xff555555, 0xff444444, 0xff222222, 0xff111111
 };
 
-struct VoxWorld
+struct MagicaWorld
 {
 	uint8_t palette[256][4];
 	
-	std::vector<VoxModel> models;
+	std::vector<MagicaModel*> models;
 	
-	std::vector<VoxMaterial_V2*> materials;
+	std::vector<MagicaMaterial_V2*> materials;
 	
-	std::vector<VoxSceneNodeBase*> nodes;
+	std::vector<MagicaSceneNodeBase*> nodes;
 	
-	VoxWorld()
+	MagicaWorld()
 	{
 		for (int i = 0; i < 256; ++i)
 		{
-			uint32_t c = default_palette[i];
+			uint32_t c = s_defaultPalette[i];
 			uint8_t r = (c >>  0) & 0xff;
 			uint8_t g = (c >>  8) & 0xff;
 			uint8_t b = (c >> 16) & 0xff;
@@ -197,16 +200,19 @@ struct VoxWorld
 		}
 	}
 	
-	~VoxWorld()
+	~MagicaWorld()
 	{
 		free();
 	}
 	
 	void free()
 	{
-		for (auto & model : models)
+		for (auto *& model : models)
 		{
-			model.free();
+			model->free();
+			
+			delete model;
+			model = nullptr;
 		}
 		
 		models.clear();
@@ -232,7 +238,7 @@ struct VoxWorld
 		nodes.clear();
 	}
 	
-	const VoxSceneNodeBase * tryGetNode(int id) const
+	const MagicaSceneNodeBase * tryGetNode(int id) const
 	{
 		for (auto * node : nodes)
 			if (node->id == id)
@@ -241,11 +247,11 @@ struct VoxWorld
 		return nullptr;
 	}
 	
-	const VoxModel * tryGetModel(int id) const
+	const MagicaModel * tryGetModel(int id) const
 	{
-		for (auto & model : models)
-			if (model.id == id)
-				return &model;
+		for (auto * model : models)
+			if (model->id == id)
+				return model;
 		
 		return nullptr;
 	}
@@ -288,7 +294,7 @@ static bool read_string(StreamReader & r, std::string & s)
 	return true;
 }
 
-static bool read_dict(StreamReader & r, VoxDict & dict)
+static bool read_dict(StreamReader & r, MagicaDict & dict)
 {
 	int count = r.ReadInt32();
 	
@@ -309,7 +315,7 @@ static bool read_dict(StreamReader & r, VoxDict & dict)
 
 extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
-static bool read_vox_world(StreamReader & r, VoxWorld & world)
+static bool read_vox_world(StreamReader & r, MagicaWorld & world)
 {
 	try
 	{
@@ -353,13 +359,13 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 				if (!is_chunk(c, "XYZI"))
 					return false;
 				
-				VoxModel model;
-				model.id = world.models.size();
-				model.alloc(sx, sy, sz);
+				MagicaModel * model = new MagicaModel();
+				model->id = world.models.size();
+				model->alloc(sx, sy, sz);
 				
 				int numVoxels = r.ReadInt32();
 				
-				logDebug("model %d: numVoxels=%d", model.id, numVoxels);
+				logDebug("model %d: numVoxels=%d", model->id, numVoxels);
 				
 				for (int i = 0; i < numVoxels; ++i)
 				{
@@ -368,7 +374,7 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 					uint8_t z = r.ReadUInt8();
 					uint8_t colorIndex = r.ReadUInt8();
 					
-					VoxModel::Voxel * voxel = model.getVoxel(x, y, z);
+					MagicaVoxel * voxel = model->getVoxel(x, y, z);
 					
 					voxel->colorIndex = colorIndex;
 				}
@@ -390,12 +396,12 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 				
 				int id = r.ReadInt32();
 
-				VoxDict attributes;
+				MagicaDict attributes;
 				
 				if (!read_dict(r, attributes))
 					return false;
 				
-				VoxMaterial_V2 * m = new VoxMaterial_V2();
+				MagicaMaterial_V2 * m = new MagicaMaterial_V2();
 				m->id = id;
 				m->dict = attributes;
 				
@@ -405,7 +411,7 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 			{
 				int id = r.ReadInt32();
 				
-				VoxDict attributes;
+				MagicaDict attributes;
 				
 				if (!read_dict(r, attributes))
 					return false;
@@ -416,11 +422,11 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 				int layerId = r.ReadInt32();
 				int numFrames = r.ReadInt32();
 				
-				std::vector<VoxDict> frames;
+				std::vector<MagicaDict> frames;
 				
 				for (int i = 0; i < numFrames; ++i)
 				{
-					VoxDict frameAttributes;
+					MagicaDict frameAttributes;
 					
 					if (!read_dict(r, frameAttributes))
 						return false;
@@ -428,8 +434,8 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 					frames.push_back(frameAttributes);
 				}
 				
-				VoxSceneNodeTransform * node = new VoxSceneNodeTransform();
-				node->type = VoxSceneNodeType::Transform;
+				MagicaSceneNodeTransform * node = new MagicaSceneNodeTransform();
+				node->type = MagicaSceneNodeType::Transform;
 				node->id = id;
 				node->attributes = attributes;
 				node->childNodeId = childNodeId;
@@ -444,7 +450,7 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 					Mat4x4 m(true);
 					if (r_encoded != 0)
 					{
-						VoxRotation r;
+						MagicaRotation r;
 						r.decode(r_encoded);
 						for (int i = 0; i < 3; ++i)
 							for (int j = 0; j < 3; ++j)
@@ -464,7 +470,7 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 			{
 				int id = r.ReadInt32();
 				
-				VoxDict attributes;
+				MagicaDict attributes;
 				
 				if (!read_dict(r, attributes))
 					return false;
@@ -479,8 +485,8 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 					childNodeIds.push_back(childNodeId);
 				}
 				
-				VoxSceneNodeGroup * node = new VoxSceneNodeGroup();
-				node->type =VoxSceneNodeType::Group;
+				MagicaSceneNodeGroup * node = new MagicaSceneNodeGroup();
+				node->type = MagicaSceneNodeType::Group;
 				node->id = id;
 				node->attributes = attributes;
 				node->childNodeIds = childNodeIds;
@@ -491,7 +497,7 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 			{
 				int id = r.ReadInt32();
 				
-				VoxDict attributes;
+				MagicaDict attributes;
 				
 				if (!read_dict(r, attributes))
 					return false;
@@ -504,7 +510,7 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 				{
 					int modelId = r.ReadInt32();
 					
-					VoxDict attributes;
+					MagicaDict attributes;
 					
 					if (!read_dict(r, attributes))
 						return false;
@@ -512,8 +518,8 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 					modelIds.push_back(modelId);
 				}
 				
-				VoxSceneNodeShape * node = new VoxSceneNodeShape();
-				node->type = VoxSceneNodeType::Shape;
+				MagicaSceneNodeShape * node = new MagicaSceneNodeShape();
+				node->type = MagicaSceneNodeType::Shape;
 				node->id = id;
 				node->attributes = attributes;
 				node->modelIds = modelIds;
@@ -538,7 +544,7 @@ static bool read_vox_world(StreamReader & r, VoxWorld & world)
 	}
 }
 
-static void drawVoxModel(const VoxWorld & world, const VoxModel & model)
+static void drawMagicaModel(const MagicaWorld & world, const MagicaModel & model)
 {
 /*
 	todo : determine parity sign, and use it to invert cubes. I tried multiplying the size of the cubes by the parity sign, but this leaves the normals untouched. we need both the winding and normals to be flipped
@@ -553,7 +559,7 @@ static void drawVoxModel(const VoxWorld & world, const VoxModel & model)
 
 	gxBegin(GX_QUADS);
 	{
-		VoxModel::Voxel emptyVoxel;
+		MagicaVoxel emptyVoxel;
 		emptyVoxel.colorIndex = 0xff;
 		
 		for (int x = 0; x < model.sx; ++x)
@@ -562,7 +568,7 @@ static void drawVoxModel(const VoxWorld & world, const VoxModel & model)
 			{
 				for (int z = 0; z < model.sz; ++z)
 				{
-					const VoxModel::Voxel * voxel = model.getVoxel(x, y, z);
+					const MagicaVoxel * voxel = model.getVoxel(x, y, z);
 					
 					if (voxel->colorIndex == 0xff)
 						continue;
@@ -612,7 +618,7 @@ static void drawVoxModel(const VoxWorld & world, const VoxModel & model)
 					//            if so: draw the face
 					//            otherwise: skip it, since it won't be visible
 					
-					const VoxModel::Voxel * neighbors[6] =
+					const MagicaVoxel * neighbors[6] =
 					{
 						model.getVoxelWithBorder(x - 1, y, z, &emptyVoxel),
 						model.getVoxelWithBorder(x + 1, y, z, &emptyVoxel),
@@ -653,13 +659,13 @@ static void drawVoxModel(const VoxWorld & world, const VoxModel & model)
 	gxEnd();
 }
 
-static void drawVoxSceneNode(const VoxWorld & world, const VoxSceneNodeBase & node)
+static void drawMagicaSceneNode(const MagicaWorld & world, const MagicaSceneNodeBase & node)
 {
 	switch (node.type)
 	{
-	case VoxSceneNodeType::Transform:
+	case MagicaSceneNodeType::Transform:
 		{
-			auto & transform = static_cast<const VoxSceneNodeTransform&>(node);
+			auto & transform = static_cast<const MagicaSceneNodeTransform&>(node);
 			
 			gxPushMatrix();
 			{
@@ -671,53 +677,53 @@ static void drawVoxSceneNode(const VoxWorld & world, const VoxSceneNodeBase & no
 				}
 				auto * childNode = world.tryGetNode(transform.childNodeId);
 				if (childNode != nullptr)
-					drawVoxSceneNode(world, *childNode);
+					drawMagicaSceneNode(world, *childNode);
 			}
 			gxPopMatrix();
 		}
 		break;
 	
-	case VoxSceneNodeType::Group:
+	case MagicaSceneNodeType::Group:
 		{
-			auto & group = static_cast<const VoxSceneNodeGroup&>(node);
+			auto & group = static_cast<const MagicaSceneNodeGroup&>(node);
 			
 			for (auto & childNodeId : group.childNodeIds)
 			{
 				auto * childNode = world.tryGetNode(childNodeId);
 				if (childNode != nullptr)
-					drawVoxSceneNode(world, *childNode);
+					drawMagicaSceneNode(world, *childNode);
 			}
 		}
 		break;
 		
-	case VoxSceneNodeType::Shape:
+	case MagicaSceneNodeType::Shape:
 		{
-			auto & shape = static_cast<const VoxSceneNodeShape&>(node);
+			auto & shape = static_cast<const MagicaSceneNodeShape&>(node);
 			
 			for (auto & modelId : shape.modelIds)
 			{
 				auto * model = world.tryGetModel(modelId);
 				if (model != nullptr)
-					drawVoxModel(world, *model);
+					drawMagicaModel(world, *model);
 			}
 		}
 		break;
 	}
 }
 
-static void drawVoxWorld(const VoxWorld & world)
+static void drawMagicaWorld(const MagicaWorld & world)
 {
 	if (world.nodes.empty())
 	{
 		for (auto & model : world.models)
 		{
-			drawVoxModel(world, model);
+			drawMagicaModel(world, *model);
 		}
 	}
 	else
 	{
 		auto * rootNode = world.nodes[0];
-		drawVoxSceneNode(world, *rootNode);
+		drawMagicaSceneNode(world, *rootNode);
 	}
 }
 
@@ -729,15 +735,13 @@ int main(int argc, char * argv[])
 	framework.enableRealTimeEditing = true;
 	framework.filedrop = true;
 	
-	if (!framework.init(800, 600))
+	//if (!framework.init(400, 300))
+	if (!framework.init(1200, 900))
 		return 0;
 
-// todo : let renderer register shader outputs
-	framework.registerShaderOutput('e', "float", "shader_fragEmissive");
-	framework.registerShaderOutput('s', "float", "shader_fragSpecularExponent");
-	framework.registerShaderOutput('S', "vec4", "shader_fragSpecularColor");
+	Renderer::registerShaderOutputs();
 	
-	VoxWorld world;
+	MagicaWorld world;
 	
 	try
 	{
@@ -761,23 +765,24 @@ int main(int argc, char * argv[])
 	
 	gxCaptureMeshBegin(drawMesh, vb, ib);
 	{
-		drawVoxWorld(world);
+		drawMagicaWorld(world);
 	}
 	gxCaptureMeshEnd();
 	
 	RenderOptions renderOptions;
 	renderOptions.renderMode = kRenderMode_DeferredShaded;
+	//renderOptions.renderMode = kRenderMode_Flat;
 	renderOptions.linearColorSpace = true;
-	renderOptions.backgroundColor.Set(0, 0, 0);
+	renderOptions.backgroundColor.Set(0, 0, 1);
 	
-	renderOptions.fog.enabled = false;
+	renderOptions.fog.enabled = true;
 	renderOptions.fog.thickness = .1f;
 	
 	renderOptions.bloom.enabled = false;
 	renderOptions.bloom.blurSize = 20.f;
 	renderOptions.bloom.strength = .3f;
 	
-	renderOptions.lightScatter.enabled = true;
+	renderOptions.lightScatter.enabled = false;
 	
 	renderOptions.depthSilhouette.enabled = true;
 	renderOptions.depthSilhouette.color.Set(0, 0, 0, .5f);
@@ -811,7 +816,7 @@ int main(int argc, char * argv[])
 			
 			gxCaptureMeshBegin(drawMesh, vb, ib);
 			{
-				drawVoxWorld(world);
+				drawMagicaWorld(world);
 			}
 			gxCaptureMeshEnd();
 		}
@@ -829,10 +834,6 @@ int main(int argc, char * argv[])
 					Shader shader("shader");
 					setShader(shader);
 					
-					const Vec4 lightDirection_world(1.f, -2.f, .5f, 0);
-					const Vec4 lightDirection_view = transformToWorld(lightDirection_world).CalcNormalized();
-					shader.setImmediate("lightDirection", lightDirection_view[0], lightDirection_view[1], lightDirection_view[2]);
-				
 					gxScalef(-1, 1, 1);
 					gxRotatef(-90, 1, 0, 0);
 					gxScalef(.1f, .1f, .1f);
@@ -846,8 +847,16 @@ int main(int argc, char * argv[])
 					clearShader();
 				};
 				
+				auto drawLights = [&]()
+				{
+					g_lightDrawer.drawDeferredAmbientLight(Vec3(.1f, .1f, .1f));
+					
+					g_lightDrawer.drawDeferredPointLight(camera.position, 0.f, 4.f, Vec3(1, 1, 1));
+				};
+				
 				RenderFunctions renderFunctions;
 				renderFunctions.drawOpaque = drawOpaque;
+				renderFunctions.drawLights = drawLights;
 				
 				renderer.render(renderFunctions, renderOptions, framework.timeStep);
 			}
@@ -855,6 +864,10 @@ int main(int argc, char * argv[])
 		}
 		framework.endDraw();
 	}
+	
+	// todo : shutdown renderer
+	
+	framework.shutdown();
 
 	return 0;
 }
