@@ -1,6 +1,7 @@
 #include "lightVolumeBuilder.h"
 #include <assert.h>
 #include <math.h>
+#include <set>
 #include <string.h>
 
 #include <map> // todo : remove. here just for prototyping
@@ -69,7 +70,7 @@ LightVolumeData LightVolumeBuilder::generateLightVolumeData(const int halfResolu
 	
 	const float worldToVolumeScale = halfResolution / extents;
 
-	std::map<int, std::vector<int>> records;
+	std::map<int, std::set<int>> records;
 
 	for (auto & light : lights)
 	{
@@ -133,7 +134,7 @@ LightVolumeData LightVolumeBuilder::generateLightVolumeData(const int halfResolu
 
 					const int index = indexX + indexY * sx + indexZ * sx * sy;
 
-					records[index].push_back(light.id);
+					records[index].insert(light.id);
 				}
 			}
 		}
