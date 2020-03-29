@@ -137,7 +137,7 @@ int main(int argc, char * argv[])
 			
 			const Mat4x4 worldToView = camera.getViewMatrix();
 			
-			helper.prepareShaderData(32, 32.f, worldToView);
+			helper.prepareShaderData(16, 16.f, infiniteSpaceMode, worldToView);
 		}
 	
 		framework.beginDraw(20, 20, 20, 0);
@@ -303,10 +303,10 @@ int main(int argc, char * argv[])
 			
 			setColor(colorWhite);
 			int y = 4;
-			drawText(4, y += 16, 12, +1, +1, "Press 'V' to toggle light volume overlay");
-			drawText(4, y += 16, 12, +1, +1, "Press 'O' to toggle light outlines");
-			drawText(4, y += 16, 12, +1, +1, "Press 'A' to toggle light animation");
-			drawText(4, y += 16, 12, +1, +1, "Press 'I' to toggle infinite space mode");
+			drawText(4, y += 16, 12, +1, +1, "Press 'V' to toggle light volume overlay (%s)", showLightVolumeOverlay ? "on" : "off");
+			drawText(4, y += 16, 12, +1, +1, "Press 'O' to toggle light outlines (%s)", showLightsOutlines ? "on" : "off");
+			drawText(4, y += 16, 12, +1, +1, "Press 'A' to toggle light animation (%s)", animateLights ? "on" : "off");
+			drawText(4, y += 16, 12, +1, +1, "Press 'I' to toggle infinite space mode (%s)", infiniteSpaceMode ? "on" : "off");
 		}
 		framework.endDraw();
 		
