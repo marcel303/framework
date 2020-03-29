@@ -26,7 +26,7 @@ struct MagicaModel
 	
 	~MagicaModel();
 
-	void alloc(int in_sx, int in_sy, int in_sz);
+	void alloc(int sx, int sy, int sz);
 	void free();
 	
 	MagicaVoxel * getVoxel(int x, int y, int z) const
@@ -59,6 +59,7 @@ struct MagicaModel
 struct MagicaMaterial_V2
 {
 	int id = -1;
+	
 	MagicaDict dict;
 };
 
@@ -67,6 +68,7 @@ struct MagicaRotation
 	int matrix[3][3];
 	
 	MagicaRotation();
+	
 	void decode(int v);
 };
 
@@ -81,7 +83,9 @@ enum struct MagicaSceneNodeType
 struct MagicaSceneNodeBase
 {
 	MagicaSceneNodeType type = MagicaSceneNodeType::None;
+	
 	int id = -1;
+	
 	MagicaDict attributes;
 };
 
@@ -89,6 +93,7 @@ struct MagicaSceneNodeTransform : MagicaSceneNodeBase
 {
 	int childNodeId = -1;
 	int layerId = -1;
+	
 	std::vector<Mat4x4> frames;
 };
 

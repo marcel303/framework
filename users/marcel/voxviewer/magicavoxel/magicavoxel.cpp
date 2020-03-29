@@ -60,6 +60,8 @@ void MagicaRotation::decode(int v)
 	matrix[2][index3] = sign3;
 }
 
+//
+
 static const uint32_t s_defaultPalette[256] =
 {
 	0x00000000, 0xffffffff, 0xffccffff, 0xff99ffff, 0xff66ffff, 0xff33ffff, 0xff00ffff, 0xffffccff, 0xffccccff, 0xff99ccff, 0xff66ccff, 0xff33ccff, 0xff00ccff, 0xffff99ff, 0xffcc99ff, 0xff9999ff,
@@ -105,8 +107,6 @@ void MagicaWorld::free()
 {
 	for (auto *& model : models)
 	{
-		model->free();
-		
 		delete model;
 		model = nullptr;
 	}
@@ -154,31 +154,30 @@ const MagicaModel * MagicaWorld::tryGetModel(int id) const
 
 // -- io --
 
-#include "Parse.h" // for MagicaDict to transform
 #include "Stream.h"
+#include <stdio.h> // sscanf
 
-extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
-
-struct vox_chunk_t
+struct magica_chunk_t
 {
 	char id[4];
 	int content_length;
 	int children_length;
 };
 
-static void read_chunk(StreamReader & r, vox_chunk_t & c)
+static void read_chunk(StreamReader & r, magica_chunk_t & c)
 {
 	r.ReadBytes(c.id, 4);
 	c.content_length = r.ReadInt32();
 	c.children_length = r.ReadInt32();
 }
 
-static void skip_chunk(StreamReader & r, vox_chunk_t & c)
+static void skip_chunk(StreamReader & r, magica_chunk_t & c)
 {
+// todo : throw exception on failure
 	r.Stream_get()->Seek(c.content_length + c.children_length, SeekMode_Offset);
 }
 
-static bool is_chunk(vox_chunk_t & c, const char * id)
+static bool is_chunk(magica_chunk_t & c, const char * id)
 {
 	return memcmp(c.id, id, 4) == 0;
 }
@@ -230,7 +229,7 @@ bool readMagicaWorld(StreamReader & r, MagicaWorld & world)
 		if (version != 150)
 			LOG_WRN("VOX file format version %d may not be supported", version);
 
-		vox_chunk_t c;
+		magica_chunk_t c;
 		read_chunk(r, c);
 		
 		if (!is_chunk(c, "MAIN"))
@@ -342,25 +341,35 @@ bool readMagicaWorld(StreamReader & r, MagicaWorld & world)
 				node->layerId = layerId;
 				for (auto & frame : frames)
 				{
+					Mat4x4 m(true);
+					
 					auto & r_text = frame.items["_r"];
 					auto & t_text = frame.items["_t"];
-					std::vector<std::string> t_elems;
-					splitString(t_text, t_elems, ' ');
-					int r_encoded = Parse::Int32(r_text);
-					Mat4x4 m(true);
-					if (r_encoded != 0)
+				
+					if (!r_text.empty())
 					{
-						MagicaRotation r;
-						r.decode(r_encoded);
-						for (int i = 0; i < 3; ++i)
-							for (int j = 0; j < 3; ++j)
-								m(j, i) = r.matrix[i][j];
+						int r_encoded;
+						if (sscanf(r_text.c_str(), "%d", &r_encoded) != 1)
+							LOG_WRN("failed to read encoded rotation", 0);
+						else
+						{
+							MagicaRotation r;
+							r.decode(r_encoded);
+							for (int i = 0; i < 3; ++i)
+								for (int j = 0; j < 3; ++j)
+									m(j, i) = r.matrix[i][j];
+						}
 					}
-					float t[3];
-					t[0] = t_elems.size() >= 3 ? Parse::Float(t_elems[0].c_str()) : 0.f;
-					t[1] = t_elems.size() >= 3 ? Parse::Float(t_elems[1].c_str()) : 0.f;
-					t[2] = t_elems.size() >= 3 ? Parse::Float(t_elems[2].c_str()) : 0.f;
-					m.SetTranslation(t[0], t[1], t[2]);
+					
+					if (!t_text.empty())
+					{
+						float t[3];
+						if (sscanf(t_text.c_str(), "%f %f %f", &t[0], &t[1], &t[2]) != 3)
+							LOG_WRN("failed to read encoded translation", 0);
+						else
+							m.SetTranslation(t[0], t[1], t[2]);
+					}
+					
 					node->frames.push_back(m);
 				}
 				
@@ -443,3 +452,4 @@ bool readMagicaWorld(StreamReader & r, MagicaWorld & world)
 		return false;
 	}
 }
+
