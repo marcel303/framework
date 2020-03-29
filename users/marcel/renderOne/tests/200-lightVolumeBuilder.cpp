@@ -4,6 +4,8 @@
 
 #include "framework.h"
 
+using namespace rOne;
+
 struct LightParams
 {
 	char type;

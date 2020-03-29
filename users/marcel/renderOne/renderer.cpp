@@ -3,6 +3,8 @@
 #include "lightDrawer.h"
 #include "renderer.h"
 
+using namespace rOne; // todo : remove once the whole renderer is put into this namespace
+
 #if 0
 	// todo : add screenshot functionality
 
