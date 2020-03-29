@@ -177,7 +177,8 @@ int FileStream::Length_get()
 	
 	int position = Position_get();
 	
-	fseek(m_File, 0, SEEK_END);
+	if (fseek(m_File, 0, SEEK_END) < 0)
+		throw ExceptionVA("failed to seek to end of file");
 	
 	int length = Position_get();
 	
@@ -197,7 +198,12 @@ int FileStream::Position_get()
 
 	return result;
 #else
-	return static_cast<int>(ftell(m_File));
+	int result = static_cast<int>(ftell(m_File));
+	
+	if (result < 0)
+		throw ExceptionVA("unable to determine file stream position");
+	
+	return result;
 #endif
 }
 
@@ -223,7 +229,8 @@ void FileStream::Seek(int seek, SeekMode mode)
 #else
 	if (mode == SeekMode_Begin)
 	{
-		fseek(m_File, seek, SEEK_SET);
+		if (fseek(m_File, seek, SEEK_SET) < 0)
+			throw ExceptionVA("failed to seek file");
 	}
 	
 	if (mode == SeekMode_Offset)
@@ -234,7 +241,8 @@ void FileStream::Seek(int seek, SeekMode mode)
 		}
 		else
 		{
-			fseek(m_File, seek, SEEK_CUR);
+			if (fseek(m_File, seek, SEEK_CUR) < 0)
+				throw ExceptionVA("failed to seek file");
 		}
 	}
 #endif
