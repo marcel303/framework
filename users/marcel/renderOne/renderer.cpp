@@ -82,8 +82,10 @@ static void renderOpaquePass(const RenderFunctions & renderFunctions, const Rend
 
 static void renderTranslucentPass(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions)
 {
+// todo : add pre-translucent post effects. this is needed for depth outline to work correctly, when there are translucent things (which themselves don't write to the depth buffer)
+
 	pushDepthTest(true, DEPTH_LESS, false);
-	pushBlend(BLEND_ADD);
+	pushBlend(BLEND_ALPHA);
 	{
 		if (renderOptions.enableTranslucentPass && renderFunctions.drawTranslucent != nullptr)
 		{
@@ -126,7 +128,8 @@ static void renderLightBuffer(
 				g_lightDrawer.drawDeferredDirectionalLight(
 					renderOptions.defaultLightDirection,
 					renderOptions.defaultLightColorTop,
-					renderOptions.defaultLightColorBottom);
+					renderOptions.defaultLightColorBottom,
+					1.f);
 			}
 			
 		#if 0 // todo : leave this set to '0' when checking in!
