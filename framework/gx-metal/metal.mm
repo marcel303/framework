@@ -979,13 +979,15 @@ void clearStencil(uint8_t value)
 	
 	gxMatrixMode(GX_PROJECTION);
 	gxPushMatrix();
+	gxMatrixMode(GX_MODELVIEW);
+	gxPushMatrix();
 	{
 		projectScreen2d();
 		
 		// we only want to touch the stencil buffer,
 		// so make sure to disable depth and color writes
 		
-		pushDepthWrite(false);
+		pushDepthTest(false, DEPTH_ALWAYS, false);
 		pushColorWriteMask(0, 0, 0, 0);
 		{
 			int sx;
@@ -995,9 +997,11 @@ void clearStencil(uint8_t value)
 			drawRect(0, 0, sx, sy);
 		}
 		popColorWriteMask();
-		popDepthWrite();
+		popDepthTest();
 	}
 	gxMatrixMode(GX_PROJECTION);
+	gxPopMatrix();
+	gxMatrixMode(GX_MODELVIEW);
 	gxPopMatrix();
 	
 	// restore previous states
@@ -1027,6 +1031,8 @@ void setStencilTest(const StencilState & front, const StencilState & back)
 	
 	id <MTLDepthStencilState> state = [device newDepthStencilStateWithDescriptor:descriptor];
 	[s_activeRenderPass->encoder setDepthStencilState:state];
+	
+	[s_activeRenderPass->encoder setStencilFrontReferenceValue:globals.frontStencilState.compareRef backReferenceValue:globals.backStencilState.compareRef];
 	
 	[state release];
 	state = nullptr;
