@@ -1,0 +1,40 @@
+include engine/ShaderPS.txt
+include renderOne/forward-lighting/light-params.txt
+include renderOne/forward-lighting/light-volume.txt
+
+/*
+
+this shader is used to draw some semi-transparent cubes,
+to test the functionality and usability of the light volume
+features of renderOne
+
+*/
+
+shader_in vec3 v_position;
+shader_in vec4 v_color;
+
+vec3 color;
+
+void forEachLightId(int id)
+{
+	LightParams params = lookupLightParams(id);
+
+	if (params.type == kLightType_Point)
+	{
+		vec3 delta = params.position - v_position;
+		float distance = length(delta);
+		float attenuation = 1.0 - (distance - params.attenuationBegin) / (params.attenuationEnd - params.attenuationBegin);
+		attenuation = clamp(attenuation, 0.0, 1.0);
+
+		color += vec3(attenuation);
+	}
+}
+
+void main()
+{
+	color = vec3(0.0);
+
+	forEachLightIdAt(v_position);
+
+	shader_fragColor = vec4(color, 1.0) * v_color;
+}
