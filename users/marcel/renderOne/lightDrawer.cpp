@@ -52,9 +52,10 @@ namespace rOne
 	}
 
 	void LightDrawer::drawDeferredAmbientLight(
-		const Vec3 & in_lightColor) const
+		const Vec3 & in_lightColor,
+		const float lightIntensity) const
 	{
-		const Vec3 lightColor = srgbToLinear(in_lightColor);
+		const Vec3 lightColor = srgbToLinear(in_lightColor) * lightIntensity;
 		
 		Shader shader("renderOne/deferred-lights/ambient");
 		setShader(shader);
@@ -72,11 +73,12 @@ namespace rOne
 	void LightDrawer::drawDeferredDirectionalLight(
 		const Vec3 & lightDirection,
 		const Vec3 & in_lightColor1,
-		const Vec3 & in_lightColor2) const
+		const Vec3 & in_lightColor2,
+		const float lightIntensity) const
 	{
 		const Vec3 lightDir_view = -drawDeferredInfo.worldToView.Mul3(lightDirection).CalcNormalized();
-		const Vec3 lightColor1 = srgbToLinear(in_lightColor1);
-		const Vec3 lightColor2 = srgbToLinear(in_lightColor2);
+		const Vec3 lightColor1 = srgbToLinear(in_lightColor1) * lightIntensity;
+		const Vec3 lightColor2 = srgbToLinear(in_lightColor2) * lightIntensity;
 
 		Shader shader("renderOne/deferred-lights/directional");
 		setShader(shader);
@@ -150,7 +152,8 @@ namespace rOne
 		const Vec3 & lightPosition,
 		const float lightAttenuationBegin,
 		const float lightAttenuationEnd,
-		const Vec3 & in_lightColor) const
+		const Vec3 & in_lightColor,
+		const float lightIntensity) const
 	{
 	#if ENABLE_LIGHT_VOLUME_STENCIL
 		if (drawDeferredInfo.enableStencilVolumes)
@@ -170,7 +173,7 @@ namespace rOne
 	#endif
 		
 		const Vec3 lightPos_view = drawDeferredInfo.worldToView.Mul4(lightPosition);
-		const Vec3 lightColor = srgbToLinear(in_lightColor);
+		const Vec3 lightColor = srgbToLinear(in_lightColor) * lightIntensity;
 
 		Shader shader("renderOne/deferred-lights/point");
 		setShader(shader);

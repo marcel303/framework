@@ -44,18 +44,21 @@ namespace rOne
 		// methods for drawing deferred lights
 		
 		void drawDeferredAmbientLight(
-			const Vec3 & lightColor) const;
+			const Vec3 & lightColor,
+			const float lightIntensity) const;
 		
 		void drawDeferredDirectionalLight(
 			const Vec3 & lightDirection,
 			const Vec3 & lightColorTop,
-			const Vec3 & lightColorBottom) const;
+			const Vec3 & lightColorBottom,
+			const float lightIntensity) const;
 		
 		void drawDeferredPointLight(
 			const Vec3 & lightPosition,
 			const float lightAttenuationBegin,
 			const float lightAttenuationEnd,
-			const Vec3 & lightColor) const;
+			const Vec3 & lightColor,
+			const float lightIntensity) const;
 	};
 
 	extern LightDrawer g_lightDrawer;
