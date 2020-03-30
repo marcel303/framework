@@ -19,63 +19,69 @@ void drawMagicaModel(const MagicaWorld & world, const MagicaModel & model)
 		MagicaVoxel emptyVoxel;
 		emptyVoxel.colorIndex = 0xff;
 		
-		for (int x = 0; x < model.sx; ++x)
+		const float vertices[8][3] =
+		{
+			{ -.5f, -.5f, -.5f },
+			{ +.5f, -.5f, -.5f },
+			{ +.5f, +.5f, -.5f },
+			{ -.5f, +.5f, -.5f },
+			{ -.5f, -.5f, +.5f },
+			{ +.5f, -.5f, +.5f },
+			{ +.5f, +.5f, +.5f },
+			{ -.5f, +.5f, +.5f }
+		};
+
+		const int faces[6][4] =
+		{
+			{ 0, 4, 7, 3 },
+			{ 2, 6, 5, 1 },
+			{ 0, 1, 5, 4 },
+			{ 7, 6, 2, 3 },
+			{ 3, 2, 1, 0 },
+			{ 4, 5, 6, 7 }
+		};
+
+		const float normals[6][3] =
+		{
+			{ -1,  0,  0 },
+			{ +1,  0,  0 },
+			{  0, -1,  0 },
+			{  0, +1,  0 },
+			{  0,  0, -1 },
+			{  0,  0, +1 }
+		};
+		
+		const float center_x = (model.sx - 1) / 2.f;
+		const float center_y = (model.sy - 1) / 2.f;
+		const float center_z = (model.sz - 1) / 2.f;
+		
+		for (int z = 0; z < model.sz; ++z)
 		{
 			for (int y = 0; y < model.sy; ++y)
 			{
-				for (int z = 0; z < model.sz; ++z)
+				const MagicaVoxel * __restrict voxel_line = model.getVoxel(0, y, z);
+				
+				for (int x = 0; x < model.sx; ++x)
 				{
-					const MagicaVoxel * voxel = model.getVoxel(x, y, z);
+					const MagicaVoxel * __restrict voxel = voxel_line + x;
 					
 					if (voxel->colorIndex == 0xff)
 						continue;
 					
-					const uint8_t * color = world.palette[voxel->colorIndex];
+					const uint8_t * __restrict color = world.palette[voxel->colorIndex];
 					
 					setColor(color[0], color[1], color[2], color[3]);
 					
-					const float vertices[8][3] =
-					{
-						{ -1, -1, -1 },
-						{ +1, -1, -1 },
-						{ +1, +1, -1 },
-						{ -1, +1, -1 },
-						{ -1, -1, +1 },
-						{ +1, -1, +1 },
-						{ +1, +1, +1 },
-						{ -1, +1, +1 }
-					};
-
-					const int faces[6][4] =
-					{
-						{ 0, 4, 7, 3 },
-						{ 2, 6, 5, 1 },
-						{ 0, 1, 5, 4 },
-						{ 7, 6, 2, 3 },
-						{ 3, 2, 1, 0 },
-						{ 4, 5, 6, 7 }
-					};
-
-					const float normals[6][3] =
-					{
-						{ -1,  0,  0 },
-						{ +1,  0,  0 },
-						{  0, -1,  0 },
-						{  0, +1,  0 },
-						{  0,  0, -1 },
-						{  0,  0, +1 }
-					};
-					
-					const float position_x = x - (model.sx - 1) / 2.f;
-					const float position_y = y - (model.sy - 1) / 2.f;
-					const float position_z = z - (model.sz - 1) / 2.f;
+					const float position_x = x - center_x;
+					const float position_y = y - center_y;
+					const float position_z = z - center_z;
 					
 				#if 1
 					// optimize : determine whether one of the neighboring cells is empty
 					//            if so: draw the face
 					//            otherwise: skip it, since it won't be visible
 					
-					const MagicaVoxel * neighbors[6] =
+					const MagicaVoxel * __restrict neighbors[6] =
 					{
 						model.getVoxelWithBorder(x - 1, y, z, &emptyVoxel),
 						model.getVoxelWithBorder(x + 1, y, z, &emptyVoxel),
@@ -104,9 +110,9 @@ void drawMagicaModel(const MagicaWorld & world, const MagicaModel & model)
 							const float * __restrict vertex = vertices[face[vertex_idx]];
 							
 							gxVertex3f(
-								position_x + .5f * vertex[0],
-								position_y + .5f * vertex[1],
-								position_z + .5f * vertex[2]);
+								position_x + vertex[0],
+								position_y + vertex[1],
+								position_z + vertex[2]);
 						}
 					}
 				}
