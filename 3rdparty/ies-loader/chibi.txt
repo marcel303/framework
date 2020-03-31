@@ -1,0 +1,8 @@
+library ies-loader
+	depend_library rgbe
+	add_files ies_loader.cpp ies_loader.h
+	header_path . expose
+
+app ies-loader-ies2rgbe
+	depend_library ies-loader
+	add_files ies2rgbe/main.cpp
