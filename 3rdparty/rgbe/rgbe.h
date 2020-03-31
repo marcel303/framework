@@ -1,24 +1,24 @@
 #ifndef _H_RGBE
 #define _H_RGBE
 /* THIS CODE CARRIES NO GUARANTEE OF USABILITY OR FITNESS FOR ANY PURPOSE.
- * WHILE THE AUTHORS HAVE TRIED TO ENSURE THE PROGRAM WORKS CORRECTLY,
- * IT IS STRICTLY USE AT YOUR OWN RISK.  */
+* WHILE THE AUTHORS HAVE TRIED TO ENSURE THE PROGRAM WORKS CORRECTLY,
+* IT IS STRICTLY USE AT YOUR OWN RISK.  */
 
 /* utility for reading and writing Ward's rgbe image format.
-   See rgbe.txt file for more details.
+See rgbe.txt file for more details.
 */
 
 #include <stdio.h>
 
 typedef struct {
-  int valid;            /* indicate which fields are valid */
-  char programtype[16]; /* listed at beginning of file to identify it 
-                         * after "#?".  defaults to "RGBE" */ 
-  float gamma;          /* image has already been gamma corrected with 
-                         * given gamma.  defaults to 1.0 (no correction) */
-  float exposure;       /* a value of 1.0 in an image corresponds to
-			 * <exposure> watts/steradian/m^2. 
-			 * defaults to 1.0 */
+	int valid;            /* indicate which fields are valid */
+	char programtype[16]; /* listed at beginning of file to identify it
+						  * after "#?".  defaults to "RGBE" */
+	float gamma;          /* image has already been gamma corrected with
+						  * given gamma.  defaults to 1.0 (no correction) */
+	float exposure;       /* a value of 1.0 in an image corresponds to
+						  * <exposure> watts/steradian/m^2.
+						  * defaults to 1.0 */
 } rgbe_header_info;
 
 /* flags indicating which fields in an rgbe_header_info are valid */
@@ -43,11 +43,8 @@ int RGBE_ReadPixels(FILE *fp, float *data, int numpixels);
 /* read or write run length encoded files */
 /* must be called to read or write whole scanlines */
 int RGBE_WritePixels_RLE(FILE *fp, float *data, int scanline_width,
-			 int num_scanlines);
+	int num_scanlines);
 int RGBE_ReadPixels_RLE(FILE *fp, float *data, int scanline_width,
-			int num_scanlines);
+	int num_scanlines);
 
 #endif /* _H_RGBE */
-
-
-
