@@ -1,0 +1,5 @@
+library rgbe
+	# see: https://www.graphics.cornell.edu/~bjw/rgbe.html
+	add_files rgbe.c rgbe.h rgbe.txt
+	license_file rgbe.txt
+	header_path . expose
