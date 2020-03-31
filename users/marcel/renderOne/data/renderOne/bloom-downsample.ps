@@ -8,7 +8,7 @@ void main()
 {
 	// todo : OpenGL version needs an offset (?)
 
-	vec3 average = texture(source, texcoord).rgb;
+	vec3 color = texture(source, texcoord).rgb;
 
-	shader_fragColor = vec4(average, 1.0);
+	shader_fragColor = vec4(color, 1.0);
 }

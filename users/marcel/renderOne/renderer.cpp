@@ -132,7 +132,7 @@ static void renderLightBuffer(
 					1.f);
 			}
 			
-		#if 0 // todo : leave this set to '0' when checking in!
+		#if 0 // note : leave this set to '0' when checking in!
 			{
 				const Vec3 lightColor = Vec3(1, 1, 1);
 			
@@ -140,7 +140,7 @@ static void renderLightBuffer(
 			}
 		#endif
 		
-		#if 0 // todo : leave this set to '0' when checking in!
+		#if 0 // note : leave this set to '0' when checking in!
 			{
 				const Mat4x4 rotationMatrix = Mat4x4(true).RotateY(framework.time / 2.f).RotateX(sinf(framework.time)/2.f);
 				const Vec3 lightDirection = rotationMatrix.Mul3(Vec3(.3f, -3.f, .6f)).CalcNormalized();
@@ -151,7 +151,7 @@ static void renderLightBuffer(
 			}
 		#endif
 		
-		#if 0 // todo : leave this set to '0' when checking in!
+		#if 0 // note : leave this set to '0' when checking in!
 			{
 				const Vec3 lightPosition = Vec3(cosf(framework.time) * 3.f, 3, sinf(framework.time) * 3.f);
 				const float lightAttenuationBegin = 0.f;
@@ -617,15 +617,16 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 		
 		pushRenderPass(composite[composite_idx], false, nullptr, false, "Bloom apply");
 		{
-		// todo : add bloom apply shader
-		
 			pushBlend(BLEND_ADD_OPAQUE);
-			gxSetTexture(buffers.bloomBuffer->getTextureId());
+			Shader shader("renderOne/bloom-apply");
+			setShader(shader);
 			{
-				setLumif(renderOptions.bloom.strength);
+				shader.setTexture("source", 0, buffers.bloomBuffer->getTextureId(), true, true);
+				shader.setImmediate("strength", renderOptions.bloom.strength);
+				
 				drawRect(0, 0, viewportSx, viewportSy);
 			}
-			gxSetTexture(0);
+			clearShader();
 			popBlend();
 		}
 		popRenderPass();
@@ -735,17 +736,16 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 		
 		pushRenderPass(composite[composite_idx], false, nullptr, false, "Bloom apply");
 		{
-		// todo : add bloom apply shader, as the generic shader does uneccessary work
-		
 			pushBlend(BLEND_ADD_OPAQUE);
-			gxSetTexture(buffers.bloomBlurChain.buffers[0].getTextureId());
-			gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
+			Shader shader("renderOne/bloom-apply");
+			setShader(shader);
 			{
-				setLumif(renderOptions.bloom.strength / buffers.bloomBlurChain.numBuffers);
+				shader.setTexture("source", 0, buffers.bloomBlurChain.buffers[0].getTextureId(), true, true);
+				shader.setImmediate("strength", renderOptions.bloom.strength / buffers.bloomBlurChain.numBuffers);
+				
 				drawRect(0, 0, viewportSx, viewportSy);
 			}
-			gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
-			gxSetTexture(0);
+			clearShader();
 			popBlend();
 		}
 		popRenderPass();
@@ -766,12 +766,12 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 				{
 					const float decayPerSample = powf(renderOptions.lightScatter.decay, 1.f / renderOptions.lightScatter.numSamples);
 					
-					shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
-					shader.setTexture("lightTexture", 1, composite[composite_idx]->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
+					shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), true, false); // note : clamp is intentionally turned off, to expose incorrect sampling
+					shader.setTexture("lightTexture", 1, composite[composite_idx]->getTextureId(), true, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 					shader.setImmediate("origin", renderOptions.lightScatter.origin[0], renderOptions.lightScatter.origin[1]);
 					shader.setImmediate("numSamples", renderOptions.lightScatter.numSamples);
 					shader.setImmediate("decayPerSample", decayPerSample);
-					shader.setImmediate("strength", renderOptions.lightScatter.strength);
+					shader.setImmediate("strength", renderOptions.lightScatter.strength * renderOptions.lightScatter.strengthMultiplier);
 					drawRect(0, 0, viewportSx, viewportSy);
 				}
 				clearShader();

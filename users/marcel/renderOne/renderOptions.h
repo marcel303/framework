@@ -75,7 +75,8 @@ struct RenderOptions
 		Vec2 origin = Vec2(.5f, .2f);
 		int numSamples = 100;
 		float decay = .1f; // todo : decay should be based on distance, not sample # ?
-		float strength = .5f;
+		float strength = 1.f;
+		float strengthMultiplier = 1.f;
 	} lightScatter;
 	
 	struct DepthSilhouette

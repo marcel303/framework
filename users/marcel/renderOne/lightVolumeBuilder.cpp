@@ -131,6 +131,8 @@ namespace rOne
 						{
 							continue;
 						}
+						
+						// optimize : intersect aabb of voxel with the volume of the light. skip non-intersecting voxels
 
 						const int index = indexX + indexY * sx + indexZ * sx * sy;
 
