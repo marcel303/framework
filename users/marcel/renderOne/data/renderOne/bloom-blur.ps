@@ -1,0 +1,34 @@
+include engine/ShaderPS.txt
+
+uniform sampler2D source;
+
+shader_in vec2 texcoord;
+
+// weights calculated using:
+// http://dev.theomader.com/gaussian-kernel-calculator/
+float gaussianKernel[5][5] =
+{
+	{ 0.01767,  0.030501, 0.036587, 0.030501, 0.01767  },
+	{ 0.030501, 0.052649, 0.063154, 0.052649, 0.030501 },
+	{ 0.036587, 0.063154, 0.075755, 0.063154, 0.036587 },
+	{ 0.030501, 0.052649, 0.063154, 0.052649, 0.030501 },
+	{ 0.01767,  0.030501, 0.036587, 0.030501, 0.01767  }
+};
+
+void main()
+{
+	vec3 sum = vec3(0.0);
+
+	for (int x = -2; x <= +2; ++x)
+	{
+		for (int y = -2; y <= +2; ++y)
+		{
+			vec3 value = textureOffset(source, texcoord, ivec2(x, y)).rgb;
+			float weight = gaussianKernel[x + 2][y + 2];
+
+			sum += value * weight;
+		}
+	}
+
+	shader_fragColor = vec4(sum, 1.0);
+}

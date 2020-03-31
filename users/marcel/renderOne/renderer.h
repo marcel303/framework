@@ -7,8 +7,8 @@
 #define BLOOM_METHOD_DOWNSAMPLE_CHAIN   0
 #define BLOOM_METHOD_ONE_LARGE_GAUSSIAN 1
 
-//#define BLOOM_METHOD BLOOM_METHOD_DOWNSAMPLE_CHAIN
-#define BLOOM_METHOD BLOOM_METHOD_ONE_LARGE_GAUSSIAN
+#define BLOOM_METHOD BLOOM_METHOD_DOWNSAMPLE_CHAIN
+//#define BLOOM_METHOD BLOOM_METHOD_ONE_LARGE_GAUSSIAN
 
 class Color;
 class ColorTarget;
@@ -55,7 +55,10 @@ struct RenderBuffers
 		
 		void alloc(const int sx, const int sy);
 		void free();
-	} bloomChain;
+	};
+	
+	BloomChain bloomDownsampleChain;
+	BloomChain bloomBlurChain;
 #endif
 
 	~RenderBuffers();

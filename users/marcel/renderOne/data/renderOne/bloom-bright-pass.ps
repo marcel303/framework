@@ -1,0 +1,18 @@
+include engine/ShaderPS.txt
+
+uniform sampler2D source;
+
+shader_in vec2 texcoord;
+
+void main()
+{
+	vec4 color = texture(source, texcoord);
+
+	float lumi = (color.r + color.g + color.b) * (1.0/3.0);
+	//float lumi = max3(color.r, color.g, color.b);
+
+	if (lumi < 0.9) // todo : add a uniform for pass threshold
+		shader_fragColor = vec4(0.0);
+	else
+		shader_fragColor = color;
+}

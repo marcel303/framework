@@ -585,6 +585,8 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 		
 		ColorTarget * src = composite[composite_idx];
 		
+		// blur the bloom buffer
+		
 		pushRenderPass(composite[next_composite_idx], true, nullptr, false, "Bloom blur H");
 		{
 			pushBlend(BLEND_OPAQUE);
@@ -611,6 +613,8 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 		}
 		popRenderPass();
 		
+		// apply bloom
+		
 		pushRenderPass(composite[composite_idx], false, nullptr, false, "Bloom apply");
 		{
 		// todo : add bloom apply shader
@@ -619,7 +623,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			gxSetTexture(buffers.bloomBuffer->getTextureId());
 			{
 				setLumif(renderOptions.bloom.strength);
-				drawRect(0, 0, buffers.bloomBuffer->getWidth(), buffers.bloomBuffer->getHeight());
+				drawRect(0, 0, viewportSx, viewportSy);
 			}
 			gxSetTexture(0);
 			popBlend();
@@ -631,21 +635,42 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 #if BLOOM_METHOD == BLOOM_METHOD_DOWNSAMPLE_CHAIN
 	if (renderOptions.bloom.enabled)
 	{
+		int next_composite_idx = 1 - composite_idx;
+		
+		ColorTarget * src = composite[composite_idx];
+		ColorTarget * dst = composite[next_composite_idx];
+		
+		// mask colors based on brightness
+		
+		pushRenderPass(dst, true, nullptr, false, "Bloom bright pass");
+		{
+			pushBlend(BLEND_OPAQUE);
+			Shader shader("renderOne/bloom-bright-pass");
+			setShader(shader);
+			{
+				shader.setTexture("source", 0, src->getTextureId(), false, true);
+				drawRect(0, 0, src->getWidth(), src->getHeight());
+			}
+			clearShader();
+			popBlend();
+		}
+		popRenderPass();
+			
+		src = dst;
+	
+		// create down sampled buffers
+		
 		pushBlend(BLEND_OPAQUE);
 		{
 			Shader shader("renderOne/bloom-downsample");
 			setShader(shader);
 			{
-				ColorTarget * src = composite[composite_idx];
-				
-				for (int i = 0; i < buffers.bloomChain.numBuffers; ++i)
+				for (int i = 0; i < buffers.bloomDownsampleChain.numBuffers; ++i)
 				{
-					ColorTarget * dst = &buffers.bloomChain.buffers[i];
-				
+					dst = &buffers.bloomDownsampleChain.buffers[i];
+					
 					pushRenderPass(dst, true, nullptr, false, "Bloom chain");
 					{
-						projectScreen2d();
-						
 						shader.setTexture("source", 0, src->getTextureId(), true, true);
 						
 						drawRect(0, 0, dst->getWidth(), dst->getHeight());
@@ -659,7 +684,71 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 		}
 		popBlend();
 		
-		// todo : apply bloom
+		// add/upscale lower level buffer and blur
+		
+		for (int i = buffers.bloomDownsampleChain.numBuffers - 1; i >= 0; --i)
+		{
+			if (i + 1 < buffers.bloomDownsampleChain.numBuffers)
+			{
+				ColorTarget * src = &buffers.bloomBlurChain.buffers[i + 1];
+				ColorTarget * dst = &buffers.bloomDownsampleChain.buffers[i];
+			
+				// add the lower resolution buffer to the current buffer
+				
+				pushRenderPass(dst, false, nullptr, false, "Bloom chain add");
+				pushBlend(BLEND_ADD_OPAQUE);
+				{
+				// todo : use a shader for the addition, as the generic shader does uneccessary work
+					gxSetTexture(src->getTextureId());
+					gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
+					setColor(colorWhite);
+					drawRect(0, 0, dst->getWidth(), dst->getHeight());
+					gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
+					gxSetTexture(0);
+				}
+				popBlend();
+				popRenderPass();
+			}
+			
+			// blur the buffer
+			
+			ColorTarget * src = &buffers.bloomDownsampleChain.buffers[i];
+			ColorTarget * dst = &buffers.bloomBlurChain.buffers[i];
+			
+			pushRenderPass(dst, true, nullptr, false, "Bloom chain blur");
+			pushBlend(BLEND_OPAQUE);
+			{
+				Shader shader("renderOne/bloom-blur");
+				setShader(shader);
+				{
+					shader.setTexture("source", 0, src->getTextureId(), false, true);
+					
+					drawRect(0, 0, dst->getWidth(), dst->getHeight());
+				}
+				clearShader();
+			}
+			popBlend();
+			popRenderPass();
+		}
+		
+		// apply bloom
+		
+		pushRenderPass(composite[composite_idx], false, nullptr, false, "Bloom apply");
+		{
+		// todo : add bloom apply shader, as the generic shader does uneccessary work
+		
+			pushBlend(BLEND_ADD_OPAQUE);
+			gxSetTexture(buffers.bloomBlurChain.buffers[0].getTextureId());
+			gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
+			{
+				setLumif(renderOptions.bloom.strength / buffers.bloomBlurChain.numBuffers);
+				drawRect(0, 0, viewportSx, viewportSy);
+			}
+			gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
+			gxSetTexture(0);
+			popBlend();
+		}
+		popRenderPass();
 	}
 #endif
 
@@ -933,8 +1022,10 @@ void RenderBuffers::alloc(const int in_sx, const int in_sy, const bool in_linear
 	#endif
 	
 	#if BLOOM_METHOD == BLOOM_METHOD_DOWNSAMPLE_CHAIN
-		bloomChain.free();
-		bloomChain.alloc(sx, sy);
+		bloomDownsampleChain.free();
+		bloomDownsampleChain.alloc(sx, sy);
+		bloomBlurChain.free();
+		bloomBlurChain.alloc(sx, sy);
 	#endif
 	}
 }
@@ -977,7 +1068,8 @@ void RenderBuffers::free()
 #endif
 
 #if BLOOM_METHOD == BLOOM_METHOD_DOWNSAMPLE_CHAIN
-	bloomChain.free();
+	bloomDownsampleChain.free();
+	bloomBlurChain.free();
 #endif
 
 	//
@@ -1015,7 +1107,8 @@ void RenderBuffers::BloomChain::alloc(const int sx, const int sy)
 		
 		numBuffers++;
 	}
-	while (tsx > 2 || tsy > 2);
+	//while (tsx > 2 || tsy > 2);
+	while (tsx > 8 || tsy > 8);
 	
 	logDebug("num bloom buffers: %d", numBuffers);
 	
@@ -1026,16 +1119,12 @@ void RenderBuffers::BloomChain::alloc(const int sx, const int sy)
 	tsx = getNearestPowerOfTwo(sx) << 1;
 	tsy = getNearestPowerOfTwo(sy) << 1;
 	
-	int i = 0;
-	
-	while (tsx > 2 || tsy > 2)
+	for (int i = 0; i < numBuffers; ++i)
 	{
 		tsx = tsx/2 > 2 ? tsx/2 : 2;
 		tsy = tsy/2 > 2 ? tsy/2 : 2;
 		
 		buffers[i].init(tsx, tsy, SURFACE_RGBA16F, colorBlackTranslucent);
-		
-		i++;
 	}
 }
 
@@ -1318,9 +1407,16 @@ void Renderer::render(const RenderFunctions & renderFunctions, const RenderOptio
 					{
 						nextRow();
 
-						for (int i = 0; i < buffers.bloomChain.numBuffers; ++i)
+						for (int i = 0; i < buffers.bloomDownsampleChain.numBuffers; ++i)
 						{
-							showRenderTarget(buffers.bloomChain.buffers[i].getTextureId(), "Bloom down");
+							showRenderTarget(buffers.bloomDownsampleChain.buffers[i].getTextureId(), "Bloom down");
+						}
+						
+						nextRow();
+
+						for (int i = 0; i < buffers.bloomBlurChain.numBuffers; ++i)
+						{
+							showRenderTarget(buffers.bloomBlurChain.buffers[i].getTextureId(), "Bloom blur");
 						}
 					}
 				#endif
