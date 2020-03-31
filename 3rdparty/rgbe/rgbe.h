@@ -8,6 +8,10 @@
 See rgbe.txt file for more details.
 */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 
 typedef struct {
@@ -46,5 +50,9 @@ int RGBE_WritePixels_RLE(FILE *fp, float *data, int scanline_width,
 	int num_scanlines);
 int RGBE_ReadPixels_RLE(FILE *fp, float *data, int scanline_width,
 	int num_scanlines);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _H_RGBE */
