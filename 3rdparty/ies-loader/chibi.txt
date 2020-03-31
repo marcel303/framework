@@ -1,6 +1,7 @@
 library ies-loader
 	depend_library rgbe
 	add_files ies_loader.cpp ies_loader.h
+	license_file license.txt
 	header_path . expose
 
 app ies-loader-ies2rgbe
