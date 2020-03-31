@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <string.h>
 
 #define ENABLE_UNIX_ONLY_CODE 0
 
