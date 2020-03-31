@@ -1,9 +1,14 @@
-#include "ies_Loader.h"
+#include "ies_loader.h"
 #include "rgbe.h"
 
-//#include <io.h>
 #include <fstream>
 #include <iostream>
+
+#define ENABLE_UNIX_ONLY_CODE 0
+
+#if ENABLE_UNIX_ONLY_CODE
+	#include <io.h>
+#endif
 
 struct IESOutputData
 {
@@ -66,7 +71,12 @@ bool IES2HDR(const std::string& path, const std::string& outpath, IESFileInfo& i
 bool IES2HDR(const std::string& path, IESFileInfo& info)
 {
 	std::size_t i = path.rfind(".");
-	std::string out = path.substr(0, i) + ".hdr";
+	std::string out;
+	
+	if (i == path.npos)
+		out = path + ".hdr";
+	else
+		out = path.substr(0, i) + ".hdr";
 
 	return IES2HDR(path, out, info);
 }
@@ -90,7 +100,7 @@ int main(int argc, const char* argv[])
 		}
 		else
 		{
-/*
+		#if ENABLE_UNIX_ONLY_CODE
 			std::string path = drive;
 			path += dir;
 			path += fname;
@@ -123,7 +133,7 @@ int main(int argc, const char* argv[])
 
 				_findclose(handle);
 			}
-*/
+		#endif
 		}
 	}
 	catch (const std::exception& e)
