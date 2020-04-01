@@ -44,6 +44,7 @@ As such, its language tries to be pragmatic and sparse, optimized for expression
 In summary,
 
 - Clone the `framework` repository,
+- Clone the submodules of the `framework` repository,
 - Create a 'chibi root' file, and let it point to both the 'framework' repository and your own repository(s),
 - Generate the project file.
 
@@ -53,6 +54,14 @@ Step by step:
 cd ~
 git clone https://github.com/marcel303/framework
 git clone https://github.com/<your-account>/<your-project>
+```
+
+Clone `framework` submodules,
+
+```
+cd ~
+cd framework
+git submodule update --init --recursive
 ```
 
 Create a text file named `chibi-root.txt` with the following contents,
