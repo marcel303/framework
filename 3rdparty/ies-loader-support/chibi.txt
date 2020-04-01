@@ -1,0 +1,4 @@
+app ies-loader-test
+	depend_library ies-loader
+	depend_library framework
+	add_files main.cpp

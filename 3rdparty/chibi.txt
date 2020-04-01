@@ -11,6 +11,7 @@ add freetype2-support
 add glew
 add hg-sdf
 add ies-loader
+add ies-loader-support
 add imgui-support
 add jsoncpp
 add leapmotion
