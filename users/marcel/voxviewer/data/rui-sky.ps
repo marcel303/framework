@@ -1,5 +1,7 @@
 // License (MIT) Copyright (C) 2017-2018 Rui. All rights reserved.
-                
+
+// source : https://www.shadertoy.com/view/XlBfRD
+
 #define float2 vec2
 #define float3 vec3
 #define float4 vec4
@@ -10,6 +12,12 @@
 #define EPSILON 1e-5
 
 #define SAMPLES_NUMS 16
+
+#if defined(__METAL_VERSION__)
+	#define OUT(type, name) thread type & name
+#else
+	#define OUT(type, name) out type name
+#endif
 
 float saturate(float x)
 {
@@ -132,7 +140,7 @@ float2 ComputeOpticalDepth(ScatteringParams setting, float3 samplePoint, float3 
 	return float2(opticalDepthSun, opticalDepthCamera);
 }
 
-void AerialPerspective(ScatteringParams setting, float3 start, float3 end, float3 V, float3 L, bool infinite, out float3 transmittance, out float3 insctrMie, out float3 insctrRayleigh)
+void AerialPerspective(ScatteringParams setting, float3 start, float3 end, float3 V, float3 L, bool infinite, OUT(float3, transmittance), OUT(float3, insctrMie), OUT(float3, insctrRayleigh))
 {
 	float inf_neg = infinite ? 1.0 : -1.0;
 
@@ -164,7 +172,7 @@ void AerialPerspective(ScatteringParams setting, float3 start, float3 end, float
 	insctrRayleigh = scattering * setting.waveLambdaRayleigh * sampleLength;
 }
 
-float ComputeSkyboxChapman(ScatteringParams setting, float3 eye, float3 V, float3 L, out float3 transmittance, out float3 insctrMie, out float3 insctrRayleigh)
+float ComputeSkyboxChapman(ScatteringParams setting, float3 eye, float3 V, float3 L, OUT(float3, transmittance), OUT(float3, insctrMie), OUT(float3, insctrRayleigh))
 {
 	bool neg = true;
 
@@ -235,23 +243,32 @@ float noise(float2 uv)
 
 //
 
+#if 0
 uniform vec2 iResolution;
 uniform vec2 iMouse;
+#endif
 
+uniform vec3 ligthDirection;
+
+shader_in vec3 v_position;
 shader_in vec2 v_texcoord;
 
 void main()
 {
+#if 0
 	vec2 uv = v_texcoord;
     
-    //vec2 mouse = vec2(0.5, 0.7);
     vec2 mouse = iMouse.xy / iResolution.xy;
     if (mouse.x == 0.0 && mouse.y == 0.0)
         mouse = float2(0.5, 0.7);
     
     float3 V = ComputeSphereNormal(uv, 0.0, PI_2, 0.0, PI);
     float3 L = ComputeSphereNormal(float2(mouse.x, mouse.y), 0.0, PI_2, 0.0, PI);
-    
+#else
+    float3 V = normalize(v_position);
+    float3 L = -ligthDirection;
+#endif
+
 	ScatteringParams setting;
 	setting.sunRadius = 500.0;
 	setting.sunRadiance = 20.0;
@@ -271,9 +288,7 @@ void main()
 	
     float3 eye = float3(0,1000.0,0);
    	float4 sky = ComputeSkyInscattering(setting, eye, V, L);
-    sky.rgb = TonemapACES(sky.rgb * 2.0);
-    sky.rgb = pow(sky.rgb, float3(1.0 / 2.2)); // gamma
-    //sky.rgb += noise(uv*iTime) / 255.0; // dither
-   
+    
 	shader_fragColor = float4(sky.rgb, 1.0);
+	shader_fragEmissive = 1.0;
 }
