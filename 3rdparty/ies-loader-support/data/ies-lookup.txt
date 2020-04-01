@@ -1,0 +1,29 @@
+uniform sampler2D ies_texture;
+
+float ies_lookup(vec3 direction)
+{
+	float h = length(direction.xz);
+	float x_angle = atan(direction[0], -direction[1]);
+	float y_angle = atan(direction[2], -direction[1]);
+
+	x_angle = abs(x_angle);
+	y_angle = abs(y_angle);
+
+	vec2 uv = vec2(x_angle, y_angle) / 3.141271809;
+
+	return texture(ies_texture, uv).x;
+}
+
+float ies_lookup_1d(vec3 direction)
+{
+#if 0
+	float h = length(direction.xz);
+	float angle = atan(h, -direction[1]);
+#else
+	float angle = acos(-normalize(direction).y);
+#endif
+
+	vec2 uv = vec2(angle, 0.5) / 3.141271809;
+
+	return texture(ies_texture, uv).x;
+}

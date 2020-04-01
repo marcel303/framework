@@ -1,0 +1,64 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+include ies-lookup.txt
+
+uniform vec3 lightPosition_world;
+
+shader_in vec3 v_position;
+shader_in vec3 v_origin;
+
+shader_in vec4 v_debug;
+
+void main()
+{
+	vec3 position = v_origin;
+	vec3 direction = normalize(v_position - v_origin);
+
+	float sum = 0.0;
+
+	int n = 60;
+
+	float maxDistance = 2.0;
+	vec3 step = direction * maxDistance / n;
+
+	for (int i = 0; i < n; ++i)
+	{
+		vec3 direction = position - lightPosition_world;
+
+	#if 1
+		float distanceSquared = dot(direction, direction);
+
+		float value = ies_lookup_1d(direction) / distanceSquared;
+	#else
+		float value = ies_lookup_1d(direction);
+	#endif
+	
+	#if 0
+		// todo : increment length in loop
+		float viewDistance = length(position - v_origin);
+		float lightDistance = length(direction);
+
+		float thickness = 0.5;
+
+		float falloffToView = pow(1.0 - thickness, viewDistance);
+		float falloffToLight = pow(1.0 - thickness, lightDistance);
+
+		value *= falloffToView;
+		value *= falloffToLight;
+		value *= thickness;
+	#endif
+
+		sum += value;
+
+		position += step;
+	}
+
+	sum /= 400.0;
+
+	sum = pow(sum, 1.0/2.2);
+
+	vec3 color = vec3(sum);
+
+	shader_fragColor = vec4(color, 1.0);
+	//shader_fragColor.rgb = v_debug.xyz;
+}

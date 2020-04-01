@@ -38,7 +38,6 @@ int main(int argc, char * argv[])
 					
 					if (helper.load(text, size, info))
 					{
-					#if 1
 						uint8_t * data = new uint8_t[viewSx * viewSy];
 						
 						if (helper.saveAsPreview(info, data, viewSx, viewSy, 1))
@@ -50,19 +49,6 @@ int main(int argc, char * argv[])
 						
 						delete [] data;
 						data = nullptr;
-					#else
-						float * data = new float[viewSx * viewSy];
-						
-						if (helper.saveAs2D(info, data, viewSx, viewSy, 1))
-						{
-							freeTexture(texture);
-							
-							texture = createTextureFromR32F(data, viewSx, viewSy, true, true);
-						}
-						
-						delete [] data;
-						data = nullptr;
-					#endif
 					}
 					
 					delete [] text;
@@ -75,9 +61,6 @@ int main(int argc, char * argv[])
 		{
 			if (texture != 0)
 			{
-				setColorClamp(false);
-				setLumif(mouse.x / 80.f);
-				setAlphaf(1.f);
 				setColor(colorWhite);
 				gxSetTexture(texture);
 				pushColorPost(POST_SET_RGB_TO_R);

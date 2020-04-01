@@ -1,0 +1,16 @@
+include engine/ShaderPS.txt
+include ies-lookup.txt
+
+uniform vec3 lightPosition_world;
+
+shader_in vec3 v_position;
+
+void main()
+{
+	vec3 direction = v_position - lightPosition_world;
+
+	float value = ies_lookup(direction);
+
+	shader_fragColor = vec4(vec3(value), 1.0);
+	//shader_fragColor = vec4(1.0);
+}

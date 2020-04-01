@@ -1,4 +1,10 @@
-app ies-loader-test
+app ies-loader-viewer
 	depend_library ies-loader
 	depend_library framework
-	add_files main.cpp
+	add_files main-viewer.cpp
+
+app ies-loader-view3d
+	depend_library ies-loader
+	depend_library framework
+	add_files main-view3d.cpp
+	resource_path data
