@@ -589,6 +589,10 @@ bool Framework::init(int sx, int sy)
 
 	SDL_DisableScreenSaver();
 
+	// set the default font
+	
+	setFont("engine/fonts/Roboto-Regular.ttf");
+	
 	return true;
 }
 
