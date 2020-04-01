@@ -41,6 +41,149 @@ As such, its language tries to be pragmatic and sparse, optimized for expression
 
 ## Getting started ##
 
+In summary,
+
+- Clone the `framework` repository,
+- Create a 'chibi root' file, and let it point to both the 'framework' repository and your own repository(s),
+- Generate the project file.
+
+Step by step:
+
+```
+cd ~
+git clone https://github.com/marcel303/framework
+git clone https://github.com/<your-account>/<your-project>
+```
+
+Create a text file named `chibi-root.txt` with the following contents,
+
+```
+cd ~
+vim chibi-root.txt
+```
+
+```
+add_root framework
+```
+
+This will create a chibi root file referencing the chibi root file in the `framework` repository.
+
+Generate the project file,
+
+On linux/macOS,
+
+```
+cd ~
+cd framework
+./generate.sh
+```
+
+On Windows,
+
+```
+cd framework
+generate.bat
+```
+
+The project file generator should open Finder on macOS, with `Project.xcodeproj` focused, or Explorer on Windows, with `Project.sln` focused.
+
+Open the generated project file in your favourite ide. To run one of the example apps, select the target and build and run it.
+
+### Using framework within your own projects
+To use `framework` within your own apps, you will need to,
+
+- Create a folder and a `chibi.txt` file for your app(s),
+- Add your chibi file to the chibi root,
+- Add one or more apps to your chibi file, and depend on the framework library,
+- Generate the project file.
+
+Step by step:
+
+Create a folder and a `chibi.txt` file,
+
+```
+cd ~
+mkdir myapp
+```
+
+Create a `chibi.txt` file within the `myapp` folder with the following contents,
+
+```
+cd myapp
+vim chibi.txt
+```
+
+```
+app myapp
+	depend_library framework
+	add_files main.cpp
+```
+
+Create a `main.cpp` file,
+
+```
+#include "framework.h"
+
+int main(int argc, char * argv[])
+{
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
+	if (!framework.init(800, 600))
+		return -1;
+
+	for (;;)
+	{
+		framework.process();
+
+		if (framework.quitRequested)
+			break;
+
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			setColor(colorWhite);
+			drawRect(100, 100, 200, 200);
+		}
+		framework.endDraw();
+	}
+
+	framework.shutdown();
+}
+```
+
+Add your chibi file to `chibi-root.txt`,
+
+```
+cd ~
+vim chibi-root.txt
+```
+
+```
+add_root framework
+add myapp
+```
+
+Generate the project file,
+
+```
+cd ~
+cd framework
+./generate.sh myapp
+```
+
+Note that the target to generate the project file for is set to `myapp`. This will generate a project file tailored to build and run `myapp` only. If you want to add more targets to your project file, that's possible too. Just append the targets you want to generate to the command line.
+
+For instance,
+
+```
+./generate.sh myapp vfxgraph-*
+```
+
+Note that the wildcard `*` means we will generate all of the libraries and apps with a name starting with `vfxgraph-`. These are all of the vfxgraph library example apps.
+
+### Marcel's user apps ###
+
+There's a few user-contributed apps and libraries inside the `users/marcel` folder. The chibi root file for these projects isn't hooked up by default. You can add `users/marcel/chibi-root.txt` to your root file and generate these apps and libraries. This folder is where I develop new ideas, and add prototypes for libraries, that may eventually be included in a next version of framework.
+
 ## What else is included? ##
 
 ### Framework libraries ###
