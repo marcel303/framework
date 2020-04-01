@@ -1,6 +1,7 @@
 #include "ies_loader.h"
 #include "rgbe.h"
 
+#include <cstring>
 #include <fstream>
 #include <iostream>
 #include <string.h>
