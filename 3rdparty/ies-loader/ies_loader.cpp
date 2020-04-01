@@ -125,7 +125,7 @@ IESLoadHelper::load(const std::string& data, IESFileInfo& info)
 	}
 
 	this->getFloat(dataPos, dataPos, info.totalLumens);
-	if (info.totalLumens < 0)
+	if (info.totalLumens < 0 && info.totalLumens != -1.f)
 	{
 		info._error = "TotalLumens is not positive number";
 		return false;
@@ -326,11 +326,9 @@ IESLoadHelper::saveAsPreview(const IESFileInfo& info, std::uint8_t* data, std::u
 	assert(channel == 1 || channel == 3 || channel == 4);
 	assert(info.valid());
 
-	std::vector<float> ies(256);
+	std::vector<float> ies(1024);
 	if (!this->saveAs1D(info, ies.data(), ies.size(), 1))
 		return false;
-
-	float maxValue = this->computeInvMax(info._candalaValues);
 
 	auto TonemapHable = [](float x)
 	{
@@ -347,28 +345,39 @@ IESLoadHelper::saveAsPreview(const IESFileInfo& info, std::uint8_t* data, std::u
 	{
 		for (int x = 0; x < width; x++)
 		{
-			float u = ((float)x / width) * 2.0f - 1.0f;
-			float v = 1.0f - ((float)y / height) * 2.0f - 1.0f;
+			float u = ((float)x / width)  * 2.0f - 1.0f;
+			float v = ((float)y / height) * 2.0f - 1.0f + 0.7f;
 
-			u *= 2.2f;
-			v *= 2.4f;
-
-			// float3(0.0f, 0.0f, -0.5f) - ray::float3(u, v, 0.0f)
-			float lx = +0.0f - u;
-			float ly = +0.0f - v;
-			float lz = -0.5f - 0.0f;
-
-			// normalize
+			float lx = u;
+			float ly = v;
+			float lz = 0.0f;
+			
+			lx *= 8.0f;
+			ly *= 8.0f;
+			lz *= 8.0f;
+			
+			lz += 0.3f;
+			
 			float length = std::sqrt(lx * lx + ly * ly + lz * lz);
+			
 			lx /= length;
 			ly /= length;
 			lz /= length;
-
-			float angle = 1.0 - std::acos(lx * 0.0 + ly * -1.0 + lz * 0.0f) / 3.141592654;
-
-			float intensity = ies[angle * 255] * maxValue / length;
-
-			std::uint8_t value = std::min(std::max((int)std::floor(TonemapHable(intensity) / TonemapHable(maxValue) * 255.0f), 0), 255);
+			
+			float angle = std::atan2(std::hypot(lx, lz), ly) / 3.141592654;
+			if (angle < 0.0)
+				angle = -angle;
+			assert(angle >= 0.0 && angle < 1.0);
+			
+			float value_linear = ies[angle * ies.size()] / (length * length);
+			
+			value_linear = TonemapHable(value_linear) / TonemapHable(1.0f);
+			float value_srgb = std::pow(value_linear, 1.0/2.2f);
+			
+			value_srgb *= 255.0f;
+			value_srgb += ((rand() % 1000) / 1000.0f - 0.5f) * 2.f;
+			
+			std::uint8_t value = std::min(std::max((int)std::floor(value_srgb), 0), 255);
 
 			switch (channel)
 			{
@@ -445,7 +454,7 @@ IESLoadHelper::computeFilterPos(float value, const std::vector<float>& angles) c
 			fraction = (value - leftValue) / deltaValue;
 		}
 	}
-
+	
 	return start + fraction;
 }
 
