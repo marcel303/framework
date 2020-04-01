@@ -162,7 +162,8 @@ enum COLOR_POST // setColorPost
 	POST_PREMULTIPLY_RGB_WITH_ALPHA = POST_RGB_MIX_ALPHA_TO_ZERO,
 	POST_BLEND_MUL_FIX = POST_RGB_MIX_ALPHA_TO_ONE,
 	POST_SET_ALPHA_TO_ONE,
-	POST_RGB_TO_LUMI
+	POST_RGB_TO_LUMI,
+	POST_SET_RGB_TO_R
 };
 
 enum DEPTH_TEST // setDepthTest
@@ -1853,6 +1854,7 @@ void showErrorMessage(const char * caption, const char * format, ...);
 
 // builtin shaders
 
+void makeGaussianKernel(int kernelSize, float * kernel, float sigma = 1.632f);
 void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma = 1.632f);
 
 void setShader_GaussianBlurH(const GxTextureId source, const int kernelSize, const float radius);

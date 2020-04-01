@@ -77,7 +77,8 @@ vec4 applyColorPost(vec4 color, float post)
 	POST_RGB_MIX_ALPHA_TO_ZERO,
 	POST_RGB_MIX_ALPHA_TO_ONE,
 	POST_SET_ALPHA_TO_ONE,
-	POST_RGB_TO_LUMI
+	POST_RGB_TO_LUMI,
+	POST_SET_RGB_TO_R
 	*/
 
 	vec4 result = color;
@@ -99,6 +100,10 @@ vec4 applyColorPost(vec4 color, float post)
 		else if (post == 4.0)
 		{
 			result.rgb = vec3(rgbLuminance(result.rgb));
+		}
+		else if (post == 5.0)
+		{
+			result.rgb = vec3(result.r);
 		}
 	}
 

@@ -34,41 +34,46 @@ static const int kMaxGaussianKernelSize = 128;
 
 static const Vec4 lumiVec(.30f, .59f, .11f, 0.f); // luminance = dot(lumiVec, srgb_color)
 
-void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma)
+void makeGaussianKernel(int kernelSize, float * kernel, float sigma)
 {
 	auto dist = [](const float x) { return .5f * erfcf(-x); };
 	
+	for (int i = 0; i < kernelSize; ++i)
+	{
+		const float x1 = (i - .5f) / float(kernelSize - 1.f);
+		const float x2 = (i + .5f) / float(kernelSize - 1.f);
+		
+		const float y1 = dist(x1 * sigma);
+		const float y2 = dist(x2 * sigma);
+		
+		const float dy = y2 - y1;
+		
+		//printf("%02.2f - %02.2f : %02.4f\n", x1, x2, dy);
+		
+		kernel[i] = dy;
+	}
+
+	float total = kernel[0];
+
+	for (int i = 1; i < kernelSize; ++i)
+		total += kernel[i] * 2.f;
+
+	if (total > 0.f)
+	{
+		for (int i = 0; i < kernelSize; ++i)
+		{
+			kernel[i] /= total;
+		}
+	}
+}
+
+void makeGaussianKernel(int kernelSize, ShaderBuffer & kernel, float sigma)
+{
 	float * values = (float*)alloca(sizeof(float) * kernelSize);
 	
 	if (kernelSize > 0)
 	{
-		for (int i = 0; i < kernelSize; ++i)
-		{
-			const float x1 = (i - .5f) / float(kernelSize - 1.f);
-			const float x2 = (i + .5f) / float(kernelSize - 1.f);
-			
-			const float y1 = dist(x1 * sigma);
-			const float y2 = dist(x2 * sigma);
-			
-			const float dy = y2 - y1;
-			
-			//printf("%02.2f - %02.2f : %02.4f\n", x1, x2, dy);
-			
-			values[i] = dy;
-		}
-		
-		float total = values[0];
-		
-		for (int i = 1; i < kernelSize; ++i)
-			total += values[i] * 2.f;
-		
-		if (total > 0.f)
-		{
-			for (int i = 0; i < kernelSize; ++i)
-			{
-				values[i] /= total;
-			}
-		}
+		makeGaussianKernel(kernelSize, values, sigma);
 	}
 	
 	kernel.setData(values, sizeof(float) * kernelSize);
