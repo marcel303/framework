@@ -9,8 +9,17 @@ void main()
 {
 	vec3 direction = v_position - lightPosition_world;
 
-	float value = ies_lookup(direction);
+	float value = ies_lookup_1d(direction);
+
+#if 1
+	float distanceSquared = dot(direction, direction);
+
+	value /= distanceSquared;
+#endif
+
+	value /= 10.0;
+
+	value = pow(value, 1.0/2.2);
 
 	shader_fragColor = vec4(vec3(value), 1.0);
-	//shader_fragColor = vec4(1.0);
 }

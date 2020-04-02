@@ -8,6 +8,7 @@ int main(int argc, char * argv[])
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	framework.enableRealTimeEditing = true;
+	framework.msaaLevel = 4;
 	
 	if (!framework.init(400, 400))
 		return -1;
@@ -22,8 +23,6 @@ int main(int argc, char * argv[])
 	
 	for (;;)
 	{
-		//framework.waitForEvents = true;
-		
 		framework.process();
 
 		if (framework.quitRequested)
@@ -72,14 +71,19 @@ int main(int argc, char * argv[])
 			}
 		}
 		
-		camera.tick(framework.timeStep, true);
+		const bool enableCamera = mouse.isDown(BUTTON_LEFT);
+		
+		mouse.showCursor(!enableCamera);
+		SDL_CaptureMouse(enableCamera ? SDL_TRUE : SDL_FALSE);
+		
+		camera.tick(framework.timeStep, enableCamera);
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			const Vec3 lightPosition_world = Vec3(0, 1, 0);
 			const Mat4x4 viewToWorld = camera.getWorldMatrix();
 			
-		#if false
+		#if true
 			projectPerspective3d(90.f, .01f, 100.f);
 			
 			camera.pushViewMatrix();
@@ -100,7 +104,7 @@ int main(int argc, char * argv[])
 						gxScalef(4, 4, 4);
 						
 						setColor(colorWhite);
-						drawGrid3d(1, 1, 0, 2);
+						drawGrid3dLine(100, 100, 0, 2);
 					}
 					gxPopMatrix();
 				}
