@@ -334,12 +334,10 @@ int main(int argc, char * argv[])
 		
 		camera.tick(framework.timeStep, true);
 		
-		// -- draw shadow maps --
+		// -- add animated spot lights --
 		
-		const Mat4x4 worldToView = camera.getViewMatrix();
-	
 		std::vector<SpotLight> spots;
-		for (int i = 0; i < 2; ++i)
+		for (int i = 0; i < 3; ++i)
 		{
 			SpotLight spot;
 			spot.transform.MakeLookat(
@@ -354,8 +352,11 @@ int main(int argc, char * argv[])
 			
 			spots.push_back(spot);
 		}
-	
+		
+		// -- draw shadow maps --
+		
 		size_t id = 0;
+
 		for (auto & spot : spots)
 		{
 			d.addSpotLight(id++, spot.transform, spot.angle, .01f, 6.f);
@@ -363,13 +364,25 @@ int main(int argc, char * argv[])
 		
 		d.drawShadowMaps();
 		
+		// -- determine view matrix --
+		
+		Mat4x4 worldToView = camera.getViewMatrix();
+		
+		if (keyboard.isDown(SDLK_1))
+			worldToView = spots[0].transform.CalcInv();
+		if (keyboard.isDown(SDLK_2))
+			worldToView = spots[1].transform.CalcInv();
+		if (keyboard.isDown(SDLK_3))
+			worldToView = spots[2].transform.CalcInv();
+		
 		//
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			projectPerspective3d(90.f, .01f, 100.f);
 			
-			camera.pushViewMatrix();
+			gxPushMatrix();
+			gxMultMatrixf(worldToView.m_v);
 			pushDepthTest(true, DEPTH_LESS);
 			{
 				Shader shader("light-with-shadow");
@@ -387,19 +400,24 @@ int main(int argc, char * argv[])
 					pushLineSmooth(true);
 					gxPushMatrix();
 					{
+						const float radius = tanf(spot.angle / 2.f * float(M_PI)/180.f);
+						
 						gxMultMatrixf(spot.transform.m_v);
 						setColor(colorWhite);
-						lineCube(Vec3(), Vec3(1, 1, 1));
+						//lineCube(Vec3(), Vec3(1, 1, 1));
+						gxPushMatrix();
+						gxTranslatef(0, 0, 1);
+						drawCircle(0, 0, radius, 40);
+						gxPopMatrix();
 						
 						gxBegin(GX_LINES);
 						gxVertex3f(0, 0, 0);
 						gxVertex3f(0, 0, 1);
 						
-						const float delta = tanf(spot.angle / 2.f * float(M_PI)/180.f);
-						gxVertex3f(0, 0, 0); gxVertex3f(-delta, 0, 1);
-						gxVertex3f(0, 0, 0); gxVertex3f(+delta, 0, 1);
-						gxVertex3f(0, 0, 0); gxVertex3f(0, -delta, 1);
-						gxVertex3f(0, 0, 0); gxVertex3f(0, +delta, 1);
+						gxVertex3f(0, 0, 0); gxVertex3f(-radius, 0, 1);
+						gxVertex3f(0, 0, 0); gxVertex3f(+radius, 0, 1);
+						gxVertex3f(0, 0, 0); gxVertex3f(0, -radius, 1);
+						gxVertex3f(0, 0, 0); gxVertex3f(0, +radius, 1);
 						gxEnd();
 					}
 					gxPopMatrix();
@@ -407,7 +425,7 @@ int main(int argc, char * argv[])
 				}
 			}
 			popDepthTest();
-			camera.popViewMatrix();
+			gxPopMatrix();
 			
 			projectScreen2d();
 			
