@@ -10,3 +10,9 @@ app renderOne-test-lightVolumeBuilder
 	depend_library renderOne
 	add_files tests/200-lightVolumeBuilder
 	resource_path tests/data
+
+app renderOne-test-shadpwMapDrawer
+	depend_library renderOne
+	add_files tests/210-shadowMapDrawer
+	resource_path tests/data
+
