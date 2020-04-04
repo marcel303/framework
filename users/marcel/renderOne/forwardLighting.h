@@ -23,6 +23,7 @@ namespace rOne
 		float attenuationEnd = 1.f;
 		float spotAngle = 0.f;
 		Vec3 color;
+		float userData;
 	};
 
 	class ForwardLightingHelper
@@ -52,14 +53,16 @@ namespace rOne
 			const float attenuationBegin,
 			const float attenuationEnd,
 			Vec3Arg color,
-			const float intensity);
+			const float intensity,
+			const float userData = -1.f);
 		void addSpotLight(
 			Vec3Arg position,
 			Vec3Arg direction,
 			const float angle,
 			const float farDistance,
 			Vec3Arg color,
-			const float intensity);
+			const float intensity,
+			const float userData = -1.f);
 		void reset();
 
 		void prepareShaderData(

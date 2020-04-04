@@ -21,7 +21,8 @@ namespace rOne
 		const float attenuationBegin,
 		const float attenuationEnd,
 		Vec3Arg color,
-		const float intensity)
+		const float intensity,
+		const float userData)
 	{
 		Light light;
 		light.type = kLightType_Point;
@@ -29,6 +30,7 @@ namespace rOne
 		light.attenuationBegin = attenuationBegin;
 		light.attenuationEnd = attenuationEnd;
 		light.color = color * intensity;
+		light.userData = userData;
 
 		addLight(light);
 	}
@@ -39,7 +41,8 @@ namespace rOne
 		const float angle,
 		const float farDistance,
 		Vec3Arg color,
-		const float intensity)
+		const float intensity,
+		const float userData)
 	{
 		Light light;
 		light.type = kLightType_Spot;
@@ -49,6 +52,7 @@ namespace rOne
 		light.attenuationEnd = farDistance;
 		light.spotAngle = angle;
 		light.color = color * intensity;
+		light.userData = userData;
 
 		addLight(light);
 	}
@@ -98,6 +102,7 @@ namespace rOne
 				params[i * 4 + 1][2] = direction_view[2];
 				params[i * 4 + 1][3] = 0.f;
 				
+			// optimize : store light color as u32, as rgbe
 				params[i * 4 + 2][0] = lights[i].color[0];
 				params[i * 4 + 2][1] = lights[i].color[1];
 				params[i * 4 + 2][2] = lights[i].color[2];
@@ -106,7 +111,7 @@ namespace rOne
 				params[i * 4 + 3][0] = lights[i].attenuationBegin;
 				params[i * 4 + 3][1] = lights[i].attenuationEnd;
 				params[i * 4 + 3][2] = cosf(lights[i].spotAngle / 2.f);
-				params[i * 4 + 3][3] = 0.f;
+				params[i * 4 + 3][3] = lights[i].userData;
 			}
 
 			lightParamsBuffer.setData(params, lights.size() * 4 * sizeof(Vec4));

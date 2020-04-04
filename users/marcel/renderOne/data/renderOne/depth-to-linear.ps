@@ -11,16 +11,7 @@ void main()
 {
     float depth = texture(source, v_texcoord).x;
     
-    /*
-    if (depth == 1.0)
-    {
-    	shader_fragColor = vec4(2000.0); // fixme
-    }
-    else
-    */
-    {
-	    float z = depthToViewZ(depth, v_texcoord, projectionToView);
+    float z = depthToViewZ(depth, v_texcoord, projectionToView);
 
-	    shader_fragColor = vec4(z);
-	}
+    shader_fragColor = vec4(z);
 }

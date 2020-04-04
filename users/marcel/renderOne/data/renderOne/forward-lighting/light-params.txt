@@ -22,6 +22,8 @@ struct LightParams
 	float attenuationEnd;
 
 	float spotAngleAlpha;
+
+	float userData;
 };
 
 LightParams decodeLightParams(vec4 params1, vec4 params2, vec4 params3, vec4 params4)
@@ -40,6 +42,8 @@ LightParams decodeLightParams(vec4 params1, vec4 params2, vec4 params3, vec4 par
 	result.attenuationBegin = params4.x;
 	result.attenuationEnd = params4.y;
 	result.spotAngleAlpha = params4.z;
+
+	result.userData = params4.w;
 
 	return result;
 }
