@@ -1,0 +1,16 @@
+include engine/ShaderPS.txt
+include 210-lighting.txt
+
+shader_in vec3 v_position;
+shader_in vec4 v_color;
+
+void main()
+{
+	vec3 color = calculateLighting(v_position, false);
+
+	color = pow(color, vec3(1.0/2.2));
+
+	color *= v_color.rgb;
+
+	shader_fragColor = vec4(color, v_color.a);
+}

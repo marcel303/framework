@@ -1,3 +1,4 @@
+#include "forwardLighting.h"
 #include "framework.h"
 #include "gx_render.h"
 #include "renderer.h"
@@ -109,6 +110,7 @@ private:
 				{
 					shader.setTexture("source", 0, depthTarget.getTextureId(), false, true);
 					shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
+					shader.setImmediate("farDistance", std::numeric_limits<float>::max());
 					drawRect(0, 0, depthTarget.getWidth(), depthTarget.getHeight());
 				}
 				clearShader();
@@ -215,7 +217,16 @@ public:
 	
 	void drawShadowMaps()
 	{
-		for (auto & light : lights)
+		// todo : prioritise lights
+		
+		std::vector<Light> lightsToDraw;
+		
+		for (size_t i = 0; i < lights.size() && i < depthTargets.size(); ++i)
+		{
+			lightsToDraw.push_back(lights[i]);
+		}
+		
+		for (auto & light : lightsToDraw)
 		{
 			pushRenderPass(nullptr, false, &depthTargets[light.id], true, "Shadow depth");
 			pushDepthTest(true, DEPTH_LESS);
@@ -244,7 +255,7 @@ public:
 		
 		if (enableColorShadows)
 		{
-			for (auto & light : lights)
+			for (auto & light : lightsToDraw)
 			{
 				pushRenderPass(&colorTargets[light.id], true, &depthTargets[light.id], false, "Shadow color");
 				pushDepthTest(true, DEPTH_LESS, false);
@@ -303,12 +314,17 @@ public:
 		shader.setImmediateMatrix4x4Array("shadowMatrices", (float*)shadowMatrices, numShadowMatrices);
 	}
 	
+	int getShadowMapId(const int id) const
+	{
+		return id;
+	}
+	
 	void reset()
 	{
 		lights.clear();
 	}
 	
-	void showRenderTargets()
+	void showRenderTargets() const
 	{
 		const int sx = 40;
 		const int sy = 40;
@@ -387,6 +403,7 @@ int main(int argc, char * argv[])
 	{
 		setColor(colorWhite);
 		fillCube(Vec3(), Vec3(1, 1, 1));
+		//fillCylinder(Vec3(), 1.f, 1.f, 100);
 		
 		gxPushMatrix();
 		{
@@ -400,7 +417,7 @@ int main(int argc, char * argv[])
 	
 	auto drawTranslucent = [&]()
 	{
-		pushCullMode(CULL_BACK, CULL_CCW);
+		pushCullMode(CULL_BACK, CULL_CW);
 		
 		for (int i = 0; i < 0; ++i)
 		{
@@ -426,7 +443,7 @@ int main(int argc, char * argv[])
 	};
 	
 	ShadowMapDrawer d;
-	d.alloc(4, 1024);
+	d.alloc(8, 512);
 
 	d.drawOpaque = drawOpaque;
 	d.drawTranslucent = drawTranslucent;
@@ -439,7 +456,12 @@ int main(int argc, char * argv[])
 	{
 		Mat4x4 transform = Mat4x4(true);
 		float angle = 90.f;
+		float nearDistance = .01f;
+		float farDistance = 1.f;
+		Vec3 color = Vec3(1, 1, 1);
 	};
+	
+	rOne::ForwardLightingHelper helper;
 	
 	for (;;)
 	{
@@ -453,18 +475,30 @@ int main(int argc, char * argv[])
 		// -- add animated spot lights --
 		
 		std::vector<SpotLight> spots;
+		
+		const Vec3 colors[3] =
+		{
+			Vec3(1, 1, 0),
+			Vec3(0, 1, 1),
+			Vec3(1, 0, 1)
+		};
+
 		for (int i = 0; i < 3; ++i)
 		{
 			SpotLight spot;
 			spot.transform.MakeLookat(
 				Vec3(
 					sinf(framework.time / (2.34f + i)) * 2.f,
-					sinf(framework.time / (1.23f + i)) + 3.f,
+					sinf(framework.time / (1.23f + i)) * i / 2.f + 4.f,
 					sinf(framework.time / (3.45f + i)) + (i == 0 ? -2.5f : +2.5f)),
-				Vec3(0, 0, 0), Vec3(0, 1, 0));
+				Vec3(0, 0, 0),
+				Vec3(0, 1, 0));
 			spot.transform = spot.transform.CalcInv();
-			spot.angle = 90.f;
+			spot.angle = 60.f;
 			//spot.angle = 60.f + sinf(framework.time/4.56f)*30.f;
+			spot.nearDistance = .01f;
+			spot.farDistance = 10.f;
+			spot.color = colors[i % 3];
 			
 			spots.push_back(spot);
 		}
@@ -475,7 +509,7 @@ int main(int argc, char * argv[])
 
 		for (auto & spot : spots)
 		{
-			d.addSpotLight(id++, spot.transform, spot.angle, .01f, 6.f);
+			d.addSpotLight(id++, spot.transform, spot.angle, spot.nearDistance, spot.farDistance);
 		}
 		
 		d.drawShadowMaps();
@@ -491,6 +525,28 @@ int main(int argc, char * argv[])
 		if (keyboard.isDown(SDLK_3))
 			worldToView = spots[2].transform.CalcInv();
 		
+		// -- prepare forward lighting --
+		
+		id = 0;
+		
+		for (auto & spot : spots)
+		{
+			const int shadowMapId = d.getShadowMapId(id);
+			
+			helper.addSpotLight(
+				spot.transform.GetTranslation(),
+				spot.transform.GetAxis(2),
+				spot.angle * float(M_PI/180.f),
+				spot.farDistance,
+				spot.color,
+				1.f,
+				shadowMapId);
+			
+			id++;
+		}
+		
+		helper.prepareShaderData(16, 32.f, false, worldToView);
+		
 		//
 		
 		framework.beginDraw(0, 0, 0, 0);
@@ -503,11 +559,12 @@ int main(int argc, char * argv[])
 				pushDepthTest(true, DEPTH_LESS);
 				pushBlend(BLEND_OPAQUE);
 				{
-					Shader shader("light-with-shadow");
+					Shader shader("210-light-with-shadow");
 					setShader(shader);
 					{
 						int nextTextureUnit = 0;
 						d.setShaderData(shader, nextTextureUnit, worldToView);
+						helper.setShaderData(shader, nextTextureUnit);
 						
 						drawOpaque();
 					}
@@ -549,11 +606,12 @@ int main(int argc, char * argv[])
 				pushBlend(BLEND_ALPHA);
 				{
 				// todo : add light only shader
-					Shader shader("light-with-shadow");
+					Shader shader("210-light");
 					setShader(shader);
 					{
 						int nextTextureUnit = 0;
 						d.setShaderData(shader, nextTextureUnit, worldToView);
+						helper.setShaderData(shader, nextTextureUnit);
 						
 						drawTranslucent();
 					}
@@ -566,11 +624,21 @@ int main(int argc, char * argv[])
 			
 			projectScreen2d();
 			
-			d.showRenderTargets();
+			//d.showRenderTargets();
 			
-			d.reset();
+		#if false
+			setColor(colorWhite);
+			drawText(4, 4, 12, +1, +1, "(%.2f, %.2f, %.2f)",
+				camera.position[0],
+				camera.position[1],
+				camera.position[2]);
+		#endif
 		}
 		framework.endDraw();
+		
+		helper.reset();
+		
+		d.reset();
 	}
 	
 	d.free();
@@ -578,41 +646,4 @@ int main(int argc, char * argv[])
 	framework.shutdown();
 	
 	return 0;
-
-	//
-
-	/*
-	include renderOne/shadow-map.txt
-
-	uniform vec3 v_position;
-
-	void forEachLightId(int id)
-	{
-		params = lookupLightParams(id);
-
-		float visibility = 1.0;
-
-		if (params.shadowed)
-		{
-			// shadow lookup does to transform from view-space to light-space, and the projective shadow lookup
-
-			visibility = lookupShadow(id, v_position);
-		}
-	}
-
-	void main()
-	{
-		forEachLightIdAt(v_position);
-	}
-
-	-- renderOne/shadow-map.txt --
-
-	uniform vec4 shadowParams[2 * kMaxShadowLights];
-	uniform mat4x4 shadowMatrices[kMaxShadowLights];
-	uniform sampler2D shadowDepthAtlas; // atlas texture with depth values for all shadow lights
-	uniform sampler2D shadowColorAtlas; // atlas texture with color values for all shadow lights
-	uniform float numMaps;
-	uniform float enableColorShadows;
-
-	*/
 }
