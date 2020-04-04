@@ -48,6 +48,7 @@ private:
 	};
 	
 	std::vector<DepthTarget> depthTargets;
+	std::vector<ColorTarget> colorTargets;
 	
 	std::vector<Light> lights;
 	
@@ -56,21 +57,29 @@ private:
 	ColorTarget depthAtlas;
 	ColorTarget colorAtlas;
 	
-	void calculateProjectionMatrixForLight(const Light & light, Mat4x4 & projectionMatrix)
+	static void calculateProjectionMatrixForLight(const Light & light, Mat4x4 & projectionMatrix)
 	{
 		if (light.type == kLightType_Spot)
 		{
 			const float aspectRatio = 1.f;
 			
 		#if ENABLE_OPENGL
-			projectionMatrix.MakePerspectiveGL(light.spotAngle / 180.f * float(M_PI), aspectRatio, light.nearDistance, light.farDistance);
+			projectionMatrix.MakePerspectiveGL(
+				light.spotAngle / 180.f * float(M_PI),
+				aspectRatio,
+				light.nearDistance,
+				light.farDistance);
 		#else
-			projectionMatrix.MakePerspectiveLH(light.spotAngle / 180.f * float(M_PI), aspectRatio, light.nearDistance, light.farDistance);
+			projectionMatrix.MakePerspectiveLH(
+				light.spotAngle / 180.f * float(M_PI),
+				aspectRatio,
+				light.nearDistance,
+				light.farDistance);
 		#endif
 		}
 		else
 		{
-			assert(false);
+			Assert(false);
 			projectionMatrix.MakeIdentity();
 		}
 	}
@@ -82,8 +91,13 @@ private:
 		{
 			projectScreen2d();
 			
+			int x = 0;
+			
 			for (auto & light : lights)
 			{
+				gxLoadIdentity();
+				gxTranslatef(x, 0, 0);
+				
 				auto & depthTarget = depthTargets[light.id];
 				
 				Mat4x4 viewToProjection;
@@ -99,8 +113,38 @@ private:
 				}
 				clearShader();
 				
-				// todo : don't keep shifting. be more precise and use integer math before conversion to float
-				gxTranslatef(depthTarget.getWidth(), 0, 0);
+				x += depthTarget.getWidth();
+			}
+		}
+		popBlend();
+		popRenderPass();
+	}
+	
+	void generateColorAtlas()
+	{
+		pushRenderPass(&colorAtlas, true, nullptr, false, "Shadow color atlas");
+		pushBlend(BLEND_OPAQUE);
+		{
+			projectScreen2d();
+			
+			int x = 0;
+		
+			for (auto & light : lights)
+			{
+				gxLoadIdentity();
+				gxTranslatef(x, 0, 0);
+				
+				auto & colorTarget = colorTargets[light.id];
+			
+				Shader shader("renderOne/blit-texture");
+				setShader(shader);
+				{
+					shader.setTexture("source", 0, colorTarget.getTextureId(), false, true);
+					drawRect(0, 0, colorTarget.getWidth(), colorTarget.getHeight());
+				}
+				clearShader();
+				
+				x += colorTarget.getWidth();
 			}
 		}
 		popBlend();
@@ -126,24 +170,26 @@ public:
 		//
 		
 		depthTargets.resize(maxShadowMaps);
-		
 		for (auto & depthTarget : depthTargets)
-		{
 			depthTarget.init(resolution, resolution, DEPTH_FLOAT32, true, 1.f);
-		}
 		
-		depthAtlas.init(maxShadowMaps * resolution, resolution, SURFACE_R32F, Color(1, 1, 1, 1));
-		colorAtlas.init(maxShadowMaps * resolution, resolution, SURFACE_R32F, Color(0, 0, 0, 0));
+		colorTargets.resize(maxShadowMaps);
+		for (auto & colorTarget : colorTargets)
+			colorTarget.init(resolution, resolution, SURFACE_RGBA8, colorWhite);
+		
+		depthAtlas.init(maxShadowMaps * resolution, resolution, SURFACE_R32F, colorBlackTranslucent);
+		colorAtlas.init(maxShadowMaps * resolution, resolution, SURFACE_RGBA8, colorWhite);
 	}
 	
 	void free()
 	{
 		for (auto & depthTarget : depthTargets)
-		{
 			depthTarget.free();
-		}
-		
 		depthTargets.clear();
+		
+		for (auto & colorTarget : colorTargets)
+			colorTarget.free();
+		colorTargets.clear();
 		
 		depthAtlas.free();
 		colorAtlas.free();
@@ -196,13 +242,47 @@ public:
 			popRenderPass();
 		}
 		
+		if (enableColorShadows)
+		{
+			for (auto & light : lights)
+			{
+				pushRenderPass(&colorTargets[light.id], true, &depthTargets[light.id], false, "Shadow color");
+				pushDepthTest(true, DEPTH_LESS, false);
+				pushBlend(BLEND_ALPHA); // todo : use blend mode where color and alpha are invert multiplied to generate an opacity mask
+				{
+					if (light.type == kLightType_Spot)
+					{
+						Mat4x4 viewToProjection;
+						calculateProjectionMatrixForLight(light, viewToProjection);
+						
+						gxSetMatrixf(GX_PROJECTION, viewToProjection.m_v);
+						gxSetMatrixf(GX_MODELVIEW, light.worldToLight.m_v);
+						
+						if (drawTranslucent != nullptr)
+							drawTranslucent();
+					}
+				}
+				popBlend();
+				popDepthTest();
+				popRenderPass();
+			}
+		}
+		
 		generateLinearDepthAtlas();
+		
+		if (enableColorShadows)
+		{
+			generateColorAtlas();
+		}
 	}
 	
 	void setShaderData(Shader & shader, int & nextTextureUnit, const Mat4x4 & worldToView)
 	{
 		shader.setTexture("shadowDepthAtlas", nextTextureUnit++, depthAtlas.getTextureId(), false);
 		shader.setTexture("shadowColorAtlas", nextTextureUnit++, enableColorShadows ? colorAtlas.getTextureId() : 0, true);
+	
+		shader.setImmediate("numMaps", depthTargets.size());
+		shader.setImmediate("enableColorShadows", enableColorShadows ? 1.f : 0.f);
 	
 		const Mat4x4 viewToWorld = worldToView.CalcInv();
 		
@@ -233,10 +313,11 @@ public:
 		const int sx = 40;
 		const int sy = 40;
 		
-		setColor(colorWhite);
-		
+		pushBlend(BLEND_OPAQUE);
 		gxPushMatrix();
 		{
+			setColor(colorWhite);
+			
 			gxPushMatrix();
 			{
 				for (auto & depthTarget : depthTargets)
@@ -245,6 +326,19 @@ public:
 					setLumif(.1f);
 					drawRect(0, 0, sx, sy);
 					setLumif(1.f);
+					gxSetTexture(0);
+					gxTranslatef(sx, 0, 0);
+				}
+			}
+			gxPopMatrix();
+			gxTranslatef(0, sy, 0);
+			
+			gxPushMatrix();
+			{
+				for (auto & colorTarget : colorTargets)
+				{
+					gxSetTexture(colorTarget.getTextureId());
+					drawRect(0, 0, sx, sy);
 					gxSetTexture(0);
 					gxTranslatef(sx, 0, 0);
 				}
@@ -275,6 +369,7 @@ public:
 			gxTranslatef(0, sy, 0);
 		}
 		gxPopMatrix();
+		popBlend();
 	}
 };
 
@@ -305,8 +400,29 @@ int main(int argc, char * argv[])
 	
 	auto drawTranslucent = [&]()
 	{
-		setColor(255, 255, 255, 100);
-		fillCube(Vec3(0, 2, 0), Vec3(1, 1, 1));
+		pushCullMode(CULL_BACK, CULL_CCW);
+		
+		for (int i = 0; i < 0; ++i)
+		{
+			const float x = cosf(i / 1.23f) * 2.f;
+			const float z = cosf(i / 2.34f) * 2.f;
+			
+			setColor(0, 0, 0, 100);
+			const float s = (sinf(framework.time) + 1.f) / 4.f;
+			fillCube(Vec3(x, 2, z), Vec3(s, s, s));
+		}
+		
+		gxPushMatrix();
+		{
+			setColor(0, 0, 0, 100);
+			const float s = (sinf(framework.time) + 1.f) / 2.f * .5f;
+			gxTranslatef(0, 2, 0);
+			gxRotatef(framework.time * 20.f, 1, 1, 1);
+			fillCube(Vec3(), Vec3(s, s, s));
+		}
+		gxPopMatrix();
+		
+		popCullMode();
 	};
 	
 	ShadowMapDrawer d;
@@ -383,48 +499,69 @@ int main(int argc, char * argv[])
 			
 			gxPushMatrix();
 			gxMultMatrixf(worldToView.m_v);
-			pushDepthTest(true, DEPTH_LESS);
 			{
-				Shader shader("light-with-shadow");
-				setShader(shader);
+				pushDepthTest(true, DEPTH_LESS);
+				pushBlend(BLEND_OPAQUE);
 				{
-					int nextTextureUnit = 0;
-					d.setShaderData(shader, nextTextureUnit, worldToView);
-					
-					drawOpaque();
-				}
-				clearShader();
-				
-				for (auto & spot : spots)
-				{
-					pushLineSmooth(true);
-					gxPushMatrix();
+					Shader shader("light-with-shadow");
+					setShader(shader);
 					{
-						const float radius = tanf(spot.angle / 2.f * float(M_PI)/180.f);
+						int nextTextureUnit = 0;
+						d.setShaderData(shader, nextTextureUnit, worldToView);
 						
-						gxMultMatrixf(spot.transform.m_v);
-						setColor(colorWhite);
-						//lineCube(Vec3(), Vec3(1, 1, 1));
-						gxPushMatrix();
-						gxTranslatef(0, 0, 1);
-						drawCircle(0, 0, radius, 40);
-						gxPopMatrix();
-						
-						gxBegin(GX_LINES);
-						gxVertex3f(0, 0, 0);
-						gxVertex3f(0, 0, 1);
-						
-						gxVertex3f(0, 0, 0); gxVertex3f(-radius, 0, 1);
-						gxVertex3f(0, 0, 0); gxVertex3f(+radius, 0, 1);
-						gxVertex3f(0, 0, 0); gxVertex3f(0, -radius, 1);
-						gxVertex3f(0, 0, 0); gxVertex3f(0, +radius, 1);
-						gxEnd();
+						drawOpaque();
 					}
-					gxPopMatrix();
-					popLineSmooth();
+					clearShader();
+					
+					for (auto & spot : spots)
+					{
+						pushLineSmooth(true);
+						gxPushMatrix();
+						{
+							const float radius = tanf(spot.angle / 2.f * float(M_PI)/180.f);
+							
+							gxMultMatrixf(spot.transform.m_v);
+							setColor(colorWhite);
+							//lineCube(Vec3(), Vec3(1, 1, 1));
+							gxPushMatrix();
+							gxTranslatef(0, 0, 1);
+							drawCircle(0, 0, radius, 100);
+							gxPopMatrix();
+							
+							gxBegin(GX_LINES);
+							gxVertex3f(0, 0, 0);
+							gxVertex3f(0, 0, 1);
+							
+							gxVertex3f(0, 0, 0); gxVertex3f(-radius, 0, 1);
+							gxVertex3f(0, 0, 0); gxVertex3f(+radius, 0, 1);
+							gxVertex3f(0, 0, 0); gxVertex3f(0, -radius, 1);
+							gxVertex3f(0, 0, 0); gxVertex3f(0, +radius, 1);
+							gxEnd();
+						}
+						gxPopMatrix();
+						popLineSmooth();
+					}
 				}
+				popBlend();
+				popDepthTest();
+				
+				pushDepthTest(true, DEPTH_LESS, false);
+				pushBlend(BLEND_ALPHA);
+				{
+				// todo : add light only shader
+					Shader shader("light-with-shadow");
+					setShader(shader);
+					{
+						int nextTextureUnit = 0;
+						d.setShaderData(shader, nextTextureUnit, worldToView);
+						
+						drawTranslucent();
+					}
+					clearShader();
+				}
+				popBlend();
+				popDepthTest();
 			}
-			popDepthTest();
 			gxPopMatrix();
 			
 			projectScreen2d();
