@@ -767,7 +767,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 					const float decayPerSample = powf(renderOptions.lightScatter.decay, 1.f / renderOptions.lightScatter.numSamples);
 					
 					shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), true, false); // note : clamp is intentionally turned off, to expose incorrect sampling
-					shader.setTexture("lightTexture", 1, composite[composite_idx]->getTextureId(), true, false); // note : clamp is intentionally turned off, to expose incorrect sampling
+					shader.setTexture("lightTexture", 1, composite[composite_idx]->getTextureId(), true, true);
 					shader.setImmediate("origin", renderOptions.lightScatter.origin[0], renderOptions.lightScatter.origin[1]);
 					shader.setImmediate("numSamples", renderOptions.lightScatter.numSamples);
 					shader.setImmediate("decayPerSample", decayPerSample);

@@ -4,14 +4,22 @@ include renderOne/depth-functions.txt
 uniform sampler2D source;
 
 uniform mat4x4 projectionToView;
+uniform float farDistance;
 
 shader_in vec2 v_texcoord;
 
 void main()
 {
-    float depth = texture(source, v_texcoord).x;
-    
-    float z = depthToViewZ(depth, v_texcoord, projectionToView);
+	float depth = texture(source, v_texcoord).x;
+	
+	if (depth == 1.0)
+	{
+		shader_fragColor = vec4(farDistance);
+	}
+	else
+	{
+		float z = depthToViewZ(depth, v_texcoord, projectionToView);
 
-    shader_fragColor = vec4(z);
+		shader_fragColor = vec4(z);
+	}
 }
