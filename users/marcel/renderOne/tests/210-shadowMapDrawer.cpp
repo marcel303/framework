@@ -2,6 +2,7 @@
 #include "framework.h"
 #include "gx_render.h"
 #include "renderer.h"
+#include <limits>
 #include <vector>
 
 /*
