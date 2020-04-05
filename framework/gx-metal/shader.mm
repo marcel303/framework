@@ -819,7 +819,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x)
 
 void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 {
-	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
 	
 	if (index >= 0)
 	{
@@ -843,7 +843,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y)
 
 void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 {
-	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
 	
 	if (index >= 0)
 	{
@@ -869,7 +869,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z)
 
 void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, float w)
 {
-	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
 	
 	if (index >= 0)
 	{
@@ -897,7 +897,7 @@ void Shader::setImmediate(GxImmediateIndex index, float x, float y, float z, flo
 
 void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
 {
-	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
 	
 	const GxImmediateIndex index = getImmediateIndex(name);
 	
@@ -906,7 +906,7 @@ void Shader::setImmediateMatrix4x4(const char * name, const float * matrix)
 
 void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 {
-	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
 	
 	if (index >= 0)
 	{
@@ -926,9 +926,18 @@ void Shader::setImmediateMatrix4x4(GxImmediateIndex index, const float * matrix)
 	}
 }
 
+void Shader::setImmediateMatrix4x4Array(const char * name, const float * matrices, const int numMatrices)
+{
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
+	
+	const GxImmediateIndex index = getImmediateIndex(name);
+	
+	setImmediateMatrix4x4Array(index, matrices, numMatrices);
+}
+
 void Shader::setImmediateMatrix4x4Array(GxImmediateIndex index, const float * matrices, const int numMatrices)
 {
-	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
 	
 	if (index >= 0)
 	{
@@ -1034,7 +1043,7 @@ void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 {
 // todo : optimize buffers. for now (to keep things simple so we can get up and running quickly), we just do a memcpy, when we should be setting the MTLBuffer directly
 
-	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this is exists
+	Assert(globals.shader == this); // see comment for setImmediate(index, x) for why this exists
 	
 	id<MTLBuffer> metal_buffer = metal_get_buffer(buffer.getMetalBuffer());
 	
