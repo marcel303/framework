@@ -13,6 +13,12 @@ public:
 	{
 		m_v[0] = m_v[1] = m_v[2] = 0.0f;
 	}
+	
+	inline Vec3(bool initializeToZero)
+	{
+		if (initializeToZero)
+			m_v[0] = m_v[1] = m_v[2] = 0.0f;
+	}
 
 	inline Vec3(float v1, float v2, float v3)
 	{
