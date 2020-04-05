@@ -1,10 +1,15 @@
 #include "lightVolumeBuilder.h"
 #include <assert.h>
 #include <math.h>
-#include <set>
 #include <string.h>
+#include <vector>
 
-#include <map> // todo : remove. here just for prototyping
+#define OPTIMIZE_LIGHT_SET_CONSTRUCTION 1
+
+#if !OPTIMIZE_LIGHT_SET_CONSTRUCTION
+	#include <map>
+	#include <set>
+#endif
 
 namespace rOne
 {
@@ -70,12 +75,78 @@ namespace rOne
 		
 		const float worldToVolumeScale = halfResolution / extents;
 
+	#if OPTIMIZE_LIGHT_SET_CONSTRUCTION
+		struct Record
+		{
+			Record * next;
+			int lightId;
+		};
+		
+		struct RecordAllocator
+		{
+			struct Block
+			{
+				Record records[4096];
+			};
+			
+			Block * currentBlock = nullptr;
+			int nextBlockRecordIndex = 0;
+			
+			std::vector<Block*> blocks;
+			
+			RecordAllocator()
+			{
+				blocks.reserve(1024);
+			}
+			
+			~RecordAllocator()
+			{
+				assert(currentBlock == nullptr);
+			}
+			
+			void cleanup()
+			{
+				currentBlock = nullptr;
+				nextBlockRecordIndex = 0;
+				
+				for (auto * block : blocks)
+					free(block);
+				
+				blocks.clear();
+			}
+			
+			Record * alloc()
+			{
+				if (currentBlock == nullptr || nextBlockRecordIndex == 4096)
+				{
+					Block * block = (Block*)malloc(sizeof(Block));
+					blocks.push_back(block);
+					
+					currentBlock = block;
+					nextBlockRecordIndex = 0;
+				}
+				
+				Record * result = currentBlock->records + nextBlockRecordIndex;
+				
+				nextBlockRecordIndex++;
+				
+				return result;
+			}
+		};
+		
+		RecordAllocator record_allocator;
+		
+		const int num_records = sx * sy * sz;
+		Record ** records = new Record*[num_records];
+		memset(records, 0, sizeof(Record*) * num_records);
+	#else
 		std::map<int, std::set<int>> records;
+	#endif
 
 		for (auto & light : lights)
 		{
-			Vec3 lightMin_world;
-			Vec3 lightMax_world;
+			Vec3 lightMin_world(false);
+			Vec3 lightMax_world(false);
 			
 			if (light.type == kLightType_Point)
 			{
@@ -124,19 +195,28 @@ namespace rOne
 							indexY = indexY % sy; if (indexY < 0) indexY += sy;
 							indexZ = indexZ % sz; if (indexZ < 0) indexZ += sz;
 						}
-
-						if (indexX < 0 || indexX >= sx ||
-							indexY < 0 || indexY >= sy ||
-							indexZ < 0 || indexZ >= sz)
+						else
 						{
-							continue;
+							if (indexX < 0 || indexX >= sx ||
+								indexY < 0 || indexY >= sy ||
+								indexZ < 0 || indexZ >= sz)
+							{
+								continue;
+							}
 						}
 						
 						// optimize : intersect aabb of voxel with the volume of the light. skip non-intersecting voxels
 
 						const int index = indexX + indexY * sx + indexZ * sx * sy;
 
+					#if OPTIMIZE_LIGHT_SET_CONSTRUCTION
+						Record * record = record_allocator.alloc();
+						record->next = records[index];
+						record->lightId = light.id;
+						records[index] = record;
+					#else
 						records[index].insert(light.id);
+					#endif
 					}
 				}
 			}
@@ -152,6 +232,26 @@ namespace rOne
 		
 		// increment counts
 		
+	#if OPTIMIZE_LIGHT_SET_CONSTRUCTION
+		assert(num_cells == num_records);
+		
+		for (int index = 0; index < num_records; ++index)
+		{
+			int record_count = 0;
+			
+			for (Record * record = records[index]; record != nullptr; record = record->next)
+				record_count++;
+			
+			auto & count = index_table[index * 2 + 1];
+			
+			assert(count == 0);
+			
+			if (record_count != 0)
+			{
+				count = record_count;
+			}
+		}
+	#else
 		for (auto & record_itr : records)
 		{
 			const auto index = record_itr.first;
@@ -164,6 +264,7 @@ namespace rOne
 			
 			count = record_itr.second.size();
 		}
+	#endif
 		
 		// allocate start offsets
 		
@@ -198,6 +299,18 @@ namespace rOne
 			
 			if (count != 0)
 			{
+			#if OPTIMIZE_LIGHT_SET_CONSTRUCTION
+				int offset = (int)index_table[i * 2 + 0];
+				
+				for (Record * record = records[i]; record != nullptr; record = record->next)
+				{
+					assert(light_ids[offset] == 0);
+					
+					light_ids[offset] = record->lightId;
+					
+					offset += 1;
+				}
+			#else
 				auto & src_light_ids = records[i];
 				
 				assert(src_light_ids.empty() == false);
@@ -212,8 +325,16 @@ namespace rOne
 					
 					offset += 1;
 				}
+			#endif
 			}
 		}
+		
+	#if OPTIMIZE_LIGHT_SET_CONSTRUCTION
+		delete [] records;
+		records = nullptr;
+		
+		record_allocator.cleanup();
+	#endif
 
 		LightVolumeData result;
 		
