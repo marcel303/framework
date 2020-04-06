@@ -1,0 +1,66 @@
+float computeAttenuationForPointLight(
+	vec3 surfacePosition,
+	vec3 lightPosition,
+	float attenuationBegin,
+	float attenuationEnd)
+{
+	float distance = length(surfacePosition - lightPosition);
+
+	if (distance >= attenuationEnd)
+	{
+		return 0.0;
+	}
+	else
+	{
+		distance = (distance - attenuationBegin) / (attenuationEnd - attenuationBegin);
+		distance = max(0.0, distance);
+		
+		float attenuation = 1.0 - distance;
+
+		attenuation *= attenuation;
+
+		return attenuation;
+	}
+}
+
+float computeAttenuationForSpotLight(
+	vec3 surfacePosition,
+	vec3 spotPosition,
+	vec3 spotDirection,
+	float spotAngleAlpha, // cos(angle/2)
+	float attenuationBegin,
+	float attenuationEnd)
+{
+	float distance =
+		dot(surfacePosition, spotDirection) -
+		dot(spotPosition, spotDirection);
+
+	if (distance <= 0.0 || distance >= attenuationEnd)
+	{
+		return 0.0;
+	}
+	else
+	{
+		vec3 delta = surfacePosition - spotPosition;
+
+		float cosAngle = dot(spotDirection, normalize(delta));
+
+		float alpha = spotAngleAlpha;
+
+		float attenuation;
+
+		if (cosAngle < alpha)
+			attenuation = 0.0;
+		else
+			attenuation = (cosAngle - alpha) / (1.0 - alpha);
+
+		distance = (distance - attenuationBegin) / (attenuationEnd - attenuationBegin);
+		distance = max(0.0, distance);
+		
+		attenuation *= 1.0 - distance;
+
+		attenuation *= attenuation;
+
+		return attenuation;
+	}
+}
