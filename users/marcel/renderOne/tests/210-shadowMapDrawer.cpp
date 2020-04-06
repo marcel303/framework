@@ -662,7 +662,7 @@ int main(int argc, char * argv[])
 			
 			helper.addSpotLight(
 				spot.transform.GetTranslation(),
-				spot.transform.GetAxis(2),
+				spot.transform.GetAxis(2).CalcNormalized(),
 				spot.angle * float(M_PI/180.f),
 				spot.farDistance,
 				spot.color,
