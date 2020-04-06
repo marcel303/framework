@@ -10,9 +10,6 @@ uniform float enableColorShadows;
 
 vec3 lookupShadow(int id, vec3 position_view)
 {
-	if (id >= numShadowMaps)
-		return vec3(1.0);
-
 	// transform view-space position into light-space
 
 	vec4 position_light = shadowMatrices[id] * vec4(position_view, 1.0);
@@ -21,9 +18,33 @@ vec3 lookupShadow(int id, vec3 position_view)
 	position_light.y = -position_light.y;
 #endif
 
+	position_light.xyz /= position_light.w;
+
+	float position_depth = position_light.z;
+
+	// does the point lie before the near plane of the light?
+
+#if defined(GL_core_profile)
+	if (position_depth < -1.0)
+#else
+	if (position_depth < 0.0)
+#endif
+	{
+		// if the point lies before the near plane of the light,
+		// we don't know if there's geometry drawn between it and
+		// the near plane of the light. we just assume it isn't
+		// shadowed to avoid too glaring discontinuities with
+		// things that are past the near plane. note that for
+		// spot lights, things before the near plane will not be
+		// lit anyway (due to the spot light's attenuation). for
+		// directional lights the above generally works best
+
+		return vec3(1.0);
+	}
+
 	// determine texture coordinates
 
-	vec2 position_texture = position_light.xy / position_light.w;
+	vec2 position_texture = position_light.xy;
 
 	position_texture = (position_texture + vec2(1.0)) * 0.5;
 
@@ -35,11 +56,13 @@ vec3 lookupShadow(int id, vec3 position_view)
 
 	vec2 position_atlas = mix(atlas_min, atlas_max, position_texture);
 
-	//position_atlas += 0.5 / textureSize(shadowDepthAtlas, 0);
-
 	position_atlas = max(atlas_min, min(atlas_max, position_atlas));
 
 	float depth = texture(shadowDepthAtlas, position_atlas).x;
+
+#if defined(GL_core_profile)
+	depth = depth * 2.0 - 1.0; // unpack depth to the -1.0 .. +1.0 range used by OpenGL
+#endif
 
 #if ENABLE_SHADOW_DEBUGS
 
@@ -48,21 +71,21 @@ vec3 lookupShadow(int id, vec3 position_view)
 	//if (depth > 1000.0) return vec3(1, 0, 0);
 
 #if 0
-	if (position_atlas.x < atlas_p1.x || position_atlas.x > atlas_p2.x)
+	if (position_atlas.x < atlas_min.x || position_atlas.x > atlas_max.x)
 		return vec3(1, 0, 0);
-	if (position_atlas.y < atlas_p1.y || position_atlas.y > atlas_p2.y)
+	if (position_atlas.y < atlas_min.y || position_atlas.y > atlas_max.y)
 		return vec3(0, 0, 1);
 #endif
 
-#if 0
+#if 1
 	if (position_texture.x < 0.0 || position_texture.x > 1.0)
 		return vec3(1, 0, 0);
 	if (position_texture.y < 0.0 || position_texture.y > 1.0)
 		return vec3(0, 0, 1);
 #endif
 
-	//return vec3(atlas_p1, 0);
-	//return vec3(atlas_p2, 0);
+	//return vec3(atlas_min, 0);
+	//return vec3(atlas_max, 0);
 	//return vec3(position_atlas, 0.0);
 	//return vec3(depth);
 	//return v_position;
@@ -74,7 +97,12 @@ vec3 lookupShadow(int id, vec3 position_view)
 
 #endif
 
-	float occlusionMask = (depth < position_light.z) ? 0.0 : 1.0;
+	float occlusionMask = 1.0;
+
+	if (depth < position_depth)
+	{
+		occlusionMask = 0.0;
+	}
 
 	if (enableColorShadows != 0.0 && occlusionMask != 0.0)
 		return texture(shadowColorAtlas, position_atlas).rgb;

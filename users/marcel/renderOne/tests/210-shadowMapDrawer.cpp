@@ -133,12 +133,10 @@ private:
 				calculateProjectionMatrixForLight(light, viewToProjection);
 				const Mat4x4 projectionToView = viewToProjection.CalcInv();
 				
-				Shader shader("renderOne/depth-to-linear");
+				Shader shader("renderOne/blit-texture");
 				setShader(shader);
 				{
 					shader.setTexture("source", 0, depthTarget.getTextureId(), false, true);
-					shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
-					shader.setImmediate("farDistance", std::numeric_limits<float>::max());
 					drawRect(0, 0, depthTarget.getWidth(), depthTarget.getHeight());
 				}
 				clearShader();
