@@ -11,7 +11,8 @@ namespace rOne
 	enum LightType
 	{
 		kLightType_Point,
-		kLightType_Spot
+		kLightType_Spot,
+		kLightType_Directional
 	};
 
 	struct Light
@@ -60,6 +61,11 @@ namespace rOne
 			Vec3Arg direction,
 			const float angle,
 			const float farDistance,
+			Vec3Arg color,
+			const float intensity,
+			const float userData = -1.f);
+		void addDirectionalLight(
+			Vec3Arg direction,
 			Vec3Arg color,
 			const float intensity,
 			const float userData = -1.f);

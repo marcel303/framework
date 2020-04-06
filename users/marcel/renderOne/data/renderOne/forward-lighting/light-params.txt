@@ -6,6 +6,7 @@ uniform float numLights;
 
 #define kLightType_Point 0
 #define kLightType_Spot 1
+#define kLightType_Directional 2
 
 struct LightParams
 {

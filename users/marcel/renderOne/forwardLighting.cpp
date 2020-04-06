@@ -56,6 +56,21 @@ namespace rOne
 
 		addLight(light);
 	}
+	
+	void ForwardLightingHelper::addDirectionalLight(
+		Vec3Arg direction,
+		Vec3Arg color,
+		const float intensity,
+		const float userData)
+	{
+		Light light;
+		light.type = kLightType_Directional;
+		light.direction = direction;
+		light.color = color * intensity;
+		light.userData = userData;
+
+		addLight(light);
+	}
 
 	void ForwardLightingHelper::reset()
 	{
@@ -192,5 +207,11 @@ namespace rOne
 		shader.setTexture("lightIds", nextTextureUnit++, lightIdsTextureId, false, false);
 		shader.setImmediate("worldToVolumeScale", worldToVolumeScale);
 		shader.setImmediate("infiniteSpaceMode", infiniteSpaceMode ? 1.f : 0.f);
+		
+		int directionalLightId = -1;
+		for (size_t i = 0; i < lights.size(); ++i)
+			if (lights[i].type == kLightType_Directional)
+				directionalLightId = i;
+		shader.setImmediate("directionalLightId", directionalLightId);
 	}
 }

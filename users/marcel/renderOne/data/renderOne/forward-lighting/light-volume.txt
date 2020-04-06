@@ -2,6 +2,7 @@ uniform sampler2D lightVolume;
 uniform sampler2D lightIds;
 uniform float worldToVolumeScale;
 uniform float infiniteSpaceMode;
+uniform float directionalLightId;
 
 #if !defined(__METAL_VERSION__)
 	void forEachLightId(int id);
@@ -68,5 +69,11 @@ void forEachLightIdAt(vec3 in_position)
 
 		forEachLightId(id);
 	}
-}
 
+	if (directionalLightId >= 0.0)
+	{
+		int id = int(directionalLightId);
+
+		forEachLightId(id);
+	}
+}
