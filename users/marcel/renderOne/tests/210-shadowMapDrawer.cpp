@@ -279,7 +279,7 @@ public:
 			}
 			else
 			{
-				assert(false);
+				Assert(false);
 			}
 		}
 	
