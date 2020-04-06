@@ -4,12 +4,13 @@ include 210-lighting.txt
 
 shader_in vec3 v_position;
 shader_in vec4 v_color;
+shader_in vec3 v_normal;
 
 void main()
 {
 	// -- calculate lighting (with shadows) --
 
-	vec3 color = calculateLighting(v_position, true);
+	vec3 color = calculateLighting(v_position, v_normal, true);
 
 	// -- modulate with color --
 

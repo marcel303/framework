@@ -35,7 +35,8 @@ private:
 
 	enum LightType
 	{
-		kLightType_Spot
+		kLightType_Spot,
+		kLightType_Directional
 	};
 
 	struct Light
@@ -48,6 +49,7 @@ private:
 		float nearDistance;
 		float farDistance;
 		float spotAngle;
+		float directionalExtents;
 		
 		float viewDistance; // for priority sort
 	};
@@ -78,6 +80,26 @@ private:
 			projectionMatrix.MakePerspectiveLH(
 				light.spotAngle / 180.f * float(M_PI),
 				aspectRatio,
+				light.nearDistance,
+				light.farDistance);
+		#endif
+		}
+		else if (light.type == kLightType_Directional)
+		{
+		#if ENABLE_OPENGL
+			projectionMatrix.MakeOrthoGL(
+				-light.directionalExtents,
+				+light.directionalExtents,
+				-light.directionalExtents,
+				+light.directionalExtents,
+				light.nearDistance,
+				light.farDistance);
+		#else
+			projectionMatrix.MakeOrthoLH(
+				-light.directionalExtents,
+				+light.directionalExtents,
+				-light.directionalExtents,
+				+light.directionalExtents,
 				light.nearDistance,
 				light.farDistance);
 		#endif
@@ -222,15 +244,45 @@ public:
 		lights.push_back(light);
 	}
 	
+	void addDirectionalLight(
+		const int id,
+		const Mat4x4 & lightToWorld,
+		const float startDistance,
+		const float endDistance,
+		const float extents)
+	{
+		Light light;
+		light.type = kLightType_Directional;
+		light.id = id;
+		light.lightToWorld = lightToWorld;
+		light.worldToLight = lightToWorld.CalcInv();
+		light.nearDistance = startDistance;
+		light.farDistance = endDistance;
+		light.directionalExtents = extents;
+		
+		lights.push_back(light);
+	}
+	
 	void drawShadowMaps(const Mat4x4 & worldToView)
 	{
 		// prioritize lights
 		
 		for (auto & light : lights)
 		{
-			const Vec3 lightPosition_view = worldToView.Mul4(light.lightToWorld.GetTranslation());
-			
-			light.viewDistance = lightPosition_view.CalcSize();
+			if (light.type == kLightType_Spot)
+			{
+				const Vec3 lightPosition_view = worldToView.Mul4(light.lightToWorld.GetTranslation());
+				
+				light.viewDistance = lightPosition_view.CalcSize();
+			}
+			else if (light.type == kLightType_Directional)
+			{
+				light.viewDistance = 0.f;
+			}
+			else
+			{
+				assert(false);
+			}
 		}
 	
 		std::sort(lights.begin(), lights.end(),
@@ -259,6 +311,17 @@ public:
 			pushDepthBias(1, 1);
 			{
 				if (light.type == kLightType_Spot)
+				{
+					Mat4x4 viewToProjection;
+					calculateProjectionMatrixForLight(light, viewToProjection);
+					
+					gxSetMatrixf(GX_PROJECTION, viewToProjection.m_v);
+					gxSetMatrixf(GX_MODELVIEW, light.worldToLight.m_v);
+					
+					if (drawOpaque != nullptr)
+						drawOpaque();
+				}
+				else if (light.type == kLightType_Directional)
 				{
 					Mat4x4 viewToProjection;
 					calculateProjectionMatrixForLight(light, viewToProjection);
@@ -298,6 +361,21 @@ public:
 						if (drawTranslucent != nullptr)
 							drawTranslucent();
 					}
+					else if (light.type == kLightType_Directional)
+					{
+						Mat4x4 viewToProjection;
+						calculateProjectionMatrixForLight(light, viewToProjection);
+						
+						gxSetMatrixf(GX_PROJECTION, viewToProjection.m_v);
+						gxSetMatrixf(GX_MODELVIEW, light.worldToLight.m_v);
+						
+						if (drawOpaque != nullptr)
+							drawOpaque();
+					}
+					else
+					{
+						Assert(false);
+					}
 				}
 				popBlend();
 				popDepthTest();
@@ -321,6 +399,7 @@ public:
 		shader.setImmediate("numShadowMaps", depthTargets.size());
 		shader.setImmediate("enableColorShadows", enableColorShadows ? 1.f : 0.f);
 	
+	// todo : compute shadow matrices only once and store in a buffer
 		const Mat4x4 viewToWorld = worldToView.CalcInv();
 		
 		const int numShadowMatrices = lights.size();
@@ -432,8 +511,8 @@ int main(int argc, char * argv[])
 	auto drawOpaque = [&]()
 	{
 		setColor(colorWhite);
-		fillCube(Vec3(), Vec3(1, 1, 1));
-		//fillCylinder(Vec3(), 1.f, 1.f, 100);
+		//fillCube(Vec3(), Vec3(1, 1, 1));
+		fillCylinder(Vec3(), 1.f, 1.f, 100);
 		
 		gxPushMatrix();
 		{
@@ -454,14 +533,14 @@ int main(int argc, char * argv[])
 			const float x = cosf(i / 1.23f) * 2.f;
 			const float z = cosf(i / 2.34f) * 2.f;
 			
-			setColor(50, 100, 0, 100);
-			const float s = (sinf(framework.time) + 1.f) / 4.f;
-			fillCube(Vec3(x, 2, z), Vec3(s, s, s));
+			setColor(50, 100, 255, 127, 512);
+			const float s = (sinf(framework.time + i) + 3.f) / 4.f * .2f;
+			fillCube(Vec3(x, .5f, z), Vec3(s, s, s));
 		}
 		
 		gxPushMatrix();
 		{
-			setColor(0, 100, 200, 100);
+			setColor(50, 100, 200, 127);
 			const float s = (sinf(framework.time) + 1.f) / 2.f * (1.f/sqrt(2.f));
 			gxTranslatef(0, 2, 0);
 			gxRotatef(framework.time * 20.f, 1, 1, 1);
@@ -473,12 +552,12 @@ int main(int argc, char * argv[])
 	};
 	
 	ShadowMapDrawer d;
-	d.alloc(8, 1024);
+	d.alloc(4, 512);
 
 	d.drawOpaque = drawOpaque;
 	d.drawTranslucent = drawTranslucent;
 
-	d.enableColorShadows = true;
+	d.enableColorShadows = false;
 
 	Camera3d camera;
 	
@@ -502,6 +581,9 @@ int main(int argc, char * argv[])
 		
 		camera.tick(framework.timeStep, true);
 		
+		if (keyboard.wentDown(SDLK_c))
+			d.enableColorShadows = !d.enableColorShadows;
+		
 		// -- add animated spot lights --
 		
 		std::vector<SpotLight> spots;
@@ -513,7 +595,7 @@ int main(int argc, char * argv[])
 			Vec3(1, 0, 1)
 		};
 
-		for (int i = 0; i < 3; ++i)
+		for (int i = 0; i < 2; ++i)
 		{
 			SpotLight spot;
 			spot.transform.MakeLookat(
@@ -524,14 +606,24 @@ int main(int argc, char * argv[])
 				Vec3(0, 0, 0),
 				Vec3(0, 1, 0));
 			spot.transform = spot.transform.CalcInv();
-			spot.angle = 60.f;
-			//spot.angle = 60.f + sinf(framework.time/4.56f)*30.f;
+			//spot.angle = 60.f;
+			spot.angle = 60.f + sinf(framework.time/4.56f)*30.f;
 			spot.nearDistance = .01f;
 			spot.farDistance = 16.f;
 			spot.color = colors[i % 3];
 			
 			spots.push_back(spot);
 		}
+		
+		Mat4x4 directional;
+		directional.MakeLookat(
+			Vec3(
+				sinf(framework.time / 1.23f) * 3.f,
+				sinf(framework.time / 3.45f) + 3.f,
+				sinf(framework.time / 2.34f) * 3.f),
+			Vec3(0, 0, 0),
+			Vec3(0, 1, 0));
+		directional = directional.CalcInv();
 		
 		// -- determine view matrix --
 		
@@ -544,14 +636,19 @@ int main(int argc, char * argv[])
 		if (keyboard.isDown(SDLK_3))
 			worldToView = spots[2].transform.CalcInv();
 		
+		if (keyboard.isDown(SDLK_0))
+			worldToView = directional;
+		
 		// -- draw shadow maps --
 		
 		size_t id = 0;
-
+		
 		for (auto & spot : spots)
 		{
 			d.addSpotLight(id++, spot.transform, spot.angle, spot.nearDistance, spot.farDistance);
 		}
+		
+		d.addDirectionalLight(id++, directional, 0.f, 100.f, 12.f);
 		
 		d.drawShadowMaps(worldToView);
 		
@@ -569,11 +666,18 @@ int main(int argc, char * argv[])
 				spot.angle * float(M_PI/180.f),
 				spot.farDistance,
 				spot.color,
-				16.f,
+				.2f,
 				shadowMapId);
 			
 			id++;
 		}
+		
+		helper.addDirectionalLight(
+			directional.GetAxis(2).CalcNormalized(),
+			Vec3(1, 1, 1),
+			(sinf(framework.time * 3.45f) + 1.f) / 2.f * .01f,
+			d.getShadowMapId(id));
+		id++;
 		
 		helper.prepareShaderData(16, 32.f, false, worldToView);
 		
@@ -609,7 +713,7 @@ int main(int argc, char * argv[])
 							
 							gxMultMatrixf(spot.transform.m_v);
 							setColor(colorWhite);
-							//lineCube(Vec3(), Vec3(1, 1, 1));
+							
 							gxPushMatrix();
 							gxTranslatef(0, 0, 1);
 							drawCircle(0, 0, radius, 100);
@@ -628,6 +732,32 @@ int main(int argc, char * argv[])
 						gxPopMatrix();
 						popLineSmooth();
 					}
+					
+					pushLineSmooth(true);
+					gxPushMatrix();
+					{
+						const float radius = 1.f;
+						
+						gxMultMatrixf(directional.m_v);
+						setColor(colorYellow);
+						
+						gxPushMatrix();
+						gxTranslatef(0, 0, 1);
+						drawCircle(0, 0, radius, 100);
+						gxPopMatrix();
+					
+						gxBegin(GX_LINES);
+						gxVertex3f(0, 0, 0);
+						gxVertex3f(0, 0, 1);
+					
+						gxVertex3f(0, 0, 0); gxVertex3f(-radius, 0, 1);
+						gxVertex3f(0, 0, 0); gxVertex3f(+radius, 0, 1);
+						gxVertex3f(0, 0, 0); gxVertex3f(0, -radius, 1);
+						gxVertex3f(0, 0, 0); gxVertex3f(0, +radius, 1);
+						gxEnd();
+					}
+					gxPopMatrix();
+					popLineSmooth();
 				}
 				popBlend();
 				popDepthTest();
