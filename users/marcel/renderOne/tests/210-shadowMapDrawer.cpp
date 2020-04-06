@@ -12,7 +12,7 @@ ShadowMapDrawer assists in the drawing of shadow maps
 it allows one to register a number of lights
 and render functions for drawing geometry
 
-on draw, it will prioritise lights to determine whichs ones to draw
+on draw, it will prioritize lights to determine whichs ones to draw
 shadow maps for. these shadow maps are then packed into a
 shadow map atlas, containing linear depth values
 
@@ -43,10 +43,13 @@ private:
 		int id;
 
 		LightType type;
+		Mat4x4 lightToWorld;
 		Mat4x4 worldToLight;
 		float nearDistance;
 		float farDistance;
 		float spotAngle;
+		
+		float viewDistance; // for priority sort
 	};
 	
 	std::vector<DepthTarget> depthTargets;
@@ -95,12 +98,14 @@ private:
 			
 			int x = 0;
 			
-			for (auto & light : lights)
+			for (size_t i = 0; i < lights.size() && i < depthTargets.size(); ++i)
 			{
+				auto & light = lights[i];
+				
 				gxLoadIdentity();
 				gxTranslatef(x, 0, 0);
 				
-				auto & depthTarget = depthTargets[light.id];
+				auto & depthTarget = depthTargets[i];
 				
 				Mat4x4 viewToProjection;
 				calculateProjectionMatrixForLight(light, viewToProjection);
@@ -132,12 +137,12 @@ private:
 			
 			int x = 0;
 		
-			for (auto & light : lights)
+			for (size_t i = 0; i < lights.size() && i < colorTargets.size(); ++i)
 			{
 				gxLoadIdentity();
 				gxTranslatef(x, 0, 0);
 				
-				auto & colorTarget = colorTargets[light.id];
+				auto & colorTarget = colorTargets[i];
 			
 				Shader shader("renderOne/blit-texture");
 				setShader(shader);
@@ -208,6 +213,7 @@ public:
 		Light light;
 		light.type = kLightType_Spot;
 		light.id = id;
+		light.lightToWorld = lightToWorld;
 		light.worldToLight = lightToWorld.CalcInv();
 		light.spotAngle = angle;
 		light.nearDistance = nearDistance;
@@ -216,10 +222,23 @@ public:
 		lights.push_back(light);
 	}
 	
-	void drawShadowMaps()
+	void drawShadowMaps(const Mat4x4 & worldToView)
 	{
-		// todo : prioritise lights
+		// prioritize lights
 		
+		for (auto & light : lights)
+		{
+			const Vec3 lightPosition_view = worldToView.Mul4(light.lightToWorld.GetTranslation());
+			
+			light.viewDistance = lightPosition_view.CalcSize();
+		}
+	
+		std::sort(lights.begin(), lights.end(),
+			[](const Light & light1, const Light & light2)
+			{
+				return light1.viewDistance < light2.viewDistance;
+			});
+	
 		std::vector<Light> lightsToDraw;
 		
 		for (size_t i = 0; i < lights.size() && i < depthTargets.size(); ++i)
@@ -227,9 +246,13 @@ public:
 			lightsToDraw.push_back(lights[i]);
 		}
 		
-		for (auto & light : lightsToDraw)
+		// draw shadow maps
+		
+		for (size_t i = 0; i < lights.size() && i < depthTargets.size(); ++i)
 		{
-			pushRenderPass(nullptr, false, &depthTargets[light.id], true, "Shadow depth");
+			auto & light = lights[i];
+			
+			pushRenderPass(nullptr, false, &depthTargets[i], true, "Shadow depth");
 			pushDepthTest(true, DEPTH_LESS);
 			pushColorWriteMask(0, 0, 0, 0);
 			pushBlend(BLEND_OPAQUE);
@@ -256,9 +279,11 @@ public:
 		
 		if (enableColorShadows)
 		{
-			for (auto & light : lightsToDraw)
+			for (size_t i = 0; i < lights.size() && i < colorTargets.size(); ++i)
 			{
-				pushRenderPass(&colorTargets[light.id], true, &depthTargets[light.id], false, "Shadow color");
+				auto & light = lights[i];
+				
+				pushRenderPass(&colorTargets[i], true, &depthTargets[i], false, "Shadow color");
 				pushDepthTest(true, DEPTH_LESS, false);
 				pushBlend(BLEND_ALPHA); // todo : use blend mode where color and alpha are invert multiplied to generate an opacity mask
 				{
@@ -293,7 +318,7 @@ public:
 		shader.setTexture("shadowDepthAtlas", nextTextureUnit++, depthAtlas.getTextureId(), false);
 		shader.setTexture("shadowColorAtlas", nextTextureUnit++, enableColorShadows ? colorAtlas.getTextureId() : 0, true);
 	
-		shader.setImmediate("numMaps", depthTargets.size());
+		shader.setImmediate("numShadowMaps", depthTargets.size());
 		shader.setImmediate("enableColorShadows", enableColorShadows ? 1.f : 0.f);
 	
 		const Mat4x4 viewToWorld = worldToView.CalcInv();
@@ -317,7 +342,11 @@ public:
 	
 	int getShadowMapId(const int id) const
 	{
-		return id;
+		for (size_t i = 0; i < lights.size(); ++i)
+			if (lights[i].id == id)
+				return i;
+		
+		return -1;
 	}
 	
 	void reset()
@@ -410,8 +439,8 @@ int main(int argc, char * argv[])
 		{
 			gxTranslatef(0, -1, 0);
 			gxScalef(10, 10, 10);
-			setColor(colorWhite);
-			drawGrid3d(10, 10, 0, 2);
+			setColor(200, 200, 200);
+			drawGrid3d(1, 1, 0, 2);
 		}
 		gxPopMatrix();
 	};
@@ -425,15 +454,15 @@ int main(int argc, char * argv[])
 			const float x = cosf(i / 1.23f) * 2.f;
 			const float z = cosf(i / 2.34f) * 2.f;
 			
-			setColor(0, 0, 0, 100);
+			setColor(50, 100, 0, 100);
 			const float s = (sinf(framework.time) + 1.f) / 4.f;
 			fillCube(Vec3(x, 2, z), Vec3(s, s, s));
 		}
 		
 		gxPushMatrix();
 		{
-			setColor(0, 0, 0, 100);
-			const float s = (sinf(framework.time) + 1.f) / 2.f * .5f;
+			setColor(0, 100, 200, 100);
+			const float s = (sinf(framework.time) + 1.f) / 2.f * (1.f/sqrt(2.f));
 			gxTranslatef(0, 2, 0);
 			gxRotatef(framework.time * 20.f, 1, 1, 1);
 			fillCube(Vec3(), Vec3(s, s, s));
@@ -444,7 +473,7 @@ int main(int argc, char * argv[])
 	};
 	
 	ShadowMapDrawer d;
-	d.alloc(8, 512);
+	d.alloc(8, 1024);
 
 	d.drawOpaque = drawOpaque;
 	d.drawTranslucent = drawTranslucent;
@@ -498,22 +527,11 @@ int main(int argc, char * argv[])
 			spot.angle = 60.f;
 			//spot.angle = 60.f + sinf(framework.time/4.56f)*30.f;
 			spot.nearDistance = .01f;
-			spot.farDistance = 10.f;
+			spot.farDistance = 16.f;
 			spot.color = colors[i % 3];
 			
 			spots.push_back(spot);
 		}
-		
-		// -- draw shadow maps --
-		
-		size_t id = 0;
-
-		for (auto & spot : spots)
-		{
-			d.addSpotLight(id++, spot.transform, spot.angle, spot.nearDistance, spot.farDistance);
-		}
-		
-		d.drawShadowMaps();
 		
 		// -- determine view matrix --
 		
@@ -525,6 +543,17 @@ int main(int argc, char * argv[])
 			worldToView = spots[1].transform.CalcInv();
 		if (keyboard.isDown(SDLK_3))
 			worldToView = spots[2].transform.CalcInv();
+		
+		// -- draw shadow maps --
+		
+		size_t id = 0;
+
+		for (auto & spot : spots)
+		{
+			d.addSpotLight(id++, spot.transform, spot.angle, spot.nearDistance, spot.farDistance);
+		}
+		
+		d.drawShadowMaps(worldToView);
 		
 		// -- prepare forward lighting --
 		
@@ -540,7 +569,7 @@ int main(int argc, char * argv[])
 				spot.angle * float(M_PI/180.f),
 				spot.farDistance,
 				spot.color,
-				1.f,
+				16.f,
 				shadowMapId);
 			
 			id++;
@@ -555,7 +584,7 @@ int main(int argc, char * argv[])
 			projectPerspective3d(90.f, .01f, 100.f);
 			
 			gxPushMatrix();
-			gxMultMatrixf(worldToView.m_v);
+			gxLoadMatrixf(worldToView.m_v);
 			{
 				pushDepthTest(true, DEPTH_LESS);
 				pushBlend(BLEND_OPAQUE);

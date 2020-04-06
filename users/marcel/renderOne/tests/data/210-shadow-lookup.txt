@@ -1,21 +1,25 @@
 uniform sampler2D shadowDepthAtlas;
 uniform sampler2D shadowColorAtlas;
 
-uniform mat4x4 shadowMatrices[32];
+uniform mat4x4 shadowMatrices[64];
 
-uniform float numMaps;
+uniform float numShadowMaps;
 uniform float enableColorShadows;
 
 #define ENABLE_SHADOW_DEBUGS 0
 
 vec3 lookupShadow(int id, vec3 position_view)
 {
-	if (id >= numMaps)
+	if (id >= numShadowMaps)
 		return vec3(1.0);
 
 	// transform view-space position into light-space
 
 	vec4 position_light = shadowMatrices[id] * vec4(position_view, 1.0);
+
+#if !defined(GL_core_profile)
+	position_light.y = -position_light.y;
+#endif
 
 	// determine texture coordinates
 
@@ -25,8 +29,9 @@ vec3 lookupShadow(int id, vec3 position_view)
 
 	// perform texture sampling inside the atlas texture
 
-	vec2 atlas_min = vec2(1.0 / numMaps * (id + 0), 0.0);
-	vec2 atlas_max = vec2(1.0 / numMaps * (id + 1), 1.0);
+// todo : optimize : store shadow atlas min/max inside a uniform array
+	vec2 atlas_min = vec2(1.0 / numShadowMaps * (id + 0), 0.0);
+	vec2 atlas_max = vec2(1.0 / numShadowMaps * (id + 1), 1.0);
 
 	vec2 position_atlas = mix(atlas_min, atlas_max, position_texture);
 
@@ -69,10 +74,10 @@ vec3 lookupShadow(int id, vec3 position_view)
 
 #endif
 
-	float occlusionMask = depth < position_light.z ? 0.0 : 1.0;
+	float occlusionMask = (depth < position_light.z) ? 0.0 : 1.0;
 
-	if (enableColorShadows != 0.0)
-		return occlusionMask * texture(shadowColorAtlas, position_atlas).rgb;
+	if (enableColorShadows != 0.0 && occlusionMask != 0.0)
+		return texture(shadowColorAtlas, position_atlas).rgb;
 	else
 		return vec3(occlusionMask);
 }

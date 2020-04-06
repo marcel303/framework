@@ -19,8 +19,6 @@ vec3 calculateLight(int id, vec3 position_view, bool receiveShadows)
 		result *= lookupShadow(id, position_view);
 	}
 
-	result *= 12.0;
-
 	float distance_attenuation = 1.0 / (position_light.z * position_light.z);
 
 	position_light.xy /= position_light.w;
@@ -44,7 +42,9 @@ void forEachLightId(int id)
 {
 	LightParams light = lookupLightParams(id);
 		
-	s_color += light.color * calculateLight(id, s_position_view, s_receiveShadows && light.userData != -1.0);
+	int shadowMapId = int(light.userData);
+
+	s_color += light.color * calculateLight(shadowMapId, s_position_view, s_receiveShadows && shadowMapId != -1);
 
 #if DEBUG_LIGHTING_COMPLXITY
 	s_numLights++;
@@ -53,9 +53,8 @@ void forEachLightId(int id)
 
 vec3 calculateLighting(vec3 position_view, bool receiveShadows)
 {
-	vec3 color = vec3(0.0);
+	// -- use light volume to lookup lights at view-position --
 
-#if 1
 	s_position_view = position_view;
 	s_color = vec3(0.0);
 	s_receiveShadows = receiveShadows;
@@ -66,29 +65,15 @@ vec3 calculateLighting(vec3 position_view, bool receiveShadows)
 
 	forEachLightIdAt(position_view);
 
-	color = s_color;
+	// -- add ambient light --
+
+	s_color += vec3(0.01);
+
+	// -- apply debugs --
 
 #if DEBUG_LIGHTING_COMPLXITY
-	color += vec3(s_numLights / 16.0);
-#endif
-#elif 1
-	int i_numLights = int(numLights);
-
-	for (int i = 0; i < i_numLights; ++i)
-	{
-		LightParams light = lookupLightParams(i);
-		
-		color += light.color * calculateLight(i, position_view, receiveShadows && light.userData != -1.0);
-	}
-#else
-	color += vec3(1, 1, 0) * calculateLight(0, position_view, receiveShadows);
-	color += vec3(0, 1, 1) * calculateLight(1, position_view, receiveShadows);
-	color += vec3(1, 0, 1) * calculateLight(2, position_view, receiveShadows);
+	s_color += vec3(s_numLights / 16.0);
 #endif
 
-	color /= 3.0;
-
-	color += vec3(0.01);
-
-	return color;
+	return s_color;
 }
