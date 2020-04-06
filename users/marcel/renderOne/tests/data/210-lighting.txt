@@ -1,7 +1,6 @@
 include renderOne/forward-lighting/light-params.txt
 include renderOne/forward-lighting/light-volume.txt
-
-include 210-shadow-lookup.txt
+include renderOne/shadow-mapping/shadow-mapping.txt
 
 #define DEBUG_LIGHTING_COMPLXITY 0
 
