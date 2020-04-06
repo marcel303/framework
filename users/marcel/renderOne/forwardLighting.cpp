@@ -6,6 +6,20 @@
 
 namespace rOne
 {
+	// todo : add renderOne include for color conversions
+	
+	static const float kSrgbToLinear = 2.2f;
+
+	static Vec3 srgbToLinear(const Vec3 & rgb)
+	{
+		return Vec3(
+			powf(rgb[0], kSrgbToLinear),
+			powf(rgb[1], kSrgbToLinear),
+			powf(rgb[2], kSrgbToLinear));
+	}
+	
+	//
+	
 	ForwardLightingHelper::~ForwardLightingHelper()
 	{
 		reset();
@@ -29,7 +43,7 @@ namespace rOne
 		light.position = position;
 		light.attenuationBegin = attenuationBegin;
 		light.attenuationEnd = attenuationEnd;
-		light.color = color * intensity;
+		light.color = srgbToLinear(color) * intensity;
 		light.userData = userData;
 
 		addLight(light);
@@ -51,7 +65,7 @@ namespace rOne
 		light.attenuationBegin = 0.f;
 		light.attenuationEnd = farDistance;
 		light.spotAngle = angle;
-		light.color = color * intensity;
+		light.color = srgbToLinear(color) * intensity;
 		light.userData = userData;
 
 		addLight(light);
@@ -66,7 +80,7 @@ namespace rOne
 		Light light;
 		light.type = kLightType_Directional;
 		light.direction = direction;
-		light.color = color * intensity;
+		light.color = srgbToLinear(color) * intensity;
 		light.userData = userData;
 
 		addLight(light);
