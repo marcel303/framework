@@ -167,6 +167,7 @@ int main(int argc, char * argv[])
 				Shader shader("light-volume-2d");
 				setShader(shader);
 				{
+					shader.setImmediate("useLightVolume", 1.f);
 					int nextTextureUnit = 0;
 					helper.setShaderData(shader, nextTextureUnit);
 					drawRect(300, 100, 500, 300);
@@ -230,6 +231,7 @@ int main(int argc, char * argv[])
 					Shader shader("light-volume");
 					setShader(shader);
 					{
+						shader.setImmediate("useLightVolume", 1.f);
 						int nextTextureUnit = 0;
 						helper.setShaderData(shader, nextTextureUnit);
 						
@@ -278,6 +280,7 @@ int main(int argc, char * argv[])
 					Shader shader("light-volume");
 					setShader(shader);
 					{
+						shader.setImmediate("useLightVolume", 1.f);
 						int nextTextureUnit = 0;
 						helper.setShaderData(shader, nextTextureUnit);
 						

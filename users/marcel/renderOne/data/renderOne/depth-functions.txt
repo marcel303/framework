@@ -13,7 +13,7 @@ vec3 depthToViewPosition(
 	vec4 position_projection = vec4(coord, 1.0);
 	vec4 position_view = projectionToView * position_projection;
 
-	position_view /= position_view.w;
+	position_view.xyz /= position_view.w;
 
 	return position_view.xyz;
 }

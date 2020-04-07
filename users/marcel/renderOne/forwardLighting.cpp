@@ -214,7 +214,6 @@ namespace rOne
 	{
 		// todo : set shader uniforms, textures and buffers
 
-		shader.setImmediate("useLightVolume", 1.f);
 		shader.setBuffer("lightParamsBuffer", lightParamsBuffer);
 		shader.setImmediate("numLights", lights.size());
 		shader.setTexture("lightVolume", nextTextureUnit++, indexTextureId, false, false);

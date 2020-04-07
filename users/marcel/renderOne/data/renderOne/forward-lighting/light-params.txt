@@ -4,8 +4,8 @@
 uniform vec4 lightParams[64*4] buffer lightParamsBuffer;
 uniform float numLights;
 
-#define kLightType_Point 0
-#define kLightType_Spot 1
+#define kLightType_Point       0
+#define kLightType_Spot        1
 #define kLightType_Directional 2
 
 struct LightParams
@@ -27,7 +27,11 @@ struct LightParams
 	float userData;
 };
 
-LightParams decodeLightParams(vec4 params1, vec4 params2, vec4 params3, vec4 params4)
+LightParams decodeLightParams(
+	vec4 params1,
+	vec4 params2,
+	vec4 params3,
+	vec4 params4)
 {
 	LightParams result;
 
