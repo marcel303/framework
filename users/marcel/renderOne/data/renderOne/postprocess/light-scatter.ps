@@ -5,38 +5,65 @@ uniform sampler2D lightTexture;
 
 uniform vec2 origin;
 uniform float numSamples;
-uniform float decayPerSample;
+uniform float decay;
 uniform float strength;
 
 shader_in vec2 v_texcoord;
 
+#define ENABLE_DITHER 1 // improve perceived quality a little by adding some noise to the origin of the ray
+
+// todo : create a fast light scatter shader. sample a small line segment between the origin and the sample pos, to determine occlusion/visibility of the source. next, exp falloff based on distance
+
+#if ENABLE_DITHER
+
+vec2 ditherCoord(vec2 sampleCoord)
+{
+	// Iestyn's RGB dither (7 asm instructions) from Portal 2 X360, slightly modified for VR
+    vec2 vDither = vec2( dot( vec2( 171.0, 231.0 ), sampleCoord ) );
+    vDither = fract( vDither / vec2( 103.0, 71.0 ) );
+    return vDither - vec2(0.5);
+}
+
+#endif
+
 void main()
 {
+	vec2 viewSize = textureSize(colorTexture, 0);
+	float xScale = viewSize.x / viewSize.y;
+
 	vec2 p1 = origin;
 	vec2 p2 = v_texcoord;
 
-	vec2 p = p1;
-	vec2 p_inc = (p2 - p1) / numSamples;
+#if ENABLE_DITHER
+	vec2 offset = ditherCoord(v_texcoord * viewSize) * 4.0 / viewSize;
+	//p1 += offset.xy;
+	p2 += offset.yx;
+#endif
 
-	vec3 accu = vec3(0.0);
+	float numSamplesRcp = 1.0 / numSamples;
+
+	vec2 p = p1;
+	vec2 p_inc = (p2 - p1) * numSamplesRcp;
+
+	vec3 sum = vec3(0.0);
 
 	for (float i = 0.0; i < numSamples; ++i)
 	{
-		//accu *= decayPerSample;
-		accu *= pow(0.9, length(p - origin));
+		vec2 delta = p - origin;
+		delta.x *= xScale; // account for aspect ratio
+
+		sum *= pow(decay, length(delta));
 
 		vec3 value = texture(lightTexture, p).rgb;
-		
-		accu += value;
+
+		sum += value;
 
 		p += p_inc;
 	}
 
-	accu /= numSamples;
-
 	vec4 color = texture(colorTexture, v_texcoord);
 
-	color.rgb += accu * strength;
+	color.rgb += sum * (strength * numSamplesRcp);
 
 	shader_fragColor = color;
 }

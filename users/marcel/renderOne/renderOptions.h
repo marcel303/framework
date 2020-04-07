@@ -25,6 +25,14 @@ struct RenderOptions
 	Vec3 defaultLightColorBottom = Vec3(.1f, .1f, .1f);
 	bool useDefaultLight = true; // when true and no light drawing function is set, the renderer will use a default directional light
 	
+	struct ScreenSpaceAmbientOcclusion
+	{
+		bool enabled = false;
+		float strength = 1.f;
+		
+		static void reflect(TypeDB & typeDB);
+	} screenSpaceAmbientOcclusion;
+	
 	struct Fog
 	{
 		bool enabled = false;
@@ -65,6 +73,9 @@ struct RenderOptions
 		bool enabled = false;
 		float strength = .15f;
 		float blurSize = 20.f; // todo : make blur blur size resolution independent
+		
+		// when true, the top-level image from the down sample chain is dropped, speeding up processing significantly
+		bool dropTopLevelImage = true;
 
 		static void reflect(TypeDB & typeDB);
 	} bloom;
@@ -74,7 +85,7 @@ struct RenderOptions
 		bool enabled = false;
 		Vec2 origin = Vec2(.5f, .2f);
 		int numSamples = 100;
-		float decay = .1f; // todo : decay should be based on distance, not sample # ?
+		float decay = .8f;
 		float strength = 1.f;
 		float strengthMultiplier = 1.f;
 	} lightScatter;

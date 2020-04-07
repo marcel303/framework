@@ -399,6 +399,33 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 	}
 	popRenderPass();
 	
+	// apply screen-space ambient occlusion
+	
+	if (renderOptions.screenSpaceAmbientOcclusion.enabled)
+	{
+		pushRenderPass(composite[composite_idx], false, nullptr, false, "SSAO");
+		{
+			projectScreen2d();
+			pushBlend(BLEND_MUL);
+			{
+				const Mat4x4 projectionToView = projectionMatrix.CalcInv();
+				
+				Shader shader("renderOne/postprocess/ssao");
+				setShader(shader);
+				{
+					shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, true);
+					shader.setTexture("normalTexture", 1, buffers.normals->getTextureId(), false, true);
+					shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
+					shader.setImmediate("strength", renderOptions.screenSpaceAmbientOcclusion.strength);
+					drawRect(0, 0, viewportSx, viewportSy);
+				}
+				clearShader();
+			}
+			popBlend();
+		}
+		popRenderPass();
+	}
+	
 	// apply fog
 	
 	if (renderOptions.fog.enabled)
@@ -687,7 +714,12 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 		
 		// add/upscale lower level buffer and blur
 		
-		for (int i = buffers.bloomDownsampleChain.numBuffers - 1; i >= 0; --i)
+		const int finalBuffer =
+			renderOptions.bloom.dropTopLevelImage
+			? (buffers.bloomDownsampleChain.numBuffers >= 2 ? 1 : 0)
+			: 0;
+		
+		for (int i = buffers.bloomDownsampleChain.numBuffers - 1; i >= finalBuffer; --i)
 		{
 			if (i + 1 < buffers.bloomDownsampleChain.numBuffers)
 			{
@@ -740,8 +772,8 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			Shader shader("renderOne/bloom-apply");
 			setShader(shader);
 			{
-				shader.setTexture("source", 0, buffers.bloomBlurChain.buffers[0].getTextureId(), true, true);
-				shader.setImmediate("strength", renderOptions.bloom.strength / buffers.bloomBlurChain.numBuffers);
+				shader.setTexture("source", 0, buffers.bloomBlurChain.buffers[finalBuffer].getTextureId(), true, true);
+				shader.setImmediate("strength", renderOptions.bloom.strength / (buffers.bloomBlurChain.numBuffers - finalBuffer));
 				
 				drawRect(0, 0, viewportSx, viewportSy);
 			}
@@ -764,13 +796,11 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 				Shader shader("renderOne/postprocess/light-scatter");
 				setShader(shader);
 				{
-					const float decayPerSample = powf(renderOptions.lightScatter.decay, 1.f / renderOptions.lightScatter.numSamples);
-					
 					shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), true, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 					shader.setTexture("lightTexture", 1, composite[composite_idx]->getTextureId(), true, true);
 					shader.setImmediate("origin", renderOptions.lightScatter.origin[0], renderOptions.lightScatter.origin[1]);
 					shader.setImmediate("numSamples", renderOptions.lightScatter.numSamples);
-					shader.setImmediate("decayPerSample", decayPerSample);
+					shader.setImmediate("decay", renderOptions.lightScatter.decay);
 					shader.setImmediate("strength", renderOptions.lightScatter.strength * renderOptions.lightScatter.strengthMultiplier);
 					drawRect(0, 0, viewportSx, viewportSy);
 				}

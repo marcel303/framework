@@ -1,6 +1,13 @@
 #include "reflection.h"
 #include "renderOptions.h"
 
+void RenderOptions::ScreenSpaceAmbientOcclusion::reflect(TypeDB & typeDB)
+{
+	typeDB.addStructured<RenderOptions::ScreenSpaceAmbientOcclusion>("RenderOptions::ScreenSpaceAmbientOcclusion")
+		.add("enabled", &RenderOptions::ScreenSpaceAmbientOcclusion::enabled)
+		.add("strength", &RenderOptions::ScreenSpaceAmbientOcclusion::strength);
+}
+
 void RenderOptions::Fog::reflect(TypeDB & typeDB)
 {
 	typeDB.addStructured<RenderOptions::Fog>("RenderOptions::Fog")
@@ -35,7 +42,8 @@ void RenderOptions::Bloom::reflect(TypeDB & typeDB)
 	typeDB.addStructured<RenderOptions::Bloom>("RenderOptions::Bloom")
 		.add("enabled", &RenderOptions::Bloom::enabled)
 		.add("blurSize", &RenderOptions::Bloom::blurSize)
-		.add("strength", &RenderOptions::Bloom::strength);
+		.add("strength", &RenderOptions::Bloom::strength)
+		.add("dropTopLevelImage", &RenderOptions::Bloom::dropTopLevelImage);
 }
 
 void RenderOptions::DepthSilhouette::reflect(TypeDB & typeDB)
