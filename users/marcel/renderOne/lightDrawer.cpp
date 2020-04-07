@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "lightDrawer.h"
+#include "lightVolumeBuilder.h" // computeSpotLightAabb
 
 #define ENABLE_LIGHT_VOLUME_STENCIL true
 
@@ -186,6 +187,66 @@ namespace rOne
 		shader.setImmediate("lightPosition_view", lightPos_view[0], lightPos_view[1], lightPos_view[2]);
 		shader.setImmediate("lightColor", lightColor[0], lightColor[1], lightColor[2]);
 		shader.setImmediate("lightAttenuationParams", lightAttenuationBegin, lightAttenuationEnd);
+		{
+			drawRect(0, 0, drawDeferredInfo.viewSx, drawDeferredInfo.viewSy);
+		}
+		clearShader();
+		
+	#if ENABLE_LIGHT_VOLUME_STENCIL
+		if (drawDeferredInfo.enableStencilVolumes)
+		{
+			stencilVolumeTestEnd();
+		}
+	#endif
+	}
+
+	void LightDrawer::drawDeferredSpotLight(
+		const Vec3 & lightPosition,
+		const Vec3 & lightDirection,
+		const float lightAngle,
+		const float lightAttenuationBegin,
+		const float lightAttenuationEnd,
+		const Vec3 & in_lightColor,
+		const float lightIntensity) const
+	{
+	#if ENABLE_LIGHT_VOLUME_STENCIL
+		if (drawDeferredInfo.enableStencilVolumes)
+		{
+			stencilVolumeDrawBegin(drawDeferredInfo);
+			{
+				Vec3 min;
+				Vec3 max;
+				LightVolumeBuilder::computeSpotLightAabb(lightPosition, lightDirection, lightAngle, lightAttenuationEnd, min, max);
+				
+				setColor(colorRed);
+				fillCube((min + max) / 2.f, (max - min) / 2.f);
+				//fillCube(lightPosition, Vec3(lightAttenuationEnd, lightAttenuationEnd, lightAttenuationEnd));
+			}
+			stencilVolumeDrawEnd();
+
+			stencilVolumeTestBegin();
+		
+			//setColor(0, 127, 0);
+			//drawRect(0, 0, drawDeferredInfo.viewSx, drawDeferredInfo.viewSy);
+		}
+	#endif
+		
+		const Vec3 lightPos_view = drawDeferredInfo.worldToView.Mul4(lightPosition);
+		const Vec3 lightDir_view = drawDeferredInfo.worldToView.Mul3(lightDirection);
+		const Vec3 lightColor = srgbToLinear(in_lightColor) * lightIntensity;
+
+		Shader shader("renderOne/deferred-lights/spot");
+		setShader(shader);
+		shader.setTexture("depthTexture", 0, drawDeferredInfo.depthTextureId, false, true);
+		shader.setTexture("normalTexture", 1, drawDeferredInfo.normalTextureId, false, true);
+		shader.setTexture("colorTexture", 2, drawDeferredInfo.colorTextureId, false, true);
+		shader.setTexture("specularColorTexture", 3, drawDeferredInfo.specularColorTextureId, false, true);
+		shader.setTexture("specularExponentTexture", 4, drawDeferredInfo.specularExponentTextureId, false, true);
+		shader.setImmediateMatrix4x4("projectionToView", drawDeferredInfo.projectionToView.m_v);
+		shader.setImmediate("lightPosition_view", lightPos_view[0], lightPos_view[1], lightPos_view[2]);
+		shader.setImmediate("lightDirection_view", lightDir_view[0], lightDir_view[1], lightDir_view[2]);
+		shader.setImmediate("lightColor", lightColor[0], lightColor[1], lightColor[2]);
+		shader.setImmediate("lightAttenuationParams", lightAttenuationBegin, lightAttenuationEnd, cosf(lightAngle / 2.f));
 		{
 			drawRect(0, 0, drawDeferredInfo.viewSx, drawDeferredInfo.viewSy);
 		}

@@ -59,6 +59,15 @@ namespace rOne
 			const float lightAttenuationEnd,
 			const Vec3 & lightColor,
 			const float lightIntensity) const;
+
+		void drawDeferredSpotLight(
+			const Vec3 & lightPosition,
+			const Vec3 & lightDirection,
+			const float lightAngle,
+			const float lightAttenuationBegin,
+			const float lightAttenuationEnd,
+			const Vec3 & lightColor,
+			const float lightIntensity) const;
 	};
 
 	extern LightDrawer g_lightDrawer;
