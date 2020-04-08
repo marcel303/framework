@@ -1,6 +1,8 @@
 include engine/ShaderPS.txt
 include renderOne/forward-lighting/light-params.txt
 include renderOne/forward-lighting/light-volume.txt
+include renderOne/light-attenuation-functions.txt
+include renderOne/shadow-mapping/shadow-mapping.txt
 
 /*
 
@@ -11,9 +13,14 @@ features of renderOne
 */
 
 shader_in vec3 v_position;
+shader_in vec3 v_normal;
 shader_in vec4 v_color;
 
+vec3 normal;
+
 vec3 color;
+
+#define DOUBLE_SIDED 1
 
 void forEachLightId(int id)
 {
@@ -22,16 +29,68 @@ void forEachLightId(int id)
 	if (params.type == kLightType_Point)
 	{
 		vec3 delta = params.position - v_position;
-		float distance = length(delta);
-		float attenuation = 1.0 - (distance - params.attenuationBegin) / (params.attenuationEnd - params.attenuationBegin);
-		attenuation = clamp(attenuation, 0.0, 1.0);
+		vec3 direction = normalize(delta);
 
-		color += vec3(attenuation);
+	#if DOUBLE_SIDED
+		float factor = abs(dot(normal, direction));
+	#else
+		float factor = max(0.0, dot(normal, direction));
+	#endif
+
+		float attenuation = computeAttenuationForPointLight(
+			v_position,
+			params.position,
+			params.attenuationBegin,
+			params.attenuationEnd);
+
+		color += (factor * attenuation) * params.color;
+	}
+	else if (params.type == kLightType_Spot)
+	{
+	#if DOUBLE_SIDED
+		float factor = abs(dot(normal, params.direction));
+	#else
+		float factor = max(0.0, dot(normal, params.direction));
+	#endif
+
+		float attenuation = computeAttenuationForSpotLight(
+			v_position,
+			params.position,
+			params.direction,
+			params.spotAngleAlpha,
+			params.attenuationBegin,
+			params.attenuationEnd);
+
+		int shadowMapId = int(params.userData);
+
+		if (shadowMapId != -1)
+			attenuation *= lookupShadow(shadowMapId, v_position).x;
+
+		color += (factor * attenuation) * params.color;
+	}
+	else if (params.type == kLightType_Directional)
+	{
+	#if DOUBLE_SIDED
+		float factor = abs(dot(normal, params.direction));
+	#else
+		float factor = max(0.0, dot(normal, params.direction));
+	#endif
+
+		float attenuation = 1.0;
+
+		int shadowMapId = int(params.userData);
+
+		if (shadowMapId != -1)
+			attenuation *= lookupShadow(shadowMapId, v_position).x;
+
+		color += (factor * attenuation) * params.color;
 	}
 }
 
 void main()
 {
+	normal = -normalize(v_normal);
+
 	color = vec3(0.0);
 
 	forEachLightIdAt(v_position);
