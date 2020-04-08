@@ -18,6 +18,7 @@
 
 #include "Quat.h"
 
+#include <algorithm>
 #include <stdint.h>
 #include <vector>
 
@@ -34,6 +35,7 @@ int main(int argc, char * argv[])
 	framework.filedrop = true;
 	
 	//if (!framework.init(400, 300))
+	//if (!framework.init(600, 600))
 	if (!framework.init(1200, 900))
 		return 0;
 
@@ -196,6 +198,7 @@ int main(int argc, char * argv[])
 				
 				std::vector<Light> lights;
 				
+				if (false)
 				{
 					Light light;
 					light.type = kLightType_Directional;
@@ -204,7 +207,7 @@ int main(int argc, char * argv[])
 					light.attenuationBegin = 0.f;
 					light.attenuationEnd = 100.f;
 					light.color.Set(1, 1, 1);
-					light.intensity = .04f;
+					light.intensity = .1f;
 					
 					lights.push_back(light);
 				}
@@ -218,7 +221,7 @@ int main(int argc, char * argv[])
 					light.attenuationBegin = 0.f;
 					light.attenuationEnd = 4.f;
 					light.color.Set(1, 1, 1);
-					light.intensity = .01f;
+					light.intensity = .4f;
 					
 					lights.push_back(light);
 					
@@ -226,6 +229,7 @@ int main(int argc, char * argv[])
 					//helper.addPointLight(camera.position, 0.f, 4.f, Vec3(1, 1, 1), .01f);
 				}
 				
+				if (true)
 				{
 					// rotating red spot light
 					
@@ -237,23 +241,23 @@ int main(int argc, char * argv[])
 					light.attenuationBegin = 0.01f;
 					light.attenuationEnd = 20.f;
 					light.color.Set(1, 0, 0);
-					light.spotAngle = float(M_PI/2.0);
+					light.spotAngle = 70.f * float(M_PI/180.0);
 					light.intensity = 1.f;
 					
 					lights.push_back(light);
 				}
 				
-				if (false)
+				if (true)
 				{
-					// pulsating red point light
+					// pulsating green point light
 					
 					Light light;
 					light.type = kLightType_Point;
 					light.position.Set(0, 0, 0);
 					light.attenuationBegin = 0.f;
 					light.attenuationEnd = 2.f + sinf(framework.time * 2.34f) * 2.f;
-					light.color.Set(1, 0, 0);
-					light.intensity = .4f;
+					light.color.Set(0, 1, 0);
+					light.intensity = 1.f;
 					
 					lights.push_back(light);
 				}
