@@ -150,7 +150,7 @@ int main(int argc, char * argv[])
 		
 		for (auto & spot : spots)
 		{
-			d.addSpotLight(id++, spot.transform, spot.angle, spot.nearDistance, spot.farDistance);
+			d.addSpotLight(id++, spot.transform, spot.angle * float(M_PI/180.0), spot.nearDistance, spot.farDistance);
 		}
 		
 		d.addDirectionalLight(id++, directional, 0.f, 100.f, 12.f);

@@ -9,13 +9,13 @@ void ShadowMapDrawer::calculateProjectionMatrixForLight(const Light & light, Mat
 		
 	#if ENABLE_OPENGL
 		projectionMatrix.MakePerspectiveGL(
-			light.spotAngle / 180.f * float(M_PI),
+			light.spotAngle,
 			aspectRatio,
 			light.nearDistance,
 			light.farDistance);
 	#else
 		projectionMatrix.MakePerspectiveLH(
-			light.spotAngle / 180.f * float(M_PI),
+			light.spotAngle,
 			aspectRatio,
 			light.nearDistance,
 			light.farDistance);
@@ -231,6 +231,7 @@ void ShadowMapDrawer::drawShadowMaps(const Mat4x4 & worldToView)
 		pushColorWriteMask(0, 0, 0, 0);
 		pushBlend(BLEND_OPAQUE);
 		pushDepthBias(1, 1);
+		pushShaderOutputs("");
 		{
 			if (light.type == kLightType_Spot)
 			{
@@ -255,6 +256,7 @@ void ShadowMapDrawer::drawShadowMaps(const Mat4x4 & worldToView)
 					drawOpaque();
 			}
 		}
+		popShaderOutputs();
 		popDepthBias();
 		popBlend();
 		popColorWriteMask();

@@ -23,7 +23,8 @@ namespace rOne
 		float attenuationBegin = 0.f;
 		float attenuationEnd = 1.f;
 		float spotAngle = 0.f;
-		Vec3 color;
+		Vec3 color = Vec3(1, 1, 1);
+		float intensity = 1.f;
 		float userData;
 	};
 
