@@ -6,6 +6,8 @@ uniform mat4x4 shadowMatrices[32];
 uniform float numShadowMaps;
 uniform float enableColorShadows;
 
+#define ENABLE_PCF 0
+
 #define ENABLE_SHADOW_DEBUGS 0
 
 vec3 lookupShadow(int id, vec3 position_view)
@@ -22,13 +24,13 @@ vec3 lookupShadow(int id, vec3 position_view)
 
 	float position_depth = position_light.z;
 
+#if defined(GL_core_profile)
+	position_depth = (position_depth + 1.0) * 0.5; // pack depth from -1.0 to +1.0 range to the 0.0 to 1.0 range used when storing depth
+#endif
+
 	// does the point lie before the near plane of the light?
 
-#if defined(GL_core_profile)
-	if (position_depth < -1.0)
-#else
 	if (position_depth < 0.0)
-#endif
 	{
 		// if the point lies before the near plane of the light,
 		// we don't know if there's geometry drawn between it and
@@ -59,10 +61,6 @@ vec3 lookupShadow(int id, vec3 position_view)
 	position_atlas = max(atlas_min, min(atlas_max, position_atlas));
 
 	float depth = texture(shadowDepthAtlas, position_atlas).x;
-
-#if defined(GL_core_profile)
-	depth = depth * 2.0 - 1.0; // unpack depth to the -1.0 .. +1.0 range used by OpenGL
-#endif
 
 #if ENABLE_SHADOW_DEBUGS
 
@@ -97,17 +95,51 @@ vec3 lookupShadow(int id, vec3 position_view)
 
 #endif
 
+#if ENABLE_PCF
+	// 'percentage closer filtering'
+	float depth00 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1, -1)).x;
+	float depth10 = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0, -1)).x;
+	float depth20 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1, -1)).x;
+	float depth01 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1,  0)).x;
+	float depth11 = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0,  0)).x;
+	float depth21 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1,  0)).x;
+	float depth02 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1, +1)).x;
+	float depth12 = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0, +1)).x;
+	float depth22 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1, +1)).x;
+
+	float occlusionMask =
+		(depth00 < position_depth ? 0.0 : 1.0) +
+		(depth10 < position_depth ? 0.0 : 1.0) +
+		(depth20 < position_depth ? 0.0 : 1.0) +
+		(depth01 < position_depth ? 0.0 : 1.0) +
+		(depth11 < position_depth ? 0.0 : 1.0) +
+		(depth21 < position_depth ? 0.0 : 1.0) +
+		(depth02 < position_depth ? 0.0 : 1.0) +
+		(depth12 < position_depth ? 0.0 : 1.0) +
+		(depth22 < position_depth ? 0.0 : 1.0);
+
+	occlusionMask *= (1.0 / 9.0);
+#else
 	float occlusionMask = 1.0;
 
 	if (depth < position_depth)
 	{
 		occlusionMask = 0.0;
 	}
+#endif
 
 	if (enableColorShadows != 0.0 && occlusionMask != 0.0)
+	{
+	#if ENABLE_PCF
+		return occlusionMask * texture(shadowColorAtlas, position_atlas).rgb;
+	#else
 		return texture(shadowColorAtlas, position_atlas).rgb;
+	#endif
+	}
 	else
+	{
 		return vec3(occlusionMask);
+	}
 }
 
 #undef ENABLE_SHADOW_DEBUGS
