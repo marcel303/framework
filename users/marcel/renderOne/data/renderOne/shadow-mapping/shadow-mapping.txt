@@ -1,8 +1,8 @@
 uniform sampler2D shadowDepthAtlas;
 uniform sampler2D shadowColorAtlas;
 
-uniform mat4x4 viewToShadowMatrices[32];
-uniform mat4x4 shadowToViewMatrices[32];
+uniform mat4x4 viewToShadowMatrices[16];
+uniform mat4x4 shadowToViewMatrices[16];
 
 uniform float numShadowMaps;
 uniform float enableColorShadows;

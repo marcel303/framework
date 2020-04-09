@@ -110,6 +110,7 @@ namespace rOne
 		
 		// fill light params buffer with information for all of the lights
 		
+		if (!lights.empty())
 		{
 			Vec4 * params = new Vec4[lights.size() * 4];
 
@@ -148,8 +149,7 @@ namespace rOne
 			delete [] params;
 			params = nullptr;
 		}
-
-		if (lights.empty())
+		else
 		{
 			// bind some dummy data when there is no data. this to avoid gpu-driver issues
 			
@@ -194,7 +194,7 @@ namespace rOne
 				}
 				else
 				{
-					assert(false);
+					Assert(false);
 					continue;
 				}
 			}
@@ -210,12 +210,15 @@ namespace rOne
 				false,
 				false);
 
-			lightIdsTextureId = createTextureFromR32F(
-				data.light_ids,
-				data.light_ids_sx,
-				data.light_ids_sy,
-				false,
-				false);
+			if (data.light_ids_sx * data.light_ids_sy > 0)
+			{
+				lightIdsTextureId = createTextureFromR32F(
+					data.light_ids,
+					data.light_ids_sx,
+					data.light_ids_sy,
+					false,
+					false);
+			}
 
 			worldToVolumeScale = data.world_to_volume_scale;
 			
