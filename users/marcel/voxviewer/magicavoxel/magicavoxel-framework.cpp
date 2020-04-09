@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "magicavoxel-framework.h"
+#include <assert.h>
 
 void drawMagicaModel(const MagicaWorld & world, const MagicaModel & model)
 {
@@ -170,6 +171,10 @@ void drawMagicaSceneNode(const MagicaWorld & world, const MagicaSceneNodeBase & 
 					drawMagicaModel(world, *model);
 			}
 		}
+		break;
+		
+	case MagicaSceneNodeType::None:
+		assert(false);
 		break;
 	}
 }
