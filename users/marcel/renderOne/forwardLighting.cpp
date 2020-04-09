@@ -149,6 +149,14 @@ namespace rOne
 			params = nullptr;
 		}
 
+		if (lights.empty())
+		{
+			// bind some dummy data when there is no data. this to avoid gpu-driver issues
+			
+			Vec4 data[4];
+			lightParamsBuffer.setData(data, sizeof(data));
+		}
+
 		// generate light volume data using the (current) set of lights
 
 		{
@@ -179,6 +187,15 @@ namespace rOne
 						direction_view,
 						lights[i].spotAngle,
 						lights[i].attenuationEnd);
+				}
+				else if (lights[i].type == kLightType_Directional)
+				{
+					continue;
+				}
+				else
+				{
+					assert(false);
+					continue;
 				}
 			}
 

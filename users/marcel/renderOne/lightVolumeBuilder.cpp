@@ -166,6 +166,7 @@ namespace rOne
 			}
 			else
 			{
+				assert(false);
 				continue;
 			}
 			

@@ -35,12 +35,12 @@ namespace rOne
 
 		std::vector<Light> lights;
 		
-		bool isPrepared = false;
-		
 		ShaderBuffer lightParamsBuffer;
 		
 		GxTextureId indexTextureId = 0;
 		GxTextureId lightIdsTextureId = 0;
+		
+		bool isPrepared = false;
 		
 		float worldToVolumeScale = 0.f;
 		bool infiniteSpaceMode = false;
