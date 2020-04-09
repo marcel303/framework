@@ -90,7 +90,8 @@ void RenderOptions::reflect(TypeDB & typeDB)
 {
 	typeDB.addEnum<RenderMode>("RenderMode")
 		.add("flat", kRenderMode_Flat)
-		.add("deferredShaded", kRenderMode_DeferredShaded);
+		.add("deferredShaded", kRenderMode_DeferredShaded)
+		.add("forwardShaded", kRenderMode_ForwardShaded);
 	
 	Fog::reflect(typeDB);
 	MotionBlur::reflect(typeDB);

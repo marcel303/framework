@@ -5,10 +5,52 @@
 
 struct TypeDB;
 
+/*
+
+The renderer supports various render modes.
+
+The 'flat' render mode being the fastest, as it renders the opaque and translucents passes to the back-buffer directly.
+
+The other render modes are more feature rich, including HDR and post-processing effects.
+As a consequence, these render modes will draw to intermediate color (and depth) targets, before blitting the result to the back-buffer.
+
+The 'deferred shaded' render mode uses a fixed material model and a deferred lighting pass.
+The 'forward shaded' render mode gives the user more flexibility for implementing a material model, at the cost of a slightly higher cost per pixel.
+
+The deferred shaded render mode uses deferred lighting as a solution for lighting opaque geometry. The steps performed by the deferred shaded render mode are,
+(-) Draw G-buffers for the opaque geometry using multi-pass rendering. The set of G-buffers includes:
+	- Color,
+	- Normal,
+	- Specular color,
+	- Specular exponent,
+	- Emissive,
+	- Depth
+(-) Draw lights into a high-resolution light buffer. The deferred light drawing takes into account the color, normal, specular and emissive properties of a material.
+(-) Composite lighting to produce the 'composite' buffer.
+(-) Draw the translucent geometry on top of the composited result.
+(-) Reconstruct a velocity buffer from depth, using the view and projection matrices from the previous and current frames. The velocity buffer is used to perform a motion-blur effect during the post-processing step.
+(-) Perform post-processing.
+(-) Perform tone mapping.
+(-) Perform optional FXAA as an anti-aliasing solution.
+
+The forward shaded render mode assumes a user-defined forward shading model exists. The forward shaded render mode supports an optional depth pre-pass. The generation of the G-buffers differs depending on whether or not the depth pre-pass is enabled.
+When the depth pre-pass is enabled, G-buffers are drawn as follows:
+(-) Draw the depth pre-pass.
+(-) Draw the color and normal buffers using multi-pass rendering, with the depth test set to EQUAL.
+When the depth pre-pass is disabled, all buffers are generated in one pass, using multi-pass rendering.
+Once the G-buffers are drawn, the translucents geometry is drawn on top of the result.
+After drawing the geometry is done, post-processing is performed. The steps are:
+(-) Reconstruct a velocity buffer from depth, using the view and projection matrices from the previous and current frames. The velocity buffer is used to perform a motion-blur effect during the post-processing step.
+(-) Perform post-processing.
+(-) Perform tone mapping.
+(-) Perform optional FXAA as an anti-aliasing solution.
+
+*/
 enum RenderMode
 {
 	kRenderMode_Flat,
-	kRenderMode_DeferredShaded
+	kRenderMode_DeferredShaded,
+	kRenderMode_ForwardShaded
 };
 
 struct RenderOptions

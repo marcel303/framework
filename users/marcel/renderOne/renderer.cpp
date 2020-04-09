@@ -197,148 +197,66 @@ static void renderLightCompositeBuffer(
 	popBlend();
 }
 
-// render modes
-
-static ColorTarget * renderModeFlat(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions)
+static void renderReconstructedVelocityBuffer(
+	const RenderOptions & renderOptions,
+	const RenderBuffers & buffers,
+	const int viewportSx,
+	const int viewportSy,
+	const Mat4x4 & projectionMatrix,
+	const Mat4x4 & modelViewMatrix,
+	const float timeStep)
 {
-	pushShaderOutputs(renderOptions.drawNormals ? "n" : "c");
+	const int kHistorySize = 100;
+	static Mat4x4 projectionToWorld_prev(true); // todo : per-eye storage
+	
+	static int projectionToWorld_prev_hist_idx = -1; // todo : per-eye storage
+	static Mat4x4 projectionToWorld_prev_hist[kHistorySize]; // todo : per-eye storage
+	
+	const Mat4x4 worldToProjection = projectionMatrix * modelViewMatrix;
+	const Mat4x4 projectionToWorld_curr = worldToProjection.CalcInv();
+	
+	const bool needsVelocityBuffer = renderOptions.motionBlur.enabled;
+	
+#if 0 // enable to use a weird effect created by delayed reprojection matrices
+	if (needsVelocityBuffer == false)
+		projectionToWorld_prev_hist_idx = -1;
+	else
 	{
-		renderOpaquePass(renderFunctions, renderOptions);
-	}
-	popShaderOutputs();
-	
-	renderTranslucentPass(renderFunctions, renderOptions);
-
-	return nullptr;
-}
-
-static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions, RenderBuffers & buffers, const int viewportSx, const int viewportSy, const float timeStep)
-{
-	Mat4x4 modelViewMatrix;
-	Mat4x4 projectionMatrix;
-	gxGetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
-	gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
-	
-	// draw colors + normals
-	
-	ColorTarget * targets[5] =
+		const Mat4x4 projectionToWorld = worldToProjection.CalcInv();
+		
+		if (projectionToWorld_prev_hist_idx == -1)
 		{
-			buffers.normals,
-			buffers.colors,
-			buffers.specularColor,
-			buffers.specularExponent,
-			buffers.emissive
-		};
-	pushRenderPass(targets, 5, true, buffers.depth, true, "Normals + Colors + Specular + Emissive & Depth");
-	pushShaderOutputs("ncSse"); // todo : drawNormals -> "nn". currently bugs when generating shader
-	{
-		gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
-		gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
-		
-	#if ENABLE_OPENGL
-		gxMatrixMode(GX_PROJECTION);
-		gxScalef(1, -1, 1); // todo : remove the need to scale here
-		gxMatrixMode(GX_MODELVIEW);
-	#endif
-		
-		renderOpaquePass(renderFunctions, renderOptions);
-	}
-	popShaderOutputs();
-	popRenderPass();
-	
-	// create velocity buffer
-	
-	{
-		const int kHistorySize = 100;
-		static Mat4x4 projectionToWorld_prev(true); // todo : per-eye storage
-		
-		static int projectionToWorld_prev_hist_idx = -1; // todo : per-eye storage
-		static Mat4x4 projectionToWorld_prev_hist[kHistorySize]; // todo : per-eye storage
-		
-		const Mat4x4 worldToProjection = projectionMatrix * modelViewMatrix;
-		const Mat4x4 projectionToWorld_curr = worldToProjection.CalcInv();
-		
-		const bool needsVelocityBuffer = renderOptions.motionBlur.enabled;
-		
-	#if 0 // enable to use a weird effect created by delayed reprojection matrices
-		if (needsVelocityBuffer == false)
-			projectionToWorld_prev_hist_idx = -1;
+			for (auto & m : projectionToWorld_prev_hist)
+				m = projectionToWorld;
+		}
 		else
 		{
-			const Mat4x4 projectionToWorld = worldToProjection.CalcInv();
-			
-			if (projectionToWorld_prev_hist_idx == -1)
-			{
-				for (auto & m : projectionToWorld_prev_hist)
-					m = projectionToWorld;
-			}
-			else
-			{
-				projectionToWorld_prev_hist[projectionToWorld_prev_hist_idx] = projectionToWorld;
-			}
-			
-			projectionToWorld_prev_hist_idx = (projectionToWorld_prev_hist_idx + 1) % kHistorySize;
+			projectionToWorld_prev_hist[projectionToWorld_prev_hist_idx] = projectionToWorld;
 		}
 		
-		projectionToWorld_prev = projectionToWorld_prev_hist[projectionToWorld_prev_hist_idx];
-	#endif
-		
-		if (needsVelocityBuffer)
-		{
-			pushRenderPass(buffers.velocity, true, nullptr, false, "Velocity");
-			{
-				projectScreen2d();
-				
-				pushBlend(BLEND_OPAQUE);
-				{
-					Shader shader("renderOne/depth-to-velocity");
-					setShader(shader);
-					{
-						shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
-						shader.setImmediateMatrix4x4("projectionToWorld_curr", projectionToWorld_curr.m_v);
-						shader.setImmediateMatrix4x4("projectionToWorld_prev", projectionToWorld_prev.m_v);
-						//shader.setImmediateMatrix4x4("worldToView", modelViewMatrix.m_v);
-						shader.setImmediateMatrix4x4("worldToProjection", worldToProjection.m_v);
-						shader.setImmediate("timeStepRcp", 1.f / timeStep);
-						drawRect(0, 0, viewportSx, viewportSy);
-					}
-					clearShader();
-				}
-				popBlend();
-			}
-			popRenderPass();
-		}
-		
-		projectionToWorld_prev = projectionToWorld_curr;
+		projectionToWorld_prev_hist_idx = (projectionToWorld_prev_hist_idx + 1) % kHistorySize;
 	}
 	
-	// apply tri-planar texture projection test
+	projectionToWorld_prev = projectionToWorld_prev_hist[projectionToWorld_prev_hist_idx];
+#endif
 	
-	if (false)
+	if (needsVelocityBuffer)
 	{
-		pushRenderPass(buffers.normals, false, nullptr, false, "Tri-planer test");
+		pushRenderPass(buffers.velocity, true, nullptr, false, "Velocity");
 		{
 			projectScreen2d();
 			
-			pushBlend(BLEND_ADD_OPAQUE);
+			pushBlend(BLEND_OPAQUE);
 			{
-				const Mat4x4 projectionToView = projectionMatrix.CalcInv();
-				const Mat4x4 viewToWorld = modelViewMatrix.CalcInv();
-				const Mat4x4 worldToView = modelViewMatrix;
-				
-				Shader shader("renderOne/tri-planar-texture-projection");
+				Shader shader("renderOne/depth-to-velocity");
 				setShader(shader);
 				{
-				// todo : ping pong composite buffer for screen space effects
 					shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
-					shader.setTexture("normalTexture", 1, buffers.normals->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
-					shader.setTexture("planarTextureX", 3, getTexture("textures/refraction/droplets.png"), true, false);
-					shader.setTexture("planarTextureY", 4, getTexture("textures/refraction/droplets.png"), true, false);
-					shader.setTexture("planarTextureZ", 5, getTexture("textures/refraction/droplets.png"), true, false);
-					shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
-					shader.setImmediateMatrix4x4("viewToWorld", viewToWorld.m_v);
-					shader.setImmediateMatrix4x4("worldToView", worldToView.m_v);
-					shader.setImmediate("time", framework.time);
+					shader.setImmediateMatrix4x4("projectionToWorld_curr", projectionToWorld_curr.m_v);
+					shader.setImmediateMatrix4x4("projectionToWorld_prev", projectionToWorld_prev.m_v);
+					//shader.setImmediateMatrix4x4("worldToView", modelViewMatrix.m_v);
+					shader.setImmediateMatrix4x4("worldToProjection", worldToProjection.m_v);
+					shader.setImmediate("timeStepRcp", 1.f / timeStep);
 					drawRect(0, 0, viewportSx, viewportSy);
 				}
 				clearShader();
@@ -347,58 +265,19 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 		}
 		popRenderPass();
 	}
+	
+	projectionToWorld_prev = projectionToWorld_curr;
+}
 
-	// accumulate lights
-	
-	pushRenderPass(
-		buffers.light, true,
-		renderOptions.deferredLighting.enableStencilVolumes
-		? buffers.depth
-		: nullptr, false,
-		"Light");
-	{
-		projectScreen2d();
-		
-		renderLightBuffer(
-			renderFunctions,
-			renderOptions,
-			buffers.depth->getTextureId(),
-			buffers.normals->getTextureId(),
-			buffers.colors->getTextureId(),
-			buffers.specularColor->getTextureId(),
-			buffers.specularExponent->getTextureId(),
-			viewportSx,
-			viewportSy,
-			projectionMatrix,
-			modelViewMatrix);
-	}
-	popRenderPass();
-	
-	// setup composite ping-pong buffers
-	
-	ColorTarget * composite[2] =
-	{
-		buffers.composite1,
-		buffers.composite2
-	};
-	
-	int composite_idx = 0;
-	
-	// apply lighting
-	
-	pushRenderPass(composite[composite_idx], true, nullptr, false, "Light application");
-	{
-		projectScreen2d();
-		
-		renderLightCompositeBuffer(
-			buffers.light->getTextureId(),
-			buffers.colors->getTextureId(),
-			buffers.emissive->getTextureId(),
-			buffers.depth->getTextureId(), viewportSx, viewportSy,
-			renderOptions.linearColorSpace);
-	}
-	popRenderPass();
-	
+static void renderPostOpaqueEffects(
+	const RenderOptions & renderOptions,
+	const RenderBuffers & buffers,
+	const int viewportSx,
+	const int viewportSy,
+	const Mat4x4 & projectionMatrix,
+	ColorTarget * composite[2],
+	int & composite_idx)
+{
 	// apply screen-space ambient occlusion
 	
 	if (renderOptions.screenSpaceAmbientOcclusion.enabled)
@@ -493,24 +372,17 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 		
 		composite_idx = next_composite_idx;
 	}
-	
-	// composite translucents on top of the lit opaque
-	
-	pushRenderPass(composite[composite_idx], false, buffers.depth, false, "Translucent");
-	{
-		gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
-		gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
-		
-	#if ENABLE_OPENGL
-		gxMatrixMode(GX_PROJECTION);
-		gxScalef(1, -1, 1); // todo : remove the need to scale here
-		gxMatrixMode(GX_MODELVIEW);
-	#endif
-		
-		renderTranslucentPass(renderFunctions, renderOptions);
-	}
-	popRenderPass();
-	
+}
+
+static void renderPostEffects(
+	const RenderOptions & renderOptions,
+	const RenderBuffers & buffers,
+	const int viewportSx,
+	const int viewportSy,
+	const Mat4x4 & projectionMatrix,
+	ColorTarget * composite[2],
+	int & composite_idx)
+{
 	// apply screen-space motion blur
 	
 	if (renderOptions.motionBlur.enabled)
@@ -683,7 +555,7 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 			popBlend();
 		}
 		popRenderPass();
-			
+		
 		src = dst;
 	
 		// create down sampled buffers
@@ -994,9 +866,301 @@ static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunc
 		
 		composite_idx = next_composite_idx;
 	}
+}
+
+// render modes
+
+static ColorTarget * renderModeFlat(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions)
+{
+	pushShaderOutputs(renderOptions.drawNormals ? "n" : "c");
+	{
+		renderOpaquePass(renderFunctions, renderOptions);
+	}
+	popShaderOutputs();
+	
+	renderTranslucentPass(renderFunctions, renderOptions);
+
+	return nullptr;
+}
+
+static ColorTarget * renderModeDeferredShaded(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions, RenderBuffers & buffers, const int viewportSx, const int viewportSy, const float timeStep)
+{
+	Mat4x4 modelViewMatrix;
+	Mat4x4 projectionMatrix;
+	gxGetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+	gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+	
+	// draw colors + normals
+	
+	ColorTarget * targets[5] =
+		{
+			buffers.normals,
+			buffers.colors,
+			buffers.specularColor,
+			buffers.specularExponent,
+			buffers.emissive
+		};
+	pushRenderPass(targets, 5, true, buffers.depth, true, "Normals + Colors + Specular + Emissive & Depth");
+	pushShaderOutputs("ncSse"); // todo : drawNormals -> "nn". currently bugs when generating shader
+	{
+		gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+		gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+		
+	#if ENABLE_OPENGL
+		gxMatrixMode(GX_PROJECTION);
+		gxScalef(1, -1, 1); // todo : remove the need to scale here
+		gxMatrixMode(GX_MODELVIEW);
+	#endif
+		
+		renderOpaquePass(renderFunctions, renderOptions);
+	}
+	popShaderOutputs();
+	popRenderPass();
+	
+	// create velocity buffer
+	
+	renderReconstructedVelocityBuffer(
+		renderOptions,
+		buffers,
+		viewportSx,
+		viewportSy,
+		projectionMatrix,
+		modelViewMatrix,
+		timeStep);
+	
+	// apply tri-planar texture projection test
+	
+	if (false)
+	{
+		pushRenderPass(buffers.normals, false, nullptr, false, "Tri-planer test");
+		{
+			projectScreen2d();
+			
+			pushBlend(BLEND_ADD_OPAQUE);
+			{
+				const Mat4x4 projectionToView = projectionMatrix.CalcInv();
+				const Mat4x4 viewToWorld = modelViewMatrix.CalcInv();
+				const Mat4x4 worldToView = modelViewMatrix;
+				
+				Shader shader("renderOne/tri-planar-texture-projection");
+				setShader(shader);
+				{
+				// todo : ping pong composite buffer for screen space effects
+					shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
+					shader.setTexture("normalTexture", 1, buffers.normals->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
+					shader.setTexture("planarTextureX", 3, getTexture("textures/refraction/droplets.png"), true, false);
+					shader.setTexture("planarTextureY", 4, getTexture("textures/refraction/droplets.png"), true, false);
+					shader.setTexture("planarTextureZ", 5, getTexture("textures/refraction/droplets.png"), true, false);
+					shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
+					shader.setImmediateMatrix4x4("viewToWorld", viewToWorld.m_v);
+					shader.setImmediateMatrix4x4("worldToView", worldToView.m_v);
+					shader.setImmediate("time", framework.time);
+					drawRect(0, 0, viewportSx, viewportSy);
+				}
+				clearShader();
+			}
+			popBlend();
+		}
+		popRenderPass();
+	}
+
+	// accumulate lights
+	
+	pushRenderPass(
+		buffers.light, true,
+		renderOptions.deferredLighting.enableStencilVolumes
+		? buffers.depth
+		: nullptr, false,
+		"Light");
+	{
+		projectScreen2d();
+		
+		renderLightBuffer(
+			renderFunctions,
+			renderOptions,
+			buffers.depth->getTextureId(),
+			buffers.normals->getTextureId(),
+			buffers.colors->getTextureId(),
+			buffers.specularColor->getTextureId(),
+			buffers.specularExponent->getTextureId(),
+			viewportSx,
+			viewportSy,
+			projectionMatrix,
+			modelViewMatrix);
+	}
+	popRenderPass();
+	
+	// setup composite ping-pong buffers
+	
+	ColorTarget * composite[2] =
+	{
+		buffers.composite1,
+		buffers.composite2
+	};
+	
+	int composite_idx = 0;
+	
+	// apply lighting
+	
+	pushRenderPass(composite[composite_idx], true, nullptr, false, "Light application");
+	{
+		projectScreen2d();
+		
+		renderLightCompositeBuffer(
+			buffers.light->getTextureId(),
+			buffers.colors->getTextureId(),
+			buffers.emissive->getTextureId(),
+			buffers.depth->getTextureId(), viewportSx, viewportSy,
+			renderOptions.linearColorSpace);
+	}
+	popRenderPass();
+	
+	// post-opaque, pre-translucent post-processing
+	
+	renderPostOpaqueEffects(
+		renderOptions,
+		buffers,
+		viewportSx,
+		viewportSy,
+		projectionMatrix,
+		composite,
+		composite_idx);
+	
+	// composite translucents on top of the lit opaque
+	
+	pushRenderPass(composite[composite_idx], false, buffers.depth, false, "Translucent");
+	{
+		gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+		gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+		
+	#if ENABLE_OPENGL
+		gxMatrixMode(GX_PROJECTION);
+		gxScalef(1, -1, 1); // todo : remove the need to scale here
+		gxMatrixMode(GX_MODELVIEW);
+	#endif
+		
+		renderTranslucentPass(renderFunctions, renderOptions);
+	}
+	popRenderPass();
+	
+	// render post-effects
+	
+	renderPostEffects(
+		renderOptions,
+		buffers,
+		viewportSx,
+		viewportSy,
+		projectionMatrix,
+		composite,
+		composite_idx);
 	
 	return composite[composite_idx];
 }
+
+//
+
+static ColorTarget * renderModeForwardShaded(
+	const RenderFunctions & renderFunctions,
+	const RenderOptions & renderOptions,
+	RenderBuffers & buffers,
+	const int viewportSx,
+	const int viewportSy,
+	const float timeStep)
+{
+	Mat4x4 modelViewMatrix;
+	Mat4x4 projectionMatrix;
+	gxGetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+	gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+	
+	// draw colors + normals
+	
+	ColorTarget * targets[2] =
+		{
+			buffers.normals,
+			buffers.composite1,
+		};
+	
+	pushRenderPass(targets, 2, true, buffers.depth, true, "Normals + Colors & Depth");
+	pushShaderOutputs("nc"); // todo : drawNormals -> "nn". currently bugs when generating shader
+	{
+		gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+		gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+		
+	#if ENABLE_OPENGL
+		gxMatrixMode(GX_PROJECTION);
+		gxScalef(1, -1, 1); // todo : remove the need to scale here
+		gxMatrixMode(GX_MODELVIEW);
+	#endif
+		
+		renderOpaquePass(renderFunctions, renderOptions);
+	}
+	popShaderOutputs();
+	popRenderPass();
+	
+	// create velocity buffer
+
+	renderReconstructedVelocityBuffer(
+		renderOptions,
+		buffers,
+		viewportSx,
+		viewportSy,
+		projectionMatrix,
+		modelViewMatrix,
+		timeStep);
+
+	// setup composite ping-pong buffers
+	
+	ColorTarget * composite[2] =
+	{
+		buffers.composite1,
+		buffers.composite2
+	};
+	
+	int composite_idx = 0;
+	
+	// post-opaque, pre-translucent post-processing
+	
+	renderPostOpaqueEffects(
+		renderOptions,
+		buffers,
+		viewportSx,
+		viewportSy,
+		projectionMatrix,
+		composite,
+		composite_idx);
+	
+	// composite translucents on top of the lit opaque
+	
+	pushRenderPass(composite[composite_idx], false, buffers.depth, false, "Translucent");
+	{
+		gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+		gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+		
+	#if ENABLE_OPENGL
+		gxMatrixMode(GX_PROJECTION);
+		gxScalef(1, -1, 1); // todo : remove the need to scale here
+		gxMatrixMode(GX_MODELVIEW);
+	#endif
+		
+		renderTranslucentPass(renderFunctions, renderOptions);
+	}
+	popRenderPass();
+	
+	// render post-effects
+	
+	renderPostEffects(
+		renderOptions,
+		buffers,
+		viewportSx,
+		viewportSy,
+		projectionMatrix,
+		composite,
+		composite_idx);
+	
+	return composite[composite_idx];
+}
+
+//
 
 RenderBuffers::~RenderBuffers()
 {
@@ -1193,6 +1357,11 @@ static ColorTarget * renderFromEye(const RenderFunctions & renderFunctions, cons
 		result = renderModeDeferredShaded(renderFunctions, renderOptions, buffers, viewportSx, viewportSy, timeStep);
 		hasResult = true;
 		break;
+		
+	case kRenderMode_ForwardShaded:
+		result = renderModeForwardShaded(renderFunctions, renderOptions, buffers, viewportSx, viewportSy, timeStep);
+		hasResult = true;
+		break;
 	}
 
 	gxPopMatrix();
@@ -1209,6 +1378,9 @@ static bool isDirectToFramebufferMode(const RenderMode renderMode)
 		return true;
 		
 	case kRenderMode_DeferredShaded:
+		return false;
+		
+	case kRenderMode_ForwardShaded:
 		return false;
 	}
 
@@ -1241,6 +1413,16 @@ void Renderer::render(const RenderFunctions & renderFunctions, const RenderOptio
 		if (buffer->colors != nullptr)
 		{
 			buffer->colors->setClearColor(
+				renderOptions.backgroundColor[0],
+				renderOptions.backgroundColor[1],
+				renderOptions.backgroundColor[2], 0.f);
+		}
+		
+		// note : we need to set the background color on the composite buffer too, since the forward shaded render mode draws directly into the (high-precision) composite buffer. it needs to draw into a high-precision buffer, since forward shaded materials are expected to output colors in the linear color space
+		
+		if (buffer->composite1 != nullptr)
+		{
+			buffer->composite1->setClearColor(
 				renderOptions.backgroundColor[0],
 				renderOptions.backgroundColor[1],
 				renderOptions.backgroundColor[2], 0.f);
