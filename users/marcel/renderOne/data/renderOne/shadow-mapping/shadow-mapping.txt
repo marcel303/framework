@@ -1,7 +1,8 @@
 uniform sampler2D shadowDepthAtlas;
 uniform sampler2D shadowColorAtlas;
 
-uniform mat4x4 shadowMatrices[32];
+uniform mat4x4 viewToShadowMatrices[32];
+uniform mat4x4 shadowToViewMatrices[32];
 
 uniform float numShadowMaps;
 uniform float enableColorShadows;
@@ -14,7 +15,7 @@ vec3 lookupShadow(int id, vec3 position_view)
 {
 	// transform view-space position into light-space
 
-	vec4 position_light = shadowMatrices[id] * vec4(position_view, 1.0);
+	vec4 position_light = viewToShadowMatrices[id] * vec4(position_view, 1.0);
 
 #if !defined(GL_core_profile)
 	position_light.y = -position_light.y;
@@ -140,6 +141,63 @@ vec3 lookupShadow(int id, vec3 position_view)
 	{
 		return vec3(occlusionMask);
 	}
+}
+
+vec3 lookupShadowPosition(int id, vec3 position_view)
+{
+	// transform view-space position into light-space
+
+	vec4 position_light = viewToShadowMatrices[id] * vec4(position_view, 1.0);
+
+	// does the point lie before the near plane of the light?
+
+	if (position_light.w <= 0.0)
+	{
+		return position_view;
+	}
+
+	position_light.xy /= position_light.w;
+
+	// does the point lie outside of the texture?
+
+	if (position_light.x < -1.0 || position_light.x > +1.0)
+		return position_view;
+	if (position_light.y < -1.0 || position_light.y > +1.0)
+		return position_view;
+
+	// determine texture coordinates
+
+	vec2 position_texture = position_light.xy;
+
+#if !defined(GL_core_profile)
+	position_texture.y = 1.0 - position_texture.y;
+#endif
+
+	position_texture = (position_texture + vec2(1.0)) * 0.5;
+
+	// perform texture sampling inside the atlas texture
+
+// todo : optimize : store shadow atlas min/max inside a uniform array
+	vec2 atlas_min = vec2(1.0 / numShadowMaps * (id + 0), 0.0);
+	vec2 atlas_max = vec2(1.0 / numShadowMaps * (id + 1), 1.0);
+
+	vec2 position_atlas = mix(atlas_min, atlas_max, position_texture);
+
+	float depth = texture(shadowDepthAtlas, position_atlas).x;
+
+#if defined(GL_core_profile)
+	depth = depth * 2.0 - 1.0;
+#endif
+
+	//depth = position_light.z; // when set to this, the result of this function should equal position_view passed into it
+
+	vec3 shadowPosition_clip = vec3(position_light.xy, depth);
+	vec4 shadowPosition_proj = vec4(shadowPosition_clip, 1.0);
+	vec4 shadowPosition_view = shadowToViewMatrices[id] * shadowPosition_proj;
+
+	shadowPosition_view.xyz /= shadowPosition_view.w;
+
+	return shadowPosition_view.xyz;
 }
 
 #undef ENABLE_SHADOW_DEBUGS

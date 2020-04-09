@@ -340,7 +340,12 @@ void ShadowMapDrawer::setShaderData(Shader & shader, int & nextTextureUnit, cons
 		shadowMatrix = lightToProjection * light.worldToLight * viewToWorld;
 	}
 	
-	shader.setImmediateMatrix4x4Array("shadowMatrices", (float*)shadowMatrices, numShadowMatrices);
+	shader.setImmediateMatrix4x4Array("viewToShadowMatrices", (float*)shadowMatrices, numShadowMatrices);
+	
+	for (size_t i = 0; i < lights.size(); ++i)
+		shadowMatrices[i] = shadowMatrices[i].CalcInv();
+	
+	shader.setImmediateMatrix4x4Array("shadowToViewMatrices", (float*)shadowMatrices, numShadowMatrices);
 }
 
 int ShadowMapDrawer::getShadowMapId(const int id) const
