@@ -43,6 +43,7 @@ void RenderOptions::Bloom::reflect(TypeDB & typeDB)
 		.add("enabled", &RenderOptions::Bloom::enabled)
 		.add("blurSize", &RenderOptions::Bloom::blurSize)
 		.add("strength", &RenderOptions::Bloom::strength)
+		.add("brightPassValue", &RenderOptions::Bloom::brightPassValue)
 		.add("dropTopLevelImage", &RenderOptions::Bloom::dropTopLevelImage);
 }
 

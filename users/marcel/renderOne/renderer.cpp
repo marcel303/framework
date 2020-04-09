@@ -82,8 +82,6 @@ static void renderOpaquePass(const RenderFunctions & renderFunctions, const Rend
 
 static void renderTranslucentPass(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions)
 {
-// todo : add pre-translucent post effects. this is needed for depth outline to work correctly, when there are translucent things (which themselves don't write to the depth buffer)
-
 	pushDepthTest(true, DEPTH_LESS, false);
 	pushBlend(BLEND_ALPHA);
 	{
@@ -372,6 +370,43 @@ static void renderPostOpaqueEffects(
 		
 		composite_idx = next_composite_idx;
 	}
+	
+	// overlay an outline to the rendered image
+	
+	if (renderOptions.depthSilhouette.enabled)
+	{
+		pushRenderPass(composite[composite_idx], false, nullptr, false, "Outline");
+		{
+			projectScreen2d();
+			
+			pushBlend(BLEND_ALPHA);
+			{
+				const Mat4x4 projectionToView = projectionMatrix.CalcInv();
+				const Vec3 color_linear = srgbToLinear(
+					Vec3(
+						renderOptions.depthSilhouette.color[0],
+						renderOptions.depthSilhouette.color[1],
+						renderOptions.depthSilhouette.color[2]));
+				
+				Shader shader("renderOne/postprocess/outline");
+				setShader(shader);
+				{
+					shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, true);
+					shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
+					shader.setImmediate("strength", renderOptions.depthSilhouette.strength);
+					shader.setImmediate("color",
+						color_linear[0],
+						color_linear[1],
+						color_linear[2],
+						renderOptions.depthSilhouette.color[3]);
+					drawRect(0, 0, viewportSx, viewportSy);
+				}
+				clearShader();
+			}
+			popBlend();
+		}
+		popRenderPass();
+	}
 }
 
 static void renderPostEffects(
@@ -549,6 +584,7 @@ static void renderPostEffects(
 			setShader(shader);
 			{
 				shader.setTexture("source", 0, src->getTextureId(), false, true);
+				shader.setImmediate("brightPassValue", renderOptions.bloom.brightPassValue);
 				drawRect(0, 0, src->getWidth(), src->getHeight());
 			}
 			clearShader();
@@ -603,13 +639,14 @@ static void renderPostEffects(
 				pushRenderPass(dst, false, nullptr, false, "Bloom chain add");
 				pushBlend(BLEND_ADD_OPAQUE);
 				{
-				// todo : use a shader for the addition, as the generic shader does uneccessary work
-					gxSetTexture(src->getTextureId());
-					gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
-					setColor(colorWhite);
-					drawRect(0, 0, dst->getWidth(), dst->getHeight());
-					gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
-					gxSetTexture(0);
+					Shader shader("renderOne/blit-texture");
+					setShader(shader);
+					{
+						shader.setTexture("source", 0, src->getTextureId(), true, true);
+
+						drawRect(0, 0, dst->getWidth(), dst->getHeight());
+					}
+					clearShader();
 				}
 				popBlend();
 				popRenderPass();
@@ -742,38 +779,6 @@ static void renderPostEffects(
 		popRenderPass();
 		
 		composite_idx = next_composite_idx;
-	}
-	
-	// overlay an outline to the rendered image
-	
-	if (renderOptions.depthSilhouette.enabled)
-	{
-		pushRenderPass(composite[composite_idx], false, nullptr, false, "Outline");
-		{
-			projectScreen2d();
-			
-			pushBlend(BLEND_ALPHA);
-			{
-				const Mat4x4 projectionToView = projectionMatrix.CalcInv();
-				
-				Shader shader("renderOne/postprocess/outline");
-				setShader(shader);
-				{
-					shader.setTexture("depthTexture", 0, buffers.depth->getTextureId(), false, true);
-					shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
-					shader.setImmediate("strength", renderOptions.depthSilhouette.strength);
-					shader.setImmediate("color",
-						renderOptions.depthSilhouette.color[0],
-						renderOptions.depthSilhouette.color[1],
-						renderOptions.depthSilhouette.color[2],
-						renderOptions.depthSilhouette.color[3]);
-					drawRect(0, 0, viewportSx, viewportSy);
-				}
-				clearShader();
-			}
-			popBlend();
-		}
-		popRenderPass();
 	}
 	
 	if (renderOptions.colorGrading.enabled)

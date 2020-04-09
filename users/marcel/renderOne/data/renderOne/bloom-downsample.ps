@@ -6,8 +6,6 @@ shader_in vec2 texcoord;
 
 void main()
 {
-	// todo : OpenGL version needs an offset (?)
-
 	vec3 color = texture(source, texcoord).rgb;
 
 	shader_fragColor = vec4(color, 1.0);

@@ -27,7 +27,7 @@ float computeAttenuationForSpotLight(
 	vec3 surfacePosition,
 	vec3 spotPosition,
 	vec3 spotDirection,
-	float spotAngleAlpha, // cos(angle/2)
+	float spotAngleAlpha, // cos(spotAngle/2)
 	float attenuationBegin,
 	float attenuationEnd)
 {

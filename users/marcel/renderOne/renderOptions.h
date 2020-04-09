@@ -115,6 +115,7 @@ struct RenderOptions
 		bool enabled = false;
 		float strength = .15f;
 		float blurSize = 20.f; // todo : make blur blur size resolution independent
+		float brightPassValue = 0.f;
 		
 		// when true, the top-level image from the down sample chain is dropped, speeding up processing significantly
 		bool dropTopLevelImage = true;

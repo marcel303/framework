@@ -232,8 +232,6 @@ namespace rOne
 
 	void ForwardLightingHelper::setShaderData(Shader & shader, int & nextTextureUnit) const
 	{
-		// todo : set shader uniforms, textures and buffers
-
 		shader.setBuffer("lightParamsBuffer", lightParamsBuffer);
 		shader.setImmediate("numLights", lights.size());
 		shader.setTexture("lightVolume", nextTextureUnit++, indexTextureId, false, false);

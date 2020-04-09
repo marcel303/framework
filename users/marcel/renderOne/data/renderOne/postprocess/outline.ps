@@ -27,7 +27,7 @@ void main()
 	float d = length(vec2(d1, d2));
 	
 	float v = d * strength * 0.5;
-	v = (v - 0.5) / 0.5;
+	v = (v - 0.5) * (1.0 / 0.5);
 	v = clamp(v, 0.0, 1.0);
 
 	shader_fragColor = vec4(color.rgb, color.a * v);
