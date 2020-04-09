@@ -76,7 +76,7 @@ Shader::~Shader()
 void Shader::load(const char * name, const char * filenameVs, const char * filenamePs, const char * outputs)
 {
 	if (outputs == nullptr)
-		outputs = globals.shaderOutputs[0] == 0 ? "c" : globals.shaderOutputs;
+		outputs = globals.shaderOutputs;
 	
 	m_cacheElem = &g_shaderCache.findOrCreate(name, filenameVs, filenamePs, outputs);
 }

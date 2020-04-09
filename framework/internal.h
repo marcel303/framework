@@ -427,6 +427,8 @@ public:
 		depthTestWriteEnabled = true;
 		frontStencilState = StencilState();
 		backStencilState = StencilState();
+		shaderOutputs[0] = 'c';
+		shaderOutputs[1] = 0;
 	}
 	
 	Window * mainWindow;
