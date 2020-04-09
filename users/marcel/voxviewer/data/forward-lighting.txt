@@ -1,0 +1,86 @@
+include renderOne/forward-lighting/light-params.txt
+include renderOne/forward-lighting/light-volume.txt
+include renderOne/light-attenuation-functions.txt
+include renderOne/shadow-mapping/shadow-mapping.txt
+
+vec3 s_position;
+vec3 s_normal;
+vec3 s_color;
+
+#define DOUBLE_SIDED 0
+
+void forEachLightId(int id)
+{
+	LightParams params = lookupLightParams(id);
+
+	if (params.type == kLightType_Point)
+	{
+		vec3 delta = s_position - params.position;
+		vec3 direction = normalize(delta);
+
+	#if DOUBLE_SIDED
+		float factor = abs(dot(s_normal, direction));
+	#else
+		float factor = max(0.0, dot(s_normal, direction));
+	#endif
+
+		float attenuation = computeAttenuationForPointLight(
+			s_position,
+			params.position,
+			params.attenuationBegin,
+			params.attenuationEnd);
+
+		s_color += (factor * attenuation) * params.color;
+	}
+	else if (params.type == kLightType_Spot)
+	{
+	#if DOUBLE_SIDED
+		float factor = abs(dot(s_normal, params.direction));
+	#else
+		float factor = max(0.0, dot(s_normal, params.direction));
+	#endif
+
+		float attenuation = computeAttenuationForSpotLight(
+			s_position,
+			params.position,
+			params.direction,
+			params.spotAngleAlpha,
+			params.attenuationBegin,
+			params.attenuationEnd);
+
+		int shadowMapId = int(params.userData);
+
+		if (shadowMapId != -1)
+			attenuation *= lookupShadow(shadowMapId, s_position).x;
+
+		s_color += (factor * attenuation) * params.color;
+	}
+	else if (params.type == kLightType_Directional)
+	{
+	#if DOUBLE_SIDED
+		float factor = abs(dot(s_normal, params.direction));
+	#else
+		float factor = max(0.0, dot(s_normal, params.direction));
+	#endif
+
+		float attenuation = 1.0;
+
+		int shadowMapId = int(params.userData);
+
+		if (shadowMapId != -1)
+			attenuation *= lookupShadow(shadowMapId, s_position).x;
+
+		s_color += (factor * attenuation) * params.color;
+	}
+}
+
+vec3 computeForwardLighting(vec3 position_view, vec3 normal_view)
+{
+	s_position = position_view;
+	s_normal = -normalize(normal_view);
+	s_color = vec3(0.0);
+
+	forEachLightIdAt(position_view);
+
+	return s_color;
+}

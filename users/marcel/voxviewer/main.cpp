@@ -22,6 +22,8 @@
 #include <stdint.h>
 #include <vector>
 
+#define USE_OPTIMIZED_SHADOW_SHADER 1
+
 using namespace rOne;
 
 static void drawSky(Vec3Arg sunPosition);
@@ -34,9 +36,9 @@ int main(int argc, char * argv[])
 	framework.enableRealTimeEditing = true;
 	framework.filedrop = true;
 	
-	//if (!framework.init(400, 300))
+	if (!framework.init(400, 300))
 	//if (!framework.init(600, 600))
-	if (!framework.init(1200, 900))
+	//if (!framework.init(1200, 900))
 		return 0;
 
 	Renderer::registerShaderOutputs();
@@ -71,7 +73,8 @@ int main(int argc, char * argv[])
 	gxCaptureMeshEnd();
 	
 	RenderOptions renderOptions;
-	renderOptions.renderMode = kRenderMode_DeferredShaded;
+	//renderOptions.renderMode = kRenderMode_DeferredShaded;
+	renderOptions.renderMode = kRenderMode_ForwardShaded;
 	//renderOptions.renderMode = kRenderMode_Flat;
 	renderOptions.linearColorSpace = true;
 	renderOptions.backgroundColor.Set(1, .5f, .25f);
@@ -107,6 +110,7 @@ int main(int argc, char * argv[])
 	ForwardLightingHelper helper;
 	ShadowMapDrawer shadowMapDrawer;
 	shadowMapDrawer.alloc(4, 1024);
+	shadowMapDrawer.enableColorShadows = false;
 	
 	for (;;)
 	{
@@ -198,7 +202,7 @@ int main(int argc, char * argv[])
 				
 				std::vector<Light> lights;
 				
-				if (false)
+				if (true)
 				{
 					Light light;
 					light.type = kLightType_Directional;
@@ -212,6 +216,7 @@ int main(int argc, char * argv[])
 					lights.push_back(light);
 				}
 				
+				if (true)
 				{
 					// camera following point light
 					
@@ -221,7 +226,7 @@ int main(int argc, char * argv[])
 					light.attenuationBegin = 0.f;
 					light.attenuationEnd = 4.f;
 					light.color.Set(1, 1, 1);
-					light.intensity = .4f;
+					light.intensity = .01f;
 					
 					lights.push_back(light);
 					
@@ -235,7 +240,7 @@ int main(int argc, char * argv[])
 					
 					Light light;
 					light.type = kLightType_Spot;
-					light.position.Set(2, 0, -2);
+					light.position.Set(2, sinf(framework.time * 2.34f) * .4f, -2);
 					//light.direction = Mat4x4(true).RotateY(framework.time * 4.f).GetAxis(2);
 					light.direction = Mat4x4(true).RotateY(framework.time / 2.f).GetAxis(2);
 					light.attenuationBegin = 0.01f;
@@ -262,9 +267,9 @@ int main(int argc, char * argv[])
 					lights.push_back(light);
 				}
 				
-				auto drawOpaque = [&]()
+				auto drawOpaqueBase = [&](const bool isMainPass)
 				{
-					if (skyEnabled)
+					if (skyEnabled && isMainPass)
 					{
 						drawSky(sunPosition);
 					}
@@ -272,8 +277,16 @@ int main(int argc, char * argv[])
 					//setColor(colorYellow);
 					//fillCube(sunPosition, Vec3(.4f, .4f, .4f));
 					
-					Shader shader("shader");
+				#if USE_OPTIMIZED_SHADOW_SHADER
+					Shader shader(isMainPass ? "shader-forward" : "shader-shadow");
+				#else
+					Shader shader("shader-forward");
+				#endif
 					setShader(shader);
+					
+					int nextTextureUnit = 0;
+					helper.setShaderData(shader, nextTextureUnit);
+					shadowMapDrawer.setShaderData(shader, nextTextureUnit, camera.getViewMatrix());
 					
 					gxPushMatrix();
 					{
@@ -295,19 +308,36 @@ int main(int argc, char * argv[])
 						{
 							for (int i = 0; i < 1*1000; ++i)
 							{
+								//const float s = .2f;
+								const float s = lerp<float>(.04f, .14f, (cosf(framework.time + i) + 1.f) / 2.f);
+								const float m = lerp<float>(-2.f, +2.f, (cosf(framework.time / 3.45f + i) + 1.f) / 2.f);
+								Vec3 t;
+								t[i % 3] = m;
+								
+								Assert(s >= 0.f);
 								setColor(colorWhite);
 								fillCube(
 									Vec3(
 										cosf(i / 1.23f) * 6.f,
 										cosf(i / 2.34f) * 2.f,
-										cosf(i * 1.23f) * 6.f),
-									Vec3(.2f, .2f, .2f));
+										cosf(i * 1.23f) * 6.f) + t,
+									Vec3(s, s, s));
 							}
 						}
 						endCubeBatch();
 					}
 					
 					clearShader();
+				};
+				
+				auto drawOpaque = [&]()
+				{
+					drawOpaqueBase(true);
+				};
+				
+				auto drawOpaqueShadow = [&]()
+				{
+					drawOpaqueBase(false);
 				};
 				
 				auto drawTranslucent = [&]()
@@ -332,6 +362,9 @@ int main(int argc, char * argv[])
 									cosf(i / 1.23f) * 6.f,
 									cosf(i / 2.34f) * 2.f,
 									cosf(i * 1.23f) * 6.f);
+								
+								const float m = lerp<float>(-2.f, +2.f, (cosf(framework.time / 3.45f + i) + 1.f) / 2.f);
+								positions[i][i % 3] += m;
 							}
 							
 							Vec3 positions_view[kNumCubes];
@@ -351,7 +384,7 @@ int main(int argc, char * argv[])
 									return z2 < z1;
 								});
 							
-							pushCullMode(CULL_BACK, CULL_CW);
+							pushCullMode(CULL_BACK, CULL_CCW);
 							beginCubeBatch();
 							{
 								setColorf(1, 1, 1, .5f);
@@ -402,7 +435,7 @@ int main(int argc, char * argv[])
 					}
 				};
 				
-				// -- prepare lighting data --
+				// -- prepare shadow maps --
 				
 				size_t lightId = 0;
 				
@@ -441,6 +474,16 @@ int main(int argc, char * argv[])
 					}
 				}
 				
+				helper.prepareShaderData(4, 64.f, false, camera.getViewMatrix());
+				
+				shadowMapDrawer.drawOpaque = drawOpaqueShadow;
+				shadowMapDrawer.drawTranslucent = drawTranslucent;
+				shadowMapDrawer.drawShadowMaps(camera.getViewMatrix());
+				
+				helper.reset();
+				
+				// -- prepare lighting data --
+				
 				lightId = 0;
 				
 				for (auto & light : lights)
@@ -478,10 +521,7 @@ int main(int argc, char * argv[])
 					lightId++;
 				}
 				
-				helper.prepareShaderData(16, 16.f, true, camera.getViewMatrix());
-				
-				shadowMapDrawer.drawOpaque = drawOpaque;
-				shadowMapDrawer.drawShadowMaps(camera.getViewMatrix());
+				helper.prepareShaderData(32, 64.f, true, camera.getViewMatrix());
 				
 				// -- render --
 				

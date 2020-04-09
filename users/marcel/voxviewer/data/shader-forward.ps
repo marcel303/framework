@@ -1,14 +1,6 @@
 include engine/ShaderPS.txt
 include forward-lighting.txt
 
-/*
-
-this shader is used to draw some semi-transparent cubes,
-to test the functionality and usability of the light volume
-features of renderOne
-
-*/
-
 shader_in vec3 v_position;
 shader_in vec3 v_normal;
 shader_in vec4 v_color;
@@ -19,5 +11,6 @@ void main()
 
 	color *= v_color.rgb;
 
-	shader_fragColor = vec4(color, v_color.a);
+	shader_fragColor = vec4(color, 1.0);
+	shader_fragNormal = vec4(normalize(v_normal), 1.0);
 }
