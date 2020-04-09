@@ -230,7 +230,7 @@ void ShadowMapDrawer::drawShadowMaps(const Mat4x4 & worldToView)
 		pushDepthTest(true, DEPTH_LESS);
 		pushColorWriteMask(0, 0, 0, 0);
 		pushBlend(BLEND_OPAQUE);
-		pushDepthBias(1, 1);
+		pushDepthBias(2, 2);
 		pushShaderOutputs("");
 		{
 			if (light.type == kLightType_Spot)
