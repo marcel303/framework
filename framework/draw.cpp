@@ -304,14 +304,14 @@ void lineCube(Vec3Arg position, Vec3Arg size)
 {
 	const float vertices[8][3] =
 	{
-		{ -1, -1, -1 }, // 0
-		{ +1, -1, -1 }, // 1
-		{ +1, +1, -1 }, // 2
-		{ -1, +1, -1 }, // 3
-		{ -1, -1, +1 }, // 4
-		{ +1, -1, +1 }, // 5
-		{ +1, +1, +1 }, // 6
-		{ -1, +1, +1 }  // 7
+		{ position[0]-size[0], position[1]-size[1], position[2]-size[2] },
+		{ position[0]+size[0], position[1]-size[1], position[2]-size[2] },
+		{ position[0]+size[0], position[1]+size[1], position[2]-size[2] },
+		{ position[0]-size[0], position[1]+size[1], position[2]-size[2] },
+		{ position[0]-size[0], position[1]-size[1], position[2]+size[2] },
+		{ position[0]+size[0], position[1]-size[1], position[2]+size[2] },
+		{ position[0]+size[0], position[1]+size[1], position[2]+size[2] },
+		{ position[0]-size[0], position[1]+size[1], position[2]+size[2] }
 	};
 
 	const int edges[12][2] =
@@ -345,10 +345,7 @@ void lineCube(Vec3Arg position, Vec3Arg size)
 			{
 				const float * __restrict vertex = vertices[line[vertex_idx]];
 				
-				gxVertex3f(
-					position[0] + size[0] * vertex[0],
-					position[1] + size[1] * vertex[1],
-					position[2] + size[2] * vertex[2]);
+				gxVertex3fv(vertex);
 			}
 		}
 	}
@@ -359,14 +356,14 @@ void fillCube(Vec3Arg position, Vec3Arg size)
 {
 	const float vertices[8][3] =
 	{
-		{ -1, -1, -1 },
-		{ +1, -1, -1 },
-		{ +1, +1, -1 },
-		{ -1, +1, -1 },
-		{ -1, -1, +1 },
-		{ +1, -1, +1 },
-		{ +1, +1, +1 },
-		{ -1, +1, +1 }
+		{ position[0]-size[0], position[1]-size[1], position[2]-size[2] },
+		{ position[0]+size[0], position[1]-size[1], position[2]-size[2] },
+		{ position[0]+size[0], position[1]+size[1], position[2]-size[2] },
+		{ position[0]-size[0], position[1]+size[1], position[2]-size[2] },
+		{ position[0]-size[0], position[1]-size[1], position[2]+size[2] },
+		{ position[0]+size[0], position[1]-size[1], position[2]+size[2] },
+		{ position[0]+size[0], position[1]+size[1], position[2]+size[2] },
+		{ position[0]-size[0], position[1]+size[1], position[2]+size[2] }
 	};
 
 	const int faces[6][4] =
@@ -405,10 +402,7 @@ void fillCube(Vec3Arg position, Vec3Arg size)
 			{
 				const float * __restrict vertex = vertices[face[vertex_idx]];
 				
-				gxVertex3f(
-					position[0] + size[0] * vertex[0],
-					position[1] + size[1] * vertex[1],
-					position[2] + size[2] * vertex[2]);
+				gxVertex3fv(vertex);
 			}
 		}
 	}
