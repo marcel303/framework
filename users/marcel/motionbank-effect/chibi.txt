@@ -1,0 +1,6 @@
+app marcel-motionbank-effect
+	depend_library ecs-parameterui
+	depend_library framework
+	depend_library libosc
+	depend_library renderOne
+	add_files main.cpp
