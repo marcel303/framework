@@ -78,7 +78,7 @@ struct RenderOptions
 	struct Fog
 	{
 		bool enabled = false;
-		float thickness = 0.f;
+		float thickness = 0.1f;
 
 		static void reflect(TypeDB & typeDB);
 	} fog;
@@ -113,8 +113,8 @@ struct RenderOptions
 	struct Bloom
 	{
 		bool enabled = false;
-		float strength = .15f;
-		float blurSize = 20.f; // todo : make blur blur size resolution independent
+		float strength = 1.f;
+		float blurSize = 1.f; // todo : make blur blur size resolution independent
 		float brightPassValue = 0.f;
 		
 		// when true, the top-level image from the down sample chain is dropped, speeding up processing significantly
@@ -126,7 +126,7 @@ struct RenderOptions
 	struct LightScatter
 	{
 		bool enabled = false;
-		Vec2 origin = Vec2(.5f, .2f);
+		Vec2 origin = Vec2(.5f, .5f);
 		int numSamples = 100;
 		float decay = .8f;
 		float strength = 1.f;

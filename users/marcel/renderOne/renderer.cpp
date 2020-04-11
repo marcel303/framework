@@ -1411,12 +1411,12 @@ void Renderer::render(const RenderFunctions & renderFunctions, const RenderOptio
 	
 	//
 	
-	// note : the 'colors' buffer stores contents in sRGB color space, so no need to linearize the background color here
-	
 	for (auto * buffer : { &buffers, &buffers2 })
 	{
 		if (buffer->colors != nullptr)
 		{
+			// note : the 'colors' buffer stores contents in sRGB color space, so no need to linearize the background color here
+			
 			buffer->colors->setClearColor(
 				renderOptions.backgroundColor[0],
 				renderOptions.backgroundColor[1],
@@ -1427,10 +1427,12 @@ void Renderer::render(const RenderFunctions & renderFunctions, const RenderOptio
 		
 		if (buffer->composite1 != nullptr)
 		{
+			const Vec3 backgroundColor_linear = srgbToLinear(renderOptions.backgroundColor);
+			
 			buffer->composite1->setClearColor(
-				renderOptions.backgroundColor[0],
-				renderOptions.backgroundColor[1],
-				renderOptions.backgroundColor[2], 0.f);
+				backgroundColor_linear[0],
+				backgroundColor_linear[1],
+				backgroundColor_linear[2], 0.f);
 		}
 	}
 	
