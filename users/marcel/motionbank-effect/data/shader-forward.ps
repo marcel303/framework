@@ -1,0 +1,16 @@
+include engine/ShaderPS.txt
+include forward-lighting.txt
+
+shader_in vec3 v_position;
+shader_in vec3 v_normal;
+shader_in vec4 v_color;
+
+void main()
+{
+	vec3 color = computeForwardLighting(v_position, v_normal);
+
+	color *= v_color.rgb;
+
+	shader_fragColor = vec4(color, 1.0);
+	shader_fragNormal = vec4(normalize(v_normal), 1.0);
+}

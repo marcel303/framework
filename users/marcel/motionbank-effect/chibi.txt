@@ -4,3 +4,4 @@ app marcel-motionbank-effect
 	depend_library libosc
 	depend_library renderOne
 	add_files main.cpp
+	resource_path data

@@ -1,9 +1,13 @@
+#include "forwardLighting.h"
 #include "framework.h"
 #include "oscReceiver.h"
 #include "Quat.h"
 #include "renderer.h"
+#include "shadowMapDrawer.h"
 #include "StringEx.h"
 #include <map>
+
+using namespace rOne;
 
 struct Joint
 {
@@ -199,11 +203,15 @@ static void tickParticles(const float dt)
 
 static void drawParticles()
 {
-	for (auto & p : particles)
+	beginCubeBatch();
 	{
-		setColor(colorWhite);
-		fillCube(p.position, Vec3(.1f, .01f, .1f) * p.life);
+		for (auto & p : particles)
+		{
+			setColor(colorWhite);
+			fillCube(p.position, Vec3(.1f, .01f, .1f) * p.life);
+		}
 	}
+	endCubeBatch();
 }
 
 static void addParticle(Vec3Arg position, const float life)
@@ -225,8 +233,9 @@ int main(int argc, char * argv[])
 	
 	framework.enableDepthBuffer = true;
 	
-	//if (!framework.init(800, 600))
-	if (!framework.init(400, 300))
+	//if (!framework.init(1200, 600))
+	if (!framework.init(800, 400))
+	//if (!framework.init(400, 300))
 		return -1;
 	
 	OscReceiver oscReceiver;
@@ -237,6 +246,7 @@ int main(int argc, char * argv[])
 	OscHandler oscHandler;
 	
 	Camera3d camera;
+	camera.mouseSmooth = .97f;
 
 	Renderer renderer;
 	
@@ -245,14 +255,26 @@ int main(int argc, char * argv[])
 	//renderOptions.renderMode = kRenderMode_Flat;
 	renderOptions.linearColorSpace = true;
 	renderOptions.bloom.enabled = true;
-	renderOptions.bloom.strength = .02f;
+	renderOptions.bloom.strength = .4f;
 	//renderOptions.screenSpaceAmbientOcclusion.enabled = true;
 	//renderOptions.lightScatter.enabled = true;
+	renderOptions.lightScatter.strength = .1f;
 	//renderOptions.depthSilhouette.enabled = true;
-	renderOptions.depthSilhouette.color.Set(.1f, .1f, .1f, .5f);
+	renderOptions.depthSilhouette.color.Set(1.f, .1f, .1f, .1f);
 	//renderOptions.fog.enabled = true;
-	renderOptions.fog.thickness = .2f;
-	renderOptions.backgroundColor.Set(.05f, .05f, .05f);
+	renderOptions.fog.thickness = .1f;
+	//renderOptions.colorGrading.enabled = true;
+	renderOptions.enableScreenSpaceReflections = true;
+	if (renderOptions.fog.enabled)
+		renderOptions.backgroundColor.Set(.35f, .25f, .15f);
+	else
+		renderOptions.backgroundColor.Set(.05f, .05f, .05f);
+	renderOptions.fxaa.enabled = true;
+	
+	ForwardLightingHelper helper;
+	
+	ShadowMapDrawer shadowMapDrawer;
+	shadowMapDrawer.alloc(4, 2048);
 	
 	for (;;)
 	{
@@ -311,77 +333,166 @@ int main(int argc, char * argv[])
 		camera.maxStrafeSpeed = 4.f;
 		camera.tick(framework.timeStep, true);
 		
+		//
+		
+		Mat4x4 viewMatrix = camera.getViewMatrix();
+		
+		if (true)
+		{
+			if (!scene.bodies.empty() > 0)
+			{
+				auto & body = scene.bodies.begin()->second;
+				auto & target = body.joints["hips"].position;
+				
+				viewMatrix.MakeLookat(Vec3(3, .4f, 0), target, Vec3(0, 1, 0));
+			}
+		}
+		
+		// prepare forward lighting data
+		
+		shadowMapDrawer.reset();
+		helper.reset();
+		
+		for (int i = 0; i < 2; ++i)
+		{
+			int index = 0;
+			
+			for (auto & body_itr : scene.bodies)
+			{
+				const Vec3 position(0, 3, 0);
+				const Vec3 target = body_itr.second.joints["hips"].position;
+				const Vec3 direction = (target - position).CalcNormalized();
+				const float angle = 36.f * float(M_PI/180.0);
+				
+				Color color = Color::fromHSL(index / 6.f, .2f, .5f);
+				
+				if (i == 0)
+				{
+					if (true)
+					{
+						Mat4x4 lightToWorld;
+						lightToWorld.MakeLookat(position, target, Vec3(0, 1, 0));
+						lightToWorld = lightToWorld.CalcInv();
+						
+						shadowMapDrawer.addSpotLight(
+							index,
+							lightToWorld,
+							angle,
+							.01f,
+							6.f);
+					}
+				}
+				else
+				{
+					helper.addSpotLight(
+						position,
+						direction,
+						angle,
+						6.f,
+						Vec3(color.r, color.g, color.b),
+						10.f,
+						shadowMapDrawer.getShadowMapId(index));
+				}
+				
+				index++;
+			}
+			
+			//helper.addSpotLight(Vec3(0, 3, 0), Vec3(0, -1, 0), float(M_PI/2.f), 3.f, Vec3(1, 1, 1), 10.f);
+			//index++;
+			
+			if (i == 0)
+			{
+				shadowMapDrawer.drawShadowMaps(viewMatrix);
+			}
+		}
+		
+		helper.prepareShaderData(16, 32.f, true, viewMatrix);
+		
 		// draw scene
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			projectPerspective3d(70.f, .01f, 100.f);
 			
-			camera.pushViewMatrix();
+			gxPushMatrix();
 			{
-				auto drawOpaque = [&]()
+				gxSetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
+				
+				auto drawOpaqueBase = [&](const bool isMainPass)
 				{
-					drawGrid3dLine(10, 10, 0, 2);
+					Shader shader(isMainPass ? "shader-forward" : "shader-shadow");
+					setShader(shader);
+					int nextTextureUnit = 0;
+					helper.setShaderData(shader, nextTextureUnit);
+					if (isMainPass)
+						shadowMapDrawer.setShaderData(shader, nextTextureUnit, viewMatrix);
+					
+					gxPushMatrix();
+					gxScalef(10, 10, 10);
+					setColor(10, 10, 20);
+					//setColor(200, 200, 255);
+					//drawGrid3dLine(100, 100, 0, 2);
+					drawGrid3d(100, 100, 0, 2);
+					gxPopMatrix();
 					
 					for (auto & body_itr : scene.bodies)
 					{
 						auto & body = body_itr.second;
 						
-						for (auto & joint_itr : body.joints)
+						beginCubeBatch();
 						{
-							auto & joint = joint_itr.second;
-							
-							setColorClamp(false);
-							setColor(colorWhite, 4.f);
-							fillCube(joint.position, Vec3(.03f, .03f, .03f));
-							
-						#if 1
-							Mat4x4 r = Mat4x4(true).RotateY(joint.rotation[3]);
-						#else
-							Quat q;
-							q.fromAngleAxis(
-								-joint.rotation[3],
-								Vec3(
-									joint.rotation[0],
-									joint.rotation[1],
-									joint.rotation[2]).CalcNormalized());
-							Mat4x4 r;
-							q.toMatrix3x3(r);
-						#endif
-							const Vec3 d = r.GetAxis(2);
-							const Vec3 p1 = joint.position;
-							const Vec3 p2 = joint.position - d * .03f;
-							gxBegin(GX_LINES);
-							gxVertex3fv(&p1[0]);
-							gxVertex3fv(&p2[0]);
-							gxEnd();
+							for (auto & joint_itr : body.joints)
+							{
+								auto & joint = joint_itr.second;
+								
+								setColorClamp(false);
+								setColor(colorWhite, 4.f);
+								fillCube(joint.position, Vec3(.03f, .03f, .03f));
+							}
 						}
+						endCubeBatch();
 						
 						gxBegin(GX_LINES);
-						for (int i = 0; i < sizeof(s_bodyConnections) / sizeof(s_bodyConnections[0]); ++i)
 						{
-							if (body.joints.find(s_bodyConnections[i].from) == body.joints.end() ||
-								body.joints.find(s_bodyConnections[i].to)   == body.joints.end())
-								continue;
-							
-							auto & j1 = body.joints[s_bodyConnections[i].from];
-							auto & j2 = body.joints[s_bodyConnections[i].to];
-							
-							gxVertex3fv(&j1.position[0]);
-							gxVertex3fv(&j2.position[0]);
+							for (int i = 0; i < sizeof(s_bodyConnections) / sizeof(s_bodyConnections[0]); ++i)
+							{
+								if (body.joints.find(s_bodyConnections[i].from) == body.joints.end() ||
+									body.joints.find(s_bodyConnections[i].to)   == body.joints.end())
+									continue;
+								
+								auto & j1 = body.joints[s_bodyConnections[i].from];
+								auto & j2 = body.joints[s_bodyConnections[i].to];
+								
+								gxVertex3fv(&j1.position[0]);
+								gxVertex3fv(&j2.position[0]);
+							}
 						}
 						gxEnd();
 					}
 					
 					drawParticles();
+					
+					clearShader();
 				};
+				
+				auto drawOpaque = [&]()
+				{
+					drawOpaqueBase(true);
+				};
+				
+				auto drawOpaqueShadow = [&]()
+				{
+					drawOpaqueBase(false);
+				};
+				
+				shadowMapDrawer.drawOpaque = drawOpaqueShadow;
 				
 				RenderFunctions renderFunctions;
 				renderFunctions.drawOpaque = drawOpaque;
 				
 				renderer.render(renderFunctions, renderOptions, framework.timeStep);
 			}
-			camera.popViewMatrix();
+			gxPopMatrix();
 		}
 		framework.endDraw();
 	}
