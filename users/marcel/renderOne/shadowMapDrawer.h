@@ -28,78 +28,81 @@ note : shadow maps are packed into an atlas, to make it easier
 #include "renderer.h"
 #include <vector>
 
-class ShadowMapDrawer
+namespace rOne
 {
-
-private:
-
-	enum LightType
+	class ShadowMapDrawer
 	{
-		kLightType_Spot,
-		kLightType_Directional
-	};
 
-	struct Light
-	{
-		int id;
+	private:
 
-		LightType type;
-		Mat4x4 lightToWorld;
-		Mat4x4 worldToLight;
-		float nearDistance;
-		float farDistance;
-		float spotAngle;
-		float directionalExtents;
+		enum LightType
+		{
+			kLightType_Spot,
+			kLightType_Directional
+		};
+
+		struct Light
+		{
+			int id;
+
+			LightType type;
+			Mat4x4 lightToWorld;
+			Mat4x4 worldToLight;
+			float nearDistance;
+			float farDistance;
+			float spotAngle;
+			float directionalExtents;
+			
+			float viewDistance; // for priority sort
+		};
 		
-		float viewDistance; // for priority sort
+		std::vector<DepthTarget> depthTargets;
+		std::vector<ColorTarget> colorTargets;
+		
+		std::vector<Light> lights;
+		
+		ShaderBuffer shaderBuffer;
+		
+		ColorTarget depthAtlas;
+		ColorTarget colorAtlas;
+		
+		static void calculateProjectionMatrixForLight(const Light & light, Mat4x4 & projectionMatrix);
+		
+		void generateDepthAtlas();
+		void generateColorAtlas();
+		
+	public:
+
+		RenderFunction drawOpaque;
+		RenderFunction drawTranslucent;
+		
+		bool enableColorShadows = false;
+
+		~ShadowMapDrawer();
+		
+		void alloc(const int maxShadowMaps, const int resolution);
+		void free();
+		
+		void addSpotLight(
+			const int id,
+			const Mat4x4 & lightToWorld,
+			const float angle,
+			const float nearDistance,
+			const float farDistance);
+		void addDirectionalLight(
+			const int id,
+			const Mat4x4 & lightToWorld,
+			const float startDistance,
+			const float endDistance,
+			const float extents);
+		
+		void drawShadowMaps(const Mat4x4 & worldToView);
+		
+		void setShaderData(Shader & shader, int & nextTextureUnit, const Mat4x4 & worldToView);
+		int getShadowMapId(const int id) const;
+		
+		void reset();
+		
+		void showRenderTargets() const;
 	};
-	
-	std::vector<DepthTarget> depthTargets;
-	std::vector<ColorTarget> colorTargets;
-	
-	std::vector<Light> lights;
-	
-	ShaderBuffer shaderBuffer;
-	
-	ColorTarget depthAtlas;
-	ColorTarget colorAtlas;
-	
-	static void calculateProjectionMatrixForLight(const Light & light, Mat4x4 & projectionMatrix);
-	
-	void generateDepthAtlas();
-	void generateColorAtlas();
-	
-public:
-
-	RenderFunction drawOpaque;
-	RenderFunction drawTranslucent;
-	
-	bool enableColorShadows = false;
-
-	~ShadowMapDrawer();
-	
-	void alloc(const int maxShadowMaps, const int resolution);
-	void free();
-	
-	void addSpotLight(
-		const int id,
-		const Mat4x4 & lightToWorld,
-		const float angle,
-		const float nearDistance,
-		const float farDistance);
-	void addDirectionalLight(
-		const int id,
-		const Mat4x4 & lightToWorld,
-		const float startDistance,
-		const float endDistance,
-		const float extents);
-	
-	void drawShadowMaps(const Mat4x4 & worldToView);
-	
-	void setShaderData(Shader & shader, int & nextTextureUnit, const Mat4x4 & worldToView);
-	int getShadowMapId(const int id) const;
-	
-	void reset();
-	
-	void showRenderTargets() const;
-};
+}

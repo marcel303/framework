@@ -17,79 +17,82 @@ class Surface;
 
 struct TypeDB;
 
-typedef std::function<void()> RenderFunction;
-
-struct RenderFunctions
+namespace rOne
 {
-	RenderFunction drawOpaque;
-	RenderFunction drawTranslucent;
-	RenderFunction drawLights;
-};
+	typedef std::function<void()> RenderFunction;
 
-struct RenderBuffers
-{
-	int sx = 0;
-	int sy = 0;
-	bool linearColorSpace = false;
-	
-	ColorTarget * colors = nullptr;
-	ColorTarget * normals = nullptr;
-	ColorTarget * specularColor = nullptr;
-	ColorTarget * specularExponent = nullptr;
-	ColorTarget * emissive = nullptr;
-	DepthTarget * depth = nullptr;
-	ColorTarget * light = nullptr;
-	ColorTarget * composite1 = nullptr;
-	ColorTarget * composite2 = nullptr;
-	ColorTarget * velocity = nullptr;
-	
-#if BLOOM_METHOD == BLOOM_METHOD_ONE_LARGE_GAUSSIAN
-	ColorTarget * bloomBuffer = nullptr;
-#endif
-
-#if BLOOM_METHOD == BLOOM_METHOD_DOWNSAMPLE_CHAIN
-	struct BloomChain
+	struct RenderFunctions
 	{
-		ColorTarget * buffers = nullptr;
-		int numBuffers = 0;
+		RenderFunction drawOpaque;
+		RenderFunction drawTranslucent;
+		RenderFunction drawLights;
+	};
+
+	struct RenderBuffers
+	{
+		int sx = 0;
+		int sy = 0;
+		bool linearColorSpace = false;
 		
-		void alloc(const int sx, const int sy);
+		ColorTarget * colors = nullptr;
+		ColorTarget * normals = nullptr;
+		ColorTarget * specularColor = nullptr;
+		ColorTarget * specularExponent = nullptr;
+		ColorTarget * emissive = nullptr;
+		DepthTarget * depth = nullptr;
+		ColorTarget * light = nullptr;
+		ColorTarget * composite1 = nullptr;
+		ColorTarget * composite2 = nullptr;
+		ColorTarget * velocity = nullptr;
+		
+	#if BLOOM_METHOD == BLOOM_METHOD_ONE_LARGE_GAUSSIAN
+		ColorTarget * bloomBuffer = nullptr;
+	#endif
+
+	#if BLOOM_METHOD == BLOOM_METHOD_DOWNSAMPLE_CHAIN
+		struct BloomChain
+		{
+			ColorTarget * buffers = nullptr;
+			int numBuffers = 0;
+			
+			void alloc(const int sx, const int sy);
+			void free();
+		};
+		
+		BloomChain bloomDownsampleChain;
+		BloomChain bloomBlurChain;
+	#endif
+
+		~RenderBuffers();
+		
+		void alloc(const int sx, const int sy, const bool linearColorSpace);
 		void free();
 	};
-	
-	BloomChain bloomDownsampleChain;
-	BloomChain bloomBlurChain;
-#endif
 
-	~RenderBuffers();
-	
-	void alloc(const int sx, const int sy, const bool linearColorSpace);
-	void free();
-};
-
-struct Renderer
-{
-	RenderBuffers buffers;
-	RenderBuffers buffers2;
-	
-	static void registerShaderOutputs();
-	
-	void render(
-		const RenderFunctions & renderFunctions,
-		const RenderOptions & renderOptions,
-		const int viewportSx,
-		const int viewportsy,
-		const float timeStep);
-	
-	void render(
-		const RenderFunctions & renderFunctions,
-		const RenderOptions & renderOptions,
-		ColorTarget * colorTarget,
-		DepthTarget * depthTarget,
-		const float timeStep);
-	
-	void render(
-		const RenderFunctions & renderFunctions,
-		const RenderOptions & renderOptions,
-		const float timeStep);
-};
+	struct Renderer
+	{
+		RenderBuffers buffers;
+		RenderBuffers buffers2;
+		
+		static void registerShaderOutputs();
+		
+		void render(
+			const RenderFunctions & renderFunctions,
+			const RenderOptions & renderOptions,
+			const int viewportSx,
+			const int viewportsy,
+			const float timeStep);
+		
+		void render(
+			const RenderFunctions & renderFunctions,
+			const RenderOptions & renderOptions,
+			ColorTarget * colorTarget,
+			DepthTarget * depthTarget,
+			const float timeStep);
+		
+		void render(
+			const RenderFunctions & renderFunctions,
+			const RenderOptions & renderOptions,
+			const float timeStep);
+	};
+}
