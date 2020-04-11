@@ -173,7 +173,7 @@ vec3 calculateLighting(vec3 position_view, vec3 normal_view, bool receiveShadows
 	// -- apply debugs --
 
 #if DEBUG_LIGHTING_COMPLXITY
-	s_color += vec3(s_numLights / 16.0);
+	s_color.r = mix(s_color.r, 1.0, s_numLights / numLights);
 #endif
 
 	return s_color;
