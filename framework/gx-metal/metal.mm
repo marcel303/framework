@@ -539,7 +539,8 @@ void beginRenderPass(
 			if (depthattachment.texture.height > viewportSy)
 				viewportSy = depthattachment.texture.height;
 			
-			if (true)
+			if (depthattachment.texture.pixelFormat == MTLPixelFormatDepth24Unorm_Stencil8 ||
+				depthattachment.texture.pixelFormat == MTLPixelFormatDepth32Float_Stencil8)
 			{
 				MTLRenderPassStencilAttachmentDescriptor * stencilattachment = pd.renderdesc.stencilAttachment;
 				stencilattachment.texture = (id <MTLTexture>)depthTarget->getMetalTexture();
@@ -548,11 +549,6 @@ void beginRenderPass(
 				stencilattachment.storeAction = depthTarget->isTextureEnabled() ? MTLStoreActionStore : MTLStoreActionDontCare;
 				
 				pd.renderPass.stencilFormat = stencilattachment.texture.pixelFormat;
-				
-				if (depthattachment.texture.width > viewportSx)
-					viewportSx = depthattachment.texture.width;
-				if (depthattachment.texture.height > viewportSy)
-					viewportSy = depthattachment.texture.height;
 			}
 		}
 		
