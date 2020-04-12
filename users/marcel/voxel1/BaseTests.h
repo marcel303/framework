@@ -124,7 +124,7 @@ static BOOL BT_IntersectBox(float* minB, float* maxB, int solid, float* ray_orig
 }
 #endif
 
-static __forceinline BOOL BT_IntersectBox_FastSIMD(SimdVecArg rayOrigin, SimdVecArg rayDirectionInv, SimdVecArg boxMin, SimdVecArg boxMax, /*SimdVec & ioDistance*/float & ioDistance)
+static inline BOOL BT_IntersectBox_FastSIMD(SimdVecArg rayOrigin, SimdVecArg rayDirectionInv, SimdVecArg boxMin, SimdVecArg boxMax, /*SimdVec & ioDistance*/float & ioDistance)
 {
 	const static SimdVec infNeg(-std::numeric_limits<float>::infinity());
 	const static SimdVec infPos(+std::numeric_limits<float>::infinity());

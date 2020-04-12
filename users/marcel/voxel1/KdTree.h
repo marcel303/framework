@@ -148,6 +148,11 @@ inline SimdVec ToSimdVec(const VecF & v)
 	return SimdVec(&v[0]);
 }
 
+inline SimdVec ToSimdVec(const Vec3 & v)
+{
+	return SimdVec(v[0], v[1], v[2]);
+}
+
 inline VecF ToVecF(SimdVecArg v)
 {
 	return VecF(v(0), v(1), v(2));
@@ -307,10 +312,10 @@ public:
 				if (count1 == 0 || count2 == 0)
 					continue;
 
-#if 0
+			#if 0
 				count1 = count1 * count1;
 				count2 = count2 * count2;
-#endif
+			#endif
 
 				float hueristic = area1 * count1 + area2 * count2;
 				//float hueristic = area1 / (float)count1 + area2 / (float)count2;
@@ -419,9 +424,9 @@ public:
 				size.Len3().X() / 2.0f);
 		}
 
-#if 1
+	#if 1
 		int axis = m_BB.MajorAxis_get();
-#endif
+	#endif
 
 		SplitInfo info;
 
@@ -445,10 +450,10 @@ public:
 		m_Plane.m_Distance.SetAll(info.m_Pos);
 
 		Assert(
-			m_Plane.m_Distance > m_Extents.m_Min[info.m_Axis] &&
-			m_Plane.m_Distance <= m_Extents.m_Max[info.m_Axis]);
+			m_Plane.m_Distance.X() > m_Extents.m_Min[info.m_Axis] &&
+			m_Plane.m_Distance.X() <= m_Extents.m_Max[info.m_Axis]);
 
-#if 0
+	#if 0
 		LOG("Split: Plane: %d %d %d, %d",
 			m_Plane.m_Normal[0],
 			m_Plane.m_Normal[1],
@@ -462,7 +467,7 @@ public:
 			m_Extents.m_Size[0],
 			m_Extents.m_Size[1],
 			m_Extents.m_Size[2]);
-#endif
+	#endif
 
 		//
 
@@ -525,14 +530,14 @@ static KdTree* CreateTree(Map* map)
 class IntersectResult
 {
 public:
-	void Initialize(KdNode* node, float distance, VecF normal)
+	void Initialize(const KdNode* node, float distance, VecF normal)
 	{
 		m_Node = node;
 		m_Distance = distance;
 		m_Normal = normal;
 	}
 
-	KdNode* m_Node;
+	const KdNode* m_Node;
 	float m_Distance;
 	VecF m_Normal;
 };
@@ -564,13 +569,18 @@ public:
 	int m_StackDepth;
 };
 
-typedef void (*IntersectCB)(KdNode* node);
+typedef void (*IntersectCB)(const KdNode* node);
 
-static BOOL Intersect(const KdTree * RESTRICTED tree, VecF pos, VecF dir, IntersectCB cb, IntersectResult * RESTRICTED result)
+static BOOL Intersect(
+	const KdTree * RESTRICTED tree,
+	const Vec3 & RESTRICTED pos,
+	const Vec3 & RESTRICTED dir,
+	IntersectCB cb,
+	IntersectResult * RESTRICTED result)
 {
-	SimdVec posVec = ToSimdVec(pos);
-	SimdVec dirVec = ToSimdVec(dir);
-	SimdVec dirInvVec = dirVec.Inv();
+	const SimdVec posVec = ToSimdVec(pos);
+	const SimdVec dirVec = ToSimdVec(dir);
+	const SimdVec dirInvVec = dirVec.Inv();
 
 	//PlaneF rayPlane;
 
@@ -583,32 +593,32 @@ static BOOL Intersect(const KdTree * RESTRICTED tree, VecF pos, VecF dir, Inters
 	class IntersectStats
 	{
 	public:
-		__forceinline IntersectStats()
+		inline IntersectStats()
 		{
 			Initialize();
 		}
 
-#if 1
-		__forceinline ~IntersectStats()
+	#if 1
+		inline ~IntersectStats()
 		{
 			LOG("MaxStackDepth: %d", MaxStackDepth);
 			LOG("NodeVisitCount: %d", NodeVisitCount);
 		}
-#endif
+	#endif
 
-		__forceinline void Initialize()
+		inline void Initialize()
 		{
 			MaxStackDepth = -1;
 			NodeVisitCount = 0;
 		}
 
-		__forceinline void NextStackDepth(int depth)
+		inline void NextStackDepth(int depth)
 		{
 			if (depth > MaxStackDepth || MaxStackDepth == -1)
 				MaxStackDepth = depth;
 		}
 
-		__forceinline void NextNodeVisit()
+		inline void NextNodeVisit()
 		{
 			NodeVisitCount++;
 		}
@@ -621,21 +631,21 @@ static BOOL Intersect(const KdTree * RESTRICTED tree, VecF pos, VecF dir, Inters
 
 	while (stack.m_StackDepth > 0)
 	{
-#if 0
+	#if 0
 		stats.NextStackDepth(stack.m_StackDepth);
 		stats.NextNodeVisit();
-#endif
+	#endif
 
-		KdNode * RESTRICTED node = stack.Pop();
+		const KdNode * RESTRICTED node = stack.Pop();
 
 		Assert(!node->m_IsEmpty);
 
-#if 0
+	#if 1
 		if (cb)
 		{
 			cb(node);
 		}
-#endif
+	#endif
 
 		float tempT;
 		VecF tempN;
@@ -647,7 +657,7 @@ static BOOL Intersect(const KdTree * RESTRICTED tree, VecF pos, VecF dir, Inters
 		if (!BT_IntersectBox_FastSIMD(posVec, dirInvVec, node->m_BB.m_Min, node->m_BB.m_Max, tempT))
 			continue;
 
-#if 0
+	#if 0
 		LOG("TRY: X=%d, Y=%d, Z=%d, SX=%d, SY=%d, SZ=%d",
 			node->m_Extents.m_Min.m_X,
 			node->m_Extents.m_Min.m_Y,
@@ -655,7 +665,7 @@ static BOOL Intersect(const KdTree * RESTRICTED tree, VecF pos, VecF dir, Inters
 			node->m_Extents.m_Size.m_X,
 			node->m_Extents.m_Size.m_Y,
 			node->m_Extents.m_Size.m_Z);
-#endif
+	#endif
 
 		if (node->IsLeaf_get())
 		{
@@ -689,7 +699,7 @@ static BOOL Intersect(const KdTree * RESTRICTED tree, VecF pos, VecF dir, Inters
 	return FALSE;
 }
 
-BOOL CheckSpace(KdNode* node, Map* map, int* o_IsEmpty, int* o_IsSolid)
+BOOL CheckSpace(const KdNode* node, const Map* map, int* o_IsEmpty, int* o_IsSolid)
 {
 	*o_IsEmpty = TRUE;
 	*o_IsSolid = TRUE;

@@ -135,12 +135,12 @@ static void PrintNodes(KdTree* tree)
 	}
 }
 
-static void DrawNode(KdNode* node)
+static void DrawNode(const KdNode* node)
 {
 	int v = 40;
 
-	int colRect;
-	int colFill;
+	uint32_t colRect;
+	uint32_t colFill;
 
 	if (node->IsLeaf_get())
 	{
@@ -159,19 +159,19 @@ static void DrawNode(KdNode* node)
 
 	VecI size = node->m_Extents.Size_get();
 
+	Draw_SetColor(colFill);
 	Draw_Rect(
 		node->m_Extents.m_Min[0],
 		node->m_Extents.m_Min[1],
 		node->m_Extents.m_Min[0] + size[0],
-		node->m_Extents.m_Max[1] + size[1],
-		colFill);
+		node->m_Extents.m_Max[1] + size[1]);
 
+	Draw_SetColor(colRect);
 	Draw_Rect(
 		node->m_Extents.m_Min[0],
 		node->m_Extents.m_Min[1],
 		node->m_Extents.m_Min[0] + size[0],
-		node->m_Extents.m_Max[1] + size[1],
-		colRect);
+		node->m_Extents.m_Max[1] + size[1]);
 
 #if 1
 	VecI mid = node->m_Extents.m_Min + size / 2;
@@ -179,7 +179,7 @@ static void DrawNode(KdNode* node)
 	VecF p1 = VecF(mid[0], mid[1], mid[2]);
 	VecF p2 = p1 + ToVecF(node->m_Plane.m_Normal);
 
-	DrawLine(p1[0], p1[1], p2[0], p2[1]);
+	Draw_Line(p1[0], p1[1], p2[0], p2[1]);
 #endif
 }
 

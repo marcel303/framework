@@ -1,6 +1,6 @@
-#define ALLEGRO_USE_CONSOLE
-
-#include <allegro.h>
+#include "framework.h"
+#include "Mat4x4.h"
+#include "mem.h"
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
@@ -28,38 +28,17 @@
 #define LOG(x, ...)
 #endif
 
-void* operator new(size_t size)
-{
-	return _mm_malloc(size, 16);
-}
-
-static inline void DoAssert(bool condition)
-{
-#if 1
-	if (condition)
-		return;
-#endif
-
-	assert(condition);
-}
-
-#ifdef VX_DEBUG
-#define Assert(x) DoAssert((x) ? TRUE : FALSE)
-#else
-#define Assert(x)
-#endif
-
+static float g_FpsTimer = 0.f;
 static int g_FpsFrame = 0;
 static int g_Fps = 0;
 
-typedef struct
+struct Voxel
 {
 	char IsSolid;
-} Voxel;
+};
 
-class Map
+struct Map
 {
-public:
 	Voxel m_Voxels[MAP_SX][MAP_SY][MAP_SX];
 };
 
@@ -79,7 +58,7 @@ static void FillMap(Map* map)
 				float sy = (y - (MAP_SY - 1.0f) / 2);
 				float sz = (z - (MAP_SZ - 1.0f) / 2);
 
-#if 0
+			#if 0
 				sx *= 2.0f * M_PI;
 				sy *= 2.0f * M_PI;
 				sz *= 2.0f * M_PI;
@@ -89,24 +68,24 @@ static void FillMap(Map* map)
 				sz /= 10.0f;
 
 				float s = cos(sx) + cos(sy) + cos(sz);
-#else
+			#else
 				float d = sqrtf(sx * sx + sy * sy + sz * sz);
 				
 				//d *= sin(d);
 
 				float s = 5.0f - d;
-#endif
+			#endif
 
 				isSolid = s <= 0.0f;
 
 				//
 
-#if 1
+			#if 1
 				//isSolid = FALSE;
 				isSolid |= (rand() % 10) == 0;
 				//isSolid |= (rand() % 20) == 0;
 				isSolid &= (rand() % 5) == 0;
-#endif
+			#endif
 
 				//
 
@@ -148,7 +127,7 @@ public:
 		if (sx * sy == 0)
 			return;
 
-		m_Dir = new VecF[sx * sy];
+		m_Dir = new Vec3[sx * sy];
 
 		Calculate();
 	}
@@ -159,7 +138,7 @@ public:
 		{
 			for (int y = 0; y < m_Sy; ++y)
 			{
-				VecF dir;
+				Vec3 dir;
 
 				dir[0] = (x / (m_Sx - 1.0f) - 0.5f) * 2.0f;
 				dir[1] = (y / (m_Sy - 1.0f) - 0.5f) * 2.0f;
@@ -174,7 +153,7 @@ public:
 		}
 	}
 
-	inline const VecF& GetDir(int x, int y) const
+	inline const Vec3& GetDir(int x, int y) const
 	{
 		int index = CalcIndex(x, y);
 
@@ -188,11 +167,11 @@ public:
 
 	int m_Sx;
 	int m_Sy;
-	VecF* m_Dir;
-	MATRIX_f m_Matrix;
+	Vec3* m_Dir;
+	Mat4x4 m_Matrix;
 };
 
-static void IntersectHandler(KdNode* node)
+static void IntersectHandler(const KdNode* node)
 {
 	DrawNode(node);
 
@@ -214,7 +193,7 @@ static void TestAACC(KdTree* tree)
 
 				KdNode* node = Locate(tree, pos);
 
-#if 1
+			#if 1
 				Assert(node);
 
 				Assert(x >= node->m_Extents.m_Min[0]);
@@ -224,7 +203,7 @@ static void TestAACC(KdTree* tree)
 				Assert(x <= node->m_Extents.m_Max[0]);
 				Assert(y <= node->m_Extents.m_Max[1]);
 				Assert(z <= node->m_Extents.m_Max[2]);
-#endif
+			#endif
 			}
 		}
 	}
@@ -244,13 +223,13 @@ static void DrawAACC(KdTree* tree)
 
 static void DrawHeli(KdTree* tree)
 {
-	VecF pos(
+	Vec3 pos(
 		MAP_SX / 2 + 0.5f,
 		MAP_SY / 2 + 0.5f,
 		MAP_SZ / 2);
-	VecF dir;
+	Vec3 dir;
 
-	VecF mousePos = VecF(mouse_x, mouse_y, pos[2] * DRAW_SCALE);
+	Vec3 mousePos = Vec3(mouse.x, mouse.y, pos[2] * DRAW_SCALE);
 
 	dir = mousePos - pos * DRAW_SCALE;
 
@@ -268,16 +247,13 @@ static void DrawHeli(KdTree* tree)
 
 	IntersectResult result;
 
-	Draw_SetBuffer(DrawBuffer_Bitmap);
-	//Draw_SetBuffer(DrawBuffer_Screen);
-
 	Draw_BeginScene();
 
 	//DrawNodes(tree, 10.0f);
 
-	DrawCircle(pos[0], pos[1], 1.0f);
+	Draw_Circle(pos[0], pos[1], 1.0f);
 
-	DrawLine(pos[0], pos[1], pos[0] + dir[0] * 4.0f, pos[1] + dir[1] * 4.0f);
+	Draw_Line(pos[0], pos[1], pos[0] + dir[0] * 4.0f, pos[1] + dir[1] * 4.0f);
 
 	if (Intersect(tree, pos, dir, IntersectHandler, &result))
 	{
@@ -291,40 +267,28 @@ static void DrawHeli(KdTree* tree)
 
 static View g_VoxiView;
 
-static void DrawVoxi(KdTree* tree, VecF pos, VecF rot)
+static void DrawVoxi(KdTree* tree, Vec3 pos, Vec3 rot)
 {
-	Draw_SetBuffer(DrawBuffer_Bitmap);
-
 	g_DrawStretch = TRUE;
 	//g_DrawStretch = FALSE;
 
 	Draw_BeginScene();
 
-	BITMAP* buffer = Draw_GetBuffer();
+	uint32_t* buffer = Draw_GetBuffer();
 
-	acquire_bitmap(buffer);
+	const uint32_t backColor = makecol(0, 0, 255);
 
-	const int backColor = makecol(0, 0, 255);
-
-#pragma omp parallel for
-	for (int y = 0; y < buffer->h; ++y)
+	for (int y = 0; y < g_BufferSy; ++y)
 	{
-		int* line = (int*)buffer->line[y];
+		uint32_t* line = buffer + y * g_BufferSx;
 
-		for (int x = 0; x < buffer->w; ++x)
+		for (int x = 0; x < g_BufferSx; ++x)
 		{
-			VecF dir = g_VoxiView.GetDir(x, y);
+			Vec3 dir = g_VoxiView.GetDir(x, y);
 
-			apply_matrix_f(
-				&g_VoxiView.m_Matrix,
-				dir[0],
-				dir[1],
-				dir[2],
-				&dir[0],
-				&dir[1],
-				&dir[2]);
+			dir = g_VoxiView.m_Matrix.Mul3(dir);
 
-#if 0
+		#if 0
 			LOG("Intersect: Ray: %f %f %f, %f %f %f",
 				pos.m_V[0],
 				pos.m_V[1],
@@ -332,7 +296,7 @@ static void DrawVoxi(KdTree* tree, VecF pos, VecF rot)
 				dir.m_V[0],
 				dir.m_V[1],
 				dir.m_V[2]);
-#endif
+		#endif
 
 			IntersectResult result;
 
@@ -340,7 +304,7 @@ static void DrawVoxi(KdTree* tree, VecF pos, VecF rot)
 			{
 				Assert(result.m_Node->IsLeaf_get());
 
-#if 0
+			#if 0
 				LOG("Intersect: %d %d %d, %d %d %d",
 					iResult.m_Node->m_Extents.m_Min.m_V[0],
 					iResult.m_Node->m_Extents.m_Min.m_V[1],
@@ -348,26 +312,26 @@ static void DrawVoxi(KdTree* tree, VecF pos, VecF rot)
 					iResult.m_Node->m_Extents.m_Size.m_V[0],
 					iResult.m_Node->m_Extents.m_Size.m_V[1],
 					iResult.m_Node->m_Extents.m_Size.m_V[2]);
-#endif
+			#endif
 
-#if 0
+			#if 0
 				LOG("Intersect=X=%d, Y=%d, Z=%d", mid.m_X, mid.m_Y, mid.m_Z);
-#endif
+			#endif
 
-#if 0
+			#if 0
 				LOG("Intersect=Y=%d", mid.m_Y);
-#endif
+			#endif
 
-#if 0
+			#if 0
 				int rgb[3] =
 				{
-					(result.m_Normal.m_X + 1.0f) / 2.0f * 255.0f,
-					(result.m_Normal.m_Y + 1.0f) / 2.0f * 255.0f,
-					(result.m_Normal.m_Z + 1.0f) / 2.0f * 255.0f
+					int((result.m_Normal.m_X + 1.0f) / 2.0f * 255.0f),
+					int((result.m_Normal.m_Y + 1.0f) / 2.0f * 255.0f),
+					int((result.m_Normal.m_Z + 1.0f) / 2.0f * 255.0f)
 				};
 
-				*line = makecol32(rgb[0], rgb[1], rgb[2]);
-#else
+				*line = makecol(rgb[0], rgb[1], rgb[2]);
+			#else
 				int v = int(result.m_Distance * 10.0f);
 
 				if (v < 0)
@@ -375,8 +339,8 @@ static void DrawVoxi(KdTree* tree, VecF pos, VecF rot)
 				if (v > 255)
 					v = 255;
 
-				*line = makecol32(0, v, 0);
-#endif
+				*line = makecol(0, v, 0);
+			#endif
 			}
 			else
 			{
@@ -386,8 +350,6 @@ static void DrawVoxi(KdTree* tree, VecF pos, VecF rot)
 			line++;
 		}
 	}
-
-	release_bitmap(buffer);
 
 	Draw_EndScene();
 
@@ -404,22 +366,12 @@ int main(int arg, char* argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
-	allegro_init();
-	install_timer();
-	install_int(HandleFps, 1000);
-	set_color_depth(32);
-	//set_gfx_mode(GFX_AUTODETECT_WINDOWED, 320, 240, 0, 0);
-	//set_gfx_mode(GFX_AUTODETECT_WINDOWED, 600, 600, 0, 0);
-	//set_gfx_mode(GFX_AUTODETECT_FULLSCREEN, 640, 480, 0, 0);
-	set_gfx_mode(GFX_AUTODETECT_WINDOWED, 640, 480, 0, 0);
-	//set_gfx_mode(GFX_AUTODETECT_FULLSCREEN, 320, 240, 0, 0);
-	install_keyboard();
-	install_mouse();
-	show_mouse(screen);
+	if (!framework.init(640, 480))
+		return -1;
 
 	//
 
-	Draw_Init(SCREEN_W, SCREEN_H);
+	Draw_Init(640, 480);
 
 	//
 
@@ -447,31 +399,39 @@ int main(int arg, char* argv[])
 
 	//PrintNodes(tree);
 
-	DrawAACC(tree);
+	for (int i = 0; i < 0; ++i)
+	{
+		framework.process();
+		
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			DrawAACC(tree);
+		}
+		framework.endDraw();
+	}
 
-//	TestAACC(tree);
+	//TestAACC(tree);
 
 	// ----------
 
-	readkey();
-
-	// ----------
-
-	//Draw_Init(160, 120);
+#if defined(DEBUG)
+	Draw_Init(160, 120);
+#else
 	Draw_Init(320, 240);
+#endif
 
 	//g_DrawStretch = TRUE;
 
-	g_VoxiView.SetSize(g_Buffer->w, g_Buffer->h);
+	g_VoxiView.SetSize(g_BufferSx, g_BufferSy);
 
-	VecF pos(
+	Vec3 pos(
 		MAP_SX / 2.0f,
 		MAP_SY / 2.0f,
 		MAP_SZ / 2.0f);
-	VecF posV(0.0f, 0.0f, 0.0f);
+	Vec3 posV(0.0f, 0.0f, 0.0f);
 
-	VecF rot(0.0f, 0.0f, 0.0f);
-	VecF rotV(0.0f, 0.0f, 0.0f);
+	Vec3 rot(0.0f, 0.0f, 0.0f);
+	Vec3 rotV(0.0f, 0.0f, 0.0f);
 
 	enum VisMode
 	{
@@ -481,17 +441,19 @@ int main(int arg, char* argv[])
 
 	VisMode visMode = VisMode_Voxi;
 
-	while (!key[KEY_ESC])
+	while (!keyboard.isDown(SDLK_ESCAPE))
 	{
+		framework.process();
+		
 		// input
 
-		if (key[KEY_1])
+		if (keyboard.isDown(SDLK_1))
 		{
 			Draw_Init(MAP_SX * DRAW_SCALE, MAP_SY * DRAW_SCALE);
 
 			visMode = VisMode_Heli;
 		}
-		if (key[KEY_2])
+		if (keyboard.isDown(SDLK_2))
 		{
 			//Draw_Init(150, 150);
 
@@ -500,59 +462,50 @@ int main(int arg, char* argv[])
 
 		float accel = 0.05f;
 
-		VecF posA(0.0f, 0.0f, 0.0f);
+		Vec3 posA(0.0f, 0.0f, 0.0f);
 
-		if (key[KEY_LEFT])
+		if (keyboard.isDown(SDLK_LEFT))
 			posA[0] -= accel;
-		if (key[KEY_RIGHT])
+		if (keyboard.isDown(SDLK_RIGHT))
 			posA[0] += accel;
-		if (key[KEY_A])
+		if (keyboard.isDown(SDLK_a))
 			posA[1] -= accel;
-		if (key[KEY_Z])
+		if (keyboard.isDown(SDLK_z))
 			posA[1] += accel;
-		if (key[KEY_DOWN] || (mouse_b & 0x2))
+		if (keyboard.isDown(SDLK_DOWN) || (mouse.isDown(BUTTON_RIGHT)))
 			posA[2] -= accel;
-		if (key[KEY_UP] || (mouse_b & 0x1))
+		if (keyboard.isDown(SDLK_UP) || (mouse.isDown(BUTTON_LEFT)))
 			posA[2] += accel;
 
-		int dx;
-		int dy;
+		int dx = mouse.dx;
+		int dy = mouse.dy;
 
-		get_mouse_mickeys(&dx, &dy);
-
-#if 0
+	#if 0
 		rot[0] += 0.1f;
 		rot[1] += 0.1f;
 		rot[2] += 0.1f;
-#endif
+	#endif
 
-		rotV[0] += +dy / 20.0f;
-		rotV[1] += -dx / 20.0f;
+		rotV[0] += -dy / 20.0f;
+		rotV[1] += +dx / 20.0f;
 
 		// logic
 
-		MATRIX_f mat;
-		MATRIX_f matRX;
-		MATRIX_f matRY;
-		get_x_rotate_matrix_f(&matRX, -rot[0]);
-		get_y_rotate_matrix_f(&matRY, -rot[1]);
-		matrix_mul_f(&matRX, &matRY, &mat);
+		Mat4x4 mat;
+		Mat4x4 matRX;
+		Mat4x4 matRY;
+		matRX.MakeRotationX(-rot[0]);
+		matRY.MakeRotationY(-rot[1]);
+		mat = matRY * matRX;
 
-		MATRIX_f matInv;
-		MATRIX_f matRXInv;
-		MATRIX_f matRYInv;
-		get_x_rotate_matrix_f(&matRX, +rot[0]);
-		get_y_rotate_matrix_f(&matRY, +rot[1]);
-		matrix_mul_f(&matRXInv, &matRYInv, &matInv);
+		Mat4x4 matInv;
+		Mat4x4 matRXInv;
+		Mat4x4 matRYInv;
+		matRXInv.MakeRotationX(+rot[0]);
+		matRYInv.MakeRotationY(+rot[1]);
+		matInv = matRXInv * matRYInv;
 
-		apply_matrix_f(
-			&g_VoxiView.m_Matrix, 
-			posA[0],
-			posA[1],
-			posA[2],
-			&posA[0],
-			&posA[1],
-			&posA[2]);
+		posA = g_VoxiView.m_Matrix.Mul4(posA);
 
 		if (false)
 		{
@@ -564,19 +517,19 @@ int main(int arg, char* argv[])
 
 		posV = posV + posA;
 		//pos = pos + posV;
-		rot = rot + rotV;
+		rot = rot + rotV * framework.timeStep;
 
-		posV = posV * 0.9f;
-		rotV = rotV * 0.8f;
+		posV = posV * powf(0.1f, framework.timeStep);
+		rotV = rotV * powf(0.2f, framework.timeStep);
 
-		//VecF dir(0.0f, 0.0f, 1.0f);
-		VecF dir = posV;
+		//Vec3 dir(0.0f, 0.0f, 1.0f);
+		Vec3 dir = posV;
 
 		//pos = pos + dir * speed;
 
 		for (int i = 0; i < 3; ++i)
 		{
-			VecF temp = pos;
+			Vec3 temp = pos;
 
 			//temp[i] += posS[i];
 			temp[i] += dir[i];
@@ -591,30 +544,41 @@ int main(int arg, char* argv[])
 
 		g_VoxiView.m_Matrix = mat;
 
-		switch (visMode)
+		framework.beginDraw(0, 0, 0, 0);
 		{
-		case VisMode_Heli:
-			DrawHeli(tree);
-			break;
+			switch (visMode)
+			{
+			case VisMode_Heli:
+				DrawHeli(tree);
+				break;
 
-		case VisMode_Voxi:
-			DrawVoxi(tree, pos, rot);
-			break;
+			case VisMode_Voxi:
+				DrawVoxi(tree, pos, rot);
+				break;
+			}
+
+			setColor(colorWhite);
+			drawText(4, 4, 12, +1, +1, "FPS: %d", g_Fps);
 		}
-
-		textprintf(screen, font, 0, 0, makecol(255, 255, 255), "FPS: %d", g_Fps);
+		framework.endDraw();
 
 		g_FpsFrame++;
+		
+		g_FpsTimer += framework.timeStep;
+		
+		if (g_FpsTimer >= 1.f)
+		{
+			g_FpsTimer = 0.f;
+			
+			HandleFps();
+		}
 	}
 
 	delete tree;
 
 	delete map;
 
-#if 0
-	clear_keybuf();
-
-	readkey();
-#endif
+	framework.shutdown();
+	
+	return 0;
 }
-END_OF_MAIN();
