@@ -319,8 +319,8 @@ namespace rOne
 
 	void ShadowMapDrawer::setShaderData(Shader & shader, int & nextTextureUnit, const Mat4x4 & worldToView)
 	{
-		shader.setTexture("shadowDepthAtlas", nextTextureUnit++, depthAtlas.getTextureId(), false);
-		shader.setTexture("shadowColorAtlas", nextTextureUnit++, enableColorShadows ? colorAtlas.getTextureId() : 0, true);
+		shader.setTexture("shadowDepthAtlas", nextTextureUnit++, depthAtlas.getTextureId(), false, true);
+		shader.setTexture("shadowColorAtlas", nextTextureUnit++, enableColorShadows ? colorAtlas.getTextureId() : 0, true, true);
 
 		shader.setImmediate("numShadowMaps", depthTargets.size());
 		shader.setImmediate("enableColorShadows", enableColorShadows ? 1.f : 0.f);
