@@ -3,6 +3,8 @@
 #include "shadowMapDrawer.h"
 #include <vector>
 
+using namespace rOne;
+
 int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
@@ -75,7 +77,7 @@ int main(int argc, char * argv[])
 		Vec3 color = Vec3(1, 1, 1);
 	};
 	
-	rOne::ForwardLightingHelper helper;
+	ForwardLightingHelper helper;
 	
 	for (;;)
 	{
