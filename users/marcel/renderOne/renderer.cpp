@@ -3,6 +3,8 @@
 #include "lightDrawer.h"
 #include "renderer.h"
 
+#define ENABLE_FULLSCREEN_QUAD_OPTIMIZE 1
+
 #if 0
 	// todo : add screenshot functionality
 
@@ -62,6 +64,30 @@ namespace rOne
 			powf(rgb[0], kSrgbToLinear),
 			powf(rgb[1], kSrgbToLinear),
 			powf(rgb[2], kSrgbToLinear));
+	}
+	
+	static void drawFullscreenQuad(const int viewSx, const int viewSy)
+	{
+	#if ENABLE_FULLSCREEN_QUAD_OPTIMIZE
+		// draw a single large triangle covering the view. this is more efficient
+		// than drawing a quad, which gets rasterized as two triangles. when
+		// drawing two triangles, there will be a seam diagonally across the view,
+		// which makes more difficult for the gpu to schedule wave fronts
+		// efficiently. a large triangle doesn't have this issue
+		// see: https://michaldrobot.com/2014/04/01/gcn-execution-patterns-in-full-screen-passes/
+		const int size = (viewSx > viewSy ? viewSx : viewSy) * 2;
+		
+		gxBegin(GX_TRIANGLES);
+		gxTexCoord2f(0, 0);
+		gxVertex2f(0, 0);
+		gxTexCoord2f(size / float(viewSx), 0);
+		gxVertex2f(size, 0);
+		gxTexCoord2f(0, size / float(viewSy));
+		gxVertex2f(0, size);
+		gxEnd();
+	#else
+		drawRect(0, 0, viewSx, viewSy);
+	#endif
 	}
 
 	// render passes
@@ -188,7 +214,7 @@ namespace rOne
 				shader.setTexture("depthTexture", 4, depth, false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 				shader.setImmediate("linearColorSpace", linearColorSpace ? 1.f : 0.f);
 			
-				drawRect(0, 0, sx, sy);
+				drawFullscreenQuad(sx, sy);
 			}
 			clearShader();
 		}
@@ -255,7 +281,7 @@ namespace rOne
 						//shader.setImmediateMatrix4x4("worldToView", modelViewMatrix.m_v);
 						shader.setImmediateMatrix4x4("worldToProjection", worldToProjection.m_v);
 						shader.setImmediate("timeStepRcp", 1.f / timeStep);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -294,7 +320,7 @@ namespace rOne
 						shader.setTexture("normalTexture", 1, buffers.normals->getTextureId(), false, true);
 						shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
 						shader.setImmediate("strength", renderOptions.screenSpaceAmbientOcclusion.strength);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -329,7 +355,7 @@ namespace rOne
 							fogColor[1],
 							fogColor[2]);
 						shader.setImmediate("fogTranslucency", 1.f - renderOptions.fog.thickness);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -360,7 +386,7 @@ namespace rOne
 						shader.setTexture("colorTexture", 2, composite[composite_idx]->getTextureId(), true, false); // note : clamp is intentionally turned off, to expose incorrect fading
 						shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
 						shader.setImmediateMatrix4x4("viewToProjection", viewToProjection.m_v);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -399,7 +425,7 @@ namespace rOne
 							color_linear[1],
 							color_linear[2],
 							renderOptions.depthSilhouette.color[3]);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -436,7 +462,7 @@ namespace rOne
 						shader.setTexture("velocityTexture", 1, buffers.velocity->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 						shader.setImmediate("strength", renderOptions.motionBlur.strength);
 						shader.setImmediate("viewportSizeRcp", 1.f / viewportSx, 1.f / viewportSy);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -498,7 +524,7 @@ namespace rOne
 						shader.setImmediateMatrix4x4("projectionToView", projectionToView.m_v);
 						shader.setImmediate("strength", renderOptions.depthOfField.strength);
 						shader.setImmediate("focusDistance", renderOptions.depthOfField.focusDistance);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -526,7 +552,7 @@ namespace rOne
 				pushBlend(BLEND_OPAQUE);
 				setShader_GaussianBlurH(src->getTextureId(), 11, renderOptions.bloom.blurSize);
 				{
-					drawRect(0, 0, src->getWidth(), src->getHeight());
+					drawFullscreenQuad(src->getWidth(), src->getHeight());
 				}
 				clearShader();
 				popBlend();
@@ -540,7 +566,7 @@ namespace rOne
 				pushBlend(BLEND_OPAQUE);
 				setShader_GaussianBlurV(src->getTextureId(), 11, 23.f);
 				{
-					drawRect(0, 0, src->getWidth(), src->getHeight());
+					drawFullscreenQuad(src->getWidth(), src->getHeight());
 				}
 				clearShader();
 				popBlend();
@@ -558,7 +584,7 @@ namespace rOne
 					shader.setTexture("source", 0, buffers.bloomBuffer->getTextureId(), true, true);
 					shader.setImmediate("strength", renderOptions.bloom.strength);
 					
-					drawRect(0, 0, viewportSx, viewportSy);
+					drawFullscreenQuad(viewportSx, viewportSy);
 				}
 				clearShader();
 				popBlend();
@@ -585,7 +611,7 @@ namespace rOne
 				{
 					shader.setTexture("source", 0, src->getTextureId(), false, true);
 					shader.setImmediate("brightPassValue", renderOptions.bloom.brightPassValue);
-					drawRect(0, 0, src->getWidth(), src->getHeight());
+					drawFullscreenQuad(src->getWidth(), src->getHeight());
 				}
 				clearShader();
 				popBlend();
@@ -609,7 +635,7 @@ namespace rOne
 						{
 							shader.setTexture("source", 0, src->getTextureId(), true, true);
 							
-							drawRect(0, 0, dst->getWidth(), dst->getHeight());
+							drawFullscreenQuad(dst->getWidth(), dst->getHeight());
 						}
 						popRenderPass();
 
@@ -644,7 +670,7 @@ namespace rOne
 						{
 							shader.setTexture("source", 0, src->getTextureId(), true, true);
 
-							drawRect(0, 0, dst->getWidth(), dst->getHeight());
+							drawFullscreenQuad(dst->getWidth(), dst->getHeight());
 						}
 						clearShader();
 					}
@@ -665,7 +691,7 @@ namespace rOne
 					{
 						shader.setTexture("source", 0, src->getTextureId(), false, true);
 						
-						drawRect(0, 0, dst->getWidth(), dst->getHeight());
+						drawFullscreenQuad(dst->getWidth(), dst->getHeight());
 					}
 					clearShader();
 				}
@@ -684,7 +710,7 @@ namespace rOne
 					shader.setTexture("source", 0, buffers.bloomBlurChain.buffers[finalBuffer].getTextureId(), true, true);
 					shader.setImmediate("strength", renderOptions.bloom.strength / (buffers.bloomBlurChain.numBuffers - finalBuffer));
 					
-					drawRect(0, 0, viewportSx, viewportSy);
+					drawFullscreenQuad(viewportSx, viewportSy);
 				}
 				clearShader();
 				popBlend();
@@ -711,7 +737,7 @@ namespace rOne
 						shader.setImmediate("numSamples", renderOptions.lightScatter.numSamples);
 						shader.setImmediate("decay", renderOptions.lightScatter.decay);
 						shader.setImmediate("strength", renderOptions.lightScatter.strength * renderOptions.lightScatter.strengthMultiplier);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -739,7 +765,7 @@ namespace rOne
 						shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 						shader.setImmediate("exposure", renderOptions.toneMapping.exposure);
 						shader.setImmediate("gamma", renderOptions.toneMapping.gamma);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -770,7 +796,7 @@ namespace rOne
 						shader.setImmediate("strength", renderOptions.simpleScreenSpaceRefraction.strength);
 					// todo : set uniform to set uv scaling and offset to fit refraction texture to view
 						shader.setImmediate("time", framework.time); // todo : remove
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -830,7 +856,7 @@ namespace rOne
 					
 						shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 						shader.setTexture("lutTexture", 1, lutTexture, true, true);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 						
 						if (lutIsDynamic)
 							freeTexture(lutTexture);
@@ -861,7 +887,7 @@ namespace rOne
 						shader.setImmediate("inverseVP",
 							1.f / viewportSx,
 							1.f / viewportSy);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -960,7 +986,7 @@ namespace rOne
 						shader.setImmediateMatrix4x4("viewToWorld", viewToWorld.m_v);
 						shader.setImmediateMatrix4x4("worldToView", worldToView.m_v);
 						shader.setImmediate("time", framework.time);
-						drawRect(0, 0, viewportSx, viewportSy);
+						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
 				}
@@ -1531,7 +1557,7 @@ namespace rOne
 					shader.setTexture("colormapL", 0, eyeL->getTextureId(), false, false);// note : clamp is intentionally turned off, to expose incorrect sampling
 					shader.setTexture("colormapR", 1, eyeR->getTextureId(), false, false);// note : clamp is intentionally turned off, to expose incorrect sampling
 					
-					drawRect(0, 0, eyeL->getWidth(), eyeL->getHeight());
+					drawFullscreenQuad(eyeL->getWidth(), eyeL->getHeight());
 				}
 				clearShader();
 			}
@@ -1558,7 +1584,7 @@ namespace rOne
 				{
 					gxSetTexture(result->getTextureId());
 					setColor(colorWhite);
-					drawRect(0, 0, result->getWidth(), result->getHeight());
+					drawFullscreenQuad(result->getWidth(), result->getHeight());
 					gxSetTexture(0);
 				}
 				popBlend();
