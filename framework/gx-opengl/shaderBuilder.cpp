@@ -148,6 +148,8 @@ R"HEADER(
 #define texture texture2D
 
 #define tex2D texture
+
+#define max3(a, b, c) max(a, max(b, c))
 )HEADER";
 		sb.Append(header);
 		sb.Append('\n');
@@ -159,6 +161,8 @@ R"HEADER(
 #define shader_out out
 
 #define tex2D texture
+
+#define max3(a, b, c) max(a, max(b, c))
 )HEADER";
 		sb.Append(header);
 		sb.Append('\n');
