@@ -55,6 +55,12 @@ namespace rOne
 		kRenderMode_DeferredShaded,
 		kRenderMode_ForwardShaded
 	};
+	
+	enum ToneMap
+	{
+		kToneMap_Uncharted2,
+		kToneMap_Aces
+	};
 
 	struct RenderOptions
 	{
@@ -156,6 +162,7 @@ namespace rOne
 		
 		struct ToneMapping
 		{
+			ToneMap toneMap = kToneMap_Uncharted2;
 			float exposure = 16.f;
 			float gamma = 2.2f;
 

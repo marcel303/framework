@@ -763,6 +763,7 @@ namespace rOne
 					setShader(shader);
 					{
 						shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
+						shader.setImmediate("tonemap", renderOptions.toneMapping.toneMap);
 						shader.setImmediate("exposure", renderOptions.toneMapping.exposure);
 						shader.setImmediate("gamma", renderOptions.toneMapping.gamma);
 						drawFullscreenQuad(viewportSx, viewportSy);

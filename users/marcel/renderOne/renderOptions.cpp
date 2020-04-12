@@ -66,6 +66,7 @@ namespace rOne
 	void RenderOptions::ToneMapping::reflect(TypeDB & typeDB)
 	{
 		typeDB.addStructured<RenderOptions::ToneMapping>("RenderOptions::ToneMapping")
+			.add("toneMap", &RenderOptions::ToneMapping::toneMap)
 			.add("exposure", &RenderOptions::ToneMapping::exposure)
 			.add("gamma", &RenderOptions::ToneMapping::gamma);
 	}
@@ -95,6 +96,10 @@ namespace rOne
 			.add("flat", kRenderMode_Flat)
 			.add("deferredShaded", kRenderMode_DeferredShaded)
 			.add("forwardShaded", kRenderMode_ForwardShaded);
+		
+		typeDB.addEnum<ToneMap>("ToneMap")
+			.add("uncharted2", kToneMap_Uncharted2)
+			.add("aces", kToneMap_Aces);
 		
 		Fog::reflect(typeDB);
 		MotionBlur::reflect(typeDB);

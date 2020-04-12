@@ -1,11 +1,12 @@
 include engine/ShaderPS.txt
 include engine/ShaderUtil.txt
 
-// tone mapper from Uncharted 2,
-// code from: https://www.shadertoy.com/view/lslGzl
+#define kToneMap_Uncharted2 0
+#define kToneMap_Aces       1
 
 uniform sampler2D colorTexture;
 
+uniform float tonemap;
 uniform float exposure;
 uniform float gamma;
 
@@ -14,6 +15,7 @@ shader_in vec2 texcoord;
 // Uncharted 2 tone map
 // by: John Hable
 // aka 'Hable Tone Mapping', 'Hable Filmic'
+// source: https://www.shadertoy.com/view/lslGzl
 vec3 Uncharted2ToneMapping(vec3 color)
 {
 	float A = 0.15;
@@ -66,11 +68,18 @@ void main()
 
 	color *= exposure;
 
-	color = Uncharted2ToneMapping(color);
+	if (tonemap == kToneMap_Uncharted2)
+		color = Uncharted2ToneMapping(color);
+	else if (tonemap == kToneMap_Aces)
+		color = toneMapACES_pure(color);
+
+	//color = Uncharted2ToneMapping(color);
 	//color = toneMapACES(color);
 	//color = toneMapACES_pure(color);
-	
+
 	color = pow(color, vec3(1.0 / gamma));
+
+	color += colorDither8ScreenSpace(texcoord * textureSize(colorTexture, 0)) * 8.0;
 
 	shader_fragColor = vec4(color, 1.0);
 }
