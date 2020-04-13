@@ -36,9 +36,11 @@ int main(int argc, char * argv[])
 	framework.enableRealTimeEditing = true;
 	framework.filedrop = true;
 	
-	if (!framework.init(400, 300))
+	//framework.fullscreen = true;
+	
+	//if (!framework.init(400, 300))
 	//if (!framework.init(600, 600))
-	//if (!framework.init(1200, 900))
+	if (!framework.init(1200, 900))
 		return 0;
 
 	Renderer::registerShaderOutputs();
@@ -79,19 +81,19 @@ int main(int argc, char * argv[])
 	renderOptions.linearColorSpace = true;
 	renderOptions.backgroundColor.Set(1, .5f, .25f);
 	
-	renderOptions.screenSpaceAmbientOcclusion.enabled = true;
+	//renderOptions.screenSpaceAmbientOcclusion.enabled = true;
 	renderOptions.screenSpaceAmbientOcclusion.strength = 1.f;
 	
-	renderOptions.fog.enabled = false;
+	//renderOptions.fog.enabled = true;
 	renderOptions.fog.thickness = .001f;
 	
 	//renderOptions.debugRenderTargets = true;
 	
 	renderOptions.bloom.enabled = true;
 	renderOptions.bloom.blurSize = 20.f;
-	renderOptions.bloom.strength = .5f;
+	renderOptions.bloom.strength = .2f;
 	
-	renderOptions.lightScatter.enabled = true;
+	//renderOptions.lightScatter.enabled = true;
 	renderOptions.lightScatter.strength = 1.f;
 	renderOptions.lightScatter.numSamples = 40; // todo : bump to a higher number. fix light scatter getting more or less bright with # samples
 	
@@ -111,12 +113,15 @@ int main(int argc, char * argv[])
 	ShadowMapDrawer shadowMapDrawer;
 	shadowMapDrawer.alloc(4, 1024);
 	shadowMapDrawer.enableColorShadows = false;
+	shadowMapDrawer.shadowMapFilter = kShadowMapFilter_PercentageCloser_3x3;
 	
 	for (;;)
 	{
+	#if !defined(DEBUG)
 		mouse.showCursor(false);
 		mouse.setRelative(true);
-		
+	#endif
+	
 		framework.process();
 
 		if (framework.quitRequested)
@@ -211,7 +216,7 @@ int main(int argc, char * argv[])
 					light.attenuationBegin = 0.f;
 					light.attenuationEnd = 100.f;
 					light.color.Set(1, 1, 1);
-					light.intensity = .1f;
+					light.intensity = .01f;
 					
 					lights.push_back(light);
 				}
@@ -226,7 +231,7 @@ int main(int argc, char * argv[])
 					light.attenuationBegin = 0.f;
 					light.attenuationEnd = 4.f;
 					light.color.Set(1, 1, 1);
-					light.intensity = .01f;
+					light.intensity = .1f;
 					
 					lights.push_back(light);
 					
@@ -243,26 +248,27 @@ int main(int argc, char * argv[])
 					light.position.Set(2, sinf(framework.time * 2.34f) * .4f, -2);
 					//light.direction = Mat4x4(true).RotateY(framework.time * 4.f).GetAxis(2);
 					light.direction = Mat4x4(true).RotateY(framework.time / 2.f).GetAxis(2);
+					//light.direction = Mat4x4(true).RotateY(float(M_PI)).GetAxis(2);
 					light.attenuationBegin = 0.01f;
-					light.attenuationEnd = 20.f;
+					light.attenuationEnd = 6.f;
 					light.color.Set(1, 0, 0);
 					light.spotAngle = 70.f * float(M_PI/180.0);
-					light.intensity = 1.f;
+					light.intensity = 10.f;
 					
 					lights.push_back(light);
 				}
 				
 				if (true)
 				{
-					// pulsating green point light
+					// pulsating white point light
 					
 					Light light;
 					light.type = kLightType_Point;
 					light.position.Set(0, 0, 0);
 					light.attenuationBegin = 0.f;
 					light.attenuationEnd = 2.f + sinf(framework.time * 2.34f) * 2.f;
-					light.color.Set(0, 1, 0);
-					light.intensity = 1.f;
+					light.color.Set(1, 1, 1);
+					light.intensity = 10.f;
 					
 					lights.push_back(light);
 				}
@@ -278,9 +284,19 @@ int main(int argc, char * argv[])
 					//fillCube(sunPosition, Vec3(.4f, .4f, .4f));
 					
 				#if USE_OPTIMIZED_SHADOW_SHADER
-					Shader shader(isMainPass ? "shader-forward" : "shader-shadow");
+					Shader shader(
+						isMainPass ?
+							(
+								renderOptions.renderMode == kRenderMode_ForwardShaded
+								? "shader-forward"
+								: "shader"
+							)
+						: "shader-shadow");
 				#else
-					Shader shader("shader-forward");
+					Shader shader(
+						renderOptions.renderMode == kRenderMode_ForwardShaded
+						? "shader-forward"
+						: "shader");
 				#endif
 					setShader(shader);
 					
@@ -306,7 +322,7 @@ int main(int argc, char * argv[])
 					{
 						beginCubeBatch();
 						{
-							for (int i = 0; i < 1*1000; ++i)
+							for (int i = 0; i < 3*1000; ++i)
 							{
 								//const float s = .2f;
 								const float s = lerp<float>(.04f, .14f, (cosf(framework.time + i) + 1.f) / 2.f);
@@ -529,7 +545,7 @@ int main(int argc, char * argv[])
 				renderFunctions.drawOpaque = drawOpaque;
 				renderFunctions.drawTranslucent = drawTranslucent;
 				renderFunctions.drawLights = drawLights;
-				
+			
 				renderer.render(renderFunctions, renderOptions, framework.timeStep);
 			}
 			camera.popViewMatrix();
