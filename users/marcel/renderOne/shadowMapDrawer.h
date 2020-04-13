@@ -30,6 +30,15 @@ note : shadow maps are packed into an atlas, to make it easier
 
 namespace rOne
 {
+	
+	enum ShadowMapFilter
+	{
+		kShadowMapFilter_Nearest,
+		kShadowMapFilter_PercentageCloser_3x3,
+		kShadowMapFilter_PercentageCloser_7x7,
+		kShadowMapFilter_Variance
+	};
+	
 	class ShadowMapDrawer
 	{
 
@@ -64,6 +73,7 @@ namespace rOne
 		ShaderBuffer shaderBuffer;
 		
 		ColorTarget depthAtlas;
+		ColorTarget depthAtlas2Channel;
 		ColorTarget colorAtlas;
 		
 		static void calculateProjectionMatrixForLight(const Light & light, Mat4x4 & projectionMatrix);
@@ -77,6 +87,8 @@ namespace rOne
 		RenderFunction drawTranslucent;
 		
 		bool enableColorShadows = false;
+		
+		ShadowMapFilter shadowMapFilter = kShadowMapFilter_PercentageCloser_3x3;
 
 		~ShadowMapDrawer();
 		

@@ -1,19 +1,27 @@
 uniform sampler2D shadowDepthAtlas;
 uniform sampler2D shadowColorAtlas;
 
+uniform sampler2D shadowDepthAtlas2Channel;
+
+#define kShadowMapFilter_Nearest              0
+#define kShadowMapFilter_PercentageCloser_3x3 1
+#define kShadowMapFilter_PercentageCloser_7x7 2
+#define kShadowMapFilter_Variance             3
+
 uniform mat4x4 viewToShadowMatrices[16];
 uniform mat4x4 shadowToViewMatrices[16];
 
 uniform float numShadowMaps;
 uniform float enableColorShadows;
+uniform float shadowMapFilter;
 
-#define ENABLE_PCF 0
+#define VSM_INVERSE_Z 0
 
 #define ENABLE_SHADOW_DEBUGS 0
 
-vec3 lookupShadow(int id, vec3 position_view)
+vec3 viewToShadowLight(int id, vec3 position_view)
 {
-	// transform view-space position into light-space
+	// transform view-space position into light-space position
 
 	vec4 position_light = viewToShadowMatrices[id] * vec4(position_view, 1.0);
 
@@ -21,7 +29,33 @@ vec3 lookupShadow(int id, vec3 position_view)
 	position_light.y = -position_light.y;
 #endif
 
+	// apply perspective divide
+
 	position_light.xyz /= position_light.w;
+
+	return position_light.xyz;
+}
+
+vec2 shadowTextureToShadowAtlas(int id, vec2 position_texture)
+{
+	vec2 atlas_min = vec2(1.0 / numShadowMaps * (id + 0), 0.0);
+	vec2 atlas_max = vec2(1.0 / numShadowMaps * (id + 1), 1.0);
+
+	vec2 position_atlas = mix(atlas_min, atlas_max, position_texture);
+
+// todo : remove min/max when any test above works
+	position_atlas = max(atlas_min, min(atlas_max, position_atlas));
+
+	return position_atlas;
+}
+
+vec3 lookupShadow_Nearest(int id, vec3 position_view)
+{
+	// transform view-space position into light-space position
+
+	vec3 position_light = viewToShadowLight(id, position_view);
+
+	// pack depth
 
 	float position_depth = position_light.z;
 
@@ -51,15 +85,27 @@ vec3 lookupShadow(int id, vec3 position_view)
 
 	position_texture = (position_texture + vec2(1.0)) * 0.5;
 
+#if 0
+	if (any(
+		bool4(
+			position_texture <= vec2(0.0),
+			position_texture >= vec2(1.0))))
+	{
+		return vec3(0.0);
+	}
+#elif 0
+	if (any(
+		bvec4(
+			lessThanEqual(position_texture, vec2(0.0)),
+			greaterThanEqual(position_texture, vec2(1.0)))))
+	{
+		return vec3(0.0);
+	}
+#endif
+
 	// perform texture sampling inside the atlas texture
 
-// todo : optimize : store shadow atlas min/max inside a uniform array
-	vec2 atlas_min = vec2(1.0 / numShadowMaps * (id + 0), 0.0);
-	vec2 atlas_max = vec2(1.0 / numShadowMaps * (id + 1), 1.0);
-
-	vec2 position_atlas = mix(atlas_min, atlas_max, position_texture);
-
-	position_atlas = max(atlas_min, min(atlas_max, position_atlas));
+	vec2 position_atlas = shadowTextureToShadowAtlas(id, position_texture);
 
 	float depth = texture(shadowDepthAtlas, position_atlas).x;
 
@@ -96,51 +142,355 @@ vec3 lookupShadow(int id, vec3 position_view)
 
 #endif
 
-#if ENABLE_PCF
-	// 'percentage closer filtering'
-	float depth00 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1, -1)).x;
-	float depth10 = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0, -1)).x;
-	float depth20 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1, -1)).x;
-	float depth01 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1,  0)).x;
-	float depth11 = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0,  0)).x;
-	float depth21 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1,  0)).x;
-	float depth02 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1, +1)).x;
-	float depth12 = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0, +1)).x;
-	float depth22 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1, +1)).x;
+	// perform depth comparison
 
-	float occlusionMask =
-		(depth00 < position_depth ? 0.0 : 1.0) +
-		(depth10 < position_depth ? 0.0 : 1.0) +
-		(depth20 < position_depth ? 0.0 : 1.0) +
-		(depth01 < position_depth ? 0.0 : 1.0) +
-		(depth11 < position_depth ? 0.0 : 1.0) +
-		(depth21 < position_depth ? 0.0 : 1.0) +
-		(depth02 < position_depth ? 0.0 : 1.0) +
-		(depth12 < position_depth ? 0.0 : 1.0) +
-		(depth22 < position_depth ? 0.0 : 1.0);
-
-	occlusionMask *= (1.0 / 9.0);
-#else
 	float occlusionMask = 1.0;
 
 	if (depth < position_depth)
 	{
 		occlusionMask = 0.0;
 	}
-#endif
+
+	// apply color shadows
 
 	if (enableColorShadows != 0.0 && occlusionMask != 0.0)
 	{
-	#if ENABLE_PCF
-		return occlusionMask * texture(shadowColorAtlas, position_atlas).rgb;
-	#else
 		return texture(shadowColorAtlas, position_atlas).rgb;
-	#endif
 	}
 	else
 	{
 		return vec3(occlusionMask);
 	}
+}
+
+vec3 lookupShadow_PCF_3x3(int id, vec3 position_view)
+{
+	// transform view-space position into light-space position
+
+	vec3 position_light = viewToShadowLight(id, position_view);
+
+	// pack depth
+
+	float position_depth = position_light.z;
+
+#if defined(GL_core_profile)
+	position_depth = (position_depth + 1.0) * 0.5; // pack depth from -1.0 to +1.0 range to the 0.0 to 1.0 range used when storing depth
+#endif
+
+	// does the point lie before the near plane of the light?
+
+	if (position_depth < 0.0)
+	{
+		// if the point lies before the near plane of the light,
+		// we don't know if there's geometry drawn between it and
+		// the near plane of the light. we just assume it isn't
+		// shadowed to avoid too glaring discontinuities with
+		// things that are past the near plane. note that for
+		// spot lights, things before the near plane will not be
+		// lit anyway (due to the spot light's attenuation). for
+		// directional lights the above generally works best
+
+		return vec3(1.0);
+	}
+
+	// determine texture coordinates
+
+	vec2 position_texture = position_light.xy;
+
+	position_texture = (position_texture + vec2(1.0)) * 0.5;
+
+#if 0
+	if (any(
+		bool4(
+			position_texture <= vec2(0.0),
+			position_texture >= vec2(1.0))))
+	{
+		return vec3(0.0);
+	}
+#elif 0
+	if (any(
+		bvec4(
+			lessThanEqual(position_texture, vec2(0.0)),
+			greaterThanEqual(position_texture, vec2(1.0)))))
+	{
+		return vec3(0.0);
+	}
+#endif
+
+	// perform texture sampling inside the atlas texture
+
+	vec2 position_atlas = shadowTextureToShadowAtlas(id, position_texture);
+
+	// perform 'percentage closer filtering'
+
+	float occlusionMask = 0.0;
+
+#if defined(GL_core_profile)
+	// note : using textureOffset here causes the shader to fail on my Mac Book pro late 2016 with
+	//        Intel Iris 540. it doesn't fail to compile.. it just outputs the wrong value :-(
+	//        so instead of using textureOffset I'm forced to add a manual offset to texture(..) calls
+	vec2 oscale = vec2(1.0) / textureSize(shadowDepthAtlas, 0);
+	#define textureOffset(s, uv, o) texture(s, uv + vec2(o) * oscale)
+#endif
+
+	float depth;
+	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1, -1)).x; occlusionMask += step(position_depth, depth);
+	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0, -1)).x; occlusionMask += step(position_depth, depth);
+	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1, -1)).x; occlusionMask += step(position_depth, depth);
+	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1,  0)).x; occlusionMask += step(position_depth, depth);
+	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0,  0)).x; occlusionMask += step(position_depth, depth);
+	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1,  0)).x; occlusionMask += step(position_depth, depth);
+	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1, +1)).x; occlusionMask += step(position_depth, depth);
+	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0, +1)).x; occlusionMask += step(position_depth, depth);
+	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1, +1)).x; occlusionMask += step(position_depth, depth);
+
+#if defined(GL_core_profile)
+	#undef textureOffset
+#endif
+
+	occlusionMask *= (1.0 / 9.0);
+
+	// apply color shadows
+
+	if (enableColorShadows != 0.0 && occlusionMask != 0.0)
+	{
+		return occlusionMask * texture(shadowColorAtlas, position_atlas).rgb;
+	}
+	else
+	{
+		return vec3(occlusionMask);
+	}
+}
+
+vec3 lookupShadow_PCF_7x7(int id, vec3 position_view)
+{
+	// transform view-space position into light-space position
+
+	vec3 position_light = viewToShadowLight(id, position_view);
+
+	// pack depth
+
+	float position_depth = position_light.z;
+
+#if defined(GL_core_profile)
+	position_depth = (position_depth + 1.0) * 0.5; // pack depth from -1.0 to +1.0 range to the 0.0 to 1.0 range used when storing depth
+#endif
+
+	// does the point lie before the near plane of the light?
+
+	if (position_depth < 0.0)
+	{
+		// if the point lies before the near plane of the light,
+		// we don't know if there's geometry drawn between it and
+		// the near plane of the light. we just assume it isn't
+		// shadowed to avoid too glaring discontinuities with
+		// things that are past the near plane. note that for
+		// spot lights, things before the near plane will not be
+		// lit anyway (due to the spot light's attenuation). for
+		// directional lights the above generally works best
+
+		return vec3(1.0);
+	}
+
+	// determine texture coordinates
+
+	vec2 position_texture = position_light.xy;
+
+	position_texture = (position_texture + vec2(1.0)) * 0.5;
+
+#if 0
+	if (any(
+		bool4(
+			position_texture <= vec2(0.0),
+			position_texture >= vec2(1.0))))
+	{
+		return vec3(0.0);
+	}
+#elif 0
+	if (any(
+		bvec4(
+			lessThanEqual(position_texture, vec2(0.0)),
+			greaterThanEqual(position_texture, vec2(1.0)))))
+	{
+		return vec3(0.0);
+	}
+#endif
+
+	// perform texture sampling inside the atlas texture
+
+	vec2 position_atlas = shadowTextureToShadowAtlas(id, position_texture);
+
+	// perform 'percentage closer filtering'
+
+	float occlusionMask = 0.0;
+
+#if defined(GL_core_profile)
+	// note : using textureOffset here causes the shader to fail on my Mac Book pro late 2016 with
+	//        Intel Iris 540. it doesn't fail to compile.. it just outputs the wrong value :-(
+	//        so instead of using textureOffset I'm forced to add a manual offset to texture(..) calls
+	vec2 oscale = vec2(1.0) / textureSize(shadowDepthAtlas, 0);
+	#define textureOffset(s, uv, o) texture(s, uv + vec2(o) * oscale)
+#endif
+
+	for (int ox = -3; ox <= +3; ++ox)
+	{
+		for (int oy = -3; oy <= +3; ++oy)
+		{
+			float depth = textureOffset(
+				shadowDepthAtlas,
+				position_atlas,
+				ivec2(ox, oy)).x;
+
+			occlusionMask += step(position_depth, depth);
+		}
+	}
+
+#if defined(GL_core_profile)
+	#undef textureOffset
+#endif
+
+	occlusionMask *= (1.0 / 9.0);
+
+	// apply color shadows
+
+	if (enableColorShadows != 0.0 && occlusionMask != 0.0)
+	{
+		return occlusionMask * texture(shadowColorAtlas, position_atlas).rgb;
+	}
+	else
+	{
+		return vec3(occlusionMask);
+	}
+}
+
+float fixVarianceLightBleeding(float pMax, float amount)
+{
+	return (pMax - amount) / (1.0 - amount);
+}
+
+vec3 lookupShadow_Variance(int id, vec3 position_view)
+{
+	// transform view-space position into light-space position
+
+	vec3 position_light = viewToShadowLight(id, position_view);
+
+#if defined(GL_core_profile)
+	// pack depth
+
+	position_light.z = (position_light.z + 1.0) * 0.5;
+#endif
+
+	// does the point lie before the near plane of the light?
+
+	if (position_light.z < 0.0)
+	{
+		// if the point lies before the near plane of the light,
+		// we don't know if there's geometry drawn between it and
+		// the near plane of the light. we just assume it isn't
+		// shadowed to avoid too glaring discontinuities with
+		// things that are past the near plane. note that for
+		// spot lights, things before the near plane will not be
+		// lit anyway (due to the spot light's attenuation). for
+		// directional lights the above generally works best
+
+		return vec3(1.0);
+	}
+
+	// determine texture coordinates
+
+	vec2 position_texture = position_light.xy;
+
+	position_texture = (position_texture + vec2(1.0)) * 0.5;
+
+#if 0
+	if (any(
+		bool4(
+			position_texture <= vec2(0.0),
+			position_texture >= vec2(1.0))))
+	{
+		return vec3(0.0);
+	}
+#elif 0
+	if (any(
+		bvec4(
+			lessThanEqual(position_texture, vec2(0.0)),
+			greaterThanEqual(position_texture, vec2(1.0)))))
+	{
+		return vec3(0.0);
+	}
+#endif
+
+	// perform texture sampling inside the atlas texture
+
+	vec2 position_atlas = shadowTextureToShadowAtlas(id, position_texture);
+
+	// perform 'variance shadow mapping'
+
+#if VSM_INVERSE_Z
+	position_light.z = 1.0 / position_light.z;
+#endif
+
+	// helpful resources:
+	// https://fabiensanglard.net/shadowmappingVSM/
+	// https://dontnormalize.me/2014/01/19/variance-shadow-maps/
+
+	vec2 moments = texture(shadowDepthAtlas2Channel, position_atlas).xy;
+
+	float occlusionMask;
+
+	if (position_light.z <= moments.x)
+	{
+		occlusionMask = 1.0;
+	}
+	else
+	{
+		float variance = moments.y - moments.x * moments.x;
+		
+		//variance = max(0.0000000002, variance);
+		variance = max(0.0000002, variance);
+		//variance = max(0.01 * 0.01, variance);
+
+		float diff = position_light.z - moments.x; // distance from interpolated depth
+
+		float p = variance / (variance + diff * diff); // chebyshev upper bound probability
+
+		p = fixVarianceLightBleeding(p, 0.2);
+
+		occlusionMask = clamp(p, 0.0, 1.0);
+	}
+	
+#if ENABLE_SHADOW_DEBUGS
+	//occlusionMask = diff < 0.0 ? 0.0 : 1.0;
+	//occlusionMask = abs(position_light.z - moments.x)/10.0;
+	//occlusionMask = position_light.z/2.0;
+	//occlusionMask = 0.0;
+	//occlusionMask = moments.x;
+#endif
+
+	// apply color shadows
+
+	if (enableColorShadows != 0.0 && occlusionMask != 0.0)
+	{
+		return occlusionMask * texture(shadowColorAtlas, position_atlas).rgb;
+	}
+	else
+	{
+		return vec3(occlusionMask);
+	}
+}
+
+vec3 lookupShadow(int id, vec3 position_view)
+{
+	if (shadowMapFilter == kShadowMapFilter_Nearest)
+		return lookupShadow_Nearest(id, position_view);
+	else if (shadowMapFilter == kShadowMapFilter_PercentageCloser_3x3)
+		return lookupShadow_PCF_3x3(id, position_view);
+	else if (shadowMapFilter == kShadowMapFilter_PercentageCloser_7x7)
+		return lookupShadow_PCF_7x7(id, position_view);
+	else if (shadowMapFilter == kShadowMapFilter_Variance)
+		return lookupShadow_Variance(id, position_view);
+	else
+		return vec3(1.0);
 }
 
 vec3 lookupShadowPosition(int id, vec3 position_view)

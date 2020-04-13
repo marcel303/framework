@@ -52,33 +52,70 @@ namespace rOne
 
 	void ShadowMapDrawer::generateDepthAtlas()
 	{
-		pushRenderPass(&depthAtlas, true, nullptr, false, "Shadow depth atlas");
-		pushBlend(BLEND_OPAQUE);
+		if (shadowMapFilter == kShadowMapFilter_Nearest ||
+			shadowMapFilter == kShadowMapFilter_PercentageCloser_3x3 ||
+			shadowMapFilter == kShadowMapFilter_PercentageCloser_7x7)
 		{
-			projectScreen2d();
-			
-			int x = 0;
-			
-			for (size_t i = 0; i < lights.size() && i < depthTargets.size(); ++i)
+			pushRenderPass(&depthAtlas, true, nullptr, false, "Shadow depth atlas");
+			pushBlend(BLEND_OPAQUE);
 			{
-				gxLoadIdentity();
-				gxTranslatef(x, 0, 0);
+				projectScreen2d();
 				
-				auto & depthTarget = depthTargets[i];
+				int x = 0;
 				
-				Shader shader("renderOne/blit-texture");
-				setShader(shader);
+				for (size_t i = 0; i < lights.size() && i < depthTargets.size(); ++i)
 				{
-					shader.setTexture("source", 0, depthTarget.getTextureId(), false, true);
-					drawRect(0, 0, depthTarget.getWidth(), depthTarget.getHeight());
+					gxLoadIdentity();
+					gxTranslatef(x, 0, 0);
+					
+					auto & depthTarget = depthTargets[i];
+					
+					Shader shader("renderOne/blit-texture");
+					setShader(shader);
+					{
+						shader.setTexture("source", 0, depthTarget.getTextureId(), false, true);
+						drawRect(0, 0, depthTarget.getWidth(), depthTarget.getHeight());
+					}
+					clearShader();
+					
+					x += depthTarget.getWidth();
 				}
-				clearShader();
-				
-				x += depthTarget.getWidth();
 			}
+			popBlend();
+			popRenderPass();
 		}
-		popBlend();
-		popRenderPass();
+		else
+		{
+			Assert(shadowMapFilter == kShadowMapFilter_Variance);
+			
+			pushRenderPass(&depthAtlas2Channel, true, nullptr, false, "Shadow depth atlas (VSM)");
+			pushBlend(BLEND_OPAQUE);
+			{
+				projectScreen2d();
+				
+				int x = 0;
+				
+				for (size_t i = 0; i < lights.size() && i < depthTargets.size(); ++i)
+				{
+					gxLoadIdentity();
+					gxTranslatef(x, 0, 0);
+					
+					auto & depthTarget = depthTargets[i];
+					
+					Shader shader("renderOne/shadow-mapping/blit-texture-vsm");
+					setShader(shader);
+					{
+						shader.setTexture("source", 0, depthTarget.getTextureId(), false, true);
+						drawRect(0, 0, depthTarget.getWidth(), depthTarget.getHeight());
+					}
+					clearShader();
+					
+					x += depthTarget.getWidth();
+				}
+			}
+			popBlend();
+			popRenderPass();
+		}
 	}
 
 	void ShadowMapDrawer::generateColorAtlas()
@@ -133,6 +170,8 @@ namespace rOne
 		
 		depthAtlas.init(maxShadowMaps * resolution, resolution, SURFACE_R32F, colorBlackTranslucent);
 		colorAtlas.init(maxShadowMaps * resolution, resolution, SURFACE_RGBA8, colorWhite);
+		
+		depthAtlas2Channel.init(maxShadowMaps * resolution, resolution, SURFACE_RG32F, colorBlackTranslucent);
 	}
 
 	void ShadowMapDrawer::free()
@@ -224,6 +263,15 @@ namespace rOne
 		
 		// draw shadow maps
 		
+		const int bias =
+			(shadowMapFilter == kShadowMapFilter_Nearest) ? 4 :
+			(shadowMapFilter == kShadowMapFilter_PercentageCloser_3x3) ? 3 :
+			(shadowMapFilter == kShadowMapFilter_PercentageCloser_7x7) ? 4 :
+			(shadowMapFilter == kShadowMapFilter_Variance) ? 0 :
+			-1;
+		
+		Assert(bias != -1);
+		
 		for (size_t i = 0; i < lights.size() && i < depthTargets.size(); ++i)
 		{
 			auto & light = lights[i];
@@ -232,7 +280,7 @@ namespace rOne
 			pushDepthTest(true, DEPTH_LESS);
 			pushColorWriteMask(0, 0, 0, 0);
 			pushBlend(BLEND_OPAQUE);
-			pushDepthBias(4, 4);
+			pushDepthBias(bias, bias);
 			pushShaderOutputs("");
 			{
 				if (light.type == kLightType_Spot)
@@ -322,8 +370,11 @@ namespace rOne
 		shader.setTexture("shadowDepthAtlas", nextTextureUnit++, depthAtlas.getTextureId(), false, true);
 		shader.setTexture("shadowColorAtlas", nextTextureUnit++, enableColorShadows ? colorAtlas.getTextureId() : 0, true, true);
 
+		shader.setTexture("shadowDepthAtlas2Channel", nextTextureUnit++, depthAtlas2Channel.getTextureId(), true, true);
+		
 		shader.setImmediate("numShadowMaps", depthTargets.size());
 		shader.setImmediate("enableColorShadows", enableColorShadows ? 1.f : 0.f);
+		shader.setImmediate("shadowMapFilter", shadowMapFilter);
 
 	// todo : compute shadow matrices only once and store in a buffer
 		const Mat4x4 viewToWorld = worldToView.CalcInv();

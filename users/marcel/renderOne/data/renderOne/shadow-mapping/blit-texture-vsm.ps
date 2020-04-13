@@ -1,0 +1,32 @@
+include engine/ShaderPS.txt
+include renderOne/depth-functions.txt
+
+uniform sampler2D source;
+uniform mat4x4 projectionToView;
+
+shader_in vec2 v_texcoord;
+
+#define VSM_INVERSE_Z 0
+#define VSM_BIAS 0
+
+void main()
+{
+	float value = texture(source, v_texcoord).x;
+
+#if VSM_INVERSE_Z
+	value = 1.0 / value;
+#endif
+
+	float valueSquared = value * value;
+
+#if VSM_BIAS
+	{
+		// add depth bias based on gradient
+		float dx = dFdx(value);
+		float dy = dFdy(value);
+		valueSquared -= 0.25 + (dx * dx + dy * dy);
+	}
+#endif
+
+    shader_fragColor = vec4(value, valueSquared, 0.0, 0.0);
+}
