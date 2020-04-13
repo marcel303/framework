@@ -70,7 +70,7 @@ static void callback(
 				if (path[0] == '/')
 					path++;
 				
-				printf("%d: %x, %s\n", (int)evIds[i], (int)evFlags[i], path);
+				//printf("%d: %x, %s\n", (int)evIds[i], (int)evFlags[i], path);
 				
 				if (self->fileChanged != nullptr)
 				{

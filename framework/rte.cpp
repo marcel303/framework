@@ -48,6 +48,8 @@ RTE strategies:
 
 static void handleFileChange(const char * filename)
 {
+	logDebug("RTE: file '%s' has changed. checking dependencies", filename);
+	
 	const std::string extension = Path::GetExtension(filename, true);
 
 	if (extension == "vs" || extension == "txt")
