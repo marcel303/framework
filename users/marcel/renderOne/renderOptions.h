@@ -69,6 +69,7 @@ namespace rOne
 		bool enableOpaquePass = true;
 		bool drawNormals = false;
 		
+		bool enableBackgroundPass = true;
 		bool enableTranslucentPass = true;
 		
 		Vec3 defaultLightDirection = Vec3(1, -4, 1).CalcNormalized();

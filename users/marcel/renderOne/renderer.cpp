@@ -105,6 +105,79 @@ namespace rOne
 		popBlend();
 		popDepthTest();
 	}
+	
+	static void renderBackgroundPass(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions)
+	{
+		// create a stencil mask for pixels in the background (depth = 1.0)
+		
+		clearStencil(0x00);
+		
+		pushDepthTest(true, DEPTH_EQUAL, false);
+		pushColorWriteMask(0, 0, 0, 0);
+		{
+			StencilSetter()
+				.op(GX_STENCIL_OP_KEEP, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_REPLACE)
+				.comparison(GX_STENCIL_FUNC_ALWAYS, 0x01, 0x01)
+				.writeMask(0x01);
+			
+			gxMatrixMode(GX_PROJECTION);
+			gxPushMatrix();
+			gxLoadIdentity();
+			gxMatrixMode(GX_MODELVIEW);
+			gxPushMatrix();
+			gxLoadIdentity();
+			{
+				gxBegin(GX_QUADS);
+				gxVertex3f(-1, -1, +1);
+				gxVertex3f(+1, -1, +1);
+				gxVertex3f(+1, +1, +1);
+				gxVertex3f(-1, +1, +1);
+				gxEnd();
+			}
+			gxMatrixMode(GX_PROJECTION);
+			gxPopMatrix();
+			gxMatrixMode(GX_MODELVIEW);
+			gxPopMatrix();
+		}
+		popColorWriteMask();
+		popDepthTest();
+		
+		// set up the stencil test to draw only onto the masked areas
+		
+		StencilSetter()
+			.comparison(GX_STENCIL_FUNC_EQUAL, 0x01, 0x01)
+			.writeMask(0x00);
+
+	#if 0
+		// stencil-test test
+		
+		pushDepthTest(true, DEPTH_LESS);
+		beginCubeBatch();
+		{
+			for (int i = 0; i < 200; ++i)
+			{
+				const float r = (cosf(i + framework.time / 2.f) * 40.f + 1.f) / 2.f;
+				
+				const Vec3 p(
+					cosf(i / 1.23f) * r,
+					cosf(i / 2.34f) * 4.f,
+					cosf(i / 3.45f) * r);
+				
+				setColor(colorWhite);
+				fillCube(p, Vec3(.1, .1, .1));
+			}
+		}
+		endCubeBatch();
+		popDepthTest();
+	#endif
+		
+		if (renderOptions.enableBackgroundPass && renderFunctions.drawBackground != nullptr)
+		{
+			renderFunctions.drawBackground();
+		}
+		
+		clearStencilTest();
+	}
 
 	static void renderTranslucentPass(const RenderFunctions & renderFunctions, const RenderOptions & renderOptions)
 	{
@@ -1127,6 +1200,23 @@ namespace rOne
 			renderOpaquePass(renderFunctions, renderOptions);
 		}
 		popShaderOutputs();
+		popRenderPass();
+		
+		pushRenderPass(buffers.composite1, false, buffers.depth, false, "Background");
+		{
+			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+			
+		#if ENABLE_OPENGL
+			gxMatrixMode(GX_PROJECTION);
+			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			gxMatrixMode(GX_MODELVIEW);
+		#endif
+		
+			renderBackgroundPass(
+				renderFunctions,
+				renderOptions);
+		}
 		popRenderPass();
 		
 		// create velocity buffer
