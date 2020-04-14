@@ -68,18 +68,21 @@ void main()
 
 	color *= exposure;
 
+#if 1
 	if (tonemap == kToneMap_Uncharted2)
 		color = Uncharted2ToneMapping(color);
 	else if (tonemap == kToneMap_Aces)
 		color = toneMapACES_pure(color);
-
+#else
 	//color = Uncharted2ToneMapping(color);
 	//color = toneMapACES(color);
-	//color = toneMapACES_pure(color);
+	color = toneMapACES_pure(color);
+#endif
 
 	color = pow(color, vec3(1.0 / gamma));
+	//color = linearToSrgb(color);
 
-	color += colorDither8ScreenSpace(texcoord * textureSize(colorTexture, 0)) * 8.0;
+	color += colorDither8ScreenSpace(texcoord * textureSize(colorTexture, 0)) * 4.0;
 
 	shader_fragColor = vec4(color, 1.0);
 }
