@@ -1,4 +1,4 @@
-app marcel-grooop-cocompose
+app thegrooop-cocompose
 	depend_library framework
 	scan_files cpp
 	scan_files h
