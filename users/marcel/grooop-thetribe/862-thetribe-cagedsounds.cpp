@@ -1,7 +1,21 @@
+#include "binauralizer.h"
+#include "binaural_cipic.h"
+#include "framework.h"
+#include "objects/paobject.h"
+#include "soundVolume.h"
 #include <cmath>
 
-namespace Cagedsounds
-{
+#if !defined(DEBUG)
+const int GFX_SX = 1280*2;
+const int GFX_SY = 800*2;
+#elif 0
+const int GFX_SX = 2400;
+const int GFX_SY = 1200;
+#else
+const int GFX_SX = 640;
+const int GFX_SY = 480;
+#endif
+
 struct MyMutex : binaural::Mutex
 {
 	SDL_mutex * mutex;
@@ -312,8 +326,21 @@ struct Cage1 : Cage
 	}
 };
 
-void main()
+int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
+#if !defined(DEBUG)
+	framework.fullscreen = true;
+	framework.exclusiveFullscreen = false;
+#endif
+
+    framework.enableDepthBuffer = true;
+    framework.enableRealTimeEditing = true;
+	
+	if (!framework.init(GFX_SX, GFX_SY))
+		return -1;
+
 	const int kFontSize = 16;
 	
 	bool showUi = true;
@@ -396,6 +423,8 @@ void main()
 	
 	SDL_DestroyMutex(audioMutex);
 	audioMutex = nullptr;
-}
-
+	
+	framework.shutdown();
+	
+	return 0;
 }

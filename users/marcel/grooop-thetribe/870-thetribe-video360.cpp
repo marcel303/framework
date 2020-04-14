@@ -1,53 +1,70 @@
+#include <GL/glew.h> // GL_TEXTURE_CUBE_MAP
+
+#include "binauralizer.h"
+#include "binaural_cipic.h"
+#include "framework.h"
+#include "objects/audioSourceVorbis.h"
+#include "objects/paobject.h"
+#include "soundVolume.h"
+#include "textScroller.h"
+#include "video.h"
+
 #include "FileStream.h"
+#include "Quat.h"
 #include "StreamReader.h"
 #include "StringEx.h"
-#include "textScroller.h"
 
-namespace Videotube
-{
-#define INTERACTIVE_MODE 1
+#include "graphEdit.h"
+#include "vfxGraph.h"
+#include "vfxNodes/vfxNodeDisplay.h"
 
-#define NUM_AUDIOCLIP_SOURCES 16
+#include <cmath>
+
 #define NUM_VIDEOCLIP_SOURCES 3
-#define NUM_VIDEOCLIPS 16
-#define NUM_VFXCLIPS 0
+#define NUM_VIDEOCLIPS 3
+#define NUM_VFXCLIPS 1
 
 #define NUM_SPOKENWORD_SOURCES 3
-#define NUM_SPOKENWORDS 0
+#define NUM_SPOKENWORDS 3
 
 #define DRAW_GRIDS 1
-#define DO_CONTROLWINDOW 0
+#define ENABLE_TRANSFORM_MIXING 0
+
+#if !defined(DEBUG)
+const int GFX_SX = 1280*2;
+const int GFX_SY = 800*2;
+#elif 0
+const int GFX_SX = 2400;
+const int GFX_SY = 1200;
+#else
+const int GFX_SX = 640;
+const int GFX_SY = 480;
+#endif
 
 static bool enableNearest = true;
 static bool enableVertices = true;
 
 static const float timeSeed = 1234.f;
 
-static const char * audioFilenames[NUM_AUDIOCLIP_SOURCES] =
+static const char * audioFilenames[NUM_VIDEOCLIP_SOURCES] =
 {
     "welcome/01 Welcome Intro alleeeen zang loop.ogg",
-    "welcome/02 Welcome Intro zonder zang loop.ogg",
-    "welcome/03 Welcome couplet 1 alleeen zang loop.ogg",
     "welcome/04 Welcome couplet 1 zonder zang loop.ogg",
-    "welcome/05 Welcome couplet 2 alleen zang loop.ogg",
-    "welcome/06 Welcome couplet 2 zonder zang loop.ogg",
-    "welcome/07 Welcome refrein 1 alleen zang loop.ogg",
     "welcome/08 Welcome refrein 1 zonder zang loop.ogg",
-    "welcome/09 Welcome brug alleeeen zang loop.ogg",
-    "welcome/10 Welcome brug zonder zang loop.ogg",
-    "welcome/11 Welcome 2e refrein alleeeen zang loop.ogg",
-    "welcome/12 Welcome 2e refrein zonder zang loop.ogg",
-    "welcome/13 Welcome Rap Gitaar lick loop.ogg",
-    "welcome/14 Welcome Rap Alles loop.ogg",
-    "welcome/15 Welcome Refrein 3 alleeen zang loop.ogg",
-    "welcome/16 Welcome Refrein 3 zonder zang loop.ogg"
+};
+
+static const float audioGains[NUM_VIDEOCLIP_SOURCES] =
+{
+	1.f,
+	.3f,
+	1.f
 };
 
 static const char * videoFilenames[NUM_VIDEOCLIP_SOURCES] =
 {
-	"0.320px.mp4",
-	"1.320px.mp4",
-	"2.320px.mp4",
+	"0.1280px.mp4",
+	"1.1280px.mp4",
+	"2.1280px.mp4",
 };
 
 static const char * spokenText[NUM_SPOKENWORD_SOURCES] =
@@ -268,6 +285,13 @@ float videoClipBlend[3] =
 
 struct Videoclip
 {
+	enum EvalMode
+	{
+		EvalMode_Floating,
+		EvalMode_Line,
+		EvalMode_Circle
+	};
+	
 	Mat4x4 transform;
 	AudioSourceVorbis soundSource;
 	SoundVolume soundVolume;
@@ -316,44 +340,102 @@ struct Videoclip
 		return intersectSoundVolume(soundVolume, pos, dir, p, t);
 	}
 	
-	void evalVideoClipParams(Vec3 & scale, Quat & rotation, Vec3 & position, float & opacity) const
+	void evalVideoClipParams(const EvalMode mode, Vec3 & scale, Quat & rotation, Vec3 & position, float & opacity) const
 	{
-        const float time = timeSeed + framework.time;
-
-        const float moveSpeed = (1.f + index / float(NUM_VIDEOCLIPS)) * .2f;
-        //const float moveAmount = 4.f / (index / float(NUM_VIDEOCLIPS) + 1);
-        const float moveAmount = 2.f;
-        const float x = std::sin(moveSpeed * time / 11.234f) * moveAmount;
-        const float y = std::sin(moveSpeed * time / 13.456f) * moveAmount;
-        const float z = std::sin(moveSpeed * time / 15.678f) * moveAmount * .2f + index * 1.7f + 8.f;
-    
-        const float scaleSpeed = 1.f + index / 5.f;
-        const float scaleY = lerp(.5f, 1.f, (std::cos(scaleSpeed * time / 4.567f) + 1.f) / 2.f);
-        const float scaleX = scaleY * 4.f/3.f;
-        //const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
-        const float scaleZ = lerp(.05f, .1f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
-        const float rotateSpeed = 1.f + index / 10.f;
-        
-        scale = Vec3(scaleX, scaleY, scaleZ);
-        rotation =
-            Quat(Vec3(1.f, 0.f, 0.f), rotateSpeed * time / 3.456f) *
-            Quat(Vec3(0.f, 1.f, 0.f), rotateSpeed * time / 4.567f);
-        position = Vec3(x, y, z);
-        opacity = 1.f;
+		const float t = (index + .5f) / float(NUM_VIDEOCLIPS) - .5f;
+		
+		switch (mode)
+		{
+		case EvalMode_Floating:
+			{
+				const float time = timeSeed + framework.time;
+		
+				const float moveSpeed = (1.f + index / float(NUM_VIDEOCLIPS)) * .2f;
+				const float moveAmount = 4.f / (index / float(NUM_VIDEOCLIPS) + 1);
+				const float x = std::sin(moveSpeed * time / 11.234f) * moveAmount;
+				const float y = std::sin(moveSpeed * time / 13.456f) * moveAmount;
+				const float z = std::sin(moveSpeed * time / 15.678f) * moveAmount;
+			
+				const float scaleSpeed = 1.f + index / 5.f;
+				const float scaleY = lerp(.5f, 1.f, (std::cos(scaleSpeed * time / 4.567f) + 1.f) / 2.f);
+				const float scaleX = scaleY * 4.f/3.f;
+				//const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
+				const float scaleZ = lerp(.05f, .1f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
+				const float rotateSpeed = 1.f + index / 5.f;
+				
+				scale = Vec3(scaleX, scaleY, scaleZ);
+				rotation =
+					Quat(Vec3(1.f, 0.f, 0.f), rotateSpeed * time / 3.456f) *
+					Quat(Vec3(0.f, 1.f, 0.f), rotateSpeed * time / 4.567f);
+				position = Vec3(x, y, z);
+				opacity = 1.f;
+			}
+			break;
+			
+		case EvalMode_Line:
+			{
+				scale = Vec3(1, 1, 1);
+				rotation.makeIdentity();
+				const float x = t * 4.f;
+				const float y = 0.f;
+				position = Vec3(x, y, 0);
+				opacity = 1.f;
+			}
+			break;
+			
+		case EvalMode_Circle:
+			{
+				scale = Vec3(1, 1, 1);
+				rotation.makeIdentity();
+				const float x = std::cos(t * M_PI * 2.f) * 4.f;
+				const float y = std::sin(t * M_PI * 2.f) * 4.f;
+				position = Vec3(x, y, 0);
+				opacity = 1.f;
+			}
+			break;
+		}
 	}
 	
 	void tick(const Mat4x4 & worldToViewMatrix, const Vec3 & cameraPosition_world, const float dt)
 	{
-        Vec3 scale;
-        Quat rotation;
-        Vec3 position;
-        float opacity;
-        evalVideoClipParams(scale, rotation, position, opacity);
-
-        transform = Mat4x4(true).
-			Translate(position).
-			Rotate(rotation).
-			Scale(scale);
+		Vec3 totalScale(0.f, 0.f, 0.f);
+		Quat totalRotation;
+		Vec3 totalTranslation(0.f, 0.f, 0.f);
+		float totalOpacity = 0.f;
+		float totalBlend = 0.f;
+		
+		for (int i = 0; i < 3; ++i) // todo : count
+		{
+			const EvalMode evalMode = (EvalMode)i;
+			const float blend = videoClipBlend[i];
+			
+			Vec3 scale;
+			Quat rotation;
+			Vec3 position;
+			float opacity;
+			evalVideoClipParams(evalMode, scale, rotation, position, opacity);
+			
+			totalScale += scale * blend;
+			// todo : what's the best way to blend between rotations ?
+			//totalRotation = totalRotation.slerp(rotation, blend);
+			totalRotation = totalRotation * rotation;
+			totalTranslation += position * blend;
+			totalOpacity += opacity * blend;
+			
+			totalBlend += blend;
+		}
+		
+		if (totalBlend != 0.f)
+		{
+			totalScale /= totalBlend;
+			totalTranslation /= totalBlend;
+			totalOpacity /= totalBlend;
+		}
+		
+		transform = Mat4x4(true).
+			Translate(totalTranslation).
+			Rotate(totalRotation).
+			Scale(totalScale);
 		
 		// update sample locations for binauralization given the new transform
 		
@@ -457,7 +539,7 @@ struct Vfxclip
 			
 			const VfxNodeDisplay * displayNode = vfxGraph->getMainDisplayNode();
 			
-			const GLuint texture = displayNode ? displayNode->getImage()->getTexture() : 0;
+			const GxTextureId texture = displayNode ? displayNode->getImage()->getTexture() : 0;
 			
 			gxSetTexture(texture);
 			{
@@ -672,21 +754,11 @@ struct World
 	
 	Videoclip videoclips[NUM_VIDEOCLIPS];
 	
-	Vfxclip vfxclips[NUM_VFXCLIPS + 1];
+	Vfxclip vfxclips[NUM_VFXCLIPS];
 	
-	SpokenWord spokenWords[NUM_SPOKENWORDS + 1];
+	SpokenWord spokenWords[NUM_SPOKENWORDS];
 	
 	HitTestResult hitTestResult;
-	
-#if INTERACTIVE_MODE
-	float idleTime;
-	
-	Gamepad oldGamepad;
-	
-	float animTime = 0.f;
-	float desiredYaw = 0.f;
-	Vec3 desiredPosition;
-#endif
 	
 	World()
 		: camera()
@@ -694,9 +766,6 @@ struct World
 		, vfxclips()
 		, spokenWords()
 		, hitTestResult()
-	#if INTERACTIVE_MODE
-		, idleTime(0.f)
-	#endif
 	{
 	}
 
@@ -704,34 +773,26 @@ struct World
 	{
 		camera.gamepadIndex = 0;
 		
-	#if INTERACTIVE_MODE
-		const float kMoveSpeed = 1.f;
-	#else
 		const float kMoveSpeed = .2f;
-	#endif
-	
+		//const float kMoveSpeed = 1.f;
 		camera.maxForwardSpeed *= kMoveSpeed;
 		camera.maxUpSpeed *= kMoveSpeed;
 		camera.maxStrafeSpeed *= kMoveSpeed;
 		
 		camera.position[0] = 0;
 		camera.position[1] = +.3f;
-		camera.position[2] = 0.f;
-
-	#if INTERACTIVE_MODE
-		camera.position[2] = 5.f;
-	#endif
+		camera.position[2] = -1.f;
+		camera.pitch = 10.f;
 		
 		//
 		
 		for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 		{
-            const int audioIndex = i % NUM_AUDIOCLIP_SOURCES;
-            const int videoIndex = i % NUM_VIDEOCLIP_SOURCES;
+			const int index = i % NUM_VIDEOCLIP_SOURCES;
 			
-			const char * audioFilename = audioFilenames[audioIndex];
-			const char * videoFilename = videoFilenames[videoIndex];
-            const float audioGain = 1.f;
+			const char * audioFilename = audioFilenames[index];
+			const char * videoFilename = videoFilenames[index];
+			const float audioGain = audioGains[index];
 			
 			videoclips[i].init(sampleSet, mutex, i, audioFilename, videoFilename, audioGain);
 		}
@@ -821,68 +882,9 @@ struct World
 	{
 		// update the camera
 		
-		const bool doCamera = !(keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT)) && animTime <= 0.f;
+		const bool doCamera = !(keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT));
 		
 		camera.tick(dt, doCamera);
-		
-		camera.pitch = clamp(camera.pitch, -70.f, +70.f);
-		
-	#if INTERACTIVE_MODE
-		if (keyboard.wentDown(SDLK_r) || (gamepad[0].wentDown(GAMEPAD_A) || gamepad[0].wentDown(GAMEPAD_B) || gamepad[0].wentDown(GAMEPAD_X) || gamepad[0].wentDown(GAMEPAD_Y) || gamepad[0].wentDown(GAMEPAD_L1) || gamepad[0].wentDown(GAMEPAD_L2) || gamepad[0].wentDown(GAMEPAD_R1) || gamepad[0].wentDown(GAMEPAD_R2)))
-		{
-			Vec3 position;
-			position[0] = random(-5.f, +5.f);
-			position[1] = +.3f;
-			position[2] = random(+5.f, +40.f);
-			
-			const float yaw = atan2f(position[0], -(position[2] - 20.f));
-			
-			desiredYaw = yaw * 180.f / M_PI;
-			desiredPosition = position;
-			animTime = 4.f;
-		}
-		
-		const float kMaxDistance = 6.28f;
-		camera.position[0] = clamp(camera.position[0], -kMaxDistance, +kMaxDistance);
-		camera.position[1] = clamp(camera.position[1], -kMaxDistance, +kMaxDistance);
-		
-		if (keyboard.isIdle() && mouse.isIdle() && memcmp(&oldGamepad, &gamepad[0], sizeof(Gamepad)) == 0 && animTime <= 0.f)
-			idleTime += dt;
-		else
-			idleTime = 0.f;
-		
-		oldGamepad = gamepad[0];
-		
-		if (animTime > 0.f)
-		{
-			animTime -= dt;
-			
-			const float falloff = powf(.5f, dt);
-			const float retain = 1.f - falloff;
-			
-			camera.position = camera.position * falloff + desiredPosition * retain;
-			camera.yaw = camera.yaw * falloff + desiredYaw * retain;
-			camera.pitch *= falloff;
-			camera.roll *= falloff;
-		}
-		
-		if (idleTime >= 10.f)
-		{
-			const float falloff = powf(.5f, dt);
-			
-			camera.position[0] = camera.position[0] * falloff + 0.f * (1.f - falloff);
-			camera.position[1] = camera.position[1] * falloff + .3f * (1.f - falloff);
-			camera.position[2] = camera.position[2] * falloff + 5.f * (1.f - falloff);
-			
-			camera.yaw = fmodf(camera.yaw, 360.f);
-			camera.pitch = fmodf(camera.pitch, 360.f);
-			camera.roll = fmodf(camera.roll, 360.f);
-			
-			camera.yaw *= falloff;
-			camera.pitch *= falloff;
-			camera.roll *= falloff;
-		}
-	#endif
 		
 		//
 		
@@ -932,12 +934,9 @@ struct World
 	void draw3d()
 	{
 		camera.pushViewMatrix();
-		
-		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-		glEnable(GL_LINE_SMOOTH);
+		pushLineSmooth(true);
 
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
+		pushDepthTest(true, DEPTH_LESS);
 		{
 			pushBlend(BLEND_OPAQUE);
 			{
@@ -958,16 +957,15 @@ struct World
 			}
 			popBlend();
 		}
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
 		
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
+		pushDepthTest(true, DEPTH_LESS, false);
 		{
 			gxPushMatrix();
 			{
-				gxScalef(40, 40, 40);
+				gxScalef(10, 10, 10);
 				setColor(200, 200, 200, 60);
-				drawGrid3dLine(400, 400, 0, 2, true);
+				drawGrid3dLine(100, 100, 0, 2, true);
 			}
 			gxPopMatrix();
 			
@@ -986,9 +984,9 @@ struct World
 				spokenWords[i].drawTranslucent();
 			}
 		}
-		glDepthMask(GL_TRUE);
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
 		
+		popLineSmooth();
 		camera.popViewMatrix();
 	}
 	
@@ -999,79 +997,9 @@ struct World
 			spokenWords[i].draw2d();
 		}
 	}
-
-#if AUDIO_USE_SSE
-	void * operator new(size_t size)
-	{
-		return _mm_malloc(size, 32);
-	}
-
-	void operator delete(void * mem)
-	{
-		_mm_free(mem);
-	}
-#endif
 };
 
 static World * s_world = nullptr;
-
-
-#if DO_CONTROLWINDOW
-
-struct ControlWindow
-{
-	Window window;
-	
-	World & world;
-	
-	ControlWindow(World & _world)
-		: window("Control", 300, 300, false)
-		, world(_world)
-	{
-		window.setPosition(0, 200);
-	}
-	
-	void tick()
-	{
-		pushWindow(window);
-		{
-		}
-		popWindow();
-	}
-	
-	void draw()
-	{
-		pushWindow(window);
-		{
-			framework.beginDraw(255, 0, 0, 0);
-			{
-				gxPushMatrix();
-				{
-					gxTranslatef(window.getWidth()/2, window.getHeight()/2, 0);
-					gxScalef(10, 10, 10);
-					
-					hqBegin(HQ_FILLED_CIRCLES, true);
-					{
-						for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
-						{
-							auto & videoclip = world.videoclips[i];
-							auto pos = videoclip.soundVolume.transform.GetTranslation();
-							
-							setColor(colorWhite);
-							hqFillCircle(pos[0], pos[2], 5.f);
-						}
-					}
-					hqEnd();
-				}
-				gxPopMatrix();
-			}
-			framework.endDraw();
-		}
-		popWindow();
-	}
-};
-
-#endif
 
 static void handleAction(const std::string & action, const Dictionary & args)
 {
@@ -1079,7 +1007,7 @@ static void handleAction(const std::string & action, const Dictionary & args)
 	{
 		const std::string filename = args.getString("file", "");
 		
-		const GLuint texture = getTexture(filename.c_str());
+		const GxTextureId texture = getTexture(filename.c_str());
 		
 		if (texture != 0)
 		{
@@ -1088,15 +1016,161 @@ static void handleAction(const std::string & action, const Dictionary & args)
 	}
 }
 
-void main()
+static void drawCubeFace(Vec3Arg side, Vec3Arg up)
 {
+    Mat4x4 cameraMatrix;
+    cameraMatrix.MakeLookat(Vec3(0,0,0), side, up);
+    
+    float fov = 90.f;
+    float near = .01f;
+    float far = 100.f;
+    
+    projectPerspective3d(fov, near, far);
+    gxPushMatrix();
+    {
+        Mat4x4 worldToView = cameraMatrix.CalcInv();
+        gxMultMatrixf(worldToView.m_v);
+        
+        const auto oldPitch = s_world->camera.pitch;
+        s_world->camera.pitch = 0.f;
+        {
+            s_world->draw3d();
+        }
+        s_world->camera.pitch = oldPitch;
+    }
+    gxPopMatrix();
+    projectScreen2d();
+}
+
+static const int kCubeSx = 512*2;
+static const int kCubeSy = 512*2;
+
+static void initCube(GLuint & cubemap)
+{
+    glGenTextures(1, &cubemap);
+    checkErrorGL();
+    
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+    checkErrorGL();
+    {
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameterf(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        checkErrorGL();
+        
+        glTexStorage2D(GL_TEXTURE_CUBE_MAP, 1, GL_RGBA8, kCubeSx, kCubeSy);
+        checkErrorGL();
+    }
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    checkErrorGL();
+}
+
+static void shutCube(GLuint & cubemap)
+{
+    glDeleteTextures(1, &cubemap);
+    checkErrorGL();
+    cubemap = 0;
+}
+
+static void drawCube()
+{
+    GLuint cubemap = 0;
+    initCube(cubemap);
+    
+    struct FaceInfo
+    {
+        GLint id;
+        Vec3 side;
+        Vec3 up;
+    };
+    
+    FaceInfo faceInfos[6] =
+    {
+        { GL_TEXTURE_CUBE_MAP_POSITIVE_X, Vec3(-1,0,0), Vec3(0,+1,0) },
+        { GL_TEXTURE_CUBE_MAP_NEGATIVE_X, Vec3(+1,0,0), Vec3(0,+1,0) },
+        { GL_TEXTURE_CUBE_MAP_POSITIVE_Y, Vec3(0,+1,0), Vec3(0,0,-1) },
+        { GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, Vec3(0,-1,0), Vec3(0,0,+1) },
+        { GL_TEXTURE_CUBE_MAP_POSITIVE_Z, Vec3(0,0,+1), Vec3(0,+1,0) },
+        { GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, Vec3(0,0,-1), Vec3(0,+1,0) }
+    };
+	
+    Surface surface(kCubeSx, kCubeSy, true, false, SURFACE_RGBA8);
+    pushSurface(&surface);
+    
+    for (int i = 0; i < 6; ++i)
+    {
+        auto & faceInfo = faceInfos[i];
+        
+        surface.clear();
+        surface.clearDepth(1.f);
+        
+        drawCubeFace(faceInfo.side, faceInfo.up);
+        
+        //glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+        checkErrorGL();
+        glCopyTexSubImage2D(faceInfo.id, 0, 0, 0, 0, 0, kCubeSx, kCubeSy);
+        checkErrorGL();
+        glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+        checkErrorGL();
+    }
+    
+    popSurface();
+    
+    //glActiveTexture(GL_TEXTURE0);
+    //glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+    {
+        setColor(colorWhite);
+        Shader shader("cubeproj");
+        setShader(shader);
+        
+        //shader.setTexture("source", 0, cubemap);
+        const GLint index = glGetUniformLocation(shader.getOpenglProgram(), "source");
+        checkErrorGL();
+        
+        if (index != -1)
+        {
+            const int unit = 0;
+            
+            glUniform1i(index, unit);
+            glActiveTexture(GL_TEXTURE0 + unit);
+            glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
+            glActiveTexture(GL_TEXTURE0);
+            checkErrorGL();
+        }
+        
+        gxBegin(GX_QUADS);
+        {
+            drawRect(0, 0, GFX_SX, GFX_SY);
+        }
+        gxEnd();
+        clearShader();
+    }
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    
+    shutCube(cubemap);
+}
+
+int main(int argc, char * argv[])
+{
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
+#if !defined(DEBUG)
+	framework.fullscreen = true;
+	framework.exclusiveFullscreen = false;
+#endif
+
+    framework.enableDepthBuffer = true;
+    framework.enableRealTimeEditing = true;
+	
+	if (!framework.init(GFX_SX, GFX_SY))
+		return -1;
+	
 	const int kFontSize = 16;
 	
 	bool showUi = true;
-	
-	float fov = 90.f;
-	float near = .01f;
-	float far = 100.f;
 	
 	SDL_mutex * audioMutex = SDL_CreateMutex();
 	
@@ -1120,24 +1194,11 @@ void main()
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, paHandler);
 	
-#if DO_CONTROLWINDOW
-	ControlWindow controlWindow(world);
-#endif
-
+    Surface preview(GFX_SX/4, GFX_SY/4, true, false, SURFACE_RGBA8);
+    
 	do
 	{
 		framework.process();
-		
-	#if INTERACTIVE_MODE
-		if (SDL_CaptureMouse(SDL_TRUE) < 0)
-			logError("SDL_CaptureMouse: %s", SDL_GetError());
-		if (SDL_SetRelativeMouseMode(SDL_TRUE) < 0)
-			logError("SDL_SetRelativeMouseMode: %s", SDL_GetError());
-	#endif
-
-	#if INTERACTIVE_MODE
-		SDL_WarpMouseInWindow(nullptr, GFX_SX/2, GFX_SY/2);
-	#endif
 
 		const float dt = framework.timeStep;
 		
@@ -1159,41 +1220,85 @@ void main()
 		}
 		SDL_UnlockMutex(audioMutex);
 		
+	#if ENABLE_TRANSFORM_MIXING
+	#if 0
+		videoClipBlend[0] = (1.f + std::cos(framework.time / 3.4f)) / 2.f;
+		videoClipBlend[1] = (1.f + std::cos(framework.time / 4.56f)) / 2.f;
+		videoClipBlend[2] = (1.f + std::cos(framework.time / 5.67f)) / 2.f;
+	#elif 1
+		videoClipBlend[0] = mouse.x / float(GFX_SX);
+		videoClipBlend[1] = mouse.y / float(GFX_SY);
+		videoClipBlend[2] = std::max(0.f, 1.f - videoClipBlend[0] - videoClipBlend[1]);
+	#endif
+	#endif
+	
 		// update video clips
 		
 		world.tick(dt);
 		
-	#if DO_CONTROLWINDOW
-		controlWindow.tick();
-		
-		controlWindow.draw();
-	#endif
-	
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			setFont("calibri.ttf");
 			pushFontMode(FONT_SDF);
-			
-			projectPerspective3d(fov, near, far);
-			{
-				world.draw3d();
-			}
-			projectScreen2d();
+            
+			// draw cube map
+            
+            drawCube();
+            
+            // draw small preview which is non-cubemapped
+            
+			pushSurface(&preview);
+            {
+                preview.clear(255, 255, 255, 0);
+                preview.clearDepth(1.f);
+                
+                float fov = 60.f;
+                float near = .01f;
+                float far = 100.f;
+                
+                projectPerspective3d(fov, near, far);
+                {
+                    world.draw3d();
+                }
+                projectScreen2d();
+            }
+            popSurface();
+            
+            pushBlend(BLEND_OPAQUE);
+            gxSetTexture(preview.getTexture());
+            {
+                setColor(colorWhite);
+                //drawRect(10, 10, 10 + preview.getWidth(), 10 + preview.getHeight());
+				
+				const float x1 = 10;
+				const float y1 = 10;
+				const float x2 = 10 + preview.getWidth();
+				const float y2 = 10 + preview.getHeight();
+				
+				gxBegin(GX_QUADS);
+				{
+					gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y1);
+					gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y1);
+					gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y2);
+					gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y2);
+				}
+				gxEnd();
+            }
+            gxSetTexture(0);
+            popBlend();
             
 			world.draw2d();
 			
-		#if !INTERACTIVE_MODE
 			if (showUi)
 			{
 				setColor(255, 255, 255, 127);
-				drawText(GFX_SX - 10, 40, 32, -1, +1, "VIDEO CLIP TUBE");
+				drawText(GFX_SX - 10, 40, 32, -1, +1, "360 VIDEO");
 
 				gxTranslatef(0, GFX_SY - 100, 0);
 				setColor(colorWhite);
 				drawText(10, 40, kFontSize, +1, +1, "N: toggle use nearest point (%s)", enableNearest ? "on" : "off");
 				drawText(10, 60, kFontSize, +1, +1, "V: toggle use vertices (%s)", enableVertices ? "on" : "off");
 			}
-		#endif
 			
 			popFontMode();
 		}
@@ -1209,6 +1314,8 @@ void main()
 	
 	SDL_DestroyMutex(audioMutex);
 	audioMutex = nullptr;
-}
-
+	
+	framework.shutdown();
+	
+	return 0;
 }

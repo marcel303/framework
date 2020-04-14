@@ -1,5 +1,15 @@
-namespace Videomixer
-{
+#include "binauralizer.h"
+#include "binaural_cipic.h"
+#include "framework.h"
+#include "objects/audioSourceVorbis.h"
+#include "objects/paobject.h"
+#include "soundVolume.h"
+#include "video.h"
+
+#include "Quat.h"
+
+#include <cmath>
+
 #define TEST_WELCOME 1
 
 #define NUM_VIDEOCLIP_SOURCES 3
@@ -7,6 +17,17 @@ namespace Videomixer
 
 #define DRAW_GRIDS 1
 #define ENABLE_TRANSFORM_MIXING 1
+
+#if !defined(DEBUG)
+const int GFX_SX = 1280*2;
+const int GFX_SY = 800*2;
+#elif 0
+const int GFX_SX = 2400;
+const int GFX_SY = 1200;
+#else
+const int GFX_SX = 640;
+const int GFX_SY = 480;
+#endif
 
 static bool enableNearest = true;
 static bool enableVertices = true;
@@ -570,11 +591,9 @@ struct World
 	{
 		camera.pushViewMatrix();
 		
-		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-		glEnable(GL_LINE_SMOOTH);
+		pushLineSmooth(true);
 
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
+		pushDepthTest(true, DEPTH_LESS);
 		{
 			pushBlend(BLEND_OPAQUE);
 			{
@@ -585,10 +604,9 @@ struct World
 			}
 			popBlend();
 		}
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
 		
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
+		pushDepthTest(true, DEPTH_LESS, false);
 		{
 			gxPushMatrix();
 			{
@@ -603,8 +621,9 @@ struct World
 				videoclips[i].drawTranslucent();
 			}
 		}
-		glDepthMask(GL_TRUE);
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
+		
+		popLineSmooth();
 		
 		camera.popViewMatrix();
 	}
@@ -616,8 +635,21 @@ struct World
 
 static World * s_world = nullptr;
 
-void main()
+int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
+#if !defined(DEBUG)
+	framework.fullscreen = true;
+	framework.exclusiveFullscreen = false;
+#endif
+
+    framework.enableDepthBuffer = true;
+    framework.enableRealTimeEditing = true;
+	
+	if (!framework.init(GFX_SX, GFX_SY))
+		return -1;
+	
 	const int kFontSize = 16;
 	
 	bool showUi = true;
@@ -726,6 +758,8 @@ void main()
 	
 	SDL_DestroyMutex(audioMutex);
 	audioMutex = nullptr;
-}
-
+	
+	framework.shutdown();
+	
+	return 0;
 }

@@ -1,13 +1,48 @@
-app thegrooop-860-thetribe
+app thegrooop-860-thetribe-spokenword
 	depend_library audiograph
 	depend_library vfxgraph
 	depend_library libvideo
-	add_files 860-thetribe.cpp
-	#add_files 860-thetribe-cagedsounds.cpp
-	#add_files 860-thetribe-spokenword.cpp
-	#add_files 860-thetribe-video360.cpp
-	#add_files 860-thetribe-videomixer.cpp
-	#add_files 860-thetribe-videotube.cpp
+	add_files 860-thetribe-spokenword.cpp
+	add_files textScroller.cpp
+	add_files textScroller.h
+	resource_path data
+	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	group thegrooop
+
+app thegrooop-862-thetribe-cagedsounds
+	depend_library audiograph
+	depend_library vfxgraph
+	depend_library libvideo
+	add_files 862-thetribe-cagedsounds.cpp
+	resource_path data
+	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	group thegrooop
+
+app thegrooop-870-thetribe-video360
+	depend_library audiograph
+	depend_library vfxgraph
+	depend_library libvideo
+	add_files 870-thetribe-video360.cpp
+	add_files textScroller.cpp
+	add_files textScroller.h
+	resource_path data
+	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	group thegrooop
+
+app thegrooop-872-thetribe-videomixer
+	depend_library audiograph
+	depend_library vfxgraph
+	depend_library libvideo
+	add_files 872-thetribe-videomixer.cpp
+	resource_path data
+	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	group thegrooop
+
+app thegrooop-874-thetribe-videotube
+	depend_library audiograph
+	depend_library vfxgraph
+	depend_library libvideo
+	add_files 874-thetribe-videotube.cpp
 	add_files textScroller.cpp
 	add_files textScroller.h
 	resource_path data
