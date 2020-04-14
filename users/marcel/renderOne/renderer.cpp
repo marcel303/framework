@@ -110,7 +110,7 @@ namespace rOne
 	{
 		// create a stencil mask for pixels in the background (depth = 1.0)
 		
-		clearStencil(0x00);
+		clearStencil(0x00, 0x01);
 		
 		pushDepthTest(true, DEPTH_EQUAL, false);
 		pushColorWriteMask(0, 0, 0, 0);
@@ -171,10 +171,16 @@ namespace rOne
 		popDepthTest();
 	#endif
 		
-		if (renderOptions.enableBackgroundPass && renderFunctions.drawBackground != nullptr)
+		pushDepthTest(true, DEPTH_LESS);
+		pushBlend(BLEND_ALPHA);
 		{
-			renderFunctions.drawBackground();
+			if (renderOptions.enableBackgroundPass && renderFunctions.drawBackground != nullptr)
+			{
+				renderFunctions.drawBackground();
+			}
 		}
+		popBlend();
+		popDepthTest();
 		
 		clearStencilTest();
 	}

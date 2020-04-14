@@ -162,7 +162,7 @@ namespace rOne
 		
 		depthTargets.resize(maxShadowMaps);
 		for (auto & depthTarget : depthTargets)
-			depthTarget.init(resolution, resolution, DEPTH_FLOAT32, true, 1.f);
+			depthTarget.init(resolution, resolution, DEPTH_UNORM16, true, 1.f);
 		
 		colorTargets.resize(maxShadowMaps);
 		for (auto & colorTarget : colorTargets)

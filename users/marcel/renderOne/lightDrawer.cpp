@@ -115,7 +115,7 @@ namespace rOne
 		
 		pushDepthTest(true, DEPTH_LESS, false);
 		
-		clearStencil(1);
+		clearStencil(0x01, 0xff);
 		setStencilTest()
 			.comparison(GX_STENCIL_FUNC_ALWAYS, 0, 0)
 			.op(GX_STENCIL_FACE_FRONT, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_INC, GX_STENCIL_OP_KEEP)

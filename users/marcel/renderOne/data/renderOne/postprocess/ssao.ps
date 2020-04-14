@@ -29,7 +29,7 @@ shader_in vec2 v_texcoord;
 #define SCALE 0.0
 #define BIAS 0.01
 #define SAMPLE_RAD 0.1
-#define MAX_DISTANCE 1.0
+#define MAX_DISTANCE 0.5
 
 #define MOD3 vec3(0.1031, 0.11369, 0.13787)
 
@@ -90,7 +90,7 @@ float spiralAO(vec2 uv, vec3 p, vec3 n, float rad)
     vec2 uvSize = textureSize(depthTexture, 0);
     float xScale = uvSize.y / uvSize.x;
 
-    float rotatePhase = hash12( uv*100.0 ) * 6.28;
+    float rotatePhase = hash12( uv*uvSize ) * 6.28;
     float rStep = inv * rad;
 
     for (int i = 0; i < SAMPLES; i++)
@@ -123,8 +123,6 @@ void main()
     ao = 1.0 - ao * strength;
 
     ao = max(0.0, ao);
-
-    //ao *= ao;
 
 	shader_fragColor = vec4(ao, ao, ao, 1.0);
 }

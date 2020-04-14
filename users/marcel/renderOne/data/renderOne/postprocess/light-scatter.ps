@@ -14,6 +14,8 @@ shader_in vec2 v_texcoord;
 
 // todo : create a fast light scatter shader. sample a small line segment between the origin and the sample pos, to determine occlusion/visibility of the source. next, exp falloff based on distance
 
+// todo : create an implementation which uses a fixed color + depth test for occlusion + perform 5x PCF to smooth the occlusion factor
+
 #if ENABLE_DITHER
 
 vec2 ditherCoord(vec2 sampleCoord)
