@@ -5,6 +5,7 @@
 #include "renderer.h"
 #include "shadowMapDrawer.h"
 #include "StringEx.h"
+#include <limits>
 #include <map>
 
 using namespace rOne;
