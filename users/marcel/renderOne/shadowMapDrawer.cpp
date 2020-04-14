@@ -357,11 +357,31 @@ namespace rOne
 			}
 		}
 		
+		// prepare atlas textures
+		
 		generateDepthAtlas();
 		
 		if (enableColorShadows)
 		{
 			generateColorAtlas();
+		}
+		
+		// prepare shadow matrices
+		
+		viewToShadowMatrices.resize(lights.size());
+		shadowToViewMatrices.resize(lights.size());
+		
+		const Mat4x4 viewToWorld = worldToView.CalcInv();
+		
+		for (size_t i = 0; i < lights.size(); ++i)
+		{
+			auto & light = lights[i];
+			
+			Mat4x4 lightToProjection;
+			calculateProjectionMatrixForLight(light, lightToProjection);
+			
+			viewToShadowMatrices[i] = lightToProjection * light.worldToLight * viewToWorld;
+			shadowToViewMatrices[i] = viewToShadowMatrices[i].CalcInv();
 		}
 	}
 
@@ -376,29 +396,8 @@ namespace rOne
 		shader.setImmediate("enableColorShadows", enableColorShadows ? 1.f : 0.f);
 		shader.setImmediate("shadowMapFilter", shadowMapFilter);
 
-	// todo : compute shadow matrices only once and store in a buffer
-		const Mat4x4 viewToWorld = worldToView.CalcInv();
-		
-		const int numShadowMatrices = lights.size();
-		Mat4x4 * shadowMatrices = (Mat4x4*)alloca(numShadowMatrices * sizeof(Mat4x4));
-		
-		for (size_t i = 0; i < lights.size(); ++i)
-		{
-			auto & light = lights[i];
-			auto & shadowMatrix = shadowMatrices[i];
-			
-			Mat4x4 lightToProjection;
-			calculateProjectionMatrixForLight(light, lightToProjection);
-			
-			shadowMatrix = lightToProjection * light.worldToLight * viewToWorld;
-		}
-		
-		shader.setImmediateMatrix4x4Array("viewToShadowMatrices", (float*)shadowMatrices, numShadowMatrices);
-		
-		for (size_t i = 0; i < lights.size(); ++i)
-			shadowMatrices[i] = shadowMatrices[i].CalcInv();
-		
-		shader.setImmediateMatrix4x4Array("shadowToViewMatrices", (float*)shadowMatrices, numShadowMatrices);
+		shader.setImmediateMatrix4x4Array("viewToShadowMatrices", (float*)viewToShadowMatrices.data(), viewToShadowMatrices.size());
+		shader.setImmediateMatrix4x4Array("shadowToViewMatrices", (float*)shadowToViewMatrices.data(), shadowToViewMatrices.size());
 	}
 
 	int ShadowMapDrawer::getShadowMapId(const int id) const

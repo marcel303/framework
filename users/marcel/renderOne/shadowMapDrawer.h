@@ -76,6 +76,9 @@ namespace rOne
 		ColorTarget depthAtlas2Channel;
 		ColorTarget colorAtlas;
 		
+		std::vector<Mat4x4> viewToShadowMatrices;
+		std::vector<Mat4x4> shadowToViewMatrices;
+		
 		static void calculateProjectionMatrixForLight(const Light & light, Mat4x4 & projectionMatrix);
 		
 		void generateDepthAtlas();
