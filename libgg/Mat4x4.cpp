@@ -113,6 +113,8 @@ void Mat4x4::MakePerspectiveGL(float fov, float aspect, float nearCP, float farC
 
 void Mat4x4::MakeOrthoLH(float left, float right, float top, float bottom, float nearCP, float farCP)
 {
+	// left handed orthographic matrix with clip space Z = (0, +1)
+	
 	const float rl = 2.0f / (right - left);
 	const float tb = 2.0f / (top - bottom);
 	const float fn = 1.0f / (farCP - nearCP);
@@ -129,6 +131,8 @@ void Mat4x4::MakeOrthoLH(float left, float right, float top, float bottom, float
 
 void Mat4x4::MakeOrthoGL(float left, float right, float top, float bottom, float nearCP, float farCP)
 {
+	// right handed orthographic matrix with clip space Z = (-1, +1)
+	
 	const float rl = 2.0f / (right - left);
 	const float tb = 2.0f / (top - bottom);
 	const float fn = 2.0f / (farCP - nearCP);
