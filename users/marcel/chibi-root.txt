@@ -41,6 +41,7 @@ add magiclines
 with_platform macos add metal1
 add maxpatch1
 add mitronix1
+add motionbank-effect
 add nanovg-canvas
 add pincushion1
 add planetvis
@@ -73,6 +74,7 @@ add veem-sound-satellites
 add vfxedit
 add vfxpro
 add videosync
+add voxel1
 add voxelizer-test
 add voxviewer
 add voxworld1
