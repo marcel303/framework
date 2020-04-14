@@ -1,0 +1,28 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+include renderOne/equirect-functions.txt
+
+/*
+
+this shader is used to 'sky' using an equirectangular source texture
+
+*/
+
+uniform sampler2D source;
+
+shader_in vec3 v_position;
+
+void main()
+{
+	vec3 direction = normalize(v_position);
+	vec2 uv = equirectDirectionToUv(direction);
+
+	uv.y = 1.0 - uv.y;
+
+	vec3 color = texture(source, uv).rgb;
+
+	color = pow(color, vec3(2.2));
+	//color = srgbToLinear(color);
+
+	shader_fragColor = vec4(color, 1.0);
+}
