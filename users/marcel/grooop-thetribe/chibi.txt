@@ -1,6 +1,7 @@
 app thegrooop-860-thetribe-spokenword
 	depend_library audiograph
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	depend_library libvideo
 	add_files 860-thetribe-spokenword.cpp
 	add_files textScroller.cpp
@@ -11,7 +12,6 @@ app thegrooop-860-thetribe-spokenword
 
 app thegrooop-862-thetribe-cagedsounds
 	depend_library audiograph
-	depend_library vfxgraph
 	depend_library libvideo
 	add_files 862-thetribe-cagedsounds.cpp
 	resource_path data
@@ -21,6 +21,7 @@ app thegrooop-862-thetribe-cagedsounds
 app thegrooop-870-thetribe-video360
 	depend_library audiograph
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	depend_library libvideo
 	add_files 870-thetribe-video360.cpp
 	add_files textScroller.cpp
@@ -31,7 +32,6 @@ app thegrooop-870-thetribe-video360
 
 app thegrooop-872-thetribe-videomixer
 	depend_library audiograph
-	depend_library vfxgraph
 	depend_library libvideo
 	add_files 872-thetribe-videomixer.cpp
 	resource_path data
@@ -41,6 +41,7 @@ app thegrooop-872-thetribe-videomixer
 app thegrooop-874-thetribe-videotube
 	depend_library audiograph
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	depend_library libvideo
 	add_files 874-thetribe-videotube.cpp
 	add_files textScroller.cpp
@@ -59,6 +60,7 @@ app thegrooop-890-performance
 	depend_library audiograph
 	depend_library libvideo
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	add_files 890-performance.cpp
 	add_files 890-performance.h
 	add_files 890-thetribe-video-landscape.cpp
@@ -73,6 +75,7 @@ app thegrooop-892-landart
 	depend_library audiograph
 	depend_library libvideo
 	depend_library vfxgraph
+	depend_library vfxgraph-nodes
 	add_files 892-landart.cpp
 	add_files 892-landart.h
 	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"

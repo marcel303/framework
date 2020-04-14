@@ -1235,14 +1235,7 @@ struct NewBeat
 			
 			int sx;
 			int sy;
-			
-			gxSetTexture(texture);
-			{
-				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &sx);
-				glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &sy);
-				checkErrorGL();
-			}
-			gxSetTexture(0);
+			gxGetTextureSize(texture, sx, sy);
 			
 			sx *= PARTICLE_SCALE;
 			sy *= PARTICLE_SCALE;
@@ -1741,11 +1734,9 @@ struct World
 	{
 		camera.pushViewMatrix();
 		
-		glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-		glEnable(GL_LINE_SMOOTH);
+		pushLineSmooth(true);
 
-		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LESS);
+		pushDepthTest(true, DEPTH_LESS);
 		{
 			pushBlend(BLEND_OPAQUE);
 			{
@@ -1766,10 +1757,9 @@ struct World
 			}
 			popBlend();
 		}
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
 		
-		glEnable(GL_DEPTH_TEST);
-		glDepthMask(GL_FALSE);
+		pushDepthTest(true, DEPTH_LESS, false);
 		{
 			for (int i = 0; i < NUM_VIDEOCLIPS; ++i)
 			{
@@ -1796,6 +1786,7 @@ struct World
 			{
 				setColorf(1.f, 1.f, 1.f, s_particlesCoronaOpacity);
 				Shader shader("particles");
+				setShader(shader);
 				shader.setTexture("source", 0, getTexture("particle.jpg"), true, true);
 				shader.setImmediate("pointScale", PARTICLE_SCALE);
 				vectorParticleSystem.draw();
@@ -1803,8 +1794,9 @@ struct World
 			}
 			popBlend();
 		}
-		glDepthMask(GL_TRUE);
-		glDisable(GL_DEPTH_TEST);
+		popDepthTest();
+		
+		popLineSmooth();
 		
 		camera.popViewMatrix();
 	}
@@ -2235,6 +2227,7 @@ struct Starfield
 		{
 			setColorf(1.f, 1.f, 1.f, starOpacity);
 			Shader shader("particles");
+			setShader(shader);
 			shader.setTexture("source", 0, getTexture("particle.jpg"), true, true);
 			shader.setImmediate("pointScale", PARTICLE_SCALE);
 			{
@@ -2755,10 +2748,9 @@ void VideoLandscape::draw()
 	pushBlend(BLEND_MUL);
 	setColor(colorWhite);
 	gxSetTexture(s_circleMask->getTexture());
-	GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-	checkErrorGL();
+	pushColorPost(POST_SET_RGB_TO_R);
 	drawRect(0, 0, GFX_SX, GFX_SY);
+	popColorPost();
 	gxSetTexture(0);
 	popBlend();
 	

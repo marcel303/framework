@@ -1270,10 +1270,12 @@ int main(int argc, char * argv[])
                 setColor(colorWhite);
                 //drawRect(10, 10, 10 + preview.getWidth(), 10 + preview.getHeight());
 				
+				const int scale = (mouse.isDown(BUTTON_LEFT) ? 3 : 1);
+				
 				const float x1 = 10;
 				const float y1 = 10;
-				const float x2 = 10 + preview.getWidth();
-				const float y2 = 10 + preview.getHeight();
+				const float x2 = 10 + preview.getWidth() * scale;
+				const float y2 = 10 + preview.getHeight() * scale;
 				
 				gxBegin(GX_QUADS);
 				{

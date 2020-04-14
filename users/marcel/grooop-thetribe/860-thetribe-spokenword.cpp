@@ -232,7 +232,7 @@ static void drawSoundVolume(const SoundVolume & volume)
 
 static bool intersectSoundVolume(const SoundVolume & soundVolume, Vec3Arg pos, Vec3Arg dir, Vec3 & p, float & t)
 {
-	auto & soundToWorld = soundVolume.transform;
+	const Mat4x4 & soundToWorld = soundVolume.transform;
 	const Mat4x4 worldToSound = soundToWorld.CalcInv();
 
 	const Vec3 pos_sound = worldToSound.Mul4(pos);
@@ -704,6 +704,11 @@ struct World
 		{
 			spokenWords[i].draw2d();
 		}
+		
+		pushLineSmooth(true);
+		setColor(255, 127, 127);
+		drawCircle(GFX_SX/2, GFX_SY/2, 4, 20);
+		popLineSmooth();
 	}
 };
 
@@ -754,8 +759,13 @@ int main(int argc, char * argv[])
 	PortAudioObject pa;
 	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, paHandler);
 	
+	mouse.showCursor(false);
+	mouse.setRelative(true);
+	
 	do
 	{
+		SDL_CaptureMouse(SDL_TRUE);
+		
 		framework.process();
 
 		const float dt = framework.timeStep;
