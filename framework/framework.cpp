@@ -3955,6 +3955,11 @@ void setColor(const Color & color)
 	setColorf(color.r, color.g, color.b, color.a);
 }
 
+void setColor(const Color & color, float rgbMul)
+{
+	setColorf(color.r * rgbMul, color.g * rgbMul, color.b * rgbMul, color.a);
+}
+
 void setColor(int r, int g, int b, int a, int rgbMul)
 {
 	setColorf(scale255(r), scale255(g), scale255(b), scale255(a), scale255(rgbMul));

@@ -597,7 +597,7 @@ enum SURFACE_FORMAT
 
 enum DEPTH_FORMAT
 {
-	DEPTH_FLOAT16,
+	DEPTH_UNORM16,
 	DEPTH_FLOAT32
 };
 
@@ -1644,6 +1644,7 @@ void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
 void popCullMode();
 
 void setColor(const Color & color);
+void setColor(const Color & color, float rgbMul);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
 void setColorf(float r, float g, float b, float a = 1.f, float rgbMul = 1.f);
 void setColorClamp(bool clamp);

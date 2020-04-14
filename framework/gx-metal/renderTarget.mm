@@ -161,7 +161,10 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 	{
 		MTLTextureDescriptor * descriptor =
 			[MTLTextureDescriptor
-				texture2DDescriptorWithPixelFormat:(properties.format == DEPTH_FLOAT16) ? MTLPixelFormatDepth16Unorm : MTLPixelFormatDepth32Float_Stencil8
+				texture2DDescriptorWithPixelFormat:
+					(properties.format == DEPTH_UNORM16)
+					? MTLPixelFormatDepth16Unorm
+					: MTLPixelFormatDepth32Float_Stencil8
 				width:properties.dimensions.width
 				height:properties.dimensions.height
 				mipmapped:NO];

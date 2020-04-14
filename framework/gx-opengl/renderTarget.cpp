@@ -192,8 +192,8 @@ static GLenum translateDepthFormat(const DEPTH_FORMAT format)
 {
 	GLenum glFormat = GL_INVALID_ENUM;
 
-	if (format == DEPTH_FLOAT16)
-		glFormat = GL_DEPTH_COMPONENT16;
+	if (format == DEPTH_UNORM16)
+		glFormat = GL_DEPTH24_STENCIL8; // GL_DEPTH_COMPONENT16 support is less common than DEPTH24
 #if ENABLE_DESKTOP_OPENGL
 	// todo : gles : float32 depth format ?
 	else if (format == DEPTH_FLOAT32)
@@ -260,8 +260,8 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		checkErrorGL();
 		
 		// restore previous OpenGL states
