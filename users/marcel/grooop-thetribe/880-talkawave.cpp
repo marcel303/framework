@@ -302,7 +302,7 @@ struct MyPortAudioHandler : PortAudioHandler
 		, audioSources()
 		, monoSource()
 	{
-		monoSource.open("thegrooop/talkative.ogg", true);
+		monoSource.open("talkative.ogg", true);
 	}
 
 	void addAudioSource(MultiChannelAudioSource_SoundVolume * audioSource)
@@ -938,7 +938,7 @@ static void drawSoundVolume(const SoundVolume & volume)
 		gxPushMatrix(); { gxTranslatef(0, 0, +1); drawGrid3dLine(res, res, 0, 1); } gxPopMatrix();
 	#endif
 	
-		gxSetTexture(getTexture("thegrooop/logo-white.png"));
+		gxSetTexture(getTexture("logo-white.png"));
 		{
 			drawRect(-1, -1, +1, +1);
 		}

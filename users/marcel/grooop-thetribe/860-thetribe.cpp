@@ -47,11 +47,11 @@ int main(int argc, char * argv[])
 	if (!framework.init(GFX_SX, GFX_SY))
 		return -1;
     
-    //Cagedsounds::main();
+    Cagedsounds::main();
     //Spokenword::main();
     //Video360::main();
     //Videomixer::main();
-    Videotube::main();
+    //Videotube::main();
 	
 	Font("calibri.ttf").saveCache();
 	
