@@ -275,9 +275,7 @@ void main()
 	setting.mieG = 0.76;
 	setting.mieHeight = 1200.0;
 	setting.rayleighHeight = 8000.0;
-	setting.earthRadius = 6360000.0;
-	setting.earthAtmTopRadius = 6420000.0;
-	setting.earthCenter = float3(0, -setting.earthRadius, 0);
+	
 	setting.waveLambdaMie = float3(2e-7);
     
     // wavelength with 680nm, 550nm, 450nm
@@ -285,6 +283,10 @@ void main()
     
     // see https://www.shadertoy.com/view/MllBR2
 	setting.waveLambdaOzone = float3(1.36820899679147, 3.31405330400124, 0.13601728252538) * 0.6e-6 * 2.504;
+
+	setting.earthRadius = 6360000.0;
+	setting.earthAtmTopRadius = 6420000.0;
+	setting.earthCenter = float3(0, -setting.earthRadius, 0);
 	
     float3 eye = float3(0,1000.0,0);
    	float4 sky = ComputeSkyInscattering(setting, eye, V, L);

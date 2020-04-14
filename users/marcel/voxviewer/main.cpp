@@ -26,7 +26,7 @@
 
 using namespace rOne;
 
-static void drawSky(Vec3Arg sunPosition);
+static void drawSky(Vec3Arg sunDirection);
 
 int main(int argc, char * argv[])
 {
@@ -172,8 +172,9 @@ int main(int argc, char * argv[])
 			{
 				Quat sunRotation;
 				sunRotation.fromAngleAxis(sinf(framework.time/10.f) * M_PI/2.f * 1.1f, Vec3(1, 0.3f, -0.3f).CalcNormalized());
-				const Vec3 sunPosition = sunRotation.toMatrix().Mul3(Vec3(0, 40, 0));
-				//const Vec3 sunPosition(0, 20, 20);
+				//const Vec3 sunPosition = camera.position + sunRotation.toMatrix().Mul3(Vec3(0, 40, 0));
+				const Vec3 sunPosition = camera.position + Vec3(0, 20, 20);
+				const Vec3 sunDirection = (camera.position - sunPosition).CalcNormalized();
 				
 			#if true
 				{
@@ -212,7 +213,7 @@ int main(int argc, char * argv[])
 					Light light;
 					light.type = kLightType_Directional;
 					light.position = sunPosition;
-					light.direction = -sunPosition.CalcNormalized();
+					light.direction = sunDirection;
 					light.attenuationBegin = 0.f;
 					light.attenuationEnd = 100.f;
 					light.color.Set(1, 1, 1);
@@ -275,14 +276,6 @@ int main(int argc, char * argv[])
 				
 				auto drawOpaqueBase = [&](const bool isMainPass)
 				{
-					if (skyEnabled && isMainPass)
-					{
-						drawSky(sunPosition);
-					}
-					
-					//setColor(colorYellow);
-					//fillCube(sunPosition, Vec3(.4f, .4f, .4f));
-					
 				#if USE_OPTIMIZED_SHADOW_SHADER
 					Shader shader(
 						isMainPass ?
@@ -354,6 +347,17 @@ int main(int argc, char * argv[])
 				auto drawOpaqueShadow = [&]()
 				{
 					drawOpaqueBase(false);
+				};
+				
+				auto drawBackground = [&]()
+				{
+					if (skyEnabled)
+					{
+						drawSky(sunDirection);
+						
+						//setColor(colorYellow);
+						//fillCube(sunPosition, Vec3(.4f, .4f, .4f));
+					}
 				};
 				
 				auto drawTranslucent = [&]()
@@ -543,6 +547,7 @@ int main(int argc, char * argv[])
 				
 				RenderFunctions renderFunctions;
 				renderFunctions.drawOpaque = drawOpaque;
+				renderFunctions.drawBackground = drawBackground;
 				renderFunctions.drawTranslucent = drawTranslucent;
 				renderFunctions.drawLights = drawLights;
 			
@@ -567,16 +572,16 @@ int main(int argc, char * argv[])
 	return 0;
 }
 
-static void drawSky(Vec3Arg sunPosition)
+static void drawSky(Vec3Arg sunDirection)
 {
 	pushBlend(BLEND_OPAQUE);
 	{
-		//const Vec3 lightDirection = Vec3(1, -.1f, 0).CalcNormalized();
-		const Vec3 lightDirection = -sunPosition.CalcNormalized();
-		
 		Mat4x4 viewMatrix;
 		gxGetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
 		const Mat4x4 cameraMatrix = viewMatrix.CalcInv();
+		
+		//const Vec3 lightDirection = Vec3(1, -.1f, 0).CalcNormalized();
+		const Vec3 lightDirection = sunDirection;
 		
 		Shader shader("rui-sky");
 		setShader(shader);
