@@ -1,0 +1,32 @@
+vec3 equirectUvToDirection(vec2 uv)
+{
+	vec2 thetaphi = ((uv * 2.0) - vec2(1.0)) *
+		vec2(
+			3.1415926535897932384626433832795,
+    		1.5707963267948966192313216916398);
+
+    vec3 direction = vec3(
+    	cos(thetaphi.y) * cos(thetaphi.x),
+    	sin(thetaphi.y),
+    	cos(thetaphi.y) * sin(thetaphi.x));
+
+    return direction;
+}
+
+vec2 equirectDirectionToUv(vec3 direction)
+{
+	float theta = atan2(direction.z, direction.x);
+	float rad = length(direction.xz);
+	float phi = atan2(direction.y, rad);
+
+	vec2 thetaphi = vec2(theta, phi);
+
+	vec2 uv = thetaphi;
+	uv /= vec2(
+		3.1415926535897932384626433832795,
+		1.5707963267948966192313216916398);
+	uv += vec2(1.0);
+	uv /= vec2(2.0);
+
+	return uv;
+}
