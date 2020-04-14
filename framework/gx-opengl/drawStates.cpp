@@ -344,6 +344,7 @@ void clearStencilTest()
 	// update OpenGL state
 	
 	glDisable(GL_STENCIL_TEST);
+	glStencilMask(0xff);
 }
 
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
