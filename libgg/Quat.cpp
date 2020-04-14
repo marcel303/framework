@@ -55,9 +55,9 @@ Quat Quat::calcConjugate() const
 	return result;
 }
 
-void Quat::fromAxisAngle(const Vec3 & _axis, float angle)
+void Quat::fromAxisAngle(const Vec3 & in_axis, float angle)
 {
-	const Vec3 axis = _axis.CalcNormalized();
+	const Vec3 axis = in_axis.CalcNormalized();
 	
 	// setup 'axis'
 
@@ -346,6 +346,8 @@ Quat Quat::slerp(const Quat & quat, float t) const
 
 	if (1.0f - std::abs(dot) > 0.000001f)
 	{
+		// spherical interpolation
+		
 		float angle = std::acos(dot);
 		float angleSin = std::sin(angle);
 		s1 = std::sin((1.0f - t) * angle) / angleSin;
@@ -353,6 +355,8 @@ Quat Quat::slerp(const Quat & quat, float t) const
 	}
 	else
 	{
+		// linear interpolation
+		
 		s1 = 1.0f - t;
 		s2 = 0.0f + t;
 	}
@@ -361,6 +365,16 @@ Quat Quat::slerp(const Quat & quat, float t) const
 
 	return result;
 }
+
+/*
+
+todo : add taylor series expansion approximation, which is faster than slerp and more accurate than nlerp
+
+	float t_approx = t + (1.f - dot(a, b)) / 3.f * t * (-2.f * t * t + 3.f * t - 1.f);
+
+	return nlerp(quat, t_approx);
+
+*/
 
 Quat Quat::nlerp(const Quat & quat, float t) const
 {
@@ -409,7 +423,7 @@ Quat Quat::operator*(const Quat & quat) const
 	result.m_xyz[0] = m_w * quat.m_xyz[0] + m_xyz[0] * quat.m_w + m_xyz[1] * quat.m_xyz[2] - m_xyz[2] * quat.m_xyz[1];
 	result.m_xyz[1] = m_w * quat.m_xyz[1] + m_xyz[1] * quat.m_w + m_xyz[2] * quat.m_xyz[0] - m_xyz[0] * quat.m_xyz[2];
 	result.m_xyz[2] = m_w * quat.m_xyz[2] + m_xyz[2] * quat.m_w + m_xyz[0] * quat.m_xyz[1] - m_xyz[1] * quat.m_xyz[0];
-	result.m_w = m_w * quat.m_w - m_xyz * quat.m_xyz;
+	result.m_w = m_w * quat.m_w - (m_xyz * quat.m_xyz);
 	
 	return result;
 }
