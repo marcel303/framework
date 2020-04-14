@@ -247,7 +247,7 @@ int main(int argc, char * argv[])
 	OscHandler oscHandler;
 	
 	Camera3d camera;
-	camera.mouseSmooth = .97f;
+	//camera.mouseSmooth = .97f;
 
 	Renderer renderer;
 	
@@ -262,8 +262,8 @@ int main(int argc, char * argv[])
 	renderOptions.lightScatter.strength = .1f;
 	//renderOptions.depthSilhouette.enabled = true;
 	renderOptions.depthSilhouette.color.Set(1.f, .1f, .1f, .1f);
-	//renderOptions.fog.enabled = true;
-	renderOptions.fog.thickness = .1f;
+	renderOptions.fog.enabled = true;
+	renderOptions.fog.thickness = .08f;
 	//renderOptions.colorGrading.enabled = true;
 	renderOptions.enableScreenSpaceReflections = true;
 	if (renderOptions.fog.enabled)
@@ -275,7 +275,8 @@ int main(int argc, char * argv[])
 	ForwardLightingHelper helper;
 	
 	ShadowMapDrawer shadowMapDrawer;
-	shadowMapDrawer.alloc(4, 2048);
+	shadowMapDrawer.alloc(4, 1024);
+	shadowMapDrawer.shadowMapFilter = kShadowMapFilter_PercentageCloser_3x3;
 	
 	for (;;)
 	{
@@ -330,15 +331,15 @@ int main(int argc, char * argv[])
 		
 		// tick camera
 		
-		camera.maxForwardSpeed = 4.f;
-		camera.maxStrafeSpeed = 4.f;
+		camera.maxForwardSpeed = 2.f;
+		camera.maxStrafeSpeed = 2.f;
 		camera.tick(framework.timeStep, true);
 		
 		//
 		
 		Mat4x4 viewMatrix = camera.getViewMatrix();
 		
-		if (true)
+		if (false)
 		{
 			if (!scene.bodies.empty() > 0)
 			{
