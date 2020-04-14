@@ -26,7 +26,7 @@
 
 using namespace rOne;
 
-static void drawSky(Vec3Arg sunDirection);
+static void drawSky(Vec3Arg viewOrigin, Vec3Arg sunDirection, const bool equirectMode);
 
 int main(int argc, char * argv[])
 {
@@ -63,6 +63,7 @@ int main(int argc, char * argv[])
 
 	Camera3d camera;
 	//camera.mouseSmooth = .97f;
+	//camera.maxForwardSpeed = 10.f;
 	
 	GxMesh drawMesh;
 	GxVertexBuffer vb;
@@ -115,6 +116,9 @@ int main(int argc, char * argv[])
 	shadowMapDrawer.enableColorShadows = false;
 	shadowMapDrawer.shadowMapFilter = kShadowMapFilter_PercentageCloser_3x3;
 	
+	ColorTarget skyTarget;
+	skyTarget.init(64, 32, SURFACE_RGBA16F, colorBlackTranslucent);
+	
 	for (;;)
 	{
 	#if !defined(DEBUG)
@@ -164,18 +168,26 @@ int main(int argc, char * argv[])
 		
 		camera.tick(framework.timeStep, true);
 		
+		// prepare sky texture
+		
+		Quat sunRotation;
+		sunRotation.fromAngleAxis(sinf(framework.time/10.f) * M_PI/2.f * 1.1f, Vec3(1, 0.3f, -0.3f).CalcNormalized());
+		const Vec3 sunPosition = camera.position + sunRotation.toMatrix().Mul3(Vec3(0, 40, 0));
+		//const Vec3 sunPosition = camera.position + Vec3(0, 20, 20);
+		const Vec3 sunDirection = (camera.position - sunPosition).CalcNormalized();
+		
+		pushRenderPass(&skyTarget, true, nullptr, false, "Sky (equirect)");
+		{
+			drawSky(Vec3(), sunDirection, true);
+		}
+		popRenderPass();
+		
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			projectPerspective3d(90.f, .01f, 100.f);
 			
 			camera.pushViewMatrix();
 			{
-				Quat sunRotation;
-				sunRotation.fromAngleAxis(sinf(framework.time/10.f) * M_PI/2.f * 1.1f, Vec3(1, 0.3f, -0.3f).CalcNormalized());
-				//const Vec3 sunPosition = camera.position + sunRotation.toMatrix().Mul3(Vec3(0, 40, 0));
-				const Vec3 sunPosition = camera.position + Vec3(0, 20, 20);
-				const Vec3 sunDirection = (camera.position - sunPosition).CalcNormalized();
-				
 			#if true
 				{
 					// update light scatter origin
@@ -212,7 +224,7 @@ int main(int argc, char * argv[])
 				{
 					Light light;
 					light.type = kLightType_Directional;
-					light.position = sunPosition;
+					light.position = camera.position - sunDirection * 50.f;
 					light.direction = sunDirection;
 					light.attenuationBegin = 0.f;
 					light.attenuationEnd = 100.f;
@@ -353,8 +365,8 @@ int main(int argc, char * argv[])
 				{
 					if (skyEnabled)
 					{
-						drawSky(sunDirection);
-						
+						drawSky(camera.position, sunDirection, false);
+					
 						//setColor(colorYellow);
 						//fillCube(sunPosition, Vec3(.4f, .4f, .4f));
 					}
@@ -557,13 +569,26 @@ int main(int argc, char * argv[])
 			
 			projectScreen2d();
 			
-			//shadowMapDrawer.showRenderTargets();
+			renderOptions.debugRenderTargets = keyboard.isDown(SDLK_1);
+				
+			if (keyboard.isDown(SDLK_2))
+				shadowMapDrawer.showRenderTargets();
+			
+			if (keyboard.isDown(SDLK_3))
+			{
+				gxSetTexture(skyTarget.getTextureId());
+				setColor(colorWhite);
+				drawRect(0, 0, skyTarget.getWidth(), skyTarget.getHeight());
+				gxSetTexture(0);
+			}
 		}
 		framework.endDraw();
 		
 		helper.reset();
 		shadowMapDrawer.reset();
 	}
+	
+	skyTarget.free();
 	
 	// todo : shutdown renderer
 	
@@ -572,26 +597,48 @@ int main(int argc, char * argv[])
 	return 0;
 }
 
-static void drawSky(Vec3Arg sunDirection)
+static void drawSky(Vec3Arg viewOrigin, Vec3Arg sunDirection, const bool equirectMode)
 {
 	pushBlend(BLEND_OPAQUE);
 	{
-		Mat4x4 viewMatrix;
-		gxGetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
-		const Mat4x4 cameraMatrix = viewMatrix.CalcInv();
-		
-		//const Vec3 lightDirection = Vec3(1, -.1f, 0).CalcNormalized();
+		const Vec3 lightPosition = viewOrigin;
 		const Vec3 lightDirection = sunDirection;
 		
 		Shader shader("rui-sky");
 		setShader(shader);
 		{
-			shader.setImmediate("ligthDirection",
+			shader.setImmediate("lightPosition",
+				lightPosition[0],
+				lightPosition[1],
+				lightPosition[2]);
+			
+			shader.setImmediate("lightDirection",
 				lightDirection[0],
 				lightDirection[1],
 				lightDirection[2]);
+				
+			shader.setImmediate("uvToEquirectMode", equirectMode ? 1.f : 0.f);
 			
-			fillCube(cameraMatrix.GetTranslation(), Vec3(40, 40, 40));
+			if (equirectMode)
+			{
+				gxMatrixMode(GX_PROJECTION);
+				gxPushMatrix();
+				gxLoadIdentity();
+				gxMatrixMode(GX_MODELVIEW);
+				gxPushMatrix();
+				gxLoadIdentity();
+				
+				drawRect(-1, -1, +1, +1);
+				
+				gxMatrixMode(GX_PROJECTION);
+				gxPopMatrix();
+				gxMatrixMode(GX_MODELVIEW);
+				gxPopMatrix();
+			}
+			else
+			{
+				fillCube(Vec3(), Vec3(40, 40, 40));
+			}
 		}
 		clearShader();
 	}

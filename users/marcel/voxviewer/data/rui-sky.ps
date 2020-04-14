@@ -1,3 +1,5 @@
+include renderOne/equirect-functions.txt
+
 // License (MIT) Copyright (C) 2017-2018 Rui. All rights reserved.
 
 // source : https://www.shadertoy.com/view/XlBfRD
@@ -7,9 +9,9 @@
 #define float4 vec4
 
 #define PI 3.1415926535f
-#define PI_2 (3.1415926535f * 2.0)
+#define PI_2 (3.1415926535f * 2.0f)
 
-#define EPSILON 1e-5
+#define EPSILON 1e-5f
 
 #define SAMPLES_NUMS 16
 
@@ -42,15 +44,6 @@ struct ScatteringParams
 	float earthAtmTopRadius;
 	float3 earthCenter;
 };
-
-float3 ComputeSphereNormal(float2 coord, float phiStart, float phiLength, float thetaStart, float thetaLength)
-{
-	float3 normal;
-	normal.x = -sin(thetaStart + coord.y * thetaLength) * sin(phiStart + coord.x * phiLength);
-	normal.y = -cos(thetaStart + coord.y * thetaLength);
-	normal.z = -sin(thetaStart + coord.y * thetaLength) * cos(phiStart + coord.x * phiLength);
-	return normalize(normal);
-}
 
 float2 ComputeRaySphereIntersection(float3 position, float3 dir, float3 center, float radius)
 {
@@ -243,31 +236,19 @@ float noise(float2 uv)
 
 //
 
-#if 0
-uniform vec2 iResolution;
-uniform vec2 iMouse;
-#endif
-
-uniform vec3 ligthDirection;
+uniform vec3 lightDirection;
+uniform float uvToEquirectMode;
 
 shader_in vec3 v_position;
 shader_in vec2 v_texcoord;
 
 void main()
 {
-#if 0
-	vec2 uv = v_texcoord;
-    
-    vec2 mouse = iMouse.xy / iResolution.xy;
-    if (mouse.x == 0.0 && mouse.y == 0.0)
-        mouse = float2(0.5, 0.7);
-    
-    float3 V = ComputeSphereNormal(uv, 0.0, PI_2, 0.0, PI);
-    float3 L = ComputeSphereNormal(float2(mouse.x, mouse.y), 0.0, PI_2, 0.0, PI);
-#else
-    float3 V = normalize(v_position);
-    float3 L = -ligthDirection;
-#endif
+	float3 V =
+		uvToEquirectMode == 1.0
+    	? equirectUvToDirection(v_texcoord)
+    	: normalize(v_position);
+    float3 L = -lightDirection;
 
 	ScatteringParams setting;
 	setting.sunRadius = 500.0;
