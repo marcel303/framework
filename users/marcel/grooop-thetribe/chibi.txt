@@ -1,0 +1,43 @@
+app thegrooop-860-thetribe
+	depend_library audiograph
+	depend_library vfxgraph
+	depend_library libvideo
+	add_files 860-thetribe.cpp
+	#add_files 860-thetribe-cagedsounds.cpp
+	#add_files 860-thetribe-spokenword.cpp
+	#add_files 860-thetribe-video360.cpp
+	#add_files 860-thetribe-videomixer.cpp
+	#add_files 860-thetribe-videotube.cpp
+	add_files textScroller.cpp
+	add_files textScroller.h
+	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	group thegrooop
+
+app thegrooop-880-talkawave
+	depend_library audiograph
+	add_files 880-talkawave.cpp
+	resource_path data
+	group thegrooop
+
+app thegrooop-890-performance
+	depend_library audiograph
+	depend_library libvideo
+	depend_library vfxgraph
+	add_files 890-performance.cpp
+	add_files 890-performance.h
+	add_files 890-thetribe-video-landscape.cpp
+	add_files audioMixer.cpp
+	add_files audioMixer.h
+	add_files textScroller.cpp
+	add_files textScroller.h
+	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	group thegrooop
+
+app thegrooop-892-landart
+	depend_library audiograph
+	depend_library libvideo
+	depend_library vfxgraph
+	add_files 892-landart.cpp
+	add_files 892-landart.h
+	resource_path "/Users/thecat/Google Drive/The Grooop - The Tribe"
+	group thegrooop
