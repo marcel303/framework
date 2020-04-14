@@ -989,6 +989,10 @@ namespace rOne
 		}
 		popShaderOutputs();
 		
+		renderBackgroundPass(
+			renderFunctions,
+			renderOptions);
+		
 		renderTranslucentPass(renderFunctions, renderOptions);
 
 		return nullptr;
@@ -1126,6 +1130,25 @@ namespace rOne
 		}
 		popRenderPass();
 		
+		// draw background pass
+		
+		pushRenderPass(composite[composite_idx], false, buffers.depth, false, "Background");
+		{
+			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+			
+		#if ENABLE_OPENGL
+			gxMatrixMode(GX_PROJECTION);
+			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			gxMatrixMode(GX_MODELVIEW);
+		#endif
+		
+			renderBackgroundPass(
+				renderFunctions,
+				renderOptions);
+		}
+		popRenderPass();
+		
 		// post-opaque, pre-translucent post-processing
 		
 		renderPostOpaqueEffects(
@@ -1207,6 +1230,8 @@ namespace rOne
 		}
 		popShaderOutputs();
 		popRenderPass();
+		
+		// draw background pass
 		
 		pushRenderPass(buffers.composite1, false, buffers.depth, false, "Background");
 		{
