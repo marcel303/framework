@@ -32,10 +32,21 @@ public:
 	{
 	}
 	
+	explicit
 	inline Mat4x4(const bool initializeToIdentity)
 	{
 		if (initializeToIdentity)
 			MakeIdentity();
+	}
+	
+	explicit
+	inline Mat4x4(const float value)
+	{
+		MakeIdentity();
+		
+		m00 = value;
+		m11 = value;
+		m22 = value;
 	}
 
 	inline Mat4x4(
