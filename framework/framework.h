@@ -1611,7 +1611,7 @@ struct StencilState
 	uint8_t writeMask = 0xff;
 };
 
-void clearStencil(uint8_t value);
+void clearStencil(uint8_t value, uint32_t writeMask);
 
 void setStencilTest(const StencilState & front, const StencilState & back);
 void clearStencilTest();

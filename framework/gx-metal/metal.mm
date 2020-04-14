@@ -949,7 +949,7 @@ void setAlphaToCoverage(bool enabled)
 	renderState.alphaToCoverageEnabled = enabled;
 }
 
-void clearStencil(uint8_t value)
+void clearStencil(uint8_t value, uint32_t writeMask)
 {
 	// capture state we need to restore later
 	
@@ -967,7 +967,7 @@ void clearStencil(uint8_t value)
 	clearStencilState.onStencilFail = GX_STENCIL_OP_REPLACE;
 	clearStencilState.onDepthFail = GX_STENCIL_OP_REPLACE;
 	clearStencilState.onDepthStencilPass = GX_STENCIL_OP_REPLACE;
-	clearStencilState.writeMask = 0xff;
+	clearStencilState.writeMask = writeMask;
 	
 	setStencilTest(clearStencilState, clearStencilState);
 	

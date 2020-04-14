@@ -300,12 +300,19 @@ static GLenum translateStencilFunc(const GX_STENCIL_FUNC func)
 	return GL_ALWAYS;
 }
 
-void clearStencil(uint8_t value)
+void clearStencil(uint8_t value, uint32_t writeMask)
 {
 	glClearStencil(value);
 	checkErrorGL();
 
+	glStencilMask(writeMask);
+	checkErrorGL();
+	
 	glClear(GL_STENCIL_BUFFER_BIT);
+	checkErrorGL();
+	
+	glStencilMaskSeparate(GL_FRONT, globals.frontStencilState.writeMask);
+	glStencilMaskSeparate(GL_BACK, globals.backStencilState.writeMask);
 	checkErrorGL();
 }
 
@@ -344,7 +351,6 @@ void clearStencilTest()
 	// update OpenGL state
 	
 	glDisable(GL_STENCIL_TEST);
-	glStencilMask(0xff);
 }
 
 void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
