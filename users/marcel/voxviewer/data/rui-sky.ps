@@ -190,7 +190,7 @@ float ComputeSkyboxChapman(ScatteringParams setting, float3 eye, float3 V, float
 	return intersectionTest ? 1.0 : 0.0;
 }
 
-float4 ComputeSkyInscattering(ScatteringParams setting, float3 eye, float3 V, float3 L)
+float4 ComputeSkyInscattering(ScatteringParams setting, float3 eye, float3 V, float3 L, bool drawSun)
 {
 	float3 insctrMie = float3(0.0);
 	float3 insctrRayleigh = float3(0.0);
@@ -214,7 +214,8 @@ float4 ComputeSkyInscattering(ScatteringParams setting, float3 eye, float3 V, fl
 	float3 limbDarkening = GetTransmittance(setting, -L, V);
 	limbDarkening *= pow(float3(cosAngle), float3(0.420, 0.503, 0.652)) * mix(vec3(1.0), float3(1.2,0.9,0.5), edge) * intersectionTest;
 
-	sky += limbDarkening;
+	if (drawSun)
+		sky += limbDarkening;
 
 	return float4(sky, phaseNight * intersectionTest);
 }
@@ -247,7 +248,9 @@ void main()
 	float3 V =
 		uvToEquirectMode == 1.0
     	? equirectUvToDirection(v_texcoord)
-    	: normalize(v_position);
+    	: v_position;
+    V = normalize(V); // note : we always normalize here, due to the sky shader being very sensitive to numbers being off by very small amounts
+
     float3 L = -lightDirection;
 
 	ScatteringParams setting;
@@ -268,9 +271,11 @@ void main()
 	setting.earthRadius = 6360000.0;
 	setting.earthAtmTopRadius = 6420000.0;
 	setting.earthCenter = float3(0, -setting.earthRadius, 0);
+
+	bool drawSun = (uvToEquirectMode == 0.0);
 	
     float3 eye = float3(0,1000.0,0);
-   	float4 sky = ComputeSkyInscattering(setting, eye, V, L);
+   	float4 sky = ComputeSkyInscattering(setting, eye, V, L, drawSun);
     
 	shader_fragColor = float4(sky.rgb, 1.0);
 	shader_fragEmissive = 1.0;

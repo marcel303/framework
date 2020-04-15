@@ -116,8 +116,8 @@ int main(int argc, char * argv[])
 	shadowMapDrawer.enableColorShadows = false;
 	shadowMapDrawer.shadowMapFilter = kShadowMapFilter_PercentageCloser_3x3;
 	
-	ColorTarget skyTarget;
-	skyTarget.init(64, 32, SURFACE_RGBA16F, colorBlackTranslucent);
+	Surface skyTarget;
+	skyTarget.init(128, 64, SURFACE_RGBA16F, false, true);
 	
 	for (;;)
 	{
@@ -176,11 +176,13 @@ int main(int argc, char * argv[])
 		//const Vec3 sunPosition = camera.position + Vec3(0, 20, 20);
 		const Vec3 sunDirection = (camera.position - sunPosition).CalcNormalized();
 		
-		pushRenderPass(&skyTarget, true, nullptr, false, "Sky (equirect)");
+		pushSurface(&skyTarget, true);
 		{
 			drawSky(Vec3(), sunDirection, true);
 		}
-		popRenderPass();
+		popSurface();
+		
+		skyTarget.gaussianBlur(10.f, 10.f);
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -308,6 +310,10 @@ int main(int argc, char * argv[])
 					int nextTextureUnit = 0;
 					helper.setShaderData(shader, nextTextureUnit);
 					shadowMapDrawer.setShaderData(shader, nextTextureUnit, camera.getViewMatrix());
+				
+				// todo : make IBL part of the forward lighting helper
+					shader.setTexture("ibl", nextTextureUnit++, skyTarget.getTexture(), true, false);
+					shader.setImmediateMatrix4x4("viewToWorld", camera.getViewMatrix().CalcInv().m_v);
 					
 					gxPushMatrix();
 					{
@@ -322,7 +328,7 @@ int main(int argc, char * argv[])
 					#endif
 					}
 					gxPopMatrix();
-				
+					
 					if (showSolids)
 					{
 						beginCubeBatch();
@@ -365,7 +371,17 @@ int main(int argc, char * argv[])
 				{
 					if (skyEnabled)
 					{
+					#if 1
 						drawSky(camera.position, sunDirection, false);
+					#else
+						// draw the sky using the IBL texture we generated for it
+						Shader shader("equirect-sky");
+						setShader(shader);
+						shader.setTexture("source", 0, skyTarget.getTexture(), true, false);
+						shader.setImmediate("viewOrigin", camera.position[0], camera.position[1], camera.position[2]);
+						fillCube(Vec3(), Vec3(40.f));
+						clearShader();
+					#endif
 					
 						//setColor(colorYellow);
 						//fillCube(sunPosition, Vec3(.4f, .4f, .4f));
@@ -576,7 +592,7 @@ int main(int argc, char * argv[])
 			
 			if (keyboard.isDown(SDLK_3))
 			{
-				gxSetTexture(skyTarget.getTextureId());
+				gxSetTexture(skyTarget.getTexture());
 				setColor(colorWhite);
 				drawRect(0, 0, skyTarget.getWidth(), skyTarget.getHeight());
 				gxSetTexture(0);
@@ -597,9 +613,12 @@ int main(int argc, char * argv[])
 	return 0;
 }
 
+// todo : create dedicated functions for drawing IBL texture
+
 static void drawSky(Vec3Arg viewOrigin, Vec3Arg sunDirection, const bool equirectMode)
 {
 	pushBlend(BLEND_OPAQUE);
+	pushDepthWrite(false);
 	{
 		const Vec3 lightPosition = viewOrigin;
 		const Vec3 lightDirection = sunDirection;
@@ -642,5 +661,6 @@ static void drawSky(Vec3Arg viewOrigin, Vec3Arg sunDirection, const bool equirec
 		}
 		clearShader();
 	}
+	popDepthWrite();
 	popBlend();
 }

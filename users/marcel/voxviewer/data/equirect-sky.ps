@@ -21,7 +21,7 @@ void main()
 
 	vec3 color = texture(source, uv).rgb;
 
-	color = pow(color, vec3(2.2));
+	//color = pow(color, vec3(2.2));
 	//color = srgbToLinear(color);
 
 	shader_fragColor = vec4(color, 1.0);
