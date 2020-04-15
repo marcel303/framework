@@ -1,4 +1,5 @@
 app marcel-phonograph1
 	depend_library framework
+	depend_library renderOne
 	add_files main.cpp
 	#resource_path data
