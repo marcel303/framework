@@ -217,12 +217,12 @@ namespace rOne
 			}
 			else
 			{
-				if (renderOptions.useDefaultLight)
+				if (renderOptions.deferredLighting.useDefaultLight)
 				{
 					g_lightDrawer.drawDeferredDirectionalLight(
-						renderOptions.defaultLightDirection,
-						renderOptions.defaultLightColorTop,
-						renderOptions.defaultLightColorBottom,
+						renderOptions.deferredLighting.defaultLightDirection,
+						renderOptions.deferredLighting.defaultLightColorTop,
+						renderOptions.deferredLighting.defaultLightColorBottom,
 						1.f);
 				}
 				

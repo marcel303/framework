@@ -66,16 +66,27 @@ namespace rOne
 	{
 		RenderMode renderMode = kRenderMode_Flat;
 		
+		// render pass enables
+		
 		bool enableOpaquePass = true;
 		bool drawNormals = false;
 		
 		bool enableBackgroundPass = true;
 		bool enableTranslucentPass = true;
 		
-		Vec3 defaultLightDirection = Vec3(1, -4, 1).CalcNormalized();
-		Vec3 defaultLightColorTop = Vec3(1.f, 1.f, 1.f);
-		Vec3 defaultLightColorBottom = Vec3(.1f, .1f, .1f);
-		bool useDefaultLight = true; // when true and no light drawing function is set, the renderer will use a default directional light
+		// deferred shading
+		
+		struct DeferredLighting
+		{
+			bool enableStencilVolumes = true;
+
+			bool useDefaultLight = true; // when true and no light drawing function is set, the renderer will use a default directional light
+			Vec3 defaultLightDirection = Vec3(1, -4, 1).CalcNormalized();
+			Vec3 defaultLightColorTop = Vec3(1.f, 1.f, 1.f);
+			Vec3 defaultLightColorBottom = Vec3(.1f, .1f, .1f);
+			
+			static void reflect(TypeDB & typeDB);
+		} deferredLighting;
 		
 		// stage : lighting
 		
@@ -132,7 +143,8 @@ namespace rOne
 		{
 			bool enabled = false;
 			float strength = 1.f;
-			// todo : reflection
+			
+			static void reflect(TypeDB & typeDB);
 		} chromaticAberration;
 		
 		struct Bloom
@@ -158,6 +170,8 @@ namespace rOne
 			float decay = .8f;
 			float strength = 1.f;
 			float strengthMultiplier = 1.f;
+			
+			static void reflect(TypeDB & typeDB);
 		} lightScatter;
 		
 		// stage : ? post-opaque 'overlay' or decal .. ? (examples: depth silhuoette, decals, depth-masking effects)
@@ -170,15 +184,6 @@ namespace rOne
 
 			static void reflect(TypeDB & typeDB);
 		} depthSilhouette;
-		
-		// deferred shading
-	// todo : this is not a post-effect, so move it separate from the effect options
-		struct DeferredLighting
-		{
-			bool enableStencilVolumes = true;
-
-			static void reflect(TypeDB & typeDB);
-		} deferredLighting;
 
 		// stage : tone mapping
 		
@@ -208,6 +213,8 @@ namespace rOne
 
 			static void reflect(TypeDB & typeDB);
 		} fxaa;
+		
+		// stereo rendering
 		
 		struct Anaglyphic
 		{

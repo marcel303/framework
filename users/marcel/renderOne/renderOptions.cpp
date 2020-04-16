@@ -3,6 +3,16 @@
 
 namespace rOne
 {
+	void RenderOptions::DeferredLighting::reflect(TypeDB & typeDB)
+	{
+		typeDB.addStructured<RenderOptions::DeferredLighting>("RenderOptions::DeferredLighting")
+			.add("defaultLightColorBottom", &RenderOptions::DeferredLighting::useDefaultLight)
+			.add("defaultLightDirection", &RenderOptions::DeferredLighting::defaultLightDirection)
+			.add("defaultLightColorTop", &RenderOptions::DeferredLighting::defaultLightColorTop)
+			.add("defaultLightColorBottom", &RenderOptions::DeferredLighting::defaultLightColorBottom)
+			.add("enableStencilVolumes", &RenderOptions::DeferredLighting::enableStencilVolumes);
+	}
+	
 	void RenderOptions::ScreenSpaceAmbientOcclusion::reflect(TypeDB & typeDB)
 	{
 		typeDB.addStructured<RenderOptions::ScreenSpaceAmbientOcclusion>("RenderOptions::ScreenSpaceAmbientOcclusion")
@@ -38,6 +48,13 @@ namespace rOne
 			.add("strength", &RenderOptions::DepthOfField::strength)
 			.add("focusDistance", &RenderOptions::DepthOfField::focusDistance);
 	}
+	
+	void RenderOptions::ChromaticAberration::reflect(TypeDB & typeDB)
+	{
+		typeDB.addStructured<RenderOptions::ChromaticAberration>("RenderOptions::ChromaticAberration")
+			.add("enabled", &RenderOptions::ChromaticAberration::enabled)
+			.add("strength", &RenderOptions::ChromaticAberration::strength);
+	}
 
 	void RenderOptions::Bloom::reflect(TypeDB & typeDB)
 	{
@@ -48,6 +65,16 @@ namespace rOne
 			.add("brightPassValue", &RenderOptions::Bloom::brightPassValue)
 			.add("dropTopLevelImage", &RenderOptions::Bloom::dropTopLevelImage);
 	}
+	
+	void RenderOptions::LightScatter::reflect(TypeDB & typeDB)
+	{
+		typeDB.addStructured<RenderOptions::LightScatter>("RenderOptions::LightScatter")
+			.add("enabled", &RenderOptions::LightScatter::enabled)
+			.add("origin", &RenderOptions::LightScatter::origin)
+			.add("numSamples", &RenderOptions::LightScatter::numSamples)
+			.add("decay", &RenderOptions::LightScatter::decay)
+			.add("strength", &RenderOptions::LightScatter::strength);
+	}
 
 	void RenderOptions::DepthSilhouette::reflect(TypeDB & typeDB)
 	{
@@ -55,12 +82,6 @@ namespace rOne
 			.add("enabled", &RenderOptions::DepthSilhouette::enabled)
 			.add("strength", &RenderOptions::DepthSilhouette::strength)
 			.add("color", &RenderOptions::DepthSilhouette::color);
-	}
-
-	void RenderOptions::DeferredLighting::reflect(TypeDB & typeDB)
-	{
-		typeDB.addStructured<RenderOptions::DeferredLighting>("RenderOptions::DeferredLighting")
-			.add("enableStencilVolumes", &RenderOptions::DeferredLighting::enableStencilVolumes);
 	}
 
 	void RenderOptions::ToneMapping::reflect(TypeDB & typeDB)
@@ -101,13 +122,17 @@ namespace rOne
 			.add("uncharted2", kToneMap_Uncharted2)
 			.add("aces", kToneMap_Aces);
 		
+		DeferredLighting::reflect(typeDB);
+		
+		ScreenSpaceAmbientOcclusion::reflect(typeDB);
 		Fog::reflect(typeDB);
 		MotionBlur::reflect(typeDB);
 		SimpleScreenSpaceRefraction::reflect(typeDB);
 		DepthOfField::reflect(typeDB);
+		ChromaticAberration::reflect(typeDB);
 		Bloom::reflect(typeDB);
+		LightScatter::reflect(typeDB);
 		DepthSilhouette::reflect(typeDB);
-		DeferredLighting::reflect(typeDB);
 		ToneMapping::reflect(typeDB);
 		ColorGrading::reflect(typeDB);
 		Fxaa::reflect(typeDB);
@@ -115,23 +140,38 @@ namespace rOne
 		
 		typeDB.addStructured<RenderOptions>("RenderOptions")
 			.add("renderMode", &RenderOptions::renderMode)
+			// render pass enables
 			.add("enableOpaquePass", &RenderOptions::enableOpaquePass)
 			.add("drawNormals", &RenderOptions::drawNormals)
 			.add("enableTranslucentPass", &RenderOptions::enableTranslucentPass)
+			.add("enableBackgroundPass", &RenderOptions::enableBackgroundPass)
+			// deferred shading
+			.add("deferredLighting", &RenderOptions::deferredLighting)
+			// stage : lighting
+			.add("screenSpaceAmbientOcclusion", &RenderOptions::screenSpaceAmbientOcclusion)
 			.add("fog", &RenderOptions::fog)
 			.add("enableScreenSpaceReflections", &RenderOptions::enableScreenSpaceReflections)
+			// stage : camera-exposure
 			.add("motionBlur", &RenderOptions::motionBlur)
 			.add("simpleScreenSpaceRefraction", &RenderOptions::simpleScreenSpaceRefraction)
+			// stage : camera-lense
 			.add("depthOfField", &RenderOptions::depthOfField)
+			.add("chromaticAberration", &RenderOptions::chromaticAberration)
 			.add("bloom", &RenderOptions::bloom)
+			.add("lightScatter", &RenderOptions::lightScatter)
+			// stage : ?
 			.add("depthSilhouette", &RenderOptions::depthSilhouette)
-			.add("deferredLighting", &RenderOptions::deferredLighting)
+			// stage : tone mapping
 			.add("linearColorSpace", &RenderOptions::linearColorSpace)
 			.add("toneMapping", &RenderOptions::toneMapping)
+			// stage : sRGB color-space operations on the near-final image
 			.add("colorGrading", &RenderOptions::colorGrading)
 			.add("fxaa", &RenderOptions::fxaa)
+			// stereo rendering
 			.add("anaglyphic", &RenderOptions::anaglyphic)
+			// debug
 			.add("debugRenderTargets", &RenderOptions::debugRenderTargets)
+			// globals
 			.add("backgroundColor", &RenderOptions::backgroundColor);
 	}
 }
