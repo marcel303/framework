@@ -77,6 +77,8 @@ namespace rOne
 		Vec3 defaultLightColorBottom = Vec3(.1f, .1f, .1f);
 		bool useDefaultLight = true; // when true and no light drawing function is set, the renderer will use a default directional light
 		
+		// stage : lighting
+		
 		struct ScreenSpaceAmbientOcclusion
 		{
 			bool enabled = false;
@@ -84,6 +86,8 @@ namespace rOne
 			
 			static void reflect(TypeDB & typeDB);
 		} screenSpaceAmbientOcclusion;
+		
+		// todo : add height fog effect or integrate it into the distance fog effect
 		
 		struct Fog
 		{
@@ -94,6 +98,8 @@ namespace rOne
 		} fog;
 		
 		bool enableScreenSpaceReflections = false;
+		
+		// stage : camera-exposure
 		
 		struct MotionBlur
 		{
@@ -111,6 +117,8 @@ namespace rOne
 			static void reflect(TypeDB & typeDB);
 		} simpleScreenSpaceRefraction;
 		
+		// stage : camera-lense
+		
 		struct DepthOfField
 		{
 			bool enabled = false;
@@ -119,6 +127,13 @@ namespace rOne
 
 			static void reflect(TypeDB & typeDB);
 		} depthOfField;
+		
+		struct ChromaticAberration
+		{
+			bool enabled = false;
+			float strength = 1.f;
+			// todo : reflection
+		} chromaticAberration;
 		
 		struct Bloom
 		{
@@ -133,6 +148,8 @@ namespace rOne
 			static void reflect(TypeDB & typeDB);
 		} bloom;
 		
+		// todo : light scatter should be before lense effects, as it approximates atmospheric lighting
+		
 		struct LightScatter
 		{
 			bool enabled = false;
@@ -143,6 +160,8 @@ namespace rOne
 			float strengthMultiplier = 1.f;
 		} lightScatter;
 		
+		// stage : ? post-opaque 'overlay' or decal .. ? (examples: depth silhuoette, decals, depth-masking effects)
+		
 		struct DepthSilhouette
 		{
 			bool enabled = false;
@@ -152,6 +171,8 @@ namespace rOne
 			static void reflect(TypeDB & typeDB);
 		} depthSilhouette;
 		
+		// deferred shading
+	// todo : this is not a post-effect, so move it separate from the effect options
 		struct DeferredLighting
 		{
 			bool enableStencilVolumes = true;
@@ -159,6 +180,8 @@ namespace rOne
 			static void reflect(TypeDB & typeDB);
 		} deferredLighting;
 
+		// stage : tone mapping
+		
 		bool linearColorSpace = false;
 		
 		struct ToneMapping
@@ -169,6 +192,8 @@ namespace rOne
 
 			static void reflect(TypeDB & typeDB);
 		} toneMapping;
+		
+		// stage : sRGB color-space operations on the near-final image
 		
 		struct ColorGrading
 		{

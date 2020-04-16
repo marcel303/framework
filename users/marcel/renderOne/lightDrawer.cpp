@@ -1,24 +1,13 @@
 #include "framework.h"
 #include "lightDrawer.h"
 #include "lightVolumeBuilder.h" // computeSpotLightAabb
+#include "srgbFunctions.h"
 
 #define ENABLE_LIGHT_VOLUME_STENCIL true
 
 namespace rOne
 {
 	LightDrawer g_lightDrawer;
-
-	//
-
-	static const float kSrgbToLinear = 2.2f;
-
-	static Vec3 srgbToLinear(const Vec3 & rgb)
-	{
-		return Vec3(
-			powf(rgb[0], kSrgbToLinear),
-			powf(rgb[1], kSrgbToLinear),
-			powf(rgb[2], kSrgbToLinear));
-	}
 
 	//
 

@@ -2,6 +2,7 @@
 #include "gx_render.h"
 #include "lightDrawer.h"
 #include "renderer.h"
+#include "srgbFunctions.h"
 
 #define ENABLE_FULLSCREEN_QUAD_OPTIMIZE 1
 
@@ -56,16 +57,6 @@
 
 namespace rOne
 {
-	static const float kSrgbToLinear = 2.2f;
-
-	static Vec3 srgbToLinear(const Vec3 & rgb)
-	{
-		return Vec3(
-			powf(rgb[0], kSrgbToLinear),
-			powf(rgb[1], kSrgbToLinear),
-			powf(rgb[2], kSrgbToLinear));
-	}
-	
 	static void drawFullscreenQuad(const int viewSx, const int viewSy)
 	{
 	#if ENABLE_FULLSCREEN_QUAD_OPTIMIZE
@@ -613,6 +604,37 @@ namespace rOne
 			
 			composite_idx = next_composite_idx;
 		#endif
+		}
+		
+		if (renderOptions.chromaticAberration.enabled)
+		{
+			const int next_composite_idx = 1 - composite_idx;
+			
+			pushRenderPass(composite[next_composite_idx], true, nullptr, false, "Chromatic aberration");
+			{
+				projectScreen2d();
+				
+				pushBlend(BLEND_OPAQUE);
+				{
+					Shader shader("renderOne/postprocess/chromatic-aberration");
+					setShader(shader);
+					{
+						static int frameIndex = 0; // todo : make a member of a future post-effect object
+						
+						shader.setTexture("source", 0, composite[composite_idx]->getTextureId(), true, true);
+						shader.setImmediate("strength", renderOptions.chromaticAberration.strength / 20.f); // 100% = 5% image distortion
+						shader.setImmediate("time", frameIndex);
+						drawFullscreenQuad(viewportSx, viewportSy);
+						
+						++frameIndex;
+					}
+					clearShader();
+				}
+				popBlend();
+			}
+			popRenderPass();
+			
+			composite_idx = next_composite_idx;
 		}
 		
 		// apply bloom
