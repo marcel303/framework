@@ -58,6 +58,8 @@ namespace rOne
 		const float intensity,
 		const float userData)
 	{
+		AssertMsg(fabsf(direction.CalcSize() - 1.f) <= 1e-3f, "direction vector must be normalized", 0);
+		
 		Light light;
 		light.type = kLightType_Spot;
 		light.position = position;
@@ -77,6 +79,8 @@ namespace rOne
 		const float intensity,
 		const float userData)
 	{
+		AssertMsg(fabsf(direction.CalcSize() - 1.f) <= 1e-3f, "direction vector must be normalized", 0);
+		
 		Light light;
 		light.type = kLightType_Directional;
 		light.direction = direction;

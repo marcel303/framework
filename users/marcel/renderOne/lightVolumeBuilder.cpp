@@ -1,3 +1,4 @@
+#include "Debugging.h"
 #include "lightVolumeBuilder.h"
 #include <assert.h>
 #include <math.h>
@@ -38,6 +39,8 @@ namespace rOne
 
 	void LightVolumeBuilder::addSpotLight(const int id, Vec3Arg position, Vec3Arg direction, const float angle, const float farDistance)
 	{
+		AssertMsg(fabsf(direction.CalcSize() - 1.f) <= 1e-3f, "direction vector must be normalized", 0);
+		
 		Light light;
 		light.id = id;
 		light.type = kLightType_Spot;
@@ -363,6 +366,8 @@ namespace rOne
 		Vec3 & out_min,
 		Vec3 & out_max)
 	{
+		AssertMsg(fabsf(direction.CalcSize() - 1.f) <= 1e-3f, "direction vector must be normalized", 0);
+		
 		/*
 		steps to compute aabb:
 		- compute the four points enclosing the circle at the base of the cone

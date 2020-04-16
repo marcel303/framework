@@ -77,6 +77,8 @@ namespace rOne
 		const Vec3 & in_lightColor2,
 		const float lightIntensity) const
 	{
+		AssertMsg(fabsf(lightDirection.CalcSize() - 1.f) <= 1e-3f, "direction vector must be normalized", 0);
+		
 		const Vec3 lightDir_view = -drawDeferredInfo.worldToView.Mul3(lightDirection).CalcNormalized();
 		const Vec3 lightColor1 = srgbToLinear(in_lightColor1) * lightIntensity;
 		const Vec3 lightColor2 = srgbToLinear(in_lightColor2) * lightIntensity;
@@ -209,6 +211,8 @@ namespace rOne
 		const Vec3 & in_lightColor,
 		const float lightIntensity) const
 	{
+		AssertMsg(fabsf(lightDirection.CalcSize() - 1.f) <= 1e-3f, "direction vector must be normalized", 0);
+		
 	#if ENABLE_LIGHT_VOLUME_STENCIL
 		if (drawDeferredInfo.enableStencilVolumes)
 		{
