@@ -4,7 +4,7 @@
 #include "Types.h"
 
 #define DDSD_CAPS        0x1 // required
-#define DDSD_HEIGHT      0x2 //required
+#define DDSD_HEIGHT      0x2 // required
 #define DDSD_WIDTH       0x4 // required
 #define DDSD_PITCH       0x8
 #define DDSD_PIXELFORMAT 0x1000 // required
@@ -19,9 +19,17 @@
 #define DDPF_YUV         0x200
 #define DDPF_LUMINANCE   0x20000
 
-#define DDSCAPS_COMPLEX 0x8
-#define DDSCAPS_MIPMAP  0x400000
-#define DDSCAPS_TEXTURE 0x1000 // required
+#define DDSCAPS_COMPLEX 0x00000008
+#define DDSCAPS_MIPMAP  0x00400000
+#define DDSCAPS_TEXTURE 0x00001000 // required
+
+#define DDSCAPS2_CUBEMAP           0x00000200
+#define DDSCAPS2_CUBEMAP_POSITIVEX 0x00000400
+#define DDSCAPS2_CUBEMAP_NEGATIVEX 0x00000800
+#define DDSCAPS2_CUBEMAP_POSITIVEY 0x00001000
+#define DDSCAPS2_CUBEMAP_NEGATIVEY 0x00002000
+#define DDSCAPS2_CUBEMAP_POSITIVEZ 0x00004000
+#define DDSCAPS2_CUBEMAP_NEGATIVEZ 0x00008000
 
 class DDS_PIXELFORMAT 
 {
