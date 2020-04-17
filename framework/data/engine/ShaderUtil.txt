@@ -135,7 +135,7 @@ vec3 makeTaps(vec3 v, float min, float max, float numTaps)
 		makeTaps(v.z, min, max, numTaps));
 }
 
-vec3 srgbToLinear(vec3 rgb)
+vec3 srgbToLinear_fast(vec3 rgb)
 {
 	return vec3(
 		pow(rgb.r, kSrgbToLinear),
@@ -143,12 +143,44 @@ vec3 srgbToLinear(vec3 rgb)
 		pow(rgb.b, kSrgbToLinear));
 }
 
-vec3 linearToSrgb(vec3 rgb)
+vec3 linearToSrgb_fast(vec3 rgb)
 {
 	return vec3(
 		pow(rgb.r, kLinearToSrgb),
 		pow(rgb.g, kLinearToSrgb),
 		pow(rgb.b, kLinearToSrgb));
+}
+
+float srgbToLinear_scalar(float c)
+{
+    return
+    	c <= 0.04045
+    	? c / 12.92
+    	: pow((c + 0.055) / 1.055, 2.4);
+}
+
+vec3 srgbToLinear(vec3 c)
+{
+    return vec3(
+    	srgbToLinear_scalar(c.r),
+    	srgbToLinear_scalar(c.g),
+    	srgbToLinear_scalar(c.b));
+}
+
+float linearToSrgb_scalar(float c)
+{
+    return
+    	c <= 0.0031308
+    	? c * 12.92
+    	: 1.055 * pow(c, 0.41666) - 0.055;
+}
+
+vec3 linearToSrgb(vec3 c)
+{
+    return vec3(
+    	linearToSrgb_scalar(c.r),
+    	linearToSrgb_scalar(c.g),
+    	linearToSrgb_scalar(c.b));
 }
 
 vec3 lerpSrgbLinear(vec3 a, vec3 b, float t)
@@ -294,6 +326,14 @@ vec3 hueShift(vec3 rgb, float amount)
 	hsl.x += amount;
 
 	return colorFromHSL(hsl);
+}
+
+float rand01ScreenSpace(vec2 sampleCoord)
+{
+	// note: based on 'Iestyn's RGB dither (7 asm instructions) from Portal 2 X360, slightly modified for VR'
+    float vDither = dot( vec2( 171.0, 231.0 ), sampleCoord );
+    vDither = fract( vDither / 103.0 );
+    return vDither;
 }
 
 #if !defined(__METAL_VERSION__)
