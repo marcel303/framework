@@ -53,7 +53,7 @@ namespace rOne
 		light.direction = direction;
 		light.attenuationBegin = 0.f;
 		light.attenuationEnd = farDistance;
-		light.spotAngle = cosf(angle / 2.f);
+		light.spotAngle = angle;
 		light.color = srgbToLinear(color) * intensity;
 		light.userData = userData;
 
@@ -131,7 +131,7 @@ namespace rOne
 				
 				params[i * 4 + 3][0] = lights[i].attenuationBegin;
 				params[i * 4 + 3][1] = lights[i].attenuationEnd;
-				params[i * 4 + 3][2] = lights[i].spotAngle;
+				params[i * 4 + 3][2] = cosf(lights[i].spotAngle / 2.f);
 				params[i * 4 + 3][3] = lights[i].userData;
 			}
 

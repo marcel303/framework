@@ -383,19 +383,25 @@ namespace rOne
 
 		// determine the most index of the most prominent axis for the light direction
 
-		int maxAxis = 0;
-		if (fabsf(direction[1]) > fabsf(direction[maxAxis]))
-			maxAxis = 1;
-		if (fabsf(direction[2]) > fabsf(direction[maxAxis]))
-			maxAxis = 2;
-
-		const int minorAxis = (maxAxis + 1) % 3;
+		int minAxis = 0;
+		if (fabsf(direction[1]) < fabsf(direction[minAxis]))
+			minAxis = 1;
+		if (fabsf(direction[2]) < fabsf(direction[minAxis]))
+			minAxis = 2;
 
 		Vec3 anotherVec;
-		anotherVec[minorAxis] = 1;
-		Vec3 tan1 = (direction % anotherVec).CalcNormalized();
-		Vec3 tan2 = (direction % tan1).CalcNormalized();
+		anotherVec[minAxis] = 1;
+		
+		const Vec3 tan1 = (anotherVec - direction * (direction * anotherVec)).CalcNormalized();
+		const Vec3 tan2 = (direction % tan1).CalcNormalized();
 
+	#if defined(DEBUG)
+		const float t1 = direction * tan1;
+		const float t2 = direction * tan2;
+		assert(fabsf(t1) <= 1e-3f);
+		assert(fabsf(t2) <= 1e-3f);
+	#endif
+	
 		const float alpha = tanf(angle/2.f);
 		const float radius = alpha * farDistance;
 
