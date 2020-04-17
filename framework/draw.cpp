@@ -62,7 +62,7 @@ void drawRect(float x1, float y1, float x2, float y2)
 {
 	gxBegin(GX_QUADS);
 	{
-		emitNormal(0, 2);
+		emitNormal(0, 1);
 		
 		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
@@ -76,7 +76,7 @@ void drawRectLine(float x1, float y1, float x2, float y2)
 {
 	gxBegin(GX_LINE_LOOP);
 	{
-		emitNormal(0, 2);
+		emitNormal(0, 1);
 		
 		gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
 		gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
@@ -90,7 +90,7 @@ void drawCircle(float x, float y, float radius, int numSegments)
 {
 	gxBegin(GX_LINE_LOOP);
 	{
-		emitNormal(0, 2);
+		emitNormal(0, 1);
 		
 		for (int i = 0; i < numSegments; ++i)
 		{
@@ -108,7 +108,7 @@ void fillCircle(float x, float y, float radius, int numSegments)
 {
 	gxBegin(GX_TRIANGLES);
 	{
-		emitNormal(0, 2);
+		emitNormal(0, 1);
 		
 		for (int i = 0; i < numSegments; ++i)
 		{
