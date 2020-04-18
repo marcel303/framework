@@ -24,6 +24,14 @@ area lights development stages:
  
 */
 
+enum AreaLightType
+{
+	kAreaLightType_Box,
+	kAreaLightType_Sphere,
+	kAreaLightType_Rect,
+	kAreaLightType_Circle
+};
+
 int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
@@ -35,6 +43,8 @@ int main(int argc, char * argv[])
 
 	Camera3d camera;
 
+	AreaLightType areaLightType = kAreaLightType_Box;
+	
 	for (;;)
 	{
 		framework.process();
@@ -43,6 +53,15 @@ int main(int argc, char * argv[])
 			break;
 
 		camera.tick(framework.timeStep, true);
+		
+		if (keyboard.wentDown(SDLK_b))
+			areaLightType = kAreaLightType_Box;
+		if (keyboard.wentDown(SDLK_s))
+			areaLightType = kAreaLightType_Sphere;
+		if (keyboard.wentDown(SDLK_r))
+			areaLightType = kAreaLightType_Rect;
+		if (keyboard.wentDown(SDLK_c))
+			areaLightType = kAreaLightType_Circle;
 
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -56,8 +75,12 @@ int main(int argc, char * argv[])
 						.Translate(0, 2 + sinf(framework.time), 0)
 						.Scale(1.f, 1.f + keyboard.isDown(SDLK_2) * sinf(framework.time * 10.f), 1.f)
 						.Rotate(keyboard.isDown(SDLK_1) * framework.time * 20.f, Vec3(0, 1, 3))
-						.Rotate(framework.time, Vec3(1, 2, 3).CalcNormalized())
-						.Scale(.1f, 1, 1);
+						.Rotate(keyboard.isDown(SDLK_4) * framework.time * 1.f, Vec3(0, 1, 3))
+						//.Rotate(framework.time, Vec3(1, 2, 3).CalcNormalized())
+						.Rotate(float(M_PI/2.0), Vec3(1, 0, 0))
+						.Scale(1.f, 1.f + keyboard.isDown(SDLK_3) * sinf(framework.time * 3.f) * .8f, 1.f)
+						//.Scale(.1f, 1, 1);
+						.Scale(1, 1, 1);
 				const Mat4x4 worldToLight = lightToWorld.CalcInv();
 
 				Shader shader("400-areaLight");
@@ -98,6 +121,8 @@ int main(int argc, char * argv[])
 						shader.setImmediateMatrix4x4("lightToWorld_packed", lightToWorld_packed.m_v);
 					}
 					
+					shader.setImmediate("areaLightType", (float)areaLightType);
+					
 					static int alternate = 0;
 					shader.setImmediate("alternate", alternate);
 					alternate = (alternate + 1) % 3;
@@ -107,7 +132,7 @@ int main(int argc, char * argv[])
 					drawGrid3d(1, 1, 0, 2);
 					gxPopMatrix();
 					
-				#if false
+				#if true
 					for (int i = 0; i < 100; ++i)
 					{
 						const float x = sinf(i) * 3.f;
@@ -119,7 +144,13 @@ int main(int argc, char * argv[])
 					gxPushMatrix();
 					gxMultMatrixf(lightToWorld.m_v);
 					pushLineSmooth(true);
-					lineCube(Vec3(), Vec3(1.f));
+					{
+					#if 1
+						lineCube(Vec3(), Vec3(1.f)); // 3d area lights (box and sphere area lights)
+					#else
+						drawRect(-1, -1, +1, +1); // 2d area lights (rect and circle area lights)
+					#endif
+					}
 					popLineSmooth();
 					gxPopMatrix();
 				}

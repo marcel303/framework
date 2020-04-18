@@ -16,6 +16,15 @@ uniform mat4x4 lightToWorld_packed;
 #define lightToWorld_scale vec3(lightToWorld_packed[0][3], lightToWorld_packed[1][3], lightToWorld_packed[2][3])
 #endif
 
+#define kAreaLightType_Box    0
+#define kAreaLightType_Sphere 1
+#define kAreaLightType_Rect   2
+#define kAreaLightType_Circle 3
+
+#define ENABLE_DOT 1
+
+uniform float areaLightType;
+
 uniform float alternate;
 
 shader_in vec3 v_position;
@@ -43,6 +52,28 @@ vec3 nearestPointOnSphere(vec3 surfacePosition)
 	return movement;
 }
 
+vec3 nearestPointOnRect(vec3 surfacePosition)
+{
+	vec2 lightToSurface = surfacePosition.xy;
+
+	vec2 movement = max(vec2(-1.0, -1.0), min(vec2(+1.0, +1.0), lightToSurface));
+
+	return vec3(movement, 0.0);
+}
+
+vec3 nearestPointOnCircle(vec3 surfacePosition)
+{
+	vec2 lightToSurface = surfacePosition.xy;
+	
+	float distance = length(lightToSurface);
+	
+	float movementAmount = clamp(distance, 0.0, 1.0);
+	
+	vec2 movement = lightToSurface / distance * movementAmount;
+
+	return vec3(movement, 0.0);
+}
+
 void main()
 {
 	vec3 lightPosition = vec3(0.0);
@@ -62,8 +93,16 @@ void main()
 		position_light /= lightToWorld_scale;
 	}
 
-	vec3 nearestPosition = nearestPointOnBox(position_light);
-	//vec3 nearestPosition = nearestPointOnSphere(position_light);
+	vec3 nearestPosition;
+
+	if (areaLightType == kAreaLightType_Box)
+		nearestPosition = nearestPointOnBox(position_light);
+	else if (areaLightType == kAreaLightType_Sphere)
+		nearestPosition = nearestPointOnSphere(position_light);
+	else if (areaLightType == kAreaLightType_Rect)
+		nearestPosition = nearestPointOnRect(position_light);
+	else if (areaLightType == kAreaLightType_Circle)
+		nearestPosition = nearestPointOnCircle(position_light);
 
 	float attenuation;
 
@@ -94,11 +133,13 @@ void main()
 
 		attenuation = 1.0 / dot(surfaceToLight, surfaceToLight);
 
+	#if ENABLE_DOT
 		vec3 surfaceToLightDir = normalize(surfaceToLight);
 		vec3 normal = (worldToLight * vec4(v_normal, 0.0)).xyz;
 		normal *= scaling;
 		normal = normalize(normal);
 		attenuation *= max(0.001, dot(normal, surfaceToLightDir));
+	#endif
 	}
 	else if (alternate == 1.0)
 	{
@@ -111,9 +152,11 @@ void main()
 
 		attenuation = 1.0 / dot(surfaceToLight, surfaceToLight);
 
+	#if ENABLE_DOT
 		vec3 surfaceToLightDir = normalize(surfaceToLight);
 		vec3 normal = normalize(v_normal);
 		attenuation *= max(0.001, dot(normal, surfaceToLightDir));
+	#endif
 	}
 	else
 	{
@@ -125,15 +168,22 @@ void main()
 
 		attenuation = 1.0 / dot(surfaceToLight, surfaceToLight);
 
+	#if ENABLE_DOT
 		vec3 surfaceToLightDir = normalize(surfaceToLight);
 		vec3 normal = normalize(v_normal);
 		attenuation *= max(0.001, dot(normal, surfaceToLightDir));
+	#endif
 	}
+
+#if 0
+	attenuation = pow(attenuation * 2.0, 2.0);
+#endif
 
 	//vec3 color = srgbToLinear(vec3(0.25, 0.5, 1.0)) * 0.02;
 	//vec3 color = srgbToLinear(vec3(0.25, 0.5, 1.0)) * 0.5;
 	vec3 color = srgbToLinear(vec3(0.25, 0.5, 1.0)) * 1.0;
 	color *= attenuation;
+
 	color = linearToSrgb(color);
 
 	shader_fragColor = vec4(color, 1.0);
