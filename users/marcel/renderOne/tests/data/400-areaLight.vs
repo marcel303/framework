@@ -12,6 +12,6 @@ void main()
 
 	gl_Position = objectToProjection(position);
 
-	v_position = (viewToWorld * objectToView(position)).xyz;
-	v_normal = normal;
+	v_position = objectToView(position).xyz;
+	v_normal = objectToView3(normal);
 }

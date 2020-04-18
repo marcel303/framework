@@ -1,19 +1,20 @@
 include engine/ShaderPS.txt
 include engine/ShaderUtil.txt
 
-uniform mat4x4 worldToLight;
-uniform mat4x4 lightToWorld;
+uniform mat4x4 viewToLight;
+uniform mat4x4 lightToView;
 
 #if 0
-//uniform mat4x4 lightToWorld_rotation;
-//uniform vec3 lightToWorld_translation;
-//uniform vec3 lightToWorld_scale;
+//uniform mat4x4 lightToView_rotation;
+//uniform vec3 lightToView_translation;
+//uniform vec3 lightToView_scale;
 #else
-uniform mat4x4 lightToWorld_packed;
+uniform mat4x4 lightToView_packed;
 
-#define lightToWorld_rotation lightToWorld_packed
-#define lightToWorld_translation lightToWorld_packed[3].xyz
-#define lightToWorld_scale vec3(lightToWorld_packed[0][3], lightToWorld_packed[1][3], lightToWorld_packed[2][3])
+#define lightToView_rotation lightToView_packed
+#define lightToView_translation lightToView_packed[3].xyz
+#define lightToView_scale vec3(lightToView_packed[0][3], lightToView_packed[1][3], lightToView_packed[2][3])
+#define areaLightType lightToView_packed[3][3]
 #endif
 
 #define kAreaLightType_Box    0
@@ -23,7 +24,7 @@ uniform mat4x4 lightToWorld_packed;
 
 #define ENABLE_DOT 1
 
-uniform float areaLightType;
+//uniform float areaLightType;
 
 uniform float alternate;
 
@@ -78,19 +79,19 @@ void main()
 {
 	vec3 lightPosition = vec3(0.0);
 
-	vec3 position_world = v_position;
+	vec3 position_view = v_position;
 	vec3 position_light;
 
 	if (alternate != 1.0)
 	{
-		position_light = (worldToLight * vec4(position_world, 1.0)).xyz;
+		position_light = (viewToLight * vec4(position_view, 1.0)).xyz;
 	}
 	else
 	{
-		position_light = position_world;
-		position_light -= lightToWorld_translation;
-		position_light = (transpose(lightToWorld_rotation) * vec4(position_light, 0.0)).xyz;
-		position_light /= lightToWorld_scale;
+		position_light = position_view;
+		position_light -= lightToView_translation;
+		position_light = (transpose(lightToView_rotation) * vec4(position_light, 0.0)).xyz;
+		position_light /= lightToView_scale;
 	}
 
 	vec3 nearestPosition;
@@ -113,7 +114,7 @@ void main()
 		vec3 surfaceToLight = nearestPosition - position_light;
 
 	// two options for attenuation and normal:
-		// 1. transform light-space position back to view-space (or world-space)
+		// 1. transform light-space position back to view-space
 			// requires extra uniform: mat4x4 light-to-view
 			// requires extra matrix multiply: position back to view-space
 		// 2. perform calculations in light-space, and account for scaling with a separate uniform
@@ -124,9 +125,9 @@ void main()
 		// when rotation and scaling are stored separately, going back to view-space could
 		// be performed using a scaling operation, and multiplication using the ortho-normal inverse of the (unscaled) view-to-light matrix
 
-		float scaling_x = length((lightToWorld * vec4(1, 0, 0, 0)).xyz);
-		float scaling_y = length((lightToWorld * vec4(0, 1, 0, 0)).xyz);
-		float scaling_z = length((lightToWorld * vec4(0, 0, 1, 0)).xyz);
+		float scaling_x = length((lightToView * vec4(1, 0, 0, 0)).xyz);
+		float scaling_y = length((lightToView * vec4(0, 1, 0, 0)).xyz);
+		float scaling_z = length((lightToView * vec4(0, 0, 1, 0)).xyz);
 		vec3 scaling = vec3(scaling_x, scaling_y, scaling_z);
 
 		surfaceToLight *= scaling;
@@ -135,7 +136,7 @@ void main()
 
 	#if ENABLE_DOT
 		vec3 surfaceToLightDir = normalize(surfaceToLight);
-		vec3 normal = (worldToLight * vec4(v_normal, 0.0)).xyz;
+		vec3 normal = (viewToLight * vec4(v_normal, 0.0)).xyz;
 		normal *= scaling;
 		normal = normalize(normal);
 		attenuation *= max(0.001, dot(normal, surfaceToLightDir));
@@ -143,10 +144,10 @@ void main()
 	}
 	else if (alternate == 1.0)
 	{
-		// perform distance attenuation, dot product in world-space, by transforming the closest point back into world-space
+		// perform distance attenuation, dot product in view-space, by transforming the closest point back into view-space
 		// == optimized to use only one mat4x4 shader uniform instead of two ==
 
-		nearestPosition = (lightToWorld_rotation * vec4(nearestPosition * lightToWorld_scale, 0.0)).xyz + lightToWorld_translation;
+		nearestPosition = (lightToView_rotation * vec4(nearestPosition * lightToView_scale, 0.0)).xyz + lightToView_translation;
 
 		vec3 surfaceToLight = nearestPosition - v_position;
 
@@ -160,9 +161,9 @@ void main()
 	}
 	else
 	{
-		// perform distance attenuation, dot product in world-space, by transforming the closest point back into world-space
+		// perform distance attenuation, dot product in view-space, by transforming the closest point back into view-space
 
-		nearestPosition = (lightToWorld * vec4(nearestPosition, 1.0)).xyz;
+		nearestPosition = (lightToView * vec4(nearestPosition, 1.0)).xyz;
 
 		vec3 surfaceToLight = nearestPosition - v_position;
 

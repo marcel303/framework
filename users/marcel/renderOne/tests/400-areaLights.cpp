@@ -81,44 +81,45 @@ int main(int argc, char * argv[])
 						.Scale(1.f, 1.f + keyboard.isDown(SDLK_3) * sinf(framework.time * 3.f) * .8f, 1.f)
 						//.Scale(.1f, 1, 1);
 						.Scale(1, 1, 1);
-				const Mat4x4 worldToLight = lightToWorld.CalcInv();
+				const Mat4x4 lightToView = camera.getViewMatrix() * lightToWorld;
+				const Mat4x4 viewToLight = lightToView.CalcInv();
 
 				Shader shader("400-areaLight");
 				setShader(shader);
 				{
-					shader.setImmediateMatrix4x4("viewToWorld", camera.getWorldMatrix().m_v);
-					shader.setImmediateMatrix4x4("worldToLight", worldToLight.m_v);
-					shader.setImmediateMatrix4x4("lightToWorld", lightToWorld.m_v);
+					shader.setImmediateMatrix4x4("viewToLight", viewToLight.m_v);
+					shader.setImmediateMatrix4x4("lightToView", lightToView.m_v);
 					
 					{
-						const float scaleX = lightToWorld.Mul3(Vec3(1, 0, 0)).CalcSize();
-						const float scaleY = lightToWorld.Mul3(Vec3(0, 1, 0)).CalcSize();
-						const float scaleZ = lightToWorld.Mul3(Vec3(0, 0, 1)).CalcSize();
+						const float scaleX = lightToView.Mul3(Vec3(1, 0, 0)).CalcSize();
+						const float scaleY = lightToView.Mul3(Vec3(0, 1, 0)).CalcSize();
+						const float scaleZ = lightToView.Mul3(Vec3(0, 0, 1)).CalcSize();
 						Mat4x4 rotationMatrix(true);
 						for (int i = 0; i < 3; ++i)
 						{
-							rotationMatrix(0, i) = lightToWorld(0, i) / scaleX;
-							rotationMatrix(1, i) = lightToWorld(1, i) / scaleY;
-							rotationMatrix(2, i) = lightToWorld(2, i) / scaleZ;
+							rotationMatrix(0, i) = lightToView(0, i) / scaleX;
+							rotationMatrix(1, i) = lightToView(1, i) / scaleY;
+							rotationMatrix(2, i) = lightToView(2, i) / scaleZ;
 						}
 						logDebug("new scales: %.2f, %.2f, %.2f",
 							rotationMatrix.Mul3(Vec3(1, 0, 0)).CalcSize(),
 							rotationMatrix.Mul3(Vec3(0, 1, 0)).CalcSize(),
 							rotationMatrix.Mul3(Vec3(0, 0, 1)).CalcSize());
 						
-						shader.setImmediateMatrix4x4("lightToWorld_rotation", rotationMatrix.m_v);
-						shader.setImmediate("lightToWorld_translation",
-							lightToWorld.GetTranslation()[0],
-							lightToWorld.GetTranslation()[1],
-							lightToWorld.GetTranslation()[2]);
-						shader.setImmediate("lightToWorld_scale", scaleX, scaleY, scaleZ);
+						shader.setImmediateMatrix4x4("lightToView_rotation", rotationMatrix.m_v);
+						shader.setImmediate("lightToView_translation",
+							lightToView.GetTranslation()[0],
+							lightToView.GetTranslation()[1],
+							lightToView.GetTranslation()[2]);
+						shader.setImmediate("lightToView_scale", scaleX, scaleY, scaleZ);
 						
-						Mat4x4 lightToWorld_packed = rotationMatrix;
-						lightToWorld_packed.SetTranslation(lightToWorld.GetTranslation());
-						lightToWorld_packed(0, 3) = scaleX;
-						lightToWorld_packed(1, 3) = scaleY;
-						lightToWorld_packed(2, 3) = scaleZ;
-						shader.setImmediateMatrix4x4("lightToWorld_packed", lightToWorld_packed.m_v);
+						Mat4x4 lightToView_packed = rotationMatrix;
+						lightToView_packed.SetTranslation(lightToView.GetTranslation());
+						lightToView_packed(0, 3) = scaleX;
+						lightToView_packed(1, 3) = scaleY;
+						lightToView_packed(2, 3) = scaleZ;
+						lightToView_packed(3, 3) = areaLightType;
+						shader.setImmediateMatrix4x4("lightToView_packed", lightToView_packed.m_v);
 					}
 					
 					shader.setImmediate("areaLightType", (float)areaLightType);
