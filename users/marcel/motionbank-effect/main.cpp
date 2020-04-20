@@ -263,11 +263,11 @@ int main(int argc, char * argv[])
 	//renderOptions.depthSilhouette.enabled = true;
 	renderOptions.depthSilhouette.color.Set(1.f, .1f, .1f, .1f);
 	renderOptions.fog.enabled = true;
-	renderOptions.fog.thickness = .08f;
+	renderOptions.fog.thickness = .02f;
 	//renderOptions.colorGrading.enabled = true;
 	renderOptions.enableScreenSpaceReflections = true;
 	if (renderOptions.fog.enabled)
-		renderOptions.backgroundColor.Set(.35f, .25f, .15f);
+		renderOptions.backgroundColor.Set(.01f, .02f, .04f);
 	else
 		renderOptions.backgroundColor.Set(.05f, .05f, .05f);
 	renderOptions.fxaa.enabled = true;
