@@ -72,8 +72,93 @@ namespace rOne
 		light.type = kLightType_Directional;
 		light.direction = direction;
 		light.color = srgbToLinear(color) * intensity;
+		light.isGlobalLight = true;
 		light.userData = userData;
 
+		addLight(light);
+	}
+	
+	void ForwardLightingHelper::addAreaBoxLight(
+		const Mat4x4 & transform,
+		const float attenuationBegin,
+		const float attenuationEnd,
+		Vec3Arg color,
+		const float intensity,
+		const float userData)
+	{
+		Light light;
+		light.type = kLightType_AreaBox;
+		light.transform = transform;
+		light.attenuationBegin = attenuationBegin;
+		light.attenuationEnd = attenuationEnd;
+		light.color = srgbToLinear(color) * intensity;
+		light.userData = userData;
+		
+		light.isGlobalLight = true; // todo : add area lights to light volume
+		
+		addLight(light);
+	}
+	
+	void ForwardLightingHelper::addAreaSphereLight(
+		const Mat4x4 & transform,
+		const float attenuationBegin,
+		const float attenuationEnd,
+		Vec3Arg color,
+		const float intensity,
+		const float userData)
+	{
+		Light light;
+		light.type = kLightType_AreaSphere;
+		light.transform = transform;
+		light.attenuationBegin = attenuationBegin;
+		light.attenuationEnd = attenuationEnd;
+		light.color = srgbToLinear(color) * intensity;
+		light.userData = userData;
+		
+		light.isGlobalLight = true; // todo : add area lights to light volume
+		
+		addLight(light);
+	}
+	
+	void ForwardLightingHelper::addAreaRectLight(
+		const Mat4x4 & transform,
+		const float attenuationBegin,
+		const float attenuationEnd,
+		Vec3Arg color,
+		const float intensity,
+		const float userData)
+	{
+		Light light;
+		light.type = kLightType_AreaRect;
+		light.transform = transform;
+		light.attenuationBegin = attenuationBegin;
+		light.attenuationEnd = attenuationEnd;
+		light.color = srgbToLinear(color) * intensity;
+		light.userData = userData;
+		
+		light.isGlobalLight = true; // todo : add area lights to light volume
+		
+		addLight(light);
+	}
+	
+	void ForwardLightingHelper::addAreaCircleLight(
+		const Mat4x4 & transform,
+		const float attenuationBegin,
+		const float attenuationEnd,
+		Vec3Arg color,
+		const float intensity,
+		const float userData)
+	{
+		Light light;
+		light.type = kLightType_AreaCircle;
+		light.transform = transform;
+		light.attenuationBegin = attenuationBegin;
+		light.attenuationEnd = attenuationEnd;
+		light.color = srgbToLinear(color) * intensity;
+		light.userData = userData;
+		
+		light.isGlobalLight = true; // todo : add area lights to light volume
+		
 		addLight(light);
 	}
 
@@ -82,9 +167,12 @@ namespace rOne
 		lights.clear();
 		
 		lightParamsBuffer.free();
+		lightExtrasBuffer.free();
 		
 		freeTexture(indexTextureId);
 		freeTexture(lightIdsTextureId);
+		
+		numGlobalLights = 0;
 		
 		isPrepared = false;
 	}
@@ -99,11 +187,28 @@ namespace rOne
 		
 		infiniteSpaceMode = in_infiniteSpaceMode;
 		
+		// sort lights so the global lights are at the beginning, and calculate the number of global lights
+		
+		std::sort(lights.begin(), lights.end(),
+			[](const Light & light1, const Light & light2)
+			{
+				const bool isGlobal1 = light1.isGlobalLight;
+				const bool isGlobal2 = light2.isGlobalLight;
+				return isGlobal1 > isGlobal2;
+			});
+		
+		Assert(numGlobalLights == 0);
+		
+		for (auto & light : lights)
+			if (light.isGlobalLight)
+				numGlobalLights++;
+		
 		// fill light params buffer with information for all of the lights
 		
 		if (!lights.empty())
 		{
 			Vec4 * params = new Vec4[lights.size() * 4];
+			Vec4 * extras = new Vec4[lights.size() * 4];
 
 			for (size_t i = 0; i < lights.size(); ++i)
 			{
@@ -133,12 +238,56 @@ namespace rOne
 				params[i * 4 + 3][1] = lights[i].attenuationEnd;
 				params[i * 4 + 3][2] = cosf(lights[i].spotAngle / 2.f);
 				params[i * 4 + 3][3] = lights[i].userData;
+				
+				const bool isAreaLight =
+					lights[i].type == kLightType_AreaBox ||
+					lights[i].type == kLightType_AreaSphere ||
+					lights[i].type == kLightType_AreaRect ||
+					lights[i].type == kLightType_AreaCircle;
+				
+				if (isAreaLight)
+				{
+					const Mat4x4 lightToView = worldToView * lights[i].transform;
+					
+					// create packed area light params
+					Mat4x4 lightToView_packed(true);
+					
+					const float scaleX = lightToView.GetAxis(0).CalcSize();
+					const float scaleY = lightToView.GetAxis(1).CalcSize();
+					const float scaleZ = lightToView.GetAxis(2).CalcSize();
+					
+					// create orthonormal 3x3 rotation matrix
+					for (int i = 0; i < 3; ++i)
+					{
+						lightToView_packed(0, i) = lightToView(0, i) / scaleX;
+						lightToView_packed(1, i) = lightToView(1, i) / scaleY;
+						lightToView_packed(2, i) = lightToView(2, i) / scaleZ;
+					}
+					
+					// pack scaling factors
+					lightToView_packed(0, 3) = scaleX;
+					lightToView_packed(1, 3) = scaleY;
+					lightToView_packed(2, 3) = scaleZ;
+					
+					// pack translation
+					lightToView_packed.SetTranslation(lightToView.GetTranslation());
+					
+					// store the packed data
+					extras[i * 4 + 0] = lightToView_packed.GetColumn(0);
+					extras[i * 4 + 1] = lightToView_packed.GetColumn(1);
+					extras[i * 4 + 2] = lightToView_packed.GetColumn(2);
+					extras[i * 4 + 3] = lightToView_packed.GetColumn(3);
+				}
 			}
 
 			lightParamsBuffer.setData(params, lights.size() * 4 * sizeof(Vec4));
+			lightExtrasBuffer.setData(extras, lights.size() * 4 * sizeof(Vec4));
 
 			delete [] params;
 			params = nullptr;
+			
+			delete [] extras;
+			extras = nullptr;
 		}
 		else
 		{
@@ -146,6 +295,7 @@ namespace rOne
 			
 			Vec4 data[4];
 			lightParamsBuffer.setData(data, sizeof(data));
+			lightExtrasBuffer.setData(data, sizeof(data));
 		}
 
 		// generate light volume data using the (current) set of lights
@@ -155,6 +305,9 @@ namespace rOne
 
 			for (size_t i = 0; i < lights.size(); ++i)
 			{
+				if (lights[i].isGlobalLight)
+					continue;
+				
 				if (lights[i].type == kLightType_Point)
 				{
 					const Vec3 & position_world = lights[i].position;
@@ -178,6 +331,15 @@ namespace rOne
 						direction_view,
 						lights[i].spotAngle,
 						lights[i].attenuationEnd);
+				}
+				else if (
+					lights[i].type == kLightType_AreaBox ||
+					lights[i].type == kLightType_AreaSphere ||
+					lights[i].type == kLightType_AreaRect ||
+					lights[i].type == kLightType_AreaCircle)
+				{
+					// todo : add area lights to light volume
+					continue;
 				}
 				else if (lights[i].type == kLightType_Directional)
 				{
@@ -224,16 +386,12 @@ namespace rOne
 	void ForwardLightingHelper::setShaderData(Shader & shader, int & nextTextureUnit) const
 	{
 		shader.setBuffer("lightParamsBuffer", lightParamsBuffer);
+		shader.setBuffer("lightExtrasBuffer", lightExtrasBuffer);
 		shader.setImmediate("numLights", lights.size());
+		shader.setImmediate("numGlobalLights", numGlobalLights);
 		shader.setTexture("lightVolume", nextTextureUnit++, indexTextureId, false, false);
 		shader.setTexture("lightIds", nextTextureUnit++, lightIdsTextureId, false, false);
 		shader.setImmediate("worldToVolumeScale", worldToVolumeScale);
 		shader.setImmediate("infiniteSpaceMode", infiniteSpaceMode ? 1.f : 0.f);
-		
-		int directionalLightId = -1;
-		for (size_t i = 0; i < lights.size(); ++i)
-			if (lights[i].type == kLightType_Directional)
-				directionalLightId = i;
-		shader.setImmediate("directionalLightId", directionalLightId);
 	}
 }

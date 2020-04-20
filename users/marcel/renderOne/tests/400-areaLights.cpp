@@ -165,5 +165,6 @@ int main(int argc, char * argv[])
 	}
 
 	framework.shutdown();
+	
 	return 0;
 }

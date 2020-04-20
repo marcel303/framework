@@ -4,6 +4,7 @@
 uniform vec4 lightParams[64*4] buffer lightParamsBuffer;
 uniform vec4 lightExtras[64*4] buffer lightExtrasBuffer;
 uniform float numLights;
+uniform float numGlobalLights;
 
 #define kLightType_Point       0
 #define kLightType_Spot        1

@@ -12,7 +12,11 @@ namespace rOne
 	{
 		kLightType_Point,
 		kLightType_Spot,
-		kLightType_Directional
+		kLightType_Directional,
+		kLightType_AreaBox,
+		kLightType_AreaSphere,
+		kLightType_AreaRect,
+		kLightType_AreaCircle
 	};
 
 	struct Light
@@ -20,11 +24,13 @@ namespace rOne
 		LightType type;
 		Vec3 position;
 		Vec3 direction;
+		Mat4x4 transform;
 		float attenuationBegin = 0.f;
 		float attenuationEnd = 1.f;
 		float spotAngle = 0.f;
 		Vec3 color = Vec3(1, 1, 1);
 		float intensity = 1.f;
+		bool isGlobalLight = false;
 		float userData;
 	};
 
@@ -36,9 +42,12 @@ namespace rOne
 		std::vector<Light> lights;
 		
 		ShaderBuffer lightParamsBuffer;
+		ShaderBuffer lightExtrasBuffer;
 		
 		GxTextureId indexTextureId = 0;
 		GxTextureId lightIdsTextureId = 0;
+		
+		int numGlobalLights = 0;
 		
 		bool isPrepared = false;
 		
@@ -67,6 +76,34 @@ namespace rOne
 			const float userData = -1.f);
 		void addDirectionalLight(
 			Vec3Arg direction,
+			Vec3Arg color,
+			const float intensity,
+			const float userData = -1.f);
+		void addAreaBoxLight(
+			const Mat4x4 & transform,
+			const float attenuationBegin,
+			const float attenuationEnd,
+			Vec3Arg color,
+			const float intensity,
+			const float userData = -1.f);
+		void addAreaSphereLight(
+			const Mat4x4 & transform,
+			const float attenuationBegin,
+			const float attenuationEnd,
+			Vec3Arg color,
+			const float intensity,
+			const float userData = -1.f);
+		void addAreaRectLight(
+			const Mat4x4 & transform,
+			const float attenuationBegin,
+			const float attenuationEnd,
+			Vec3Arg color,
+			const float intensity,
+			const float userData = -1.f);
+		void addAreaCircleLight(
+			const Mat4x4 & transform,
+			const float attenuationBegin,
+			const float attenuationEnd,
 			Vec3Arg color,
 			const float intensity,
 			const float userData = -1.f);
