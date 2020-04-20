@@ -10,7 +10,7 @@ void main()
 {
 	// -- calculate lighting (without shadows) --
 
-	vec3 color = calculateLighting(v_position, v_normal, false);
+	vec3 color = calculateLighting(v_position, normalize(v_normal), false);
 
 	// -- modulate with color --
 
@@ -22,5 +22,6 @@ void main()
 
 	// -- output --
 	
-	shader_fragColor = vec4(color, v_color.a);
+	shader_fragColor.rgb = color * v_color.rgb * v_color.a;
+	shader_fragColor.a = v_color.a;
 }

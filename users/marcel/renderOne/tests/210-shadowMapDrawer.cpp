@@ -3,6 +3,10 @@
 #include "shadowMapDrawer.h"
 #include <vector>
 
+#if defined(DEBUG)
+	#include "lightVolumeBuilder.h" // for drawing spot light aabbs
+#endif
+
 using namespace rOne;
 
 int main(int argc, char * argv[])
@@ -47,8 +51,11 @@ int main(int argc, char * argv[])
 		
 		gxPushMatrix();
 		{
-			setColor(50, 100, 200, 127);
-			const float s = (sinf(framework.time) + 1.f) / 2.f * (1.f/sqrt(2.f));
+			setColor(255, 0, 255, 200);
+			//const float s = (sinf(framework.time) + 1.f) / 2.f * (1.f/sqrt(2.f));
+			const float s = .5f;
+			const float a = (sinf(framework.time) + 1.f) / 2.f;
+			setAlphaf(a);
 			gxTranslatef(0, 2, 0);
 			gxRotatef(framework.time * 20.f, 1, 1, 1);
 			fillCube(Vec3(), Vec3(s, s, s));
@@ -59,12 +66,15 @@ int main(int argc, char * argv[])
 	};
 	
 	ShadowMapDrawer d;
-	d.alloc(4, 512);
+	d.alloc(4, 1024);
 
 	d.drawOpaque = drawOpaque;
 	d.drawTranslucent = drawTranslucent;
 
 	d.enableColorShadows = false;
+	
+	d.shadowMapFilter = kShadowMapFilter_Variance;
+	//d.shadowMapFilter = kShadowMapFilter_PercentageCloser_3x3;
 
 	Camera3d camera;
 	
@@ -107,11 +117,14 @@ int main(int argc, char * argv[])
 			SpotLight spot;
 			spot.transform.MakeLookat(
 				Vec3(
-					sinf(framework.time / (2.34f + i)) * 2.f,
+					sinf(framework.time / (2.34f + i)) * 4.f,
 					sinf(framework.time / (1.23f + i)) * i / 2.f + 4.f,
-					sinf(framework.time / (3.45f + i)) + (i == 0 ? -2.5f : +2.5f)),
+					sinf(framework.time / (3.45f + i)) * 4.f + (i == 0 ? -2.5f : +2.5f)),
 				Vec3(0, 0, 0),
 				Vec3(0, 1, 0));
+			//spot.transform = spot.transform.Rotate(-framework.time * 1.f, Vec3(.1f, 1.f, .2f).CalcNormalized());
+			spot.transform = Mat4x4(true).RotateZ(framework.time * 10.f).Mul(spot.transform);
+			
 			spot.transform = spot.transform.CalcInv();
 			//spot.angle = 60.f;
 			spot.angle = 60.f + sinf(framework.time/4.56f)*30.f;
@@ -125,7 +138,7 @@ int main(int argc, char * argv[])
 		Mat4x4 directional;
 		directional.MakeLookat(
 			Vec3(
-				sinf(framework.time / 1.23f) * 3.f,
+				sinf(framework.time / 1.23f) * 3.f + .01f,
 				sinf(framework.time / 3.45f) + 3.f,
 				sinf(framework.time / 2.34f) * 3.f),
 			Vec3(0, 0, 0),
@@ -152,7 +165,8 @@ int main(int argc, char * argv[])
 		
 		for (auto & spot : spots)
 		{
-			d.addSpotLight(id++, spot.transform, spot.angle * float(M_PI/180.0), spot.nearDistance, spot.farDistance);
+			d.addSpotLight(id++, spot.transform, spot.angle * float(M_PI/180.0), spot.nearDistance, spot.farDistance)
+				.setMaskingTexture(getTexture("light-mask.png"));
 		}
 		
 		d.addDirectionalLight(id++, directional, 0.f, 100.f, 12.f);
@@ -173,7 +187,7 @@ int main(int argc, char * argv[])
 				spot.angle * float(M_PI/180.f),
 				spot.farDistance,
 				spot.color,
-				.2f,
+				1.f,
 				shadowMapId);
 			
 			id++;
@@ -181,12 +195,12 @@ int main(int argc, char * argv[])
 		
 		helper.addDirectionalLight(
 			directional.GetAxis(2).CalcNormalized(),
-			Vec3(1, 1, 1),
-			(sinf(framework.time * 3.45f) + 1.f) / 2.f * .01f,
+			Vec3(1, 1, 1).CalcNormalized(),
+			(sinf(framework.time * 3.45f) + 1.f) / 2.f * .04f,
 			d.getShadowMapId(id));
 		id++;
 		
-		helper.prepareShaderData(16, 32.f, false, worldToView);
+		helper.prepareShaderData(16, 32.f, true, worldToView);
 		
 		//
 		
@@ -272,7 +286,6 @@ int main(int argc, char * argv[])
 				pushDepthTest(true, DEPTH_LESS, false);
 				pushBlend(BLEND_ALPHA);
 				{
-				// todo : add light only shader
 					Shader shader("210-light");
 					setShader(shader);
 					{
@@ -283,6 +296,26 @@ int main(int argc, char * argv[])
 						drawTranslucent();
 					}
 					clearShader();
+					
+				#if false
+					// draw spot light aabb volumes to see whether the light volume builder does a good job at calculating them
+					
+					for (auto & spot : spots)
+					{
+						Vec3 min;
+						Vec3 max;
+						LightVolumeBuilder::computeSpotLightAabb(
+							spot.transform.GetTranslation(),
+							spot.transform.GetAxis(2).CalcNormalized(),
+							spot.angle * float(M_PI/180.f),
+							spot.farDistance,
+							min,
+							max);
+							
+						setColor(255, 255, 255, 127);
+						lineCube((min + max) / 2.f, (max - min) / 2.f);
+					}
+				#endif
 				}
 				popBlend();
 				popDepthTest();

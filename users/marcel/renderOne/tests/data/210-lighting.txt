@@ -3,13 +3,29 @@ include renderOne/forward-lighting/light-volume.txt
 include renderOne/light-attenuation-functions.txt
 include renderOne/shadow-mapping/shadow-mapping.txt
 
+include renderOne/area-light-functions.txt
+
 #define DEBUG_LIGHTING_COMPLXITY 0
+
+#define ENABLE_DOT 0
 
 vec3 calculatePointLight(
 	LightParams light,
 	vec3 position_view,
+	vec3 normal_view,
 	bool receiveShadows)
 {
+	vec3 lightToSurface_view = position_view - light.position;
+
+#if ENABLE_DOT
+	float d = -dot(normal_view, normalize(lightToSurface_view));
+	
+	if (d < 0.0)
+		return vec3(0.0);
+#else
+	float d = 1.0;
+#endif
+
 	float attenuation = computeAttenuationForPointLight(
 		position_view,
 		light.position,
@@ -22,21 +38,13 @@ vec3 calculatePointLight(
 	}
 	else
 	{
-		vec3 result = light.color * attenuation;
+		vec3 result = light.color * d * attenuation;
 
-	/*
 		// no shadow mapping for point lights (yet..?)
 
 		if (receiveShadows)
 		{
-			int shadowMapId = int(light.userData);
-
-			if (shadowMapId != -1)
-			{
-				result *= lookupShadow(shadowMapId, position_view);
-			}
 		}
-	*/
 
 		return result;
 	}
@@ -48,10 +56,14 @@ vec3 calculateSpotLight(
 	vec3 normal_view,
 	bool receiveShadows)
 {
-	float d = max(0.0, -dot(normal_view, light.direction));
+#if ENABLE_DOT
+	float d = -dot(normal_view, light.direction);
 
 	if (d < 0.0)
 		return vec3(0.0);
+#else
+	float d = 1.0;
+#endif
 
 	float attenuation = computeAttenuationForSpotLight(
 		position_view,
@@ -89,10 +101,14 @@ vec3 calculateDirectionalLight(
 	vec3 normal_view,
 	bool receiveShadows)
 {
-	float d = max(0.0, -dot(normal_view, light.direction));
+#if ENABLE_DOT
+	float d = -dot(normal_view, light.direction);
 
 	if (d < 0.0)
 		return vec3(0.0);
+#else
+	float d = 1.0;
+#endif
 
 	vec3 result = light.color * d;
 
@@ -107,6 +123,43 @@ vec3 calculateDirectionalLight(
 	}
 
 	return result;
+}
+
+vec3 calculateAreaLight(
+	LightParams light,
+	AreaLightTransform transform,
+	vec3 position_view,
+	vec3 normal_view)
+{
+	vec3 nearestPosition_view = nearestPointToAreaLight(
+		light.type,
+		transform,
+		position_view);
+
+	vec3 lightToSurface_view = position_view - nearestPosition_view;
+
+#if ENABLE_DOT
+	float d = abs(dot(normal_view, normalize(lightToSurface_view)));
+#else
+	float d = 1.0;
+#endif
+
+	float attenuation = computeAttenuationForPointLight(
+		position_view,
+		nearestPosition_view,
+		light.attenuationBegin,
+		light.attenuationEnd);
+
+	if (attenuation == 0.0)
+	{
+		return vec3(0.0);
+	}
+	else
+	{
+		vec3 result = light.color * d * attenuation;
+
+		return result;
+	}
 }
 
 vec3 s_position_view;
@@ -127,6 +180,7 @@ void forEachLightId(int id)
 		s_color += calculatePointLight(
 			light,
 			s_position_view,
+			s_normal_view,
 			s_receiveShadows);
 	}
 	else if (light.type == kLightType_Spot)
@@ -144,6 +198,20 @@ void forEachLightId(int id)
 			s_position_view,
 			s_normal_view,
 			s_receiveShadows);
+	}
+	else if (
+		light.type == kLightType_AreaBox ||
+		light.type == kLightType_AreaSphere ||
+		light.type == kLightType_AreaRect ||
+		light.type == kLightType_AreaCircle)
+	{
+		AreaLightTransform transform = lookupAreaLightTransform(id);
+
+		s_color += calculateAreaLight(
+			light,
+			transform,
+			s_position_view,
+			s_normal_view);
 	}
 
 #if DEBUG_LIGHTING_COMPLXITY

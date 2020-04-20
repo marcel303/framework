@@ -10,7 +10,7 @@ void main()
 {
 	// -- calculate lighting (with shadows) --
 
-	vec3 color = calculateLighting(v_position, v_normal, true);
+	vec3 color = calculateLighting(v_position, normalize(v_normal), true);
 
 	// -- modulate with color --
 
