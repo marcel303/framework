@@ -15,9 +15,9 @@ vec3 equirectUvToDirection(vec2 uv)
 
 vec2 equirectDirectionToUv(vec3 direction)
 {
-	float theta = atan2(direction.z, direction.x);
+	float theta = atan(direction.z, direction.x);
 	float rad = length(direction.xz);
-	float phi = atan2(direction.y, rad);
+	float phi = atan(direction.y, rad);
 
 	vec2 thetaphi = vec2(theta, phi);
 
