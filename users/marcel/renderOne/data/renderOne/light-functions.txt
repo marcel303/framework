@@ -1,21 +1,3 @@
-// with physically based lighting, each light should be treated as extending into infinity,
-// as the (inverse square) attenuation factor will never truely reach zero. for performance
-// reasons, we'd like to limit the range of lights however, so one possible solution is to
-// come up with a windowing function which fades out the light at a set maximum distance,
-// while at the same time attempting not to affect the intensity/energy of the light too
-// much. Karis13 proposed the below windowing function, which will dampen the energy more
-// near the outer radius of the light, while approximating the true interse-square
-// intensity of the light nearby
-// todo : provide source to Karis13 paper
-float caculateInverseSquareWithWindowingFunction(float distanceSquared, float lightRadiusSquared)
-{
-    float normalizedDistance = distanceSquared / lightRadiusSquared;
-
-    float t = max(0.0, 1.0 - normalizedDistance * normalizedDistance);
-
-    return (t * t) / max(distanceSquared, 0.01 * 0.01);
-}
-
 float computeSpecularLightingFactor(
 	float specularExponent,
 	vec3 lightDirection_view,
