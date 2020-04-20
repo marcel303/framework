@@ -187,7 +187,7 @@ int main(int argc, char * argv[])
 				spot.angle * float(M_PI/180.f),
 				spot.farDistance,
 				spot.color,
-				1.f,
+				6.f,
 				shadowMapId);
 			
 			id++;

@@ -1,23 +1,23 @@
+include renderOne/light-functions.txt
+
 float computeAttenuationForPointLight(
 	vec3 surfacePosition,
 	vec3 lightPosition,
-	float attenuationBegin,
-	float attenuationEnd)
+	float lightRadius)
 {
-	float distance = length(surfacePosition - lightPosition);
+	vec3 lightToSurface = surfacePosition - lightPosition;
 
-	if (distance >= attenuationEnd)
+	float distanceSquared = dot(lightToSurface, lightToSurface);
+
+	float lightRadiusSquared = lightRadius * lightRadius;
+
+	if (distanceSquared == 0.0 || distanceSquared >= lightRadiusSquared)
 	{
 		return 0.0;
 	}
 	else
 	{
-		distance = (distance - attenuationBegin) / (attenuationEnd - attenuationBegin);
-		distance = max(0.0, distance);
-		
-		float attenuation = 1.0 - distance;
-
-		attenuation *= attenuation;
+		float attenuation = caculateInverseSquareWithWindowingFunction(distanceSquared, lightRadiusSquared);
 
 		return attenuation;
 	}
@@ -28,38 +28,34 @@ float computeAttenuationForSpotLight(
 	vec3 spotPosition,
 	vec3 spotDirection,
 	float spotAngleAlpha, // cos(spotAngle/2)
-	float attenuationBegin,
-	float attenuationEnd)
+	float lightRadius)
 {
-	float distance =
-		dot(surfacePosition, spotDirection) -
-		dot(spotPosition, spotDirection);
+	vec3 lightToSurface = surfacePosition - spotPosition;
 
-	if (distance <= 0.0 || distance >= attenuationEnd)
+	float distanceSquared = dot(lightToSurface, lightToSurface);
+
+	float lightRadiusSquared = lightRadius * lightRadius;
+
+	if (distanceSquared == 0.0 || distanceSquared >= lightRadiusSquared)
 	{
 		return 0.0;
 	}
 	else
 	{
-		vec3 delta = surfacePosition - spotPosition;
-
-		float cosAngle = dot(spotDirection, normalize(delta));
+		float cosAngle = dot(spotDirection, normalize(lightToSurface));
 
 		float alpha = spotAngleAlpha;
 
 		float attenuation;
 
-		if (cosAngle < alpha)
-			attenuation = 0.0;
-		else
-			attenuation = (cosAngle - alpha) / (1.0 - alpha);
+		//if (cosAngle < alpha)
+		//	attenuation = 0.0;
+		//else
+		//	attenuation = (cosAngle - alpha) / (1.0 - alpha);
 
-		distance = (distance - attenuationBegin) / (attenuationEnd - attenuationBegin);
-		distance = max(0.0, distance);
-		
-		attenuation *= 1.0 - distance;
+		attenuation = max(0.0, cosAngle - alpha) / (1.0 - alpha);
 
-		attenuation *= attenuation;
+		attenuation *= caculateInverseSquareWithWindowingFunction(distanceSquared, lightRadiusSquared);
 
 		return attenuation;
 	}

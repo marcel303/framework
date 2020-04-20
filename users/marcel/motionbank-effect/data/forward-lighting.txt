@@ -27,7 +27,6 @@ void forEachLightId(int id)
 		float attenuation = computeAttenuationForPointLight(
 			s_position,
 			params.position,
-			params.attenuationBegin,
 			params.attenuationEnd);
 
 		s_color += (factor * attenuation) * params.color;
@@ -45,7 +44,6 @@ void forEachLightId(int id)
 			params.position,
 			params.direction,
 			params.spotAngleAlpha,
-			params.attenuationBegin,
 			params.attenuationEnd);
 
 		int shadowMapId = int(params.userData);

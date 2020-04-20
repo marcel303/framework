@@ -29,7 +29,6 @@ vec3 calculatePointLight(
 	float attenuation = computeAttenuationForPointLight(
 		position_view,
 		light.position,
-		light.attenuationBegin,
 		light.attenuationEnd);
 
 	if (attenuation == 0.0)
@@ -70,7 +69,6 @@ vec3 calculateSpotLight(
 		light.position,
 		light.direction,
 		light.spotAngleAlpha,
-		light.attenuationBegin,
 		light.attenuationEnd);
 
 	if (attenuation == 0.0)
@@ -147,7 +145,6 @@ vec3 calculateAreaLight(
 	float attenuation = computeAttenuationForPointLight(
 		position_view,
 		nearestPosition_view,
-		light.attenuationBegin,
 		light.attenuationEnd);
 
 	if (attenuation == 0.0)
