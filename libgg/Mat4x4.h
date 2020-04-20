@@ -142,6 +142,11 @@ public:
 		m_v[INDEX(index, 2)] = axis[2];
 	}
 	
+	const Vec4 & GetColumn(int index) const
+	{
+		return (Vec4&)m_v[INDEX(index, 0)];
+	}
+	
 	inline Mat4x4 CalcTranspose() const
 	{
 		Mat4x4 r;
