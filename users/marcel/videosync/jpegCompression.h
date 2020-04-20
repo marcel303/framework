@@ -1,3 +1,5 @@
+#pragma once
+
 struct JpegLoadData
 {
 	unsigned char * buffer;
