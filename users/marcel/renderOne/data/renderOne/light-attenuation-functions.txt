@@ -17,7 +17,9 @@ float computeAttenuationForPointLight(
 	}
 	else
 	{
-		float attenuation = caculateInverseSquareWithWindowingFunction(distanceSquared, lightRadiusSquared);
+		float attenuation = caculateInverseSquareWithWindowingFunction(
+			distanceSquared,
+			lightRadiusSquared);
 
 		return attenuation;
 	}
@@ -30,32 +32,29 @@ float computeAttenuationForSpotLight(
 	float spotAngleAlpha, // cos(spotAngle/2)
 	float lightRadius)
 {
-	vec3 lightToSurface = surfacePosition - spotPosition;
+	float distance =
+		dot(surfacePosition, spotDirection) -
+		dot(spotPosition, spotDirection);
 
-	float distanceSquared = dot(lightToSurface, lightToSurface);
-
-	float lightRadiusSquared = lightRadius * lightRadius;
-
-	if (distanceSquared == 0.0 || distanceSquared >= lightRadiusSquared)
+	if (distance <= 0.0 || distance >= lightRadius)
 	{
 		return 0.0;
 	}
 	else
 	{
+		vec3 lightToSurface = surfacePosition - spotPosition;
+
 		float cosAngle = dot(spotDirection, normalize(lightToSurface));
 
-		float alpha = spotAngleAlpha;
+		float attenuation = max(0.0, cosAngle - spotAngleAlpha) / (1.0 - spotAngleAlpha);
 
-		float attenuation;
+		float distanceSquared = distance * distance;
 
-		//if (cosAngle < alpha)
-		//	attenuation = 0.0;
-		//else
-		//	attenuation = (cosAngle - alpha) / (1.0 - alpha);
+		float lightRadiusSquared = lightRadius * lightRadius;
 
-		attenuation = max(0.0, cosAngle - alpha) / (1.0 - alpha);
-
-		attenuation *= caculateInverseSquareWithWindowingFunction(distanceSquared, lightRadiusSquared);
+		attenuation *= caculateInverseSquareWithWindowingFunction(
+			distanceSquared,
+			lightRadiusSquared);
 
 		return attenuation;
 	}
