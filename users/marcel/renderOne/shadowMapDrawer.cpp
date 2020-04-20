@@ -3,9 +3,9 @@
 
 namespace rOne
 {
-	void ShadowMapDrawer::calculateProjectionMatrixForLight(const Light & light, Mat4x4 & projectionMatrix)
+	void ShadowMapDrawer::calculateProjectionMatrixForLight(const ShadowMapLight & light, Mat4x4 & projectionMatrix)
 	{
-		if (light.type == kLightType_Spot)
+		if (light.type == kShadowMapLightType_Spot)
 		{
 			const float aspectRatio = 1.f;
 			
@@ -23,7 +23,7 @@ namespace rOne
 				light.farDistance);
 		#endif
 		}
-		else if (light.type == kLightType_Directional)
+		else if (light.type == kShadowMapLightType_Directional)
 		{
 		#if ENABLE_OPENGL
 			projectionMatrix.MakeOrthoGL(
@@ -133,14 +133,30 @@ namespace rOne
 				gxTranslatef(x, 0, 0);
 				
 				auto & colorTarget = colorTargets[i];
-			
-				Shader shader("renderOne/blit-texture");
-				setShader(shader);
+				
+				if (enableColorShadows)
 				{
-					shader.setTexture("source", 0, colorTarget.getTextureId(), false, true);
-					drawRect(0, 0, colorTarget.getWidth(), colorTarget.getHeight());
+					Shader shader("renderOne/shadow-mapping/blit-texture-opacity");
+					setShader(shader);
+					{
+						shader.setTexture("source", 0, colorTarget.getTextureId(), false, true);
+						drawRect(0, 0, colorTarget.getWidth(), colorTarget.getHeight());
+					}
+					clearShader();
 				}
-				clearShader();
+				
+				if (lights[i].maskingTextureId != 0)
+				{
+					pushBlend(BLEND_MUL);
+					Shader shader("renderOne/blit-texture");
+					setShader(shader);
+					{
+						shader.setTexture("source", 0, lights[i].maskingTextureId, true, true);
+						drawRect(0, 0, colorTarget.getWidth(), colorTarget.getHeight());
+					}
+					clearShader();
+					popBlend();
+				}
 				
 				x += colorTarget.getWidth();
 			}
@@ -169,7 +185,7 @@ namespace rOne
 			colorTarget.init(resolution, resolution, SURFACE_RGBA8, colorWhite);
 		
 		depthAtlas.init(maxShadowMaps * resolution, resolution, SURFACE_R32F, colorBlackTranslucent);
-		colorAtlas.init(maxShadowMaps * resolution, resolution, SURFACE_RGBA8, colorWhite);
+		colorAtlas.init(maxShadowMaps * resolution, resolution, SURFACE_RGBA8_SRGB, colorWhite);
 		
 		depthAtlas2Channel.init(maxShadowMaps * resolution, resolution, SURFACE_RG32F, colorBlackTranslucent);
 	}
@@ -188,15 +204,15 @@ namespace rOne
 		colorAtlas.free();
 	}
 
-	void ShadowMapDrawer::addSpotLight(
+	ShadowMapLight & ShadowMapDrawer::addSpotLight(
 		const int id,
 		const Mat4x4 & lightToWorld,
 		const float angle,
 		const float nearDistance,
 		const float farDistance)
 	{
-		Light light;
-		light.type = kLightType_Spot;
+		ShadowMapLight light;
+		light.type = kShadowMapLightType_Spot;
 		light.id = id;
 		light.lightToWorld = lightToWorld;
 		light.worldToLight = lightToWorld.CalcInv();
@@ -205,17 +221,19 @@ namespace rOne
 		light.farDistance = farDistance;
 		
 		lights.push_back(light);
+		
+		return lights.back();
 	}
 
-	void ShadowMapDrawer::addDirectionalLight(
+	ShadowMapLight & ShadowMapDrawer::addDirectionalLight(
 		const int id,
 		const Mat4x4 & lightToWorld,
 		const float startDistance,
 		const float endDistance,
 		const float extents)
 	{
-		Light light;
-		light.type = kLightType_Directional;
+		ShadowMapLight light;
+		light.type = kShadowMapLightType_Directional;
 		light.id = id;
 		light.lightToWorld = lightToWorld;
 		light.worldToLight = lightToWorld.CalcInv();
@@ -224,6 +242,8 @@ namespace rOne
 		light.directionalExtents = extents;
 		
 		lights.push_back(light);
+		
+		return lights.back();
 	}
 
 	void ShadowMapDrawer::drawShadowMaps(const Mat4x4 & worldToView)
@@ -232,13 +252,13 @@ namespace rOne
 		
 		for (auto & light : lights)
 		{
-			if (light.type == kLightType_Spot)
+			if (light.type == kShadowMapLightType_Spot)
 			{
 				const Vec3 lightPosition_view = worldToView.Mul4(light.lightToWorld.GetTranslation());
 				
 				light.viewDistance = lightPosition_view.CalcSize();
 			}
-			else if (light.type == kLightType_Directional)
+			else if (light.type == kShadowMapLightType_Directional)
 			{
 				light.viewDistance = 0.f;
 			}
@@ -249,17 +269,18 @@ namespace rOne
 		}
 
 		std::sort(lights.begin(), lights.end(),
-			[](const Light & light1, const Light & light2)
+			[](const ShadowMapLight & light1, const ShadowMapLight & light2)
 			{
 				return light1.viewDistance < light2.viewDistance;
 			});
 
-		std::vector<Light> lightsToDraw;
+		// check if there are any lights with a masking texture
+		// we need to generate the color atlas when the feature is used
 		
-		for (size_t i = 0; i < lights.size() && i < depthTargets.size(); ++i)
-		{
-			lightsToDraw.push_back(lights[i]);
-		}
+		Assert(hasAnyMaskingTextures == false);
+		
+		for (size_t i = 0; i < lights.size() && i < colorTargets.size(); ++i)
+			hasAnyMaskingTextures |= lights[i].maskingTextureId;
 		
 		// draw shadow maps
 		
@@ -283,7 +304,7 @@ namespace rOne
 			pushDepthBias(bias, bias);
 			pushShaderOutputs("");
 			{
-				if (light.type == kLightType_Spot)
+				if (light.type == kShadowMapLightType_Spot)
 				{
 					Mat4x4 viewToProjection;
 					calculateProjectionMatrixForLight(light, viewToProjection);
@@ -294,7 +315,7 @@ namespace rOne
 					if (drawOpaque != nullptr)
 						drawOpaque();
 				}
-				else if (light.type == kLightType_Directional)
+				else if (light.type == kShadowMapLightType_Directional)
 				{
 					Mat4x4 viewToProjection;
 					calculateProjectionMatrixForLight(light, viewToProjection);
@@ -322,9 +343,9 @@ namespace rOne
 				
 				pushRenderPass(&colorTargets[i], true, &depthTargets[i], false, "Shadow color");
 				pushDepthTest(true, DEPTH_LESS, false);
-				pushBlend(BLEND_ALPHA); // todo : use blend mode where color and alpha are invert multiplied to generate an opacity mask
+				pushBlend(BLEND_ABSORBTION_MASK);
 				{
-					if (light.type == kLightType_Spot)
+					if (light.type == kShadowMapLightType_Spot)
 					{
 						Mat4x4 viewToProjection;
 						calculateProjectionMatrixForLight(light, viewToProjection);
@@ -335,7 +356,7 @@ namespace rOne
 						if (drawTranslucent != nullptr)
 							drawTranslucent();
 					}
-					else if (light.type == kLightType_Directional)
+					else if (light.type == kShadowMapLightType_Directional)
 					{
 						Mat4x4 viewToProjection;
 						calculateProjectionMatrixForLight(light, viewToProjection);
@@ -361,7 +382,7 @@ namespace rOne
 		
 		generateDepthAtlas();
 		
-		if (enableColorShadows)
+		if (enableColorShadows || hasAnyMaskingTextures)
 		{
 			generateColorAtlas();
 		}
@@ -387,13 +408,15 @@ namespace rOne
 
 	void ShadowMapDrawer::setShaderData(Shader & shader, int & nextTextureUnit, const Mat4x4 & worldToView)
 	{
+		const bool enableColorAtlas = enableColorShadows || hasAnyMaskingTextures;
+		
 		shader.setTexture("shadowDepthAtlas", nextTextureUnit++, depthAtlas.getTextureId(), false, true);
-		shader.setTexture("shadowColorAtlas", nextTextureUnit++, enableColorShadows ? colorAtlas.getTextureId() : 0, true, true);
+		shader.setTexture("shadowColorAtlas", nextTextureUnit++, enableColorAtlas ? colorAtlas.getTextureId() : 0, true, true);
 
 		shader.setTexture("shadowDepthAtlas2Channel", nextTextureUnit++, depthAtlas2Channel.getTextureId(), true, true);
 		
 		shader.setImmediate("numShadowMaps", depthTargets.size());
-		shader.setImmediate("enableColorShadows", enableColorShadows ? 1.f : 0.f);
+		shader.setImmediate("enableColorShadows", enableColorAtlas ? 1.f : 0.f);
 		shader.setImmediate("shadowMapFilter", shadowMapFilter);
 
 		shader.setImmediateMatrix4x4Array("viewToShadowMatrices", (float*)viewToShadowMatrices.data(), viewToShadowMatrices.size());
@@ -412,6 +435,8 @@ namespace rOne
 	void ShadowMapDrawer::reset()
 	{
 		lights.clear();
+		
+		hasAnyMaskingTextures = false;
 	}
 
 	void ShadowMapDrawer::showRenderTargets() const

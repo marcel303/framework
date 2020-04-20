@@ -39,36 +39,44 @@ namespace rOne
 		kShadowMapFilter_Variance
 	};
 	
+	enum ShadowMapLightType
+	{
+		kShadowMapLightType_Spot,
+		kShadowMapLightType_Directional
+	};
+
+	struct ShadowMapLight
+	{
+		int id;
+
+		ShadowMapLightType type;
+		Mat4x4 lightToWorld;
+		Mat4x4 worldToLight;
+		float nearDistance;
+		float farDistance;
+		float spotAngle;
+		float directionalExtents;
+		
+		float viewDistance; // for priority sort
+		
+		GxTextureId maskingTextureId = 0;
+		
+		ShadowMapLight & setMaskingTexture(const GxTextureId textureId)
+		{
+			maskingTextureId = textureId;
+			return *this;
+		}
+	};
+	
 	class ShadowMapDrawer
 	{
 
 	private:
 
-		enum LightType
-		{
-			kLightType_Spot,
-			kLightType_Directional
-		};
-
-		struct Light
-		{
-			int id;
-
-			LightType type;
-			Mat4x4 lightToWorld;
-			Mat4x4 worldToLight;
-			float nearDistance;
-			float farDistance;
-			float spotAngle;
-			float directionalExtents;
-			
-			float viewDistance; // for priority sort
-		};
-		
 		std::vector<DepthTarget> depthTargets;
 		std::vector<ColorTarget> colorTargets;
 		
-		std::vector<Light> lights;
+		std::vector<ShadowMapLight> lights;
 		
 		ShaderBuffer shaderBuffer;
 		
@@ -79,7 +87,9 @@ namespace rOne
 		std::vector<Mat4x4> viewToShadowMatrices;
 		std::vector<Mat4x4> shadowToViewMatrices;
 		
-		static void calculateProjectionMatrixForLight(const Light & light, Mat4x4 & projectionMatrix);
+		bool hasAnyMaskingTextures = false;
+		
+		static void calculateProjectionMatrixForLight(const ShadowMapLight & light, Mat4x4 & projectionMatrix);
 		
 		void generateDepthAtlas();
 		void generateColorAtlas();
@@ -98,13 +108,13 @@ namespace rOne
 		void alloc(const int maxShadowMaps, const int resolution);
 		void free();
 		
-		void addSpotLight(
+		ShadowMapLight & addSpotLight(
 			const int id,
 			const Mat4x4 & lightToWorld,
 			const float angle,
 			const float nearDistance,
 			const float farDistance);
-		void addDirectionalLight(
+		ShadowMapLight & addDirectionalLight(
 			const int id,
 			const Mat4x4 & lightToWorld,
 			const float startDistance,
