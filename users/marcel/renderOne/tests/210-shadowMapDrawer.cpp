@@ -71,7 +71,7 @@ int main(int argc, char * argv[])
 	d.drawOpaque = drawOpaque;
 	d.drawTranslucent = drawTranslucent;
 
-	d.enableColorShadows = false;
+	d.enableColorShadows = true;
 	
 	d.shadowMapFilter = kShadowMapFilter_Variance;
 	//d.shadowMapFilter = kShadowMapFilter_PercentageCloser_3x3;

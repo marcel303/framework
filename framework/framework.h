@@ -135,8 +135,9 @@ enum BLEND_MODE // setBlend
 {
 	BLEND_OPAQUE,
 	BLEND_ALPHA,
-	BLEND_PREMULTIPLIED_ALPHA,
-	BLEND_PREMULTIPLIED_ALPHA_DRAW,
+	BLEND_PREMULTIPLIED_ALPHA,      // blend a color with premultiplied alpha
+	BLEND_PREMULTIPLIED_ALPHA_DRAW, // premultiply color with alpha and blend
+	BLEND_ABSORBTION_MASK, // the color blended with the mask MUST use premultiplied-alpha
 	BLEND_ADD,
 	BLEND_ADD_OPAQUE,
 	BLEND_SUBTRACT,

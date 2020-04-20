@@ -67,6 +67,14 @@ void setBlend(BLEND_MODE blendMode)
 		if (glBlendFuncSeparate)
 			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		break;
+	case BLEND_ABSORBTION_MASK:
+		// this is a special blending mode, where the user may generate an 'absorbtion mask'. initially, the user should clear the mask to white. translucent objects may then be drawn onto the mask. the color written to the mask MUST be premultiplied with alpha. the mask will accumulate opacity, where more opaque areas will become dark. alpha will gradually become zero, meaning fully masked. the color should be interpreted as the inverse of the color still allowed to 'bleed through' the mask
+		glEnable(GL_BLEND);
+		if (glBlendEquation)
+			glBlendEquation(GL_FUNC_ADD);
+		if (glBlendFuncSeparate)
+			glBlendFuncSeparate(GL_ZERO, GL_ONE_MINUS_SRC_COLOR, GL_ZERO, GL_ONE_MINUS_SRC_ALPHA);
+		break;
 	case BLEND_ADD:
 		glEnable(GL_BLEND);
 		if (glBlendEquation)

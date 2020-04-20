@@ -1836,6 +1836,16 @@ static void gxValidatePipelineState()
 					att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
 					break;
+				case BLEND_ABSORBTION_MASK:
+					// this is a special blending mode, where the user may generate an 'absorbtion mask'. initially, the user should clear the mask to white. translucent objects may then be drawn onto the mask. the color written to the mask MUST be premultiplied with alpha. the mask will accumulate opacity, where more opaque areas will become dark. alpha will gradually become zero, meaning fully masked. the color should be interpreted as the inverse of the color still allowed to 'bleed through' the mask
+					att.blendingEnabled = true;
+					att.rgbBlendOperation = MTLBlendOperationAdd;
+					att.alphaBlendOperation = MTLBlendOperationAdd;
+					att.sourceRGBBlendFactor = MTLBlendFactorZero;
+					att.sourceAlphaBlendFactor = MTLBlendFactorZero;
+					att.destinationRGBBlendFactor = MTLBlendFactorOneMinusSourceColor;
+					att.destinationAlphaBlendFactor = MTLBlendFactorOneMinusSourceAlpha;
+					break;
 				case BLEND_ADD:
 					att.blendingEnabled = true;
 					att.rgbBlendOperation = MTLBlendOperationAdd;
