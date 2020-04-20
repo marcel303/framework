@@ -6,13 +6,22 @@ library renderOne
 	header_path . expose
 	resource_path data
 
-app renderOne-test-lightVolumeBuilder
+app renderOne-200-lightVolumeBuilder
 	depend_library renderOne
-	add_files tests/200-lightVolumeBuilder
+	add_files tests/200-lightVolumeBuilder.cpp
 	resource_path tests/data
 
-app renderOne-test-shadowMapDrawer
+app renderOne-210-shadowMapDrawer
 	depend_library renderOne
-	add_files tests/210-shadowMapDrawer
+	add_files tests/210-shadowMapDrawer.cpp
 	resource_path tests/data
 
+app renderOne-400-areaLights
+	depend_library renderOne
+	add_files tests/400-areaLights.cpp
+	resource_path tests/data
+
+app renderOne-402-areaLights
+	depend_library renderOne
+	add_files tests/402-areaLights.cpp
+	resource_path tests/data

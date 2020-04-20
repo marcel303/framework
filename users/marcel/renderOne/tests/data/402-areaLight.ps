@@ -1,0 +1,121 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+
+uniform mat4x4 viewToLight;
+uniform mat4x4 lightToView;
+
+uniform mat4x4 lightToView_packed;
+
+#define lightToView_rotation    lightToView_packed
+#define lightToView_translation lightToView_packed[3].xyz
+#define lightToView_scale       vec3(lightToView_packed[0][3], lightToView_packed[1][3], lightToView_packed[2][3])
+#define areaLightType           lightToView_packed[3][3]
+
+#define kAreaLightType_Box    0
+#define kAreaLightType_Sphere 1
+#define kAreaLightType_Rect   2
+#define kAreaLightType_Circle 3
+
+#define ENABLE_DOT 1
+
+shader_in vec3 v_position;
+shader_in vec3 v_normal;
+
+vec3 nearestPointOnBox(vec3 surfacePosition)
+{
+	vec3 lightToSurface = surfacePosition;
+
+	vec3 movement = max(vec3(-1.0), min(vec3(+1.0), lightToSurface));
+
+	return movement;
+}
+
+vec3 nearestPointOnSphere(vec3 surfacePosition)
+{
+	vec3 lightToSurface = surfacePosition;
+	
+	float distance = length(lightToSurface);
+	
+	float movementAmount = min(1.0, distance);
+	
+	vec3 movement = lightToSurface / distance * movementAmount;
+
+	return movement;
+}
+
+vec3 nearestPointOnRect(vec3 surfacePosition)
+{
+	vec2 lightToSurface = surfacePosition.xy;
+
+	vec2 movement = max(vec2(-1.0, -1.0), min(vec2(+1.0, +1.0), lightToSurface));
+
+	return vec3(movement, 0.0);
+}
+
+vec3 nearestPointOnCircle(vec3 surfacePosition)
+{
+	vec2 lightToSurface = surfacePosition.xy;
+	
+	float distance = length(lightToSurface);
+	
+	float movementAmount = clamp(distance, 0.0, 1.0);
+	
+	vec2 movement = lightToSurface / distance * movementAmount;
+
+	return vec3(movement, 0.0);
+}
+
+void main()
+{
+	vec3 lightPosition = vec3(0.0);
+
+	vec3 position_view = v_position;
+
+	// transform view-space position into light-space
+
+	vec3 position_light;
+
+	position_light = position_view;
+	position_light -= lightToView_translation;
+	position_light = (transpose(lightToView_rotation) * vec4(position_light, 0.0)).xyz;
+	position_light /= lightToView_scale;
+
+	// calculate nearest point in light-space
+
+	vec3 nearestPosition;
+
+	if (areaLightType == kAreaLightType_Box)
+		nearestPosition = nearestPointOnBox(position_light);
+	else if (areaLightType == kAreaLightType_Sphere)
+		nearestPosition = nearestPointOnSphere(position_light);
+	else if (areaLightType == kAreaLightType_Rect)
+		nearestPosition = nearestPointOnRect(position_light);
+	else if (areaLightType == kAreaLightType_Circle)
+		nearestPosition = nearestPointOnCircle(position_light);
+
+	// transform nearest point from light-space into view-space
+
+	nearestPosition = (lightToView_rotation * vec4(nearestPosition * lightToView_scale, 0.0)).xyz + lightToView_translation;
+
+	// perform distance attenuation
+
+	vec3 surfaceToLight = nearestPosition - v_position;
+
+	float attenuation = 1.0 / dot(surfaceToLight, surfaceToLight);
+
+	// perform dot-product attenuation
+
+#if ENABLE_DOT
+	vec3 surfaceToLightDir = normalize(surfaceToLight);
+	vec3 normal = normalize(v_normal);
+	attenuation *= max(0.001, dot(normal, surfaceToLightDir));
+#endif
+
+	vec3 color = srgbToLinear(vec3(0.25, 0.5, 1.0)) * 1.0;
+
+	color *= attenuation;
+
+	color = linearToSrgb(color);
+
+	shader_fragColor = vec4(color, 1.0);
+}
