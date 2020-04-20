@@ -2,16 +2,21 @@
 //        GLSL doesn't allow this. make a change to shader builder ?
 
 uniform vec4 lightParams[64*4] buffer lightParamsBuffer;
+uniform vec4 lightExtras[64*4] buffer lightExtrasBuffer;
 uniform float numLights;
 
 #define kLightType_Point       0
 #define kLightType_Spot        1
 #define kLightType_Directional 2
+#define kLightType_AreaBox     3
+#define kLightType_AreaSphere  4
+#define kLightType_AreaRect    5
+#define kLightType_AreaCircle  6
 
 struct LightParams
 {
 	vec3 position;
-	float type;
+	int type;
 
 	vec3 direction;
 	float reserved;
@@ -36,7 +41,7 @@ LightParams decodeLightParams(
 	LightParams result;
 
 	result.position = params1.xyz;
-	result.type = params1.w;
+	result.type = int(params1.w);
 	
 	result.direction = params2.xyz;
 	result.reserved = params2.w;

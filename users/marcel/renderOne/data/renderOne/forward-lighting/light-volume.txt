@@ -56,8 +56,6 @@ void forEachLightIdAt(vec3 in_position)
 	int startOffset = startOffsetAndCount.x;
 	int count = startOffsetAndCount.y;
 
-	ivec2 lightIdsDim = rOne_toIvec2(textureSize(lightIds, 0));
-
 	for (int i = 0; i < count; ++i)
 	{
 		int index = startOffset + i;

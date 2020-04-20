@@ -1,0 +1,129 @@
+struct AreaLightTransform
+{
+	// these values describe the light-to-view transform
+	vec3 translation;
+	mat3x3 rotation;
+	vec3 scale;
+};
+
+AreaLightTransform lookupAreaLightTransform(int id)
+{
+	vec4 lightToView_packed_1 = lightExtras[id * 4 + 0];
+	vec4 lightToView_packed_2 = lightExtras[id * 4 + 1];
+	vec4 lightToView_packed_3 = lightExtras[id * 4 + 2];
+	vec4 lightToView_packed_4 = lightExtras[id * 4 + 3];
+
+	AreaLightTransform result;
+	result.translation = lightToView_packed_4.xyz;
+	result.rotation = mat3x3(
+		lightToView_packed_1.xyz,
+		lightToView_packed_2.xyz,
+		lightToView_packed_3.xyz);
+	result.scale = vec3(
+		lightToView_packed_1.w,
+		lightToView_packed_2.w,
+		lightToView_packed_3.w);
+
+	return result;
+}
+
+// functions for finding the nearest point on the light surface to a surface position (in light-space)
+
+vec3 nearestPointOnBox(vec3 surfacePosition)
+{
+	vec3 lightToSurface = surfacePosition;
+
+	vec3 movement = max(vec3(-1.0), min(vec3(+1.0), lightToSurface));
+
+	return movement;
+}
+
+vec3 nearestPointOnSphere(vec3 surfacePosition)
+{
+	vec3 lightToSurface = surfacePosition;
+	
+	float distance = length(lightToSurface);
+	
+	float movementAmount = min(1.0, distance);
+	
+	vec3 movement = lightToSurface / distance * movementAmount;
+
+	return movement;
+}
+
+vec3 nearestPointOnRect(vec3 surfacePosition)
+{
+	vec2 lightToSurface = surfacePosition.xy;
+
+	vec2 movement = max(vec2(-1.0, -1.0), min(vec2(+1.0, +1.0), lightToSurface));
+
+	return vec3(movement, 0.0);
+}
+
+vec3 nearestPointOnCircle(vec3 surfacePosition)
+{
+	vec2 lightToSurface = surfacePosition.xy;
+	
+	float distance = length(lightToSurface);
+	
+	float movementAmount = clamp(distance, 0.0, 1.0);
+	
+	vec2 movement = lightToSurface / distance * movementAmount;
+
+	return vec3(movement, 0.0);
+}
+
+// functions for transforming view-space positions into light-spac
+
+vec3 viewToLight(AreaLightTransform transform, vec3 position_view)
+{
+	vec3 position_light = position_view;
+
+	position_light = position_light - transform.translation;
+	position_light = transpose(transform.rotation) * position_light;
+	position_light = position_light / transform.scale;
+
+	return position_light;
+}
+
+vec3 lightToView(AreaLightTransform transform, vec3 position_light)
+{
+	vec3 position_view = position_light;
+
+	position_view = position_view * transform.scale;
+	position_view = transform.rotation * position_view;
+	position_view = position_view + transform.translation;
+
+	return position_view;
+}
+
+// function for finding the nearest point on the light surface to a surface position (in view-space)
+
+vec3 nearestPointToAreaLight(
+	int areaLightType,
+	AreaLightTransform transform,
+	vec3 position_view)
+{
+	// transform view-space position into light-space
+
+	vec3 position_light = viewToLight(transform, position_view);
+
+	// calculate the nearest point in light-space
+
+	vec3 nearestPosition;
+
+	if (areaLightType == kLightType_AreaBox)
+		nearestPosition = nearestPointOnBox(position_light);
+	else if (areaLightType == kLightType_AreaSphere)
+		nearestPosition = nearestPointOnSphere(position_light);
+	else if (areaLightType == kLightType_AreaRect)
+		nearestPosition = nearestPointOnRect(position_light);
+	else if (areaLightType == kLightType_AreaCircle)
+		nearestPosition = nearestPointOnCircle(position_light);
+
+	// transform nearest position in light-space into view-space
+
+	vec3 nearestPosition_view = lightToView(transform, nearestPosition);
+
+	return nearestPosition_view;
+}
