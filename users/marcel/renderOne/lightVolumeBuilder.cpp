@@ -32,7 +32,7 @@ namespace rOne
 		light.id = id;
 		light.type = kLightType_Point;
 		light.position = position;
-		light.radius = radius;
+		light.farDistance = radius;
 
 		lights.push_back(light);
 	}
@@ -47,8 +47,19 @@ namespace rOne
 		light.position = position;
 		light.direction = direction;
 		light.spotAngle = angle;
-		light.spotFarDistance = farDistance;
+		light.farDistance = farDistance;
 
+		lights.push_back(light);
+	}
+	
+	void LightVolumeBuilder::addAreaLight(const int id, const Mat4x4 & lightToWorld, const float farDistance)
+	{
+		Light light;
+		light.id = id;
+		light.type = kLightType_Area;
+		light.areaLightToWorld = lightToWorld;
+		light.farDistance = farDistance;
+		
 		lights.push_back(light);
 	}
 
@@ -154,8 +165,8 @@ namespace rOne
 			
 			if (light.type == kLightType_Point)
 			{
-				lightMin_world = light.position - Vec3(light.radius, light.radius, light.radius);
-				lightMax_world = light.position + Vec3(light.radius, light.radius, light.radius);
+				lightMin_world = light.position - Vec3(light.farDistance);
+				lightMax_world = light.position + Vec3(light.farDistance);
 			}
 			else if (light.type == kLightType_Spot)
 			{
@@ -163,7 +174,15 @@ namespace rOne
 					light.position,
 					light.direction,
 					light.spotAngle,
-					light.spotFarDistance,
+					light.farDistance,
+					lightMin_world,
+					lightMax_world);
+			}
+			else if (light.type == kLightType_Area)
+			{
+				computeAreaLightAabb(
+					light.areaLightToWorld,
+					light.farDistance,
 					lightMin_world,
 					lightMax_world);
 			}
@@ -361,8 +380,8 @@ namespace rOne
 	void LightVolumeBuilder::computeSpotLightAabb(
 		Vec3Arg position,
 		Vec3Arg direction,
-		float angle,
-		float farDistance,
+		const float angle,
+		const float farDistance,
 		Vec3 & out_min,
 		Vec3 & out_max)
 	{
@@ -429,6 +448,71 @@ namespace rOne
 		{
 			out_min[i] = fminf(position[i], fminf(fminf(p11[i], p21[i]), fminf(p22[i], p12[i])));
 			out_max[i] = fmaxf(position[i], fmaxf(fmaxf(p11[i], p21[i]), fmaxf(p22[i], p12[i])));
+		}
+	}
+	
+	void LightVolumeBuilder::computeAreaLightAabb(
+		const Mat4x4 & lightToWorld,
+		const float farDistance,
+		Vec3 & out_min,
+		Vec3 & out_max)
+	{
+		// by definition, the area light is fully constrained to the
+		// box (-1, -1, -1) to (+1, +1, +1) in light-space
+		
+		// there are eight vertices at the extremities of the box
+		// at +1/-1 for all three axis
+		
+		// we can compute a tight-fitting aabb by transforming all
+		// eight vertices and performing min/max operations on the
+		// resulting vertices. however, due to symmetries we can
+		// get away with testing only four points!
+		// I've commented out vertices with a 'negative parity'
+		
+		const Vec3 vertex_light[4] =
+		{
+			//{ -1, -1, -1 },
+			{ +1, -1, -1 },
+			//{ +1, +1, -1 },
+			{ -1, +1, -1 },
+			
+			{ -1, -1, +1 },
+			//{ +1, -1, +1 },
+			{ +1, +1, +1 },
+			//{ -1, +1, +1 },
+		};
+		
+		/*
+		static int parity = -1;
+		parity = -parity;
+		*/
+		
+		for (int i = 0; i < 4; ++i)
+		{
+			/*
+			float sign = vertex_light[i][0] * vertex_light[i][1] * vertex_light[i][2];
+			if (sign != parity)
+				continue;
+			*/
+			
+			const Vec3 vertex_world = lightToWorld.Mul4(vertex_light[i]);
+			
+			if (i == 0)
+			{
+				out_min = vertex_world;
+				out_max = vertex_world;
+			}
+			else
+			{
+				out_min = out_min.Min(vertex_world);
+				out_max = out_max.Max(vertex_world);
+			}
+		}
+		
+		for (int i = 0; i < 3; ++i)
+		{
+			out_min[i] -= farDistance;
+			out_max[i] += farDistance;
 		}
 	}
 }

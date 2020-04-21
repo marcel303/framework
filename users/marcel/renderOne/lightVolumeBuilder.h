@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Vec3.h"
+#include "Mat4x4.h"
 #include <vector>
 
 namespace rOne
@@ -29,19 +29,20 @@ namespace rOne
 		enum LightType
 		{
 			kLightType_Point,
-			kLightType_Spot
+			kLightType_Spot,
+			kLightType_Area
 		};
 		
 		struct Light
 		{
 			int id;
-
 			LightType type;
+			
 			Vec3 position;
 			Vec3 direction;
-			float radius;
+			float farDistance;
 			float spotAngle;
-			float spotFarDistance;
+			Mat4x4 areaLightToWorld;
 		};
 		
 		std::vector<Light> lights;
@@ -58,6 +59,10 @@ namespace rOne
 			Vec3Arg direction,
 			const float angle,
 			const float farDistance);
+		void addAreaLight(
+			const int id,
+			const Mat4x4 & lightToWorld,
+			const float farDistance);
 		void reset();
 
 		LightVolumeData generateLightVolumeData(
@@ -68,8 +73,14 @@ namespace rOne
 		static void computeSpotLightAabb(
 			Vec3Arg position,
 			Vec3Arg direction,
-			float angle,
-			float farDistance,
+			const float angle,
+			const float farDistance,
+			Vec3 & out_min,
+			Vec3 & out_max);
+		
+		static void computeAreaLightAabb(
+			const Mat4x4 & lightToWorld,
+			const float farDistance,
 			Vec3 & out_min,
 			Vec3 & out_max);
 		

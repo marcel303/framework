@@ -3,6 +3,7 @@
 #include "srgbFunctions.h"
 
 #include "framework.h"
+#include <algorithm>
 #include <math.h>
 
 namespace rOne
@@ -94,8 +95,6 @@ namespace rOne
 		light.color = srgbToLinear(color) * intensity;
 		light.userData = userData;
 		
-		light.isGlobalLight = true; // todo : add area lights to light volume
-		
 		addLight(light);
 	}
 	
@@ -114,8 +113,6 @@ namespace rOne
 		light.attenuationEnd = attenuationEnd;
 		light.color = srgbToLinear(color) * intensity;
 		light.userData = userData;
-		
-		light.isGlobalLight = true; // todo : add area lights to light volume
 		
 		addLight(light);
 	}
@@ -136,8 +133,6 @@ namespace rOne
 		light.color = srgbToLinear(color) * intensity;
 		light.userData = userData;
 		
-		light.isGlobalLight = true; // todo : add area lights to light volume
-		
 		addLight(light);
 	}
 	
@@ -156,8 +151,6 @@ namespace rOne
 		light.attenuationEnd = attenuationEnd;
 		light.color = srgbToLinear(color) * intensity;
 		light.userData = userData;
-		
-		light.isGlobalLight = true; // todo : add area lights to light volume
 		
 		addLight(light);
 	}
@@ -200,8 +193,12 @@ namespace rOne
 		Assert(numGlobalLights == 0);
 		
 		for (auto & light : lights)
+		{
 			if (light.isGlobalLight)
 				numGlobalLights++;
+			else
+				break;
+		}
 		
 		// fill light params buffer with information for all of the lights
 		
@@ -338,8 +335,12 @@ namespace rOne
 					lights[i].type == kLightType_AreaRect ||
 					lights[i].type == kLightType_AreaCircle)
 				{
-					// todo : add area lights to light volume
-					continue;
+					const Mat4x4 transform_view = worldToView * lights[i].transform;
+					
+					builder.addAreaLight(
+						i,
+						transform_view,
+						lights[i].attenuationEnd);
 				}
 				else if (lights[i].type == kLightType_Directional)
 				{
