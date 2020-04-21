@@ -4,6 +4,7 @@
 #include "graphEdit.h"
 #include "vfxGraph.h"
 #include "vfxGraphRealTimeConnection.h"
+#include <algorithm> // std::find
 
 #if !defined(DEBUG)
 	#define FINMODE 1
