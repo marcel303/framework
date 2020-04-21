@@ -16,6 +16,7 @@ add box2d1
 add codevember
 add codingChallenges
 add colorpart
+add colortemp1
 add cuber
 add earcut-test
 add esp32-discovery
@@ -27,7 +28,10 @@ add geo
 add geopart1
 add gpuParticles1
 add gpupath1
-add grooop-cocompose
+push_group thegrooop
+	add grooop-cocompose
+	add grooop-thetribe
+pop_group
 add hackerPoet/010-particleLife
 add hashSpaceCollide
 add holeFilling
@@ -46,6 +50,7 @@ add nanovg-canvas
 add pincushion1
 add planetvis
 add planetvis2
+add phonograph1
 # todo : add with_library ?
 with_platform macos add ps3eye-to-osc
 with_platform linux add ps3eye-to-osc
