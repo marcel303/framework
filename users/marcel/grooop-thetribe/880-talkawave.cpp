@@ -4,6 +4,7 @@
 #include "objects/audioSourceVorbis.h"
 #include "objects/paobject.h"
 #include "soundmix.h"
+#include <algorithm>
 #include <cmath>
 #include <deque>
 
