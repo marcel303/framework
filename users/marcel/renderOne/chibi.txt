@@ -25,3 +25,8 @@ app renderOne-402-areaLights
 	depend_library renderOne
 	add_files tests/402-areaLights.cpp
 	resource_path tests/data
+
+app renderOne-410-areaLights
+	depend_library renderOne
+	add_files tests/410-areaLights.cpp
+	resource_path tests/data
