@@ -153,7 +153,11 @@ Framework::Framework()
 	minification = 1;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
+#if defined(DEBUG) // todo : make this distribution. let libgg also set DISTRIBUTION define when config is Distribution
+	enableRealTimeEditing = true;
+#else
 	enableRealTimeEditing = false;
+#endif
 	filedrop = false;
 	windowX = -1;
 	windowY = -1;
@@ -713,7 +717,11 @@ bool Framework::shutdown()
 	minification = 1;
 	reloadCachesOnActivate = false;
 	cacheResourceData = false;
+#if defined(DEBUG) // todo : make this distribution. let libgg also set DISTRIBUTION define when config is Distribution
+	enableRealTimeEditing = true;
+#else
 	enableRealTimeEditing = false;
+#endif
 	filedrop = false;
 	enableSound = true;
 	numSoundSources = 32;
@@ -4212,6 +4220,23 @@ void debugDrawText(float x, float y, int size, float alignX, float alignY, const
 		va_end(args);
 		
 		globals.debugDraw.numLines++;
+	}
+}
+
+void debugDrawText(const Vec3 & position, int size, float alignX, float alignY, const char * format, ...)
+{
+	float w;
+	const Vec2 position_screen = transformToScreen(position, w);
+	
+	if (w > 0.f)
+	{
+		char text[1024];
+		va_list args;
+		va_start(args, format);
+		vsprintf_s(text, sizeof(text), format, args);
+		va_end(args);
+		
+		debugDrawText(position_screen[0], position_screen[1], size, alignX, alignY, "%s", text);
 	}
 }
 

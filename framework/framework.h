@@ -1706,6 +1706,7 @@ GxTextureId copyTexture(const GxTextureId source);
 void freeTexture(GxTextureId & textureId);
 
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...);
+void debugDrawText(const Vec3 & position, int size, float alignX, float alignY, const char * format, ...);
 
 // OpenGL legacy mode drawing
 
@@ -1870,7 +1871,7 @@ void setShader_GrayscaleWeights(const GxTextureId source, const Vec3 & weights, 
 void setShader_Colorize(const GxTextureId source, const float hue, const float opacity);
 void setShader_HueShift(const GxTextureId source, const float hue, const float opacity);
 void setShader_ColorMultiply(const GxTextureId source, const Color & color, const float opacity);
-void setShader_ColorTemperature(const GxTextureId source, const float temperature, const float opacity);
+void setShader_ColorTemperature(const GxTextureId source, const float temperature, const float opacity); // temperature in Kelvin. sensible range is 1000 to 12.000
 void setShader_TextureSwizzle(const GxTextureId source, const int r, const int g, const int b, const int a);
 
 // high quality rendering
