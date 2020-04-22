@@ -244,9 +244,7 @@ int main(int argc, char * argv[])
 						
 						setColor(255, 127, 255);
 						debugDrawText(
-							areaLight.transform.GetTranslation()[0],
-							areaLight.transform.GetTranslation()[1],
-							areaLight.transform.GetTranslation()[2],
+							areaLight.transform.GetTranslation(),
 							12,
 							0, 0,
 							"%s",
