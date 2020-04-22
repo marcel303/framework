@@ -79,6 +79,14 @@ namespace rOne
 			Vec3Arg color,
 			const float intensity,
 			const float userData = -1.f);
+		void addAreaLight(
+			const LightType lightType,
+			const Mat4x4 & transform,
+			const float attenuationBegin,
+			const float attenuationEnd,
+			Vec3Arg color,
+			const float intensity,
+			const float userData = -1.f);
 		void addAreaBoxLight(
 			const Mat4x4 & transform,
 			const float attenuationBegin,

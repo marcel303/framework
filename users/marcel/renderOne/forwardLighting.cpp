@@ -79,6 +79,32 @@ namespace rOne
 		addLight(light);
 	}
 	
+	void ForwardLightingHelper::addAreaLight(
+		const LightType lightType,
+		const Mat4x4 & transform,
+		const float attenuationBegin,
+		const float attenuationEnd,
+		Vec3Arg color,
+		const float intensity,
+		const float userData)
+	{
+		Assert(
+			lightType == kLightType_AreaBox ||
+			lightType == kLightType_AreaSphere ||
+			lightType == kLightType_AreaRect ||
+			lightType == kLightType_AreaCircle);
+		
+		Light light;
+		light.type = lightType;
+		light.transform = transform;
+		light.attenuationBegin = attenuationBegin;
+		light.attenuationEnd = attenuationEnd;
+		light.color = srgbToLinear(color) * intensity;
+		light.userData = userData;
+		
+		addLight(light);
+	}
+	
 	void ForwardLightingHelper::addAreaBoxLight(
 		const Mat4x4 & transform,
 		const float attenuationBegin,
@@ -87,15 +113,14 @@ namespace rOne
 		const float intensity,
 		const float userData)
 	{
-		Light light;
-		light.type = kLightType_AreaBox;
-		light.transform = transform;
-		light.attenuationBegin = attenuationBegin;
-		light.attenuationEnd = attenuationEnd;
-		light.color = srgbToLinear(color) * intensity;
-		light.userData = userData;
-		
-		addLight(light);
+		addAreaLight(
+			kLightType_AreaBox,
+			transform,
+			attenuationBegin,
+			attenuationEnd,
+			color,
+			intensity,
+			userData);
 	}
 	
 	void ForwardLightingHelper::addAreaSphereLight(
@@ -106,15 +131,14 @@ namespace rOne
 		const float intensity,
 		const float userData)
 	{
-		Light light;
-		light.type = kLightType_AreaSphere;
-		light.transform = transform;
-		light.attenuationBegin = attenuationBegin;
-		light.attenuationEnd = attenuationEnd;
-		light.color = srgbToLinear(color) * intensity;
-		light.userData = userData;
-		
-		addLight(light);
+		addAreaLight(
+			kLightType_AreaSphere,
+			transform,
+			attenuationBegin,
+			attenuationEnd,
+			color,
+			intensity,
+			userData);
 	}
 	
 	void ForwardLightingHelper::addAreaRectLight(
@@ -125,15 +149,14 @@ namespace rOne
 		const float intensity,
 		const float userData)
 	{
-		Light light;
-		light.type = kLightType_AreaRect;
-		light.transform = transform;
-		light.attenuationBegin = attenuationBegin;
-		light.attenuationEnd = attenuationEnd;
-		light.color = srgbToLinear(color) * intensity;
-		light.userData = userData;
-		
-		addLight(light);
+		addAreaLight(
+			kLightType_AreaRect,
+			transform,
+			attenuationBegin,
+			attenuationEnd,
+			color,
+			intensity,
+			userData);
 	}
 	
 	void ForwardLightingHelper::addAreaCircleLight(
@@ -144,15 +167,14 @@ namespace rOne
 		const float intensity,
 		const float userData)
 	{
-		Light light;
-		light.type = kLightType_AreaCircle;
-		light.transform = transform;
-		light.attenuationBegin = attenuationBegin;
-		light.attenuationEnd = attenuationEnd;
-		light.color = srgbToLinear(color) * intensity;
-		light.userData = userData;
-		
-		addLight(light);
+		addAreaLight(
+			kLightType_AreaCircle,
+			transform,
+			attenuationBegin,
+			attenuationEnd,
+			color,
+			intensity,
+			userData);
 	}
 
 	void ForwardLightingHelper::reset()
