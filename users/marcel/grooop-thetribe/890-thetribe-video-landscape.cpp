@@ -13,7 +13,7 @@
 #include "vfxNodeBase.h"
 #include "vfxNodes/vfxNodeDisplay.h"
 #include "video.h"
-#include <cmath>
+#include <math.h>
 
 #define NUM_AUDIOCLIP_SOURCES 16
 #define NUM_VIDEOCLIPS 32
@@ -235,15 +235,15 @@ struct Videoclip
 	{
         const float moveSpeed = (1.f + index / float(NUM_VIDEOCLIPS)) * .1f;
         const float moveAmount = 1.f;
-        const float x = std::sin(moveSpeed * time / 15.678f) * moveAmount * .2f - index * 2.7f - 8.f;
-        const float y = std::sin(moveSpeed * time / 13.456f) * moveAmount;
-        const float z = std::sin(moveSpeed * time / 11.234f) * moveAmount;
+        const float x = sinf(moveSpeed * time / 15.678f) * moveAmount * .2f - index * 2.7f - 8.f;
+        const float y = sinf(moveSpeed * time / 13.456f) * moveAmount;
+        const float z = sinf(moveSpeed * time / 11.234f) * moveAmount;
     
         const float scaleSpeed = 1.f + index / 5.f;
-        const float scaleY = lerp(.5f, 1.f, (std::cos(scaleSpeed * time / 4.567f) + 1.f) / 2.f);
+        const float scaleY = lerp(.5f, 1.f, (cosf(scaleSpeed * time / 4.567f) + 1.f) / 2.f);
         const float scaleX = scaleY * 4.f/3.f;
-        //const float scaleZ = lerp(.05f, .5f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
-        const float scaleZ = lerp(.05f, .1f, (std::cos(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
+        //const float scaleZ = lerp(.05f, .5f, (cosf(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
+        const float scaleZ = lerp(.05f, .1f, (cosf(scaleSpeed * time / 8.765f) + 1.f) / 2.f);
         const float rotateSpeed = 1.f + index / 10.f;
 		
         scale = Vec3(scaleX, scaleY, scaleZ);
@@ -517,9 +517,9 @@ struct SpokenWord
 	
 	void tick(const Mat4x4 & worldToViewMatrix, Vec3Arg cameraPosition_world, const float dt)
 	{
-		//const float y = std::sin(framework.time / 3.45f) * 1.f;
+		//const float y = sinf(framework.time / 3.45f) * 1.f;
 		const float y = 0.f;
-		//const float angleY = std::sin(framework.time / 4.56f) * 1.f;
+		//const float angleY = sinf(framework.time / 4.56f) * 1.f;
 		const float angleY = currentAngle * M_PI / 180.f;
 		
 		soundVolume.transform = Mat4x4(true)
@@ -576,7 +576,7 @@ struct SpokenWord
 		//
 		
 		const float speed = .7f;
-		const float retain = std::pow(1.f - speed, dt);
+		const float retain = powf(1.f - speed, dt);
 		
 		currentColor = desiredColor.interp(currentColor, retain);
 		currentGain = lerp(desiredGain, currentGain, retain);
@@ -1716,8 +1716,8 @@ struct World
 		
 		const float roll = camera.roll * M_PI / 180.f;
 		
-		const Vec2 xAxis = Vec2(std::cosf(-roll), std::sinf(-roll));
-		const Vec2 yAxis = Vec2(std::cosf(-roll - M_PI / 2.f), std::sinf(-roll - M_PI / 2.f));
+		const Vec2 xAxis = Vec2(cosf(-roll), sinf(-roll));
+		const Vec2 yAxis = Vec2(cosf(-roll - float(M_PI / 2.0)), sinf(-roll - float(M_PI / 2.0)));
 		
 		Shader shader("horizon");
 		setShader(shader);
@@ -2350,8 +2350,8 @@ struct SpacePoints
 	{
 		Vec3 p;
 		
-		p[0] = std::cos(t * 2.0 * M_PI);
-		p[1] = std::sin(t * 2.0 * M_PI);
+		p[0] = cosf(t * float(2.0 * M_PI));
+		p[1] = sinf(t * float(2.0 * M_PI));
 		
 		return p * radius;
 	}
@@ -2392,8 +2392,8 @@ struct SpacePoints
 	{
 		Vec3 p;
 		
-		p[0] = std::cos(t * 2.0 * M_PI / 2.345) * 16.f;
-		p[1] = std::sin(t * 2.0 * M_PI / 1.234) * 6.f;
+		p[0] = cosf(t * float(2.0 * M_PI) / 2.345) * 16.f;
+		p[1] = sinf(t * float(2.0 * M_PI) / 1.234) * 6.f;
 		
 		return p;
 	}
@@ -2425,7 +2425,7 @@ struct SpacePoints
 			t += s_speed * dt;
 		
 		if (gamepad[0].isDown(GAMEPAD_R2))
-			t *= std::pow(0.1, dt);
+			t *= powf(.1f, dt);
 		
 		for (int i = 0; i < MAX_SPACE_POINTS; ++i)
 		{
