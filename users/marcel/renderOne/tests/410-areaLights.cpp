@@ -44,8 +44,6 @@ int main(int argc, char * argv[])
 		gxPopMatrix();
 	};
 	
-	Camera3d camera;
-	
 	struct AreaLight
 	{
 		LightType lightType;
@@ -56,6 +54,11 @@ int main(int argc, char * argv[])
 	};
 	
 	ForwardLightingHelper helper;
+	
+	Camera3d camera;
+	
+	camera.position.Set(0, 6, -4);
+	camera.pitch = -60.f;
 	
 	for (;;)
 	{
@@ -210,6 +213,7 @@ int main(int argc, char * argv[])
 						gxPopMatrix();
 						popLineSmooth();
 						
+					#if defined(DEBUG)
 						pushLineSmooth(true);
 						gxPushMatrix();
 						{
@@ -222,6 +226,7 @@ int main(int argc, char * argv[])
 						}
 						gxPopMatrix();
 						popLineSmooth();
+					#endif
 						
 						const char * lightTypeNames[4] =
 						{
