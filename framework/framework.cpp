@@ -3883,6 +3883,12 @@ static StencilState & getStencilStateForFace(GX_STENCIL_FACE face)
 		: globals.backStencilState;
 }
 
+StencilSetter::StencilSetter()
+{
+	globals.frontStencilState = StencilState();
+	globals.backStencilState = StencilState();
+}
+
 StencilSetter::~StencilSetter()
 {
 	setStencilTest(globals.frontStencilState, globals.backStencilState);

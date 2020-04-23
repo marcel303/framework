@@ -1620,6 +1620,7 @@ void clearStencilTest();
 class StencilSetter
 {
 public:
+	StencilSetter();
 	~StencilSetter();
 	
 	StencilSetter & op(
