@@ -12,6 +12,8 @@ class TweenFloat;
 class TweenFloatModifier
 {
 public:
+	virtual ~TweenFloatModifier() { }
+	
 	virtual float applyModifier(TweenFloat * tweenFloat, const float value) = 0;
 };
 
@@ -86,6 +88,10 @@ struct TweenFloatCollection
 {
 	std::map<std::string, TweenFloat*> m_tweenVars;
 
+	virtual ~TweenFloatCollection()
+	{
+	}
+	
 	void addVar(const char * name, TweenFloat & var)
 	{
 		m_tweenVars[name] = &var;

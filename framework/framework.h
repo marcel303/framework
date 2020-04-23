@@ -918,10 +918,10 @@ public:
 	void free();
 	
 #if ENABLE_OPENGL
-	int getOpenglBuffer() const { return m_buffer; }
+	GxShaderBufferId getOpenglBuffer() const { return m_buffer; }
 #endif
 #if ENABLE_METAL
-	int getMetalBuffer() const { return m_buffer; }
+	GxShaderBufferId getMetalBuffer() const { return m_buffer; }
 #endif
 };
 
@@ -944,10 +944,10 @@ public:
 	}
 	
 #if ENABLE_OPENGL
-	int getOpenglBuffer() const { return m_buffer; }
+	GxShaderBufferId getOpenglBuffer() const { return m_buffer; }
 #endif
 #if ENABLE_METAL
-	int getMetalBuffer() const { return m_buffer; }
+	GxShaderBufferId getMetalBuffer() const { return m_buffer; }
 #endif
 };
 

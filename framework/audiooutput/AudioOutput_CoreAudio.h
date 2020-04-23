@@ -37,10 +37,10 @@ struct SDL_mutex;
 
 class AudioOutput_CoreAudio : AudioOutput
 {
-	AudioComponent m_audioComponent = nullptr;
-	AudioComponentInstance m_audioUnit = nullptr;
-	SDL_mutex * m_mutex = nullptr;
-	AudioStream * m_stream = nullptr;
+	AudioComponent __nullable m_audioComponent = nullptr;
+	AudioComponentInstance __nullable m_audioUnit = nullptr;
+	SDL_mutex * __nullable m_mutex = nullptr;
+	AudioStream * __nullable m_stream = nullptr;
 	int m_numChannels = 0;
 	int m_sampleRate;
 	std::atomic<bool> m_isPlaying;
@@ -55,9 +55,9 @@ class AudioOutput_CoreAudio : AudioOutput
 	bool shutCoreAudio();
 	
 	static OSStatus outputCallback(
-		void * inRefCon,
-		AudioUnitRenderActionFlags * ioActionFlags,
-		const AudioTimeStamp * inTimeStamp,
+		void * __nonnull inRefCon,
+		AudioUnitRenderActionFlags * __nonnull ioActionFlags,
+		const AudioTimeStamp * __nonnull inTimeStamp,
 		UInt32 inBusNumber,
 		UInt32 inNumberFrames,
 		AudioBufferList * __nullable ioData);
@@ -69,7 +69,7 @@ public:
 	bool Initialize(const int numChannels, const int sampleRate, const int bufferSize);
 	bool Shutdown();
 	
-	virtual void Play(AudioStream * stream) override;
+	virtual void Play(AudioStream * __nonnull stream) override;
 	virtual void Stop() override;
 	virtual void Update() override;
 	virtual void Volume_set(float volume) override;
