@@ -233,6 +233,7 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 		checkErrorGL();
 	#endif
 		glClearStencil(0);
+		glStencilMask(0xff); // note : glClear is affected by the stencil write mask
 
 		clearFlags |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
 	}
@@ -240,6 +241,14 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 	if (clearFlags)
 	{
 		glClear(clearFlags);
+		checkErrorGL();
+	}
+	
+	if (clearDepth)
+	{
+		// restore the stencil write mask
+		glStencilMaskSeparate(GL_FRONT, globals.frontStencilState.writeMask);
+		glStencilMaskSeparate(GL_BACK, globals.backStencilState.writeMask);
 		checkErrorGL();
 	}
 
