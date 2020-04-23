@@ -59,6 +59,8 @@ namespace rOne
 	enum ToneMap
 	{
 		kToneMap_Uncharted2,
+		kToneMap_JimRichard,
+		kToneMap_Reinhard,
 		kToneMap_Aces
 	};
 

@@ -120,6 +120,8 @@ namespace rOne
 		
 		typeDB.addEnum<ToneMap>("ToneMap")
 			.add("uncharted2", kToneMap_Uncharted2)
+			.add("jimrichard", kToneMap_JimRichard)
+			.add("reinhard", kToneMap_Reinhard)
 			.add("aces", kToneMap_Aces);
 		
 		DeferredLighting::reflect(typeDB);

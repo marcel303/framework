@@ -2,7 +2,9 @@ include engine/ShaderPS.txt
 include engine/ShaderUtil.txt
 
 #define kToneMap_Uncharted2 0
-#define kToneMap_Aces       1
+#define kToneMap_JimRichard 1
+#define kToneMap_Reinhard   2
+#define kToneMap_Aces       3
 
 uniform sampler2D colorTexture;
 
@@ -25,14 +27,36 @@ vec3 Uncharted2ToneMapping(vec3 color)
 	float E = 0.02;
 	float F = 0.30;
 	
+	float white = 11.2;
+
 	color = ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
-	
-	float W = 11.2;
-	float white = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
-	float whiteScale = 1.0 / white;
-	color *= whiteScale;
+	white = ((white * (A * white + C * B) + D * E) / (white * (A * white + B) + D * F)) - E / F;
+	color *= (1.0 / white);
 
 	return color;
+}
+
+// optimized formula by Jim Hejl and Richard Burgess-Dawson
+// source: http://filmicworlds.com/blog/filmic-tonemapping-operators/
+// note : it's modeled to have to linear to sRGB conversion built-in
+//        sadly, we undo it here, so it behaves the same as the others
+vec3 toneMapJimRich(vec3 color)
+{
+    color = max(vec3(0.0), color - vec3(0.004));
+    color = (color * (6.2 * color + vec3(0.5))) / (color * (6.2 * color + vec3(1.7)) + vec3(0.06));
+
+    color = srgbToLinear(color);
+
+    return color;
+}
+
+// Reinhard tone map
+// source: http://filmicworlds.com/blog/filmic-tonemapping-operators/
+vec3 toneMapReinhard(vec3 color)
+{
+   color = color / (vec3(1.0) + color);
+   
+   return color;
 }
 
 // ACES (Academy Color Encoding System) tone map
@@ -46,6 +70,7 @@ vec3 toneMapACES(vec3 color)
     float E = 0.14;
 
     color = clamp((color * (A * color + B)) / (color * (C * color + D) + E), 0.0, 1.0);
+
     return color;
 }
 
@@ -71,16 +96,22 @@ void main()
 #if 1
 	if (tonemap == kToneMap_Uncharted2)
 		color = Uncharted2ToneMapping(color);
+	else if (tonemap == kToneMap_JimRichard)
+		color = toneMapJimRich(color);
+	else if (tonemap == kToneMap_Reinhard)
+		color = toneMapReinhard(color);
 	else if (tonemap == kToneMap_Aces)
 		color = toneMapACES_pure(color);
 #else
 	//color = Uncharted2ToneMapping(color);
+	color = toneMapJimRich(color);
+	//color = toneMapReinhard(color);
 	//color = toneMapACES(color);
-	color = toneMapACES_pure(color);
+	//color = toneMapACES_pure(color);
 #endif
 
-	color = pow(color, vec3(1.0 / gamma));
-	//color = linearToSrgb(color);
+	//color = pow(color, vec3(1.0 / gamma));
+	color = linearToSrgb(color);
 
 	color += colorDither8ScreenSpace(texcoord * textureSize(colorTexture, 0)) * 4.0;
 
