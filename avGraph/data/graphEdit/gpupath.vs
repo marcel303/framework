@@ -7,6 +7,7 @@ uniform float numVertices;
 uniform float halfThickness;
 
 shader_out float v_radialPosition;
+shader_out float v_scale;
 
 vec2 interp(vec2 v1, vec2 v4, float t, float s)
 {
@@ -71,6 +72,10 @@ void main()
 		offset = +tangent;
 		v_radialPosition = +halfThickness;
 	}
+
+	// calculate the scaling applied by the transformation matrices. we use this to create a fade out effect when zooming out
+	float sqrt3_rcp = 0.577; // 1 / sqrt(3)
+	v_scale = length(objectToView3(vec3(sqrt3_rcp, sqrt3_rcp, sqrt3_rcp)));
 
 	// calculate the final position
 

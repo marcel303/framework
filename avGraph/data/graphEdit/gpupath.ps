@@ -7,6 +7,7 @@ uniform float halfThicknessColor;
 uniform float hardness;
 
 shader_in float v_radialPosition;
+shader_in float v_scale;
 
 void main()
 {
@@ -14,6 +15,9 @@ void main()
 	float t = (1.0 - abs(v_radialPosition) / halfThickness);
 	c = min(1.0, c * hardness);
 	t = min(1.0, t * hardness);
+
+	// let the inner color dominate when the scale is small. this to avoid excessive aliasing as the colors fight each other
+	c = 1.0 - min(1.0 - c, v_scale);
 
 	vec4 color = color1 * (1.0 - c) + color2 * c;
 
