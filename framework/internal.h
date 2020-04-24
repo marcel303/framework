@@ -74,9 +74,9 @@
 #endif
 
 #if ENABLE_MSDF_FONTS
-	#define MSDF_GLYPH_PADDING_INNER 3
-	#define MSDF_GLYPH_PADDING_OUTER 4
-	#define MSDF_SCALE .04f
+	#define MSDF_GLYPH_PADDING_INNER 2 // the padding when drawing msdf text. should be greater than zero, to avoid adjacent glyphs from becoming visible near the edges. a good value would be the outer padding divided by two
+	#define MSDF_GLYPH_PADDING_OUTER 4 // the padding when generating the msdf glyph
+	#define MSDF_SCALE .03f // scale used to down-scale glyph coords into msdf bitmap coords 
 #endif
 
 #if USE_FREETYPE
@@ -822,7 +822,7 @@ public:
 	int y;
 	int sx;
 	int sy;
-	float scale;
+	float textureToGlyphScale[2];
 	int advance;
 	int lsb;
 	bool isInitialized;

@@ -1459,7 +1459,6 @@ MsdfGlyphCacheElem::MsdfGlyphCacheElem()
 	, y(0)
 	, sx(0)
 	, sy(0)
-	, scale(1.f)
 	, advance(0)
 	, lsb(0)
 	, isInitialized(false)
@@ -1572,6 +1571,7 @@ bool MsdfGlyphCache::stbGlyphToMsdfShape(const int codePoint, msdfgen::Shape & s
 			contour = &shape.addContour();
 			
 			old_p.set(v.x, v.y);
+			old_p *= MSDF_SCALE;
 			
 		}
 		else if (v.type == STBTT_vline)
@@ -1579,6 +1579,7 @@ bool MsdfGlyphCache::stbGlyphToMsdfShape(const int codePoint, msdfgen::Shape & s
 			//logDebug("lineTo: %d, %d", v.x, v.y);
 			
 			msdfgen::Point2 new_p(v.x, v.y);
+			new_p *= MSDF_SCALE;
 			
 			contour->addEdge(new msdfgen::LinearSegment(old_p, new_p));
 			
@@ -1588,8 +1589,10 @@ bool MsdfGlyphCache::stbGlyphToMsdfShape(const int codePoint, msdfgen::Shape & s
 		{
 			//logDebug("quadraticTo: %d, %d", v.x, v.y);
 			
-			const msdfgen::Point2 new_p(v.x, v.y);
-			const msdfgen::Point2 control_p(v.cx, v.cy);
+			msdfgen::Point2 new_p(v.x, v.y);
+			msdfgen::Point2 control_p(v.cx, v.cy);
+			new_p *= MSDF_SCALE;
+			control_p *= MSDF_SCALE;
 			
 			contour->addEdge(new msdfgen::QuadraticSegment(old_p, control_p, new_p));
 			
@@ -1599,9 +1602,12 @@ bool MsdfGlyphCache::stbGlyphToMsdfShape(const int codePoint, msdfgen::Shape & s
 		{
 			//logDebug("cubicTo: %d, %d", v.x, v.y);
 			
-			const msdfgen::Point2 new_p(v.x, v.y);
-			const msdfgen::Point2 control_p1(v.cx, v.cy);
-			const msdfgen::Point2 control_p2(v.cx1, v.cy1);
+			msdfgen::Point2 new_p(v.x, v.y);
+			msdfgen::Point2 control_p1(v.cx, v.cy);
+			msdfgen::Point2 control_p2(v.cx1, v.cy1);
+			new_p *= MSDF_SCALE;
+			control_p1 *= MSDF_SCALE;
+			control_p2 *= MSDF_SCALE;
 			
 			contour->addEdge(new msdfgen::CubicSegment(old_p, control_p1, control_p2, new_p));
 			
@@ -1639,30 +1645,29 @@ void MsdfGlyphCache::makeGlyph(const int codepoint, MsdfGlyphCacheElem & glyph)
 		const int sx = x2 - x1 + 1;
 		const int sy = y2 - y1 + 1;
 		
-		const float scale = MSDF_SCALE;
-		const float sx1 = x1 * scale;
-		const float sy1 = y1 * scale;
-		const float sx2 = (x1 + sx) * scale;
-		const float sy2 = (y1 + sy) * scale;
+		const float scaled_x1 = x1 * MSDF_SCALE;
+		const float scaled_y1 = y1 * MSDF_SCALE;
+		const float scaled_sx = sx * MSDF_SCALE;
+		const float scaled_sy = sy * MSDF_SCALE;
 		
-		const float ssx = sx2 - sx1;
-		const float ssy = sy2 - sy1;
-		
-		const int bitmapSx = (int)std::ceil(ssx) + MSDF_GLYPH_PADDING_OUTER * 2;
-		const int bitmapSy = (int)std::ceil(ssy) + MSDF_GLYPH_PADDING_OUTER * 2;
-		logDebug("bitmap size: %d x %d", bitmapSx, bitmapSy);
+		const int bitmapSx = (int)std::ceil(scaled_sx) + MSDF_GLYPH_PADDING_OUTER * 2;
+		const int bitmapSy = (int)std::ceil(scaled_sy) + MSDF_GLYPH_PADDING_OUTER * 2;
+		logDebug("msdf bitmap size: %d x %d", bitmapSx, bitmapSy);
 		
 		msdfgen::edgeColoringSimple(shape, 3.f);
 		msdfgen::Bitmap<msdfgen::FloatRGBA> msdf(bitmapSx, bitmapSy);
 		
-		const msdfgen::Vector2 scaleVec(scale, scale);
+		const msdfgen::Vector2 scaleVec(1.f, 1.f);
 		const msdfgen::Vector2 transVec(
-			-x1 + int(MSDF_GLYPH_PADDING_OUTER / scale),
-			-y1 + int(MSDF_GLYPH_PADDING_OUTER / scale));
-		msdfgen::generateMSDF(msdf, shape, 1.f / scale, scaleVec, transVec);
+			-scaled_x1 + MSDF_GLYPH_PADDING_OUTER,
+			-scaled_y1 + MSDF_GLYPH_PADDING_OUTER);
+		msdfgen::generateMSDF(msdf, shape, 1.f, scaleVec, transVec);
 		
-		glyph.sx = (int)ceilf((bitmapSx - MSDF_GLYPH_PADDING_INNER * 2) / MSDF_SCALE);
-		glyph.sy = (int)ceilf((bitmapSy - MSDF_GLYPH_PADDING_INNER * 2) / MSDF_SCALE);
+		glyph.sx = sx;
+		glyph.sy = sy;
+		
+		glyph.textureToGlyphScale[0] = sx / scaled_sx;
+		glyph.textureToGlyphScale[1] = sy / scaled_sy;
 		
 		for (;;)
 		{
@@ -1719,7 +1724,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 		
 		result &= fread(&version, 4, 1, file) == 1;
 		
-		if (version != 2)
+		if (version != 3)
 		{
 			logDebug("loadCache: version mismatch");
 			result = false;
@@ -1747,13 +1752,11 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 			int32_t y;
 			int32_t sx;
 			int32_t sy;
-			float scale;
 			int32_t advance;
 			
 			result &= fread(&y, 4, 1, file) == 1;
 			result &= fread(&sx, 4, 1, file) == 1;
 			result &= fread(&sy, 4, 1, file) == 1;
-			result &= fread(&scale, 4, 1, file) == 1;
 			result &= fread(&advance, 4, 1, file) == 1;
 			
 			//
@@ -1805,7 +1808,6 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 				glyph.y = y;
 				glyph.sx = sx;
 				glyph.sy = sy;
-				glyph.scale = scale;
 				glyph.advance = advance;
 				glyph.isInitialized = true;
 			}
@@ -1859,7 +1861,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 	
 	if (result == true)
 	{
-		const int32_t version = 2;
+		const int32_t version = 3;
 		
 		result &= fwrite(&version, 4, 1, file) == 1;
 	}
@@ -1885,13 +1887,11 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 			const int32_t y = e.y;
 			const int32_t sx = e.sx;
 			const int32_t sy = e.sy;
-			const float scale = e.scale;
 			const int32_t advance = e.advance;
 			
 			result &= fwrite(&y, 4, 1, file) == 1;
 			result &= fwrite(&sx, 4, 1, file) == 1;
 			result &= fwrite(&sy, 4, 1, file) == 1;
-			result &= fwrite(&scale, 4, 1, file) == 1;
 			result &= fwrite(&advance, 4, 1, file) == 1;
 			
 			//

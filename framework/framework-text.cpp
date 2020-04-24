@@ -368,8 +368,8 @@ static void measureText_MSDF(const stbtt_fontinfo & fontInfo, const float size, 
 			int gsx = glyph.sx;
 			int gsy = glyph.sy;
 			
-			int dx1 = x - MSDF_GLYPH_PADDING_INNER + glyph.lsb;
-			int dy1 = 0 + MSDF_GLYPH_PADDING_INNER;
+			int dx1 = x + glyph.lsb;
+			int dy1 = 0;
 			int dx2 = dx1 + gsx;
 			int dy2 = dy1 - gsy;
 			
@@ -449,16 +449,15 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 		
 		if (glyph.textureAtlasElem != nullptr)
 		{
-			const int PADDING = MSDF_GLYPH_PADDING_OUTER - MSDF_GLYPH_PADDING_INNER;
-			//const int PADDING = MSDF_GLYPH_PADDING_INNER;
+			const int PADDING_FROM_OUTER = MSDF_GLYPH_PADDING_OUTER - MSDF_GLYPH_PADDING_INNER;
 			
 			const int sx = glyph.textureAtlasElem->sx;
 			const int sy = glyph.textureAtlasElem->sy;
 			
-			const int u1i = glyph.textureAtlasElem->x + PADDING;
-			const int v1i = glyph.textureAtlasElem->y + PADDING;
-			const int u2i = glyph.textureAtlasElem->x + sx - PADDING;
-			const int v2i = glyph.textureAtlasElem->y + sy - PADDING;
+			const int u1i = glyph.textureAtlasElem->x + PADDING_FROM_OUTER;
+			const int v1i = glyph.textureAtlasElem->y + PADDING_FROM_OUTER;
+			const int u2i = glyph.textureAtlasElem->x + sx - PADDING_FROM_OUTER;
+			const int v2i = glyph.textureAtlasElem->y + sy - PADDING_FROM_OUTER;
 			
 			const float u1 = u1i / float(atlasSx);
 			const float v1 = v1i / float(atlasSy);
@@ -468,14 +467,11 @@ static void drawText_MSDF(MsdfGlyphCache & glyphCache, const float _x, const flo
 			int gsx = glyph.sx;
 			int gsy = glyph.sy;
 			
-		//  todo : why not float ?
-			int dx1 = x - MSDF_GLYPH_PADDING_INNER + glyph.lsb;
-			int dy1 = y + MSDF_GLYPH_PADDING_INNER;
-			int dx2 = dx1 + gsx;
-			int dy2 = dy1 - gsy;
-			
-			dy1 -= glyph.y;
-			dy2 -= glyph.y;
+			// note : we will slightly need to shift the vertex coordinates since we also shifted the texture coordinates. the amount of shift is equal to the padding times a factor which equates to the number of 'glyph units' represented by one 'texture unit'. we precompute this value in textureToGlyphScale, since it depends on the scaled-down size of the glyph (in texels) that's only known at the time when we render the msdf glyph
+			float dx1 = x + glyph.lsb       - MSDF_GLYPH_PADDING_INNER * glyph.textureToGlyphScale[0];
+			float dy1 = y - glyph.y         + MSDF_GLYPH_PADDING_INNER * glyph.textureToGlyphScale[1];
+			float dx2 = x + glyph.lsb + gsx + MSDF_GLYPH_PADDING_INNER * glyph.textureToGlyphScale[0];
+			float dy2 = y - glyph.y   - gsy - MSDF_GLYPH_PADDING_INNER * glyph.textureToGlyphScale[1];
 			
 			gxTexCoord2f(u1, v1); gxVertex2f(dx1 * scale, dy1 * scale);
 			gxTexCoord2f(u2, v1); gxVertex2f(dx2 * scale, dy1 * scale);
