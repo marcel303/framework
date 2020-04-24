@@ -106,25 +106,23 @@ void drawCircle(float x, float y, float radius, int numSegments)
 
 void fillCircle(float x, float y, float radius, int numSegments)
 {
-	gxBegin(GX_TRIANGLES);
+	gxBegin(GX_TRIANGLE_STRIP);
 	{
 		emitNormal(0, 1);
 		
-		for (int i = 0; i < numSegments; ++i)
+		for (int i = 0; i <= numSegments; ++i)
 		{
-			const float angle1 = (i + 0) * (M_PI * 2.f / numSegments);
-			const float angle2 = (i + 1) * (M_PI * 2.f / numSegments);
+			const int index = i < numSegments ? i : 0;
+			
+			const float angle = index * (M_PI * 2.f / numSegments);
 
 			gxVertex2f(
 				x,
 				y);
 
 			gxVertex2f(
-				x + cosf(angle1) * radius,
-				y + sinf(angle1) * radius);
-			gxVertex2f(
-				x + cosf(angle2) * radius,
-				y + sinf(angle2) * radius);
+				x + cosf(angle) * radius,
+				y + sinf(angle) * radius);
 		}
 	}
 	gxEnd();
@@ -427,7 +425,7 @@ void endCubeBatch()
 	s_isInCubeBatch = false;
 }
 
-void fillCylinder(Vec3Arg position, const float radius, const float height, const int resolution, const float angleOffset)
+void fillCylinder(Vec3Arg position, const float radius, const float height, const int resolution, const float angleOffset, const bool smoothNormals)
 {
 	float * dx = (float*)alloca(resolution * sizeof(float));
 	float * dz = (float*)alloca(resolution * sizeof(float));
@@ -449,6 +447,7 @@ void fillCylinder(Vec3Arg position, const float radius, const float height, cons
 	const float y1 = position[1] - height;
 	const float y2 = position[1] + height;
 	
+#if true
 	gxBegin(GX_QUADS);
 	{
 		for (int i = 0; i < resolution; ++i)
@@ -458,25 +457,42 @@ void fillCylinder(Vec3Arg position, const float radius, const float height, cons
 			
 			// emit quad
 			
-			const float dxMid = dx[vertex1] + dx[vertex2];
-			const float dzMid = dz[vertex1] + dz[vertex2];
-			const float dLength = hypotf(dxMid, dzMid);
-			
-			const float nx = dxMid / dLength;
-			const float nz = dzMid / dLength;
-			
-			gxNormal3f(nx, 0.f, nz);
-			
-			gxVertex3f(x[vertex1], y1, z[vertex1]);
-			gxVertex3f(x[vertex2], y1, z[vertex2]);
-			gxVertex3f(x[vertex2], y2, z[vertex2]);
-			gxVertex3f(x[vertex1], y2, z[vertex1]);
+			if (smoothNormals)
+			{
+				gxNormal3f(dx[vertex1], 0.f, dz[vertex1]);
+				gxVertex3f(x[vertex1], y2, z[vertex1]);
+				gxVertex3f(x[vertex1], y1, z[vertex1]);
+				
+				gxNormal3f(dx[vertex2], 0.f, dz[vertex2]);
+				gxVertex3f(x[vertex2], y1, z[vertex2]);
+				gxVertex3f(x[vertex2], y2, z[vertex2]);
+			}
+			else
+			{
+				// calculate face normal
+				
+				const float dxMid = dx[vertex1] + dx[vertex2];
+				const float dzMid = dz[vertex1] + dz[vertex2];
+				const float dLength = hypotf(dxMid, dzMid);
+				
+				const float nx = dxMid / dLength;
+				const float nz = dzMid / dLength;
+				
+				gxNormal3f(nx, 0.f, nz);
+				
+				gxVertex3f(x[vertex1], y1, z[vertex1]);
+				gxVertex3f(x[vertex2], y1, z[vertex2]);
+				gxVertex3f(x[vertex2], y2, z[vertex2]);
+				gxVertex3f(x[vertex1], y2, z[vertex1]);
+			}
 		}
 	}
 	gxEnd();
 	
 	gxBegin(GX_TRIANGLES);
 	{
+		// emit bottom part
+		
 		gxNormal3f(0, -1, 0);
 		
 		for (int i = 0; i < resolution; ++i)
@@ -489,6 +505,8 @@ void fillCylinder(Vec3Arg position, const float radius, const float height, cons
 			gxVertex3f(x[vertex2], y1, z[vertex2]);
 			gxVertex3f(x[vertex3], y1, z[vertex3]);
 		}
+		
+		// emit top part
 		
 		gxNormal3f(0, +1, 0);
 		
@@ -504,9 +522,69 @@ void fillCylinder(Vec3Arg position, const float radius, const float height, cons
 		}
 	}
 	gxEnd();
+#else
+// todo : use a single triangle strip for everything
+
+	gxBegin(GX_TRIANGLE_STRIP);
+	{
+		for (int i = 0; i <= resolution; ++i)
+		{
+			const int vertex = i < resolution ? i : 0;
+			
+			// emit vertical segment
+			
+			gxNormal3f(dx[vertex], 0.f, dz[vertex]);
+			
+			gxVertex3f(x[vertex], y1, z[vertex]);
+			gxVertex3f(x[vertex], y2, z[vertex]);
+		}
+	}
+	gxEnd();
+	
+	gxBegin(GX_TRIANGLE_STRIP);
+	{
+		// emit bottom part
+		
+		gxNormal3f(0, -1, 0);
+		
+		int index1 = 0;
+		int index2 = resolution - 1;
+		
+		while (index1 < index2)
+		{
+			gxVertex3f(x[index1], y1, z[index1]);
+			gxVertex3f(x[index2], y1, z[index2]);
+			
+			index1++;
+			index2--;
+		}
+		
+		// emit top part
+		
+		gxNormal3f(0, +1, 0);
+		
+		index1--;
+		index2++;
+		
+		// note : the bottom and top will be connected through a degenerate
+		//        triangle, so we don't need to start a new triangle strip here
+		
+		gxVertex3f(x[index2], y1, z[index2]);
+		
+		while (index1 >= 0)
+		{
+			gxVertex3f(x[index2], y2, z[index2]);
+			gxVertex3f(x[index1], y2, z[index1]);
+			
+			index1--;
+			index2++;
+		}
+	}
+	gxEnd();
+#endif
 }
 
-void fillHexagon(Vec3Arg position, const float radius, const float height, const float angleOffset)
+void fillHexagon(Vec3Arg position, const float radius, const float height, const float angleOffset, const bool smoothNormals)
 {
-	fillCylinder(position, radius, height, 5, angleOffset);
+	fillCylinder(position, radius, height, 5, angleOffset, smoothNormals);
 }
