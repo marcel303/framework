@@ -74,8 +74,8 @@ void main()
 	}
 
 	// calculate the scaling applied by the transformation matrices. we use this to create a fade out effect when zooming out
-	float sqrt3_rcp = 0.577; // 1 / sqrt(3)
-	v_scale = length(objectToView3(vec3(sqrt3_rcp, sqrt3_rcp, sqrt3_rcp)));
+	float sqrt2_rcp = 0.707; // 1 / sqrt(2)
+	v_scale = length(objectToView3(vec3(sqrt2_rcp, sqrt2_rcp, 0.0)));
 
 	// calculate the final position
 
