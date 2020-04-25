@@ -62,8 +62,6 @@ static AudioGraphManager_Basic * s_audioGraphMgr = nullptr;
 #endif
 
 extern AudioMutexBase * g_vfxAudioMutex;
-extern AudioVoiceManager * g_vfxAudioVoiceMgr;
-extern AudioGraphManager * g_vfxAudioGraphMgr;
 
 //
 
@@ -104,15 +102,11 @@ static void initAudioGraph()
 	//
 	
 	g_vfxAudioMutex = s_audioMutex;
-	g_vfxAudioVoiceMgr = s_voiceMgr;
-	g_vfxAudioGraphMgr = s_audioGraphMgr;
 }
 
 static void shutAudioGraph()
 {
 	g_vfxAudioMutex = nullptr;
-	g_vfxAudioVoiceMgr = nullptr;
-	g_vfxAudioGraphMgr = nullptr;
 	
 	//
 	
@@ -132,8 +126,6 @@ static void shutAudioGraph()
 	
 	if (s_audioGraphMgr != nullptr)
 	{
-		g_vfxAudioGraphMgr = nullptr;
-		
 		s_audioGraphMgr->shut();
 		delete s_audioGraphMgr;
 		s_audioGraphMgr = nullptr;

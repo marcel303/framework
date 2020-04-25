@@ -52,7 +52,7 @@ extern const int GFX_SY;
 static AudioMutex * s_audioMutex = nullptr;
 static AudioUpdateHandler * s_audioUpdateHandler = nullptr;
 static PortAudioObject * s_paObject = nullptr;
-static AudioVoiceManagerBasic * s_voiceMgr = nullptr;
+static AudioVoiceManagerBasic * s_audioVoiceMgr = nullptr;
 #if ENABLE_AUDIO_RTE
 static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 #else
@@ -60,8 +60,6 @@ static AudioGraphManager_Basic * s_audioGraphMgr = nullptr;
 #endif
 
 extern AudioMutexBase * g_vfxAudioMutex;
-extern AudioVoiceManager * g_vfxAudioVoiceMgr;
-extern AudioGraphManager * g_vfxAudioGraphMgr;
 
 extern OscEndpointMgr g_oscEndpointMgr;
 
@@ -501,6 +499,9 @@ void testVfxGraph()
 	
 	RealTimeConnection rtc(vfxGraph);
 	
+	rtc.vfxGraphContext->addSystem<AudioGraphManager>(s_audioGraphMgr);
+	rtc.vfxGraphContext->addSystem<AudioVoiceManager>(s_audioVoiceMgr);
+	
 	Graph_TypeDefinitionLibrary tdl;
 	createVfxTypeDefinitionLibrary(tdl, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
 	
@@ -594,11 +595,10 @@ static void initAudioGraph()
 	s_audioMutex->init();
 	g_vfxAudioMutex = s_audioMutex;
 	
-	Assert(s_voiceMgr == nullptr);
-	s_voiceMgr = new AudioVoiceManagerBasic();
-	s_voiceMgr->init(s_audioMutex, 64);
-	s_voiceMgr->outputStereo = true;
-	g_vfxAudioVoiceMgr = s_voiceMgr;
+	Assert(s_audioVoiceMgr == nullptr);
+	s_audioVoiceMgr = new AudioVoiceManagerBasic();
+	s_audioVoiceMgr->init(s_audioMutex, 64);
+	s_audioVoiceMgr->outputStereo = true;
 	
 	Assert(s_audioGraphMgr == nullptr);
 #if ENABLE_AUDIO_RTE
@@ -606,14 +606,13 @@ static void initAudioGraph()
 #else
 	s_audioGraphMgr = new AudioGraphManager_Basic(true);
 #endif
-	s_audioGraphMgr->init(s_audioMutex, s_voiceMgr);
-	g_vfxAudioGraphMgr = s_audioGraphMgr;
+	s_audioGraphMgr->init(s_audioMutex, s_audioVoiceMgr);
 	
 	Assert(s_audioUpdateHandler == nullptr);
 	s_audioUpdateHandler = new AudioUpdateHandler();
 	s_audioUpdateHandler->init(s_audioMutex, nullptr, 0);
 	s_audioUpdateHandler->audioGraphMgr = s_audioGraphMgr;
-	s_audioUpdateHandler->voiceMgr = s_voiceMgr;
+	s_audioUpdateHandler->voiceMgr = s_audioVoiceMgr;
 	
 	Assert(s_paObject == nullptr);
 	s_paObject = new PortAudioObject();
@@ -638,18 +637,16 @@ static void shutAudioGraph()
 	
 	if (s_audioGraphMgr != nullptr)
 	{
-		g_vfxAudioGraphMgr = nullptr;
-		
 		s_audioGraphMgr->shut();
 		delete s_audioGraphMgr;
 		s_audioGraphMgr = nullptr;
 	}
 	
-	if (s_voiceMgr != nullptr)
+	if (s_audioVoiceMgr != nullptr)
 	{
-		s_voiceMgr->shut();
-		delete s_voiceMgr;
-		s_voiceMgr = nullptr;
+		s_audioVoiceMgr->shut();
+		delete s_audioVoiceMgr;
+		s_audioVoiceMgr = nullptr;
 	}
 	
 	if (s_audioMutex != nullptr)
