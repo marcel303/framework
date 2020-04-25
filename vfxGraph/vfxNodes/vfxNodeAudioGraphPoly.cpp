@@ -90,7 +90,14 @@ VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	
 	memset(instances, 0, sizeof(instances));
 	
-	context = g_vfxAudioGraphMgr->createContext(g_vfxAudioMutex, &voiceMgr);
+	if (g_vfxAudioGraphMgr == nullptr)
+	{
+		setEditorIssue("missing required audio graph system");
+	}
+	else
+	{
+		context = g_vfxAudioGraphMgr->createContext(g_vfxAudioMutex, &voiceMgr);
+	}
 }
 
 VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
@@ -101,8 +108,11 @@ VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
 			g_vfxAudioGraphMgr->free(instances[i], false);
 	}
 	
-	// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeContext will prune any instances still left fading out that reference our context
-	g_vfxAudioGraphMgr->freeContext(context);
+	if (context != nullptr)
+	{
+		// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeContext will prune any instances still left fading out that reference our context
+		g_vfxAudioGraphMgr->freeContext(context);
+	}
 }
 
 void VfxNodeAudioGraphPoly::updateDynamicInputs()
@@ -232,7 +242,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	const VfxChannel * volume = getInputChannel(kInput_Volume, nullptr);
 	const int maxInstances = getInputInt(kInput_MaxInstances, kMaxInstances);
 	
-	if (isPassthrough || filename == nullptr || volume == nullptr)
+	if (isPassthrough || filename == nullptr || volume == nullptr || context == nullptr)
 	{
 		currentFilename.clear();
 		

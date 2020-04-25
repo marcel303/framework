@@ -133,27 +133,27 @@ void RealTimeConnection::nodeAdd(const GraphNodeId nodeId, const std::string & t
 	
 	//
 	
-	VfxNodeBase * vfxNode = createVfxNode(nodeId, typeName);
-	
-	if (vfxNode == nullptr)
-	{
-		vfxGraph->nodesFailedToCreate.insert(nodeId);
-		
-		return;
-	}
-	
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = vfxGraph;
 	{
-		vfxNode->id = nodeId;
+		VfxNodeBase * vfxNode = createVfxNode(nodeId, typeName);
 		
-		vfxNode->initSelf(node);
-		
-		vfxGraph->nodes[node.id] = vfxNode;
-		
-		//
-		
-		vfxNode->init(node);
+		if (vfxNode == nullptr)
+		{
+			vfxGraph->nodesFailedToCreate.insert(nodeId);
+		}
+		else
+		{
+			vfxNode->id = nodeId;
+			
+			vfxNode->initSelf(node);
+			
+			vfxGraph->nodes[node.id] = vfxNode;
+			
+			//
+			
+			vfxNode->init(node);
+		}
 	}
 	g_currentVfxGraph = nullptr;
 }

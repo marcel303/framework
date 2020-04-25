@@ -107,18 +107,31 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 	addInput(kInput_LimitPeak, kVfxPlugType_Float);
 	addInput(kInput_NumChannels, kVfxPlugType_Int);
 	
-	context = g_vfxAudioGraphMgr->createContext(g_vfxAudioMutex, &voiceMgr);
+	if (g_vfxAudioGraphMgr == nullptr)
+	{
+		setEditorIssue("missing required audio graph system");
+	}
+	else
+	{
+		context = g_vfxAudioGraphMgr->createContext(g_vfxAudioMutex, &voiceMgr);
+	}
 }
 
 VfxNodeAudioGraph::~VfxNodeAudioGraph()
 {
-	g_vfxAudioGraphMgr->free(audioGraphInstance, false);
+	if (audioGraphInstance != nullptr)
+	{
+		g_vfxAudioGraphMgr->free(audioGraphInstance, false);
+	}
 	
 	delete [] channelOutputs;
 	channelOutputs = nullptr;
 	
-	// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeContext will prune any instances still left fading out that reference our context
-	g_vfxAudioGraphMgr->freeContext(context);
+	if (context != nullptr)
+	{
+		// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeContext will prune any instances still left fading out that reference our context
+		g_vfxAudioGraphMgr->freeContext(context);
+	}
 }
 
 void VfxNodeAudioGraph::updateDynamicInputs()
@@ -269,7 +282,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 	const float limitPeak = getInputFloat(kInput_LimitPeak, 1.f);
 	const int _numChannels = getInputInt(kInput_NumChannels, 8);
 	
-	if (isPassthrough || filename == nullptr)
+	if (isPassthrough || filename == nullptr || context == nullptr)
 	{
 		if (audioGraphInstance != nullptr)
 		{

@@ -96,6 +96,10 @@ VfxNodePs3eye::VfxNodePs3eye()
 	addInput(kInput_WhiteBalanceB, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, &imageOutput);
 	addOutput(kOutput_ImageCpu, kVfxPlugType_ImageCpu, &imageCpuOutput);
+	
+	Assert(mutex == nullptr);
+	mutex = SDL_CreateMutex();
+	Assert(mutex != nullptr);
 }
 
 VfxNodePs3eye::~VfxNodePs3eye()
@@ -104,7 +108,13 @@ VfxNodePs3eye::~VfxNodePs3eye()
 	
 	stopCapture();
 	
-	ps3eye = nullptr;
+	Assert(ps3eye == nullptr);
+	
+	if (mutex != nullptr)
+	{
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
+	}
 }
 
 void VfxNodePs3eye::tick(const float dt)
@@ -196,10 +206,6 @@ void VfxNodePs3eye::tick(const float dt)
 				Assert(frameData == nullptr);
 				frameData = new uint8_t[numBytes];
 				Assert(hasFrameData == false);
-				
-				Assert(mutex == nullptr);
-				mutex = SDL_CreateMutex();
-				Assert(mutex != nullptr);
 				
 				Assert(captureThread == nullptr);
 				captureThread = SDL_CreateThread(captureThreadProc, "PS3EYE Capture Thread", this);
@@ -348,12 +354,6 @@ void VfxNodePs3eye::stopCapture()
 		captureThread = nullptr;
 		
 		stopCaptureThread = false;
-	}
-	
-	if (mutex != nullptr)
-	{
-		SDL_DestroyMutex(mutex);
-		mutex = nullptr;
 	}
 	
 	if (ps3eye != nullptr)
