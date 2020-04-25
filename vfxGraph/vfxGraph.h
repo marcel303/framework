@@ -27,10 +27,12 @@
 
 #pragma once
 
+#include "Debugging.h"
 #include "graph.h"
 #include <map>
 #include <set>
 #include <string>
+#include <typeindex>
 #include <vector>
 
 #if defined(DEBUG)
@@ -90,6 +92,34 @@ struct MemoryComponent
 	bool getMems(const char * name, std::string & result) const;
 };
 
+struct VfxGraphContext
+{
+	std::map<std::type_index, void*> systems;
+	
+	int refCount = 0;
+	
+	template <typename T>
+	void addSystem(T * system)
+	{
+		const std::type_index typeIndex(typeid(T));
+		
+		Assert(systems.count(typeIndex) == 0);
+		systems[typeIndex] = system;
+	}
+	
+	template <typename T>
+	T * tryGetSystem() const
+	{
+		const std::type_index typeIndex(typeid(T));
+		
+		auto i = systems.find(typeIndex);
+		if (i == systems.end())
+			return nullptr;
+		else
+			return (T*)i->second;
+	}
+};
+
 struct VfxGraph
 {
 	struct ValueToFree
@@ -122,6 +152,8 @@ struct VfxGraph
 		}
 	};
 	
+	VfxGraphContext * context;
+	
 	std::map<GraphNodeId, VfxNodeBase*> nodes;
 	std::set<GraphNodeId> nodesFailedToCreate;
 	
@@ -142,7 +174,7 @@ struct VfxGraph
 	
 	double time;
 	
-	VfxGraph();
+	VfxGraph(VfxGraphContext * context = nullptr);
 	~VfxGraph();
 	
 	void destroy();

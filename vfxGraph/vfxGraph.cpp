@@ -144,8 +144,9 @@ bool MemoryComponent::getMems(const char * name, std::string & result) const
 
 //
 
-VfxGraph::VfxGraph()
-	: nodes()
+VfxGraph::VfxGraph(VfxGraphContext * in_context)
+	: context(nullptr)
+	, nodes()
 	, dynamicData(nullptr)
 	, displayNodeIds()
 	, currentTickTraversalId(-1)
@@ -156,6 +157,11 @@ VfxGraph::VfxGraph()
 	, sy(0)
 	, time(0.0)
 {
+	if (in_context == nullptr)
+		in_context = new VfxGraphContext();
+	context = in_context;
+	context->refCount++;
+	
 	dynamicData = new VfxDynamicData();
 }
 
@@ -231,6 +237,11 @@ void VfxGraph::destroy()
 	dynamicData = nullptr;
 	
 	nodes.clear();
+	
+	context->refCount--;
+	if (context->refCount == 0)
+		delete context;
+	context = nullptr;
 }
 
 void VfxGraph::connectToInputLiteral(VfxPlug & input, const std::string & inputValue)
