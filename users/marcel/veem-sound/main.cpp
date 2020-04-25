@@ -39,8 +39,6 @@ static AudioVoiceManager * s_voiceMgr = nullptr;
 static AudioGraphManager_RTE * s_audioGraphMgr = nullptr;
 
 extern AudioMutexBase * g_vfxAudioMutex;
-extern AudioVoiceManager * g_vfxAudioVoiceMgr;
-extern AudioGraphManager * g_vfxAudioGraphMgr;
 
 extern OscEndpointMgr g_oscEndpointMgr;
 
@@ -758,11 +756,11 @@ int main(int argc, char * argv[])
 	paObject.init(SAMPLE_RATE, outputStereo ? 2 : CHANNEL_COUNT, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
 
 	g_vfxAudioMutex = &audioMutex;
-	g_vfxAudioVoiceMgr = &voiceMgr;
-	g_vfxAudioGraphMgr = &audioGraphMgr;
 	
 	VfxGraph * vfxGraph = new VfxGraph();
 	RealTimeConnection realTimeConnection(vfxGraph);
+	realTimeConnection.vfxGraphContext->addSystem<AudioGraphManager>(&audioGraphMgr);
+	realTimeConnection.vfxGraphContext->addSystem<AudioVoiceManager>(&voiceMgr);
 	
 	Graph_TypeDefinitionLibrary typeDefinitionLibrary;
 	createVfxTypeDefinitionLibrary(typeDefinitionLibrary);

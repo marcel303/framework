@@ -25,8 +25,6 @@ const int GFX_SX = 480;
 const int GFX_SY = 320;
 
 extern AudioMutexBase * g_vfxAudioMutex;
-extern AudioVoiceManager * g_vfxAudioVoiceMgr;
-extern AudioGraphManager * g_vfxAudioGraphMgr;
 
 extern OscEndpointMgr g_oscEndpointMgr;
 
@@ -264,7 +262,6 @@ struct SatellitesApp
 		
 		audioGraphMgr = new AudioGraphManager_RTE(GFX_SX, GFX_SY);
 		audioGraphMgr->init(audioMutex, voiceMgr);
-		g_vfxAudioGraphMgr = audioGraphMgr;
 		
 		audioUpdateHandler = new AudioUpdateHandler();
 		audioUpdateHandler->init(audioMutex, voiceMgr, audioGraphMgr);
@@ -272,8 +269,12 @@ struct SatellitesApp
 		paObject = new PortAudioObject();
 		paObject->init(SAMPLE_RATE, outputStereo ? 2 : CHANNEL_COUNT, 0, AUDIO_UPDATE_SIZE, audioUpdateHandler, inputDeviceIndex, outputDeviceIndex, true);
 		
+		g_vfxAudioMutex = audioMutex;
+		
 		vfxGraph = new VfxGraph();
-		realTimeConnection = new RealTimeConnection((vfxGraph));
+		realTimeConnection = new RealTimeConnection(vfxGraph);
+		realTimeConnection->vfxGraphContext->addSystem<AudioGraphManager>(audioGraphMgr);
+		realTimeConnection->vfxGraphContext->addSystem<AudioVoiceManager>(voiceMgr);
 		
 		typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 		createVfxTypeDefinitionLibrary(*typeDefinitionLibrary);
@@ -348,10 +349,6 @@ int main(int argc, char * argv[])
 		framework.shutdown();
 		return -1;
 	}
-	
-	g_vfxAudioMutex = app.audioMutex;
-	g_vfxAudioVoiceMgr = app.voiceMgr;
-	g_vfxAudioGraphMgr = app.audioGraphMgr;
 	
 	for (;;)
 	{
