@@ -1,4 +1,4 @@
-<graph nextNodeId="26" nextLinkId="40">
+<graph nextNodeId="28" nextLinkId="42">
     <node id="1" typeName="draw.surface">
         <input socket="format" value="0"/>
         <input socket="multiply" value="1"/>
@@ -21,8 +21,11 @@
     </node>
     <node id="6" typeName="draw.mesh">
         <input socket="instanced" value="1"/>
+        <input socket="pos.mode" value="1"/>
         <input socket="pos.y" value="-6 -3 0 3 6"/>
-        <input socket="scale.x" value="1"/>
+        <input socket="rot.angle" value=""/>
+        <input socket="scale" value="1.45"/>
+        <input socket="scale.x" value="0.2"/>
         <input socket="scale.y" value="1"/>
         <input socket="scale.z" value="1"/>
         <input socket="shader" value="mesh-instanced"/>
@@ -79,6 +82,10 @@
         <input socket="frequency" value="0.670000"/>
     </node>
     <node id="25" typeName="channel.fromFloat"/>
+    <node id="26" typeName="time">
+        <input socket="scale" value="90.000000"/>
+    </node>
+    <node id="27" typeName="channel.fromFloat"/>
     <link id="3" srcNodeId="3" srcNodeSocketName="angle_norm" dstNodeId="4" dstNodeSocketName="time">
         <param name="out.max" value="0.140000"/>
     </link>
@@ -107,15 +114,17 @@
         <param name="out.min" value="0.600000"/>
     </link>
     <link id="39" srcNodeId="21" srcNodeSocketName="scale.z" dstNodeId="25" dstNodeSocketName="channel"/>
-    <editor nextZKey="224">
-        <dragAndZoom x="-530.1800537109375" y="78.030624389648438" zoom="1"/>
+    <link id="40" srcNodeId="27" srcNodeSocketName="value1" dstNodeId="26" dstNodeSocketName="time"/>
+    <link id="41" srcNodeId="6" srcNodeSocketName="rot.angle" dstNodeId="27" dstNodeSocketName="channel"/>
+    <editor nextZKey="246">
+        <dragAndZoom x="-912.406005859375" y="-74.975830078125" zoom="1"/>
         <nodeDatas>
             <nodeData nodeId="1" x="272" y="-80" zKey="132"/>
             <nodeData nodeId="2" x="448" y="-64" zKey="131"/>
             <nodeData nodeId="3" x="-208" y="-96" zKey="198"/>
             <nodeData nodeId="4" x="-400" y="160" zKey="223"/>
             <nodeData nodeId="5" x="-992" y="-320" zKey="204"/>
-            <nodeData nodeId="6" x="-720" y="-288" zKey="214"/>
+            <nodeData nodeId="6" x="-720" y="-288" zKey="245"/>
             <nodeData nodeId="7" x="-1232" y="-192" zKey="205"/>
             <nodeData nodeId="8" x="-1264" y="-112" zKey="202"/>
             <nodeData nodeId="9" x="-1040" y="0" zKey="195" folded="1"/>
@@ -132,6 +141,8 @@
             <nodeData nodeId="23" x="-656" y="256" zKey="221"/>
             <nodeData nodeId="24" x="-976" y="320" zKey="215"/>
             <nodeData nodeId="25" x="-848" y="320" zKey="183"/>
+            <nodeData nodeId="26" x="-1056" y="-96" zKey="242"/>
+            <nodeData nodeId="27" x="-928" y="-96" zKey="229"/>
         </nodeDatas>
         <visualizers/>
         <comments/>
