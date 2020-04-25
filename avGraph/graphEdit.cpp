@@ -347,8 +347,8 @@ void GraphEdit_Visualizer::init()
 
 void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit, const float dt)
 {
-	auto srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
-	auto dstSocket = graphEdit.tryGetOutputSocket(nodeId, dstSocketIndex);
+	auto * srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
+	auto * dstSocket = graphEdit.tryGetOutputSocket(nodeId, dstSocketIndex);
 	
 	texture = 0;
 	
@@ -356,7 +356,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit, const float dt)
 	
 	if (srcSocket != nullptr)
 	{
-		auto valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(srcSocket->typeName);
+		auto * valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(srcSocket->typeName);
 		
 		if (valueTypeDefinition == nullptr)
 		{
@@ -412,7 +412,7 @@ void GraphEdit_Visualizer::tick(const GraphEdit & graphEdit, const float dt)
 	
 	if (dstSocket != nullptr)
 	{
-		auto valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(dstSocket->typeName);
+		auto * valueTypeDefinition = graphEdit.typeDefinitionLibrary->tryGetValueTypeDefinition(dstSocket->typeName);
 		
 		if (valueTypeDefinition == nullptr)
 		{
@@ -534,7 +534,7 @@ void GraphEdit_Visualizer::measure(
 	
 	if (srcSocketIndex != -1)
 	{
-		auto srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
+		auto * srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
 		
 		if (srcSocket != nullptr)
 			caption = srcSocket->name;
@@ -542,7 +542,7 @@ void GraphEdit_Visualizer::measure(
 	
 	if (dstSocketIndex != -1)
 	{
-		auto dstSocket = graphEdit.tryGetOutputSocket(nodeId, dstSocketIndex);
+		auto * dstSocket = graphEdit.tryGetOutputSocket(nodeId, dstSocketIndex);
 		
 		if (dstSocket != nullptr)
 			caption = dstSocket->name;
@@ -664,7 +664,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	if (srcSocketIndex != -1)
 	{
-		auto srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
+		auto * srcSocket = graphEdit.tryGetInputSocket(nodeId, srcSocketIndex);
 		
 		if (srcSocket != nullptr)
 		{
@@ -676,7 +676,7 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	if (dstSocketIndex != -1)
 	{
-		auto dstSocket = graphEdit.tryGetOutputSocket(nodeId, dstSocketIndex);
+		auto * dstSocket = graphEdit.tryGetOutputSocket(nodeId, dstSocketIndex);
 		
 		if (dstSocket != nullptr)
 		{
@@ -1346,7 +1346,7 @@ GraphLink * GraphEdit::tryGetLink(const GraphLinkId id) const
 
 const Graph_TypeDefinition::InputSocket * GraphEdit::tryGetInputSocket(const GraphNodeId nodeId, const int socketIndex) const
 {
-	auto node = tryGetNode(nodeId);
+	auto * node = tryGetNode(nodeId);
 	
 	Assert(node);
 	if (node == nullptr)
@@ -1357,7 +1357,7 @@ const Graph_TypeDefinition::InputSocket * GraphEdit::tryGetInputSocket(const Gra
 	if (typeDefinition == nullptr)
 		return nullptr;
 	
-	auto nodeData = tryGetNodeData(nodeId);
+	auto * nodeData = tryGetNodeData(nodeId);
 	
 	Assert(nodeData);
 	if (nodeData == nullptr)
@@ -1372,19 +1372,19 @@ const Graph_TypeDefinition::InputSocket * GraphEdit::tryGetInputSocket(const Gra
 
 const Graph_TypeDefinition::OutputSocket * GraphEdit::tryGetOutputSocket(const GraphNodeId nodeId, const int socketIndex) const
 {
-	auto node = tryGetNode(nodeId);
+	auto * node = tryGetNode(nodeId);
 	
 	Assert(node);
 	if (node == nullptr)
 		return nullptr;
 	
-	auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
+	auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
 	
 	Assert(typeDefinition);
 	if (typeDefinition == nullptr)
 		return nullptr;
 	
-	auto nodeData = tryGetNodeData(nodeId);
+	auto * nodeData = tryGetNodeData(nodeId);
 	
 	Assert(nodeData);
 	if (nodeData == nullptr)
@@ -1415,14 +1415,14 @@ bool GraphEdit::getLinkPath(const GraphLinkId linkId, LinkPath & path) const
 	
 	//
 	
-	auto srcNode = tryGetNode(link.srcNodeId);
-	auto dstNode = tryGetNode(link.dstNodeId);
+	auto * srcNode = tryGetNode(link.srcNodeId);
+	auto * dstNode = tryGetNode(link.dstNodeId);
 	
-	auto srcNodeData = tryGetNodeData(link.srcNodeId);
-	auto dstNodeData = tryGetNodeData(link.dstNodeId);
+	auto * srcNodeData = tryGetNodeData(link.srcNodeId);
+	auto * dstNodeData = tryGetNodeData(link.dstNodeId);
 	
-	auto inputSocket = tryGetInputSocket(link.srcNodeId, link.srcNodeSocketIndex);
-	auto outputSocket = tryGetOutputSocket(link.dstNodeId, link.dstNodeSocketIndex);
+	auto * inputSocket = tryGetInputSocket(link.srcNodeId, link.srcNodeSocketIndex);
+	auto * outputSocket = tryGetOutputSocket(link.dstNodeId, link.dstNodeSocketIndex);
 	
 	if (srcNode == nullptr ||
 		dstNode == nullptr ||
@@ -1435,8 +1435,8 @@ bool GraphEdit::getLinkPath(const GraphLinkId linkId, LinkPath & path) const
 	}
 	else
 	{
-		auto srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
-		auto dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+		auto * srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
+		auto * dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
 		
 		float srcSx, srcSy;
 		float dstSx, dstSy;
@@ -1500,13 +1500,13 @@ const Graph_LinkTypeDefinition * GraphEdit::tryGetLinkTypeDefinition(const Graph
 {
 	const Graph_LinkTypeDefinition * result = nullptr;
 	
-	auto link = tryGetLink(linkId);
+	auto * link = tryGetLink(linkId);
 	Assert(link != nullptr);
 	
 	if (link != nullptr)
 	{
-		auto srcSocket = tryGetInputSocket(link->srcNodeId, link->srcNodeSocketIndex);
-		auto dstSocket = tryGetOutputSocket(link->dstNodeId, link->dstNodeSocketIndex);
+		auto * srcSocket = tryGetInputSocket(link->srcNodeId, link->srcNodeSocketIndex);
+		auto * dstSocket = tryGetOutputSocket(link->dstNodeId, link->dstNodeSocketIndex);
 		
 		Assert(srcSocket != nullptr || link->isDynamic); // if the link is dynamic the socket may not exist (yet)
 		Assert(dstSocket != nullptr || link->isDynamic); // if the link is dynamic the socket may not exist (yet)
@@ -1567,7 +1567,7 @@ static void sortVisualElements(const GraphEdit & graphEdit, SortedGraphElem * so
 	for (auto & nodeItr : graphEdit.graph->nodes)
 	{
 		auto & node = nodeItr.second;
-		auto nodeData = graphEdit.tryGetNodeData(node.id);
+		auto * nodeData = graphEdit.tryGetNodeData(node.id);
 		
 		sortedElems[elemIndex].node = &node;
 		sortedElems[elemIndex].nodeData = nodeData;
@@ -1616,7 +1616,7 @@ bool GraphEdit::hitTest(const float x, const float y, HitTestResult & result) co
 			auto & node = *sortedElems[i].node;
 			auto & nodeData = *sortedElems[i].nodeData;
 			
-			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+			auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 			
 			if (typeDefinition == nullptr)
 			{
@@ -2217,7 +2217,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								{
 									selectNode(hitTestResult.node->id, true);
 									
-									auto nodeData = tryGetNodeData(hitTestResult.node->id);
+									auto * nodeData = tryGetNodeData(hitTestResult.node->id);
 									nodeData->zKey = nextZKey++;
 								}
 							}
@@ -2246,7 +2246,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								#if 1
 									// open a resource editor window if there's a resource editor associated with the node
 									
-									auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(hitTestResult.node->typeName);
+									auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(hitTestResult.node->typeName);
 									
 									Assert(typeDefinition != nullptr);
 									if (typeDefinition != nullptr)
@@ -2607,8 +2607,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				for (auto nodeId : selectedNodes)
 				{
-					auto node = tryGetNode(nodeId);
-					auto nodeData = tryGetNodeData(nodeId);
+					auto * node = tryGetNode(nodeId);
+					auto * nodeData = tryGetNodeData(nodeId);
 					
 					Assert(node != nullptr && nodeData != nullptr);
 					if (node != nullptr && nodeData != nullptr)
@@ -2621,7 +2621,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						
 						graph->addNode(newNode);
 						
-						auto newNodeData = tryGetNodeData(newNode.id);
+						auto * newNodeData = tryGetNodeData(newNode.id);
 						Assert(newNodeData != nullptr);
 						if (newNodeData != nullptr)
 						{
@@ -2638,12 +2638,12 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						
 						if (commandMod())
 						{
-							auto newNodePtr = tryGetNode(newNode.id);
+							auto * newNodePtr = tryGetNode(newNode.id);
 							Assert(newNodePtr != nullptr);
 							
 							// deep copy node including values
 							
-							auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(newNode.typeName);
+							auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(newNode.typeName);
 							Assert(typeDefinition != nullptr);
 							
 							// let real-time editing know the socket values have changed
@@ -2784,7 +2784,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				for (auto nodeId : selectedNodes)
 				{
-					auto node = tryGetNode(nodeId);
+					auto * node = tryGetNode(nodeId);
 					
 					if (node != nullptr)
 						allPassthrough &= node->isPassthrough;
@@ -2792,7 +2792,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				for (auto nodeId : selectedNodes)
 				{
-					auto node = tryGetNode(nodeId);
+					auto * node = tryGetNode(nodeId);
 					
 					Assert(node);
 					if (node)
@@ -2843,7 +2843,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				{
 					for (auto nodeId : selectedNodes)
 					{
-						auto nodeData = tryGetNodeData(nodeId);
+						auto * nodeData = tryGetNodeData(nodeId);
 						
 						Assert(nodeData);
 						if (nodeData)
@@ -2879,7 +2879,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				for (auto nodeId : selectedNodes)
 				{
-					auto nodeData = tryGetNodeData(nodeId);
+					auto * nodeData = tryGetNodeData(nodeId);
 					
 					Assert(nodeData != nullptr);
 					if (nodeData != nullptr && !nodeData->isFolded)
@@ -2890,7 +2890,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				
 				for (auto nodeId : selectedNodes)
 				{
-					auto nodeData = tryGetNodeData(nodeId);
+					auto * nodeData = tryGetNodeData(nodeId);
 					
 					Assert(nodeData != nullptr);
 					if (nodeData != nullptr)
@@ -2935,7 +2935,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					
 					for (auto * routePoint : routePointsToRemove)
 					{
-						auto link = graph->tryGetLink(routePoint->linkId);
+						auto * link = graph->tryGetLink(routePoint->linkId);
 						
 						for (auto routePointItr = link->editorRoutePoints.begin(); routePointItr != link->editorRoutePoints.end(); ++routePointItr)
 						{
@@ -3047,7 +3047,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 				auto & node = nodeItr.second;
 				auto & nodeData = nodeDatas[node.id];
 				
-				auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+				auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 				
 				Assert(typeDefinition != nullptr);
 				if (typeDefinition != nullptr)
@@ -3146,7 +3146,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 			
 			for (auto nodeId : selectedNodes)
 			{
-				auto nodeData = tryGetNodeData(nodeId);
+				auto * nodeData = tryGetNodeData(nodeId);
 				
 				Assert(nodeData != nullptr);
 				if (nodeData != nullptr)
@@ -3338,17 +3338,17 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 		{
 			if (nodeInsert.linkId != kGraphLinkIdInvalid)
 			{
-				auto link = tryGetLink(nodeInsert.linkId);
+				auto * link = tryGetLink(nodeInsert.linkId);
 				
 				if (link != nullptr)
 				{
-					auto srcNode = tryGetNode(link->srcNodeId);
-					auto dstNode = tryGetNode(link->dstNodeId);
+					auto * srcNode = tryGetNode(link->srcNodeId);
+					auto * dstNode = tryGetNode(link->dstNodeId);
 					
 					if (srcNode != nullptr && dstNode != nullptr)
 					{
-						auto srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
-						auto dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+						auto * srcTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
+						auto * dstTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
 						
 						if (srcTypeDefinition != nullptr && dstTypeDefinition != nullptr)
 						{
@@ -3398,7 +3398,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 						
 						if (linkId != kGraphLinkIdInvalid)
 						{
-							auto linkPtr = tryGetLink(linkId);
+							auto * linkPtr = tryGetLink(linkId);
 							Assert(linkPtr != nullptr);
 							
 							if (linkPtr != nullptr)
@@ -3409,8 +3409,8 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 								
 								auto link = *linkPtr;
 								
-								auto dstSocket = tryGetOutputSocket(nodeId, 0);
-								auto srcSocket = tryGetInputSocket(nodeId, 0);
+								auto * dstSocket = tryGetOutputSocket(nodeId, 0);
+								auto * srcSocket = tryGetInputSocket(nodeId, 0);
 								
 								if (true)
 								{
@@ -3524,11 +3524,7 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 					
 					float sx;
 					float sy;
-					getNodeRect(
-						nodeType->inputSockets.size(),
-						nodeType->outputSockets.size(),
-						false,
-						sx, sy);
+					getNodeRect(nodeType->inputSockets.size(), nodeType->outputSockets.size(), false, sx, sy);
 					
 					// 2. compute the distance from the mouse position to the edges of the box
 					
@@ -4044,7 +4040,7 @@ void GraphEdit::nodeDragEnd()
 	{
 		for (auto nodeId : selectedNodes)
 		{
-			auto nodeData = tryGetNodeData(nodeId);
+			auto * nodeData = tryGetNodeData(nodeId);
 			
 			Assert(nodeData != nullptr);
 			if (nodeData != nullptr)
@@ -4076,12 +4072,12 @@ bool GraphEdit::nodeResourceEditBegin(const GraphNodeId nodeId)
 	
 	//
 	
-	auto node = tryGetNode(nodeId);
+	auto * node = tryGetNode(nodeId);
 	
 	Assert(node != nullptr);
 	if (node != nullptr)
 	{
-		auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
+		auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node->typeName);
 		
 		Assert(typeDefinition != nullptr);
 		if (typeDefinition != nullptr)
@@ -4121,7 +4117,7 @@ void GraphEdit::nodeResourceEditSave()
 {
 	if (nodeResourceEditor.resourceEditor != nullptr)
 	{
-		auto node = tryGetNode(nodeResourceEditor.nodeId);
+		auto * node = tryGetNode(nodeResourceEditor.nodeId);
 		
 		if (node != nullptr)
 		{
@@ -4338,10 +4334,10 @@ void GraphEdit::doLinkParams(const float dt)
 				resetMenu();
 			}
 			
-			auto link = tryGetLink(linkId);
+			auto * link = tryGetLink(linkId);
 			Assert(link != nullptr);
 			
-			auto linkTypeDefinition = tryGetLinkTypeDefinition(linkId);
+			auto * linkTypeDefinition = tryGetLinkTypeDefinition(linkId);
 			
 			if (linkTypeDefinition != nullptr)
 			{
@@ -4496,7 +4492,7 @@ bool GraphEdit::tryAddNode(const std::string & typeName, const float x, const fl
 		
 		graph->addNode(node);
 		
-		auto nodeData = tryGetNodeData(node.id);
+		auto * nodeData = tryGetNodeData(node.id);
 		Assert(nodeData != nullptr);
 		if (nodeData != nullptr)
 		{
@@ -4595,7 +4591,7 @@ void GraphEdit::updateDynamicSockets()
 		}
 		else
 		{
-			auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+			auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 			
 			nodeData.dynamicSockets.update(*typeDefinition, inputs, outputs);
 		}
@@ -4606,18 +4602,18 @@ void GraphEdit::resolveSocketIndices(
 	const GraphNodeId srcNodeId, const std::string & srcNodeSocketName, int & srcNodeSocketIndex,
 	const GraphNodeId dstNodeId, const std::string & dstNodeSocketName, int & dstNodeSocketIndex)
 {
-	auto srcNode = tryGetNode(srcNodeId);
+	auto * srcNode = tryGetNode(srcNodeId);
 	Assert(srcNode != nullptr);
 	
 	if (srcNode != nullptr)
 	{
-		auto srcNodeTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
+		auto * srcNodeTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(srcNode->typeName);
 		
 		if (srcNodeTypeDefinition != nullptr && (srcNodeSocketIndex < 0 || srcNodeSocketIndex >= srcNodeTypeDefinition->inputSockets.size()))
 		{
 			srcNodeSocketIndex = -1;
 			
-			auto srcNodeData = tryGetNodeData(srcNodeId);
+			auto * srcNodeData = tryGetNodeData(srcNodeId);
 			Assert(srcNodeData);
 			
 			if (srcNodeData)
@@ -4636,18 +4632,18 @@ void GraphEdit::resolveSocketIndices(
 
 	//
 	
-	auto dstNode = tryGetNode(dstNodeId);
+	auto * dstNode = tryGetNode(dstNodeId);
 	Assert(dstNode != nullptr);
 
 	if (dstNode != nullptr)
 	{
-		auto dstNodeTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
+		auto * dstNodeTypeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(dstNode->typeName);
 		
 		if (dstNodeTypeDefinition != nullptr && (dstNodeSocketIndex < 0 || dstNodeSocketIndex >= dstNodeTypeDefinition->outputSockets.size()))
 		{
 			dstNodeSocketIndex = -1;
 			
-			auto dstNodeData = tryGetNodeData(dstNodeId);
+			auto * dstNodeData = tryGetNodeData(dstNodeId);
 			Assert(dstNodeData);
 			
 			if (dstNodeData)
@@ -5180,7 +5176,7 @@ void GraphEdit::draw() const
 			auto & node = *sortedElems[i].node;
 			auto & nodeData = *sortedElems[i].nodeData;
 			
-			const auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+			const auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 			
 			if (typeDefinition == nullptr)
 			{
@@ -5251,7 +5247,7 @@ void GraphEdit::draw() const
 	
 	case kState_InputSocketConnect:
 		{
-			auto nodeData = tryGetNodeData(socketConnect.srcNodeId);
+			auto * nodeData = tryGetNodeData(socketConnect.srcNodeId);
 			
 			Assert(nodeData != nullptr);
 			if (nodeData != nullptr)
@@ -5274,7 +5270,7 @@ void GraphEdit::draw() const
 	
 	case kState_OutputSocketConnect:
 		{
-			auto nodeData = tryGetNodeData(socketConnect.dstNodeId);
+			auto * nodeData = tryGetNodeData(socketConnect.dstNodeId);
 			
 			Assert(nodeData != nullptr);
 			if (nodeData != nullptr)
@@ -5401,6 +5397,9 @@ void GraphEdit::draw() const
 	
 	if (state == kState_NodeInsert)
 	{
+		nodeInsertMenu->x = (displaySx - nodeInsertMenu->sx)/2;
+		nodeInsertMenu->y = (displaySy - nodeInsertMenu->sy)/2;
+		
 		nodeInsertMenu->draw(*this, *typeDefinitionLibrary);
 	}
 	
@@ -5763,8 +5762,8 @@ void GraphEdit::drawVisualizer(const EditorVisualizer & visualizer) const
 	
 	const bool isSelected = selectedVisualizers.count(const_cast<EditorVisualizer*>(&visualizer)) != 0;
 	
-	auto srcNode = tryGetNode(visualizer.nodeId);
-	auto srcNodeData = tryGetNodeData(visualizer.nodeId);
+	auto * srcNode = tryGetNode(visualizer.nodeId);
+	auto * srcNodeData = tryGetNodeData(visualizer.nodeId);
 	
 	const std::string & nodeName = srcNode != nullptr && srcNodeData != nullptr ? getDisplayName(*srcNode, *srcNodeData) : String::Empty;
 	
@@ -5882,7 +5881,7 @@ bool GraphEdit::load(const char * filename)
 				if (nodeId == kGraphNodeIdInvalid)
 					continue;
 				
-				auto nodeDataPtr = tryGetNodeData(nodeId);
+				auto * nodeDataPtr = tryGetNodeData(nodeId);
 				Assert(nodeDataPtr != nullptr);
 				if (nodeDataPtr == nullptr)
 					continue;
@@ -5945,14 +5944,14 @@ bool GraphEdit::load(const char * filename)
 		{
 			auto & visualizer = visualizerItr.second;
 			
-			auto linkedNode = tryGetNode(visualizer.nodeId);
+			auto * linkedNode = tryGetNode(visualizer.nodeId);
 			Assert(linkedNode != nullptr);
 			
 			if (linkedNode != nullptr)
 			{
 				auto & nodeData = *tryGetNodeData(visualizer.nodeId);
 				
-				auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(linkedNode->typeName);
+				auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(linkedNode->typeName);
 				Assert(typeDefinition != nullptr);
 				
 				if (typeDefinition != nullptr)
@@ -6015,7 +6014,7 @@ bool GraphEdit::load(const char * filename)
 	{
 		auto & node = nodeItr.second;
 		
-		auto typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
+		auto * typeDefinition = typeDefinitionLibrary->tryGetTypeDefinition(node.typeName);
 		
 		if (typeDefinition == nullptr)
 		{
@@ -6108,7 +6107,7 @@ bool GraphEdit::loadXml(const tinyxml2::XMLElement * editorElem)
 			if (nodeId == kGraphNodeIdInvalid)
 				continue;
 			
-			auto node = tryGetNode(nodeId);
+			auto * node = tryGetNode(nodeId);
 			Assert(node != nullptr);
 			if (node == nullptr)
 				continue;
@@ -6423,10 +6422,10 @@ void GraphEdit::linkRemove(const GraphLinkId linkId, const GraphNodeId srcNodeId
 		
 		//
 		
-		auto srcNode = tryGetNode(srcNodeId);
+		auto * srcNode = tryGetNode(srcNodeId);
 		Assert(srcNode != nullptr);
 		
-		auto srcSocket = tryGetInputSocket(srcNodeId, srcSocketIndex);
+		auto * srcSocket = tryGetInputSocket(srcNodeId, srcSocketIndex);
 		Assert(srcSocket != nullptr);
 		
 		if (srcNode != nullptr && srcSocket != nullptr)

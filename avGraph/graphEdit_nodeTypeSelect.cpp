@@ -30,6 +30,11 @@
 #include "graphEdit_nodeTypeSelect.h"
 #include "ui.h"
 
+static const int kCategoryFontSize = 18;
+static const int kCategoryPadding = 7;
+static const int kCategoryHeight = 32;
+static const int kCategorySpacing = 12;
+
 typedef std::map<std::string, std::vector<const Graph_TypeDefinition*>> TypeDefinitionsByCategory;
 
 bool GraphEdit_NodeTypeSelect::Filter::isMatch(const Graph_TypeDefinition & typeDefinition) const
@@ -61,7 +66,10 @@ bool GraphEdit_NodeTypeSelect::Filter::isMatch(const Graph_TypeDefinition & type
 	return false;
 }
 
-static void getTypeDefinitionsByCategory(const Graph_TypeDefinitionLibrary & typeDefinitionLibrary, TypeDefinitionsByCategory & result, GraphEdit_NodeTypeSelect::Filter & filter)
+static void getTypeDefinitionsByCategory(
+	const Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
+	TypeDefinitionsByCategory & result,
+	GraphEdit_NodeTypeSelect::Filter & filter)
 {
 	for (auto & typeDefinitonItr : typeDefinitionLibrary.typeDefinitions)
 	{
@@ -106,11 +114,6 @@ static void doBackground(const int x, const int y, const int sx, const int sy)
 		hqEnd();
 	}
 }
-
-static const int kCategoryFontSize = 18;
-static const int kCategoryPadding = 7;
-static const int kCategoryHeight = 32;
-static const int kCategorySpacing = 12;
 
 static void measureCategoryButton(const char * name, int & sx, int & sy)
 {
@@ -175,7 +178,13 @@ static bool doCategoryButton(const char * name, const bool isSelected)
 	return result;
 }
 
-static bool doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & categories, const int x, const int y, std::string & selectedCategoryName, std::string & selectedNodeType)
+static bool doCategories(
+	GraphEdit & graphEdit,
+	TypeDefinitionsByCategory & categories,
+	const int x,
+	const int y,
+	std::string & selectedCategoryName,
+	std::string & selectedNodeType)
 {
 	bool result = false;
 	
@@ -311,6 +320,8 @@ static bool doCategories(GraphEdit & graphEdit, TypeDefinitionsByCategory & cate
 	return result;
 }
 
+//
+
 GraphEdit_NodeTypeSelect::GraphEdit_NodeTypeSelect()
 	: x(0)
 	, y(0)
@@ -354,7 +365,10 @@ void GraphEdit_NodeTypeSelect::cancel()
 	filter = Filter();
 }
 
-bool GraphEdit_NodeTypeSelect::doMenus(GraphEdit & graphEdit, const Graph_TypeDefinitionLibrary & typeDefinitionLibrary, std::string & selectedNodeTypeName)
+bool GraphEdit_NodeTypeSelect::doMenus(
+	GraphEdit & graphEdit,
+	const Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
+	std::string & selectedNodeTypeName)
 {
 	bool result = false;
 	
