@@ -117,7 +117,7 @@ void VfxGraphManager_Basic::selectInstance(const VfxGraphInstance * instance)
 {
 }
 
-VfxGraphInstance * VfxGraphManager_Basic::createInstance(const char * filename, const int sx, const int sy)
+VfxGraphInstance * VfxGraphManager_Basic::createInstance(const char * filename, const int sx, const int sy, VfxGraphContext * context)
 {
 	VfxGraph * vfxGraph = nullptr;
 	
@@ -129,7 +129,7 @@ VfxGraphInstance * VfxGraphManager_Basic::createInstance(const char * filename, 
 		
 		if (elem.isValid)
 		{
-			vfxGraph = constructVfxGraph(*elem.graph, typeDefinitionLibrary);
+			vfxGraph = constructVfxGraph(*elem.graph, typeDefinitionLibrary, context);
 		}
 	}
 	else
@@ -145,7 +145,7 @@ VfxGraphInstance * VfxGraphManager_Basic::createInstance(const char * filename, 
 			
 			if (elem.isValid)
 			{
-				vfxGraph = constructVfxGraph(*elem.graph, typeDefinitionLibrary);
+				vfxGraph = constructVfxGraph(*elem.graph, typeDefinitionLibrary, context);
 			}
 		}
 		else
@@ -154,7 +154,7 @@ VfxGraphInstance * VfxGraphManager_Basic::createInstance(const char * filename, 
 			
 			if (graph.load(filename, typeDefinitionLibrary))
 			{
-				vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
+				vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary, context);
 			}
 		}
 	}
@@ -509,7 +509,7 @@ void VfxGraphManager_RTE::selectInstance(const VfxGraphInstance * instance)
 	}
 }
 
-VfxGraphInstance * VfxGraphManager_RTE::createInstance(const char * filename, const int sx, const int sy)
+VfxGraphInstance * VfxGraphManager_RTE::createInstance(const char * filename, const int sx, const int sy, VfxGraphContext * context)
 {
 	VfxGraphFile * file = nullptr;
 	
@@ -534,7 +534,7 @@ VfxGraphInstance * VfxGraphManager_RTE::createInstance(const char * filename, co
 
 	//
 
-	auto * vfxGraph = constructVfxGraph(*file->graphEdit->graph, typeDefinitionLibrary);
+	auto * vfxGraph = constructVfxGraph(*file->graphEdit->graph, typeDefinitionLibrary, context);
 	
 	VfxGraphInstance * instance = new VfxGraphInstance();
 	instance->vfxGraph = vfxGraph;

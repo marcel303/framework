@@ -58,7 +58,7 @@ struct VfxGraphManager
 	virtual void selectFile(const char * filename) = 0;
 	virtual void selectInstance(const VfxGraphInstance * instance) = 0;
 
-	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) = 0;
+	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy, VfxGraphContext * context = nullptr) = 0;
 	virtual void free(VfxGraphInstance *& instance) = 0;
 	
 	virtual void tick(const float dt) = 0;
@@ -102,7 +102,7 @@ struct VfxGraphManager_Basic : VfxGraphManager
 	virtual void selectFile(const char * filename) override;
 	virtual void selectInstance(const VfxGraphInstance * instance) override;
 	
-	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) override;
+	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy, VfxGraphContext * context = nullptr) override;
 	virtual void free(VfxGraphInstance *& instance) override;
 	
 	virtual void tick(const float dt) override;
@@ -151,7 +151,7 @@ struct VfxGraphManager_RTE : VfxGraphManager
 	virtual void selectFile(const char * filename) override;
 	virtual void selectInstance(const VfxGraphInstance * instance) override;
 	
-	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy) override;
+	virtual VfxGraphInstance * createInstance(const char * filename, const int sx, const int sy, VfxGraphContext * context = nullptr) override;
 	virtual void free(VfxGraphInstance *& instance) override;
 	
 	virtual void tick(const float dt) override;
