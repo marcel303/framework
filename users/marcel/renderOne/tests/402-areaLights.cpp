@@ -108,7 +108,7 @@ int main(int argc, char * argv[])
 					drawGrid3d(1, 1, 0, 2);
 					gxPopMatrix();
 					
-				#if true
+				#if false
 					for (int i = 0; i < 100; ++i)
 					{
 						const float x = sinf(i) * 3.f;
@@ -135,6 +135,10 @@ int main(int argc, char * argv[])
 			camera.popViewMatrix();
 			
 			popDepthTest();
+			
+			projectScreen2d();
+			setColor(255, 255, 255, 80);
+			drawText(4, 4, 12, +1, +1, "Press [1..4] to add transformation(s)");fine
 		}
 		framework.endDraw();
 	}
