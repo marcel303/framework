@@ -26,6 +26,7 @@
 */
 
 #include "framework.h"
+#include "vfxChannelZipper.h"
 #include "vfxNodeDrawPrimitive.h"
 #include "vfxTypes.h"
 

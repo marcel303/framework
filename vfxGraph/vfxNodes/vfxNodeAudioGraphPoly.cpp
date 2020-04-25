@@ -29,6 +29,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "audioGraphManager.h"
 #include "soundmix.h" // AudioSource
 #include "StringEx.h"
+#include "vfxChannelZipper.h"
 #include "vfxNodeAudioGraphPoly.h"
 
 #include "framework.h"

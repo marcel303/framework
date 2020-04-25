@@ -25,6 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
+#include "vfxChannelZipper.h"
 #include "vfxNodeChannelMath.h"
 #include <math.h>
 

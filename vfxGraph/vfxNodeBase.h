@@ -29,7 +29,6 @@
 
 #include "Debugging.h"
 #include "vfxProfiling.h"
-#include <initializer_list>
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -232,138 +231,6 @@ struct VfxChannel
 	{
 		return const_cast<float*>(data);
 	}
-};
-
-struct VfxChannelZipper
-{
-	const static int kMaxChannels = 16;
-	
-	VfxChannelZipper(std::initializer_list<const VfxChannel*> _channels)
-		: numChannels(0)
-		, sx(0)
-		, sy(0)
-		, x(0)
-		, y(0)
-	{
-		ctor(_channels.begin(), _channels.size());
-	}
-	
-	VfxChannelZipper(const VfxChannel * const * _channels, const int _numChannels)
-		: numChannels(0)
-		, sx(0)
-		, sy(0)
-		, x(0)
-		, y(0)
-	{
-		ctor(_channels, _numChannels);
-	}
-	
-	void ctor(const VfxChannel * const * _channels, const int _numChannels)
-	{
-		for (int i = 0; i < _numChannels; ++i)
-		{
-			const VfxChannel * channel = _channels[i];
-			
-			if (numChannels < kMaxChannels)
-			{
-				channels[numChannels] = channel;
-				
-				if (channel != nullptr)
-				{
-					sx = channel->sx > sx ? channel->sx : sx;
-					sy = channel->sy > sy ? channel->sy : sy;
-				}
-				
-				numChannels++;
-			}
-		}
-	}
-	
-	int size() const
-	{
-		return sx * sy;
-	}
-	
-	bool doneX() const
-	{
-		return x == sx;
-	}
-	
-	void nextX()
-	{
-		Assert(!doneX());
-		
-		x = x + 1;
-	}
-	
-	bool doneY() const
-	{
-		return y == sy;
-	}
-	
-	void nextY()
-	{
-		Assert(!doneY());
-		
-		y = y + 1;
-		
-		if (!doneY())
-		{
-			x = 0;
-		}
-	}
-	
-	bool done() const
-	{
-		if (size() == 0)
-			return true;
-		
-		return doneX() && doneY();
-	}
-	
-	void next()
-	{
-		nextX();
-		
-		if (doneX())
-		{
-			nextY();
-		}
-	}
-	
-	void restart()
-	{
-		x = 0;
-		y = 0;
-	}
-	
-	float read(const int channelIndex, const float defaultValue) const
-	{
-		const VfxChannel * channel = channels[channelIndex];
-		
-		if (channel == nullptr || channel->size == 0)
-		{
-			return defaultValue;
-		}
-		else
-		{
-			const int rx = x % channel->sx;
-			const int ry = y % channel->sy;
-			
-			const float result = channel->data[ry * channel->sx + rx];
-			
-			return result;
-		}
-	}
-	
-	const VfxChannel * channels[kMaxChannels];
-	int numChannels;
-	
-	int sx;
-	int sy;
-	
-	int x;
-	int y;
 };
 
 //
@@ -907,6 +774,15 @@ struct VfxNodeTypeRegistration
 		std::string displayName;
 		std::string enumName;
 		std::string defaultValue;
+		
+		Input()
+			: typeName()
+			, name()
+			, displayName()
+			, enumName()
+			, defaultValue()
+		{
+		}
 	};
 	
 	struct Output

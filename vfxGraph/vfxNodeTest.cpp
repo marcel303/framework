@@ -29,6 +29,7 @@
 // todo : if not remove, at least move to vfx graph examples
 
 #include "framework.h"
+#include "vfxChannelZipper.h"
 #include "vfxNodeTest.h"
 
 VFX_NODE_TYPE(VfxNodeTest)

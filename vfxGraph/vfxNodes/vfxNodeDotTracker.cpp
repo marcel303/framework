@@ -26,6 +26,7 @@
 */
 
 #include "dotTracker.h"
+#include "vfxChannelZipper.h"
 #include "vfxNodeDotTracker.h"
 #include <algorithm>
 
