@@ -69,7 +69,7 @@ void RealTimeConnection::loadBegin()
 void RealTimeConnection::loadEnd(GraphEdit & graphEdit)
 {
 	Assert(vfxGraph == nullptr);
-	vfxGraph = constructVfxGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary);
+	vfxGraph = constructVfxGraph(*graphEdit.graph, graphEdit.typeDefinitionLibrary, vfxGraphContext);
 	*vfxGraphPtr = vfxGraph;
 	
 	// restore saved memory

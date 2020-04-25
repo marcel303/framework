@@ -247,6 +247,6 @@ void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinition
 
 VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName);
 
-VfxGraph * constructVfxGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary);
+VfxGraph * constructVfxGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, VfxGraphContext * context = nullptr);
 
 void connectVfxSockets(VfxNodeBase * srcNode, const int srcNodeSocketIndex, VfxPlug * srcSocket, VfxNodeBase * dstNode, const int dstNodeSocketIndex, VfxPlug * dstSocket, const std::map<std::string, std::string> & linkParams, const bool addPredep);

@@ -38,18 +38,35 @@ struct RealTimeConnection : GraphEdit_RealTimeConnection
 	VfxGraph * vfxGraph;
 	VfxGraph ** vfxGraphPtr;
 	
+	VfxGraphContext * vfxGraphContext;
+	
 	bool isLoading;
 	SavedVfxMemory * savedVfxMemory;
 	
-	RealTimeConnection(VfxGraph *& _vfxGraph)
+	RealTimeConnection(VfxGraph *& in_vfxGraph)
 		: GraphEdit_RealTimeConnection()
 		, vfxGraph(nullptr)
 		, vfxGraphPtr(nullptr)
+		, vfxGraphContext(nullptr)
 		, isLoading(false)
 		, savedVfxMemory(nullptr)
 	{
-		vfxGraph = _vfxGraph;
-		vfxGraphPtr = &_vfxGraph;
+		vfxGraph = in_vfxGraph;
+		vfxGraphPtr = &in_vfxGraph;
+		
+		if (vfxGraph == nullptr)
+			vfxGraphContext = new VfxGraphContext();
+		else
+			vfxGraphContext = vfxGraph->context;
+		vfxGraphContext->refCount++;
+	}
+	
+	~RealTimeConnection()
+	{
+		vfxGraphContext->refCount--;
+		if (vfxGraphContext->refCount == 0)
+			delete vfxGraphContext;
+		vfxGraphContext = nullptr;
 	}
 	
 	virtual void loadBegin() override;

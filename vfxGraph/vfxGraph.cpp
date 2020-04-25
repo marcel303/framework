@@ -535,9 +535,9 @@ VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeNa
 
 //
 
-VfxGraph * constructVfxGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary)
+VfxGraph * constructVfxGraph(const Graph & graph, const Graph_TypeDefinitionLibrary * typeDefinitionLibrary, VfxGraphContext * context)
 {
-	VfxGraph * vfxGraph = new VfxGraph();
+	VfxGraph * vfxGraph = new VfxGraph(context);
 	
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = vfxGraph;

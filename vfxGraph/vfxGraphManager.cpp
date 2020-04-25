@@ -534,14 +534,14 @@ VfxGraphInstance * VfxGraphManager_RTE::createInstance(const char * filename, co
 
 	//
 
-	auto vfxGraph = constructVfxGraph(*file->graphEdit->graph, typeDefinitionLibrary);
+	auto * vfxGraph = constructVfxGraph(*file->graphEdit->graph, typeDefinitionLibrary);
 	
 	VfxGraphInstance * instance = new VfxGraphInstance();
 	instance->vfxGraph = vfxGraph;
 	instance->sx = sx;
 	instance->sy = sy;
 	
-	auto realTimeConnection = new RealTimeConnection(instance->vfxGraph);
+	auto * realTimeConnection = new RealTimeConnection(instance->vfxGraph);
 	instance->realTimeConnection = realTimeConnection;
 	
 	//

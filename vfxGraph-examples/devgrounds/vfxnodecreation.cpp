@@ -7,9 +7,6 @@
 #include "vfxNodeBase.h"
 #include <algorithm>
 
-extern AudioVoiceManager * g_vfxAudioVoiceMgr;
-extern AudioGraphManager * g_vfxAudioGraphMgr;
-
 static VfxPlugType stringToVfxPlugType(const std::string & typeName)
 {
 	VfxPlugType type = kVfxPlugType_None;
@@ -47,11 +44,11 @@ void testVfxNodeCreation()
 	Assert(g_currentVfxGraph == nullptr);
 	g_currentVfxGraph = &vfxGraph;
 	
-	AudioVoiceManagerBasic audioVoiceMgr;
-	g_vfxAudioVoiceMgr = &audioVoiceMgr;
+	AudioVoiceManager * audioVoiceMgr = new AudioVoiceManagerBasic();
+	vfxGraph.context->addSystem(audioVoiceMgr);
 	
-	AudioGraphManager_Basic audioGraphMgr(false);
-	g_vfxAudioGraphMgr = &audioGraphMgr;
+	AudioGraphManager * audioGraphMgr = new AudioGraphManager_Basic(false);
+	vfxGraph.context->addSystem(audioGraphMgr);
 	
 	for (VfxNodeTypeRegistration * registration = g_vfxNodeTypeRegistrationList; registration != nullptr; registration = registration->next)
 	{
@@ -150,4 +147,10 @@ void testVfxNodeCreation()
 	}
 	
 	g_currentVfxGraph = nullptr;
+	
+	delete audioGraphMgr;
+	audioGraphMgr = nullptr;
+	
+	delete audioVoiceMgr;
+	audioVoiceMgr = nullptr;
 }

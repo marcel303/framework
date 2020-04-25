@@ -355,7 +355,7 @@ int main(int argc, char * argv[])
 					{
 						auto t1 = g_TimerRT.TimeUS_get();
 						
-						auto vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
+						auto * vfxGraph = constructVfxGraph(graph, typeDefinitionLibrary);
 						
 						vfxGraph->tick(GFX_SX, GFX_SY, 0.f);
 						
