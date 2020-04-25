@@ -28,14 +28,14 @@
 #include "audioGraph.h"
 #include "audioGraphContext.h"
 #include "audioGraphManager.h"
+#include "audioVoiceManager.h"
 #include "StringEx.h"
+#include "vfxGraph.h"
 #include "vfxNodeAudioGraph.h"
 
 #include "framework.h"
 
 AudioMutexBase * g_vfxAudioMutex = nullptr;
-AudioVoiceManager * g_vfxAudioVoiceMgr = nullptr;
-AudioGraphManager * g_vfxAudioGraphMgr = nullptr;
 
 /*
 
@@ -69,7 +69,7 @@ VFX_NODE_TYPE(VfxNodeAudioGraph)
 
 bool VfxNodeAudioGraph::VoiceMgr::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
 {
-	const bool result = g_vfxAudioVoiceMgr->allocVoice(voice, source, name, doRamping, rampDelay, rampTime, channelIndex);
+	const bool result = parentVoiceMgr->allocVoice(voice, source, name, doRamping, rampDelay, rampTime, channelIndex);
 	
 	voices.insert(voice);
 	
@@ -80,7 +80,7 @@ void VfxNodeAudioGraph::VoiceMgr::freeVoice(AudioVoice *& voice)
 {
 	voices.erase(voice);
 	
-	g_vfxAudioVoiceMgr->freeVoice(voice);
+	parentVoiceMgr->freeVoice(voice);
 }
 
 int VfxNodeAudioGraph::VoiceMgr::calculateNumVoices() const
@@ -107,21 +107,28 @@ VfxNodeAudioGraph::VfxNodeAudioGraph()
 	addInput(kInput_LimitPeak, kVfxPlugType_Float);
 	addInput(kInput_NumChannels, kVfxPlugType_Int);
 	
-	if (g_vfxAudioGraphMgr == nullptr)
+	auto * audioGraphMgr = g_currentVfxGraph->context->tryGetSystem<AudioGraphManager>();
+	auto * audioVoiceMgr = g_currentVfxGraph->context->tryGetSystem<AudioVoiceManager>();
+	
+	if (audioGraphMgr == nullptr || audioVoiceMgr == nullptr)
 	{
 		setEditorIssue("missing required audio graph system");
 	}
 	else
 	{
-		context = g_vfxAudioGraphMgr->createContext(g_vfxAudioMutex, &voiceMgr);
+		voiceMgr.init(audioVoiceMgr);
+		
+		context = audioGraphMgr->createContext(g_vfxAudioMutex, &voiceMgr);
 	}
 }
 
 VfxNodeAudioGraph::~VfxNodeAudioGraph()
 {
+	auto * audioGraphMgr = g_currentVfxGraph->context->tryGetSystem<AudioGraphManager>();
+	
 	if (audioGraphInstance != nullptr)
 	{
-		g_vfxAudioGraphMgr->free(audioGraphInstance, false);
+		audioGraphMgr->free(audioGraphInstance, false);
 	}
 	
 	delete [] channelOutputs;
@@ -130,7 +137,7 @@ VfxNodeAudioGraph::~VfxNodeAudioGraph()
 	if (context != nullptr)
 	{
 		// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeContext will prune any instances still left fading out that reference our context
-		g_vfxAudioGraphMgr->freeContext(context);
+		audioGraphMgr->freeContext(context);
 	}
 }
 
@@ -282,22 +289,24 @@ void VfxNodeAudioGraph::tick(const float dt)
 	const float limitPeak = getInputFloat(kInput_LimitPeak, 1.f);
 	const int _numChannels = getInputInt(kInput_NumChannels, 8);
 	
+	auto * audioGraphMgr = g_currentVfxGraph->context->tryGetSystem<AudioGraphManager>();
+	
 	if (isPassthrough || filename == nullptr || context == nullptr)
 	{
 		if (audioGraphInstance != nullptr)
 		{
-			g_vfxAudioGraphMgr->free(audioGraphInstance, true);
+			audioGraphMgr->free(audioGraphInstance, true);
 			currentFilename.clear();
 		}
 	}
 	else if (filename != currentFilename)
 	{
-		g_vfxAudioGraphMgr->free(audioGraphInstance, true);
+		audioGraphMgr->free(audioGraphInstance, true);
 		currentFilename.clear();
 		
 		//
 		
-		audioGraphInstance = g_vfxAudioGraphMgr->createInstance(filename, context);
+		audioGraphInstance = audioGraphMgr->createInstance(filename, context);
 		
 		currentFilename = filename;
 	}
@@ -325,7 +334,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 	
 	// generate channel data
 	
-	g_vfxAudioMutex->lock();
+	context->audioMutex->lock();
 	{
 		const AudioVoiceManager::OutputMode outputMode =
 			_outputMode == kOutputMode_Mono ? AudioVoiceManager::kOutputMode_Mono :
@@ -338,7 +347,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 		for (auto & voice : voiceMgr.voices)
 			voices[voiceIndex++] = voice;
 		
-		g_vfxAudioVoiceMgr->generateAudio(
+		AudioVoiceManager::generateAudio(
 			voices, numVoices,
 			channelData.data, numSamples, numChannels,
 			limit, limitPeak,
@@ -346,7 +355,7 @@ void VfxNodeAudioGraph::tick(const float dt)
 			1.f,
 			outputMode, false);
 	}
-	g_vfxAudioMutex->unlock();
+	context->audioMutex->unlock();
 	
 	//
 	

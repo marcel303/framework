@@ -37,12 +37,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "Timer.h"
 
 extern AudioMutexBase * g_vfxAudioMutex;
-extern AudioVoiceManager * g_vfxAudioVoiceMgr;
-extern AudioGraphManager * g_vfxAudioGraphMgr;
 
 bool VoiceMgr_VoiceGroup::allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex)
 {
-	const bool result = g_vfxAudioVoiceMgr->allocVoice(voice, source, name, doRamping, rampDelay, rampTime, channelIndex);
+	const bool result = parentVoiceMgr->allocVoice(voice, source, name, doRamping, rampDelay, rampTime, channelIndex);
 	
 	voices.insert(voice);
 	
@@ -53,7 +51,7 @@ void VoiceMgr_VoiceGroup::freeVoice(AudioVoice *& voice)
 {
 	voices.erase(voice);
 	
-	g_vfxAudioVoiceMgr->freeVoice(voice);
+	parentVoiceMgr->freeVoice(voice);
 }
 
 int VoiceMgr_VoiceGroup::calculateNumVoices() const
@@ -90,28 +88,35 @@ VfxNodeAudioGraphPoly::VfxNodeAudioGraphPoly()
 	
 	memset(instances, 0, sizeof(instances));
 	
-	if (g_vfxAudioGraphMgr == nullptr)
+	auto * audioGraphMgr = g_currentVfxGraph->context->tryGetSystem<AudioGraphManager>();
+	auto * audioVoiceMgr = g_currentVfxGraph->context->tryGetSystem<AudioVoiceManager>();
+	
+	if (audioGraphMgr == nullptr || audioVoiceMgr == nullptr)
 	{
 		setEditorIssue("missing required audio graph system");
 	}
 	else
 	{
-		context = g_vfxAudioGraphMgr->createContext(g_vfxAudioMutex, &voiceMgr);
+		voiceMgr.init(audioVoiceMgr);
+		
+		context = audioGraphMgr->createContext(g_vfxAudioMutex, &voiceMgr);
 	}
 }
 
 VfxNodeAudioGraphPoly::~VfxNodeAudioGraphPoly()
 {
+	auto * audioGraphMgr = g_currentVfxGraph->context->tryGetSystem<AudioGraphManager>();
+	
 	for (int i = 0; i < kMaxInstances; ++i)
 	{
 		if (instances[i] != nullptr)
-			g_vfxAudioGraphMgr->free(instances[i], false);
+			audioGraphMgr->free(instances[i], false);
 	}
 	
 	if (context != nullptr)
 	{
 		// note : some of our instances may still be fading out (if they had voices with a fade out time set on the. quite conveniently, freeContext will prune any instances still left fading out that reference our context
-		g_vfxAudioGraphMgr->freeContext(context);
+		audioGraphMgr->freeContext(context);
 	}
 }
 
@@ -242,6 +247,8 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	const VfxChannel * volume = getInputChannel(kInput_Volume, nullptr);
 	const int maxInstances = getInputInt(kInput_MaxInstances, kMaxInstances);
 	
+	auto * audioGraphMgr = g_currentVfxGraph->context->tryGetSystem<AudioGraphManager>();
+	
 	if (isPassthrough || filename == nullptr || volume == nullptr || context == nullptr)
 	{
 		currentFilename.clear();
@@ -249,7 +256,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		for (int i = 0; i < kMaxInstances; ++i)
 		{
 			if (instances[i] != nullptr)
-				g_vfxAudioGraphMgr->free(instances[i], true);
+				audioGraphMgr->free(instances[i], true);
 		}
 		
 		voicesData.free();
@@ -267,7 +274,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		for (int i = 0; i < kMaxInstances; ++i)
 		{
 			if (instances[i] != nullptr)
-				g_vfxAudioGraphMgr->free(instances[i], true);
+				audioGraphMgr->free(instances[i], true);
 		}
 	}
 	
@@ -290,7 +297,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			if (instances[index] != nullptr)
 			{
 				auto t1 = g_TimerRT.TimeUS_get();
-				g_vfxAudioGraphMgr->free(instances[index], true);
+				audioGraphMgr->free(instances[index], true);
 				auto t2 = g_TimerRT.TimeUS_get();
 				
 				addHistoryElem(kHistoryType_InstanceFree, (t2 - t1) / 1000.0);
@@ -301,7 +308,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			if (instances[index] == nullptr)
 			{
 				auto t1 = g_TimerRT.TimeUS_get();
-				instances[index] = g_vfxAudioGraphMgr->createInstance(filename, context, true);
+				instances[index] = audioGraphMgr->createInstance(filename, context, true);
 				auto t2 = g_TimerRT.TimeUS_get();
 				
 				addHistoryElem(kHistoryType_InstanceCreate, (t2 - t1) / 1000.0);
@@ -323,7 +330,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 	while (index < kMaxInstances)
 	{
 		if (instances[index] != nullptr)
-			g_vfxAudioGraphMgr->free(instances[index], true);
+			audioGraphMgr->free(instances[index], true);
 		
 		index++;
 	}
@@ -404,7 +411,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 		}
 	}
 	
-	g_vfxAudioMutex->lock();
+	context->audioMutex->lock();
 	{
 		const int numVoices = voiceMgr.voices.size();
 		
@@ -420,7 +427,7 @@ void VfxNodeAudioGraphPoly::tick(const float dt)
 			voiceData += AUDIO_UPDATE_SIZE;
 		}
 	}
-	g_vfxAudioMutex->unlock();
+	context->audioMutex->unlock();
 }
 
 void VfxNodeAudioGraphPoly::getDescription(VfxNodeDescription & d)

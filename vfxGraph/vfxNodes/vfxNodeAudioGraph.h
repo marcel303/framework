@@ -37,11 +37,20 @@ struct VfxNodeAudioGraph : VfxNodeBase
 {
 	struct VoiceMgr : AudioVoiceManager
 	{
+		AudioVoiceManager * parentVoiceMgr;
+		
 		std::set<AudioVoice*> voices;
 		
 		VoiceMgr()
 			: AudioVoiceManager(kType_Basic)
+			, parentVoiceMgr(nullptr)
+			, voices()
 		{
+		}
+		
+		void init(AudioVoiceManager * in_parentVoiceMgr)
+		{
+			parentVoiceMgr = in_parentVoiceMgr;
 		}
 		
 		virtual bool allocVoice(AudioVoice *& voice, AudioSource * source, const char * name, const bool doRamping, const float rampDelay, const float rampTime, const int channelIndex = -1) override;

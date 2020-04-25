@@ -46,12 +46,15 @@ struct VoiceMgr_VoiceGroup : AudioVoiceManager
 		kMode_Disabled
 	};
 	
+	AudioVoiceManager * parentVoiceMgr;
+	
 	std::set<AudioVoice*> voices;
 	
 	Mode currentMode;
 	
 	VoiceMgr_VoiceGroup()
 		: AudioVoiceManager(kType_Basic)
+		, parentVoiceMgr(nullptr)
 		, voices()
 		, currentMode(kMode_Passthrough)
 	{
@@ -60,6 +63,11 @@ struct VoiceMgr_VoiceGroup : AudioVoiceManager
 	virtual ~VoiceMgr_VoiceGroup() override
 	{
 		Assert(voices.empty());
+	}
+	
+	void init(AudioVoiceManager * in_parentVoiceMgr)
+	{
+		parentVoiceMgr = in_parentVoiceMgr;
 	}
 	
 	void setMode(const Mode mode)
