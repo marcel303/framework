@@ -54,6 +54,9 @@ bool node_from_clipboard_text(const char * text, SceneNode & node)
 	{
 		const char * component_type_name = line_reader.get_next_line(true);
 		
+		if (component_type_name == nullptr)
+			break;
+			
 		if (component_type_name[0] == '\t')
 		{
 			// only one level of identation may be added per line
@@ -61,9 +64,6 @@ bool node_from_clipboard_text(const char * text, SceneNode & node)
 			LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
 			return false;
 		}
-		
-		if (component_type_name == nullptr)
-			break;
 		
 		auto * component_type = findComponentType(component_type_name);
 		
