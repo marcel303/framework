@@ -161,40 +161,6 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 		
 		if (maxAxis > 0.f)
 		{
-			Shader metallicRoughnessShader("gltf/shaders/shader-pbr-metallicRoughness");
-			Shader specularGlossinessShader("gltf/shaders/shader-pbr-specularGlossiness");
-			
-		// todo : add a nicer way to set lighting for the GLTF library's built-in shaders
-			Shader * shaders[2] = { &metallicRoughnessShader, &specularGlossinessShader };
-			for (auto * shader : shaders)
-			{
-				setShader(*shader);
-				shader->setImmediate("scene_camPos",
-					0.f,
-					0.f,
-					0.f);
-				
-				Mat4x4 objectToView;
-				gxGetMatrixf(GX_MODELVIEW, objectToView.m_v);
-				
-				const float dx = cosf(framework.time / 1.56f);
-				const float dz = sinf(framework.time / 1.67f);
-				const Vec3 lightDir_world(dx, 0.f, dz);
-				const Vec3 lightDir_view = objectToView.Mul3(lightDir_world);
-		
-				shader->setImmediate("scene_lightDir",
-					lightDir_view[0],
-					lightDir_view[1],
-					lightDir_view[2]);
-				
-				clearShader();
-			}
-			
-			gltf::MaterialShaders materialShaders;
-			materialShaders.pbr_specularGlossiness = &specularGlossinessShader;
-			materialShaders.pbr_metallicRoughness = &metallicRoughnessShader;
-			materialShaders.fallbackShader = &metallicRoughnessShader;
-			
 			gxPushMatrix();
 			{
 				gxTranslatef(0, 0, 2.f);
@@ -241,6 +207,38 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				}
 				
 				// draw model
+				
+				Shader metallicRoughnessShader("gltf/shaders/shader-pbr-metallicRoughness");
+				Shader specularGlossinessShader("gltf/shaders/shader-pbr-specularGlossiness");
+				
+			// todo : add a nicer way to set lighting for the GLTF library's built-in shaders
+				Shader * shaders[2] = { &metallicRoughnessShader, &specularGlossinessShader };
+				for (auto * shader : shaders)
+				{
+					setShader(*shader);
+					
+					Mat4x4 objectToView;
+					gxGetMatrixf(GX_MODELVIEW, objectToView.m_v);
+					
+					const float dx = cosf(framework.time / 1.56f);
+					const float dz = sinf(framework.time / 1.67f);
+					const Vec3 lightDir_world(dx, -2.f, dz);
+					const Vec3 lightDir_view = objectToView.Mul3(lightDir_world).CalcNormalized();
+			
+					shader->setImmediate("scene_lightParams",
+						lightDir_view[0],
+						lightDir_view[1],
+						lightDir_view[2],
+						0.f /* directional */);
+					shader->setImmediate("scene_ambientLightColor", .2f, .2f, .2f);
+					
+					clearShader();
+				}
+				
+				gltf::MaterialShaders materialShaders;
+				materialShaders.pbr_specularGlossiness = &specularGlossinessShader;
+				materialShaders.pbr_metallicRoughness = &metallicRoughnessShader;
+				materialShaders.fallbackShader = &metallicRoughnessShader;
 				
 				gltf::DrawOptions drawOptions;
 				drawOptions.alphaMode = alphaMode;
