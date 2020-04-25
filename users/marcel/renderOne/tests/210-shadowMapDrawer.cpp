@@ -23,7 +23,7 @@ int main(int argc, char * argv[])
 	{
 		setColor(colorWhite);
 		//fillCube(Vec3(), Vec3(1, 1, 1));
-		fillCylinder(Vec3(), 1.f, 1.f, 100);
+		fillCylinder(Vec3(), 1.f, 1.f, 100, 0.f, true);
 		
 		gxPushMatrix();
 		{
