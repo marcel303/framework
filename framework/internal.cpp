@@ -1724,7 +1724,7 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 		
 		result &= fread(&version, 4, 1, file) == 1;
 		
-		if (version != 3)
+		if (version != 4)
 		{
 			logDebug("loadCache: version mismatch");
 			result = false;
@@ -1752,11 +1752,14 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 			int32_t y;
 			int32_t sx;
 			int32_t sy;
+			float textureToGlyphScale[2];
 			int32_t advance;
 			
 			result &= fread(&y, 4, 1, file) == 1;
 			result &= fread(&sx, 4, 1, file) == 1;
 			result &= fread(&sy, 4, 1, file) == 1;
+			result &= fread(&textureToGlyphScale[0], 4, 1, file) == 1;
+			result &= fread(&textureToGlyphScale[1], 4, 1, file) == 1;
 			result &= fread(&advance, 4, 1, file) == 1;
 			
 			//
@@ -1808,6 +1811,8 @@ bool MsdfGlyphCache::loadCache(const char * filename)
 				glyph.y = y;
 				glyph.sx = sx;
 				glyph.sy = sy;
+				glyph.textureToGlyphScale[0] = textureToGlyphScale[0];
+				glyph.textureToGlyphScale[1] = textureToGlyphScale[1];
 				glyph.advance = advance;
 				glyph.isInitialized = true;
 			}
@@ -1861,7 +1866,7 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 	
 	if (result == true)
 	{
-		const int32_t version = 3;
+		const int32_t version = 4;
 		
 		result &= fwrite(&version, 4, 1, file) == 1;
 	}
@@ -1887,11 +1892,18 @@ bool MsdfGlyphCache::saveCache(const char * filename) const
 			const int32_t y = e.y;
 			const int32_t sx = e.sx;
 			const int32_t sy = e.sy;
+			const float textureToGlyphScale[2] =
+			{
+				e.textureToGlyphScale[0],
+				e.textureToGlyphScale[1]
+			};
 			const int32_t advance = e.advance;
 			
 			result &= fwrite(&y, 4, 1, file) == 1;
 			result &= fwrite(&sx, 4, 1, file) == 1;
 			result &= fwrite(&sy, 4, 1, file) == 1;
+			result &= fwrite(&textureToGlyphScale[0], 4, 1, file) == 1;
+			result &= fwrite(&textureToGlyphScale[1], 4, 1, file) == 1;
 			result &= fwrite(&advance, 4, 1, file) == 1;
 			
 			//
