@@ -636,7 +636,7 @@ void GraphEdit_Visualizer::measure(
 	sy += kPadding;
 }
 
-void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string & nodeName, const bool isSelected, const int * _sx, const int * _sy) const
+void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string & nodeName, const bool isSelected, const int * in_sx, const int * in_sy) const
 {
 	const int kFontSize = 12;
 	const int kPadding = 8;
@@ -644,10 +644,16 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	setFont("calibri.ttf");
 	
+	const bool hasVisualSize = in_sx != nullptr && in_sy != nullptr;
+	
+	const bool hasGraph = history.historySize > 0;
+	const bool hasTexture = texture != 0;
+	const bool hasChannels = channelData.hasChannels();
+	
 	int visualSx = 0;
 	int visualSy = 0;
 	
-	if (_sx && _sy)
+	if (hasVisualSize)
 	{
 		int minSx;
 		int minSy;
@@ -655,9 +661,9 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		measure(graphEdit, nodeName, 0, 0, 0, 0, 0, 0, minSx, minSy);
 		
 		//logDebug("minSize: %d, %d", minSx, minSy);
-		
-		visualSx = *_sx - kPadding * 2;
-		visualSy = *_sy - minSy;
+	
+		visualSx = *in_sx - kPadding * 2;
+		visualSy = *in_sy - minSy;
 	}
 	
 	std::string caption;
@@ -718,8 +724,6 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	//
 	
-	const bool hasGraph = history.historySize > 0;
-	
 	float graphMin = 0.f;
 	float graphMax = 0.f;
 	
@@ -730,19 +734,9 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	//
 	
-	const bool hasTexture = texture != 0;
-	
-	//
-	
-	const bool hasChannels = channelData.hasChannels();
-	
-	//
-	
-	const bool hasVisualSy = _sx != nullptr && _sy != nullptr;
-	
 	int perVisualSy = 0;
 	
-	if (hasVisualSy)
+	if (hasVisualSize)
 	{
 		int numVisuals = 0;
 		
@@ -760,14 +754,13 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		else
 		{
 			sx = std::max(sx, visualSx);
-			sy += visualSy;
 		}
 	}
 	
 	//
 	
-	int graphSx = hasVisualSy ? (*_sx - kPadding * 2) : kDefaultGraphSx;
-	int graphSy = hasVisualSy ? perVisualSy : kDefaultGraphSy;
+	int graphSx = hasVisualSize ? (*in_sx - kPadding * 2) : kDefaultGraphSx;
+	int graphSy = hasVisualSize ? perVisualSy : kDefaultGraphSy;
 	
 	if (hasGraph)
 	{
@@ -779,8 +772,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	//
 	
-	int textureSx = hasVisualSy ? (*_sx - kPadding * 2) : kDefaultMaxTextureSx;
-	int textureSy = hasVisualSy ? perVisualSy : kDefaultMaxTextureSy;
+	int textureSx = hasVisualSize ? (*in_sx - kPadding * 2) : kDefaultMaxTextureSx;
+	int textureSy = hasVisualSize ? perVisualSy : kDefaultMaxTextureSy;
 	
 	int textureAreaSx = 0;
 	int textureAreaSy = 0;
@@ -802,9 +795,9 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 		textureSx = std::floor(baseTextureSx * scale);
 		textureSy = std::floor(baseTextureSy * scale);
 		
-		if (hasVisualSy)
+		if (hasVisualSize)
 		{
-			textureAreaSx = (*_sx - kPadding * 2);
+			textureAreaSx = (*in_sx - kPadding * 2);
 			textureAreaSy = perVisualSy;
 		}
 		else
@@ -821,8 +814,8 @@ void GraphEdit_Visualizer::draw(const GraphEdit & graphEdit, const std::string &
 	
 	//
 	
-	int channelsSx = hasVisualSy ? (*_sx - kPadding * 2) : kDefaultChannelsSx;
-	int channelsSy = hasVisualSy ? perVisualSy : kDefaultChannelsSy;
+	int channelsSx = hasVisualSize ? (*in_sx - kPadding * 2) : kDefaultChannelsSx;
+	int channelsSy = hasVisualSize ? perVisualSy : kDefaultChannelsSy;
 	
 	if (hasChannels)
 	{

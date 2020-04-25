@@ -754,7 +754,7 @@ struct GraphEdit : GraphEditConnection
 			, autoHideUi(false)
 			, showBackground(true)
 			, showGrid(true)
-			, showSocketNames(false)
+			, showSocketNames(true)
 			, showNodeImages(false)
 			, snapToGrid(false)
 			, showOneShotActivity(false)
