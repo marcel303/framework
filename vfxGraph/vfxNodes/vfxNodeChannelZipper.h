@@ -39,11 +39,11 @@ struct VfxNodeChannelZipper : VfxNodeBase
 	
 	enum Input
 	{
-		kInput_Mode,
 		kInput_Channel1,
 		kInput_Channel2,
 		kInput_Channel3,
 		kInput_Channel4,
+		kInput_Mode,
 		kInput_COUNT
 	};
 

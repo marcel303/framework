@@ -38,11 +38,11 @@ VFX_NODE_TYPE(VfxNodeChannelZipper)
 {
 	typeName = "channel.zipper";
 	
-	inEnum("mode", "channelZipMode");
 	in("1", "channel");
 	in("2", "channel");
 	in("3", "channel");
 	in("4", "channel");
+	inEnum("mode", "channelZipMode");
 	out("1", "channel");
 	out("2", "channel");
 	out("3", "channel");
@@ -53,11 +53,11 @@ VfxNodeChannelZipper::VfxNodeChannelZipper()
 	: VfxNodeBase()
 {
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
-	addInput(kInput_Mode, kVfxPlugType_Int);
 	addInput(kInput_Channel1, kVfxPlugType_Channel);
 	addInput(kInput_Channel2, kVfxPlugType_Channel);
 	addInput(kInput_Channel3, kVfxPlugType_Channel);
 	addInput(kInput_Channel4, kVfxPlugType_Channel);
+	addInput(kInput_Mode, kVfxPlugType_Int);
 	addOutput(kOutput_Channel1, kVfxPlugType_Channel, &channelOutput[0]);
 	addOutput(kOutput_Channel2, kVfxPlugType_Channel, &channelOutput[1]);
 	addOutput(kOutput_Channel3, kVfxPlugType_Channel, &channelOutput[2]);
@@ -70,8 +70,6 @@ VfxNodeChannelZipper::~VfxNodeChannelZipper()
 
 void VfxNodeChannelZipper::tick(const float dt)
 {
-	const int mode = getInputInt(kInput_Mode, 0);
-	
 	const VfxChannel * channel1 = getInputChannel(kInput_Channel1, nullptr);
 	const VfxChannel * channel2 = getInputChannel(kInput_Channel2, nullptr);
 	const VfxChannel * channel3 = getInputChannel(kInput_Channel3, nullptr);
@@ -91,6 +89,8 @@ void VfxNodeChannelZipper::tick(const float dt)
 		
 		return;
 	}
+	
+	const int mode = getInputInt(kInput_Mode, 0);
 
 	if (mode == kMode_RoundRobin)
 	{
