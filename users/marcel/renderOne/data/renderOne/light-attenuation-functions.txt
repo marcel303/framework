@@ -27,7 +27,7 @@ float computeAttenuationForPointLight(
 
 	float lightRadiusSquared = lightRadius * lightRadius;
 
-	if (distanceSquared == 0.0 || distanceSquared >= lightRadiusSquared)
+	if (distanceSquared >= lightRadiusSquared)
 	{
 		return 0.0;
 	}
