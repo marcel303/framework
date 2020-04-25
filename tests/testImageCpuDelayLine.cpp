@@ -251,7 +251,8 @@ void testImageCpuDelayLine()
 			drawText(x, y + 0, fontSize, +1, +1, "LEFT/RIGHT: control sampling position within the delay line");
 			drawText(x, y + 20, fontSize, +1, +1, "C: clear delay line FIFO");
 			drawText(x, y + 40, fontSize, +1, +1, "R: set a random delay line size");
-			drawText(x, y + 60, fontSize, +1, +1, "SPACE: quit test");
+			drawText(x, y + 60, fontSize, +1, +1, "G: toggle glitch mode");
+			drawText(x, y + 80, fontSize, +1, +1, "ESCAPE: quit test");
 			
 			drawTestUi();
 		}

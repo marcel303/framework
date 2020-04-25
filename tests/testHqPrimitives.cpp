@@ -326,7 +326,7 @@ void testHqPrimitives()
 			y += dy; drawText(10.f, y, fontSize, +1, +1, "press R to randomize lines");
 			y += dy; drawText(10.f, y, fontSize, +1, +1, "press G to toggle color gradient [%s]", enableColorGradient ? "on" : "off");
 			y += dy; drawText(10.f, y, fontSize, +1, +1, "press T to toggle texturing [%s]", enableTexturing ? "on" : "off");
-			y += dy; drawText(10.f, y, fontSize, +1, +1, "press SPACE to quit test");
+			y += dy; drawText(10.f, y, fontSize, +1, +1, "press ESCAPE to quit test");
 			
 			//
 			

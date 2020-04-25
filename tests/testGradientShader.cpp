@@ -47,6 +47,8 @@ void testGradientShader()
 		circles[i][2] = random(0.f, 5.f); // life
 	}
 	
+	float time = 0.f;
+	
 	do
 	{
 		framework.process();
@@ -65,6 +67,11 @@ void testGradientShader()
 			circles[i][0] += scaled_octave_noise_3d(4, .5f, .01f, -500.f, +500.f, framework.time * 20.f + i, circles[i][0], circles[i][1]) * framework.timeStep;
 			circles[i][1] += scaled_octave_noise_3d(4, .5f, .01f, -500.f, +500.f, framework.time * 20.f - i, circles[i][0], circles[i][1]) * framework.timeStep;
 		}
+		
+		time += framework.timeStep;
+		
+		const float sunX = GFX_SX/2.f + GFX_SX/3.f * sinf(framework.time / 1.23f);
+		const float sunY = GFX_SY/2.f + GFX_SX/3.f * sinf(framework.time / 2.34f);
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -86,11 +93,17 @@ void testGradientShader()
 			for (int i = 0; i < 360; i += 20)
 			{
 				gxPushMatrix();
+				gxTranslatef(sunX, sunY, 0);
 				gxRotatef(i + framework.time, 0, 0, 1);
 				hqBegin(HQ_LINES);
 				{
 					setColor(colorWhite);
 					hqLine(0, 0, 10, GFX_SX, GFX_SY, 50);
+					
+					hqLine(0, 0, 2, GFX_SX - sunY, GFX_SY, 1);
+					hqLine(0, 0, 2, GFX_SX + sunY, GFX_SY, 1);
+					hqLine(0, 0, 2, GFX_SX, GFX_SY - sunX, 1);
+					hqLine(0, 0, 2, GFX_SX, GFX_SY + sunX, 1);
 				}
 				hqEnd();
 				gxPopMatrix();
