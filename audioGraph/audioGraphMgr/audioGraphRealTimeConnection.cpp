@@ -87,7 +87,7 @@ struct AudioScope
 
 //
 
-AudioRealTimeConnection::AudioRealTimeConnection(AudioValueHistorySet * _audioValueHistorySet, AudioGraphContext * in_context)
+AudioRealTimeConnection::AudioRealTimeConnection(AudioGraph *& in_audioGraph, AudioGraphContext * in_context, AudioValueHistorySet * in_audioValueHistorySet)
 	: GraphEdit_RealTimeConnection()
 	, audioGraph(nullptr)
 	, audioGraphPtr(nullptr)
@@ -96,7 +96,10 @@ AudioRealTimeConnection::AudioRealTimeConnection(AudioValueHistorySet * _audioVa
 	, audioValueHistorySet(nullptr)
 	, context(nullptr)
 {
-	audioValueHistorySet = _audioValueHistorySet;
+	audioGraph = in_audioGraph;
+	audioGraphPtr = &in_audioGraph;
+	
+	audioValueHistorySet = in_audioValueHistorySet;
 	
 	context = in_context;
 }

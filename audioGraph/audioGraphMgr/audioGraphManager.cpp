@@ -767,17 +767,16 @@ AudioGraphInstance * AudioGraphManager_RTE::createInstance(const char * filename
 	
 	//
 	
-	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, context, createdPaused);
-	auto realTimeConnection = new AudioRealTimeConnection(file->audioValueHistorySet, context);
-	
-	//
-	
 	AudioGraphInstance * instance = new AudioGraphInstance();
+	
+	auto * audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, context, createdPaused);
 	instance->audioGraph = audioGraph;
+	
+	auto * realTimeConnection = new AudioRealTimeConnection(instance->audioGraph, context, file->audioValueHistorySet);
 	instance->realTimeConnection = realTimeConnection;
 	instance->realTimeConnection->audioMutex = audioMutex;
-	instance->realTimeConnection->audioGraph = instance->audioGraph;
-	instance->realTimeConnection->audioGraphPtr = &instance->audioGraph;
+	
+	//
 	
 	audioMutex->lock();
 	{
@@ -1205,17 +1204,14 @@ AudioGraphInstance * AudioGraphManager_MultiRTE::createInstance(const char * fil
 	
 	//
 	
-	auto audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, context, createdPaused);
-	auto realTimeConnection = new AudioRealTimeConnection(file->audioValueHistorySet, context);
-	
-	//
-	
 	AudioGraphInstance * instance = new AudioGraphInstance();
+	
+	auto * audioGraph = constructAudioGraph(*file->graphEdit->graph, typeDefinitionLibrary, context, createdPaused);
 	instance->audioGraph = audioGraph;
+	
+	auto * realTimeConnection = new AudioRealTimeConnection(instance->audioGraph, context, file->audioValueHistorySet);
 	instance->realTimeConnection = realTimeConnection;
 	instance->realTimeConnection->audioMutex = audioMutex;
-	instance->realTimeConnection->audioGraph = instance->audioGraph;
-	instance->realTimeConnection->audioGraphPtr = &instance->audioGraph;
 	
 	audioMutex->lock();
 	{

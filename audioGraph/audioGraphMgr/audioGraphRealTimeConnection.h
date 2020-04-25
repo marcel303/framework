@@ -46,7 +46,7 @@ struct AudioRealTimeConnection : GraphEdit_RealTimeConnection
 	
 	AudioGraphContext * context;
 	
-	AudioRealTimeConnection(AudioValueHistorySet * audioValueHistorySet, AudioGraphContext * context);
+	AudioRealTimeConnection(AudioGraph *& audioGraph, AudioGraphContext * context, AudioValueHistorySet * audioValueHistorySet);
 	virtual ~AudioRealTimeConnection() override;
 	
 	void updateAudioValues();

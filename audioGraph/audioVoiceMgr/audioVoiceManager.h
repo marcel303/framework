@@ -237,7 +237,7 @@ struct AudioVoiceManager
 	 * @param outputMode The output mode (mono, stereo or multi-channel).
 	 * @param interleaved True when the stereo or multi-channel output should be written in an interleaved fashion. Interleaved means that the values for channel 0, 1, 2 etc will be packed next to each other inside the samples array. When false, the channels are output in a planar fashion. Which means first numSamples for channel 0 are output, followed by numSamples for channel 1, etc.
 	 */
-	void generateAudio(
+	static void generateAudio(
 		AudioVoice ** voices,
 		const int numVoices,
 		float * __restrict samples, const int numSamples, const int numChannels,
