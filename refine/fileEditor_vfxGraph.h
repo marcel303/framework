@@ -4,12 +4,15 @@
 #include "audioVoiceManager.h"
 #include "fileEditor.h"
 #include "ui.h"
+#include "vfxGraph.h"
 #include "vfxGraphManager.h"
 
 struct FileEditor_VfxGraph : FileEditor
 {
 	static const int defaultSx = 600;
 	static const int defaultSy = 600;
+	
+	VfxGraphContext vfxGraphCtx;
 	
 	VfxGraphManager_RTE vfxGraphMgr;
 	VfxGraphInstance * instance = nullptr;

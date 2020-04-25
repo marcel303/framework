@@ -8,14 +8,13 @@
 #include "vfxUi.h"
 
 extern AudioMutexBase * g_vfxAudioMutex;
-extern AudioVoiceManager * g_vfxAudioVoiceMgr;
-extern AudioGraphManager * g_vfxAudioGraphMgr;
 
 FileEditor_VfxGraph::FileEditor_VfxGraph(const char * path)
 	: vfxGraphMgr(defaultSx, defaultSy)
 	, audioGraphMgr(true)
 {
 	// init vfx graph
+	vfxGraphCtx.refCount++;
 	vfxGraphMgr.init();
 	
 	// init audio graph
@@ -24,11 +23,12 @@ FileEditor_VfxGraph::FileEditor_VfxGraph(const char * path)
 	audioGraphMgr.init(&audioMutex, &audioVoiceMgr);
 	
 	g_vfxAudioMutex = &audioMutex;
-	g_vfxAudioVoiceMgr = &audioVoiceMgr;
-	g_vfxAudioGraphMgr = &audioGraphMgr;
+	
+	vfxGraphCtx.addSystem<AudioVoiceManager>(&audioVoiceMgr);
+	vfxGraphCtx.addSystem<AudioGraphManager>(&audioGraphMgr);
 	
 	// create instance
-	instance = vfxGraphMgr.createInstance(path, defaultSx, defaultSy);
+	instance = vfxGraphMgr.createInstance(path, defaultSx, defaultSy, &vfxGraphCtx);
 	vfxGraphMgr.selectInstance(instance);
 }
 
@@ -40,8 +40,6 @@ FileEditor_VfxGraph::~FileEditor_VfxGraph()
 	
 	// shut audio graph
 	g_vfxAudioMutex = nullptr; // todo : needs a nicer solution .. make it part of globals .. side data for additional node support .. ?
-	g_vfxAudioVoiceMgr = nullptr;
-	g_vfxAudioGraphMgr = nullptr;
 	
 	audioGraphMgr.shut();
 	audioVoiceMgr.shut();
@@ -49,6 +47,7 @@ FileEditor_VfxGraph::~FileEditor_VfxGraph()
 	
 	// shut vfx graph
 	vfxGraphMgr.shut();
+	vfxGraphCtx.refCount--;
 }
 
 void FileEditor_VfxGraph::tick(const int sx, const int sy, const float dt, const bool hasFocus, bool & inputIsCaptured)
