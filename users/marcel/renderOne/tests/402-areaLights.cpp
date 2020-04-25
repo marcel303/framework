@@ -138,7 +138,7 @@ int main(int argc, char * argv[])
 			
 			projectScreen2d();
 			setColor(255, 255, 255, 80);
-			drawText(4, 4, 12, +1, +1, "Press [1..4] to add transformation(s)");fine
+			drawText(4, 4, 12, +1, +1, "Press [1..4] to add transformation(s)");
 		}
 		framework.endDraw();
 	}
