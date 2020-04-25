@@ -6,7 +6,8 @@
 
 struct FileEditor_Ies : FileEditor
 {
-	GxTextureId texture = 0;
+	GxTextureId previewTexture = 0;
+	GxTextureId lookupTexture = 0;
 	
 	Camera3d camera;
 

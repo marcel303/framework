@@ -5,11 +5,17 @@
 #include "ui.h"
 
 static const int kPreviewResolution = 512;
+static const int kLookupResolution = 256;
 
 FileEditor_Ies::FileEditor_Ies(const char * path)
 {
 	guiContext.init();
 
+	//
+	
+	camera.position[2] = -.5f;
+	camera.position[1] = .5f;
+	
 	//
 
 	char * text = nullptr;
@@ -21,17 +27,33 @@ FileEditor_Ies::FileEditor_Ies(const char * path)
 		
 		if (helper.load(text, size, info))
 		{
-			uint8_t * data = new uint8_t[kPreviewResolution * kPreviewResolution];
-			
-			if (helper.saveAsPreview(info, data, kPreviewResolution, kPreviewResolution, 1))
 			{
-				freeTexture(texture);
+				uint8_t * data = new uint8_t[kPreviewResolution * kPreviewResolution];
 				
-				texture = createTextureFromR8(data, kPreviewResolution, kPreviewResolution, true, true);
+				if (helper.saveAsPreview(info, data, kPreviewResolution, kPreviewResolution, 1))
+				{
+					freeTexture(previewTexture);
+					
+					previewTexture = createTextureFromR8(data, kPreviewResolution, kPreviewResolution, true, true);
+				}
+				
+				delete [] data;
+				data = nullptr;
 			}
 			
-			delete [] data;
-			data = nullptr;
+			{
+				float * data = new float[kLookupResolution * kLookupResolution];
+	
+				if (helper.saveAs2D(info, data, kLookupResolution, kLookupResolution, 1))
+				{
+					freeTexture(lookupTexture);
+					
+					lookupTexture = createTextureFromR32F(data, kLookupResolution, kLookupResolution, true, true);
+				}
+				
+				delete [] data;
+				data = nullptr;
+			}
 		}
 		
 		delete [] text;
@@ -41,7 +63,8 @@ FileEditor_Ies::FileEditor_Ies(const char * path)
 
 FileEditor_Ies::~FileEditor_Ies()
 {
-	freeTexture(texture);
+	freeTexture(previewTexture);
+	freeTexture(lookupTexture);
 	
 	guiContext.shut();
 }
@@ -69,7 +92,7 @@ void FileEditor_Ies::tick(const int sx, const int sy, const float dt, const bool
 		{
 			ImGui::PushItemWidth(120.f);
 			{
-				//ImGui::Checkbox("Explore in 3d", &exploreIn3d);
+				ImGui::Checkbox("Explore in 3d", &exploreIn3d);
 			}
 			ImGui::PopItemWidth();
 		}
@@ -77,34 +100,102 @@ void FileEditor_Ies::tick(const int sx, const int sy, const float dt, const bool
 	}
 	guiContext.processEnd();
 
-	camera.tick(dt, inputIsCaptured == false);
+	if (exploreIn3d)
+	{
+		camera.tick(dt, inputIsCaptured == false && mouse.isDown(BUTTON_LEFT));
+	}
 
 	// draw
 	
 	clearSurface(0, 0, 0, 0);
 	
-	setColor(colorWhite);
-	drawUiRectCheckered(0, 0, sx, sy, 8);
-	
-	if (texture != 0)
+	if (exploreIn3d)
 	{
-		const float scaleX = sx / float(kPreviewResolution);
-		const float scaleY = sy / float(kPreviewResolution);
-		const float scale = fminf(scaleX, scaleY);
-		const float x = (sx - scale * kPreviewResolution) / 2.f;
-		const float y = (sy - scale * kPreviewResolution) / 2.f;
-		gxSetTexture(texture);
-		gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
-		pushColorPost(POST_SET_RGB_TO_R);
+		const Vec3 lightPosition_world = Vec3(0, 1, 0);
+		const Mat4x4 viewToWorld = camera.getWorldMatrix();
+	
+	#if true
+		projectPerspective3d(90.f, .01f, 100.f);
+
+		camera.pushViewMatrix();
+		pushBlend(BLEND_OPAQUE);
+		{
+			if (lookupTexture != 0)
+			{
+				Shader shader("fileEditor_ies/ies-light");
+				setShader(shader);
+				{
+					shader.setTexture("ies_texture", 0, lookupTexture, true, true);
+					shader.setImmediateMatrix4x4("viewToWorld", viewToWorld.m_v);
+					shader.setImmediate("lightPosition_world",
+						lightPosition_world[0],
+						lightPosition_world[1],
+						lightPosition_world[2]);
+					
+					gxPushMatrix();
+					{
+						gxScalef(4, 4, 4);
+						
+						setColor(colorWhite);
+						drawGrid3dLine(100, 100, 0, 2);
+					}
+					gxPopMatrix();
+				}
+				clearShader();
+			}
+		}
+		popBlend();
+		camera.popViewMatrix();
+	#endif
+	
+		projectScreen2d();
+	
+		pushBlend(BLEND_ADD);
+		{
+			if (lookupTexture != 0)
+			{
+				Shader shader("fileEditor_ies/ies-light-volume");
+				setShader(shader);
+				{
+					shader.setTexture("ies_texture", 0, lookupTexture, true, true);
+					shader.setImmediateMatrix4x4("viewToWorld", viewToWorld.m_v);
+					shader.setImmediate("lightPosition_world",
+						lightPosition_world[0],
+						lightPosition_world[1],
+						lightPosition_world[2]);
+					
+					drawRect(0, 0, sx, sy);
+				}
+				clearShader();
+			}
+		}
+		popBlend();
+	}
+	else
+	{
 		setColor(colorWhite);
-		drawRect(
-			x,
-			y,
-			x + kPreviewResolution * scale,
-			y + kPreviewResolution * scale);
-		popColorPost();
-		gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
-		gxSetTexture(0);
+		drawUiRectCheckered(0, 0, sx, sy, 8);
+		
+		if (previewTexture != 0)
+		{
+			const float scaleX = sx / float(kPreviewResolution);
+			const float scaleY = sy / float(kPreviewResolution);
+			const float scale = fminf(scaleX, scaleY);
+			const float x = (sx - scale * kPreviewResolution) / 2.f;
+			const float y = (sy - scale * kPreviewResolution) / 2.f;
+			gxSetTexture(previewTexture);
+			gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
+			pushColorPost(POST_SET_RGB_TO_R);
+			setColor(colorWhite);
+			drawRect(
+				x,
+				y,
+				x + kPreviewResolution * scale,
+				y + kPreviewResolution * scale);
+			popColorPost();
+			gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
+			gxSetTexture(0);
+		}
 	}
 	
 	guiContext.draw();
