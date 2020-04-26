@@ -91,14 +91,14 @@ int main(int argc, char * argv[])
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
-	//const char * path = "van_gogh_room/scene.gltf";
-	const char * path = "littlest_tokyo/scene.gltf";
-	//const char * path = "ftm/scene.gltf";
-	//const char * path = "nara_the_desert_dancer/scene.gltf";
-	//const char * path = "drone/scene.gltf";
-	//const char * path = "buster_drone/scene.gltf";
-	//const char * path = "halloween_little_witch/scene.gltf";
-	//const char * path = "kalestra_the_sorceress/scene.gltf";
+	//const char * path = "scenes/van_gogh_room/scene.gltf";
+	//const char * path = "scenes/littlest_tokyo/scene.gltf";
+	//const char * path = "scenes/ftm/scene.gltf";
+	const char * path = "scenes/nara_the_desert_dancer/scene.gltf";
+	//const char * path = "scenes/drone/scene.gltf";
+	//const char * path = "scenes/buster_drone/scene.gltf";
+	//const char * path = "scenes/halloween_little_witch/scene.gltf";
+	//const char * path = "scenes/kalestra_the_sorceress/scene.gltf";
 
 	gltf::Scene scene;
 	
@@ -220,7 +220,7 @@ int main(int argc, char * argv[])
 							const Vec3 lightDir_world(dx, -1.f, dz);
 							const Vec3 lightDir_view = camera.getViewMatrix().Mul3(lightDir_world).CalcNormalized();
 					
-							shader->setImmediate("scene_lightParams",
+							shader->setImmediate("scene_lightParams1",
 								lightDir_view[0],
 								lightDir_view[1],
 								lightDir_view[2],
@@ -234,14 +234,21 @@ int main(int argc, char * argv[])
 							const Vec3 lightPos_world = Vec3(x, y, z) / scaleMultiplier;
 							const Vec3 lightPos_view = viewMatrix.Mul4(lightPos_world);
 					
-							shader->setImmediate("scene_lightParams",
+							shader->setImmediate("scene_lightParams1",
 								lightPos_view[0],
 								lightPos_view[1],
 								lightPos_view[2],
 								1.f);
 						#endif
 						
-							shader->setImmediate("scene_ambientLightColor", .03f, .02f, .01f);
+							shader->setImmediate("scene_lightParams2",
+								1.f,
+								1.f,
+								1.f,
+								2.f);
+						
+							//shader->setImmediate("scene_ambientLightColor", .03f, .02f, .01f);
+							shader->setImmediate("scene_ambientLightColor", .2f, .2f, .2f);
 							
 							clearShader();
 							

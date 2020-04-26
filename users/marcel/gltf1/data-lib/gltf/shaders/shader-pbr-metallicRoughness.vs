@@ -21,5 +21,5 @@ void main()
   v_texcoord0 = unpackTexcoord(0);
   v_texcoord1 = unpackTexcoord(1);
 
-  v_normal_view = objectToView(unpackNormal()).xyz;
+  v_normal_view = objectToView3(unpackNormal().xyz);
 }

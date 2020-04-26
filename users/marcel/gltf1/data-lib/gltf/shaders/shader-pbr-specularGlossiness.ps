@@ -2,178 +2,51 @@ include engine/ShaderPS.txt
 include engine/ShaderUtil.txt
 
 include gltf/shaders/lighting.txt
-include gltf/shaders/utils.txt
+include gltf/shaders/normal-mapping-utils.txt
 
 // shader based on: https://github.com/SaschaWillems/Vulkan-glTF-PBR/blob/master/data/shaders/pbr.frag
 
-// material maps
-
-uniform vec4 u_diffuseFactor;
-uniform sampler2D diffuseTexture;
-uniform float diffuseTextureCoord;
-
-uniform vec3 u_specularFactor;
-uniform float u_glossinessFactor;
-uniform sampler2D specularGlossinessTexture;
-uniform float specularGlossinessTextureCoord;
-
-// extra maps
-
-uniform sampler2D normalTexture;
-uniform float normalTextureCoord;
-
-uniform sampler2D occlusionTexture;
-uniform float occlusionTextureCoord;
-uniform float u_occlusionStrength;
-
-uniform vec3 u_emissiveFactor;
-uniform sampler2D emissiveTexture;
-uniform float emissiveTextureCoord;
-
-// material common
-
-uniform float u_alphaMask;
-uniform float u_alphaMaskCutoff;
+include gltf/shaders/material-pbr-specularGlossiness.txt
 
 // scene common
-
-uniform vec4 scene_lightParams;
+uniform vec4 scene_lightParams1;
+uniform vec4 scene_lightParams2;
 uniform vec3 scene_ambientLightColor;
 
 // from vertex shader
-
 shader_in vec3 v_position_view;
 shader_in vec4 v_color;
 shader_in vec2 v_texcoord0;
 shader_in vec2 v_texcoord1;
 shader_in vec3 v_normal_view;
 
-// ---
-
-#define kMinRoughness 0.04
-
-vec4 gltfTexture(sampler2D s, float texcoord)
-{
-    if (texcoord < 1.0)
-        return texture(s, v_texcoord0);
-    else
-        return texture(s, v_texcoord1);
-}
-
-vec3 perturbNormal()
-{
-    vec3 normal_view = normalize(v_normal_view);
-
-    if (normalTextureCoord < 0.0)
-        return normal_view;
-
-    vec3 tangentNormal = gltfTexture(normalTexture, normalTextureCoord).xyz * 2.0 - 1.0;
-
-    return perturbNormal(v_position_view, normal_view, v_texcoord0, tangentNormal);
-}
-
 void main()
 {
-    // -- unpack diffuse color and alpha
+    // -- prepare surface properties
 
-    vec4 baseColor = u_diffuseFactor;
-
-    if (diffuseTextureCoord >= 0.0)
-    {
-        vec4 baseColorFromTexture = gltfTexture(diffuseTexture, diffuseTextureCoord);
-
-        /*
-        The baseColorTexture uses the sRGB transfer function and must be converted to
-        linear space before it is used for any computations.
-        */
-
-        baseColorFromTexture.rgb = srgbToLinear(baseColorFromTexture.rgb);
-
-        baseColor *= baseColorFromTexture;
-    }
-    else
-    {
-    // todo : need a way to set default values for vertex inputs
-    //        otherwise meshes without vertex colors get random data
-
-        /*
-        if a primitive specifies a vertex color using the attribute semantic
-        property COLOR_0, then this value acts as an additional linear multiplier
-        to baseColor.
-        */
-
-        //baseColor *= v_color;
-    }
-
-    // -- perform alpha test
-
-    if (u_alphaMask != 0.0)
-    {
-        if (baseColor.a < u_alphaMaskCutoff)
-            discard;
-    }
-
-    // -- calculate surface vectors
-
-    vec3 N = perturbNormal();
-    vec3 V = normalize(-v_position_view); // note : this equals 'cameraPosition_view - v_position_view', since the camera position in view-space is always at (0, 0, 0) we can simplify
-    vec3 R = -normalize(reflect(V, N));
-
-    // -- unpack specular and roughness
-
-    vec3 specular = u_specularFactor;
-    float glossiness = u_glossinessFactor;
-    
-    if (specularGlossinessTextureCoord >= 0.0)
-    {
-        vec4 specularGlossiness = gltfTexture(specularGlossinessTexture, specularGlossinessTextureCoord);
-
-        /*
-        Specular is encoded with the sRGB transfer function and must be converted to linear space before it's used for any computations.
-        source: https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness
-        */
-        specularGlossiness.rgb = srgbToLinear(specularGlossiness.rgb);
-
-        specular *= specularGlossiness.rgb;
-        glossiness *= specularGlossiness.a;
-    }
-
-    float roughness = clamp(1.0 - glossiness, kMinRoughness, 1.0);
+    Lighting_SurfaceProperties surfaceProperties = prepareSurfaceProperties(
+        v_position_view,
+        normalize(v_normal_view),
+        v_color,
+        v_texcoord0,
+        v_texcoord1,
+        true);
 
     // -- compute lighting
-    
-    Lighting_SurfaceProperties surfaceProperties;
-    surfaceProperties.position = v_position_view;
-    surfaceProperties.N = N;
-    surfaceProperties.V = V;
-    surfaceProperties.R = R;
-    surfaceProperties.baseColor = baseColor.rgb;
-    surfaceProperties.metallic = specular;
-    surfaceProperties.roughness = roughness;
 
     vec3 Lo = vec3(0.0);
     vec3 diffuse = vec3(0.0);
 
     {
         Lighting_LightProperties lightProperties;
-        lightProperties.type = scene_lightParams.w;
-        lightProperties.positionOrDirection = scene_lightParams.xyz;
+        lightProperties.type = scene_lightParams1.w;
+        lightProperties.positionOrDirection = scene_lightParams1.xyz;
 
         Lighting_LightingResult lightingResult = computeLighting(surfaceProperties, lightProperties);
 
-        Lo += lightingResult.specular;
-        diffuse += lightingResult.diffuse;
-    }
-
-    // -- ambient occlusion
-
-    if (occlusionTextureCoord >= 0.0)
-    {
-        float ao = gltfTexture(occlusionTexture, occlusionTextureCoord).r;
-
-        ao = mix(1.0, ao, u_occlusionStrength);
-
-        diffuse *= ao;
+        vec3 lightColor = scene_lightParams2.xyz * scene_lightParams2.w;
+        Lo += lightingResult.specular * lightColor;
+        diffuse += lightingResult.diffuse * lightColor;
     }
 
     // -- add all terms
@@ -183,22 +56,19 @@ void main()
     // -- add ambient light
 
 // todo : use lighting model to compute ambient contribution
-    color += baseColor.rgb * scene_ambientLightColor;
+    vec3 ambient = scene_ambientLightColor;
+    ambient *= surfaceProperties.baseColor;
+    ambient *= gltfAmbientOcclusion();
+
+    color += ambient;
+
+    // -- add emissive
+
+    color += gltfEmissive();
 
     // -- convert linear to gamma space
 
     color = linearToSrgb(color);
-
-    // -- add emissive
-
-    vec3 emissive = u_emissiveFactor;
-
-    if (emissiveTextureCoord >= 0.0)
-    {
-        emissive *= gltfTexture(emissiveTexture, emissiveTextureCoord).rgb;
-    }
-
-    color += emissive;
 
     // -- store
 
@@ -210,7 +80,7 @@ void main()
     //color.rgb = N;
     //color.rgb = specular;
 
-    shader_fragColor = vec4(color, baseColor.a);
+    shader_fragColor = vec4(color, surfaceProperties.opacity);
 
 #if 0 // todo : use temporal or dither based alpha offset to improve the blending result we get when using the alpha to coverage method
     // Iestyn's RGB dither (7 asm instructions) from Portal 2 X360, slightly modified for VR

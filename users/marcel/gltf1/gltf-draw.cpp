@@ -202,6 +202,9 @@ namespace gltf
 		}
 	#endif
 	
+		const bool hasVertexColors = primitive.attributes.count("COLOR_0") != 0;
+		shader.setImmediate("u_hasVertexColors", hasVertexColors ? 1.f : 0.f);
+		
 		pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
 		{
 			do
@@ -393,11 +396,7 @@ namespace gltf
 							
 							//
 							
-							if (color0Accessor == nullptr)
-							{
-								gxColor4f(1.f, 1.f, 1.f, 1.f);
-							}
-							else
+							if (color0Accessor != nullptr)
 							{
 								const uint8_t * __restrict color0_mem = color0Buffer->data + color0BufferView->byteOffset + color0Accessor->byteOffset;
 								if (color0BufferView->byteStride == 0)

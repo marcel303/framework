@@ -1,5 +1,9 @@
 // See http://www.thetenthplanet.de/archives/1180
-vec3 perturbNormal(vec3 position, vec3 normal, vec2 texcoord, vec3 tangentNormal)
+vec3 perturbNormal(
+	vec3 position,
+	vec3 normal,
+	vec2 texcoord,
+	vec3 tangentNormal)
 {
     vec3 q1 = dFdx(position);
     vec3 q2 = dFdy(position);
