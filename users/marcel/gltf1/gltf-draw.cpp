@@ -64,6 +64,114 @@ namespace gltf
 		
 		return true;
 	}
+
+	static void setShaderParams_metallicRoughness(Shader & shader, const Material & material, const Scene & scene, const bool hasVertexColors)
+	{
+		// PBR metallic roughness material
+
+		shader.setImmediate("u_hasVertexColors", hasVertexColors ? 1.f : 0.f);
+
+		shader.setImmediate("u_alphaMask", material.alphaMode == "MASK");
+		shader.setImmediate("u_alphaMaskCutoff", material.alphaCutoff);
+
+		shader.setImmediate("u_baseColorFactor",
+			material.pbrMetallicRoughness.baseColorFactor.r,
+			material.pbrMetallicRoughness.baseColorFactor.g,
+			material.pbrMetallicRoughness.baseColorFactor.b,
+			material.pbrMetallicRoughness.baseColorFactor.a);
+
+		shader.setImmediate("u_metallicFactor",
+			material.pbrMetallicRoughness.metallicFactor);
+		shader.setImmediate("u_roughnessFactor",
+			material.pbrMetallicRoughness.roughnessFactor);
+		
+		shader.setImmediate("u_emissiveFactor",
+			material.emissiveFactor[0],
+			material.emissiveFactor[1],
+			material.emissiveFactor[2]);
+
+		// set texture maps
+
+		// todo : set texture samplers
+
+		const GxTextureId baseColorTextureId = tryGetTextureId(scene, material.pbrMetallicRoughness.baseColorTexture.index);
+		const GxTextureId metallicRoughnessTextureId = tryGetTextureId(scene, material.pbrMetallicRoughness.metallicRoughnessTexture.index);
+		
+		const GxTextureId normalTextureId = tryGetTextureId(scene, material.normalTexture.index);
+		const GxTextureId occlusionTextureId = tryGetTextureId(scene, material.occlusionTexture.index);
+		const GxTextureId emissiveTextureId = tryGetTextureId(scene, material.emissiveTexture.index);
+	
+		shader.setTexture("baseColorTexture", 0, baseColorTextureId, true, false);
+		shader.setImmediate("baseColorTextureCoord", baseColorTextureId == 0 ? -1 : material.pbrMetallicRoughness.baseColorTexture.texCoord);
+
+		shader.setTexture("metallicRoughnessTexture", 1, metallicRoughnessTextureId, true, false);
+		shader.setImmediate("metallicRoughnessTextureCoord", metallicRoughnessTextureId == 0 ? -1 : material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord);
+		
+		shader.setTexture("normalTexture", 2, normalTextureId, true, false);
+		shader.setImmediate("normalTextureCoord", normalTextureId == 0 ? -1 : material.normalTexture.texCoord);
+		
+		shader.setTexture("occlusionTexture", 3, occlusionTextureId, true, false);
+		shader.setImmediate("occlusionTextureCoord", occlusionTextureId == 0 ? -1 : material.occlusionTexture.texCoord);
+		shader.setImmediate("u_occlusionStrength", material.occlusionTexture.strength);
+
+		shader.setTexture("emissiveTexture", 4, emissiveTextureId, true, false);
+		shader.setImmediate("emissiveTextureCoord", emissiveTextureId == 0 ? -1 : material.emissiveTexture.texCoord);
+	}
+
+	static void setShaderParams_specularGlossiness(Shader & shader, const Material & material, const Scene & scene, const bool hasVertexColors)
+	{
+		// PBR specular glossiness material
+
+		shader.setImmediate("u_hasVertexColors", hasVertexColors ? 1.f : 0.f);
+
+		shader.setImmediate("u_alphaMask", material.alphaMode == "MASK");
+		shader.setImmediate("u_alphaMaskCutoff", material.alphaCutoff);
+
+		shader.setImmediate("u_diffuseFactor",
+			material.pbrSpecularGlossiness.diffuseFactor.r,
+			material.pbrSpecularGlossiness.diffuseFactor.g,
+			material.pbrSpecularGlossiness.diffuseFactor.b,
+			material.pbrSpecularGlossiness.diffuseFactor.a);
+		
+		shader.setImmediate("u_specularFactor",
+			material.pbrSpecularGlossiness.specularFactor[0],
+			material.pbrSpecularGlossiness.specularFactor[1],
+			material.pbrSpecularGlossiness.specularFactor[2]);
+		shader.setImmediate("u_glossinessFactor",
+			material.pbrSpecularGlossiness.glossinessFactor);
+
+		shader.setImmediate("u_emissiveFactor",
+			material.emissiveFactor[0],
+			material.emissiveFactor[1],
+			material.emissiveFactor[2]);
+
+		// set texture maps
+
+		// todo : set texture samplers
+
+		const GxTextureId diffuseTextureId = tryGetTextureId(scene, material.pbrSpecularGlossiness.diffuseTexture.index);
+		const GxTextureId specularGlossinessTextureId = tryGetTextureId(scene, material.pbrSpecularGlossiness.specularGlossinessTexture.index);
+		
+		const GxTextureId normalTextureId = tryGetTextureId(scene, material.normalTexture.index);
+		const GxTextureId occlusionTextureId = tryGetTextureId(scene, material.occlusionTexture.index);
+		const GxTextureId emissiveTextureId = tryGetTextureId(scene, material.emissiveTexture.index);
+
+		shader.setTexture("diffuseTexture", 0, diffuseTextureId, true, false);
+		shader.setImmediate("diffuseTextureCoord", diffuseTextureId == 0 ? -1 : material.pbrSpecularGlossiness.diffuseTexture.texCoord);
+		
+		shader.setTexture("specularGlossinessTexture", 1, specularGlossinessTextureId, true, false);
+		shader.setImmediate("specularGlossinessTextureCoord", specularGlossinessTextureId == 0 ? -1 : material.pbrSpecularGlossiness.specularGlossinessTexture.texCoord);
+		
+		shader.setTexture("normalTexture", 2, normalTextureId, true, false);
+		shader.setImmediate("normalTextureCoord", normalTextureId == 0 ? -1 : material.normalTexture.texCoord);
+		
+		shader.setTexture("occlusionTexture", 3, occlusionTextureId, true, false);
+		shader.setImmediate("occlusionTextureCoord", occlusionTextureId == 0 ? -1 : material.occlusionTexture.texCoord);
+		shader.setImmediate("u_occlusionStrength", material.occlusionTexture.strength);
+		
+		shader.setTexture("emissiveTexture", 4, emissiveTextureId, true, false);
+		shader.setImmediate("emissiveTextureCoord", emissiveTextureId == 0 ? -1 : material.emissiveTexture.texCoord);
+	}
 	
 	//
 	
@@ -77,16 +185,22 @@ namespace gltf
 			return;
 		}
 		
+		// fetch material
+
 		auto & material =
 			primitive.material < 0 || primitive.material >= scene.materials.size()
 			? defaultMaterial
 			: scene.materials[primitive.material];
 		
+		// omit material im this pass ?
+
 		const bool isOpaqueMaterial = (material.alphaMode != "BLEND");
 		
 		if (isOpaquePass != isOpaqueMaterial)
 			return;
 		
+		// determine which shader to use for the material
+
 		Shader * shader_ptr = nullptr;
 		
 		if (material.pbrSpecularGlossiness.isSet)
@@ -104,113 +218,28 @@ namespace gltf
 				shader_ptr = materialShaders.pbr_metallicRoughness;
 		}
 		
-	#if 0
-		Shader shader(materialShaders.fallbackShader.c_str());
-		setShader(shader);
-		shader.setTexture("diffuseTexture", 0, textureId, true, false);
-	#else
 		Shader & shader = *shader_ptr;
 		setShader(shader);
-		
-	// todo : set texture samplers
 	
-		if (material.pbrSpecularGlossiness.isSet)
-		{
-			// PBR specular glossiness material
-			const GxTextureId diffuseTextureId = tryGetTextureId(scene, material.pbrSpecularGlossiness.diffuseTexture.index);
-			const GxTextureId specularGlossinessTextureId = tryGetTextureId(scene, material.pbrSpecularGlossiness.specularGlossinessTexture.index);
-			
-			const GxTextureId normalTextureId = tryGetTextureId(scene, material.normalTexture.index);
-			const GxTextureId occlusionTextureId = tryGetTextureId(scene, material.occlusionTexture.index);
-			const GxTextureId emissiveTextureId = tryGetTextureId(scene, material.emissiveTexture.index);
-	
-			shader.setTexture("diffuseTexture", 0, diffuseTextureId, true, false);
-			shader.setImmediate("diffuseTextureCoord", diffuseTextureId == 0 ? -1 : material.pbrSpecularGlossiness.diffuseTexture.texCoord);
-			
-			shader.setTexture("specularGlossinessTexture", 1, specularGlossinessTextureId, true, false);
-			shader.setImmediate("specularGlossinessTextureCoord", specularGlossinessTextureId == 0 ? -1 : material.pbrSpecularGlossiness.specularGlossinessTexture.texCoord);
-			
-			shader.setTexture("normalTexture", 2, normalTextureId, true, false);
-			shader.setImmediate("normalTextureCoord", normalTextureId == 0 ? -1 : material.normalTexture.texCoord);
-			
-			shader.setTexture("occlusionTexture", 3, occlusionTextureId, true, false);
-			shader.setImmediate("occlusionTextureCoord", occlusionTextureId == 0 ? -1 : material.occlusionTexture.texCoord);
-			shader.setImmediate("u_occlusionStrength", material.occlusionTexture.strength);
-			
-			shader.setTexture("emissiveTexture", 4, emissiveTextureId, true, false);
-			shader.setImmediate("emissiveTextureCoord", emissiveTextureId == 0 ? -1 : material.emissiveTexture.texCoord);
+		// set material parameters
 
-			shader.setImmediate("u_diffuseFactor",
-				material.pbrSpecularGlossiness.diffuseFactor.r,
-				material.pbrSpecularGlossiness.diffuseFactor.g,
-				material.pbrSpecularGlossiness.diffuseFactor.b,
-				material.pbrSpecularGlossiness.diffuseFactor.a);
-			shader.setImmediate("u_glossinessFactor",
-				material.pbrSpecularGlossiness.glossinessFactor);
-			shader.setImmediate("u_specularFactor",
-				material.pbrSpecularGlossiness.specularFactor[0],
-				material.pbrSpecularGlossiness.specularFactor[1],
-				material.pbrSpecularGlossiness.specularFactor[2]);
-	
-			shader.setImmediate("u_emissiveFactor",
-				material.emissiveFactor[0],
-				material.emissiveFactor[1],
-				material.emissiveFactor[2]);
-			shader.setImmediate("u_alphaMask", material.alphaMode == "MASK");
-			shader.setImmediate("u_alphaMaskCutoff", material.alphaCutoff);
-		}
-		else
-		{
-			// PBR metallic roughness material
-			const GxTextureId baseColorTextureId = tryGetTextureId(scene, material.pbrMetallicRoughness.baseColorTexture.index);
-			const GxTextureId metallicRoughnessTextureId = tryGetTextureId(scene, material.pbrMetallicRoughness.metallicRoughnessTexture.index);
-			const GxTextureId normalTextureId = tryGetTextureId(scene, material.normalTexture.index);
-			const GxTextureId occlusionTextureId = tryGetTextureId(scene, material.occlusionTexture.index);
-			const GxTextureId emissiveTextureId = tryGetTextureId(scene, material.emissiveTexture.index);
-		
-			shader.setImmediate("u_baseColorFactor",
-				material.pbrMetallicRoughness.baseColorFactor.r,
-				material.pbrMetallicRoughness.baseColorFactor.g,
-				material.pbrMetallicRoughness.baseColorFactor.b,
-				material.pbrMetallicRoughness.baseColorFactor.a);
-			shader.setTexture("baseColorTexture", 0, baseColorTextureId, true, false);
-			shader.setImmediate("baseColorTextureCoord", baseColorTextureId == 0 ? -1 : material.pbrMetallicRoughness.baseColorTexture.texCoord);
-			
-			shader.setTexture("normalTexture", 1, normalTextureId, true, false);
-			shader.setImmediate("normalTextureCoord", normalTextureId == 0 ? -1 : material.normalTexture.texCoord);
-			
-			shader.setTexture("occlusionTexture", 2, occlusionTextureId, true, false);
-			shader.setImmediate("occlusionTextureCoord", occlusionTextureId == 0 ? -1 : material.occlusionTexture.texCoord);
-			shader.setImmediate("u_occlusionStrength", material.occlusionTexture.strength);
-			
-			shader.setImmediate("u_metallicFactor",
-				material.pbrMetallicRoughness.metallicFactor);
-			shader.setImmediate("u_roughnessFactor",
-				material.pbrMetallicRoughness.roughnessFactor);
-			shader.setTexture("metallicRoughnessTexture", 3, metallicRoughnessTextureId, true, false);
-			shader.setImmediate("metallicRoughnessTextureCoord", metallicRoughnessTextureId == 0 ? -1 : material.pbrMetallicRoughness.metallicRoughnessTexture.texCoord);
-			
-			shader.setImmediate("u_emissiveFactor",
-				material.emissiveFactor[0],
-				material.emissiveFactor[1],
-				material.emissiveFactor[2]);
-			shader.setTexture("emissiveTexture", 4, emissiveTextureId, true, false);
-			shader.setImmediate("emissiveTextureCoord", emissiveTextureId == 0 ? -1 : material.emissiveTexture.texCoord);
-
-			shader.setImmediate("u_alphaMask", material.alphaMode == "MASK");
-			shader.setImmediate("u_alphaMaskCutoff", material.alphaCutoff);
-		}
-	#endif
-	
 		const bool hasVertexColors = primitive.attributes.count("COLOR_0") != 0;
-		shader.setImmediate("u_hasVertexColors", hasVertexColors ? 1.f : 0.f);
+
+		if (material.pbrSpecularGlossiness.isSet)
+			setShaderParams_specularGlossiness(shader, material, scene, hasVertexColors);
+		else
+			setShaderParams_metallicRoughness(shader, material, scene, hasVertexColors);
 		
+		// draw
+
 		pushCullMode(material.doubleSided ? CULL_NONE : CULL_BACK, CULL_CCW);
 		{
 			do
 			{
 				if (bufferCache != nullptr)
 				{
+					// find the cached mesh for this primitive and draw
+					
 					auto gxMesh_itr = bufferCache->primitives.find(&primitive);
 					
 					Assert(gxMesh_itr != bufferCache->primitives.end());
