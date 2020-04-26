@@ -34,6 +34,7 @@ uniform float u_hasVertexColors;
 
 // utility
 
+vec4 s_color0;
 vec2 s_texcoord0;
 vec2 s_texcoord1;
 
@@ -48,6 +49,41 @@ vec2 gltfTextureCoord(float texcoord)
 vec4 gltfTexture(sampler2D s, float texcoord)
 {
 	return texture(s, gltfTextureCoord(texcoord));
+}
+
+vec4 gltfBaseColor()
+{
+    vec4 baseColor = u_diffuseFactor;
+
+    if (diffuseTextureCoord >= 0.0)
+    {
+        vec4 baseColorFromTexture = gltfTexture(diffuseTexture, diffuseTextureCoord);
+
+        /*
+        The baseColorTexture uses the sRGB transfer function and must be converted to
+        linear space before it is used for any computations.
+        */
+
+        baseColorFromTexture.rgb = srgbToLinear(baseColorFromTexture.rgb);
+
+        baseColor *= baseColorFromTexture;
+    }
+    
+    if (u_hasVertexColors != 0.0)
+    {
+        // todo : need a way to set default values for vertex inputs
+        //        otherwise meshes without vertex colors get random data
+
+        /*
+        if a primitive specifies a vertex color using the attribute semantic
+        property COLOR_0, then this value acts as an additional linear multiplier
+        to baseColor.
+        */
+
+        baseColor *= s_color0;
+    }
+
+    return baseColor;
 }
 
 vec3 gltfNormal(vec3 position_view, vec3 normal_view)
@@ -104,40 +140,13 @@ Lighting_SurfaceProperties prepareSurfaceProperties(
 	vec2 texcoord1,
 	bool doAlphaMasking)
 {
+    s_color0 = color0;
     s_texcoord0 = texcoord0;
     s_texcoord1 = texcoord1;
 
     // -- unpack diffuse color and alpha
 
-    vec4 baseColor = u_diffuseFactor;
-
-    if (diffuseTextureCoord >= 0.0)
-    {
-        vec4 baseColorFromTexture = gltfTexture(diffuseTexture, diffuseTextureCoord);
-
-        /*
-        The baseColorTexture uses the sRGB transfer function and must be converted to
-        linear space before it is used for any computations.
-        */
-
-        baseColorFromTexture.rgb = srgbToLinear(baseColorFromTexture.rgb);
-
-        baseColor *= baseColorFromTexture;
-    }
-    
-    if (u_hasVertexColors != 0.0)
-    {
-        // todo : need a way to set default values for vertex inputs
-        //        otherwise meshes without vertex colors get random data
-
-        /*
-        if a primitive specifies a vertex color using the attribute semantic
-        property COLOR_0, then this value acts as an additional linear multiplier
-        to baseColor.
-        */
-
-        baseColor *= color0;
-    }
+    vec4 baseColor = gltfBaseColor();
 
     // -- perform alpha test
 
@@ -146,12 +155,6 @@ Lighting_SurfaceProperties prepareSurfaceProperties(
         if (baseColor.a < u_alphaMaskCutoff)
             discard;
     }
-
-    // -- calculate surface vectors
-
-    vec3 N = gltfNormal(position_view, normal_view);
-    vec3 V = -normalize(position_view); // note : this equals 'cameraPosition_view - position_view', since the camera position in view-space is always at (0, 0, 0) we can simplify
-    vec3 R = -normalize(reflect(V, N));
 
     // -- unpack specular and roughness
 
@@ -173,6 +176,12 @@ Lighting_SurfaceProperties prepareSurfaceProperties(
     }
 
     float roughness = clamp(1.0 - glossiness, kMinRoughness, 1.0);
+
+    // -- calculate surface vectors
+
+    vec3 N = gltfNormal(position_view, normal_view);
+    vec3 V = -normalize(position_view); // note : this equals 'cameraPosition_view - position_view', since the camera position in view-space is always at (0, 0, 0) we can simplify
+    vec3 R = -normalize(reflect(V, N));
 
     // -- fill in surface properties
     

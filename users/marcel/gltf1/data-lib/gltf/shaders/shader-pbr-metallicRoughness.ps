@@ -1,7 +1,7 @@
 include engine/ShaderPS.txt
 include engine/ShaderUtil.txt
 
-include gltf/shaders/lighting.txt
+include gltf/shaders/pbr-lighting-utils.txt
 include gltf/shaders/normal-mapping-utils.txt
 
 // shader based on: https://github.com/SaschaWillems/Vulkan-glTF-PBR/blob/master/data/shaders/pbr.frag
@@ -9,6 +9,8 @@ include gltf/shaders/normal-mapping-utils.txt
 include gltf/shaders/material-pbr-metallicRoughness.txt
 
 // scene common
+#define kLightType_Directional 0
+#define kLightType_Point       1
 uniform vec4 scene_lightParams1;
 uniform vec4 scene_lightParams2;
 uniform vec3 scene_ambientLightColor;
@@ -38,13 +40,25 @@ void main()
     vec3 diffuse = vec3(0.0);
 
     {
-        Lighting_LightProperties lightProperties;
-        lightProperties.type = scene_lightParams1.w;
-        lightProperties.positionOrDirection = scene_lightParams1.xyz;
+        vec3 lightDir;
+        float lightAttenuation;
 
-        Lighting_LightingResult lightingResult = computeLighting(surfaceProperties, lightProperties);
+        if (scene_lightParams1.w == kLightType_Directional)
+        {
+            lightDir = scene_lightParams1.xyz;
+            lightAttenuation = 1.0;
+        }
+        else
+        {
+            vec3 lightPos = scene_lightParams1.xyz;
+            vec3 lightToSurface = surfaceProperties.position - lightPos;
+            lightDir = normalize(lightToSurface);
+            lightAttenuation = 1.0 / dot(lightToSurface, lightToSurface);
+        }
 
-        vec3 lightColor = scene_lightParams2.xyz * scene_lightParams2.w;
+        Lighting_LightingResult lightingResult = computeLighting(surfaceProperties, lightDir);
+
+        vec3 lightColor = scene_lightParams2.xyz * (scene_lightParams2.w * lightAttenuation);
         Lo += lightingResult.specular * lightColor;
         diffuse += lightingResult.diffuse * lightColor;
     }
