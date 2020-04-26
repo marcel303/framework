@@ -144,8 +144,10 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 	
 	clearSurface(0, 0, 0, 0);
 	
+	pushBlend(BLEND_OPAQUE);
 	setColor(colorWhite);
 	drawUiRectCheckered(0, 0, sx, sy, 8);
+	popBlend();
 	
 	projectPerspective3d(60.f, .01f, 100.f);
 	{
@@ -225,11 +227,14 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 					const Vec3 lightDir_world(dx, -2.f, dz);
 					const Vec3 lightDir_view = objectToView.Mul3(lightDir_world).CalcNormalized();
 			
-					shader->setImmediate("scene_lightParams",
+					shader->setImmediate("scene_lightParams1",
 						lightDir_view[0],
 						lightDir_view[1],
 						lightDir_view[2],
 						0.f /* directional */);
+					shader->setImmediate("scene_lightParams2",
+						1.f, 1.f, 1.f,
+						2.f);
 					shader->setImmediate("scene_ambientLightColor", .2f, .2f, .2f);
 					
 					clearShader();

@@ -122,8 +122,10 @@ struct FileEditor_Spriter : FileEditor
 		
 		clearSurface(0, 0, 0, 0);
 		
+		pushBlend(BLEND_OPAQUE);
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
+		popBlend();
 		
 		if (showAxis)
 		{

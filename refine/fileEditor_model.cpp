@@ -201,12 +201,15 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 	
 	clearSurface(0, 0, 0, 0);
 	
+	pushBlend(BLEND_OPAQUE);
 	setColor(colorWhite);
 	drawUiRectCheckered(0, 0, sx, sy, 8);
+	popBlend();
 	
 	projectPerspective3d(60.f, .01f, 100.f);
 	{
 		pushDepthTest(true, DEPTH_LESS);
+		pushBlend(BLEND_OPAQUE);
 		
 		float maxAxis = 0.f;
 		
@@ -288,6 +291,7 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 			gxPopMatrix();
 		}
 		
+		popBlend();
 		popDepthTest();
 	}
 	projectScreen2d();

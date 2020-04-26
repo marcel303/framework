@@ -173,6 +173,8 @@ void FileEditor_Ies::tick(const int sx, const int sy, const float dt, const bool
 	}
 	else
 	{
+		pushBlend(BLEND_OPAQUE);
+		
 		setColor(colorWhite);
 		drawUiRectCheckered(0, 0, sx, sy, 8);
 		
@@ -196,6 +198,8 @@ void FileEditor_Ies::tick(const int sx, const int sy, const float dt, const bool
 			gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
 			gxSetTexture(0);
 		}
+		
+		popBlend();
 	}
 	
 	guiContext.draw();

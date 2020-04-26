@@ -109,8 +109,10 @@ void FileEditor_Video::tick(const int sx, const int sy, const float dt, const bo
 	
 	clearSurface(0, 0, 0, 0);
 	
+	pushBlend(BLEND_OPAQUE);
 	setColor(colorWhite);
 	drawUiRectCheckered(0, 0, sx, sy, 8);
+	popBlend();
 	
 	auto texture = mp.getTexture();
 	
