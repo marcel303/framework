@@ -203,6 +203,7 @@ void Sprite::drawEx(float x, float y, float angle, float scaleX, float scaleY, b
 		}
 		gxPopMatrix();
 
+		gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
 		gxSetTexture(0);
 	}
 }
