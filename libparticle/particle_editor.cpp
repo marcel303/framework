@@ -718,6 +718,7 @@ struct ParticleEditorState
 			}
 			gxEnd();
 			
+			gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
 			gxSetTexture(0);
 		}
 		

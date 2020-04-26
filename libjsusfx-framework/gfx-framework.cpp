@@ -1074,7 +1074,7 @@ void JsusFxGfx_Framework::gfx_blit(EEL_F _img, EEL_F scale, EEL_F rotate)
 					drawRect(dstX, dstY, dstX + sx, dstY + sy);
 				}
 				
-				gxSetTextureSampler(GX_SAMPLE_LINEAR, false);
+				gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
 			}
 			gxSetTexture(0);
 			popColorPost();
