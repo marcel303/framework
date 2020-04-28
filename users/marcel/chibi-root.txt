@@ -26,6 +26,8 @@ add fourier
 add fluidCube
 add geo
 add geopart1
+add gltf1
+add gltf2
 add gpuParticles1
 add gpupath1
 push_group thegrooop

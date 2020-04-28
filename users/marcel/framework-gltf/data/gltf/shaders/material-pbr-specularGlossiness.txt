@@ -1,5 +1,8 @@
 // material based on: https://github.com/SaschaWillems/Vulkan-glTF-PBR/blob/master/data/shaders/pbr.frag
 
+include gltf/shaders/pbr-lighting-utils.txt
+include gltf/shaders/normal-mapping-utils.txt
+
 #define kMinRoughness 0.04
 
 // material maps
