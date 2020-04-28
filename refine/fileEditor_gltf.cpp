@@ -175,6 +175,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				{
 					pushDepthTest(true, DEPTH_LESS);
 					pushBlend(BLEND_OPAQUE);
+					pushLineSmooth(true);
 					{
 						setColor(colorRed);
 						drawLine3d(0);
@@ -185,6 +186,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 						setColor(colorBlue);
 						drawLine3d(2);
 					}
+					popLineSmooth();
 					popBlend();
 					popDepthTest();
 				}
@@ -200,18 +202,20 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				{
 					pushDepthTest(true, DEPTH_LESS);
 					pushBlend(BLEND_OPAQUE);
+					pushLineSmooth(true);
 					{
 						setColor(colorWhite);
 						lineCube(mid, extents);
 					}
+					popLineSmooth();
 					popBlend();
 					popDepthTest();
 				}
 				
 				// draw model
 				
-				Shader metallicRoughnessShader("gltf/shaders/shader-pbr-metallicRoughness");
-				Shader specularGlossinessShader("gltf/shaders/shader-pbr-specularGlossiness");
+				Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
+				Shader specularGlossinessShader("gltf/shaders/pbr-specularGlossiness");
 				
 			// todo : add a nicer way to set lighting for the GLTF library's built-in shaders
 				Shader * shaders[2] = { &metallicRoughnessShader, &specularGlossinessShader };
