@@ -11,10 +11,16 @@ vec4 applyColorPost(vec4 color, float post);
 float makeTaps(float v, float min, float max, float numTaps);
 vec3 makeTaps(vec3 v, float min, float max, float numTaps);
 
-float rgbLuminance(vec3 rgb);
+// worth a read if you're into (digital) color theory,
+//   http://poynton.ca/notes/colour_and_gamma/ColorFAQ.txt
+
+float rgbLuminance(vec3 rgb); // since luminance cannot properly be computed in sRGB space, this value is officially called 'luma'. however, for practical reasons we don't make this distinction here
+float rgbLuminance_linear(vec3 rgb); // CIE luminance
 
 vec3 srgbToLinear(vec3 rgb);
 vec3 linearToSrgb(vec3 rgb);
+vec3 srgbToLinear_fast(vec3 rgb);
+vec3 linearToSrgb_fast(vec3 rgb);
 vec3 lerpSrgbLinear(vec3 a, vec3 b, float t);
 
 // todo : add functions for evaluating gradient color and matrix texturing
@@ -196,9 +202,17 @@ vec3 lerpSrgbLinear(vec3 a, vec3 b, float t)
 float rgbLuminance(vec3 rgb)
 {
 	return
-		rgb.r * 0.30 +
-		rgb.g * 0.59 +
-		rgb.b * 0.11;
+		rgb.r * 0.299 +
+		rgb.g * 0.587 +
+		rgb.b * 0.114;
+}
+
+float rgbLuminance_linear(vec3 rgb)
+{
+	return
+		rgb.r * 0.2126 +
+		rgb.g * 0.7152 +
+		rgb.b * 0.0722;
 }
 
 vec3 colorFromHSL(vec3 hsl)
