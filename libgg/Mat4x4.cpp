@@ -155,7 +155,7 @@ void Mat4x4::MakeLookat(const Vec3& position, const Vec3& target, const Vec3& up
 	
 	Vec3 axisZ = target - position;
 	
-	if (axisZ.CalcSizeSq() == 0.0f)
+	if (axisZ.CalcSizeSq() == 0.0f || (axisZ % up).CalcSizeSq() == 0.0f)
 		axisZ = Vec3(up[1], up[2], up[0]);
 	
 	Vec3 axisX = up % axisZ;
@@ -175,6 +175,37 @@ void Mat4x4::MakeLookat(const Vec3& position, const Vec3& target, const Vec3& up
 	MakeTranslation(-position);
 	
 	*this = orient * (*this);
+}
+
+void Mat4x4::MakeLookatInv(const Vec3& position, const Vec3& target, const Vec3& up)
+{
+	Vec3 axisZ = target - position;
+	
+	if (axisZ.CalcSizeSq() == 0.0f || (axisZ % up).CalcSizeSq() == 0.0f)
+		axisZ = Vec3(up[1], up[2], up[0]);
+	
+	Vec3 axisX = up % axisZ;
+	Vec3 axisY = axisZ % axisX;
+	
+	axisX = axisX.CalcNormalized();
+	axisY = axisY.CalcNormalized();
+	axisZ = axisZ.CalcNormalized();
+	
+	for (int i = 0; i < 3; ++i)
+	{
+		m_v[INDEX(0, i)] = axisX[i];
+		m_v[INDEX(1, i)] = axisY[i];
+		m_v[INDEX(2, i)] = axisZ[i];
+	}
+	
+	m_v[INDEX(0, 3)] = 0.f;
+	m_v[INDEX(1, 3)] = 0.f;
+	m_v[INDEX(2, 3)] = 0.f;
+	
+	m_v[INDEX(3, 0)] = position[0];
+	m_v[INDEX(3, 1)] = position[1];
+	m_v[INDEX(3, 2)] = position[2];
+	m_v[INDEX(3, 3)] = 1.f;
 }
 
 float Mat4x4::CalcDet() const
