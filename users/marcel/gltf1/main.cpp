@@ -86,15 +86,15 @@ int main(int argc, char * argv[])
 	framework.enableRealTimeEditing = true;
 	framework.msaaLevel = 4;
 	framework.filedrop = true;
-	framework.allowHighDpi = false;
+	framework.allowHighDpi = true;
 	
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 
 	//const char * path = "scenes/van_gogh_room/scene.gltf";
-	//const char * path = "scenes/littlest_tokyo/scene.gltf";
+	const char * path = "scenes/littlest_tokyo/scene.gltf";
 	//const char * path = "scenes/ftm/scene.gltf";
-	const char * path = "scenes/nara_the_desert_dancer/scene.gltf";
+	//const char * path = "scenes/nara_the_desert_dancer/scene.gltf";
 	//const char * path = "scenes/drone/scene.gltf";
 	//const char * path = "scenes/buster_drone/scene.gltf";
 	//const char * path = "scenes/halloween_little_witch/scene.gltf";
@@ -197,6 +197,8 @@ int main(int argc, char * argv[])
 				Mat4x4 viewMatrix;
 				gxGetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
 				
+			// todo : draw a z-prepass to avoid overdraw
+			
 				for (int i = 0; i < 2; ++i)
 				{
 					const bool isOpaquePass = (i == 0);
@@ -212,12 +214,12 @@ int main(int argc, char * argv[])
 						{
 							setShader(*shader);
 							
-						#if 0
+						#if 1
 							// directional light
 							
-							const float dx = cosf(framework.time / 1.56f);
-							const float dz = sinf(framework.time / 1.67f);
-							const Vec3 lightDir_world(dx, -1.f, dz);
+							const float dx = cosf(framework.time / 3.45f);
+							const float dz = sinf(framework.time / 4.56f);
+							const Vec3 lightDir_world(dx, -2.f, dz);
 							const Vec3 lightDir_view = camera.getViewMatrix().Mul3(lightDir_world).CalcNormalized();
 					
 							shader->setImmediate("scene_lightParams1",
@@ -252,7 +254,7 @@ int main(int argc, char * argv[])
 							
 							clearShader();
 							
-						#if 1
+						#if 0
 							setColor(colorYellow);
 							fillCube(lightPos_world, Vec3(.1f, .1f, .1f) * (centimeters ? 100.f : 1.f));
 							
