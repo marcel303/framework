@@ -47,6 +47,7 @@ namespace rOne
 		const float userData)
 	{
 		AssertMsg(fabsf(direction.CalcSize() - 1.f) <= 1e-3f, "direction vector must be normalized", 0);
+		AssertMsg(angle >= 0.f && angle <= float(M_PI), "spot angle must be between 0 and 180 degrees", 0);
 		
 		Light light;
 		light.type = kLightType_Spot;
