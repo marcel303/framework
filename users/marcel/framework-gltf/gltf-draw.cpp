@@ -887,7 +887,13 @@ namespace gltf
 				
 				Mat4x4 * nodeToViewTransforms = (Mat4x4*)alloca(scene.nodes.size() * sizeof(Mat4x4));
 				
-				computeNodeToViewTransformsTraverse(scene, activeScene, nodeToViewTransforms);
+				for (auto & node_index : sceneRoot.nodes)
+				{
+					if (node_index >= 0 && node_index < scene.nodes.size())
+					{
+						computeNodeToViewTransformsTraverse(scene, node_index, nodeToViewTransforms);
+					}
+				}
 				
 				// 1. gather a full list of primitives
 				
@@ -895,13 +901,30 @@ namespace gltf
 				
 				int totalNumPrimitives = 0;
 				
-				for (auto & node : scene.nodes)
+				std::function<void(int node_index)> count_traverse;
+				
+				count_traverse = [&](int node_index)
 				{
-					if (node.mesh >= 0 && node.mesh < scene.meshes.size())
+					if (node_index >= 0 && node_index < scene.nodes.size())
 					{
-						auto & mesh = scene.meshes[node.mesh];
-						totalNumPrimitives += mesh.primitives.size();
+						auto & node = scene.nodes[node_index];
+						
+						if (node.mesh >= 0 && node.mesh < scene.meshes.size())
+						{
+							auto & mesh = scene.meshes[node.mesh];
+							totalNumPrimitives += mesh.primitives.size();
+						}
+						
+						for (auto & child_index : node.children)
+						{
+							count_traverse(child_index);
+						}
 					}
+				};
+				
+				for (auto & node_index : sceneRoot.nodes)
+				{
+					count_traverse(node_index);
 				}
 				
 				// 1.2. allocate temporary storage for the primitives
@@ -915,27 +938,42 @@ namespace gltf
 				
 				int primIndex = 0;
 				
-				for (int node_index = 0; node_index < scene.nodes.size(); ++node_index)
+				std::function<void(int node_index)> collect_traverse;
+				
+				collect_traverse = [&](int node_index)
 				{
-					auto & node = scene.nodes[node_index];
-					auto & nodeToViewTransform = nodeToViewTransforms[node_index];
-					
-					if (node.mesh >= 0 && node.mesh < scene.meshes.size())
+					if (node_index >= 0 && node_index < scene.nodes.size())
 					{
-						auto & mesh = scene.meshes[node.mesh];
+						auto & node = scene.nodes[node_index];
+						auto & nodeToViewTransform = nodeToViewTransforms[node_index];
 						
-						for (auto & prim : mesh.primitives)
+						if (node.mesh >= 0 && node.mesh < scene.meshes.size())
 						{
-							Assert(primIndex < totalNumPrimitives);
+							auto & mesh = scene.meshes[node.mesh];
 							
-							prims[primIndex] = &prim;
-							primCenters[primIndex] = calculateMeshPrimitiveCenter(scene, prim);
-							primDistances[primIndex] = nodeToViewTransform.Mul4(primCenters[primIndex])[2];
-							primNodeIndices[primIndex] = node_index;
-							
-							primIndex++;
+							for (auto & prim : mesh.primitives)
+							{
+								Assert(primIndex < totalNumPrimitives);
+								
+								prims[primIndex] = &prim;
+								primCenters[primIndex] = calculateMeshPrimitiveCenter(scene, prim);
+								primDistances[primIndex] = nodeToViewTransform.Mul4(primCenters[primIndex])[2];
+								primNodeIndices[primIndex] = node_index;
+								
+								primIndex++;
+							}
+						}
+						
+						for (auto & child_index : node.children)
+						{
+							collect_traverse(child_index);
 						}
 					}
+				};
+				
+				for (auto & node_index : sceneRoot.nodes)
+				{
+					collect_traverse(node_index);
 				}
 		
 				// 2. sort primitives by view distance
