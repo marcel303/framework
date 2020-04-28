@@ -1,0 +1,14 @@
+library gltf
+	depend_library framework
+	depend_library jsoncpp
+	add_files gltf.cpp gltf.h
+	add_files gltf-draw.cpp gltf-draw.h
+	add_files gltf-loader.cpp gltf-loader.h
+	header_path . expose
+	resource_path data-lib
+
+app marcel-gltf1
+	depend_library framework
+	depend_library gltf
+	add_files main.cpp
+	resource_path data
