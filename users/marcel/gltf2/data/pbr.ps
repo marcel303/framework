@@ -1,0 +1,98 @@
+include engine/ShaderPS.txt
+include engine/ShaderUtil.txt
+include renderOne/forward-lighting/light-params.txt
+include renderOne/forward-lighting/light-volume.txt
+include renderOne/light-attenuation-functions.txt
+
+include gltf/shaders/material-pbr-metallicRoughness.txt
+
+shader_in vec3 v_position_view;
+shader_in vec3 v_normal_view;
+shader_in vec4 v_color;
+shader_in vec2 v_texcoord0;
+shader_in vec2 v_texcoord1;
+
+Lighting_SurfaceProperties s_surfaceProperties;
+
+vec3 s_color;
+
+void forEachLightId(int id)
+{
+	LightParams light = lookupLightParams(id);
+
+    // -- compute lighting
+
+    vec3 Lo = vec3(0.0);
+    vec3 diffuse = vec3(0.0);
+
+    {
+        vec3 lightDir;
+        float lightAttenuation;
+
+        if (light.type == kLightType_Spot)
+        {
+            lightDir = light.direction;
+            lightAttenuation = computeAttenuationForSpotLight(v_position_view, light.position, light.direction, light.spotAngleAlpha, light.attenuationEnd);
+        }
+        else if (light.type == kLightType_Point)
+        {
+        	vec3 lightToSurface = v_position_view - light.position;
+            lightDir = normalize(lightToSurface);
+            lightAttenuation = computeAttenuationForPointLight(v_position_view, light.position, light.attenuationEnd);
+        }
+        // todo : handle different light types
+
+        Lighting_LightingResult lightingResult = computeLighting(s_surfaceProperties, lightDir);
+
+        vec3 lightColor = light.color * lightAttenuation;
+        Lo += lightingResult.specular * lightColor;
+        diffuse += lightingResult.diffuse * lightColor;
+    }
+
+    // -- add all terms
+
+    s_color += diffuse + Lo;
+}
+
+void main()
+{
+   // -- prepare surface properties
+
+    s_surfaceProperties = prepareSurfaceProperties(
+        v_position_view,
+        normalize(v_normal_view),
+        v_color,
+        v_texcoord0,
+        v_texcoord1,
+        true);
+
+    // -- compute lighting
+
+    s_color = vec3(0.0);
+
+    forEachLightIdAt(v_position_view);
+
+#if 1
+    // -- add ambient light
+
+    vec3 ambient = vec3(0.1, 0.05, 0.025);
+    ambient *= s_surfaceProperties.baseColor;
+    ambient *= gltfAmbientOcclusion();
+
+    s_color += ambient;
+#endif
+
+    // -- add emissive
+
+    s_color += gltfEmissive();
+
+    // -- convert linear to gamma space
+
+    s_color = linearToSrgb(s_color);
+
+    s_color += colorDither8ScreenSpace(v_position_view.xy * vec2(800, 600) * 0.5) * 1.0;
+
+    // -- store
+
+    shader_fragColor = vec4(s_color, s_surfaceProperties.opacity);
+}
