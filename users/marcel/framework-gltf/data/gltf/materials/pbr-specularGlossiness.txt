@@ -1,0 +1,202 @@
+// material based on: https://github.com/SaschaWillems/Vulkan-glTF-PBR/blob/master/data/shaders/pbr.frag
+
+include gltf/shaders/pbr-lighting-utils.txt
+include gltf/shaders/normal-mapping-utils.txt
+
+#define kMinRoughness 0.04
+
+// material maps
+
+uniform vec4 u_diffuseFactor; // linear
+uniform sampler2D diffuseTexture; // sRGB
+uniform float diffuseTextureCoord;
+
+uniform vec3 u_specularFactor; // linear
+uniform float u_glossinessFactor; // linear
+uniform sampler2D specularGlossinessTexture; // sRGB
+uniform float specularGlossinessTextureCoord;
+
+// extra maps
+
+uniform sampler2D normalTexture;
+uniform float normalTextureCoord;
+
+uniform sampler2D occlusionTexture; // linear
+uniform float occlusionTextureCoord;
+uniform float u_occlusionStrength; // linear
+
+uniform vec3 u_emissiveFactor; // linear
+uniform sampler2D emissiveTexture; // sRGB
+uniform float emissiveTextureCoord;
+
+// material common
+
+uniform float u_alphaMask;
+uniform float u_alphaMaskCutoff;
+uniform float u_hasVertexColors;
+
+// utility
+
+vec4 s_color0;
+vec2 s_texcoord0;
+vec2 s_texcoord1;
+
+vec2 gltfTextureCoord(float texcoord)
+{
+	if (texcoord < 1.0)
+        return s_texcoord0;
+    else
+        return s_texcoord1;
+}
+
+vec4 gltfTexture(sampler2D s, float texcoord)
+{
+	return texture(s, gltfTextureCoord(texcoord));
+}
+
+vec4 gltfBaseColor()
+{
+    vec4 baseColor = u_diffuseFactor;
+
+    if (diffuseTextureCoord >= 0.0)
+    {
+        vec4 baseColorFromTexture = gltfTexture(diffuseTexture, diffuseTextureCoord);
+
+        /*
+        The baseColorTexture uses the sRGB transfer function and must be converted to
+        linear space before it is used for any computations.
+        */
+
+        baseColorFromTexture.rgb = srgbToLinear(baseColorFromTexture.rgb);
+
+        baseColor *= baseColorFromTexture;
+    }
+    
+    if (u_hasVertexColors != 0.0)
+    {
+        // todo : need a way to set default values for vertex inputs
+        //        otherwise meshes without vertex colors get random data
+
+        /*
+        if a primitive specifies a vertex color using the attribute semantic
+        property COLOR_0, then this value acts as an additional linear multiplier
+        to baseColor.
+        */
+
+        baseColor *= s_color0;
+    }
+
+    return baseColor;
+}
+
+vec3 gltfNormal(vec3 position_view, vec3 normal_view)
+{
+    if (normalTextureCoord < 0.0)
+        return normal_view;
+
+    vec2 texcoord = gltfTextureCoord(normalTextureCoord);
+
+    vec3 tangentNormal = texture(normalTexture, texcoord).xyz * 2.0 - 1.0;
+
+    return perturbNormal(position_view, normal_view, texcoord, tangentNormal);
+}
+
+float gltfAmbientOcclusion()
+{
+	if (occlusionTextureCoord >= 0.0)
+	{
+	    float ao = gltfTexture(occlusionTexture, occlusionTextureCoord).r;
+
+	    ao = mix(1.0, ao, u_occlusionStrength);
+
+	    return ao;
+	}
+	else
+	{
+		return 1.0;
+	}
+}
+
+vec3 gltfEmissive()
+{
+	vec3 emissive = u_emissiveFactor;
+
+    if (emissiveTextureCoord >= 0.0)
+    {
+        vec3 emissiveFromTexture = gltfTexture(emissiveTexture, emissiveTextureCoord).rgb;
+
+        emissiveFromTexture = srgbToLinear(emissiveFromTexture);
+
+        emissive *= emissiveFromTexture;
+    }
+
+    return emissive;
+}
+
+// decode
+
+Lighting_SurfaceProperties prepareSurfaceProperties(
+	vec3 position_view,
+	vec3 normal_view,
+	vec4 color0,
+	vec2 texcoord0,
+	vec2 texcoord1,
+	bool doAlphaMasking)
+{
+    s_color0 = color0;
+    s_texcoord0 = texcoord0;
+    s_texcoord1 = texcoord1;
+
+    // -- unpack diffuse color and alpha
+
+    vec4 baseColor = gltfBaseColor();
+
+    // -- perform alpha test
+
+    if (doAlphaMasking && u_alphaMask != 0.0)
+    {
+        if (baseColor.a < u_alphaMaskCutoff)
+            discard;
+    }
+
+    // -- unpack specular and roughness
+
+    vec3 specular = u_specularFactor;
+    float glossiness = u_glossinessFactor;
+    
+    if (specularGlossinessTextureCoord >= 0.0)
+    {
+        vec4 specularGlossiness = gltfTexture(specularGlossinessTexture, specularGlossinessTextureCoord);
+
+        /*
+        Specular is encoded with the sRGB transfer function and must be converted to linear space before it's used for any computations.
+        source: https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_materials_pbrSpecularGlossiness
+        */
+        specularGlossiness.rgb = srgbToLinear(specularGlossiness.rgb);
+
+        specular *= specularGlossiness.rgb;
+        glossiness *= specularGlossiness.a;
+    }
+
+    float roughness = clamp(1.0 - glossiness, kMinRoughness, 1.0);
+
+    // -- calculate surface vectors
+
+    vec3 N = gltfNormal(position_view, normal_view);
+    vec3 V = -normalize(position_view); // note : this equals 'cameraPosition_view - position_view', since the camera position in view-space is always at (0, 0, 0) we can simplify
+    vec3 R = -normalize(reflect(V, N));
+
+    // -- fill in surface properties
+    
+    Lighting_SurfaceProperties surfaceProperties;
+    surfaceProperties.position = position_view;
+    surfaceProperties.N = N;
+    surfaceProperties.V = V;
+    surfaceProperties.R = R;
+    surfaceProperties.baseColor = baseColor.rgb * (vec3(1.0) - specular);
+    surfaceProperties.opacity = baseColor.a;
+    surfaceProperties.metallic = specular;
+    surfaceProperties.roughness = roughness;
+
+    return surfaceProperties;
+}
