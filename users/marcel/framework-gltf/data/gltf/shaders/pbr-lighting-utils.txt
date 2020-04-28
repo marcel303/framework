@@ -87,19 +87,15 @@ struct Lighting_SurfaceProperties
     float roughness;
 };
 
-struct Lighting_LightProperties
-{
-    float type;
-    vec3 positionOrDirection;
-};
-
 struct Lighting_LightingResult
 {
     vec3 diffuse;
     vec3 specular;
 };
 
-Lighting_LightingResult computeLighting(Lighting_SurfaceProperties surfaceProperties, vec3 lightDir)
+Lighting_LightingResult computeLighting(
+    Lighting_SurfaceProperties surfaceProperties,
+    vec3 lightDir)
 {
     vec3 L = -lightDir;
     vec3 V = surfaceProperties.V;

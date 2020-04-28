@@ -53,9 +53,12 @@ void main()
             lightAttenuation = 1.0 / dot(lightToSurface, lightToSurface);
         }
 
-        Lighting_LightingResult lightingResult = computeLighting(surfaceProperties, lightDir);
+        Lighting_LightingResult lightingResult = computeLighting(
+            surfaceProperties,
+            lightDir);
 
         vec3 lightColor = scene_lightParams2.xyz * (scene_lightParams2.w * lightAttenuation);
+
         Lo += lightingResult.specular * lightColor;
         diffuse += lightingResult.diffuse * lightColor;
     }
@@ -82,14 +85,6 @@ void main()
     color = linearToSrgb(color);
 
     // -- store
-
-    //color.rgb = gltfTexture(diffuseTexture, diffuseTextureCoord).rgb;
-    //color.rgb = u_diffuseFactor.rgb;
-    //color.rgb = linearToSrgb(baseColor.rgb);
-    //color.rgb = R;
-    //color.rgb = vec3(glossiness);
-    //color.rgb = N;
-    //color.rgb = specular;
 
     shader_fragColor = vec4(color, surfaceProperties.opacity);
 
