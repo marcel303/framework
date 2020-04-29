@@ -268,9 +268,9 @@ int main(int argc, char * argv[])
 						}
 						
 						gltf::MaterialShaders materialShaders;
-						materialShaders.pbr_specularGlossiness = &specularGlossinessShader;
-						materialShaders.pbr_metallicRoughness = &metallicRoughnessShader;
-						materialShaders.fallbackShader = &metallicRoughnessShader;
+						materialShaders.metallicRoughnessShader = &metallicRoughnessShader;
+						materialShaders.specularGlossinessShader = &specularGlossinessShader;
+						materialShaders.init();
 						
 						gltf::DrawOptions drawOptions;
 						drawOptions.alphaMode = gltf::kAlphaMode_AlphaToCoverage;
