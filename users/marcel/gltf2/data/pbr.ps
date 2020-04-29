@@ -3,6 +3,7 @@ include engine/ShaderUtil.txt
 include renderOne/forward-lighting/light-params.txt
 include renderOne/forward-lighting/light-volume.txt
 include renderOne/light-attenuation-functions.txt
+include renderOne/shadow-mapping/shadow-mapping.txt
 
 include gltf/materials/pbr-metallicRoughness.txt
 
@@ -33,6 +34,18 @@ void forEachLightId(int id)
         {
             lightDir = light.direction;
             lightAttenuation = computeAttenuationForSpotLight(v_position_view, light.position, light.direction, light.spotAngleAlpha, light.attenuationEnd);
+
+            if (true)
+            {
+                int shadowMapId = int(light.userData);
+
+                if (shadowMapId != -1)
+                {
+                    lightAttenuation *= lookupShadow(shadowMapId, v_position_view).r;
+
+                    //lightAttenuation = 0.0;
+                }
+            }
         }
         else if (light.type == kLightType_Point)
         {
@@ -45,6 +58,7 @@ void forEachLightId(int id)
         Lighting_LightingResult lightingResult = computeLighting(s_surfaceProperties, lightDir);
 
         vec3 lightColor = light.color * lightAttenuation;
+
         Lo += lightingResult.specular * lightColor;
         diffuse += lightingResult.diffuse * lightColor;
     }
@@ -75,7 +89,7 @@ void main()
 #if 1
     // -- add ambient light
 
-    vec3 ambient = vec3(0.1, 0.05, 0.025);
+    vec3 ambient = vec3(0.02, 0.01, 0.005);
     ambient *= s_surfaceProperties.baseColor;
     ambient *= gltfAmbientOcclusion();
 
