@@ -1,6 +1,7 @@
 #pragma once
 
 #include "framework.h"
+#include "gltf-material.h"
 
 // forward declarations
 
@@ -28,10 +29,23 @@ namespace gltf
 	
 	struct MaterialShaders
 	{
-		Shader * pbr_specularGlossiness = nullptr;
-		Shader * pbr_metallicRoughness = nullptr;
+		Shader * metallicRoughnessShader = nullptr;
+		Shader * specularGlossinessShader = nullptr;
 		
-		Shader * fallbackShader = nullptr;
+		MetallicRoughnessParams metallicRoughnessParams;
+		SpecularGlossinessParams specularGlossinessParams;
+		
+		bool isInitialized = false;
+		
+		void init()
+		{
+			if (metallicRoughnessShader != nullptr)
+				metallicRoughnessParams.init(*metallicRoughnessShader);
+			if (specularGlossinessShader != nullptr)
+				specularGlossinessParams.init(*specularGlossinessShader);
+			
+			isInitialized = true;
+		}
 	};
 	
 	struct DrawOptions
