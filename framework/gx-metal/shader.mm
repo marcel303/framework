@@ -663,7 +663,7 @@ bool Shader::getErrorMessages(std::vector<std::string> & errorMessages) const
 	}
 }
 
-GxImmediateIndex Shader::getImmediateIndex(const char * name)
+GxImmediateIndex Shader::getImmediateIndex(const char * name) const
 {
 	for (size_t i = 0; i < m_cacheElem->uniformInfos.size(); ++i)
 		if (m_cacheElem->uniformInfos[i].name == name)
@@ -671,7 +671,7 @@ GxImmediateIndex Shader::getImmediateIndex(const char * name)
 	return -1;
 }
 
-void Shader::getImmediateValuef(const GxImmediateIndex index, float * value)
+void Shader::getImmediateValuef(const GxImmediateIndex index, float * value) const
 {
 	if (index >= 0 && index < m_cacheElem->uniformInfos.size())
 	{
