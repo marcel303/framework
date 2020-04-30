@@ -1946,6 +1946,7 @@ static void randomizeParticles(ShaderBufferRw & particleBuffer, const int partic
 		}
 	}
 
+	particleBuffer.alloc(sizeof(Particle) * particleCount);
 	particleBuffer.setDataRaw(particleArray, sizeof(Particle) * particleCount);
 
 	delete[] particleArray;

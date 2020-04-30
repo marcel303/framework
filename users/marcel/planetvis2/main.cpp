@@ -1202,6 +1202,7 @@ static void setPlanarTexShader(const Cube * cube, const int debugCubeSideIndex)
 	}
 	cubeSideInfo.testValue = std::fmod(framework.time, .5f);
 	static ShaderBufferRw buffer;
+	buffer.alloc(sizeof(cubeSideInfo));
 	buffer.setDataRaw(&cubeSideInfo, sizeof(cubeSideInfo));
 
 	static Shader shader("PlanarTex");
