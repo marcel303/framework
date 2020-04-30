@@ -141,7 +141,7 @@ namespace gltf
 						return false;
 					}
 					
-					auto path = dir + "/" + buffer.uri;
+					auto path = dir.empty() ? buffer.uri : (dir + "/" + buffer.uri);
 					
 					FILE * file = fopen(path.c_str(), "rb");
 					
