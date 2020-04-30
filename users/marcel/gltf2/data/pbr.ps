@@ -53,6 +53,11 @@ void forEachLightId(int id)
             lightDir = normalize(lightToSurface);
             lightAttenuation = computeAttenuationForPointLight(v_position_view, light.position, light.attenuationEnd);
         }
+        else if (light.type == kLightType_Directional)
+        {
+            lightDir = light.direction;
+            lightAttenuation = 1.0;
+        }
         // todo : handle different light types
 
         Lighting_LightingResult lightingResult = computeLighting(s_surfaceProperties, lightDir);
@@ -89,7 +94,7 @@ void main()
 #if 1
     // -- add ambient light
 
-    vec3 ambient = vec3(0.02, 0.01, 0.005);
+    vec3 ambient = vec3(0.01, 0.005, 0.0025);
     ambient *= s_surfaceProperties.baseColor;
     ambient *= gltfAmbientOcclusion();
 
@@ -102,9 +107,9 @@ void main()
 
     // -- convert linear to gamma space
 
-    s_color = linearToSrgb(s_color);
+    //s_color = linearToSrgb(s_color);
 
-    s_color += colorDither8ScreenSpace(v_position_view.xy * vec2(800, 600) * 0.5) * 1.0;
+    //s_color += colorDither8ScreenSpace(v_position_view.xy * vec2(800, 600) * 0.5) * 1.0;
 
     // -- store
 

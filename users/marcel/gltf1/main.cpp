@@ -158,7 +158,7 @@ int main(int argc, char * argv[])
 		{
 			gltf::BoundingBox boundingBox;
 			
-			calculateSceneMinMaxTraverse(scene, scene.activeScene, boundingBox);
+			calculateSceneMinMax(scene, boundingBox);
 			
 			if (centimeters)
 			{
@@ -282,7 +282,6 @@ int main(int argc, char * argv[])
 								: bufferCache,
 							materialShaders,
 							isOpaquePass,
-							scene.activeScene,
 							&drawOptions);
 					}
 					popBlend();
