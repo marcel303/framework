@@ -152,7 +152,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 	projectPerspective3d(60.f, .01f, 100.f);
 	{
 		gltf::BoundingBox bb;
-		gltf::calculateSceneMinMaxTraverse(scene, scene.activeScene, bb);
+		gltf::calculateSceneMinMax(scene, bb);
 		
 		const Vec3 mid = (bb.min + bb.max) / 2.f;
 		const Vec3 extents = (bb.max - bb.min) / 2.f;
@@ -245,9 +245,9 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				}
 				
 				gltf::MaterialShaders materialShaders;
-				materialShaders.pbr_specularGlossiness = &specularGlossinessShader;
-				materialShaders.pbr_metallicRoughness = &metallicRoughnessShader;
-				materialShaders.fallbackShader = &metallicRoughnessShader;
+				materialShaders.specularGlossinessShader = &specularGlossinessShader;
+				materialShaders.metallicRoughnessShader = &metallicRoughnessShader;
+				materialShaders.init();
 				
 				gltf::DrawOptions drawOptions;
 				drawOptions.alphaMode = alphaMode;
@@ -263,7 +263,6 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 						: nullptr,
 						materialShaders,
 						true,
-						scene.activeScene,
 						&drawOptions);
 				}
 				popBlend();
@@ -279,7 +278,6 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 						: nullptr,
 						materialShaders,
 						false,
-						scene.activeScene,
 						&drawOptions);
 				}
 				popBlend();
@@ -299,7 +297,9 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 						clearShader();
 						
 						gltf::MaterialShaders materialShaders;
-						materialShaders.fallbackShader = &shader;
+						materialShaders.metallicRoughnessShader = &shader;
+						materialShaders.specularGlossinessShader = &shader;
+						materialShaders.init();
 						
 						gltf::drawScene(
 							scene,
@@ -307,8 +307,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 							? &bufferCache
 							: nullptr,
 							materialShaders,
-							true,
-							scene.activeScene);
+							true);
 						
 						gltf::drawScene(
 							scene,
@@ -316,8 +315,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 							? &bufferCache
 							: nullptr,
 							materialShaders,
-							false,
-							scene.activeScene);
+							false);
 					}
 					popWireframe();
 					popBlend();
