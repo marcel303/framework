@@ -3,6 +3,7 @@ include engine/ShaderPS.txt
 shader_in vec2 texcoord;
 uniform sampler2D source;
 uniform float temperature;
+uniform float useSource;
 uniform float opacity;
 
 // code sampled from https://www.shadertoy.com/view/lsSXW1
@@ -17,7 +18,7 @@ uniform float opacity;
 // https://creativecommons.org/licenses/by/3.0/
 
 // playing with this value tweaks how dim or bright the resulting image is
-#define LUMINANCE_PRESERVATION 0.75
+#define LUMINANCE_PRESERVATION 0.75 // todo : remove ?
 
 #define EPSILON 1e-10
 
@@ -96,19 +97,15 @@ vec3 RGBtoHSL(vec3 RGB)
 
 void main()
 {
-    float colorTempK = mix(1000.0, 40000.0, temperature);
+    vec3 colorTempRGB = ColorTemperatureToRGB(temperature);
     
-    vec3 image = texture(source, texcoord).rgb;
-    vec3 colorTempRGB = ColorTemperatureToRGB(colorTempK);
-    
-    //if (texcoord.x > 0.5)
-    if (false)
+    if (useSource == 0.0)
     {
-        shader_fragColor = vec4(ColorTemperatureToRGB(mix(1000.0, 40000.0, texcoord.y)), 1.0);
-        //shader_fragColor = vec4(colorTempRGB, 1.0);
+        shader_fragColor = vec4(colorTempRGB, 1.0);
     }
     else
     {
+        vec3 image = texture(source, texcoord).rgb;
     	float originalLuminance = Luminance(image);
         
     	vec3 blended = mix(image, image * colorTempRGB, opacity);

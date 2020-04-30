@@ -4,15 +4,13 @@ include engine/ShaderUtil.txt
 shader_in vec2 texcoord;
 
 uniform sampler2D source;
-uniform float hueShift;
+uniform float hueShiftAmount;
 
 void main()
 {
 	vec4 color = texture(source, texcoord);
 	
-	vec3 hsl = colorToHSL(color.rgb);
-	hsl.x += hueShift;
-	color.rgb = colorFromHSL(hsl);
+	color.rgb = hueShift(color.rgb, hueShiftAmount);
 	
 	shader_fragColor = color;
 }

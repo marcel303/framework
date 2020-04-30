@@ -251,7 +251,7 @@ void setShader_HueShift(const GxTextureId source, const float hue, const float o
 	setShader(shader);
 
 	shader.setTexture("source", 0, source, true, true);
-	shader.setImmediate("hueShift", hue);
+	shader.setImmediate("hueShiftAmount", hue);
 	shader.setImmediate("opacity", opacity);
 }
 
@@ -273,6 +273,7 @@ void setShader_ColorTemperature(const GxTextureId source, const float temperatur
 	
 	shader.setTexture("source", 0, source, true, true);
 	shader.setImmediate("temperature", temperature);
+	shader.setImmediate("useSource", source != 0);
 	shader.setImmediate("opacity", opacity);
 }
 
