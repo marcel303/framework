@@ -46,8 +46,11 @@ namespace gltf
 			const bool hasVertexColors,
 			int & nextTextureUnit) const;
 		
+		void setUseVertexColors(Shader & shader, const bool useVertexColors);
+		void setBaseColor(Shader & shader, const Color & color);
 		void setMetallicRoughness(Shader & shader, const float metallic, const float roughness) const;
 		void setEmissive(Shader & shader, const float emissive) const;
+		void setEmissive(Shader & shader, const Color & emissive) const;
 	};
 	
 	struct SpecularGlossinessParams

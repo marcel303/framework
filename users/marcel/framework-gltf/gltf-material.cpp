@@ -156,6 +156,18 @@ namespace gltf
 		}
 	}
 	
+	void MetallicRoughnessParams::setUseVertexColors(Shader & shader, const bool useVertexColors)
+	{
+		if (u_hasVertexColors != -1)
+			shader.setImmediate(u_hasVertexColors, useVertexColors ? 1.f : 0.f);
+	}
+	
+	void MetallicRoughnessParams::setBaseColor(Shader & shader, const Color & color)
+	{
+		if (u_baseColorFactor != -1)
+			shader.setImmediate(u_baseColorFactor, color.r, color.g, color.b, color.a);
+	}
+	
 	void MetallicRoughnessParams::setMetallicRoughness(Shader & shader, const float metallic, const float roughness) const
 	{
 		if (u_metallicFactor != -1)
@@ -167,7 +179,13 @@ namespace gltf
 	void MetallicRoughnessParams::setEmissive(Shader & shader, const float emissive) const
 	{
 		if (u_emissiveFactor != -1)
-			shader.setImmediate(u_emissiveFactor, emissive);
+			shader.setImmediate(u_emissiveFactor, emissive, emissive, emissive);
+	}
+	
+	void MetallicRoughnessParams::setEmissive(Shader & shader, const Color & emissive) const
+	{
+		if (u_emissiveFactor != -1)
+			shader.setImmediate(u_emissiveFactor, emissive.r, emissive.g, emissive.b);
 	}
 	
 	//
