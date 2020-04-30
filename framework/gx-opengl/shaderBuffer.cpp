@@ -71,6 +71,23 @@ ShaderBuffer::~ShaderBuffer()
 	}
 }
 
+void ShaderBuffer::alloc(const int numBytes)
+{
+	glBindBuffer(GL_UNIFORM_BUFFER, m_buffer);
+	checkErrorGL();
+
+	glBufferData(GL_UNIFORM_BUFFER, numBytes, nullptr, GL_DYNAMIC_DRAW);
+	checkErrorGL();
+
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	checkErrorGL();
+}
+
+void ShaderBuffer::free()
+{
+	setData(nullptr, 0);
+}
+
 void ShaderBuffer::setData(const void * bytes, int numBytes)
 {
 	fassert(m_buffer);
@@ -80,17 +97,12 @@ void ShaderBuffer::setData(const void * bytes, int numBytes)
 		glBindBuffer(GL_UNIFORM_BUFFER, m_buffer);
 		checkErrorGL();
 
-		glBufferData(GL_UNIFORM_BUFFER, numBytes, bytes, GL_DYNAMIC_DRAW);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, numBytes, bytes);
 		checkErrorGL();
 		
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 		checkErrorGL();
 	}
-}
-
-void ShaderBuffer::free()
-{
-	setData(nullptr, 0);
 }
 
 //

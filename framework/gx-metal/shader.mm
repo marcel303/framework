@@ -1064,6 +1064,8 @@ void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
 		AssertMsg(metal_buffer.length <= shaderBufferLength, "the buffer is larger than what the ps expects. length=%d, expected=%d", metal_buffer.length, shaderBufferLength);
 		const int copySize = metal_buffer.length < shaderBufferLength ? metal_buffer.length : shaderBufferLength;
 		memcpy(m_cacheElem->psUniformData[psIndex], metal_buffer.contents, copySize);
+		
+		m_cacheElem->psBuffers[psIndex] = metal_buffer;
 	}
 }
 

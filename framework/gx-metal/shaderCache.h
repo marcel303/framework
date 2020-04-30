@@ -78,7 +78,7 @@ public:
 	static const int kMaxBuffers = 16;
 	
 	static const int kMaxVsTextures = 2;
-	static const int kMaxPsTextures = 8;
+	static const int kMaxPsTextures = 16;
 	
 	struct StageInfo
 	{
@@ -136,6 +136,8 @@ public:
 	
 	void * vsUniformData[kMaxBuffers] = { };
 	void * psUniformData[kMaxBuffers] = { };
+	
+	id <MTLBuffer> psBuffers[kMaxBuffers] = { };
 	
 	std::vector<TextureInfo> textureInfos;
 	

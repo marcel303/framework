@@ -76,7 +76,7 @@ ShaderBuffer::~ShaderBuffer()
 	}
 }
 
-void ShaderBuffer::setData(const void * bytes, int numBytes)
+void ShaderBuffer::alloc(int numBytes)
 {
 	fassert(m_buffer);
 	
@@ -84,25 +84,16 @@ void ShaderBuffer::setData(const void * bytes, int numBytes)
 	
 	id<MTLBuffer> & buffer = s_buffers[m_buffer];
 	
-	if (buffer == nil)
+	if (buffer != nil && buffer.length == numBytes)
+		return;
+	
+	if (buffer != nil)
 	{
-		buffer = [device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeManaged];
+		[buffer release];
+		buffer = nil;
 	}
-	else
-	{
-		if (buffer.length == numBytes)
-		{
-			memcpy(buffer.contents, bytes, numBytes);
-			[buffer didModifyRange:NSMakeRange(0, numBytes)];
-		}
-		else
-		{
-			[buffer release];
-			buffer = nil;
-			
-			buffer = [device newBufferWithBytes:bytes length:numBytes options:MTLResourceStorageModeManaged];
-		}
-	}
+	
+	buffer = [device newBufferWithLength:numBytes options:MTLResourceStorageModeManaged];
 }
 
 void ShaderBuffer::free()
@@ -111,6 +102,21 @@ void ShaderBuffer::free()
 	
 	[buffer release];
 	buffer = nil;
+}
+
+void ShaderBuffer::setData(const void * bytes, int numBytes)
+{
+	fassert(m_buffer);
+	
+	id<MTLBuffer> & buffer = s_buffers[m_buffer];
+	
+	fassert(buffer != nil);
+	if (buffer == nil)
+		return;
+	
+	fassert(numBytes <= buffer.length);
+	memcpy(buffer.contents, bytes, numBytes);
+	[buffer didModifyRange:NSMakeRange(0, numBytes)];
 }
 
 //

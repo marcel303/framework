@@ -914,8 +914,10 @@ public:
 	ShaderBuffer();
 	~ShaderBuffer();
 
-	void setData(const void * bytes, int numBytes);
+	void alloc(int numBytes);
 	void free();
+	
+	void setData(const void * bytes, int numBytes);
 	
 #if ENABLE_OPENGL
 	GxShaderBufferId getOpenglBuffer() const { return m_buffer; }
