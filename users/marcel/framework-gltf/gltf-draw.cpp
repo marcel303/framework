@@ -54,7 +54,8 @@ namespace gltf
 		const BufferCache * bufferCache,
 		const MeshPrimitive & primitive,
 		const MaterialShaders & materialShaders,
-		const bool isOpaquePass)
+		const bool isOpaquePass,
+		const DrawOptions & drawOptions)
 	{
 		Assert(materialShaders.isInitialized);
 		
@@ -72,49 +73,56 @@ namespace gltf
 		if (isOpaquePass != isOpaqueMaterial)
 			return;
 		
-		// determine which shader to use for the material
-
-		Shader * shader_ptr = nullptr;
+		Shader * shader = nullptr;
 		
-		if (material.pbrSpecularGlossiness.isSet)
-			shader_ptr = materialShaders.specularGlossinessShader;
-		else
-			shader_ptr = materialShaders.metallicRoughnessShader;
-		
-		if (shader_ptr == nullptr)
+		if (drawOptions.enableShaderSetting)
 		{
-			logWarning("shader for material type not set");
-			return;
+			// determine which shader to use for the material
+			
+			if (material.pbrSpecularGlossiness.isSet)
+				shader = materialShaders.specularGlossinessShader;
+			else
+				shader = materialShaders.metallicRoughnessShader;
+			
+			if (shader == nullptr)
+			{
+				logWarning("shader for material type not set");
+				return;
+			}
+			
+			// set shader
+			
+			setShader(*shader);
 		}
-		
-		// set shader
-		
-		Shader & shader = *shader_ptr;
-		setShader(shader);
 	
 		// set material parameters
 
-		const bool hasVertexColors = primitive.attributes.count("COLOR_0") != 0;
-		
-		int nextTextureUnit = 0;
+		if (drawOptions.enableMaterialSetup && shader != nullptr)
+		{
+			const bool hasVertexColors = primitive.attributes.count("COLOR_0") != 0;
 
-		if (material.pbrSpecularGlossiness.isSet)
-		{
-			materialShaders.specularGlossinessParams.setShaderParams(
-				shader,
-				material,
-				scene,
-				hasVertexColors,
-				nextTextureUnit);
-		}
-		else
-		{
-			materialShaders.metallicRoughnessParams.setShaderParams(
-				shader,
-				material,
-				scene,
-				hasVertexColors,
-				nextTextureUnit);
+			if (material.pbrSpecularGlossiness.isSet)
+			{
+				int nextTextureUnit = materialShaders.firstTextureUnit;
+				
+				materialShaders.specularGlossinessParams.setShaderParams(
+					*shader,
+					material,
+					scene,
+					hasVertexColors,
+					nextTextureUnit);
+			}
+			else
+			{
+				int nextTextureUnit = materialShaders.firstTextureUnit;
+				
+				materialShaders.metallicRoughnessParams.setShaderParams(
+					*shader,
+					material,
+					scene,
+					hasVertexColors,
+					nextTextureUnit);
+			}
 		}
 		
 		// translate primitive type
@@ -275,9 +283,12 @@ namespace gltf
 						}
 					}
 					
-					// note : we turn off the occlusion texture here, as it depends on texcoord1, rather than texcoord0. we cannot set texcoord1 using the basic GX api, so to avoid artifacts we just disable the occlusion texture altogether
-					// fixme : check the actual texture coord index
-					shader.setImmediate("occlusionTextureCoord", -1.f);
+					if (drawOptions.enableMaterialSetup && shader != nullptr)
+					{
+						// note : we turn off the occlusion texture here, as it depends on texcoord1, rather than texcoord0. we cannot set texcoord1 using the basic GX api, so to avoid artifacts we just disable the occlusion texture altogether
+						// fixme : check the actual texture coord index
+						shader->setImmediate("occlusionTextureCoord", -1.f);
+					}
 					
 					gxBegin(gxPrimitiveType);
 					{
@@ -393,25 +404,25 @@ namespace gltf
 		popCullMode();
 	}
 
-	void drawMesh(const Scene & scene, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass)
+	void drawMesh(const Scene & scene, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions)
 	{
-		drawMesh(scene, nullptr, mesh, materialShaders, isOpaquePass);
+		drawMesh(scene, nullptr, mesh, materialShaders, isOpaquePass, drawOptions);
 	}
 	
-	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass)
+	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions)
 	{
 		for (auto & primitive : mesh.primitives)
 		{
-			drawMeshPrimitive(scene, bufferCache, primitive, materialShaders, isOpaquePass);
+			drawMeshPrimitive(scene, bufferCache, primitive, materialShaders, isOpaquePass, drawOptions);
 		}
 	}
 	
-	void drawNodeTraverse(const Scene & scene, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass)
+	void drawNodeTraverse(const Scene & scene, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions)
 	{
-		drawNodeTraverse(scene, nullptr, node, materialShaders, isOpaquePass);
+		drawNodeTraverse(scene, nullptr, node, materialShaders, isOpaquePass, drawOptions);
 	}
 	
-	void drawNodeTraverse(const Scene & scene, const BufferCache * bufferCache, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass)
+	void drawNodeTraverse(const Scene & scene, const BufferCache * bufferCache, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions)
 	{
 		gxPushMatrix();
 		gxTranslatef(node.translation[0], node.translation[1], node.translation[2]);
@@ -430,14 +441,14 @@ namespace gltf
 			
 			auto & child = scene.nodes[child_index];
 			
-			drawNodeTraverse(scene, bufferCache, child, materialShaders, isOpaquePass);
+			drawNodeTraverse(scene, bufferCache, child, materialShaders, isOpaquePass, drawOptions);
 		}
 		
 		if (node.mesh >= 0 && node.mesh < scene.meshes.size())
 		{
 			auto & mesh = scene.meshes[node.mesh];
 			
-			drawMesh(scene, bufferCache, mesh, materialShaders, isOpaquePass);
+			drawMesh(scene, bufferCache, mesh, materialShaders, isOpaquePass, drawOptions);
 		}
 		
 		gxPopMatrix();
@@ -627,8 +638,13 @@ namespace gltf
 		gxPopMatrix();
 	}
 	
-	void calculateSceneMinMaxTraverse(const Scene & scene, const int activeScene, BoundingBox & boundingBox)
+	void calculateSceneMinMax(const Scene & scene, BoundingBox & boundingBox, const int in_activeScene)
 	{
+		const int activeScene =
+			in_activeScene == -2
+			? scene.activeScene
+			: in_activeScene;
+		
 		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 		gxLoadIdentity();
@@ -694,11 +710,10 @@ namespace gltf
 	}
 #endif
 	
-	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const int activeScene, const DrawOptions * drawOptions)
+	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions * drawOptions)
 	{
-		drawScene(scene, nullptr, materialShaders, isOpaquePass, activeScene, drawOptions);
+		drawScene(scene, nullptr, materialShaders, isOpaquePass, drawOptions);
 	}
-	
 	
 #if ENABLE_SORT_PRIMITIVES_BY_VIEW_DISTANCE
 	static void computeNodeToViewTransformsTraverse(const Scene & scene, const int node_index, Mat4x4 * __restrict nodeToViewTransforms)
@@ -737,17 +752,17 @@ namespace gltf
 	}
 #endif
 	
-	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const int in_activeScene, const DrawOptions * in_drawOptions)
+	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions * in_drawOptions)
 	{
-		const int activeScene =
-			in_activeScene == -2
-			? scene.activeScene
-			: in_activeScene;
-		
 		const DrawOptions drawOptions =
 			in_drawOptions
 			? *in_drawOptions
 			: DrawOptions();
+		
+		const int activeScene =
+			drawOptions.activeScene == -2
+			? scene.activeScene
+			: drawOptions.activeScene;
 		
 		pushAlphaToCoverage(drawOptions.alphaMode == kAlphaMode_AlphaToCoverage);
 		
@@ -768,11 +783,12 @@ namespace gltf
 					{
 						auto & node = scene.nodes[node_index];
 						
-						drawNodeTraverse(scene, bufferCache, node, materialShaders, isOpaquePass);
+						drawNodeTraverse(scene, bufferCache, node, materialShaders, isOpaquePass, drawOptions);
 					}
 				}
 				
-				clearShader();
+				if (drawOptions.enableShaderSetting)
+					clearShader();
 			}
 		#if ENABLE_SORT_PRIMITIVES_BY_VIEW_DISTANCE
 			else
@@ -906,7 +922,8 @@ namespace gltf
 							bufferCache,
 							*prim,
 							materialShaders,
-							isOpaquePass);
+							isOpaquePass,
+							drawOptions);
 						
 					#if false // for debugging: draw a cube at the prim center
 						if (isOpaquePass)
@@ -919,7 +936,8 @@ namespace gltf
 					gxPopMatrix();
 				}
 				
-				clearShader();
+				if (drawOptions.enableShaderSetting)
+					clearShader();
 			}
 		#endif
 		}
