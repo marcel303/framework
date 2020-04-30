@@ -381,6 +381,8 @@ public:
 	Mat4x4 Rotate(const Quat & q) const;
 	Mat4x4 Rotate(const float angle, Vec3Arg axis) const;
 
+	Mat4x4 Lookat(Vec3Arg position, Vec3Arg target, Vec3Arg up) const;
+	
 	inline Mat4x4 Invert() const
 	{
 		return CalcInv();

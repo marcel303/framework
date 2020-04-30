@@ -266,6 +266,13 @@ Mat4x4 Mat4x4::Rotate(const float angle, Vec3Arg axis) const
 	return Rotate(q);
 }
 
+Mat4x4 Mat4x4::Lookat(Vec3Arg position, Vec3Arg target, Vec3Arg up) const
+{
+	Mat4x4 lookat;
+	lookat.MakeLookatInv(position, target, up);
+	return (*this) * lookat;
+}
+
 #undef INDEX
 
 #undef m00
