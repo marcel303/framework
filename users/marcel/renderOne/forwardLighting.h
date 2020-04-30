@@ -56,6 +56,7 @@ namespace rOne
 
 	public:
 
+		ForwardLightingHelper();
 		~ForwardLightingHelper();
 		
 		void addLight(const Light & light);

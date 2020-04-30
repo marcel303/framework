@@ -8,6 +8,14 @@
 
 namespace rOne
 {
+	static const int kMaxLights = 1024; // due to a limitation with desktop Metal of 64kb max constant buffer memory, this is limited to 1024 only
+	
+	ForwardLightingHelper::ForwardLightingHelper()
+	{
+		lightParamsBuffer.alloc(kMaxLights * 4*sizeof(Vec4));
+		lightExtrasBuffer.alloc(kMaxLights * 4*sizeof(Vec4));
+	}
+	
 	ForwardLightingHelper::~ForwardLightingHelper()
 	{
 		reset();
@@ -182,9 +190,6 @@ namespace rOne
 	{
 		lights.clear();
 		
-		lightParamsBuffer.free();
-		lightExtrasBuffer.free();
-		
 		freeTexture(indexTextureId);
 		freeTexture(lightIdsTextureId);
 		
@@ -309,14 +314,6 @@ namespace rOne
 			delete [] extras;
 			extras = nullptr;
 		}
-		else
-		{
-			// bind some dummy data when there is no data. this to avoid gpu-driver issues
-			
-			Vec4 data[4];
-			lightParamsBuffer.setData(data, sizeof(data));
-			lightExtrasBuffer.setData(data, sizeof(data));
-		}
 
 		// generate light volume data using the (current) set of lights
 
@@ -409,8 +406,8 @@ namespace rOne
 
 	void ForwardLightingHelper::setShaderData(Shader & shader, int & nextTextureUnit) const
 	{
-		shader.setBuffer("lightParamsBuffer", lightParamsBuffer);
-		shader.setBuffer("lightExtrasBuffer", lightExtrasBuffer);
+		shader.setBuffer("LightParamsBuffer", lightParamsBuffer);
+		shader.setBuffer("LightExtrasBuffer", lightExtrasBuffer);
 		shader.setImmediate("numLights", lights.size());
 		shader.setImmediate("numGlobalLights", numGlobalLights);
 		shader.setTexture("lightVolume", nextTextureUnit++, indexTextureId, false, false);

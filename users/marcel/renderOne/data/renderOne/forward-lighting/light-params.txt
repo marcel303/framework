@@ -1,8 +1,8 @@
 // todo : fix same uniform block name as variable name
 //        GLSL doesn't allow this. make a change to shader builder ?
 
-uniform vec4 lightParams[64*4] buffer lightParamsBuffer;
-uniform vec4 lightExtras[64*4] buffer lightExtrasBuffer;
+uniform vec4 lightParams[1024*4] buffer LightParamsBuffer;
+uniform vec4 lightExtras[1024*4] buffer LightExtrasBuffer;
 uniform float numLights;
 uniform float numGlobalLights;
 
