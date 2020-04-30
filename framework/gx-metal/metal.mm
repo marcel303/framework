@@ -2119,6 +2119,18 @@ static void gxFlush(bool endOfBatch)
 		bindVsInputs(s_gxVsInputs, sizeof(s_gxVsInputs) / sizeof(s_gxVsInputs[0]), sizeof(GxVertex));
 	
 		setShader(shader);
+		
+		// set shader parameters for the generic shader
+		
+		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
+		{
+			shader.setImmediate(
+				shaderElem.params[ShaderCacheElem::kSp_Params].index,
+				s_gxTextureEnabled ? 1.f : 0.f,
+				globals.colorMode,
+				globals.colorPost,
+				globals.colorClamp);
+		}
 	
 		gxValidatePipelineState();
 	
@@ -2219,36 +2231,11 @@ static void gxFlush(bool endOfBatch)
 			indexed = true;
 		}
 	
-		// set shader parameters for the generic shader
-		
-		if (shaderElem.params[ShaderCacheElem::kSp_Params].index != -1)
-		{
-			shader.setImmediate(
-				shaderElem.params[ShaderCacheElem::kSp_Params].index,
-				s_gxTextureEnabled ? 1.f : 0.f,
-				globals.colorMode,
-				globals.colorPost,
-				globals.colorClamp);
-		}
-	
-		// set fragment stage uniform buffers
-	
-		for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
-		{
-			if (shaderElem.psInfo.uniformBufferSize[i] == 0)
-				continue;
-			
-			[s_activeRenderPass->encoder
-				setFragmentBytes:shaderElem.psUniformData[i]
-				length:shaderElem.psInfo.uniformBufferSize[i]
-				atIndex:i];
-		}
-	
 		const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(s_gxPrimitiveType);
 
 		if (indexed)
 		{
-			[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:s_gxIndexBufferElem->m_buffer indexBufferOffset:s_gxLastIndexOffset];
+ 			[s_activeRenderPass->encoder drawIndexedPrimitives:metalPrimitiveType indexCount:numElements indexType:MTLIndexTypeUInt32 indexBuffer:s_gxIndexBufferElem->m_buffer indexBufferOffset:s_gxLastIndexOffset];
 		}
 		else
 		{
@@ -2406,14 +2393,6 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 
 	setShader(shader);
 
-	gxValidatePipelineState();
-	
-	gxValidateMatrices();
-	
-	gxValidateShaderResources(useGenericShader);
-
-	//
-
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 	
 	// set shader parameters for the generic shader
@@ -2427,20 +2406,13 @@ void gxEmitVertices(GX_PRIMITIVE_TYPE primitiveType, int numVertices)
 			globals.colorPost,
 			globals.colorClamp);
 	}
-
-	// set fragment stage uniform buffers
-
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
-	{
-		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
-			continue;
-		
-		[s_activeRenderPass->encoder
-			setFragmentBytes:shaderElem.psUniformData[i]
-			length:shaderElem.psInfo.uniformBufferSize[i]
-			atIndex:i];
-	}
 	
+	gxValidatePipelineState();
+	
+	gxValidateMatrices();
+	
+	gxValidateShaderResources(useGenericShader);
+
 	//
 	
 	const MTLPrimitiveType metalPrimitiveType = toMetalPrimitiveType(primitiveType);
@@ -2650,12 +2622,6 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 
 	setShader(shader);
 
-	gxValidatePipelineState();
-
-	gxValidateMatrices();
-
-	gxValidateShaderResources(useGenericShader);
-
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 
 	// set shader parameters for the generic shader
@@ -2670,18 +2636,11 @@ void gxDrawIndexedPrimitives(const GX_PRIMITIVE_TYPE type, const int firstIndex,
 			globals.colorClamp);
 	}
 	
-	// set fragment stage uniform buffers
-	
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
-	{
-		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
-			continue;
-		
-		[s_activeRenderPass->encoder
-			setFragmentBytes:shaderElem.psUniformData[i]
-			length:shaderElem.psInfo.uniformBufferSize[i]
-			atIndex:i];
-	}
+	gxValidatePipelineState();
+
+	gxValidateMatrices();
+
+	gxValidateShaderResources(useGenericShader);
 	
 	if (shader.isValid())
 	{
@@ -2729,12 +2688,6 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 
 	setShader(shader);
 
-	gxValidatePipelineState();
-
-	gxValidateMatrices();
-
-	gxValidateShaderResources(useGenericShader);
-
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 
 	// set shader parameters for the generic shader
@@ -2748,19 +2701,12 @@ void gxDrawPrimitives(const GX_PRIMITIVE_TYPE type, const int firstVertex, const
 			globals.colorPost,
 			globals.colorClamp);
 	}
-
-	// set fragment stage uniform buffers
 	
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
-	{
-		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
-			continue;
-		
-		[s_activeRenderPass->encoder
-			setFragmentBytes:shaderElem.psUniformData[i]
-			length:shaderElem.psInfo.uniformBufferSize[i]
-			atIndex:i];
-	}
+	gxValidatePipelineState();
+
+	gxValidateMatrices();
+
+	gxValidateShaderResources(useGenericShader);
 	
 	if (shader.isValid())
 	{
@@ -2793,13 +2739,7 @@ void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE
 		: *static_cast<Shader*>(globals.shader);
 
 	setShader(shader);
-
-	gxValidatePipelineState();
-
-	gxValidateMatrices();
-
-	gxValidateShaderResources(useGenericShader);
-
+	
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 
 	// set shader parameters for the generic shader
@@ -2813,19 +2753,12 @@ void gxDrawInstancedIndexedPrimitives(const int numInstances, const GX_PRIMITIVE
 			globals.colorPost,
 			globals.colorClamp);
 	}
-	
-	// set fragment stage uniform buffers
-	
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
-	{
-		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
-			continue;
-		
-		[s_activeRenderPass->encoder
-			setFragmentBytes:shaderElem.psUniformData[i]
-			length:shaderElem.psInfo.uniformBufferSize[i]
-			atIndex:i];
-	}
+
+	gxValidatePipelineState();
+
+	gxValidateMatrices();
+
+	gxValidateShaderResources(useGenericShader);
 	
 	if (shader.isValid())
 	{
@@ -2874,12 +2807,6 @@ void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE t
 
 	setShader(shader);
 
-	gxValidatePipelineState();
-
-	gxValidateMatrices();
-
-	gxValidateShaderResources(useGenericShader);
-
 	const ShaderCacheElem_Metal & shaderElem = static_cast<const ShaderCacheElem_Metal&>(shader.getCacheElem());
 
 	// set shader parameters for the generic shader
@@ -2893,19 +2820,12 @@ void gxDrawInstancedPrimitives(const int numInstances, const GX_PRIMITIVE_TYPE t
 			globals.colorPost,
 			globals.colorClamp);
 	}
-
-	// set fragment stage uniform buffers
 	
-	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
-	{
-		if (shaderElem.psInfo.uniformBufferSize[i] == 0)
-			continue;
-		
-		[s_activeRenderPass->encoder
-			setFragmentBytes:shaderElem.psUniformData[i]
-			length:shaderElem.psInfo.uniformBufferSize[i]
-			atIndex:i];
-	}
+	gxValidatePipelineState();
+
+	gxValidateMatrices();
+
+	gxValidateShaderResources(useGenericShader);
 	
 	if (shader.isValid())
 	{
@@ -2940,12 +2860,15 @@ void gxClearCaptureCallback()
 
 void gxValidateShaderResources(const bool useGenericShader)
 {
+	auto * shader = static_cast<Shader*>(globals.shader);
+	auto & cacheElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
+	
 	if (useGenericShader && s_gxTextureEnabled)
 	{
-	// todo : avoid setting textures when not needed
-	//        needed when: texture changed
-	//                  or shader changed
-	
+		// todo : avoid setting textures when not needed
+		//        needed when: texture changed
+		//                  or shader changed
+		
 		auto i = s_textures.find(s_gxTexture);
 		
 		Assert(i != s_textures.end());
@@ -2960,17 +2883,18 @@ void gxValidateShaderResources(const bool useGenericShader)
 	}
 	else
 	{
-		auto * shader = static_cast<Shader*>(globals.shader);
-		auto & cacheElem = static_cast<const ShaderCacheElem_Metal&>(shader->getCacheElem());
-		
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxVsTextures; ++i)
 			if (cacheElem.vsTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setVertexTexture:cacheElem.vsTextures[i] atIndex:i];
 		
+	#if 0
 		for (int i = 0; i < ShaderCacheElem_Metal::kMaxPsTextures; ++i)
 			if (cacheElem.psTextures[i] != nullptr)
 				[s_activeRenderPass->encoder setFragmentTexture:cacheElem.psTextures[i] atIndex:i];
-		
+	#else
+		[s_activeRenderPass->encoder setFragmentTextures:cacheElem.psTextures withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxPsTextures)];
+	#endif
+	
 		for (auto & textureInfo : cacheElem.textureInfos)
 		{
 			// todo : set sampler states at the start of a render pass. or set an invalidation bit
@@ -2990,6 +2914,24 @@ void gxValidateShaderResources(const bool useGenericShader)
 				[s_activeRenderPass->encoder setFragmentSamplerState:samplerState atIndex:i];
 			}
 		}
+		
+		NSUInteger offsets[ShaderCacheElem_Metal::kMaxBuffers] = { };
+		[s_activeRenderPass->encoder setFragmentBuffers:cacheElem.psBuffers offsets:offsets withRange:NSMakeRange(0, ShaderCacheElem_Metal::kMaxBuffers)];
+	}
+	
+	// set fragment stage uniform buffers
+
+	for (int i = 0; i < ShaderCacheElem_Metal::kMaxBuffers; ++i)
+	{
+		if (cacheElem.psInfo.uniformBufferSize[i] == 0)
+			continue;
+		if (cacheElem.psBuffers[i] != nullptr)
+			continue;
+		
+		[s_activeRenderPass->encoder
+			setFragmentBytes:cacheElem.psUniformData[i]
+			length:cacheElem.psInfo.uniformBufferSize[i]
+			atIndex:i];
 	}
 }
 
