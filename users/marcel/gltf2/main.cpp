@@ -37,18 +37,20 @@ int main(int argc, char * argv[])
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	framework.enableDepthBuffer = true;
-	//framework.allowHighDpi = true;
-	//framework.msaaLevel = 4;
+	
+	framework.allowHighDpi = true;
+	framework.msaaLevel = 4;
 	
 	//framework.fullscreen = true;
-	if (!framework.init(800, 600))
-	//if (!framework.init(1000, 800))
+	
+	if (!framework.init(1000, 800))
 		return -1;
 	
 	ForwardLightingHelper helper;
 	
 	ShadowMapDrawer shadowMapDrawer;
-	shadowMapDrawer.alloc(4, 2048);
+	shadowMapDrawer.alloc(4, 1024);
+	shadowMapDrawer.shadowMapFilter = kShadowMapFilter_Variance;
 	
 	Camera3d camera;
 	camera.mouseSmooth = .98f;
@@ -65,7 +67,10 @@ int main(int argc, char * argv[])
 	renderer.registerShaderOutputs();
 	RenderOptions renderOptions;
 	renderOptions.renderMode = kRenderMode_ForwardShaded;
+	renderOptions.backgroundColor.Set(.02f, .02f, .03f);
 	renderOptions.linearColorSpace = true;
+	renderOptions.fog.enabled = true;
+	renderOptions.fog.thickness = .1f;
 	renderOptions.bloom.enabled = true;
 	renderOptions.bloom.strength = .2f;
 	renderOptions.depthSilhouette.enabled = true;
@@ -73,13 +78,15 @@ int main(int argc, char * argv[])
 	//renderOptions.colorGrading.enabled = true;
 	//renderOptions.chromaticAberration.enabled = true;
 	renderOptions.motionBlur.enabled = true;
-	//renderOptions.lightScatter.enabled = true;
+	renderOptions.lightScatter.enabled = true;
 	//renderOptions.enableScreenSpaceReflections = true;
+	//renderOptions.depthOfField.enabled = true;
+	renderOptions.depthOfField.focusDistance = 6.f;
 	
 	mouse.setRelative(true);
 	mouse.showCursor(false);
 	
-	float emissive = 0.f;
+	Vec3 emissive;
 	
 	for (;;)
 	{
@@ -93,7 +100,7 @@ int main(int argc, char * argv[])
 		emissive *= powf(.1f, framework.timeStep);
 		
 		if (keyboard.wentDown(SDLK_SPACE))
-			emissive = .2f;
+			emissive.Set(1.f, .4f, .1f);
 		
 		const Mat4x4 worldToView = camera.getViewMatrix();
 		
@@ -136,7 +143,7 @@ int main(int argc, char * argv[])
 				drawOptions.activeScene = -1;
 				
 				params.setMetallicRoughness(shader, 1.f, (1.f + sinf(framework.time * 2.f)) / 2.f);
-				params.setEmissive(shader, emissive);
+				params.setEmissive(shader, Color(emissive[0], emissive[1], emissive[2]));
 				gltf::drawScene(scene, &bufferCache, materialShaders, true, &drawOptions);
 				
 				for (int x = -10; x <= +10; ++x)
@@ -151,7 +158,10 @@ int main(int argc, char * argv[])
 							Mat4x4 lookat;
 							lookat.MakeLookatInv(Vec3(x, 0, z), Vec3(0, 8, 0), Vec3(0, 1, 0));
 							gxMultMatrixf(lookat.m_v);
-							gxRotatef(framework.time * 140.f, (x/3)%2, 0, (z/3)%2);
+							Vec3 movement;
+							movement[abs(x + z) % 3] = cosf(framework.time + x + z) * .2f;
+							gxTranslatef(movement[0], movement[1], movement[2]);
+							gxRotatef(framework.time * 40.f, (x/3)%2, 0, (z/3)%2);
 
 							setColor(colorWhite);
 							//fillCube(Vec3(), Vec3(.3f));
@@ -181,30 +191,64 @@ int main(int argc, char * argv[])
 		};
 		
 	#if 1
-		Mat4x4 spotTransform;
-		spotTransform = Mat4x4(true)
-			.Lookat(Vec3(-2, 8, 0), Vec3(0, 0, 0), Vec3(0, 1, 0))
-			.RotateX(sinf(framework.time / 6.23f) * .5f)
-			.RotateY(sinf(framework.time / 8.34f) * .5f);
+		struct SpotLight
+		{
+			Mat4x4 transform;
+			float spotAngle = 0.0;
+			float intensity = 1.f;
+			Vec3 color;
+		};
 		
-		const float spotAngle = float(M_PI) * lerp<float>(.3f, .5f, (cosf(framework.time / 2.34f) + 1.f) / 2.f);
-		const float intensityMultiplier = powf(1.f / tanf(spotAngle/2.f), 2.f);
+		std::vector<SpotLight> spotLights;
 		
-		shadowMapDrawer.addSpotLight(0, spotTransform, spotAngle, .01f, 100.f);
+		{
+			SpotLight spotLight;
+			spotLight.transform = Mat4x4(true)
+				.Lookat(Vec3(-2, 8, 0), Vec3(0, 0, 0), Vec3(0, 1, 0))
+				.RotateX(sinf(framework.time / 6.23f) * .5f)
+				.RotateY(sinf(framework.time / 8.34f) * .5f);
+			
+			spotLight.spotAngle = float(M_PI) * lerp<float>(.3f, .5f, (cosf(framework.time / 2.34f) + 1.f) / 2.f);
+			spotLight.intensity = 100.f * powf(1.f / tanf(spotLight.spotAngle/2.f), 2.f);
+			spotLight.color.Set(.6f, .8f, 1.f);
+			
+			spotLights.push_back(spotLight);
+		}
+		
+		for (int i = 0; i < 1; ++i)
+		{
+			SpotLight spotLight;
+			spotLight.transform = Mat4x4(true)
+				.Lookat(Vec3(-1, 3, 0), Vec3(0, 0, 0), Vec3(0, 1, 0))
+				.RotateY(sinf(framework.time / 4.34f + i) * .5f)
+				.RotateX(sinf(framework.time / 3.23f + i) * .5f);
+			
+			spotLight.spotAngle = float(M_PI) * lerp<float>(.02f, .1f, (cosf(framework.time * 1.34f) + 1.f) / 2.f);
+			spotLight.intensity = (sinf(framework.time * 6.f + i) + 1.f) / 2.f * 100.f * powf(1.f / tanf(spotLight.spotAngle/2.f), 2.f);
+			spotLight.color.Set(1.f, .8f, .6f);
+			
+			spotLights.push_back(spotLight);
+		}
+		
+		for (size_t i = 0; i < spotLights.size(); ++i)
+			shadowMapDrawer.addSpotLight(i, spotLights[i].transform, spotLights[i].spotAngle, .01f, 100.f);
 		
 		helper.prepareShaderData(1, 1.f, false, worldToView);
 		shadowMapDrawer.drawOpaque = drawShadow;
 		shadowMapDrawer.drawShadowMaps(worldToView);
 		helper.reset();
 		
-		helper.addSpotLight(
-			spotTransform.GetTranslation(),
-			spotTransform.GetAxis(2),
-			spotAngle,
-			16.f,
-			Vec3(.6f, .8f, 1.f),
-			25.f * intensityMultiplier,
-			shadowMapDrawer.getShadowMapId(0));
+		for (size_t i = 0; i < spotLights.size(); ++i)
+		{
+			helper.addSpotLight(
+				spotLights[i].transform.GetTranslation(),
+				spotLights[i].transform.GetAxis(2),
+				spotLights[i].spotAngle,
+				16.f,
+				spotLights[i].color,
+				spotLights[i].intensity,
+				shadowMapDrawer.getShadowMapId(0));
+		}
 		
 		helper.addDirectionalLight(Vec3(4, -4, 4).CalcNormalized(), Vec3(1.f, .8f, .6f), .1f);
 	#endif
