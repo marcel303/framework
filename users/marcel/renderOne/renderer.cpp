@@ -909,7 +909,7 @@ namespace rOne
 			composite_idx = next_composite_idx;
 		}
 		
-		if (renderOptions.colorGrading.enabled)
+		if (renderOptions.colorGrading.enabled && renderOptions.colorGrading.lookupTexture != 0)
 		{
 		// todo : create a color grading designer UI, with export option ?
 		// todo : write color grading identity LUT to data folder, at startup (when it doesn't exist yet)
@@ -927,41 +927,9 @@ namespace rOne
 					Shader shader("renderOne/postprocess/color-grade");
 					setShader(shader);
 					{
-					#if 0
-						const GxTextureId lutTexture = getTexture("color-grading/LUT_Greenish.jpg");
-						//const GxTextureId lutTexture = getTexture("color-grading/LUT_Reddish.jpg");
-						const bool lutIsDynamic = false;
-					#else
-						uint8_t lut[16][256][4];
-						
-						for (int x = 0; x < 256; ++x)
-						{
-							for (int y = 0; y < 16; ++y)
-							{
-								const float r = (x % 16) / 15.f;
-								const float g = y / 15.f;
-								const float b = (x / 16) / 15.f;
-								
-								Color color(r, g, b);
-								color = color.hueShift(framework.time / 10.f);
-								
-								lut[y][x][0] = color.r * 255.f;
-								lut[y][x][1] = color.g * 255.f;
-								lut[y][x][2] = color.b * 255.f;
-								lut[y][x][3] = 255;
-							}
-						}
-						
-						GxTextureId lutTexture = createTextureFromRGBA8(lut, 256, 16, true, false);
-						const bool lutIsDynamic = true;
-					#endif
-					
 						shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
-						shader.setTexture("lutTexture", 1, lutTexture, true, true);
+						shader.setTexture("lutTexture", 1, renderOptions.colorGrading.lookupTexture, true, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 						drawFullscreenQuad(viewportSx, viewportSy);
-						
-						if (lutIsDynamic)
-							freeTexture(lutTexture);
 					}
 					clearShader();
 				}
@@ -1834,5 +1802,55 @@ namespace rOne
 		framework.getCurrentViewportSize(viewportSx, viewportSy);
 		
 		render(renderFunctions, renderOptions, viewportSx, viewportSy, timeStep);
+	}
+	
+	//
+	
+	int RenderOptions::ColorGrading::lookupTextureFromFile(const char * filename)
+	{
+		GxTextureId textureId = getTexture(filename);
+		
+		int sx;
+		int sy;
+		gxGetTextureSize(textureId, sx, sy);
+		
+		Assert(sx == kLookupSize*kLookupSize && sy == kLookupSize);
+		if (sx != kLookupSize*kLookupSize || sy != kLookupSize)
+			logWarning("color grading lookup texture doesn't adhere to the required size of %dx%d pixels!", kLookupSize * kLookupSize, kLookupSize);
+		
+		return textureId;
+	}
+	
+	int RenderOptions::ColorGrading::lookupTextureFromSrgbColorTransform(RenderOptions::ColorGrading::SrgbColorTransform transform)
+	{
+		float * colors = (float*)malloc(kLookupSize * kLookupSize * kLookupSize * (sizeof(float)*4));
+		
+		for (int y = 0; y < kLookupSize; ++y)
+		{
+			float * __restrict line = colors + y * kLookupSize * kLookupSize * 4;
+			
+			const float g = y / float(kLookupSize - 1);
+			
+			for (int x = 0; x < kLookupSize * kLookupSize; ++x)
+			{
+				const float r = (x & (kLookupSize - 1)) / float(kLookupSize - 1);
+				const float b = (x >> 4) / float(kLookupSize - 1);
+				
+				float * __restrict out_rgb = line + x * 4;
+				
+				transform(r, g, b, out_rgb);
+				
+				out_rgb[0] = fmaxf(0.f, fminf(1.f, out_rgb[0]));
+				out_rgb[1] = fmaxf(0.f, fminf(1.f, out_rgb[1]));
+				out_rgb[2] = fmaxf(0.f, fminf(1.f, out_rgb[2]));
+			}
+		}
+		
+		GxTextureId textureId = createTextureFromRGBA32F(colors, kLookupSize * kLookupSize, kLookupSize, true, true);
+		
+		free(colors);
+		colors = nullptr;
+		
+		return textureId;
 	}
 }

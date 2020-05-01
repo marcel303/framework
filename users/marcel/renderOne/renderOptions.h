@@ -204,7 +204,15 @@ namespace rOne
 		
 		struct ColorGrading
 		{
+			static const int kLookupSize = 16;
+			
+			typedef void (SrgbColorTransform)(float r, float g, float b, float * out_rgb);
+			
 			bool enabled = false;
+			int lookupTexture = 0;
+			
+			static int lookupTextureFromFile(const char * filename);
+			static int lookupTextureFromSrgbColorTransform(SrgbColorTransform transform);
 
 			static void reflect(TypeDB & typeDB);
 		} colorGrading;

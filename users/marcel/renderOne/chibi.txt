@@ -6,6 +6,8 @@ library renderOne
 	header_path . expose
 	resource_path data
 
+# -- 200 - core lights and shadows
+
 app renderOne-200-lightVolumeBuilder
 	depend_library renderOne
 	add_files tests/200-lightVolumeBuilder.cpp
@@ -15,6 +17,8 @@ app renderOne-210-shadowMapDrawer
 	depend_library renderOne
 	add_files tests/210-shadowMapDrawer.cpp
 	resource_path tests/data
+
+# -- 400 - advanced lighting
 
 app renderOne-400-areaLights
 	depend_library renderOne
@@ -29,4 +33,12 @@ app renderOne-402-areaLights
 app renderOne-410-areaLights
 	depend_library renderOne
 	add_files tests/410-areaLights.cpp
+	resource_path tests/data
+
+# -- 700 - post effects
+
+app renderOne-710-colorGrading
+	depend_library imgui-framework
+	depend_library renderOne
+	add_files tests/710-colorGrading.cpp
 	resource_path tests/data
