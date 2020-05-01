@@ -35,6 +35,7 @@ struct GraphEdit;
 struct Graph_TypeDefinitionLibrary;
 struct RealTimeConnection;
 struct VfxGraph;
+struct VfxGraphContext;
 
 struct VfxGraphInstance
 {

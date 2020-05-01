@@ -131,6 +131,7 @@ bool buildOpenglText(const char * text, const char shaderType, const char * outp
 
 	if (!TextIO::loadText(text, lines, lineEndings))
 	{
+		logError("failed to load text");
 		return false;
 	}
 	else

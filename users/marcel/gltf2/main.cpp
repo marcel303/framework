@@ -54,7 +54,7 @@ int main(int argc, char * argv[])
 	
 	Camera3d camera;
 	camera.mouseSmooth = .98f;
-	camera.position[2] = -4.f;
+	camera.position.Set(0, 2, -2);
 	
 	gltf::Scene scene;
 	gltf::loadScene("smooth-cube.gltf", scene);
@@ -97,7 +97,7 @@ int main(int argc, char * argv[])
 		
 		camera.tick(framework.timeStep, true);
 		
-		emissive *= powf(.1f, framework.timeStep);
+		emissive *= powf(.2f, framework.timeStep * 10.f);
 		
 		if (keyboard.wentDown(SDLK_SPACE))
 			emissive.Set(1.f, .4f, .1f);
@@ -247,7 +247,7 @@ int main(int argc, char * argv[])
 				16.f,
 				spotLights[i].color,
 				spotLights[i].intensity,
-				shadowMapDrawer.getShadowMapId(0));
+				shadowMapDrawer.getShadowMapId(i));
 		}
 		
 		helper.addDirectionalLight(Vec3(4, -4, 4).CalcNormalized(), Vec3(1.f, .8f, .6f), .1f);

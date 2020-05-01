@@ -712,6 +712,7 @@ void Effect_Fsfx::draw()
 	data._param3 = m_param3;
 	data._param4 = m_param4;
 	data._pcmVolume = g_pcmVolume;
+	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("FsfxBlock", buffer);
 	if (!m_image.empty())
@@ -1617,8 +1618,10 @@ void Effect_Luminance::draw()
 	LuminanceData2 data2;
 	data2.darkenAlpha = m_darkenAlpha;
 	//logDebug("p=%g, m=%g", (float)m_power, (float)m_mul);
+	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("LuminanceBlock", buffer);
+	buffer2.alloc(sizeof(data2));
 	buffer2.setData(&data2, sizeof(data2));
 	shader.setBuffer("LuminanceBlock2", buffer2);
 	g_currentSurface->postprocess(shader);
@@ -1668,6 +1671,7 @@ void Effect_ColorLut2D::draw()
 	data.lutStart = m_lutStart;
 	data.lutEnd = m_lutEnd;
 	data.numTaps = m_numTaps;
+	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("ColorLut2DBlock", buffer);
 	g_currentSurface->postprocess(shader);
@@ -1719,6 +1723,7 @@ void Effect_Flowmap::draw()
 	data.alpha = m_alpha;
 	data.strength = m_strength;
 	data.darken = m_darken;
+	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("FlowmapBlock", buffer);
 	g_currentSurface->postprocess(shader);
@@ -1764,6 +1769,7 @@ void Effect_Vignette::draw()
 	data.alpha = m_alpha;
 	data.innerRadius = m_innerRadius;
 	data.distanceRcp = 1.f / m_distance;
+	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("VignetteBlock", buffer);
 	g_currentSurface->postprocess(shader);
@@ -1809,6 +1815,7 @@ void Effect_Clockwork::draw()
 	data.alpha = m_alpha;
 	data.innerRadius = m_innerRadius;
 	data.distanceRcp = 1.f / m_distance;
+	buffer.alloc(sizeof(data));
 	buffer.setData(&data, sizeof(data));
 	shader.setBuffer("VignetteBlock", buffer);
 	g_currentSurface->postprocess(shader);
@@ -2926,6 +2933,7 @@ void Effect_Smoke::draw()
 		data.darken = m_darken;
 		data.darkenAlpha = m_darkenAlpha;
 		data.mul = m_multiply;
+		buffer.alloc(sizeof(data));
 		buffer.setData(&data, sizeof(data));
 		shader.setBuffer("SmokeBlock", buffer);
 		g_currentSurface->postprocess(shader);
