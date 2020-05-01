@@ -129,7 +129,7 @@ namespace gltf
 		std::string uri;
 		std::string name;
 		
-		std::string path;
+		std::string path; // the path including the folder the scene was loaded from
 		
 		bool isValid() const
 		{
@@ -340,5 +340,10 @@ namespace gltf
 
 	//
 
-	bool resolveBufferView(const Scene & scene, const int index, const gltf::Accessor *& accessor, const gltf::BufferView *& bufferView, const gltf::Buffer *& buffer);
+	bool resolveBufferView(
+		const Scene & scene,
+		const int index,
+		const gltf::Accessor *& out_accessor,
+		const gltf::BufferView *& out_bufferView,
+		const gltf::Buffer *& out_buffer);
 }

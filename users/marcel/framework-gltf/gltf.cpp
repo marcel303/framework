@@ -10,22 +10,27 @@ namespace gltf
 	
 	//
 	
-	bool resolveBufferView(const Scene & scene, const int index, const gltf::Accessor *& accessor, const gltf::BufferView *& bufferView, const gltf::Buffer *& buffer)
+	bool resolveBufferView(
+		const Scene & scene,
+		const int index,
+		const gltf::Accessor *& out_accessor,
+		const gltf::BufferView *& out_bufferView,
+		const gltf::Buffer *& out_buffer)
 	{
 		if (index < 0 || index >= scene.accessors.size())
 			return false;
 
-		accessor = &scene.accessors[index];
+		out_accessor = &scene.accessors[index];
 
-		if (accessor->bufferView < 0 || accessor->bufferView >= scene.bufferViews.size())
+		if (out_accessor->bufferView < 0 || out_accessor->bufferView >= scene.bufferViews.size())
 			return false;
 
-		bufferView = &scene.bufferViews[accessor->bufferView];
+		out_bufferView = &scene.bufferViews[out_accessor->bufferView];
 
-		if (bufferView->buffer < 0 || bufferView->buffer >= scene.buffers.size())
+		if (out_bufferView->buffer < 0 || out_bufferView->buffer >= scene.buffers.size())
 			return false;
 
-		buffer = &scene.buffers[bufferView->buffer];
+		out_buffer = &scene.buffers[out_bufferView->buffer];
 		
 		return true;
 	}
