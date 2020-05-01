@@ -6,27 +6,55 @@ uniform sampler2D lutTexture;
 
 shader_in vec2 texcoord;
 
+#define SIZE 16
+
 void main()
 {
 	vec4 color = texture(colorTexture, texcoord);
 	color.rgb = clamp(color.rgb, vec3(0.0), vec3(1.0));
 
-#define fuzzle(x) ((x) * (1.0 - 1.0/16.0) + 0.5/16.0)
+	//color.r = 0.0;
+	//color.b = 0.0;
+	//color.g = 0.0;
+
+#if 1
+	#define rescale(x, range) ((x) * (1.0 - 1.0/range) + 0.5/range)
+
+	float b_exact = color.b * (SIZE - 1);
+	float b_floor = floor(b_exact);
+	float b_next = min(SIZE - 1, b_floor + 1.0);
+
+	float x1 = rescale(color.r, SIZE)/SIZE + b_floor / SIZE;
+	float x2 = rescale(color.r, SIZE)/SIZE + b_next  / SIZE;
+	
+	float y = rescale(color.g, SIZE);
+
+	vec3 lutColor1 = textureLod(lutTexture, vec2(x1, y), 0).rgb;
+	vec3 lutColor2 = textureLod(lutTexture, vec2(x2, y), 0).rgb;
+
+	float t = b_exact - b_floor;
+	vec3 lutColor = mix(lutColor1, lutColor2, t);
+
+	//if (lutColor.b < 0.01 || lutColor.b > 0.99)
+	//	lutColor = vec3(1.0);
+#elif 1
+	#define rescale(x, range) ((x) * (1.0 - 1.0/range) + 0.5/range)
 
 	float b_exact = color.b * 16.0;
 	float b_floor = floor(b_exact);
+	float b_next = min(15.0, b_floor + 1.0);
 
-	float x1 = fuzzle(color.r) / 16.0 + b_floor / 16.0;
-	float x2 = x1 + 1.0 / 16.0;
-	float y = fuzzle(color.g);
+	float x1 = rescale(color.r, 16)/16.0 + b_floor / 16.0;
+	float x2 = rescale(color.r, 16)/16.0 + b_next  / 16.0;
+	
+	float y = rescale(color.g, 16);
 
-	vec3 lutColor1 = texture(lutTexture, vec2(x1, y)).rgb;
-	vec3 lutColor2 = texture(lutTexture, vec2(x2, y)).rgb;
+	vec3 lutColor1 = textureLod(lutTexture, vec2(x1, y), 0).rgb;
+	vec3 lutColor2 = textureLod(lutTexture, vec2(x2, y), 0).rgb;
 
-	float t = (b_exact - b_floor);
+	float t = b_exact - b_floor;
 	vec3 lutColor = mix(lutColor1, lutColor2, t);
+#endif
 
 	shader_fragColor = vec4(lutColor, color.a);
-
-	//shader_fragColor = color;
 }
