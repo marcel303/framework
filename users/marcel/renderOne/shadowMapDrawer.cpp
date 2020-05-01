@@ -3,6 +3,8 @@
 
 namespace rOne
 {
+	static const int kMaxShadowMatrices = 64;
+	
 	void ShadowMapDrawer::calculateProjectionMatrixForLight(const ShadowMapLight & light, Mat4x4 & projectionMatrix)
 	{
 		if (light.type == kShadowMapLightType_Spot)
@@ -188,6 +190,9 @@ namespace rOne
 		colorAtlas.init(maxShadowMaps * resolution, resolution, SURFACE_RGBA8_SRGB, colorWhite);
 		
 		depthAtlas2Channel.init(maxShadowMaps * resolution, resolution, SURFACE_RG32F, colorBlackTranslucent);
+		
+		viewToShadowMatricesBuffer.alloc(kMaxShadowMatrices * sizeof(Mat4x4));
+		shadowToViewMatricesBuffer.alloc(kMaxShadowMatrices * sizeof(Mat4x4));
 	}
 
 	void ShadowMapDrawer::free()
@@ -202,6 +207,9 @@ namespace rOne
 		
 		depthAtlas.free();
 		colorAtlas.free();
+		
+		viewToShadowMatricesBuffer.free();
+		shadowToViewMatricesBuffer.free();
 	}
 
 	ShadowMapLight & ShadowMapDrawer::addSpotLight(
@@ -391,12 +399,12 @@ namespace rOne
 		
 		// prepare shadow matrices
 		
-		viewToShadowMatrices.resize(lights.size());
-		shadowToViewMatrices.resize(lights.size());
+		Mat4x4 viewToShadowMatrices[kMaxShadowMatrices];
+		Mat4x4 shadowToViewMatrices[kMaxShadowMatrices];
 		
 		const Mat4x4 viewToWorld = worldToView.CalcInv();
 		
-		for (size_t i = 0; i < lights.size(); ++i)
+		for (size_t i = 0; i < lights.size() && i < kMaxShadowMatrices; ++i)
 		{
 			auto & light = lights[i];
 			
@@ -406,6 +414,9 @@ namespace rOne
 			viewToShadowMatrices[i] = lightToProjection * light.worldToLight * viewToWorld;
 			shadowToViewMatrices[i] = viewToShadowMatrices[i].CalcInv();
 		}
+		
+		viewToShadowMatricesBuffer.setData(viewToShadowMatrices, lights.size() * sizeof(Mat4x4));
+		shadowToViewMatricesBuffer.setData(shadowToViewMatrices, lights.size() * sizeof(Mat4x4));
 	}
 
 	void ShadowMapDrawer::setShaderData(Shader & shader, int & nextTextureUnit, const Mat4x4 & worldToView)
@@ -421,8 +432,8 @@ namespace rOne
 		shader.setImmediate("enableColorShadows", enableColorAtlas ? 1.f : 0.f);
 		shader.setImmediate("shadowMapFilter", shadowMapFilter);
 
-		shader.setImmediateMatrix4x4Array("viewToShadowMatrices", (float*)viewToShadowMatrices.data(), viewToShadowMatrices.size());
-		shader.setImmediateMatrix4x4Array("shadowToViewMatrices", (float*)shadowToViewMatrices.data(), shadowToViewMatrices.size());
+		shader.setBuffer("ViewToShadowMatrices", viewToShadowMatricesBuffer);
+		shader.setBuffer("ShadowToViewMatrices", shadowToViewMatricesBuffer);
 	}
 
 	int ShadowMapDrawer::getShadowMapId(const int id) const

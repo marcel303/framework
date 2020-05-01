@@ -78,14 +78,12 @@ namespace rOne
 		
 		std::vector<ShadowMapLight> lights;
 		
-		ShaderBuffer shaderBuffer;
-		
 		ColorTarget depthAtlas;
 		ColorTarget depthAtlas2Channel;
 		ColorTarget colorAtlas;
 		
-		std::vector<Mat4x4> viewToShadowMatrices;
-		std::vector<Mat4x4> shadowToViewMatrices;
+		ShaderBuffer viewToShadowMatricesBuffer;
+		ShaderBuffer shadowToViewMatricesBuffer;
 		
 		bool hasAnyMaskingTextures = false;
 		

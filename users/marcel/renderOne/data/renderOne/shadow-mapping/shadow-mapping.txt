@@ -8,8 +8,8 @@ uniform sampler2D shadowDepthAtlas2Channel;
 #define kShadowMapFilter_PercentageCloser_7x7 2
 #define kShadowMapFilter_Variance             3
 
-uniform mat4x4 viewToShadowMatrices[16];
-uniform mat4x4 shadowToViewMatrices[16];
+uniform mat4x4 viewToShadowMatrices[64] buffer ViewToShadowMatrices
+uniform mat4x4 shadowToViewMatrices[64] buffer ShadowToViewMatrices
 
 uniform float numShadowMaps;
 uniform float enableColorShadows;
