@@ -145,6 +145,17 @@ int main(int argc, char * argv[])
 					gxVertex2f(+0, +1);
 				}
 				gxEnd();
+				
+			#if 1
+				Shader shader("710-colorCube");
+				setShader(shader);
+				shader.setImmediate("scale", .2f);
+				gxRotatef(10.f*framework.time/1.23f, 1, 0, 0);
+				gxRotatef(20.f*framework.time/2.34f, 0, 1, 0);
+				gxRotatef(30.f*framework.time/3.45f, 0, 0, 1);
+				fillCube(Vec3(), Vec3(1.f));
+				clearShader();
+			#endif
 			};
 			
 			projectPerspective3d(90.f, .01f, 10.f);
