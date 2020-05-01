@@ -90,7 +90,10 @@ namespace gltf
 		std::map<int, GxIndexBuffer*> indexBuffers;
 		std::map<const MeshPrimitive*, GxMesh*> primitives;
 		
+		~BufferCache();
+		
 		bool init(const Scene & scene);
+		void free();
 	};
 	
 	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions);

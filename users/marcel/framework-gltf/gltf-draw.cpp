@@ -953,6 +953,11 @@ namespace gltf
 
 namespace gltf
 {
+	BufferCache::~BufferCache()
+	{
+		free();
+	}
+	
 	bool BufferCache::init(const Scene & scene)
 	{
 		// create vertex buffers from buffer objects
@@ -1232,5 +1237,34 @@ namespace gltf
 		}
 		
 		return true;
+	}
+	
+	void BufferCache::free()
+	{
+		for (auto i : vertexBuffers)
+		{
+			i.second->free();
+			
+			delete i.second;
+			i.second = nullptr;
+		}
+		
+		for (auto i : indexBuffers)
+		{
+			i.second->free();
+			
+			delete i.second;
+			i.second = nullptr;
+		}
+		
+		for (auto i : primitives)
+		{
+			delete i.second;
+			i.second = nullptr;
+		}
+		
+		vertexBuffers.clear();
+		indexBuffers.clear();
+		primitives.clear();
 	}
 }
