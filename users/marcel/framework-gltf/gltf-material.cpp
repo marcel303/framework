@@ -40,7 +40,7 @@ namespace gltf
 		
 		u_emissiveFactor = shader.getImmediateIndex("u_emissiveFactor");
 
-		// set texture maps
+		// texture maps
 
 		//shader.setTexture("baseColorTexture", nextTextureUnit++, baseColorTextureId, true, false);
 		baseColorTextureCoord = shader.getImmediateIndex("baseColorTextureCoord");
@@ -50,6 +50,8 @@ namespace gltf
 		
 		//shader.setTexture("normalTexture", nextTextureUnit++, normalTextureId, true, false);
 		normalTextureCoord = shader.getImmediateIndex("normalTextureCoord");
+	// todo : add normal scale. see GLTF spec
+		u_normalTextureScale = shader.getImmediateIndex("u_normalTextureScale");
 		
 		//shader.setTexture("occlusionTexture", nextTextureUnit++, occlusionTextureId, true, false);
 		occlusionTextureCoord = shader.getImmediateIndex("occlusionTextureCoord");
@@ -132,6 +134,8 @@ namespace gltf
 				? -1
 				: material.normalTexture.texCoord);
 		}
+		if (u_normalTextureScale != -1)
+			shader.setImmediate(u_normalTextureScale, material.normalTexture.scale);
 		
 		shader.setTexture("occlusionTexture", nextTextureUnit++, occlusionTextureId, true, false);
 		if (occlusionTextureCoord != -1)
@@ -192,6 +196,39 @@ namespace gltf
 	
 	void SpecularGlossinessParams::init(const Shader & shader)
 	{
+		// PBR specular glossiness material
+
+		u_hasVertexColors = shader.getImmediateIndex("u_hasVertexColors");
+
+		u_alphaMask = shader.getImmediateIndex("u_alphaMask");
+		u_alphaMaskCutoff = shader.getImmediateIndex("u_alphaMaskCutoff");
+
+		u_diffuseFactor = shader.getImmediateIndex("u_diffuseFactor");
+		
+		u_specularFactor = shader.getImmediateIndex("u_specularFactor");
+		u_glossinessFactor = shader.getImmediateIndex("u_glossinessFactor");
+		
+		u_emissiveFactor = shader.getImmediateIndex("u_emissiveFactor");
+		
+		// texture maps
+
+		//shader.setTexture("diffuseTexture", nextTextureUnit++, diffuseTextureId, true, false);
+		diffuseTextureCoord = shader.getImmediateIndex("diffuseTextureCoord");
+
+		//shader.setTexture("specularGlossinessTexture", nextTextureUnit++, specularGlossinessTextureId, true, false);
+		specularGlossinessTextureCoord = shader.getImmediateIndex("specularGlossinessTextureCoord");
+		
+		//shader.setTexture("normalTexture", nextTextureUnit++, normalTextureId, true, false);
+		normalTextureCoord = shader.getImmediateIndex("normalTextureCoord");
+	// todo : add normal scale. see GLTF spec
+		u_normalTextureScale = shader.getImmediateIndex("u_normalTextureScale");
+		
+		//shader.setTexture("occlusionTexture", nextTextureUnit++, occlusionTextureId, true, false);
+		occlusionTextureCoord = shader.getImmediateIndex("occlusionTextureCoord");
+		u_occlusionStrength = shader.getImmediateIndex("u_occlusionStrength");
+
+		//shader.setTexture("emissiveTexture", nextTextureUnit++, emissiveTextureId, true, false);
+		emissiveTextureCoord = shader.getImmediateIndex("emissiveTextureCoord");
 	}
 	
 	void SpecularGlossinessParams::setShaderParams(
@@ -202,29 +239,39 @@ namespace gltf
 		int & nextTextureUnit) const
 	{
 		// PBR specular glossiness material
-
-		shader.setImmediate("u_hasVertexColors", hasVertexColors ? 1.f : 0.f);
-
-		shader.setImmediate("u_alphaMask", material.alphaMode == "MASK");
-		shader.setImmediate("u_alphaMaskCutoff", material.alphaCutoff);
-
-		shader.setImmediate("u_diffuseFactor",
-			material.pbrSpecularGlossiness.diffuseFactor.r,
-			material.pbrSpecularGlossiness.diffuseFactor.g,
-			material.pbrSpecularGlossiness.diffuseFactor.b,
-			material.pbrSpecularGlossiness.diffuseFactor.a);
 		
-		shader.setImmediate("u_specularFactor",
-			material.pbrSpecularGlossiness.specularFactor[0],
-			material.pbrSpecularGlossiness.specularFactor[1],
-			material.pbrSpecularGlossiness.specularFactor[2]);
-		shader.setImmediate("u_glossinessFactor",
-			material.pbrSpecularGlossiness.glossinessFactor);
+		if (u_hasVertexColors != -1) shader.setImmediate(u_hasVertexColors, hasVertexColors ? 1.f : 0.f);
 
-		shader.setImmediate("u_emissiveFactor",
-			material.emissiveFactor[0],
-			material.emissiveFactor[1],
-			material.emissiveFactor[2]);
+		if (u_alphaMask != -1)       shader.setImmediate(u_alphaMask, material.alphaMode == "MASK");
+		if (u_alphaMaskCutoff != -1) shader.setImmediate(u_alphaMaskCutoff, material.alphaCutoff);
+
+		if (u_diffuseFactor != -1)
+		{
+			shader.setImmediate(u_diffuseFactor,
+				material.pbrSpecularGlossiness.diffuseFactor.r,
+				material.pbrSpecularGlossiness.diffuseFactor.g,
+				material.pbrSpecularGlossiness.diffuseFactor.b,
+				material.pbrSpecularGlossiness.diffuseFactor.a);
+		}
+		
+		if (u_specularFactor != -1)
+		{
+			shader.setImmediate(u_specularFactor,
+				material.pbrSpecularGlossiness.specularFactor[0],
+				material.pbrSpecularGlossiness.specularFactor[1],
+				material.pbrSpecularGlossiness.specularFactor[2]);
+		}
+		
+		if (u_glossinessFactor != -1)
+			shader.setImmediate(u_glossinessFactor, material.pbrSpecularGlossiness.glossinessFactor);
+		
+		if (u_emissiveFactor != -1)
+		{
+			shader.setImmediate(u_emissiveFactor,
+				material.emissiveFactor[0],
+				material.emissiveFactor[1],
+				material.emissiveFactor[2]);
+		}
 
 		// set texture maps
 
@@ -238,19 +285,43 @@ namespace gltf
 		const GxTextureId emissiveTextureId = tryGetTextureId(scene, material.emissiveTexture.index);
 
 		shader.setTexture("diffuseTexture", nextTextureUnit++, diffuseTextureId, true, false);
-		shader.setImmediate("diffuseTextureCoord", diffuseTextureId == 0 ? -1 : material.pbrSpecularGlossiness.diffuseTexture.texCoord);
+		shader.setImmediate(diffuseTextureCoord, diffuseTextureId == 0 ? -1 : material.pbrSpecularGlossiness.diffuseTexture.texCoord);
 		
 		shader.setTexture("specularGlossinessTexture", nextTextureUnit++, specularGlossinessTextureId, true, false);
-		shader.setImmediate("specularGlossinessTextureCoord", specularGlossinessTextureId == 0 ? -1 : material.pbrSpecularGlossiness.specularGlossinessTexture.texCoord);
+		shader.setImmediate(specularGlossinessTextureCoord, specularGlossinessTextureId == 0 ? -1 : material.pbrSpecularGlossiness.specularGlossinessTexture.texCoord);
 		
 		shader.setTexture("normalTexture", nextTextureUnit++, normalTextureId, true, false);
-		shader.setImmediate("normalTextureCoord", normalTextureId == 0 ? -1 : material.normalTexture.texCoord);
+		if (normalTextureCoord != -1)
+		{
+			shader.setImmediate(
+				normalTextureCoord,
+				normalTextureId == 0
+				? -1
+				: material.normalTexture.texCoord);
+		}
+		if (u_normalTextureScale != -1)
+			shader.setImmediate(u_normalTextureScale, material.normalTexture.scale);
 		
 		shader.setTexture("occlusionTexture", nextTextureUnit++, occlusionTextureId, true, false);
-		shader.setImmediate("occlusionTextureCoord", occlusionTextureId == 0 ? -1 : material.occlusionTexture.texCoord);
-		shader.setImmediate("u_occlusionStrength", material.occlusionTexture.strength);
-		
+		if (occlusionTextureCoord != -1)
+		{
+			shader.setImmediate(
+				occlusionTextureCoord,
+				occlusionTextureId == 0
+				? -1
+				: material.occlusionTexture.texCoord);
+		}
+		if (u_occlusionStrength != -1)
+			shader.setImmediate(u_occlusionStrength, material.occlusionTexture.strength);
+
 		shader.setTexture("emissiveTexture", nextTextureUnit++, emissiveTextureId, true, false);
-		shader.setImmediate("emissiveTextureCoord", emissiveTextureId == 0 ? -1 : material.emissiveTexture.texCoord);
+		if (emissiveTextureCoord != -1)
+		{
+			shader.setImmediate(
+				emissiveTextureCoord,
+				emissiveTextureId == 0
+				? -1
+				: material.emissiveTexture.texCoord);
+		}
 	}
 }
