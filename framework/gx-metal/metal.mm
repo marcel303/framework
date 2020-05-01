@@ -1163,6 +1163,11 @@ GxTextureId createTextureFromRG32F(const void * source, int sx, int sy, bool fil
 	return createTexture(source, sx, sy, 8, 0, filter, clamp, MTLPixelFormatRG32Float);
 }
 
+GxTextureId createTextureFromRGBA32F(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, 8, 0, filter, clamp, MTLPixelFormatRGBA32Float);
+}
+
 // --- internal texture creation functions ---
 
 GxTextureId createTextureFromRGBA8(const void * source, int sx, int sy, int sourcePitch, bool filter, bool clamp)

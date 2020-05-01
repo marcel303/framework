@@ -651,6 +651,11 @@ GxTextureId createTextureFromR8(const void * source, int sx, int sy, bool filter
 	return createTexture(source, sx, sy, filter, clamp, GL_R8, GL_RED, GL_UNSIGNED_BYTE);
 }
 
+GxTextureId createTextureFromRGBA32F(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, filter, clamp, GL_RGBA32F, GL_RGBA, GL_FLOAT);
+}
+
 GxTextureId createTextureFromRGB32F(const void * source, int sx, int sy, bool filter, bool clamp)
 {
 	return createTexture(source, sx, sy, filter, clamp, GL_RGB32F, GL_RGB, GL_FLOAT);
