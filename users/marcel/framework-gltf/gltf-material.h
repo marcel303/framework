@@ -93,5 +93,11 @@ namespace gltf
 			const Scene & scene,
 			const bool hasVertexColors,
 			int & nextTextureUnit) const;
+		
+		void setUseVertexColors(Shader & shader, const bool useVertexColors);
+		void setBaseColor(Shader & shader, const Color & color);
+		void setSpecularGlossiness(Shader & shader, const Color & specular, const float glossiness) const;
+		void setEmissive(Shader & shader, const float emissive) const;
+		void setEmissive(Shader & shader, const Color & emissive) const;
 	};
 }

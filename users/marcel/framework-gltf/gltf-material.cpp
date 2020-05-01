@@ -324,4 +324,36 @@ namespace gltf
 				: material.emissiveTexture.texCoord);
 		}
 	}
+	
+	void SpecularGlossinessParams::setUseVertexColors(Shader & shader, const bool useVertexColors)
+	{
+		if (u_hasVertexColors != -1)
+			shader.setImmediate(u_hasVertexColors, useVertexColors ? 1.f : 0.f);
+	}
+	
+	void SpecularGlossinessParams::setBaseColor(Shader & shader, const Color & color)
+	{
+		if (u_diffuseFactor != -1)
+			shader.setImmediate(u_diffuseFactor, color.r, color.g, color.b, color.a);
+	}
+	
+	void SpecularGlossinessParams::setSpecularGlossiness(Shader & shader, const Color & specular, const float glossiness) const
+	{
+		if (u_specularFactor != -1)
+			shader.setImmediate(u_specularFactor, specular.r, specular.g, specular.b);
+		if (u_glossinessFactor != -1)
+			shader.setImmediate(u_glossinessFactor, glossiness);
+	}
+	
+	void SpecularGlossinessParams::setEmissive(Shader & shader, const float emissive) const
+	{
+		if (u_emissiveFactor != -1)
+			shader.setImmediate(u_emissiveFactor, emissive, emissive, emissive);
+	}
+	
+	void SpecularGlossinessParams::setEmissive(Shader & shader, const Color & emissive) const
+	{
+		if (u_emissiveFactor != -1)
+			shader.setImmediate(u_emissiveFactor, emissive.r, emissive.g, emissive.b);
+	}
 }
