@@ -32,15 +32,13 @@ public:
 	{
 	}
 	
-	explicit
-	inline Mat4x4(const bool initializeToIdentity)
+	explicit inline Mat4x4(const bool initializeToIdentity)
 	{
 		if (initializeToIdentity)
 			MakeIdentity();
 	}
 	
-	explicit
-	inline Mat4x4(const float value)
+	explicit inline Mat4x4(const float value)
 	{
 		MakeIdentity();
 		
