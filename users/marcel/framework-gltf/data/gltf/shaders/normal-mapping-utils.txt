@@ -1,4 +1,31 @@
+#if 1
 // See http://www.thetenthplanet.de/archives/1180
+vec3 perturbNormal(
+	vec3 position,
+	vec3 normal,
+	vec2 texcoord,
+	vec3 tangentNormal)
+{
+    // get edge vectors of the pixel triangle
+    vec3 dp1 = dFdx(position);
+    vec3 dp2 = dFdy(position);
+    vec2 duv1 = dFdx(texcoord);
+    vec2 duv2 = dFdy(texcoord);
+
+    // solve the linear system
+    vec3 N = normal;
+    vec3 dp2perp = cross(dp2, N);
+    vec3 dp1perp = cross(N, dp1);
+    vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
+
+    T = normalize(T);
+    B = normalize(B);
+    mat3 TBN = mat3(T, B, N);
+    
+    return normalize(TBN * tangentNormal);
+}
+#else
 vec3 perturbNormal(
 	vec3 position,
 	vec3 normal,
@@ -11,9 +38,10 @@ vec3 perturbNormal(
     vec2 st2 = dFdy(texcoord);
 
     vec3 N = normal;
-    vec3 T = normalize(q1 * st2.y - q2 * st1.y);
-    vec3 B = -normalize(cross(N, T));
+    vec3 T = normalize(q2 * st1.y - q1 * st2.y);
+    vec3 B = normalize(cross(N, T));
     mat3 TBN = mat3(T, B, N);
 
     return normalize(TBN * tangentNormal);
 }
+#endif

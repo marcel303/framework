@@ -20,6 +20,7 @@ uniform float metallicRoughnessTextureCoord;
 
 uniform sampler2D normalTexture;
 uniform float normalTextureCoord;
+uniform float u_normalTextureScale;
 
 uniform sampler2D occlusionTexture; // linear
 uniform float occlusionTextureCoord;
@@ -97,6 +98,8 @@ vec3 gltfNormal(vec3 position_view, vec3 normal_view)
     vec2 texcoord = gltfTextureCoord(normalTextureCoord);
 
     vec3 tangentNormal = texture(normalTexture, texcoord).xyz * 2.0 - 1.0;
+    tangentNormal.xy *= u_normalTextureScale;
+    tangentNormal = normalize(tangentNormal);
 
     return perturbNormal(position_view, normal_view, texcoord, tangentNormal);
 }
