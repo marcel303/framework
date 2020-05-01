@@ -154,7 +154,7 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 		if (clearDepth && depthTarget != nullptr)
 		{
 			const float depth = depthTarget->getClearDepth();
-			glClearBufferfv(GL_DEPTH, 0, &depth);
+			glClearBufferfi(GL_DEPTH_STENCIL, 0, depth, 0x00);
 			checkErrorGL();
 		}
 	}
@@ -178,11 +178,24 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 			glClearDepthf(depthTarget->getClearDepth());
 		#endif
 			clearFlags |= GL_DEPTH_BUFFER_BIT;
+			
+			//
+			
+			glClearStencil(0x00);
+			glStencilMask(0xff);
+			clearFlags |= GL_STENCIL_BUFFER_BIT;
 		}
 	
 		if (clearFlags)
 		{
 			glClear(clearFlags);
+			checkErrorGL();
+		}
+		
+		if (clearDepth && depthTarget != nullptr)
+		{
+			glStencilMaskSeparate(GL_FRONT, globals.frontStencilState.writeMask);
+			glStencilMaskSeparate(GL_BACK, globals.backStencilState.writeMask);
 			checkErrorGL();
 		}
 	}
