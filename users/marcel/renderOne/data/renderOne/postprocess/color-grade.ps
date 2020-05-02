@@ -2,59 +2,121 @@ include engine/ShaderPS.txt
 include renderOne/depth-functions.txt
 
 uniform sampler2D colorTexture;
-uniform sampler2D lutTexture;
+uniform sampler3D lutTexture;
 
 shader_in vec2 texcoord;
 
 #define SIZE 16
+
+#define ENABLE_CUBIC_SAMPLING 0
+#define ENABLE_BETTER_SAMPLING 0
+
+#if ENABLE_CUBIC_SAMPLING
+
+// from http://www.java-gaming.org/index.php?topic=35123.0
+vec4 cubic(float v)
+{
+	vec4 n = vec4(1.0, 2.0, 3.0, 4.0) - v;
+	vec4 s = n * n * n;
+	float x = s.x;
+	float y = s.y - 4.0 * s.x;
+	float z = s.z - 4.0 * s.y + 6.0 * s.x;
+	float w = 6.0 - x - y - z;
+	return vec4(x, y, z, w) * (1.0/6.0);
+}
+
+vec4 textureBicubic(sampler2D sampler, vec2 texCoords)
+{
+	vec2 texSize = textureSize(sampler, 0);
+	vec2 invTexSize = 1.0 / texSize;
+
+	texCoords = texCoords * texSize - 0.5;
+
+	vec2 fxy = fract(texCoords);
+	texCoords -= fxy;
+
+	vec4 xcubic = cubic(fxy.x);
+	vec4 ycubic = cubic(fxy.y);
+
+	vec4 c = texCoords.xxyy + vec2(-0.5, +1.5).xyxy;
+
+	vec4 s = vec4(
+		xcubic.xz + xcubic.yw,
+		ycubic.xz + ycubic.yw);
+	vec4 offset = c + vec4(xcubic.yw, ycubic.yw) / s;
+
+	offset *= invTexSize.xxyy;
+
+	vec4 sample0 = textureLod(sampler, offset.xz, 0);
+	vec4 sample1 = textureLod(sampler, offset.yz, 0);
+	vec4 sample2 = textureLod(sampler, offset.xw, 0);
+	vec4 sample3 = textureLod(sampler, offset.yw, 0);
+
+	float sx = s.x / (s.x + s.y);
+	float sy = s.z / (s.z + s.w);
+
+	return mix(
+		mix(sample3, sample2, sx),
+		mix(sample1, sample0, sx),
+		sy);
+}
+
+#endif
+
+#if ENABLE_BETTER_SAMPLING
+
+// Created by inigo quilez - iq/2013
+// License Creative Commons Attribution-ShareAlike 3.0 Unported
+// https://creativecommons.org/licenses/by-sa/3.0/
+//
+//
+// This is the implementation for my article "improved texture interpolation"
+// 
+// http://www.iquilezles.org/www/articles/texture/texture.htm
+//
+// It shows how to get some smooth texture interpolation without resorting to the regular
+// bicubic filtering, which is pretty expensive because it needs 9 texels instead of the 
+// 4 the hardware uses for bilinear interpolation.
+//
+// With this techinique here, you van get smooth interpolation while the hardware still 
+// uses only 4 texels, by tricking the hardware. The idea is to get the fractional part
+// of the texel coordinates and apply a smooth curve to it such that the derivatives are
+// zero at the extremes. The regular cubic or quintic smoothstep functions are just
+// perfect for this task.
+
+vec4 textureBetter(sampler2D sampler, vec2 texCoords)
+{
+    vec2 uv = texCoords;
+
+    //---------------------------------------------	
+	// my own filtering 
+    //---------------------------------------------	
+	vec2 textureResolution = textureSize( sampler, 0 );
+	uv = uv*textureResolution + 0.5;
+	vec2 iuv = floor( uv );
+	vec2 fuv = fract( uv );
+	uv = iuv + fuv*fuv*(3.0-2.0*fuv); // fuv*fuv*fuv*(fuv*(fuv*6.0-15.0)+10.0);;
+	uv = (uv - 0.5)/textureResolution;
+	vec4 col = textureLod( sampler, uv, 0 );
+	
+    return col;
+}
+
+#endif
 
 void main()
 {
 	vec4 color = texture(colorTexture, texcoord);
 	color.rgb = clamp(color.rgb, vec3(0.0), vec3(1.0));
 
-	//color.r = 0.0;
-	//color.b = 0.0;
-	//color.g = 0.0;
+	#define rescale(x, range) ((x) * (1.0 - 1.0/(range)) + 0.5/(range))
 
-#if 1
-	#define rescale(x, range) ((x) * (1.0 - 1.0/range) + 0.5/range)
-
-	float b_exact = color.b * (SIZE - 1);
-	float b_floor = floor(b_exact);
-	float b_next = min(SIZE - 1, b_floor + 1.0);
-
-	float x1 = rescale(color.r, SIZE)/SIZE + b_floor / SIZE;
-	float x2 = rescale(color.r, SIZE)/SIZE + b_next  / SIZE;
+	vec3 coord = color.rgb;
+	coord.r = rescale(coord.r, SIZE);
+	coord.g = rescale(coord.g, SIZE);
+	coord.b = rescale(coord.b, SIZE);
 	
-	float y = rescale(color.g, SIZE);
-
-	vec3 lutColor1 = textureLod(lutTexture, vec2(x1, y), 0).rgb;
-	vec3 lutColor2 = textureLod(lutTexture, vec2(x2, y), 0).rgb;
-
-	float t = b_exact - b_floor;
-	vec3 lutColor = mix(lutColor1, lutColor2, t);
-
-	//if (lutColor.b < 0.01 || lutColor.b > 0.99)
-	//	lutColor = vec3(1.0);
-#elif 1
-	#define rescale(x, range) ((x) * (1.0 - 1.0/range) + 0.5/range)
-
-	float b_exact = color.b * 16.0;
-	float b_floor = floor(b_exact);
-	float b_next = min(15.0, b_floor + 1.0);
-
-	float x1 = rescale(color.r, 16)/16.0 + b_floor / 16.0;
-	float x2 = rescale(color.r, 16)/16.0 + b_next  / 16.0;
-	
-	float y = rescale(color.g, 16);
-
-	vec3 lutColor1 = textureLod(lutTexture, vec2(x1, y), 0).rgb;
-	vec3 lutColor2 = textureLod(lutTexture, vec2(x2, y), 0).rgb;
-
-	float t = b_exact - b_floor;
-	vec3 lutColor = mix(lutColor1, lutColor2, t);
-#endif
+	vec3 lutColor = texture(lutTexture, coord).rgb;
 
 	shader_fragColor = vec4(lutColor, color.a);
 }

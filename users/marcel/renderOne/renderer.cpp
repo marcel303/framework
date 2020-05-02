@@ -928,7 +928,7 @@ namespace rOne
 					setShader(shader);
 					{
 						shader.setTexture("colorTexture", 0, composite[composite_idx]->getTextureId(), false, false); // note : clamp is intentionally turned off, to expose incorrect sampling
-						shader.setTexture("lutTexture", 1, renderOptions.colorGrading.lookupTexture, true, false); // note : clamp is intentionally turned off, to expose incorrect sampling
+						shader.setTexture3d("lutTexture", 1, renderOptions.colorGrading.lookupTexture, true, false); // note : clamp is intentionally turned off, to expose incorrect sampling
 						drawFullscreenQuad(viewportSx, viewportSy);
 					}
 					clearShader();
@@ -1818,6 +1818,8 @@ namespace rOne
 		if (sx != kLookupSize*kLookupSize || sy != kLookupSize)
 			logWarning("color grading lookup texture doesn't adhere to the required size of %dx%d pixels!", kLookupSize * kLookupSize, kLookupSize);
 		
+		AssertMsg(false, "todo : convert from 2d to 3d", 0);
+	
 		return textureId;
 	}
 	
@@ -1825,28 +1827,42 @@ namespace rOne
 	{
 		float * colors = (float*)malloc(kLookupSize * kLookupSize * kLookupSize * (sizeof(float)*4));
 		
-		for (int y = 0; y < kLookupSize; ++y)
+		for (int z = 0; z < kLookupSize; ++z)
 		{
-			float * __restrict line = colors + y * kLookupSize * kLookupSize * 4;
+			const float b = z / float(kLookupSize - 1);
 			
-			const float g = y / float(kLookupSize - 1);
+			float * __restrict slice = colors + z * kLookupSize * kLookupSize * 4;
 			
-			for (int x = 0; x < kLookupSize * kLookupSize; ++x)
+			for (int y = 0; y < kLookupSize; ++y)
 			{
-				const float r = (x & (kLookupSize - 1)) / float(kLookupSize - 1);
-				const float b = (x >> 4) / float(kLookupSize - 1);
+				float * __restrict line = slice + y * kLookupSize * 4;
 				
-				float * __restrict out_rgb = line + x * 4;
+				const float g = y / float(kLookupSize - 1);
 				
-				transform(r, g, b, out_rgb);
-				
-				out_rgb[0] = fmaxf(0.f, fminf(1.f, out_rgb[0]));
-				out_rgb[1] = fmaxf(0.f, fminf(1.f, out_rgb[1]));
-				out_rgb[2] = fmaxf(0.f, fminf(1.f, out_rgb[2]));
+				for (int x = 0; x < kLookupSize; ++x)
+				{
+					const float r = x / float(kLookupSize - 1);
+					
+					float * __restrict out_rgb = line + x * 4;
+					
+					transform(r, g, b, out_rgb);
+					
+					out_rgb[0] = fmaxf(0.f, fminf(1.f, out_rgb[0]));
+					out_rgb[1] = fmaxf(0.f, fminf(1.f, out_rgb[1]));
+					out_rgb[2] = fmaxf(0.f, fminf(1.f, out_rgb[2]));
+				}
 			}
 		}
 		
-		GxTextureId textureId = createTextureFromRGBA32F(colors, kLookupSize * kLookupSize, kLookupSize, true, true);
+		GxTexture3d texture;
+		texture.allocate(kLookupSize, kLookupSize, kLookupSize, GX_RGBA32_FLOAT);
+		texture.upload(colors, 4, 0);
+		
+	// fixme : make GxTexture3d a member of the color grading options ? or make a copy of the texture using copyTexture ?
+		GxTextureId textureId = texture.id;
+		texture.id = 0;
+		
+		texture.free();
 		
 		free(colors);
 		colors = nullptr;
