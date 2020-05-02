@@ -32,6 +32,8 @@ FileEditor_Gltf::FileEditor_Gltf(const char * path)
 FileEditor_Gltf::~FileEditor_Gltf()
 {
 	guiContext.shut();
+	
+	bufferCache.free();
 }
 
 bool FileEditor_Gltf::reflect(TypeDB & typeDB, StructuredType & type)
@@ -226,9 +228,9 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 					Mat4x4 objectToView;
 					gxGetMatrixf(GX_MODELVIEW, objectToView.m_v);
 					
-					const float dx = cosf(framework.time / 1.56f);
-					const float dz = sinf(framework.time / 1.67f);
-					const Vec3 lightDir_world(dx, -2.f, dz);
+					const float dx = cosf(framework.time / 1.56f) * 2.f;
+					const float dz = sinf(framework.time / 1.67f) * 2.f;
+					const Vec3 lightDir_world(dx, -1.f, dz);
 					const Vec3 lightDir_view = objectToView.Mul3(lightDir_world).CalcNormalized();
 			
 					shader->setImmediate("scene_lightParams1",
@@ -238,7 +240,7 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 						0.f /* directional */);
 					shader->setImmediate("scene_lightParams2",
 						1.f, 1.f, 1.f,
-						2.f);
+						1.f);
 					shader->setImmediate("scene_ambientLightColor", .2f, .2f, .2f);
 					
 					clearShader();
