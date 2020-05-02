@@ -283,6 +283,8 @@ bool buildMetalText(const char * text, const char shaderType, const char * outpu
 				
 				if (strcmp(type, "sampler2D") == 0)
 					u.index = texture_index++;
+				if (strcmp(type, "sampler3D") == 0)
+					u.index = texture_index++;
 				
 				uniforms.push_back(u);
 			}
@@ -327,7 +329,13 @@ struct sampler2D
 	texture2d<float> t;
 	sampler s;
 };
-		
+
+struct sampler3D
+{
+	texture3d<float> t;
+	sampler s;
+};
+
 // texture sampling
 #define texture(sampler, coord) sampler.t.sample(sampler.s, coord)
 #define textureOffset(sampler, coord, offset) sampler.t.sample(sampler.s, coord, offset)
@@ -436,7 +444,7 @@ float atan(float x, float y) { return atan2(x, y); }
 			
 			for (auto & u : uniforms)
 			{
-				if (u.type == "sampler2D")
+				if (u.type == "sampler2D" || u.type == "sampler3D")
 					continue;
 				
 				if (strcmp(currentUniformBufferName, u.buffer_name.c_str()) != 0)
@@ -473,6 +481,11 @@ float atan(float x, float y) { return atan2(x, y); }
 						sb.AppendFormat("\ttexture2d<float> %s [[texture(%d)]];\n", u.name.c_str(), u.index);
 						sb.AppendFormat("\tsampler %s_sampler [[sampler(%d)]];\n", u.name.c_str(), u.index);
 					}
+					else if (u.type == "sampler3D")
+					{
+						sb.AppendFormat("\ttexture3d<float> %s [[texture(%d)]];\n", u.name.c_str(), u.index);
+						sb.AppendFormat("\tsampler %s_sampler [[sampler(%d)]];\n", u.name.c_str(), u.index);
+					}
 				}
 			}
 			sb.Append("};\n");
@@ -495,7 +508,7 @@ float atan(float x, float y) { return atan2(x, y); }
 					sb.AppendFormat("\tm.%s = inputs.%s;\n", a.name.c_str(), a.name.c_str());
 				for (auto & u : uniforms)
 				{
-					if (u.type == "sampler2D")
+					if (u.type == "sampler2D" || u.type == "sampler3D")
 						continue;
 					
 					const char * array_start = strchr(u.name.c_str(), '[');
@@ -504,7 +517,7 @@ float atan(float x, float y) { return atan2(x, y); }
 						auto name = u.name.substr(0, array_start - u.name.c_str());
 						sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", name.c_str(), u.buffer_name.c_str(), name.c_str());
 					}
-					else if (u.type != "sampler2D")
+					else
 					{
 						sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", u.name.c_str(), u.buffer_name.c_str(), u.name.c_str());
 					}
@@ -512,6 +525,11 @@ float atan(float x, float y) { return atan2(x, y); }
 				for (auto & u : uniforms)
 				{
 					if (u.type == "sampler2D")
+					{
+						sb.AppendFormat("\tm.%s.t = textures.%s;\n", u.name.c_str(), u.name.c_str());
+						sb.AppendFormat("\tm.%s.s = textures.%s_sampler;\n", u.name.c_str(), u.name.c_str());
+					}
+					else if (u.type == "sampler3D")
 					{
 						sb.AppendFormat("\tm.%s.t = textures.%s;\n", u.name.c_str(), u.name.c_str());
 						sb.AppendFormat("\tm.%s.s = textures.%s_sampler;\n", u.name.c_str(), u.name.c_str());
@@ -608,7 +626,7 @@ float atan(float x, float y) { return atan2(x, y); }
 
 			for (auto & u : uniforms)
 			{
-				if (u.type == "sampler2D")
+				if (u.type == "sampler2D" || u.type == "sampler3D")
 					continue;
 				
 				if (strcmp(currentUniformBufferName, u.buffer_name.c_str()) != 0)
@@ -643,6 +661,11 @@ float atan(float x, float y) { return atan2(x, y); }
 					if (u.type == "sampler2D")
 					{
 						sb.AppendFormat("\ttexture2d<float> %s [[texture(%d)]];\n", u.name.c_str(), u.index);
+						sb.AppendFormat("\tsampler %s_sampler [[sampler(%d)]];\n", u.name.c_str(), u.index);
+					}
+					else if (u.type == "sampler3D")
+					{
+						sb.AppendFormat("\ttexture3d<float> %s [[texture(%d)]];\n", u.name.c_str(), u.index);
 						sb.AppendFormat("\tsampler %s_sampler [[sampler(%d)]];\n", u.name.c_str(), u.index);
 					}
 				}
@@ -683,7 +706,7 @@ float atan(float x, float y) { return atan2(x, y); }
 			{
 				for (auto & u : uniforms)
 				{
-					if (u.type == "sampler2D")
+					if (u.type == "sampler2D" || u.type == "sampler3D")
 						continue;
 					
 					const char * array_start = strchr(u.name.c_str(), '[');
@@ -692,7 +715,7 @@ float atan(float x, float y) { return atan2(x, y); }
 						auto name = u.name.substr(0, array_start - u.name.c_str());
 						sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", name.c_str(), u.buffer_name.c_str(), name.c_str());
 					}
-					else if (u.type != "sampler2D")
+					else
 					{
 						sb.AppendFormat("\tm.%s = uniforms_%s.%s;\n", u.name.c_str(), u.buffer_name.c_str(), u.name.c_str());
 					}
@@ -701,6 +724,11 @@ float atan(float x, float y) { return atan2(x, y); }
 				for (auto & u : uniforms)
 				{
 					if (u.type == "sampler2D")
+					{
+						sb.AppendFormat("\tm.%s.t = textures.%s;\n", u.name.c_str(), u.name.c_str());
+						sb.AppendFormat("\tm.%s.s = textures.%s_sampler;\n", u.name.c_str(), u.name.c_str());
+					}
+					else if (u.type == "sampler3D")
 					{
 						sb.AppendFormat("\tm.%s.t = textures.%s;\n", u.name.c_str(), u.name.c_str());
 						sb.AppendFormat("\tm.%s.s = textures.%s_sampler;\n", u.name.c_str(), u.name.c_str());

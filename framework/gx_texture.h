@@ -127,3 +127,46 @@ struct GxTexture
 	
 	bool downloadContents(const int x, const int y, const int sx, const int sy, void * bytes, const int numBytes);
 };
+
+//
+
+struct GxTexture3dProperties
+{
+	struct
+	{
+		int sx = 0;
+		int sy = 0;
+		int sz = 0;
+	} dimensions;
+	
+	GX_TEXTURE_FORMAT format = GX_UNKNOWN_FORMAT;
+	
+	bool mipmapped = false;
+};
+
+struct GxTexture3d
+{
+	GxTextureId id;
+	
+	int sx;
+	int sy;
+	int sz;
+	GX_TEXTURE_FORMAT format;
+	
+	bool mipmapped;
+
+	GxTexture3d();
+	~GxTexture3d();
+
+	void allocate(const GxTexture3dProperties & properties);
+	void allocate(const int sx, const int sy, const int sz, const GX_TEXTURE_FORMAT format);
+	void free();
+	
+	bool isValid() const { return id != 0; }
+	
+	bool isChanged(const int sx, const int sy, const int sz, const GX_TEXTURE_FORMAT format) const;
+
+	void upload(const void * src, const int srcAlignment, const int srcPitch, const bool updateMipmaps = false);
+	
+	void generateMipmaps();
+};

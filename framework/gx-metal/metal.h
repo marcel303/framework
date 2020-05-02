@@ -91,11 +91,10 @@ void metal_upload_texture_area(
 
 void metal_copy_texture_to_texture(
 	id <MTLTexture> src,
-	const int srcPitch,
-	const int srcX, const int srcY, const int srcSx,
-	const int srcSy,
+	const int srcX, const int srcY, const int srcZ,
+	const int srcSx, const int srcSy, const int srcSz,
 	id <MTLTexture> dst,
-	const int dstX, const int dstY,
+	const int dstX, const int dstY, const int dstZ,
 	const MTLPixelFormat pixelFormat);
 
 void metal_generate_mipmaps(id <MTLTexture> texture);

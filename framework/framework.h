@@ -813,6 +813,7 @@ public:
 	void setTexture(GxImmediateIndex index, int unit, GxTextureId texture, bool filtered, bool clamp = true);
 	void setTextureArray(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp = true);
 	void setTextureCube(const char * name, int unit, GxTextureId texture, bool filtered = true);
+	void setTexture3d(const char * name, int unit, GxTextureId texture, bool filtered = true, bool clamp = true);
 	void setBuffer(const char * name, const ShaderBuffer & buffer);
 	void setBuffer(GxImmediateIndex index, const ShaderBuffer & buffer);
 	void setBufferRw(const char * name, const ShaderBufferRw & buffer);

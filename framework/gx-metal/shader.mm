@@ -1032,9 +1032,20 @@ void Shader::setTextureArray(const char * name, int unit, GxTextureId texture, b
 	not_implemented;
 }
 
-void Shader::setTextureCube(const char * name, int unit, GxTextureId texture, bool filter)
+void Shader::setTextureCube(const char * name, int unit, GxTextureId texture, bool filtered)
 {
 	not_implemented;
+}
+
+void Shader::setTexture3d(const char * name, int unit, GxTextureId texture, bool filtered, bool clamp)
+{
+	const int index = getTextureIndex(*m_cacheElem, name);
+	
+	if (index >= 0)
+	{
+		setTextureUniform(m_cacheElem, index, unit, texture);
+		setTextureSamplerUniform(m_cacheElem, index, filtered, clamp);
+	}
 }
 
 id<MTLBuffer> metal_get_buffer(const GxShaderBufferId bufferId);

@@ -580,6 +580,211 @@ bool GxTexture::downloadContents(const int x, const int y, const int sx, const i
 
 //
 
+GxTexture3d::GxTexture3d()
+	: id(0)
+	, sx(0)
+	, sy(0)
+	, sz(0)
+	, format(GX_UNKNOWN_FORMAT)
+	, mipmapped(false)
+{
+}
+
+GxTexture3d::~GxTexture3d()
+{
+	free();
+}
+
+void GxTexture3d::allocate(const GxTexture3dProperties & properties)
+{
+	free();
+	
+	// capture current OpenGL states before we change them
+
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_3D, reinterpret_cast<GLint*>(&restoreTexture));
+	checkErrorGL();
+	
+	//
+	
+	sx = properties.dimensions.sx;
+	sy = properties.dimensions.sy;
+	sz = properties.dimensions.sz;
+	format = properties.format;
+	mipmapped = properties.mipmapped;
+
+	// allocate storage
+	
+	GLenum internalFormat = toOpenGLInternalFormat(format);
+	
+	int numLevels = 1;
+	
+	if (mipmapped)
+	{
+		// see how many extra levels we need to build all mipmaps down to 1x1
+		
+		int level_sx = sx;
+		int level_sy = sy;
+		int level_sz = sz;
+		
+		while (level_sx > 1 || level_sy > 1 || level_sz > 1)
+		{
+			numLevels++;
+			level_sx /= 2;
+			level_sy /= 2;
+			level_sz /= 2;
+		}
+	}
+	
+	fassert(id == 0);
+	glGenTextures(1, &id);
+	checkErrorGL();
+
+	glBindTexture(GL_TEXTURE_3D, id);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAX_LEVEL, numLevels - 1);
+	checkErrorGL();
+
+	glTexStorage3D(
+		GL_TEXTURE_3D,
+		numLevels,
+		internalFormat,
+		properties.dimensions.sx,
+		properties.dimensions.sy,
+		properties.dimensions.sz);
+	checkErrorGL();
+
+	// set filtering
+
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	checkErrorGL();
+	
+	// restore previous OpenGL states
+
+	glBindTexture(GL_TEXTURE_3D, restoreTexture);
+	checkErrorGL();
+}
+
+void GxTexture3d::allocate(const int sx, const int sy, const int sz, const GX_TEXTURE_FORMAT format)
+{
+	GxTexture3dProperties properties;
+	properties.dimensions.sx = sx;
+	properties.dimensions.sy = sy;
+	properties.dimensions.sz = sz;
+	properties.format = format;
+	properties.mipmapped = false;
+	
+	allocate(properties);
+}
+
+void GxTexture3d::free()
+{
+	if (id != 0)
+	{
+		glDeleteTextures(1, &id);
+		checkErrorGL();
+		
+		id = 0;
+		sx = 0;
+		sy = 0;
+		sz = 0;
+		format = GX_UNKNOWN_FORMAT;
+	}
+}
+
+bool GxTexture3d::isChanged(const int in_sx, const int in_sy, const int in_sz, const GX_TEXTURE_FORMAT in_format) const
+{
+	return
+		in_sx != sx ||
+		in_sy != sy ||
+		in_sz != sz ||
+		in_format != format;
+}
+
+void GxTexture3d::upload(const void * src, const int in_srcAlignment, const int in_srcPitch, const bool updateMipmaps)
+{
+	Assert(id != 0);
+	if (id == 0)
+		return;
+	
+	const int srcPitch = in_srcPitch == 0 ? sx : in_srcPitch;
+	
+	const int srcAlignment = ((srcPitch & (in_srcAlignment - 1)) == 0) ? in_srcAlignment : 1;
+	
+	// capture current OpenGL states before we change them
+
+	GLuint restoreTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_3D, reinterpret_cast<GLint*>(&restoreTexture));
+	GLint restoreUnpack;
+	glGetIntegerv(GL_UNPACK_ALIGNMENT, &restoreUnpack);
+	GLint restorePitch;
+	glGetIntegerv(GL_UNPACK_ROW_LENGTH, &restorePitch);
+	checkErrorGL();
+
+	//
+	
+	GLenum uploadFormat;
+	GLenum uploadElementType;
+	toOpenGLUploadType(format, uploadFormat, uploadElementType);
+
+	glBindTexture(GL_TEXTURE_3D, id);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, std::min(8, srcAlignment));
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, srcPitch);
+	checkErrorGL();
+	
+	glTexSubImage3D(
+		GL_TEXTURE_3D,
+		0, 0, 0, 0,
+		sx, sy, sz,
+		uploadFormat,
+		uploadElementType,
+		src);
+	checkErrorGL();
+
+	// restore previous OpenGL states
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, restoreUnpack);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, restorePitch);
+	glBindTexture(GL_TEXTURE_3D, restoreTexture);
+	checkErrorGL();
+	
+	// generate mipmaps if needed
+	
+	if (updateMipmaps && mipmapped)
+	{
+		generateMipmaps();
+	}
+}
+
+void GxTexture3d::generateMipmaps()
+{
+	if (id == 0)
+		return;
+	
+	Assert(mipmapped);
+	
+	if (glGenerateMipmap != nullptr)
+	{
+		GLuint restoreTexture;
+		glGetIntegerv(GL_TEXTURE_BINDING_3D, reinterpret_cast<GLint*>(&restoreTexture));
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_3D, id);
+		checkErrorGL();
+	
+		glGenerateMipmap(GL_TEXTURE_3D);
+		checkErrorGL();
+		
+		glBindTexture(GL_TEXTURE_3D, restoreTexture);
+		checkErrorGL();
+	}
+}
+
+//
+
 static GxTextureId createTexture(const void * source, int sx, int sy, bool filter, bool clamp, GLenum internalFormat, GLenum uploadFormat, GLenum uploadElementType)
 {
 	checkErrorGL();

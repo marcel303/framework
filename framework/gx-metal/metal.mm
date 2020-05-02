@@ -375,18 +375,17 @@ void metal_upload_texture_area(
 
 void metal_copy_texture_to_texture(
 	id <MTLTexture> src,
-	const int srcPitch,
-	const int srcX, const int srcY,
-	const int srcSx, const int srcSy,
+	const int srcX, const int srcY, const int srcZ,
+	const int srcSx, const int srcSy, const int srcSz,
 	id <MTLTexture> dst,
-	const int dstX, const int dstY,
+	const int dstX, const int dstY, const int dstZ,
 	const MTLPixelFormat pixelFormat)
 {
 	@autoreleasepool
 	{
-		const MTLOrigin src_origin = { (NSUInteger)srcX, (NSUInteger)srcY, 0 };
-		const MTLSize src_size = { (NSUInteger)srcSx, (NSUInteger)srcSy, 1 };
-		const MTLOrigin dst_origin = { (NSUInteger)dstX, (NSUInteger)dstY, 0 };
+		const MTLOrigin src_origin = { (NSUInteger)srcX, (NSUInteger)srcY, (NSUInteger)srcZ };
+		const MTLSize src_size = { (NSUInteger)srcSx, (NSUInteger)srcSy, (NSUInteger)srcSz };
+		const MTLOrigin dst_origin = { (NSUInteger)dstX, (NSUInteger)dstY, (NSUInteger)dstZ };
 		
 		auto blit_cmdbuf = [queue commandBuffer];
 		auto blit_encoder = [blit_cmdbuf blitCommandEncoder];
@@ -1189,7 +1188,13 @@ GxTextureId copyTexture(const GxTextureId source)
 			
 			id <MTLTexture> dst = [device newTextureWithDescriptor:descriptor];
 			
-			metal_copy_texture_to_texture(src, 0, 0, 0, src.width, src.height, dst, 0, 0, dst.pixelFormat);
+			metal_copy_texture_to_texture(
+				src,
+				0, 0, 0,
+				src.width, src.height, src.depth,
+				dst,
+				0, 0, 0,
+				dst.pixelFormat);
 			
 			s_textures[s_nextTextureId] = dst;
 			

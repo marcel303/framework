@@ -395,6 +395,22 @@ void Shader::setTextureCube(const char * name, int unit, GxTextureId texture, bo
 	checkErrorGL();
 }
 
+void Shader::setTexture3d(const char * name, int unit, GxTextureId texture, bool filtered, bool clamped)
+{
+	SET_UNIFORM(name, glUniform1i(index, unit));
+	checkErrorGL();
+
+	glActiveTexture(GL_TEXTURE0 + unit);
+	glBindTexture(GL_TEXTURE_3D, texture);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, filtered ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, clamped ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+	glActiveTexture(GL_TEXTURE0);
+	checkErrorGL();
+}
+
 #undef SET_UNIFORM
 
 void Shader::setBuffer(const char * name, const ShaderBuffer & buffer)
