@@ -236,6 +236,25 @@ Color Color::hueShift(float shift) const
 	return Color::fromHSL(hue + shift, sat, lum);
 }
 
+Color Color::desaturate(float amount) const
+{
+	amount = clamp<float>(amount, 0.f, 1.f);
+	float hue, sat, lum;
+	toHSL(hue, sat, lum);
+	sat *= 1.f - amount;
+	return Color::fromHSL(hue, sat, lum);
+}
+
+Color Color::invertRGB(float amount) const
+{
+	amount = clamp<float>(amount, 0.f, 1.f);
+	return Color(
+		lerp<float>(r, 1.f - r, amount),
+		lerp<float>(g, 1.f - g, amount),
+		lerp<float>(b, 1.f - b, amount),
+		a);
+}
+
 uint32_t Color::toRGBA() const
 {
 	const int ir = r < 0.f ? 0 : r > 1.f ? 255 : int(r * 255.f);

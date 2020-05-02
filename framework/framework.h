@@ -965,6 +965,8 @@ public:
 	void toHSL(float & hue, float & sat, float & lum) const;
 	Color interp(const Color & other, float t) const;
 	Color hueShift(float shift) const;
+	Color desaturate(float amount) const;
+	Color invertRGB(float amount) const;
 
 	uint32_t toRGBA() const;
 	std::string toHexString(const bool withAlpha) const;
