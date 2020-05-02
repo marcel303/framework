@@ -540,35 +540,65 @@ int main(int argc, char * argv[])
 		cube->density.mulf(.99f, .99f, .99f);
 		
 	#if 1
-		pushBlend(BLEND_ADD);
-		pushSurface(&cube->density);
+		for (auto & e : framework.events)
 		{
-			hqBegin(HQ_FILLED_CIRCLES);
-			setColorf(.008f, 0.f, 0.f, 1.f / 100);
-			for (int i = 0; i < 100; ++i)
-				hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, i * 60.f / 100);
-			hqEnd();
+			float x;
+			float y;
+			float dx;
+			float dy;
+			
+			if (e.type == SDL_FINGERMOTION)
+			{
+				x = e.tfinger.x * 900;
+				y = e.tfinger.y * 900;
+				dx = e.tfinger.dx * 900;
+				dy = e.tfinger.dy * 900;
+			}
+			else if (e.type == SDL_MOUSEMOTION)
+			{
+				if (e.motion.which == SDL_TOUCH_MOUSEID)
+					continue;
+				
+				x = e.motion.x;
+				y = e.motion.y;
+				dx = e.motion.xrel;
+				dy = e.motion.yrel;
+			}
+			else
+			{
+				continue;
+			}
+			
+			pushBlend(BLEND_ADD);
+			pushSurface(&cube->density);
+			{
+				hqBegin(HQ_FILLED_CIRCLES);
+				setColorf(.008f, 0.f, 0.f, 1.f / 100);
+				for (int i = 0; i < 100; ++i)
+					hqFillCircle(x / SCALE, y / SCALE, i * 60.f / 100);
+				hqEnd();
+			}
+			popSurface();
+			pushSurface(&cube->Vx);
+			{
+				hqBegin(HQ_FILLED_CIRCLES);
+				setColorf(dx / 10.f, 0.f, 0.f, 1.f / 10);
+				for (int i = 0; i < 10; ++i)
+					hqFillCircle(x / SCALE, y / SCALE, i * 8.f / 10);
+				hqEnd();
+			}
+			popSurface();
+			pushSurface(&cube->Vy);
+			{
+				hqBegin(HQ_FILLED_CIRCLES);
+				setColorf(dy / 10.f, 0.f, 0.f, 1.f / 10);
+				for (int i = 0; i < 10; ++i)
+					hqFillCircle(x / SCALE, y / SCALE, i * 8.f / 10);
+				hqEnd();
+			}
+			popSurface();
+			popBlend();
 		}
-		popSurface();
-		pushSurface(&cube->Vx);
-		{
-			hqBegin(HQ_FILLED_CIRCLES);
-			setColorf(mouse.dx / 10.f, 0.f, 0.f, 1.f / 10);
-			for (int i = 0; i < 10; ++i)
-				hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, i * 8.f / 10);
-			hqEnd();
-		}
-		popSurface();
-		pushSurface(&cube->Vy);
-		{
-			hqBegin(HQ_FILLED_CIRCLES);
-			setColorf(mouse.dy / 10.f, 0.f, 0.f, 1.f / 10);
-			for (int i = 0; i < 10; ++i)
-				hqFillCircle(mouse.x / SCALE, mouse.y / SCALE, i * 8.f / 10);
-			hqEnd();
-		}
-		popSurface();
-		popBlend();
 	#else
 		for (int x = -4; x <= +4; ++x)
 		{
