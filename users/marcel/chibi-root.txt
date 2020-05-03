@@ -19,6 +19,9 @@ add colorpart
 add colortemp1
 add cuber
 add earcut-test
+add ecs-parameter
+add ecs-parameter-from-osc
+add ecs-parameterui
 add esp32-discovery
 with_platform macos   add etherdream1
 with_platform windows add etherdream1
@@ -31,6 +34,7 @@ add gltf1
 add gltf2
 add gpuParticles1
 add gpupath1
+#add graphtests
 push_group thegrooop
 	add grooop-cocompose
 	add grooop-thetribe
