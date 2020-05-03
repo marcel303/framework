@@ -1,9 +1,9 @@
+#include "components/sceneNodeComponent.h"
 #include "componentType.h"
 #include "Debugging.h"
 #include "lineWriter.h"
 #include "Log.h"
 #include "scene.h"
-#include "sceneNodeComponent.h"
 #include "TextIO.h"
 
 #include "helpers.h" // g_componentTypes
@@ -252,5 +252,14 @@ bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer, const i
 
 bool Scene::saveNodeHierarchyToLines(const int rootNodeId, LineWriter & line_writer, const int indent) const
 {
-	return write_node_children_traverse(*this, rootNodeId, line_writer, indent);
+	if (rootNodeId == -1)
+		return true;
+	else
+	{
+		return write_node_children_traverse(
+			*this,
+			rootNodeId,
+			line_writer,
+			indent);
+	}
 }
