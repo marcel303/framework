@@ -31,8 +31,6 @@
 #include <stdint.h>
 #include <typeindex>
 
-// todo : add flags to types
-
 struct MemberFlagBase
 {
 	MemberFlagBase * next;
@@ -268,6 +266,15 @@ struct StructuredType : Type
 	StructuredType & addFlag(MemberFlagBase * flag)
 	{
 		members_tail->addFlag(flag);
+		
+		return *this;
+	}
+	
+	template <typename T>
+	StructuredType & addFlag()
+	{
+		T * flag = new T();
+		addFlag(flag);
 		
 		return *this;
 	}

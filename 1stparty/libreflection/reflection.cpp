@@ -53,11 +53,11 @@ bool EnumType::set(void * object, const char * key) const
 		if (strcmp(elem->key, key) == 0)
 		{
 			if (enumSize == 1)
-				*(uint8_t*)object = elem->value;
+				*(int8_t*)object = elem->value;
 			else if (enumSize == 2)
-				*(uint16_t*)object = elem->value;
+				*(int16_t*)object = elem->value;
 			else if (enumSize == 4)
-				*(uint32_t*)object = elem->value;
+				*(int32_t*)object = elem->value;
 			else
 				assert(false);
 			
@@ -90,11 +90,11 @@ bool EnumType::get_key(const void * object, const char *& key) const
 bool EnumType::get_value(const void * object, int & value) const
 {
 	if (enumSize == 1)
-		value = *(uint8_t*)object;
+		value = *(int8_t*)object;
 	else if (enumSize == 2)
-		value = *(uint16_t*)object;
+		value = *(int16_t*)object;
 	else if (enumSize == 4)
-		value = *(uint32_t*)object;
+		value = *(int32_t*)object;
 	else
 	{
 		assert(false);
