@@ -2,6 +2,7 @@
 
 #include "component.h"
 #include "Mat4x4.h"
+#include <string>
 
 struct SceneNodeComponent : Component<SceneNodeComponent>
 {

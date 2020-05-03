@@ -10,6 +10,7 @@
 #include "Path.h"
 #include "StringEx.h"
 #include "template.h"
+#include "templateIo.h"
 #include <list>
 #include <set>
 #include <sstream>

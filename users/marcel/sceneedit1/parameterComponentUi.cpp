@@ -1,4 +1,4 @@
-#include "parameterComponent.h"
+#include "components/parameterComponent.h"
 #include "parameterComponentUi.h"
 #include "parameterUi.h"
 #include "StringEx.h"

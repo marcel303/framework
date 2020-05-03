@@ -21,4 +21,7 @@ app marcel-sceneedit1
 	#depend_library vfxgraph-nodes
 	scan_files *.cpp
 	scan_files *.h
+	scan_files *.cpp path components group components
+	scan_files *.h   path components group components
+	header_path .
 	resource_path data

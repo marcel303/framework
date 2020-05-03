@@ -1,8 +1,10 @@
+#include "components/sceneNodeComponent.h"
 #include "lineReader.h"
 #include "Log.h"
 #include "scene.h"
 #include "scene_fromText.h"
-#include "sceneNodeComponent.h"
+#include "template.h"
+#include "templateIo.h"
 #include <string.h>
 
 static int calculateIndentationLevel(const char * line)

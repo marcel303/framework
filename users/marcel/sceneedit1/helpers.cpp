@@ -8,14 +8,14 @@
 #include "scene.h"
 
 #define DEFINE_COMPONENT_TYPES
-#include "cameraComponent.h"
-#include "lightComponent.h"
-#include "modelComponent.h"
-#include "parameterComponent.h"
-#include "rotateTransformComponent.h"
-#include "sceneNodeComponent.h"
-#include "transformComponent.h"
-#include "vfxgraphComponent.h"
+#include "components/cameraComponent.h"
+#include "components/lightComponent.h"
+#include "components/modelComponent.h"
+#include "components/parameterComponent.h"
+#include "components/rotateTransformComponent.h"
+#include "components/sceneNodeComponent.h"
+#include "components/transformComponent.h"
+#include "components/vfxgraphComponent.h"
 
 #include <algorithm>
 #include <string.h>

@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "helpers.h"
 #include "template.h"
+#include "templateIo.h"
 
 #include "scene.h"
 
