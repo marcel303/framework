@@ -13,871 +13,840 @@
 	#include <alloca.h>
 #endif
 
-#define ENABLE_BACKWARD_COMPATIBLE_ROOT_PREFIXES 1 // when set to 1, parameter names pasted from clipboard don't have to start with '/' explicitly. instead names are fixes up on the spot
+#define ENABLE_BACKWARD_COMPATIBLE_ROOT_PREFIXES 1 // when set to 1, parameter names from text don't have to start with '/' explicitly. instead names are fixed-up on the spot
 
-//
-
-static std::vector<int> s_flagsStack;
-static int s_flags = kParameterUiFlag_ShowDefaultButton;
-
-struct ContextMenuElem
+namespace parameterUi
 {
-	ParameterMgrContextMenu contextMenu;
-	ParameterContextMenu parameterContextMenu;
-};
+	static std::vector<int> s_flagsStack;
+	static int s_flags = kFlag_ShowDefaultButton;
 
-static std::vector<ContextMenuElem> s_contextMenuStack;
-static ParameterMgrContextMenu s_contextMenu = nullptr;
-static ParameterContextMenu s_parameterContextMenu = nullptr;
+	static std::vector<ContextMenu> s_contextMenuStack;
+	static ContextMenu s_contextMenu = nullptr;
 
-void pushParameterUiFlags(const int flags)
-{
-	s_flagsStack.push_back(s_flags);
-	s_flags = flags;
-}
-
-void popParameterUiFlags()
-{
-	s_flags = s_flagsStack.back();
-	s_flagsStack.pop_back();
-}
-
-void pushParameterUiContextMenu(ParameterMgrContextMenu contextMenu, ParameterContextMenu parameterContextMenu)
-{
-	ContextMenuElem elem;
-	elem.contextMenu = s_contextMenu;
-	elem.parameterContextMenu = s_parameterContextMenu;
-	
-	s_contextMenuStack.push_back(elem);
-	
-	s_contextMenu = contextMenu;
-	s_parameterContextMenu = parameterContextMenu;
-}
-
-void popParameterUiContextMenu()
-{
-	s_contextMenu = s_contextMenuStack.back().contextMenu;
-	s_parameterContextMenu = s_contextMenuStack.back().parameterContextMenu;
-	
-	s_contextMenuStack.pop_back();
-}
-
-//
-
-void doParameterUi(ParameterBase & parameterBase)
-{
-	ImGui::PushID(&parameterBase);
-	
-	if (s_flags & kParameterUiFlag_ShowDefaultButton)
+	void pushFlags(const int flags)
 	{
-		if (ImGui::Button("Default"))
-			parameterBase.setToDefault();
-		ImGui::SameLine();
+		s_flagsStack.push_back(s_flags);
+		s_flags = flags;
 	}
-	
-	switch (parameterBase.type)
+
+	void popFlags()
 	{
-	case kParameterType_Bool:
-		{
-			auto & parameter = static_cast<ParameterBool&>(parameterBase);
-			
-			if (ImGui::Checkbox(parameter.name.c_str(), &parameter.access_rw()))
-				parameter.setDirty();
-		}
-		break;
-	case kParameterType_Int:
-		{
-			auto & parameter = static_cast<ParameterInt&>(parameterBase);
-			
-			if (parameter.hasLimits)
-			{
-				auto value = parameter.get();
+		s_flags = s_flagsStack.back();
+		s_flagsStack.pop_back();
+	}
 
-				if (ImGui::SliderInt(parameter.name.c_str(), &value, parameter.min, parameter.max))
-					parameter.set(value);
-			}
-			else
-			{
-				if (ImGui::InputInt(parameter.name.c_str(), &parameter.access_rw()))
-					parameter.setDirty();
-			}
-		}
-		break;
-	case kParameterType_Float:
-		{
-			auto & parameter = static_cast<ParameterFloat&>(parameterBase);
-			
-			if (parameter.hasLimits)
-			{
-				auto value = parameter.get();
+	void pushContextMenu(ContextMenu contextMenu)
+	{
+		s_contextMenuStack.push_back(s_contextMenu);
+		s_contextMenu = contextMenu;
+	}
 
-				if (ImGui::SliderFloat(parameter.name.c_str(), &value, parameter.min, parameter.max, "%.3f", parameter.editingCurveExponential))
-					parameter.set(value);
-			}
-			else
-			{
-				if (ImGui::InputFloat(parameter.name.c_str(), &parameter.access_rw()))
-					parameter.setDirty();
-			}
-		}
-		break;
-	case kParameterType_Vec2:
-		{
-			auto & parameter = static_cast<ParameterVec2&>(parameterBase);
-			
-			if (parameter.hasLimits)
-			{
-				// fixme : no separate min/max for each dimension
-				auto value = parameter.get();
+	void popContextMenu()
+	{
+		s_contextMenu = s_contextMenuStack.back();
+		s_contextMenuStack.pop_back();
+	}
 
-				if (ImGui::SliderFloat2(parameter.name.c_str(), &value[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
-					parameter.set(value);
-			}
-			else
-			{
-				if (ImGui::InputFloat2(parameter.name.c_str(), &parameter.access_rw()[0]))
-					parameter.setDirty();
-			}
-		}
-		break;
-	case kParameterType_Vec3:
-		{
-			auto & parameter = static_cast<ParameterVec3&>(parameterBase);
-			
-			if (parameter.hasLimits)
-			{
-				// fixme : no separate min/max for each dimension
-				auto value = parameter.get();
+	//
 
-				if (ImGui::SliderFloat3(parameter.name.c_str(), &value[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
-					parameter.set(value);
-			}
-			else
-			{
-				if (ImGui::InputFloat3(parameter.name.c_str(), &parameter.access_rw()[0]))
-					parameter.setDirty();
-			}
-		}
-		break;
-	case kParameterType_Vec4:
+	void doParameterUi(ParameterBase & parameterBase)
+	{
+		ImGui::PushID(&parameterBase);
+		
+		if (s_flags & kFlag_ShowDefaultButton)
 		{
-			auto & parameter = static_cast<ParameterVec4&>(parameterBase);
-			
-			if (parameter.hasLimits)
-			{
-				// fixme : no separate min/max for each dimension
-				auto value = parameter.get();
-
-				if (ImGui::SliderFloat4(parameter.name.c_str(), &value[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
-					parameter.set(value);
-			}
-			else
-			{
-				if (ImGui::InputFloat4(parameter.name.c_str(), &parameter.access_rw()[0]))
-					parameter.setDirty();
-			}
+			if (ImGui::Button("Default"))
+				parameterBase.setToDefault();
+			ImGui::SameLine();
 		}
-		break;
-	case kParameterType_String:
+		
+		switch (parameterBase.type)
 		{
-			auto & parameter = static_cast<ParameterString&>(parameterBase);
-			
-			char buffer[1024];
-			strcpy_s(buffer, sizeof(buffer), parameter.get().c_str());
-			
-			if (ImGui::InputText(parameter.name.c_str(), buffer, sizeof(buffer)))
+		case kParameterType_Bool:
 			{
-				parameter.set(buffer);
-			}
-		}
-		break;
-	case kParameterType_Enum:
-		{
-			auto & parameter = static_cast<ParameterEnum&>(parameterBase);
-			
-			auto & elems = parameter.getElems();
-			
-			int currentItemIndex = -1;
-			
-			const int numItems = elems.size();
-			const char ** items = (const char **)alloca(numItems * sizeof(char*));
-			
-			int itemIndex = 0;
-			
-			for (auto & elem : elems)
-			{
-				items[itemIndex] = elem.key;
+				auto & parameter = static_cast<ParameterBool&>(parameterBase);
 				
-				if (elem.value == parameter.get())
-					currentItemIndex = itemIndex;
-				
-				itemIndex++;
+				if (ImGui::Checkbox(parameter.name.c_str(), &parameter.access_rw()))
+					parameter.setDirty();
 			}
-			
-			if (ImGui::Combo(parameter.name.c_str(), &currentItemIndex, items, numItems))
-			{
-				parameter.set(elems[currentItemIndex].value);
-			}
-		}
-		break;
-		
-	default:
-		Assert(false);
-		break;
-	}
-	
-	ImGui::PopID();
-	
-	if ((s_flags & kParameterUiFlag_ShowDeveloperTooltip) && ImGui::IsItemHovered())
-	{
-		doParameterTooltipUi(parameterBase);
-	}
-}
+			break;
 
-void doParameterTooltipUi(ParameterBase & parameterBase)
-{
-	switch (parameterBase.type)
-	{
-	case kParameterType_Bool:
-		{
-			auto & parameter = static_cast<ParameterBool&>(parameterBase);
-			
-			ImGui::BeginTooltip();
-			ImGui::Text("Name: %s", parameter.name.c_str());
-			ImGui::Text("Value: %s", parameter.get() ? "True" : "False");
-			ImGui::EndTooltip();
-		}
-		break;
-		
-	case kParameterType_Int:
-		{
-			auto & parameter = static_cast<ParameterInt&>(parameterBase);
-			
-			ImGui::BeginTooltip();
-			ImGui::Text("Name: %s", parameter.name.c_str());
-			ImGui::Text("Value: %d", parameter.get());
-			ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
-			if (parameter.hasLimits)
+		case kParameterType_Int:
 			{
-				ImGui::Text("Min: %d", parameter.min);
-				ImGui::Text("Max: %d", parameter.max);
+				auto & parameter = static_cast<ParameterInt&>(parameterBase);
+				
+				if (parameter.hasLimits)
+				{
+					auto value = parameter.get();
+
+					if (ImGui::SliderInt(parameter.name.c_str(), &value, parameter.min, parameter.max))
+						parameter.set(value);
+				}
+				else
+				{
+					if (ImGui::InputInt(parameter.name.c_str(), &parameter.access_rw()))
+						parameter.setDirty();
+				}
 			}
-			ImGui::EndTooltip();
-		}
-		break;
-		
-	case kParameterType_Float:
-		{
-			auto & parameter = static_cast<ParameterFloat&>(parameterBase);
-			
-			ImGui::BeginTooltip();
-			ImGui::Text("Name: %s", parameter.name.c_str());
-			ImGui::Text("Value: %.2f", parameter.get());
-			ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
-			if (parameter.hasLimits)
+			break;
+
+		case kParameterType_Float:
 			{
-				ImGui::Text("Min: %.2f", parameter.min);
-				ImGui::Text("Max: %.2f", parameter.max);
+				auto & parameter = static_cast<ParameterFloat&>(parameterBase);
+				
+				if (parameter.hasLimits)
+				{
+					auto value = parameter.get();
+
+					if (ImGui::SliderFloat(parameter.name.c_str(), &value, parameter.min, parameter.max, "%.3f", parameter.editingCurveExponential))
+						parameter.set(value);
+				}
+				else
+				{
+					if (ImGui::InputFloat(parameter.name.c_str(), &parameter.access_rw()))
+						parameter.setDirty();
+				}
 			}
-			ImGui::EndTooltip();
-		}
-		break;
-		
-	case kParameterType_Vec2:
-		{
-			auto & parameter = static_cast<ParameterVec2&>(parameterBase);
-			
-			ImGui::BeginTooltip();
-			ImGui::Text("Name: %s", parameter.name.c_str());
-			ImGui::Text("Value: %.2f, %.2f", parameter.get()[0], parameter.get()[1]);
-			ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
-			if (parameter.hasLimits)
+			break;
+
+		case kParameterType_Vec2:
 			{
-				ImGui::Text("Min: %.2f, %.2f", parameter.min[0], parameter.min[1]);
-				ImGui::Text("Max: %.2f, %.2f", parameter.max[0], parameter.max[1]);
+				auto & parameter = static_cast<ParameterVec2&>(parameterBase);
+				
+				if (parameter.hasLimits)
+				{
+					// fixme : no separate min/max for each dimension
+					auto value = parameter.get();
+
+					if (ImGui::SliderFloat2(parameter.name.c_str(), &value[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
+						parameter.set(value);
+				}
+				else
+				{
+					if (ImGui::InputFloat2(parameter.name.c_str(), &parameter.access_rw()[0]))
+						parameter.setDirty();
+				}
 			}
-			ImGui::EndTooltip();
-		}
-		break;
-		
-	case kParameterType_Vec3:
-		{
-			auto & parameter = static_cast<ParameterVec3&>(parameterBase);
-			
-			ImGui::BeginTooltip();
-			ImGui::Text("Name: %s", parameter.name.c_str());
-			ImGui::Text("Value: %.2f, %.2f, %.2f", parameter.get()[0], parameter.get()[1], parameter.get()[2]);
-			ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
-			if (parameter.hasLimits)
+			break;
+
+		case kParameterType_Vec3:
 			{
-				ImGui::Text("Min: %.2f, %.2f, %.2f", parameter.min[0], parameter.min[1], parameter.min[2]);
-				ImGui::Text("Max: %.2f, %.2f, %.2f", parameter.max[0], parameter.max[1], parameter.max[2]);
+				auto & parameter = static_cast<ParameterVec3&>(parameterBase);
+				
+				if (parameter.hasLimits)
+				{
+					// fixme : no separate min/max for each dimension
+					auto value = parameter.get();
+
+					if (ImGui::SliderFloat3(parameter.name.c_str(), &value[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
+						parameter.set(value);
+				}
+				else
+				{
+					if (ImGui::InputFloat3(parameter.name.c_str(), &parameter.access_rw()[0]))
+						parameter.setDirty();
+				}
 			}
-			ImGui::EndTooltip();
-		}
-		break;
-		
-	case kParameterType_Vec4:
-		{
-			auto & parameter = static_cast<ParameterVec4&>(parameterBase);
-			
-			ImGui::BeginTooltip();
-			ImGui::Text("Name: %s", parameter.name.c_str());
-			ImGui::Text("Value: %.2f, %.2f, %.2f, %.2f", parameter.get()[0], parameter.get()[1], parameter.get()[2], parameter.get()[3]);
-			ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
-			if (parameter.hasLimits)
+			break;
+
+		case kParameterType_Vec4:
 			{
-				ImGui::Text("Min: %.2f, %.2f, %.2f, %.2f", parameter.min[0], parameter.min[1], parameter.min[2], parameter.min[3]);
-				ImGui::Text("Max: %.2f, %.2f, %.2f, %.2f", parameter.max[0], parameter.max[1], parameter.max[2], parameter.max[3]);
+				auto & parameter = static_cast<ParameterVec4&>(parameterBase);
+				
+				if (parameter.hasLimits)
+				{
+					// fixme : no separate min/max for each dimension
+					auto value = parameter.get();
+
+					if (ImGui::SliderFloat4(parameter.name.c_str(), &value[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
+						parameter.set(value);
+				}
+				else
+				{
+					if (ImGui::InputFloat4(parameter.name.c_str(), &parameter.access_rw()[0]))
+						parameter.setDirty();
+				}
 			}
-			ImGui::EndTooltip();
-		}
-		break;
-	
-	case kParameterType_String:
-		{
-			auto & parameter = static_cast<ParameterString&>(parameterBase);
-			
-			ImGui::BeginTooltip();
-			ImGui::Text("Name: %s", parameter.name.c_str());
-			ImGui::Text("Value: %s", parameter.get().c_str());
-			ImGui::EndTooltip();
-		}
-		break;
-		
-	case kParameterType_Enum:
-		{
-			auto & parameter = static_cast<ParameterEnum&>(parameterBase);
-			
-			ImGui::BeginTooltip();
-			ImGui::Text("Name: %s", parameter.name.c_str());
-			ImGui::Text("Value: %s", parameter.translateValueToKey(parameter.get()));
-			auto & elems = parameter.getElems();
-			if (!elems.empty())
+			break;
+
+		case kParameterType_String:
 			{
-				ImGui::Text("Elements:");
-				ImGui::Indent();
+				auto & parameter = static_cast<ParameterString&>(parameterBase);
+				
+				char buffer[1024];
+				strcpy_s(buffer, sizeof(buffer), parameter.get().c_str());
+				
+				if (ImGui::InputText(parameter.name.c_str(), buffer, sizeof(buffer)))
+				{
+					parameter.set(buffer);
+				}
+			}
+			break;
+
+		case kParameterType_Enum:
+			{
+				auto & parameter = static_cast<ParameterEnum&>(parameterBase);
+				
+				auto & elems = parameter.getElems();
+				
+				int currentItemIndex = -1;
+				
+				const int numItems = elems.size();
+				const char ** items = (const char **)alloca(numItems * sizeof(char*));
+				
+				int itemIndex = 0;
+				
 				for (auto & elem : elems)
-					ImGui::Text("%d: %s", elem.value, elem.key);
-				ImGui::Unindent();
+				{
+					items[itemIndex] = elem.key;
+					
+					if (elem.value == parameter.get())
+						currentItemIndex = itemIndex;
+					
+					itemIndex++;
+				}
+				
+				if (ImGui::Combo(parameter.name.c_str(), &currentItemIndex, items, numItems))
+				{
+					parameter.set(elems[currentItemIndex].value);
+				}
 			}
-			ImGui::EndTooltip();
+			break;
 		}
-		break;
+		
+		ImGui::PopID();
+		
+		if ((s_flags & kFlag_ShowDeveloperTooltip) && ImGui::IsItemHovered())
+		{
+			doParameterTooltipUi(parameterBase);
+		}
 	}
-}
 
-void doParameterUi(ParameterMgr & parameterMgr, const char * filter, const bool showCollapsingHeader)
-{
-	const bool do_filter = filter != nullptr && filter[0] != 0;
-	
-	ParameterBase ** parameters = (ParameterBase**)alloca(parameterMgr.access_parameters().size() * sizeof(ParameterBase*));
-	
-	int numParameters = 0;
-	
-	if (do_filter)
+	void doParameterTooltipUi(ParameterBase & parameterBase)
 	{
-		for (auto * parameter : parameterMgr.access_parameters())
-			if (strcasestr(parameter->name.c_str(), filter))
-				parameters[numParameters++] = parameter;
-	}
-	else
-	{
-		for (auto * parameter : parameterMgr.access_parameters())
-			parameters[numParameters++] = parameter;
-	}
-	
-	if (numParameters > 0)
-	{
-		bool isOpen = true;
-		
-		if (showCollapsingHeader)
+		switch (parameterBase.type)
 		{
-		// todo : this could be solved more nicely if the traversing version adds the headers
-		//        and this function just does the parameter mgr UI
-		
-			isOpen = ImGui::TreeNodeEx(&parameterMgr, ImGuiTreeNodeFlags_Framed, "%s", parameterMgr.access_prefix().c_str());
-		}
-		else
-		{
-			ImGui::PushID(&parameterMgr);
-		}
-		
-		if (isOpen)
-		{
-			ImGui::PushItemWidth(200.f);
-			for (int i = 0; i < numParameters; ++i)
-				doParameterUi(*parameters[i]);
-			ImGui::PopItemWidth();
-		}
-		
-		if (showCollapsingHeader)
-		{
-			if (isOpen)
-				ImGui::TreePop();
-		}
-		else
-		{
-			ImGui::PopID();
-		}
-	}
-}
-
-static bool checkFilterPassesAtLeastOnce_recursive(const ParameterMgr & parameterMgr, const char * filter)
-{
-	Assert(filter != nullptr);
-	
-	// check the parameters first before recursing
-	
-	for (auto * parameter : parameterMgr.access_parameters())
-		if (strcasestr(parameter->name.c_str(), filter))
-			return true;
-	
-	// recurse
-	
-	for (auto * child : parameterMgr.access_children())
-	{
-		if (child->getIsHiddenFromUi())
-			continue;
+		case kParameterType_Bool:
+			{
+				auto & parameter = static_cast<ParameterBool&>(parameterBase);
+				
+				ImGui::BeginTooltip();
+				ImGui::Text("Name: %s", parameter.name.c_str());
+				ImGui::Text("Value: %s", parameter.get() ? "True" : "False");
+				ImGui::EndTooltip();
+			}
+			break;
 			
-		if (checkFilterPassesAtLeastOnce_recursive(*child, filter))
-			return true;
-	}
-	
-	return false;
-}
-
-static void doParameterUi_recursive(ParameterMgr ** parameterMgrStack, int parameterMgrStackSize, ParameterMgr & parameterMgr, const char * filter)
-{
-	parameterMgrStack[parameterMgrStackSize++] = &parameterMgr;
-	
-	const bool do_filter = filter != nullptr && filter[0] != 0;
-	
-	for (auto * child : parameterMgr.access_children())
-	{
-		if (child->getIsHiddenFromUi())
-			continue;
+		case kParameterType_Int:
+			{
+				auto & parameter = static_cast<ParameterInt&>(parameterBase);
+				
+				ImGui::BeginTooltip();
+				ImGui::Text("Name: %s", parameter.name.c_str());
+				ImGui::Text("Value: %d", parameter.get());
+				ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
+				if (parameter.hasLimits)
+				{
+					ImGui::Text("Min: %d", parameter.min);
+					ImGui::Text("Max: %d", parameter.max);
+				}
+				ImGui::EndTooltip();
+			}
+			break;
+			
+		case kParameterType_Float:
+			{
+				auto & parameter = static_cast<ParameterFloat&>(parameterBase);
+				
+				ImGui::BeginTooltip();
+				ImGui::Text("Name: %s", parameter.name.c_str());
+				ImGui::Text("Value: %.2f", parameter.get());
+				ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
+				if (parameter.hasLimits)
+				{
+					ImGui::Text("Min: %.2f", parameter.min);
+					ImGui::Text("Max: %.2f", parameter.max);
+				}
+				ImGui::EndTooltip();
+			}
+			break;
+			
+		case kParameterType_Vec2:
+			{
+				auto & parameter = static_cast<ParameterVec2&>(parameterBase);
+				
+				ImGui::BeginTooltip();
+				ImGui::Text("Name: %s", parameter.name.c_str());
+				ImGui::Text("Value: %.2f, %.2f", parameter.get()[0], parameter.get()[1]);
+				ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
+				if (parameter.hasLimits)
+				{
+					ImGui::Text("Min: %.2f, %.2f", parameter.min[0], parameter.min[1]);
+					ImGui::Text("Max: %.2f, %.2f", parameter.max[0], parameter.max[1]);
+				}
+				ImGui::EndTooltip();
+			}
+			break;
+			
+		case kParameterType_Vec3:
+			{
+				auto & parameter = static_cast<ParameterVec3&>(parameterBase);
+				
+				ImGui::BeginTooltip();
+				ImGui::Text("Name: %s", parameter.name.c_str());
+				ImGui::Text("Value: %.2f, %.2f, %.2f", parameter.get()[0], parameter.get()[1], parameter.get()[2]);
+				ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
+				if (parameter.hasLimits)
+				{
+					ImGui::Text("Min: %.2f, %.2f, %.2f", parameter.min[0], parameter.min[1], parameter.min[2]);
+					ImGui::Text("Max: %.2f, %.2f, %.2f", parameter.max[0], parameter.max[1], parameter.max[2]);
+				}
+				ImGui::EndTooltip();
+			}
+			break;
+			
+		case kParameterType_Vec4:
+			{
+				auto & parameter = static_cast<ParameterVec4&>(parameterBase);
+				
+				ImGui::BeginTooltip();
+				ImGui::Text("Name: %s", parameter.name.c_str());
+				ImGui::Text("Value: %.2f, %.2f, %.2f, %.2f", parameter.get()[0], parameter.get()[1], parameter.get()[2], parameter.get()[3]);
+				ImGui::Text("Has Limits: %s", parameter.hasLimits ? "Yes" : "No");
+				if (parameter.hasLimits)
+				{
+					ImGui::Text("Min: %.2f, %.2f, %.2f, %.2f", parameter.min[0], parameter.min[1], parameter.min[2], parameter.min[3]);
+					ImGui::Text("Max: %.2f, %.2f, %.2f, %.2f", parameter.max[0], parameter.max[1], parameter.max[2], parameter.max[3]);
+				}
+				ImGui::EndTooltip();
+			}
+			break;
 		
-		const char * child_filter = filter;
+		case kParameterType_String:
+			{
+				auto & parameter = static_cast<ParameterString&>(parameterBase);
+				
+				ImGui::BeginTooltip();
+				ImGui::Text("Name: %s", parameter.name.c_str());
+				ImGui::Text("Value: %s", parameter.get().c_str());
+				ImGui::EndTooltip();
+			}
+			break;
+			
+		case kParameterType_Enum:
+			{
+				auto & parameter = static_cast<ParameterEnum&>(parameterBase);
+				
+				ImGui::BeginTooltip();
+				ImGui::Text("Name: %s", parameter.name.c_str());
+				ImGui::Text("Value: %s", parameter.translateValueToKey(parameter.get()));
+				auto & elems = parameter.getElems();
+				if (!elems.empty())
+				{
+					ImGui::Text("Elements:");
+					ImGui::Indent();
+					for (auto & elem : elems)
+						ImGui::Text("%d: %s", elem.value, elem.key);
+					ImGui::Unindent();
+				}
+				ImGui::EndTooltip();
+			}
+			break;
+		}
+	}
+
+	void doParameterUi(ParameterMgr & parameterMgr, const char * filter, const bool showCollapsingHeader)
+	{
+		const bool do_filter = filter != nullptr && filter[0] != 0;
+		
+		ParameterBase ** parameters = (ParameterBase**)alloca(parameterMgr.access_parameters().size() * sizeof(ParameterBase*));
+		
+		int numParameters = 0;
 		
 		if (do_filter)
 		{
-			// check the name of the parameter mgr. if it matches, show all of the child's parameters, as the filter has passed at the parent level
-	
-			if (strcasestr(child->access_prefix().c_str(), filter))
-				child_filter = nullptr;
-			else if (checkFilterPassesAtLeastOnce_recursive(*child, filter) == false)
-				continue;
-		}
-		
-		if (child->access_index() != -1)
-		{
-			const bool isOpen = ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s [%d]", child->access_prefix().c_str(), child->access_index());
-			
-			if (s_contextMenu != nullptr && ImGui::BeginPopupContextItem())
-			{
-				parameterMgrStack[parameterMgrStackSize++] = child;
-				s_contextMenu(parameterMgrStack, parameterMgrStackSize, *child);
-				parameterMgrStackSize--;
-				
-				ImGui::EndPopup();
-			}
-			
-			if (isOpen)
-			{
-				doParameterUi_recursive(parameterMgrStack, parameterMgrStackSize, *child, child_filter);
-				
-				ImGui::TreePop();
-			}
+			for (auto * parameter : parameterMgr.access_parameters())
+				if (strcasestr(parameter->name.c_str(), filter))
+					parameters[numParameters++] = parameter;
 		}
 		else
 		{
-			const bool isOpen = ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s", child->access_prefix().c_str());
-			
-			if (s_contextMenu != nullptr && ImGui::BeginPopupContextItem())
-			{
-				parameterMgrStack[parameterMgrStackSize++] = child;
-				s_contextMenu(parameterMgrStack, parameterMgrStackSize, *child);
-				parameterMgrStackSize--;
-				
-				ImGui::EndPopup();
-			}
-			
-			if (isOpen)
-			{
-				doParameterUi_recursive(parameterMgrStack, parameterMgrStackSize, *child, child_filter);
-				
-				ImGui::TreePop();
-			}
-		}
-	}
-	
-	ParameterBase ** parameters = (ParameterBase**)alloca(parameterMgr.access_parameters().size() * sizeof(ParameterBase*));
-	
-	int numParameters = 0;
-	
-	if (do_filter)
-	{
-		for (auto * parameter : parameterMgr.access_parameters())
-			if (strcasestr(parameter->name.c_str(), filter))
+			for (auto * parameter : parameterMgr.access_parameters())
 				parameters[numParameters++] = parameter;
-	}
-	else
-	{
-		for (auto * parameter : parameterMgr.access_parameters())
-			parameters[numParameters++] = parameter;
-	}
-	
-	if (numParameters > 0)
-	{
-		ImGui::PushItemWidth(200.f);
-		for (int i = 0; i < numParameters; ++i)
+		}
+		
+		if (numParameters > 0)
 		{
-			ImGui::PushID(parameters[i]->name.c_str());
-			{
-				doParameterUi(*parameters[i]);
-			}
-			ImGui::PopID();
+			bool isOpen = true;
 			
-			if (s_parameterContextMenu != nullptr && ImGui::BeginPopupContextItem(parameters[i]->name.c_str()))
+			if (showCollapsingHeader)
 			{
-				s_parameterContextMenu(parameterMgrStack, parameterMgrStackSize, parameterMgr, *parameters[i]);
-				
-				ImGui::EndPopup();
-			}
-		}
-		ImGui::PopItemWidth();
-	}
-	
-	parameterMgrStackSize--;
-}
-
-void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
-{
-	ParameterMgr * parameterMgrStack[128];
-	int parameterMgrStackSize = 0;
-	
-	doParameterUi_recursive(parameterMgrStack, parameterMgrStackSize, parameterMgr, filter);
-}
-
-//
-
-static void copyParameterToStringStream(ParameterBase * const parameterBase, const char * name, std::ostringstream & text)
-{
-	text << name << "\n";
-
-	switch (parameterBase->type)
-	{
-	case kParameterType_Bool:
-		{
-			auto * parameter = static_cast<ParameterBool*>(parameterBase);
-			text << '\t' << (parameter->get() ? 1 : 0);
-		}
-		break;
-	case kParameterType_Int:
-		{
-			auto * parameter = static_cast<ParameterInt*>(parameterBase);
-			text << '\t' << parameter->get();
-		}
-		break;
-	case kParameterType_Float:
-		{
-			auto * parameter = static_cast<ParameterFloat*>(parameterBase);
-			text << '\t' << parameter->get();
-		}
-		break;
-	case kParameterType_Vec2:
-		{
-			auto * parameter = static_cast<ParameterVec2*>(parameterBase);
-			text << '\t' << parameter->get()[0];
-			text << '\t' << parameter->get()[1];
-		}
-		break;
-	case kParameterType_Vec3:
-		{
-			auto * parameter = static_cast<ParameterVec3*>(parameterBase);
-			text << '\t' << parameter->get()[0];
-			text << '\t' << parameter->get()[1];
-			text << '\t' << parameter->get()[2];
-		}
-		break;
-	case kParameterType_Vec4:
-		{
-			auto * parameter = static_cast<ParameterVec4*>(parameterBase);
-			text << '\t' << parameter->get()[0];
-			text << '\t' << parameter->get()[1];
-			text << '\t' << parameter->get()[2];
-			text << '\t' << parameter->get()[3];
-		}
-		break;
-	case kParameterType_String:
-		{
-			auto * parameter = static_cast<ParameterString*>(parameterBase);
-			text << '\t' << parameter->get();
-		}
-		break;
-	case kParameterType_Enum:
-		{
-			auto * parameter = static_cast<ParameterEnum*>(parameterBase);
-			const int value = parameter->get();
-			const char * key = parameter->translateValueToKey(value);
-			text << '\t' << key;
-		}
-		break;
-		
-	default:
-		Assert(false);
-		break;
-	}
-
-	text << "\n";
-}
-
-static void collectParamMgrsAndPrefixes(
-	ParameterMgr * const rootParamMgr,
-	std::vector<ParameterMgr*> & paramMgrs,
-	std::vector<std::string> & prefixes)
-{
-	std::vector<ParameterMgr*> stack;
-	std::vector<std::string> prefixStack;
-	stack.push_back(rootParamMgr);
-	prefixStack.push_back("");
-
-	while (!stack.empty())
-	{
-		ParameterMgr * paramMgr = stack.back();
-		const std::string prefix = prefixStack.back();
-		
-		paramMgrs.push_back(paramMgr);
-		prefixes.push_back(prefix);
-		
-		stack.pop_back();
-		prefixStack.pop_back();
-		
-		stack.insert(stack.end(), paramMgr->access_children().begin(), paramMgr->access_children().end());
-		
-		for (auto * child : paramMgr->access_children())
-		{
-			if (child->access_index() != -1)
-			{
-				const std::string child_prefix = String::FormatC("%s%s/%d/",
-					prefix.c_str(),
-					child->access_prefix().c_str(),
-					child->access_index());
-				
-				prefixStack.push_back(child_prefix);
+			// todo : this could be solved more nicely if the traversing version adds the headers
+			//        and this function just does the parameter mgr UI
+			
+				isOpen = ImGui::TreeNodeEx(&parameterMgr, ImGuiTreeNodeFlags_Framed, "%s", parameterMgr.access_prefix().c_str());
 			}
 			else
 			{
-				prefixStack.push_back(prefix + child->access_prefix() + "/");
+				ImGui::PushID(&parameterMgr);
+			}
+			
+			if (isOpen)
+			{
+				ImGui::PushItemWidth(200.f);
+				for (int i = 0; i < numParameters; ++i)
+					doParameterUi(*parameters[i]);
+				ImGui::PopItemWidth();
+			}
+			
+			if (showCollapsingHeader)
+			{
+				if (isOpen)
+					ImGui::TreePop();
+			}
+			else
+			{
+				ImGui::PopID();
 			}
 		}
 	}
-}
 
-void copyParametersToText_recursive(ParameterMgr * const parameterMgr, const char * filter, std::string & out_text)
-{
-	std::vector<ParameterMgr*> paramMgrs;
-	std::vector<std::string> prefixes;
-	collectParamMgrsAndPrefixes(parameterMgr, paramMgrs, prefixes);
-	
-	std::ostringstream text;
-	
-	const bool do_filter = filter != nullptr && filter[0] != 0;
-	
-	for (int i = 0; i < paramMgrs.size(); ++i)
+	static bool checkFilterPassesAtLeastOnce_recursive(const ParameterMgr & parameterMgr, const char * filter)
 	{
-		auto * paramMgr = paramMgrs[i];
-		auto & prefix = prefixes[i];
+		Assert(filter != nullptr);
 		
-		for (auto * parameter : paramMgr->access_parameters())
+		// check the parameters first before recursing
+		
+		for (auto * parameter : parameterMgr.access_parameters())
+			if (strcasestr(parameter->name.c_str(), filter))
+				return true;
+		
+		// recurse
+		
+		for (auto * child : parameterMgr.access_children())
 		{
-			if (parameter->isSetToDefault())
+			if (child->getIsHiddenFromUi())
+				continue;
+				
+			if (checkFilterPassesAtLeastOnce_recursive(*child, filter))
+				return true;
+		}
+		
+		return false;
+	}
+
+	static void doParameterUi_recursive(ParameterMgr ** stack, int stackSize, ParameterMgr & parameterMgr, const char * filter)
+	{
+		stack[stackSize++] = &parameterMgr;
+		
+		const bool do_filter = filter != nullptr && filter[0] != 0;
+		
+		for (auto * child : parameterMgr.access_children())
+		{
+			if (child->getIsHiddenFromUi())
 				continue;
 			
-			const std::string name = prefix + parameter->name;
-		
+			const char * child_filter = filter;
+			
 			if (do_filter)
 			{
-				if (strcasestr(name.c_str(), filter) == nullptr)
+				// check the name of the parameter mgr. if it matches, show all of the child's parameters, as the filter has passed at the parent level
+		
+				if (strcasestr(child->access_prefix().c_str(), filter))
+					child_filter = nullptr;
+				else if (checkFilterPassesAtLeastOnce_recursive(*child, filter) == false)
 					continue;
 			}
-	
-			copyParameterToStringStream(parameter, name.c_str(), text);
-		}
-	}
-	
-	out_text = text.str();
-}
+			
+			const bool isOpen = 
+				child->access_index() != -1
+				? ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s [%d]", child->access_prefix().c_str(), child->access_index())
+				: ImGui::TreeNodeEx(child, ImGuiTreeNodeFlags_Framed, "%s", child->access_prefix().c_str());
 
-void copyParametersToClipboard_recursive(ParameterMgr * const parameterMgr, const char * filter)
-{
-	std::string text;
-	copyParametersToText_recursive(parameterMgr, filter, text);
-	
-	ImGui::SetClipboardText(text.c_str());
-}
-
-static void pasteParameterFromText(ParameterBase * const parameterBase, const char * line)
-{
-	while (*line == '\t' || *line == ' ')
-		line++;
-	
-	switch (parameterBase->type)
-	{
-	case kParameterType_Bool:
-		{
-			auto * parameter = static_cast<ParameterBool*>(parameterBase);
+			if (s_contextMenu != nullptr && ImGui::BeginPopupContextItem())
+			{
+				stack[stackSize++] = child;
+				s_contextMenu(stack, stackSize, *child, nullptr);
+				stackSize--;
+				
+				ImGui::EndPopup();
+			}
 			
-			int value;
-			if (sscanf_s(line, "%d", &value) == 1)
-				parameter->set(value != 0);
+			if (isOpen)
+			{
+				doParameterUi_recursive(stack, stackSize, *child, child_filter);
+				
+				ImGui::TreePop();
+			}
 		}
-		break;
-	case kParameterType_Int:
-		{
-			auto * parameter = static_cast<ParameterInt*>(parameterBase);
-			
-			int value;
-			if (sscanf_s(line, "%d", &value) == 1)
-				parameter->set(value);
-		}
-		break;
-	case kParameterType_Float:
-		{
-			auto * parameter = static_cast<ParameterFloat*>(parameterBase);
-			
-			float value;
-			if (sscanf_s(line, "%f", &value) == 1)
-				parameter->set(value);
-		}
-		break;
-	case kParameterType_Vec2:
-		{
-			auto * parameter = static_cast<ParameterVec2*>(parameterBase);
-			
-			float values[2];
-			if (sscanf_s(line, "%f %f", &values[0], &values[1]) == 2)
-				parameter->set(Vec2(values[0], values[1]));
-		}
-		break;
-	case kParameterType_Vec3:
-		{
-			auto * parameter = static_cast<ParameterVec3*>(parameterBase);
-			
-			float values[3];
-			if (sscanf_s(line, "%f %f %f", &values[0], &values[1], &values[2]) == 3)
-				parameter->set(Vec3(values[0], values[1], values[2]));
-		}
-		break;
-	case kParameterType_Vec4:
-		{
-			auto * parameter = static_cast<ParameterVec4*>(parameterBase);
-			
-			float values[4];
-			if (sscanf_s(line, "%f %f %f %f", &values[0], &values[1], &values[2], &values[3]) == 4)
-				parameter->set(Vec4(values[0], values[1], values[2], values[3]));
-		}
-		break;
-	case kParameterType_String:
-		{
-			auto * parameter = static_cast<ParameterString*>(parameterBase);
-			
-			parameter->set(line);
-		}
-		break;
-	case kParameterType_Enum:
-		{
-			auto * parameter = static_cast<ParameterEnum*>(parameterBase);
-			
-			const int value = parameter->translateKeyToValue(line);
-			if (value != -1)
-				parameter->set(value);
-		}
-		break;
 		
-	default:
-		Assert(false);
-		break;
-	}
-}
-
-void pasteParametersFromText_recursive(ParameterMgr * const parameterMgr, const char * text, const char * filter)
-{
-	// decode text
-	
-	struct Elem
-	{
-		std::string line;
-	};
-
-	std::map<std::string, Elem> elems;
-
-	std::istringstream str(text);
-
-	std::string line;
-
-	int index = 0;
-
-	Elem * elem = nullptr;
-
-	for (;;)
-	{
-		std::getline(str, line);
+		ParameterBase ** parameters = (ParameterBase**)alloca(parameterMgr.access_parameters().size() * sizeof(ParameterBase*));
 		
-		if (str.eof() || str.fail())
-			break;
+		int numParameters = 0;
 		
-		if (index == 0)
+		if (do_filter)
 		{
-			elem = &elems[line];
+			for (auto * parameter : parameterMgr.access_parameters())
+				if (strcasestr(parameter->name.c_str(), filter))
+					parameters[numParameters++] = parameter;
 		}
 		else
 		{
-			std::swap(elem->line, line);
+			for (auto * parameter : parameterMgr.access_parameters())
+				parameters[numParameters++] = parameter;
 		}
 		
-		index++;
-		
-		if (index == 2)
-			index = 0;
-	}
-
-	// iterate over key-value pairs, find parameters by key, and paste value
-	
-	const bool do_filter = filter != nullptr && filter[0] != 0;
-	
-	for (auto & elem_itr : elems)
-	{
-		auto & elem = elem_itr.second;
-		auto & name = elem_itr.first;
-		auto * line = elem.line.c_str();
-		
-		if (name.empty())
-			continue;
-		
-		if (do_filter && strcasestr(name.c_str(), filter) == nullptr)
-			continue;
-			
-	#if ENABLE_BACKWARD_COMPATIBLE_ROOT_PREFIXES
-		auto * parameter =
-			name[0] == '/'
-			? parameterMgr->findRecursively(name.c_str(), '/')
-			: parameterMgr->findRecursively(("/" + name).c_str(), '/'); // less efficient backwards compatibility mode
-	#else
-		auto * parameter = parameterMgr->findRecursively(name.c_str(), '/');
-	#endif
-	
-		if (parameter != nullptr)
+		if (numParameters > 0)
 		{
-			pasteParameterFromText(parameter, line);
+			ImGui::PushItemWidth(200.f);
+			for (int i = 0; i < numParameters; ++i)
+			{
+				ImGui::PushID(parameters[i]->name.c_str());
+				{
+					doParameterUi(*parameters[i]);
+				}
+				ImGui::PopID();
+				
+				if (s_contextMenu != nullptr && ImGui::BeginPopupContextItem(parameters[i]->name.c_str()))
+				{
+					s_contextMenu(stack, stackSize, parameterMgr, parameters[i]);
+					
+					ImGui::EndPopup();
+				}
+			}
+			ImGui::PopItemWidth();
+		}
+		
+		stackSize--;
+	}
+
+	void doParameterUi_recursive(ParameterMgr & parameterMgr, const char * filter)
+	{
+		ParameterMgr * parameterMgrStack[128];
+		int parameterMgrStackSize = 0;
+		
+		doParameterUi_recursive(parameterMgrStack, parameterMgrStackSize, parameterMgr, filter);
+	}
+
+	//
+
+	static void parameterToStringStream(ParameterBase * const parameterBase, const char * name, std::ostringstream & text)
+	{
+		text << name << "\n";
+
+		switch (parameterBase->type)
+		{
+		case kParameterType_Bool:
+			{
+				auto * parameter = static_cast<ParameterBool*>(parameterBase);
+				text << '\t' << (parameter->get() ? 1 : 0);
+			}
+			break;
+		case kParameterType_Int:
+			{
+				auto * parameter = static_cast<ParameterInt*>(parameterBase);
+				text << '\t' << parameter->get();
+			}
+			break;
+		case kParameterType_Float:
+			{
+				auto * parameter = static_cast<ParameterFloat*>(parameterBase);
+				text << '\t' << parameter->get();
+			}
+			break;
+		case kParameterType_Vec2:
+			{
+				auto * parameter = static_cast<ParameterVec2*>(parameterBase);
+				text << '\t' << parameter->get()[0];
+				text << '\t' << parameter->get()[1];
+			}
+			break;
+		case kParameterType_Vec3:
+			{
+				auto * parameter = static_cast<ParameterVec3*>(parameterBase);
+				text << '\t' << parameter->get()[0];
+				text << '\t' << parameter->get()[1];
+				text << '\t' << parameter->get()[2];
+			}
+			break;
+		case kParameterType_Vec4:
+			{
+				auto * parameter = static_cast<ParameterVec4*>(parameterBase);
+				text << '\t' << parameter->get()[0];
+				text << '\t' << parameter->get()[1];
+				text << '\t' << parameter->get()[2];
+				text << '\t' << parameter->get()[3];
+			}
+			break;
+		case kParameterType_String:
+			{
+				auto * parameter = static_cast<ParameterString*>(parameterBase);
+				text << '\t' << parameter->get();
+			}
+			break;
+		case kParameterType_Enum:
+			{
+				auto * parameter = static_cast<ParameterEnum*>(parameterBase);
+				const int value = parameter->get();
+				const char * key = parameter->translateValueToKey(value);
+				text << '\t' << key;
+			}
+			break;
+			
+		default:
+			Assert(false);
+			break;
+		}
+
+		text << "\n";
+	}
+
+	static void collectParamMgrsAndPrefixes(
+		ParameterMgr * const rootParamMgr,
+		std::vector<ParameterMgr*> & paramMgrs,
+		std::vector<std::string> & prefixes)
+	{
+		std::vector<ParameterMgr*> stack;
+		std::vector<std::string> prefixStack;
+		stack.push_back(rootParamMgr);
+		prefixStack.push_back("");
+
+		while (!stack.empty())
+		{
+			ParameterMgr * paramMgr = stack.back();
+			const std::string prefix = prefixStack.back();
+			
+			paramMgrs.push_back(paramMgr);
+			prefixes.push_back(prefix);
+			
+			stack.pop_back();
+			prefixStack.pop_back();
+			
+			stack.insert(stack.end(), paramMgr->access_children().begin(), paramMgr->access_children().end());
+			
+			for (auto * child : paramMgr->access_children())
+			{
+				if (child->access_index() != -1)
+				{
+					const std::string child_prefix = String::FormatC("%s%s/%d/",
+						prefix.c_str(),
+						child->access_prefix().c_str(),
+						child->access_index());
+					
+					prefixStack.push_back(child_prefix);
+				}
+				else
+				{
+					prefixStack.push_back(prefix + child->access_prefix() + "/");
+				}
+			}
 		}
 	}
-}
 
-void pasteParametersFromClipboard_recursive(ParameterMgr * const parameterMgr, const char * filter)
-{
-	const char * text = ImGui::GetClipboardText();
+	void parametersToText_recursive(ParameterMgr * const parameterMgr, const char * filter, std::string & out_text)
+	{
+		std::vector<ParameterMgr*> paramMgrs;
+		std::vector<std::string> prefixes;
+		collectParamMgrsAndPrefixes(parameterMgr, paramMgrs, prefixes);
+		
+		std::ostringstream text;
+		
+		const bool do_filter = filter != nullptr && filter[0] != 0;
+		
+		for (int i = 0; i < paramMgrs.size(); ++i)
+		{
+			auto * paramMgr = paramMgrs[i];
+			auto & prefix = prefixes[i];
+			
+			for (auto * parameter : paramMgr->access_parameters())
+			{
+				if (parameter->isSetToDefault())
+					continue;
+				
+				const std::string name = prefix + parameter->name;
+			
+				if (do_filter)
+				{
+					if (strcasestr(name.c_str(), filter) == nullptr)
+						continue;
+				}
+		
+				parameterToStringStream(parameter, name.c_str(), text);
+			}
+		}
+		
+		out_text = text.str();
+	}
+
+	static void parameterFromText(ParameterBase * const parameterBase, const char * line)
+	{
+		while (*line == '\t' || *line == ' ')
+			line++;
+		
+		switch (parameterBase->type)
+		{
+		case kParameterType_Bool:
+			{
+				auto * parameter = static_cast<ParameterBool*>(parameterBase);
+				
+				int value;
+				if (sscanf_s(line, "%d", &value) == 1)
+					parameter->set(value != 0);
+			}
+			break;
+		case kParameterType_Int:
+			{
+				auto * parameter = static_cast<ParameterInt*>(parameterBase);
+				
+				int value;
+				if (sscanf_s(line, "%d", &value) == 1)
+					parameter->set(value);
+			}
+			break;
+		case kParameterType_Float:
+			{
+				auto * parameter = static_cast<ParameterFloat*>(parameterBase);
+				
+				float value;
+				if (sscanf_s(line, "%f", &value) == 1)
+					parameter->set(value);
+			}
+			break;
+		case kParameterType_Vec2:
+			{
+				auto * parameter = static_cast<ParameterVec2*>(parameterBase);
+				
+				float values[2];
+				if (sscanf_s(line, "%f %f", &values[0], &values[1]) == 2)
+					parameter->set(Vec2(values[0], values[1]));
+			}
+			break;
+		case kParameterType_Vec3:
+			{
+				auto * parameter = static_cast<ParameterVec3*>(parameterBase);
+				
+				float values[3];
+				if (sscanf_s(line, "%f %f %f", &values[0], &values[1], &values[2]) == 3)
+					parameter->set(Vec3(values[0], values[1], values[2]));
+			}
+			break;
+		case kParameterType_Vec4:
+			{
+				auto * parameter = static_cast<ParameterVec4*>(parameterBase);
+				
+				float values[4];
+				if (sscanf_s(line, "%f %f %f %f", &values[0], &values[1], &values[2], &values[3]) == 4)
+					parameter->set(Vec4(values[0], values[1], values[2], values[3]));
+			}
+			break;
+		case kParameterType_String:
+			{
+				auto * parameter = static_cast<ParameterString*>(parameterBase);
+				
+				parameter->set(line);
+			}
+			break;
+		case kParameterType_Enum:
+			{
+				auto * parameter = static_cast<ParameterEnum*>(parameterBase);
+				
+				const int value = parameter->translateKeyToValue(line);
+				if (value != -1)
+					parameter->set(value);
+			}
+			break;
+			
+		default:
+			Assert(false);
+			break;
+		}
+	}
+
+	void parametersFromText_recursive(ParameterMgr * const parameterMgr, const char * text, const char * filter)
+	{
+		// decode text
+		
+		struct Elem
+		{
+			std::string line;
+		};
+
+		std::map<std::string, Elem> elems;
+
+		std::istringstream str(text);
+
+		std::string line;
+
+		int index = 0;
+
+		Elem * elem = nullptr;
+
+		for (;;)
+		{
+			std::getline(str, line);
+			
+			if (str.eof() || str.fail())
+				break;
+			
+			if (index == 0)
+			{
+				elem = &elems[line];
+			}
+			else
+			{
+				std::swap(elem->line, line);
+			}
+			
+			index++;
+			
+			if (index == 2)
+				index = 0;
+		}
+
+		// iterate over key-value pairs, find parameters by key, and convert value to text
+		
+		const bool do_filter = filter != nullptr && filter[0] != 0;
+		
+		for (auto & elem_itr : elems)
+		{
+			auto & elem = elem_itr.second;
+			auto & name = elem_itr.first;
+			auto * line = elem.line.c_str();
+			
+			if (name.empty())
+				continue;
+			
+			if (do_filter && strcasestr(name.c_str(), filter) == nullptr)
+				continue;
+				
+		#if ENABLE_BACKWARD_COMPATIBLE_ROOT_PREFIXES
+			auto * parameter =
+				name[0] == '/'
+				? parameterMgr->findRecursively(name.c_str(), '/')
+				: parameterMgr->findRecursively(("/" + name).c_str(), '/'); // less efficient backwards compatibility mode
+		#else
+			auto * parameter = parameterMgr->findRecursively(name.c_str(), '/');
+		#endif
+		
+			if (parameter != nullptr)
+			{
+				parameterFromText(parameter, line);
+			}
+		}
+	}
+
+	void parametersToClipboard_recursive(ParameterMgr * const parameterMgr, const char * filter)
+	{
+		std::string text;
+		parametersToText_recursive(parameterMgr, filter, text);
+		
+		ImGui::SetClipboardText(text.c_str());
+	}
 	
- 	pasteParametersFromText_recursive(parameterMgr, text, filter);
+	void parametersFromClipboard_recursive(ParameterMgr * const parameterMgr, const char * filter)
+	{
+		const char * text = ImGui::GetClipboardText();
+		
+		parametersFromText_recursive(parameterMgr, text, filter);
+	}
 }
