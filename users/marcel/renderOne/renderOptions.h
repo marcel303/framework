@@ -3,6 +3,8 @@
 #include "Vec3.h"
 #include "Vec4.h"
 
+class Color;
+
 struct TypeDB;
 
 namespace rOne
@@ -206,7 +208,7 @@ namespace rOne
 		{
 			static const int kLookupSize = 16;
 			
-			typedef void (SrgbColorTransform)(float r, float g, float b, float * out_rgb);
+			typedef void (SrgbColorTransform)(Color & color);
 			
 			bool enabled = false;
 			int lookupTexture = 0;

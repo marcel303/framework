@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "gx_render.h"
+#include "image.h" // for ColorGrading lookup texture from file
 #include "lightDrawer.h"
 #include "renderer.h"
 #include "srgbFunctions.h"
@@ -1808,19 +1809,37 @@ namespace rOne
 	
 	int RenderOptions::ColorGrading::lookupTextureFromFile(const char * filename)
 	{
-		GxTextureId textureId = getTexture(filename);
+		GxTextureId result = 0;
 		
-		int sx;
-		int sy;
-		gxGetTextureSize(textureId, sx, sy);
+		ImageData * image = loadImage(filename);
 		
-		Assert(sx == kLookupSize*kLookupSize && sy == kLookupSize);
-		if (sx != kLookupSize*kLookupSize || sy != kLookupSize)
-			logWarning("color grading lookup texture doesn't adhere to the required size of %dx%d pixels!", kLookupSize * kLookupSize, kLookupSize);
+		if (image == nullptr)
+		{
+			logError("failed to load image: %s", filename);
+		}
+		else if (image->sx != kLookupSize * kLookupSize || image->sy != kLookupSize)
+		{
+			logError("image doesn't adhere to the required size of %dx%d pixels for color grading lookup. filename=%s", kLookupSize * kLookupSize, kLookupSize, filename);
+		}
+		else
+		{
+			GxTexture3d texture;
+			texture.allocate(kLookupSize, kLookupSize, kLookupSize, GX_RGBA8_UNORM);
+			texture.upload(image->imageData, 4, 0);
+			
+		// fixme : make GxTexture3d a member of the color grading options ? or make a copy of the texture using copyTexture ?
+			GxTextureId textureId = texture.id;
+			texture.id = 0;
+			
+			texture.free();
 		
-		AssertMsg(false, "todo : convert from 2d to 3d", 0);
-	
-		return textureId;
+			result = textureId;
+		}
+		
+		delete image;
+		image = nullptr;
+		
+		return result;
 	}
 	
 	int RenderOptions::ColorGrading::lookupTextureFromSrgbColorTransform(RenderOptions::ColorGrading::SrgbColorTransform transform)
@@ -1845,7 +1864,12 @@ namespace rOne
 					
 					float * __restrict out_rgb = line + x * 4;
 					
-					transform(r, g, b, out_rgb);
+					Color & color = *(Color*)out_rgb;
+					color.r = r;
+					color.g = g;
+					color.b = b;
+					
+					transform(color);
 					
 					out_rgb[0] = fmaxf(0.f, fminf(1.f, out_rgb[0]));
 					out_rgb[1] = fmaxf(0.f, fminf(1.f, out_rgb[1]));
