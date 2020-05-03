@@ -185,7 +185,7 @@ bool doReflection_PlainType(
 				}
 			}
 			
-			const bool isAngle = member.hasFlag<ComponentMemberFlag_EditorType_Angle>();
+			const bool isAngle = member.hasFlag<ComponentMemberFlag_EditorType_AngleDegrees>();
 			
 			if (isAngle)
 			{
@@ -248,8 +248,8 @@ bool doReflection_PlainType(
 				}
 			}
 			
-			const bool isColor = member.findFlag<ComponentMemberFlag_EditorType_Color>() != nullptr;
-			const bool isAxis = member.findFlag<ComponentMemberFlag_EditorType_Axis>() != nullptr;
+			const bool isColor = member.hasFlag<ComponentMemberFlag_EditorType_ColorSrgb>();
+			const bool isOrientation = member.hasFlag<ComponentMemberFlag_EditorType_OrientationVector>();
 
 			if (isColor)
 			{
@@ -258,7 +258,7 @@ bool doReflection_PlainType(
 					result = true;
 				}
 			}
-			else if (isAxis)
+			else if (isOrientation)
 			{
 				if (ImGui::SliderFloat3(member.name, &value[0], -1.f, +1.f))
 				{
@@ -286,7 +286,7 @@ bool doReflection_PlainType(
 				}
 			}
 			
-			const bool isColor = member.findFlag<ComponentMemberFlag_EditorType_Color>() != nullptr;
+			const bool isColor = member.hasFlag<ComponentMemberFlag_EditorType_ColorSrgb>();
 			
 			if (isColor)
 			{

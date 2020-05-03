@@ -63,9 +63,9 @@ void registerBuiltinTypes()
 	g_typeDB.addPlain<std::string>("string", kDataType_String);
 	g_typeDB.addStructured<AngleAxis>("AngleAxis")
 		.add("angle", &AngleAxis::angle)
-			.addFlag(new ComponentMemberFlag_EditorType_Angle)
+			.addFlag(new ComponentMemberFlag_EditorType_AngleDegrees)
 		.add("axis", &AngleAxis::axis)
-			.addFlag(new ComponentMemberFlag_EditorType_Axis);
+			.addFlag(new ComponentMemberFlag_EditorType_OrientationVector);
 	
 	//
 	

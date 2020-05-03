@@ -44,15 +44,19 @@ struct ComponentMemberFlag_FloatEditorCurveExponential : MemberFlag<ComponentMem
 	float exponential;
 };
 
-struct ComponentMemberFlag_EditorType_Color : MemberFlag<ComponentMemberFlag_EditorType_Color>
+struct ComponentMemberFlag_EditorType_ColorSrgb : MemberFlag<ComponentMemberFlag_EditorType_ColorSrgb>
 {
 };
 
-struct ComponentMemberFlag_EditorType_Angle : MemberFlag<ComponentMemberFlag_EditorType_Angle>
+struct ComponentMemberFlag_EditorType_ColorLinear : MemberFlag<ComponentMemberFlag_EditorType_ColorLinear>
 {
 };
 
-struct ComponentMemberFlag_EditorType_Axis : MemberFlag<ComponentMemberFlag_EditorType_Axis>
+struct ComponentMemberFlag_EditorType_AngleDegrees : MemberFlag<ComponentMemberFlag_EditorType_AngleDegrees>
+{
+};
+
+struct ComponentMemberFlag_EditorType_OrientationVector : MemberFlag<ComponentMemberFlag_EditorType_OrientationVector>
 {
 };
 

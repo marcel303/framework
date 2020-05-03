@@ -53,9 +53,9 @@ struct LightComponentType : ComponentType<LightComponent>
 			.limits(0.f, 100.f)
 			.editingCurveExponential(4.f);
 		add("color", &LightComponent::color)
-			.addFlag(new ComponentMemberFlag_EditorType_Color());
+			.addFlag<ComponentMemberFlag_EditorType_ColorSrgb>();
 		add("bottomColor", &LightComponent::bottomColor)
-			.addFlag(new ComponentMemberFlag_EditorType_Color());
+			.addFlag<ComponentMemberFlag_EditorType_ColorSrgb>();
 		add("innerRadius", &LightComponent::innerRadius);
 		add("outerRadius", &LightComponent::outerRadius);
 	}

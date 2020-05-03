@@ -1487,7 +1487,7 @@ struct SceneEditor
 				{
 					if (ImGui::BeginMenu("Renderer"))
 					{
-						doParameterUi(renderer.parameterMgr, nullptr, false);
+						parameterUi::doParameterUi(renderer.parameterMgr, nullptr, false);
 						
 						ImGui::EndMenu();
 					}
@@ -1501,6 +1501,16 @@ struct SceneEditor
 						doParameterUi(s_parameterComponentMgr, parameterUi.component_filter, parameterUi.parameter_filter, parameterUi.showAnonymousComponents);
 						
 						ImGui::EndMenu();
+					}
+					
+					if (ImGui::Button("Undo"))
+					{
+					
+					}
+					
+					if (ImGui::Button("Redo"))
+					{
+					
 					}
 				}
 				ImGui::EndMainMenuBar();
