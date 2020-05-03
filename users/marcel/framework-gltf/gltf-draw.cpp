@@ -764,7 +764,7 @@ namespace gltf
 			? scene.activeScene
 			: drawOptions.activeScene;
 		
-		pushAlphaToCoverage(drawOptions.alphaMode == kAlphaMode_AlphaToCoverage);
+		pushAlphaToCoverage(isOpaquePass == false && drawOptions.alphaMode == kAlphaMode_AlphaToCoverage);
 		
 		for (size_t sceneRootIndex = 0; sceneRootIndex < scene.sceneRoots.size(); ++sceneRootIndex)
 		{
