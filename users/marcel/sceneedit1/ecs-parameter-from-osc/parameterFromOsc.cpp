@@ -3,7 +3,7 @@
 #include "parameter.h"
 #include "parameterFromOsc.h"
 
-bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage & m)
+bool parameterFromOsc(ParameterBase * parameterBase, const osc::ReceivedMessage & m)
 {
 	bool result = true;
 
@@ -204,7 +204,7 @@ bool handleOscMessage(ParameterBase * parameterBase, const osc::ReceivedMessage 
 	return result;
 }
 
-bool handleOscMessage(ParameterMgr & paramMgr, const osc::ReceivedMessage & m, const char * addressPattern)
+bool parameterFromOsc(ParameterMgr & paramMgr, const osc::ReceivedMessage & m, const char * addressPattern)
 {
 	Assert(addressPattern[0] == '/');
 	
@@ -234,7 +234,7 @@ bool handleOscMessage(ParameterMgr & paramMgr, const osc::ReceivedMessage & m, c
 			}
 			else
 			{
-				return handleOscMessage(parameter, m);
+				return parameterFromOsc(parameter, m);
 			}
 		}
 		
@@ -307,12 +307,12 @@ bool handleOscMessage(ParameterMgr & paramMgr, const osc::ReceivedMessage & m, c
 			}
 			else
 			{
-				return handleOscMessage(
+				return parameterFromOsc(
 					*child,
 					m,
 					foundIndexed
-					? nextNameSeparator
-					: nameSeparator);
+						? nextNameSeparator
+						: nameSeparator);
 			}
 		}
 	}
