@@ -1,4 +1,12 @@
+library ecs-component
+	depend_library libgg
+	depend_library libreflection
+	scan_files cpp path ecs-component
+	scan_files h   path ecs-component
+	header_path ecs-component expose
+
 app marcel-sceneedit1
+	depend_library ecs-component
 	depend_library ecs-parameter
 	depend_library ecs-parameterui
 	depend_library framework

@@ -17,12 +17,9 @@
 // todo : when editing, apply the latest version to the component instance
 // todo : allow for live value viewing ?
 
-// todo : when saving we will want to distinguish between templates which define (new) components, and those that merely override component properties. perhaps have new component definitions have a plus sign (+transform) to signify it's a new definition ? or maybe just skip saving if a component with the same type name + id exists in a base template and the list of property override is empty ?
+// note : when saving we will want to distinguish between templates which define (new) components, and those that merely override component properties. component definitions that are merely there because of component property overrides have a minus sign (-transform) to signify it's not a new definition
 
 // todo : avoid creating a component instance just to aid in editing templates
-
-// todo : add support for adding components
-// todo : add support for removing components
 
 #define VIEW_SX 1200
 #define VIEW_SY 480
@@ -53,7 +50,7 @@ static bool doComponentTypeMenu(std::string & out_typeName)
 
 static void createFallbackTemplateForComponent(const TypeDB & typeDB, const char * componentTypeName, const char * componentId, TemplateComponent & template_component)
 {
-	template_component.type_name = componentTypeName;
+	template_component.typeName = componentTypeName;
 	template_component.id = componentId;
 	
 	auto * componentType = findComponentType(componentTypeName);
@@ -217,7 +214,7 @@ struct TemplateInstance
 			
 			for (auto & templateComponent_itr : t.components)
 			{
-				if (templateComponent_itr.type_name == componentTypeWithId.typeName &&
+				if (templateComponent_itr.typeName == componentTypeWithId.typeName &&
 					templateComponent_itr.id == componentTypeWithId.id)
 				{
 					templateComponent = &templateComponent_itr;
@@ -237,7 +234,7 @@ struct TemplateInstance
 			
 			if (componentType == nullptr)
 			{
-				LOG_ERR("failed to find component type: %s", templateComponent->type_name.c_str());
+				LOG_ERR("failed to find component type: %s", templateComponent->typeName.c_str());
 				return false;
 			}
 			else if (!component.init(typeDB, componentType, componentTypeWithId.id.c_str(), templateComponent))
@@ -398,7 +395,7 @@ bool test_templateEditor()
 	{
 		Template t;
 		
-		if (!loadTemplateFromFile(current_filename.c_str(), t))
+		if (!parseTemplateFromFile(current_filename.c_str(), t))
 		{
 			LOG_ERR("failed to load template from file", 0);
 			return false;
@@ -430,7 +427,7 @@ bool test_templateEditor()
 		for (auto & component : t.components)
 		{
 			ComponentTypeWithId elem;
-			elem.typeName = component.type_name;
+			elem.typeName = component.typeName;
 			elem.id = component.id;
 			
 			if (allComponentTypesWithId.count(elem) == 0)
@@ -491,7 +488,7 @@ bool test_templateEditor()
 			for (auto & component : t.components)
 			{
 				ComponentTypeWithId elem;
-				elem.typeName = component.type_name;
+				elem.typeName = component.typeName;
 				elem.id = component.id;
 				
 				if (componentTypesWithId.count(elem) == 0)

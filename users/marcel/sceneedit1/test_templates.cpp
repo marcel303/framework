@@ -10,13 +10,13 @@ static void dump_template(const Template & t)
 	for (auto & component : t.components)
 	{
 		logInfo("%30s : %20s *",
-			component.type_name.c_str(),
+			component.typeName.c_str(),
 			component.id.c_str());
 		
 		for (auto & property : component.properties)
 		{
 			logInfo("%30s : %20s : %20s = %s",
-				component.type_name.c_str(),
+				component.typeName.c_str(),
 				component.id.c_str(),
 				property.name.c_str(),
 				property.value_lines.size() == 1 ? property.value_lines[0].c_str() : "");
@@ -35,12 +35,12 @@ void test_templates_v1()
 {
 	Template t;
 	
-	if (!loadTemplateFromFile("textfiles/base-entity-v1.txt", t))
+	if (!parseTemplateFromFile("textfiles/base-entity-v1.txt", t))
 		logError("failed to load template from file");
 	
 	Template overlay;
 	
-	if (!loadTemplateFromFile("textfiles/base-entity-v1-overlay.txt", overlay))
+	if (!parseTemplateFromFile("textfiles/base-entity-v1-overlay.txt", overlay))
 		logError("failed to load template from file");
 	
 	if (!overlayTemplate(t, overlay, false, true))
@@ -70,8 +70,14 @@ void test_templates()
 	
 	Template t;
 	
-	if (!loadTemplateWithOverlaysFromFile("textfiles/base-entity-v2-overlay.txt", t, false))
+	if (!parseTemplateFromFileAndRecursivelyOverlayBaseTemplates(
+		"textfiles/base-entity-v2-overlay.txt",
+		false,
+		true,
+		t))
+	{
 		logError("failed to load template with overlays from file");
+	}
 	
 	SceneNode node;
 	

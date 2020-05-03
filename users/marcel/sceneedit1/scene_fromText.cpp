@@ -82,9 +82,9 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 	{
 		if (line[0] == '\t')
 		{
-			// only one level of identation may be added per line
+			// only one level of indentation may be added per line
 			
-			LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+			LOG_ERR("more than one level of indentation added on line %d", line_reader.get_current_line_index());
 			return false;
 		}
 		
@@ -128,7 +128,10 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 				std::map<std::string, Template> * templates;
 			};
 			
-			auto fetchTemplate = [](const char * name, void * user_data, Template & out_template) -> bool
+			auto fetchTemplate = [](
+				const char * name,
+				const void * user_data,
+				Template & out_template) -> bool
 			{
 				const FetchContext * context = (FetchContext*)user_data;
 				
@@ -142,14 +145,19 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 				}
 				else
 				{
-					return loadTemplateFromFile(name, out_template);
+					return parseTemplateFromFile(name, out_template);
 				}
 			};
 			
 			FetchContext context;
 			context.templates = &templates;
 			
-			if (!applyTemplateOverlaysWithCallback(name, t, t, true, fetchTemplate, &context))
+			if (!recursivelyOverlayBaseTemplates(
+				t,
+				true,
+				true,
+				fetchTemplate,
+				&context))
 			{
 				LOG_ERR("failed to parse template", 0);
 				return false;
@@ -193,7 +201,10 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 				std::map<std::string, Template> * templates;
 			};
 			
-			auto fetchTemplate = [](const char * name, void * user_data, Template & out_template) -> bool
+			auto fetchTemplate = [](
+				const char * name,
+				const void * user_data,
+				Template & out_template) -> bool
 			{
 				const FetchContext * context = (FetchContext*)user_data;
 				
@@ -207,14 +218,19 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 				}
 				else
 				{
-					return loadTemplateFromFile(name, out_template);
+					return parseTemplateFromFile(name, out_template);
 				}
 			};
 			
 			FetchContext context;
 			context.templates = &templates;
 			
-			if (!applyTemplateOverlaysWithCallback(name, t, t, true, fetchTemplate, &context))
+			if (!recursivelyOverlayBaseTemplates(
+				t,
+				true,
+				true,
+				fetchTemplate,
+				&context))
 			{
 				LOG_ERR("failed to parse template (entity)", 0);
 				return false;
@@ -264,9 +280,9 @@ bool parseSceneObjectFromLines(const TypeDB & typeDB, LineReader & line_reader, 
 	{
 		if (line[0] == '\t')
 		{
-			// only one level of identation may be added per line
+			// only one level of indentation may be added per line
 			
-			LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+			LOG_ERR("more than one level of indentation added on line %d", line_reader.get_current_line_index());
 			return false;
 		}
 		
@@ -317,9 +333,9 @@ bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, LineReader & line
 		
 		if (new_level > current_level + 1)
 		{
-			// only one level of identation may be added per line
+			// only one level of indentation may be added per line
 			
-			LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+			LOG_ERR("more than one level of indentation added on line %d", line_reader.get_current_line_index());
 			return false;
 		}
 		

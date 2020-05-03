@@ -12,7 +12,10 @@
 #include <set>
 #include <string.h>
 
-bool parseTemplateFromLines(LineReader & line_reader, const char * name, Template & out_template)
+bool parseTemplateFromLines(
+	LineReader & lineReader,
+	const char * name,
+	Template & out_template)
 {
 	if (name != nullptr)
 	{
@@ -23,13 +26,13 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 	
 	const char * line;
 	
-	while ((line = line_reader.get_next_line(true)))
+	while ((line = lineReader.get_next_line(true)))
 	{
 		if (line[0] == '\t')
 		{
-			// only one level of identation may be added per line
+			// only one level of indentation may be added per line
 			
-			LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+			LOG_ERR("more than one level of indentation added on line %d", lineReader.get_current_line_index());
 			return false;
 		}
 		
@@ -131,10 +134,10 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 		
 		auto & current_component_element = out_template.components.back();
 		
-		current_component_element.type_name = full_name;
+		current_component_element.typeName = full_name;
 		current_component_element.id = id;
 		
-		if (current_component_element.type_name.empty())
+		if (current_component_element.typeName.empty())
 		{
 			LOG_ERR("found property outside the context of a component", 0);
 			return false;
@@ -142,17 +145,17 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 	
 		// read component properties
 		
-		line_reader.push_indent();
+		lineReader.push_indent();
 		{
 			const char * propertyName;
 			
-			while ((propertyName = line_reader.get_next_line(true)))
+			while ((propertyName = lineReader.get_next_line(true)))
 			{
 				if (propertyName[0] == '\t')
 				{
-					// only one level of identation may be added per line
+					// only one level of indentation may be added per line
 					
-					LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+					LOG_ERR("more than one level of indentation added on line %d", lineReader.get_current_line_index());
 					return false;
 				}
 				
@@ -168,40 +171,40 @@ bool parseTemplateFromLines(LineReader & line_reader, const char * name, Templat
 				
 				// read property value lines
 				
-				line_reader.push_indent();
+				lineReader.push_indent();
 				{
 					const char * value_line;
 					
-					while ((value_line = line_reader.get_next_line(false)))
+					while ((value_line = lineReader.get_next_line(false)))
 					{
 						// note : we don't check if value_line[0] == '\t' here, as we are simply extracting line, not parsing them (yet)
 						
 						current_property_element.value_lines.push_back(value_line);
 					}
 				}
-				line_reader.pop_indent();
+				lineReader.pop_indent();
 			}
 		}
-		line_reader.pop_indent();
+		lineReader.pop_indent();
 	}
 	
 	return true;
 }
 
-bool loadTemplateFromFile(const char * filename, Template & t)
+bool parseTemplateFromFile(const char * path, Template & out_template)
 {
 	std::vector<std::string> lines;
 	TextIO::LineEndings lineEndings;
 	
-	if (!TextIO::load(filename, lines, lineEndings))
+	if (!TextIO::load(path, lines, lineEndings))
 	{
 		LOG_ERR("failed to load text file", 0);
 		return false;
 	}
 	
-	LineReader line_reader(lines, 0, 0);
+	LineReader lineReader(lines, 0, 0);
 	
-	if (!parseTemplateFromLines(line_reader, filename, t))
+	if (!parseTemplateFromLines(lineReader, path, out_template))
 	{
 		LOG_ERR("failed to parse template from lines", 0);
 		return false;
@@ -210,7 +213,11 @@ bool loadTemplateFromFile(const char * filename, Template & t)
 	return true;
 }
 
-bool overlayTemplate(Template & target, const Template & overlay, const bool allowAddingComponents, const bool allowAddingProperties)
+bool overlayTemplate(
+	Template & target,
+	const Template & overlay,
+	const bool allowAddingComponents,
+	const bool allowAddingProperties)
 {
 	for (auto & overlay_component : overlay.components)
 	{
@@ -218,7 +225,7 @@ bool overlayTemplate(Template & target, const Template & overlay, const bool all
 		
 		for (auto & target_component_itr : target.components)
 		{
-			if (target_component_itr.type_name == overlay_component.type_name &&
+			if (target_component_itr.typeName == overlay_component.typeName &&
 				target_component_itr.id == overlay_component.id)
 				target_component = &target_component_itr;
 		}
@@ -228,7 +235,7 @@ bool overlayTemplate(Template & target, const Template & overlay, const bool all
 			if (allowAddingComponents == false)
 			{
 				LOG_ERR("component doesn't exist: %s, id=%s",
-					overlay_component.type_name.c_str(),
+					overlay_component.typeName.c_str(),
 					overlay_component.id.c_str());
 				return false;
 			}
@@ -258,7 +265,7 @@ bool overlayTemplate(Template & target, const Template & overlay, const bool all
 					if (allowAddingProperties == false)
 					{
 						LOG_ERR("component property doesn't exist: component=%s, id=%s, property=%s",
-							overlay_component.type_name.c_str(),
+							overlay_component.typeName.c_str(),
 							overlay_component.id.c_str(),
 							overlay_property.name.c_str());
 						return false;
@@ -286,15 +293,19 @@ bool overlayTemplate(Template & target, const Template & overlay, const bool all
 	return true;
 }
 
-bool applyTemplateOverlaysWithCallback(const char * name, const Template & t, Template & out_template, const bool allowAddingComponentsFromBase, FetchTemplateCallback fetchTemplate, void * user_data)
+bool recursivelyOverlayBaseTemplates(
+	Template & t,
+	const bool allowAddingComponents,
+	const bool allowAddingProperties,
+	const FetchTemplateCallback fetchTemplate,
+	const void * userData)
 {
 	std::set<std::string> processed;
 	std::vector<Template> templates;
 	
-	processed.insert(name);
-	templates.push_back(t);
+	processed.insert(t.name);
 	
-	std::string current_name = name;
+	std::string current_name = t.name;
 	
 	for (;;)
 	{
@@ -317,7 +328,7 @@ bool applyTemplateOverlaysWithCallback(const char * name, const Template & t, Te
 		
 		Template t;
 		
-		if (!fetchTemplate(current_name.c_str(), user_data, t))
+		if (!fetchTemplate(current_name.c_str(), userData, t))
 		{
 			LOG_ERR("failed to fetch template. name=%s", current_name.c_str());
 			return false;
@@ -329,48 +340,64 @@ bool applyTemplateOverlaysWithCallback(const char * name, const Template & t, Te
 	
 	for (auto template_itr = templates.rbegin(); template_itr != templates.rend(); ++template_itr)
 	{
-		if (template_itr == templates.rbegin())
+		if (!overlayTemplate(
+			t,
+			*template_itr,
+			allowAddingComponents,
+			allowAddingProperties))
 		{
-			out_template = *template_itr;
-		}
-		else
-		{
-			if (!overlayTemplate(out_template, *template_itr, allowAddingComponentsFromBase, true))
-			{
-				LOG_ERR("failed to overlay template", 0);
-				return false;
-			}
+			LOG_ERR("failed to overlay template", 0);
+			return false;
 		}
 	}
 	
 	return true;
 }
 
-bool parseTemplateWithOverlaysWithCallback(const char * name, Template & out_template, const bool allowAddingComponentsFromBase, FetchTemplateCallback fetchTemplate, void * user_data)
+bool parseTemplateFromCallbackAndRecursivelyOverlayBaseTemplates(
+	const char * name,
+	const bool allowAddingComponents,
+	const bool allowAddingProperties,
+	const FetchTemplateCallback fetchTemplate,
+	const void * userData,
+	Template & out_template)
 {
-	Template t;
-	
-	if (!fetchTemplate(name, user_data, t))
+	if (!fetchTemplate(name, userData, out_template))
 	{
 		LOG_ERR("failed to fetch template. name=%s", name);
 		return false;
 	}
 	
-	return applyTemplateOverlaysWithCallback(name, t, out_template, allowAddingComponentsFromBase, fetchTemplate, user_data);
+	return recursivelyOverlayBaseTemplates(
+		out_template,
+		allowAddingComponents,
+		allowAddingProperties,
+		fetchTemplate,
+		userData);
 }
 
-bool loadTemplateWithOverlaysFromFile(const char * path, Template & out_template, const bool allowAddingComponentsFromBase)
+bool parseTemplateFromFileAndRecursivelyOverlayBaseTemplates(
+	const char * path,
+	const bool allowAddingComponents,
+	const bool allowAddingProperties,
+	Template & out_template)
 {
 	auto directory = Path::GetDirectory(path);
 	auto filename = Path::GetFileName(path);
 	
-	auto fetchTemplate = [](const char * name, void * user_data, Template & out_template) -> bool
+	auto fetchTemplate = [](
+		const char * name,
+		const void * userData,
+		Template & out_template) -> bool
 	{
-		const char * directory = (const char*)user_data;
+		const char * directory = (const char*)userData;
 		
-		std::string path = std::string(directory) + "/" + name;
+		const std::string path =
+			directory[0] == 0
+			? name
+			: std::string(directory) + "/" + name;
 		
-		if (!loadTemplateFromFile(path.c_str(), out_template))
+		if (!parseTemplateFromFile(path.c_str(), out_template))
 		{
 			LOG_ERR("failed to load template from file. path=%s", path.c_str());
 			return false;
@@ -379,18 +406,27 @@ bool loadTemplateWithOverlaysFromFile(const char * path, Template & out_template
 		return true;
 	};
 	
-	return parseTemplateWithOverlaysWithCallback(filename.c_str(), out_template, allowAddingComponentsFromBase, fetchTemplate, (void*)directory.c_str());
+	return parseTemplateFromCallbackAndRecursivelyOverlayBaseTemplates(
+		filename.c_str(),
+		allowAddingComponents,
+		allowAddingProperties,
+		fetchTemplate,
+		(void*)directory.c_str(),
+		out_template);
 }
 
-bool instantiateComponentsFromTemplate(const TypeDB & typeDB, const Template & t, ComponentSet & componentSet)
+bool instantiateComponentsFromTemplate(
+	const TypeDB & typeDB,
+	const Template & t,
+	ComponentSet & componentSet)
 {
 	for (auto & component_template : t.components)
 	{
-		const ComponentTypeBase * componentType = findComponentType(component_template.type_name.c_str());
+		const ComponentTypeBase * componentType = findComponentType(component_template.typeName.c_str());
 		
 		if (componentType == nullptr)
 		{
-			LOG_ERR("unknown component type: %s", component_template.type_name.c_str());
+			LOG_ERR("unknown component type: %s", component_template.typeName.c_str());
 			return false;
 		}
 		
@@ -410,9 +446,9 @@ bool instantiateComponentsFromTemplate(const TypeDB & typeDB, const Template & t
 				return false;
 			}
 			
-			LineReader line_reader(property_template.value_lines, 0, 0);
+			LineReader lineReader(property_template.value_lines, 0, 0);
 			
-			if (member_fromlines_recursive(g_typeDB, member, component, line_reader) == false)
+			if (member_fromlines_recursive(g_typeDB, member, component, lineReader) == false)
 			{
 				LOG_ERR("failed to deserialize property from text: property=%s, lines=", property_template.name.c_str());
 				for (auto & line : property_template.value_lines)
@@ -432,13 +468,13 @@ void dumpTemplateToLog(const Template & t)
 	for (auto & component : t.components)
 	{
 		LOG_DBG("%30s : %20s *",
-			component.type_name.c_str(),
+			component.typeName.c_str(),
 			component.id.c_str());
 		
 		for (auto & property : component.properties)
 		{
 			LOG_DBG("%30s : %20s : %20s = %s",
-				component.type_name.c_str(),
+				component.typeName.c_str(),
 				component.id.c_str(),
 				property.name.c_str(),
 				property.value_lines.size() == 1 ? property.value_lines[0].c_str() : "");

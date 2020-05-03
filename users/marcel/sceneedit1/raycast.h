@@ -16,7 +16,16 @@
  * @param t: Stores the distance to the intersection point if there is an intersection.
  * @return: True if there is an intersection. False otherwise.
  */
-inline bool intersectBoundingBox3d(const float * min, const float * max, const float px, const float py, const float pz, const float dxInv, const float dyInv, const float dzInv, float & t)
+inline bool intersectBoundingBox3d(
+	const float * min,
+	const float * max,
+	const float px,
+	const float py,
+	const float pz,
+	const float dxInv,
+	const float dyInv,
+	const float dzInv,
+	float & t)
 {
 	float tmin = std::numeric_limits<float>().min();
 	float tmax = std::numeric_limits<float>().max();

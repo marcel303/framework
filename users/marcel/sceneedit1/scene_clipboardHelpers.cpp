@@ -59,9 +59,9 @@ bool node_from_clipboard_text(const char * text, SceneNode & node)
 			
 		if (component_type_name[0] == '\t')
 		{
-			// only one level of identation may be added per line
+			// only one level of indentation may be added per line
 			
-			LOG_ERR("more than one level of identation added on line %d", line_reader.get_current_line_index());
+			LOG_ERR("more than one level of indentation added on line %d", line_reader.get_current_line_index());
 			return false;
 		}
 		
