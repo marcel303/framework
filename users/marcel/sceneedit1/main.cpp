@@ -714,7 +714,13 @@ struct SceneEditor
 			selectedNodes.insert(nodeId);
 			markNodeOpenUntilRoot(nodeId);
 			nodeToGiveFocus = nodeId;
+			enablePadGizmo = true;
 		}
+	}
+	
+	void selectNode(const int nodeId, const bool append)
+	{
+		selectNodes({ nodeId }, append);
 	}
 	
 	void addNodesToAdd()
@@ -1467,7 +1473,7 @@ struct SceneEditor
 		
 		if (!parseTemplateFromFileAndRecursivelyOverlayBaseTemplates(
 			"textfiles/base-entity-v1-overlay.txt",
-			false,
+			true,
 			true,
 			t))
 		{
@@ -1515,12 +1521,7 @@ struct SceneEditor
 			}
 		}
 		
-		scene.nodes[node->id] = node;
-		
-		//
-		
-		auto & parentNode = scene.getNode(parentId);
-		parentNode.childNodeIds.push_back(node->id);
+		deferred.nodesToAdd.push_back(node);
 		
 		return node->id;
 	}
@@ -1918,7 +1919,7 @@ struct SceneEditor
 			//inputIsCaptured = true;
 			
 			// action: add node from template. todo : this is a test action. remove! instead, have a template list or something and allow adding instances from there
-			if (keyboard.isDown(SDLK_LSHIFT))
+			if (keyboard.isDown(SDLK_RSHIFT))
 			{
 				// todo : make action dependent on editing state. in this case, node placement
 			
@@ -1934,47 +1935,40 @@ struct SceneEditor
 						
 						if (keyboard.isDown(SDLK_c))
 						{
-							std::set<int> nodesToSelect;
-							
-							for (auto & parentNodeId : selectedNodes)
+							deferredBegin();
 							{
-								auto & parentNode = scene.getNode(parentNodeId);
-								
-								auto * sceneNodeComp = parentNode.components.find<SceneNodeComponent>();
-								
-								Assert(sceneNodeComp != nullptr);
-								if (sceneNodeComp != nullptr)
+								for (auto & parentNodeId : selectedNodes)
 								{
-									const Vec3 groundPosition_parent = sceneNodeComp->objectToWorld.CalcInv().Mul4(groundPosition);
+									auto & parentNode = scene.getNode(parentNodeId);
 									
-									auto nodeId = addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
+									auto * sceneNodeComp = parentNode.components.find<SceneNodeComponent>();
 									
-									// select the newly added node
-									nodesToSelect.insert(nodeId);
-									nodeToGiveFocus = nodeId;
+									Assert(sceneNodeComp != nullptr);
+									if (sceneNodeComp != nullptr)
+									{
+										const Vec3 groundPosition_parent = sceneNodeComp->objectToWorld.CalcInv().Mul4(groundPosition);
+										
+										addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
+									}
 								}
 							}
-							
-							if (nodesToSelect.empty() == false)
-								selectedNodes = nodesToSelect;
+							deferredEnd(true);
 						}
 						else
 						{
-							auto nodeId = addNodeFromTemplate_v2(groundPosition, AngleAxis(), scene.rootNodeId);
-							
-							// select the newly added node
-							selectedNodes.clear();
-							selectedNodes.insert(nodeId);
-							markNodeOpenUntilRoot(nodeId);
-							nodeToGiveFocus = nodeId;
-							enablePadGizmo = true;
+							deferredBegin();
+							{
+								addNodeFromTemplate_v2(groundPosition, AngleAxis(), scene.rootNodeId);
+							}
+							deferredEnd(true);
 						}
 					}
 				}
 			}
 			else
 			{
-				selectedNodes.clear();
+				if (!keyboard.isDown(SDLK_LSHIFT))
+					selectedNodes.clear();
 				
 				if (hoverNode != nullptr)
 				{
