@@ -17,17 +17,18 @@
 #include "transformGizmos.h"
 
 // component types
-#include "cameraComponent.h"
-#include "lightComponent.h"
-#include "modelComponent.h"
-#include "parameterComponent.h"
-#include "sceneNodeComponent.h"
-#include "transformComponent.h"
+#include "components/cameraComponent.h"
+#include "components/lightComponent.h"
+#include "components/modelComponent.h"
+#include "components/parameterComponent.h"
+#include "components/sceneNodeComponent.h"
+#include "components/transformComponent.h"
 
 #include "helpers.h"
 #include "lineReader.h"
 #include "lineWriter.h"
 #include "template.h"
+#include "templateIo.h"
 
 #include <algorithm>
 #include <limits>
@@ -539,6 +540,14 @@ struct SceneEditor
 		bool showAnonymousComponents = false;
 	} parameterUi;
 	
+	struct
+	{
+		std::vector<std::string> versions;
+		int currentVersionIndex = -1;
+		
+		std::string currentVersion;
+	} undo;
+	
 	//
 	
 	SceneEditor()
@@ -627,9 +636,16 @@ struct SceneEditor
 	
 	void deferredEnd()
 	{
-		addNodesToAdd();
-		
-		removeNodesToRemove();
+		if (deferred.isFlushed() == false)
+		{
+			undoCaptureBegin();
+			{
+				addNodesToAdd();
+				
+				removeNodesToRemove();
+			}
+			undoCaptureEnd();
+		}
 	}
 	
 	void removeNodeTraverse(const int nodeId, const bool removeFromParent)
@@ -662,16 +678,10 @@ struct SceneEditor
 			
 			if (removeFromParent && node.parentId != -1)
 			{
-				auto parentNodeItr = scene.nodes.find(node.parentId);
-				Assert(parentNodeItr != scene.nodes.end());
-				if (parentNodeItr != scene.nodes.end())
-				{
-					auto & parentNode = *parentNodeItr->second;
-					auto childNodeItr = std::find(parentNode.childNodeIds.begin(), parentNode.childNodeIds.end(), node.id);
-					Assert(childNodeItr != parentNode.childNodeIds.end());
-					if (childNodeItr != parentNode.childNodeIds.end())
-						parentNode.childNodeIds.erase(childNodeItr);
-				}
+				auto & parentNode = scene.getNode(node.parentId);
+				auto childNodeItr = std::find(parentNode.childNodeIds.begin(), parentNode.childNodeIds.end(), node.id);
+				Assert(childNodeItr != parentNode.childNodeIds.end());
+				parentNode.childNodeIds.erase(childNodeItr);
 			}
 			
 			node.freeComponents();
@@ -679,6 +689,9 @@ struct SceneEditor
 			delete &node;
 			
 			scene.nodes.erase(nodeItr);
+			
+			if (nodeId == scene.rootNodeId)
+				scene.rootNodeId = -1;
 			
 			selectedNodes.erase(nodeId);
 			
@@ -694,14 +707,12 @@ struct SceneEditor
 			
 			for (SceneNode * node : deferred.nodesToAdd)
 			{
+				Assert(scene.nodes.find(node->id) == scene.nodes.end());
 				scene.nodes[node->id] = node;
 				
-				auto parentNode_itr = scene.nodes.find(node->parentId);
-				Assert(parentNode_itr != scene.nodes.end());
-				
 				// insert the node into the scene
-				auto * parentNode = parentNode_itr->second;
-				parentNode->childNodeIds.push_back(node->id);
+				auto & parentNode = scene.getNode(node->parentId);
+				parentNode.childNodeIds.push_back(node->id);
 				
 				// select the newly added child node
 				selectedNodes.insert(node->id);
@@ -730,15 +741,193 @@ struct SceneEditor
 	#endif
 	}
 	
+	bool undoCapture(std::string & text)
+	{
+		LineWriter line_writer;
+		
+		if (scene.saveToLines(g_typeDB, line_writer, 0) == false)
+		{
+			logError("failed to save scene to lines");
+			return false;
+		}
+		else
+		{
+			text = line_writer.to_string();
+			return true;
+		}
+	}
+	
+	void undoCaptureBegin()
+	{
+	#if defined(DEBUG)
+		// for debugging purposes, we save the current version,
+		// and compare it later when we begin capturing a new undo
+		// state. these SHOULD be equal, unless some action didn't
+		// get recorded into undo
+		
+		std::string text;
+		
+		if (undoCapture(text))
+		{
+		// fixme : entity ids aren't reserved between load/save actions. we should have 1. unique entity names (for scene hierarchy save/load) and 2. unique entity ids (for components and fast lookups)
+			//Assert(text == undo.currentVersion);
+		}
+	#endif
+	}
+	
+	void undoCaptureEnd()
+	{
+		std::string text;
+		
+		if (undoCapture(text))
+		{
+			undo.versions.resize(undo.currentVersionIndex + 1);
+			undo.versions.push_back(text);
+			undo.currentVersionIndex = undo.versions.size() - 1;
+			
+		#if defined(DEBUG)
+			undo.currentVersion = text;
+		#endif
+		}
+	}
+	
+	void undoPerformUndo()
+	{
+		if (undo.currentVersionIndex > 0)
+		{
+			auto & text = undo.versions[undo.currentVersionIndex - 1];
+			
+			std::vector<std::string> lines;
+			TextIO::LineEndings lineEndings;
+		
+			if (!TextIO::loadText(text.c_str(), lines, lineEndings))
+			{
+				logError("failed to load text file");
+			}
+			else
+			{
+				Scene tempScene;
+				tempScene.createRootNode();
+
+				if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
+				{
+					logError("failed to load scene from lines");
+				}
+				else
+				{
+					bool init_ok = true;
+					
+					for (auto node_itr : tempScene.nodes)
+						init_ok &= node_itr.second->initComponents();
+					
+					if (init_ok == false)
+					{
+						tempScene.freeAllNodesAndComponents();
+					}
+					else
+					{
+						for (auto & node_itr : scene.nodes)
+							deferred.nodesToRemove.insert(node_itr.second->id);
+						
+						removeNodesToRemove();
+						
+						scene = tempScene;
+						
+						undo.currentVersion = text;
+						undo.currentVersionIndex--;
+					}
+				}
+				
+				tempScene.nodes.clear();
+			}
+		}
+	}
+	
+	void undoPerformRedo()
+	{
+		if (undo.currentVersionIndex + 1 < undo.versions.size())
+		{
+			auto & text = undo.versions[undo.currentVersionIndex + 1];
+			
+			std::vector<std::string> lines;
+			TextIO::LineEndings lineEndings;
+		
+			if (!TextIO::loadText(text.c_str(), lines, lineEndings))
+			{
+				logError("failed to load text file");
+			}
+			else
+			{
+				Scene tempScene;
+				tempScene.createRootNode();
+
+				if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
+				{
+					logError("failed to load scene from lines");
+					tempScene.nodes.clear();
+				}
+				else
+				{
+					bool init_ok = true;
+					
+					for (auto node_itr : tempScene.nodes)
+						init_ok &= node_itr.second->initComponents();
+					
+					if (init_ok == false)
+					{
+						tempScene.freeAllNodesAndComponents();
+					}
+					else
+					{
+						for (auto & node_itr : scene.nodes)
+							deferred.nodesToRemove.insert(node_itr.second->id);
+						
+						removeNodesToRemove();
+						
+						scene = tempScene;
+						
+						undo.currentVersion = text;
+						undo.currentVersionIndex++;
+						
+					#if false // todo : remove. this is an A-B test to see if the results of a save-load-save are equal
+						std::string temp;
+						undoCapture(temp);
+						{
+							std::vector<std::string> lines;
+							TextIO::LineEndings lineEndings;
+							TextIO::loadText(temp.c_str(), lines, lineEndings);
+							TextIO::save("version-old.txt", lines, TextIO::kLineEndings_Unix);
+						}
+						{
+							std::vector<std::string> lines;
+							TextIO::LineEndings lineEndings;
+							TextIO::loadText(text.c_str(), lines, lineEndings);
+							TextIO::save("version-new.txt", lines, TextIO::kLineEndings_Unix);
+						}
+						Assert(text == temp);
+					#endif
+					}
+				}
+				
+				tempScene.nodes.clear();
+			}
+		}
+	}
+	
+	void undoReset()
+	{
+		undo.versions.clear();
+		undo.currentVersion.clear();
+		undo.currentVersionIndex = -1;
+		
+		undoCapture(undo.currentVersion);
+		undo.versions.push_back(undo.currentVersion);
+		undo.currentVersionIndex = undo.versions.size() - 1;
+	}
+	
 	void editNode(const int nodeId)
 	{
-		auto nodeItr = scene.nodes.find(nodeId);
-		
-		Assert(nodeItr != scene.nodes.end());
-		if (nodeItr == scene.nodes.end())
-			return;
-		
-		auto & node = *nodeItr->second;
+		auto & node = scene.getNode(nodeId);
 		
 		// todo : make a separate function to edit a data structure (recursively)
 		
@@ -1040,13 +1229,7 @@ struct SceneEditor
 	{
 		const bool do_filter = nodeUi.nodeDisplayNameFilter[0] != 0;
 		
-		auto nodeItr = scene.nodes.find(nodeId);
-		
-		Assert(nodeItr != scene.nodes.end());
-		if (nodeItr == scene.nodes.end())
-			return;
-		
-		auto & node = *nodeItr->second;
+		auto & node = scene.getNode(nodeId);
 		
 		//
 		
@@ -1118,14 +1301,9 @@ struct SceneEditor
 	{
 		nodeUi.visibleNodes.insert(nodeId);
 
-		auto node_itr = scene.nodes.find(nodeId);
-		Assert(node_itr != scene.nodes.end());
-		if (node_itr == scene.nodes.end())
-			return;
+		auto & node = scene.getNode(nodeId);
 		
-		auto * node = node_itr->second;
-		
-		int parentId = node->parentId;
+		int parentId = node.parentId;
 
 		while (parentId != -1)
 		{
@@ -1134,11 +1312,8 @@ struct SceneEditor
 			
 			nodeUi.visibleNodes.insert(parentId);
 			
-			auto parentNode_itr = scene.nodes.find(parentId);
-			Assert(parentNode_itr != scene.nodes.end());
-			if (parentNode_itr == scene.nodes.end())
-				break;
-			parentId = parentNode_itr->second->parentId;
+			auto & parentNode = scene.getNode(parentId);
+			parentId = parentNode.parentId;
 		}
 	}
 	
@@ -1204,11 +1379,8 @@ struct SceneEditor
 			
 			nodeUi.openNodes.insert(nodeId);
 			
-			auto parentNode_itr = scene.nodes.find(nodeId);
-			Assert(parentNode_itr != scene.nodes.end());
-			if (parentNode_itr == scene.nodes.end())
-				break;
-			nodeId = parentNode_itr->second->parentId;
+			auto & node = scene.getNode(nodeId);
+			nodeId = node.parentId;
 		}
 	}
 	
@@ -1219,14 +1391,9 @@ struct SceneEditor
 		
 		for (auto & nodeId : selectedNodes)
 		{
-			auto node_itr = scene.nodes.find(nodeId);
-			Assert(node_itr != scene.nodes.end());
-			if (node_itr == scene.nodes.end())
-				continue;
+			auto & node = scene.getNode(nodeId);
 			
-			auto * node = node_itr->second;
-			
-			markNodeOpenUntilRoot(node->parentId);
+			markNodeOpenUntilRoot(node.parentId);
 			
 			markNodeVisibleUntilRoot(nodeId);
 		}
@@ -1264,14 +1431,9 @@ struct SceneEditor
 			
 			//
 			
-			auto parentNode_itr = scene.nodes.find(parentId);
-			Assert(parentNode_itr != scene.nodes.end());
-			if (parentNode_itr != scene.nodes.end())
-			{
-				auto & parentNode = *parentNode_itr->second;
-				
-				parentNode.childNodeIds.push_back(node->id);
-			}
+
+			auto & parentNode = scene.getNode(parentId);
+			parentNode.childNodeIds.push_back(node->id);
 		}
 	}
 	
@@ -1279,8 +1441,14 @@ struct SceneEditor
 	{
 		Template t;
 		
-		if (!loadTemplateWithOverlaysFromFile("textfiles/base-entity-v1-overlay.txt", t, false))
+		if (!parseTemplateFromFileAndRecursivelyOverlayBaseTemplates(
+			"textfiles/base-entity-v1-overlay.txt",
+			false,
+			true,
+			t))
+		{
 			return -1;
+		}
 		
 		//
 		
@@ -1327,14 +1495,8 @@ struct SceneEditor
 		
 		//
 		
-		auto parentNode_itr = scene.nodes.find(parentId);
-		Assert(parentNode_itr != scene.nodes.end());
-		if (parentNode_itr != scene.nodes.end())
-		{
-			auto & parentNode = *parentNode_itr->second;
-			
-			parentNode.childNodeIds.push_back(node->id);
-		}
+		auto & parentNode = scene.getNode(parentId);
+		parentNode.childNodeIds.push_back(node->id);
 		
 		return node->id;
 	}
@@ -1505,12 +1667,12 @@ struct SceneEditor
 					
 					if (ImGui::Button("Undo"))
 					{
-					
+						undoPerformUndo();
 					}
 					
 					if (ImGui::Button("Redo"))
 					{
-					
+						undoPerformRedo();
 					}
 				}
 				ImGui::EndMainMenuBar();
@@ -1533,6 +1695,7 @@ struct SceneEditor
 			preview.tickMultiplier /= 1.25f;
 		}
 		
+		// action: copy selected node(s) to clipboard
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_c) && keyboard.isDown(SDLK_LGUI))
 		{
 			inputIsCaptured = true;
@@ -1540,15 +1703,14 @@ struct SceneEditor
 			if (selectedNodes.empty() == false)
 			{
 				auto nodeId = *selectedNodes.begin(); // todo : handle multiple nodes
-				auto node_itr = scene.nodes.find(nodeId);
-				Assert(node_itr != scene.nodes.end());
-				auto * node = node_itr->second;
+				auto & node = scene.getNode(nodeId);
 				std::string text;
-				if (node_to_clipboard_text(*node, text))
+				if (node_to_clipboard_text(node, text))
 					SDL_SetClipboardText(text.c_str());
 			}
 		}
 		
+		// action: paste node(s) from clipboard
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_v) && keyboard.isDown(SDLK_LGUI))
 		{
 			inputIsCaptured = true;
@@ -1557,22 +1719,24 @@ struct SceneEditor
 			deferredEnd();
 		}
 		
+		// action: duplicate selected node(s)
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_d) && keyboard.isDown(SDLK_LGUI))
 		{
 			inputIsCaptured = true;
+			
 			if (selectedNodes.empty() == false)
 			{
-				auto nodeId = *selectedNodes.begin(); // todo : handle multiple nodes
-				auto node_itr = scene.nodes.find(nodeId);
-				Assert(node_itr != scene.nodes.end());
-				auto * node = node_itr->second;
-				std::string text;
-				if (node_to_clipboard_text(*node, text))
+				deferredBegin();
 				{
-					deferredBegin();
-					pasteNodeFromClipboardText(scene.rootNodeId, text.c_str());
-					deferredEnd();
+					for (auto nodeId : selectedNodes)
+					{
+						auto & node = scene.getNode(nodeId);
+						std::string text;
+						if (node_to_clipboard_text(node, text))
+							pasteNodeFromClipboardText(scene.rootNodeId, text.c_str());
+					}
 				}
+				deferredEnd();
 			}
 		}
 		
@@ -1635,16 +1799,13 @@ struct SceneEditor
 		}
 		else
 		{
-			auto node_itr = scene.nodes.find(*selectedNodes.begin());
-			Assert(node_itr != scene.nodes.end());
-			
-			auto * node = node_itr->second;
+			auto & node = scene.getNode(*selectedNodes.begin());
 			
 			// determine the current global transform
 			
 			Mat4x4 globalTransform(true);
 			
-			auto * sceneNodeComponent = node->components.find<SceneNodeComponent>();
+			auto * sceneNodeComponent = node.components.find<SceneNodeComponent>();
 			Assert(sceneNodeComponent != nullptr);
 			
 			if (sceneNodeComponent != nullptr)
@@ -1670,14 +1831,11 @@ struct SceneEditor
 				
 				Mat4x4 localTransform = transformGizmo.gizmoToWorld;
 				
-				if (node->parentId != -1)
+				if (node.parentId != -1)
 				{
-					auto parent_itr = scene.nodes.find(node->parentId);
-					Assert(parent_itr != scene.nodes.end());
+					auto & parentNode = scene.getNode(node.parentId);
 					
-					auto * parent = parent_itr->second;
-					
-					auto * sceneNodeComponent_parent = parent->components.find<SceneNodeComponent>();
+					auto * sceneNodeComponent_parent = parentNode.components.find<SceneNodeComponent>();
 					Assert(sceneNodeComponent_parent != nullptr);
 				
 					if (sceneNodeComponent_parent != nullptr)
@@ -1686,7 +1844,7 @@ struct SceneEditor
 				
 				// assign the translation in local space to the transform component
 				
-				auto * transformComponent = node->components.find<TransformComponent>();
+				auto * transformComponent = node.components.find<TransformComponent>();
 				
 				if (transformComponent != nullptr)
 				{
@@ -1761,25 +1919,20 @@ struct SceneEditor
 							
 							for (auto & parentNodeId : selectedNodes)
 							{
-								auto parentNode_itr = scene.nodes.find(parentNodeId);
-								Assert(parentNode_itr != scene.nodes.end());
-								if (parentNode_itr != scene.nodes.end())
+								auto & parentNode = scene.getNode(parentNodeId);
+								
+								auto * sceneNodeComp = parentNode.components.find<SceneNodeComponent>();
+								
+								Assert(sceneNodeComp != nullptr);
+								if (sceneNodeComp != nullptr)
 								{
-									auto & parentNode = *parentNode_itr->second;
+									const Vec3 groundPosition_parent = sceneNodeComp->objectToWorld.CalcInv().Mul4(groundPosition);
 									
-									auto * sceneNodeComp = parentNode.components.find<SceneNodeComponent>();
+									auto nodeId = addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
 									
-									Assert(sceneNodeComp != nullptr);
-									if (sceneNodeComp != nullptr)
-									{
-										const Vec3 groundPosition_parent = sceneNodeComp->objectToWorld.CalcInv().Mul4(groundPosition);
-										
-										auto nodeId = addNodeFromTemplate_v2(groundPosition_parent, AngleAxis(), parentNodeId);
-										
-										// select the newly added node
-										nodesToSelect.insert(nodeId);
-										nodeToGiveFocus = nodeId;
-									}
+									// select the newly added node
+									nodesToSelect.insert(nodeId);
+									nodeToGiveFocus = nodeId;
 								}
 							}
 							
@@ -2091,7 +2244,7 @@ static bool testResourcePointers()
 	
 	Template t;
 	
-	if (!loadTemplateFromFile("textfiles/resource-pointer-v1.txt", t))
+	if (!parseTemplateFromFile("textfiles/resource-pointer-v1.txt", t))
 		logError("failed to load resource pointer test file");
 	else
 	{
@@ -2142,6 +2295,7 @@ static bool load_scene_from_lines_nondestructive(std::vector<std::string> & line
 		if (init_ok == false)
 		{
 			tempScene.freeAllNodesAndComponents();
+			tempScene.nodes.clear();
 			return false;
 		}
 		else
@@ -2155,6 +2309,8 @@ static bool load_scene_from_lines_nondestructive(std::vector<std::string> & line
 			
 			sceneEditor.scene = tempScene;
 			tempScene.nodes.clear();
+			
+			sceneEditor.undoReset();
 			
 			return true;
 		}

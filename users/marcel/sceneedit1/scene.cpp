@@ -108,6 +108,14 @@ const SceneNode & Scene::getRootNode() const
 	return *i->second;
 }
 
+SceneNode & Scene::getNode(const int nodeId)
+{
+	auto i = nodes.find(nodeId);
+	Assert(i != nodes.end());
+	
+	return *i->second;
+}
+
 const SceneNode & Scene::getNode(const int nodeId) const
 {
 	auto i = nodes.find(nodeId);
@@ -118,16 +126,11 @@ const SceneNode & Scene::getNode(const int nodeId) const
 
 static bool write_node_children_traverse(const Scene & scene, const int nodeId, LineWriter & line_writer, const int indent)
 {
-	auto node_itr = scene.nodes.find(nodeId);
-	Assert(node_itr != scene.nodes.end());
-	if (node_itr == scene.nodes.end())
-		return false;
-	
-	auto * node = node_itr->second;
+	auto & node = scene.getNode(nodeId);
 	
 	bool result = true;
 	
-	for (auto child_node_id : node->childNodeIds)
+	for (auto child_node_id : node.childNodeIds)
 	{
 		char id[32];
 		sprintf(id, "%d", child_node_id); // todo : use a faster conversion function

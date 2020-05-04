@@ -33,15 +33,9 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 	
 	for (auto & childNodeId : node.childNodeIds)
 	{
-		auto childNodeItr = scene.nodes.find(childNodeId);
+		SceneNode & childNode = scene.getNode(childNodeId);
 		
-		Assert(childNodeItr != scene.nodes.end());
-		if (childNodeItr != scene.nodes.end())
-		{
-			SceneNode & childNode = *childNodeItr->second;
-			
-			calculateTransformsTraverse(scene, childNode, newGlobalTransform);
-		}
+		calculateTransformsTraverse(scene, childNode, newGlobalTransform);
 	}
 }
 

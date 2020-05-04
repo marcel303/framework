@@ -43,6 +43,7 @@ struct Scene
 	void createRootNode();
 	SceneNode & getRootNode();
 	const SceneNode & getRootNode() const;
+	SceneNode & getNode(const int nodeId);
 	const SceneNode & getNode(const int nodeId) const;
 	
 	bool saveToLines(const TypeDB & typeDB, LineWriter & line_writer, const int indent);
