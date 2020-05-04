@@ -8,6 +8,8 @@
 
 #include "helpers.h" // g_componentTypes
 
+extern SceneNodeComponentMgr s_sceneNodeComponentMgr;
+
 bool SceneNode::initComponents()
 {
 	bool result = true;
@@ -88,7 +90,7 @@ void Scene::createRootNode()
 	SceneNode * rootNode = new SceneNode();
 	rootNode->id = allocNodeId();
 	
-	auto * sceneNodeComponent = new SceneNodeComponent();
+	auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(rootNode->components.id);
 	sceneNodeComponent->name = "root";
 	rootNode->components.add(sceneNodeComponent);
 	

@@ -29,7 +29,7 @@ ComponentTypeBase * findComponentType(const char * typeName);
 ComponentTypeBase * findComponentType(const std::type_index & typeIndex);
 
 void freeComponentsInComponentSet(ComponentSet & componentSet);
-void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase * component);
+void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase *& component);
 
 #include "reflection-textio.h"
 

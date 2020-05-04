@@ -1077,7 +1077,10 @@ struct SceneEditor
 		else
 		{
 			if (childNode->components.contains<SceneNodeComponent>() == false)
-				childNode->components.add(new SceneNodeComponent()); // todo : should alloc from scene node component mgr
+			{
+				auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(childNode->components.id);
+				childNode->components.add(sceneNodeComponent);
+			}
 			
 			auto * sceneNodeComponent = childNode->components.find<SceneNodeComponent>();
 			sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
@@ -1169,7 +1172,7 @@ struct SceneEditor
 			childNode->id = scene.allocNodeId();
 			childNode->parentId = node.id;
 			
-			auto * sceneNodeComponent = new SceneNodeComponent();
+			auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(childNode->components.id);
 			sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
 			childNode->components.add(sceneNodeComponent);
 			
@@ -1233,12 +1236,12 @@ struct SceneEditor
 					{
 						result = kNodeContextMenuResult_ComponentAdded;
 						
-						auto * component = componentType->componentMgr->createComponent(nullptr);
+						auto * component = componentType->componentMgr->createComponent(node.components.id);
 						
 						if (component->init())
 							node.components.add(component);
 						else
-							componentType->componentMgr->destroyComponent(component);
+							componentType->componentMgr->destroyComponent(node.components.id);
 					}
 				}
 			}
@@ -1434,16 +1437,16 @@ struct SceneEditor
 		node->id = scene.allocNodeId();
 		node->parentId = parentId;
 		
-		auto * sceneNodeComponent = new SceneNodeComponent();
+		auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(node->components.id);
 		sceneNodeComponent->name = String::FormatC("Node %d", node->id);
 		node->components.add(sceneNodeComponent);
 		
-		auto * modelComp = s_modelComponentMgr.createComponent(nullptr);
+		auto * modelComp = s_modelComponentMgr.createComponent(node->components.id);
 		modelComp->filename = "model.txt";
 		modelComp->scale = .01f;
 		node->components.add(modelComp);
 		
-		auto * transformComp = s_transformComponentMgr.createComponent(nullptr);
+		auto * transformComp = s_transformComponentMgr.createComponent(node->components.id);
 		transformComp->position = position;
 		node->components.add(transformComp);
 		
@@ -1492,7 +1495,7 @@ struct SceneEditor
 		
 		if (node->components.contains<SceneNodeComponent>() == false)
 		{
-			auto * sceneNodeComponent = new SceneNodeComponent();
+			auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(node->components.id);
 			sceneNodeComponent->name = String::FormatC("Node %d", node->id);
 			node->components.add(sceneNodeComponent);
 		}
@@ -2513,6 +2516,8 @@ int main(int argc, char * argv[])
 							
 							for (int i = 0; i < 100000; ++i)
 							{
+								int componentSetId = allocComponentSetId();
+								
 								LineWriter line_writer;
 								object_tolines_recursive(g_typeDB, componentType, component, line_writer, 0);
 								
@@ -2521,7 +2526,7 @@ int main(int argc, char * argv[])
 								//for (auto & line : lines)
 								//	logInfo("%s", line.c_str());
 								
-								auto * component_copy = componentType->componentMgr->createComponent(nullptr);
+								auto * component_copy = componentType->componentMgr->createComponent(componentSetId);
 								
 								LineReader line_reader(lines, 0, 0);
 								if (object_fromlines_recursive(g_typeDB, componentType, component_copy, line_reader))
@@ -2529,7 +2534,11 @@ int main(int argc, char * argv[])
 									//logDebug("success!");
 								}
 								
-								componentType->componentMgr->destroyComponent(component_copy);
+								componentType->componentMgr->destroyComponent(componentSetId);
+								component_copy = nullptr;
+								
+								freeComponentSetId(componentSetId);
+								Assert(componentSetId == kComponentSetIdInvalid);
 							}
 							
 							auto t2 = SDL_GetTicks();

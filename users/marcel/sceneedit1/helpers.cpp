@@ -153,14 +153,14 @@ void freeComponentsInComponentSet(ComponentSet & componentSet)
 		
 		auto * componentMgr = componentType->componentMgr;
 
-		componentMgr->destroyComponent(component);
-		Assert(component == nullptr);
+		componentMgr->destroyComponent(componentSet.id);
+		component = nullptr;
 	}
 
 	componentSet.head = nullptr;
 }
 
-void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase * component)
+void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase *& component)
 {
 	componentSet.remove(component);
 	
@@ -168,9 +168,10 @@ void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase * co
 	Assert(componentType != nullptr);
 	
 	auto * componentMgr = componentType->componentMgr;
+	Assert(componentMgr != nullptr);
 
-	componentMgr->destroyComponent(component);
-	Assert(component == nullptr);
+	componentMgr->destroyComponent(componentSet.id);
+	component = nullptr;
 }
 
 //

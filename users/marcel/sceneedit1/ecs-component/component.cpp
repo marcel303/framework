@@ -1,11 +1,36 @@
 #include "component.h"
 #include <string.h>
 
+//
+
+static int s_nextComponentSetId = 0; // todo : reuse component set ids when freed, to avoid infinitely growing numbers
+
+int allocComponentSetId()
+{
+	return s_nextComponentSetId++;
+}
+
+void freeComponentSetId(int & id)
+{
+	id = kComponentSetIdInvalid;
+}
+
 ComponentBase::~ComponentBase()
 {
 }
 
 //
+
+ComponentSet::ComponentSet()
+{
+	id = allocComponentSetId();
+}
+
+ComponentSet::~ComponentSet()
+{
+	freeComponentSetId(id);
+	Assert(id == kComponentSetIdInvalid);
+}
 
 void ComponentSet::add(ComponentBase * component)
 {

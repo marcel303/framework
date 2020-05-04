@@ -11,6 +11,13 @@ struct ComponentSet;
 
 //
 
+const int kComponentSetIdInvalid = -1;
+
+int allocComponentSetId();
+void freeComponentSetId(int & id);
+
+//
+
 struct ComponentBase
 {
 	ComponentSet * componentSet = nullptr;
@@ -51,16 +58,10 @@ struct ComponentMgrBase
 	virtual bool init() { return true; }
 	virtual void shut() { }
 	
-	virtual ComponentBase * createComponent(const char * id) = 0;
-	virtual void addComponent(ComponentBase * component) = 0;
-	virtual void destroyComponentImpl(ComponentBase * component) = 0;
+	virtual ComponentBase * createComponent(const int id) = 0;
+	virtual void destroyComponent(const int id) = 0;
 	
-	template <typename T>
-	void destroyComponent(T *& component)
-	{
-		destroyComponentImpl(component);
-		component = nullptr;
-	}
+	virtual ComponentBase * getComponent(const int id) = 0;
 	
 	virtual void tick(const float dt) = 0;
 	
@@ -70,22 +71,56 @@ struct ComponentMgrBase
 template <typename T>
 struct ComponentMgr : ComponentMgrBase
 {
+	T ** components = nullptr;
+	int numComponents = 0;
+	
 	T * head = nullptr;
 	T * tail = nullptr;
 	
-	virtual T * createComponent(const char * id) override final
+	virtual T * createComponent(const int id) override final
 	{
+		if (id + 1 > numComponents)
+			resizeCapacity(id + 1);
+		
 		T * component = new T();
 		
-		addComponent(component);
+		Assert(components[id] == nullptr);
+		components[id] = component;
+		
+		linkComponent(component);
 		
 		return component;
 	}
 	
-	virtual void addComponent(ComponentBase * in_component) override final
+	virtual void destroyComponent(const int id) override final
 	{
-		T * component = castToComponentType(in_component);
+		Assert(id >= 0 && id < numComponents && components[id] != nullptr);
+		auto *& component = components[id];
 		
+		unlinkComponent(component);
+		
+		delete component;
+		component = nullptr;
+	}
+	
+	virtual ComponentBase * getComponent(const int id) override final
+	{
+		Assert(id >= 0 && id < numComponents);
+		auto * component = components[id];
+		
+		return component;
+	}
+	
+	void resizeCapacity(const int capacity)
+	{
+		components = (T**)realloc(components, capacity * sizeof(T*)); // todo : include
+		for (int i = numComponents; i < capacity; ++i)
+			components[i] = nullptr;
+		numComponents = capacity;
+	}
+	
+	void linkComponent(T * component)
+	{
 		Assert(component->prev == nullptr);
 		Assert(component->next == nullptr);
 		
@@ -103,10 +138,8 @@ struct ComponentMgr : ComponentMgrBase
 		}
 	}
 
-	virtual void destroyComponentImpl(ComponentBase * in_component) override final
+	void unlinkComponent(T * component)
 	{
-		T * component = castToComponentType(in_component);
-		
 		if (component->prev != nullptr)
 			component->prev->next = component->next;
 		if (component->next != nullptr)
@@ -119,8 +152,6 @@ struct ComponentMgr : ComponentMgrBase
 		
 		component->prev = nullptr;
 		component->next = nullptr;
-		
-		delete component;
 	}
 	
 	virtual void tick(const float dt) override final
@@ -145,6 +176,11 @@ struct ComponentMgr : ComponentMgrBase
 struct ComponentSet
 {
 	ComponentBase * head = nullptr;
+	
+	int id = kComponentSetIdInvalid;
+	
+	ComponentSet();
+	~ComponentSet();
 	
 	void add(ComponentBase * component);
 	void remove(ComponentBase * component);

@@ -22,7 +22,7 @@ bool instantiateComponentsFromTemplate(
 			return false;
 		}
 		
-		ComponentBase * component = componentType->componentMgr->createComponent(component_template.id.c_str());
+		ComponentBase * component = componentType->componentMgr->createComponent(componentSet.id);
 		
 		for (auto & property_template : component_template.properties)
 		{

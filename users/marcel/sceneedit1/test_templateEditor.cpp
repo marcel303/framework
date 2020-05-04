@@ -54,8 +54,10 @@ static void createFallbackTemplateForComponent(const TypeDB & typeDB, const char
 	template_component.typeName = componentTypeName;
 	template_component.id = componentId;
 	
+	int componentSetId = allocComponentSetId();
+	
 	auto * componentType = findComponentType(componentTypeName);
-	auto * component = componentType->componentMgr->createComponent(nullptr);
+	auto * component = componentType->componentMgr->createComponent(componentSetId);
 	
 	for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 	{
@@ -76,8 +78,9 @@ static void createFallbackTemplateForComponent(const TypeDB & typeDB, const char
 		template_component.properties.push_back(template_property);
 	}
 	
-	componentType->componentMgr->destroyComponent(component);
-	Assert(component == nullptr);
+	componentType->componentMgr->destroyComponent(componentSetId);
+	
+	freeComponentSetId(componentSetId);
 }
 
 struct ComponentTypeWithId
@@ -111,12 +114,12 @@ struct TemplateComponentInstance
 		Assert(component == nullptr);
 	}
 	
-	bool init(const TypeDB & typeDB, ComponentTypeBase * in_componentType, const char * in_id, const TemplateComponent * templateComponent)
+	bool init(const TypeDB & typeDB, ComponentTypeBase * in_componentType, const char * in_id, const TemplateComponent * templateComponent, const int componentSetId)
 	{
 		bool result = true;
 		
 		componentType = in_componentType;
-		component = componentType->componentMgr->createComponent(nullptr);
+		component = componentType->componentMgr->createComponent(componentSetId);
 		id = in_id;
 		
 		// iterate over each property to see if it's set or not
@@ -159,12 +162,12 @@ struct TemplateComponentInstance
 		return result;
 	}
 	
-	void shut()
+	void shut(const int componentSetId)
 	{
 		if (component != nullptr)
 		{
-			componentType->componentMgr->destroyComponent(component);
-			Assert(component == nullptr);
+			componentType->componentMgr->destroyComponent(componentSetId);
+			component = nullptr;
 		}
 		
 		componentType = nullptr;
@@ -181,6 +184,8 @@ struct TemplateInstance
 	std::string base;
 	
 	std::list<TemplateComponentInstance> components;
+	
+	int componentSetId = kComponentSetIdInvalid;
 	
 	TemplateComponentInstance * findComponentInstance(const char * typeName, const char * id)
 	{
@@ -200,6 +205,9 @@ struct TemplateInstance
 	{
 		name = t.name;
 		base = t.base;
+		
+		Assert(componentSetId == kComponentSetIdInvalid);
+		componentSetId = allocComponentSetId();
 		
 		// create template component instances for each component
 		
@@ -238,7 +246,7 @@ struct TemplateInstance
 				LOG_ERR("failed to find component type: %s", templateComponent->typeName.c_str());
 				return false;
 			}
-			else if (!component.init(typeDB, componentType, componentTypeWithId.id.c_str(), templateComponent))
+			else if (!component.init(typeDB, componentType, componentTypeWithId.id.c_str(), templateComponent, componentSetId))
 			{
 				LOG_ERR("failed to initialize template component instance", 0);
 				return false;
@@ -251,7 +259,10 @@ struct TemplateInstance
 	void shut()
 	{
 		for (auto & component : components)
-			component.shut();
+			component.shut(componentSetId);
+		
+		freeComponentSetId(componentSetId);
+		Assert(componentSetId == kComponentSetIdInvalid);
 	}
 	
 	bool addComponentByTypeName(const TypeDB & typeDB, const char * typeName, const bool isOverride, const bool isFallback)
@@ -262,7 +273,7 @@ struct TemplateInstance
 		
 		// initialize the component instance
 		
-		TemplateComponentInstance & component = components.back();;
+		TemplateComponentInstance & component = components.back();
 	
 		component.isOverride = isOverride;
 	
@@ -281,7 +292,7 @@ struct TemplateInstance
 			components.pop_back();
 			return false;
 		}
-		else if (!component.init(typeDB, componentType, "", &template_component))
+		else if (!component.init(typeDB, componentType, "", &template_component, componentSetId))
 		{
 			LOG_ERR("failed to initialize template component instance", 0);
 			components.pop_back();

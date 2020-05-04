@@ -7,6 +7,8 @@
 #include "templateIo.h"
 #include <string.h>
 
+extern SceneNodeComponentMgr s_sceneNodeComponentMgr;
+
 static int calculateIndentationLevel(const char * line)
 {
 	int result = 0;
@@ -406,7 +408,7 @@ bool parseSceneObjectStructureFromLines(
 		
 		if (node->components.contains<SceneNodeComponent>() == false)
 		{
-			auto * sceneNodeComponent = new SceneNodeComponent();
+			auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(node->components.id);
 			sceneNodeComponent->name = name;
 			node->components.add(sceneNodeComponent);
 		}

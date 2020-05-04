@@ -74,7 +74,7 @@ bool node_from_text(const char * text, SceneNode & node)
 			return false;
 		}
 		
-		auto * component = component_type->componentMgr->createComponent(nullptr);
+		auto * component = component_type->componentMgr->createComponent(node.components.id);
 		
 		line_reader.push_indent();
 		{
