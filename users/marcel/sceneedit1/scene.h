@@ -14,7 +14,9 @@ struct TypeDB;
 
 struct SceneNode
 {
-	int id = -1;
+	std::string name; // unique name, used during save/load only
+	
+	int id = -1; // id used for run-time lookups. note : not serialized, but allocated when a node is created
 	int parentId = -1; // note : not serialized, but inferred when loading a scene
 	
 	std::vector<int> childNodeIds;
@@ -33,7 +35,6 @@ struct Scene
 	
 	int rootNodeId = -1;
 	
-	Scene();
 	~Scene();
 	
 	int allocNodeId();
@@ -43,11 +44,13 @@ struct Scene
 	
 	void createRootNode();
 	
-	SceneNode & getRootNode();
+	      SceneNode & getRootNode();
 	const SceneNode & getRootNode() const;
-	SceneNode & getNode(const int nodeId);
+	      SceneNode & getNode(const int nodeId);
 	const SceneNode & getNode(const int nodeId) const;
 	
 	bool saveToLines(const TypeDB & typeDB, LineWriter & line_writer, const int indent) const;
 	bool saveNodeHierarchyToLines(const int rootNodeId, LineWriter & line_writer, const int indent) const;
+	
+	bool validate() const;
 };

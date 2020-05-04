@@ -43,8 +43,14 @@
 
 #if defined(DEBUG)
 	#define ENABLE_LOAD_AFTER_SAVE_TEST 1
+	#define ENABLE_PERFORMANCE_TEST     1
+	#define ENABLE_TEMPLATE_TEST        1
+	#define ENABLE_SAVE_LOAD_TIMING     1
 #else
 	#define ENABLE_LOAD_AFTER_SAVE_TEST 0 // do not alter
+	#define ENABLE_PERFORMANCE_TEST     0 // do not alter
+	#define ENABLE_TEMPLATE_TEST        0 // do not alter
+	#define ENABLE_SAVE_LOAD_TIMING     0 // do not alter
 #endif
 
 /*
@@ -469,6 +475,8 @@ struct Renderer
 
 //
 
+struct SceneEditor;
+
 struct SceneEditor
 {
 	static const int kMaxNodeDisplayNameFilter = 100;
@@ -634,7 +642,7 @@ struct SceneEditor
 		Assert(deferred.isFlushed());
 	}
 	
-	void deferredEnd(bool selectAddedNodes)
+	void deferredEnd(const bool selectAddedNodes)
 	{
 		if (deferred.isFlushed() == false)
 		{
@@ -747,11 +755,6 @@ struct SceneEditor
 			
 			removeNodeSubTree(nodeId);
 		}
-
-	#if defined(DEBUG)
-		for (auto & selectedNodeId : selectedNodes)
-			Assert(scene.nodes.find(selectedNodeId) != scene.nodes.end());
-	#endif
 	}
 	
 	bool undoCapture(std::string & text) const
@@ -804,7 +807,18 @@ struct SceneEditor
 		}
 	}
 	
-	void undoPerformUndo()
+	void undoReset()
+	{
+		undo.versions.clear();
+		undo.currentVersion.clear();
+		undo.currentVersionIndex = -1;
+		
+		undoCapture(undo.currentVersion);
+		undo.versions.push_back(undo.currentVersion);
+		undo.currentVersionIndex = undo.versions.size() - 1;
+	}
+	
+	void performAction_undo()
 	{
 		if (undo.currentVersionIndex > 0)
 		{
@@ -856,7 +870,7 @@ struct SceneEditor
 		}
 	}
 	
-	void undoPerformRedo()
+	void performAction_redo()
 	{
 		if (undo.currentVersionIndex + 1 < undo.versions.size())
 		{
@@ -925,17 +939,6 @@ struct SceneEditor
 				tempScene.nodes.clear();
 			}
 		}
-	}
-	
-	void undoReset()
-	{
-		undo.versions.clear();
-		undo.currentVersion.clear();
-		undo.currentVersionIndex = -1;
-		
-		undoCapture(undo.currentVersion);
-		undo.versions.push_back(undo.currentVersion);
-		undo.currentVersionIndex = undo.versions.size() - 1;
 	}
 	
 	void editNode(const int nodeId)
@@ -1658,6 +1661,36 @@ struct SceneEditor
 				
 				if (ImGui::BeginMainMenuBar())
 				{
+					if (ImGui::BeginMenu("File"))
+					{
+						if (ImGui::MenuItem("Save"))
+							performAction_save();
+						if (ImGui::MenuItem("Load"))
+							performAction_load();
+						
+						ImGui::EndMenu();
+					}
+					
+					if (ImGui::BeginMenu("Edit"))
+					{
+						if (ImGui::MenuItem("Undo", nullptr, false, undo.currentVersionIndex > 0))
+							performAction_undo();
+						if (ImGui::MenuItem("Redo", nullptr, false, undo.currentVersionIndex + 1 < undo.versions.size()))
+							performAction_redo();
+						ImGui::Separator();
+						
+						if (ImGui::MenuItem("Copy", nullptr, false, !selectedNodes.empty()))
+							performAction_copy();
+						if (ImGui::MenuItem("Paste"))
+							performAction_paste();
+						ImGui::Separator();
+						
+						if (ImGui::MenuItem("Duplicate", nullptr, false, !selectedNodes.empty()))
+							performAction_duplicate();
+						
+						ImGui::EndMenu();
+					}
+					
 					if (ImGui::BeginMenu("Renderer"))
 					{
 						parameterUi::doParameterUi(renderer.parameterMgr, nullptr, false);
@@ -1675,22 +1708,26 @@ struct SceneEditor
 						
 						ImGui::EndMenu();
 					}
-					
-					if (ImGui::Button("Undo"))
-					{
-						undoPerformUndo();
-					}
-					
-					if (ImGui::Button("Redo"))
-					{
-						undoPerformRedo();
-					}
 				}
 				ImGui::EndMainMenuBar();
 			
 				guiContext.updateMouseCursor();
 			}
 			guiContext.processEnd();
+		}
+		
+		// action: save
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_s) && keyboard.isDown(SDLK_LGUI))
+		{
+			inputIsCaptured = true;
+			performAction_save();
+		}
+		
+		// action: load
+		if (inputIsCaptured == false && keyboard.wentDown(SDLK_l) && keyboard.isDown(SDLK_LGUI))
+		{
+			inputIsCaptured = true;
+			performAction_load();
 		}
 		
 		// action: increase simulation speed
@@ -1711,47 +1748,21 @@ struct SceneEditor
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_c) && keyboard.isDown(SDLK_LGUI))
 		{
 			inputIsCaptured = true;
-			
-			if (selectedNodes.empty() == false)
-			{
-				auto nodeId = *selectedNodes.begin(); // todo : handle multiple nodes
-				auto & node = scene.getNode(nodeId);
-				std::string text;
-				if (node_to_text(node, text))
-					SDL_SetClipboardText(text.c_str());
-			}
+			performAction_copy();
 		}
 		
 		// action: paste node(s) from clipboard
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_v) && keyboard.isDown(SDLK_LGUI))
 		{
 			inputIsCaptured = true;
-			deferredBegin();
-			{
-				pasteNodeFromClipboard(scene.rootNodeId);
-			}
-			deferredEnd(true);
+			performAction_paste();
 		}
 		
 		// action: duplicate selected node(s)
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_d) && keyboard.isDown(SDLK_LGUI))
 		{
 			inputIsCaptured = true;
-			
-			if (selectedNodes.empty() == false)
-			{
-				deferredBegin();
-				{
-					for (auto nodeId : selectedNodes)
-					{
-						auto & node = scene.getNode(nodeId);
-						std::string text;
-						if (node_to_text(node, text))
-							pasteNodeFromText(scene.rootNodeId, text.c_str());
-					}
-				}
-				deferredEnd(true);
-			}
+			performAction_duplicate();
 		}
 		
 		// -- mouse picking
@@ -2008,6 +2019,117 @@ struct SceneEditor
 			cameraIsActive = true;
 		
 		camera.tick(dt, inputIsCaptured, cameraIsActive == false);
+		
+		//
+		
+	#if defined(DEBUG)
+		validateNodeReferences();
+	#endif
+	}
+	
+	void validateNodeReferences() const
+	{
+		for (auto & selectedNodeId : selectedNodes)
+			Assert(scene.nodes.count(selectedNodeId) != 0);
+		Assert(hoverNodeId == -1 || scene.nodes.count(hoverNodeId) != 0);
+		Assert(nodeToGiveFocus == -1 || scene.nodes.count(nodeToGiveFocus) != 0);
+		Assert(deferred.isFlushed());
+	}
+	
+	void performAction_save()
+	{
+	#if ENABLE_SAVE_LOAD_TIMING
+		auto t1 = SDL_GetTicks();
+	#endif
+		
+		LineWriter line_writer;
+		
+		if (scene.saveToLines(g_typeDB, line_writer, 0) == false)
+		{
+			logError("failed to save scene to lines");
+		}
+		else
+		{
+			auto lines = line_writer.to_lines();
+	
+			if (TextIO::save("testScene.txt", lines, TextIO::kLineEndings_Unix) == false)
+				logError("failed to save lines to file");
+			else
+			{
+			#if ENABLE_LOAD_AFTER_SAVE_TEST
+				loadSceneFromLines_nonDestructive(lines);
+			#endif
+			}
+		}
+		
+	#if ENABLE_SAVE_LOAD_TIMING
+		auto t2 = SDL_GetTicks();
+		printf("save time: %ums\n", (t2 - t1));
+	#endif
+	}
+	
+	void performAction_load()
+	{
+	#if ENABLE_SAVE_LOAD_TIMING
+		auto t1 = SDL_GetTicks();
+	#endif
+
+		std::vector<std::string> lines;
+		TextIO::LineEndings lineEndings;
+
+	// todo : store path somewhere
+		if (!TextIO::load("testScene.txt", lines, lineEndings))
+		{
+			logError("failed to load text file");
+		}
+		else
+		{
+			loadSceneFromLines_nonDestructive(lines);
+		}
+
+	#if ENABLE_SAVE_LOAD_TIMING
+		auto t2 = SDL_GetTicks();
+		printf("load time: %ums\n", (t2 - t1));
+	#endif
+	}
+	
+	void performAction_copy()
+	{
+		if (selectedNodes.empty() == false)
+		{
+			auto nodeId = *selectedNodes.begin(); // todo : handle multiple nodes
+			auto & node = scene.getNode(nodeId);
+			std::string text;
+			if (node_to_text(node, text))
+				SDL_SetClipboardText(text.c_str());
+		}
+	}
+	
+	void performAction_paste()
+	{
+		deferredBegin();
+		{
+			pasteNodeFromClipboard(scene.rootNodeId);
+		}
+		deferredEnd(true);
+	}
+	
+	void performAction_duplicate()
+	{
+		if (selectedNodes.empty() == false)
+		{
+			deferredBegin();
+			{
+				for (auto nodeId : selectedNodes)
+				{
+					auto & node = scene.getNode(nodeId);
+					std::string text;
+					if (node_to_text(node, text))
+						pasteNodeFromText(scene.rootNodeId, text.c_str());
+				}
+			}
+			deferredEnd(true);
+		}
 	}
 	
 	void drawNode(const SceneNode & node) const
@@ -2210,6 +2332,55 @@ struct SceneEditor
 		
 		const_cast<SceneEditor*>(this)->guiContext.draw();
 	}
+	
+	bool loadSceneFromLines_nonDestructive(std::vector<std::string> & lines)
+	{
+		Scene tempScene;
+		tempScene.createRootNode();
+
+		if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
+		{
+			logError("failed to load scene from lines");
+			tempScene.nodes.clear();
+			return false;
+		}
+		else if (!tempScene.validate())
+		{
+			logError("failed to validate scene");
+			tempScene.nodes.clear();
+			return false;
+		}
+		else
+		{
+			bool init_ok = true;
+			
+			for (auto node_itr : tempScene.nodes)
+				init_ok &= node_itr.second->initComponents();
+			
+			if (init_ok == false)
+			{
+				tempScene.freeAllNodesAndComponents();
+				tempScene.nodes.clear();
+				return false;
+			}
+			else
+			{
+				deferredBegin();
+				{
+					for (auto & node_itr : scene.nodes)
+						deferred.nodesToRemove.insert(node_itr.second->id);
+				}
+				deferredEnd(false);
+				
+				scene = tempScene;
+				tempScene.nodes.clear();
+				
+				undoReset();
+				
+				return true;
+			}
+		}
+	}
 };
 
 #include "cameraResource.h"
@@ -2294,48 +2465,6 @@ static bool testResourcePointers()
 
 #endif
 
-static bool load_scene_from_lines_nondestructive(std::vector<std::string> & lines, SceneEditor & sceneEditor)
-{
-	Scene tempScene;
-	tempScene.createRootNode();
-
-	if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
-	{
-		logError("failed to load scene from lines");
-		return false;
-	}
-	else
-	{
-		bool init_ok = true;
-		
-		for (auto node_itr : tempScene.nodes)
-			init_ok &= node_itr.second->initComponents();
-		
-		if (init_ok == false)
-		{
-			tempScene.freeAllNodesAndComponents();
-			tempScene.nodes.clear();
-			return false;
-		}
-		else
-		{
-			sceneEditor.deferredBegin();
-			{
-				for (auto & node_itr : sceneEditor.scene.nodes)
-					sceneEditor.deferred.nodesToRemove.insert(node_itr.second->id);
-			}
-			sceneEditor.deferredEnd(false);
-			
-			sceneEditor.scene = tempScene;
-			tempScene.nodes.clear();
-			
-			sceneEditor.undoReset();
-			
-			return true;
-		}
-	}
-}
-
 int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
@@ -2402,70 +2531,17 @@ int main(int argc, char * argv[])
 		bool inputIsCaptured = false;
 		
 		editor.tickEditor(dt, inputIsCaptured);
-		
-		// save load test
-		
-		if (inputIsCaptured == false && keyboard.wentDown(SDLK_s))
-		{
-			inputIsCaptured = true;
-			
-			auto t1 = SDL_GetTicks();
-			
-			LineWriter line_writer;
-			
-			if (editor.scene.saveToLines(g_typeDB, line_writer, 0) == false)
-			{
-				logError("failed to save scene to lines");
-			}
-			else
-			{
-				auto lines = line_writer.to_lines();
-		
-				if (TextIO::save("testScene.txt", lines, TextIO::kLineEndings_Unix) == false)
-					logError("failed to save lines to file");
-				else
-				{
-				#if ENABLE_LOAD_AFTER_SAVE_TEST
-					load_scene_from_lines_nondestructive(lines, editor);
-				#endif
-				}
-			}
-			
-			auto t2 = SDL_GetTicks();
-			printf("save time: %ums\n", (t2 - t1));
-		}
-		
-		if (inputIsCaptured == false && keyboard.wentDown(SDLK_l))
-		{
-			inputIsCaptured = true;
-			
-			auto t1 = SDL_GetTicks();
-			
-			std::vector<std::string> lines;
-			TextIO::LineEndings lineEndings;
-			
-			if (!TextIO::load("testScene.txt", lines, lineEndings))
-			{
-				logError("failed to load text file");
-			}
-			else
-			{
-				load_scene_from_lines_nondestructive(lines, editor);
-			}
-			
-			auto t2 = SDL_GetTicks();
-			printf("load time: %ums\n", (t2 - t1));
-		}
 	
+	#if ENABLE_TEMPLATE_TEST
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_t))
 		{
 			inputIsCaptured = true;
 			
 			// load scene description text file
 	
-		AssertMsg(false, "todo : use a nicer solution to handling relative paths", 0);
+		logWarning("todo : use a nicer solution to handling relative paths");
 			changeDirectory("textfiles"); // todo : use a nicer solution to handling relative paths
-			assert(false); // changeDirectory stuff will need to be fixed! this won't work after the load_scene_from_lines_nondestructive refactor
+			//assert(false); // changeDirectory stuff will need to be fixed! this won't work after the loadSceneFromLines_nonDestructive refactor
 			
 			std::vector<std::string> lines;
 			TextIO::LineEndings lineEndings;
@@ -2481,14 +2557,15 @@ int main(int argc, char * argv[])
 			}
 			else
 			{
-				load_scene_from_lines_nondestructive(lines, editor);
+				editor.loadSceneFromLines_nonDestructive(lines);
 			}
 			
 			changeDirectory(".."); // fixme : remove
 		}
+	#endif
 		
+	#if ENABLE_PERFORMANCE_TEST
 	// performance test. todo : remove this code
-	
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_p))
 		{
 			inputIsCaptured = true;
@@ -2549,7 +2626,8 @@ int main(int argc, char * argv[])
 				}
 			}
 		}
-		
+	#endif
+	
 		//
 		
 		s_transformComponentMgr.calculateTransforms(editor.scene);

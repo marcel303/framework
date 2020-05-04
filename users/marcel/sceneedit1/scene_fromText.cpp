@@ -5,6 +5,7 @@
 #include "scene_fromText.h"
 #include "template.h"
 #include "templateIo.h"
+#include "TextIO.h"
 #include <string.h>
 
 extern SceneNodeComponentMgr s_sceneNodeComponentMgr;
@@ -283,6 +284,28 @@ bool parseSceneFromLines(
 	return true;
 }
 
+bool parseSceneFromFile(
+	const TypeDB & typeDB,
+	const char * path,
+	Scene & out_scene)
+{
+	std::vector<std::string> lines;
+	TextIO::LineEndings lineEndings;
+
+	if (!TextIO::load(path, lines, lineEndings))
+	{
+		LOG_ERR("failed to load text file. path=%s", path);
+		return false;
+	}
+	else
+	{
+		return parseSceneFromLines(
+			typeDB,
+			lines,
+			out_scene);
+	}
+}
+
 bool parseSceneObjectFromLines(
 	const TypeDB & typeDB,
 	LineReader & line_reader,
@@ -391,6 +414,7 @@ bool parseSceneObjectStructureFromLines(
 		auto & t = template_itr->second;
 		
 		SceneNode * node = new SceneNode();
+		node->name = name;
 		node->id = out_scene.allocNodeId();
 		node->parentId = node_stack.back()->id;
 		
@@ -409,7 +433,6 @@ bool parseSceneObjectStructureFromLines(
 		if (node->components.contains<SceneNodeComponent>() == false)
 		{
 			auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(node->components.id);
-			sceneNodeComponent->name = name;
 			node->components.add(sceneNodeComponent);
 		}
 		

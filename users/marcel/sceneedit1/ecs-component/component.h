@@ -103,7 +103,7 @@ struct ComponentMgr : ComponentMgrBase
 		component = nullptr;
 	}
 	
-	virtual ComponentBase * getComponent(const int id) override final
+	virtual T * getComponent(const int id) override final
 	{
 		Assert(id >= 0 && id < numComponents);
 		auto * component = components[id];
