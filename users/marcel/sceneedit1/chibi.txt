@@ -5,7 +5,14 @@ library ecs-component
 	scan_files h   path ecs-component
 	header_path ecs-component expose
 
-app marcel-sceneedit1
+library marcel-scene
+	depend_library ecs-component
+	depend_library libreflection-textio
+	scan_files *.cpp path scene
+	scan_files *.h   path scene
+	header_path scene expose
+
+library marcel-sceneedit
 	depend_library ecs-component
 	depend_library ecs-parameter
 	depend_library ecs-parameterui
@@ -17,11 +24,26 @@ app marcel-sceneedit1
 	depend_library libreflection-bindtofile
 	depend_library libreflection-jsonio
 	depend_library libreflection-textio
+	depend_library marcel-scene
 	#depend_library vfxgraph
 	#depend_library vfxgraph-nodes
-	scan_files *.cpp
+	scan_files *.cpp exclude_path main.cpp
 	scan_files *.h
+	scan_files *.cpp path editor group editor
+	scan_files *.h   path editor group editor
 	scan_files *.cpp path components group components
 	scan_files *.h   path components group components
-	header_path .
+	header_path . expose
+
+app marcel-sceneedit-100-bindStructToFile
+	depend_library marcel-sceneedit
+	add_files tests/100-bindStructToFile.cpp
+
+app marcel-sceneedit-110-reflection
+	depend_library marcel-sceneedit
+	add_files tests/110-reflection.cpp
+
+app marcel-sceneedit1
+	depend_library marcel-sceneedit
+	add_files main.cpp
 	resource_path data

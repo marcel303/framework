@@ -4,7 +4,7 @@
 
 //
 
-#include "helpers.h"
+#include "helpers2.h"
 
 ResourceBase * ResourcePtr::getImpl(const std::type_index & typeIndex)
 {

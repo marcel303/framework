@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "helpers.h"
+#include "helpers2.h"
 #include "Log.h"
 #include "Path.h"
 #include "scene.h"

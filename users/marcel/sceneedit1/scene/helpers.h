@@ -1,6 +1,5 @@
 #pragma once
 
-#include <string> // member_totext
 #include <typeindex>
 #include <vector>
 
@@ -17,10 +16,7 @@ struct TypeDB;
 
 //
 
-void registerBuiltinTypes();
-
 void registerComponentType(ComponentTypeBase * componentType, ComponentMgrBase * componentMgr);
-void registerComponentTypes();
 
 bool initComponentMgrs();
 void shutComponentMgrs();
@@ -36,15 +32,3 @@ void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase *& c
 extern TypeDB g_typeDB;
 
 extern std::vector<ComponentTypeBase*> g_componentTypes;
-
-//
-
-#include "resource.h" // fixme : move resource helpers somewhere else
-
-extern ResourceDatabase g_resourceDatabase;
-
-template <typename T>
-T * findResource(const char * name)
-{
-	return g_resourceDatabase.find<T>(name);
-}

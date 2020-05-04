@@ -1,13 +1,13 @@
-#include "components/sceneNodeComponent.h"
 #include "componentType.h"
 #include "Debugging.h"
 #include "lineWriter.h"
 #include "Log.h"
 #include "scene.h"
+#include "sceneNodeComponent.h"
 #include "StringEx.h"
 #include "TextIO.h"
 
-#include "helpers.h" // g_componentTypes
+#include "helpers.h" // findComponentType
 
 #include <set>
 
