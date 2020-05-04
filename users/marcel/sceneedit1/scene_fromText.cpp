@@ -1,8 +1,10 @@
 #include "components/sceneNodeComponent.h"
 #include "lineReader.h"
 #include "Log.h"
+#include "Path.h"
 #include "scene.h"
 #include "scene_fromText.h"
+#include "StringEx.h"
 #include "template.h"
 #include "templateIo.h"
 #include "TextIO.h"
@@ -76,6 +78,7 @@ static bool match_text(const char * text, const char * other)
 bool parseSceneFromLines(
 	const TypeDB & typeDB,
 	std::vector<std::string> & lines,
+	const char * basePath,
 	Scene & out_scene)
 {
 	std::map<std::string, Template> templates;
@@ -133,6 +136,7 @@ bool parseSceneFromLines(
 			
 			struct FetchContext
 			{
+				std::string basePath;
 				std::map<std::string, Template> * templates;
 			};
 			
@@ -153,11 +157,20 @@ bool parseSceneFromLines(
 				}
 				else
 				{
-					return parseTemplateFromFile(name, out_template);
+					char path[256];
+					sprintf_s(path, sizeof(path),
+						"%s/%s",
+						context->basePath.empty()
+							? "."
+							: context->basePath.c_str(),
+						name);
+					
+					return parseTemplateFromFile(path, out_template);
 				}
 			};
 			
 			FetchContext context;
+			context.basePath = basePath;
 			context.templates = &templates;
 			
 			if (!recursivelyOverlayBaseTemplates(
@@ -206,6 +219,7 @@ bool parseSceneFromLines(
 			
 			struct FetchContext
 			{
+				std::string basePath;
 				std::map<std::string, Template> * templates;
 			};
 			
@@ -226,11 +240,22 @@ bool parseSceneFromLines(
 				}
 				else
 				{
-					return parseTemplateFromFile(name, out_template);
+					// todo : the base path should be derived from the path of the template, and the global base path
+					
+					char path[256];
+					sprintf_s(path, sizeof(path),
+						"%s/%s",
+						context->basePath.empty()
+							? "."
+							: context->basePath.c_str(),
+						name);
+					
+					return parseTemplateFromFile(path, out_template);
 				}
 			};
 			
 			FetchContext context;
+			context.basePath = basePath;
 			context.templates = &templates;
 			
 			if (!recursivelyOverlayBaseTemplates(
@@ -299,9 +324,12 @@ bool parseSceneFromFile(
 	}
 	else
 	{
+		const std::string basePath = Path::GetDirectory(path);
+		
 		return parseSceneFromLines(
 			typeDB,
 			lines,
+			basePath.c_str(),
 			out_scene);
 	}
 }

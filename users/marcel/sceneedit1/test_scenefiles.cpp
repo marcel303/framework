@@ -1,6 +1,7 @@
 #include "framework.h"
 #include "helpers.h"
 #include "Log.h"
+#include "Path.h"
 #include "scene.h"
 #include "template.h"
 #include "scene_fromText.h"
@@ -19,12 +20,13 @@ bool test_scenefiles()
 
 	// load scene description text file
 	
-	changeDirectory("textfiles"); // todo : use a nicer solution to handling relative paths
+	const char * path = "textfiles/scene-v1.txt";
+	const std::string basePath = Path::GetDirectory(path);
 
 	std::vector<std::string> lines;
 	TextIO::LineEndings lineEndings;
 	
-	if (!TextIO::load("scene-v1.txt", lines, lineEndings))
+	if (!TextIO::load(path, lines, lineEndings))
 	{
 		LOG_ERR("failed to load text file", 0);
 		return false;
@@ -33,15 +35,13 @@ bool test_scenefiles()
 	Scene scene;
 	scene.createRootNode();
 	
-	if (!parseSceneFromLines(g_typeDB, lines, scene))
+	if (!parseSceneFromLines(g_typeDB, lines, basePath.c_str(), scene))
 	{
 		LOG_ERR("failed to parse scene from lines", 0);
 		return false;
 	}
 
 	LOG_DBG("success!", 0);
-	
-	exit(0);
 
 	return true;
 }

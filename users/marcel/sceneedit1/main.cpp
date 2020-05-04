@@ -7,6 +7,7 @@
 #include "imgui-framework.h"
 #include "parameterComponentUi.h"
 #include "parameterUi.h"
+#include "Path.h"
 #include "Quat.h"
 #include "raycast.h"
 #include "scene.h"
@@ -836,7 +837,7 @@ struct SceneEditor
 				Scene tempScene;
 				tempScene.createRootNode();
 
-				if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
+				if (parseSceneFromLines(g_typeDB, lines, "", tempScene) == false)
 				{
 					logError("failed to load scene from lines");
 				}
@@ -888,7 +889,7 @@ struct SceneEditor
 				Scene tempScene;
 				tempScene.createRootNode();
 
-				if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
+				if (parseSceneFromLines(g_typeDB, lines, "", tempScene) == false)
 				{
 					logError("failed to load scene from lines");
 					tempScene.nodes.clear();
@@ -1130,6 +1131,15 @@ struct SceneEditor
 		
 		NodeStructureContextMenuResult result = kNodeStructureContextMenuResult_None;
 
+		auto * sceneNodeComponent = node.components.find<SceneNodeComponent>();
+		
+		char name[256];
+		strcpy_s(name, sizeof(name), sceneNodeComponent->name.c_str());
+		if (ImGui::InputText("Name", name, sizeof(name)))
+		{
+			sceneNodeComponent->name = name;
+		}
+		
 		if (ImGui::MenuItem("Copy"))
 		{
 			result = kNodeStructureContextMenuResult_NodeCopy;
@@ -2052,12 +2062,15 @@ struct SceneEditor
 		{
 			auto lines = line_writer.to_lines();
 	
-			if (TextIO::save("testScene.txt", lines, TextIO::kLineEndings_Unix) == false)
+			const char * path = "testScene.txt";
+			const std::string basePath = Path::GetDirectory(path);
+			
+			if (TextIO::save(path, lines, TextIO::kLineEndings_Unix) == false)
 				logError("failed to save lines to file");
 			else
 			{
 			#if ENABLE_LOAD_AFTER_SAVE_TEST
-				loadSceneFromLines_nonDestructive(lines);
+				loadSceneFromLines_nonDestructive(lines, basePath.c_str());
 			#endif
 			}
 		}
@@ -2078,13 +2091,16 @@ struct SceneEditor
 		TextIO::LineEndings lineEndings;
 
 	// todo : store path somewhere
-		if (!TextIO::load("testScene.txt", lines, lineEndings))
+		const char * path = "testScene.txt";
+		const std::string basePath = Path::GetDirectory(path);
+		
+		if (!TextIO::load(path, lines, lineEndings))
 		{
 			logError("failed to load text file");
 		}
 		else
 		{
-			loadSceneFromLines_nonDestructive(lines);
+			loadSceneFromLines_nonDestructive(lines, basePath.c_str());
 		}
 
 	#if ENABLE_SAVE_LOAD_TIMING
@@ -2333,12 +2349,12 @@ struct SceneEditor
 		const_cast<SceneEditor*>(this)->guiContext.draw();
 	}
 	
-	bool loadSceneFromLines_nonDestructive(std::vector<std::string> & lines)
+	bool loadSceneFromLines_nonDestructive(std::vector<std::string> & lines, const char * basePath)
 	{
 		Scene tempScene;
 		tempScene.createRootNode();
 
-		if (parseSceneFromLines(g_typeDB, lines, tempScene) == false)
+		if (parseSceneFromLines(g_typeDB, lines, basePath, tempScene) == false)
 		{
 			logError("failed to load scene from lines");
 			tempScene.nodes.clear();
@@ -2539,9 +2555,8 @@ int main(int argc, char * argv[])
 			
 			// load scene description text file
 	
-		logWarning("todo : use a nicer solution to handling relative paths");
-			changeDirectory("textfiles"); // todo : use a nicer solution to handling relative paths
-			//assert(false); // changeDirectory stuff will need to be fixed! this won't work after the loadSceneFromLines_nonDestructive refactor
+			const char * path = "textfiles/scene-v1.txt";
+			const std::string basePath = Path::GetDirectory(path);
 			
 			std::vector<std::string> lines;
 			TextIO::LineEndings lineEndings;
@@ -2550,17 +2565,15 @@ int main(int argc, char * argv[])
 			
 			bool load_ok = true;
 			
-			if (!TextIO::load("scene-v1.txt", lines, lineEndings))
+			if (!TextIO::load(path, lines, lineEndings))
 			{
 				logError("failed to load text file");
 				load_ok = false;
 			}
 			else
 			{
-				editor.loadSceneFromLines_nonDestructive(lines);
+				editor.loadSceneFromLines_nonDestructive(lines, basePath.c_str());
 			}
-			
-			changeDirectory(".."); // fixme : remove
 		}
 	#endif
 		

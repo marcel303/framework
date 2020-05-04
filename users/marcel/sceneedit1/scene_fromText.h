@@ -63,6 +63,7 @@ example scene:
 bool parseSceneFromLines(
 	const TypeDB & typeDB,
 	std::vector<std::string> & lines,
+	const char * basePath,
 	Scene & out_scene);
 bool parseSceneFromFile(
 	const TypeDB & typeDB,
