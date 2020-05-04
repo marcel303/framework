@@ -471,6 +471,10 @@ struct Renderer
 
 struct SceneEditor
 {
+	static const int kMaxNodeDisplayNameFilter = 100;
+	static const int kMaxComponentTypeNameFilter = 100;
+	static const int kMaxParameterFilter = 100;
+	
 	Scene scene; // todo : this should live outside the editor, but referenced
 	
 	Camera camera; // todo : this should live outside the editor, but referenced
@@ -488,6 +492,8 @@ struct SceneEditor
 
 	Renderer renderer; // todo : this should live outside the editor
 	
+	FrameworkImGuiContext guiContext;
+	
 	struct
 	{
 		bool drawGrid = true;
@@ -504,8 +510,6 @@ struct SceneEditor
 		bool drawScene = true;
 	} preview;
 	
-	FrameworkImGuiContext guiContext;
-	
 	struct
 	{
 		std::set<int> nodesToRemove;
@@ -519,18 +523,13 @@ struct SceneEditor
 		}
 	} deferred;
 	
-	static const int kMaxNodeDisplayNameFilter = 100;
-	static const int kMaxComponentTypeNameFilter = 100;
-	
 	struct
 	{
 		char nodeDisplayNameFilter[kMaxNodeDisplayNameFilter] = { };
 		char componentTypeNameFilter[kMaxComponentTypeNameFilter] = { };
-		std::set<int> visibleNodes;
-		std::set<int> openNodes;
+		std::set<int> visibleNodes; // set of visible nodes, when the node structure is filtered, by for instance node name or component type
+		std::set<int> nodesToOpen; // nodes inside this set will be forcibly opened inside the node structure editor and scrolled into view
 	} nodeUi;
-	
-	static const int kMaxParameterFilter = 100;
 	
 	struct
 	{
@@ -550,61 +549,58 @@ struct SceneEditor
 	
 	//
 	
-	SceneEditor()
+	void init()
 	{
+		scene.createRootNode();
+		
 		camera.mode = Camera::kMode_Orbit;
 		camera.orbit.distance = -8.f;
 		camera.ortho.side = Camera::kOrthoSide_Top;
 		camera.ortho.scale = 16.f;
 		camera.firstPerson.position = Vec3(0, 1, -2);
 		camera.firstPerson.height = 0.f;
-	}
-	
-	void init()
-	{
-		guiContext.init();
-		
-		scene.createRootNode();
 		
 		renderer.init();
 		renderer.drawOpaque = [&]() { drawOpaque(); };
 		renderer.drawTranslucent = [&]() { drawTranslucent(); };
+		
+		guiContext.init();
 	}
 	
 	void shut()
 	{
 		scene.freeAllNodesAndComponents();
 		
+		// todo : shutdown renderer
+		
 		guiContext.shut();
 	}
 	
-	SceneNode * raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const std::set<int> & nodesToIgnore)
+	SceneNode * raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const std::set<int> & nodesToIgnore) const
 	{
-		SceneNode * result = nullptr;
+		SceneNode * bestNode = nullptr;
 		float bestDistance = std::numeric_limits<float>::max();
 		
-		for (auto & nodeItr : scene.nodes)
+		for (const auto & nodeItr : scene.nodes)
 		{
 			auto & node = *nodeItr.second;
 			
 			if (nodesToIgnore.count(node.id) != 0)
 				continue;
 			
-			auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
-			auto * modelComponent = node.components.find<ModelComponent>();
+			const auto * sceneNodeComp = node.components.find<SceneNodeComponent>();
+			const auto * modelComponent = node.components.find<ModelComponent>();
 			
 			Assert(sceneNodeComp != nullptr);
-			
 			if (sceneNodeComp != nullptr && modelComponent != nullptr)
 			{
-				auto & objectToWorld = sceneNodeComp->objectToWorld;
-				auto worldToObject = objectToWorld.CalcInv();
+				const auto & objectToWorld = sceneNodeComp->objectToWorld;
+				const auto worldToObject = objectToWorld.CalcInv();
 				
 				const Vec3 rayOrigin_object = worldToObject.Mul4(rayOrigin);
 				const Vec3 rayDirection_object = worldToObject.Mul3(rayDirection);
 				
 				float distance;
-				
 				if (intersectBoundingBox3d(
 					&modelComponent->aabbMin[0],
 					&modelComponent->aabbMax[0],
@@ -618,26 +614,40 @@ struct SceneEditor
 				{
 					if (distance < bestDistance)
 					{
+						bestNode = &node;
 						bestDistance = distance;
-						
-						result = &node;
 					}
 				}
 			}
 		}
 		
-		return result;
+		return bestNode;
 	}
 	
+	/**
+	 * Begin a deferred update to the scene structure. Note we need to defer updates, due to
+	 * the fact that the scene editor traverses the scene structure at the same time as making
+	 * updates to it. Making immediate updates would invalidate and/or complicate scene traversal.
+	 */
 	void deferredBegin()
 	{
 		Assert(deferred.isFlushed());
 	}
 	
-	void deferredEnd()
+	void deferredEnd(bool selectAddedNodes)
 	{
 		if (deferred.isFlushed() == false)
 		{
+			std::set<int> nodesToSelect;
+			
+			if (selectAddedNodes)
+			{
+				for (auto * node : deferred.nodesToAdd)
+					nodesToSelect.insert(node->id);
+			}
+			
+			//
+			
 			undoCaptureBegin();
 			{
 				addNodesToAdd();
@@ -645,83 +655,81 @@ struct SceneEditor
 				removeNodesToRemove();
 			}
 			undoCaptureEnd();
+			
+			//
+			
+			if (selectAddedNodes)
+			{
+				selectNodes(nodesToSelect, false);
+			}
 		}
 	}
 	
-	void removeNodeTraverse(const int nodeId, const bool removeFromParent)
+	void removeNodeSubTree(const int nodeId)
 	{
-		auto nodeItr = scene.nodes.find(nodeId);
+		auto & node = scene.getNode(nodeId);
 		
-		Assert(nodeItr != scene.nodes.end());
-		if (nodeItr != scene.nodes.end())
+		// recursively remove child nodes
+		
+		while (!node.childNodeIds.empty())
 		{
-			auto & node = *nodeItr->second;
-			
-			if (removeFromParent == false)
-			{
-				for (auto childNodeId : node.childNodeIds)
-				{
-					removeNodeTraverse(childNodeId, removeFromParent);
-				}
-				
-				node.childNodeIds.clear();
-			}
-			else
-			{
-				while (!node.childNodeIds.empty())
-				{
-					removeNodeTraverse(node.childNodeIds.front(), removeFromParent);
-				}
-				
-				Assert(node.childNodeIds.empty());
-			}
-			
-			if (removeFromParent && node.parentId != -1)
-			{
-				auto & parentNode = scene.getNode(node.parentId);
-				auto childNodeItr = std::find(parentNode.childNodeIds.begin(), parentNode.childNodeIds.end(), node.id);
-				Assert(childNodeItr != parentNode.childNodeIds.end());
-				parentNode.childNodeIds.erase(childNodeItr);
-			}
-			
-			node.freeComponents();
-			
-			delete &node;
-			
-			scene.nodes.erase(nodeItr);
-			
-			if (nodeId == scene.rootNodeId)
-				scene.rootNodeId = -1;
-			
-			selectedNodes.erase(nodeId);
-			
-			deferred.nodesToRemove.erase(nodeId);
+			const int childNodeId = node.childNodeIds.front();
+			removeNodeSubTree(childNodeId);
+		}
+		Assert(node.childNodeIds.empty());
+		
+		// remove our reference from our parent
+		
+		if (node.parentId != -1)
+		{
+			auto & parentNode = scene.getNode(node.parentId);
+			auto childNodeId_itr = std::find(parentNode.childNodeIds.begin(), parentNode.childNodeIds.end(), node.id);
+			Assert(childNodeId_itr != parentNode.childNodeIds.end());
+			parentNode.childNodeIds.erase(childNodeId_itr);
+		}
+		
+		// free the node
+		
+		scene.freeNode(nodeId);
+		
+		// update node references
+		
+		if (nodeId == scene.rootNodeId)
+			scene.rootNodeId = -1;
+		
+		selectedNodes.erase(nodeId);
+		
+		deferred.nodesToRemove.erase(nodeId);
+	}
+	
+	void selectNodes(const std::set<int> & nodeIds, const bool append)
+	{
+		if (append == false)
+		{
+			selectedNodes.clear();
+		}
+		
+		for (auto & nodeId : nodeIds)
+		{
+			selectedNodes.insert(nodeId);
+			markNodeOpenUntilRoot(nodeId);
+			nodeToGiveFocus = nodeId;
 		}
 	}
 	
 	void addNodesToAdd()
 	{
-		if (deferred.nodesToAdd.empty() == false)
+		for (SceneNode * node : deferred.nodesToAdd)
 		{
-			selectedNodes.clear();
+			Assert(scene.nodes.find(node->id) == scene.nodes.end());
+			scene.nodes[node->id] = node;
 			
-			for (SceneNode * node : deferred.nodesToAdd)
-			{
-				Assert(scene.nodes.find(node->id) == scene.nodes.end());
-				scene.nodes[node->id] = node;
-				
-				// insert the node into the scene
-				auto & parentNode = scene.getNode(node->parentId);
-				parentNode.childNodeIds.push_back(node->id);
-				
-				// select the newly added child node
-				selectedNodes.insert(node->id);
-				markNodeOpenUntilRoot(node->id);
-				nodeToGiveFocus = node->id;
-			}
-			
-			deferred.nodesToAdd.clear();
+			// insert the node into the scene
+			auto & parentNode = scene.getNode(node->parentId);
+			parentNode.childNodeIds.push_back(node->id);
 		}
+		
+		deferred.nodesToAdd.clear();
 	}
 	
 	void removeNodesToRemove()
@@ -731,17 +739,16 @@ struct SceneEditor
 			auto nodeToRemoveItr = deferred.nodesToRemove.begin();
 			auto nodeId = *nodeToRemoveItr;
 			
-			removeNodeTraverse(nodeId, true);
+			removeNodeSubTree(nodeId);
 		}
 
-		Assert(deferred.nodesToRemove.empty());
 	#if defined(DEBUG)
 		for (auto & selectedNodeId : selectedNodes)
 			Assert(scene.nodes.find(selectedNodeId) != scene.nodes.end());
 	#endif
 	}
 	
-	bool undoCapture(std::string & text)
+	bool undoCapture(std::string & text) const
 	{
 		LineWriter line_writer;
 		
@@ -927,15 +934,115 @@ struct SceneEditor
 	
 	void editNode(const int nodeId)
 	{
-		auto & node = scene.getNode(nodeId);
-		
 		// todo : make a separate function to edit a data structure (recursively)
 		
 		ImGui::PushID(nodeId);
 		{
-			if (node.components.head == nullptr)
+			auto & node = scene.getNode(nodeId);
+			
+			// collect the list of components for this node. optionally filtered by component type name
+			
+			const bool do_filter = nodeUi.componentTypeNameFilter[0] != 0;
+			
+			const int kMaxComponents = 256;
+			ComponentBase * sorted_components[kMaxComponents];
+			int num_components = 0;
+			
+			for (auto * component = node.components.head; component != nullptr && num_components < kMaxComponents; component = component->next_in_set)
 			{
-				// no components exist, but we still need some area for the user to click to add nodes and components
+				if (component->isType<SceneNodeComponent>())
+					continue;
+				
+				bool passes_filter = true;
+				
+				if (do_filter)
+				{
+					const auto * componentType = findComponentType(component->typeIndex());
+					
+					passes_filter =
+						componentType != nullptr &&
+						strcasestr(componentType->typeName, nodeUi.componentTypeNameFilter) != nullptr;
+				}
+				
+				if (passes_filter)
+				{
+					sorted_components[num_components++] = component;
+				}
+			}
+			
+			Assert(num_components < kMaxComponents);
+			
+			// sort components by type name
+			
+			std::sort(sorted_components, sorted_components + num_components,
+				[](const ComponentBase * first, const ComponentBase * second) -> bool
+					{
+						const auto * first_type = findComponentType(first->typeIndex());
+						const auto * second_type = findComponentType(second->typeIndex());
+						
+						if (first_type == nullptr || second_type == nullptr)
+							return first_type > second_type;
+						else
+							return strcmp(first_type->typeName, second_type->typeName) < 0;
+					});
+			
+			// show component editors
+			
+			for (int i = 0; i < num_components; ++i)
+			{
+				ComponentBase * component = sorted_components[i];
+				
+				ImGui::PushID(component);
+				{
+					// note : we group component properties here, so the node context menu can be opened by
+					// right clicking anywhere inside this group
+					
+					ImGui::BeginGroup();
+					{
+						const auto * componentType = findComponentType(component->typeIndex());
+						
+						Assert(componentType != nullptr);
+						if (componentType != nullptr)
+						{
+							ImGui::LabelText("", "%s", componentType->typeName);
+							ImGui::Indent();
+							
+							bool isSet = true;
+							void * changedMemberObject = nullptr;
+							
+							if (doReflection_StructuredType(g_typeDB, *componentType, component, isSet, nullptr, &changedMemberObject))
+							{
+								// signal the component one of its properties has changed
+								component->propertyChanged(changedMemberObject);
+							}
+							
+							ImGui::Unindent();
+						}
+					}
+					ImGui::EndGroup();
+				
+					// see if we should open the node context menu
+					
+					NodeContextMenuResult result = kNodeContextMenuResult_None;
+				
+					if (ImGui::BeginPopupContextItem("NodeMenu"))
+					{
+						result = doNodeContextMenu(node, component);
+
+						ImGui::EndPopup();
+					}
+				
+					if (result == kNodeContextMenuResult_ComponentShouldBeRemoved)
+					{
+						freeComponentInComponentSet(node.components, component);
+					}
+				}
+				ImGui::PopID();
+			}
+			
+			if (num_components == 0)
+			{
+				// no components exist or passed the filter, but we still need some area for the user to click to add nodes and components
 				
 				ImGui::Text("(no components");
 				
@@ -946,110 +1053,17 @@ struct SceneEditor
 					ImGui::EndPopup();
 				}
 			}
-			else
-			{
-				const bool do_filter = nodeUi.componentTypeNameFilter[0] != 0;
-				
-				const int kMaxComponents = 256;
-				ComponentBase * sorted_components[kMaxComponents];
-				int num_components = 0;
-				
-				for (auto * component = node.components.head; component != nullptr && num_components < kMaxComponents; component = component->next_in_set)
-				{
-					bool passes_filter = true;
-					
-					if (do_filter)
-					{
-						auto * component_type = findComponentType(component->typeIndex());
-						
-						passes_filter =
-							component_type != nullptr &&
-							strcasestr(component_type->typeName, nodeUi.componentTypeNameFilter) != nullptr;
-					}
-					
-					if (passes_filter)
-					{
-						sorted_components[num_components++] = component;
-					}
-				}
-				
-				Assert(num_components < kMaxComponents);
-				
-				std::sort(sorted_components, sorted_components + num_components,
-					[](const ComponentBase * first, const ComponentBase * second) -> bool
-						{
-							auto * first_type = findComponentType(first->typeIndex());
-							auto * second_type = findComponentType(second->typeIndex());
-							
-							if (first_type == nullptr || second_type == nullptr)
-								return first_type > second_type;
-							else
-								return strcmp(first_type->typeName, second_type->typeName) < 0;
-						});
-				
-				for (int i = 0; i < num_components; ++i)
-				{
-					ComponentBase * component = sorted_components[i];
-					
-					ImGui::PushID(component);
-					{
-						// note : we group component properties here, so the node context menu can be opened by
-						// right clicking anywhere inside this group
-						
-						ImGui::BeginGroup();
-						{
-							auto * componentType = findComponentType(component->typeIndex());
-							
-							Assert(componentType != nullptr);
-							if (componentType != nullptr)
-							{
-								ImGui::LabelText("", "%s", componentType->typeName);
-								ImGui::Indent();
-								
-								bool isSet = true;
-								void * changedMemberObject = nullptr;
-								
-								if (doReflection_StructuredType(g_typeDB, *componentType, component, isSet, nullptr, &changedMemberObject))
-								{
-									// signal component one of its properties has changed
-									component->propertyChanged(changedMemberObject);
-								}
-								
-								ImGui::Unindent();
-							}
-						}
-						ImGui::EndGroup();
-					
-						// see if we should open the node context menu
-						
-						NodeContextMenuResult result = kNodeContextMenuResult_None;
-					
-						if (ImGui::BeginPopupContextItem("NodeMenu"))
-						{
-							result = doNodeContextMenu(node, component);
-
-							ImGui::EndPopup();
-						}
-					
-						if (result == kNodeContextMenuResult_ComponentShouldBeRemoved)
-						{
-							freeComponentInComponentSet(node.components, component);
-						}
-					}
-					ImGui::PopID();
-				}
-			}
 		}
 		ImGui::PopID();
 	}
 	
-	void pasteNodeFromClipboardText(const int parentId, const char * text)
+	void pasteNodeFromText(const int parentId, const char * text)
 	{
 		SceneNode * childNode = new SceneNode();
 		childNode->id = scene.allocNodeId();
 		childNode->parentId = parentId;
 		
-		if (node_from_clipboard_text(text, *childNode) == false)
+		if (node_from_text(text, *childNode) == false)
 		{
 			delete childNode;
 			childNode = nullptr;
@@ -1057,7 +1071,7 @@ struct SceneEditor
 		else
 		{
 			if (childNode->components.contains<SceneNodeComponent>() == false)
-				childNode->components.add(new SceneNodeComponent());
+				childNode->components.add(new SceneNodeComponent()); // todo : should alloc from scene node component mgr
 			
 			auto * sceneNodeComponent = childNode->components.find<SceneNodeComponent>();
 			sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
@@ -1082,7 +1096,7 @@ struct SceneEditor
 		
 		if (text != nullptr)
 		{
-			pasteNodeFromClipboardText(parentId, text);
+			pasteNodeFromText(parentId, text);
 			
 			SDL_free((void*)text);
 			text = nullptr;
@@ -1110,7 +1124,7 @@ struct SceneEditor
 			
 		// todo : copy nodes recursively
 			std::string text;
-			if (node_to_clipboard_text(node, text))
+			if (node_to_text(node, text))
 			{
 				SDL_SetClipboardText(text.c_str());
 			}
@@ -1176,13 +1190,13 @@ struct SceneEditor
 		kNodeContextMenuResult_ComponentAdded
 	};
 	
-	NodeContextMenuResult doNodeContextMenu(SceneNode & node, ComponentBase * component)
+	NodeContextMenuResult doNodeContextMenu(SceneNode & node, ComponentBase * selectedComponent)
 	{
 		//logDebug("context window for %d", node.id);
 		
 		NodeContextMenuResult result = kNodeContextMenuResult_None;
 		
-		if (component != nullptr)
+		if (selectedComponent != nullptr && !selectedComponent->isType<SceneNodeComponent>())
 		{
 			if (ImGui::MenuItem("Remove component"))
 			{
@@ -1194,13 +1208,17 @@ struct SceneEditor
 		{
 			for (auto * componentType : g_componentTypes)
 			{
-				bool isAdded = false;
+				// check if the node already has a component of this type
+				
+				bool hasComponent = false;
 				
 				for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
 					if (component->typeIndex() == componentType->componentMgr->typeIndex())
-						isAdded = true;
+						hasComponent = true;
 				
-				if (isAdded == false)
+				// show the option to add a component of this type if the node doesn't have it yet
+				
+				if (hasComponent == false)
 				{
 					char text[256];
 					sprintf_s(text, sizeof(text), "Add %s", componentType->typeName);
@@ -1239,15 +1257,24 @@ struct SceneEditor
 		
 		ImGui::PushID(&node);
 		{
+			// update scrolling
+			
 			if (nodeToGiveFocus == nodeId)
 			{
 				nodeToGiveFocus = -1;
 				ImGui::SetScrollHereY();
 			}
 			
-			if (nodeUi.visibleNodes.count(node.id) != 0 || nodeUi.openNodes.count(node.id) != 0)
+			// update visibility
+			
+			if (nodeUi.visibleNodes.count(node.id) != 0 ||
+				nodeUi.nodesToOpen.count(node.id) != 0)
+			{
 				ImGui::SetNextTreeNodeOpen(true);
-
+			}
+			
+			// show the tree node
+			
 			const char * name = "(noname)";
 			
 			auto * sceneNodeComponent = node.components.find<SceneNodeComponent>();
@@ -1267,9 +1294,9 @@ struct SceneEditor
 			
 			if (isClicked)
 			{
-				selectedNodes.clear();
+				if (!ImGui::GetIO().KeyShift)
+					selectedNodes.clear();
 				selectedNodes.insert(node.id);
-				markNodeOpenUntilRoot(node.id);
 			}
 		
 			if (ImGui::BeginPopupContextItem("NodeStructureMenu"))
@@ -1297,26 +1324,6 @@ struct SceneEditor
 		ImGui::PopID();
 	}
 	
-	void markNodeVisibleUntilRoot(const int nodeId)
-	{
-		nodeUi.visibleNodes.insert(nodeId);
-
-		auto & node = scene.getNode(nodeId);
-		
-		int parentId = node.parentId;
-
-		while (parentId != -1)
-		{
-			if (nodeUi.visibleNodes.count(parentId) != 0)
-				break;
-			
-			nodeUi.visibleNodes.insert(parentId);
-			
-			auto & parentNode = scene.getNode(parentId);
-			parentId = parentNode.parentId;
-		}
-	}
-	
 	void updateNodeVisibility()
 	{
 		// determine the set of visible nodes, given any filters applied to the list
@@ -1324,12 +1331,42 @@ struct SceneEditor
 		
 		nodeUi.visibleNodes.clear();
 		
-		if (nodeUi.nodeDisplayNameFilter[0] != 0 || nodeUi.componentTypeNameFilter[0] != 0)
+		if (nodeUi.nodeDisplayNameFilter[0] != 0 ||
+			nodeUi.componentTypeNameFilter[0] != 0)
 		{
+			auto markNodeVisibleUntilRoot = [&](const int nodeId)
+			{
+				nodeUi.visibleNodes.insert(nodeId);
+
+				auto & node = scene.getNode(nodeId);
+				
+				int parentId = node.parentId;
+
+				while (parentId != -1)
+				{
+					if (nodeUi.visibleNodes.count(parentId) != 0)
+						break;
+					
+					nodeUi.visibleNodes.insert(parentId);
+					
+					auto & parentNode = scene.getNode(parentId);
+					parentId = parentNode.parentId;
+				}
+			};
+			
+			// selected nodes are always visible
+			
+			for (auto & nodeId : selectedNodes)
+			{
+				markNodeVisibleUntilRoot(nodeId);
+			}
+			
+			// check each node, to see if it passes the filter(s)
+			
 			for (auto & node_itr : scene.nodes)
 			{
-				auto nodeId = node_itr.first;
-				auto * node = node_itr.second;
+				const auto nodeId = node_itr.first;
+				const auto * node = node_itr.second;
 				
 				if (nodeUi.visibleNodes.count(nodeId) != 0)
 					continue;
@@ -1338,7 +1375,7 @@ struct SceneEditor
 				
 				if (nodeUi.nodeDisplayNameFilter[0] != 0)
 				{
-					auto * sceneNodeComponent = node->components.find<SceneNodeComponent>();
+					const auto * sceneNodeComponent = node->components.find<SceneNodeComponent>();
 					
 					is_visible &=
 						sceneNodeComponent != nullptr &&
@@ -1351,10 +1388,10 @@ struct SceneEditor
 					
 					for (auto * component = node->components.head; component != nullptr; component = component->next_in_set)
 					{
-						auto * component_type = findComponentType(component->typeIndex());
-						Assert(component_type != nullptr);
-						if (component_type != nullptr)
-							passes_component_filter |= strcasestr(component_type->typeName, nodeUi.componentTypeNameFilter) != nullptr;
+						auto * componentType = findComponentType(component->typeIndex());
+						Assert(componentType != nullptr);
+						if (componentType != nullptr)
+							passes_component_filter |= strcasestr(componentType->typeName, nodeUi.componentTypeNameFilter) != nullptr;
 					}
 					
 					is_visible &= passes_component_filter;
@@ -1374,31 +1411,17 @@ struct SceneEditor
 
 		while (nodeId != -1)
 		{
-			if (nodeUi.openNodes.count(nodeId) != 0)
+			if (nodeUi.nodesToOpen.count(nodeId) != 0)
 				break;
 			
-			nodeUi.openNodes.insert(nodeId);
+			nodeUi.nodesToOpen.insert(nodeId);
 			
 			auto & node = scene.getNode(nodeId);
 			nodeId = node.parentId;
 		}
 	}
 	
-// todo : only open nodes when the user clicks on one
-	void markSelectedNodesOpen()
-	{
-		nodeUi.openNodes.clear();
-		
-		for (auto & nodeId : selectedNodes)
-		{
-			auto & node = scene.getNode(nodeId);
-			
-			markNodeOpenUntilRoot(node.parentId);
-			
-			markNodeVisibleUntilRoot(nodeId);
-		}
-	}
-	
+// todo : this is a test method. remove from scene editor and move elsewhere
 	void addNodeFromTemplate_v1(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
 	{
 		SceneNode * node = new SceneNode();
@@ -1437,6 +1460,7 @@ struct SceneEditor
 		}
 	}
 	
+// todo : this is a test method. remove from scene editor and move elsewhere
 	int addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angleAxis, const int parentId)
 	{
 		Template t;
@@ -1511,6 +1535,8 @@ struct SceneEditor
 				ImGui::SetNextWindowSize(ImVec2(370, VIEW_SY - 20 - 4 - 4));
 				if (ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 				{
+					// visibility options
+					
 					if (ImGui::CollapsingHeader("Visibility", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						ImGui::Indent();
@@ -1522,6 +1548,8 @@ struct SceneEditor
 						}
 						ImGui::Unindent();
 					}
+					
+					// preview/simulation options
 					
 					if (ImGui::CollapsingHeader("Preview", ImGuiTreeNodeFlags_DefaultOpen))
 					{
@@ -1558,6 +1586,8 @@ struct SceneEditor
 						ImGui::Unindent();
 					}
 					
+					// node structure
+					
 					if (ImGui::CollapsingHeader("Scene structure", ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						if (ImGui::InputText("Display name", nodeUi.nodeDisplayNameFilter, kMaxNodeDisplayNameFilter))
@@ -1570,15 +1600,17 @@ struct SceneEditor
 							updateNodeVisibility();
 						}
 						
+						updateNodeVisibility();
+						
 						ImGui::BeginChild("Scene structure", ImVec2(0, 140), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 						{
 							deferredBegin();
 							{
 								editNodeStructure_traverse(scene.rootNodeId);
+								
+								nodeUi.nodesToOpen.clear();
 							}
-							deferredEnd();
-							
-							nodeUi.openNodes.clear();
+							deferredEnd(true);
 						}
 						ImGui::EndChild();
 						
@@ -1590,36 +1622,12 @@ struct SceneEditor
 								deferredBegin();
 								for (auto nodeId : selectedNodes)
 									deferred.nodesToRemove.insert(nodeId);
-								deferredEnd();
+								deferredEnd(false);
 							}
 						}
 					}
 					
-				#if 0
-					if (ImGui::CollapsingHeader("Templates"))
-					{
-						static std::vector<std::string> templates;
-						static bool init = false;
-						if (init == false)
-						{
-							init = true;
-							templates = listFiles("textfiles", false);
-						}
-						
-						int item = -1;
-						ImGui::ListBox("Templates", &item, [](void * obj, int index, const char ** item) -> bool
-						{
-							auto & items = *(std::vector<std::string>*)obj;
-							*item = items[index].c_str();
-							return true;
-						}, &templates, templates.size());
-						
-						//for (auto & t : templates)
-						{
-						
-						}
-					}
-				#endif
+					// node editing
 					
 					if (ImGui::CollapsingHeader("Selected node(s)", ImGuiTreeNodeFlags_DefaultOpen))
 					{
@@ -1632,7 +1640,7 @@ struct SceneEditor
 							}
 						}
 						ImGui::EndChild();
-						deferredEnd();
+						deferredEnd(false);
 						
 						// one or more transforms may have been edited or invalidated due to a parent node being invalidated
 						// ensure the transforms are up to date by recalculating them. this is needed for transform gizmos
@@ -1642,9 +1650,8 @@ struct SceneEditor
 				}
 				ImGui::End();
 				
-				//
+				// menu bar
 				
-			#if 1
 				if (ImGui::BeginMainMenuBar())
 				{
 					if (ImGui::BeginMenu("Renderer"))
@@ -1676,19 +1683,20 @@ struct SceneEditor
 					}
 				}
 				ImGui::EndMainMenuBar();
-			#endif
 			
 				guiContext.updateMouseCursor();
 			}
 			guiContext.processEnd();
 		}
 		
+		// action: increase simulation speed
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_a) && keyboard.isDown(SDLK_LGUI))
 		{
 			inputIsCaptured = true;
 			preview.tickMultiplier *= 1.25f;
 		}
 		
+		// action: decrease simulation speed
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_z) && keyboard.isDown(SDLK_LGUI))
 		{
 			inputIsCaptured = true;
@@ -1705,7 +1713,7 @@ struct SceneEditor
 				auto nodeId = *selectedNodes.begin(); // todo : handle multiple nodes
 				auto & node = scene.getNode(nodeId);
 				std::string text;
-				if (node_to_clipboard_text(node, text))
+				if (node_to_text(node, text))
 					SDL_SetClipboardText(text.c_str());
 			}
 		}
@@ -1715,8 +1723,10 @@ struct SceneEditor
 		{
 			inputIsCaptured = true;
 			deferredBegin();
-			pasteNodeFromClipboard(scene.rootNodeId);
-			deferredEnd();
+			{
+				pasteNodeFromClipboard(scene.rootNodeId);
+			}
+			deferredEnd(true);
 		}
 		
 		// action: duplicate selected node(s)
@@ -1732,15 +1742,17 @@ struct SceneEditor
 					{
 						auto & node = scene.getNode(nodeId);
 						std::string text;
-						if (node_to_clipboard_text(node, text))
-							pasteNodeFromClipboardText(scene.rootNodeId, text.c_str());
+						if (node_to_text(node, text))
+							pasteNodeFromText(scene.rootNodeId, text.c_str());
 					}
 				}
-				deferredEnd();
+				deferredEnd(true);
 			}
 		}
 		
-		// transform mouse coordinates into a world space direction vector
+		// -- mouse picking
+		
+		// 1. transform mouse coordinates into a world space direction vector
 	
 		int viewportSx;
 		int viewportSy;
@@ -1793,6 +1805,8 @@ struct SceneEditor
 		}
 		
 	#if ENABLE_TRANSFORM_GIZMOS
+		// 2. transformation gizo interaction
+		
 		if (selectedNodes.size() != 1)
 		{
 			transformGizmo.hide();
@@ -1880,7 +1894,7 @@ struct SceneEditor
 		}
 	#endif
 	
-		// determine which node is underneath the mouse cursor
+		// 3. determine which node is underneath the mouse cursor
 		
 		const SceneNode * hoverNode =
 			inputIsCaptured == false
@@ -1889,6 +1903,10 @@ struct SceneEditor
 		
 		hoverNodeId = hoverNode ? hoverNode->id : -1;
 		
+		// 4. update mouse cursor
+		
+	// todo : framework should mediate here. perhaps have a requested mouse cursor and update it each frame. or make it a member of the mouse, and add an explicit mouse.updateCursor() method
+	
 		if (inputIsCaptured == false)
 		{
 			static SDL_Cursor * cursorHand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
@@ -1899,6 +1917,7 @@ struct SceneEditor
 		{
 			//inputIsCaptured = true;
 			
+			// action: add node from template. todo : this is a test action. remove! instead, have a template list or something and allow adding instances from there
 			if (keyboard.isDown(SDLK_LSHIFT))
 			{
 				// todo : make action dependent on editing state. in this case, node placement
@@ -1966,6 +1985,7 @@ struct SceneEditor
 			}
 		}
 		
+		// action: remove selected node(s)
 		if (inputIsCaptured == false && (keyboard.wentDown(SDLK_BACKSPACE) || keyboard.wentDown(SDLK_DELETE)))
 		{
 			inputIsCaptured = true;
@@ -1980,8 +2000,10 @@ struct SceneEditor
 					deferred.nodesToRemove.insert(nodeId);
 				}
 			}
-			deferredEnd();
+			deferredEnd(false);
 		}
+		
+		// update the camera
 		
 		if (camera.mode == Camera::kMode_FirstPerson)
 			cameraIsActive = mouse.isDown(BUTTON_LEFT);
@@ -2305,7 +2327,7 @@ static bool load_scene_from_lines_nondestructive(std::vector<std::string> & line
 				for (auto & node_itr : sceneEditor.scene.nodes)
 					sceneEditor.deferred.nodesToRemove.insert(node_itr.second->id);
 			}
-			sceneEditor.deferredEnd();
+			sceneEditor.deferredEnd(false);
 			
 			sceneEditor.scene = tempScene;
 			tempScene.nodes.clear();

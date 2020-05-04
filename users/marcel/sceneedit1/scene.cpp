@@ -66,6 +66,21 @@ void Scene::freeAllNodesAndComponents()
 	rootNodeId = -1;
 }
 
+void Scene::freeNode(const int nodeId)
+{
+	Assert(nodes.count(nodeId) != 0);
+	
+	auto node_itr = nodes.find(nodeId);
+	auto *& node = node_itr->second;
+	
+	node->freeComponents();
+	
+	delete node;
+	node = nullptr;
+	
+	nodes.erase(node_itr);
+}
+
 void Scene::createRootNode()
 {
 	Assert(rootNodeId == -1);
@@ -143,7 +158,7 @@ static bool write_node_children_traverse(const Scene & scene, const int nodeId, 
 	return result;
 }
 
-bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer, const int in_indent)
+bool Scene::saveToLines(const TypeDB & typeDB, LineWriter & line_writer, const int in_indent) const
 {
 	bool result = true;
 	

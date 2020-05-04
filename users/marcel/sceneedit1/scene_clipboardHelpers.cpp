@@ -8,7 +8,7 @@
 #include "scene_clipboardHelpers.h"
 #include "TextIO.h"
 
-bool node_to_clipboard_text(const SceneNode & node, std::string & text)
+bool node_to_text(const SceneNode & node, std::string & text)
 {
 	LineWriter line_writer;
 	
@@ -33,7 +33,7 @@ bool node_to_clipboard_text(const SceneNode & node, std::string & text)
 	return true;
 }
 
-bool node_from_clipboard_text(const char * text, SceneNode & node)
+bool node_from_text(const char * text, SceneNode & node)
 {
 	std::vector<std::string> lines;
 	TextIO::LineEndings lineEndings;

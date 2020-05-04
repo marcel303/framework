@@ -24,6 +24,12 @@ struct ComponentBase
 	virtual std::type_index typeIndex() const = 0;
 	
 	virtual void propertyChanged(void * address) { };
+	
+	template <typename T>
+	bool isType() const
+	{
+		return typeIndex() == std::type_index(typeid(T));
+	}
 };
 
 template <typename T>

@@ -4,5 +4,5 @@
 
 struct SceneNode;
 
-bool node_to_clipboard_text(const SceneNode & node, std::string & text);
-bool node_from_clipboard_text(const char * text, SceneNode & node);
+bool node_to_text(const SceneNode & node, std::string & text);
+bool node_from_text(const char * text, SceneNode & node);
