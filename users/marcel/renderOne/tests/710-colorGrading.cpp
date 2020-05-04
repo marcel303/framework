@@ -37,27 +37,23 @@ int main(int argc, char * argv[])
 		
 		freeTexture(colorGradingTexture);
 		colorGradingTexture = renderOptions.colorGrading.lookupTextureFromSrgbColorTransform(
-			[](float r, float g, float b, float * out_rgb)
+			[](Color & color)
 			{
 			#if true
-				Color colorTemp(r, g, b);
-				colorTemp = colorTemp.hueShift(hueShift);
-				Vec3 color(colorTemp.r, colorTemp.g, colorTemp.b);
+				color = color.hueShift(hueShift);
+				Vec3 colorTemp(color.r, color.g, color.b);
 				
 				for (int i = 0; i < 3; ++i)
 				{
-					color[i] = powf(color[i], gammaValue);
-					color[i] *= colorMultiplier[i];
-					color[i] += colorOffset[i];
+					colorTemp[i] = powf(colorTemp[i], gammaValue);
+					colorTemp[i] *= colorMultiplier[i];
+					colorTemp[i] += colorOffset[i];
 				}
 				
-				out_rgb[0] = color[0];
-				out_rgb[1] = color[1];
-				out_rgb[2] = color[2];
+				color.r = colorTemp[0];
+				color.g = colorTemp[1];
+				color.b = colorTemp[2];
 			#else
-				if (r == 1.f && g == 1.f && b == 1.f)
-					logDebug("xxx");
-				Color color = Color(r, g, b);
 				//color = color.hueShift(framework.time / 10.f);
 				//color = color.mulRGB((cosf(framework.time) + 1.f) / 2.f);
 				//color.r += (cosf(framework.time) + 1.f) / 2.f;
@@ -70,10 +66,6 @@ int main(int argc, char * argv[])
 				color.r *= 1.2f;
 				color.g *= 1.f;
 				color.b *= .9f;
-				
-				out_rgb[0] = color.r;
-				out_rgb[1] = color.g;
-				out_rgb[2] = color.b;
 			#endif
 			});
 		renderOptions.colorGrading.lookupTexture = colorGradingTexture;
