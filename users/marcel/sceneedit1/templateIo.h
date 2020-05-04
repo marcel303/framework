@@ -61,6 +61,15 @@ bool recursivelyOverlayBaseTemplates(
 	const FetchTemplateCallback fetchTemplate,
 	const void * userData);
 
+/**
+ * Combines fetching a template using the fetch callback
+ * and calling recursivelyOverlayBaseTemplates to apply base templates.
+ * @param name The initial template to fetch.
+ * @param fetchTemplate The callback for fetching templates.
+ * @param userData The user data passed to the fetch callback.
+ * @param out_template The resulting template.
+ * @return True upon success.
+ */
 bool parseTemplateFromCallbackAndRecursivelyOverlayBaseTemplates(
 	const char * name,
 	const bool allowAddingComponents,
@@ -69,6 +78,13 @@ bool parseTemplateFromCallbackAndRecursivelyOverlayBaseTemplates(
 	const void * userData,
 	Template & out_template);
 
+/**
+ * Combines fetching a template from file and calling
+ * recursivelyOverlayBaseTemplates to apply base templates from file.
+ * @param name The initial template to fetch.
+ * @param out_template The resulting template.
+ * @return True upon success.
+ */
 bool parseTemplateFromFileAndRecursivelyOverlayBaseTemplates(
 	const char * path,
 	const bool allowAddingComponents,

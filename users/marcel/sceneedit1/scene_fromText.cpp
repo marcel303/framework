@@ -70,7 +70,10 @@ static bool match_text(const char * text, const char * other)
 	return strcmp(text, other) == 0;
 }
 
-bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines, Scene & out_scene)
+bool parseSceneFromLines(
+	const TypeDB & typeDB,
+	std::vector<std::string> & lines,
+	Scene & out_scene)
 {
 	std::map<std::string, Template> templates;
 	
@@ -256,7 +259,11 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 		{
 			line_reader.push_indent();
 			{
-				if (!parseSceneObjectFromLines(typeDB, line_reader, out_scene, entities))
+				if (!parseSceneObjectFromLines(
+					typeDB,
+					line_reader,
+					out_scene,
+					entities))
 				{
 					line_reader.pop_indent();
 					return false;
@@ -274,7 +281,11 @@ bool parseSceneFromLines(const TypeDB & typeDB, std::vector<std::string> & lines
 	return true;
 }
 
-bool parseSceneObjectFromLines(const TypeDB & typeDB, LineReader & line_reader, Scene & out_scene, std::map<std::string, Template> & templates)
+bool parseSceneObjectFromLines(
+	const TypeDB & typeDB,
+	LineReader & line_reader,
+	Scene & out_scene,
+	std::map<std::string, Template> & templates)
 {
 	char * line; // fixme : use const char
 	
@@ -319,7 +330,11 @@ bool parseSceneObjectFromLines(const TypeDB & typeDB, LineReader & line_reader, 
 	return true;
 }
 
-bool parseSceneObjectStructureFromLines(const TypeDB & typeDB, LineReader & line_reader, Scene & out_scene, std::map<std::string, Template> & templates)
+bool parseSceneObjectStructureFromLines(
+	const TypeDB & typeDB,
+	LineReader & line_reader,
+	Scene & out_scene,
+	std::map<std::string, Template> & templates)
 {
 	std::vector<SceneNode*> node_stack;
 	
