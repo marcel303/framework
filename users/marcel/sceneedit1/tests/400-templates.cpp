@@ -85,8 +85,8 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
-	registerBuiltinTypes();
-	registerComponentTypes();
+	registerBuiltinTypes(g_typeDB);
+	registerComponentTypes(g_typeDB);
 	
 	LOG_INF("[running test-v1]", 0);
 	test_v1();

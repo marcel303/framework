@@ -12,8 +12,8 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 
-	registerBuiltinTypes();
-	registerComponentTypes();
+	registerBuiltinTypes(g_typeDB);
+	registerComponentTypes(g_typeDB);
 
 	// load scene description text file
 	

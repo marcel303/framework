@@ -2501,8 +2501,9 @@ int main(int argc, char * argv[])
 	if (!framework.init(VIEW_SX, VIEW_SY))
 		return -1;
 	
-	registerBuiltinTypes();
-	registerComponentTypes();
+	registerBuiltinTypes(g_typeDB);
+	registerComponentTypes(g_typeDB);
+	
 	initComponentMgrs();
 	
 	testResources(); // todo : remove

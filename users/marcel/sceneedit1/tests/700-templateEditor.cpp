@@ -1,19 +1,36 @@
-#include "componentPropertyUi.h"
-#include "componentType.h"
-#include "framework.h"
+// sceneedit
+#include "helpers2.h"
+
+// ecs-scene
 #include "helpers.h"
-#include "imgui.h"
-#include "imgui-framework.h"
-#include "lineReader.h"
-#include "lineWriter.h"
-#include "Log.h"
-#include "Path.h"
-#include "StringEx.h"
 #include "template.h"
 #include "templateIo.h"
+
+// ecs-component
+#include "componentPropertyUi.h"
+#include "componentType.h"
+
+// reflection-textio
+#include "lineReader.h"
+#include "lineWriter.h"
+#include "reflection-textio.h"
+
+// imgui-framework
+#include "imgui.h"
+#include "imgui-framework.h"
+
+// framework
+#include "framework.h"
+
+// libgg
+#include "Log.h"
+#include "Path.h"
+#include "StringEx.h" // strcpy_s
+
+// std
 #include <list>
 #include <set>
-#include <sstream>
+#include <sstream> // ostringstream
 
 // todo : when editing, apply the latest version to the component instance
 // todo : allow for live value viewing ?
@@ -384,12 +401,14 @@ bool saveTemplateInstanceToFile(const TypeDB & typeDB, const std::vector<Templat
 	return true;
 }
 
-bool test_templateEditor()
+int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	auto & typeDB = g_typeDB;
 	
-	registerBuiltinTypes();
-	registerComponentTypes();
+	registerBuiltinTypes(typeDB);
+	registerComponentTypes(typeDB);
 	
 	// load all of the template overlays from file
 
@@ -410,7 +429,7 @@ bool test_templateEditor()
 		if (!parseTemplateFromFile(current_filename.c_str(), t))
 		{
 			LOG_ERR("failed to load template from file", 0);
-			return false;
+			return -1;
 		}
 		
 		processed.insert(current_filename);
@@ -424,7 +443,7 @@ bool test_templateEditor()
 		if (processed.count(new_filename) != 0)
 		{
 			LOG_ERR("cyclic dependency detected", 0);
-			return false;
+			return -1;
 		}
 		
 		current_filename = new_filename;
@@ -459,7 +478,11 @@ bool test_templateEditor()
 		{
 			TemplateComponent template_component;
 			
-			createFallbackTemplateForComponent(typeDB, componentTypeWithId.typeName.c_str(), componentTypeWithId.id.c_str(), template_component);
+			createFallbackTemplateForComponent(
+				typeDB,
+				componentTypeWithId.typeName.c_str(),
+				componentTypeWithId.id.c_str(),
+				template_component);
 			
 			fallback_template.components.emplace_back(std::move(template_component));
 		}
@@ -490,7 +513,7 @@ bool test_templateEditor()
 			if (!template_instance.init(typeDB, t, allComponentTypesWithId))
 			{
 				LOG_ERR("failed to initialize (fallback) template instance", 0);
-				return false;
+				return -1;
 			}
 		}
 		else
@@ -512,13 +535,17 @@ bool test_templateEditor()
 			if (!template_instance.init(typeDB, t, componentTypesWithId))
 			{
 				LOG_ERR("failed to initialize template instance", 0);
-				return false;
+				return -1;
 			}
 		}
 	}
 	
+	//
+	
+	framework.windowIsResizable = true;
+	
 	if (!framework.init(VIEW_SX, VIEW_SY))
-		return false;
+		return -1;
 	
 	FrameworkImGuiContext guiContext;
 	guiContext.init();
@@ -534,7 +561,11 @@ bool test_templateEditor()
 		
 		bool inputIsCaptured = false;
 		
-		guiContext.processBegin(framework.timeStep, VIEW_SX, VIEW_SY, inputIsCaptured);
+		int viewSx;
+		int viewSy;
+		framework.getCurrentViewportSize(viewSx, viewSy);
+		
+		guiContext.processBegin(framework.timeStep, viewSx, viewSy, inputIsCaptured);
 		{
 			ImGui::SetNextWindowPos(ImVec2(10, 10));
 			ImGui::SetNextWindowSize(ImVec2(400, 400));
@@ -698,7 +729,7 @@ bool test_templateEditor()
 						if (!saveTemplateInstanceToString(typeDB, template_instances, instance_itr, text))
 						{
 							logError("failed to save template instance");
-							return false;
+							return -1;
 						}
 						
 						ImGui::InputTextMultiline(
@@ -733,7 +764,7 @@ bool test_templateEditor()
 		if (!saveTemplateInstanceToFile(typeDB, template_instances, instance_itr, filename))
 		{
 			logError("failed to save template instance");
-			return false;
+			return -1;
 		}
 	}
 	
@@ -748,5 +779,5 @@ bool test_templateEditor()
 	
 	framework.shutdown();
 	
-	return true;
+	return 0;
 }

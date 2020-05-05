@@ -28,16 +28,16 @@ TypeDB g_typeDB;
 
 //
 
-void registerBuiltinTypes()
+void registerBuiltinTypes(TypeDB & typeDB)
 {
-	g_typeDB.addPlain<bool>("bool", kDataType_Bool);
-	g_typeDB.addPlain<int>("int", kDataType_Int);
-	g_typeDB.addPlain<float>("float", kDataType_Float);
-	g_typeDB.addPlain<Vec2>("vec2", kDataType_Float2);
-	g_typeDB.addPlain<Vec3>("vec3", kDataType_Float3);
-	g_typeDB.addPlain<Vec4>("vec4", kDataType_Float4);
-	g_typeDB.addPlain<std::string>("string", kDataType_String);
-	g_typeDB.addStructured<AngleAxis>("AngleAxis")
+	typeDB.addPlain<bool>("bool", kDataType_Bool);
+	typeDB.addPlain<int>("int", kDataType_Int);
+	typeDB.addPlain<float>("float", kDataType_Float);
+	typeDB.addPlain<Vec2>("vec2", kDataType_Float2);
+	typeDB.addPlain<Vec3>("vec3", kDataType_Float3);
+	typeDB.addPlain<Vec4>("vec4", kDataType_Float4);
+	typeDB.addPlain<std::string>("string", kDataType_String);
+	typeDB.addStructured<AngleAxis>("AngleAxis")
 		.add("angle", &AngleAxis::angle)
 			.addFlag(new ComponentMemberFlag_EditorType_AngleDegrees)
 		.add("axis", &AngleAxis::axis)
@@ -45,8 +45,8 @@ void registerBuiltinTypes()
 	
 	//
 	
-	g_typeDB.add(std::type_index(typeid(TransformComponent)), new TransformComponentType());
-	g_typeDB.addStructured<ParameterDefinition>("parameter")
+	typeDB.add(std::type_index(typeid(TransformComponent)), new TransformComponentType());
+	typeDB.addStructured<ParameterDefinition>("parameter")
 		.add("type", &ParameterDefinition::type)
 		.add("name", &ParameterDefinition::name)
 		.add("defaultValue", &ParameterDefinition::defaultValue)
@@ -54,7 +54,7 @@ void registerBuiltinTypes()
 		.add("max", &ParameterDefinition::max);
 }
 
-void registerComponentTypes()
+void registerComponentTypes(TypeDB & typeDB)
 {
 	registerComponentType(new CameraComponentType(), &s_cameraComponentMgr);
 	registerComponentType(new LightComponentType(), &s_lightComponentMgr);

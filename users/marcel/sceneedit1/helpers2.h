@@ -6,8 +6,8 @@ extern TypeDB g_typeDB;
 
 //
 
-void registerBuiltinTypes();
-void registerComponentTypes();
+void registerBuiltinTypes(TypeDB & typeDB);
+void registerComponentTypes(TypeDB & typeDB);
 
 //
 
