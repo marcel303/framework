@@ -568,6 +568,7 @@ int main(int argc, char * argv[])
 			pushBlend(BLEND_OPAQUE);
 			{
 				editor.drawSceneOpaque();
+				editor.drawEditorOpaque();
 			}
 			popBlend();
 			popDepthTest();
@@ -580,6 +581,14 @@ int main(int argc, char * argv[])
 			{
 				editor.drawSceneTranslucent();
 				editor.drawEditorTranslucent();
+			}
+			popBlend();
+			popDepthTest();
+			
+			pushDepthTest(false, DEPTH_LESS);
+			pushBlend(BLEND_ALPHA);
+			{
+				editor.drawEditorGizmos();
 			}
 			popBlend();
 			popDepthTest();
@@ -731,8 +740,7 @@ int main(int argc, char * argv[])
 			
 			renderer.draw(projectionMatrix, viewMatrix);
 			
-			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
-			gxSetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
+			projectScreen2d();
 
 			editor.drawEditor();
 		}

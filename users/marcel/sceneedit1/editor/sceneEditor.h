@@ -30,8 +30,6 @@
 
 #define ENABLE_QUAT_FIXUP 1
 
-#define ENABLE_RENDERER 0
-
 //
 
 struct AngleAxis;
@@ -58,10 +56,6 @@ struct SceneEditor
 	
 #if ENABLE_TRANSFORM_GIZMOS
 	TransformGizmo transformGizmo;
-#endif
-
-#if ENABLE_RENDERER
-	Renderer renderer; // todo : this should live outside the editor
 #endif
 
 	FrameworkImGuiContext guiContext;
@@ -205,10 +199,11 @@ struct SceneEditor
 	void drawNodes() const;
 	
 	void drawSceneOpaque() const;
-	void drawEditorOpaque() const;
-	
 	void drawSceneTranslucent() const;
+	
+	void drawEditorOpaque() const;
 	void drawEditorTranslucent() const;
+	void drawEditorGizmos() const;
 	
 	void drawEditor() const;
 	

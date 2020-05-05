@@ -414,11 +414,15 @@ void SceneEditor::editNode(const int nodeId)
 				}
 				ImGui::EndGroup();
 			
+			#if 1
 				// see if we should open the node context menu
 				
 				NodeContextMenuResult result = kNodeContextMenuResult_None;
 			
-				if (ImGui::BeginPopupContextItem("NodeMenu"))
+				//const bool canOpen = !ImGui::IsPopupOpen(nullptr) || ImGui::IsPopupOpen("NodeMenu");
+				const bool canOpen = true; // fixme : this override any popup context menu that was opened inside the component property editors
+				
+				if (canOpen && ImGui::BeginPopupContextItem("NodeMenu"))
 				{
 					result = doNodeContextMenu(node, component);
 
@@ -429,6 +433,7 @@ void SceneEditor::editNode(const int nodeId)
 				{
 					freeComponentInComponentSet(node.components, component);
 				}
+			#endif
 			}
 			ImGui::PopID();
 		}
@@ -1083,10 +1088,12 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 					deferredBegin();
 					ImGui::BeginChild("Selected nodes", ImVec2(0, 300), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 					{
+						ImGui::PushItemWidth(180.f);
 						for (auto & selectedNodeId : selectedNodes)
 						{
 							editNode(selectedNodeId);
 						}
+						ImGui::PopItemWidth();
 					}
 					ImGui::EndChild();
 					deferredEnd(false);
@@ -1314,7 +1321,10 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 				transformComponent->position = localTransform.GetTranslation();
 				
 				for (int i = 0; i < 3; ++i)
+				{
+					//logDebug("size[%d] = %.2f", i, localTransform.GetAxis(i).CalcSize());
 					localTransform.SetAxis(i, localTransform.GetAxis(i).CalcNormalized());
+				}
 				
 				Quat q;
 				q.fromMatrix(localTransform);
@@ -1331,7 +1341,7 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 			
 				q.toAxisAngle(transformComponent->angleAxis.axis, transformComponent->angleAxis.angle);
 				
-			#if ENABLE_QUAT_FIXUP
+			#if ENABLE_QUAT_FIXUP && false
 				const bool neg_after = transformComponent->angleAxis.axis[max_axis] < 0.f;
 				if (neg_before != neg_after)
 				{
@@ -1367,11 +1377,11 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 	
 	if (inputIsCaptured == false && mouse.wentDown(BUTTON_LEFT))
 	{
-		//inputIsCaptured = true;
-		
 		// action: add node from template. todo : this is a test action. remove! instead, have a template list or something and allow adding instances from there
 		if (keyboard.isDown(SDLK_RSHIFT))
 		{
+			inputIsCaptured = true;
+			
 			// todo : make action dependent on editing state. in this case, node placement
 		
 			// find intersection point with the ground plane
@@ -1804,15 +1814,11 @@ void SceneEditor::drawSceneOpaque() const
 	}
 }
 
-void SceneEditor::drawEditorOpaque() const
+void SceneEditor::drawSceneTranslucent() const
 {
-#if ENABLE_TRANSFORM_GIZMOS
-// todo : draw transform gizmo on top of everything
-	transformGizmo.draw();
-#endif
 }
 
-void SceneEditor::drawSceneTranslucent() const
+void SceneEditor::drawEditorOpaque() const
 {
 }
 
@@ -1823,7 +1829,7 @@ void SceneEditor::drawEditorTranslucent() const
 		pushLineSmooth(true);
 		gxPushMatrix();
 		{
-			gxScalef(100, 1, 100);
+			gxScalef(100, 100, 100);
 			
 			setLumi(200);
 			drawGrid3dLine(100, 100, 0, 2, true);
@@ -1845,57 +1851,16 @@ void SceneEditor::drawEditorTranslucent() const
 	}
 }
 
+void SceneEditor::drawEditorGizmos() const
+{
+#if ENABLE_TRANSFORM_GIZMOS
+// todo : draw transform gizmo on top of everything
+	transformGizmo.draw();
+#endif
+}
+
 void SceneEditor::drawEditor() const
 {
-/*
-	int viewportSx = 0;
-	int viewportSy = 0;
-	framework.getCurrentViewportSize(viewportSx, viewportSy);
-
-	Mat4x4 projectionMatrix;
-	camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
-	
-	Mat4x4 viewMatrix;
-	camera.calculateViewMatrix(viewMatrix);
-	
-#if ENABLE_RENDERER
-	renderer.draw(projectionMatrix, viewMatrix);
-#endif
-*/
-	
-#if 1
-	// draw gizmos
-	
-// todo : start a new render pass for this ?
-	{
-		gxMatrixMode(GX_PROJECTION);
-		gxPushMatrix();
-		//gxLoadMatrixf(projectionMatrix.m_v);
-		
-		gxMatrixMode(GX_MODELVIEW);
-		gxPushMatrix();
-		//gxLoadMatrixf(viewMatrix.m_v);
-		{
-			//gxClearDepth(1.f);
-			
-			pushDepthTest(false, DEPTH_LEQUAL);
-			pushBlend(BLEND_OPAQUE);
-			{
-				drawEditorOpaque();
-			}
-			popBlend();
-			popDepthTest();
-		}
-		gxMatrixMode(GX_PROJECTION);
-		gxPopMatrix();
-		
-		gxMatrixMode(GX_MODELVIEW);
-		gxPopMatrix();
-	}
-#endif
-
-	projectScreen2d();
-	
 	const_cast<SceneEditor*>(this)->guiContext.draw();
 }
 
