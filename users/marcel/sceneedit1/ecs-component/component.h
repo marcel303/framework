@@ -3,20 +3,20 @@
 #include "Debugging.h"
 #include <typeindex>
 
-//
+// forward declarations
 
 struct ComponentBase;
 struct ComponentMgrBase;
 struct ComponentSet;
 
-//
+// component set ids
 
 const int kComponentSetIdInvalid = -1;
 
 int allocComponentSetId();
 void freeComponentSetId(int & id);
 
-//
+// components
 
 struct ComponentBase
 {
@@ -172,6 +172,8 @@ struct ComponentMgr : ComponentMgrBase
 		return std::type_index(typeid(T));
 	}
 };
+
+// component set
 
 struct ComponentSet
 {

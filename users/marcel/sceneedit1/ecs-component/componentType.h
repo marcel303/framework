@@ -1,7 +1,7 @@
 #pragma once
 
 #include "component.h"
-#include "reflection.h"
+#include "reflection.h" // StructuredType
 #include <type_traits>
 
 // component types

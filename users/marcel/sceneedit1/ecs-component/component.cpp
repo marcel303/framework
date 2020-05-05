@@ -1,7 +1,6 @@
 #include "component.h"
-#include <string.h>
 
-//
+// component set ids
 
 static int s_nextComponentSetId = 0; // todo : reuse component set ids when freed, to avoid infinitely growing numbers
 
@@ -15,11 +14,13 @@ void freeComponentSetId(int & id)
 	id = kComponentSetIdInvalid;
 }
 
+// components
+
 ComponentBase::~ComponentBase()
 {
 }
 
-//
+// component set
 
 ComponentSet::ComponentSet()
 {
