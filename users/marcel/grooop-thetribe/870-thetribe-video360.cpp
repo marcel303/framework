@@ -1119,6 +1119,7 @@ static void drawCube()
     
     popSurface();
     
+#if ENABLE_OPENGL
     //glActiveTexture(GL_TEXTURE0);
     //glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
     {
@@ -1149,6 +1150,7 @@ static void drawCube()
         clearShader();
     }
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+#endif
     
     shutCube(cubemap);
 }
