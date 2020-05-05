@@ -2,6 +2,7 @@
 #include "helpers.h"
 
 #include <algorithm> // std::sort
+#include <string.h> // strcmp
 
 std::vector<ComponentTypeBase*> g_componentTypes;
 

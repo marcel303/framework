@@ -38,6 +38,8 @@ struct TransformGizmo
 	
 	Mat4x4 gizmoToWorld = Mat4x4(true);
 	
+	Vec3 rayOriginInGizmoSpace; // used for determining on which side to draw the pads
+	
 	IntersectionResult intersectionResult;
 	
 	bool isInteractive = true;

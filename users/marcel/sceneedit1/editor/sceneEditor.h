@@ -4,7 +4,6 @@
 #include "editor/transformGizmos.h"
 
 // ecs-scene
-//#include "helpers.h" // findComponentType
 #include "scene.h"
 
 // imgui-framework
@@ -19,8 +18,8 @@
 //
 
 #if defined(DEBUG)
-	#define ENABLE_LOAD_AFTER_SAVE_TEST 1
-	#define ENABLE_SAVE_LOAD_TIMING     1
+	#define ENABLE_LOAD_AFTER_SAVE_TEST 0
+	#define ENABLE_SAVE_LOAD_TIMING     0
 #else
 	#define ENABLE_LOAD_AFTER_SAVE_TEST 0 // do not alter
 	#define ENABLE_SAVE_LOAD_TIMING     0 // do not alter
@@ -59,6 +58,8 @@ struct SceneEditor
 #endif
 
 	FrameworkImGuiContext guiContext;
+	
+	bool showUi = true;
 	
 	struct
 	{

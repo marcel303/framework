@@ -32,6 +32,10 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 {
 	isInteractive = (inputIsCaptured == false);
 	
+	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
+	
+	rayOriginInGizmoSpace = worldToGizmo.Mul4(ray_origin);
+	
 	if (inputIsCaptured)
 	{
 		//
@@ -43,8 +47,6 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 	else if (state == kState_DragArrow)
 	{
 		inputIsCaptured = true;
-		
-		const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 		
 		const Vec3 origin_gizmo = worldToGizmo * ray_origin;
 		const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
@@ -70,8 +72,6 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 	{
 		inputIsCaptured = true;
 		
-		const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
-		
 		const Vec3 origin_gizmo = worldToGizmo * ray_origin;
 		const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
 		
@@ -95,8 +95,6 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 	else if (state == kState_DragRing)
 	{
 		inputIsCaptured = true;
-		
-		const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 	
 		// intersect the ray with the projection plane for the ring
 		
@@ -147,7 +145,7 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 				dragArrow.axis = axis;
 				
 				//
-				const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
+				
 				const Vec3 origin_gizmo = worldToGizmo * ray_origin;
 				const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
 				dragArrow.projection_axis = determineDragArrowProjectionAxis(axis, direction_gizmo);
@@ -170,7 +168,7 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 				dragPad = DragPad();
 				
 				//
-				const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
+				
 				const Vec3 origin_gizmo = worldToGizmo * ray_origin;
 				const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
 				const int projection_axis =
@@ -314,6 +312,11 @@ void TransformGizmo::draw() const
 			position[axis2] = 0.f;
 			position[axis3] = pad_offset;
 			
+			if (rayOriginInGizmoSpace[axis1] < 0.f)
+				position[axis1] = -position[axis1];
+			if (rayOriginInGizmoSpace[axis3] < 0.f)
+				position[axis3] = -position[axis3];
+			
 			size[axis1] = pad_size;
 			size[axis2] = pad_thickness;
 			size[axis3] = pad_size;
@@ -398,40 +401,47 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 		{
 			// intersect the pads
 			
-			const int axis1 = (i + 0) % 3;
-			const int axis2 = (i + 1) % 3;
-			const int axis3 = (i + 2) % 3;
-			
 			const Element elements[3] =
 			{
 				kElement_XZPad,
 				kElement_YXPad,
 				kElement_ZYPad
 			};
+
+			const int axis1 = (i + 0) % 3;
+			const int axis2 = (i + 1) % 3;
+			const int axis3 = (i + 2) % 3;
 			
+			Vec3 position;
+			Vec3 size;
+			
+			position[axis1] = pad_offset;
+			position[axis2] = 0.f;
+			position[axis3] = pad_offset;
+			
+			if (rayOriginInGizmoSpace[axis1] < 0.f)
+				position[axis1] = -position[axis1];
+			if (rayOriginInGizmoSpace[axis3] < 0.f)
+				position[axis3] = -position[axis3];
+			
+			size[axis1] = pad_size;
+			size[axis2] = pad_thickness;
+			size[axis3] = pad_size;
+			
+			const Vec3 min = position - size;
+			const Vec3 max = position + size;
+		
+			if (intersectBoundingBox3d(
+				&min[0], &max[0],
+				origin_gizmo[0],
+				origin_gizmo[1],
+				origin_gizmo[2],
+				1.f / direction_gizmo[0],
+				1.f / direction_gizmo[1],
+				1.f / direction_gizmo[2], t) && t < best_t)
 			{
-				float min[3];
-				min[axis1] = + pad_offset - pad_size;
-				min[axis2] = - pad_thickness;
-				min[axis3] = + pad_offset - pad_size;
-				
-				float max[3];
-				max[axis1] = + pad_offset + pad_size;
-				max[axis2] = + pad_thickness;
-				max[axis3] = + pad_offset + pad_size;
-				
-				if (intersectBoundingBox3d(
-					min, max,
-					origin_gizmo[0],
-					origin_gizmo[1],
-					origin_gizmo[2],
-					1.f / direction_gizmo[0],
-					1.f / direction_gizmo[1],
-					1.f / direction_gizmo[2], t) && t < best_t)
-				{
-					best_t = t;
-					result.element = elements[i];
-				}
+				best_t = t;
+				result.element = elements[i];
 			}
 		}
 	}

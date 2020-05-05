@@ -981,9 +981,9 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 	int viewSy;
 	framework.getCurrentViewportSize(viewSx, viewSy);
 	
-	//if (mouse.isCaptured == false)
+	guiContext.processBegin(dt, viewSx, viewSy, inputIsCaptured);
 	{
-		guiContext.processBegin(dt, viewSx, viewSy, inputIsCaptured);
+		if (showUi)
 		{
 			ImGui::SetNextWindowPos(ImVec2(4, 20 + 4 + 4));
 			ImGui::SetNextWindowSize(ImVec2(370, viewSy - 20 - 4 - 4));
@@ -1105,66 +1105,73 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 				}
 			}
 			ImGui::End();
-			
-			// menu bar
-			
-			if (ImGui::BeginMainMenuBar())
-			{
-				if (ImGui::BeginMenu("File"))
-				{
-					if (ImGui::MenuItem("Save"))
-						performAction_save();
-					if (ImGui::MenuItem("Load"))
-						performAction_load();
-					
-					ImGui::EndMenu();
-				}
-				
-				if (ImGui::BeginMenu("Edit"))
-				{
-					if (ImGui::MenuItem("Undo", nullptr, false, undo.currentVersionIndex > 0))
-						performAction_undo();
-					if (ImGui::MenuItem("Redo", nullptr, false, undo.currentVersionIndex + 1 < undo.versions.size()))
-						performAction_redo();
-					ImGui::Separator();
-					
-					if (ImGui::MenuItem("Copy", nullptr, false, !selectedNodes.empty()))
-						performAction_copy();
-					if (ImGui::MenuItem("Paste"))
-						performAction_paste();
-					ImGui::Separator();
-					
-					if (ImGui::MenuItem("Duplicate", nullptr, false, !selectedNodes.empty()))
-						performAction_duplicate();
-					
-					ImGui::EndMenu();
-				}
-				
-			#if ENABLE_RENDERER
-				if (ImGui::BeginMenu("Renderer"))
-				{
-					parameterUi::doParameterUi(renderer.parameterMgr, nullptr, false);
-					
-					ImGui::EndMenu();
-				}
-			#endif
-				
-				if (ImGui::BeginMenu("Parameters"))
-				{
-					ImGui::InputText("Component filter", parameterUi.component_filter, kMaxParameterFilter);
-					ImGui::InputText("Parameter filter", parameterUi.parameter_filter, kMaxParameterFilter);
-					ImGui::Checkbox("Show components with empty prefix", &parameterUi.showAnonymousComponents);
-					
-					doParameterUi(s_parameterComponentMgr, parameterUi.component_filter, parameterUi.parameter_filter, parameterUi.showAnonymousComponents);
-					
-					ImGui::EndMenu();
-				}
-			}
-			ImGui::EndMainMenuBar();
-		
-			guiContext.updateMouseCursor();
 		}
-		guiContext.processEnd();
+		
+		// menu bar
+		
+		if (ImGui::BeginMainMenuBar())
+		{
+			if (ImGui::BeginMenu("File"))
+			{
+				if (ImGui::MenuItem("Save"))
+					performAction_save();
+				if (ImGui::MenuItem("Load"))
+					performAction_load();
+				
+				ImGui::EndMenu();
+			}
+			
+			if (ImGui::BeginMenu("Edit"))
+			{
+				if (ImGui::MenuItem("Undo", nullptr, false, undo.currentVersionIndex > 0))
+					performAction_undo();
+				if (ImGui::MenuItem("Redo", nullptr, false, undo.currentVersionIndex + 1 < undo.versions.size()))
+					performAction_redo();
+				ImGui::Separator();
+				
+				if (ImGui::MenuItem("Copy", nullptr, false, !selectedNodes.empty()))
+					performAction_copy();
+				if (ImGui::MenuItem("Paste"))
+					performAction_paste();
+				ImGui::Separator();
+				
+				if (ImGui::MenuItem("Duplicate", nullptr, false, !selectedNodes.empty()))
+					performAction_duplicate();
+				
+				ImGui::EndMenu();
+			}
+			
+		#if ENABLE_RENDERER
+			if (ImGui::BeginMenu("Renderer"))
+			{
+				parameterUi::doParameterUi(renderer.parameterMgr, nullptr, false);
+				
+				ImGui::EndMenu();
+			}
+		#endif
+			
+			if (ImGui::BeginMenu("Parameters"))
+			{
+				ImGui::InputText("Component filter", parameterUi.component_filter, kMaxParameterFilter);
+				ImGui::InputText("Parameter filter", parameterUi.parameter_filter, kMaxParameterFilter);
+				ImGui::Checkbox("Show components with empty prefix", &parameterUi.showAnonymousComponents);
+				
+				doParameterUi(s_parameterComponentMgr, parameterUi.component_filter, parameterUi.parameter_filter, parameterUi.showAnonymousComponents);
+				
+				ImGui::EndMenu();
+			}
+		}
+		ImGui::EndMainMenuBar();
+	
+		guiContext.updateMouseCursor();
+	}
+	guiContext.processEnd();
+	
+	// action: show/hide ui
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_TAB))
+	{
+		inputIsCaptured = true;
+		showUi = !showUi;
 	}
 	
 	// action: save
