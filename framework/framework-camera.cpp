@@ -239,9 +239,7 @@ void Camera::Ortho::tick(const float dt, bool & inputIsCaptured)
 			inputIsCaptured = true;
 		}
 		
-		const float speed = 1.f;
-		
-		position += direction * speed * dt;
+		position += direction * speed * scale * dt;
 		
 		// transform reset
 		

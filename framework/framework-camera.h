@@ -76,6 +76,8 @@ public:
 		
 		float zRange = 1000.f;
 		
+		float speed = 1.f;
+		
 		int gamepadIndex = -1;
 		
 		void tick(const float dt, bool & inputIsCaptured);
