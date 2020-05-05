@@ -3,8 +3,12 @@
 #include <string>
 #include <vector>
 
+// forward declarations
+
 struct ComponentSet;
 struct TypeDB;
+
+//
 
 struct TemplateComponentProperty
 {

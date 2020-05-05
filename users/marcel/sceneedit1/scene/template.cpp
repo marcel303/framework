@@ -4,6 +4,7 @@
 #include "componentType.h"
 #include "helpers.h"
 #include "lineReader.h"
+#include "reflection-textio.h"
 
 #include "Log.h"
 
@@ -40,7 +41,7 @@ bool instantiateComponentsFromTemplate(
 			
 			LineReader lineReader(property_template.value_lines, 0, 0);
 			
-			if (member_fromlines_recursive(g_typeDB, member, component, lineReader) == false)
+			if (member_fromlines_recursive(typeDB, member, component, lineReader) == false)
 			{
 				LOG_ERR("failed to deserialize property from text: property=%s, lines=", property_template.name.c_str());
 				for (auto & line : property_template.value_lines)

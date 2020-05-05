@@ -1,10 +1,11 @@
 #pragma once
 
 #include "component.h"
-#include "Mat4x4.h"
 #include <map>
 #include <string>
 #include <vector>
+
+// forward declarations
 
 class LineReader;
 class LineWriter;
@@ -12,12 +13,14 @@ struct Scene;
 struct SceneNode;
 struct TypeDB;
 
+//
+
 struct SceneNode
 {
 	std::string name; // unique name, used during save/load only
 	
 	int id = -1; // id used for run-time lookups. note : not serialized, but allocated when a node is created
-	int parentId = -1; // note : not serialized, but inferred when loading a scene
+	int parentId = -1; // parent id used for run-time lookups. note : not serialized, but inferred when loading a scene
 	
 	std::vector<int> childNodeIds;
 	
@@ -26,6 +29,8 @@ struct SceneNode
 	bool initComponents();
 	void freeComponents();
 };
+
+//
 
 struct Scene
 {

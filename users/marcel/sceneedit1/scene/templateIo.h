@@ -1,7 +1,11 @@
 #pragma once
 
+// forward declarations
+
 class LineReader;
 struct Template;
+
+//
 
 typedef bool (*FetchTemplateCallback)(
 	const char * name,

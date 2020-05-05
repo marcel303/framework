@@ -1,13 +1,7 @@
-#include "component.h"
 #include "componentType.h"
 #include "helpers.h"
-#include "reflection.h"
-#include "scene.h"
 
 #include <algorithm> // std::sort
-//#include <string.h>
-
-TypeDB g_typeDB;
 
 std::vector<ComponentTypeBase*> g_componentTypes;
 

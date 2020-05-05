@@ -9,7 +9,7 @@
 #include "TextIO.h"
 
 #include <set>
-#include <string.h>
+#include <string.h> // memcmp
 
 bool parseTemplateFromLines(
 	LineReader & lineReader,

@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+// forward declarations
+
 class LineReader;
 struct Scene;
 struct Template;

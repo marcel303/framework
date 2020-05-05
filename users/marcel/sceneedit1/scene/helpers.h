@@ -27,8 +27,4 @@ ComponentTypeBase * findComponentType(const std::type_index & typeIndex);
 void freeComponentsInComponentSet(ComponentSet & componentSet);
 void freeComponentInComponentSet(ComponentSet & componentSet, ComponentBase *& component);
 
-#include "reflection-textio.h"
-
-extern TypeDB g_typeDB;
-
 extern std::vector<ComponentTypeBase*> g_componentTypes;

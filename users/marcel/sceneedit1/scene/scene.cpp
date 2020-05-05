@@ -1,15 +1,18 @@
 #include "componentType.h"
 #include "Debugging.h"
+#include "helpers.h" // findComponentType
 #include "lineWriter.h"
 #include "Log.h"
+#include "reflection-textio.h"
 #include "scene.h"
 #include "sceneNodeComponent.h"
 #include "StringEx.h"
 #include "TextIO.h"
 
-#include "helpers.h" // findComponentType
-
 #include <set>
+
+// todo : rename this function
+static bool write_node_children_traverse(const Scene & scene, const int nodeId, LineWriter & line_writer, const int indent);
 
 extern SceneNodeComponentMgr s_sceneNodeComponentMgr;
 
