@@ -1,12 +1,6 @@
-//#include "component.h"
-//#include "componentType.h"
 #include "helpers.h"
 #include "helpers2.h"
-//#include "lineReader.h"
-//#include "lineWriter.h"
-//#include "Log.h"
 #include "reflection.h"
-//#include "scene.h"
 
 #define DEFINE_COMPONENT_TYPES
 #include "components/cameraComponent.h"
@@ -18,9 +12,6 @@
 #include "components/vfxgraphComponent.h"
 #include "scene/sceneNodeComponent.h"
 
-//#include <algorithm>
-//#include <string.h>
-
 // todo : remove component mgr globals
 CameraComponentMgr s_cameraComponentMgr;
 LightComponentMgr s_lightComponentMgr;
@@ -30,6 +21,12 @@ RotateTransformComponentMgr s_rotateTransformComponentMgr;
 SceneNodeComponentMgr s_sceneNodeComponentMgr;
 TransformComponentMgr s_transformComponentMgr;
 //VfxgraphComponentMgr s_vfxgraphComponentMgr;
+
+//
+
+TypeDB g_typeDB;
+
+//
 
 void registerBuiltinTypes()
 {

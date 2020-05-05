@@ -1,9 +1,11 @@
 #include "component.h"
 #include "componentType.h"
-#include "helpers.h"
+#include "helpers.h" // findComponentType
+#include "helpers2.h" // g_typeDB
 #include "lineReader.h"
 #include "lineWriter.h"
 #include "Log.h"
+#include "reflection-textio.h"
 #include "scene.h"
 #include "scene_clipboardHelpers.h"
 #include "TextIO.h"

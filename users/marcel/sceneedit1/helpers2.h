@@ -1,5 +1,11 @@
 #pragma once
 
+#include "reflection.h"
+
+extern TypeDB g_typeDB;
+
+//
+
 void registerBuiltinTypes();
 void registerComponentTypes();
 

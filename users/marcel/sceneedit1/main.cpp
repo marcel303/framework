@@ -11,6 +11,7 @@
 #include "Path.h"
 #include "Quat.h"
 #include "raycast.h"
+#include "reflection-textio.h"
 #include "scene.h"
 #include "scene_fromText.h"
 #include "scene_clipboardHelpers.h"
@@ -37,7 +38,7 @@
 #include <set>
 #include <typeindex>
 
-#include <SDL2/SDL.h>
+#include <SDL2/SDL.h> // SDL_Get/SetClipboardText
 
 #define ENABLE_TRANSFORM_GIZMOS 1
 
