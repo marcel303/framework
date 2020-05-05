@@ -1,20 +1,16 @@
-#include "framework.h"
-#include "helpers.h"
 #include "helpers2.h"
+#include "scene.h"
+#include "scene_fromText.h"
+
 #include "Log.h"
 #include "Path.h"
-#include "scene.h"
-#include "template.h"
-#include "scene_fromText.h"
 #include "TextIO.h"
-#include <map>
-#include <string>
-#include <vector>
 
-bool test_scenefiles()
+#include "framework.h" // setupPaths
+
+int main(int argc, char * argv[])
 {
-	if (!framework.init(640, 480))
-		return false;
+	setupPaths(CHIBI_RESOURCE_PATHS);
 
 	registerBuiltinTypes();
 	registerComponentTypes();
@@ -30,8 +26,10 @@ bool test_scenefiles()
 	if (!TextIO::load(path, lines, lineEndings))
 	{
 		LOG_ERR("failed to load text file", 0);
-		return false;
+		return -1;
 	}
+	
+	// parse the scene
 	
 	Scene scene;
 	scene.createRootNode();
@@ -39,10 +37,14 @@ bool test_scenefiles()
 	if (!parseSceneFromLines(g_typeDB, lines, basePath.c_str(), scene))
 	{
 		LOG_ERR("failed to parse scene from lines", 0);
-		return false;
+		return -1;
 	}
 
-	LOG_DBG("success!", 0);
+	LOG_INF("success!", 0);
+	
+	// empty the scene before we quit the app
+	
+	scene.freeAllNodesAndComponents();
 
-	return true;
+	return 0;
 }

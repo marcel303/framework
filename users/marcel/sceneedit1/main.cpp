@@ -83,8 +83,6 @@ done :
 
 */
 
-extern void test_templates();
-extern bool test_scenefiles();
 extern bool test_templateEditor();
 
 static const int VIEW_SX = 1200;
@@ -2488,16 +2486,6 @@ int main(int argc, char * argv[])
 	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;
 	framework.allowHighDpi = false;
-
-#if 0
-	test_templates();
-	return 0;
-#endif
-
-#if 0
-	test_scenefiles();
-	return 0;
-#endif
 
 #if 0
 	if (!test_templateEditor())

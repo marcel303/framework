@@ -51,6 +51,11 @@ app marcel-sceneedit-400-templates
 	add_files tests/400-templates.cpp
 	resource_path data
 
+app marcel-sceneedit-410-sceneFiles
+	depend_library marcel-sceneedit
+	add_files tests/410-sceneFiles.cpp
+	resource_path data
+
 app marcel-sceneedit1
 	depend_library marcel-sceneedit
 	add_files main.cpp
