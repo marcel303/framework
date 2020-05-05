@@ -1,22 +1,26 @@
-#include "framework.h"
+#include "Log.h"
+
+#include "component.h"
+
 #include "helpers.h"
 #include "template.h"
 #include "templateIo.h"
 
-#include "scene.h"
+#include "helpers2.h"
+
+#include "framework.h" // setupPaths
 
 static void dump_template(const Template & t)
 {
-#if ENABLE_LOGGING
 	for (auto & component : t.components)
 	{
-		logInfo("%30s : %20s *",
+		LOG_INF("%30s : %20s *",
 			component.typeName.c_str(),
 			component.id.c_str());
 		
 		for (auto & property : component.properties)
 		{
-			logInfo("%30s : %20s : %20s = %s",
+			LOG_INF("%30s : %20s : %20s = %s",
 				component.typeName.c_str(),
 				component.id.c_str(),
 				property.name.c_str(),
@@ -25,87 +29,72 @@ static void dump_template(const Template & t)
 			if (property.value_lines.size() > 1)
 			{
 				for (auto & value_line : property.value_lines)
-					logInfo("\t%s", value_line.c_str());
+					LOG_INF("\t%s", value_line.c_str());
 			}
 		}
 	}
-#endif
 }
 
-void test_templates_v1()
+static void test_v1()
 {
 	Template t;
 	
 	if (!parseTemplateFromFile("textfiles/base-entity-v1.txt", t))
-		logError("failed to load template from file");
+		LOG_ERR("failed to load template from file", 0);
 	
 	Template overlay;
 	
 	if (!parseTemplateFromFile("textfiles/base-entity-v1-overlay.txt", overlay))
-		logError("failed to load template from file");
+		LOG_ERR("failed to load template from file", 0);
 	
 	if (!overlayTemplate(t, overlay, false, true))
-		logError("failed to overlay template");
+		LOG_ERR("failed to overlay template", 0);
 	
-	SceneNode node;
-	
-	if (!instantiateComponentsFromTemplate(g_typeDB, t, node.components))
-	{
-		logError("failed to instantiate components from template");
-		
-		node.freeComponents();
-	}
+	ComponentSet componentSet;
+	if (!instantiateComponentsFromTemplate(g_typeDB, t, componentSet))
+		LOG_ERR("failed to instantiate components from template", 0);
+	freeComponentsInComponentSet(componentSet);
 	
 	// show what we just parsed
 	
 	dump_template(t);
 }
 
-void test_templates()
+static void test_v2()
 {
-	if (!framework.init(640, 480))
-		return;
-
-	registerBuiltinTypes();
-	registerComponentTypes();
-	
 	Template t;
 	
 	if (!parseTemplateFromFileAndRecursivelyOverlayBaseTemplates(
 		"textfiles/base-entity-v2-overlay.txt",
-		false,
+		true,
 		true,
 		t))
 	{
-		logError("failed to load template with overlays from file");
+		LOG_ERR("failed to load template with overlays from file", 0);
 	}
 	
-	SceneNode node;
-	
-	if (!instantiateComponentsFromTemplate(g_typeDB, t, node.components))
-	{
-		logError("failed to instantiate components from template");
-		
-		node.freeComponents();
-	}
+	ComponentSet componentSet;
+	if (!instantiateComponentsFromTemplate(g_typeDB, t, componentSet))
+		LOG_ERR("failed to instantiate components from template", 0);
+	freeComponentsInComponentSet(componentSet);
 	
 	dump_template(t);
+}
+
+int main(int argc, char * argv[])
+{
+	setupPaths(CHIBI_RESOURCE_PATHS);
 	
-	exit(0);
+	registerBuiltinTypes();
+	registerComponentTypes();
 	
-	for (;;)
-	{
-		framework.process();
-		
-		if (framework.quitRequested)
-			break;
-
-		framework.beginDraw(0, 0, 0, 0);
-		{
-
-		}
-		framework.endDraw();
-	}
-
-	framework.shutdown();
+	LOG_INF("[running test-v1]", 0);
+	test_v1();
+	LOG_INF("[done]", 0);
+	
+	LOG_INF("[running test-v2]", 0);
+	test_v2();
+	LOG_INF("[done]", 0);
+	
+	return 0;
 }

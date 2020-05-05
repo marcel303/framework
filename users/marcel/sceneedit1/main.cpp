@@ -86,8 +86,6 @@ done :
 extern void test_templates();
 extern bool test_scenefiles();
 extern bool test_templateEditor();
-extern void test_reflection_1();
-extern void test_bindObjectToFile();
 
 static const int VIEW_SX = 1200;
 static const int VIEW_SY = 800;
@@ -2509,16 +2507,6 @@ int main(int argc, char * argv[])
 
 #if 0
 	testResourcePointers();
-	return 0;
-#endif
-
-#if 0
-	test_reflection_1();
-	return 0;
-#endif
-
-#if 0
-	test_bindObjectToFile();
 	return 0;
 #endif
 	
