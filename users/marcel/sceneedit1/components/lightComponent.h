@@ -1,6 +1,7 @@
 #pragma once
 
 #include "component.h"
+#include "Vec3.h"
 
 class Surface;
 

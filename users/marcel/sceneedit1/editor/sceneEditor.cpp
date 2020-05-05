@@ -32,6 +32,7 @@
 
 // libgg
 #include "Path.h"
+#include "Quat.h"
 #include "StringEx.h"
 #include "TextIO.h"
 
@@ -71,12 +72,6 @@ void SceneEditor::init(TypeDB * in_typeDB)
 	camera.ortho.scale = 16.f;
 	camera.firstPerson.position = Vec3(0, 1, -2);
 	camera.firstPerson.height = 0.f;
-	
-#if ENABLE_RENDERER
-	renderer.init();
-	renderer.drawOpaque = [&]() { drawOpaque(); };
-	renderer.drawTranslucent = [&]() { drawTranslucent(); };
-#endif
 
 	guiContext.init();
 }
@@ -84,10 +79,6 @@ void SceneEditor::init(TypeDB * in_typeDB)
 void SceneEditor::shut()
 {
 	scene.freeAllNodesAndComponents();
-	
-#if ENABLE_RENDERER
-	// todo : shutdown renderer
-#endif
 	
 	guiContext.shut();
 }
@@ -1723,12 +1714,15 @@ void SceneEditor::drawNodes() const
 
 void SceneEditor::drawSceneOpaque() const
 {
-	s_modelComponentMgr.draw();
-	
 	if (visibility.drawGroundPlane)
 	{
 		setLumi(200);
 		fillCube(Vec3(), Vec3(100, 1, 100));
+	}
+	
+	if (preview.drawScene)
+	{
+		s_modelComponentMgr.draw();
 	}
 }
 
@@ -1738,20 +1732,6 @@ void SceneEditor::drawEditorOpaque() const
 // todo : draw transform gizmo on top of everything
 	transformGizmo.draw();
 #endif
-}
-
-void SceneEditor::drawOpaque() const
-{
-	pushDepthTest(true, DEPTH_LEQUAL);
-	pushBlend(BLEND_OPAQUE);
-	{
-		if (preview.drawScene)
-		{
-			drawSceneOpaque();
-		}
-	}
-	popBlend();
-	popDepthTest();
 }
 
 void SceneEditor::drawSceneTranslucent() const
@@ -1787,21 +1767,9 @@ void SceneEditor::drawEditorTranslucent() const
 	}
 }
 
-void SceneEditor::drawTranslucent() const
-{
-	pushDepthTest(true, DEPTH_LESS, false);
-	pushBlend(BLEND_ALPHA);
-	{
-		drawSceneTranslucent();
-		
-		drawEditorTranslucent();
-	}
-	popBlend();
-	popDepthTest();
-}
-
 void SceneEditor::drawEditor() const
 {
+/*
 	int viewportSx = 0;
 	int viewportSy = 0;
 	framework.getCurrentViewportSize(viewportSx, viewportSy);
@@ -1815,6 +1783,7 @@ void SceneEditor::drawEditor() const
 #if ENABLE_RENDERER
 	renderer.draw(projectionMatrix, viewMatrix);
 #endif
+*/
 	
 #if 1
 	// draw gizmos
@@ -1823,11 +1792,11 @@ void SceneEditor::drawEditor() const
 	{
 		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
-		gxLoadMatrixf(projectionMatrix.m_v);
+		//gxLoadMatrixf(projectionMatrix.m_v);
 		
 		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
-		gxLoadMatrixf(viewMatrix.m_v);
+		//gxLoadMatrixf(viewMatrix.m_v);
 		{
 			//gxClearDepth(1.f);
 			
@@ -1846,6 +1815,8 @@ void SceneEditor::drawEditor() const
 		gxPopMatrix();
 	}
 #endif
+
+	projectScreen2d();
 	
 	const_cast<SceneEditor*>(this)->guiContext.draw();
 }

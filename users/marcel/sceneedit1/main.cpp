@@ -1,31 +1,20 @@
-#include "parameterUi.h"
-
 // component types
-#include "components/cameraComponent.h"
 #include "components/lightComponent.h"
-#include "components/modelComponent.h"
-#include "components/parameterComponent.h"
 #include "components/transformComponent.h"
 #include "scene/sceneNodeComponent.h"
 
 // ecs-sceneEditor
-#include "editor/componentPropertyUi.h"
-#include "editor/parameterComponentUi.h"
-#include "editor/raycast.h"
-#include "editor/scene_clipboardHelpers.h"
 #include "editor/sceneEditor.h"
-#include "editor/transformGizmos.h"
 
 // ecs-scene
-#include "helpers.h"
-#include "scene.h"
-#include "scene_fromText.h"
-#include "template.h"
-#include "templateIo.h"
+#include "helpers.h" // g_componentTypes
 
 // ecs-component
-#include "component.h"
 #include "componentType.h"
+
+// ecs-parameter
+#include "parameter.h"
+#include "parameterUi.h"
 
 // libreflection
 #include "lineReader.h"
@@ -33,34 +22,15 @@
 #include "reflection-textio.h"
 
 // sceneedit
-#include "helpers2.h"
-
-// imgui-framework
-#include "imgui-framework.h"
+#include "helpers2.h" // g_typeDB
 
 // framework
 #include "framework.h"
-#include "framework-camera.h"
 #include "gx_render.h"
 
 // libgg
 #include "Path.h"
-#include "Quat.h"
-#include "StringEx.h"
 #include "TextIO.h"
-
-// libsdl
-#include <SDL2/SDL.h> // SDL_Get/SetClipboardText
-
-// std
-#include <algorithm>
-#include <limits>
-#include <set>
-#include <typeindex>
-
-#define ENABLE_TRANSFORM_GIZMOS 1
-
-#define ENABLE_QUAT_FIXUP 1
 
 #if defined(DEBUG)
 	#define ENABLE_PERFORMANCE_TEST     1
@@ -103,9 +73,7 @@ static const int VIEW_SY = 800;
 // todo : move these instances to helpers.cpp
 extern TransformComponentMgr s_transformComponentMgr;
 extern LightComponentMgr s_lightComponentMgr;
-extern ModelComponentMgr s_modelComponentMgr;
 extern ParameterComponentMgr s_parameterComponentMgr;
-extern SceneNodeComponentMgr s_sceneNodeComponentMgr;
 
 //
 
@@ -594,6 +562,34 @@ int main(int argc, char * argv[])
 	SceneEditor editor;
 	editor.init(&g_typeDB);
 	
+	auto drawOpaque = [&]()
+		{
+			pushDepthTest(true, DEPTH_LEQUAL);
+			pushBlend(BLEND_OPAQUE);
+			{
+				editor.drawSceneOpaque();
+			}
+			popBlend();
+			popDepthTest();
+		};
+	
+	auto drawTranslucent = [&]()
+		{
+			pushDepthTest(true, DEPTH_LESS, false);
+			pushBlend(BLEND_ALPHA);
+			{
+				editor.drawSceneTranslucent();
+				editor.drawEditorTranslucent();
+			}
+			popBlend();
+			popDepthTest();
+		};
+
+	Renderer renderer;
+	renderer.init();
+	renderer.drawOpaque = [&]() { drawOpaque(); };
+	renderer.drawTranslucent = [&]() { drawTranslucent(); };
+	
 	for (;;)
 	{
 		framework.process();
@@ -723,12 +719,29 @@ int main(int argc, char * argv[])
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
+			int viewportSx = 0;
+			int viewportSy = 0;
+			framework.getCurrentViewportSize(viewportSx, viewportSy);
+
+			Mat4x4 projectionMatrix;
+			editor.camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
+			
+			Mat4x4 viewMatrix;
+			editor.camera.calculateViewMatrix(viewMatrix);
+			
+			renderer.draw(projectionMatrix, viewMatrix);
+			
+			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+			gxSetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
+
 			editor.drawEditor();
 		}
 		framework.endDraw();
 	}
 	
 	editor.shut();
+	
+	// todo : shutdown renderer
 	
 	shutComponentMgrs();
 	

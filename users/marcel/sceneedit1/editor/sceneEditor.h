@@ -26,11 +26,15 @@
 	#define ENABLE_SAVE_LOAD_TIMING     0 // do not alter
 #endif
 
+#define ENABLE_TRANSFORM_GIZMOS 1
+
+#define ENABLE_QUAT_FIXUP 1
+
 #define ENABLE_RENDERER 0
 
 //
 
-class AngleAxis;
+struct AngleAxis;
 
 //
 
@@ -200,11 +204,9 @@ struct SceneEditor
 	
 	void drawSceneOpaque() const;
 	void drawEditorOpaque() const;
-	void drawOpaque() const;
 	
 	void drawSceneTranslucent() const;
 	void drawEditorTranslucent() const;
-	void drawTranslucent() const;
 	
 	void drawEditor() const;
 	
