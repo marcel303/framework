@@ -9,9 +9,6 @@ void TransformGizmo::show(const Mat4x4 & transform)
 		state = kState_Visible;
 	
 	gizmoToWorld = transform;
-	
-	for (int i = 0; i < 3; ++i)
-		gizmoToWorld.SetAxis(i, gizmoToWorld.GetAxis(i).CalcNormalized());
 }
 
 void TransformGizmo::hide()
@@ -116,18 +113,15 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 		
 		// determine how much rotation occurred and rotate to match
 		
-	#if 0 // todo : make smoothing amout a parameter
-		const float delta = (dragRing.initialAngle - angle) * .5f;
+	#if 0 // todo : make smoothing amount a parameter
+		const float delta = (dragRing.initialAngle - angle) * .1f;
 	#else
 		const float delta = dragRing.initialAngle - angle;
 	#endif
 		
-		if (dragRing.axis == 0)
-			gizmoToWorld = gizmoToWorld.RotateX(delta);
-		if (dragRing.axis == 1)
-			gizmoToWorld = gizmoToWorld.RotateY(delta);
-		if (dragRing.axis == 2)
-			gizmoToWorld = gizmoToWorld.RotateZ(delta);
+		if (dragRing.axis == 0) gizmoToWorld = gizmoToWorld.RotateX(delta);
+		if (dragRing.axis == 1) gizmoToWorld = gizmoToWorld.RotateY(delta);
+		if (dragRing.axis == 2) gizmoToWorld = gizmoToWorld.RotateZ(delta);
 		
 		if (mouse.wentUp(BUTTON_LEFT))
 		{
@@ -445,7 +439,7 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 	if (enableRotation)
 	{
 		// intersect the rings
-		
+
 		for (int i = 0; i < 3; ++i)
 		{
 			const float t = -origin_gizmo[i] / direction_gizmo[i];
@@ -474,7 +468,11 @@ float TransformGizmo::calculateRingAngle(Vec3Arg position_world, const int axis)
 {
 	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 	
-	const Vec3 position_gizmo = worldToGizmo * position_world;
+	Vec3 position_gizmo = worldToGizmo * position_world;
+	
+	// we need to undo any scaling, to get 'reproducible' angles
+	for (int i = 0; i < 3; ++i)
+		position_gizmo[i] /= worldToGizmo.GetAxis(i).CalcSize();
 	
 	const int axis2 = (axis + 1) % 3;
 	const int axis3 = (axis + 2) % 3;
