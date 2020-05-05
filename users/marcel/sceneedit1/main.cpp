@@ -9,16 +9,17 @@
 #include "scene/sceneNodeComponent.h"
 
 // ecs-sceneEditor
+#include "editor/componentPropertyUi.h"
 #include "editor/parameterComponentUi.h"
 #include "editor/raycast.h"
+#include "editor/scene_clipboardHelpers.h"
 #include "editor/sceneEditor.h"
-#include "editor/transformGizmos.h""
+#include "editor/transformGizmos.h"
 
 // ecs-scene
 #include "helpers.h"
 #include "scene.h"
 #include "scene_fromText.h"
-#include "scene_clipboardHelpers.h"
 #include "template.h"
 #include "templateIo.h"
 
@@ -32,7 +33,6 @@
 #include "reflection-textio.h"
 
 // sceneedit
-#include "componentPropertyUi.h"
 #include "helpers2.h"
 
 // imgui-framework
@@ -40,7 +40,7 @@
 
 // framework
 #include "framework.h"
-#include "framework-camera.h
+#include "framework-camera.h"
 #include "gx_render.h"
 
 // libgg
@@ -63,15 +63,11 @@
 #define ENABLE_QUAT_FIXUP 1
 
 #if defined(DEBUG)
-	#define ENABLE_LOAD_AFTER_SAVE_TEST 1
 	#define ENABLE_PERFORMANCE_TEST     1
 	#define ENABLE_TEMPLATE_TEST        1
-	#define ENABLE_SAVE_LOAD_TIMING     1
 #else
-	#define ENABLE_LOAD_AFTER_SAVE_TEST 0 // do not alter
 	#define ENABLE_PERFORMANCE_TEST     0 // do not alter
 	#define ENABLE_TEMPLATE_TEST        0 // do not alter
-	#define ENABLE_SAVE_LOAD_TIMING     0 // do not alter
 #endif
 
 /*
@@ -596,7 +592,7 @@ int main(int argc, char * argv[])
 	testResources(); // todo : remove
 	
 	SceneEditor editor;
-	editor.init();
+	editor.init(&g_typeDB);
 	
 	for (;;)
 	{
