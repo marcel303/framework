@@ -5,8 +5,10 @@
 #include "Vec3.h"
 #include <vector>
 
-void test_bindObjectToFile()
+int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	TypeDB typeDB;
 	typeDB.addPlain<float>("float", kDataType_Float);
 	typeDB.addPlain<Vec2>("Vec2", kDataType_Float2);
@@ -32,7 +34,8 @@ void test_bindObjectToFile()
 	// real-time editing needs to be enabled to let framework detect file changes
 	framework.enableRealTimeEditing = true;
 	
-	framework.init(640, 480);
+	if (!framework.init(640, 480))
+		return -1;
 	
 	for (;;)
 	{
@@ -61,4 +64,6 @@ void test_bindObjectToFile()
 	}
 	
 	framework.shutdown();
+	
+	return 0;
 }

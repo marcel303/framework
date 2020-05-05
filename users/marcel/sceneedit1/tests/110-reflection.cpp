@@ -143,7 +143,7 @@ struct TestStruct_3
 #define TYPEDB_ADD_STRUCT(typeDB, type) \
 	typeDB.add(std::type_index(typeid(type)), #type)
 
-void test_reflection_1()
+int main(int argc, char * argv[])
 {
 	TypeDB typeDB;
 
@@ -201,4 +201,6 @@ void test_reflection_1()
 	auto * type = typeDB.findType(*object);
 
 	dumpReflectionInfo_traverse(typeDB, type, object, 0);
+	
+	return 0;
 }

@@ -1,10 +1,11 @@
 #include "componentPropertyUi.h"
 #include "componentType.h"
-#include "helpers.h"
+#include "helpers2.h" // g_typeDB
 #include "imgui.h"
 #include "lineReader.h"
 #include "lineWriter.h"
 #include "nfd.h"
+#include "reflection-textio.h"
 #include "StringEx.h"
 #include "Vec2.h"
 #include "Vec3.h"

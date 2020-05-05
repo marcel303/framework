@@ -38,10 +38,12 @@ library marcel-sceneedit
 app marcel-sceneedit-100-bindStructToFile
 	depend_library marcel-sceneedit
 	add_files tests/100-bindStructToFile.cpp
+	resource_path data
 
 app marcel-sceneedit-110-reflection
 	depend_library marcel-sceneedit
 	add_files tests/110-reflection.cpp
+	resource_path data
 
 app marcel-sceneedit1
 	depend_library marcel-sceneedit
