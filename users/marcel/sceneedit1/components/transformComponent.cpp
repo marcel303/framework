@@ -17,7 +17,11 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 		Quat q;
 		q.fromAxisAngle(transformComp->angleAxis.axis, transformComp->angleAxis.angle * float(M_PI) / 180.f);
 
-		const Mat4x4 localTransform = Mat4x4(true).Translate(transformComp->position).Rotate(q).Scale(transformComp->scale);
+		const Mat4x4 localTransform = Mat4x4(true)
+			.Translate(transformComp->position)
+			.Rotate(q)
+			.Scale(transformComp->uniformScale)
+			.Scale(transformComp->scale);
 		
 		newGlobalTransform = globalTransform * localTransform;
 	}

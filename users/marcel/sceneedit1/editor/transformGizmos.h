@@ -21,6 +21,8 @@ struct TransformGizmo
 		kElement_YAxis,
 		kElement_ZAxis,
 		kElement_XZPad,
+		kElement_YXPad,
+		kElement_ZYPad,
 		kElement_XRing,
 		kElement_YRing,
 		kElement_ZRing
@@ -38,6 +40,8 @@ struct TransformGizmo
 	
 	IntersectionResult intersectionResult;
 	
+	bool isInteractive = true;
+	
 	bool enableTranslation = true;
 	bool enableRotation = true;
 	
@@ -46,7 +50,7 @@ struct TransformGizmo
 	
 	float pad_offset = .5f;
 	float pad_size = .3f;
-	float pad_thickness = .04f;
+	float pad_thickness = .02f;
 	
 	float ring_radius = 1.8f;
 	float ring_tubeRadius = .1f;
@@ -61,6 +65,7 @@ struct TransformGizmo
 	struct DragPad
 	{
 		Vec3 initialPosition;
+		int projection_axis = 0;
 	} dragPad;
 	
 	struct DragRing
@@ -80,8 +85,6 @@ struct TransformGizmo
 	 */
 	bool tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured);
 	void draw() const;
-	
-	void beginPad(Vec3Arg origin_world, Vec3Arg direction_world);
 
 private:
 	IntersectionResult intersect(Vec3Arg origin_world, Vec3Arg direction_world) const;

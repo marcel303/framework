@@ -12,7 +12,8 @@ struct TransformComponent : Component<TransformComponent>
 {
 	Vec3 position;
 	AngleAxis angleAxis;
-	float scale = 1.f;
+	float uniformScale = 1.f;
+	Vec3 scale = Vec3(1.f);
 };
 
 struct TransformComponentMgr : ComponentMgr<TransformComponent>
@@ -34,9 +35,10 @@ struct TransformComponentType : ComponentType<TransformComponent>
 		
 		add("position", &TransformComponent::position);
 		add("angleAxis", &TransformComponent::angleAxis);
-		in("scale", &TransformComponent::scale)
+		in("scale", &TransformComponent::uniformScale)
 			.limits(0.f, 10.f)
 			.editingCurveExponential(2.f);
+		add("scale3", &TransformComponent::scale);
 	}
 };
 

@@ -9,6 +9,9 @@ void TransformGizmo::show(const Mat4x4 & transform)
 		state = kState_Visible;
 	
 	gizmoToWorld = transform;
+	
+	for (int i = 0; i < 3; ++i)
+		gizmoToWorld.SetAxis(i, gizmoToWorld.GetAxis(i).CalcNormalized());
 }
 
 void TransformGizmo::hide()
@@ -16,7 +19,7 @@ void TransformGizmo::hide()
 	state = kState_Hidden;
 }
 
-static int determineProjectionAxis(const int axis, Vec3Arg ray_direction)
+static int determineDragArrowProjectionAxis(const int axis, Vec3Arg ray_direction)
 {
 	int projection_axis = (axis + 1) % 3;
 	
@@ -30,9 +33,11 @@ static int determineProjectionAxis(const int axis, Vec3Arg ray_direction)
 
 bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured)
 {
+	isInteractive = (inputIsCaptured == false);
+	
 	if (inputIsCaptured)
 	{
-		hide();
+		//
 	}
 	else if (state == kState_Hidden)
 	{
@@ -73,16 +78,15 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 		const Vec3 origin_gizmo = worldToGizmo * ray_origin;
 		const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
 		
-		const int projection_axis = 1;
-		const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
+		const float t = - origin_gizmo[dragPad.projection_axis] / direction_gizmo[dragPad.projection_axis];
 		const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
 		
 		//logDebug("initial_pos: %f, current_pos: %f", dragAxis.initialPosition[i], position_gizmo[i]);
 		
 		const Vec3 delta = position_gizmo - dragPad.initialPosition;
 		
-		Vec3 drag;
-		drag.Set(delta[0], 0.f, delta[2]);
+		Vec3 drag = delta;
+		drag[dragPad.projection_axis] = 0.f;
 		
 		gizmoToWorld = gizmoToWorld.Translate(drag[0], drag[1], drag[2]);
 		
@@ -152,14 +156,16 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 				const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 				const Vec3 origin_gizmo = worldToGizmo * ray_origin;
 				const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
-				dragArrow.projection_axis = determineProjectionAxis(axis, direction_gizmo);
+				dragArrow.projection_axis = determineDragArrowProjectionAxis(axis, direction_gizmo);
 				const float t = - origin_gizmo[dragArrow.projection_axis] / direction_gizmo[dragArrow.projection_axis];
 				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
 				dragArrow.initialPosition = position_gizmo;
 			}
 		}
 		
-		if (intersectionResult.element == kElement_XZPad)
+		if (intersectionResult.element == kElement_XZPad ||
+			intersectionResult.element == kElement_YXPad ||
+			intersectionResult.element == kElement_ZYPad)
 		{
 			if (mouse.wentDown(BUTTON_LEFT))
 			{
@@ -173,10 +179,15 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 				const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 				const Vec3 origin_gizmo = worldToGizmo * ray_origin;
 				const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
-				const int projection_axis = 1;
+				const int projection_axis =
+					intersectionResult.element == kElement_XZPad ? 1 :
+					intersectionResult.element == kElement_YXPad ? 2 :
+					intersectionResult.element == kElement_ZYPad ? 0 :
+					-1;
 				const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
 				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
 				dragPad.initialPosition = position_gizmo;
+				dragPad.projection_axis = projection_axis;
 			}
 		}
 		
@@ -208,7 +219,7 @@ static void drawRing(const Vec3 & position, const int axis, const float radius, 
 	gxPushMatrix();
 	gxTranslatef(position[0], position[1], position[2]);
 	
-	const int axis1 = axis;
+	const int axis1 = (axis + 0) % 3;
 	const int axis2 = (axis + 1) % 3;
 	const int axis3 = (axis + 2) % 3;
 	
@@ -263,9 +274,16 @@ void TransformGizmo::draw() const
 	if (state == kState_Hidden)
 		return;
 	
+	if (!isInteractive)
+		pushColorPost(POST_RGB_TO_LUMI);
+	
+	pushBlend(BLEND_ALPHA); // fixme : draw gizmo in translucent pass or a separate pass where alpha blend is the default blend mode
+	
 	gxPushMatrix();
 	gxMultMatrixf(gizmoToWorld.m_v);
 	{
+		const int opacity = 60;
+		
 		// draw axis arrows
 		
 		setColorForArrow(0);
@@ -279,13 +297,47 @@ void TransformGizmo::draw() const
 		
 		// draw pads
 		
-		const Color pad_color(100, 100, 100);
-		const Color pad_color_highlight(200, 200, 200);
-		
-		setColor(intersectionResult.element == kElement_XZPad ? pad_color_highlight : pad_color);
-		fillCube(
-			Vec3(pad_offset, 0.f, pad_offset),
-			Vec3(pad_size, pad_thickness, pad_size));
+		for (int i = 0; i < 3; ++i)
+		{
+			const Color pad_colors[3] =
+			{
+				Color(255, 40, 40, opacity),
+				Color(40, 255, 40, opacity),
+				Color(40, 40, 255, opacity)
+			};
+			
+			const Color & pad_color = pad_colors[i];
+			const Color pad_color_highlight(255, 255, 40, opacity);
+			
+			const int axis1 = (i + 0) % 3;
+			const int axis2 = (i + 1) % 3;
+			const int axis3 = (i + 2) % 3;
+			
+			Vec3 position;
+			Vec3 size;
+			
+			position[axis1] = pad_offset;
+			position[axis2] = 0.f;
+			position[axis3] = pad_offset;
+			
+			size[axis1] = pad_size;
+			size[axis2] = pad_thickness;
+			size[axis3] = pad_size;
+			
+			const Color color =
+				intersectionResult.element == (kElement_XZPad + i)
+					? pad_color_highlight
+					: pad_color;
+			
+			setColor(color);
+			fillCube(
+				position,
+				size);
+			setAlpha(255);
+			lineCube(
+				position,
+				size);
+		}
 		
 		setColorForRing(0);
 		drawRing(Vec3(), 0, ring_radius, ring_tubeRadius);
@@ -297,23 +349,11 @@ void TransformGizmo::draw() const
 		drawRing(Vec3(), 2, ring_radius, ring_tubeRadius);
 	}
 	gxPopMatrix();
-}
-
-void TransformGizmo::beginPad(Vec3Arg origin_world, Vec3Arg direction_world)
-{
-	// todo : update tick to use this method
 	
-	state = kState_DragPad;
-	dragPad = DragPad();
-
-	//
-	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
-	const Vec3 origin_gizmo = worldToGizmo * origin_world;
-	const Vec3 direction_gizmo = worldToGizmo.Mul3(direction_world);
-	const int projection_axis = 1;
-	const float t = - origin_gizmo[projection_axis] / direction_gizmo[projection_axis];
-	const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
-	dragPad.initialPosition = position_gizmo;
+	popBlend();
+	
+	if (!isInteractive)
+		popColorPost();
 }
 
 TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_world, Vec3Arg direction_world) const
@@ -360,30 +400,44 @@ TransformGizmo::IntersectionResult TransformGizmo::intersect(Vec3Arg origin_worl
 			}
 		}
 
-		// intersect the XZ pad
-		
+		for (int i = 0; i < 3; ++i)
 		{
-			const float min[3] =
+			// intersect the pads
+			
+			const int axis1 = (i + 0) % 3;
+			const int axis2 = (i + 1) % 3;
+			const int axis3 = (i + 2) % 3;
+			
+			const Element elements[3] =
 			{
-				+ pad_offset - pad_size,
-				- pad_thickness,
-				+ pad_offset - pad_size
+				kElement_XZPad,
+				kElement_YXPad,
+				kElement_ZYPad
 			};
 			
-			const float max[3] =
 			{
-				+ pad_offset + pad_size,
-				+ pad_thickness,
-				+ pad_offset + pad_size
-			};
-			
-			if (intersectBoundingBox3d(
-				min, max,
-				origin_gizmo[0], origin_gizmo[1], origin_gizmo[2],
-				1.f / direction_gizmo[0], 1.f / direction_gizmo[1], 1.f / direction_gizmo[2], t) && t < best_t)
-			{
-				best_t = t;
-				result.element = kElement_XZPad;
+				float min[3];
+				min[axis1] = + pad_offset - pad_size;
+				min[axis2] = - pad_thickness;
+				min[axis3] = + pad_offset - pad_size;
+				
+				float max[3];
+				max[axis1] = + pad_offset + pad_size;
+				max[axis2] = + pad_thickness;
+				max[axis3] = + pad_offset + pad_size;
+				
+				if (intersectBoundingBox3d(
+					min, max,
+					origin_gizmo[0],
+					origin_gizmo[1],
+					origin_gizmo[2],
+					1.f / direction_gizmo[0],
+					1.f / direction_gizmo[1],
+					1.f / direction_gizmo[2], t) && t < best_t)
+				{
+					best_t = t;
+					result.element = elements[i];
+				}
 			}
 		}
 	}
@@ -450,4 +504,5 @@ void TransformGizmo::setColorForRing(const int axis) const
 		setColor(colorYellow);
 	else
 		setColor(colors[axis]);
+	setAlpha(100);
 }

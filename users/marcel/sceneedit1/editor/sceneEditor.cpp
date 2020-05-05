@@ -222,7 +222,6 @@ void SceneEditor::selectNodes(const std::set<int> & nodeIds, const bool append)
 		selectedNodes.insert(nodeId);
 		markNodeOpenUntilRoot(nodeId);
 		nodeToGiveFocus = nodeId;
-		enablePadGizmo = true;
 	}
 }
 
@@ -1289,16 +1288,6 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 		
 		transformGizmo.show(globalTransform);
 		
-		if (enablePadGizmo)
-		{
-			enablePadGizmo = false;
-			
-			if (inputIsCaptured == false)
-			{
-				transformGizmo.beginPad(cameraPosition, mouseDirection_world);
-			}
-		}
-		
 		if (transformGizmo.tick(cameraPosition, mouseDirection_world, inputIsCaptured))
 		{
 			// transform the global transform into local space
@@ -1323,6 +1312,9 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 			if (transformComponent != nullptr)
 			{
 				transformComponent->position = localTransform.GetTranslation();
+				
+				for (int i = 0; i < 3; ++i)
+					localTransform.SetAxis(i, localTransform.GetAxis(i).CalcNormalized());
 				
 				Quat q;
 				q.fromMatrix(localTransform);

@@ -55,7 +55,6 @@ struct SceneEditor
 	int hoverNodeId = -1;
 	
 	int nodeToGiveFocus = -1;
-	bool enablePadGizmo = false;
 	
 #if ENABLE_TRANSFORM_GIZMOS
 	TransformGizmo transformGizmo;
