@@ -461,6 +461,7 @@ bool parseSceneObjectStructureFromLines(
 		if (node->components.contains<SceneNodeComponent>() == false)
 		{
 			auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(node->components.id);
+			sceneNodeComponent->name = node->name;
 			node->components.add(sceneNodeComponent);
 		}
 		

@@ -70,6 +70,7 @@ void SceneEditor::init(TypeDB * in_typeDB)
 	camera.orbit.distance = -8.f;
 	camera.ortho.side = Camera::kOrthoSide_Top;
 	camera.ortho.scale = 16.f;
+	camera.ortho.speed = 1.f;
 	camera.firstPerson.position = Vec3(0, 1, -2);
 	camera.firstPerson.height = 0.f;
 
@@ -235,11 +236,19 @@ void SceneEditor::addNodesToAdd()
 	for (SceneNode * node : deferred.nodesToAdd)
 	{
 		Assert(scene.nodes.find(node->id) == scene.nodes.end());
-		scene.nodes[node->id] = node;
 		
 		// insert the node into the scene
+		scene.nodes[node->id] = node;
+		
+		// insert the node into the child list of its parent, if it isn't inserted yet
 		auto & parentNode = scene.getNode(node->parentId);
-		parentNode.childNodeIds.push_back(node->id);
+		const bool isInsertedIntoParent =
+			std::find(
+				parentNode.childNodeIds.begin(),
+				parentNode.childNodeIds.end(),
+				node->id) != parentNode.childNodeIds.end();
+		if (isInsertedIntoParent == false)
+			parentNode.childNodeIds.push_back(node->id);
 	}
 	
 	deferred.nodesToAdd.clear();
@@ -315,129 +324,6 @@ void SceneEditor::undoReset()
 	undoCapture(undo.currentVersion);
 	undo.versions.push_back(undo.currentVersion);
 	undo.currentVersionIndex = undo.versions.size() - 1;
-}
-
-void SceneEditor::performAction_undo()
-{
-	if (undo.currentVersionIndex > 0)
-	{
-		auto & text = undo.versions[undo.currentVersionIndex - 1];
-		
-		std::vector<std::string> lines;
-		TextIO::LineEndings lineEndings;
-	
-		if (!TextIO::loadText(text.c_str(), lines, lineEndings))
-		{
-			logError("failed to load text file");
-		}
-		else
-		{
-			Scene tempScene;
-			tempScene.createRootNode();
-
-			if (parseSceneFromLines(*typeDB, lines, "", tempScene) == false)
-			{
-				logError("failed to load scene from lines");
-			}
-			else
-			{
-				bool init_ok = true;
-				
-				for (auto node_itr : tempScene.nodes)
-					init_ok &= node_itr.second->initComponents();
-				
-				if (init_ok == false)
-				{
-					tempScene.freeAllNodesAndComponents();
-				}
-				else
-				{
-					for (auto & node_itr : scene.nodes)
-						deferred.nodesToRemove.insert(node_itr.second->id);
-					
-					removeNodesToRemove();
-					
-					scene = tempScene;
-					
-					undo.currentVersion = text;
-					undo.currentVersionIndex--;
-				}
-			}
-			
-			tempScene.nodes.clear();
-		}
-	}
-}
-
-void SceneEditor::performAction_redo()
-{
-	if (undo.currentVersionIndex + 1 < undo.versions.size())
-	{
-		auto & text = undo.versions[undo.currentVersionIndex + 1];
-		
-		std::vector<std::string> lines;
-		TextIO::LineEndings lineEndings;
-	
-		if (!TextIO::loadText(text.c_str(), lines, lineEndings))
-		{
-			logError("failed to load text file");
-		}
-		else
-		{
-			Scene tempScene;
-			tempScene.createRootNode();
-
-			if (parseSceneFromLines(*typeDB, lines, "", tempScene) == false)
-			{
-				logError("failed to load scene from lines");
-				tempScene.nodes.clear();
-			}
-			else
-			{
-				bool init_ok = true;
-				
-				for (auto node_itr : tempScene.nodes)
-					init_ok &= node_itr.second->initComponents();
-				
-				if (init_ok == false)
-				{
-					tempScene.freeAllNodesAndComponents();
-				}
-				else
-				{
-					for (auto & node_itr : scene.nodes)
-						deferred.nodesToRemove.insert(node_itr.second->id);
-					
-					removeNodesToRemove();
-					
-					scene = tempScene;
-					
-					undo.currentVersion = text;
-					undo.currentVersionIndex++;
-					
-				#if false // todo : remove. this is an A-B test to see if the results of a save-load-save are equal
-					std::string temp;
-					undoCapture(temp);
-					{
-						std::vector<std::string> lines;
-						TextIO::LineEndings lineEndings;
-						TextIO::loadText(temp.c_str(), lines, lineEndings);
-						TextIO::save("version-old.txt", lines, TextIO::kLineEndings_Unix);
-					}
-					{
-						std::vector<std::string> lines;
-						TextIO::LineEndings lineEndings;
-						TextIO::loadText(text.c_str(), lines, lineEndings);
-						TextIO::save("version-new.txt", lines, TextIO::kLineEndings_Unix);
-					}
-					Assert(text == temp);
-				#endif
-				}
-			}
-			
-			tempScene.nodes.clear();
-		}
-	}
 }
 
 void SceneEditor::editNode(const int nodeId)
@@ -627,6 +513,13 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 	if (ImGui::InputText("Name", name, sizeof(name)))
 	{
 		sceneNodeComponent->name = name;
+	}
+	
+// todo : add the ability to attach a scene
+	if (ImGui::MenuItem("Attach from template"))
+	{
+		//addNodeFromTemplate_v2(Vec3(), AngleAxis(), node.id);
+		addNodesFromScene_v1(node.id);
 	}
 	
 	if (ImGui::MenuItem("Copy"))
@@ -1024,6 +917,58 @@ int SceneEditor::addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angl
 	deferred.nodesToAdd.push_back(node);
 	
 	return node->id;
+}
+
+// todo : this is a test method. remove from scene editor and move elsewhere
+#include "scene_fromText.h"
+int SceneEditor::addNodesFromScene_v1(const int parentId)
+{
+	Scene tempScene;
+	tempScene.nodeIdAllocator = &scene;
+	
+	// create root node, assign its parent id, and make sure it has a transform component
+	tempScene.createRootNode();
+	auto & rootNode = tempScene.getRootNode();
+	rootNode.parentId = parentId;
+	auto * transformComponent = s_transformComponentMgr.createComponent(rootNode.components.id);
+	rootNode.components.add(transformComponent);
+	
+	if (!parseSceneFromFile(*typeDB, "textfiles/scene-v1.txt", tempScene))
+	{
+		tempScene.freeAllNodesAndComponents();
+		return -1;
+	}
+	
+	for (auto node_itr : tempScene.nodes)
+		node_itr.second->name.clear(); // make sure it gets assigned a new unique auto-generated name on save
+	
+	bool init_ok = true;
+	
+	for (auto node_itr : tempScene.nodes)
+		init_ok &= node_itr.second->initComponents();
+
+	if (init_ok == false)
+	{
+		tempScene.freeAllNodesAndComponents();
+		return -1;
+	}
+	else
+	{
+		deferredBegin();
+		{
+			for (auto node_itr : tempScene.nodes)
+			{
+				deferred.nodesToAdd.push_back(node_itr.second);
+			}
+			
+			tempScene.nodes.clear();
+		}
+		deferredEnd(false);
+		
+		selectNode(tempScene.rootNodeId, false);
+		
+		return tempScene.rootNodeId;
+	}
 }
 
 void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
@@ -1524,6 +1469,7 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 	
 #if defined(DEBUG)
 	validateNodeReferences();
+	validateNodeStructure();
 #endif
 }
 
@@ -1534,6 +1480,23 @@ void SceneEditor::validateNodeReferences() const
 	Assert(hoverNodeId == -1 || scene.nodes.count(hoverNodeId) != 0);
 	Assert(nodeToGiveFocus == -1 || scene.nodes.count(nodeToGiveFocus) != 0);
 	Assert(deferred.isFlushed());
+}
+
+void SceneEditor::validateNodeStructure() const
+{
+	std::set<int> usedNodeIds;
+	std::set<SceneNode*> usedNodes;
+	std::set<std::string> usedNodeNames;
+	for (auto & node_itr : scene.nodes)
+	{
+		Assert(node_itr.first == node_itr.second->id);
+		Assert(usedNodeIds.count(node_itr.first) == 0);
+		Assert(usedNodes.count(node_itr.second) == 0);
+		Assert(usedNodeNames.count(node_itr.second->name) == 0);
+		usedNodeIds.insert(node_itr.first);
+		usedNodes.insert(node_itr.second);
+		usedNodeNames.insert(node_itr.second->name);
+	}
 }
 
 void SceneEditor::performAction_save()
@@ -1597,6 +1560,129 @@ void SceneEditor::performAction_load()
 	auto t2 = SDL_GetTicks();
 	printf("load time: %ums\n", (t2 - t1));
 #endif
+}
+
+void SceneEditor::performAction_undo()
+{
+	if (undo.currentVersionIndex > 0)
+	{
+		auto & text = undo.versions[undo.currentVersionIndex - 1];
+		
+		std::vector<std::string> lines;
+		TextIO::LineEndings lineEndings;
+	
+		if (!TextIO::loadText(text.c_str(), lines, lineEndings))
+		{
+			logError("failed to load text file");
+		}
+		else
+		{
+			Scene tempScene;
+			tempScene.createRootNode();
+
+			if (parseSceneFromLines(*typeDB, lines, "", tempScene) == false)
+			{
+				logError("failed to load scene from lines");
+			}
+			else
+			{
+				bool init_ok = true;
+				
+				for (auto node_itr : tempScene.nodes)
+					init_ok &= node_itr.second->initComponents();
+				
+				if (init_ok == false)
+				{
+					tempScene.freeAllNodesAndComponents();
+				}
+				else
+				{
+					for (auto & node_itr : scene.nodes)
+						deferred.nodesToRemove.insert(node_itr.second->id);
+					
+					removeNodesToRemove();
+					
+					scene = tempScene;
+					
+					undo.currentVersion = text;
+					undo.currentVersionIndex--;
+				}
+			}
+			
+			tempScene.nodes.clear();
+		}
+	}
+}
+
+void SceneEditor::performAction_redo()
+{
+	if (undo.currentVersionIndex + 1 < undo.versions.size())
+	{
+		auto & text = undo.versions[undo.currentVersionIndex + 1];
+		
+		std::vector<std::string> lines;
+		TextIO::LineEndings lineEndings;
+	
+		if (!TextIO::loadText(text.c_str(), lines, lineEndings))
+		{
+			logError("failed to load text file");
+		}
+		else
+		{
+			Scene tempScene;
+			tempScene.createRootNode();
+
+			if (parseSceneFromLines(*typeDB, lines, "", tempScene) == false)
+			{
+				logError("failed to load scene from lines");
+				tempScene.nodes.clear();
+			}
+			else
+			{
+				bool init_ok = true;
+				
+				for (auto node_itr : tempScene.nodes)
+					init_ok &= node_itr.second->initComponents();
+				
+				if (init_ok == false)
+				{
+					tempScene.freeAllNodesAndComponents();
+				}
+				else
+				{
+					for (auto & node_itr : scene.nodes)
+						deferred.nodesToRemove.insert(node_itr.second->id);
+					
+					removeNodesToRemove();
+					
+					scene = tempScene;
+					
+					undo.currentVersion = text;
+					undo.currentVersionIndex++;
+					
+				#if false // todo : remove. this is an A-B test to see if the results of a save-load-save are equal
+					std::string temp;
+					undoCapture(temp);
+					{
+						std::vector<std::string> lines;
+						TextIO::LineEndings lineEndings;
+						TextIO::loadText(temp.c_str(), lines, lineEndings);
+						TextIO::save("version-old.txt", lines, TextIO::kLineEndings_Unix);
+					}
+					{
+						std::vector<std::string> lines;
+						TextIO::LineEndings lineEndings;
+						TextIO::loadText(text.c_str(), lines, lineEndings);
+						TextIO::save("version-new.txt", lines, TextIO::kLineEndings_Unix);
+					}
+					Assert(text == temp);
+				#endif
+				}
+			}
+			
+			tempScene.nodes.clear();
+		}
+	}
 }
 
 void SceneEditor::performAction_copy()

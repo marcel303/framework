@@ -50,7 +50,10 @@ Scene::~Scene()
 
 int Scene::allocNodeId()
 {
-	return nextNodeId++;
+	if (nodeIdAllocator != nullptr)
+		return nodeIdAllocator->allocNodeId();
+	else
+		return nextNodeId++;
 }
 
 void Scene::freeAllNodesAndComponents()
@@ -90,10 +93,10 @@ void Scene::createRootNode()
 	Assert(rootNodeId == -1);
 	
 	SceneNode * rootNode = new SceneNode();
-	rootNode->name = "root";
 	rootNode->id = allocNodeId();
 	
 	auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(rootNode->components.id);
+	sceneNodeComponent->name = "root";
 	rootNode->components.add(sceneNodeComponent);
 	
 	if (rootNode->initComponents() == false)
@@ -332,17 +335,10 @@ bool Scene::validate() const
 	{
 		auto * node = node_itr.second;
 		
-		// validate it has a name
+		// validate the name isn't a duplicate
 		
-		if (node->name.empty())
+		if (!node->name.empty())
 		{
-			LOG_ERR("scene node name is empty for node %d", node->id);
-			result &= false;
-		}
-		else
-		{
-			// validate the name it has isn't a duplicate
-			
 			if (usedNodeNames.count(node->name) != 0)
 			{
 				LOG_ERR("the scene node name '%s' is used multiple times by node %d", node->name.c_str(), node->id);

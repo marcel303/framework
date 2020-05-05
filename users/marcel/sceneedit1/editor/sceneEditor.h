@@ -149,9 +149,6 @@ struct SceneEditor
 	void undoCaptureEnd();   // end a scene capture and add it to the undo history
 	void undoReset(); // reset the undo history
 	
-	void performAction_undo();
-	void performAction_redo();
-	
 	void editNode(const int nodeId);
 	
 	void pasteNodeFromText(const int parentId, const char * text);
@@ -187,13 +184,19 @@ struct SceneEditor
 	void addNodeFromTemplate_v1(Vec3Arg position, const AngleAxis & angleAxis, const int parentId);
 // todo : this is a test method. remove from scene editor and move elsewhere
 	int addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angleAxis, const int parentId);
+// todo : this is a test method. remove from scene editor and move elsewhere
+	int addNodesFromScene_v1(const int parentId);
 	
 	void tickEditor(const float dt, bool & inputIsCaptured);
 	
 	void validateNodeReferences() const;
+	void validateNodeStructure() const;
 	
 	void performAction_save();
 	void performAction_load();
+	
+	void performAction_undo();
+	void performAction_redo();
 	
 	void performAction_copy();
 	void performAction_paste();

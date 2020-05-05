@@ -40,6 +40,8 @@ struct Scene
 	
 	int rootNodeId = -1;
 	
+	Scene * nodeIdAllocator = nullptr;
+	
 	~Scene();
 	
 	int allocNodeId();
