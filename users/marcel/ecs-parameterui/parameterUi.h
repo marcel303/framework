@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 struct ParameterBase;
 struct ParameterMgr;
 struct ParameterComponentMgr;
