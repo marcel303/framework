@@ -1,3 +1,4 @@
+#include "helpers.h"
 #include "lineReader.h"
 #include "Log.h"
 #include "Path.h"

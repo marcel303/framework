@@ -32,10 +32,4 @@ struct Template
 	std::vector<TemplateComponent> components;
 };
 
-// todo : move elsewhere
-bool instantiateComponentsFromTemplate(
-	const TypeDB & typeDB,
-	const Template & t,
-	ComponentSet & componentSet);
-
 void dumpTemplateToLog(const Template & t);
