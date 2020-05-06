@@ -8,6 +8,8 @@
 
 #include "Log.h"
 
+#include <string.h> // strcmp
+
 bool instantiateComponentsFromTemplate(
 	const TypeDB & typeDB,
 	const Template & t,
