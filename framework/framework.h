@@ -1177,7 +1177,7 @@ public:
 		float * __restrict normalZ,
 		const int numVertices) const;
 	
-	void calculateAABB(Vec3 & min, Vec3 & max, const bool applyAnimation) const;
+	bool calculateAABB(Vec3 & min, Vec3 & max, const bool applyAnimation) const;
 	
 private:
 	void ctor();
@@ -1933,53 +1933,61 @@ void hqDrawPath(const Path2d & path, float stroke);
 // math
 
 template <typename T>
-static T clamp(T v, T vmin, T vmax)
+inline T clamp(T v, T vmin, T vmax)
 {
 	return v < vmin ? vmin : v > vmax ? vmax : v;
 }
 
 template <typename T>
-static T saturate(T v)
+inline T saturate(T v)
 {
 	return clamp<T>(v, (T)0, (T)1);
 }
 
 template <typename T>
-static T lerp(T v1, T v2, float t)
+inline T lerp(T v1, T v2, float t)
 {
 	return v1 * (1.f - t) + v2 * t;
 }
 
 template <typename T>
-static T lerp(T v1, T v2, double t)
+inline T lerp(T v1, T v2, double t)
 {
 	return v1 * (1.f - t) + v2 * t;
 }
 
 template <typename T>
-static T sine(T min, T max, float t)
+inline T sine(T min, T max, float t)
 {
 	t = t * float(M_PI) / 180.f;
 	return static_cast<T>(min + (max - min) * (sinf(t) + 1.f) / 2.f);
 }
 
 template <typename T>
-static T cosine(T min, T max, float t)
+inline T cosine(T min, T max, float t)
 {
 	t = t * float(M_PI) / 180.f;
 	return static_cast<T>(min + (max - min) * (cosf(t) + 1.f) / 2.f);
 }
 
 template <typename T>
-static T getAngle(T dx, T dy)
+inline T getAngle(T dx, T dy)
 {
 	return static_cast<T>(atan2f(dy, dx) / M_PI * 180.f + 90.f);
 }
 
 template <typename T>
-static T random(T min, T max)
+inline T random(T min, T max)
 {
 	return static_cast<T>(min + (max - min) * ((rand() % 1000) / 999.f));
+}
+
+template <>
+inline int random(int in_min, int in_max)
+{
+	int min = in_min < in_max ? in_min : in_max;
+	int max = in_max > in_min ? in_max : in_min;
+	return min + (rand() % (max - min + 1));
 }
 
 // logging

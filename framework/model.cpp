@@ -812,6 +812,8 @@ void Model::ctor()
 	
 	if (m_autoUpdate)
 		framework.registerModel(this);
+	
+	skinningMatrices.alloc(32 * sizeof(Mat4x4));
 }
 
 void Model::ctorEnd()
@@ -1048,34 +1050,34 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 	{
 		Vec3 min;
 		Vec3 max;
-		
-		calculateAABB(min, max, false);
-		
-		gxPushMatrix();
-		gxMultMatrixf(matrix.m_v);
+		if (calculateAABB(min, max, false))
 		{
-			gxBegin(GX_LINES);
+			gxPushMatrix();
+			gxMultMatrixf(matrix.m_v);
 			{
-				const float x[2] = { min[0], max[0] };
-				const float y[2] = { min[1], max[1] };
-				const float z[2] = { min[2], max[2] };
-				
-				gxColor3ub(127, 127, 127);
-				for (int x1 = 0; x1 <= 1; ++x1)
-					for (int y1 = 0; y1 <= 1; ++y1)
-						for (int z1 = 0; z1 <= 1; ++z1)
-							for (int x2 = 0; x2 <= 1; ++x2)
-								for (int y2 = 0; y2 <= 1; ++y2)
-									for (int z2 = 0; z2 <= 1; ++z2)
-										if (std::abs(x1-x2) + std::abs(y1-y2) + std::abs(z2-z1) == 1)
-										{
-											gxVertex3f(x[x1], y[y1], z[z1]);
-											gxVertex3f(x[x2], y[y2], z[z2]);
-										}
+				gxBegin(GX_LINES);
+				{
+					const float x[2] = { min[0], max[0] };
+					const float y[2] = { min[1], max[1] };
+					const float z[2] = { min[2], max[2] };
+					
+					gxColor3ub(127, 127, 127);
+					for (int x1 = 0; x1 <= 1; ++x1)
+						for (int y1 = 0; y1 <= 1; ++y1)
+							for (int z1 = 0; z1 <= 1; ++z1)
+								for (int x2 = 0; x2 <= 1; ++x2)
+									for (int y2 = 0; y2 <= 1; ++y2)
+										for (int z2 = 0; z2 <= 1; ++z2)
+											if (std::abs(x1-x2) + std::abs(y1-y2) + std::abs(z2-z1) == 1)
+											{
+												gxVertex3f(x[x1], y[y1], z[z1]);
+												gxVertex3f(x[x2], y[y2], z[z2]);
+											}
+				}
+				gxEnd();
 			}
-			gxEnd();
+			gxPopMatrix();
 		}
-		gxPopMatrix();
 	}
 	
 	if (drawFlags & DrawBones)
@@ -1383,8 +1385,10 @@ int Model::softBlend(const Mat4x4 & matrix, Mat4x4 * localMatrices, Mat4x4 * wor
 	return 0;
 }
 
-void Model::calculateAABB(Vec3 & min, Vec3 & max, const bool applyAnimation) const
+bool Model::calculateAABB(Vec3 & min, Vec3 & max, const bool applyAnimation) const
 {
+	bool hasAABB = false;
+	
 	const float minFloat = -std::numeric_limits<float>::max();
 	const float maxFloat = +std::numeric_limits<float>::max();
 
@@ -1429,6 +1433,8 @@ void Model::calculateAABB(Vec3 & min, Vec3 & max, const bool applyAnimation) con
 			max[0] = fmaxf(max[0], positionX[i]);
 			max[1] = fmaxf(max[1], positionY[i]);
 			max[2] = fmaxf(max[2], positionZ[i]);
+			
+			hasAABB = true;
 		}
 		
 		delete [] positionX;
@@ -1452,9 +1458,13 @@ void Model::calculateAABB(Vec3 & min, Vec3 & max, const bool applyAnimation) con
 				max[0] = fmaxf(max[0], vertex.px);
 				max[1] = fmaxf(max[1], vertex.py);
 				max[2] = fmaxf(max[2], vertex.pz);
+				
+				hasAABB = true;
 			}
 		}
 	}
+	
+	return hasAABB;
 }
 
 void Model::updateAnimationSegment()
