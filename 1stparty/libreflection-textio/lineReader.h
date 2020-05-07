@@ -17,6 +17,7 @@ class LineReader
 	int line_index;
 	int indentation_level;
 	int initial_indentation_level;
+	bool do_dtor_check;
 	
 public:
 	LineReader(
@@ -27,6 +28,8 @@ public:
 	
 	const char * get_next_line(const bool skipEmptyLinesAndComments);
 	int get_current_line_index() const { return line_index; }
+	
+	void disable_dtor_check() { do_dtor_check = false; }
 	
 	void push_indent()
 	{

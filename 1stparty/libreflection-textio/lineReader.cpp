@@ -36,12 +36,16 @@ LineReader::LineReader(
 	, line_index(in_line_index)
 	, indentation_level(in_indentation_level)
 	, initial_indentation_level(in_indentation_level)
+	, do_dtor_check(true)
 {
 }
 
 LineReader::~LineReader()
 {
-	AssertMsg(indentation_level == initial_indentation_level, "indentation level when line reader disposed: %d", indentation_level);
+	if (do_dtor_check)
+	{
+		AssertMsg(indentation_level == initial_indentation_level, "indentation level when line reader disposed: %d", indentation_level);
+	}
 }
 
 const char * LineReader::get_next_line(const bool skipEmptyLinesAndComments)
