@@ -4,12 +4,15 @@
 
 bool ModelComponent::init()
 {
-	Model(filename.c_str()).calculateAABB(modelAabbMin, modelAabbMax, true);
+	hasModelAabb = Model(filename.c_str()).calculateAABB(modelAabbMin, modelAabbMax, true);
 	
-	const float finalScale = scale * (centimetersToMeters ? .01f : 1.f);
-	
-	aabbMin = modelAabbMin * finalScale;
-	aabbMax = modelAabbMax * finalScale;
+	if (hasModelAabb)
+	{
+		const float finalScale = scale * (centimetersToMeters ? .01f : 1.f);
+		
+		aabbMin = modelAabbMin * finalScale;
+		aabbMax = modelAabbMax * finalScale;
+	}
 	
 	return true;
 }
@@ -22,15 +25,18 @@ void ModelComponent::propertyChanged(void * address)
 {
 	if (address == &filename)
 	{
-		Model(filename.c_str()).calculateAABB(modelAabbMin, modelAabbMax, true);
+		hasModelAabb = Model(filename.c_str()).calculateAABB(modelAabbMin, modelAabbMax, true);
 	}
 	
 	if (address == &filename || address == &scale || address == &centimetersToMeters)
 	{
-		const float finalScale = scale * (centimetersToMeters ? .01f : 1.f);
-		
-		aabbMin = modelAabbMin * finalScale;
-		aabbMax = modelAabbMax * finalScale;
+		if (hasModelAabb)
+		{
+			const float finalScale = scale * (centimetersToMeters ? .01f : 1.f);
+			
+			aabbMin = modelAabbMin * finalScale;
+			aabbMax = modelAabbMax * finalScale;
+		}
 	}
 }
 

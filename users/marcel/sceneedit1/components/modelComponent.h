@@ -14,6 +14,7 @@ struct ModelComponent : Component<ModelComponent>
 	bool colorNormals = false;
 	bool centimetersToMeters = false;
 	
+	bool hasModelAabb = false;
 	Vec3 modelAabbMin;
 	Vec3 modelAabbMax;
 	
