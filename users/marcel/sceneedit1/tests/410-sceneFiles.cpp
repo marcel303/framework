@@ -34,7 +34,9 @@ int main(int argc, char * argv[])
 	Scene scene;
 	scene.createRootNode();
 	
-	if (!parseSceneFromLines(g_typeDB, lines, basePath.c_str(), scene))
+	LineReader line_reader(lines, 0, 0);
+	
+	if (!parseSceneFromLines(g_typeDB, line_reader, basePath.c_str(), scene))
 	{
 		LOG_ERR("failed to parse scene from lines", 0);
 		return -1;

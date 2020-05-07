@@ -11,8 +11,8 @@
 #include "components/transformComponent.h"
 #include "helpers.h" // findComponentType
 #include "scene.h"
+#include "sceneIo.h"
 #include "sceneNodeComponent.h"
-#include "scene_fromText.h"
 
 // ecs-component
 #include "componentType.h"
@@ -28,6 +28,7 @@
 #include "framework-camera.h"
 
 // libreflection-textio
+#include "lineReader.h"
 #include "lineWriter.h"
 
 // libgg
@@ -55,6 +56,22 @@ extern ParameterComponentMgr s_parameterComponentMgr;
 
 extern SceneNodeComponentMgr s_sceneNodeComponentMgr;
 extern TransformComponentMgr s_transformComponentMgr;
+
+//
+
+inline bool modShift()
+{
+	return
+		keyboard.isDown(SDLK_LSHIFT) ||
+		keyboard.isDown(SDLK_RSHIFT);
+}
+
+inline bool keyCommand()
+{
+	return
+		keyboard.isDown(SDLK_LGUI) ||
+		keyboard.isDown(SDLK_RGUI);
+}
 
 //
 
@@ -100,7 +117,7 @@ SceneNode * SceneEditor::raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const 
 		const auto * modelComponent = node.components.find<ModelComponent>();
 		
 		Assert(sceneNodeComp != nullptr);
-		if (sceneNodeComp != nullptr && modelComponent != nullptr)
+		if (sceneNodeComp != nullptr && modelComponent != nullptr && modelComponent->hasModelAabb)
 		{
 			const auto & objectToWorld = sceneNodeComp->objectToWorld;
 			const auto worldToObject = objectToWorld.CalcInv();
@@ -455,13 +472,17 @@ void SceneEditor::editNode(const int nodeId)
 	ImGui::PopID();
 }
 
-void SceneEditor::pasteNodeFromText(const int parentId, const char * text)
+bool SceneEditor::pasteNodeFromText(const int parentId, LineReader & line_reader)
 {
+	bool result = true;
+	
 	SceneNode * childNode = new SceneNode();
 	childNode->id = scene.allocNodeId();
 	childNode->parentId = parentId;
 	
-	if (node_from_text(text, *childNode) == false)
+	result &= ::pasteSceneNodeFromText(*typeDB, line_reader, *childNode);
+	
+	if (result == false)
 	{
 		delete childNode;
 		childNode = nullptr;
@@ -477,7 +498,9 @@ void SceneEditor::pasteNodeFromText(const int parentId, const char * text)
 		auto * sceneNodeComponent = childNode->components.find<SceneNodeComponent>();
 		sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
 		
-		if (childNode->initComponents() == false)
+		result &= childNode->initComponents();
+		
+		if (result == false)
 		{
 			childNode->freeComponents();
 			
@@ -489,18 +512,64 @@ void SceneEditor::pasteNodeFromText(const int parentId, const char * text)
 			deferred.nodesToAdd.push_back(childNode);
 		}
 	}
+	
+	return result;
 }
 
-void SceneEditor::pasteNodeFromClipboard(const int parentId)
+int SceneEditor::pasteNodeTreeFromText(const int parentId, LineReader & line_reader)
 {
-	const char * text = SDL_GetClipboardText();
+	Scene tempScene;
+	tempScene.nodeIdAllocator = &scene;
 	
-	if (text != nullptr)
+	// create root node, assign its parent id, and make sure it has a transform component
+	tempScene.createRootNode();
+	auto & rootNode = tempScene.getRootNode();
+	rootNode.parentId = parentId;
+	
+	auto * transformComponent = s_transformComponentMgr.createComponent(rootNode.components.id);
+	rootNode.components.add(transformComponent);
+	
+	if (!pasteSceneNodeTreeFromText(*typeDB, line_reader, tempScene))
 	{
-		pasteNodeFromText(parentId, text);
+		tempScene.freeAllNodesAndComponents();
+		return -1;
+	}
+	
+	bool init_ok = true;
+
+	for (auto node_itr : tempScene.nodes)
+	{
+		auto & node = *node_itr.second;
 		
-		SDL_free((void*)text);
-		text = nullptr;
+		node.name.clear(); // make sure it gets assigned a new unique auto-generated name on save
+		
+		if (node.components.contains<SceneNodeComponent>() == false)
+		{
+			auto * sceneNodeComponent = s_sceneNodeComponentMgr.createComponent(node.components.id);
+			node.components.add(sceneNodeComponent);
+		}
+		
+		init_ok &= node.initComponents();
+	}
+
+	if (init_ok == false)
+	{
+		tempScene.freeAllNodesAndComponents();
+		return -1;
+	}
+	else
+	{
+	// todo : let caller of pasteNodeTreeFromText handle node insertion ?
+	// todo : let deferredEnd traverse child nodes and add them ?
+	// todo : we want explicit control over which nodes to select. we want to only select to tree roots, not any of its children
+		for (auto node_itr : tempScene.nodes)
+		{
+			deferred.nodesToAdd.push_back(node_itr.second);
+		}
+		
+		tempScene.nodes.clear();
+		
+		return tempScene.rootNodeId;
 	}
 }
 
@@ -529,31 +598,25 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 	if (ImGui::MenuItem("Copy"))
 	{
 		result = kNodeStructureContextMenuResult_NodeCopy;
-		
-	// todo : copy nodes recursively
-		std::string text;
-		if (node_to_text(node, text))
-		{
-			SDL_SetClipboardText(text.c_str());
-		}
+		performAction_copy(false);
+	}
+	
+	if (ImGui::MenuItem("Copy tree"))
+	{
+		result = kNodeStructureContextMenuResult_NodeCopy;
+		performAction_copy(true);
 	}
 	
 	if (ImGui::MenuItem("Paste as child", nullptr, false, SDL_HasClipboardText()))
 	{
 		result = kNodeStructureContextMenuResult_NodePaste;
-		
-	// todo : paste nodes recursively. and fixup parent-child id's
-	// todo : update display names
-		pasteNodeFromClipboard(node.id);
+		performAction_paste(node.id);
 	}
 	
 	if (ImGui::MenuItem("Paste as sibling", nullptr, false, SDL_HasClipboardText()))
 	{
 		result = kNodeStructureContextMenuResult_NodePaste;
-		
-	// todo : paste nodes recursively. and fixup parent-child id's
-	// todo : update display names
-		pasteNodeFromClipboard(node.parentId);
+		performAction_paste(node.parentId);
 	}
 	
 	if (ImGui::MenuItem("Remove"))
@@ -669,7 +732,7 @@ void SceneEditor::editNodeStructure_traverse(const int nodeId)
 		// update visibility
 		
 		if (nodeUi.visibleNodes.count(node.id) != 0 ||
-			nodeUi.nodesToOpen.count(node.id) != 0)
+			nodeUi.nodesToOpen_active.count(node.id) != 0)
 		{
 			ImGui::SetNextTreeNodeOpen(true);
 		}
@@ -812,10 +875,10 @@ void SceneEditor::markNodeOpenUntilRoot(const int in_nodeId)
 
 	while (nodeId != -1)
 	{
-		if (nodeUi.nodesToOpen.count(nodeId) != 0)
+		if (nodeUi.nodesToOpen_deferred.count(nodeId) != 0)
 			break;
 		
-		nodeUi.nodesToOpen.insert(nodeId);
+		nodeUi.nodesToOpen_deferred.insert(nodeId);
 		
 		auto & node = scene.getNode(nodeId);
 		nodeId = node.parentId;
@@ -924,7 +987,6 @@ int SceneEditor::addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angl
 }
 
 // todo : this is a test method. remove from scene editor and move elsewhere
-#include "scene_fromText.h"
 int SceneEditor::addNodesFromScene_v1(const int parentId)
 {
 	Scene tempScene;
@@ -1060,9 +1122,10 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 					{
 						deferredBegin();
 						{
-							editNodeStructure_traverse(scene.rootNodeId);
+							nodeUi.nodesToOpen_active = nodeUi.nodesToOpen_deferred;
+							nodeUi.nodesToOpen_deferred.clear();
 							
-							nodeUi.nodesToOpen.clear();
+							editNodeStructure_traverse(scene.rootNodeId);
 						}
 						deferredEnd(true);
 					}
@@ -1130,9 +1193,11 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 				ImGui::Separator();
 				
 				if (ImGui::MenuItem("Copy", nullptr, false, !selectedNodes.empty()))
-					performAction_copy();
+					performAction_copy(false);
+				if (ImGui::MenuItem("Copy tree", nullptr, false, !selectedNodes.empty()))
+					performAction_copy(true);
 				if (ImGui::MenuItem("Paste"))
-					performAction_paste();
+					performAction_paste(scene.rootNodeId);
 				ImGui::Separator();
 				
 				if (ImGui::MenuItem("Duplicate", nullptr, false, !selectedNodes.empty()))
@@ -1175,49 +1240,50 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 	}
 	
 	// action: save
-	if (inputIsCaptured == false && keyboard.wentDown(SDLK_s) && keyboard.isDown(SDLK_LGUI))
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_s) && keyCommand())
 	{
 		inputIsCaptured = true;
 		performAction_save();
 	}
 	
 	// action: load
-	if (inputIsCaptured == false && keyboard.wentDown(SDLK_l) && keyboard.isDown(SDLK_LGUI))
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_l) && keyCommand())
 	{
 		inputIsCaptured = true;
 		performAction_load();
 	}
 	
 	// action: increase simulation speed
-	if (inputIsCaptured == false && keyboard.wentDown(SDLK_a) && keyboard.isDown(SDLK_LGUI))
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_a) && keyCommand())
 	{
 		inputIsCaptured = true;
 		preview.tickMultiplier *= 1.25f;
 	}
 	
 	// action: decrease simulation speed
-	if (inputIsCaptured == false && keyboard.wentDown(SDLK_z) && keyboard.isDown(SDLK_LGUI))
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_z) && keyCommand())
 	{
 		inputIsCaptured = true;
 		preview.tickMultiplier /= 1.25f;
 	}
 	
 	// action: copy selected node(s) to clipboard
-	if (inputIsCaptured == false && keyboard.wentDown(SDLK_c) && keyboard.isDown(SDLK_LGUI))
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_c) && keyCommand())
 	{
 		inputIsCaptured = true;
-		performAction_copy();
+		const bool deep = modShift();
+		performAction_copy(deep);
 	}
 	
 	// action: paste node(s) from clipboard
-	if (inputIsCaptured == false && keyboard.wentDown(SDLK_v) && keyboard.isDown(SDLK_LGUI))
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_v) && keyCommand())
 	{
 		inputIsCaptured = true;
-		performAction_paste();
+		performAction_paste(scene.rootNodeId);
 	}
 	
 	// action: duplicate selected node(s)
-	if (inputIsCaptured == false && keyboard.wentDown(SDLK_d) && keyboard.isDown(SDLK_LGUI))
+	if (inputIsCaptured == false && keyboard.wentDown(SDLK_d) && keyCommand())
 	{
 		inputIsCaptured = true;
 		performAction_duplicate();
@@ -1435,7 +1501,7 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 		}
 		else
 		{
-			if (!keyboard.isDown(SDLK_LSHIFT))
+			if (!modShift())
 				selectedNodes.clear();
 			
 			if (hoverNode != nullptr)
@@ -1589,7 +1655,9 @@ void SceneEditor::performAction_undo()
 			Scene tempScene;
 			tempScene.createRootNode();
 
-			if (parseSceneFromLines(*typeDB, lines, "", tempScene) == false)
+			LineReader line_reader(lines, 0, 0);
+			
+			if (parseSceneFromLines(*typeDB, line_reader, "", tempScene) == false)
 			{
 				logError("failed to load scene from lines");
 			}
@@ -1640,8 +1708,10 @@ void SceneEditor::performAction_redo()
 		{
 			Scene tempScene;
 			tempScene.createRootNode();
+			
+			LineReader line_reader(lines, 0, 0);
 
-			if (parseSceneFromLines(*typeDB, lines, "", tempScene) == false)
+			if (parseSceneFromLines(*typeDB, line_reader, "", tempScene) == false)
 			{
 				logError("failed to load scene from lines");
 				tempScene.nodes.clear();
@@ -1694,23 +1764,133 @@ void SceneEditor::performAction_redo()
 	}
 }
 
-void SceneEditor::performAction_copy()
+void SceneEditor::performAction_copy(const bool deep)
+{
+	if (deep)
+		performAction_copySceneNodeTrees();
+	else
+		performAction_copySceneNodes();
+}
+
+void SceneEditor::performAction_copySceneNodes()
 {
 	if (selectedNodes.empty() == false)
 	{
-		auto nodeId = *selectedNodes.begin(); // todo : handle multiple nodes
-		auto & node = scene.getNode(nodeId);
-		std::string text;
-		if (node_to_text(node, text))
+		bool result = true;
+		
+		LineWriter line_writer;
+		
+		int indent = 0;
+		
+		for (auto nodeId : selectedNodes)
+		{
+			line_writer.append_indented_line(indent, "sceneNode");
+			
+			indent++;
+			{
+				auto & node = scene.getNode(nodeId);
+				
+				result &= copySceneNodeToText(*typeDB, node, line_writer, indent);
+			}
+			indent--;
+		}
+	
+		if (result)
+		{
+			const std::string text = line_writer.to_string();
 			SDL_SetClipboardText(text.c_str());
+		}
 	}
 }
 
-void SceneEditor::performAction_paste()
+void SceneEditor::performAction_copySceneNodeTrees()
+{
+	if (selectedNodes.empty() == false)
+	{
+		bool result = true;
+		
+		LineWriter line_writer;
+		
+		int indent = 0;
+		
+		for (auto nodeId : selectedNodes)
+		{
+			line_writer.append_indented_line(indent, "sceneNodeTree");
+			
+			indent++;
+			{
+				auto & node = scene.getNode(nodeId);
+				
+				result &= copySceneNodeTreeToText(*typeDB, scene, node.id, line_writer, indent);
+			}
+			indent--;
+		}
+	
+		if (result)
+		{
+			const std::string text = line_writer.to_string();
+			SDL_SetClipboardText(text.c_str());
+		}
+	}
+}
+
+void SceneEditor::performAction_paste(const int parentNodeId)
 {
 	deferredBegin();
 	{
-		pasteNodeFromClipboard(scene.rootNodeId);
+		// fetch clipboard text
+		
+		const char * text = SDL_GetClipboardText();
+	
+		if (text != nullptr)
+		{
+			// convert text to lines
+			
+			std::vector<std::string> lines;
+			TextIO::LineEndings lineEndings;
+			if (TextIO::loadText(text, lines, lineEndings) == false)
+				logError("failed to load text");
+			else
+			{
+				LineReader line_reader(lines, 0, 0);
+			
+				// iterate over clipboard items
+				
+				for (;;)
+				{
+					const char * id = line_reader.get_next_line(true);
+					
+					if (id == nullptr)
+						break;
+
+					if (strcmp(id, "sceneNode") == 0)
+					{
+						line_reader.push_indent();
+						{
+							pasteNodeFromText(parentNodeId, line_reader);
+						}
+						line_reader.pop_indent();
+					}
+					else if (strcmp(id, "sceneNodeTree") == 0)
+					{
+						line_reader.push_indent();
+						{
+							pasteNodeTreeFromText(parentNodeId, line_reader);
+						}
+						line_reader.pop_indent();
+					}
+					else
+					{
+						logError("unknown clipboard item: %s", id);
+					}
+				}
+			}
+			
+			// free clipboard text
+			
+			SDL_free((void*)text);
+			text = nullptr;
+		}
 	}
 	deferredEnd(true);
 }
@@ -1724,9 +1904,13 @@ void SceneEditor::performAction_duplicate()
 			for (auto nodeId : selectedNodes)
 			{
 				auto & node = scene.getNode(nodeId);
-				std::string text;
-				if (node_to_text(node, text))
-					pasteNodeFromText(scene.rootNodeId, text.c_str());
+				LineWriter line_writer;
+				if (copySceneNodeToText(*typeDB, node, line_writer, 0))
+				{
+					auto lines = line_writer.to_lines();
+					LineReader line_reader(lines, 0, 0);
+					pasteNodeFromText(node.parentId, line_reader);
+				}
 			}
 		}
 		deferredEnd(true);
@@ -1876,7 +2060,9 @@ bool SceneEditor::loadSceneFromLines_nonDestructive(std::vector<std::string> & l
 	Scene tempScene;
 	tempScene.createRootNode();
 
-	if (parseSceneFromLines(*typeDB, lines, basePath, tempScene) == false)
+	LineReader line_reader(lines, 0, 0);
+	
+	if (parseSceneFromLines(*typeDB, line_reader, basePath, tempScene) == false)
 	{
 		logError("failed to load scene from lines");
 		tempScene.nodes.clear();

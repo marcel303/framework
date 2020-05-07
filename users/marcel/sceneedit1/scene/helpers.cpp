@@ -147,6 +147,7 @@ bool instantiateComponentsFromTemplate(
 			if (member == nullptr)
 			{
 				LOG_ERR("unknown property: %s", property_template.name.c_str());
+				componentType->componentMgr->destroyComponent(componentSet.id);
 				return false;
 			}
 			
@@ -157,6 +158,7 @@ bool instantiateComponentsFromTemplate(
 				LOG_ERR("failed to deserialize property from text: property=%s, lines=", property_template.name.c_str());
 				for (auto & line : property_template.value_lines)
 					LOG_ERR("%s", line.c_str());
+				componentType->componentMgr->destroyComponent(componentSet.id);
 				return false;
 			}
 		}

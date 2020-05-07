@@ -64,7 +64,7 @@ example scene:
 
 bool parseSceneFromLines(
 	const TypeDB & typeDB,
-	std::vector<std::string> & lines,
+	LineReader & line_reader,
 	const char * basePath,
 	Scene & out_scene);
 bool parseSceneFromFile(
@@ -82,3 +82,24 @@ bool parseSceneObjectStructureFromLines(
 	LineReader & line_reader,
 	Scene & out_scene,
 	std::map<std::string, Template> & templates);
+
+bool writeSceneToLines(
+	const TypeDB & typeDB,
+	const Scene & scene,
+	LineWriter & line_writer,
+	const int indent);
+bool writeSceneEntityToLines(
+	const TypeDB & typeDB,
+	const SceneNode & node,
+	LineWriter & line_writer,
+	const int indent);
+bool writeSceneEntitiesToLines(
+	const TypeDB & typeDB,
+	const Scene & scene,
+	LineWriter & line_writer,
+	const int indent);
+bool writeSceneNodeTreeToLines(
+	const Scene & scene,
+	const int rootNodeId,
+	LineWriter & line_writer,
+	const int indent);

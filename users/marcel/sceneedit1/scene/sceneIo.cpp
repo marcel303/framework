@@ -3,7 +3,7 @@
 #include "Log.h"
 #include "Path.h"
 #include "scene.h"
-#include "scene_fromText.h"
+#include "sceneIo.h"
 #include "sceneNodeComponent.h"
 #include "StringEx.h"
 #include "template.h"
@@ -78,15 +78,13 @@ static bool match_text(const char * text, const char * other)
 
 bool parseSceneFromLines(
 	const TypeDB & typeDB,
-	std::vector<std::string> & lines,
+	LineReader & line_reader,
 	const char * basePath,
 	Scene & out_scene)
 {
 	std::map<std::string, Template> templates;
 	
 	std::map<std::string, Template> entities;
-	
-	LineReader line_reader(lines, 0, 0);
 	
 	char * line; // fixme : make const char
 	
@@ -133,6 +131,11 @@ bool parseSceneFromLines(
 			}
 			line_reader.pop_indent();
 			
+			// store it (by name) in a map for future reference
+			
+			templates.insert({ name, t });
+			
+		#if false
 			// recursively apply overlays
 			
 			struct FetchContext
@@ -186,10 +189,7 @@ bool parseSceneFromLines(
 			}
 			
 			//dumpTemplateToLog(t);
-			
-			// store it (by name) in a map for future reference
-			
-			templates.insert({ name, t });
+		#endif
 		}
 		else if (match_text(word, "entity"))
 		{
@@ -302,7 +302,7 @@ bool parseSceneFromLines(
 		}
 		else
 		{
-			LOG_ERR("syntax error: %s", line);
+			LOG_ERR("syntax error: %s", word);
 			return false;
 		}
 	}
@@ -327,11 +327,18 @@ bool parseSceneFromFile(
 	{
 		const std::string basePath = Path::GetDirectory(path);
 		
-		return parseSceneFromLines(
+		LineReader line_reader(lines, 0, 0);
+		
+		const bool result = parseSceneFromLines(
 			typeDB,
-			lines,
+			line_reader,
 			basePath.c_str(),
 			out_scene);
+		
+		if (result == false)
+			line_reader.disable_dtor_check();
+
+		return result;
 	}
 }
 
@@ -480,4 +487,218 @@ bool parseSceneObjectStructureFromLines(
 	}
 	
 	return true;
+}
+
+//
+
+// ecs-component
+#include "componentType.h"
+
+// libreflection-textio
+#include "lineWriter.h"
+#include "reflection-textio.h"
+
+bool writeSceneEntityToLines(
+	const TypeDB & typeDB,
+	const SceneNode & node,
+	LineWriter & line_writer,
+	const int in_indent)
+{
+	bool result = true;
+	
+	int indent = in_indent;
+	
+	char node_definition[128];
+	sprintf(node_definition, "entity %s", node.name.c_str());
+	line_writer.append_indented_line(indent, node_definition);
+	
+	indent++;
+	{
+		for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
+		{
+			auto * componentType = findComponentType(component->typeIndex());
+			
+			if (componentType == nullptr)
+			{
+				LOG_ERR("didn't find component type for component @ %p", component);
+				result &= false;
+				continue;
+			}
+			
+			// check if the component type name ends with 'Component'. in this case
+			// we'll want to write a short hand component name which is easier
+			// to hand-edit
+			
+			const char * suffix = strstr(componentType->typeName, "Component");
+			const int suffix_length = 9;
+			
+			if (suffix != nullptr && suffix[suffix_length] == 0)
+			{
+				// make a short version of the component type name
+				// e.g. RotateTransformComponent becomes 'rotate-transform'
+				
+				char short_name[1024];
+				int length = 0;
+				
+				for (int i = 0; componentType->typeName + i < suffix && length < 1024; ++i)
+				{
+					if (isupper(componentType->typeName[i]))
+					{
+						if (i != 0)
+							short_name[length++] = '-';
+						
+						short_name[length++] = tolower(componentType->typeName[i]);
+					}
+					else
+						short_name[length++] = componentType->typeName[i];
+				}
+				
+				if (length == 1024)
+				{
+					LOG_ERR("component type name too long: %s", componentType->typeName);
+					result &= false;
+				}
+				else
+				{
+					short_name[length++] = 0;
+					
+					line_writer.append_indented_line(indent, short_name);
+				}
+			}
+			else
+			{
+				// write the full name if the type name doesn't match the pattern
+				
+				LOG_WRN("writing full component type name. this is unexpected. typeName=%s", componentType->typeName);
+				line_writer.append_indented_line(indent, componentType->typeName);
+			}
+			
+			indent++;
+			{
+				result &= object_tolines_recursive(typeDB, componentType, component, line_writer, indent);
+			}
+			indent--;
+		}
+	}
+	indent--;
+	
+	return result;
+}
+
+bool writeSceneEntitiesToLines(
+	const TypeDB & typeDB,
+	const Scene & scene,
+	LineWriter & line_writer,
+	const int in_indent)
+{
+	bool result = true;
+	
+	int indent = in_indent;
+	
+	for (auto & node_itr : scene.nodes)
+	{
+		auto & node = *node_itr.second;
+		
+		writeSceneEntityToLines(typeDB, node, line_writer, indent);
+		
+		/*
+		char node_definition[128];
+		sprintf(node_definition, "entity %s", node->name.c_str());
+		line_writer.append_indented_line(indent, node_definition);
+		
+		indent++;
+		{
+			for (auto * component = node->components.head; component != nullptr; component = component->next_in_set)
+			{
+				auto * componentType = findComponentType(component->typeIndex());
+				
+				if (componentType == nullptr)
+				{
+					LOG_ERR("didn't find component type for component @ %p", component);
+					result &= false;
+					continue;
+				}
+				
+				// check if the component type name ends with 'Component'. in this case
+				// we'll want to write a short hand component name which is easier
+				// to hand-edit
+				
+				const char * suffix = strstr(componentType->typeName, "Component");
+				const int suffix_length = 9;
+				
+				if (suffix != nullptr && suffix[suffix_length] == 0)
+				{
+					// make a short version of the component type name
+					// e.g. RotateTransformComponent becomes 'rotate-transform'
+					
+					char short_name[1024];
+					int length = 0;
+					
+					for (int i = 0; componentType->typeName + i < suffix && length < 1024; ++i)
+					{
+						if (isupper(componentType->typeName[i]))
+						{
+							if (i != 0)
+								short_name[length++] = '-';
+							
+							short_name[length++] = tolower(componentType->typeName[i]);
+						}
+						else
+							short_name[length++] = componentType->typeName[i];
+					}
+					
+					if (length == 1024)
+					{
+						LOG_ERR("component type name too long: %s", componentType->typeName);
+						result &= false;
+					}
+					else
+					{
+						short_name[length++] = 0;
+						
+						line_writer.append_indented_line(indent, short_name);
+					}
+				}
+				else
+				{
+					// write the full name if the type name doesn't match the pattern
+					
+					LOG_WRN("writing full component type name. this is unexpected. typeName=%s", componentType->typeName);
+					line_writer.append_indented_line(indent, componentType->typeName);
+				}
+				
+				indent++;
+				{
+					result &= object_tolines_recursive(typeDB, componentType, component, line_writer, indent);
+				}
+				indent--;
+			}
+		}
+		indent--;
+		*/
+		
+		line_writer.append('\n');
+	}
+	
+	return result;
+}
+
+bool writeSceneNodeTreeToLines(
+	const Scene & scene,
+	const int rootNodeId,
+	LineWriter & line_writer,
+	const int indent)
+{
+	bool result = true;
+	
+	auto & node = scene.getNode(rootNodeId);
+	
+	line_writer.append_indented_line(indent, node.name.c_str());
+	
+	for (auto childNodeId : node.childNodeIds)
+	{
+		result &= writeSceneNodeTreeToLines(scene, childNodeId, line_writer, indent + 1);
+	}
+	
+	return result;
 }

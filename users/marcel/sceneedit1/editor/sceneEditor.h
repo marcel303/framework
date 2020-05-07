@@ -95,7 +95,8 @@ struct SceneEditor
 		char nodeDisplayNameFilter[kMaxNodeDisplayNameFilter] = { };
 		char componentTypeNameFilter[kMaxComponentTypeNameFilter] = { };
 		std::set<int> visibleNodes; // set of visible nodes, when the node structure is filtered, by for instance node name or component type
-		std::set<int> nodesToOpen; // nodes inside this set will be forcibly opened inside the node structure editor and scrolled into view
+		std::set<int> nodesToOpen_deferred; // nodes inside this set will be forcibly opened inside the node structure editor and scrolled into view
+		std::set<int> nodesToOpen_active; // deferredNodesToOpen will be moved into here when the scene is traversed. we need a copy, so we can clear the deferred set and add new nodes to it during scene traversal itself
 	} nodeUi;
 	
 	struct
@@ -145,8 +146,8 @@ struct SceneEditor
 	
 	void editNode(const int nodeId);
 	
-	void pasteNodeFromText(const int parentId, const char * text);
-	void pasteNodeFromClipboard(const int parentId);
+	bool pasteNodeFromText(const int parentId, LineReader & line_reader);
+	int pasteNodeTreeFromText(const int parentId, LineReader & line_reader);
 
 	enum NodeStructureContextMenuResult
 	{
@@ -192,8 +193,10 @@ struct SceneEditor
 	void performAction_undo();
 	void performAction_redo();
 	
-	void performAction_copy();
-	void performAction_paste();
+	void performAction_copy(const bool deep);
+	void performAction_copySceneNodes();
+	void performAction_copySceneNodeTrees();
+	void performAction_paste(const int parentNodeId);
 	void performAction_duplicate();
 	
 	void drawNode(const SceneNode & node) const;
