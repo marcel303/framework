@@ -303,6 +303,7 @@ bool recursivelyOverlayBaseTemplates(
 	std::vector<Template> templates;
 	
 	processed.insert(t.name);
+	templates.push_back(t);
 	
 	std::string current_name = t.name;
 	
@@ -310,7 +311,7 @@ bool recursivelyOverlayBaseTemplates(
 	{
 		// todo : let us inherit the path component of the previous name.. so we end up with the full relative path
 	
-		auto & new_name = templates.empty() ? t.base : templates.back().base;
+		auto & new_name = templates.back().base;
 		
 		if (new_name.empty())
 			break;
@@ -336,6 +337,8 @@ bool recursivelyOverlayBaseTemplates(
 		processed.insert(current_name);
 		templates.emplace_back(std::move(t));
 	}
+	
+	t = Template();
 	
 	for (auto template_itr = templates.rbegin(); template_itr != templates.rend(); ++template_itr)
 	{

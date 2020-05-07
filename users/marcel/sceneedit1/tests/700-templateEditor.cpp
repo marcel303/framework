@@ -1,13 +1,15 @@
 // sceneedit
 #include "helpers2.h"
 
+// ecs-sceneEditor
+#include "editor/componentPropertyUi.h"
+
 // ecs-scene
 #include "helpers.h"
 #include "template.h"
 #include "templateIo.h"
 
 // ecs-component
-#include "componentPropertyUi.h"
 #include "componentType.h"
 
 // reflection-textio
