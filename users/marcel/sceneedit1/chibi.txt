@@ -61,6 +61,20 @@ app marcel-sceneedit-700-templateEditor
 	add_files tests/700-templateEditor.cpp
 	resource_path data
 
+app marcel-sceneedit-800-realtimeEditing
+	depend_library ecs-parameter
+	depend_library framework
+	depend_library marcel-scene
+	add_files helpers2.cpp
+	add_files helpers2.h
+	add_files resource.cpp
+	add_files resource.h
+	scan_files *.cpp path components group components
+	scan_files *.h   path components group components
+	add_files tests/800-realtimeEditing.cpp
+	header_path .
+	resource_path data
+
 app marcel-sceneedit1
 	depend_library marcel-sceneedit
 	add_files main.cpp
