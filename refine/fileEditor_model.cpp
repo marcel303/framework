@@ -38,7 +38,7 @@ FileEditor_Model::FileEditor_Model(const char * path)
 {
 	shaderSource("BasicSkinnedWithLighting.ps", s_basicSkinnedWithLightingPs);
 	
-	model.calculateAABB(min, max, true);
+	hasMinMax = model.calculateAABB(min, max, true);
 	
 	guiContext.init();
 }
@@ -213,8 +213,11 @@ void FileEditor_Model::tick(const int sx, const int sy, const float dt, const bo
 		
 		float maxAxis = 0.f;
 		
-		for (int i = 0; i < 3; ++i)
-			maxAxis = fmaxf(maxAxis, fmaxf(fabsf(min[i]), fabsf(max[i])));
+		if (hasMinMax)
+		{
+			for (int i = 0; i < 3; ++i)
+				maxAxis = fmaxf(maxAxis, fmaxf(fabsf(min[i]), fabsf(max[i])));
+		}
 		
 		if (maxAxis > 0.f)
 		{

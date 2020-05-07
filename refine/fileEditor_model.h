@@ -6,8 +6,11 @@
 struct FileEditor_Model : FileEditor
 {
 	Model model;
+	
+	bool hasMinMax = false;
 	Vec3 min;
 	Vec3 max;
+	
 	float rotationX = 0.f;
 	float rotationY = 0.f;
 	
