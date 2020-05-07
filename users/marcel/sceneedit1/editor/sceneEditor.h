@@ -146,7 +146,7 @@ struct SceneEditor
 	
 	void editNode(const int nodeId);
 	
-	bool pasteNodeFromText(const int parentId, LineReader & line_reader);
+	int pasteNodeFromText(const int parentId, LineReader & line_reader);
 	int pasteNodeTreeFromText(const int parentId, LineReader & line_reader);
 
 	enum NodeStructureContextMenuResult

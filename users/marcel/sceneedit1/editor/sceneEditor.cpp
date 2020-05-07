@@ -285,7 +285,7 @@ bool SceneEditor::undoCapture(std::string & text) const
 {
 	LineWriter line_writer;
 	
-	if (scene.saveToLines(*typeDB, line_writer, 0) == false)
+	if (writeSceneToLines(*typeDB, scene, line_writer, 0) == false)
 	{
 		logError("failed to save scene to lines");
 		return false;
@@ -472,20 +472,18 @@ void SceneEditor::editNode(const int nodeId)
 	ImGui::PopID();
 }
 
-bool SceneEditor::pasteNodeFromText(const int parentId, LineReader & line_reader)
+int SceneEditor::pasteNodeFromText(const int parentId, LineReader & line_reader)
 {
-	bool result = true;
-	
 	SceneNode * childNode = new SceneNode();
 	childNode->id = scene.allocNodeId();
 	childNode->parentId = parentId;
 	
-	result &= ::pasteSceneNodeFromText(*typeDB, line_reader, *childNode);
-	
-	if (result == false)
+	if (pasteSceneNodeFromLines(*typeDB, line_reader, *childNode) == false)
 	{
 		delete childNode;
 		childNode = nullptr;
+		
+		return -1;
 	}
 	else
 	{
@@ -498,22 +496,22 @@ bool SceneEditor::pasteNodeFromText(const int parentId, LineReader & line_reader
 		auto * sceneNodeComponent = childNode->components.find<SceneNodeComponent>();
 		sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
 		
-		result &= childNode->initComponents();
-		
-		if (result == false)
+		if (childNode->initComponents() == false)
 		{
 			childNode->freeComponents();
 			
 			delete childNode;
 			childNode = nullptr;
+			
+			return -1;
 		}
 		else
 		{
 			deferred.nodesToAdd.push_back(childNode);
+			
+			return childNode->id;
 		}
 	}
-	
-	return result;
 }
 
 int SceneEditor::pasteNodeTreeFromText(const int parentId, LineReader & line_reader)
@@ -529,7 +527,7 @@ int SceneEditor::pasteNodeTreeFromText(const int parentId, LineReader & line_rea
 	auto * transformComponent = s_transformComponentMgr.createComponent(rootNode.components.id);
 	rootNode.components.add(transformComponent);
 	
-	if (!pasteSceneNodeTreeFromText(*typeDB, line_reader, tempScene))
+	if (!pasteSceneNodeTreeFromLines(*typeDB, line_reader, tempScene))
 	{
 		tempScene.freeAllNodesAndComponents();
 		return -1;
@@ -1568,6 +1566,16 @@ void SceneEditor::validateNodeStructure() const
 		Assert(usedNodeIds.count(node_itr.first) == 0);
 		Assert(usedNodes.count(node_itr.second) == 0);
 		Assert(usedNodeNames.count(node_itr.second->name) == 0);
+		Assert(node_itr.second->parentId == -1 || scene.nodes.count(node_itr.second->parentId) != 0);
+		if (node_itr.second->parentId != -1)
+		{
+			auto & parentNode = scene.getNode(node_itr.second->parentId);
+			Assert(
+				std::find(
+					parentNode.childNodeIds.begin(),
+					parentNode.childNodeIds.end(),
+					node_itr.second->id) != parentNode.childNodeIds.end());
+		}
 		usedNodeIds.insert(node_itr.first);
 		usedNodes.insert(node_itr.second);
 		usedNodeNames.insert(node_itr.second->name);
@@ -1582,7 +1590,7 @@ void SceneEditor::performAction_save()
 	
 	LineWriter line_writer;
 	
-	if (scene.saveToLines(*typeDB, line_writer, 0) == false)
+	if (writeSceneToLines(*typeDB, scene, line_writer, 0) == false)
 	{
 		logError("failed to save scene to lines");
 	}
@@ -1790,7 +1798,7 @@ void SceneEditor::performAction_copySceneNodes()
 			{
 				auto & node = scene.getNode(nodeId);
 				
-				result &= copySceneNodeToText(*typeDB, node, line_writer, indent);
+				result &= copySceneNodeToLines(*typeDB, node, line_writer, indent);
 			}
 			indent--;
 		}
@@ -1821,7 +1829,7 @@ void SceneEditor::performAction_copySceneNodeTrees()
 			{
 				auto & node = scene.getNode(nodeId);
 				
-				result &= copySceneNodeTreeToText(*typeDB, scene, node.id, line_writer, indent);
+				result &= copySceneNodeTreeToLines(*typeDB, scene, node.id, line_writer, indent);
 			}
 			indent--;
 		}
@@ -1836,6 +1844,8 @@ void SceneEditor::performAction_copySceneNodeTrees()
 
 void SceneEditor::performAction_paste(const int parentNodeId)
 {
+	std::set<int> nodesToSelect;
+	
 	deferredBegin();
 	{
 		// fetch clipboard text
@@ -1867,7 +1877,9 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					{
 						line_reader.push_indent();
 						{
-							pasteNodeFromText(parentNodeId, line_reader);
+							const int nodeId = pasteNodeFromText(parentNodeId, line_reader);
+							
+							nodesToSelect.insert(nodeId);
 						}
 						line_reader.pop_indent();
 					}
@@ -1875,7 +1887,9 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					{
 						line_reader.push_indent();
 						{
-							pasteNodeTreeFromText(parentNodeId, line_reader);
+							const int nodeId = pasteNodeTreeFromText(parentNodeId, line_reader);
+							
+							nodesToSelect.insert(nodeId);
 						}
 						line_reader.pop_indent();
 					}
@@ -1892,7 +1906,9 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 			text = nullptr;
 		}
 	}
-	deferredEnd(true);
+	deferredEnd(false);
+	
+	selectNodes(nodesToSelect, false);
 }
 
 void SceneEditor::performAction_duplicate()
@@ -1904,8 +1920,9 @@ void SceneEditor::performAction_duplicate()
 			for (auto nodeId : selectedNodes)
 			{
 				auto & node = scene.getNode(nodeId);
+				
 				LineWriter line_writer;
-				if (copySceneNodeToText(*typeDB, node, line_writer, 0))
+				if (copySceneNodeToLines(*typeDB, node, line_writer, 0))
 				{
 					auto lines = line_writer.to_lines();
 					LineReader line_reader(lines, 0, 0);

@@ -12,9 +12,9 @@ class LineWriter;
 
 // copy/paste utilities
 
-bool copySceneNodeToText(const TypeDB & typeDB, const SceneNode & node, LineWriter & line_writer, int indent);
-bool pasteSceneNodeFromText(const TypeDB & typeDB, LineReader & line_reader, SceneNode & node);
+bool copySceneNodeToLines(const TypeDB & typeDB, const SceneNode & node, LineWriter & line_writer, int indent);
+bool pasteSceneNodeFromLines(const TypeDB & typeDB, LineReader & line_reader, SceneNode & node);
 
-bool copySceneNodeTreeToText(const TypeDB & typeDB, const Scene & scene, const int rootNodeId, LineWriter & line_writer, int indent);
-bool pasteSceneNodeTreeFromText(const TypeDB & typeDB, LineReader & line_reader, Scene & scene);
+bool copySceneNodeTreeToLines(const TypeDB & typeDB, const Scene & scene, const int rootNodeId, LineWriter & line_writer, int indent);
+bool pasteSceneNodeTreeFromLines(const TypeDB & typeDB, LineReader & line_reader, Scene & scene);
 

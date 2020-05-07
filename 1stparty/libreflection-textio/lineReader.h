@@ -26,8 +26,9 @@ public:
 		const int in_indentation_level);
 	~LineReader();
 	
-	const char * get_next_line(const bool skipEmptyLinesAndComments);
+	const char * get_next_line(const bool skipEmptyLinesAndComments, const bool checkForIndentationJump = true);
 	int get_current_line_index() const { return line_index; }
+	int get_current_indentation_level() const { return indentation_level; }
 	
 	void disable_dtor_check() { do_dtor_check = false; }
 	

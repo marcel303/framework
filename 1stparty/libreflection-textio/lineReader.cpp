@@ -48,7 +48,7 @@ LineReader::~LineReader()
 	}
 }
 
-const char * LineReader::get_next_line(const bool skipEmptyLinesAndComments)
+const char * LineReader::get_next_line(const bool skipEmptyLinesAndComments, const bool checkForIndentationJump)
 {
 	// at end? return nullptr
 	
@@ -73,7 +73,7 @@ const char * LineReader::get_next_line(const bool skipEmptyLinesAndComments)
 		
 		// check we aren't skipping more than one indentation level
 		
-		Assert(next_level <= indentation_level + 1);
+		Assert(!checkForIndentationJump || next_level <= indentation_level + 1);
 		
 		// return line with appropriate offset to compensate for indentation
 		
