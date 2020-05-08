@@ -35,7 +35,7 @@ void TransformComponentMgr::calculateTransformsTraverse(Scene & scene, SceneNode
 		sceneNodeComp->objectToWorld = newGlobalTransform;
 	}
 	
-	for (auto & childNodeId : node.childNodeIds)
+	for (auto childNodeId : node.childNodeIds)
 	{
 		SceneNode & childNode = scene.getNode(childNodeId);
 		

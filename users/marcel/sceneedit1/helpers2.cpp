@@ -4,6 +4,7 @@
 
 #define DEFINE_COMPONENT_TYPES
 #include "components/cameraComponent.h"
+#include "components/gltfComponent.h"
 #include "components/lightComponent.h"
 #include "components/modelComponent.h"
 #include "components/parameterComponent.h"
@@ -14,6 +15,7 @@
 
 // todo : remove component mgr globals
 CameraComponentMgr s_cameraComponentMgr;
+GltfComponentMgr s_gltfComponentMgr;
 LightComponentMgr s_lightComponentMgr;
 ModelComponentMgr s_modelComponentMgr;
 ParameterComponentMgr s_parameterComponentMgr;
@@ -57,6 +59,7 @@ void registerBuiltinTypes(TypeDB & typeDB)
 void registerComponentTypes(TypeDB & typeDB)
 {
 	registerComponentType(new CameraComponentType(), &s_cameraComponentMgr);
+	registerComponentType(new GltfComponentType(), &s_gltfComponentMgr);
 	registerComponentType(new LightComponentType(), &s_lightComponentMgr);
 	registerComponentType(new ModelComponentType(), &s_modelComponentMgr);
 	registerComponentType(new ParameterComponentType(), &s_parameterComponentMgr);

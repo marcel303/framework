@@ -49,6 +49,8 @@ struct Scene
 	void freeAllNodesAndComponents();
 	void freeNode(const int nodeId);
 	
+	bool initComponents();
+	
 	void createRootNode();
 	
 	      SceneNode & getRootNode();

@@ -77,16 +77,21 @@ struct SceneEditor
 		bool drawScene = true;
 	} preview;
 	
-	struct
+	struct Deferred
 	{
+		int numActivations = 0;
+		bool isProcessing = false;
+		
 		std::set<int> nodesToRemove;
 		std::vector<SceneNode*> nodesToAdd;
+		std::set<int> nodesToSelect;
 		
 		bool isFlushed() const
 		{
 			return
 				nodesToRemove.empty() &&
-				nodesToAdd.empty();
+				nodesToAdd.empty() &&
+				nodesToSelect.empty();
 		}
 	} deferred;
 	
@@ -128,15 +133,13 @@ struct SceneEditor
 	 * updates to it. Making immediate updates would invalidate and/or complicate scene traversal.
 	 */
 	void deferredBegin();
-	void deferredEnd(const bool selectAddedNodes);
+	void deferredEnd();
 	
 	void removeNodeSubTree(const int nodeId);
 	
-	void selectNodes(const std::set<int> & nodeIds, const bool append);
-	void selectNode(const int nodeId, const bool append);
-	
 	void addNodesToAdd();
 	void removeNodesToRemove();
+	void selectNodesToSelect(const bool append);
 	
 	// undo functions
 	bool undoCapture(std::string & text) const; // capture the entire scene into text format
@@ -146,8 +149,8 @@ struct SceneEditor
 	
 	void editNode(const int nodeId);
 	
-	int pasteNodeFromText(const int parentId, LineReader & line_reader);
-	int pasteNodeTreeFromText(const int parentId, LineReader & line_reader);
+	bool pasteNodeFromText(const int parentId, LineReader & line_reader);
+	bool pasteNodeTreeFromText(const int parentId, LineReader & line_reader);
 
 	enum NodeStructureContextMenuResult
 	{

@@ -17,6 +17,7 @@ library marcel-sceneedit
 	depend_library ecs-parameter
 	depend_library ecs-parameterui
 	depend_library framework
+	depend_library framework-gltf
 	depend_library imgui-framework
 	depend_library jsoncpp
 	depend_library libnfd
@@ -64,6 +65,7 @@ app marcel-sceneedit-700-templateEditor
 app marcel-sceneedit-800-realtimeEditing
 	depend_library ecs-parameter
 	depend_library framework
+	depend_library framework-gltf
 	depend_library marcel-scene
 	add_files helpers2.cpp
 	add_files helpers2.h

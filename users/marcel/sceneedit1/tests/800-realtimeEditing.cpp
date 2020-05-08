@@ -1,5 +1,6 @@
 // sceneedit
 #define DEFINE_COMPONENT_TYPES
+#include "components/gltfComponent.h"
 #include "components/modelComponent.h"
 #include "components/transformComponent.h"
 #include "helpers2.h"
@@ -19,6 +20,7 @@
 // libreflection
 #include "reflection.h"
 
+extern GltfComponentMgr s_gltfComponentMgr;
 extern ModelComponentMgr s_modelComponentMgr;
 extern TransformComponentMgr s_transformComponentMgr;
 
@@ -47,7 +49,7 @@ int main(int argc, char * argv[])
 	const char * path = "textfiles/scene-v1.txt";
 	
 	scene.createRootNode();
-	if (parseSceneFromFile(typeDB, path, scene) == false)
+	if (parseSceneFromFile(typeDB, path, scene) == false || scene.init() == false)
 	{
 		scene.freeAllNodesAndComponents();
 		scene.createRootNode();
@@ -69,7 +71,7 @@ int main(int argc, char * argv[])
 			scene.freeAllNodesAndComponents();
 
 			scene.createRootNode();
-			if (parseSceneFromFile(typeDB, path, scene) == false)
+			if (parseSceneFromFile(typeDB, path, scene) == false || scene.init() == false)
 			{
 				scene.freeAllNodesAndComponents();
 				scene.createRootNode();
@@ -114,6 +116,8 @@ int main(int argc, char * argv[])
 				// draw models
 				
 				s_modelComponentMgr.draw();
+				
+				s_gltfComponentMgr.draw();
 			}
 			popDepthTest();
 			camera.popViewMatrix();

@@ -26,6 +26,11 @@ void shutComponentMgrs();
 ComponentTypeBase * findComponentType(const char * typeName);
 ComponentTypeBase * findComponentType(const std::type_index & typeIndex);
 
+template <typename T> T * findComponentType()
+{
+	return findComponentType(std::type_index(typeid(T)));
+}
+
 extern std::vector<ComponentTypeBase*> g_componentTypes;
 
 // -- component set helpers

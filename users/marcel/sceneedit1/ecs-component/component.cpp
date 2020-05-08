@@ -29,6 +29,9 @@ ComponentSet::ComponentSet()
 
 ComponentSet::~ComponentSet()
 {
+	Assert(head == nullptr);
+	
+	Assert(id != kComponentSetIdInvalid);
 	freeComponentSetId(id);
 	Assert(id == kComponentSetIdInvalid);
 }

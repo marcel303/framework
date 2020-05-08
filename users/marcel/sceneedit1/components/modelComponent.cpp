@@ -64,8 +64,6 @@ void ModelComponent::draw(const Mat4x4 & objectToWorld) const
 
 //
 
-#include "transformComponent.h"
-
 void ModelComponentMgr::draw() const
 {
 	for (auto * i = head; i != nullptr; i = i->next)

@@ -47,8 +47,10 @@
 
 // todo : remove. need a may generic way to ask for a node's bounding box
 
+#include "components/gltfComponent.h"
 #include "components/modelComponent.h"
 #include "components/parameterComponent.h"
+extern GltfComponentMgr s_gltfComponentMgr;
 extern ModelComponentMgr s_modelComponentMgr;
 extern ParameterComponentMgr s_parameterComponentMgr;
 
@@ -156,42 +158,42 @@ SceneNode * SceneEditor::raycast(Vec3Arg rayOrigin, Vec3Arg rayDirection, const 
  */
 void SceneEditor::deferredBegin()
 {
-	Assert(deferred.isFlushed());
+	Assert(deferred.numActivations || deferred.isFlushed());
+	
+	deferred.numActivations++;
 }
 
-void SceneEditor::deferredEnd(const bool selectAddedNodes)
+void SceneEditor::deferredEnd()
 {
-	if (deferred.isFlushed() == false)
+	Assert(deferred.isProcessing == false);
+	Assert(deferred.numActivations > 0);
+	
+	deferred.numActivations--;
+	
+	if (deferred.numActivations == 0 && deferred.isFlushed() == false)
 	{
-		std::set<int> nodesToSelect;
-		
-		if (selectAddedNodes)
-		{
-			for (auto * node : deferred.nodesToAdd)
-				nodesToSelect.insert(node->id);
-		}
-		
-		//
-		
 		undoCaptureBegin();
 		{
+			deferred.isProcessing = true;
+			
 			addNodesToAdd();
 			
 			removeNodesToRemove();
+			
+			selectNodesToSelect(false);
+			
+			deferred.isProcessing = false;
 		}
 		undoCaptureEnd();
 		
-		//
-		
-		if (selectAddedNodes)
-		{
-			selectNodes(nodesToSelect, false);
-		}
+		Assert(deferred.isFlushed());
 	}
 }
 
 void SceneEditor::removeNodeSubTree(const int nodeId)
 {
+	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!", 0);
+	
 	auto & node = scene.getNode(nodeId);
 	
 	// recursively remove child nodes
@@ -225,30 +227,13 @@ void SceneEditor::removeNodeSubTree(const int nodeId)
 	selectedNodes.erase(nodeId);
 	
 	deferred.nodesToRemove.erase(nodeId);
-}
-
-void SceneEditor::selectNodes(const std::set<int> & nodeIds, const bool append)
-{
-	if (append == false)
-	{
-		selectedNodes.clear();
-	}
-	
-	for (auto & nodeId : nodeIds)
-	{
-		selectedNodes.insert(nodeId);
-		markNodeOpenUntilRoot(nodeId);
-		nodeToGiveFocus = nodeId;
-	}
-}
-
-void SceneEditor::selectNode(const int nodeId, const bool append)
-{
-	selectNodes({ nodeId }, append);
+	deferred.nodesToSelect.erase(nodeId);
 }
 
 void SceneEditor::addNodesToAdd()
 {
+	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!", 0);
+	
 	for (SceneNode * node : deferred.nodesToAdd)
 	{
 		Assert(scene.nodes.find(node->id) == scene.nodes.end());
@@ -272,12 +257,36 @@ void SceneEditor::addNodesToAdd()
 
 void SceneEditor::removeNodesToRemove()
 {
+	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!", 0);
+	
 	while (!deferred.nodesToRemove.empty())
 	{
 		auto nodeToRemoveItr = deferred.nodesToRemove.begin();
 		auto nodeId = *nodeToRemoveItr;
 		
 		removeNodeSubTree(nodeId);
+	}
+}
+
+void SceneEditor::selectNodesToSelect(const bool append)
+{
+	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!", 0);
+	
+	if (!deferred.nodesToSelect.empty())
+	{
+		if (append == false)
+		{
+			selectedNodes.clear();
+		}
+		
+		for (auto nodeId : deferred.nodesToSelect)
+		{
+			selectedNodes.insert(nodeId);
+			markNodeOpenUntilRoot(nodeId);
+			nodeToGiveFocus = nodeId;
+		}
+		
+		deferred.nodesToSelect.clear();
 	}
 }
 
@@ -472,7 +481,7 @@ void SceneEditor::editNode(const int nodeId)
 	ImGui::PopID();
 }
 
-int SceneEditor::pasteNodeFromText(const int parentId, LineReader & line_reader)
+bool SceneEditor::pasteNodeFromText(const int parentId, LineReader & line_reader)
 {
 	SceneNode * childNode = new SceneNode();
 	childNode->id = scene.allocNodeId();
@@ -483,7 +492,7 @@ int SceneEditor::pasteNodeFromText(const int parentId, LineReader & line_reader)
 		delete childNode;
 		childNode = nullptr;
 		
-		return -1;
+		return false;
 	}
 	else
 	{
@@ -503,18 +512,23 @@ int SceneEditor::pasteNodeFromText(const int parentId, LineReader & line_reader)
 			delete childNode;
 			childNode = nullptr;
 			
-			return -1;
+			return false;
 		}
 		else
 		{
-			deferred.nodesToAdd.push_back(childNode);
+			deferredBegin();
+			{
+				deferred.nodesToAdd.push_back(childNode);
+				deferred.nodesToSelect.insert(childNode->id);
+			}
+			deferredEnd();
 			
-			return childNode->id;
+			return true;
 		}
 	}
 }
 
-int SceneEditor::pasteNodeTreeFromText(const int parentId, LineReader & line_reader)
+bool SceneEditor::pasteNodeTreeFromText(const int parentId, LineReader & line_reader)
 {
 	Scene tempScene;
 	tempScene.nodeIdAllocator = &scene;
@@ -524,13 +538,10 @@ int SceneEditor::pasteNodeTreeFromText(const int parentId, LineReader & line_rea
 	auto & rootNode = tempScene.getRootNode();
 	rootNode.parentId = parentId;
 	
-	auto * transformComponent = s_transformComponentMgr.createComponent(rootNode.components.id);
-	rootNode.components.add(transformComponent);
-	
 	if (!pasteSceneNodeTreeFromLines(*typeDB, line_reader, tempScene))
 	{
 		tempScene.freeAllNodesAndComponents();
-		return -1;
+		return false;
 	}
 	
 	bool init_ok = true;
@@ -553,21 +564,37 @@ int SceneEditor::pasteNodeTreeFromText(const int parentId, LineReader & line_rea
 	if (init_ok == false)
 	{
 		tempScene.freeAllNodesAndComponents();
-		return -1;
+		return false;
 	}
 	else
 	{
-	// todo : let caller of pasteNodeTreeFromText handle node insertion ?
-	// todo : let deferredEnd traverse child nodes and add them ?
-	// todo : we want explicit control over which nodes to select. we want to only select to tree roots, not any of its children
-		for (auto node_itr : tempScene.nodes)
+		deferredBegin();
 		{
-			deferred.nodesToAdd.push_back(node_itr.second);
+		// todo : let deferredEnd traverse child nodes and add them ?
+			for (auto node_itr : tempScene.nodes)
+			{
+				auto * node = node_itr.second;
+				
+				if (node->id == rootNode.id)
+				{
+					node->freeComponents();
+					continue;
+				}
+				
+				if (node->parentId == rootNode.id)
+				{
+					node->parentId = parentId;
+					deferred.nodesToSelect.insert(node->id);
+				}
+				
+				deferred.nodesToAdd.push_back(node);
+			}
 		}
+		deferredEnd();
 		
 		tempScene.nodes.clear();
 		
-		return tempScene.rootNodeId;
+		return true;
 	}
 }
 
@@ -589,8 +616,12 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 // todo : add the ability to attach a scene
 	if (ImGui::MenuItem("Attach from template"))
 	{
-		//addNodeFromTemplate_v2(Vec3(), AngleAxis(), node.id);
-		addNodesFromScene_v1(node.id);
+		deferredBegin();
+		{
+			//addNodeFromTemplate_v2(Vec3(), AngleAxis(), node.id);
+			addNodesFromScene_v1(node.id);
+		}
+		deferredEnd();
 	}
 	
 	if (ImGui::MenuItem("Copy"))
@@ -770,7 +801,7 @@ void SceneEditor::editNodeStructure_traverse(const int nodeId)
 
 		if (isOpen)
 		{
-			for (auto & childNodeId : node.childNodeIds)
+			for (auto childNodeId : node.childNodeIds)
 			{
 				if (do_filter && nodeUi.visibleNodes.count(childNodeId) == 0)
 				{
@@ -818,7 +849,7 @@ void SceneEditor::updateNodeVisibility()
 		
 		// selected nodes are always visible
 		
-		for (auto & nodeId : selectedNodes)
+		for (auto nodeId : selectedNodes)
 		{
 			markNodeVisibleUntilRoot(nodeId);
 		}
@@ -979,7 +1010,12 @@ int SceneEditor::addNodeFromTemplate_v2(Vec3Arg position, const AngleAxis & angl
 		}
 	}
 	
-	deferred.nodesToAdd.push_back(node);
+	deferredBegin();
+	{
+		deferred.nodesToAdd.push_back(node);
+		deferred.nodesToSelect.insert(node->id);
+	}
+	deferredEnd();
 	
 	return node->id;
 }
@@ -1025,11 +1061,11 @@ int SceneEditor::addNodesFromScene_v1(const int parentId)
 				deferred.nodesToAdd.push_back(node_itr.second);
 			}
 			
+			deferred.nodesToSelect.insert(tempScene.rootNodeId);
+			
 			tempScene.nodes.clear();
 		}
-		deferredEnd(false);
-		
-		selectNode(tempScene.rootNodeId, false);
+		deferredEnd();
 		
 		return tempScene.rootNodeId;
 	}
@@ -1125,7 +1161,7 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 							
 							editNodeStructure_traverse(scene.rootNodeId);
 						}
-						deferredEnd(true);
+						deferredEnd();
 					}
 					ImGui::EndChild();
 					
@@ -1137,7 +1173,7 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 							deferredBegin();
 							for (auto nodeId : selectedNodes)
 								deferred.nodesToRemove.insert(nodeId);
-							deferredEnd(false);
+							deferredEnd();
 						}
 					}
 				}
@@ -1146,7 +1182,6 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 				
 				if (ImGui::CollapsingHeader("Selected node(s)", ImGuiTreeNodeFlags_DefaultOpen))
 				{
-					deferredBegin();
 					ImGui::BeginChild("Selected nodes", ImVec2(0, 300), true, ImGuiWindowFlags_AlwaysVerticalScrollbar);
 					{
 						ImGui::PushItemWidth(180.f);
@@ -1157,7 +1192,6 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 						ImGui::PopItemWidth();
 					}
 					ImGui::EndChild();
-					deferredEnd(false);
 					
 					// one or more transforms may have been edited or invalidated due to a parent node being invalidated
 					// ensure the transforms are up to date by recalculating them. this is needed for transform gizmos
@@ -1484,7 +1518,7 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 								}
 							}
 						}
-						deferredEnd(true);
+						deferredEnd();
 					}
 					else
 					{
@@ -1492,7 +1526,7 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 						{
 							addNodeFromTemplate_v2(groundPosition, AngleAxis(), scene.rootNodeId);
 						}
-						deferredEnd(true);
+						deferredEnd();
 					}
 				}
 			}
@@ -1526,7 +1560,7 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 				deferred.nodesToRemove.insert(nodeId);
 			}
 		}
-		deferredEnd(false);
+		deferredEnd();
 	}
 	
 	// update the camera
@@ -1844,10 +1878,10 @@ void SceneEditor::performAction_copySceneNodeTrees()
 
 void SceneEditor::performAction_paste(const int parentNodeId)
 {
-	std::set<int> nodesToSelect;
-	
 	deferredBegin();
 	{
+		bool result = true;
+		
 		// fetch clipboard text
 		
 		const char * text = SDL_GetClipboardText();
@@ -1877,9 +1911,7 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					{
 						line_reader.push_indent();
 						{
-							const int nodeId = pasteNodeFromText(parentNodeId, line_reader);
-							
-							nodesToSelect.insert(nodeId);
+							result &= pasteNodeFromText(parentNodeId, line_reader);
 						}
 						line_reader.pop_indent();
 					}
@@ -1887,15 +1919,14 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					{
 						line_reader.push_indent();
 						{
-							const int nodeId = pasteNodeTreeFromText(parentNodeId, line_reader);
-							
-							nodesToSelect.insert(nodeId);
+							result &= pasteNodeTreeFromText(parentNodeId, line_reader);
 						}
 						line_reader.pop_indent();
 					}
 					else
 					{
 						logError("unknown clipboard item: %s", id);
+						result &= false;
 					}
 				}
 			}
@@ -1905,10 +1936,10 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 			SDL_free((void*)text);
 			text = nullptr;
 		}
+		
+		Assert(result); // todo : make it possible for deferred blocks to discard their changes. this would make deferred blocks into something like transactions
 	}
-	deferredEnd(false);
-	
-	selectNodes(nodesToSelect, false);
+	deferredEnd();
 }
 
 void SceneEditor::performAction_duplicate()
@@ -1930,7 +1961,7 @@ void SceneEditor::performAction_duplicate()
 				}
 			}
 		}
-		deferredEnd(true);
+		deferredEnd();
 	}
 }
 
@@ -2019,6 +2050,8 @@ void SceneEditor::drawSceneOpaque() const
 	if (preview.drawScene)
 	{
 		s_modelComponentMgr.draw();
+		
+		s_gltfComponentMgr.draw();
 	}
 }
 
@@ -2111,7 +2144,7 @@ bool SceneEditor::loadSceneFromLines_nonDestructive(std::vector<std::string> & l
 				for (auto & node_itr : scene.nodes)
 					deferred.nodesToRemove.insert(node_itr.second->id);
 			}
-			deferredEnd(false);
+			deferredEnd();
 			
 			scene = tempScene;
 			tempScene.nodes.clear();

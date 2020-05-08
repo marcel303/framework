@@ -470,13 +470,18 @@ bool writeSceneToLines(
 		{
 			indent++;
 			{
-				// write node hierarchy
-			
-				result &= writeSceneNodeTreeToLines(
-					scene,
-					scene.rootNodeId,
-					line_writer,
-					indent);
+				auto & rootNode = scene.getRootNode();
+				
+				for (auto childNodeId : rootNode.childNodeIds)
+				{
+					// write node hierarchy
+				
+					result &= writeSceneNodeTreeToLines(
+						scene,
+						childNodeId,
+						line_writer,
+						indent);
+				}
 			}
 			indent--;
 		}

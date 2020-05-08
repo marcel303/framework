@@ -91,6 +91,20 @@ void Scene::freeNode(const int nodeId)
 	nodes.erase(node_itr);
 }
 
+bool Scene::initComponents()
+{
+	bool result = true;
+
+	for (auto node_itr : nodes)
+	{
+		auto * node = node_itr.second;
+		
+		result &= node->initComponents();
+	}
+
+	return result;
+}
+
 void Scene::createRootNode()
 {
 	Assert(rootNodeId == -1);
