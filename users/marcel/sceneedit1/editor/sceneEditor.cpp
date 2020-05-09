@@ -1856,10 +1856,15 @@ void SceneEditor::performAction_undo()
 				}
 				else
 				{
-					for (auto & node_itr : scene.nodes)
-						deferred.nodesToRemove.insert(node_itr.second->id);
-					
-					removeNodesToRemove();
+					Assert(!deferred.isProcessing && deferred.isFlushed());
+					deferred.isProcessing = true;
+					{
+						for (auto & node_itr : scene.nodes)
+							deferred.nodesToRemove.insert(node_itr.second->id);
+						
+						removeNodesToRemove();
+					}
+					deferred.isProcessing = false;
 					
 					scene = tempScene;
 					
@@ -1911,10 +1916,15 @@ void SceneEditor::performAction_redo()
 				}
 				else
 				{
-					for (auto & node_itr : scene.nodes)
-						deferred.nodesToRemove.insert(node_itr.second->id);
-					
-					removeNodesToRemove();
+					Assert(!deferred.isProcessing && deferred.isFlushed());
+					deferred.isProcessing = true;
+					{
+						for (auto & node_itr : scene.nodes)
+							deferred.nodesToRemove.insert(node_itr.second->id);
+						
+						removeNodesToRemove();
+					}
+					deferred.isProcessing = false;
 					
 					scene = tempScene;
 					
