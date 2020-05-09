@@ -5,6 +5,7 @@
 namespace gltf
 {
 	struct Material;
+	struct MaterialShaders;
 	struct Scene;
 	
 	struct MetallicRoughnessParams
@@ -100,4 +101,17 @@ namespace gltf
 		void setEmissive(Shader & shader, const float emissive) const;
 		void setEmissive(Shader & shader, const Color & emissive) const;
 	};
+	
+	// functions for working with the default shaders provided by the GLTF library
+	// note that you'd normally would want to use the provided material shader includes
+	// to create your own shaders with custom forward shading etc. but having some
+	// built-in shaders comes in handy sometimes also,
+	
+	void setDefaultMaterialShaders(MaterialShaders & shaders);
+	void setDefaultMaterialLighting(
+		MaterialShaders & shaders,
+		const Mat4x4 & worldToView,
+		const Vec3 & directionalDirection = Vec3(0, -1, 0),
+		const Vec3 & directionalColor = Vec3(1.f),
+		const Vec3 & ambientColor = Vec3());
 }

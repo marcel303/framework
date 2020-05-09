@@ -1,4 +1,5 @@
 #include "gltf.h"
+#include "gltf-draw.h" // MaterialShaders
 #include "gltf-material.h"
 
 namespace gltf
@@ -355,5 +356,62 @@ namespace gltf
 	{
 		if (u_emissiveFactor != -1)
 			shader.setImmediate(u_emissiveFactor, emissive.r, emissive.g, emissive.b);
+	}
+	
+	//
+	
+	void setDefaultMaterialShaders(MaterialShaders & shaders)
+	{
+		static Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
+		static Shader specularGlossinessShader("gltf/shaders/pbr-specularGlossiness");
+		
+		shaders.metallicRoughnessShader = &metallicRoughnessShader;
+		shaders.specularGlossinessShader = &specularGlossinessShader;
+		shaders.init();
+		
+		// set max ambient lighting
+		setDefaultMaterialLighting(shaders, Mat4x4(true), Vec3(), Vec3(), Vec3(1.f));
+	}
+	
+	void setDefaultMaterialLighting(
+		MaterialShaders & materialShaders,
+		const Mat4x4 & worldToView,
+		const Vec3 & directionalDirection,
+		const Vec3 & directionalColor,
+		const Vec3 & ambientColor)
+	{
+		Shader * shaders[2] =
+			{
+				materialShaders.metallicRoughnessShader,
+				materialShaders.specularGlossinessShader
+			};
+		
+		const Vec3 lightDirection_view = worldToView.Mul3(directionalDirection);
+		
+		for (int i = 0; i < 2; ++i)
+		{
+			if (shaders[i] != nullptr)
+			{
+				setShader(*shaders[i]);
+				{
+					shaders[i]->setImmediate("scene_lightParams1",
+						lightDirection_view[0],
+						lightDirection_view[1],
+						lightDirection_view[2],
+						0.f);
+				
+					shaders[i]->setImmediate("scene_lightParams2",
+						directionalColor[0],
+						directionalColor[1],
+						directionalColor[2], 1.f);
+					
+					shaders[i]->setImmediate("scene_ambientLightColor",
+						ambientColor[0],
+						ambientColor[1],
+						ambientColor[2]);
+				}
+				clearShader();
+			}
+		}
 	}
 }
