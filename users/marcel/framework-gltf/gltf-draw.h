@@ -8,6 +8,7 @@
 namespace gltf
 {
 	struct Mesh;
+	struct MeshPrimitive;
 	struct Node;
 	struct Scene;
 }
