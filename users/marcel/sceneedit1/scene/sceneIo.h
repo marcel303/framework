@@ -67,6 +67,11 @@ bool parseSceneFromLines(
 	LineReader & line_reader,
 	const char * basePath,
 	Scene & out_scene);
+bool parseComponentFromLines(
+	const TypeDB & typeDB,
+	LineReader & line_reader,
+	ComponentBase & out_component);
+
 bool parseSceneFromFile(
 	const TypeDB & typeDB,
 	const char * path,
@@ -86,6 +91,11 @@ bool parseSceneObjectStructureFromLines(
 bool writeSceneToLines(
 	const TypeDB & typeDB,
 	const Scene & scene,
+	LineWriter & line_writer,
+	const int indent);
+bool writeComponentToLines(
+	const TypeDB & typeDB,
+	const ComponentBase & component,
 	LineWriter & line_writer,
 	const int indent);
 bool writeSceneEntityToLines(

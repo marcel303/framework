@@ -1,6 +1,8 @@
 #include "helpers2.h"
 #include "scene.h"
-#include "scene_fromText.h"
+#include "sceneIo.h"
+
+#include "lineReader.h"
 
 #include "Log.h"
 #include "Path.h"

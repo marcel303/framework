@@ -94,3 +94,6 @@ bool parseTemplateFromFileAndRecursivelyOverlayBaseTemplates(
 	const bool allowAddingComponents,
 	const bool allowAddingProperties,
 	Template & out_template);
+
+bool expandComponentTypeName(const char * typeName, char * out_typeName, const int out_typeNameSize);
+bool shrinkComponentTypeName(const char * typeName, char * out_typeName, const int out_typeNameSize);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 // forward declarations
 
@@ -18,3 +19,6 @@ bool pasteSceneNodeFromLines(const TypeDB & typeDB, LineReader & line_reader, Sc
 bool copySceneNodeTreeToLines(const TypeDB & typeDB, const Scene & scene, const int rootNodeId, LineWriter & line_writer, int indent);
 bool pasteSceneNodeTreeFromLines(const TypeDB & typeDB, LineReader & line_reader, Scene & scene);
 
+// clipboard utilities
+
+std::vector<std::string> linesFromClipboard();

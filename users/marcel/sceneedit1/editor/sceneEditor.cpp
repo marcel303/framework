@@ -13,6 +13,7 @@
 #include "scene.h"
 #include "sceneIo.h"
 #include "sceneNodeComponent.h"
+#include "templateIo.h"
 
 // ecs-component
 #include "componentType.h"
@@ -481,6 +482,51 @@ void SceneEditor::editNode(const int nodeId)
 	ImGui::PopID();
 }
 
+void SceneEditor::updateClipboardInfo()
+{
+	clipboardInfo = ClipboardInfo();
+	
+	// fetch lines from clipboard
+	
+	clipboardInfo.lines = linesFromClipboard();
+	
+	// scan through the clipboard contents to see what's stored inside
+	
+	LineReader line_reader(clipboardInfo.lines, 0, 0);
+	line_reader.disable_jump_check();
+	
+	for (;;)
+	{
+		const char * id = line_reader.get_next_line(true);
+		
+		if (id == nullptr)
+			break;
+		
+		// check if we have a component inside the clipboard, and remember its type if so
+		
+		if (strcmp(id, "component") == 0)
+		{
+			line_reader.push_indent();
+			{
+				const char * typeName = line_reader.get_next_line(true);
+				
+				if (typeName != nullptr && typeName[0] != '\t')
+				{
+					char full_name[1024];
+					if (expandComponentTypeName(typeName, full_name, sizeof(full_name)))
+					{
+						clipboardInfo.hasComponent = true;
+						clipboardInfo.componentTypeName = full_name;
+						clipboardInfo.component_lineIndex = line_reader.get_current_line_index();
+						clipboardInfo.component_lineIndent = line_reader.get_current_indentation_level() + 1;
+					}
+				}
+			}
+			line_reader.pop_indent();
+		}
+	}
+}
+
 bool SceneEditor::pasteNodeFromText(const int parentId, LineReader & line_reader)
 {
 	SceneNode * childNode = new SceneNode();
@@ -636,13 +682,13 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 		performAction_copy(true);
 	}
 	
-	if (ImGui::MenuItem("Paste as child", nullptr, false, SDL_HasClipboardText()))
+	if (ImGui::MenuItem("Paste as child", nullptr, false, clipboardInfo.lines.empty() == false))
 	{
 		result = kNodeStructureContextMenuResult_NodePaste;
 		performAction_paste(node.id);
 	}
 	
-	if (ImGui::MenuItem("Paste as sibling", nullptr, false, SDL_HasClipboardText()))
+	if (ImGui::MenuItem("Paste as sibling", nullptr, false, clipboardInfo.lines.empty() == false))
 	{
 		result = kNodeStructureContextMenuResult_NodePaste;
 		performAction_paste(node.parentId);
@@ -667,6 +713,9 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 		sceneNodeComponent->name = String::FormatC("Node %d", childNode->id);
 		childNode->components.add(sceneNodeComponent);
 		
+		auto * transformComponent = s_transformComponentMgr.createComponent(childNode->components.id);
+		childNode->components.add(transformComponent);
+		
 		if (childNode->initComponents() == false)
 		{
 			childNode->freeComponents();
@@ -676,7 +725,12 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 		}
 		else
 		{
-			deferred.nodesToAdd.push_back(childNode);
+			deferredBegin();
+			{
+				deferred.nodesToAdd.push_back(childNode);
+				deferred.nodesToSelect.insert(childNode->id);
+			}
+			deferredEnd();
 		}
 	}
 	
@@ -688,6 +742,90 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 	//logDebug("context window for %d", node.id);
 	
 	NodeContextMenuResult result = kNodeContextMenuResult_None;
+	
+	if (selectedComponent != nullptr)
+	{
+		if (ImGui::MenuItem("Copy"))
+		{
+			bool result = true;
+			
+			LineWriter line_writer;
+			
+			int indent = 0;
+			
+			line_writer.append_indented_line(indent, "component");
+			
+			indent++;
+			{
+				result &= writeComponentToLines(*typeDB, *selectedComponent, line_writer, indent);
+			}
+			indent--;
+			
+			if (result)
+			{
+				const std::string text = line_writer.to_string();
+				SDL_SetClipboardText(text.c_str());
+			}
+		}
+	}
+	
+	// check if we have a component inside the clipboard. if so, add options for pasting the component either as a new component or just its values
+	
+	bool hasComponentOfType = false;
+	
+	if (clipboardInfo.hasComponent)
+	{
+		// see if we already have a component of this type. we use this information later to show the correct menu option ('paste as new component' vs 'paste component values')
+		
+		for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
+		{
+			auto * componentType = findComponentType(component->typeIndex());
+			if (componentType != nullptr && strcmp(componentType->typeName, clipboardInfo.componentTypeName.c_str()) == 0)
+				hasComponentOfType = true;
+		}
+	}
+	
+	if (ImGui::MenuItem("Paste as new component", nullptr, false, clipboardInfo.hasComponent && !hasComponentOfType))
+	{
+		LineReader line_reader(clipboardInfo.lines, clipboardInfo.component_lineIndex, clipboardInfo.component_lineIndent);
+		
+		auto * componentType = findComponentType(clipboardInfo.componentTypeName.c_str());
+		
+		if (componentType != nullptr)
+		{
+			auto * component = componentType->componentMgr->createComponent(node.components.id);
+			
+			if (parseComponentFromLines(*typeDB, line_reader, *component) == false || component->init() == false)
+				componentType->componentMgr->destroyComponent(node.components.id);
+			else
+				node.components.add(component);
+		}
+	}
+	
+	if (ImGui::MenuItem("Paste component values", nullptr, false, clipboardInfo.hasComponent && hasComponentOfType))
+	{
+		LineReader line_reader(clipboardInfo.lines, clipboardInfo.component_lineIndex, clipboardInfo.component_lineIndent);
+		
+		for (auto * component = node.components.head; component != nullptr; component = component->next_in_set)
+		{
+			auto * componentType = findComponentType(component->typeIndex());
+			
+			if (componentType != nullptr && strcmp(componentType->typeName, clipboardInfo.componentTypeName.c_str()) == 0)
+			{
+				parseComponentFromLines(*typeDB, line_reader, *component);
+				
+				for (auto * member = componentType->members_head; member != nullptr; member = member->next)
+				{
+					if (!member->isVector)
+					{
+						Member_Scalar * member_scalar = static_cast<Member_Scalar*>(member);
+						void * member_ptr = member_scalar->scalar_access(component);
+						component->propertyChanged(member_ptr);
+					}
+				}
+			}
+		}
+	}
 	
 	if (selectedComponent != nullptr && !selectedComponent->isType<SceneNodeComponent>())
 	{
@@ -1073,6 +1211,8 @@ int SceneEditor::addNodesFromScene_v1(const int parentId)
 
 void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 {
+	updateClipboardInfo();
+	
 	int viewSx;
 	int viewSy;
 	framework.getCurrentViewportSize(viewSx, viewSy);
@@ -1228,7 +1368,7 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 					performAction_copy(false);
 				if (ImGui::MenuItem("Copy tree", nullptr, false, !selectedNodes.empty()))
 					performAction_copy(true);
-				if (ImGui::MenuItem("Paste"))
+				if (ImGui::MenuItem("Paste", nullptr, false, clipboardInfo.lines.empty() == false))
 					performAction_paste(scene.rootNodeId);
 				ImGui::Separator();
 				
@@ -1572,7 +1712,7 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 	
 	camera.tick(dt, inputIsCaptured, cameraIsActive == false);
 	
-	//
+	// perform debug checks
 	
 #if defined(DEBUG)
 	validateNodeReferences();

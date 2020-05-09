@@ -49,7 +49,7 @@ int main(int argc, char * argv[])
 	const char * path = "textfiles/scene-v1.txt";
 	
 	scene.createRootNode();
-	if (parseSceneFromFile(typeDB, path, scene) == false || scene.init() == false)
+	if (parseSceneFromFile(typeDB, path, scene) == false || scene.initComponents() == false)
 	{
 		scene.freeAllNodesAndComponents();
 		scene.createRootNode();
@@ -71,7 +71,7 @@ int main(int argc, char * argv[])
 			scene.freeAllNodesAndComponents();
 
 			scene.createRootNode();
-			if (parseSceneFromFile(typeDB, path, scene) == false || scene.init() == false)
+			if (parseSceneFromFile(typeDB, path, scene) == false || scene.initComponents() == false)
 			{
 				scene.freeAllNodesAndComponents();
 				scene.createRootNode();

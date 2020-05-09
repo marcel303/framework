@@ -120,6 +120,18 @@ struct SceneEditor
 		std::string currentVersion;
 	} undo;
 	
+	struct ClipboardInfo
+	{
+	// todo : store if we got a node or a node tree inside the clipboard
+		std::vector<std::string> lines;
+		bool hasNode = false;
+		bool hasNodeTree = false;
+		bool hasComponent = false;
+		std::string componentTypeName;
+		int component_lineIndex = -1;
+		int component_lineIndent = -1;
+	} clipboardInfo;
+	
 	//
 	
 	void init(TypeDB * in_typeDB);
@@ -148,6 +160,8 @@ struct SceneEditor
 	void undoReset(); // reset the undo history
 	
 	void editNode(const int nodeId);
+	
+	void updateClipboardInfo();
 	
 	bool pasteNodeFromText(const int parentId, LineReader & line_reader);
 	bool pasteNodeTreeFromText(const int parentId, LineReader & line_reader);

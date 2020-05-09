@@ -9,6 +9,7 @@
 #include "scene.h"
 #include "scene_clipboardHelpers.h"
 #include "TextIO.h"
+#include <SDL2/SDL.h> // SDL_GetClipboardText
 
 bool copySceneNodeToLines(const TypeDB & typeDB, const SceneNode & node, LineWriter & line_writer, int indent)
 {
@@ -142,4 +143,26 @@ bool pasteSceneNodeTreeFromLines(const TypeDB & typeDB, LineReader & line_reader
 	result &= parseSceneFromLines(typeDB, line_reader, "", scene);
 	
 	return result;
+}
+
+//
+
+std::vector<std::string> linesFromClipboard()
+{
+	const char * text = SDL_GetClipboardText();
+
+	if (text == nullptr)
+		return { };
+	
+	// convert text to lines
+	
+	std::vector<std::string> lines;
+	TextIO::LineEndings lineEndings;
+	if (TextIO::loadText(text, lines, lineEndings) == false)
+	{
+		LOG_ERR("failed to load clipboard text into lines", 0);
+		return { };
+	}
+	
+	return lines;
 }

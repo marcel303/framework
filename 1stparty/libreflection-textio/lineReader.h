@@ -18,6 +18,7 @@ class LineReader
 	int indentation_level;
 	int initial_indentation_level;
 	bool do_dtor_check;
+	bool do_jump_check;
 	
 public:
 	LineReader(
@@ -31,6 +32,7 @@ public:
 	int get_current_indentation_level() const { return indentation_level; }
 	
 	void disable_dtor_check() { do_dtor_check = false; }
+	void disable_jump_check() { do_jump_check = false; }
 	
 	void push_indent()
 	{

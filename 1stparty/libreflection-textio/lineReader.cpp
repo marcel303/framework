@@ -37,6 +37,7 @@ LineReader::LineReader(
 	, indentation_level(in_indentation_level)
 	, initial_indentation_level(in_indentation_level)
 	, do_dtor_check(true)
+	, do_jump_check(true)
 {
 }
 
@@ -73,7 +74,10 @@ const char * LineReader::get_next_line(const bool skipEmptyLinesAndComments, con
 		
 		// check we aren't skipping more than one indentation level
 		
-		Assert(!checkForIndentationJump || next_level <= indentation_level + 1);
+		Assert(!checkForIndentationJump || !do_jump_check || next_level <= indentation_level + 1);
+		
+		if (checkForIndentationJump && next_level > indentation_level + 1)
+			return nullptr;
 		
 		// return line with appropriate offset to compensate for indentation
 		

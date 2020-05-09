@@ -62,60 +62,10 @@ bool parseTemplateFromLines(
 		
 		const char * typeName = line;
 		
-		// apply conversion to the type name:
-		// 'transform' becomes TransformComponent
-		// 'rotate-transform' becomes RotateTransformComponent
-		// 'TransformComponent' remains TransformComponent, due to it ending with 'Component'
-		
-		bool hasComponentSuffix = false;
-		
-		const char * componentSuffix = "Component";
-		
-		// detect if the type name already has a 'Component' suffix
-		
-		if (strstr(typeName, componentSuffix) != nullptr)
-			hasComponentSuffix = true;
-	
 		char full_name[1024];
-		int length = 0;
 		
-		// if the type name has a 'Component' suffix, just keep the type name
-		// otherwise, apply conversion
-		
-		if (hasComponentSuffix)
-		{
-			for (int i = 0; typeName[i] != 0 && !isspace(typeName[i]) && length < 1024; ++i)
-				full_name[length++] = typeName[i];
-		}
-		else
-		{
-			bool capitalize = true;
-			
-			for (int i = 0; typeName[i] != 0 && !isspace(typeName[i]) && length < 1024; ++i)
-			{
-				if (typeName[i] == '-')
-					capitalize = true;
-				else if (capitalize)
-				{
-					capitalize = false;
-					full_name[length++] = toupper(typeName[i]);
-				}
-				else
-					full_name[length++] = typeName[i];
-			}
-		
-			for (int i = 0; componentSuffix[i] != 0 && length < 1024; ++i)
-				full_name[length++] = componentSuffix[i];
-		}
-		
-		if (length < 1024)
-			full_name[length++] = 0;
-		
-		if (length == 1024)
-		{
-			LOG_ERR("type name is too long", 0);
+		if (expandComponentTypeName(typeName, full_name, sizeof(full_name)) == false)
 			return false;
-		}
 		
 		// find the optional component id at the end
 		
@@ -415,4 +365,127 @@ bool parseTemplateFromFileAndRecursivelyOverlayBaseTemplates(
 		fetchTemplate,
 		(void*)directory.c_str(),
 		out_template);
+}
+
+//
+
+bool expandComponentTypeName(const char * typeName, char * out_typeName, const int out_typeNameSize)
+{
+	// apply conversion to the type name:
+	// 'transform' becomes TransformComponent
+	// 'rotate-transform' becomes RotateTransformComponent
+	// 'TransformComponent' remains TransformComponent, due to it ending with 'Component'
+
+	int length = 0;
+	
+	// detect if the type name already has a 'Component' suffix
+
+	const char * componentSuffixStr = "Component";
+	const char * componentSuffix = strstr(typeName, componentSuffixStr);
+	const int componentSuffixLength = 9;
+	
+	const bool hasComponentSuffix =
+		componentSuffix != nullptr &&
+		(
+			componentSuffix[componentSuffixLength] == 0 ||
+			isspace(componentSuffix[componentSuffixLength])
+		);
+
+	// if the type name has a 'Component' suffix, just keep the type name
+	// otherwise, apply conversion
+
+	if (hasComponentSuffix)
+	{
+		for (int i = 0; typeName[i] != 0 && !isspace(typeName[i]) && length < out_typeNameSize; ++i)
+			out_typeName[length++] = typeName[i];
+	}
+	else
+	{
+		bool capitalize = true;
+		
+		for (int i = 0; typeName[i] != 0 && !isspace(typeName[i]) && length < out_typeNameSize; ++i)
+		{
+			if (typeName[i] == '-')
+				capitalize = true;
+			else if (capitalize)
+			{
+				capitalize = false;
+				out_typeName[length++] = toupper(typeName[i]);
+			}
+			else
+				out_typeName[length++] = typeName[i];
+		}
+	
+		for (int i = 0; componentSuffixStr[i] != 0 && length < out_typeNameSize; ++i)
+			out_typeName[length++] = componentSuffixStr[i];
+	}
+
+	if (length < out_typeNameSize)
+		out_typeName[length++] = 0;
+
+	if (length == out_typeNameSize)
+	{
+		LOG_ERR("type name is too long", 0);
+		return false;
+	}
+	
+	return true;
+}
+
+bool shrinkComponentTypeName(const char * typeName, char * out_typeName, const int out_typeNameSize)
+{
+	int length = 0;
+	
+	// check if the component type name ends with 'Component'. in this case
+	// we'll want to write a short hand component name which is easier
+	// to hand-edit
+
+	const char * componentSuffix = strstr(typeName, "Component");
+	const int componentSuffixLength = 9;
+	
+	const bool hasComponentSuffix =
+		componentSuffix != nullptr &&
+		(
+			componentSuffix[componentSuffixLength] == 0 ||
+			isspace(componentSuffix[componentSuffixLength])
+		);
+	
+	if (hasComponentSuffix)
+	{
+		// make a short version of the component type name
+		// e.g. RotateTransformComponent becomes 'rotate-transform'
+		
+		for (int i = 0; typeName + i < componentSuffix && length < out_typeNameSize; ++i)
+		{
+			if (isupper(typeName[i]))
+			{
+				if (i != 0)
+					out_typeName[length++] = '-';
+				
+				out_typeName[length++] = tolower(typeName[i]);
+			}
+			else
+				out_typeName[length++] = typeName[i];
+		}
+	}
+	else
+	{
+		// write the full name if the type name doesn't match the pattern
+
+		LOG_WRN("writing full component type name. this is unexpected. typeName=%s", typeName);
+		
+		for (int i = 0; typeName[i] != 0 && !isspace(typeName[i]) && length < out_typeNameSize; ++i)
+			out_typeName[length++] = typeName[i];
+	}
+	
+	if (length < out_typeNameSize)
+		out_typeName[length++] = 0;
+
+	if (length == out_typeNameSize)
+	{
+		LOG_ERR("type name is too long", 0);
+		return false;
+	}
+	
+	return true;
 }
