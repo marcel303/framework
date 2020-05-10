@@ -95,6 +95,8 @@ void SceneEditor::init(TypeDB * in_typeDB)
 	camera.firstPerson.height = 0.f;
 
 	guiContext.init();
+	
+	undoReset();
 }
 
 void SceneEditor::shut()
@@ -195,40 +197,21 @@ void SceneEditor::removeNodeSubTree(const int nodeId)
 {
 	AssertMsg(deferred.isProcessing, "this method may only be called by deferredEnd!", 0);
 	
-	auto & node = scene.getNode(nodeId);
+	std::vector<int> removedNodeIds;
+	scene.removeNodeSubTree(nodeId, &removedNodeIds);
 	
-	// recursively remove child nodes
-	
-	while (!node.childNodeIds.empty())
+	for (auto nodeId : removedNodeIds)
 	{
-		const int childNodeId = node.childNodeIds.front();
-		removeNodeSubTree(childNodeId);
+		// update node references
+		
+		if (nodeId == scene.rootNodeId)
+			scene.rootNodeId = -1;
+		
+		selectedNodes.erase(nodeId);
+		
+		deferred.nodesToRemove.erase(nodeId);
+		deferred.nodesToSelect.erase(nodeId);
 	}
-	Assert(node.childNodeIds.empty());
-	
-	// remove our reference from our parent
-	
-	if (node.parentId != -1)
-	{
-		auto & parentNode = scene.getNode(node.parentId);
-		auto childNodeId_itr = std::find(parentNode.childNodeIds.begin(), parentNode.childNodeIds.end(), node.id);
-		Assert(childNodeId_itr != parentNode.childNodeIds.end());
-		parentNode.childNodeIds.erase(childNodeId_itr);
-	}
-	
-	// free the node
-	
-	scene.freeNode(nodeId);
-	
-	// update node references
-	
-	if (nodeId == scene.rootNodeId)
-		scene.rootNodeId = -1;
-	
-	selectedNodes.erase(nodeId);
-	
-	deferred.nodesToRemove.erase(nodeId);
-	deferred.nodesToSelect.erase(nodeId);
 }
 
 void SceneEditor::addNodesToAdd()
@@ -283,8 +266,10 @@ void SceneEditor::selectNodesToSelect(const bool append)
 		for (auto nodeId : deferred.nodesToSelect)
 		{
 			selectedNodes.insert(nodeId);
-			markNodeOpenUntilRoot(nodeId);
 			nodeToGiveFocus = nodeId;
+			
+			auto & node = scene.getNode(nodeId);
+			markNodeOpenUntilRoot(node.parentId);
 		}
 		
 		deferred.nodesToSelect.clear();
@@ -458,7 +443,11 @@ void SceneEditor::editNode(const int nodeId)
 			
 				if (result == kNodeContextMenuResult_ComponentShouldBeRemoved)
 				{
-					freeComponentInComponentSet(node.components, component);
+					undoCaptureBegin();
+					{
+						freeComponentInComponentSet(node.components, component);
+					}
+					undoCaptureEnd();
 				}
 			#endif
 			}
@@ -688,13 +677,13 @@ SceneEditor::NodeStructureContextMenuResult SceneEditor::doNodeStructureContextM
 		performAction_paste(node.id);
 	}
 	
-	if (ImGui::MenuItem("Paste as sibling", nullptr, false, clipboardInfo.lines.empty() == false))
+	if (ImGui::MenuItem("Paste as sibling", nullptr, false, clipboardInfo.lines.empty() == false && node.parentId != -1))
 	{
 		result = kNodeStructureContextMenuResult_NodePaste;
 		performAction_paste(node.parentId);
 	}
 	
-	if (ImGui::MenuItem("Remove"))
+	if (ImGui::MenuItem("Remove", nullptr, false, node.parentId != -1))
 	{
 		result = kNodeStructureContextMenuResult_NodeQueuedForRemove;
 		
@@ -795,10 +784,14 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 		{
 			auto * component = componentType->componentMgr->createComponent(node.components.id);
 			
-			if (parseComponentFromLines(*typeDB, line_reader, *component) == false || component->init() == false)
-				componentType->componentMgr->destroyComponent(node.components.id);
-			else
-				node.components.add(component);
+			undoCaptureBegin();
+			{
+				if (parseComponentFromLines(*typeDB, line_reader, *component) == false || component->init() == false)
+					componentType->componentMgr->destroyComponent(node.components.id);
+				else
+					node.components.add(component);
+			}
+			undoCaptureEnd();
 		}
 	}
 	
@@ -812,17 +805,23 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 			
 			if (componentType != nullptr && strcmp(componentType->typeName, clipboardInfo.componentTypeName.c_str()) == 0)
 			{
-				parseComponentFromLines(*typeDB, line_reader, *component);
-				
-				for (auto * member = componentType->members_head; member != nullptr; member = member->next)
+				undoCaptureBegin();
 				{
-					if (!member->isVector)
+					parseComponentFromLines(*typeDB, line_reader, *component);
+					
+					for (auto * member = componentType->members_head; member != nullptr; member = member->next)
 					{
-						Member_Scalar * member_scalar = static_cast<Member_Scalar*>(member);
-						void * member_ptr = member_scalar->scalar_access(component);
-						component->propertyChanged(member_ptr);
+						if (!member->isVector)
+						{
+							Member_Scalar * member_scalar = static_cast<Member_Scalar*>(member);
+							void * member_ptr = member_scalar->scalar_access(component);
+							component->propertyChanged(member_ptr);
+						}
 					}
 				}
+				undoCaptureEnd();
+				
+				break;
 			}
 		}
 	}
@@ -858,12 +857,16 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 				{
 					result = kNodeContextMenuResult_ComponentAdded;
 					
-					auto * component = componentType->componentMgr->createComponent(node.components.id);
-					
-					if (component->init())
-						node.components.add(component);
-					else
-						componentType->componentMgr->destroyComponent(node.components.id);
+					undoCaptureBegin();
+					{
+						auto * component = componentType->componentMgr->createComponent(node.components.id);
+						
+						if (component->init())
+							node.components.add(component);
+						else
+							componentType->componentMgr->destroyComponent(node.components.id);
+					}
+					undoCaptureEnd();
 				}
 			}
 		}
@@ -1819,6 +1822,31 @@ void SceneEditor::performAction_load()
 #endif
 }
 
+static std::set<std::string> s_capturedSelectedNodes; // fixme : make local var
+static void backupSelectedNodes(SceneEditor & sceneEditor)
+{
+	Assert(s_capturedSelectedNodes.empty());
+	sceneEditor.scene.assignAutoGeneratedNodeNames();
+	for (auto nodeId : sceneEditor.selectedNodes)
+	{
+		auto & node = sceneEditor.scene.getNode(nodeId);
+		s_capturedSelectedNodes.insert(node.name);
+	}
+}
+static void restoreSelectedNodes(SceneEditor & sceneEditor)
+{
+	std::map<std::string, int> nodeNameToNodeId;
+	for (auto & node_itr : sceneEditor.scene.nodes)
+		nodeNameToNodeId.insert({ node_itr.second->name, node_itr.first });
+	for (auto & nodeName : s_capturedSelectedNodes)
+	{
+		auto i = nodeNameToNodeId.find(nodeName);
+		Assert(i != nodeNameToNodeId.end());
+		sceneEditor.selectedNodes.insert(i->second);
+	}
+	s_capturedSelectedNodes.clear();
+}
+
 void SceneEditor::performAction_undo()
 {
 	if (undo.currentVersionIndex > 0)
@@ -1856,17 +1884,21 @@ void SceneEditor::performAction_undo()
 				}
 				else
 				{
-					Assert(!deferred.isProcessing && deferred.isFlushed());
-					deferred.isProcessing = true;
+					backupSelectedNodes(*this);
 					{
-						for (auto & node_itr : scene.nodes)
-							deferred.nodesToRemove.insert(node_itr.second->id);
+						Assert(!deferred.isProcessing && deferred.isFlushed());
+						deferred.isProcessing = true;
+						{
+							for (auto & node_itr : scene.nodes)
+								deferred.nodesToRemove.insert(node_itr.second->id);
+							
+							removeNodesToRemove();
+						}
+						deferred.isProcessing = false;
 						
-						removeNodesToRemove();
+						scene = tempScene;
 					}
-					deferred.isProcessing = false;
-					
-					scene = tempScene;
+					restoreSelectedNodes(*this);
 					
 					undo.currentVersion = text;
 					undo.currentVersionIndex--;
@@ -1916,17 +1948,21 @@ void SceneEditor::performAction_redo()
 				}
 				else
 				{
-					Assert(!deferred.isProcessing && deferred.isFlushed());
-					deferred.isProcessing = true;
+					backupSelectedNodes(*this);
 					{
-						for (auto & node_itr : scene.nodes)
-							deferred.nodesToRemove.insert(node_itr.second->id);
+						Assert(!deferred.isProcessing && deferred.isFlushed());
+						deferred.isProcessing = true;
+						{
+							for (auto & node_itr : scene.nodes)
+								deferred.nodesToRemove.insert(node_itr.second->id);
+							
+							removeNodesToRemove();
+						}
+						deferred.isProcessing = false;
 						
-						removeNodesToRemove();
+						scene = tempScene;
 					}
-					deferred.isProcessing = false;
-					
-					scene = tempScene;
+					restoreSelectedNodes(*this);
 					
 					undo.currentVersion = text;
 					undo.currentVersionIndex++;
@@ -2054,7 +2090,7 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 				{
 					const char * id = line_reader.get_next_line(true);
 					
-					if (id == nullptr)
+					if (id == nullptr || id[0] == '\t')
 						break;
 
 					if (strcmp(id, "sceneNode") == 0)
@@ -2077,6 +2113,12 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					{
 						logError("unknown clipboard item: %s", id);
 						result &= false;
+						
+						line_reader.push_indent();
+						{
+							line_reader.skip_current_section();
+						}
+						line_reader.pop_indent();
 					}
 				}
 			}
@@ -2250,8 +2292,68 @@ void SceneEditor::drawEditorGizmos() const
 #endif
 }
 
+void SceneEditor::drawEditorSelectedNodeLabels() const
+{
+	int viewportSx = 0;
+	int viewportSy = 0;
+	framework.getCurrentViewportSize(viewportSx, viewportSy);
+	
+	Mat4x4 projectionMatrix;
+	camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
+
+	Mat4x4 viewMatrix;
+	camera.calculateViewMatrix(viewMatrix);
+	
+	const Mat4x4 modelViewProjection = projectionMatrix * viewMatrix;
+	
+	for (auto nodeId : selectedNodes)
+	{
+		auto & node = scene.getNode(nodeId);
+		
+		auto * sceneNodeComponent = node.components.find<SceneNodeComponent>();
+		Assert(sceneNodeComponent != nullptr);
+		
+		float w;
+		Vec2 p = transformToScreen(modelViewProjection, sceneNodeComponent->objectToWorld.GetTranslation(), w);
+		
+		if (w > 0.f)
+		{
+			p[1] -= 40;
+			
+			const char * text = sceneNodeComponent->name.c_str();
+			const float textSize = 12.f;
+			
+			float sx;
+			float sy;
+			measureText(textSize, sx, sy, "%s", text);
+			
+			sx = (sx + 6.f) / 2.f;
+			sy = 20.f / 2.f;
+			
+			hqBegin(HQ_FILLED_ROUNDED_RECTS);
+			{
+				setColor(20, 20, 20);
+				hqFillRoundedRect(p[0] - sx, p[1] - sy, p[0] + sx, p[1] + sy, 3.f);
+			}
+			hqEnd();
+			
+			hqBegin(HQ_STROKED_ROUNDED_RECTS);
+			{
+				setColor(60, 60, 60);
+				hqStrokeRoundedRect(p[0] - sx, p[1] - sy, p[0] + sx, p[1] + sy, 3.f, 1.f);
+			}
+			hqEnd();
+			
+			setColor(200, 200, 200);
+			drawText(p[0], p[1], 12, 0, 0, "%s", text);
+		}
+	}
+}
+
 void SceneEditor::drawEditor() const
 {
+	drawEditorSelectedNodeLabels();
+	
 	const_cast<SceneEditor*>(this)->guiContext.draw();
 }
 

@@ -225,6 +225,7 @@ struct SceneEditor
 	void drawEditorOpaque() const;
 	void drawEditorTranslucent() const;
 	void drawEditorGizmos() const;
+	void drawEditorSelectedNodeLabels() const;
 	
 	void drawEditor() const;
 	

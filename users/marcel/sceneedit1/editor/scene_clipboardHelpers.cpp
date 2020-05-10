@@ -83,16 +83,6 @@ bool pasteSceneNodeFromLines(const TypeDB & typeDB, LineReader & line_reader, Sc
 #include "sceneIo.h"
 #include "StringEx.h"
 
-static void flattenSceneNodeTree(const Scene & scene, const int rootNodeId, std::vector<int> & result)
-{
-	result.push_back(rootNodeId);
-	
-	auto & node = scene.getNode(rootNodeId);
-	
-	for (auto childNodeId : node.childNodeIds)
-		flattenSceneNodeTree(scene, childNodeId, result);
-}
-
 bool copySceneNodeTreeToLines(const TypeDB & typeDB, const Scene & scene, const int rootNodeId, LineWriter & line_writer, int indent)
 {
 	bool result = true;
@@ -100,7 +90,7 @@ bool copySceneNodeTreeToLines(const TypeDB & typeDB, const Scene & scene, const 
 	// gather nodes
 	
 	std::vector<int> nodeIds;
-	flattenSceneNodeTree(scene, rootNodeId, nodeIds);
+	scene.collectNodeSubTreeNodeIds(rootNodeId, nodeIds);
 	
 	// write entities
 	
