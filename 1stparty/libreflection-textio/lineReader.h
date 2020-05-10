@@ -31,6 +31,8 @@ public:
 	int get_current_line_index() const { return line_index; }
 	int get_current_indentation_level() const { return indentation_level; }
 	
+	void skip_current_section();
+	
 	void disable_dtor_check() { do_dtor_check = false; }
 	void disable_jump_check() { do_jump_check = false; }
 	

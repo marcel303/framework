@@ -86,3 +86,14 @@ const char * LineReader::get_next_line(const bool skipEmptyLinesAndComments, con
 		return line + indentation_level;
 	}
 }
+
+void LineReader::skip_current_section()
+{
+	for (;;)
+	{
+		const char * line = get_next_line(true, false);
+		
+		if (line == nullptr)
+			break;
+	}
+}
