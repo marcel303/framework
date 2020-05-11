@@ -16,6 +16,12 @@ static FILE * f = nullptr;
 
 struct S
 {
+	S & operator>>(const char * text)
+	{
+		fprintf(f, "%s", text);
+		return *this;
+	}
+	
 	S & operator<<(const char * text)
 	{
 		fprintf(f, "%s\n", text);
@@ -30,7 +36,7 @@ static void mkdir(const char * path)
 	mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 }
 
-static const char * s_androidManifestTemplate =
+static const char * s_androidManifestTemplateForApp =
 R"MANIFEST(<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.chibi.generated.lib" android:versionCode="1" android:versionName="1.0" android:installLocation="auto">
 
@@ -71,10 +77,30 @@ R"MANIFEST(<?xml version="1.0" encoding="utf-8"?>
 	</application>
 </manifest>)MANIFEST";
 
+static const char * s_androidManifestTemplateForLib =
+R"MANIFEST(<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.chibi.generated.lib" android:versionCode="1" android:versionName="1.0" android:installLocation="auto">
+
+	<!-- Tell the system this app requires OpenGL ES 3.1. -->
+	<uses-feature android:glEsVersion="0x00030001" android:required="true"/>
+
+	<!-- Tell the system this app works in either 3dof or 6dof mode -->
+	<uses-feature android:name="android.hardware.vr.headtracking" android:required="false" />
+
+	<!-- Network access needed for OVRMonitor -->
+	<uses-permission android:name="android.permission.INTERNET" />
+
+	<!-- Volume Control -->
+	<uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+</manifest>)MANIFEST";
+
 struct Library
 {
 	std::string name;
-	bool shared = false;
+	bool is_app = false;
+	bool is_shared = false;
+	std::vector<std::string> files;
 	std::vector<std::string> deps;
 };
 
@@ -89,21 +115,36 @@ int main(int argc, char * argv[])
 	{
 		libs.resize(3);
 		
-		libs[0].name = "testlib1";
-		libs[0].shared = true;
-		libs[0].deps.push_back("testlib3");
+		// add an app and two libraries, one shared and one static
 		
-		libs[1].name = "testlib2";
-		libs[2].shared = false;
+		libs[0].name = "testapp1";
+		libs[0].is_app = true;
+		libs[0].is_shared = true;
+		libs[0].files.push_back("/Users/thecat/repos/ovr-quest/cubes1/Src/framework.cpp");
+		libs[0].files.push_back("/Users/thecat/repos/ovr-quest/cubes1/Src/opengl-ovr.cpp");
+		libs[0].files.push_back("/Users/thecat/repos/ovr-quest/cubes1/Src/ovrFramebuffer.cpp");
+		libs[0].files.push_back("/Users/thecat/repos/ovr-quest/cubes1/Src/VrCubeWorld_SurfaceView.cpp");
+		libs[0].deps.push_back("testlib1");
+		libs[0].deps.push_back("testlib2");
 		
-		libs[2].name = "testlib3";
-		libs[2].shared = true;
+		libs[1].name = "testlib1";
+		libs[1].is_app = false;
+		libs[1].is_shared = true;
+		libs[1].files.push_back("/Users/thecat/repos/ovr-quest/cubes1/Src/framework.cpp");
+		libs[1].files.push_back("/Users/thecat/repos/ovr-quest/cubes1/Src/opengl-ovr.cpp");
+		
+		libs[2].name = "testlib2";
+		libs[2].is_app = false;
+		libs[2].is_shared = false;
+		libs[2].files.push_back("/Users/thecat/repos/ovr-quest/cubes1/Src/framework.cpp");
+		libs[2].files.push_back("/Users/thecat/repos/ovr-quest/cubes1/Src/opengl-ovr.cpp");
 	}
 
 	// generate root build.gradle file
 
 	{
 		f = fopen("build.gradle", "wt");
+		
 s << "buildscript {";
 s << "  repositories {";
 s << "    google()";
@@ -121,6 +162,7 @@ s << "        google()";
 s << "      jcenter()";
 s << "    }";
 s << "}";
+
 		fclose(f);
 		f = nullptr;
 	}
@@ -130,13 +172,10 @@ s << "}";
 	{
 		f = fopen("settings.gradle", "wt");
 		
-		s << "rootProject.name = 'Project'";
-		s << "";
-		
-		for (auto & lib : libs)
-		{
-			s << String::FormatC("include '%s:Projects:Android'", lib.name.c_str()).c_str();
-		}
+s << "rootProject.name = 'Project'";
+s << "";
+for (auto & lib : libs)
+	s >> "include '" >> lib.name.c_str() << ":Projects:Android'";
 		
 		fclose(f);
 		f = nullptr;
@@ -148,21 +187,6 @@ s << "}";
 		chdir(lib.name.c_str());
 		
 		const std::string appId = std::string("com.chibi.generated.") + lib.name;
-		
-	#if true
-		// generate a fake source file for each library
-		{
-			mkdir("Src");
-			chdir("Src");
-			
-			f = fopen("file.cpp", "wt");
-s << "#include <stdio.h>";
-			fclose(f);
-			f = nullptr;
-			
-			chdir("..");
-		}
-	#endif
 	
 		mkdir("Projects");
 		chdir("Projects");
@@ -174,9 +198,15 @@ s << "#include <stdio.h>";
 
 		{
 			f = fopen("build.gradle", "wt");
-s << "apply plugin: 'com.android.application'";
+			
+if (lib.is_app)
+	s << "apply plugin: 'com.android.application'";
+else
+	s << "apply plugin: 'com.android.library'";
 s << "";
 s << "dependencies {";
+for (auto & dep : lib.deps)
+	s >> "  implementation project(':" >> dep.c_str() << ":Projects:Android')";
 s << "}";
 s << "";
 s << "android {";
@@ -184,20 +214,23 @@ s << "  // This is the name of the generated apk file, which will have";
 s << "  // -debug.apk or -release.apk appended to it.";
 s << "  // The filename doesn't effect the Android installation process.";
 s << "  // Use only letters to remain compatible with the package name.";
-s << String::FormatC("  project.archivesBaseName = \"%s\"", lib.name.c_str()).c_str();
-s << "";
+s >> "  project.archivesBaseName = \"" >> lib.name.c_str() << "\"";
+s << "  ";
 s << "  defaultConfig {";
+if (lib.is_app)
+{
 s << "    // Gradle replaces the manifest package with this value, which must";
 s << "    // be unique on a system.  If you don't change it, a new app";
 s << "    // will replace an older one.";
 s << "    applicationId \"com.chibi.generated.\" + project.archivesBaseName";
+}
 s << "    minSdkVersion 23";
 s << "    targetSdkVersion 25";
 s << "    compileSdkVersion 26";
-s << "";
-s << String::FormatC("    manifestPlaceholders = [appId:\"%s\", appName:\"%s\"]", appId.c_str(), lib.name.c_str()).c_str();
-s << "";
-s << "";
+s << "    ";
+s >> "    manifestPlaceholders = [appId:\"" >> appId.c_str() >> "\", appName:\"" >> lib.name.c_str() << "\"]";
+s << "    ";
+s << "    ";
 s << "    // override app plugin abiFilters for 64-bit support";
 s << "    externalNativeBuild {";
 s << "        ndk {";
@@ -229,6 +262,7 @@ s << "  lintOptions{";
 s << "      disable 'ExpiredTargetSdkVersion'";
 s << "  }";
 s << "}";
+
 			fclose(f);
 			f = nullptr;
 		}
@@ -238,7 +272,10 @@ s << "}";
 		{
 			f = fopen("AndroidManifest.xml", "wt");
 			
-			fprintf(f, "%s", s_androidManifestTemplate);
+if (lib.is_app)
+	fprintf(f, "%s", s_androidManifestTemplateForApp);
+else
+	fprintf(f, "%s", s_androidManifestTemplateForLib);
 			
 			fclose(f);
 			f = nullptr;
@@ -251,49 +288,77 @@ s << "}";
 
 		{
 			f = fopen("Android.mk", "wt");
+		
+s << "# auto-generated. do not edit by hand";
+s << "";
 s << "LOCAL_PATH := $(call my-dir)";
 s << "";
-s << "#---";
-s << String::FormatC("#--- %s", lib.name.c_str()).c_str();
-s << "#---";
+s << String::FormatC("# -- %s", lib.name.c_str()).c_str();
 s << "";
-s << "# CLEAR_VARS is a built-in NDK makefile which attempts to clear as many LOCAL_ variables as possible";
+s << "# note : CLEAR_VARS is a built-in NDK makefile";
+s << "#        which attempts to clear as many LOCAL_XXX";
+s << "#        variables as possible";
 s << "include $(CLEAR_VARS)";
 s << "";
-s << String::FormatC("LOCAL_MODULE           := %s", lib.name.c_str()).c_str();
-//s <<                 "LOCAL_SRC_FILES        := ../../../Src/file.cpp";
-s << "LOCAL_SRC_FILES := /Users/thecat/repos/ovr-quest/cubes1/Src/framework.cpp /Users/thecat/repos/ovr-quest/cubes1/Src/opengl-ovr.cpp /Users/thecat/repos/ovr-quest/cubes1/Src/ovrFramebuffer.cpp /Users/thecat/repos/ovr-quest/cubes1/Src/VrCubeWorld_SurfaceView.cpp"; // todo : files from library
-s <<                 "LOCAL_LDLIBS           := -llog -landroid";
-s <<                 "";
-s <<                 "LOCAL_SHARED_LIBRARIES := vrapi"; // todo : remove
+s >> "LOCAL_MODULE           := " << lib.name.c_str();
+s >> "LOCAL_SRC_FILES        :=";
+for (auto & file : lib.files)
+	s >> " " >> file.c_str();
 s << "";
-if (lib.shared)
+s << "LOCAL_LDLIBS           := -llog -landroid -lGLESv3 -lEGL";
+s << "";
+std::string static_libs = "LOCAL_STATIC_LIBRARIES :=";
+std::string shared_libs = "LOCAL_SHARED_LIBRARIES :=";
+for (auto & dep : lib.deps)
 {
-	s << "# BUILD_SHARED_LIBRARY is a built-in NDK makefile which will generate a shared library from LOCAL_SRC_FILES";
+	for (auto & dep_lib : libs)
+	{
+		if (dep_lib.name == dep)
+		{
+			if (dep_lib.is_shared)
+				shared_libs += " " + dep;
+			else
+				static_libs += " " + dep;
+		}
+	}
+}
+if (lib.is_app) shared_libs += " vrapi"; // todo : remove
+s << static_libs.c_str();
+s << shared_libs.c_str();
+s << "";
+if (lib.is_shared)
+{
+	s << "# note : BUILD_SHARED_LIBRARY is a built-in NDK makefile";
+	s << "#        which will generate a shared library from LOCAL_SRC_FILES";
 	s << "include $(BUILD_SHARED_LIBRARY)";
 }
 else
 {
 	
-	s << "# BUILD_STATIC_LIBRARY is a built-in NDK makefile which will generate a static library from LOCAL_SRC_FILES";
+	s << "# note : BUILD_STATIC_LIBRARY is a built-in NDK makefile";
+	s << "#        which will generate a static library from LOCAL_SRC_FILES";
 	s << "include $(BUILD_STATIC_LIBRARY)";
 }
 s << "";
 s << "$(call import-module,VrApi/Projects/AndroidPrebuilt/jni)";
+for (auto & dep : lib.deps)
+	s << String::FormatC("$(call import-module,%s/Projects/Android/jni)", dep.c_str()).c_str();
 s << "";
+
 			fclose(f);
 			f = nullptr;
 		}
 		
 		// generate Application.mk file for each app
-	// todo : make distinction between apps and libraries. for now, pretend we are building apps only
 
+		if (lib.is_app || true)
 		{
 			f = fopen("Application.mk", "wt");
 s << String::FormatC("NDK_MODULE_PATH := %s", module_path).c_str();
-s << "#APP_ABI := arm64-v8a";
-s << "#sAPP_CPPFLAGS := ...";
+s << "APP_ABI := arm64-v8a";
+s << "#APP_CPPFLAGS := ...";
 s << "APP_DEBUG := true";
+
 			fclose(f);
 			f = nullptr;
 		}
