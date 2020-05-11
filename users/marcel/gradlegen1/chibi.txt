@@ -1,0 +1,4 @@
+app marcel-gradlegen1
+	depend_library libgg
+	add_files main.cpp
+	resource_path data
