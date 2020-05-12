@@ -19,5 +19,6 @@ library libgg
 	with_platform iphoneos compile_definition IPHONEOS * expose
 	with_platform linux    compile_definition LINUX    * expose
 	with_platform windows  compile_definition WINDOWS  * expose
+	with_platform android  compile_definition ANDROID  * expose
 
 	with_platform macos depend_library CoreFoundation find

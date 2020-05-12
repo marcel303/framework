@@ -10,6 +10,9 @@
 #ifdef LINUX
 #include <time.h>
 #endif
+#ifdef ANDROID
+#include <time.h>
+#endif
 #ifdef BBOS
 #include <time.h>
 #endif
@@ -47,7 +50,7 @@ ITimer::~ITimer()
 	double GetSystemTime() { return CFAbsoluteTimeGetCurrent(); }
 #elif defined(MACOS)
 	double GetSystemTime() { return CFAbsoluteTimeGetCurrent(); }
-#elif defined(LINUX) || defined(BBOS)
+#elif defined(LINUX) || defined(BBOS) || defined(ANDROID)
 	static timespec sBeginTime;
 	static bool sBeginTimeIsInit = false;
 	double GetSystemTime()
