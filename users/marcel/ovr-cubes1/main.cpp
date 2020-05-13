@@ -16,25 +16,23 @@ Copyright	:	Copyright (c) Facebook Technologies, LLC and its affiliates. All rig
 #include "opengl-ovr.h"
 #include "ovrFramebuffer.h"
 
+#include "StringEx.h"
+
 #include <VrApi.h>
 #include <VrApi_Helpers.h>
-#include <VrApi_SystemUtils.h>
 #include <VrApi_Input.h>
+#include <VrApi_SystemUtils.h>
 
 #include <android/input.h>
 #include <android/log.h>
 #include <android/native_window_jni.h> // for native window JNI
+#include <android/window.h> // for AWINDOW_FLAG_KEEP_SCREEN_ON
 
 #include <assert.h>
 #include <math.h>
-#include <pthread.h>
-#include <stdio.h>
 #include <sys/prctl.h> // for prctl( PR_SET_NAME )
-#include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
-
-#define USE_NATIVE_ACTIVITY 1
 
 static const int CPU_LEVEL = 2;
 static const int GPU_LEVEL = 3;
@@ -583,7 +581,7 @@ static bool ovrProgram_Create(
     for (int i = 0; i < MAX_PROGRAM_TEXTURES; i++)
     {
         char name[32];
-        sprintf(name, "Texture%i", i);
+        sprintf_s(name, sizeof(name), "Texture%i", i);
         program->Textures[i] = glGetUniformLocation(program->Program, name);
         if (program->Textures[i] != -1)
         {
@@ -1137,7 +1135,7 @@ struct ovrApp
     int CpuLevel = 2;
     int GpuLevel = 2;
     int MainThreadTid = 0;
-    int RenderThreadTid = 0;
+    //int RenderThreadTid = 0; // disabled
     bool BackButtonDownLastFrame = false;
     bool GamePadBackButtonDown = false;
     ovrRenderer Renderer;
@@ -1210,8 +1208,8 @@ static void ovrApp_HandleVrModeChanges(ovrApp * app)
                 vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_MAIN, app->MainThreadTid);
                 logDebug("- vrapi_SetPerfThread( MAIN, %d )", app->MainThreadTid);
 
-                vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_RENDERER, app->RenderThreadTid);
-                logDebug("- vrapi_SetPerfThread( RENDERER, %d )", app->RenderThreadTid);
+                //vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_RENDERER, app->RenderThreadTid);
+                //logDebug("- vrapi_SetPerfThread( RENDERER, %d )", app->RenderThreadTid);
             }
         }
     }
@@ -1347,723 +1345,6 @@ static void ovrApp_HandleVrApiEvents(ovrApp * app)
 /*
 ================================================================================
 
-ovrMessageQueue
-
-================================================================================
-*/
-
-typedef enum {
-    MQ_WAIT_NONE, // don't wait
-    MQ_WAIT_RECEIVED, // wait until the consumer thread has received the message
-    MQ_WAIT_PROCESSED // wait until the consumer thread has processed the message
-} ovrMQWait;
-
-#define MAX_MESSAGE_PARMS 8
-#define MAX_MESSAGES 1024
-
-struct ovrMessage
-{
-    int Id;
-    ovrMQWait Wait;
-    long long Parms[MAX_MESSAGE_PARMS];
-};
-
-static void ovrMessage_Init(ovrMessage * message, const int id, const int wait) {
-    message->Id = id;
-    message->Wait = (ovrMQWait)wait;
-    memset(message->Parms, 0, sizeof(message->Parms));
-}
-
-static void ovrMessage_SetPointerParm(ovrMessage * message, int index, void * ptr) {
-    *(void**)&message->Parms[index] = ptr;
-}
-static void* ovrMessage_GetPointerParm(ovrMessage * message, int index) {
-    return *(void**)&message->Parms[index];
-}
-static void ovrMessage_SetIntegerParm(ovrMessage * message, int index, int value) {
-    message->Parms[index] = value;
-}
-static int ovrMessage_GetIntegerParm(ovrMessage * message, int index) {
-    return (int)message->Parms[index];
-}
-/// static void		ovrMessage_SetFloatParm( ovrMessage * message, int index, float value ) {
-/// *(float *)&message->Parms[index] = value; } static float	ovrMessage_GetFloatParm( ovrMessage
-/// * message, int index ) { return *(float *)&message->Parms[index]; }
-
-// Cyclic queue with messages.
-struct ovrMessageQueue
-{
-    ovrMessage Messages[MAX_MESSAGES];
-    volatile int Head; // dequeue at the head
-    volatile int Tail; // enqueue at the tail
-    ovrMQWait Wait;
-    volatile bool EnabledFlag;
-    volatile bool PostedFlag;
-    volatile bool ReceivedFlag;
-    volatile bool ProcessedFlag;
-    pthread_mutex_t Mutex;
-    pthread_cond_t PostedCondition;
-    pthread_cond_t ReceivedCondition;
-    pthread_cond_t ProcessedCondition;
-};
-
-static void ovrMessageQueue_Create(ovrMessageQueue * messageQueue)
-{
-    messageQueue->Head = 0;
-    messageQueue->Tail = 0;
-    messageQueue->Wait = MQ_WAIT_NONE;
-    messageQueue->EnabledFlag = false;
-    messageQueue->PostedFlag = false;
-    messageQueue->ReceivedFlag = false;
-    messageQueue->ProcessedFlag = false;
-
-    pthread_mutexattr_t attr;
-    pthread_mutexattr_init(&attr);
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
-    pthread_mutex_init(&messageQueue->Mutex, &attr);
-    pthread_mutexattr_destroy(&attr);
-    pthread_cond_init(&messageQueue->PostedCondition, NULL);
-    pthread_cond_init(&messageQueue->ReceivedCondition, NULL);
-    pthread_cond_init(&messageQueue->ProcessedCondition, NULL);
-}
-
-static void ovrMessageQueue_Destroy(ovrMessageQueue * messageQueue)
-{
-    pthread_mutex_destroy(&messageQueue->Mutex);
-    pthread_cond_destroy(&messageQueue->PostedCondition);
-    pthread_cond_destroy(&messageQueue->ReceivedCondition);
-    pthread_cond_destroy(&messageQueue->ProcessedCondition);
-}
-
-static void ovrMessageQueue_Enable(ovrMessageQueue * messageQueue, const bool set)
-{
-    messageQueue->EnabledFlag = set;
-}
-
-static void ovrMessageQueue_PostMessage(ovrMessageQueue * messageQueue, const ovrMessage * message)
-{
-    if (!messageQueue->EnabledFlag)
-    {
-        return;
-    }
-
-    while (messageQueue->Tail - messageQueue->Head >= MAX_MESSAGES)
-    {
-        usleep(1000);
-    }
-
-    pthread_mutex_lock(&messageQueue->Mutex);
-    messageQueue->Messages[messageQueue->Tail & (MAX_MESSAGES - 1)] = *message;
-    messageQueue->Tail++;
-    messageQueue->PostedFlag = true;
-    pthread_cond_broadcast(&messageQueue->PostedCondition);
-    if (message->Wait == MQ_WAIT_RECEIVED)
-    {
-        while (!messageQueue->ReceivedFlag)
-        {
-            pthread_cond_wait(&messageQueue->ReceivedCondition, &messageQueue->Mutex);
-        }
-        messageQueue->ReceivedFlag = false;
-    }
-    else if (message->Wait == MQ_WAIT_PROCESSED)
-    {
-        while (!messageQueue->ProcessedFlag)
-        {
-            pthread_cond_wait(&messageQueue->ProcessedCondition, &messageQueue->Mutex);
-        }
-        messageQueue->ProcessedFlag = false;
-    }
-    pthread_mutex_unlock(&messageQueue->Mutex);
-}
-
-static void ovrMessageQueue_SleepUntilMessage(ovrMessageQueue * messageQueue)
-{
-    if (messageQueue->Wait == MQ_WAIT_PROCESSED)
-    {
-        messageQueue->ProcessedFlag = true;
-        pthread_cond_broadcast(&messageQueue->ProcessedCondition);
-        messageQueue->Wait = MQ_WAIT_NONE;
-    }
-
-    pthread_mutex_lock(&messageQueue->Mutex);
-    if (messageQueue->Tail > messageQueue->Head)
-    {
-        pthread_mutex_unlock(&messageQueue->Mutex);
-        return;
-    }
-
-    while (!messageQueue->PostedFlag)
-    {
-        pthread_cond_wait(&messageQueue->PostedCondition, &messageQueue->Mutex);
-    }
-    messageQueue->PostedFlag = false;
-    pthread_mutex_unlock(&messageQueue->Mutex);
-}
-
-static bool ovrMessageQueue_GetNextMessage(
-    ovrMessageQueue * messageQueue,
-    ovrMessage * message,
-    bool waitForMessages)
-{
-    if (messageQueue->Wait == MQ_WAIT_PROCESSED)
-    {
-        messageQueue->ProcessedFlag = true;
-        pthread_cond_broadcast(&messageQueue->ProcessedCondition);
-        messageQueue->Wait = MQ_WAIT_NONE;
-    }
-
-    if (waitForMessages)
-    {
-        ovrMessageQueue_SleepUntilMessage(messageQueue);
-    }
-
-    pthread_mutex_lock(&messageQueue->Mutex);
-    if (messageQueue->Tail <= messageQueue->Head)
-    {
-        pthread_mutex_unlock(&messageQueue->Mutex);
-        return false;
-    }
-
-    *message = messageQueue->Messages[messageQueue->Head & (MAX_MESSAGES - 1)];
-    messageQueue->Head++;
-    pthread_mutex_unlock(&messageQueue->Mutex);
-
-    if (message->Wait == MQ_WAIT_RECEIVED)
-    {
-        messageQueue->ReceivedFlag = true;
-        pthread_cond_broadcast(&messageQueue->ReceivedCondition);
-    }
-    else if (message->Wait == MQ_WAIT_PROCESSED)
-    {
-        messageQueue->Wait = MQ_WAIT_PROCESSED;
-    }
-
-    return true;
-}
-
-/*
-================================================================================
-
-ovrAppThread
-
-================================================================================
-*/
-
-enum
-{
-    MESSAGE_ON_CREATE,
-    MESSAGE_ON_START,
-    MESSAGE_ON_RESUME,
-    MESSAGE_ON_PAUSE,
-    MESSAGE_ON_STOP,
-    MESSAGE_ON_DESTROY,
-    MESSAGE_ON_SURFACE_CREATED,
-    MESSAGE_ON_SURFACE_DESTROYED,
-    MESSAGE_ON_KEY_EVENT,
-    MESSAGE_ON_TOUCH_EVENT
-};
-
-struct ovrAppThread
-{
-    JavaVM * JavaVm = nullptr;
-    jobject ActivityObject = nullptr;
-    pthread_t Thread;
-    ovrMessageQueue MessageQueue;
-    ANativeWindow * NativeWindow = nullptr;
-};
-
-void * AppThreadFunction(void * obj)
-{
-    ovrAppThread * appThread = (ovrAppThread*)obj;
-
-    ovrJava java;
-    java.Vm = appThread->JavaVm;
-    java.Vm->AttachCurrentThread(&java.Env, nullptr);
-    java.ActivityObject = appThread->ActivityObject;
-
-    // Note that AttachCurrentThread will reset the thread name.
-    prctl(PR_SET_NAME, (long)"OVR::Main", 0, 0, 0);
-
-    const ovrInitParms initParms = vrapi_DefaultInitParms(&java);
-    const int32_t initResult = vrapi_Initialize(&initParms);
-
-    if (initResult != VRAPI_INITIALIZE_SUCCESS)
-    {
-        // If intialization failed, vrapi_* function calls will not be available.
-        exit(0);
-    }
-
-    ovrApp appState;
-    appState.Java = java;
-
-    // This app will handle android gamepad events itself.
-    vrapi_SetPropertyInt(&appState.Java, VRAPI_EAT_NATIVE_GAMEPAD_EVENTS, 0);
-
-    ovrEgl_CreateContext(&appState.Egl, nullptr);
-
-    EglInitExtensions();
-
-    appState.UseMultiview &=
-        (glExtensions.multi_view &&
-         vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
-
-    logDebug("AppState UseMultiview : %d", appState.UseMultiview ? 1 : 0);
-
-    appState.CpuLevel = CPU_LEVEL;
-    appState.GpuLevel = GPU_LEVEL;
-    appState.MainThreadTid = gettid();
-
-    ovrRenderer_Create(&appState.Renderer, &java, appState.UseMultiview);
-
-    const double startTime = GetTimeInSeconds();
-
-    bool destroyed = false;
-
-    while (!destroyed)
-    {
-        framework.process();
-
-        for (;;)
-        {
-            ovrMessage message;
-            const bool waitForMessages = (appState.Ovr == nullptr && destroyed == false);
-            if (!ovrMessageQueue_GetNextMessage(&appThread->MessageQueue, &message, waitForMessages))
-                break;
-
-            switch (message.Id)
-            {
-                case MESSAGE_ON_CREATE: {
-                    break;
-                }
-                case MESSAGE_ON_START: {
-                    break;
-                }
-                case MESSAGE_ON_RESUME: {
-                    appState.Resumed = true;
-                    break;
-                }
-                case MESSAGE_ON_PAUSE: {
-                    appState.Resumed = false;
-                    break;
-                }
-                case MESSAGE_ON_STOP: {
-                    break;
-                }
-                case MESSAGE_ON_DESTROY: {
-                    appState.NativeWindow = NULL;
-                    destroyed = true;
-                    break;
-                }
-                case MESSAGE_ON_SURFACE_CREATED: {
-                    appState.NativeWindow = (ANativeWindow*)ovrMessage_GetPointerParm(&message, 0);
-                    break;
-                }
-                case MESSAGE_ON_SURFACE_DESTROYED: {
-                    appState.NativeWindow = NULL;
-                    break;
-                }
-                case MESSAGE_ON_KEY_EVENT: {
-                    ovrApp_HandleKeyEvent(
-                        &appState,
-                        ovrMessage_GetIntegerParm(&message, 0),
-                        ovrMessage_GetIntegerParm(&message, 1));
-                    break;
-                }
-            }
-
-            ovrApp_HandleVrModeChanges(&appState);
-        }
-
-        // We must read from the event queue with regular frequency.
-        ovrApp_HandleVrApiEvents(&appState);
-
-        ovrApp_HandleInput(&appState);
-
-        if (appState.Ovr == nullptr)
-            continue;
-
-        // Create the scene if not yet created.
-        // The scene is created here to be able to show a loading icon.
-        if (!ovrScene_IsCreated(&appState.Scene))
-        {
-            // Show a loading icon.
-            const int frameFlags = VRAPI_FRAME_FLAG_FLUSH;
-
-            ovrLayerProjection2 blackLayer = vrapi_DefaultLayerBlackProjection2();
-            blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
-
-            ovrLayerLoadingIcon2 iconLayer = vrapi_DefaultLayerLoadingIcon2();
-            iconLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
-
-            const ovrLayerHeader2 * layers[] =
-                {
-                    &blackLayer.Header,
-                    &iconLayer.Header,
-                };
-
-            ovrSubmitFrameDescription2 frameDesc = { };
-            frameDesc.Flags = frameFlags;
-            frameDesc.SwapInterval = 1;
-            frameDesc.FrameIndex = appState.FrameIndex;
-            frameDesc.DisplayTime = appState.DisplayTime;
-            frameDesc.LayerCount = 2;
-            frameDesc.Layers = layers;
-
-            vrapi_SubmitFrame2(appState.Ovr, &frameDesc);
-
-            // Create the scene.
-            ovrScene_Create(&appState.Scene, appState.UseMultiview);
-        }
-
-        // This is the only place the frame index is incremented, right before
-        // calling vrapi_GetPredictedDisplayTime().
-        appState.FrameIndex++;
-
-        // Get the HMD pose, predicted for the middle of the time period during which
-        // the new eye images will be displayed. The number of frames predicted ahead
-        // depends on the pipeline depth of the engine and the synthesis rate.
-        // The better the prediction, the less black will be pulled in at the edges.
-        const double predictedDisplayTime = vrapi_GetPredictedDisplayTime(appState.Ovr, appState.FrameIndex);
-        const ovrTracking2 tracking = vrapi_GetPredictedTracking2(appState.Ovr, predictedDisplayTime);
-
-        appState.DisplayTime = predictedDisplayTime;
-
-        // Advance the simulation based on the elapsed time since start of loop till predicted
-        // display time.
-        ovrSimulation_Advance(&appState.Simulation, predictedDisplayTime - startTime);
-
-        // Render eye images and setup the primary layer using ovrTracking2.
-        const ovrLayerProjection2 worldLayer = ovrRenderer_RenderFrame(
-            &appState.Renderer,
-            &appState.Java,
-            &appState.Scene,
-            &appState.Simulation,
-            &tracking,
-            appState.Ovr);
-
-        const ovrLayerHeader2 * layers[] = { &worldLayer.Header };
-
-        ovrSubmitFrameDescription2 frameDesc = { };
-        frameDesc.Flags = 0;
-        frameDesc.SwapInterval = appState.SwapInterval;
-        frameDesc.FrameIndex = appState.FrameIndex;
-        frameDesc.DisplayTime = appState.DisplayTime;
-        frameDesc.LayerCount = 1;
-        frameDesc.Layers = layers;
-
-        // Hand over the eye images to the time warp.
-        vrapi_SubmitFrame2(appState.Ovr, &frameDesc);
-    }
-
-    ovrRenderer_Destroy(&appState.Renderer);
-
-    ovrScene_Destroy(&appState.Scene);
-    ovrEgl_DestroyContext(&appState.Egl);
-
-    vrapi_Shutdown();
-
-    java.Vm->DetachCurrentThread();
-
-    return NULL;
-}
-
-static void ovrAppThread_Create(ovrAppThread * appThread, JNIEnv * env, jobject activityObject)
-{
-    env->GetJavaVM(&appThread->JavaVm);
-    appThread->ActivityObject = env->NewGlobalRef(activityObject);
-    appThread->Thread = 0;
-    appThread->NativeWindow = nullptr;
-    ovrMessageQueue_Create(&appThread->MessageQueue);
-
-    const int createErr = pthread_create(&appThread->Thread, nullptr, AppThreadFunction, appThread);
-    if (createErr != 0)
-        logError("pthread_create returned %d", createErr);
-}
-
-static void ovrAppThread_Destroy(ovrAppThread * appThread, JNIEnv * env)
-{
-    pthread_join(appThread->Thread, nullptr);
-    env->DeleteGlobalRef(appThread->ActivityObject);
-    ovrMessageQueue_Destroy(&appThread->MessageQueue);
-}
-
-/*
-================================================================================
-
-Activity lifecycle
-
-================================================================================
-*/
-
-extern "C"
-{
-
-JNIEXPORT jlong JNICALL Java_com_oculus_sdk_GLES3JNILib_onCreate(
-    JNIEnv * env,
-    jclass obj,
-    jobject activity)
-{
-    logDebug("GLES3JNILib::onCreate()");
-
-    ovrAppThread * appThread = new ovrAppThread();
-    ovrAppThread_Create(appThread, env, activity);
-
-    ovrMessageQueue_Enable(&appThread->MessageQueue, true);
-
-    ovrMessage message;
-    ovrMessage_Init(&message, MESSAGE_ON_CREATE, MQ_WAIT_PROCESSED);
-    ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-
-    return (jlong)(size_t)appThread;
-}
-
-JNIEXPORT void JNICALL Java_com_oculus_sdk_GLES3JNILib_onStart(
-    JNIEnv * env,
-    jclass jclass,
-    jlong handle)
-{
-    logDebug("GLES3JNILib::onStart()");
-
-    ovrAppThread * appThread = (ovrAppThread*)(size_t)handle;
-
-    ovrMessage message;
-    ovrMessage_Init(&message, MESSAGE_ON_START, MQ_WAIT_PROCESSED);
-    ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-}
-
-JNIEXPORT void JNICALL Java_com_oculus_sdk_GLES3JNILib_onResume(
-    JNIEnv * env,
-    jclass obj,
-    jlong handle)
-{
-    logDebug("GLES3JNILib::onResume()");
-
-    ovrAppThread * appThread = (ovrAppThread*)(size_t)handle;
-
-    ovrMessage message;
-    ovrMessage_Init(&message, MESSAGE_ON_RESUME, MQ_WAIT_PROCESSED);
-    ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-}
-
-JNIEXPORT void JNICALL Java_com_oculus_sdk_GLES3JNILib_onPause(
-    JNIEnv * env,
-    jclass obj,
-    jlong handle)
-{
-    logDebug("GLES3JNILib::onPause()");
-
-    ovrAppThread * appThread = (ovrAppThread*)(size_t)handle;
-
-    ovrMessage message;
-    ovrMessage_Init(&message, MESSAGE_ON_PAUSE, MQ_WAIT_PROCESSED);
-    ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-}
-
-JNIEXPORT void JNICALL Java_com_oculus_sdk_GLES3JNILib_onStop(
-    JNIEnv * env,
-    jclass obj,
-    jlong handle)
-{
-    logDebug("GLES3JNILib::onStop()");
-
-    ovrAppThread * appThread = (ovrAppThread*)(size_t)handle;
-
-    ovrMessage message;
-    ovrMessage_Init(&message, MESSAGE_ON_STOP, MQ_WAIT_PROCESSED);
-    ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-}
-
-JNIEXPORT void JNICALL Java_com_oculus_sdk_GLES3JNILib_onDestroy(
-    JNIEnv * env,
-    jclass obj,
-    jlong handle)
-{
-    logDebug("GLES3JNILib::onDestroy()");
-
-    ovrAppThread * appThread = (ovrAppThread*)(size_t)handle;
-
-    ovrMessage message;
-    ovrMessage_Init(&message, MESSAGE_ON_DESTROY, MQ_WAIT_PROCESSED);
-    ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-    ovrMessageQueue_Enable(&appThread->MessageQueue, false);
-
-    ovrAppThread_Destroy(appThread, env);
-    delete appThread;
-    appThread = nullptr;
-}
-
-}
-
-/*
-================================================================================
-
-Surface lifecycle
-
-================================================================================
-*/
-
-extern "C"
-{
-
-JNIEXPORT void JNICALL Java_com_oculus_sdk_GLES3JNILib_onSurfaceCreated(
-    JNIEnv * env,
-    jclass obj,
-    jlong handle,
-    jobject surface)
-{
-    logDebug("GLES3JNILib::onSurfaceCreated()");
-
-    // fixme : is it safe to defer processing surface messages using an async message queue ?
-    //         perhaps we should lock the app thread and update surface params in lock-step ?
-
-    ovrAppThread * appThread = (ovrAppThread*)(size_t)handle;
-
-#if USE_NATIVE_ACTIVITY
-    ANativeWindow * newNativeWindow = (ANativeWindow*)surface;
-#else
-    ANativeWindow * newNativeWindow = ANativeWindow_fromSurface(env, surface);
-#endif
-
-    if (ANativeWindow_getWidth(newNativeWindow) < ANativeWindow_getHeight(newNativeWindow))
-    {
-        // An app that is relaunched after pressing the home button gets an initial surface with
-        // the wrong orientation even though android:screenOrientation="landscape" is set in the
-        // manifest. The choreographer callback will also never be called for this surface because
-        // the surface is immediately replaced with a new surface with the correct orientation.
-        logError("- Surface not in landscape mode!");
-    }
-
-    logDebug("- NativeWindow = ANativeWindow_fromSurface( env, surface )");
-
-    appThread->NativeWindow = newNativeWindow;
-
-    ovrMessage message;
-    ovrMessage_Init(&message, MESSAGE_ON_SURFACE_CREATED, MQ_WAIT_PROCESSED);
-    ovrMessage_SetPointerParm(&message, 0, appThread->NativeWindow);
-    ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-}
-
-JNIEXPORT void JNICALL Java_com_oculus_sdk_GLES3JNILib_onSurfaceChanged(
-    JNIEnv * env,
-    jclass obj,
-    jlong handle,
-    jobject surface)
-{
-    logDebug("GLES3JNILib::onSurfaceChanged()");
-
-    ovrAppThread * appThread = (ovrAppThread*)(size_t)handle;
-
-#if USE_NATIVE_ACTIVITY
-    ANativeWindow * newNativeWindow = (ANativeWindow*)surface;
-#else
-    ANativeWindow * newNativeWindow = ANativeWindow_fromSurface(env, surface);
-#endif
-
-    if (ANativeWindow_getWidth(newNativeWindow) < ANativeWindow_getHeight(newNativeWindow))
-    {
-        // An app that is relaunched after pressing the home button gets an initial surface with
-        // the wrong orientation even though android:screenOrientation="landscape" is set in the
-        // manifest. The choreographer callback will also never be called for this surface because
-        // the surface is immediately replaced with a new surface with the correct orientation.
-        logError("- Surface not in landscape mode!");
-    }
-
-    if (newNativeWindow != appThread->NativeWindow)
-    {
-        if (appThread->NativeWindow != nullptr)
-        {
-            ovrMessage message;
-            ovrMessage_Init(&message, MESSAGE_ON_SURFACE_DESTROYED, MQ_WAIT_PROCESSED);
-            ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-
-        #if USE_NATIVE_ACTIVITY == 0
-            logDebug("- ANativeWindow_release( NativeWindow )");
-            ANativeWindow_release(appThread->NativeWindow);
-        #endif
-            appThread->NativeWindow = nullptr;
-        }
-
-        if (newNativeWindow != nullptr)
-        {
-            logDebug("- NativeWindow = ANativeWindow_fromSurface( env, surface )");
-
-            appThread->NativeWindow = newNativeWindow;
-
-            ovrMessage message;
-            ovrMessage_Init(&message, MESSAGE_ON_SURFACE_CREATED, MQ_WAIT_PROCESSED);
-            ovrMessage_SetPointerParm(&message, 0, appThread->NativeWindow);
-            ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-        }
-    }
-    else if (newNativeWindow != nullptr)
-    {
-    #if USE_NATIVE_ACTIVITY == 0
-        // note : ANativeWindow_fromSurface increments the ref count, so we need to decrement it here
-        ANativeWindow_release(newNativeWindow);
-    #endif
-        newNativeWindow = nullptr;
-    }
-}
-
-JNIEXPORT void JNICALL Java_com_oculus_sdk_GLES3JNILib_onSurfaceDestroyed(
-    JNIEnv * env,
-    jclass obj,
-    jlong handle)
-{
-    logDebug("GLES3JNILib::onSurfaceDestroyed()");
-
-    ovrAppThread * appThread = (ovrAppThread*)(size_t)handle;
-
-    ovrMessage message;
-    ovrMessage_Init(&message, MESSAGE_ON_SURFACE_DESTROYED, MQ_WAIT_PROCESSED);
-    ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-
-#if USE_NATIVE_ACTIVITY == 0
-    logDebug("- ANativeWindow_release( NativeWindow )");
-    ANativeWindow_release(appThread->NativeWindow);
-#endif
-    appThread->NativeWindow = nullptr;
-}
-
-}
-
-/*
-================================================================================
-
-Input
-
-================================================================================
-*/
-
-extern "C"
-{
-
-JNIEXPORT void JNICALL Java_com_oculus_sdk_GLES3JNILib_onKeyEvent(
-    JNIEnv * env,
-    jclass obj,
-    jlong handle,
-    int keyCode,
-    int action)
-{
-    if (action == AKEY_EVENT_ACTION_UP)
-        logDebug("GLES3JNILib::onKeyEvent( %d, %d )", keyCode, action);
-
-    ovrAppThread * appThread = (ovrAppThread*)(size_t)handle;
-
-    ovrMessage message;
-    ovrMessage_Init(&message, MESSAGE_ON_KEY_EVENT, MQ_WAIT_NONE);
-    ovrMessage_SetIntegerParm(&message, 0, keyCode);
-    ovrMessage_SetIntegerParm(&message, 1, action);
-    ovrMessageQueue_PostMessage(&appThread->MessageQueue, &message);
-}
-
-}
-
-#if USE_NATIVE_ACTIVITY
-
-/*
-================================================================================
-
 Android Main (android_native_app_glue)
 
 ================================================================================
@@ -2076,86 +1357,115 @@ extern "C"
 
     void android_main(android_app* app)
     {
-        // I can't seem to figure out how to safely use the JavaVM from another thread than
-        // the main thread. where the main thread is _NOT_ this thread. but the thread the
-        // android native app glue runs in.. native app glue spawns a new thread and calls
-        // android_main from there. meanwhile, the OculusVR api needs the JavaVM for various
-        // tasks.. meaning we can't use OVR when using the native app glue code ??
-        // meaning.. any app using native app glue code cannot access any Java functions at
-        // all ???
+        ANativeActivity_setWindowFlags(app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
 
-        JNIEnv * env  = nullptr;
+        ovrJava java;
+        java.Vm = app->activity->vm;
+        java.Vm->AttachCurrentThread(&java.Env, nullptr);
+        java.ActivityObject = app->activity->clazz;
 
-        app->activity->vm->AttachCurrentThread(&env, nullptr);
+    // todo : set thread name
+        // Note that AttachCurrentThread will reset the thread name.
+        //prctl(PR_SET_NAME, (long)"OVR::Main", 0, 0, 0);
 
-        auto handle = Java_com_oculus_sdk_GLES3JNILib_onCreate(
-                env,
-                nullptr,
-                app->activity->clazz);
+        const ovrInitParms initParms = vrapi_DefaultInitParms(&java);
+        const int32_t initResult = vrapi_Initialize(&initParms);
+
+        if (initResult != VRAPI_INITIALIZE_SUCCESS)
+        {
+            // If intialization failed, vrapi_* function calls will not be available.
+            exit(0);
+        }
+
+        ovrApp appState;
+        appState.Java = java;
+
+    // todo : the native activity example doesn't do this. why? and what does it do anyway?
+        // This app will handle android gamepad events itself.
+        vrapi_SetPropertyInt(&appState.Java, VRAPI_EAT_NATIVE_GAMEPAD_EVENTS, 0);
+
+        ovrEgl_CreateContext(&appState.Egl, nullptr);
+
+        EglInitExtensions();
+
+        appState.UseMultiview &=
+            (glExtensions.multi_view &&
+             vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
+
+        logDebug("AppState UseMultiview : %d", appState.UseMultiview ? 1 : 0);
+
+        appState.CpuLevel = CPU_LEVEL;
+        appState.GpuLevel = GPU_LEVEL;
+        appState.MainThreadTid = gettid();
+
+        ovrRenderer_Create(&appState.Renderer, &java, appState.UseMultiview);
+
+        const double startTime = GetTimeInSeconds();
 
         while (!app->destroyRequested) {
             int ident;
             int events;
             struct android_poll_source *source;
+            //const int timeoutMilliseconds = (appState.Ovr == NULL && app->destroyRequested == 0) ? -1 : 0;
+            const int timeoutMilliseconds = 0;
 
-            while ((ident = ALooper_pollAll(-1, NULL, &events, (void **) &source)) >= 0) {
-                if (source != NULL) {
-                    //source->process(app, source);
-                }
-
+            while ((ident = ALooper_pollAll(timeoutMilliseconds, NULL, &events, (void **) &source)) >= 0) {
                 if (ident == LOOPER_ID_MAIN) {
                     auto cmd = android_app_read_cmd(app);
 
                     android_app_pre_exec_cmd(app, cmd);
 
                     if (cmd == APP_CMD_START) {
-                        Java_com_oculus_sdk_GLES3JNILib_onStart(
-                                env,
-                                nullptr,
-                                handle);
+                        logDebug("APP_CMD_START");
                     } else if (cmd == APP_CMD_STOP) {
-                        Java_com_oculus_sdk_GLES3JNILib_onStop(
-                                env,
-                                nullptr,
-                                handle);
+                        logDebug("APP_CMD_STOP");
                     } else if (cmd == APP_CMD_RESUME) {
-                        Java_com_oculus_sdk_GLES3JNILib_onResume(
-                                env,
-                                nullptr,
-                                handle);
+                        logDebug("APP_CMD_RESUME");
+                        appState.Resumed = true;
                     } else if (cmd == APP_CMD_PAUSE) {
-                        Java_com_oculus_sdk_GLES3JNILib_onPause(
-                                env,
-                                nullptr,
-                                handle);
+                        logDebug("APP_CMD_PAUSE");
+                        appState.Resumed = false;
                     } else if (cmd == APP_CMD_INIT_WINDOW) {
-                        Java_com_oculus_sdk_GLES3JNILib_onSurfaceCreated(
-                                env,
-                                nullptr, handle,
-                                (jobject) app->window);
+                        logDebug("APP_CMD_INIT_WINDOW");
+                        appState.NativeWindow = app->window;
                     } else if (cmd == APP_CMD_TERM_WINDOW) {
-                        Java_com_oculus_sdk_GLES3JNILib_onSurfaceDestroyed(
-                                env,
-                                nullptr,
-                                handle);
+                        logDebug("APP_CMD_TERM_WINDOW");
+                        appState.NativeWindow = nullptr;
                     } else if (cmd == APP_CMD_CONTENT_RECT_CHANGED) {
-                        Java_com_oculus_sdk_GLES3JNILib_onSurfaceChanged(
-                                env,
-                                nullptr,
-                                handle,
-                                (jobject) app->window);
+                        if (ANativeWindow_getWidth(app->window) < ANativeWindow_getHeight(app->window))
+                        {
+                            // An app that is relaunched after pressing the home button gets an initial surface with
+                            // the wrong orientation even though android:screenOrientation="landscape" is set in the
+                            // manifest. The choreographer callback will also never be called for this surface because
+                            // the surface is immediately replaced with a new surface with the correct orientation.
+                            logError("- Surface not in landscape mode!");
+                        }
+
+                        if (app->window != appState.NativeWindow)
+                        {
+                            if (appState.NativeWindow != nullptr)
+                            {
+                                // todo : perform actions due to window being destroyed
+                                appState.NativeWindow = nullptr;
+                            }
+
+                            if (app->window != nullptr)
+                            {
+                                // todo : perform actions due to window being created
+                                appState.NativeWindow = app->window;
+                            }
+                        }
                     } else {
-                        printf("??? #2\n");
+                        logWarning("??? #2");
                     }
 
                     android_app_post_exec_cmd(app, cmd);
-                } else if (ident == LOOPER_ID_INPUT)
-                {
+                } else if (ident == LOOPER_ID_INPUT) {
                     AInputEvent * event = nullptr;
                     while (AInputQueue_getEvent(app->inputQueue, &event) >= 0) {
-                        if (AInputQueue_preDispatchEvent(app->inputQueue, event)) {
-                            continue;
-                        }
+                        //if (AInputQueue_preDispatchEvent(app->inputQueue, event)) {
+                        //    continue;
+                        //}
 
                         int32_t handled = 0;
 
@@ -2179,9 +1489,11 @@ extern "C"
                                     //Log.v( TAG, "GLES3JNIActivity::dispatchKeyEvent( " + keyCode + ", " + action + " )" );
                                 }
 
-                                Java_com_oculus_sdk_GLES3JNILib_onKeyEvent(
-                                        env, nullptr, handle,
-                                        keyCode, action);
+                                ovrApp_HandleKeyEvent(
+                                    &appState,
+                                    keyCode,
+                                    action);
+
                                 handled = 1;
                             }
                         }
@@ -2189,13 +1501,100 @@ extern "C"
                         AInputQueue_finishEvent(app->inputQueue, event, handled);
                     }
                 } else {
-                    printf("??? #1\n");
+                    logWarning("??? #1");
                 }
+
+                ovrApp_HandleVrModeChanges(&appState);
             }
+
+            // We must read from the event queue with regular frequency.
+            ovrApp_HandleVrApiEvents(&appState);
+
+            ovrApp_HandleInput(&appState);
+
+            if (appState.Ovr == nullptr)
+                continue;
+
+            // Create the scene if not yet created.
+            // The scene is created here to be able to show a loading icon.
+            if (!ovrScene_IsCreated(&appState.Scene))
+            {
+                // Show a loading icon.
+                const int frameFlags = VRAPI_FRAME_FLAG_FLUSH;
+
+                ovrLayerProjection2 blackLayer = vrapi_DefaultLayerBlackProjection2();
+                blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
+
+                ovrLayerLoadingIcon2 iconLayer = vrapi_DefaultLayerLoadingIcon2();
+                iconLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
+
+                const ovrLayerHeader2 * layers[] =
+                    {
+                        &blackLayer.Header,
+                        &iconLayer.Header,
+                    };
+
+                ovrSubmitFrameDescription2 frameDesc = { };
+                frameDesc.Flags = frameFlags;
+                frameDesc.SwapInterval = 1;
+                frameDesc.FrameIndex = appState.FrameIndex;
+                frameDesc.DisplayTime = appState.DisplayTime;
+                frameDesc.LayerCount = 2;
+                frameDesc.Layers = layers;
+
+                vrapi_SubmitFrame2(appState.Ovr, &frameDesc);
+
+                // Create the scene.
+                ovrScene_Create(&appState.Scene, appState.UseMultiview);
+            }
+
+            // This is the only place the frame index is incremented, right before
+            // calling vrapi_GetPredictedDisplayTime().
+            appState.FrameIndex++;
+
+            // Get the HMD pose, predicted for the middle of the time period during which
+            // the new eye images will be displayed. The number of frames predicted ahead
+            // depends on the pipeline depth of the engine and the synthesis rate.
+            // The better the prediction, the less black will be pulled in at the edges.
+            const double predictedDisplayTime = vrapi_GetPredictedDisplayTime(appState.Ovr, appState.FrameIndex);
+            const ovrTracking2 tracking = vrapi_GetPredictedTracking2(appState.Ovr, predictedDisplayTime);
+
+            appState.DisplayTime = predictedDisplayTime;
+
+            // Advance the simulation based on the elapsed time since start of loop till predicted
+            // display time.
+            ovrSimulation_Advance(&appState.Simulation, predictedDisplayTime - startTime);
+
+            // Render eye images and setup the primary layer using ovrTracking2.
+            const ovrLayerProjection2 worldLayer = ovrRenderer_RenderFrame(
+                &appState.Renderer,
+                &appState.Java,
+                &appState.Scene,
+                &appState.Simulation,
+                &tracking,
+                appState.Ovr);
+
+            const ovrLayerHeader2 * layers[] = { &worldLayer.Header };
+
+            ovrSubmitFrameDescription2 frameDesc = { };
+            frameDesc.Flags = 0;
+            frameDesc.SwapInterval = appState.SwapInterval;
+            frameDesc.FrameIndex = appState.FrameIndex;
+            frameDesc.DisplayTime = appState.DisplayTime;
+            frameDesc.LayerCount = 1;
+            frameDesc.Layers = layers;
+
+            // Hand over the eye images to the time warp.
+            vrapi_SubmitFrame2(appState.Ovr, &frameDesc);
         }
 
-        app->activity->vm->DetachCurrentThread();
+        ovrRenderer_Destroy(&appState.Renderer);
+
+        ovrScene_Destroy(&appState.Scene);
+        ovrEgl_DestroyContext(&appState.Egl);
+
+        vrapi_Shutdown();
+
+        java.Vm->DetachCurrentThread();
     }
 }
-
-#endif

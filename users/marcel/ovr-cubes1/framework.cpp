@@ -4,12 +4,6 @@
 
 #include <android/log.h>
 
-Framework framework;
-
-void Framework::process()
-{
-}
-
 void checkErrorGL()
 {
     const GLenum error = glGetError();
@@ -22,6 +16,11 @@ void checkErrorGL()
 void logDebug(const char * format, ...)
 {
     //__android_log_print(ANDROID_LOG_VERBOSE, OVR_LOG_TAG, __VA_ARGS__);
+}
+
+void logWarning(const char * format, ...)
+{
+    //__android_log_print(ANDROID_LOG_ERROR, OVR_LOG_TAG, __VA_ARGS__);
 }
 
 void logError(const char * format, ...)

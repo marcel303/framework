@@ -1,4 +1,5 @@
 app ovr-cubes1
+	depend_library libgg
 	depend_library ovr-mobile-vrapi
 	depend_library GLESv3 global
 	depend_library EGL global
