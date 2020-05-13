@@ -23,6 +23,7 @@ add miniz
 add msdfgen
 add nanovg-support
 add oggvorbis
+with_platform android add ovr-mobile
 add portaudio-support
 with_platform linux add PS3EYEDriver/framework
 with_platform macos add PS3EYEDriver/framework

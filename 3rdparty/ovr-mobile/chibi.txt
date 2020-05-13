@@ -1,0 +1,3 @@
+library ovr-mobile-vrapi shared prebuilt
+	add_files VrApi/Libs/Android/arm64-v8a/Release/libvrapi.so
+	header_path VrApi/Include expose
