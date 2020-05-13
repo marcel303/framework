@@ -2106,7 +2106,7 @@ extern "C"
                 if (ident == LOOPER_ID_MAIN) {
                     auto cmd = android_app_read_cmd(app);
 
-                   // android_app_pre_exec_cmd(app, cmd);
+                    android_app_pre_exec_cmd(app, cmd);
 
                     if (cmd == APP_CMD_START) {
                         Java_com_oculus_sdk_GLES3JNILib_onStart(
@@ -2148,7 +2148,7 @@ extern "C"
                         printf("??? #2\n");
                     }
 
-                    //android_app_post_exec_cmd(app, cmd);
+                    android_app_post_exec_cmd(app, cmd);
                 } else if (ident == LOOPER_ID_INPUT)
                 {
                     AInputEvent * event = nullptr;
@@ -2156,35 +2156,35 @@ extern "C"
                         if (AInputQueue_preDispatchEvent(app->inputQueue, event)) {
                             continue;
                         }
+
                         int32_t handled = 0;
 
-                        int keyCode = event->ke;
-                        int action = event.getAction();
-                        if ( action != KeyEvent.ACTION_DOWN && action != KeyEvent.ACTION_UP )
-                        {
-                            return super.dispatchKeyEvent( event );
+                        if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY) {
+                            int keyCode = AKeyEvent_getKeyCode(event);
+                            int action = AKeyEvent_getAction(event);
+
+                            if (action != AKEY_EVENT_ACTION_DOWN &&
+                                action != AKEY_EVENT_ACTION_UP) {
+                                // dispatch
+                            } else if (keyCode == AKEYCODE_VOLUME_UP) {
+                                // todo : we get here twice due to up/down ?
+                                //adjustVolume(1);
+                                handled = 1;
+                            } else if (keyCode == AKEYCODE_VOLUME_DOWN) {
+                                // todo : we get here twice due to up/down ?
+                                //adjustVolume(-1);
+                                handled = 1;
+                            } else {
+                                if (action == AKEY_EVENT_ACTION_UP) {
+                                    //Log.v( TAG, "GLES3JNIActivity::dispatchKeyEvent( " + keyCode + ", " + action + " )" );
+                                }
+
+                                Java_com_oculus_sdk_GLES3JNILib_onKeyEvent(
+                                        env, nullptr, handle,
+                                        keyCode, action);
+                                handled = 1;
+                            }
                         }
-                        if ( keyCode == KeyEvent.KEYCODE_VOLUME_UP )
-                        {
-                            adjustVolume( 1 );
-                            return true;
-                        }
-                        if ( keyCode == KeyEvent.KEYCODE_VOLUME_DOWN )
-                        {
-                            adjustVolume( -1 );
-                            return true;
-                        }
-                        if ( action == KeyEvent.ACTION_UP )
-                        {
-                            Log.v( TAG, "GLES3JNIActivity::dispatchKeyEvent( " + keyCode + ", " + action + " )" );
-                        }
-                        GLES3JNILib.onKeyEvent( mNativeHandle, keyCode, action );
-                        JNIEXPORT void JNICALL Java_com_oculus_sdk_GLES3JNILib_onKeyEvent(
-                                JNIEnv * env,
-                                jclass obj,
-                                jlong handle,
-                                int keyCode,
-                                int action)
 
                         AInputQueue_finishEvent(app->inputQueue, event, handled);
                     }
