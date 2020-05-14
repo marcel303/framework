@@ -29,7 +29,6 @@
 
 #include "BoxAtlas.h"
 #include "gx_texture.h"
-#include <SDL2/SDL_opengl.h>
 
 struct TextureAtlas
 {

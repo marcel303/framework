@@ -29,12 +29,17 @@
 
 #if defined(IPHONEOS)
 	#include <OpenGLES/ES3/gl.h>
+#elif defined(ANDROID)
+	#include <GLES3/gl3.h>
 #else
 	#include <GL/glew.h>
 #endif
 
+#if FRAMEWORK_USE_SDL
+	#include <SDL2/SDL.h>
+#endif
+
 #include <map>
-#include <SDL2/SDL.h>
 #include <string>
 #include "framework.h"
 #include "internal_filereader.h"
@@ -234,7 +239,8 @@ public:
 		while (stop == false)
 		{
 			const SDL_Event & e = events[eventIndex];
-			
+
+		#if FRAMEWORK_USE_SDL
 			if (e.type == SDL_MOUSEBUTTONDOWN)
 			{
 				const int index = e.button.button == SDL_BUTTON_LEFT ? 0 : e.button.button == SDL_BUTTON_RIGHT ? 1 : -1;
@@ -266,6 +272,7 @@ public:
 			{
 				Assert(false);
 			}
+		#endif
 			
 			eventIndex++;
 			
@@ -286,14 +293,14 @@ public:
 			for (int i = 0; i < eventIndex; ++i)
 				numEvents--;
 			std::reverse(events, events + numEvents);
-#if 0
+		#if 0
 			printf("size: %d\n", (int)events.size());
 			for (int i = 0; i < eventIndex; ++i)
 			{
 				auto itr = events.begin();
 				events.erase(itr);
 			}
-#endif
+		#endif
 		#else
 			events.erase(events.begin(), events.begin() + eventIndex);
 		#endif
@@ -433,7 +440,9 @@ public:
 	
 	Window * mainWindow;
 	Window * currentWindow;
+#if FRAMEWORK_USE_SDL
 	SDL_GLContext glContext;
+#endif
 	int displaySize[2]; // size as passed to init
 #if ENABLE_PROFILING
 	Remotery * rmt;
@@ -477,7 +486,9 @@ public:
 	MsdfFontCacheElem * fontMSDF;
 	bool isInTextBatchMSDF;
 	int xinputGamepadIdx;
+#if FRAMEWORK_USE_SDL
 	SDL_Joystick * joystick[GAMEPAD_MAX];
+#endif
 	ShaderBase * shader;
 	TRANSFORM transform;
 	Mat4x4 transformScreen;

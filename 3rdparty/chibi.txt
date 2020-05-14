@@ -40,6 +40,7 @@ with_platform macos add xmm-support
 
 with_platform macos    add FreeImage-support
 with_platform iphoneos add FreeImage-support
+with_platform android  add FreeImage-support
 with_platform windows  add FreeImage-support
 
 library ImGuiColorTextEdit

@@ -38,12 +38,49 @@
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Vec4.h"
+
+#if FRAMEWORK_USE_SDL
+	#include <SDL2/SDL_events.h>
+	#include <SDL2/SDL_keycode.h>
+	#include <SDL2/SDL_mutex.h>
+	#include <SDL2/SDL_thread.h>
+	#include <SDL2/SDL_timer.h>
+#else
+// todo : remove these typedefs and SDLK enum
+	typedef int SDL_Event;
+	typedef int SDL_Window; // todo : resolve what to do with windows on Android
+
+	enum
+	{
+		SDLK_LSHIFT,
+		SDLK_RSHIFT,
+		SDLK_UP,
+		SDLK_DOWN,
+		SDLK_LEFT,
+		SDLK_RIGHT,
+		SDLK_EQUALS,
+		SDLK_MINUS,
+		SDLK_a,
+		SDLK_z,
+		SDLK_o,
+		SDLK_LGUI,
+		SDLK_RGUI,
+		SDLK_f,
+		SDLK_b,
+		SDLK_s,
+		SDLK_t,
+		SDLK_w,
+		SDLK_d,
+		SDLK_LEFTBRACKET,
+		SDLK_RIGHTBRACKET,
+		SDLK_1,
+		SDLK_2,
+		SDLK_3,
+
+	};
+#endif
+
 #include <float.h> // FLT_MAX (sprite draw)
-#include <SDL2/SDL_events.h>
-#include <SDL2/SDL_keycode.h>
-#include <SDL2/SDL_mutex.h>
-#include <SDL2/SDL_thread.h>
-#include <SDL2/SDL_timer.h>
 #include <string>
 #include <vector>
 
@@ -79,6 +116,9 @@
 #if defined(IPHONEOS)
 	#define ENABLE_DESKTOP_OPENGL 0
 	#define ENABLE_OPENGL_ES3 1
+#elif defined(ANDROID)
+	#define ENABLE_DESKTOP_OPENGL 0
+	#define ENABLE_OPENGL_ES3 1
 #elif ENABLE_OPENGL
 	#define ENABLE_DESKTOP_OPENGL 1 // do not alter
 #else
@@ -91,7 +131,7 @@
 	#define ENABLE_COMPUTE_SHADER 0 // do not alter
 #endif
 
-#if ENABLE_OPENGL && !defined(LINUX) && !defined(IPHONEOS)
+#if ENABLE_OPENGL && !defined(LINUX) && !defined(IPHONEOS) && !defined(ANDROID)
 	#define ENABLE_PROFILING 1
 #else
 	#define ENABLE_PROFILING 0

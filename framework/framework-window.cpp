@@ -52,6 +52,7 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 	, m_window(nullptr)
 	, m_windowData(nullptr)
 {
+#if FRAMEWORK_USE_SDL
 	int flags = (SDL_WINDOW_ALLOW_HIGHDPI * framework.allowHighDpi) | (SDL_WINDOW_RESIZABLE * resizable);
 	
 #if ENABLE_OPENGL
@@ -62,6 +63,7 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 	
 #if ENABLE_METAL
 	metal_attach(m_window);
+#endif
 #endif
 	
 	m_windowData = new WindowData();
@@ -77,31 +79,40 @@ Window::~Window()
 	delete m_windowData;
 	m_windowData = nullptr;
 
+#if FRAMEWORK_USE_SDL
 #if ENABLE_METAL
 	metal_detach(m_window);
 #endif
 
 	SDL_DestroyWindow(m_window);
 	m_window = nullptr;
+#endif
 }
 
 void Window::setPosition(const int x, const int y)
 {
+#if FRAMEWORK_USE_SDL
 	SDL_SetWindowPosition(m_window, x, y);
+#endif
 }
 
 void Window::setPositionCentered()
 {
+#if FRAMEWORK_USE_SDL
 	SDL_SetWindowPosition(m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+#endif
 }
 
 void Window::setSize(const int sx, const int sy)
 {
+#if FRAMEWORK_USE_SDL
 	SDL_SetWindowSize(m_window, sx, sy);
+#endif
 }
 
 void Window::setFullscreen(const bool fullscreen)
 {
+#if FRAMEWORK_USE_SDL
 	// https://wiki.libsdl.org/SDL_SetWindowFullscreen
 	// SDL_WINDOW_FULLSCREEN, SDL_WINDOW_FULLSCREEN_DESKTOP or 0
 	
@@ -109,66 +120,97 @@ void Window::setFullscreen(const bool fullscreen)
 		SDL_SetWindowFullscreen(m_window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0);
 	else
 		SDL_SetWindowFullscreen(m_window, 0);
+#endif
 }
 
 void Window::setTitle(const char * title)
 {
+#if FRAMEWORK_USE_SDL
 	SDL_SetWindowTitle(m_window, title);
+#endif
 }
 
 void Window::show()
 {
+#if FRAMEWORK_USE_SDL
 	SDL_ShowWindow(m_window);
+#endif
 }
 
 void Window::hide()
 {
+#if FRAMEWORK_USE_SDL
 	SDL_HideWindow(m_window);
+#endif
 }
 
 bool Window::isHidden() const
 {
+#if FRAMEWORK_USE_SDL
 	return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_HIDDEN) != 0;
+#else
+	return false;
+#endif
 }
 
 bool Window::hasFocus() const
 {
+#if FRAMEWORK_USE_SDL
 	return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_INPUT_FOCUS) != 0;
+#else
+	return true;
+#endif
 }
 
 void Window::raise()
 {
+#if FRAMEWORK_USE_SDL
 	SDL_RaiseWindow(m_window);
+#endif
 }
 
 void Window::getPosition(int & x, int & y) const
 {
+#if FRAMEWORK_USE_SDL
 	SDL_GetWindowPosition(m_window, &x, &y);
+#endif
 }
 
 int Window::getWidth() const
 {
+#if FRAMEWORK_USE_SDL
 	int sx;
 	int sy;
 	
 	SDL_GetWindowSize(m_window, &sx, &sy);
 	
 	return sx;
+#else
+	return 0; // todo : return fullscreen size ?
+#endif
 }
 
 int Window::getHeight() const
 {
+#if FRAMEWORK_USE_SDL
 	int sx;
 	int sy;
 	
 	SDL_GetWindowSize(m_window, &sx, &sy);
 	
 	return sy;
+#else
+	return 0; // todo : return fullscreen size ?
+#endif
 }
 
 bool Window::isFullscreen() const
 {
+#if FRAMEWORK_USE_SDL
 	return (SDL_GetWindowFlags(m_window) & SDL_WINDOW_FULLSCREEN) != 0;
+#else
+	return true;
+#endif
 }
 
 bool Window::getQuitRequested() const
@@ -195,7 +237,7 @@ void pushWindow(Window & window)
 	globals.currentWindow = &window;
 	globals.currentWindow->getWindowData()->makeActive();
 	
-#if ENABLE_OPENGL
+#if ENABLE_OPENGL && FRAMEWORK_USE_SDL
 	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 #endif
 
@@ -211,7 +253,7 @@ void popWindow()
 	globals.currentWindow = window;
 	globals.currentWindow->getWindowData()->makeActive();
 	
-#if ENABLE_OPENGL
+#if ENABLE_OPENGL && FRAMEWORK_USE_SDL
 	SDL_GL_MakeCurrent(globals.currentWindow->getWindow(), globals.glContext);
 #endif
 

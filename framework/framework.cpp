@@ -56,6 +56,8 @@
 #if defined(IPHONEOS)
 	#include <OpenGLES/ES3/gl.h>
 	#include <OpenGLES/ES3/glext.h>
+#elif defined(ANDROID)
+	#include <GLES3/gl3.h>
 #else
 	#include <GL/glew.h>
 #endif
@@ -212,6 +214,7 @@ bool Framework::init(int sx, int sy)
 	*/
 #endif
 
+#if FRAMEWORK_USE_SDL
 	// initialize SDL
 	
 	const int initFlags = SDL_INIT_NOPARACHUTE | SDL_INIT_TIMER | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK;
@@ -235,7 +238,7 @@ bool Framework::init(int sx, int sy)
 // todo : add framework option to select orientation, instead of hard-coding it here
 	SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
 #endif
-	
+
 #if ENABLE_OPENGL
 	#if defined(IPHONEOS)
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
@@ -396,6 +399,11 @@ bool Framework::init(int sx, int sy)
 			initErrorHandler(INIT_ERROR_WINDOW);
 		return false;
 	}
+#else
+	// !FRAMEWORK_USE_SDL
+	// todo : remove window support altogether when SDL is disabled ?
+	SDL_Window * mainWindow = nullptr;
+#endif
 	
 	globals.mainWindow = new Window(mainWindow);
 	
@@ -405,6 +413,7 @@ bool Framework::init(int sx, int sy)
 	windowSx = sx;
 	windowSy = sy;
 	
+#if FRAMEWORK_USE_SDL
 #if ENABLE_OPENGL
 	int drawableSx;
 	int drawableSy;
@@ -498,6 +507,9 @@ bool Framework::init(int sx, int sy)
 
 	SDL_GL_SetSwapInterval(enableVsync ? 1 : 0);
 #endif
+#else
+	s_backingScale = 1;
+#endif
 
 #if ENABLE_METAL
 	metal_init();
@@ -515,7 +527,9 @@ bool Framework::init(int sx, int sy)
 	
 	gxInitialize();
 	
-#ifndef __WIN32__
+#ifdef __WIN32__
+	// we use XInput on Windows
+#elif FRAMEWORK_USE_SDL
 	// initialize SDL joysticks
 	
 	const int numJoysticks = SDL_NumJoysticks();
@@ -576,6 +590,7 @@ bool Framework::init(int sx, int sy)
 		initRealTimeEditing();
 	}
 
+#if FRAMEWORK_USE_SDL
 	// set icon
 
 	if (!windowIcon.empty())
@@ -592,6 +607,7 @@ bool Framework::init(int sx, int sy)
 	SDL_RaiseWindow(globals.currentWindow->getWindow());
 
 	SDL_DisableScreenSaver();
+#endif
 
 	// set the default font
 	
@@ -669,6 +685,7 @@ bool Framework::shutdown()
 	glClampColor = 0;
 #endif
 	
+#if FRAMEWORK_USE_SDL
 	// destroy SDL OpenGL context
 	
 	if (globals.glContext)
@@ -676,6 +693,7 @@ bool Framework::shutdown()
 		SDL_GL_DeleteContext(globals.glContext);
 		globals.glContext = 0;
 	}
+#endif
 #endif
 	
 	// destroy SDL window
@@ -690,9 +708,11 @@ bool Framework::shutdown()
 		globals.currentWindow = nullptr;
 	}
 	
+#if FRAMEWORK_USE_SDL
 	// shut down SDL
 	
 	SDL_Quit();
+#endif
 	
 	// clear globals
 	
@@ -787,6 +807,8 @@ struct XMap
 	GAMEPAD_START,
 	GAMEPAD_BACK,
 */
+
+#if FRAMEWORK_USE_SDL
 
 static XMap zeemoteSteelseriesFree =
 {
@@ -901,6 +923,8 @@ static const XMap * getXMap(const char * deviceName)
 	return nullptr;
 }
 
+#endif
+
 void Framework::process()
 {
 	cpuTimingBlock(frameworkProcess);
@@ -921,6 +945,7 @@ void Framework::process()
 	changedFiles.clear();
 	droppedFiles.clear();
 	
+#if FRAMEWORK_USE_SDL
 	SDL_Event e;
 	
 	bool hasWaited = false;
@@ -1082,6 +1107,7 @@ void Framework::process()
 			quitRequested = true;
 		}
 	}
+#endif
 
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		window->m_windowData->endProcess();
@@ -1189,7 +1215,7 @@ void Framework::process()
 	}
 
 	globals.xinputGamepadIdx++;
-#else
+#elif FRAMEWORK_USE_SDL
 	SDL_JoystickUpdate();
 	
 	for (int i = 0; i < MAX_GAMEPAD; ++i)
@@ -1322,6 +1348,7 @@ void Framework::process()
 	
 	//
 	
+#if FRAMEWORK_USE_SDL
 #if 1
 	// high accuracy time steps using SDL_GetPerformanceCounter/SDL_GetPerformanceFrequency
 	const uint64_t tickCount = SDL_GetPerformanceCounter();
@@ -1341,6 +1368,10 @@ void Framework::process()
 	m_lastTick = tickCount;
 
 	timeStep = delta / 1000.f;
+#endif
+#else
+	assert(false);
+	timeStep = 0.f; // todo
 #endif
 
 	time += timeStep;
@@ -1496,7 +1527,11 @@ void showErrorMessage(const char * caption, const char * format, ...)
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
 
+#if FRAMEWORK_USE_SDL
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, caption, text, globals.currentWindow->getWindow());
+#else
+	logError("%s", text);
+#endif
 }
 
 void Framework::fillCachesWithPath(const char * path, bool recurse)
@@ -1668,7 +1703,7 @@ void Framework::endDraw()
 	popRenderPass();
 #endif
 
-#if ENABLE_OPENGL
+#if ENABLE_OPENGL && FRAMEWORK_USE_SDL
 	// check for errors
 	
 	checkErrorGL();
@@ -2120,10 +2155,12 @@ void Framework::unregisterWindow(Window * window)
 
 WindowData * Framework::findWindowDataById(const int id)
 {
+#if FRAMEWORK_USE_SDL
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		if (SDL_GetWindowID(window->m_window) == id)
 			return window->m_windowData;
-	
+#endif
+
 	return nullptr;
 }
 
@@ -2984,13 +3021,17 @@ bool Mouse::wentUp(BUTTON button) const
 
 void Mouse::showCursor(bool enabled)
 {
+#if FRAMEWORK_USE_SDL
 	SDL_ShowCursor(enabled ? 1 : 0);
+#endif
 }
 
 void Mouse::setRelative(bool isRelative)
 {
+#if FRAMEWORK_USE_SDL
 	SDL_SetRelativeMouseMode(isRelative ? SDL_TRUE : SDL_FALSE);
 	SDL_CaptureMouse(isRelative ? SDL_TRUE : SDL_FALSE);
+#endif
 }
 
 bool Mouse::isIdle() const
@@ -3310,12 +3351,8 @@ static void getCurrentViewportSize(int & sx, int & sy)
 		}
 		else
 		{
-			int windowSx;
-			int windowSy;
-			SDL_GetWindowSize(globals.currentWindow->getWindow(), &windowSx, &windowSy);
-
-			sx = windowSx * framework.minification;
-			sy = windowSy * framework.minification;
+			sx = globals.currentWindow->getWidth() * framework.minification;
+			sy = globals.currentWindow->getHeight() * framework.minification;
 		}
 	}
 }
@@ -4938,7 +4975,9 @@ void hqDrawPath(const Path2d & path, float stroke)
 
 void setupPaths(const char * chibiResourcePaths)
 {
+#if FRAMEWORK_USE_SDL
 	changeDirectory(SDL_GetBasePath());
+#endif
 	
 	if (chibiResourcePaths != nullptr)
 		framework.registerChibiResourcePaths(chibiResourcePaths);

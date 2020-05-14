@@ -46,6 +46,12 @@ library framework
 	with_platform iphoneos depend_library libsdl2
 	#with_platform linux depend_library libsdl2
 	with_platform windows depend_library libsdl2
+	
+	with_platform macos    compile_definition FRAMEWORK_USE_SDL 1
+	with_platform iphoneos compile_definition FRAMEWORK_USE_SDL 1
+	with_platform linux    compile_definition FRAMEWORK_USE_SDL 1
+	with_platform android  compile_definition FRAMEWORK_USE_SDL 0
+	with_platform window   compile_definition FRAMEWORK_USE_SDL 1
 
 	depend_library audioio
 	depend_library audiostream
@@ -153,6 +159,13 @@ library framework
 	with_platform linux depend_library portaudio find
 	with_platform linux depend_library freeimage find
 	with_platform linux depend_package SDL2
+
+# Android header file includes and libraries
+
+	#with_platform android depend_library OpenGL
+	#with_platform android depend_library pthread find
+	#with_platform android depend_library portaudio find
+	with_platform android depend_library FreeImage
 
 	resource_path data
 
