@@ -31,9 +31,17 @@ struct S
 
 static S s;
 
-static void mkdir(const char * path)
+static void push_dir(const char * path)
 {
+// todo : error checks
+
 	mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	chdir(path);
+}
+
+static void pop_dir()
+{
+	chdir("..");
 }
 
 static const char * s_androidManifestTemplateForApp =
@@ -66,9 +74,11 @@ R"MANIFEST(<?xml version="1.0" encoding="utf-8"?>
 				android:screenOrientation="landscape"
 				android:excludeFromRecents="false"
 				android:configChanges="screenSize|screenLayout|orientation|keyboardHidden|keyboard|navigation|uiMode">
-      <!-- Indicate the activity is aware of VrApi focus states required for system overlays  -->
-      <meta-data android:name="com.oculus.vr.focusaware" android:value="true"/>
-      <!-- This filter lets the apk show up as a launchable icon. -->
+			
+			<!-- Indicate the activity is aware of VrApi focus states required for system overlays  -->
+			<meta-data android:name="com.oculus.vr.focusaware" android:value="true"/>
+			
+			<!-- This filter lets the apk show up as a launchable icon. -->
 			<intent-filter>
 				<action android:name="android.intent.action.MAIN" />
 				<category android:name="android.intent.category.LAUNCHER" />
@@ -183,16 +193,12 @@ for (auto & lib : libs)
 	
 	for (auto & lib : libs)
 	{
-		mkdir(lib.name.c_str());
-		chdir(lib.name.c_str());
+		push_dir(lib.name.c_str());
 		
 		const std::string appId = std::string("com.chibi.generated.") + lib.name;
 	
-		mkdir("Projects");
-		chdir("Projects");
-		
-		mkdir("Android");
-		chdir("Android");
+		push_dir("Projects");
+		push_dir("Android");
 		
 		// generate build.gradle file for each library
 
@@ -281,8 +287,7 @@ else
 			f = nullptr;
 		}
 
-		mkdir("jni");
-		chdir("jni");
+		push_dir("jni");
 		
 		// generate Android.mk file for each library
 
@@ -363,11 +368,12 @@ s << "APP_DEBUG := true";
 			f = nullptr;
 		}
 
-		chdir("..");
+		pop_dir();
 		
-		chdir("..");
-		chdir("..");
-		chdir("..");
+		pop_dir();
+		pop_dir();
+		
+		pop_dir();
 	}
 
 	return 0;
