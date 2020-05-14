@@ -1135,7 +1135,7 @@ struct ovrApp
     int CpuLevel = 2;
     int GpuLevel = 2;
     int MainThreadTid = 0;
-    //int RenderThreadTid = 0; // disabled
+    int RenderThreadTid = 0;
     bool BackButtonDownLastFrame = false;
     bool GamePadBackButtonDown = false;
     ovrRenderer Renderer;
@@ -1208,8 +1208,8 @@ static void ovrApp_HandleVrModeChanges(ovrApp * app)
                 vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_MAIN, app->MainThreadTid);
                 logDebug("- vrapi_SetPerfThread( MAIN, %d )", app->MainThreadTid);
 
-                //vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_RENDERER, app->RenderThreadTid);
-                //logDebug("- vrapi_SetPerfThread( RENDERER, %d )", app->RenderThreadTid);
+                vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_RENDERER, app->RenderThreadTid);
+                logDebug("- vrapi_SetPerfThread( RENDERER, %d )", app->RenderThreadTid);
             }
         }
     }
@@ -1316,18 +1316,22 @@ static void ovrApp_HandleVrApiEvents(ovrApp * app)
             case VRAPI_EVENT_DATA_LOST:
                 logDebug("vrapi_PollEvent: Received VRAPI_EVENT_DATA_LOST");
                 break;
+
             case VRAPI_EVENT_VISIBILITY_GAINED:
                 logDebug("vrapi_PollEvent: Received VRAPI_EVENT_VISIBILITY_GAINED");
                 break;
+
             case VRAPI_EVENT_VISIBILITY_LOST:
                 logDebug("vrapi_PollEvent: Received VRAPI_EVENT_VISIBILITY_LOST");
                 break;
+
             case VRAPI_EVENT_FOCUS_GAINED:
                 // FOCUS_GAINED is sent when the application is in the foreground and has
                 // input focus. This may be due to a system overlay relinquishing focus
                 // back to the application.
                 logDebug("vrapi_PollEvent: Received VRAPI_EVENT_FOCUS_GAINED");
                 break;
+
             case VRAPI_EVENT_FOCUS_LOST:
                 // FOCUS_LOST is sent when the application is no longer in the foreground and
                 // therefore does not have input focus. This may be due to a system overlay taking
@@ -1335,6 +1339,7 @@ static void ovrApp_HandleVrApiEvents(ovrApp * app)
                 // this occurs.
                 logDebug("vrapi_PollEvent: Received VRAPI_EVENT_FOCUS_LOST");
                 break;
+
             default:
                 logDebug("vrapi_PollEvent: Unknown event");
                 break;
@@ -1388,9 +1393,7 @@ extern "C"
 
         EglInitExtensions();
 
-        appState.UseMultiview &=
-            (glExtensions.multi_view &&
-             vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
+        appState.UseMultiview &= (glExtensions.multi_view && vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
 
         logDebug("AppState UseMultiview : %d", appState.UseMultiview ? 1 : 0);
 
@@ -1402,36 +1405,53 @@ extern "C"
 
         const double startTime = GetTimeInSeconds();
 
-        while (!app->destroyRequested) {
+        while (!app->destroyRequested)
+        {
             int ident;
             int events;
             struct android_poll_source *source;
             //const int timeoutMilliseconds = (appState.Ovr == NULL && app->destroyRequested == 0) ? -1 : 0;
             const int timeoutMilliseconds = 0;
 
-            while ((ident = ALooper_pollAll(timeoutMilliseconds, NULL, &events, (void **) &source)) >= 0) {
-                if (ident == LOOPER_ID_MAIN) {
+            while ((ident = ALooper_pollAll(timeoutMilliseconds, NULL, &events, (void **) &source)) >= 0)
+            {
+                if (ident == LOOPER_ID_MAIN)
+                {
                     auto cmd = android_app_read_cmd(app);
 
                     android_app_pre_exec_cmd(app, cmd);
 
-                    if (cmd == APP_CMD_START) {
+					switch (cmd)
+					{
+					case APP_CMD_START:
                         logDebug("APP_CMD_START");
-                    } else if (cmd == APP_CMD_STOP) {
+                        break;
+
+					case APP_CMD_STOP:
                         logDebug("APP_CMD_STOP");
-                    } else if (cmd == APP_CMD_RESUME) {
+                        break;
+
+					case APP_CMD_RESUME:
                         logDebug("APP_CMD_RESUME");
                         appState.Resumed = true;
-                    } else if (cmd == APP_CMD_PAUSE) {
+                        break;
+
+					case APP_CMD_PAUSE:
                         logDebug("APP_CMD_PAUSE");
                         appState.Resumed = false;
-                    } else if (cmd == APP_CMD_INIT_WINDOW) {
+                        break;
+
+					case APP_CMD_INIT_WINDOW:
                         logDebug("APP_CMD_INIT_WINDOW");
                         appState.NativeWindow = app->window;
-                    } else if (cmd == APP_CMD_TERM_WINDOW) {
+                        break;
+
+					case APP_CMD_TERM_WINDOW:
                         logDebug("APP_CMD_TERM_WINDOW");
                         appState.NativeWindow = nullptr;
-                    } else if (cmd == APP_CMD_CONTENT_RECT_CHANGED) {
+                        break;
+
+					case APP_CMD_CONTENT_RECT_CHANGED:
                         if (ANativeWindow_getWidth(app->window) < ANativeWindow_getHeight(app->window))
                         {
                             // An app that is relaunched after pressing the home button gets an initial surface with
@@ -1455,37 +1475,52 @@ extern "C"
                                 appState.NativeWindow = app->window;
                             }
                         }
-                    } else {
+                        break;
+
+					default:
                         logWarning("??? #2");
-                    }
+                        break;
+					}
 
                     android_app_post_exec_cmd(app, cmd);
-                } else if (ident == LOOPER_ID_INPUT) {
+                }
+                else if (ident == LOOPER_ID_INPUT)
+                {
                     AInputEvent * event = nullptr;
-                    while (AInputQueue_getEvent(app->inputQueue, &event) >= 0) {
+                    while (AInputQueue_getEvent(app->inputQueue, &event) >= 0)
+                    {
                         //if (AInputQueue_preDispatchEvent(app->inputQueue, event)) {
                         //    continue;
                         //}
 
                         int32_t handled = 0;
 
-                        if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY) {
+                        if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY)
+                        {
                             int keyCode = AKeyEvent_getKeyCode(event);
                             int action = AKeyEvent_getAction(event);
 
                             if (action != AKEY_EVENT_ACTION_DOWN &&
-                                action != AKEY_EVENT_ACTION_UP) {
+                                action != AKEY_EVENT_ACTION_UP)
+                            {
                                 // dispatch
-                            } else if (keyCode == AKEYCODE_VOLUME_UP) {
+                            }
+                            else if (keyCode == AKEYCODE_VOLUME_UP)
+                            {
                                 // todo : we get here twice due to up/down ?
                                 //adjustVolume(1);
                                 handled = 1;
-                            } else if (keyCode == AKEYCODE_VOLUME_DOWN) {
+                            }
+                            else if (keyCode == AKEYCODE_VOLUME_DOWN)
+                            {
                                 // todo : we get here twice due to up/down ?
                                 //adjustVolume(-1);
                                 handled = 1;
-                            } else {
-                                if (action == AKEY_EVENT_ACTION_UP) {
+                            }
+                            else
+                            {
+                                if (action == AKEY_EVENT_ACTION_UP)
+                                {
                                     //Log.v( TAG, "GLES3JNIActivity::dispatchKeyEvent( " + keyCode + ", " + action + " )" );
                                 }
 
@@ -1500,7 +1535,9 @@ extern "C"
 
                         AInputQueue_finishEvent(app->inputQueue, event, handled);
                     }
-                } else {
+                }
+                else
+                {
                     logWarning("??? #1");
                 }
 
