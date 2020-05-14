@@ -34,6 +34,7 @@ add gltf1
 add gltf2
 add gpuParticles1
 add gpupath1
+add gradlegen1
 #add graphtests
 push_group thegrooop
 	add grooop-cocompose
@@ -54,6 +55,7 @@ add maxpatch1
 add mitronix1
 add motionbank-effect
 add nanovg-canvas
+with_platform android add ovr-cubes1
 add pincushion1
 add planetvis
 add planetvis2
