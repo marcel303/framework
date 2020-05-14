@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(IPHONEOS)
+#if !defined(IPHONEOS) && !defined(ANDROID)
 	#include <GL/glew.h>
 #endif
 
@@ -39,6 +39,8 @@
 
 #if defined(IPHONEOS)
 	#include <OpenGLES/ES3/gl.h>
+#elif defined(ANDROID)
+	#include <GLES3/gl3.h>
 #endif
 
 static GLenum toOpenGLInternalFormat(const GX_TEXTURE_FORMAT format)
@@ -49,7 +51,9 @@ static GLenum toOpenGLInternalFormat(const GX_TEXTURE_FORMAT format)
 	C(GX_RG8_UNORM, GL_RG8);
 	C(GX_RGB8_UNORM, GL_RGB8);
 	C(GX_RGBA8_UNORM, GL_RGBA8);
+#if ENABLE_DESKTOP_OPENGL
 	C(GX_R16_UNORM, GL_R16);
+#endif
 	C(GX_R16_FLOAT, GL_R16F);
 	C(GX_RGBA16_FLOAT, GL_RGBA16F);
 	C(GX_R32_FLOAT, GL_R32F);
@@ -274,8 +278,10 @@ void GxTexture::setSampling(const bool _filter, const bool _clamp)
 
 void GxTexture::clearf(const float r, const float g, const float b, const float a)
 {
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+	GLuint oldReadBuffer = 0;
+	GLuint oldDrawBuffer = 0;
+	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, (GLint*)&oldReadBuffer);
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldDrawBuffer);
 	{
 		GLuint frameBuffer = 0;
 		
@@ -293,7 +299,8 @@ void GxTexture::clearf(const float r, const float g, const float b, const float 
 		frameBuffer = 0;
 		checkErrorGL();
 	}
-	glBindFramebuffer(GL_FRAMEBUFFER, oldBuffer);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, oldReadBuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
 	checkErrorGL();
 }
 
@@ -902,8 +909,16 @@ static GLuint allocateTexture(const int sx, const int sy, GLenum internalFormat,
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	checkErrorGL();
 	
+#if ENABLE_DESKTOP_OPENGL
 	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 	checkErrorGL();
+#else
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, swizzleMask[0]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, swizzleMask[1]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, swizzleMask[2]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, swizzleMask[3]);
+	checkErrorGL();
+#endif
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, clamp ? GL_CLAMP_TO_EDGE : GL_REPEAT);
@@ -918,6 +933,7 @@ static GLuint allocateTexture(const int sx, const int sy, GLenum internalFormat,
 
 GxTextureId copyTexture(const GxTextureId texture)
 {
+#if ENABLE_DESKTOP_OPENGL
 	// update texture
 	
 	GLuint oldBuffer = 0;
@@ -955,7 +971,7 @@ GxTextureId copyTexture(const GxTextureId texture)
 	glGetTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 	checkErrorGL();
 	
-	const bool filter = magFilter != GL_POINT;
+	const bool filter = magFilter != GL_NEAREST;
 	const bool clamp = wrapS == GL_CLAMP_TO_EDGE;
 	
 	GLuint newTexture = allocateTexture(sx, sy, internalFormat, filter, clamp, swizzleMask);
@@ -990,6 +1006,10 @@ GxTextureId copyTexture(const GxTextureId texture)
 	frameBuffer = 0;
 	
 	return newTexture;
+#else
+	return 0;
+	assert(false); // todo : how to copy textures using GLES3?
+#endif
 }
 
 void freeTexture(GxTextureId & textureId)

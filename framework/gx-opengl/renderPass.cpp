@@ -33,6 +33,8 @@
 
 #if defined(IPHONEOS)
 	#include <OpenGLES/ES3/gl.h>
+#elif defined(ANDROID)
+	#include <GLES3/gl3.h>
 #else
 	#include <GL/glew.h>
 #endif
@@ -268,8 +270,12 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 
 	int renderTargetSx = 0;
 	int renderTargetSy = 0;
+#if FRAMEWORK_USE_SDL
 	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
-	
+#else
+	assert(false); // todo : what's the appropriate size ?
+#endif
+
 	// update viewport
 	
 	glViewport(0, 0, renderTargetSx, renderTargetSy);
@@ -321,7 +327,11 @@ void endRenderPass()
 	
 	int renderTargetSx = 0;
 	int renderTargetSy = 0;
+#if FRAMEWORK_USE_SDL
 	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
+#else
+	assert(false); // todo : what's the appropriate size ?
+#endif
 	
 	glViewport(0, 0, renderTargetSx, renderTargetSy);
 	s_renderTargetSx = renderTargetSx;
@@ -442,6 +452,16 @@ void popRenderPass()
 	if (s_renderPasses.empty())
 	{
 		s_renderPassIsBackbufferPass = false;
+		
+		// todo : restore frame buffer bindings
+		/*
+		int oldReadBuffer = 0;
+		int oldDrawBuffer = 0;
+
+		glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &oldReadBuffer);
+		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDrawBuffer);
+		checkErrorGL();
+		*/
 	}
 	else
 	{

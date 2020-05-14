@@ -966,7 +966,9 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	// translate OpenGL format to GX format
 	
 	if (internalFormat == GL_R8) return GX_R8_UNORM;
+#if ENABLE_DESKTOP_OPENGL
 	else if (internalFormat == GL_R16) return GX_R16_UNORM;
+#endif
 	else if (internalFormat == GL_RG8) return GX_RG8_UNORM;
 	else if (internalFormat == GL_R16F) return GX_R16_FLOAT;
 	else if (internalFormat == GL_RGBA16F) return GX_RGBA16_FLOAT;
@@ -1166,7 +1168,9 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId id)
 	// translate OpenGL format to GX format
 
 	if (internalFormat == GL_R8) return GX_R8_UNORM;
+#if ENABLE_DESKTOP_OPENGL
 	else if (internalFormat == GL_R16) return GX_R16_UNORM;
+#endif
 	else if (internalFormat == GL_RG8) return GX_RG8_UNORM;
 	else if (internalFormat == GL_R16F) return GX_R16_FLOAT;
 	else if (internalFormat == GL_RGBA16F) return GX_RGBA16_FLOAT;

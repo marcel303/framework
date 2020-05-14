@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(IPHONEOS)
+#if !defined(IPHONEOS) && !defined(ANDROID)
 	#include <GL/glew.h>
 #endif
 
@@ -37,6 +37,8 @@
 
 #if defined(IPHONEOS)
 	#include <OpenGLES/ES3/gl.h>
+#elif defined(ANDROID)
+	#include <GLES3/gl3.h>
 #endif
 
 static GLenum translateColorFormat(const SURFACE_FORMAT format)

@@ -25,7 +25,7 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#if !defined(IPHONEOS)
+#if !defined(IPHONEOS) && !defined(ANDROID)
 	#include <GL/glew.h>
 #endif
 
@@ -127,7 +127,11 @@ void blitBackBufferToSurface(Surface * surface)
 {
 	int drawableSx;
 	int drawableSy;
+#if FRAMEWORK_USE_SDL
 	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &drawableSx, &drawableSy);
+#else
+	assert(false); // todo : what's the appropriate size ?
+#endif
 	
 	int oldDrawBuffer = 0;
 

@@ -234,12 +234,16 @@ void setDepthBias(float depthBias, float slopeScale)
 	if (depthBias == 0.f && slopeScale == 0.f)
 	{
 		glDisable(GL_POLYGON_OFFSET_FILL);
+	#if ENABLE_DESKTOP_OPENGL
 		glDisable(GL_POLYGON_OFFSET_LINE);
+	#endif
 	}
 	else
 	{
 		glEnable(GL_POLYGON_OFFSET_FILL);
+	#if ENABLE_DESKTOP_OPENGL
 		glEnable(GL_POLYGON_OFFSET_LINE);
+	#endif
 		glPolygonOffset(slopeScale, depthBias);
 	}
 }

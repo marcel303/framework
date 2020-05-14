@@ -1,6 +1,6 @@
 #pragma once
 
-#if !defined(IPHONEOS)
+#if !defined(IPHONEOS) && !defined(ANDROID)
 	#include <GL/glew.h>
 #endif
 
@@ -10,6 +10,8 @@
 
 #if defined(IPHONEOS)
 	#include <OpenGLES/ES3/gl.h>
+#elif defined(ANDROID)
+	#include <GLES3/gl3.h>
 #endif
 
 static GLenum toOpenGLPrimitiveType(const GX_PRIMITIVE_TYPE primitiveType)
