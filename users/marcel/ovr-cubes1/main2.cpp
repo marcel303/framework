@@ -43,6 +43,31 @@ static const int CPU_LEVEL = 2;
 static const int GPU_LEVEL = 3;
 static const int NUM_MULTI_SAMPLES = 4;
 
+#if false
+
+VERTEX_SHADER =
+
+    #define NUM_VIEWS 2
+    #extension GL_OVR_multiview2 : enable
+    layout(num_views=NUM_VIEWS) in;
+    #define VIEW_ID gl_ViewID_OVR
+
+    in vec3 vertexPosition;
+    in mat4 vertexTransform;
+
+    uniform SceneMatrices
+    {
+    	uniform mat4 ViewMatrix[NUM_VIEWS];
+    	uniform mat4 ProjectionMatrix[NUM_VIEWS];
+    } sm;
+
+    void main()
+    {
+		gl_Position = sm.ProjectionMatrix[VIEW_ID] * ( sm.ViewMatrix[VIEW_ID] * ( vertexTransform * vec4( vertexPosition * 0.1, 1.0 ) ) );
+    }
+
+#endif
+
 /*
 ================================================================================
 
@@ -249,420 +274,6 @@ static void ovrEgl_DestroyContext(ovrEgl * egl)
 /*
 ================================================================================
 
-ovrGeometry
-
-================================================================================
-*/
-
-struct ovrVertexAttribPointer
-{
-    GLint Index;
-    GLint Size;
-    GLenum Type;
-    GLboolean Normalized;
-    GLsizei Stride;
-    const GLvoid * Pointer;
-};
-
-#define MAX_VERTEX_ATTRIB_POINTERS 3
-
-struct ovrGeometry
-{
-    GLuint VertexBuffer = 0;
-    GLuint IndexBuffer = 0;
-    GLuint VertexArrayObject = 0;
-    int VertexCount = 0;
-    int IndexCount = 0;
-    ovrVertexAttribPointer VertexAttribs[MAX_VERTEX_ATTRIB_POINTERS];
-
-    ovrGeometry()
-    {
-        memset(VertexAttribs, 0, sizeof(VertexAttribs));
-        for (int i = 0; i < MAX_VERTEX_ATTRIB_POINTERS; ++i)
-            VertexAttribs[i].Index = -1;
-    }
-};
-
-enum VertexAttributeLocation
-{
-    VERTEX_ATTRIBUTE_LOCATION_POSITION,
-    VERTEX_ATTRIBUTE_LOCATION_COLOR,
-    VERTEX_ATTRIBUTE_LOCATION_UV,
-    VERTEX_ATTRIBUTE_LOCATION_TRANSFORM
-};
-
-struct ovrVertexAttribute
-{
-    enum VertexAttributeLocation location;
-    const char* name;
-};
-
-static const ovrVertexAttribute ProgramVertexAttributes[] =
-{
-    { VERTEX_ATTRIBUTE_LOCATION_POSITION,   "vertexPosition"    },
-    { VERTEX_ATTRIBUTE_LOCATION_COLOR,      "vertexColor"       },
-    { VERTEX_ATTRIBUTE_LOCATION_UV,         "vertexUv"          },
-    { VERTEX_ATTRIBUTE_LOCATION_TRANSFORM,  "vertexTransform"   }
-};
-
-static void ovrGeometry_CreateCube(ovrGeometry * geometry)
-{
-    struct ovrCubeVertices
-    {
-        signed char positions[8][4];
-        unsigned char colors[8][4];
-    };
-
-    static const ovrCubeVertices cubeVertices =
-    {
-        // positions
-        {
-            {-127, +127, -127, +127},
-            {+127, +127, -127, +127},
-            {+127, +127, +127, +127},
-            {-127, +127, +127, +127}, // top
-            {-127, -127, -127, +127},
-            {-127, -127, +127, +127},
-            {+127, -127, +127, +127},
-            {+127, -127, -127, +127} // bottom
-        },
-        // colors
-        {
-            {255, 0, 255, 255},
-            {0, 255, 0, 255},
-            {0, 0, 255, 255},
-            {255, 0, 0, 255},
-            {0, 0, 255, 255},
-            {0, 255, 0, 255},
-            {255, 0, 255, 255},
-            {255, 0, 0, 255}
-        },
-    };
-
-    static const unsigned short cubeIndices[36] =
-    {
-        0, 2, 1, 2, 0, 3, // top
-        4, 6, 5, 6, 4, 7, // bottom
-        2, 6, 7, 7, 1, 2, // right
-        0, 4, 5, 5, 3, 0, // left
-        3, 5, 6, 6, 2, 3, // front
-        0, 1, 7, 7, 4, 0 // back
-    };
-
-    geometry->VertexCount = 8;
-    geometry->IndexCount = 36;
-
-    geometry->VertexAttribs[0].Index = VERTEX_ATTRIBUTE_LOCATION_POSITION;
-    geometry->VertexAttribs[0].Size = 4;
-    geometry->VertexAttribs[0].Type = GL_BYTE;
-    geometry->VertexAttribs[0].Normalized = true;
-    geometry->VertexAttribs[0].Stride = sizeof(cubeVertices.positions[0]);
-    geometry->VertexAttribs[0].Pointer = (const GLvoid*)offsetof(ovrCubeVertices, positions);
-
-    geometry->VertexAttribs[1].Index = VERTEX_ATTRIBUTE_LOCATION_COLOR;
-    geometry->VertexAttribs[1].Size = 4;
-    geometry->VertexAttribs[1].Type = GL_UNSIGNED_BYTE;
-    geometry->VertexAttribs[1].Normalized = true;
-    geometry->VertexAttribs[1].Stride = sizeof(cubeVertices.colors[0]);
-    geometry->VertexAttribs[1].Pointer = (const GLvoid*)offsetof(ovrCubeVertices, colors);
-
-    glGenBuffers(1, &geometry->VertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, geometry->VertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
-    checkErrorGL();
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glGenBuffers(1, &geometry->IndexBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry->IndexBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
-    checkErrorGL();
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-}
-
-static void ovrGeometry_Destroy(ovrGeometry * geometry)
-{
-    glDeleteBuffers(1, &geometry->IndexBuffer);
-    glDeleteBuffers(1, &geometry->VertexBuffer);
-    checkErrorGL();
-
-    *geometry = ovrGeometry();
-}
-
-static void ovrGeometry_CreateVAO(ovrGeometry * geometry)
-{
-    glGenVertexArrays(1, &geometry->VertexArrayObject);
-    glBindVertexArray(geometry->VertexArrayObject);
-    checkErrorGL();
-
-    glBindBuffer(GL_ARRAY_BUFFER, geometry->VertexBuffer);
-    checkErrorGL();
-
-    for (int i = 0; i < MAX_VERTEX_ATTRIB_POINTERS; i++)
-    {
-        if (geometry->VertexAttribs[i].Index != -1)
-        {
-            glEnableVertexAttribArray(geometry->VertexAttribs[i].Index);
-            glVertexAttribPointer(
-                geometry->VertexAttribs[i].Index,
-                geometry->VertexAttribs[i].Size,
-                geometry->VertexAttribs[i].Type,
-                geometry->VertexAttribs[i].Normalized,
-                geometry->VertexAttribs[i].Stride,
-                geometry->VertexAttribs[i].Pointer);
-            checkErrorGL();
-        }
-    }
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry->IndexBuffer);
-    checkErrorGL();
-
-    glBindVertexArray(0);
-    checkErrorGL();
-}
-
-static void ovrGeometry_DestroyVAO(ovrGeometry * geometry)
-{
-    glDeleteVertexArrays(1, &geometry->VertexArrayObject);
-    checkErrorGL();
-}
-
-/*
-================================================================================
-
-ovrProgram
-
-================================================================================
-*/
-
-#define MAX_PROGRAM_UNIFORMS 8
-#define MAX_PROGRAM_TEXTURES 8
-
-struct ovrProgram
-{
-    GLuint Program = 0;
-    GLuint VertexShader = 0;
-    GLuint FragmentShader = 0;
-
-    // These will be -1 if not used by the program.
-    GLint UniformLocation[MAX_PROGRAM_UNIFORMS] = { }; // ProgramUniforms[].name
-    GLint UniformBinding[MAX_PROGRAM_UNIFORMS] = { }; // ProgramUniforms[].name
-    GLint Textures[MAX_PROGRAM_TEXTURES] = { }; // Texture%i
-};
-
-enum UNIFORM_INDEX
-{
-    UNIFORM_MODEL_MATRIX,
-    UNIFORM_VIEW_ID,
-    UNIFORM_SCENE_MATRICES,
-};
-
-enum UNIFORM_TYPE
-{
-    UNIFORM_TYPE_VECTOR4,
-    UNIFORM_TYPE_MATRIX4X4,
-    UNIFORM_TYPE_INT,
-    UNIFORM_TYPE_BUFFER,
-};
-
-struct ovrUniform
-{
-    UNIFORM_INDEX index;
-    UNIFORM_TYPE type;
-    const char * name;
-};
-
-static const ovrUniform ProgramUniforms[] =
-{
-    { UNIFORM_MODEL_MATRIX,     UNIFORM_TYPE_MATRIX4X4, "ModelMatrix"   },
-    { UNIFORM_VIEW_ID,          UNIFORM_TYPE_INT,       "ViewID"        },
-    { UNIFORM_SCENE_MATRICES,   UNIFORM_TYPE_BUFFER,    "SceneMatrices" },
-};
-
-static const char * programVersion = "#version 300 es\n";
-
-static bool ovrProgram_Create(
-    ovrProgram * program,
-    const char * vertexSource,
-    const char * fragmentSource,
-    const bool useMultiview)
-{
-    GLint r;
-
-    program->VertexShader = glCreateShader(GL_VERTEX_SHADER);
-
-    const char * vertexSources[3] =
-        {
-            programVersion,
-            (useMultiview) ? "#define DISABLE_MULTIVIEW 0\n" : "#define DISABLE_MULTIVIEW 1\n",
-            vertexSource
-        };
-
-    glShaderSource(program->VertexShader, 3, vertexSources, 0);
-    glCompileShader(program->VertexShader);
-    checkErrorGL();
-
-    glGetShaderiv(program->VertexShader, GL_COMPILE_STATUS, &r);
-    if (r == GL_FALSE)
-    {
-        GLchar msg[4096];
-        glGetShaderInfoLog(program->VertexShader, sizeof(msg), 0, msg);
-        logError("%s\n%s\n", vertexSource, msg);
-        return false;
-    }
-
-    const char * fragmentSources[2] = { programVersion, fragmentSource };
-    program->FragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(program->FragmentShader, 2, fragmentSources, 0);
-    glCompileShader(program->FragmentShader);
-    checkErrorGL();
-
-    glGetShaderiv(program->FragmentShader, GL_COMPILE_STATUS, &r);
-    if (r == GL_FALSE)
-    {
-        GLchar msg[4096];
-        glGetShaderInfoLog(program->FragmentShader, sizeof(msg), 0, msg);
-        logError("%s\n%s\n", fragmentSource, msg);
-        return false;
-    }
-
-    program->Program = glCreateProgram();
-
-    glAttachShader(program->Program, program->VertexShader);
-    checkErrorGL();
-    glAttachShader(program->Program, program->FragmentShader);
-    checkErrorGL();
-
-    // Bind the vertex attribute locations.
-    for (int i = 0; i < (int)(sizeof(ProgramVertexAttributes) / sizeof(ProgramVertexAttributes[0])); i++)
-    {
-        glBindAttribLocation(
-            program->Program,
-            ProgramVertexAttributes[i].location,
-            ProgramVertexAttributes[i].name);
-        checkErrorGL();
-    }
-
-    glLinkProgram(program->Program);
-    checkErrorGL();
-
-    glGetProgramiv(program->Program, GL_LINK_STATUS, &r);
-    if (r == GL_FALSE)
-    {
-        GLchar msg[4096];
-        glGetProgramInfoLog(program->Program, sizeof(msg), 0, msg);
-        logError("Linking program failed: %s\n", msg);
-        return false;
-    }
-
-    int numBufferBindings = 0;
-
-    // Get the uniform locations.
-    memset(program->UniformLocation, -1, sizeof(program->UniformLocation));
-    for (int i = 0; i < (int)(sizeof(ProgramUniforms) / sizeof(ProgramUniforms[0])); i++)
-    {
-        const int uniformIndex = ProgramUniforms[i].index;
-        if (ProgramUniforms[i].type == UNIFORM_TYPE_BUFFER)
-        {
-            program->UniformLocation[uniformIndex] = glGetUniformBlockIndex(program->Program, ProgramUniforms[i].name);
-            program->UniformBinding[uniformIndex] = numBufferBindings++;
-            glUniformBlockBinding(
-                program->Program,
-                program->UniformLocation[uniformIndex],
-                program->UniformBinding[uniformIndex]);
-            checkErrorGL();
-        }
-        else
-        {
-            program->UniformLocation[uniformIndex] = glGetUniformLocation(program->Program, ProgramUniforms[i].name);
-            program->UniformBinding[uniformIndex] = program->UniformLocation[uniformIndex];
-            checkErrorGL();
-        }
-    }
-
-    glUseProgram(program->Program);
-    checkErrorGL();
-
-    // Get the texture locations.
-    for (int i = 0; i < MAX_PROGRAM_TEXTURES; i++)
-    {
-        char name[32];
-        sprintf_s(name, sizeof(name), "Texture%i", i);
-        program->Textures[i] = glGetUniformLocation(program->Program, name);
-        if (program->Textures[i] != -1)
-        {
-            glUniform1i(program->Textures[i], i);
-            checkErrorGL();
-        }
-    }
-
-    glUseProgram(0);
-    checkErrorGL();
-
-    return true;
-}
-
-static void ovrProgram_Destroy(ovrProgram* program)
-{
-    if (program->Program != 0)
-    {
-        glDeleteProgram(program->Program);
-        program->Program = 0;
-    }
-
-    if (program->VertexShader != 0)
-    {
-        glDeleteShader(program->VertexShader);
-        program->VertexShader = 0;
-    }
-
-    if (program->FragmentShader != 0)
-    {
-        glDeleteShader(program->FragmentShader);
-        program->FragmentShader = 0;
-    }
-
-    checkErrorGL();
-}
-
-static const char VERTEX_SHADER[] =
-    "#ifndef DISABLE_MULTIVIEW\n"
-    "	#define DISABLE_MULTIVIEW 0\n"
-    "#endif\n"
-    "#define NUM_VIEWS 2\n"
-    "#if defined( GL_OVR_multiview2 ) && ! DISABLE_MULTIVIEW\n"
-    "	#extension GL_OVR_multiview2 : enable\n"
-    "	layout(num_views=NUM_VIEWS) in;\n"
-    "	#define VIEW_ID gl_ViewID_OVR\n"
-    "#else\n"
-    "	uniform lowp int ViewID;\n"
-    "	#define VIEW_ID ViewID\n"
-    "#endif\n"
-    "in vec3 vertexPosition;\n"
-    "in vec4 vertexColor;\n"
-    "in mat4 vertexTransform;\n"
-    "uniform SceneMatrices\n"
-    "{\n"
-    "	uniform mat4 ViewMatrix[NUM_VIEWS];\n"
-    "	uniform mat4 ProjectionMatrix[NUM_VIEWS];\n"
-    "} sm;\n"
-    "out vec4 fragmentColor;\n"
-    "void main()\n"
-    "{\n"
-    "	gl_Position = sm.ProjectionMatrix[VIEW_ID] * ( sm.ViewMatrix[VIEW_ID] * ( vertexTransform * vec4( vertexPosition * 0.1, 1.0 ) ) );\n"
-    "	fragmentColor = vertexColor;\n"
-    "}\n";
-
-static const char FRAGMENT_SHADER[] =
-    "in lowp vec4 fragmentColor;\n"
-    "out lowp vec4 outColor;\n"
-    "void main()\n"
-    "{\n"
-    "	outColor = fragmentColor;\n"
-    "}\n";
-
-/*
-================================================================================
-
 ovrFramebuffer
 
 ================================================================================
@@ -711,12 +322,7 @@ ovrScene
 struct ovrScene
 {
     bool CreatedScene = false;
-    bool CreatedVAOs = false;
-    unsigned int Random = 2;
-    ovrProgram Program;
-    ovrGeometry Cube;
-    GLuint SceneMatrices = 0;
-    GLuint InstanceTransformBuffer = 0;
+	unsigned int Random = 2;
     ovrVector3f Rotations[NUM_ROTATIONS];
     ovrVector3f CubePositions[NUM_INSTANCES];
     int CubeRotations[NUM_INSTANCES];
@@ -725,48 +331,6 @@ struct ovrScene
 static bool ovrScene_IsCreated(ovrScene * scene)
 {
     return scene->CreatedScene;
-}
-
-static void ovrScene_CreateVAOs(ovrScene * scene)
-{
-    if (!scene->CreatedVAOs)
-    {
-        ovrGeometry_CreateVAO(&scene->Cube);
-
-        // Modify the VAO to use the instance transform attributes.
-        glBindVertexArray(scene->Cube.VertexArrayObject);
-        glBindBuffer(GL_ARRAY_BUFFER, scene->InstanceTransformBuffer);
-        checkErrorGL();
-
-        for (int i = 0; i < 4; i++)
-        {
-            glEnableVertexAttribArray(VERTEX_ATTRIBUTE_LOCATION_TRANSFORM + i);
-            glVertexAttribPointer(
-                VERTEX_ATTRIBUTE_LOCATION_TRANSFORM + i,
-                4,
-                GL_FLOAT,
-                false,
-                4 * 4 * sizeof(float),
-                (void*)(i * 4 * sizeof(float)));
-            glVertexAttribDivisor(VERTEX_ATTRIBUTE_LOCATION_TRANSFORM + i, 1);
-            checkErrorGL();
-        }
-
-        glBindVertexArray(0);
-        checkErrorGL();
-
-        scene->CreatedVAOs = true;
-    }
-}
-
-static void ovrScene_DestroyVAOs(ovrScene * scene)
-{
-    if (scene->CreatedVAOs)
-    {
-        ovrGeometry_DestroyVAO(&scene->Cube);
-
-        scene->CreatedVAOs = false;
-    }
 }
 
 // Returns a random float in the range [0, 1].
@@ -784,28 +348,6 @@ static float ovrScene_RandomFloat(ovrScene * scene)
 
 static void ovrScene_Create(ovrScene * scene, bool useMultiview)
 {
-    ovrProgram_Create(&scene->Program, VERTEX_SHADER, FRAGMENT_SHADER, useMultiview);
-    ovrGeometry_CreateCube(&scene->Cube);
-
-    // Create the instance transform attribute buffer.
-    glGenBuffers(1, &scene->InstanceTransformBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, scene->InstanceTransformBuffer);
-    glBufferData(GL_ARRAY_BUFFER, NUM_INSTANCES * 4 * 4 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
-    checkErrorGL();
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    // Setup the scene matrices.
-    glGenBuffers(1, &scene->SceneMatrices);
-    glBindBuffer(GL_UNIFORM_BUFFER, scene->SceneMatrices);
-    glBufferData(
-        GL_UNIFORM_BUFFER,
-        + 2 * sizeof(ovrMatrix4f) /* 2 view matrices */
-        + 2 * sizeof(ovrMatrix4f) /* 2 projection matrices */,
-        NULL,
-        GL_STATIC_DRAW);
-    checkErrorGL();
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
     // Setup random rotations.
     for (int i = 0; i < NUM_ROTATIONS; i++)
     {
@@ -869,21 +411,10 @@ static void ovrScene_Create(ovrScene * scene, bool useMultiview)
     }
 
     scene->CreatedScene = true;
-
-    ovrScene_CreateVAOs(scene);
 }
 
 static void ovrScene_Destroy(ovrScene * scene)
 {
-    ovrScene_DestroyVAOs(scene);
-
-    ovrProgram_Destroy(&scene->Program);
-    ovrGeometry_Destroy(&scene->Cube);
-
-    glDeleteBuffers(1, &scene->InstanceTransformBuffer);
-    glDeleteBuffers(1, &scene->SceneMatrices);
-    checkErrorGL();
-
     scene->CreatedScene = false;
 }
 
@@ -952,52 +483,15 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
     const ovrTracking2 * tracking,
     ovrMobile * ovr)
 {
-#if !USE_FRAMEWORK_DRAWING
-    ovrMatrix4f rotationMatrices[NUM_ROTATIONS];
-    for (int i = 0; i < NUM_ROTATIONS; i++)
-    {
-        rotationMatrices[i] = ovrMatrix4f_CreateRotation(
-            scene->Rotations[i].x * simulation->CurrentRotation.x,
-            scene->Rotations[i].y * simulation->CurrentRotation.y,
-            scene->Rotations[i].z * simulation->CurrentRotation.z);
-    }
-
-    // Update the instance transform attributes.
-    glBindBuffer(GL_ARRAY_BUFFER, scene->InstanceTransformBuffer);
-    ovrMatrix4f* cubeTransforms = (ovrMatrix4f*)glMapBufferRange(
-           GL_ARRAY_BUFFER,
-           0,
-           NUM_INSTANCES * sizeof(ovrMatrix4f),
-           GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
-    for (int i = 0; i < NUM_INSTANCES; i++)
-    {
-        const int index = scene->CubeRotations[i];
-
-        // Write in order in case the mapped buffer lives on write-combined memory.
-        cubeTransforms[i].M[0][0] = rotationMatrices[index].M[0][0];
-        cubeTransforms[i].M[0][1] = rotationMatrices[index].M[0][1];
-        cubeTransforms[i].M[0][2] = rotationMatrices[index].M[0][2];
-        cubeTransforms[i].M[0][3] = rotationMatrices[index].M[0][3];
-
-        cubeTransforms[i].M[1][0] = rotationMatrices[index].M[1][0];
-        cubeTransforms[i].M[1][1] = rotationMatrices[index].M[1][1];
-        cubeTransforms[i].M[1][2] = rotationMatrices[index].M[1][2];
-        cubeTransforms[i].M[1][3] = rotationMatrices[index].M[1][3];
-
-        cubeTransforms[i].M[2][0] = rotationMatrices[index].M[2][0];
-        cubeTransforms[i].M[2][1] = rotationMatrices[index].M[2][1];
-        cubeTransforms[i].M[2][2] = rotationMatrices[index].M[2][2];
-        cubeTransforms[i].M[2][3] = rotationMatrices[index].M[2][3];
-
-        cubeTransforms[i].M[3][0] = scene->CubePositions[i].x;
-        cubeTransforms[i].M[3][1] = scene->CubePositions[i].y;
-        cubeTransforms[i].M[3][2] = scene->CubePositions[i].z;
-        cubeTransforms[i].M[3][3] = 1.0f;
-    }
-    glUnmapBuffer(GL_ARRAY_BUFFER);
-    checkErrorGL();
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-#endif
+	// todo : use rotation matrices when drawing cubes
+	ovrMatrix4f rotationMatrices[NUM_ROTATIONS];
+	for (int i = 0; i < NUM_ROTATIONS; i++)
+	{
+		rotationMatrices[i] = ovrMatrix4f_CreateRotation(
+				scene->Rotations[i].x * simulation->CurrentRotation.x,
+				scene->Rotations[i].y * simulation->CurrentRotation.y,
+				scene->Rotations[i].z * simulation->CurrentRotation.z);
+	}
 
     ovrTracking2 updatedTracking = *tracking;
 
@@ -1008,28 +502,6 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
     ovrMatrix4f projectionMatrixTransposed[2];
     projectionMatrixTransposed[0] = ovrMatrix4f_Transpose(&updatedTracking.Eye[0].ProjectionMatrix);
     projectionMatrixTransposed[1] = ovrMatrix4f_Transpose(&updatedTracking.Eye[1].ProjectionMatrix);
-
-#if !USE_FRAMEWORK_DRAWING
-    // Update the scene matrices.
-    glBindBuffer(GL_UNIFORM_BUFFER, scene->SceneMatrices);
-    ovrMatrix4f* sceneMatrices = (ovrMatrix4f*)glMapBufferRange(
-           GL_UNIFORM_BUFFER,
-           0,
-           + 2 * sizeof(ovrMatrix4f) /* 2 view matrices */
-           + 2 * sizeof(ovrMatrix4f) /* 2 projection matrices */,
-           GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
-    if (sceneMatrices != NULL)
-    {
-        memcpy((char*)sceneMatrices, &eyeViewMatrixTransposed, 2 * sizeof(ovrMatrix4f));
-        memcpy(
-            (char*)sceneMatrices + 2 * sizeof(ovrMatrix4f),
-            &projectionMatrixTransposed,
-            2 * sizeof(ovrMatrix4f));
-    }
-    glUnmapBuffer(GL_UNIFORM_BUFFER);
-    checkErrorGL();
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-#endif
 
     ovrLayerProjection2 layer = vrapi_DefaultLayerProjection2();
     layer.HeadPose = updatedTracking.HeadPose;
@@ -1066,39 +538,42 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         checkErrorGL();
 
-	#if USE_FRAMEWORK_DRAWING
+        // Draw cubes.
 	    gxSetMatrixf(GX_MODELVIEW, (float*)eyeViewMatrixTransposed[eye].M);
 	    gxSetMatrixf(GX_PROJECTION, (float*)projectionMatrixTransposed[eye].M);
 
+	    const double time = GetTimeInSeconds();
+
+		pushShaderOutputs("n");
 		beginCubeBatch();
 	    {
-		    for (int i = 0; i < NUM_INSTANCES; ++i)
+	        for (int i = 0; i < NUM_INSTANCES; ++i)
 		    {
+			    const float x = (i & 2) == 0 ? 0.f : (float)sin(time + i);
+			    const float z = (i & 2) == 1 ? 0.f : (float)sin(time + i);
+
+			    const float size = lerp<float>(.02f, .08f, float(sin(time + i) + 1.f) / 2.f);
+
 			    setColor(colorWhite);
-			    fillCube(Vec3(scene->CubePositions[i].x, scene->CubePositions[i].y, scene->CubePositions[i].z), Vec3(.01f));
+			    fillCube(Vec3(scene->CubePositions[i].x + x, scene->CubePositions[i].y, scene->CubePositions[i].z + z), Vec3(size));
 		    }
 	    }
 	    endCubeBatch();
-	#else
-        glUseProgram(scene->Program.Program);
-        {
-            glBindBufferBase(
-                    GL_UNIFORM_BUFFER,
-                    scene->Program.UniformBinding[UNIFORM_SCENE_MATRICES],
-                    scene->SceneMatrices);
+	    popShaderOutputs();
 
-            if (scene->Program.UniformLocation[UNIFORM_VIEW_ID] >= 0) // NOTE: will not be present when multiview path is enabled.
-            {
-                glUniform1i(scene->Program.UniformLocation[UNIFORM_VIEW_ID], eye);
-            }
+		gxPushMatrix();
+		gxTranslatef(0, -1, 0);
+		gxRotatef(90, 1, 0, 0);
+	    for (int i = 0; i < 10; ++i)
+	    {
+	        const float t = float(sin(time + i) + 1.f) / 2.f;
+		    const float size = lerp<float>(1.f, 4.f, t);
+		    const float c = 1.f - t;
 
-            glBindVertexArray(scene->Cube.VertexArrayObject);
-            glDrawElementsInstanced(GL_TRIANGLES, scene->Cube.IndexCount, GL_UNSIGNED_SHORT, NULL, NUM_INSTANCES);
-            checkErrorGL();
-            glBindVertexArray(0);
-        }
-        glUseProgram(0);
-	#endif
+		    setColorf(c, c, c, 1.f);
+		    drawCircle(0.f, 0.f, size, 100);
+	    }
+	    gxPopMatrix();
 
         // Explicitly clear the border texels to black when GL_CLAMP_TO_BORDER is not available.
         if (glExtensions.EXT_texture_border_clamp == false)
