@@ -233,7 +233,17 @@ void GxTexture::setSwizzle(const int in_r, const int in_g, const int in_b, const
 	glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 	checkErrorGL();
 #else
-	AssertMsg(false, "not implemented. GL_TEXTURE_SWIZZLE_RGBA is not available in non-desktop OpenGL", 0);
+	const int r = toOpenGLTextureSwizzle(in_r);
+	const int g = toOpenGLTextureSwizzle(in_g);
+	const int b = toOpenGLTextureSwizzle(in_b);
+	const int a = toOpenGLTextureSwizzle(in_a);
+
+	glBindTexture(GL_TEXTURE_2D, id);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, r);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, g);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, b);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, a);
+	checkErrorGL();
 #endif
 
 	// restore previous OpenGL states
