@@ -3,7 +3,20 @@ app ovr-cubes1
 	depend_library ovr-mobile-vrapi
 	depend_library GLESv3 global
 	depend_library EGL global
-	add_files framework.cpp
 	add_files opengl-ovr.cpp
 	add_files ovrFramebuffer.cpp
-	add_files main.cpp
+	add_files main1.cpp
+
+app ovr-cubes2
+	depend_library framework
+	depend_library ovr-mobile-vrapi
+	depend_library GLESv3 global
+	depend_library EGL global
+	add_files opengl-ovr.cpp
+	add_files ovrFramebuffer.cpp
+	add_files main2.cpp
+
+app ovr-cubes3
+	depend_library framework
+	depend_library GLESv3 global
+	add_files main3.cpp

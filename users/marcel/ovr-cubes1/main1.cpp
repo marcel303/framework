@@ -12,10 +12,10 @@ Copyright	:	Copyright (c) Facebook Technologies, LLC and its affiliates. All rig
 
 *************************************************************************************/
 
-#include "framework.h"
 #include "opengl-ovr.h"
 #include "ovrFramebuffer.h"
 
+#include "Log.h"
 #include "StringEx.h"
 
 #include <VrApi.h>
@@ -65,6 +65,13 @@ OpenGL-ES Utility Functions
 */
 
 // todo : move OpenGL extensions into a separate file
+
+static void checkErrorGL()
+{
+    const GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+        LOG_ERR("GL error: %s", GlErrorString(error));
+}
 
 static void EglInitExtensions()
 {
@@ -117,7 +124,7 @@ static void ovrEgl_CreateContext(ovrEgl * egl, const ovrEgl * shareEgl)
 
     if (eglGetConfigs(egl->Display, configs, MAX_CONFIGS, &numConfigs) == EGL_FALSE)
     {
-        logError("eglGetConfigs() failed: %s", EglErrorString(eglGetError()));
+        LOG_ERR("eglGetConfigs() failed: %s", EglErrorString(eglGetError()));
         return;
     }
 
@@ -167,11 +174,11 @@ static void ovrEgl_CreateContext(ovrEgl * egl, const ovrEgl * shareEgl)
 
     if (egl->Config == 0)
     {
-        logError("eglChooseConfig() failed: %s", EglErrorString(eglGetError()));
+        LOG_ERR("eglChooseConfig() failed: %s", EglErrorString(eglGetError()));
         return;
     }
 
-    logDebug("Context = eglCreateContext( Display, Config, EGL_NO_CONTEXT, contextAttribs )");
+    LOG_DBG("Context = eglCreateContext( Display, Config, EGL_NO_CONTEXT, contextAttribs )", 0);
     const EGLint contextAttribs[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
     egl->Context = eglCreateContext(
         egl->Display,
@@ -181,25 +188,25 @@ static void ovrEgl_CreateContext(ovrEgl * egl, const ovrEgl * shareEgl)
 
     if (egl->Context == EGL_NO_CONTEXT)
     {
-        logError("eglCreateContext() failed: %s", EglErrorString(eglGetError()));
+        LOG_ERR("eglCreateContext() failed: %s", EglErrorString(eglGetError()));
         return;
     }
 
-    logDebug("TinySurface = eglCreatePbufferSurface( Display, Config, surfaceAttribs )");
+    LOG_DBG("TinySurface = eglCreatePbufferSurface( Display, Config, surfaceAttribs )", 0);
     const EGLint surfaceAttribs[] = { EGL_WIDTH, 16, EGL_HEIGHT, 16, EGL_NONE };
     egl->TinySurface = eglCreatePbufferSurface(egl->Display, egl->Config, surfaceAttribs);
     if (egl->TinySurface == EGL_NO_SURFACE)
     {
-        logError("eglCreatePbufferSurface() failed: %s", EglErrorString(eglGetError()));
+        LOG_ERR("eglCreatePbufferSurface() failed: %s", EglErrorString(eglGetError()));
         eglDestroyContext(egl->Display, egl->Context);
         egl->Context = EGL_NO_CONTEXT;
         return;
     }
 
-    logDebug("eglMakeCurrent( Display, TinySurface, TinySurface, Context )");
+    LOG_DBG("eglMakeCurrent( Display, TinySurface, TinySurface, Context )", 0);
     if (eglMakeCurrent(egl->Display, egl->TinySurface, egl->TinySurface, egl->Context) == EGL_FALSE)
     {
-        logError("eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
+        LOG_ERR("eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
         eglDestroySurface(egl->Display, egl->TinySurface);
         eglDestroyContext(egl->Display, egl->Context);
         egl->Context = EGL_NO_CONTEXT;
@@ -211,32 +218,32 @@ static void ovrEgl_DestroyContext(ovrEgl * egl)
 {
     if (egl->Display != EGL_NO_DISPLAY)
     {
-        logError("- eglMakeCurrent( Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT )");
+        LOG_ERR("- eglMakeCurrent( Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT )", 0);
         if (eglMakeCurrent(egl->Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_FALSE)
-            logError("- eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
+            LOG_ERR("- eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
     }
 
     if (egl->Context != EGL_NO_CONTEXT)
     {
-        logError("- eglDestroyContext( Display, Context )");
+        LOG_ERR("- eglDestroyContext( Display, Context )", 0);
         if (eglDestroyContext(egl->Display, egl->Context) == EGL_FALSE)
-            logError("- eglDestroyContext() failed: %s", EglErrorString(eglGetError()));
+            LOG_ERR("- eglDestroyContext() failed: %s", EglErrorString(eglGetError()));
         egl->Context = EGL_NO_CONTEXT;
     }
 
     if (egl->TinySurface != EGL_NO_SURFACE)
     {
-        logError("- eglDestroySurface( Display, TinySurface )");
+        LOG_ERR("- eglDestroySurface( Display, TinySurface )", 0);
         if (eglDestroySurface(egl->Display, egl->TinySurface) == EGL_FALSE)
-            logError("- eglDestroySurface() failed: %s", EglErrorString(eglGetError()));
+            LOG_ERR("- eglDestroySurface() failed: %s", EglErrorString(eglGetError()));
         egl->TinySurface = EGL_NO_SURFACE;
     }
 
     if (egl->Display != EGL_NO_DISPLAY)
     {
-        logError("- eglTerminate( Display )");
+        LOG_ERR("- eglTerminate( Display )", 0);
         if (eglTerminate(egl->Display) == EGL_FALSE)
-            logError("- eglTerminate() failed: %s", EglErrorString(eglGetError()));
+            LOG_ERR("- eglTerminate() failed: %s", EglErrorString(eglGetError()));
         egl->Display = EGL_NO_DISPLAY;
     }
 }
@@ -501,7 +508,7 @@ static bool ovrProgram_Create(
     {
         GLchar msg[4096];
         glGetShaderInfoLog(program->VertexShader, sizeof(msg), 0, msg);
-        logError("%s\n%s\n", vertexSource, msg);
+        LOG_ERR("%s\n%s\n", vertexSource, msg);
         return false;
     }
 
@@ -516,7 +523,7 @@ static bool ovrProgram_Create(
     {
         GLchar msg[4096];
         glGetShaderInfoLog(program->FragmentShader, sizeof(msg), 0, msg);
-        logError("%s\n%s\n", fragmentSource, msg);
+        LOG_ERR("%s\n%s\n", fragmentSource, msg);
         return false;
     }
 
@@ -545,7 +552,7 @@ static bool ovrProgram_Create(
     {
         GLchar msg[4096];
         glGetProgramInfoLog(program->Program, sizeof(msg), 0, msg);
-        logError("Linking program failed: %s\n", msg);
+        LOG_ERR("Linking program failed: %s\n", msg);
         return false;
     }
 
@@ -1185,17 +1192,17 @@ static void ovrApp_HandleVrModeChanges(ovrApp * app)
             parms.WindowSurface = (size_t)app->NativeWindow;
             parms.ShareContext = (size_t)app->Egl.Context;
 
-            logDebug("- eglGetCurrentSurface( EGL_DRAW ) = %p", eglGetCurrentSurface(EGL_DRAW));
+            LOG_DBG("- eglGetCurrentSurface( EGL_DRAW ) = %p", eglGetCurrentSurface(EGL_DRAW));
 
-            logDebug("- vrapi_EnterVrMode()");
+            LOG_DBG("- vrapi_EnterVrMode()", 0);
             app->Ovr = vrapi_EnterVrMode(&parms);
 
-            logDebug("- eglGetCurrentSurface( EGL_DRAW ) = %p", eglGetCurrentSurface(EGL_DRAW));
+            LOG_DBG("- eglGetCurrentSurface( EGL_DRAW ) = %p", eglGetCurrentSurface(EGL_DRAW));
 
             // If entering VR mode failed then the ANativeWindow was not valid.
             if (app->Ovr == nullptr)
             {
-                logError("Invalid ANativeWindow!");
+                LOG_ERR("Invalid ANativeWindow!", 0);
                 app->NativeWindow = nullptr;
             }
 
@@ -1203,13 +1210,13 @@ static void ovrApp_HandleVrModeChanges(ovrApp * app)
             if (app->Ovr != nullptr)
             {
                 vrapi_SetClockLevels(app->Ovr, app->CpuLevel, app->GpuLevel);
-                logDebug("- vrapi_SetClockLevels( %d, %d )", app->CpuLevel, app->GpuLevel);
+                LOG_DBG("- vrapi_SetClockLevels( %d, %d )", app->CpuLevel, app->GpuLevel);
 
                 vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_MAIN, app->MainThreadTid);
-                logDebug("- vrapi_SetPerfThread( MAIN, %d )", app->MainThreadTid);
+                LOG_DBG("- vrapi_SetPerfThread( MAIN, %d )", app->MainThreadTid);
 
                 vrapi_SetPerfThread(app->Ovr, VRAPI_PERF_THREAD_TYPE_RENDERER, app->RenderThreadTid);
-                logDebug("- vrapi_SetPerfThread( RENDERER, %d )", app->RenderThreadTid);
+                LOG_DBG("- vrapi_SetPerfThread( RENDERER, %d )", app->RenderThreadTid);
             }
         }
     }
@@ -1217,13 +1224,13 @@ static void ovrApp_HandleVrModeChanges(ovrApp * app)
     {
         if (app->Ovr != nullptr)
         {
-            logDebug("- eglGetCurrentSurface( EGL_DRAW ) = %p", eglGetCurrentSurface(EGL_DRAW));
+            LOG_DBG("- eglGetCurrentSurface( EGL_DRAW ) = %p", eglGetCurrentSurface(EGL_DRAW));
 
-            logDebug("- vrapi_LeaveVrMode()");
+            LOG_DBG("- vrapi_LeaveVrMode()", 0);
             vrapi_LeaveVrMode(app->Ovr);
             app->Ovr = nullptr;
 
-            logDebug("- eglGetCurrentSurface( EGL_DRAW ) = %p", eglGetCurrentSurface(EGL_DRAW));
+            LOG_DBG("- eglGetCurrentSurface( EGL_DRAW ) = %p", eglGetCurrentSurface(EGL_DRAW));
         }
     }
 }
@@ -1276,10 +1283,10 @@ static void ovrApp_HandleInput(ovrApp * app)
 
     if (backButtonDownLastFrame && !backButtonDownThisFrame)
     {
-        logDebug("back button short press");
-        logDebug("- ovrApp_PushBlackFinal()");
+        LOG_DBG("back button short press", 0);
+        LOG_DBG("- ovrApp_PushBlackFinal()", 0);
         ovrApp_PushBlackFinal(app);
-        logDebug("- vrapi_ShowSystemUI( confirmQuit )");
+        LOG_DBG("- vrapi_ShowSystemUI( confirmQuit )", 0);
         vrapi_ShowSystemUI(&app->Java, VRAPI_SYS_UI_CONFIRM_QUIT_MENU);
     }
 }
@@ -1314,22 +1321,22 @@ static void ovrApp_HandleVrApiEvents(ovrApp * app)
         switch (eventHeader->EventType)
         {
             case VRAPI_EVENT_DATA_LOST:
-                logDebug("vrapi_PollEvent: Received VRAPI_EVENT_DATA_LOST");
+                LOG_DBG("vrapi_PollEvent: Received VRAPI_EVENT_DATA_LOST", 0);
                 break;
 
             case VRAPI_EVENT_VISIBILITY_GAINED:
-                logDebug("vrapi_PollEvent: Received VRAPI_EVENT_VISIBILITY_GAINED");
+                LOG_DBG("vrapi_PollEvent: Received VRAPI_EVENT_VISIBILITY_GAINED", 0);
                 break;
 
             case VRAPI_EVENT_VISIBILITY_LOST:
-                logDebug("vrapi_PollEvent: Received VRAPI_EVENT_VISIBILITY_LOST");
+                LOG_DBG("vrapi_PollEvent: Received VRAPI_EVENT_VISIBILITY_LOST", 0);
                 break;
 
             case VRAPI_EVENT_FOCUS_GAINED:
                 // FOCUS_GAINED is sent when the application is in the foreground and has
                 // input focus. This may be due to a system overlay relinquishing focus
                 // back to the application.
-                logDebug("vrapi_PollEvent: Received VRAPI_EVENT_FOCUS_GAINED");
+                LOG_DBG("vrapi_PollEvent: Received VRAPI_EVENT_FOCUS_GAINED", 0);
                 break;
 
             case VRAPI_EVENT_FOCUS_LOST:
@@ -1337,11 +1344,11 @@ static void ovrApp_HandleVrApiEvents(ovrApp * app)
                 // therefore does not have input focus. This may be due to a system overlay taking
                 // focus from the application. The application should take appropriate action when
                 // this occurs.
-                logDebug("vrapi_PollEvent: Received VRAPI_EVENT_FOCUS_LOST");
+                LOG_DBG("vrapi_PollEvent: Received VRAPI_EVENT_FOCUS_LOST", 0);
                 break;
 
             default:
-                logDebug("vrapi_PollEvent: Unknown event");
+                LOG_DBG("vrapi_PollEvent: Unknown event", 0);
                 break;
         }
     }
@@ -1395,7 +1402,7 @@ extern "C"
 
         appState.UseMultiview &= (glExtensions.multi_view && vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
 
-        logDebug("AppState UseMultiview : %d", appState.UseMultiview ? 1 : 0);
+        LOG_DBG("AppState UseMultiview : %d", appState.UseMultiview ? 1 : 0);
 
         appState.CpuLevel = CPU_LEVEL;
         appState.GpuLevel = GPU_LEVEL;
@@ -1424,30 +1431,30 @@ extern "C"
 					switch (cmd)
 					{
 					case APP_CMD_START:
-                        logDebug("APP_CMD_START");
+                        LOG_DBG("APP_CMD_START", 0);
                         break;
 
 					case APP_CMD_STOP:
-                        logDebug("APP_CMD_STOP");
+                        LOG_DBG("APP_CMD_STOP", 0);
                         break;
 
 					case APP_CMD_RESUME:
-                        logDebug("APP_CMD_RESUME");
+                        LOG_DBG("APP_CMD_RESUME", 0);
                         appState.Resumed = true;
                         break;
 
 					case APP_CMD_PAUSE:
-                        logDebug("APP_CMD_PAUSE");
+                        LOG_DBG("APP_CMD_PAUSE", 0);
                         appState.Resumed = false;
                         break;
 
 					case APP_CMD_INIT_WINDOW:
-                        logDebug("APP_CMD_INIT_WINDOW");
+                        LOG_DBG("APP_CMD_INIT_WINDOW", 0);
                         appState.NativeWindow = app->window;
                         break;
 
 					case APP_CMD_TERM_WINDOW:
-                        logDebug("APP_CMD_TERM_WINDOW");
+                        LOG_DBG("APP_CMD_TERM_WINDOW", 0);
                         appState.NativeWindow = nullptr;
                         break;
 
@@ -1458,7 +1465,7 @@ extern "C"
                             // the wrong orientation even though android:screenOrientation="landscape" is set in the
                             // manifest. The choreographer callback will also never be called for this surface because
                             // the surface is immediately replaced with a new surface with the correct orientation.
-                            logError("- Surface not in landscape mode!");
+                            LOG_ERR("- Surface not in landscape mode!", 0);
                         }
 
                         if (app->window != appState.NativeWindow)
@@ -1478,7 +1485,6 @@ extern "C"
                         break;
 
 					default:
-                        logWarning("??? #2");
                         break;
 					}
 
@@ -1535,10 +1541,6 @@ extern "C"
 
                         AInputQueue_finishEvent(app->inputQueue, event, handled);
                     }
-                }
-                else
-                {
-                    logWarning("??? #1");
                 }
 
                 ovrApp_HandleVrModeChanges(&appState);
