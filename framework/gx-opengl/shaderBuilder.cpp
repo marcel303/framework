@@ -367,16 +367,10 @@ R"HEADER(
 		
 		if (currentUniformBufferName[0] != 0)
 			endUniformBuffer();
-		
-		sb.Append("#define main() shaderMain()\n");
 		sb.Append('\n');
-		{
-			sb.Append(text.ToString());
-		}
-		sb.Append('\n');
-		sb.Append("#undef main\n");
-		sb.Append("\n");
 		
+		sb.Append("void shaderMain();\n");
+		sb.Append('\n');
 		sb.Append("void main()\n");
 		sb.Append("{\n");
 		{
@@ -405,6 +399,15 @@ R"HEADER(
 			sb.Append("\tshaderMain();\n");
 		}
 		sb.Append("}\n");
+		sb.Append('\n');
+		
+		sb.Append("#define main shaderMain");
+		
+		sb.Append('\n');
+		{
+			sb.Append(text.ToString());
+		}
+		sb.Append('\n');
 		
 		result = sb.ToString();
 		
