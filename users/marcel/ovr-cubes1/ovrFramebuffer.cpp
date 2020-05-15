@@ -1,10 +1,17 @@
-#include "framework.h"
-#include "ovrFramebuffer.h"
+#include "Log.h"
 
+#include "ovrFramebuffer.h"
 #include "opengl-ovr.h"
 
 #include <VrApi.h>
 #include <VrApi_Types.h>
+
+static void checkErrorGL()
+{
+    const GLenum error = glGetError();
+    if (error != GL_NO_ERROR)
+        LOG_ERR("GL error: %s", GlErrorString(error));
+}
 
 bool ovrFramebuffer::init(
     const bool in_useMultiview,
@@ -46,7 +53,7 @@ bool ovrFramebuffer::init(
     DepthBuffers = new GLuint[TextureSwapChainLength];
     FrameBuffers = new GLuint[TextureSwapChainLength];
 
-    logDebug("        frameBuffer->UseMultiview = %d", UseMultiview);
+    LOG_DBG("        frameBuffer->UseMultiview = %d", UseMultiview);
 
     for (int i = 0; i < TextureSwapChainLength; i++)
     {
@@ -145,7 +152,7 @@ bool ovrFramebuffer::init(
 
             if (renderFramebufferStatus != GL_FRAMEBUFFER_COMPLETE)
             {
-                logError("Incomplete frame buffer object: %s", GlFrameBufferStatusString(renderFramebufferStatus));
+                LOG_ERR("Incomplete frame buffer object: %s", GlFrameBufferStatusString(renderFramebufferStatus));
                 return false;
             }
         }
@@ -189,7 +196,7 @@ bool ovrFramebuffer::init(
 
                 if (renderFramebufferStatus != GL_FRAMEBUFFER_COMPLETE)
                 {
-                    logError("Incomplete frame buffer object: %s", GlFrameBufferStatusString(renderFramebufferStatus));
+                    LOG_ERR("Incomplete frame buffer object: %s", GlFrameBufferStatusString(renderFramebufferStatus));
                     return false;
                 }
             }
@@ -220,7 +227,7 @@ bool ovrFramebuffer::init(
 
                 if (renderFramebufferStatus != GL_FRAMEBUFFER_COMPLETE)
                 {
-                    logError("Incomplete frame buffer object: %s", GlFrameBufferStatusString(renderFramebufferStatus));
+                    LOG_ERR("Incomplete frame buffer object: %s", GlFrameBufferStatusString(renderFramebufferStatus));
                     return false;
                 }
             }
@@ -246,7 +253,7 @@ void ovrFramebuffer::shut()
         checkErrorGL();
     }
 
-    vrapi_DestroyTextureSwapChain(ColorTextureSwapChain);
+	vrapi_DestroyTextureSwapChain(ColorTextureSwapChain);
 
     delete [] DepthBuffers;
     delete [] FrameBuffers;

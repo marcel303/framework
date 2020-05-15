@@ -1,5 +1,3 @@
-#include "framework.h"
-
 #include <android_native_app_glue.h>
 #include <android/native_activity.h>
 #include <android/asset_manager.h>
@@ -25,7 +23,7 @@ static std::vector<std::string> list_assets(android_app * app, const char * asse
 
 	auto length = env->GetArrayLength(files_object);
 
-	for(int i = 0; i < length; i++)
+	for (int i = 0; i < length; i++)
 	{
 		jstring jstr = (jstring)env->GetObjectArrayElement(files_object, i);
 
@@ -175,15 +173,8 @@ extern "C"
         else
         {
             logInfo("successfully copied assets to filesystem");
+
+            // ( resources may be opened using regular fopen(..) from here )
         }
-
-	#if true
-	    framework.init(0, 0);
-
-	    Shader s("engine/Generic");
-
-	    setColor(colorWhite);
-	    drawRect(0, 0, 10, 10);
-	#endif
 	}
 }
