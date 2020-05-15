@@ -1,6 +1,8 @@
 #include <android_native_app_glue.h>
 #include <android/native_activity.h>
 #include <android/asset_manager.h>
+
+#include <string>
 #include <vector>
 
 static std::vector<std::string> list_assets(android_app * app, const char * asset_path)
@@ -160,6 +162,8 @@ static bool recursively_copy_assets_to_filesystem(android_app * app, const char 
 	return true;
 }
 
+#include <android/log.h>
+
 extern "C"
 {
     void android_main(android_app* app)
@@ -168,13 +172,13 @@ extern "C"
             recursively_copy_assets_to_filesystem(app, "") == false ||
             chdir(app->activity->internalDataPath) < 0)
         {
-            logError("failed to copy assets to filesystem");
+            __android_log_print(ANDROID_LOG_INFO, "AssetCopy", "failed to copy assets to filesystem");
         }
         else
         {
-            logInfo("successfully copied assets to filesystem");
+	        __android_log_print(ANDROID_LOG_INFO, "AssetCopy", "successfully copied assets to filesystem");
 
             // ( resources may be opened using regular fopen(..) from here )
         }
-	}
+    }
 }

@@ -17,6 +17,4 @@ app ovr-cubes2
 	add_files main2.cpp
 
 app ovr-cubes3
-	depend_library framework
-	depend_library GLESv3 global
 	add_files main3.cpp
