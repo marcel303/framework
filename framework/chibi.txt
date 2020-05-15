@@ -47,11 +47,11 @@ library framework
 	#with_platform linux depend_library libsdl2
 	with_platform windows depend_library libsdl2
 	
-	with_platform macos    compile_definition FRAMEWORK_USE_SDL 1
-	with_platform iphoneos compile_definition FRAMEWORK_USE_SDL 1
-	with_platform linux    compile_definition FRAMEWORK_USE_SDL 1
-	with_platform android  compile_definition FRAMEWORK_USE_SDL 0
-	with_platform window   compile_definition FRAMEWORK_USE_SDL 1
+	with_platform macos    compile_definition FRAMEWORK_USE_SDL 1 expose
+	with_platform iphoneos compile_definition FRAMEWORK_USE_SDL 1 expose
+	with_platform linux    compile_definition FRAMEWORK_USE_SDL 1 expose
+	with_platform android  compile_definition FRAMEWORK_USE_SDL 0 expose
+	with_platform window   compile_definition FRAMEWORK_USE_SDL 1 expose
 
 	depend_library audioio
 	depend_library audiostream
