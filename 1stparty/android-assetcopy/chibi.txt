@@ -1,0 +1,4 @@
+library android-assetcopy
+	add_files android-assetcopy.cpp
+	add_files android-assetcopy.h
+	header_path . expose

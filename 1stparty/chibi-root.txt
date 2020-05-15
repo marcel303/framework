@@ -1,3 +1,4 @@
+with_platform android add android-assetcopy
 add artnet
 add binaural
 add framework-ofx
