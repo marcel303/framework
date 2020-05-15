@@ -12,9 +12,12 @@ Copyright	:	Copyright (c) Facebook Technologies, LLC and its affiliates. All rig
 
 *************************************************************************************/
 
-#include "framework.h"
 #include "opengl-ovr.h"
 #include "ovrFramebuffer.h"
+
+#include "framework.h"
+
+#include "android-assetcopy.h"
 
 #include "StringEx.h"
 
@@ -33,6 +36,8 @@ Copyright	:	Copyright (c) Facebook Technologies, LLC and its affiliates. All rig
 #include <sys/prctl.h> // for prctl( PR_SET_NAME )
 #include <time.h>
 #include <unistd.h>
+
+#define USE_FRAMEWORK_DRAWING 1
 
 static const int CPU_LEVEL = 2;
 static const int GPU_LEVEL = 3;
@@ -947,6 +952,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
     const ovrTracking2 * tracking,
     ovrMobile * ovr)
 {
+#if !USE_FRAMEWORK_DRAWING
     ovrMatrix4f rotationMatrices[NUM_ROTATIONS];
     for (int i = 0; i < NUM_ROTATIONS; i++)
     {
@@ -991,6 +997,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
     glUnmapBuffer(GL_ARRAY_BUFFER);
     checkErrorGL();
     glBindBuffer(GL_ARRAY_BUFFER, 0);
+#endif
 
     ovrTracking2 updatedTracking = *tracking;
 
@@ -1002,6 +1009,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
     projectionMatrixTransposed[0] = ovrMatrix4f_Transpose(&updatedTracking.Eye[0].ProjectionMatrix);
     projectionMatrixTransposed[1] = ovrMatrix4f_Transpose(&updatedTracking.Eye[1].ProjectionMatrix);
 
+#if !USE_FRAMEWORK_DRAWING
     // Update the scene matrices.
     glBindBuffer(GL_UNIFORM_BUFFER, scene->SceneMatrices);
     ovrMatrix4f* sceneMatrices = (ovrMatrix4f*)glMapBufferRange(
@@ -1021,6 +1029,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
     glUnmapBuffer(GL_UNIFORM_BUFFER);
     checkErrorGL();
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
+#endif
 
     ovrLayerProjection2 layer = vrapi_DefaultLayerProjection2();
     layer.HeadPose = updatedTracking.HeadPose;
@@ -1057,6 +1066,20 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         checkErrorGL();
 
+	#if USE_FRAMEWORK_DRAWING
+	    gxSetMatrixf(GX_MODELVIEW, (float*)eyeViewMatrixTransposed[eye].M);
+	    gxSetMatrixf(GX_PROJECTION, (float*)projectionMatrixTransposed[eye].M);
+
+		beginCubeBatch();
+	    {
+		    for (int i = 0; i < NUM_INSTANCES; ++i)
+		    {
+			    setColor(colorWhite);
+			    fillCube(Vec3(scene->CubePositions[i].x, scene->CubePositions[i].y, scene->CubePositions[i].z), Vec3(.01f));
+		    }
+	    }
+	    endCubeBatch();
+	#else
         glUseProgram(scene->Program.Program);
         {
             glBindBufferBase(
@@ -1075,6 +1098,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
             glBindVertexArray(0);
         }
         glUseProgram(0);
+	#endif
 
         // Explicitly clear the border texels to black when GL_CLAMP_TO_BORDER is not available.
         if (glExtensions.EXT_texture_border_clamp == false)
@@ -1360,24 +1384,16 @@ extern "C"
     #include <android_native_app_glue.h>
     #include <android/native_activity.h>
 
-	#include <android/asset_manager.h>
-	#include <android/asset_manager_jni.h>
-
-	static void test_asset_manager(android_app* app)
-	{
-		auto * am = app->activity->assetManager;
-		auto * d = AAssetManager_openDir(am, "");
-		for (;;)
-		{
-			auto * fn = AAssetDir_getNextFileName(d);
-			logDebug("dir: %s", fn);
-		}
-		AAssetDir_close(d);
-	}
-
     void android_main(android_app* app)
     {
-	    test_asset_manager(app);
+	    const bool copied_files =
+		    chdir(app->activity->internalDataPath) == 0 &&
+	        assetcopy::recursively_copy_assets_to_filesystem(
+			    app->activity->vm,
+			    app->activity->clazz,
+			    app->activity->assetManager,
+			    "") &&
+		    chdir(app->activity->internalDataPath) == 0;
 
         ANativeActivity_setWindowFlags(app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
 
@@ -1410,16 +1426,13 @@ extern "C"
 
         EglInitExtensions();
 
-	#if true
 	    framework.init(0, 0);
 
-	    Shader s("engine/Generic");
-
-		setColor(colorWhite);
-	    drawRect(0, 0, 10, 10);
-	#endif
-
+	#if USE_FRAMEWORK_DRAWING
+	    appState.UseMultiview = false;
+	#else
         appState.UseMultiview &= (glExtensions.multi_view && vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
+	#endif
 
         logDebug("AppState UseMultiview : %d", appState.UseMultiview ? 1 : 0);
 

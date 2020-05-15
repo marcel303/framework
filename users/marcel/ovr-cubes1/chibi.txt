@@ -8,6 +8,7 @@ app ovr-cubes1
 	add_files main1.cpp
 
 app ovr-cubes2
+	depend_library android-assetcopy
 	depend_library framework
 	depend_library ovr-mobile-vrapi
 	depend_library GLESv3 global
