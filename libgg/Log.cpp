@@ -2,6 +2,29 @@
 
 #ifndef DEPLOYMENT
 
+#if defined(ANDROID)
+	#include <android/log.h>
+
+	static int LevelToAdroidPrio(LogLevel level)
+	{
+		switch (level)
+		{
+		case LogLevel_Debug:
+			return ANDROID_LOG_VERBOSE;
+		case LogLevel_Info:
+			return ANDROID_LOG_INFO;
+		case LogLevel_Warning:
+			return ANDROID_LOG_WARN;
+		case LogLevel_Error:
+			return ANDROID_LOG_ERROR;
+		case LogLevel_Critical:
+			return ANDROID_LOG_FATAL;
+		}
+
+		return ANDROID_LOG_VERBOSE;
+	}
+#endif
+
 void LogMgr::_WriteLine(LogLevel level, const char* text, ...)
 {
 #if !defined(DEBUG)
@@ -10,11 +33,13 @@ void LogMgr::_WriteLine(LogLevel level, const char* text, ...)
 #endif
 	
 	VA_SPRINTF(text, temp, text);
-	
-#ifdef PSP
+
+#if defined(PSP)
 	char temp2[VA_BUFSIZE];
 	sprintf(temp2, "[%s] %s\n", LevelToString(level), temp);
-	printf(temp2);
+	printf("%s", temp2);
+#elif defined(ANDROID)
+	__android_log_write(LevelToAdroidPrio(level), "GG", temp);
 #else
 	fprintf(stderr, "[%s] %s\n", LevelToString(level), temp);
 #endif
@@ -26,8 +51,14 @@ void LogMgr::_WriteLineNA(LogLevel level, const char* name, const char* text)
 	if (level < LogLevel_Info)
 		return;
 #endif
-	
+
+#if defined(PSP)
+	printf("%s", text);
+#elif defined(ANDROID)
+	__android_log_write(LevelToAdroidPrio(level), "GG", text);
+#else
 	fprintf(stderr, "[%s] %s: %s\n", LevelToString(level), name, text);
+#endif
 }
 
 #endif
