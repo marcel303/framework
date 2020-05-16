@@ -526,25 +526,26 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 	    endCubeBatch();
 	    popShaderOutputs();
 
-		gxPushMatrix();
-		gxTranslatef(0, -1, 0);
-		gxRotatef(90, 1, 0, 0);
 		pushLineSmooth(true);
-	    for (int i = 0; i < 20; ++i)
+	    for (int i = 0; i < 16; ++i)
 	    {
-	        const float t = float(sin(time + i) + 1.f) / 2.f;
-		    const float size = lerp<float>(.2f, 4.f, t);
+		    gxPushMatrix();
+
+	        const float t = float(sin(time / 4.0 + i) + 1.f) / 2.f;
+		    const float size = lerp<float>(1.f, 4.f, t);
 		    const float c = 1.f - t;
 
-		    const float y_t = float(sin(time / 2.34f + i) + 1.f) / 2.f;
+		    const float y_t = float(sin(time / 6.0 / 2.34f + i) + 1.f) / 2.f;
 		    const float y = lerp<float>(-1.f, 2.f, y_t);
-		    gxTranslatef(0, 0, y);
+		    gxTranslatef(0, y, 0);
+		    gxRotatef(90, 1, 0, 0);
 
 		    setColorf(c, c, c, 1.f);
 		    drawCircle(0.f, 0.f, size, 100);
+
+		    gxPopMatrix();
 	    }
 	    popLineSmooth();
-	    gxPopMatrix();
 
 		pushCullMode(CULL_NONE, CULL_CCW);
 	    gxSetTexture(getTexture("sabana.jpg"));
@@ -565,6 +566,77 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 	    }
 	    gxSetTexture(0);
 	    popCullMode();
+
+	#if true
+	    uint32_t index = 0;
+	    for (;;)
+	    {
+		    ovrInputCapabilityHeader header;
+
+	        const auto result = vrapi_EnumerateInputDevices(ovr, index++, &header);
+
+	        if (result < 0)
+	            break;
+
+	        if (header.Type == ovrControllerType_TrackedRemote)
+	        {
+		        ovrInputStateTrackedRemote state;
+				state.Header.ControllerType = ovrControllerType_TrackedRemote;
+				if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &state.Header ) >= 0)
+				{
+				}
+
+				ovrTracking tracking;
+				// todo : use predicted display time, not current time
+				if (vrapi_GetInputTrackingState(ovr, header.DeviceID, GetTimeInSeconds(), &tracking) == ovrSuccess)
+				{
+					if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
+					{
+						const auto & p = tracking.HeadPose.Pose;
+						const auto & t = p.Translation;
+
+						ovrMatrix4f m = ovrMatrix4f_CreateTranslation(t.x, t.y, t.z);
+						ovrMatrix4f r = ovrMatrix4f_CreateFromQuaternion(&p.Orientation);
+						m = ovrMatrix4f_Multiply(&m, &r);
+						m = ovrMatrix4f_Transpose(&m);
+
+						gxPushMatrix();
+						gxMultMatrixf((float*)m.M);
+
+						pushShaderOutputs("n");
+						setColor(colorWhite);
+						fillCube(Vec3(), Vec3(.02f, .02f, .1f));
+						popShaderOutputs();
+
+						pushBlend(BLEND_ADD);
+						const float a = lerp<float>(.1f, .4f, (sin(time) + 1.0) / 2.0);
+						setColorf(1, 1, 1, a);
+						fillCube(Vec3(0, 0, -100), Vec3(.01f, .01f, -100));
+						popBlend();
+
+					#if false
+						ovrHandMesh handMesh;
+						handMesh.Header.Version = ovrHandVersion_1;
+						if (vrapi_GetHandMesh(ovr, VRAPI_HAND_LEFT, &handMesh.Header) == ovrSuccess)
+						{
+							gxBegin(GX_POINTS);
+							{
+								setColor(colorWhite);
+								for (int i = 0; i < handMesh.NumVertices; ++i)
+								{
+									gxVertex3fv(&handMesh.VertexPositions[i].x);
+								}
+							}
+							gxEnd();
+						}
+					#endif
+
+						gxPopMatrix();
+					}
+				}
+	        }
+	    }
+	#endif
 
 	    popCullMode();
 
