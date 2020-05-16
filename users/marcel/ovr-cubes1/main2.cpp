@@ -501,14 +501,25 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 
 		setDepthTest(true, DEPTH_LESS);
 
-	    // Draw cubes.
 	    gxSetMatrixf(GX_MODELVIEW, (float*)eyeViewMatrixTransposed[eye].M);
 	    gxSetMatrixf(GX_PROJECTION, (float*)projectionMatrixTransposed[eye].M);
 
-		pushCullMode(CULL_BACK, CULL_CCW);
+		// Adjust for floor level.
+		float ground_y = 0.f;
+
+	    {
+		    ovrPosef boundaryPose;
+		    ovrVector3f boundaryScale;
+		    if (vrapi_GetBoundaryOrientedBoundingBox(ovr, &boundaryPose, &boundaryScale) == ovrSuccess)
+		        ground_y = boundaryPose.Translation.y;
+	    }
+	    gxPushMatrix();
+	    gxTranslatef(0, ground_y, 0);
 
 	    const double time = GetTimeInSeconds();
 
+	    // Draw cubes.
+	    pushCullMode(CULL_BACK, CULL_CCW);
 		pushShaderOutputs("n");
 		beginCubeBatch();
 	    {
@@ -525,7 +536,9 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 	    }
 	    endCubeBatch();
 	    popShaderOutputs();
+	    popCullMode();
 
+		// Draw circles.
 		pushLineSmooth(true);
 	    for (int i = 0; i < 16; ++i)
 	    {
@@ -536,7 +549,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 		    const float c = 1.f - t;
 
 		    const float y_t = float(sin(time / 6.0 / 2.34f + i) + 1.f) / 2.f;
-		    const float y = lerp<float>(-1.f, 2.f, y_t);
+		    const float y = lerp<float>(0.f, 4.f, y_t);
 		    gxTranslatef(0, y, 0);
 		    gxRotatef(90, 1, 0, 0);
 
@@ -547,7 +560,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 	    }
 	    popLineSmooth();
 
-		pushCullMode(CULL_NONE, CULL_CCW);
+		// Draw textured walls.
 	    gxSetTexture(getTexture("sabana.jpg"));
 	    gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
 	    setColor(colorWhite);
@@ -565,8 +578,10 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 		    gxPopMatrix();
 	    }
 	    gxSetTexture(0);
-	    popCullMode();
 
+	    gxPopMatrix();
+
+		// Draw hands.
 	#if true
 	    uint32_t index = 0;
 	    for (;;)
@@ -580,65 +595,116 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 
 	        if (header.Type == ovrControllerType_TrackedRemote)
 	        {
+		        ovrTracking tracking;
+		        // todo : use predicted display time, not current time
+		        if (vrapi_GetInputTrackingState(ovr, header.DeviceID, GetTimeInSeconds(), &tracking) != ovrSuccess)
+			        tracking.Status = 0;
+
+		        ovrMatrix4f m = ovrMatrix4f_CreateIdentity();
+		        if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
+		        {
+			        const auto & p = tracking.HeadPose.Pose;
+			        const auto & t = p.Translation;
+
+			        m = ovrMatrix4f_CreateTranslation(t.x, t.y, t.z);
+			        ovrMatrix4f r = ovrMatrix4f_CreateFromQuaternion(&p.Orientation);
+			        m = ovrMatrix4f_Multiply(&m, &r);
+			        m = ovrMatrix4f_Transpose(&m);
+		        }
+
 		        ovrInputStateTrackedRemote state;
 				state.Header.ControllerType = ovrControllerType_TrackedRemote;
 				if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &state.Header ) >= 0)
 				{
+					if ((state.Buttons & ovrButton_Trigger) && (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID))
+					{
+						// Draw textured walls.
+						gxSetTexture(getTexture("sabana.jpg"));
+						gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
+						setColor(colorWhite);
+						{
+							gxPushMatrix();
+							gxMultMatrixf((float*)m.M);
+							gxTranslatef(0, 0, -3);
+							gxRotatef(time * 20.f, 0, 1, 0);
+							drawRect(+1, +1, -1, -1);
+							gxPopMatrix();
+						}
+						gxSetTexture(0);
+					}
 				}
 
-				ovrTracking tracking;
-				// todo : use predicted display time, not current time
-				if (vrapi_GetInputTrackingState(ovr, header.DeviceID, GetTimeInSeconds(), &tracking) == ovrSuccess)
+		        if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
 				{
-					if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
+					gxPushMatrix();
+					gxMultMatrixf((float*)m.M);
+
+					pushCullMode(CULL_BACK, CULL_CCW);
+					pushShaderOutputs("n");
+					setColor(colorWhite);
+					fillCube(Vec3(), Vec3(.02f, .02f, .1f));
+					popShaderOutputs();
+
+					pushBlend(BLEND_ADD);
+					const float a = lerp<float>(.1f, .4f, (sin(time) + 1.0) / 2.0);
+					setColorf(1, 1, 1, a);
+					fillCube(Vec3(0, 0, -100), Vec3(.01f, .01f, 100));
+					popBlend();
+					popCullMode();
+
+				#if false
+					ovrHandMesh handMesh;
+					handMesh.Header.Version = ovrHandVersion_1;
+					if (vrapi_GetHandMesh(ovr, VRAPI_HAND_LEFT, &handMesh.Header) == ovrSuccess)
 					{
-						const auto & p = tracking.HeadPose.Pose;
-						const auto & t = p.Translation;
-
-						ovrMatrix4f m = ovrMatrix4f_CreateTranslation(t.x, t.y, t.z);
-						ovrMatrix4f r = ovrMatrix4f_CreateFromQuaternion(&p.Orientation);
-						m = ovrMatrix4f_Multiply(&m, &r);
-						m = ovrMatrix4f_Transpose(&m);
-
-						gxPushMatrix();
-						gxMultMatrixf((float*)m.M);
-
-						pushShaderOutputs("n");
-						setColor(colorWhite);
-						fillCube(Vec3(), Vec3(.02f, .02f, .1f));
-						popShaderOutputs();
-
-						pushBlend(BLEND_ADD);
-						const float a = lerp<float>(.1f, .4f, (sin(time) + 1.0) / 2.0);
-						setColorf(1, 1, 1, a);
-						fillCube(Vec3(0, 0, -100), Vec3(.01f, .01f, -100));
-						popBlend();
-
-					#if false
-						ovrHandMesh handMesh;
-						handMesh.Header.Version = ovrHandVersion_1;
-						if (vrapi_GetHandMesh(ovr, VRAPI_HAND_LEFT, &handMesh.Header) == ovrSuccess)
+						gxBegin(GX_POINTS);
 						{
-							gxBegin(GX_POINTS);
+							setColor(colorWhite);
+							for (int i = 0; i < handMesh.NumVertices; ++i)
 							{
-								setColor(colorWhite);
-								for (int i = 0; i < handMesh.NumVertices; ++i)
-								{
-									gxVertex3fv(&handMesh.VertexPositions[i].x);
-								}
+								gxVertex3fv(&handMesh.VertexPositions[i].x);
 							}
-							gxEnd();
 						}
-					#endif
-
-						gxPopMatrix();
+						gxEnd();
 					}
+				#endif
+
+					gxPopMatrix();
 				}
 	        }
 	    }
 	#endif
 
-	    popCullMode();
+		// Draw filled circles.
+	    pushDepthTest(true, DEPTH_LESS, false);
+		pushBlend(BLEND_ADD);
+	    pushLineSmooth(true);
+	    for (int i = 0; i < 16; ++i)
+	    {
+	        if ((i % 3) != 0)
+	            continue;
+
+		    gxPushMatrix();
+
+		    const float y_t = float(sin(time / 6.0 / 2.34f + i) + 1.f) / 2.f;
+		    const float y = lerp<float>(0.f, 4.f, y_t);
+
+		    gxTranslatef(0, y, 0);
+		    gxRotatef(90, 1, 0, 0);
+
+		    const float t = float(sin(time / 4.0 + i) + 1.f) / 2.f;
+		    const float size = lerp<float>(1.f, 4.f, t);
+
+		    const float c = fabsf(y_t - .5f) * 2.f;
+
+		    setColorf(1, 1, 1, c * .2f);
+		    fillCircle(0.f, 0.f, size, 100);
+
+		    gxPopMatrix();
+	    }
+	    popLineSmooth();
+	    popBlend();
+	    popDepthTest();
 
         // Explicitly clear the border texels to black when GL_CLAMP_TO_BORDER is not available.
         if (glExtensions.EXT_texture_border_clamp == false)
