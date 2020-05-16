@@ -14,6 +14,10 @@
 #define PACKED __attribute__ ((packed))
 #elif defined(MACOS)
 #define PACKED __attribute__ ((packed))
+#elif defined(LINUX)
+#define PACKED __attribute__ ((packed))
+#elif defined(ANDROID)
+#define PACKED __attribute__ ((packed))
 #elif defined(WIN32)
 #define PACKED
 #elif defined(PSP)
