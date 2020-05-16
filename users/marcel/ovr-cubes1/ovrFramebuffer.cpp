@@ -260,3 +260,60 @@ void ovrFramebuffer::shut()
 
     *this = ovrFramebuffer();
 }
+
+//
+
+void ovrFramebuffer_SetCurrent(ovrFramebuffer * frameBuffer)
+{
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer->FrameBuffers[frameBuffer->TextureSwapChainIndex]);
+	checkErrorGL();
+}
+
+void ovrFramebuffer_SetNone()
+{
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+	checkErrorGL();
+}
+
+void ovrFramebuffer_Resolve(ovrFramebuffer * frameBuffer)
+{
+	// Discard the depth buffer, so the tiler won't need to write it back out to memory.
+	const GLenum depthAttachment[1] = { GL_DEPTH_ATTACHMENT };
+	glInvalidateFramebuffer(GL_DRAW_FRAMEBUFFER, 1, depthAttachment);
+	checkErrorGL();
+
+	// Flush this frame worth of commands.
+	glFlush();
+}
+
+void ovrFramebuffer_Advance(ovrFramebuffer * frameBuffer)
+{
+	// Advance to the next texture from the set.
+	frameBuffer->TextureSwapChainIndex = (frameBuffer->TextureSwapChainIndex + 1) % frameBuffer->TextureSwapChainLength;
+}
+
+void ovrFramebuffer_ClearBorder(ovrFramebuffer * frameBuffer)
+{
+	// Clear to fully opaque black.
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+	// bottom
+	glScissor(0, 0, frameBuffer->Width, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	checkErrorGL();
+
+	// top
+	glScissor(0, frameBuffer->Height - 1, frameBuffer->Width, 1);
+	glClear(GL_COLOR_BUFFER_BIT);
+	checkErrorGL();
+
+	// left
+	glScissor(0, 0, 1, frameBuffer->Height);
+	glClear(GL_COLOR_BUFFER_BIT);
+	checkErrorGL();
+
+	// right
+	glScissor(frameBuffer->Width - 1, 0, 1, frameBuffer->Height);
+	glClear(GL_COLOR_BUFFER_BIT);
+	checkErrorGL();
+}

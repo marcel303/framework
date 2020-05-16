@@ -43,7 +43,7 @@ static const int CPU_LEVEL = 2;
 static const int GPU_LEVEL = 3;
 static const int NUM_MULTI_SAMPLES = 4;
 
-#if false
+#if false // multi view vertex shader reference
 
 VERTEX_SHADER =
 
@@ -118,6 +118,8 @@ ovrEgl
 
 ================================================================================
 */
+
+// todo : GLES initialization routines to framework
 
 struct ovrEgl
 {
@@ -274,49 +276,12 @@ static void ovrEgl_DestroyContext(ovrEgl * egl)
 /*
 ================================================================================
 
-ovrFramebuffer
-
-================================================================================
-*/
-
-static void ovrFramebuffer_SetCurrent(ovrFramebuffer * frameBuffer)
-{
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer->FrameBuffers[frameBuffer->TextureSwapChainIndex]);
-    checkErrorGL();
-}
-
-static void ovrFramebuffer_SetNone()
-{
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    checkErrorGL();
-}
-
-static void ovrFramebuffer_Resolve(ovrFramebuffer * frameBuffer)
-{
-    // Discard the depth buffer, so the tiler won't need to write it back out to memory.
-    const GLenum depthAttachment[1] = { GL_DEPTH_ATTACHMENT };
-    glInvalidateFramebuffer(GL_DRAW_FRAMEBUFFER, 1, depthAttachment);
-    checkErrorGL();
-
-    // Flush this frame worth of commands.
-    glFlush();
-}
-
-static void ovrFramebuffer_Advance(ovrFramebuffer * frameBuffer)
-{
-    // Advance to the next texture from the set.
-    frameBuffer->TextureSwapChainIndex = (frameBuffer->TextureSwapChainIndex + 1) % frameBuffer->TextureSwapChainLength;
-}
-
-/*
-================================================================================
-
 ovrScene
 
 ================================================================================
 */
 
-#define NUM_INSTANCES 2500
+#define NUM_INSTANCES 1500
 #define NUM_ROTATIONS 16
 
 struct ovrScene
@@ -529,7 +494,8 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
         glScissor(0, 0, frameBuffer->Width, frameBuffer->Height);
         checkErrorGL();
 
-        glClearColor(0.125f, 0.0f, 0.125f, 1.0f);
+        //glClearColor(0.125f, 0.0f, 0.125f, 1.0f);
+	    glClearColor(0.f, 0.f, 0.f, 1.f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         checkErrorGL();
 
@@ -604,30 +570,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 
         // Explicitly clear the border texels to black when GL_CLAMP_TO_BORDER is not available.
         if (glExtensions.EXT_texture_border_clamp == false)
-        {
-            // Clear to fully opaque black.
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-            // bottom
-            glScissor(0, 0, frameBuffer->Width, 1);
-            glClear(GL_COLOR_BUFFER_BIT);
-            checkErrorGL();
-
-            // top
-            glScissor(0, frameBuffer->Height - 1, frameBuffer->Width, 1);
-            glClear(GL_COLOR_BUFFER_BIT);
-            checkErrorGL();
-
-            // left
-            glScissor(0, 0, 1, frameBuffer->Height);
-            glClear(GL_COLOR_BUFFER_BIT);
-            checkErrorGL();
-
-            // right
-            glScissor(frameBuffer->Width - 1, 0, 1, frameBuffer->Height);
-            glClear(GL_COLOR_BUFFER_BIT);
-            checkErrorGL();
-        }
+           ovrFramebuffer_ClearBorder(frameBuffer);
 
         ovrFramebuffer_Resolve(frameBuffer);
         ovrFramebuffer_Advance(frameBuffer);
@@ -1022,7 +965,6 @@ extern "C"
                         break;
 
 					default:
-                        logWarning("??? #2");
                         break;
 					}
 
@@ -1033,6 +975,7 @@ extern "C"
                     AInputEvent * event = nullptr;
                     while (AInputQueue_getEvent(app->inputQueue, &event) >= 0)
                     {
+                    // todo : restore AInputQueue_preDispatchEvent
                         //if (AInputQueue_preDispatchEvent(app->inputQueue, event)) {
                         //    continue;
                         //}
@@ -1079,10 +1022,6 @@ extern "C"
 
                         AInputQueue_finishEvent(app->inputQueue, event, handled);
                     }
-                }
-                else
-                {
-                    logWarning("??? #1");
                 }
 
                 ovrApp_HandleVrModeChanges(&appState);
