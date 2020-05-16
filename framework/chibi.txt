@@ -167,6 +167,8 @@ library framework
 
 	with_platform android depend_library GLESv3 global
 	with_platform android depend_library EGL global
+	with_platform android depend_library android global
+	with_platform android depend_library log global
 	#with_platform android depend_library pthread find
 	#with_platform android depend_library portaudio find
 	with_platform android depend_library FreeImage
