@@ -16,6 +16,7 @@ app ovr-cubes2
 	add_files opengl-ovr.cpp
 	add_files ovrFramebuffer.cpp
 	add_files main2.cpp
+	resource_path data
 
 app ovr-cubes3
 	add_files main3.cpp

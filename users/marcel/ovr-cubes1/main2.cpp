@@ -523,11 +523,6 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
         ovrFramebuffer_SetCurrent(frameBuffer);
 
         glEnable(GL_SCISSOR_TEST);
-        glDepthMask(GL_TRUE);
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LEQUAL);
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_BACK);
         checkErrorGL();
 
         glViewport(0, 0, frameBuffer->Width, frameBuffer->Height);
@@ -538,9 +533,13 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         checkErrorGL();
 
-        // Draw cubes.
+		setDepthTest(true, DEPTH_LESS);
+
+	    // Draw cubes.
 	    gxSetMatrixf(GX_MODELVIEW, (float*)eyeViewMatrixTransposed[eye].M);
 	    gxSetMatrixf(GX_PROJECTION, (float*)projectionMatrixTransposed[eye].M);
+
+		pushCullMode(CULL_BACK, CULL_CCW);
 
 	    const double time = GetTimeInSeconds();
 
@@ -564,16 +563,44 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 		gxPushMatrix();
 		gxTranslatef(0, -1, 0);
 		gxRotatef(90, 1, 0, 0);
-	    for (int i = 0; i < 10; ++i)
+		pushLineSmooth(true);
+	    for (int i = 0; i < 20; ++i)
 	    {
 	        const float t = float(sin(time + i) + 1.f) / 2.f;
-		    const float size = lerp<float>(1.f, 4.f, t);
+		    const float size = lerp<float>(.2f, 4.f, t);
 		    const float c = 1.f - t;
+
+		    const float y_t = float(sin(time / 2.34f + i) + 1.f) / 2.f;
+		    const float y = lerp<float>(-1.f, 2.f, y_t);
+		    gxTranslatef(0, 0, y);
 
 		    setColorf(c, c, c, 1.f);
 		    drawCircle(0.f, 0.f, size, 100);
 	    }
+	    popLineSmooth();
 	    gxPopMatrix();
+
+		pushCullMode(CULL_NONE, CULL_CCW);
+	    gxSetTexture(getTexture("sabana.jpg"));
+	    gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
+	    setColor(colorWhite);
+	    {
+		    gxPushMatrix();
+		    gxTranslatef(+3, 0, 0);
+		    gxRotatef(time * 20.f, 0, 1, 0);
+		    drawRect(+1, +1, -1, -1);
+		    gxPopMatrix();
+
+		    gxPushMatrix();
+		    gxTranslatef(-3, 0, 0);
+		    gxRotatef(time * 20.f, 0, 1, 0);
+		    drawRect(+1, +1, -1, -1);
+		    gxPopMatrix();
+	    }
+	    gxSetTexture(0);
+	    popCullMode();
+
+	    popCullMode();
 
         // Explicitly clear the border texels to black when GL_CLAMP_TO_BORDER is not available.
         if (glExtensions.EXT_texture_border_clamp == false)
@@ -861,6 +888,7 @@ extern "C"
 
     void android_main(android_app* app)
     {
+        const double t1 = GetTimeInSeconds();
 	    const bool copied_files =
 		    chdir(app->activity->internalDataPath) == 0 &&
 	        assetcopy::recursively_copy_assets_to_filesystem(
@@ -869,6 +897,8 @@ extern "C"
 			    app->activity->assetManager,
 			    "") &&
 		    chdir(app->activity->internalDataPath) == 0;
+	    const double t2 = GetTimeInSeconds();
+	    logInfo("asset copying took %.2f seconds", (t2 - t1));
 
         ANativeActivity_setWindowFlags(app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
 
