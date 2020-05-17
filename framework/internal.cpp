@@ -927,7 +927,7 @@ void SoundCacheElem::free()
 		g_soundPlayer.checkError();
 		buffer = 0;
 	}
-#elif FRAMEWORK_USE_PORTAUDIO
+#elif FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT || FRAMEWORK_USE_PORTAUDIO
 	if (buffer != nullptr)
 	{
 		g_soundPlayer.stopSoundsForBuffer(buffer);
@@ -1000,7 +1000,7 @@ void SoundCacheElem::load(const char * filename)
 				soundData->channelCount,
 				soundData->channelSize);
 		}
-	#elif FRAMEWORK_USE_PORTAUDIO
+	#elif FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT || FRAMEWORK_USE_PORTAUDIO
 		buffer = g_soundPlayer.createBuffer(soundData->sampleData, soundData->sampleCount, soundData->sampleRate, soundData->channelSize, soundData->channelCount);
 
 		if (buffer != nullptr)
