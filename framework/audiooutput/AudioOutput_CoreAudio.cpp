@@ -348,7 +348,7 @@ OSStatus AudioOutput_CoreAudio::outputCallback(
 			int16_t * __restrict values = (int16_t*)buffer.mData;
 		
 			for (int i = 0; i < numSamples; ++i)
-				values[i] = (int(samples[i].channel[0] + samples[i].channel[1]) * volume) >> 11;
+				values[i] = (int32_t(samples[i].channel[0] + samples[i].channel[1]) * volume) >> 11;
 		}
 		else
 		{
@@ -364,7 +364,7 @@ OSStatus AudioOutput_CoreAudio::outputCallback(
 			
 				for (int i = 0; i < numValues; ++i)
 				{
-					values[i] = (int(values[i]) * volume) >> 10;
+					values[i] = (int32_t(values[i]) * volume) >> 10;
 				}
 			}
 		}

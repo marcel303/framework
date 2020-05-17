@@ -131,7 +131,7 @@ void AudioOutput_OpenSL::playbackHandler(SLAndroidSimpleBufferQueueItf bq)
 		int16_t * __restrict values = (int16_t*)alloca(numSamples * sizeof(int16_t));
 	
 		for (int i = 0; i < numSamples; ++i)
-			values[i] = (int(samples[i].channel[0] + samples[i].channel[1]) * volume) >> 11;
+			values[i] = (int32_t(samples[i].channel[0] + samples[i].channel[1]) * volume) >> 11;
 
 		(*bq)->Enqueue(bq, values, numSamples * sizeof(values[0]));
 	}
@@ -148,7 +148,7 @@ void AudioOutput_OpenSL::playbackHandler(SLAndroidSimpleBufferQueueItf bq)
 		
 			for (int i = 0; i < numValues; ++i)
 			{
-				values[i] = (int(values[i]) * volume) >> 10;
+				values[i] = (int32_t(values[i]) * volume) >> 10;
 			}
 		}
 
