@@ -1,6 +1,6 @@
 add 4d-imu9250
 add 4dsound2-osc
-#add abletonlink1
+add abletonlink1
 add ambisonics1
 add anaglyphic
 add arrange1
@@ -55,7 +55,7 @@ add maxpatch1
 add mitronix1
 add motionbank-effect
 add nanovg-canvas
-with_platform android add ovr-cubes1
+with_platform android add ovr-cubes
 add pincushion1
 add planetvis
 add planetvis2
