@@ -1,17 +1,3 @@
-/************************************************************************************
-
-Filename	:	VrCubeWorld_SurfaceView.c
-Content		:	This sample uses a plain Android SurfaceView and handles all
-                Activity and Surface life cycle events in native code. This sample
-                does not use the application framework.
-                This sample only uses the VrApi.
-Created		:	March, 2015
-Authors		:	J.M.P. van Waveren
-
-Copyright	:	Copyright (c) Facebook Technologies, LLC and its affiliates. All rights reserved.
-
-*************************************************************************************/
-
 #include "opengl-ovr.h"
 #include "ovrFramebuffer.h"
 
@@ -1348,6 +1334,7 @@ extern "C"
         ovrRenderer_Destroy(&appState.Renderer);
 
         ovrScene_Destroy(&appState.Scene);
+
         ovrEgl_DestroyContext(&appState.Egl);
 
         vrapi_Shutdown();
