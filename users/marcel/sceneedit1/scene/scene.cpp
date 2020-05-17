@@ -9,6 +9,7 @@
 #include "StringEx.h"
 #include "TextIO.h"
 
+#include <algorithm>
 #include <set>
 
 // -- scene node component type
