@@ -291,7 +291,10 @@ ovrScene
 ================================================================================
 */
 
-#define NUM_INSTANCES 1500
+#include "gx_mesh.h"
+#include "image.h"
+
+#define NUM_INSTANCES 500
 #define NUM_ROTATIONS 16
 
 struct ovrScene
@@ -301,6 +304,11 @@ struct ovrScene
     ovrVector3f Rotations[NUM_ROTATIONS];
     ovrVector3f CubePositions[NUM_INSTANCES];
     int CubeRotations[NUM_INSTANCES];
+
+	// for terrain:
+    GxMesh mesh;
+    GxVertexBuffer vb;
+    GxIndexBuffer ib;
 };
 
 static bool ovrScene_IsCreated(ovrScene * scene)
@@ -385,11 +393,58 @@ static void ovrScene_Create(ovrScene * scene, bool useMultiview)
         scene->CubeRotations[insert] = (int)(ovrScene_RandomFloat(scene) * (NUM_ROTATIONS - 0.1f));
     }
 
+    auto * image = loadImage("Hokkaido8.png");
+    if (image != nullptr)
+    {
+        gxCaptureMeshBegin(scene->mesh, scene->vb, scene->ib);
+	    {
+	        setColor(colorWhite);
+	        gxBegin(GX_QUADS);
+		    //gxBegin(GX_POINTS);
+	        const int stride = 3; // 2 when points, 3 when quads
+		    for (int y = 0; y < image->sy - stride; y += stride)
+		    {
+			    ImageData::Pixel * line1 = image->getLine(y + 0);
+			    ImageData::Pixel * line2 = image->getLine(y + stride);
+			    ImageData::Pixel * line[2] = { line1, line2 };
+	            for (int x = 0; x < image->sx - stride; x += stride)
+	            {
+				#define emitVertex(ox, oy) \
+		            gxVertex3f( \
+				            ((x + ox) + .5f - image->sx / 2.f) * .1f, \
+				            line[oy/stride][x + ox].r / 40.f - 4, \
+				            ((y + oy) + .5f - image->sy / 2.f) * .1f);
+
+		            gxColor3ub(line1[x].r + 127, line1[x].r, 255 - line1[x].r);
+
+				#if false
+		            emitVertex(0,           0);
+				#else
+		            emitVertex(0,           0);
+		            emitVertex(stride,      0);
+		            emitVertex(stride, stride);
+		            emitVertex(0,      stride);
+				#endif
+
+				#undef emitVertex
+	            }
+	        }
+	        gxEnd();
+	    }
+	    gxCaptureMeshEnd();
+
+        delete image;
+    }
+
     scene->CreatedScene = true;
 }
 
 static void ovrScene_Destroy(ovrScene * scene)
 {
+	scene->mesh.clear();
+	scene->vb.free();
+	scene->ib.free();
+
     scene->CreatedScene = false;
 }
 
@@ -527,6 +582,9 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 	    gxTranslatef(0, ground_y, 0);
 
 	    const double time = GetTimeInSeconds();
+
+	    // Draw terrain.
+	    scene->mesh.draw();
 
 	    // Draw cubes.
 	    pushCullMode(CULL_BACK, CULL_CCW);
