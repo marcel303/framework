@@ -1,4 +1,5 @@
 app ovr-cubes1
+	depend_library android-native-app-glue
 	depend_library libgg
 	depend_library ovr-mobile-vrapi
 	depend_library GLESv3 global
@@ -19,4 +20,5 @@ app ovr-cubes2
 	resource_path data
 
 app ovr-cubes3
+	depend_library android-native-app-glue
 	add_files main3.cpp

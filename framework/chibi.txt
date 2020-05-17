@@ -122,11 +122,11 @@ library framework
 	with_platform iphoneos compile_definition FRAMEWORK_USE_COREAUDIO 1 expose
 	with_platform android  compile_definition FRAMEWORK_USE_COREAUDIO 0 expose
 
-	with_platform macos    compile_definition FRAMEWORK_USE_SLESAUDIO 0 expose
-	with_platform linux    compile_definition FRAMEWORK_USE_SLESAUDIO 0 expose
-	with_platform windows  compile_definition FRAMEWORK_USE_SLESAUDIO 0 expose
-	with_platform iphoneos compile_definition FRAMEWORK_USE_SLESAUDIO 0 expose
-	with_platform android  compile_definition FRAMEWORK_USE_SLESAUDIO 1 expose
+	with_platform macos    compile_definition FRAMEWORK_USE_OPENSL 0 expose
+	with_platform linux    compile_definition FRAMEWORK_USE_OPENSL 0 expose
+	with_platform windows  compile_definition FRAMEWORK_USE_OPENSL 0 expose
+	with_platform iphoneos compile_definition FRAMEWORK_USE_OPENSL 0 expose
+	with_platform android  compile_definition FRAMEWORK_USE_OPENSL 1 expose
 
 	compile_definition HAVE_M_PI               * expose toolchain msvc
 	compile_definition _USE_MATH_DEFINES       * expose toolchain msvc
@@ -173,14 +173,13 @@ library framework
 
 # Android header file includes and libraries
 
+	with_platform android depend_library FreeImage
+	with_platform android depend_library android-native-app-glue
+	with_platform android depend_library android global
+	with_platform android depend_library log global
 	with_platform android depend_library GLESv3 global
 	with_platform android depend_library EGL global
 	with_platform android depend_library OpenSLES global
-	with_platform android depend_library android global
-	with_platform android depend_library log global
-	#with_platform android depend_library pthread find
-	#with_platform android depend_library portaudio find
-	with_platform android depend_library FreeImage
 
 	resource_path data
 
