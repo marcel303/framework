@@ -1,4 +1,5 @@
 with_platform android add android-assetcopy
+with_platform android add android-native-app-glue
 add artnet
 add binaural
 add framework-ofx

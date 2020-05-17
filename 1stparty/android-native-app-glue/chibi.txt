@@ -1,0 +1,8 @@
+library android-native-app-glue
+	
+	depend_library android global
+	depend_library log global
+	
+	add_files ${ANDROID_NDK}/sources/android/native_app_glue/android_native_app_glue.c - absolute
+	
+	header_path ${ANDROID_NDK}/sources/android/native_app_glue absolute expose
