@@ -412,7 +412,7 @@ static void ovrScene_Create(ovrScene * scene, bool useMultiview)
 				#define emitVertex(ox, oy) \
 		            gxVertex3f( \
 				            ((x + ox) + .5f - image->sx / 2.f) * .1f, \
-				            line[oy/stride][x + ox].r / 40.f - 4, \
+				            line[oy/stride][x + ox].r / 40.f - 3, \
 				            ((y + oy) + .5f - image->sy / 2.f) * .1f);
 
 		            gxColor3ub(line1[x].r + 127, line1[x].r, 255 - line1[x].r);
@@ -1058,8 +1058,7 @@ extern "C"
 
 		s_audioOutput.Initialize(2, nativeOutputSampleRate, nativeBufferLength);
 
-		s_audioStream.Open("button1.ogg", true);
-		//s_audioOutput.Play(&s_audioStream);
+		s_audioStream.Open("button1.ogg", true); // play/stop on button press/release
 	}
 
     void android_main(android_app* app)
@@ -1302,6 +1301,9 @@ extern "C"
                 // Create the scene.
                 ovrScene_Create(&appState.Scene, appState.UseMultiview);
             }
+
+            if ((rand() % 900) == 0)
+	            Sound("button1.ogg").play(); // here to test framework's built-in sound player
 
             // This is the only place the frame index is incremented, right before
             // calling vrapi_GetPredictedDisplayTime().
