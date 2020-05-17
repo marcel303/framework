@@ -27,6 +27,41 @@
 
 #if FRAMEWORK_USE_OPENSL
 
+// todo : how do we figure out the native sample rate on Android? (to ensure we get the fast path)
+
+#if false // retrieve native sample rate and buffer size example code
+
+/*
+ * retrieve fast audio path sample rate and buf size; if we have it, we pass to native
+ * side to create a player with fast audio enabled [ fast audio == low latency audio ];
+ * IF we do not have a fast audio path, we pass 0 for sampleRate, which will force native
+ * side to pick up the 8Khz sample rate.
+ */
+if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+    AudioManager myAudioMgr = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+    String nativeParam = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
+    sampleRate = Integer.parseInt(nativeParam);
+    nativeParam = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
+    bufSize = Integer.parseInt(nativeParam);
+}
+
+#endif
+
+#if false // retrieve native sample rate and buffer size through JNI
+
+	JNIEnv * env = nullptr;
+	vm->AttachCurrentThread(&env, nullptr);
+
+	jclass audioSystem = env->FindClass("android/media/AudioSystem");
+	jmethodID method = env->GetStaticMethodID(audioSystem, "getPrimaryOutputSamplingRate", "()I");
+	jint nativeOutputSampleRate = env->CallStaticIntMethod(audioSystem, method);
+	method = env->GetStaticMethodID(audioSystem, "getPrimaryOutputFrameCount", "()I");
+	jint nativeBufferLength = env->CallStaticIntMethod(audioSystem, method);
+
+	vm->DetachCurrentThread();
+
+#endif
+
 #include "AudioOutput_OpenSL.h"
 
 #include "framework.h"
@@ -38,6 +73,8 @@
 #if ENABLE_OVR_MIC
 	#include "OVR_Voip_LowLevel.h"
 #endif
+
+#define USE_VOLUME_INTERFACE 0
 
 static bool checkError(const char * title, const SLresult code)
 {
@@ -213,16 +250,21 @@ bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate,
 	SLDataSink audioSnk = { &loc_outmix, nullptr };
 
 	// create audio player
-	const SLInterfaceID ids[3] = { SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_VOLUME };
-	const SLboolean req[3] = { SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE };
+	const SLInterfaceID ids[2] = { SL_IID_ANDROIDSIMPLEBUFFERQUEUE, SL_IID_VOLUME };
+	const SLboolean req[2] = { SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE };
 
-	if (!checkError("CreateAudioPlayer", (*engineEngine)->CreateAudioPlayer(engineEngine, &playObj, &audioSrc, &audioSnk, 2, ids, req)) ||
+	if (!checkError("CreateAudioPlayer", (*engineEngine)->CreateAudioPlayer(engineEngine, &playObj, &audioSrc, &audioSnk, USE_VOLUME_INTERFACE ? 2 : 1, ids, req)) ||
 		!checkError("Realize",           (*playObj)->Realize(playObj, SL_BOOLEAN_FALSE)) ||
 		!checkError("GetInterface",      (*playObj)->GetInterface(playObj, SL_IID_PLAY, &playPlay)) ||
 		!checkError("GetInterface",      (*playObj)->GetInterface(playObj, SL_IID_ANDROIDSIMPLEBUFFERQUEUE, &playBufferQueue)) ||
 		!checkError("RegisterCallback",  (*playBufferQueue)->RegisterCallback(playBufferQueue, playbackHandler_static, this)) ||
-		!checkError("GetInterface",      (*playObj)->GetInterface(playObj, SL_IID_VOLUME, &playVolume)) ||
 		!checkError("SetPlayState",      (*playPlay)->SetPlayState(playPlay, SL_PLAYSTATE_PLAYING)))
+	{
+		return false;
+	}
+
+	if (USE_VOLUME_INTERFACE &&
+		!checkError("GetInterface", (*playObj)->GetInterface(playObj, SL_IID_VOLUME, &playVolume)))
 	{
 		return false;
 	}
@@ -255,7 +297,7 @@ bool AudioOutput_OpenSL::Shutdown()
 	ovr_Microphone_Destroy(MicHandle);
 #endif
 
-// todo : release playVolume
+	playVolume = nullptr;
 
 	if (playPlay != nullptr)
 	{
@@ -281,7 +323,7 @@ bool AudioOutput_OpenSL::Shutdown()
 		outputMixObject = nullptr;
 	}
 
-	// todo : release engineEngine
+	engineEngine = nullptr;
 
 	if (engineObject != nullptr)
 	{
@@ -326,8 +368,16 @@ void AudioOutput_OpenSL::Volume_set(float volume)
 {
 	Assert(volume >= 0.f && volume <= 1.f);
 	
-	// todo : use playVolume object
-	
+#if USE_VOLUME_INTERFACE
+    if (playVolume != nullptr)
+	{
+		// todo : is this thread safe ?
+        result = (*playVolume)->SetVolumeLevel(playVolume, millibel);
+        assert(SL_RESULT_SUCCESS == result);
+        (void)result;
+    }
+#endif
+
 	m_volume = int(roundf(volume * 1024.f));
 }
 
