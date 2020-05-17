@@ -39,6 +39,16 @@ Copyright	:	Copyright (c) Facebook Technologies, LLC and its affiliates. All rig
 
 #define USE_FRAMEWORK_DRAWING 1
 
+#define ENABLE_AUDIOOUTPUT_TEST 1
+
+#if ENABLE_AUDIOOUTPUT_TEST
+#include "audiooutput/AudioOutput_OpenSL.h"
+#include "audiostream/AudioStreamVorbis.h"
+
+static AudioOutput_OpenSL s_audioOutput;
+static AudioStream_Vorbis s_audioStream;
+#endif
+
 static const int CPU_LEVEL = 2;
 static const int GPU_LEVEL = 3;
 static const int NUM_MULTI_SAMPLES = 4;
@@ -632,6 +642,11 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 						}
 						gxSetTexture(0);
 					}
+
+					if (state.Buttons & ovrButton_X)
+						s_audioOutput.Play(&s_audioStream);
+					else
+						s_audioOutput.Stop();
 				}
 
 		        if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
@@ -967,6 +982,28 @@ extern "C"
     #include <android_native_app_glue.h>
     #include <android/native_activity.h>
 
+	static void test_audiooutput(JavaVM * vm)
+	{
+		JNIEnv * env = nullptr;
+		vm->AttachCurrentThread(&env, nullptr);
+
+		jclass audioSystem = env->FindClass("android/media/AudioSystem");
+		jmethodID method = env->GetStaticMethodID(audioSystem, "getPrimaryOutputSamplingRate", "()I");
+		jint nativeOutputSampleRate = env->CallStaticIntMethod(audioSystem, method);
+		method = env->GetStaticMethodID(audioSystem, "getPrimaryOutputFrameCount", "()I");
+		jint nativeBufferLength = env->CallStaticIntMethod(audioSystem, method);
+
+		vm->DetachCurrentThread();
+
+		logDebug("native sample rate: %d", nativeOutputSampleRate);
+		logDebug("native buffer size: %d", nativeBufferLength);
+
+		s_audioOutput.Initialize(2, nativeOutputSampleRate, nativeBufferLength);
+
+		s_audioStream.Open("button1.ogg", true);
+		//s_audioOutput.Play(&s_audioStream);
+	}
+
     void android_main(android_app* app)
     {
         const double t1 = GetTimeInSeconds();
@@ -980,6 +1017,8 @@ extern "C"
 		    chdir(app->activity->internalDataPath) == 0;
 	    const double t2 = GetTimeInSeconds();
 	    logInfo("asset copying took %.2f seconds", (t2 - t1));
+
+	    test_audiooutput(app->activity->vm);
 
         ANativeActivity_setWindowFlags(app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
 
@@ -1134,13 +1173,13 @@ extern "C"
                             {
                                 // todo : we get here twice due to up/down ?
                                 //adjustVolume(1);
-                                handled = 1;
+                                //handled = 1;
                             }
                             else if (keyCode == AKEYCODE_VOLUME_DOWN)
                             {
                                 // todo : we get here twice due to up/down ?
                                 //adjustVolume(-1);
-                                handled = 1;
+                                //handled = 1;
                             }
                             else
                             {

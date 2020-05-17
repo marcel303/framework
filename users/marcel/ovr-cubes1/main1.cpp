@@ -665,43 +665,6 @@ static const char FRAGMENT_SHADER[] =
 /*
 ================================================================================
 
-ovrFramebuffer
-
-================================================================================
-*/
-
-static void ovrFramebuffer_SetCurrent(ovrFramebuffer * frameBuffer)
-{
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer->FrameBuffers[frameBuffer->TextureSwapChainIndex]);
-    checkErrorGL();
-}
-
-static void ovrFramebuffer_SetNone()
-{
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-    checkErrorGL();
-}
-
-static void ovrFramebuffer_Resolve(ovrFramebuffer * frameBuffer)
-{
-    // Discard the depth buffer, so the tiler won't need to write it back out to memory.
-    const GLenum depthAttachment[1] = { GL_DEPTH_ATTACHMENT };
-    glInvalidateFramebuffer(GL_DRAW_FRAMEBUFFER, 1, depthAttachment);
-    checkErrorGL();
-
-    // Flush this frame worth of commands.
-    glFlush();
-}
-
-static void ovrFramebuffer_Advance(ovrFramebuffer * frameBuffer)
-{
-    // Advance to the next texture from the set.
-    frameBuffer->TextureSwapChainIndex = (frameBuffer->TextureSwapChainIndex + 1) % frameBuffer->TextureSwapChainLength;
-}
-
-/*
-================================================================================
-
 ovrScene
 
 ================================================================================
@@ -1083,32 +1046,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
         }
         glUseProgram(0);
 
-        // Explicitly clear the border texels to black when GL_CLAMP_TO_BORDER is not available.
-        if (glExtensions.EXT_texture_border_clamp == false)
-        {
-            // Clear to fully opaque black.
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-            // bottom
-            glScissor(0, 0, frameBuffer->Width, 1);
-            glClear(GL_COLOR_BUFFER_BIT);
-            checkErrorGL();
-
-            // top
-            glScissor(0, frameBuffer->Height - 1, frameBuffer->Width, 1);
-            glClear(GL_COLOR_BUFFER_BIT);
-            checkErrorGL();
-
-            // left
-            glScissor(0, 0, 1, frameBuffer->Height);
-            glClear(GL_COLOR_BUFFER_BIT);
-            checkErrorGL();
-
-            // right
-            glScissor(frameBuffer->Width - 1, 0, 1, frameBuffer->Height);
-            glClear(GL_COLOR_BUFFER_BIT);
-            checkErrorGL();
-        }
+		ovrFramebuffer_ClearBorder(frameBuffer);
 
         ovrFramebuffer_Resolve(frameBuffer);
         ovrFramebuffer_Advance(frameBuffer);
