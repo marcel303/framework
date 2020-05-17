@@ -36,7 +36,7 @@ typedef void PaStream;
 
 struct SDL_mutex;
 
-class AudioOutput_PortAudio : AudioOutput
+class AudioOutput_PortAudio : public AudioOutput
 {
 	bool m_paInitialized;
 	PaStream * m_paStream;

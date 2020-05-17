@@ -35,7 +35,7 @@
 
 struct SDL_mutex;
 
-class AudioOutput_CoreAudio : AudioOutput
+class AudioOutput_CoreAudio : public AudioOutput
 {
 	AudioComponent __nullable m_audioComponent = nullptr;
 	AudioComponentInstance __nullable m_audioUnit = nullptr;

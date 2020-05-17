@@ -29,6 +29,8 @@
 
 #include "audiostream/AudioIO.h"
 
+#define FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT 1
+
 class SoundPlayer_Dummy
 {
 public:
@@ -46,12 +48,114 @@ public:
 	void setMusicVolume(const float volume) { }
 };
 
+#if FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT
+
+#include "audiostream/AudioStream.h"
+#include <mutex>
+#include <stdint.h>
+
+class AudioOutput;
+
+class SoundPlayer_AudioOutput
+{
+	friend class SoundCacheElem;
+	
+	struct Buffer
+	{
+		short * sampleData;
+		int sampleCount;
+		int sampleRate;
+		int channelCount;
+	};
+	
+	struct Source
+	{
+		Buffer * buffer;
+		int64_t bufferPosition_fp;
+		int64_t bufferIncrement_fp;
+		
+		int playId;
+		bool loop;
+		float volume;
+	};
+	
+	//
+	
+	std::mutex m_mutex;
+	
+	//
+	
+	int m_numSources;
+	Source * m_sources;
+	
+	int m_playId;
+	
+	//
+	
+	class AudioStream_Vorbis * m_musicStream;
+	float m_musicVolume;
+	
+	//
+	
+	AudioOutput * m_audioOutput;
+	int m_sampleRate;
+	
+	//
+	
+	struct Stream : AudioStream
+	{
+		SoundPlayer_AudioOutput * m_soundPlayer = nullptr;
+		
+		virtual int Provide(int numSamples, AudioSample* __restrict samples) override final;
+	};
+	
+	Stream m_stream;
+	
+	//
+	
+	class MutexScope
+	{
+		std::mutex & m_mutex;
+	public:
+		MutexScope(std::mutex & mutex);
+		~MutexScope();
+	};
+	
+	void * createBuffer(const void * sampleData, const int sampleCount, const int sampleRate, const int channelSize, const int channelCount);
+	void destroyBuffer(void *& buffer);
+	Source * allocSource();
+	
+	void generateAudio(AudioSample * __restrict samples, const int numSamples);
+	
+	bool initAudioOutput(const int numChannels, const int sampleRate, const int bufferSize);
+	bool shutAudioOutput();
+	
+public:
+	SoundPlayer_AudioOutput();
+	~SoundPlayer_AudioOutput();
+	
+	bool init(const int numSources);
+	bool shutdown();
+	void process();
+	
+	int playSound(const void * buffer, const float volume, const bool loop);
+	void stopSound(const int playId);
+	void stopSoundsForBuffer(const void * buffer);
+	void stopAllSounds();
+	void setSoundVolume(const int playId, const float volume);
+	void playMusic(const char * filename, const bool loop);
+	void stopMusic();
+	void setMusicVolume(const float volume);
+};
+
+#endif
+
 #if FRAMEWORK_USE_OPENAL
 
 #include <OpenAL/al.h>
 #include <OpenAL/alc.h>
 
-class SoundPlayer_OpenAL
+class SoundPlayer_OpenAL : public SoundPlayer_Interface
 {
 	friend class SoundCacheElem;
 	
@@ -208,10 +312,12 @@ public:
 
 //
 
-#if FRAMEWORK_USE_PORTAUDIO
+#if FRAMEWORK_USE_PORTAUDIO && 0
 	typedef SoundPlayer_PortAudio SoundPlayer;
 #elif FRAMEWORK_USE_OPENAL
 	typedef SoundPlayer_OpenAL SoundPlayer;
+#elif FRAMEWORK_USE_SOUNDPLAYER_USING_AUDIOOUTPUT
+	typedef SoundPlayer_AudioOutput SoundPlayer;
 #else
 	typedef SoundPlayer_Dummy SoundPlayer;
 #endif

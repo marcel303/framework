@@ -38,7 +38,7 @@
 
 #define ENABLE_OVR_MIC 0
 
-class AudioOutput_OpenSL : AudioOutput
+class AudioOutput_OpenSL : public AudioOutput
 {
 	SLObjectItf engineObject;
 	SLEngineItf engineEngine;
