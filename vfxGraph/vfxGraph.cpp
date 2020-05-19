@@ -500,13 +500,6 @@ float VfxDynamicLink::floatParam(const char * name, const float defaultValue) co
 
 //
 
-void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
-{
-	createVfxTypeDefinitionLibrary(typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
-}
-
-//
-
 VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string & typeName)
 {
 	VfxNodeBase * vfxNode = nullptr;

@@ -29,6 +29,7 @@
 
 #include "Debugging.h"
 #include "graph.h"
+#include "vfxTypeDB.h"
 #include <map>
 #include <set>
 #include <string>

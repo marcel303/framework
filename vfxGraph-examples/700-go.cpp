@@ -175,7 +175,7 @@ int main(int argc, char * argv[])
 	
 	Graph_TypeDefinitionLibrary * typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
 	
-	createVfxTypeDefinitionLibrary(*typeDefinitionLibrary, g_vfxEnumTypeRegistrationList, g_vfxNodeTypeRegistrationList);
+	createVfxTypeDefinitionLibrary(*typeDefinitionLibrary);
 	
 	Graph graph;
 	

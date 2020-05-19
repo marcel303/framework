@@ -841,11 +841,3 @@ struct VfxNodeTypeRegistration
 
 extern VfxEnumTypeRegistration * g_vfxEnumTypeRegistrationList;
 extern VfxNodeTypeRegistration * g_vfxNodeTypeRegistrationList;
-
-// todo : move creation function somewhere else
-
-void createVfxValueTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
-void createVfxEnumTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * registrationList);
-void createVfxNodeTypeDefinitions(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxNodeTypeRegistration * registrationList);
-
-void createVfxTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary, const VfxEnumTypeRegistration * enumRegistrationList, const VfxNodeTypeRegistration * nodeRegistrationList);
