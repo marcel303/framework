@@ -25,10 +25,12 @@ app ovr-cubes3
 
 app ovr-cubes4
 	depend_library android-assetcopy
-	depend_library audiograph
+	#depend_library audiograph
 	depend_library framework
+	depend_library framework-allegro2
 	depend_library framework-gltf
-	depend_library bullet3
+	depend_library imgui-framework
+	depend_library libjgmod
 	depend_library magicavoxel-framework
 	depend_library ovr-mobile-vrapi
 	add_files opengl-ovr.cpp

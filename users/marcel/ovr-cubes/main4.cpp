@@ -7,6 +7,9 @@
 #include "magicavoxel-framework.h"
 
 #include "framework.h"
+#include "gx_render.h"
+
+#include "imgui-framework.h"
 
 #include "android-assetcopy.h"
 
@@ -24,15 +27,15 @@
 
  todo : integrate vfxgraph for some vfx processing: let it modulate lines or points and draw them in 3d
 
- todo : check if Window class works conveniently with render passes and color/depth ragets
+ todo : check if Window class works conveniently with render passes and color/depth targets
 
- todo : integrate imgui drawing to a Window. composite the result in 3d
+ DONE : integrate imgui drawing to a Window. composite the result in 3d
 
- todo : test if drawing text in 3d using sdf fonts works
+ DONE : test if drawing text in 3d using sdf fonts works
 
  todo : test model drawing
 
- todo : integrate jgmod
+ DONE : integrate jgmod
 
  todo : integrate libparticle
 
@@ -297,6 +300,10 @@ struct Scene
     GxVertexBuffer terrain_vb;
     GxIndexBuffer terrain_ib;
 
+    // ImGui test
+    Window * guiWindow = nullptr;
+    FrameworkImGuiContext guiContext;
+
     void create();
     void destroy();
 };
@@ -326,6 +333,9 @@ void Scene::create()
 		drawMagicaWorld(magica_world);
 	}
 	gxCaptureMeshEnd();
+
+	guiWindow = new Window("window", 200, 200);
+	guiContext.init(false);
 
     auto * image = loadImage("Hokkaido8.png");
     if (image != nullptr)
@@ -375,6 +385,15 @@ void Scene::create()
 
 void Scene::destroy()
 {
+	guiContext.shut();
+
+	delete guiWindow;
+	guiWindow = nullptr;
+
+// todo : clear gltf scene
+
+	magica_world.free();
+
 	terrain_mesh.clear();
 	terrain_vb.free();
 	terrain_ib.free();
@@ -421,10 +440,34 @@ static void ovrRenderer_Destroy(ovrRenderer * renderer)
 static ovrLayerProjection2 ovrRenderer_RenderFrame(
     ovrRenderer * renderer,
     const ovrJava * java,
-    const Scene * scene,
+    Scene * scene, // todo : make const again
     const ovrTracking2 * tracking,
     ovrMobile * ovr)
 {
+	pushWindow(*scene->guiWindow);
+	{
+		bool inputIsCaptured = false;
+		scene->guiContext.processBegin(.01f, scene->guiWindow->getWidth(), scene->guiWindow->getHeight(), inputIsCaptured);
+		{
+			ImGui::SetNextWindowPos(ImVec2(0, 0));
+			ImGui::SetNextWindowSize(ImVec2(scene->guiWindow->getWidth(), scene->guiWindow->getHeight()));
+
+			if (ImGui::Begin("This is a window", nullptr, ImGuiWindowFlags_NoCollapse))
+			{
+				ImGui::Button("This is a button");
+			}
+			ImGui::End();
+		}
+		scene->guiContext.processEnd();
+
+		framework.beginDraw(0, 0, 0, 255);
+		{
+			scene->guiContext.draw();
+		}
+		framework.endDraw();
+	}
+	popWindow();
+
     ovrTracking2 updatedTracking = *tracking;
 
     ovrMatrix4f eyeViewMatrixTransposed[2];
@@ -466,10 +509,11 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         checkErrorGL();
 
-		setDepthTest(true, DEPTH_LESS);
-
 	    gxSetMatrixf(GX_MODELVIEW, (float*)eyeViewMatrixTransposed[eye].M);
 	    gxSetMatrixf(GX_PROJECTION, (float*)projectionMatrixTransposed[eye].M);
+
+	    pushDepthTest(true, DEPTH_LESS);
+	    pushBlend(BLEND_OPAQUE);
 
 		// Adjust for floor level.
 		float ground_y = 0.f;
@@ -516,7 +560,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 	    scene->terrain_mesh.draw();
 
 		// Draw circles.
-		pushLineSmooth(true);
+		//pushLineSmooth(true);
 	    for (int i = 0; i < 16; ++i)
 	    {
 		    gxPushMatrix();
@@ -535,7 +579,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 
 		    gxPopMatrix();
 	    }
-	    popLineSmooth();
+	    //popLineSmooth();
 
 	    gxPopMatrix();
 
@@ -577,8 +621,11 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 					if ((state.Buttons & ovrButton_Trigger) && (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID))
 					{
 						// Draw textured walls.
-						gxSetTexture(getTexture("sabana.jpg"));
-						gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
+						pushBlend(BLEND_OPAQUE);
+						//gxSetTexture(scene->guiContext.font_texture.id);
+						gxSetTexture(scene->guiWindow->getColorTarget()->getTextureId());
+						//gxSetTexture(getTexture("sabana.jpg"));
+						//gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
 						setColor(colorWhite);
 						{
 							gxPushMatrix();
@@ -589,6 +636,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 							gxPopMatrix();
 						}
 						gxSetTexture(0);
+						popBlend();
 					}
 				}
 
@@ -633,9 +681,32 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 	    }
 	#endif
 
-		// Draw filled circles.
+		// -- End opaque pass.
+		popBlend();
+	    popDepthTest();
+
+	    // -- Begin translucent pass.
 	    pushDepthTest(true, DEPTH_LESS, false);
-		pushBlend(BLEND_ADD);
+	    pushBlend(BLEND_ADD);
+
+		// Draw text.
+		gxPushMatrix();
+	    {
+	        gxTranslatef(0, .5f, -1);
+	        gxRotatef(time * 10.f, 0, 1, 0);
+	        gxScalef(1, -1, 1);
+	        setFont("calibri.ttf");
+	        pushFontMode(FONT_SDF);
+		    {
+		    // todo : add a function to directly draw 3d msdf text. msdf or sdf is really a requirement for vr
+		        setColor(Color::fromHSL(time / 4.f, .5f, .5f));
+		        drawTextArea(0, 0, 1.f, .25f, .1f, 0, 0, "Hello World!\nThis is some text, drawn using Framework's multiple signed-distance field method! Doesn't it look crisp? :-)", 2.f, 2.f);
+		    }
+		    popFontMode();
+	    }
+	    gxPopMatrix();
+
+		// Draw filled circles.
 	    pushLineSmooth(true);
 	    for (int i = 0; i < 16; ++i)
 	    {
@@ -661,6 +732,8 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 		    gxPopMatrix();
 	    }
 	    popLineSmooth();
+
+		// -- End translucent pass.
 	    popBlend();
 	    popDepthTest();
 
@@ -670,6 +743,9 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 
         ovrFramebuffer_Resolve(frameBuffer);
         ovrFramebuffer_Advance(frameBuffer);
+
+	    glDisable(GL_SCISSOR_TEST);
+	    checkErrorGL();
     }
 
     ovrFramebuffer_SetNone();
@@ -919,6 +995,44 @@ Android Main (android_native_app_glue)
 ================================================================================
 */
 
+#include "allegro2-timerApi.h"
+#include "allegro2-voiceApi.h"
+#include "audiooutput/AudioOutput_OpenSL.h"
+#include "framework-allegro2.h"
+#include "jgmod.h"
+
+#define DIGI_SAMPLERATE 48000
+
+static void test_jgmod()
+{
+	AllegroTimerApi * timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
+	AllegroVoiceApi * voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE, true);
+
+	auto * audioOutput = new AudioOutput_OpenSL();
+	audioOutput->Initialize(2, DIGI_SAMPLERATE, 256);
+
+	auto * audioStream = new AudioStream_AllegroVoiceMixer(voiceApi, timerApi);
+	audioOutput->Play(audioStream);
+
+	auto * player = new JGMOD_PLAYER();
+
+    if (player->init(JGMOD_MAX_VOICES, timerApi, voiceApi) < 0)
+	{
+        logError("unable to allocate %d voices", JGMOD_MAX_VOICES);
+        return;
+	}
+
+	player->enable_lasttrk_loop = true;
+
+	const char * filename = "point_of_departure.s3m";
+	auto * mod = jgmod_load(filename);
+
+	if (mod != nullptr)
+	{
+		player->play(mod, true);
+	}
+}
+
 extern "C"
 {
     #include <android_native_app_glue.h>
@@ -937,6 +1051,9 @@ extern "C"
 		    chdir(app->activity->internalDataPath) == 0;
 	    const double t2 = GetTimeInSeconds();
 	    logInfo("asset copying took %.2f seconds", (t2 - t1));
+
+	// todo : stop jgmod player on shutdown
+	    test_jgmod();
 
         ANativeActivity_setWindowFlags(app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
 
