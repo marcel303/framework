@@ -1,7 +1,8 @@
+#include "allegro2-mutex.h"
 #include "allegro2-timerApi.h"
 #include <assert.h>
 #include <atomic>
-#include <SDL2/SDL.h>
+#include <thread>
 
 #define Assert assert
 
@@ -21,7 +22,7 @@ struct AllegroTimerReg
 	int delayInMicroseconds;
 	
 	int sampleTime; // when processing manually
-	SDL_Thread * thread; // when using threaded processing
+	std::thread * thread; // when using threaded processing
 };
 
 //
@@ -35,7 +36,22 @@ static int TimerThreadProc(void * obj)
 {
 	AllegroTimerReg * r = (AllegroTimerReg*)obj;
 	
-	SDL_SetThreadPriority(SDL_THREAD_PRIORITY_HIGH);
+#ifdef WIN32
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGH);
+#else
+    const pthread_t thread = pthread_self();
+	pthread_setname_np("Allegro timer");
+	
+    struct sched_param sched;
+    int policy;
+	int retval = pthread_getschedparam(thread, &policy, &sched);
+	assert(retval == 0);
+	const int min_priority = sched_get_priority_min(policy);
+	const int max_priority = sched_get_priority_max(policy);
+	sched.sched_priority = min_priority + (max_priority - min_priority) * 4/5;
+	retval = pthread_setschedparam(thread, policy, &sched);
+	assert(retval == 0);
+#endif
 	
 #ifndef WIN32
 	struct timespec start, end;
@@ -75,12 +91,12 @@ AllegroTimerApi::AllegroTimerApi(const Mode in_mode)
 	: mutex(nullptr)
 	, mode(in_mode)
 {
-	mutex = SDL_CreateMutex();
+	mutex = new AllegroMutex();
 }
 
 AllegroTimerApi::~AllegroTimerApi()
 {
-	SDL_DestroyMutex(mutex);
+	delete mutex;
 	mutex = nullptr;
 }
 
@@ -139,7 +155,7 @@ void AllegroTimerApi::install_int_ex2(void (*proc)(void * data), int speed, void
 	
 	if (mode == kMode_Threaded)
 	{
-		r->thread = SDL_CreateThread(TimerThreadProc, "Allegro timer", r);
+		r->thread = new std::thread(TimerThreadProc, r);
 	}
 }
 
@@ -170,7 +186,10 @@ void AllegroTimerApi::remove_int2(void (*proc)(void * data), void * data)
 				{
 					t->stop = true;
 				
-					SDL_WaitThread(t->thread, nullptr);
+					t->thread->join();
+					
+					delete t->thread;
+					t->thread = nullptr;
 				}
 				lock();
 			}
@@ -189,12 +208,12 @@ void AllegroTimerApi::remove_int2(void (*proc)(void * data), void * data)
 
 void AllegroTimerApi::lock()
 {
-	Verify(SDL_LockMutex(mutex) == 0);
+	mutex->lock();
 }
 
 void AllegroTimerApi::unlock()
 {
-	Verify(SDL_UnlockMutex(mutex) == 0);
+	mutex->unlock();
 }
 
 void AllegroTimerApi::processInterrupts(const int numMicroseconds)

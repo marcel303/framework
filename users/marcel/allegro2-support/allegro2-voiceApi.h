@@ -5,7 +5,7 @@
 #define PLAYMODE_LOOP 0x1
 #define PLAYMODE_BIDIR 0x2
 
-struct SDL_mutex;
+struct AllegroMutex;
 
 typedef struct SAMPLE
 {
@@ -46,7 +46,7 @@ struct AllegroVoiceApi
 	
 	int sampleRate;
 	
-	SDL_mutex * mutex;
+	AllegroMutex * mutex;
 	bool useMutex;
 	
 	AllegroVoiceApi(const int sampleRate, const bool useMutex);

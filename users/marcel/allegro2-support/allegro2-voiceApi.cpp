@@ -1,6 +1,6 @@
+#include "allegro2-mutex.h"
 #include "allegro2-voiceApi.h"
 #include <assert.h>
-#include <SDL2/SDL.h>
 #include <string.h>
 
 #define FIXBITS AllegroVoiceApi::FIXBITS
@@ -16,7 +16,7 @@ AllegroVoiceApi::AllegroVoiceApi(const int in_sampleRate, const bool in_useMutex
 {
 	if (useMutex)
 	{
-		mutex = SDL_CreateMutex();
+		mutex = new AllegroMutex();
 	}
 }
 
@@ -24,7 +24,7 @@ AllegroVoiceApi::~AllegroVoiceApi()
 {
 	if (useMutex)
 	{
-		SDL_DestroyMutex(mutex);
+		delete mutex;
 		mutex = nullptr;
 	}
 }
@@ -254,7 +254,7 @@ void AllegroVoiceApi::lock()
 {
 	if (useMutex)
 	{
-		Verify(SDL_LockMutex(mutex) == 0);
+		mutex->lock();
 	}
 }
 
@@ -262,7 +262,7 @@ void AllegroVoiceApi::unlock()
 {
 	if (useMutex)
 	{
-		Verify(SDL_UnlockMutex(mutex) == 0);
+		mutex->unlock();
 	}
 }
 

@@ -4,7 +4,7 @@
 
 //
 
-struct SDL_mutex;
+struct AllegroMutex;
 
 struct AllegroTimerReg;
 
@@ -18,7 +18,7 @@ struct AllegroTimerApi
 	
 	AllegroTimerReg * timerRegs = nullptr;
 	
-	SDL_mutex * mutex = nullptr;
+	AllegroMutex * mutex = nullptr;
 	
 	Mode mode;
 	
