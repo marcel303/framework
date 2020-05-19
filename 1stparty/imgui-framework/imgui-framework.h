@@ -30,15 +30,22 @@
 #include "framework.h"
 #include "imgui.h"
 
-#define DO_KINETIC_SCROLL 1
-#define DO_TOUCH_SCROLL 1
+#if FRAMEWORK_USE_SDL
+	#define DO_KINETIC_SCROLL 1
+	#define DO_TOUCH_SCROLL 1
+#else
+	#define DO_KINETIC_SCROLL 1
+	#define DO_TOUCH_SCROLL 0
+#endif
 
 struct FrameworkImGuiContext
 {
 	ImGuiContext * imgui_context = nullptr;
-	
+
+#if FRAMEWORK_USE_SDL
 	SDL_Cursor * mouse_cursors[ImGuiMouseCursor_COUNT] = { };
-	
+#endif
+
 	const char * clipboard_text = nullptr;
 	
 	GxTexture font_texture;
@@ -70,9 +77,11 @@ struct FrameworkImGuiContext
 	void updateFontTexture();
 	
 	void setFrameworkStyleColors();
-	
+
+#if FRAMEWORK_USE_SDL
 	static const char * getClipboardText(void * user_data);
 	static void setClipboardText(void * user_data, const char * text);
+#endif
 	static void render(const ImDrawData * draw_data);
 };
 

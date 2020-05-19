@@ -29,7 +29,10 @@
 #include "imgui.h"
 #include "imgui-framework.h"
 #include <math.h>
-#include <SDL2/SDL_clipboard.h>
+
+#if FRAMEWORK_USE_SDL
+	#include <SDL2/SDL_clipboard.h>
+#endif
 
 FrameworkImGuiContext::~FrameworkImGuiContext()
 {
@@ -51,7 +54,8 @@ void FrameworkImGuiContext::init(const bool enableIniFiles)
 	
 	io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 	io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
-	
+
+#if FRAMEWORK_USE_SDL
 	// setup keyboard mappings
 	
 	io.KeyMap[ImGuiKey_Tab] = SDL_SCANCODE_TAB;
@@ -75,13 +79,17 @@ void FrameworkImGuiContext::init(const bool enableIniFiles)
 	io.KeyMap[ImGuiKey_X] = SDL_SCANCODE_X;
 	io.KeyMap[ImGuiKey_Y] = SDL_SCANCODE_Y;
 	io.KeyMap[ImGuiKey_Z] = SDL_SCANCODE_Z;
-	
+#endif
+
+#if FRAMEWORK_USE_SDL
 	// set clipboard handling functions
 	
 	io.SetClipboardTextFn = setClipboardText;
 	io.GetClipboardTextFn = getClipboardText;
 	io.ClipboardUserData = this;
-	
+#endif
+
+#if FRAMEWORK_USE_SDL
 	// create mouse cursors
 	
 	mouse_cursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
@@ -92,7 +100,8 @@ void FrameworkImGuiContext::init(const bool enableIniFiles)
 	mouse_cursors[ImGuiMouseCursor_ResizeNESW] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENESW);
 	mouse_cursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
 	mouse_cursors[ImGuiMouseCursor_Hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
-	
+#endif
+
 	setFrameworkStyleColors();
 	
 	popImGuiContext();
@@ -104,17 +113,20 @@ void FrameworkImGuiContext::init(const bool enableIniFiles)
 
 void FrameworkImGuiContext::shut()
 {
+#if FRAMEWORK_USE_SDL
 	if (clipboard_text != nullptr)
     {
         SDL_free((void*)clipboard_text);
         clipboard_text = nullptr;
 	}
+#endif
 	
 	if (font_texture.id != 0)
 	{
 		font_texture.free();
 	}
-	
+
+#if FRAMEWORK_USE_SDL
 	for (int i = 0; i < ImGuiMouseCursor_COUNT; ++i)
 	{
 		if (mouse_cursors[i] != nullptr)
@@ -123,6 +135,7 @@ void FrameworkImGuiContext::shut()
 			mouse_cursors[i] = nullptr;
 		}
 	}
+#endif
 	
 	if (imgui_context != nullptr)
 	{
@@ -237,7 +250,9 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 	#endif
 	#endif
 
+	#if DO_TOUCH_SCROLL
 		if (SDL_GetNumTouchDevices() == 0)
+	#endif
 		{
 		#if DO_KINETIC_SCROLL
 			if (mouse.scrollY != 0)
@@ -252,10 +267,11 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 		io.KeyShift = keyboard.isDown(SDLK_LSHIFT) || keyboard.isDown(SDLK_RSHIFT);
 		io.KeyAlt = keyboard.isDown(SDLK_LALT) || keyboard.isDown(SDLK_RALT);
 		io.KeySuper = keyboard.isDown(SDLK_LGUI) || keyboard.isDown(SDLK_RGUI);
-		
+
+	#if FRAMEWORK_USE_SDL
 		// handle keyboard and text input
-		
-		for (auto & e : framework.events)
+
+		for (auto & e : keyboard.events)
 		{
 			if (e.type == SDL_KEYDOWN)
 				io.KeysDown[e.key.keysym.scancode] = true;
@@ -264,6 +280,7 @@ void FrameworkImGuiContext::processBegin(const float dt, const int displaySx, co
 			else if (e.type == SDL_TEXTINPUT)
 				io.AddInputCharactersUTF8(e.text.text);
 		}
+	#endif
 		
 		inputIsCaptured |= io.WantCaptureKeyboard;
 		inputIsCaptured |= io.WantCaptureMouse;
@@ -315,6 +332,7 @@ void FrameworkImGuiContext::popImGuiContext()
 
 void FrameworkImGuiContext::updateMouseCursor()
 {
+#if FRAMEWORK_USE_SDL
 	auto & io = ImGui::GetIO();
 	
 	if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) == 0)
@@ -339,6 +357,7 @@ void FrameworkImGuiContext::updateMouseCursor()
 			SDL_ShowCursor(SDL_TRUE);
 		}
 	}
+#endif
 }
 
 void FrameworkImGuiContext::updateFontTexture()
@@ -414,10 +433,12 @@ void FrameworkImGuiContext::setFrameworkStyleColors()
 	colors[ImGuiCol_ModalWindowDimBg]       = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
 }
 
+#if FRAMEWORK_USE_SDL
+
 const char * FrameworkImGuiContext::getClipboardText(void * user_data)
 {
 	FrameworkImGuiContext * context = (FrameworkImGuiContext*)user_data;
-	
+
     if (context->clipboard_text != nullptr)
     {
         SDL_free((void*)context->clipboard_text);
@@ -425,7 +446,7 @@ const char * FrameworkImGuiContext::getClipboardText(void * user_data)
 	}
 	
 	//
-	
+
     context->clipboard_text = SDL_GetClipboardText();
 	
     return context->clipboard_text;
@@ -445,6 +466,8 @@ void FrameworkImGuiContext::setClipboardText(void * user_data, const char * text
 	
     SDL_SetClipboardText(text);
 }
+
+#endif
 
 void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 {
