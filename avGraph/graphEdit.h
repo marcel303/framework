@@ -984,8 +984,8 @@ struct GraphEdit : GraphEditConnection
 	mutable int maxNodeCpuTime = 0;
 	
 	GraphEdit(
-		const int _displaySx,
-		const int _displaySy,
+		const int displaySx,
+		const int displaySy,
 		Graph_TypeDefinitionLibrary * typeDefinitionLibrary,
 		GraphEdit_RealTimeConnection * realTimeConnection = nullptr);
 	~GraphEdit();

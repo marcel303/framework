@@ -32,6 +32,8 @@ struct Graph_TypeDefinitionLibrary;
 struct AudioEnumTypeRegistration;
 struct AudioNodeTypeRegistration;
 
+// -- functions for adding individual types
+
 void createAudioValueTypeDefinitions(
 	Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
 
@@ -43,10 +45,16 @@ void createAudioNodeTypeDefinitions(
 	Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
 	const AudioNodeTypeRegistration * registrationList);
 
+// -- create types using custom type registration lists
+
 void createAudioTypeDefinitionLibrary(
 	Graph_TypeDefinitionLibrary & typeDefinitionLibrary,
 	const AudioEnumTypeRegistration * enumRegistrationList,
 	const AudioNodeTypeRegistration * nodeRegistrationList);
 
+// -- create types using the standard type definition lists
+
 void createAudioTypeDefinitionLibrary(
 	Graph_TypeDefinitionLibrary & typeDefinitionLibrary);
+
+Graph_TypeDefinitionLibrary * createAudioTypeDefinitionLibrary(); // for convenience

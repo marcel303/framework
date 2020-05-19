@@ -176,5 +176,20 @@ void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefiniti
 
 void createAudioTypeDefinitionLibrary(Graph_TypeDefinitionLibrary & typeDefinitionLibrary)
 {
-	createAudioTypeDefinitionLibrary(typeDefinitionLibrary, g_audioEnumTypeRegistrationList, g_audioNodeTypeRegistrationList);
+	createAudioTypeDefinitionLibrary(
+		typeDefinitionLibrary,
+		g_audioEnumTypeRegistrationList,
+		g_audioNodeTypeRegistrationList);
+}
+
+Graph_TypeDefinitionLibrary * createAudioTypeDefinitionLibrary()
+{
+	Graph_TypeDefinitionLibrary * typeDefinitionLibrary = new Graph_TypeDefinitionLibrary();
+
+	createAudioTypeDefinitionLibrary(
+		*typeDefinitionLibrary,
+		g_audioEnumTypeRegistrationList,
+		g_audioNodeTypeRegistrationList);
+
+	return typeDefinitionLibrary;
 }
