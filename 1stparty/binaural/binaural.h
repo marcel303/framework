@@ -60,7 +60,7 @@ within the triangle.
 #include <vector>
 
 #ifndef ALIGN16
-	#if defined(MACOS) || defined(LINUX)
+	#if defined(MACOS) || defined(LINUX) || defined(ANDROID)
 		#define ALIGN16 __attribute__((aligned(16)))
 	#else
 		#define ALIGN16 __declspec(align(16))
