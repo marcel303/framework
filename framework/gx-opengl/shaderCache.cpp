@@ -71,11 +71,20 @@ static void showShaderInfoLog(GLuint shader, const char * source)
 
 	bool newLine = true;
 
-	for (int line = 1; *source; )
+	const int kMaxTextLength = 1024;
+	char text[kMaxTextLength];
+	int textLength = 0;
+
+	int line = 1;
+	
+	while (*source != 0)
 	{
 		if (newLine)
 		{
-			printf("%04d: ", line);
+			text[textLength++] = 0;
+			logInfo("%04d: %s", line, text);
+			textLength = 0;
+
 			newLine = false;
 		}
 
@@ -85,12 +94,17 @@ static void showShaderInfoLog(GLuint shader, const char * source)
 			line++;
 		}
 
-		printf("%c", *source);
+		if (textLength + 1 < kMaxTextLength)
+			text[textLength++] = *source;
 
 		source++;
 	}
 
-	logError("OpenGL shader compile failed:\n%s\n----\n%s", source, log);
+	text[textLength++] = 0;
+	logInfo("%04d: %s", line, text);
+	textLength = 0;
+
+	logError("OpenGL shader compile failed:\n----\n%s", log);
 
 	delete [] log;
 	log = 0;
@@ -202,7 +216,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 				*/
 				
 			#if ENABLE_OPENGL_ES3
-				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 300\nprecision highp float;\n";
+				const GLchar * version = "#version 300 es\n#define _SHADER_ 1\n#define LEGACY_GL 0\n#define GLSL_VERSION 300\nprecision mediump float;\n";
 			#elif USE_LEGACY_OPENGL
 				const GLchar * version = "#version 120\n#define _SHADER_ 1\n#define LEGACY_GL 1\n#define GLSL_VERSION 120\n";
 			#elif FRAMEWORK_USE_OPENGL_ES
