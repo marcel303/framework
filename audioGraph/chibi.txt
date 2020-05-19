@@ -5,7 +5,6 @@ library audiograph-core
 	depend_library audioio
 	depend_library libavgraph-core
 	depend_library libgg
-	depend_library libsdl2
 
 	header_path audioGraphCore expose
 

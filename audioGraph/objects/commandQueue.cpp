@@ -26,29 +26,22 @@ OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "commandQueue.h"
-#include <SDL2/SDL.h>
 
 CommandQueueBase::CommandQueueBase()
-	: mutex(nullptr)
+	: mutex()
 {
-	mutex = SDL_CreateMutex();
 }
 
 CommandQueueBase::~CommandQueueBase()
 {
-	if (mutex != nullptr)
-	{
-		SDL_DestroyMutex(mutex);
-		mutex = nullptr;
-	}
 }
 
 void CommandQueueBase::lockMutex()
 {
-	SDL_LockMutex(mutex);
+	mutex.lock();
 }
 
 void CommandQueueBase::unlockMutex()
 {
-	SDL_UnlockMutex(mutex);
+	mutex.unlock();
 }

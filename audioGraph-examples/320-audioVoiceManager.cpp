@@ -571,7 +571,7 @@ int main(int argc, char * argv[])
 	AudioMutex mutex;
 	mutex.init();
 
-	s_audioMutex.mutex = mutex.mutex;
+	s_audioMutex.mutex = &mutex.mutex;
 	
 	//
 	

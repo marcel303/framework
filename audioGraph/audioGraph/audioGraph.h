@@ -54,8 +54,6 @@ struct AudioSource;
 struct AudioVoice;
 struct AudioVoiceManager;
 
-struct SDL_mutex;
-
 extern AUDIO_THREAD_LOCAL AudioGraph * g_currentAudioGraph;
 
 struct AudioGraph

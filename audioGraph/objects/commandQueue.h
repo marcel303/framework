@@ -28,12 +28,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 #pragma once
 
 #include <list>
+#include <mutex>
 
-struct SDL_mutex;
+// todo : is CommandQueue still used ?
 
 struct CommandQueueBase
 {
-	SDL_mutex * mutex;
+	std::mutex mutex;
 	
 	CommandQueueBase();
 	~CommandQueueBase();

@@ -109,7 +109,7 @@ int main(int argc, char * argv[])
 
 	filename = argv[1];
 
-	if (SDL_Init(0) >= 0)
+	if (SDL_Init(0) >= 0) // todo : remove SDL2 dependency
 	{
 		// load resources
 		

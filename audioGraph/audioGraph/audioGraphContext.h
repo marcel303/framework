@@ -36,8 +36,6 @@
 struct AudioGraphManager;
 struct AudioVoiceManager;
 
-struct SDL_mutex;
-
 struct AudioGraphContext
 {
 	struct ObjectRegistration

@@ -27,80 +27,67 @@
 
 #include "audioThreading.h"
 #include "Debugging.h"
-#include <SDL2/SDL.h>
+#include "Multicore/Mutex.h"
 
 AudioMutex_Shared::AudioMutex_Shared()
 	: mutex(nullptr)
 {
 }
 
-AudioMutex_Shared::AudioMutex_Shared(SDL_mutex * _mutex)
-	: mutex(_mutex)
+AudioMutex_Shared::AudioMutex_Shared(Mutex * in_mutex)
+	: mutex(in_mutex)
 {
 }
 	
 void AudioMutex_Shared::lock() const
 {
 	Assert(mutex != nullptr);
-	const int result = SDL_LockMutex(mutex);
-	Assert(result == 0);
-	(void)result;
+	mutex->lock();
 }
 
 void AudioMutex_Shared::unlock() const
 {
 	Assert(mutex != nullptr);
-	const int result = SDL_UnlockMutex(mutex);
-	Assert(result == 0);
-	(void)result;
+	mutex->unlock();
 }
 
 //
 
 AudioMutex::AudioMutex()
-	: mutex(nullptr)
+	: mutex()
 {
 }
 
 AudioMutex::~AudioMutex()
 {
-	Assert(mutex == nullptr);
 }
 
 void AudioMutex::init()
 {
-	Assert(mutex == nullptr);
-	mutex = SDL_CreateMutex();
-	Assert(mutex != nullptr);
+	mutex.alloc();
 }
 
 void AudioMutex::shut()
 {
-	Assert(mutex != nullptr);
-	if (mutex != nullptr)
-	{
-		SDL_DestroyMutex(mutex);
-		mutex = nullptr;
-	}
+	mutex.free();
 }
 
 void AudioMutex::lock() const
 {
-	Assert(mutex != nullptr);
-	const int result = SDL_LockMutex(mutex);
-	Assert(result == 0);
-	(void)result;
+	mutex.lock();
 }
 
 void AudioMutex::unlock() const
 {
-	Assert(mutex != nullptr);
-	const int result = SDL_UnlockMutex(mutex);
-	Assert(result == 0);
-	(void)result;
+	mutex.unlock();
 }
 
-//
+// -- audio thread id
+
+// note : we cannot get the thread id as an integer representation directly, so we are forced to use std::hash to generate an integer. this doesn't guarantee unique thread id's, but it's better than nothing I guess
+
+#include <functional> // std::hash
+#include <thread>
 
 AudioThreadId::AudioThreadId()
 	: id(-1)
@@ -109,7 +96,7 @@ AudioThreadId::AudioThreadId()
 
 void AudioThreadId::setThreadId()
 {
-	id = SDL_GetThreadID(nullptr);
+	id = (int64_t)std::hash<std::thread::id>()(std::this_thread::get_id());
 }
 
 void AudioThreadId::clearThreadId()
@@ -119,5 +106,5 @@ void AudioThreadId::clearThreadId()
 
 bool AudioThreadId::checkThreadId() const
 {
-	return SDL_GetThreadID(nullptr) == id;
+	return (int64_t)std::hash<std::thread::id>()(std::this_thread::get_id()) == id;
 }

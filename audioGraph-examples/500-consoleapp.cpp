@@ -53,7 +53,7 @@ int main(int argc, char * argv[])
 		return -1;
 #endif
 
-	if (SDL_Init(0) >= 0)
+	if (SDL_Init(0) >= 0) // todo : remove SDL2 dependency
 	{
 		// initialize audio related systems
 		

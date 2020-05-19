@@ -65,7 +65,7 @@
 	#define AUDIO_USE_SIMD 0 // do not alter
 #endif
 
-#if defined(MACOS) || defined(LINUX)
+#if defined(MACOS) || defined(LINUX) || defined(ANDROID)
 	#define ALIGN16 __attribute__((aligned(16)))
 	#define ALIGN32 __attribute__((aligned(32)))
 

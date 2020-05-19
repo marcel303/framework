@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "Multicore/Mutex.h"
 #include <stdint.h>
 
 struct AudioMutexBase
@@ -38,34 +39,34 @@ struct AudioMutexBase
 };
 
 /**
- * AudioMutex_Shared contains a shared reference to a SDL mutex.
+ * AudioMutex_Shared contains a shared reference to a libgg mutex.
  * It provides lock and unlock methods which will lock and unlock the mutex.
  */
 struct AudioMutex_Shared : AudioMutexBase
 {
-	struct SDL_mutex * mutex;
+	Mutex * mutex;
 	
 	AudioMutex_Shared();
-	AudioMutex_Shared(struct SDL_mutex * mutex);
+	AudioMutex_Shared(Mutex * mutex);
 	
 	virtual void lock() const override; ///< Locks the mutex. Asserts the lock operation succeeds in debug mode.
 	virtual void unlock() const override; ///< Unlocks the mutex. Assers the unlock operation succeeds in debug mode.
 };
 
 /**
- * AudioMutex provides an interface for locking and unlocking a SDL mutex.
+ * AudioMutex provides an interface for locking and unlocking a mutex.
  * The AudioMutex must first be initialized using init(), which will create the mutex.
  * shut() must explicitly be called to free the mutex again.
  */
 struct AudioMutex : AudioMutexBase
 {
-	struct SDL_mutex * mutex; ///< Reference to the SDL mutex owned by this AudioMutex. Exposed here for convience when direct usage of the SDL mutex is needed.
+	Mutex mutex; ///< Reference to the libgg mutex owned by this AudioMutex. Exposed here for convience when direct usage of the mutex is needed.
 	
 	AudioMutex();
 	virtual ~AudioMutex() override; ///< Asserts shut() has been called before the AudioMutex leaves scope.
 	
-	void init(); ///< Creates the SDL mutex.
-	void shut(); ///< Destroys the SDL mutex.
+	void init(); ///< Creates the underlying mutex.
+	void shut(); ///< Destroys the underlying mutex.
 	
 	virtual void lock() const override; ///< Locks the mutex. Asserts the lock operation succeeds in debug mode.
 	virtual void unlock() const override; ///< Unlocks the mutex. Assers the unlock operation succeeds in debug mode.
@@ -78,7 +79,7 @@ struct AudioMutex : AudioMutexBase
  */
 struct AudioThreadId
 {
-	int64_t id; ///< The thread id this object has been assigned. Set to -1 by default.
+	intptr_t id; ///< The thread id this object has been assigned. Set to -1 by default.
 	
 	AudioThreadId();
 	
