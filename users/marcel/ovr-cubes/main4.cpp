@@ -23,7 +23,7 @@
 
  todo : integrate libbullet3 for terrain collisions
 
- todo : integrate audiograph for some audio processing: first step towards 4dworld in vr
+ DONE : integrate audiograph for some audio processing: first step towards 4dworld in vr
 
  todo : integrate vfxgraph for some vfx processing: let it modulate lines or points and draw them in 3d
 
@@ -286,6 +286,7 @@ struct Scene
     bool created = false;
 
 	// gltf
+// todo : add gltf::BufferedScene ? something is needed to make gltf scenes more usable. now always requires a separate buffer cache object ..
 	gltf::Scene gltf_scene;
 	gltf::BufferCache gltf_bufferCache;
 
@@ -1033,6 +1034,106 @@ static void test_jgmod()
 	}
 }
 
+#include "audioGraph.h"
+#include "audioGraphManager.h"
+#include "audioVoiceManager.h"
+
+#include "audiooutput/AudioOutput_Native.h"
+#include "audiostream/AudioStream.h"
+
+struct AudioStream_AudioGraph : AudioStream
+{
+	AudioVoiceManager * voiceMgr = nullptr;
+	AudioGraphManager * audioGraphMgr = nullptr;
+
+	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
+	{
+		//audioGraphMgr->tickMain();
+
+		audioGraphMgr->tickAudio(numSamples / 44100.f);
+
+		float samples[numSamples * 2];
+
+		voiceMgr->generateAudio(samples, numSamples, 2);
+
+		for (int i = 0; i < numSamples; ++i)
+		{
+		// todo : stereo mode
+			int value = samples[i * 2 + 0] * (1 << 15);
+
+			// perform clipping
+
+			if (value != 0)
+			{
+				logDebug("non zero!");
+			}
+
+			if (value < -(1 << 15))
+				value = -(1 << 15);
+			if (value > +(1 << 15) - 1)
+				value = +(1 << 15) - 1;
+
+			buffer[i].channel[0] = value;
+			buffer[i].channel[1] = value;
+		}
+
+		return numSamples;
+	}
+};
+
+extern void linkAudioNodes();
+
+struct AudiographTest
+{
+	AudioMutex mutex;
+	AudioVoiceManagerBasic voiceMgr;
+	AudioGraphManager_Basic audioGraphMgr;
+
+	AudioStream_AudioGraph audioStream;
+	AudioOutput_Native audioOutput;
+
+	AudiographTest()
+		: audioGraphMgr(true)
+	{
+	}
+
+	void init()
+	{
+		linkAudioNodes(); // todo : link translation units on Android. note : we already do! why doesn't this work?
+
+		// initialize audio related systems
+
+		mutex.init();
+
+		voiceMgr.init(&mutex, 16);
+		voiceMgr.outputStereo = true;
+
+		audioGraphMgr.init(&mutex, &voiceMgr);
+
+		// create an audio graph instance
+
+		auto * instance = audioGraphMgr.createInstance("sweetStuff6.xml");
+
+		audioStream.voiceMgr = &voiceMgr;
+		audioStream.audioGraphMgr = &audioGraphMgr;
+
+		audioOutput.Initialize(2, 44100, 256);
+		audioOutput.Play(&audioStream);
+	}
+
+	void shut()
+	{
+		audioOutput.Stop();
+		audioOutput.Shutdown();
+
+		audioGraphMgr.shut();
+
+		voiceMgr.shut();
+
+		mutex.shut();
+	}
+};
+
 extern "C"
 {
     #include <android_native_app_glue.h>
@@ -1051,9 +1152,6 @@ extern "C"
 		    chdir(app->activity->internalDataPath) == 0;
 	    const double t2 = GetTimeInSeconds();
 	    logInfo("asset copying took %.2f seconds", (t2 - t1));
-
-	// todo : stop jgmod player on shutdown
-	    test_jgmod();
 
         ANativeActivity_setWindowFlags(app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
 
@@ -1101,6 +1199,12 @@ extern "C"
         appState.MainThreadTid = gettid();
 
         ovrRenderer_Create(&appState.Renderer, &java, appState.UseMultiview);
+
+	    // todo : stop jgmod player on shutdown
+        //test_jgmod();
+        AudiographTest audiographTest;
+
+        audiographTest.init();
 
         const double startTime = GetTimeInSeconds();
 
@@ -1319,6 +1423,8 @@ extern "C"
             // Hand over the eye images to the time warp.
             vrapi_SubmitFrame2(appState.Ovr, &frameDesc);
         }
+
+	    audiographTest.shut();
 
         ovrRenderer_Destroy(&appState.Renderer);
 

@@ -25,7 +25,7 @@ app ovr-cubes3
 
 app ovr-cubes4
 	depend_library android-assetcopy
-	#depend_library audiograph
+	depend_library audiograph
 	depend_library framework
 	depend_library framework-allegro2
 	depend_library framework-gltf
