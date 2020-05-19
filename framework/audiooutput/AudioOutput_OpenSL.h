@@ -30,13 +30,10 @@
 #if FRAMEWORK_USE_OPENSL
 
 #include "AudioOutput.h"
+#include "Multicore/Mutex.h"
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
-
-#include <mutex>
-
-#define ENABLE_OVR_MIC 0
 
 class AudioOutput_OpenSL : public AudioOutput
 {
@@ -49,15 +46,8 @@ class AudioOutput_OpenSL : public AudioOutput
 	SLAndroidSimpleBufferQueueItf playBufferQueue;
 	SLVolumeItf playVolume;
 
-#if ENABLE_OVR_MIC
-	ovrMicrophoneHandle MicHandle = 0;
-
-	// Platform mic is annoying, doesnt always return 20ms for some reason.
-	uint32_t MicBufferUsed = 0;
-#endif
-
 	bool m_isInitialized = false;
-	std::mutex m_mutex;
+	Mutex m_mutex;
 	AudioStream * m_stream = nullptr;
 	int m_numChannels = 0;
 	int m_sampleRate = 0;

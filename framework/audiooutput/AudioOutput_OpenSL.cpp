@@ -70,10 +70,6 @@ if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
 #include <SLES/OpenSLES_Android.h>
 #include <SLES/OpenSLES_AndroidConfiguration.h>
 
-#if ENABLE_OVR_MIC
-	#include "OVR_Voip_LowLevel.h"
-#endif
-
 #define USE_VOLUME_INTERFACE 0
 
 static bool checkError(const char * title, const SLresult code)
@@ -154,24 +150,6 @@ void AudioOutput_OpenSL::playbackHandler(SLAndroidSimpleBufferQueueItf bq)
 
 		(*bq)->Enqueue(bq, samples, numSamples * sizeof(samples[0]));
 	}
-
-#if ENABLE_OVR_MIC
-	if (MicCallback)
-	{
-		size_t recvd = 0;
-		do
-		{
-			recvd = ovr_Microphone_GetPCM(MicHandle, MicBuf + MicBufferUsed, (MicBufferSize - MicBufferUsed));
-			MicBufferUsed += recvd;
-
-			if (MicBufferUsed == MicBufferSize)
-			{
-				MicCallback(MicBuf);
-				MicBufferUsed = 0;
-			}
-		} while (recvd != 0);
-	}
-#endif
 }
 
 AudioOutput_OpenSL::AudioOutput_OpenSL()
@@ -269,17 +247,15 @@ bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate,
 		return false;
 	}
 
+	// create mutex
+	m_mutex.alloc();
+
+	// start streaming
 	const int initialBufferSize = bufferSize * sizeof(int16_t) * numChannels;
 	int16_t * __restrict initialBuffer = (int16_t*)alloca(initialBufferSize);
 	memset(initialBuffer, 0, initialBufferSize);
 
 	checkError("Enqueue", (*playBufferQueue)->Enqueue(playBufferQueue, initialBuffer, initialBufferSize));
-
-#if ENABLE_OVR_MIC
-	MicBufferUsed = 0;
-	MicHandle = ovr_Microphone_Create();
-	ovr_Microphone_Start(MicHandle);
-#endif
 
 	m_numChannels = numChannels;
 	m_sampleRate = sampleRate;
@@ -292,10 +268,7 @@ bool AudioOutput_OpenSL::Shutdown()
 {
 	Stop();
 
-#if ENABLE_OVR_MIC
-	ovr_Microphone_Stop(MicHandle);
-	ovr_Microphone_Destroy(MicHandle);
-#endif
+	m_mutex.free();
 
 	playVolume = nullptr;
 
