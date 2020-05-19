@@ -1274,8 +1274,10 @@ GraphEdit::GraphEdit(
 	uiState->x = kPadding;
 	uiState->y = kPadding;
 	uiState->textBoxTextOffset = 64;
-	
+
+#if FRAMEWORK_USE_SDL
 	cursorHand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+#endif
 	
 	//
 	
@@ -1285,9 +1287,11 @@ GraphEdit::GraphEdit(
 GraphEdit::~GraphEdit()
 {
 	selectedNodes.clear();
-	
+
+#if FRAMEWORK_USE_SDL
 	SDL_FreeCursor(cursorHand);
 	cursorHand = nullptr;
+#endif
 	
 	delete uiState;
 	uiState = nullptr;
@@ -3593,7 +3597,9 @@ bool GraphEdit::tick(const float dt, const bool _inputIsCaptured)
 	
 	if (enabled(kFlag_SetCursor))
 	{
+	#if FRAMEWORK_USE_SDL
 		SDL_SetCursor(mousePosition.hover ? cursorHand : SDL_GetDefaultCursor());
+	#endif
 	}
 	
 	animationIsDone =
@@ -3617,8 +3623,9 @@ bool GraphEdit::tickTouches()
 	
 	const float sx = 1920*2/3;
 	const float sy = 1080*2/3;
-	
-	for (auto & event : framework.events)
+
+#if FRAMEWORK_USE_SDL
+	for (auto & event : framework.events) // todo : use per-window list of events
 	{
 		if (event.type == SDL_FINGERDOWN)
 		{
@@ -3894,6 +3901,7 @@ bool GraphEdit::tickTouches()
 			}
 		}
 	}
+#endif
 	
 	return
 		state == kState_TouchDrag ||
@@ -4453,12 +4461,14 @@ bool GraphEdit::isInputIdle() const
 	result &= keyboard.isIdle();
 	result &= mouse.isIdle();
 
+#if FRAMEWORK_USE_SDL
 	for (auto & e : framework.events)
 	{
 		result &= e.type != SDL_FINGERDOWN;
 		result &= e.type != SDL_FINGERUP;
 		result &= e.type != SDL_FINGERMOTION;
 	}
+#endif
 	
 	return result;
 }
