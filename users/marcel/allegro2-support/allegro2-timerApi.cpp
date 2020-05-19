@@ -40,7 +40,10 @@ static int TimerThreadProc(void * obj)
 	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGH);
 #else
     const pthread_t thread = pthread_self();
+#ifdef MACOS
+#error
 	pthread_setname_np("Allegro timer");
+#endif
 	
     struct sched_param sched;
     int policy;
