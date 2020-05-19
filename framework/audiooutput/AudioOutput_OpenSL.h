@@ -35,6 +35,8 @@
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
 
+#include <atomic>
+
 class AudioOutput_OpenSL : public AudioOutput
 {
 	SLObjectItf engineObject;
