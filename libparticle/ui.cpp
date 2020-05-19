@@ -763,13 +763,15 @@ static UiTextboxResult doTextBoxImpl(T & value, const char * name, const float x
 				textField.setText(temp);
 				
 				textField.setTextIsSelected(true);
-				
+
+			#if FRAMEWORK_USE_SDL
 				SDL_Rect inputRect;
 				inputRect.x = x1;
 				inputRect.y = y1;
 				inputRect.w = x2 - x1;
 				inputRect.h = y2 - y1;
 				SDL_SetTextInputRect(&inputRect);
+			#endif
 				
 				//
 				

@@ -1,8 +1,11 @@
 #include "framework.h"
 #include "StringEx.h"
 #include "textfield.h"
-#include <SDL2/SDL_clipboard.h>
 #include <string.h>
+
+#if FRAMEWORK_USE_SDL
+	#include <SDL2/SDL_clipboard.h>
+#endif
 
 #define CARET_PADDING_X 0
 #define CARET_PADDING_Y 5
@@ -40,26 +43,33 @@ bool EditorTextField::tick(const float dt)
 		
 		if (commandMod && keyboard.wentDown(SDLK_c) && m_bufferSize != 0)
 		{
+		#if FRAMEWORK_USE_SDL
 			SDL_SetClipboardText(m_buffer);
+		#endif
 		}
 		
-		if (commandMod && keyboard.wentDown(SDLK_v) && SDL_HasClipboardText())
+		if (commandMod && keyboard.wentDown(SDLK_v))
 		{
-			char * text = SDL_GetClipboardText();
-			
-			if (m_textIsSelected)
+		#if FRAMEWORK_USE_SDL
+			if (SDL_HasClipboardText())
 			{
-				m_textIsSelected = false;
-				setText(text);
+				char * text = SDL_GetClipboardText();
+
+				if (m_textIsSelected)
+				{
+					m_textIsSelected = false;
+					setText(text);
+				}
+				else
+				{
+					for (int i = 0; text[i]; ++i)
+						addChar(text[i]);
+				}
+
+				SDL_free(text);
+				text = nullptr;
 			}
-			else
-			{
-				for (int i = 0; text[i]; ++i)
-					addChar(text[i]);
-			}
-			
-			SDL_free(text);
-			text = nullptr;
+		#endif
 		}
 		
 		if (commandMod && keyboard.wentDown(SDLK_a))
@@ -69,6 +79,7 @@ bool EditorTextField::tick(const float dt)
 		
 		if (commandMod == false)
 		{
+		#if FRAMEWORK_USE_SDL
 			for (auto & e : framework.events)
 			{
 				if (e.type != SDL_TEXTINPUT)
@@ -90,6 +101,7 @@ bool EditorTextField::tick(const float dt)
 					addChar(c);
 				}
 			}
+		#endif
 		}
 		
 		if (m_textIsSelected)
