@@ -50,7 +50,7 @@ struct FrameworkImGuiContext
 	
 	GxTexture font_texture;
 	
-	ImGuiContext * previous_context = nullptr;
+	mutable ImGuiContext * previous_context = nullptr;
 	
 #if DO_KINETIC_SCROLL
 #if DO_TOUCH_SCROLL
@@ -68,11 +68,11 @@ struct FrameworkImGuiContext
 	void processBegin(const float dt, const int displaySx, const int displaySy, bool & inputIsCaptured);
 	void processEnd();
 	
-	void draw();
-	void skipDraw();
+	void draw() const;
+	void skipDraw() const;
 	
-	void pushImGuiContext();
-	void popImGuiContext();
+	void pushImGuiContext() const;
+	void popImGuiContext() const;
 	void updateMouseCursor();
 	void updateFontTexture();
 	

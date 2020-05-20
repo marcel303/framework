@@ -294,7 +294,7 @@ void FrameworkImGuiContext::processEnd()
 	popImGuiContext();
 }
 
-void FrameworkImGuiContext::draw()
+void FrameworkImGuiContext::draw() const
 {
 	pushImGuiContext();
 	{
@@ -305,7 +305,7 @@ void FrameworkImGuiContext::draw()
 	popImGuiContext();
 }
 
-void FrameworkImGuiContext::skipDraw()
+void FrameworkImGuiContext::skipDraw() const
 {
 	pushImGuiContext();
 	{
@@ -316,7 +316,7 @@ void FrameworkImGuiContext::skipDraw()
 	popImGuiContext();
 }
 
-void FrameworkImGuiContext::pushImGuiContext()
+void FrameworkImGuiContext::pushImGuiContext() const
 {
 	fassert(previous_context == nullptr);
 	previous_context = ImGui::GetCurrentContext();
@@ -324,7 +324,7 @@ void FrameworkImGuiContext::pushImGuiContext()
 	ImGui::SetCurrentContext(imgui_context);
 }
 
-void FrameworkImGuiContext::popImGuiContext()
+void FrameworkImGuiContext::popImGuiContext() const
 {
 	ImGui::SetCurrentContext(previous_context);
 	previous_context = nullptr;
