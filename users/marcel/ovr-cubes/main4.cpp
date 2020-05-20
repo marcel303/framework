@@ -6,6 +6,12 @@
 #include "gltf-loader.h"
 #include "magicavoxel-framework.h"
 
+#include "parameter.h"
+#include "parameterUi.h"
+
+#include "audioTypeDB.h"
+#include "graphEdit.h"
+
 #include "framework.h"
 #include "gx_render.h"
 
@@ -27,13 +33,12 @@
 
  todo : integrate vfxgraph for some vfx processing: let it modulate lines or points and draw them in 3d
 
- todo : check if Window class works conveniently with render passes and color/depth targets
+ DONE : check if Window class works conveniently with render passes and color/depth targets
+ todo : integrate 3d virtual pointer with Window objects. create a small 3d Window picking system? should this be part of framework? perhaps just prototype it here and see what feels right
 
  DONE : integrate imgui drawing to a Window. composite the result in 3d
 
  DONE : test if drawing text in 3d using sdf fonts works
-
- todo : test model drawing
 
  DONE : integrate jgmod
 
@@ -281,9 +286,20 @@ ovrScene
 #include "../framework-gltf/gltf-draw.h"
 #include "../voxviewer/magicavoxel/magicavoxel.h"
 
+struct PointerObject
+{
+	Mat4x4 transform = Mat4x4(true);
+	bool isValid = false;
+
+	bool isDown = false;
+	float pictureTimer = 0.f;
+};
+
 struct Scene
 {
     bool created = false;
+
+	Vec3 playerLocation;
 
 	// gltf
 // todo : add gltf::BufferedScene ? something is needed to make gltf scenes more usable. now always requires a separate buffer cache object ..
@@ -304,9 +320,18 @@ struct Scene
     // ImGui test
     Window * guiWindow = nullptr;
     FrameworkImGuiContext guiContext;
+    ParameterMgr parameterMgr;
+
+    // graph editor
+    Window * graphEditWindow = nullptr;
+	Graph_TypeDefinitionLibrary * audioTypes = nullptr;
+	GraphEdit * graphEdit = nullptr;
+
+	PointerObject pointers[2];
 
     void create();
     void destroy();
+    void tick(ovrMobile * ovr, const float dt, const double predictedDisplayTime);
 };
 
 #include "FileStream.h"
@@ -335,8 +360,16 @@ void Scene::create()
 	}
 	gxCaptureMeshEnd();
 
-	guiWindow = new Window("window", 200, 200);
+	guiWindow = new Window("window", 300, 300);
 	guiContext.init(false);
+	parameterMgr.addString("name", "");
+	parameterMgr.addInt("count", 0)->setLimits(0, 100);
+	parameterMgr.addFloat("speed", 0.f)->setLimits(0.f, 10.f);
+
+	graphEditWindow = new Window("Graph Editor", 300, 300);
+    audioTypes = createAudioTypeDefinitionLibrary();
+    graphEdit = new GraphEdit(graphEditWindow->getWidth(), graphEditWindow->getHeight(), audioTypes); // todo : remove width/heigth from editor ctor. or make optional. sx/sy should be passed on tick instead
+	graphEdit->load("sweetStuff6.xml");
 
     auto * image = loadImage("Hokkaido8.png");
     if (image != nullptr)
@@ -379,6 +412,7 @@ void Scene::create()
 	    gxCaptureMeshEnd();
 
         delete image;
+        image = nullptr;
     }
 
     created = true;
@@ -386,20 +420,133 @@ void Scene::create()
 
 void Scene::destroy()
 {
-	guiContext.shut();
-
-	delete guiWindow;
-	guiWindow = nullptr;
-
-// todo : clear gltf scene
-
-	magica_world.free();
+	// destroy terrain resources
 
 	terrain_mesh.clear();
 	terrain_vb.free();
 	terrain_ib.free();
 
+	// destroy graph editor related objects
+
+	delete graphEdit;
+	graphEdit = nullptr;
+
+	delete audioTypes;
+	audioTypes = nullptr;
+
+	delete graphEditWindow;
+	graphEditWindow = nullptr;
+
+	// destroy imgui related objects
+
+	guiContext.shut();
+
+	delete guiWindow;
+	guiWindow = nullptr;
+
+	magica_world.free();
+
+	// todo : clear gltf scene
+
     created = false;
+}
+
+void Scene::tick(ovrMobile * ovr, const float dt, const double predictedDisplayTime)
+{
+	bool inputIsCaptured = false;
+	guiContext.processBegin(.01f, guiWindow->getWidth(), guiWindow->getHeight(), inputIsCaptured);
+	{
+		ImGui::SetNextWindowPos(ImVec2(0, 0));
+		ImGui::SetNextWindowSize(ImVec2(guiWindow->getWidth(), guiWindow->getHeight()));
+
+		if (ImGui::Begin("This is a window", nullptr, ImGuiWindowFlags_NoCollapse))
+		{
+			ImGui::Button("This is a button");
+
+			parameterUi::doParameterUi_recursive(parameterMgr, nullptr);
+		}
+		ImGui::End();
+	}
+	guiContext.processEnd();
+
+	uint32_t index = 0;
+
+	for (;;)
+	{
+		ovrInputCapabilityHeader header;
+
+		const auto result = vrapi_EnumerateInputDevices(ovr, index++, &header);
+
+		if (result < 0)
+			break;
+
+		if (header.Type == ovrControllerType_TrackedRemote)
+		{
+			ovrTracking tracking;
+			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, predictedDisplayTime, &tracking) != ovrSuccess)
+				tracking.Status = 0;
+
+			ovrInputStateTrackedRemote state;
+			state.Header.ControllerType = ovrControllerType_TrackedRemote;
+			if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &state.Header ) >= 0)
+			{
+				int index = -1;
+
+				ovrInputTrackedRemoteCapabilities remoteCaps;
+				remoteCaps.Header.Type = ovrControllerType_TrackedRemote;
+				remoteCaps.Header.DeviceID = header.DeviceID;
+				if (vrapi_GetInputDeviceCapabilities(ovr, &remoteCaps.Header) == ovrSuccess)
+				{
+					if (remoteCaps.ControllerCapabilities & ovrControllerCaps_LeftHand)
+						index = 0;
+					if (remoteCaps.ControllerCapabilities & ovrControllerCaps_RightHand)
+						index = 1;
+				}
+
+				if (index != -1)
+				{
+					auto & pointer = pointers[index];
+
+					if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
+					{
+						ovrMatrix4f m = ovrMatrix4f_CreateIdentity();
+						const auto & p = tracking.HeadPose.Pose;
+						const auto & t = p.Translation;
+
+						m = ovrMatrix4f_CreateTranslation(t.x, t.y, t.z);
+						ovrMatrix4f r = ovrMatrix4f_CreateFromQuaternion(&p.Orientation);
+						m = ovrMatrix4f_Multiply(&m, &r);
+						m = ovrMatrix4f_Transpose(&m);
+
+						memcpy(pointer.transform.m_v, (float*)m.M, sizeof(Mat4x4));
+						pointer.isValid = true;
+					}
+					else
+					{
+						pointer.transform.MakeIdentity();
+						pointer.isValid = false;
+					}
+
+					const bool wasDown = pointer.isDown;
+
+					if (state.Buttons & ovrButton_Trigger)
+						pointer.isDown = true;
+					else
+						pointer.isDown = false;
+
+					if (pointer.isDown != wasDown)
+					{
+						if (pointer.isDown && pointer.isValid && index == 1)
+						{
+							playerLocation += pointer.transform.GetAxis(2) * -6.f;
+						}
+					}
+
+					pointer.pictureTimer = clamp<float>(pointer.pictureTimer + (pointer.isDown ? +1 : -1) * .01f / .4f, 0.f, 1.f);
+				}
+			}
+		}
+	}
 }
 
 /*
@@ -441,29 +588,33 @@ static void ovrRenderer_Destroy(ovrRenderer * renderer)
 static ovrLayerProjection2 ovrRenderer_RenderFrame(
     ovrRenderer * renderer,
     const ovrJava * java,
-    Scene * scene, // todo : make const again
+    const Scene * scene,
     const ovrTracking2 * tracking,
     ovrMobile * ovr)
 {
+	setFont("calibri.ttf");
+
 	pushWindow(*scene->guiWindow);
 	{
-		bool inputIsCaptured = false;
-		scene->guiContext.processBegin(.01f, scene->guiWindow->getWidth(), scene->guiWindow->getHeight(), inputIsCaptured);
-		{
-			ImGui::SetNextWindowPos(ImVec2(0, 0));
-			ImGui::SetNextWindowSize(ImVec2(scene->guiWindow->getWidth(), scene->guiWindow->getHeight()));
-
-			if (ImGui::Begin("This is a window", nullptr, ImGuiWindowFlags_NoCollapse))
-			{
-				ImGui::Button("This is a button");
-			}
-			ImGui::End();
-		}
-		scene->guiContext.processEnd();
-
 		framework.beginDraw(0, 0, 0, 255);
 		{
 			scene->guiContext.draw();
+		}
+		framework.endDraw();
+	}
+	popWindow();
+
+	scene->graphEdit->displaySx = scene->graphEditWindow->getWidth();
+	scene->graphEdit->displaySy = scene->graphEditWindow->getHeight();
+	scene->graphEdit->tick(.01f, false);
+
+	pushWindow(*scene->graphEditWindow);
+	{
+		framework.beginDraw(0, 0, 0, 0);
+		{
+			pushFontMode(FONT_SDF);
+			scene->graphEdit->draw();
+			popFontMode();
 		}
 		framework.endDraw();
 	}
@@ -513,6 +664,11 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 	    gxSetMatrixf(GX_MODELVIEW, (float*)eyeViewMatrixTransposed[eye].M);
 	    gxSetMatrixf(GX_PROJECTION, (float*)projectionMatrixTransposed[eye].M);
 
+	    gxTranslatef(
+		    -scene->playerLocation[0],
+		    -scene->playerLocation[1],
+		    -scene->playerLocation[2]);
+
 	    pushDepthTest(true, DEPTH_LESS);
 	    pushBlend(BLEND_OPAQUE);
 
@@ -531,37 +687,32 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 	    const double time = GetTimeInSeconds();
 
 		// Draw gltf scene.
-		for (int x = -1; x <= +1; ++x)
-		{
-			for (int z = -1; z <= +1; ++z)
-			{
-				if (x == 0 && z == 0)
-					continue;
-
-				gxPushMatrix();
-				gxTranslatef(x, 1, z);
-				gxRotatef(time * (x + z) * 40.f, 0, 1, 0);
-				gxScalef(.1f, .1f, .1f);
-				gltf::MaterialShaders materialShaders;
-				gltf::setDefaultMaterialShaders(materialShaders);
-				gltf::DrawOptions drawOptions;
-				gltf::drawScene(scene->gltf_scene, &scene->gltf_bufferCache, materialShaders, true, &drawOptions);
-				gxPopMatrix();
-			}
-		}
+		gxPushMatrix();
+	    {
+			gxTranslatef(0, 2.5f, 0);
+			gxRotatef(time * 40.f, 0, 1, 0);
+			gxScalef(.1f, .1f, .1f);
+			gltf::MaterialShaders materialShaders;
+			gltf::setDefaultMaterialShaders(materialShaders);
+			gltf::setDefaultMaterialLighting(materialShaders, (Mat4x4&)eyeViewMatrixTransposed, Vec3(.3f, -1.f, .3f).CalcNormalized(), Vec3(1.f, .8f, .6f), Vec3(.02f));
+			gltf::DrawOptions drawOptions;
+			gltf::drawScene(scene->gltf_scene, &scene->gltf_bufferCache, materialShaders, true, &drawOptions);
+	    }
+		gxPopMatrix();
 
 		// Draw MagicVoxel world
 	    gxPushMatrix();
 	    gxScalef(.01f, .01f, .01f);
+	    pushShaderOutputs("n");
 		//drawMagicaWorld(scene->magica_world);
 		//scene->magica_mesh.draw();
+		popShaderOutputs();
 		gxPopMatrix();
 
 	    // Draw terrain.
 	    scene->terrain_mesh.draw();
 
 		// Draw circles.
-		//pushLineSmooth(true);
 	    for (int i = 0; i < 16; ++i)
 	    {
 		    gxPushMatrix();
@@ -580,106 +731,82 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 
 		    gxPopMatrix();
 	    }
-	    //popLineSmooth();
 
-	    gxPopMatrix();
+	    gxPopMatrix(); // Undo ground level adjustment.
 
 		// Draw hands.
 	#if true
-	    uint32_t index = 0;
-	    for (;;)
+		gxPushMatrix();
+		gxTranslatef(
+		    scene->playerLocation[0],
+		    scene->playerLocation[1],
+		    scene->playerLocation[2]);
+
+		for (int i = 0; i < 2; ++i)
 	    {
-		    ovrInputCapabilityHeader header;
+			auto & pointer = scene->pointers[i];
 
-	        const auto result = vrapi_EnumerateInputDevices(ovr, index++, &header);
+			if (pointer.isValid == false)
+				continue;
 
-	        if (result < 0)
-	            break;
+			// Draw picture.
 
-	        if (header.Type == ovrControllerType_TrackedRemote)
-	        {
-		        ovrTracking tracking;
-		        // todo : use predicted display time, not current time
-		        if (vrapi_GetInputTrackingState(ovr, header.DeviceID, GetTimeInSeconds(), &tracking) != ovrSuccess)
-			        tracking.Status = 0;
+			gxSetTexture(scene->guiWindow->getColorTarget()->getTextureId());
+			//gxSetTexture(scene->graphEditWindow->getColorTarget()->getTextureId());
+			//gxSetTexture(getTexture("sabana.jpg"));
+			//gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
+			setColor(colorWhite);
+			{
+				gxPushMatrix();
+				gxMultMatrixf(pointer.transform.m_v);
+				gxTranslatef(0, 0, -3);
+				gxRotatef(180 + sinf(time) * 15, 0, 1, 0);
+				gxScalef(pointer.pictureTimer, pointer.pictureTimer, pointer.pictureTimer);
+				drawRect(+1, +1, -1, -1);
+				gxPopMatrix();
+			}
+			gxSetTexture(0);
 
-		        ovrMatrix4f m = ovrMatrix4f_CreateIdentity();
-		        if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
-		        {
-			        const auto & p = tracking.HeadPose.Pose;
-			        const auto & t = p.Translation;
+			// Draw cube.
+			gxPushMatrix();
+			gxMultMatrixf(pointer.transform.m_v);
 
-			        m = ovrMatrix4f_CreateTranslation(t.x, t.y, t.z);
-			        ovrMatrix4f r = ovrMatrix4f_CreateFromQuaternion(&p.Orientation);
-			        m = ovrMatrix4f_Multiply(&m, &r);
-			        m = ovrMatrix4f_Transpose(&m);
-		        }
+			pushCullMode(CULL_BACK, CULL_CCW);
+			pushShaderOutputs("n");
+			setColor(colorWhite);
+			fillCube(Vec3(), Vec3(.02f, .02f, .1f));
+			popShaderOutputs();
 
-		        ovrInputStateTrackedRemote state;
-				state.Header.ControllerType = ovrControllerType_TrackedRemote;
-				if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &state.Header ) >= 0)
+			// Draw pointer ray.
+			pushBlend(BLEND_ADD);
+			const float a = lerp<float>(.1f, .4f, (sin(time) + 1.0) / 2.0);
+			setColorf(1, 1, 1, a);
+			fillCube(Vec3(0, 0, -100), Vec3(.01f, .01f, 100));
+			popBlend();
+			popCullMode();
+
+		#if false
+			// Draw skinned hand mesh.
+			ovrHandMesh handMesh;
+			handMesh.Header.Version = ovrHandVersion_1;
+			if (vrapi_GetHandMesh(ovr, VRAPI_HAND_LEFT, &handMesh.Header) == ovrSuccess)
+			{
+				gxBegin(GX_POINTS);
 				{
-					if ((state.Buttons & ovrButton_Trigger) && (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID))
-					{
-						// Draw textured walls.
-						pushBlend(BLEND_OPAQUE);
-						//gxSetTexture(scene->guiContext.font_texture.id);
-						gxSetTexture(scene->guiWindow->getColorTarget()->getTextureId());
-						//gxSetTexture(getTexture("sabana.jpg"));
-						//gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
-						setColor(colorWhite);
-						{
-							gxPushMatrix();
-							gxMultMatrixf((float*)m.M);
-							gxTranslatef(0, 0, -3);
-							gxRotatef(time * 20.f, 0, 1, 0);
-							drawRect(+1, +1, -1, -1);
-							gxPopMatrix();
-						}
-						gxSetTexture(0);
-						popBlend();
-					}
-				}
-
-		        if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
-				{
-					gxPushMatrix();
-					gxMultMatrixf((float*)m.M);
-
-					pushCullMode(CULL_BACK, CULL_CCW);
-					pushShaderOutputs("n");
 					setColor(colorWhite);
-					fillCube(Vec3(), Vec3(.02f, .02f, .1f));
-					popShaderOutputs();
-
-					pushBlend(BLEND_ADD);
-					const float a = lerp<float>(.1f, .4f, (sin(time) + 1.0) / 2.0);
-					setColorf(1, 1, 1, a);
-					fillCube(Vec3(0, 0, -100), Vec3(.01f, .01f, 100));
-					popBlend();
-					popCullMode();
-
-				#if false
-					ovrHandMesh handMesh;
-					handMesh.Header.Version = ovrHandVersion_1;
-					if (vrapi_GetHandMesh(ovr, VRAPI_HAND_LEFT, &handMesh.Header) == ovrSuccess)
+					for (int i = 0; i < handMesh.NumVertices; ++i)
 					{
-						gxBegin(GX_POINTS);
-						{
-							setColor(colorWhite);
-							for (int i = 0; i < handMesh.NumVertices; ++i)
-							{
-								gxVertex3fv(&handMesh.VertexPositions[i].x);
-							}
-						}
-						gxEnd();
+						gxVertex3fv(&handMesh.VertexPositions[i].x);
 					}
-				#endif
-
-					gxPopMatrix();
 				}
-	        }
+				gxEnd();
+			}
+		#endif
+
+			gxPopMatrix();
 	    }
+
+	    gxPopMatrix();
 	#endif
 
 		// -- End opaque pass.
@@ -693,10 +820,9 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 		// Draw text.
 		gxPushMatrix();
 	    {
-	        gxTranslatef(0, .5f, -1);
+	        gxTranslatef(0, 2, 0);
 	        gxRotatef(time * 10.f, 0, 1, 0);
 	        gxScalef(1, -1, 1);
-	        setFont("calibri.ttf");
 	        pushFontMode(FONT_SDF);
 		    {
 		    // todo : add a function to directly draw 3d msdf text. msdf or sdf is really a requirement for vr
@@ -704,11 +830,14 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 		        drawTextArea(0, 0, 1.f, .25f, .1f, 0, 0, "Hello World!\nThis is some text, drawn using Framework's multiple signed-distance field method! Doesn't it look crisp? :-)", 2.f, 2.f);
 		    }
 		    popFontMode();
+
+			setColor(40, 30, 20);
+		    fillCircle(0, 0, 1.2f/2.f, 100);
 	    }
 	    gxPopMatrix();
 
+	#if false
 		// Draw filled circles.
-	    pushLineSmooth(true);
 	    for (int i = 0; i < 16; ++i)
 	    {
 	        if ((i % 3) != 0)
@@ -732,7 +861,7 @@ static ovrLayerProjection2 ovrRenderer_RenderFrame(
 
 		    gxPopMatrix();
 	    }
-	    popLineSmooth();
+	#endif
 
 		// -- End translucent pass.
 	    popBlend();
@@ -1004,35 +1133,75 @@ Android Main (android_native_app_glue)
 
 #define DIGI_SAMPLERATE 48000
 
-static void test_jgmod()
+struct JgmodTest
 {
-	AllegroTimerApi * timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
-	AllegroVoiceApi * voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE, true);
+	AllegroTimerApi * timerApi = nullptr;
+	AllegroVoiceApi * voiceApi = nullptr;
 
-	auto * audioOutput = new AudioOutput_OpenSL();
-	audioOutput->Initialize(2, DIGI_SAMPLERATE, 256);
+	AudioOutput_OpenSL * audioOutput = nullptr;
+	AudioStream * audioStream = nullptr;
 
-	auto * audioStream = new AudioStream_AllegroVoiceMixer(voiceApi, timerApi);
-	audioOutput->Play(audioStream);
+	JGMOD_PLAYER player;
+	JGMOD * mod = nullptr;
 
-	auto * player = new JGMOD_PLAYER();
-
-    if (player->init(JGMOD_MAX_VOICES, timerApi, voiceApi) < 0)
+	void init()
 	{
-        logError("unable to allocate %d voices", JGMOD_MAX_VOICES);
-        return;
+		timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
+		voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE, true);
+
+		audioOutput = new AudioOutput_OpenSL();
+		audioOutput->Initialize(2, DIGI_SAMPLERATE, 256);
+
+		audioStream = new AudioStream_AllegroVoiceMixer(voiceApi, timerApi);
+		audioOutput->Play(audioStream);
+
+	    if (player.init(JGMOD_MAX_VOICES, timerApi, voiceApi) < 0)
+		{
+	        logError("unable to allocate %d voices", JGMOD_MAX_VOICES);
+	        return;
+		}
+
+		player.enable_lasttrk_loop = true;
+
+		const char * filename = "point_of_departure.s3m";
+		mod = jgmod_load(filename);
+
+		if (mod != nullptr)
+		{
+			player.play(mod, true);
+		}
 	}
 
-	player->enable_lasttrk_loop = true;
-
-	const char * filename = "point_of_departure.s3m";
-	auto * mod = jgmod_load(filename);
-
-	if (mod != nullptr)
+	void shut()
 	{
-		player->play(mod, true);
+		player.stop();
+
+		if (mod != nullptr)
+		{
+			jgmod_destroy(mod);
+			mod = nullptr;
+		}
+
+		if (audioOutput != nullptr)
+		{
+			audioOutput->Stop();
+			delete audioStream;
+			audioStream = nullptr;
+		}
+
+		if (audioOutput != nullptr)
+		{
+			audioOutput->Shutdown();
+			delete audioOutput;
+			audioOutput = nullptr;
+		}
+
+		delete timerApi;
+		delete voiceApi;
+		timerApi = nullptr;
+		voiceApi = nullptr;
 	}
-}
+};
 
 #include "audioGraph.h"
 #include "audioGraphManager.h"
@@ -1058,30 +1227,22 @@ struct AudioStream_AudioGraph : AudioStream
 
 		for (int i = 0; i < numSamples; ++i)
 		{
-		// todo : stereo mode
-			int value = samples[i * 2 + 0] * (1 << 15);
+			float valueL = samples[i * 2 + 0];
+			float valueR = samples[i * 2 + 1];
 
-			// perform clipping
+			valueL = valueL < -1.f ? -1.f : valueL > +1.f ? +1.f : valueL;
+			valueR = valueR < -1.f ? -1.f : valueR > +1.f ? +1.f : valueR;
 
-			if (value != 0)
-			{
-				logDebug("non zero!");
-			}
+			const int valueLi = int(valueL * ((1 << 15) - 1));
+			const int valueRi = int(valueR * ((1 << 15) - 1));
 
-			if (value < -(1 << 15))
-				value = -(1 << 15);
-			if (value > +(1 << 15) - 1)
-				value = +(1 << 15) - 1;
-
-			buffer[i].channel[0] = value;
-			buffer[i].channel[1] = value;
+			buffer[i].channel[0] = valueLi;
+			buffer[i].channel[1] = valueRi;
 		}
 
 		return numSamples;
 	}
 };
-
-extern void linkAudioNodes();
 
 struct AudiographTest
 {
@@ -1099,8 +1260,6 @@ struct AudiographTest
 
 	void init()
 	{
-		linkAudioNodes(); // todo : link translation units on Android. note : we already do! why doesn't this work?
-
 		// initialize audio related systems
 
 		mutex.init();
@@ -1200,10 +1359,10 @@ extern "C"
 
         ovrRenderer_Create(&appState.Renderer, &java, appState.UseMultiview);
 
-	    // todo : stop jgmod player on shutdown
-        //test_jgmod();
-        AudiographTest audiographTest;
+        JgmodTest jgmodTest;
+        //jgmodTest.init();
 
+        AudiographTest audiographTest;
         audiographTest.init();
 
         const double startTime = GetTimeInSeconds();
@@ -1291,17 +1450,15 @@ extern "C"
                     AInputEvent * event = nullptr;
                     while (AInputQueue_getEvent(app->inputQueue, &event) >= 0)
                     {
-                    // todo : restore AInputQueue_preDispatchEvent
-                        //if (AInputQueue_preDispatchEvent(app->inputQueue, event)) {
+                        //if (AInputQueue_preDispatchEvent(app->inputQueue, event))
                         //    continue;
-                        //}
 
                         int32_t handled = 0;
 
                         if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY)
                         {
-                            int keyCode = AKeyEvent_getKeyCode(event);
-                            int action = AKeyEvent_getAction(event);
+                            const int keyCode = AKeyEvent_getKeyCode(event);
+	                        const int action = AKeyEvent_getAction(event);
 
                             if (action != AKEY_EVENT_ACTION_DOWN &&
                                 action != AKEY_EVENT_ACTION_UP)
@@ -1310,29 +1467,21 @@ extern "C"
                             }
                             else if (keyCode == AKEYCODE_VOLUME_UP)
                             {
-                                // todo : we get here twice due to up/down ?
-                                //adjustVolume(1);
-                                //handled = 1;
+	                            // dispatch
                             }
                             else if (keyCode == AKEYCODE_VOLUME_DOWN)
                             {
-                                // todo : we get here twice due to up/down ?
-                                //adjustVolume(-1);
-                                //handled = 1;
+	                            // dispatch
                             }
                             else
                             {
-                                if (action == AKEY_EVENT_ACTION_UP)
-                                {
-                                    //Log.v( TAG, "GLES3JNIActivity::dispatchKeyEvent( " + keyCode + ", " + action + " )" );
-                                }
-
-                                ovrApp_HandleKeyEvent(
+                                if (ovrApp_HandleKeyEvent(
                                     &appState,
                                     keyCode,
-                                    action);
-
-                                handled = 1;
+                                    action))
+                                {
+                                    handled = 1;
+                                }
                             }
                         }
 
@@ -1397,10 +1546,9 @@ extern "C"
 
             appState.DisplayTime = predictedDisplayTime;
 
-            // Advance the simulation based on the elapsed time since start of loop till predicted
-            // display time.
+	        // Tick the simulation
             const float timeStep = predictedDisplayTime - startTime;
-        // todo : update simulation with timeStep
+            appState.Scene.tick(appState.Ovr, timeStep, predictedDisplayTime);
 
             // Render eye images and setup the primary layer using ovrTracking2.
             const ovrLayerProjection2 worldLayer = ovrRenderer_RenderFrame(
@@ -1424,7 +1572,11 @@ extern "C"
             vrapi_SubmitFrame2(appState.Ovr, &frameDesc);
         }
 
+        Font("calibri.ttf").saveCache();
+
 	    audiographTest.shut();
+
+	    jgmodTest.shut();
 
         ovrRenderer_Destroy(&appState.Renderer);
 
