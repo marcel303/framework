@@ -158,11 +158,14 @@ AudioOutput_OpenSL::AudioOutput_OpenSL()
 	, m_position(0)
 	, m_isDone(false)
 {
+	m_mutex.alloc();
 }
 
 AudioOutput_OpenSL::~AudioOutput_OpenSL()
 {
 	Shutdown();
+
+	m_mutex.free();
 }
 
 bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate, const int bufferSize)
@@ -247,9 +250,6 @@ bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate,
 		return false;
 	}
 
-	// create mutex
-	m_mutex.alloc();
-
 	// start streaming
 	const int initialBufferSize = bufferSize * sizeof(int16_t) * numChannels;
 	int16_t * __restrict initialBuffer = (int16_t*)alloca(initialBufferSize);
@@ -267,8 +267,6 @@ bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate,
 bool AudioOutput_OpenSL::Shutdown()
 {
 	Stop();
-
-	m_mutex.free();
 
 	playVolume = nullptr;
 
