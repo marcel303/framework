@@ -19,6 +19,12 @@ public:
 		m_v[0] = x;
 		m_v[1] = y;
 	}
+	
+	explicit
+	inline Vec2(float v)
+	{
+		m_v[0] = m_v[1] = v;
+	}
 
 	inline void Set(float x, float y)
 	{
