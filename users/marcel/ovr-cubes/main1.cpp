@@ -1,5 +1,6 @@
-#include "opengl-ovr.h"
+#include "ovr-egl.h"
 #include "ovr-framebuffer.h"
+#include "ovr-glext.h"
 
 #include "Log.h"
 #include "StringEx.h"
@@ -50,188 +51,11 @@ OpenGL-ES Utility Functions
 ================================================================================
 */
 
-// todo : move OpenGL extensions into a separate file
-
 static void checkErrorGL()
 {
     const GLenum error = glGetError();
     if (error != GL_NO_ERROR)
         LOG_ERR("GL error: %s", GlErrorString(error));
-}
-
-static void EglInitExtensions()
-{
-    const char * allExtensions = (const char*)glGetString(GL_EXTENSIONS);
-
-    if (allExtensions != nullptr)
-    {
-        glExtensions.multi_view = strstr(allExtensions, "GL_OVR_multiview2") &&
-            strstr(allExtensions, "GL_OVR_multiview_multisampled_render_to_texture");
-
-        glExtensions.EXT_texture_border_clamp =
-            strstr(allExtensions, "GL_EXT_texture_border_clamp") ||
-            strstr(allExtensions, "GL_OES_texture_border_clamp");
-    }
-}
-
-/*
-================================================================================
-
-ovrEgl
-
-================================================================================
-*/
-
-struct ovrEgl
-{
-    EGLint MajorVersion = 0; // note : major version number returned by eglInitialize
-    EGLint MinorVersion = 0; // note : minor version number returned by eglInitialize
-    EGLDisplay Display = EGL_NO_DISPLAY;
-    EGLConfig Config = 0;
-    EGLSurface TinySurface = EGL_NO_SURFACE;
-    EGLSurface MainSurface = EGL_NO_SURFACE;
-    EGLContext Context = EGL_NO_CONTEXT;
-};
-
-static void ovrEgl_CreateContext(ovrEgl * egl, const ovrEgl * shareEgl)
-{
-    assert(egl->Display == EGL_NO_DISPLAY);
-
-    egl->Display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    eglInitialize(egl->Display, &egl->MajorVersion, &egl->MinorVersion);
-
-    // Do NOT use eglChooseConfig, because the Android EGL code pushes in multisample
-    // flags in eglChooseConfig if the user has selected the "force 4x MSAA" option in
-    // settings, and that is completely wasted for our warp target.
-
-    const int MAX_CONFIGS = 1024;
-    EGLConfig configs[MAX_CONFIGS];
-    EGLint numConfigs = 0;
-
-    if (eglGetConfigs(egl->Display, configs, MAX_CONFIGS, &numConfigs) == EGL_FALSE)
-    {
-        LOG_ERR("eglGetConfigs() failed: %s", EglErrorString(eglGetError()));
-        return;
-    }
-
-    const EGLint configAttribs[] =
-        {
-            EGL_RED_SIZE,       8,
-            EGL_GREEN_SIZE,     8,
-            EGL_BLUE_SIZE,      8,
-            EGL_ALPHA_SIZE,     8, // need alpha for the multi-pass timewarp compositor
-            EGL_DEPTH_SIZE,     0,
-            EGL_STENCIL_SIZE,   0,
-            EGL_SAMPLES,        0,
-            EGL_NONE
-        };
-
-    egl->Config = 0;
-
-    for (int i = 0; i < numConfigs; i++)
-    {
-        EGLint value = 0;
-
-        eglGetConfigAttrib(egl->Display, configs[i], EGL_RENDERABLE_TYPE, &value);
-        if ((value & EGL_OPENGL_ES3_BIT_KHR) != EGL_OPENGL_ES3_BIT_KHR)
-            continue;
-
-        // The pbuffer config also needs to be compatible with normal window rendering
-        // so it can share textures with the window context.
-        eglGetConfigAttrib(egl->Display, configs[i], EGL_SURFACE_TYPE, &value);
-        if ((value & (EGL_WINDOW_BIT | EGL_PBUFFER_BIT)) != (EGL_WINDOW_BIT | EGL_PBUFFER_BIT))
-            continue;
-
-        int j = 0;
-        while (configAttribs[j] != EGL_NONE)
-        {
-            eglGetConfigAttrib(egl->Display, configs[i], configAttribs[j], &value);
-            if (value != configAttribs[j + 1])
-                break;
-            j += 2;
-        }
-
-        if (configAttribs[j] == EGL_NONE)
-        {
-            egl->Config = configs[i];
-            break;
-        }
-    }
-
-    if (egl->Config == 0)
-    {
-        LOG_ERR("eglChooseConfig() failed: %s", EglErrorString(eglGetError()));
-        return;
-    }
-
-    LOG_DBG("Context = eglCreateContext( Display, Config, EGL_NO_CONTEXT, contextAttribs )", 0);
-    const EGLint contextAttribs[] = { EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE };
-    egl->Context = eglCreateContext(
-        egl->Display,
-        egl->Config,
-        (shareEgl != NULL) ? shareEgl->Context : EGL_NO_CONTEXT,
-        contextAttribs);
-
-    if (egl->Context == EGL_NO_CONTEXT)
-    {
-        LOG_ERR("eglCreateContext() failed: %s", EglErrorString(eglGetError()));
-        return;
-    }
-
-    LOG_DBG("TinySurface = eglCreatePbufferSurface( Display, Config, surfaceAttribs )", 0);
-    const EGLint surfaceAttribs[] = { EGL_WIDTH, 16, EGL_HEIGHT, 16, EGL_NONE };
-    egl->TinySurface = eglCreatePbufferSurface(egl->Display, egl->Config, surfaceAttribs);
-    if (egl->TinySurface == EGL_NO_SURFACE)
-    {
-        LOG_ERR("eglCreatePbufferSurface() failed: %s", EglErrorString(eglGetError()));
-        eglDestroyContext(egl->Display, egl->Context);
-        egl->Context = EGL_NO_CONTEXT;
-        return;
-    }
-
-    LOG_DBG("eglMakeCurrent( Display, TinySurface, TinySurface, Context )", 0);
-    if (eglMakeCurrent(egl->Display, egl->TinySurface, egl->TinySurface, egl->Context) == EGL_FALSE)
-    {
-        LOG_ERR("eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
-        eglDestroySurface(egl->Display, egl->TinySurface);
-        eglDestroyContext(egl->Display, egl->Context);
-        egl->Context = EGL_NO_CONTEXT;
-        return;
-    }
-}
-
-static void ovrEgl_DestroyContext(ovrEgl * egl)
-{
-    if (egl->Display != EGL_NO_DISPLAY)
-    {
-        LOG_ERR("- eglMakeCurrent( Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT )", 0);
-        if (eglMakeCurrent(egl->Display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT) == EGL_FALSE)
-            LOG_ERR("- eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
-    }
-
-    if (egl->Context != EGL_NO_CONTEXT)
-    {
-        LOG_ERR("- eglDestroyContext( Display, Context )", 0);
-        if (eglDestroyContext(egl->Display, egl->Context) == EGL_FALSE)
-            LOG_ERR("- eglDestroyContext() failed: %s", EglErrorString(eglGetError()));
-        egl->Context = EGL_NO_CONTEXT;
-    }
-
-    if (egl->TinySurface != EGL_NO_SURFACE)
-    {
-        LOG_ERR("- eglDestroySurface( Display, TinySurface )", 0);
-        if (eglDestroySurface(egl->Display, egl->TinySurface) == EGL_FALSE)
-            LOG_ERR("- eglDestroySurface() failed: %s", EglErrorString(eglGetError()));
-        egl->TinySurface = EGL_NO_SURFACE;
-    }
-
-    if (egl->Display != EGL_NO_DISPLAY)
-    {
-        LOG_ERR("- eglTerminate( Display )", 0);
-        if (eglTerminate(egl->Display) == EGL_FALSE)
-            LOG_ERR("- eglTerminate() failed: %s", EglErrorString(eglGetError()));
-        egl->Display = EGL_NO_DISPLAY;
-    }
 }
 
 /*
@@ -1320,11 +1144,11 @@ extern "C"
         // This app will handle android gamepad events itself.
         vrapi_SetPropertyInt(&appState.Java, VRAPI_EAT_NATIVE_GAMEPAD_EVENTS, 0);
 
-        ovrEgl_CreateContext(&appState.Egl, nullptr);
+        appState.Egl.createContext();
 
-        EglInitExtensions();
+	    ovrOpenGLExtensions.init();
 
-        appState.UseMultiview &= (glExtensions.multi_view && vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
+        appState.UseMultiview &= (ovrOpenGLExtensions.multi_view && vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
 
         LOG_DBG("AppState UseMultiview : %d", appState.UseMultiview ? 1 : 0);
 
@@ -1554,7 +1378,8 @@ extern "C"
         ovrRenderer_Destroy(&appState.Renderer);
 
         ovrScene_Destroy(&appState.Scene);
-        ovrEgl_DestroyContext(&appState.Egl);
+        
+        appState.Egl.destroyContext();
 
         vrapi_Shutdown();
 

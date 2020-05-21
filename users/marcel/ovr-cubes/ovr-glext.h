@@ -18,13 +18,15 @@
 #define GL_TEXTURE_BORDER_COLOR 0x1004
 #endif
 
-struct OpenGLExtensions_t
+struct OvrOpenGLExtensions
 {
-    bool multi_view; // GL_OVR_multiview, GL_OVR_multiview2
+    bool multi_view;               // GL_OVR_multiview, GL_OVR_multiview2
     bool EXT_texture_border_clamp; // GL_EXT_texture_border_clamp, GL_OES_texture_border_clamp
+
+    void init();
 };
 
-extern OpenGLExtensions_t glExtensions;
+extern OvrOpenGLExtensions ovrOpenGLExtensions;
 
 #if !defined(GL_EXT_multisampled_render_to_texture)
 typedef void(GL_APIENTRY* PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC)(

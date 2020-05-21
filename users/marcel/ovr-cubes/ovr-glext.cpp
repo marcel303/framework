@@ -1,6 +1,22 @@
-#include "opengl-ovr.h"
+#include "ovr-glext.h"
+#include <string.h>
 
-OpenGLExtensions_t glExtensions;
+OvrOpenGLExtensions ovrOpenGLExtensions;
+
+void OvrOpenGLExtensions::init()
+{
+    const char * allExtensions = (const char*)glGetString(GL_EXTENSIONS);
+
+    if (allExtensions != nullptr)
+    {
+        multi_view = strstr(allExtensions, "GL_OVR_multiview2") &&
+            strstr(allExtensions, "GL_OVR_multiview_multisampled_render_to_texture");
+
+        EXT_texture_border_clamp =
+            strstr(allExtensions, "GL_EXT_texture_border_clamp") ||
+            strstr(allExtensions, "GL_OES_texture_border_clamp");
+    }
+}
 
 const char * EglErrorString(const EGLint error)
 {

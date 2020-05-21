@@ -4,8 +4,9 @@ app ovr-cubes1
 	depend_library ovr-mobile-vrapi
 	depend_library GLESv3 global
 	depend_library EGL global
-	add_files opengl-ovr.cpp
-	add_files ovrFramebuffer.cpp
+	add_files ovr-egl.cpp
+	add_files ovr-framebuffer.cpp
+	add_files ovr-glext.cpp
 	add_files main1.cpp
 
 app ovr-cubes2
@@ -14,8 +15,9 @@ app ovr-cubes2
 	depend_library ovr-mobile-vrapi
 	depend_library GLESv3 global
 	depend_library EGL global
-	add_files opengl-ovr.cpp
-	add_files ovrFramebuffer.cpp
+	add_files ovr-egl.cpp
+	add_files ovr-framebuffer.cpp
+	add_files ovr-glext.cpp
 	add_files main2.cpp
 	resource_path data
 
@@ -34,8 +36,9 @@ app ovr-cubes4
 	depend_library libjgmod
 	depend_library magicavoxel-framework
 	depend_library ovr-mobile-vrapi
-	add_files opengl-ovr.cpp
-	add_files ovrFramebuffer.cpp
+	add_files ovr-egl.cpp
+	add_files ovr-framebuffer.cpp
+	add_files ovr-glext.cpp
 	add_files main4.cpp
 	resource_path data
 

@@ -1,7 +1,7 @@
 #include "Log.h"
 
-#include "opengl-ovr.h"
 #include "ovr-framebuffer.h"
+#include "ovr-glext.h"
 
 #include <VrApi.h>
 #include <VrApi_Types.h>
@@ -64,7 +64,7 @@ bool ovrFramebuffer::init(
         glBindTexture(colorTextureTarget, colorTexture);
         checkErrorGL();
 
-        if (glExtensions.EXT_texture_border_clamp)
+        if (ovrOpenGLExtensions.EXT_texture_border_clamp)
         {
             glTexParameteri(colorTextureTarget, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
             glTexParameteri(colorTextureTarget, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
