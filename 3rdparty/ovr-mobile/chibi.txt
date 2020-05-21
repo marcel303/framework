@@ -1,5 +1,6 @@
-library ovr-mobile-vrapi shared prebuilt
-	add_files VrApi/Libs/Android/arm64-v8a/Release/libvrapi.so
+library ovr-mobile-vrapi shared
+    # todo : use 'prebuilt' library option
+	depend_library VrApi/Libs/Android/${ANDROID_ABI}/Release/libvrapi.so local
 	add_files dummy.cpp
 	license_file LICENSE.txt
 	header_path VrApi/Include expose
