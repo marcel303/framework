@@ -41,7 +41,7 @@ void main()
 
     int numSegments = int(numVertices)/2;
     int segmentIndex = gl_VertexID/2;
-	float t = segmentIndex / (numSegments - 1.0);
+	float t = float(segmentIndex) / (float(numSegments) - 1.0);
     //float t = gl_VertexID / (numVertices - 1.0);
 	vec2 position = interp(position1, position2, t, s);
 
