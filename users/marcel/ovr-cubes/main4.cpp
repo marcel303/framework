@@ -67,13 +67,7 @@ static const int CPU_LEVEL = 2;
 static const int GPU_LEVEL = 3;
 static const int NUM_MULTI_SAMPLES = 4;
 
-/*
-================================================================================
-
-System Clock Time
-
-================================================================================
-*/
+// -- system clock time
 
 static double GetTimeInSeconds()
 {
@@ -85,13 +79,7 @@ static double GetTimeInSeconds()
     return (now.tv_sec * 1e9 + now.tv_nsec) * 0.000000001;
 }
 
-/*
-================================================================================
-
-ovrScene
-
-================================================================================
-*/
+// -- scene
 
 #include "gx_mesh.h"
 #include "image.h"
@@ -141,30 +129,20 @@ struct Scene
 
     void create();
     void destroy();
-    void tick(ovrMobile * ovr, const float dt, const double predictedDisplayTime);
+
+    void tick(ovrMobile * ovr, const float dt, const double displayTime);
+
     void draw() const;
     void drawEye(ovrMobile * ovr) const;
 };
-
-#include "FileStream.h"
-#include "StreamReader.h"
 
 void Scene::create()
 {
 	gltf::loadScene("lain_2.0/scene.gltf", gltf_scene);
 	gltf_bufferCache.init(gltf_scene);
 
-	try
-	{
-		FileStream stream("room.vox", OpenMode_Read);
-		StreamReader reader(&stream, false);
-
-		readMagicaWorld(reader, magica_world);
-	}
-	catch (std::exception & e)
-	{
-		logError("failed to read MagicaVoxel world: %s", e.what());
-	}
+	if (!readMagicaWorld("room.vox", magica_world))
+		logError("failed to read MagicaVoxel world");
 
 	gxCaptureMeshBegin(magica_mesh, magica_vb, magica_ib);
 	{
@@ -263,7 +241,7 @@ void Scene::destroy()
     created = false;
 }
 
-void Scene::tick(ovrMobile * ovr, const float dt, const double predictedDisplayTime)
+void Scene::tick(ovrMobile * ovr, const float dt, const double displayTime)
 {
 	bool inputIsCaptured = false;
 	guiContext.processBegin(.01f, guiWindow->getWidth(), guiWindow->getHeight(), inputIsCaptured);
@@ -295,7 +273,7 @@ void Scene::tick(ovrMobile * ovr, const float dt, const double predictedDisplayT
 		if (header.Type == ovrControllerType_TrackedRemote)
 		{
 			ovrTracking tracking;
-			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, predictedDisplayTime, &tracking) != ovrSuccess)
+			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, displayTime, &tracking) != ovrSuccess)
 				tracking.Status = 0;
 
 			ovrInputStateTrackedRemote state;
@@ -359,79 +337,6 @@ void Scene::tick(ovrMobile * ovr, const float dt, const double predictedDisplayT
 			}
 		}
 	}
-}
-
-/*
-================================================================================
-
-ovrRenderer
-
-================================================================================
-*/
-
-struct ovrRenderer
-{
-    ovrFramebuffer FrameBuffer[VRAPI_FRAME_LAYER_EYE_MAX];
-    int NumBuffers = VRAPI_FRAME_LAYER_EYE_MAX;
-    Mat4x4 projectionMatrices[2];
-    Mat4x4 viewMatrices[2];
-};
-
-static void ovrRenderer_Create(ovrRenderer * renderer, const ovrJava * java, const bool useMultiview)
-{
-    renderer->NumBuffers = useMultiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX;
-
-    // Create the frame buffers.
-    for (int eye = 0; eye < renderer->NumBuffers; eye++)
-    {
-        renderer->FrameBuffer[eye].init(
-            useMultiview,
-            GL_RGBA8,
-            vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH),
-            vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT),
-            NUM_MULTI_SAMPLES);
-    }
-}
-
-static void ovrRenderer_Destroy(ovrRenderer * renderer)
-{
-    for (int eye = 0; eye < renderer->NumBuffers; eye++)
-        renderer->FrameBuffer[eye].shut();
-}
-
-static void ovrRenderer_BeginRenderFrame(
-    ovrRenderer * renderer,
-    const ovrTracking2 * tracking)
-{
-	ovrMatrix4f eyeViewMatrixTransposed[2];
-	eyeViewMatrixTransposed[0] = ovrMatrix4f_Transpose(&tracking->Eye[0].ViewMatrix);
-	eyeViewMatrixTransposed[1] = ovrMatrix4f_Transpose(&tracking->Eye[1].ViewMatrix);
-
-	ovrMatrix4f projectionMatrixTransposed[2];
-	projectionMatrixTransposed[0] = ovrMatrix4f_Transpose(&tracking->Eye[0].ProjectionMatrix);
-	projectionMatrixTransposed[1] = ovrMatrix4f_Transpose(&tracking->Eye[1].ProjectionMatrix);
-
-	memcpy(renderer->projectionMatrices, projectionMatrixTransposed, sizeof(renderer->projectionMatrices));
-	memcpy(renderer->viewMatrices, eyeViewMatrixTransposed, sizeof(renderer->viewMatrices));
-}
-
-static ovrLayerProjection2 ovrRenderer_EndRenderFrame(
-	ovrRenderer * renderer,
-	const ovrTracking2 * tracking)
-{
-	ovrLayerProjection2 layer = vrapi_DefaultLayerProjection2();
-	layer.HeadPose = tracking->HeadPose;
-
-	for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
-	{
-		ovrFramebuffer * frameBuffer = &renderer->FrameBuffer[renderer->NumBuffers == 1 ? 0 : eye];
-		layer.Textures[eye].ColorSwapChain = frameBuffer->ColorTextureSwapChain;
-		layer.Textures[eye].SwapChainIndex = frameBuffer->TextureSwapChainIndex;
-		layer.Textures[eye].TexCoordsFromTanAngles = ovrMatrix4f_TanAngleMatrixFromProjection(&tracking->Eye[eye].ProjectionMatrix);
-	}
-	layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
-
-	return layer;
 }
 
 void Scene::draw() const
@@ -676,14 +581,9 @@ void Scene::drawEye(ovrMobile * ovr) const
     popDepthTest();
 }
 
-/*
-================================================================================
+// -- ovrApp
 
-ovrApp
-
-================================================================================
-*/
-
+// todo : cleanup, refactor, and transform into FrameworkVr
 struct ovrApp
 {
     ovrJava Java;
@@ -691,18 +591,30 @@ struct ovrApp
     ANativeWindow* NativeWindow = nullptr;
     bool Resumed = false;
     ovrMobile* Ovr = nullptr;
-    Scene Scene;
+
     long long FrameIndex = 1;
     double DisplayTime = 0.0;
     int SwapInterval = 1;
-    int CpuLevel = 2;
-    int GpuLevel = 2;
+    int CpuLevel = CPU_LEVEL;
+    int GpuLevel = GPU_LEVEL;
     int MainThreadTid = 0;
     int RenderThreadTid = 0;
     bool BackButtonDownLastFrame = false;
     bool GamePadBackButtonDown = false;
-    ovrRenderer Renderer;
+
+	// Rendering.
+	ovrFramebuffer FrameBuffer[VRAPI_FRAME_LAYER_EYE_MAX];
+	int NumBuffers = VRAPI_FRAME_LAYER_EYE_MAX;
     bool UseMultiview = true;
+
+	// Frame state.
+	ovrTracking2 Tracking;
+	Mat4x4 ProjectionMatrices[2];
+	Mat4x4 ViewMatrices[2];
+	ovrLayerProjection2 WorldLayer;
+
+	// Draw state.
+	int currentEyeIndex = -1;
 
     ovrApp()
     {
@@ -710,7 +622,145 @@ struct ovrApp
         Java.Env = nullptr;
         Java.ActivityObject = nullptr;
     }
+
+    void init(ovrJava * java, const bool useMultiview);
+    void shut();
+
+    void nextFrame();
+    void submitFrame();
+
+	int getEyeCount() const
+    {
+        return 2;
+    }
+
+	void beginEye(const int eyeIndex, const Color & clearColor);
+	void endEye();
 };
+
+void ovrApp::init(ovrJava * java, const bool useMultiview)
+{
+	MainThreadTid = gettid();
+
+	NumBuffers = useMultiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX;
+
+    // Create the frame buffers.
+	for (int eyeIndex = 0; eyeIndex < NumBuffers; ++eyeIndex)
+    {
+        FrameBuffer[eyeIndex].init(
+            useMultiview,
+            GL_RGBA8,
+            vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH),
+            vrapi_GetSystemPropertyInt(java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT),
+            NUM_MULTI_SAMPLES);
+    }
+}
+
+void ovrApp::shut()
+{
+    for (int eyeIndex = 0; eyeIndex < NumBuffers; ++eyeIndex)
+        FrameBuffer[eyeIndex].shut();
+}
+
+void ovrApp::nextFrame()
+{
+	// This is the only place the frame index is incremented, right before calling vrapi_GetPredictedDisplayTime().
+    FrameIndex++;
+
+    // Get the HMD pose, predicted for the middle of the time period during which
+    // the new eye images will be displayed. The number of frames predicted ahead
+    // depends on the pipeline depth of the engine and the synthesis rate.
+    // The better the prediction, the less black will be pulled in at the edges.
+	DisplayTime = vrapi_GetPredictedDisplayTime(Ovr, FrameIndex);
+    Tracking = vrapi_GetPredictedTracking2(Ovr, DisplayTime);
+
+	// Get the projection and view matrices using the predicted tracking info.
+	ovrMatrix4f eyeViewMatrixTransposed[2];
+	eyeViewMatrixTransposed[0] = ovrMatrix4f_Transpose(&Tracking.Eye[0].ViewMatrix);
+	eyeViewMatrixTransposed[1] = ovrMatrix4f_Transpose(&Tracking.Eye[1].ViewMatrix);
+
+	ovrMatrix4f projectionMatrixTransposed[2];
+	projectionMatrixTransposed[0] = ovrMatrix4f_Transpose(&Tracking.Eye[0].ProjectionMatrix);
+	projectionMatrixTransposed[1] = ovrMatrix4f_Transpose(&Tracking.Eye[1].ProjectionMatrix);
+
+	memcpy(ProjectionMatrices, projectionMatrixTransposed, sizeof(ProjectionMatrices));
+	memcpy(ViewMatrices, eyeViewMatrixTransposed, sizeof(ViewMatrices));
+
+	// Setup the projection layer we want to display.
+	ovrLayerProjection2 layer = vrapi_DefaultLayerProjection2();
+	layer.HeadPose = Tracking.HeadPose;
+
+	for (int eyeIndex = 0; eyeIndex < VRAPI_FRAME_LAYER_EYE_MAX; ++eyeIndex)
+	{
+		ovrFramebuffer * frameBuffer = &FrameBuffer[NumBuffers == 1 ? 0 : eyeIndex];
+		layer.Textures[eyeIndex].ColorSwapChain = frameBuffer->ColorTextureSwapChain;
+		layer.Textures[eyeIndex].SwapChainIndex = frameBuffer->TextureSwapChainIndex;
+		layer.Textures[eyeIndex].TexCoordsFromTanAngles = ovrMatrix4f_TanAngleMatrixFromProjection(&Tracking.Eye[eyeIndex].ProjectionMatrix);
+	}
+	layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+	WorldLayer = layer;
+}
+
+void ovrApp::submitFrame()
+{
+	const ovrLayerHeader2 * layers[] = { &WorldLayer.Header };
+
+	ovrSubmitFrameDescription2 frameDesc = { };
+	frameDesc.Flags = 0;
+	frameDesc.SwapInterval = SwapInterval;
+	frameDesc.FrameIndex = FrameIndex;
+	frameDesc.DisplayTime = DisplayTime;
+	frameDesc.LayerCount = 1;
+	frameDesc.Layers = layers;
+
+	// Hand over the eye images to the time warp.
+	vrapi_SubmitFrame2(Ovr, &frameDesc);
+}
+
+void ovrApp::beginEye(const int eyeIndex, const Color & clearColor)
+{
+	Assert(currentEyeIndex == -1);
+	currentEyeIndex = eyeIndex;
+
+	// NOTE: In the non-mv case, latency can be further reduced by updating the sensor
+	// prediction for each eye (updates orientation, not position)
+	ovrFramebuffer * frameBuffer = &FrameBuffer[eyeIndex];
+	ovrFramebuffer_SetCurrent(frameBuffer);
+
+	gxSetMatrixf(GX_PROJECTION, ProjectionMatrices[eyeIndex].m_v);
+	gxSetMatrixf(GX_MODELVIEW, ViewMatrices[eyeIndex].m_v);
+
+	glViewport(0, 0, frameBuffer->Width, frameBuffer->Height);
+	glScissor(0, 0, frameBuffer->Width, frameBuffer->Height);
+	checkErrorGL();
+
+// todo : clear depth ?
+	glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	checkErrorGL();
+
+	glEnable(GL_SCISSOR_TEST);
+	checkErrorGL();
+}
+
+void ovrApp::endEye()
+{
+	Assert(currentEyeIndex != -1);
+	ovrFramebuffer * frameBuffer = &FrameBuffer[currentEyeIndex];
+	currentEyeIndex = -1;
+
+	// Explicitly clear the border texels to black when GL_CLAMP_TO_BORDER is not available.
+	if (ovrOpenGLExtensions.EXT_texture_border_clamp == false)
+		ovrFramebuffer_ClearBorder(frameBuffer);
+
+	glDisable(GL_SCISSOR_TEST);
+	checkErrorGL();
+
+	ovrFramebuffer_Resolve(frameBuffer);
+	ovrFramebuffer_Advance(frameBuffer);
+
+	ovrFramebuffer_SetNone();
+}
 
 static void ovrApp_PushBlackFinal(ovrApp * app)
 {
@@ -1134,21 +1184,19 @@ int main(int argc, char * argv[])
 
 	ovrOpenGLExtensions.init();
 
-    framework.init(0, 0);
-
 #if USE_FRAMEWORK_DRAWING
-    appState.UseMultiview = false;
+    const bool useMultiview = false;
 #else
-    appState.UseMultiview &= (ovrOpenGLExtensions.multi_view && vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
+	const bool useMultiview &= (ovrOpenGLExtensions.multi_view && vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
 #endif
 
     logDebug("AppState UseMultiview : %d", appState.UseMultiview ? 1 : 0);
 
-    appState.CpuLevel = CPU_LEVEL;
-    appState.GpuLevel = GPU_LEVEL;
-    appState.MainThreadTid = gettid();
+	appState.init(&java, useMultiview);
 
-    ovrRenderer_Create(&appState.Renderer, &java, appState.UseMultiview);
+	framework.init(0, 0);
+
+	Scene scene;
 
     JgmodTest jgmodTest;
     //jgmodTest.init();
@@ -1296,7 +1344,7 @@ int main(int argc, char * argv[])
 
         // Create the scene if not yet created.
         // The scene is created here to be able to show a loading icon.
-        if (!appState.Scene.created)
+        if (!scene.created)
         {
             // Show a loading icon.
             const int frameFlags = VRAPI_FRAME_FLAG_FLUSH;
@@ -1324,84 +1372,29 @@ int main(int argc, char * argv[])
             vrapi_SubmitFrame2(appState.Ovr, &frameDesc);
 
             // Create the scene.
-            appState.Scene.create();
+            scene.create();
         }
 
-        // This is the only place the frame index is incremented, right before
-        // calling vrapi_GetPredictedDisplayTime().
-        appState.FrameIndex++;
-
-        // Get the HMD pose, predicted for the middle of the time period during which
-        // the new eye images will be displayed. The number of frames predicted ahead
-        // depends on the pipeline depth of the engine and the synthesis rate.
-        // The better the prediction, the less black will be pulled in at the edges.
-        const double predictedDisplayTime = vrapi_GetPredictedDisplayTime(appState.Ovr, appState.FrameIndex);
-        const ovrTracking2 tracking = vrapi_GetPredictedTracking2(appState.Ovr, predictedDisplayTime);
-
-        appState.DisplayTime = predictedDisplayTime;
+        appState.nextFrame();
 
         // Tick the simulation
-        const float timeStep = predictedDisplayTime - startTime;
-        appState.Scene.tick(appState.Ovr, timeStep, predictedDisplayTime);
+        const float timeStep = appState.DisplayTime - startTime;
+        scene.tick(appState.Ovr, timeStep, appState.DisplayTime);
 
-        // Render eye images and setup the primary layer using ovrTracking2.
-	    ovrRenderer_BeginRenderFrame(&appState.Renderer, &tracking);
+		// Render the stuff we need to draw only once (shared for each eye).
+	    scene.draw();
+
+		// Render the eye images.
+	    for (int eyeIndex = 0; eyeIndex < appState.getEyeCount(); ++eyeIndex)
 	    {
-		    appState.Scene.draw();
-
-		    // Render the eye images.
-		    for (int eye = 0; eye < appState.Renderer.NumBuffers; eye++)
+	        appState.beginEye(eyeIndex, colorBlack);
 		    {
-		        // NOTE: In the non-mv case, latency can be further reduced by updating the sensor
-		        // prediction for each eye (updates orientation, not position)
-		        ovrFramebuffer * frameBuffer = &appState.Renderer.FrameBuffer[eye];
-		        ovrFramebuffer_SetCurrent(frameBuffer);
-
-				const Mat4x4 & projectionMatrix = appState.Renderer.projectionMatrices[eye];
-				const Mat4x4 & worldToView = appState.Renderer.viewMatrices[eye];
-			    gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
-			    gxSetMatrixf(GX_MODELVIEW, worldToView.m_v);
-
-		        glEnable(GL_SCISSOR_TEST);
-		        checkErrorGL();
-
-		        glViewport(0, 0, frameBuffer->Width, frameBuffer->Height);
-		        glScissor(0, 0, frameBuffer->Width, frameBuffer->Height);
-		        checkErrorGL();
-
-			    glClearColor(0.f, 0.f, 0.f, 1.f);
-		        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-		        checkErrorGL();
-
-			    appState.Scene.drawEye(appState.Ovr);
-
-				// Explicitly clear the border texels to black when GL_CLAMP_TO_BORDER is not available.
-				if (ovrOpenGLExtensions.EXT_texture_border_clamp == false)
-					ovrFramebuffer_ClearBorder(frameBuffer);
-
-				ovrFramebuffer_Resolve(frameBuffer);
-				ovrFramebuffer_Advance(frameBuffer);
-
-				glDisable(GL_SCISSOR_TEST);
-				checkErrorGL();
-
-				ovrFramebuffer_SetNone();
+		        scene.drawEye(appState.Ovr);
 		    }
+			appState.endEye();
 	    }
-	    const ovrLayerProjection2 worldLayer = ovrRenderer_EndRenderFrame(&appState.Renderer, &tracking);
 
-        const ovrLayerHeader2 * layers[] = { &worldLayer.Header };
-
-        ovrSubmitFrameDescription2 frameDesc = { };
-        frameDesc.Flags = 0;
-        frameDesc.SwapInterval = appState.SwapInterval;
-        frameDesc.FrameIndex = appState.FrameIndex;
-        frameDesc.DisplayTime = appState.DisplayTime;
-        frameDesc.LayerCount = 1;
-        frameDesc.Layers = layers;
-
-        // Hand over the eye images to the time warp.
-        vrapi_SubmitFrame2(appState.Ovr, &frameDesc);
+		appState.submitFrame();
     }
 
     Font("calibri.ttf").saveCache();
@@ -1410,9 +1403,11 @@ int main(int argc, char * argv[])
 
     jgmodTest.shut();
 
-    ovrRenderer_Destroy(&appState.Renderer);
+	scene.destroy();
 
-	appState.Scene.destroy();
+	framework.shutdown();
+
+	appState.shut();
 
     appState.Egl.destroyContext();
 
