@@ -155,6 +155,7 @@ const MagicaModel * MagicaWorld::tryGetModel(int id) const
 // -- io --
 
 #include "Stream.h"
+#include "StreamReader.h"
 #include <stdio.h> // sscanf
 
 struct magica_chunk_t
@@ -453,3 +454,19 @@ bool readMagicaWorld(StreamReader & r, MagicaWorld & world)
 	}
 }
 
+#include "FileStream.h"
+
+bool readMagicaWorld(const char * filename, MagicaWorld & world)
+{
+	try
+	{
+		FileStream stream(filename, OpenMode_Read);
+		StreamReader reader(&stream, false);
+
+		return readMagicaWorld(reader, world);
+	}
+	catch (std::exception & e)
+	{
+		return false;
+	}
+}

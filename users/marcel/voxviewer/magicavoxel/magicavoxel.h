@@ -128,6 +128,7 @@ struct MagicaWorld
 
 // -- io --
 
-#include "StreamReader.h"
+class StreamReader;
 
 bool readMagicaWorld(StreamReader & r, MagicaWorld & world);
+bool readMagicaWorld(const char * filename, MagicaWorld & world);
