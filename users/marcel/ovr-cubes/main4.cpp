@@ -283,8 +283,6 @@ ovrScene
 
 #include "gx_mesh.h"
 #include "image.h"
-#include "../framework-gltf/gltf-draw.h"
-#include "../voxviewer/magicavoxel/magicavoxel.h"
 
 struct PointerObject
 {
@@ -1293,299 +1291,305 @@ struct AudiographTest
 	}
 };
 
-extern "C"
+#include "framework-android-app.h"
+
+#include <android_native_app_glue.h>
+#include <android/native_activity.h>
+
+int main(int argc, char * argv[])
 {
-    #include <android_native_app_glue.h>
-    #include <android/native_activity.h>
+    android_app * app = get_android_app();
 
-    void android_main(android_app* app)
+    const double t1 = GetTimeInSeconds();
+    const bool copied_files =
+	    chdir(app->activity->internalDataPath) == 0 &&
+        assetcopy::recursively_copy_assets_to_filesystem(
+		    app->activity->vm,
+		    app->activity->clazz,
+		    app->activity->assetManager,
+		    "") &&
+	    chdir(app->activity->internalDataPath) == 0;
+    const double t2 = GetTimeInSeconds();
+    logInfo("asset copying took %.2f seconds", (t2 - t1));
+
+    ANativeActivity_setWindowFlags(app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
+
+    ovrJava java;
+    java.Vm = app->activity->vm;
+    java.Vm->AttachCurrentThread(&java.Env, nullptr);
+    java.ActivityObject = app->activity->clazz;
+
+// todo : set thread name
+    // Note that AttachCurrentThread will reset the thread name.
+    //prctl(PR_SET_NAME, (long)"OVR::Main", 0, 0, 0);
+
+    const ovrInitParms initParms = vrapi_DefaultInitParms(&java);
+    const int32_t initResult = vrapi_Initialize(&initParms);
+
+    if (initResult != VRAPI_INITIALIZE_SUCCESS)
     {
-        const double t1 = GetTimeInSeconds();
-	    const bool copied_files =
-		    chdir(app->activity->internalDataPath) == 0 &&
-	        assetcopy::recursively_copy_assets_to_filesystem(
-			    app->activity->vm,
-			    app->activity->clazz,
-			    app->activity->assetManager,
-			    "") &&
-		    chdir(app->activity->internalDataPath) == 0;
-	    const double t2 = GetTimeInSeconds();
-	    logInfo("asset copying took %.2f seconds", (t2 - t1));
+        // If intialization failed, vrapi_* function calls will not be available.
+        exit(0);
+    }
 
-        ANativeActivity_setWindowFlags(app->activity, AWINDOW_FLAG_KEEP_SCREEN_ON, 0);
+    ovrApp appState;
+    appState.Java = java;
 
-        ovrJava java;
-        java.Vm = app->activity->vm;
-        java.Vm->AttachCurrentThread(&java.Env, nullptr);
-        java.ActivityObject = app->activity->clazz;
+// todo : the native activity example doesn't do this. why? and what does it do anyway?
+    // This app will handle android gamepad events itself.
+    vrapi_SetPropertyInt(&appState.Java, VRAPI_EAT_NATIVE_GAMEPAD_EVENTS, 0);
 
-    // todo : set thread name
-        // Note that AttachCurrentThread will reset the thread name.
-        //prctl(PR_SET_NAME, (long)"OVR::Main", 0, 0, 0);
+    ovrEgl_CreateContext(&appState.Egl, nullptr);
 
-        const ovrInitParms initParms = vrapi_DefaultInitParms(&java);
-        const int32_t initResult = vrapi_Initialize(&initParms);
+    EglInitExtensions();
 
-        if (initResult != VRAPI_INITIALIZE_SUCCESS)
-        {
-            // If intialization failed, vrapi_* function calls will not be available.
-            exit(0);
+    framework.init(0, 0);
+
+#if USE_FRAMEWORK_DRAWING
+    appState.UseMultiview = false;
+#else
+    appState.UseMultiview &= (glExtensions.multi_view && vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
+#endif
+
+    logDebug("AppState UseMultiview : %d", appState.UseMultiview ? 1 : 0);
+
+    appState.CpuLevel = CPU_LEVEL;
+    appState.GpuLevel = GPU_LEVEL;
+    appState.MainThreadTid = gettid();
+
+    ovrRenderer_Create(&appState.Renderer, &java, appState.UseMultiview);
+
+    JgmodTest jgmodTest;
+    //jgmodTest.init();
+
+    AudiographTest audiographTest;
+    audiographTest.init();
+
+    const double startTime = GetTimeInSeconds();
+
+    while (!app->destroyRequested)
+    {
+		for (;;)
+		{
+			const int timeoutMilliseconds = (appState.Ovr == nullptr && app->destroyRequested == 0) ? -1 : 0;
+
+			int events;
+			struct android_poll_source *source;
+	        const int ident = ALooper_pollAll(timeoutMilliseconds, NULL, &events, (void **) &source);
+
+	        if (ident < 0)
+	            break;
+
+            if (ident == LOOPER_ID_MAIN)
+            {
+                auto cmd = android_app_read_cmd(app);
+
+                android_app_pre_exec_cmd(app, cmd);
+
+				switch (cmd)
+				{
+				case APP_CMD_START:
+                    logDebug("APP_CMD_START");
+                    break;
+
+				case APP_CMD_STOP:
+                    logDebug("APP_CMD_STOP");
+                    break;
+
+				case APP_CMD_RESUME:
+                    logDebug("APP_CMD_RESUME");
+                    appState.Resumed = true;
+                    break;
+
+				case APP_CMD_PAUSE:
+                    logDebug("APP_CMD_PAUSE");
+                    appState.Resumed = false;
+                    break;
+
+				case APP_CMD_INIT_WINDOW:
+                    logDebug("APP_CMD_INIT_WINDOW");
+                    appState.NativeWindow = app->window;
+                    break;
+
+				case APP_CMD_TERM_WINDOW:
+                    logDebug("APP_CMD_TERM_WINDOW");
+                    appState.NativeWindow = nullptr;
+                    break;
+
+				case APP_CMD_CONTENT_RECT_CHANGED:
+                    if (ANativeWindow_getWidth(app->window) < ANativeWindow_getHeight(app->window))
+                    {
+                        // An app that is relaunched after pressing the home button gets an initial surface with
+                        // the wrong orientation even though android:screenOrientation="landscape" is set in the
+                        // manifest. The choreographer callback will also never be called for this surface because
+                        // the surface is immediately replaced with a new surface with the correct orientation.
+                        logError("- Surface not in landscape mode!");
+                    }
+
+                    if (app->window != appState.NativeWindow)
+                    {
+                        if (appState.NativeWindow != nullptr)
+                        {
+                            // todo : perform actions due to window being destroyed
+                            appState.NativeWindow = nullptr;
+                        }
+
+                        if (app->window != nullptr)
+                        {
+                            // todo : perform actions due to window being created
+                            appState.NativeWindow = app->window;
+                        }
+                    }
+                    break;
+
+				default:
+                    break;
+				}
+
+                android_app_post_exec_cmd(app, cmd);
+            }
+            else if (ident == LOOPER_ID_INPUT)
+            {
+                AInputEvent * event = nullptr;
+                while (AInputQueue_getEvent(app->inputQueue, &event) >= 0)
+                {
+                    //if (AInputQueue_preDispatchEvent(app->inputQueue, event))
+                    //    continue;
+
+                    int32_t handled = 0;
+
+                    if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY)
+                    {
+                        const int keyCode = AKeyEvent_getKeyCode(event);
+                        const int action = AKeyEvent_getAction(event);
+
+                        if (action != AKEY_EVENT_ACTION_DOWN &&
+                            action != AKEY_EVENT_ACTION_UP)
+                        {
+                            // dispatch
+                        }
+                        else if (keyCode == AKEYCODE_VOLUME_UP)
+                        {
+                            // dispatch
+                        }
+                        else if (keyCode == AKEYCODE_VOLUME_DOWN)
+                        {
+                            // dispatch
+                        }
+                        else
+                        {
+                            if (ovrApp_HandleKeyEvent(
+                                &appState,
+                                keyCode,
+                                action))
+                            {
+                                handled = 1;
+                            }
+                        }
+                    }
+
+                    AInputQueue_finishEvent(app->inputQueue, event, handled);
+                }
+            }
+
+	        ovrApp_HandleVrModeChanges(&appState);
         }
 
-        ovrApp appState;
-        appState.Java = java;
+        // We must read from the event queue with regular frequency.
+        ovrApp_HandleVrApiEvents(&appState);
 
-    // todo : the native activity example doesn't do this. why? and what does it do anyway?
-        // This app will handle android gamepad events itself.
-        vrapi_SetPropertyInt(&appState.Java, VRAPI_EAT_NATIVE_GAMEPAD_EVENTS, 0);
+        ovrApp_HandleInput(&appState);
 
-        ovrEgl_CreateContext(&appState.Egl, nullptr);
+        if (appState.Ovr == nullptr)
+            continue;
 
-        EglInitExtensions();
-
-	    framework.init(0, 0);
-
-	#if USE_FRAMEWORK_DRAWING
-	    appState.UseMultiview = false;
-	#else
-        appState.UseMultiview &= (glExtensions.multi_view && vrapi_GetSystemPropertyInt(&appState.Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
-	#endif
-
-        logDebug("AppState UseMultiview : %d", appState.UseMultiview ? 1 : 0);
-
-        appState.CpuLevel = CPU_LEVEL;
-        appState.GpuLevel = GPU_LEVEL;
-        appState.MainThreadTid = gettid();
-
-        ovrRenderer_Create(&appState.Renderer, &java, appState.UseMultiview);
-
-        JgmodTest jgmodTest;
-        //jgmodTest.init();
-
-        AudiographTest audiographTest;
-        audiographTest.init();
-
-        const double startTime = GetTimeInSeconds();
-
-        while (!app->destroyRequested)
+        // Create the scene if not yet created.
+        // The scene is created here to be able to show a loading icon.
+        if (!appState.Scene.created)
         {
-            int ident;
-            int events;
-            struct android_poll_source *source;
-            //const int timeoutMilliseconds = (appState.Ovr == NULL && app->destroyRequested == 0) ? -1 : 0;
-            const int timeoutMilliseconds = 0;
+            // Show a loading icon.
+            const int frameFlags = VRAPI_FRAME_FLAG_FLUSH;
 
-            while ((ident = ALooper_pollAll(timeoutMilliseconds, NULL, &events, (void **) &source)) >= 0)
-            {
-                if (ident == LOOPER_ID_MAIN)
+            ovrLayerProjection2 blackLayer = vrapi_DefaultLayerBlackProjection2();
+            blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
+
+            ovrLayerLoadingIcon2 iconLayer = vrapi_DefaultLayerLoadingIcon2();
+            iconLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
+
+            const ovrLayerHeader2 * layers[] =
                 {
-                    auto cmd = android_app_read_cmd(app);
-
-                    android_app_pre_exec_cmd(app, cmd);
-
-					switch (cmd)
-					{
-					case APP_CMD_START:
-                        logDebug("APP_CMD_START");
-                        break;
-
-					case APP_CMD_STOP:
-                        logDebug("APP_CMD_STOP");
-                        break;
-
-					case APP_CMD_RESUME:
-                        logDebug("APP_CMD_RESUME");
-                        appState.Resumed = true;
-                        break;
-
-					case APP_CMD_PAUSE:
-                        logDebug("APP_CMD_PAUSE");
-                        appState.Resumed = false;
-                        break;
-
-					case APP_CMD_INIT_WINDOW:
-                        logDebug("APP_CMD_INIT_WINDOW");
-                        appState.NativeWindow = app->window;
-                        break;
-
-					case APP_CMD_TERM_WINDOW:
-                        logDebug("APP_CMD_TERM_WINDOW");
-                        appState.NativeWindow = nullptr;
-                        break;
-
-					case APP_CMD_CONTENT_RECT_CHANGED:
-                        if (ANativeWindow_getWidth(app->window) < ANativeWindow_getHeight(app->window))
-                        {
-                            // An app that is relaunched after pressing the home button gets an initial surface with
-                            // the wrong orientation even though android:screenOrientation="landscape" is set in the
-                            // manifest. The choreographer callback will also never be called for this surface because
-                            // the surface is immediately replaced with a new surface with the correct orientation.
-                            logError("- Surface not in landscape mode!");
-                        }
-
-                        if (app->window != appState.NativeWindow)
-                        {
-                            if (appState.NativeWindow != nullptr)
-                            {
-                                // todo : perform actions due to window being destroyed
-                                appState.NativeWindow = nullptr;
-                            }
-
-                            if (app->window != nullptr)
-                            {
-                                // todo : perform actions due to window being created
-                                appState.NativeWindow = app->window;
-                            }
-                        }
-                        break;
-
-					default:
-                        break;
-					}
-
-                    android_app_post_exec_cmd(app, cmd);
-                }
-                else if (ident == LOOPER_ID_INPUT)
-                {
-                    AInputEvent * event = nullptr;
-                    while (AInputQueue_getEvent(app->inputQueue, &event) >= 0)
-                    {
-                        //if (AInputQueue_preDispatchEvent(app->inputQueue, event))
-                        //    continue;
-
-                        int32_t handled = 0;
-
-                        if (AInputEvent_getType(event) == AINPUT_EVENT_TYPE_KEY)
-                        {
-                            const int keyCode = AKeyEvent_getKeyCode(event);
-	                        const int action = AKeyEvent_getAction(event);
-
-                            if (action != AKEY_EVENT_ACTION_DOWN &&
-                                action != AKEY_EVENT_ACTION_UP)
-                            {
-                                // dispatch
-                            }
-                            else if (keyCode == AKEYCODE_VOLUME_UP)
-                            {
-	                            // dispatch
-                            }
-                            else if (keyCode == AKEYCODE_VOLUME_DOWN)
-                            {
-	                            // dispatch
-                            }
-                            else
-                            {
-                                if (ovrApp_HandleKeyEvent(
-                                    &appState,
-                                    keyCode,
-                                    action))
-                                {
-                                    handled = 1;
-                                }
-                            }
-                        }
-
-                        AInputQueue_finishEvent(app->inputQueue, event, handled);
-                    }
-                }
-
-                ovrApp_HandleVrModeChanges(&appState);
-            }
-
-            // We must read from the event queue with regular frequency.
-            ovrApp_HandleVrApiEvents(&appState);
-
-            ovrApp_HandleInput(&appState);
-
-            if (appState.Ovr == nullptr)
-                continue;
-
-            // Create the scene if not yet created.
-            // The scene is created here to be able to show a loading icon.
-            if (!appState.Scene.created)
-            {
-                // Show a loading icon.
-                const int frameFlags = VRAPI_FRAME_FLAG_FLUSH;
-
-                ovrLayerProjection2 blackLayer = vrapi_DefaultLayerBlackProjection2();
-                blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
-
-                ovrLayerLoadingIcon2 iconLayer = vrapi_DefaultLayerLoadingIcon2();
-                iconLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
-
-                const ovrLayerHeader2 * layers[] =
-                    {
-                        &blackLayer.Header,
-                        &iconLayer.Header,
-                    };
-
-                ovrSubmitFrameDescription2 frameDesc = { };
-                frameDesc.Flags = frameFlags;
-                frameDesc.SwapInterval = 1;
-                frameDesc.FrameIndex = appState.FrameIndex;
-                frameDesc.DisplayTime = appState.DisplayTime;
-                frameDesc.LayerCount = 2;
-                frameDesc.Layers = layers;
-
-                vrapi_SubmitFrame2(appState.Ovr, &frameDesc);
-
-                // Create the scene.
-                appState.Scene.create();
-            }
-
-            // This is the only place the frame index is incremented, right before
-            // calling vrapi_GetPredictedDisplayTime().
-            appState.FrameIndex++;
-
-            // Get the HMD pose, predicted for the middle of the time period during which
-            // the new eye images will be displayed. The number of frames predicted ahead
-            // depends on the pipeline depth of the engine and the synthesis rate.
-            // The better the prediction, the less black will be pulled in at the edges.
-            const double predictedDisplayTime = vrapi_GetPredictedDisplayTime(appState.Ovr, appState.FrameIndex);
-            const ovrTracking2 tracking = vrapi_GetPredictedTracking2(appState.Ovr, predictedDisplayTime);
-
-            appState.DisplayTime = predictedDisplayTime;
-
-	        // Tick the simulation
-            const float timeStep = predictedDisplayTime - startTime;
-            appState.Scene.tick(appState.Ovr, timeStep, predictedDisplayTime);
-
-            // Render eye images and setup the primary layer using ovrTracking2.
-            const ovrLayerProjection2 worldLayer = ovrRenderer_RenderFrame(
-                &appState.Renderer,
-                &appState.Java,
-                &appState.Scene,
-                &tracking,
-                appState.Ovr);
-
-            const ovrLayerHeader2 * layers[] = { &worldLayer.Header };
+                    &blackLayer.Header,
+                    &iconLayer.Header,
+                };
 
             ovrSubmitFrameDescription2 frameDesc = { };
-            frameDesc.Flags = 0;
-            frameDesc.SwapInterval = appState.SwapInterval;
+            frameDesc.Flags = frameFlags;
+            frameDesc.SwapInterval = 1;
             frameDesc.FrameIndex = appState.FrameIndex;
             frameDesc.DisplayTime = appState.DisplayTime;
-            frameDesc.LayerCount = 1;
+            frameDesc.LayerCount = 2;
             frameDesc.Layers = layers;
 
-            // Hand over the eye images to the time warp.
             vrapi_SubmitFrame2(appState.Ovr, &frameDesc);
+
+            // Create the scene.
+            appState.Scene.create();
         }
 
-        Font("calibri.ttf").saveCache();
+        // This is the only place the frame index is incremented, right before
+        // calling vrapi_GetPredictedDisplayTime().
+        appState.FrameIndex++;
 
-	    audiographTest.shut();
+        // Get the HMD pose, predicted for the middle of the time period during which
+        // the new eye images will be displayed. The number of frames predicted ahead
+        // depends on the pipeline depth of the engine and the synthesis rate.
+        // The better the prediction, the less black will be pulled in at the edges.
+        const double predictedDisplayTime = vrapi_GetPredictedDisplayTime(appState.Ovr, appState.FrameIndex);
+        const ovrTracking2 tracking = vrapi_GetPredictedTracking2(appState.Ovr, predictedDisplayTime);
 
-	    jgmodTest.shut();
+        appState.DisplayTime = predictedDisplayTime;
 
-        ovrRenderer_Destroy(&appState.Renderer);
+        // Tick the simulation
+        const float timeStep = predictedDisplayTime - startTime;
+        appState.Scene.tick(appState.Ovr, timeStep, predictedDisplayTime);
 
-		appState.Scene.destroy();
+        // Render eye images and setup the primary layer using ovrTracking2.
+        const ovrLayerProjection2 worldLayer = ovrRenderer_RenderFrame(
+            &appState.Renderer,
+            &appState.Java,
+            &appState.Scene,
+            &tracking,
+            appState.Ovr);
 
-        ovrEgl_DestroyContext(&appState.Egl);
+        const ovrLayerHeader2 * layers[] = { &worldLayer.Header };
 
-        vrapi_Shutdown();
+        ovrSubmitFrameDescription2 frameDesc = { };
+        frameDesc.Flags = 0;
+        frameDesc.SwapInterval = appState.SwapInterval;
+        frameDesc.FrameIndex = appState.FrameIndex;
+        frameDesc.DisplayTime = appState.DisplayTime;
+        frameDesc.LayerCount = 1;
+        frameDesc.Layers = layers;
 
-        java.Vm->DetachCurrentThread();
+        // Hand over the eye images to the time warp.
+        vrapi_SubmitFrame2(appState.Ovr, &frameDesc);
     }
+
+    Font("calibri.ttf").saveCache();
+
+    audiographTest.shut();
+
+    jgmodTest.shut();
+
+    ovrRenderer_Destroy(&appState.Renderer);
+
+	appState.Scene.destroy();
+
+    ovrEgl_DestroyContext(&appState.Egl);
+
+    vrapi_Shutdown();
+
+    java.Vm->DetachCurrentThread();
+
+	return 0;
 }
