@@ -142,6 +142,8 @@ struct Scene
     void create();
     void destroy();
     void tick(ovrMobile * ovr, const float dt, const double predictedDisplayTime);
+    void draw() const;
+    void drawEye(ovrMobile * ovr) const;
 };
 
 #include "FileStream.h"
@@ -371,6 +373,8 @@ struct ovrRenderer
 {
     ovrFramebuffer FrameBuffer[VRAPI_FRAME_LAYER_EYE_MAX];
     int NumBuffers = VRAPI_FRAME_LAYER_EYE_MAX;
+    Mat4x4 projectionMatrices[2];
+    Mat4x4 viewMatrices[2];
 };
 
 static void ovrRenderer_Create(ovrRenderer * renderer, const ovrJava * java, const bool useMultiview)
@@ -395,302 +399,281 @@ static void ovrRenderer_Destroy(ovrRenderer * renderer)
         renderer->FrameBuffer[eye].shut();
 }
 
-static ovrLayerProjection2 ovrRenderer_RenderFrame(
+static void ovrRenderer_BeginRenderFrame(
     ovrRenderer * renderer,
-    const ovrJava * java,
-    const Scene * scene,
-    const ovrTracking2 * tracking,
-    ovrMobile * ovr)
+    const ovrTracking2 * tracking)
+{
+	ovrMatrix4f eyeViewMatrixTransposed[2];
+	eyeViewMatrixTransposed[0] = ovrMatrix4f_Transpose(&tracking->Eye[0].ViewMatrix);
+	eyeViewMatrixTransposed[1] = ovrMatrix4f_Transpose(&tracking->Eye[1].ViewMatrix);
+
+	ovrMatrix4f projectionMatrixTransposed[2];
+	projectionMatrixTransposed[0] = ovrMatrix4f_Transpose(&tracking->Eye[0].ProjectionMatrix);
+	projectionMatrixTransposed[1] = ovrMatrix4f_Transpose(&tracking->Eye[1].ProjectionMatrix);
+
+	memcpy(renderer->projectionMatrices, projectionMatrixTransposed, sizeof(renderer->projectionMatrices));
+	memcpy(renderer->viewMatrices, eyeViewMatrixTransposed, sizeof(renderer->viewMatrices));
+}
+
+static ovrLayerProjection2 ovrRenderer_EndRenderFrame(
+	ovrRenderer * renderer,
+	const ovrTracking2 * tracking)
+{
+	ovrLayerProjection2 layer = vrapi_DefaultLayerProjection2();
+	layer.HeadPose = tracking->HeadPose;
+
+	for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
+	{
+		ovrFramebuffer * frameBuffer = &renderer->FrameBuffer[renderer->NumBuffers == 1 ? 0 : eye];
+		layer.Textures[eye].ColorSwapChain = frameBuffer->ColorTextureSwapChain;
+		layer.Textures[eye].SwapChainIndex = frameBuffer->TextureSwapChainIndex;
+		layer.Textures[eye].TexCoordsFromTanAngles = ovrMatrix4f_TanAngleMatrixFromProjection(&tracking->Eye[eye].ProjectionMatrix);
+	}
+	layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+
+	return layer;
+}
+
+void Scene::draw() const
 {
 	setFont("calibri.ttf");
 
-	pushWindow(*scene->guiWindow);
+	pushWindow(*guiWindow);
 	{
 		framework.beginDraw(0, 0, 0, 255);
 		{
-			scene->guiContext.draw();
+			guiContext.draw();
 		}
 		framework.endDraw();
 	}
 	popWindow();
 
-	scene->graphEdit->displaySx = scene->graphEditWindow->getWidth();
-	scene->graphEdit->displaySy = scene->graphEditWindow->getHeight();
-	scene->graphEdit->tick(.01f, false);
+	graphEdit->displaySx = graphEditWindow->getWidth();
+	graphEdit->displaySy = graphEditWindow->getHeight();
+	graphEdit->tick(.01f, false);
 
-	pushWindow(*scene->graphEditWindow);
+	pushWindow(*graphEditWindow);
 	{
 		framework.beginDraw(0, 0, 0, 0);
 		{
 			pushFontMode(FONT_SDF);
-			scene->graphEdit->draw();
+			graphEdit->draw();
 			popFontMode();
 		}
 		framework.endDraw();
 	}
 	popWindow();
+}
 
-    ovrTracking2 updatedTracking = *tracking;
+void Scene::drawEye(ovrMobile * ovr) const
+{
+	Mat4x4 worldToView;
+	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 
-    ovrMatrix4f eyeViewMatrixTransposed[2];
-    eyeViewMatrixTransposed[0] = ovrMatrix4f_Transpose(&updatedTracking.Eye[0].ViewMatrix);
-    eyeViewMatrixTransposed[1] = ovrMatrix4f_Transpose(&updatedTracking.Eye[1].ViewMatrix);
+    setFont("calibri.ttf");
 
-    ovrMatrix4f projectionMatrixTransposed[2];
-    projectionMatrixTransposed[0] = ovrMatrix4f_Transpose(&updatedTracking.Eye[0].ProjectionMatrix);
-    projectionMatrixTransposed[1] = ovrMatrix4f_Transpose(&updatedTracking.Eye[1].ProjectionMatrix);
+    gxTranslatef(
+	    -playerLocation[0],
+	    -playerLocation[1],
+	    -playerLocation[2]);
 
-    ovrLayerProjection2 layer = vrapi_DefaultLayerProjection2();
-    layer.HeadPose = updatedTracking.HeadPose;
-    for (int eye = 0; eye < VRAPI_FRAME_LAYER_EYE_MAX; eye++)
+    pushDepthTest(true, DEPTH_LESS);
+    pushBlend(BLEND_OPAQUE);
+
+	// Adjust for floor level.
+	float ground_y = 0.f;
+
     {
-        ovrFramebuffer * frameBuffer = &renderer->FrameBuffer[renderer->NumBuffers == 1 ? 0 : eye];
-        layer.Textures[eye].ColorSwapChain = frameBuffer->ColorTextureSwapChain;
-        layer.Textures[eye].SwapChainIndex = frameBuffer->TextureSwapChainIndex;
-        layer.Textures[eye].TexCoordsFromTanAngles = ovrMatrix4f_TanAngleMatrixFromProjection(&updatedTracking.Eye[eye].ProjectionMatrix);
+	    ovrPosef boundaryPose;
+	    ovrVector3f boundaryScale;
+	    if (vrapi_GetBoundaryOrientedBoundingBox(ovr, &boundaryPose, &boundaryScale) == ovrSuccess)
+	        ground_y = boundaryPose.Translation.y;
     }
-    layer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_CHROMATIC_ABERRATION_CORRECTION;
+    gxPushMatrix();
+    gxTranslatef(0, ground_y, 0);
 
-    // Render the eye images.
-    for (int eye = 0; eye < renderer->NumBuffers; eye++)
+    const double time = GetTimeInSeconds();
+
+	// Draw gltf scene.
+	gxPushMatrix();
     {
-        // NOTE: In the non-mv case, latency can be further reduced by updating the sensor
-        // prediction for each eye (updates orientation, not position)
-        ovrFramebuffer * frameBuffer = &renderer->FrameBuffer[eye];
-        ovrFramebuffer_SetCurrent(frameBuffer);
+		gxTranslatef(0, 2.5f, 0);
+		gxRotatef(time * 40.f, 0, 1, 0);
+		gxScalef(.1f, .1f, .1f);
+		gltf::MaterialShaders materialShaders;
+		gltf::setDefaultMaterialShaders(materialShaders);
+		gltf::setDefaultMaterialLighting(materialShaders, worldToView, Vec3(.3f, -1.f, .3f).CalcNormalized(), Vec3(1.f, .8f, .6f), Vec3(.02f));
+		gltf::DrawOptions drawOptions;
+		gltf::drawScene(gltf_scene, &gltf_bufferCache, materialShaders, true, &drawOptions);
+    }
+	gxPopMatrix();
 
-        glEnable(GL_SCISSOR_TEST);
-        checkErrorGL();
+	// Draw MagicVoxel world
+    gxPushMatrix();
+    gxScalef(.01f, .01f, .01f);
+    pushShaderOutputs("n");
+	//drawMagicaWorld(magica_world);
+	//magica_mesh.draw();
+	popShaderOutputs();
+	gxPopMatrix();
 
-        glViewport(0, 0, frameBuffer->Width, frameBuffer->Height);
-        glScissor(0, 0, frameBuffer->Width, frameBuffer->Height);
-        checkErrorGL();
+    // Draw terrain.
+    terrain_mesh.draw();
 
-        //glClearColor(0.125f, 0.0f, 0.125f, 1.0f);
-	    glClearColor(0.f, 0.f, 0.f, 1.f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        checkErrorGL();
-
-	    gxSetMatrixf(GX_MODELVIEW, (float*)eyeViewMatrixTransposed[eye].M);
-	    gxSetMatrixf(GX_PROJECTION, (float*)projectionMatrixTransposed[eye].M);
-
-	    gxTranslatef(
-		    -scene->playerLocation[0],
-		    -scene->playerLocation[1],
-		    -scene->playerLocation[2]);
-
-	    pushDepthTest(true, DEPTH_LESS);
-	    pushBlend(BLEND_OPAQUE);
-
-		// Adjust for floor level.
-		float ground_y = 0.f;
-
-	    {
-		    ovrPosef boundaryPose;
-		    ovrVector3f boundaryScale;
-		    if (vrapi_GetBoundaryOrientedBoundingBox(ovr, &boundaryPose, &boundaryScale) == ovrSuccess)
-		        ground_y = boundaryPose.Translation.y;
-	    }
+	// Draw circles.
+    for (int i = 0; i < 16; ++i)
+    {
 	    gxPushMatrix();
-	    gxTranslatef(0, ground_y, 0);
 
-	    const double time = GetTimeInSeconds();
+        const float t = float(sin(time / 4.0 + i) + 1.f) / 2.f;
+	    const float size = lerp<float>(1.f, 4.f, t);
+	    const float c = 1.f - t;
 
-		// Draw gltf scene.
-		gxPushMatrix();
-	    {
-			gxTranslatef(0, 2.5f, 0);
-			gxRotatef(time * 40.f, 0, 1, 0);
-			gxScalef(.1f, .1f, .1f);
-			gltf::MaterialShaders materialShaders;
-			gltf::setDefaultMaterialShaders(materialShaders);
-			gltf::setDefaultMaterialLighting(materialShaders, (Mat4x4&)eyeViewMatrixTransposed, Vec3(.3f, -1.f, .3f).CalcNormalized(), Vec3(1.f, .8f, .6f), Vec3(.02f));
-			gltf::DrawOptions drawOptions;
-			gltf::drawScene(scene->gltf_scene, &scene->gltf_bufferCache, materialShaders, true, &drawOptions);
-	    }
-		gxPopMatrix();
+	    const float y_t = float(sin(time / 6.0 / 2.34f + i) + 1.f) / 2.f;
+	    const float y = lerp<float>(0.f, 4.f, y_t);
+	    gxTranslatef(0, y, 0);
+	    gxRotatef(90, 1, 0, 0);
 
-		// Draw MagicVoxel world
-	    gxPushMatrix();
-	    gxScalef(.01f, .01f, .01f);
-	    pushShaderOutputs("n");
-		//drawMagicaWorld(scene->magica_world);
-		//scene->magica_mesh.draw();
-		popShaderOutputs();
-		gxPopMatrix();
+	    setColorf(c, c, c, 1.f);
+	    drawCircle(0.f, 0.f, size, 100);
 
-	    // Draw terrain.
-	    scene->terrain_mesh.draw();
+	    gxPopMatrix();
+    }
 
-		// Draw circles.
-	    for (int i = 0; i < 16; ++i)
-	    {
-		    gxPushMatrix();
+    gxPopMatrix(); // Undo ground level adjustment.
 
-	        const float t = float(sin(time / 4.0 + i) + 1.f) / 2.f;
-		    const float size = lerp<float>(1.f, 4.f, t);
-		    const float c = 1.f - t;
+	// Draw hands.
+#if true
+	gxPushMatrix();
+	gxTranslatef(
+	    playerLocation[0],
+	    playerLocation[1],
+	    playerLocation[2]);
 
-		    const float y_t = float(sin(time / 6.0 / 2.34f + i) + 1.f) / 2.f;
-		    const float y = lerp<float>(0.f, 4.f, y_t);
-		    gxTranslatef(0, y, 0);
-		    gxRotatef(90, 1, 0, 0);
+	for (int i = 0; i < 2; ++i)
+    {
+		auto & pointer = pointers[i];
 
-		    setColorf(c, c, c, 1.f);
-		    drawCircle(0.f, 0.f, size, 100);
+		if (pointer.isValid == false)
+			continue;
 
-		    gxPopMatrix();
-	    }
+		// Draw picture.
 
-	    gxPopMatrix(); // Undo ground level adjustment.
-
-		// Draw hands.
-	#if true
-		gxPushMatrix();
-		gxTranslatef(
-		    scene->playerLocation[0],
-		    scene->playerLocation[1],
-		    scene->playerLocation[2]);
-
-		for (int i = 0; i < 2; ++i)
-	    {
-			auto & pointer = scene->pointers[i];
-
-			if (pointer.isValid == false)
-				continue;
-
-			// Draw picture.
-
-			gxSetTexture(scene->guiWindow->getColorTarget()->getTextureId());
-			//gxSetTexture(scene->graphEditWindow->getColorTarget()->getTextureId());
-			//gxSetTexture(getTexture("sabana.jpg"));
-			//gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
-			setColor(colorWhite);
-			{
-				gxPushMatrix();
-				gxMultMatrixf(pointer.transform.m_v);
-				gxTranslatef(0, 0, -3);
-				gxRotatef(180 + sinf(time) * 15, 0, 1, 0);
-				gxScalef(pointer.pictureTimer, pointer.pictureTimer, pointer.pictureTimer);
-				drawRect(+1, +1, -1, -1);
-				gxPopMatrix();
-			}
-			gxSetTexture(0);
-
-			// Draw cube.
+		gxSetTexture(guiWindow->getColorTarget()->getTextureId());
+		//gxSetTexture(graphEditWindow->getColorTarget()->getTextureId());
+		//gxSetTexture(getTexture("sabana.jpg"));
+		//gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
+		setColor(colorWhite);
+		{
 			gxPushMatrix();
 			gxMultMatrixf(pointer.transform.m_v);
-
-			pushCullMode(CULL_BACK, CULL_CCW);
-			pushShaderOutputs("n");
-			setColor(colorWhite);
-			fillCube(Vec3(), Vec3(.02f, .02f, .1f));
-			popShaderOutputs();
-
-			// Draw pointer ray.
-			pushBlend(BLEND_ADD);
-			const float a = lerp<float>(.1f, .4f, (sin(time) + 1.0) / 2.0);
-			setColorf(1, 1, 1, a);
-			fillCube(Vec3(0, 0, -100), Vec3(.01f, .01f, 100));
-			popBlend();
-			popCullMode();
-
-		#if false
-			// Draw skinned hand mesh.
-			ovrHandMesh handMesh;
-			handMesh.Header.Version = ovrHandVersion_1;
-			if (vrapi_GetHandMesh(ovr, VRAPI_HAND_LEFT, &handMesh.Header) == ovrSuccess)
-			{
-				gxBegin(GX_POINTS);
-				{
-					setColor(colorWhite);
-					for (int i = 0; i < handMesh.NumVertices; ++i)
-					{
-						gxVertex3fv(&handMesh.VertexPositions[i].x);
-					}
-				}
-				gxEnd();
-			}
-		#endif
-
+			gxTranslatef(0, 0, -3);
+			gxRotatef(180 + sinf(time) * 15, 0, 1, 0);
+			gxScalef(pointer.pictureTimer, pointer.pictureTimer, pointer.pictureTimer);
+			drawRect(+1, +1, -1, -1);
 			gxPopMatrix();
-	    }
+		}
+		gxSetTexture(0);
 
-	    gxPopMatrix();
-	#endif
-
-		// -- End opaque pass.
-		popBlend();
-	    popDepthTest();
-
-	    // -- Begin translucent pass.
-	    pushDepthTest(true, DEPTH_LESS, false);
-	    pushBlend(BLEND_ADD);
-
-		// Draw text.
+		// Draw cube.
 		gxPushMatrix();
-	    {
-	        gxTranslatef(0, 2, 0);
-	        gxRotatef(time * 10.f, 0, 1, 0);
-	        gxScalef(1, -1, 1);
-	        pushFontMode(FONT_SDF);
-		    {
-		    // todo : add a function to directly draw 3d msdf text. msdf or sdf is really a requirement for vr
-		        setColor(Color::fromHSL(time / 4.f, .5f, .5f));
-		        drawTextArea(0, 0, 1.f, .25f, .1f, 0, 0, "Hello World!\nThis is some text, drawn using Framework's multiple signed-distance field method! Doesn't it look crisp? :-)", 2.f, 2.f);
-		    }
-		    popFontMode();
+		gxMultMatrixf(pointer.transform.m_v);
 
-			setColor(40, 30, 20);
-		    fillCircle(0, 0, 1.2f/2.f, 100);
-	    }
-	    gxPopMatrix();
+		pushCullMode(CULL_BACK, CULL_CCW);
+		pushShaderOutputs("n");
+		setColor(colorWhite);
+		fillCube(Vec3(), Vec3(.02f, .02f, .1f));
+		popShaderOutputs();
+
+		// Draw pointer ray.
+		pushBlend(BLEND_ADD);
+		const float a = lerp<float>(.1f, .4f, (sin(time) + 1.0) / 2.0);
+		setColorf(1, 1, 1, a);
+		fillCube(Vec3(0, 0, -100), Vec3(.01f, .01f, 100));
+		popBlend();
+		popCullMode();
 
 	#if false
-		// Draw filled circles.
-	    for (int i = 0; i < 16; ++i)
-	    {
-	        if ((i % 3) != 0)
-	            continue;
-
-		    gxPushMatrix();
-
-		    const float y_t = float(sin(time / 6.0 / 2.34f + i) + 1.f) / 2.f;
-		    const float y = lerp<float>(0.f, 4.f, y_t);
-
-		    gxTranslatef(0, y, 0);
-		    gxRotatef(90, 1, 0, 0);
-
-		    const float t = float(sin(time / 4.0 + i) + 1.f) / 2.f;
-		    const float size = lerp<float>(1.f, 4.f, t);
-
-		    const float c = fabsf(y_t - .5f) * 2.f;
-
-		    setColorf(1, 1, 1, c * .2f);
-		    fillCircle(0.f, 0.f, size, 100);
-
-		    gxPopMatrix();
-	    }
+		// Draw skinned hand mesh.
+		ovrHandMesh handMesh;
+		handMesh.Header.Version = ovrHandVersion_1;
+		if (vrapi_GetHandMesh(ovr, VRAPI_HAND_LEFT, &handMesh.Header) == ovrSuccess)
+		{
+			gxBegin(GX_POINTS);
+			{
+				setColor(colorWhite);
+				for (int i = 0; i < handMesh.NumVertices; ++i)
+				{
+					gxVertex3fv(&handMesh.VertexPositions[i].x);
+				}
+			}
+			gxEnd();
+		}
 	#endif
 
-		// -- End translucent pass.
-	    popBlend();
-	    popDepthTest();
-
-        // Explicitly clear the border texels to black when GL_CLAMP_TO_BORDER is not available.
-        if (ovrOpenGLExtensions.EXT_texture_border_clamp == false)
-           ovrFramebuffer_ClearBorder(frameBuffer);
-
-        ovrFramebuffer_Resolve(frameBuffer);
-        ovrFramebuffer_Advance(frameBuffer);
-
-	    glDisable(GL_SCISSOR_TEST);
-	    checkErrorGL();
+		gxPopMatrix();
     }
 
-    ovrFramebuffer_SetNone();
+    gxPopMatrix();
+#endif
 
-    return layer;
+	// -- End opaque pass.
+	popBlend();
+    popDepthTest();
+
+    // -- Begin translucent pass.
+    pushDepthTest(true, DEPTH_LESS, false);
+    pushBlend(BLEND_ADD);
+
+	// Draw text.
+	gxPushMatrix();
+    {
+        gxTranslatef(0, 2, 0);
+        gxRotatef(time * 10.f, 0, 1, 0);
+        gxScalef(1, -1, 1);
+        pushFontMode(FONT_SDF);
+	    {
+	    // todo : add a function to directly draw 3d msdf text. msdf or sdf is really a requirement for vr
+	        setColor(Color::fromHSL(time / 4.f, .5f, .5f));
+	        drawTextArea(0, 0, 1.f, .25f, .1f, 0, 0, "Hello World!\nThis is some text, drawn using Framework's multiple signed-distance field method! Doesn't it look crisp? :-)", 2.f, 2.f);
+	    }
+	    popFontMode();
+
+		setColor(40, 30, 20);
+	    fillCircle(0, 0, 1.2f/2.f, 100);
+    }
+    gxPopMatrix();
+
+#if false
+	// Draw filled circles.
+    for (int i = 0; i < 16; ++i)
+    {
+        if ((i % 3) != 0)
+            continue;
+
+	    gxPushMatrix();
+
+	    const float y_t = float(sin(time / 6.0 / 2.34f + i) + 1.f) / 2.f;
+	    const float y = lerp<float>(0.f, 4.f, y_t);
+
+	    gxTranslatef(0, y, 0);
+	    gxRotatef(90, 1, 0, 0);
+
+	    const float t = float(sin(time / 4.0 + i) + 1.f) / 2.f;
+	    const float size = lerp<float>(1.f, 4.f, t);
+
+	    const float c = fabsf(y_t - .5f) * 2.f;
+
+	    setColorf(1, 1, 1, c * .2f);
+	    fillCircle(0.f, 0.f, size, 100);
+
+	    gxPopMatrix();
+    }
+#endif
+
+	// -- End translucent pass.
+    popBlend();
+    popDepthTest();
 }
 
 /*
@@ -1362,12 +1345,50 @@ int main(int argc, char * argv[])
         appState.Scene.tick(appState.Ovr, timeStep, predictedDisplayTime);
 
         // Render eye images and setup the primary layer using ovrTracking2.
-        const ovrLayerProjection2 worldLayer = ovrRenderer_RenderFrame(
-            &appState.Renderer,
-            &appState.Java,
-            &appState.Scene,
-            &tracking,
-            appState.Ovr);
+	    ovrRenderer_BeginRenderFrame(&appState.Renderer, &tracking);
+	    {
+		    appState.Scene.draw();
+
+		    // Render the eye images.
+		    for (int eye = 0; eye < appState.Renderer.NumBuffers; eye++)
+		    {
+		        // NOTE: In the non-mv case, latency can be further reduced by updating the sensor
+		        // prediction for each eye (updates orientation, not position)
+		        ovrFramebuffer * frameBuffer = &appState.Renderer.FrameBuffer[eye];
+		        ovrFramebuffer_SetCurrent(frameBuffer);
+
+				const Mat4x4 & projectionMatrix = appState.Renderer.projectionMatrices[eye];
+				const Mat4x4 & worldToView = appState.Renderer.viewMatrices[eye];
+			    gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+			    gxSetMatrixf(GX_MODELVIEW, worldToView.m_v);
+
+		        glEnable(GL_SCISSOR_TEST);
+		        checkErrorGL();
+
+		        glViewport(0, 0, frameBuffer->Width, frameBuffer->Height);
+		        glScissor(0, 0, frameBuffer->Width, frameBuffer->Height);
+		        checkErrorGL();
+
+			    glClearColor(0.f, 0.f, 0.f, 1.f);
+		        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		        checkErrorGL();
+
+			    appState.Scene.drawEye(appState.Ovr);
+
+				// Explicitly clear the border texels to black when GL_CLAMP_TO_BORDER is not available.
+				if (ovrOpenGLExtensions.EXT_texture_border_clamp == false)
+					ovrFramebuffer_ClearBorder(frameBuffer);
+
+				ovrFramebuffer_Resolve(frameBuffer);
+				ovrFramebuffer_Advance(frameBuffer);
+
+				glDisable(GL_SCISSOR_TEST);
+				checkErrorGL();
+
+				ovrFramebuffer_SetNone();
+		    }
+	    }
+	    const ovrLayerProjection2 worldLayer = ovrRenderer_EndRenderFrame(&appState.Renderer, &tracking);
 
         const ovrLayerHeader2 * layers[] = { &worldLayer.Header };
 
