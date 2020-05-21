@@ -76,7 +76,7 @@ static bool checkError(const char * title, const SLresult code)
 {
  	if (code != SL_RESULT_SUCCESS)
 	{
-		logError("OpenSL: error: %s: %i", title, code);
+		logError("OpenSLES: error: %s: %i", title, code);
 		return false;
 	}
 
@@ -174,7 +174,7 @@ bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate,
 
 	if (numChannels != 1 && numChannels != 2)
 	{
-		logError("portaudio: invalid number of channels");
+		logError("OpenSLES: invalid number of channels");
 		return false;
 	}
 
