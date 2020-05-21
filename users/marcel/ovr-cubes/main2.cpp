@@ -1,5 +1,5 @@
 #include "opengl-ovr.h"
-#include "ovrFramebuffer.h"
+#include "ovr-framebuffer.h"
 
 #include "framework.h"
 

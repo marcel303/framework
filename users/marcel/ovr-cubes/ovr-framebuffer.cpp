@@ -1,7 +1,7 @@
 #include "Log.h"
 
-#include "ovrFramebuffer.h"
 #include "opengl-ovr.h"
+#include "ovr-framebuffer.h"
 
 #include <VrApi.h>
 #include <VrApi_Types.h>
