@@ -98,25 +98,33 @@
 #elif defined(__arm__) || defined(__aarch64__)
 	struct ScopedFlushDenormalsObject
 	{
-		int oldValue;
+	#ifdef __aarch64__
+		int64_t oldValue;
+	#else
+		int32_t oldValue;
+	#endif
 
 		ScopedFlushDenormalsObject()
 		{
-			int result;
-
 		#ifdef __aarch64__
+			int64_t result;
+
 			asm volatile("mrs %[result], FPCR" : [result] "=r" (result));
-		#else
-			asm volatile("vmrs %[result], FPSCR" : [result] "=r" (result));
-		#endif
 
 			oldValue = result;
 
-			const int newValue = oldValue | (1 << 24);
+			const int64_t newValue = oldValue | (1 << 24); // enable flush-to-zero bit
 
-		#ifdef __aarch64__
 			asm volatile("msr FPCR, %[src]" : : [src] "r" (newValue));
 		#else
+			int32_t result;
+
+			asm volatile("vmrs %[result], FPSCR" : [result] "=r" (result));
+
+			oldValue = result;
+
+			const int32_t newValue = oldValue | (1 << 24); // enable flush-to-zero bit
+
 			asm volatile("vmsr FPSCR, %[src]" : : [src] "r" (newValue));
 		#endif
 		}
@@ -267,6 +275,7 @@ struct AudioEvent
 	std::string name;
 	int refCount = 0;
 };
+
 
 struct AudioRNG
 {
