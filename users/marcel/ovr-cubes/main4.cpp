@@ -136,6 +136,7 @@ struct Scene
 		GxMesh mesh;
 		GxVertexBuffer vb;
 		GxIndexBuffer ib;
+		ShaderBuffer skinningData;
 	} handMeshes[2];
 
 	PointerObject pointers[2];
@@ -197,6 +198,8 @@ void Scene::create()
 			handMeshes[i].mesh.setVertexBuffer(&handMeshes[i].vb, vsInputs, numVsInputs, 0);
 			handMeshes[i].mesh.setIndexBuffer(&handMeshes[i].ib);
 			handMeshes[i].mesh.addPrim(GX_TRIANGLES, handMesh.NumIndices, true);
+
+			handMeshes[i].skinningData.alloc(sizeof(Mat4x4) * 32);
 		}
 	}
 
@@ -582,7 +585,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 				handPose.Header.Version = ovrHandVersion_1;
 				if (vrapi_GetHandPose(ovr, cap.DeviceID, GetTimeInSeconds(), &handPose.Header) == ovrSuccess &&
 					handPose.Status == ovrHandTrackingStatus_Tracked &&
-					handPose.HandConfidence == ovrConfidence_HIGH)
+					(handPose.HandConfidence == ovrConfidence_HIGH || true))
 				{
 					// Fetch the initial pose for the hand.
 					// We will need to combine it with the current pose, which only defines the new orientations for the bones.
@@ -591,6 +594,24 @@ void Scene::drawEye(ovrMobile * ovr) const
 					handSkeleton.Header.Version = ovrHandVersion_1;
 					if (vrapi_GetHandSkeleton(ovr, index == 0 ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT, &handSkeleton.Header) == ovrSuccess)
 					{
+					// todo : Check with the SDK documentation, if we can optimize global transform calculations, by assuming parent matrices are always processed before a child.
+
+						// Calculate global bone transforms (bind pose).
+						ovrMatrix4f globalBoneTransforms_bind[ovrHand_MaxBones];
+						for (int i = 0; i < handSkeleton.NumBones; ++i)
+						{
+							ovrMatrix4f globalBoneTransform = ovrMatrix4f_CreateIdentity();
+
+							for (int index = i; index >= 0; index = handSkeleton.BoneParentIndices[index])
+							{
+								const ovrPosef & pose = handSkeleton.BonePoses[index];
+								const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
+								globalBoneTransform = ovrMatrix4f_Multiply(&transform, &globalBoneTransform);
+							}
+
+							globalBoneTransforms_bind[i] = globalBoneTransform;
+						}
+
 						// Update local bone poses.
 						ovrPosef localBonePoses[ovrHand_MaxBones];
 						for (int i = 0; i < handSkeleton.NumBones; ++i)
@@ -599,7 +620,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 							localBonePoses[i].Orientation = handPose.BoneRotations[i];
 						}
 
-						// Calculate global bone transforms.
+						// Calculate global bone transforms (animated).
 						ovrMatrix4f globalBoneTransforms[ovrHand_MaxBones];
 						for (int i = 0; i < handSkeleton.NumBones; ++i)
 						{
@@ -607,51 +628,69 @@ void Scene::drawEye(ovrMobile * ovr) const
 
 							for (int index = i; index >= 0; index = handSkeleton.BoneParentIndices[index])
 							{
-								auto & pose = localBonePoses[index];
-								ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
+								const ovrPosef & pose = localBonePoses[index];
+								const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
 								globalBoneTransform = ovrMatrix4f_Multiply(&transform, &globalBoneTransform);
 							}
 
 							globalBoneTransforms[i] = globalBoneTransform;
 						}
 
+						// Calculate skinning matrices. Skinning matrices will first transform a vertex into 'bind space',
+						// by applying the inverse of the initial pose transform. It will then apply the global bone transform.
+						ovrMatrix4f skinningTransforms[ovrHand_MaxBones];
+						for (int i = 0; i < handSkeleton.NumBones; ++i)
+						{
+							const ovrMatrix4f objectToBind = ovrMatrix4f_Inverse(&globalBoneTransforms_bind[i]);
+							const ovrMatrix4f & bindToObject = globalBoneTransforms[i];
+							skinningTransforms[i] = ovrMatrix4f_Multiply(&bindToObject, &objectToBind);
+							skinningTransforms[i] = ovrMatrix4f_Transpose(&skinningTransforms[i]);
+						}
+
 						ovrMatrix4f rootPose = vrapi_GetTransformFromPose(&handPose.RootPose);
 						rootPose = ovrMatrix4f_Transpose(&rootPose);
 
-						// Draw bones.
 						gxPushMatrix();
-						gxMultMatrixf((float*)rootPose.M);
-						gxBegin(GX_LINES);
 						{
-							for (int i = 0; i < handSkeleton.NumBones; ++i)
+							// Apply the root pose.
+							gxMultMatrixf((float*)rootPose.M);
+
+							// Draw bones.
+							gxBegin(GX_LINES);
 							{
-								const int parentIndex = handSkeleton.BoneParentIndices[i];
-
-								if (parentIndex >= 0)
+								for (int i = 0; i < handSkeleton.NumBones; ++i)
 								{
-									ovrVector4f origin = { 0, 0, 0, 1 };
-									ovrVector4f position1 = ovrVector4f_MultiplyMatrix4f(&globalBoneTransforms[i], &origin);
-									ovrVector4f position2 = ovrVector4f_MultiplyMatrix4f(&globalBoneTransforms[parentIndex], &origin);
+									const int parentIndex = handSkeleton.BoneParentIndices[i];
 
-									setColor(colorGreen);
-									gxVertex3f(position1.x, position1.y, position1.z);
-									gxVertex3f(position2.x, position2.y, position2.z);
+									if (parentIndex >= 0)
+									{
+										ovrVector4f origin = { 0, 0, 0, 1 };
+										ovrVector4f position1 = ovrVector4f_MultiplyMatrix4f(&globalBoneTransforms[i], &origin);
+										ovrVector4f position2 = ovrVector4f_MultiplyMatrix4f(&globalBoneTransforms[parentIndex], &origin);
+
+										setColor(colorGreen);
+										gxVertex3f(position1.x, position1.y, position1.z);
+										gxVertex3f(position2.x, position2.y, position2.z);
+									}
 								}
 							}
+							gxEnd();
+
+							// Draw hand mesh.
+							Shader shader("engine/BasicSkinned");
+							setShader(shader);
+							{
+								handMeshes[index].skinningData.setData(skinningTransforms, sizeof(skinningTransforms));
+
+								shader.setImmediate("drawColor", 0, 0, 0, 0);
+								shader.setImmediate("drawSkin", 0, 0, 0, 0);
+								shader.setBuffer("SkinningData", handMeshes[index].skinningData);
+								handMeshes[index].mesh.draw();
+							}
+							clearShader();
 						}
-						gxEnd();
 						gxPopMatrix();
 					}
-
-					// Draw hand mesh.
-
-					ovrMatrix4f rootPose = vrapi_GetTransformFromPose(&handPose.RootPose);
-					rootPose = ovrMatrix4f_Transpose(&rootPose);
-
-					gxPushMatrix();
-					gxMultMatrixf((float*)rootPose.M);
-					//handMeshes[index].mesh.draw();
-					gxPopMatrix();
 				}
 			}
 		}
@@ -968,7 +1007,7 @@ void FrameworkVr::beginEye(const int eyeIndex, const Color & clearColor)
 	checkErrorGL();
 
 	glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
-	glClearDepth(1.f);
+	glClearDepthf(1.f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	checkErrorGL();
 
