@@ -64,6 +64,8 @@
 
 #define USE_FRAMEWORK_DRAWING 1
 
+#define OPTIMIZE_GLOBAL_HAND_POSE_TRANSFORM_MATHS 1
+
 static const int CPU_LEVEL = 2;
 static const int GPU_LEVEL = 3;
 static const int NUM_MULTI_SAMPLES = 4;
@@ -600,6 +602,15 @@ void Scene::drawEye(ovrMobile * ovr) const
 						ovrMatrix4f globalBoneTransforms_bind[ovrHand_MaxBones];
 						for (int i = 0; i < handSkeleton.NumBones; ++i)
 						{
+						#if OPTIMIZE_GLOBAL_HAND_POSE_TRANSFORM_MATHS
+							const ovrPosef & pose = handSkeleton.BonePoses[i];
+							const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
+							const int parentIndex = handSkeleton.BoneParentIndices[i];
+							if (parentIndex < 0)
+								globalBoneTransforms_bind[i] = transform;
+							else
+								globalBoneTransforms_bind[i] = ovrMatrix4f_Multiply(&globalBoneTransforms_bind[parentIndex], &transform);
+						#else
 							ovrMatrix4f globalBoneTransform = ovrMatrix4f_CreateIdentity();
 
 							for (int index = i; index >= 0; index = handSkeleton.BoneParentIndices[index])
@@ -610,6 +621,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 							}
 
 							globalBoneTransforms_bind[i] = globalBoneTransform;
+						#endif
 						}
 
 						// Update local bone poses.
@@ -624,6 +636,15 @@ void Scene::drawEye(ovrMobile * ovr) const
 						ovrMatrix4f globalBoneTransforms[ovrHand_MaxBones];
 						for (int i = 0; i < handSkeleton.NumBones; ++i)
 						{
+						#if OPTIMIZE_GLOBAL_HAND_POSE_TRANSFORM_MATHS
+							const ovrPosef & pose = localBonePoses[i];
+							const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
+							const int parentIndex = handSkeleton.BoneParentIndices[i];
+							if (parentIndex < 0)
+								globalBoneTransforms[i] = transform;
+							else
+								globalBoneTransforms[i] = ovrMatrix4f_Multiply(&globalBoneTransforms[parentIndex], &transform);
+						#else
 							ovrMatrix4f globalBoneTransform = ovrMatrix4f_CreateIdentity();
 
 							for (int index = i; index >= 0; index = handSkeleton.BoneParentIndices[index])
@@ -634,6 +655,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 							}
 
 							globalBoneTransforms[i] = globalBoneTransform;
+						#endif
 						}
 
 						// Calculate skinning matrices. Skinning matrices will first transform a vertex into 'bind space',
@@ -654,6 +676,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 						{
 							// Apply the root pose.
 							gxMultMatrixf((float*)rootPose.M);
+							gxScalef(handPose.HandScale, handPose.HandScale, handPose.HandScale);
 
 							// Draw bones.
 							gxBegin(GX_LINES);
@@ -680,7 +703,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 							Shader shader("engine/BasicSkinned");
 							setShader(shader);
 							{
-								handMeshes[index].skinningData.setData(skinningTransforms, sizeof(skinningTransforms));
+								const_cast<ShaderBuffer&>(handMeshes[index].skinningData).setData(skinningTransforms, sizeof(skinningTransforms));
 
 								shader.setImmediate("drawColor", 0, 0, 0, 0);
 								shader.setImmediate("drawSkin", 0, 0, 0, 0);
