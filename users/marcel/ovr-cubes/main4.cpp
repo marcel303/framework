@@ -13,6 +13,7 @@
 #include "audioTypeDB.h"
 #include "graphEdit.h"
 
+#include "data/engine/ShaderCommon.txt" // VS_ constants
 #include "framework.h"
 #include "gx_render.h"
 
@@ -79,6 +80,10 @@ static double GetTimeInSeconds()
     return (now.tv_sec * 1e9 + now.tv_nsec) * 0.000000001;
 }
 
+// -- VrApi
+
+ovrMobile * getOvrMobile();
+
 // -- scene
 
 #include "gx_mesh.h"
@@ -125,6 +130,14 @@ struct Scene
 	Graph_TypeDefinitionLibrary * audioTypes = nullptr;
 	GraphEdit * graphEdit = nullptr;
 
+	// hand mesh
+	struct HandMesh
+	{
+		GxMesh mesh;
+		GxVertexBuffer vb;
+		GxIndexBuffer ib;
+	} handMeshes[2];
+
 	PointerObject pointers[2];
 
     void create();
@@ -161,6 +174,31 @@ void Scene::create()
     audioTypes = createAudioTypeDefinitionLibrary();
     graphEdit = new GraphEdit(graphEditWindow->getWidth(), graphEditWindow->getHeight(), audioTypes); // todo : remove width/heigth from editor ctor. or make optional. sx/sy should be passed on tick instead
 	graphEdit->load("sweetStuff6.xml");
+
+	for (int i = 0; i < 2; ++i)
+	{
+		ovrHandMesh handMesh;
+		handMesh.Header.Version = ovrHandVersion_1;
+		if (vrapi_GetHandMesh(getOvrMobile(), i == 0 ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT, &handMesh.Header) == ovrSuccess)
+		{
+			GxVertexInput vsInputs[] =
+			{
+				{ VS_POSITION,      3, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, VertexPositions), sizeof(ovrVector3f) },
+				//{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, VertexNormals),   sizeof(ovrVector3f) },
+				{ VS_COLOR,         3, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, VertexNormals),   sizeof(ovrVector3f) },
+				{ VS_TEXCOORD0,     2, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, VertexUV0),       sizeof(ovrVector2f) },
+				{ VS_BLEND_INDICES, 4, GX_ELEMENT_UINT16,  0, offsetof(ovrHandMesh, BlendIndices),    sizeof(ovrVector4s) },
+				{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, BlendWeights),    sizeof(ovrVector4f) }
+			};
+			const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
+
+			handMeshes[i].vb.alloc(&handMesh, sizeof(handMesh));
+			handMeshes[i].ib.alloc(handMesh.Indices, sizeof(handMesh.Indices) / sizeof(handMesh.Indices[0]), GX_INDEX_16);
+			handMeshes[i].mesh.setVertexBuffer(&handMeshes[i].vb, vsInputs, numVsInputs, 0);
+			handMeshes[i].mesh.setIndexBuffer(&handMeshes[i].ib);
+			handMeshes[i].mesh.addPrim(GX_TRIANGLES, handMesh.NumIndices, true);
+		}
+	}
 
     auto * image = loadImage("Hokkaido8.png");
     if (image != nullptr)
@@ -509,26 +547,116 @@ void Scene::drawEye(ovrMobile * ovr) const
 		popBlend();
 		popCullMode();
 
-	#if false
-		// Draw skinned hand mesh.
-		ovrHandMesh handMesh;
-		handMesh.Header.Version = ovrHandVersion_1;
-		if (vrapi_GetHandMesh(ovr, VRAPI_HAND_LEFT, &handMesh.Header) == ovrSuccess)
-		{
-			gxBegin(GX_POINTS);
-			{
-				setColor(colorWhite);
-				for (int i = 0; i < handMesh.NumVertices; ++i)
-				{
-					gxVertex3fv(&handMesh.VertexPositions[i].x);
-				}
-			}
-			gxEnd();
-		}
+	#if true
+	    handMeshes[0].mesh.draw();
 	#endif
 
 		gxPopMatrix();
     }
+
+#if true
+	if (ovr != nullptr)
+	{
+		for (int i = 0; true; i++)
+		{
+			// Describe this input device.
+			ovrInputCapabilityHeader cap;
+			const ovrResult result = vrapi_EnumerateInputDevices(ovr, i, &cap);
+			if (result < 0)
+				break;
+
+			// Is it a hand?
+			if (cap.Type == ovrControllerType_Hand)
+			{
+				// Describe hand.
+				ovrInputHandCapabilities handCapabilities;
+	            handCapabilities.Header = cap;
+	            if (vrapi_GetInputDeviceCapabilities(ovr, &handCapabilities.Header) != ovrSuccess)
+		            continue;
+
+				// Left hand or right hand.
+		        const int index = (handCapabilities.HandCapabilities & ovrHandCaps_LeftHand) ? 0 : 1;
+
+				// Fetch the current pose for the hand.
+				ovrHandPose handPose;
+				handPose.Header.Version = ovrHandVersion_1;
+				if (vrapi_GetHandPose(ovr, cap.DeviceID, GetTimeInSeconds(), &handPose.Header) == ovrSuccess &&
+					handPose.Status == ovrHandTrackingStatus_Tracked &&
+					handPose.HandConfidence == ovrConfidence_HIGH)
+				{
+					// Fetch the initial pose for the hand.
+					// We will need to combine it with the current pose, which only defines the new orientations for the bones.
+					// And we will need it to perform skinning as well.
+					ovrHandSkeleton handSkeleton;
+					handSkeleton.Header.Version = ovrHandVersion_1;
+					if (vrapi_GetHandSkeleton(ovr, index == 0 ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT, &handSkeleton.Header) == ovrSuccess)
+					{
+						// Update local bone poses.
+						ovrPosef localBonePoses[ovrHand_MaxBones];
+						for (int i = 0; i < handSkeleton.NumBones; ++i)
+						{
+							localBonePoses[i] = handSkeleton.BonePoses[i];
+							localBonePoses[i].Orientation = handPose.BoneRotations[i];
+						}
+
+						// Calculate global bone transforms.
+						ovrMatrix4f globalBoneTransforms[ovrHand_MaxBones];
+						for (int i = 0; i < handSkeleton.NumBones; ++i)
+						{
+							ovrMatrix4f globalBoneTransform = ovrMatrix4f_CreateIdentity();
+
+							for (int index = i; index >= 0; index = handSkeleton.BoneParentIndices[index])
+							{
+								auto & pose = localBonePoses[index];
+								ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
+								globalBoneTransform = ovrMatrix4f_Multiply(&transform, &globalBoneTransform);
+							}
+
+							globalBoneTransforms[i] = globalBoneTransform;
+						}
+
+						ovrMatrix4f rootPose = vrapi_GetTransformFromPose(&handPose.RootPose);
+						rootPose = ovrMatrix4f_Transpose(&rootPose);
+
+						// Draw bones.
+						gxPushMatrix();
+						gxMultMatrixf((float*)rootPose.M);
+						gxBegin(GX_LINES);
+						{
+							for (int i = 0; i < handSkeleton.NumBones; ++i)
+							{
+								const int parentIndex = handSkeleton.BoneParentIndices[i];
+
+								if (parentIndex >= 0)
+								{
+									ovrVector4f origin = { 0, 0, 0, 1 };
+									ovrVector4f position1 = ovrVector4f_MultiplyMatrix4f(&globalBoneTransforms[i], &origin);
+									ovrVector4f position2 = ovrVector4f_MultiplyMatrix4f(&globalBoneTransforms[parentIndex], &origin);
+
+									setColor(colorGreen);
+									gxVertex3f(position1.x, position1.y, position1.z);
+									gxVertex3f(position2.x, position2.y, position2.z);
+								}
+							}
+						}
+						gxEnd();
+						gxPopMatrix();
+					}
+
+					// Draw hand mesh.
+
+					ovrMatrix4f rootPose = vrapi_GetTransformFromPose(&handPose.RootPose);
+					rootPose = ovrMatrix4f_Transpose(&rootPose);
+
+					gxPushMatrix();
+					gxMultMatrixf((float*)rootPose.M);
+					//handMeshes[index].mesh.draw();
+					gxPopMatrix();
+				}
+			}
+		}
+	}
+#endif
 
     gxPopMatrix();
 #endif
@@ -611,6 +739,11 @@ public:
     long long FrameIndex = 1;
     double PredictedDisplayTime = 0.0;
 
+	ovrMobile * getOvrMobile()
+	{
+		return Ovr;
+	}
+
 private:
     int SwapInterval = 1;
     int CpuLevel = CPU_LEVEL;
@@ -670,6 +803,17 @@ private:
 public:
 	float TimeStep = 0.f;
 };
+
+//
+
+FrameworkVr frameworkVr;
+
+ovrMobile * getOvrMobile()
+{
+	return frameworkVr.getOvrMobile();
+}
+
+//
 
 bool FrameworkVr::init(ovrEgl * egl)
 {
@@ -823,8 +967,8 @@ void FrameworkVr::beginEye(const int eyeIndex, const Color & clearColor)
 	glScissor(0, 0, frameBuffer->Width, frameBuffer->Height);
 	checkErrorGL();
 
-// todo : clear depth ?
 	glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
+	glClearDepth(1.f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	checkErrorGL();
 
@@ -1415,7 +1559,7 @@ int main(int argc, char * argv[])
 	Scene scene;
 
     JgmodTest jgmodTest;
-    jgmodTest.init();
+    //jgmodTest.init();
 
     AudiographTest audiographTest;
     audiographTest.init();
