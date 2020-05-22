@@ -192,7 +192,7 @@ Lighting_SurfaceProperties prepareSurfaceProperties(
     surfaceProperties.R = R;
     surfaceProperties.baseColor = baseColor.rgb * (1.0 - metallic);
     surfaceProperties.opacity = baseColor.a;
-    surfaceProperties.metallic = metallic * baseColor.rgb;
+    surfaceProperties.metallic = mix(vec3(0.04), baseColor.rgb, metallic);
     surfaceProperties.roughness = roughness;
 
 	return surfaceProperties;

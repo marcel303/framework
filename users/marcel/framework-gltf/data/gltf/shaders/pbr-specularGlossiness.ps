@@ -33,7 +33,7 @@ void main()
 
     // -- compute lighting
 
-    vec3 Lo = vec3(0.0);
+    vec3 specular = vec3(0.0);
     vec3 diffuse = vec3(0.0);
 
     {
@@ -59,13 +59,13 @@ void main()
 
         vec3 lightColor = scene_lightParams2.xyz * (scene_lightParams2.w * lightAttenuation);
 
-        Lo += lightingResult.specular * lightColor;
+        specular += lightingResult.specular * lightColor;
         diffuse += lightingResult.diffuse * lightColor;
     }
 
     // -- add all terms
 
-    vec3 color = diffuse + Lo;
+    vec3 color = diffuse + specular;
 
     // -- add ambient light
 
