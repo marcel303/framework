@@ -109,6 +109,12 @@ namespace gltf
 	
 	void setDefaultMaterialShaders(MaterialShaders & shaders);
 	void setDefaultMaterialLighting(
+		Shader & shader,
+		const Mat4x4 & worldToView,
+		const Vec3 & directionalDirection = Vec3(0, -1, 0),
+		const Vec3 & directionalColor = Vec3(1.f),
+		const Vec3 & ambientColor = Vec3());
+	void setDefaultMaterialLighting(
 		MaterialShaders & shaders,
 		const Mat4x4 & worldToView,
 		const Vec3 & directionalDirection = Vec3(0, -1, 0),

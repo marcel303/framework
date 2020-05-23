@@ -372,7 +372,33 @@ namespace gltf
 		// set max ambient lighting
 		setDefaultMaterialLighting(shaders, Mat4x4(true), Vec3(), Vec3(), Vec3(1.f));
 	}
-	
+
+	void setDefaultMaterialLighting(
+		Shader & shader,
+		const Mat4x4 & worldToView,
+		const Vec3 & directionalDirection,
+		const Vec3 & directionalColor,
+		const Vec3 & ambientColor)
+	{
+		const Vec3 lightDirection_view = worldToView.Mul3(directionalDirection);
+
+		shader.setImmediate("scene_lightParams1",
+			lightDirection_view[0],
+			lightDirection_view[1],
+			lightDirection_view[2],
+			0.f);
+
+		shader.setImmediate("scene_lightParams2",
+			directionalColor[0],
+			directionalColor[1],
+			directionalColor[2], 1.f);
+
+		shader.setImmediate("scene_ambientLightColor",
+			ambientColor[0],
+			ambientColor[1],
+			ambientColor[2]);
+	}
+
 	void setDefaultMaterialLighting(
 		MaterialShaders & materialShaders,
 		const Mat4x4 & worldToView,
@@ -386,29 +412,18 @@ namespace gltf
 				materialShaders.specularGlossinessShader
 			};
 		
-		const Vec3 lightDirection_view = worldToView.Mul3(directionalDirection);
-		
 		for (int i = 0; i < 2; ++i)
 		{
 			if (shaders[i] != nullptr)
 			{
 				setShader(*shaders[i]);
 				{
-					shaders[i]->setImmediate("scene_lightParams1",
-						lightDirection_view[0],
-						lightDirection_view[1],
-						lightDirection_view[2],
-						0.f);
-				
-					shaders[i]->setImmediate("scene_lightParams2",
-						directionalColor[0],
-						directionalColor[1],
-						directionalColor[2], 1.f);
-					
-					shaders[i]->setImmediate("scene_ambientLightColor",
-						ambientColor[0],
-						ambientColor[1],
-						ambientColor[2]);
+					setDefaultMaterialLighting(
+						*shaders[i],
+						worldToView,
+						directionalDirection,
+						directionalColor,
+						ambientColor);
 				}
 				clearShader();
 			}

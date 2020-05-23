@@ -1,7 +1,5 @@
 include engine/ShaderVS.txt
 
-uniform float time;
-
 shader_out vec3 v_position_view;
 shader_out vec4 v_color;
 shader_out vec2 v_texcoord0;
