@@ -187,8 +187,8 @@ void Scene::create()
 			GxVertexInput vsInputs[] =
 			{
 				{ VS_POSITION,      3, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, VertexPositions), sizeof(ovrVector3f) },
-				//{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, VertexNormals),   sizeof(ovrVector3f) },
-				{ VS_COLOR,         3, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, VertexNormals),   sizeof(ovrVector3f) },
+				{ VS_NORMAL,        3, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, VertexNormals),   sizeof(ovrVector3f) },
+				//{ VS_COLOR,         3, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, VertexNormals),   sizeof(ovrVector3f) },
 				{ VS_TEXCOORD0,     2, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, VertexUV0),       sizeof(ovrVector2f) },
 				{ VS_BLEND_INDICES, 4, GX_ELEMENT_UINT16,  0, offsetof(ovrHandMesh, BlendIndices),    sizeof(ovrVector4s) },
 				{ VS_BLEND_WEIGHTS, 4, GX_ELEMENT_FLOAT32, 0, offsetof(ovrHandMesh, BlendWeights),    sizeof(ovrVector4f) }
@@ -450,14 +450,14 @@ void Scene::drawEye(ovrMobile * ovr) const
 
 		gltf::MaterialShaders materialShaders;
 		gltf::setDefaultMaterialShaders(materialShaders);
-		gltf::setDefaultMaterialLighting(materialShaders, worldToView, Vec3(.3f, -1.f, .3f).CalcNormalized(), Vec3(10.f, .8f, .6f), Vec3(.2f));
+		gltf::setDefaultMaterialLighting(materialShaders, worldToView, Vec3(.3f, -1.f, .3f).CalcNormalized(), Vec3(2.f, .8f, .6f), Vec3(.2f));
 
-		for (int i = 0; i < 10; ++i)
+		for (int i = 0; i < 1; ++i)
 		{
 			gxPushMatrix();
 		    gxTranslatef(sinf(i * 1.23f) * 1.f, sinf(i / 1.23f) * .5f, sinf(i * 2.34f) * 1.f);
 	        gxRotatef((time + i) * 40.f, .3f, 1, .2f);
-	        gxScalef(.1f, .1f, .1f);
+	        gxScalef(.4f, .4f, .4f);
 			gltf::DrawOptions drawOptions;
 			gltf::drawScene(gltf_scene, &gltf_bufferCache, materialShaders, true, &drawOptions);
 			gxPopMatrix();
@@ -475,7 +475,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 	gxPopMatrix();
 
     // Draw terrain.
-    terrain_mesh.draw();
+    //terrain_mesh.draw();
 
 	// Draw circles.
     for (int i = 0; i < 16; ++i)
@@ -538,13 +538,39 @@ void Scene::drawEye(ovrMobile * ovr) const
 		gxPushMatrix();
 		gxMultMatrixf(pointer.transform.m_v);
 
+	#if false
 		pushCullMode(CULL_BACK, CULL_CCW);
 		pushShaderOutputs("n");
 		setColor(colorWhite);
 		fillCube(Vec3(), Vec3(.02f, .02f, .1f));
 		popShaderOutputs();
+		popCullMode();
+	#else
+		pushCullMode(CULL_BACK, CULL_CCW);
+		Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
+		setShader(metallicRoughnessShader);
+		{
+			gltf::setDefaultMaterialLighting(metallicRoughnessShader, worldToView);
+
+			gltf::MetallicRoughnessParams params;
+			params.init(metallicRoughnessShader);
+
+			gltf::Material material;
+			gltf::Scene scene;
+			int nextTextureUnit = 0;
+			params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
+
+			params.setUseVertexColors(metallicRoughnessShader, true);
+			params.setMetallicRoughness(metallicRoughnessShader, .8f, .2f);
+			setColor(255, 127, 63, 255);
+			fillCube(Vec3(), Vec3(.02f, .02f, .1f));
+		}
+		clearShader();
+		popCullMode();
+	#endif
 
 		// Draw pointer ray.
+		pushCullMode(CULL_BACK, CULL_CCW);
 		pushBlend(BLEND_ADD);
 		const float a = lerp<float>(.1f, .4f, (sin(time) + 1.0) / 2.0);
 		setColorf(1, 1, 1, a);
@@ -678,6 +704,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 							gxMultMatrixf((float*)rootPose.M);
 							gxScalef(handPose.HandScale, handPose.HandScale, handPose.HandScale);
 
+						#if false
 							// Draw bones.
 							gxBegin(GX_LINES);
 							{
@@ -698,7 +725,9 @@ void Scene::drawEye(ovrMobile * ovr) const
 								}
 							}
 							gxEnd();
+						#endif
 
+						#if false
 							// Draw hand mesh.
 							Shader shader("engine/BasicSkinned");
 							setShader(shader);
@@ -711,6 +740,33 @@ void Scene::drawEye(ovrMobile * ovr) const
 								handMeshes[index].mesh.draw();
 							}
 							clearShader();
+						#else
+							Shader metallicRoughnessShader("pbr-metallicRoughness-skinned");
+							setShader(metallicRoughnessShader);
+							{
+								gltf::setDefaultMaterialLighting(metallicRoughnessShader, worldToView);
+
+								gltf::MetallicRoughnessParams params;
+								params.init(metallicRoughnessShader);
+
+								gltf::Material material;
+								material.pbrMetallicRoughness.baseColorFactor = Color(255, 127, 63, 255);
+
+								gltf::Scene scene;
+								int nextTextureUnit = 0;
+								params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
+
+								params.setUseVertexColors(metallicRoughnessShader, true);
+								params.setMetallicRoughness(metallicRoughnessShader, .8f, .2f);
+
+								const_cast<ShaderBuffer&>(handMeshes[index].skinningData).setData(skinningTransforms, sizeof(skinningTransforms));
+								metallicRoughnessShader.setBuffer("SkinningData", handMeshes[index].skinningData);
+
+								setColor(255, 127, 63, 255);
+								handMeshes[index].mesh.draw();
+							}
+							clearShader();
+						#endif
 						}
 						gxPopMatrix();
 					}
@@ -731,6 +787,7 @@ void Scene::drawEye(ovrMobile * ovr) const
     pushDepthTest(true, DEPTH_LESS, false);
     pushBlend(BLEND_ADD);
 
+#if false
 	// Draw text.
 	gxPushMatrix();
     {
@@ -749,6 +806,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 	    fillCircle(0, 0, 1.2f/2.f, 100);
     }
     gxPopMatrix();
+#endif
 
 #if false
 	// Draw filled circles.
