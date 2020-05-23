@@ -6,15 +6,13 @@
 #include "framework.h"
 #include "gx_mesh.h"
 
-#include "magicavoxel/magicavoxel-framework.h"
+#include "magicavoxel-framework.h"
 
 #include "forwardLighting.h"
 #include "lightDrawer.h"
 #include "renderer.h"
 #include "renderOptions.h"
 #include "shadowMapDrawer.h"
-
-#include "FileStream.h"
 
 #include "Quat.h"
 
@@ -46,20 +44,9 @@ int main(int argc, char * argv[])
 	Renderer::registerShaderOutputs();
 	
 	MagicaWorld world;
-	
-	try
-	{
-		//FileStream stream("marcel-01.vox", OpenMode_Read);
-		//FileStream stream("monu7.vox", OpenMode_Read);
-		FileStream stream("room.vox", OpenMode_Read);
-		StreamReader reader(&stream, false);
-		
-		readMagicaWorld(reader, world);
-	}
-	catch (std::exception & e)
-	{
-		logError("error: %s", e.what());
-	}
+	//readMagicaWorld("marcel-01.vox", world);
+	//readMagicaWorld("monu7.vox", world);
+	readMagicaWorld("room.vox", world);
 
 	Camera3d camera;
 	//camera.mouseSmooth = .97f;
@@ -90,18 +77,23 @@ int main(int argc, char * argv[])
 	
 	//renderOptions.debugRenderTargets = true;
 	
+	//renderOptions.chromaticAberration.enabled = true;
+	renderOptions.chromaticAberration.strength = 1.f;
+	
 	renderOptions.bloom.enabled = true;
 	renderOptions.bloom.blurSize = 20.f;
 	renderOptions.bloom.strength = .2f;
 	
 	//renderOptions.lightScatter.enabled = true;
 	renderOptions.lightScatter.strength = 1.f;
-	renderOptions.lightScatter.numSamples = 40; // todo : bump to a higher number. fix light scatter getting more or less bright with # samples
+	renderOptions.lightScatter.numSamples = 100; // todo : bump to a higher number. fix light scatter getting more or less bright with # samples
 	
-	renderOptions.depthSilhouette.enabled = false;
+	renderOptions.depthSilhouette.enabled = true;
 	renderOptions.depthSilhouette.color.Set(0, 0, 0, .5f);
 	
 	renderOptions.fxaa.enabled = true;
+	
+	renderOptions.colorGrading.enabled = false;
 	
 	Renderer renderer;
 	
@@ -133,19 +125,9 @@ int main(int argc, char * argv[])
 		
 		for (auto & file : framework.droppedFiles)
 		{
-			try
-			{
-				world.free();
-				
-				FileStream stream(file.c_str(), OpenMode_Read);
-				StreamReader reader(&stream, false);
-				
-				readMagicaWorld(reader, world);
-			}
-			catch (std::exception & e)
-			{
-				logError("error: %s", e.what());
-			}
+			world.free();
+			
+			readMagicaWorld(file.c_str(), world);
 			
 			gxCaptureMeshBegin(drawMesh, vb, ib);
 			{
@@ -183,6 +165,17 @@ int main(int argc, char * argv[])
 		popSurface();
 		
 		skyTarget.gaussianBlur(10.f, 10.f);
+
+		GxTextureId lookupTexture = renderOptions.colorGrading.lookupTexture;
+		freeTexture(lookupTexture);
+		renderOptions.colorGrading.lookupTexture = renderOptions.colorGrading.lookupTextureFromSrgbColorTransform(
+			[](Color & color)
+			{
+				color = color
+					.hueShift(framework.time / 12.f)
+					//.invertRGB(sinf(framework.time / 3.45f))
+					.desaturate(sinf(framework.time / 2.34f));
+			});
 		
 		framework.beginDraw(0, 0, 0, 0);
 		{
@@ -268,7 +261,7 @@ int main(int argc, char * argv[])
 					light.attenuationEnd = 6.f;
 					light.color.Set(1, 0, 0);
 					light.spotAngle = 70.f * float(M_PI/180.0);
-					light.intensity = 10.f;
+					light.intensity = 4.f;
 					
 					lights.push_back(light);
 				}
@@ -283,7 +276,7 @@ int main(int argc, char * argv[])
 					light.attenuationBegin = 0.f;
 					light.attenuationEnd = 2.f + sinf(framework.time * 2.34f) * 2.f;
 					light.color.Set(1, 1, 1);
-					light.intensity = 10.f;
+					light.intensity = 4.f;
 					
 					lights.push_back(light);
 				}
