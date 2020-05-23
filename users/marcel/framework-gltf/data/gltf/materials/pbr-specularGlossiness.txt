@@ -183,6 +183,8 @@ Lighting_SurfaceProperties prepareSurfaceProperties(
 
     float roughness = clamp(1.0 - glossiness, kMinRoughness, 1.0);
 
+    float reflectance = max(specular.r, max(specular.g, specular.b));
+
     // -- calculate surface vectors
 
     vec3 N = gltfNormal(position_view, normal_view);
@@ -196,7 +198,7 @@ Lighting_SurfaceProperties prepareSurfaceProperties(
     surfaceProperties.N = N;
     surfaceProperties.V = V;
     surfaceProperties.R = R;
-    surfaceProperties.baseColor = baseColor.rgb * (vec3(1.0) - specular);
+    surfaceProperties.baseColor = baseColor.rgb * (1.0 - reflectance);
     surfaceProperties.opacity = baseColor.a;
     surfaceProperties.metallic = specular;
     surfaceProperties.roughness = roughness;

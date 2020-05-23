@@ -175,7 +175,17 @@ Lighting_SurfaceProperties prepareSurfaceProperties(
         roughness *= metallicRoughness.g;
     }
 
-    roughness = clamp(roughness, kMinRoughness, 1.0);
+    /*
+    From the spec,
+        The base color has two different interpretations depending on the value of metalness. When the material is a metal, the base color is the specific measured reflectance value at normal incidence (F0). For a non-metal the base color represents the reflected diffuse color of the material. In this model it is not possible to specify a F0 value for non-metals, and a linear value of 4% (0.04) is used.
+    Note,
+        We will fade out the dialectric value of 0.04 to 0.0 when the metallic factor is small. This to ensure materials with an explicit metall-ness of zero, do not have specular reflections. These types of materials are often used in flat shaded models or models with a cartooney look. Also, some models use black fringe geometry to create outlines, usually black, which would have some amount of reflection without this fade.
+    */
+    float dialectricValue = min(metallic, 0.04);
+    //float dialectricValue = mix(0.04, 1.0, metallic); // According to the spec, but fails to work properly for material that wish for a flat appearance.
+
+    //metallic = mix(dialectricValue, 1.0, metallic);
+    roughness = max(roughness, kMinRoughness);
 
     // -- calculate surface vectors
 
@@ -192,7 +202,7 @@ Lighting_SurfaceProperties prepareSurfaceProperties(
     surfaceProperties.R = R;
     surfaceProperties.baseColor = baseColor.rgb * (1.0 - metallic);
     surfaceProperties.opacity = baseColor.a;
-    surfaceProperties.metallic = mix(vec3(0.04), baseColor.rgb, metallic);
+    surfaceProperties.metallic = mix(vec3(dialectricValue), baseColor.rgb, metallic);
     surfaceProperties.roughness = roughness;
 
 	return surfaceProperties;

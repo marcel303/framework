@@ -113,8 +113,6 @@ Lighting_LightingResult computeLighting(
     float NdotV = max(dot(N, V), 0.004); // the geometric self-shadowing model has a nasty floating point cancellation which would give precision issues near the 'zero point singularity'. without this clamp, at grazing angles, the resulting colors turn to black. the value of 0.004 has been determined through visual inspection of the result, near grazing angles
     float NdotL = max(dot(N, L), 0.004);
 
-    float reflectance = max(surfaceProperties.metallic.r, max(surfaceProperties.metallic.g, surfaceProperties.metallic.b));
-
     // -- specular
 
     vec3 F0 = surfaceProperties.metallic;
@@ -135,8 +133,8 @@ Lighting_LightingResult computeLighting(
         F0,
         surfaceProperties.roughness);
 
-    // for energy conservation: reduce diffuse by how reflective the material is
-    vec3 kD = (vec3(1.0) - F) * (1.0 - reflectance);
+    // for energy conservation: reduce diffuse by energy lost due to reflections
+    vec3 kD = (vec3(1.0) - F);
 
     vec3 diffuse = kD * surfaceProperties.baseColor / PI;
 
