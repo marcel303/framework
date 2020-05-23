@@ -26,14 +26,14 @@ float G_SchlicksmithGGX(float NdotL, float NdotV, float roughness)
 vec3 F_Schlick(float cosTheta, vec3 F0)
 {
     // note : F0 and F90 are the reflectance at 0 and 90 degrees (grazing angle)
-    float F90 = 1.0;
+    vec3 F90 = clamp(F0 * (1.0 / 0.04), vec3(0.0), vec3(1.0)); // 1.0 for F0 >= 0.04. fade out to zero if below. this to give material a chance to completely disable fresnel at 0.0. note : 0.04 is not arbitrality chosen. it's the minimum 'metallic' value for regular dialectrics
     return F0 + (F90 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 vec3 F_SchlickR(float cosTheta, vec3 F0, float roughness)
 {
     // note : F0 and F90 are the reflectance at 0 and 90 degrees (grazing angle)
-    float F90 = 1.0;
+    vec3 F90 = clamp(F0 * (1.0 / 0.04), vec3(0.0), vec3(1.0)); // 1.0 for F0 >= 0.04. fade out to zero if below. this to give material a chance to completely disable fresnel at 0.0. note : 0.04 is not arbitrality chosen. it's the minimum 'metallic' value for regular dialectrics
     return F0 + (max(vec3(F90 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
@@ -94,6 +94,7 @@ struct Lighting_LightingResult
 {
     vec3 diffuse;
     vec3 specular;
+    float lightIncidence; // Give pbr shaders control over whether or not to integrate the light incidence factor. For correct results, you'd want to. But, flat shading or not is an artistic choice we want to support.
 };
 
 Lighting_LightingResult computeLighting(
@@ -109,8 +110,8 @@ Lighting_LightingResult computeLighting(
     // -- precalculate vectors and dot products
     
     float NdotH = max(dot(N, H), 0.0);
-    float NdotV = max(dot(N, V), 0.0);
-    float NdotL = max(dot(N, L), 0.0);
+    float NdotV = max(dot(N, V), 0.004); // the geometric self-shadowing model has a nasty floating point cancellation which would give precision issues near the 'zero point singularity'. without this clamp, at grazing angles, the resulting colors turn to black. the value of 0.004 has been determined through visual inspection of the result, near grazing angles
+    float NdotL = max(dot(N, L), 0.004);
 
     float reflectance = max(surfaceProperties.metallic.r, max(surfaceProperties.metallic.g, surfaceProperties.metallic.b));
 
@@ -138,17 +139,20 @@ Lighting_LightingResult computeLighting(
     vec3 kD = (vec3(1.0) - F) * (1.0 - reflectance);
 
     vec3 diffuse = kD * surfaceProperties.baseColor / PI;
-    
-    // -- light incidence
 
-    specular *= NdotL;
-    diffuse *= NdotL;
+    // -- debugging
+
+#if 0
+    specular *= PI;
+    diffuse *= PI;
+#endif
 
     // -- result
 
     Lighting_LightingResult result;
     result.specular = specular;
     result.diffuse = diffuse;
+    result.lightIncidence = NdotL;
 
     return result;
 }
