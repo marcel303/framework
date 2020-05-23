@@ -203,8 +203,13 @@ int main(int argc, char * argv[])
 				{
 					const bool isOpaquePass = (i == 0);
 					
-					pushDepthWrite(!keyboard.isDown(SDLK_z) ? true : (isOpaquePass ? true : false));
-					pushBlend(useAlphaToCoverage ? BLEND_OPAQUE : (isOpaquePass ? BLEND_OPAQUE : BLEND_ALPHA));
+					const BLEND_MODE blendMode =
+						useAlphaToCoverage
+							? BLEND_OPAQUE
+							: (isOpaquePass ? BLEND_OPAQUE : BLEND_ALPHA);
+					
+					pushDepthWrite(blendMode == BLEND_OPAQUE);
+					pushBlend(blendMode);
 					{
 						Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
 						Shader specularGlossinessShader("gltf/shaders/pbr-specularGlossiness");
@@ -247,7 +252,7 @@ int main(int argc, char * argv[])
 								1.f,
 								1.f,
 								1.f,
-								2.f);
+								1.f);
 						
 							//shader->setImmediate("scene_ambientLightColor", .03f, .02f, .01f);
 							shader->setImmediate("scene_ambientLightColor", .2f, .2f, .2f);
@@ -273,7 +278,10 @@ int main(int argc, char * argv[])
 						materialShaders.init();
 						
 						gltf::DrawOptions drawOptions;
-						drawOptions.alphaMode = gltf::kAlphaMode_AlphaToCoverage;
+						drawOptions.alphaMode =
+							useAlphaToCoverage
+							? gltf::kAlphaMode_AlphaToCoverage
+							: gltf::kAlphaMode_AlphaBlend;
 						
 						gltf::drawScene(
 							scene,
