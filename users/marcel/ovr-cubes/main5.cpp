@@ -5,17 +5,14 @@
 #include "gltf.h"
 #include "gltf-draw.h"
 #include "gltf-loader.h"
-#include "magicavoxel-framework.h"
 
 #include "parameter.h"
 #include "parameterUi.h"
 
-#include "audioTypeDB.h"
-#include "graphEdit.h"
-
 #include "data/engine/ShaderCommon.txt" // VS_ constants
 #include "framework.h"
 #include "gx_render.h"
+#include "internal.h"
 
 #include "imgui-framework.h"
 
@@ -25,26 +22,13 @@
 
 /*
 
- DONE : integrate MagicaVoxel model drawing
+todo : draw windows in 3d using framework
 
- DONE : integrate gltf model drawing
-
- todo : integrate libbullet3 for terrain collisions
-
- DONE : integrate audiograph for some audio processing: first step towards 4dworld in vr
-
- todo : integrate vfxgraph for some vfx processing: let it modulate lines or points and draw them in 3d
-
- DONE : check if Window class works conveniently with render passes and color/depth targets
- todo : integrate 3d virtual pointer with Window objects. create a small 3d Window picking system? should this be part of framework? perhaps just prototype it here and see what feels right
-
- DONE : integrate imgui drawing to a Window. composite the result in 3d
-
- DONE : test if drawing text in 3d using sdf fonts works
-
- DONE : integrate jgmod
-
- todo : integrate libparticle
+todo : tick events for windows in 3d
+	- let the app or framework determine pointer direction and button presses
+	- intersect pointer with windows. determine nearest intersection
+	- on button press, make the intersecting window active
+	- for all windows, generate mouse.x, mouse.y and button presses
 
  */
 
@@ -61,10 +45,6 @@
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
-
-#define USE_FRAMEWORK_DRAWING 1
-
-#define OPTIMIZE_GLOBAL_HAND_POSE_TRANSFORM_MATHS 1
 
 static const int CPU_LEVEL = 2;
 static const int GPU_LEVEL = 3;
@@ -90,6 +70,7 @@ ovrMobile * getOvrMobile();
 
 #include "gx_mesh.h"
 #include "image.h"
+#include "../../../3rdparty/ovr-mobile/VrApi/Include/VrApi_Input.h"
 
 struct PointerObject
 {
@@ -106,31 +87,10 @@ struct Scene
 
 	Vec3 playerLocation;
 
-	// gltf
-// todo : add gltf::BufferedScene ? something is needed to make gltf scenes more usable. now always requires a separate buffer cache object ..
-	gltf::Scene gltf_scene;
-	gltf::BufferCache gltf_bufferCache;
-
-	// MagicaVoxel
-	MagicaWorld magica_world;
-	GxMesh magica_mesh;
-    GxVertexBuffer magica_vb;
-    GxIndexBuffer magica_ib;
-
-	// terrain
-    GxMesh terrain_mesh;
-    GxVertexBuffer terrain_vb;
-    GxIndexBuffer terrain_ib;
-
     // ImGui test
     Window * guiWindow = nullptr;
     FrameworkImGuiContext guiContext;
     ParameterMgr parameterMgr;
-
-    // graph editor
-    Window * graphEditWindow = nullptr;
-	Graph_TypeDefinitionLibrary * audioTypes = nullptr;
-	GraphEdit * graphEdit = nullptr;
 
 	// hand mesh
 	struct HandMesh
@@ -154,29 +114,11 @@ struct Scene
 
 void Scene::create()
 {
-	//gltf::loadScene("lain_2.0/scene.gltf", gltf_scene);
-	gltf::loadScene("Suzanne/glTF/Suzanne.gltf", gltf_scene);
-	gltf_bufferCache.init(gltf_scene);
-
-	if (!readMagicaWorld("room.vox", magica_world))
-		logError("failed to read MagicaVoxel world");
-
-	gxCaptureMeshBegin(magica_mesh, magica_vb, magica_ib);
-	{
-		drawMagicaWorld(magica_world);
-	}
-	gxCaptureMeshEnd();
-
 	guiWindow = new Window("window", 300, 300);
 	guiContext.init(false);
 	parameterMgr.addString("name", "");
 	parameterMgr.addInt("count", 0)->setLimits(0, 100);
 	parameterMgr.addFloat("speed", 0.f)->setLimits(0.f, 10.f);
-
-	graphEditWindow = new Window("Graph Editor", 300, 300);
-    audioTypes = createAudioTypeDefinitionLibrary();
-    graphEdit = new GraphEdit(graphEditWindow->getWidth(), graphEditWindow->getHeight(), audioTypes); // todo : remove width/heigth from editor ctor. or make optional. sx/sy should be passed on tick instead
-	graphEdit->load("sweetStuff6.xml");
 
 	for (int i = 0; i < 2; ++i)
 	{
@@ -205,72 +147,11 @@ void Scene::create()
 		}
 	}
 
-    auto * image = loadImage("Hokkaido8.png");
-    if (image != nullptr)
-    {
-        gxCaptureMeshBegin(terrain_mesh, terrain_vb, terrain_ib);
-	    {
-	        setColor(colorWhite);
-	        gxBegin(GX_QUADS);
-		    //gxBegin(GX_POINTS);
-	        const int stride = 3; // 2 when points, 3 when quads
-		    for (int y = 0; y < image->sy - stride; y += stride)
-		    {
-			    ImageData::Pixel * line1 = image->getLine(y + 0);
-			    ImageData::Pixel * line2 = image->getLine(y + stride);
-			    ImageData::Pixel * line[2] = { line1, line2 };
-	            for (int x = 0; x < image->sx - stride; x += stride)
-	            {
-				#define emitVertex(ox, oy) \
-		            gxVertex3f( \
-				            ((x + ox) + .5f - image->sx / 2.f) * .1f, \
-				            line[oy/stride][x + ox].r / 40.f - 3, \
-				            ((y + oy) + .5f - image->sy / 2.f) * .1f);
-
-		            gxColor3ub(line1[x].r + 127, line1[x].r, 255 - line1[x].r);
-
-				#if false
-		            emitVertex(0,           0);
-				#else
-		            emitVertex(0,           0);
-		            emitVertex(stride,      0);
-		            emitVertex(stride, stride);
-		            emitVertex(0,      stride);
-				#endif
-
-				#undef emitVertex
-	            }
-	        }
-	        gxEnd();
-	    }
-	    gxCaptureMeshEnd();
-
-        delete image;
-        image = nullptr;
-    }
-
     created = true;
 }
 
 void Scene::destroy()
 {
-	// destroy terrain resources
-
-	terrain_mesh.clear();
-	terrain_vb.free();
-	terrain_ib.free();
-
-	// destroy graph editor related objects
-
-	delete graphEdit;
-	graphEdit = nullptr;
-
-	delete audioTypes;
-	audioTypes = nullptr;
-
-	delete graphEditWindow;
-	graphEditWindow = nullptr;
-
 	// destroy imgui related objects
 
 	guiContext.shut();
@@ -278,32 +159,67 @@ void Scene::destroy()
 	delete guiWindow;
 	guiWindow = nullptr;
 
-	magica_world.free();
-
-	// todo : clear gltf scene
-
     created = false;
 }
 
 void Scene::tick(ovrMobile * ovr, const float dt, const double predictedDisplayTime)
 {
-	bool inputIsCaptured = false;
-	guiContext.processBegin(.01f, guiWindow->getWidth(), guiWindow->getHeight(), inputIsCaptured);
+static bool isPinching = false; // todo : remove hack
+
+	// update window positions
+
+	Mat4x4 transform = Mat4x4(true).Translate(0, 0, -.3f);//.RotateY(float(M_PI));
+	guiWindow->setTransform(transform);
+
+	// update windows
+
+// todo : move this to framework
+
+// todo : let the user specify the pointer origin and direction. or the pointer transform
+	Mat4x4 worldToView;
+	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+	Mat4x4 viewToWorld = worldToView.CalcInv();
+	const Vec3 pointerOrigin = viewToWorld.GetTranslation();
+	const Vec3 pointerDirection = viewToWorld.GetAxis(2).CalcNormalized();
+
+	auto * windowData = guiWindow->getWindowData();
+	windowData->beginProcess();
+	windowData->endProcess();
+
+	Vec2 pixelPos;
+	float distance;
+	if (guiWindow->intersectRay(pointerOrigin, pointerDirection, pixelPos, distance))
 	{
-		ImGui::SetNextWindowPos(ImVec2(0, 0));
-		ImGui::SetNextWindowSize(ImVec2(guiWindow->getWidth(), guiWindow->getHeight()));
-
-		if (ImGui::Begin("This is a window", nullptr, ImGuiWindowFlags_NoCollapse))
-		{
-			ImGui::Button("This is a button");
-
-			parameterUi::doParameterUi_recursive(parameterMgr, nullptr);
-		}
-		ImGui::End();
+		windowData->mouseData.mouseX = pixelPos[0];
+		windowData->mouseData.mouseY = pixelPos[1];
+		windowData->mouseData.mouseDown[0] = isPinching;
 	}
-	guiContext.processEnd();
+
+	// update gui window
+
+	pushWindow(*guiWindow);
+	{
+		bool inputIsCaptured = false;
+		guiContext.processBegin(.01f, guiWindow->getWidth(), guiWindow->getHeight(), inputIsCaptured);
+		{
+			ImGui::SetNextWindowPos(ImVec2(0, 0));
+			ImGui::SetNextWindowSize(ImVec2(guiWindow->getWidth(), guiWindow->getHeight()));
+
+			if (ImGui::Begin("This is a window", nullptr, ImGuiWindowFlags_NoCollapse))
+			{
+				ImGui::Button("This is a button");
+
+				parameterUi::doParameterUi_recursive(parameterMgr, nullptr);
+			}
+			ImGui::End();
+		}
+		guiContext.processEnd();
+	}
+	popWindow();
 
 	uint32_t index = 0;
+
+isPinching = false; // todo : remove hack
 
 	for (;;)
 	{
@@ -314,6 +230,7 @@ void Scene::tick(ovrMobile * ovr, const float dt, const double predictedDisplayT
 		if (result < 0)
 			break;
 
+// todo : vrapi_SetHapticVibrationSimple(ovrMobile* ovr, const ovrDeviceID deviceID, const float intensity)
 		if (header.Type == ovrControllerType_TrackedRemote)
 		{
 			ovrTracking tracking;
@@ -380,6 +297,16 @@ void Scene::tick(ovrMobile * ovr, const float dt, const double predictedDisplayT
 				}
 			}
 		}
+		else if (header.Type == ovrControllerType_Hand)
+		{
+			ovrInputStateHand hand;
+			hand.Header.ControllerType = ovrControllerType_Hand;
+			if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &hand.Header) == ovrSuccess)
+			{
+				if ((hand.InputStateStatus & ovrInputStateHandStatus_IndexPinching) && hand.PinchStrength[ovrHandPinchStrength_Index] >= .5f)
+					isPinching = true;
+			}
+		}
 	}
 }
 
@@ -396,27 +323,13 @@ void Scene::draw() const
 		framework.endDraw();
 	}
 	popWindow();
-
-	graphEdit->displaySx = graphEditWindow->getWidth();
-	graphEdit->displaySy = graphEditWindow->getHeight();
-	graphEdit->tick(.01f, false);
-
-	pushWindow(*graphEditWindow);
-	{
-		framework.beginDraw(0, 0, 0, 0);
-		{
-			pushFontMode(FONT_SDF);
-			graphEdit->draw();
-			popFontMode();
-		}
-		framework.endDraw();
-	}
-	popWindow();
 }
 
 void Scene::drawEye(ovrMobile * ovr) const
 {
     setFont("calibri.ttf");
+
+	const double time = GetTimeInSeconds();
 
     gxTranslatef(
 	    -playerLocation[0],
@@ -438,66 +351,17 @@ void Scene::drawEye(ovrMobile * ovr) const
 	    if (vrapi_GetBoundaryOrientedBoundingBox(ovr, &boundaryPose, &boundaryScale) == ovrSuccess)
 	        ground_y = boundaryPose.Translation.y;
     }
+
     gxPushMatrix();
-    gxTranslatef(0, ground_y, 0);
-
-    const double time = GetTimeInSeconds();
-
-	// Draw gltf scene.
-	gxPushMatrix();
     {
-	    gxTranslatef(0, 2.5f, 0);
+    	gxTranslatef(0, ground_y, 0);
 
-		gltf::MaterialShaders materialShaders;
-		gltf::setDefaultMaterialShaders(materialShaders);
-		gltf::setDefaultMaterialLighting(materialShaders, worldToView, Vec3(.3f, -1.f, .3f).CalcNormalized(), Vec3(2.f, .8f, .6f), Vec3(.2f));
-
-		for (int i = 0; i < 1; ++i)
-		{
-			gxPushMatrix();
-		    gxTranslatef(sinf(i * 1.23f) * 1.f, sinf(i / 1.23f) * .5f, sinf(i * 2.34f) * 1.f);
-	        gxRotatef((time + i) * 40.f, .3f, 1, .2f);
-	        gxScalef(.4f, .4f, .4f);
-			gltf::DrawOptions drawOptions;
-			gltf::drawScene(gltf_scene, &gltf_bufferCache, materialShaders, true, &drawOptions);
-			gxPopMatrix();
-		}
+	    // draw world-space things
     }
-	gxPopMatrix();
-
-	// Draw MagicVoxel world
-    gxPushMatrix();
-    gxScalef(.01f, .01f, .01f);
-    pushShaderOutputs("n");
-	//drawMagicaWorld(magica_world);
-	//magica_mesh.draw();
-	popShaderOutputs();
-	gxPopMatrix();
-
-    // Draw terrain.
-    //terrain_mesh.draw();
-
-	// Draw circles.
-    for (int i = 0; i < 16; ++i)
-    {
-	    gxPushMatrix();
-
-        const float t = float(sin(time / 4.0 + i) + 1.f) / 2.f;
-	    const float size = lerp<float>(1.f, 4.f, t);
-	    const float c = 1.f - t;
-
-	    const float y_t = float(sin(time / 6.0 / 2.34f + i) + 1.f) / 2.f;
-	    const float y = lerp<float>(0.f, 4.f, y_t);
-	    gxTranslatef(0, y, 0);
-	    gxRotatef(90, 1, 0, 0);
-
-	    setColorf(c, c, c, 1.f);
-	    drawCircle(0.f, 0.f, size, 100);
-
-	    gxPopMatrix();
-    }
-
     gxPopMatrix(); // Undo ground level adjustment.
+
+	setColor(colorWhite);
+	framework.drawVirtualDesktop();
 
 	// Draw hands.
 #if true
@@ -516,12 +380,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 
 		// Draw picture.
 
-		gxSetTexture(i == 0
-			? guiWindow->getColorTarget()->getTextureId()
-			: graphEditWindow->getColorTarget()->getTextureId());
-		//gxSetTexture(graphEditWindow->getColorTarget()->getTextureId());
-		//gxSetTexture(getTexture("sabana.jpg"));
-		//gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
+		gxSetTexture(guiWindow->getColorTarget()->getTextureId());
 		setColor(colorWhite);
 		{
 			gxPushMatrix();
@@ -536,52 +395,44 @@ void Scene::drawEye(ovrMobile * ovr) const
 
 		// Draw cube.
 		gxPushMatrix();
-		gxMultMatrixf(pointer.transform.m_v);
-
-	#if false
-		pushCullMode(CULL_BACK, CULL_CCW);
-		pushShaderOutputs("n");
-		setColor(colorWhite);
-		fillCube(Vec3(), Vec3(.02f, .02f, .1f));
-		popShaderOutputs();
-		popCullMode();
-	#else
-		pushCullMode(CULL_BACK, CULL_CCW);
-		Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
-		setShader(metallicRoughnessShader);
 		{
-			gltf::setDefaultMaterialLighting(metallicRoughnessShader, worldToView);
+			gxMultMatrixf(pointer.transform.m_v);
 
-			gltf::MetallicRoughnessParams params;
-			params.init(metallicRoughnessShader);
+			pushCullMode(CULL_BACK, CULL_CCW);
+			Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
+			setShader(metallicRoughnessShader);
+			{
+				gltf::setDefaultMaterialLighting(metallicRoughnessShader, worldToView);
 
-			gltf::Material material;
-			gltf::Scene scene;
-			int nextTextureUnit = 0;
-			params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
+				gltf::MetallicRoughnessParams params;
+				params.init(metallicRoughnessShader);
 
-			params.setUseVertexColors(metallicRoughnessShader, true);
-			params.setMetallicRoughness(metallicRoughnessShader, .8f, .2f);
-			setColor(255, 127, 63, 255);
-			fillCube(Vec3(), Vec3(.02f, .02f, .1f));
+				gltf::Material material;
+				gltf::Scene scene;
+				int nextTextureUnit = 0;
+				params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
+
+				params.setUseVertexColors(metallicRoughnessShader, true);
+				params.setMetallicRoughness(metallicRoughnessShader, .8f, .2f);
+				setColor(255, 127, 63, 255);
+				fillCube(Vec3(), Vec3(.02f, .02f, .1f));
+			}
+			clearShader();
+			popCullMode();
+
+			// Draw pointer ray.
+			pushCullMode(CULL_BACK, CULL_CCW);
+			pushBlend(BLEND_ADD);
+			const float a = lerp<float>(.1f, .4f, (sin(time) + 1.0) / 2.0);
+			setColorf(1, 1, 1, a);
+			fillCube(Vec3(0, 0, -100), Vec3(.01f, .01f, 100));
+			popBlend();
+			popCullMode();
+
+		#if true
+		    handMeshes[0].mesh.draw();
+		#endif
 		}
-		clearShader();
-		popCullMode();
-	#endif
-
-		// Draw pointer ray.
-		pushCullMode(CULL_BACK, CULL_CCW);
-		pushBlend(BLEND_ADD);
-		const float a = lerp<float>(.1f, .4f, (sin(time) + 1.0) / 2.0);
-		setColorf(1, 1, 1, a);
-		fillCube(Vec3(0, 0, -100), Vec3(.01f, .01f, 100));
-		popBlend();
-		popCullMode();
-
-	#if true
-	    handMeshes[0].mesh.draw();
-	#endif
-
 		gxPopMatrix();
     }
 
@@ -628,7 +479,6 @@ void Scene::drawEye(ovrMobile * ovr) const
 						ovrMatrix4f globalBoneTransforms_bind[ovrHand_MaxBones];
 						for (int i = 0; i < handSkeleton.NumBones; ++i)
 						{
-						#if OPTIMIZE_GLOBAL_HAND_POSE_TRANSFORM_MATHS
 							const ovrPosef & pose = handSkeleton.BonePoses[i];
 							const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
 							const int parentIndex = handSkeleton.BoneParentIndices[i];
@@ -636,18 +486,6 @@ void Scene::drawEye(ovrMobile * ovr) const
 								globalBoneTransforms_bind[i] = transform;
 							else
 								globalBoneTransforms_bind[i] = ovrMatrix4f_Multiply(&globalBoneTransforms_bind[parentIndex], &transform);
-						#else
-							ovrMatrix4f globalBoneTransform = ovrMatrix4f_CreateIdentity();
-
-							for (int index = i; index >= 0; index = handSkeleton.BoneParentIndices[index])
-							{
-								const ovrPosef & pose = handSkeleton.BonePoses[index];
-								const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
-								globalBoneTransform = ovrMatrix4f_Multiply(&transform, &globalBoneTransform);
-							}
-
-							globalBoneTransforms_bind[i] = globalBoneTransform;
-						#endif
 						}
 
 						// Update local bone poses.
@@ -662,7 +500,6 @@ void Scene::drawEye(ovrMobile * ovr) const
 						ovrMatrix4f globalBoneTransforms[ovrHand_MaxBones];
 						for (int i = 0; i < handSkeleton.NumBones; ++i)
 						{
-						#if OPTIMIZE_GLOBAL_HAND_POSE_TRANSFORM_MATHS
 							const ovrPosef & pose = localBonePoses[i];
 							const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
 							const int parentIndex = handSkeleton.BoneParentIndices[i];
@@ -670,18 +507,6 @@ void Scene::drawEye(ovrMobile * ovr) const
 								globalBoneTransforms[i] = transform;
 							else
 								globalBoneTransforms[i] = ovrMatrix4f_Multiply(&globalBoneTransforms[parentIndex], &transform);
-						#else
-							ovrMatrix4f globalBoneTransform = ovrMatrix4f_CreateIdentity();
-
-							for (int index = i; index >= 0; index = handSkeleton.BoneParentIndices[index])
-							{
-								const ovrPosef & pose = localBonePoses[index];
-								const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
-								globalBoneTransform = ovrMatrix4f_Multiply(&transform, &globalBoneTransform);
-							}
-
-							globalBoneTransforms[i] = globalBoneTransform;
-						#endif
 						}
 
 						// Calculate skinning matrices. Skinning matrices will first transform a vertex into 'bind space',
@@ -704,43 +529,6 @@ void Scene::drawEye(ovrMobile * ovr) const
 							gxMultMatrixf((float*)rootPose.M);
 							gxScalef(handPose.HandScale, handPose.HandScale, handPose.HandScale);
 
-						#if false
-							// Draw bones.
-							gxBegin(GX_LINES);
-							{
-								for (int i = 0; i < handSkeleton.NumBones; ++i)
-								{
-									const int parentIndex = handSkeleton.BoneParentIndices[i];
-
-									if (parentIndex >= 0)
-									{
-										ovrVector4f origin = { 0, 0, 0, 1 };
-										ovrVector4f position1 = ovrVector4f_MultiplyMatrix4f(&globalBoneTransforms[i], &origin);
-										ovrVector4f position2 = ovrVector4f_MultiplyMatrix4f(&globalBoneTransforms[parentIndex], &origin);
-
-										setColor(colorGreen);
-										gxVertex3f(position1.x, position1.y, position1.z);
-										gxVertex3f(position2.x, position2.y, position2.z);
-									}
-								}
-							}
-							gxEnd();
-						#endif
-
-						#if false
-							// Draw hand mesh.
-							Shader shader("engine/BasicSkinned");
-							setShader(shader);
-							{
-								const_cast<ShaderBuffer&>(handMeshes[index].skinningData).setData(skinningTransforms, sizeof(skinningTransforms));
-
-								shader.setImmediate("drawColor", 0, 0, 0, 0);
-								shader.setImmediate("drawSkin", 0, 0, 0, 0);
-								shader.setBuffer("SkinningData", handMeshes[index].skinningData);
-								handMeshes[index].mesh.draw();
-							}
-							clearShader();
-						#else
 							Shader metallicRoughnessShader("pbr-metallicRoughness-skinned");
 							setShader(metallicRoughnessShader);
 							{
@@ -766,7 +554,6 @@ void Scene::drawEye(ovrMobile * ovr) const
 								handMeshes[index].mesh.draw();
 							}
 							clearShader();
-						#endif
 						}
 						gxPopMatrix();
 					}
@@ -786,58 +573,12 @@ void Scene::drawEye(ovrMobile * ovr) const
     // -- Begin translucent pass.
     pushDepthTest(true, DEPTH_LESS, false);
     pushBlend(BLEND_ADD);
-
-#if false
-	// Draw text.
-	gxPushMatrix();
     {
-        gxTranslatef(0, 2, 0);
-        gxRotatef(time * 10.f, 0, 1, 0);
-        gxScalef(1, -1, 1);
-        pushFontMode(FONT_SDF);
-	    {
-	    // todo : add a function to directly draw 3d msdf text. msdf or sdf is really a requirement for vr
-	        setColor(Color::fromHSL(time / 4.f, .5f, .5f));
-	        drawTextArea(0, 0, 1.f, .25f, .1f, 0, 0, "Hello World!\nThis is some text, drawn using Framework's multiple signed-distance field method! Doesn't it look crisp? :-)", 2.f, 2.f);
-	    }
-	    popFontMode();
-
-		setColor(40, 30, 20);
-	    fillCircle(0, 0, 1.2f/2.f, 100);
+    	// todo : draw translucent objects
     }
-    gxPopMatrix();
-#endif
-
-#if false
-	// Draw filled circles.
-    for (int i = 0; i < 16; ++i)
-    {
-        if ((i % 3) != 0)
-            continue;
-
-	    gxPushMatrix();
-
-	    const float y_t = float(sin(time / 6.0 / 2.34f + i) + 1.f) / 2.f;
-	    const float y = lerp<float>(0.f, 4.f, y_t);
-
-	    gxTranslatef(0, y, 0);
-	    gxRotatef(90, 1, 0, 0);
-
-	    const float t = float(sin(time / 4.0 + i) + 1.f) / 2.f;
-	    const float size = lerp<float>(1.f, 4.f, t);
-
-	    const float c = fabsf(y_t - .5f) * 2.f;
-
-	    setColorf(1, 1, 1, c * .2f);
-	    fillCircle(0.f, 0.f, size, 100);
-
-	    gxPopMatrix();
-    }
-#endif
-
-	// -- End translucent pass.
     popBlend();
     popDepthTest();
+    // -- End translucent pass.
 }
 
 // -- FrameworkVr
@@ -963,11 +704,7 @@ bool FrameworkVr::init(ovrEgl * egl)
 
 	MainThreadTid = gettid();
 
-#if USE_FRAMEWORK_DRAWING
     const bool useMultiview = false;
-#else
-	const bool useMultiview &= (ovrOpenGLExtensions.multi_view && vrapi_GetSystemPropertyInt(&Java, VRAPI_SYS_PROP_MULTIVIEW_AVAILABLE));
-#endif
 
     logDebug("useMultiview: %d", useMultiview ? 1 : 0);
 
@@ -1474,174 +1211,6 @@ Android Main (android_native_app_glue)
 ================================================================================
 */
 
-#include "allegro2-timerApi.h"
-#include "allegro2-voiceApi.h"
-#include "audiooutput/AudioOutput_OpenSL.h"
-#include "framework-allegro2.h"
-#include "jgmod.h"
-
-#define DIGI_SAMPLERATE 48000
-
-struct JgmodTest
-{
-	AllegroTimerApi * timerApi = nullptr;
-	AllegroVoiceApi * voiceApi = nullptr;
-
-	AudioOutput_OpenSL * audioOutput = nullptr;
-	AudioStream * audioStream = nullptr;
-
-	JGMOD_PLAYER player;
-	JGMOD * mod = nullptr;
-
-	void init()
-	{
-		timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
-		voiceApi = new AllegroVoiceApi(DIGI_SAMPLERATE, true);
-
-		audioOutput = new AudioOutput_OpenSL();
-		audioOutput->Initialize(2, DIGI_SAMPLERATE, 256);
-
-		audioStream = new AudioStream_AllegroVoiceMixer(voiceApi, timerApi);
-		audioOutput->Play(audioStream);
-
-	    if (player.init(JGMOD_MAX_VOICES, timerApi, voiceApi) < 0)
-		{
-	        logError("unable to allocate %d voices", JGMOD_MAX_VOICES);
-	        return;
-		}
-
-		player.enable_lasttrk_loop = true;
-
-		const char * filename = "point_of_departure.s3m";
-		mod = jgmod_load(filename);
-
-		if (mod != nullptr)
-		{
-			player.play(mod, true);
-		}
-	}
-
-	void shut()
-	{
-		player.stop();
-
-		if (mod != nullptr)
-		{
-			jgmod_destroy(mod);
-			mod = nullptr;
-		}
-
-		if (audioOutput != nullptr)
-		{
-			audioOutput->Stop();
-			delete audioStream;
-			audioStream = nullptr;
-		}
-
-		if (audioOutput != nullptr)
-		{
-			audioOutput->Shutdown();
-			delete audioOutput;
-			audioOutput = nullptr;
-		}
-
-		delete timerApi;
-		delete voiceApi;
-		timerApi = nullptr;
-		voiceApi = nullptr;
-	}
-};
-
-#include "audioGraph.h"
-#include "audioGraphManager.h"
-#include "audioVoiceManager.h"
-
-#include "audiooutput/AudioOutput_Native.h"
-#include "audiostream/AudioStream.h"
-
-struct AudioStream_AudioGraph : AudioStream
-{
-	AudioVoiceManager * voiceMgr = nullptr;
-	AudioGraphManager * audioGraphMgr = nullptr;
-
-	virtual int Provide(int numSamples, AudioSample* __restrict buffer) override
-	{
-		//audioGraphMgr->tickMain();
-
-		audioGraphMgr->tickAudio(numSamples / 44100.f);
-
-		float samples[numSamples * 2];
-
-		voiceMgr->generateAudio(samples, numSamples, 2);
-
-		for (int i = 0; i < numSamples; ++i)
-		{
-			float valueL = samples[i * 2 + 0];
-			float valueR = samples[i * 2 + 1];
-
-			valueL = valueL < -1.f ? -1.f : valueL > +1.f ? +1.f : valueL;
-			valueR = valueR < -1.f ? -1.f : valueR > +1.f ? +1.f : valueR;
-
-			const int valueLi = int(valueL * ((1 << 15) - 1));
-			const int valueRi = int(valueR * ((1 << 15) - 1));
-
-			buffer[i].channel[0] = valueLi;
-			buffer[i].channel[1] = valueRi;
-		}
-
-		return numSamples;
-	}
-};
-
-struct AudiographTest
-{
-	AudioMutex mutex;
-	AudioVoiceManagerBasic voiceMgr;
-	AudioGraphManager_Basic audioGraphMgr;
-
-	AudioStream_AudioGraph audioStream;
-	AudioOutput_Native audioOutput;
-
-	AudiographTest()
-		: audioGraphMgr(true)
-	{
-	}
-
-	void init()
-	{
-		// initialize audio related systems
-
-		mutex.init();
-
-		voiceMgr.init(&mutex, 16);
-		voiceMgr.outputStereo = true;
-
-		audioGraphMgr.init(&mutex, &voiceMgr);
-
-		// create an audio graph instance
-
-		auto * instance = audioGraphMgr.createInstance("sweetStuff6.xml");
-
-		audioStream.voiceMgr = &voiceMgr;
-		audioStream.audioGraphMgr = &audioGraphMgr;
-
-		audioOutput.Initialize(2, 44100, 256);
-		audioOutput.Play(&audioStream);
-	}
-
-	void shut()
-	{
-		audioOutput.Stop();
-		audioOutput.Shutdown();
-
-		audioGraphMgr.shut();
-
-		voiceMgr.shut();
-
-		mutex.shut();
-	}
-};
-
 #include "framework-android-app.h"
 #include <android_native_app_glue.h>
 #include <android/native_activity.h>
@@ -1677,12 +1246,6 @@ int main(int argc, char * argv[])
 	}
 
 	Scene scene;
-
-    JgmodTest jgmodTest;
-    //jgmodTest.init();
-
-    AudiographTest audiographTest;
-    audiographTest.init();
 
     while (!app->destroyRequested)
     {
@@ -1742,10 +1305,6 @@ int main(int argc, char * argv[])
     }
 
     Font("calibri.ttf").saveCache();
-
-    audiographTest.shut();
-
-    jgmodTest.shut();
 
 	scene.destroy();
 

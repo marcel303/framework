@@ -27,3 +27,11 @@ app ovr-cubes4
 	add_files main4.cpp
 	resource_path data
 
+app ovr-cubes5
+	depend_library android-assetcopy
+	depend_library ecs-parameterui
+	depend_library framework
+	depend_library framework-gltf
+	depend_library imgui-framework
+	add_files main5.cpp
+	resource_path data
