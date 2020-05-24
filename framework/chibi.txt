@@ -185,6 +185,7 @@ library framework
 # Oculus VR Mobile includes and libraries
 
 	with_platform android.ovr-mobile compile_definition FRAMEWORK_USE_OVR_MOBILE * expose
+	with_platform android.ovr-mobile depend_library ovr-mobile-opengl
 	with_platform android.ovr-mobile depend_library ovr-mobile-vrapi
 
 	resource_path data
