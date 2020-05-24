@@ -4,21 +4,18 @@
 
 #include "gltf.h"
 #include "gltf-draw.h"
-#include "gltf-loader.h"
 
 #include "parameter.h"
 #include "parameterUi.h"
 
 #include "data/engine/ShaderCommon.txt" // VS_ constants
 #include "framework.h"
-#include "gx_render.h"
+#include "gx_mesh.h"
 #include "internal.h"
 
 #include "imgui-framework.h"
 
 #include "android-assetcopy.h"
-
-#include "StringEx.h"
 
 /*
 
@@ -68,10 +65,6 @@ ovrMobile * getOvrMobile();
 
 // -- scene
 
-#include "gx_mesh.h"
-#include "image.h"
-#include "../../../3rdparty/ovr-mobile/VrApi/Include/VrApi_Input.h"
-
 struct PointerObject
 {
 	Mat4x4 transform = Mat4x4(true);
@@ -80,18 +73,86 @@ struct PointerObject
 	bool isDown = false;
 };
 
+struct WindowTest
+{
+    Window window;
+    FrameworkImGuiContext guiContext;
+	ParameterMgr parameterMgr;
+	ParameterMgr parameterMgr_A;
+	ParameterMgr parameterMgr_B;
+
+	WindowTest(const float angle)
+		: window("Window", 340, 340)
+	{
+		const Mat4x4 transform = Mat4x4(true).RotateY(angle).Translate(0, 0, -.45f);
+		window.setTransform(transform);
+
+		guiContext.init(false);
+		parameterMgr.addString("name", "");
+		parameterMgr.addInt("count", 0)->setLimits(0, 100);
+		parameterMgr.addFloat("speed", 0.f)->setLimits(0.f, 10.f);
+
+		parameterMgr_A.setPrefix("Group A");
+		parameterMgr_A.addVec3("color", Vec3(1.f))->setLimits(Vec3(0.f), Vec3(1.f));
+		parameterMgr_A.addFloat("strength", 1.f)->setLimits(0.f, 1.f);
+		parameterMgr.addChild(&parameterMgr_A);
+
+		parameterMgr_B.setPrefix("Group B");
+		parameterMgr_B.addEnum("type", 0, {{ "Box", 0 }, { "Sphere", 1 }});
+		parameterMgr_B.addVec3("color", Vec3(1.f))->setLimits(Vec3(0.f), Vec3(1.f));
+		parameterMgr_B.addFloat("strength", 1.f)->setLimits(0.f, 1.f);
+		parameterMgr.addChild(&parameterMgr_B);
+	}
+
+	~WindowTest()
+	{
+		guiContext.shut();
+	}
+
+	void tick()
+	{
+		pushWindow(window);
+		{
+			bool inputIsCaptured = false;
+			guiContext.processBegin(.01f, window.getWidth(), window.getHeight(), inputIsCaptured);
+			{
+				ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
+				ImGui::SetNextWindowSize(ImVec2(window.getWidth(), window.getHeight()), ImGuiCond_Once);
+
+				if (ImGui::Begin("This is a window", nullptr, ImGuiWindowFlags_NoCollapse))
+				{
+					ImGui::Button("This is a button");
+
+					parameterUi::doParameterUi_recursive(parameterMgr, nullptr);
+				}
+				ImGui::End();
+			}
+			guiContext.processEnd();
+		}
+		popWindow();
+	}
+
+	void draw()
+	{
+		pushWindow(window);
+		{
+			framework.beginDraw(20, 20, 20, 255);
+			{
+				guiContext.draw();
+			}
+			framework.endDraw();
+		}
+		popWindow();
+	}
+};
+
 struct Scene
 {
     bool created = false;
 
 	Vec3 playerLocation;
 
-    // ImGui test
-    Window * guiWindow = nullptr;
-    FrameworkImGuiContext guiContext;
-	ParameterMgr parameterMgr;
-	ParameterMgr parameterMgr_A;
-	ParameterMgr parameterMgr_B;
+	std::vector<WindowTest*> windows;
 
 	// hand mesh
 	struct HandMesh
@@ -115,22 +176,12 @@ struct Scene
 
 void Scene::create()
 {
-	guiWindow = new Window("window", 300, 300);
-	guiContext.init(false);
-	parameterMgr.addString("name", "");
-	parameterMgr.addInt("count", 0)->setLimits(0, 100);
-	parameterMgr.addFloat("speed", 0.f)->setLimits(0.f, 10.f);
+	for (int i = 0; i < 3; ++i)
+	{
+		WindowTest * window = new WindowTest(i - 1);
 
-	parameterMgr_A.setPrefix("Group A");
-	parameterMgr_A.addVec3("color", Vec3(1.f))->setLimits(Vec3(0.f), Vec3(1.f));
-	parameterMgr_A.addFloat("strength", 1.f)->setLimits(0.f, 1.f);
-	parameterMgr.addChild(&parameterMgr_A);
-
-	parameterMgr_B.setPrefix("Group B");
-	parameterMgr_B.addEnum("type", 0, {{ "Box", 0 }, { "Sphere", 1 }});
-	parameterMgr_B.addVec3("color", Vec3(1.f))->setLimits(Vec3(0.f), Vec3(1.f));
-	parameterMgr_B.addFloat("strength", 1.f)->setLimits(0.f, 1.f);
-	parameterMgr.addChild(&parameterMgr_B);
+		windows.push_back(window);
+	}
 
 	for (int i = 0; i < 2; ++i)
 	{
@@ -164,12 +215,13 @@ void Scene::create()
 
 void Scene::destroy()
 {
-	// destroy imgui related objects
+	for (auto *& window : windows)
+	{
+		delete window;
+		window = nullptr;
+	}
 
-	guiContext.shut();
-
-	delete guiWindow;
-	guiWindow = nullptr;
+	windows.clear();
 
     created = false;
 }
@@ -178,63 +230,28 @@ void Scene::tick(ovrMobile * ovr, const float dt, const double predictedDisplayT
 {
 static bool isPinching = false; // todo : remove hack
 
-	// update window positions
-
-	Mat4x4 transform = Mat4x4(true).Translate(0, 0, -.3f);//.RotateY(float(M_PI));
-	guiWindow->setTransform(transform);
-
 	// update windows
 
 // todo : move this to framework
 
 // todo : let the user specify the pointer origin and direction. or the pointer transform
+#if true
+	const Mat4x4 viewToWorld = Mat4x4(true).Translate(playerLocation).Mul(pointers[0].transform);
+	const bool pointerIsActive = pointers[0].isDown;
+#else
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 	Mat4x4 viewToWorld = worldToView.CalcInv();
-#if true
-	const Vec3 pointerOrigin = pointers[0].transform.GetTranslation();
-	const Vec3 pointerDirection = pointers[0].transform.GetAxis(2).CalcNormalized();
-	const bool pointerIsActive = pointers[0].isDown;
-#else
-	const Vec3 pointerOrigin = viewToWorld.GetTranslation();
-	const Vec3 pointerDirection = viewToWorld.GetAxis(2).CalcNormalized();
 	const bool pointerIsActive = isPinching;
 #endif
 
-	auto * windowData = guiWindow->getWindowData();
-	windowData->beginProcess();
-	windowData->endProcess();
+	int buttons = 0;
+	if (pointerIsActive)
+		buttons |= 1 << BUTTON_LEFT;
+	framework.tickVirtualDesktop(viewToWorld, buttons);
 
-	Vec2 pixelPos;
-	float distance;
-	if (guiWindow->intersectRay(pointerOrigin, pointerDirection, pixelPos, distance))
-	{
-		windowData->mouseData.mouseX = pixelPos[0];
-		windowData->mouseData.mouseY = pixelPos[1];
-		windowData->mouseData.mouseDown[0] = pointerIsActive;
-	}
-
-	// update gui window
-
-	pushWindow(*guiWindow);
-	{
-		bool inputIsCaptured = false;
-		guiContext.processBegin(.01f, guiWindow->getWidth(), guiWindow->getHeight(), inputIsCaptured);
-		{
-			ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-			ImGui::SetNextWindowSize(ImVec2(guiWindow->getWidth(), guiWindow->getHeight()), ImGuiCond_Once);
-
-			if (ImGui::Begin("This is a window", nullptr, ImGuiWindowFlags_NoCollapse))
-			{
-				ImGui::Button("This is a button");
-
-				parameterUi::doParameterUi_recursive(parameterMgr, nullptr);
-			}
-			ImGui::End();
-		}
-		guiContext.processEnd();
-	}
-	popWindow();
+	for (auto * window : windows)
+		window->tick();
 
 	uint32_t index = 0;
 
@@ -329,23 +346,12 @@ isPinching = false; // todo : remove hack
 
 void Scene::draw() const
 {
-	setFont("calibri.ttf");
-
-	pushWindow(*guiWindow);
-	{
-		framework.beginDraw(20, 20, 20, 255);
-		{
-			guiContext.draw();
-		}
-		framework.endDraw();
-	}
-	popWindow();
+	for (auto * window : windows)
+		window->draw();
 }
 
 void Scene::drawEye(ovrMobile * ovr) const
 {
-    setFont("calibri.ttf");
-
 	const double time = GetTimeInSeconds();
 
     gxTranslatef(
