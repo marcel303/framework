@@ -1,0 +1,9 @@
+library ovr-mobile-opengl
+	depend_library libgg
+	depend_library ovr-mobile-vrapi
+	depend_library GLESv3 global
+	depend_library EGL global
+	scan_files cpp
+	scan_files h
+	header_path . expose
+
