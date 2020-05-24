@@ -78,7 +78,6 @@ struct PointerObject
 	bool isValid = false;
 
 	bool isDown = false;
-	float pictureTimer = 0.f;
 };
 
 struct Scene
@@ -90,7 +89,9 @@ struct Scene
     // ImGui test
     Window * guiWindow = nullptr;
     FrameworkImGuiContext guiContext;
-    ParameterMgr parameterMgr;
+	ParameterMgr parameterMgr;
+	ParameterMgr parameterMgr_A;
+	ParameterMgr parameterMgr_B;
 
 	// hand mesh
 	struct HandMesh
@@ -119,6 +120,17 @@ void Scene::create()
 	parameterMgr.addString("name", "");
 	parameterMgr.addInt("count", 0)->setLimits(0, 100);
 	parameterMgr.addFloat("speed", 0.f)->setLimits(0.f, 10.f);
+
+	parameterMgr_A.setPrefix("Group A");
+	parameterMgr_A.addVec3("color", Vec3(1.f))->setLimits(Vec3(0.f), Vec3(1.f));
+	parameterMgr_A.addFloat("strength", 1.f)->setLimits(0.f, 1.f);
+	parameterMgr.addChild(&parameterMgr_A);
+
+	parameterMgr_B.setPrefix("Group B");
+	parameterMgr_B.addEnum("type", 0, {{ "Box", 0 }, { "Sphere", 1 }});
+	parameterMgr_B.addVec3("color", Vec3(1.f))->setLimits(Vec3(0.f), Vec3(1.f));
+	parameterMgr_B.addFloat("strength", 1.f)->setLimits(0.f, 1.f);
+	parameterMgr.addChild(&parameterMgr_B);
 
 	for (int i = 0; i < 2; ++i)
 	{
@@ -179,8 +191,15 @@ static bool isPinching = false; // todo : remove hack
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 	Mat4x4 viewToWorld = worldToView.CalcInv();
+#if true
+	const Vec3 pointerOrigin = pointers[0].transform.GetTranslation();
+	const Vec3 pointerDirection = pointers[0].transform.GetAxis(2).CalcNormalized();
+	const bool pointerIsActive = pointers[0].isDown;
+#else
 	const Vec3 pointerOrigin = viewToWorld.GetTranslation();
 	const Vec3 pointerDirection = viewToWorld.GetAxis(2).CalcNormalized();
+	const bool pointerIsActive = isPinching;
+#endif
 
 	auto * windowData = guiWindow->getWindowData();
 	windowData->beginProcess();
@@ -192,7 +211,7 @@ static bool isPinching = false; // todo : remove hack
 	{
 		windowData->mouseData.mouseX = pixelPos[0];
 		windowData->mouseData.mouseY = pixelPos[1];
-		windowData->mouseData.mouseDown[0] = isPinching;
+		windowData->mouseData.mouseDown[0] = pointerIsActive;
 	}
 
 	// update gui window
@@ -202,8 +221,8 @@ static bool isPinching = false; // todo : remove hack
 		bool inputIsCaptured = false;
 		guiContext.processBegin(.01f, guiWindow->getWidth(), guiWindow->getHeight(), inputIsCaptured);
 		{
-			ImGui::SetNextWindowPos(ImVec2(0, 0));
-			ImGui::SetNextWindowSize(ImVec2(guiWindow->getWidth(), guiWindow->getHeight()));
+			ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
+			ImGui::SetNextWindowSize(ImVec2(guiWindow->getWidth(), guiWindow->getHeight()), ImGuiCond_Once);
 
 			if (ImGui::Begin("This is a window", nullptr, ImGuiWindowFlags_NoCollapse))
 			{
@@ -292,8 +311,6 @@ isPinching = false; // todo : remove hack
 							playerLocation += pointer.transform.GetAxis(2) * -6.f;
 						}
 					}
-
-					pointer.pictureTimer = clamp<float>(pointer.pictureTimer + (pointer.isDown ? +1 : -1) * .01f / .4f, 0.f, 1.f);
 				}
 			}
 		}
@@ -316,7 +333,7 @@ void Scene::draw() const
 
 	pushWindow(*guiWindow);
 	{
-		framework.beginDraw(0, 0, 0, 255);
+		framework.beginDraw(20, 20, 20, 255);
 		{
 			guiContext.draw();
 		}
@@ -378,21 +395,6 @@ void Scene::drawEye(ovrMobile * ovr) const
 		if (pointer.isValid == false)
 			continue;
 
-		// Draw picture.
-
-		gxSetTexture(guiWindow->getColorTarget()->getTextureId());
-		setColor(colorWhite);
-		{
-			gxPushMatrix();
-			gxMultMatrixf(pointer.transform.m_v);
-			gxTranslatef(0, 0, -3);
-			gxRotatef(180 + sin(time) * 15, 0, 1, 0);
-			gxScalef(pointer.pictureTimer, pointer.pictureTimer, pointer.pictureTimer);
-			drawRect(+1, +1, -1, -1);
-			gxPopMatrix();
-		}
-		gxSetTexture(0);
-
 		// Draw cube.
 		gxPushMatrix();
 		{
@@ -428,10 +430,6 @@ void Scene::drawEye(ovrMobile * ovr) const
 			fillCube(Vec3(0, 0, -100), Vec3(.01f, .01f, 100));
 			popBlend();
 			popCullMode();
-
-		#if true
-		    handMeshes[0].mesh.draw();
-		#endif
 		}
 		gxPopMatrix();
     }
