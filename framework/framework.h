@@ -54,33 +54,53 @@
 	{
 		SDLK_LSHIFT,
 		SDLK_RSHIFT,
+		SDLK_LALT,
+		SDLK_RALT,
+		SDLK_LGUI,
+		SDLK_RGUI,
+		SDLK_LCTRL,
+		SDLK_RCTRL,
 		SDLK_UP,
 		SDLK_DOWN,
 		SDLK_LEFT,
 		SDLK_RIGHT,
 		SDLK_EQUALS,
 		SDLK_MINUS,
+		SDLK_HOME,
+		SDLK_END,
+		SDLK_DELETE,
+		SDLK_BACKSPACE,
+		SDLK_RETURN,
+		SDLK_SPACE,
+		SDLK_ESCAPE,
+		SDLK_TAB,
 		SDLK_a,
+		SDLK_c,
+		SDLK_k,
+		SDLK_m,
 		SDLK_z,
+		SDLK_i,
 		SDLK_o,
-		SDLK_LGUI,
-		SDLK_RGUI,
 		SDLK_f,
+		SDLK_g,
 		SDLK_b,
 		SDLK_s,
 		SDLK_t,
+		SDLK_p,
 		SDLK_w,
 		SDLK_d,
+		SDLK_v,
 		SDLK_LEFTBRACKET,
 		SDLK_RIGHTBRACKET,
 		SDLK_1,
 		SDLK_2,
 		SDLK_3,
-
+		SDLK_0
 	};
 #endif
 
 #include <float.h> // FLT_MAX (sprite draw)
+#include <math.h> // math functions
 #include <string>
 #include <vector>
 
@@ -506,6 +526,9 @@ public:
 	
 	void blinkTaskbarIcon(int count);
 
+	void tickVirtualDesktop(const Mat4x4 & viewMatrix, const int buttonMask);
+	void drawVirtualDesktop();
+
 	bool quitRequested;
 	float time;
 	float timeStep;
@@ -545,7 +568,7 @@ public:
 	
 	std::vector<std::string> resourcePaths;
 	
-	std::vector<SDL_Event> events;
+	std::vector<SDL_Event> events; // todo : add events for window (touch events), so ImGui integration can look at correct events
 	std::vector<std::string> changedFiles;
 	std::vector<std::string> droppedFiles;
 	
@@ -568,6 +591,14 @@ private:
 };
 
 //
+
+#if defined(FRAMEWORK_USE_OVR_MOBILE)
+	#define WINDOW_HAS_A_SURFACE 1
+	#define WINDOW_IS_3D         1
+#else
+	#define WINDOW_HAS_A_SURFACE 0
+	#define WINDOW_IS_3D         0
+#endif
 
 class Window
 {
@@ -597,12 +628,31 @@ public:
 	void getPosition(int & x, int & y) const;
 	int getWidth() const;
 	int getHeight() const;
+	const char * getTitle() const;
 	
 	bool isFullscreen() const;
 	
 	bool getQuitRequested() const;
 	
+	bool hasSurface() const;
+	
+	class ColorTarget * getColorTarget() const;
+	class DepthTarget * getDepthTarget() const;
+
+#if FRAMEWORK_USE_SDL
 	SDL_Window * getWindow() const;
+#else
+	void setHasFocus(const bool hasFocus);
+#endif
+
+#if WINDOW_IS_3D
+	const Mat4x4 & getTransform() const;
+	void setTransform(const Mat4x4 & transform);
+	void setPixelsPerMeters(const float ppm);
+	bool intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, Vec2 & out_pixelPos, float & out_distance) const;
+	void draw3d() const;
+#endif
+
 	class WindowData * getWindowData() const;
 	
 private:
@@ -610,9 +660,25 @@ private:
 	Window * m_prev;
 	Window * m_next;
 	
+#if WINDOW_HAS_A_SURFACE
+	class ColorTarget * m_colorTarget;
+	class DepthTarget * m_depthTarget;
+#endif
+
+#if FRAMEWORK_USE_SDL
 	// SDL window
 	SDL_Window * m_window;
+#else
+	// these properties are normally managed by SDL
+	std::string m_title;
+	bool m_hasFocus;
+#endif
 	
+#if WINDOW_IS_3D
+	Mat4x4 m_transform;
+	float m_pixelsPerMeter;
+#endif
+
 	// keyboard and mouse data
 	class WindowData * m_windowData;
 };
@@ -1597,7 +1663,7 @@ void popScroll();
 void projectScreen2d();
 void projectPerspective3d(const float fov, const float nearZ, const float farZ);
 void viewLookat3d(const float originX, const float originY, const float originZ, const float targetX, const float targetY, const float targetZ, const float upX, const float upY, const float upZ);
-Vec4 transformToWorld(const Vec4 & v);
+Vec4 transformToWorld(const Vec4 & v); // todo : rename to transformToView
 Vec2 transformToScreen(const Mat4x4 & modelViewProjection, const Vec3 & v, float & w);
 Vec2 transformToScreen(const Vec3 & v, float & w);
 

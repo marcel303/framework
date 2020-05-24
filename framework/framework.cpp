@@ -399,13 +399,12 @@ bool Framework::init(int sx, int sy)
 			initErrorHandler(INIT_ERROR_WINDOW);
 		return false;
 	}
+
+	globals.mainWindow = new Window(mainWindow);
 #else
 	// !FRAMEWORK_USE_SDL
-	// todo : remove window support altogether when SDL is disabled ?
-	SDL_Window * mainWindow = nullptr;
+	globals.mainWindow = new Window("Framework", sx, sy, windowIsResizable);
 #endif
-	
-	globals.mainWindow = new Window(mainWindow);
 	
 	fassert(globals.currentWindow == nullptr);
 	globals.currentWindow = globals.mainWindow;
@@ -1650,24 +1649,43 @@ int Framework::getCurrentBackingScale() const
 
 void Framework::beginDraw(int r, int g, int b, int a, float depth)
 {
-#if ENABLE_OPENGL
-	if (enableDrawTiming)
-		gpuTimingBegin(frameworkDraw);
-	
-	const Color color(
-		scale255(r),
-		scale255(g),
-		scale255(b),
-		scale255(a));
-	
-	pushBackbufferRenderPass(true, color, enableDepthBuffer, depth, "Backbuffer");
-#endif
+	if (globals.currentWindow->hasSurface())
+	{
+		globals.currentWindow->getColorTarget()->setClearColor(
+			scale255(r),
+			scale255(g),
+			scale255(b),
+			scale255(a));
+		globals.currentWindow->getDepthTarget()->setClearDepth(1.f);
+		
+		pushRenderPass(
+			globals.currentWindow->getColorTarget(), true,
+			globals.currentWindow->getDepthTarget(), true,
+			globals.currentWindow->getTitle());
+	}
+	else
+	{
+	#if FRAMEWORK_USE_SDL
+	#if ENABLE_OPENGL
+		if (enableDrawTiming)
+			gpuTimingBegin(frameworkDraw);
+		
+		const Color color(
+			scale255(r),
+			scale255(g),
+			scale255(b),
+			scale255(a));
+		
+		pushBackbufferRenderPass(true, color, enableDepthBuffer, depth, "Backbuffer");
+	#endif
 
-#if ENABLE_METAL
-// todo : replace with beginBackbufferRenderPass
-	metal_draw_begin(scale255(r), scale255(g), scale255(b), scale255(a), depth);
-#endif
-
+	#if ENABLE_METAL
+	// todo : replace with beginBackbufferRenderPass
+		metal_draw_begin(scale255(r), scale255(g), scale255(b), scale255(a), depth);
+	#endif
+	#endif
+	}
+	
 	applyTransform();
 	
 	setBlend(BLEND_ALPHA);
@@ -1699,25 +1717,102 @@ void Framework::endDraw()
 	if (enableDrawTiming)
 		gpuTimingEnd();
 
-#if ENABLE_OPENGL
-	popRenderPass();
+	if (globals.currentWindow->hasSurface())
+	{
+		popRenderPass();
+	}
+	else
+	{
+	#if FRAMEWORK_USE_SDL
+	#if ENABLE_OPENGL
+		popRenderPass();
+		
+		// check for errors
+		
+		checkErrorGL();
+		
+		// flip back buffers
+		
+		SDL_GL_SwapWindow(globals.currentWindow->getWindow());
+	#endif
+
+	#if ENABLE_METAL
+	// todo : replace with endRenderPass
+		metal_draw_end();
+
+	// todo : add metal_present function
+	#endif
+	#endif
+	}
+}
+
+void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int buttonMask)
+{
+#if WINDOW_IS_3D
+	const Vec3 pointerOrigin = transform.GetTranslation();
+	const Vec3 pointerDirection = transform.GetAxis(2).CalcNormalized();
+
+	Window * hoverWindow = nullptr;
+	Vec2 hoverPos;
+	float hoverDistance = FLT_MAX;
+
+	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+	{
+		if (window == globals.mainWindow)
+			continue; // todo : discard more nicely or don't create a main window when framework is init with size(0, 0)
+
+		Vec2 pixelPos;
+		float distance;
+		if (window->intersectRay(pointerOrigin, pointerDirection, pixelPos, distance))
+		{
+			if (distance < hoverDistance)
+			{
+				hoverWindow = window;
+				hoverPos = pixelPos;
+				hoverDistance = distance;
+			}
+		}
+	}
+
+	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+	{
+		// give focus or remove it
+
+		const bool hasFocus = (window == hoverWindow);
+
+		window->setHasFocus(hasFocus);
+
+		// update mouse movement and button presses
+
+		WindowData * windowData = window->getWindowData();
+
+		windowData->beginProcess();
+		{
+			if (window == hoverWindow)
+			{
+				windowData->mouseData.mouseX = hoverPos[0];
+				windowData->mouseData.mouseY = hoverPos[1];
+				windowData->mouseData.mouseDown[0] = (buttonMask & (1 << 0)) != 0;
+				windowData->mouseData.mouseDown[1] = (buttonMask & (1 << 1)) != 0;
+			}
+			else
+			{
+				windowData->mouseData.mouseDown[0] = false;
+				windowData->mouseData.mouseDown[1] = false;
+			}
+		}
+		windowData->endProcess();
+	}
 #endif
+}
 
-#if ENABLE_OPENGL && FRAMEWORK_USE_SDL
-	// check for errors
-	
-	checkErrorGL();
-	
-	// flip back buffers
-	
-	SDL_GL_SwapWindow(globals.currentWindow->getWindow());
-#endif
-
-#if ENABLE_METAL
-// todo : replace with endRenderPass
-	metal_draw_end();
-
-// todo : add metal_present function
+void Framework::drawVirtualDesktop()
+{
+#if WINDOW_IS_3D
+	// todo : make virtual desktop an opt-out feature
+	// todo : only do 3d desktop when USE_SDL is false and WINDOW_IS_3D
+	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+		window->draw3d();
 #endif
 }
 
@@ -2157,8 +2252,9 @@ WindowData * Framework::findWindowDataById(const int id)
 {
 #if FRAMEWORK_USE_SDL
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
-		if (SDL_GetWindowID(window->m_window) == id)
-			return window->m_windowData;
+		if (window->m_window)
+			if (SDL_GetWindowID(window->m_window) == id)
+				return window->m_windowData;
 #endif
 
 	return nullptr;
@@ -3580,7 +3676,7 @@ Vec4 transformToWorld(const Vec4 & v)
 	
 	gxGetMatrixf(GX_MODELVIEW, matM.m_v);
 	
-	// from current transfor to world
+	// from current transform to world
 	
 	Vec4 t = matM * Vec4(v[0], v[1], v[2], v[3]);
 	
@@ -3589,7 +3685,7 @@ Vec4 transformToWorld(const Vec4 & v)
 
 Vec2 transformToScreen(const Mat4x4 & modelViewProjection, const Vec3 & v, float & w)
 {
-	// from current transfor to view
+	// from current transform to view
 	
 	Vec4 t = modelViewProjection * Vec4(v[0], v[1], v[2], 1.f);
 	
@@ -5008,6 +5104,10 @@ std::string getDirectory()
 
 #if ENABLE_LOGGING
 
+#if defined(ANDROID)
+	#include <android/log.h>
+#endif
+
 static int logLevel = 0;
 
 #if ENABLE_LOGGING_DBG
@@ -5022,8 +5122,12 @@ void logDebug(const char * format, ...)
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
-	
+
+#if defined(ANDROID)
+	__android_log_write(ANDROID_LOG_VERBOSE, "Framework", text);
+#else
 	fprintf(stderr, "[DD] %s\n", text);
+#endif
 }
 
 #endif
@@ -5038,8 +5142,12 @@ void logInfo(const char * format, ...)
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
-	
+
+#if defined(ANDROID)
+	__android_log_write(ANDROID_LOG_INFO, "Framework", text);
+#else
 	fprintf(stderr, "[II] %s\n", text);
+#endif
 }
 
 void logWarning(const char * format, ...)
@@ -5052,8 +5160,12 @@ void logWarning(const char * format, ...)
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
-	
+
+#if defined(ANDROID)
+	__android_log_write(ANDROID_LOG_WARN, "Framework", text);
+#else
 	fprintf(stderr, "[WW] %s\n", text);
+#endif
 }
 
 void logError(const char * format, ...)
@@ -5066,8 +5178,12 @@ void logError(const char * format, ...)
 	va_start(args, format);
 	vsprintf_s(text, sizeof(text), format, args);
 	va_end(args);
-	
+
+#if defined(ANDROID)
+	__android_log_write(ANDROID_LOG_ERROR, "Framework", text);
+#else
 	fprintf(stderr, "[EE] %s\n", text);
+#endif
 }
 
 #endif
