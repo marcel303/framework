@@ -15,6 +15,7 @@
 #include "internal.h"
 
 #include "imgui-framework.h"
+#include "imgui_internal.h"
 
 /*
 
@@ -58,6 +59,9 @@ struct WindowTest
 	ParameterMgr parameterMgr;
 	ParameterMgr parameterMgr_A;
 	ParameterMgr parameterMgr_B;
+
+	ImGuiID lastHoveredId = 0;
+	bool hoveredIdChanged = false;
 
 	WindowTest(const float angle)
 		: window("Window", 340, 340)
@@ -104,6 +108,9 @@ struct WindowTest
 					parameterUi::doParameterUi_recursive(parameterMgr, nullptr);
 				}
 				ImGui::End();
+
+				hoveredIdChanged = (GImGui->HoveredId != lastHoveredId);
+				lastHoveredId = GImGui->HoveredId;
 			}
 			guiContext.processEnd();
 		}
@@ -146,10 +153,11 @@ struct Scene
     void create();
     void destroy();
 
-    void tick(ovrMobile * ovr, const float dt, const double predictedDisplayTime);
+    void tick(const float dt, const double predictedDisplayTime);
 
-    void draw() const;
-    void drawEye(ovrMobile * ovr) const;
+    void drawOnce() const;
+	void drawOpaque() const;
+	void drawTranslucent() const;
 };
 
 void Scene::create()
@@ -204,8 +212,10 @@ void Scene::destroy()
     created = false;
 }
 
-void Scene::tick(ovrMobile * ovr, const float dt, const double predictedDisplayTime)
+void Scene::tick(const float dt, const double predictedDisplayTime)
 {
+	ovrMobile * ovr = getOvrMobile();
+
 static bool isPinching = false; // todo : remove hack
 
 	// update windows
@@ -243,6 +253,9 @@ isPinching = false; // todo : remove hack
 		if (header.Type == ovrControllerType_TrackedRemote)
 		{
 			bool vibrate = false;
+
+			for (auto * window : windows)
+				vibrate |= window->hoveredIdChanged && window->lastHoveredId != 0;
 
 			ovrTracking tracking;
 			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, predictedDisplayTime, &tracking) != ovrSuccess)
@@ -329,26 +342,20 @@ isPinching = false; // todo : remove hack
 	}
 }
 
-void Scene::draw() const
+void Scene::drawOnce() const
 {
 	for (auto * window : windows)
 		window->draw();
 }
 
-void Scene::drawEye(ovrMobile * ovr) const
+void Scene::drawOpaque() const
 {
-	const double time = frameworkVr.getTimeInSeconds();
+	ovrMobile * ovr = getOvrMobile();
 
-    gxTranslatef(
-	    -playerLocation[0],
-	    -playerLocation[1],
-	    -playerLocation[2]);
+	const double time = frameworkVr.PredictedDisplayTime;
 
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
-
-    pushDepthTest(true, DEPTH_LESS);
-    pushBlend(BLEND_OPAQUE);
 
 	// Adjust for floor level.
 	float ground_y = 0.f;
@@ -367,11 +374,11 @@ void Scene::drawEye(ovrMobile * ovr) const
     	gxTranslatef(0, ground_y, 0);
 
 	    // draw world-space things
+
+	    setColor(colorWhite);
+	    framework.drawVirtualDesktop();
     }
     gxPopMatrix(); // Undo ground level adjustment.
-
-	setColor(colorWhite);
-	framework.drawVirtualDesktop();
 
 	// Draw hands.
 #if true
@@ -415,6 +422,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 			clearShader();
 			popCullMode();
 
+		// todo : draw in translucent pass. todo : process and remember pointer state during tick
 			// Draw pointer ray.
 			pushCullMode(CULL_BACK, CULL_CCW);
 			pushBlend(BLEND_ADD);
@@ -556,34 +564,26 @@ void Scene::drawEye(ovrMobile * ovr) const
 
     gxPopMatrix();
 #endif
+}
 
-	// -- End opaque pass.
-	popBlend();
-    popDepthTest();
-
-    // -- Begin translucent pass.
-    pushDepthTest(true, DEPTH_LESS, false);
-    pushBlend(BLEND_ADD);
-    {
-    	// todo : draw translucent objects
-    }
-    popBlend();
-    popDepthTest();
-    // -- End translucent pass.
+void Scene::drawTranslucent() const
+{
+    // todo : draw translucent objects
 }
 
 int main(int argc, char * argv[])
 {
-	ovrEgl egl;
+	ovrEgl Egl;
 
-	egl.createContext();
+	Egl.createContext();
 
-	ovrOpenGLExtensions.init();
-
-	FrameworkVr frameworkVr;
-
+#if true // todo : investigate why vr init before framework init causes issues
 	if (!framework.init(0, 0) ||
-		!frameworkVr.init(&egl))
+		!frameworkVr.init(&Egl))
+#else
+	if (!frameworkVr.init(&Egl) ||
+		!framework.init(0, 0))
+#endif
 	{
 		return -1;
 	}
@@ -632,17 +632,39 @@ int main(int argc, char * argv[])
         }
 
 	    // Tick the simulation
-        scene.tick(frameworkVr.Ovr, frameworkVr.TimeStep, frameworkVr.PredictedDisplayTime);
+        scene.tick(frameworkVr.TimeStep, frameworkVr.PredictedDisplayTime);
 
 		// Render the stuff we need to draw only once (shared for each eye).
-	    scene.draw();
+	    scene.drawOnce();
 
 		// Render the eye images.
 	    for (int eyeIndex = 0; eyeIndex < frameworkVr.getEyeCount(); ++eyeIndex)
 	    {
 		    frameworkVr.beginEye(eyeIndex, colorBlack);
 		    {
-		        scene.drawEye(frameworkVr.Ovr);
+		        gxPushMatrix();
+			    gxTranslatef(
+		            -scene.playerLocation[0],
+		            -scene.playerLocation[1],
+		            -scene.playerLocation[2]);
+			    {
+				    pushDepthTest(true, DEPTH_LESS);
+				    pushBlend(BLEND_OPAQUE);
+				    {
+			            scene.drawOpaque();
+				    }
+				    popBlend();
+				    popDepthTest();
+
+				    pushDepthTest(true, DEPTH_LESS, false);
+				    pushBlend(BLEND_ADD);
+				    {
+				        scene.drawTranslucent();
+				    }
+				    popBlend();
+				    popDepthTest();
+			    }
+			    gxPopMatrix();
 		    }
 		    frameworkVr.endEye();
 	    }
@@ -650,16 +672,12 @@ int main(int argc, char * argv[])
 	    frameworkVr.submitFrameAndPresent();
     }
 
-    Font("calibri.ttf").saveCache();
-
 	scene.destroy();
+
+	Font("calibri.ttf").saveCache();
 
 	framework.shutdown();
 	frameworkVr.shutdown();
-
-    egl.destroyContext();
-
-    vrapi_Shutdown();
 
 	return 0;
 }
