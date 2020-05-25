@@ -17,6 +17,7 @@ app ovr-cubes3
 app ovr-cubes4
 	depend_library android-assetcopy
 	depend_library audiograph
+	depend_library audiograph-nodes-4dsound-1.6
 	depend_library ecs-parameterui
 	depend_library framework
 	depend_library framework-allegro2
@@ -28,7 +29,6 @@ app ovr-cubes4
 	resource_path data
 
 app ovr-cubes5
-	depend_library android-assetcopy
 	depend_library ecs-parameterui
 	depend_library framework
 	depend_library framework-gltf

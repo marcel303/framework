@@ -15,8 +15,6 @@
 
 #include "imgui-framework.h"
 
-#include "android-assetcopy.h"
-
 /*
 
 todo : draw windows in 3d using framework
@@ -26,6 +24,8 @@ todo : tick events for windows in 3d
 	- intersect pointer with windows. determine nearest intersection
 	- on button press, make the intersecting window active
 	- for all windows, generate mouse.x, mouse.y and button presses
+
+todo : experiment with drawing window contents in 3d directly (no window surface). this will give higher quality results on outlines
 
  */
 
@@ -70,7 +70,7 @@ struct PointerObject
 	Mat4x4 transform = Mat4x4(true);
 	bool isValid = false;
 
-	bool isDown = false;
+	bool isDown[2] = { };
 };
 
 struct WindowTest
@@ -84,7 +84,7 @@ struct WindowTest
 	WindowTest(const float angle)
 		: window("Window", 340, 340)
 	{
-		const Mat4x4 transform = Mat4x4(true).RotateY(angle).Translate(0, 0, -.45f);
+		const Mat4x4 transform = Mat4x4(true).RotateY(angle).Translate(0, 1.5f, -.45f);
 		window.setTransform(transform);
 
 		guiContext.init(false);
@@ -232,23 +232,19 @@ static bool isPinching = false; // todo : remove hack
 
 	// update windows
 
-// todo : move this to framework
-
-// todo : let the user specify the pointer origin and direction. or the pointer transform
 #if true
 	const Mat4x4 viewToWorld = Mat4x4(true).Translate(playerLocation).Mul(pointers[0].transform);
-	const bool pointerIsActive = pointers[0].isDown;
+	const int buttonMask =
+		(pointers[0].isDown[0] << 0) |
+		(pointers[0].isDown[1] << 1);
 #else
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 	Mat4x4 viewToWorld = worldToView.CalcInv();
-	const bool pointerIsActive = isPinching;
+	const int buttonMask = (isPinching << 0);
 #endif
 
-	int buttons = 0;
-	if (pointerIsActive)
-		buttons |= 1 << BUTTON_LEFT;
-	framework.tickVirtualDesktop(viewToWorld, buttons);
+	framework.tickVirtualDesktop(viewToWorld, buttonMask);
 
 	for (auto * window : windows)
 		window->tick();
@@ -266,9 +262,10 @@ isPinching = false; // todo : remove hack
 		if (result < 0)
 			break;
 
-// todo : vrapi_SetHapticVibrationSimple(ovrMobile* ovr, const ovrDeviceID deviceID, const float intensity)
 		if (header.Type == ovrControllerType_TrackedRemote)
 		{
+			bool vibrate = false;
+
 			ovrTracking tracking;
 			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, predictedDisplayTime, &tracking) != ovrSuccess)
 				tracking.Status = 0;
@@ -314,22 +311,32 @@ isPinching = false; // todo : remove hack
 						pointer.isValid = false;
 					}
 
-					const bool wasDown = pointer.isDown;
+					const int buttonMasks[2] = { ovrButton_Trigger, ovrButton_GripTrigger };
 
-					if (state.Buttons & ovrButton_Trigger)
-						pointer.isDown = true;
-					else
-						pointer.isDown = false;
-
-					if (pointer.isDown != wasDown)
+					for (int i = 0; i < 2; ++i)
 					{
-						if (pointer.isDown && pointer.isValid && index == 1)
+						const bool wasDown = pointer.isDown[i];
+
+						if (state.Buttons & buttonMasks[i])
+							pointer.isDown[i] = true;
+						else
+							pointer.isDown[i] = false;
+
+						if (pointer.isDown[i] != wasDown)
 						{
-							playerLocation += pointer.transform.GetAxis(2) * -6.f;
+							// todo : vrapi_SetHapticVibrationSimple(ovrMobile* ovr, const ovrDeviceID deviceID, const float intensity)
+							vibrate = true;
+
+							if (i == 0 && index == 1 && pointer.isDown[i] && pointer.isValid)
+							{
+								playerLocation += pointer.transform.GetAxis(2) * -6.f;
+							}
 						}
 					}
 				}
 			}
+
+			vrapi_SetHapticVibrationSimple(ovr, header.DeviceID, vibrate ? .5f : 0.f);
 		}
 		else if (header.Type == ovrControllerType_Hand)
 		{
@@ -368,12 +375,14 @@ void Scene::drawEye(ovrMobile * ovr) const
 	// Adjust for floor level.
 	float ground_y = 0.f;
 
+#if false
     {
 	    ovrPosef boundaryPose;
 	    ovrVector3f boundaryScale;
 	    if (vrapi_GetBoundaryOrientedBoundingBox(ovr, &boundaryPose, &boundaryScale) == ovrSuccess)
 	        ground_y = boundaryPose.Translation.y;
     }
+#endif
 
     gxPushMatrix();
     {
@@ -1071,6 +1080,9 @@ void FrameworkVr::handleVrModeChanges()
 
                 vrapi_SetPerfThread(Ovr, VRAPI_PERF_THREAD_TYPE_RENDERER, RenderThreadTid);
                 logDebug("- vrapi_SetPerfThread( RENDERER, %d )", RenderThreadTid);
+
+	            // Set the tracking transform to use, by default this is eye level.
+	            vrapi_SetTrackingTransform(Ovr, vrapi_GetTrackingTransform(Ovr, VRAPI_TRACKING_TRANSFORM_SYSTEM_CENTER_FLOOR_LEVEL));
             }
         }
     }
@@ -1222,18 +1234,6 @@ Android Main (android_native_app_glue)
 int main(int argc, char * argv[])
 {
     android_app * app = get_android_app();
-
-    const double t1 = GetTimeInSeconds();
-    const bool copied_files =
-	    chdir(app->activity->internalDataPath) == 0 &&
-        assetcopy::recursively_copy_assets_to_filesystem(
-		    app->activity->vm,
-		    app->activity->clazz,
-		    app->activity->assetManager,
-		    "") &&
-	    chdir(app->activity->internalDataPath) == 0;
-    const double t2 = GetTimeInSeconds();
-    logInfo("asset copying took %.2f seconds", (t2 - t1));
 
 	ovrEgl egl;
 
