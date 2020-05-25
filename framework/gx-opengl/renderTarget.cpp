@@ -169,11 +169,7 @@ bool ColorTarget::init(const ColorTargetProperties & in_properties)
 	
 	if (result == false)
 	{
-		if (m_colorTextureId != 0)
-		{
-			glDeleteTextures(1, &m_colorTextureId);
-			m_colorTextureId = 0;
-		}
+		free();
 	}
 	
 	return result;
@@ -271,11 +267,7 @@ bool DepthTarget::init(const DepthTargetProperties & in_properties)
 	
 	if (result == false)
 	{
-		if (m_depthTextureId != 0)
-		{
-			glDeleteTextures(1, &m_depthTextureId);
-			m_depthTextureId = 0;
-		}
+		free();
 	}
 	
 	return result;

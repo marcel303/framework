@@ -57,6 +57,9 @@
 	#include <OpenGLES/ES3/gl.h>
 	#include <OpenGLES/ES3/glext.h>
 #elif defined(ANDROID)
+	#include "android-assetcopy.h"
+	#include "framework-android-app.h"
+	#include <android_native_app_glue.h>
 	#include <GLES3/gl3.h>
 #else
 	#include <GL/glew.h>
@@ -401,18 +404,7 @@ bool Framework::init(int sx, int sy)
 	}
 
 	globals.mainWindow = new Window(mainWindow);
-#else
-	// !FRAMEWORK_USE_SDL
-	globals.mainWindow = new Window("Framework", sx, sy, windowIsResizable);
-#endif
-	
-	fassert(globals.currentWindow == nullptr);
-	globals.currentWindow = globals.mainWindow;
-	
-	windowSx = sx;
-	windowSy = sy;
-	
-#if FRAMEWORK_USE_SDL
+
 #if ENABLE_OPENGL
 	int drawableSx;
 	int drawableSy;
@@ -506,9 +498,6 @@ bool Framework::init(int sx, int sy)
 
 	SDL_GL_SetSwapInterval(enableVsync ? 1 : 0);
 #endif
-#else
-	s_backingScale = 1;
-#endif
 
 #if ENABLE_METAL
 	metal_init();
@@ -516,6 +505,21 @@ bool Framework::init(int sx, int sy)
 	metal_attach(globals.mainWindow->getWindow());
 	
 	metal_make_active(globals.mainWindow->getWindow());
+#endif
+#else // !FRAMEWORK_USE_SDL
+#if FRAMEWORK_USE_OVR_MOBILE
+	// todo : initialize ovr mobile
+#endif
+
+	globals.mainWindow = new Window("Framework", sx, sy, windowIsResizable);
+
+	fassert(globals.currentWindow == nullptr);
+	globals.currentWindow = globals.mainWindow;
+
+	windowSx = sx;
+	windowSy = sy;
+
+	s_backingScale = 1;
 #endif
 	
 	globals.displaySize[0] = sx;
@@ -547,6 +551,28 @@ bool Framework::init(int sx, int sy)
 		if (rmt_CreateGlobalInstance(&globals.rmt) != RMT_ERROR_NONE)
 			return false;
 		rmt_BindOpenGL();
+	}
+#endif
+
+#if defined(ANDROID)
+	{
+		android_app * app = get_android_app();
+		const double t1 = GetSystemTime();
+		const bool copied_files =
+			chdir(app->activity->internalDataPath) == 0 &&
+			assetcopy::recursively_copy_assets_to_filesystem(
+				app->activity->vm,
+				app->activity->clazz,
+				app->activity->assetManager,
+				"") &&
+			chdir(app->activity->internalDataPath) == 0;
+		const double t2 = GetSystemTime();
+		logInfo("asset copying took %.2f seconds", (t2 - t1));
+		if (copied_files == false)
+		{
+			logError("failed to copy assets to filesystem. destination path: %s", app->activity->internalDataPath);
+			return false;
+		}
 	}
 #endif
 
@@ -930,21 +956,21 @@ void Framework::process()
 	
 	g_soundPlayer.process();
 	
-	bool doReload = false;
-	
+#if FRAMEWORK_USE_SDL
 	// poll SDL event queue
-	
+
+	bool doReload = false;
+
 	keyboard.events.clear();
-	
+
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		window->m_windowData->beginProcess();
-	
+
 	events.clear();
-	
+
 	changedFiles.clear();
 	droppedFiles.clear();
-	
-#if FRAMEWORK_USE_SDL
+
 	SDL_Event e;
 	
 	bool hasWaited = false;
@@ -1106,12 +1132,19 @@ void Framework::process()
 			quitRequested = true;
 		}
 	}
-#endif
 
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		window->m_windowData->endProcess();
-	
+
 	globals.currentWindow->getWindowData()->makeActive();
+
+	if (doReload)
+	{
+		reloadCaches();
+	}
+#elif FRAMEWORK_USE_OVR_MOBILE
+	// todo : process ovr mobile events
+#endif
 
 #ifdef __WIN32__
 	// use XInput to poll gamepad state
@@ -1334,18 +1367,13 @@ void Framework::process()
 		}
 	}
 #endif
-
-	if (doReload)
-	{
-		reloadCaches();
-	}
 	
 	if (enableRealTimeEditing)
 	{
 		tickRealTimeEditing();
 	}
 	
-	//
+	// begin time step for the next frame
 	
 #if FRAMEWORK_USE_SDL
 #if 1
@@ -1368,6 +1396,8 @@ void Framework::process()
 
 	timeStep = delta / 1000.f;
 #endif
+#elif FRAMEWORK_USE_OVR_MOBILE
+	// todo : timeStep = 'predicted display time' - 'last time'
 #else
 	assert(false);
 	timeStep = 0.f; // todo
@@ -1375,7 +1405,7 @@ void Framework::process()
 
 	time += timeStep;
 	
-	//
+	// time step sprites and models
 
 	for (Sprite * sprite = m_sprites; sprite; sprite = sprite->m_next)
 	{
@@ -1812,7 +1842,8 @@ void Framework::drawVirtualDesktop()
 	// todo : make virtual desktop an opt-out feature
 	// todo : only do 3d desktop when USE_SDL is false and WINDOW_IS_3D
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
-		window->draw3d();
+		if (window->hasSurface())
+			window->draw3d();
 #endif
 }
 

@@ -646,11 +646,12 @@ public:
 #endif
 
 #if WINDOW_IS_3D
-	const Mat4x4 & getTransform() const;
 	void setTransform(const Mat4x4 & transform);
 	void setPixelsPerMeters(const float ppm);
 	bool intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, Vec2 & out_pixelPos, float & out_distance) const;
 	void draw3d() const;
+	const Mat4x4 & getTransform() const;
+	Mat4x4 getTransformForDraw() const;
 #endif
 
 	class WindowData * getWindowData() const;

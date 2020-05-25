@@ -48,6 +48,10 @@ bool FrameworkVr::init(ovrEgl * egl)
 	Java.Vm->AttachCurrentThread(&Java.Env, nullptr);
 	Java.ActivityObject = app->activity->clazz;
 
+	Egl = egl;
+
+	ovrOpenGLExtensions.init();
+
 	const ovrInitParms initParms = vrapi_DefaultInitParms(&Java);
 	const int32_t initResult = vrapi_Initialize(&initParms);
 
@@ -57,8 +61,6 @@ bool FrameworkVr::init(ovrEgl * egl)
 		logError("failed to initialize VrApi: %d", initResult);
 		return false;
 	}
-
-	Egl = egl;
 
 // todo : the native activity example doesn't do this. why? and what does it do anyway?
     // This app will handle android gamepad events itself.
@@ -92,6 +94,10 @@ void FrameworkVr::shutdown()
 {
     for (int eyeIndex = 0; eyeIndex < NumBuffers; ++eyeIndex)
         FrameBuffer[eyeIndex].shut();
+
+	Egl->destroyContext();
+
+	vrapi_Shutdown();
 
 	Java.Vm->DetachCurrentThread();
 }
@@ -386,6 +392,8 @@ void FrameworkVr::processEvents()
         // Done!
         break;
     }
+
+    framework.quitRequested |= app->destroyRequested;
 }
 
 void FrameworkVr::handleVrModeChanges()

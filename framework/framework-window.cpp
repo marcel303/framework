@@ -89,10 +89,13 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 	, m_windowData(nullptr)
 {
 #if WINDOW_HAS_A_SURFACE
-	m_colorTarget = new ColorTarget();
-	m_depthTarget = new DepthTarget();
-	m_colorTarget->init(sx, sy, SURFACE_RGBA8, colorBlackTranslucent);
-	m_depthTarget->init(sx, sy, DEPTH_FLOAT32, true, 0.f);
+	if (sx > 0 && sy > 0)
+	{
+		m_colorTarget = new ColorTarget();
+		m_depthTarget = new DepthTarget();
+		m_colorTarget->init(sx, sy, SURFACE_RGBA8, colorBlackTranslucent);
+		m_depthTarget->init(sx, sy, DEPTH_FLOAT32, true, 0.f);
+	}
 #endif
 
 #if FRAMEWORK_USE_SDL
@@ -394,11 +397,6 @@ void Window::setHasFocus(const bool hasFocus)
 
 #if WINDOW_IS_3D
 
-const Mat4x4 & Window::getTransform() const
-{
-	return m_transform;
-}
-
 void Window::setTransform(const Mat4x4 & transform)
 {
 	m_transform = transform;
@@ -441,23 +439,16 @@ bool Window::intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, Vec2 & out_pi
 
 void Window::draw3d() const
 {
-	if (getWidth() == 0)
-		return; // todo : discard main window if it has a (0, 0) size. better solution: don't require there to be a main window
+	Assert(hasSurface());
 
 	gxPushMatrix();
 	{
-		gxMultMatrixf(m_transform.m_v);
-		
-		const int sx = getWidth();
-		const int sy = getHeight();
-
-		gxScalef(1.f / m_pixelsPerMeter, 1.f / m_pixelsPerMeter, 1.f);
-		gxScalef(1, -1, 1);
-		gxTranslatef(-sx/2.f, -sy/2.f, 0);
+		const Mat4x4 transformForDraw = getTransformForDraw();
+		gxMultMatrixf(transformForDraw.m_v);
 
 		gxSetTexture(getColorTarget()->getTextureId());
 		{
-			drawRect(0, 0, sx, sy);
+			drawRect(0, 0, getWidth(), getHeight());
 		}
 		gxSetTexture(0);
 
@@ -478,6 +469,23 @@ void Window::draw3d() const
 		}
 	}
 	gxPopMatrix();
+}
+
+const Mat4x4 & Window::getTransform() const
+{
+	return m_transform;
+}
+
+Mat4x4 Window::getTransformForDraw() const
+{
+	const int sx = getWidth();
+	const int sy = getHeight();
+	
+	return
+		m_transform
+		.Scale(1.f / m_pixelsPerMeter, 1.f / m_pixelsPerMeter, 1.f)
+		.Scale(1, -1, 1)
+		.Translate(-sx/2.f, -sy/2.f, 0);
 }
 
 #endif
