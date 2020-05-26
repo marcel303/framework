@@ -1,7 +1,3 @@
-#include "ovr-egl.h"
-#include "ovr-framebuffer.h"
-#include "ovr-glext.h"
-
 #include "gltf.h"
 #include "gltf-draw.h"
 
@@ -34,6 +30,7 @@ todo : experiment with drawing window contents in 3d directly (no window surface
 #include <VrApi_Helpers.h>
 #include <VrApi_Input.h>
 #include <math.h>
+#include <vector> // for hand skeleton
 
 // -- VrApi
 
@@ -129,9 +126,107 @@ struct PointerObject
 	bool isDown[2] = { };
 };
 
+enum FingerName
+{
+	kFingerName_Index
+};
+
 struct HandObject
 {
 	bool isPinching = false;
+
+	bool hasSkeleton = false;
+	struct
+	{
+		int numBones = 0;
+
+		std::vector<int> boneParentIndices; // bone hierarchy
+
+		std::vector<Mat4x4> localBoneTransforms;  // bind pose in local space
+		std::vector<Mat4x4> globalBoneTransforms; // bind pose in global space
+
+		std::vector<int> fingerNameToBoneIndex;
+	} skeleton;
+
+	bool hasDeform = false;
+	struct
+	{
+		std::vector<Mat4x4> localBoneTransforms;
+		std::vector<Mat4x4> globalBoneTransforms;
+	} deform;
+
+	// todo : add method for fetching finger transforms
+	/**
+	 * Returns the world-space pointer transform for a finger.
+	 * @param finger The finger for which to get the transform.
+	 * @return The world-space pointer transform.
+	 */
+	Mat4x4 getPointerTransform(const FingerName finger) const
+	{
+		Assert(hasSkeleton);
+
+		return Mat4x4(true);
+	}
+
+	void resizeSkeleton(const int numBones)
+	{
+		skeleton.numBones = numBones;
+		skeleton.boneParentIndices.resize(numBones);
+		skeleton.localBoneTransforms.resize(numBones);
+		skeleton.globalBoneTransforms.resize(numBones);
+
+		deform.localBoneTransforms.resize(numBones);
+		deform.globalBoneTransforms.resize(numBones);
+	}
+
+	static void localPoseToGlobal(
+		const Mat4x4 * __restrict localMatrices,
+		const int * __restrict parentIndices,
+		const int numMatrices,
+		Mat4x4 * __restrict globalMatrices)
+	{
+		for (int i = 0; i < numMatrices; ++i)
+		{
+			const Mat4x4 & transform = localMatrices[i];
+			const int parentIndex = parentIndices[i];
+			if (parentIndex < 0)
+				globalMatrices[i] = transform;
+			else
+				globalMatrices[i] = globalMatrices[parentIndex] * transform;
+		}
+	}
+
+	void calculateGlobalBindPose()
+	{
+		// Calculate global bone transforms (bind pose).
+		localPoseToGlobal(
+			skeleton.localBoneTransforms.data(),
+			skeleton.boneParentIndices.data(),
+			skeleton.numBones,
+			skeleton.globalBoneTransforms.data());
+	}
+
+	void calculateGlobalDeformPose()
+	{
+		// Calculate global bone transforms (animated).
+		localPoseToGlobal(
+			deform.localBoneTransforms.data(),
+			skeleton.boneParentIndices.data(),
+			skeleton.numBones,
+			deform.globalBoneTransforms.data());
+	}
+
+	void calculateSkinnningMatrices(Mat4x4 * skinningMatrices, const int maxBones) const
+	{
+		// Calculate skinning matrices. Skinning matrices will first transform a vertex into 'bind space',
+		// by applying the inverse of the initial pose transform. It will then apply the global bone transform.
+		for (int i = 0; i < skeleton.numBones && i < maxBones; ++i)
+		{
+			const Mat4x4 objectToBind = skeleton.globalBoneTransforms[i].CalcInv();
+			const Mat4x4 & bindToDeform = deform.globalBoneTransforms[i];
+			skinningMatrices[i] = bindToDeform * objectToBind;
+		}
+	}
 };
 
 // -- scene
@@ -476,6 +571,8 @@ void Scene::drawOpaque() const
 				// Left hand or right hand.
 		        const int index = (handCapabilities.HandCapabilities & ovrHandCaps_LeftHand) ? 0 : 1;
 
+		        auto & hand = const_cast<HandObject&>(hands[index]); // todo : update hands during tick, not draw
+
 				// Fetch the current pose for the hand.
 				ovrHandPose handPose;
 				handPose.Header.Version = ovrHandVersion_1;
@@ -490,52 +587,41 @@ void Scene::drawOpaque() const
 					handSkeleton.Header.Version = ovrHandVersion_1;
 					if (vrapi_GetHandSkeleton(ovr, index == 0 ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT, &handSkeleton.Header) == ovrSuccess)
 					{
-					// todo : Check with the SDK documentation, if we can optimize global transform calculations, by assuming parent matrices are always processed before a child.
+						hand.resizeSkeleton(handSkeleton.NumBones);
+						hand.hasSkeleton = true;
+						hand.hasDeform = true;
 
-						// Calculate global bone transforms (bind pose).
-						ovrMatrix4f globalBoneTransforms_bind[ovrHand_MaxBones];
+						// Fill in bone hierarchy.
+						for (int i = 0; i < handSkeleton.NumBones; ++i)
+							hand.skeleton.boneParentIndices[i] = handSkeleton.BoneParentIndices[i];
+
+						// Fill in local bone transforms (bind pose).
 						for (int i = 0; i < handSkeleton.NumBones; ++i)
 						{
 							const ovrPosef & pose = handSkeleton.BonePoses[i];
 							const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
-							const int parentIndex = handSkeleton.BoneParentIndices[i];
-							if (parentIndex < 0)
-								globalBoneTransforms_bind[i] = transform;
-							else
-								globalBoneTransforms_bind[i] = ovrMatrix4f_Multiply(&globalBoneTransforms_bind[parentIndex], &transform);
+							const ovrMatrix4f transform_transposed = ovrMatrix4f_Transpose(&transform);
+							memcpy(hand.skeleton.localBoneTransforms[i].m_v, transform_transposed.M, sizeof(Mat4x4));
 						}
+
+						// Calculate global bind pose.
+						hand.calculateGlobalBindPose();
 
 						// Update local bone poses.
-						ovrPosef localBonePoses[ovrHand_MaxBones];
 						for (int i = 0; i < handSkeleton.NumBones; ++i)
 						{
-							localBonePoses[i] = handSkeleton.BonePoses[i];
-							localBonePoses[i].Orientation = handPose.BoneRotations[i];
-						}
-
-						// Calculate global bone transforms (animated).
-						ovrMatrix4f globalBoneTransforms[ovrHand_MaxBones];
-						for (int i = 0; i < handSkeleton.NumBones; ++i)
-						{
-							const ovrPosef & pose = localBonePoses[i];
+							ovrPosef pose = handSkeleton.BonePoses[i];
+							pose.Orientation = handPose.BoneRotations[i];
 							const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
-							const int parentIndex = handSkeleton.BoneParentIndices[i];
-							if (parentIndex < 0)
-								globalBoneTransforms[i] = transform;
-							else
-								globalBoneTransforms[i] = ovrMatrix4f_Multiply(&globalBoneTransforms[parentIndex], &transform);
+							const ovrMatrix4f transform_transposed = ovrMatrix4f_Transpose(&transform);
+
+							memcpy(hand.deform.localBoneTransforms[i].m_v, transform_transposed.M, sizeof(Mat4x4));
 						}
 
-						// Calculate skinning matrices. Skinning matrices will first transform a vertex into 'bind space',
-						// by applying the inverse of the initial pose transform. It will then apply the global bone transform.
-						ovrMatrix4f skinningTransforms[ovrHand_MaxBones];
-						for (int i = 0; i < handSkeleton.NumBones; ++i)
-						{
-							const ovrMatrix4f objectToBind = ovrMatrix4f_Inverse(&globalBoneTransforms_bind[i]);
-							const ovrMatrix4f & bindToObject = globalBoneTransforms[i];
-							skinningTransforms[i] = ovrMatrix4f_Multiply(&bindToObject, &objectToBind);
-							skinningTransforms[i] = ovrMatrix4f_Transpose(&skinningTransforms[i]);
-						}
+						hand.calculateGlobalDeformPose();
+
+						Mat4x4 skinningTransforms[32];
+						hand.calculateSkinnningMatrices(skinningTransforms, 32);
 
 						ovrMatrix4f rootPose = vrapi_GetTransformFromPose(&handPose.RootPose);
 						rootPose = ovrMatrix4f_Transpose(&rootPose);
