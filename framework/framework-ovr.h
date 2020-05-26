@@ -29,9 +29,7 @@
 
 #if FRAMEWORK_USE_OVR_MOBILE
 
-#include "ovr-egl.h"
 #include "ovr-framebuffer.h"
-#include "ovr-glext.h"
 #include "framework.h"
 #include <VrApi.h>
 
@@ -39,13 +37,12 @@ static const int CPU_LEVEL = 2;
 static const int GPU_LEVEL = 3;
 static const int NUM_MULTI_SAMPLES = 4;
 
+class ANativeWindow;
+
 struct FrameworkVr
 {
 	// Java context.
     ovrJava Java;
-
-    // EGL context.
-    ovrEgl * Egl = nullptr;
 
     // Window state.
     ANativeWindow * NativeWindow = nullptr;
@@ -82,7 +79,7 @@ struct FrameworkVr
 	// Draw state.
 	int currentEyeIndex = -1;
 
-    bool init(ovrEgl * egl);
+    bool init();
     void shutdown();
 
 	void process();
@@ -99,6 +96,7 @@ struct FrameworkVr
 	void endEye();
 
 	void pushBlackFinal();
+	void showLoadingScreen();
 
 	void processEvents();
 	void handleVrModeChanges();

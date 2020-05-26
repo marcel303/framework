@@ -29,6 +29,8 @@
 
 #include "framework-android-app.h"
 #include "framework-ovr.h"
+#include "internal.h"
+#include "ovr-glext.h"
 #include <VrApi_Helpers.h>
 #include <VrApi_Input.h>
 #include <VrApi_SystemUtils.h>
@@ -38,7 +40,7 @@
 
 FrameworkVr frameworkVr;
 
-bool FrameworkVr::init(ovrEgl * egl)
+bool FrameworkVr::init()
 {
 	android_app * app = get_android_app();
 
@@ -48,11 +50,11 @@ bool FrameworkVr::init(ovrEgl * egl)
 	Java.Vm->AttachCurrentThread(&Java.Env, nullptr);
 	Java.ActivityObject = app->activity->clazz;
 
-	Egl = egl;
-
 	ovrOpenGLExtensions.init();
 
-	const ovrInitParms initParms = vrapi_DefaultInitParms(&Java);
+	ovrInitParms initParms = vrapi_DefaultInitParms(&Java);
+	initParms.GraphicsAPI = VRAPI_GRAPHICS_API_OPENGL_ES_3;
+
 	const int32_t initResult = vrapi_Initialize(&initParms);
 
 	if (initResult != VRAPI_INITIALIZE_SUCCESS)
@@ -68,17 +70,14 @@ bool FrameworkVr::init(ovrEgl * egl)
 
 	MainThreadTid = gettid();
 
-    const bool useMultiview = false;
-
-    logDebug("useMultiview: %d", useMultiview ? 1 : 0);
-
-	NumBuffers = useMultiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX;
+    UseMultiview = false; // todo : perhaps support multiview in the future ..
+	NumBuffers = UseMultiview ? 1 : VRAPI_FRAME_LAYER_EYE_MAX;
 
     // Create the frame buffers.
 	for (int eyeIndex = 0; eyeIndex < NumBuffers; ++eyeIndex)
     {
         FrameBuffer[eyeIndex].init(
-            useMultiview,
+            UseMultiview,
             GL_RGBA8,
             vrapi_GetSystemPropertyInt(&Java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_WIDTH),
             vrapi_GetSystemPropertyInt(&Java, VRAPI_SYS_PROP_SUGGESTED_EYE_TEXTURE_HEIGHT),
@@ -94,8 +93,6 @@ void FrameworkVr::shutdown()
 {
     for (int eyeIndex = 0; eyeIndex < NumBuffers; ++eyeIndex)
         FrameBuffer[eyeIndex].shut();
-
-	Egl->destroyContext();
 
 	vrapi_Shutdown();
 
@@ -238,6 +235,34 @@ void FrameworkVr::pushBlackFinal()
     frameDesc.Layers = layers;
 
     vrapi_SubmitFrame2(Ovr, &frameDesc);
+}
+
+void FrameworkVr::showLoadingScreen()
+{
+    // Show a loading icon.
+    const int frameFlags = VRAPI_FRAME_FLAG_FLUSH;
+
+    ovrLayerProjection2 blackLayer = vrapi_DefaultLayerBlackProjection2();
+    blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
+
+    ovrLayerLoadingIcon2 iconLayer = vrapi_DefaultLayerLoadingIcon2();
+    iconLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
+
+    const ovrLayerHeader2 * layers[] =
+        {
+            &blackLayer.Header,
+            &iconLayer.Header,
+        };
+
+    ovrSubmitFrameDescription2 frameDesc = { };
+    frameDesc.Flags = frameFlags;
+    frameDesc.SwapInterval = 1;
+    frameDesc.FrameIndex = frameworkVr.FrameIndex;
+    frameDesc.DisplayTime = frameworkVr.PredictedDisplayTime;
+    frameDesc.LayerCount = 2;
+    frameDesc.Layers = layers;
+
+    vrapi_SubmitFrame2(frameworkVr.Ovr, &frameDesc);
 }
 
 void FrameworkVr::processEvents()
@@ -408,9 +433,9 @@ void FrameworkVr::handleVrModeChanges()
             parms.Flags |= VRAPI_MODE_FLAG_RESET_WINDOW_FULLSCREEN;
 
             parms.Flags |= VRAPI_MODE_FLAG_NATIVE_WINDOW;
-            parms.Display = (size_t)Egl->Display;
+            parms.Display = (size_t)globals.egl.Display;
             parms.WindowSurface = (size_t)NativeWindow;
-            parms.ShareContext = (size_t)Egl->Context;
+            parms.ShareContext = (size_t)globals.egl.Context;
 
             logDebug("- eglGetCurrentSurface( EGL_DRAW ) = %p", eglGetCurrentSurface(EGL_DRAW));
 

@@ -39,6 +39,10 @@
 	#include <SDL2/SDL.h>
 #endif
 
+#if FRAMEWORK_USE_OVR_MOBILE
+	#include "ovr-egl.h"
+#endif
+
 #include <map>
 #include <string>
 #include "framework.h"
@@ -442,6 +446,9 @@ public:
 	Window * currentWindow;
 #if FRAMEWORK_USE_SDL
 	SDL_GLContext glContext;
+#endif
+#if FRAMEWORK_USE_OVR_MOBILE
+	ovrEgl egl;
 #endif
 	int displaySize[2]; // size as passed to init
 #if ENABLE_PROFILING

@@ -84,6 +84,10 @@
 	#include "gx-metal/metal.h"
 #endif
 
+#if FRAMEWORK_USE_OVR_MOBILE
+	#include "framework-ovr.h"
+#endif
+
 // -----
 
 #if defined(_MSC_VER) && _MSC_VER >= 1900
@@ -508,7 +512,7 @@ bool Framework::init(int sx, int sy)
 #endif
 #else // !FRAMEWORK_USE_SDL
 #if FRAMEWORK_USE_OVR_MOBILE
-	// todo : initialize ovr mobile
+	globals.egl.createContext();
 #endif
 
 	globals.mainWindow = new Window("Framework", sx, sy, windowIsResizable);
@@ -637,7 +641,21 @@ bool Framework::init(int sx, int sy)
 	// set the default font
 	
 	setFont("engine/fonts/Roboto-Regular.ttf");
-	
+
+#if FRAMEWORK_USE_OVR_MOBILE
+	if (!frameworkVr.init())
+	{
+		logError("failed to initialize ovr mobile");
+		return false;
+	}
+
+	// process once (to ensure we are in vr mode) and show a loading screen
+
+	process();
+
+	frameworkVr.showLoadingScreen();
+#endif
+
 	return true;
 }
 
@@ -737,6 +755,11 @@ bool Framework::shutdown()
 	// shut down SDL
 	
 	SDL_Quit();
+#endif
+
+#if FRAMEWORK_USE_OVR_MOBILE
+	frameworkVr.shutdown();
+	globals.egl.destroyContext();
 #endif
 	
 	// clear globals
@@ -1142,8 +1165,6 @@ void Framework::process()
 	{
 		reloadCaches();
 	}
-#elif FRAMEWORK_USE_OVR_MOBILE
-	// todo : process ovr mobile events
 #endif
 
 #ifdef __WIN32__
@@ -1395,15 +1416,18 @@ void Framework::process()
 	m_lastTick = tickCount;
 
 	timeStep = delta / 1000.f;
-#endif
-#elif FRAMEWORK_USE_OVR_MOBILE
-	// todo : timeStep = 'predicted display time' - 'last time'
-#else
-	assert(false);
-	timeStep = 0.f; // todo
-#endif
 
 	time += timeStep;
+#endif
+#elif FRAMEWORK_USE_OVR_MOBILE
+	// process events and begin the next frame
+	frameworkVr.process();
+
+	timeStep = frameworkVr.TimeStep;
+	time = float(frameworkVr.PredictedDisplayTime);
+#else
+	#error
+#endif
 	
 	// time step sprites and models
 
