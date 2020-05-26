@@ -155,6 +155,8 @@ struct HandObject
 		std::vector<Mat4x4> globalBoneTransforms;
 	} deform;
 
+	Mat4x4 rootPose = Mat4x4(true);
+
 	// todo : add method for fetching finger transforms
 	/**
 	 * Returns the world-space pointer transform for a finger.
@@ -338,12 +340,14 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 	for (auto * window : windows)
 		window->tick();
 
-	uint32_t index = 0;
-
-	for (int i = 0; i < 2; ++i)
+	for (auto & hand : hands)
 	{
-		hands[i].isPinching = false;
+		hand.isPinching = false;
+		hand.hasSkeleton = false;
+		hand.hasDeform = false;
 	}
+
+	uint32_t index = 0;
 
 	for (;;)
 	{
@@ -441,15 +445,77 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
             if (vrapi_GetInputDeviceCapabilities(ovr, &handCapabilities.Header) != ovrSuccess)
 	            continue;
 
-			// Left hand or right hand.
-	        const int index = (handCapabilities.HandCapabilities & ovrHandCaps_LeftHand) ? 0 : 1;
+			// Left hand or right hand?
+	        const int index =
+	            (handCapabilities.HandCapabilities & ovrHandCaps_LeftHand) ? 0 :
+				(handCapabilities.HandCapabilities & ovrHandCaps_RightHand) ? 1 : -1;
 
+			if (index == -1)
+				continue;
+
+			// Fetch the input state for the hand.
 			ovrInputStateHand hand;
 			hand.Header.ControllerType = ovrControllerType_Hand;
 			if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &hand.Header) == ovrSuccess)
 			{
 				if ((hand.InputStateStatus & ovrInputStateHandStatus_IndexPinching) && hand.PinchStrength[ovrHandPinchStrength_Index] >= .5f)
 					hands[index].isPinching = true;
+			}
+
+	        // Fetch the current pose for the hand.
+	        ovrHandPose handPose;
+	        handPose.Header.Version = ovrHandVersion_1;
+	        if (vrapi_GetHandPose(ovr, header.DeviceID, predictedDisplayTime, &handPose.Header) == ovrSuccess &&
+	            handPose.Status == ovrHandTrackingStatus_Tracked &&
+	            (handPose.HandConfidence == ovrConfidence_HIGH))
+	        {
+	            // Fetch the initial pose for the hand.
+	            // We will need to combine it with the current pose, which only defines the new orientations for the bones.
+	            // And we will need it to perform skinning as well.
+	            ovrHandSkeleton handSkeleton;
+	            handSkeleton.Header.Version = ovrHandVersion_1;
+	            if (vrapi_GetHandSkeleton(ovr, index == 0 ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT, &handSkeleton.Header) == ovrSuccess)
+	            {
+		            auto & hand = hands[index];
+
+	                hand.resizeSkeleton(handSkeleton.NumBones);
+	                hand.hasSkeleton = true;
+	                hand.hasDeform = true;
+
+	                // Fill in bone hierarchy.
+	                for (int i = 0; i < handSkeleton.NumBones; ++i)
+	                    hand.skeleton.boneParentIndices[i] = handSkeleton.BoneParentIndices[i];
+
+	                // Fill in local bone transforms (bind pose).
+	                for (int i = 0; i < handSkeleton.NumBones; ++i)
+	                {
+	                    const ovrPosef & pose = handSkeleton.BonePoses[i];
+	                    const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
+	                    const ovrMatrix4f transform_transposed = ovrMatrix4f_Transpose(&transform);
+	                    memcpy(hand.skeleton.localBoneTransforms[i].m_v, transform_transposed.M, sizeof(Mat4x4));
+	                }
+
+	                // Calculate global bind pose.
+	                hand.calculateGlobalBindPose();
+
+	                // Update local bone poses.
+	                for (int i = 0; i < handSkeleton.NumBones; ++i)
+	                {
+	                    ovrPosef pose = handSkeleton.BonePoses[i];
+	                    pose.Orientation = handPose.BoneRotations[i];
+	                    const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
+	                    const ovrMatrix4f transform_transposed = ovrMatrix4f_Transpose(&transform);
+
+	                    memcpy(hand.deform.localBoneTransforms[i].m_v, transform_transposed.M, sizeof(Mat4x4));
+	                }
+
+	                hand.calculateGlobalDeformPose();
+
+	                ovrMatrix4f rootPose = vrapi_GetTransformFromPose(&handPose.RootPose);
+	                rootPose = ovrMatrix4f_Transpose(&rootPose);
+	                memcpy(hand.rootPose.m_v, rootPose.M, sizeof(Mat4x4));
+		            hand.rootPose = hand.rootPose.Scale(handPose.HandScale);
+	            }
 			}
 		}
 	}
@@ -549,120 +615,48 @@ void Scene::drawOpaque() const
     }
 
 #if true
-	if (ovr != nullptr)
+	for (int i = 0; i < 2; ++i)
 	{
-		for (int i = 0; true; i++)
+		auto & hand = hands[i];
+
+		if (!hand.hasDeform)
+			continue;
+
+		Mat4x4 skinningTransforms[32];
+		hand.calculateSkinnningMatrices(skinningTransforms, 32);
+
+		gxPushMatrix();
 		{
-			// Describe this input device.
-			ovrInputCapabilityHeader cap;
-			const ovrResult result = vrapi_EnumerateInputDevices(ovr, i, &cap);
-			if (result < 0)
-				break;
+			// Apply the root pose.
+			gxMultMatrixf(hand.rootPose.m_v);
 
-			// Is it a hand?
-			if (cap.Type == ovrControllerType_Hand)
+			Shader metallicRoughnessShader("pbr-metallicRoughness-skinned");
+			setShader(metallicRoughnessShader);
 			{
-				// Describe hand.
-				ovrInputHandCapabilities handCapabilities;
-	            handCapabilities.Header = cap;
-	            if (vrapi_GetInputDeviceCapabilities(ovr, &handCapabilities.Header) != ovrSuccess)
-		            continue;
+				gltf::setDefaultMaterialLighting(metallicRoughnessShader, worldToView);
 
-				// Left hand or right hand.
-		        const int index = (handCapabilities.HandCapabilities & ovrHandCaps_LeftHand) ? 0 : 1;
+				gltf::MetallicRoughnessParams params;
+				params.init(metallicRoughnessShader);
 
-		        auto & hand = const_cast<HandObject&>(hands[index]); // todo : update hands during tick, not draw
+				gltf::Material material;
+				material.pbrMetallicRoughness.baseColorFactor = Color(255, 127, 63, 255);
 
-				// Fetch the current pose for the hand.
-				ovrHandPose handPose;
-				handPose.Header.Version = ovrHandVersion_1;
-				if (vrapi_GetHandPose(ovr, cap.DeviceID, time, &handPose.Header) == ovrSuccess &&
-					handPose.Status == ovrHandTrackingStatus_Tracked &&
-					(handPose.HandConfidence == ovrConfidence_HIGH))
-				{
-					// Fetch the initial pose for the hand.
-					// We will need to combine it with the current pose, which only defines the new orientations for the bones.
-					// And we will need it to perform skinning as well.
-					ovrHandSkeleton handSkeleton;
-					handSkeleton.Header.Version = ovrHandVersion_1;
-					if (vrapi_GetHandSkeleton(ovr, index == 0 ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT, &handSkeleton.Header) == ovrSuccess)
-					{
-						hand.resizeSkeleton(handSkeleton.NumBones);
-						hand.hasSkeleton = true;
-						hand.hasDeform = true;
+				gltf::Scene scene;
+				int nextTextureUnit = 0;
+				params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
 
-						// Fill in bone hierarchy.
-						for (int i = 0; i < handSkeleton.NumBones; ++i)
-							hand.skeleton.boneParentIndices[i] = handSkeleton.BoneParentIndices[i];
+				params.setUseVertexColors(metallicRoughnessShader, true);
+				params.setMetallicRoughness(metallicRoughnessShader, .8f, .2f);
 
-						// Fill in local bone transforms (bind pose).
-						for (int i = 0; i < handSkeleton.NumBones; ++i)
-						{
-							const ovrPosef & pose = handSkeleton.BonePoses[i];
-							const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
-							const ovrMatrix4f transform_transposed = ovrMatrix4f_Transpose(&transform);
-							memcpy(hand.skeleton.localBoneTransforms[i].m_v, transform_transposed.M, sizeof(Mat4x4));
-						}
+				const_cast<ShaderBuffer&>(handMeshes[i].skinningData).setData(skinningTransforms, sizeof(skinningTransforms));
+				metallicRoughnessShader.setBuffer("SkinningData", handMeshes[i].skinningData);
 
-						// Calculate global bind pose.
-						hand.calculateGlobalBindPose();
-
-						// Update local bone poses.
-						for (int i = 0; i < handSkeleton.NumBones; ++i)
-						{
-							ovrPosef pose = handSkeleton.BonePoses[i];
-							pose.Orientation = handPose.BoneRotations[i];
-							const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
-							const ovrMatrix4f transform_transposed = ovrMatrix4f_Transpose(&transform);
-
-							memcpy(hand.deform.localBoneTransforms[i].m_v, transform_transposed.M, sizeof(Mat4x4));
-						}
-
-						hand.calculateGlobalDeformPose();
-
-						Mat4x4 skinningTransforms[32];
-						hand.calculateSkinnningMatrices(skinningTransforms, 32);
-
-						ovrMatrix4f rootPose = vrapi_GetTransformFromPose(&handPose.RootPose);
-						rootPose = ovrMatrix4f_Transpose(&rootPose);
-
-						gxPushMatrix();
-						{
-							// Apply the root pose.
-							gxMultMatrixf((float*)rootPose.M);
-							gxScalef(handPose.HandScale, handPose.HandScale, handPose.HandScale);
-
-							Shader metallicRoughnessShader("pbr-metallicRoughness-skinned");
-							setShader(metallicRoughnessShader);
-							{
-								gltf::setDefaultMaterialLighting(metallicRoughnessShader, worldToView);
-
-								gltf::MetallicRoughnessParams params;
-								params.init(metallicRoughnessShader);
-
-								gltf::Material material;
-								material.pbrMetallicRoughness.baseColorFactor = Color(255, 127, 63, 255);
-
-								gltf::Scene scene;
-								int nextTextureUnit = 0;
-								params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
-
-								params.setUseVertexColors(metallicRoughnessShader, true);
-								params.setMetallicRoughness(metallicRoughnessShader, .8f, .2f);
-
-								const_cast<ShaderBuffer&>(handMeshes[index].skinningData).setData(skinningTransforms, sizeof(skinningTransforms));
-								metallicRoughnessShader.setBuffer("SkinningData", handMeshes[index].skinningData);
-
-								setColor(255, 127, 63, 255);
-								handMeshes[index].mesh.draw();
-							}
-							clearShader();
-						}
-						gxPopMatrix();
-					}
-				}
+				setColor(255, 127, 63, 255);
+				handMeshes[i].mesh.draw();
 			}
+			clearShader();
 		}
+		gxPopMatrix();
 	}
 #endif
 
