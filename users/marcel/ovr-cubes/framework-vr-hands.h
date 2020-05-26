@@ -60,14 +60,14 @@ struct VrHandBase
 	virtual ShaderBuffer & getSkinningMatrices(const bool update) const = 0;
 	virtual void drawMesh() const = 0;
 
-	Mat4x4 getTransform(const Vec3 worldOrigin) const;
+	Mat4x4 getTransform(const Vec3 worldOffset) const;
 
 	/**
 	 * Returns the world-space pointer transform for a finger.
 	 * @param finger The finger for which to get the transform.
 	 * @return The world-space pointer transform.
 	 */
-	bool getFingerTransform(const VrFingers finger, const Vec3 worldOrigin, Mat4x4 & out_transform) const;
+	bool getFingerTransform(const VrFingers finger, const Vec3 worldOffset, Mat4x4 & out_transform) const;
 
 	void resizeSkeleton(const int numBones);
 

@@ -42,3 +42,15 @@ app ovr-cubes5
 	depend_library imgui-framework
 	add_files main5.cpp
 	resource_path data
+
+app ovr-cubes6
+	depend_library ecs-parameterui
+	depend_library framework
+	depend_library framework-gltf
+	depend_library framework-vr
+	depend_library imgui-framework
+	add_files main6.cpp
+	add_files simd.h
+	add_files watersim.cpp
+	add_files watersim.h
+	resource_path data

@@ -12,15 +12,33 @@
 #include "imgui-framework.h"
 #include "imgui_internal.h"
 
+#include "watersim.h"
+
 /*
 
-todo : draw windows in 3d using framework
+new challenges!
 
-todo : tick events for windows in 3d
-	- let the app or framework determine pointer direction and button presses
-	- intersect pointer with windows. determine nearest intersection
-	- on button press, make the intersecting window active
-	- for all windows, generate mouse.x, mouse.y and button presses
+todo : automatically switch between controller and hands for virtual desktop interaction
+
+todo : use finger gesture or controller button to open/close control panel
+
+todo : for testing : save/load parameters on startup/exit
+
+todo : experiment with drawing window contents in 3d directly (no window surface). this will give higher quality results on outlines
+
+todo : draw virtual desktop using a custom shader, to give the windows some specular reflection
+
+todo : refactor controller state similar to hand state
+
+todo : project hand position down onto watersim, to give the user an exaggered impression of how high up they are
+
+todo : determine nice watersim params and update defaults
+
+todo : binauralize some sounds
+
+todo : polish virtual desktop interaction when using hands,
+    - tell virtual desktop which type of interaction is used (beam or finger),
+    - let virtual desktop have detection of false finger presses
 
  */
 
@@ -36,41 +54,30 @@ static ovrMobile * getOvrMobile()
 	return frameworkVr.Ovr;
 }
 
-struct WindowTest
+struct ControlPanel
 {
 	Window window;
 	FrameworkImGuiContext guiContext;
-	ParameterMgr parameterMgr;
-	ParameterMgr parameterMgr_A;
-	ParameterMgr parameterMgr_B;
+	ParameterMgr * parameterMgr = nullptr;
 
 	ImGuiID lastHoveredId = 0;
 	bool hoveredIdChanged = false;
 
-	WindowTest(const float angle)
+	ControlPanel(const Vec3 position, const float angle, ParameterMgr * in_parameterMgr)
 		: window("Window", 340, 340)
 	{
-		const Mat4x4 transform = Mat4x4(true).RotateY(angle).Translate(0, 1.5f, -.45f);
+		const Mat4x4 transform =
+			Mat4x4(true)
+				.RotateY(angle)
+				.Translate(position);
 		window.setTransform(transform);
 
 		guiContext.init(false);
-		parameterMgr.addString("name", "");
-		parameterMgr.addInt("count", 0)->setLimits(0, 100);
-		parameterMgr.addFloat("speed", 0.f)->setLimits(0.f, 10.f);
 
-		parameterMgr_A.setPrefix("Group A");
-		parameterMgr_A.addVec3("color", Vec3(1.f))->setLimits(Vec3(0.f), Vec3(1.f));
-		parameterMgr_A.addFloat("strength", 1.f)->setLimits(0.f, 1.f);
-		parameterMgr.addChild(&parameterMgr_A);
-
-		parameterMgr_B.setPrefix("Group B");
-		parameterMgr_B.addEnum("type", 0, {{ "Box", 0 }, { "Sphere", 1 }});
-		parameterMgr_B.addVec3("color", Vec3(1.f))->setLimits(Vec3(0.f), Vec3(1.f));
-		parameterMgr_B.addFloat("strength", 1.f)->setLimits(0.f, 1.f);
-		parameterMgr.addChild(&parameterMgr_B);
+		parameterMgr = in_parameterMgr;
 	}
 
-	~WindowTest()
+	~ControlPanel()
 	{
 		guiContext.shut();
 	}
@@ -82,14 +89,12 @@ struct WindowTest
 			bool inputIsCaptured = false;
 			guiContext.processBegin(.01f, window.getWidth(), window.getHeight(), inputIsCaptured);
 			{
-				ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-				ImGui::SetNextWindowSize(ImVec2(window.getWidth(), window.getHeight()), ImGuiCond_Once);
+				ImGui::SetNextWindowPos(ImVec2(0, 0));
+				ImGui::SetNextWindowSize(ImVec2(window.getWidth(), window.getHeight()));
 
-				if (ImGui::Begin("This is a window", nullptr, ImGuiWindowFlags_NoCollapse))
+				if (ImGui::Begin("Control Panel", nullptr, ImGuiWindowFlags_NoCollapse))
 				{
-					ImGui::Button("This is a button");
-
-					parameterUi::doParameterUi_recursive(parameterMgr, nullptr);
+					parameterUi::doParameterUi_recursive(*parameterMgr, nullptr);
 				}
 				ImGui::End();
 
@@ -127,15 +132,26 @@ struct PointerObject
 
 struct Scene
 {
-	bool created = false;
-
 	Vec3 playerLocation;
-
-	std::vector<WindowTest*> windows;
 
 	PointerObject pointers[2];
 
 	VrHand hands[VrHand_COUNT];
+
+	ControlPanel * controlPanel = nullptr;
+
+	ParameterMgr parameterMgr;
+	ParameterInt * resolution = nullptr;
+	ParameterFloat * tension = nullptr;
+	ParameterFloat * velocityRetain = nullptr;
+	ParameterFloat * positionRetain = nullptr;
+	ParameterFloat * materialMetallic = nullptr;
+	ParameterFloat * materialRoughness = nullptr;
+	ParameterFloat * transformHeight = nullptr;
+	ParameterFloat * transformScale = nullptr;
+
+	Mat4x4 watersim_transform = Mat4x4(true);
+	Watersim watersim;
 
 	void create();
 	void destroy();
@@ -145,6 +161,8 @@ struct Scene
 	void drawOnce() const;
 	void drawOpaque() const;
 	void drawTranslucent() const;
+
+	void drawWatersim() const;
 };
 
 void Scene::create()
@@ -154,30 +172,37 @@ void Scene::create()
 		hands[i].init((VrHands)i);
 	}
 
-	for (int i = 0; i < 3; ++i)
-	{
-		WindowTest * window = new WindowTest(i - 1);
+	controlPanel = new ControlPanel(Vec3(0, 1.5f, -.45f), 0.f, &parameterMgr);
 
-		windows.push_back(window);
-	}
-
-	created = true;
+	// add watersim object
+	resolution = parameterMgr.addInt("resolution", 16);
+	resolution->setLimits(2, Watersim::kMaxElems);
+	tension = parameterMgr.addFloat("tension", 10.f);
+	tension->setLimits(1.f, 100.f);
+	velocityRetain = parameterMgr.addFloat("velocityRetain", .1f);
+	velocityRetain->setLimits(.01f, .99f);
+	positionRetain = parameterMgr.addFloat("positionRetain", .1f);
+	positionRetain->setLimits(.01f, .99f);
+	materialMetallic = parameterMgr.addFloat("materialMetallic", .8f);
+	materialMetallic->setLimits(0.f, 1.f);
+	materialRoughness = parameterMgr.addFloat("materialRoughness", .8f);
+	materialRoughness->setLimits(0.f, 1.f);
+	transformHeight = parameterMgr.addFloat("transformHeight", 0.f);
+	transformHeight->setLimits(-2.f, +2.f);
+	transformScale = parameterMgr.addFloat("transformScale", 1.f);
+	transformScale->setLimits(.1f, 2.f);
+	watersim.init(resolution->get());
 }
 
 void Scene::destroy()
 {
+	watersim.shut();
+
 	for (auto & hand : hands)
 		hand.shut();
 
-	for (auto *& window : windows)
-	{
-		delete window;
-		window = nullptr;
-	}
-
-	windows.clear();
-
-	created = false;
+	delete controlPanel;
+	controlPanel = nullptr;
 }
 
 void Scene::tick(const float dt, const double predictedDisplayTime)
@@ -193,25 +218,67 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 
 	// update windows
 
-#if false
+#if true
 	const Mat4x4 viewToWorld = Mat4x4(true).Translate(playerLocation).Mul(pointers[0].transform);
 	const int buttonMask =
 		(pointers[0].isDown[0] << 0) |
 		(pointers[0].isDown[1] << 1);
+	const bool useProximityForInteractivity = false;
 #else
 	// todo : getFingerTransform may return false. handle this case
 	Mat4x4 viewToWorld;
 	hands[VrHand_Left].getFingerTransform(VrFinger_Index, playerLocation, viewToWorld);
 	//const int buttonMask = (hands[0].fingers[VrFinger_Index].isPinching << 0);
 	const int buttonMask = 1 << 0;
+	const bool useProximityForInteractivity = true;
 #endif
 
-	framework.tickVirtualDesktop(viewToWorld, buttonMask, true);
+	framework.tickVirtualDesktop(viewToWorld, buttonMask, useProximityForInteractivity);
 
-	for (auto * window : windows)
-		window->tick();
+	controlPanel->tick();
 
-// todo : update controller input before updating windows
+	// update watersim object
+	{
+		// update resolution
+
+		if (resolution->get() != watersim.numElems)
+		{
+			watersim.shut();
+			watersim.init(resolution->get());
+
+			watersim.randomize();
+		}
+
+		watersim_transform = Mat4x4(true)
+			.Translate(0, transformHeight->get(), 0)
+			.Scale(transformScale->get())
+			.Translate(
+				-(watersim.numElems - 1) / 2.f,
+				0.f,
+				-(watersim.numElems - 1) / 2.f);
+
+		// update interaction with hands
+
+		if ((rand() % 100) == 0)
+		{
+			watersim.doGaussianImpact(
+				rand() % watersim.numElems,
+				rand() % watersim.numElems,
+				3,
+				1.f, 1.f);
+		}
+
+		// update physics
+
+		watersim.tick(
+			dt,                    // time step
+			tension->get(),        // tension
+			velocityRetain->get(), // velocity retain
+			positionRetain->get(), // position retain
+			true);                 // closed ends (non-wrapped at the edges)
+	}
+
+// todo : add VrController to framework-vr shared library
 	uint32_t index = 0;
 
 	for (;;)
@@ -225,8 +292,7 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 		{
 			bool vibrate = false;
 
-			for (auto * window : windows)
-				vibrate |= window->hoveredIdChanged && window->lastHoveredId != 0;
+			vibrate |= controlPanel->hoveredIdChanged && controlPanel->lastHoveredId != 0;
 
 			ovrTracking tracking;
 			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, predictedDisplayTime, &tracking) != ovrSuccess)
@@ -305,8 +371,7 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 
 void Scene::drawOnce() const
 {
-	for (auto * window : windows)
-		window->draw();
+	controlPanel->draw();
 }
 
 void Scene::drawOpaque() const
@@ -317,6 +382,10 @@ void Scene::drawOpaque() const
 
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+
+#if true
+	//drawWatersim();
+#endif
 
 	setColor(colorWhite);
 	framework.drawVirtualDesktop();
@@ -425,6 +494,70 @@ void Scene::drawOpaque() const
 void Scene::drawTranslucent() const
 {
 	// todo : draw translucent objects
+
+	drawWatersim();
+}
+
+void Scene::drawWatersim() const
+{
+	Mat4x4 worldToView;
+	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+
+	// todo : convert watersim values to texture, create texture, and use a static mesh to sample from it
+	//        using a shader. this avoids using the GX api to draw dynamic geometry
+
+	// Draw watersim object.
+	gxPushMatrix();
+	{
+		gxMultMatrixf(watersim_transform.m_v);
+
+		Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
+		setShader(metallicRoughnessShader);
+		{
+			gltf::setDefaultMaterialLighting(metallicRoughnessShader, worldToView, Vec3(0.f, -1.f, 4.f).CalcNormalized());
+
+			gltf::MetallicRoughnessParams params;
+			params.init(metallicRoughnessShader);
+
+			gltf::Material material;
+			gltf::Scene scene;
+			int nextTextureUnit = 0;
+			params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
+
+			params.setUseVertexColors(metallicRoughnessShader, true);
+			params.setMetallicRoughness(metallicRoughnessShader, materialMetallic->get(), materialRoughness->get());
+
+			setColor(255, 200, 180, 180);
+			gxBegin(GX_QUADS);
+			{
+				for (int x = 0; x < watersim.numElems - 1; ++x)
+				{
+					for (int z = 0; z < watersim.numElems - 1; ++z)
+					{
+						const float y1 = watersim.p[x + 0][z + 0];
+						const float y2 = watersim.p[x + 1][z + 0];
+						const float y3 = watersim.p[x + 1][z + 1];
+						const float y4 = watersim.p[x + 0][z + 1];
+
+						const float nx = -(y2 - y1);
+						const float ny = 1.f;
+						const float nz = -(y4 - y1);
+
+						const Vec3 normal = Vec3(nx, ny, nz).CalcNormalized();
+
+						gxNormal3f(normal[0], normal[1], normal[2]);
+						gxVertex3f(x + 0, y1, z + 0);
+						gxVertex3f(x + 1, y2, z + 0);
+						gxVertex3f(x + 1, y3, z + 1);
+						gxVertex3f(x + 0, y4, z + 1);
+					}
+				}
+			}
+			gxEnd();
+		}
+		clearShader();
+	}
+	gxPopMatrix();
 }
 
 int main(int argc, char * argv[])
@@ -469,7 +602,8 @@ int main(int argc, char * argv[])
 					popDepthTest();
 
 					pushDepthTest(true, DEPTH_LESS, false);
-					pushBlend(BLEND_ADD);
+					//pushBlend(BLEND_ADD);
+					pushBlend(BLEND_ALPHA);
 					{
 						scene.drawTranslucent();
 					}

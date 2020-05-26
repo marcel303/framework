@@ -17,14 +17,14 @@ VrHandBase::VrHandBase()
 		index = -1;
 }
 
-Mat4x4 VrHandBase::getTransform(const Vec3 worldOrigin) const
+Mat4x4 VrHandBase::getTransform(const Vec3 worldOffset) const
 {
 	return Mat4x4(true)
-		.Translate(worldOrigin)
+		.Translate(worldOffset)
 		.Mul(rootPose);
 }
 
-bool VrHandBase::getFingerTransform(const VrFingers finger, const Vec3 worldOrigin, Mat4x4 & out_transform) const
+bool VrHandBase::getFingerTransform(const VrFingers finger, const Vec3 worldOffset, Mat4x4 & out_transform) const
 {
 	if (!hasSkeleton || !hasDeform)
 		return false;
@@ -34,7 +34,7 @@ bool VrHandBase::getFingerTransform(const VrFingers finger, const Vec3 worldOrig
 		return false;
 
 	out_transform = Mat4x4(true)
-		.Translate(worldOrigin)
+		.Translate(worldOffset)
 		.Mul(rootPose)
 		.Mul(deform.globalBoneTransforms[boneIndex])
 		.RotateY(float(M_PI)/2.f); // todo : make rotation depend on the hand?
