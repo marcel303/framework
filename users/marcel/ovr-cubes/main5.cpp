@@ -41,8 +41,8 @@ ovrMobile * getOvrMobile()
 
 struct WindowTest
 {
-    Window window;
-    FrameworkImGuiContext guiContext;
+	Window window;
+	FrameworkImGuiContext guiContext;
 	ParameterMgr parameterMgr;
 	ParameterMgr parameterMgr_A;
 	ParameterMgr parameterMgr_B;
@@ -126,19 +126,25 @@ struct PointerObject
 	bool isDown[2] = { };
 };
 
-enum FingerName
+enum VrHands
 {
-	kFingerName_Thumb,
-	kFingerName_Index,
-	kFingerName_Middle,
-	kFingerName_Ring,
-	kFingerName_Pinky
+	VrHand_Left,
+	VrHand_Right,
+	VrHand_COUNT
 };
 
-struct HandObject
+enum VrFingers
 {
-	bool isPinching = false;
+	VrFinger_Thumb,
+	VrFinger_Index,
+	VrFinger_Middle,
+	VrFinger_Ring,
+	VrFinger_Pinky,
+	VrFinger_COUNT
+};
 
+struct VrHandBase
+{
 	bool hasSkeleton = false;
 	struct
 	{
@@ -149,7 +155,7 @@ struct HandObject
 		std::vector<Mat4x4> localBoneTransforms;  // bind pose in local space
 		std::vector<Mat4x4> globalBoneTransforms; // bind pose in global space
 
-		std::map<FingerName, int> fingerNameToBoneIndex;
+		int fingerNameToBoneIndex[VrFinger_COUNT];
 	} skeleton;
 
 	bool hasDeform = false;
@@ -161,22 +167,51 @@ struct HandObject
 
 	Mat4x4 rootPose = Mat4x4(true);
 
+	struct
+	{
+		bool isPinching = false;
+	} fingers[VrFinger_COUNT];
+
+	VrHandBase()
+	{
+		for (auto & index : skeleton.fingerNameToBoneIndex)
+			index = -1;
+	}
+
+	virtual void init(VrHands hand) = 0;
+	virtual void shut() = 0;
+
+	virtual void updateInputState() = 0;
+	virtual void updateSkinningMatrices() const = 0;
+	virtual ShaderBuffer & getSkinningMatrices(const bool update) const = 0;
+	virtual void drawMesh() const = 0;
+
+	Mat4x4 getTransform(const Vec3 worldOrigin) const
+	{
+		return Mat4x4(true)
+			.Translate(worldOrigin)
+			.Mul(rootPose);
+	}
+
 	/**
 	 * Returns the world-space pointer transform for a finger.
 	 * @param finger The finger for which to get the transform.
 	 * @return The world-space pointer transform.
 	 */
-	bool getFingerTransform(const FingerName finger, Mat4x4 & out_transform) const
+	bool getFingerTransform(const VrFingers finger, const Vec3 worldOrigin, Mat4x4 & out_transform) const
 	{
 		if (!hasSkeleton || !hasDeform)
 			return false;
 
-		auto i = skeleton.fingerNameToBoneIndex.find(finger);
-		if (i == skeleton.fingerNameToBoneIndex.end())
+		const int boneIndex = skeleton.fingerNameToBoneIndex[finger];
+		if (boneIndex < 0)
 			return false;
 
-		out_transform = rootPose * deform.globalBoneTransforms[i->second];
-		out_transform = out_transform.RotateY(float(M_PI)/2.f);
+		out_transform = Mat4x4(true)
+			.Translate(worldOrigin)
+			.Mul(rootPose)
+			.Mul(deform.globalBoneTransforms[boneIndex])
+			.RotateY(float(M_PI)/2.f); // todo : make rotation depend on the hand?
 		return true;
 	}
 
@@ -241,53 +276,26 @@ struct HandObject
 	}
 };
 
-// -- scene
-
-struct Scene
+class VrHand : public VrHandBase
 {
-    bool created = false;
+	VrHands hand;
 
-	Vec3 playerLocation;
+	GxMesh mesh;
+	GxVertexBuffer vb;
+	GxIndexBuffer ib;
 
-	std::vector<WindowTest*> windows;
+	mutable ShaderBuffer skinningData;
 
-	// hand mesh
-	struct HandMesh
+public:
+	virtual void init(VrHands in_hand) override
 	{
-		GxMesh mesh;
-		GxVertexBuffer vb;
-		GxIndexBuffer ib;
-		ShaderBuffer skinningData;
-	} handMeshes[2];
+		hand = in_hand;
 
-	PointerObject pointers[2];
+		const auto ovrHand = (hand == VrHand_Left) ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT;
 
-	HandObject hands[2];
-
-    void create();
-    void destroy();
-
-    void tick(const float dt, const double predictedDisplayTime);
-
-    void drawOnce() const;
-	void drawOpaque() const;
-	void drawTranslucent() const;
-};
-
-void Scene::create()
-{
-	for (int i = 0; i < 3; ++i)
-	{
-		WindowTest * window = new WindowTest(i - 1);
-
-		windows.push_back(window);
-	}
-
-	for (int i = 0; i < 2; ++i)
-	{
 		ovrHandMesh handMesh;
 		handMesh.Header.Version = ovrHandVersion_1;
-		if (vrapi_GetHandMesh(getOvrMobile(), i == 0 ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT, &handMesh.Header) == ovrSuccess)
+		if (vrapi_GetHandMesh(getOvrMobile(), ovrHand, &handMesh.Header) == ovrSuccess)
 		{
 			GxVertexInput vsInputs[] =
 			{
@@ -300,21 +308,217 @@ void Scene::create()
 			};
 			const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
 
-			handMeshes[i].vb.alloc(&handMesh, sizeof(handMesh));
-			handMeshes[i].ib.alloc(handMesh.Indices, sizeof(handMesh.Indices) / sizeof(handMesh.Indices[0]), GX_INDEX_16);
-			handMeshes[i].mesh.setVertexBuffer(&handMeshes[i].vb, vsInputs, numVsInputs, 0);
-			handMeshes[i].mesh.setIndexBuffer(&handMeshes[i].ib);
-			handMeshes[i].mesh.addPrim(GX_TRIANGLES, handMesh.NumIndices, true);
+			vb.alloc(&handMesh, sizeof(handMesh));
+			ib.alloc(handMesh.Indices, sizeof(handMesh.Indices) / sizeof(handMesh.Indices[0]), GX_INDEX_16);
+			mesh.setVertexBuffer(&vb, vsInputs, numVsInputs, 0);
+			mesh.setIndexBuffer(&ib);
+			mesh.addPrim(GX_TRIANGLES, handMesh.NumIndices, true);
 
-			handMeshes[i].skinningData.alloc(sizeof(Mat4x4) * 32);
+			skinningData.alloc(sizeof(Mat4x4) * 32);
 		}
 	}
 
-    created = true;
+	virtual void shut() override
+	{
+		mesh.clear();
+		vb.free();
+		ib.free();
+
+		skinningData.free();
+	}
+
+	virtual void updateInputState() override
+	{
+		for (int i = 0; i < VrFinger_COUNT; ++i)
+			fingers[i].isPinching = false;
+		hasSkeleton = false;
+		hasDeform = false;
+
+		// loop through input device and find our hand
+
+		auto * ovr = getOvrMobile();
+
+		uint32_t deviceIndex = 0;
+
+		for (;;)
+		{
+			ovrInputCapabilityHeader header;
+			if (vrapi_EnumerateInputDevices(ovr, deviceIndex++, &header) < 0)
+				break;
+
+			// Is it a hand?
+			if (header.Type != ovrControllerType_Hand)
+				continue;
+
+			// Describe hand.
+			ovrInputHandCapabilities handCapabilities;
+			handCapabilities.Header = header;
+			if (vrapi_GetInputDeviceCapabilities(ovr, &handCapabilities.Header) != ovrSuccess)
+				continue;
+
+			// Is it our hand?
+			if (hand == VrHand_Left && (handCapabilities.HandCapabilities & ovrHandCaps_LeftHand) == 0)
+				continue;
+			if (hand == VrHand_Right && (handCapabilities.HandCapabilities & ovrHandCaps_RightHand) == 0)
+				continue;
+
+			for (;;)
+			{
+				// Fetch the input state for the hand.
+				ovrInputStateHand hand;
+				hand.Header.ControllerType = ovrControllerType_Hand;
+				if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &hand.Header) != ovrSuccess)
+					break;
+
+				// todo : pinching state for all five fingers
+				if ((hand.InputStateStatus & ovrInputStateHandStatus_IndexPinching) && hand.PinchStrength[ovrHandPinchStrength_Index] >= .5f)
+					fingers[VrFinger_Index].isPinching = true;
+
+				break;
+			}
+
+			for (;;)
+			{
+				// Fetch the initial pose for the hand.
+				// We will need to combine it with the current pose, which only defines the new orientations for the bones.
+				// And we will need it to perform skinning as well.
+				ovrHandSkeleton handSkeleton;
+				handSkeleton.Header.Version = ovrHandVersion_1;
+				const auto ovrHand = (hand == VrHand_Left) ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT;
+				if (vrapi_GetHandSkeleton(ovr, ovrHand, &handSkeleton.Header) != ovrSuccess)
+					break;
+
+				hasSkeleton = true;
+
+				resizeSkeleton(handSkeleton.NumBones);
+
+				// Fill in bone hierarchy.
+				for (int i = 0; i < handSkeleton.NumBones; ++i)
+					skeleton.boneParentIndices[i] = handSkeleton.BoneParentIndices[i];
+
+				// Fill in bone indices for finger tips (for pointer positions and directions).
+				skeleton.fingerNameToBoneIndex[VrFinger_Thumb]  = ovrHandBone_ThumbTip;
+				skeleton.fingerNameToBoneIndex[VrFinger_Index]  = ovrHandBone_IndexTip;
+				skeleton.fingerNameToBoneIndex[VrFinger_Middle] = ovrHandBone_MiddleTip;
+				skeleton.fingerNameToBoneIndex[VrFinger_Ring]   = ovrHandBone_RingTip;
+				skeleton.fingerNameToBoneIndex[VrFinger_Pinky]  = ovrHandBone_PinkyTip;
+
+				// Fill in local bone transforms (bind pose).
+				for (int i = 0; i < handSkeleton.NumBones; ++i)
+				{
+					const ovrPosef & pose = handSkeleton.BonePoses[i];
+					const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
+					const ovrMatrix4f transform_transposed = ovrMatrix4f_Transpose(&transform);
+					memcpy(skeleton.localBoneTransforms[i].m_v, transform_transposed.M, sizeof(Mat4x4));
+				}
+
+				// Calculate global bind pose.
+				calculateGlobalBindPose();
+
+				// Fetch the current pose for the hand.
+				ovrHandPose handPose;
+				handPose.Header.Version = ovrHandVersion_1;
+				if (vrapi_GetHandPose(ovr, header.DeviceID, frameworkVr.PredictedDisplayTime, &handPose.Header) != ovrSuccess)
+					break;
+
+				// Is the hand being tracked, with high confidence?
+				if (handPose.Status != ovrHandTrackingStatus_Tracked ||
+					handPose.HandConfidence != ovrConfidence_HIGH)
+					break;
+
+				hasDeform = true;
+
+				// Update local bone poses.
+				for (int i = 0; i < handSkeleton.NumBones; ++i)
+				{
+					ovrPosef pose = handSkeleton.BonePoses[i];
+					pose.Orientation = handPose.BoneRotations[i];
+					const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
+					const ovrMatrix4f transform_transposed = ovrMatrix4f_Transpose(&transform);
+
+					memcpy(deform.localBoneTransforms[i].m_v, transform_transposed.M, sizeof(Mat4x4));
+				}
+
+				calculateGlobalDeformPose();
+
+				ovrMatrix4f ovrRootPose = vrapi_GetTransformFromPose(&handPose.RootPose);
+				ovrRootPose = ovrMatrix4f_Transpose(&ovrRootPose);
+				memcpy(rootPose.m_v, ovrRootPose.M, sizeof(Mat4x4));
+				rootPose = rootPose.Scale(handPose.HandScale);
+
+				break;
+			}
+		}
+	}
+
+	virtual void updateSkinningMatrices() const override
+	{
+		Mat4x4 skinningTransforms[32];
+		calculateSkinnningMatrices(skinningTransforms, 32);
+
+		skinningData.setData(skinningTransforms, sizeof(skinningTransforms));
+	}
+
+	virtual ShaderBuffer & getSkinningMatrices(const bool update) const override
+	{
+		if (update)
+			updateSkinningMatrices();
+
+		return skinningData;
+	}
+
+	virtual void drawMesh() const override
+	{
+		mesh.draw();
+	}
+};
+
+// -- scene
+
+struct Scene
+{
+	bool created = false;
+
+	Vec3 playerLocation;
+
+	std::vector<WindowTest*> windows;
+
+	PointerObject pointers[2];
+
+	VrHand hands[VrHand_COUNT];
+
+	void create();
+	void destroy();
+
+	void tick(const float dt, const double predictedDisplayTime);
+
+	void drawOnce() const;
+	void drawOpaque() const;
+	void drawTranslucent() const;
+};
+
+void Scene::create()
+{
+	for (int i = 0; i < 2; ++i)
+	{
+		hands[i].init((VrHands)i);
+	}
+
+	for (int i = 0; i < 3; ++i)
+	{
+		WindowTest * window = new WindowTest(i - 1);
+
+		windows.push_back(window);
+	}
+
+	created = true;
 }
 
 void Scene::destroy()
 {
+	for (auto & hand : hands)
+		hand.shut();
+
 	for (auto *& window : windows)
 	{
 		delete window;
@@ -323,7 +527,7 @@ void Scene::destroy()
 
 	windows.clear();
 
-    created = false;
+	created = false;
 }
 
 void Scene::tick(const float dt, const double predictedDisplayTime)
@@ -340,8 +544,8 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 #else
 	// todo : getFingerTransform may return false. handle this case
 	Mat4x4 viewToWorld;
-	hands[0].getFingerTransform(kFingerName_Index, viewToWorld);
-	//const int buttonMask = (hands[0].isPinching << 0);
+	hands[VrHand_Left].getFingerTransform(VrFinger_Index, playerLocation, viewToWorld);
+	//const int buttonMask = (hands[0].fingers[VrFinger_Index].isPinching << 0);
 	const int buttonMask = 1 << 0;
 #endif
 
@@ -352,9 +556,7 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 
 	for (auto & hand : hands)
 	{
-		hand.isPinching = false;
-		hand.hasSkeleton = false;
-		hand.hasDeform = false;
+		hand.updateInputState();
 	}
 
 	uint32_t index = 0;
@@ -363,9 +565,7 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 	{
 		ovrInputCapabilityHeader header;
 
-		const auto result = vrapi_EnumerateInputDevices(ovr, index++, &header);
-
-		if (result < 0)
+		if (vrapi_EnumerateInputDevices(ovr, index++, &header) < 0)
 			break;
 
 		if (header.Type == ovrControllerType_TrackedRemote)
@@ -447,94 +647,6 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 
 			vrapi_SetHapticVibrationSimple(ovr, header.DeviceID, vibrate ? .5f : 0.f);
 		}
-		else if (header.Type == ovrControllerType_Hand)
-		{
-			// Describe hand.
-			ovrInputHandCapabilities handCapabilities;
-            handCapabilities.Header = header;
-            if (vrapi_GetInputDeviceCapabilities(ovr, &handCapabilities.Header) != ovrSuccess)
-	            continue;
-
-			// Left hand or right hand?
-	        const int index =
-	            (handCapabilities.HandCapabilities & ovrHandCaps_LeftHand) ? 0 :
-				(handCapabilities.HandCapabilities & ovrHandCaps_RightHand) ? 1 : -1;
-
-			if (index == -1)
-				continue;
-
-			// Fetch the input state for the hand.
-			ovrInputStateHand hand;
-			hand.Header.ControllerType = ovrControllerType_Hand;
-			if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &hand.Header) == ovrSuccess)
-			{
-				if ((hand.InputStateStatus & ovrInputStateHandStatus_IndexPinching) && hand.PinchStrength[ovrHandPinchStrength_Index] >= .5f)
-					hands[index].isPinching = true;
-			}
-
-	        // Fetch the current pose for the hand.
-	        ovrHandPose handPose;
-	        handPose.Header.Version = ovrHandVersion_1;
-	        if (vrapi_GetHandPose(ovr, header.DeviceID, predictedDisplayTime, &handPose.Header) == ovrSuccess &&
-	            handPose.Status == ovrHandTrackingStatus_Tracked &&
-	            (handPose.HandConfidence == ovrConfidence_HIGH))
-	        {
-	            // Fetch the initial pose for the hand.
-	            // We will need to combine it with the current pose, which only defines the new orientations for the bones.
-	            // And we will need it to perform skinning as well.
-	            ovrHandSkeleton handSkeleton;
-	            handSkeleton.Header.Version = ovrHandVersion_1;
-	            if (vrapi_GetHandSkeleton(ovr, index == 0 ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT, &handSkeleton.Header) == ovrSuccess)
-	            {
-		            auto & hand = hands[index];
-
-	                hand.resizeSkeleton(handSkeleton.NumBones);
-	                hand.hasSkeleton = true;
-	                hand.hasDeform = true;
-
-	                // Fill in bone hierarchy.
-	                for (int i = 0; i < handSkeleton.NumBones; ++i)
-	                    hand.skeleton.boneParentIndices[i] = handSkeleton.BoneParentIndices[i];
-
-					// Fill in bone indices for finger tips (for pointer positions and directions).
-		            hand.skeleton.fingerNameToBoneIndex[kFingerName_Thumb] = ovrHandBone_ThumbTip;
-		            hand.skeleton.fingerNameToBoneIndex[kFingerName_Index] = ovrHandBone_IndexTip;
-		            hand.skeleton.fingerNameToBoneIndex[kFingerName_Middle] = ovrHandBone_MiddleTip;
-		            hand.skeleton.fingerNameToBoneIndex[kFingerName_Ring] = ovrHandBone_RingTip;
-		            hand.skeleton.fingerNameToBoneIndex[kFingerName_Pinky] = ovrHandBone_PinkyTip;
-
-	                // Fill in local bone transforms (bind pose).
-	                for (int i = 0; i < handSkeleton.NumBones; ++i)
-	                {
-	                    const ovrPosef & pose = handSkeleton.BonePoses[i];
-	                    const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
-	                    const ovrMatrix4f transform_transposed = ovrMatrix4f_Transpose(&transform);
-	                    memcpy(hand.skeleton.localBoneTransforms[i].m_v, transform_transposed.M, sizeof(Mat4x4));
-	                }
-
-	                // Calculate global bind pose.
-	                hand.calculateGlobalBindPose();
-
-	                // Update local bone poses.
-	                for (int i = 0; i < handSkeleton.NumBones; ++i)
-	                {
-	                    ovrPosef pose = handSkeleton.BonePoses[i];
-	                    pose.Orientation = handPose.BoneRotations[i];
-	                    const ovrMatrix4f transform = vrapi_GetTransformFromPose(&pose);
-	                    const ovrMatrix4f transform_transposed = ovrMatrix4f_Transpose(&transform);
-
-	                    memcpy(hand.deform.localBoneTransforms[i].m_v, transform_transposed.M, sizeof(Mat4x4));
-	                }
-
-	                hand.calculateGlobalDeformPose();
-
-	                ovrMatrix4f rootPose = vrapi_GetTransformFromPose(&handPose.RootPose);
-	                rootPose = ovrMatrix4f_Transpose(&rootPose);
-	                memcpy(hand.rootPose.m_v, rootPose.M, sizeof(Mat4x4));
-		            hand.rootPose = Mat4x4(true).Translate(playerLocation).Mul(hand.rootPose).Scale(handPose.HandScale);
-	            }
-			}
-		}
 	}
 }
 
@@ -553,38 +665,18 @@ void Scene::drawOpaque() const
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 
-	// Adjust for floor level.
-	float ground_y = 0.f;
+	setColor(colorWhite);
+	framework.drawVirtualDesktop();
 
-#if false
-    {
-	    ovrPosef boundaryPose;
-	    ovrVector3f boundaryScale;
-	    if (vrapi_GetBoundaryOrientedBoundingBox(ovr, &boundaryPose, &boundaryScale) == ovrSuccess)
-	        ground_y = boundaryPose.Translation.y;
-    }
-#endif
-
-    gxPushMatrix();
-    {
-    	gxTranslatef(0, ground_y, 0);
-
-	    // draw world-space things
-
-	    setColor(colorWhite);
-	    framework.drawVirtualDesktop();
-    }
-    gxPopMatrix(); // Undo ground level adjustment.
-
-	// Draw hands.
 #if true
+	// Draw controllers.
 	gxPushMatrix();
 	gxTranslatef(
-	    playerLocation[0],
-	    playerLocation[1],
-	    playerLocation[2]);
+		playerLocation[0],
+		playerLocation[1],
+		playerLocation[2]);
 	for (int i = 0; i < 2; ++i)
-    {
+	{
 		auto & pointer = pointers[i];
 
 		if (pointer.isValid == false)
@@ -628,11 +720,12 @@ void Scene::drawOpaque() const
 			popCullMode();
 		}
 		gxPopMatrix();
-    }
-    gxPopMatrix();
+	}
+	gxPopMatrix();
 #endif
 
 #if true
+	// Draw hands.
 	for (int i = 0; i < 2; ++i)
 	{
 		auto & hand = hands[i];
@@ -640,13 +733,10 @@ void Scene::drawOpaque() const
 		if (!hand.hasDeform)
 			continue;
 
-		Mat4x4 skinningTransforms[32];
-		hand.calculateSkinnningMatrices(skinningTransforms, 32);
-
 		gxPushMatrix();
 		{
 			// Apply the root pose.
-			gxMultMatrixf(hand.rootPose.m_v);
+			gxMultMatrixf(hand.getTransform(playerLocation).m_v);
 
 			Shader metallicRoughnessShader("pbr-metallicRoughness-skinned");
 			setShader(metallicRoughnessShader);
@@ -666,11 +756,11 @@ void Scene::drawOpaque() const
 				params.setUseVertexColors(metallicRoughnessShader, true);
 				params.setMetallicRoughness(metallicRoughnessShader, .8f, .2f);
 
-				const_cast<ShaderBuffer&>(handMeshes[i].skinningData).setData(skinningTransforms, sizeof(skinningTransforms));
-				metallicRoughnessShader.setBuffer("SkinningData", handMeshes[i].skinningData);
+				auto & skinningData = hands[i].getSkinningMatrices(true);
+				metallicRoughnessShader.setBuffer("SkinningData", skinningData);
 
 				setColor(255, 127, 63, 255);
-				handMeshes[i].mesh.draw();
+				hands[i].drawMesh();
 			}
 			clearShader();
 		}
@@ -681,7 +771,7 @@ void Scene::drawOpaque() const
 
 void Scene::drawTranslucent() const
 {
-    // todo : draw translucent objects
+	// todo : draw translucent objects
 }
 
 int main(int argc, char * argv[])
@@ -693,53 +783,53 @@ int main(int argc, char * argv[])
 
 	scene.create();
 
-    for (;;)
-    {
-        framework.process();
+	for (;;)
+	{
+		framework.process();
 
-	    if (framework.quitRequested)
-	        break;
+		if (framework.quitRequested)
+			break;
 
-  	    // Tick the simulation
-        scene.tick(frameworkVr.TimeStep, frameworkVr.PredictedDisplayTime);
+		// Tick the simulation
+		scene.tick(frameworkVr.TimeStep, frameworkVr.PredictedDisplayTime);
 
 		// Render the stuff we need to draw only once (shared for each eye).
-	    scene.drawOnce();
+		scene.drawOnce();
 
 		// Render the eye images.
-	    for (int eyeIndex = 0; eyeIndex < frameworkVr.getEyeCount(); ++eyeIndex)
-	    {
-		    frameworkVr.beginEye(eyeIndex, colorBlack);
-		    {
-		        gxPushMatrix();
-			    gxTranslatef(
-		            -scene.playerLocation[0],
-		            -scene.playerLocation[1],
-		            -scene.playerLocation[2]);
-			    {
-				    pushDepthTest(true, DEPTH_LESS);
-				    pushBlend(BLEND_OPAQUE);
-				    {
-			            scene.drawOpaque();
-				    }
-				    popBlend();
-				    popDepthTest();
+		for (int eyeIndex = 0; eyeIndex < frameworkVr.getEyeCount(); ++eyeIndex)
+		{
+			frameworkVr.beginEye(eyeIndex, colorBlack);
+			{
+				gxPushMatrix();
+				gxTranslatef(
+					-scene.playerLocation[0],
+					-scene.playerLocation[1],
+					-scene.playerLocation[2]);
+				{
+					pushDepthTest(true, DEPTH_LESS);
+					pushBlend(BLEND_OPAQUE);
+					{
+						scene.drawOpaque();
+					}
+					popBlend();
+					popDepthTest();
 
-				    pushDepthTest(true, DEPTH_LESS, false);
-				    pushBlend(BLEND_ADD);
-				    {
-				        scene.drawTranslucent();
-				    }
-				    popBlend();
-				    popDepthTest();
-			    }
-			    gxPopMatrix();
-		    }
-		    frameworkVr.endEye();
-	    }
+					pushDepthTest(true, DEPTH_LESS, false);
+					pushBlend(BLEND_ADD);
+					{
+						scene.drawTranslucent();
+					}
+					popBlend();
+					popDepthTest();
+				}
+				gxPopMatrix();
+			}
+			frameworkVr.endEye();
+		}
 
-	    frameworkVr.submitFrameAndPresent();
-    }
+		frameworkVr.submitFrameAndPresent();
+	}
 
 	scene.destroy();
 
