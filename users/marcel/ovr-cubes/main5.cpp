@@ -128,7 +128,11 @@ struct PointerObject
 
 enum FingerName
 {
-	kFingerName_Index
+	kFingerName_Thumb,
+	kFingerName_Index,
+	kFingerName_Middle,
+	kFingerName_Ring,
+	kFingerName_Pinky
 };
 
 struct HandObject
@@ -145,7 +149,7 @@ struct HandObject
 		std::vector<Mat4x4> localBoneTransforms;  // bind pose in local space
 		std::vector<Mat4x4> globalBoneTransforms; // bind pose in global space
 
-		std::vector<int> fingerNameToBoneIndex;
+		std::map<FingerName, int> fingerNameToBoneIndex;
 	} skeleton;
 
 	bool hasDeform = false;
@@ -157,17 +161,23 @@ struct HandObject
 
 	Mat4x4 rootPose = Mat4x4(true);
 
-	// todo : add method for fetching finger transforms
 	/**
 	 * Returns the world-space pointer transform for a finger.
 	 * @param finger The finger for which to get the transform.
 	 * @return The world-space pointer transform.
 	 */
-	Mat4x4 getPointerTransform(const FingerName finger) const
+	bool getFingerTransform(const FingerName finger, Mat4x4 & out_transform) const
 	{
-		Assert(hasSkeleton);
+		if (!hasSkeleton || !hasDeform)
+			return false;
 
-		return Mat4x4(true);
+		auto i = skeleton.fingerNameToBoneIndex.find(finger);
+		if (i == skeleton.fingerNameToBoneIndex.end())
+			return false;
+
+		out_transform = rootPose * deform.globalBoneTransforms[i->second];
+		out_transform = out_transform.RotateY(float(M_PI)/2.f);
+		return true;
 	}
 
 	void resizeSkeleton(const int numBones)
@@ -322,20 +332,20 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 
 	// update windows
 
-#if true
+#if false
 	const Mat4x4 viewToWorld = Mat4x4(true).Translate(playerLocation).Mul(pointers[0].transform);
 	const int buttonMask =
 		(pointers[0].isDown[0] << 0) |
 		(pointers[0].isDown[1] << 1);
 #else
-	// todo : use the matrix for the index finger
-	Mat4x4 worldToView;
-	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v); // todo : getGetMatrix doesn't really make sense ?
-	Mat4x4 viewToWorld = worldToView.CalcInv();
-	const int buttonMask = (hands[0].isPinching << 0);
+	// todo : getFingerTransform may return false. handle this case
+	Mat4x4 viewToWorld;
+	hands[0].getFingerTransform(kFingerName_Index, viewToWorld);
+	//const int buttonMask = (hands[0].isPinching << 0);
+	const int buttonMask = 1 << 0;
 #endif
 
-	framework.tickVirtualDesktop(viewToWorld, buttonMask);
+	framework.tickVirtualDesktop(viewToWorld, buttonMask, true);
 
 	for (auto * window : windows)
 		window->tick();
@@ -486,6 +496,13 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 	                for (int i = 0; i < handSkeleton.NumBones; ++i)
 	                    hand.skeleton.boneParentIndices[i] = handSkeleton.BoneParentIndices[i];
 
+					// Fill in bone indices for finger tips (for pointer positions and directions).
+		            hand.skeleton.fingerNameToBoneIndex[kFingerName_Thumb] = ovrHandBone_ThumbTip;
+		            hand.skeleton.fingerNameToBoneIndex[kFingerName_Index] = ovrHandBone_IndexTip;
+		            hand.skeleton.fingerNameToBoneIndex[kFingerName_Middle] = ovrHandBone_MiddleTip;
+		            hand.skeleton.fingerNameToBoneIndex[kFingerName_Ring] = ovrHandBone_RingTip;
+		            hand.skeleton.fingerNameToBoneIndex[kFingerName_Pinky] = ovrHandBone_PinkyTip;
+
 	                // Fill in local bone transforms (bind pose).
 	                for (int i = 0; i < handSkeleton.NumBones; ++i)
 	                {
@@ -514,7 +531,7 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 	                ovrMatrix4f rootPose = vrapi_GetTransformFromPose(&handPose.RootPose);
 	                rootPose = ovrMatrix4f_Transpose(&rootPose);
 	                memcpy(hand.rootPose.m_v, rootPose.M, sizeof(Mat4x4));
-		            hand.rootPose = hand.rootPose.Scale(handPose.HandScale);
+		            hand.rootPose = Mat4x4(true).Translate(playerLocation).Mul(hand.rootPose).Scale(handPose.HandScale);
 	            }
 			}
 		}
@@ -566,7 +583,6 @@ void Scene::drawOpaque() const
 	    playerLocation[0],
 	    playerLocation[1],
 	    playerLocation[2]);
-
 	for (int i = 0; i < 2; ++i)
     {
 		auto & pointer = pointers[i];
@@ -613,6 +629,8 @@ void Scene::drawOpaque() const
 		}
 		gxPopMatrix();
     }
+    gxPopMatrix();
+#endif
 
 #if true
 	for (int i = 0; i < 2; ++i)
@@ -658,9 +676,6 @@ void Scene::drawOpaque() const
 		}
 		gxPopMatrix();
 	}
-#endif
-
-    gxPopMatrix();
 #endif
 }
 
