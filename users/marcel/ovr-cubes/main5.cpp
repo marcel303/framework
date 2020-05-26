@@ -42,16 +42,6 @@ ovrMobile * getOvrMobile()
 	return frameworkVr.Ovr;
 }
 
-// -- scene
-
-struct PointerObject
-{
-	Mat4x4 transform = Mat4x4(true);
-	bool isValid = false;
-
-	bool isDown[2] = { };
-};
-
 struct WindowTest
 {
     Window window;
@@ -131,6 +121,21 @@ struct WindowTest
 	}
 };
 
+struct PointerObject
+{
+	Mat4x4 transform = Mat4x4(true);
+	bool isValid = false;
+
+	bool isDown[2] = { };
+};
+
+struct HandObject
+{
+	bool isPinching = false;
+};
+
+// -- scene
+
 struct Scene
 {
     bool created = false;
@@ -149,6 +154,8 @@ struct Scene
 	} handMeshes[2];
 
 	PointerObject pointers[2];
+
+	HandObject hands[2];
 
     void create();
     void destroy();
@@ -216,8 +223,6 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 {
 	ovrMobile * ovr = getOvrMobile();
 
-static bool isPinching = false; // todo : remove hack
-
 	// update windows
 
 #if true
@@ -226,10 +231,11 @@ static bool isPinching = false; // todo : remove hack
 		(pointers[0].isDown[0] << 0) |
 		(pointers[0].isDown[1] << 1);
 #else
+	// todo : use the matrix for the index finger
 	Mat4x4 worldToView;
-	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v); // todo : getGetMatrix doesn't really make sense ?
 	Mat4x4 viewToWorld = worldToView.CalcInv();
-	const int buttonMask = (isPinching << 0);
+	const int buttonMask = (hands[0].isPinching << 0);
 #endif
 
 	framework.tickVirtualDesktop(viewToWorld, buttonMask);
@@ -239,7 +245,10 @@ static bool isPinching = false; // todo : remove hack
 
 	uint32_t index = 0;
 
-isPinching = false; // todo : remove hack
+	for (int i = 0; i < 2; ++i)
+	{
+		hands[i].isPinching = false;
+	}
 
 	for (;;)
 	{
@@ -331,12 +340,21 @@ isPinching = false; // todo : remove hack
 		}
 		else if (header.Type == ovrControllerType_Hand)
 		{
+			// Describe hand.
+			ovrInputHandCapabilities handCapabilities;
+            handCapabilities.Header = header;
+            if (vrapi_GetInputDeviceCapabilities(ovr, &handCapabilities.Header) != ovrSuccess)
+	            continue;
+
+			// Left hand or right hand.
+	        const int index = (handCapabilities.HandCapabilities & ovrHandCaps_LeftHand) ? 0 : 1;
+
 			ovrInputStateHand hand;
 			hand.Header.ControllerType = ovrControllerType_Hand;
 			if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &hand.Header) == ovrSuccess)
 			{
 				if ((hand.InputStateStatus & ovrInputStateHandStatus_IndexPinching) && hand.PinchStrength[ovrHandPinchStrength_Index] >= .5f)
-					isPinching = true;
+					hands[index].isPinching = true;
 			}
 		}
 	}
@@ -573,65 +591,21 @@ void Scene::drawTranslucent() const
 
 int main(int argc, char * argv[])
 {
-	ovrEgl Egl;
-
-	Egl.createContext();
-
-#if true // todo : investigate why vr init before framework init causes issues
-	if (!framework.init(0, 0) ||
-		!frameworkVr.init(&Egl))
-#else
-	if (!frameworkVr.init(&Egl) ||
-		!framework.init(0, 0))
-#endif
-	{
+	if (!framework.init(0, 0))
 		return -1;
-	}
 
 	Scene scene;
 
+	scene.create();
+
     for (;;)
     {
-        //framework.process();
-	    frameworkVr.process();
+        framework.process();
 
 	    if (framework.quitRequested)
 	        break;
 
-        // Create the scene if not yet created.
-        // The scene is created here to be able to show a loading icon.
-        if (!scene.created)
-        {
-            // Show a loading icon.
-            const int frameFlags = VRAPI_FRAME_FLAG_FLUSH;
-
-            ovrLayerProjection2 blackLayer = vrapi_DefaultLayerBlackProjection2();
-            blackLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
-
-            ovrLayerLoadingIcon2 iconLayer = vrapi_DefaultLayerLoadingIcon2();
-            iconLayer.Header.Flags |= VRAPI_FRAME_LAYER_FLAG_INHIBIT_SRGB_FRAMEBUFFER;
-
-            const ovrLayerHeader2 * layers[] =
-                {
-                    &blackLayer.Header,
-                    &iconLayer.Header,
-                };
-
-            ovrSubmitFrameDescription2 frameDesc = { };
-            frameDesc.Flags = frameFlags;
-            frameDesc.SwapInterval = 1;
-            frameDesc.FrameIndex = frameworkVr.FrameIndex;
-            frameDesc.DisplayTime = frameworkVr.PredictedDisplayTime;
-            frameDesc.LayerCount = 2;
-            frameDesc.Layers = layers;
-
-            vrapi_SubmitFrame2(frameworkVr.Ovr, &frameDesc);
-
-            // Create the scene.
-            scene.create();
-        }
-
-	    // Tick the simulation
+  	    // Tick the simulation
         scene.tick(frameworkVr.TimeStep, frameworkVr.PredictedDisplayTime);
 
 		// Render the stuff we need to draw only once (shared for each eye).
@@ -677,7 +651,6 @@ int main(int argc, char * argv[])
 	Font("calibri.ttf").saveCache();
 
 	framework.shutdown();
-	frameworkVr.shutdown();
 
 	return 0;
 }
