@@ -55,7 +55,7 @@ add maxpatch1
 add mitronix1
 add motionbank-effect
 add nanovg-canvas
-with_platform android add ovr-cubes
+with_platform android.ovr-mobile add ovr-cubes
 add pincushion1
 add planetvis
 add planetvis2
