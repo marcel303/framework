@@ -408,6 +408,9 @@ bool Framework::init(int sx, int sy)
 	}
 
 	globals.mainWindow = new Window(mainWindow);
+	
+	fassert(globals.currentWindow == nullptr);
+	globals.currentWindow = globals.mainWindow;
 
 #if ENABLE_OPENGL
 	int drawableSx;
@@ -1406,6 +1409,8 @@ void Framework::process()
 	m_lastTick = tickCount;
 
 	timeStep = delta / (double)SDL_GetPerformanceFrequency();
+	
+	time += timeStep;
 #else
 	// lower precision time steps using SDL_GetTicks. leaving this code here as the performance
 	// counter version is still in testing
@@ -1800,11 +1805,13 @@ void Framework::endDraw()
 	}
 }
 
-void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int buttonMask)
+void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_buttonMask, const bool isHand)
 {
 #if WINDOW_IS_3D
 	const Vec3 pointerOrigin = transform.GetTranslation();
 	const Vec3 pointerDirection = transform.GetAxis(2).CalcNormalized();
+
+	const float depthThreshold = .1f;
 
 	Window * hoverWindow = nullptr;
 	Vec2 hoverPos;
@@ -1814,10 +1821,12 @@ void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int buttonMas
 	{
 		if (window == globals.mainWindow)
 			continue; // todo : discard more nicely or don't create a main window when framework is init with size(0, 0)
+		if (window->isHidden())
+			continue;
 
 		Vec2 pixelPos;
 		float distance;
-		if (window->intersectRay(pointerOrigin, pointerDirection, pixelPos, distance))
+		if (window->intersectRay(pointerOrigin, pointerDirection, depthThreshold, pixelPos, distance))
 		{
 			if (distance < hoverDistance)
 			{
@@ -1844,6 +1853,50 @@ void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int buttonMas
 		{
 			if (window == hoverWindow)
 			{
+				int buttonMask = 0;
+
+				if (isHand)
+				{
+					if (window->m_isInteracting)
+					{
+						// end interacting when,
+						//     - hand pushes too far through the surface
+						//     - hand moves outside of the window
+						//     - hand is pulled back
+
+						if (hoverDistance < -.1f ||
+							hoverDistance > .005f ||
+							hoverPos[0] < 0 || hoverPos[0] > window->getWidth() ||
+							hoverPos[1] < 0 || hoverPos[1] > window->getHeight())
+						{
+							window->m_isInteracting = false;
+						}
+					}
+					else
+					{
+						// begin interacting when,
+						//     - hand is inside the window
+						//     - hand is touching the window
+
+						if (hoverDistance > -.05f &&
+							hoverDistance < 0.f &&
+							hoverPos[0] >= 0 && hoverPos[0] < window->getWidth() &&
+							hoverPos[1] >= 0 && hoverPos[1] < window->getHeight())
+						{
+							window->m_isInteracting = true;
+						}
+					}
+
+					if (window->m_isInteracting)
+					{
+						buttonMask = in_buttonMask;
+					}
+				}
+				else
+				{
+					buttonMask = in_buttonMask;
+				}
+
 				windowData->mouseData.mouseX = hoverPos[0];
 				windowData->mouseData.mouseY = hoverPos[1];
 				windowData->mouseData.mouseDown[0] = (buttonMask & (1 << 0)) != 0;
@@ -1866,8 +1919,15 @@ void Framework::drawVirtualDesktop()
 	// todo : make virtual desktop an opt-out feature
 	// todo : only do 3d desktop when USE_SDL is false and WINDOW_IS_3D
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
-		if (window->hasSurface())
+	{
+		if (window->hasSurface() && !window->isHidden())
+		{
 			window->draw3d();
+
+			if (window->hasFocus())
+				window->draw3dCursor();
+		}
+	}
 #endif
 }
 

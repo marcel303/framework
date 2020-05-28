@@ -51,11 +51,13 @@ Window::Window(SDL_Window * window)
 	, m_window(nullptr)
 #else
 	, m_title()
+	, m_isVisible(true)
 	, m_hasFocus(false)
 #endif
 #if WINDOW_IS_3D
 	, m_transform(true)
 	, m_pixelsPerMeter(DEFAULT_PIXELS_PER_METER)
+	, m_isInteracting(false)
 #endif
 	, m_windowData(nullptr)
 {
@@ -80,11 +82,13 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 	, m_window(nullptr)
 #else
 	, m_title()
+	, m_isVisible(true)
 	, m_hasFocus(false)
 #endif
 #if WINDOW_IS_3D
 	, m_transform(true)
 	, m_pixelsPerMeter(DEFAULT_PIXELS_PER_METER)
+	, m_isInteracting(false)
 #endif
 	, m_windowData(nullptr)
 {
@@ -225,6 +229,8 @@ void Window::show()
 #if FRAMEWORK_USE_SDL
 	if (m_window)
 		SDL_ShowWindow(m_window);
+#else
+	m_isVisible = true;
 #endif
 }
 
@@ -233,6 +239,8 @@ void Window::hide()
 #if FRAMEWORK_USE_SDL
 	if (m_window)
 		SDL_HideWindow(m_window);
+#else
+	m_isVisible = false;
 #endif
 }
 
@@ -244,7 +252,7 @@ bool Window::isHidden() const
 	else
 		return false;
 #else
-	return false;
+	return !m_isVisible;
 #endif
 }
 
@@ -407,7 +415,7 @@ void Window::setPixelsPerMeters(const float ppm)
 	m_pixelsPerMeter = ppm;
 }
 
-bool Window::intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, Vec2 & out_pixelPos, float & out_distance) const
+bool Window::intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, const float depthThreshold, Vec2 & out_pixelPos, float & out_distance) const
 {
 	const Mat4x4 worldToWindow = m_transform.CalcInv();
 	const Vec3 rayOrigin_window = worldToWindow.Mul4(rayOrigin);
@@ -417,7 +425,7 @@ bool Window::intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, Vec2 & out_pi
 	if (dd == 0.f)
 		return false;
 	const float t = -d1 / dd;
-	if (t > 0.f)
+	if (t > depthThreshold)
 		return false;
 	const Vec2 p_meter(
 		+ rayOrigin_window[0] + rayDirection_window[0] * t,
@@ -451,22 +459,25 @@ void Window::draw3d() const
 			drawRect(0, 0, getWidth(), getHeight());
 		}
 		gxSetTexture(0);
+	}
+	gxPopMatrix();
+}
 
-		if (hasFocus())
-		{
-			gxPushMatrix();
-			{
-				gxTranslatef(0, 0, .005f); // 5mm above the surface
+void Window::draw3dCursor() const
+{
+	Assert(hasSurface());
 
-				setColor(255, 255, 255, 127);
-				fillCircle(
-					m_windowData->mouseData.mouseX,
-					m_windowData->mouseData.mouseY,
-					3,
-					10);
-			}
-			gxPopMatrix();
-		}
+	gxPushMatrix();
+	{
+		const Mat4x4 transformForDraw = getTransformForDraw();
+		gxMultMatrixf(transformForDraw.m_v);
+		gxTranslatef(0, 0, .001f); // 1mm above the surface
+
+		fillCircle(
+			m_windowData->mouseData.mouseX,
+			m_windowData->mouseData.mouseY,
+			3,
+			10);
 	}
 	gxPopMatrix();
 }

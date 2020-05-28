@@ -526,7 +526,7 @@ public:
 	
 	void blinkTaskbarIcon(int count);
 
-	void tickVirtualDesktop(const Mat4x4 & viewMatrix, const int buttonMask);
+	void tickVirtualDesktop(const Mat4x4 & viewMatrix, const int buttonMask, const bool isHand);
 	void drawVirtualDesktop();
 
 	bool quitRequested;
@@ -648,8 +648,9 @@ public:
 #if WINDOW_IS_3D
 	void setTransform(const Mat4x4 & transform);
 	void setPixelsPerMeters(const float ppm);
-	bool intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, Vec2 & out_pixelPos, float & out_distance) const;
+	bool intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, const float depthThreshold, Vec2 & out_pixelPos, float & out_distance) const;
 	void draw3d() const;
+	void draw3dCursor() const;
 	const Mat4x4 & getTransform() const;
 	Mat4x4 getTransformForDraw() const;
 #endif
@@ -672,12 +673,14 @@ private:
 #else
 	// these properties are normally managed by SDL
 	std::string m_title;
+	bool m_isVisible;
 	bool m_hasFocus;
 #endif
 	
 #if WINDOW_IS_3D
 	Mat4x4 m_transform;
 	float m_pixelsPerMeter;
+	bool m_isInteracting; // updated by tickVirtualDesktop
 #endif
 
 	// keyboard and mouse data
