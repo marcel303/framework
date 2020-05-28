@@ -161,16 +161,23 @@ namespace gltf
 		}
 	}
 	
-	void MetallicRoughnessParams::setUseVertexColors(Shader & shader, const bool useVertexColors)
+	void MetallicRoughnessParams::setUseVertexColors(Shader & shader, const bool useVertexColors) const
 	{
 		if (u_hasVertexColors != -1)
 			shader.setImmediate(u_hasVertexColors, useVertexColors ? 1.f : 0.f);
 	}
 	
-	void MetallicRoughnessParams::setBaseColor(Shader & shader, const Color & color)
+	void MetallicRoughnessParams::setBaseColor(Shader & shader, const Color & color) const
 	{
 		if (u_baseColorFactor != -1)
 			shader.setImmediate(u_baseColorFactor, color.r, color.g, color.b, color.a);
+	}
+
+	void MetallicRoughnessParams::setBaseColorTexture(Shader & shader, const GxTextureId textureId, const int texcoordIndex, int & nextTextureUnit) const
+	{
+		shader.setTexture("baseColorTexture", nextTextureUnit++, textureId, true, false);
+		if (baseColorTextureCoord != -1)
+			shader.setImmediate(baseColorTextureCoord, texcoordIndex);
 	}
 	
 	void MetallicRoughnessParams::setMetallicRoughness(Shader & shader, const float metallic, const float roughness) const
@@ -179,6 +186,13 @@ namespace gltf
 			shader.setImmediate(u_metallicFactor, metallic);
 		if (u_roughnessFactor != -1)
 			shader.setImmediate(u_roughnessFactor, roughness);
+	}
+
+	void MetallicRoughnessParams::setMetallicRoughnessTexture(Shader & shader, const GxTextureId textureId, const int texcoordIndex, int & nextTextureUnit) const
+	{
+		shader.setTexture("metallicRoughnessTexture", nextTextureUnit++, textureId, true, false);
+		if (metallicRoughnessTextureCoord != -1)
+			shader.setImmediate(metallicRoughnessTextureCoord, texcoordIndex);
 	}
 	
 	void MetallicRoughnessParams::setEmissive(Shader & shader, const float emissive) const
