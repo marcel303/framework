@@ -140,6 +140,11 @@ void FrameworkVr::nextFrame()
 	memcpy(ProjectionMatrices, projectionMatrixTransposed, sizeof(ProjectionMatrices));
 	memcpy(ViewMatrices, eyeViewMatrixTransposed, sizeof(ViewMatrices));
 
+	// Get the head transform.
+	const ovrMatrix4f headTransform = vrapi_GetTransformFromPose(&Tracking.HeadPose.Pose);
+	const ovrMatrix4f headTransform_transposed = ovrMatrix4f_Transpose(&headTransform);
+	memcpy(&HeadTransform, &headTransform_transposed, sizeof(HeadTransform));
+
 	// Setup the projection layer we want to display.
 	ovrLayerProjection2 layer = vrapi_DefaultLayerProjection2();
 	layer.HeadPose = Tracking.HeadPose;

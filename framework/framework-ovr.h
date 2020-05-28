@@ -72,6 +72,7 @@ struct FrameworkVr
 
 	// Frame state.
 	ovrTracking2 Tracking;
+	Mat4x4 HeadTransform;
 	Mat4x4 ProjectionMatrices[2];
 	Mat4x4 ViewMatrices[2];
 	ovrLayerProjection2 WorldLayer;
