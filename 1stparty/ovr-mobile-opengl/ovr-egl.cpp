@@ -121,20 +121,20 @@ void ovrEgl::destroyContext()
 	        LOG_ERR("- eglMakeCurrent() failed: %s", EglErrorString(eglGetError()));
     }
 
-    if (Context != EGL_NO_CONTEXT)
-    {
-	    LOG_ERR("- eglDestroyContext( Display, Context )", 0);
-        if (eglDestroyContext(Display, Context) == EGL_FALSE)
-	        LOG_ERR("- eglDestroyContext() failed: %s", EglErrorString(eglGetError()));
-        Context = EGL_NO_CONTEXT;
-    }
-
     if (TinySurface != EGL_NO_SURFACE)
     {
 	    LOG_ERR("- eglDestroySurface( Display, TinySurface )", 0);
         if (eglDestroySurface(Display, TinySurface) == EGL_FALSE)
 	        LOG_ERR("- eglDestroySurface() failed: %s", EglErrorString(eglGetError()));
         TinySurface = EGL_NO_SURFACE;
+    }
+
+    if (Context != EGL_NO_CONTEXT)
+    {
+	    LOG_ERR("- eglDestroyContext( Display, Context )", 0);
+        if (eglDestroyContext(Display, Context) == EGL_FALSE)
+	        LOG_ERR("- eglDestroyContext() failed: %s", EglErrorString(eglGetError()));
+        Context = EGL_NO_CONTEXT;
     }
 
     if (Display != EGL_NO_DISPLAY)
