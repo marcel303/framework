@@ -206,6 +206,9 @@ namespace binaural
 			
 			for (int i = 0; i < 50; ++i)
 			{
+				debugAssert(file.l->sampleSize == 2);
+				debugAssert(file.r->sampleSize == 2);
+
 				short sampleData[200 * 2];
 				
 				const short * __restrict lSamples = (short*)file.l->sampleData;
