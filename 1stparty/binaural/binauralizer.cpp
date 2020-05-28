@@ -58,10 +58,12 @@ namespace binaural
 		memset(hrtfs, 0, sizeof(hrtfs));
 	}
 	
-	void Binauralizer::init(const HRIRSampleSet * _sampleSet, Mutex * _mutex)
+	void Binauralizer::init(const HRIRSampleSet * in_sampleSet, Mutex * in_mutex)
 	{
-		sampleSet = _sampleSet;
-		mutex = _mutex;
+		debugAssert(in_sampleSet->sampleGrid.triangles.empty() == false); // sample set must be finalized
+	
+		sampleSet = in_sampleSet;
+		mutex = in_mutex;
 	}
 	
 	void Binauralizer::shut()
@@ -103,7 +105,15 @@ namespace binaural
 			azimuth = sampleLocation.azimuth;
 		}
 		mutex->unlock();
-		
+
+		// ensure elevation and azimuth are within (-90, -180) to (+90, +180) range
+
+		float x, y, z;
+		elevationAndAzimuthToCartesian(elevation, azimuth, x, y, z);
+		cartesianToElevationAndAzimuth(x, y, z, elevation, azimuth);
+		debugAssert(elevation >= -90.f && elevation <= +90.f);
+		debugAssert(azimuth >= -180.f && azimuth <= +180.f);
+
 		{
 			// clamp elevation and azimuth to ensure it maps within the elevation and azimut topology
 			
