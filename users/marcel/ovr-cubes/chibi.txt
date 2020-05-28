@@ -44,6 +44,8 @@ app ovr-cubes5
 	resource_path data
 
 app ovr-cubes6
+    depend_library audiograph
+    depend_library binaural
 	depend_library ecs-parameterui
 	depend_library framework
 	depend_library framework-gltf
