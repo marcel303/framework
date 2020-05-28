@@ -29,6 +29,7 @@
 #include "binaural_cipic.h"
 #include "binaural_ircam.h"
 #include "binaural_mit.h"
+#include "binaural_oalsoft.h"
 #include "hrirSampleSetCache.h"
 #include <map>
 
@@ -55,10 +56,15 @@ void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSamp
 		case kHRIRSampleSetType_Mit:
 			result = binaural::loadHRIRSampleSet_Mit(path.c_str(), *sampleSet);
 			break;
+		case kHRIRSampleSetType_Oalsoft:
+			result = binaural::loadHRIRSampleSet_Oalsoft(path.c_str(), *sampleSet);
+			break;
 		}
 		
 		if (result == false)
 		{
+		// todo : log error
+		
 			delete sampleSet;
 			sampleSet = nullptr;
 		}

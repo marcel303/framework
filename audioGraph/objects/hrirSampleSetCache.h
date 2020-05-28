@@ -37,7 +37,8 @@ enum HRIRSampleSetType
 {
 	kHRIRSampleSetType_Cipic,
 	kHRIRSampleSetType_Ircam,
-	kHRIRSampleSetType_Mit
+	kHRIRSampleSetType_Mit,
+	kHRIRSampleSetType_Oalsoft
 };
 
 void fillHrirSampleSetCache(const char * path, const char * name, const HRIRSampleSetType type);
