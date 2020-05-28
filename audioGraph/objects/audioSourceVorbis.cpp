@@ -67,7 +67,7 @@ void AudioSourceVorbis::generate(SAMPLE_ALIGN16 float * __restrict samples, cons
 	{
 		int bitstream = -1;
 		
-		float ** channels;
+		float ** channels = nullptr;
 		
 		int numSamplesRead = (int)ov_read_float(
 			&vorbisFile,
@@ -86,7 +86,10 @@ void AudioSourceVorbis::generate(SAMPLE_ALIGN16 float * __restrict samples, cons
 		
 		if (numChannels == 1)
 		{
-			memcpy(samplePtr, channels[0], numSamplesRead * sizeof(float));
+			if (numSamplesRead > 0)
+			{
+				memcpy(samplePtr, channels[0], numSamplesRead * sizeof(float));
+			}
 		}
 		else if (numChannels == 2)
 		{
