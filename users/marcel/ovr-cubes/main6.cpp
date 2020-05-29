@@ -54,11 +54,13 @@ todo : apply a texture or color to the watersim quads
 
 todo : determine nice watersim params and update defaults
 
-todo : binauralize some sounds
+DONE : binauralize some sounds
 
 DONE : polish virtual desktop interaction when using hands,
     + tell virtual desktop which type of interaction is used (beam or finger),
     + let virtual desktop have detection of false finger presses
+
+todo : add UI for showing spatial audio system status
 
  */
 
@@ -67,6 +69,7 @@ DONE : polish virtual desktop interaction when using hands,
 
 #include <algorithm> // std::find
 #include <math.h>
+#include <mutex>
 
 // -- VrApi
 
@@ -235,24 +238,66 @@ struct DrifterObject
 
 // -- audio streamer object
 
+struct AudioStreamerAudioSource : AudioSource
+{
+	AudioSourceVorbis audioSourceVorbis;
+	std::atomic<float> rms;
+
+	AudioStreamerAudioSource()
+		: rms(0.f)
+	{
+	}
+
+	void open(const char * filename)
+	{
+		audioSourceVorbis.open(filename, true);
+	}
+
+	virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override final
+	{
+		audioSourceVorbis.generate(samples, numSamples);
+
+		float squaredSum = 0.f;
+
+		for (int i = 0; i < numSamples; ++i)
+		{
+			squaredSum += samples[i] * samples[i];
+		}
+
+		rms.store(sqrtf(squaredSum / numSamples));
+	}
+};
+
 struct AudioStreamerObject
 {
 	Vec3 initialPosition;
 
 	Mat4x4 transform = Mat4x4(true);
-	AudioSourceVorbis audioSource;
+	AudioStreamerAudioSource * audioSource = nullptr;
 	void * spatialAudioSource = nullptr;
+
+	~AudioStreamerObject()
+	{
+		shut();
+	}
 
 	void init(const char * filename)
 	{
-		audioSource.open(filename, true);
+		audioSource = new AudioStreamerAudioSource();
+		audioSource->open(filename);
 
-		spatialAudioSource = spatialAudioSystem->addSource(transform, &audioSource);
+		spatialAudioSource = spatialAudioSystem->addSource(transform, audioSource);
+	}
+
+	void shut()
+	{
+		delete audioSource;
+		audioSource = nullptr;
 	}
 
 	void tick(const float dt)
 	{
-		transform = Mat4x4(true).Translate(initialPosition).Translate(sinf(framework.time * 1.23f) * .3f, sinf(framework.time / 1.23f) * .2f, sinf(framework.time * 2.34f) * .3f);
+		transform = Mat4x4(true).Translate(initialPosition).Translate(0.f, sinf(framework.time / 2.34f) * .06f, 0.f);
 
 		spatialAudioSystem->setSourceTransform(spatialAudioSource, transform);
 	}
@@ -263,9 +308,13 @@ struct AudioStreamerObject
 		{
 			gxMultMatrixf(transform.m_v);
 
+			const float value = clamp<float>(audioSource->rms.load(), 0.f, 1.f);
+			const float scale = lerp<float>(.2f, 1.f, value);
+			gxScalef(scale, scale, scale);
+
 			setColor(colorWhite);
-			lineCube(Vec3(), Vec3(.1f));
-			fillCube(Vec3(), Vec3(.04f));
+			lineCube(Vec3(), Vec3(.3f));
+			fillCube(Vec3(), Vec3(.1f));
 		}
 		gxPopMatrix();
 	}
@@ -328,6 +377,8 @@ struct Scene : CollisionSystemInterface
 
 	ControlPanel * controlPanel = nullptr;
 	bool showControlPanel = true;
+	AudioSourceVorbis controlPanel_audioSource;
+	void * controlPanel_spatialAudioSource = nullptr;
 
 	ParameterMgr parameterMgr;
 	ParameterInt * resolution = nullptr;
@@ -347,8 +398,6 @@ struct Scene : CollisionSystemInterface
 	ParameterMgr parameterMgr_binaural;
 	ParameterFloat * binauralElevationBase = nullptr;
 	ParameterFloat * binauralAzimuthBase = nullptr;
-	ParameterFloat * binauralElevationScale = nullptr;
-	ParameterFloat * binauralAzimuthScale = nullptr;
 	ParameterVec3 * binauralSourcePos_listener = nullptr;
 
 	Mat4x4 watersim_transform = Mat4x4(true);
@@ -425,6 +474,8 @@ void Scene::create()
 	}
 
 	controlPanel = new ControlPanel(Vec3(0, 1.5f, -.45f), 0.f, &parameterMgr, this);
+	controlPanel_audioSource.open("180328-004.ogg", true);
+	controlPanel_spatialAudioSource = spatialAudioSystem->addSource(controlPanel->window.getTransform(), &controlPanel_audioSource);
 
 	// add watersim object
 	resolution = parameterMgr.addInt("resolution", 16);
@@ -458,10 +509,6 @@ void Scene::create()
 	binauralElevationBase->setLimits(-90.f, +90.f);
 	binauralAzimuthBase = parameterMgr_binaural.addFloat("azimuthBase", 0.f);
 	binauralAzimuthBase->setLimits(-180.f, +180.f);
-	binauralElevationScale = parameterMgr_binaural.addFloat("elevationScale", 0.f);
-	binauralElevationScale->setLimits(0.f, 90.f);
-	binauralAzimuthScale = parameterMgr_binaural.addFloat("azimuthScale", 0.f);
-	binauralAzimuthScale->setLimits(0.f, 180.f);
 	binauralSourcePos_listener = parameterMgr_binaural.addVec3("sourcePos_listener", Vec3(0.f));
 	parameterMgr.addChild(&parameterMgr_binaural);
 
@@ -647,6 +694,10 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 		controlPanel->window.show();
 	}
 
+	// Update registered spatial audio source transform for the control panel.
+	spatialAudioSystem->setSourceTransform(controlPanel_spatialAudioSource, controlPanel->window.getTransform());
+
+	// Update the virtual desktop.
 	framework.tickVirtualDesktop(viewToWorld, buttonMask, isHand);
 
 	controlPanel->tick();
@@ -900,9 +951,6 @@ void Scene::drawOpaque() const
 
 void Scene::drawTranslucent() const
 {
-	// todo : draw translucent objects
-
-	//drawWatersim();
 }
 
 void Scene::drawWatersim() const
@@ -1060,10 +1108,18 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 		std::atomic<float> elevation;
 		std::atomic<float> azimuth;
 		std::atomic<float> intensity;
+
+		Source()
+			: elevation(0.f)
+			, azimuth(0.f)
+			, intensity(0.f)
+		{
+		}
 	};
 
 	binaural::HRIRSampleSet sampleSet;
-	binaural::Mutex_Dummy mutex;
+	binaural::Mutex_Dummy mutex_binaural; // we use a dummy mutex for the binauralizer, since we change (elevation, azimuth) only from the audio thread
+	std::mutex mutex_sources; // mutex for sources array
 
 	std::vector<Source*> sources;
 
@@ -1080,8 +1136,14 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 		Source * source = new Source();
 		source->transform = transform;
 		source->audioSource = audioSource;
-		source->binauralizer.init(&sampleSet, &mutex);
-		sources.push_back(source); // todo : this requires a mutex
+		source->binauralizer.init(&sampleSet, &mutex_binaural);
+
+		mutex_sources.lock();
+		{
+			sources.push_back(source);
+		}
+		mutex_sources.unlock();
+
 		return source;
 	}
 
@@ -1091,7 +1153,12 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 
 		auto i = std::find(sources.begin(), sources.end(), source);
 		Assert(i != sources.end());
-		sources.erase(i);
+
+		mutex_sources.lock();
+		{
+			sources.erase(i);
+		}
+		mutex_sources.unlock();
 
 		delete source;
 		source = nullptr;
@@ -1107,8 +1174,6 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 	virtual void setListenerTransform(const Mat4x4 & transform) override final
 	{
 		listenerTransform = transform;
-
-		// todo : require mutex
 	}
 
 	virtual void updatePanning() override final
@@ -1153,39 +1218,43 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 		memset(outputSamplesL, 0, numSamples * sizeof(float));
 		memset(outputSamplesR, 0, numSamples * sizeof(float));
 
-		for (auto * source : sources)
+		mutex_sources.lock();
 		{
-			float inputSamples[numSamples];
-
-			// generate source audio
-			source->audioSource->generate(inputSamples, numSamples);
-
-			// todo : delay line for doppler shift and propagation delay
-
-			// distance attenuation
-			const float intensity_value = source->intensity.load();
-			for (int i = 0; i < numSamples; ++i)
-				inputSamples[i] *= intensity_value;
-
-			source->binauralizer.provide(inputSamples, numSamples);
-
-			source->binauralizer.setSampleLocation(
-				source->elevation.load(),
-				source->azimuth.load());
-
-			float samplesL[numSamples];
-			float samplesR[numSamples];
-			source->binauralizer.generateLR(
-				samplesL,
-				samplesR,
-				numSamples);
-
-			for (int i = 0; i < numSamples; ++i)
+			for (auto * source : sources)
 			{
-				outputSamplesL[i] += samplesL[i];
-				outputSamplesR[i] += samplesR[i];
+				float inputSamples[numSamples];
+
+				// generate source audio
+				source->audioSource->generate(inputSamples, numSamples);
+
+				// todo : delay line for doppler shift and propagation delay
+
+				// distance attenuation
+				const float intensity_value = source->intensity.load();
+				for (int i = 0; i < numSamples; ++i)
+					inputSamples[i] *= intensity_value;
+
+				source->binauralizer.provide(inputSamples, numSamples);
+
+				source->binauralizer.setSampleLocation(
+					source->elevation.load(),
+					source->azimuth.load());
+
+				float samplesL[numSamples];
+				float samplesR[numSamples];
+				source->binauralizer.generateLR(
+					samplesL,
+					samplesR,
+					numSamples);
+
+				for (int i = 0; i < numSamples; ++i)
+				{
+					outputSamplesL[i] += samplesL[i];
+					outputSamplesR[i] += samplesR[i];
+				}
 			}
 		}
+		mutex_sources.unlock();
 	}
 };
 
@@ -1280,8 +1349,6 @@ int main(int argc, char * argv[])
 	{
 		virtual int Provide(int numSamples, AudioSample * __restrict samples) override final
 		{
-			spatialAudioSystem->updatePanning();
-
 			float outputSamplesL[numSamples];
 			float outputSamplesR[numSamples];
 			spatialAudioSystem->generateLR(
@@ -1291,13 +1358,14 @@ int main(int argc, char * argv[])
 
 			for (int i = 0; i < numSamples; ++i)
 			{
+			// todo : implement soft clipping ?
 				if (outputSamplesL[i] < -1.f) outputSamplesL[i] = -1.f;
 				if (outputSamplesR[i] < -1.f) outputSamplesR[i] = -1.f;
 				if (outputSamplesL[i] > +1.f) outputSamplesL[i] = +1.f;
 				if (outputSamplesR[i] > +1.f) outputSamplesR[i] = +1.f;
 
-				samples[i].channel[0] = outputSamplesL[i] * 16000.f;
-				samples[i].channel[1] = outputSamplesR[i] * 16000.f;
+				samples[i].channel[0] = outputSamplesL[i] * 32000.f;
+				samples[i].channel[1] = outputSamplesR[i] * 32000.f;
 			}
 
 			return numSamples;
@@ -1309,11 +1377,6 @@ int main(int argc, char * argv[])
 	audioStream.init("180328-004.ogg");
 #else
 	SpatialAudioSystemAudioStream audioStream;
-
-	AudioSourceVorbis audioSource;
-	audioSource.open("180328-004.ogg", true);
-
-	auto * spatialAudioSource = spatialAudioSystem->addSource(scene.controlPanel->window.getTransform(), &audioSource);
 #endif
 
 	AudioOutput_Native audioOutput;
@@ -1330,51 +1393,15 @@ int main(int argc, char * argv[])
 		// Tick the simulation
 		scene.tick(frameworkVr.TimeStep, frameworkVr.PredictedDisplayTime);
 
-	#if false
-		// Update binauralization parameters from listener and audio source transforms.
-		const Mat4x4 listenerToWorld = Mat4x4(true).Translate(scene.playerLocation).Mul(frameworkVr.HeadTransform);
-		const Mat4x4 worldToListener = listenerToWorld.CalcInv();
+	// todo : show spatial audio source position in listener space, in spatial audio system status gui (under advanced.. ;-),
+		//scene.binauralSourcePos_listener->set(audioStreamPosition_listener);
 
-		const Mat4x4 & audioStreamToWorld = scene.controlPanel->window.getTransform();
-		const Vec3 audioStreamPosition_world = audioStreamToWorld.GetTranslation();
-		const Vec3 audioStreamPosition_listener = worldToListener.Mul4(audioStreamPosition_world);
-		float elevation;
-		float azimuth;
-		binaural::cartesianToElevationAndAzimuth(
-				audioStreamPosition_listener[2],
-				audioStreamPosition_listener[1],
-				audioStreamPosition_listener[0],
-				elevation,
-				azimuth);
-		const float distance = audioStreamPosition_listener.CalcSize();
-		const float recordedDistance = 8.f;
-		const float headroomInDb = 6.f;
-		const float maxGain = powf(10.f, -headroomInDb/20.f);
-		const float normalizedDistance = distance / recordedDistance;
-		const float intensity = fminf(maxGain, 1.f / (normalizedDistance * normalizedDistance + 1e-6f));
-
-		azimuth = -azimuth;
-		//azimuth += 180.f; // fixme : openal is shifted?
-		if (azimuth > 180.f)
-			azimuth -= 360.f;
-
-		scene.binauralElevationBase->set(elevation);
-		scene.binauralAzimuthBase->set(azimuth);
-		scene.binauralSourcePos_listener->set(audioStreamPosition_listener);
-
-		audioStream.intensity = intensity;
-
-		// Update audio parameters.
-		audioStream.elevationBase = scene.binauralElevationBase->get();
-		audioStream.azimuthBase = scene.binauralAzimuthBase->get();
-		audioStream.elevationScale = scene.binauralElevationScale->get();
-		audioStream.azimuthScale = scene.binauralAzimuthScale->get();
-	#else
+		// Update the listener transform for the spatial audio system.
 		const Mat4x4 listenerTransform = Mat4x4(true).Translate(scene.playerLocation).Mul(frameworkVr.HeadTransform);
-
 		spatialAudioSystem->setListenerTransform(listenerTransform);
-		spatialAudioSystem->setSourceTransform(spatialAudioSource, scene.controlPanel->window.getTransform());
-	#endif
+
+		// Update the panning for the spatial audio system. This basically tells the spatial audio system we're done making a batch of modifications to the audio source and listener transforms, and tell it to update panning.
+		spatialAudioSystem->updatePanning();
 
 		// Render the stuff we need to draw only once (shared for each eye).
 		scene.drawOnce();
