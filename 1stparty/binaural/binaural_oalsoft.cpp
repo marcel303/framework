@@ -31,6 +31,7 @@
 #include "FileStream.h"
 #include "StreamReader.h"
 
+#include <assert.h>
 #include <string.h> // memcmp
 
 namespace binaural
@@ -79,11 +80,15 @@ namespace binaural
 			
 			uint8_t magic[8];
 			reader.ReadBytes(magic, 8);
-			
-			if (memcmp(magic, "MinPHR03", 8) != 0) // 'minimum-phase head response protocol 03' ?
+
+			const bool isVersion2 = memcmp(magic, "MinPHR02", 8) == 0;
+			const bool isVersion3 = memcmp(magic, "MinPHR03", 8) == 0;
+
+			if (!isVersion2 && !isVersion3) // 'minimum-phase head response protocol 03' ?
 				return false;
-			
+
 			const uint32_t sampleRate = reader.ReadUInt32();
+			const uint8_t sampleType = isVersion2 ? reader.ReadUInt8() : 1;
 			const uint8_t channelType = reader.ReadUInt8();
 			const uint8_t hrirSize = reader.ReadUInt8();
 			const uint8_t fieldCount = reader.ReadUInt8();
@@ -143,47 +148,68 @@ namespace binaural
 						
 						for (int a = 0; a < field.azimuthCounts[e]; ++a)
 						{
-							const float azimuth =
-								field.azimuthCounts[e] == 1
-								? 0 // This sample will be duplicated at azimuth -180 and +180 later.
-								: lerpFloat(-180.f, 180.f, fmodf(.5f + a / float(field.azimuthCounts[e] - 1), 1.f));
+							const float azimuth = lerpFloat(-180.f, 180.f, a / float(field.azimuthCounts[e]));
 							
 							HRIRSample * sample = new HRIRSample();
-							sample->init(elevation, azimuth);
-							
 							memset(&sample->sampleData, 0, sizeof(sample->sampleData));
-							for (int i = 0; i < hrirSize; ++i)
+							sample->init(elevation, azimuth);
+
+							if (sampleType == 0) // 16 bit signed integer
 							{
-								for (int c = 0; c < channelCount; ++c)
+								for (int i = 0; i < hrirSize; ++i)
 								{
-									int32_t value =
-										(coefficients_ptr[0] <<  8) |
-										(coefficients_ptr[1] << 16) |
-										(coefficients_ptr[2] << 24);
-									
-									// perform a shift right to sign-extend the 24 bit number (which we packed into the top-most 24 bits of a 32 bits number)
-									value >>= 8;
-									
-									const float value_float = value / float(1 << 23);
-									
-									if (c == 0) sample->sampleData.lSamples[i] = value_float;
-									if (c == 1) sample->sampleData.rSamples[i] = value_float;
-									
-									coefficients_ptr += 3;
+									for (int c = 0; c < channelCount; ++c)
+									{
+										int16_t value =
+											(coefficients_ptr[0] << 0) |
+											(coefficients_ptr[1] << 8);
+
+										const float value_float = value / float(1 << 15);
+
+										if (c == 0) sample->sampleData.lSamples[i] = value_float;
+										if (c == 1) sample->sampleData.rSamples[i] = value_float;
+
+										coefficients_ptr += 2;
+									}
+								}
+							}
+							else // 24 bit signed integer
+							{
+								for (int i = 0; i < hrirSize; ++i)
+								{
+									for (int c = 0; c < channelCount; ++c)
+									{
+										int32_t value =
+											(coefficients_ptr[0] <<  8) |
+											(coefficients_ptr[1] << 16) |
+											(coefficients_ptr[2] << 24);
+
+										// perform a shift right to sign-extend the 24 bit number (which we packed into the top-most 24 bits of a 32 bits number)
+										value >>= 8;
+
+										const float value_float = value / float(1 << 23);
+
+										if (c == 0) sample->sampleData.lSamples[i] = value_float;
+										if (c == 1) sample->sampleData.rSamples[i] = value_float;
+
+										coefficients_ptr += 3;
+									}
 								}
 							}
 							
-							if (field.azimuthCounts[e] > 1)
+							if (a > 0)
 							{
 								samplesForElevation.push_back(sample);
 							}
 							else
 							{
-								// The sample set lookup method requires that convex
+								// The sample set lookup method requires that the convex
 								// hull surrounding all of the sample points describe
 								// a 2D map with extents (-180, -90) to (+180, +90)
-								// azimuth, elevation. Extend the polar samples here
-								// to ensure they cover the entire upper region.
+								// azimuth, elevation. We duplicate the 'left-most'
+								// samples to the 'right-most' side to ensure the
+								// entire region is covered.
+								assert(sample->azimuth == -180.f);
 								HRIRSample * sampleL = sample;
 								HRIRSample * sampleR = new HRIRSample();
 								*sampleR = *sampleL;
