@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h> // memset, memcpy
 
 #define USE_FRAMEWORK 1
 
@@ -61,6 +62,11 @@
 
 #if ENABLE_WDL_FFT
 	#include "WDL/fft.h"
+#endif
+
+#if ENABLE_DEBUGGING
+	#include <assert.h>
+	#include <map>
 #endif
 
 #define WDL_REAL_FFT_TEST 0
@@ -242,6 +248,10 @@ namespace binaural
 		HRIRSampleData & r)
 	{
 		debugTimerBegin("blendHrirSamples_3");
+		debugAssert(aWeight >= -1e-3f && aWeight <= 1.f + 1e-3f);
+		debugAssert(bWeight >= -1e-3f && bWeight <= 1.f + 1e-3f);
+		debugAssert(cWeight >= -1e-3f && cWeight <= 1.f + 1e-3f);
+		debugAssert(fabsf(aWeight + bWeight + cWeight - 1.f) <= 1e-3f);
 		
 	#if BINAURAL_USE_SIMD
 		const float4 * __restrict a_lSamples = (float4*)a.lSamples;
@@ -798,8 +808,8 @@ namespace binaural
 		
 		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
 		{
-			array1[i] = interleavedScalar[i * 4 + 0];
-			array2[i] = interleavedScalar[i * 4 + 1];
+			array1[i] = interleavedScalar[i * 2 + 0];
+			array2[i] = interleavedScalar[i * 2 + 1];
 		}
 	#endif
 	}
@@ -845,7 +855,7 @@ namespace binaural
 	
 	void debugAssert(const bool condition)
 	{
-		fassert(condition);
+		assert(condition);
 		
 		if (condition == false)
 			debugLog("assert failed!");
@@ -1362,7 +1372,9 @@ namespace binaural
 				{
 					if (sample->elevation == triangleLocation.x && sample->azimuth == triangleLocation.y)
 					{
-						debugAssert(triangleSamples[i] == -1);
+						// duplicates are expected, as triangles share vertices. so either the sample should be
+						// invalid, or set to the same sample index we're about to assign
+						debugAssert(triangleSamples[i] == -1 || triangleSamples[i] == sampleIndex);
 						
 						triangleSamples[i] = sampleIndex;
 					}
