@@ -36,5 +36,5 @@ class AudioStream
 {
 public:
 	virtual ~AudioStream() { }
-	virtual int Provide(int numSamples, AudioSample* __restrict buffer) = 0;
+	virtual int Provide(int numSamples, AudioSample* __restrict samples) = 0;
 };
