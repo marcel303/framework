@@ -252,7 +252,7 @@ struct WDL_FFT4_REAL
 	
 	WDL_FFT4_REAL & operator=(const WDL_FFT_REAL c)
 	{
-		v = float4 { (float)c };
+		v = float4 { (float)c, (float)c, (float)c, (float)c };
 		return *this;
 	}
 #endif
@@ -270,8 +270,8 @@ struct WDL_FFT4_COMPLEX {
   	re.v = _mm_set1_ps(c.re);
   	im.v = _mm_set1_ps(c.im);
   #else
-  	re.v = WDL_FFT4_REAL::float4 { (float)c.re };
-  	im.v = WDL_FFT4_REAL::float4 { (float)c.im };
+  	re.v = WDL_FFT4_REAL::float4 { (float)c.re, (float)c.re, (float)c.re, (float)c.re };
+  	im.v = WDL_FFT4_REAL::float4 { (float)c.im, (float)c.im, (float)c.im, (float)c.im };
   #endif
   	return *this;
   }
