@@ -52,8 +52,7 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 	GLuint oldTexture = 0;
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, (GLint*)&oldTexture);
 	checkErrorGL();
-	
-#if ENABLE_DESKTOP_OPENGL
+
 	// set swizzle on both targets
 
 	GLint swizzleMask[4] =
@@ -67,12 +66,17 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 	for (int i = 0; i < (m_properties.colorTarget.doubleBuffered ? 2 : 1); ++i)
 	{
 		glBindTexture(GL_TEXTURE_2D, m_colorTarget[i]->getTextureId());
+	#if ENABLE_DESKTOP_OPENGL
 		glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 		checkErrorGL();
+	#else
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, swizzleMask[0]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_G, swizzleMask[1]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, swizzleMask[2]);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_A, swizzleMask[3]);
+		checkErrorGL();
+	#endif
 	}
-#else
-	AssertMsg(false, "not implemented. GL_TEXTURE_SWIZZLE_RGBA is not available in non-desktop OpenGL", 0);
-#endif
 
 	// restore the previous OpenGL state
 	
