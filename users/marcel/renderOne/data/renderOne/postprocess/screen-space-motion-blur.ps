@@ -36,7 +36,7 @@ void main()
 #endif
 
 	vec2 coord = texcoord - delta * 0.5;
-	vec2 coord_step = delta / (numSteps - 1);
+	vec2 coord_step = delta / float(numSteps - 1);
 
 	vec4 sum = vec4(0.0);
 
@@ -47,7 +47,7 @@ void main()
 		coord += coord_step;
 	}
 
-	vec4 result = sum * (1.0 / numSteps);
+	vec4 result = sum * (1.0 / float(numSteps));
 
 	shader_fragColor = result;
 }

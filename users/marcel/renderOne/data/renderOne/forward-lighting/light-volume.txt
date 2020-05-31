@@ -10,8 +10,13 @@ uniform float infiniteSpaceMode;
 ivec2 rOne_toIvec2(vec2 v)
 {
 	return ivec2(
-		v.x,
-		v.y);
+		int(v.x),
+		int(v.y));
+}
+
+ivec2 rOne_toIvec2(ivec2 v)
+{
+	return v;
 }
 
 void forEachLightIdAt(vec3 in_position)

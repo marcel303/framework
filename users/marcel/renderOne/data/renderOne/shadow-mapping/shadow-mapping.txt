@@ -38,8 +38,8 @@ vec3 viewToShadowLight(int id, vec3 position_view)
 
 vec2 shadowTextureToShadowAtlas(int id, vec2 position_texture)
 {
-	vec2 atlas_min = vec2(1.0 / numShadowMaps * (id + 0), 0.0);
-	vec2 atlas_max = vec2(1.0 / numShadowMaps * (id + 1), 1.0);
+	vec2 atlas_min = vec2(1.0 / numShadowMaps * float(id + 0), 0.0);
+	vec2 atlas_max = vec2(1.0 / numShadowMaps * float(id + 1), 1.0);
 
 	vec2 position_atlas = mix(atlas_min, atlas_max, position_texture);
 
@@ -229,7 +229,7 @@ vec3 lookupShadow_PCF_3x3(int id, vec3 position_view)
 	// note : using textureOffset here causes the shader to fail on my Mac Book pro late 2016 with
 	//        Intel Iris 540. it doesn't fail to compile.. it just outputs the wrong value :-(
 	//        so instead of using textureOffset I'm forced to add a manual offset to texture(..) calls
-	vec2 oscale = vec2(1.0) / textureSize(shadowDepthAtlas, 0);
+	vec2 oscale = vec2(1.0) / vec2(textureSize(shadowDepthAtlas, 0));
 	#define textureOffset(s, uv, o) texture(s, uv + vec2(o) * oscale)
 #endif
 
@@ -328,7 +328,7 @@ vec3 lookupShadow_PCF_7x7(int id, vec3 position_view)
 	// note : using textureOffset here causes the shader to fail on my Mac Book pro late 2016 with
 	//        Intel Iris 540. it doesn't fail to compile.. it just outputs the wrong value :-(
 	//        so instead of using textureOffset I'm forced to add a manual offset to texture(..) calls
-	vec2 oscale = vec2(1.0) / textureSize(shadowDepthAtlas, 0);
+	vec2 oscale = vec2(1.0) / vec2(textureSize(shadowDepthAtlas, 0));
 	#define textureOffset(s, uv, o) texture(s, uv + vec2(o) * oscale)
 #endif
 
@@ -481,13 +481,15 @@ vec3 lookupShadow_Variance(int id, vec3 position_view)
 
 vec3 lookupShadow(int id, vec3 position_view)
 {
-	if (shadowMapFilter == kShadowMapFilter_Nearest)
+	int i_shadowMapFilter = int(shadowMapFilter);
+
+	if (i_shadowMapFilter == kShadowMapFilter_Nearest)
 		return lookupShadow_Nearest(id, position_view);
-	else if (shadowMapFilter == kShadowMapFilter_PercentageCloser_3x3)
+	else if (i_shadowMapFilter == kShadowMapFilter_PercentageCloser_3x3)
 		return lookupShadow_PCF_3x3(id, position_view);
-	else if (shadowMapFilter == kShadowMapFilter_PercentageCloser_7x7)
+	else if (i_shadowMapFilter == kShadowMapFilter_PercentageCloser_7x7)
 		return lookupShadow_PCF_7x7(id, position_view);
-	else if (shadowMapFilter == kShadowMapFilter_Variance)
+	else if (i_shadowMapFilter == kShadowMapFilter_Variance)
 		return lookupShadow_Variance(id, position_view);
 	else
 		return vec3(1.0);
@@ -528,8 +530,8 @@ vec3 lookupShadowPosition(int id, vec3 position_view)
 	// perform texture sampling inside the atlas texture
 
 // todo : optimize : store shadow atlas min/max inside a uniform array
-	vec2 atlas_min = vec2(1.0 / numShadowMaps * (id + 0), 0.0);
-	vec2 atlas_max = vec2(1.0 / numShadowMaps * (id + 1), 1.0);
+	vec2 atlas_min = vec2(1.0 / numShadowMaps * float(id + 0), 0.0);
+	vec2 atlas_max = vec2(1.0 / numShadowMaps * float(id + 1), 1.0);
 
 	vec2 position_atlas = mix(atlas_min, atlas_max, position_texture);
 
