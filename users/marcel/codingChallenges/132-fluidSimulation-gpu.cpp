@@ -32,7 +32,7 @@ Cohesive forces can be approximated by using a tracer image to track different f
 
 */
 
-#if ENABLE_OPENGL && defined(DEBUG)
+#if ENABLE_OPENGL && ENABLE_DESKTOP_OPENGL && defined(DEBUG)
 	#include <SDL2/SDL_opengl.h> // so we can call glFinish to measure GPU time
 #endif
 
@@ -97,7 +97,7 @@ static void getOrCreateShader(const char * name, const char * code, const char *
 		
 				float samp_filter(sampler2D s, float x, float y)
 				{
-					vec2 size = textureSize(s, 0);
+					vec2 size = vec2(textureSize(s, 0));
 					
 					return texture(s, v_texcoord + vec2(x, y) / size).x;
 				}
@@ -539,7 +539,7 @@ int main(int argc, char * argv[])
 
 		cube->density.mulf(.99f, .99f, .99f);
 		
-	#if 1
+	#if FRAMEWORK_USE_SDL && 1
 		for (auto & e : framework.events)
 		{
 			float x;
@@ -611,7 +611,7 @@ int main(int argc, char * argv[])
 		}
 	#endif
 		
-	#if ENABLE_OPENGL && defined(DEBUG)
+	#if ENABLE_OPENGL && ENABLE_DESKTOP_OPENGL && defined(DEBUG)
 		const auto t1 = g_TimerRT.TimeUS_get();
 	#endif
 		
