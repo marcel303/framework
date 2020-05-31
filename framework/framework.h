@@ -506,6 +506,7 @@ public:
 
 	void beginDraw(int r, int g, int b, int a, float depth = 1.f);
 	void endDraw();
+	void present(); // note : currently only needed for manual vr mode. but may come in handy later, for correctly vsync'ed multi-window drawing
 	
 	void beginScreenshot(int r, int g, int b, int a, int scale);
 	void endScreenshot(const char * name, int index = -1, bool omitAlpha = true);
@@ -548,6 +549,7 @@ public:
 	bool reloadCachesOnActivate;
 	bool cacheResourceData;
 	bool enableRealTimeEditing;
+	bool manualVrMode;
 	bool filedrop;
 	bool enableSound;
 	int numSoundSources;

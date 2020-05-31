@@ -167,6 +167,7 @@ Framework::Framework()
 #else
 	enableRealTimeEditing = false;
 #endif
+	manualVrMode = false;
 	filedrop = false;
 	windowX = -1;
 	windowY = -1;
@@ -653,9 +654,7 @@ bool Framework::init(int sx, int sy)
 	}
 
 	// process once (to ensure we are in vr mode) and show a loading screen
-
-	process();
-
+	frameworkVr.process();
 	frameworkVr.showLoadingScreen();
 #endif
 
@@ -793,6 +792,7 @@ bool Framework::shutdown()
 #else
 	enableRealTimeEditing = false;
 #endif
+	manualVrMode = false;
 	filedrop = false;
 	enableSound = true;
 	numSoundSources = 32;
@@ -1425,11 +1425,43 @@ void Framework::process()
 	time += timeStep;
 #endif
 #elif FRAMEWORK_USE_OVR_MOBILE
+	if (manualVrMode == false)
+	{
+		// Render the eye images.
+		for (int eyeIndex = 0; eyeIndex < frameworkVr.getEyeCount(); ++eyeIndex)
+		{
+			frameworkVr.beginEye(eyeIndex, colorBlack);
+			{
+				gxPushMatrix();
+				gxTranslatef(0, 0, 0);
+				{
+					pushDepthTest(true, DEPTH_LESS);
+					pushBlend(BLEND_OPAQUE);
+					{
+						framework.drawVirtualDesktop();
+					}
+					popBlend();
+					popDepthTest();
+				}
+				gxPopMatrix();
+			}
+			frameworkVr.endEye();
+		}
+		
+		frameworkVr.submitFrameAndPresent();
+	}
+	
 	// process events and begin the next frame
 	frameworkVr.process();
 
 	timeStep = frameworkVr.TimeStep;
 	time = float(frameworkVr.PredictedDisplayTime);
+	
+	if (manualVrMode == false)
+	{
+		// todo : use controller as a pointing device, not the direction of the head pose
+		framework.tickVirtualDesktop(frameworkVr.HeadTransform, framework.timeStep, false);
+	}
 #else
 	#error
 #endif
@@ -1803,6 +1835,18 @@ void Framework::endDraw()
 	#endif
 	#endif
 	}
+}
+
+void Framework::present()
+{
+#if FRAMEWORK_USE_OVR_MOBILE
+	// fixme : present() calls may appear for regular, properly vsync'ed apps.
+	//         In this case, manualVrMode may not be set and this assert will trigger.
+	//         We should probably call present(..) at the start of process, which
+	//         will present any pending frames, and wait for frame pacing (if vsync is enabled).
+	Assert(manualVrMode);
+	frameworkVr.submitFrameAndPresent();
+#endif
 }
 
 void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_buttonMask, const bool isHand)
