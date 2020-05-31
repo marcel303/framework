@@ -459,9 +459,12 @@ void Window::draw3d() const
 		gxMultMatrixf(transformForDraw.m_v);
 
 		gxSetTexture(getColorTarget()->getTextureId());
+		gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
 		{
+			setColor(colorWhite);
 			drawRect(0, 0, getWidth(), getHeight());
 		}
+		gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
 		gxSetTexture(0);
 	}
 	gxPopMatrix();
