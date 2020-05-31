@@ -86,6 +86,10 @@
 
 #if FRAMEWORK_USE_OVR_MOBILE
 	#include "framework-ovr.h"
+
+	// todo : remove these include once controller input is handled more nicely
+	#include <VrApi_Helpers.h>
+	#include <VrApi_Input.h>
 #endif
 
 // -----
@@ -1439,6 +1443,9 @@ void Framework::process()
 					pushBlend(BLEND_OPAQUE);
 					{
 						framework.drawVirtualDesktop();
+						for (auto * window = m_windows; window != nullptr; window = window->m_next)
+							if (window->isHidden() == false && window->hasFocus())
+								window->draw3dCursor();
 					}
 					popBlend();
 					popDepthTest();
@@ -1459,8 +1466,87 @@ void Framework::process()
 	
 	if (manualVrMode == false)
 	{
+		// update virtual desktop. but first, find the pointer transform to use
+
+		// todo : remove this global
+		// todo : does ovr api provide a way to determine the active hand?
+	static int activeController = 0;
+
+		Mat4x4 pointerTransform[2] =
+			{
+				Mat4x4(true),
+				Mat4x4(true)
+			};
+
+		bool pointerTransformIsValid = false;
+		int buttonMasks[2] = { 0, 0 };
+
+	#if true
+		auto * ovr = frameworkVr.Ovr;
+
+		uint32_t index = 0;
+
+		for (;;)
+		{
+			ovrInputCapabilityHeader header;
+
+			if (vrapi_EnumerateInputDevices(ovr, index++, &header) < 0)
+				break;
+
+			if (header.Type != ovrControllerType_TrackedRemote)
+				continue;
+
+			ovrTracking tracking;
+			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, frameworkVr.PredictedDisplayTime, &tracking) != ovrSuccess)
+				tracking.Status = 0;
+
+			ovrInputStateTrackedRemote state;
+			state.Header.ControllerType = ovrControllerType_TrackedRemote;
+			if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &state.Header ) >= 0)
+			{
+				int index = -1;
+
+				ovrInputTrackedRemoteCapabilities remoteCaps;
+				remoteCaps.Header.Type = ovrControllerType_TrackedRemote;
+				remoteCaps.Header.DeviceID = header.DeviceID;
+				if (vrapi_GetInputDeviceCapabilities(ovr, &remoteCaps.Header) == ovrSuccess)
+				{
+					if (remoteCaps.ControllerCapabilities & ovrControllerCaps_LeftHand)
+						index = 0;
+					if (remoteCaps.ControllerCapabilities & ovrControllerCaps_RightHand)
+						index = 1;
+				}
+
+				if (index != -1)
+				{
+					if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
+					{
+						ovrMatrix4f transform = vrapi_GetTransformFromPose(&tracking.HeadPose.Pose);
+						transform = ovrMatrix4f_Transpose(&transform);
+
+						memcpy(&pointerTransform[index], (float*)transform.M, sizeof(Mat4x4));
+						pointerTransformIsValid = true;
+					}
+
+					if (state.Buttons & ovrButton_Trigger)
+					{
+						activeController = index;
+						buttonMasks[index] |= 1 << 0;
+					}
+					if (state.Buttons & ovrButton_GripTrigger)
+					{
+						activeController = index;
+						buttonMasks[index] |= 1 << 1;
+					}
+				}
+			}
+		}
+	#endif
+
 		// todo : use controller as a pointing device, not the direction of the head pose
-		framework.tickVirtualDesktop(frameworkVr.HeadTransform, framework.timeStep, false);
+		framework.tickVirtualDesktop(pointerTransform[activeController], buttonMasks[activeController], false);
+
+		globals.currentWindow->getWindowData()->makeActive();
 	}
 #else
 	#error
@@ -1863,8 +1949,6 @@ void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_button
 
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 	{
-		if (window == globals.mainWindow)
-			continue; // todo : discard more nicely or don't create a main window when framework is init with size(0, 0)
 		if (window->isHidden())
 			continue;
 
@@ -1943,13 +2027,28 @@ void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_button
 
 				windowData->mouseData.mouseX = hoverPos[0];
 				windowData->mouseData.mouseY = hoverPos[1];
-				windowData->mouseData.mouseDown[0] = (buttonMask & (1 << 0)) != 0;
-				windowData->mouseData.mouseDown[1] = (buttonMask & (1 << 1)) != 0;
+
+				for (int i = 0; i < 2; ++i)
+				{
+					const bool isDown = (buttonMask & (1 << i)) != 0;
+
+					if (windowData->mouseData.mouseDown[i] != isDown)
+					{
+						windowData->mouseData.mouseDown[i] = isDown;
+						windowData->mouseData.mouseChange[i] = true;
+					}
+				}
 			}
 			else
 			{
-				windowData->mouseData.mouseDown[0] = false;
-				windowData->mouseData.mouseDown[1] = false;
+				for (int i = 0; i < 2; ++i)
+				{
+					if (windowData->mouseData.mouseDown[i])
+					{
+						windowData->mouseData.mouseDown[i] = false;
+						windowData->mouseData.mouseChange[i] = true;
+					}
+				}
 			}
 		}
 		windowData->endProcess();
