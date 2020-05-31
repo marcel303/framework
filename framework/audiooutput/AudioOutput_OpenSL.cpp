@@ -92,10 +92,14 @@ void AudioOutput_OpenSL::playbackHandler_static(SLAndroidSimpleBufferQueueItf bq
 
 void AudioOutput_OpenSL::playbackHandler(SLAndroidSimpleBufferQueueItf bq)
 {
-	AudioSample * __restrict samples;
-	const int numSamples = m_bufferSize;
+	int16_t * buffer = m_buffers[m_nextBuffer];
+	m_nextBuffer = 1 - m_nextBuffer;
 
-	samples = (AudioSample*)alloca(numSamples * sizeof(AudioSample));
+	AudioSample * __restrict samples =
+		m_numChannels == 1
+		? (AudioSample*)alloca(m_bufferSize * sizeof(AudioSample))
+		: (AudioSample*)buffer;
+	const int numSamples = m_bufferSize;
 	
 	bool generateSilence = true;
 	
@@ -124,12 +128,10 @@ void AudioOutput_OpenSL::playbackHandler(SLAndroidSimpleBufferQueueItf bq)
 	{
 		const int volume = std::max(0, std::min(1024, m_volume.load()));
 
-		int16_t * __restrict values = (int16_t*)alloca(numSamples * sizeof(int16_t));
-	
 		for (int i = 0; i < numSamples; ++i)
-			values[i] = (int32_t(samples[i].channel[0] + samples[i].channel[1]) * volume) >> 11;
+			buffer[i] = (int32_t(samples[i].channel[0] + samples[i].channel[1]) * volume) >> 11;
 
-		(*bq)->Enqueue(bq, values, numSamples * sizeof(values[0]));
+		(*bq)->Enqueue(bq, buffer, numSamples * sizeof(int16_t) * 1);
 	}
 	else
 	{
@@ -139,16 +141,15 @@ void AudioOutput_OpenSL::playbackHandler(SLAndroidSimpleBufferQueueItf bq)
 
 		if (volume != 1024)
 		{
-			int16_t * __restrict values = (int16_t*)samples;
 			const int numValues = numSamples * 2;
 		
 			for (int i = 0; i < numValues; ++i)
 			{
-				values[i] = (int32_t(values[i]) * volume) >> 10;
+				buffer[i] = (int32_t(buffer[i]) * volume) >> 10;
 			}
 		}
 
-		(*bq)->Enqueue(bq, samples, numSamples * sizeof(samples[0]));
+		(*bq)->Enqueue(bq, buffer, numSamples * sizeof(int16_t) * 2);
 	}
 }
 
@@ -159,6 +160,9 @@ AudioOutput_OpenSL::AudioOutput_OpenSL()
 	, m_isDone(false)
 {
 	m_mutex.alloc();
+
+	m_buffers[0] = nullptr;
+	m_buffers[1] = nullptr;
 }
 
 AudioOutput_OpenSL::~AudioOutput_OpenSL()
@@ -250,12 +254,18 @@ bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate,
 		return false;
 	}
 
+	// allocate buffers
+
+	Assert(m_buffers[0] == nullptr);
+	m_buffers[0] = new int16_t[bufferSize * numChannels];
+	m_buffers[1] = new int16_t[bufferSize * numChannels];
+	Assert(m_nextBuffer == 0);
+
 	// start streaming
 	const int initialBufferSize = bufferSize * sizeof(int16_t) * numChannels;
-	int16_t * __restrict initialBuffer = (int16_t*)alloca(initialBufferSize);
-	memset(initialBuffer, 0, initialBufferSize);
-
-	checkError("Enqueue", (*playBufferQueue)->Enqueue(playBufferQueue, initialBuffer, initialBufferSize));
+	memset(m_buffers[m_nextBuffer], 0, initialBufferSize);
+	checkError("Enqueue", (*playBufferQueue)->Enqueue(playBufferQueue, m_buffers[m_nextBuffer], initialBufferSize));
+	m_nextBuffer = 1 - m_nextBuffer;
 
 	m_numChannels = numChannels;
 	m_sampleRate = sampleRate;
@@ -268,6 +278,16 @@ bool AudioOutput_OpenSL::Shutdown()
 {
 	Stop();
 
+	// free buffers
+
+	delete [] m_buffers[0];
+	delete [] m_buffers[1];
+	m_buffers[0] = nullptr;
+	m_buffers[1] = nullptr;
+	m_nextBuffer = 0;
+
+	// destroy OpenSL objects
+	
 	playVolume = nullptr;
 
 	if (playPlay != nullptr)
@@ -343,7 +363,7 @@ void AudioOutput_OpenSL::Volume_set(float volume)
     if (playVolume != nullptr)
 	{
 		// todo : is this thread safe ?
-        result = (*playVolume)->SetVolumeLevel(playVolume, millibel);
+        auto result = (*playVolume)->SetVolumeLevel(playVolume, volume); // todo: millibel
         assert(SL_RESULT_SUCCESS == result);
         (void)result;
     }

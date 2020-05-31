@@ -54,6 +54,8 @@ class AudioOutput_OpenSL : public AudioOutput
 	int m_numChannels = 0;
 	int m_sampleRate = 0;
 	int m_bufferSize = 0;
+	int16_t * m_buffers[2] = { };
+	int m_nextBuffer = 0;
 
 	std::atomic<bool> m_isPlaying;
 	std::atomic<int> m_volume;
