@@ -117,6 +117,10 @@ Window::Window(const char * title, const int sx, const int sy, const bool resiza
 #else
 	m_title = title;
 #endif
+
+#if WINDOW_IS_3D
+	m_transform = Mat4x4(true).Translate(0, 1.f, -1.f);
+#endif
 	
 	m_windowData = new WindowData();
 	memset(m_windowData, 0, sizeof(WindowData));
