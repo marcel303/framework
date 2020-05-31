@@ -908,6 +908,8 @@ extern "C"
 
 	    ovrOpenGLExtensions.init();
 
+	    framework.manualVrMode = true;
+
 	    framework.init(0, 0);
 
 	#if USE_FRAMEWORK_DRAWING

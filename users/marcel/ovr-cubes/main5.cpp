@@ -429,6 +429,8 @@ void Scene::drawTranslucent() const
 
 int main(int argc, char * argv[])
 {
+	framework.manualVrMode = true;
+
 	if (!framework.init(0, 0))
 		return -1;
 

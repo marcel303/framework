@@ -798,7 +798,7 @@ void Scene::drawEye(ovrMobile * ovr) const
 	    {
 	    // todo : add a function to directly draw 3d msdf text. msdf or sdf is really a requirement for vr
 	        setColor(Color::fromHSL(time / 4.f, .5f, .5f));
-	        drawTextArea(0, 0, 1.f, .25f, .1f, 0, 0, "Hello World!\nThis is some text, drawn using Framework's multiple signed-distance field method! Doesn't it look crisp? :-)", 2.f, 2.f);
+	        drawTextArea(-1.f/2.f, -.25f/2.f, 1.f, .25f, .1f, 0, 0, "Hello World!\nThis is some text, drawn using Framework's multiple signed-distance field method! Doesn't it look crisp? :-)", 2.f, 2.f);
 	    }
 	    popFontMode();
 
@@ -1669,6 +1669,8 @@ int main(int argc, char * argv[])
 	ovrOpenGLExtensions.init();
 
 	FrameworkVr frameworkVr;
+
+	framework.manualVrMode = true;
 
 	if (!framework.init(0, 0) ||
 		!frameworkVr.init(&egl))
