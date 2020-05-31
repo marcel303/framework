@@ -36,6 +36,10 @@
 #include "shaderPreprocess.h"
 #include "StringEx.h"
 
+#if defined(ANDROID)
+	#include <thread>
+#endif
+
 ShaderCache g_shaderCache;
 
 #if ENABLE_COMPUTE_SHADER
@@ -69,40 +73,41 @@ static void showShaderInfoLog(GLuint shader, const char * source)
 
 	glGetShaderInfoLog(shader, logSize, &logSize, log);
 
-	bool newLine = true;
-
 	const int kMaxTextLength = 1024;
 	char text[kMaxTextLength];
 	int textLength = 0;
 
 	int line = 1;
-	
+
 	while (*source != 0)
 	{
-		if (newLine)
-		{
-			text[textLength++] = 0;
-			logInfo("%04d: %s", line, text);
-			textLength = 0;
-
-			newLine = false;
-		}
-
 		if (*source == '\n' || *source == '\r')
 		{
-			newLine = true;
-			line++;
-		}
+			text[textLength++] = 0;
+			logInfo("%04d: %s", line++, text);
+			textLength = 0;
 
-		if (textLength + 1 < kMaxTextLength)
-			text[textLength++] = *source;
+		#if defined(ANDROID)
+			// Logcat on Android uses a circular buffer, and dumping the shader source here may cause us to miss
+			// messages. Putting a sleep in here ensures the entire Logcat output appears within Android Studio.
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		#endif
+		}
+		else
+		{
+			if (textLength + 1 < kMaxTextLength)
+				text[textLength++] = *source;
+		}
 
 		source++;
 	}
 
-	text[textLength++] = 0;
-	logInfo("%04d: %s", line, text);
-	textLength = 0;
+	if (textLength > 0)
+	{
+		text[textLength++] = 0;
+		logInfo("%04d: %s", line, text);
+		textLength = 0;
+	}
 
 	logError("OpenGL shader compile failed:\n----\n%s", log);
 
@@ -238,7 +243,7 @@ static bool loadShader(const char * filename, GLuint & shader, GLuint type, cons
 			#endif
 			
 				const GLchar * sourceData = (const GLchar*)source.c_str();
-				const GLchar * sources[] = { version, debugs, defines, sourceData };
+				const GLchar * sources[] = { version, debugs, defines, "#line 0 0", sourceData };
 
 				glShaderSource(shader, sizeof(sources) / sizeof(sources[0]), sources, 0);
 				checkErrorGL();
