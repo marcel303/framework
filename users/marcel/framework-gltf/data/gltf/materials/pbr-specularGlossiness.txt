@@ -198,7 +198,7 @@ Lighting_SurfaceProperties prepareSurfaceProperties(
     surfaceProperties.N = N;
     surfaceProperties.V = V;
     surfaceProperties.R = R;
-    surfaceProperties.baseColor = baseColor.rgb * (1.0 - reflectance);
+    surfaceProperties.baseColor = baseColor.rgb * (1.0 - reflectance); // * (1.0 - 0.04)
     surfaceProperties.opacity = baseColor.a;
     surfaceProperties.metallic = specular;
     surfaceProperties.roughness = roughness;
