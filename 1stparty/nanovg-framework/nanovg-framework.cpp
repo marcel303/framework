@@ -139,8 +139,8 @@ void main()
 		vec2 pt = (paintMat * vec4(v_position, 0.0, 1.0)).xy / extent;
 		
 		vec4 color = texture(tex, pt);
-		if (texType == 1) color = vec4(color.xyz * color.w, color.w);
-		if (texType == 2) color = vec4(color.x);
+		if (texType == 1.0) color = vec4(color.xyz * color.w, color.w);
+		if (texType == 2.0) color = vec4(color.x);
 		
 		// apply color tint and alpha
 		color *= innerCol;
