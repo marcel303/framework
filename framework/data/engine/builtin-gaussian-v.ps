@@ -27,14 +27,14 @@ float getWeight(int i)
 
 void main()
 {
-    float texScale = radius / textureSize(source, 0).y / (kernelSize - 1.0);
+    float texScale = radius / float(textureSize(source, 0).y) / (kernelSize - 1.0);
 	
 	vec4 result = texture(source, texcoord) * getWeight(0);
 	
-	for (int i = 1; i < kernelSize; ++i)
+	for (int i = 1; i < int(kernelSize); ++i)
 	{
-		result += texture(source, texcoord + vec2(0.0, texScale * i)) * getWeight(i);
-		result += texture(source, texcoord - vec2(0.0, texScale * i)) * getWeight(i);
+		result += texture(source, texcoord + vec2(0.0, texScale * float(i))) * getWeight(i);
+		result += texture(source, texcoord - vec2(0.0, texScale * float(i))) * getWeight(i);
 	}
 	
     shader_fragColor = result;
