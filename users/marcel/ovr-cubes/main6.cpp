@@ -5,6 +5,7 @@
 #include "parameter.h"
 #include "parameterUi.h"
 
+#include "data/engine/ShaderCommon.txt" // VS_ constants
 #include "framework.h"
 #include "framework-ovr.h"
 #include "framework-vr-hands.h"
@@ -21,6 +22,9 @@
 #include "binaural_oalsoft.h"
 
 #include "objects/audioSourceVorbis.h"
+#include "objects/delayLine.h"
+
+#include "Quat.h"
 
 /*
 
@@ -61,6 +65,24 @@ DONE : polish virtual desktop interaction when using hands,
     + let virtual desktop have detection of false finger presses
 
 todo : add UI for showing spatial audio system status
+
+DONE : add the moon
+
+todo : add some stars
+
+todo : add some particles drifiting in the air
+	- particles everywhere
+
+todo : make NdotV abs(..) inside the gltf pbr shaders. this would make lighting act double-sidedly
+
+todo : add 'assetcopy-filelist.txt' or something, which stores the hashes for copied files
+    - during assetcopy: optionally enable filelist check
+    - calculate hash for assets inside apk
+    - check if changed from filelist
+
+todo : window3d : draw zoom bubble at cursor location
+todo : framework : draw pointer beams when manual vr mode is off
+    - requires a unified place to store pointer transforms, and active pointer index
 
  */
 
@@ -164,7 +186,7 @@ static void calculateNormal(const Watersim & watersim, const int x, const int z,
 	out_normal[2] = nz;
 }
 
-// --
+// -- collision system
 
 struct CollisionSystemInterface
 {
@@ -175,7 +197,7 @@ static const int kCollisionFlag_Watersim = 1 << 0;
 
 static CollisionSystemInterface * collisionSystem = nullptr;
 
-// --
+// -- spatial audio system
 
 struct SpatialAudioSystemInterface
 {
@@ -195,6 +217,141 @@ struct SpatialAudioSystemInterface
 };
 
 static SpatialAudioSystemInterface * spatialAudioSystem = nullptr;
+
+// -- forward lighting system
+
+struct ForwardLightingSystemInterface
+{
+	virtual void beginScene(const Mat4x4 & worldToView) = 0;
+
+	virtual void setSunProperties(const bool enabled, Vec3Arg position, Vec3Arg color, const float intensity) = 0;
+	virtual bool getSunProperties(Vec3 & position, Vec3 & color) = 0;
+
+	virtual void setLightingForGltfMaterialShader(Shader & materialShader) = 0;
+	virtual void setLightingForGltfMaterialShaders(gltf::MaterialShaders & materialShaders) = 0;
+};
+
+static ForwardLightingSystemInterface * forwardLightingSystem = nullptr;
+
+// -- moon object
+
+struct MoonObject
+{
+	float angle = 0.f;
+	Vec3 axis = Vec3(1, 0, 0);
+
+	Vec3 getPosition() const
+	{
+		Quat q;
+		q.fromAngleAxis(angle * float(M_PI / 180.0), axis);
+
+		return q.toMatrix().GetAxis(2) * 100.f;
+	}
+
+	void tick(const float dt)
+	{
+		angle -= dt * .2f;
+	}
+
+	void drawOpaque() const
+	{
+		Mat4x4 worldToView;
+		gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+		const Mat4x4 & viewToWorld = worldToView.CalcInv();
+		const Vec3 origin = viewToWorld.GetTranslation();
+		const Vec3 position = origin + getPosition();
+
+		const Vec3 drawPosition = position + origin;
+		const Mat4x4 lookatMatrix = Mat4x4(true).Lookat(position, origin, Vec3(0, 1, 0));
+
+		gxPushMatrix();
+		{
+			gxMultMatrixf(lookatMatrix.m_v);
+
+			setColor(colorWhite);
+			fillCircle(0, 0, 10.f, 40);
+		}
+		gxPopMatrix();
+	}
+};
+
+// -- celestrial sphere object
+
+struct CelestialSphereObject
+{
+	GxVertexBuffer vb;
+	GxIndexBuffer ib;
+	GxMesh mesh;
+
+	float distance = 0.f;
+
+	void init(const int numStars, const float in_distance)
+	{
+		distance = in_distance;
+
+		struct Vertex
+		{
+			Vec4 position;
+			Vec4 color;
+		};
+
+		std::vector<Vertex> vertices;
+		vertices.resize(numStars);
+
+		for (int i = 0; i < numStars; ++i)
+		{
+			const float a1 = random<float>(-M_PI, +M_PI);
+			const float a2 = random<float>(-M_PI, +M_PI);
+
+			const Mat4x4 rotation = Mat4x4(true).RotateX(a1).RotateY(a2);
+
+			vertices[i].position = rotation * Vec4(0, 0, 1, 1);
+			vertices[i].color.Set(1, 1, 1, 1);
+		}
+
+		vb.alloc(vertices.data(), numStars * sizeof(Vec3));
+
+		uint16_t * indices = new uint16_t[numStars * 6];
+		for (int i = 0; i < numStars; ++i)
+		{
+			indices[i * 6 + 0] = indices[i * 6 + 1] = indices[i * 6 + 2] =
+			indices[i * 6 + 3] = indices[i * 6 + 4] = indices[i * 6 + 5] = i;
+		}
+
+		ib.alloc(indices, numStars * 6, GX_INDEX_16);
+
+		delete [] indices;
+		indices = nullptr;
+
+		const GxVertexInput inputs[2] =
+			{
+				{ VS_POSITION, 4, GX_ELEMENT_FLOAT32, 0, 0*4, sizeof(Vec4) },
+				{ VS_COLOR,    4, GX_ELEMENT_FLOAT32, 0, 4*4, sizeof(Vec4) }
+			};
+
+		mesh.setVertexBuffer(&vb, inputs, sizeof(inputs) / sizeof(inputs[0]), sizeof(Vertex));
+		mesh.setIndexBuffer(&ib);
+		mesh.addPrim(GX_TRIANGLES, numStars * 6, true);
+		//mesh.addPrim(GX_POINTS, numStars * 6, true);
+	}
+
+	void drawOpaque() const
+	{
+		gxPushMatrix();
+		{
+			gxScalef(distance, distance, distance);
+			gxRotatef(framework.time, 1, 1, 1);
+
+			Shader shader("stars");
+			setShader(shader);
+			{
+				mesh.draw();
+			}
+			clearShader();
+		}
+		gxPopMatrix();
+	}
+};
 
 // -- drifter object
 
@@ -352,10 +509,7 @@ struct ModelObject
 			gltf::MaterialShaders materialShaders;
 			gltf::setDefaultMaterialShaders(materialShaders);
 
-			gltf::setDefaultMaterialLighting(materialShaders, worldToView,
-				Vec3(0.f, -1.f, -3.f).CalcNormalized(),
-				//Vec3(lightIntensity->get()));
-				Vec3(1.f));
+			forwardLightingSystem->setLightingForGltfMaterialShaders(materialShaders);
 
 			gltf::DrawOptions drawOptions;
 
@@ -367,7 +521,7 @@ struct ModelObject
 
 // -- scene
 
-struct Scene : CollisionSystemInterface
+struct Scene : CollisionSystemInterface, ForwardLightingSystemInterface
 {
 	Vec3 playerLocation;
 
@@ -403,6 +557,10 @@ struct Scene : CollisionSystemInterface
 	Mat4x4 watersim_transform = Mat4x4(true);
 	Watersim watersim;
 
+	std::vector<MoonObject> moons;
+
+	std::vector<CelestialSphereObject> celestialSpheres;
+
 	std::vector<DrifterObject> drifters;
 
 	std::vector<AudioStreamerObject> audioStreamers;
@@ -420,6 +578,8 @@ struct Scene : CollisionSystemInterface
 
 	void drawWatersim() const;
 	void drawWatersimHandProjections() const;
+
+	// -- collision system interface
 
 // todo : should be part of a collision system
 	virtual bool raycast(Vec3Arg origin, Vec3Arg direction, const int collisionMask, float & out_distance, Vec3 & out_normal) const override final
@@ -462,11 +622,58 @@ struct Scene : CollisionSystemInterface
 
 		return result;
 	}
+
+	// -- forward lighting system interface
+
+	Mat4x4 worldToView = Mat4x4(true);
+
+	bool sunEnabled = false;
+	Vec3 sunPosition;
+	Vec3 sunColor;
+
+	virtual void beginScene(const Mat4x4 & in_worldToView) override final
+	{
+		worldToView = in_worldToView;
+	}
+
+	virtual void setSunProperties(const bool enabled, Vec3Arg position, Vec3Arg color, const float intensity) override final
+	{
+		sunEnabled = enabled;
+		sunPosition = position;
+		sunColor = color * intensity;
+	}
+
+	virtual bool getSunProperties(Vec3 & position, Vec3 & color) override final
+	{
+		position = sunPosition;
+		color = sunColor;
+
+		return sunEnabled;
+	}
+
+	virtual void setLightingForGltfMaterialShader(Shader & materialShader) override final
+	{
+		gltf::setDefaultMaterialLighting(
+			materialShader,
+			worldToView,
+			-sunPosition.CalcNormalized(),
+			sunColor);
+	}
+
+	virtual void setLightingForGltfMaterialShaders(gltf::MaterialShaders & materialShaders) override final
+	{
+		gltf::setDefaultMaterialLighting(
+			materialShaders,
+			worldToView,
+			-sunPosition.CalcNormalized(),
+			sunColor);
+	}
 };
 
 void Scene::create()
 {
 	collisionSystem = this;
+	forwardLightingSystem = this;
 
 	for (int i = 0; i < 2; ++i)
 	{
@@ -512,6 +719,21 @@ void Scene::create()
 	binauralSourcePos_listener = parameterMgr_binaural.addVec3("sourcePos_listener", Vec3(0.f));
 	parameterMgr.addChild(&parameterMgr_binaural);
 
+	moons.resize(1);
+
+	for (auto & moon : moons)
+	{
+		moon.angle = .2f;
+		moon.axis = Vec3(1, .2f, .2f).CalcNormalized();
+	}
+
+	celestialSpheres.resize(1);
+
+	for (auto & celestialSphere : celestialSpheres)
+	{
+		celestialSphere.init(10000, 100.f);
+	}
+
 	drifters.resize(32);
 
 	for (auto & drifter : drifters)
@@ -522,7 +744,7 @@ void Scene::create()
 		drifter.transform.SetTranslation(x, 0, z);
 	}
 
-	audioStreamers.resize(3);
+	audioStreamers.resize(1); // works with up to 20 in release
 
 	int index = 0;
 
@@ -618,16 +840,10 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 
 					if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
 					{
-						ovrMatrix4f m = ovrMatrix4f_CreateIdentity();
-						const auto & p = tracking.HeadPose.Pose;
-						const auto & t = p.Translation;
+						ovrMatrix4f transform = vrapi_GetTransformFromPose(&tracking.HeadPose.Pose);
+						transform = ovrMatrix4f_Transpose(&transform);
 
-						m = ovrMatrix4f_CreateTranslation(t.x, t.y, t.z);
-						ovrMatrix4f r = ovrMatrix4f_CreateFromQuaternion(&p.Orientation);
-						m = ovrMatrix4f_Multiply(&m, &r);
-						m = ovrMatrix4f_Transpose(&m);
-
-						memcpy(pointer.transform.m_v, (float*)m.M, sizeof(Mat4x4));
+						memcpy(&pointer.transform, (float*)transform.M, sizeof(Mat4x4));
 						pointer.isValid = true;
 					}
 					else
@@ -743,6 +959,11 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 			true);                 // closed ends (non-wrapped at the edges)
 	}
 
+	for (auto & moon : moons)
+	{
+		moon.tick(dt);
+	}
+
 	for (auto & drifter : drifters)
 	{
 		drifter.tick(dt);
@@ -768,41 +989,62 @@ void Scene::drawOpaque() const
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 
+	forwardLightingSystem->beginScene(worldToView);
+
+	if (moons.empty())
+	{
+		forwardLightingSystem->setSunProperties(
+			true,
+			Vec3(0, -100, 0),
+			Vec3(1.f),
+			1.f);
+	}
+	else
+	{
+		auto & moon = moons.front();
+
+		forwardLightingSystem->setSunProperties(
+			true,
+			moon.getPosition(),
+			Vec3(1.f),
+			lightIntensity->get());
+	}
+
 #if true
 	drawWatersim();
 	drawWatersimHandProjections();
 #endif
 
-#if true
+	for (auto & moon : moons)
+	{
+		moon.drawOpaque();
+	}
+
+	for (auto & celestialSphere : celestialSpheres)
+	{
+		celestialSphere.drawOpaque();
+	}
+
 	for (auto & drifter : drifters)
 	{
 		drifter.drawOpaque();
 	}
-#endif
 
 	for (auto & audioStreamer : audioStreamers)
 	{
 		audioStreamer.drawOpaque();
 	}
 
-#if true
 	for (auto & model : models)
 	{
 		model.drawOpaque();
 	}
-#endif
 
 #if true
 	Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
 	setShader(metallicRoughnessShader);
 	{
-	// todo : use a single sun location and direction vector for the entire scene .. this is becoming unmanagable
-		gltf::setDefaultMaterialLighting(
-			metallicRoughnessShader,
-			worldToView,
-			Vec3(0.f, -1.f, -3.f).CalcNormalized(),
-			Vec3(lightIntensity->get()),
-			Vec3(.2f));
+		forwardLightingSystem->setLightingForGltfMaterialShader(metallicRoughnessShader);
 
 		gltf::MetallicRoughnessParams params;
 		params.init(metallicRoughnessShader);
@@ -867,9 +1109,7 @@ void Scene::drawOpaque() const
 			Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
 			setShader(metallicRoughnessShader);
 			{
-				gltf::setDefaultMaterialLighting(metallicRoughnessShader, worldToView,
-					Vec3(0.f, -1.f, -3.f).CalcNormalized(),
-					Vec3(lightIntensity->get()));
+				forwardLightingSystem->setLightingForGltfMaterialShader(metallicRoughnessShader);
 
 				gltf::MetallicRoughnessParams params;
 				params.init(metallicRoughnessShader);
@@ -919,9 +1159,7 @@ void Scene::drawOpaque() const
 			Shader metallicRoughnessShader("pbr-metallicRoughness-skinned");
 			setShader(metallicRoughnessShader);
 			{
-				gltf::setDefaultMaterialLighting(metallicRoughnessShader, worldToView,
-					Vec3(0.f, -1.f, -3.f).CalcNormalized(),
-					Vec3(lightIntensity->get()));
+				forwardLightingSystem->setLightingForGltfMaterialShader(metallicRoughnessShader);
 
 				gltf::MetallicRoughnessParams params;
 				params.init(metallicRoughnessShader);
@@ -951,6 +1189,10 @@ void Scene::drawOpaque() const
 
 void Scene::drawTranslucent() const
 {
+	Mat4x4 worldToView;
+	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
+
+	forwardLightingSystem->beginScene(worldToView);
 }
 
 void Scene::drawWatersim() const
@@ -969,9 +1211,7 @@ void Scene::drawWatersim() const
 		Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
 		setShader(metallicRoughnessShader);
 		{
-			gltf::setDefaultMaterialLighting(metallicRoughnessShader, worldToView,
-				Vec3(0.f, -1.f, -3.f).CalcNormalized(),
-				Vec3(lightIntensity->get()));
+			forwardLightingSystem->setLightingForGltfMaterialShader(metallicRoughnessShader);
 
 			gltf::MetallicRoughnessParams params;
 			params.init(metallicRoughnessShader);
@@ -1095,6 +1335,72 @@ void ControlPanel::tick()
 	popWindow();
 }
 
+// todo : move to a separate file
+struct FastDelayLineForSmallChunks
+{
+	float * samples = nullptr;
+	int numSamples = 0;
+
+	void alloc(const int in_numSamples)
+	{
+		samples = new float[in_numSamples];
+		numSamples = in_numSamples;
+	}
+
+	void free()
+	{
+		delete [] samples;
+		samples = nullptr;
+
+		numSamples = 0;
+	}
+
+	float * prepareNextChunk(const int numSamplesToProvide)
+	{
+		const int numSamplesToKeep = numSamples - numSamplesToProvide;
+
+		memcpy(
+			samples,
+			samples + numSamples - numSamplesToKeep,
+			numSamplesToKeep * sizeof(float));
+
+		return samples + numSamplesToKeep;
+	}
+
+	void readChunkWithInterpolation(const float delayInSamples, const int numSamplesToRead, float * out_samples)
+	{
+		// note : the -eps is because we read +1 sample during linear interpolation, and we don't want to read
+		//        past our own sample array. this ensured the sample index, when rounded down, is one less
+		//        than the last sample index, and the 't' value used during interpolation is correct (0.99..)
+		const float eps = 1e-3f;
+		const float indexOfFirstSampleToRead = ((numSamples - numSamplesToRead) - delayInSamples) - eps;
+		Assert(indexOfFirstSampleToRead >= 0 && indexOfFirstSampleToRead < numSamples - numSamplesToRead);
+
+		int firstIndexRoundedDownToInt = int(indexOfFirstSampleToRead);
+		Assert(firstIndexRoundedDownToInt >= 0 && firstIndexRoundedDownToInt <= numSamples - numSamplesToRead - 1);
+
+		const float t = indexOfFirstSampleToRead - firstIndexRoundedDownToInt;
+		Assert(t >= 0.f && t <= 1.f);
+
+		const float t1 = 1.f - t;
+		const float t2 = t;
+
+		for (int i = 0; i < numSamplesToRead; ++i)
+		{
+			const int index1 = firstIndexRoundedDownToInt + i;
+			const int index2 = firstIndexRoundedDownToInt + i + 1;
+
+			Assert(index1 >= 0 && index1 < numSamples);
+			Assert(index2 >= 0 && index2 < numSamples);
+
+			const float sample1 = samples[index1];
+			const float sample2 = samples[index2];
+
+			out_samples[i] = sample1 * t1 + sample2 * t2;
+		}
+	}
+};
+
 // -- SpatialAudioSystem
 
 struct SpatialAudioSystem : SpatialAudioSystemInterface
@@ -1127,7 +1433,7 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 
 	SpatialAudioSystem()
 	{
-		loadHRIRSampleSet_Oalsoft("binaural/Default HRTF.mhr", sampleSet);
+		loadHRIRSampleSet_Oalsoft("binaural/irc_1047_44100.mhr", sampleSet);
 		sampleSet.finalize();
 	}
 
@@ -1260,6 +1566,8 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 
 int main(int argc, char * argv[])
 {
+	framework.manualVrMode = true;
+
 	if (!framework.init(0, 0))
 		return -1;
 
