@@ -50,6 +50,9 @@ static int s_renderTargetSx = 0;
 static int s_renderTargetSy = 0;
 static int s_renderTargetBackingScale = 0;
 
+static GLuint s_oldReadBuffer = 0;
+static GLuint s_oldDrawBuffer = 0;
+
 extern bool s_renderPassIsBackbufferPass;
 
 extern int s_backingScale; // todo : can this be exposed/determined more nicely?
@@ -65,6 +68,14 @@ void beginRenderPass(ColorTarget ** targets, const int numTargets, const bool cl
 {
 	Assert(numTargets >= 0 && numTargets <= kMaxColorTargets);
 	Assert(s_frameBufferId == 0);
+	Assert(s_oldReadBuffer == 0);
+	Assert(s_oldDrawBuffer == 0);
+	
+	// capture the currently bound framebuffers. we will restore them at the end of endRenderPass
+	
+	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, (GLint*)&s_oldReadBuffer);
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&s_oldDrawBuffer);
+	checkErrorGL();
 	
 	//
 	
@@ -218,12 +229,17 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 {
 	Assert(s_frameBufferId == 0);
 	
-	s_frameBufferId = 0;
+	// capture the currently bound framebuffers. we will restore them at the end of endRenderPass
 	
-	glBindFramebuffer(GL_FRAMEBUFFER, s_frameBufferId);
+	glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, (GLint*)&s_oldReadBuffer);
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&s_oldDrawBuffer);
 	checkErrorGL();
 	
-	//
+	// note : we don't have to bind a new framebuffer. we assume here the currently bound framebuffer, is
+	//        already the backbuffer. this must be true, as render passes are not allowed to overlap, and
+	//        the backbuffer should be bound (restored) at the end of each render pass
+	
+	s_frameBufferId = 0;
 	
 	s_renderPassIsBackbufferPass = true;
 	
@@ -271,9 +287,12 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 	int renderTargetSx = 0;
 	int renderTargetSy = 0;
 #if FRAMEWORK_USE_SDL
-	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
+	if (globals.currentWindow->getWindow())
+		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
+	else
+		AssertMsg(false, "beginBackbufferRenderPass called when no SDL window set", 0);
 #else
-	assert(false); // todo : what's the appropriate size ?
+	AssertMsg(false, "beginBackbufferRenderPass called when no backbuffer is available", 0);
 #endif
 
 	// update viewport
@@ -290,9 +309,18 @@ void beginBackbufferRenderPass(const bool clearColor, const Color & color, const
 
 void endRenderPass()
 {
-// todo : for MSAA, SDL uses a separate framebuffer. we should ask/store the framebuffer used by the current windows, and set that instead of the framebuffer with id zero
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	// note : for MSAA, SDL uses a separate framebuffer. we ask/store the framebuffer used by the current windows, and set that instead of the framebuffer with id zero
+
+	// restore the previous frame buffer bindings
+	
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, s_oldReadBuffer);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, s_oldDrawBuffer);
 	checkErrorGL();
+	
+	s_oldReadBuffer = 0;
+	s_oldDrawBuffer = 0;
+	
+	// free the temporary framebuffer we rendered into
 	
 	if (s_frameBufferId != 0)
 	{
@@ -328,11 +356,10 @@ void endRenderPass()
 	int renderTargetSx = 0;
 	int renderTargetSy = 0;
 #if FRAMEWORK_USE_SDL
-	SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
-#else
-	assert(false); // todo : what's the appropriate size ?
+	if (globals.currentWindow->getWindow())
+		SDL_GL_GetDrawableSize(globals.currentWindow->getWindow(), &renderTargetSx, &renderTargetSy);
 #endif
-	
+
 	glViewport(0, 0, renderTargetSx, renderTargetSy);
 	s_renderTargetSx = renderTargetSx;
 	s_renderTargetSy = renderTargetSy;

@@ -305,6 +305,7 @@ void GxTexture::clearf(const float r, const float g, const float b, const float 
 			glClearColor(r, g, b, a);
 			glClear(GL_COLOR_BUFFER_BIT);
 		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glDeleteFramebuffers(1, &frameBuffer);
 		frameBuffer = 0;
 		checkErrorGL();
@@ -480,7 +481,7 @@ void GxTexture::copyRegionsFromTexture(const GxTexture & src, const CopyRegion *
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
 	checkErrorGL();
 	
-	//
+	// update texture
 	
 	glBindTexture(GL_TEXTURE_2D, id);
 	checkErrorGL();
@@ -509,14 +510,16 @@ void GxTexture::copyRegionsFromTexture(const GxTexture & src, const CopyRegion *
 		checkErrorGL();
 	}
 	
-	glDeleteFramebuffers(1, &frameBuffer);
-	frameBuffer = 0;
-	checkErrorGL();
-	
 	// restore previous OpenGL states
 	
 	glBindFramebuffer(GL_FRAMEBUFFER, restoreBuffer);
 	glBindTexture(GL_TEXTURE_2D, restoreTexture);
+	checkErrorGL();
+	
+	// free the temporary framebuffer
+	
+	glDeleteFramebuffers(1, &frameBuffer);
+	frameBuffer = 0;
 	checkErrorGL();
 }
 
@@ -548,6 +551,12 @@ bool GxTexture::downloadContents(const int x, const int y, const int sx, const i
 {
 	bool result = true;
 	
+	// capture OpenGL states so we can restore them later
+	
+	GLuint oldBuffer = 0;
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
+	checkErrorGL();
+	
 	// create a temporary framebuffer, which we'll need for glReadBuffer
 	
 	GLuint frameBuffer = 0;
@@ -562,12 +571,6 @@ bool GxTexture::downloadContents(const int x, const int y, const int sx, const i
 	checkErrorGL();
 	
 	result &= glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-	checkErrorGL();
-	
-	// capture OpenGL states so we can restore them later
-	
-	GLuint oldBuffer = 0;
-	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
 	checkErrorGL();
 
 	// bind the temporary framebuffer and read pixels from it
@@ -944,7 +947,7 @@ static GLuint allocateTexture(const int sx, const int sy, GLenum internalFormat,
 GxTextureId copyTexture(const GxTextureId texture)
 {
 #if ENABLE_DESKTOP_OPENGL
-	// update texture
+	// capture OpenGL states so we can restore them later
 	
 	GLuint oldBuffer = 0;
 	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&oldBuffer);
@@ -954,7 +957,7 @@ GxTextureId copyTexture(const GxTextureId texture)
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, reinterpret_cast<GLint*>(&restoreTexture));
 	checkErrorGL();
 
-	//
+	// update texture
 	
 	glBindTexture(GL_TEXTURE_2D, texture);
 	checkErrorGL();
@@ -1002,7 +1005,7 @@ GxTextureId copyTexture(const GxTextureId texture)
 	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, sx, sy);
 	checkErrorGL();
 	
-	//
+	// restore previous OpenGL states
 	
 	glBindTexture(GL_TEXTURE_2D, restoreTexture);
 	checkErrorGL();

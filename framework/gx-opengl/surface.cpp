@@ -86,6 +86,7 @@ void Surface::setSwizzle(int r, int g, int b, int a)
 
 void Surface::blitTo(Surface * surface) const
 {
+	// capture current OpenGL states before we change them
 	int oldReadBuffer = 0;
 	int oldDrawBuffer = 0;
 
@@ -118,10 +119,12 @@ void Surface::blitTo(Surface * surface) const
 		GL_NEAREST);
 	checkErrorGL();
 
+	// restore previous OpenGL states
 	glBindFramebuffer(GL_READ_FRAMEBUFFER, oldReadBuffer);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
 	checkErrorGL();
 	
+	// free the temporary framebuffers
 	glDeleteFramebuffers(1, &srcFramebuffer);
 	glDeleteFramebuffers(1, &dstFramebuffer);
 	checkErrorGL();
@@ -136,6 +139,8 @@ void blitBackBufferToSurface(Surface * surface)
 #else
 	assert(false); // todo : what's the appropriate size ?
 #endif
+	
+	// capture current OpenGL states before we change them
 	
 	int oldDrawBuffer = 0;
 
@@ -159,8 +164,12 @@ void blitBackBufferToSurface(Surface * surface)
 		GL_NEAREST);
 	checkErrorGL();
 
+	// restore previous OpenGL states
+	
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, oldDrawBuffer);
 	checkErrorGL();
+	
+	// free the temporary framebuffer
 	
 	glDeleteFramebuffers(1, &dstFramebuffer);
 	checkErrorGL();
