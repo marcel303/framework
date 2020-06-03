@@ -141,6 +141,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 		UInt32 size;
 		Boolean writable;
 		
+	#if defined(IPHONEOS)
 		status = AudioUnitGetPropertyInfo(
 			m_audioUnit,
 			kAudioUnitProperty_StreamFormat,
@@ -166,6 +167,7 @@ bool AudioOutput_CoreAudio::initCoreAudio(const int numChannels, const int sampl
 				return false;
 		#endif
 		}
+	#endif
 		
 	#if 1
 		status = AudioUnitGetPropertyInfo(
