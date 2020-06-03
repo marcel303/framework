@@ -10,6 +10,27 @@ float D_GGX(float NdotH, float roughness)
     return alpha2 / (PI * denom*denom);
 }
 
+#if 0
+
+// see section 4.4.1: https://google.github.io/filament/Filament.md.html?fbclid=IwAR2vP5fDzkM1XKHuw69HY0zsc6xw8ifhDqYEhAxE-bwHJEAWE5s1iJOE1mo
+// mediump version that avoid floating point precision issues due to floating point cancellations
+#define MEDIUMP_FLT_MAX    65504.0
+#define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
+
+float D_GGX(float NdotH, float roughness, const vec3 n, const vec3 h)
+{
+    vec3 NxH = cross(n, h);
+    float a = NdotH * roughness;
+    float k = roughness / (dot(NxH, NxH) + a * a);
+    float d = k * k * (1.0 / PI);
+    return saturateMediump(d);
+}
+
+#undef MEDIUMP_FLT_MAX
+#undef saturateMediump
+
+#endif
+
 // --- Geometric Shadowing function ---
 
 float G_SchlicksmithGGX(float NdotL, float NdotV, float roughness)
@@ -21,20 +42,59 @@ float G_SchlicksmithGGX(float NdotL, float NdotV, float roughness)
     return GL * GV;
 }
 
+// --- Visibility function, taking into account Geometric Shadowing ---
+
+float V_SmithGGXCorrelatedFast(float NdotL, float NdotV, float roughness)
+{
+    float k = roughness;
+    float GGXV = NdotL * (NdotV * (1.0 - k) + k);
+    float GGXL = NdotV * (NdotL * (1.0 - k) + k);
+    return 0.5 / (GGXV + GGXL);
+}
+
+float V_Kelemen(float LdotH)
+{
+    return 0.25 / (LdotH * LdotH);
+}
+
 // --- Fresnel function ---
+
+// todo : clean up the various fresnel functions
 
 vec3 F_Schlick(float cosTheta, vec3 F0)
 {
-    // note : F0 and F90 are the reflectance at 0 and 90 degrees (grazing angle)
+    // note : F0 and F90 are the reflectance at 0 (normal incidence) and 90 degrees (grazing angle)
     vec3 F90 = clamp(F0 * (1.0 / 0.04), vec3(0.0), vec3(1.0)); // 1.0 for F0 >= 0.04. fade out to zero if below. this to give material a chance to completely disable fresnel at 0.0. note : 0.04 is not arbitrality chosen. it's the minimum 'metallic' value for regular dialectrics
     return F0 + (F90 - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 vec3 F_SchlickR(float cosTheta, vec3 F0, float roughness)
 {
-    // note : F0 and F90 are the reflectance at 0 and 90 degrees (grazing angle)
+    // note : F0 and F90 are the reflectance at 0 (normal incidence) and 90 degrees (grazing angle)
     vec3 F90 = clamp(F0 * (1.0 / 0.04), vec3(0.0), vec3(1.0)); // 1.0 for F0 >= 0.04. fade out to zero if below. this to give material a chance to completely disable fresnel at 0.0. note : 0.04 is not arbitrality chosen. it's the minimum 'metallic' value for regular dialectrics
     return F0 + (max(vec3(F90 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+// --- diffuse ---
+
+float Fd_Lambert()
+{
+    // Lambertian Diffuse brdf. Good old Lambert!
+    return 1.0 / PI;
+}
+
+float F_Schlick(float cosTheta, float F0, float F90)
+{
+    return F0 + (F90 - F0) * pow(1.0 - cosTheta, 5.0);
+}
+
+float Fd_Burley(float NdotL, float NdotV, float LdotH, float roughness)
+{
+    // Disney Diffuse Brdf (Burley)
+    float f90 = 0.5 + 2.0 * roughness * LdotH * LdotH;
+    float lightScatter = F_Schlick(NdotL, 1.0, f90);
+    float viewScatter = F_Schlick(NdotV, 1.0, f90);
+    return lightScatter * viewScatter * (1.0 / PI);
 }
 
 // --- specular model ---
@@ -46,9 +106,7 @@ vec3 specularContribution(
     float NdotV,
     float NdotL,
     vec3 F0,
-    vec3 metallic,
-    float roughness,
-    vec3 baseColor)
+    float roughness)
 {
     if (NdotL <= 0.0)
         return vec3(0.0);
@@ -58,13 +116,52 @@ vec3 specularContribution(
         float D = D_GGX(NdotH, roughness);
 
         // G = Geometric shadowing term (Microfacets shadowing)
+    #if 0
         float G = G_SchlicksmithGGX(NdotL, NdotV, roughness);
+        float V = G / (4.0 * NdotL * NdotV + 0.001);
+    #else
+        float V = V_SmithGGXCorrelatedFast(NdotL, NdotV, roughness);
+    #endif
         
         // F = Fresnel factor (Reflectance depending on angle of incidence)
         vec3 F = F_Schlick(NdotV, F0);
         
         // Cook-Torrance (Brdf model)
-        vec3 specular = D * F * G / (4.0 * NdotL * NdotV + 0.001);
+        vec3 specular = D * F * V;
+
+    // todo : some way to compensate for energy loss, due to geometric shadowing function not taking into account light still arriving due to multi-scattering
+        //specular *= 1.0 + roughness * PI;
+        
+        return specular;
+    }
+}
+
+float specularContribution_clearcoat(
+    float NdotH,
+    float NdotV,
+    float NdotL,
+    float LdotH,
+    float F0,
+    float roughness)
+{
+    if (NdotL <= 0.0)
+        return 0.0;
+    else
+    {
+        // D = Normal distribution (Distribution of the microfacets)
+        float D = D_GGX(NdotH, roughness);
+
+        // V = Visibility function
+        float V = V_Kelemen(LdotH);
+        
+        // F = Fresnel factor (Reflectance depending on angle of incidence)
+        float F = F_Schlick(NdotV, F0, 1.0);
+        
+        // Cook-Torrance (Brdf model)
+        float specular = D * F * V;
+
+    // todo : some way to compensate for energy loss, due to geometric shadowing function not taking into account light still arriving due to multi-scattering
+        //specular *= 1.0 + roughness * PI;
         
         return specular;
     }
@@ -113,6 +210,8 @@ Lighting_LightingResult computeLighting(
     float NdotV = max(dot(N, V), 0.004); // the geometric self-shadowing model has a nasty floating point cancellation which would give precision issues near the 'zero point singularity'. without this clamp, at grazing angles, the resulting colors turn to black. the value of 0.004 has been determined through visual inspection of the result, near grazing angles
     float NdotL = max(dot(N, L), 0.004);
 
+    float LdotH = max(dot(L, H), 0.0);
+
     // -- specular
 
     vec3 F0 = surfaceProperties.metallic;
@@ -122,9 +221,21 @@ Lighting_LightingResult computeLighting(
         NdotV,
         NdotL,
         F0,
-        surfaceProperties.metallic,
-        surfaceProperties.roughness,
-        surfaceProperties.baseColor);
+        surfaceProperties.roughness);
+
+#if 0
+    // todo : add a cheap clearcoat model
+    float clearcoat_strength = 1.0;
+    float clearcoat_roughness = surfaceProperties.roughness / 4.0;
+    specular *= (1.0 - 0.04 * clearcoat_strength); // energy absorbtion clearcoat layer
+    specular += specularContribution_clearcoat(
+        NdotH,
+        NdotV,
+        NdotL,
+        LdotH,
+        0.04, // common dielectric F0
+        clearcoat_roughness) * clearcoat_strength;
+#endif
 
     // -- diffuse
 
@@ -136,7 +247,8 @@ Lighting_LightingResult computeLighting(
     // for energy conservation: reduce diffuse by energy lost due to reflections
     vec3 kD = (vec3(1.0) - F);
 
-    vec3 diffuse = kD * surfaceProperties.baseColor / PI;
+    vec3 diffuse = kD * surfaceProperties.baseColor * Fd_Lambert();
+    //vec3 diffuse = kD * surfaceProperties.baseColor * Fd_Burley(NdotL, NdotV, LdotH, surfaceProperties.roughness);
 
     // -- debugging
 
