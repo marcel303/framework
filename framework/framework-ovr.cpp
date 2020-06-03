@@ -38,9 +38,9 @@
 #include <android/window.h> // for AWINDOW_FLAG_KEEP_SCREEN_ON
 #include <unistd.h>
 
-FrameworkVr frameworkVr;
+FrameworkOvr frameworkOvr;
 
-bool FrameworkVr::init()
+bool FrameworkOvr::init()
 {
 	android_app * app = get_android_app();
 
@@ -89,7 +89,7 @@ bool FrameworkVr::init()
 	return true;
 }
 
-void FrameworkVr::shutdown()
+void FrameworkOvr::shutdown()
 {
     for (int eyeIndex = 0; eyeIndex < NumBuffers; ++eyeIndex)
         FrameBuffer[eyeIndex].shut();
@@ -99,7 +99,7 @@ void FrameworkVr::shutdown()
 	Java.Vm->DetachCurrentThread();
 }
 
-void FrameworkVr::process()
+void FrameworkOvr::process()
 {
 	// process app events
 
@@ -116,7 +116,7 @@ void FrameworkVr::process()
     StartTime = PredictedDisplayTime;
 }
 
-void FrameworkVr::nextFrame()
+void FrameworkOvr::nextFrame()
 {
 	// This is the only place the frame index is incremented, right before calling vrapi_GetPredictedDisplayTime().
     FrameIndex++;
@@ -161,7 +161,7 @@ void FrameworkVr::nextFrame()
 	WorldLayer = layer;
 }
 
-void FrameworkVr::submitFrameAndPresent()
+void FrameworkOvr::submitFrameAndPresent()
 {
 	const ovrLayerHeader2 * layers[] = { &WorldLayer.Header };
 
@@ -177,7 +177,7 @@ void FrameworkVr::submitFrameAndPresent()
 	vrapi_SubmitFrame2(Ovr, &frameDesc);
 }
 
-void FrameworkVr::beginEye(const int eyeIndex, const Color & clearColor)
+void FrameworkOvr::beginEye(const int eyeIndex, const Color & clearColor)
 {
 	Assert(currentEyeIndex == -1);
 	currentEyeIndex = eyeIndex;
@@ -203,7 +203,7 @@ void FrameworkVr::beginEye(const int eyeIndex, const Color & clearColor)
 	checkErrorGL();
 }
 
-void FrameworkVr::endEye()
+void FrameworkOvr::endEye()
 {
 	Assert(currentEyeIndex != -1);
 	ovrFramebuffer * frameBuffer = &FrameBuffer[currentEyeIndex];
@@ -222,7 +222,7 @@ void FrameworkVr::endEye()
 	ovrFramebuffer_SetNone();
 }
 
-void FrameworkVr::pushBlackFinal()
+void FrameworkOvr::pushBlackFinal()
 {
     const int frameFlags = VRAPI_FRAME_FLAG_FLUSH | VRAPI_FRAME_FLAG_FINAL;
 
@@ -242,7 +242,7 @@ void FrameworkVr::pushBlackFinal()
     vrapi_SubmitFrame2(Ovr, &frameDesc);
 }
 
-void FrameworkVr::showLoadingScreen()
+void FrameworkOvr::showLoadingScreen()
 {
     // Show a loading icon.
     const int frameFlags = VRAPI_FRAME_FLAG_FLUSH;
@@ -262,15 +262,15 @@ void FrameworkVr::showLoadingScreen()
     ovrSubmitFrameDescription2 frameDesc = { };
     frameDesc.Flags = frameFlags;
     frameDesc.SwapInterval = 1;
-    frameDesc.FrameIndex = frameworkVr.FrameIndex;
-    frameDesc.DisplayTime = frameworkVr.PredictedDisplayTime;
+    frameDesc.FrameIndex = FrameIndex;
+    frameDesc.DisplayTime = PredictedDisplayTime;
     frameDesc.LayerCount = 2;
     frameDesc.Layers = layers;
 
-    vrapi_SubmitFrame2(frameworkVr.Ovr, &frameDesc);
+    vrapi_SubmitFrame2(Ovr, &frameDesc);
 }
 
-void FrameworkVr::processEvents()
+void FrameworkOvr::processEvents()
 {
 	android_app * app = get_android_app();
 
@@ -291,6 +291,7 @@ void FrameworkVr::processEvents()
 	        if (ident < 0)
 	            break;
 
+		#if true
             if (ident == LOOPER_ID_MAIN)
             {
                 auto cmd = android_app_read_cmd(app);
@@ -358,6 +359,8 @@ void FrameworkVr::processEvents()
 				}
 
                 android_app_post_exec_cmd(app, cmd);
+
+                Assert(NativeWindow == app->window);
             }
             else if (ident == LOOPER_ID_INPUT)
             {
@@ -401,6 +404,27 @@ void FrameworkVr::processEvents()
                     AInputQueue_finishEvent(app->inputQueue, event, handled);
                 }
             }
+            else
+            {
+                if (source != nullptr)
+                {
+                    source->process(app, source);
+                }
+            }
+		#else
+            if (source != nullptr)
+            {
+                source->process(app, source);
+            }
+
+            NativeWindow = app->window;
+            Resumed = app->activityState == APP_CMD_RESUME;
+
+            if ((uint64_t)NativeWindow == 0x1)
+            {
+                auto cmd = android_app_read_cmd(app);
+            }
+		#endif
 
             // Update vr mode based on the current app state.
 	        handleVrModeChanges();
@@ -412,8 +436,7 @@ void FrameworkVr::processEvents()
         // Handle device input, to see if we should present the system ui.
         handleDeviceInput();
 
-
-        // When we're no in vr mode.. rather than letting the app simulate
+        // When we're not in vr mode.. rather than letting the app simulate
         // and draw the next frame, we will wait for events until we are back
         // in vr mode again.
         if (Ovr == nullptr)
@@ -423,10 +446,12 @@ void FrameworkVr::processEvents()
         break;
     }
 
+	Assert(Resumed && Ovr != nullptr && NativeWindow != nullptr);
+
     framework.quitRequested |= app->destroyRequested;
 }
 
-void FrameworkVr::handleVrModeChanges()
+void FrameworkOvr::handleVrModeChanges()
 {
     if (Resumed != false && NativeWindow != nullptr)
     {
@@ -435,7 +460,10 @@ void FrameworkVr::handleVrModeChanges()
             ovrModeParms parms = vrapi_DefaultModeParms(&Java);
 
             // Must reset the FLAG_FULLSCREEN window flag when using a SurfaceView
-            parms.Flags |= VRAPI_MODE_FLAG_RESET_WINDOW_FULLSCREEN;
+            //parms.Flags |= VRAPI_MODE_FLAG_RESET_WINDOW_FULLSCREEN;
+
+            // No need to reset the FLAG_FULLSCREEN window flag when using a View
+            parms.Flags &= ~VRAPI_MODE_FLAG_RESET_WINDOW_FULLSCREEN;
 
             parms.Flags |= VRAPI_MODE_FLAG_NATIVE_WINDOW;
             parms.Display = (size_t)globals.egl.Display;
@@ -488,7 +516,7 @@ void FrameworkVr::handleVrModeChanges()
     }
 }
 
-void FrameworkVr::handleDeviceInput()
+void FrameworkOvr::handleDeviceInput()
 {
     bool backButtonDownThisFrame = false;
 
@@ -543,7 +571,7 @@ void FrameworkVr::handleDeviceInput()
 	BackButtonDownLastFrame = backButtonDownThisFrame;
 }
 
-int FrameworkVr::handleKeyEvent(const int keyCode, const int action)
+int FrameworkOvr::handleKeyEvent(const int keyCode, const int action)
 {
     // Handle back button.
     if (keyCode == AKEYCODE_BACK || keyCode == AKEYCODE_BUTTON_B)
@@ -558,7 +586,7 @@ int FrameworkVr::handleKeyEvent(const int keyCode, const int action)
     return 0;
 }
 
-void FrameworkVr::handleVrApiEvents()
+void FrameworkOvr::handleVrApiEvents()
 {
     ovrEventDataBuffer eventDataBuffer;
 
@@ -606,7 +634,7 @@ void FrameworkVr::handleVrApiEvents()
     }
 }
 
-double FrameworkVr::getTimeInSeconds() const
+double FrameworkOvr::getTimeInSeconds() const
 {
     // note : this time must match the time used internally by the VrApi. this is due to us having
     //        to simulate the time step since the last update until the predicted (by the vr system) display time

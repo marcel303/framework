@@ -537,8 +537,8 @@ public:
 	void drawVirtualDesktop();
 
 	bool quitRequested;
-	float time;
-	float timeStep;
+	double time;
+	float timeStep; 
 	
 	bool waitForEvents;
 	bool fullscreen;

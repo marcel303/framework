@@ -565,17 +565,17 @@ bool Framework::init(int sx, int sy)
 		rmt_BindOpenGL();
 	}
 #endif
-
+	
 #if FRAMEWORK_USE_OVR_MOBILE
-	if (!frameworkVr.init())
+	if (!frameworkOvr.init())
 	{
 		logError("failed to initialize ovr mobile");
 		return false;
 	}
 
 	// process once (to ensure we are in vr mode) and show a loading screen
-	frameworkVr.process();
-	frameworkVr.showLoadingScreen();
+	frameworkOvr.process();
+	frameworkOvr.showLoadingScreen();
 #endif
 	
 #if defined(ANDROID)
@@ -764,7 +764,7 @@ bool Framework::shutdown()
 #endif
 
 #if FRAMEWORK_USE_OVR_MOBILE
-	frameworkVr.shutdown();
+	frameworkOvr.shutdown();
 	globals.egl.destroyContext();
 #endif
 	
@@ -1432,9 +1432,9 @@ void Framework::process()
 	if (manualVrMode == false)
 	{
 		// Render the eye images.
-		for (int eyeIndex = 0; eyeIndex < frameworkVr.getEyeCount(); ++eyeIndex)
+		for (int eyeIndex = 0; eyeIndex < frameworkOvr.getEyeCount(); ++eyeIndex)
 		{
-			frameworkVr.beginEye(eyeIndex, colorBlack);
+			frameworkOvr.beginEye(eyeIndex, colorBlack);
 			{
 				gxPushMatrix();
 				gxTranslatef(0, 0, 0);
@@ -1452,17 +1452,17 @@ void Framework::process()
 				}
 				gxPopMatrix();
 			}
-			frameworkVr.endEye();
+			frameworkOvr.endEye();
 		}
 		
-		frameworkVr.submitFrameAndPresent();
+		frameworkOvr.submitFrameAndPresent();
 	}
 	
 	// process events and begin the next frame
-	frameworkVr.process();
+	frameworkOvr.process();
 
-	timeStep = frameworkVr.TimeStep;
-	time = float(frameworkVr.PredictedDisplayTime);
+	timeStep = float(frameworkOvr.TimeStep);
+	time = frameworkOvr.PredictedDisplayTime;
 	
 	if (manualVrMode == false)
 	{
@@ -1482,7 +1482,7 @@ void Framework::process()
 		int buttonMasks[2] = { 0, 0 };
 
 	#if true
-		auto * ovr = frameworkVr.Ovr;
+		auto * ovr = frameworkOvr.Ovr;
 
 		uint32_t index = 0;
 
@@ -1497,7 +1497,7 @@ void Framework::process()
 				continue;
 
 			ovrTracking tracking;
-			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, frameworkVr.PredictedDisplayTime, &tracking) != ovrSuccess)
+			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, frameworkOvr.PredictedDisplayTime, &tracking) != ovrSuccess)
 				tracking.Status = 0;
 
 			ovrInputStateTrackedRemote state;
@@ -1938,14 +1938,14 @@ void Framework::present()
 	//         We should probably call present(..) at the start of process, which
 	//         will present any pending frames, and wait for frame pacing (if vsync is enabled).
 	Assert(manualVrMode);
-	frameworkVr.submitFrameAndPresent();
+	frameworkOvr.submitFrameAndPresent();
 #endif
 }
 
 int Framework::getEyeCount() const
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	return frameworkVr.getEyeCount();
+	return frameworkOvr.getEyeCount();
 #else
 	return 1;
 #endif
@@ -1954,7 +1954,7 @@ int Framework::getEyeCount() const
 void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	frameworkVr.beginEye(eyeIndex, clearColor);
+	frameworkOvr.beginEye(eyeIndex, clearColor);
 #else
 	Assert(eyeIndex == 0);
 	beginDraw(
@@ -1971,7 +1971,7 @@ void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 void Framework::endEye()
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	frameworkVr.endEye();
+	frameworkOvr.endEye();
 #else
 	globals.emulatedVrCamera.popViewMatrix();
 	globals.emulatedVrCamera.popProjectionMatrix();
@@ -1983,7 +1983,7 @@ void Framework::endEye()
 Mat4x4 Framework::getHeadTransform() const
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	return frameworkVr.HeadTransform;
+	return frameworkOvr.HeadTransform;
 #else
 	Mat4x4 result;
 	globals.emulatedVrCamera.calculateWorldMatrix(result);

@@ -39,7 +39,7 @@ static const int NUM_MULTI_SAMPLES = 4;
 
 class ANativeWindow;
 
-struct FrameworkVr
+struct FrameworkOvr
 {
 	// Java context.
     ovrJava Java;
@@ -109,6 +109,6 @@ struct FrameworkVr
 	double getTimeInSeconds() const;
 };
 
-extern FrameworkVr frameworkVr;
+extern FrameworkOvr frameworkOvr;
 
 #endif
