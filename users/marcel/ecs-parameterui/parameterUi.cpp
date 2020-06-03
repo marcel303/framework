@@ -15,6 +15,11 @@
 
 #define ENABLE_BACKWARD_COMPATIBLE_ROOT_PREFIXES 1 // when set to 1, parameter names from text don't have to start with '/' explicitly. instead names are fixed-up on the spot
 
+namespace ImGui
+{
+	bool SliderFloatN(const char* label, float* v, int components, const float* v_min, const float* v_max, const char* format, float power);
+}
+
 namespace parameterUi
 {
 	static std::vector<int> s_flagsStack;
@@ -115,10 +120,9 @@ namespace parameterUi
 				
 				if (parameter.hasLimits)
 				{
-					// fixme : no separate min/max for each dimension
 					auto value = parameter.get();
 
-					if (ImGui::SliderFloat2(parameter.name.c_str(), &value[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
+					if (ImGui::SliderFloatN(parameter.name.c_str(), &value[0], 2, &parameter.min[0], &parameter.max[0], "%.3f", parameter.editingCurveExponential))
 						parameter.set(value);
 				}
 				else
@@ -135,10 +139,9 @@ namespace parameterUi
 				
 				if (parameter.hasLimits)
 				{
-					// fixme : no separate min/max for each dimension
 					auto value = parameter.get();
 
-					if (ImGui::SliderFloat3(parameter.name.c_str(), &value[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
+					if (ImGui::SliderFloatN(parameter.name.c_str(), &value[0], 3, &parameter.min[0], &parameter.max[0], "%.3f", parameter.editingCurveExponential))
 						parameter.set(value);
 				}
 				else
@@ -155,10 +158,9 @@ namespace parameterUi
 				
 				if (parameter.hasLimits)
 				{
-					// fixme : no separate min/max for each dimension
 					auto value = parameter.get();
 
-					if (ImGui::SliderFloat4(parameter.name.c_str(), &value[0], parameter.min[0], parameter.max[0], "%.3f", parameter.editingCurveExponential))
+					if (ImGui::SliderFloatN(parameter.name.c_str(), &value[0], 4, &parameter.min[0], &parameter.max[0], "%.3f", parameter.editingCurveExponential))
 						parameter.set(value);
 				}
 				else
@@ -848,5 +850,48 @@ namespace parameterUi
 		const char * text = ImGui::GetClipboardText();
 		
 		parametersFromText_recursive(parameterMgr, text, filter);
+	}
+}
+
+// custom imgui functions
+
+#include "imgui_internal.h"
+
+namespace ImGui
+{
+	// adapted from ImGui's SliderScalarN, to handle different min/max for each element
+	
+	// Add multiple sliders on 1 line for compact edition of multiple components
+	bool SliderFloatN(const char* label, float* v, int components, const float* v_min, const float* v_max, const char* format, float power)
+	{
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		ImGuiContext& g = *GImGui;
+		bool value_changed = false;
+		BeginGroup();
+		PushID(label);
+		PushMultiItemsWidths(components, CalcItemWidth());
+		for (int i = 0; i < components; i++)
+		{
+			PushID(i);
+			if (i > 0)
+				SameLine(0, g.Style.ItemInnerSpacing.x);
+			value_changed |= SliderScalar("", ImGuiDataType_Float, &v[i], &v_min[i], &v_max[i], format, power);
+			PopID();
+			PopItemWidth();
+		}
+		PopID();
+
+		const char* label_end = FindRenderedTextEnd(label);
+		if (label != label_end)
+		{
+			SameLine(0, g.Style.ItemInnerSpacing.x);
+			TextEx(label, label_end);
+		}
+
+		EndGroup();
+		return value_changed;
 	}
 }
