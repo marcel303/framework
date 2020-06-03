@@ -9,9 +9,13 @@ struct LightComponent : Component<LightComponent>
 {
 	enum LightType
 	{
-		kLightType_Point,
 		kLightType_Directional,
-		kLightType_Line
+		kLightType_Point,
+		kLightType_Spot,
+		kLightType_AreaBox,
+		kLightType_AreaSphere,
+		kLightType_AreaRect,
+		kLightType_AreaCircle
 	};
 	
 	LightType type = kLightType_Point;
@@ -24,13 +28,6 @@ struct LightComponent : Component<LightComponent>
 
 struct LightComponentMgr : ComponentMgr<LightComponent>
 {
-	Surface * lightAccumulationSurface = nullptr;
-	
-	virtual bool init() override;
-	virtual void shut() override;
-	
-	void drawDeferredLights() const;
-	void drawDeferredLightApplication(const int colorTextureId) const;
 };
 
 #if defined(DEFINE_COMPONENT_TYPES)
@@ -45,9 +42,13 @@ struct LightComponentType : ComponentType<LightComponent>
 		tickPriority = kComponentPriority_Light;
 		
 		g_typeDB.addEnum<LightComponent::LightType>("LightComponent::LightType")
-			.add("point", LightComponent::kLightType_Point)
 			.add("directional", LightComponent::kLightType_Directional)
-			.add("line", LightComponent::kLightType_Line);
+			.add("point", LightComponent::kLightType_Point)
+			.add("spot", LightComponent::kLightType_Spot)
+			.add("areaBox", LightComponent::kLightType_AreaBox)
+			.add("areaSphere", LightComponent::kLightType_AreaSphere)
+			.add("areaRect", LightComponent::kLightType_AreaRect)
+			.add("areaCircle", LightComponent::kLightType_AreaCircle);
 		
 		add("type", &LightComponent::type);
 		in("intensity", &LightComponent::intensity)

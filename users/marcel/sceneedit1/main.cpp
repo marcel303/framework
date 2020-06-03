@@ -614,6 +614,18 @@ int main(int argc, char * argv[])
 		bool inputIsCaptured = false;
 		
 		editor.tickEditor(dt, inputIsCaptured);
+		
+		if (ImGui::BeginMainMenuBar())
+		{
+			if (ImGui::BeginMenu("Renderer"))
+			{
+				parameterUi::doParameterUi(renderer.parameterMgr, nullptr, false);
+				
+				ImGui::EndMenu();
+			}
+			
+			ImGui::EndMainMenuBar();
+		}
 	
 	#if ENABLE_TEMPLATE_TEST
 		if (inputIsCaptured == false && keyboard.wentDown(SDLK_t))

@@ -163,8 +163,8 @@ struct SceneEditor
 	
 	void updateClipboardInfo();
 	
-	bool pasteNodeFromText(const int parentId, LineReader & line_reader);
-	bool pasteNodeTreeFromText(const int parentId, LineReader & line_reader);
+	bool pasteNodeFromLines(const int parentId, LineReader & line_reader);
+	bool pasteNodeTreeFromLines(const int parentId, LineReader & line_reader);
 
 	enum NodeStructureContextMenuResult
 	{

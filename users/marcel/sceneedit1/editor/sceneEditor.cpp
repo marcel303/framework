@@ -516,7 +516,7 @@ void SceneEditor::updateClipboardInfo()
 	}
 }
 
-bool SceneEditor::pasteNodeFromText(const int parentId, LineReader & line_reader)
+bool SceneEditor::pasteNodeFromLines(const int parentId, LineReader & line_reader)
 {
 	SceneNode * childNode = new SceneNode();
 	childNode->id = scene.allocNodeId();
@@ -563,7 +563,7 @@ bool SceneEditor::pasteNodeFromText(const int parentId, LineReader & line_reader
 	}
 }
 
-bool SceneEditor::pasteNodeTreeFromText(const int parentId, LineReader & line_reader)
+bool SceneEditor::pasteNodeTreeFromLines(const int parentId, LineReader & line_reader)
 {
 	Scene tempScene;
 	tempScene.nodeIdAllocator = &scene;
@@ -2097,7 +2097,7 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					{
 						line_reader.push_indent();
 						{
-							result &= pasteNodeFromText(parentNodeId, line_reader);
+							result &= pasteNodeFromLines(parentNodeId, line_reader);
 						}
 						line_reader.pop_indent();
 					}
@@ -2105,7 +2105,7 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					{
 						line_reader.push_indent();
 						{
-							result &= pasteNodeTreeFromText(parentNodeId, line_reader);
+							result &= pasteNodeTreeFromLines(parentNodeId, line_reader);
 						}
 						line_reader.pop_indent();
 					}
@@ -2144,13 +2144,23 @@ void SceneEditor::performAction_duplicate()
 			{
 				auto & node = scene.getNode(nodeId);
 				
+			#if true
+				LineWriter line_writer;
+				if (copySceneNodeTreeToLines(*typeDB, scene, node.id, line_writer, 0))
+				{
+					auto lines = line_writer.to_lines();
+					LineReader line_reader(lines, 0, 0);
+					pasteNodeTreeFromLines(node.parentId, line_reader);
+				}
+			#else
 				LineWriter line_writer;
 				if (copySceneNodeToLines(*typeDB, node, line_writer, 0))
 				{
 					auto lines = line_writer.to_lines();
 					LineReader line_reader(lines, 0, 0);
-					pasteNodeFromText(node.parentId, line_reader);
+					pasteNodeFromLines(node.parentId, line_reader);
 				}
+			#endif
 			}
 		}
 		deferredEnd();
