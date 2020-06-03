@@ -434,7 +434,7 @@ bool Window::intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, const float d
 	const Vec2 p_meter(
 		+ rayOrigin_window[0] + rayDirection_window[0] * t,
 		- rayOrigin_window[1] - rayDirection_window[1] * t);
-	logDebug("pos: %.2f, %.2f", p_meter[0], p_meter[1]);
+	//logDebug("pos: %.2f, %.2f", p_meter[0], p_meter[1]);
 	const Vec2 p_pixel = p_meter * m_pixelsPerMeter + Vec2(getWidth()/2.f, getHeight()/2.f);
 	if (p_pixel[0] >= 0.f && p_pixel[0] < getWidth() &&
 		p_pixel[1] >= 0.f && p_pixel[1] < getHeight())
@@ -462,7 +462,7 @@ void Window::draw3d() const
 		gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
 		{
 			setColor(colorWhite);
-			drawRect(0, 0, getWidth(), getHeight());
+			drawRect(0, getHeight(), getWidth(), 0);
 		}
 		gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
 		gxSetTexture(0);
@@ -502,7 +502,6 @@ Mat4x4 Window::getTransformForDraw() const
 	return
 		m_transform
 		.Scale(1.f / m_pixelsPerMeter, 1.f / m_pixelsPerMeter, 1.f)
-		.Scale(1, -1, 1)
 		.Translate(-sx/2.f, -sy/2.f, 0);
 }
 
