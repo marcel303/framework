@@ -6,6 +6,7 @@
 
 enum VrHands
 {
+	VrHand_Undefined = -1,
 	VrHand_Left,
 	VrHand_Right,
 	VrHand_COUNT
@@ -23,6 +24,8 @@ enum VrFingers
 
 struct VrHandBase
 {
+	VrHands hand = VrHand_Undefined;
+
 	bool hasSkeleton = false;
 	struct
 	{
@@ -84,8 +87,6 @@ struct VrHandBase
 
 class VrHand : public VrHandBase
 {
-	VrHands hand;
-
 	GxMesh mesh;
 	GxVertexBuffer vb;
 	GxIndexBuffer ib;

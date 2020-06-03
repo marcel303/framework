@@ -1,13 +1,11 @@
 #include "framework-ovr.h"
 #include "framework-vr-hands.h"
 #include "data/engine/ShaderCommon.txt" // VS_ constants
-#include <VrApi_Helpers.h>
-#include <VrApi_Input.h>
 
-static ovrMobile * getOvrMobile()
-{
-	return frameworkVr.Ovr;
-}
+#if FRAMEWORK_USE_OVR_MOBILE
+	#include <VrApi_Helpers.h>
+	#include <VrApi_Input.h>
+#endif
 
 // -- VrHandBase
 
@@ -107,11 +105,12 @@ void VrHand::init(VrHands in_hand)
 {
 	hand = in_hand;
 
+#if FRAMEWORK_USE_OVR_MOBILE
 	const auto ovrHand = (hand == VrHand_Left) ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT;
 
 	ovrHandMesh handMesh;
 	handMesh.Header.Version = ovrHandVersion_1;
-	if (vrapi_GetHandMesh(getOvrMobile(), ovrHand, &handMesh.Header) == ovrSuccess)
+	if (vrapi_GetHandMesh(frameworkVr.Ovr, ovrHand, &handMesh.Header) == ovrSuccess)
 	{
 		GxVertexInput vsInputs[] =
 		{
@@ -129,9 +128,10 @@ void VrHand::init(VrHands in_hand)
 		mesh.setVertexBuffer(&vb, vsInputs, numVsInputs, 0);
 		mesh.setIndexBuffer(&ib);
 		mesh.addPrim(GX_TRIANGLES, handMesh.NumIndices, true);
-
-		skinningData.alloc(sizeof(Mat4x4) * 32);
 	}
+#endif
+
+	skinningData.alloc(sizeof(Mat4x4) * 32);
 }
 
 void VrHand::shut()
@@ -150,9 +150,10 @@ void VrHand::updateInputState()
 	hasSkeleton = false;
 	hasDeform = false;
 
+#if FRAMEWORK_USE_OVR_MOBILE
 	// loop through input device and find our hand
 
-	auto * ovr = getOvrMobile();
+	auto * ovr = frameworkVr.Ovr;
 
 	uint32_t deviceIndex = 0;
 
@@ -265,6 +266,7 @@ void VrHand::updateInputState()
 			break;
 		}
 	}
+#endif
 }
 
 void VrHand::updateSkinningMatrices() const
