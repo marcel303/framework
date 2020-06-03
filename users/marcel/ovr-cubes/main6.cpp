@@ -86,19 +86,14 @@ todo : framework : draw pointer beams when manual vr mode is off
 
  */
 
-#include <VrApi_Helpers.h>
-#include <VrApi_Input.h>
+#if FRAMEWORK_USE_OVR_MOBILE
+	#include <VrApi_Helpers.h>
+	#include <VrApi_Input.h>
+#endif
 
 #include <algorithm> // std::find
 #include <math.h>
 #include <mutex>
-
-// -- VrApi
-
-static ovrMobile * getOvrMobile()
-{
-	return frameworkVr.Ovr;
-}
 
 struct Scene;
 
@@ -116,11 +111,13 @@ struct ControlPanel
 	ControlPanel(const Vec3 position, const float angle, ParameterMgr * in_parameterMgr, Scene * in_scene)
 		: window("Window", 340, 340)
 	{
+	#if WINDOW_IS_3D
 		const Mat4x4 transform =
 			Mat4x4(true)
 				.RotateY(angle)
 				.Translate(position);
 		window.setTransform(transform);
+	#endif
 
 		guiContext.init(false);
 
@@ -161,11 +158,11 @@ struct PointerObject
 
 static void calculateNormal(const Watersim & watersim, const int x, const int z, float * out_normal)
 {
-	const int x1 = x >= 0 ? x : 0;
-	const int z1 = z >= 0 ? z : 0;
-	const int x2 = x + 1 < watersim.numElems ? x + 1 : x;
-	const int z2 = z + 1 < watersim.numElems ? z + 1 : z;
-
+	const int x1 = x < 0 ? 0 : x > watersim.numElems - 1 ? watersim.numElems - 1 : x;
+	const int z1 = z < 0 ? 0 : z > watersim.numElems - 1 ? watersim.numElems - 1 : z;
+	const int x2 = x1 + 1 < watersim.numElems ? x1 + 1 : x1;
+	const int z2 = z1 + 1 < watersim.numElems ? z1 + 1 : z1;
+	
 	const float y1 = watersim.p[x1][z1];
 	const float y2 = watersim.p[x2][z1];
 	const float y3 = watersim.p[x2][z2];
@@ -225,7 +222,7 @@ struct ForwardLightingSystemInterface
 	virtual void beginScene(const Mat4x4 & worldToView) = 0;
 
 	virtual void setSunProperties(const bool enabled, Vec3Arg position, Vec3Arg color, const float intensity) = 0;
-	virtual bool getSunProperties(Vec3 & position, Vec3 & color) = 0;
+	virtual bool getSunProperties(Vec3 & position, Vec3 & color, const bool viewSpace) = 0;
 
 	virtual void setLightingForGltfMaterialShader(Shader & materialShader) = 0;
 	virtual void setLightingForGltfMaterialShaders(gltf::MaterialShaders & materialShaders) = 0;
@@ -296,7 +293,7 @@ struct CelestialSphereObject
 		};
 
 		std::vector<Vertex> vertices;
-		vertices.resize(numStars);
+		vertices.resize(numStars * 6);
 
 		for (int i = 0; i < numStars; ++i)
 		{
@@ -304,24 +301,16 @@ struct CelestialSphereObject
 			const float a2 = random<float>(-M_PI, +M_PI);
 
 			const Mat4x4 rotation = Mat4x4(true).RotateX(a1).RotateY(a2);
+			const Vec4 position = rotation * Vec4(0, 0, 1, 1);
 
-			vertices[i].position = rotation * Vec4(0, 0, 1, 1);
-			vertices[i].color.Set(1, 1, 1, 1);
+			for (int j = 0; j < 6; ++j)
+			{
+				vertices[i * 6 + j].position = position;
+				vertices[i * 6 + j].color.Set(1, 1, 1, 1);
+			}
 		}
 
-		vb.alloc(vertices.data(), numStars * sizeof(Vec3));
-
-		uint16_t * indices = new uint16_t[numStars * 6];
-		for (int i = 0; i < numStars; ++i)
-		{
-			indices[i * 6 + 0] = indices[i * 6 + 1] = indices[i * 6 + 2] =
-			indices[i * 6 + 3] = indices[i * 6 + 4] = indices[i * 6 + 5] = i;
-		}
-
-		ib.alloc(indices, numStars * 6, GX_INDEX_16);
-
-		delete [] indices;
-		indices = nullptr;
+		vb.alloc(vertices.data(), numStars * 6 * sizeof(Vec3));
 
 		const GxVertexInput inputs[2] =
 			{
@@ -330,8 +319,7 @@ struct CelestialSphereObject
 			};
 
 		mesh.setVertexBuffer(&vb, inputs, sizeof(inputs) / sizeof(inputs[0]), sizeof(Vertex));
-		mesh.setIndexBuffer(&ib);
-		mesh.addPrim(GX_TRIANGLES, numStars * 6, true);
+		mesh.addPrim(GX_TRIANGLES, numStars * 6, false);
 		//mesh.addPrim(GX_POINTS, numStars * 6, true);
 	}
 
@@ -345,6 +333,9 @@ struct CelestialSphereObject
 			Shader shader("stars");
 			setShader(shader);
 			{
+				shader.setTexture("source", 0, getTexture("star.jpg"), true, true);
+				shader.setImmediate("u_time", framework.time);
+
 				mesh.draw();
 			}
 			clearShader();
@@ -493,7 +484,7 @@ struct ModelObject
 			.5f,
 			random<float>(-4.f, +4.f));
 
-		gltf::loadScene("coronavirus/scene.gltf", scene);
+		gltf::loadScene("Suzanne/glTF/Suzanne.gltf", scene);
 		bufferCache.init(scene);
 	}
 
@@ -570,7 +561,7 @@ struct Scene : CollisionSystemInterface, ForwardLightingSystemInterface
 	void create();
 	void destroy();
 
-	void tick(const float dt, const double predictedDisplayTime);
+	void tick(const float dt);
 
 	void drawOnce() const;
 	void drawOpaque() const;
@@ -593,8 +584,6 @@ struct Scene : CollisionSystemInterface, ForwardLightingSystemInterface
 			const Mat4x4 & watersimToWorld = watersim_transform;
 			const Mat4x4 worldToWatersim = watersimToWorld.CalcInv();
 			const Vec3 position_watersim = worldToWatersim.Mul4(origin);
-			const float x = floorf(position_watersim[0]);
-			const float z = floorf(position_watersim[2]);
 
 			{
 				const float height = watersim.sample(
@@ -643,9 +632,13 @@ struct Scene : CollisionSystemInterface, ForwardLightingSystemInterface
 		sunColor = color * intensity;
 	}
 
-	virtual bool getSunProperties(Vec3 & position, Vec3 & color) override final
+	virtual bool getSunProperties(Vec3 & position, Vec3 & color, const bool viewSpace) override final
 	{
-		position = sunPosition;
+		if (viewSpace)
+			position = worldToView.Mul4(sunPosition);
+		else
+			position = sunPosition;
+
 		color = sunColor;
 
 		return sunEnabled;
@@ -681,8 +674,10 @@ void Scene::create()
 	}
 
 	controlPanel = new ControlPanel(Vec3(0, 1.5f, -.45f), 0.f, &parameterMgr, this);
+#if WINDOW_IS_3D
 	controlPanel_audioSource.open("180328-004.ogg", true);
 	controlPanel_spatialAudioSource = spatialAudioSystem->addSource(controlPanel->window.getTransform(), &controlPanel_audioSource);
+#endif
 
 	// add watersim object
 	resolution = parameterMgr.addInt("resolution", 16);
@@ -786,10 +781,8 @@ void Scene::destroy()
 	controlPanel = nullptr;
 }
 
-void Scene::tick(const float dt, const double predictedDisplayTime)
+void Scene::tick(const float dt)
 {
-	ovrMobile * ovr = getOvrMobile();
-
 	// update input state
 
 	for (auto & hand : hands)
@@ -797,6 +790,9 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 		hand.updateInputState();
 	}
 
+#if FRAMEWORK_USE_OVR_MOBILE
+	ovrMobile * ovr = frameworkOvr.Ovr;
+	
 // todo : add VrController to framework-vr shared library
 	uint32_t index = 0;
 
@@ -814,7 +810,7 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 			vibrate |= controlPanel->hoveredIdChanged && controlPanel->lastHoveredId != 0;
 
 			ovrTracking tracking;
-			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, predictedDisplayTime, &tracking) != ovrSuccess)
+			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, frameworkOvr.PredictedDisplayTime, &tracking) != ovrSuccess)
 				tracking.Status = 0;
 
 			ovrInputStateTrackedRemote state;
@@ -880,6 +876,7 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 			vrapi_SetHapticVibrationSimple(ovr, header.DeviceID, vibrate ? .5f : 0.f);
 		}
 	}
+#endif
 
 	// update windows
 
@@ -887,8 +884,9 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 	int buttonMask = 0;
 	bool isHand = false;
 
+	const VrHands interactiveHand = VrHand_Right;
 // todo : automatically switch between left and right hand. or allow both to interact at the 'same' time ?
-	if (hands[VrHand_Left].getFingerTransform(VrFinger_Index, playerLocation, viewToWorld))
+	if (hands[interactiveHand].getFingerTransform(VrFinger_Index, playerLocation, viewToWorld))
 	{
 		buttonMask = 1 << 0;
 		isHand = true;
@@ -901,17 +899,31 @@ void Scene::tick(const float dt, const double predictedDisplayTime)
 			(pointers[0].isDown[1] << 1);
 		isHand = false;
 
+	#if WINDOW_IS_3D
 	#if false
-		controlPanel->window.setTransform(Mat4x4(true).Translate(playerLocation).Mul(pointers[1].transform));
+		controlPanel->window.setTransform(
+			Mat4x4(true)
+				.Translate(playerLocation)
+				.Mul(pointers[1].transform));
 	#else
 		if (pointers[1].isDown[1])
-			controlPanel->window.setTransform(Mat4x4(true).Translate(playerLocation).Mul(pointers[1].transform).Translate(0, .2f, -.1f).RotateX(float(M_PI/180.0) * -15));
+		{
+			controlPanel->window.setTransform(
+				Mat4x4(true)
+					.Translate(playerLocation)
+					.Mul(pointers[1].transform)
+					.Translate(0, .2f, -.1f)
+					.RotateX(float(M_PI/180.0) * -15));
+		}
+	#endif
 	#endif
 		controlPanel->window.show();
 	}
 
+#if WINDOW_IS_3D
 	// Update registered spatial audio source transform for the control panel.
 	spatialAudioSystem->setSourceTransform(controlPanel_spatialAudioSource, controlPanel->window.getTransform());
+#endif
 
 	// Update the virtual desktop.
 	framework.tickVirtualDesktop(viewToWorld, buttonMask, isHand);
@@ -982,9 +994,7 @@ void Scene::drawOnce() const
 
 void Scene::drawOpaque() const
 {
-	ovrMobile * ovr = getOvrMobile();
-
-	const double time = frameworkVr.PredictedDisplayTime;
+	const double time = framework.time;
 
 	Mat4x4 worldToView;
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
@@ -1040,8 +1050,9 @@ void Scene::drawOpaque() const
 		model.drawOpaque();
 	}
 
+#if WINDOW_IS_3D
 #if true
-	Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
+	Shader metallicRoughnessShader("pbr-metallicRoughness-simple");
 	setShader(metallicRoughnessShader);
 	{
 		forwardLightingSystem->setLightingForGltfMaterialShader(metallicRoughnessShader);
@@ -1054,7 +1065,6 @@ void Scene::drawOpaque() const
 		int nextTextureUnit = 0;
 		params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
 
-		params.setUseVertexColors(metallicRoughnessShader, false);
 		params.setMetallicRoughness(metallicRoughnessShader, materialMetallic->get(), materialRoughness->get());
 		params.setBaseColorTexture(metallicRoughnessShader, controlPanel->window.getColorTarget()->getTextureId(), 0, nextTextureUnit);
 
@@ -1065,7 +1075,9 @@ void Scene::drawOpaque() const
 			{
 				gxMultMatrixf(controlPanel->window.getTransformForDraw().m_v);
 				gxTranslatef(0, 0, -.01f);
+				pushCullMode(CULL_BACK, CULL_CCW);
 				fillCube(Vec3(controlPanel->window.getWidth()/2.f, controlPanel->window.getHeight()/2.f, 0), Vec3(controlPanel->window.getWidth()/2.f + 10, controlPanel->window.getHeight()/2.f + 10, .008f));
+				popCullMode();
 			}
 			gxPopMatrix();
 
@@ -1084,6 +1096,7 @@ void Scene::drawOpaque() const
 #else
 	setColor(colorWhite);
 	framework.drawVirtualDesktop();
+#endif
 #endif
 
 #if true
@@ -1106,7 +1119,7 @@ void Scene::drawOpaque() const
 			gxMultMatrixf(pointer.transform.m_v);
 
 			pushCullMode(CULL_BACK, CULL_CCW);
-			Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
+			Shader metallicRoughnessShader("pbr-metallicRoughness-simple");
 			setShader(metallicRoughnessShader);
 			{
 				forwardLightingSystem->setLightingForGltfMaterialShader(metallicRoughnessShader);
@@ -1115,13 +1128,13 @@ void Scene::drawOpaque() const
 				params.init(metallicRoughnessShader);
 
 				gltf::Material material;
+				material.pbrMetallicRoughness.baseColorFactor = Color(255, 127, 63, 255);
+
 				gltf::Scene scene;
 				int nextTextureUnit = 0;
 				params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
 
-				params.setUseVertexColors(metallicRoughnessShader, true);
 				params.setMetallicRoughness(metallicRoughnessShader, .8f, .2f);
-				setColor(255, 127, 63, 255);
 				fillCube(Vec3(), Vec3(.02f, .02f, .1f));
 			}
 			clearShader();
@@ -1156,6 +1169,7 @@ void Scene::drawOpaque() const
 			// Apply the root pose.
 			gxMultMatrixf(hand.getTransform(playerLocation).m_v);
 
+			pushCullMode(CULL_BACK, CULL_CCW);
 			Shader metallicRoughnessShader("pbr-metallicRoughness-skinned");
 			setShader(metallicRoughnessShader);
 			{
@@ -1170,17 +1184,15 @@ void Scene::drawOpaque() const
 				gltf::Scene scene;
 				int nextTextureUnit = 0;
 				params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
-
-				params.setUseVertexColors(metallicRoughnessShader, true);
 				params.setMetallicRoughness(metallicRoughnessShader, .8f, .2f);
 
 				auto & skinningData = hands[i].getSkinningMatrices(true);
 				metallicRoughnessShader.setBuffer("SkinningData", skinningData);
 
-				setColor(255, 127, 63, 255);
 				hands[i].drawMesh();
 			}
 			clearShader();
+			popCullMode();
 		}
 		gxPopMatrix();
 	}
@@ -1208,7 +1220,7 @@ void Scene::drawWatersim() const
 	{
 		gxMultMatrixf(watersim_transform.m_v);
 
-		Shader metallicRoughnessShader("gltf/shaders/pbr-metallicRoughness");
+		Shader metallicRoughnessShader("pbr-metallicRoughness-simple");
 		setShader(metallicRoughnessShader);
 		{
 			forwardLightingSystem->setLightingForGltfMaterialShader(metallicRoughnessShader);
@@ -1221,10 +1233,8 @@ void Scene::drawWatersim() const
 			int nextTextureUnit = 0;
 			params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
 
-			params.setUseVertexColors(metallicRoughnessShader, true);
 			params.setMetallicRoughness(metallicRoughnessShader, materialMetallic->get(), materialRoughness->get());
 			params.setBaseColorTexture(metallicRoughnessShader, getTexture("texture.bmp"), 0, nextTextureUnit);
-			//params.setMetallicRoughnessTexture(metallicRoughnessShader, getTexture("sabana.jpg"), 0, nextTextureUnit);
 
 			setColor(255, 200, 180, 180);
 			gxBegin(GX_QUADS);
@@ -1508,11 +1518,6 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 			const float normalizedDistance = distance / recordedDistance;
 			const float intensity = fminf(maxGain, 1.f / (normalizedDistance * normalizedDistance + 1e-6f));
 
-			azimuth = -azimuth;
-			//azimuth += 180.f; // fixme : openal is shifted?
-			if (azimuth > 180.f)
-				azimuth -= 360.f;
-
 			source->elevation = elevation;
 			source->azimuth = azimuth;
 			source->intensity = intensity;
@@ -1564,11 +1569,41 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 	}
 };
 
+struct SpatialAudioSystemAudioStream : AudioStream
+{
+	virtual int Provide(int numSamples, AudioSample * __restrict samples) override final
+	{
+		float outputSamplesL[numSamples];
+		float outputSamplesR[numSamples];
+		spatialAudioSystem->generateLR(
+			outputSamplesL,
+			outputSamplesR,
+			numSamples);
+
+		for (int i = 0; i < numSamples; ++i)
+		{
+		// todo : implement soft clipping ?
+			if (outputSamplesL[i] < -1.f) outputSamplesL[i] = -1.f;
+			if (outputSamplesR[i] < -1.f) outputSamplesR[i] = -1.f;
+			if (outputSamplesL[i] > +1.f) outputSamplesL[i] = +1.f;
+			if (outputSamplesR[i] > +1.f) outputSamplesR[i] = +1.f;
+
+			samples[i].channel[0] = outputSamplesL[i] * 32000.f;
+			samples[i].channel[1] = outputSamplesR[i] * 32000.f;
+		}
+
+		return numSamples;
+	}
+};
+
 int main(int argc, char * argv[])
 {
+	setupPaths(CHIBI_RESOURCE_PATHS);
+	
 	framework.manualVrMode = true;
+	framework.enableDepthBuffer = true;
 
-	if (!framework.init(0, 0))
+	if (!framework.init(800, 600))
 		return -1;
 
 	spatialAudioSystem = new SpatialAudioSystem();
@@ -1577,118 +1612,10 @@ int main(int argc, char * argv[])
 
 	scene.create();
 
-	struct BinauralAudioStream : AudioStream
-	{
-		AudioSourceVorbis audioSource;
-
-		binaural::HRIRSampleSet sampleSet;
-		binaural::Mutex_Dummy mutex;
-		binaural::Binauralizer binauralizer;
-
-		std::atomic<float> elevationBase;
-		std::atomic<float> azimuthBase;
-		std::atomic<float> elevationScale;
-		std::atomic<float> azimuthScale;
-		std::atomic<float> intensity;
-
-		double time = 0.0;
-
-		BinauralAudioStream()
-			: elevationBase(0.f)
-			, azimuthBase(0.f)
-			, elevationScale(30.f)
-			, azimuthScale(60.f)
-			, intensity(0.f)
-		{
-		}
-
-		void init(const char * filename)
-		{
-			audioSource.open(filename, true);
-
-			loadHRIRSampleSet_Oalsoft("binaural/Default HRTF.mhr", sampleSet);
-			sampleSet.finalize();
-			binauralizer.init(&sampleSet, &mutex);
-		}
-
-		virtual int Provide(int numSamples, AudioSample * __restrict samples) override final
-		{
-			float inputSamples[numSamples];
-
-			// generate source audio
-			audioSource.generate(inputSamples, numSamples);
-
-			// distance attenuation
-			const float intensity_value = intensity.load();
-			for (int i = 0; i < numSamples; ++i)
-				inputSamples[i] *= intensity_value;
-
-			binauralizer.provide(inputSamples, numSamples);
-
-			binauralizer.setSampleLocation(
-				elevationBase.load() + sin(time / 1.23) * elevationScale.load(),
-				azimuthBase.load() + sin(time / 2.34) * azimuthScale.load());
-
-			time += numSamples / 44100.0;
-
-			float outputSamplesL[numSamples];
-			float outputSamplesR[numSamples];
-			binauralizer.generateLR(
-				outputSamplesL,
-				outputSamplesR,
-				numSamples);
-
-			for (int i = 0; i < numSamples; ++i)
-			{
-				if (outputSamplesL[i] < -1.f) outputSamplesL[i] = -1.f;
-				if (outputSamplesR[i] < -1.f) outputSamplesR[i] = -1.f;
-				if (outputSamplesL[i] > +1.f) outputSamplesL[i] = +1.f;
-				if (outputSamplesR[i] > +1.f) outputSamplesR[i] = +1.f;
-
-				samples[i].channel[0] = outputSamplesL[i] * 16000.f;
-				samples[i].channel[1] = outputSamplesR[i] * 16000.f;
-			}
-
-			return numSamples;
-		}
-	};
-
-	struct SpatialAudioSystemAudioStream : AudioStream
-	{
-		virtual int Provide(int numSamples, AudioSample * __restrict samples) override final
-		{
-			float outputSamplesL[numSamples];
-			float outputSamplesR[numSamples];
-			spatialAudioSystem->generateLR(
-				outputSamplesL,
-				outputSamplesR,
-				numSamples);
-
-			for (int i = 0; i < numSamples; ++i)
-			{
-			// todo : implement soft clipping ?
-				if (outputSamplesL[i] < -1.f) outputSamplesL[i] = -1.f;
-				if (outputSamplesR[i] < -1.f) outputSamplesR[i] = -1.f;
-				if (outputSamplesL[i] > +1.f) outputSamplesL[i] = +1.f;
-				if (outputSamplesR[i] > +1.f) outputSamplesR[i] = +1.f;
-
-				samples[i].channel[0] = outputSamplesL[i] * 32000.f;
-				samples[i].channel[1] = outputSamplesR[i] * 32000.f;
-			}
-
-			return numSamples;
-		}
-	};
-
-#if false
-	BinauralAudioStream audioStream;
-	audioStream.init("180328-004.ogg");
-#else
-	SpatialAudioSystemAudioStream audioStream;
-#endif
-
 	AudioOutput_Native audioOutput;
 	audioOutput.Initialize(2, 44100, 256);
+
+	SpatialAudioSystemAudioStream audioStream;
 	audioOutput.Play(&audioStream);
 
 	for (;;)
@@ -1699,13 +1626,16 @@ int main(int argc, char * argv[])
 			break;
 
 		// Tick the simulation
-		scene.tick(frameworkVr.TimeStep, frameworkVr.PredictedDisplayTime);
+		scene.tick(framework.timeStep);
 
 	// todo : show spatial audio source position in listener space, in spatial audio system status gui (under advanced.. ;-),
 		//scene.binauralSourcePos_listener->set(audioStreamPosition_listener);
 
 		// Update the listener transform for the spatial audio system.
-		const Mat4x4 listenerTransform = Mat4x4(true).Translate(scene.playerLocation).Mul(frameworkVr.HeadTransform);
+		const Mat4x4 listenerTransform =
+			Mat4x4(true)
+				.Translate(scene.playerLocation)
+				.Mul(framework.getHeadTransform());
 		spatialAudioSystem->setListenerTransform(listenerTransform);
 
 		// Update the panning for the spatial audio system. This basically tells the spatial audio system we're done making a batch of modifications to the audio source and listener transforms, and tell it to update panning.
@@ -1715,9 +1645,9 @@ int main(int argc, char * argv[])
 		scene.drawOnce();
 
 		// Render the eye images.
-		for (int eyeIndex = 0; eyeIndex < frameworkVr.getEyeCount(); ++eyeIndex)
+		for (int eyeIndex = 0; eyeIndex < framework.getEyeCount(); ++eyeIndex)
 		{
-			frameworkVr.beginEye(eyeIndex, colorBlack);
+			framework.beginEye(eyeIndex, colorBlack);
 			{
 				gxPushMatrix();
 				gxTranslatef(
@@ -1725,6 +1655,21 @@ int main(int argc, char * argv[])
 					-scene.playerLocation[1],
 					-scene.playerLocation[2]);
 				{
+				#if false
+					// depth pre-pass
+					pushDepthTest(true, DEPTH_LESS);
+					pushBlend(BLEND_OPAQUE);
+					pushColorWriteMask(0, 0, 0, 0);
+					pushShaderOutputs("");
+					{
+						scene.drawOpaque();
+					}
+					popShaderOutputs();
+					popColorWriteMask();
+					popBlend();
+					popDepthTest();
+				#endif
+
 					pushDepthTest(true, DEPTH_LESS);
 					pushBlend(BLEND_OPAQUE);
 					{
@@ -1744,10 +1689,10 @@ int main(int argc, char * argv[])
 				}
 				gxPopMatrix();
 			}
-			frameworkVr.endEye();
+			framework.endEye();
 		}
 
-		frameworkVr.submitFrameAndPresent();
+		framework.present();
 	}
 
 	scene.destroy();

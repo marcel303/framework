@@ -3,7 +3,6 @@ include engine/ShaderSkinnedVS.txt
 shader_out vec3 v_position_view;
 shader_out vec4 v_color;
 shader_out vec2 v_texcoord0;
-shader_out vec2 v_texcoord1;
 shader_out vec3 v_normal_view;
 
 void main()
@@ -20,11 +19,7 @@ void main()
 
 	v_position_view = objectToView(position).xyz;
 
-	//v_color = unpackColor();
-	v_color = vec4(1.0);
-
 	v_texcoord0 = unpackTexcoord(0);
-	v_texcoord1 = unpackTexcoord(1);
 
 	vec4 normal = boneToObject_Skinned(
 		skinningBlendIndices,

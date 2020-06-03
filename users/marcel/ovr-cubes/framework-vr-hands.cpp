@@ -35,7 +35,7 @@ bool VrHandBase::getFingerTransform(const VrFingers finger, const Vec3 worldOffs
 		.Translate(worldOffset)
 		.Mul(rootPose)
 		.Mul(deform.globalBoneTransforms[boneIndex])
-		.RotateY(float(M_PI)/2.f); // todo : make rotation depend on the hand?
+		.RotateY(hand == VrHand_Left ? +float(M_PI)/2.f : -float(M_PI)/2.f);
 	return true;
 }
 
@@ -110,7 +110,7 @@ void VrHand::init(VrHands in_hand)
 
 	ovrHandMesh handMesh;
 	handMesh.Header.Version = ovrHandVersion_1;
-	if (vrapi_GetHandMesh(frameworkVr.Ovr, ovrHand, &handMesh.Header) == ovrSuccess)
+	if (vrapi_GetHandMesh(frameworkOvr.Ovr, ovrHand, &handMesh.Header) == ovrSuccess)
 	{
 		GxVertexInput vsInputs[] =
 		{
@@ -153,7 +153,7 @@ void VrHand::updateInputState()
 #if FRAMEWORK_USE_OVR_MOBILE
 	// loop through input device and find our hand
 
-	auto * ovr = frameworkVr.Ovr;
+	auto * ovr = frameworkOvr.Ovr;
 
 	uint32_t deviceIndex = 0;
 
@@ -235,7 +235,7 @@ void VrHand::updateInputState()
 			// Fetch the current pose for the hand.
 			ovrHandPose handPose;
 			handPose.Header.Version = ovrHandVersion_1;
-			if (vrapi_GetHandPose(ovr, header.DeviceID, frameworkVr.PredictedDisplayTime, &handPose.Header) != ovrSuccess)
+			if (vrapi_GetHandPose(ovr, header.DeviceID, frameworkOvr.PredictedDisplayTime, &handPose.Header) != ovrSuccess)
 				break;
 
 			// Is the hand being tracked, with high confidence?
