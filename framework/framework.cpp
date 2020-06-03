@@ -1994,7 +1994,7 @@ Mat4x4 Framework::getHeadTransform() const
 
 void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_buttonMask, const bool isHand)
 {
-#if WINDOW_IS_3D && WINDOW_HAS_A_SURFACE
+#if WINDOW_IS_3D
 	const Vec3 pointerOrigin = transform.GetTranslation();
 	const Vec3 pointerDirection = transform.GetAxis(2).CalcNormalized();
 
@@ -2115,9 +2115,7 @@ void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_button
 
 void Framework::drawVirtualDesktop()
 {
-#if WINDOW_IS_3D && WINDOW_HAS_A_SURFACE
-	// todo : make virtual desktop an opt-out feature
-	// todo : only do 3d desktop when USE_SDL is false and WINDOW_IS_3D
+#if WINDOW_IS_3D
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 	{
 		if (window->hasSurface() && !window->isHidden())

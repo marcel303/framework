@@ -602,11 +602,11 @@ private:
 
 #if defined(FRAMEWORK_USE_OVR_MOBILE)
 	#define WINDOW_HAS_A_SURFACE 1
-	#define WINDOW_IS_3D         1
 #else
 	#define WINDOW_HAS_A_SURFACE 0
-	#define WINDOW_IS_3D         0
 #endif
+
+#define WINDOW_IS_3D (WINDOW_HAS_A_SURFACE && 1)
 
 class Window
 {

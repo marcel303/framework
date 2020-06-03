@@ -479,16 +479,6 @@ void popRenderPass()
 	if (s_renderPasses.empty())
 	{
 		s_renderPassIsBackbufferPass = false;
-		
-		// todo : restore frame buffer bindings
-		/*
-		int oldReadBuffer = 0;
-		int oldDrawBuffer = 0;
-
-		glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &oldReadBuffer);
-		glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &oldDrawBuffer);
-		checkErrorGL();
-		*/
 	}
 	else
 	{

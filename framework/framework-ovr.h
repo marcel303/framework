@@ -55,6 +55,7 @@ struct FrameworkVr
     long long FrameIndex = 1;
     double PredictedDisplayTime = 0.0;
     double StartTime = 0.0;
+    double TimeStep = 0.0;
 
     // Scheduling.
     int SwapInterval = 1;
@@ -106,8 +107,6 @@ struct FrameworkVr
 	void handleVrApiEvents();
 
 	double getTimeInSeconds() const;
-
-	float TimeStep = 0.f; // todo : remove
 };
 
 extern FrameworkVr frameworkVr;
