@@ -46,6 +46,7 @@
 #include <map>
 #include <string>
 #include "framework.h"
+#include "framework-camera.h"
 #include "internal_filereader.h"
 
 #if !defined(USE_FREETYPE)
@@ -440,6 +441,7 @@ public:
 		backStencilState = StencilState();
 		shaderOutputs[0] = 'c';
 		shaderOutputs[1] = 0;
+		emulatedVrCamera = Camera();
 	}
 	
 	Window * mainWindow;
@@ -504,6 +506,7 @@ public:
 	bool gxShaderIsDirty;
 	BuiltinShaders * builtinShaders;
 	char shaderOutputs[32];
+	Camera emulatedVrCamera;
 	
 	struct DebugDraw
 	{

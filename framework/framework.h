@@ -508,6 +508,12 @@ public:
 	void endDraw();
 	void present(); // note : currently only needed for manual vr mode. but may come in handy later, for correctly vsync'ed multi-window drawing
 	
+	// stereoscopic vr rendering
+	int getEyeCount() const;
+	void beginEye(const int eyeIndex, const Color & clearColor);
+	void endEye();
+	Mat4x4 getHeadTransform() const;
+	
 	void beginScreenshot(int r, int g, int b, int a, int scale);
 	void endScreenshot(const char * name, int index = -1, bool omitAlpha = true);
 	void screenshot(const char * name, int index = -1, bool omitAlpha = true);

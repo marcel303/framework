@@ -451,6 +451,7 @@ bool Window::intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, const float d
 
 void Window::draw3d() const
 {
+#if WINDOW_IS_3D && WINDOW_HAS_A_SURFACE
 	Assert(hasSurface());
 
 	gxPushMatrix();
@@ -468,10 +469,12 @@ void Window::draw3d() const
 		gxSetTexture(0);
 	}
 	gxPopMatrix();
+#endif
 }
 
 void Window::draw3dCursor() const
 {
+#if WINDOW_IS_3D && WINDOW_HAS_A_SURFACE
 	Assert(hasSurface());
 
 	gxPushMatrix();
@@ -487,6 +490,7 @@ void Window::draw3dCursor() const
 			10);
 	}
 	gxPopMatrix();
+#endif
 }
 
 const Mat4x4 & Window::getTransform() const

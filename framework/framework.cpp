@@ -566,6 +566,18 @@ bool Framework::init(int sx, int sy)
 	}
 #endif
 
+#if FRAMEWORK_USE_OVR_MOBILE
+	if (!frameworkVr.init())
+	{
+		logError("failed to initialize ovr mobile");
+		return false;
+	}
+
+	// process once (to ensure we are in vr mode) and show a loading screen
+	frameworkVr.process();
+	frameworkVr.showLoadingScreen();
+#endif
+	
 #if defined(ANDROID)
 	{
 		android_app * app = get_android_app();
@@ -649,18 +661,6 @@ bool Framework::init(int sx, int sy)
 	// set the default font
 	
 	setFont("engine/fonts/Roboto-Regular.ttf");
-
-#if FRAMEWORK_USE_OVR_MOBILE
-	if (!frameworkVr.init())
-	{
-		logError("failed to initialize ovr mobile");
-		return false;
-	}
-
-	// process once (to ensure we are in vr mode) and show a loading screen
-	frameworkVr.process();
-	frameworkVr.showLoadingScreen();
-#endif
 
 	return true;
 }
@@ -1552,6 +1552,13 @@ void Framework::process()
 	#error
 #endif
 	
+	if (manualVrMode)
+	{
+		bool inputIsCaptured = !mouse.isDown(BUTTON_LEFT);
+		globals.emulatedVrCamera.mode = Camera::kMode_FirstPerson;
+		globals.emulatedVrCamera.tick(framework.timeStep, inputIsCaptured, false);
+	}
+	
 	// time step sprites and models
 
 	for (Sprite * sprite = m_sprites; sprite; sprite = sprite->m_next)
@@ -1935,9 +1942,59 @@ void Framework::present()
 #endif
 }
 
+int Framework::getEyeCount() const
+{
+#if FRAMEWORK_USE_OVR_MOBILE
+	return frameworkVr.getEyeCount();
+#else
+	return 1;
+#endif
+}
+
+void Framework::beginEye(const int eyeIndex, const Color & clearColor)
+{
+#if FRAMEWORK_USE_OVR_MOBILE
+	frameworkVr.beginEye(eyeIndex, clearColor);
+#else
+	Assert(eyeIndex == 0);
+	beginDraw(
+		scale255(clearColor.r),
+		scale255(clearColor.g),
+		scale255(clearColor.b),
+		scale255(clearColor.a));
+	
+	globals.emulatedVrCamera.pushProjectionMatrix();
+	globals.emulatedVrCamera.pushViewMatrix();
+#endif
+}
+
+void Framework::endEye()
+{
+#if FRAMEWORK_USE_OVR_MOBILE
+	frameworkVr.endEye();
+#else
+	globals.emulatedVrCamera.popViewMatrix();
+	globals.emulatedVrCamera.popProjectionMatrix();
+	
+	endDraw();
+#endif
+}
+
+Mat4x4 Framework::getHeadTransform() const
+{
+#if FRAMEWORK_USE_OVR_MOBILE
+	return frameworkVr.HeadTransform;
+#else
+	Mat4x4 result;
+	globals.emulatedVrCamera.calculateWorldMatrix(result);
+	
+	return result;
+#endif
+}
+
 void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_buttonMask, const bool isHand)
 {
-#if WINDOW_IS_3D
+#if WINDOW_IS_3D && WINDOW_HAS_A_SURFACE
 	const Vec3 pointerOrigin = transform.GetTranslation();
 	const Vec3 pointerDirection = transform.GetAxis(2).CalcNormalized();
 
@@ -2058,7 +2115,7 @@ void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_button
 
 void Framework::drawVirtualDesktop()
 {
-#if WINDOW_IS_3D
+#if WINDOW_IS_3D && WINDOW_HAS_A_SURFACE
 	// todo : make virtual desktop an opt-out feature
 	// todo : only do 3d desktop when USE_SDL is false and WINDOW_IS_3D
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
