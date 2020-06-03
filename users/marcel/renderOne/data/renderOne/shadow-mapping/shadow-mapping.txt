@@ -233,16 +233,21 @@ vec3 lookupShadow_PCF_3x3(int id, vec3 position_view)
 	#define textureOffset(s, uv, o) texture(s, uv + vec2(o) * oscale)
 #endif
 
-	float depth;
-	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1, -1)).x; occlusionMask += step(position_depth, depth);
-	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0, -1)).x; occlusionMask += step(position_depth, depth);
-	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1, -1)).x; occlusionMask += step(position_depth, depth);
-	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1,  0)).x; occlusionMask += step(position_depth, depth);
-	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0,  0)).x; occlusionMask += step(position_depth, depth);
-	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1,  0)).x; occlusionMask += step(position_depth, depth);
-	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1, +1)).x; occlusionMask += step(position_depth, depth);
-	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0, +1)).x; occlusionMask += step(position_depth, depth);
-	depth = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1, +1)).x; occlusionMask += step(position_depth, depth);
+#define DoRow(oy) \
+	{ \
+		float depth1 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1, oy)).x; \
+		float depth2 = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0, oy)).x; \
+		float depth3 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1, oy)).x; \
+		float occlusionMaskForRow = \
+			step(position_depth, depth1) + \
+			step(position_depth, depth2) + \
+			step(position_depth, depth3); \
+		occlusionMask += occlusionMaskForRow; \
+	}
+	DoRow(-1);
+	DoRow( 0);
+	DoRow(+1);
+#undef DoRow
 
 #if defined(GL_core_profile)
 	#undef textureOffset
@@ -332,24 +337,39 @@ vec3 lookupShadow_PCF_7x7(int id, vec3 position_view)
 	#define textureOffset(s, uv, o) texture(s, uv + vec2(o) * oscale)
 #endif
 
-	for (int ox = -3; ox <= +3; ++ox)
-	{
-		for (int oy = -3; oy <= +3; ++oy)
-		{
-			float depth = textureOffset(
-				shadowDepthAtlas,
-				position_atlas,
-				ivec2(ox, oy)).x;
-
-			occlusionMask += step(position_depth, depth);
-		}
+#define DoRow(oy) \
+	{ \
+		float depth1 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-3, oy)).x; \
+		float depth2 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-2, oy)).x; \
+		float depth3 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(-1, oy)).x; \
+		float depth4 = textureOffset(shadowDepthAtlas, position_atlas, ivec2( 0, oy)).x; \
+		float depth5 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+1, oy)).x; \
+		float depth6 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+2, oy)).x; \
+		float depth7 = textureOffset(shadowDepthAtlas, position_atlas, ivec2(+3, oy)).x; \
+		float occlusionMaskForRow = \
+			step(position_depth, depth1) + \
+			step(position_depth, depth2) + \
+			step(position_depth, depth3) + \
+			step(position_depth, depth4) + \
+			step(position_depth, depth5) + \
+			step(position_depth, depth6) + \
+			step(position_depth, depth7); \
+		occlusionMask += occlusionMaskForRow; \
 	}
+	DoRow(-3);
+	DoRow(-2);
+	DoRow(-1);
+	DoRow( 0);
+	DoRow(+1);
+	DoRow(+2);
+	DoRow(+3);
+#undef DoRow
 
 #if defined(GL_core_profile)
 	#undef textureOffset
 #endif
 
-	occlusionMask *= (1.0 / 9.0);
+	occlusionMask *= (1.0 / 49.0);
 
 	// apply color shadows
 
