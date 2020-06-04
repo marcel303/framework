@@ -159,6 +159,11 @@ void voice_stop(int voice)
 	voiceApi->voice_stop(voice);
 }
 
+int voice_get_volume(int voice)
+{
+	return voiceApi->voice_get_volume(voice);
+}
+
 int voice_get_position(int voice)
 {
 	return voiceApi->voice_get_position(voice);
@@ -167,6 +172,11 @@ int voice_get_position(int voice)
 int voice_get_frequency(int voice)
 {
 	return voiceApi->voice_get_frequency(voice);
+}
+
+int voice_get_pan(int voice)
+{
+	return voiceApi->voice_get_pan(voice);
 }
 
 void voice_set_volume(int voice, int volume)

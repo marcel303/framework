@@ -57,8 +57,11 @@ struct AllegroVoiceApi
 	void deallocate_voice(int voice);
 	void voice_start(int voice);
 	void voice_stop(int voice);
+	bool voice_is_playing(int voice);
+	int voice_get_volume(int voice);
 	int voice_get_position(int voice);
 	int voice_get_frequency(int voice);
+	int voice_get_pan(int voice);
 	void voice_set_volume(int voice, int volume);
 	void voice_set_playmode(int voice, int mode);
 	void voice_set_position(int voice, int position);

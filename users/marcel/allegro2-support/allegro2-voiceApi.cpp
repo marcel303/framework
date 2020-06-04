@@ -5,6 +5,7 @@
 
 #define FIXBITS AllegroVoiceApi::FIXBITS
 #define INTERP_LINEAR 1
+#define ENABLE_VALIDATION 0
 
 #define Assert assert
 #define Verify(x) do { const bool y = x; (void)y; Assert(y); } while (false)
@@ -125,6 +126,24 @@ void AllegroVoiceApi::voice_stop(int voice)
 	unlock();
 }
 
+bool AllegroVoiceApi::voice_is_playing(int voice)
+{
+	if (voice == -1)
+		return false;
+	
+	return voices[voice].started == 1;
+}
+
+int AllegroVoiceApi::voice_get_volume(int voice)
+{
+	if (voice == -1)
+		return 0;
+	
+	Assert(voices[voice].used);
+	
+	return voices[voice].volume;
+}
+
 int AllegroVoiceApi::voice_get_position(int voice)
 {
 	if (voice == -1)
@@ -162,6 +181,16 @@ int AllegroVoiceApi::voice_get_frequency(int voice)
 	Assert(voices[voice].used);
 	
 	return voices[voice].frequency;
+}
+
+int AllegroVoiceApi::voice_get_pan(int voice)
+{
+	if (voice == -1)
+		return 0;
+	
+	Assert(voices[voice].used);
+	
+	return voices[voice].pan;
 }
 
 void AllegroVoiceApi::voice_set_volume(int voice, int volume)
@@ -285,13 +314,25 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 	
 	int sampleIndex = voice_position >> FIXBITS;
 	
+#if ENABLE_VALIDATION
+	if (voice.playmode & PLAYMODE_LOOP)
+		Assert(sampleIndex >= 0 && sampleIndex < voice.sample->loop_end);
+	else
+		Assert(sampleIndex >= 0 && sampleIndex < voice.sample->len);
+#endif
+	
 	const float scale16 = 1.f / float(1 << (16 - 1));
 	const float scale24 = 1.f / float(1 << (24 - 1));
 	
 	for (int i = 0; i < numSamples; ++i)
 	{
-		Assert(sampleIndex >= 0 && sampleIndex < voice.sample->len);
-		
+	#if ENABLE_VALIDATION
+		if (voice.playmode & PLAYMODE_LOOP)
+			Assert(sampleIndex >= 0 && sampleIndex < voice.sample->loop_end);
+		else
+			Assert(sampleIndex >= 0 && sampleIndex < voice.sample->len);
+	#endif
+	
 		if (sampleIndex >= 0 && sampleIndex < voice.sample->len)
 		{
 		#if INTERP_LINEAR
@@ -300,7 +341,7 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 				? (sampleIndex + 1 < voice.sample->loop_end ? sampleIndex + 1 : sampleIndex)
 				: (sampleIndex + 1 < voice.sample->len      ? sampleIndex + 1 : sampleIndex);
 
-			const int t = (voice.position >> (FIXBITS - 16)) & 0xffff;
+			const int t = (voice_position >> (FIXBITS - 16)) & 0xffff;
 		#endif
 		
 			if (voice.sample->bits == 8)
@@ -312,6 +353,15 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 				const int value2 = int8_t(values[sampleIndex2] ^ 0x80);
 	
 				const int value = (value1 * ((1 << 16) - t) + value2 * t) >> 16;
+			
+			#if ENABLE_VALIDATION
+				if (value1 < value2)
+					Assert(value >= value1 && value <= value2);
+				else if (value1 > value2)
+					Assert(value <= value1 && value >= value2);
+				else
+					Assert(value == value1 && value == value2);
+			#endif
 			#else
 				const int value = int8_t(values[sampleIndex] ^ 0x80);
 			#endif
@@ -327,6 +377,15 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 				const int value2 = int16_t(values[sampleIndex2] ^ 0x8000);
 	
 				const int value = (value1 * ((1 << 16) - t) + value2 * t) >> 16;
+				
+			#if ENABLE_VALIDATION
+				if (value1 < value2)
+					Assert(value >= value1 && value < value2);
+				else if (value2 < value1)
+					Assert(value <= value1 && value >= value2);
+				else
+					Assert(value == value1 && value == value2);
+			#endif
 			#else
 				const int value = int16_t(values[sampleIndex] ^ 0x8000);
 			#endif
@@ -360,6 +419,14 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 						sampleIndex = voice_position >> FIXBITS;
 						
 						voice.sampleIncrement = -voice.sampleIncrement;
+						
+					#if ENABLE_VALIDATION
+						const int64_t min = int64_t(voice.sample->loop_start) << FIXBITS;
+						const int64_t max = int64_t(voice.sample->loop_end) << FIXBITS;
+						Assert(voice_position >= min && voice_position < max);
+						Assert(sampleIndex >= voice.sample->loop_start);
+						Assert(sampleIndex < voice.sample->loop_end);
+					#endif
 					}
 				}
 				else
@@ -371,6 +438,14 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 						sampleIndex = voice_position >> FIXBITS;
 						
 						voice.sampleIncrement = -voice.sampleIncrement;
+						
+					#if ENABLE_VALIDATION
+						const int64_t min = int64_t(voice.sample->loop_start) << FIXBITS;
+						const int64_t max = int64_t(voice.sample->loop_end) << FIXBITS;
+						Assert(voice_position >= min && voice_position < max);
+						Assert(sampleIndex >= voice.sample->loop_start);
+						Assert(sampleIndex < voice.sample->loop_end);
+					#endif
 					}
 				}
 			}
@@ -381,6 +456,14 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 					voice_position -= int64_t(voice.sample->loop_end - voice.sample->loop_start) << FIXBITS;
 					
 					sampleIndex = voice_position >> FIXBITS;
+					
+				#if ENABLE_VALIDATION
+					const int64_t min = int64_t(voice.sample->loop_start) << FIXBITS;
+					const int64_t max = int64_t(voice.sample->loop_end) << FIXBITS;
+					Assert(voice_position >= min && voice_position < max);
+					Assert(sampleIndex >= voice.sample->loop_start);
+					Assert(sampleIndex < voice.sample->loop_end);
+				#endif
 				}
 			}
 		}
@@ -390,7 +473,7 @@ bool AllegroVoiceApi::generateSamplesForVoice(const int voiceIndex, float * __re
 			{
 				//Assert(sampleIndex == voice.sample->len); // not necessarily true, as sample playback may increment by more than one sample
 				
-				voice.started = false;
+				voice.started = 0;
 				
 				for (int j = i + 1; j < numSamples; ++j)
 					samples[j] = 0.f;
