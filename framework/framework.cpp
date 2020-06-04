@@ -1035,21 +1035,7 @@ void Framework::process()
 			
 			if (windowData != nullptr)
 			{
-				keyboard.events.push_back(e);
-				
-				bool isRepeat = false;
-				for (int i = 0; i < windowData->keyDownCount; ++i)
-					if (windowData->keyDown[i] == e.key.keysym.sym)
-						isRepeat = true;
-				if (isRepeat)
-				{
-					windowData->keyRepeat[windowData->keyRepeatCount++] = e.key.keysym.sym;
-				}
-				else
-				{
-					windowData->keyDown[windowData->keyDownCount++] = e.key.keysym.sym;
-					windowData->keyChange[windowData->keyChangeCount++] = e.key.keysym.sym;
-				}
+				windowData->keyEvents.push_back(e);
 			}
 		}
 		else if (e.type == SDL_KEYUP)
@@ -1058,18 +1044,7 @@ void Framework::process()
 			
 			if (windowData != nullptr)
 			{
-				keyboard.events.push_back(e);
-				
-				for (int i = 0; i < windowData->keyDownCount; ++i)
-				{
-					if (windowData->keyDown[i] == e.key.keysym.sym)
-					{
-						for (int j = i + 1; j < windowData->keyDownCount; ++j)
-							windowData->keyDown[j - 1] = windowData->keyDown[j];
-						windowData->keyDownCount--;
-					}
-				}
-				windowData->keyChange[windowData->keyChangeCount++] = e.key.keysym.sym;
+				windowData->keyEvents.push_back(e);
 			}
 		}
 		else if (e.type == SDL_TEXTINPUT)
@@ -1078,7 +1053,7 @@ void Framework::process()
 			
 			if (windowData != nullptr)
 			{
-				keyboard.events.push_back(e);
+				windowData->keyEvents.push_back(e);
 			}
 		}
 		else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)

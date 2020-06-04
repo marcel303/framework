@@ -355,20 +355,23 @@ public:
 	{
 		quitRequested = false;
 		
-		keyChangeCount = 0;
-		keyRepeatCount = 0;
+		keyData_beginProcess();
 		
 		mouseData.beginProcess();
 	}
 	
 	void endProcess()
 	{
+		keyData_endProcess();
+		
 		mouseData.endProcess();
 	}
 	
 	void makeActive() const
 	{
 		framework.windowIsActive = isActive;
+		
+		keyboard.events = keyEvents;
 		
 		mouse.x = mouseData.mouseX;
 		mouse.y = mouseData.mouseY;
@@ -385,6 +388,117 @@ public:
 	int keyChangeCount;
 	int keyRepeat[256];
 	int keyRepeatCount;
+	
+	std::vector<SDL_Event> keyEvents;
+	std::vector<SDL_Event> pendingKeyEvents;
+	
+	void keyData_beginProcess()
+	{
+		keyChangeCount = 0;
+		keyRepeatCount = 0;
+		
+		keyEvents.clear();
+	}
+	
+	void keyData_endProcess()
+	{
+		// for 'keyboard.events', we want to immediately update the list to include all of the events during this frame.
+		// for the 'keyboard.wentDown', 'wentUp' etc to work correctly, we need to avoid processing conflicting up/down
+		// events during the same frame. if we don't, we may end up missing 'key down' events, when the following event
+		// sequence occurs within one frame: 'key down', 'key up'. we need to end processing as soon as we
+		// detect a 'key up' event for a key for which we already processed a 'key down' event within the same frame.
+		// otherwise, the 'key down' event would be lost and we only detect the 'key up' event.
+		
+		size_t numProcessed = 0;
+		
+		for (size_t i = 0; i < keyEvents.size(); ++i)
+			pendingKeyEvents.push_back(keyEvents[i]);
+		
+		for (size_t i = 0; i < pendingKeyEvents.size(); ++i)
+		{
+			const SDL_Event & e = pendingKeyEvents[i];
+			
+			if (e.type == SDL_KEYDOWN)
+			{
+				bool stop = false;
+				for (int i = 0; i < keyChangeCount; ++i)
+					if (keyChange[i] == e.key.keysym.sym)
+						stop = true;
+				for (int i = 0; i < keyRepeatCount; ++i)
+					if (keyRepeat[i] == e.key.keysym.sym)
+						stop = true;
+				
+				if (stop)
+					break;
+			
+				bool isRepeat = false;
+				for (int i = 0; i < keyDownCount; ++i)
+					if (keyDown[i] == e.key.keysym.sym)
+						isRepeat = true;
+				
+			#if defined(DEBUG)
+				for (int i = 0; i < keyChangeCount; ++i)
+					Assert(keyChange[i] != e.key.keysym.sym);
+			#endif
+			
+				if (isRepeat)
+				{
+					keyRepeat[keyRepeatCount++] = e.key.keysym.sym;
+				}
+				else
+				{
+				#if defined(DEBUG)
+					for (int i = 0; i < keyDownCount; ++i)
+						Assert(keyDown[i] != e.key.keysym.sym);
+				#endif
+				
+					keyDown[keyDownCount++] = e.key.keysym.sym;
+					keyChange[keyChangeCount++] = e.key.keysym.sym;
+				}
+			}
+			else if (e.type == SDL_KEYUP)
+			{
+				bool stop = false;
+				for (int i = 0; i < keyChangeCount; ++i)
+					if (keyChange[i] == e.key.keysym.sym)
+						stop = true;
+				
+				if (stop)
+					break;
+				
+			#if defined(DEBUG)
+				for (int i = 0; i < keyChangeCount; ++i)
+					Assert(keyChange[i] != e.key.keysym.sym);
+			#endif
+				
+				for (int i = 0; i < keyDownCount; ++i)
+				{
+					if (keyDown[i] == e.key.keysym.sym)
+					{
+						for (int j = i + 1; j < keyDownCount; ++j)
+							keyDown[j - 1] = keyDown[j];
+						keyDownCount--;
+						
+					#if defined(DEBUG)
+						for (int j = i; j < keyDownCount; ++j)
+							Assert(keyDown[j] != e.key.keysym.sym);
+					#endif
+					
+						break;
+					}
+				}
+				
+				keyChange[keyChangeCount++] = e.key.keysym.sym;
+			}
+			
+			numProcessed++;
+		}
+		
+		if (numProcessed == pendingKeyEvents.size())
+			pendingKeyEvents.clear();
+		else
+			pendingKeyEvents.erase(pendingKeyEvents.begin(), pendingKeyEvents.begin() + numProcessed);
+	}
 	
 	MouseData mouseData;
 };
