@@ -402,6 +402,7 @@ public:
 	
 	void keyData_endProcess()
 	{
+	#if FRAMEWORK_USE_SDL
 		// for 'keyboard.events', we want to immediately update the list to include all of the events during this frame.
 		// for the 'keyboard.wentDown', 'wentUp' etc to work correctly, we need to avoid processing conflicting up/down
 		// events during the same frame. if we don't, we may end up missing 'key down' events, when the following event
@@ -498,6 +499,7 @@ public:
 			pendingKeyEvents.clear();
 		else
 			pendingKeyEvents.erase(pendingKeyEvents.begin(), pendingKeyEvents.begin() + numProcessed);
+	#endif
 	}
 	
 	MouseData mouseData;
