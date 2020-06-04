@@ -1072,6 +1072,15 @@ void Framework::process()
 				windowData->keyChange[windowData->keyChangeCount++] = e.key.keysym.sym;
 			}
 		}
+		else if (e.type == SDL_TEXTINPUT)
+		{
+			WindowData * windowData = findWindowDataById(e.key.windowID);
+			
+			if (windowData != nullptr)
+			{
+				keyboard.events.push_back(e);
+			}
+		}
 		else if (e.type == SDL_MOUSEBUTTONDOWN || e.type == SDL_MOUSEBUTTONUP)
 		{
 			WindowData * windowData = findWindowDataById(e.button.windowID);
