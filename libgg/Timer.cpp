@@ -61,7 +61,7 @@ ITimer::~ITimer()
 			sBeginTimeIsInit = true;
 		}
 		timespec ts;
-		clock_gettime(CLOCK_REALTIME, &ts);
+		clock_gettime(CLOCK_MONOTONIC, &ts);
 		return (ts.tv_sec - sBeginTime.tv_sec) + ts.tv_nsec / 1000000000.0;
 	}
 #elif defined(PSP)
