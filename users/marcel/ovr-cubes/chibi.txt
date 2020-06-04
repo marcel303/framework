@@ -48,9 +48,11 @@ app ovr-cubes6
     depend_library binaural
 	depend_library ecs-parameterui
 	depend_library framework
+	depend_library framework-allegro2
 	depend_library framework-gltf
 	depend_library framework-vr
 	depend_library imgui-framework
+	depend_library libjgmod
 	add_files main6.cpp
 	add_files simd.h
 	add_files watersim.cpp

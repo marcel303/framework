@@ -95,6 +95,8 @@ todo : framework : draw pointer beams when manual vr mode is off
 #include <math.h>
 #include <mutex>
 
+#define SAMPLE_RATE 44100
+
 struct Scene;
 
 struct ControlPanel
@@ -445,7 +447,8 @@ struct AudioStreamerObject
 
 	void tick(const float dt)
 	{
-		transform = Mat4x4(true).Translate(initialPosition).Translate(0.f, sinf(framework.time / 2.34f) * .06f, 0.f);
+		//transform = Mat4x4(true).Translate(initialPosition).Translate(0.f, sinf(framework.time / 2.34f) * .06f, 0.f);
+		transform = Mat4x4(true).Translate(initialPosition).Translate(sinf(framework.time / 2.34f) * 10.f, sinf(framework.time / 2.34f) * .06f, 0.f);
 
 		spatialAudioSystem->setSourceTransform(spatialAudioSource, transform);
 	}
@@ -510,6 +513,172 @@ struct ModelObject
 	}
 };
 
+// -- jgplayer object
+
+#include "allegro2-timerApi.h"
+#include "allegro2-voiceApi.h"
+#include "audiooutput/AudioOutput_OpenSL.h"
+#include "framework-allegro2.h"
+#include "jgmod.h"
+
+struct JgplayerObject
+{
+	static const int kMaxVoices = 12;
+	
+	struct MyAudioSource : AudioSource
+	{
+		AllegroTimerApi * timerApi = nullptr;
+		AllegroVoiceApi * voiceApi = nullptr;
+		int voiceId = -1;
+		
+		void * spatialAudioSource = nullptr;
+		
+		bool isVisible = false;
+		Mat4x4 transform = Mat4x4(true);
+		
+		void init(AllegroVoiceApi * in_voiceApi, const int in_voiceId)
+		{
+			voiceApi = in_voiceApi;
+			voiceId = in_voiceId;
+			
+			spatialAudioSource = spatialAudioSystem->addSource(
+				transform,
+				this);
+		}
+		
+		void shut()
+		{
+			spatialAudioSystem->removeSource(spatialAudioSource);
+			spatialAudioSource = nullptr;
+			
+			timerApi = nullptr;
+			voiceApi = nullptr;
+			voiceId = -1;
+		}
+		
+		virtual void generate(SAMPLE_ALIGN16 float * __restrict samples, const int numSamples) override final
+		{
+			if (timerApi != nullptr)
+			{
+				timerApi->processInterrupts(int64_t(numSamples) * 1000000 / voiceApi->sampleRate);
+			}
+			
+			float stereoPanning;
+			voiceApi->generateSamplesForVoice(voiceId, samples, numSamples, stereoPanning);
+		}
+	};
+	
+	AllegroTimerApi * timerApi = nullptr;
+	AllegroVoiceApi * voiceApi = nullptr;
+
+	JGMOD_PLAYER * player = nullptr;
+	JGMOD * mod = nullptr;
+	
+	MyAudioSource audioSources[kMaxVoices];
+	
+	void init(const char * filename)
+	{
+		timerApi = new AllegroTimerApi(AllegroTimerApi::kMode_Manual);
+		voiceApi = new AllegroVoiceApi(SAMPLE_RATE, true);
+
+		mod = jgmod_load(filename);
+		
+		player = new JGMOD_PLAYER();
+		
+	    if (player->init(JGMOD_MAX_VOICES, timerApi, voiceApi) < 0)
+		{
+	        logError("unable to allocate %d voices", JGMOD_MAX_VOICES);
+		}
+		else if (mod != nullptr)
+		{
+			player->enable_lasttrk_loop = true;
+			player->play(mod, true);
+		}
+		
+		for (int i = 0; i < kMaxVoices; ++i)
+		{
+		// todo : register pre-update with spatial audio system
+			if (i == 0)
+				audioSources[i].timerApi = timerApi;
+			
+			audioSources[i].init(voiceApi, i);
+		}
+	}
+
+	void shut()
+	{
+		for (int i = 0; i < kMaxVoices; ++i)
+		{
+			audioSources[i].shut();
+		}
+		
+		player->stop();
+		
+		delete player;
+		player = nullptr;
+		
+		if (mod != nullptr)
+		{
+			jgmod_destroy(mod);
+			mod = nullptr;
+		}
+
+		delete timerApi;
+		delete voiceApi;
+		timerApi = nullptr;
+		voiceApi = nullptr;
+	}
+	
+	void tick(const float dt)
+	{
+		for (int i = 0; i < kMaxVoices; ++i)
+		{
+			audioSources[i].isVisible = voiceApi->voice_is_playing(audioSources[i].voiceId);
+
+			const int panning = voiceApi->voice_get_pan(audioSources[i].voiceId);
+			const int pitch = voiceApi->voice_get_frequency(audioSources[i].voiceId);
+			const int volume = voiceApi->voice_get_volume(audioSources[i].voiceId);
+			
+			// update transform based on panning, pitch, etc
+			audioSources[i].transform =
+				Mat4x4(true)
+					.RotateY(framework.time / 100.f)
+					.Translate(
+						((audioSources[i].voiceId + .5f) / kMaxVoices - .5f) * 2.f * 4.f,
+						1.f + (panning/255.f - .5f) * 2.f * 1.f,
+						pitch / 4000.f - 2.f)
+					.Scale(volume / 255.f);
+
+			spatialAudioSystem->setSourceTransform(
+				audioSources[i].spatialAudioSource,
+				audioSources[i].transform);
+		}
+	}
+	
+	void drawOpaque() const
+	{
+		pushCullMode(CULL_BACK, CULL_CCW);
+		{
+			for (int i = 0; i < kMaxVoices; ++i)
+			{
+				if (!audioSources[i].isVisible)
+					continue;
+				
+				gxPushMatrix();
+				{
+					gxMultMatrixf(audioSources[i].transform.m_v);
+
+					setColor(Color::fromHSL(i / float(kMaxVoices), .5f, .5f));
+					fillCube(Vec3(), Vec3(.2f));
+				}
+				gxPopMatrix();
+			}
+		}
+		popCullMode();
+	}
+};
+
+
 // -- scene
 
 struct Scene : CollisionSystemInterface, ForwardLightingSystemInterface
@@ -557,6 +726,8 @@ struct Scene : CollisionSystemInterface, ForwardLightingSystemInterface
 	std::vector<AudioStreamerObject> audioStreamers;
 
 	std::vector<ModelObject> models;
+	
+	std::vector<JgplayerObject> jgplayers;
 
 	void create();
 	void destroy();
@@ -767,6 +938,16 @@ void Scene::create()
 	for (auto & model : models)
 	{
 		model.init();
+	}
+	
+	jgplayers.resize(1);
+	
+	for (auto & jgplayer : jgplayers)
+	{
+		//jgplayer.init("point_of_departure.s3m");
+		//jgplayer.init("K_vision.s3m");
+		jgplayer.init("25 - Surfacing.s3m");
+		//jgplayer.init("05 - Shared Dig.s3m");
 	}
 }
 
@@ -985,6 +1166,11 @@ void Scene::tick(const float dt)
 	{
 		audioStreamer.tick(dt);
 	}
+	
+	for (auto & jgplayer : jgplayers)
+	{
+		jgplayer.tick(dt);
+	}
 }
 
 void Scene::drawOnce() const
@@ -1048,6 +1234,11 @@ void Scene::drawOpaque() const
 	for (auto & model : models)
 	{
 		model.drawOpaque();
+	}
+	
+	for (auto & jgplayer : jgplayers)
+	{
+		jgplayer.drawOpaque();
 	}
 
 #if WINDOW_IS_3D
@@ -1483,7 +1674,7 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 	virtual void setSourceTransform(void * in_source, const Mat4x4 & transform) override final
 	{
 		Source * source = (Source*)in_source;
-
+		
 		source->transform = transform;
 	}
 
@@ -1513,7 +1704,7 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 					azimuth);
 			const float distance = sourcePosition_listener.CalcSize();
 			const float recordedDistance = 4.f;
-			const float headroomInDb = 12.f;
+			const float headroomInDb = 12.f; // todo : make these settings a member of spatial audio source
 			const float maxGain = powf(10.f, headroomInDb/20.f);
 			const float normalizedDistance = distance / recordedDistance;
 			const float intensity = fminf(maxGain, 1.f / (normalizedDistance * normalizedDistance + 1e-6f));
@@ -1537,13 +1728,11 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 
 				// generate source audio
 				source->audioSource->generate(inputSamples, numSamples);
-
-				// todo : delay line for doppler shift and propagation delay
-
+				
 				// distance attenuation
-				const float intensity_value = source->intensity.load();
+				const float intensity = source->intensity.load();
 				for (int i = 0; i < numSamples; ++i)
-					inputSamples[i] *= intensity_value;
+					inputSamples[i] *= intensity;
 
 				source->binauralizer.provide(inputSamples, numSamples);
 
@@ -1557,12 +1746,9 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 					samplesL,
 					samplesR,
 					numSamples);
-
-				for (int i = 0; i < numSamples; ++i)
-				{
-					outputSamplesL[i] += samplesL[i];
-					outputSamplesR[i] += samplesR[i];
-				}
+				
+				audioBufferAdd(outputSamplesL, samplesL, numSamples);
+				audioBufferAdd(outputSamplesR, samplesR, numSamples);
 			}
 		}
 		mutex_sources.unlock();
@@ -1613,7 +1799,7 @@ int main(int argc, char * argv[])
 	scene.create();
 
 	AudioOutput_Native audioOutput;
-	audioOutput.Initialize(2, 44100, 256);
+	audioOutput.Initialize(2, SAMPLE_RATE, 256);
 
 	SpatialAudioSystemAudioStream audioStream;
 	audioOutput.Play(&audioStream);
