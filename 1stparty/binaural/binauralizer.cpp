@@ -89,11 +89,11 @@ namespace binaural
 		mutex->unlock();
 	}
 	
-	void Binauralizer::calculateHrir(HRIRSampleData & hrir) const
+	void Binauralizer::calculateHrir(HRIRSample & sample) const
 	{
 		// compute the HRIR, a blend between three sample points in a Delaunay triangulation of all sample points
 		
-		const HRIRSampleData * samples[3];
+		const HRIRSample * samples[3];
 		float sampleWeights[3];
 		
 		float elevation;
@@ -134,11 +134,11 @@ namespace binaural
 		
 		if (sampleSet != nullptr && sampleSet->lookup_3(elevation, azimuth, samples, sampleWeights))
 		{
-			blendHrirSamples_3(samples, sampleWeights, hrir);
+			blendHrirSamples_3(samples, sampleWeights, sample);
 		}
 		else
 		{
-			memset(&hrir, 0, sizeof(hrir));
+			memset(&sample, 0, sizeof(sample));
 		}
 	}
 	
@@ -259,7 +259,7 @@ namespace binaural
 	void Binauralizer::generateInterleaved(
 		float * __restrict samples,
 		const int numSamples,
-		const HRIRSampleData * hrir)
+		const HRIRSample * hrir)
 	{
 		int left = numSamples;
 		int done = 0;
@@ -270,13 +270,13 @@ namespace binaural
 			{
 				if (hrir == nullptr)
 				{
-					HRIRSampleData hrir;
+					HRIRSample hrir;
 					calculateHrir(hrir);
-					fillReadBuffer(hrir);
+					fillReadBuffer(hrir.sampleData);
 				}
 				else
 				{
-					fillReadBuffer(*hrir);
+					fillReadBuffer(hrir->sampleData);
 				}
 			}
 			
@@ -323,7 +323,7 @@ namespace binaural
 		float * __restrict samplesL,
 		float * __restrict samplesR,
 		const int numSamples,
-		const HRIRSampleData * hrir)
+		const HRIRSample * hrir)
 	{
 		int left = numSamples;
 		int done = 0;
@@ -334,13 +334,13 @@ namespace binaural
 			{
 				if (hrir == nullptr)
 				{
-					HRIRSampleData hrir;
+					HRIRSample hrir;
 					calculateHrir(hrir);
-					fillReadBuffer(hrir);
+					fillReadBuffer(hrir.sampleData);
 				}
 				else
 				{
-					fillReadBuffer(*hrir);
+					fillReadBuffer(hrir->sampleData);
 				}
 			}
 			

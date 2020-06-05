@@ -176,21 +176,29 @@ namespace binaural
 
 		float elevation;
 		float azimuth;
+		
+		float sampleDelayL; // sample delay for sound to arrive at the ear
+		float sampleDelayR;
 
 		HRIRSample()
 			: sampleData()
 			, elevation(0)
 			, azimuth(0)
+			, sampleDelayL(0)
+			, sampleDelayR(0)
 		{
 		}
 		
-		void init(const float _elevation, const float _azimuth)
+		void init(const float _elevation, const float _azimuth, const float _sampleDelayL, const float _sampleDelayR)
 		{
 			elevation = _elevation;
 			azimuth = _azimuth;
+			sampleDelayL = _sampleDelayL;
+			sampleDelayR = _sampleDelayR;
 		}
 
 	#if BINAURAL_USE_SSE
+	// todo : aligned alloc for all SIMD implementations
 		void * operator new(size_t size)
 		{
 			return _mm_malloc(size, 32);
@@ -280,7 +288,7 @@ namespace binaural
 		
 		void finalize();
 		
-		bool lookup_3(const float elevation, const float azimuth, HRIRSampleData const * * samples, float * sampleWeights) const;
+		bool lookup_3(const float elevation, const float azimuth, HRIRSample const * * samples, float * sampleWeights) const;
 		
 		bool save(FILE * file) const;
 		bool load(FILE * file);
@@ -335,6 +343,12 @@ namespace binaural
 		virtual void unlock() = 0;
 	};
 
+	struct Mutex_Dummy : Mutex
+	{
+		virtual void lock() override { }
+		virtual void unlock() override { }
+	};
+
 	// functions
 
 	bool convertSoundDataToHRIR(
@@ -343,15 +357,15 @@ namespace binaural
 		float * __restrict rSamples);
 
 	void blendHrirSamples_3(
-		const HRIRSampleData & a, const float weightA,
-		const HRIRSampleData & b, const float weightB,
-		const HRIRSampleData & c, const float weightC,
-		HRIRSampleData & result);
+		const HRIRSample & a, const float weightA,
+		const HRIRSample & b, const float weightB,
+		const HRIRSample & c, const float weightC,
+		HRIRSample & result);
 	
 	void blendHrirSamples_3(
-		HRIRSampleData const * const * samples,
+		HRIRSample const * const * samples,
 		const float * sampleWeights,
-		HRIRSampleData & result);
+		HRIRSample & result);
 	
 	void hrirToHrtf(
 		const float * __restrict lSamples,
@@ -467,6 +481,7 @@ namespace binaural
 	void debugTimerBegin(const char * name);
 	void debugTimerEnd(const char * name);
 #else
+	// todo : use macros, to avoid conditions and formatting arguments from still being evaluated
 	inline void debugAssert(const bool condition)
 	{
 	}

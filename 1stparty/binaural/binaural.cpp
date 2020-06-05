@@ -242,10 +242,10 @@ namespace binaural
 	}
 
 	void blendHrirSamples_3(
-		const HRIRSampleData & a, const float aWeight,
-		const HRIRSampleData & b, const float bWeight,
-		const HRIRSampleData & c, const float cWeight,
-		HRIRSampleData & r)
+		const HRIRSample & a, const float aWeight,
+		const HRIRSample & b, const float bWeight,
+		const HRIRSample & c, const float cWeight,
+		HRIRSample & r)
 	{
 		debugTimerBegin("blendHrirSamples_3");
 		debugAssert(aWeight >= -1e-3f && aWeight <= 1.f + 1e-3f);
@@ -254,20 +254,20 @@ namespace binaural
 		debugAssert(fabsf(aWeight + bWeight + cWeight - 1.f) <= 1e-3f);
 		
 	#if BINAURAL_USE_SIMD
-		const float4 * __restrict a_lSamples = (float4*)a.lSamples;
-		const float4 * __restrict b_lSamples = (float4*)b.lSamples;
-		const float4 * __restrict c_lSamples = (float4*)c.lSamples;
+		const float4 * __restrict a_lSamples = (float4*)a.sampleData.lSamples;
+		const float4 * __restrict b_lSamples = (float4*)b.sampleData.lSamples;
+		const float4 * __restrict c_lSamples = (float4*)c.sampleData.lSamples;
 
-		const float4 * __restrict a_rSamples = (float4*)a.rSamples;
-		const float4 * __restrict b_rSamples = (float4*)b.rSamples;
-		const float4 * __restrict c_rSamples = (float4*)c.rSamples;
+		const float4 * __restrict a_rSamples = (float4*)a.sampleData.rSamples;
+		const float4 * __restrict b_rSamples = (float4*)b.sampleData.rSamples;
+		const float4 * __restrict c_rSamples = (float4*)c.sampleData.rSamples;
 
 		const float4 aWeight4 = _mm_set1_ps(aWeight);
 		const float4 bWeight4 = _mm_set1_ps(bWeight);
 		const float4 cWeight4 = _mm_set1_ps(cWeight);
 
-		float4 * __restrict r_lSamples = (float4*)r.lSamples;
-		float4 * __restrict r_rSamples = (float4*)r.rSamples;
+		float4 * __restrict r_lSamples = (float4*)r.sampleData.lSamples;
+		float4 * __restrict r_rSamples = (float4*)r.sampleData.rSamples;
 
 		for (int i = 0; i < HRIR_BUFFER_SIZE / 4; ++i)
 		{
@@ -284,25 +284,35 @@ namespace binaural
 	#else
 		for (int i = 0; i < HRIR_BUFFER_SIZE; ++i)
 		{
-			r.lSamples[i] =
-				a.lSamples[i] * aWeight +
-				b.lSamples[i] * bWeight +
-				c.lSamples[i] * cWeight;
+			r.sampleData.lSamples[i] =
+				a.sampleData.lSamples[i] * aWeight +
+				b.sampleData.lSamples[i] * bWeight +
+				c.sampleData.lSamples[i] * cWeight;
 
-			r.rSamples[i] =
-				a.rSamples[i] * aWeight +
-				b.rSamples[i] * bWeight +
-				c.rSamples[i] * cWeight;
+			r.sampleData.rSamples[i] =
+				a.sampleData.rSamples[i] * aWeight +
+				b.sampleData.rSamples[i] * bWeight +
+				c.sampleData.rSamples[i] * cWeight;
 		}
 	#endif
+	
+		r.sampleDelayL =
+			a.sampleDelayL * aWeight +
+			b.sampleDelayL * bWeight +
+			c.sampleDelayL * cWeight;
+		
+		r.sampleDelayR =
+			a.sampleDelayR * aWeight +
+			b.sampleDelayR * bWeight +
+			c.sampleDelayR * cWeight;
 	
 		debugTimerEnd("blendHrirSamples_3");
 	}
 	
 	void blendHrirSamples_3(
-		HRIRSampleData const * const * samples,
+		HRIRSample const * const * samples,
 		const float * sampleWeights,
-		HRIRSampleData & result)
+		HRIRSample & result)
 	{
 		blendHrirSamples_3(
 			*samples[0], sampleWeights[0],
@@ -519,6 +529,7 @@ namespace binaural
 		{
 			const int sortedIndex = i;
 			
+		// todo : optimize transpose using SSE instructions
 			lResultOld[sortedIndex] = filter_wdl[i].re.elem(0) * scale;
 			rResultOld[sortedIndex] = filter_wdl[i].re.elem(1) * scale;
 			lResultNew[sortedIndex] = filter_wdl[i].re.elem(2) * scale;
@@ -1302,7 +1313,7 @@ namespace binaural
 			swapLR == false ? sample->sampleData.lSamples : sample->sampleData.rSamples,
 			swapLR == false ? sample->sampleData.rSamples : sample->sampleData.lSamples))
 		{
-			sample->init(elevation, azimuth);
+			sample->init(elevation, azimuth, 0.f, 0.f);
 			
 			samples.push_back(sample);
 			
@@ -1460,7 +1471,7 @@ namespace binaural
 		debugTimerEnd("grid_insertion");
 	}
 	
-	bool HRIRSampleSet::lookup_3(const float elevation, const float azimuth, HRIRSampleData const * * samples, float * sampleWeights) const
+	bool HRIRSampleSet::lookup_3(const float elevation, const float azimuth, HRIRSample const * * samples, float * sampleWeights) const
 	{
 		debugTimerBegin("lookup_hrir");
 		
@@ -1475,9 +1486,9 @@ namespace binaural
 		
 		if (triangle != nullptr)
 		{
-			samples[0] = &this->samples[triangle->vertex[0].sampleIndex]->sampleData;
-			samples[1] = &this->samples[triangle->vertex[1].sampleIndex]->sampleData;
-			samples[2] = &this->samples[triangle->vertex[2].sampleIndex]->sampleData;
+			samples[0] = this->samples[triangle->vertex[0].sampleIndex];
+			samples[1] = this->samples[triangle->vertex[1].sampleIndex];
+			samples[2] = this->samples[triangle->vertex[2].sampleIndex];
 			
 			sampleWeights[0] = 1.f - baryU - baryV;
 			sampleWeights[1] = baryV;

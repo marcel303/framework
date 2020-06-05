@@ -136,6 +136,7 @@ namespace binaural
 					first = false;
 					
 					const uint8_t * coefficients_ptr = coefficients;
+					const uint8_t * delays_ptr = delays;
 					
 					for (int e = 0; e < field.elevationCount; ++e )
 					{
@@ -148,11 +149,11 @@ namespace binaural
 						
 						for (int a = 0; a < field.azimuthCounts[e]; ++a)
 						{
-							const float azimuth = lerpFloat(-180.f, 180.f, a / float(field.azimuthCounts[e]));
+							const float azimuth = lerpFloat(+180.f, -180.f, a / float(field.azimuthCounts[e]));
 							
 							HRIRSample * sample = new HRIRSample();
 							memset(&sample->sampleData, 0, sizeof(sample->sampleData));
-							sample->init(elevation, azimuth);
+							sample->init(elevation, azimuth, 0.f, 0.f);
 
 							if (sampleType == 0) // 16 bit signed integer
 							{
@@ -197,6 +198,19 @@ namespace binaural
 								}
 							}
 							
+							for (int c = 0; c < channelCount; ++c)
+							{
+								float delay = 0.f;
+								
+								if (isVersion2) delay = delays_ptr[0];       // 8.0 fixed point
+								if (isVersion3) delay = delays_ptr[0] / 4.f; // 6.2 fixed point
+								
+								if (c == 0) sample->sampleDelayL = delay;
+								if (c == 1) sample->sampleDelayR = delay;
+								
+								delays_ptr++;
+							}
+							
 							if (a > 0)
 							{
 								samplesForElevation.push_back(sample);
@@ -209,13 +223,13 @@ namespace binaural
 								// azimuth, elevation. We duplicate the 'left-most'
 								// samples to the 'right-most' side to ensure the
 								// entire region is covered.
-								assert(sample->azimuth == -180.f);
+								assert(sample->azimuth == +180.f);
 								HRIRSample * sampleL = sample;
 								HRIRSample * sampleR = new HRIRSample();
 								*sampleR = *sampleL;
 								
-								sampleL->azimuth = -180.f;
-								sampleR->azimuth = +180.f;
+								sampleL->azimuth = +180.f;
+								sampleR->azimuth = -180.f;
 								
 								samplesForElevation.push_back(sampleL);
 								samplesForElevation.push_back(sampleR);
@@ -229,14 +243,13 @@ namespace binaural
 							{
 								auto * src = samplesForElevation[i];
 								auto * dst = samplesForElevation[samplesForElevation.size() - 1 - i];
-								
-								if (src == dst)
-									continue;
 
 								memcpy(
 									dst->sampleData.rSamples,
 									src->sampleData.lSamples,
 									hrirSize * sizeof(float));
+								
+								dst->sampleDelayR = src->sampleDelayL;
 							}
 						}
 						

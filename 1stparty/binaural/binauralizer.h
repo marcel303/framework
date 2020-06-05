@@ -86,20 +86,47 @@ namespace binaural
 		void shut();
 		
 		bool isInit() const;
-		
+
+		/**
+		 * Sets the sample location used to look up the HRIR data. The location (elevation, azimuth) can be interpreted as the orientation of a sound source to be spatialized, relative to the listener's head.
+		 * @param elevation The elevation (in degrees) coordinate of the hrtf filter location.
+		 * @param azimuth The azimuth (in degrees) coordinate of the hrtf filter location.
+		 */
 		void setSampleLocation(const float elevation, const float azimuth);
-		void calculateHrir(HRIRSampleData & hrir) const;
+
+		/**
+		 * Calculates the interpolated HRIR sample, given the current HRTF sample location (elevation, azimuth).
+		 * @param sample The interpolated HRIR sample, as the result of the lookup and interpolation process.
+		 */
+		void calculateHrir(HRIRSample & sample) const;
+
+		/**
+		 * Provide the binauralizer with input samples. The input samples are stored inside an internal buffer, which is drained during the binauralization process.
+		 * @param samples The input samples provided to the binauralizer.
+		 * @param numSamples The number of input samples to provide.
+		 */
 		void provide(const float * __restrict samples, const int numSamples);
+
+		/**
+		 * Fills the read buffer by reading samples from the input buffer, and binauralizing them.
+		 * @param hrir The HRIR data to use during the binauralization process.
+		 */
 		void fillReadBuffer(const HRIRSampleData & hrir);
-		
+
+		/**
+		 * Generate interleaved binauralized stereo samples (left, right), given the samples inside the internal input buffer, and the HRIR given the last set sample location.
+		 * @param samples numSamples x 2 (left, right) interleaved stereo samples.
+		 * @param numSamples The number of samples.
+		 * @param hrir Optional HRIR data, for custom binauralization. When unset, the HRIR is sampled from the HRIRSampleset, using the sample location given by (elevation, azimuth).
+		 */
 		void generateInterleaved(
 			float * __restrict samples,
 			const int numSamples,
-			const HRIRSampleData * hrir = nullptr);
+			const HRIRSample * hrir = nullptr);
 		void generateLR(
 			float * __restrict samplesL,
 			float * __restrict samplesR,
 			const int numSamples,
-			const HRIRSampleData * hrir = nullptr);
+			const HRIRSample * hrir = nullptr);
 	};
 }
