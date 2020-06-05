@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "soundmix.h"
 #include <math.h>
 
 // weird idea: use a limiter with N measurement points.. say 1024 .. and see how limiting each sample i % N limited separately affects the waveform
@@ -192,7 +193,7 @@ struct Limiter
 	// flexible, as it supports both mono, stereo or multi-channel analysis, with similar
 	//     output limiting applied to each channel
 	
-	void chunk_analyze(float * __restrict samples, const int numSamples)
+	void chunk_analyze(float * __restrict samples, const int numSamples, const int alignment)
 	{
 		int i = 0;
 		
@@ -232,40 +233,45 @@ struct Limiter
 		}
 	}
 	
-	void chunk_applyInPlace(float * __restrict samples, const int numSamples, const float outputMax)
+	void chunk_applyInPlace(float * __restrict samples, const int numSamples, const int alignment, const float outputMax)
 	{
 		if (measuredMax > outputMax)
 		{
 			const float outputScale = outputMax / measuredMax;
 			
-			int i = 0;
-
-		#if 1
-			// todo : SSE optimize limiter code
-			
-			while (i * 16 < numSamples)
+			if (alignment >= 16)
 			{
-				float * __restrict samplePtr = samples + i * 16;
-				
-				for (int j = 0; j < 4; ++j)
-				{
-					samplePtr[j * 4 + 0] *= outputScale;
-					samplePtr[j * 4 + 1] *= outputScale;
-					samplePtr[j * 4 + 2] *= outputScale;
-					samplePtr[j * 4 + 3] *= outputScale;
-				}
-				
-				i++;
+				audioBufferMul(samples, numSamples, outputScale);
 			}
-			
-			i = i * 16;
-		#endif
-		
-			while (i < numSamples)
+			else
 			{
-				samples[i] *= outputScale;
+				int i = 0;
 
-				i++;
+			#if 1
+				while (i * 16 < numSamples)
+				{
+					float * __restrict samplePtr = samples + i * 16;
+					
+					for (int j = 0; j < 4; ++j)
+					{
+						samplePtr[j * 4 + 0] *= outputScale;
+						samplePtr[j * 4 + 1] *= outputScale;
+						samplePtr[j * 4 + 2] *= outputScale;
+						samplePtr[j * 4 + 3] *= outputScale;
+					}
+					
+					i++;
+				}
+			
+				i = i * 16;
+			#endif
+			
+				while (i < numSamples)
+				{
+					samples[i] *= outputScale;
+
+					i++;
+				}
 			}
 		}
 	}
