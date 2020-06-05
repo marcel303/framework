@@ -179,4 +179,99 @@ struct Limiter
 			i++;
 		}
 	}
+	
+	// -- chunk based approach
+	
+	// the chunk based approach separated the analysis, application and decay into three methods,
+	// - chunk_analyze(samples)
+	// - chunk_applyInPlace(samples, outputMax)
+	// - chunk_end(retain)
+	//
+	// this approach is 1) fast and 2) flexible
+	// fast, as analysis and application are highly optimized
+	// flexible, as it supports both mono, stereo or multi-channel analysis, with similar
+	//     output limiting applied to each channel
+	
+	void chunk_analyze(float * __restrict samples, const int numSamples)
+	{
+		int i = 0;
+		
+	#if 1
+		// todo : SSE optimize limiter code
+		
+		while (i * 16 < numSamples)
+		{
+			float * __restrict samplePtr = samples + i * 16;
+			
+			for (int j = 0; j < 4; ++j)
+			{
+				const float value1 = fabsf(samplePtr[j * 4 + 0]);
+				const float value2 = fabsf(samplePtr[j * 4 + 1]);
+				const float value3 = fabsf(samplePtr[j * 4 + 2]);
+				const float value4 = fabsf(samplePtr[j * 4 + 3]);
+				
+				const float max1 = fmaxf(value1, value2);
+				const float max2 = fmaxf(value3, value4);
+				
+				measuredMax = fmaxf(measuredMax, fmaxf(max1, max2));
+			}
+			
+			i++;
+		}
+		
+		i = i * 16;
+	#endif
+	
+		while (i < numSamples)
+		{
+			const float value = fabsf(samples[i]);
+			
+			measuredMax = fmaxf(measuredMax, value);
+
+			i++;
+		}
+	}
+	
+	void chunk_applyInPlace(float * __restrict samples, const int numSamples, const float outputMax)
+	{
+		if (measuredMax > outputMax)
+		{
+			const float outputScale = outputMax / measuredMax;
+			
+			int i = 0;
+
+		#if 1
+			// todo : SSE optimize limiter code
+			
+			while (i * 16 < numSamples)
+			{
+				float * __restrict samplePtr = samples + i * 16;
+				
+				for (int j = 0; j < 4; ++j)
+				{
+					samplePtr[j * 4 + 0] *= outputScale;
+					samplePtr[j * 4 + 1] *= outputScale;
+					samplePtr[j * 4 + 2] *= outputScale;
+					samplePtr[j * 4 + 3] *= outputScale;
+				}
+				
+				i++;
+			}
+			
+			i = i * 16;
+		#endif
+		
+			while (i < numSamples)
+			{
+				samples[i] *= outputScale;
+
+				i++;
+			}
+		}
+	}
+	
+	void chunk_end(const float retain)
+	{
+		measuredMax *= retain;
+	}
 };
