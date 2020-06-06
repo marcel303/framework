@@ -792,6 +792,46 @@ struct JgplayerObject
 	}
 };
 
+// -- particle effect object
+
+#include "particle.h"
+
+static ParticleEffectSystem s_particleEffectSystem;
+
+struct ParticleEffectObject
+{
+	std::vector<ParticleEffectInfo> infos;
+	std::vector<ParticleEffect*> effects;
+	
+	void init(const char * filename)
+	{
+		if (loadParticleEffectLibrary(filename, infos))
+		{
+			for (auto & info : infos)
+			{
+				auto * effect = s_particleEffectSystem.createEffect(&info);
+				
+				effects.push_back(effect);
+			}
+		}
+	}
+	
+	void shut()
+	{
+		for (auto *& effect : effects)
+		{
+			s_particleEffectSystem.removeEffect(effect);
+			
+			effect = nullptr;
+		}
+		
+		effects.clear();
+	}
+	
+	void tick(const float dt)
+	{
+	}
+};
 
 // -- scene
 
@@ -839,6 +879,8 @@ struct Scene : CollisionSystemInterface, ForwardLightingSystemInterface
 	std::vector<ModelObject> models;
 	
 	std::vector<JgplayerObject> jgplayers;
+	
+	std::vector<ParticleEffectObject> particleEffects;
 
 	void create();
 	void destroy();
@@ -1056,10 +1098,22 @@ void Scene::create()
 		
 		parameterMgr.addChild(&jgplayer.parameterMgr);
 	}
+	
+	particleEffects.resize(1);
+	
+	for (auto & particleEffect : particleEffects)
+	{
+		particleEffect.init("particles3.pfx");
+	}
 }
 
 void Scene::destroy()
 {
+	for (auto & particleEffect : particleEffects)
+	{
+		particleEffect.shut();
+	}
+	
 	watersim.shut();
 
 	for (auto & hand : hands)
@@ -1319,6 +1373,13 @@ void Scene::tick(const float dt)
 	{
 		jgplayer.tick(dt);
 	}
+	
+	for (auto & particleEffect : particleEffects)
+	{
+		particleEffect.tick(dt);
+	}
+	
+	s_particleEffectSystem.tick(0.f, -100.f, 0.f, dt);
 }
 
 void Scene::drawOnce() const
@@ -1544,6 +1605,14 @@ void Scene::drawTranslucent() const
 	gxGetMatrixf(GX_MODELVIEW, worldToView.m_v);
 
 	forwardLightingSystem->beginScene(worldToView);
+	
+	gxPushMatrix();
+	{
+		gxScalef(1.f / 100.f, 1.f / 100.f, 1.f / 100.f);
+		
+		s_particleEffectSystem.draw();
+	}
+	gxPopMatrix();
 }
 
 void Scene::drawWatersim() const
