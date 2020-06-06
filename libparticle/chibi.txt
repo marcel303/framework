@@ -3,7 +3,12 @@ library libparticle-ui
 	depend_library libnfd
 	depend_library framework
 
-	add_files ui.cpp ui.h textfield.cpp textfield.h colorwheel.cpp colorwheel.h particle.cpp particle.h
+	add_files ui.cpp
+	add_files ui.h
+	add_files textfield.cpp
+	add_files textfield.h
+	add_files colorwheel.cpp
+	add_files colorwheel.h
 
 	header_path . expose
 
@@ -11,7 +16,18 @@ library libparticle
 
 	depend_library libparticle-ui
 
-	add_files particle_editor.cpp particle_editor.h particle_framework.cpp particle_framework.h
+	add_files particle.cpp
+	add_files particle.h
+
+	add_files particle_color.cpp
+	add_files particle_colorcurve.cpp
+	add_files particle_curve.cpp
+	add_files particle_editor.cpp
+	add_files particle_editor.h
+	add_files particle_framework.cpp
+	add_files particle_framework.h
+	add_files particle_ui.cpp
+	add_files particle_ui.h
 
 	header_path . expose
 

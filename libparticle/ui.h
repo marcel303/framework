@@ -6,13 +6,12 @@
 class Color;
 class ColorWheel;
 class EditorTextField;
-struct ParticleColor;
-struct ParticleColorCurve;
-struct ParticleCurve;
 struct UiElem;
 struct UiMenu;
 struct UiMenuStates;
 struct UiState;
+
+struct ParticleColor; // todo : remove
 
 extern UiMenu * g_menu;
 
@@ -101,7 +100,7 @@ struct UiState
 	float opacity;
 	
 	UiElem * activeElem;
-	ParticleColor * activeColor;
+	ParticleColor * activeColor; // todo : remove
 	ColorWheel * colorWheel;
 	UiMenuStates * menuStates;
 	
@@ -196,9 +195,4 @@ void doDropdown(E & value, const char * name, const std::vector<EnumValue> & enu
 	value = E(valueInt);
 }
 
-void doParticleCurve(ParticleCurve & curve, const char * name);
-void doParticleColor(ParticleColor & color, const char * name);
-void doParticleColorCurve(ParticleColorCurve & curve, const char * name);
-
 void doColorWheel(float & r, float & g, float & b, float & a, const char * name, const float dt);
-void doColorWheel(ParticleColor & color, const char * name, const float dt);

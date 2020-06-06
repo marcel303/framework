@@ -3,9 +3,9 @@
 #include "particle.h"
 #include "particle_editor.h"
 #include "particle_framework.h"
+#include "particle_ui.h"
 #include "Path.h"
 #include "tinyxml2.h"
-#include "ui.h"
 #include <math.h>
 
 #include "StringEx.h" // _s functions
@@ -44,6 +44,8 @@ using namespace tinyxml2;
 // ui design
 static const int kMenuWidth = 300;
 static const int kMenuSpacing = 15;
+
+// -- ParticleEditorState
 
 struct ParticleEditorState
 {
@@ -88,7 +90,7 @@ struct ParticleEditorState
 		return false;
 	}
 
-	static bool checkCollision(void * userData, float x1, float y1, float x2, float y2, float & t, float & nx, float & ny)
+	static bool checkCollision(void * userData, float x1, float y1, float z1, float x2, float y2, float z2, float & t, float & nx, float & ny, float & nz)
 	{
 		//ParticleEditorState & self = *(ParticleEditorState*)userData;
 		
@@ -106,6 +108,7 @@ struct ParticleEditorState
 			t = -d1 / (d2 - d1);
 			nx = pnx;
 			ny = pny;
+			nz = 0.f;
 			return true;
 		}
 		else
@@ -343,14 +346,16 @@ struct ParticleEditorState
 		doTextBox(pi.circleRadius, "Circle Radius", dt);
 		doTextBox(pi.boxSizeX, "Box Width", dt);
 		doTextBox(pi.boxSizeY, "Box Height", dt);
+		doTextBox(pi.boxSizeZ, "Box Depth", dt);
 		doCheckBox(pi.emitFromShell, "Emit From Shell", false);
 
 		if (doCheckBox(pi.velocityOverLifetime, "Velocity Over Lifetime", true))
 		{
 			pushMenu("Velocity Over Lifetime");
 			ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-			doTextBox(pi.velocityOverLifetimeValueX, "X", 0.f, .5f, false, dt);
-			doTextBox(pi.velocityOverLifetimeValueY, "Y", .5f, .5f, true, dt);
+			doTextBox(pi.velocityOverLifetimeValueX, "X", .00f, .33f, false, dt);
+			doTextBox(pi.velocityOverLifetimeValueY, "Y", .33f, .33f, true, dt);
+			doTextBox(pi.velocityOverLifetimeValueZ, "Z", .66f, .33f, true, dt);
 			popMenu();
 		}
 		
@@ -367,8 +372,9 @@ struct ParticleEditorState
 		{
 			pushMenu("Force Over Lifetime");
 			ScopedValueAdjust<int> xAdjust(g_drawX, +10);
-			doTextBox(pi.forceOverLifetimeValueX, "X", 0.f, .5f, false, dt);
-			doTextBox(pi.forceOverLifetimeValueY, "Y", .5f, .5f, true, dt);
+			doTextBox(pi.forceOverLifetimeValueX, "X", .00f, .33f, false, dt);
+			doTextBox(pi.forceOverLifetimeValueY, "Y", .33f, .33f, true, dt);
+			doTextBox(pi.forceOverLifetimeValueZ, "Z", .66f, .33f, true, dt);
 			popMenu();
 		}
 		
@@ -621,12 +627,38 @@ struct ParticleEditorState
 		{
 			const float gravityX = 0.f;
 			const float gravityY = 100.f;
+			const float gravityZ = 0.f;
+			
 			for (Particle * p = pool[i].head; p; )
-				if (!tickParticle(callbacks, peiList[i], piList[i], dt, gravityX, gravityY, *p))
+			{
+				if (!tickParticle(
+					callbacks,
+					peiList[i],
+					piList[i],
+					dt,
+					gravityX,
+					gravityY,
+					gravityZ,
+					*p))
+				{
 					p = pool[i].freeParticle(p);
+				}
 				else
+				{
 					p = p->next;
-			tickParticleEmitter(callbacks, peiList[i], piList[i], pool[i], dt, gravityX, gravityY, particleEmitter[i]);
+				}
+			}
+			
+			tickParticleEmitter(
+				callbacks,
+				peiList[i],
+				piList[i],
+				pool[i],
+				dt,
+				gravityX,
+				gravityY,
+				gravityZ,
+				particleEmitter[i]);
 		}
 	}
 
@@ -666,7 +698,14 @@ struct ParticleEditorState
 			break;
 		}
 
-		drawParticles();
+		for (int i = 0; i < kMaxParticleInfos; ++i)
+		{
+			drawParticles(
+				peiList[i],
+				piList[i],
+				pool[i],
+				basePath);
+		}
 	#endif
 
 		gxPopMatrix();
@@ -674,57 +713,9 @@ struct ParticleEditorState
 		if (menuActive)
 			doMenu(s_menu, false, true, sx, sy, 0.f);
 	}
-
-	void drawParticles()
-	{
-		pushBlend(BLEND_OPAQUE);
-		
-		for (int i = 0; i < kMaxParticleInfos; ++i)
-		{
-			char materialPath[PATH_MAX];
-			sprintf_s(materialPath, sizeof(materialPath), "%s/%s", basePath, peiList[i].materialName);
-			
-			gxSetTexture(Sprite(materialPath).getTexture());
-			gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
-
-			if (piList[i].blendMode == ParticleInfo::kBlendMode_AlphaBlended)
-				setBlend(BLEND_ALPHA);
-			else if (piList[i].blendMode == ParticleInfo::kBlendMode_Additive)
-				setBlend(BLEND_ADD);
-			else
-				fassert(false);
-
-			gxBegin(GX_QUADS);
-			{
-				for (Particle * p = (piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? pool[i].head : pool[i].tail;
-							 p; p = (piList[i].sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
-				{
-					const float particleLife = 1.f - p->life;
-					const float particleSpeed = p->speedScalar;
-
-					ParticleColor color(true);
-					computeParticleColor(peiList[i], piList[i], particleLife, particleSpeed, color);
-					const float size_div_2 = computeParticleSize(peiList[i], piList[i], particleLife, particleSpeed) / 2.f;
-
-					const float s = sinf(-p->rotation * float(M_PI) / 180.f);
-					const float c = cosf(-p->rotation * float(M_PI) / 180.f);
-
-					gxColor4fv(color.rgba);
-					gxTexCoord2f(0.f, 1.f); gxVertex2f(p->position[0] + (- c - s) * size_div_2, p->position[1] + (+ s - c) * size_div_2);
-					gxTexCoord2f(1.f, 1.f); gxVertex2f(p->position[0] + (+ c - s) * size_div_2, p->position[1] + (- s - c) * size_div_2);
-					gxTexCoord2f(1.f, 0.f); gxVertex2f(p->position[0] + (+ c + s) * size_div_2, p->position[1] + (- s + c) * size_div_2);
-					gxTexCoord2f(0.f, 0.f); gxVertex2f(p->position[0] + (- c + s) * size_div_2, p->position[1] + (+ s + c) * size_div_2);
-				}
-			}
-			gxEnd();
-			
-			gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
-			gxSetTexture(0);
-		}
-		
-		popBlend();
-	}
 };
+
+// -- ParticleEditor
 
 ParticleEditor::ParticleEditor()
 	: state(nullptr)

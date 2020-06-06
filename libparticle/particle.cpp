@@ -1,16 +1,15 @@
 #include "particle.h"
 #include "tinyxml2.h"
+#include "tinyxml2_helpers.h"
 #include <algorithm>
 #include <cmath>
 
 #include "Debugging.h" // Assert
-#include "Log.h" // LOG_ functions
-#include "StringEx.h" // _s functions
-#include "ui.h" // srgb <-> linear
+#include "Log.h"       // LOG_ functions
+#include "StringEx.h"  // _s functions
+#include "ui.h"        // srgb <-> linear
 
-//#pragma optimize("", off)
-
-using namespace tinyxml2;
+//using namespace tinyxml2;
 
 //
 
@@ -23,458 +22,6 @@ using namespace tinyxml2;
 		#define _MM_ACCESS(r, i) r.m128_f32[i]
 	#endif
 #endif
-
-//
-
-static const char * stringAttrib(const XMLElement * elem, const char * name, const char * defaultValue)
-{
-	if (elem->Attribute(name))
-		return elem->Attribute(name);
-	else
-		return defaultValue;
-}
-
-static bool boolAttrib(const XMLElement * elem, const char * name, bool defaultValue)
-{
-	if (elem->Attribute(name))
-		return elem->BoolAttribute(name);
-	else
-		return defaultValue;
-}
-
-static int intAttrib(const XMLElement * elem, const char * name, int defaultValue)
-{
-	if (elem->Attribute(name))
-		return elem->IntAttribute(name);
-	else
-		return defaultValue;
-}
-
-static float floatAttrib(const XMLElement * elem, const char * name, float defaultValue)
-{
-	if (elem->Attribute(name))
-		return elem->FloatAttribute(name);
-	else
-		return defaultValue;
-}
-
-//
-
-ParticleColor::ParticleColor()
-{
-	memset(this, 0, sizeof(ParticleColor));
-}
-
-ParticleColor::ParticleColor(float r, float g, float b, float a)
-{
-	rgba[0] = r;
-	rgba[1] = g;
-	rgba[2] = b;
-	rgba[3] = a;
-}
-
-void ParticleColor::set(float r, float g, float b, float a)
-{
-	rgba[0] = r;
-	rgba[1] = g;
-	rgba[2] = b;
-	rgba[3] = a;
-}
-
-void ParticleColor::modulateWith(const ParticleColor & other)
-{
-	for (int i = 0; i < 4; ++i)
-		rgba[i] *= other.rgba[i];
-}
-
-void ParticleColor::interpolateBetween(const ParticleColor & v1, const ParticleColor & v2, const float t)
-{
-	const float t1 = 1.f - t;
-	const float t2 =       t;
-	for (int i = 0; i < 4; ++i)
-		rgba[i] = v1.rgba[i] * t1 + v2.rgba[i] * t2;
-}
-
-void ParticleColor::interpolateBetweenLinear(const ParticleColor & v1, const ParticleColor & v2, const float t)
-{
-	const float t1 = 1.f - t;
-	const float t2 =       t;
-	
-	float linear1[3];
-	float linear2[3];
-	float linear[3];
-	
-	srgbToLinear(v1.rgba[0], v1.rgba[1], v1.rgba[2], linear1[0], linear1[1], linear1[2]);
-	srgbToLinear(v2.rgba[0], v2.rgba[1], v2.rgba[2], linear2[0], linear2[1], linear2[2]);
-	
-	for (int i = 0; i < 3; ++i)
-		linear[i] = linear1[i] * t1 + linear2[i] * t2;
-	for (int i = 3; i < 4; ++i)
-		rgba[i] = v1.rgba[i] * t1 + v2.rgba[i] * t2;
-	
-	linearToSrgb(linear[0], linear[1], linear[2], rgba[0], rgba[1], rgba[2]);
-}
-
-void ParticleColor::save(XMLPrinter * printer) const
-{
-	printer->PushAttribute("r", rgba[0]);
-	printer->PushAttribute("g", rgba[1]);
-	printer->PushAttribute("b", rgba[2]);
-	printer->PushAttribute("a", rgba[3]);
-}
-
-void ParticleColor::load(const XMLElement * elem)
-{
-	*this = ParticleColor();
-
-	rgba[0] = floatAttrib(elem, "r", rgba[0]);
-	rgba[1] = floatAttrib(elem, "g", rgba[1]);
-	rgba[2] = floatAttrib(elem, "b", rgba[2]);
-	rgba[3] = floatAttrib(elem, "a", rgba[3]);
-}
-
-//
-
-ParticleCurve::Key::Key()
-	: t(0.f)
-	, value(0.f)
-{
-}
-
-bool ParticleCurve::Key::operator<(const Key & other) const
-{
-	return t < other.t;
-}
-
-ParticleCurve::ParticleCurve()
-	: keys(nullptr)
-	, numKeys(0)
-{
-	setLinear(0.f, 1.f);
-}
-
-void ParticleCurve::setLinear(float v1, float v2)
-{
-	clearKeys();
-	
-	Key * k1 = allocKey();
-	k1->t = 0.f;
-	k1->value = v1;
-	
-	Key * k2 = allocKey();
-	k2->t = 1.f;
-	k2->value = v2;
-}
-
-ParticleCurve::Key * ParticleCurve::allocKey()
-{
-	keys = (Key*)realloc(keys, (numKeys + 1) * sizeof(Key));
-	
-	return &keys[numKeys++];
-}
-
-void ParticleCurve::freeKey(Key *& key)
-{
-	const int index = key - keys;
-	
-	for (int i = index + 1; i < numKeys; ++i)
-		keys[i - 1] = keys[i];
-	
-	keys = (Key*)realloc(keys, (numKeys - 1) * sizeof(Key));
-	
-	numKeys--;
-}
-
-void ParticleCurve::clearKeys()
-{
-	free(keys);
-	keys = nullptr;
-	
-	numKeys = 0;
-}
-
-static bool compareKeysByTime(const ParticleCurve::Key * k1, const ParticleCurve::Key * k2)
-{
-    return k1->t < k2->t;
-}
-
-ParticleCurve::Key * ParticleCurve::sortKeys(Key * keyToReturn)
-{
-	Key * result = 0;
-
-	if (keyToReturn)
-	{
-		Key * keyValues = (Key*)alloca(numKeys * sizeof(Key));
-		memcpy(keyValues, keys, sizeof(Key) * numKeys);
-		Key ** keysForSorting = (Key**)alloca(numKeys * sizeof(Key*));
-		for (int i = 0; i < numKeys; ++i)
-			keysForSorting[i] = &keys[i];
-        std::sort(keysForSorting, keysForSorting + numKeys, compareKeysByTime);
-		for (int i = 0; i < numKeys; ++i)
-		{
-			if (keysForSorting[i] == keyToReturn)
-				result = &keys[i];
-			const int index = keysForSorting[i] - keys;
-			keys[i] = keyValues[index];
-		}
-	}
-	else
-	{
-		std::sort(keys, keys + numKeys);
-	}
-
-	return result;
-}
-
-float ParticleCurve::sample(const float _t) const
-{
-	const float t = _t < 0.f ? 0.f : _t > 1.f ? 1.f : _t;
-
-	if (numKeys == 0)
-		return 1.f;
-	else if (numKeys == 1)
-		return keys[0].value;
-	else
-	{
-		int endKey = 0;
-
-		while (endKey < numKeys)
-		{
-			if (t < keys[endKey].t)
-				break;
-			else
-				++endKey;
-		}
-
-		if (endKey == 0)
-			return keys[0].value;
-		else if (endKey == numKeys)
-			return keys[numKeys - 1].value;
-		else
-		{
-			const int startKey = endKey - 1;
-			const float c1 = keys[startKey].value;
-			const float c2 = keys[endKey].value;
-			const float t2 = (t - keys[startKey].t) / (keys[endKey].t - keys[startKey].t);
-			return c1 * (1.f - t2) + c2 * t2;
-		}
-	}
-}
-
-void ParticleCurve::save(XMLPrinter * printer) const
-{
-	printer->PushAttribute("numKeys", numKeys);
-	for (int i = 0; i < numKeys; ++i)
-	{
-		printer->OpenElement("key");
-		{
-			printer->PushAttribute("t", keys[i].t);
-			printer->PushAttribute("value", keys[i].value);
-		}
-		printer->CloseElement();
-	}
-}
-
-void ParticleCurve::load(const XMLElement * elem)
-{
-	clearKeys();
-	
-	//
-	
-	for (const XMLElement * keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
-	{
-		Key * key = allocKey();
-
-		key->t = floatAttrib(keyElem, "t", 0.f);
-		key->value = floatAttrib(keyElem, "value", 0.f);
-	}
-
-	if (numKeys == 0)
-	{
-		setLinear(0.f, 1.f);
-	}
-}
-
-//
-
-ParticleColorCurve::Key::Key()
-	: t(0.f)
-	, color()
-{
-}
-
-bool ParticleColorCurve::Key::operator<(const Key & other) const
-{
-	return t < other.t;
-}
-
-//
-
-ParticleColorCurve::ParticleColorCurve()
-	: keys(nullptr)
-	, numKeys(0)
-	, useLinearColorSpace(true)
-{
-}
-
-ParticleColorCurve::Key * ParticleColorCurve::allocKey()
-{
-	keys = (Key*)realloc(keys, (numKeys + 1) * sizeof(Key));
-	
-	return &keys[numKeys++];
-}
-
-void ParticleColorCurve::freeKey(Key *& key)
-{
-	const int index = key - keys;
-	
-	for (int i = index + 1; i < numKeys; ++i)
-		keys[i - 1] = keys[i];
-	
-	keys = (Key*)realloc(keys, (numKeys - 1) * sizeof(Key));
-	
-	numKeys--;
-}
-
-void ParticleColorCurve::clearKeys()
-{
-	free(keys);
-	keys = nullptr;
-	
-	numKeys = 0;
-}
-
-static bool compareKeysByTime2(const ParticleColorCurve::Key * k1, const ParticleColorCurve::Key * k2)
-{
-    return k1->t < k2->t;
-}
-
-ParticleColorCurve::Key * ParticleColorCurve::sortKeys(Key * keyToReturn)
-{
-	Key * result = nullptr;
-
-	if (keyToReturn)
-	{
-		Key * keyValues = (Key*)alloca(numKeys * sizeof(Key));
-		memcpy(keyValues, keys, numKeys * sizeof(Key));
-		Key ** keysForSorting = (Key**)alloca(numKeys * sizeof(Key*));
-		for (int i = 0; i < numKeys; ++i)
-			keysForSorting[i] = &keys[i];
-        std::sort(keysForSorting, keysForSorting + numKeys, compareKeysByTime2);
-		for (int i = 0; i < numKeys; ++i)
-		{
-			if (keysForSorting[i] == keyToReturn)
-				result = &keys[i];
-			const int index = keysForSorting[i] - keys;
-			keys[i] = keyValues[index];
-		}
-	}
-	else
-	{
-		std::sort(keys, keys + numKeys);
-	}
-
-	return result;
-}
-
-void ParticleColorCurve::setLinear(const ParticleColor & v1, const ParticleColor & v2)
-{
-	clearKeys();
-
-	Key * k1 = allocKey();
-	k1->t = 0.f;
-	k1->color = v1;
-
-	Key * k2 = allocKey();
-	k2->t = 1.f;
-	k2->color = v2;
-
-	sortKeys();
-}
-
-void ParticleColorCurve::setLinearAlpha(float v1, float v2)
-{
-	clearKeys();
-
-	Key * k1 = allocKey();
-	k1->t = 0.f;
-	k1->color.set(1.f, 1.f, 1.f, v1);
-
-	Key * k2 = allocKey();
-	k2->t = 1.f;
-	k2->color.set(1.f, 1.f, 1.f, v2);
-
-	sortKeys();
-}
-
-void ParticleColorCurve::sample(const float t, const bool linearColorSpace, ParticleColor & result) const
-{
-	if (numKeys == 0)
-		result.set(1.f, 1.f, 1.f, 1.f);
-	else if (numKeys == 1)
-		result = keys[0].color;
-	else
-	{
-		int endKey = 0;
-
-		while (endKey < numKeys)
-		{
-			if (t < keys[endKey].t)
-				break;
-			else
-				++endKey;
-		}
-
-		if (endKey == 0)
-			result = keys[0].color;
-		else if (endKey == numKeys)
-			result = keys[numKeys - 1].color;
-		else
-		{
-			const int startKey = endKey - 1;
-			const ParticleColor & c1 = keys[startKey].color;
-			const ParticleColor & c2 = keys[endKey].color;
-			const float t2 = (t - keys[startKey].t) / (keys[endKey].t - keys[startKey].t);
-			if (linearColorSpace)
-				result.interpolateBetweenLinear(c1, c2, t2);
-			else
-				result.interpolateBetween(c1, c2, t2);
-		}
-	}
-}
-
-void ParticleColorCurve::save(XMLPrinter * printer) const
-{
-	printer->PushAttribute("useLinearColorSpace", useLinearColorSpace);
-	
-	for (int i = 0; i < numKeys; ++i)
-	{
-		printer->OpenElement("key");
-		{
-			printer->PushAttribute("t", keys[i].t);
-			keys[i].color.save(printer);
-		}
-		printer->CloseElement();
-	}
-}
-
-void ParticleColorCurve::load(const XMLElement * elem)
-{
-	clearKeys();
-	
-	//
-	
-	useLinearColorSpace = boolAttrib(elem, "useLinearColorSpace", true);
-	
-	for (auto keyElem = elem->FirstChildElement("key"); keyElem; keyElem = keyElem->NextSiblingElement())
-	{
-		Key * key = allocKey();
-		key->t = floatAttrib(keyElem, "t", 0.f);
-		key->color.load(keyElem);
-	}
-
-	sortKeys();
-}
 
 //
 
@@ -498,7 +45,7 @@ ParticleEmitterInfo::ParticleEmitterInfo()
 	memset(materialName, 0, sizeof(materialName));
 }
 
-void ParticleEmitterInfo::save(XMLPrinter * printer) const
+void ParticleEmitterInfo::save(tinyxml2::XMLPrinter * printer) const
 {
 	printer->PushAttribute("name", name);
 	printer->PushAttribute("duration", duration);
@@ -523,7 +70,7 @@ void ParticleEmitterInfo::save(XMLPrinter * printer) const
 	printer->CloseElement();
 }
 
-void ParticleEmitterInfo::load(const XMLElement * elem)
+void ParticleEmitterInfo::load(const tinyxml2::XMLElement * elem)
 {
 	*this = ParticleEmitterInfo();
 
@@ -559,11 +106,13 @@ ParticleInfo::ParticleInfo()
 	, circleRadius(100.f)
 	, boxSizeX(100.f)
 	, boxSizeY(100.f)
+	, boxSizeZ(100.f)
 	, emitFromShell(false)
 	// velocity over lifetime
 	, velocityOverLifetime(false)
 	, velocityOverLifetimeValueX(0.f)
 	, velocityOverLifetimeValueY(0.f)
+	, velocityOverLifetimeValueZ(0.f)
 	// limit velocity over lifetime
 	, velocityOverLifetimeLimit(false)
 	, velocityOverLifetimeLimitCurve()
@@ -572,6 +121,7 @@ ParticleInfo::ParticleInfo()
 	, forceOverLifetime(false)
 	, forceOverLifetimeValueX(0.f)
 	, forceOverLifetimeValueY(0.f)
+	, forceOverLifetimeValueZ(0.f)
 	// color over lifetime
 	, colorOverLifetime(false)
 	, colorOverLifetimeCurve()
@@ -596,8 +146,6 @@ ParticleInfo::ParticleInfo()
 	, rotationBySpeedCurve()
 	, rotationBySpeedRangeMin(0.f)
 	, rotationBySpeedRangeMax(100.f)
-	// external forces
-	//
 	// collision
 	, collision(false)
 	, bounciness(1.f)
@@ -606,9 +154,7 @@ ParticleInfo::ParticleInfo()
 	, collisionRadius(1.f)
 	// sub emitters
 	, enableSubEmitters(false)
-	// texture sheet animation
-	//
-	// renderer
+	// drawing
 	, sortMode(kSortMode_YoungestFirst)
 	, blendMode(kBlendMode_AlphaBlended)
 {
@@ -633,7 +179,7 @@ void ParticleInfo::clearBursts()
 	numBursts = 0;
 }
 
-void ParticleInfo::save(XMLPrinter * printer) const
+void ParticleInfo::save(tinyxml2::XMLPrinter * printer) const
 {
 	// emission
 	printer->PushAttribute("rate", rate);
@@ -643,11 +189,13 @@ void ParticleInfo::save(XMLPrinter * printer) const
 	printer->PushAttribute("circleRadius", circleRadius);
 	printer->PushAttribute("boxSizeX", boxSizeX);
 	printer->PushAttribute("boxSizeY", boxSizeY);
+	printer->PushAttribute("boxSizeZ", boxSizeZ);
 	printer->PushAttribute("emitFromShell", emitFromShell);
 	// velocity over lifetime
 	printer->PushAttribute("velocityOverLifetime", velocityOverLifetime);
 	printer->PushAttribute("velocityOverLifetimeValueX", velocityOverLifetimeValueX);
 	printer->PushAttribute("velocityOverLifetimeValueY", velocityOverLifetimeValueY);
+	printer->PushAttribute("velocityOverLifetimeValueZ", velocityOverLifetimeValueZ);
 	// limit velocity over lifetime
 	printer->PushAttribute("velocityOverLifetimeLimit", velocityOverLifetimeLimit);
 	printer->PushAttribute("velocityOverLifetimeLimitDampen", velocityOverLifetimeLimitDampen);
@@ -655,6 +203,7 @@ void ParticleInfo::save(XMLPrinter * printer) const
 	printer->PushAttribute("forceOverLifetime", forceOverLifetime);
 	printer->PushAttribute("forceOverLifetimeValueX", forceOverLifetimeValueX);
 	printer->PushAttribute("forceOverLifetimeValueY", forceOverLifetimeValueY);
+	printer->PushAttribute("forceOverLifetimeValueZ", forceOverLifetimeValueZ);
 	// color over lifetime
 	printer->PushAttribute("colorOverLifetime", colorOverLifetime);
 	// color by speed
@@ -674,8 +223,6 @@ void ParticleInfo::save(XMLPrinter * printer) const
 	printer->PushAttribute("rotationBySpeed", rotationBySpeed);
 	printer->PushAttribute("rotationBySpeedRangeMin", rotationBySpeedRangeMin);
 	printer->PushAttribute("rotationBySpeedRangeMax", rotationBySpeedRangeMax);
-	// external forces
-	//
 	// collision
 	printer->PushAttribute("collision", collision);
 	printer->PushAttribute("bounciness", bounciness);
@@ -684,9 +231,7 @@ void ParticleInfo::save(XMLPrinter * printer) const
 	printer->PushAttribute("collisionRadius", collisionRadius);
 	// sub emitters
 	printer->PushAttribute("subEmitters", enableSubEmitters);
-	// texture sheet animation
-	// todo
-	// renderer
+	// drawing
 	printer->PushAttribute("sortMode", sortMode);
 	printer->PushAttribute("blendMode", blendMode);
 
@@ -755,7 +300,7 @@ void ParticleInfo::save(XMLPrinter * printer) const
 	}
 }
 
-void ParticleInfo::load(const XMLElement * elem)
+void ParticleInfo::load(const tinyxml2::XMLElement * elem)
 {
 	*this = ParticleInfo();
 
@@ -776,11 +321,13 @@ void ParticleInfo::load(const XMLElement * elem)
 	circleRadius = floatAttrib(elem, "circleRadius", circleRadius);
 	boxSizeX = floatAttrib(elem, "boxSizeX", boxSizeX);
 	boxSizeY = floatAttrib(elem, "boxSizeY", boxSizeY);
+	boxSizeZ = floatAttrib(elem, "boxSizeZ", boxSizeZ);
 	emitFromShell = boolAttrib(elem, "emitFromShell", emitFromShell);
 	// velocity over lifetime
 	velocityOverLifetime = boolAttrib(elem, "velocityOverLifetime", velocityOverLifetime);
 	velocityOverLifetimeValueX = floatAttrib(elem, "velocityOverLifetimeValueX", velocityOverLifetimeValueX);
 	velocityOverLifetimeValueY = floatAttrib(elem, "velocityOverLifetimeValueY", velocityOverLifetimeValueY);
+	velocityOverLifetimeValueZ = floatAttrib(elem, "velocityOverLifetimeValueZ", velocityOverLifetimeValueZ);
 	// limit velocity over lifetime
 	velocityOverLifetimeLimit = boolAttrib(elem, "velocityOverLifetimeLimit", velocityOverLifetimeLimit);
 	auto velocityOverLifetimeLimitCurveElem = elem->FirstChildElement("velocityOverLifetimeLimitCurve");
@@ -791,6 +338,7 @@ void ParticleInfo::load(const XMLElement * elem)
 	forceOverLifetime = boolAttrib(elem, "forceOverLifetime", forceOverLifetime);
 	forceOverLifetimeValueX = floatAttrib(elem, "forceOverLifetimeValueX", forceOverLifetimeValueX);
 	forceOverLifetimeValueY = floatAttrib(elem, "forceOverLifetimeValueY", forceOverLifetimeValueY);
+	forceOverLifetimeValueZ = floatAttrib(elem, "forceOverLifetimeValueZ", forceOverLifetimeValueZ);
 	// color over lifetime
 	colorOverLifetime = boolAttrib(elem, "colorOverLifetime", colorOverLifetime);
 	auto colorOverLifetimeCurveElem = elem->FirstChildElement("colorOverLifetimeCurve");
@@ -825,8 +373,6 @@ void ParticleInfo::load(const XMLElement * elem)
 		rotationBySpeedCurve.load(rotationBySpeedCurveElem);
 	rotationBySpeedRangeMin = floatAttrib(elem, "rotationBySpeedRangeMin", rotationBySpeedRangeMin);
 	rotationBySpeedRangeMax = floatAttrib(elem, "rotationBySpeedRangeMax", rotationBySpeedRangeMax);
-	// external forces
-	//
 	// collision
 	collision = boolAttrib(elem, "collision", collision);
 	bounciness = floatAttrib(elem, "bounciness", bounciness);
@@ -841,9 +387,7 @@ void ParticleInfo::load(const XMLElement * elem)
 		if (index >= 0 && index < kSubEmitterEvent_COUNT)
 			subEmitters[index].load(subEmitterElem);
 	}
-	// texture sheet animation
-	// todo
-	// renderer
+	// drawing
 	sortMode = (SortMode)intAttrib(elem, "sortMode", sortMode);
 	blendMode = (BlendMode)intAttrib(elem, "blendMode", blendMode);
 }
@@ -856,7 +400,7 @@ ParticleInfo::SubEmitter::SubEmitter()
 	memset(emitterName, 0, sizeof(emitterName));
 }
 
-void ParticleInfo::SubEmitter::save(XMLPrinter * printer) const
+void ParticleInfo::SubEmitter::save(tinyxml2::XMLPrinter * printer) const
 {
 	printer->PushAttribute("enabled", enabled);
 	printer->PushAttribute("count", count);
@@ -864,7 +408,7 @@ void ParticleInfo::SubEmitter::save(XMLPrinter * printer) const
 	printer->PushAttribute("emitterName", emitterName);
 }
 
-void ParticleInfo::SubEmitter::load(const XMLElement * elem)
+void ParticleInfo::SubEmitter::load(const tinyxml2::XMLElement * elem)
 {
 	enabled = boolAttrib(elem, "enabled", enabled);
 	count = intAttrib(elem, "count", count);
@@ -897,16 +441,32 @@ void ParticleEmitter::clearParticles(ParticlePool & pool)
 	}
 }
 
-bool ParticleEmitter::emitParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeOffset, const float gravityX, const float gravityY, const float positionX, const float positionY, const float speedX, const float speedY, Particle *& p)
+bool ParticleEmitter::emitParticle(
+	const ParticleCallbacks & cbs,
+	const ParticleEmitterInfo & pei,
+	const ParticleInfo & pi,
+	ParticlePool & pool,
+	const float timeOffset,
+	const float gravityX,
+	const float gravityY,
+	const float gravityZ,
+	const float positionX,
+	const float positionY,
+	const float positionZ,
+	const float speedX,
+	const float speedY,
+	const float speedZ,
+	Particle *& p)
 {
 	if (allocParticle(pool, p))
 	{
 		p->life = 1.f;
 		p->lifeRcp = 1.f / pei.startLifetime;
 
-		getParticleSpawnLocation(cbs, pi, p->position[0], p->position[1]);
+		getParticleSpawnLocation(cbs, pi, p->position[0], p->position[1], p->position[2]);
 		p->position[0] += positionX;
 		p->position[1] += positionY;
+		p->position[2] += positionZ;
 
 		float speedAngle;
 		if (pi.randomDirection)
@@ -915,6 +475,7 @@ bool ParticleEmitter::emitParticle(const ParticleCallbacks & cbs, const Particle
 			speedAngle = pei.startSpeedAngle * float(M_PI / 180.f);
 		p->speed[0] = speedX + cosf(speedAngle) * pei.startSpeed;
 		p->speed[1] = speedY + sinf(speedAngle) * pei.startSpeed;
+		p->speed[2] = 0.f;
 		p->rotation = pei.startRotation;
 
 		/*
@@ -923,11 +484,26 @@ bool ParticleEmitter::emitParticle(const ParticleCallbacks & cbs, const Particle
 			bool worldSpace; // Should particles be animated in the parent object’s local space (and therefore move with the object) or in world space?
 		*/
 
-		tickParticle(cbs, pei, pi, timeOffset, gravityX, gravityY, *p);
+		tickParticle(
+			cbs,
+			pei,
+			pi,
+			timeOffset,
+			gravityX,
+			gravityY,
+			gravityZ,
+			*p);
 
 		if (pi.enableSubEmitters && pi.subEmitters[ParticleInfo::kSubEmitterEvent_Birth].enabled)
 		{
-			handleSubEmitter(cbs, pi, gravityX, gravityY, *p, ParticleInfo::kSubEmitterEvent_Birth);
+			handleSubEmitter(
+				cbs,
+				pi,
+				gravityX,
+				gravityY,
+				gravityZ,
+				*p,
+				ParticleInfo::kSubEmitterEvent_Birth);
 		}
 
 		return true;
@@ -1013,15 +589,22 @@ ParticleSystem::~ParticleSystem()
 	Assert(pool.tail == 0);
 }
 
-bool ParticleSystem::tick(const ParticleCallbacks & cbs, const float gravityX, const float gravityY, float dt)
+bool ParticleSystem::tick(
+	const ParticleCallbacks & cbs,
+	const float gravityX,
+	const float gravityY,
+	const float gravityZ,
+	float dt)
 {
 	for (Particle * p = pool.head; p; )
-		if (!tickParticle(cbs, emitterInfo, particleInfo, dt, gravityX, gravityY, *p))
+	{
+		if (!tickParticle(cbs, emitterInfo, particleInfo, dt, gravityX, gravityY, gravityZ, *p))
 			p = pool.freeParticle(p);
 		else
 			p = p->next;
+	}
 
-	return tickParticleEmitter(cbs, emitterInfo, particleInfo, pool, dt, gravityX, gravityY, emitter);
+	return tickParticleEmitter(cbs, emitterInfo, particleInfo, pool, dt, gravityX, gravityY, gravityZ, emitter);
 }
 
 void ParticleSystem::restart()
@@ -1031,7 +614,15 @@ void ParticleSystem::restart()
 
 //
 
-bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float _timeStep, const float gravityX, const float gravityY, Particle & p)
+bool tickParticle(
+	const ParticleCallbacks & cbs,
+	const ParticleEmitterInfo & pei,
+	const ParticleInfo & pi,
+	const float _timeStep,
+	const float gravityX,
+	const float gravityY,
+	const float gravityZ,
+	Particle & p)
 {
 	Assert(p.life > 0.f);
 
@@ -1052,43 +643,50 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 	
 	p.speed[0] += gravityX * pei.gravityMultiplier * timeStep;
 	p.speed[1] += gravityY * pei.gravityMultiplier * timeStep;
+	p.speed[2] += gravityZ * pei.gravityMultiplier * timeStep;
 
 	if (pi.forceOverLifetime)
 	{
 		p.speed[0] += pi.forceOverLifetimeValueX * timeStep;
 		p.speed[1] += pi.forceOverLifetimeValueY * timeStep;
+		p.speed[2] += pi.forceOverLifetimeValueZ * timeStep;
 	}
 
 	const float oldX = p.position[0];
 	const float oldY = p.position[1];
+	const float oldZ = p.position[2];
 
 	const float newX = oldX + p.speed[0] * timeStep;
 	const float newY = oldY + p.speed[1] * timeStep;
+	const float newZ = oldZ + p.speed[2] * timeStep;
 
 	if (pi.collision)
 	{
 		float t;
 		float nx;
 		float ny;
+		float nz;
 
-		if (cbs.checkCollision && cbs.checkCollision(cbs.userData, oldX, oldY, newX, newY, t, nx, ny))
+		if (cbs.checkCollision && cbs.checkCollision(cbs.userData, oldX, oldY, oldZ, newX, newY, newZ, t, nx, ny, nz))
 		{
 			p.position[0] = oldX + (newX - oldX) * t;
 			p.position[1] = oldY + (newY - oldY) * t;
+			p.position[2] = oldZ + (newZ - oldZ) * t;
 
 			p.life -= pi.lifetimeLoss;
 			if (p.life < 0.f)
 				p.life = 0.f;
 
-			const float d = nx * p.speed[0] + ny * p.speed[1];
+			const float d = nx * p.speed[0] + ny * p.speed[1] + nz * p.speed[2];
 
 			p.speed[0] -= nx * d * (1.f + pi.bounciness);
 			p.speed[1] -= ny * d * (1.f + pi.bounciness);
+			p.speed[2] -= nz * d * (1.f + pi.bounciness);
 			
 		#ifdef __SSE2__
-			const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])), 0);
+			const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1] + p.speed[2] * p.speed[2])), 0);
 		#else
-			const float particleSpeed = hypotf(p.speed[0], p.speed[1] * p.speed[1]);
+			const float particleSpeed = sqrtf(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1] + p.speed[2] * p.speed[2]);
 		#endif
 
 			if (particleSpeed < pi.minKillSpeed)
@@ -1096,26 +694,28 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 
 			if (pi.enableSubEmitters && pi.subEmitters[ParticleInfo::kSubEmitterEvent_Collision].enabled)
 			{
-				handleSubEmitter(cbs, pi, gravityX, gravityY, p, ParticleInfo::kSubEmitterEvent_Collision);
+				handleSubEmitter(cbs, pi, gravityX, gravityY, gravityZ, p, ParticleInfo::kSubEmitterEvent_Collision);
 			}
 		}
 		else
 		{
 			p.position[0] = newX;
 			p.position[1] = newY;
+			p.position[2] = newZ;
 		}
 	}
 	else
 	{
 		p.position[0] = newX;
 		p.position[1] = newY;
+		p.position[2] = newZ;
 	}
 
 	const float particleLife = 1.f - p.life;
 #ifdef __SSE2__
-	const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1])), 0);
+	const float particleSpeed = _MM_ACCESS(_mm_sqrt_ss(_mm_set_ss(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1] + p.speed[2] * p.speed[2])), 0);
 #else
-	const float particleSpeed = hypotf(p.speed[0], p.speed[1]);
+	const float particleSpeed = sqrtf(p.speed[0] * p.speed[0] + p.speed[1] * p.speed[1] + p.speed[2] * p.speed[2]);
 #endif
 	
 	p.speedScalar = particleSpeed;
@@ -1136,14 +736,21 @@ bool tickParticle(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei
 	{
 		if (pi.enableSubEmitters && pi.subEmitters[ParticleInfo::kSubEmitterEvent_Death].enabled)
 		{
-			handleSubEmitter(cbs, pi, gravityX, gravityY, p, ParticleInfo::kSubEmitterEvent_Death);
+			handleSubEmitter(cbs, pi, gravityX, gravityY, gravityZ, p, ParticleInfo::kSubEmitterEvent_Death);
 		}
 	}
 
 	return p.life > 0.f;
 }
 
-void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, const float gravityX, const float gravityY, const Particle & p, const ParticleInfo::SubEmitterEvent e)
+void handleSubEmitter(
+	const ParticleCallbacks & cbs,
+	const ParticleInfo & pi,
+	const float gravityX,
+	const float gravityY,
+	const float gravityZ,
+	const Particle & p,
+	const ParticleInfo::SubEmitterEvent e)
 {
 	if (!pi.subEmitters[e].emitterName[0])
 		return;
@@ -1182,10 +789,13 @@ void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, co
 					0.f,
 					gravityX,
 					gravityY,
+					gravityZ,
 					p.position[0],
 					p.position[1],
+					p.position[2],
 					subPei->inheritVelocity ? p.speed[0] : 0.f,
 					subPei->inheritVelocity ? p.speed[1] : 0.f,
+					subPei->inheritVelocity ? p.speed[2] : 0.f,
 					subP))
 				{
 					//
@@ -1195,8 +805,14 @@ void handleSubEmitter(const ParticleCallbacks & cbs, const ParticleInfo & pi, co
 	}
 }
 
-void getParticleSpawnLocation(const ParticleCallbacks & cbs, const ParticleInfo & pi, float & x, float & y)
+void getParticleSpawnLocation(
+	const ParticleCallbacks & cbs,
+	const ParticleInfo & pi,
+	float & x,
+	float & y,
+	float & z)
 {
+	// todo : sphere and box3d
 	switch (pi.shape)
 	{
 	case ParticleInfo::kShapeEdge:
@@ -1204,6 +820,7 @@ void getParticleSpawnLocation(const ParticleCallbacks & cbs, const ParticleInfo 
 			const float t = cbs.randomFloat(cbs.userData, 0.f, 1.f);
 			x = (t - .5f) * 2.f * pi.boxSizeX;
 			y = 0.f;
+			z = 0.f;
 		}
 		break;
 	case ParticleInfo::kShapeBox:
@@ -1248,6 +865,8 @@ void getParticleSpawnLocation(const ParticleCallbacks & cbs, const ParticleInfo 
 				x = (tx - .5f) * 2.f * pi.boxSizeX;
 				y = (ty - .5f) * 2.f * pi.boxSizeY;
 			}
+
+			z = 0.f;
 		}
 		break;
 	case ParticleInfo::kShapeCircle:
@@ -1271,16 +890,24 @@ void getParticleSpawnLocation(const ParticleCallbacks & cbs, const ParticleInfo 
 						break;
 				}
 			}
+
+			z = 0.f;
 		}
 		break;
 	default:
 		x = 0.f;
 		y = 0.f;
+		z = 0.f;
 		break;
 	}
 }
 
-void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float particleLife, const float particleSpeed, ParticleColor & result)
+void computeParticleColor(
+	const ParticleEmitterInfo & pei,
+	const ParticleInfo & pi,
+	const float particleLife,
+	const float particleSpeed,
+	ParticleColor & result)
 {
 	result = pei.startColor;
 
@@ -1300,7 +927,11 @@ void computeParticleColor(const ParticleEmitterInfo & pei, const ParticleInfo & 
 	}
 }
 
-float computeParticleSize(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float particleLife, const float particleSpeed)
+float computeParticleSize(
+	const ParticleEmitterInfo & pei,
+	const ParticleInfo & pi,
+	const float particleLife,
+	const float particleSpeed)
 {
 	float result = pei.startSize;
 
@@ -1319,7 +950,13 @@ float computeParticleSize(const ParticleEmitterInfo & pei, const ParticleInfo & 
 	return result;
 }
 
-float computeParticleRotation(const ParticleEmitterInfo & pei, const ParticleInfo & pi, const float timeStep, const float particleLife, const float particleSpeed, float particleRotation)
+float computeParticleRotation(
+	const ParticleEmitterInfo & pei,
+	const ParticleInfo & pi,
+	const float timeStep,
+	const float particleLife,
+	const float particleSpeed,
+	float particleRotation)
 {
 	float result = particleRotation;
 
@@ -1337,7 +974,16 @@ float computeParticleRotation(const ParticleEmitterInfo & pei, const ParticleInf
 	return result;
 }
 
-bool tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInfo & pei, const ParticleInfo & pi, ParticlePool & pool, const float timeStep, const float gravityX, const float gravityY, ParticleEmitter & pe)
+bool tickParticleEmitter(
+	const ParticleCallbacks & cbs,
+	const ParticleEmitterInfo & pei,
+	const ParticleInfo & pi,
+	ParticlePool & pool,
+	const float timeStep,
+	const float gravityX,
+	const float gravityY,
+	const float gravityZ,
+	ParticleEmitter & pe)
 {
 	if (pi.rate <= 0.f)
 		return false;
@@ -1367,8 +1013,79 @@ bool tickParticleEmitter(const ParticleCallbacks & cbs, const ParticleEmitterInf
 		const float timeOffset = fmodf(pe.time, rateTime);
 
 		Particle * p;
-		pe.emitParticle(cbs, pei, pi, pool, timeOffset, gravityX, gravityY, 0.f, 0.f, 0.f, 0.f, p);
+		pe.emitParticle(
+			cbs,
+			pei,
+			pi,
+			pool,
+			timeOffset,
+			gravityX,
+			gravityY,
+			gravityZ,
+			0.f, // position
+			0.f,
+			0.f,
+			0.f, // speed
+			0.f,
+			0.f,
+			p);
 	}
 
 	return true;
+}
+
+//
+
+#include "framework.h"
+
+void drawParticles(
+	const ParticleEmitterInfo & pei,
+	const ParticleInfo & pi,
+	const ParticlePool & pool,
+	const char * basePath)
+{
+	char materialPath[PATH_MAX];
+	sprintf_s(materialPath, sizeof(materialPath), "%s/%s", basePath, pei.materialName);
+	
+	gxSetTexture(Sprite(materialPath).getTexture());
+	gxSetTextureSampler(GX_SAMPLE_LINEAR, true);
+
+	if (pi.blendMode == ParticleInfo::kBlendMode_AlphaBlended)
+		pushBlend(BLEND_ALPHA);
+	else if (pi.blendMode == ParticleInfo::kBlendMode_Additive)
+		pushBlend(BLEND_ADD);
+	else
+	{
+		fassert(false);
+		pushBlend(BLEND_OPAQUE);
+	}
+
+	gxBegin(GX_QUADS);
+	{
+		for (Particle * p = (pi.sortMode == ParticleInfo::kSortMode_OldestFirst) ? pool.head : pool.tail;
+					 p; p = (pi.sortMode == ParticleInfo::kSortMode_OldestFirst) ? p->next : p->prev)
+		{
+			const float particleLife = 1.f - p->life;
+			const float particleSpeed = p->speedScalar;
+
+			ParticleColor color(true);
+			computeParticleColor(pei, pi, particleLife, particleSpeed, color);
+			const float size_div_2 = computeParticleSize(pei, pi, particleLife, particleSpeed) / 2.f;
+
+			const float s = sinf(-p->rotation * float(M_PI) / 180.f);
+			const float c = cosf(-p->rotation * float(M_PI) / 180.f);
+
+			gxColor4fv(color.rgba);
+			gxTexCoord2f(0.f, 1.f); gxVertex2f(p->position[0] + (- c - s) * size_div_2, p->position[1] + (+ s - c) * size_div_2);
+			gxTexCoord2f(1.f, 1.f); gxVertex2f(p->position[0] + (+ c - s) * size_div_2, p->position[1] + (- s - c) * size_div_2);
+			gxTexCoord2f(1.f, 0.f); gxVertex2f(p->position[0] + (+ c + s) * size_div_2, p->position[1] + (- s + c) * size_div_2);
+			gxTexCoord2f(0.f, 0.f); gxVertex2f(p->position[0] + (- c + s) * size_div_2, p->position[1] + (+ s + c) * size_div_2);
+		}
+	}
+	gxEnd();
+	
+	gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
+	gxSetTexture(0);
+	
+	popBlend();
 }
