@@ -479,7 +479,7 @@ bool ParticleEmitter::emitParticle(
 
 		/*
 		todo
-			bool inheritVelocity; // Do the particles start with the same velocity as the particle system object?
+			bool inheritVelocity; // Do the particles start with the same velocity as the particle effect object?
 			bool worldSpace; // Should particles be animated in the parent object’s local space (and therefore move with the object) or in world space?
 		*/
 
@@ -579,16 +579,16 @@ Particle * ParticlePool::freeParticle(Particle * p)
 	return result;
 }
 
-// -- ParticleSystem
+// -- ParticleEffect
 
-ParticleSystem::~ParticleSystem()
+ParticleEffect::~ParticleEffect()
 {
 	emitter.clearParticles(pool);
 	Assert(pool.head == 0);
 	Assert(pool.tail == 0);
 }
 
-bool ParticleSystem::tick(
+bool ParticleEffect::tick(
 	const ParticleCallbacks & cbs,
 	const float gravityX,
 	const float gravityY,
@@ -625,17 +625,17 @@ bool ParticleSystem::tick(
 		emitter);
 }
 
-void ParticleSystem::draw() const
+void ParticleEffect::draw() const
 {
 	drawParticles(info->emitterInfo, info->particleInfo, pool, info->basePath.c_str());
 }
 
-void ParticleSystem::restart()
+void ParticleEffect::restart()
 {
 	emitter.restart(pool);
 }
 
-// -- ParticleSystemMgr
+// -- ParticleEffectSystem
 
 static int randomInt(void * userData, int min, int max)
 {
@@ -649,16 +649,16 @@ static float randomFloat(void * userData, float min, float max)
 
 static bool getEmitterByName(void * userData, const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe)
 {
-	ParticleSystemMgr & self = *(ParticleSystemMgr*)userData;
+	ParticleEffectSystem & self = *(ParticleEffectSystem*)userData;
 	
-	for (auto * system : self.systems)
+	for (auto * effect : self.effects)
 	{
-		if (!strcmp(name, system->info->emitterInfo.name))
+		if (!strcmp(name, effect->info->emitterInfo.name))
 		{
-			pei = &system->info->emitterInfo;
-			pi = &system->info->particleInfo;
-			pool = &system->pool;
-			pe = &system->emitter;
+			pei = &effect->info->emitterInfo;
+			pi = &effect->info->particleInfo;
+			pool = &effect->pool;
+			pe = &effect->emitter;
 			return true;
 		}
 	}
@@ -676,7 +676,7 @@ static bool checkCollision(
 	return false;
 }
 
-ParticleSystemMgr::ParticleSystemMgr()
+ParticleEffectSystem::ParticleEffectSystem()
 {
 	callbacks.userData = this;
 	callbacks.randomInt = randomInt;
@@ -685,42 +685,40 @@ ParticleSystemMgr::ParticleSystemMgr()
 	callbacks.checkCollision = checkCollision;
 }
 
-ParticleSystemMgr::~ParticleSystemMgr()
+ParticleEffectSystem::~ParticleEffectSystem()
 {
-	Assert(systems.empty());
+	Assert(effects.empty());
 }
 
-ParticleSystem * ParticleSystemMgr::add(const ParticleSystemInfo * info)
+ParticleEffect * ParticleEffectSystem::createEffect(const ParticleEffectInfo * effectInfo)
 {
-	ParticleSystem * instance = new ParticleSystem();
-	instance->info = info;
-	systems.push_back(instance);
+	ParticleEffect * instance = new ParticleEffect();
+	instance->info = effectInfo;
+	effects.push_back(instance);
 
 	return instance;
 }
 
-void ParticleSystemMgr::remove(ParticleSystem * particleSystem)
+void ParticleEffectSystem::removeEffect(ParticleEffect * effect)
 {
-	auto i = std::find(systems.begin(), systems.end(), particleSystem);
-	Assert(i != systems.end());
-	
-	auto *& system = *i;
+	auto i = std::find(effects.begin(), effects.end(), effect);
+	Assert(i != effects.end());
 
-	delete system;
-	system = nullptr;
+	delete effect;
+	effect = nullptr;
 
-	systems.erase(i);
+	effects.erase(i);
 }
 
-void ParticleSystemMgr::tick(
+void ParticleEffectSystem::tick(
 	const float gravityX,
 	const float gravityY,
 	const float gravityZ,
 	float dt)
 {
-	for (auto * system : systems)
+	for (auto * effect : effects)
 	{
-		system->tick(
+		effect->tick(
 			callbacks,
 			gravityX,
 			gravityY,
@@ -729,11 +727,11 @@ void ParticleSystemMgr::tick(
 	}
 }
 
-void ParticleSystemMgr::draw() const
+void ParticleEffectSystem::draw() const
 {
-	for (auto * system : systems)
+	for (auto * effect : effects)
 	{
-		system->draw();
+		effect->draw();
 	}
 }
 
@@ -741,7 +739,7 @@ void ParticleSystemMgr::draw() const
 
 bool loadParticleEffectLibrary(
 	const char * path,
-	std::vector<ParticleSystemInfo> & infos)
+	std::vector<ParticleEffectInfo> & infos)
 {
 	tinyxml2::XMLDocument d;
 
@@ -750,7 +748,7 @@ bool loadParticleEffectLibrary(
 		return false;
 	}
 	
-	// first count the numbers of particle system infos inside the document
+	// first count the numbers of particle effect infos inside the document
 
 	size_t peiIdx = 0;
 	size_t piIdx = 0;
@@ -763,12 +761,12 @@ bool loadParticleEffectLibrary(
 	
 	const size_t numInfos = std::max(peiIdx, piIdx);
 	
-	// allocate new particle system infos
+	// allocate new particle effect infos
 	
 	const size_t firstIndex = infos.size();
 	infos.resize(infos.size() + numInfos);
 	
-	// set the base path for each particle system info
+	// set the base path for each particle effect info
 	
 	const std::string basePath = Path::GetDirectory(path);
 	

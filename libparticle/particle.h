@@ -373,23 +373,23 @@ struct ParticleCallbacks
 	}
 };
 
-struct ParticleSystemInfo
+struct ParticleEffectInfo
 {
 	ParticleEmitterInfo emitterInfo;
 	ParticleInfo particleInfo;
 	std::string basePath;
 };
 
-struct ParticleSystem
+struct ParticleEffect
 {
 	// -- info
-	const ParticleSystemInfo * info;
+	const ParticleEffectInfo * info;
 
 	// -- runtime
 	ParticleEmitter emitter;
 	ParticlePool pool;
 
-	~ParticleSystem();
+	~ParticleEffect();
 
 	bool tick(
 		const ParticleCallbacks & cbs,
@@ -403,16 +403,16 @@ struct ParticleSystem
 	void restart();
 };
 
-struct ParticleSystemMgr
+struct ParticleEffectSystem
 {
-	std::vector<ParticleSystem*> systems;
+	std::vector<ParticleEffect*> effects;
 	ParticleCallbacks callbacks;
 
-	ParticleSystemMgr();
-	~ParticleSystemMgr();
+	ParticleEffectSystem();
+	~ParticleEffectSystem();
 
-	ParticleSystem * add(const ParticleSystemInfo * info);
-	void remove(ParticleSystem * particleSystem);
+	ParticleEffect * createEffect(const ParticleEffectInfo * effectInfo);
+	void removeEffect(ParticleEffect * effect);
 
 	void tick(
 		const float gravityX,
@@ -427,7 +427,7 @@ struct ParticleSystemMgr
 
 bool loadParticleEffectLibrary(
 	const char * path,
-	std::vector<ParticleSystemInfo> & infos);
+	std::vector<ParticleEffectInfo> & infos);
 
 //
 

@@ -45,8 +45,8 @@ struct ParticleEditorState
 	bool forceUiRefreshRequested = false;
 
 	// library
-	static const int kMaxParticleSystems = 6;
-	ParticleSystemInfo infos[kMaxParticleSystems];
+	static const int kMaxParticleEffects = 6;
+	ParticleEffectInfo infos[kMaxParticleEffects];
 
 	// current editing
 	int activeEditingIndex = 0;
@@ -54,7 +54,7 @@ struct ParticleEditorState
 	ParticleInfo & getActiveParticleInfo() { return infos[activeEditingIndex].particleInfo; }
 
 	// preview
-	ParticleSystemMgr particleSystemMgr;
+	ParticleEffectSystem particleEffectSystem;
 	Camera3d camera;
 	bool threeDeeMode = false;
 	
@@ -111,8 +111,8 @@ struct ParticleEditorState
 
 	~ParticleEditorState()
 	{
-		while (particleSystemMgr.systems.empty() == false)
-			particleSystemMgr.remove(particleSystemMgr.systems.front());
+		while (particleEffectSystem.effects.empty() == false)
+			particleEffectSystem.removeEffect(particleEffectSystem.effects.front());
 	}
 
 	void refreshUi()
@@ -136,28 +136,28 @@ struct ParticleEditorState
 	{
 		// attemp to load the effect library
 		
-		std::vector<ParticleSystemInfo> loadedInfos;
+		std::vector<ParticleEffectInfo> loadedInfos;
 		
 		if (!loadParticleEffectLibrary(path, loadedInfos))
 			return false;
 	
-		// clear the current particle systems
+		// clear the current particle effects
 		
-		while (particleSystemMgr.systems.empty() == false)
-			particleSystemMgr.remove(particleSystemMgr.systems.front());
+		while (particleEffectSystem.effects.empty() == false)
+			particleEffectSystem.removeEffect(particleEffectSystem.effects.front());
 		
-		for (int i = 0; i < kMaxParticleSystems; ++i)
-			infos[i] = ParticleSystemInfo();
+		for (int i = 0; i < kMaxParticleEffects; ++i)
+			infos[i] = ParticleEffectInfo();
 
-		// assign the new particle system infos
+		// assign the new particle effect infos
 		
-		for (size_t i = 0; i < loadedInfos.size() && i < kMaxParticleSystems; ++i)
+		for (size_t i = 0; i < loadedInfos.size() && i < kMaxParticleEffects; ++i)
 			infos[i] = loadedInfos[i];
 	
-		// instantiate particle systems
+		// instantiate particle effects
 		
-		for (int i = 0; i < kMaxParticleSystems; ++i)
-			particleSystemMgr.add(&infos[i]);
+		for (int i = 0; i < kMaxParticleEffects; ++i)
+			particleEffectSystem.createEffect(&infos[i]);
 		
 		return true;
 	}
@@ -220,7 +220,7 @@ struct ParticleEditorState
 			{
 				tinyxml2::XMLPrinter p;
 
-				for (int i = 0; i < kMaxParticleSystems; ++i)
+				for (int i = 0; i < kMaxParticleEffects; ++i)
 				{
 					p.OpenElement("emitter");
 					{
@@ -245,8 +245,8 @@ struct ParticleEditorState
 		
 		if (doButton("Restart simulation", 0.f, 1.f, true))
 		{
-			for (auto * system : particleSystemMgr.systems)
-				system->emitter.restart(system->pool);
+			for (auto * effect : particleEffectSystem.effects)
+				effect->emitter.restart(effect->pool);
 		}
 	}
 
@@ -306,7 +306,6 @@ struct ParticleEditorState
 		doEnum(pi.shape, "Shape", shapeValues);
 		
 		doCheckBox(pi.randomDirection, "Random Direction", false);
-		doCheckBox(pi.threeDeeDirection, "3D Direction", false);
 		doTextBox(pi.circleRadius, "Circle Radius", dt);
 		doTextBox(pi.boxSizeX, "Box Width", dt);
 		doTextBox(pi.boxSizeY, "Box Height", dt);
@@ -571,14 +570,14 @@ struct ParticleEditorState
 
 	ParticleEditorState()
 	{
-		particleSystemMgr.callbacks.checkCollision = checkCollision;
+		particleEffectSystem.callbacks.checkCollision = checkCollision;
 
 		infos[0].particleInfo.rate = 1.f;
-		for (int i = 0; i < kMaxParticleSystems; ++i)
+		for (int i = 0; i < kMaxParticleEffects; ++i)
 			strcpy_s(infos[i].emitterInfo.materialName, sizeof(infos[i].emitterInfo.materialName), "texture.png");
 		
-		for (int i = 0; i < kMaxParticleSystems; ++i)
-			particleSystemMgr.add(&infos[i]);
+		for (int i = 0; i < kMaxParticleEffects; ++i)
+			particleEffectSystem.createEffect(&infos[i]);
 		
 		camera.position[2] = -200.f;
 		camera.maxForwardSpeed = 100.f;
@@ -597,7 +596,7 @@ struct ParticleEditorState
 		const float gravityY = 100.f;
 		const float gravityZ = 0.f;
 		
-		particleSystemMgr.tick(gravityX, gravityY, gravityZ, dt);
+		particleEffectSystem.tick(gravityX, gravityY, gravityZ, dt);
 	}
 
 	void drawBoundingShape(const ParticleInfo & pi) const
@@ -654,7 +653,7 @@ struct ParticleEditorState
 				
 				drawBoundingShape(pi);
 				
-				particleSystemMgr.draw();
+				particleEffectSystem.draw();
 			}
 			camera.popViewMatrix();
 			projectScreen2d();
@@ -671,7 +670,7 @@ struct ParticleEditorState
 			drawBoundingShape(pi);
 		#endif
 
-			particleSystemMgr.draw();
+			particleEffectSystem.draw();
 			
 			gxPopMatrix();
 		}
