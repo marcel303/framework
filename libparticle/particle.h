@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace tinyxml2
 {
 	class XMLElement;
@@ -339,10 +341,26 @@ struct ParticleCallbacks
 {
 	void * userData;
 
-	int (*randomInt)(void * userData, int min, int max);
+	// -- random number generation. roll your own (deterministic or not) rng
+	int   (*randomInt  )(void * userData, int   min, int   max);
 	float (*randomFloat)(void * userData, float min, float max);
-	bool (*getEmitterByName)(void * userData, const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe);
-	bool (*checkCollision)(void * userData, float x1, float y1, float z1, float x2, float y2, float z2, float & t, float & nx, float & ny, float & nz);
+	
+	// -- sub-emitters
+	bool (*getEmitterByName)(
+		void * userData,
+		const char * name,
+		const ParticleEmitterInfo *& pei,
+		const ParticleInfo *& pi,
+		ParticlePool *& pool,
+		ParticleEmitter *& pe);
+	
+	// -- collision detection
+	bool (*checkCollision)(
+		void * userData,
+		float x1, float y1, float z1,
+		float x2, float y2, float z2,
+		float & t,
+		float & nx, float & ny, float & nz);
 
 	ParticleCallbacks()
 		: userData(0)
@@ -360,6 +378,7 @@ struct ParticleSystem
 	ParticleInfo particleInfo;
 	ParticleEmitter emitter;
 	ParticlePool pool;
+	std::string basePath;
 
 	~ParticleSystem();
 
@@ -369,6 +388,8 @@ struct ParticleSystem
 		const float gravityY,
 		const float gravityZ,
 		float dt);
+	
+	void draw() const;
 
 	void restart();
 };

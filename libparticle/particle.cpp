@@ -599,12 +599,28 @@ bool ParticleSystem::tick(
 	for (Particle * p = pool.head; p; )
 	{
 		if (!tickParticle(cbs, emitterInfo, particleInfo, dt, gravityX, gravityY, gravityZ, *p))
+		{
 			p = pool.freeParticle(p);
+		}
 		else
 			p = p->next;
 	}
 
-	return tickParticleEmitter(cbs, emitterInfo, particleInfo, pool, dt, gravityX, gravityY, gravityZ, emitter);
+	return tickParticleEmitter(
+		cbs,
+		emitterInfo,
+		particleInfo,
+		pool,
+		dt,
+		gravityX,
+		gravityY,
+		gravityZ,
+		emitter);
+}
+
+void ParticleSystem::draw() const
+{
+	drawParticles(emitterInfo, particleInfo, pool, basePath.c_str());
 }
 
 void ParticleSystem::restart()
