@@ -522,19 +522,45 @@ namespace binaural
 		
 		WDL_fft4(filter_wdl, AUDIO_BUFFER_SIZE, true);
 		
-	// todo : SSE optimize this scaling (or adjust the output gain?)
 		const float scale = 1.f / AUDIO_BUFFER_SIZE;
 		
+	#if BINAURAL_USE_SSE // todo : include neon
+		float4 * __restrict lResultOld_4 = (float4*)lResultOld;
+		float4 * __restrict rResultOld_4 = (float4*)rResultOld;
+		float4 * __restrict lResultNew_4 = (float4*)lResultNew;
+		float4 * __restrict rResultNew_4 = (float4*)rResultNew;
+		
+		for (int i = 0; i < AUDIO_BUFFER_SIZE / 4; ++i)
+		{
+			const int sortedIndex = i;
+			
+			float4 value1 = filter_wdl[i * 4 + 0].re.v;
+			float4 value2 = filter_wdl[i * 4 + 1].re.v;
+			float4 value3 = filter_wdl[i * 4 + 2].re.v;
+			float4 value4 = filter_wdl[i * 4 + 3].re.v;
+			
+		#if BINAURAL_USE_SSE
+			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
+		#else
+			#error
+		#endif
+			
+			lResultOld_4[sortedIndex] = value1 * scale;
+			rResultOld_4[sortedIndex] = value2 * scale;
+			lResultNew_4[sortedIndex] = value3 * scale;
+			rResultNew_4[sortedIndex] = value4 * scale;
+		}
+	#else
 		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
 		{
 			const int sortedIndex = i;
 			
-		// todo : optimize transpose using SSE instructions
 			lResultOld[sortedIndex] = filter_wdl[i].re.elem(0) * scale;
 			rResultOld[sortedIndex] = filter_wdl[i].re.elem(1) * scale;
 			lResultNew[sortedIndex] = filter_wdl[i].re.elem(2) * scale;
 			rResultNew[sortedIndex] = filter_wdl[i].re.elem(3) * scale;
 		}
+	#endif
 	#else
 		// transform audio data from the time-domain into the frequency-domain
 		
