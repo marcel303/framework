@@ -482,7 +482,7 @@ void Window::draw3dCursor() const
 
 		fillCircle(
 			m_windowData->mouseData.mouseX,
-			m_windowData->mouseData.mouseY,
+			getHeight() - m_windowData->mouseData.mouseY,
 			3,
 			10);
 	}
