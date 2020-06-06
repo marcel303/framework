@@ -12,10 +12,6 @@
 
 namespace gltf
 {
-	static Material defaultMaterial;
-	
-	//
-	
 	static bool translatePrimitiveType(const PrimitiveType type, GX_PRIMITIVE_TYPE & result)
 	{
 		switch (type)
@@ -63,7 +59,7 @@ namespace gltf
 
 		auto & material =
 			primitive.material < 0 || primitive.material >= scene.materials.size()
-			? defaultMaterial
+			? drawOptions.defaultMaterial
 			: scene.materials[primitive.material];
 		
 		// omit material in this pass ?

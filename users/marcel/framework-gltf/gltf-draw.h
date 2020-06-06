@@ -60,6 +60,8 @@ namespace gltf
 		bool enableShaderSetting = true;
 		
 		int activeScene = -2; // -2 = use active scene from GLTF file. -1 = draw all scenes
+		
+		Material defaultMaterial;
 	};
 	
 	// -- draw using GX api --
