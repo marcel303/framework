@@ -56,18 +56,15 @@ struct ParticleEditorState
 	char basePath[PATH_MAX] = { };
 
 	// library
-	static const int kMaxParticleInfos = 6;
-	ParticleEmitterInfo peiList[kMaxParticleInfos];
-	ParticleInfo piList[kMaxParticleInfos];
+	static const int kMaxParticleSystems = 6;
+	ParticleSystem system[kMaxParticleSystems];
 
 	// current editing
 	int activeEditingIndex = 0;
-	ParticleEmitterInfo & activeParticleEmitterInfo() { return peiList[activeEditingIndex]; }
-	ParticleInfo & getActiveParticleInfo() { return piList[activeEditingIndex]; }
+	ParticleEmitterInfo & activeParticleEmitterInfo() { return system[activeEditingIndex].emitterInfo; }
+	ParticleInfo & getActiveParticleInfo() { return system[activeEditingIndex].particleInfo; }
 
 	// preview
-	ParticlePool pool[kMaxParticleInfos];
-	ParticleEmitter particleEmitter[kMaxParticleInfos];
 	ParticleCallbacks callbacks;
 
 	static int randomInt(void * userData, int min, int max) { return min + (rand() % (max - min + 1)); }
@@ -76,39 +73,46 @@ struct ParticleEditorState
 	{
 		ParticleEditorState & self = *(ParticleEditorState*)userData;
 		
-		for (int i = 0; i < kMaxParticleInfos; ++i)
+		for (int i = 0; i < kMaxParticleSystems; ++i)
 		{
-			if (!strcmp(name, self.peiList[i].name))
+			if (!strcmp(name, self.system[i].emitterInfo.name))
 			{
-				pei = &self.peiList[i];
-				pi = &self.piList[i];
-				pool = &self.pool[i];
-				pe = &self.particleEmitter[i];
+				pei = &self.system[i].emitterInfo;
+				pi = &self.system[i].particleInfo;
+				pool = &self.system[i].pool;
+				pe = &self.system[i].emitter;
 				return true;
 			}
 		}
 		return false;
 	}
 
-	static bool checkCollision(void * userData, float x1, float y1, float z1, float x2, float y2, float z2, float & t, float & nx, float & ny, float & nz)
+	static bool checkCollision(
+		void * userData,
+		float x1, float y1, float z1,
+		float x2, float y2, float z2,
+		float & t,
+		float & nx, float & ny, float & nz)
 	{
 		//ParticleEditorState & self = *(ParticleEditorState*)userData;
 		
 		const float px = 0.f;
 		const float py = 100.f; // todo : plane position and normal should be editable
+		const float pz = 0.f;
 		
 		const float pnx = 0.f;
 		const float pny = -1.f;
-		const float pd = px * pnx + py * pny;
-		const float d1 = x1 * pnx + y1 * pny - pd;
-		const float d2 = x2 * pnx + y2 * pny - pd;
+		const float pnz = 0.f;
+		const float pd = px * pnx + py * pny + pz * pnz;
+		const float d1 = x1 * pnx + y1 * pny + z1 * pnz - pd;
+		const float d2 = x2 * pnx + y2 * pny + z2 * pnz - pd;
 		
 		if (d1 >= 0.f && d2 < 0.f)
 		{
 			t = -d1 / (d2 - d1);
 			nx = pnx;
 			ny = pny;
-			nz = 0.f;
+			nz = pnz;
 			return true;
 		}
 		else
@@ -138,10 +142,10 @@ struct ParticleEditorState
 
 	~ParticleEditorState()
 	{
-		for (int i = 0; i < kMaxParticleInfos; ++i)
+		for (int i = 0; i < kMaxParticleSystems; ++i)
 		{
-			while (pool[i].head != nullptr)
-				pool[i].freeParticle(pool[i].head);
+			while (system[i].pool.head != nullptr)
+				system[i].pool.freeParticle(system[i].pool.head);
 		}
 	}
 
@@ -175,26 +179,26 @@ struct ParticleEditorState
 			const std::string directory = Path::GetDirectory(path);
 			strcpy_s(basePath, sizeof(basePath), directory.c_str());
 			
-			for (int i = 0; i < kMaxParticleInfos; ++i)
+			for (int i = 0; i < kMaxParticleSystems; ++i)
 			{
-				peiList[i] = ParticleEmitterInfo();
-				piList[i] = ParticleInfo();
-				particleEmitter[i].clearParticles(pool[i]);
-				fassert(pool[i].head == 0);
-				fassert(pool[i].tail == 0);
-				particleEmitter[i] = ParticleEmitter();
+				system[i].emitterInfo = ParticleEmitterInfo();
+				system[i].particleInfo = ParticleInfo();
+				system[i].emitter.clearParticles(system[i].pool);
+				fassert(system[i].pool.head == 0);
+				fassert(system[i].pool.tail == 0);
+				system[i].emitter = ParticleEmitter();
 			}
 
 			int peiIdx = 0;
 			for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
 			{
-				peiList[peiIdx++].load(emitterElem);
+				system[peiIdx++].emitterInfo.load(emitterElem);
 			}
 
 			int piIdx = 0;
 			for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
 			{
-				piList[piIdx++].load(particleElem);
+				system[piIdx++].particleInfo.load(particleElem);
 			}
 			
 			return true;
@@ -259,17 +263,17 @@ struct ParticleEditorState
 			{
 				XMLPrinter p;
 
-				for (int i = 0; i < kMaxParticleInfos; ++i)
+				for (int i = 0; i < kMaxParticleSystems; ++i)
 				{
 					p.OpenElement("emitter");
 					{
-						peiList[i].save(&p);
+						system[i].emitterInfo.save(&p);
 					}
 					p.CloseElement();
 
 					p.OpenElement("particle");
 					{
-						piList[i].save(&p);
+						system[i].particleInfo.save(&p);
 					}
 					p.CloseElement();
 				}
@@ -284,8 +288,8 @@ struct ParticleEditorState
 		
 		if (doButton("Restart simulation", 0.f, 1.f, true))
 		{
-			for (int i = 0; i < kMaxParticleInfos; ++i)
-				particleEmitter[i].restart(pool[i]);
+			for (int i = 0; i < kMaxParticleSystems; ++i)
+				system[i].emitter.restart(system[i].pool);
 		}
 	}
 
@@ -613,9 +617,9 @@ struct ParticleEditorState
 		callbacks.getEmitterByName = getEmitterByName;
 		callbacks.checkCollision = checkCollision;
 
-		piList[0].rate = 1.f;
-		for (int i = 0; i < kMaxParticleInfos; ++i)
-			strcpy_s(peiList[i].materialName, sizeof(peiList[i].materialName), "texture.png");
+		system[0].particleInfo.rate = 1.f;
+		for (int i = 0; i < kMaxParticleSystems; ++i)
+			strcpy_s(system[i].emitterInfo.materialName, sizeof(system[i].emitterInfo.materialName), "texture.png");
 	}
 
 	void tick(const bool menuActive, const float sx, const float sy, const float dt)
@@ -623,42 +627,18 @@ struct ParticleEditorState
 		if (menuActive)
 			doMenu(s_menu, true, false, sx, sy, dt);
 
-		for (int i = 0; i < kMaxParticleInfos; ++i)
+		for (int i = 0; i < kMaxParticleSystems; ++i)
 		{
 			const float gravityX = 0.f;
 			const float gravityY = 100.f;
 			const float gravityZ = 0.f;
 			
-			for (Particle * p = pool[i].head; p; )
-			{
-				if (!tickParticle(
-					callbacks,
-					peiList[i],
-					piList[i],
-					dt,
-					gravityX,
-					gravityY,
-					gravityZ,
-					*p))
-				{
-					p = pool[i].freeParticle(p);
-				}
-				else
-				{
-					p = p->next;
-				}
-			}
-			
-			tickParticleEmitter(
+			system[i].tick(
 				callbacks,
-				peiList[i],
-				piList[i],
-				pool[i],
-				dt,
 				gravityX,
 				gravityY,
 				gravityZ,
-				particleEmitter[i]);
+				dt);
 		}
 	}
 
@@ -698,12 +678,12 @@ struct ParticleEditorState
 			break;
 		}
 
-		for (int i = 0; i < kMaxParticleInfos; ++i)
+		for (int i = 0; i < kMaxParticleSystems; ++i)
 		{
 			drawParticles(
-				peiList[i],
-				piList[i],
-				pool[i],
+				system[i].emitterInfo,
+				system[i].particleInfo,
+				system[i].pool,
 				basePath);
 		}
 	#endif

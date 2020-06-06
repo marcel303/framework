@@ -598,7 +598,15 @@ bool ParticleSystem::tick(
 {
 	for (Particle * p = pool.head; p; )
 	{
-		if (!tickParticle(cbs, emitterInfo, particleInfo, dt, gravityX, gravityY, gravityZ, *p))
+		if (!tickParticle(
+			cbs,
+			emitterInfo,
+			particleInfo,
+			dt,
+			gravityX,
+			gravityY,
+			gravityZ,
+			*p))
 		{
 			p = pool.freeParticle(p);
 		}
