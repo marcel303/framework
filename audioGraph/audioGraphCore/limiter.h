@@ -77,9 +77,9 @@ struct Limiter
 		
 		// todo : SSE optimize limiter code
 		
-		while (i * 16 < numSamples)
+		while (i + 16 <= numSamples)
 		{
-			float * __restrict samplePtr = samples + i * 16;
+			float * __restrict samplePtr = samples + i;
 			
 			for (int j = 0; j < 4; ++j)
 			{
@@ -113,10 +113,8 @@ struct Limiter
 				// already within the maximum output range
 			}
 			
-			i++;
+			i += 16;
 		}
-		
-		i = i * 16;
 	#endif
 	
 		while (i < numSamples)
@@ -134,11 +132,11 @@ struct Limiter
 	#if 1
 		const float retain16 = powf(retain, 16.f);
 
-		while (i * 16 < numSamples)
+		while (i + 16 <= numSamples)
 		{
 			for (int j = 0; j < 16; ++j)
 			{
-				const float value = samples[i * 16 + j];
+				const float value = samples[i + j];
 
 				const float valueMag = fabsf(value);
 
@@ -152,7 +150,7 @@ struct Limiter
 
 				for (int j = 0; j < 16; ++j)
 				{
-					outputSamples[i * 16 + j] = samples[i * 16 + j] * outputScale;
+					outputSamples[i + j] = samples[i + j] * outputScale;
 				}
 
 				measuredMax *= retain16;
@@ -163,14 +161,12 @@ struct Limiter
 				
 				for (int j = 0; j < 16; ++j)
 				{
-					outputSamples[i * 16 + j] = samples[i * 16 + j];
+					outputSamples[i + j] = samples[i + j];
 				}
 			}
 			
-			i++;
+			i += 16;
 		}
-		
-		i = i * 16;
 	#endif
 	
 		while (i < numSamples)
@@ -200,9 +196,9 @@ struct Limiter
 	#if 1
 		// todo : SSE optimize limiter code
 		
-		while (i * 16 < numSamples)
+		while (i + 16 <= numSamples)
 		{
-			float * __restrict samplePtr = samples + i * 16;
+			float * __restrict samplePtr = samples + i;
 			
 			for (int j = 0; j < 4; ++j)
 			{
@@ -217,10 +213,8 @@ struct Limiter
 				measuredMax = fmaxf(measuredMax, fmaxf(max1, max2));
 			}
 			
-			i++;
+			i += 16;
 		}
-		
-		i = i * 16;
 	#endif
 	
 		while (i < numSamples)
@@ -248,9 +242,9 @@ struct Limiter
 				int i = 0;
 
 			#if 1
-				while (i * 16 < numSamples)
+				while (i + 16 <= numSamples)
 				{
-					float * __restrict samplePtr = samples + i * 16;
+					float * __restrict samplePtr = samples + i;
 					
 					for (int j = 0; j < 4; ++j)
 					{
@@ -260,10 +254,8 @@ struct Limiter
 						samplePtr[j * 4 + 3] *= outputScale;
 					}
 					
-					i++;
+					i += 16;
 				}
-			
-				i = i * 16;
 			#endif
 			
 				while (i < numSamples)
