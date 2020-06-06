@@ -200,7 +200,7 @@ namespace parameterUi
 				
 				for (auto & elem : elems)
 				{
-					items[itemIndex] = elem.key;
+					items[itemIndex] = elem.key.c_str();
 					
 					if (elem.value == parameter.get())
 						currentItemIndex = itemIndex;
@@ -348,7 +348,7 @@ namespace parameterUi
 					ImGui::Text("Elements:");
 					ImGui::Indent();
 					for (auto & elem : elems)
-						ImGui::Text("%d: %s", elem.value, elem.key);
+						ImGui::Text("%d: %s", elem.value, elem.key.c_str());
 					ImGui::Unindent();
 				}
 				ImGui::EndTooltip();

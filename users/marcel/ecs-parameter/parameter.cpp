@@ -88,7 +88,7 @@ ParameterVec4 & ParameterVec4::setLimits(const Vec4 & in_min, const Vec4 & in_ma
 int ParameterEnum::translateKeyToValue(const char * key) const
 {
 	for (auto & elem : elems)
-		if (strcmp(elem.key, key) == 0)
+		if (strcmp(elem.key.c_str(), key) == 0)
 			return elem.value;
 	return -1;
 }
@@ -97,7 +97,7 @@ const char * ParameterEnum::translateValueToKey(const int value) const
 {
 	for (auto & elem : elems)
 		if (elem.value == value)
-			return elem.key;
+			return elem.key.c_str();
 	return nullptr;
 }
 

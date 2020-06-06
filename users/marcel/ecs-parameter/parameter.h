@@ -452,7 +452,7 @@ struct ParameterEnum : ParameterBase
 {
 	struct Elem
 	{
-		const char * key;
+		std::string key;
 		const int value;
 	};
 	
