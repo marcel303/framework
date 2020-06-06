@@ -6,10 +6,9 @@
 
 #include "Debugging.h" // Assert
 #include "Log.h"       // LOG_ functions
+#include "Path.h"      // GetDirectory
 #include "StringEx.h"  // _s functions
 #include "ui.h"        // srgb <-> linear
-
-//using namespace tinyxml2;
 
 //
 
@@ -101,7 +100,7 @@ ParticleInfo::ParticleInfo()
 	: rate(0.f)
 	, numBursts(0)
 	// shape
-	, shape(kShapeCircle)
+	, shape(kShapeType_Circle)
 	, randomDirection(false)
 	, circleRadius(100.f)
 	, boxSizeX(100.f)
@@ -316,7 +315,7 @@ void ParticleInfo::load(const tinyxml2::XMLElement * elem)
 		}
 	}
 	// shape
-	shape = (Shape)intAttrib(elem, "shape", shape);
+	shape = (ShapeType)intAttrib(elem, "shape", shape);
 	randomDirection = boolAttrib(elem, "randomDirection", randomDirection);
 	circleRadius = floatAttrib(elem, "circleRadius", circleRadius);
 	boxSizeX = floatAttrib(elem, "boxSizeX", boxSizeX);
@@ -580,7 +579,7 @@ Particle * ParticlePool::freeParticle(Particle * p)
 	return result;
 }
 
-//
+// -- ParticleSystem
 
 ParticleSystem::~ParticleSystem()
 {
@@ -600,8 +599,8 @@ bool ParticleSystem::tick(
 	{
 		if (!tickParticle(
 			cbs,
-			emitterInfo,
-			particleInfo,
+			info->emitterInfo,
+			info->particleInfo,
 			dt,
 			gravityX,
 			gravityY,
@@ -616,8 +615,8 @@ bool ParticleSystem::tick(
 
 	return tickParticleEmitter(
 		cbs,
-		emitterInfo,
-		particleInfo,
+		info->emitterInfo,
+		info->particleInfo,
 		pool,
 		dt,
 		gravityX,
@@ -628,7 +627,7 @@ bool ParticleSystem::tick(
 
 void ParticleSystem::draw() const
 {
-	drawParticles(emitterInfo, particleInfo, pool, basePath.c_str());
+	drawParticles(info->emitterInfo, info->particleInfo, pool, info->basePath.c_str());
 }
 
 void ParticleSystem::restart()
@@ -636,6 +635,163 @@ void ParticleSystem::restart()
 	emitter.restart(pool);
 }
 
+// -- ParticleSystemMgr
+
+static int randomInt(void * userData, int min, int max)
+{
+	return min + (rand() % (max - min + 1));
+}
+
+static float randomFloat(void * userData, float min, float max)
+{
+	return min + (rand() % 4096) / 4095.f * (max - min);
+}
+
+static bool getEmitterByName(void * userData, const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe)
+{
+	ParticleSystemMgr & self = *(ParticleSystemMgr*)userData;
+	
+	for (auto * system : self.systems)
+	{
+		if (!strcmp(name, system->info->emitterInfo.name))
+		{
+			pei = &system->info->emitterInfo;
+			pi = &system->info->particleInfo;
+			pool = &system->pool;
+			pe = &system->emitter;
+			return true;
+		}
+	}
+
+	return false;
+}
+
+static bool checkCollision(
+	void * userData,
+	float x1, float y1, float z1,
+	float x2, float y2, float z2,
+	float & t,
+	float & nx, float & ny, float & nz)
+{
+	return false;
+}
+
+ParticleSystemMgr::ParticleSystemMgr()
+{
+	callbacks.userData = this;
+	callbacks.randomInt = randomInt;
+	callbacks.randomFloat = randomFloat;
+	callbacks.getEmitterByName = getEmitterByName;
+	callbacks.checkCollision = checkCollision;
+}
+
+ParticleSystemMgr::~ParticleSystemMgr()
+{
+	Assert(systems.empty());
+}
+
+ParticleSystem * ParticleSystemMgr::add(const ParticleSystemInfo * info)
+{
+	ParticleSystem * instance = new ParticleSystem();
+	instance->info = info;
+	systems.push_back(instance);
+
+	return instance;
+}
+
+void ParticleSystemMgr::remove(ParticleSystem * particleSystem)
+{
+	auto i = std::find(systems.begin(), systems.end(), particleSystem);
+	Assert(i != systems.end());
+	
+	auto *& system = *i;
+
+	delete system;
+	system = nullptr;
+
+	systems.erase(i);
+}
+
+void ParticleSystemMgr::tick(
+	const float gravityX,
+	const float gravityY,
+	const float gravityZ,
+	float dt)
+{
+	for (auto * system : systems)
+	{
+		system->tick(
+			callbacks,
+			gravityX,
+			gravityY,
+			gravityZ,
+			dt);
+	}
+}
+
+void ParticleSystemMgr::draw() const
+{
+	for (auto * system : systems)
+	{
+		system->draw();
+	}
+}
+
+//
+
+bool loadParticleEffectLibrary(
+	const char * path,
+	std::vector<ParticleSystemInfo> & infos)
+{
+	tinyxml2::XMLDocument d;
+
+	if (d.LoadFile(path) != tinyxml2::XML_NO_ERROR)
+	{
+		return false;
+	}
+	
+	// first count the numbers of particle system infos inside the document
+
+	size_t peiIdx = 0;
+	size_t piIdx = 0;
+	
+	for (tinyxml2::XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
+		peiIdx++;
+	
+	for (tinyxml2::XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
+		piIdx++;
+	
+	const size_t numInfos = std::max(peiIdx, piIdx);
+	
+	// allocate new particle system infos
+	
+	const size_t firstIndex = infos.size();
+	infos.resize(infos.size() + numInfos);
+	
+	// set the base path for each particle system info
+	
+	const std::string basePath = Path::GetDirectory(path);
+	
+	for (size_t i = firstIndex; i < infos.size(); ++i)
+		infos[i].basePath = basePath;
+	
+	// load the emitter and particle infos
+	
+	peiIdx = firstIndex;
+	for (tinyxml2::XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
+	{
+		infos[peiIdx++].emitterInfo.load(emitterElem);
+	}
+
+	piIdx = firstIndex;
+	for (tinyxml2::XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
+	{
+		infos[piIdx++].particleInfo.load(particleElem);
+	}
+	
+	return true;
+}
+	
 //
 
 bool tickParticle(
@@ -836,10 +992,9 @@ void getParticleSpawnLocation(
 	float & y,
 	float & z)
 {
-	// todo : sphere and box3d
 	switch (pi.shape)
 	{
-	case ParticleInfo::kShapeEdge:
+	case ParticleInfo::kShapeType_Edge:
 		{
 			const float t = cbs.randomFloat(cbs.userData, 0.f, 1.f);
 			x = (t - .5f) * 2.f * pi.boxSizeX;
@@ -847,7 +1002,7 @@ void getParticleSpawnLocation(
 			z = 0.f;
 		}
 		break;
-	case ParticleInfo::kShapeBox:
+	case ParticleInfo::kShapeType_Box:
 		{
 			if (pi.emitFromShell)
 			{
@@ -893,7 +1048,7 @@ void getParticleSpawnLocation(
 			z = 0.f;
 		}
 		break;
-	case ParticleInfo::kShapeCircle:
+	case ParticleInfo::kShapeType_Circle:
 		{
 			if (pi.emitFromShell)
 			{
@@ -916,6 +1071,32 @@ void getParticleSpawnLocation(
 			}
 
 			z = 0.f;
+		}
+		break;
+	case ParticleInfo::kShapeType_Box3d:
+		{
+			const float tx = cbs.randomFloat(cbs.userData, 0.f, 1.f);
+			const float ty = cbs.randomFloat(cbs.userData, 0.f, 1.f);
+			const float tz = cbs.randomFloat(cbs.userData, 0.f, 1.f);
+			x = (tx - .5f) * 2.f * pi.boxSizeX;
+			y = (ty - .5f) * 2.f * pi.boxSizeY;
+			z = (tz - .5f) * 2.f * pi.boxSizeZ;
+		}
+		break;
+	case ParticleInfo::kShapeType_Sphere:
+		{
+			for (;;)
+			{
+				const float tx = cbs.randomFloat(cbs.userData, 0.f, 1.f);
+				const float ty = cbs.randomFloat(cbs.userData, 0.f, 1.f);
+				const float tz = cbs.randomFloat(cbs.userData, 0.f, 1.f);
+				x = (tx - .5f) * 2.f * pi.circleRadius;
+				y = (ty - .5f) * 2.f * pi.circleRadius;
+				z = (tz - .5f) * 2.f * pi.circleRadius;
+				const float dSquared = x * x + y * y + z * z;
+				if (dSquared <= pi.circleRadius * pi.circleRadius)
+					break;
+			}
 		}
 		break;
 	default:
@@ -1096,14 +1277,17 @@ void drawParticles(
 			computeParticleColor(pei, pi, particleLife, particleSpeed, color);
 			const float size_div_2 = computeParticleSize(pei, pi, particleLife, particleSpeed) / 2.f;
 
+		// todo : determine particle orientation based on the view matrix
 			const float s = sinf(-p->rotation * float(M_PI) / 180.f);
 			const float c = cosf(-p->rotation * float(M_PI) / 180.f);
 
+			const float * __restrict pos = p->position;
+			
 			gxColor4fv(color.rgba);
-			gxTexCoord2f(0.f, 1.f); gxVertex2f(p->position[0] + (- c - s) * size_div_2, p->position[1] + (+ s - c) * size_div_2);
-			gxTexCoord2f(1.f, 1.f); gxVertex2f(p->position[0] + (+ c - s) * size_div_2, p->position[1] + (- s - c) * size_div_2);
-			gxTexCoord2f(1.f, 0.f); gxVertex2f(p->position[0] + (+ c + s) * size_div_2, p->position[1] + (- s + c) * size_div_2);
-			gxTexCoord2f(0.f, 0.f); gxVertex2f(p->position[0] + (- c + s) * size_div_2, p->position[1] + (+ s + c) * size_div_2);
+			gxTexCoord2f(0.f, 1.f); gxVertex3f(pos[0] + (- c - s) * size_div_2, pos[1] + (+ s - c) * size_div_2, pos[2]);
+			gxTexCoord2f(1.f, 1.f); gxVertex3f(pos[0] + (+ c - s) * size_div_2, pos[1] + (- s - c) * size_div_2, pos[2]);
+			gxTexCoord2f(1.f, 0.f); gxVertex3f(pos[0] + (+ c + s) * size_div_2, pos[1] + (- s + c) * size_div_2, pos[2]);
+			gxTexCoord2f(0.f, 0.f); gxVertex3f(pos[0] + (- c + s) * size_div_2, pos[1] + (+ s + c) * size_div_2, pos[2]);
 		}
 	}
 	gxEnd();

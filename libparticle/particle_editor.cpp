@@ -4,9 +4,9 @@
 #include "particle_editor.h"
 #include "particle_framework.h"
 #include "particle_ui.h"
-#include "Path.h"
 #include "tinyxml2.h"
 #include <math.h>
+#include <string>
 
 #include "StringEx.h" // _s functions
 
@@ -33,14 +33,6 @@
 
 */
 
-#ifdef _MSC_VER
-	#ifndef PATH_MAX
-		#define PATH_MAX _MAX_PATH
-	#endif
-#endif
-
-using namespace tinyxml2;
-
 // ui design
 static const int kMenuWidth = 300;
 static const int kMenuSpacing = 15;
@@ -52,41 +44,20 @@ struct ParticleEditorState
 	// ui draw state
 	bool forceUiRefreshRequested = false;
 
-	// resources
-	char basePath[PATH_MAX] = { };
-
 	// library
 	static const int kMaxParticleSystems = 6;
-	ParticleSystem system[kMaxParticleSystems];
+	ParticleSystemInfo infos[kMaxParticleSystems];
 
 	// current editing
 	int activeEditingIndex = 0;
-	ParticleEmitterInfo & activeParticleEmitterInfo() { return system[activeEditingIndex].emitterInfo; }
-	ParticleInfo & getActiveParticleInfo() { return system[activeEditingIndex].particleInfo; }
+	ParticleEmitterInfo & activeParticleEmitterInfo() { return infos[activeEditingIndex].emitterInfo; }
+	ParticleInfo & getActiveParticleInfo() { return infos[activeEditingIndex].particleInfo; }
 
 	// preview
-	ParticleCallbacks callbacks;
-
-	static int randomInt(void * userData, int min, int max) { return min + (rand() % (max - min + 1)); }
-	static float randomFloat(void * userData, float min, float max) { return min + (rand() % 4096) / 4095.f * (max - min); }
-	static bool getEmitterByName(void * userData, const char * name, const ParticleEmitterInfo *& pei, const ParticleInfo *& pi, ParticlePool *& pool, ParticleEmitter *& pe)
-	{
-		ParticleEditorState & self = *(ParticleEditorState*)userData;
-		
-		for (int i = 0; i < kMaxParticleSystems; ++i)
-		{
-			if (!strcmp(name, self.system[i].emitterInfo.name))
-			{
-				pei = &self.system[i].emitterInfo;
-				pi = &self.system[i].particleInfo;
-				pool = &self.system[i].pool;
-				pe = &self.system[i].emitter;
-				return true;
-			}
-		}
-		return false;
-	}
-
+	ParticleSystemMgr particleSystemMgr;
+	Camera3d camera;
+	bool threeDeeMode = false;
+	
 	static bool checkCollision(
 		void * userData,
 		float x1, float y1, float z1,
@@ -94,8 +65,6 @@ struct ParticleEditorState
 		float & t,
 		float & nx, float & ny, float & nz)
 	{
-		//ParticleEditorState & self = *(ParticleEditorState*)userData;
-		
 		const float px = 0.f;
 		const float py = 100.f; // todo : plane position and normal should be editable
 		const float pz = 0.f;
@@ -142,11 +111,8 @@ struct ParticleEditorState
 
 	~ParticleEditorState()
 	{
-		for (int i = 0; i < kMaxParticleSystems; ++i)
-		{
-			while (system[i].pool.head != nullptr)
-				system[i].pool.freeParticle(system[i].pool.head);
-		}
+		while (particleSystemMgr.systems.empty() == false)
+			particleSystemMgr.remove(particleSystemMgr.systems.front());
 	}
 
 	void refreshUi()
@@ -168,41 +134,32 @@ struct ParticleEditorState
 
 	bool load(const char * path)
 	{
-		XMLDocument d;
-
-		if (d.LoadFile(path) != XML_NO_ERROR)
-		{
+		// attemp to load the effect library
+		
+		std::vector<ParticleSystemInfo> loadedInfos;
+		
+		if (!loadParticleEffectLibrary(path, loadedInfos))
 			return false;
-		}
-		else
-		{
-			const std::string directory = Path::GetDirectory(path);
-			strcpy_s(basePath, sizeof(basePath), directory.c_str());
-			
-			for (int i = 0; i < kMaxParticleSystems; ++i)
-			{
-				system[i].emitterInfo = ParticleEmitterInfo();
-				system[i].particleInfo = ParticleInfo();
-				system[i].emitter.clearParticles(system[i].pool);
-				fassert(system[i].pool.head == 0);
-				fassert(system[i].pool.tail == 0);
-				system[i].emitter = ParticleEmitter();
-			}
+	
+		// clear the current particle systems
+		
+		while (particleSystemMgr.systems.empty() == false)
+			particleSystemMgr.remove(particleSystemMgr.systems.front());
+		
+		for (int i = 0; i < kMaxParticleSystems; ++i)
+			infos[i] = ParticleSystemInfo();
 
-			int peiIdx = 0;
-			for (XMLElement * emitterElem = d.FirstChildElement("emitter"); emitterElem; emitterElem = emitterElem->NextSiblingElement("emitter"))
-			{
-				system[peiIdx++].emitterInfo.load(emitterElem);
-			}
-
-			int piIdx = 0;
-			for (XMLElement * particleElem = d.FirstChildElement("particle"); particleElem; particleElem = particleElem->NextSiblingElement("particle"))
-			{
-				system[piIdx++].particleInfo.load(particleElem);
-			}
-			
-			return true;
-		}
+		// assign the new particle system infos
+		
+		for (size_t i = 0; i < loadedInfos.size() && i < kMaxParticleSystems; ++i)
+			infos[i] = loadedInfos[i];
+	
+		// instantiate particle systems
+		
+		for (int i = 0; i < kMaxParticleSystems; ++i)
+			particleSystemMgr.add(&infos[i]);
+		
+		return true;
 	}
 
 	void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
@@ -261,24 +218,24 @@ struct ParticleEditorState
 
 			if (!saveFilename.empty())
 			{
-				XMLPrinter p;
+				tinyxml2::XMLPrinter p;
 
 				for (int i = 0; i < kMaxParticleSystems; ++i)
 				{
 					p.OpenElement("emitter");
 					{
-						system[i].emitterInfo.save(&p);
+						infos[i].emitterInfo.save(&p);
 					}
 					p.CloseElement();
 
 					p.OpenElement("particle");
 					{
-						system[i].particleInfo.save(&p);
+						infos[i].particleInfo.save(&p);
 					}
 					p.CloseElement();
 				}
 
-				XMLDocument d;
+				tinyxml2::XMLDocument d;
 				d.Parse(p.CStr());
 				d.SaveFile(saveFilename.c_str());
 
@@ -288,8 +245,8 @@ struct ParticleEditorState
 		
 		if (doButton("Restart simulation", 0.f, 1.f, true))
 		{
-			for (int i = 0; i < kMaxParticleSystems; ++i)
-				system[i].emitter.restart(system[i].pool);
+			for (auto * system : particleSystemMgr.systems)
+				system->emitter.restart(system->pool);
 		}
 	}
 
@@ -344,9 +301,12 @@ struct ParticleEditorState
 		shapeValues.push_back(EnumValue('e', "Edge"));
 		shapeValues.push_back(EnumValue('b', "Box"));
 		shapeValues.push_back(EnumValue('c', "Circle"));
+		shapeValues.push_back(EnumValue('B', "Box(3D)"));
+		shapeValues.push_back(EnumValue('s', "Sphere"));
 		doEnum(pi.shape, "Shape", shapeValues);
 		
 		doCheckBox(pi.randomDirection, "Random Direction", false);
+		doCheckBox(pi.threeDeeDirection, "3D Direction", false);
 		doTextBox(pi.circleRadius, "Circle Radius", dt);
 		doTextBox(pi.boxSizeX, "Box Width", dt);
 		doTextBox(pi.boxSizeY, "Box Height", dt);
@@ -358,7 +318,7 @@ struct ParticleEditorState
 			pushMenu("Velocity Over Lifetime");
 			ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 			doTextBox(pi.velocityOverLifetimeValueX, "X", .00f, .33f, false, dt);
-			doTextBox(pi.velocityOverLifetimeValueY, "Y", .33f, .33f, true, dt);
+			doTextBox(pi.velocityOverLifetimeValueY, "Y", .33f, .33f, false, dt);
 			doTextBox(pi.velocityOverLifetimeValueZ, "Z", .66f, .33f, true, dt);
 			popMenu();
 		}
@@ -377,7 +337,7 @@ struct ParticleEditorState
 			pushMenu("Force Over Lifetime");
 			ScopedValueAdjust<int> xAdjust(g_drawX, +10);
 			doTextBox(pi.forceOverLifetimeValueX, "X", .00f, .33f, false, dt);
-			doTextBox(pi.forceOverLifetimeValueY, "Y", .33f, .33f, true, dt);
+			doTextBox(pi.forceOverLifetimeValueY, "Y", .33f, .33f, false, dt);
 			doTextBox(pi.forceOverLifetimeValueZ, "Z", .66f, .33f, true, dt);
 			popMenu();
 		}
@@ -611,15 +571,19 @@ struct ParticleEditorState
 
 	ParticleEditorState()
 	{
-		callbacks.userData = this;
-		callbacks.randomInt = randomInt;
-		callbacks.randomFloat = randomFloat;
-		callbacks.getEmitterByName = getEmitterByName;
-		callbacks.checkCollision = checkCollision;
+		particleSystemMgr.callbacks.checkCollision = checkCollision;
 
-		system[0].particleInfo.rate = 1.f;
+		infos[0].particleInfo.rate = 1.f;
 		for (int i = 0; i < kMaxParticleSystems; ++i)
-			strcpy_s(system[i].emitterInfo.materialName, sizeof(system[i].emitterInfo.materialName), "texture.png");
+			strcpy_s(infos[i].emitterInfo.materialName, sizeof(infos[i].emitterInfo.materialName), "texture.png");
+		
+		for (int i = 0; i < kMaxParticleSystems; ++i)
+			particleSystemMgr.add(&infos[i]);
+		
+		camera.position[2] = -200.f;
+		camera.maxForwardSpeed = 100.f;
+		camera.maxUpSpeed = camera.maxForwardSpeed;
+		camera.maxStrafeSpeed = camera.maxForwardSpeed;
 	}
 
 	void tick(const bool menuActive, const float sx, const float sy, const float dt)
@@ -627,68 +591,90 @@ struct ParticleEditorState
 		if (menuActive)
 			doMenu(s_menu, true, false, sx, sy, dt);
 
-		for (int i = 0; i < kMaxParticleSystems; ++i)
-		{
-			const float gravityX = 0.f;
-			const float gravityY = 100.f;
-			const float gravityZ = 0.f;
-			
-			system[i].tick(
-				callbacks,
-				gravityX,
-				gravityY,
-				gravityZ,
-				dt);
-		}
+		camera.tick(framework.timeStep, threeDeeMode && menuActive == false);
+		
+		const float gravityX = 0.f;
+		const float gravityY = 100.f;
+		const float gravityZ = 0.f;
+		
+		particleSystemMgr.tick(gravityX, gravityY, gravityZ, dt);
 	}
 
-	void draw(const bool menuActive, const float sx, const float sy)
+	void drawBoundingShape(const ParticleInfo & pi) const
 	{
-		gxPushMatrix();
-		gxTranslatef(sx/2.f, sy/2.f, 0.f);
-
-	#if 1
-	// todo : add option for drawing collision shapes
-	
-		auto & pi = getActiveParticleInfo();
-		
 		setColor(0, 255, 0, 31);
 		switch (pi.shape)
 		{
-		case ParticleInfo::kShapeBox:
+		case ParticleInfo::kShapeType_Box:
 			drawRectLine(
 				-pi.boxSizeX,
 				-pi.boxSizeY,
 				+pi.boxSizeX,
 				+pi.boxSizeY);
 			break;
-		case ParticleInfo::kShapeCircle:
+		case ParticleInfo::kShapeType_Circle:
 			drawRectLine(
 				-pi.circleRadius,
 				-pi.circleRadius,
 				+pi.circleRadius,
 				+pi.circleRadius);
 			break;
-		case ParticleInfo::kShapeEdge:
+		case ParticleInfo::kShapeType_Edge:
 			drawLine(
 				-pi.boxSizeX,
 				0.f,
 				+pi.boxSizeX,
 				0.f);
 			break;
+		case ParticleInfo::kShapeType_Box3d:
+			drawRectLine(
+				-pi.boxSizeX,
+				-pi.boxSizeY,
+				+pi.boxSizeX,
+				+pi.boxSizeY);
+			break;
+		case ParticleInfo::kShapeType_Sphere:
+			drawRectLine(
+				-pi.circleRadius,
+				-pi.circleRadius,
+				+pi.circleRadius,
+				+pi.circleRadius);
+			break;
 		}
-
-		for (int i = 0; i < kMaxParticleSystems; ++i)
+	}
+	
+	void draw(const bool menuActive, const float sx, const float sy)
+	{
+		if (threeDeeMode)
 		{
-			drawParticles(
-				system[i].emitterInfo,
-				system[i].particleInfo,
-				system[i].pool,
-				basePath);
+			projectPerspective3d(90.f, 1.f, 1000.f);
+			camera.pushViewMatrix();
+			{
+				auto & pi = getActiveParticleInfo();
+				
+				drawBoundingShape(pi);
+				
+				particleSystemMgr.draw();
+			}
+			camera.popViewMatrix();
+			projectScreen2d();
 		}
-	#endif
+		else
+		{
+			gxPushMatrix();
+			gxTranslatef(sx/2.f, sy/2.f, 0.f);
 
-		gxPopMatrix();
+		#if 1
+		// todo : add option for drawing collision shapes
+			auto & pi = getActiveParticleInfo();
+			
+			drawBoundingShape(pi);
+		#endif
+
+			particleSystemMgr.draw();
+			
+			gxPopMatrix();
+		}
 
 		if (menuActive)
 			doMenu(s_menu, false, true, sx, sy, 0.f);

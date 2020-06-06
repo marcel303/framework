@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace tinyxml2
 {
@@ -147,16 +148,16 @@ struct ParticleInfo
 
 	// shape
 
-	enum Shape
+	enum ShapeType
 	{
-		kShapeEdge = 'e',
-		kShapeBox = 'b',
-		kShapeCircle = 'c',
-		kShapeBox3d = 'B',
-		kShapeSphere = 's'
+		kShapeType_Edge = 'e',
+		kShapeType_Box = 'b',
+		kShapeType_Circle = 'c',
+		kShapeType_Box3d = 'B',
+		kShapeType_Sphere = 's'
 	};
 
-	Shape shape;                        // The shape of the emission volume.
+	ShapeType shape;                    // The shape of the emission volume.
 	bool randomDirection;               // When enabled, the particles’ initial direction will be chosen randomly.
 	float circleRadius;                 // The radius of the circular aspect of the shape (Circle and Sphere only).
 	float boxSizeX, boxSizeY, boxSizeZ; // Width, height and depth of the box shape (for Box and Box3d only).
@@ -372,13 +373,21 @@ struct ParticleCallbacks
 	}
 };
 
-struct ParticleSystem
+struct ParticleSystemInfo
 {
 	ParticleEmitterInfo emitterInfo;
 	ParticleInfo particleInfo;
+	std::string basePath;
+};
+
+struct ParticleSystem
+{
+	// -- info
+	const ParticleSystemInfo * info;
+
+	// -- runtime
 	ParticleEmitter emitter;
 	ParticlePool pool;
-	std::string basePath;
 
 	~ParticleSystem();
 
@@ -393,6 +402,34 @@ struct ParticleSystem
 
 	void restart();
 };
+
+struct ParticleSystemMgr
+{
+	std::vector<ParticleSystem*> systems;
+	ParticleCallbacks callbacks;
+
+	ParticleSystemMgr();
+	~ParticleSystemMgr();
+
+	ParticleSystem * add(const ParticleSystemInfo * info);
+	void remove(ParticleSystem * particleSystem);
+
+	void tick(
+		const float gravityX,
+		const float gravityY,
+		const float gravityZ,
+		float dt);
+	
+	void draw() const;
+};
+
+//
+
+bool loadParticleEffectLibrary(
+	const char * path,
+	std::vector<ParticleSystemInfo> & infos);
+
+//
 
 bool tickParticle(
 	const ParticleCallbacks & cbs,
