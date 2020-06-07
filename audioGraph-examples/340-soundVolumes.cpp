@@ -119,7 +119,7 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		// fetch all of the HRIR sample datas we need based on the current elevation and azimuth pairs
 		
-		const binaural::HRIRSampleData * samples[3 * MAX_BINAURALIZERS_PER_VOLUME];
+		const binaural::HRIRSample * samples[3 * MAX_BINAURALIZERS_PER_VOLUME];
 		float sampleWeights[3 * MAX_BINAURALIZERS_PER_VOLUME];
 		bool lookupResults[MAX_BINAURALIZERS_PER_VOLUME];
 		float gainCopy[MAX_BINAURALIZERS_PER_VOLUME];
@@ -141,10 +141,10 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		
 		// combine individual HRIRs into one combined HRIR
 		
-		binaural::HRIRSampleData combinedHrir;
+		binaural::HRIRSample combinedHrir;
 		memset(&combinedHrir, 0, sizeof(combinedHrir));
 		
-		const binaural::HRIRSampleData ** samplesPtr = samples;
+		const binaural::HRIRSample ** samplesPtr = samples;
 		float * sampleWeightsPtr = sampleWeights;
 		
 		for (int i = 0; i < MAX_BINAURALIZERS_PER_VOLUME; ++i)
@@ -155,8 +155,8 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 				
 				for (int j = 0; j < 3; ++j)
 				{
-					audioBufferAdd(combinedHrir.lSamples, samplesPtr[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
-					audioBufferAdd(combinedHrir.rSamples, samplesPtr[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
+					audioBufferAdd(combinedHrir.sampleData.lSamples, samplesPtr[j]->sampleData.lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
+					audioBufferAdd(combinedHrir.sampleData.rSamples, samplesPtr[j]->sampleData.rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeightsPtr[j] * gain);
 				}
 			}
 			

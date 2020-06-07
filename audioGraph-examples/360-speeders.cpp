@@ -183,7 +183,7 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 		// fetch all of the HRIR sample datas we need based on the sample positions we get from the sound volume
 		// and combine these individual HRIRs into one combined HRIR
 
-		binaural::HRIRSampleData combinedHrir;
+		binaural::HRIRSample combinedHrir;
 		memset(&combinedHrir, 0, sizeof(combinedHrir));
 
 		for (int i = 0; i < numSamplePositions; ++i)
@@ -217,7 +217,7 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			//const float attenuation = enableDistanceAttenuation ? .5f / clampedDistanceToEar : 1.f;
 			const float gain = attenuation / numSamplePositions / 40.f;
 
-			const binaural::HRIRSampleData * samples[3];
+			const binaural::HRIRSample * samples[3];
 			float sampleWeights[3];
 
 			if (s_sampleSet->lookup_3(
@@ -228,8 +228,8 @@ struct MultiChannelAudioSource_SoundVolume : MultiChannelAudioSource
 			{
 				for (int j = 0; j < 3; ++j)
 				{
-					audioBufferAdd(combinedHrir.lSamples, samples[j]->lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
-					audioBufferAdd(combinedHrir.rSamples, samples[j]->rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
+					audioBufferAdd(combinedHrir.sampleData.lSamples, samples[j]->sampleData.lSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
+					audioBufferAdd(combinedHrir.sampleData.rSamples, samples[j]->sampleData.rSamples, binaural::HRIR_BUFFER_SIZE, sampleWeights[j] * gain);
 				}
 			}
 		}
