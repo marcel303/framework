@@ -2,6 +2,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 class Color;
 class ColorWheel;
