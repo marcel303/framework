@@ -35,7 +35,7 @@
 #include "StringEx.h"
 #include "tinyxml2.h"
 #include "tinyxml2_helpers.h"
-#include "ui.h"
+#include "particle_ui.h"
 #include <algorithm>
 #include <cmath>
 
