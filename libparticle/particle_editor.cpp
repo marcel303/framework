@@ -1,5 +1,4 @@
 #include "framework.h"
-#include "nfd.h"
 #include "particle.h"
 #include "particle_editor.h"
 #include "particle_framework.h"
@@ -33,6 +32,16 @@
 
 */
 
+#if defined(ANDROID) || defined(IPHONEOS)
+	#define ENABLE_FILE_BROWSER 0
+#else
+	#define ENABLE_FILE_BROWSER 1
+#endif
+
+#if ENABLE_FILE_BROWSER
+	#include "nfd.h"
+#endif
+
 // ui design
 static const int kMenuWidth = 300;
 static const int kMenuSpacing = 15;
@@ -52,9 +61,11 @@ struct ParticleEditorState
 	int activeEditingIndex = 0;
 	ParticleEmitterInfo & activeParticleEmitterInfo() { return infos[activeEditingIndex].emitterInfo; }
 	ParticleInfo & getActiveParticleInfo() { return infos[activeEditingIndex].particleInfo; }
+	ParticleEmitter & getActiveParticleEmitter() { return effects[activeEditingIndex]->emitter; }
 
 	// preview
 	ParticleEffectSystem particleEffectSystem;
+	ParticleEffect * effects[kMaxParticleEffects] = { };
 	Camera3d camera;
 	bool threeDeeMode = false;
 	
@@ -111,8 +122,9 @@ struct ParticleEditorState
 
 	~ParticleEditorState()
 	{
-		while (particleEffectSystem.effects.empty() == false)
-			particleEffectSystem.removeEffect(particleEffectSystem.effects.front());
+		for (int i = 0; i < kMaxParticleEffects; ++i)
+			particleEffectSystem.removeEffect(effects[i]);
+		Assert(particleEffectSystem.effects.empty());
 	}
 
 	void refreshUi()
@@ -143,8 +155,9 @@ struct ParticleEditorState
 	
 		// clear the current particle effects
 		
-		while (particleEffectSystem.effects.empty() == false)
-			particleEffectSystem.removeEffect(particleEffectSystem.effects.front());
+		for (int i = 0; i < kMaxParticleEffects; ++i)
+			particleEffectSystem.removeEffect(effects[i]);
+		Assert(particleEffectSystem.effects.empty());
 		
 		for (int i = 0; i < kMaxParticleEffects; ++i)
 			infos[i] = ParticleEffectInfo();
@@ -157,13 +170,14 @@ struct ParticleEditorState
 		// instantiate particle effects
 		
 		for (int i = 0; i < kMaxParticleEffects; ++i)
-			particleEffectSystem.createEffect(&infos[i]);
+			effects[i] = particleEffectSystem.createEffect(&infos[i]);
 		
 		return true;
 	}
 
 	void doMenu_LoadSave(Menu_LoadSave & menu, const float dt)
 	{
+	#if ENABLE_FILE_BROWSER
 		if (doButton("Load", 0.f, 1.f, true))
 		{
 			nfdchar_t * path = 0;
@@ -182,6 +196,7 @@ struct ParticleEditorState
 				refreshUi();
 			}
 		}
+	#endif
 
 		bool save = false;
 		std::string saveFilename;
@@ -191,14 +206,17 @@ struct ParticleEditorState
 			save = true;
 			saveFilename = menu.activeFilename;
 		}
-		
+
+	#if ENABLE_FILE_BROWSER
 		if (doButton("Save as..", 0.f, 1.f, true))
 		{
 			save = true;
 		}
+	#endif
 
 		if (save)
 		{
+		#if ENABLE_FILE_BROWSER
 			if (saveFilename.empty())
 			{
 				nfdchar_t * path = 0;
@@ -215,6 +233,7 @@ struct ParticleEditorState
 					path = nullptr;
 				}
 			}
+		#endif
 
 			if (!saveFilename.empty())
 			{
@@ -281,6 +300,12 @@ struct ParticleEditorState
 		}
 
 		doTextBox(pi.rate, "Rate (Particles/Sec)", dt);
+		
+		doEnum(pi.emissionType, "Emission Type",
+			{
+				{ ParticleInfo::kEmissionType_Time, "Time"},
+				{ ParticleInfo::kEmissionType_DistanceTraveled, "Distance Traveled" }
+			});
 
 		/*
 		struct Burst
@@ -577,7 +602,7 @@ struct ParticleEditorState
 			strcpy_s(infos[i].emitterInfo.materialName, sizeof(infos[i].emitterInfo.materialName), "texture.png");
 		
 		for (int i = 0; i < kMaxParticleEffects; ++i)
-			particleEffectSystem.createEffect(&infos[i]);
+			effects[i] = particleEffectSystem.createEffect(&infos[i]);
 		
 		camera.position[2] = -200.f;
 		camera.maxForwardSpeed = 100.f;
@@ -591,6 +616,19 @@ struct ParticleEditorState
 			doMenu(s_menu, true, false, sx, sy, dt);
 
 		camera.tick(framework.timeStep, threeDeeMode && menuActive == false);
+		
+	// todo : add control of movement radius and speed for distance traveled emission type preview
+		for (int i = 0; i < kMaxParticleEffects; ++i)
+		{
+			if (infos[i].particleInfo.emissionType == ParticleInfo::kEmissionType_DistanceTraveled)
+			{
+				effects[i]->setPosition(
+					cosf(framework.time / 4.f) * 100.f,
+					0.f,
+					sinf(framework.time / 4.f) * 100.f,
+					false);
+			}
+		}
 		
 		const float gravityX = 0.f;
 		const float gravityY = 100.f;
@@ -646,17 +684,25 @@ struct ParticleEditorState
 	{
 		if (threeDeeMode)
 		{
+			pushTransform();
 			projectPerspective3d(90.f, 1.f, 1000.f);
 			camera.pushViewMatrix();
 			{
 				auto & pi = getActiveParticleInfo();
+				auto & pe = getActiveParticleEmitter();
 				
-				drawBoundingShape(pi);
+				gxPushMatrix();
+				{
+					gxTranslatef(pe.position[0], pe.position[1], pe.position[2]);
+					
+					drawBoundingShape(pi);
+				}
+				gxPopMatrix();
 				
 				particleEffectSystem.draw();
 			}
 			camera.popViewMatrix();
-			projectScreen2d();
+			popTransform();
 		}
 		else
 		{
@@ -666,8 +712,15 @@ struct ParticleEditorState
 		#if 1
 		// todo : add option for drawing collision shapes
 			auto & pi = getActiveParticleInfo();
+			auto & pe = getActiveParticleEmitter();
 			
-			drawBoundingShape(pi);
+			gxPushMatrix();
+			{
+				gxTranslatef(pe.position[0], pe.position[1], 0);
+				
+				drawBoundingShape(pi);
+			}
+			gxPopMatrix();
 		#endif
 
 			particleEffectSystem.draw();

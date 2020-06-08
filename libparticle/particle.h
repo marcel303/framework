@@ -130,8 +130,14 @@ struct ParticleInfo
 
 	// emission
 
+	enum EmissionType
+	{
+		kEmissionType_Time = 't',
+		kEmissionType_DistanceTraveled = 'd',
+	};
+	
+	EmissionType emissionType;
 	float rate; // The number of particles emitted per unit of time or distance moved (selected from the adjacent popup menu).
-	// todo : emit over time or over distance moved
 
 	struct Burst
 	{
@@ -287,6 +293,10 @@ struct ParticleEmitter
 	bool delaying;
 	float time;
 	float totalTime;
+	
+	float position[3];
+	float previousPosition[3];
+	bool hasDiscontinuity;
 
 	ParticleEmitter();
 
@@ -389,8 +399,9 @@ struct ParticleEffect
 	ParticleEmitter emitter;
 	ParticlePool pool;
 
+	ParticleEffect(const ParticleEffectInfo * info);
 	~ParticleEffect();
-
+	
 	bool tick(
 		const ParticleCallbacks & cbs,
 		const float gravityX,
@@ -401,6 +412,14 @@ struct ParticleEffect
 	void draw() const;
 
 	void restart();
+	
+	void setPosition(
+		const float x,
+		const float y,
+		const float z,
+		const bool isDiscontinuity);
+	
+	void setPositionDiscontinuity();
 };
 
 struct ParticleEffectSystem
@@ -412,7 +431,7 @@ struct ParticleEffectSystem
 	~ParticleEffectSystem();
 
 	ParticleEffect * createEffect(const ParticleEffectInfo * effectInfo);
-	void removeEffect(ParticleEffect * effect);
+	void removeEffect(ParticleEffect *& effect);
 
 	void tick(
 		const float gravityX,
@@ -421,6 +440,31 @@ struct ParticleEffectSystem
 		float dt);
 	
 	void draw() const;
+};
+
+struct ParticleEffectLibrary
+{
+	std::vector<ParticleEffectInfo> effectInfos;
+	std::vector<ParticleEffect*> effects;
+	
+	bool loadFromFile(const char * path);
+	
+	void createEffects(ParticleEffectSystem & system);
+	void removeEffects(ParticleEffectSystem & system);
+	
+	void setActive(
+		const bool active);
+	
+	void setPosition(
+		const float x,
+		const float y,
+		const float z,
+		const bool isDiscontinuity);
+	
+	void setPositionDiscontinuity();
+	
+	ParticleEffect * getEffectByEmitterName(
+		const char * name) const;
 };
 
 //
