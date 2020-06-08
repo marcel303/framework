@@ -183,16 +183,19 @@ void Window::setPositionCentered()
 void Window::setSize(const int sx, const int sy)
 {
 #if WINDOW_HAS_A_SURFACE
-	if (m_colorTarget)
+	if (sx != getWidth() || sy != getHeight())
 	{
-		m_colorTarget->free();
-		m_colorTarget->init(sx, sy, SURFACE_RGBA8, colorBlackTranslucent);
-	}
-	
-	if (m_depthTarget)
-	{
-		m_depthTarget->free();
-		m_depthTarget->init(sx, sy, DEPTH_FLOAT32, false, 0.f);
+		if (m_colorTarget)
+		{
+			m_colorTarget->free();
+			m_colorTarget->init(sx, sy, SURFACE_RGBA8, colorBlackTranslucent);
+		}
+		
+		if (m_depthTarget)
+		{
+			m_depthTarget->free();
+			m_depthTarget->init(sx, sy, DEPTH_FLOAT32, false, 0.f);
+		}
 	}
 #endif
 
