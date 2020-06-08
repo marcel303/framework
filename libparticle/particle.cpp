@@ -97,7 +97,8 @@ void ParticleEmitterInfo::load(const tinyxml2::XMLElement * elem)
 
 ParticleInfo::ParticleInfo()
 	// emission
-	: rate(0.f)
+	: emissionType(kEmissionType_Time)
+	, rate(0.f)
 	, numBursts(0)
 	// shape
 	, shape(kShapeType_Circle)
@@ -181,6 +182,7 @@ void ParticleInfo::clearBursts()
 void ParticleInfo::save(tinyxml2::XMLPrinter * printer) const
 {
 	// emission
+	printer->PushAttribute("emissionType", emissionType);
 	printer->PushAttribute("rate", rate);
 	// shape
 	printer->PushAttribute("shape", shape);
@@ -304,6 +306,7 @@ void ParticleInfo::load(const tinyxml2::XMLElement * elem)
 	*this = ParticleInfo();
 
 	// emission
+	emissionType = (EmissionType)intAttrib(elem, "emissionType", emissionType);
 	rate = floatAttrib(elem, "rate", rate);
 	for (auto burstElem = elem->FirstChildElement("burst"); burstElem; burstElem = burstElem->NextSiblingElement())
 	{
@@ -422,7 +425,10 @@ ParticleEmitter::ParticleEmitter()
 	, delaying(true)
 	, time(0.f)
 	, totalTime(0.f)
+	, hasDiscontinuity(false)
 {
+	memset(position, 0, sizeof(position));
+	memset(previousPosition, 0, sizeof(previousPosition));
 }
 
 bool ParticleEmitter::allocParticle(ParticlePool & pool, Particle *& p)
@@ -474,7 +480,7 @@ bool ParticleEmitter::emitParticle(
 			speedAngle = pei.startSpeedAngle * float(M_PI / 180.f);
 		p->speed[0] = speedX + cosf(speedAngle) * pei.startSpeed;
 		p->speed[1] = speedY + sinf(speedAngle) * pei.startSpeed;
-		p->speed[2] = 0.f;
+		p->speed[2] = speedZ;
 		p->rotation = pei.startRotation;
 
 		/*
@@ -581,6 +587,11 @@ Particle * ParticlePool::freeParticle(Particle * p)
 
 // -- ParticleEffect
 
+ParticleEffect::ParticleEffect(const ParticleEffectInfo * in_info)
+{
+	info = in_info;
+}
+
 ParticleEffect::~ParticleEffect()
 {
 	emitter.clearParticles(pool);
@@ -633,6 +644,24 @@ void ParticleEffect::draw() const
 void ParticleEffect::restart()
 {
 	emitter.restart(pool);
+}
+
+void ParticleEffect::setPosition(
+	const float x,
+	const float y,
+	const float z,
+	const bool isDiscontinuity)
+{
+	emitter.position[0] = x;
+	emitter.position[1] = y;
+	emitter.position[2] = z;
+	
+	emitter.hasDiscontinuity |= isDiscontinuity;
+}
+
+void ParticleEffect::setPositionDiscontinuity()
+{
+	emitter.hasDiscontinuity = true;
 }
 
 // -- ParticleEffectSystem
@@ -692,22 +721,20 @@ ParticleEffectSystem::~ParticleEffectSystem()
 
 ParticleEffect * ParticleEffectSystem::createEffect(const ParticleEffectInfo * effectInfo)
 {
-	ParticleEffect * instance = new ParticleEffect();
-	instance->info = effectInfo;
+	ParticleEffect * instance = new ParticleEffect(effectInfo);
 	effects.push_back(instance);
 
 	return instance;
 }
 
-void ParticleEffectSystem::removeEffect(ParticleEffect * effect)
+void ParticleEffectSystem::removeEffect(ParticleEffect *& effect)
 {
 	auto i = std::find(effects.begin(), effects.end(), effect);
 	Assert(i != effects.end());
-
+	effects.erase(i);
+	
 	delete effect;
 	effect = nullptr;
-
-	effects.erase(i);
 }
 
 void ParticleEffectSystem::tick(
@@ -733,6 +760,74 @@ void ParticleEffectSystem::draw() const
 	{
 		effect->draw();
 	}
+}
+
+// -- ParticleEffectLibrary
+
+bool ParticleEffectLibrary::loadFromFile(const char * path)
+{
+	Assert(effects.empty()); // resizing the effects array will potentially invalidate any info pointers we gave to the effect instances before, so we need to be sure here we haven't instanced any effects yet
+	
+	return loadParticleEffectLibrary(path, effectInfos);
+}
+
+void ParticleEffectLibrary::createEffects(ParticleEffectSystem & system)
+{
+	for (auto & effectInfo : effectInfos)
+	{
+		auto * effect = system.createEffect(&effectInfo);
+		
+		effects.push_back(effect);
+	}
+}
+
+void ParticleEffectLibrary::removeEffects(ParticleEffectSystem & system)
+{
+	for (auto *& effect : effects)
+	{
+		system.removeEffect(effect);
+	}
+	
+	effects.clear();
+}
+
+void ParticleEffectLibrary::setActive(const bool active)
+{
+	for (auto * effect : effects)
+	{
+		effect->emitter.active = active;
+	}
+}
+
+void ParticleEffectLibrary::setPosition(
+	const float x,
+	const float y,
+	const float z,
+	const bool isDiscontinuity)
+{
+	for (auto * effect : effects)
+	{
+		effect->setPosition(x, y, z, isDiscontinuity);
+	}
+}
+
+void ParticleEffectLibrary::setPositionDiscontinuity()
+{
+	for (auto * effect : effects)
+	{
+		effect->setPositionDiscontinuity();
+	}
+}
+
+ParticleEffect * ParticleEffectLibrary::getEffectByEmitterName(const char * name) const
+{
+	for (auto * effect : effects)
+	{
+		if (strcmp(effect->info->emitterInfo.name, name) == 0)
+			return effect;
+	}
+	
+	return nullptr;
 }
 
 //
@@ -1188,50 +1283,156 @@ bool tickParticleEmitter(
 	const float gravityZ,
 	ParticleEmitter & pe)
 {
-	if (pi.rate <= 0.f)
+	const bool tick =
+		pe.active &&
+		pi.rate > 0.f &&
+		(pei.loop || pe.totalTime < pei.duration);
+	
+	if (!tick)
+	{
+		pe.hasDiscontinuity = true;
 		return false;
-	if (!pei.loop && pe.totalTime >= pei.duration)
-		return false;
-
-	pe.time += timeStep;
-	pe.totalTime += timeStep;
-
+	}
+	
 	if (pe.delaying)
 	{
-		if (pe.time < pei.startDelay)
-			return true;
+		Assert(pe.totalTime <= pei.startDelay);
+		const float delayRemaining = pei.startDelay - pe.totalTime;
+		
+		if (timeStep < delayRemaining)
+		{
+			pe.totalTime += timeStep;
+			Assert(pe.time == 0.f);
+			return false;
+		}
 		else
 		{
-			pe.time -= pei.startDelay;
+			pe.totalTime = pei.startDelay;
+			pe.time = timeStep - delayRemaining;
 			pe.delaying = false;
 		}
 	}
-
-	const float rateTime = 1.f / pi.rate;
-
-	while (pe.time >= rateTime && (pe.totalTime < pei.duration || pei.loop))
+	else
 	{
-		pe.time -= rateTime;
+		pe.time += timeStep;
+	}
 
-		const float timeOffset = fmodf(pe.time, rateTime);
+	if (pi.emissionType == ParticleInfo::kEmissionType_Time)
+	{
+		const float period = 1.f / pi.rate;
 
-		Particle * p;
-		pe.emitParticle(
-			cbs,
-			pei,
-			pi,
-			pool,
-			timeOffset,
-			gravityX,
-			gravityY,
-			gravityZ,
-			0.f, // position
-			0.f,
-			0.f,
-			0.f, // speed
-			0.f,
-			0.f,
-			p);
+		// todo : interpolate position
+		
+		while (pe.time >= period && (pei.loop || pe.totalTime < pei.duration))
+		{
+			pe.time -= period;
+			pe.totalTime += period;
+
+			const float timeOffset = fmodf(pe.time, period);
+
+			Particle * p;
+			pe.emitParticle(
+				cbs,
+				pei,
+				pi,
+				pool,
+				timeOffset,
+				gravityX,
+				gravityY,
+				gravityZ,
+				pe.position[0], // position
+				pe.position[1],
+				pe.position[2],
+				0.f, // speed
+				0.f,
+				0.f,
+				p);
+		}
+	}
+	else if (pi.emissionType == ParticleInfo::kEmissionType_DistanceTraveled)
+	{
+		// handle discontinuities. if the user tells us there was a discontinuity, we just restart
+		// spawning particles at the new location, dismissing any particles between the previous and
+		// current positions
+		if (pe.hasDiscontinuity)
+		{
+			pe.previousPosition[0] = pe.position[0];
+			pe.previousPosition[1] = pe.position[1];
+			pe.previousPosition[2] = pe.position[2];
+			pe.hasDiscontinuity = false;
+		}
+	
+		const float delta[3] =
+			{
+				pe.position[0] - pe.previousPosition[0],
+				pe.position[1] - pe.previousPosition[1],
+				pe.position[2] - pe.previousPosition[2]
+			};
+		
+		const float distanceTraveled = sqrtf(
+			delta[0] * delta[0] +
+			delta[1] * delta[1] +
+			delta[2] * delta[2]);
+		
+		if (distanceTraveled > 0.f)
+		{
+			const float numParticlesToSpawn_f = distanceTraveled * pi.rate;
+			
+			float position[3] =
+			{
+				pe.previousPosition[0],
+				pe.previousPosition[1],
+				pe.previousPosition[2]
+			};
+			
+			const float position_step[3] =
+			{
+				delta[0] / numParticlesToSpawn_f,
+				delta[1] / numParticlesToSpawn_f,
+				delta[2] / numParticlesToSpawn_f
+			};
+			
+			const float speed[3] =
+			{
+				pei.inheritVelocity ? (delta[0] / timeStep) : 0.f,
+				pei.inheritVelocity ? (delta[1] / timeStep) : 0.f,
+				pei.inheritVelocity ? (delta[2] / timeStep) : 0.f
+			};
+			
+			const int numParticlesToSpawn = int(numParticlesToSpawn_f);
+			
+			for (int i = 0; i < numParticlesToSpawn && (pei.loop || pe.totalTime < pei.duration); ++i)
+			{
+				Particle * p;
+				pe.emitParticle(
+					cbs,
+					pei,
+					pi,
+					pool,
+					0.f, // timeOffset
+					gravityX,
+					gravityY,
+					gravityZ,
+					position[0], // position
+					position[1],
+					position[2],
+					speed[0], // speed
+					speed[1],
+					speed[2],
+					p);
+				
+				position[0] += position_step[0];
+				position[1] += position_step[1];
+				position[2] += position_step[2];
+			}
+			
+			pe.previousPosition[0] = position[0];
+			pe.previousPosition[1] = position[1];
+			pe.previousPosition[2] = position[2];
+		}
+		
+		pe.time = 0.f;
+		pe.totalTime += timeStep;
 	}
 
 	return true;
