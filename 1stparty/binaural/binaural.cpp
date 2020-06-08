@@ -507,7 +507,8 @@ namespace binaural
 	#endif
 		
 		WDL_FFT4_COMPLEX filter_wdl[HRTF_BUFFER_SIZE]; // lOld, rOld, lNew, rNew
-		
+
+	// todo : use SSE transpose
 		for (int i = 0; i < HRTF_BUFFER_SIZE; ++i)
 		{
 			filter_wdl[i].re.v = _mm_set_ps(rFilterNew.real[i], lFilterNew.real[i], rFilterOld.real[i], lFilterOld.real[i]);
@@ -524,7 +525,8 @@ namespace binaural
 		
 		const float scale = 1.f / AUDIO_BUFFER_SIZE;
 		
-	#if BINAURAL_USE_SSE // todo : include neon
+		// todo : include neon; requires transpose function
+	#if BINAURAL_USE_SSE
 		float4 * __restrict lResultOld_4 = (float4*)lResultOld;
 		float4 * __restrict rResultOld_4 = (float4*)rResultOld;
 		float4 * __restrict lResultNew_4 = (float4*)lResultNew;
@@ -534,31 +536,33 @@ namespace binaural
 		{
 			const int sortedIndex = i;
 			
+		#if BINAURAL_USE_SSE
 			float4 value1 = filter_wdl[i * 4 + 0].re.v;
 			float4 value2 = filter_wdl[i * 4 + 1].re.v;
 			float4 value3 = filter_wdl[i * 4 + 2].re.v;
 			float4 value4 = filter_wdl[i * 4 + 3].re.v;
 			
-		#if BINAURAL_USE_SSE
 			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
-		#else
-			#error
-		#endif
 			
 			lResultOld_4[sortedIndex] = value1 * scale;
 			rResultOld_4[sortedIndex] = value2 * scale;
 			lResultNew_4[sortedIndex] = value3 * scale;
 			rResultNew_4[sortedIndex] = value4 * scale;
+		#else
+			#error
+		#endif
 		}
 	#else
 		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
 		{
 			const int sortedIndex = i;
+
+			const WDL_FFT4_REAL value = filter_wdl[i].re * scale;
 			
-			lResultOld[sortedIndex] = filter_wdl[i].re.elem(0) * scale;
-			rResultOld[sortedIndex] = filter_wdl[i].re.elem(1) * scale;
-			lResultNew[sortedIndex] = filter_wdl[i].re.elem(2) * scale;
-			rResultNew[sortedIndex] = filter_wdl[i].re.elem(3) * scale;
+			lResultOld[sortedIndex] = value.elem(0);
+			rResultOld[sortedIndex] = value.elem(1);
+			lResultNew[sortedIndex] = value.elem(2);
+			rResultNew[sortedIndex] = value.elem(3);
 		}
 	#endif
 	#else
@@ -597,7 +601,7 @@ namespace binaural
 	{
 		debugAssert((numSamples % 4) == 0);
 		
-	#if BINAURAL_USE_SIMD
+	#if BINAURAL_USE_SIMD || BINAURAL_USE_NEON
 		const float tStepScalar = 1.f / numSamples;
 		const float4 tStep = _mm_set1_ps(8.f / numSamples);
 		float4 t1 = _mm_set_ps(tStepScalar * 3.f, tStepScalar * 2.f, tStepScalar * 1.f, tStepScalar * 0.f);
@@ -649,7 +653,7 @@ namespace binaural
 		const float * __restrict array4,
 		float4 * __restrict result)
 	{
-	 	// todo : include neon; requires transpose function
+		// todo : include neon; requires transpose function
 	#if BINAURAL_USE_SSE
 		const float4 * __restrict array1_4 = (float4*)array1;
 		const float4 * __restrict array2_4 = (float4*)array2;
@@ -658,6 +662,8 @@ namespace binaural
 		
 		for (int i = 0; i < AUDIO_BUFFER_SIZE / 8; ++i)
 		{
+		// todo : neon : this is actually suitable for vldq4_f32?
+		#if BINAURAL_USE_SSE
 			float4 value1a = array1_4[i * 2 + 0];
 			float4 value2a = array2_4[i * 2 + 0];
 			float4 value3a = array3_4[i * 2 + 0];
@@ -668,12 +674,8 @@ namespace binaural
 			float4 value3b = array3_4[i * 2 + 1];
 			float4 value4b = array4_4[i * 2 + 1];
 			
-		#if BINAURAL_USE_SSE
 			_MM_TRANSPOSE4_PS(value1a, value2a, value3a, value4a);
 			_MM_TRANSPOSE4_PS(value1b, value2b, value3b, value4b);
-		#else
-			#error
-		#endif
 			
 			result[i * 8 + 0] = value1a;
 			result[i * 8 + 1] = value2a;
@@ -684,10 +686,13 @@ namespace binaural
 			result[i * 8 + 5] = value2b;
 			result[i * 8 + 6] = value3b;
 			result[i * 8 + 7] = value4b;
+		#else
+			#error
+		#endif
 		}
 	#else
 		float * __restrict resultScalar = (float*)result;
-		
+
 		for (int i = 0; i < AUDIO_BUFFER_SIZE; ++i)
 		{
 			const float value1 = array1[i];
@@ -719,26 +724,26 @@ namespace binaural
 		
 		for (int i = 0; i < AUDIO_BUFFER_SIZE / 4; ++i)
 		{
-			float4 value1 = array1_4[i];
-			float4 value2 = array2_4[i];
-			float4 value3 = array3_4[i];
-			float4 value4 = array4_4[i];
-			
-		#if BINAURAL_USE_SSE
-			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
-		#else
-			#error
-		#endif
-			
 			const int index1 = fftIndices.indices[i * 4 + 0];
 			const int index2 = fftIndices.indices[i * 4 + 1];
 			const int index3 = fftIndices.indices[i * 4 + 2];
 			const int index4 = fftIndices.indices[i * 4 + 3];
 			
+		#if BINAURAL_USE_SSE
+			float4 value1 = array1_4[i];
+			float4 value2 = array2_4[i];
+			float4 value3 = array3_4[i];
+			float4 value4 = array4_4[i];
+			
+			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
+			
 			result[index1] = value1;
 			result[index2] = value2;
 			result[index3] = value3;
 			result[index4] = value4;
+		#else
+			#error
+		#endif
 		}
 	#else
 		float * __restrict resultScalar = (float*)result;
@@ -767,8 +772,7 @@ namespace binaural
 		float * __restrict array3,
 		float * __restrict array4)
 	{
-		// todo : include neon; requires transpose function
-	#if BINAURAL_USE_SSE
+	#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
 		float4 * __restrict array1_4 = (float4*)array1;
 		float4 * __restrict array2_4 = (float4*)array2;
 		float4 * __restrict array3_4 = (float4*)array3;
@@ -776,21 +780,30 @@ namespace binaural
 		
 		for (int i = 0; i < AUDIO_BUFFER_SIZE / 4; ++i)
 		{
+		#if BINAURAL_USE_SSE
 			float4 value1 = interleaved[i * 4 + 0];
 			float4 value2 = interleaved[i * 4 + 1];
 			float4 value3 = interleaved[i * 4 + 2];
 			float4 value4 = interleaved[i * 4 + 3];
 			
-		#if BINAURAL_USE_SSE
 			_MM_TRANSPOSE4_PS(value1, value2, value3, value4);
-		#else
-			#error
-		#endif
 			
 			array1_4[i] = value1;
 			array2_4[i] = value2;
 			array3_4[i] = value3;
 			array4_4[i] = value4;
+		#elif BINAURAL_USE_NEON
+			// note : vld4q_f32 is a spread-load instruction, which
+			//        deinterleaves ('transposes') the values for us!
+			const float32x4x4_t value = vld4q_f32(&interleaved[i * 4]);
+			
+			array1_4[i] = value.val[0];
+			array2_4[i] = value.val[1];
+			array3_4[i] = value.val[2];
+			array4_4[i] = value.val[3];
+		#else
+			#error
+		#endif
 		}
 	#else
 		const float * __restrict interleavedScalar = (float*)interleaved;
@@ -810,13 +823,13 @@ namespace binaural
 		float * __restrict array1,
 		float * __restrict array2)
 	{
-	 	// todo : include neon; requires transpose function
-	#if BINAURAL_USE_SSE
+	#if BINAURAL_USE_SSE || BINAURAL_USE_NEON
 		float4 * __restrict array1_4 = (float4*)array1;
 		float4 * __restrict array2_4 = (float4*)array2;
 		
 		for (int i = 0; i < AUDIO_BUFFER_SIZE / 8; ++i)
 		{
+		#if BINAURAL_USE_SSE
 			float4 value1a = interleaved[i * 8 + 0];
 			float4 value2a = interleaved[i * 8 + 1];
 			float4 value3a = interleaved[i * 8 + 2];
@@ -827,18 +840,28 @@ namespace binaural
 			float4 value3b = interleaved[i * 8 + 6];
 			float4 value4b = interleaved[i * 8 + 7];
 			
-		#if BINAURAL_USE_SSE
 			_MM_TRANSPOSE4_PS(value1a, value2a, value3a, value4a);
 			_MM_TRANSPOSE4_PS(value1b, value2b, value3b, value4b);
-		#else
-			#error
-		#endif
 			
 			array1_4[i * 2 + 0] = value1a;
 			array2_4[i * 2 + 0] = value2a;
 			
 			array1_4[i * 2 + 1] = value1b;
 			array2_4[i * 2 + 1] = value2b;
+		#elif BINAURAL_USE_NEON
+			// note : vld4q_f32 is a spread-load instruction, which
+			//        deinterleaves ('transposes') the values for us!
+			const float32x4x4_t value_a = vld4q_f32(&interleaved[i * 8 + 0]);
+			const float32x4x4_t value_b = vld4q_f32(&interleaved[i * 8 + 4]);
+			
+			array1_4[i * 2 + 0] = value_a.val[0];
+			array2_4[i * 2 + 0] = value_a.val[1];
+			
+			array1_4[i * 2 + 1] = value_b.val[0];
+			array2_4[i * 2 + 1] = value_b.val[1];
+		#else
+			#error
+		#endif
 		}
 	#else
 		const float * __restrict interleavedScalar = (float*)interleaved;
