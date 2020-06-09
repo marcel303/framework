@@ -1,6 +1,7 @@
 #pragma once
 
 #include "framework.h"
+#include "gltf.h"
 #include "gltf-material.h"
 
 // forward declarations
