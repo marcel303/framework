@@ -24,6 +24,10 @@
 #include "objects/audioSourceVorbis.h"
 #include "objects/delayLine.h"
 
+#include "particle.h"
+#include "particle_editor.h"
+#include "ui.h"
+
 #include "Path.h" // GetExtension for mhr file listing
 #include "Quat.h"
 
@@ -37,8 +41,6 @@ todo : use finger gesture or controller button to open/close control panel
     - check finger pinching amount for the index finger
     - have pinch enter/leave thresholds (where leave > enter), to avoid rapid transitions
     - attach control panel to hand location on pinch
-
-todo : for testing : save/load parameters on startup/exit
 
 todo : experiment with drawing window contents in 3d directly (no window surface). this will give higher quality results on outlines
 
@@ -57,7 +59,7 @@ DONE : project hand position down onto watersim, to give the user an exaggered i
 
 DONE : apply a texture or color to the watersim quads
 
-todo : determine nice watersim params and update defaults
+DONE : determine nice watersim params and update defaults
 
 DONE : binauralize some sounds
 
@@ -65,7 +67,7 @@ DONE : polish virtual desktop interaction when using hands,
     + tell virtual desktop which type of interaction is used (beam or finger),
     + let virtual desktop have detection of false finger presses
 
-todo : add UI for showing spatial audio system status
+DONE : add UI for showing spatial audio system status
 
 DONE : add the moon
 
@@ -73,6 +75,9 @@ todo : add some stars
 
 todo : add some particles drifting in the air
 	- particles everywhere
+	- particle effect : spawn particles on movement. spawn particles when objects move
+	- particle effect : add manual spawn trigger. spawn(100) ?
+	- particle effect : add ability to enable/disable spawn by time. or give it some limited amount of time to spawn. allows for spawning on some event over time for some while
 
 todo : make NdotV abs(..) inside the gltf pbr shaders. this would make lighting act double-sidedly
 
@@ -94,7 +99,76 @@ todo : grab jgmod voice cubes using left pointer
     - add jgmod voices to raycast
     - manually set the transform
 
+DONE : add spatial audio source parameters
+	- make headroom a spatial audio source parameter
+	- make recorded distance a spatial audio source parameter
+
+todo : optimize matrix multiplication for neon
+
  */
+
+#if false
+// source : https://developer.arm.com/architectures/instruction-sets/simd-isas/neon/neon-programmers-guide-for-armv8-a/optimizing-c-code-with-neon-intrinsics/optimizing-matrix-multiplication
+void matrix_multiply_4x4_neon(float32_t *A, float32_t *B, float32_t *C) {
+	// these are the columns A
+	float32x4_t A0;
+	float32x4_t A1;
+	float32x4_t A2;
+	float32x4_t A3;
+	
+	// these are the columns B
+	float32x4_t B0;
+	float32x4_t B1;
+	float32x4_t B2;
+	float32x4_t B3;
+	
+	// these are the columns C
+	float32x4_t C0;
+	float32x4_t C1;
+	float32x4_t C2;
+	float32x4_t C3;
+	
+	A0 = vld1q_f32(A);
+	A1 = vld1q_f32(A+4);
+	A2 = vld1q_f32(A+8);
+	A3 = vld1q_f32(A+12);
+	
+	// Zero accumulators for C values
+	C0 = vmovq_n_f32(0);
+	C1 = vmovq_n_f32(0);
+	C2 = vmovq_n_f32(0);
+	C3 = vmovq_n_f32(0);
+	
+	// Multiply accumulate in 4x1 blocks, i.e. each column in C
+	B0 = vld1q_f32(B);
+	C0 = vfmaq_laneq_f32(C0, A0, B0, 0);
+	C0 = vfmaq_laneq_f32(C0, A1, B0, 1);
+	C0 = vfmaq_laneq_f32(C0, A2, B0, 2);
+	C0 = vfmaq_laneq_f32(C0, A3, B0, 3);
+	vst1q_f32(C, C0);
+	
+	B1 = vld1q_f32(B+4);
+	C1 = vfmaq_laneq_f32(C1, A0, B1, 0);
+	C1 = vfmaq_laneq_f32(C1, A1, B1, 1);
+	C1 = vfmaq_laneq_f32(C1, A2, B1, 2);
+	C1 = vfmaq_laneq_f32(C1, A3, B1, 3);
+	vst1q_f32(C+4, C1);
+	
+	B2 = vld1q_f32(B+8);
+	C2 = vfmaq_laneq_f32(C2, A0, B2, 0);
+	C2 = vfmaq_laneq_f32(C2, A1, B2, 1);
+	C2 = vfmaq_laneq_f32(C2, A2, B2, 2);
+	C2 = vfmaq_laneq_f32(C2, A3, B2, 3);
+	vst1q_f32(C+8, C2);
+	
+	B3 = vld1q_f32(B+12);
+	C3 = vfmaq_laneq_f32(C3, A0, B3, 0);
+	C3 = vfmaq_laneq_f32(C3, A1, B3, 1);
+	C3 = vfmaq_laneq_f32(C3, A2, B3, 2);
+	C3 = vfmaq_laneq_f32(C3, A3, B3, 3);
+	vst1q_f32(C+12, C3);
+}
+#endif
 
 #if FRAMEWORK_USE_OVR_MOBILE
 	#include <VrApi_Helpers.h>
@@ -129,7 +203,8 @@ struct ControlPanel
 	enum Tab
 	{
 		kTab_Scene,
-		kTab_Audio
+		kTab_Audio,
+		kTab_ParticleEditor
 	};
 	
 	Window window;
@@ -137,6 +212,8 @@ struct ControlPanel
 
 	Scene * scene = nullptr;
 	SpatialAudioSystem * spatialAudioSystem = nullptr;
+	
+	ParticleEditor particleEditor;
 
 	ImGuiID lastHoveredId = 0;
 	bool hoveredIdChanged = false;
@@ -165,7 +242,7 @@ struct ControlPanel
 		guiContext.shut();
 	}
 
-	void tick();
+	void tick(const float dt);
 
 	void draw()
 	{
@@ -174,6 +251,14 @@ struct ControlPanel
 			framework.beginDraw(20, 20, 20, 255);
 			{
 				guiContext.draw();
+				
+				if (activeTab == kTab_ParticleEditor)
+				{
+				// todo : remove particle preview from particle editor, or make it optional
+					pushFontMode(FONT_SDF);
+					particleEditor.draw(true, window.getWidth(), window.getHeight());
+					popFontMode();
+				}
 			}
 			framework.endDraw();
 		}
@@ -191,7 +276,28 @@ struct PointerObject
 	ovrDeviceID DeviceID = -1;
 #endif
 
-	bool isDown[2] = { };
+	bool m_isDown[2] = { };
+	bool m_hasChanged[2] = { };
+	
+	bool wentDown(const int index) const
+	{
+		return m_hasChanged[index] && m_isDown[index];
+	}
+	
+	bool wentUp(const int index) const
+	{
+		return m_hasChanged[index] && !m_isDown[index];
+	}
+	
+	bool isDown(const int index) const
+	{
+		return m_isDown[index];
+	}
+	
+	bool isUp(const int index) const
+	{
+		return !m_isDown[index];
+	}
 };
 
 // -- watersim object
@@ -238,7 +344,11 @@ static CollisionSystemInterface * collisionSystem = nullptr;
 
 struct SpatialAudioSystemInterface
 {
-	virtual void * addSource(const Mat4x4 & transform, AudioSource * audioSource) = 0;
+	virtual void * addSource(
+		const Mat4x4 & transform,
+		AudioSource * audioSource,
+		const float recordedDistance,
+		const float headroomInDb) = 0;
 	virtual void removeSource(void * source) = 0;
 
 	virtual void setSourceTransform(void * source, const Mat4x4 & transform) = 0;
@@ -269,6 +379,10 @@ struct ForwardLightingSystemInterface
 };
 
 static ForwardLightingSystemInterface * forwardLightingSystem = nullptr;
+
+// -- particle effect system
+
+static ParticleEffectSystem particleEffectSystem;
 
 // -- moon object
 
@@ -391,7 +505,32 @@ struct DrifterObject
 	Mat4x4 transform = Mat4x4(true);
 
 	Vec3 speed;
+	
+	ParticleEffectLibrary effectLibrary;
 
+	void init()
+	{
+		effectLibrary.loadFromFile("drifter-particles1.pfx");
+	// todo : add a dedicated particle effect for drifters, and remove the hack below
+		for (auto & effectInfo : effectLibrary.effectInfos)
+		{
+			effectInfo.particleInfo.emissionType = ParticleInfo::kEmissionType_DistanceTraveled;
+			effectInfo.particleInfo.rate /= 100.f;
+		}
+		
+		effectLibrary.createEffects(particleEffectSystem);
+		
+		Vec3 position = transform.GetTranslation();
+		position[1] += .2f;
+		position *= 100.f; // fixme : particle effect scaling
+		effectLibrary.setPosition(position[0], position[1], position[2], true);
+	}
+	
+	void shut()
+	{
+		effectLibrary.removeEffects(particleEffectSystem);
+	}
+	
 	void tick(const float dt)
 	{
 		Vec3 position = transform.GetTranslation();
@@ -408,7 +547,15 @@ struct DrifterObject
 
 		speed *= powf(.97f, dt);
 
-		transform.SetTranslation(position + speed * dt);
+		position += speed * dt;
+		
+		transform.SetTranslation(position);
+		
+		//
+		
+		position[1] += .2f;
+		position *= 100.f; // fixme : particle effect scaling
+		effectLibrary.setPosition(position[0], position[1], position[2], false);
 	}
 
 	void drawOpaque() const
@@ -474,7 +621,7 @@ struct AudioStreamerObject
 		audioSource = new AudioStreamerAudioSource();
 		audioSource->open(filename);
 
-		spatialAudioSource = spatialAudioSystem->addSource(transform, audioSource);
+		spatialAudioSource = spatialAudioSystem->addSource(transform, audioSource, 4.f, 12.f);
 	}
 
 	void shut()
@@ -518,15 +665,37 @@ struct ModelObject
 	gltf::Scene scene;
 	gltf::BufferCache bufferCache;
 
-	void init()
-	{
-		transform.SetTranslation(
-			random<float>(-4.f, +4.f),
-			.5f,
-			random<float>(-4.f, +4.f));
+	ParameterMgr parameterMgr;
+	ParameterVec3 * position = nullptr;
 
-		gltf::loadScene("Suzanne/glTF/Suzanne.gltf", scene);
+	void init(Vec3Arg in_position)
+	{
+		parameterMgr.setPrefix("model");
+		position = parameterMgr.addVec3("position", Vec3(0.f));
+		position->setLimits(Vec3(-4.f), Vec3(+4.f));
+		position->setEditingCurveExponential(4.f);
+		position->set(in_position);
+
+		//gltf::loadScene("Suzanne/glTF/Suzanne.gltf", scene);
+		gltf::loadScene("deus_ex_pbr/scene.gltf", scene);
 		bufferCache.init(scene);
+		
+		for (auto & material : scene.materials)
+			material.pbrMetallicRoughness.roughnessFactor = .25f;
+	}
+	
+	void tick(const float dt)
+	{
+		if (position->isDirty)
+		{
+			position->isDirty = false;
+
+			transform = Mat4x4(true)
+				.Translate(position->get())
+				.Scale(.01f);
+		}
+
+		transform = transform.Rotate(dt * .4f, Vec3(0, 1, 0));
 	}
 
 	void drawOpaque() const
@@ -544,6 +713,8 @@ struct ModelObject
 			forwardLightingSystem->setLightingForGltfMaterialShaders(materialShaders);
 
 			gltf::DrawOptions drawOptions;
+			drawOptions.defaultMaterial.pbrMetallicRoughness.metallicFactor = 1.f;
+			drawOptions.defaultMaterial.pbrMetallicRoughness.roughnessFactor = .2f;
 
 			gltf::drawScene(scene, &bufferCache, materialShaders, true, &drawOptions);
 		}
@@ -586,7 +757,9 @@ struct JgplayerObject
 			
 			spatialAudioSource = spatialAudioSystem->addSource(
 				transform,
-				this);
+				this,
+				4.f,
+				12.f);
 		}
 		
 		void shut()
@@ -794,10 +967,6 @@ struct JgplayerObject
 
 // -- particle effect object
 
-#include "particle.h"
-
-static ParticleEffectSystem s_particleEffectSystem;
-
 struct ParticleEffectObject
 {
 	std::vector<ParticleEffectInfo> infos;
@@ -809,7 +978,7 @@ struct ParticleEffectObject
 		{
 			for (auto & info : infos)
 			{
-				auto * effect = s_particleEffectSystem.createEffect(&info);
+				auto * effect = particleEffectSystem.createEffect(&info);
 				
 				effects.push_back(effect);
 			}
@@ -820,7 +989,7 @@ struct ParticleEffectObject
 	{
 		for (auto *& effect : effects)
 		{
-			s_particleEffectSystem.removeEffect(effect);
+			particleEffectSystem.removeEffect(effect);
 			
 			effect = nullptr;
 		}
@@ -830,6 +999,10 @@ struct ParticleEffectObject
 	
 	void tick(const float dt)
 	{
+		for (auto * effect : effects)
+		{
+			effect->emitter.active = mouse.isDown(BUTTON_LEFT);
+		}
 	}
 };
 
@@ -840,6 +1013,7 @@ struct Scene : CollisionSystemInterface, ForwardLightingSystemInterface
 	Vec3 playerLocation;
 
 	PointerObject pointers[2];
+	ParticleEffectLibrary pointerBeamsEffect;
 
 	VrHand hands[VrHand_COUNT];
 
@@ -996,11 +1170,14 @@ void Scene::create()
 	{
 		hands[i].init((VrHands)i);
 	}
+	
+	pointerBeamsEffect.loadFromFile("drifter-particles1.pfx");
+	pointerBeamsEffect.createEffects(particleEffectSystem);
 
 	controlPanel = new ControlPanel(Vec3(0, 1.5f, -.45f), 0.f, this, (SpatialAudioSystem*)spatialAudioSystem);
-#if WINDOW_IS_3D
+#if WINDOW_IS_3D && 0
 	controlPanel_audioSource.open("180328-004.ogg", true);
-	controlPanel_spatialAudioSource = spatialAudioSystem->addSource(controlPanel->window.getTransform(), &controlPanel_audioSource);
+	controlPanel_spatialAudioSource = spatialAudioSystem->addSource(controlPanel->window.getTransform(), &controlPanel_audioSource, 4.f, 12.f);
 #endif
 
 	// add watersim object
@@ -1055,6 +1232,8 @@ void Scene::create()
 		const float z = random<float>(-4.f, +4.f);
 
 		drifter.transform.SetTranslation(x, 0, z);
+		
+		drifter.init();
 	}
 
 	audioStreamers.resize(1); // works with up to 20 in release
@@ -1081,22 +1260,27 @@ void Scene::create()
 	}
 
 	models.resize(4);
+	int modelIdx = 0;
 
 	for (auto & model : models)
 	{
-		model.init();
+		model.init(Vec3((modelIdx + .5f - models.size() / 2.f), 0, 0));
+
+		parameterMgr.addChild(&model.parameterMgr, ++modelIdx);
 	}
 	
 	jgplayers.resize(1);
+	int jgplayerIdx = 0;
 	
 	for (auto & jgplayer : jgplayers)
 	{
-		jgplayer.init("point_of_departure.s3m");
+		//jgplayer.init("point_of_departure.s3m");
 		//jgplayer.init("K_vision.s3m");
 		//jgplayer.init("25 - Surfacing.s3m");
 		//jgplayer.init("05 - Shared Dig.s3m");
+		jgplayer.init("UNATCO.it");
 		
-		parameterMgr.addChild(&jgplayer.parameterMgr);
+		parameterMgr.addChild(&jgplayer.parameterMgr, ++jgplayerIdx);
 	}
 	
 	particleEffects.resize(1);
@@ -1112,6 +1296,11 @@ void Scene::destroy()
 	for (auto & particleEffect : particleEffects)
 	{
 		particleEffect.shut();
+	}
+	
+	for (auto & drifter : drifters)
+	{
+		drifter.shut();
 	}
 	
 	watersim.shut();
@@ -1139,6 +1328,9 @@ void Scene::tick(const float dt)
 	{
 		pointer.wantsToVibrate = false;
 		pointer.DeviceID = -1;
+		
+		for (int i = 0; i < 2; ++i)
+			pointer.m_hasChanged[i] = false;
 	}
 
 // todo : add VrController to framework-vr shared library
@@ -1198,20 +1390,16 @@ void Scene::tick(const float dt)
 
 					for (int i = 0; i < 2; ++i)
 					{
-						const bool wasDown = pointer.isDown[i];
+						const bool wasDown = pointer.m_isDown[i];
 
 						if (state.Buttons & buttonMasks[i])
-							pointer.isDown[i] = true;
+							pointer.m_isDown[i] = true;
 						else
-							pointer.isDown[i] = false;
+							pointer.m_isDown[i] = false;
 
-					// todo : add wentUp, wentDown. move this code outside of input polling loop
-						if (pointer.isDown[i] != wasDown)
+						if (pointer.m_isDown[i] != wasDown)
 						{
-							if (i == 0 && index == 1 && pointer.isDown[i] && pointer.isValid)
-							{
-								playerLocation += pointer.transform.GetAxis(2) * -1.f;
-							}
+							pointer.m_hasChanged[i] = true;
 						}
 					}
 				}
@@ -1219,6 +1407,13 @@ void Scene::tick(const float dt)
 		}
 	}
 #endif
+
+	// update movement
+	
+	if (pointers[1].isValid && pointers[1].wentDown(0))
+	{
+		playerLocation += pointers[1].transform.GetAxis(2) * -1.f;
+	}
 
 	// update windows
 
@@ -1237,8 +1432,8 @@ void Scene::tick(const float dt)
 	{
 		viewToWorld = Mat4x4(true).Translate(playerLocation).Mul(pointers[0].transform);
 		buttonMask =
-			(pointers[0].isDown[0] << 0) |
-			(pointers[0].isDown[1] << 1);
+			(pointers[0].isDown(0) << 0) |
+			(pointers[0].isDown(1) << 1);
 		isHand = false;
 
 	#if WINDOW_IS_3D
@@ -1248,7 +1443,7 @@ void Scene::tick(const float dt)
 				.Translate(playerLocation)
 				.Mul(pointers[1].transform));
 	#else
-		if (pointers[1].isDown[1])
+		if (pointers[1].isDown(1))
 		{
 			controlPanel->window.setTransform(
 				Mat4x4(true)
@@ -1264,18 +1459,20 @@ void Scene::tick(const float dt)
 
 #if WINDOW_IS_3D
 	// Update registered spatial audio source transform for the control panel.
-	spatialAudioSystem->setSourceTransform(controlPanel_spatialAudioSource, controlPanel->window.getTransform());
+	if (controlPanel_spatialAudioSource != nullptr)
+		spatialAudioSystem->setSourceTransform(controlPanel_spatialAudioSource, controlPanel->window.getTransform());
 #endif
 
 	// Update the virtual desktop.
 	framework.tickVirtualDesktop(viewToWorld, buttonMask, isHand);
 
-	controlPanel->tick();
+	controlPanel->tick(dt);
 
 // todo : use active pointer
 	pointers[0].wantsToVibrate |= controlPanel->hoveredIdChanged && (controlPanel->lastHoveredId != 0);
 
 	// Check if pointer beams are intersecting. If so, give some feedback (vibration, particles)
+	pointerBeamsEffect.setActive(false);
 	if (pointers[0].isValid && pointers[1].isValid)
 	{
 		Vec3 closest1;
@@ -1294,10 +1491,12 @@ void Scene::tick(const float dt)
 
 				if (models.empty() == false)
 				{
-					auto & model = models.front();
-
 					const Vec3 midpoint = (closest1 + closest2) / 2.f;
-					model.transform.SetTranslation(midpoint);
+
+					pointerBeamsEffect.setActive(true);
+					Vec3 position = midpoint;
+					position *= 100.f; // fixme : scale particle effects
+					pointerBeamsEffect.setPosition(position[0], position[1], position[2], false);
 				}
 			}
 		}
@@ -1369,6 +1568,11 @@ void Scene::tick(const float dt)
 		audioStreamer.tick(dt);
 	}
 	
+	for (auto & model : models)
+	{
+		model.tick(dt);
+	}
+	
 	for (auto & jgplayer : jgplayers)
 	{
 		jgplayer.tick(dt);
@@ -1379,7 +1583,7 @@ void Scene::tick(const float dt)
 		particleEffect.tick(dt);
 	}
 	
-	s_particleEffectSystem.tick(0.f, -100.f, 0.f, dt);
+	particleEffectSystem.tick(0.f, -10.f, 0.f, dt);
 }
 
 void Scene::drawOnce() const
@@ -1610,7 +1814,7 @@ void Scene::drawTranslucent() const
 	{
 		gxScalef(1.f / 100.f, 1.f / 100.f, 1.f / 100.f);
 		
-		s_particleEffectSystem.draw();
+		particleEffectSystem.draw();
 	}
 	gxPopMatrix();
 }
@@ -1712,7 +1916,11 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 	struct Source
 	{
 		Mat4x4 transform = Mat4x4(true);
+		
 		AudioSource * audioSource = nullptr;
+		float recordedDistance = 1.f;
+		float headroomInDb = 0.f;
+		
 		binaural::Binauralizer binauralizer;
 
 		std::atomic<bool> enabled;
@@ -1759,6 +1967,7 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 			for (auto & file : files)
 				if (Path::GetExtension(file, true) == "mhr")
 					sampleSetFiles.push_back(file);
+			std::sort(sampleSetFiles.begin(), sampleSetFiles.end());
 		}
 		
 		// load sample sets
@@ -1776,11 +1985,17 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 		sampleSet = &sampleSets[sampleSetId->get()];
 	}
 
-	virtual void * addSource(const Mat4x4 & transform, AudioSource * audioSource) override final
+	virtual void * addSource(
+		const Mat4x4 & transform,
+		AudioSource * audioSource,
+		const float recordedDistance,
+		const float headroomInDb) override final
 	{
 		Source * source = new Source();
 		source->transform = transform;
 		source->audioSource = audioSource;
+		source->recordedDistance = recordedDistance;
+		source->headroomInDb = headroomInDb;
 		source->binauralizer.init(sampleSet, &mutex_binaural);
 
 		mutex_sources.lock();
@@ -1843,8 +2058,8 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 						elevation,
 						azimuth);
 				const float distance = sourcePosition_listener.CalcSize();
-				const float recordedDistance = 4.f;
-				const float headroomInDb = 12.f; // todo : make these settings a member of spatial audio source
+				const float recordedDistance = source->recordedDistance;
+				const float headroomInDb = source->headroomInDb;
 				const float maxGain = powf(10.f, headroomInDb/20.f);
 				const float normalizedDistance = distance / recordedDistance;
 				const float intensity = fminf(maxGain, 1.f / (normalizedDistance * normalizedDistance + 1e-6f)) * volume->get();
@@ -1992,8 +2207,24 @@ struct SpatialAudioSystemAudioStream : AudioStream
 
 // -- ControlPanel implementation
 
-void ControlPanel::tick()
+void ControlPanel::tick(const float dt)
 {
+	int sx = 0;
+	int sy = 0;
+	
+	if (activeTab == kTab_Scene || activeTab == kTab_Audio)
+	{
+		sx = 340;
+		sy = 340;
+	}
+	else if (activeTab == kTab_ParticleEditor)
+	{
+		sx = 1024;
+		sy = 1024;
+	}
+	
+	window.setSize(sx, sy);
+	
 	pushWindow(window);
 	{
 		bool inputIsCaptured = false;
@@ -2015,6 +2246,8 @@ void ControlPanel::tick()
 						activeTab = kTab_Scene;
 					if (ImGui::Button("Audio"))
 						activeTab = kTab_Audio;
+					if (ImGui::Button("Particle Editor"))
+						activeTab = kTab_ParticleEditor;
 					
 					ImGui::EndMenuBar();
 				}
@@ -2029,6 +2262,8 @@ void ControlPanel::tick()
 							const float z = random<float>(-4.f, +4.f);
 
 							drifter.transform.SetTranslation(x, 0, z);
+
+							drifter.effectLibrary.setPositionDiscontinuity();
 						}
 					}
 					ImGui::SameLine();
@@ -2049,6 +2284,21 @@ void ControlPanel::tick()
 				else if (activeTab == kTab_Audio)
 				{
 					parameterUi::doParameterUi_recursive(spatialAudioSystem->parameterMgr, nullptr);
+					
+					auto * spatialAudioSystemImpl = (SpatialAudioSystem*)spatialAudioSystem;
+					spatialAudioSystemImpl->mutex_sources.lock();
+					{
+						for (auto * source : spatialAudioSystemImpl->sources)
+						{
+							ImGui::Text("el: %+07.2f, az: %+07.2f, in: %.2f, rd: %04.2f, hr: %05.2f",
+								source->elevation.load(),
+								source->azimuth.load(),
+								source->intensity.load(),
+								source->recordedDistance,
+								source->headroomInDb);
+						}
+					}
+					spatialAudioSystemImpl->mutex_sources.unlock();
 				}
 			}
 			ImGui::End();
@@ -2057,6 +2307,11 @@ void ControlPanel::tick()
 			lastHoveredId = GImGui->HoveredId;
 		}
 		guiContext.processEnd();
+		
+		if (activeTab == kTab_ParticleEditor)
+		{
+			particleEditor.tick(true, sx, sy, dt);
+		}
 	}
 	popWindow();
 }
@@ -2137,6 +2392,8 @@ int main(int argc, char * argv[])
 	if (!framework.init(800, 600))
 		return -1;
 	
+	initUi();
+	
 	auto * spatialAudioSystemImpl = new SpatialAudioSystem();
 	spatialAudioSystem = spatialAudioSystemImpl;
 
@@ -2157,8 +2414,10 @@ int main(int argc, char * argv[])
 		if (framework.quitRequested)
 			break;
 
+		const float dt = fminf(framework.timeStep, 1/30.f);
+		
 		// Tick the simulation
-		scene.tick(framework.timeStep);
+		scene.tick(dt);
 
 		// Update the listener transform for the spatial audio system.
 		const Mat4x4 listenerTransform =
@@ -2178,6 +2437,10 @@ int main(int argc, char * argv[])
 		{
 			framework.beginEye(eyeIndex, colorBlack);
 			{
+			#if !FRAMEWORK_USE_OVR_MOBILE // todo : invert the z-axis on OVR mobile.. which includes all of the skeletons and tracking info etc ..
+				gxScalef(1, 1, -1);
+			#endif
+			
 				gxPushMatrix();
 				gxTranslatef(
 					-scene.playerLocation[0],
@@ -2226,6 +2489,8 @@ int main(int argc, char * argv[])
 
 	scene.destroy();
 
+	shutUi();
+	
 	Font("calibri.ttf").saveCache();
 
 	framework.shutdown();
