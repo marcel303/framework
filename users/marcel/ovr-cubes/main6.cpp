@@ -44,10 +44,10 @@ todo : use finger gesture or controller button to open/close control panel
 
 todo : experiment with drawing window contents in 3d directly (no window surface). this will give higher quality results on outlines
 
-todo : draw virtual desktop using a custom shader, to give the windows some specular reflection
-    - issue : no way to control which texture uniform gets set. pass texture name to drawVirtualDesktop ?
-    - maybe just custom draw all windows (it's easy enough)
-    - problem : need to iterate windows
+DONE : draw virtual desktop using a custom shader, to give the windows some specular reflection
+    # issue : no way to control which texture uniform gets set. pass texture name to drawVirtualDesktop ?
+    + maybe just custom draw all windows (it's easy enough)
+    + problem : need to iterate windows
 
 todo : refactor controller state similar to hand state
 
@@ -74,8 +74,8 @@ DONE : add the moon
 todo : add some stars
 
 todo : add some particles drifting in the air
-	- particles everywhere
-	- particle effect : spawn particles on movement. spawn particles when objects move
+	- add ephimeral particles drifting in the air
+	+ particle effect : spawn particles on movement. spawn particles when objects move
 	- particle effect : add manual spawn trigger. spawn(100) ?
 	- particle effect : add ability to enable/disable spawn by time. or give it some limited amount of time to spawn. allows for spawning on some event over time for some while
 
@@ -204,6 +204,7 @@ struct ControlPanel
 	{
 		kTab_Scene,
 		kTab_Audio,
+		kTab_Tracker,
 		kTab_ParticleEditor
 	};
 	
@@ -802,9 +803,10 @@ struct JgplayerObject
 	gltf::BufferCache box_bufferCache;
 	
 	ParameterMgr parameterMgr;
-	// todo : add global speed scale
 	ParameterInt * speed = nullptr;
+	ParameterInt * tempo = nullptr;
 	ParameterInt * pitch = nullptr;
+	ParameterEnum * file = nullptr;
 	
 	void init(const char * filename)
 	{
@@ -842,8 +844,29 @@ struct JgplayerObject
 		//
 		
 		parameterMgr.setPrefix("jgplayer");
+
+		std::vector<std::string> modFiles;
+		{
+			// list all of the module files
+			auto files = listFiles(".", true);
+			for (auto & file : files)
+			{
+				auto ext = Path::GetExtension(file, true);
+				if (ext == "mod" || ext == "xm" || ext == "s3m" || ext == "it")
+					modFiles.push_back(file);
+			}
+			std::sort(modFiles.begin(), modFiles.end());
+		}
+
+		std::vector<ParameterEnum::Elem> fileElems;
+		for (size_t i = 0; i < modFiles.size(); ++i)
+			fileElems.push_back({ modFiles[i].c_str(), (int)i });
+		file = parameterMgr.addEnum("file", 0, fileElems);
+
 		speed = parameterMgr.addInt("speed", 100);
 		speed->setLimits(0, 200);
+		tempo = parameterMgr.addInt("tempo", 100);
+		tempo->setLimits(0, 200);
 		pitch = parameterMgr.addInt("pitch", 100);
 		pitch->setLimits(0, 200);
 	}
@@ -874,8 +897,20 @@ struct JgplayerObject
 	
 	void tick(const float dt)
 	{
-		player->set_speed(speed->get());
-		player->set_pitch(pitch->get());
+		if (file->isDirty)
+		{
+			file->isDirty = false;
+
+			player->destroy_mod();
+			mod = nullptr;
+
+			const char * filename = file->translateValueToKey(file->get());
+			mod = jgmod_load(filename);
+			player->play(mod, true);
+		}
+
+		player->set_speed((speed->get() * tempo->get()) / 100);
+		player->set_pitch((speed->get() * pitch->get()) / 100);
 		
 		for (int i = 0; i < kMaxVoices; ++i)
 		{
@@ -1259,7 +1294,7 @@ void Scene::create()
 		index++;
 	}
 
-	models.resize(4);
+	models.resize(1);
 	int modelIdx = 0;
 
 	for (auto & model : models)
@@ -1656,6 +1691,8 @@ void Scene::drawOpaque() const
 
 #if WINDOW_IS_3D
 #if true
+	auto windows = framework.getAllWindows();
+	
 	Shader metallicRoughnessShader("pbr-metallicRoughness-simple");
 	setShader(metallicRoughnessShader);
 	{
@@ -1668,34 +1705,56 @@ void Scene::drawOpaque() const
 		gltf::Scene scene;
 		int nextTextureUnit = 0;
 		params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
-
-		params.setMetallicRoughness(metallicRoughnessShader, materialMetallic->get(), materialRoughness->get());
-		params.setBaseColorTexture(metallicRoughnessShader, controlPanel->window.getColorTarget()->getTextureId(), 0, nextTextureUnit);
-
-		setColor(colorWhite);
-		if (controlPanel->window.isHidden() == false)
+		
+		for (auto * window : windows)
 		{
-			gxPushMatrix();
+			if (window->hasSurface() && window->isHidden() == false)
 			{
-				gxMultMatrixf(controlPanel->window.getTransformForDraw().m_v);
-				gxTranslatef(0, 0, -.01f);
-				pushCullMode(CULL_BACK, CULL_CCW);
-				fillCube(Vec3(controlPanel->window.getWidth()/2.f, controlPanel->window.getHeight()/2.f, 0), Vec3(controlPanel->window.getWidth()/2.f + 10, controlPanel->window.getHeight()/2.f + 10, .008f));
-				popCullMode();
-			}
-			gxPopMatrix();
+				params.setMetallicRoughness(metallicRoughnessShader, materialMetallic->get(), materialRoughness->get());
+				params.setBaseColorTexture(metallicRoughnessShader, window->getColorTarget()->getTextureId(), 0, nextTextureUnit);
 
-			controlPanel->window.draw3d();
+				gxPushMatrix();
+				{
+					gxMultMatrixf(window->getTransformForDraw().m_v);
+					gxTranslatef(0, 0, -.01f);
+
+					pushCullMode(CULL_BACK, CULL_CCW);
+					{
+						setColor(colorWhite);
+						fillCube(
+							Vec3(window->getWidth()/2.f, window->getHeight()/2.f, 0),
+							Vec3(window->getWidth()/2.f + 10, window->getHeight()/2.f + 10, .008f));
+					}
+					popCullMode();
+				}
+				gxPopMatrix();
+
+				window->draw3d();
+			}
 		}
 
 		//framework.drawVirtualDesktop();
 	}
 	clearShader();
 
-	if (controlPanel->window.isHidden() == false && controlPanel->window.hasFocus())
+	for (auto * window : windows)
 	{
-		setColor(colorWhite);
-		controlPanel->window.draw3dCursor();
+		if (window->hasSurface() && window->isHidden() == false && window->hasFocus())
+		{
+			// draw magnification bubble around cursor position
+			float mouseX;
+			float mouseY;
+			if (window->getMousePosition(mouseX, mouseY))
+			{
+				setColor(colorWhite);
+				gxSetTexture(window->getColorTarget()->getTextureId());
+				drawRect(mouseX - 10, mouseY - 10, mouseX + 10, mouseY + 10);
+				gxSetTexture(0);
+			}
+			
+			setColor(colorWhite);
+			window->draw3dCursor();
+		}
 	}
 #else
 	setColor(colorWhite);
@@ -2212,7 +2271,7 @@ void ControlPanel::tick(const float dt)
 	int sx = 0;
 	int sy = 0;
 	
-	if (activeTab == kTab_Scene || activeTab == kTab_Audio)
+	if (activeTab == kTab_Scene || activeTab == kTab_Audio || activeTab == kTab_Tracker)
 	{
 		sx = 340;
 		sy = 340;
@@ -2221,6 +2280,10 @@ void ControlPanel::tick(const float dt)
 	{
 		sx = 1024;
 		sy = 1024;
+	}
+	else
+	{
+		Assert(false);
 	}
 	
 	window.setSize(sx, sy);
@@ -2246,6 +2309,8 @@ void ControlPanel::tick(const float dt)
 						activeTab = kTab_Scene;
 					if (ImGui::Button("Audio"))
 						activeTab = kTab_Audio;
+					if (ImGui::Button("Tracker"))
+						activeTab = kTab_Tracker;
 					if (ImGui::Button("Particle Editor"))
 						activeTab = kTab_ParticleEditor;
 					
@@ -2299,6 +2364,28 @@ void ControlPanel::tick(const float dt)
 						}
 					}
 					spatialAudioSystemImpl->mutex_sources.unlock();
+				}
+				else if (activeTab == kTab_Tracker)
+				{
+					for (auto & jgplayer : scene->jgplayers)
+					{
+						if (ImGui::Button("Prev track"))
+							jgplayer.player->prev_track();
+						ImGui::SameLine();
+						if (ImGui::Button("Next next"))
+							jgplayer.player->next_track();
+
+						if (jgplayer.player->is_paused())
+						{
+							if (ImGui::Button("Resume"))
+								jgplayer.player->resume();
+						}
+						else
+						{
+							if (ImGui::Button("Pause"))
+								jgplayer.player->pause();
+						}
+					}
 				}
 			}
 			ImGui::End();
