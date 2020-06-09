@@ -114,6 +114,11 @@ namespace binaural
 		return _mm_mul_ps(a, b);
 	}
 
+	inline __m128 operator*(__m128 a, float b)
+	{
+		return _mm_mul_ps(a, _mm_set1_ps(b));
+	}
+
 #endif
 
 #if BINAURAL_USE_SSE
