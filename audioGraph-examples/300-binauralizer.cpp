@@ -32,6 +32,7 @@
 #include "binaural_cipic.h"
 #include "binaural_ircam.h"
 #include "binaural_mit.h"
+#include "binaural_oalsoft.h"
 #include "binauralizer.h"
 #include "framework.h"
 #include "paobject.h"
@@ -402,10 +403,10 @@ int main(int argc, char * argv[])
 			
 			debugTimerBegin("applyHrtf");
 			
-			HRIRSampleData hrir;
+			HRIRSample hrir;
 			
 			{
-				const HRIRSampleData * samples[3];
+				const HRIRSample * samples[3];
 				float sampleWeights[3];
 				
 				float elevation = hoverLocation[1];
@@ -443,7 +444,11 @@ int main(int argc, char * argv[])
 			
 			HRTF hrtf;
 			
-			hrirToHrtf(hrir.lSamples, hrir.rSamples, hrtf.lFilter, hrtf.rFilter);
+			hrirToHrtf(
+				hrir.sampleData.lSamples,
+				hrir.sampleData.rSamples,
+				hrtf.lFilter,
+				hrtf.rFilter);
 			
 			// prepare audio signal for HRTF application
 			
@@ -517,6 +522,19 @@ int main(int argc, char * argv[])
 					gxMultMatrixf(transform.m_v);
 					
 					drawHrirSampleGrid(sampleSet, hoverLocation, hoverCell, hoverTriangle);
+					
+					if (hoverTriangle != nullptr)
+					{
+						pushFontMode(FONT_SDF);
+						for (int i = 0; i < 3; ++i)
+						{
+							drawText(
+								hoverTriangle->vertex[i].location.azimuth,
+								hoverTriangle->vertex[i].location.elevation,
+								1.f, 0, 0, "P%d", i + 1);
+						}
+						popFontMode();
+					}
 					
 					std::vector<Vec2> sampleLocations;
 					sampleLocations.resize(audioHandler.sounds.size());
@@ -614,17 +632,17 @@ int main(int argc, char * argv[])
 						setColor(colorRed);
 						for (int i = 0; i < sx; ++i)
 						{
-							const float v = .5f + hrir.lSamples[i];
+							const float v = .5f + hrir.sampleData.lSamples[i];
 							setColorf(v, 0.f, v / 4.f);
-							drawLine(i, 0, i, sy/2 + hrir.lSamples[i] * sy/2);
+							drawLine(i, 0, i, sy/2 + hrir.sampleData.lSamples[i] * sy/2);
 						}
 						
 						setColor(colorGreen);
 						for (int i = 0; i < sx; ++i)
 						{
-							const float v = .5f + hrir.rSamples[i];
+							const float v = .5f + hrir.sampleData.rSamples[i];
 							setColorf(0.f, v, v / 4.f);
-							drawLine(i, 0, i, sy/2 + hrir.rSamples[i] * sy/2);
+							drawLine(i, 0, i, sy/2 + hrir.sampleData.rSamples[i] * sy/2);
 						}
 					}
 					popBlend();
@@ -813,7 +831,7 @@ int main(int argc, char * argv[])
 					
 					if (hoverTriangle != nullptr)
 					{
-						drawText(mouse.x, mouse.y + 40, fontSize, 0, 1, "bary=(%.2f, %.2f, %.2f)", baryU, baryV, 1.f - baryU - baryV);
+						drawText(mouse.x, mouse.y + 40, fontSize, 0, 1, "bary=(%.2f, %.2f, %.2f)", 1.f - baryU - baryV, baryV, baryU);
 					}
 					
 					if (hoverCell != nullptr)
