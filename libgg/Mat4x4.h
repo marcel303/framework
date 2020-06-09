@@ -4,6 +4,10 @@
 #include "Vec3.h"
 #include "Vec4.h"
 
+#if defined(__aarch64__)
+	#include <arm_neon.h>
+#endif
+
 #define INDEX(x, y) ((x) * 4 + (y))
 
 #define m00 m_v[INDEX(0, 0)]
@@ -260,34 +264,34 @@ public:
 		// Multiply accumulate in 4x1 blocks, i.e. each column in C
 		float32x4_t B0 = vld1q_f32(B);
 		float32x4_t C0 = vmovq_n_f32(0);
-		float32x4_t C0 = vfmaq_laneq_f32(C0, A0, B0, 0);
-		float32x4_t C0 = vfmaq_laneq_f32(C0, A1, B0, 1);
-		float32x4_t C0 = vfmaq_laneq_f32(C0, A2, B0, 2);
-		float32x4_t C0 = vfmaq_laneq_f32(C0, A3, B0, 3);
+		C0 = vfmaq_laneq_f32(C0, A0, B0, 0);
+		C0 = vfmaq_laneq_f32(C0, A1, B0, 1);
+		C0 = vfmaq_laneq_f32(C0, A2, B0, 2);
+		C0 = vfmaq_laneq_f32(C0, A3, B0, 3);
 		vst1q_f32(C, C0);
 
 		float32x4_t B1 = vld1q_f32(B+4);
 		float32x4_t C1 = vmovq_n_f32(0);
-		float32x4_t C1 = vfmaq_laneq_f32(C1, A0, B1, 0);
-		float32x4_t C1 = vfmaq_laneq_f32(C1, A1, B1, 1);
-		float32x4_t C1 = vfmaq_laneq_f32(C1, A2, B1, 2);
-		float32x4_t C1 = vfmaq_laneq_f32(C1, A3, B1, 3);
+		C1 = vfmaq_laneq_f32(C1, A0, B1, 0);
+		C1 = vfmaq_laneq_f32(C1, A1, B1, 1);
+		C1 = vfmaq_laneq_f32(C1, A2, B1, 2);
+		C1 = vfmaq_laneq_f32(C1, A3, B1, 3);
 		vst1q_f32(C+4, C1);
-		
+
 		float32x4_t B2 = vld1q_f32(B+8);
 		float32x4_t C2 = vmovq_n_f32(0);
-		float32x4_t C2 = vfmaq_laneq_f32(C2, A0, B2, 0);
-		float32x4_t C2 = vfmaq_laneq_f32(C2, A1, B2, 1);
-		float32x4_t C2 = vfmaq_laneq_f32(C2, A2, B2, 2);
-		float32x4_t C2 = vfmaq_laneq_f32(C2, A3, B2, 3);
+		C2 = vfmaq_laneq_f32(C2, A0, B2, 0);
+		C2 = vfmaq_laneq_f32(C2, A1, B2, 1);
+		C2 = vfmaq_laneq_f32(C2, A2, B2, 2);
+		C2 = vfmaq_laneq_f32(C2, A3, B2, 3);
 		vst1q_f32(C+8, C2);
-		
+
 		float32x4_t B3 = vld1q_f32(B+12);
 		float32x4_t C3 = vmovq_n_f32(0);
-		float32x4_t C3 = vfmaq_laneq_f32(C3, A0, B3, 0);
-		float32x4_t C3 = vfmaq_laneq_f32(C3, A1, B3, 1);
-		float32x4_t C3 = vfmaq_laneq_f32(C3, A2, B3, 2);
-		float32x4_t C3 = vfmaq_laneq_f32(C3, A3, B3, 3);
+		C3 = vfmaq_laneq_f32(C3, A0, B3, 0);
+		C3 = vfmaq_laneq_f32(C3, A1, B3, 1);
+		C3 = vfmaq_laneq_f32(C3, A2, B3, 2);
+		C3 = vfmaq_laneq_f32(C3, A3, B3, 3);
 		vst1q_f32(C+12, C3);
 		
 		return result;
