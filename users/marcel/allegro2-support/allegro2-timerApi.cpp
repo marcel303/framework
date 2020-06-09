@@ -30,6 +30,7 @@ struct AllegroTimerReg
 #ifndef WIN32
 	#include <time.h>
 	#include <unistd.h>
+	#include <Windows.h> // SetThreadPriority, GetCurrentThread
 #endif
 
 static int TimerThreadProc(void * obj)
