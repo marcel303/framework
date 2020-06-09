@@ -366,6 +366,13 @@ bool Window::getQuitRequested() const
 	return m_windowData->quitRequested;
 }
 
+bool Window::getMousePosition(float & x, float & y) const
+{
+	x = m_windowData->mouseData.mouseX;
+	y = m_windowData->mouseData.mouseY;
+	return true;
+}
+
 bool Window::hasSurface() const
 {
 #if WINDOW_HAS_A_SURFACE

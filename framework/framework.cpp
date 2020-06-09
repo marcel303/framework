@@ -1785,12 +1785,12 @@ void Framework::fillCaches(bool recurse)
 	fillCachesWithPath(".", recurse);
 }
 
-Window & Framework::getMainWindow()
+Window & Framework::getMainWindow() const
 {
 	return *globals.mainWindow;
 }
 
-Window & Framework::getCurrentWindow()
+Window & Framework::getCurrentWindow() const
 {
 	for (Window * window = m_windows; window != nullptr; window = window->m_next)
 		if (window == globals.currentWindow)
@@ -1798,6 +1798,14 @@ Window & Framework::getCurrentWindow()
 	
 	logError("failed to find current window. this should not be possible unless framework failed to initialize!");
 	return *globals.mainWindow;
+}
+
+std::vector<Window*> Framework::getAllWindows() const
+{
+	std::vector<Window*> result;
+	for (Window * window = m_windows; window != nullptr; window = window->m_next)
+		result.push_back(window);
+	return result;
 }
 
 void Framework::setFullscreen(bool fullscreen)

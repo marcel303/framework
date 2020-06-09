@@ -497,8 +497,9 @@ public:
 	void fillCachesWithPath(const char * path, bool recurse);
 	void fillCaches(bool recurse);
 	
-	Window & getMainWindow();
-	Window & getCurrentWindow();
+	Window & getMainWindow() const;
+	Window & getCurrentWindow() const;
+	std::vector<Window*> getAllWindows() const;
 	void setFullscreen(bool fullscreen);
 	
 	void getCurrentViewportSize(int & sx, int & sy) const;
@@ -641,6 +642,8 @@ public:
 	bool isFullscreen() const;
 	
 	bool getQuitRequested() const;
+	
+	bool getMousePosition(float & x, float & y) const;
 	
 	bool hasSurface() const;
 	
