@@ -40,6 +40,8 @@
 
 #define DEFAULT_PIXELS_PER_METER 700 // screens often use a value of around 72dpi = ~2800 dots per meter. we use a value a few times smaller here, to make the virtual windows appear larger by default
 
+#if FRAMEWORK_USE_SDL
+
 Window::Window(SDL_Window * window)
 	: m_prev(nullptr)
 	, m_next(nullptr)
@@ -70,6 +72,8 @@ Window::Window(SDL_Window * window)
 	
 	framework.registerWindow(this);
 }
+
+#endif
 
 Window::Window(const char * title, const int sx, const int sy, const bool resizable)
 	: m_prev(nullptr)

@@ -171,7 +171,7 @@ Framework::Framework()
 #else
 	enableRealTimeEditing = false;
 #endif
-	manualVrMode = false;
+	vrMode = false;
 	filedrop = false;
 	windowX = -1;
 	windowY = -1;
@@ -192,6 +192,9 @@ Framework::Framework()
 	events.clear();
 	changedFiles.clear();
 	droppedFiles.clear();
+	
+	vrOrigin.Set(0, 0, 0);
+	enableVrMovement = true;
 	
 	quitRequested = false;
 	time = 0.f;
@@ -522,7 +525,7 @@ bool Framework::init(int sx, int sy)
 #if FRAMEWORK_USE_OVR_MOBILE
 	globals.egl.createContext();
 	
-	if (manualVrMode)
+	if (vrMode)
 	{
 		sx = 0;
 		sy = 0;
@@ -802,7 +805,7 @@ bool Framework::shutdown()
 #else
 	enableRealTimeEditing = false;
 #endif
-	manualVrMode = false;
+	vrMode = false;
 	filedrop = false;
 	enableSound = true;
 	numSoundSources = 32;
@@ -823,6 +826,9 @@ bool Framework::shutdown()
 	events.clear();
 	changedFiles.clear();
 	droppedFiles.clear();
+	
+	vrOrigin.Set(0, 0, 0);
+	enableVrMovement = true;
 	
 	m_lastTick = -1;
 	
@@ -1419,7 +1425,7 @@ void Framework::process()
 	time += timeStep;
 #endif
 #elif FRAMEWORK_USE_OVR_MOBILE
-	if (manualVrMode == false)
+	if (vrMode == false)
 	{
 		// Render the eye images.
 		for (int eyeIndex = 0; eyeIndex < frameworkOvr.getEyeCount(); ++eyeIndex)
@@ -1454,7 +1460,7 @@ void Framework::process()
 	timeStep = float(frameworkOvr.TimeStep);
 	time = frameworkOvr.PredictedDisplayTime;
 	
-	if (manualVrMode == false)
+	if (vrMode == false)
 	{
 		// update virtual desktop. but first, find the pointer transform to use
 
@@ -1542,7 +1548,7 @@ void Framework::process()
 	#error
 #endif
 	
-	if (manualVrMode)
+	if (vrMode)
 	{
 		bool inputIsCaptured = !mouse.isDown(BUTTON_LEFT);
 		globals.emulatedVrCamera.mode = Camera::kMode_FirstPerson;
@@ -1931,29 +1937,41 @@ void Framework::endDraw()
 void Framework::present()
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	// fixme : present() calls may appear for regular, properly vsync'ed apps.
-	//         In this case, manualVrMode may not be set and this assert will trigger.
-	//         We should probably call present(..) at the start of process, which
-	//         will present any pending frames, and wait for frame pacing (if vsync is enabled).
-	Assert(manualVrMode);
-	frameworkOvr.submitFrameAndPresent();
+	if (vrMode)
+		frameworkOvr.submitFrameAndPresent();
 #endif
+}
+
+bool Framework::isStereoVr() const
+{
+#if FRAMEWORK_USE_OVR_MOBILE
+	if (vrMode)
+		return true;
+#endif
+
+	return false;
 }
 
 int Framework::getEyeCount() const
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	return frameworkOvr.getEyeCount();
-#else
-	return 1;
+	if (vrMode)
+		return frameworkOvr.getEyeCount();
 #endif
+
+	return 1;
 }
 
 void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	frameworkOvr.beginEye(eyeIndex, clearColor);
-#else
+	if (vrMode)
+	{
+		frameworkOvr.beginEye(eyeIndex, clearColor);
+		return;
+	}
+#endif
+
 	Assert(eyeIndex == 0);
 	beginDraw(
 		scale255(clearColor.r),
@@ -1961,33 +1979,48 @@ void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 		scale255(clearColor.b),
 		scale255(clearColor.a));
 	
+	const Vec3 restore_position = globals.emulatedVrCamera.firstPerson.position;
+	globals.emulatedVrCamera.firstPerson.position += vrOrigin;
 	globals.emulatedVrCamera.pushProjectionMatrix();
 	globals.emulatedVrCamera.pushViewMatrix();
-#endif
+	globals.emulatedVrCamera.firstPerson.position = restore_position;
 }
 
 void Framework::endEye()
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	frameworkOvr.endEye();
-#else
+	if (vrMode)
+	{
+		frameworkOvr.endEye();
+		return;
+	}
+#endif
+
 	globals.emulatedVrCamera.popViewMatrix();
 	globals.emulatedVrCamera.popProjectionMatrix();
 	
 	endDraw();
-#endif
 }
 
 Mat4x4 Framework::getHeadTransform() const
 {
 #if FRAMEWORK_USE_OVR_MOBILE
-	return frameworkOvr.HeadTransform;
-#else
+	if (vrMode)
+	{
+		return Mat4x4(true)
+			.Translate(origin)
+			.Mul(frameworkOvr.HeadTransform);
+	}
+#endif
+
 	Mat4x4 result;
+	
+	const Vec3 restore_position = globals.emulatedVrCamera.firstPerson.position;
+	globals.emulatedVrCamera.firstPerson.position += vrOrigin;
 	globals.emulatedVrCamera.calculateWorldMatrix(result);
+	globals.emulatedVrCamera.firstPerson.position = restore_position;
 	
 	return result;
-#endif
 }
 
 void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_buttonMask, const bool isHand)

@@ -455,6 +455,7 @@ public:
 	void present(); // note : currently only needed for manual vr mode. but may come in handy later, for correctly vsync'ed multi-window drawing
 	
 	// stereoscopic vr rendering
+	bool isStereoVr() const;
 	int getEyeCount() const;
 	void beginEye(const int eyeIndex, const Color & clearColor);
 	void endEye();
@@ -502,7 +503,7 @@ public:
 	bool reloadCachesOnActivate;
 	bool cacheResourceData;
 	bool enableRealTimeEditing;
-	bool manualVrMode;
+	bool vrMode;
 	bool filedrop;
 	bool enableSound;
 	int numSoundSources;
@@ -528,6 +529,9 @@ public:
 	std::vector<std::string> changedFiles;
 	std::vector<std::string> droppedFiles;
 	
+	Vec3 vrOrigin;
+	bool enableVrMovement;
+	
 private:
 	uint64_t m_lastTick;
 	
@@ -546,7 +550,7 @@ private:
 	class WindowData * findWindowDataById(const int id);
 };
 
-//
+// -----
 
 #if defined(FRAMEWORK_USE_OVR_MOBILE)
 	#define WINDOW_HAS_A_SURFACE 1
@@ -560,8 +564,10 @@ class Window
 {
 private:
 	friend class Framework;
-	
+
+#if FRAMEWORK_USE_SDL
 	Window(SDL_Window * window);
+#endif
 	
 public:
 	Window(const char * title, const int sx, const int sy, const bool resizable = false);
