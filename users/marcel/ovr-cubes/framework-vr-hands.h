@@ -4,12 +4,12 @@
 #include "Mat4x4.h"
 #include <vector>
 
-enum VrHands
+enum VrSide
 {
-	VrHand_Undefined = -1,
-	VrHand_Left,
-	VrHand_Right,
-	VrHand_COUNT
+	VrSide_Undefined = -1,
+	VrSide_Left,
+	VrSide_Right,
+	VrSide_COUNT
 };
 
 enum VrFingers
@@ -24,7 +24,7 @@ enum VrFingers
 
 struct VrHandBase
 {
-	VrHands hand = VrHand_Undefined;
+	VrSide side = VrSide_Undefined;
 
 	bool hasSkeleton = false;
 	struct
@@ -55,7 +55,7 @@ struct VrHandBase
 
 	VrHandBase();
 
-	virtual void init(VrHands hand) = 0;
+	virtual void init(VrSide side) = 0;
 	virtual void shut() = 0;
 
 	virtual void updateInputState() = 0;
@@ -94,7 +94,7 @@ class VrHand : public VrHandBase
 	mutable ShaderBuffer skinningData;
 
 public:
-	virtual void init(VrHands in_hand) override;
+	virtual void init(VrSide side) override;
 	virtual void shut() override;
 
 	virtual void updateInputState() override;

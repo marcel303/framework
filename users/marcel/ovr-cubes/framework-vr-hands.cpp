@@ -35,7 +35,7 @@ bool VrHandBase::getFingerTransform(const VrFingers finger, const Vec3 worldOffs
 		.Translate(worldOffset)
 		.Mul(rootPose)
 		.Mul(deform.globalBoneTransforms[boneIndex])
-		.RotateY(hand == VrHand_Left ? +float(M_PI)/2.f : -float(M_PI)/2.f);
+		.RotateY(side == VrSide_Left ? +float(M_PI)/2.f : -float(M_PI)/2.f);
 	return true;
 }
 
@@ -101,12 +101,12 @@ void VrHandBase::calculateSkinnningMatrices(Mat4x4 * skinningMatrices, const int
 
 // -- VrHand
 
-void VrHand::init(VrHands in_hand)
+void VrHand::init(VrSide in_side)
 {
-	hand = in_hand;
+	side = in_side;
 
 #if FRAMEWORK_USE_OVR_MOBILE
-	const auto ovrHand = (hand == VrHand_Left) ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT;
+	const auto ovrHand = (side == VrSide_Left) ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT;
 
 	ovrHandMesh handMesh;
 	handMesh.Header.Version = ovrHandVersion_1;
@@ -136,6 +136,8 @@ void VrHand::init(VrHands in_hand)
 
 void VrHand::shut()
 {
+	side = VrSide_Undefined;
+
 	mesh.clear();
 	vb.free();
 	ib.free();
@@ -174,9 +176,9 @@ void VrHand::updateInputState()
 			continue;
 
 		// Is it our hand?
-		if (hand == VrHand_Left && (handCapabilities.HandCapabilities & ovrHandCaps_LeftHand) == 0)
+		if (side == VrSide_Left && (handCapabilities.HandCapabilities & ovrHandCaps_LeftHand) == 0)
 			continue;
-		if (hand == VrHand_Right && (handCapabilities.HandCapabilities & ovrHandCaps_RightHand) == 0)
+		if (side == VrSide_Right && (handCapabilities.HandCapabilities & ovrHandCaps_RightHand) == 0)
 			continue;
 
 		for (;;)
@@ -201,7 +203,7 @@ void VrHand::updateInputState()
 			// And we will need it to perform skinning as well.
 			ovrHandSkeleton handSkeleton;
 			handSkeleton.Header.Version = ovrHandVersion_1;
-			const auto ovrHand = (hand == VrHand_Left) ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT;
+			const auto ovrHand = (side == VrSide_Left) ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT;
 			if (vrapi_GetHandSkeleton(ovr, ovrHand, &handSkeleton.Header) != ovrSuccess)
 				break;
 

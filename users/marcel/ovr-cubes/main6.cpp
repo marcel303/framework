@@ -35,8 +35,6 @@
 
 new challenges!
 
-DONE : automatically switch between controller and hands for virtual desktop interaction
-
 todo : use finger gesture or controller button to open/close control panel
     - check finger pinching amount for the index finger
     - have pinch enter/leave thresholds (where leave > enter), to avoid rapid transitions
@@ -44,12 +42,38 @@ todo : use finger gesture or controller button to open/close control panel
 
 todo : experiment with drawing window contents in 3d directly (no window surface). this will give higher quality results on outlines
 
+todo : refactor controller state similar to hand state
+
+todo : add some particles drifting in the air
+	- add ephimeral particles drifting in the air
+	+ particle effect : spawn particles on movement. spawn particles when objects move
+	- particle effect : add manual spawn trigger. spawn(100) ?
+	+ particle effect : add ability to enable/disable spawn by time. or give it some limited amount of time to spawn. allows for spawning on some event over time for some while
+
+todo : make NdotV abs(..) inside the gltf pbr shaders. this would make lighting act double-sidedly
+
+todo : add 'assetcopy-filelist.txt' or something, which stores the hashes for copied files
+    - during assetcopy: optionally enable filelist check
+    - calculate hash for assets inside apk
+    - check if changed from filelist
+
+todo : window3d : draw magnification bubble at cursor location
+todo : framework : draw pointer beams when manual vr mode is off
+    - requires a unified place to store pointer transforms, and active pointer index
+
+todo : experiment with more geometrically interesting mesh shapes for the jgmod voices
+    - what kind of effects can be achieved?
+
+todo : grab jgmod voice cubes using left pointer
+    - add jgmod voices to raycast
+    - manually set the transform
+
+DONE : automatically switch between controller and hands for virtual desktop interaction
+
 DONE : draw virtual desktop using a custom shader, to give the windows some specular reflection
     # issue : no way to control which texture uniform gets set. pass texture name to drawVirtualDesktop ?
     + maybe just custom draw all windows (it's easy enough)
     + problem : need to iterate windows
-
-todo : refactor controller state similar to hand state
 
 DONE : project hand position down onto watersim, to give the user an exaggered impression of how high up they are
     - calculate inverse of the watersim transform
@@ -71,104 +95,17 @@ DONE : add UI for showing spatial audio system status
 
 DONE : add the moon
 
-todo : add some stars
+DONE : add some stars
 
-todo : add some particles drifting in the air
-	- add ephimeral particles drifting in the air
-	+ particle effect : spawn particles on movement. spawn particles when objects move
-	- particle effect : add manual spawn trigger. spawn(100) ?
-	- particle effect : add ability to enable/disable spawn by time. or give it some limited amount of time to spawn. allows for spawning on some event over time for some while
-
-todo : make NdotV abs(..) inside the gltf pbr shaders. this would make lighting act double-sidedly
-
-todo : add 'assetcopy-filelist.txt' or something, which stores the hashes for copied files
-    - during assetcopy: optionally enable filelist check
-    - calculate hash for assets inside apk
-    - check if changed from filelist
-
-todo : window3d : draw zoom bubble at cursor location
-todo : framework : draw pointer beams when manual vr mode is off
-    - requires a unified place to store pointer transforms, and active pointer index
-
-todo : spawn particles and vibrate when controller beams intersect each other
-
-todo : experiment with more geometrically interesting mesh shapes for the jgmod voices
-    - what kind of effects can be achieved?
-
-todo : grab jgmod voice cubes using left pointer
-    - add jgmod voices to raycast
-    - manually set the transform
+DONE : spawn particles and vibrate when controller beams intersect each other
 
 DONE : add spatial audio source parameters
 	- make headroom a spatial audio source parameter
 	- make recorded distance a spatial audio source parameter
 
-todo : optimize matrix multiplication for neon
+DONE : optimize matrix multiplication for neon
 
  */
-
-#if false
-// source : https://developer.arm.com/architectures/instruction-sets/simd-isas/neon/neon-programmers-guide-for-armv8-a/optimizing-c-code-with-neon-intrinsics/optimizing-matrix-multiplication
-void matrix_multiply_4x4_neon(float32_t *A, float32_t *B, float32_t *C) {
-	// these are the columns A
-	float32x4_t A0;
-	float32x4_t A1;
-	float32x4_t A2;
-	float32x4_t A3;
-	
-	// these are the columns B
-	float32x4_t B0;
-	float32x4_t B1;
-	float32x4_t B2;
-	float32x4_t B3;
-	
-	// these are the columns C
-	float32x4_t C0;
-	float32x4_t C1;
-	float32x4_t C2;
-	float32x4_t C3;
-	
-	A0 = vld1q_f32(A);
-	A1 = vld1q_f32(A+4);
-	A2 = vld1q_f32(A+8);
-	A3 = vld1q_f32(A+12);
-	
-	// Zero accumulators for C values
-	C0 = vmovq_n_f32(0);
-	C1 = vmovq_n_f32(0);
-	C2 = vmovq_n_f32(0);
-	C3 = vmovq_n_f32(0);
-	
-	// Multiply accumulate in 4x1 blocks, i.e. each column in C
-	B0 = vld1q_f32(B);
-	C0 = vfmaq_laneq_f32(C0, A0, B0, 0);
-	C0 = vfmaq_laneq_f32(C0, A1, B0, 1);
-	C0 = vfmaq_laneq_f32(C0, A2, B0, 2);
-	C0 = vfmaq_laneq_f32(C0, A3, B0, 3);
-	vst1q_f32(C, C0);
-	
-	B1 = vld1q_f32(B+4);
-	C1 = vfmaq_laneq_f32(C1, A0, B1, 0);
-	C1 = vfmaq_laneq_f32(C1, A1, B1, 1);
-	C1 = vfmaq_laneq_f32(C1, A2, B1, 2);
-	C1 = vfmaq_laneq_f32(C1, A3, B1, 3);
-	vst1q_f32(C+4, C1);
-	
-	B2 = vld1q_f32(B+8);
-	C2 = vfmaq_laneq_f32(C2, A0, B2, 0);
-	C2 = vfmaq_laneq_f32(C2, A1, B2, 1);
-	C2 = vfmaq_laneq_f32(C2, A2, B2, 2);
-	C2 = vfmaq_laneq_f32(C2, A3, B2, 3);
-	vst1q_f32(C+8, C2);
-	
-	B3 = vld1q_f32(B+12);
-	C3 = vfmaq_laneq_f32(C3, A0, B3, 0);
-	C3 = vfmaq_laneq_f32(C3, A1, B3, 1);
-	C3 = vfmaq_laneq_f32(C3, A2, B3, 2);
-	C3 = vfmaq_laneq_f32(C3, A3, B3, 3);
-	vst1q_f32(C+12, C3);
-}
-#endif
 
 #if FRAMEWORK_USE_OVR_MOBILE
 	#include <VrApi_Helpers.h>
@@ -267,39 +204,205 @@ struct ControlPanel
 	}
 };
 
-struct PointerObject
+enum VrButton
 {
+	VrButton_Trigger,
+	VrButton_GripTrigger,
+	VrButton_A,
+	VrButton_B,
+	VrButton_COUNT
+};
+
+class VrPointerBase
+{
+protected:
+	bool m_isDown[VrButton_COUNT] = { };
+	bool m_hasChanged[VrButton_COUNT] = { };
+	
+public:
 	Mat4x4 transform = Mat4x4(true);
-	bool isValid = false;
+	bool hasTransform = false;
 	bool wantsToVibrate = false;
 
-#if FRAMEWORK_USE_OVR_MOBILE
-	ovrDeviceID DeviceID = -1;
-#endif
-
-	bool m_isDown[2] = { };
-	bool m_hasChanged[2] = { };
+public:
+	virtual void init(VrSide side) = 0;
+	virtual void shut() = 0;
 	
-	bool wentDown(const int index) const
+	virtual void updateInputState() = 0;
+	virtual void updateHaptics() = 0;
+	
+public:
+	bool wentDown(const VrButton index) const
 	{
 		return m_hasChanged[index] && m_isDown[index];
 	}
 	
-	bool wentUp(const int index) const
+	bool wentUp(const VrButton index) const
 	{
 		return m_hasChanged[index] && !m_isDown[index];
 	}
 	
-	bool isDown(const int index) const
+	bool isDown(const VrButton index) const
 	{
 		return m_isDown[index];
 	}
 	
-	bool isUp(const int index) const
+	bool isUp(const VrButton index) const
 	{
 		return !m_isDown[index];
 	}
 };
+
+#if FRAMEWORK_USE_OVR_MOBILE
+
+class VrPointer : public VrPointerBase
+{
+private:
+	VrSide side = VrSide_Undefined;
+	
+	ovrDeviceID DeviceID = -1; // cached by updateInputState. todo : remove (?)
+
+public:
+	virtual void init(VrSide side) override final;
+	virtual void shut() override final;
+	
+	virtual void updateInputState() override final;
+	virtual void updateHaptics() override final;
+};
+
+void VrPointer::init(VrSide in_side)
+{
+	side = in_side;
+}
+
+void VrPointer::shut()
+{
+}
+
+void VrPointer::updateInputState()
+{
+// todo : add VrController to framework-vr shared library
+	hasTransform = false;
+	
+	DeviceID = -1;
+	
+	for (int i = 0; i < VrButton_COUNT; ++i)
+		m_hasChanged[i] = false;
+
+	ovrMobile * ovr = frameworkOvr.Ovr;
+	
+	int index = 0;
+
+	for (;;)
+	{
+		ovrInputCapabilityHeader header;
+
+		if (vrapi_EnumerateInputDevices(ovr, index++, &header) < 0)
+			break;
+
+		if (header.Type == ovrControllerType_TrackedRemote)
+		{
+			ovrInputStateTrackedRemote state;
+			state.Header.ControllerType = ovrControllerType_TrackedRemote;
+			if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &state.Header) >= 0)
+			{
+				VrSide controllerSide = VrSide_Undefined;
+
+				ovrInputTrackedRemoteCapabilities remoteCaps;
+				remoteCaps.Header.Type = ovrControllerType_TrackedRemote;
+				remoteCaps.Header.DeviceID = header.DeviceID;
+				if (vrapi_GetInputDeviceCapabilities(ovr, &remoteCaps.Header) != ovrSuccess)
+					continue;
+				
+				if (remoteCaps.ControllerCapabilities & ovrControllerCaps_LeftHand)
+					controllerSide = VrSide_Left;
+				if (remoteCaps.ControllerCapabilities & ovrControllerCaps_RightHand)
+					controllerSide = VrSide_Right;
+
+				if (controllerSide != side)
+					continue;
+				
+				DeviceID = header.DeviceID;
+
+				ovrTracking tracking;
+				if (vrapi_GetInputTrackingState(
+					ovr,
+					header.DeviceID,
+					frameworkOvr.PredictedDisplayTime,
+					&tracking) != ovrSuccess)
+				{
+					tracking.Status = 0;
+				}
+				
+				if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
+				{
+					ovrMatrix4f ovr_transform = vrapi_GetTransformFromPose(&tracking.HeadPose.Pose);
+					ovr_transform = ovrMatrix4f_Transpose(&ovr_transform);
+
+					memcpy(&transform, (float*)ovr_transform.M, sizeof(Mat4x4));
+					hasTransform = true;
+				}
+				else
+				{
+					transform.MakeIdentity();
+					hasTransform = false;
+				}
+
+				const int buttonMasks[VrButton_COUNT] =
+					{
+						ovrButton_Trigger,
+						ovrButton_GripTrigger,
+						0,
+						0
+					};
+
+				for (int i = 0; i < VrButton_COUNT; ++i)
+				{
+					if (buttonMasks[i] == 0)
+						continue;
+					
+					const bool wasDown = m_isDown[i];
+
+					if (state.Buttons & buttonMasks[i])
+						m_isDown[i] = true;
+					else
+						m_isDown[i] = false;
+
+					if (m_isDown[i] != wasDown)
+					{
+						m_hasChanged[i] = true;
+					}
+				}
+			}
+		}
+	}
+}
+
+void VrPointer::updateHaptics()
+{
+	if (DeviceID != -1)
+	{
+		ovrMobile * ovr = frameworkOvr.Ovr;
+		
+		vrapi_SetHapticVibrationSimple(ovr, DeviceID, wantsToVibrate ? .5f : 0.f);
+	}
+	
+	wantsToVibrate = false;
+}
+
+#else
+
+class VrPointer : public VrPointerBase
+{
+public:
+	virtual void init(VrSide side) override final { }
+	virtual void shut() override final { }
+	
+	virtual void updateInputState() override final { }
+	virtual void updateHaptics() override final { }
+};
+
+#endif
 
 // -- watersim object
 
@@ -676,6 +779,7 @@ struct ModelObject
 		position->setLimits(Vec3(-4.f), Vec3(+4.f));
 		position->setEditingCurveExponential(4.f);
 		position->set(in_position);
+		position->setDirty();
 
 		//gltf::loadScene("Suzanne/glTF/Suzanne.gltf", scene);
 		gltf::loadScene("deus_ex_pbr/scene.gltf", scene);
@@ -693,7 +797,7 @@ struct ModelObject
 
 			transform = Mat4x4(true)
 				.Translate(position->get())
-				.Scale(.01f);
+				.Scale(.03f);
 		}
 
 		transform = transform.Rotate(dt * .4f, Vec3(0, 1, 0));
@@ -1047,10 +1151,10 @@ struct Scene : CollisionSystemInterface, ForwardLightingSystemInterface
 {
 	Vec3 playerLocation;
 
-	PointerObject pointers[2];
+	VrPointer pointers[2];
 	ParticleEffectLibrary pointerBeamsEffect;
 
-	VrHand hands[VrHand_COUNT];
+	VrHand hands[VrSide_COUNT];
 
 	ControlPanel * controlPanel = nullptr;
 	bool showControlPanel = true;
@@ -1203,7 +1307,9 @@ void Scene::create()
 
 	for (int i = 0; i < 2; ++i)
 	{
-		hands[i].init((VrHands)i);
+		pointers[i].init((VrSide)i);
+
+		hands[i].init((VrSide)i);
 	}
 	
 	pointerBeamsEffect.loadFromFile("drifter-particles1.pfx");
@@ -1345,6 +1451,8 @@ void Scene::destroy()
 
 	delete controlPanel;
 	controlPanel = nullptr;
+	
+	pointerBeamsEffect.removeEffects(particleEffectSystem);
 }
 
 void Scene::tick(const float dt)
@@ -1356,96 +1464,14 @@ void Scene::tick(const float dt)
 		hand.updateInputState();
 	}
 
-#if FRAMEWORK_USE_OVR_MOBILE
-	ovrMobile * ovr = frameworkOvr.Ovr;
-
 	for (auto & pointer : pointers)
 	{
-		pointer.wantsToVibrate = false;
-		pointer.DeviceID = -1;
-		
-		for (int i = 0; i < 2; ++i)
-			pointer.m_hasChanged[i] = false;
+		pointer.updateInputState();
 	}
-
-// todo : add VrController to framework-vr shared library
-	uint32_t index = 0;
-
-	for (;;)
-	{
-		ovrInputCapabilityHeader header;
-
-		if (vrapi_EnumerateInputDevices(ovr, index++, &header) < 0)
-			break;
-
-		if (header.Type == ovrControllerType_TrackedRemote)
-		{
-			ovrTracking tracking;
-			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, frameworkOvr.PredictedDisplayTime, &tracking) != ovrSuccess)
-				tracking.Status = 0;
-
-			ovrInputStateTrackedRemote state;
-			state.Header.ControllerType = ovrControllerType_TrackedRemote;
-			if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &state.Header ) >= 0)
-			{
-				int index = -1;
-
-				ovrInputTrackedRemoteCapabilities remoteCaps;
-				remoteCaps.Header.Type = ovrControllerType_TrackedRemote;
-				remoteCaps.Header.DeviceID = header.DeviceID;
-				if (vrapi_GetInputDeviceCapabilities(ovr, &remoteCaps.Header) == ovrSuccess)
-				{
-					if (remoteCaps.ControllerCapabilities & ovrControllerCaps_LeftHand)
-						index = 0;
-					if (remoteCaps.ControllerCapabilities & ovrControllerCaps_RightHand)
-						index = 1;
-				}
-
-				if (index != -1)
-				{
-					auto & pointer = pointers[index];
-
-					pointer.DeviceID = header.DeviceID;
-
-					if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
-					{
-						ovrMatrix4f transform = vrapi_GetTransformFromPose(&tracking.HeadPose.Pose);
-						transform = ovrMatrix4f_Transpose(&transform);
-
-						memcpy(&pointer.transform, (float*)transform.M, sizeof(Mat4x4));
-						pointer.isValid = true;
-					}
-					else
-					{
-						pointer.transform.MakeIdentity();
-						pointer.isValid = false;
-					}
-
-					const int buttonMasks[2] = { ovrButton_Trigger, ovrButton_GripTrigger };
-
-					for (int i = 0; i < 2; ++i)
-					{
-						const bool wasDown = pointer.m_isDown[i];
-
-						if (state.Buttons & buttonMasks[i])
-							pointer.m_isDown[i] = true;
-						else
-							pointer.m_isDown[i] = false;
-
-						if (pointer.m_isDown[i] != wasDown)
-						{
-							pointer.m_hasChanged[i] = true;
-						}
-					}
-				}
-			}
-		}
-	}
-#endif
 
 	// update movement
 	
-	if (pointers[1].isValid && pointers[1].wentDown(0))
+	if (pointers[1].hasTransform && pointers[1].wentDown(VrButton_Trigger))
 	{
 		playerLocation += pointers[1].transform.GetAxis(2) * -1.f;
 	}
@@ -1456,9 +1482,9 @@ void Scene::tick(const float dt)
 	int buttonMask = 0;
 	bool isHand = false;
 
-	const VrHands interactiveHand = VrHand_Right;
+	const VrSide interactiveSide = VrSide_Right;
 // todo : automatically switch between left and right hand. or allow both to interact at the 'same' time ?
-	if (hands[interactiveHand].getFingerTransform(VrFinger_Index, playerLocation, viewToWorld))
+	if (hands[interactiveSide].getFingerTransform(VrFinger_Index, playerLocation, viewToWorld))
 	{
 		buttonMask = 1 << 0;
 		isHand = true;
@@ -1467,8 +1493,8 @@ void Scene::tick(const float dt)
 	{
 		viewToWorld = Mat4x4(true).Translate(playerLocation).Mul(pointers[0].transform);
 		buttonMask =
-			(pointers[0].isDown(0) << 0) |
-			(pointers[0].isDown(1) << 1);
+			(pointers[0].isDown(VrButton_Trigger) << 0) |
+			(pointers[0].isDown(VrButton_GripTrigger) << 1);
 		isHand = false;
 
 	#if WINDOW_IS_3D
@@ -1478,7 +1504,7 @@ void Scene::tick(const float dt)
 				.Translate(playerLocation)
 				.Mul(pointers[1].transform));
 	#else
-		if (pointers[1].isDown(1))
+		if (pointers[1].isDown(VrButton_GripTrigger))
 		{
 			controlPanel->window.setTransform(
 				Mat4x4(true)
@@ -1508,7 +1534,7 @@ void Scene::tick(const float dt)
 
 	// Check if pointer beams are intersecting. If so, give some feedback (vibration, particles)
 	pointerBeamsEffect.setActive(false);
-	if (pointers[0].isValid && pointers[1].isValid)
+	if (pointers[0].hasTransform && pointers[1].hasTransform)
 	{
 		Vec3 closest1;
 		Vec3 closest2;
@@ -1537,15 +1563,10 @@ void Scene::tick(const float dt)
 		}
 	}
 
-#if FRAMEWORK_USE_OVR_MOBILE
 	for (auto & pointer : pointers)
 	{
-		if (pointer.DeviceID != -1)
-		{
-			vrapi_SetHapticVibrationSimple(ovr, pointer.DeviceID, pointer.wantsToVibrate ? .5f : 0.f);
-		}
+		pointer.updateHaptics();
 	}
-#endif
 
 	// update watersim object
 	{
@@ -1729,6 +1750,11 @@ void Scene::drawOpaque() const
 				}
 				gxPopMatrix();
 
+				metallicRoughnessShader.setImmediate("scene_ambientLightColor",
+					window->hasFocus() ? .3f : 0.f,
+					window->hasFocus() ? .3f : 0.f,
+					window->hasFocus() ? .3f : 0.f);
+
 				window->draw3d();
 			}
 		}
@@ -1741,16 +1767,51 @@ void Scene::drawOpaque() const
 	{
 		if (window->hasSurface() && window->isHidden() == false && window->hasFocus())
 		{
+		#if false
 			// draw magnification bubble around cursor position
 			float mouseX;
 			float mouseY;
 			if (window->getMousePosition(mouseX, mouseY))
 			{
-				setColor(colorWhite);
-				gxSetTexture(window->getColorTarget()->getTextureId());
-				drawRect(mouseX - 10, mouseY - 10, mouseX + 10, mouseY + 10);
-				gxSetTexture(0);
+				gxPushMatrix();
+				{
+					const float sampleRadius = 10.f;
+					const float drawRadius = 20.f;
+
+					gxMultMatrixf(window->getTransformForDraw().m_v);
+					gxTranslatef(0, 0, .001f);
+					gxTranslatef(mouseX, window->getHeight() - mouseY, 0);
+					gxScalef(drawRadius, drawRadius, 1);
+					
+					setColor(colorWhite);
+					gxSetTexture(window->getColorTarget()->getTextureId());
+					
+					const float x1 = mouseX - sampleRadius;
+					const float y1 = mouseY - sampleRadius;
+					const float x2 = mouseX + sampleRadius;
+					const float y2 = mouseY + sampleRadius;
+					
+					const float u1 = x1 / window->getWidth();
+					const float v1 = y1 / window->getHeight();
+					const float u2 = x2 / window->getWidth();
+					const float v2 = y2 / window->getHeight();
+					
+					gxBegin(GX_QUADS);
+					{
+						gxNormal3f(0, 0, 1);
+						
+						gxTexCoord2f(u1, v1); gxVertex2f(-1, +1);
+						gxTexCoord2f(u2, v1); gxVertex2f(+1, +1);
+						gxTexCoord2f(u2, v2); gxVertex2f(+1, -1);
+						gxTexCoord2f(u1, v2); gxVertex2f(-1, -1);
+					}
+					gxEnd();
+					
+					gxSetTexture(0);
+				}
+				gxPopMatrix();
 			}
+		#endif
 			
 			setColor(colorWhite);
 			window->draw3dCursor();
@@ -1773,7 +1834,7 @@ void Scene::drawOpaque() const
 	{
 		auto & pointer = pointers[i];
 
-		if (pointer.isValid == false)
+		if (pointer.hasTransform == false)
 			continue;
 
 		// Draw cube.
@@ -2473,7 +2534,7 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
-	framework.manualVrMode = true;
+	framework.vrMode = true;
 	framework.enableDepthBuffer = true;
 
 	if (!framework.init(800, 600))
