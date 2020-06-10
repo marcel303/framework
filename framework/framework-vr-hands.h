@@ -1,8 +1,9 @@
 #pragma once
 
-#include "gx_mesh.h"
 #include "Mat4x4.h"
 #include <vector>
+
+class ShaderBuffer;
 
 enum VrSide
 {
@@ -22,8 +23,11 @@ enum VrFingers
 	VrFinger_COUNT
 };
 
-struct VrHandBase
+class VrHand
 {
+	struct VrHandData * data = nullptr;
+	
+public:
 	VrSide side = VrSide_Undefined;
 
 	bool hasSkeleton = false;
@@ -53,15 +57,15 @@ struct VrHandBase
 		bool isPinching = false;
 	} fingers[VrFinger_COUNT];
 
-	VrHandBase();
+	VrHand();
 
-	virtual void init(VrSide side) = 0;
-	virtual void shut() = 0;
+	void init(VrSide side);
+	void shut();
 
-	virtual void updateInputState() = 0;
-	virtual void updateSkinningMatrices() const = 0;
-	virtual ShaderBuffer & getSkinningMatrices(const bool update) const = 0;
-	virtual void drawMesh() const = 0;
+	void updateInputState();
+	void updateSkinningMatrices() const;
+	ShaderBuffer & getSkinningMatrices(const bool update) const;
+	void drawMesh() const;
 
 	Mat4x4 getTransform(const Vec3 worldOffset) const;
 
@@ -83,24 +87,4 @@ struct VrHandBase
 	void calculateGlobalBindPose();
 	void calculateGlobalDeformPose();
 	void calculateSkinnningMatrices(Mat4x4 * skinningMatrices, const int maxBones) const;
-};
-
-class VrHand : public VrHandBase
-{
-	GxMesh mesh;
-	GxVertexBuffer vb;
-	GxIndexBuffer ib;
-
-	mutable ShaderBuffer skinningData;
-
-public:
-	virtual void init(VrSide side) override;
-	virtual void shut() override;
-
-	virtual void updateInputState() override;
-
-	virtual void updateSkinningMatrices() const override;
-	virtual ShaderBuffer & getSkinningMatrices(const bool update) const override;
-
-	virtual void drawMesh() const override;
 };

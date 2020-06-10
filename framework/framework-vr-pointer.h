@@ -1,5 +1,8 @@
 #pragma once
 
+#include "framework-vr-hands.h" // for VrSide
+#include "Mat4x4.h"
+
 enum VrButton
 {
 	VrButton_Trigger,

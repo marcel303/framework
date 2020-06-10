@@ -2,6 +2,10 @@
 
 #if FRAMEWORK_USE_OVR_MOBILE
 
+#include <VrApi_Helpers.h>
+#include <VrApi_Input.h>
+#include "framework-ovr.h"
+
 void VrPointer::init(VrSide in_side)
 {
 	side = in_side;

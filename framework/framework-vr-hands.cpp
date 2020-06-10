@@ -1,28 +1,20 @@
-#include "framework-ovr.h"
 #include "framework-vr-hands.h"
-#include "data/engine/ShaderCommon.txt" // VS_ constants
+#include <math.h>
 
-#if FRAMEWORK_USE_OVR_MOBILE
-	#include <VrApi_Helpers.h>
-	#include <VrApi_Input.h>
-#endif
-
-// -- VrHandBase
-
-VrHandBase::VrHandBase()
+VrHand::VrHand()
 {
 	for (auto & index : skeleton.fingerNameToBoneIndex)
 		index = -1;
 }
 
-Mat4x4 VrHandBase::getTransform(const Vec3 worldOffset) const
+Mat4x4 VrHand::getTransform(const Vec3 worldOffset) const
 {
 	return Mat4x4(true)
 		.Translate(worldOffset)
 		.Mul(rootPose);
 }
 
-bool VrHandBase::getFingerTransform(const VrFingers finger, const Vec3 worldOffset, Mat4x4 & out_transform) const
+bool VrHand::getFingerTransform(const VrFingers finger, const Vec3 worldOffset, Mat4x4 & out_transform) const
 {
 	if (!hasSkeleton || !hasDeform)
 		return false;
@@ -31,6 +23,7 @@ bool VrHandBase::getFingerTransform(const VrFingers finger, const Vec3 worldOffs
 	if (boneIndex < 0)
 		return false;
 
+// fixme : rotate by 90 degrees here is ovr-mobile specific. move it over to ovr-mobile implementation
 	out_transform = Mat4x4(true)
 		.Translate(worldOffset)
 		.Mul(rootPose)
@@ -39,7 +32,7 @@ bool VrHandBase::getFingerTransform(const VrFingers finger, const Vec3 worldOffs
 	return true;
 }
 
-void VrHandBase::resizeSkeleton(const int numBones)
+void VrHand::resizeSkeleton(const int numBones)
 {
 	skeleton.numBones = numBones;
 	skeleton.boneParentIndices.resize(numBones);
@@ -50,7 +43,7 @@ void VrHandBase::resizeSkeleton(const int numBones)
 	deform.globalBoneTransforms.resize(numBones);
 }
 
-void VrHandBase::localPoseToGlobal(
+void VrHand::localPoseToGlobal(
 	const Mat4x4 * __restrict localMatrices,
 	const int * __restrict parentIndices,
 	const int numMatrices,
@@ -67,7 +60,7 @@ void VrHandBase::localPoseToGlobal(
 	}
 }
 
-void VrHandBase::calculateGlobalBindPose()
+void VrHand::calculateGlobalBindPose()
 {
 	// Calculate global bone transforms (bind pose).
 	localPoseToGlobal(
@@ -77,7 +70,7 @@ void VrHandBase::calculateGlobalBindPose()
 		skeleton.globalBoneTransforms.data());
 }
 
-void VrHandBase::calculateGlobalDeformPose()
+void VrHand::calculateGlobalDeformPose()
 {
 	// Calculate global bone transforms (animated).
 	localPoseToGlobal(
@@ -87,7 +80,7 @@ void VrHandBase::calculateGlobalDeformPose()
 		deform.globalBoneTransforms.data());
 }
 
-void VrHandBase::calculateSkinnningMatrices(Mat4x4 * skinningMatrices, const int maxBones) const
+void VrHand::calculateSkinnningMatrices(Mat4x4 * skinningMatrices, const int maxBones) const
 {
 	// Calculate skinning matrices. Skinning matrices will first transform a vertex into 'bind space',
 	// by applying the inverse of the initial pose transform. It will then apply the global bone transform.
@@ -99,13 +92,31 @@ void VrHandBase::calculateSkinnningMatrices(Mat4x4 * skinningMatrices, const int
 	}
 }
 
-// -- VrHand
+#if FRAMEWORK_USE_OVR_MOBILE
+
+#include "data/engine/ShaderCommon.txt" // VS_ constants
+#include "framework-ovr.h"
+#include "gx_mesh.h"
+#include <VrApi_Helpers.h>
+#include <VrApi_Input.h>
+
+struct VrHandData
+{
+	GxMesh mesh;
+	GxVertexBuffer vb;
+	GxIndexBuffer ib;
+
+	ShaderBuffer skinningData;
+};
 
 void VrHand::init(VrSide in_side)
 {
+	Assert(data == nullptr);
+	
+	data = new VrHandData();
+	
 	side = in_side;
 
-#if FRAMEWORK_USE_OVR_MOBILE
 	const auto ovrHand = (side == VrSide_Left) ? VRAPI_HAND_LEFT : VRAPI_HAND_RIGHT;
 
 	ovrHandMesh handMesh;
@@ -123,26 +134,31 @@ void VrHand::init(VrSide in_side)
 		};
 		const int numVsInputs = sizeof(vsInputs) / sizeof(vsInputs[0]);
 
-		vb.alloc(&handMesh, sizeof(handMesh));
-		ib.alloc(handMesh.Indices, sizeof(handMesh.Indices) / sizeof(handMesh.Indices[0]), GX_INDEX_16);
-		mesh.setVertexBuffer(&vb, vsInputs, numVsInputs, 0);
-		mesh.setIndexBuffer(&ib);
-		mesh.addPrim(GX_TRIANGLES, handMesh.NumIndices, true);
+		data->vb.alloc(&handMesh, sizeof(handMesh));
+		data->ib.alloc(handMesh.Indices, sizeof(handMesh.Indices) / sizeof(handMesh.Indices[0]), GX_INDEX_16);
+		data->mesh.setVertexBuffer(&data->vb, vsInputs, numVsInputs, 0);
+		data->mesh.setIndexBuffer(&data->ib);
+		data->mesh.addPrim(GX_TRIANGLES, handMesh.NumIndices, true);
 	}
-#endif
 
-	skinningData.alloc(sizeof(Mat4x4) * 32);
+	data->skinningData.alloc(sizeof(Mat4x4) * 32);
 }
 
 void VrHand::shut()
 {
 	side = VrSide_Undefined;
 
-	mesh.clear();
-	vb.free();
-	ib.free();
+	if (data != nullptr)
+	{
+		data->mesh.clear();
+		data->vb.free();
+		data->ib.free();
 
-	skinningData.free();
+		data->skinningData.free();
+		
+		delete data;
+		data = nullptr;
+	}
 }
 
 void VrHand::updateInputState()
@@ -152,7 +168,6 @@ void VrHand::updateInputState()
 	hasSkeleton = false;
 	hasDeform = false;
 
-#if FRAMEWORK_USE_OVR_MOBILE
 	// loop through input device and find our hand
 
 	auto * ovr = frameworkOvr.Ovr;
@@ -268,7 +283,6 @@ void VrHand::updateInputState()
 			break;
 		}
 	}
-#endif
 }
 
 void VrHand::updateSkinningMatrices() const
@@ -276,7 +290,7 @@ void VrHand::updateSkinningMatrices() const
 	Mat4x4 skinningTransforms[32];
 	calculateSkinnningMatrices(skinningTransforms, 32);
 
-	skinningData.setData(skinningTransforms, sizeof(skinningTransforms));
+	data->skinningData.setData(skinningTransforms, sizeof(skinningTransforms));
 }
 
 ShaderBuffer & VrHand::getSkinningMatrices(const bool update) const
@@ -284,10 +298,40 @@ ShaderBuffer & VrHand::getSkinningMatrices(const bool update) const
 	if (update)
 		updateSkinningMatrices();
 
-	return skinningData;
+	return data->skinningData;
 }
 
 void VrHand::drawMesh() const
 {
-	mesh.draw();
+	data->mesh.draw();
 }
+
+#else
+
+void VrHand::init(VrSide side)
+{
+}
+
+void VrHand::shut()
+{
+}
+
+void VrHand::updateInputState()
+{
+}
+
+void VrHand::updateSkinningMatrices() const
+{
+}
+
+ShaderBuffer & VrHand::getSkinningMatrices(const bool update) const
+{
+	ShaderBuffer * result = nullptr;
+	return *result;
+}
+
+void VrHand::drawMesh() const
+{
+}
+
+#endif
