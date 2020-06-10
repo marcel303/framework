@@ -37,64 +37,52 @@
 	#include <GL/glew.h>
 #endif
 
-static std::vector<GLuint> s_bufferPool;
-static bool s_useBufferPool = false;
-
 ShaderBuffer::ShaderBuffer()
 	: m_buffer(0)
 {
-	if (!s_useBufferPool || s_bufferPool.empty())
-	{
-		glGenBuffers(1, &m_buffer);
-		checkErrorGL();
-	}
-	else
-	{
-		m_buffer = s_bufferPool.back();
-		s_bufferPool.pop_back();
-	}
 }
 
 ShaderBuffer::~ShaderBuffer()
 {
-	if (m_buffer)
-	{
-		if (s_useBufferPool)
-		{
-			s_bufferPool.push_back(m_buffer);
-			m_buffer = 0;
-		}
-		else
-		{
-			glDeleteBuffers(1, &m_buffer);
-			m_buffer = 0;
-			checkErrorGL();
-		}
-	}
+	fassert(m_buffer == 0);
 }
 
 void ShaderBuffer::alloc(const int numBytes)
 {
-	glBindBuffer(GL_UNIFORM_BUFFER, m_buffer);
+	fassert(m_buffer == 0);
+	
+	glGenBuffers(1, &m_buffer);
 	checkErrorGL();
+	
+	if (m_buffer != 0)
+	{
+		glBindBuffer(GL_UNIFORM_BUFFER, m_buffer);
+		checkErrorGL();
 
-	glBufferData(GL_UNIFORM_BUFFER, numBytes, nullptr, GL_DYNAMIC_DRAW);
-	checkErrorGL();
+		glBufferData(GL_UNIFORM_BUFFER, numBytes, nullptr, GL_DYNAMIC_DRAW);
+		checkErrorGL();
 
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-	checkErrorGL();
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+		checkErrorGL();
+	}
 }
 
 void ShaderBuffer::free()
 {
-	setData(nullptr, 0);
+	if (m_buffer != 0)
+	{
+		glDeleteBuffers(1, &m_buffer);
+		checkErrorGL();
+		
+		m_buffer = 0;
+	}
 }
 
 void ShaderBuffer::setData(const void * bytes, int numBytes)
 {
-	fassert(m_buffer);
+	fassert(m_buffer != 0);
 
-	if (m_buffer)
+	if (m_buffer != 0)
 	{
 		glBindBuffer(GL_UNIFORM_BUFFER, m_buffer);
 		checkErrorGL();
