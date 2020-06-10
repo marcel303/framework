@@ -34,6 +34,8 @@
 
 #include "Debugging.h"
 #include "framework-event.h" // SDL_Event and key codes
+#include "framework-vr-hands.h"
+#include "framework-vr-pointer.h"
 #include "gx_texture.h" // GX_TEXTURE_FORMAT
 #include "Mat4x4.h"
 #include "Vec2.h"
@@ -314,6 +316,9 @@ extern Framework framework;
 extern Mouse mouse;
 extern Keyboard keyboard;
 extern Gamepad gamepad[MAX_GAMEPAD];
+
+extern VrHand vrHand[2];
+extern VrPointer vrPointer[2];
 
 // event handlers
 

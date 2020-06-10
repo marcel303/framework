@@ -139,6 +139,9 @@ Mouse mouse;
 Keyboard keyboard;
 Gamepad gamepad[MAX_GAMEPAD];
 
+VrHand vrHand[2];
+VrPointer vrPointer[2];
+
 // -----
 
 int s_backingScale = 1; // global backing scale multiplier. a bit of a hack as it assumed the scale never changes, but works well for most apps in most situations for now..
@@ -609,6 +612,16 @@ bool Framework::init(int sx, int sy)
 	}
 #endif
 
+	// initialize vr hands and pointers
+	
+	for (int i = 0; i < VrSide_COUNT; ++i)
+		vrHand[i].init((VrSide)i);
+
+	for (int i = 0; i < VrSide_COUNT; ++i)
+		vrPointer[i].init((VrSide)i);
+	
+	// initialize built-in shaders
+	
 	fassert(globals.builtinShaders == nullptr);
 	globals.builtinShaders = new BuiltinShaders();
 
@@ -703,6 +716,14 @@ bool Framework::shutdown()
 	g_fontCacheMSDF.clear();
 #endif
 	g_glyphCache.clear();
+	
+	// shut down vr hands and pointers
+	
+	for (int i = 0; i < VrSide_COUNT; ++i)
+		vrHand[i].shut();
+		
+	for (int i = 0; i < VrSide_COUNT; ++i)
+		vrPointer[i].shut();
 	
 #if USE_FREETYPE
 	// shut down FreeType
@@ -997,6 +1018,13 @@ void Framework::process()
 	cpuTimingBlock(frameworkProcess);
 	
 	g_soundPlayer.process();
+	
+	// update haptics
+	
+	for (auto & pointer : vrPointer)
+	{
+		pointer.updateHaptics();
+	}
 	
 #if FRAMEWORK_USE_SDL
 	// poll SDL event queue
@@ -1391,7 +1419,7 @@ void Framework::process()
 		}
 	}
 #endif
-	
+
 	if (enableRealTimeEditing)
 	{
 		tickRealTimeEditing();
@@ -1428,9 +1456,9 @@ void Framework::process()
 	if (vrMode == false)
 	{
 		// Render the eye images.
-		for (int eyeIndex = 0; eyeIndex < frameworkOvr.getEyeCount(); ++eyeIndex)
+		for (int eyeIndex = 0; eyeIndex < getEyeCount(); ++eyeIndex)
 		{
-			frameworkOvr.beginEye(eyeIndex, colorBlack);
+			beginEye(eyeIndex, colorBlack);
 			{
 				gxPushMatrix();
 				gxTranslatef(0, 0, 0);
@@ -1438,7 +1466,7 @@ void Framework::process()
 					pushDepthTest(true, DEPTH_LESS);
 					pushBlend(BLEND_OPAQUE);
 					{
-						framework.drawVirtualDesktop();
+						drawVirtualDesktop();
 						for (auto * window = m_windows; window != nullptr; window = window->m_next)
 							if (window->isHidden() == false && window->hasFocus())
 								window->draw3dCursor();
@@ -1448,10 +1476,10 @@ void Framework::process()
 				}
 				gxPopMatrix();
 			}
-			frameworkOvr.endEye();
+			endEye();
 		}
 		
-		frameworkOvr.submitFrameAndPresent();
+		present();
 	}
 	
 	// process events and begin the next frame
@@ -1460,6 +1488,14 @@ void Framework::process()
 	timeStep = float(frameworkOvr.TimeStep);
 	time = frameworkOvr.PredictedDisplayTime;
 	
+	// update input state
+
+	for (auto & hand : vrHand)
+		hand.updateInputState();
+
+	for (auto & pointer : vrPointer)
+		pointer.updateInputState();
+
 	if (vrMode == false)
 	{
 		// update virtual desktop. but first, find the pointer transform to use
@@ -1474,72 +1510,31 @@ void Framework::process()
 				Mat4x4(true)
 			};
 
-		bool pointerTransformIsValid = false;
+		bool pointerTransformIsValid[2] = { };
 		int buttonMasks[2] = { 0, 0 };
 
-	#if true
-		auto * ovr = frameworkOvr.Ovr;
-
-		uint32_t index = 0;
-
-		for (;;)
+		for (int i = 0; i < 2; ++i)
 		{
-			ovrInputCapabilityHeader header;
+			auto & pointer = vrPointer[i];
 
-			if (vrapi_EnumerateInputDevices(ovr, index++, &header) < 0)
-				break;
+			if (pointer.wentDown(VrButton_Trigger))
+				activeController = i;
 
-			if (header.Type != ovrControllerType_TrackedRemote)
-				continue;
-
-			ovrTracking tracking;
-			if (vrapi_GetInputTrackingState(ovr, header.DeviceID, frameworkOvr.PredictedDisplayTime, &tracking) != ovrSuccess)
-				tracking.Status = 0;
-
-			ovrInputStateTrackedRemote state;
-			state.Header.ControllerType = ovrControllerType_TrackedRemote;
-			if (vrapi_GetCurrentInputState(ovr, header.DeviceID, &state.Header ) >= 0)
+			if (pointer.hasTransform)
 			{
-				int index = -1;
-
-				ovrInputTrackedRemoteCapabilities remoteCaps;
-				remoteCaps.Header.Type = ovrControllerType_TrackedRemote;
-				remoteCaps.Header.DeviceID = header.DeviceID;
-				if (vrapi_GetInputDeviceCapabilities(ovr, &remoteCaps.Header) == ovrSuccess)
-				{
-					if (remoteCaps.ControllerCapabilities & ovrControllerCaps_LeftHand)
-						index = 0;
-					if (remoteCaps.ControllerCapabilities & ovrControllerCaps_RightHand)
-						index = 1;
-				}
-
-				if (index != -1)
-				{
-					if (tracking.Status & VRAPI_TRACKING_STATUS_POSITION_VALID)
-					{
-						ovrMatrix4f transform = vrapi_GetTransformFromPose(&tracking.HeadPose.Pose);
-						transform = ovrMatrix4f_Transpose(&transform);
-
-						memcpy(&pointerTransform[index], (float*)transform.M, sizeof(Mat4x4));
-						pointerTransformIsValid = true;
-					}
-
-					if (state.Buttons & ovrButton_Trigger)
-					{
-						activeController = index;
-						buttonMasks[index] |= 1 << 0;
-					}
-					if (state.Buttons & ovrButton_GripTrigger)
-					{
-						activeController = index;
-						buttonMasks[index] |= 1 << 1;
-					}
-				}
+				pointerTransform[i] = pointer.transform;
+				pointerTransformIsValid[i] = true;
 			}
+			else
+				pointerTransformIsValid[i] = false;
+
+			buttonMasks[i] =
+				int(pointer.isDown(VrButton_Trigger) << 0) |
+				int(pointer.isDown(VrButton_GripTrigger) << 1);
 		}
-	#endif
 
 		// todo : use controller as a pointing device, not the direction of the head pose
+		// todo : let virtual desktop know if the transform is valid or not
 		framework.tickVirtualDesktop(pointerTransform[activeController], buttonMasks[activeController], false);
 
 		globals.currentWindow->getWindowData()->makeActive();
@@ -1553,6 +1548,14 @@ void Framework::process()
 		bool inputIsCaptured = !mouse.isDown(BUTTON_LEFT);
 		globals.emulatedVrCamera.mode = Camera::kMode_FirstPerson;
 		globals.emulatedVrCamera.tick(framework.timeStep, inputIsCaptured, false);
+
+		if (enableVrMovement)
+		{
+			if (vrPointer[1].hasTransform && vrPointer[1].wentDown(VrButton_Trigger))
+			{
+				vrOrigin += vrPointer[1].transform.GetAxis(2) * -1.f;
+			}
+		}
 	}
 	
 	// time step sprites and models
@@ -1968,6 +1971,10 @@ void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 	if (vrMode)
 	{
 		frameworkOvr.beginEye(eyeIndex, clearColor);
+		gxTranslatef(
+			-vrOrigin[0],
+			-vrOrigin[1],
+			-vrOrigin[2]);
 		return;
 	}
 #endif
@@ -2008,7 +2015,7 @@ Mat4x4 Framework::getHeadTransform() const
 	if (vrMode)
 	{
 		return Mat4x4(true)
-			.Translate(origin)
+			.Translate(vrOrigin)
 			.Mul(frameworkOvr.HeadTransform);
 	}
 #endif
