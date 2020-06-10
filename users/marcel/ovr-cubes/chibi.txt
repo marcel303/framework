@@ -32,6 +32,8 @@ library framework-vr
 	depend_library framework
 	add_files framework-vr-hands.cpp
 	add_files framework-vr-hands.h
+	add_files framework-vr-pointer.cpp
+	add_files framework-vr-pointer.h
 	header_path . expose
 
 app ovr-cubes5
