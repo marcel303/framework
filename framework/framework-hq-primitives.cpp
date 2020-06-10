@@ -29,6 +29,8 @@
 
 #if ENABLE_HQ_PRIMITIVES
 
+#include "internal.h"
+
 static void setShader_HqLines()
 {
 	setShader(globals.builtinShaders->hqLine.get());
