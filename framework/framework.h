@@ -33,70 +33,20 @@
 #endif
 
 #include "Debugging.h"
-#include "gx_texture.h"
+#include "framework-event.h" // SDL_Event and key codes
+#include "gx_texture.h" // GX_TEXTURE_FORMAT
 #include "Mat4x4.h"
 #include "Vec2.h"
 #include "Vec3.h"
 #include "Vec4.h"
 
 #if FRAMEWORK_USE_SDL
-	#include <SDL2/SDL_events.h>
-	#include <SDL2/SDL_keycode.h>
 	#include <SDL2/SDL_mutex.h>
 	#include <SDL2/SDL_thread.h>
 	#include <SDL2/SDL_timer.h>
 #else
 // todo : remove these typedefs and SDLK enum
-	typedef int SDL_Event;
-	typedef int SDL_Window; // todo : resolve what to do with windows on Android
-
-	enum
-	{
-		SDLK_LSHIFT,
-		SDLK_RSHIFT,
-		SDLK_LALT,
-		SDLK_RALT,
-		SDLK_LGUI,
-		SDLK_RGUI,
-		SDLK_LCTRL,
-		SDLK_RCTRL,
-		SDLK_UP,
-		SDLK_DOWN,
-		SDLK_LEFT,
-		SDLK_RIGHT,
-		SDLK_EQUALS,
-		SDLK_MINUS,
-		SDLK_HOME,
-		SDLK_END,
-		SDLK_DELETE,
-		SDLK_BACKSPACE,
-		SDLK_RETURN,
-		SDLK_SPACE,
-		SDLK_ESCAPE,
-		SDLK_TAB,
-		SDLK_a,
-		SDLK_c,
-		SDLK_k,
-		SDLK_m,
-		SDLK_z,
-		SDLK_i,
-		SDLK_o,
-		SDLK_f,
-		SDLK_g,
-		SDLK_b,
-		SDLK_s,
-		SDLK_t,
-		SDLK_p,
-		SDLK_w,
-		SDLK_d,
-		SDLK_v,
-		SDLK_LEFTBRACKET,
-		SDLK_RIGHTBRACKET,
-		SDLK_1,
-		SDLK_2,
-		SDLK_3,
-		SDLK_0
-	};
+	//typedef int SDL_Window; // todo : resolve what to do with windows on Android
 #endif
 
 #include <float.h> // FLT_MAX (sprite draw)
@@ -156,14 +106,6 @@
 #else
 	#define ENABLE_PROFILING 0
 #endif
-
-/*
-#ifdef DEBUG
-	#define ENABLE_OPENGL 1
-#else
-	#define ENABLE_OPENGL 0
-#endif
-*/
 
 #if !defined(USE_LEGACY_OPENGL)
 	#define USE_LEGACY_OPENGL 0
@@ -381,7 +323,7 @@ typedef void (*FillCachesUnknownResourceCallback)(const char * filename);
 typedef void (*RealTimeEditCallback)(const std::string & filename);
 typedef void (*InitErrorHandler)(INIT_ERROR error);
 
-//
+// GX types
 
 typedef int32_t GxImmediateIndex;
 typedef uint32_t GxShaderBufferId;
@@ -392,28 +334,28 @@ typedef uint32_t GxShaderBufferId;
 
 enum GX_PRIMITIVE_TYPE
 {
-	GX_INVALID_PRIM = -1,
-	GX_POINTS = GL_POINTS,
-	GX_LINES = GL_LINES,
-	GX_LINE_LOOP = GL_LINE_LOOP,
-	GX_LINE_STRIP = GL_LINE_STRIP,
-	GX_TRIANGLES = GL_TRIANGLES,
-	GX_TRIANGLE_FAN = GL_TRIANGLE_FAN,
+	GX_INVALID_PRIM   = -1,
+	GX_POINTS         = GL_POINTS,
+	GX_LINES          = GL_LINES,
+	GX_LINE_LOOP      = GL_LINE_LOOP,
+	GX_LINE_STRIP     = GL_LINE_STRIP,
+	GX_TRIANGLES      = GL_TRIANGLES,
+	GX_TRIANGLE_FAN   = GL_TRIANGLE_FAN,
 	GX_TRIANGLE_STRIP = GL_TRIANGLE_STRIP,
-	GX_QUADS = GL_QUADS
+	GX_QUADS          = GL_QUADS
 };
 
 enum GX_MATRIX
 {
-	GX_MODELVIEW = GL_MODELVIEW,
+	GX_MODELVIEW  = GL_MODELVIEW,
 	GX_PROJECTION = GL_PROJECTION
 };
 
 enum GX_SAMPLE_FILTER
 {
 	GX_SAMPLE_NEAREST = GL_NEAREST,
-	GX_SAMPLE_LINEAR = GL_LINEAR,
-	GX_SAMPLE_MIPMAP = GL_LINEAR_MIPMAP_LINEAR
+	GX_SAMPLE_LINEAR  = GL_LINEAR,
+	GX_SAMPLE_MIPMAP  = GL_LINEAR_MIPMAP_LINEAR
 };
 
 #else
@@ -449,8 +391,8 @@ enum GX_SAMPLE_FILTER
 enum GX_STENCIL_FACE
 {
 	GX_STENCIL_FACE_FRONT = 0x1,
-	GX_STENCIL_FACE_BACK = 0x2,
-	GX_STENCIL_FACE_BOTH = 0x3
+	GX_STENCIL_FACE_BACK  = 0x2,
+	GX_STENCIL_FACE_BOTH  = 0x3
 };
 
 enum GX_STENCIL_FUNC
@@ -490,9 +432,11 @@ public:
 	
 	bool init(int sx, int sy);
 	bool shutdown();
+	
 	void process();
 	void processAction(const std::string & action, const Dictionary & args);
 	void processActions(const std::string & actions, const Dictionary & args);
+	
 	void reloadCaches();
 	void fillCachesWithPath(const char * path, bool recurse);
 	void fillCaches(bool recurse);
@@ -500,6 +444,7 @@ public:
 	Window & getMainWindow() const;
 	Window & getCurrentWindow() const;
 	std::vector<Window*> getAllWindows() const;
+	
 	void setFullscreen(bool fullscreen);
 	
 	void getCurrentViewportSize(int & sx, int & sy) const;
@@ -530,7 +475,7 @@ public:
 	
 	void registerResourcePath(const char * path);
 	bool registerChibiResourcePaths(const char * text);
-	const char * resolveResourcePath(const char * path);
+	const char * resolveResourcePath(const char * path) const;
 	
 	void blinkTaskbarIcon(int count);
 
@@ -539,9 +484,10 @@ public:
 
 	bool quitRequested;
 	double time;
-	float timeStep; 
+	float timeStep;
 	
 	bool waitForEvents;
+	
 	bool fullscreen;
 	bool exclusiveFullscreen;
 	bool useClosestDisplayMode;
@@ -569,6 +515,7 @@ public:
 	int windowSx;
 	int windowSy;
 	bool windowIsActive;
+	
 	ActionHandler actionHandler;
 	FillCachesCallback fillCachesCallback;
 	FillCachesUnknownResourceCallback fillCachesUnknownResourceCallback;
@@ -612,11 +559,11 @@ private:
 class Window
 {
 private:
+	friend class Framework;
+	
 	Window(SDL_Window * window);
 	
 public:
-	friend class Framework;
-	
 	Window(const char * title, const int sx, const int sy, const bool resizable = false);
 	~Window();
 	
@@ -674,6 +621,7 @@ private:
 	Window * m_next;
 	
 #if WINDOW_HAS_A_SURFACE
+	// render targets
 	class ColorTarget * m_colorTarget;
 	class DepthTarget * m_depthTarget;
 #endif
@@ -807,7 +755,7 @@ public:
 	void swapBuffers();
 
 	bool init(const SurfaceProperties & properties);
-	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered, const int backingScale = 0);
+	bool init(int sx, int sy, SURFACE_FORMAT format, bool withDepthBuffer, bool doubleBuffered, int backingScale = 0);
 	void free();
 	void setSwizzle(int r, int g, int b, int a);
 	void setClearColor(int r, int g, int b, int a);
@@ -1084,6 +1032,7 @@ public:
 	
 	static Color fromHex(const char * str);
 	static Color fromHSL(float hue, float sat, float lum);
+	
 	void toHSL(float & hue, float & sat, float & lum) const;
 	Color interp(const Color & other, float t) const;
 	Color hueShift(float shift) const;
@@ -1452,117 +1401,6 @@ private:
 
 //
 
-// todo : move to a separate file
-// todo : create a dedicated path drawing test app
-class Path2d
-{
-	enum ELEM_TYPE
-	{
-		ELEM_LINE,
-		ELEM_CURVE,
-		ELEM_ARC
-	};
-
-	struct Vertex
-	{
-		float x;
-		float y;
-
-		float dot(const Vertex & v) const
-		{
-			return x * v.x + y * v.y;
-		}
-
-		float len() const
-		{
-			return sqrtf(x * x + y * y);
-		}
-
-		Vertex operator-(const Vertex & v) const
-		{
-			Vertex r;
-			r.x = x - v.x;
-			r.y = y - v.y;
-			return r;
-		}
-
-		Vertex operator+(const Vertex & v) const
-		{
-			Vertex r;
-			r.x = x + v.x;
-			r.y = y + v.y;
-			return r;
-		}
-
-		Vertex operator*(const float v) const
-		{
-			Vertex r;
-			r.x = x * v;
-			r.y = y * v;
-			return r;
-		}
-
-		Vertex operator/(const float v) const
-		{
-			Vertex r;
-			r.x = x / v;
-			r.y = y / v;
-			return r;
-		}
-	};
-
-	struct PathElem
-	{
-		ELEM_TYPE type;
-
-		Vertex v1;
-		Vertex v2;
-		Vertex v3;
-		Vertex v4;
-
-		void lineHeading(float & x, float & y) const;
-		void curveHeading(float & x, float & y, const float t) const;
-
-		void curveEval(float & x, float & y, const float t) const;
-		void curveSubdiv(const float t1, const float t2, float *& xy, float *& hxy, int & numPoints) const;
-		void curveSubdiv(const Vertex & v1, const Vertex & v2, const Vertex & v3, float *& xy, float *& hxy, int & numPoints) const;
-	};
-
-	std::vector<PathElem> elems;
-
-	float x;
-	float y;
-	bool hasMove;
-
-	PathElem & allocElem()
-	{
-		elems.resize(elems.size() + 1);
-
-		return elems.back();
-	}
-
-public:
-	Path2d()
-		: x(0.f)
-		, y(0.f)
-		, hasMove(false)
-	{
-	}
-
-	void moveTo(const float x, const float y);
-	void lineTo(const float x, const float y);
-	void line(const float dx, const float dy);
-	void curveTo(const float x, const float y, const float tx1, const float ty1, const float tx2, const float ty2);
-	void curveToAbs(const float x, const float y, const float cx1, const float cy1, const float cx2, const float cy2);
-	void curve(const float dx, const float dy, const float tx1, const float ty1, const float tx2, const float ty2);
-	void arc(const float angle, const float radius);
-	void close();
-
-	void generatePoints(float * xy, float * hxy, const int maxPoints, const float curveFlatness, int & numPoints) const;
-};
-
-//
-
 class Mouse
 {
 public:
@@ -1809,7 +1647,6 @@ void drawText(float x, float y, float size, float alignX, float alignY, const ch
 void measureTextArea(float size, float maxSx, float & sx, float & sy, const char * format, ...);
 void drawTextArea(float x, float y, float sx, float size, const char * format, ...);
 void drawTextArea(float x, float y, float sx, float sy, float size, float alignX, float alignY, const char * format, ...);
-void drawPath(const Path2d & path);
 
 void drawLine3d(int axis = 0);
 void drawRect3d(int axis1 = 0, int axis2 = 1);
@@ -2048,8 +1885,6 @@ void hqStrokeTriangle(float x1, float y1, float x2, float y2, float x3, float y3
 void hqStrokeCircle(float x, float y, float radius, float stroke);
 void hqStrokeRect(float x1, float y1, float x2, float y2, float stroke);
 void hqStrokeRoundedRect(float x1, float y1, float x2, float y2, float radius, float stroke);
-
-void hqDrawPath(const Path2d & path, float stroke);
 
 // math
 
