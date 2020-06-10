@@ -10,6 +10,7 @@
 #include "framework-ovr.h"
 #include "framework-vr-hands.h"
 #include "framework-vr-pointer.h"
+#include "gx_mesh.h"
 #include "gx_render.h"
 #include "internal.h"
 
@@ -107,11 +108,6 @@ DONE : add spatial audio source parameters
 DONE : optimize matrix multiplication for neon
 
  */
-
-#if FRAMEWORK_USE_OVR_MOBILE
-	#include <VrApi_Helpers.h>
-	#include <VrApi_Input.h>
-#endif
 
 #include <algorithm> // std::find
 #include <math.h>
@@ -952,10 +948,7 @@ struct Scene : CollisionSystemInterface, ForwardLightingSystemInterface
 {
 	Vec3 playerLocation;
 
-	VrPointer pointers[2];
 	ParticleEffectLibrary pointerBeamsEffect;
-
-	VrHand hands[VrSide_COUNT];
 
 	ControlPanel * controlPanel = nullptr;
 	bool showControlPanel = true;
@@ -1105,13 +1098,6 @@ void Scene::create()
 {
 	collisionSystem = this;
 	forwardLightingSystem = this;
-
-	for (int i = 0; i < 2; ++i)
-	{
-		pointers[i].init((VrSide)i);
-
-		hands[i].init((VrSide)i);
-	}
 	
 	pointerBeamsEffect.loadFromFile("drifter-particles1.pfx");
 	pointerBeamsEffect.createEffects(particleEffectSystem);
@@ -1247,9 +1233,6 @@ void Scene::destroy()
 	
 	watersim.shut();
 
-	for (auto & hand : hands)
-		hand.shut();
-
 	delete controlPanel;
 	controlPanel = nullptr;
 	
@@ -1258,23 +1241,11 @@ void Scene::destroy()
 
 void Scene::tick(const float dt)
 {
-	// update input state
-
-	for (auto & hand : hands)
-	{
-		hand.updateInputState();
-	}
-
-	for (auto & pointer : pointers)
-	{
-		pointer.updateInputState();
-	}
-
 	// update movement
-	
-	if (pointers[1].hasTransform && pointers[1].wentDown(VrButton_Trigger))
+
+	if (vrPointer[1].hasTransform && vrPointer[1].wentDown(VrButton_Trigger))
 	{
-		playerLocation += pointers[1].transform.GetAxis(2) * -1.f;
+		playerLocation += vrPointer[1].transform.GetAxis(2) * -1.f;
 	}
 
 	// update windows
@@ -1285,17 +1256,17 @@ void Scene::tick(const float dt)
 
 	const VrSide interactiveSide = VrSide_Right;
 // todo : automatically switch between left and right hand. or allow both to interact at the 'same' time ?
-	if (hands[interactiveSide].getFingerTransform(VrFinger_Index, playerLocation, viewToWorld))
+	if (vrHand[interactiveSide].getFingerTransform(VrFinger_Index, playerLocation, viewToWorld))
 	{
 		buttonMask = 1 << 0;
 		isHand = true;
 	}
 	else
 	{
-		viewToWorld = Mat4x4(true).Translate(playerLocation).Mul(pointers[0].transform);
+		viewToWorld = Mat4x4(true).Translate(playerLocation).Mul(vrPointer[0].transform);
 		buttonMask =
-			(pointers[0].isDown(VrButton_Trigger) << 0) |
-			(pointers[0].isDown(VrButton_GripTrigger) << 1);
+			(vrPointer[0].isDown(VrButton_Trigger) << 0) |
+			(vrPointer[0].isDown(VrButton_GripTrigger) << 1);
 		isHand = false;
 
 	#if WINDOW_IS_3D
@@ -1303,14 +1274,14 @@ void Scene::tick(const float dt)
 		controlPanel->window.setTransform(
 			Mat4x4(true)
 				.Translate(playerLocation)
-				.Mul(pointers[1].transform));
+				.Mul(vrPointer[1].transform));
 	#else
-		if (pointers[1].isDown(VrButton_GripTrigger))
+		if (vrPointer[1].isDown(VrButton_GripTrigger))
 		{
 			controlPanel->window.setTransform(
 				Mat4x4(true)
 					.Translate(playerLocation)
-					.Mul(pointers[1].transform)
+					.Mul(vrPointer[1].transform)
 					.Translate(0, .2f, -.1f)
 					.RotateX(float(M_PI/180.0) * -15));
 		}
@@ -1331,25 +1302,25 @@ void Scene::tick(const float dt)
 	controlPanel->tick(dt);
 
 // todo : use active pointer
-	pointers[0].wantsToVibrate |= controlPanel->hoveredIdChanged && (controlPanel->lastHoveredId != 0);
+	vrPointer[0].wantsToVibrate |= controlPanel->hoveredIdChanged && (controlPanel->lastHoveredId != 0);
 
 	// Check if pointer beams are intersecting. If so, give some feedback (vibration, particles)
 	pointerBeamsEffect.setActive(false);
-	if (pointers[0].hasTransform && pointers[1].hasTransform)
+	if (vrPointer[0].hasTransform && vrPointer[1].hasTransform)
 	{
 		Vec3 closest1;
 		Vec3 closest2;
 		if (calculate_nearest_points_for_ray_vs_ray(
-			playerLocation + pointers[0].transform.GetTranslation(), -pointers[0].transform.GetAxis(2),
-			playerLocation + pointers[1].transform.GetTranslation(), -pointers[1].transform.GetAxis(2),
+			playerLocation + vrPointer[0].transform.GetTranslation(), -vrPointer[0].transform.GetAxis(2),
+			playerLocation + vrPointer[1].transform.GetTranslation(), -vrPointer[1].transform.GetAxis(2),
 			closest1, closest2))
 		{
 			const float distance = (closest2 - closest1).CalcSize();
 
 			if (distance <= .02f)
 			{
-				pointers[0].wantsToVibrate = true;
-				pointers[1].wantsToVibrate = true;
+				vrPointer[0].wantsToVibrate = true;
+				vrPointer[1].wantsToVibrate = true;
 
 				if (models.empty() == false)
 				{
@@ -1362,11 +1333,6 @@ void Scene::tick(const float dt)
 				}
 			}
 		}
-	}
-
-	for (auto & pointer : pointers)
-	{
-		pointer.updateHaptics();
 	}
 
 	// update watersim object
@@ -1631,9 +1597,9 @@ void Scene::drawOpaque() const
 		playerLocation[0],
 		playerLocation[1],
 		playerLocation[2]);
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < VrSide_COUNT; ++i)
 	{
-		auto & pointer = pointers[i];
+		auto & pointer = vrPointer[i];
 
 		if (pointer.hasTransform == false)
 			continue;
@@ -1682,9 +1648,9 @@ void Scene::drawOpaque() const
 
 #if true
 	// Draw hands.
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < VrSide_COUNT; ++i)
 	{
-		auto & hand = hands[i];
+		auto & hand = vrHand[i];
 
 		if (!hand.hasDeform)
 			continue;
@@ -1711,10 +1677,10 @@ void Scene::drawOpaque() const
 				params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
 				params.setMetallicRoughness(metallicRoughnessShader, .8f, .2f);
 
-				auto & skinningData = hands[i].getSkinningMatrices(true);
+				auto & skinningData = vrHand[i].getSkinningMatrices(true);
 				metallicRoughnessShader.setBuffer("SkinningData", skinningData);
 
-				hands[i].drawMesh();
+				vrHand[i].drawMesh();
 			}
 			clearShader();
 			popCullMode();
@@ -1801,12 +1767,12 @@ void Scene::drawWatersim() const
 
 void Scene::drawWatersimHandProjections() const
 {
-	for (int i = 0; i < 2; ++i)
+	for (int i = 0; i < VrSide_COUNT; ++i)
 	{
-		if (!hands[i].hasDeform)
+		if (!vrHand[i].hasDeform)
 			continue;
 
-		const Vec3 position_world = hands[i].getTransform(playerLocation).GetTranslation();
+		const Vec3 position_world = vrHand[i].getTransform(playerLocation).GetTranslation();
 		const Vec3 direction_world(0, -1, 0);
 
 		float distance;
@@ -2336,6 +2302,7 @@ int main(int argc, char * argv[])
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	framework.vrMode = true;
+	framework.enableVrMovement = false;
 	framework.enableDepthBuffer = true;
 
 	if (!framework.init(800, 600))
