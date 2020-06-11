@@ -443,7 +443,7 @@ bool Window::intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, const float d
 	if (dd == 0.f)
 		return false;
 	const float t = -d1 / dd;
-	if (t > depthThreshold)
+	if (t < -depthThreshold)
 		return false;
 	const Vec2 p_meter(
 		+ rayOrigin_window[0] + rayDirection_window[0] * t,
@@ -454,7 +454,7 @@ bool Window::intersectRay(Vec3Arg rayOrigin, Vec3Arg rayDirection, const float d
 		p_pixel[1] >= 0.f && p_pixel[1] < getHeight())
 	{
 		out_pixelPos = p_pixel;
-		out_distance = -t;
+		out_distance = t;
 		return true;
 	}
 	else
@@ -476,7 +476,22 @@ void Window::draw3d() const
 		gxSetTextureSampler(GX_SAMPLE_MIPMAP, true);
 		{
 			setColor(colorWhite);
-			drawRect(0, getHeight(), getWidth(), 0);
+
+			const int x1 = 0;
+			const int y1 = getHeight();
+			const int x2 = getWidth();
+			const int y2 = 0;
+
+			gxBegin(GX_QUADS);
+			{
+				gxNormal3f(0, 0, -1);
+
+				gxTexCoord2f(0.f, 0.f); gxVertex2f(x1, y1);
+				gxTexCoord2f(1.f, 0.f); gxVertex2f(x2, y1);
+				gxTexCoord2f(1.f, 1.f); gxVertex2f(x2, y2);
+				gxTexCoord2f(0.f, 1.f); gxVertex2f(x1, y2);
+			}
+			gxEnd();
 		}
 		gxSetTextureSampler(GX_SAMPLE_NEAREST, false);
 		gxSetTexture(0);
@@ -492,7 +507,7 @@ void Window::draw3dCursor() const
 	{
 		const Mat4x4 transformForDraw = getTransformForDraw();
 		gxMultMatrixf(transformForDraw.m_v);
-		gxTranslatef(0, 0, .001f); // 1mm above the surface
+		gxTranslatef(0, 0, -.001f); // 1mm above the surface
 
 		fillCircle(
 			m_windowData->mouseData.mouseX,

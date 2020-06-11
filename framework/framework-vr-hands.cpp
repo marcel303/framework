@@ -279,6 +279,7 @@ void VrHand::updateInputState()
 			ovrRootPose = ovrMatrix4f_Transpose(&ovrRootPose);
 			memcpy(rootPose.m_v, ovrRootPose.M, sizeof(Mat4x4));
 			rootPose = rootPose.Scale(handPose.HandScale);
+			rootPose = Mat4x4(true).Scale(1, 1, -1).Mul(rootPose); // convert from a right-handed coordinate system to a left-handed one
 
 			break;
 		}
@@ -303,7 +304,11 @@ ShaderBuffer & VrHand::getSkinningMatrices(const bool update) const
 
 void VrHand::drawMesh() const
 {
-	data->mesh.draw();
+	pushCullFlip(); // note : the face winding is flipped, due to converting the root pose from using a right-handed into a left-handed coordinate frame
+	{
+		data->mesh.draw();
+	}
+	popCullFlip();
 }
 
 #else

@@ -75,6 +75,7 @@ void VrPointer::updateInputState()
 					ovr_transform = ovrMatrix4f_Transpose(&ovr_transform);
 
 					memcpy(&transform, (float*)ovr_transform.M, sizeof(Mat4x4));
+					transform = Mat4x4(true).Scale(1, 1, -1).Mul(transform).Scale(1, 1, -1); // convert from a right-handed coordinate system to a left-handed one
 					hasTransform = true;
 				}
 				else

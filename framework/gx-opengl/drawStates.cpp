@@ -386,6 +386,14 @@ void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 		glCullFace(face);
 		checkErrorGL();
 		
+		if (globals.cullingOrder < 0)
+		{
+			frontFaceWinding =
+				frontFaceWinding == CULL_CCW
+					? CULL_CW
+					: CULL_CCW;
+		}
+		
 		const GLenum winding =
 			frontFaceWinding == CULL_CCW
 			? GL_CCW

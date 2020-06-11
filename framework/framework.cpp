@@ -1545,7 +1545,7 @@ void Framework::process()
 	
 	if (vrMode)
 	{
-		bool inputIsCaptured = !mouse.isDown(BUTTON_LEFT);
+		bool inputIsCaptured = false;
 		globals.emulatedVrCamera.mode = Camera::kMode_FirstPerson;
 		globals.emulatedVrCamera.tick(framework.timeStep, inputIsCaptured, false);
 
@@ -1553,7 +1553,7 @@ void Framework::process()
 		{
 			if (vrPointer[1].hasTransform && vrPointer[1].wentDown(VrButton_Trigger))
 			{
-				vrOrigin += vrPointer[1].transform.GetAxis(2) * -1.f;
+				vrOrigin += vrPointer[1].transform.GetAxis(2);
 			}
 		}
 	}
@@ -1971,6 +1971,8 @@ void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 	if (vrMode)
 	{
 		frameworkOvr.beginEye(eyeIndex, clearColor);
+		gxScalef(1, 1, -1); // convert from a right-handed coordinate system to a left-handed one
+		popCullFlip();      // we flipped one of the axis, so we need to flip the window order
 		gxTranslatef(
 			-vrOrigin[0],
 			-vrOrigin[1],
@@ -1998,6 +2000,7 @@ void Framework::endEye()
 #if FRAMEWORK_USE_OVR_MOBILE
 	if (vrMode)
 	{
+		popCullFlip();
 		frameworkOvr.endEye();
 		return;
 	}
@@ -3993,6 +3996,20 @@ void popCullMode()
 	const CullModeInfo cullMode = cullModeStack.popValue();
 	
 	setCullMode(cullMode.mode, cullMode.winding);
+}
+
+void pushCullFlip()
+{
+	globals.cullingOrder = -globals.cullingOrder;
+	
+	setCullMode(globals.cullMode, globals.cullWinding);
+}
+
+void popCullFlip()
+{
+	globals.cullingOrder = -globals.cullingOrder;
+	
+	setCullMode(globals.cullMode, globals.cullWinding);
 }
 
 //

@@ -1064,9 +1064,18 @@ void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 	
 	[s_activeRenderPass->encoder setCullMode:metalCullMode];
 	
+	if (globals.cullingOrder < 0)
+	{
+		frontFaceWinding =
+			frontFaceWinding == CULL_CCW
+				? CULL_CW
+				: CULL_CCW;
+	}
+	
 	const MTLWinding metalFrontFaceWinding =
-		frontFaceWinding == CULL_CCW ? MTLWindingCounterClockwise :
-		MTLWindingClockwise;
+		frontFaceWinding == CULL_CCW
+			? MTLWindingCounterClockwise
+			: MTLWindingClockwise;
 	
 	[s_activeRenderPass->encoder setFrontFacingWinding:metalFrontFaceWinding];
 }

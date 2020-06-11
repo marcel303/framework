@@ -1622,6 +1622,9 @@ void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
 void pushCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding);
 void popCullMode();
 
+void pushCullFlip();
+void popCullFlip();
+
 void setColor(const Color & color);
 void setColor(const Color & color, float rgbMul);
 void setColor(int r, int g, int b, int a = 255, int rgbMul = 255);
