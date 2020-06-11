@@ -1245,7 +1245,7 @@ void Scene::tick(const float dt)
 
 	if (vrPointer[1].hasTransform && vrPointer[1].wentDown(VrButton_Trigger))
 	{
-		playerLocation += vrPointer[1].transform.GetAxis(2) * -1.f;
+		playerLocation += vrPointer[1].transform.GetAxis(2);
 	}
 
 	// update windows
@@ -1311,8 +1311,8 @@ void Scene::tick(const float dt)
 		Vec3 closest1;
 		Vec3 closest2;
 		if (calculate_nearest_points_for_ray_vs_ray(
-			playerLocation + vrPointer[0].transform.GetTranslation(), -vrPointer[0].transform.GetAxis(2),
-			playerLocation + vrPointer[1].transform.GetTranslation(), -vrPointer[1].transform.GetAxis(2),
+			playerLocation + vrPointer[0].transform.GetTranslation(), vrPointer[0].transform.GetAxis(2),
+			playerLocation + vrPointer[1].transform.GetTranslation(), vrPointer[1].transform.GetAxis(2),
 			closest1, closest2))
 		{
 			const float distance = (closest2 - closest1).CalcSize();
@@ -1504,7 +1504,7 @@ void Scene::drawOpaque() const
 				gxPushMatrix();
 				{
 					gxMultMatrixf(window->getTransformForDraw().m_v);
-					gxTranslatef(0, 0, -.01f);
+					gxTranslatef(0, 0, .01f);
 
 					pushCullMode(CULL_BACK, CULL_CCW);
 					{
@@ -1625,8 +1625,21 @@ void Scene::drawOpaque() const
 				int nextTextureUnit = 0;
 				params.setShaderParams(metallicRoughnessShader, material, scene, false, nextTextureUnit);
 
+			#if 1
+				params.setMetallicRoughness(metallicRoughnessShader, .1f, .2f);
+
+				params.setBaseColor(metallicRoughnessShader, Color(255, 0, 0));
+				fillCube(Vec3(0, 0, 0), Vec3(.04f, .01f, .01f));
+
+				params.setBaseColor(metallicRoughnessShader, Color(0, 255, 0));
+				fillCube(Vec3(0, 0, 0), Vec3(.01f, .04f, .01f));
+
+				params.setBaseColor(metallicRoughnessShader, Color(0, 0, 255));
+				fillCube(Vec3(0, 0, .1f), Vec3(.01f, .01f, .1f));
+			#else
 				params.setMetallicRoughness(metallicRoughnessShader, .8f, .2f);
-				fillCube(Vec3(), Vec3(.02f, .02f, .1f));
+				fillCube(Vec3(0, 0, .05f), Vec3(.02f, .02f, .1f));
+			#endif
 			}
 			clearShader();
 			popCullMode();
@@ -1637,7 +1650,7 @@ void Scene::drawOpaque() const
 			pushBlend(BLEND_ADD);
 			const float a = lerp<float>(.02f, .04f, (sin(time) + 1.0) / 2.0);
 			setColorf(.5f, .8f, 1.f, a);
-			fillCube(Vec3(0, 0, -100), Vec3(.004f, .004f, 100));
+			fillCube(Vec3(0, 0, 100), Vec3(.004f, .004f, 100));
 			popBlend();
 			popCullMode();
 		}
@@ -2353,10 +2366,6 @@ int main(int argc, char * argv[])
 		{
 			framework.beginEye(eyeIndex, colorBlack);
 			{
-			#if !FRAMEWORK_USE_OVR_MOBILE // todo : invert the z-axis on OVR mobile.. which includes all of the skeletons and tracking info etc ..
-				gxScalef(1, 1, -1);
-			#endif
-			
 				gxPushMatrix();
 				gxTranslatef(
 					-scene.playerLocation[0],
