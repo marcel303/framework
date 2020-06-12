@@ -15,6 +15,12 @@
 
 #define ENABLE_BACKWARD_COMPATIBLE_ROOT_PREFIXES 1 // when set to 1, parameter names from text don't have to start with '/' explicitly. instead names are fixed-up on the spot
 
+#if defined(ANDROID) || defined(IPHONEOS)
+	#define HAS_KEYBOARD 0
+#else
+	#define HAS_KEYBOARD 1
+#endif
+
 namespace ImGui
 {
 	bool SliderFloatN(const char* label, float* v, int components, const float* v_min, const float* v_max, const char* format, float power);
@@ -89,8 +95,16 @@ namespace parameterUi
 				}
 				else
 				{
-					if (ImGui::InputInt(parameter.name.c_str(), &parameter.access_rw()))
-						parameter.setDirty();
+					if (HAS_KEYBOARD)
+					{
+						if (ImGui::InputInt(parameter.name.c_str(), &parameter.access_rw()))
+							parameter.setDirty();
+					}
+					else
+					{
+						if (ImGui::DragInt(parameter.name.c_str(), &parameter.access_rw()))
+							parameter.setDirty();
+					}
 				}
 			}
 			break;
@@ -108,8 +122,16 @@ namespace parameterUi
 				}
 				else
 				{
-					if (ImGui::InputFloat(parameter.name.c_str(), &parameter.access_rw()))
-						parameter.setDirty();
+					if (HAS_KEYBOARD)
+					{
+						if (ImGui::InputFloat(parameter.name.c_str(), &parameter.access_rw()))
+							parameter.setDirty();
+					}
+					else
+					{
+						if (ImGui::DragFloat(parameter.name.c_str(), &parameter.access_rw()))
+							parameter.setDirty();
+					}
 				}
 			}
 			break;
@@ -127,8 +149,16 @@ namespace parameterUi
 				}
 				else
 				{
-					if (ImGui::InputFloat2(parameter.name.c_str(), &parameter.access_rw()[0]))
-						parameter.setDirty();
+					if (HAS_KEYBOARD)
+					{
+						if (ImGui::InputFloat2(parameter.name.c_str(), &parameter.access_rw()[0]))
+							parameter.setDirty();
+					}
+					else
+					{
+						if (ImGui::DragFloat2(parameter.name.c_str(), &parameter.access_rw()[0]))
+							parameter.setDirty();
+					}
 				}
 			}
 			break;
@@ -146,8 +176,16 @@ namespace parameterUi
 				}
 				else
 				{
-					if (ImGui::InputFloat3(parameter.name.c_str(), &parameter.access_rw()[0]))
-						parameter.setDirty();
+					if (HAS_KEYBOARD)
+					{
+						if (ImGui::InputFloat3(parameter.name.c_str(), &parameter.access_rw()[0]))
+							parameter.setDirty();
+					}
+					else
+					{
+						if (ImGui::DragFloat3(parameter.name.c_str(), &parameter.access_rw()[0]))
+							parameter.setDirty();
+					}
 				}
 			}
 			break;
@@ -165,8 +203,16 @@ namespace parameterUi
 				}
 				else
 				{
-					if (ImGui::InputFloat4(parameter.name.c_str(), &parameter.access_rw()[0]))
-						parameter.setDirty();
+					if (HAS_KEYBOARD)
+					{
+						if (ImGui::InputFloat4(parameter.name.c_str(), &parameter.access_rw()[0]))
+							parameter.setDirty();
+					}
+					else
+					{
+						if (ImGui::DragFloat4(parameter.name.c_str(), &parameter.access_rw()[0]))
+							parameter.setDirty();
+					}
 				}
 			}
 			break;
