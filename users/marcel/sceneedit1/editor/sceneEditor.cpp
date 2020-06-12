@@ -38,8 +38,10 @@
 #include "StringEx.h"
 #include "TextIO.h"
 
-// libsdl
-#include <SDL2/SDL.h>
+#if FRAMEWORK_USE_SDL
+	// libsdl
+	#include <SDL2/SDL.h>
+#endif
 
 // std
 #include <set>
@@ -753,7 +755,11 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 			if (result)
 			{
 				const std::string text = line_writer.to_string();
+
+			#if FRAMEWORK_USE_SDL
+				// todo : implement a fallback clipboard
 				SDL_SetClipboardText(text.c_str());
+			#endif
 			}
 		}
 	}
@@ -1212,7 +1218,7 @@ int SceneEditor::addNodesFromScene_v1(const int parentId)
 	}
 }
 
-void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
+void SceneEditor::tickGui(const float dt, bool & inputIsCaptured)
 {
 	updateClipboardInfo();
 	
@@ -1351,10 +1357,10 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 		{
 			if (ImGui::BeginMenu("File"))
 			{
-				if (ImGui::MenuItem("Save"))
-					performAction_save();
 				if (ImGui::MenuItem("Load"))
 					performAction_load();
+				if (ImGui::MenuItem("Save"))
+					performAction_save();
 				
 				ImGui::EndMenu();
 			}
@@ -1406,7 +1412,10 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 		guiContext.updateMouseCursor();
 	}
 	guiContext.processEnd();
-	
+}
+
+void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
+{
 	// action: show/hide ui
 	if (inputIsCaptured == false && keyboard.wentDown(SDLK_TAB))
 	{
@@ -1467,55 +1476,80 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 	// -- mouse picking
 	
 	// 1. transform mouse coordinates into a world space direction vector
-
-	int viewportSx;
-	int viewportSy;
-	framework.getCurrentViewportSize(viewportSx, viewportSy);
-
-	Mat4x4 projectionMatrix;
-	camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
 	
-	Mat4x4 cameraToWorld;
-	camera.calculateWorldMatrix(cameraToWorld);
+	Vec3 pointerOrigin;
+	Vec3 pointerDirection_world;
+	bool hasPointer = false;
+	bool pointerIsActive = false;
+	bool pointerBecameActive = false;
 	
-	Vec3 cameraPosition;
-	Vec3 mouseDirection_world;
-	
-	if (camera.mode == Camera::kMode_Ortho)
+	if (framework.isStereoVr())
 	{
-		const Vec2 mousePosition_screen(
-			mouse.x,
-			mouse.y);
-		const Vec3 mousePosition_clip(
-			mousePosition_screen[0] / float(viewportSx) * 2.f - 1.f,
-			mousePosition_screen[1] / float(viewportSy) * 2.f - 1.f,
-			0.f);
-		Vec3 mousePosition_camera = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
-		mousePosition_camera[1] = -mousePosition_camera[1];
-		
-		cameraPosition = cameraToWorld.Mul4(mousePosition_camera) - cameraToWorld.GetAxis(2) * 10.f;
-		
-		mouseDirection_world = cameraToWorld.GetAxis(2);
-		mouseDirection_world = mouseDirection_world.CalcNormalized();
+		if (vrPointer[0].hasTransform)
+		{
+			const Mat4x4 transform = Mat4x4(true)
+				.Translate(framework.vrOrigin)
+				.Mul(vrPointer[0].transform);
+			
+			pointerOrigin = transform.GetTranslation();
+			pointerDirection_world = transform.GetAxis(2);
+			pointerIsActive = vrPointer[0].isDown(VrButton_Trigger);
+			pointerBecameActive = vrPointer[0].wentDown(VrButton_Trigger);
+			hasPointer = true;
+		}
 	}
 	else
 	{
-		cameraPosition = cameraToWorld.GetTranslation();
+		int viewportSx;
+		int viewportSy;
+		framework.getCurrentViewportSize(viewportSx, viewportSy);
 		
-		const Vec2 mousePosition_screen(
-			mouse.x,
-			mouse.y);
-		const Vec2 mousePosition_clip(
-			mousePosition_screen[0] / float(viewportSx) * 2.f - 1.f,
-			mousePosition_screen[1] / float(viewportSy) * 2.f - 1.f);
-		Vec2 mousePosition_camera = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
+		Mat4x4 projectionMatrix;
+		camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
 		
-		mouseDirection_world = cameraToWorld.Mul3(
-			Vec3(
-				+mousePosition_camera[0],
-				-mousePosition_camera[1],
-				1.f));
-		mouseDirection_world = mouseDirection_world.CalcNormalized();
+		Mat4x4 cameraToWorld;
+		camera.calculateWorldMatrix(cameraToWorld);
+		
+		if (camera.mode == Camera::kMode_Ortho)
+		{
+			const Vec2 mousePosition_screen(
+				mouse.x,
+				mouse.y);
+			const Vec3 mousePosition_clip(
+				mousePosition_screen[0] / float(viewportSx) * 2.f - 1.f,
+				mousePosition_screen[1] / float(viewportSy) * 2.f - 1.f,
+				0.f);
+			Vec3 mousePosition_camera = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
+			mousePosition_camera[1] = -mousePosition_camera[1];
+			
+			pointerOrigin = cameraToWorld.Mul4(mousePosition_camera) - cameraToWorld.GetAxis(2) * 10.f;
+			
+			pointerDirection_world = cameraToWorld.GetAxis(2);
+			pointerDirection_world = pointerDirection_world.CalcNormalized();
+		}
+		else
+		{
+			pointerOrigin = cameraToWorld.GetTranslation();
+			
+			const Vec2 mousePosition_screen(
+				mouse.x,
+				mouse.y);
+			const Vec2 mousePosition_clip(
+				mousePosition_screen[0] / float(viewportSx) * 2.f - 1.f,
+				mousePosition_screen[1] / float(viewportSy) * 2.f - 1.f);
+			Vec2 mousePosition_camera = projectionMatrix.CalcInv().Mul4(mousePosition_clip);
+			
+			pointerDirection_world = cameraToWorld.Mul3(
+				Vec3(
+					+mousePosition_camera[0],
+					-mousePosition_camera[1],
+					1.f));
+			pointerDirection_world = pointerDirection_world.CalcNormalized();
+		}
+		
+		pointerIsActive = mouse.isDown(BUTTON_LEFT);
+		pointerBecameActive = mouse.wentDown(BUTTON_LEFT);
+		hasPointer = true;
 	}
 	
 #if ENABLE_TRANSFORM_GIZMOS
@@ -1543,7 +1577,13 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 		
 		transformGizmo.show(globalTransform);
 		
-		if (transformGizmo.tick(cameraPosition, mouseDirection_world, inputIsCaptured))
+		if (hasPointer &&
+			transformGizmo.tick(
+				pointerOrigin,
+				pointerDirection_world,
+				pointerIsActive,
+				pointerBecameActive,
+				inputIsCaptured))
 		{
 			// transform the global transform into local space
 			
@@ -1607,23 +1647,25 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 	// 3. determine which node is underneath the mouse cursor
 	
 	const SceneNode * hoverNode =
-		inputIsCaptured == false
-		? raycast(cameraPosition, mouseDirection_world, selectedNodes)
+		inputIsCaptured == false && hasPointer
+		? raycast(pointerOrigin, pointerDirection_world, selectedNodes)
 		: nullptr;
 	
 	hoverNodeId = hoverNode ? hoverNode->id : -1;
 	
 	// 4. update mouse cursor
-	
+
 // todo : framework should mediate here. perhaps have a requested mouse cursor and update it each frame. or make it a member of the mouse, and add an explicit mouse.updateCursor() method
 
 	if (inputIsCaptured == false)
 	{
+	#if FRAMEWORK_USE_SDL
 		static SDL_Cursor * cursorHand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 		SDL_SetCursor(hoverNode == nullptr ? SDL_GetDefaultCursor() : cursorHand);
+	#endif
 	}
 	
-	if (inputIsCaptured == false && mouse.wentDown(BUTTON_LEFT))
+	if (inputIsCaptured == false && hasPointer && pointerBecameActive)
 	{
 		// action: add node from template. todo : this is a test action. remove! instead, have a template list or something and allow adding instances from there
 		if (keyboard.isDown(SDLK_RSHIFT))
@@ -1634,13 +1676,13 @@ void SceneEditor::tickEditor(const float dt, bool & inputIsCaptured)
 		
 			// find intersection point with the ground plane
 		
-			if (mouseDirection_world[1] != 0.f)
+			if (pointerDirection_world[1] != 0.f)
 			{
-				const float t = -cameraPosition[1] / mouseDirection_world[1];
+				const float t = -pointerOrigin[1] / pointerDirection_world[1];
 				
 				if (t >= 0.f)
 				{
-					const Vec3 groundPosition = cameraPosition + mouseDirection_world * t;
+					const Vec3 groundPosition = pointerOrigin + pointerDirection_world * t;
 					
 					if (keyboard.isDown(SDLK_c))
 					{
@@ -2026,7 +2068,9 @@ void SceneEditor::performAction_copySceneNodes()
 		if (result)
 		{
 			const std::string text = line_writer.to_string();
+		#if FRAMEWORK_USE_SDL
 			SDL_SetClipboardText(text.c_str());
+		#endif
 		}
 	}
 }
@@ -2057,7 +2101,10 @@ void SceneEditor::performAction_copySceneNodeTrees()
 		if (result)
 		{
 			const std::string text = line_writer.to_string();
+
+		#if FRAMEWORK_USE_SDL
 			SDL_SetClipboardText(text.c_str());
+		#endif
 		}
 	}
 }
@@ -2069,8 +2116,12 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 		bool result = true;
 		
 		// fetch clipboard text
-		
+
+	#if FRAMEWORK_USE_SDL
 		const char * text = SDL_GetClipboardText();
+	#else
+		const char * text = nullptr;
+	#endif
 	
 		if (text != nullptr)
 		{
@@ -2122,11 +2173,13 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					}
 				}
 			}
-			
+
+		#if FRAMEWORK_USE_SDL
 			// free clipboard text
-			
+
 			SDL_free((void*)text);
 			text = nullptr;
+		#endif
 		}
 		
 		Assert(result); // todo : make it possible for deferred blocks to discard their changes. this would make deferred blocks into something like transactions
@@ -2360,11 +2413,14 @@ void SceneEditor::drawEditorSelectedNodeLabels() const
 	}
 }
 
-void SceneEditor::drawEditor() const
+void SceneEditor::drawGui() const
+{
+	const_cast<SceneEditor*>(this)->guiContext.draw();
+}
+
+void SceneEditor::drawView() const
 {
 	drawEditorSelectedNodeLabels();
-	
-	const_cast<SceneEditor*>(this)->guiContext.draw();
 }
 
 bool SceneEditor::loadSceneFromLines_nonDestructive(std::vector<std::string> & lines, const char * basePath)

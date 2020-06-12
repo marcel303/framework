@@ -28,13 +28,13 @@ static int determineDragArrowProjectionAxis(const int axis, Vec3Arg ray_directio
 	return projection_axis;
 }
 
-bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured)
+bool TransformGizmo::tick(Vec3Arg pointer_origin, Vec3Arg pointer_direction, const bool pointer_isActive, const bool pointer_becameActive, bool & inputIsCaptured)
 {
 	isInteractive = (inputIsCaptured == false);
 	
 	const Mat4x4 worldToGizmo = gizmoToWorld.CalcInv();
 	
-	rayOriginInGizmoSpace = worldToGizmo.Mul4(ray_origin);
+	rayOriginInGizmoSpace = worldToGizmo.Mul4(pointer_origin);
 	
 	if (inputIsCaptured)
 	{
@@ -48,8 +48,8 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 	{
 		inputIsCaptured = true;
 		
-		const Vec3 origin_gizmo = worldToGizmo * ray_origin;
-		const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
+		const Vec3 origin_gizmo = worldToGizmo * pointer_origin;
+		const Vec3 direction_gizmo = worldToGizmo.Mul3(pointer_direction);
 		
 		const float t = - origin_gizmo[dragArrow.projection_axis] / direction_gizmo[dragArrow.projection_axis];
 		const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
@@ -63,7 +63,7 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 		
 		gizmoToWorld = gizmoToWorld.Translate(drag[0], drag[1], drag[2]);
 		
-		if (mouse.wentUp(BUTTON_LEFT))
+		if (!pointer_isActive)
 		{
 			state = kState_Visible;
 		}
@@ -72,8 +72,8 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 	{
 		inputIsCaptured = true;
 		
-		const Vec3 origin_gizmo = worldToGizmo * ray_origin;
-		const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
+		const Vec3 origin_gizmo = worldToGizmo * pointer_origin;
+		const Vec3 direction_gizmo = worldToGizmo.Mul3(pointer_direction);
 		
 		const float t = - origin_gizmo[dragPad.projection_axis] / direction_gizmo[dragPad.projection_axis];
 		const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
@@ -87,7 +87,7 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 		
 		gizmoToWorld = gizmoToWorld.Translate(drag[0], drag[1], drag[2]);
 		
-		if (mouse.wentUp(BUTTON_LEFT))
+		if (!pointer_isActive)
 		{
 			state = kState_Visible;
 		}
@@ -98,16 +98,17 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 	
 		// intersect the ray with the projection plane for the ring
 		
-		auto origin_gizmo = worldToGizmo * ray_origin;
-		auto direction_gizmo = worldToGizmo.Mul3(ray_direction);
+		auto origin_gizmo = worldToGizmo * pointer_origin;
+		auto direction_gizmo = worldToGizmo.Mul3(pointer_direction);
 		
 		// determine the intersection point with the plane, and check its angle relative to the center of the gizmo
 		
 		const float t = - origin_gizmo[dragRing.axis] / direction_gizmo[dragRing.axis];
 		
-		const Vec3 position_world = ray_origin + ray_direction * t;
+		const Vec3 position_world = pointer_origin + pointer_direction * t;
 		
-		const float angle = calculateRingAngle(position_world, dragRing.axis);
+		const float angle_a = calculateRingAngle(position_world, dragRing.axis);
+		const float angle = t < 0.f ? angle_a + float(M_PI) : angle_a;
 		
 		// determine how much rotation occurred and rotate to match
 		
@@ -121,20 +122,20 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 		if (dragRing.axis == 1) gizmoToWorld = gizmoToWorld.RotateY(delta);
 		if (dragRing.axis == 2) gizmoToWorld = gizmoToWorld.RotateZ(delta);
 		
-		if (mouse.wentUp(BUTTON_LEFT))
+		if (!pointer_isActive)
 		{
 			state = kState_Visible;
 		}
 	}
 	else if (state == kState_Visible)
 	{
-		intersectionResult = intersect(ray_origin, ray_direction);
+		intersectionResult = intersect(pointer_origin, pointer_direction);
 		
 		if (intersectionResult.element == kElement_XAxis ||
 			intersectionResult.element == kElement_YAxis ||
 			intersectionResult.element == kElement_ZAxis)
 		{
-			if (mouse.wentDown(BUTTON_LEFT))
+			if (pointer_becameActive)
 			{
 				inputIsCaptured = true;
 				
@@ -146,8 +147,8 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 				
 				//
 				
-				const Vec3 origin_gizmo = worldToGizmo * ray_origin;
-				const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
+				const Vec3 origin_gizmo = worldToGizmo * pointer_origin;
+				const Vec3 direction_gizmo = worldToGizmo.Mul3(pointer_direction);
 				dragArrow.projection_axis = determineDragArrowProjectionAxis(axis, direction_gizmo);
 				const float t = - origin_gizmo[dragArrow.projection_axis] / direction_gizmo[dragArrow.projection_axis];
 				const Vec3 position_gizmo = origin_gizmo + direction_gizmo * t;
@@ -159,7 +160,7 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 			intersectionResult.element == kElement_YXPad ||
 			intersectionResult.element == kElement_ZYPad)
 		{
-			if (mouse.wentDown(BUTTON_LEFT))
+			if (pointer_becameActive)
 			{
 				inputIsCaptured = true;
 				
@@ -169,8 +170,8 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 				
 				//
 				
-				const Vec3 origin_gizmo = worldToGizmo * ray_origin;
-				const Vec3 direction_gizmo = worldToGizmo.Mul3(ray_direction);
+				const Vec3 origin_gizmo = worldToGizmo * pointer_origin;
+				const Vec3 direction_gizmo = worldToGizmo.Mul3(pointer_direction);
 				const int projection_axis =
 					intersectionResult.element == kElement_XZPad ? 1 :
 					intersectionResult.element == kElement_YXPad ? 2 :
@@ -187,14 +188,14 @@ bool TransformGizmo::tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inpu
 			intersectionResult.element == kElement_YRing ||
 			intersectionResult.element == kElement_ZRing)
 		{
-			if (mouse.wentDown(BUTTON_LEFT))
+			if (pointer_becameActive)
 			{
 				inputIsCaptured = true;
 				state = kState_DragRing;
 				
 				dragRing = DragRing();
 				dragRing.axis = intersectionResult.element - kElement_XRing;
-				const Vec3 position_world = ray_origin + ray_direction * intersectionResult.t;
+				const Vec3 position_world = pointer_origin + pointer_direction * intersectionResult.t;
 				dragRing.initialAngle = calculateRingAngle(position_world, dragRing.axis);
 			}
 		}

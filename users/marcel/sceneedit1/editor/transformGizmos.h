@@ -85,7 +85,12 @@ struct TransformGizmo
 	 * by clicking on arrows and a pad, and rotation by clicking and dragging rings.
 	 * @return True if the user is interacting with the object.
 	 */
-	bool tick(Vec3Arg ray_origin, Vec3Arg ray_direction, bool & inputIsCaptured);
+	bool tick(
+		Vec3Arg pointer_origin,
+		Vec3Arg pointer_direction,
+		const bool pointer_isActive,
+		const bool pointer_becameActive,
+		bool & inputIsCaptured);
 	void draw() const;
 
 private:

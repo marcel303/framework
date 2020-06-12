@@ -31,6 +31,7 @@
 // libgg
 #include "Path.h"
 #include "TextIO.h"
+#include "Timer.h"
 
 #if defined(DEBUG)
 	#define ENABLE_PERFORMANCE_TEST     1
@@ -38,6 +39,12 @@
 #else
 	#define ENABLE_PERFORMANCE_TEST     0 // do not alter
 	#define ENABLE_TEMPLATE_TEST        0 // do not alter
+#endif
+
+#if defined(ANDROID)
+	#define USE_GUI_WINDOW 1
+#else
+	#define USE_GUI_WINDOW 0
 #endif
 
 /*
@@ -123,7 +130,7 @@ struct Renderer
 
 		parameterMgr.init("renderer");
 		
-		mode = parameterMgr.addEnum("mode", kMode_Lit,
+		mode = parameterMgr.addEnum("mode", kMode_Colors,
 			{
 				{ "Wireframe", kMode_Wireframe },
 				{ "Colors", kMode_Colors },
@@ -195,7 +202,6 @@ struct Renderer
 	
 	void pushMatrices(const bool drawToSurface) const
 	{
-		applyTransform();
 		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
 		gxLoadMatrixf(drawState.projectionMatrix.m_v);
@@ -540,6 +546,9 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 
+	framework.vrMode = true;
+	framework.enableVrMovement = true;
+
 	framework.enableRealTimeEditing = true;
 	framework.enableDepthBuffer = true;
 	framework.allowHighDpi = false;
@@ -562,6 +571,10 @@ int main(int argc, char * argv[])
 	SceneEditor editor;
 	editor.init(&g_typeDB);
 	
+#if USE_GUI_WINDOW
+	Window guiWindow("Gui", 400, 600, true);
+#endif
+	
 	auto drawOpaque = [&]()
 		{
 			pushDepthTest(true, DEPTH_LEQUAL);
@@ -569,6 +582,10 @@ int main(int argc, char * argv[])
 			{
 				editor.drawSceneOpaque();
 				editor.drawEditorOpaque();
+
+			#if USE_GUI_WINDOW
+				framework.drawVirtualDesktop();
+			#endif
 			}
 			popBlend();
 			popDepthTest();
@@ -613,111 +630,138 @@ int main(int argc, char * argv[])
 		
 		bool inputIsCaptured = false;
 		
-		editor.tickEditor(dt, inputIsCaptured);
-		
-		if (ImGui::BeginMainMenuBar())
+	#if USE_GUI_WINDOW
 		{
-			if (ImGui::BeginMenu("Renderer"))
-			{
-				parameterUi::doParameterUi(renderer.parameterMgr, nullptr, false);
-				
-				ImGui::EndMenu();
-			}
+			const Mat4x4 transform = Mat4x4(true).Translate(framework.vrOrigin).Mul(vrPointer[0].transform);
+			const int buttonMask =
+				vrPointer[0].isDown(VrButton_Trigger) << 0 |
+				vrPointer[0].isDown(VrButton_GripTrigger) << 1;
 			
-			ImGui::EndMainMenuBar();
-		}
-	
-	#if ENABLE_TEMPLATE_TEST
-		if (inputIsCaptured == false && keyboard.wentDown(SDLK_t))
-		{
-			inputIsCaptured = true;
-			
-			// load scene description text file
-	
-			const char * path = "textfiles/scene-v1.txt";
-			const std::string basePath = Path::GetDirectory(path);
-			
-			std::vector<std::string> lines;
-			TextIO::LineEndings lineEndings;
-			
-			Scene tempScene;
-			
-			bool load_ok = true;
-			
-			if (!TextIO::load(path, lines, lineEndings))
-			{
-				logError("failed to load text file");
-				load_ok = false;
-			}
-			else
-			{
-				editor.loadSceneFromLines_nonDestructive(lines, basePath.c_str());
-			}
+			inputIsCaptured |= framework.tickVirtualDesktop(transform, buttonMask, false);
 		}
 	#endif
 		
-	#if ENABLE_PERFORMANCE_TEST
-	// performance test. todo : remove this code
-		if (inputIsCaptured == false && keyboard.wentDown(SDLK_p))
+		editor.tickView(dt, inputIsCaptured);
+		
+	#if USE_GUI_WINDOW
+		pushWindow(guiWindow);
+	#endif
 		{
-			inputIsCaptured = true;
+		#if USE_GUI_WINDOW
+			// note : we track the input capture separately when using a separate window for the gui
+			bool inputIsCaptured = false;
+		#endif
 			
-			auto & rootNode = editor.scene.getRootNode();
+			editor.tickGui(dt, inputIsCaptured);
 			
-			if (!rootNode.childNodeIds.empty())
+		// todo : active gui context.. ?
+			if (ImGui::BeginMainMenuBar())
 			{
-				auto nodeId = rootNode.childNodeIds[0];
-				
-				auto node_itr = editor.scene.nodes.find(nodeId);
-				Assert(node_itr != editor.scene.nodes.end());
+				if (ImGui::BeginMenu("Renderer"))
 				{
-					auto * node = node_itr->second;
+					parameterUi::doParameterUi(renderer.parameterMgr, nullptr, false);
 					
-					if (node->components.head != nullptr)
+					ImGui::EndMenu();
+				}
+				
+				ImGui::EndMainMenuBar();
+			}
+		
+		#if ENABLE_TEMPLATE_TEST
+			if (inputIsCaptured == false && keyboard.wentDown(SDLK_t))
+			{
+				inputIsCaptured = true;
+				
+				// load scene description text file
+		
+				const char * path = "textfiles/scene-v1.txt";
+				const std::string basePath = Path::GetDirectory(path);
+				
+				std::vector<std::string> lines;
+				TextIO::LineEndings lineEndings;
+				
+				Scene tempScene;
+				
+				bool load_ok = true;
+				
+				if (!TextIO::load(path, lines, lineEndings))
+				{
+					logError("failed to load text file");
+					load_ok = false;
+				}
+				else
+				{
+					editor.loadSceneFromLines_nonDestructive(lines, basePath.c_str());
+				}
+			}
+		#endif
+			
+		#if ENABLE_PERFORMANCE_TEST
+		// performance test. todo : remove this code
+			if (inputIsCaptured == false && keyboard.wentDown(SDLK_p))
+			{
+				inputIsCaptured = true;
+				
+				auto & rootNode = editor.scene.getRootNode();
+				
+				if (!rootNode.childNodeIds.empty())
+				{
+					auto nodeId = rootNode.childNodeIds[0];
+					
+					auto node_itr = editor.scene.nodes.find(nodeId);
+					Assert(node_itr != editor.scene.nodes.end());
 					{
-						auto * component = node->components.head;
-						auto * componentType = findComponentType(component->typeIndex());
+						auto * node = node_itr->second;
 						
-						Assert(componentType != nullptr);
-						if (componentType != nullptr)
+						if (node->components.head != nullptr)
 						{
-							auto t1 = SDL_GetTicks();
+							auto * component = node->components.head;
+							auto * componentType = findComponentType(component->typeIndex());
 							
-							for (int i = 0; i < 100000; ++i)
+							Assert(componentType != nullptr);
+							if (componentType != nullptr)
 							{
-								int componentSetId = allocComponentSetId();
+								auto t1 = g_TimerRT.TimeUS_get();
 								
-								LineWriter line_writer;
-								object_tolines_recursive(g_typeDB, componentType, component, line_writer, 0);
-								
-								std::vector<std::string> lines = line_writer.to_lines();
-								
-								//for (auto & line : lines)
-								//	logInfo("%s", line.c_str());
-								
-								auto * component_copy = componentType->componentMgr->createComponent(componentSetId);
-								
-								LineReader line_reader(lines, 0, 0);
-								if (object_fromlines_recursive(g_typeDB, componentType, component_copy, line_reader))
+								for (int i = 0; i < 100000; ++i)
 								{
-									//logDebug("success!");
+									int componentSetId = allocComponentSetId();
+									
+									LineWriter line_writer;
+									object_tolines_recursive(g_typeDB, componentType, component, line_writer, 0);
+									
+									std::vector<std::string> lines = line_writer.to_lines();
+									
+									//for (auto & line : lines)
+									//	logInfo("%s", line.c_str());
+									
+									auto * component_copy = componentType->componentMgr->createComponent(componentSetId);
+									
+									LineReader line_reader(lines, 0, 0);
+									if (object_fromlines_recursive(g_typeDB, componentType, component_copy, line_reader))
+									{
+										//logDebug("success!");
+									}
+									
+									componentType->componentMgr->destroyComponent(componentSetId);
+									component_copy = nullptr;
+									
+									freeComponentSetId(componentSetId);
+									Assert(componentSetId == kComponentSetIdInvalid);
 								}
-								
-								componentType->componentMgr->destroyComponent(componentSetId);
-								component_copy = nullptr;
-								
-								freeComponentSetId(componentSetId);
-								Assert(componentSetId == kComponentSetIdInvalid);
+
+								auto t2 = g_TimerRT.TimeUS_get();
+								logDebug("time: %ums", (t2 - t1) / 1000);
+								logDebug("(done)");
 							}
-							
-							auto t2 = SDL_GetTicks();
-							printf("time: %ums\n", (t2 - t1));
-							printf("(done)\n");
 						}
 					}
 				}
 			}
+		#endif
 		}
+	#if USE_GUI_WINDOW
+		popWindow();
 	#endif
 	
 		//
@@ -738,25 +782,69 @@ int main(int argc, char * argv[])
 		
 		//
 		
-		framework.beginDraw(0, 0, 0, 0);
+	#if USE_GUI_WINDOW
+	#if WINDOW_IS_3D
+		if (vrPointer[1].isDown(VrButton_GripTrigger))
 		{
-			int viewportSx = 0;
-			int viewportSy = 0;
-			framework.getCurrentViewportSize(viewportSx, viewportSy);
-
-			Mat4x4 projectionMatrix;
-			editor.camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
-			
-			Mat4x4 viewMatrix;
-			editor.camera.calculateViewMatrix(viewMatrix);
-			
-			renderer.draw(projectionMatrix, viewMatrix);
-			
-			projectScreen2d();
-
-			editor.drawEditor();
+			guiWindow.setTransform(
+				Mat4x4(true)
+					.Translate(framework.vrOrigin)
+					.Mul(vrPointer[1].transform));
 		}
-		framework.endDraw();
+	#endif
+
+		pushWindow(guiWindow);
+		{
+			framework.beginDraw(0, 0, 0, 0);
+			{
+				editor.drawGui();
+			}
+			framework.endDraw();
+		}
+		popWindow();
+	#endif
+		
+		//
+		
+		for (int i = 0; i < framework.getEyeCount(); ++i)
+		{
+			framework.beginEye(i, colorBlack);
+			{
+				Mat4x4 projectionMatrix;
+				Mat4x4 viewMatrix;
+				
+				if (framework.isStereoVr())
+				{
+					gxGetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
+					gxGetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
+				}
+				else
+				{
+					int viewportSx = 0;
+					int viewportSy = 0;
+					framework.getCurrentViewportSize(viewportSx, viewportSy);
+					
+					editor.camera.calculateProjectionMatrix(viewportSx, viewportSy, projectionMatrix);
+					editor.camera.calculateViewMatrix(viewMatrix);
+				}
+				
+				renderer.draw(projectionMatrix, viewMatrix);
+
+				if (!framework.isStereoVr())
+				{
+					projectScreen2d();
+
+					editor.drawView();
+				}
+
+			#if !USE_GUI_WINDOW
+				editor.drawGui();
+			#endif
+			}
+			framework.endEye();
+		}
+
+		framework.present();
 	}
 	
 	editor.shut();

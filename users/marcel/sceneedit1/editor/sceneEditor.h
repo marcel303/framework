@@ -199,7 +199,8 @@ struct SceneEditor
 // todo : this is a test method. remove from scene editor and move elsewhere
 	int addNodesFromScene_v1(const int parentId);
 	
-	void tickEditor(const float dt, bool & inputIsCaptured);
+	void tickGui(const float dt, bool & inputIsCaptured);
+	void tickView(const float dt, bool & inputIsCaptured);
 	
 	void validateNodeReferences() const;
 	void validateNodeStructure() const;
@@ -227,7 +228,8 @@ struct SceneEditor
 	void drawEditorGizmos() const;
 	void drawEditorSelectedNodeLabels() const;
 	
-	void drawEditor() const;
+	void drawGui() const;
+	void drawView() const;
 	
 	bool loadSceneFromLines_nonDestructive(std::vector<std::string> & lines, const char * basePath);
 };
