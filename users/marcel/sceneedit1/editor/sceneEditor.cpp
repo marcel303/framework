@@ -37,10 +37,11 @@
 #include "Quat.h"
 #include "StringEx.h"
 #include "TextIO.h"
+#include "Timer.h"
 
 #if FRAMEWORK_USE_SDL
 	// libsdl
-	#include <SDL2/SDL.h>
+	#include <SDL2/SDL.h> // SDL_Cursor
 #endif
 
 // std
@@ -756,10 +757,7 @@ SceneEditor::NodeContextMenuResult SceneEditor::doNodeContextMenu(SceneNode & no
 			{
 				const std::string text = line_writer.to_string();
 
-			#if FRAMEWORK_USE_SDL
-				// todo : implement a fallback clipboard
-				SDL_SetClipboardText(text.c_str());
-			#endif
+				framework.setClipboardText(text.c_str());
 			}
 		}
 	}
@@ -1804,7 +1802,7 @@ void SceneEditor::validateNodeStructure() const
 void SceneEditor::performAction_save()
 {
 #if ENABLE_SAVE_LOAD_TIMING
-	auto t1 = SDL_GetTicks();
+	auto t1 = g_TimerRT.TimeUS_get();
 #endif
 	
 	LineWriter line_writer;
@@ -1831,15 +1829,15 @@ void SceneEditor::performAction_save()
 	}
 	
 #if ENABLE_SAVE_LOAD_TIMING
-	auto t2 = SDL_GetTicks();
-	printf("save time: %ums\n", (t2 - t1));
+	auto t2 = g_TimerRT.TimeUS_get();
+	logDebug("save time: %ums", (t2 - t1));
 #endif
 }
 
 void SceneEditor::performAction_load()
 {
 #if ENABLE_SAVE_LOAD_TIMING
-	auto t1 = SDL_GetTicks();
+	auto t1 = g_TimerRT.TimeUS_get();
 #endif
 
 	std::vector<std::string> lines;
@@ -1859,8 +1857,8 @@ void SceneEditor::performAction_load()
 	}
 
 #if ENABLE_SAVE_LOAD_TIMING
-	auto t2 = SDL_GetTicks();
-	printf("load time: %ums\n", (t2 - t1));
+	auto t2 = g_TimerRT.TimeUS_get();
+	logDebug("load time: %ums", (t2 - t1));
 #endif
 }
 
@@ -2068,9 +2066,8 @@ void SceneEditor::performAction_copySceneNodes()
 		if (result)
 		{
 			const std::string text = line_writer.to_string();
-		#if FRAMEWORK_USE_SDL
-			SDL_SetClipboardText(text.c_str());
-		#endif
+			
+			framework.setClipboardText(text.c_str());
 		}
 	}
 }
@@ -2102,9 +2099,7 @@ void SceneEditor::performAction_copySceneNodeTrees()
 		{
 			const std::string text = line_writer.to_string();
 
-		#if FRAMEWORK_USE_SDL
-			SDL_SetClipboardText(text.c_str());
-		#endif
+			framework.setClipboardText(text.c_str());
 		}
 	}
 }
@@ -2117,19 +2112,15 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 		
 		// fetch clipboard text
 
-	#if FRAMEWORK_USE_SDL
-		const char * text = SDL_GetClipboardText();
-	#else
-		const char * text = nullptr;
-	#endif
+		const std::string text = framework.getClipboardText();
 	
-		if (text != nullptr)
+		if (!text.empty())
 		{
 			// convert text to lines
 			
 			std::vector<std::string> lines;
 			TextIO::LineEndings lineEndings;
-			if (TextIO::loadText(text, lines, lineEndings) == false)
+			if (TextIO::loadText(text.c_str(), lines, lineEndings) == false)
 				logError("failed to load text");
 			else
 			{
@@ -2173,13 +2164,6 @@ void SceneEditor::performAction_paste(const int parentNodeId)
 					}
 				}
 			}
-
-		#if FRAMEWORK_USE_SDL
-			// free clipboard text
-
-			SDL_free((void*)text);
-			text = nullptr;
-		#endif
 		}
 		
 		Assert(result); // todo : make it possible for deferred blocks to discard their changes. this would make deferred blocks into something like transactions

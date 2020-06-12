@@ -641,8 +641,6 @@ int main(int argc, char * argv[])
 		}
 	#endif
 		
-		editor.tickView(dt, inputIsCaptured);
-		
 	#if USE_GUI_WINDOW
 		pushWindow(guiWindow);
 	#endif
@@ -763,6 +761,10 @@ int main(int argc, char * argv[])
 	#if USE_GUI_WINDOW
 		popWindow();
 	#endif
+	
+		//
+		
+		editor.tickView(dt, inputIsCaptured);
 	
 		//
 		
