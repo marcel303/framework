@@ -1064,7 +1064,7 @@ void setCullMode(CULL_MODE mode, CULL_WINDING frontFaceWinding)
 	
 	[s_activeRenderPass->encoder setCullMode:metalCullMode];
 	
-	if (globals.cullingOrder < 0)
+	if (globals.frontFaceWinding < 0)
 	{
 		frontFaceWinding =
 			frontFaceWinding == CULL_CCW
@@ -1322,6 +1322,13 @@ GX_MATRIX gxGetMatrixMode()
 		fassert(false);
 		return GX_MODELVIEW;
 	}
+}
+
+int gxGetMatrixParity()
+{
+	const Mat4x4 matrix = s_gxProjection.get() * s_gxModelView.get();
+	const float parity = (matrix.GetAxis(0) % matrix.GetAxis(1)) * matrix.GetAxis(2);
+	return parity < 0.f ? -1 : +1;
 }
 
 void gxPopMatrix()

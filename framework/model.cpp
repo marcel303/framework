@@ -830,7 +830,9 @@ Model::~Model()
 {
 	delete [] m_boneTransforms;
 	m_boneTransforms = nullptr;
-	
+
+	skinningMatrices.free();
+
 	if (m_autoUpdate)
 		framework.unregisterModel(this);
 }

@@ -134,6 +134,13 @@ GX_MATRIX gxGetMatrixMode()
 	}
 }
 
+int gxGetMatrixParity()
+{
+	const Mat4x4 matrix = s_gxProjection.get() * s_gxModelView.get();
+	const float parity = (matrix.GetAxis(0) % matrix.GetAxis(1)) * matrix.GetAxis(2);
+	return parity < 0.f ? -1 : +1;
+}
+
 void gxPopMatrix()
 {
 	s_gxMatrixStack->pop();

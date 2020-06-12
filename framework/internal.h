@@ -555,6 +555,7 @@ public:
 		depthTestWriteEnabled = true;
 		frontStencilState = StencilState();
 		backStencilState = StencilState();
+		frontFaceWinding = 1;
 		shaderOutputs[0] = 'c';
 		shaderOutputs[1] = 0;
 		emulatedVrCamera = Camera();
@@ -595,6 +596,7 @@ public:
 	StencilState backStencilState;
 	CULL_MODE cullMode;
 	CULL_WINDING cullWinding;
+	int frontFaceWinding;
 	GRADIENT_TYPE hqGradientType;
 	Mat4x4 hqGradientMatrix;
 	Color hqGradientColor1;
@@ -1101,6 +1103,7 @@ class BuiltinShaders
 {
 public:
 	BuiltinShaders();
+	~BuiltinShaders();
 	
 	BuiltinShader gaussianBlurH;
 	BuiltinShader gaussianBlurV;

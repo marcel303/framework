@@ -2062,6 +2062,11 @@ BuiltinShaders::BuiltinShaders()
 {
 }
 
+BuiltinShaders::~BuiltinShaders()
+{
+	gaussianKernelBuffer.free();
+}
+
 //
 
 const ShaderOutput * findShaderOutput(const char name)

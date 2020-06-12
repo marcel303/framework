@@ -66,6 +66,7 @@
 		SDLK_o,
 		SDLK_f,
 		SDLK_g,
+		SDLK_l,
 		SDLK_b,
 		SDLK_s,
 		SDLK_t,

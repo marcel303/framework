@@ -1971,8 +1971,12 @@ void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 	if (vrMode)
 	{
 		frameworkOvr.beginEye(eyeIndex, clearColor);
-		gxScalef(1, 1, -1); // convert from a right-handed coordinate system to a left-handed one
-		popCullFlip();      // we flipped one of the axis, so we need to flip the window order
+		
+		// note : the OVR API prepares a right-handed OpenGL matrix for us. we convert it from a right-handed coordinate system into a left-handed one, since framework uses a left-handed system cross-platform
+		gxScalef(1, 1, -1);
+		updateCullFlip();
+		Assert(globals.frontFaceWinding == +1);
+		
 		gxTranslatef(
 			-vrOrigin[0],
 			-vrOrigin[1],
@@ -1997,10 +2001,18 @@ void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 
 void Framework::endEye()
 {
+	if (enableVrMovement)
+	{
+		pushDepthTest(true, DEPTH_LESS);
+		{
+			drawVrPointers();
+		}
+		popDepthTest();
+	}
+
 #if FRAMEWORK_USE_OVR_MOBILE
 	if (vrMode)
 	{
-		popCullFlip();
 		frameworkOvr.endEye();
 		return;
 	}
@@ -2033,7 +2045,7 @@ Mat4x4 Framework::getHeadTransform() const
 	return result;
 }
 
-void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_buttonMask, const bool isHand)
+bool Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_buttonMask, const bool isHand)
 {
 #if WINDOW_IS_3D
 	const Vec3 pointerOrigin = transform.GetTranslation();
@@ -2151,6 +2163,10 @@ void Framework::tickVirtualDesktop(const Mat4x4 & transform, const int in_button
 		}
 		windowData->endProcess();
 	}
+	
+	return hoverWindow != nullptr;
+#else
+	return false;
 #endif
 }
 
@@ -2169,6 +2185,79 @@ void Framework::drawVirtualDesktop()
 	}
 #endif
 }
+
+void Framework::drawVrPointers()
+{
+	// draw pointer beams
+	pushCullMode(CULL_BACK, CULL_CCW);
+	for (auto & pointer : vrPointer)
+	{
+		if (pointer.hasTransform == false)
+			continue;
+
+		gxPushMatrix();
+		{
+			gxTranslatef(vrOrigin[0], vrOrigin[1], vrOrigin[2]);
+			gxMultMatrixf(pointer.transform.m_v);
+			
+			// draw a cube at the pointer location
+			setColor(0, 0, 255);
+			fillCube(Vec3(0, 0, .05f), Vec3(.01f, .01f, .05f));
+			
+			// draw beam
+			pushBlend(BLEND_ADD);
+			pushDepthWrite(false);
+			{
+				setColor(255, 255, 255, 10);
+				fillCube(Vec3(0, 0, 100), Vec3(.004f, .004f, 100));
+			}
+			popDepthWrite();
+			popBlend();
+		}
+		gxPopMatrix();
+	}
+	popCullMode();
+}
+
+#if FRAMEWORK_USE_SDL
+
+void Framework::setClipboardText(const char * text)
+{
+	SDL_SetClipboardText(text);
+}
+
+std::string Framework::getClipboardText()
+{
+	const char * text = SDL_GetClipboardText();
+	
+	if (text == nullptr)
+		return { };
+	else
+	{
+		std::string result(text);
+		
+		SDL_free((void*)text);
+		text = nullptr;
+		
+		return result;
+	}
+}
+
+#else
+
+static std::string s_clipboardText;
+
+void Framework::setClipboardText(const char * text)
+{
+	s_clipboardText = text;
+}
+
+std::string Framework::getClipboardText()
+{
+	return s_clipboardText;
+}
+
+#endif
 
 // -----
 
@@ -3227,7 +3316,11 @@ void Camera3d::tick(float dt, bool enableInput)
 
 Mat4x4 Camera3d::getWorldMatrix() const
 {
-	return Mat4x4(true).Translate(position).RotateZ(roll / 180.f * M_PI).RotateY(yaw / 180.f * M_PI).RotateX(pitch / 180.f * M_PI);
+	return Mat4x4(true)
+		.Translate(position)
+		.RotateZ(roll / 180.f * M_PI)
+		.RotateY(yaw / 180.f * M_PI)
+		.RotateX(pitch / 180.f * M_PI);
 }
 
 Mat4x4 Camera3d::getViewMatrix() const
@@ -3432,7 +3525,7 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 		case TRANSFORM_3D:
 		{
 			gxLoadMatrixf(globals.transform3d.m_v);
-		
+			
 		#if ENABLE_OPENGL
 			if (s_renderPassIsBackbufferPass == false)
 			{
@@ -3450,9 +3543,11 @@ void applyTransformWithViewportSize(const int sx, const int sy)
 			break;
 		}
 	}
-	
+
 	gxMatrixMode(GX_MODELVIEW);
 	gxLoadIdentity();
+	
+	updateCullFlip();
 }
 
 void setTransform2d(const Mat4x4 & transform)
@@ -4000,14 +4095,23 @@ void popCullMode()
 
 void pushCullFlip()
 {
-	globals.cullingOrder = -globals.cullingOrder;
+	globals.frontFaceWinding = -globals.frontFaceWinding;
 	
+	Assert(globals.frontFaceWinding == gxGetMatrixParity());
+
 	setCullMode(globals.cullMode, globals.cullWinding);
 }
 
 void popCullFlip()
 {
-	globals.cullingOrder = -globals.cullingOrder;
+	globals.frontFaceWinding = -globals.frontFaceWinding;
+	
+	setCullMode(globals.cullMode, globals.cullWinding);
+}
+
+void updateCullFlip()
+{
+	globals.frontFaceWinding = gxGetMatrixParity();
 	
 	setCullMode(globals.cullMode, globals.cullWinding);
 }

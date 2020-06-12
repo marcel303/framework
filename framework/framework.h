@@ -485,8 +485,12 @@ public:
 	
 	void blinkTaskbarIcon(int count);
 
-	void tickVirtualDesktop(const Mat4x4 & viewMatrix, const int buttonMask, const bool isHand);
+	bool tickVirtualDesktop(const Mat4x4 & viewMatrix, const int buttonMask, const bool isHand);
 	void drawVirtualDesktop();
+	void drawVrPointers();
+	
+	void setClipboardText(const char * text);
+	std::string getClipboardText();
 
 	bool quitRequested;
 	double time;
@@ -1624,6 +1628,7 @@ void popCullMode();
 
 void pushCullFlip();
 void popCullFlip();
+void updateCullFlip();
 
 void setColor(const Color & color);
 void setColor(const Color & color, float rgbMul);
@@ -1738,6 +1743,7 @@ static inline GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture) { return
 
 void gxMatrixMode(GX_MATRIX mode);
 GX_MATRIX gxGetMatrixMode();
+int gxGetMatrixParity();
 void gxPopMatrix();
 void gxPushMatrix();
 void gxLoadIdentity();
