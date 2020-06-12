@@ -11,6 +11,20 @@
 #include "Vec3.h"
 #include "Vec4.h"
 
+#if defined(ANDROID) || defined(IPHONEOS)
+	#define HAS_KEYBOARD 0
+#else
+	#define HAS_KEYBOARD 1
+#endif
+
+namespace ImGui
+{
+	bool DragDouble(const char* label, double* v, double v_speed = 1.0, double v_min = 0.0, double v_max = 0.0, const char* format = "%.3f", float power = 1.0f)     // If v_min >= v_max we have no bound
+	{
+		return DragScalar(label, ImGuiDataType_Double, v, v_speed, &v_min, &v_max, format, power);
+	}
+}
+
 bool doComponentProperty(
 	const TypeDB & typeDB,
 	const Member & member,
@@ -167,9 +181,19 @@ bool doReflection_PlainType(
 			}
 			else
 			{
-				if (ImGui::InputInt(member.name, &value))
+				if (HAS_KEYBOARD)
 				{
-					result = true;
+					if (ImGui::InputInt(member.name, &value))
+					{
+						result = true;
+					}
+				}
+				else
+				{
+					if (ImGui::DragInt(member.name, &value))
+					{
+						result = true;
+					}
 				}
 			}
 		}
@@ -211,9 +235,19 @@ bool doReflection_PlainType(
 				}
 				else
 				{
-					if (ImGui::InputFloat(member.name, &value))
+					if (HAS_KEYBOARD)
 					{
-						result = true;
+						if (ImGui::InputFloat(member.name, &value))
+						{
+							result = true;
+						}
+					}
+					else
+					{
+						if (ImGui::DragFloat(member.name, &value, .01f))
+						{
+							result = true;
+						}
 					}
 				}
 			}
@@ -231,9 +265,19 @@ bool doReflection_PlainType(
 				}
 			}
 			
-			if (ImGui::InputFloat2(member.name, &value[0]))
+			if (HAS_KEYBOARD)
 			{
-				result = true;
+				if (ImGui::InputFloat2(member.name, &value[0]))
+				{
+					result = true;
+				}
+			}
+			else
+			{
+				if (ImGui::DragFloat2(member.name, &value[0], .01f))
+				{
+					result = true;
+				}
 			}
 		}
 		break;
@@ -268,9 +312,19 @@ bool doReflection_PlainType(
 			}
 			else
 			{
-				if (ImGui::InputFloat3(member.name, &value[0]))
+				if (HAS_KEYBOARD)
 				{
-					result = true;
+					if (ImGui::InputFloat3(member.name, &value[0]))
+					{
+						result = true;
+					}
+				}
+				else
+				{
+					if (ImGui::DragFloat3(member.name, &value[0], .01f))
+					{
+						result = true;
+					}
 				}
 			}
 		}
@@ -298,9 +352,19 @@ bool doReflection_PlainType(
 			}
 			else
 			{
-				if (ImGui::InputFloat4(member.name, &value[0]))
+				if (HAS_KEYBOARD)
 				{
-					result = true;
+					if (ImGui::InputFloat4(member.name, &value[0]))
+					{
+						result = true;
+					}
+				}
+				else
+				{
+					if (ImGui::DragFloat4(member.name, &value[0], .01f))
+					{
+						result = true;
+					}
 				}
 			}
 		}
@@ -335,9 +399,19 @@ bool doReflection_PlainType(
 			}
 			else
 			{
-				if (ImGui::InputDouble(member.name, &value))
+				if (HAS_KEYBOARD)
 				{
-					result = true;
+					if (ImGui::InputDouble(member.name, &value))
+					{
+						result = true;
+					}
+				}
+				else
+				{
+					if (ImGui::DragDouble(member.name, &value, .01))
+					{
+						result = true;
+					}
 				}
 			}
 		}
@@ -374,7 +448,7 @@ bool doReflection_PlainType(
 					if (ImGui::Button(".."))
 					{
 						nfdchar_t * filename = nullptr;
-					
+
 						if (NFD_OpenDialog(nullptr, nullptr, &filename) == NFD_OKAY)
 						{
 						// todo : compute relative path
