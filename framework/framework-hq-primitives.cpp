@@ -26,10 +26,9 @@
 */
 
 #include "framework.h"
+#include "internal.h"
 
 #if ENABLE_HQ_PRIMITIVES
-
-#include "internal.h"
 
 static void setShader_HqLines()
 {
