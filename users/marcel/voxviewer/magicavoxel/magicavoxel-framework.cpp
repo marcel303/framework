@@ -34,12 +34,12 @@ void drawMagicaModel(const MagicaWorld & world, const MagicaModel & model)
 
 		const int faces[6][4] =
 		{
-			{ 0, 4, 7, 3 },
-			{ 2, 6, 5, 1 },
-			{ 0, 1, 5, 4 },
-			{ 7, 6, 2, 3 },
-			{ 3, 2, 1, 0 },
-			{ 4, 5, 6, 7 }
+			{ 3, 7, 4, 0 },
+			{ 1, 5, 6, 2 },
+			{ 4, 5, 1, 0 },
+			{ 3, 2, 6, 7 },
+			{ 0, 1, 2, 3 },
+			{ 7, 6, 5, 4 }
 		};
 
 		const float normals[6][3] =
