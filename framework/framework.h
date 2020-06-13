@@ -491,6 +491,7 @@ public:
 	
 	void setClipboardText(const char * text);
 	std::string getClipboardText();
+	bool hasClipboardText();
 
 	bool quitRequested;
 	double time;
@@ -994,6 +995,7 @@ public:
 class ShaderBuffer
 {
 	GxShaderBufferId m_buffer;
+	int m_bufferSize;
 	
 public:
 	ShaderBuffer();
