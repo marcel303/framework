@@ -19,6 +19,9 @@ namespace rOne
 	ForwardLightingHelper::~ForwardLightingHelper()
 	{
 		reset();
+		
+		lightParamsBuffer.free();
+		lightExtrasBuffer.free();
 	}
 
 	void ForwardLightingHelper::addLight(const Light & light)

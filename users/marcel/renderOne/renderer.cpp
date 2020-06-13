@@ -1011,14 +1011,20 @@ namespace rOne
 		{
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+			updateCullFlip();
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
 			gxScalef(1, -1, 1); // todo : remove the need to scale here
 			gxMatrixMode(GX_MODELVIEW);
+			pushCullFlip();
 		#endif
 			
 			renderOpaquePass(renderFunctions, renderOptions);
+			
+		#if ENABLE_OPENGL
+			popCullFlip();
+		#endif
 		}
 		popShaderOutputs();
 		popRenderPass();
@@ -1127,16 +1133,22 @@ namespace rOne
 		{
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+			updateCullFlip();
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
 			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			pushCullFlip();
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
 		
 			renderBackgroundPass(
 				renderFunctions,
 				renderOptions);
+			
+		#if ENABLE_OPENGL
+			popCullFlip();
+		#endif
 		}
 		popRenderPass();
 		
@@ -1157,14 +1169,20 @@ namespace rOne
 		{
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+			updateCullFlip();
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
 			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			pushCullFlip();
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
 			
 			renderTranslucentPass(renderFunctions, renderOptions);
+			
+		#if ENABLE_OPENGL
+			popCullFlip();
+		#endif
 		}
 		popRenderPass();
 		
@@ -1210,14 +1228,20 @@ namespace rOne
 		{
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+			updateCullFlip();
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
 			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			pushCullFlip();
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
 			
 			renderOpaquePass(renderFunctions, renderOptions);
+			
+		#if ENABLE_OPENGL
+			popCullFlip();
+		#endif
 		}
 		popShaderOutputs();
 		popRenderPass();
@@ -1228,16 +1252,22 @@ namespace rOne
 		{
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+			updateCullFlip();
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
 			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			pushCullFlip();
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
 		
 			renderBackgroundPass(
 				renderFunctions,
 				renderOptions);
+		
+		#if ENABLE_OPENGL
+			popCullFlip();
+		#endif
 		}
 		popRenderPass();
 		
@@ -1279,14 +1309,20 @@ namespace rOne
 		{
 			gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 			gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+			updateCullFlip();
 			
 		#if ENABLE_OPENGL
 			gxMatrixMode(GX_PROJECTION);
 			gxScalef(1, -1, 1); // todo : remove the need to scale here
+			pushCullFlip();
 			gxMatrixMode(GX_MODELVIEW);
 		#endif
 			
 			renderTranslucentPass(renderFunctions, renderOptions);
+			
+		#if ENABLE_OPENGL
+			popCullFlip();
+		#endif
 		}
 		popRenderPass();
 		
@@ -1595,10 +1631,12 @@ namespace rOne
 				{
 					gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 					gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+					updateCullFlip();
 			
 				#if ENABLE_OPENGL
 					gxMatrixMode(GX_PROJECTION);
 					gxScalef(1, -1, 1); // todo : remove the need to scale here
+					pushCullFlip();
 					gxMatrixMode(GX_MODELVIEW);
 				#endif
 				
@@ -1611,6 +1649,10 @@ namespace rOne
 						viewportSy,
 						timeStep);
 					eyeL = buffers.colors;
+					
+				#if ENABLE_OPENGL
+					popCullFlip();
+				#endif
 				}
 				popRenderPass();
 
@@ -1618,10 +1660,12 @@ namespace rOne
 				{
 					gxSetMatrixf(GX_PROJECTION, projectionMatrix.m_v);
 					gxSetMatrixf(GX_MODELVIEW, modelViewMatrix.m_v);
+					updateCullFlip();
 					
 				#if ENABLE_OPENGL
 					gxMatrixMode(GX_PROJECTION);
 					gxScalef(1, -1, 1); // todo : remove the need to scale here
+					pushCullFlip();
 					gxMatrixMode(GX_MODELVIEW);
 				#endif
 				
@@ -1634,6 +1678,10 @@ namespace rOne
 						viewportSy,
 						timeStep);
 					eyeR = buffers2.colors;
+					
+				#if ENABLE_OPENGL
+					popCullFlip();
+				#endif
 				}
 				popRenderPass();
 			}
