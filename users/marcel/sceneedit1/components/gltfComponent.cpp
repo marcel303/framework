@@ -96,7 +96,6 @@ void GltfComponent::draw(const Mat4x4 & objectToWorld) const
 		gxMultMatrixf(objectToWorld.m_v);
 		gxRotatef(rotation.angle, rotation.axis[0], rotation.axis[1], rotation.axis[2]);
 		gxScalef(finalScale, finalScale, finalScale);
-		gxScalef(1, 1, -1); // apply scale (1, 1, -1) at the scene draw & minmax levelte
 		
 		MaterialShaders materialShaders;
 		setDefaultMaterialShaders(materialShaders);
