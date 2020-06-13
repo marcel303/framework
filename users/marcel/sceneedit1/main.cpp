@@ -209,6 +209,8 @@ struct Renderer
 		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 		gxLoadMatrixf(drawState.viewMatrix.m_v);
+		
+		updateCullFlip();
 	}
 	
 	void popMatrices() const
@@ -217,6 +219,8 @@ struct Renderer
 		gxPopMatrix();
 		gxMatrixMode(GX_MODELVIEW);
 		gxPopMatrix();
+		
+		updateCullFlip();
 	}
 	
 	void draw(const Mat4x4 & projectionMatrix, const Mat4x4 & viewMatrix) const
