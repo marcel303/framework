@@ -189,6 +189,7 @@ void FrameworkOvr::beginEye(const int eyeIndex, const Color & clearColor)
 
 	gxSetMatrixf(GX_PROJECTION, ProjectionMatrices[eyeIndex].m_v);
 	gxSetMatrixf(GX_MODELVIEW, ViewMatrices[eyeIndex].m_v);
+	updateCullFlip();
 
 	glViewport(0, 0, frameBuffer->Width, frameBuffer->Height);
 	glScissor(0, 0, frameBuffer->Width, frameBuffer->Height);
