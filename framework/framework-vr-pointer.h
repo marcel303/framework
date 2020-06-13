@@ -18,8 +18,9 @@ protected:
 	bool m_isDown[VrButton_COUNT] = { };
 	bool m_hasChanged[VrButton_COUNT] = { };
 	
-public:
 	Mat4x4 transform = Mat4x4(true);
+	
+public:
 	bool hasTransform = false;
 	bool wantsToVibrate = false;
 
@@ -29,6 +30,8 @@ public:
 	
 	virtual void updateInputState() = 0;
 	virtual void updateHaptics() = 0;
+	
+	Mat4x4 getTransform(Vec3Arg vrOrigin) const;
 	
 public:
 	bool wentDown(const VrButton index) const

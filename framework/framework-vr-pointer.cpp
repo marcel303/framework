@@ -1,5 +1,10 @@
 #include "framework-vr-pointer.h"
 
+Mat4x4 VrPointerBase::getTransform(Vec3Arg vrOrigin) const
+{
+	return Mat4x4(true).Translate(vrOrigin).Mul(transform);
+}
+
 #if FRAMEWORK_USE_OVR_MOBILE
 
 #include <VrApi_Helpers.h>
