@@ -9,6 +9,9 @@ int main(int argc, char * argv[])
 {
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
+	framework.vrMode = true;
+	framework.enableVrMovement = true;
+	
 	framework.enableDepthBuffer = true;
 	framework.windowIsResizable = true;
 	
@@ -18,9 +21,8 @@ int main(int argc, char * argv[])
 	SimpleDynamicsWorld world;
 	world.init();
 	
-	Camera3d camera;
-	camera.position[1] = 1.f;
-	camera.position[2] = -1.4f;
+	framework.vrOrigin[1] = 1.f;
+	framework.vrOrigin[2] = -1.4f;
 	
 	// add the ground plane
 	
@@ -94,8 +96,6 @@ int main(int argc, char * argv[])
 		mouse.showCursor(false);
 		mouse.setRelative(true);
 		
-		camera.tick(framework.timeStep, true);
-		
 		// remember the point we hit (if any) so we can draw the hit test indicator
 		
 		btVector3 hitPoint;
@@ -104,20 +104,28 @@ int main(int argc, char * argv[])
 		// apply a force or impulse to push objects around when the mouse button is pressed
 		
 		//if (mouse.wentDown(BUTTON_LEFT)) // for applying impulse
-		if (mouse.isDown(BUTTON_LEFT)) // for applying force
+		if (mouse.isDown(BUTTON_LEFT) || (vrPointer[0].hasTransform && vrPointer[0].isDown(VrButton_Trigger))) // for applying force
 		{
-			const Vec3 cameraDirection = camera.getWorldMatrix().GetAxis(2);
+			Vec3 cameraPosition = framework.getHeadTransform().GetTranslation();
+			Vec3 cameraDirection = framework.getHeadTransform().GetAxis(2);
+
+			if (vrPointer[0].hasTransform)
+			{
+				const Mat4x4 transform = vrPointer[0].getTransform(framework.vrOrigin);
+				cameraPosition = transform.GetTranslation();
+				cameraDirection = transform.GetAxis(2);
+			}
 			
 			const btVector3 origin(
-				camera.position[0],
-				camera.position[1],
-				camera.position[2]);
+				cameraPosition[0],
+				cameraPosition[1],
+				cameraPosition[2]);
 			
 			const btVector3 direction(
 				cameraDirection[0],
 				cameraDirection[1],
 				cameraDirection[2]);
-			
+		
 			const btVector3 target = origin + direction * 100.0;
 			
 			btCollisionWorld::ClosestRayResultCallback rayCallback(
@@ -160,12 +168,10 @@ int main(int argc, char * argv[])
 		syncPhysicsToGraphics(world.dynamicsWorld, &renderInterface);
 		
 		// draw
-		
-		framework.beginDraw(40, 40, 40, 0);
+
+		for (int i = 0; i < framework.getEyeCount(); ++i)
 		{
-			projectPerspective3d(90.f, .01f, 100.f);
-			
-			camera.pushViewMatrix();
+			framework.beginEye(i, Color(40, 40, 40, 0));
 			{
 				pushBlend(BLEND_OPAQUE);
 				pushDepthTest(true, DEPTH_LESS);
@@ -186,27 +192,31 @@ int main(int argc, char * argv[])
 				}
 				popDepthTest();
 				popBlend();
+			
+				if (!framework.isStereoVr())
+				{
+					// draw the screen-space overlay
+
+					projectScreen2d();
+
+					int sx, sy;
+					framework.getCurrentViewportSize(sx, sy);
+					setColor(100, 100, 200, 100);
+					fillCircle(sx/2, sy/2, 10, 10);
+
+					setFont("engine/fonts/Roboto-Regular.ttf");
+					setColor(0, 0, 0, 60);
+					hqBegin(HQ_FILLED_ROUNDED_RECTS);
+					hqFillRoundedRect(4, 4, 240, 40, 4.f);
+					hqEnd();
+					setColor(255, 255, 255, 200);
+					drawText(10, 10, 14, +1, +1, "Bullet physics - ray test and apply impulse");
+				}
 			}
-			camera.popViewMatrix();
-			
-			// draw the screen-space overlay
-			
-			projectScreen2d();
-			
-			int sx, sy;
-			framework.getCurrentViewportSize(sx, sy);
-			setColor(100, 100, 200, 100);
-			fillCircle(sx/2, sy/2, 10, 10);
-			
-			setFont("engine/fonts/Roboto-Regular.ttf");
-			setColor(0, 0, 0, 60);
-			hqBegin(HQ_FILLED_ROUNDED_RECTS);
-			hqFillRoundedRect(4, 4, 240, 40, 4.f);
-			hqEnd();
-			setColor(255, 255, 255, 200);
-			drawText(10, 10, 14, +1, +1, "Bullet physics - ray test and apply impulse");
+			framework.endEye();
 		}
-		framework.endDraw();
+
+		framework.present();
 	}
 
 	renderInterface.removeAllInstances();

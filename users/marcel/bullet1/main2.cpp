@@ -15,15 +15,17 @@ int main(int argc, char * argv[])
 	framework.enableDepthBuffer = true;
 	framework.windowIsResizable = true;
 	
+	framework.vrMode = true;
+	framework.enableVrMovement = true;
+	
 	if (!framework.init(800, 600))
 		return -1;
 
 	SimpleDynamicsWorld world;
 	world.init();
 
-	Camera3d camera;
-	camera.position[1] = 1.f;
-	camera.position[2] = -1.4f;
+	framework.vrOrigin[1] = 1.f;
+	framework.vrOrigin[2] = -1.4f;
 	
 	btBoxShape boxShape(btVector3(100, 0.1, 100));
 	world.createRigidBody(btTransform(btQuaternion::getIdentity()), 0.f, &boxShape)
@@ -61,8 +63,6 @@ int main(int argc, char * argv[])
 		mouse.showCursor(false);
 		mouse.setRelative(true);
 		
-		camera.tick(framework.timeStep, true);
-		
 		world.dynamicsWorld->stepSimulation(framework.timeStep);
 		
 		Vec3 whirl_pos(
@@ -93,12 +93,10 @@ int main(int argc, char * argv[])
 		}
 		
 		syncPhysicsToGraphics(world.dynamicsWorld, &renderInterface);
-		
-		framework.beginDraw(40, 40, 40, 0);
+
+		for (int i = 0; i < framework.getEyeCount(); ++i)
 		{
-			projectPerspective3d(90.f, .01f, 100.f);
-			
-			camera.pushViewMatrix();
+			framework.beginEye(i, Color(40, 40, 40, 0));
 			{
 				pushBlend(BLEND_OPAQUE);
 				pushDepthTest(true, DEPTH_LESS);
@@ -123,9 +121,10 @@ int main(int argc, char * argv[])
 				}
 				popDepthTest();
 			}
-			camera.popViewMatrix();
+			framework.endEye();
 		}
-		framework.endDraw();
+
+		framework.present();
 	}
 
 	renderInterface.removeAllInstances();

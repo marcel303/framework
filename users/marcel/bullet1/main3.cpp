@@ -3,9 +3,64 @@
 #include "FrameworkRenderInterface.h"
 #include "SimpleDynamicsWorld.h"
 
+#include "BulletCollision/NarrowPhaseCollision/btRaycastCallback.h"
+
 static const btVector3 toBT(const Vec3 & v)
 {
 	return btVector3(v[0], v[1], v[2]);
+}
+
+static btRigidBody * raycast(btCollisionWorld * world, int pointerIndex)
+{
+	Vec3 cameraPosition = framework.getHeadTransform().GetTranslation();
+	Vec3 cameraDirection = framework.getHeadTransform().GetAxis(2);
+
+	if (pointerIndex != -1)
+	{
+		if (vrPointer[pointerIndex].hasTransform)
+		{
+			const Mat4x4 transform = vrPointer[pointerIndex].getTransform(framework.vrOrigin);
+			cameraPosition = transform.GetTranslation();
+			cameraDirection = transform.GetAxis(2);
+		}
+		else
+		{
+			return nullptr;
+		}
+	}
+
+	const btVector3 origin(
+		cameraPosition[0],
+		cameraPosition[1],
+		cameraPosition[2]);
+
+	const btVector3 direction(
+		cameraDirection[0],
+		cameraDirection[1],
+		cameraDirection[2]);
+
+	const btVector3 target = origin + direction * 100.0;
+
+	btCollisionWorld::ClosestRayResultCallback rayCallback(
+		origin,
+		target);
+
+	rayCallback.m_flags |= btTriangleRaycastCallback::kF_UseGjkConvexCastRaytest;
+
+	world->rayTest(origin, target, rayCallback);
+
+	if (rayCallback.hasHit())
+	{
+		btVector3 pickPos = rayCallback.m_hitPointWorld;
+		btRigidBody* body = const_cast<btRigidBody*>(btRigidBody::upcast(rayCallback.m_collisionObject));
+
+		if (body != nullptr && !body->isStaticObject())
+		{
+			return body;
+		}
+	}
+	
+	return nullptr;
 }
 
 int main(int argc, char * argv[])
@@ -15,16 +70,18 @@ int main(int argc, char * argv[])
 	framework.enableDepthBuffer = true;
 	framework.windowIsResizable = true;
 	
+	framework.vrMode = true;
+	framework.enableVrMovement = true;
+
 	if (!framework.init(800, 600))
 		return -1;
 
 	SimpleDynamicsWorld world;
 	world.init();
 
-	Camera3d camera;
-	camera.position[1] = 1.f;
-	camera.position[2] = -1.4f;
-	
+	framework.vrOrigin[1] = 1.f;
+	framework.vrOrigin[2] = -1.4f;
+
 	btBoxShape boxShape(btVector3(100, 0.1, 100));
 	world.createRigidBody(btTransform(btQuaternion::getIdentity()), 0.f, &boxShape)
 		->setRestitution(.8f);
@@ -77,6 +134,8 @@ int main(int argc, char * argv[])
 	
 	autogenerateGraphicsObjects(&renderInterface, world.dynamicsWorld);
 	
+	btRigidBody * pickedBodies[3] = { };
+	
 	for (;;)
 	{
 		framework.process();
@@ -86,8 +145,6 @@ int main(int argc, char * argv[])
 
 		mouse.showCursor(false);
 		mouse.setRelative(true);
-		
-		camera.tick(framework.timeStep, true);
 		
 		world.dynamicsWorld->stepSimulation(framework.timeStep);
 		
@@ -107,7 +164,7 @@ int main(int argc, char * argv[])
 				auto delta = (toBT(whirl_pos) - pos).safeNormalize();
 				
 				auto strength =
-					mouse.isDown(BUTTON_LEFT)
+					(mouse.isDown(BUTTON_LEFT) || vrPointer[0].isDown(VrButton_Trigger))
 					? 10.f
 					: 0.f;
 				
@@ -117,14 +174,46 @@ int main(int argc, char * argv[])
 				body->activate();
 			}
 		}
-		
-		syncPhysicsToGraphics(world.dynamicsWorld, &renderInterface);
-		
-		framework.beginDraw(40, 40, 40, 0);
+
+		for (int i = 0; i < VrSide_COUNT; ++i)
 		{
-			projectPerspective3d(90.f, .01f, 100.f);
+			auto & pointer = vrPointer[i];
+
+			if (pointer.wentDown(VrButton_GripTrigger) && pointer.hasTransform)
+			{
+				pickedBodies[i] = raycast(world.dynamicsWorld, i);
+			}
 			
-			camera.pushViewMatrix();
+			if (pointer.isDown(VrButton_GripTrigger) && pointer.hasTransform)
+			{
+				auto * body = pickedBodies[i];
+
+				if (body != nullptr)
+				{
+					const Mat4x4 pointerTransform = pointer.getTransform(framework.vrOrigin);
+					
+					btTransform transform;
+					transform.setFromOpenGLMatrix(pointerTransform.m_v);
+					
+					body->setWorldTransform(transform);
+					
+				// fixme : don't reset velocities, and use some impulse/constraint method for re-positioning bodies. this doesn't work properly, as no energy is passed on to the objects the body will collide with, causing little physical reaction (just movement due to solving for collisions)
+					body->setLinearVelocity(btVector3(0, 0, 0));
+					body->setAngularVelocity(btVector3(0, 0, 0));
+					body->activate();
+				}
+			}
+			else
+			{
+				pickedBodies[i] = nullptr;
+			}
+		}
+
+		syncPhysicsToGraphics(world.dynamicsWorld, &renderInterface);
+
+		for (int i = 0; i < framework.getEyeCount(); ++i)
+		{
+			framework.beginEye(i, Color(40, 40, 40, 0));
 			{
 				pushBlend(BLEND_OPAQUE);
 				pushDepthTest(true, DEPTH_LESS);
@@ -149,18 +238,23 @@ int main(int argc, char * argv[])
 				}
 				popDepthTest();
 			}
-			camera.popViewMatrix();
 			
-			projectScreen2d();
-			setFont("engine/fonts/Roboto-Regular.ttf");
-			setColor(0, 0, 0, 60);
-			hqBegin(HQ_FILLED_ROUNDED_RECTS);
-			hqFillRoundedRect(4, 4, 240, 40, 4.f);
-			hqEnd();
-			setColor(255, 255, 255, 200);
-			drawText(10, 10, 14, +1, +1, "Bullet physics - rope example");
+			if (!framework.isStereoVr())
+			{
+				projectScreen2d();
+				setFont("engine/fonts/Roboto-Regular.ttf");
+				setColor(0, 0, 0, 60);
+				hqBegin(HQ_FILLED_ROUNDED_RECTS);
+				hqFillRoundedRect(4, 4, 240, 40, 4.f);
+				hqEnd();
+				setColor(255, 255, 255, 200);
+				drawText(10, 10, 14, +1, +1, "Bullet physics - rope example");
+			}
+
+			framework.endEye();
 		}
-		framework.endDraw();
+
+		framework.present();
 	}
 
 	renderInterface.removeAllInstances();

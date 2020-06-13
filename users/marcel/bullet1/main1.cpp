@@ -41,6 +41,9 @@ int main(int argc, char * argv[])
 	framework.msaaLevel = 4;
 	framework.enableRealTimeEditing = true;
 	
+	framework.vrMode = true;
+	framework.enableVrMovement = true;
+	
 	if (!framework.init(800, 600))
 		return -1;
 	
@@ -180,12 +183,8 @@ int main(int argc, char * argv[])
 	
 	//
 	
-	Camera3d camera;
-	camera.position.Set(0, 4, -10);
-	camera.maxForwardSpeed *= 3.f;
-	camera.maxStrafeSpeed *= 3.f;
-	camera.maxUpSpeed *= 3.f;
-	
+	framework.vrOrigin.Set(0, 4, -10);
+
 	for (;;)
 	{
 		framework.process();
@@ -196,9 +195,11 @@ int main(int argc, char * argv[])
 		mouse.showCursor(false);
 		mouse.setRelative(true);
 		
+		const Vec3 cameraPosition = framework.getHeadTransform().GetTranslation();
+		
 		btTransform transform;
 		transform.setIdentity();
-		transform.setOrigin(btVector3(camera.position[0], camera.position[1], camera.position[2]));
+		transform.setOrigin(btVector3(cameraPosition[0], cameraPosition[1], cameraPosition[2]));
 		//cameraBody->setWorldTransform(transform);
 		cameraBody->setLinearVelocity(btVector3(0, 0, 0));
 		cameraBody->activate();
@@ -217,8 +218,6 @@ int main(int argc, char * argv[])
 		
 		const float dt = framework.timeStep;
 		
-		camera.tick(dt, true);
-		
 		dynamicsWorld->stepSimulation(dt);
 		
 		int viewSx;
@@ -229,12 +228,10 @@ int main(int argc, char * argv[])
 		
 		syncPhysicsToGraphics(dynamicsWorld, renderInterface);
 		
-		framework.beginDraw(0, 0, 0, 0);
+		for (int i = 0; i < framework.getEyeCount(); ++i)
 		{
-			projectPerspective3d(60.f, .01f, 100.f);
+			framework.beginEye(i, colorBlack);
 			pushDepthTest(true, DEPTH_LESS);
-			
-			camera.pushViewMatrix();
 			{
 			#if 1
 				renderInterface->renderScene();
@@ -270,11 +267,11 @@ int main(int argc, char * argv[])
 				
 				//dynamicsWorld->debugDrawWorld();
 			}
-			camera.popViewMatrix();
-			
 			popDepthTest();
+			framework.endEye();
 		}
-		framework.endDraw();
+
+		framework.present();
 	}
 	
 	renderInterface->removeAllInstances();
