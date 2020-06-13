@@ -680,10 +680,11 @@ struct JgplayerObject
 			{
 				timerApi->processInterrupts(int64_t(numSamples) * 1000000 / voiceApi->sampleRate);
 			}
-			
+
 			float stereoPanning;
 			voiceApi->generateSamplesForVoice(voiceId, samples, numSamples, stereoPanning);
 
+		// todo : use a circular history buffer or something
 			const int numSamplesToCopyForVisualization = numSamples < kMaxSamplesForVisualization ? numSamples : kMaxSamplesForVisualization;
 			memcpy(samplesForVisualization, samples, numSamplesToCopyForVisualization * sizeof(float));
 			for (int i = numSamplesToCopyForVisualization; i < kMaxSamplesForVisualization; ++i)
@@ -1279,9 +1280,7 @@ void Scene::tick(const float dt)
 		if (vrPointer[1].isDown(VrButton_GripTrigger))
 		{
 			controlPanel->window.setTransform(
-				Mat4x4(true)
-					.Translate(playerLocation)
-					.Mul(vrPointer[1].transform)
+				vrPointer[1].getTransform(playerLocation)
 					.Translate(0, .2f, -.1f)
 					.RotateX(float(M_PI/180.0) * -15));
 		}
@@ -1949,9 +1948,9 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 				float elevation;
 				float azimuth;
 				binaural::cartesianToElevationAndAzimuth(
-						-sourcePosition_listener[2],
-						+sourcePosition_listener[1],
-						+sourcePosition_listener[0],
+						sourcePosition_listener[2],
+						sourcePosition_listener[1],
+						sourcePosition_listener[0],
 						elevation,
 						azimuth);
 				const float distance = sourcePosition_listener.CalcSize();
@@ -1960,7 +1959,7 @@ struct SpatialAudioSystem : SpatialAudioSystemInterface
 				const float maxGain = powf(10.f, headroomInDb/20.f);
 				const float normalizedDistance = distance / recordedDistance;
 				const float intensity = fminf(maxGain, 1.f / (normalizedDistance * normalizedDistance + 1e-6f)) * volume->get();
-				
+
 				source->enabled = true;
 				source->elevation = elevation;
 				source->azimuth = azimuth;
@@ -2068,11 +2067,24 @@ struct SpatialAudioSystemAudioStream : AudioStream
 	{
 		ALIGN16 float outputSamplesL[numSamples];
 		ALIGN16 float outputSamplesR[numSamples];
-		spatialAudioSystem->generateLR(
-			outputSamplesL,
-			outputSamplesR,
-			numSamples);
+		
+		for (int i = 0; i < numSamples; )
+		{
+			const int kUpdateSize = 32;
+			const int numSamplesRemaining = numSamples - i;
+			const int numSamplesThisUpdate =
+				numSamplesRemaining < kUpdateSize
+					? numSamplesRemaining
+					: kUpdateSize;
 
+			spatialAudioSystem->generateLR(
+				outputSamplesL + i,
+				outputSamplesR + i,
+				numSamplesThisUpdate);
+			
+			i += numSamplesThisUpdate;
+		}
+		
 	#if AUDIO_BUFFER_VALIDATION
 		for (int i = 0; i < numSamples; ++i)
 			Assert(isfinite(outputSamplesL[i]) && isfinite(outputSamplesR[i]));
