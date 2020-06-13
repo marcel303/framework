@@ -566,6 +566,9 @@ void Camera::pushProjectionMatrix() const
 		gxMatrixMode(GX_PROJECTION);
 		gxPushMatrix();
 		gxLoadMatrixf(matrix.m_v);
+		
+		// note : we use gxMultMatrixf in pushViewMatrix, which is guaranteed not to change the matrix parity, so we don't need updateCullFlip there. we do need it here though, since we are overwriting the previous projection matrix here, which may or may not change the matrix parity
+		updateCullFlip();
 	}
 	gxMatrixMode(restoreMatrixMode);
 }
