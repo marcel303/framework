@@ -377,6 +377,15 @@ void FrameworkImGuiContext::updateFontTexture()
 	uint8_t * pixels = nullptr;
 	io.Fonts->GetTexDataAsRGBA32(&pixels, &sx, &sy);
 	
+	const int numPixels = sx * sy;
+	
+	for (int i = 0; i < numPixels; ++i)
+	{
+		pixels[i * 4 + 0] = (pixels[i * 4 + 0] * (pixels[i * 4 + 3] + 1)) >> 8;
+		pixels[i * 4 + 1] = (pixels[i * 4 + 1] * (pixels[i * 4 + 3] + 1)) >> 8;
+		pixels[i * 4 + 2] = (pixels[i * 4 + 2] * (pixels[i * 4 + 3] + 1)) >> 8;
+	}
+	
 	font_texture.allocate(sx, sy, GX_RGBA8_UNORM, false, true);
 	font_texture.upload(pixels, 1, 0);
 	io.Fonts->TexID = (void*)(uintptr_t)font_texture.id;
@@ -512,6 +521,7 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 				
 				const GxTextureId textureId = (GxTextureId)(uintptr_t)cmd->TextureId;
 				
+				pushBlend(BLEND_PREMULTIPLIED_ALPHA);
 				gxSetTexture(textureId);
 				{
 					gxBegin(GX_TRIANGLES);
@@ -522,11 +532,16 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 							
 							const ImDrawVert & vertex = vertex_list[index];
 							
+							const int r = (vertex.col >> IM_COL32_R_SHIFT) & 0xff;
+							const int g = (vertex.col >> IM_COL32_G_SHIFT) & 0xff;
+							const int b = (vertex.col >> IM_COL32_B_SHIFT) & 0xff;
+							const int a = (vertex.col >> IM_COL32_A_SHIFT) & 0xff;
+							
 							gxColor4ub(
-								(vertex.col >> IM_COL32_R_SHIFT) & 0xff,
-								(vertex.col >> IM_COL32_G_SHIFT) & 0xff,
-								(vertex.col >> IM_COL32_B_SHIFT) & 0xff,
-								(vertex.col >> IM_COL32_A_SHIFT) & 0xff);
+								(r * (a + 1)) >> 8,
+								(g * (a + 1)) >> 8,
+								(b * (a + 1)) >> 8,
+								a);
 							
 							gxTexCoord2f(vertex.uv.x, vertex.uv.y);
 							gxVertex2f(vertex.pos.x, vertex.pos.y);
@@ -535,6 +550,7 @@ void FrameworkImGuiContext::render(const ImDrawData * draw_data)
 					gxEnd();
 				}
 				gxSetTexture(0);
+				popBlend();
 				
 			#if 0
 				Assert(cmd->ClipRect.x <= cmd->ClipRect.z);
