@@ -177,11 +177,11 @@ void doParticleCurve(ParticleCurve & curve, const char * name)
 			float lx1 = x1;
 			float ly1 = lerp(y1, y2, value1);
 			
-			for (int i = 1; i <= 100; ++i)
+			for (int i = 0; i < curve.numKeys; ++i)
 			{
-				const float t = i / 100.f;
+				const float t = curve.keys[i].t;
+				const float value2 = curve.keys[i].value;
 				
-				const float value2 = curve.sample(t);
 				const float lx2 = lerp(x1, x2, t);
 				const float ly2 = lerp(y1, y2, value2);
 				
