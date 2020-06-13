@@ -1245,7 +1245,7 @@ void Scene::tick(const float dt)
 
 	if (vrPointer[1].hasTransform && vrPointer[1].wentDown(VrButton_Trigger))
 	{
-		playerLocation += vrPointer[1].transform.GetAxis(2);
+		playerLocation += vrPointer[1].getTransform(Vec3()).GetAxis(2);
 	}
 
 	// update windows
@@ -1263,7 +1263,7 @@ void Scene::tick(const float dt)
 	}
 	else
 	{
-		viewToWorld = Mat4x4(true).Translate(playerLocation).Mul(vrPointer[0].transform);
+		viewToWorld = vrPointer[0].getTransform(playerLocation);
 		buttonMask =
 			(vrPointer[0].isDown(VrButton_Trigger) << 0) |
 			(vrPointer[0].isDown(VrButton_GripTrigger) << 1);
@@ -1308,11 +1308,14 @@ void Scene::tick(const float dt)
 	pointerBeamsEffect.setActive(false);
 	if (vrPointer[0].hasTransform && vrPointer[1].hasTransform)
 	{
+		const Mat4x4 transform1 = vrPointer[0].getTransform(playerLocation);
+		const Mat4x4 transform2 = vrPointer[1].getTransform(playerLocation);
+		
 		Vec3 closest1;
 		Vec3 closest2;
 		if (calculate_nearest_points_for_ray_vs_ray(
-			playerLocation + vrPointer[0].transform.GetTranslation(), vrPointer[0].transform.GetAxis(2),
-			playerLocation + vrPointer[1].transform.GetTranslation(), vrPointer[1].transform.GetAxis(2),
+			transform1.GetTranslation(), transform1.GetAxis(2),
+			transform2.GetTranslation(), transform2.GetAxis(2),
 			closest1, closest2))
 		{
 			const float distance = (closest2 - closest1).CalcSize();
@@ -1592,11 +1595,6 @@ void Scene::drawOpaque() const
 
 #if true
 	// Draw controllers.
-	gxPushMatrix();
-	gxTranslatef(
-		playerLocation[0],
-		playerLocation[1],
-		playerLocation[2]);
 	for (int i = 0; i < VrSide_COUNT; ++i)
 	{
 		auto & pointer = vrPointer[i];
@@ -1607,7 +1605,7 @@ void Scene::drawOpaque() const
 		// Draw cube.
 		gxPushMatrix();
 		{
-			gxMultMatrixf(pointer.transform.m_v);
+			gxMultMatrixf(pointer.getTransform(playerLocation).m_v);
 
 			pushCullMode(CULL_BACK, CULL_CCW);
 			Shader metallicRoughnessShader("pbr-metallicRoughness-simple");
@@ -1656,7 +1654,6 @@ void Scene::drawOpaque() const
 		}
 		gxPopMatrix();
 	}
-	gxPopMatrix();
 #endif
 
 #if true
