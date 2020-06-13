@@ -311,19 +311,28 @@ int main(int argc, char * argv[])
 					gxPushMatrix();
 					{
 						gxScalef(-1, 1, 1);
+						pushCullFlip();
+						
 						gxRotatef(-90, 1, 0, 0);
 						gxScalef(.1f, .1f, .1f);
 						
-					#if 1
-						drawMesh.draw();
-					#else
-						drawMagicaWorld(world);
-					#endif
+						pushCullMode(CULL_BACK, CULL_CCW);
+						{
+						#if 1
+							drawMesh.draw();
+						#else
+							drawMagicaWorld(world);
+						#endif
+						}
+						popCullMode();
+					
+						popCullFlip();
 					}
 					gxPopMatrix();
 					
 					if (showSolids)
 					{
+						pushCullMode(CULL_BACK, CULL_CCW);
 						beginCubeBatch();
 						{
 							for (int i = 0; i < 3*1000; ++i)
@@ -345,6 +354,7 @@ int main(int argc, char * argv[])
 							}
 						}
 						endCubeBatch();
+						popCullMode();
 					}
 					
 					clearShader();
