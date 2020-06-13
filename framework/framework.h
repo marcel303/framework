@@ -1426,11 +1426,14 @@ public:
 	
 	int scrollY;
 	
+	void * mouseCaptureObject;
+	
 	Mouse()
 	{
 		x = y = 0;
 		dx = dy = 0;
 		scrollY = 0;
+		mouseCaptureObject = 0;
 	}
 	
 	bool isDown(BUTTON button) const;
@@ -1440,6 +1443,9 @@ public:
 	void setRelative(bool isRelative);
 	
 	bool isIdle() const; // return true when there is no mouse movement and there are no buttons being pressed
+	
+	void capture(void * object);
+	void release(void * object);
 };
 
 class Keyboard

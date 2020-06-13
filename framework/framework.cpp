@@ -1522,7 +1522,7 @@ void Framework::process()
 
 			if (pointer.hasTransform)
 			{
-				pointerTransform[i] = pointer.transform;
+				pointerTransform[i] = pointer.getTransform(vrOrigin);
 				pointerTransformIsValid[i] = true;
 			}
 			else
@@ -1553,7 +1553,7 @@ void Framework::process()
 		{
 			if (vrPointer[1].hasTransform && vrPointer[1].wentDown(VrButton_Trigger))
 			{
-				vrOrigin += vrPointer[1].transform.GetAxis(2);
+				vrOrigin += vrPointer[1].getTransform(Vec3()).GetAxis(2);
 			}
 		}
 	}
@@ -1992,11 +1992,14 @@ void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 		scale255(clearColor.b),
 		scale255(clearColor.a));
 	
-	const Vec3 restore_position = globals.emulatedVrCamera.firstPerson.position;
-	globals.emulatedVrCamera.firstPerson.position += vrOrigin;
-	globals.emulatedVrCamera.pushProjectionMatrix();
-	globals.emulatedVrCamera.pushViewMatrix();
-	globals.emulatedVrCamera.firstPerson.position = restore_position;
+	if (vrMode)
+	{
+		const Vec3 restore_position = globals.emulatedVrCamera.firstPerson.position;
+		globals.emulatedVrCamera.firstPerson.position += vrOrigin;
+		globals.emulatedVrCamera.pushProjectionMatrix();
+		globals.emulatedVrCamera.pushViewMatrix();
+		globals.emulatedVrCamera.firstPerson.position = restore_position;
+	}
 }
 
 void Framework::endEye()
@@ -2018,8 +2021,11 @@ void Framework::endEye()
 	}
 #endif
 
-	globals.emulatedVrCamera.popViewMatrix();
-	globals.emulatedVrCamera.popProjectionMatrix();
+	if (vrMode)
+	{
+		globals.emulatedVrCamera.popViewMatrix();
+		globals.emulatedVrCamera.popProjectionMatrix();
+	}
 	
 	endDraw();
 }
@@ -2031,7 +2037,9 @@ Mat4x4 Framework::getHeadTransform() const
 	{
 		return Mat4x4(true)
 			.Translate(vrOrigin)
-			.Mul(frameworkOvr.HeadTransform);
+			.Scale(1, 1, -1)
+			.Mul(frameworkOvr.HeadTransform)
+			.Scale(1, 1, -1);
 	}
 #endif
 
@@ -2197,8 +2205,7 @@ void Framework::drawVrPointers()
 
 		gxPushMatrix();
 		{
-			gxTranslatef(vrOrigin[0], vrOrigin[1], vrOrigin[2]);
-			gxMultMatrixf(pointer.transform.m_v);
+			gxMultMatrixf(pointer.getTransform(vrOrigin).m_v);
 			
 			// draw a cube at the pointer location
 			setColor(0, 0, 255);
@@ -2243,6 +2250,11 @@ std::string Framework::getClipboardText()
 	}
 }
 
+bool Framework::hasClipboardText()
+{
+	return SDL_HasClipboardText();
+}
+
 #else
 
 static std::string s_clipboardText;
@@ -2255,6 +2267,11 @@ void Framework::setClipboardText(const char * text)
 std::string Framework::getClipboardText()
 {
 	return s_clipboardText;
+}
+
+bool Framework::hasClipboardText()
+{
+	return !s_clipboardText.empty();
 }
 
 #endif
@@ -3132,6 +3149,19 @@ bool Mouse::isIdle() const
 		!currentWindowData->mouseData.mouseChange[1];
 }
 
+void Mouse::capture(void * object)
+{
+	Assert(mouseCaptureObject == nullptr);
+	Assert(object != nullptr);
+	mouseCaptureObject = object;
+}
+
+void Mouse::release(void * object)
+{
+	Assert(mouseCaptureObject == object);
+	mouseCaptureObject = nullptr;
+}
+
 // -----
 
 bool Keyboard::isDown(int key) const
@@ -3589,6 +3619,7 @@ void popTransform()
 	setTransform(t.transform);
 	gxSetMatrixf(GX_PROJECTION, t.projection.m_v);
 	gxSetMatrixf(GX_MODELVIEW, t.modelView.m_v);
+	updateCullFlip();
 }
 
 struct ScrollData
