@@ -361,10 +361,10 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 	if (inputIsCaptured)
 	{
 		hoverElem = nullptr;
-		
+
 		if (activeElem != nullptr)
 		{
-			SDL_CaptureMouse(SDL_FALSE);
+			mouse.release(activeElem);
 			activeElem = nullptr;
 		}
 		
@@ -422,7 +422,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					else
 					{
 						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
+						mouse.capture(activeElem);
 						
 						e.doubleClickTimer = .2f;
 					}
@@ -430,8 +430,8 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 				{
+					mouse.release(activeElem);
 					activeElem = nullptr;
-					SDL_CaptureMouse(SDL_FALSE);
 				}
 				
 				if (&e == activeElem)
@@ -469,7 +469,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 						else
 						{
 							activeElem = &e;
-							SDL_CaptureMouse(SDL_TRUE);
+							mouse.capture(activeElem);
 						
 							e.doubleClickTimer = .2f;
 						}
@@ -477,7 +477,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					else
 					{
 						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
+						mouse.capture(activeElem);
 						
 						e.value = 1.f;
 						e.valueHasChanged = true;
@@ -488,8 +488,8 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 				{
+					mouse.release(activeElem);
 					activeElem = nullptr;
-					SDL_CaptureMouse(SDL_FALSE);
 					
 					if (button.isToggle)
 					{
@@ -525,7 +525,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					else
 					{
 						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
+						mouse.capture(activeElem);
 						
 						e.liveState[0] = clamp<int>((mouse.x - e.x) * 2 / e.sx, 0, 1);
 						
@@ -535,8 +535,8 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 				{
+					mouse.release(activeElem);
 					activeElem = nullptr;
-					SDL_CaptureMouse(SDL_FALSE);
 				}
 				
 				if (&e == activeElem)
@@ -574,7 +574,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					else
 					{
 						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
+						mouse.capture(activeElem);
 						
 						e.liveState[0] = clamp<int>((mouse.x - e.x) * 3 / e.sx, 0, 2);
 						
@@ -584,8 +584,8 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 				{
+					mouse.release(activeElem);
 					activeElem = nullptr;
-					SDL_CaptureMouse(SDL_FALSE);
 				}
 				
 				if (&e == activeElem)
@@ -623,7 +623,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					else
 					{
 						activeElem = &e;
-						SDL_CaptureMouse(SDL_TRUE);
+						mouse.capture(activeElem);
 						
 						e.doubleClickTimer = .2f;
 					}
@@ -631,8 +631,8 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 				
 				if (&e == activeElem && mouse.wentUp(BUTTON_LEFT))
 				{
+					mouse.release(activeElem);
 					activeElem = nullptr;
-					SDL_CaptureMouse(SDL_FALSE);
 				}
 				
 				if (&e == activeElem)
@@ -687,7 +687,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 							else
 							{
 								activeElem = &e;
-								SDL_CaptureMouse(SDL_TRUE);
+								mouse.capture(activeElem);
 							
 								e.liveState[0] = 'p';
 								
@@ -709,7 +709,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 							else
 							{
 								activeElem = &e;
-								SDL_CaptureMouse(SDL_TRUE);
+								mouse.capture(activeElem);
 								
 								e.liveState[0] = '1';
 								
@@ -722,8 +722,8 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					{
 						e.liveState[0] = 0;
 						
+						mouse.release(activeElem);
 						activeElem = nullptr;
-						SDL_CaptureMouse(SDL_FALSE);
 					}
 				
 					if (&e == activeElem)
@@ -794,7 +794,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 							else
 							{
 								activeElem = &e;
-								SDL_CaptureMouse(SDL_TRUE);
+								mouse.capture(activeElem);
 								
 								e.liveState[0] = 'p';
 							
@@ -816,7 +816,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 							else
 							{
 								activeElem = &e;
-								SDL_CaptureMouse(SDL_TRUE);
+								mouse.capture(activeElem);
 								
 								e.liveState[0] = '1';
 								
@@ -838,7 +838,7 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 							else
 							{
 								activeElem = &e;
-								SDL_CaptureMouse(SDL_TRUE);
+								mouse.capture(activeElem);
 							
 								e.liveState[0] = '2';
 								
@@ -855,8 +855,8 @@ void LiveUi::tick(const float dt, bool & inputIsCaptured)
 					{
 						e.liveState[0] = 0;
 						
+						mouse.release(activeElem);
 						activeElem = nullptr;
-						SDL_CaptureMouse(SDL_FALSE);
 					}
 				
 					if (&e == activeElem)
