@@ -321,6 +321,7 @@ namespace rOne
 					
 					gxSetMatrixf(GX_PROJECTION, viewToProjection.m_v);
 					gxSetMatrixf(GX_MODELVIEW, light.worldToLight.m_v);
+					updateCullFlip();
 					
 					if (drawOpaque != nullptr)
 						drawOpaque();
@@ -332,6 +333,7 @@ namespace rOne
 					
 					gxSetMatrixf(GX_PROJECTION, viewToProjection.m_v);
 					gxSetMatrixf(GX_MODELVIEW, light.worldToLight.m_v);
+					updateCullFlip();
 					
 					if (drawOpaque != nullptr)
 						drawOpaque();
@@ -362,6 +364,7 @@ namespace rOne
 						
 						gxSetMatrixf(GX_PROJECTION, viewToProjection.m_v);
 						gxSetMatrixf(GX_MODELVIEW, light.worldToLight.m_v);
+						updateCullFlip();
 						
 						if (drawTranslucent != nullptr)
 							drawTranslucent();
@@ -373,6 +376,7 @@ namespace rOne
 						
 						gxSetMatrixf(GX_PROJECTION, viewToProjection.m_v);
 						gxSetMatrixf(GX_MODELVIEW, light.worldToLight.m_v);
+						updateCullFlip();
 						
 						if (drawOpaque != nullptr)
 							drawOpaque();

@@ -104,9 +104,11 @@ namespace rOne
 		gxPushMatrix();
 		gxLoadMatrixf(worldToView.m_v);
 		
+		updateCullFlip();
+		
 		pushDepthTest(true, DEPTH_LESS, false);
 		
-		clearStencil(0x01, 0xff);
+		clearStencil(0x01, 0xff); // todo : clear stencil once at the start of deferred draw, and clear during light draw
 		setStencilTest()
 			.comparison(GX_STENCIL_FUNC_ALWAYS, 0, 0)
 			.op(GX_STENCIL_FACE_FRONT, GX_STENCIL_OP_KEEP, GX_STENCIL_OP_INC, GX_STENCIL_OP_KEEP)

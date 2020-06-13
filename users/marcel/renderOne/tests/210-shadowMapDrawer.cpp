@@ -37,7 +37,7 @@ int main(int argc, char * argv[])
 	
 	auto drawTranslucent = [&]()
 	{
-		pushCullMode(CULL_BACK, CULL_CW);
+		pushCullMode(CULL_BACK, CULL_CCW);
 		
 		for (int i = 0; i < 0; ++i)
 		{
