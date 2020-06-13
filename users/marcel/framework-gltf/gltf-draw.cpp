@@ -760,6 +760,8 @@ namespace gltf
 			? scene.activeScene
 			: drawOptions.activeScene;
 		
+		gxPushMatrix();
+		gxScalef(1, 1, -1);
 		pushAlphaToCoverage(isOpaquePass == false && drawOptions.alphaMode == kAlphaMode_AlphaToCoverage);
 		
 		for (size_t sceneRootIndex = 0; sceneRootIndex < scene.sceneRoots.size(); ++sceneRootIndex)
@@ -911,6 +913,7 @@ namespace gltf
 					
 					gxPushMatrix();
 					{
+						// note : normally a gxSetMatrix call should be followed by updateCullFlip, but gltf model draw doesn't do this, as gltf scenes have no concept of a matrix parity. also, some scenes intentionally flip one or three axis to reverse the culling
 						gxSetMatrixf(GX_MODELVIEW, nodeToViewTransform.m_v);
 						
 						drawMeshPrimitive(
@@ -939,6 +942,7 @@ namespace gltf
 		}
 		
 		popAlphaToCoverage();
+		gxPopMatrix();
 	}
 }
 

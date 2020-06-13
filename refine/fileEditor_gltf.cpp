@@ -197,7 +197,6 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 				
 				gxScalef(1.f / maxAxis, 1.f / maxAxis, 1.f / maxAxis);
 				gxScalef(currentScale, currentScale, currentScale);
-				gxScalef(1, 1, -1); // apply scale (1, 1, -1) at the scene draw & minmax level
 				gxTranslatef(-mid[0], -mid[1], -mid[2]);
 				
 				if (showBoundingBox)

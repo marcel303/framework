@@ -192,7 +192,6 @@ int main(int argc, char * argv[])
 			camera.pushViewMatrix();
 			{
 				gxScalef(scaleMultiplier, scaleMultiplier, scaleMultiplier);
-				gxScalef(1, 1, -1);
 				
 				Mat4x4 viewMatrix;
 				gxGetMatrixf(GX_MODELVIEW, viewMatrix.m_v);
