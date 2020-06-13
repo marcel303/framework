@@ -2002,6 +2002,11 @@ void Framework::beginEye(const int eyeIndex, const Color & clearColor)
 	}
 }
 
+void Framework::beginEye(const int eyeIndex, float r, float g, float b, float a)
+{
+	beginEye(eyeIndex, Color(r, g, b, a));
+}
+
 void Framework::endEye()
 {
 	if (enableVrMovement)

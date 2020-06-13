@@ -1059,6 +1059,18 @@ GX_MATRIX gxGetMatrixMode()
 	return (GX_MATRIX)mode;
 }
 
+int gxGetMatrixParity()
+{
+	Mat4x4 projection;
+	Mat4x4 modelView;
+	gxGetMatrixf(GX_PROJECTION, projection.m_v);
+	gxGetMatrixf(GX_MODELVIEW, modelView.m_v);
+	
+	const Mat4x4 matrix = projection * modelView;
+	const float parity = (matrix.GetAxis(0) % matrix.GetAxis(1)) * matrix.GetAxis(2);
+	return parity < 0.f ? -1 : +1;
+}
+
 void gxBegin(GLenum type)
 {
 	glBegin(type);

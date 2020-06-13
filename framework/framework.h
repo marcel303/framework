@@ -463,6 +463,7 @@ public:
 	bool isStereoVr() const;
 	int getEyeCount() const;
 	void beginEye(const int eyeIndex, const Color & clearColor);
+	void beginEye(const int eyeIndex, float r, float g, float b, float a);
 	void endEye();
 	Mat4x4 getHeadTransform() const;
 	
@@ -1710,6 +1711,7 @@ SDL_Surface * getWindowSurface();
 
 static inline void gxMatrixMode(GX_MATRIX mode) { }
 static inline GX_MATRIX gxGetMatrixMode() { return GX_MODELVIEW; }
+static inline int gxGetMatrixParity() { return 1; }
 static inline void gxPopMatrix() { }
 static inline void gxPushMatrix() { }
 static inline void gxLoadIdentity() { }
@@ -1793,6 +1795,7 @@ GX_TEXTURE_FORMAT gxGetTextureFormat(GxTextureId texture);
 
 #define gxMatrixMode glMatrixMode
 GX_MATRIX gxGetMatrixMode();
+int gxGetMatrixParity();
 #define gxPopMatrix glPopMatrix
 #define gxPushMatrix glPushMatrix
 #define gxLoadIdentity glLoadIdentity
