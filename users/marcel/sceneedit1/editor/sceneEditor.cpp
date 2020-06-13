@@ -1485,10 +1485,7 @@ void SceneEditor::tickView(const float dt, bool & inputIsCaptured)
 	{
 		if (vrPointer[0].hasTransform)
 		{
-			const Mat4x4 transform = Mat4x4(true)
-				.Translate(framework.vrOrigin)
-				.Mul(vrPointer[0].transform);
-			
+			const Mat4x4 transform = vrPointer[0].getTransform(framework.vrOrigin);
 			pointerOrigin = transform.GetTranslation();
 			pointerDirection_world = transform.GetAxis(2);
 			pointerIsActive = vrPointer[0].isDown(VrButton_Trigger);
