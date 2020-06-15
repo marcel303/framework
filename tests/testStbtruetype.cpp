@@ -81,8 +81,6 @@ void testStbTruetype()
 	// can free ttf_buffer at this point
 	GxTextureId fontTexture = createTextureFromR8(temp_bitmap, 512, 512, false, true);
 	
-	Path2d path;
-	
 	do
 	{
 		framework.process();
@@ -110,16 +108,6 @@ void testStbTruetype()
 				stbTruetype_Print(300, 300, "Hello World!");
 			}
 			gxSetTexture(0);
-			
-			gxPushMatrix();
-			{
-				gxTranslatef(400, 400, 0);
-				gxScalef(.1f, .1f, 1.f);
-				setColor(colorWhite);
-				drawPath(path);
-				//hqDrawPath(path);
-			}
-			gxPopMatrix();
 			
 			drawTestUi();
 		}
