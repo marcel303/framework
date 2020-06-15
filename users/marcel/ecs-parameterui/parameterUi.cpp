@@ -129,7 +129,7 @@ namespace parameterUi
 					}
 					else
 					{
-						if (ImGui::DragFloat(parameter.name.c_str(), &parameter.access_rw()))
+						if (ImGui::DragFloat(parameter.name.c_str(), &parameter.access_rw(), .01f))
 							parameter.setDirty();
 					}
 				}
@@ -156,7 +156,7 @@ namespace parameterUi
 					}
 					else
 					{
-						if (ImGui::DragFloat2(parameter.name.c_str(), &parameter.access_rw()[0]))
+						if (ImGui::DragFloat2(parameter.name.c_str(), &parameter.access_rw()[0], .01f))
 							parameter.setDirty();
 					}
 				}
@@ -183,7 +183,7 @@ namespace parameterUi
 					}
 					else
 					{
-						if (ImGui::DragFloat3(parameter.name.c_str(), &parameter.access_rw()[0]))
+						if (ImGui::DragFloat3(parameter.name.c_str(), &parameter.access_rw()[0], .01f))
 							parameter.setDirty();
 					}
 				}
@@ -210,7 +210,7 @@ namespace parameterUi
 					}
 					else
 					{
-						if (ImGui::DragFloat4(parameter.name.c_str(), &parameter.access_rw()[0]))
+						if (ImGui::DragFloat4(parameter.name.c_str(), &parameter.access_rw()[0], .01f))
 							parameter.setDirty();
 					}
 				}
