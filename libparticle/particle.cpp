@@ -1442,6 +1442,13 @@ bool tickParticleEmitter(
 
 #include "framework.h"
 
+#ifdef _MSC_VER
+	#include <stdlib.h>
+	#ifndef PATH_MAX
+		#define PATH_MAX _MAX_PATH
+	#endif
+#endif
+
 void drawParticles(
 	const ParticleEmitterInfo & pei,
 	const ParticleInfo & pi,
