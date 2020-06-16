@@ -67,15 +67,27 @@ namespace gltf
 	
 	// -- draw using GX api --
 
-	void drawMesh(const Scene & scene, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions);
+	void drawMesh(
+		const Scene & scene,
+		const Mesh & mesh,
+		const MaterialShaders & materialShaders,
+		const bool isOpaquePass,
+		const DrawOptions & drawOptions);
 
-	void drawNodeTraverse(const Scene & scene, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions);
-	void drawNodeMinMaxTraverse(const Scene & scene, const Node & node);
-	void calculateNodeMinMaxTraverse(const Scene & scene, const Node & node, BoundingBox & boundingBox);
+	void calculateSceneMinMax(
+		const Scene & scene,
+		BoundingBox & boundingBox,
+		const int activeScene = -2);
 	
-	void calculateSceneMinMax(const Scene & scene, BoundingBox & boundingBox, const int activeScene = -2);
+	void drawSceneMinMax(
+		const Scene & scene,
+		const int activeScene = -2);
 	
-	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions * drawOptions = nullptr);
+	void drawScene(
+		const Scene & scene,
+		const MaterialShaders & materialShaders,
+		const bool isOpaquePass,
+		const DrawOptions * drawOptions = nullptr);
 }
 
 // -- draw using buffer cache --
@@ -100,9 +112,18 @@ namespace gltf
 		void free();
 	};
 	
-	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions);
-
-	void drawNodeTraverse(const Scene & scene, const BufferCache * bufferCache, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions);
+	void drawMesh(
+		const Scene & scene,
+		const BufferCache * bufferCache,
+		const Mesh & mesh,
+		const MaterialShaders & materialShaders,
+		const bool isOpaquePass,
+		const DrawOptions & drawOptions);
 	
-	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions * drawOptions = nullptr);
+	void drawScene(
+		const Scene & scene,
+		const BufferCache * bufferCache,
+		const MaterialShaders & materialShaders,
+		const bool isOpaquePass,
+		const DrawOptions * drawOptions = nullptr);
 }

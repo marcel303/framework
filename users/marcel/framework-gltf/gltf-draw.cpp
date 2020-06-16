@@ -400,12 +400,23 @@ namespace gltf
 		popCullMode();
 	}
 
-	void drawMesh(const Scene & scene, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions)
+	void drawMesh(
+		const Scene & scene,
+		const Mesh & mesh,
+		const MaterialShaders & materialShaders,
+		const bool isOpaquePass,
+		const DrawOptions & drawOptions)
 	{
 		drawMesh(scene, nullptr, mesh, materialShaders, isOpaquePass, drawOptions);
 	}
 	
-	void drawMesh(const Scene & scene, const BufferCache * bufferCache, const Mesh & mesh, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions)
+	void drawMesh(
+		const Scene & scene,
+		const BufferCache * bufferCache,
+		const Mesh & mesh,
+		const MaterialShaders & materialShaders,
+		const bool isOpaquePass,
+		const DrawOptions & drawOptions)
 	{
 		for (auto & primitive : mesh.primitives)
 		{
@@ -413,12 +424,13 @@ namespace gltf
 		}
 	}
 	
-	void drawNodeTraverse(const Scene & scene, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions)
-	{
-		drawNodeTraverse(scene, nullptr, node, materialShaders, isOpaquePass, drawOptions);
-	}
-	
-	void drawNodeTraverse(const Scene & scene, const BufferCache * bufferCache, const Node & node, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions & drawOptions)
+	static void drawNodeTraverse(
+		const Scene & scene,
+		const BufferCache * bufferCache,
+		const Node & node,
+		const MaterialShaders & materialShaders,
+		const bool isOpaquePass,
+		const DrawOptions & drawOptions)
 	{
 		gxPushMatrix();
 		gxTranslatef(node.translation[0], node.translation[1], node.translation[2]);
@@ -437,7 +449,13 @@ namespace gltf
 			
 			auto & child = scene.nodes[child_index];
 			
-			drawNodeTraverse(scene, bufferCache, child, materialShaders, isOpaquePass, drawOptions);
+			drawNodeTraverse(
+				scene,
+				bufferCache,
+				child,
+				materialShaders,
+				isOpaquePass,
+				drawOptions);
 		}
 		
 		if (node.mesh >= 0 && node.mesh < scene.meshes.size())
@@ -450,7 +468,9 @@ namespace gltf
 		gxPopMatrix();
 	}
 
-	void drawNodeMinMaxTraverse(const Scene & scene, const Node & node)
+	static void drawNodeMinMaxTraverse(
+		const Scene & scene,
+		const Node & node)
 	{
 		gxPushMatrix();
 		gxTranslatef(node.translation[0], node.translation[1], node.translation[2]);
@@ -523,8 +543,45 @@ namespace gltf
 		
 		gxPopMatrix();
 	}
+	
+	void drawSceneMinMax(
+		const Scene & scene,
+		const int in_activeScene)
+	{
+		const int activeScene =
+			in_activeScene == -2
+			? scene.activeScene
+			: in_activeScene;
+		
+		gxMatrixMode(GX_MODELVIEW);
+		gxPushMatrix();
+		gxScalef(1, 1, -1);
+		
+		for (size_t sceneRootIndex = 0; sceneRootIndex < scene.sceneRoots.size(); ++sceneRootIndex)
+		{
+			if (activeScene != -1 && activeScene != sceneRootIndex)
+				continue;
+			
+			auto & sceneRoot = scene.sceneRoots[sceneRootIndex];
+			
+			for (auto & node_index : sceneRoot.nodes)
+			{
+				if (node_index >= 0 && node_index < scene.nodes.size())
+				{
+					auto & node = scene.nodes[node_index];
+					
+					drawNodeMinMaxTraverse(scene, node);
+				}
+			}
+		}
+		
+		gxPopMatrix();
+	}
 
-	void calculateNodeMinMaxTraverse(const Scene & scene, const Node & node, BoundingBox & boundingBox)
+	static void calculateNodeMinMaxTraverse(
+		const Scene & scene,
+		const Node & node,
+		BoundingBox & boundingBox)
 	{
 		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
@@ -634,7 +691,10 @@ namespace gltf
 		gxPopMatrix();
 	}
 	
-	void calculateSceneMinMax(const Scene & scene, BoundingBox & boundingBox, const int in_activeScene)
+	void calculateSceneMinMax(
+		const Scene & scene,
+		BoundingBox & boundingBox,
+		const int in_activeScene)
 	{
 		const int activeScene =
 			in_activeScene == -2
@@ -644,6 +704,7 @@ namespace gltf
 		gxMatrixMode(GX_MODELVIEW);
 		gxPushMatrix();
 		gxLoadIdentity();
+		gxScalef(1, 1, -1);
 		
 		for (size_t sceneRootIndex = 0; sceneRootIndex < scene.sceneRoots.size(); ++sceneRootIndex)
 		{
@@ -706,13 +767,25 @@ namespace gltf
 	}
 #endif
 	
-	void drawScene(const Scene & scene, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions * drawOptions)
+	void drawScene(
+		const Scene & scene,
+		const MaterialShaders & materialShaders,
+		const bool isOpaquePass,
+		const DrawOptions * drawOptions)
 	{
-		drawScene(scene, nullptr, materialShaders, isOpaquePass, drawOptions);
+		drawScene(
+			scene,
+			nullptr,
+			materialShaders,
+			isOpaquePass,
+			drawOptions);
 	}
 	
 #if ENABLE_SORT_PRIMITIVES_BY_VIEW_DISTANCE
-	static void computeNodeToViewTransformsTraverse(const Scene & scene, const int node_index, Mat4x4 * __restrict nodeToViewTransforms)
+	static void computeNodeToViewTransformsTraverse(
+		const Scene & scene,
+		const int node_index,
+		Mat4x4 * __restrict nodeToViewTransforms)
 	{
 		auto & node = scene.nodes[node_index];
 		
@@ -748,7 +821,12 @@ namespace gltf
 	}
 #endif
 	
-	void drawScene(const Scene & scene, const BufferCache * bufferCache, const MaterialShaders & materialShaders, const bool isOpaquePass, const DrawOptions * in_drawOptions)
+	void drawScene(
+		const Scene & scene,
+		const BufferCache * bufferCache,
+		const MaterialShaders & materialShaders,
+		const bool isOpaquePass,
+		const DrawOptions * in_drawOptions)
 	{
 		const DrawOptions drawOptions =
 			in_drawOptions
