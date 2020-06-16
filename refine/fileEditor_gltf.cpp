@@ -207,6 +207,8 @@ void FileEditor_Gltf::tick(const int sx, const int sy, const float dt, const boo
 					{
 						setColor(colorWhite);
 						lineCube(mid, extents);
+						
+						gltf::drawSceneMinMax(scene);
 					}
 					popLineSmooth();
 					popBlend();
