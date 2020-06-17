@@ -25,8 +25,11 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 */
 
-#include "Log.h"
 #include "paobject.h"
+
+#if !defined(STUB_PAOBJECT)
+
+#include "Log.h"
 #include <string.h>
 
 #if LINUX
@@ -329,3 +332,35 @@ double PortAudioObject::getCpuUsage() const
 {
 	return Pa_GetStreamCpuLoad(stream);
 }
+
+#else
+
+bool PortAudioObject::findSupportedDevices(const int numInputChannels, const int numOutputChannels, int & inputDeviceIndex, int & outputDeviceIndex) const
+{
+	inputDeviceIndex = 0;
+	outputDeviceIndex = 0;
+	
+	return true;
+}
+
+bool PortAudioObject::isSupported(const int numInputChannels, const int numOutputChannels) const
+{
+	return true;
+}
+
+bool PortAudioObject::init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * audioSource, const int inputDeviceIndex, const int outputDeviceIndex, const bool useFloatFormat)
+{
+	return true;
+}
+
+bool PortAudioObject::shut()
+{
+	return true;
+}
+
+double PortAudioObject::getCpuUsage() const
+{
+	return 0.0;
+}
+
+#endif

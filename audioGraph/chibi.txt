@@ -63,6 +63,9 @@ library audiograph-nodes
 	scan_files cpp path audioNodes conglomerate conglomerates/audioNodes_all.h
 	scan_files h   path audioNodes
 
+#todo : remove portaudio dependency
+	with_platform android compile_definition STUB_PAOBJECT * expose
+
 	link_translation_unit_using_function_call linkAudioNodes
 
 library audiograph-nodes-4dsound-1.6

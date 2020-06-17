@@ -57,18 +57,18 @@ struct PortAudioHandler
 
 struct PortAudioObject
 {
-	bool paInitialized;
-	PaStream * stream;
 	PortAudioHandler * handler;
 	int numOutputChannels;
 	int numInputChannels;
 	
 	PortAudioObject()
-		: paInitialized(false)
-		, stream(nullptr)
-		, handler(nullptr)
+		: handler(nullptr)
 		, numOutputChannels(0)
 		, numInputChannels(0)
+	#if !defined(STUB_PAOBJECT)
+		, paInitialized(false)
+		, stream(nullptr)
+	#endif
 	{
 	}
 	
@@ -81,8 +81,15 @@ struct PortAudioObject
 	bool isSupported(const int numInputChannels, const int numOutputChannels) const;
 	
 	bool init(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * audioSource, const int inputDeviceIndex = -1, const int outputDeviceIndex = -1, const bool useFloatFormat = true);
-	bool initImpl(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * audioSource, const int inputDeviceIndex, const int outputDeviceIndex, const bool useFloatFormat);
 	bool shut();
 	
 	double getCpuUsage() const;
+
+private:
+#if !defined(STUB_PAOBJECT)
+	bool paInitialized;
+	PaStream * stream;
+
+	bool initImpl(const int sampleRate, const int numOutputChannels, const int numInputChannels, const int bufferSize, PortAudioHandler * audioSource, const int inputDeviceIndex, const int outputDeviceIndex, const bool useFloatFormat);
+#endif
 };
