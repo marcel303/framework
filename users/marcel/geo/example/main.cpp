@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
 	bone1->Finalize();
 	
 	//bone1_1->m_position = Vector(-1.0f, 0.0f, 0.0f);
-	bone1_1->currentRotationLocal.MakeRotationZ(M_PI / 2.0f);
+	bone1_1->currentRotationLocal.MakeRotationZ(float(M_PI) / 2.0f);
 	
 	for (std::list<Geo::Bone*>::iterator i = bone1->children.begin(); i != bone1->children.end(); ++i)
 	{

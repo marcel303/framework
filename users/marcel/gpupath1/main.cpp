@@ -20,8 +20,8 @@ int main(int argc, char * argv[])
 		{
 			Shader shader("gpupath");
 			setShader(shader);
-			shader.setImmediate("color1", 0.1, 0.3, 0.9, 1.0);
-			shader.setImmediate("color2", 0.8, 1.0, 0.1, 1.0);
+			shader.setImmediate("color1", 0.1f, 0.3f, 0.9f, 1.0f);
+			shader.setImmediate("color2", 0.8f, 1.0f, 0.1f, 1.0f);
 			shader.setImmediate("halfThickness", 5.f / 2.f);
 			shader.setImmediate("hardness", 1.f);
 			
