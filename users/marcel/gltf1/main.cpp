@@ -304,18 +304,8 @@ int main(int argc, char * argv[])
 						{
 							if (scene.activeScene != -1 && scene.activeScene != sceneRootIndex)
 								continue;
-							
-							auto & sceneRoot = scene.sceneRoots[sceneRootIndex];
-							
-							for (auto & node_index : sceneRoot.nodes)
-							{
-								if (node_index >= 0 && node_index < scene.nodes.size())
-								{
-									auto & node = scene.nodes[node_index];
-									
-									drawNodeMinMaxTraverse(scene, node);
-								}
-							}
+
+							gltf::drawSceneMinMax(scene, sceneRootIndex);
 						}
 					}
 					popDepthWrite();
