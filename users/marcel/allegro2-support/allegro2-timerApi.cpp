@@ -39,7 +39,7 @@ static int TimerThreadProc(void * obj)
 	AllegroTimerReg * r = (AllegroTimerReg*)obj;
 	
 #ifdef WIN32
-	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGH);
+	SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 #else
     const pthread_t thread = pthread_self();
 #ifdef MACOS
