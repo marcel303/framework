@@ -290,7 +290,7 @@ namespace rOne
 		Assert(hasAnyMaskingTextures == false);
 		
 		for (size_t i = 0; i < lights.size() && i < colorTargets.size(); ++i)
-			hasAnyMaskingTextures |= lights[i].maskingTextureId;
+			hasAnyMaskingTextures |= lights[i].maskingTextureId != 0;
 		
 		// draw shadow maps
 		
