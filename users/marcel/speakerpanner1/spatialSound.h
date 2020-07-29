@@ -2,7 +2,7 @@
 
 #include "panner.h"
 
-class AudioSource;
+struct AudioSource;
 
 struct SpatialSound
 {
