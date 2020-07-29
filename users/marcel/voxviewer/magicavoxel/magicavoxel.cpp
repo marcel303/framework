@@ -467,6 +467,7 @@ bool readMagicaWorld(const char * filename, MagicaWorld & world)
 	}
 	catch (std::exception & e)
 	{
+		(void)e;
 		return false;
 	}
 }
