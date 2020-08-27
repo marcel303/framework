@@ -395,11 +395,11 @@ bool SoundPlayer_AudioOutput::init(int numSources)
 	m_musicStream = new AudioStream_Vorbis();
 	m_musicVolume = 1.f;
 	
-	// initialize portaudio
+	// initialize audio output
 	
-	if (!initAudioOutput(2, 48000, 192)) // fixme
+	if (!initAudioOutput(2, 44100, 256)) // fixme
 	{
-		logError("failed to initialize portaudio output");
+		logError("failed to initialize audio output");
 		return false;
 	}
 	
@@ -408,7 +408,7 @@ bool SoundPlayer_AudioOutput::init(int numSources)
 
 bool SoundPlayer_AudioOutput::shutdown()
 {
-	// shut down portaudio
+	// shut down audio output
 	
 	shutAudioOutput();
 	
@@ -546,6 +546,8 @@ void SoundPlayer_AudioOutput::setMusicVolume(const float volume)
 	
 	m_musicVolume = volume;
 }
+
+#undef RESAMPLE_FIXEDBITS
 
 #endif
 
@@ -1509,5 +1511,7 @@ void SoundPlayer_PortAudio::setMusicVolume(const float volume)
 	
 	m_musicVolume = volume;
 }
+
+#undef RESAMPLE_FIXEDBITS
 
 #endif
