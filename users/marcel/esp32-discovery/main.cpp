@@ -120,7 +120,7 @@ struct Test_TcpToI2S
 			
 			logError("connected to remote endpoint!");
 			
-			soundData = loadSound("loop01.ogg");
+			soundData = loadSound("loop01-short.ogg");
 			
 			while (wantsToStop.load() == false)
 			{
@@ -274,7 +274,7 @@ struct Test_TcpToI2SQuad
 			
 			logError("connected to remote endpoint!");
 			
-			soundData = loadSound("loop01.ogg");
+			soundData = loadSound("loop01-short.ogg");
 			
 			logDebug("frame size: %d", I2S_4CH_FRAME_COUNT * 4 * sizeof(int16_t));
 			
@@ -432,7 +432,7 @@ struct Test_TcpToI2SMono8
 			
 			logError("connected to remote endpoint!");
 			
-			soundData = loadSound("loop01.ogg");
+			soundData = loadSound("loop01-short.ogg");
 			
 			logDebug("frame size: %d", I2S_1CH_8_FRAME_COUNT * sizeof(int8_t));
 			
@@ -596,7 +596,7 @@ struct NodeState
 			{
 				if (array[i].IsInt())
 					dst[i] = array[i].GetInt();
-				else if (array[i].IsFloat())
+				else if (array[i].IsNumber())
 					dst[i] = array[i].GetFloat();
 				else
 					return false;
@@ -693,18 +693,18 @@ struct NodeState
 						auto & defaultValue_json = parameter_json["defaultValue"];
 						auto & value_json = parameter_json["value"];
 						
-						if (defaultValue_json.IsFloat() == false)
+						if (defaultValue_json.IsNumber() == false)
 							logDebug("parameter default value not set");
-						if (value_json.IsFloat() == false)
+						if (value_json.IsNumber() == false)
 							logDebug("parameter value not set");
 						
 						const float defaultValue =
-							defaultValue_json.IsFloat()
+							defaultValue_json.IsNumber()
 							? defaultValue_json.GetFloat()
 							: false;
 						
 						const float value =
-							value_json.IsFloat()
+							value_json.IsNumber()
 							? value_json.GetFloat()
 							: defaultValue;
 						
@@ -720,7 +720,7 @@ struct NodeState
 							auto & min_json = parameter_json["min"];
 							auto & max_json = parameter_json["max"];
 						
-							if (min_json.IsFloat() == false || max_json.IsFloat() == false)
+							if (min_json.IsNumber() == false || max_json.IsNumber() == false)
 								logDebug("parameter range not set");
 							else
 								param->setLimits(min_json.GetFloat(), max_json.GetFloat());
@@ -782,7 +782,53 @@ struct NodeState
 					}
 					else if (!strcmp(type, "enum"))
 					{
-						paramMgr.addEnum(name, 0, { });
+						auto & defaultValue_json = parameter_json["defaultValue"];
+						auto & value_json = parameter_json["value"];
+						auto & elements_json_element = parameter_json["elements"];
+						
+						if (defaultValue_json.IsInt() == false)
+							logDebug("parameter default value not set");
+						if (value_json.IsInt() == false)
+							logDebug("parameter value not set");
+						if (elements_json_element.IsArray() == false)
+							logDebug("parameter enumeration elements not set");
+						
+						std::vector<ParameterEnum::Elem> elems;
+						
+						if (elements_json_element.IsArray())
+						{
+							auto elements_json = elements_json_element.GetArray();
+							
+							for (auto element_json_element = elements_json.begin(); element_json_element != elements_json.end(); ++element_json_element)
+							{
+								auto & element_json = *element_json_element;
+								
+								auto & key_json = element_json["key"];
+								auto & value_json = element_json["value"];
+								
+								if (!key_json.IsString() || !value_json.IsInt())
+									logDebug("parameter enumeration element is not of a valid key/value type");
+								else
+								{
+									elems.emplace_back(
+										ParameterEnum::Elem
+											{
+												key_json.GetString(),
+												value_json.GetInt()
+											});
+								}
+							}
+						}
+						
+						const int defaultValue =
+							defaultValue_json.IsInt()
+							? defaultValue_json.GetInt()
+							: 0;
+						
+						auto * param = paramMgr.addEnum(name, defaultValue, elems);
+						
+						if (value_json.IsInt())
+							param->set(value_json.GetInt());
 					}
 					else
 					{
