@@ -803,19 +803,30 @@ struct NodeState
 							{
 								auto & element_json = *element_json_element;
 								
-								auto & key_json = element_json["key"];
-								auto & value_json = element_json["value"];
+								auto key_json_member = element_json.FindMember("key");
+								auto value_json_member = element_json.FindMember("value");
 								
-								if (!key_json.IsString() || !value_json.IsInt())
-									logDebug("parameter enumeration element is not of a valid key/value type");
+								if (key_json_member == element_json.MemberEnd() ||
+									value_json_member == element_json.MemberEnd())
+								{
+									logDebug("parameter enumeration element is missing key and/or value member");
+								}
 								else
 								{
-									elems.emplace_back(
-										ParameterEnum::Elem
-											{
-												key_json.GetString(),
-												value_json.GetInt()
-											});
+									auto & key_json = key_json_member->value;
+									auto & value_json = value_json_member->value;
+									
+									if (!key_json.IsString() || !value_json.IsInt())
+										logDebug("parameter enumeration element is not of a valid key/value type");
+									else
+									{
+										elems.emplace_back(
+											ParameterEnum::Elem
+												{
+													key_json.GetString(),
+													value_json.GetInt()
+												});
+									}
 								}
 							}
 						}
@@ -1028,9 +1039,9 @@ int main(int argc, char * argv[])
 			{
 				ArtnetPacket packet;
 			
-				auto packFloatToDmx16 = [](const float value, const float gamma, uint8_t & hi, uint8_t & lo)
+				auto packFloatToDmx16 = [](const double value, const double gamma, uint8_t & hi, uint8_t & lo)
 				{
-					const uint16_t value16 = uint16_t(powf(value, gamma) * (1 << 16));
+					const uint16_t value16 = uint16_t(pow(value, gamma) * ((1 << 16) - 1));
 					hi = value16 >> 8;
 					lo = uint8_t(value16);
 				};
@@ -1043,9 +1054,9 @@ int main(int argc, char * argv[])
 			
 				for (int i = 0; i < 3; ++i)
 				{
-					const float brightness = mouse.x / 800.f;
-					const float value = (sinf(framework.time * (i + 1) / 10.f) + 1.f) / 2.f * brightness;
-					packFloatToDmx16(value, 1.f, values[i * 2 + 0], values[i * 2 + 1]);
+					const double brightness = mouse.x / 800.0;
+					const double value = (sin(framework.time * (i * 8 + 1) / 4.0) + 1.0) / 2.0 * brightness;
+					packFloatToDmx16(value, 1.0, values[i * 2 + 0], values[i * 2 + 1]);
 				}
 				
 				const IpEndpointName remoteEndpoint(record.endpointName.address, ARTNET_TO_LED_PORT);
