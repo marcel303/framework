@@ -345,7 +345,6 @@ AUDIO_NODE_TYPE(AudioNodeWavefield1D)
 		return new ResourceEditor_Wavefield1D();
 	};
 	
-	in("size", "int", "16");
 	in("gain", "audioValue", "1");
 	in("pos.dampen", "audioValue");
 	in("vel.dampen", "audioValue");

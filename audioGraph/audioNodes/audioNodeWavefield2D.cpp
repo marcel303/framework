@@ -319,7 +319,6 @@ AUDIO_NODE_TYPE(AudioNodeWavefield2D)
 {
 	typeName = "wavefield.2d";
 	
-	in("size", "int", "16");
 	in("gain", "audioValue", "1");
 	in("pos.dampen", "audioValue");
 	in("vel.dampen", "audioValue");
