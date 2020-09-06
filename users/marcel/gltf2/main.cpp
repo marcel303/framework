@@ -57,8 +57,8 @@ int main(int argc, char * argv[])
 	camera.position.Set(0, 2, -2);
 	
 	gltf::Scene scene;
-	gltf::loadScene("smooth-cube.gltf", scene);
-	//gltf::loadScene("space-ship.gltf", scene);
+	//gltf::loadScene("smooth-cube.gltf", scene);
+	gltf::loadScene("space-ship.gltf", scene);
 	
 	gltf::BufferCache bufferCache;
 	bufferCache.init(scene);
@@ -75,7 +75,11 @@ int main(int argc, char * argv[])
 	renderOptions.bloom.strength = .2f;
 	renderOptions.depthSilhouette.enabled = true;
 	renderOptions.depthSilhouette.color[3] = .01f;
-	//renderOptions.colorGrading.enabled = true;
+	renderOptions.colorGrading.enabled = true;
+	renderOptions.colorGrading.lookupTexture = renderOptions.colorGrading.lookupTextureFromSrgbColorTransform([](Color & color)
+		{
+			color = color.hueShift(.3f).desaturate(.5f);
+		});
 	//renderOptions.chromaticAberration.enabled = true;
 	renderOptions.motionBlur.enabled = true;
 	renderOptions.lightScatter.enabled = true;
@@ -141,10 +145,11 @@ int main(int argc, char * argv[])
 				drawOptions.enableMaterialSetup = false;
 				drawOptions.enableShaderSetting = false;
 				drawOptions.activeScene = -1;
+				drawOptions.defaultMaterial.doubleSided = true;
 				
 				params.setMetallicRoughness(shader, 1.f, (1.f + sinf(framework.time * 2.f)) / 2.f);
 				params.setEmissive(shader, Color(emissive[0], emissive[1], emissive[2]));
-				gltf::drawScene(scene, &bufferCache, materialShaders, true, &drawOptions);
+				//gltf::drawScene(scene, &bufferCache, materialShaders, true, &drawOptions);
 				
 				for (int x = -10; x <= +10; ++x)
 				{
@@ -168,7 +173,7 @@ int main(int argc, char * argv[])
 							//fillCylinder(Vec3(), .12f, .4f, 20, 0.f, true);
 							
 							gxScalef(.4f, .4f, .4f);
-							//gxScalef(.1f, .1f, .1f);
+							gxScalef(.3f, .3f, .3f);
 							gltf::drawScene(scene, &bufferCache, materialShaders, true, &drawOptions);
 						}
 						gxPopMatrix();
@@ -223,7 +228,7 @@ int main(int argc, char * argv[])
 				.RotateY(sinf(framework.time / 4.34f + i) * .5f)
 				.RotateX(sinf(framework.time / 3.23f + i) * .5f);
 			
-			spotLight.spotAngle = float(M_PI) * lerp<float>(.02f, .1f, (cosf(framework.time * 1.34f) + 1.f) / 2.f);
+			spotLight.spotAngle = float(M_PI) * lerp<float>(.02f, .3f, (cosf(framework.time * 3.34f) + 1.f) / 2.f);
 			spotLight.intensity = (sinf(framework.time * 6.f + i) + 1.f) / 2.f * 100.f * powf(1.f / tanf(spotLight.spotAngle/2.f), 2.f);
 			spotLight.color.Set(1.f, .8f, .6f);
 			
@@ -250,7 +255,7 @@ int main(int argc, char * argv[])
 				shadowMapDrawer.getShadowMapId(i));
 		}
 		
-		helper.addDirectionalLight(Vec3(4, -4, 4).CalcNormalized(), Vec3(1.f, .8f, .6f), .1f);
+		//helper.addDirectionalLight(Vec3(4, -4, 4).CalcNormalized(), Vec3(1.f, .8f, .6f), .1f);
 	#endif
 	
 	#if 0
@@ -272,7 +277,7 @@ int main(int argc, char * argv[])
 			gxSetMatrixf(GX_MODELVIEW, worldToView.m_v);
 			
 			helper.prepareShaderData(16, 32.f, true, worldToView);
-			
+		
 			//
 		
 		#if 1
