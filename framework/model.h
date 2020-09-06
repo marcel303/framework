@@ -241,6 +241,7 @@ public:
 	AnimModel::AnimSet * animSet;
 	
 	Mat4x4 meshToObject;
+	int meshToObjectParity;
 	
 	std::string rootNode;
 	

@@ -905,6 +905,9 @@ void Model::drawEx(Vec3Arg position, Vec3Arg axis, const float angle, const floa
 
 void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 {
+	if (m_model->meshToObjectParity < 0)
+		pushCullFlip();
+	
 	const int numBones = calculateBoneMatrices(matrix, nullptr, nullptr, nullptr, 0);
 	
 	Mat4x4 * localMatrices = (Mat4x4*)ALIGNED_ALLOCA(sizeof(Mat4x4) * numBones, 16);
@@ -1169,6 +1172,9 @@ void Model::drawEx(const Mat4x4 & matrix, const int drawFlags) const
 		
 		popDepthTest();
 	}
+	
+	if (m_model->meshToObjectParity < 0)
+		popCullFlip();
 }
 
 void Model::calculateTransform(Mat4x4 & matrix) const
@@ -1589,6 +1595,8 @@ ModelCacheElem::ModelCacheElem()
 	meshSet = 0;
 	boneSet = 0;
 	animSet = 0;
+	
+	meshToObjectParity = 0;
 }
 
 void ModelCacheElem::free()
@@ -1603,6 +1611,8 @@ void ModelCacheElem::free()
 	animSet = 0;
 	
 	meshToObject.MakeIdentity();
+	
+	meshToObjectParity = 0;
 	
 	rootNode.clear();
 }
@@ -2042,6 +2052,7 @@ void ModelCacheElem::load(const char * filename)
 	meshToObject((up      < 0 ? -up      : +up     ) - 1, 1) = up      < 0 ? -scale : +scale;
 	meshToObject((forward < 0 ? -forward : +forward) - 1, 2) = forward < 0 ? -scale : +scale;
 	meshToObject(3, 3) = 1.f;
+	meshToObjectParity = right * up * forward;
 	
 	//dumpMatrix(meshToObject);
 }
