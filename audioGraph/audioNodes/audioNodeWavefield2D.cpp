@@ -408,9 +408,26 @@ void AudioNodeWavefield2D::randomize()
 	}
 }
 
+void AudioNodeWavefield2D::syncWavefieldResource()
+{
+	wavefieldData->lock();
+	{
+		wavefield->init(wavefieldData->numElems);
+		
+		for (int x = 0; x < wavefield->numElems; ++x)
+			for (int y = 0; y < wavefield->numElems; ++y)
+				wavefield->f[x][y] = wavefieldData->f[x][y];
+		
+		currentDataVersion = wavefieldData->version;
+	}
+	wavefieldData->unlock();
+}
+
 void AudioNodeWavefield2D::init(const GraphNode & node)
 {
 	createAudioNodeResource(node, "wavefield.2d", "editorData", wavefieldData);
+	
+	syncWavefieldResource();
 }
 
 void AudioNodeWavefield2D::tick(const float _dt)
@@ -441,17 +458,7 @@ void AudioNodeWavefield2D::tick(const float _dt)
 	
 	if (wavefieldData->version != currentDataVersion)
 	{
-		wavefieldData->lock();
-		{
-			wavefield->init(wavefieldData->numElems);
-			
-			for (int x = 0; x < wavefield->numElems; ++x)
-				for (int y = 0; y < wavefield->numElems; ++y)
-					wavefield->f[x][y] = wavefieldData->f[x][y];
-			
-			currentDataVersion = wavefieldData->version;
-		}
-		wavefieldData->unlock();
+		syncWavefieldResource();
 	}
 	
 	//

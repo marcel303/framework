@@ -71,6 +71,7 @@ struct AudioNodeWavefield1D : AudioNodeBase
 	virtual ~AudioNodeWavefield1D() override;
 	
 	void randomize();
+	void syncWavefieldResource();
 	
 	virtual void init(const GraphNode & node) override;
 	

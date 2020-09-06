@@ -48,17 +48,10 @@ struct GraphNode;
 struct AudioResourceBase
 {
 	std::atomic<int> version;
-	std::atomic<int> mutexCreationLock;
 
 	AudioMutex * mutex;
 	
-	AudioResourceBase()
-		: version(0)
-		, mutexCreationLock(0)
-		, mutex(nullptr)
-	{
-	}
-
+	AudioResourceBase();
 	virtual ~AudioResourceBase();
 	
 	void lock();

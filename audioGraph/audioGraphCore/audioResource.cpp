@@ -84,6 +84,14 @@ struct AudioResourceElem
 
 //
 
+AudioResourceBase::AudioResourceBase()
+	: version(0)
+	, mutex(nullptr)
+{
+	mutex = new AudioMutex();
+	mutex->init();
+}
+
 AudioResourceBase::~AudioResourceBase()
 {
 	if (mutex != nullptr)
@@ -97,22 +105,6 @@ AudioResourceBase::~AudioResourceBase()
 
 void AudioResourceBase::lock()
 {
-	if (mutex == nullptr)
-	{
-		for (;;)
-		{
-			int expected = 0;
-			
-			if (mutexCreationLock.compare_exchange_strong(expected, 1))
-				break;
-		}
-		
-		mutex = new AudioMutex();
-		mutex->init();
-		
-		mutexCreationLock.exchange(0);
-	}
-	
 	mutex->lock();
 }
 
