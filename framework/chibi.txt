@@ -137,9 +137,9 @@ library framework
 
 # todo : disable these Linux options
 # For testing with Travis-CI, these are enabled for now. Once everything compiles, the follow up step is to make things compile on Linux with below compile definitions removed
-	with_platform linux compile_definition USE_LEGACY_OPENGL    1 expose
-	with_platform linux compile_definition ENABLE_HQ_PRIMITIVES 0 expose
-	with_platform linux compile_definition ENABLE_MSDF_FONTS    0 expose
+	#with_platform linux compile_definition USE_LEGACY_OPENGL    1 expose
+	#with_platform linux compile_definition ENABLE_HQ_PRIMITIVES 0 expose
+	#with_platform linux compile_definition ENABLE_MSDF_FONTS    0 expose
 
 # Macos header file includes and libraries
 	with_platform macos depend_library FreeImage
