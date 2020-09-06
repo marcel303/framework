@@ -137,6 +137,7 @@ int main(int argc, char * argv[])
 	setupPaths(CHIBI_RESOURCE_PATHS);
 	
 	framework.enableDepthBuffer = true;
+	framework.allowHighDpi = false;
 	
 	if (!framework.init(800, 600))
 		return -1;
@@ -176,6 +177,15 @@ int main(int argc, char * argv[])
 	RenderOptions renderOptions;
 	//renderOptions.renderMode = kRenderMode_Flat;
 	renderOptions.renderMode = kRenderMode_DeferredShaded;
+	renderOptions.linearColorSpace = true;
+	//renderOptions.deferredLighting.enableStencilVolumes = false;
+	//renderOptions.bloom.enabled = true;
+	//renderOptions.chromaticAberration.enabled = true;
+	//renderOptions.fxaa.enabled = true;
+	renderOptions.colorGrading.enabled = true;
+	
+	mouse.showCursor(false);
+	mouse.setRelative(true);
 	
 	for (;;)
 	{
@@ -251,8 +261,7 @@ int main(int argc, char * argv[])
 					
 						gxPushMatrix();
 						{
-							//setColor(colorGreen);
-							gxRotatef(90, 1, 0, 0);
+							gxRotatef(-90, 1, 0, 0);
 							fillCircle(0, 0, 6.1f, 100);
 						}
 						gxPopMatrix();
@@ -264,8 +273,31 @@ int main(int argc, char * argv[])
 				
 				auto drawLights = [&]()
 				{
-					g_lightDrawer.drawDeferredDirectionalLight(Vec3(0, -1, 0), Vec3(1, 1, 1), Vec3(1, 0, 0), .1f);
-					g_lightDrawer.drawDeferredSpotLight(Vec3(0, 5, 0), Vec3(0, -1, 0), M_PI/2.0, 0.f, 20.f, Vec3(1, 0, 0), 1.f);
+					g_lightDrawer.drawDeferredDirectionalLight(Vec3(0, -1, 0), Vec3(1, 1, 1), Vec3(1, 0, 0), .01f);
+
+					g_lightDrawer.drawDeferredSpotLight(
+						Vec3(0, 5, 0),
+						Vec3(
+							sinf(framework.time / 1.23f) * .4f,
+							-1,
+							sinf(framework.time / 2.34f) * .4f).CalcNormalized(),
+						M_PI/8.0,
+						0.01f,
+						20.f,
+						Vec3(1, .5f, 0),
+						10.f);
+					
+					g_lightDrawer.drawDeferredSpotLight(
+						Vec3(0, 5, 0),
+						Vec3(
+							sinf(framework.time / 2.34f) * .3f,
+							-1,
+							sinf(framework.time / 3.45f) * .3f).CalcNormalized(),
+						M_PI/8.0,
+						0.01f,
+						20.f,
+						Vec3(0, .5f, 1),
+						10.f);
 				};
 				
 				RenderFunctions renderFunctions;
