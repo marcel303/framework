@@ -32,7 +32,6 @@
 #include "audioVoiceManager.h"
 #include "Debugging.h"
 #include "pcmDataCache.h"
-#include <SDL2/SDL.h>
 
 #if defined(MACOS) || defined(LINUX)
 	#include <unistd.h>
@@ -109,137 +108,132 @@ int main(int argc, char * argv[])
 
 	filename = argv[1];
 
-	if (SDL_Init(0) >= 0) // todo : remove SDL2 dependency
+	// load resources
+	
+	fillPcmDataCache("birds", true, false, true);
+	fillPcmDataCache("testsounds", true, true, true);
+	fillPcmDataCache("voice-fragments", false, false, true);
+	
+	// initialize audio related systems
+	
+	AudioMutex mutex;
+	mutex.init();
+
+	AudioVoiceManagerBasic voiceMgr;
+	voiceMgr.init(&mutex, CHANNEL_COUNT);
+	voiceMgr.outputStereo = true;
+
+	AudioGraphManager_Basic audioGraphMgr(true);
+	audioGraphMgr.init(&mutex, &voiceMgr);
+
+	AudioUpdateHandler audioUpdateHandler;
+	audioUpdateHandler.init(&mutex, &voiceMgr, &audioGraphMgr);
+
+	PortAudioObject pa;
+	
+	if (!pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler))
 	{
-		// load resources
+		printf("failed to initialize audio output\n");
+	}
+	else
+	{
+		// create an audio graph instance
 		
-		fillPcmDataCache("birds", true, false, true);
-		fillPcmDataCache("testsounds", true, true, true);
-		fillPcmDataCache("voice-fragments", false, false, true);
+		AudioGraphInstance * instance = audioGraphMgr.createInstance(filename);
 		
-		// initialize audio related systems
-		
-		AudioMutex mutex;
-		mutex.init();
-
-		AudioVoiceManagerBasic voiceMgr;
-		voiceMgr.init(&mutex, CHANNEL_COUNT);
-		voiceMgr.outputStereo = true;
-
-		AudioGraphManager_Basic audioGraphMgr(true);
-		audioGraphMgr.init(&mutex, &voiceMgr);
-
-		AudioUpdateHandler audioUpdateHandler;
-		audioUpdateHandler.init(&mutex, &voiceMgr, &audioGraphMgr);
-
-		PortAudioObject pa;
-		
-		if (!pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler))
+		if (instance == nullptr)
 		{
-			printf("failed to initialize audio output\n");
+			printf("failed to open %s\n", filename);
 		}
 		else
 		{
-			// create an audio graph instance
+			int selectedIndex = 0;
 			
-			AudioGraphInstance * instance = audioGraphMgr.createInstance(filename);
+			int c = 0;
 			
-			if (instance == nullptr)
+			bool stop = false;
+			
+			do
 			{
-				printf("failed to open %s\n", filename);
-			}
-			else
-			{
-				int selectedIndex = 0;
-				
-				int c = 0;
-				
-				bool stop = false;
-				
-				do
+				mutex.lock();
 				{
-					mutex.lock();
+					const int count =
+						audioGraphMgr.context->controlValues.size() +
+						instance->audioGraph->stateDescriptor.controlValues.size() +
+						instance->audioGraph->stateDescriptor.events.size();
+					
+					if (count == 0)
+						selectedIndex = 0;
+					else
 					{
-						const int count =
-							audioGraphMgr.context->controlValues.size() +
-							instance->audioGraph->stateDescriptor.controlValues.size() +
-							instance->audioGraph->stateDescriptor.events.size();
-						
-						if (count == 0)
+						if (selectedIndex < 0)
+							selectedIndex = count - 1;
+						else if (selectedIndex >= count)
 							selectedIndex = 0;
-						else
-						{
-							if (selectedIndex < 0)
-								selectedIndex = count - 1;
-							else if (selectedIndex >= count)
-								selectedIndex = 0;
-						}
-						
-						int index = 0;
-						
-						for (auto & controlValue : audioGraphMgr.context->controlValues)
-						{
-							doControlValue(controlValue, index, selectedIndex, 'G', c);
-							
-							index++;
-						}
-						
-						for (auto & controlValue : instance->audioGraph->stateDescriptor.controlValues)
-						{
-							doControlValue(controlValue, index, selectedIndex, 'L', c);
-							
-							index++;
-						}
-						
-						for (auto & event : instance->audioGraph->stateDescriptor.events)
-						{
-							doEvent(instance->audioGraph, event.name, index, selectedIndex, c);
-							
-							index++;
-						}
 					}
-					mutex.unlock();
 					
-					printf("up/down = a/z, increment/decrement = 1/2, trigger event = SPACE, quit = q\n");
-					printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
+					int index = 0;
 					
-					Verify(system("/bin/stty raw") != -1);
+					for (auto & controlValue : audioGraphMgr.context->controlValues)
 					{
-						c = getchar();
+						doControlValue(controlValue, index, selectedIndex, 'G', c);
+						
+						index++;
 					}
-					Verify(system("/bin/stty cooked") != -1);
 					
-					printf("\n");
+					for (auto & controlValue : instance->audioGraph->stateDescriptor.controlValues)
+					{
+						doControlValue(controlValue, index, selectedIndex, 'L', c);
+						
+						index++;
+					}
 					
-					if (c == 'q')
-						stop = true;
-					if (c == 'a')
-						selectedIndex--;
-					if (c == 'z')
-						selectedIndex++;
+					for (auto & event : instance->audioGraph->stateDescriptor.events)
+					{
+						doEvent(instance->audioGraph, event.name, index, selectedIndex, c);
+						
+						index++;
+					}
 				}
-				while (stop == false);
+				mutex.unlock();
+				
+				printf("up/down = a/z, increment/decrement = 1/2, trigger event = SPACE, quit = q\n");
+				printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
+				
+				Verify(system("/bin/stty raw") != -1);
+				{
+					c = getchar();
+				}
+				Verify(system("/bin/stty cooked") != -1);
+				
+				printf("\n");
+				
+				if (c == 'q')
+					stop = true;
+				if (c == 'a')
+					selectedIndex--;
+				if (c == 'z')
+					selectedIndex++;
 			}
-			
-			// free the audio graph instance
-			
-			audioGraphMgr.free(instance, false);
+			while (stop == false);
 		}
 		
-		// shut down audio related systems
-
-		pa.shut();
+		// free the audio graph instance
 		
-		audioUpdateHandler.shut();
-
-		audioGraphMgr.shut();
-		
-		voiceMgr.shut();
-
-		mutex.shut();
-		
-		SDL_Quit();
+		audioGraphMgr.free(instance, false);
 	}
+	
+	// shut down audio related systems
+
+	pa.shut();
+	
+	audioUpdateHandler.shut();
+
+	audioGraphMgr.shut();
+	
+	voiceMgr.shut();
+
+	mutex.shut();
 
 	return 0;
 }

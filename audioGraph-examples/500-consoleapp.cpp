@@ -30,7 +30,7 @@
 #include "audioUpdateHandler.h"
 #include "audioVoiceManager.h"
 #include "Debugging.h"
-#include <SDL2/SDL.h>
+#include <thread>
 
 #if defined(MACOS) || defined(LINUX)
 	#include <unistd.h>
@@ -53,55 +53,50 @@ int main(int argc, char * argv[])
 		return -1;
 #endif
 
-	if (SDL_Init(0) >= 0) // todo : remove SDL2 dependency
+	// initialize audio related systems
+	
+	AudioMutex mutex;
+	mutex.init();
+
+	AudioVoiceManagerBasic voiceMgr;
+	voiceMgr.init(&mutex, CHANNEL_COUNT);
+	voiceMgr.outputStereo = true;
+
+	AudioGraphManager_Basic audioGraphMgr(true);
+	audioGraphMgr.init(&mutex, &voiceMgr);
+
+	AudioUpdateHandler audioUpdateHandler;
+	audioUpdateHandler.init(&mutex, &voiceMgr, &audioGraphMgr);
+
+	PortAudioObject pa;
+	pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
+	
+	// create an audio graph instance
+	
+	AudioGraphInstance * instance = audioGraphMgr.createInstance("sweetStuff6.xml");
+	
+	for (;;)
 	{
-		// initialize audio related systems
+		printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
 		
-		AudioMutex mutex;
-		mutex.init();
-
-		AudioVoiceManagerBasic voiceMgr;
-		voiceMgr.init(&mutex, CHANNEL_COUNT);
-		voiceMgr.outputStereo = true;
-
-		AudioGraphManager_Basic audioGraphMgr(true);
-		audioGraphMgr.init(&mutex, &voiceMgr);
-
-		AudioUpdateHandler audioUpdateHandler;
-		audioUpdateHandler.init(&mutex, &voiceMgr, &audioGraphMgr);
-
-		PortAudioObject pa;
-		pa.init(SAMPLE_RATE, 2, 0, AUDIO_UPDATE_SIZE, &audioUpdateHandler);
-		
-		// create an audio graph instance
-		
-		AudioGraphInstance * instance = audioGraphMgr.createInstance("sweetStuff6.xml");
-		
-		for (;;)
-		{
-			printf("CPU usage: %d%%\n", int(audioUpdateHandler.msecsPerSecond / 1000000.0 * 100));
-			
-			SDL_Delay(1100);
-		}
-		
-		// free the audio graph instance
-		
-		audioGraphMgr.free(instance, false);
-		
-		// shut down audio related systems
-
-		pa.shut();
-		
-		audioUpdateHandler.shut();
-
-		audioGraphMgr.shut();
-		
-		voiceMgr.shut();
-
-		mutex.shut();
-		
-		SDL_Quit();
+		std::this_thread::sleep_for(std::chrono::milliseconds(1100));
 	}
+	
+	// free the audio graph instance
+	
+	audioGraphMgr.free(instance, false);
+	
+	// shut down audio related systems
+
+	pa.shut();
+	
+	audioUpdateHandler.shut();
+
+	audioGraphMgr.shut();
+	
+	voiceMgr.shut();
+
+	mutex.shut();
 
 	return 0;
 }
