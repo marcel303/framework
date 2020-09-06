@@ -484,7 +484,7 @@ namespace binaural
 		WDL_FFT_COMPLEX source_wdl[AUDIO_BUFFER_SIZE];
 		
 	#if WDL_REAL_FFT_TEST
-	// todo : use WDL_real_fft
+	// todo : use WDL_real_fft since the source data has only zeroes for the imaginary part
 		memset(source_wdl, 0, sizeof(source_wdl));
 		memcpy(source_wdl, source.real, AUDIO_BUFFER_SIZE * sizeof(float));
 		WDL_real_fft((WDL_FFT_REAL*)source_wdl, AUDIO_BUFFER_SIZE, false);
