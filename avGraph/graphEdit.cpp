@@ -1267,6 +1267,8 @@ GraphEdit::GraphEdit(
 	displaySx = _displaySx;
 	displaySy = _displaySy;
 	
+	initUi();
+	
 	uiState = new UiState();
 	
 	const int kPadding = 10;
@@ -1295,6 +1297,8 @@ GraphEdit::~GraphEdit()
 	
 	delete uiState;
 	uiState = nullptr;
+	
+	shutUi();
 	
 	delete nodeTypeNameSelect;
 	nodeTypeNameSelect = nullptr;
