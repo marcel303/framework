@@ -3704,7 +3704,7 @@ void viewLookat3d(const float originX, const float originY, const float originZ,
 	setTransform(TRANSFORM_3D);
 }
 
-Vec4 transformToWorld(const Vec4 & v)
+Vec4 transformToView(const Vec4 & v)
 {
 	Mat4x4 matM;
 	
