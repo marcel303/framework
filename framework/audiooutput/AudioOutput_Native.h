@@ -1,6 +1,7 @@
 #pragma once
 
-#if defined(IPHONEOS) || defined(MACOS)
+#if defined(IPHONEOS)
+	// todo : include macOS in. requires to fix initialization on osx
 	#include "AudioOutput_CoreAudio.h"
 	typedef AudioOutput_CoreAudio AudioOutput_Native;
 #elif defined(ANDROID)
