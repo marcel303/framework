@@ -90,28 +90,48 @@ void UiState::reset()
 
 //
 
+static int s_initCount = 0;
+
 void initUi()
 {
-	fassert(checkersTexture.isValid() == false);
-	if (checkersTexture.isValid() == false)
+	// keep track of how many times init/shut are called
+	
+	s_initCount++;
+	
+	// perform the actual initialization if this is the first call
+	
+	if (s_initCount == 1)
 	{
-		// create a checkered texture
-		const uint8_t v1 = 31;
-		const uint8_t v2 = 63;
-		uint32_t rgba[4];
-		uint32_t c1; uint32_t c2;
-		uint8_t * rgba1 = (uint8_t*)&c1; uint8_t * rgba2 = (uint8_t*)&c2;
-		rgba1[0] = v1; rgba1[1] = v1; rgba1[2] = v1; rgba1[3] = 255;
-		rgba2[0] = v2; rgba2[1] = v2; rgba2[2] = v2; rgba2[3] = 255;
-		rgba[0] = c1; rgba[1] = c2; rgba[2] = c2; rgba[3] = c1;
-		checkersTexture.allocate(2, 2, GX_RGBA8_UNORM, false, false);
-		checkersTexture.upload(rgba, 1, 0);
+		fassert(checkersTexture.isValid() == false);
+		if (checkersTexture.isValid() == false)
+		{
+			// create a checkered texture
+			const uint8_t v1 = 31;
+			const uint8_t v2 = 63;
+			uint32_t rgba[4];
+			uint32_t c1; uint32_t c2;
+			uint8_t * rgba1 = (uint8_t*)&c1; uint8_t * rgba2 = (uint8_t*)&c2;
+			rgba1[0] = v1; rgba1[1] = v1; rgba1[2] = v1; rgba1[3] = 255;
+			rgba2[0] = v2; rgba2[1] = v2; rgba2[2] = v2; rgba2[3] = 255;
+			rgba[0] = c1; rgba[1] = c2; rgba[2] = c2; rgba[3] = c1;
+			checkersTexture.allocate(2, 2, GX_RGBA8_UNORM, false, false);
+			checkersTexture.upload(rgba, 1, 0);
+		}
 	}
 }
 
 void shutUi()
 {
-	checkersTexture.free();
+	// keep track of how many times init/shut are called
+	
+	s_initCount--;
+	
+	// perform the actual shutdown if this is the last call
+	
+	if (s_initCount == 0)
+	{
+		checkersTexture.free();
+	}
 }
 
 void drawUiRectCheckered(float x1, float y1, float x2, float y2, float scale)
