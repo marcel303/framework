@@ -438,19 +438,24 @@ int main(int argc, char * argv[])
 		
 		framework.waitForEvents = false;
 		
+		bool done = false;
+		
 		framework.beginDraw(100, 100, 100, 0);
 		{
 			makeActive(&uiState, true, true);
 			
 			if (doPaMenu(true, true, framework.timeStep, inputDeviceIndex, outputDeviceIndex, numChannels))
-				break;
+				done = true;
 			
 			pushMenu("buttons");
 			if (doButton("OK"))
-				break;
+				done = true;
 			popMenu();
 		}
 		framework.endDraw();
+		
+		if (done)
+			break;
 	}
 	
 	CHANNEL_COUNT = numChannels;

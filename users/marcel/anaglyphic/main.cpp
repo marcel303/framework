@@ -554,6 +554,7 @@ void Scene::draw(Surface * surface, const float eyeOffset, const float eyeX, con
 	#else
 		Mat4x4 matP;
 		matP.MakePerspectiveLH(Calc::DegToRad(60.f), surface->getHeight() / float(surface->getWidth()), .1f, 10000.f);
+		matP = matP.Scale(1, -1, 1);
 	#endif
 
 		Mat4x4 matC(true);

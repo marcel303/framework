@@ -259,6 +259,8 @@ int main(int artgc, char * argv[])
 		}
 		framework.endDraw();
 	}
+	
+	framework.shutdown();
 
 	return 0;
 }

@@ -1218,15 +1218,7 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 			
 			gxSetTexture(image.surface->getTexture());
 			{
-			#if ENABLE_OPENGL
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter ? GL_LINEAR : GL_NEAREST);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-				checkErrorGL();
-			#else
-				AssertMsg(false, "gfx_blitext2: sampler state not implemented for current graphics api", 0);
-			#endif
+				gxSetTextureSampler(filter ? GX_SAMPLE_LINEAR : GX_SAMPLE_NEAREST, true);
 				
 				const float x1 = 0;
 				const float y1 = 0;
@@ -1252,6 +1244,8 @@ void JsusFxGfx_Framework::gfx_blitext2(int np, EEL_F ** parms, int blitmode)
 					gxTexCoord2f(u1, v2); gxVertex2f(x1, y2);
 				}
 				gxEnd();
+				
+				gxSetTextureSampler(GX_SAMPLE_LINEAR, false);
 			}
 			gxSetTexture(0);
 		}

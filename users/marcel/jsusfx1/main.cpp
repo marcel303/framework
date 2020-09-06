@@ -1457,7 +1457,7 @@ static void testJsusFxList()
 	}
 #endif
 	
-	JsusFxChainWindow effectChainWindow(effectChain, audioStream, windows);
+	JsusFxChainWindow * effectChainWindow = new JsusFxChainWindow(effectChain, audioStream, windows);
 	
 	bool scrollerIsActive = false;
 	float scrollerPosition = 0.f;
@@ -1506,7 +1506,7 @@ static void testJsusFxList()
 			}
 		}
 		
-		effectChainWindow.tick(dt);
+		effectChainWindow->tick(dt);
 		
 	#if ENABLE_MIDI
 		audioStream.lock();
@@ -1899,6 +1899,9 @@ static void testJsusFxList()
 	// free effects, windows etc
 
 	audioStream.shut();
+	
+	delete effectChainWindow;
+	effectChainWindow = nullptr;
 
 	for (auto & window : windows)
 	{

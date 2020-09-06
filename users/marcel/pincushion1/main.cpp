@@ -175,5 +175,7 @@ int main(int argc, char * argv[])
 		framework.endDraw();
 	}
 	
+	framework.shutdown();
+	
 	return 0;
 }
