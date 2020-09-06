@@ -153,26 +153,7 @@ void AudioOutput_OpenSL::playbackHandler(SLAndroidSimpleBufferQueueItf bq)
 	}
 }
 
-AudioOutput_OpenSL::AudioOutput_OpenSL()
-	: m_isPlaying(false)
-	, m_volume(1024)
-	, m_position(0)
-	, m_isDone(false)
-{
-	m_mutex.alloc();
-
-	m_buffers[0] = nullptr;
-	m_buffers[1] = nullptr;
-}
-
-AudioOutput_OpenSL::~AudioOutput_OpenSL()
-{
-	Shutdown();
-
-	m_mutex.free();
-}
-
-bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate, const int bufferSize)
+bool AudioOutput_OpenSL::doInitialize(const int numChannels, const int sampleRate, const int bufferSize)
 {
 	fassert(numChannels == 1 || numChannels == 2);
 
@@ -181,8 +162,6 @@ bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate,
 		logError("OpenSLES: invalid number of channels");
 		return false;
 	}
-
-	// todo : shutdown on error
 
 	if (!checkError("slCreateEngine", slCreateEngine(&engineObject, 0, nullptr, 0, nullptr, nullptr)) ||
 		!checkError("Realize",        (*engineObject)->Realize(engineObject, SL_BOOLEAN_FALSE)) ||
@@ -272,6 +251,33 @@ bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate,
 	m_bufferSize = bufferSize;
 
 	return true;
+}
+
+AudioOutput_OpenSL::AudioOutput_OpenSL()
+	: m_isPlaying(false)
+	, m_volume(1024)
+	, m_position(0)
+	, m_isDone(false)
+{
+	m_mutex.alloc();
+
+	m_buffers[0] = nullptr;
+	m_buffers[1] = nullptr;
+}
+
+AudioOutput_OpenSL::~AudioOutput_OpenSL()
+{
+	Shutdown();
+
+	m_mutex.free();
+}
+
+bool AudioOutput_OpenSL::Initialize(const int numChannels, const int sampleRate, const int bufferSize)
+{
+	if (!doInitialize())
+	{
+		Shutdown();
+	}
 }
 
 bool AudioOutput_OpenSL::Shutdown()

@@ -64,6 +64,8 @@ class AudioOutput_OpenSL : public AudioOutput
 
 	static void playbackHandler_static(SLAndroidSimpleBufferQueueItf bq, void * obj);
 	void playbackHandler(SLAndroidSimpleBufferQueueItf bq);
+	
+	bool doInitialize(const int numChannels, const int sampleRate, const int bufferSize);
 
 public:
 	AudioOutput_OpenSL();
