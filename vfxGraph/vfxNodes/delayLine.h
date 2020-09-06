@@ -84,18 +84,6 @@ struct DelayLine
 			nextWriteIndex = 0;
 	}
 	
-	float read(const int offset) const
-	{
-		int index = nextWriteIndex + offset;
-		
-		if (index >= numSamples)
-			index -= numSamples;
-		if (index >= numSamples)
-			index %= numSamples;
-		
-		return samples[index];
-	}
-	
 	int pushEx(int nextWriteIndex, const float value)
 	{
 		samples[nextWriteIndex] = value;
@@ -106,6 +94,18 @@ struct DelayLine
 			nextWriteIndex = 0;
 		
 		return nextWriteIndex;
+	}
+	
+	float read(const int offset) const
+	{
+		int index = nextWriteIndex + offset;
+		
+		if (index >= numSamples)
+			index -= numSamples;
+		if (index >= numSamples)
+			index %= numSamples;
+		
+		return samples[index];
 	}
 	
 	float readEx(const int nextWriteIndex, const int offset) const
