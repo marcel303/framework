@@ -686,7 +686,11 @@ float atan(float x, float y) { return atan2(x, y); }
 						return false;
 					}
 					
-					// todo : detect if a pass is added more than once
+				#if defined(DEBUG)
+					// detect if a pass is added more than once
+					for (int j = 0; j < i; ++i)
+						Assert(outputs[j] != outputs[i]);
+				#endif
 					
 					sb.AppendFormat("\t%s %s [[color(%d)]];\n",
 						output->outputType.c_str(),

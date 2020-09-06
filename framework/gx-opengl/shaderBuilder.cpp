@@ -185,7 +185,11 @@ R"HEADER(
 					return false;
 				}
 				
-				// todo : detect if a pass is added more than once
+			#if defined(DEBUG)
+				// detect if a pass is added more than once
+				for (int j = 0; j < i; ++i)
+					Assert(outputs[j] != outputs[i]);
+			#endif
 				
 				sb.AppendFormat("layout(location = %d) out %s %s;\n",
 					i,
