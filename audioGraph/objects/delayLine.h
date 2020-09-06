@@ -86,19 +86,7 @@ struct DelayLine
 			nextWriteIndex = 0;
 	}
 	
-	float read(const int offset) const
-	{
-		int index = nextWriteIndex + offset;
-		
-		if (index >= numSamples)
-			index -= numSamples;
-		if (index >= numSamples)
-			index %= numSamples;
-		
-		return samples[index];
-	}
-	
-	int pushEx(int nextWriteIndex, const float value)
+	int push_optimized(int nextWriteIndex, const float value)
 	{
 		samples[nextWriteIndex] = value;
 		
@@ -110,27 +98,54 @@ struct DelayLine
 		return nextWriteIndex;
 	}
 	
-	float readEx(const int nextWriteIndex, const int offset) const
+	float read(const int offset) const
 	{
-		const int index = (numSamples + nextWriteIndex + offset) % numSamples;
+		Assert(offset >= 0 && offset <= numSamples - 1);
 		
+		int index = nextWriteIndex - 1 - offset;
+		if (index < 0)
+			index += numSamples;
+		Assert(index >= 0 && index < numSamples);
+
+		return samples[index];
+	}
+	
+	float read_optimized(const int nextWriteIndex, const int offset) const
+	{
+		Assert(offset >= 0 && offset <= numSamples - 1);
+		
+		int index = nextWriteIndex - 1 - offset;
+		if (index < 0)
+			index += numSamples;
+		Assert(index >= 0 && index < numSamples);
+
 		return samples[index];
 	}
 	
 	float readInterp(const float offset) const
 	{
-		const float index = fmodf(numSamples + nextWriteIndex + offset, numSamples);
-		const int index1 = int(index);
-		const int index2 = (index1 + 1) % numSamples;
+		const int offset_int = int(offset);
+		Assert(offset_int >= 0 && offset_int <= numSamples - 2);
+
+		int index1 = nextWriteIndex - 1 - offset_int;
+		if (index1 < 0)
+			index1 += numSamples;
+		Assert(index1 >= 0 && index1 < numSamples);
 		
-		const float t2 = index - index1;
-		const float t1 = 1.f - t2;
+		int index2 = nextWriteIndex - 2 - offset_int;
+		if (index2 < 0)
+			index2 += numSamples;
+		Assert(index2 >= 0 && index2 < numSamples);
+
+		const float t = offset - offset_int;
+		Assert(t >= 0.f && t <= 1.f);
+		
+		const float t1 = 1.f - t;
+		const float t2 = t;
 		
 		const float sample1 = samples[index1];
 		const float sample2 = samples[index2];
 		
-		const float sample = sample1 * t1 + sample2 * t2;
-		
-		return sample;
+		return sample1 * t1 + sample2 * t2;
 	}
 };

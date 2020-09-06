@@ -102,8 +102,7 @@ void AudioNodeCombFilter::tick(const float dt)
 		
 		for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 		{
-			//const float offset = std::min(float(delayLine->getLength() - 1),  ((maxDelay - delay->samples[i]) * SAMPLE_RATE));
-			const int offset = std::min(delayLine->getLength() - 1,  int((maxDelay - delay->samples[i]) * SAMPLE_RATE));
+			const int offset = std::min(delayLine->getLength() - 1, int(delay->samples[i] * SAMPLE_RATE));
 			
 			float input = value->samples[i];
 			

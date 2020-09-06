@@ -115,22 +115,22 @@ void AudioNodeDelayLine::tick(const float dt)
 		
 		if (fixedDelay)
 		{
-			const int offset1 = std::min(delayLine->getLength() - 1, int((maxDelay - delay1->getScalar()) * SAMPLE_RATE));
-			const int offset2 = std::min(delayLine->getLength() - 1, int((maxDelay - delay2->getScalar()) * SAMPLE_RATE));
-			const int offset3 = std::min(delayLine->getLength() - 1, int((maxDelay - delay3->getScalar()) * SAMPLE_RATE));
-			const int offset4 = std::min(delayLine->getLength() - 1, int((maxDelay - delay4->getScalar()) * SAMPLE_RATE));
+			const int offset1 = std::min(delayLine->getLength() - 1, int(delay1->getScalar() * SAMPLE_RATE));
+			const int offset2 = std::min(delayLine->getLength() - 1, int(delay2->getScalar() * SAMPLE_RATE));
+			const int offset3 = std::min(delayLine->getLength() - 1, int(delay3->getScalar() * SAMPLE_RATE));
+			const int offset4 = std::min(delayLine->getLength() - 1, int(delay4->getScalar() * SAMPLE_RATE));
 			
 			if (value->isScalar)
 			{
 				const float valueScalar = value->getScalar();
 				
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
-					nextWriteIndex = delayLine->pushEx(nextWriteIndex, valueScalar);
+					nextWriteIndex = delayLine->push_optimized(nextWriteIndex, valueScalar);
 				
-				outputValue[0].setScalar(delayLine->readEx(nextWriteIndex, offset1));
-				outputValue[1].setScalar(delayLine->readEx(nextWriteIndex, offset2));
-				outputValue[2].setScalar(delayLine->readEx(nextWriteIndex, offset3));
-				outputValue[3].setScalar(delayLine->readEx(nextWriteIndex, offset4));
+				outputValue[0].setScalar(delayLine->read_optimized(nextWriteIndex, offset1));
+				outputValue[1].setScalar(delayLine->read_optimized(nextWriteIndex, offset2));
+				outputValue[2].setScalar(delayLine->read_optimized(nextWriteIndex, offset3));
+				outputValue[3].setScalar(delayLine->read_optimized(nextWriteIndex, offset4));
 			}
 			else
 			{
@@ -141,12 +141,12 @@ void AudioNodeDelayLine::tick(const float dt)
 				
 				for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 				{
-					nextWriteIndex = delayLine->pushEx(nextWriteIndex, value->samples[i]);
+					nextWriteIndex = delayLine->push_optimized(nextWriteIndex, value->samples[i]);
 					
-					outputValue[0].samples[i] = delayLine->readEx(nextWriteIndex, offset1);
-					outputValue[1].samples[i] = delayLine->readEx(nextWriteIndex, offset2);
-					outputValue[2].samples[i] = delayLine->readEx(nextWriteIndex, offset3);
-					outputValue[3].samples[i] = delayLine->readEx(nextWriteIndex, offset4);
+					outputValue[0].samples[i] = delayLine->read_optimized(nextWriteIndex, offset1);
+					outputValue[1].samples[i] = delayLine->read_optimized(nextWriteIndex, offset2);
+					outputValue[2].samples[i] = delayLine->read_optimized(nextWriteIndex, offset3);
+					outputValue[3].samples[i] = delayLine->read_optimized(nextWriteIndex, offset4);
 				}
 			}
 		}
@@ -166,17 +166,17 @@ void AudioNodeDelayLine::tick(const float dt)
 			
 			for (int i = 0; i < AUDIO_UPDATE_SIZE; ++i)
 			{
-				nextWriteIndex = delayLine->pushEx(nextWriteIndex, value->samples[i]);
+				nextWriteIndex = delayLine->push_optimized(nextWriteIndex, value->samples[i]);
 				
-				const int offset1 = std::min(delayLine->getLength() - 1, int((maxDelay - delay1->samples[i]) * SAMPLE_RATE));
-				const int offset2 = std::min(delayLine->getLength() - 1, int((maxDelay - delay2->samples[i]) * SAMPLE_RATE));
-				const int offset3 = std::min(delayLine->getLength() - 1, int((maxDelay - delay3->samples[i]) * SAMPLE_RATE));
-				const int offset4 = std::min(delayLine->getLength() - 1, int((maxDelay - delay4->samples[i]) * SAMPLE_RATE));
+				const int offset1 = std::min(delayLine->getLength() - 1, int(delay1->samples[i] * SAMPLE_RATE));
+				const int offset2 = std::min(delayLine->getLength() - 1, int(delay2->samples[i] * SAMPLE_RATE));
+				const int offset3 = std::min(delayLine->getLength() - 1, int(delay3->samples[i] * SAMPLE_RATE));
+				const int offset4 = std::min(delayLine->getLength() - 1, int(delay4->samples[i] * SAMPLE_RATE));
 				
-				outputValue[0].samples[i] = delayLine->readEx(nextWriteIndex, offset1);
-				outputValue[1].samples[i] = delayLine->readEx(nextWriteIndex, offset2);
-				outputValue[2].samples[i] = delayLine->readEx(nextWriteIndex, offset3);
-				outputValue[3].samples[i] = delayLine->readEx(nextWriteIndex, offset4);
+				outputValue[0].samples[i] = delayLine->read_optimized(nextWriteIndex, offset1);
+				outputValue[1].samples[i] = delayLine->read_optimized(nextWriteIndex, offset2);
+				outputValue[2].samples[i] = delayLine->read_optimized(nextWriteIndex, offset3);
+				outputValue[3].samples[i] = delayLine->read_optimized(nextWriteIndex, offset4);
 			}
 		}
 		
